@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { Minesweeper } from './src/game.mjs';
 import { renderBoard } from './src/render.mjs';
+import { listScores } from './src/scores.mjs';
 import { startTui } from './src/tui.mjs';
 
 const PRESETS = {
@@ -29,21 +30,23 @@ Presets:
 Options:
   --seed N        reproducible board
   --script file   replay moves from a file ('-' or omitted = read stdin)
+  --scores        show best times
 
 Scripted moves (one per line, 0-based):
-  r ROW COL   reveal      f ROW COL   toggle flag      c ROW COL   chord
+  r ROW COL   reveal      f ROW COL   cycle mark (flag→question→none)      c ROW COL   chord
   Lines starting with # are ignored.
 
 Examples:
   node main.mjs
   node main.mjs expert
   node main.mjs 16 16 40 --seed 42
+  node main.mjs --scores
   echo "r 4 4" | node main.mjs 9 9 10
 
 Exit codes (scripted): 0 won, 1 lost, 2 usage error, 3 game unfinished.`;
 
 function parseArgs(argv) {
-  const args = { width: 9, height: 9, mines: 10, seed: undefined, scriptFile: null, help: false, error: null };
+  const args = { width: 9, height: 9, mines: 10, seed: undefined, scriptFile: null, scores: false, help: false, error: null };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -52,6 +55,7 @@ function parseArgs(argv) {
     else if (a.startsWith('--seed=')) args.seed = Number(a.slice('--seed='.length));
     else if (a === '--script') args.scriptFile = argv[++i] ?? '-';
     else if (a.startsWith('--script=')) args.scriptFile = a.slice('--script='.length) || '-';
+    else if (a === '--scores') args.scores = true;
     else if (PRESETS[a]) { const p = PRESETS[a]; args.width = p.width; args.height = p.height; args.mines = p.mines; }
     else if (/^\d+$/.test(a)) positional.push(Number(a));
     else { args.error = `unknown argument: ${a}`; break; }
@@ -108,6 +112,19 @@ async function main() {
   }
   if (args.help) {
     console.log(USAGE);
+    return;
+  }
+
+  if (args.scores) {
+    const rows = listScores();
+    if (rows.length === 0) {
+      console.log('no scores yet — win a game first');
+      return;
+    }
+    console.log('best times (saved in ~/.minesweeper-scores.json):');
+    for (const { key, best, wins } of rows) {
+      console.log(`  ${key.padEnd(18)} best ${String(best).padStart(4)}s   ${wins} win${wins === 1 ? '' : 's'}`);
+    }
     return;
   }
 

@@ -1,6 +1,7 @@
 // Interactive terminal UI: raw-mode keyboard input + full-screen redraw.
 
 import { renderBoard } from './render.mjs';
+import { recordWin } from './scores.mjs';
 
 // Map a raw-mode input chunk to an action (pure, unit-tested).
 export function parseKey(chunk) {
@@ -19,7 +20,7 @@ export function parseKey(chunk) {
   }
 }
 
-export async function startTui(makeGame) {
+export async function startTui(makeGame, { scoresFile } = {}) {
   const stdin = process.stdin;
   const out = process.stdout;
   if (!stdin.isTTY || !out.isTTY) return null;
@@ -28,16 +29,30 @@ export async function startTui(makeGame) {
   let r = Math.floor(game.height / 2);
   let c = Math.floor(game.width / 2);
   let quit = false;
+  let wonRecorded = false;
+  let lastWin = null; // { seconds, isNewBest, best, wins } once a game is won
 
   stdin.setRawMode(true);
   stdin.resume();
   stdin.setEncoding('utf8');
 
+  // Called after every move: record the win (and possible record) exactly once.
+  function afterMove() {
+    if (game.state === 'won' && !wonRecorded) {
+      wonRecorded = true;
+      const seconds = game.startedAt ? Math.floor((Date.now() - game.startedAt) / 1000) : 0;
+      lastWin = recordWin(game.width, game.height, game.mineCount, seconds, scoresFile);
+    }
+  }
+
   function draw() {
     const time = game.startedAt ? Math.floor((Date.now() - game.startedAt) / 1000) : null;
     const lines = renderBoard(game, { cursor: [r, c], color: true, time });
-    const footer = `\x1b[90m  arrows/WASD/HJKL move · Space reveal · F flag · Enter chord · R restart · Q quit · seed ${game.seed}\x1b[0m`;
-    out.write(`\x1b[2J\x1b[H\x1b[?25l${lines.join('\n')}\n${footer}\n`);
+    const banner = lastWin
+      ? `\x1b[32m  ★ WIN in ${lastWin.seconds}s — ${lastWin.isNewBest ? `NEW BEST! (best ${lastWin.best}s, ${lastWin.wins} wins)` : `best ${lastWin.best}s, ${lastWin.wins} wins`}\x1b[0m`
+      : '';
+    const footer = `\x1b[90m  arrows/WASD/HJKL move · Space reveal · F flag/? · Enter chord · R restart · Q quit · seed ${game.seed}\x1b[0m`;
+    out.write(`\x1b[2J\x1b[H\x1b[?25l${lines.join('\n')}\n${banner}\n${footer}\n`);
   }
 
   return new Promise((resolve) => {
@@ -69,6 +84,8 @@ export async function startTui(makeGame) {
           game = makeGame();
           r = Math.floor(game.height / 2);
           c = Math.floor(game.width / 2);
+          wonRecorded = false;
+          lastWin = null;
           break;
         case 'quit':
           quit = true;
@@ -79,6 +96,7 @@ export async function startTui(makeGame) {
         resolve(game);
         return;
       }
+      afterMove();
       draw();
     }
 

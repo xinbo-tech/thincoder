@@ -139,32 +139,63 @@ test('zero-mine board wins on first reveal', () => {
   assert.equal(g.revealedCount, 16);
 });
 
-test('flag toggling, reveal blocking and minesLeft', () => {
+test('flag toggling cycles flag → question → none', () => {
   const g = new Minesweeper({ width: 3, height: 3, mineLayout: [0] });
-  assert.equal(g.minesLeft, 1);
-  g.toggleFlag(2, 2);
-  assert.equal(g.flagged[8], 1);
+  // cycle: none → flag → question → none
+  g.toggleFlag(1, 1);
+  assert.equal(g.flagged[4], 1);
   assert.equal(g.flagCount, 1);
   assert.equal(g.minesLeft, 0);
-  g.reveal(2, 2); // blocked by the flag
-  assert.equal(g.revealed[8], 0);
-  assert.equal(g.state, 'playing');
-  // over-flagging goes negative
   g.toggleFlag(1, 1);
-  assert.equal(g.minesLeft, -1);
-  g.toggleFlag(1, 2);
-  assert.equal(g.minesLeft, -2);
-  // unflag and reveal
-  g.toggleFlag(2, 2);
-  g.toggleFlag(1, 1);
-  g.toggleFlag(1, 2);
+  assert.equal(g.flagged[4], 0);
+  assert.equal(g.questioned[4], 1);
+  assert.equal(g.flagCount, 0);
   assert.equal(g.minesLeft, 1);
+  g.toggleFlag(1, 1);
+  assert.equal(g.flagged[4], 0);
+  assert.equal(g.questioned[4], 0);
+  // flags block reveal, questions do not
+  g.toggleFlag(2, 2); // → flag
   g.reveal(2, 2);
-  assert.equal(g.revealed[8], 1);
+  assert.equal(g.revealed[8], 0, 'flag blocks reveal');
+  g.toggleFlag(2, 2); // → question
+  g.reveal(2, 2);
+  assert.equal(g.revealed[8], 1, 'question does not block reveal');
   assert.equal(g.state, 'won');
-  // cannot flag a revealed cell
+  // cannot mark a revealed cell
   g.toggleFlag(2, 2);
   assert.equal(g.flagged[8], 0);
+  assert.equal(g.questioned[8], 0);
+});
+
+test('chord ignores question marks but reveals them', () => {
+  // 3×3, mines at indices 0 and 8. (1,0) has adj 1 (mine at (0,0)).
+  const g = new Minesweeper({ width: 3, height: 3, mineLayout: [0, 8] });
+  g.reveal(1, 0);
+  g.toggleFlag(0, 0); // flag the mine (counts toward chord)
+  g.toggleFlag(1, 1); // → flag
+  g.toggleFlag(1, 1); // → question (does not count)
+  g.chord(1, 0); // flags = 1 == adj → reveal unflagged neighbors
+  assert.equal(g.revealed[4], 1, 'chord reveals question-marked cells');
+  assert.equal(g.revealed[0], 0, 'flagged mine stays hidden');
+  assert.equal(g.state, 'playing');
+});
+
+test('first reveal always opens a zero region', () => {
+  for (const seed of [1, 7, 42, 12345]) {
+    const g = new Minesweeper({ width: 9, height: 9, mines: 10, seed });
+    g.reveal(4, 4);
+    assert.equal(g.adj[4 * 9 + 4], 0, `seed ${seed}: first click must be a zero cell`);
+    assert.ok(g.revealedCount > 1, `seed ${seed}: flood fill opened more than one cell`);
+  }
+});
+
+test('first-click zero zone degrades on tiny boards', () => {
+  // 3×3 with 8 mines: only one safe cell, neighbors cannot be excluded.
+  const g = new Minesweeper({ width: 3, height: 3, mines: 8, seed: 3 });
+  g.reveal(1, 1);
+  assert.equal(g.state, 'won', 'the single safe cell is the first click');
+  assert.equal(g.mines.reduce((s, m) => s + m, 0), 8);
 });
 
 test('chord reveals neighbors when flags match', () => {

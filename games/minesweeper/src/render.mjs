@@ -6,6 +6,7 @@ const CELL = {
   empty: '  ',
   unrevealed: '· ',
   flag: '⚑ ',
+  question: '? ',
   mine: '* ',
 };
 
@@ -26,6 +27,9 @@ function cellText(game, i, color) {
   // On a win the only unrevealed cells are mines — show them flagged.
   if (game.flagged[i] || (game.state === 'won' && game.mines[i])) {
     return color ? colorize(CELL.flag, 33) : CELL.flag;
+  }
+  if (game.questioned[i]) {
+    return color ? colorize(CELL.question, 90) : CELL.question;
   }
   return color ? colorize(CELL.unrevealed, 90) : CELL.unrevealed;
 }

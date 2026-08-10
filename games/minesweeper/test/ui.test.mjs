@@ -81,6 +81,14 @@ test('renderBoard: win shows unrevealed mines as flags', () => {
   assert.ok(lines[3].includes(' 1⚑  1'), 'center mine rendered as a flag');
 });
 
+test('renderBoard: question marks render as ?', () => {
+  const g = new Minesweeper({ width: 3, height: 3, mineLayout: [4] });
+  g.toggleFlag(0, 1); // → flag
+  g.toggleFlag(0, 1); // → question
+  const lines = renderBoard(g, { color: false });
+  assert.ok(lines[2].includes('· ? · '), 'row 0 shows the question mark');
+});
+
 test('renderBoard: loss shows mines as asterisks', () => {
   const g = new Minesweeper({ width: 3, height: 3, mineLayout: [4] });
   g.reveal(1, 1); // the mine

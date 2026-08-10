@@ -42,6 +42,7 @@ export class Minesweeper {
     this.mines = new Uint8Array(n);
     this.revealed = new Uint8Array(n);
     this.flagged = new Uint8Array(n);
+    this.questioned = new Uint8Array(n);
     this.adj = new Uint8Array(n);
 
     this.firstMove = true;
@@ -102,19 +103,32 @@ export class Minesweeper {
     }
   }
 
-  // Fisher–Yates over all cells except the safe first-click cell.
+  // Fisher–Yates over candidate cells, excluding the safe first-click zone.
+  // First-click opens a zero region (the cell + its 8 neighbors are kept
+  // mine-free); on boards too small for that it degrades to cell-only.
   _placeMines(safeR, safeC) {
-    const candidates = [];
+    const safeZone = new Set();
+    safeZone.add(safeR * this.width + safeC);
+    for (const [dr, dc] of DIRS) {
+      const nr = safeR + dr;
+      const nc = safeC + dc;
+      if (this.inBounds(nr, nc)) safeZone.add(nr * this.width + nc);
+    }
+    const all = [];
+    const outside = [];
     for (let i = 0; i < this.size; i++) {
       const r = Math.floor(i / this.width);
       const c = i % this.width;
-      if (r !== safeR || c !== safeC) candidates.push(i);
+      if (r === safeR && c === safeC) continue;
+      all.push(i);
+      if (!safeZone.has(i)) outside.push(i);
     }
-    for (let i = candidates.length - 1; i > 0; i--) {
+    const pool = outside.length >= this.mineCount ? outside : all;
+    for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(this.rng() * (i + 1));
-      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    for (let k = 0; k < this.mineCount; k++) this.mines[candidates[k]] = 1;
+    for (let k = 0; k < this.mineCount; k++) this.mines[pool[k]] = 1;
     this._computeAdj();
   }
 
@@ -139,6 +153,7 @@ export class Minesweeper {
       const i = cr * this.width + cc;
       if (this.revealed[i] || this.flagged[i]) continue;
       this.revealed[i] = 1;
+      this.questioned[i] = 0; // revealing a question-marked cell clears the mark
       this.revealedCount++;
       if (this.mines[i]) {
         this.state = 'lost';
@@ -161,12 +176,22 @@ export class Minesweeper {
     }
   }
 
+  // Cycle cell marks: none → flag → question → none. Question marks do not
+  // block reveal and do not count as flags.
   toggleFlag(r, c) {
     if (!this.inBounds(r, c) || this.over) return;
     const i = r * this.width + c;
     if (this.revealed[i]) return;
-    this.flagged[i] = this.flagged[i] ? 0 : 1;
-    this.flagCount += this.flagged[i] ? 1 : -1;
+    if (this.flagged[i]) {
+      this.flagged[i] = 0;
+      this.flagCount--;
+      this.questioned[i] = 1;
+    } else if (this.questioned[i]) {
+      this.questioned[i] = 0;
+    } else {
+      this.flagged[i] = 1;
+      this.flagCount++;
+    }
   }
 
   // Chord: reveal all unflagged neighbors when the flag count matches the number.
