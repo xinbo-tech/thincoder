@@ -55,6 +55,8 @@ export async function startTui(makeGame, { scoresFile } = {}) {
     out.write(`\x1b[2J\x1b[H\x1b[?25l${lines.join('\n')}\n${banner}\n${footer}\n`);
   }
 
+  const onResize = draw; // redraw on terminal resize
+
   return new Promise((resolve) => {
     const timer = setInterval(draw, 1000);
 
