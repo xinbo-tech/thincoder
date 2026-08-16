@@ -143,6 +143,13 @@ export async function handleConfigCommand(ctx, args = []) {
   if (sub) { pushLine("Usage: /config [embedkey]", C.error); return }
 
   /** 会诊/飞刀候选池子菜单：列出 / 添加 / 编辑 effort / 删除 consultModels 条目。 */
+  async function pickEffort(current) {
+    const levels = ["none", "min", "low", "medium", "high", "max"]
+    const entries = levels.map((l) => ({ type: "item", text: l === current ? `${l}  ← current` : l, action: l }))
+    const c = await showPicker("Reasoning effort", entries, { defaultIndex: Math.max(0, levels.indexOf(current ?? "none")) })
+    return c ? c.action : null // Esc → null (keep unchanged)
+  }
+
   async function consultMenu() {
     let idx = 0
     for (;;) {
@@ -161,9 +168,9 @@ export async function handleConfigCommand(ctx, args = []) {
         if (!p) continue
         const modelIn = await askQuestion(`Model for ${p.provider} (default: ${p.model}):`)
         const mname = modelIn?.trim() || p.model
-        const effortIn = await askQuestion("Reasoning effort (optional: min/low/medium/high/max, Enter to skip):")
+        const effort = await pickEffort(null)
         const entry = { provider: p.provider, model: mname }
-        if (effortIn?.trim()) entry.effort = effortIn.trim()
+        if (effort && effort !== "none") entry.effort = effort
         const next = [...cm, entry]
         await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
         pushLabel("❯ Config", ansi.bold + C.tool)
@@ -186,13 +193,12 @@ export async function handleConfigCommand(ctx, args = []) {
           pushLabel("❯ Config", ansi.bold + C.tool)
           pushLine(`Removed ${tag}`, C.tool)
         } else if (s.action === "effort") {
-          const effortIn = await askQuestion(`Reasoning effort for ${tag} (current: ${m.effort ?? "none"}; min/low/medium/high/max, or "none" to clear):`)
+          const effort = await pickEffort(m.effort)
+          if (effort === null) { continue } // Esc 保持
           const next = cm.map((x, i) => {
             if (i !== c.index) return x
-            const v = effortIn?.trim()
-            if (!v) return x // Enter 保持
-            if (v.toLowerCase() === "none" || v.toLowerCase() === "clear") { const { effort, ...rest } = x; return rest }
-            return { ...x, effort: v }
+            if (effort === "none") { const { effort, ...rest } = x; return rest }
+            return { ...x, effort }
           })
           await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
           pushLabel("❯ Config", ansi.bold + C.tool)
