@@ -21,6 +21,7 @@ Design philosophy (the entire meaning of the name): if the Node standard library
 - **Two-phase tool scheduling**: permission prompts serialized, read-only tools parallelized, side-effect tools serialized
 - **Session persistence** ⭐0.5.0: unlimited archive slots, `/session` to switch anytime, tool results visible after restore. Process-level isolation — multiple instances in the same directory each get their own session slot
 - **Concurrent subagents**: three roles — `explore`/`plan`/`coder` — dispatched in parallel, streaming output visible, reports land in the conversation; per-subagent model override (`subagent` tool `model` arg or `agent.subagentModel` config — e.g. discuss with `glm-5.2`, let `deepseek-v4-flash` implement)
+- **Multi-model consultation + 飞刀 (escalate)** ⭐0.12.30: `consult_start`/`consult_check`/`consult_stop` run several configured models in parallel as independent read-only consultants (each with its own TUI activity card, `main_history` access to the failure trail); `escalate` flies in a stronger model for a single expert implementation run with full write access. Candidate pool = `agent.consultModels` ([{ provider, model, effort? }], up to 5); budgets via `agent.consultTurns` / `agent.consultTimeoutMs`
 - **Plan Mode**: read-only exploration + design, implement after user approval
 - **AUTO mode**: `/auto` full authorization, no confirmations on long tasks
 - **Task tracking**: `task` tool breaks down multi-step work, status bar ✓n/m live progress, auto-filters completed items

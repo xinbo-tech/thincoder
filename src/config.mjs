@@ -49,6 +49,11 @@ const DEFAULTS = {
     goalTurns: 200,
     compactThreshold: 100000,
     verifyGuard: false,  // push model back to verify when files were mutated but verify not run (opt-in)
+    // Multi-model consultation ("会诊") + escalate ("飞刀") — CLI parity with the VS Code plugin.
+    // consultModels: candidate pool for BOTH consult and escalate ({ provider, model, effort? }, up to 5).
+    consultModels: [],
+    consultTurns: 40,      // per-consultant tool-turn budget (diagnosis tasks)
+    consultTimeoutMs: 600000, // wall-clock ceiling per consultant (10min)
     streamRules: [],      // time-traveling stream rules: [{ pattern: "regex", message: "reminder", action: "abort"|"warn", repeat: "always"|"once" }]
     advisor: { enabled: false },  // code review; { enabled: true, provider: "deepseek", model: "deepseek-chat", thinking: { type: "enabled" }, reasoningEffort: "max", guard: true }
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
@@ -232,6 +237,15 @@ export function loadConfig() {
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
+  }
+
+  // Consult/escalate pool validation (CLI parity with the plugin): up to 5 candidates.
+  const cm = merged.agent.consultModels
+  if (cm !== undefined && !Array.isArray(cm)) {
+    throw new Error(`agent.consultModels must be an array of { provider, model } entries (got ${typeof cm})`)
+  }
+  if (Array.isArray(cm) && cm.length > 5) {
+    throw new Error(`agent.consultModels supports at most 5 models (got ${cm.length})`)
   }
 
   // Backward compatibility: promote root-level config fields to agent sub-object

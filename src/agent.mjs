@@ -13,6 +13,7 @@ import { executeToolCalls } from "./agent/dispatch.mjs"
 import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn, STALL_WINDOW_SIZE, STALL_THRESHOLD, GOAL_BUDGET_WARN_RATIO } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
+import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
 import {
   escapeXml, tryCanonicalize, repairHistory, listWorkDir,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
@@ -26,15 +27,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const SYSTEM_PROMPT = readFileSync(join(__dirname, "prompts", "system.md"), "utf8")
 const DISCIPLINE_RULES = readFileSync(join(__dirname, "prompts", "discipline.md"), "utf8")
 const MAIN_OVERLAY = readFileSync(join(__dirname, "prompts", "main.md"), "utf8")
-let _EXPLORE, _CODER, _PLAN, _ENG_CODER
+let _EXPLORE, _CODER, _PLAN, _ENG_CODER, _CONSULT_BASE
 try { _EXPLORE = readFileSync(join(__dirname, "prompts", "explore.md"), "utf8") } catch { _EXPLORE = "" }
 try { _CODER = readFileSync(join(__dirname, "prompts", "coder.md"), "utf8") } catch { _CODER = "" }
 try { _PLAN = readFileSync(join(__dirname, "prompts", "plan.md"), "utf8") } catch { _PLAN = "" }
 try { _ENG_CODER = readFileSync(join(__dirname, "prompts", "eng-coder.md"), "utf8") } catch { _ENG_CODER = "" }
+try { _CONSULT_BASE = readFileSync(join(__dirname, "prompts", "consult-base.md"), "utf8") } catch { _CONSULT_BASE = "" }
 export const EXPLORE_OVERLAY = _EXPLORE
 export const CODER_OVERLAY = _CODER
 export const PLAN_OVERLAY = _PLAN
 export const ENG_CODER_OVERLAY = _ENG_CODER
+export const CONSULT_BASE = _CONSULT_BASE
 
 // exported for consumption by agent-tools.mjs
 export {
@@ -142,7 +145,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     tools: toolSchemas,
   }
 
-  for (let turn = 0; turn < maxTurns; turn++) {
+  try {
+    for (let turn = 0; turn < maxTurns; turn++) {
     // Update turn counter for status bar display
     agent._currentTurn = turn + 1
     agent._maxTurns = maxTurns
@@ -439,7 +443,12 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     }
 
     injectPostTurn(agent, results, recentCallSigs, callbacks, turn)
-  }
+    }
 
-  throw new ContinueError(maxTurns)
+    throw new ContinueError(maxTurns)
+  } finally {
+    // Turn-end cleanup: abort any leftover consultation children (consult_start spawns
+    // fire-and-forget runners; a completed turn must not let them keep burning tokens).
+    cleanupConsultSessions(agent)
+  }
 }

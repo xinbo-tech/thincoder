@@ -168,6 +168,17 @@ export async function prepareRun(agent, input, callbacks, {
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
   const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool } = await import("../agent-tools.mjs")
+  const { consultStartTool, consultCheckTool, consultStopTool } = await import("../agent-tools/consult.mjs")
+  const { escalateTool } = await import("../agent-tools/escalate.mjs")
+  const { CONSULT_BASE } = await import("../agent.mjs")
+  // withPool: decorate consult_start/escalate descriptions with the CURRENT candidate pool
+  // so the model knows which models it can pick (CLI parity with the plugin).
+  const withPool = (tool) => {
+    const models = agent.config?.agent?.consultModels ?? []
+    const list = models.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")
+    if (!list) return tool
+    return { ...tool, description: tool.description + `\nCurrently configured consultants (this tool's pool): ${list}` }
+  }
   // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"
   const subagentRoles = (depth === 0 && agent.config?.agent?.engineering)
     ? {
@@ -192,13 +203,19 @@ export async function prepareRun(agent, input, callbacks, {
     },
   } : subagentTool
 
-  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool]
-    // Write-permission coder sub-agents (subagent role="coder" + escalate surgeon): the
-    // system prompt names verify (system.md) and advisor (discipline.md) — without them a
-    // surgeon hit "unknown tool" and fell back to bash node --check / npm test to
-    // self-verify (2026-08-16 deepseek surgeon diagnosis; plugin parity).
+  // Consult/escalate tools registered only when configured — an unconfigured pool would
+  // otherwise make the model call them and eat an error turn (plugin parity).
+  const consultTools = (agent.config?.agent?.consultModels ?? []).length
+    ? [withPool(consultStartTool), consultCheckTool, consultStopTool, withPool(escalateTool)]
+    : []
+  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
+    // Write-permission coder sub-agents (subagent role="coder" + escalate): the
+    // system prompt names verify (system.md) and advisor (discipline.md) — without them an
+    // escalate hit "unknown tool" and fell back to bash node --check / npm test to
+    // self-verify (2026-08-16 deepseek escalate diagnosis; plugin parity).
     : agent._role === "eng-coder" ? [advisorTool, verifyTool]
     : agent._role === "coder" ? [verifyTool, advisorTool]
+    : agent._role === "consult" ? [recentChangesTool]
     : []
   const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly]
   const toolSchemas = tools.map(toOpenAISchema)
@@ -208,7 +225,12 @@ export async function prepareRun(agent, input, callbacks, {
   // system prompt
   const needsDiscipline = depth === 0 || agent._role === "coder" || agent._role === "eng-coder"
   let base
-  if ((depth === 0 || agent._role === "eng-coder") && agent.config?.agent?.engineering) {
+  if (agent._role === "consult") {
+    // consult children: a lean, purpose-built base prompt (consult-base.md) — NOT the full
+    // main-agent system.md (whose coding-agent persona, checklist/task/verify workflows and
+    // tool references conflict with a read-only diagnosis and cost tokens every turn).
+    base = CONSULT_BASE
+  } else if ((depth === 0 || agent._role === "eng-coder") && agent.config?.agent?.engineering) {
     // Engineering mode: strict methodology, NO standard discipline injection.
     // Falling back to standard discipline on METHODOLOGY.md absence would leak
     // advisor enforcement into engineering mode — the two prompt sets stay separate.
