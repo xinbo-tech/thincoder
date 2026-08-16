@@ -164,7 +164,7 @@ export const consultStartTool = {
   readonly: false,
   sideEffectExempt: true,
   description:
-    "Start a parallel multi-model consultation for a hard problem you are stuck on (repeated failures, no headway). " +
+    "Start a parallel multi-model consultation (会诊) for a hard problem you are stuck on (repeated failures, no headway). " +
     "Several configured models (agent.consultModels) analyze the same problem INDEPENDENTLY and in parallel. " +
     "Non-blocking: returns immediately with a consult id. Then call consult_check(id) to read each reply as it " +
     "arrives, judge/verify it yourself with your own tools, and call consult_stop(id) once a reply is good enough.\n" +
