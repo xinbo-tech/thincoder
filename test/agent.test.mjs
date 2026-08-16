@@ -2767,3 +2767,29 @@ test("mergeChildMutations: child without mutations changes nothing", () => {
   assert.equal(parent._mutatedThisRun, false)
   assert.deepEqual(parent._touchedFiles, [])
 })
+
+test("cache audit (2026-08-16): OS/cwd reminder injected once per process; resume re-grounds the time", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const memory = createMemory({ dbPath: join(mkdtempSync(join(tmpdir(), "mem-")), "m.db") })
+  const { server, requests } = await mockLLM([{ content: "a" }, { content: "b" }, { content: "c" }])
+  try {
+    const cwd = mkdtempSync(join(tmpdir(), "cache-audit-"))
+    const agent = createAgent({ provider: { baseURL: `http://127.0.0.1:${server.address().port}`, apiKey: "x", model: "m" }, tools: [], config: {}, cwd, memory })
+    // run 1: fresh → OS reminder lands once, time lands
+    await runAgent(agent, "t1")
+    const osReminders = agent.history.filter((m) => typeof m.content === "string" && m.content.startsWith("[System reminder: OS:"))
+    assert.equal(osReminders.length, 1, "OS reminder injected exactly once")
+    // run 2: guard blocks the duplicate OS reminder
+    await runAgent(agent, "t2")
+    const osReminders2 = agent.history.filter((m) => typeof m.content === "string" && m.content.startsWith("[System reminder: OS:"))
+    assert.equal(osReminders2.length, 1, "no duplicate OS reminder on the next run")
+    // resume path: time re-grounded (a resume must not keep the pre-interrupt time)
+    const beforeTimes = agent.history.filter((m) => typeof m.content === "string" && /current time is/.test(m.content)).length
+    await runAgent(agent, "t3", {}, { resume: true })
+    const afterTimes = agent.history.filter((m) => typeof m.content === "string" && /current time is/.test(m.content)).length
+    assert.ok(afterTimes > beforeTimes, "resume injects a fresh time reminder")
+  } finally {
+    server.close()
+  }
+})
+

@@ -52,6 +52,10 @@ async function loadSkillsFromDir(dir) {
   let entries
   try {
     entries = await readdir(dir, { withFileTypes: true })
+    // Deterministic order: readdir order is filesystem-dependent; an unsorted scan would
+    // reshuffle the skills listing → system prompt byte change with zero content change
+    // (2026-08-16 cache audit — that silently misses the provider prefix cache).
+    entries.sort((a, b) => a.name.localeCompare(b.name))
   } catch {
     return []
   }

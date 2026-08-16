@@ -80,12 +80,20 @@ export async function prepareRun(agent, input, callbacks, {
       const platform = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] ?? process.platform
       const wasRestored = agent._sessionStart != null
       agent._sessionStart ??= new Date().toISOString()
-      if (tree) {
-        agent.history.push({ role: "user", content: `[System reminder: OS: ${platform}. Working directory: ${agent.cwd}. Session start: ${agent._sessionStart}. Working directory snapshot:\n<untrusted_cwd_listing>\n${escapeXml(tree)}\n</untrusted_cwd_listing>]`, transient: true })
-      } else {
-        agent.history.push({ role: "user", content: `[System reminder: OS: ${platform}. Working directory: ${agent.cwd}. Session start: ${agent._sessionStart}.]`, transient: true })
+      // Inject OS/cwd + cwd-tree only ONCE per process (restored sessionStart keeps the
+      // content byte-identical across restarts — 2026-08-16 cache audit). Without the guard
+      // every run re-pushed the same reminder (history bloat, wasted tokens).
+      if (!agent._osReminderInjected) {
+        agent._osReminderInjected = true
+        if (tree) {
+          agent.history.push({ role: "user", content: `[System reminder: OS: ${platform}. Working directory: ${agent.cwd}. Session start: ${agent._sessionStart}. Working directory snapshot:\n<untrusted_cwd_listing>\n${escapeXml(tree)}\n</untrusted_cwd_listing>]`, transient: true })
+        } else {
+          agent.history.push({ role: "user", content: `[System reminder: OS: ${platform}. Working directory: ${agent.cwd}. Session start: ${agent._sessionStart}.]`, transient: true })
+        }
+  
       }
-      if (wasRestored) {
+      if (wasRestored && !agent._restartReminderInjected) {
+        agent._restartReminderInjected = true
         agent.history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
       }
       if (agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
@@ -139,16 +147,16 @@ export async function prepareRun(agent, input, callbacks, {
       } catch { /* checklist not available — suppress error */ }
     }
     pushReal(agent, { role: "user", content: input })
-    // Time grounding for EVERY agent depth, pushed LAST (after the user input): transient,
-    // dropped on persist, fresh at every run start. Tail position keeps the second-precision
-    // content out of any prefix — caches stay hit (plugin hit a position-drift regression
-    // when the reminder was interleaved before the input; CLI is aligned preemptively).
-    agent.history.push({
-      role: "user",
-      content: `[System reminder: current time is ${timeNowLocal()} (local; timezone ${Intl.DateTimeFormat().resolvedOptions().timeZone || "local"}).]`,
-      transient: true,
-    })
   }
+  // Time grounding for EVERY agent depth AND every resume, pushed LAST (after the user
+  // input): transient, dropped on persist, fresh at every run start — including resumes
+  // (an interrupt-continuation must know NOW, not the pre-interrupt time; 2026-08-16).
+  // Tail position keeps the second-precision content out of any prefix — caches stay hit.
+  agent.history.push({
+    role: "user",
+    content: `[System reminder: current time is ${timeNowLocal()} (local; timezone ${Intl.DateTimeFormat().resolvedOptions().timeZone || "local"}).`,
+    transient: true,
+  })
 
   if (agent._pendingReminders.length > 0) {
     for (const reminder of agent._pendingReminders) {
