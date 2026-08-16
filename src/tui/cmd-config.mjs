@@ -142,14 +142,14 @@ export async function handleConfigCommand(ctx, args = []) {
   }
   if (sub) { pushLine("Usage: /config [embedkey]", C.error); return }
 
-  /** 会诊/飞刀候选池子菜单：列出 / 添加 / 删除 consultModels 条目。 */
+  /** 会诊/飞刀候选池子菜单：列出 / 添加 / 编辑 effort / 删除 consultModels 条目。 */
   async function consultMenu() {
     let idx = 0
     for (;;) {
       const cm = agent.config?.agent?.consultModels ?? []
       const entries = [
         { type: "header", text: `Consult/escalate pool: ${cm.length} model(s) (max 5)` },
-        ...cm.map((m, i) => ({ type: "item", text: `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`, action: "remove", index: i })),
+        ...cm.map((m, i) => ({ type: "item", text: `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`, action: "edit", index: i })),
         { type: "item", text: cm.length ? "＋ Add model" : "＋ Add model (none yet)", action: "add" },
       ]
       const c = await showPicker("Consult models", entries, { defaultIndex: idx })
@@ -167,14 +167,38 @@ export async function handleConfigCommand(ctx, args = []) {
         const next = [...cm, entry]
         await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
         pushLabel("❯ Config", ansi.bold + C.tool)
-        pushLine(`Added ${entry.provider}:${entry.model}`, C.tool)
+        pushLine(`Added ${entry.provider}:${entry.model}${entry.effort ? ` (${entry.effort})` : ""}`, C.tool)
         idx = 0
-      } else if (c.action === "remove") {
-        const target = cm[c.index]
-        const next = cm.filter((_, i) => i !== c.index)
-        await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
-        pushLabel("❯ Config", ansi.bold + C.tool)
-        pushLine(`Removed ${target.provider}:${target.model}`, C.tool)
+      } else if (c.action === "edit") {
+        // Per-model sub-menu: change effort or remove.
+        const m = cm[c.index]
+        const tag = `${m.provider}:${m.model}`
+        const subEntries = [
+          { type: "header", text: `${tag} — effort: ${m.effort ?? "(none)"}` },
+          { type: "item", text: `Change effort (current: ${m.effort ?? "none"})`, action: "effort" },
+          { type: "item", text: "Remove", action: "remove" },
+        ]
+        const s = await showPicker(tag, subEntries, {})
+        if (!s) continue
+        if (s.action === "remove") {
+          const next = cm.filter((_, i) => i !== c.index)
+          await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
+          pushLabel("❯ Config", ansi.bold + C.tool)
+          pushLine(`Removed ${tag}`, C.tool)
+        } else if (s.action === "effort") {
+          const effortIn = await askQuestion(`Reasoning effort for ${tag} (current: ${m.effort ?? "none"}; min/low/medium/high/max, or "none" to clear):`)
+          const next = cm.map((x, i) => {
+            if (i !== c.index) return x
+            const v = effortIn?.trim()
+            if (!v) return x // Enter 保持
+            if (v.toLowerCase() === "none" || v.toLowerCase() === "clear") { const { effort, ...rest } = x; return rest }
+            return { ...x, effort: v }
+          })
+          await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
+          pushLabel("❯ Config", ansi.bold + C.tool)
+          const after = next[c.index]
+          pushLine(`${tag} effort = ${after?.effort ?? "none"}`, C.tool)
+        }
         idx = 0
       }
     }
