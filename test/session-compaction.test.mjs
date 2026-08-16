@@ -151,3 +151,26 @@ test("legacy session file without contextHistory still loads (backwards compatib
     rmSync(cwd, { recursive: true, force: true })
   }
 })
+
+test("machine line (contextHistory) keeps transient messages — resume must rebuild a byte-identical prefix for provider caches", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "sess-tran-"))
+  try {
+    const agent = makeAgent(cwd, [{ role: "user", content: "hi" }, { role: "assistant", content: "yo" }])
+    // simulate a run's machine-only injections (git/OS/time reminders are transient)
+    agent.history.push({ role: "user", content: "[System reminder: git context: branch main]", transient: true })
+    agent.history.push({ role: "user", content: "[System reminder: current time is 2026-08-16 11:00:00]", transient: true })
+    saveSession(agent)
+
+    const restored = loadSession(cwd)
+    const restoredAgent = { ...agent, history: [], _fullHistory: [] }
+    applySession(restoredAgent, restored)
+    // the MACHINE line must equal the saved machine line (transient included) so the
+    // next request's prefix matches what the provider cached
+    assert.deepEqual(restoredAgent.history, agent.history, "machine line survives save→load byte-identical (transient kept)")
+    // the HUMAN line must NOT contain transient
+    assert.ok(!restoredAgent._fullHistory.some((m) => m.transient), "human line stays clean")
+  } finally {
+    cleanup(cwd)
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})

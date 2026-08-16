@@ -325,8 +325,14 @@ export function saveSession(agent) {
   // _fullHistory is written at the source via pushReal — no flush needed here.
   // history        = FULL, never-compacted (human-readable; VS Code panel & CLI resume read this)
   // contextHistory = machine context (possibly compacted) so CLI resume keeps the token savings
+  // Human line: transient machine injections never enter the readable record.
   const history = (agent._fullHistory ?? agent.history).filter((m) => !m.transient && !isLegacyTransient(m))
-  const contextHistory = agent.history.filter((m) => !m.transient && !isLegacyTransient(m))
+  // Machine line (contextHistory): KEEP transient messages — resume must rebuild the
+  // machine line byte-identical to what the provider cache saw. Dropping them made every
+  // process restart diverge at the first injection position (git/OS/time reminders are
+  // re-injected with FRESH content) → whole-prefix cache miss on the CLI's very first
+  // request of each session (2026-08-16 cache-hit report; Kimi review).
+  const contextHistory = agent.history.filter((m) => !isLegacyTransient(m))
   const data = {
     version: 2,
     cwd: agent.cwd,
