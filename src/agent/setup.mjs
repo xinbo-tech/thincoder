@@ -124,13 +124,6 @@ export async function prepareRun(agent, input, callbacks, {
         })
       }
     }
-    // Time grounding for EVERY agent depth (subagents are short-lived; they also need
-    // to know "now"). Transient — dropped on persist, fresh at every run start.
-    agent.history.push({
-      role: "user",
-      content: `[System reminder: current time is ${timeNowLocal()} (local; timezone ${Intl.DateTimeFormat().resolvedOptions().timeZone || "local"}).]`,
-      transient: true,
-    })
     if (depth === 0) {
       // Checklist injection: inject pending + in_progress items from .thincoder/checklist.md
       try {
@@ -146,6 +139,15 @@ export async function prepareRun(agent, input, callbacks, {
       } catch { /* checklist not available — suppress error */ }
     }
     pushReal(agent, { role: "user", content: input })
+    // Time grounding for EVERY agent depth, pushed LAST (after the user input): transient,
+    // dropped on persist, fresh at every run start. Tail position keeps the second-precision
+    // content out of any prefix — caches stay hit (plugin hit a position-drift regression
+    // when the reminder was interleaved before the input; CLI is aligned preemptively).
+    agent.history.push({
+      role: "user",
+      content: `[System reminder: current time is ${timeNowLocal()} (local; timezone ${Intl.DateTimeFormat().resolvedOptions().timeZone || "local"}).]`,
+      transient: true,
+    })
   }
 
   if (agent._pendingReminders.length > 0) {
