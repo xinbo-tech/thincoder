@@ -46,7 +46,7 @@ export const SLASH_COMMANDS = [
   { name: "/goal", group: "Agent", desc: "set/view/cancel long-term goal" },
   { name: "/think", group: "Agent", desc: "thinking mode & reasoning effort" },
   { name: "/upgrade", group: "System", desc: "check for updates & upgrade" },
-  { name: "/config", group: "System", desc: "agent config (embedding, proxy, turns, thresholds)" },
+  { name: "/config", group: "System", desc: "agent config (embedding, proxy, turns, threshold, consult pool)" },
   { name: "/new", group: "Session", desc: "new session (old one archived to slot)" },
   { name: "/session", group: "Session", desc: "list/switch archived sessions" },
   { name: "/clear", group: "Session", desc: "clear screen" },

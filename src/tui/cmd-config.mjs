@@ -142,16 +142,58 @@ export async function handleConfigCommand(ctx, args = []) {
   }
   if (sub) { pushLine("Usage: /config [embedkey]", C.error); return }
 
+  /** 会诊/飞刀候选池子菜单：列出 / 添加 / 删除 consultModels 条目。 */
+  async function consultMenu() {
+    let idx = 0
+    for (;;) {
+      const cm = agent.config?.agent?.consultModels ?? []
+      const entries = [
+        { type: "header", text: `Consult/escalate pool: ${cm.length} model(s) (max 5)` },
+        ...cm.map((m, i) => ({ type: "item", text: `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`, action: "remove", index: i })),
+        { type: "item", text: cm.length ? "＋ Add model" : "＋ Add model (none yet)", action: "add" },
+      ]
+      const c = await showPicker("Consult models", entries, { defaultIndex: idx })
+      if (!c) return // Esc → 返回主菜单
+      if (c.action === "add") {
+        if (cm.length >= 5) { pushLine("At most 5 consult models", C.error); continue }
+        const pEntries = agent.providers.map((p) => ({ type: "item", text: `${p.name.padEnd(14)} ${p.model}`, action: "pick", provider: p.name, model: p.model }))
+        const p = await showPicker("Add consult model — pick provider", pEntries, {})
+        if (!p) continue
+        const modelIn = await askQuestion(`Model for ${p.provider} (default: ${p.model}):`)
+        const mname = modelIn?.trim() || p.model
+        const effortIn = await askQuestion("Reasoning effort (optional: min/low/medium/high/max, Enter to skip):")
+        const entry = { provider: p.provider, model: mname }
+        if (effortIn?.trim()) entry.effort = effortIn.trim()
+        const next = [...cm, entry]
+        await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
+        pushLabel("❯ Config", ansi.bold + C.tool)
+        pushLine(`Added ${entry.provider}:${entry.model}`, C.tool)
+        idx = 0
+      } else if (c.action === "remove") {
+        const target = cm[c.index]
+        const next = cm.filter((_, i) => i !== c.index)
+        await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
+        pushLabel("❯ Config", ansi.bold + C.tool)
+        pushLine(`Removed ${target.provider}:${target.model}`, C.tool)
+        idx = 0
+      }
+    }
+  }
+
   // ── Main config loop ──
   let running = true
   let mainIdx = 0 // 记住上次选中位置，改完一项回主菜单时恢复
   while (running) {
+    const consultCount = (ac.consultModels ?? []).length
     const mainEntries = [
-      { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 100} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | embedding=${agent.memory?.embedder ? "on" : "off"}` },
+      { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 100} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"}` },
       { type: "item", text: `agent.maxTurns = ${ac.maxTurns ?? 100}`, action: "agent.maxTurns" },
       { type: "item", text: `agent.subagentTurns = ${ac.subagentTurns ?? 100}`, action: "agent.subagentTurns" },
       { type: "item", text: `agent.compactThreshold = ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, action: "agent.compactThreshold" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
+      { type: "item", text: `agent.consultModels = ${consultCount} model(s)${consultCount ? ` (${(ac.consultModels ?? []).map((m) => m.provider + ":" + m.model).join(", ")})` : ""}`, action: "consult" },
+      { type: "item", text: `agent.consultTurns = ${ac.consultTurns ?? 40}`, action: "agent.consultTurns" },
+      { type: "item", text: `agent.consultTimeoutMs = ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, action: "agent.consultTimeoutMs" },
       { type: "item", text: "Set embedding API key", action: "embedkey" },
       { type: "item", text: `proxy = ${proxySummary()}`, action: "proxy" },
       { type: "item", text: "View full config", action: "view" },
@@ -169,6 +211,9 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLine(`agent.subagentTurns: ${ac.subagentTurns ?? 100}`, C.dim)
       pushLine(`agent.compactThreshold: ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, C.dim)
       pushLine(`agent.verifyGuard: ${ac.verifyGuard === true ? "on" : "off"}`, C.dim)
+      pushLine(`agent.consultModels: ${(ac.consultModels ?? []).map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ") || "(none)"}`, C.dim)
+      pushLine(`agent.consultTurns: ${ac.consultTurns ?? 40}`, C.dim)
+      pushLine(`agent.consultTimeoutMs: ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, C.dim)
       pushLine(`embedding: ${agent.memory?.embedder ? `enabled (${ec.model ?? ""})` : "disabled (FTS only)"}`, C.dim)
       pushLine(`proxy: ${proxySummary()}`, C.dim)
       pushLine(`Config file: ${configPath}`, C.dim)
@@ -178,6 +223,11 @@ export async function handleConfigCommand(ctx, args = []) {
 
     if (choice.action === "proxy") {
       await proxyMenu()
+      continue
+    }
+
+    if (choice.action === "consult") {
+      await consultMenu()
       continue
     }
 
@@ -205,23 +255,27 @@ export async function handleConfigCommand(ctx, args = []) {
 
     // Numeric config items
     const label = choice.action
+    const isTimeout = label === "agent.consultTimeoutMs"
     const current = label === "agent.maxTurns" ? (ac.maxTurns ?? 100)
       : label === "agent.subagentTurns" ? (ac.subagentTurns ?? 100)
       : label === "agent.compactThreshold" ? (ac.compactThreshold ?? 100000)
+      : label === "agent.consultTurns" ? (ac.consultTurns ?? 40)
+      : isTimeout ? Math.round((ac.consultTimeoutMs ?? 600000) / 60000)
       : ""
-    const val = await askQuestion(`${label} (current: ${current}):`)
+    const val = await askQuestion(`${label} (current: ${current}${isTimeout ? " min" : ""}):`)
     if (!val) continue
     try {
       const num = Number(val)
       if (isNaN(num)) { pushLine("Value must be a number", C.error); continue }
+      const stored = isTimeout ? Math.round(num * 60000) : num
       await saveProxy((raw) => {
         const keys = label.split(".")
         let obj = raw
         for (let i = 0; i < keys.length - 1; i++) { obj[keys[i]] ??= {}; obj = obj[keys[i]] }
-        obj[keys[keys.length - 1]] = num
+        obj[keys[keys.length - 1]] = stored
       })
       pushLabel("❯ Config", ansi.bold + C.tool)
-      pushLine(`${label} = ${val}`, C.tool)
+      pushLine(`${label} = ${isTimeout ? `${val} min (${stored} ms)` : val}`, C.tool)
       pushLine("(restart to apply)", C.dim)
       running = false
     } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
