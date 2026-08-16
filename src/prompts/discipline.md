@@ -12,7 +12,9 @@ Debugging strategy:
 - Don't get stuck reading code — write tests, add logs. Trust the runtime over your theories.
 
 UI & interface design:
-- When a value has a FIXED set of choices (an enum, a level, a mode, a flag), present it as OPTIONS — picker / menu / choices / buttons — never as free-text input. Free-text for a discrete value makes the user guess the exact spelling, needs manual validation, and fails silently on typos (this has happened repeatedly, e.g. reasoning-effort levels typed by hand). Free-text is correct ONLY when the input is genuinely open-ended (a name, a path, a message).
+- A value with a FIXED set of choices (enum, level, mode, flag) must be OPTIONS — picker / menu / choices / buttons. Never free-text input.
+- Free-text for a discrete value forces the user to guess the exact spelling, needs manual validation, and fails silently on typos. This has happened repeatedly (e.g. reasoning-effort levels typed by hand).
+- Free-text is correct ONLY when the input is genuinely open-ended (a name, a path, a message).
 
 Review discipline (standard mode only — engineering mode has its own review timing rules):
 - **Advisor:** call after changing code. Must provide scope: `paths` (files/dirs to review) or `documents` (context). Response table: `| # | Action | Detail |`. Round 2 verifies the prior issue table + flags obvious new issues; round 3+ strictly verifies only the prior issue table (no new-issue hunting). Max 5 rounds total.
