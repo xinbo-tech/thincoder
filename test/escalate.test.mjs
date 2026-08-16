@@ -233,7 +233,7 @@ describe("escalate (飞刀, CLI)", () => {
     await assert.rejects(pending, (e) => e.name === "AbortError", "user Stop propagates as AbortError")
   })
 
-  it("effort clamp: an out-of-enum pool effort falls back to preset instead of dying on takeoff", async () => {
+  it("effort clamp: an out-of-enum pool effort is dropped instead of dying on takeoff", async () => {
     // kimi-k3's reasoningEffortEnum includes max — fine. A model whose enum lacks the
     // configured effort must NOT get it copied into provider.reasoningEffort (chat would throw).
     const agent = makeAgent([{ provider: "kimi", model: "qwen3.8-max", effort: "max" }])

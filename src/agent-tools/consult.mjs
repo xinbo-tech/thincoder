@@ -13,6 +13,7 @@
  */
 import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
+import { specForModel } from "../config.mjs"
 
 function consultLabel(m) {
   return `${m.provider}:${m.model}`
@@ -104,7 +105,19 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       // (settleChild turns this message into a clear failed reply instead of a raw 401)
       throw new Error(`consult model ${label} has no API key — check providers[${m.provider}].apiKey or THINCODER_API_KEY`)
     }
-    if (m.effort) provider.reasoningEffort = m.effort
+    // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
+    // value makes provider/core throw on EVERY chat call (candidate dies on takeoff).
+    // Symmetric with escalate.mjs; 2026-08-16 a real consult died on qwen3.8-max
+    // effort "high" (enum is xhigh/medium/low). Out-of-enum: DROP the effort entirely
+    // (the provider preset default may ALSO be out-of-enum for this override model).
+    if (m.effort) {
+      const enumList = specForModel(m.model).reasoningEffortEnum
+      if (enumList && !enumList.includes(m.effort)) {
+        delete provider.reasoningEffort
+      } else {
+        provider.reasoningEffort = m.effort
+      }
+    }
 
     // Read-only consultant: filter the parent tool set down to readonly tools + main_history.
     const allowed = readonlyToolNames(agent.tools ?? [])

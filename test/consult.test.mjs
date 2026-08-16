@@ -202,4 +202,20 @@ describe("consult mechanism (CLI)", () => {
     const kept = agent.tools.filter((t) => allowed.has(t.name))
     assert.ok(kept.every((t) => t.readonly), "no mutators survive")
   })
+
+  it("clamps out-of-enum pool effort: drops it entirely (qwen3.8-max effort high)", async () => {
+    // qwen3.8-max enum is xhigh/medium/low — "high" is out-of-enum and must NOT reach
+    // provider.reasoningEffort (a 2026-08-16 real consult died on exactly this).
+    const agent = makeAgent([{ provider: "deepseek", model: "qwen3.8-max", effort: "high" }])
+    // simulate a provider whose preset default effort is ALSO invalid for the override model
+    agent.config.providersList.find((p) => p.name === "deepseek").reasoningEffort = "high"
+    let seenEffort = "UNSET"
+    const runner = async (childAgent) => { seenEffort = childAgent.provider.reasoningEffort; return "ok" }
+    const ctx = makeCtx(agent, runner)
+    await consultStartTool.execute({ problem: "x" }, ctx)
+    const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+    assert.equal(r.reply, "ok")
+    assert.equal(seenEffort, undefined, "out-of-enum effort dropped, not blindly copied (nor preset residue)")
+    await cleanupConsultSessions(agent)
+  })
 })

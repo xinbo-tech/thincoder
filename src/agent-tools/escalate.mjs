@@ -77,9 +77,13 @@ export const escalateTool = {
     if (pick.effort) {
       // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
       // value makes provider/core.mjs throw on EVERY chat call (candidate dies on takeoff).
+      // Out-of-enum: DROP the effort entirely (the provider preset default may ALSO be
+      // out-of-enum for this override model — e.g. qwenplan preset default "high" is
+      // invalid for qwen3.8-max, enum xhigh/medium/low).
       const enumList = specForModel(pick.model).reasoningEffortEnum
       if (enumList && !enumList.includes(pick.effort)) {
-        effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, using preset default)`
+        effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, dropped)`
+        delete provider.reasoningEffort
       } else {
         provider.reasoningEffort = pick.effort
       }
