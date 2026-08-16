@@ -1,3 +1,18 @@
+## [0.12.31] — 2026-08-16
+
+### Fixed
+
+- **/config consult model picker**: adding a consult model now uses pickModelForSlot (provider AND model are both OPTION pickers, reusing /model's async-fetched model list) — was free-text for the model name
+- **Prompt adaptation**: CLI main.md was missing the consult (会诊) + escalate (飞刀) sections — the CLI main agent did not know "会诊" meant consult_start. Ported both + added the 会诊 alias to consult_start's tool description
+
+### Prompt system
+
+- Attention optimization + cross-end consistency: split over-long sentences, fixed an escalate-timing contradiction (up-front ability judgment), unified Review discipline + advisor rounds — all 15 prompt files byte-identical with the plugin
+
+### Docs
+
+- CONSULTATION.md + ESCALATE.md design docs (CLI implementation differences vs the plugin)
+
 ## [0.12.30] — 2026-08-16
 
 ### New: 会诊 (consult) + 飞刀 (escalate) — full VS Code plugin parity
