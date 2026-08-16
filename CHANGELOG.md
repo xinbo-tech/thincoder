@@ -1,3 +1,20 @@
+## [0.12.32] — 2026-08-16
+
+### Fixed
+
+- **会诊触发条款重构**（两轮会诊驱动的修复）：触发规则从飞刀段移入会诊段且自包含——功能请求语义（"会诊一下"触发、"consult the docs"不触发）+ 用户请求覆盖自主判断；consult_start 描述补对称触发句；飞刀段补 fly-in/口语变体
+- **飞刀三个真实断链**（会诊发现，此前"代码在但真实跑必翻车"）：
+  - 删墙钟看门狗——固定墙钟误杀正常但慢的手术（实测两个 max-effort 顾问读 5 个文件即撞 10min 墙）；完全依赖 turns + FETCH_TIMEOUT + 用户 Stop 直传
+  - effort 枚举钳制——池 effort 越界不再让候选"起飞即死"，回退预设并标注
+  - AUTO 传导对齐 subagent——headless 嵌入下父 autoApprove 正确放行子 agent 写操作
+- **config 加载校验**：consultModels 池 provider 名必须存在于 providers[]，条目形状校验——静默运行时失败改为启动即报错
+- **撞墙可继续（kimi-k3 飞刀）**：escalate 子 agent 撞 turn 上限后弹"继续?"（复用 onPermissionRequest，TUI 同款 y/n 面板），resume:true 续跑不重复注入任务、预算重置，上限 2 次；顺带修复 ContinueError e.turns → e.turn（原来打印 "undefined turns"）
+- consult 死代码补 precheck（无 key 时明确失败回复而非原始 401）
+
+### Docs
+
+- CLI CONSULTATION.md / ESCALATE.md 文档地图收录、FEATURES.md 功能全览补齐（7→11 个）、README 会诊别名、checklist T2-T6 验收
+
 ## [0.12.31] — 2026-08-16
 
 ### Fixed

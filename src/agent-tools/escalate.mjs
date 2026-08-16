@@ -18,6 +18,7 @@
 import { isAbsolute, relative } from "node:path"
 import { createAgent, runAgent, ContinueError, CODER_OVERLAY } from "../agent.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent.mjs"
+import { specForModel } from "../config.mjs"
 
 const label = (m) => `${m.provider}:${m.model}`
 
@@ -72,24 +73,29 @@ export const escalateTool = {
     if (!provider?.apiKey?.trim() && !process.env.THINCODER_API_KEY) {
       return `Error: provider "${pick.provider}" has no API key — set it in config.json (or THINCODER_API_KEY) before flying it in`
     }
-    if (pick.effort) provider.reasoningEffort = pick.effort
+    let effortNote = ""
+    if (pick.effort) {
+      // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
+      // value makes provider/core.mjs throw on EVERY chat call (candidate dies on takeoff).
+      const enumList = specForModel(pick.model).reasoningEffortEnum
+      if (enumList && !enumList.includes(pick.effort)) {
+        effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, using preset default)`
+      } else {
+        provider.reasoningEffort = pick.effort
+      }
+    }
 
     parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
     const subId = parent._subAgentCounter
     const tag = label(pick)
     const relayPrefix = `escalate#${subId}/`
 
-    const timeoutMs = parent?.config?.agent?.consultTimeoutMs ?? 600_000
-    let timedOut = false
-    const ctrl = new AbortController()
-    const watchdog = setTimeout(() => {
-      timedOut = true
-      try { ctrl.abort() } catch { /* already settled */ }
-    }, timeoutMs)
-    if (ctx.signal) {
-      if (ctx.signal.aborted) ctrl.abort()
-      else ctx.signal.addEventListener("abort", () => ctrl.abort(), { once: true })
-    }
+    // No wall-clock watchdog — turn cap only, exactly like subagent (the verified write
+    // path). Rationale (2026-08-16): a fixed wall-clock aborts NORMAL-but-slow surgery —
+    // two max-effort consultants hit a 10min wall just READING files. Hang protection is
+    // already covered by FETCH_TIMEOUT_MS (per LLM call) and the user's Stop (parent
+    // signal propagates directly below). maxTurns is the cost budget; hitting it asks
+    // the user whether to continue (main-agent parity), falling back to partial work.
 
     let output = ""
     const childCallbacks = {
@@ -113,29 +119,54 @@ export const escalateTool = {
         role: "coder",
       })
       const runner = ctx.runAgent ?? runAgent
-      const report = await runner(child, task, {
-        ...childCallbacks,
-        onPermissionRequest: ctx.onPermissionRequest ?? null,
-      }, {
+      const runOpts = {
         depth: 1,
         maxTurns: parent.config?.agent?.subagentTurns ?? 100,
-        signal: ctrl.signal,
-      })
-      // Escalate mutations are the parent's mutations: verify/advisor guards must see them
-      mergeChildMutations(parent, child)
-      return `escalate (${tag}) post-op report:\n${report || output.slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
-    } catch (e) {
-      // Even a failed surgery may have written files — merge whatever the child touched.
-      if (child) mergeChildMutations(parent, child)
-      const msg = e?.message ?? String(e)
-      if (ctx.signal?.aborted || (!timedOut && e?.name === "AbortError")) throw e
-      if (e instanceof ContinueError) {
-        return `escalate (${tag}) stopped: turn cap reached (${e.turns} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`
+        signal: ctx.signal ?? null,
       }
-      const note = timedOut ? `timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : msg
-      return `escalate (${tag}) error: ${note}\nPartial output: ${output.slice(0, 2000)}`
-    } finally {
-      clearTimeout(watchdog)
+      // Turn-cap continue, main-agent parity (tui/agent-turn.mjs): when the child hits
+      // ContinueError, ask the user through the SAME channel as child write approval
+      // (ctx.onPermissionRequest). The name "continue" renders the TUI's dedicated y/n
+      // Continue panel — the same panel the main agent's turn-cap pause uses. The
+      // resumed run passes resume:true, so runAgent does NOT re-inject the task text
+      // (setup.mjs skips input on resume) and keeps the child's history + mutation
+      // bookkeeping, with a fresh maxTurns budget per run. No permission handler
+      // (headless) or a declined prompt falls through to the partial-work return;
+      // MAX_RESUMES caps continues so a stuck child cannot loop forever.
+      const MAX_RESUMES = 2
+      for (let resumes = 0; ; resumes++) {
+        try {
+          const report = await runner(child, task, {
+            ...childCallbacks,
+            // AUTO parity with subagent.mjs: parent.autoApprove must reach the child even
+            // when no onPermissionRequest exists (ACP/headless embeds) — otherwise every
+            // child write burns a turn on "no permission handler" rejections.
+            onPermissionRequest: parent.autoApprove ? async () => true : (ctx.onPermissionRequest ?? null),
+          }, { ...runOpts, resume: resumes > 0 })
+          // Escalate mutations are the parent's mutations: verify/advisor guards must see them
+          mergeChildMutations(parent, child)
+          return `escalate (${tag})${effortNote} post-op report:\n${report || output.slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
+        } catch (e) {
+          // Even a failed surgery may have written files — merge whatever the child touched.
+          mergeChildMutations(parent, child)
+          const msg = e?.message ?? String(e)
+          if (ctx.signal?.aborted || e?.name === "AbortError") throw e
+          if (e instanceof ContinueError) {
+            if (resumes < MAX_RESUMES && ctx.onPermissionRequest) {
+              const go = await ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
+              if (go) continue // fresh maxTurns budget; task NOT re-injected (resume:true)
+            }
+            return `escalate (${tag}) stopped: turn cap reached (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`
+          }
+          return `escalate (${tag}) error: ${msg}\nPartial output: ${output.slice(0, 2000)}`
+        }
+      }
+    } catch (e) {
+      // Reached only when createAgent itself fails or the continue prompt throws —
+      // run failures are handled inside the loop above.
+      if (child) mergeChildMutations(parent, child)
+      if (ctx.signal?.aborted || e?.name === "AbortError") throw e
+      return `escalate (${tag}) error: ${e?.message ?? String(e)}`
     }
   },
 }

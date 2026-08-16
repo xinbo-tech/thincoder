@@ -101,6 +101,8 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     const provider = resolveChildProvider(agent, `${m.provider}:${m.model}`)
     if (!provider?.apiKey?.trim() && !process.env.THINCODER_API_KEY) {
       // resolveChildProvider may still lack a key; fail loudly like the plugin precheck
+      // (settleChild turns this message into a clear failed reply instead of a raw 401)
+      throw new Error(`consult model ${label} has no API key — check providers[${m.provider}].apiKey or THINCODER_API_KEY`)
     }
     if (m.effort) provider.reasoningEffort = m.effort
 
@@ -165,6 +167,7 @@ export const consultStartTool = {
   sideEffectExempt: true,
   description:
     "Start a parallel multi-model consultation (会诊) for a hard problem you are stuck on (repeated failures, no headway). " +
+    "Call it directly when the user asks for 会诊 / consult — an explicit user request applies even if you are not 'stuck'. " +
     "Several configured models (agent.consultModels) analyze the same problem INDEPENDENTLY and in parallel. " +
     "Non-blocking: returns immediately with a consult id. Then call consult_check(id) to read each reply as it " +
     "arrives, judge/verify it yourself with your own tools, and call consult_stop(id) once a reply is good enough.\n" +

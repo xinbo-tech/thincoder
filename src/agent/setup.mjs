@@ -205,8 +205,12 @@ export async function prepareRun(agent, input, callbacks, {
 
   // Consult/escalate tools registered only when configured — an unconfigured pool would
   // otherwise make the model call them and eat an error turn (plugin parity).
-  const consultTools = (agent.config?.agent?.consultModels ?? []).length
-    ? [withPool(consultStartTool), consultCheckTool, consultStopTool, withPool(escalateTool)]
+  // escalate is fail-closed in engineering mode (execute() rejects there) — registering it
+  // anyway would hand the model a tool that is guaranteed to eat an error turn.
+  const consultModels = agent.config?.agent?.consultModels ?? []
+  const engineering = agent.config?.agent?.engineering
+  const consultTools = consultModels.length
+    ? [withPool(consultStartTool), consultCheckTool, consultStopTool, ...(engineering ? [] : [withPool(escalateTool)])]
     : []
   const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
     // Write-permission coder sub-agents (subagent role="coder" + escalate): the

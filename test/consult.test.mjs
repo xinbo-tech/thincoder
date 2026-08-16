@@ -134,6 +134,27 @@ describe("consult mechanism (CLI)", () => {
     assert.match(r, /not configured|consultModels/)
   })
 
+  it("consult model without an API key fails loudly as a failed reply", async () => {
+    const agent = makeAgent(MODELS)
+    // provider "openai" loses its key — no THINCODER_API_KEY fallback → precheck must throw a clear message
+    agent.config.providersList.find((p) => p.name === "openai").apiKey = ""
+    delete process.env.THINCODER_API_KEY
+    const runner = fakeRunner({ "m-a": { reply: "A", delay: 50 }, "m-c": { reply: "C", delay: 50 } })
+    const ctx = makeCtx(agent, runner.fn)
+    await consultStartTool.execute({ problem: "stuck" }, ctx)
+    const replies = []
+    for (;;) {
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+      if (r.reply) replies.push(r)
+      if (r.done) break
+    }
+    const failed = replies.find((r) => r.failedReply === true)
+    assert.ok(failed, "a failed reply exists")
+    assert.match(failed.reply, /no API key/, "clear precheck message, not a raw 401")
+    assert.ok(replies.some((r) => r.failedReply !== true), "keyed models still answer")
+  })
+
+
   it("user Stop aborts all children and check returns done", async () => {
     const agent = makeAgent(MODELS)
     const ctrl = new AbortController()

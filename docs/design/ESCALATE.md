@@ -90,7 +90,8 @@ escalate
 - **改动并入父级守卫**：`mergeChildMutations(parent, child)` 重置父级 verify/advisor 收敛预算——飞刀不能绕过父级门直接收尾。
 - **深度护栏**：`(ctx.depth ?? 0) > 0` 拒绝（飞刀不能再飞刀）。
 - **工程模式禁飞刀**：engineering mode 下 spawn coder 子 agent 是设计禁止的，fail-closed 指向 eng-coder。
-- **看门狗**：`consultTimeoutMs` 墙钟超时按 timeout 结算（非崩溃）；`ContinueError`（撞 turn 上限）单独话术读作 partial work。
+- **无墙钟看门狗**：完全依赖 turn 上限（`subagentTurns` ?? 100），与 subagent 写路径对齐——固定墙钟会误杀正常但慢的手术（2026-08-16 会诊实测：两个 max-effort 顾问仅读 5 个文件即撞 10min 墙）。挂死防护由 FETCH_TIMEOUT_MS（单 LLM 调用）+ 用户 Stop（父 signal 直传子）覆盖。
+- **撞墙后用户可选继续**：子 agent 撞 turn 上限（`ContinueError`）时，复用子 agent 写审批的同一通道 `ctx.onPermissionRequest("continue", { turns })` 弹"继续?"——name `"continue"` 在 TUI 渲染主 agent 同款 y/n Continue 面板（tui/agent-turn.mjs 同款机制）。用户选继续则以 `resume: true` 续跑：runAgent 不重复注入任务文本（setup.mjs resume 分支跳过 input push），child history 与 mutation 簿记保留，预算重置为一轮完整 `maxTurns`。续跑上限 `MAX_RESUMES = 2`，超限或用户放弃或 headless 无回调时退回 partial work 话术。
 - **用户 Stop 传播**：AbortError 向上 rethrow，不吞掉。
 
 ### 2.5 受影响文件
@@ -131,5 +132,5 @@ escalate
 | 改动合并 | 子 agent mutate 重置父级 verify/advisor 预算 + touchedFiles 并入 |
 | 失败也合并 | 中途崩溃仍合并已 touch 的文件 |
 | 用户 Stop | AbortError 向上传播 |
-| ContinueError | 读作 partial work（stopped） |
-| 看门狗 | 超时读作 timeout，非崩溃 |
+| ContinueError | 撞墙后用户可选继续（复用 onPermissionRequest 通道，`resume:true` 续跑不重复注入任务，上限 2 次）；放弃/headless 读作 partial work（stopped） |
+| 无墙钟 | turn 帽 + 撞墙继续选择；用户 Stop 经父 signal 直传 |

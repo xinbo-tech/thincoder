@@ -247,6 +247,19 @@ export function loadConfig() {
   if (Array.isArray(cm) && cm.length > 5) {
     throw new Error(`agent.consultModels supports at most 5 models (got ${cm.length})`)
   }
+  if (Array.isArray(cm)) {
+    // Fail fast at load: a pool entry whose provider doesn't exist in providers[] fails
+    // every consult/escalate call at runtime with a quiet error string (eats a turn).
+    const providerNames = merged.providers.map((p) => p.name)
+    for (const entry of cm) {
+      if (!entry || typeof entry !== "object" || typeof entry.provider !== "string" || typeof entry.model !== "string") {
+        throw new Error(`agent.consultModels entries must be { provider: string, model: string } objects (got ${JSON.stringify(entry)})`)
+      }
+      if (!providerNames.includes(entry.provider)) {
+        throw new Error(`agent.consultModels entry "${entry.provider}:${entry.model}" references unknown provider "${entry.provider}" (available: ${providerNames.join(", ") || "none"})`)
+      }
+    }
+  }
 
   // Backward compatibility: promote root-level config fields to agent sub-object
   if (config.verifyGuard !== undefined) {

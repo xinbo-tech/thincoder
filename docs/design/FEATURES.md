@@ -58,7 +58,7 @@
 | `doc_search` | 文档检索 |
 | 记忆层 | personal（SQLite ~/.thincoder）、project（.thincoder/memory/*.md）、team（独立 git 仓库） |
 
-## 七、Agent 控制（7 个）
+## 七、Agent 控制（11 个）
 
 | 工具 | 说明 |
 |------|------|
@@ -69,6 +69,8 @@
 | `verify` | 完成验证守卫 |
 | `question` | 向用户提问，暂停等待回复 |
 | `timer` | 思考时间预算，超时提醒去动手而非空想 |
+| `consult_start` / `consult_check` / `consult_stop` | 多模型并行会诊（只读顾问，需配置 `agent.consultModels`） |
+| `escalate` | 飞刀：把实现交给更强的模型亲自操刀（有写权限，候选池同 `consultModels`） |
 
 ## 八、版本控制（4 个）
 

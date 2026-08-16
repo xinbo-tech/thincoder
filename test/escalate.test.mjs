@@ -146,25 +146,117 @@ describe("escalate (飞刀, CLI)", () => {
     await assert.rejects(p, (e) => e.name === "AbortError", "user Stop propagates to the parent loop")
   })
 
-  it("turn-cap exhaustion reads as partial work (ContinueError), not an error", async () => {
+  it("turn-cap exhaustion without a permission handler (headless) falls back to partial work", async () => {
     const agent = makeAgent(CONSULTS)
     const { ContinueError } = await import("../src/agent.mjs")
-    const runner = async () => { throw new ContinueError(100) }
+    let calls = 0
+    const runner = async () => { calls++; throw new ContinueError(100) }
     const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    assert.equal(calls, 1, "no continue prompt possible → no resume attempted")
+    assert.ok(String(r).includes("stopped: turn cap reached"))
+    assert.ok(String(r).includes("(100 turns)"), "ContinueError.turn surfaced")
+    assert.ok(String(r).includes("Partial output"))
+  })
+
+  it("user picks continue → child resumes from the wall (resume:true, task not re-injected, fresh budget)", async () => {
+    const agent = makeAgent(CONSULTS)
+    const { ContinueError } = await import("../src/agent.mjs")
+    const seen = []
+    const runner = async (childAgent, input, callbacks, opts) => {
+      seen.push({ child: childAgent, input, resume: opts?.resume ?? false, maxTurns: opts?.maxTurns })
+      if (seen.length === 1) throw new ContinueError(100)
+      return "post-op report"
+    }
+    const asks = []
+    const ctx = makeCtx(agent, runner)
+    ctx.onPermissionRequest = async (name, args) => { asks.push([name, args]); return true }
+    const r = await escalateTool.execute({ task: "hard refactor" }, ctx)
+    assert.equal(seen.length, 2, "first run hit the wall, second run finished")
+    assert.equal(seen[0].resume, false)
+    assert.equal(seen[1].resume, true, "resumed run — runAgent does NOT re-inject the task text")
+    assert.equal(seen[1].input, "hard refactor", "same input object passed; injection is skipped by resume:true")
+    assert.equal(seen[1].child, seen[0].child, "same child agent — history preserved across the wall")
+    assert.equal(seen[1].maxTurns, seen[0].maxTurns, "fresh full maxTurns budget per run")
+    assert.deepEqual(asks, [["continue", { turns: 100, agent: "kimi:kimi-k3" }]], "continue asked once via the permission channel")
+    assert.ok(String(r).includes("post-op report"))
+    assert.ok(!String(r).includes("stopped"), "completed run is a normal post-op report")
+  })
+
+  it("user declines continue → partial work return, no resume", async () => {
+    const agent = makeAgent(CONSULTS)
+    const { ContinueError } = await import("../src/agent.mjs")
+    let calls = 0
+    const runner = async () => { calls++; throw new ContinueError(100) }
+    const ctx = makeCtx(agent, runner)
+    ctx.onPermissionRequest = async () => false
+    const r = await escalateTool.execute({ task: "x" }, ctx)
+    assert.equal(calls, 1, "declined → no resume run")
     assert.ok(String(r).includes("stopped: turn cap reached"))
     assert.ok(String(r).includes("Partial output"))
   })
 
-  it("wall-clock watchdog: a stuck escalate settles as a timeout, not a hang", async () => {
+  it("resume cap: after 2 continues a third wall forces the partial-work return", async () => {
     const agent = makeAgent(CONSULTS)
-    agent.config.agent.consultTimeoutMs = 100
+    const { ContinueError } = await import("../src/agent.mjs")
+    const resumes = []
     const runner = async (childAgent, input, callbacks, opts) => {
+      resumes.push(opts?.resume ?? false)
+      throw new ContinueError(100)
+    }
+    let asks = 0
+    const ctx = makeCtx(agent, runner)
+    ctx.onPermissionRequest = async () => { asks++; return true }
+    const r = await escalateTool.execute({ task: "x" }, ctx)
+    assert.deepEqual(resumes, [false, true, true], "initial run + 2 resumed runs, then the cap bites")
+    assert.equal(asks, 2, "asked twice — the third wall is NOT offered to the user")
+    assert.ok(String(r).includes("stopped: turn cap reached"))
+  })
+
+  it("no wall-clock watchdog: parent signal passes through directly; turn cap is the only budget", async () => {
+    const agent = makeAgent(CONSULTS)
+    const ctrl = new AbortController()
+    let seenSignal = null
+    const runner = async (childAgent, input, callbacks, opts) => {
+      seenSignal = opts?.signal ?? null
       await new Promise((resolve, reject) => {
         opts.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true })
       })
       return "never"
     }
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
-    assert.ok(String(r).includes("timed out after"), "reads as timeout")
+    const ctx = { ...makeCtx(agent, runner), signal: ctrl.signal }
+    // Parent aborts mid-run → child run rejects with AbortError → escalate rethrows (user Stop)
+    const pending = escalateTool.execute({ task: "x" }, ctx)
+    // Wait until the child runner has captured the signal, then abort the parent
+    await new Promise((r) => setTimeout(r, 30))
+    assert.equal(seenSignal, ctrl.signal, "child receives the parent signal directly (no intermediate controller)")
+    ctrl.abort()
+    await assert.rejects(pending, (e) => e.name === "AbortError", "user Stop propagates as AbortError")
   })
+
+  it("effort clamp: an out-of-enum pool effort falls back to preset instead of dying on takeoff", async () => {
+    // kimi-k3's reasoningEffortEnum includes max — fine. A model whose enum lacks the
+    // configured effort must NOT get it copied into provider.reasoningEffort (chat would throw).
+    const agent = makeAgent([{ provider: "kimi", model: "qwen3.8-max", effort: "max" }])
+    // qwen3.8-max enum = ["xhigh","high"] → "max" is out-of-enum
+    let seenProvider = null
+    const runner = async (childAgent) => { seenProvider = childAgent.provider; return "done" }
+    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    assert.ok(seenProvider, "child spawned")
+    assert.equal(seenProvider.reasoningEffort, undefined, "out-of-enum effort NOT copied (would throw in chat)")
+    assert.ok(String(r).includes("unsupported"), "result notes the fallback")
+  })
+
+  it("AUTO parity: parent.autoApprove reaches the child without onPermissionRequest (headless embed)", async () => {
+    const agent = makeAgent(CONSULTS)
+    agent.autoApprove = true
+    let seenPermission = null
+    const runner = async (childAgent, input, callbacks) => {
+      seenPermission = callbacks?.onPermissionRequest ?? null
+      return "done"
+    }
+    await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    assert.equal(typeof seenPermission, "function", "permission resolver injected")
+    assert.equal(await seenPermission("write", {}), true, "AUTO approves child writes")
+  })
+
 })
