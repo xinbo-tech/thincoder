@@ -1,3 +1,10 @@
+## [0.12.29] — 2026-08-16
+
+### Fixed
+
+- **Coder sub-agents (subagent role=coder) get verify + advisor** — CLI parity with the plugin's escalate diagnosis: the system prompt names both tools but the tool table only gave them to eng-coder; a coder sub-agent hit unknown-tool and self-verified via bash
+- **Cache-audit follow-ups**: OS/cwd reminder injected once per process (was every run); interrupt-resume now re-grounds the time (was stuck on the pre-interrupt time); skills scan sorted deterministically (filesystem-dependent readdir order could byte-change the system prompt with zero content change)
+
 ## [0.12.28] — 2026-08-16
 
 ### Cache-hit-rate fix (user-reported low hit rate on session start)
