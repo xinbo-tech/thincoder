@@ -240,7 +240,9 @@ export function normalizeToolPairing(messages) {
       rest.push(m)
     }
   }
-  if (toolById.size === 0) return messages // no tool messages — nothing to enforce
+  if (toolById.size === 0 && !messages.some((m) => m.role === "assistant" && m.tool_calls?.length)) {
+    return messages // no tool messages AND no tool_calls declared — nothing to enforce
+  }
   const out = []
   for (const m of rest) {
     out.push(m)
