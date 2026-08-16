@@ -1,3 +1,14 @@
+## [0.12.28] — 2026-08-16
+
+### Cache-hit-rate fix (user-reported low hit rate on session start)
+
+- **Machine line (contextHistory) now keeps transient messages on persist** — every CLI invocation is a new process; the previous reals-only reload plus fresh re-injections (git/OS/outline/doc/memory/time) diverged at index ~1 → whole-prefix cache miss on the first request of every session. Resume now rebuilds a byte-identical machine line; new injections append at the tail
+- Time reminder moved to the END of the message sequence (after the user input) — aligned with the plugin fix, robust against any future machine-line disk reload
+
+### Fixed
+
+- normalizeToolPairing early-return hole: toolById empty must not skip placeholder filling when assistant tool_calls are declared (dangling tool_calls 400 otherwise)
+
 ## [0.12.27] — 2026-08-15
 
 - Time injection moved OUT of the system prompt into a transient per-run user reminder — system prompts fully static again (prefix caches hit across hours, not minutes); local time + IANA timezone at second precision; now covers ALL agent depths (subagents previously had no time grounding at all)
