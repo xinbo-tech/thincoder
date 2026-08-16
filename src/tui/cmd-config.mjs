@@ -3,7 +3,7 @@ import { ansi, C } from "./ansi.mjs"
 
 /** /config command: view and set agent/embedding/proxy config. */
 export async function handleConfigCommand(ctx, args = []) {
-  const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey } = ctx
+  const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
   const { configPath } = await import("../config.mjs")
   const ac = agent.config?.agent ?? {}
   const ec = agent.config?.embedding ?? {}
@@ -163,13 +163,12 @@ export async function handleConfigCommand(ctx, args = []) {
       if (!c) return // Esc → 返回主菜单
       if (c.action === "add") {
         if (cm.length >= 5) { pushLine("At most 5 consult models", C.error); continue }
-        const pEntries = agent.providers.map((p) => ({ type: "item", text: `${p.name.padEnd(14)} ${p.model}`, action: "pick", provider: p.name, model: p.model }))
-        const p = await showPicker("Add consult model — pick provider", pEntries, {})
-        if (!p) continue
-        const modelIn = await askQuestion(`Model for ${p.provider} (default: ${p.model}):`)
-        const mname = modelIn?.trim() || p.model
+        // BOTH provider and model are pickers (discipline: options, never free-text) —
+        // pickModelForSlot reuses /model's provider list + async-fetched model list.
+        const picked = await pickModelForSlot()
+        if (!picked) continue
         const effort = await pickEffort(null)
-        const entry = { provider: p.provider, model: mname }
+        const entry = { provider: picked.provider, model: picked.model }
         if (effort && effort !== "none") entry.effort = effort
         const next = [...cm, entry]
         await saveProxy((raw) => { raw.agent ??= {}; raw.agent.consultModels = next })
