@@ -193,7 +193,13 @@ export async function prepareRun(agent, input, callbacks, {
   } : subagentTool
 
   const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool]
-    : agent._role === "eng-coder" ? [advisorTool, verifyTool] : []
+    // Write-permission coder sub-agents (subagent role="coder" + escalate surgeon): the
+    // system prompt names verify (system.md) and advisor (discipline.md) — without them a
+    // surgeon hit "unknown tool" and fell back to bash node --check / npm test to
+    // self-verify (2026-08-16 deepseek surgeon diagnosis; plugin parity).
+    : agent._role === "eng-coder" ? [advisorTool, verifyTool]
+    : agent._role === "coder" ? [verifyTool, advisorTool]
+    : []
   const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly]
   const toolSchemas = tools.map(toOpenAISchema)
   const toolByName = new Map(tools.map((t) => [t.name, t]))
