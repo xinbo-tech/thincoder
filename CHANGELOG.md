@@ -1,3 +1,16 @@
+## [0.12.30] — 2026-08-16
+
+### New: 会诊 (consult) + 飞刀 (escalate) — full VS Code plugin parity
+
+- `consult_start` / `consult_check` / `consult_stop`: several configured models run as parallel independent read-only consultants — each with its own TUI activity card, `main_history` access to the failure trail, arrival-order reply queue, stopped/terminated settle states, wall-clock watchdog
+- `escalate`: fly in a stronger model for one expert implementation run — coder role, full write path, permission gate, mutations merge into the parent's verify/advisor guards, turn-cap reads as partial work, timeout reads as timeout
+- Config: `agent.consultModels` ([{ provider, model, effort? }], up to 5, validated), `agent.consultTurns` (40), `agent.consultTimeoutMs` (600000)
+- **/config now manages the consult pool**: list / add / remove models; per-model reasoning-effort is an OPTION picker (none/min/low/medium/high/max); consultTurns + consultTimeoutMs (entered in minutes)
+
+### Discipline
+
+- UI rule added: fixed-choice values must be OPTIONS (picker/menu), never free-text — free-text only for genuinely open-ended input
+
 ## [0.12.29] — 2026-08-16
 
 ### Fixed
