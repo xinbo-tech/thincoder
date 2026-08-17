@@ -56,7 +56,6 @@ Usage:
   thincoder -v, --version   Print version
 
 Config: ~/.thincoder/config.json (providers[] + activeProvider; manage via /provider, /model in TUI)
-Env:    THINCODER_API_KEY, THINCODER_BASE_URL, THINCODER_MODEL, THINCODER_ACTIVE_PROVIDER
 `
 
 /** Unified message when no API key is configured */

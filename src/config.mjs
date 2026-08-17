@@ -193,10 +193,8 @@ export function normalizeProxy(proxy) {
 
 /**
  * Load configuration.
- * Env var priority: THINCODER_ACTIVE_PROVIDER > config file activeProvider
- * THINCODER_BASE_URL / THINCODER_MODEL override the active provider's non-key fields
- * THINCODER_ACTIVE_MODEL overrides the active model (wins over THINCODER_MODEL — see loadConfig)
- * API keys come exclusively from config.json (env vars are NOT a key source).
+ * No env-var overrides — config.json is the single source of truth
+ * (API keys, baseURL, model, activeProvider all come from the file).
  */
 /** Keep only { header: "string value" } pairs from a provider's headers field — anything
  *  else (null, arrays, nested objects) is dropped so it can never reach a fetch call.
@@ -270,26 +268,15 @@ export function loadConfig() {
   // 保证 agent.config.proxy 永远是规范形态或 undefined
   merged.proxy = normalizeProxy(merged.proxy)
 
-  // Env var overrides activeProvider
-  if (process.env.THINCODER_ACTIVE_PROVIDER) {
-    merged.activeProvider = process.env.THINCODER_ACTIVE_PROVIDER
-  }
-
   // Get the currently active provider
   const active = findProvider(merged.providers, merged.activeProvider)
 
   // Build runtime provider object (for agent.provider usage)
   const runtimeProvider = { ...active }
 
-  // Env vars override current active provider's non-key fields (model/baseURL only —
-  // API keys come exclusively from config.json; env vars are not a key source)
-  if (process.env.THINCODER_BASE_URL) runtimeProvider.baseURL = process.env.THINCODER_BASE_URL
-  if (process.env.THINCODER_MODEL) runtimeProvider.model = process.env.THINCODER_MODEL
-
-  // activeModel overrides provider's default model (env > config)
-  const activeModel = process.env.THINCODER_ACTIVE_MODEL || merged.activeModel
-  if (activeModel) runtimeProvider.model = activeModel
-  merged.activeModel = activeModel || null  // normalize for agent.activeModel
+  // activeModel overrides provider's default model (config only)
+  if (merged.activeModel) runtimeProvider.model = merged.activeModel
+  merged.activeModel = merged.activeModel || null  // normalize for agent.activeModel
 
   // Compaction threshold follows the model
   const explicitThreshold = config.agent?.compactThreshold
