@@ -143,8 +143,15 @@ export async function handleConfigCommand(ctx, args = []) {
   if (sub) { pushLine("Usage: /config [embedkey]", C.error); return }
 
   /** 会诊/飞刀候选池子菜单：列出 / 添加 / 编辑 effort / 删除 consultModels 条目。 */
-  async function pickEffort(current) {
-    const levels = ["none", "min", "low", "medium", "high", "max"]
+  async function pickEffort(current, model) {
+    const { specForModel } = await import("../config.mjs")
+    const enumList = model ? specForModel(model).reasoningEffortEnum : null
+    // The model's reasoning-effort enum is HETEROGENEOUS across providers (deepseek:
+    // low/high/max; qwen3.8-max: xhigh/medium/low; kimi: 7 levels). A fixed
+    // min/low/medium/high/max list made the user pick values that the runtime then
+    // silently dropped as out-of-enum (2026-08-17 audit). Show the model's real enum.
+    if (!enumList || enumList.length === 0) return null // model has no effort — skip
+    const levels = ["none", ...enumList] // "none" = clear the effort
     const entries = levels.map((l) => ({ type: "item", text: l === current ? `${l}  ← current` : l, action: l }))
     const c = await showPicker("Reasoning effort", entries, { defaultIndex: Math.max(0, levels.indexOf(current ?? "none")) })
     return c ? c.action : null // Esc → null (keep unchanged)
@@ -167,7 +174,7 @@ export async function handleConfigCommand(ctx, args = []) {
         // pickModelForSlot reuses /model's provider list + async-fetched model list.
         const picked = await pickModelForSlot()
         if (!picked) continue
-        const effort = await pickEffort(null)
+        const effort = await pickEffort(null, picked.model)
         const entry = { provider: picked.provider, model: picked.model }
         if (effort && effort !== "none") entry.effort = effort
         const next = [...cm, entry]
@@ -192,7 +199,7 @@ export async function handleConfigCommand(ctx, args = []) {
           pushLabel("❯ Config", ansi.bold + C.tool)
           pushLine(`Removed ${tag}`, C.tool)
         } else if (s.action === "effort") {
-          const effort = await pickEffort(m.effort)
+          const effort = await pickEffort(m.effort, m.model)
           if (effort === null) { continue } // Esc 保持
           const next = cm.map((x, i) => {
             if (i !== c.index) return x
