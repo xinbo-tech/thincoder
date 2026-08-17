@@ -297,6 +297,28 @@ export function deleteSlot(cwd, slot) {
   return true
 }
 
+/** Rename a slot: update the slot file's title + the manifest metadata (shared with VS Code). */
+export function renameSlot(cwd, slot, title) {
+  const n = Number(slot)
+  if (!Number.isInteger(n) || n < 1) return false
+  const p = slotPath(cwd, n)
+  if (!existsSync(p)) return false
+  let data
+  try {
+    data = JSON.parse(readFileSync(p, "utf8"))
+  } catch {
+    return false
+  }
+  data.title = title
+  writeSessionFile(p, data)
+  const m = loadManifest(cwd)
+  if (m.slots[n]) {
+    m.slots[n] = slotDigest(data)
+    saveManifest(cwd, m)
+  }
+  return true
+}
+
 
 // ========== legacy transient prefix cleanup ==========
 

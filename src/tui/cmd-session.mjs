@@ -1,6 +1,29 @@
-import { listSlots, switchToSlot, applySession } from "../session.mjs"
+import { listSlots, switchToSlot, applySession, renameSlot, activeSlot } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
+
+/** /rename <title> — rename the ACTIVE session (slot file + manifest, shared with VS Code). */
+export async function handleRenameCommand(ctx, args) {
+  const { agent, pushLine, pushLabel, render } = ctx
+  const slot = activeSlot(agent.cwd)
+  const current = agent.title || "(untitled)"
+  const title = args.join(" ").trim()
+  if (!title) {
+    pushLine(`Usage: /rename <new title>  (current: ${current})`, C.warn)
+    return
+  }
+  if (title.length > 80) {
+    pushLine(`Title too long (max 80 chars)`, C.error)
+    return
+  }
+  if (!renameSlot(agent.cwd, slot, title)) {
+    pushLine(`Rename failed — active session (slot ${slot}) not found`, C.error)
+    return
+  }
+  agent.title = title
+  pushLabel(`── Session renamed: "${title}" ──`, C.warn)
+  render()
+}
 
 /** /session command: list/switch session slots.
  *  ctx: { agent, state, showPicker, pushLine, pushLabel, render } */
@@ -17,7 +40,7 @@ export async function handleSessionCommand(ctx) {
   }
   const truncate = (s, n) => s.length <= n ? s : s.slice(0, n - 1) + "…"
   const entries = [
-    { type: "header", text: `Sessions (● = active, ↑↓ select, Enter switch, Esc cancel)` },
+    { type: "header", text: `Sessions (● = active, ↑↓ select, Enter switch, Esc cancel; /rename <title> renames the active one)` },
     ...slots.map((s) => {
       const label = s.title || (s.firstMessage ? `"${truncate(s.firstMessage, 40)}"` : "(empty)")
       const turns = s.turnCount > 0 ? `${s.turnCount} turns` : "0 turns"

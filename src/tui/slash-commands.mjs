@@ -13,7 +13,7 @@ import { specForModel } from "../config.mjs"
 import { handleClearCommand } from "./cmd-clear.mjs"
 import { handleNewCommand } from "./cmd-new.mjs"
 import { handleExitCommand } from "./cmd-exit.mjs"
-import { handleSessionCommand } from "./cmd-session.mjs"
+import { handleSessionCommand, handleRenameCommand } from "./cmd-session.mjs"
 import { handleReindexCommand } from "./cmd-reindex.mjs"
 import { handleInitCommand } from "./cmd-init.mjs"
 import { handleRestoreCommand } from "./cmd-restore.mjs"
@@ -49,6 +49,7 @@ export const SLASH_COMMANDS = [
   { name: "/config", group: "System", desc: "agent config (embedding, proxy, turns, threshold, consult pool)" },
   { name: "/new", group: "Session", desc: "new session (old one archived to slot)" },
   { name: "/session", group: "Session", desc: "list/switch archived sessions" },
+  { name: "/rename", group: "Session", desc: "rename the active session" },
   { name: "/clear", group: "Session", desc: "clear screen" },
   { name: "/fold", group: "Session", desc: "toggle result folding on/off" },
   { name: "/undo", group: "Session", desc: "undo recent file modifications" },
@@ -69,6 +70,7 @@ export const SLASH_ALIASES = { "/h": "/help", "/x": "/exit", "/m": "/model", "/p
 export const HANDLERS = {
   "/clear": handleClearCommand,
   "/new": handleNewCommand,
+  "/rename": handleRenameCommand,
   "/exit": handleExitCommand,
   "/session": handleSessionCommand,
   "/reindex": handleReindexCommand,

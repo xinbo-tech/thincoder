@@ -235,6 +235,40 @@ test("session: newSession 分配槽位并记录元数据", async () => {
   try { unlinkSync(sessionPath(cwd)) } catch {}
 })
 
+test("session: renameSlot 改标题（槽位文件 + manifest 同步，VS Code 共享）", async () => {
+  const { saveSession, renameSlot, listSlots, loadSession, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-rename-slot-" + Date.now())
+  const agent = {
+    cwd,
+    activeProvider: "kimi",
+    provider: { name: "kimi", model: "kimi-k3" },
+    history: [{ role: "user", content: "帮我写周报" }],
+    tasks: [],
+    _pendingReminders: [],
+    title: "旧标题",
+  }
+  saveSession(agent, [])
+
+  assert.equal(renameSlot(cwd, 1, "新标题"), true)
+  // 槽位文件里的 title 更新
+  const data = loadSession(cwd)
+  assert.equal(data.title, "新标题")
+  // listSlots 的元数据同步更新
+  const slots = listSlots(cwd)
+  assert.equal(slots[0].title, "新标题")
+  // 无效槽位返回 false
+  assert.equal(renameSlot(cwd, 99, "不存在"), false)
+
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+})
+
+
 test("session: listSlots 向后兼容旧格式 manifest（数字时间戳）", async () => {
   const { listSlots, sessionPath } = await import("../src/session.mjs")
   const cwd = join(tmpdir(), "thincoder-old-manifest-" + Date.now())
