@@ -10,6 +10,13 @@
 import { layoutInput, wrapText } from "./render.mjs"
 import { QUESTION_CUSTOM } from "./interaction.mjs"
 
+/** 防御：question options 声明为 string[]，但 LLM 可能误传对象；取 label/text/title 兜底，避免渲染 "[object Object]"。 */
+function optText(opt) {
+  if (typeof opt === "string") return opt
+  return opt?.label ?? opt?.text ?? opt?.title ?? String(opt)
+}
+
+
 const MAX_INPUT_LINES = 5
 const MAX_TASK_LINES = 5
 export const MAX_SUB_LINES = 4
@@ -38,7 +45,7 @@ export function computeLayout(state, { cols, rows }) {
       const sel = q.selected ?? 0
       const start = Math.max(0, Math.min(sel - 2, q.options.length - QWIN))
       boxLines = q.options.slice(start, start + QWIN).map((opt, i) =>
-        (start + i === sel ? "▸ " : "  ") + (opt === QUESTION_CUSTOM ? "✍ Custom answer…" : opt))
+        (start + i === sel ? "▸ " : "  ") + (opt === QUESTION_CUSTOM ? "✍ Custom answer…" : optText(opt)))
     } else {
       boxLines = ["▸ " + (q.answer ?? "")]
     }

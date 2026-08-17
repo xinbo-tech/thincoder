@@ -2,7 +2,7 @@ Ask the user a question and wait for their response. Use when the task is ambigu
 
 Parameters:
 - question (required): The question to ask the user
-- options: Array of single-choice options for the user to pick from (optional)
+- options: Array of single-choice options for the user to pick from (optional). MUST be plain strings, e.g. ["A", "B", "C"] — never objects.
 
 Notes:
 - The agent loop pauses until the user answers
