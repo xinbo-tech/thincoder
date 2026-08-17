@@ -350,6 +350,28 @@ test("config: Kimi For Coding 短 ID \"k3\" 命中 kimi-k3 规格（IK5VGJ）", 
   assert.equal(preset.model, "k3")
 })
 
+test("config: MiMo 预设与规格（按量付费 + Token Plan）", async () => {
+  const { specForModel, PROVIDER_PRESETS } = await import("../src/config.mjs")
+  // 按量付费（sk- keys）
+  const mimo = PROVIDER_PRESETS.mimo
+  assert.ok(mimo, "mimo preset must exist")
+  assert.equal(mimo.baseURL, "https://api.xiaomimimo.com/v1")
+  assert.equal(mimo.model, "mimo-v2.5-pro")
+  // Token Plan（tp- keys，独立端点，与按量付费密钥不通用）
+  const plan = PROVIDER_PRESETS.mimoplan
+  assert.ok(plan, "mimoplan preset must exist")
+  assert.equal(plan.baseURL, "https://token-plan-cn.xiaomimimo.com/v1")
+  assert.equal(plan.model, "mimo-v2.5-pro")
+  // 规格：1M 上下文 / 128K 输出 / 深度思考（thinking.type 默认开）/ 多轮工具调用必须回显推理内容
+  const s = specForModel("mimo-v2.5-pro")
+  assert.equal(s.context, 1_000_000, "mimo-v2.5-pro must get 1M context (not the 128K default)")
+  assert.equal(s.maxOutput, 128_000)
+  assert.equal(s.thinkApi, "type")
+  assert.equal(s.reasoningEcho, "required", "MiMo 多轮回传 reasoning_content 缺失会 400")
+  assert.equal(specForModel("mimo-v2.5").multimodal, true, "mimo-v2.5 is the multimodal variant")
+})
+
+
 test("config: 未知模型名警告一次（不静默降级，防刷屏）", async () => {
   const { specForModel } = await import("../src/config.mjs")
   const warns = []
