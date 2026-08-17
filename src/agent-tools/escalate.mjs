@@ -70,8 +70,8 @@ export const escalateTool = {
     } catch (e) {
       return `Error: ${e.message}`
     }
-    if (!provider?.apiKey?.trim() && !process.env.THINCODER_API_KEY) {
-      return `Error: provider "${pick.provider}" has no API key — set it in config.json (or THINCODER_API_KEY) before flying it in`
+    if (!provider?.apiKey?.trim()) {
+      return `Error: provider "${pick.provider}" has no API key — set it in config.json before flying it in`
     }
     let effortNote = ""
     if (pick.effort) {

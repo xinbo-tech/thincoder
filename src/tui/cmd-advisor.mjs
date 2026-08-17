@@ -174,11 +174,7 @@ async function fetchAdvisorModels(agent) {
   const result = new Map()
   await Promise.all((agent.providers || []).map(async (p) => {
     try {
-      const envKey = { deepseek: "DEEPSEEK_API_KEY", openai: "OPENAI_API_KEY" }[p.name]
-      let apiKey = p.apiKey
-      if (!apiKey && envKey && process.env[envKey]) apiKey = process.env[envKey]
-      if (!apiKey) apiKey = process.env.THINCODER_API_KEY
-      const models = await listModels({ baseURL: p.baseURL, apiKey: apiKey ?? "" }, { signal: AbortSignal.timeout(10000) })
+      const models = await listModels({ baseURL: p.baseURL, apiKey: p.apiKey ?? "" }, { signal: AbortSignal.timeout(10000) })
       result.set(p.name, { models, error: null })
     } catch (err) {
       result.set(p.name, { models: [], error: err.message.slice(0, 40) })
@@ -193,10 +189,7 @@ function buildModelEntries(agent, cfg, cache) {
 
   for (const p of agent.providers || []) {
     const cached = cache.get(p.name)
-    const hasKey = !!(p.apiKey
-      || (p.name === "deepseek" && process.env.DEEPSEEK_API_KEY)
-      || (p.name === "openai" && process.env.OPENAI_API_KEY)
-      || process.env.THINCODER_API_KEY)
+    const hasKey = !!p.apiKey
     const noteParts = [p.baseURL]
     if (!hasKey) noteParts.push("(no key)")
     if (agent.activeProvider === p.name) noteParts.push("← active")

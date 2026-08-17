@@ -194,9 +194,9 @@ export function normalizeProxy(proxy) {
 /**
  * Load configuration.
  * Env var priority: THINCODER_ACTIVE_PROVIDER > config file activeProvider
- * THINCODER_API_KEY / THINCODER_BASE_URL / THINCODER_MODEL override the current active provider's corresponding fields
+ * THINCODER_BASE_URL / THINCODER_MODEL override the active provider's non-key fields
  * THINCODER_ACTIVE_MODEL overrides the active model (wins over THINCODER_MODEL — see loadConfig)
- * Provider-specific key fallbacks (when providers[] lacks a key): DEEPSEEK_API_KEY / OPENAI_API_KEY
+ * API keys come exclusively from config.json (env vars are NOT a key source).
  */
 /** Keep only { header: "string value" } pairs from a provider's headers field — anything
  *  else (null, arrays, nested objects) is dropped so it can never reach a fetch call.
@@ -281,8 +281,8 @@ export function loadConfig() {
   // Build runtime provider object (for agent.provider usage)
   const runtimeProvider = { ...active }
 
-  // Env vars override current active provider's fields
-  if (process.env.THINCODER_API_KEY) runtimeProvider.apiKey = process.env.THINCODER_API_KEY
+  // Env vars override current active provider's non-key fields (model/baseURL only —
+  // API keys come exclusively from config.json; env vars are not a key source)
   if (process.env.THINCODER_BASE_URL) runtimeProvider.baseURL = process.env.THINCODER_BASE_URL
   if (process.env.THINCODER_MODEL) runtimeProvider.model = process.env.THINCODER_MODEL
 
@@ -290,21 +290,6 @@ export function loadConfig() {
   const activeModel = process.env.THINCODER_ACTIVE_MODEL || merged.activeModel
   if (activeModel) runtimeProvider.model = activeModel
   merged.activeModel = activeModel || null  // normalize for agent.activeModel
-
-  // apiKey also falls back to env vars (when providers doesn't include a key)
-  // Provider-specific env vars only apply to the matching provider name, preventing keys from leaking to wrong endpoints
-  // NOTE: only deepseek/openai have provider-specific fallbacks by design — the other presets
-  // intentionally rely on THINCODER_API_KEY or keys stored in config.json (no silent env pickup).
-  if (!runtimeProvider.apiKey?.trim()) {
-    const envMap = { deepseek: "DEEPSEEK_API_KEY", openai: "OPENAI_API_KEY" }
-    const keyVar = envMap[merged.activeProvider]
-    if (keyVar && process.env[keyVar]) runtimeProvider.apiKey = process.env[keyVar]
-  }
-
-  // embedding apiKey
-  if (!merged.embedding.apiKey) {
-    merged.embedding.apiKey = process.env.SILICONFLOW_API_KEY || process.env.THINCODER_EMBEDDING_API_KEY
-  }
 
   // Compaction threshold follows the model
   const explicitThreshold = config.agent?.compactThreshold

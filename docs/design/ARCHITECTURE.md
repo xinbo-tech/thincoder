@@ -234,7 +234,7 @@ export function createAgent({ provider, tools, config, cwd, memory, overlay, ...
 | `verify` | 完成前自检：git diff --stat + task 清单 + 自检 checklist | 仅顶层 |
 | `subagent` / `skill` | 子 agent（explore/plan/coder）与项目技能加载 | 仅顶层（防递归） |
 
-**子 agent 模型指定**：`subagent` 工具 `model` 参数可覆盖子 agent 的 provider/model——`"provider:model"`（指定 provider 与模型，如 `deepseek:deepseek-v4-flash`）、provider 名（用其配置模型）、或纯模型名（父 provider 换模型）。**配置按类型分层**：`config.agent.subagentModels[role]`（explore/plan/coder/eng-coder 各自独立，如 explore 用便宜模型、coder 用好模型）+ `config.agent.subagentModel`（全局兜底，向后兼容）。优先级：**工具参数 > 类型级 > 全局 > 继承父 provider**（resolveChildProvider 单一解析源，仅收最终字符串）。API key 按 config 回退序（provider.apiKey → THINCODER_API_KEY → provider 专属 env）。典型用法：主会话用 glm-5.2 讨论定方案，explore/coder 外包给便宜模型、plan 用好模型推敲设计。
+**子 agent 模型指定**：`subagent` 工具 `model` 参数可覆盖子 agent 的 provider/model——`"provider:model"`（指定 provider 与模型，如 `deepseek:deepseek-v4-flash`）、provider 名（用其配置模型）、或纯模型名（父 provider 换模型）。**配置按类型分层**：`config.agent.subagentModels[role]`（explore/plan/coder/eng-coder 各自独立，如 explore 用便宜模型、coder 用好模型）+ `config.agent.subagentModel`（全局兜底，向后兼容）。优先级：**工具参数 > 类型级 > 全局 > 继承父 provider**（resolveChildProvider 单一解析源，仅收最终字符串）。API key 仅从 config.json 的 provider.apiKey 读取（不支持环境变量）。典型用法：主会话用 glm-5.2 讨论定方案，explore/coder 外包给便宜模型、plan 用好模型推敲设计。
 
 **子 agent 权限模型**：explore/plan 强制只读（权限回调恒 false）；coder/默认角色在 AUTO 模式直接放行，**手动模式把权限请求排队透传到父 agent 的审批 UI**（工具名带 `coder/` 前缀，如 `coder/bash`）——人在回路，子 agent 的写操作由用户逐条批准，拒绝后子 agent 按 overlay 设计改为交报告。并行子 agent 的请求经 `parent._permQueue` 串行化，避免两个审批同时弹出互相覆盖（question 工具的教训）。
 
@@ -394,7 +394,7 @@ export function specForModel(model)  // 查模型规格（contextWindow / reason
 }
 ```
 
-apiKey 也可走环境变量（`THINCODER_API_KEY` 或 provider 惯用变量），配置文件不明文存储时可留空。
+apiKey 仅从 config.json 读取（不支持环境变量配置 API key）。
 
 ### tui/ — 裸 ANSI 终端 UI
 > 详细设计见 [`TUI.md`](TUI.md)。

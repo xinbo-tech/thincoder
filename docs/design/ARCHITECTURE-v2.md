@@ -129,7 +129,7 @@ thincoder distill           # 从当前会话提取候选条目，逐条 y/n 后
 {
   "embedding": {
     "baseURL": "https://api.siliconflow.cn/v1",
-    "apiKey": "...",              // 或 SILICONFLOW_API_KEY
+    "apiKey": "...",
     "model": "BAAI/bge-m3"
   },
   "memory": {

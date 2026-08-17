@@ -121,13 +121,9 @@ export function createPickers(ctx) {
     return e.action === "switch" ? `switch:${e.provider}:${e.model}` : `action:${e.action}`
   }
 
-  /** Get API key for a provider (from config or env vars) */
+  /** Get API key for a provider (config.json only — env vars are not a key source) */
   function getApiKey(providerName, providerConfig) {
-    const envKey = { deepseek: "DEEPSEEK_API_KEY", openai: "OPENAI_API_KEY" }[providerName]
-    let apiKey = providerConfig.apiKey
-    if (!apiKey && envKey && process.env[envKey]) apiKey = process.env[envKey]
-    if (!apiKey) apiKey = process.env.THINCODER_API_KEY
-    return apiKey
+    return providerConfig.apiKey
   }
 
   /** Level 1: Show provider list. Selecting a provider opens Level 2 (model list). */
@@ -296,11 +292,6 @@ export function createPickers(ctx) {
     // If selecting the provider's default model, clear activeModel; otherwise set it
     agent.activeModel = item.model !== providerDefault ? item.model : null
     agent.provider = { ...target }
-    if (!agent.provider.apiKey) {
-      const envKey = { deepseek: "DEEPSEEK_API_KEY", openai: "OPENAI_API_KEY" }[item.provider]
-      if (envKey && process.env[envKey]) agent.provider.apiKey = process.env[envKey]
-    }
-    if (!agent.provider.apiKey) agent.provider.apiKey = process.env.THINCODER_API_KEY
     if (agent.config?.agent?.compactThresholdAuto) {
       const { resolveCompactThreshold } = await import("../config.mjs")
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, item.model).value

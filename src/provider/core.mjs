@@ -19,7 +19,7 @@ const FETCH_TIMEOUT_MS = 600_000
 /** Create a validated provider config object from raw config */
 export function createProvider(config) {
   if (!config?.baseURL) throw new Error("provider config: baseURL is required — configure providers in ~/.thincoder/config.json")
-  if (!config?.apiKey) throw new Error("provider config: apiKey is required — set THINCODER_API_KEY env or configure in ~/.thincoder/config.json")
+  if (!config?.apiKey) throw new Error("provider config: apiKey is required — configure it in ~/.thincoder/config.json")
   if (!config?.model) throw new Error("provider config: model is required — configure in ~/.thincoder/config.json")
   return {
     baseURL: config.baseURL.replace(/\/+$/, ""),

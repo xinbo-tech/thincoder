@@ -96,7 +96,7 @@ Running from source: replace `thincoder` above with `node bin/thincoder.mjs`.
 
 Slash commands in the TUI: `/help`, `/model` (two-level picker: first select provider, then model; `/model <provider>:<name>` switches directly), `/submodel` (subagent models per type — picker over global + explore/plan/coder/eng-coder slots, or `/submodel <type> <provider:model>` directly), `/shell` (platform-aware picker of available shells — e.g. `/shell` → pick Git Bash/pwsh, or `/shell "C:\Program Files\Git\bin\bash.exe"`, `/shell reset`; fixes win11 cmd encoding/command issues), `/provider` (add/remove providers, set keys, custom endpoints), `/think` (thinking mode toggle and reasoning effort), `/config` (view config, `/config embedkey` for the embedding key, `/config set` for parameters), `/session` (list/switch archived sessions), `/reindex` (rebuild the index), `/extract` (extract knowledge from the current session), `/restore` (restore checkpoint), `/clear`, `/exit`. High-frequency commands support abbreviations: `/h` `/x` `/m` `/p` `/t` `/c` `/n`. Typing `/` shows live matching hints in the status bar. Model picker supports search/filter — type to narrow down results.
 
-Environment variables: `THINCODER_API_KEY` (or `DEEPSEEK_API_KEY` / `OPENAI_API_KEY`), `THINCODER_BASE_URL`, `THINCODER_MODEL`, `SILICONFLOW_API_KEY`.
+Environment variables: `THINCODER_BASE_URL`, `THINCODER_MODEL` (API keys are config-file only — env vars are NOT a key source).
 
 > **Kimi note**: Kimi has **two separate platforms with non-interchangeable API keys** — Moonshot (`https://api.moonshot.cn/v1`, keys `sk-...`, platform.moonshot.cn) and **Kimi For Coding** (`https://api.kimi.com/coding/v1`, keys `sk-kimi-...`, platform.kimi.com, model ID `k3`). Use the `kimi` preset for Moonshot and `kimi-code` for Kimi For Coding — putting one platform's key on the other's endpoint fails with 401 (a hint is appended when the key/baseURL look mismatched).
 
@@ -125,7 +125,7 @@ Environment variables: `THINCODER_API_KEY` (or `DEEPSEEK_API_KEY` / `OPENAI_API_
   "embedding": {
     // optional: without it, retrieval is pure FTS
     "baseURL": "https://api.siliconflow.cn/v1",
-    "apiKey": "sk-...", // or SILICONFLOW_API_KEY
+    "apiKey": "sk-...",
     "model": "BAAI/bge-m3",
   },
   "agent": {

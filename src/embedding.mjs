@@ -12,7 +12,7 @@ const BATCH_SIZE = 32 // max texts per request (within SiliconFlow limits)
 /** Create an embedder. config: { baseURL, apiKey, model } */
 export function createEmbedder(config) {
   if (!config?.baseURL) throw new Error("embedding config: baseURL is required — configure embedding.baseURL in ~/.thincoder/config.json")
-  if (!config?.apiKey) throw new Error("embedding config: apiKey is required — set SILICONFLOW_API_KEY env or configure embedding.apiKey in ~/.thincoder/config.json")
+  if (!config?.apiKey) throw new Error("embedding config: apiKey is required — configure embedding.apiKey in ~/.thincoder/config.json")
   if (!config?.model) throw new Error("embedding config: model is required — configure embedding.model in ~/.thincoder/config.json")
   return {
     baseURL: config.baseURL.replace(/\/+$/, ""),

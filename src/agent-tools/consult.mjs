@@ -100,10 +100,10 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // Provider resolution: consultModels entries are { provider, model, effort? } — resolve
     // via the subagent's provider resolver ("provider:model" handles cross-provider picks).
     const provider = resolveChildProvider(agent, `${m.provider}:${m.model}`)
-    if (!provider?.apiKey?.trim() && !process.env.THINCODER_API_KEY) {
+    if (!provider?.apiKey?.trim()) {
       // resolveChildProvider may still lack a key; fail loudly like the plugin precheck
       // (settleChild turns this message into a clear failed reply instead of a raw 401)
-      throw new Error(`consult model ${label} has no API key — check providers[${m.provider}].apiKey or THINCODER_API_KEY`)
+      throw new Error(`consult model ${label} has no API key — check providers[${m.provider}].apiKey in config.json`)
     }
     // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
     // value makes provider/core throw on EVERY chat call (candidate dies on takeoff).
