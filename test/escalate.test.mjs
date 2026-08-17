@@ -195,7 +195,7 @@ describe("escalate (飞刀, CLI)", () => {
     assert.ok(String(r).includes("Partial output"))
   })
 
-  it("resume cap: after 2 continues a third wall forces the partial-work return", async () => {
+  it("UNLIMITED continues: every wall prompts; the user's Stop ends it", async () => {
     const agent = makeAgent(CONSULTS)
     const { ContinueError } = await import("../src/agent.mjs")
     const resumes = []
@@ -205,10 +205,12 @@ describe("escalate (飞刀, CLI)", () => {
     }
     let asks = 0
     const ctx = makeCtx(agent, runner)
-    ctx.onPermissionRequest = async () => { asks++; return true }
+    // Never-ending walls: the user keeps choosing Continue — resumes are unlimited.
+    // The 4th prompt answers Stop (the user's escape hatch), so the test terminates.
+    ctx.onPermissionRequest = async () => { asks++; return asks < 4 }
     const r = await escalateTool.execute({ task: "x" }, ctx)
-    assert.deepEqual(resumes, [false, true, true], "initial run + 2 resumed runs, then the cap bites")
-    assert.equal(asks, 2, "asked twice — the third wall is NOT offered to the user")
+    assert.deepEqual(resumes, [false, true, true, true], "initial run + 3 resumed runs — no MAX_RESUMES cap")
+    assert.equal(asks, 4, "every wall prompts (4 asks)")
     assert.ok(String(r).includes("stopped: turn cap reached"))
   })
 

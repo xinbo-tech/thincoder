@@ -11,7 +11,7 @@
  * CONSULT_BASE overlay }); activity streams to the parent TUI via the relay
  * prefix `consult#<id>/` (same channel subagent uses), not onSubagent/onToolPanel.
  */
-import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
+import { createAgent, runAgent, readonlyToolNames, ContinueError } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
 import { specForModel } from "../config.mjs"
 
@@ -91,10 +91,15 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   const agent = ctx.agent
   const timeoutMs = agent?.config?.agent?.consultTimeoutMs ?? 600_000
   let timedOut = false
-  const watchdog = setTimeout(() => {
-    timedOut = true
-    try { ctrl.abort() } catch { /* already settled */ }
-  }, timeoutMs)
+  const armWatchdog = () => {
+    const t = setTimeout(() => {
+      timedOut = true
+      try { ctrl.abort() } catch { /* already settled */ }
+    }, timeoutMs)
+    t.unref?.()
+    return t
+  }
+  let watchdog = armWatchdog()
   const label = consultLabel(m)
   try {
     // Provider resolution: consultModels entries are { provider, model, effort? } — resolve
@@ -148,16 +153,50 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       onToolCall: ctx.callbacks?.onToolCall ? (name, args) => ctx.callbacks.onToolCall(`${relayPrefix}${name}`, args) : null,
     }
 
+    // Turn-cap continue loop (TURN-CAP-CONTINUE.md): hitting the cap asks the user via
+    // the SAME y/n panel the main agent uses (ctx.onPermissionRequest "continue") —
+    // unlimited continues, each with a fresh turn budget AND a re-armed wall-clock
+    // watchdog (a continue is a fresh budget, the clock restarts too). Parallel
+    // consultants serialize their prompts through a session-level queue. Declined /
+    // headless → failed reply (partial diagnosis).
     const runner = ctx.runAgent ?? runAgent
-    const result = await runner(child, "# Problem\n" + problem, childCallbacks, {
-      depth: 1,
-      maxTurns: agent?.config?.agent?.consultTurns ?? 40,
-      signal: ctrl.signal,
-    })
-    settleChild(session, id, label, true, String(result ?? ""))
+    for (let resume = false; ; resume = true) {
+      try {
+        const result = await runner(child, "# Problem\n" + problem, childCallbacks, {
+          depth: 1,
+          maxTurns: agent?.config?.agent?.consultTurns ?? 40,
+          signal: ctrl.signal,
+          resume,
+        })
+        settleChild(session, id, label, true, String(result ?? ""))
+        return
+      } catch (e) {
+        if (e instanceof ContinueError) {
+          let go = false
+          if (ctx.onPermissionRequest) {
+            const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: label })
+            session.continueQueue = (session.continueQueue ?? Promise.resolve()).then(ask, ask)
+            go = await session.continueQueue
+          }
+          if (go) {
+            clearTimeout(watchdog)
+            timedOut = false // fresh budget → fresh clock
+            watchdog = armWatchdog()
+            continue
+          }
+          settleChild(session, id, label, false, `turn cap reached (${e.turn} turns) — stopped, diagnosis may be partial`)
+          return
+        }
+        const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
+        settleChild(session, id, label, false, note)
+        return
+      }
+    }
   } catch (e) {
-    const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
-    settleChild(session, id, label, false, note)
+    // Errors BEFORE the runner (provider resolution, createAgent) or a throwing
+    // continue-prompt settle as failed replies — the runner's own errors are already
+    // handled inside the loop above.
+    settleChild(session, id, label, false, e?.message ?? String(e))
   } finally {
     clearTimeout(watchdog)
   }

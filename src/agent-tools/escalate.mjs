@@ -135,9 +135,8 @@ export const escalateTool = {
       // resumed run passes resume:true, so runAgent does NOT re-inject the task text
       // (setup.mjs skips input on resume) and keeps the child's history + mutation
       // bookkeeping, with a fresh maxTurns budget per run. No permission handler
-      // (headless) or a declined prompt falls through to the partial-work return;
-      // MAX_RESUMES caps continues so a stuck child cannot loop forever.
-      const MAX_RESUMES = 2
+      // (headless) or a declined prompt falls through to the partial-work return.
+      // Continues are UNLIMITED — the user can decline at any prompt.
       for (let resumes = 0; ; resumes++) {
         try {
           const report = await runner(child, task, {
@@ -156,7 +155,7 @@ export const escalateTool = {
           const msg = e?.message ?? String(e)
           if (ctx.signal?.aborted || e?.name === "AbortError") throw e
           if (e instanceof ContinueError) {
-            if (resumes < MAX_RESUMES && ctx.onPermissionRequest) {
+            if (ctx.onPermissionRequest) {
               const go = await ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
               if (go) continue // fresh maxTurns budget; task NOT re-injected (resume:true)
             }

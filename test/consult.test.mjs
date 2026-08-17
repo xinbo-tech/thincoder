@@ -168,6 +168,54 @@ describe("consult mechanism (CLI)", () => {
     assert.equal(r.stopped, true)
   })
 
+  it("turn-cap continue: consultant wall → user Continue → resumes with its own history", async () => {
+    const agent = makeAgent([MODELS[0]])
+    const { ContinueError } = await import("../src/agent.mjs")
+    const seen = []
+    const runner = async (childAgent, input, callbacks, opts) => {
+      seen.push({ child: childAgent, resume: opts?.resume ?? false })
+      if (seen.length === 1) throw new ContinueError(40)
+      return "diagnosis after resume"
+    }
+    const asks = []
+    const ctx = makeCtx(agent, runner)
+    ctx.onPermissionRequest = async (name, args) => { asks.push([name, args]); return true }
+    await consultStartTool.execute({ problem: "stuck" }, ctx)
+    const replies = []
+    for (;;) {
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, makeCtx(agent, runner)))
+      if (r.reply) replies.push(r)
+      if (r.done) break
+      await sleep(5)
+    }
+    assert.equal(seen.length, 2, "wall then resume")
+    assert.equal(seen[1].resume, true, "second run is a resume")
+    assert.equal(seen[1].child, seen[0].child, "same child agent — history preserved")
+    assert.ok(replies.some((x) => x.reply.includes("diagnosis after resume")), "resumed consultant's reply lands")
+    assert.deepEqual(asks, [["continue", { turns: 40, agent: "deepseek:m-a" }]], "continue asked once via the permission channel")
+    await cleanupConsultSessions(agent)
+  })
+
+  it("turn-cap continue: user declines → failed reply (no resume)", async () => {
+    const agent = makeAgent([MODELS[0]])
+    const { ContinueError } = await import("../src/agent.mjs")
+    let calls = 0
+    const runner = async () => { calls++; throw new ContinueError(40) }
+    const ctx = makeCtx(agent, runner)
+    ctx.onPermissionRequest = async () => false
+    await consultStartTool.execute({ problem: "stuck" }, ctx)
+    const replies = []
+    for (;;) {
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, makeCtx(agent, runner)))
+      if (r.reply) replies.push(r)
+      if (r.done) break
+      await sleep(5)
+    }
+    assert.equal(calls, 1, "declined → no resume")
+    assert.ok(replies.some((x) => x.failedReply === true && /turn cap reached/.test(x.reply)), "failed reply names the cap")
+    await cleanupConsultSessions(agent)
+  })
+
   it("main_history exposes the parent's recent history with a byte budget", async () => {
     const agent = makeAgent(MODELS)
     agent.history = Array.from({ length: 30 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `msg ${i}` }))

@@ -89,3 +89,89 @@ test("buildChildRunOpts: no parent signal → null (child runs unbounded by inte
   assert.equal(opts.signal, null)
 })
 
+// ─── turn-cap continue (TURN-CAP-CONTINUE.md): every wall prompts, unlimited ───
+
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { createServer } from "node:http"
+
+const noopRead = { name: "read", description: "read a file", parameters: { type: "object", properties: {} }, readonly: true, execute: async () => "ok" }
+
+/** Fake SSE LLM: the first `walls` calls demand the read tool (loop), then it answers. */
+function wallServer(walls) {
+  const calls = { n: 0 }
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      calls.n++
+      const toolFrame = { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "t1", function: { name: "read", arguments: JSON.stringify({ path: "x" }) } }] } }] }
+      const finishToolFrame = { choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] }
+      const stopFrame = { choices: [{ index: 0, delta: { content: "child done " + "x".repeat(220) } }] }
+      const finishStopFrame = { choices: [{ index: 0, delta: {}, finish_reason: "stop" }] }
+      const frames = calls.n <= walls
+        ? `data: ${JSON.stringify(toolFrame)}\n\ndata: ${JSON.stringify(finishToolFrame)}\n\n`
+        : `data: ${JSON.stringify(stopFrame)}\n\ndata: ${JSON.stringify(finishStopFrame)}\n\n`
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end(frames + "data: [DONE]\n\n")
+    })
+  })
+  return { server, calls }
+}
+
+test("subagent tool: turn-cap walls prompt Continue — resume completes with fresh budget", async () => {
+  const { server, calls } = wallServer(3)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sub-"))
+  try {
+    const { createAgent } = await import("../src/agent.mjs")
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-pro" },
+      tools: [noopRead],
+      config: { agent: { subagentTurns: 3 } },
+      cwd,
+    })
+    const asks = []
+    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, {
+      agent: parent, cwd, callbacks: {},
+      onPermissionRequest: async (name, args) => { asks.push([name, args]); return true },
+    }))
+    assert.equal(calls.n, 4, "3 loop calls hit the cap, the resumed run finished on the 4th")
+    assert.deepEqual(asks, [["continue", { turns: 3, agent: "coder#1" }]], "continue asked via the permission channel")
+    assert.ok(r.includes("child done"), `resume completes normally — got: ${JSON.stringify(r.slice(0, 300))}`)
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("subagent tool: user declines at the wall → partial-work return, no resume", async () => {
+  const { server, calls } = wallServer(999)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sub-"))
+  try {
+    const { createAgent } = await import("../src/agent.mjs")
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-pro" },
+      tools: [noopRead],
+      config: { agent: { subagentTurns: 3 } },
+      cwd,
+    })
+    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, {
+      agent: parent, cwd, callbacks: {},
+      onPermissionRequest: async () => false,
+    }))
+    assert.equal(calls.n, 3, "hit the cap and stopped — no resumed run")
+    assert.ok(r.includes("stopped: turn cap reached"), "partial-work message names the cap")
+    assert.ok(r.includes("Partial output"), "partial output included")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+

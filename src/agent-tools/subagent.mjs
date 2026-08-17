@@ -174,7 +174,31 @@ export const subagentTool = {
         : null,
     }
     const childRunOpts = buildChildRunOpts(ctx)
-    let report = await runAgent(child, input, childOpts, childRunOpts)
+    let report = ""
+    // Turn-cap continue loop (TURN-CAP-CONTINUE.md): hitting the cap asks the user via
+    // the SAME y/n panel the main agent uses (ctx.onPermissionRequest "continue") —
+    // unlimited continues, resume:true keeps the child's history + mutation bookkeeping,
+    // fresh budget each run. Prompts queue through parent._permQueue (same as write
+    // approval) so parallel children never pop two panels at once. Declined / headless
+    // → partial-work return. Non-ContinueError errors still propagate (dispatch.mjs
+    // turns them into Error tool results — unchanged behavior).
+    for (let resume = false; ; resume = true) {
+      try {
+        report = await runAgent(child, input, childOpts, { ...childRunOpts, resume })
+        break
+      } catch (e) {
+        if (!(e instanceof ContinueError)) throw e
+        let go = false
+        if (ctx.onPermissionRequest) {
+          const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: `${role ?? "sub"}#${subId}` })
+          parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
+          go = await parent._permQueue
+        }
+        if (go) continue
+        if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
+        return `Subagent (${role}) stopped: turn cap reached (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${report || ""}`
+      }
+    }
 
     // Report too short = incomplete handoff: send back for expansion once (inspired by kimi-code's summaryPolicy: min 200 chars, retry 1 time).
     // The child agent's history is still intact; the continuation instruction is appended as new input so it can see its own earlier work.
