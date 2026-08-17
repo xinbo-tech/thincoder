@@ -34,12 +34,7 @@ export const PROVIDER_PRESETS = {
   groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32768, desc: "Groq" },
 }
 
-// Default provider matches deepseek preset (strip the desc display field)
-const { desc: _, ...deepseekPreset } = PROVIDER_PRESETS.deepseek
-
 const DEFAULTS = {
-  providers: [{ name: "deepseek", ...deepseekPreset }],
-  activeProvider: "deepseek",
   activeModel: null,  // optional: override provider.model (set via /model picker or /model provider:model)
   agent: {
     maxTurns: 100,
@@ -230,10 +225,10 @@ export function loadConfig() {
   const merged = {
     ...DEFAULTS,
     ...config,
-    providers: Array.isArray(config.providers) && config.providers.length
+    providers: Array.isArray(config.providers)
       ? config.providers.map((p) => sanitizeProviderHeaders({ ...p }))
-      : DEFAULTS.providers.map((p) => ({ ...p })),
-    activeProvider: config.activeProvider ?? DEFAULTS.activeProvider,
+      : [],
+    activeProvider: config.activeProvider ?? "",
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
