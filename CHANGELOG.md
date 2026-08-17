@@ -100,6 +100,18 @@
 
 # Changelog
 
+## [0.12.34] — 2026-08-18
+
+### Added
+
+- **/rename 命令** — 改会话标题（renameSlot 双写，与 VS Code 共享）
+
+### Fixed
+
+- **/config 候选池 effort picker 显示真实枚举** — 从固定 min/low/medium/high/max 改为动态读 specForModel(model).reasoningEffortEnum；无枚举的模型跳过 effort 步
+- **question 工具 options 防御** — LLM 误传对象时取 label 字段，避免渲染 [object Object]
+
+
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [0.12.23] - 2026-08-13
