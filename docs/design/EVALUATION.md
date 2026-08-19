@@ -212,7 +212,7 @@ ThinCoder 的克制本身也是它的约束——应该诚实地列出：
 | 短板 | 说明 |
 |------|------|
 | **单一协议** | 仅支持 OpenAI 兼容端点（fetch + SSE），不做 Anthropic Messages API、不做 Google Gemini API |
-| **模型范围窄** | 仅 5 家厂商预设（DeepSeek/Kimi/GLM/Qwen/MiniMax），不做 Ollama、不做 Copilot、不做 Groq |
+| **模型范围窄** | 仅 5 家厂商预设（DeepSeek/Kimi/GLM/Qwen/MiniMax），不做 Copilot、不做 Groq |
 | **无 LSP 集成** | 代码理解靠 FTS5 + 向量 + JSDoc，不是 LSP 语义分析（OMP 有完整的 LSP + DAP 集成） |
 | **无 IDE 集成** | 纯终端 CLI/TUI，没有 VS Code 插件、没有 ACP 服务端 |
 | **无桌面应用** | TUI only（OpenCode 有桌面版） |

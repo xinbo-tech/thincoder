@@ -147,7 +147,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
 // rate.mjs 提供 TPM/RPM 闸门控制
 ```
 
-覆盖范围：只跟顶流、只跟最新——当前内置 DeepSeek / Kimi / GLM / Qwen / MiniMax 五家国内顶流厂商的旗舰模型。不做 Ollama 本地模型、不做 Anthropic 原生协议、不做"通用 OpenAI 兼容端点"泛化承诺。预设表随模型换代增删，不留历史包袱。
+覆盖范围：只跟顶流、只跟最新——当前内置 DeepSeek / Kimi / GLM / Qwen / MiniMax 五家国内顶流厂商的旗舰模型。不做老旧/不成熟模型（早期模型行为怪异，要堆大量防御性适配，堆出垃圾代码）、不做 Anthropic 原生协议、不做"通用 OpenAI 兼容端点"泛化承诺。预设表随模型换代增删，不留历史包袱。
 
 注意：流式解析时除 `delta.content` 外必须同时认 `delta.reasoning_content`（DeepSeek-R1 类推理模型的思考流），思考流与正文流分开回调，TUI 可选择折叠展示。
 
