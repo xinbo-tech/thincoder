@@ -94,7 +94,7 @@ export async function runAgentTurn(ctx, text) {
   const callbacks = {
     onToken: (t) => {
       // Subagent streaming: prefix format role#id/ → extract id, update subTask streaming text
-      const subMatch = t.match(/^(\w+)#(\d+)\//)
+      const subMatch = t.match(/^([\w-]+)#(\d+)\//)
       if (subMatch) {
         const key = `${subMatch[1]}#${subMatch[2]}`
         const payload = t.slice(subMatch[0].length)
@@ -114,7 +114,7 @@ export async function runAgentTurn(ctx, text) {
     },
     onReasoning: (t) => {
       // Subagent reasoning tokens also carry role#id/ prefix, go into subTasks panel
-      const subMatch = t.match(/^(\w+)#(\d+)\//)
+      const subMatch = t.match(/^([\w-]+)#(\d+)\//)
       if (subMatch) {
         const key = `${subMatch[1]}#${subMatch[2]}`
         if (!state.subTasks[key]) {
@@ -129,7 +129,7 @@ export async function runAgentTurn(ctx, text) {
     },
     onToolCall: (name, args) => {
       // Subagent tool call: prefix role#id/toolName → update subTask current tool
-      const subMatch = name.match(/^(\w+)#(\d+)\//)
+      const subMatch = name.match(/^([\w-]+)#(\d+)\//)
       if (subMatch) {
         const key = `${subMatch[1]}#${subMatch[2]}`
         const toolName = name.slice(subMatch[0].length)

@@ -112,3 +112,45 @@ test("runAgentTurn: catch 块内抛异常也能清理 ticker 与状态（try/fin
   assert.equal(ctx.state.status, "Ready")
   assert.equal(ctx.calls.saved, 1)
 })
+
+// ---- Subagent streaming relay：role#id/ 前缀剥离（连字符 role，如 eng-coder） ----
+
+/** 捕获 runAgentTurn 内部构造的 callbacks（ctx.runAgent mock 第三参）；turn 结束后再调用，避开 finally 的状态复位。 */
+async function captureCallbacks() {
+  const ctx = trackedCtx()
+  let captured = null
+  ctx.runAgent = async (_agent, _text, callbacks) => { captured = callbacks }
+  await runAgentTurn(ctx, "relay")
+  return { ctx, callbacks: captured }
+}
+
+test("subagent relay: eng-coder#1/ 前缀剥离——连字符 role 路由 subTasks，主流无前缀", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToken("eng-coder#1/hello")
+  const sub = ctx.state.subTasks["eng-coder#1"]
+  assert.ok(sub, `subTasks["eng-coder#1"] 创建（role 保留连字符）`)
+  assert.equal(sub.text, "hello", "payload 进 subTask 文本")
+  assert.equal(sub.role, "eng-coder")
+  assert.ok(!ctx.state.streaming.includes("eng-coder#1/"), "带前缀 token 不进主聊天流")
+})
+
+test("subagent relay 回归: coder#2/ 仍路由 subTasks", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToken("coder#2/writing code...")
+  assert.equal(ctx.state.subTasks["coder#2"].text, "writing code...")
+  assert.ok(!ctx.state.streaming.includes("coder#2/"), "无连字符 role 不受正则变更影响")
+})
+
+test("subagent relay: 无前缀 token 照常进主 streaming", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToken("plain text")
+  assert.equal(ctx.state.streaming, "plain text")
+  assert.deepEqual(ctx.state.subTasks, {}, "无前缀不产生 subTask")
+})
+
+test("subagent relay: onToolCall eng-coder#3/read 路由 tool 名", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToolCall("eng-coder#3/read", { path: "src/a.mjs" })
+  assert.equal(ctx.state.subTasks["eng-coder#3"].tool, "read")
+  assert.equal(ctx.state.subTasks["eng-coder#3"].toolArgs.path, "src/a.mjs")
+})
