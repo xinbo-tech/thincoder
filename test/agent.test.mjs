@@ -4,9 +4,10 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
 
 import { createMemory, put } from "../src/memory.mjs"
@@ -14,6 +15,7 @@ import { parseEntry, serializeEntry, slugify, entryFilename } from "../src/markd
 import { goalTool } from "../src/agent-tools.mjs"
 import { mergeChildMutations } from "../src/agent-tools/subagent.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
+import { offloadToolResult, TMP_RETENTION_MS } from "../src/agent/helpers.mjs"
 
 function freshMemory() {
   return createMemory({ dbPath: ":memory:" })
@@ -1109,7 +1111,7 @@ test("runAgent: advisor guard — side-effect tool (bash) after the review does 
   try {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-guard-test-"))
-    const agent = createAgent({ provider, tools: [makeMutationTool(), advisorTool, bashTool], config: { advisor: { enabled: true } }, cwd })
+    const agent = createAgent({ provider, tools: [makeMutationTool(), advisorTool, bashTool], config: { advisor: { guard: true } }, cwd })
     const out = await runAgent(agent, "改点东西", { onPermissionRequest: async () => true })
     assert.equal(out, "done")
     const guards = agent.history.filter(
@@ -1137,7 +1139,7 @@ test("runAgent: advisor guard — writing code again AFTER the review DOES re-tr
   try {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-guard-test-"))
-    const agent = createAgent({ provider, tools: [makeMutationTool()], config: { advisor: { enabled: true } }, cwd })
+    const agent = createAgent({ provider, tools: [makeMutationTool()], config: { advisor: { guard: true } }, cwd })
     const out = await runAgent(agent, "改点东西", { onPermissionRequest: async () => true })
     assert.equal(out, "done")
     const guards = agent.history.filter(
@@ -1563,7 +1565,7 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-token-reuse-"))
     const agent = createAgent({
       provider, tools: [makeMutationTool()],
-      config: { agent: { engineering: true }, advisor: { enabled: false } },
+      config: { agent: { engineering: true }, advisor: {} },
       cwd,
     })
     agent._engDesignToken = "tok-abc" // 设计评审已签发
@@ -1797,6 +1799,66 @@ test("loadProjectInstructions: 来源标注与超限警告", async () => {
   assert.match(over, /WARNING: project instructions total \d+ chars/) // 软上限：警告
   assert.ok(over.includes("长规范标记在末尾")) // 但不截断，全量保留
   rmSync(dir, { recursive: true, force: true })
+})
+
+// ------------------------------------------------------- offload 写时自清理
+
+test("offloadToolResult: >3 天旧文件删除，新文件与子目录保留", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cleanup-test-"))
+  try {
+    const oldFile = join(dir, "old.log")
+    writeFileSync(oldFile, "stale")
+    const old = new Date(Date.now() - TMP_RETENTION_MS - 24 * 3600 * 1000) // 4 天前
+    utimesSync(oldFile, old, old)
+    const freshFile = join(dir, "fresh.log")
+    writeFileSync(freshFile, "fresh")
+    const subdir = join(dir, "keep-dir")
+    mkdirSync(subdir)
+    writeFileSync(join(subdir, "nested.txt"), "nested")
+
+    const big = "x".repeat(20_000)
+    const out = await offloadToolResult(big, "call-1", dir)
+    assert.ok(!existsSync(oldFile), ">3 天旧文件应被删除")
+    assert.ok(existsSync(freshFile), "刚写入的新文件应保留")
+    assert.ok(existsSync(join(subdir, "nested.txt")), "子目录不动")
+    // 回归：offload 本身行为不变（磁盘全量 + 2k 预览 + 路径指引）
+    const m = out.match(/full content saved to: (.+\.log)/)
+    assert.ok(m, "应包含落盘路径")
+    assert.equal(readFileSync(m[1], "utf8").length, 20_000)
+    assert.ok(out.length < 5000)
+    assert.match(out, /Page through it with the read tool/)
+    // 回归：小结果不落盘、不触发清理
+    assert.equal(await offloadToolResult("short", "call-small", dir), "short")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 3 天内的边界文件保留", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cleanup-test-"))
+  try {
+    const boundary = join(dir, "boundary.log")
+    writeFileSync(boundary, "keep me")
+    const t = new Date(Date.now() - (TMP_RETENTION_MS - 3600 * 1000)) // 2 天 23 小时前，3 天内
+    utimesSync(boundary, t, t)
+    await offloadToolResult("y".repeat(20_000), "call-2", dir)
+    assert.ok(existsSync(boundary), "mtime 在 3 天内的文件应保留")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 目录不存在时清理静默，offload 正常落盘", async () => {
+  const base = mkdtempSync(join(tmpdir(), "thincoder-cleanup-test-"))
+  try {
+    const missing = join(base, "no-such-dir")
+    const out = await offloadToolResult("z".repeat(20_000), "call-3", missing)
+    assert.match(out, /full content saved to:/, "目录不存在不抛异常，offload 正常返回落盘结果")
+    const m = out.match(/full content saved to: (.+\.log)/)
+    assert.equal(readFileSync(m[1], "utf8").length, 20_000)
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
 })
 
 test("runAgent: 子 agent 超长报告不再内部截断，由落盘全量保留", async () => {
@@ -2671,7 +2733,7 @@ test("runAgent: engineering doc-only change skips advisor and verify guards", as
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-doconly-"))
     const agent = createAgent({
       provider, tools: [makeWriteFileTool()],
-      config: { agent: { engineering: true }, advisor: { enabled: false } },
+      config: { agent: { engineering: true }, advisor: {} },
       cwd,
     })
     const out = await runAgent(agent, "写个设计文档", { onPermissionRequest: async () => true })
@@ -2697,7 +2759,7 @@ test("runAgent: engineering code change does NOT trigger advisor/verify guards",
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-codechg-"))
     const agent = createAgent({
       provider, tools: [makeWriteFileTool()],
-      config: { agent: { engineering: true }, advisor: { enabled: false } },
+      config: { agent: { engineering: true }, advisor: {} },
       cwd,
     })
     agent._engDesignToken = "tok-123" // design review passed — parent may write code
@@ -2724,7 +2786,7 @@ test("runAgent: verifyGuard does NOT apply in engineering mode", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-engverify-"))
     const agent = createAgent({
       provider, tools: [makeWriteFileTool()],
-      config: { agent: { engineering: true }, advisor: { enabled: false }, verifyGuard: true },
+      config: { agent: { engineering: true }, advisor: {}, verifyGuard: true },
       cwd,
     })
     agent._engDesignToken = "tok-123"
@@ -2848,4 +2910,72 @@ test("cache audit (2026-08-16): OS/cwd reminder injected once per process; resum
     server.close()
   }
 })
+
+// ---------------------------------------------------------------- 提示词借鉴增量（kimi-code 对照，2026-08-21）
+// 两端 src/prompts/ 必须保持 byte-identical（项目铁律）；本组测试防内容缺失 + 防漂移回归。
+
+const TEST_DIR = dirname(fileURLToPath(import.meta.url))                     // thincoder/test
+const PROMPTS_DIR = join(TEST_DIR, "..", "src", "prompts")                   // thincoder/src/prompts
+const VSCODE_PROMPTS_DIR = join(TEST_DIR, "..", "..", "thincoder-vscode", "src", "prompts")
+
+test("prompts/explore.md: Thoroughness levels 三档 + 默认档", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "explore.md"), "utf8")
+  assert.ok(text.includes("Thoroughness levels"), "段落标题存在")
+  const lines = text.split("\n")
+  assert.ok(lines.some((l) => l.trim().startsWith("- quick")), "quick 档存在")
+  const medium = lines.find((l) => /^- medium/.test(l.trim()))
+  assert.ok(medium, "medium 档存在")
+  assert.ok(/default/i.test(medium), `medium 标注为默认档: ${medium}`)
+  const thorough = lines.find((l) => /^- thorough/.test(l.trim()))
+  assert.ok(thorough, "thorough 档存在")
+  assert.ok(/NOT find/i.test(thorough), `thorough 要求报告没找到什么: ${thorough}`)
+})
+
+test("prompts/main.md: Delegate well 含委派 explore 时指定彻底度的指引", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+  assert.ok(text.includes("quick / medium / thorough"), "三档文案在 main.md 中")
+  assert.match(text, /Delegate well[\s\S]*thoroughness/, "指引位于 Delegate well 段")
+})
+
+test("prompts/system.md: 确认理解句含 most important acceptance criteria", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+  const line = text.split("\n").find((l) => l.includes("Confirm understanding"))
+  assert.ok(line, "确认理解句存在")
+  assert.ok(line.includes("most important acceptance criteria"), line)
+  assert.ok(line.includes("Wait for confirmation"), "其余语义保留")
+})
+
+// ---------------------------------------------------------------- 开工前计划确认纪律（2026-08-21）
+test("prompts/system.md: 无豁免确认纪律 — 写文件动作清单 + 明确确认门禁", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+  assert.ok(/write \/ edit \/ apply_patch \/ insert_after \/ delete \/ hashline_edit/.test(text), "写文件动作清单在")
+  assert.ok(/no exemptions/i.test(text), "无豁免语义句在")
+  assert.ok(text.includes("obvious enough to skip"), "堵死 self-exemption 借口句在")
+  assert.ok(text.includes("a new question from the user is not a confirmation"), "用户新问题 ≠ 确认")
+  assert.ok(text.includes("Re-confirm when the requirement changes"), "需求变化后重新确认条款在")
+})
+
+test("prompts/engineering.md: 写文档前计划确认条款（无豁免）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(/Plan confirmation before writing any doc/i.test(text), "条款标题在")
+  assert.ok(text.includes("before writing the requirements doc"), "写需求/设计文档前确认")
+  assert.ok(text.includes("no exemptions"), "无豁免语义在")
+  assert.ok(text.includes("obvious enough to skip"), "堵死 self-exemption 借口句在")
+})
+
+// 两端 15 文件 byte-identical：thincoder-vscode 不存在时动态 skip（如单独 clone CLI 仓库）
+test("两端 src/prompts/ 15 文件 byte-identical（CLI ↔ VS Code）",
+  { skip: !existsSync(VSCODE_PROMPTS_DIR) },
+  () => {
+    const cli = readdirSync(PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
+    const vsc = readdirSync(VSCODE_PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
+    assert.deepEqual(cli, vsc, "两端 prompt 文件集合一致")
+    assert.equal(cli.length, 15, "15 个 prompt 文件")
+    for (const f of cli) {
+      assert.ok(
+        readFileSync(join(PROMPTS_DIR, f)).equals(readFileSync(join(VSCODE_PROMPTS_DIR, f))),
+        `${f} 两端 byte-identical`,
+      )
+    }
+  })
 

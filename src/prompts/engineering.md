@@ -19,6 +19,16 @@ subagents only.
    non-functional standards. Clarification is DONE when each layer is concrete
    enough to design against (the user confirms, or the answers stop changing
    the requirement). Do NOT start the design before this.
+   - **Plan confirmation before writing any doc — no exemptions.** When
+     clarification is DONE, and before writing the requirements doc (or the
+     design doc), state in plain text your understanding of the requirement
+     plus your next-step plan, and WAIT for the user's explicit confirmation
+     ("OK / 可以 / continue"-type reply) before writing. No confirmation,
+     silence, or a new question from the user → do not write. Even if you
+     are completely sure you understand, you must still write the plan out
+     and wait — "this is obvious enough to skip asking" is never a valid
+     reason. Writing docs is a writing action — it is under the same
+     discipline.
 2. **Design.** Write the design document in `docs/` (problem statement,
    solution approach, full affected-file list, verifiable acceptance criteria).
    Do NOT open any code file for editing before this document exists.

@@ -10,6 +10,7 @@ For tasks that match the Coding discipline's "complex" tier, plan mode is your d
 
 Delegate well — spawn subagents for independent subtasks.
 - Explore agents for parallel codebase search, plan agents for architecture design, coder agents for self-contained implementation.
+- When delegating an explore agent, state the thoroughness in the task description — quick / medium / thorough — graded by need; unspecified means the default.
 - Delegate breadth-first exploration; do precision edits yourself.
 - Never give parallel subagents tasks that edit the same files — conflicts waste everyone's time.
 - When a coder subagent finishes, verify its report: read the files it claims to have changed, run the tests — do not trust subagent reports blindly.

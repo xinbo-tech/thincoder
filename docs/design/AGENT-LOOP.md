@@ -64,7 +64,7 @@ eng-coder && 未过设计评审 && FILE_MUTATORS → denied "engineering design 
 非只读 && !autoApprove → onPermissionRequest（用户确认）；无 handler → denied
 PreToolUse hooks → 阻断
 ```
-**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果 >16K 字符落盘 `~/.thincoder/tmp/` + 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。
+**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果 >16K 字符落盘 `~/.thincoder/tool-results/` + 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。
 
 ## 5. 零工具调用回合（completion.mjs handleCompletion）
 
@@ -72,7 +72,7 @@ PreToolUse hooks → 阻断
 1. **空响应恢复**（IK60QP）：`!response.content` → 注入 `[System reminder: your last response was empty…]` 重试，上限 `MAX_EMPTY_RETRIES=2`（每次用户消息重置），仍空才抛原错误（含 /think 降档建议）
 2. **pending tasks 提醒**：有 pending → 注入任务列表提醒并继续循环（模型更新 task 状态后再收尾）；**最多推回一次**（`_taskPushbacks`，task 工具更新列表即重置）——模型第二次坚持收尾则放行，避免 pending 项无法解决时无限循环
 3. **verify guard**（opt-in `verifyGuard: true`，工程模式除外）：改过代码未 verify → 推回调 verify（≤2 次）；verify 失败 → 推回修复（≤3 次）；耗尽 → 诚实声明提醒（必须说明哪些测试失败/试了什么/根因）
-4. **advisor guard**（opt-in `advisor.enabled && guard !== false`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 轮，收敛协议见 ADVISOR-CONVERGENCE.md）
+4. **advisor guard**（opt-in `advisor.guard === true`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 轮，收敛协议见 ADVISOR-CONVERGENCE.md）。advisor 评审能力本身**恒启用**（不依赖任何开关，未配 advisor.provider 时评审继承主 provider）——`advisor.enabled` 字段已废弃（2026-08-21 语义重构，见下）
 5. 通过 → pushReal assistant 回复 + 返回 content
 
 ## 6. 回合后注入（post-turn.mjs）
@@ -83,12 +83,37 @@ PreToolUse hooks → 阻断
 ## 7. 子代理（subagent 工具）
 
 - `depth > 0`：独立 agent 对象 + 丢弃式局部双线；role（explore/plan/coder/eng-coder）决定工具集（只读过滤）与 overlay prompt
-- 流式 relay：`role#id/` 前缀 token 转发给父回调（TUI subTasks 面板 / VS Code subagent 面板）
+- 流式 relay：`role#id/` 前缀 token 转发给父回调（TUI subTasks 面板 / VS Code subagent 面板）。**TUI 消费端正则须含连字符（2026-08-21，已实现 ✅）**：`src/tui/agent-turn.mjs` 三处前缀剥离正则 `/^(\w+)#(\d+)\//` → `/^([\w-]+)#(\d+)\//`——`\w` 不含连字符，`eng-coder#N/` 当前匹配失败，带前缀 token 原样落入主聊天流每个 chunk 刷屏（其余 role 无连字符未暴露）。修复后 eng-coder token 正常路由 subTasks 面板。测试 `test/agent-turn.test.mjs`：① `onToken("eng-coder#1/hello")` → subTasks["eng-coder#1"] 收文、主流无前缀；② `coder#2/` 回归仍路由；③ 无前缀 token 照常进 streaming；④ `onToolCall("eng-coder#3/read")` 路由 tool。VS Code 无此机制（子 agent 走 onToolPanel 通道），不涉及。
 - 报告契约：<200 字符视为交接不完整，打回扩写一次（`MIN_REPORT_CHARS`）；超长报告落盘全量保留
 - 权限：手动模式下子代理的非只读工具透传到父 agent 的权限审批（人在回路）
 - eng-coder：设计 token 门控（`_engDesignToken`，评审通过后签发，跨 turn 存活；子代理授权在 spawn 前校验）
 
-## 8. 关键设计决策
+## 8. advisor 开关语义重构（2026-08-21）
+
+**需求**：`advisor.enabled` 曾是双义开关——既 gate 评审能力（非工程模式 enabled=false 时 advisor 工具直接拒绝 "not enabled"），又 gate guard 推回（`enabled && guard !== false`）。用户拍板：**评审能力恒启用，开关语义收敛为 guard**；guard 默认 OFF（评审自愿调用，打开才强制）。工程模式行为不变（评审恒可用、guard 豁免）。
+
+**设计**：
+- `src/advisor/run.mjs`：删除 enabled gate（"Advisor: not enabled" 拒绝移除）——advisor 工具任何模式都可调用；评审 provider 沿用 `resolveAdvisorProvider`（未配 advisor.provider → 继承主 provider）
+- `src/agent/completion.mjs`：guard 条件 `cfg?.enabled && cfg?.guard !== false` → `cfg?.guard === true`；工程模式豁免保留
+- `src/config.mjs`：默认配置 `advisor: { enabled: false }` → `advisor: { guard: false }`（enabled 字段废弃不再读写；存量配置不迁移——pre-release 约定，CHANGELOG 说明）
+- `src/tui/cmd-advisor.mjs`：菜单删除 "Advisor ON/OFF" toggle（评审恒 ON，仅显示状态）；"Guard on/off" 成为唯一开关项
+- `src/tui/render-frame.mjs`：状态栏 banner 由 `advisor.enabled` 驱动改为 guard 驱动——`agent.config?.advisor?.guard === true` 时显示 `GUARD│`（ADVISOR banner 删除；banner 展示的是"强制评审已开"这一值得提醒的状态，而非恒真的评审可用性）
+- 提示词/工具描述无 enabled 引用，不改
+
+**测试**：
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| 1 | 评审恒可用 | config `{ advisor: {} }`（无 enabled/guard）非工程模式调 advisor | 正常执行评审（不再返回 not enabled） |
+| 2 | guard 默认 OFF | `{ advisor: {} }` 改代码后收尾 | 不推回，正常收尾 |
+| 3 | guard ON 推回 | `{ advisor: { guard: true } }` 改代码未评审收尾 | 推回 "MUST get an advisor review" |
+| 4 | 工程模式豁免 | engineering: true 改代码收尾（guard 任意） | 不推回 |
+| 5 | 存量 enabled 不生效 | `{ advisor: { enabled: true } }` 改代码收尾 | 不推回（enabled 不再读取）；评审仍可手动调用 |
+| 6 | /advisor 菜单 | toggle 项 | 不再出现 Advisor ON/OFF；Guard 项读写 `guard` 字段 |
+- 更新既有断言：`test/completion.test.mjs`（enabled 推回用例改 guard）、`test/advisor.test.mjs`（enabled gate 放行用例改为无配置）、`test/slash-commands.test.mjs:354`（toggle 写 enabled → guard）、`test/agent.test.mjs` 相关推回用例
+
+**受影响文件**：`src/advisor/run.mjs`、`src/agent/completion.mjs`、`src/config.mjs`、`src/tui/cmd-advisor.mjs`、`src/tui/render-frame.mjs`、`test/completion.test.mjs`、`test/advisor.test.mjs`、`test/slash-commands.test.mjs`、`test/agent.test.mjs`、`CHANGELOG.md`。VS Code 端见其 `docs/design/ARCHITECTURE.md` 同款变更段（两端逐行等价，CLI 为准）。
+
+## 9. 关键设计决策
 
 | 决策 | 理由 |
 |---|---|
@@ -98,3 +123,49 @@ PreToolUse hooks → 阻断
 | resume 保留 guard 状态 | 续跑不能重置已验证/收敛事实，否则可被无限续跑绕过 |
 | 两段调度顺序保序 | 只读并行提速，副作用严格串行保因果 |
 | 错误落盘不落模型 | stack trace 泄露路径且干扰推理；`~/.thincoder/tool-errors/` 供事后分析 |
+
+
+## 10. 提示词借鉴增量（kimi-code 对照，2026-08-21）
+
+**需求**（对照 kimi-code 提示词研究，用户批准两项借鉴，范围最小化）：
+1. explore 彻底度分级——kimi 有 quick/medium/thorough 三档（whenToUse 文案约定），ThinCoder 缺；采用 **prompt 约定形态（B 方案，用户拍板）**，不加工具参数。
+2. "识别最重要验收标准"——kimi system 提示词要求 identify "the most important criteria to achieve the goal"，ThinCoder 的确认理解条款缺这半句。
+
+**设计**（两端 `src/prompts/` 改动必须保持 byte-identical 同步；两端 subagent 工具描述各自同步语义）：
+- `src/prompts/explore.md`：新增 **Thoroughness levels** 段——quick（单点定向搜索，回答一个具体问题）；medium（**默认**，适度多路并行）；thorough（多位置、多命名习惯全面分析，报告须列出搜索过什么、没找到什么）。
+- `src/prompts/main.md`：Delegate well 条款补一句——委派 explore 时在 task 描述中指定彻底度（quick/medium/thorough），按需分级，未指定走默认。
+- 两端 `src/agent-tools/subagent.mjs` 工具 description：explore 描述处补 "specify thoroughness in the task: quick / medium / thorough (default medium)"（CLI setup.mjs 的 filteredSubagent 与 VS Code modeRoleField 只覆盖 role 字段，description 追加自动生效）。
+- `src/prompts/system.md`："Confirm understanding" 句改为——State what you believe the user asked for and what you plan to deliver, **including the most important acceptance criteria**. Wait for confirmation.（coder.md 不动：其 delivery table 已强制逐条 requirement 列示，强于该补句。）
+- 明确不做：不加 thoroughness 工具参数（用户拍板 B 方案）；不改 explore 的 prompt 前缀/工具集；不动 kimi 对照结论中其余 ✅ 项。
+
+**测试**（两端各自断言提示词文件内容，位置选现有 prompt 相关测试）：
+- ① explore.md 含 "Thoroughness levels" 与 quick/medium/thorough 三档及默认档说明
+- ② main.md 含委派彻底度指引
+- ③ system.md 确认理解句含 "most important acceptance criteria"
+- ④ 两端 `src/prompts/` 15 文件仍 byte-identical（比对测试已落地：CLI `test/agent.test.mjs`，thincoder-vscode 同级目录不存在时动态 skip）
+- ⑤ 回归：两端 subagent 工具 schema 的 role enum 覆盖不受影响（modeRoleField / filteredSubagent 现有测试仍绿）
+
+**受影响文件**：`src/prompts/explore.md`、`src/prompts/main.md`、`src/prompts/system.md`、`src/agent-tools/subagent.mjs`（两端各一份，共 6 个源文件）+ 两端测试文件 + 两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同款变更段。
+
+
+## 11. 开工前计划确认纪律（2026-08-21）
+
+**需求**（用户报告 + 拍板）：agent 在澄清交流中常"自以为清楚了"就直接写代码/写文档，跳过确认。要求：**任何写代码/写文档动作前，都必须用纯文字复述"理解+计划"，等用户明确确认后才动手；无豁免**（连看起来再小再明确的改动也要确认）。机制 = 提示词纪律（用户拍板：不用 question 卡片）；普通模式与工程模式都生效；子 agent 不适用（子 agent 不向用户提问，确认由父 agent 完成）。
+
+**设计**（两端 `src/prompts/` 保持 byte-identical）：
+- `system.md` 强化 "Confirm understanding" 条款，追加无豁免纪律：
+  - 写文件动作（write/edit/apply_patch/insert_after/delete/hashline_edit 及一切写文件的 bash）前，必须先文字复述理解+计划要点，等待用户明确确认（"OK/可以/继续"类回复）；未确认、沉默、或用户回复新要求 → 一律不动手。
+  - 明确堵死自我豁免：多轮澄清后即使自认完全清楚，也必须把计划文字化并等待确认；"这太明显了不用问"不是跳过理由；用户的新问题不是确认。
+  - 与现有条款衔接：确认过的内容在后续对话中被新要求改变时，动手前重新复述重新确认。
+- `engineering.md` 澄清阶段补同类条款：clarification DONE（用户确认或答案不再改变需求）后、写需求/设计文档前，把"对需求的理解 + 下一步计划"文字呈现并等待用户确认——工程模式的"写文档"同样在纪律范围内（用户报告明确包含"写文档"）。
+- `discipline.md` / `main.md` 不动（分层逻辑不变，纪律统一挂在 system.md 与 engineering.md）。
+- 明确不做：不加 question 工具卡片（用户拍板）；不加机械门禁；子 agent overlay 不改。
+
+**测试**（两端 `test/agent.test.mjs` 追加断言）：
+- ① system.md 含无豁免确认纪律关键句（如 "no exemption" / 写文件动作清单）
+- ② engineering.md 含"写文档前计划确认"条款关键句
+- ③ 两端 15 文件 byte-identical（既有比对测试自动覆盖）
+- ④ 回归：两端全量测试通过
+
+**受影响文件**：`src/prompts/system.md`、`src/prompts/engineering.md`（两端各一份，共 4 个源文件）+ 两端 `test/agent.test.mjs` + 两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同步变更段。
+

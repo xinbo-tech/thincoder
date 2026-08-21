@@ -53,7 +53,7 @@ export const subagentTool = {
   name: "subagent",
   description:
     "Spawn a sub-agent to handle an independent subtask in an isolated context. The sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
-    "Use role='explore' for codebase search/analysis (read-only, fast), role='plan' for read-only implementation planning (returns a step-by-step plan, never edits), role='coder' for self-contained implementation tasks. Do not give parallel subagents tasks that edit the same files.\n\n" +
+    "Use role='explore' for codebase search/analysis (read-only, fast — specify thoroughness in the task: quick / medium / thorough (default medium)), role='plan' for read-only implementation planning (returns a step-by-step plan, never edits), role='coder' for self-contained implementation tasks. Do not give parallel subagents tasks that edit the same files.\n\n" +
     "Writing the prompt:\n" +
     "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
     "- Put exact paths and commands in the prompt when you know them. The sub-agent should not search for things you already know.\n" +
