@@ -72,14 +72,11 @@ const ADVISOR_ROUND1 = loadPrompt("advisor-round1.md", "advisor-round1.md")
 // buildAdvisorSystemPrompt when _advisorRound > 0.
 const ADVISOR_ROUND2 = loadPrompt("advisor-round2.md", "advisor-round2.md")
 const ADVISOR_ROUND3 = loadPrompt("advisor-round3.md", "advisor-round3.md")
-// Fallback when advisor-design.md is missing — keep in sync with the real
-// file (table format + workflow steps).
-const ADVISOR_DESIGN_FALLBACK = `You are an independent design reviewer for an engineering-mode project. Review the design document in the changes below. Evaluate: completeness, feasibility, clarity, scope, acceptance criteria. Read METHODOLOGY.md if provided. Produce a review table with | # | Category | Severity | Issue | Suggestion | format.`
-let ADVISOR_DESIGN = ""
-// Design review is OPTIONAL (engineering mode only) — silent fallback to the
-// in-code constant is intentional, unlike the mandatory round prompts which
-// must exist for every review (loadPrompt throws a descriptive error there).
-try { ADVISOR_DESIGN = readFileSync(join(__dirname, "prompts", "advisor-design.md"), "utf8") } catch { /* fallback below */ }
+// Design-review prompt — hard-loaded like the round prompts (decision
+// 2026-08-21): a missing file means a broken installation, and silently
+// degrading to a lesser in-code prompt would quietly strip the approval-signal
+// and citation rules, disabling design approval entirely. loadPrompt throws.
+const ADVISOR_DESIGN = loadPrompt("advisor-design.md", "advisor-design.md")
 
 // ────────────────────────────────────────
 // System prompt building
@@ -109,7 +106,7 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
   // approval token); rounds 2+ converge like code reviews (verify agent fix claims).
   if (reviewType === "design") {
     if (!hasPrior) {
-      return ADVISOR_DESIGN || ADVISOR_DESIGN_FALLBACK
+      return ADVISOR_DESIGN
     }
     const round = (agent._advisorRound || 0) + 1
     if (round === 2) return ADVISOR_ROUND2

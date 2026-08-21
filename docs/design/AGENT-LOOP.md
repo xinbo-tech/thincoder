@@ -169,3 +169,31 @@ PreToolUse hooks → 阻断
 
 **受影响文件**：`src/prompts/system.md`、`src/prompts/engineering.md`（两端各一份，共 4 个源文件）+ 两端 `test/agent.test.mjs` + 两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同步变更段。
 
+## 12. 文档归属纪律 + advisor 设计评审增强（2026-08-21）
+
+**需求**（用户报告 + 拍板 B 方案，合并上一轮已批 A 方案）：
+- 文档碎片化：agent 说一件事就新建文档，不找相关文档修改（settings 板块 6 个文档即实证），且同一机制多处重复描述互相矛盾（落盘路径 tmp/ vs tool-results/、字段往返"待补"vs"已落地"）。治理：未来纪律（文档地图 + 提示词归属条款）+ 评审把关（advisor design review 新增归属检查维度）。存量合并不在本范围（记 TODO）。
+- advisor 设计评审缺陷（A 方案，已批）：① fallback 提示词缺 Approval Signal 规则 → 评审永远无法批准；② Instructions 与系统提示词维度列表漂移（漏 Methodology compliance）；③ 无引用纪律 → host 引用验证对 design 形同虚设（实测 0/8 命中）。
+
+**设计**：
+1. **文档地图**：两端各建 `docs/design/README.md`——「板块 → 文档文件」映射表（含"一个板块一个文档、功能点并入所属板块、新板块才新建并登记"规则说明）。
+2. **两端 `src/prompts/system.md`**（byte-identical）：「Discussion → docs」类条款处补文档归属纪律：写文档前先查 `docs/design/README.md` 文档地图（无地图则查 AGENTS.md/docs 目录）定位所属板块文档——**找到就改、不得为既有板块新建文件**；确无归属才新建并登记进地图；同一机制只在一处详述（权威源），其余文档引用不复制。
+3. **两端 `src/prompts/advisor-design.md`**（byte-identical）：
+   - Review Criteria 加第 7 维 **Document ownership**：变更是否并入所属板块文档而非碎片化新建？表述是否与现有文档重复/矛盾？
+   - 严重度约定：与现有文档**矛盾**的表述 → 🔴；该并入却新建/重复描述 → 🟡。
+   - 加 **引用纪律**：引用设计文档原文用精确 `file:line` 格式，未核实内容标注 unverified（激活 host citation 验证）。
+4. **两端 messages.mjs design 分支**（CLI `src/advisor/messages.mjs`、VS Code `src/advisor/messages.mjs`）：Instructions 补第 6 维度（Methodology compliance，与系统提示词对齐）；若存在 `docs/design/README.md` 文档地图，注入「## Document Map」段供归属检查对照。
+5. **fallback 转硬加载**：两端 design 提示词加载改为与 round1/2/3 同待遇——`loadPrompt("advisor-design.md", ...)` 直接抛错（缺失即安装损坏，静默降级到劣质 prompt 的后果是评审机制失效）；删除 `ADVISOR_DESIGN_FALLBACK` 常量与 try/catch。
+6. 范围外（记 TODO.md）：存量碎片文档合并（settings 6 文档等）；design round2 专用提示词（§11 评审发现 #4）。
+
+**测试**（两端各自断言）：
+- ① advisor-design.md 含 "Document ownership" 维度与 🔴/🟡 分级句、含引用纪律句（file:line / unverified）、含 Approval Signal / `[DESIGN-TOKEN:…]` 回显规则（防 fallback 删除后规则回归丢失）
+- ② system.md 含文档归属纪律关键句（doc map / update instead of creating）
+- ③ 文档地图 README.md 存在且含板块映射表
+- ④ messages.mjs design 分支：Instructions 含 Methodology 维度；存在文档地图时注入 Document Map 段（单测 buildAdvisorUserMessage 输出）
+- ⑤ fallback 移除：grep 无 ADVISOR_DESIGN_FALLBACK；advisor-design.md 缺失时构建抛错（两端各有 loadPrompt 测试或沿用既有 pattern）
+- ⑥ 回归：两端全量测试通过；两端 prompts 15 文件 byte-identical
+
+**受影响文件**：`docs/design/README.md`（两端各新建）、`src/prompts/system.md`、`src/prompts/advisor-design.md`（两端各一份）、CLI `src/advisor.mjs` + `src/advisor/messages.mjs`、VS Code `src/advisor/main.mjs` + `src/advisor/messages.mjs`、两端测试、两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同步变更段。
+
+

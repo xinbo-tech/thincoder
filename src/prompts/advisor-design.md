@@ -12,6 +12,7 @@ Evaluate the design against these dimensions:
 4. **Clarity** — Is the design specific enough to implement? Are the affected files identified?
 5. **Acceptance criteria** — Are they verifiable? Do they cover normal paths, edge cases, and error conditions?
 6. **Scope** — Is the scope appropriate? Are there opportunities to simplify? Is there scope creep?
+7. **Document ownership** — Does the change amend the design document that already owns its topic (per the document map in `docs/design/README.md`), or does it fragment by creating a new file for an existing section? Does the wording duplicate or contradict existing documents?
 
 ## Output Format
 
@@ -26,6 +27,14 @@ Severity levels:
 - 🔴 Critical — design is incomplete or infeasible; must be addressed before implementation. Any 🔴 blocks approval.
 - 🟡 Advisory — design could be improved; NOT a blocker for approval
 - 🔵 Note — optional observation; NOT a blocker
+
+Document ownership severity:
+- Wording that CONTRADICTS an existing document (same mechanism described differently in two places) → 🔴
+- Creating a new file for an existing section, or duplicating a description that already exists elsewhere → 🟡
+
+## Citation Discipline
+
+When you cite design-document text, use the exact `file:line` format (e.g. `docs/design/AGENT-LOOP.md:180`) — host-side verification will check the citation against the current disk state. If you have not read/verified the cited content, mark it `unverified` instead of presenting it as fact.
 
 ## Approval Signal
 
