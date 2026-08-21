@@ -52,7 +52,7 @@ const DEFAULTS = {
     consultTurns: 40,      // per-consultant tool-turn budget (diagnosis tasks)
     consultTimeoutMs: 600000, // wall-clock ceiling per consultant (10min)
     streamRules: [],      // time-traveling stream rules: [{ pattern: "regex", message: "reminder", action: "abort"|"warn", repeat: "always"|"once" }]
-    advisor: { enabled: false },  // code review; { enabled: true, provider: "deepseek", model: "deepseek-chat", thinking: { type: "enabled" }, reasoningEffort: "max", guard: true }
+    advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
     engineering: false,   // strict methodology enforcement — read METHODOLOGY.md, design-before-code
   },

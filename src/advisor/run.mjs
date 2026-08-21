@@ -361,13 +361,11 @@ function extractUnfixedIssues(priorText) {
 export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null) {
   const onOutput = callbacks?.onOutput
   const signal = callbacks?.signal
-  const cfg = agent.config?.advisor
   const startTime = Date.now()
-  
-  // Engineering mode overrides advisor toggle — reviews are mandatory regardless
-  if (!cfg?.enabled && !agent.config?.agent?.engineering) {
-    return "Advisor: not enabled (set advisor.enabled in config.json)."
-  }
+
+  // Advisor reviews are ALWAYS available (2026-08-21 semantic refactor): the
+  // former advisor.enabled gate is removed — review capability has no off
+  // switch; only the guard (completion pushback) is opt-in via advisor.guard.
 
   // Mechanical convergence cap — refuse further reviews once the protocol has run
   // its rounds. _advisorRound counts completed advisor calls (incremented by the

@@ -111,10 +111,11 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
   }
 
   // --- advisor guard: review of mutated files before completion ---
-  // Active by default when advisor.enabled is set (opt-out via guard: false),
-  // and NEVER in engineering mode.
+  // OPT-IN ONLY (advisor.guard === true, default OFF — 2026-08-21 semantic
+  // refactor), and NEVER in engineering mode. The advisor tool itself is always
+  // available; this guard only controls whether completion is pushed back.
   const cfg = agent.config?.advisor
-  const advisorReview = cfg?.enabled && cfg?.guard !== false
+  const advisorReview = cfg?.guard === true
   if (depth === 0 && advisorReview && !agent.config?.agent?.engineering) {
     // Cap sync: beyond MAX_ADVISOR_ROUNDS the advisor tool refuses to review
     // (run.mjs convergence cap) — pushing back further would loop forever

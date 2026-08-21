@@ -1,4 +1,4 @@
-/** /advisor command: toggle advisor on/off, select model, configure thinking.
+/** /advisor command: configure review model/thinking and toggle the review guard.
  *  Interactive loop UX — stays in menu after each action, Esc to exit.
  *  ctx: { agent, showPicker, pushLine, pushLabel, persistRaw } */
 import { ansi, C } from "./ansi.mjs"
@@ -6,6 +6,9 @@ import { ansi, C } from "./ansi.mjs"
 export async function handleAdvisorCommand(ctx) {
   const { agent, showPicker, pushLine, pushLabel } = ctx
   const cfg = agent.config.advisor ??= {}
+  // Deprecated field cleanup (2026-08-21): advisor.enabled is no longer read
+  // anywhere; drop it here so persist() never re-writes the stale flag.
+  delete cfg.enabled
 
   const persist = async () => {
     if (ctx.persistRaw) {
@@ -21,13 +24,12 @@ export async function handleAdvisorCommand(ctx) {
 
   // ── State helpers ──
   function advisorStatus() {
-    const enabled = cfg.enabled === true
     const curModel = cfg.model || agent.provider.model
     const thinkInfo = cfg.thinking === null ? "off"
       : cfg.thinking?.type === "disabled" ? "off"
       : cfg.reasoningEffort ? `on (${cfg.reasoningEffort})`
       : cfg.thinking ? `on (${cfg.thinking.type})` : "(main)"
-    return `Advisor: ${enabled ? "ON" : "OFF"} | Model: ${curModel} | Think: ${thinkInfo}`
+    return `Advisor: always available | Model: ${curModel} | Think: ${thinkInfo}`
   }
 
   function headerLine() {
@@ -105,14 +107,12 @@ export async function handleAdvisorCommand(ctx) {
   // ── Main loop ──
   let mainIdx = 0
   for (;;) {
-    const enabled = cfg.enabled === true
     const curProvider = cfg.provider || "(main)"
     const curModel = cfg.model || agent.provider.model
     const guardInfo = cfg.guard === true ? "on" : "off"
 
     const entries = [
       { type: "header", text: headerLine() },
-      { type: "item", text: `Advisor: ${enabled ? "ON" : "OFF"}`, action: "toggle" },
       { type: "item", text: `Model: ${curModel}`, action: "model", note: `Provider: ${curProvider}` },
       { type: "item", text: `Thinking: ${advisorStatus().split("|")[2]?.trim() || "(main)"}`, action: "thinking" },
       { type: "item", text: `Guard: ${guardInfo}`, action: "guard" },
@@ -125,18 +125,10 @@ export async function handleAdvisorCommand(ctx) {
 
     if (choice.action === "view") {
       pushLabel("❯ Advisor", ansi.bold + C.tool)
-      pushLine(`Status:   ${enabled ? "ON" : "OFF"}`, C.dim)
+      pushLine(`Status:   always available`, C.dim)
       pushLine(`Model:    ${curModel} (provider: ${curProvider})`, C.dim)
       pushLine(`Guard:    ${guardInfo}`, C.dim)
       pushLine(`Thinking: ${advisorStatus().split("|")[2]?.trim() || "(main)"}`, C.dim)
-      continue
-    }
-
-    if (choice.action === "toggle") {
-      cfg.enabled = !cfg.enabled
-      await persist().catch(err => pushLine(`[error] Advisor toggle: ${err.message}`, C.error))
-      pushLabel("❯ Advisor", ansi.bold + C.tool)
-      pushLine(`Advisor: ${cfg.enabled ? "ON" : "OFF"}`, C.tool)
       continue
     }
 

@@ -346,12 +346,18 @@ test("handleSlash: /new 选 yes 确认后清空会话", async () => {
   }
 })
 
-test("handleSlash: /advisor 选 toggle 后开启", async () => {
+test("handleSlash: /advisor 菜单无 Advisor ON/OFF toggle，guard 项写 guard 字段", async () => {
   const ctx = mockCtx()
-  ctx.pickerResponse = (entries) => entries.find((e) => e.action === "toggle")
+  let sawEntries = null
+  ctx.pickerResponse = (entries) => {
+    sawEntries = entries
+    return entries.find((e) => e.action === "guard")
+  }
   const { handleSlash } = createSlashCommands(ctx)
   await handleSlash("/advisor")
-  assert.equal(ctx.agent.config.advisor.enabled, true)
+  assert.equal(sawEntries.some((e) => e.action === "toggle"), false, "Advisor ON/OFF toggle 项已移除（评审恒启用）")
+  assert.equal(ctx.agent.config.advisor.guard, true, "guard 字段被写入")
+  assert.equal(ctx.agent.config.advisor.enabled, undefined, "enabled 字段不再写入（已废弃）")
 })
 
 test("handleSlash: autoThink 开启时 /think on|effort 直参被拒绝且不写入手动值", async () => {

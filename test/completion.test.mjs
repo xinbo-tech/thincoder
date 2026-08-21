@@ -12,7 +12,7 @@ function baseAgent(overrides = {}) {
   return {
     history: [],
     tasks: [],
-    config: { agent: {}, advisor: { enabled: false } },
+    config: { agent: {}, advisor: {} },
     provider: { model: "test-model" },
     _mutatedThisRun: false,
     _touchedFiles: [],
@@ -120,7 +120,7 @@ test("handleCompletion: no pending tasks → no pushback, no counter touched", (
 
 test("handleCompletion: advisor guard pushes back BELOW the convergence cap", () => {
   const agent = baseAgent({
-    config: { agent: {}, advisor: { enabled: true } },
+    config: { agent: {}, advisor: { guard: true } },
     _mutatedThisRun: true,
     _touchedFiles: ["src/a.mjs"],
     _calledAdvisorThisRun: false,
@@ -139,7 +139,7 @@ test("handleCompletion: advisor guard does NOT push back at/after the convergenc
   // forever — fix → pushback → cap-refused call → fix → … The guard must let
   // the run finish; the cap message from the last accepted review stands.
   const agent = baseAgent({
-    config: { agent: {}, advisor: { enabled: true } },
+    config: { agent: {}, advisor: { guard: true } },
     _mutatedThisRun: true,
     _touchedFiles: ["src/a.mjs"],
     _calledAdvisorThisRun: false,
@@ -149,6 +149,45 @@ test("handleCompletion: advisor guard does NOT push back at/after the convergenc
   assert.equal(cr.action, "done", "cap reached → no more pushback")
   const last = agent.history.at(-1)
   assert.ok(!last.content.startsWith("[System reminder: you changed code"), "no advisor reminder after cap")
+})
+
+test("handleCompletion: advisor guard default OFF — no config pushes nothing back (2026-08-21)", () => {
+  const agent = baseAgent({
+    config: { agent: {}, advisor: {} },
+    _mutatedThisRun: true,
+    _touchedFiles: ["src/a.mjs"],
+    _calledAdvisorThisRun: false,
+    _advisorRound: 0,
+  })
+  const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
+  assert.equal(cr.action, "done", "guard defaults OFF → completion accepted without a review")
+  assert.ok(!agent.history.some((m) => m.content?.includes("MUST get an advisor review")), "no advisor reminder injected")
+})
+
+test("handleCompletion: legacy advisor.enabled no longer triggers the guard (deprecated, 2026-08-21)", () => {
+  const agent = baseAgent({
+    config: { agent: {}, advisor: { enabled: true } },
+    _mutatedThisRun: true,
+    _touchedFiles: ["src/a.mjs"],
+    _calledAdvisorThisRun: false,
+    _advisorRound: 0,
+  })
+  const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
+  assert.equal(cr.action, "done", "enabled is not read anymore → no pushback")
+  assert.ok(!agent.history.some((m) => m.content?.includes("MUST get an advisor review")), "no advisor reminder injected")
+})
+
+test("handleCompletion: engineering mode is exempt from the advisor guard even with guard: true", () => {
+  const agent = baseAgent({
+    config: { agent: { engineering: true }, advisor: { guard: true } },
+    _mutatedThisRun: true,
+    _touchedFiles: ["src/a.mjs"],
+    _calledAdvisorThisRun: false,
+    _advisorRound: 0,
+  })
+  const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
+  assert.equal(cr.action, "done", "engineering mode never gets advisor pushback")
+  assert.ok(!agent.history.some((m) => m.content?.includes("MUST get an advisor review")), "no advisor reminder injected")
 })
 
 

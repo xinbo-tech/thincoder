@@ -654,7 +654,7 @@ test("runAdvisorReview: no doc-only auto-skip — review runs (or fails explicit
   // provider's undefined baseURL throws immediately — no slow network wait.)
   const { runAdvisorReview } = await import("../src/advisor/run.mjs")
   const agent = {
-    config: { advisor: { enabled: true } },
+    config: {},
     provider: { name: "p", model: "m" },
     history: [{ role: "user", content: "update the readme" }],
     _touchedFiles: [],
@@ -663,13 +663,14 @@ test("runAdvisorReview: no doc-only auto-skip — review runs (or fails explicit
   }
   const result = await runAdvisorReview(agent, "code", {})
   assert.ok(result.startsWith("Advisor:"), "explicit failure/notice, not a silent pass")
+  assert.ok(!result.includes("not enabled"), "enabled gate removed (2026-08-21): no advisor config must still run the review, got: " + result)
   assert.ok(!result.includes("CODE_REVIEW_PASSED"), "CODE_REVIEW_PASSED should no longer appear")
 })
 
 test("runAdvisorReview: convergence cap blocks a 6th review call", async () => {
   const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
   const agent = {
-    config: { advisor: { enabled: true } },
+    config: {},
     provider: { name: "p", model: "m" },
     history: [],
     _touchedFiles: ["x.js"],
@@ -796,7 +797,7 @@ test("prepareAdvisorMessages: failed-retry with prior table PRESERVES the round"
 test("runAdvisorReview: cap blocks design reviews too after 5 rounds (bounded loop)", async () => {
   const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
   const agent = {
-    config: { advisor: { enabled: true } },
+    config: {},
     provider: { name: "p", model: "m" },
     history: [],
     _touchedFiles: [],
@@ -814,7 +815,7 @@ test("runAdvisorReview: cap blocks design reviews too after 5 rounds (bounded lo
 test("runAdvisorReview: design review below cap reaches the tool loop", async () => {
   const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
   const agent = {
-    config: { advisor: { enabled: true } },
+    config: {},
     provider: { name: "p", model: "m" },
     history: [],
     _touchedFiles: [],
@@ -840,7 +841,7 @@ test("runAdvisorReview: code changes do NOT hit the doc-only fast path", async (
     // We can't run the LLM here, so assert the fast path is NOT taken by checking
     // that prepareAdvisorMessages builds a round-1 session for this agent.
     const agent = {
-      config: { advisor: { enabled: true } },
+      config: {},
       provider: { name: "p", model: "m" },
       history: [{ role: "user", content: "change app code" }],
       _touchedFiles: [join(tmp, "app.js")],

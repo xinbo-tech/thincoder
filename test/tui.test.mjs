@@ -979,6 +979,20 @@ test("renderStatus: engineering mode shows ENG banner", () => {
   assert.ok(!off.includes("ENG"), "no ENG banner when engineering mode is off")
 })
 
+test("renderStatus: advisor guard shows GUARD banner; enabled is deprecated (2026-08-21)", () => {
+  const state = tuiState({ processing: false })
+  const base = { provider: { model: "test" }, cwd: "/test", planMode: false, autoApprove: false }
+  const on = renderStatus(state, { ...base, config: { advisor: { guard: true } } }, 120, [])
+  assert.ok(on.includes("GUARD"), "GUARD banner shown when advisor.guard === true")
+  assert.ok(!on.includes("ADVISOR"), "ADVISOR banner is gone")
+  const offDefault = renderStatus(state, { ...base, config: { advisor: {} } }, 120, [])
+  assert.ok(!offDefault.includes("GUARD") && !offDefault.includes("ADVISOR"), "no banner when guard is absent (default OFF)")
+  const offFalse = renderStatus(state, { ...base, config: { advisor: { guard: false } } }, 120, [])
+  assert.ok(!offFalse.includes("GUARD") && !offFalse.includes("ADVISOR"), "no banner when guard: false")
+  const legacyEnabled = renderStatus(state, { ...base, config: { advisor: { enabled: true } } }, 120, [])
+  assert.ok(!legacyEnabled.includes("GUARD") && !legacyEnabled.includes("ADVISOR"), "legacy enabled: true no longer drives a banner")
+})
+
 test("panel functions: renderPermission formats permission request", () => {
   const lines = renderPermission(["  Allow bash: rm -rf /", "  This is dangerous"])
   assert.equal(lines.length, 3)
