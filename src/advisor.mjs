@@ -47,6 +47,7 @@ import { fileURLToPath } from "node:url"
 import { extractAgentResponseTable } from "./advisor/history.mjs"
 import { buildAdvisorUserMessage, resolveScopeFiles } from "./advisor/messages.mjs"
 import { buildConvergenceBody } from "./advisor/convergence.mjs"
+import { escapeLiteralEscapes } from "./escape.mjs"
 // Re-export for run.mjs and tests (keeps their imports from "../advisor.mjs" stable)
 export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "./advisor/history.mjs"
 export { buildAdvisorUserMessage } from "./advisor/messages.mjs"
@@ -171,28 +172,9 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null) {
  * messages.mjs so the legacy path shares it (see there).
  */
 
-/**
- * Neutralize literal backslash escape sequences ("\x", "\u") that some
- * OpenAI-compatible servers interpret inside message content ("unexpected end
- * of hex escape" → 400 — observed 2026-08-06 when the conversation background
- * quoted "\x" literals). Only sequences that would be INVALID when expanded
- * are doubled ("\\x" → literal "\x" after server expansion); well-formed
- * "\xNN" / "\uNNNN" pass through untouched (they expand to a byte/codepoint).
- */
-export function escapeLiteralEscapes(text) {
-  // (?<!\\) — only a SINGLE backslash counts ("\\x" already doubles the
-  // escape and must pass through untouched); lookbehind is fine on Node 24.
-  // Known limitation (documented, accepted): an ODD backslash run of 3+ (e.g.
-  // "\\\x") leaves the trailing "\x" un-doubled — vanishingly rare in real
-  // conversation text, and the sequence is still valid JSON either way.
-  // The lookahead treats "\x" followed by AT LEAST 2 hex as valid (servers
-  // expand only the first two: "\x1b3" → ESC + "3"); only truncated runs
-  // ("\x" + <2 hex) are doubled.
-  text = String(text ?? "")
-  return text
-    .replace(/(?<!\\)\\(x)(?![0-9a-fA-F]{2})/g, "\\\\$1")
-    .replace(/(?<!\\)\\(u)(?![0-9a-fA-F]{4})/g, "\\\\$1")
-}
+// escapeLiteralEscapes 已抽到 ./escape.mjs（advisor 与主 agent 发送路径共用），
+// 这里 re-export 保持既有 import 稳定。
+export { escapeLiteralEscapes }
 
 
 /**

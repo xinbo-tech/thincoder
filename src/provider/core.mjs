@@ -6,6 +6,7 @@
 
 import { specForModel } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
+import { escapeMessages } from "../escape.mjs"
 import { readSSE } from "./sse.mjs"
 export { readSSE } from "./sse.mjs"
 import {
@@ -68,6 +69,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   }
 
   messages = normalizeToolPairing(messages)
+  // 中和服务端的非标二次转义：会话里若出现字面 "\x"/"\u"（如讨论转义、grep 到含
+  // 转义的代码），Kimi 等会把它们当 hex escape 再解析 → "unexpected end of hex escape" 400。
+  // 发送前统一 double 掉会形成非法转义的序列（合法 \xNN/\uNNNN 不受影响）。
+  messages = escapeMessages(messages)
   // Compile string-pattern rules to RegExp at call time
   const rules = compileStreamRules(streamRules)
   const body = {
