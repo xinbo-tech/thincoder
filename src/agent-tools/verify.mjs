@@ -2,7 +2,7 @@ import { repairHistory, listWorkDir } from "../agent.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 import { execSync, spawn, spawnSync } from "node:child_process"
 import { readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 
 /**
  * Source module → test file mapping. Heuristic: the FIRST path component
@@ -68,7 +68,7 @@ export const verifyTool = {
     const cwd = ctx.agent.cwd
     // workdir only relocates WHERE tests (and package.json) live — changed-file
     // resolution (git diff) stays anchored to the project root.
-    const testCwd = args.workdir ? join(cwd, args.workdir) : cwd
+    const testCwd = args.workdir ? resolve(cwd, args.workdir) : cwd
     const lines = []
     lines.push("=== VERIFICATION REPORT ===")
     lines.push("")
@@ -168,7 +168,7 @@ export const verifyTool = {
           continue
         }
         try {
-          const result = await runTestFile(testCwd, testFile, ctx, args.filter)
+          const result = await runTestFile(cwd, testFile, ctx, args.filter)
           if (result.passed) {
             lines.push(`  ✓ ${testFile}`)
           } else {

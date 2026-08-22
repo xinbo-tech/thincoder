@@ -19,6 +19,17 @@ function filterLines(output, filter) {
   }
 }
 
+/** Run git and report failure (stderr + exit code) instead of swallowing it.
+ *  Used by write ops (commit/push/rm) where a silent "" would masquerade as success. */
+function runGitStrict(cwd, cmdArgs) {
+  try {
+    const out = execFileSync("git", cmdArgs, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim().replace(/\r/g, "")
+    return { ok: true, out }
+  } catch (e) {
+    return { ok: false, out: String(e.stdout || "").trim(), err: String(e.stderr || e.message || "").trim() }
+  }
+}
+
 export const gitTool = {
   name: "git",
   description: DESC("git"),
@@ -100,18 +111,22 @@ export const gitTool = {
       }
       case "rm": {
         if (!args.path) return "Error: rm requires path (the file/directory to untrack, relative to repo root)"
-        const out = runGit(ctx.cwd, ["rm", "--cached", "-r", "--", args.path])
-        return truncate(out || `Untracked ${args.path} (kept on disk)`)
+        const r = runGitStrict(ctx.cwd, ["rm", "--cached", "-r", "--", args.path])
+        return r.ok ? truncate(r.out || `Untracked ${args.path} (kept on disk)`) : truncate(`git rm failed: ${r.err || r.out}`)
       }
       case "commit": {
         if (!args.message) return "Error: commit requires message"
-        const add = runGit(ctx.cwd, ["add", "-A"])
-        const commit = runGit(ctx.cwd, ["commit", "-m", args.message])
-        return truncate(`${add}\n${commit}`.trim() || "(commit produced no output)")
+        const add = runGitStrict(ctx.cwd, ["add", "-A"])
+        const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
+        const parts = []
+        if (add.out) parts.push(add.out)
+        if (commit.ok) { if (commit.out) parts.push(commit.out) }
+        else parts.push(`git commit failed: ${commit.err || "(no output)"}`)
+        return truncate(parts.join("\n") || "(commit produced no output)")
       }
       case "push": {
-        const out = runGit(ctx.cwd, ["push"])
-        return truncate(out || "(push produced no output)")
+        const r = runGitStrict(ctx.cwd, ["push"])
+        return r.ok ? truncate(r.out || "(push complete — no output)") : truncate(`git push failed: ${r.err || r.out || "(no output)"}`)
       }
       case "checkpoint": {
         const { createCheckpoint, listCheckpoints, rewind, listFileVersions, isGitRepo } = await import("../git/checkpoint.mjs")

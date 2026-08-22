@@ -463,5 +463,3 @@ export const lsTool = {
     return truncate(out.join("\n"))
   },
 }
-
-// ---------------------------------------------------------------- fetch
