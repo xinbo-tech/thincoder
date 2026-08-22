@@ -71,6 +71,26 @@ describe("consult mechanism (CLI)", () => {
     await cleanupConsultSessions(agent)
   })
 
+  it("models param runs a subset (provider:model / provider / model) and errors on unknown selectors", async () => {
+    const noop = async () => "ok"
+    const start = (models) => consultStartTool.execute({ problem: "p", models }, makeCtx(makeAgent(MODELS), noop, undefined))
+
+    assert.deepEqual(JSON.parse(await start(["openai:m-b"])).models, ["openai:m-b"], "provider:model selector")
+    assert.deepEqual(JSON.parse(await start(["glm"])).models, ["glm:m-c"], "bare provider selector")
+    assert.deepEqual(JSON.parse(await start(["m-a"])).models, ["deepseek:m-a"], "bare model selector")
+    assert.deepEqual(JSON.parse(await start(["m-a", "glm"])).models, ["deepseek:m-a", "glm:m-c"], "multi-selector, pool order preserved")
+
+    const err = await start(["does-not-exist"])
+    assert.match(err, /unknown consult model selector/, "unknown selector errors out")
+    assert.match(err, /openai:m-b/, "lists valid choices")
+
+    assert.deepEqual(
+      JSON.parse(await consultStartTool.execute({ problem: "p" }, makeCtx(makeAgent(MODELS), noop, undefined))).models,
+      ["deepseek:m-a", "openai:m-b", "glm:m-c"],
+      "omitted models → full pool",
+    )
+  })
+
   it("check yields replies in arrival order (first-settled first), then done", async () => {
     const agent = makeAgent(MODELS)
     const runner = fakeRunner({

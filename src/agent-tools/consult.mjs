@@ -19,6 +19,35 @@ function consultLabel(m) {
   return `${m.provider}:${m.model}`
 }
 
+/** Narrow the configured consultModels pool to a requested subset.
+ *  Each selector is "provider:model", a bare provider name, or a bare model name
+ *  (case-insensitive). Returns { models, error } — error set when a selector matches
+ *  nothing (surface the typo rather than silently dropping it). Absent/empty selectors
+ *  → the full pool. */
+function selectConsultModels(pool, selectors) {
+  if (!Array.isArray(selectors) || selectors.length === 0) return { models: pool, error: null }
+  const selected = []
+  const seen = new Set()
+  const unknowns = []
+  for (const raw of selectors) {
+    const s = String(raw).toLowerCase()
+    const matches = pool.filter((m) =>
+      consultLabel(m).toLowerCase() === s ||
+      String(m.provider ?? "").toLowerCase() === s ||
+      String(m.model ?? "").toLowerCase() === s,
+    )
+    if (matches.length === 0) unknowns.push(String(raw))
+    else for (const m of matches) {
+      const key = consultLabel(m)
+      if (!seen.has(key)) { seen.add(key); selected.push(m) }
+    }
+  }
+  if (unknowns.length > 0) {
+    return { models: null, error: `unknown consult model selector(s): ${unknowns.join(", ")} — choose from: ${pool.map(consultLabel).join(", ")}` }
+  }
+  return { models: selected, error: null }
+}
+
 /** Read-only tool injected into consultation children (via createAgent's tools).
  *  Lets the consultant pull the main agent's conversation history on demand —
  *  the failure trail is first-class evidence, not a retelling. */
@@ -225,31 +254,40 @@ export const consultStartTool = {
     "arrives, judge/verify it yourself with your own tools, and call consult_stop(id) once a reply is good enough.\n" +
     "Parameters:\n" +
     "- problem (required): a brief — the symptom, what you already tried (failure trail), and entry-point files. " +
-    "Do NOT paste raw error logs; consultants pull the main session history themselves via their main_history tool.",
+    "Do NOT paste raw error logs; consultants pull the main session history themselves via their main_history tool.\n" +
+    "- models (optional): subset of agent.consultModels to run — an array of \"provider:model\", bare provider, or bare model names (case-insensitive). Omit to run all.",
   parameters: {
     type: "object",
-    properties: { problem: { type: "string", description: "Problem brief (symptom + failure trail + entry files)" } },
+    properties: {
+      problem: { type: "string", description: "Problem brief (symptom + failure trail + entry files)" },
+      models: { type: "array", items: { type: "string" }, description: 'Optional subset of agent.consultModels to run (default: all). Each entry is "provider:model", a bare provider name, or a bare model name (case-insensitive).' },
+    },
     required: ["problem"],
   },
-  async execute({ problem }, ctx) {
+  async execute({ problem, models }, ctx) {
     if (typeof problem !== "string" || !problem.trim()) return "Error: problem is required and must be a non-empty string"
     const agent = ctx.agent
     if (!agent) return "Error: consult requires an agent context"
-    const models = agent.config?.agent?.consultModels ?? []
-    if (!Array.isArray(models) || models.length === 0)
+    const pool = agent.config?.agent?.consultModels ?? []
+    if (!Array.isArray(pool) || pool.length === 0)
       return "Consultation is not configured — add agent.consultModels ([{ provider, model }], up to 5) to ~/.thincoder/config.json"
-    if (models.length > 5) return `Error: consultModels supports at most 5 models (got ${models.length})`
+    if (pool.length > 5) return `Error: consultModels supports at most 5 models (got ${pool.length})`
+
+    // `models` (optional) narrows the pool to a subset; absent/empty → run the whole pool.
+    const picked = selectConsultModels(pool, models)
+    if (picked.error) return picked.error
+    const run = picked.models
 
     agent._consultSessions ??= new Map()
     const id = String((agent._consultIdCounter = (agent._consultIdCounter ?? 0) + 1))
     const session = {
       id, controllers: [], replies: [], pending: 0, waiters: [],
-      failed: 0, terminated: 0, stopped: false, received: 0, total: models.length,
-      models: models.map(consultLabel),
+      failed: 0, terminated: 0, stopped: false, received: 0, total: run.length,
+      models: run.map(consultLabel),
     }
     agent._consultSessions.set(id, session)
 
-    for (const m of models) {
+    for (const m of run) {
       session.pending++
       const ctrl = new AbortController()
       session.controllers.push(ctrl)

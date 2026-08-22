@@ -73,6 +73,8 @@ consult 会话（挂在 agent._consultSessions = Map<id, Session>，turn 结束�
 consult_start
   - problem (required): 问题简报——现象 + 失败轨迹概述 + 文件入口
       （原始报错无需粘贴——会诊子 agent 用 main_history 自行拉取）
+  - models (optional): 子集选择器——["provider:model" | 裸 provider | 裸 model]（大小写不敏感），
+      只从 agent.consultModels 里筛出子集跑；缺省/空 = 全池。选择器匹配不到任何池成员 → 报错并列出可选值
   → { id, models: ["deepseek:deepseek-v4-pro", ...] }   // 非阻塞
 
 consult_check
