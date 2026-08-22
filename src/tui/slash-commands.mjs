@@ -28,6 +28,7 @@ import { handleModelCommand } from "./cmd-model.mjs"
 import { handleSubmodelCommand } from "./cmd-submodel.mjs"
 import { handleShellCommand } from "./cmd-shell.mjs"
 import { handleConfigCommand } from "./cmd-config.mjs"
+import { handleCopyCommand } from "./cmd-copy.mjs"
 import { handleExtractCommand } from "./cmd-extract.mjs"
 import { handleHelpCommand } from "./cmd-help.mjs"
 import { handleUpgradeCommand } from "./cmd-upgrade.mjs"
@@ -51,6 +52,7 @@ export const SLASH_COMMANDS = [
   { name: "/session", group: "Session", desc: "list/switch archived sessions" },
   { name: "/rename", group: "Session", desc: "rename the active session" },
   { name: "/clear", group: "Session", desc: "clear screen" },
+  { name: "/copy", group: "Session", desc: "copy last assistant response to clipboard" },
   { name: "/fold", group: "Session", desc: "toggle result folding on/off" },
   { name: "/undo", group: "Session", desc: "undo recent file modifications" },
   { name: "/init", group: "Project", desc: "generate project AGENTS.md skeleton" },
@@ -87,6 +89,7 @@ export const HANDLERS = {
   "/submodel": handleSubmodelCommand,
   "/shell": handleShellCommand,
   "/config": handleConfigCommand,
+  "/copy": handleCopyCommand,
   "/upgrade": handleUpgradeCommand,
   "/fold": handleFoldCommand,
   "/undo": handleUndoCommand,

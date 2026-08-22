@@ -7,7 +7,13 @@ export async function readClipboardText() {
     const isWin = process.platform === "win32"
     const isMac = process.platform === "darwin"
     if (isWin) {
-      return await new Promise((resolve) => execFile("powershell", ["-NoProfile", "-Command", "Get-Clipboard"], { timeout: 5000 }, (err, stdout) => resolve(err ? "" : stdout)))
+      // -EncodedCommand (base64 UTF-16LE) decodes the command without codepage ambiguity,
+      // and [Console]::OutputEncoding=UTF8 forces Get-Clipboard to emit UTF-8 — otherwise
+      // Windows PowerShell writes the clipboard text in the OEM codepage (GBK on Chinese
+      // Windows) and Node's default UTF-8 decode garbles it (IK9UWM).
+      const psCmd = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard"
+      const encoded = Buffer.from(psCmd, "utf16le").toString("base64")
+      return await new Promise((resolve) => execFile("powershell", ["-NoProfile", "-EncodedCommand", encoded], { timeout: 5000 }, (err, stdout) => resolve(err ? "" : stdout)))
     } else if (isMac) {
       return await new Promise((resolve) => execFile("pbpaste", [], { timeout: 5000 }, (err, stdout) => resolve(err ? "" : stdout)))
     } else {
@@ -16,6 +22,49 @@ export async function readClipboardText() {
   } catch {
     return ""
   }
+}
+
+/** Write text to the system clipboard. Returns true on success, false on failure. */
+export async function writeClipboardText(text) {
+  if (typeof text !== "string" || text.length === 0) return false
+  try {
+    const { spawn } = await import("node:child_process")
+    const isWin = process.platform === "win32"
+    const isMac = process.platform === "darwin"
+
+    if (isWin) {
+      // -EncodedCommand is base64 UTF-16LE: PowerShell decodes the command (embedded text
+      // included) directly from UTF-16, so no console codepage (e.g. GBK) can garble
+      // non-ASCII characters — the same class of bug as the read path (IK9UWM).
+      const psCmd = `Set-Clipboard -Value '${text.replace(/'/g, "''")}'`
+      const encoded = Buffer.from(psCmd, "utf16le").toString("base64")
+      await spawnWait(spawn, "powershell", ["-NoProfile", "-EncodedCommand", encoded], null)
+      return true
+    }
+    if (isMac) {
+      await spawnWait(spawn, "pbcopy", [], text)
+      return true
+    }
+    // Linux: prefer wl-copy (Wayland), fall back to xclip (X11).
+    await spawnWait(spawn, "sh", ["-c", "command -v wl-copy >/dev/null 2>&1 && wl-copy || xclip -selection clipboard"], text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Spawn a process and wait for clean exit. When stdinText is provided it is piped to
+ *  the child as UTF-8 (used by pbcopy / xclip / wl-copy); otherwise stdio is ignored. */
+function spawnWait(spawn, cmd, args, stdinText) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: stdinText == null ? "ignore" : ["pipe", "ignore", "ignore"] })
+    child.once("error", reject)
+    child.once("close", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`))))
+    if (stdinText != null) {
+      child.stdin.on("error", () => {}) // swallow EPIPE when the tool exits without draining
+      child.stdin.end(stdinText, "utf8")
+    }
+  })
 }
 
 /** Insert pasted text into the active text target.
