@@ -30,6 +30,15 @@
 - [ ] setup.mjs 提示词解耦（工程模式不注入 main.md/discipline.md；METHODOLOGY 缺失降级为工程模板+警告）——设计见 PROMPT-DECOUPLING.md
 - [ ] 多设计并行 token 映射化（单值 token → {designPath: token}）
 
+### Issue 批量（2026-08-22，来源：Gitee/GitHub issue 巡检）
+
+- [ ] IK9IXD 数学公式渲染（CLI Unicode 近似）——需求层已入 `docs/design/TUI.md` §9.1
+- [ ] IK9UWM Windows 中文粘贴乱码——需求层已入 `docs/design/TUI.md` §9.2
+- [ ] GitHub thincoder#1 embedding 三件套落盘——需求层已入 `docs/design/TUI.md` §9.3
+- [ ] IK9UZ8 思考型模型标题生成失败（两端同修）——需求层已入 `docs/design/SESSION.md` §7
+- [ ] GitHub thincoder#2 GLM tool_calls 畸形解析崩溃（扩展端）——需求层已入 `thincoder-vscode/docs/design/ARCHITECTURE.md` 变更段
+- [ ] TUI.md 重复章节号（两个 "## 4."，渲染管线/折叠交互）重编号——评审 🔵（2026-08-22 发现，未改）
+
 ## 已关闭（Done）
 
 - [x] 语义一致化 4 项（hasCodeMutations src/ 判定、dispatch 未知路径保守、isDocOnlyChange src/ 排除、直接单测）

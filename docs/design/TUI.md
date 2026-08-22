@@ -74,18 +74,18 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 原始 text
   → highlightSearchMatches（搜索命中：当前项反白、其余黄下划线）
   → sanitizeDisplay（剥 ANSI/控制字符，防网格污染）
+  → renderMathInline + renderMarkdownPreservingWidth（数学 Unicode 近似 + **粗体**/`下划线代码`/~~删除线~~/标题，IK5VW3；先 math 后 markdown，§9.1D）
   → formatTables（markdown 表格按显示宽度重排，CJK 对齐）
   → wrapText（按 stringWidth 换行，宽度 = cols-1）
-  → renderMarkdownHeading + renderMarkdownInline（**粗体**/`下划线代码`/~~删除线~~/标题，IK5VW3）
   → 折叠（连续 dim 行 >8 折成 "… N more lines — click to expand"）
 ```
-关键约束：**markdown ANSI 在 wrap 之后插入**——插入的转义序列不再参与宽度计算，不破坏对齐。**宽度补偿**：标记（`` ` ``/`**`/`~~`）渲染后消失，含标记的表格行会比 formatTables 计算的列宽短——`renderMarkdownPreservingWidth` 在行尾补空格恢复原宽（竖线对齐）。`stringWidth` 剥离 ANSI 序列（ANSI 零显示宽度）——渲染后文本的宽度数学同样正确。窄作用域复位（`22`/`24`/`29` 而非 `0`）保证不冲掉行底色。缓存：`convCacheKey`（lines 长度/最后一行长度/streaming/reasoning 长度 + expandedBlocks 摘要）命中则跳过重建。
+关键约束：**markdown/math ANSI 在 wrap 之前插入**——但插入的转义序列零显示宽度（`stringWidth` 剥离 ANSI），不参与宽度计算，不破坏对齐。**宽度补偿**：标记（`` ` ``/`**`/`~~`/`$…$`）渲染后消失，含标记的表格行会比 formatTables 计算的列宽短——`renderMarkdownPreservingWidth` 在行尾补空格恢复原宽（竖线对齐）。渲染先于 wrap 执行保证跨 wrap 边界的公式/标记完整转换。窄作用域复位（`22`/`24`/`29` 而非 `0`）保证不冲掉行底色。缓存：`convCacheKey`（lines 长度/最后一行长度/streaming/reasoning 长度 + expandedBlocks 摘要）命中则跳过重建。
 
 ## 4. 折叠交互（双向：展开 ↔ 收起）
 
 **折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`）：
-1. **长消息折叠**：**任意**单条消息（主输出 C.text、思考 C.reason、工具摘要 C.dim——凡是 wrap 后 >12 行的都算）→ 折叠为 `[首行, hint, 末行]`；key = `long-{lines 索引}`（稳定，跨重渲染）。**主输出/思考是折叠的主力对象**——它们才是实际内容最长的；dim 工具摘要反而很少触发。双向折叠保证阅读可控：点击展开看全文，看完点收起提示收回去
-2. **连续 dim 块折叠**：连续 dim 行 >8 → 折叠为 `[首行, 次行, hint]`；key = `fold-{n}`
+1. **长消息折叠**：**任意**单条消息（主输出 C.text、思考 C.reason、工具摘要 C.dim——凡是 wrap 后 >12 行的都算）→ 折叠为 `[前 4 行, hint, 末行]`（共 5 行内容，hint 位于中间省略号位置）；key = `long-{lines 索引}`（稳定，跨重渲染）。**主输出/思考是折叠的主力对象**——它们才是实际内容最长的；dim 工具摘要反而很少触发。双向折叠保证阅读可控：点击展开看全文，看完点收起提示收回去
+2. **连续 dim 块折叠**：连续 dim 行 >8 → 同样折叠为 `[前 4 行, hint, 末行]`；key = `fold-{n}`
 
 **标志（哪里可折叠一眼可见）**：
 - 折叠控制行**不缩进、与输出内容平齐**，且**行前空一行**（与其他内容区分，避免误认为无关行）
@@ -98,7 +98,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **约束**：
 - 展开的长 dim 块行带 `_skipDimFold` 标记，不再参与连续 dim 折叠（防折叠套折叠——0.12.7 回归修复）
-- **历史上"主输出/思考永不折叠"的约束已撤销**（0.12.7 的临时修复）：当时只有单向折叠，折叠=内容被锁住影响阅读；双向折叠落地后重新纳入——>12 行的主输出/思考默认折叠为 3 行（首末行可见），点击展开/收起
+- **历史上"主输出/思考永不折叠"的约束已撤销**（0.12.7 的临时修复）：当时只有单向折叠，折叠=内容被锁住影响阅读；双向折叠落地后重新纳入——>12 行的主输出/思考默认折叠为 5 行（前 4 行 + 末 1 行可见），点击展开/收起
 - `/fold off` 时两类折叠与全部提示行不出现；`/fold on` 恢复
 - 展开态与折叠态切换由 `convCacheKey` 的 expandedBlocks 摘要驱动缓存失效
 
@@ -137,7 +137,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 纯函数渲染 | 无终端也能全量单测（tui.test.mjs 1147 行） |
 | stdin 双层（keyStream + paste 累积） | 粘贴与按键保序，bracketed paste 大文本不丢 |
 | Ctrl+C 永不直接杀进程 | 防误触（双确认）+ picker/生成语义分层（IK61BI） |
-| markdown 渲染放 wrap 后 | ANSI 不干扰宽度数学；窄复位不清行色（IK5VW3） |
+| markdown/math 渲染在 wrap 之前、宽度补偿保对齐 | ANSI 零显示宽度不干扰宽度数学；行尾补空格恢复原宽；跨 wrap 边界的标记/公式完整转换；窄复位不清行色（IK5VW3） |
 | /submodel 独立命令而非扩展现有 /model | /model 语义是主会话 provider 切换；子 agent 模型是高频操作，picker 导航 + 参数直设双通道 |
 | 子 agent 模型按类型分别配置（subagentModels[role]） | 4 种 role（explore/plan/coder/eng-coder）用途差异大——搜索用便宜模型、规划/实现用好模型；全局 subagentModel 保留为兜底（向后兼容）；优先级：工具参数 > 类型级 > 全局 > 继承父 |
 | /submodel picker 选中写入槽位（不复用 openModelPicker） | openModelPicker 绑定主会话状态（改 activeProvider/activeModel）；子模型选择需"选中即写指定槽位"的参数化变体——复用 provider/模型列表构建与两级交互，仅回调目标不同 |
@@ -146,3 +146,147 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 恢复过滤 [System reminder: | 机读消息不显示（与 VS Code 渲染契约一致） |
 | 增量渲染 + 缓存键 | 1M 行会话不卡：只重绘变化行 |
 | 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子任务面板 |
+
+
+## 9. Issue 变更段（2026-08-22 · 需求层）
+
+> 来源：Gitee #IK9IXD / #IK9UWM、GitHub thincoder#1。三层面按板块同文档：需求层 + 设计层 + 测试层齐备。
+
+### 9.1 IK9IXD · 数学公式渲染（Unicode 近似）
+
+**总体需求**：CLI TUI 显示模型回答中的数学公式时，把 LaTeX 源码（行内 `$...$`、块级 `$$...$$`）转换为 Unicode 近似可读形式，消除 `\frac`/`\sum` 源码噪声——覆盖工程数学常见子集（issue 截图为 WLS 数据整定公式，行内+块级混合）。
+
+**功能性需求**：
+- F1 行内公式近似显示：`$x_i$`→xᵢ、`$\hat{x}_i$`→x̂ᵢ、`$\sigma_i$`→σᵢ，中文解释段落中的变量引用直接可读。
+- F2 块级公式近似显示：`\min_{\hat{x}} \sum_i \left(\frac{\hat{x}_i-x_i}{\sigma_i}\right)^2 \ \text{s.t.} \ f(\hat{x})=0` 类公式转换后整体可读（不再显示原始 `\frac{...}{...}`）；无 `\\` 的块级输出单行近似，含 `\\` 的按行近似保留多行。
+- F3 转换子集（设计层给 token 表）：`\frac{a}{b}`→(a)/(b)、`\sum_i`→∑ᵢ、`\prod`→∏、`\hat{x}`→x̂、`\bar{x}`→x̄、`\sqrt{x}`→√(x)、希腊字母直映、`_x`→ₓ、`^2`→²、`\min`/`\max`/`\text{}`→对应文本、`\left(`/`\right)`→()、`\quad`→空格、`\pm`/`\times`/`\cdot`/`\le`/`\ge`/`\ne`/`\approx`/`\in` 等常见算符直映。
+- **范围边界**：仅显示层转换、不改语义；不认识的 LaTeX 结构**原样显示**；不做多行 unicodeart 排版（路线 B 已否决）；扩展端（webview/katex）不在本轮。
+
+**非功能性需求**：
+- NF1 流式安全：未闭合的 `$` 保持原样（与 markdown.mjs 现有策略一致），只转换完整闭合的公式。
+- NF2 性能：行级渲染热路径 O(n) 单遍；无正则回溯爆炸；`convCacheKey` 缓存语义不变。
+- NF3 零依赖：自写表驱动转换器，不引第三方 LaTeX 库。
+- NF4 宽度正确：转换结果按显示宽度参与计算；组合字符（x̂ = x + U+0302）宽计 1——若 `stringWidth` 对组合字符计算有误需一并修正；表格对齐不破坏。
+
+### 9.2 IK9UWM · Windows 中文粘贴乱码
+
+**总体需求**：Windows 下 Ctrl+V 粘贴中文正确显示。根因已实测验证：`readClipboardText` 调 `powershell Get-Clipboard`，PowerShell 按 `[Console]::OutputEncoding`（中文系统 GBK/936）编码 stdout、node 按 UTF-8 解码 → 乱码。本机 65001 代码页读测正常，反证机制在代码页边界。
+
+**功能性需求**：
+- F1 Windows 中文用户 Ctrl+V 粘贴的中文在输入框正确显示。
+- F2 修复：Windows 分支强制 UTF-8 输出——`powershell -NoProfile -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-Clipboard"`。
+- **范围边界**：仅修 Ctrl+V 文本读取路径；bracketed paste（终端直传 UTF-8）、macOS/Linux 分支、剪贴板图片路径均不动。
+
+**非功能性需求**：
+- NF1 兼容：任意系统代码页（936/65001）输出稳定 UTF-8；65001 系统行为不变。
+- NF2 无额外进程开销（同一 powershell 调用内完成）；失败仍返回空串（现状语义不变）。
+
+### 9.3 GitHub thincoder#1 · embedding 配置三件套落盘
+
+**总体需求**：CLI `/config` 保存 embedding key 时 baseURL/model 一并落盘，两端读同一 config.json 判定一致。现状：CLI 只落 apiKey（`cmd-config.mjs` setEmbedKey），baseURL/model 靠 `DEFAULTS.embedding` 内存兜底；扩展 `embed-config.mjs` 要求文件里三件套齐全 → 扩展判定"未配置"，用户需两端各配一遍。
+
+**功能性需求**：
+- F1 用户在 CLI 配置 embedding key 后，VS Code 扩展读同一 config.json 即启用向量检索，不重复配置。
+- F2 修复：`setEmbedKey` 的 persistRaw 补写 baseURL/model——已有值保留；缺省时取自 `config.mjs` 的 `DEFAULTS.embedding`（**引用，不硬编码字面量**）。
+- F3 存量兼容：config.json 仅含 apiKey 的存量配置，用户在 CLI 再次保存 embedding 设置时自动补齐（本次不动扩展端读取判定）。
+- **范围边界**：仅改 CLI 落盘逻辑；扩展端三件套判定保留不动。
+
+**非功能性需求**：
+- NF1 默认值单一来源（`DEFAULTS.embedding`），杜绝两端字面量漂移。
+
+### 9.1D · 设计层（公式渲染）
+
+**方案选型**：自写表驱动 Unicode 转换器，挂现有 markdown 渲染管线（路线 A）。否决项：完整 LaTeX 解析器（零依赖约束冲突 + 范围失控）、多行 unicodeart 排版（路线 B：与行式渲染模型冲突，render.mjs 按行做宽度数学，多行公式块需新块类型，收益边际）。
+
+**架构与接口**：
+- 新增 `src/tui/math.mjs`（纯函数、零依赖、无 ANSI 输出）：
+  - `renderMathInline(line)`：转换单行内**闭合**的 `$...$` 段（不跨行）
+  - `renderMathBlock(text)`：转换**闭合**的 `$$...$$` 段（无 `\\` → 单行近似输出；含 `\\` → 每行独立近似、保留多行）
+  - `convertFormula(src)`：token 表驱动的子集转换器（导出供单测）
+- 管线挂钩（单一挂钩点，与 `renderMarkdownPreservingWidth` 同层、位于 `formatTables`/`wrapText` **之前**）：`render-conversation.mjs` 的 `renderMarkdownPreservingWidth(sanitizeDisplay(text))` 改为 `renderMarkdownPreservingWidth(renderMathInline(renderMathBlock(sanitizeDisplay(text))))`——**行内与块级都在此一处调用**（renderMathBlock 处理跨行闭合的 `$$...$$`，renderMathInline 只匹配不成对 `$$` 的单 `$`）。**先 math 后 markdown**——math 把 `$...$`/`$$...$$` 视为不透明段（内部不跑 markdown，避免 `x**2` 被误判粗体），转换输出为纯 Unicode；未转换的原样段继续走 markdown。math 先于 wrap 执行保证跨 wrap 边界的公式也能完整转换。
+- 行内代码段规则：**反引号内不做数学转换**（代码是字面量）——与 markdown.mjs 的 code-span 不透明策略一致（先按反引号切段，奇数段为代码原样跳过）。
+- 流式安全：未闭合的 `$`/`$$` 原样保留（与 markdown.mjs 未闭合标记策略一致）；只转换完整闭合对。
+- 宽度：转换输出（x̂ = x+U+0302 等组合字符）由现有 `charWidth` 正确计宽（U+0300-036F 已计 0，NF4 满足，render.mjs 无需改动）；转换后文本再进 `formatTables`/`wrapText` 按显示宽度测量。**T12 机制**：math 先于 formatTables 执行 → 表格列宽按转换后文本测量，无需补偿；`renderMarkdownPreservingWidth` 的行尾补空格只针对 markdown 标记（`` ` ``/`**`/`~~`），与 math 无关。
+
+**token 表**（`convertFormula` 子集，表驱动、按序匹配）：
+- 二参数：`\frac{a}{b}`→`(a)/(b)`；一参数：`\sqrt{x}`→`√(x)`、`\text{...}`→内容原样、`\hat{x}`→`x̂`（追加 U+0302）、`\bar{x}`→`x̄`（U+0304）、`\vec{x}`→`x⃗`（U+20D7）
+- 命令直映：`\sum`→∑、`\prod`→∏、`\int`→∫、`\min`/`\max`/`\log`/`\ln`/`\exp`/`\lim`→同文本、`\left(`/`\right)`→()、`\quad`→两空格、`\qquad`→四空格、`\,`/`\;`→空格
+- 算符直映：`\pm`→±、`\mp`→∓、`\times`→×、`\cdot`→·、`\div`→÷、`\le`→≤、`\ge`→≥、`\ne`→≠、`\approx`→≈、`\equiv`→≡、`\propto`→∝、`\in`→∈、`\notin`→∉、`\infty`→∞、`\to`/`\rightarrow`→→、`\partial`→∂、`\nabla`→∇、`\forall`→∀、`\exists`→∃、`\cdots`→⋯、`\ldots`→…
+- 希腊字母：`\alpha`…`\omega`（小写+大写）直映
+- 上下标：`_x`→ₓ、`^2`→²（单字符用 Unicode 上下标字符；多字符 `_{ab}`→`_(ab)`、`^{ab}`→`^(ab)`；无对应 Unicode 字符的保留括号形式）
+- `\\`（块级内）→保留换行语义（块级近似输出按 `\\` 分行，每行独立近似后保留为多行——仅块级）
+- **不认识的命令原样保留**（含反斜杠与参数）
+
+**受影响文件**：新增 `src/tui/math.mjs`、新增 `test/math.test.mjs`、修改 `src/tui/render-conversation.mjs`（挂钩点一处）。
+
+**关键决策**：路线 A（否决 B）；先 math 后 markdown；子集表驱动（新 token 不碰管线）；块级 `\\` 保留多行（不做整块压成一行——多约束方程组逐行近似可读性更高）。
+
+**测试用例表**（映射 F1/F2/F3 + NF1/NF4）：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | `$x_i$` | `xᵢ` | F1 |
+| T2 | `$\hat{x}_i$` | `x̂ᵢ` | F1 |
+| T3 | `$\sigma_i$` | `σᵢ` | F1 |
+| T4 | `$$\min_{\hat{x}} \sum_i \left(\frac{\hat{x}_i-x_i}{\sigma_i}\right)^2$$` | `min_(x̂) ∑ᵢ ((x̂ᵢ-xᵢ)/(σᵢ))²` | F2 |
+| T5 | `\text{s.t.} \quad f(\hat{x})=0` | `s.t.  f(x̂)=0` | F3 |
+| T6 | 未闭合 `$x_i`（流式中途） | 原样 `$x_i` | NF1 |
+| T7 | `$$` 只有开头无结尾 | 原样 | NF1 |
+| T8 | `\begin{matrix}…\end{matrix}` | 原样 | F3 边界 |
+| T9 | `\frac{\frac{a}{b}}{c}`（嵌套） | `((a)/(b))/(c)` | F3 |
+| T10 | 空串 / 只有 `$$$` | 空串 / 原样 | 错误条件 |
+| T11 | `stringWidth(转换结果)` | 与显示宽度一致（x̂ᵢ=2、σᵢ=2） | NF4 |
+| T12 | 表格内行含 `$x_i$` | 转换后 formatTables 对齐不破（列宽按转换后文本测量，见 9.1D 宽度条） | NF4 |
+| T13 | 块级含 `\\`：`$$\min_{\hat{x}} \sum_i (…) \\ \text{s.t.} \ f(\hat{x})=0$$` | 输出两行近似（`\\` 处分行，每行独立近似） | F2 |
+| T14 | 反引号代码段 `` `$x_i$` `` 内的公式 | 不转换，原样保留（code-span 不透明） | 边界 |
+
+### 9.2D · 设计层（中文粘贴乱码）
+
+**方案**：Windows 分支 PowerShell 命令强制 UTF-8 输出，命令构造抽为纯函数便于单测。GBK(936) 机器是本 bug 的唯一复现环境（本机 65001 无法复现），故修复正确性由**命令级单测锁定**（断言 UTF-8 前缀存在）+ 本机行为不变回归验证。
+
+**接口**：
+- `clipboard.mjs` 新增导出 `buildWindowsClipboardCommand()` → `["-NoProfile", "-Command", "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-Clipboard"]`
+- `readClipboardText` Windows 分支改为 `execFile("powershell", buildWindowsClipboardCommand(), { timeout: 5000 }, …)`——execFile 默认 utf8 解码不变，管道输出现在恒为 UTF-8 字节；返回值统一 strip 前导 `\uFEFF`（PowerShell 输出 BOM 防御，936 机器首次冒烟时验证）
+
+**受影响文件**：修改 `src/tui/clipboard.mjs`、`test/tui.test.mjs`（追加 describe）。
+
+**关键决策**：命令前缀而非 `-EncodedCommand`/WScript 等重实现——最小 diff、同一次进程调用、PowerShell 2.0 起 `OutputEncoding` 赋值均可用。
+
+**测试用例表**：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | 调用 `buildWindowsClipboardCommand()` | 数组含 `[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-Clipboard` 完整命令 | F2 |
+| T2 | 现有 `insertPastedText` 单测全过 | 回归无破坏 | 范围边界 |
+| T3 | 本机（65001）手动 Ctrl+V 粘贴中文 | 输入框显示正确（行为不变验证） | NF1 |
+| T4 | mock execFile 失败（powershell 不存在/非零退出） | `readClipboardText` 返回 `""`，不抛出 | NF2 |
+
+### 9.3D · 设计层（embedding 三件套落盘）
+
+**方案**：
+- `config.mjs`：`const DEFAULTS`（line 39）→ `export const DEFAULTS`
+- `cmd-config.mjs` `setEmbedKey` 的 persistRaw 改为：
+  ```js
+  const { DEFAULTS } = await import("../config.mjs")
+  raw.embedding = {
+    ...(raw.embedding ?? {}),
+    apiKey: embKey,
+    baseURL: raw.embedding?.baseURL ?? DEFAULTS.embedding.baseURL,
+    model: raw.embedding?.model ?? DEFAULTS.embedding.model,
+  }
+  ```
+- 运行时内存侧 `agent.config.embedding` 已由 `loadConfig` 的 `{...DEFAULTS.embedding, ...config.embedding}` 兜底补齐，无需改动；扩展端 `embed-config.mjs` 判定不动（F3 存量：用户在 CLI 再次保存即补齐三件套）。
+
+**受影响文件**：修改 `src/config.mjs`（export 一词）、`src/tui/cmd-config.mjs`（persistRaw 块）。
+
+**关键决策**：引用 `DEFAULTS.embedding` 而非字面量（NF1 单一来源）；保留已有自定义值（Ollama/本地 embedding 用户不受影响）；不动扩展端（最小变更面）。
+
+**测试用例表**：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | 空 config：保存 key "K" | raw.embedding = { apiKey:"K", baseURL: DEFAULTS 值, model: DEFAULTS 值 } | F2 |
+| T2 | 已有自定义 baseURL/model（Ollama）再保存 key | 原 baseURL/model 保留，apiKey 更新 | F2 |
+| T3 | raw.embedding 为 undefined | 三件套齐（与 T1 同） | F2 |
+| T4 | 仅 apiKey 的存量 config 再保存 | 补齐 baseURL/model | F3 |
+| T5 | 回归：现有 /config 相关测试全过 | 无破坏 | 范围边界 |

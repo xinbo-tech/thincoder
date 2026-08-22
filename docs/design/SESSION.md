@@ -78,3 +78,51 @@ _compressFailures/_verifyRetries 重置
 | 旧格式回退 | 无 contextHistory → 从 history 播种 | 同（`contextHistory: null` → 播种） |
 | transient 过滤 | saveSession 过滤 | `_saveLines` 落盘过滤（2026-08 修复） |
 | 字段往返 | 全量覆盖写 | `...existing` 展开保留未知字段（activeModel/engineering 等） |
+
+## 7. Issue 变更段（2026-08-22 · 需求层）
+
+> 来源：Gitee #IK9UZ8。两端同修（CLI `src/generate-title.mjs` + VS Code `src/extension/generate-title.mjs`）；本文件为权威源，VS Code 端 `docs/design/ARCHITECTURE.md` 变更段引用（不复制）。
+
+### IK9UZ8 · 思考型模型会话标题生成失败
+
+**总体需求**：思考型模型（DeepSeek `thinking:{type:"enabled"}`、GLM 等）下会话自动标题生成成功。根因已验证：标题请求 `max_tokens: 30` 全部被 `reasoning_content` 消耗，`content` 为空 → 标题 null → 回退首条消息前 40 字（多个会话同名，无法区分）。
+
+**功能性需求**：
+- F1 使用思考型模型的用户，每个会话仍有自动标题，`/session` 列表可区分会话。
+- F2 修复：标题请求**显式禁用思考**（OpenAI 兼容格式 body 加 `thinking:{type:"disabled"}`；provider 不接受的字段由其忽略）+ 提高 `max_tokens`（30→100，设计层定值）。
+- F3 两端同修：CLI `generate-title.mjs`；VS Code `generate-title.mjs` 的 `requestTitle` 独立 fetch 不走 buildRequest 的 spec 思考注入，需在 body 显式处理。
+- **范围边界**：标题规范（≤40 字符、无引号）与失败静默降级语义不变；anthropic/google 格式的思考型模型影响（设计层确认是否需要同样处理）。
+
+**非功能性需求**：
+- NF1 超时 10s、失败静默降级不变。
+- NF2 成本：标题请求 token 上限适度，不随会话长度增长。
+
+### IK9UZ8-D · 设计层
+
+**方案**：标题请求显式禁用思考 + 提高输出上限；两端同修。已否决：从 `reasoning_content` 里提取标题——reasoning 是思考过程不是标题，读出的是推理片段而非标题文本；禁用思考后 content 正常返回，无需兜底读取。
+
+**CLI `src/generate-title.mjs`**：
+- body 增加 `thinking: { type: "disabled" }`；`max_tokens: 30` → `100`
+- 读取逻辑不变（`choices[0].message.content`）；provider 不支持 thinking 字段的按未知字段忽略处理（OpenAI 兼容 API 惯例）
+- **CLI 仅 OpenAI 兼容格式**：`generate-title.mjs` 单一 fetch 直拼 body（无 format 分派，无 anthropic/google 分支）——anthropic/google 格式标题请求仅存在于扩展端，CLI 侧无需对应处理
+
+**VS Code `src/extension/generate-title.mjs` `requestTitle`**（其独立 fetch 不走 buildRequest 的 spec 注入，需显式处理）：
+- openai 格式分支：body 加 `thinking: { type: "disabled" }` + `max_tokens: 100`
+- anthropic 格式分支：`max_tokens: 30` → `100`（anthropic 扩展思考默认关闭，不传 thinking 即不思考，无需禁用字段）
+- google 格式分支：`generationConfig.maxOutputTokens: 30` → `100`（thinkingConfig 不传即不思考）
+
+**受影响文件**：`thincoder/src/generate-title.mjs`、`thincoder-vscode/src/extension/generate-title.mjs`、新增 `thincoder/test/generate-title.test.mjs`、修改 `thincoder-vscode/test/unit.test.mjs`（generate-title describe 内追加）。
+
+**关键决策**：禁用思考而非提取 reasoning（见方案）；max_tokens 100 是 40 字符标题（≈60-80 token）的 2.5 倍余量，思考禁用后 30 也够，但 100 防御意外空转；标题规范（≤40 字符、无引号）与静默降级不变。
+
+**测试用例表**：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | CLI：mock fetch，断言请求 body | body 含 `thinking:{type:"disabled"}` 且 `max_tokens:100`；返回正常 content → 标题提取正确 | F2 |
+| T2 | CLI：响应 content 为空 | 返回 null（静默降级不变） | 边界 |
+| T3 | CLI：HTTP 400 / 网络错误 | 返回 null，不抛出 | 错误条件 |
+| T4 | vscode：mock fetch 断言 openai 分支 body | 含 `thinking:{type:"disabled"}` + `max_tokens:100` | F3 |
+| T5 | vscode：anthropic 分支 body | `max_tokens:100`，无 thinking 字段 | 范围边界 |
+| T6 | vscode：google 分支 body | `maxOutputTokens:100` | 范围边界 |
+| T7 | 回归：标题 ≤40 字符截断、无引号 | 不变 | 范围边界 |
