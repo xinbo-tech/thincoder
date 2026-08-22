@@ -1499,6 +1499,20 @@ test("execute: 正常沙箱行为不受影响（log/readFile/grep）", async () 
   }
 })
 
+test("execute: 顶层 await + import() 项目 ESM + console + filter", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-exec4-"))
+  try {
+    writeFileSync(join(dir, "mod.mjs"), 'export const name = "mod"\n')
+    const imp = await codeModeTool.execute({ code: 'const m = await import("./mod.mjs"); console.log(m.name)' }, { cwd: dir })
+    assert.equal(imp, "mod")
+
+    const filt = await codeModeTool.execute({ code: 'console.log("a")\nconsole.log("b")', filter: "a" }, { cwd: dir })
+    assert.equal(filt, "a")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test("isPrivateHost: blocks loopback, private ranges, metadata, link-local (SSRF guard)", () => {
   const blocked = [
     "localhost", "LOCALHOST", "foo.localhost", "0.0.0.0",

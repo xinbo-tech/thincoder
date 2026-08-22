@@ -1,63 +1,112 @@
 /**
  * tools/codemode.mjs — CodeMode: JavaScript execution tool
  *
- * Gives the model an `execute` tool backed by Node.js vm.Script.runInNewContext.
- * Multiple tool calls can be composed into a single script, reducing API round-trips
- * and keeping large intermediate results out of context.
+ * Gives the model an `execute` tool that runs JS in a child `node
+ * --input-type=module --eval` process — NOT the in-process vm sandbox it used
+ * to be. The vm route could not support dynamic `import()` (needs the
+ * --experimental-vm-modules flag) or await it, which pushed every real JS run
+ * back to `bash node -e`. A child node process gives top-level await, dynamic
+ * `import()` of the project's own .mjs modules, native `console`/`fetch`, AND a
+ * killable timeout (an in-process infinite loop would freeze the CLI; a child
+ * process is killed like bash).
  *
- * Sandbox API:
- *   readFile(path)      — read a file relative to cwd, return string
- *   writeFile(path, c)  — write content to a file (auto-creates parent dirs)
- *   glob(pattern)        — return array of matching paths
- *   grep(pattern, file)  — return array of matching lines
- *   log(...args)         — append to output buffer
- *   fetch(url)           — HTTP GET, return string
+ * The child `import()`-s exec-prelude.mjs first for readFile/writeFile/glob/grep/
+ * log/require (paths confined to the workspace root). Full Node via require()/
+ * process/import() is available — same boundary as bash, no fake sandbox.
  *
- * Full Node access via require()/process — no fake sandbox. The bash tool can
- * already reach any Node API, so blocking require here only misled the model
- * about its real capability boundary (project philosophy: no command-level
- * sandbox; transparency + trust + audit).
- *
- * Limits (engineering guards, not security):
- *   timeout: 30s (configurable via timeoutMs param)
- *   maxOutput: 50000 bytes
- *   maxScriptSize: 50000 bytes
- *   file paths confined to cwd (accidental out-of-workspace writes)
+ * Parameters:
+ *   code       — JS to run (top-level await and import() supported)
+ *   workdir    — run in this sub-directory (confined to the workspace)
+ *   filter     — return only output lines matching this regex (case-insensitive)
+ *   timeoutMs  — timeout (default 30s, max 60s)
  */
+import { spawn } from "node:child_process"
+import { dirname, resolve, relative } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
+import { DESC } from "./shared.mjs"
 
-import { Script, createContext } from "node:vm"
-import { createRequire } from "node:module"
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync } from "node:fs"
-import { join, dirname, relative, resolve } from "node:path"
-import { DESC, globToRegex, normalizeEOL } from "./shared.mjs"
-
-const MAX_OUTPUT = 50_000
 const MAX_SCRIPT = 50_000
+const MAX_OUTPUT = 50_000
 const DEFAULT_TIMEOUT = 30_000
 
-/** fetch: only http/https (protocol guard kept; no private-host rejection — the
- *  bash tool can reach anything anyway, so the SSRF check was a fake boundary).
- *  Validation throws SYNCHRONOUSLY so the vm sandbox's try/catch can catch it —
- *  an async throw here would become an unhandled rejection and crash the host process,
- *  and the rejection message would never reach the model. */
-function sandboxFetch(url) {
-  const parsed = new URL(url)
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error(`CodeMode fetch: protocol not allowed: ${parsed.protocol}`)
-  }
-  return doFetch(url)
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const PRELUDE_URL = pathToFileURL(resolve(__dirname, "exec-prelude.mjs")).href
+
+/** Resolve workdir relative to cwd, asserting it stays within the workspace. */
+function resolveBaseDir(cwd, workdir) {
+  if (!workdir || typeof workdir !== "string") return cwd
+  const abs = resolve(cwd, workdir)
+  const rel = relative(cwd, abs)
+  if (rel.startsWith("..")) throw new Error(`workdir escapes the workspace: ${workdir}`)
+  return abs
 }
 
-async function doFetch(url) {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 10_000)
+/** Keep only output lines matching a regex (execute filter, case-insensitive). */
+function applyFilter(output, filter) {
   try {
-    const res = await fetch(url, { signal: ctrl.signal })
-    const text = await res.text()
-    return text.slice(0, 100_000)
-  } finally {
-    clearTimeout(timer)
+    const re = new RegExp(filter, "i")
+    const lines = output.split("\n").filter((l) => re.test(l))
+    return lines.length ? lines.join("\n") : `(no output lines matched filter "${filter}")`
+  } catch (e) {
+    return `Error: filter regex invalid: ${e.message}`
   }
+}
+
+/** Spawn node, run code + prelude, capture stdout/stderr, enforce timeout/abort. */
+function runNodeEval(code, baseDir, root, timeoutMs, signal) {
+  return new Promise((resolvePromise) => {
+    const src = `await import(${JSON.stringify(PRELUDE_URL)});\n${code}`
+    const child = spawn(process.execPath, ["--input-type=module", "--eval", src], {
+      cwd: baseDir,
+      env: { ...process.env, THINCODER_EXEC_ROOT: root },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    })
+
+    let outBuf = "", errBuf = "", truncated = false, settled = false, mode = null
+    let timer = null, kickTimer = null
+
+    const settle = (result) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      clearTimeout(kickTimer)
+      if (signal) signal.removeEventListener("abort", onAbort)
+      resolvePromise(result)
+    }
+    const kill = () => { try { child.kill() } catch { /* already gone */ } }
+    // After kill, wait for "close" (child fully reaped) before settling — settling
+    // early races the caller deleting the cwd dir while the child still holds it.
+    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : `Error: script timed out after ${timeoutMs}ms`), 3000) }
+    const onAbort = () => { if (mode) return; mode = "abort"; kill(); armKick() }
+
+    timer = setTimeout(() => { if (!mode) { mode = "timeout"; kill(); armKick() } }, timeoutMs)
+
+    if (signal) {
+      if (signal.aborted) onAbort()
+      else signal.addEventListener("abort", onAbort, { once: true })
+    }
+
+    const cap = (buf, d) => {
+      if (buf.length < MAX_OUTPUT) return buf + d
+      if (!truncated) { truncated = true; return buf + "\n...[output truncated]" }
+      return buf
+    }
+    child.stdout.on("data", (d) => { outBuf = cap(outBuf, d.toString()) })
+    child.stderr.on("data", (d) => { errBuf = cap(errBuf, d.toString()) })
+    child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`))
+    child.on("close", (code) => {
+      if (mode === "abort") return settle("(stopped)")
+      if (mode === "timeout") return settle(`Error: script timed out after ${timeoutMs}ms`)
+      const out = outBuf.trimEnd()
+      const err = errBuf.trim()
+      if (code === 0) {
+        settle(out || "(no output)")
+      } else {
+        settle(err ? (out ? `${out}\n\n[stderr]:\n${err}` : err) : `${out}\n(exit code ${code})`.trim())
+      }
+    })
+  })
 }
 
 export const codeModeTool = {
@@ -68,7 +117,15 @@ export const codeModeTool = {
     properties: {
       code: {
         type: "string",
-        description: "JavaScript code to execute. Use provided functions: readFile(path), writeFile(path, content), glob(pattern), grep(pattern, file), log(...args). require()/process/Node modules are available.",
+        description: "JavaScript code to execute (top-level await and dynamic import() supported). Use provided globals: readFile/writeFile/glob/grep/log, plus native require/process/console/fetch/import.",
+      },
+      workdir: {
+        type: "string",
+        description: "Run in this directory (relative to cwd, confined to the workspace; default cwd)",
+      },
+      filter: {
+        type: "string",
+        description: "Optional: only return output lines matching this regex (case-insensitive)",
       },
       timeoutMs: {
         type: "integer",
@@ -80,97 +137,15 @@ export const codeModeTool = {
   readonly: false,
 
   async execute(args, ctx) {
-    const cwd = ctx.cwd
     const code = args.code ?? ""
-
     if (code.length > MAX_SCRIPT) {
       return `Error: script too large (${code.length} > ${MAX_SCRIPT} bytes). Split into smaller scripts or use individual tools.`
     }
-
-    const output = []
+    let baseDir
+    try { baseDir = resolveBaseDir(ctx.cwd, args.workdir) }
+    catch (e) { return `Error: ${e.message}` }
     const timeoutMs = Math.min(args.timeoutMs ?? DEFAULT_TIMEOUT, 60_000)
-
-    // File path guard: ensure paths are within cwd (accidental out-of-workspace writes)
-    function safePath(p) {
-      if (typeof p !== "string") throw new Error(`Path must be a string, got ${typeof p}`)
-      const abs = resolve(cwd, p)
-      const rel = relative(cwd, abs)
-      if (rel.startsWith("..") || (rel.includes("..") && process.platform === "win32")) {
-        throw new Error(`Path traversal denied: ${p}`)
-      }
-      return abs
-    }
-
-    const sandbox = createContext({
-      readFile: (p) => {
-        const abs = safePath(p)
-        if (!existsSync(abs)) throw new Error(`File not found: ${p}`)
-        const st = statSync(abs)
-        if (st.size > 5_000_000) throw new Error(`File too large: ${p} (${Math.round(st.size / 1000000)}MB)`)
-        return normalizeEOL(readFileSync(abs, "utf8"))
-      },
-      writeFile: (p, content) => {
-        const abs = safePath(p)
-        mkdirSync(dirname(abs), { recursive: true })
-        writeFileSync(abs, String(content), "utf8")
-      },
-      glob: (pattern) => {
-        if (typeof pattern !== "string") throw new Error("glob pattern must be a string")
-        const regex = globToRegex(pattern)
-        const results = []
-        function walk(dir, rel) {
-          let entries
-          try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
-          for (const e of entries) {
-            if (e.name.startsWith(".") || e.name === "node_modules") continue
-            const relPath = rel ? `${rel}/${e.name}` : e.name
-            if (e.isDirectory()) { walk(join(dir, e.name), relPath) }
-            else if (regex.test(relPath)) results.push(relPath)
-          }
-        }
-        walk(cwd, "")
-        return results.slice(0, 200)
-      },
-      grep: (pattern, file) => {
-        if (typeof pattern !== "string") throw new Error("grep pattern must be a string")
-        if (typeof file !== "string") throw new Error("grep file must be a string")
-        const abs = safePath(file)
-        if (!existsSync(abs)) throw new Error(`File not found: ${file}`)
-        const content = normalizeEOL(readFileSync(abs, "utf8"))
-        const regex = new RegExp(pattern)
-        const lines = content.split("\n")
-        const matches = []
-        for (let i = 0; i < lines.length; i++) {
-          if (regex.test(lines[i])) matches.push(`${i + 1}: ${lines[i].slice(0, 200)}`)
-        }
-        return matches.slice(0, 100)
-      },
-      log: (...args) => {
-        const line = args.map((a) => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ")
-        output.push(line)
-        if (output.join("\n").length > MAX_OUTPUT) {
-          output.push("... (output truncated)")
-          throw new Error("CodeMode output limit exceeded")
-        }
-      },
-      fetch: sandboxFetch,
-      // Full Node access — no fake sandbox (bash can reach it anyway).
-      require: createRequire(join(cwd, "__codemode__.js")),
-      process,
-      setTimeout,
-      clearTimeout,
-    })
-
-    try {
-      const script = new Script(code, { filename: "codemode.js" })
-      // timeout belongs on runInContext — the Script constructor ignores it,
-      // so passing it there let runaway scripts (while(true)) hang the process forever.
-      script.runInContext(sandbox, { timeout: timeoutMs })
-      return output.join("\n") || "(no output)"
-    } catch (err) {
-      const out = output.join("\n")
-      const prefix = out ? `${out}\n\n` : ""
-      return `${prefix}Error: ${err.message}`
-    }
+    const result = await runNodeEval(code, baseDir, ctx.cwd, timeoutMs, ctx.signal)
+    return args.filter ? applyFilter(result, args.filter) : result
   },
 }
