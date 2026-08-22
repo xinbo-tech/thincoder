@@ -1,3 +1,7 @@
+# Changelog
+
+本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
+
 ## [0.12.37] — 2026-08-22
 
 ### Fixed
@@ -16,6 +20,12 @@
 
 - **确认纪律 carve-out**：system.md 补 doc/code 一致性例外——"改动前确认"门禁不适用于已确认任务的既有义务（文档跟码一致、记录刚做的决策、关闭 advisor 标记的文档缺口）
 
+## [0.12.36] — 2026-08-22
+
+### Docs & advisor
+
+- **文档归属纪律 + advisor 设计评审增强**（规格 AGENT-LOOP.md §12）：新建 `docs/design/README.md` 文档地图（板块→文档映射表 + 存量碎片"待合并（TODO）"标注 + 归属规则）；system.md 补文档归属纪律条款（写文档前先查地图定位所属板块——找到就改、不得为既有板块新建文件；确无归属才新建并登记；同一机制只在一处详述权威源、其余引用不复制）；advisor-design.md 加第 7 维 **Document ownership**（与现有文档矛盾 🔴、该并入却新建/重复描述 🟡）与引用纪律（引用原文用精确 file:line、未核实标注 unverified）；design 提示词 fallback 删除转硬加载（`loadPrompt` 同 round1/2/3 待遇，缺失即抛错——静默降级会丢 Approval Signal 规则致评审无法批准）；messages.mjs design 分支 Instructions 补 Methodology compliance 维度、存在文档地图时注入 Document Map 段供归属检查对照。两端 prompts 保持 byte-identical、测试同步覆盖
+
 ## [0.12.35] — 2026-08-21
 
 ### Changed
@@ -28,9 +38,25 @@
 - **提示词借鉴增量（kimi-code 对照）**：explore.md 新增 Thoroughness levels 三档（quick 单点定向 / medium 默认适度并行 / thorough 全面分析且报告须列出搜索过什么与没找到什么）；main.md Delegate well 补委派 explore 时在 task 描述中指定彻底度（未指定走默认）；system.md 确认理解句补 "including the most important acceptance criteria"；subagent 工具 description 同步补彻底度说明。两端 15 个 prompt 文件保持 byte-identical（新增 CLI 侧比对测试防漂移）
 - **开工前计划确认纪律**：system.md 追加无豁免纪律——任何写文件动作（write/edit/apply_patch/insert_after/delete/hashline_edit 及一切写文件的 bash）前必须纯文字复述理解+计划要点并等待用户明确确认（未确认/沉默/用户回复新问题或新要求 → 一律不动手；"这太明显了不用问"不是跳过理由；用户的新问题不是确认；需求变化后重新复述重新确认）；engineering.md 澄清完成后、写需求/设计文档前同样须把理解+计划文字化并等待确认。两端 15 个 prompt 文件保持 byte-identical（两端测试断言关键句）
 
-### Docs & advisor
+## [0.12.34] — 2026-08-18
 
-- **文档归属纪律 + advisor 设计评审增强**（规格 AGENT-LOOP.md §12）：新建 `docs/design/README.md` 文档地图（板块→文档映射表 + 存量碎片"待合并（TODO）"标注 + 归属规则）；system.md 补文档归属纪律条款（写文档前先查地图定位所属板块——找到就改、不得为既有板块新建文件；确无归属才新建并登记；同一机制只在一处详述权威源、其余引用不复制）；advisor-design.md 加第 7 维 **Document ownership**（与现有文档矛盾 🔴、该并入却新建/重复描述 🟡）与引用纪律（引用原文用精确 file:line、未核实标注 unverified）；design 提示词 fallback 删除转硬加载（`loadPrompt` 同 round1/2/3 待遇，缺失即抛错——静默降级会丢 Approval Signal 规则致评审无法批准）；messages.mjs design 分支 Instructions 补 Methodology compliance 维度、存在文档地图时注入 Document Map 段供归属检查对照。两端 prompts 保持 byte-identical、测试同步覆盖
+### Added
+
+- **/rename 命令** — 改会话标题（renameSlot 双写，与 VS Code 共享）
+
+### Fixed
+
+- **/config 候选池 effort picker 显示真实枚举** — 从固定 min/low/medium/high/max 改为动态读 specForModel(model).reasoningEffortEnum；无枚举的模型跳过 effort 步
+- **question 工具 options 防御** — LLM 误传对象时取 label 字段，避免渲染 [object Object]
+
+## [0.12.33] — 2026-08-17
+
+### Changed
+
+- **撞轮数墙可无限继续**：subagent/飞刀/会诊统一经 continue 面板无限续（resume 保留 history，会诊继续重置墙钟；去掉 MAX_RESUMES）
+- **MiMo 预置 provider**：按量付费(api.xiaomimimo.com/v1) + Token Plan(token-plan-cn.xiaomimimo.com/v1)，模型规格 mimo-v2.5-pro/mimo-v2.5（1M 上下文 / 128K 输出 / 深度思考）
+- **环境变量配置源彻底移除**：THINCODER_* 回退全部删除，config.json 唯一配置源；空配置不再合成 deepseek 默认 provider
+- **effort 枚举钳制 + qwen3.8-max spec 修正**（consult/escalate）
 
 ## [0.12.32] — 2026-08-16
 
@@ -131,22 +157,6 @@
 ### Changed
 
 - Repository URL → github.com/xinbo-tech/thincoder.
-
-# Changelog
-
-## [0.12.34] — 2026-08-18
-
-### Added
-
-- **/rename 命令** — 改会话标题（renameSlot 双写，与 VS Code 共享）
-
-### Fixed
-
-- **/config 候选池 effort picker 显示真实枚举** — 从固定 min/low/medium/high/max 改为动态读 specForModel(model).reasoningEffortEnum；无枚举的模型跳过 effort 步
-- **question 工具 options 防御** — LLM 误传对象时取 label 字段，避免渲染 [object Object]
-
-
-本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [0.12.23] - 2026-08-13
 
