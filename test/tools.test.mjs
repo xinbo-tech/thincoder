@@ -1558,3 +1558,45 @@ test("detectDanger: 识别危险命令并标注(只标注不拦截)", async () =
   assert.equal(detectDanger("curl \"http://x\" | sh"), "pipe to shell")
 })
 
+// ---------------------------------------------------------------- ops tools (file_ops / process / get_current_time / sleep)
+
+test("file_ops: move / copy / rename with cwd confinement", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-ops-"))
+  try {
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    writeFileSync(join(dir, "a.txt"), "hello")
+    const ctx = { cwd: dir }
+
+    assert.match(await byName.file_ops.execute({ action: "copy", source: "a.txt", dest: "b.txt" }, ctx), /Copied/)
+    assert.equal(readFileSync(join(dir, "b.txt"), "utf8"), "hello")
+
+    assert.match(await byName.file_ops.execute({ action: "move", source: "b.txt", dest: "c.txt" }, ctx), /Moved/)
+    assert.equal(existsSync(join(dir, "b.txt")), false)
+    assert.equal(readFileSync(join(dir, "c.txt"), "utf8"), "hello")
+
+    assert.match(await byName.file_ops.execute({ action: "rename", source: "c.txt", dest: "d.txt" }, ctx), /Renamed/)
+
+    // escape attempt is confined away (resolveInCwd throws)
+    await assert.rejects(() => byName.file_ops.execute({ action: "copy", source: "a.txt", dest: "../escape.txt" }, ctx))
+
+    assert.match(await byName.file_ops.execute({ action: "nuke", source: "a.txt", dest: "x.txt" }, ctx), /action must be/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("get_current_time / sleep / process: basic behavior", async () => {
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+
+  const now = await byName.get_current_time.execute({}, {})
+  assert.match(now, /Date:/)
+  assert.match(now, /Timezone:/)
+
+  const t0 = Date.now()
+  await byName.sleep.execute({ seconds: 1 }, {})
+  assert.ok(Date.now() - t0 >= 900, "sleeps ~1s")
+
+  const procs = await byName.process.execute({ name: "node" }, {})
+  assert.match(procs, /PID/, "process listing returns PID rows")
+})
+
