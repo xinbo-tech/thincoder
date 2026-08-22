@@ -96,7 +96,8 @@ export const gitTool = {
         return truncate(filterLines(parts.join("\n\n"), args.filter))
       }
       case "log": {
-        const n = Math.min(Math.max(1, args.count ?? 10), 200)
+        const parsed = Number.parseInt(args.count, 10)
+        const n = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 200) : 10
         const isOneline = args.oneline
         const cmdArgs = isOneline
           ? ["log", "-" + n, "--oneline"]
@@ -106,7 +107,9 @@ export const gitTool = {
         return truncate(filterLines(out || "(no commits)", args.filter))
       }
       case "show": {
-        const out = runGit(ctx.cwd, ["show", "--stat", args.ref ?? "HEAD"])
+        const ref = args.ref ?? "HEAD"
+        if (!/^[A-Za-z0-9._\/~^@][A-Za-z0-9._\/~^@{}\-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
+        const out = runGit(ctx.cwd, ["show", "--stat", ref])
         return truncate(out || "(no such commit)")
       }
       case "rm": {

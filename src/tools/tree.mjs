@@ -5,7 +5,7 @@
  * exist without shelling out to `tree`/`find`.
  */
 import { DESC, truncate, resolveInCwd } from "./shared.mjs"
-import { readdir } from "node:fs/promises"
+import { readdir, stat } from "node:fs/promises"
 import { join, basename, extname } from "node:path"
 
 const MAX_ENTRIES = 200
@@ -27,15 +27,20 @@ export const treeTool = {
   readonly: true,
   async execute(args, ctx) {
     const root = resolveInCwd(ctx, args.path ?? ".")
-    const maxDepth = Math.min(Math.max(1, Math.floor(args.depth ?? DEFAULT_DEPTH)), 6)
+    let st
+    try { st = await stat(root) } catch { return `Error: directory not found: ${args.path ?? "."}` }
+    if (!st.isDirectory()) return `Error: not a directory: ${args.path ?? "."}`
+    const d = Number(args.depth)
+    const maxDepth = Number.isInteger(d) && d > 0 ? Math.min(d, 6) : DEFAULT_DEPTH
     const lines = [basename(root) + "/"]
-    const state = { count: 1 }
+    const state = { count: 1, capped: false }
     await walk(root, 0, maxDepth, "", lines, state)
     return truncate(lines.join("\n"))
   },
 }
 
 async function walk(dir, depth, maxDepth, prefix, lines, state) {
+  if (state.capped) return
   let entries
   try { entries = await readdir(dir, { withFileTypes: true }) } catch { return }
   const items = []
@@ -48,7 +53,8 @@ async function walk(dir, depth, maxDepth, prefix, lines, state) {
   items.sort((a, b) => (a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1))
 
   for (let i = 0; i < items.length; i++) {
-    if (state.count >= MAX_ENTRIES) { lines.push(prefix + "…（更多项已省略）"); return }
+    if (state.capped) return
+    if (state.count >= MAX_ENTRIES) { state.capped = true; lines.push(prefix + "…（更多项已省略）"); return }
     const { name, isDir } = items[i]
     const isLast = i === items.length - 1
     lines.push(prefix + (isLast ? "└── " : "├── ") + (isDir ? name + "/" : name))
