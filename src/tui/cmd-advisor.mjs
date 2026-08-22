@@ -29,7 +29,7 @@ export async function handleAdvisorCommand(ctx) {
       : cfg.thinking?.type === "disabled" ? "off"
       : cfg.reasoningEffort ? `on (${cfg.reasoningEffort})`
       : cfg.thinking ? `on (${cfg.thinking.type})` : "(main)"
-    return `Advisor: always available | Model: ${curModel} | Think: ${thinkInfo}`
+    return `Advisor | Model: ${curModel} | Think: ${thinkInfo}`
   }
 
   function headerLine() {
@@ -115,7 +115,7 @@ export async function handleAdvisorCommand(ctx) {
       { type: "header", text: headerLine() },
       { type: "item", text: `Model: ${curModel}`, action: "model", note: `Provider: ${curProvider}` },
       { type: "item", text: `Thinking: ${advisorStatus().split("|")[2]?.trim() || "(main)"}`, action: "thinking" },
-      { type: "item", text: `Guard: ${guardInfo}`, action: "guard" },
+      { type: "item", text: `Advisor: ${guardInfo}`, action: "guard" },
       { type: "item", text: "View full config", action: "view" },
     ]
 
@@ -125,9 +125,8 @@ export async function handleAdvisorCommand(ctx) {
 
     if (choice.action === "view") {
       pushLabel("❯ Advisor", ansi.bold + C.tool)
-      pushLine(`Status:   always available`, C.dim)
       pushLine(`Model:    ${curModel} (provider: ${curProvider})`, C.dim)
-      pushLine(`Guard:    ${guardInfo}`, C.dim)
+      pushLine(`Advisor:    ${guardInfo}`, C.dim)
       pushLine(`Thinking: ${advisorStatus().split("|")[2]?.trim() || "(main)"}`, C.dim)
       continue
     }
@@ -136,7 +135,7 @@ export async function handleAdvisorCommand(ctx) {
       cfg.guard = !(cfg.guard === true)
       await persist().catch(err => pushLine(`[error] ${err.message}`, C.error))
       pushLabel("❯ Advisor", ansi.bold + C.tool)
-      pushLine(`Guard: ${cfg.guard === true ? "on" : "off"}`, C.tool)
+      pushLine(`Advisor: ${cfg.guard === true ? "on" : "off"}`, C.tool)
       continue
     }
 

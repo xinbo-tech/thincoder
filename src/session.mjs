@@ -13,6 +13,7 @@ import { mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, existsS
 import { join, dirname } from "node:path"
 import { execSync } from "node:child_process"
 import { configDir } from "./config.mjs"
+import { migrateHashLength } from "./session-migrate.mjs"
 
 let currentSessionId = null
 
@@ -33,40 +34,6 @@ export function normalizeCwd(cwd) {
 /** Full sha1 hex (40 chars), not truncated. Shared contract with the VS Code extension. */
 function cwdHash(cwd) {
   return createHash("sha1").update(normalizeCwd(cwd)).digest("hex")
-}
-
-/** One-time migration: rename legacy short-hash session files to the full 40-char hash.
- *  Idempotent; runs on first access per cwd.
- *  Historical hash algorithms (all sha1, none normalized the drive letter):
- *    - CLI:      sha1(cwd).slice(0, 12)      — cwd comes from process.cwd() (uppercase drive on Windows)
- *    - VS Code:  sha1(cwd).slice(0, 16)      — cwd comes from uri.fsPath (LOWERCASE drive on Windows)
- *  Plus the previous migration attempt's assumption (normalized 12 = first 12 of the full hash).
- *  Every combination is tried — a migration that only checks one candidate misses real
- *  legacy files (drive-letter case differs between CLI and VS Code historical paths). */
-function migrateHashLength(cwd, fullHash) {
-  const dir = join(configDir, "sessions")
-  const lower = cwd.replace(/^([A-Z]):/, (_, d) => d.toLowerCase() + ":")
-  const candidates = [
-    createHash("sha1").update(cwd).digest("hex").slice(0, 12),
-    createHash("sha1").update(cwd).digest("hex").slice(0, 16),
-    createHash("sha1").update(lower).digest("hex").slice(0, 12),
-    createHash("sha1").update(lower).digest("hex").slice(0, 16),
-    fullHash.slice(0, 12),
-  ]
-  const newBase = join(dir, `${fullHash}.json`)
-  let migrated = false
-  for (const short of new Set(candidates)) {
-    const legacyBase = join(dir, `${short}.json`)
-    if (!existsSync(legacyBase) && !existsSync(`${legacyBase}.manifest`) && !existsSync(`${legacyBase}.1`)) continue
-    migrated = true
-    try {
-      for (const suffix of ["", ".manifest", ...Array.from({ length: 64 }, (_, i) => `.${i + 1}`)]) {
-        const from = legacyBase + suffix
-        if (existsSync(from) && !existsSync(newBase + suffix)) renameSync(from, newBase + suffix)
-      }
-    } catch { /* best-effort; leave files in place on failure */ }
-  }
-  return migrated
 }
 
 /** Derive base session path from cwd hash. Migrates legacy short-hash files on first access. */
@@ -149,10 +116,6 @@ function saveManifest(cwd, m) {
   writeSessionFile(manifestPath(cwd), m)
 }
 
-/**
- * Ensure an active slot exists in the manifest, migrating legacy data if needed.
- * Called by activeSlot() — idempotent, safe to call repeatedly.
- */
 /**
  * Claim a slot for this process and set it as active. Idempotent.
  * Preference order:

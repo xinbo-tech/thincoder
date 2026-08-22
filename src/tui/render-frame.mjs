@@ -8,7 +8,7 @@
  */
 import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
-import { sliceByWidth, stringWidth, wrapText, formatTables, sanitizeDisplay } from "./render.mjs"
+import { sliceByWidth, stringWidth, sanitizeDisplay } from "./render.mjs"
 import { specForModel } from "../config.mjs"
 import { computeLayout, MAX_SUB_LINES } from "./layout.mjs"
 import { basename } from "node:path"
@@ -268,9 +268,9 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const statusLine = buildStatusLine(state, agent, { cols, slashCommands })
   const autoBanner = agent.autoApprove ? `${C.warn} AUTO${ansi.reset}${ansi.dim}│` : ""
   const planBanner = agent.planMode ? `${C.tool} PLAN${ansi.reset}${ansi.dim}│` : ""
-  const advisorBanner = agent.config?.advisor?.guard === true ? `${C.advisor} GUARD${ansi.reset}${ansi.dim}│` : ""
+  const advisorBanner = agent.config?.advisor?.guard === true ? `${C.advisor} ADVISOR${ansi.reset}${ansi.dim}│` : ""
   const engBanner = agent.config?.agent?.engineering ? `${C.advisor} ENG${ansi.reset}${ansi.dim}│` : ""
-  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " GUARD│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "")
+  const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "")
   const statusMax = cols - 1 - (bannerPrefix ? stringWidth(bannerPrefix) : 0)
   return `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}${ansi.reset}`
 }

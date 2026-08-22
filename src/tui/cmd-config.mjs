@@ -1,10 +1,22 @@
 import { existsSync, readFileSync } from "node:fs"
 import { ansi, C } from "./ansi.mjs"
+/** Merge an embedding-key save into the raw config, backfilling baseURL/model from defaults.
+ *  Keeps existing custom values (Ollama/local embedding); defaults are the single source
+ *  (TUI.md §9.3D — NF1). Exported for unit tests. */
+export function embeddingPatch(raw, embKey, defaults) {
+  const prev = raw?.embedding ?? {}
+  return {
+    ...prev,
+    apiKey: embKey,
+    baseURL: prev.baseURL ?? defaults.baseURL,
+    model: prev.model ?? defaults.model,
+  }
+}
 
 /** /config command: view and set agent/embedding/proxy config. */
 export async function handleConfigCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
-  const { configPath } = await import("../config.mjs")
+  const { configPath, DEFAULTS } = await import("../config.mjs")
   const ac = agent.config?.agent ?? {}
   const ec = agent.config?.embedding ?? {}
 
@@ -20,7 +32,7 @@ export async function handleConfigCommand(ctx, args = []) {
     if (!embKey) return false
     agent.config.embedding ??= {}
     agent.config.embedding.apiKey = embKey
-    await persistRaw((raw) => { raw.embedding = { ...(raw.embedding ?? {}), apiKey: embKey } })
+    await persistRaw((raw) => { raw.embedding = embeddingPatch(raw, embKey, DEFAULTS.embedding) })
     if (agent.memory) {
       const { createEmbedder } = await import("../embedding.mjs")
       agent.memory.embedder = createEmbedder(agent.config.embedding)

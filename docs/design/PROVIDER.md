@@ -133,10 +133,20 @@ for (const tc of delta.tool_calls ?? []) {
 **流结束收尾**（readSSE return 前，单点）：
 
 ```js
-const kept = result.toolCalls.filter((tc) => tc && tc.name)   // name 空的 slot 丢弃
-result.droppedToolCalls = (result.droppedToolCalls ?? 0) + (result.toolCalls.length - kept.length)
+const entries = result.toolCalls.filter((tc) => tc)     // 稀疏 hole 剔除（rule-1 index 跳号）
+const kept = entries.filter((tc) => tc.name)            // name 空的 slot 丢弃
+result.droppedToolCalls = (result.droppedToolCalls ?? 0) + (entries.length - kept.length)
 result.toolCalls = kept
-kept.forEach((tc, i) => { if (!tc.id) tc.id = `call_${i}` })  // 缺 id 合成
+const used = new Set(kept.map((tc) => tc.id).filter(Boolean))
+let seq = 0
+for (const tc of kept) {                               // 缺 id 合成，避让已用 id（call_N 冲突防御）
+  if (!tc.id) {
+    let id
+    do { id = `call_${seq++}` } while (used.has(id))
+    tc.id = id
+    used.add(id)
+  }
+}
 ```
 
 **告警通道**：`result._warnings ??= []` push `{ name: "malformed-tool-calls", message: "N malformed tool_calls dropped from provider response" }`——复用 `src/agent.mjs:253` 现有 `_warnings` 注入机制（**机读线注入**，模型需知道其工具调用未执行；agent.mjs 零改动）。**两端统一策略**：告警一律进机读线（模型可见），不进人读线——扩展端同规格，见 vscode `ARCHITECTURE.md` 变更段。

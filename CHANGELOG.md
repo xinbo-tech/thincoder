@@ -1,3 +1,21 @@
+## [0.12.37] — 2026-08-22
+
+### Fixed
+
+- **advisor 标签还原**：状态栏徽标与 /advisor 菜单项由 "GUARD" 显示名还原为 "ADVISOR"（内部配置字段 `advisor.guard` 不变，仅显示名）
+- **SSE 流式 tool_calls 防御性合并**（PROVIDER.md §10）：跳过 null/畸形元素并计数，按 index/id/name/tail 合并、补齐缺失 id、计数丢弃
+- **Windows 剪贴板 BOM 防御**：UTF-8 输出后剥离前导 `\uFEFF`（IK9UWM 后续）
+- **上下文压缩空安全**：`t.function?.name` 防 tool name 缺失
+
+### Refactor
+
+- **session.mjs 拆分**：`migrateHashLength` 抽到 `session-migrate.mjs`，文件回到 ≤500 行硬限内
+- **/config embedding 保存重构**：`embeddingPatch()` 抽取 + `DEFAULTS` 导出（供单测）
+
+### Prompt
+
+- **确认纪律 carve-out**：system.md 补 doc/code 一致性例外——"改动前确认"门禁不适用于已确认任务的既有义务（文档跟码一致、记录刚做的决策、关闭 advisor 标记的文档缺口）
+
 ## [0.12.35] — 2026-08-21
 
 ### Changed

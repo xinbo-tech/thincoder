@@ -1,5 +1,12 @@
 import { C } from "./ansi.mjs"
 
+/** Windows clipboard-read command: force UTF-8 console output so Get-Clipboard's bytes
+ *  are decoded by Node's default UTF-8 (not the OEM codepage / GBK) — IK9UWM. Exported
+ *  for unit tests (TUI.md §9.2D). */
+export function buildWindowsClipboardCommand() {
+  return ["-NoProfile", "-Command", "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-Clipboard"]
+}
+
 /** Read text from system clipboard. Returns empty string on failure. */
 export async function readClipboardText() {
   try {
@@ -7,13 +14,9 @@ export async function readClipboardText() {
     const isWin = process.platform === "win32"
     const isMac = process.platform === "darwin"
     if (isWin) {
-      // -EncodedCommand (base64 UTF-16LE) decodes the command without codepage ambiguity,
-      // and [Console]::OutputEncoding=UTF8 forces Get-Clipboard to emit UTF-8 — otherwise
-      // Windows PowerShell writes the clipboard text in the OEM codepage (GBK on Chinese
-      // Windows) and Node's default UTF-8 decode garbles it (IK9UWM).
-      const psCmd = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard"
-      const encoded = Buffer.from(psCmd, "utf16le").toString("base64")
-      return await new Promise((resolve) => execFile("powershell", ["-NoProfile", "-EncodedCommand", encoded], { timeout: 5000 }, (err, stdout) => resolve(err ? "" : stdout)))
+      // Strip a leading \uFEFF — PowerShell may prepend a UTF-8 BOM once OutputEncoding
+      // flips to UTF-8 (TUI.md §9.2D BOM defense).
+      return await new Promise((resolve) => execFile("powershell", buildWindowsClipboardCommand(), { timeout: 5000 }, (err, stdout) => resolve(err ? "" : String(stdout).replace(/^\uFEFF/, ""))))
     } else if (isMac) {
       return await new Promise((resolve) => execFile("pbpaste", [], { timeout: 5000 }, (err, stdout) => resolve(err ? "" : stdout)))
     } else {

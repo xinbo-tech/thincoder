@@ -36,7 +36,7 @@ export const PROVIDER_PRESETS = {
   groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32768, desc: "Groq" },
 }
 
-const DEFAULTS = {
+export const DEFAULTS = {
   activeModel: null,  // optional: override provider.model (set via /model picker or /model provider:model)
   agent: {
     maxTurns: 100,

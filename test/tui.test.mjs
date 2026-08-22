@@ -979,18 +979,18 @@ test("renderStatus: engineering mode shows ENG banner", () => {
   assert.ok(!off.includes("ENG"), "no ENG banner when engineering mode is off")
 })
 
-test("renderStatus: advisor guard shows GUARD banner; enabled is deprecated (2026-08-21)", () => {
+test("renderStatus: advisor guard shows ADVISOR banner; enabled is deprecated (2026-08-21)", () => {
   const state = tuiState({ processing: false })
   const base = { provider: { model: "test" }, cwd: "/test", planMode: false, autoApprove: false }
   const on = renderStatus(state, { ...base, config: { advisor: { guard: true } } }, 120, [])
-  assert.ok(on.includes("GUARD"), "GUARD banner shown when advisor.guard === true")
-  assert.ok(!on.includes("ADVISOR"), "ADVISOR banner is gone")
+  assert.ok(on.includes("ADVISOR"), "ADVISOR banner shown when advisor.guard === true")
+  assert.ok(!on.includes("GUARD"), "no GUARD label (ADVISOR restored)")
   const offDefault = renderStatus(state, { ...base, config: { advisor: {} } }, 120, [])
-  assert.ok(!offDefault.includes("GUARD") && !offDefault.includes("ADVISOR"), "no banner when guard is absent (default OFF)")
+  assert.ok(!offDefault.includes("ADVISOR"), "no banner when guard is absent (default OFF)")
   const offFalse = renderStatus(state, { ...base, config: { advisor: { guard: false } } }, 120, [])
-  assert.ok(!offFalse.includes("GUARD") && !offFalse.includes("ADVISOR"), "no banner when guard: false")
+  assert.ok(!offFalse.includes("ADVISOR"), "no banner when guard: false")
   const legacyEnabled = renderStatus(state, { ...base, config: { advisor: { enabled: true } } }, 120, [])
-  assert.ok(!legacyEnabled.includes("GUARD") && !legacyEnabled.includes("ADVISOR"), "legacy enabled: true no longer drives a banner")
+  assert.ok(!legacyEnabled.includes("ADVISOR"), "legacy enabled: true no longer drives a banner")
 })
 
 test("panel functions: renderPermission formats permission request", () => {

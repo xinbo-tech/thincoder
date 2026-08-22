@@ -2946,13 +2946,16 @@ test("prompts/system.md: 确认理解句含 most important acceptance criteria",
 })
 
 // ---------------------------------------------------------------- 开工前计划确认纪律（2026-08-21）
-test("prompts/system.md: 无豁免确认纪律 — 写文件动作清单 + 明确确认门禁", () => {
+test("prompts/system.md: 确认纪律 — 写文件动作清单 + 门禁 + doc/code 一致性豁免", () => {
   const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
   assert.ok(/write \/ edit \/ apply_patch \/ insert_after \/ delete \/ hashline_edit/.test(text), "写文件动作清单在")
-  assert.ok(/no exemptions/i.test(text), "无豁免语义句在")
+  assert.ok(text.includes("For the changes you propose, there are no exemptions"), "确认门禁对主动提议改动无豁免")
   assert.ok(text.includes("obvious enough to skip"), "堵死 self-exemption 借口句在")
   assert.ok(text.includes("a new question from the user is not a confirmation"), "用户新问题 ≠ 确认")
   assert.ok(text.includes("Re-confirm when the requirement changes"), "需求变化后重新确认条款在")
+  assert.ok(text.includes("outranks this gate"), "doc/code 一致性豁免条款在")
+  assert.ok(text.includes("standing obligations you already owe"), "豁免只覆盖既有义务（非泛化）")
+  assert.ok(text.includes("the user already confirmed"), "豁免限定于已确认的代码/逻辑")
 })
 
 test("prompts/engineering.md: 写文档前计划确认条款（无豁免）", () => {

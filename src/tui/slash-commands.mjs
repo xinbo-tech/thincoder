@@ -40,7 +40,7 @@ export const SLASH_COMMANDS = [
   { name: "/plan", group: "Agent", desc: "toggle plan mode (design first, then implement)" },
   { name: "/auto", group: "Agent", desc: "toggle auto-approve" },
   { name: "/eng", group: "Agent", desc: "toggle engineering mode — strict methodology enforcement" },
-  { name: "/advisor", group: "Agent", desc: "advisor settings (toggle, model, thinking, guard)" },
+  { name: "/advisor", group: "Agent", desc: "advisor settings (model, thinking, review gate)" },
   { name: "/model", group: "Agent", desc: "select model & manage providers" },
   { name: "/submodel", group: "Agent", desc: "subagent model per type (explore/plan/coder/eng-coder)" },
   { name: "/shell", group: "System", desc: "bash tool shell (git-bash/pwsh path; win11 cmd encoding fix)" },

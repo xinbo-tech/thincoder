@@ -19,6 +19,56 @@ export function normalizeUsageCache(u) {
   }
   return u
 }
+/** Defensive tool-call merge (PROVIDER.md §10): skip null/malformed elements and count them;
+ *  merge slots by index / id / name / tail, accumulate arguments. */
+function mergeToolCalls(result, delta) {
+  for (const tc of delta.tool_calls ?? []) {
+    if (!tc || typeof tc !== "object") { result.droppedToolCalls++; continue }
+    let slot
+    if (Number.isInteger(tc.index) && tc.index >= 0) {
+      slot = (result.toolCalls[tc.index] ??= { id: "", name: "", arguments: "" })
+    } else if (tc.id) {
+      slot = result.toolCalls.find((s) => s && s.id === tc.id)
+      if (!slot) { slot = { id: tc.id, name: "", arguments: "" }; result.toolCalls.push(slot) }
+    } else if (tc.function?.name) {
+      slot = { id: "", name: "", arguments: "" }
+      result.toolCalls.push(slot)
+    } else {
+      slot = result.toolCalls[result.toolCalls.length - 1]
+      if (!slot) { result.droppedToolCalls++; continue }
+    }
+    if (tc.id && !slot.id) slot.id = tc.id
+    if (tc.function?.name && !slot.name) slot.name = tc.function.name
+    const arg = tc.function?.arguments
+    if (typeof arg === "string") slot.arguments += arg
+    else if (arg != null) slot.arguments += JSON.stringify(arg)
+  }
+}
+
+/** Finalize tool calls (PROVIDER.md §10): drop nameless slots, synthesize missing ids,
+ *  count drops, and surface a machine-line warning via the existing `_warnings` channel. */
+function finalizeToolCalls(result) {
+  const entries = result.toolCalls.filter((tc) => tc) // drop sparse holes (rule-1 index jumps)
+  const kept = entries.filter((tc) => tc.name) // drop nameless slots
+  result.droppedToolCalls = (result.droppedToolCalls ?? 0) + (entries.length - kept.length)
+  result.toolCalls = kept
+  const used = new Set(kept.map((tc) => tc.id).filter(Boolean))
+  let seq = 0
+  for (const tc of kept) {
+    if (!tc.id) {
+      let id
+      do { id = `call_${seq++}` } while (used.has(id))
+      tc.id = id
+      used.add(id)
+    }
+  }
+  if (result.droppedToolCalls > 0) {
+    const existing = (result._warnings ??= [])
+    if (!existing.some((w) => w.name === "malformed-tool-calls")) {
+      existing.push({ name: "malformed-tool-calls", message: `${result.droppedToolCalls} malformed tool_calls dropped from provider response` })
+    }
+  }
+}
 
 export async function readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns: sharedFired }) {
   // Early intercept: non-SSE responses — either error bodies (HTTP >= 400) or
@@ -46,19 +96,15 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
       const parsed = JSON.parse(body)
       const choice = parsed.choices?.[0]
       if (choice) {
-        const result = { content: "", reasoning: "", toolCalls: [], usage: normalizeUsageCache(parsed.usage ?? null), finishReason: null }
+        const result = { content: "", reasoning: "", toolCalls: [], droppedToolCalls: 0, usage: normalizeUsageCache(parsed.usage ?? null), finishReason: null }
         const delta = choice.delta ?? {}
         result.content = delta.content ?? ""
         result.reasoning = delta.reasoning_content ?? ""
         result.finishReason = choice.finish_reason ?? null
-        for (const tc of delta.tool_calls ?? []) {
-          const slot = (result.toolCalls[tc.index ?? result.toolCalls.length] ??= { id: "", name: "", arguments: "" })
-          if (tc.id) slot.id = tc.id
-          if (tc.function?.name && !slot.name) slot.name = tc.function.name
-          if (tc.function?.arguments) slot.arguments += tc.function.arguments
-        }
+        mergeToolCalls(result, delta)
         if (result.content) onToken?.(result.content)
         if (result.reasoning) onReasoning?.(result.reasoning)
+        finalizeToolCalls(result)
         return result
       }
     } catch { /* not parseable JSON */ }
@@ -66,7 +112,7 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     throw new Error(`API error: HTTP ${response.status} — unexpected non-SSE response: ${body.slice(0, 200)}`)
   }
 
-  const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
+  const result = { content: "", reasoning: "", toolCalls: [], droppedToolCalls: 0, usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
   let hasChoices = false
@@ -96,12 +142,7 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
         result.content += delta.content
         onToken?.(delta.content)
       }
-      for (const tc of delta.tool_calls ?? []) {
-        const slot = (result.toolCalls[tc.index] ??= { id: "", name: "", arguments: "" })
-        if (tc.id) slot.id = tc.id
-        if (tc.function?.name && !slot.name) slot.name = tc.function.name
-        if (tc.function?.arguments) slot.arguments += tc.function.arguments
-      }
+      mergeToolCalls(result, delta)
     }
   }
 
@@ -165,5 +206,6 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     throw new Error(`API error: ${errorMsg}`)
   }
 
+  finalizeToolCalls(result)
   return result
 }

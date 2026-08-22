@@ -214,7 +214,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   const middle = history.slice(split.headEnd, split.tailStart)
   const serialized = middle
     .map((m) => {
-      const toolNote = m.tool_calls ? ` [called tools: ${m.tool_calls.map((t) => t.function.name).join(", ")}]` : ""
+      const toolNote = m.tool_calls ? ` [called tools: ${m.tool_calls.map((t) => t.function?.name).join(", ")}]` : ""
       // user messages get a wider cap (8000): cutting off a long user-pasted requirement loses original intent; tool/assistant capped at 2000 is enough
       const cap = m.role === "user" ? 8000 : 2000
       // Multimodal messages (array content): extract the TEXT parts — the image itself can't be
