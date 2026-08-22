@@ -108,7 +108,8 @@ export const getCurrentTimeTool = {
   async execute() {
     const now = new Date()
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "unknown"
-    return `Date: ${now.toISOString()} (UTC)\nTimezone: ${tz}\nLocal: ${now.toLocaleString()}`
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    return `Date: ${now.toISOString()} (UTC)\nTimezone: ${tz}\nWeekday: ${days[now.getDay()]}\nLocal: ${now.toLocaleString()}`
   },
 }
 
@@ -127,7 +128,8 @@ export const sleepTool = {
   },
   readonly: true,
   async execute({ seconds, reason }, ctx) {
-    const n = Math.min(Math.max(Math.round(seconds ?? 1), 1), 300)
+    const raw = Number(seconds)
+    const n = Number.isFinite(raw) ? Math.min(Math.max(Math.round(raw), 1), 300) : 1
     await new Promise((resolve, reject) => {
       const t = setTimeout(resolve, n * 1000)
       if (ctx?.signal) {
