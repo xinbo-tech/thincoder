@@ -107,6 +107,15 @@ if (agent._mutatedThisRun        // ① 本 run 改过代码
 
 - **设计理由**：bash 被系统规则禁止写文件（"NEVER use bash to write or modify files"）——合规 agent 的副作用工具不可能改变被评审代码，故不触发评审；违规场景（bash 改文件）与 `hasCodeMutations` 盲区一致，接受（规则与机械判定的一致性优先）。
 
+### 4d. 响应表 Action 语义 + 禁「pre-existing」借口（2026-08-22 决策）
+
+`discipline.md`（标准模式）/ `engineering.md`（工程模式父代理）的响应表纪律此前只规定表头 `| # | Action | Detail |`，未定义 `Action` 取值，模型对审查发现的处理因此含糊——常见"之前就有、不修"的推诿。用户拍板补两件事：
+
+1. **`Action` 三值封闭词表**：`Fixed`（已改代码/设计）、`Not an issue`（技术反驳，附证据）、`Deferred`（承认但不修，附理由——仅适用于 🟡/🔵 改进或需用户先拍板的 🔴，不得用于静默丢弃真缺陷）。表头保持 `| # | Action | Detail |` 不变（`extractAgentResponseTable` 按此精确匹配提取）。
+2. **禁止「pre-existing」借口**：评审双方拥有整个代码/设计——"之前就有""不是我引入的"永远不是跳过修复的理由；问题何时出现不决定它该不该修。只能技术反驳或修，否则不算收敛。
+
+约束性质：纯提示词纪律，不加机械解析——响应表仍是"聚焦参考"，不驱动控制流（见 §4a）。两条同时写入 `discipline.md` 与 `engineering.md`（两端 `src/prompts/` byte-identical）；工程模式条款收窄为"超出已批准设计范围就 surface 或提设计更新"，因父代理不直接写实现代码。
+
 ### 5. 证据机械校验（host-verified citations）
 
 提示词的证据规则（"引用必须来自本轮 read"）无法被 LLM 自我强制——模型可以声称读过而实际复述 prior 表（三轮误报实证：引用行号为修复前旧状态）。**宿主侧机械校验**作为最后防线：

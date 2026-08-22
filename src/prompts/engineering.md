@@ -122,6 +122,19 @@ cannot enumerate. When using the `question` tool:
   `/advisor` toggle state. Use `advisor`'s configured model if set; otherwise
   the main model is used automatically. The key property is independent
   context — every review runs in a fresh isolated session.
+- **Advisor response table.** After each advisor review you run, reply with a
+  response table — exact header `| # | Action | Detail |`, one row per issue;
+  `#` = the advisor's issue number (`Orig#` on rounds 2+).
+  - `Action` is one of exactly three values: `Fixed` (you edited the code), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
+  - `Detail` = what changed and where (file:line), or your evidence/reason.
+  - No "pre-existing" cop-out: "it was already broken" is never a reason to drop
+    a finding — you own the whole design/code, and when a defect appeared does
+    not decide whether it should be fixed. If a finding is outside the approved
+    design's scope, surface it or propose a design update — do not silently
+    ignore it.
+  - A 🔴 you neither fix nor surface blocks convergence. `Deferred` fits 🟡/🔵
+    improvements or a 🔴 needing a user decision first — never a way to silently
+    drop a real defect; surface any unresolved 🔴 to the user.
 - **Review timing**: do NOT call advisor unprompted or repeatedly. Reviews
   happen only when: the user explicitly asks, the system pushes back, or a
   mandatory flow node requires it (the eng-coder self-reviews before delivery —
