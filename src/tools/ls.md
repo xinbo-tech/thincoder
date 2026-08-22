@@ -2,6 +2,7 @@ List directory contents with type, size, and modification time. Directories list
 
 Parameters:
 - path: Directory path (default cwd)
+- filter: Only list entries matching this glob (e.g. '*.mjs', '*test*') — a wildcard filter, not a full listing
 
 Notes:
 - Shows first 500 entries

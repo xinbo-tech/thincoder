@@ -1600,3 +1600,25 @@ test("get_current_time / sleep / process: basic behavior", async () => {
   assert.match(procs, /PID/, "process listing returns PID rows")
 })
 
+test("grep literal + ignoreCase; ls filter", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-grep-"))
+  try {
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    writeFileSync(join(dir, "a.js"), "function foo.bar() {}\nFOOBAR\nx\n")
+    writeFileSync(join(dir, "b.txt"), "nothing")
+    const ctx = { cwd: dir }
+
+    const lit = await byName.grep.execute({ pattern: "foo.bar()", literal: true, path: "a.js" }, ctx)
+    assert.match(lit, /foo\.bar\(\)/, "literal match — regex specials not interpreted")
+
+    const ic = await byName.grep.execute({ pattern: "foobar", ignoreCase: true, path: "a.js" }, ctx)
+    assert.match(ic, /FOOBAR/, "ignoreCase matches case variant")
+
+    const ls = await byName.ls.execute({ filter: "*.js", path: "." }, ctx)
+    assert.match(ls, /a\.js/, "ls filter keeps matching entry")
+    assert.doesNotMatch(ls, /b\.txt/, "ls filter excludes non-matching entry")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+

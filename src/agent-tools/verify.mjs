@@ -58,12 +58,17 @@ export const verifyTool = {
     type: "object",
     properties: {
       full: { type: "boolean", description: "Run the full test suite (npm test) instead of just related tests. Default false — use sparingly, per the testing discipline rules." },
+      workdir: { type: "string", description: "Optional: run verify in this subdirectory (relative to cwd or absolute) — for monorepos" },
+      filter: { type: "string", description: "Optional: limit the test run to matching test names (node --test-name-pattern / npm test -- --test-name-pattern)" },
     },
   },
   readonly: true,
   outputPanel: true, // stream test output to a panel instead of inline
   async execute(args, ctx) {
     const cwd = ctx.agent.cwd
+    // workdir only relocates WHERE tests (and package.json) live — changed-file
+    // resolution (git diff) stays anchored to the project root.
+    const testCwd = args.workdir ? join(cwd, args.workdir) : cwd
     const lines = []
     lines.push("=== VERIFICATION REPORT ===")
     lines.push("")
@@ -130,7 +135,7 @@ export const verifyTool = {
     const relatedTests = [...new Set(modules.map((m) => MODULE_TO_TEST[m]).filter(Boolean))]
 
     // 4. Run tests
-    const pkgPath = join(cwd, "package.json")
+    const pkgPath = join(testCwd, "package.json")
     const hasTestScript = existsSync(pkgPath) && (() => { try { return !!JSON.parse(readFileSync(pkgPath, "utf8")).scripts?.test } catch { return false } })()
 
     if (args.full) {
@@ -138,7 +143,7 @@ export const verifyTool = {
       if (hasTestScript) {
         lines.push("")
         lines.push("Tests (full suite):")
-        const result = await runTestSuite(cwd, ctx)
+        const result = await runTestSuite(testCwd, ctx, args.filter)
         if (result.passed) {
           lines.push("✓ All tests passed.")
           ctx.agent._verifyPassed = !syntaxFailed
@@ -163,7 +168,7 @@ export const verifyTool = {
           continue
         }
         try {
-          const result = await runTestFile(cwd, testFile, ctx)
+          const result = await runTestFile(testCwd, testFile, ctx, args.filter)
           if (result.passed) {
             lines.push(`  ✓ ${testFile}`)
           } else {
@@ -248,9 +253,9 @@ export const verifyTool = {
  * Run a single test file with node --test, no maxBuffer limit.
  * Returns { passed: boolean, tail: string } — the last few lines of output.
  */
-function runTestFile(cwd, testPath, ctx) {
+function runTestFile(cwd, testPath, ctx, filter) {
   return new Promise((resolve, reject) => {
-    const child = spawn("node", ["--test", testPath], {
+    const child = spawn("node", filter ? ["--test", "--test-name-pattern", filter, testPath] : ["--test", testPath], {
       cwd, stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, FORCE_COLOR: "0" },
     })
@@ -288,9 +293,9 @@ function runTestFile(cwd, testPath, ctx) {
  * Test output is streamed through ctx.callbacks.onToolOutput (TUI can display progress in real time).
  * Returns { passed: boolean, tail: string }.
  */
-function runTestSuite(cwd, ctx) {
+function runTestSuite(cwd, ctx, filter) {
   return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["test"], {
+    const child = spawn("npm", filter ? ["test", "--", `--test-name-pattern=${filter}`] : ["test"], {
       cwd, shell: true, stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, FORCE_COLOR: "0" },
     })

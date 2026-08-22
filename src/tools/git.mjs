@@ -7,19 +7,33 @@ import { escapeXml } from "../agent/helpers.mjs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
+/** Keep only output lines matching a regex (git filter, case-insensitive). */
+function filterLines(output, filter) {
+  if (!filter) return output
+  try {
+    const re = new RegExp(filter, "i")
+    const lines = output.split("\n").filter((l) => re.test(l))
+    return lines.length ? lines.join("\n") : `(no lines matched filter "${filter}")`
+  } catch (e) {
+    return `Error: filter regex invalid: ${e.message}`
+  }
+}
+
 export const gitTool = {
   name: "git",
   description: DESC("git"),
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: ["diff", "status", "log", "checkpoint"], description: "diff / status / log / checkpoint" },
+      action: { type: "string", enum: ["diff", "status", "log", "show", "checkpoint", "rm", "commit", "push"], description: "diff / status / log / show / checkpoint / rm / commit / push" },
       // diff/log params
       staged: { type: "boolean", description: "(diff) Show staged changes instead of working tree" },
-      path: { type: "string", description: "(diff/log/checkpoint:cat/versions/rewind) File or directory to scope to" },
-      ref: { type: "string", description: "(diff) Compare against this ref (default HEAD)" },
+      path: { type: "string", description: "(diff/log/checkpoint:cat/versions/rewind/rm) File or directory to scope to" },
+      ref: { type: "string", description: "(show) Commit ref to show (default HEAD)" },
       count: { type: "number", description: "(log) Number of commits (default 10)" },
       oneline: { type: "boolean", description: "(log) One-line-per-commit format" },
+      message: { type: "string", description: "(commit) Commit message — required for commit" },
+      filter: { type: "string", description: "Optional: keep only status/diff/log output lines matching this regex (case-insensitive)" },
       // checkpoint params
       checkpointAction: { type: "string", enum: ["list", "create", "rewind", "cat", "versions"], description: "(checkpoint) list snapshots / create one / restore by id / read file from snapshot / list a file's historical versions" },
       checkpointId: { type: "string", description: "(checkpoint) Snapshot id — required for rewind and cat; optional for list (shows file tree)" },
@@ -35,7 +49,7 @@ export const gitTool = {
         const flags = args.staged ? ["--staged"] : []
         const paths = args.path ? [args.path] : []
         const out = runGit(ctx.cwd, ["diff", ...flags, ref, "--", ...paths])
-        return truncate(out || "(no changes)")
+        return truncate(filterLines(out || "(no changes)", args.filter))
       }
       case "status": {
         const porcelain = runGit(ctx.cwd, ["status", "--porcelain"])
@@ -68,7 +82,7 @@ export const gitTool = {
         if (unstaged.length) parts.push("Unstaged (" + unstaged.length + "):\n" + unstaged.join("\n"))
         if (untracked.length) parts.push("Untracked (" + untracked.length + "):\n" + untracked.join("\n"))
         if (conflicts.length) parts.push("Conflicts (" + conflicts.length + "):\n" + conflicts.join("\n"))
-        return truncate(parts.join("\n\n"))
+        return truncate(filterLines(parts.join("\n\n"), args.filter))
       }
       case "log": {
         const n = Math.min(Math.max(1, args.count ?? 10), 200)
@@ -78,7 +92,26 @@ export const gitTool = {
           : ["log", "-" + n, "--format=%h %ad %an %s", "--date=short"]
         if (args.path) cmdArgs.push("--", args.path)
         const out = runGit(ctx.cwd, cmdArgs)
-        return truncate(out || "(no commits)")
+        return truncate(filterLines(out || "(no commits)", args.filter))
+      }
+      case "show": {
+        const out = runGit(ctx.cwd, ["show", "--stat", args.ref ?? "HEAD"])
+        return truncate(out || "(no such commit)")
+      }
+      case "rm": {
+        if (!args.path) return "Error: rm requires path (the file/directory to untrack, relative to repo root)"
+        const out = runGit(ctx.cwd, ["rm", "--cached", "-r", "--", args.path])
+        return truncate(out || `Untracked ${args.path} (kept on disk)`)
+      }
+      case "commit": {
+        if (!args.message) return "Error: commit requires message"
+        const add = runGit(ctx.cwd, ["add", "-A"])
+        const commit = runGit(ctx.cwd, ["commit", "-m", args.message])
+        return truncate(`${add}\n${commit}`.trim() || "(commit produced no output)")
+      }
+      case "push": {
+        const out = runGit(ctx.cwd, ["push"])
+        return truncate(out || "(push produced no output)")
       }
       case "checkpoint": {
         const { createCheckpoint, listCheckpoints, rewind, listFileVersions, isGitRepo } = await import("../git/checkpoint.mjs")
@@ -139,7 +172,7 @@ export const gitTool = {
         throw new Error(`Unknown checkpoint action: ${sub}. Use: list | create | rewind | cat | versions`)
       }
       default:
-        return `Unknown action '${args.action}'. Use: diff | status | log | checkpoint`
+        return `Unknown action '${args.action}'. Use: diff | status | log | show | checkpoint | rm | commit | push`
     }
   },
 }

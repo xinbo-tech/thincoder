@@ -17,6 +17,20 @@ import { join } from "node:path";
 /** Maximum buffer size per stream (stdout / stderr) before truncation */
 const MAX_STREAM_BUF = 2_000_000
 
+/** Escape a string for literal regex matching (grep literal=true). */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/** Keep only output lines matching a regex (bash filter, case-insensitive). */
+function applyLineFilter(output, filter) {
+  let re
+  try { re = new RegExp(filter, "i") } catch (e) { return `Error: filter regex invalid: ${e.message}` }
+  const lines = output.split("\n").filter((l) => re.test(l))
+  if (lines.length === 0) return `(no output lines matched filter "${filter}")`
+  return truncate(lines.join("\n"))
+}
+
 // ====================================================================
 // bash — command execution with safety gates
 // ====================================================================
@@ -223,6 +237,7 @@ export const bashTool = {
     properties: {
       command: { type: "string", description: "Shell command to execute" },
       timeout: { type: "number", description: `Timeout in ms (default ${BASH_TIMEOUT_MS})` },
+      filter: { type: "string", description: "Optional: only return output lines matching this regex (case-insensitive)" },
     },
     required: ["command"],
   },
@@ -241,7 +256,8 @@ export const bashTool = {
       onOutput: ctx.onOutput,
       shell: ctx.agent?.config?.shell ?? null,
     })
-    return guard ? `${guard.notice}\n\n${result}` : result
+    const filtered = args.filter ? applyLineFilter(result, args.filter) : result
+    return guard ? `${guard.notice}\n\n${filtered}` : filtered
   },
 }
 
@@ -305,9 +321,11 @@ export const grepTool = {
   parameters: {
     type: "object",
     properties: {
-      pattern: { type: "string", description: "Regular expression" },
+      pattern: { type: "string", description: "Regular expression, or a literal string when literal=true" },
       path: { type: "string", description: "Directory or file to search (default cwd)" },
       glob: { type: "string", description: "Only search files matching this glob (e.g. '*.mjs')" },
+      ignoreCase: { type: "boolean", description: "Case-insensitive match (default false)" },
+      literal: { type: "boolean", description: "Literal string match — no regex interpretation (default false)" },
       before: { type: "integer", description: "Lines of context to show before each match (grep -B). Default 0" },
       after: { type: "integer", description: "Lines of context to show after each match (grep -A). Default 0" },
     },
@@ -318,7 +336,8 @@ export const grepTool = {
     const base = resolveInCwd(ctx, args.path ?? ".")
     let regex
     try {
-      regex = new RegExp(args.pattern)
+      const pat = args.literal ? escapeRegExp(String(args.pattern)) : args.pattern
+      regex = new RegExp(pat, args.ignoreCase ? "i" : "")
     } catch (e) {
       throw new Error(`grep pattern /${args.pattern}/ is not a valid regex: ${e.message}`)
     }
@@ -409,11 +428,13 @@ export const lsTool = {
     type: "object",
     properties: {
       path: { type: "string", description: "Directory path (default cwd)" },
+      filter: { type: "string", description: "Only list entries matching this glob (e.g. '*.mjs', '*test*')" },
     },
   },
   readonly: true,
   async execute(args, ctx) {
     const abs = resolveInCwd(ctx, args.path ?? ".")
+    const filterRe = args.filter ? globToRegex(args.filter) : null
     let entries
     try {
       entries = await readdir(abs, { withFileTypes: true })
@@ -422,7 +443,10 @@ export const lsTool = {
       throw e
     }
     const rows = await Promise.all(
-      entries.slice(0, 500).map(async (e) => {
+      entries
+        .filter((e) => !filterRe || filterRe.test(e.name))
+        .slice(0, 500)
+        .map(async (e) => {
         const s = await stat(join(abs, e.name)).catch(() => null)
         const isDir = e.isDirectory()
         return {

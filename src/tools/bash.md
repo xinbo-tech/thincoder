@@ -11,6 +11,7 @@ Execute a shell command and return stdout+stderr. Use for running commands, buil
 Parameters:
 - command (required): Shell command to execute
 - timeout: Timeout in milliseconds (default 120000, max ~300000)
+- filter: Optional — a regex; only output lines matching it are returned (case-insensitive). Use instead of hand-writing a pipe into `findstr`/`grep`.
 
 Output format:
 ```
