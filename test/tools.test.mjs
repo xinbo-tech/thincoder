@@ -1622,3 +1622,48 @@ test("grep literal + ignoreCase; ls filter", async () => {
   }
 })
 
+test("apply_patch: multiple hunks in one file stay aligned after line-count drift", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-patch-"))
+  try {
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    writeFileSync(join(dir, "f.txt"), "one\ntwo\nthree\nfour\nfive\nsix\nseven\n")
+    const ctx = { cwd: dir }
+    // hunk 1 inserts a line (shift), so hunk 2's target drifts from its @@ line number
+    const patch = `--- a/f.txt
++++ b/f.txt
+@@ -1,3 +1,4 @@
+ one
++oneAndHalf
+ two
+ three
+@@ -5,3 +5,3 @@
+ five
+-six
++sixX
+ seven
+`
+    const out = await byName.apply_patch.execute({ patch }, ctx)
+    assert.match(out, /Applied patch/)
+    assert.equal(readFileSync(join(dir, "f.txt"), "utf8"), "one\noneAndHalf\ntwo\nthree\nfour\nfive\nsixX\nseven\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("tree: depth-limited directory tree", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-tree-"))
+  try {
+    mkdirSync(join(dir, "src/nested/deep"), { recursive: true })
+    writeFileSync(join(dir, "src/a.js"), "x")
+    writeFileSync(join(dir, "src/nested/b.js"), "x")
+    writeFileSync(join(dir, "root.txt"), "x")
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    const out = await byName.tree.execute({ depth: 2 }, { cwd: dir })
+    assert.match(out, /src\//, "lists directory with trailing slash")
+    assert.match(out, /root\.txt/, "lists root file")
+    assert.doesNotMatch(out, /deep/, "depth limit excludes deeper levels")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+

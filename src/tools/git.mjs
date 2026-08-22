@@ -117,6 +117,7 @@ export const gitTool = {
       case "commit": {
         if (!args.message) return "Error: commit requires message"
         const add = runGitStrict(ctx.cwd, ["add", "-A"])
+        if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)
         const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
         const parts = []
         if (add.out) parts.push(add.out)
