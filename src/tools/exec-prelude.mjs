@@ -10,7 +10,7 @@
  */
 import { createRequire } from "node:module"
 import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, readdirSync } from "node:fs"
-import { resolve, relative, dirname, join } from "node:path"
+import { resolve, relative, dirname, join, isAbsolute, sep } from "node:path"
 
 const require = createRequire(join(process.cwd(), "__exec__.js"))
 const root = process.env.THINCODER_EXEC_ROOT || process.cwd()
@@ -20,7 +20,8 @@ function safe(p) {
   if (typeof p !== "string") throw new Error(`Path must be a string, got ${typeof p}`)
   const abs = resolve(process.cwd(), p)
   const rel = relative(root, abs)
-  if (rel.startsWith("..") || (rel.includes("..") && process.platform === "win32")) {
+  // isAbsolute(rel) covers cross-drive (relative() returns an absolute path then)
+  if (isAbsolute(rel) || rel === ".." || rel.startsWith(".." + sep)) {
     throw new Error(`Path traversal denied: ${p}`)
   }
   return abs
@@ -63,7 +64,9 @@ globalThis.glob = (pattern) => {
     }
   }
   walk(process.cwd(), "")
-  return out.slice(0, 200)
+  const capped = out.slice(0, 200)
+  if (out.length > 200) capped.push(`... (${out.length - 200} more)`)
+  return capped
 }
 globalThis.grep = (pattern, file) => {
   if (typeof pattern !== "string") throw new Error("grep pattern must be a string")
@@ -74,6 +77,8 @@ globalThis.grep = (pattern, file) => {
   const lines = readFileSync(abs, "utf8").replace(/\r\n/g, "\n").split("\n")
   const m = []
   for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) m.push(`${i + 1}: ${lines[i].slice(0, 200)}`)
-  return m.slice(0, 100)
+  const capped = m.slice(0, 100)
+  if (m.length > 100) capped.push(`... (${m.length - 100} more)`)
+  return capped
 }
 globalThis.log = (...a) => console.log(a.map((x) => (x && typeof x === "object" ? JSON.stringify(x) : String(x))).join(" "))

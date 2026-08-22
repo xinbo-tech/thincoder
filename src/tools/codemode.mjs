@@ -21,7 +21,7 @@
  *   timeoutMs  — timeout (default 30s, max 60s)
  */
 import { spawn } from "node:child_process"
-import { dirname, resolve, relative } from "node:path"
+import { dirname, resolve, relative, isAbsolute, sep } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { DESC } from "./shared.mjs"
 
@@ -32,12 +32,19 @@ const DEFAULT_TIMEOUT = 30_000
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PRELUDE_URL = pathToFileURL(resolve(__dirname, "exec-prelude.mjs")).href
 
+/** True when `abs` is inside `root` (handles `..` and cross-drive, which
+ *  relative() returns as an absolute path on Windows). */
+function isInside(root, abs) {
+  const rel = relative(root, abs)
+  if (isAbsolute(rel)) return false
+  return rel !== ".." && !rel.startsWith(".." + sep)
+}
+
 /** Resolve workdir relative to cwd, asserting it stays within the workspace. */
 function resolveBaseDir(cwd, workdir) {
   if (!workdir || typeof workdir !== "string") return cwd
   const abs = resolve(cwd, workdir)
-  const rel = relative(cwd, abs)
-  if (rel.startsWith("..")) throw new Error(`workdir escapes the workspace: ${workdir}`)
+  if (!isInside(cwd, abs)) throw new Error(`workdir escapes the workspace: ${workdir}`)
   return abs
 }
 
@@ -52,7 +59,8 @@ function applyFilter(output, filter) {
   }
 }
 
-/** Spawn node, run code + prelude, capture stdout/stderr, enforce timeout/abort. */
+/** Spawn node, run code + prelude, capture stdout/stderr, enforce timeout/abort.
+ *  Resolves { text, ok } — ok=false on non-zero exit / timeout / abort. */
 function runNodeEval(code, baseDir, root, timeoutMs, signal) {
   return new Promise((resolvePromise) => {
     const src = `await import(${JSON.stringify(PRELUDE_URL)});\n${code}`
@@ -66,18 +74,19 @@ function runNodeEval(code, baseDir, root, timeoutMs, signal) {
     let outBuf = "", errBuf = "", truncated = false, settled = false, mode = null
     let timer = null, kickTimer = null
 
-    const settle = (result) => {
+    const settle = (text, ok) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
       clearTimeout(kickTimer)
       if (signal) signal.removeEventListener("abort", onAbort)
-      resolvePromise(result)
+      resolvePromise({ text, ok })
     }
-    const kill = () => { try { child.kill() } catch { /* already gone */ } }
+    // SIGKILL (not SIGTERM) so a signal-trapping script can't dodge the watchdog.
+    const kill = () => { try { child.kill("SIGKILL") } catch { /* already gone */ } }
     // After kill, wait for "close" (child fully reaped) before settling — settling
     // early races the caller deleting the cwd dir while the child still holds it.
-    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : `Error: script timed out after ${timeoutMs}ms`), 3000) }
+    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : `Error: script timed out after ${timeoutMs}ms`, false), 3000) }
     const onAbort = () => { if (mode) return; mode = "abort"; kill(); armKick() }
 
     timer = setTimeout(() => { if (!mode) { mode = "timeout"; kill(); armKick() } }, timeoutMs)
@@ -94,16 +103,16 @@ function runNodeEval(code, baseDir, root, timeoutMs, signal) {
     }
     child.stdout.on("data", (d) => { outBuf = cap(outBuf, d.toString()) })
     child.stderr.on("data", (d) => { errBuf = cap(errBuf, d.toString()) })
-    child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`))
+    child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`, false))
     child.on("close", (code) => {
-      if (mode === "abort") return settle("(stopped)")
-      if (mode === "timeout") return settle(`Error: script timed out after ${timeoutMs}ms`)
+      if (mode === "abort") return settle("(stopped)", false)
+      if (mode === "timeout") return settle(`Error: script timed out after ${timeoutMs}ms`, false)
       const out = outBuf.trimEnd()
       const err = errBuf.trim()
       if (code === 0) {
-        settle(out || "(no output)")
+        settle(out || "(no output)", true)
       } else {
-        settle(err ? (out ? `${out}\n\n[stderr]:\n${err}` : err) : `${out}\n(exit code ${code})`.trim())
+        settle(err ? (out ? `${out}\n\n[stderr]:\n${err}` : err) : `${out}\n(exit code ${code})`.trim(), false)
       }
     })
   })
@@ -129,6 +138,8 @@ export const codeModeTool = {
       },
       timeoutMs: {
         type: "integer",
+        minimum: 1,
+        maximum: 60000,
         description: `Timeout in milliseconds (default ${DEFAULT_TIMEOUT}, max 60000)`,
       },
     },
@@ -144,8 +155,13 @@ export const codeModeTool = {
     let baseDir
     try { baseDir = resolveBaseDir(ctx.cwd, args.workdir) }
     catch (e) { return `Error: ${e.message}` }
-    const timeoutMs = Math.min(args.timeoutMs ?? DEFAULT_TIMEOUT, 60_000)
-    const result = await runNodeEval(code, baseDir, ctx.cwd, timeoutMs, ctx.signal)
-    return args.filter ? applyFilter(result, args.filter) : result
+
+    const t = Number(args.timeoutMs)
+    const timeoutMs = Number.isFinite(t) && t > 0 ? Math.min(t, 60_000) : DEFAULT_TIMEOUT
+
+    const { text, ok } = await runNodeEval(code, baseDir, ctx.cwd, timeoutMs, ctx.signal)
+    // Only filter successful output — never swallow an error report behind a filter.
+    if (!ok) return text
+    return args.filter ? applyFilter(text, args.filter) : text
   },
 }
