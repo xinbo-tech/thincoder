@@ -5,6 +5,7 @@
 import { ansi, C } from "./ansi.mjs"
 import { formatTables, sanitizeDisplay, stringWidth, wrapText } from "./render.mjs"
 import { renderMarkdownInline, renderMarkdownHeading } from "./markdown.mjs"
+import { renderMathInline, renderMathBlock } from "./math.mjs"
 
 let _convCache = { key: "", cols: 0, lines: [] }
 
@@ -27,6 +28,13 @@ function renderMarkdownPreservingWidth(text) {
     const diff = stringWidth(line) - stringWidth(rendered)
     return diff > 0 ? rendered + " ".repeat(diff) : rendered
   }).join("\n")
+}
+
+// Math runs BEFORE markdown (TUI.md §9.1D): `$...$`/`$$...$$` are opaque to markdown
+// (so `x**2` inside a formula isn't misread as bold), and the Unicode approximation
+// is measured by renderMarkdownPreservingWidth's width-compensation math.
+function renderMathAndMarkdown(text) {
+  return renderMarkdownPreservingWidth(renderMathInline(renderMathBlock(text)))
 }
 // Test seam (mirrors the _-prefixed seams in run.mjs).
 export { renderMarkdownPreservingWidth as _renderMarkdownPreservingWidth }
@@ -124,7 +132,7 @@ function buildConvLines(state, cols) {
     // ANSI-aware). Rendering after wrapping measured raw markdown
     // (`**bold**` = 8) against displayed text (4) and sliced markers
     // mid-sequence — the table misalignment the user kept reporting.
-    const renderedText = renderMarkdownPreservingWidth(sanitizeDisplay(text))
+    const renderedText = renderMathAndMarkdown(sanitizeDisplay(text))
     for (const line of formatTables(renderedText, cols - 1)) {
       for (const wrapped of wrapText(line, cols - 1)) {
         block.push({ text: wrapped, color: l.color, _foldId: l._foldId, _src: i })
@@ -183,7 +191,7 @@ function buildConvLines(state, cols) {
       // mid-sequence (`**bo` + `ld**`) so the renderer never saw complete ones.
       const rows = block.kind === "think"
         ? source.split("\n")
-        : formatTables(block.kind === "text" ? renderMarkdownPreservingWidth(source) : source, cols - 3)
+        : formatTables(block.kind === "text" ? renderMathAndMarkdown(source) : source, cols - 3)
       for (const line of rows) {
         for (const wrapped of wrapText(line, cols - 3)) {
           convLines.push({ text: `│ ${wrapped}`, color })
@@ -193,7 +201,7 @@ function buildConvLines(state, cols) {
   }
   if (state.streaming) {
     // Rendered BEFORE formatTables — see the advisor-block comment above.
-    const rendered = renderMarkdownPreservingWidth(sanitizeDisplay(state.streaming))
+    const rendered = renderMathAndMarkdown(sanitizeDisplay(state.streaming))
     for (const line of formatTables(rendered, cols - 1)) {
       for (const wrapped of wrapText(line, cols - 1)) {
         convLines.push({ text: wrapped, color: C.text })
