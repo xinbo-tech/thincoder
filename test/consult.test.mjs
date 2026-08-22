@@ -79,6 +79,7 @@ describe("consult mechanism (CLI)", () => {
     assert.deepEqual(JSON.parse(await start(["glm"])).models, ["glm:m-c"], "bare provider selector")
     assert.deepEqual(JSON.parse(await start(["m-a"])).models, ["deepseek:m-a"], "bare model selector")
     assert.deepEqual(JSON.parse(await start(["m-a", "glm"])).models, ["deepseek:m-a", "glm:m-c"], "multi-selector, pool order preserved")
+    assert.deepEqual(JSON.parse(await start("glm")).models, ["glm:m-c"], "bare string coerced to [string]")
 
     const err = await start(["does-not-exist"])
     assert.match(err, /unknown consult model selector/, "unknown selector errors out")

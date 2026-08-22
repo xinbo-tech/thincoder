@@ -25,12 +25,13 @@ function consultLabel(m) {
  *  nothing (surface the typo rather than silently dropping it). Absent/empty selectors
  *  → the full pool. */
 function selectConsultModels(pool, selectors) {
-  if (!Array.isArray(selectors) || selectors.length === 0) return { models: pool, error: null }
+  if (selectors == null || (Array.isArray(selectors) && selectors.length === 0)) return { models: pool, error: null }
+  const list = Array.isArray(selectors) ? selectors : [selectors] // coerce a bare string → [string]
   const selected = []
   const seen = new Set()
   const unknowns = []
-  for (const raw of selectors) {
-    const s = String(raw).toLowerCase()
+  for (const raw of list) {
+    const s = String(raw).trim().toLowerCase()
     const matches = pool.filter((m) =>
       consultLabel(m).toLowerCase() === s ||
       String(m.provider ?? "").toLowerCase() === s ||
