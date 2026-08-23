@@ -2,6 +2,27 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.38] — 2026-08-23
+
+### Added
+
+- **对齐 thinworker 编程工具集**：新增 `file_ops`（move/copy/rename）、`process`（列进程）、`get_current_time`、`sleep` 四个内置工具，及 `tree`（递归目录树 + `depth`，对齐 thinworker `repomap`）；各工具描述带「Route to X instead of bash」反向路由
+- **内部能力对齐 thinworker**：`grep` 加 `literal`/`ignoreCase`；`ls` 加 `filter`（通配符）；`bash` 加 `filter`（正则行过滤）；`git` 加 `show`/`rm`/`commit`/`push` 子命令 + `filter`；`verify` 加 `filter`/`workdir`
+- **`execute` 工具重做**：由同步 vm 沙箱改为 `node --input-type=module --eval` 子进程——支持顶层 `await`、动态 `import()`（直接加载项目 `.mjs`）、原生 `console`/`fetch`，新增 `workdir`/`filter` 参数，保留 killable 超时（无限循环可被终止）；`exec-prelude.mjs` 提供 readFile/writeFile/glob/grep/log/require（路径隔离 workspace）
+- **consult 指定子集模型**：`consult_start` 新增 `models` 选择器（`provider:model`/裸 provider/裸 model，大小写不敏感、去重保序）
+- **模型规格更新**：新增 glm-5.3、deepseek-v4-flash-vision-exp；gpt-5.6/claude-5 收敛 `thinking=false`
+
+### Fixed
+
+- **apply_patch 多 hunk 错位**：同一文件多个 hunks 因前一段改变行数而错位应用、静默损坏——改为重扫上下文 + splice
+- **git 写操作吞错**：`commit`/`push`/`rm` 改用 `runGitStrict` 返回 stderr + exit code，失败不再伪装成功；`show` 补 ref 校验（防 `-` 开头注入选项）
+- **tool 补齐项加固**：`get_current_time` 补 weekday；`sleep` 防 NaN；`tree` 深度/计数校验、省略号单次、根目录报错；`log` 非法 count 回退默认
+
+### Docs
+
+- `TOOLS.md` 注册表计数同步（含 ops/tree）
+- Changelog backfill 0.12.36 / 0.12.33
+
 ## [0.12.37] — 2026-08-22
 
 ### Fixed
