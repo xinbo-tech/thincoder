@@ -2981,4 +2981,83 @@ test("两端 src/prompts/ 15 文件 byte-identical（CLI ↔ VS Code）",
       )
     }
   })
+// ---------------------------------------------------------------- workflow/debugging 必须用 task（2026-08-23）
+// discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
+
+test("prompts/discipline.md: Workflow/Debugging 要求用 task（内容级断言）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+  const lines = text.split("\n")
+
+  // 关键短语全文断言（不受两端比对影响——内容一旦回退即失败）
+  assert.ok(/every tier/i.test(text), "全英文短语 every tier 在（文件为 EVERY tier，大小写不敏感）")
+  assert.ok(text.includes("one in_progress"), "短语 one in_progress 在")
+
+  // Workflow 总规句：use `task` … every tier … one (item) in_progress
+  const rule = lines.find((l) => /every tier/i.test(l))
+  assert.ok(rule, "Workflow 总规行存在")
+  assert.ok(/use `task`/i.test(rule), "总规含 use `task`")
+  assert.ok(/one .*in_progress/i.test(rule), "总规含 one … in_progress（原文为 one item in_progress）")
+
+  // 分层追踪工具断言
+  const complex = lines.find((l) => /Complex \(3\+ steps/.test(l.trim()))
+  assert.ok(complex, "Complex 层存在")
+  assert.ok(complex.includes("`checklist`"), "Complex 层仍含 checklist 双轨")
+  const medium = lines.find((l) => /Medium \(2-3 steps/.test(l.trim()))
+  assert.ok(medium, "Medium 层存在")
+  assert.ok(medium.includes("`task`"), "Medium 层含 task")
+  const small = lines.find((l) => /Small \(typo, one-line fix\)/.test(l.trim()))
+  assert.ok(small, "Small 层存在")
+  assert.ok(small.includes("`task`"), "Small 层含 task（单行小改也要 task）")
+
+  // Debugging 段：四步 + task + one in_progress
+  assert.ok(text.includes("reproduce → locate root cause → fix → verify"), "Debugging 段含调试四步")
+  const debugLine = lines.find((l) => l.includes("reproduce → locate root cause → fix → verify"))
+  assert.ok(debugLine, "Debugging 调试句存在")
+  assert.ok(debugLine.includes("`task`"), "调试句含 task")
+  assert.ok(debugLine.includes("one in_progress"), "调试句含 one in_progress")
+})
+// ---------------------------------------------------------------- 读/更新文档嵌入 Workflow 箭头序列（2026-08-23）
+// discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
+
+test("prompts/discipline.md: 读/更新文档已嵌入 Workflow 箭头序列（无独立 Documentation 段）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+  const lines = text.split("\n")
+
+  // 无独立 Documentation 段头（上版「Documentation — read before you write」已删除）
+  assert.ok(
+    !lines.some((l) => l.trim().startsWith("Documentation —")),
+    "不存在 Documentation — 段头（读/更新文档已嵌入 Workflow）",
+  )
+
+  // 读文档总规句（Workflow 段首）：read the relevant docs + document map + ANY tier
+  const readLine = lines.find((l) => /read the relevant docs before changing code/i.test(l))
+  assert.ok(readLine, "读文档总规句存在")
+  assert.ok(readLine.includes("at ANY tier"), "范围标记 ANY tier 在")
+  assert.ok(readLine.includes("the document map"), "the document map（文档地图）在")
+  assert.ok(readLine.includes("docs/design/README.md"), "文档地图路径 docs/design/README.md 在")
+  assert.ok(readLine.includes("AGENTS.md if present"), "AGENTS.md if present 在")
+
+  // Complex 层箭头：Read the docs → Requirements → Design → Development → Testing（不加 update the owning doc——已写设计文档）
+  const complex = lines.find((l) => /Complex \(3\+ steps/.test(l.trim()))
+  assert.ok(complex, "Complex 层存在")
+  assert.ok(complex.includes("Read the docs → Requirements → Design → Development → Testing"), "Complex 箭头完整")
+  assert.ok(!complex.includes("update the owning doc"), "Complex 层不含 update the owning doc")
+
+  // Medium 层箭头：Read the docs → Plan → Change → update the owning doc if you spotted a gap
+  const medium = lines.find((l) => /Medium \(2-3 steps/.test(l.trim()))
+  assert.ok(medium, "Medium 层存在")
+  assert.ok(medium.includes("Read the docs → Plan → Change"), "Medium 箭头含 Read the docs → Plan → Change")
+  assert.ok(medium.includes("update the owning doc if you spotted a gap"), "Medium 箭头含 update the owning doc if you spotted a gap")
+
+  // Small 层箭头：Read the docs → Change → Verify → update the owning doc if you spotted a gap
+  const small = lines.find((l) => /Small \(typo, one-line fix\)/.test(l.trim()))
+  assert.ok(small, "Small 层存在")
+  assert.ok(small.includes("Read the docs → Change → Verify"), "Small 箭头含 Read the docs → Change → Verify")
+  assert.ok(small.includes("update the owning doc if you spotted a gap"), "Small 箭头含 update the owning doc if you spotted a gap")
+
+  // 归属句（Workflow 段末）：Never create a new doc + find the owner and amend
+  const ownLine = lines.find((l) => l.includes("Never create a new doc"))
+  assert.ok(ownLine, "归属句存在")
+  assert.ok(ownLine.includes("find the owner and amend"), "归属句含 find the owner and amend")
+})
 

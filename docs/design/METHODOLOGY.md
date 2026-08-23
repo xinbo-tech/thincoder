@@ -38,3 +38,48 @@
 - [x] 遇到问题三招：分析日志、查资料、二分法测试
 - [x] 不要长时间反复阅读代码：动手比动眼有用
 - [ ] （下一条待讨论）
+
+---
+
+## 变更记录
+
+### 2026-08-23：工作流程与调试策略要求使用 `task`（已落地）
+
+**需求**（用户拍板）：标准模式（普通开发）的**工作流程**与**调试策略**都应要求使用 `task`（会话级任务跟踪），使多步工作在任意时刻都可见「计划中 / 进行中 / 已完成」。
+
+**设计**（已落地，落 `src/prompts/discipline.md`，CLI `thincoder/` 与 VS Code `thincoder-vscode/` 各一份 byte-identical；desktop vendored 副本不在本次范围）：
+1. **Workflow 段**加总规（英文，匹配文件现语言）：「use `task` to track work for EVERY tier — one item in_progress at a time」；复杂层保留 `checklist`+`task` 双轨；中/小层都显式用 `task`（用户明确：单行小改也要 `task`）。
+2. **Debugging 段**加一条（英文）：「Track the debug steps in `task` — reproduce → locate root cause → fix → verify, one in_progress」。
+
+**范围**：仅标准模式 `discipline.md`。工程模式已自带 `checklist`+`task`（`engineering.md`：每个需求映射 checklist 条目、用 task 跟踪），无需改。
+
+**测试**（内容级断言英文短语——`discipline.md` 全英文；两端各验；仅 byte-identical 不算通过）：
+- Workflow 段含总规英文句「use `task` … every tier … one in_progress」；Complex 层仍含 `checklist`；Medium 层含 `task`；Small 层含 `task`。
+- Debugging 段含「reproduce → locate root cause → fix → verify」+ `task` + 「one in_progress」。
+- 内容断言必须能在副本**未改**时失败，不能只靠「两端 byte-identical」漂绿。
+- 全量测试回归不降。
+
+**受影响文件**：`src/prompts/discipline.md`（`thincoder/` + `thincoder-vscode/` 各一份）。
+
+### 2026-08-23：改码前读文档 + 中/小改后更新文档（嵌入 Workflow 箭头序列，已落地）
+
+**需求**（用户拍板）：标准模式中，① 改代码前（不论大/中/小）都要求先读一些文档；② 中/小任务改完后、发现文档缺口时更新文档。
+
+**设计**（修订——读/更新文档**嵌入 Workflow 箭头序列**，而非独立段落；两端 byte-identical）：
+1. **删除**上版独立的 `Documentation` 段。
+2. Workflow 段首**前移**一条「读文档」总规（从被删的 `Documentation` 段移至 Workflow 段首；英文，定义含义）：`Read the relevant docs before changing code — at ANY tier: doc_search the topic, then locate the owning design doc via docs/design/README.md (the document map) and read it — plus AGENTS.md if present.`
+3. 每个 tier 的箭头序列**前缀**加 `Read the docs`：Complex = `Read the docs → Requirements → Design → Development → Testing`；Medium = `Read the docs → Plan → Change`；Small = `Read the docs → Change → Verify`。
+4. 中/小 tier 的箭头序列**后缀**加 `update the owning doc if you spotted a gap`（英文，含 gap 定义：a decision not yet recorded, or a doc now contradicting the code），Complex 不加（已写设计文档）。
+5. 保留归属句（置于 Workflow 段末）`Never create a new doc for an existing board's topic — find the owner and amend it.`
+
+**范围**：仅标准模式 `discipline.md`。工程模式已有 read-docs-first + 强制设计文档，无需改。
+
+**测试**（英文内容级断言，两端各验；仅 byte-identical 不算通过）：
+- 无独立 `Documentation` 段（断言不存在 `Documentation —` 段头）。
+- 含读文档总规句：`read the relevant docs` + `document map` + `ANY tier`。
+- Complex 层箭头含 `Read the docs → Requirements → Design → Development → Testing`。
+- Medium/Small 层箭头含 `Read the docs` + `update the owning doc if you spotted a gap`。
+- 含归属句：`Never create a new doc` + `find the owner and amend`。
+- 断言在内容未改时能失败；全量回归不降。
+
+**受影响文件**：`src/prompts/discipline.md`（`thincoder/` + `thincoder-vscode/` 各一份）。

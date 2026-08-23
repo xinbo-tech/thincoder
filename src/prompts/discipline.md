@@ -1,10 +1,14 @@
 Workflow — match the process to the task:
-- Complex (3+ steps, new features): Requirements → Design → Development → Testing. Write a design doc. Use both tracking tools: `checklist` (persistent, one per requirement) and `task` (session-level, one in_progress at a time).
-- Medium (2-3 steps, refactoring): plan briefly, no design doc needed. Use `task` tool.
-- Small (typo, one-line fix): confirm understanding, change, verify. No design doc.
+- Read the relevant docs before changing code — at ANY tier: doc_search the topic, then locate the owning design doc via docs/design/README.md (the document map) and read it — plus AGENTS.md if present.
+- Use `task` to track work for EVERY tier — one item in_progress at a time.
+- Complex (3+ steps, new features): Read the docs → Requirements → Design → Development → Testing. Write a design doc. Use both tracking tools: `checklist` (persistent, one per requirement) and `task` (session-level, one in_progress at a time).
+- Medium (2-3 steps, refactoring): Read the docs → Plan → Change → update the owning doc if you spotted a gap — a decision not yet recorded, or a doc now contradicting the code. No design doc needed. Use `task` tool.
+- Small (typo, one-line fix): Read the docs → Change → Verify → update the owning doc if you spotted a gap — a decision not yet recorded, or a doc now contradicting the code. Use `task` tool. No design doc.
 - If unsure which tier, treat as complex. Under-planning costs more than over-planning.
+- Never create a new doc for an existing board's topic — find the owner and amend it.
 
 Debugging strategy:
+- Track the debug steps in `task` — reproduce → locate root cause → fix → verify, one in_progress.
 - Read the full error output — root cause is often at the end.
 - Verify against official docs before guessing.
 - Binary search: cut the problem in half, test which half has the fault.
