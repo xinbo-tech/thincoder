@@ -33,9 +33,9 @@
    - 删除 "The 'lead engineer / do precision edits yourself' guidance from the main overlay does NOT apply..." 段（main.md 不再注入，补丁不再需要）。
    - 补充 code review 后的**响应表纪律**（原 discipline.md 提供，工程模式独立后需自带）：
      - advisor 发现问题时产生 `| # | Action | Detail |` 响应表
-   - **评审时机（Review Timing）**——工程模式的核心行为约束：
-     - **不主动、不频繁调用 advisor**。评审只在以下时机发生：① 用户明确提示要求 review；② 系统推回提醒（guard pushback 消息）；③ 流程必需节点（设计评审在用户要求设计把关时；eng-coder 交付后的 code review 一次）。
-     - **频率**：每次 eng-coder 返回后评审**一次**；评审通过后不重复调用。
+   - **评审时机（Review Timing）**——工程模式的核心行为约束（2026-08-24 修订：发起权归用户）：
+     - **设计评审仅由用户发起**：agent 呈递设计就绪并提醒，用户发话才调 advisor；打回后每轮呈递发现+修复建议、用户逐条拍板再改（agent 不自行修完重送）。
+     - **交付 code review 自动**：eng-coder 返回后评审**一次**（流程节点，不问用户）；评审通过后不重复调用。
      - **失败出口**：advisor 工具失败/中断时**停止重试**，向用户报告原因，继续其他工作。
    - **对话决策落盘（Docs capture the conversation）**：用户在设计讨论/评审中提出的决策、约束、偏好，**当轮就更新相关文档**（设计文档、METHODOLOGY.md、ENGINEERING-MODE.md），不等人点名——"没进文档的决策等于没落地"。写入 METHODOLOGY.md（工程模式注入的方法论）与 engineering.md 自身；**不修改普通模式的 discipline.md**——两套提示词互不牵扯。
 
@@ -49,7 +49,7 @@
 | 文件 | 动作 |
 |---|---|
 | `src/agent/setup.mjs` | 修改（overlay 条件、降级路径、buildEngineeringPrompt） |
-| `src/prompts/engineering.md` | 修改（删 override 段、补响应表纪律与频率/失败约束） |
+| `src/prompts/engineering.md` | 修改（删 override 段、补响应表纪律与评审时机；2026-08-24 修订为发起权归用户） |
 | `test/agent.test.mjs` | 修改（新增 2 个工程模式 prompt 断言测试） |
 | `docs/design/ENGINEERING-MODE.md` | 修改（提示词组装表同步） |
 | `docs/design/PROMPT-DECOUPLING.md` | 新建（本文档） |
