@@ -1925,6 +1925,25 @@ test("context: 历史太短切不出中间段时，巨型消息被确定性瘦�
   assert.ok(estimateTokens(agent.history) < before, "token 必须显著下降")
 })
 
+test("context: 巨型消息瘦身不污染人读线 _fullHistory（数据丢失回归防护）", async () => {
+  const { compressIfNeeded } = await import("../src/context.mjs")
+  const huge = "开".repeat(60_000)
+  // pushReal 把同一消息对象推进 history + _fullHistory（两条线共享引用）；瘦身必须复制后替换、
+  // 不能原地改共享对象，否则截断会泄漏进永不压缩的人读线并在持久化时丢原始内容。
+  const shared = { role: "user", content: huge }
+  const agent = {
+    provider: { baseURL: "http://127.0.0.1:1", apiKey: "x", model: "m" },
+    history: [shared],
+    _fullHistory: [shared], // 与 history 共享同一对象（pushReal 的真实行为）
+    tasks: [], planMode: false,
+  }
+  const done = await compressIfNeeded(agent, 1_000)
+  assert.equal(done, true)
+  assert.ok(agent.history[0].content.includes("truncated"), "机器线被瘦身")
+  assert.equal(agent._fullHistory[0].content.length, 60_000, "人读线内容长度不变")
+  assert.ok(!agent._fullHistory[0].content.includes("truncated"), "人读线无截断桩")
+})
+
 test("context: tail 保留量随模型窗口自适应（1M 窗口 40 条，小窗口模型 38 条，短历史受 40% 上限）", async () => {
   const { compressFallback } = await import("../src/context.mjs")
   const makeAgent = (model) => ({

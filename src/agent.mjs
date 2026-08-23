@@ -95,6 +95,7 @@ export function createAgent({
     _sessionStart: sessionStart,
     _lastPromptTokens: null, _usageAtLen: null,
     _compressFailures: 0,
+    _emptyRetries: 0, // empty-response retry budget (per-run; reset on a fresh user turn)
     _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here
     _currentTurn: 0, _maxTurns: 100, // turn counter for status bar display
   }
@@ -418,11 +419,6 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
           // how many reviews have run (round 1→2→3→4→5), not how many succeeded.
           // A failed/interrupted review is still a review attempt and should use
           // the next round's prompt on retry.
-          try {
-            JSON.parse(toolCall.arguments || "{}")
-          } catch {
-            /* arguments unparseable — still counts as a review attempt */
-          }
           agent._advisorRound++
         }
         if (FILE_MUTATORS.has(toolCall.name)) {

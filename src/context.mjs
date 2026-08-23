@@ -272,19 +272,28 @@ const OVERSIZE_CONTENT_LIMIT = 8_000
  */
 function shrinkOversized(agent, limit = OVERSIZE_CONTENT_LIMIT) {
   let shrunk = false
-  for (const m of agent.history) {
-    if ((m.role !== "user" && m.role !== "tool") || typeof m.content !== "string") continue
-    if (m.content.length <= limit) continue
+  // Copy-on-write: build a NEW array and replace only truncated entries. pushReal stores the SAME
+  // message object in both `agent.history` (machine line) and `agent._fullHistory` (human/persistence
+  // line), so in-place `m.content = ...` would ALSO truncate the never-compacted human line and lose
+  // the original pasted content on session persist (session.mjs persists _fullHistory). VS Code port
+  // already copies (`history.map(m => ({ ...m }))`); this brings CLI to parity.
+  const next = agent.history.map((m) => {
+    if ((m.role !== "user" && m.role !== "tool") || typeof m.content !== "string") return m
+    if (m.content.length <= limit) return m
     // Truncate keeping head + tail, insert stub in between; keepHead/keepTail proportional but not exceeding 50%/25% of limit
     const keepHead = Math.min(Math.floor(limit * 0.5), 4000)
     const keepTail = Math.min(Math.floor(limit * 0.25), 2000)
-    m.content =
-      m.content.slice(0, keepHead) +
-      `\n[... ${m.content.length - keepHead - keepTail} chars truncated — single message too large for context window ...]\n` +
-      m.content.slice(-keepTail)
     shrunk = true
-  }
+    return {
+      ...m,
+      content:
+        m.content.slice(0, keepHead) +
+        `\n[... ${m.content.length - keepHead - keepTail} chars truncated — single message too large for context window ...]\n` +
+        m.content.slice(-keepTail),
+    }
+  })
   if (shrunk) {
+    agent.history = next
     // Same as compaction: measured token baseline is invalidated by the changed history, fall back to estimation until next response
     agent._lastPromptTokens = null
     agent._usageAtLen = null

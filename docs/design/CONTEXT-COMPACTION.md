@@ -198,3 +198,10 @@
 - `SUMMARIZE_PROMPT` 含「已改动文件清单」「未决点/待办」两新增清单；且两端 `SUMMARIZE_PROMPT` **均含 D12 的「COMPLETED vs IN-PROGRESS」句**（CLI 已有，VS Code 需补齐——实现时发现的 D12 移植缺口）；两端 prompts byte-identical；全量回归。
 
 **受影响文件**：CLI `src/context.mjs`（`summarizeRunExplorations` + `EXPLORE_SUMMARY_PROMPT` + `SUMMARIZE_PROMPT` 追加清单）、CLI `src/agent.mjs`（run 结束 hook + `_runStartHistoryLen`）、两端测试、两端 `CHANGELOG.md`；VS Code 对应 `src/agent.mjs` + compact/history 模块。（`main.md` 由 AGENT-LOOP §13 改，不在此列）
+
+---
+
+## 6. 已知 parity 说明（2026-08-23 评审）
+
+- **CLI `splitHistory` 无「reverse 保护」**（VS Code `compact.mjs` 的 REVERSE protection）：reverse 保护处理「tail 以 tool_calls 悬空 assistant 开头、其 tool 结果在尾部之前被切掉」的**倒序**场景。CLI 不需要——`repairHistory` 在 run 起点已保证 tool_calls→tool 顺序，run 中 append 与原样重建均保序，倒序无法产生。另有边界微差（CLI `i > headEnd` / `tokens <= threshold` vs VS Code `i >= headEnd` / `total < threshold`），为 off-by-one 粒度差、不改变语义。若将来两端 history 来源出现倒序，应回植该保护。
+- **`SUMMARIZE_PROMPT` 两端措辞微差**（语义等价、非 byte-identical）：`EXPLORE_SUMMARY_PROMPT` 两端 byte-identical；`SUMMARIZE_PROMPT` 各端自有措辞（关键清单——D12 区分、FILES CHANGED、UNRESOLVED——均齐全）。如需防漂移可对齐为同一字面量（以 CLI 为准）；本次未对齐，避免牵动压缩行为与既有测试断言。
