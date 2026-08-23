@@ -2,6 +2,14 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.40] — 2026-08-23
+
+### Fixed
+
+- **`shrinkOversized` 数据丢失**：原地改共享消息对象会污染持久化的人读线（巨型粘贴内容被永久截断）——改为复制-on-write（机器线替换、人读线不动）
+- 轮末探索蒸馏边界只在压缩**真重建**时重置（shrink 路径不再误重置）
+- `createAgent` 补 `_emptyRetries` 初始化；删 advisor 分支无用 JSON.parse
+
 ## [0.12.39] — 2026-08-23
 
 ### Added
