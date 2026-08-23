@@ -48,13 +48,14 @@ function keepTailSize(provider, historyLen) {
   return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
 }
 
-const SUMMARIZE_PROMPT = `You are a conversation compressor. Summarize the following agent work log into a compact summary for use as context in the ongoing conversation.
+export const SUMMARIZE_PROMPT = `You are a conversation compressor. Summarize the following agent work log into a compact summary for use as context in the ongoing conversation.
 Requirements:
 - Write in first person, present tense — these are "my" handover notes, continuing my own train of thought
 - Most important: preserve design decisions and their reasons — architecture choices, API contracts, naming conventions, trade-off rationale. These are the anchors the subsequent code must not deviate from
 - Distinguish COMPLETED vs IN-PROGRESS work: completed tasks get a ONE-LINE recap each (what was done, key outcome); spend the detail budget on unresolved issues, next steps, and the CURRENT task
 - The user's most recent request defines the current task — anchor on it. Earlier requests are likely already completed and only need the one-line recap; do NOT preserve them at full fidelity
-- Keep: files modified and why, unresolved issues, next steps
+- Explicitly list FILES CHANGED: every modified file path plus a one-line "why" — so post-compaction work can re-locate what was edited and where
+- Explicitly list UNRESOLVED ISSUES / TODOs: anything still open plus the next steps — so post-compaction recovery knows where to resume
 - Drop: pleasantries, repetition, fine-grained tool output details
 - Honestly mark uncertain items: anything not actually verified must say "unverified"; do not present guesses as facts
 - Use bullet-point output; aim for information completeness, not a hard word limit (old 500-char cap is deprecated; in a 1M-context era, err on the long side)
@@ -152,6 +153,15 @@ function applyCompression(agent, headEnd, tailStart, note) {
     { role: "assistant", content: "Understood. I'll continue from these notes, re-verifying anything transient." },
     ...tail,
   ]
+  // Compaction REBUILDS the machine line (head + note + "Understood" + tail), so the pre-compaction
+  // _runStartHistoryLen index is stale — a longer array shrank beneath it, and end-of-run exploration
+  // distillation would then silently skip or slice from the wrong offset. Reset the boundary to the
+  // verbatim tail start (head.length + 2: the note and the "Understood" placeholder sit between head
+  // and tail). Exploration before the tail was already covered by the compaction summary, so only the
+  // still-raw tail needs distilling. `head` is empty today (KEEP_HEAD = 0) — the formula stays
+  // correct if KEEP_HEAD ever grows. (shrinkOversized only truncates message bodies in place and
+  // leaves the array length unchanged, so this boundary stays valid there — no reset needed.)
+  agent._runStartHistoryLen = head.length + 2
   // Measured token baseline is invalidated along with old history (prompt_tokens were for pre-compaction context), fall back to estimation until next response
   agent._lastPromptTokens = null
   agent._usageAtLen = null
@@ -280,4 +290,140 @@ function shrinkOversized(agent, limit = OVERSIZE_CONTENT_LIMIT) {
     agent._usageAtLen = null
   }
   return shrunk
+}
+
+// ─── End-of-run exploration distillation (AGENT-LOOP §13 + CONTEXT-COMPACTION §5, 2026-08-23) ───
+// The main agent's machine line is flooded by inline step-by-step exploration (read/grep/...).
+// At run end we distill THIS run's exploration tool-results into one semantic summary note that
+// replaces them in the machine line, while agent._fullHistory (the human line) stays untouched.
+
+/** Read-only knowledge tools counted as "exploration" (execute writes files → never exploration). */
+export const EXPLORE_TOOLS = new Set([
+  "read", "grep", "glob", "ls", "code_search", "doc_search", "repo_outline",
+])
+
+/** Summary prompt for turning a burst of exploration results into a semantic summary. */
+export const EXPLORE_SUMMARY_PROMPT = `You are distilling exploration tool results. Summarize the following read-only codebase exploration into a compact semantic summary for the main agent's own context.
+
+Requirements:
+- Capture WHAT was discovered, WHERE (which files / directories / symbols), and the KEY CONCLUSIONS — do not list tool calls mechanically
+- Keep actionable facts the main agent needs to continue: code locations, function names, file paths, structure, and open questions the exploration raised
+- Drop raw tool-output noise, repeated lines, and verbatim file dumps — keep only what must be remembered
+- Be honest: mark anything not actually verified as "unverified"; do not present guesses as facts
+- Use bullet points; aim for information completeness, not a hard word limit
+
+Exploration log:
+`
+
+/** tool_calls name across both stored shapes ({function:{name}} and flat {name}). */
+function toolCallName(tc) {
+  return tc?.function?.name ?? tc?.name ?? ""
+}
+
+/** Tool that produced a tool-result message (falls back to its owner assistant's tool_call). */
+function toolResultName(msg, ownerToolCalls) {
+  if (typeof msg?.name === "string" && msg.name) return msg.name
+  const owner = (ownerToolCalls ?? []).find((tc) => tc.id === msg?.tool_call_id)
+  return owner ? toolCallName(owner) : ""
+}
+
+/**
+ * Find the pure-exploration "assistant(tool_calls)→tool…" pair blocks added since `start`.
+ * A block is explorable only when EVERY tool call AND every tool result in it is an exploration
+ * tool — mixed blocks (read + edit in one turn) stay untouched, or we'd orphan the edit pairing.
+ */
+function findExplorationBlocks(history, start) {
+  const blocks = []
+  let i = start
+  while (i < history.length) {
+    const m = history[i]
+    if (m?.role === "assistant" && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+      let j = i + 1
+      while (j < history.length && history[j]?.role === "tool") j++
+      const toolMsgs = history.slice(i + 1, j)
+      const allCallsExplore = m.tool_calls.every((tc) => EXPLORE_TOOLS.has(toolCallName(tc)))
+      const allResultsExplore = toolMsgs.length > 0 && toolMsgs.every((t) => EXPLORE_TOOLS.has(toolResultName(t, m.tool_calls)))
+      if (allCallsExplore && allResultsExplore) {
+        blocks.push({ start: i, end: j, messages: history.slice(i, j), toolCount: toolMsgs.length })
+      }
+      i = j
+    } else {
+      i++
+    }
+  }
+  return blocks
+}
+
+/** Serialize a batch of exploration messages for the summary LLM (same shape as compaction serialization). */
+function serializeExplorationMessages(messages) {
+  const cap = 8000 // exploration results ARE the signal to distill — generous cap (quality-first, N1)
+  return messages
+    .map((m) => {
+      const toolNote = m.tool_calls ? ` [called tools: ${m.tool_calls.map(toolCallName).join(", ")}]` : ""
+      let text = ""
+      if (typeof m.content === "string") text = m.content
+      else if (Array.isArray(m.content)) text = m.content.filter((p) => p?.type === "text").map((p) => p.text ?? "").join(" ")
+      return `[${m.role}]${toolNote} ${text.slice(0, cap)}`
+    })
+    .join("\n")
+}
+
+/**
+ * Core (shared) distillation: replace this run's pure-exploration pair blocks with a single
+ * "[Exploration summary]" note placed where the first block was. Returns a NEW history array,
+ * or null when there is nothing to shrink (<3 exploration results / LLM failure). Pairing-safe:
+ * whole assistant→tool blocks are removed, so no orphan tool_calls/tool can survive.
+ */
+async function distillExplorations(history, start, provider, signal) {
+  if (!Array.isArray(history) || history.length - start < 2) return null
+  const blocks = findExplorationBlocks(history, start)
+  const resultCount = blocks.reduce((n, b) => n + b.toolCount, 0)
+  if (resultCount < 3) return null
+
+  const serialized = blocks.map((b) => serializeExplorationMessages(b.messages)).join("\n")
+
+  let summary
+  try {
+    // Silent by design (D11): thinking:null and no onToken/onReasoning — this internal
+    // distillation must not stream to the frontend. signal propagates user cancellation.
+    const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
+      messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
+      signal,
+    })
+    summary = resp?.content
+  } catch {
+    return null // N3: never block the run's return or lose history — original results stay
+  }
+  if (!summary) return null
+
+  const drop = new Set()
+  for (const b of blocks) for (let k = b.start; k < b.end; k++) drop.add(k)
+  const note = { role: "user", content: "[Exploration summary]\n" + summary }
+  const next = []
+  let inserted = false
+  for (let k = 0; k < history.length; k++) {
+    if (drop.has(k)) {
+      if (!inserted) { next.push(note); inserted = true }
+      continue
+    }
+    next.push(history[k])
+  }
+  return next
+}
+
+/**
+ * End-of-run exploration distillation (runAgent's final return). Shrinks the MACHINE line
+ * (agent.history) only; agent._fullHistory is never touched. Triggers when this run added ≥3
+ * exploration tool results; on LLM failure it silently keeps the original history (N3).
+ * `callbacks` is accepted for call-site parity with the other lifecycle hooks — the distillation
+ * is silent by design and never streams (D11).
+ */
+export async function summarizeRunExplorations(agent, callbacks, signal) {
+  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal)
+  if (!next) return
+  agent.history = next
+  // The machine line changed shape — the measured token baseline was for the pre-shrink context.
+  // Invalidate so the next compaction check re-estimates instead of over-counting stale history.
+  agent._lastPromptTokens = null
+  agent._usageAtLen = null
 }

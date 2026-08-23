@@ -161,3 +161,40 @@
 4. 压缩后：task（去重、pending 全量 + done≤3）、plan、AUTO/permission 回注齐全；实测基线失效。
 5. 人读线全程不动；落盘双字段（CLI contextHistory / VS Code contextHistory）。
 6. 空响应：自动重试 2 次，仍空抛错。
+## 5. 探索结果语义摘要 + 压缩保真（2026-08-23）
+
+**需求**（用户报告「主 agent 历史质量差」，选 A+C；C=历史卫生，A=委托策略见 `AGENT-LOOP.md`）：
+
+### 总体需求
+机器线历史（`history`）在压缩阈值触发前就因内联探索逐步结果而膨胀；即便触发压缩，LLM 摘要也可能丢关键信号。在**每轮 runAgent 最终返回时**把本轮写入机器线的探索类结果蒸馏为语义摘要、并强化压缩保真，使机器线在任意时刻信号密集、可恢复。
+
+### 功能性需求
+- F1：当一轮内连续/成批的探索类工具结果（read/grep/ls/glob/code_search/doc_search/repo_outline）写入机器线后，在轮末被 LLM 蒸馏为语义摘要（发现了什么、在哪、关键结论），而非裸堆结果或机械截断。
+- F2：压缩摘要（`SUMMARIZE_PROMPT`）在压缩时，除 D12 已有的「已完成 vs 进行中」外，显式新增保留：已改动文件清单、未决点/待办。
+- F3：人读线 `_fullHistory`（落盘 `fullHistory`）保持全量不变；机器线 `history`（落盘 `contextHistory`）承载摘要后的信号密集形式。
+
+### 非功能性需求
+- N1：摘要质量优先，token 成本不作决策变量；摘要调用必须 `thinking:null` 且不接 onToken/onReasoning（对齐 D11）。
+- N2：两端（CLI `context.mjs` + VS Code 对应 compact 模块）一致落地，两端 prompts byte-identical、有比对测试。
+- N3：轮末摘要失败不得阻塞/影响 runAgent 返回（静默跳过，原始历史保留）。
+
+**设计**：
+
+**H1 回合结束探索摘要**（新函数 `summarizeRunExplorations(agent, callbacks, signal)`，两端同构，CLI 落 `context.mjs` / VS Code 落对应 compact 模块）：
+
+1. **触发时机**：主 `runAgent` **最终返回前**（即 onComplete 前，非 advisor/verify 推回的 `continue` 点）。若本轮新增探索类工具结果 ≥ 3 条，触发一次 LLM 蒸馏。
+2. **探索类工具集**：`read` / `grep` / `glob` / `ls` / `code_search` / `doc_search` / `repo_outline`（只读知识型；`execute` 会写文件、不计入探索类）。
+3. **定位本轮新增**：记录 run 起点的 `agent.history.length`（新增 `agent._runStartHistoryLen`）；run 最终返回前对 `history.slice(起点)` 中「assistant(tool_calls)+tool 结果」按探索类配对识别本轮探索突发。
+4. **蒸馏**：新增专用 `EXPLORE_SUMMARY_PROMPT`，静默调用（对齐 D11：`thinking:null`、不接 onToken/onReasoning），把该批探索结果蒸馏为语义摘要——**发现了什么 / 在哪 / 关键结论**。
+5. **收缩**：在 `agent.history`（机器线）里把这批「assistant→tools」配对**整体替换**为一条 `user` 角色 `[Exploration summary]` note——**保留 assistant/tool 配对边界、不产生孤儿 tool_calls/tool**（仿照 `splitHistory` 的配对保护）；`agent._fullHistory` 保持全量不动。
+6. **阈值/降级**：<3 条不摘要；LLM 摘要失败时**静默跳过**（不阻塞本轮返回、不丢历史——原始结果仍在）；与压缩各自独立、不抢阈值。
+
+> **与 A（AGENT-LOOP §13 F2）的交互**：轮末摘要发生在编辑之后——「即将编辑而 read」的原始内容若在本轮内已被编辑消费则无需保留（编辑结果已在历史）；若跨轮到下一轮才编辑，摘要需足够支撑下一轮的精确编辑、必要时模型重读该文件。本设计选择轮末摘要、接受此权衡。
+
+**H2 压缩保真**：`SUMMARIZE_PROMPT` 追加显式清单——① 已改动文件清单；② 未决点/待办（供压缩后恢复定位）；「已完成 vs 进行中」已在 D12 规定、不重复。
+
+**测试**（实现前补全，两端各断言）：
+- 构造一轮含 ≥3 条探索结果的 history，调 `summarizeRunExplorations`：断言机器线缩短为一条 `[Exploration summary]`、无孤儿 tool_calls/tool、`_fullHistory` 不变；<3 条不触发；LLM 失败静默跳过。
+- `SUMMARIZE_PROMPT` 含「已改动文件清单」「未决点/待办」两新增清单；且两端 `SUMMARIZE_PROMPT` **均含 D12 的「COMPLETED vs IN-PROGRESS」句**（CLI 已有，VS Code 需补齐——实现时发现的 D12 移植缺口）；两端 prompts byte-identical；全量回归。
+
+**受影响文件**：CLI `src/context.mjs`（`summarizeRunExplorations` + `EXPLORE_SUMMARY_PROMPT` + `SUMMARIZE_PROMPT` 追加清单）、CLI `src/agent.mjs`（run 结束 hook + `_runStartHistoryLen`）、两端测试、两端 `CHANGELOG.md`；VS Code 对应 `src/agent.mjs` + compact/history 模块。（`main.md` 由 AGENT-LOOP §13 改，不在此列）

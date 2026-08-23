@@ -4,7 +4,7 @@
  */
 import { chat } from "./provider/index.mjs"
 import { estimateText } from "./provider/rate.mjs"
-import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT, pushReal } from "./context.mjs"
+import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT, pushReal, summarizeRunExplorations } from "./context.mjs"
 import { specForModel } from "./config.mjs"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
@@ -95,6 +95,7 @@ export function createAgent({
     _sessionStart: sessionStart,
     _lastPromptTokens: null, _usageAtLen: null,
     _compressFailures: 0,
+    _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here
     _currentTurn: 0, _maxTurns: 100, // turn counter for status bar display
   }
 }
@@ -105,6 +106,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     agent, input, callbacks,
     { depth, signal, overrideTurns, resume, systemPrompt: SYSTEM_PROMPT, disciplineRules: DISCIPLINE_RULES, mainOverlay: MAIN_OVERLAY },
   )
+
+  // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): prepareRun has already
+  // pushed the user input + injections, so everything appended from here is "this run's" work.
+  agent._runStartHistoryLen = agent.history.length
 
   // Per-run bookkeeping reset. On `resume` (ContinueError continuation) these are
   // PRESERVED: the resumed run must keep mutation tracking so the advisor/verify
@@ -301,6 +306,12 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       honestReminderInjected = cr.honestReminderInjected
       advisorPushbacks = cr.advisorPushbacks
       if (cr.action === "continue") continue
+      if (depth === 0) {
+        // End-of-run exploration distillation (CONTEXT-COMPACTION §5): this run's inline
+        // exploration results become one semantic note before the final return. Silent (N3):
+        // distillation failure must never block the return or lose history.
+        try { await summarizeRunExplorations(agent, callbacks, signal) } catch { /* silent (N3) */ }
+      }
       return cr.content
     }
 

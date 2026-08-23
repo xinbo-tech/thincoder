@@ -195,5 +195,35 @@ PreToolUse hooks → 阻断
 - ⑥ 回归：两端全量测试通过；两端 prompts 15 文件 byte-identical
 
 **受影响文件**：`docs/design/README.md`（两端各新建）、`src/prompts/system.md`、`src/prompts/advisor-design.md`（两端各一份）、CLI `src/advisor.mjs` + `src/advisor/messages.mjs`、VS Code `src/advisor/main.mjs` + `src/advisor/messages.mjs`、两端测试、两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同步变更段。
+## 13. 委托策略：广度探索下沉 explore（2026-08-23）
+
+**需求**（用户报告「主 agent 历史被逐步 tool call 淹没、质量差」，选 A+C；A=行为层委托，C=历史卫生见 `CONTEXT-COMPACTION.md`）：
+
+### 总体需求
+主 agent 的机器线历史（`history`，落盘 `contextHistory`）被大量内联逐步探索（read/grep/ls/glob 等）淹没，多轮后上下文质量退化。把「广度理解性探索」下沉到 explore 子代理、只让其**报告**进入主历史，提升主历史信号密度——与 `CONTEXT-COMPACTION.md` 的历史卫生（截断/压缩）正交互补。
+
+### 功能性需求
+- F1：当任务需要**跨多文件/目录的理解性探索**（找用法、摸结构、读一批文件）时，主 agent 有一条明确规则把其交给 `explore` 子代理（任务里标注用法），使主历史只保留一份报告而非几十条逐步工具调用。
+- F2：当主 agent **即将立刻编辑**某文件时，它可自己 read 该文件，使精确行保持在自身工作上下文内（精度例外，目的不是省 token）。
+- F3：`coder` 子代理完成后，主 agent 的「验证」= 读其**声称改动**的文件 + 运行测试，而非重做整段探索——不让自己随后的复核行为抵消委托收益。
+
+### 非功能性需求
+- N1：委托规则由 `main.md`（及 explore/coder overlay）以「触发条件明确的规则句」表达，非模糊建议；两端 prompt byte-identical。
+- N2：纯提示词行为层改动，不新增工具/机制，与 C 解耦可独立落地。
+
+**设计**（重写 `main.md` "Delegate well" 段；两端 byte-identical）：
+
+1. **首句点破收益**：在委托总述后补一条——子 agent 跑在隔离上下文，它的逐步 read/grep **不进你的历史**，只有最终报告回来；内联做宽探索才会把自己的窗口埋进噪声、多轮后注意力退化。
+2. **触发规则句**（替换原句「Delegate breadth-first exploration; do precision edits yourself」为两条）：
+   - 宽度优先探索——跨多文件/目录的理解（找用法、摸结构、读一批文件）——交给 `explore` 子代理，任务里标注 thoroughness（quick/medium/thorough）。
+   - 只有当你**即将立刻编辑**某文件时才自己 read 它：精确编辑需要精确行在你的工作上下文里——这是**精度例外，不是省 token 技巧**。
+3. **验证句**（替换原句「When a coder subagent finishes, verify its report: read the files it claims to have changed, run the tests — do not trust subagent reports blindly」）：coder 子代理完成后，验证 = 读它**声称改动**的文件 + 运行测试；**不要重做你已委托的那整段探索**——那会抵消委托。
+4. 其余各条（并行不编辑同一文件、失败就收窄重试或自己做、escalate EARLY、冲突时自己读代码仲裁）保持不变。
+
+**测试**（实现前补全，两端各断言）：
+- `main.md` 含委托收益句（isolated context / only its final report / flood 类）、含「about to edit it immediately」触发句、含「Do NOT redo the whole exploration」句。
+- 两端 prompts byte-identical 比对测试继续通过。
+
+**受影响文件**：`src/prompts/main.md`（两端各一份）、两端测试、两端 `CHANGELOG.md`。
 
 
