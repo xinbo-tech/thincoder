@@ -5,7 +5,7 @@ import {
 } from "./shared.mjs";
 import { escapeXml } from "../agent/helpers.mjs";
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve, relative, isAbsolute, sep } from "node:path";
 
 /** Keep only output lines matching a regex (git filter, case-insensitive). */
 function filterLines(output, filter) {
@@ -16,6 +16,17 @@ function filterLines(output, filter) {
     return lines.length ? lines.join("\n") : `(no lines matched filter "${filter}")`
   } catch (e) {
     return `Error: filter regex invalid: ${e.message}`
+  }
+}
+
+/** Run git PRESERVING per-line leading whitespace. runGit trims the WHOLE output, which
+ *  strips a porcelain line's leading " " (the unstaged marker) and misclassifies an
+ *  unstaged-only first line as staged. status uses this so the staged/unstaged column survives. */
+function runGitRaw(cwd, cmdArgs) {
+  try {
+    return execFileSync("git", cmdArgs, { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).replace(/\r/g, "").replace(/\n$/, "")
+  } catch (e) {
+    return String(e.stdout || "").replace(/\r/g, "")
   }
 }
 
@@ -30,21 +41,66 @@ function runGitStrict(cwd, cmdArgs) {
   }
 }
 
+/** Validate a git ref / branch / tag / remote name (no option injection, no whitespace). */
+function validateRef(ref, what = "git ref") {
+  if (!/^[A-Za-z0-9._\/~^@][A-Za-z0-9._\/~^@{}\-]*$/.test(ref)) throw new Error(`Invalid ${what}: ${ref}`)
+  return ref
+}
+
+/** True when `abs` is inside `root` (handles `..` and cross-drive, which relative()
+ *  returns as an absolute path on Windows). */
+function isInside(root, abs) {
+  const rel = relative(root, abs)
+  if (isAbsolute(rel)) return false
+  return rel !== ".." && !rel.startsWith(".." + sep)
+}
+
+/** Resolve workdir relative to cwd, asserting it stays within the workspace. */
+function resolveBaseDir(cwd, workdir) {
+  if (!workdir || typeof workdir !== "string") return cwd
+  const abs = resolve(cwd, workdir)
+  if (!isInside(cwd, abs)) throw new Error(`workdir escapes the workspace: ${workdir}`)
+  return abs
+}
+
+/** Snapshot the working tree before a destructive op (reset --hard / checkout file / restore /
+ *  stash pop / branch|tag delete). Best-effort — a snapshot failure must not block the op
+ *  (the approval/permission layer is the real gate). Returns a note line or "". */
+async function snapshotBefore(ctx, label) {
+  try {
+    const { createCheckpoint, isGitRepo } = await import("../git/checkpoint.mjs")
+    if (!isGitRepo(ctx.cwd)) return ""
+    const cp = await createCheckpoint(ctx.cwd)
+    return `[snapshot ${cp.id} created before ${label}]\n`
+  } catch {
+    return ""
+  }
+}
+
 export const gitTool = {
   name: "git",
   description: DESC("git"),
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: ["diff", "status", "log", "show", "checkpoint", "rm", "commit", "push"], description: "diff / status / log / show / checkpoint / rm / commit / push" },
+      action: { type: "string", enum: ["diff", "status", "log", "show", "checkpoint", "add", "rm", "commit", "push", "tag", "branch", "checkout", "restore", "stash", "fetch", "pull", "reset", "revert", "merge", "cherry-pick"], description: "diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick" },
       // diff/log params
       staged: { type: "boolean", description: "(diff) Show staged changes instead of working tree" },
-      path: { type: "string", description: "(diff/log/checkpoint:cat/versions/rewind/rm) File or directory to scope to" },
-      ref: { type: "string", description: "(show) Commit ref to show (default HEAD)" },
+      path: { type: "string", description: "(diff/log/add/commit/checkout/restore/checkpoint:cat/versions/rewind/rm) File or directory to scope to / stage / restore" },
+      ref: { type: "string", description: "(show/diff/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create) Commit/branch/ref; (push/pull/fetch) the branch or tag to push/pull/fetch (space-separated for multiple)" },
       count: { type: "number", description: "(log) Number of commits (default 10)" },
       oneline: { type: "boolean", description: "(log) One-line-per-commit format" },
-      message: { type: "string", description: "(commit) Commit message — required for commit" },
+      message: { type: "string", description: "(commit) Commit message — required for commit; (stash:push) stash message" },
       filter: { type: "string", description: "Optional: keep only status/diff/log output lines matching this regex (case-insensitive)" },
+      // write-op params
+      name: { type: "string", description: "(branch/tag) The branch or tag name (create/delete/switch)" },
+      remote: { type: "string", description: "(push/fetch/pull) Remote name (e.g. origin). Default: current upstream" },
+      workdir: { type: "string", description: "Run git in this workspace subdirectory (monorepo / multi-repo). Confined to the workspace. Default: cwd" },
+      tags: { type: "boolean", description: "(push) Also push all tags (--tags)" },
+      mode: { type: "string", enum: ["soft", "mixed", "hard"], description: "(reset) reset mode — hard snapshots the tree first + needs confirmation" },
+      tagAction: { type: "string", enum: ["list", "create", "delete"], description: "(tag) list tags / create one / delete one" },
+      branchAction: { type: "string", enum: ["list", "create", "delete", "switch"], description: "(branch) list branches / create / delete / switch to one" },
+      stashAction: { type: "string", enum: ["push", "pop", "list"], description: "(stash) push (stash now) / pop (apply+drop) / list" },
       // checkpoint params
       checkpointAction: { type: "string", enum: ["list", "create", "rewind", "cat", "versions"], description: "(checkpoint) list snapshots / create one / restore by id / read file from snapshot / list a file's historical versions" },
       checkpointId: { type: "string", description: "(checkpoint) Snapshot id — required for rewind and cat; optional for list (shows file tree)" },
@@ -53,6 +109,9 @@ export const gitTool = {
   },
   readonly: false,
   async execute(args, ctx) {
+    // workdir: run git in a workspace subdirectory (monorepo / multi-repo). Shadow ctx.cwd so
+    // every action + snapshotBefore + checkpoint resolves against the workdir, confined to the workspace.
+    if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }
     switch (args.action) {
       case "diff": {
         const ref = args.ref ?? "HEAD"
@@ -63,7 +122,9 @@ export const gitTool = {
         return truncate(filterLines(out || "(no changes)", args.filter))
       }
       case "status": {
-        const porcelain = runGit(ctx.cwd, ["status", "--porcelain"])
+        // Preserve per-line leading whitespace — porcelain " M"/"M " staged/unstaged markers are
+        // significant (runGit trims the whole output's leading space, corrupting an unstaged-first-line).
+        const porcelain = runGitRaw(ctx.cwd, ["status", "--porcelain"])
         if (!porcelain) return "(clean — no changes)"
 
         const staged = []
@@ -119,7 +180,8 @@ export const gitTool = {
       }
       case "commit": {
         if (!args.message) return "Error: commit requires message"
-        const add = runGitStrict(ctx.cwd, ["add", "-A"])
+        // Granular staging when path given (only stage these); otherwise stage all (add -A).
+        const add = runGitStrict(ctx.cwd, args.path ? ["add", "--", args.path] : ["add", "-A"])
         if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)
         const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
         const parts = []
@@ -129,8 +191,144 @@ export const gitTool = {
         return truncate(parts.join("\n") || "(commit produced no output)")
       }
       case "push": {
-        const r = runGitStrict(ctx.cwd, ["push"])
+        const cmdArgs = ["push"]
+        if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
+        if (args.ref) for (const r of args.ref.split(/\s+/).filter(Boolean)) cmdArgs.push(validateRef(r, "ref"))
+        if (args.tags) cmdArgs.push("--tags")
+        const r = runGitStrict(ctx.cwd, cmdArgs)
         return r.ok ? truncate(r.out || "(push complete — no output)") : truncate(`git push failed: ${r.err || r.out || "(no output)"}`)
+      }
+      case "add": {
+        // Granular staging: stage `path` when given, else all changes (add -A).
+        const cmdArgs = args.path ? ["add", "--", args.path] : ["add", "-A"]
+        const r = runGitStrict(ctx.cwd, cmdArgs)
+        return r.ok ? truncate(r.out || `Staged ${args.path || "all changes"}`) : truncate(`git add failed: ${r.err || r.out}`)
+      }
+      case "tag": {
+        const sub = args.tagAction
+        if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["tag", "-l"]) || "(no tags)", args.filter))
+        if (sub === "create") {
+          if (!args.name) return "Error: tag create requires name"
+          validateRef(args.name, "tag")
+          const cmdArgs = ["tag", args.name]
+          if (args.ref) cmdArgs.push(validateRef(args.ref))
+          const r = runGitStrict(ctx.cwd, cmdArgs)
+          return r.ok ? `Tag ${args.name} created` : truncate(`git tag failed: ${r.err || r.out}`)
+        }
+        if (sub === "delete") {
+          if (!args.name) return "Error: tag delete requires name"
+          validateRef(args.name, "tag")
+          const snap = await snapshotBefore(ctx, `tag delete ${args.name}`)
+          const r = runGitStrict(ctx.cwd, ["tag", "-d", args.name])
+          return r.ok ? truncate(snap + `Tag ${args.name} deleted`) : truncate(`git tag -d failed: ${r.err || r.out}`)
+        }
+        return "Error: tag requires tagAction — use: list | create | delete"
+      }
+      case "branch": {
+        const sub = args.branchAction
+        if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["branch", "--all", "-vv"]) || "(no branches)", args.filter))
+        if (sub === "create") {
+          if (!args.name) return "Error: branch create requires name"
+          validateRef(args.name, "branch")
+          const cmdArgs = ["branch", args.name]
+          if (args.ref) cmdArgs.push(validateRef(args.ref))
+          const r = runGitStrict(ctx.cwd, cmdArgs)
+          return r.ok ? `Branch ${args.name} created` : truncate(`git branch failed: ${r.err || r.out}`)
+        }
+        if (sub === "switch") {
+          if (!args.name) return "Error: branch switch requires name"
+          validateRef(args.name, "branch")
+          const r = runGitStrict(ctx.cwd, ["checkout", args.name])
+          return r.ok ? `Switched to branch ${args.name}` : truncate(`git checkout ${args.name} failed: ${r.err || r.out}`)
+        }
+        if (sub === "delete") {
+          if (!args.name) return "Error: branch delete requires name"
+          validateRef(args.name, "branch")
+          const snap = await snapshotBefore(ctx, `branch delete ${args.name}`)
+          const r = runGitStrict(ctx.cwd, ["branch", "-d", args.name])
+          return r.ok ? truncate(snap + `Branch ${args.name} deleted`) : truncate(`git branch -d failed: ${r.err || r.out}`)
+        }
+        return "Error: branch requires branchAction — use: list | create | delete | switch"
+      }
+      case "checkout": {
+        if (args.path) {
+          // Restore file from index (discards working-tree changes to it) — destructive: snapshot first.
+          const snap = await snapshotBefore(ctx, `checkout -- ${args.path}`)
+          const r = runGitStrict(ctx.cwd, ["checkout", "--", args.path])
+          return r.ok ? truncate(snap + `Restored ${args.path}`) : truncate(`git checkout -- ${args.path} failed: ${r.err || r.out}`)
+        }
+        if (args.ref) {
+          validateRef(args.ref, "ref")
+          const r = runGitStrict(ctx.cwd, ["checkout", args.ref])
+          return r.ok ? truncate(r.out || `Checked out ${args.ref}`) : truncate(`git checkout ${args.ref} failed: ${r.err || r.out}`)
+        }
+        return "Error: checkout requires ref (branch/commit) or path (file to restore)"
+      }
+      case "restore": {
+        if (!args.path) return "Error: restore requires path"
+        const snap = await snapshotBefore(ctx, `restore ${args.path}`)
+        const cmdArgs = ["restore"]
+        if (args.staged) cmdArgs.push("--staged")
+        cmdArgs.push("--", args.path)
+        const r = runGitStrict(ctx.cwd, cmdArgs)
+        return r.ok ? truncate(snap + `Restored ${args.path}`) : truncate(`git restore failed: ${r.err || r.out}`)
+      }
+      case "stash": {
+        const sub = args.stashAction
+        if (sub === "list") return truncate(filterLines(runGit(ctx.cwd, ["stash", "list"]) || "(no stashes)", args.filter))
+        if (sub === "push") {
+          const cmdArgs = ["stash", "push"]
+          if (args.message) cmdArgs.push("-m", args.message)
+          const r = runGitStrict(ctx.cwd, cmdArgs)
+          return r.ok ? truncate(r.out || "Stashed") : truncate(`git stash push failed: ${r.err || r.out}`)
+        }
+        if (sub === "pop") {
+          const snap = await snapshotBefore(ctx, "stash pop")
+          const r = runGitStrict(ctx.cwd, ["stash", "pop"])
+          return r.ok ? truncate(snap + (r.out || "Popped")) : truncate(`git stash pop failed: ${r.err || r.out}`)
+        }
+        return "Error: stash requires stashAction — use: push | pop | list"
+      }
+      case "fetch": {
+        const cmdArgs = ["fetch"]
+        if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
+        if (args.ref) cmdArgs.push(validateRef(args.ref, "ref"))
+        const r = runGitStrict(ctx.cwd, cmdArgs)
+        return r.ok ? truncate(r.out || "(fetch complete — no output)") : truncate(`git fetch failed: ${r.err || r.out}`)
+      }
+      case "pull": {
+        const cmdArgs = ["pull"]
+        if (args.remote) cmdArgs.push(validateRef(args.remote, "remote"))
+        if (args.ref) cmdArgs.push(validateRef(args.ref, "ref"))
+        const r = runGitStrict(ctx.cwd, cmdArgs)
+        return r.ok ? truncate(r.out || "(pull complete — no output)") : truncate(`git pull failed: ${r.err || r.out}`)
+      }
+      case "reset": {
+        const mode = args.mode ?? "mixed"
+        if (!["soft", "mixed", "hard"].includes(mode)) return "Error: reset mode must be soft | mixed | hard"
+        let snap = ""
+        if (mode === "hard") snap = await snapshotBefore(ctx, "reset --hard") // destructive: drops working-tree changes
+        const cmdArgs = ["reset", `--${mode}`]
+        if (args.ref) cmdArgs.push(validateRef(args.ref))
+        const r = runGitStrict(ctx.cwd, cmdArgs)
+        return r.ok ? truncate(snap + (r.out || `Reset (${mode}) complete`)) : truncate(`git reset failed: ${r.err || r.out}`)
+      }
+      case "revert": {
+        const ref = validateRef(args.ref ?? "HEAD")
+        const r = runGitStrict(ctx.cwd, ["revert", "--no-edit", ref])
+        return r.ok ? truncate(r.out || `Reverted ${ref}`) : truncate(`git revert failed: ${r.err || r.out}`)
+      }
+      case "merge": {
+        if (!args.ref) return "Error: merge requires ref (branch/commit to merge)"
+        validateRef(args.ref, "ref")
+        const r = runGitStrict(ctx.cwd, ["merge", "--no-edit", args.ref])
+        return r.ok ? truncate(r.out || `Merged ${args.ref}`) : truncate(`git merge failed: ${r.err || r.out} — resolve conflicts, then commit`)
+      }
+      case "cherry-pick": {
+        if (!args.ref) return "Error: cherry-pick requires ref (commit)"
+        validateRef(args.ref, "ref")
+        const r = runGitStrict(ctx.cwd, ["cherry-pick", args.ref])
+        return r.ok ? truncate(r.out || `Cherry-picked ${args.ref}`) : truncate(`git cherry-pick failed: ${r.err || r.out}`)
       }
       case "checkpoint": {
         const { createCheckpoint, listCheckpoints, rewind, listFileVersions, isGitRepo } = await import("../git/checkpoint.mjs")
@@ -191,7 +389,7 @@ export const gitTool = {
         throw new Error(`Unknown checkpoint action: ${sub}. Use: list | create | rewind | cat | versions`)
       }
       default:
-        return `Unknown action '${args.action}'. Use: diff | status | log | show | checkpoint | rm | commit | push`
+        return `Unknown action '${args.action}'. Use: diff | status | log | show | checkpoint | add | rm | commit | push | tag | branch | checkout | restore | stash | fetch | pull | reset | revert | merge | cherry-pick`
     }
   },
 }

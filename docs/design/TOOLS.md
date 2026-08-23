@@ -45,3 +45,55 @@
 | 超限落盘而非截断 | 模型可再用 read 工具读全量；预览 2K 字符足够决策 |
 | 沙箱只出不进 | 模型执行用户代码时，网络/文件系统读写按工具授权而非代码内自由 |
 | 工具全部字符串返回 | schema 简单、dispatch 统一、流式展示统一 |
+
+## 6. git 工具能力扩充（2026-08-23）
+
+**需求**（用户观察「git 操作还在走 bash」+ 拍板「最全」）：git 操作模型常走 bash 而非 git 工具。三层缺口——能力（工具做不到带参/分文件操作）、描述（git.md 无反向路由）、提示词（main.md 无路由条款）。
+
+**设计**：扩充 `git` 工具的 action 集，把日常 git 操作收敛进工具（bash 反向路由 + main.md 条款）。
+
+**新增 action**（两端一致）：
+
+| 组 | action | 说明 | 破坏性 |
+|---|---|---|---|
+| 暂存 | `add` | 分文件暂存；`path` 可选（不给则 `-A`）；`commit` 加 `path`（只暂存这些） | — |
+| 发布 | `push` | 加 `remote` / `branch` / `tags` 参数 | outward |
+| 标签 | `tag`（`tagAction` list/create/delete） | tag 创建/列举/删除 | delete 需确认 |
+| 分支 | `branch`（`branchAction` list/create/delete/switch） | 分支管理 | delete 需确认 |
+| 切换/还原 | `checkout` | 切到分支/ref（`ref`）或还原文件（`path`） | path 还原需确认 |
+| 还原 | `restore` | 从 index/HEAD 还原文件（`path`，`staged?`） | 需确认 |
+| 暂存栈 | `stash`（`stashAction` push/pop/list） | stash 管理 | pop 需确认 |
+| 同步 | `fetch` / `pull`（`remote`/`branch` 可选） | 拉取远端 | outward |
+| 回退 | `reset`（`mode` soft/mixed/hard） | 重置到 ref | hard 先 snapshot + 确认 |
+| 撤销 | `revert` | revert 一个 commit（安全撤销） | — |
+| 合并 | `merge` | 合并分支/ref（冲突如实上报） | — |
+| 摘樱桃 | `cherry-pick` | cherry-pick 一个 commit（`ref`） | — |
+
+**反向路由**（git.md 描述）：加 `**Route to git instead of bash:**` 段 + 逐条 bash→工具映射。
+
+**提示词条款**（discipline.md）：加「git 操作用 git 工具、不要用 bash」的 Tool routing 条款（标准模式纪律，两端 byte-identical；git 路由属编码纪律、放 discipline.md 而非协调职责的 main.md）。
+
+**破坏性原则**（沿用「破坏性操作 snapshot-then-proceed」）：reset --hard / checkout 丢改动 / rm 等先快照再执行 + 用户确认。CLI 用 `createCheckpoint`（全量复制，非破坏）；VS Code 用 `git stash create`+`git stash store`（非破坏，与 `git stash push` 清工作区不同）。**顺带修复的既有 bug**：`runGit` 对整段输出 `.trim()` 会剥掉 porcelain 首行的「 」（unstaged 标记），把 unstaged 误分类成 staged——status 改用保行前导空格的 `runGitRaw`。
+
+**测试**（两端各验）：每个新 action 的成功路径 + 参数校验 + 破坏性快照触发；反向路由断言（git.md 含 Route to git、discipline.md 含条款）；全量回归不降。
+
+**受影响文件**：CLI `src/tools/git.mjs` + `src/tools/git.md` + `src/prompts/discipline.md`、VS Code `src/tools/git.mjs` + `src/prompts/discipline.md`、两端测试、`CHANGELOG.md`。
+
+---
+
+## 7. 工具「真覆盖」：workdir + scriptFile + 全工具路由（2026-08-23）
+
+**需求**（用户问「git 工具有 workdir/filter 吗」「为什么 JS 还走 bash 不走 execute」，并要求按会话历史 bash 调用做真覆盖分析）：bash 调用可归三类——能力缺口（工具做不到被迫 bash）、路由缺口（工具做得到但习惯 bash）、合理 bash（npm/CLI/服务器）。逐项补齐。
+
+**设计**：
+
+| 缺口 | 补法 | 落点 |
+|---|---|---|
+| git 无 `workdir`（子目录/多 repo） | 加 `workdir` 参数（`ctx = {...ctx, cwd: resolveBaseDir(ctx.cwd, workdir)}` 遮蔽，isInside 校验防逃逸） | 两端 `git.mjs` |
+| execute 只能 inline（`node <script>` 被迫 bash） | 加 `scriptFile`（跑 workspace `.mjs`/`.js`，子进程、无 prelude）+ `nodeArgs`（禁 `--eval`/`--inspect` 类）；`runNodeEval` 重构为接 args 的 `runNode` | 两端 `codemode.mjs`/`execute.mjs` + `execute.md` |
+| grep/ls/delete/read 无反向路由 | 描述补「Route to X instead of bash」 | 两端描述 |
+| 提示词路由零散 | discipline.md「Tool routing」扩为全工具路由总表（git/execute/读写搜/进程 + bash 适用边界） | 两端 discipline.md（byte-identical） |
+
+**测试**（两端各验）：git workdir（子仓库运行 + 越界报错）；execute scriptFile（跑文件 + nodeArgs `--check` 好/坏语法 + 越界 + 缺参 + 禁 flag）；全量回归不降。注：测试里不断言 `node --test` 输出——嵌套 node --test（测试套件内再跑）输出为空属测试环境伪影，真实场景正常。
+
+**受影响文件**：CLI `src/tools/git.mjs` + `git.md` + `codemode.mjs` + `execute.md` + `grep.md`/`ls.md`/`delete.md`/`read.md` + `src/prompts/discipline.md`、VS Code 对应（git.mjs / execute.mjs / search.mjs / more-file.mjs / file.mjs / discipline.md）、两端测试。
