@@ -2,6 +2,18 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.39] — 2026-08-23
+
+### Added
+
+- **主 agent 委托策略**：`main.md` 把「广度探索 → explore 子代理（隔离上下文，逐步读/搜不进主历史）」「仅当即将立刻编辑时才自己 read」「coder 验证 = 读改动文件 + 跑测试」从建议升级为明确规则
+- **历史卫生**：轮末 `summarizeRunExplorations` 把一轮内连续探索结果（read/grep/glob/ls/code_search/doc_search/repo_outline）LLM 蒸馏为 `[Exploration summary]`（机器线收缩、人读线全量不变）；压缩 `SUMMARIZE_PROMPT` 加「已改动文件清单 + 未决点/待办」两清单
+- **编码纪律**：`discipline.md` 工作流程 + 调试策略要求用 `task` 跟踪；「改码前读文档」「中/小改后更新文档」嵌入 Workflow 各 tier 箭头序列
+
+### Fixed
+
+- 轮末探索摘要边界 `_runStartHistoryLen` 在压缩重建机器线后变 stale → 重置到 tail 起点
+
 ## [0.12.38] — 2026-08-23
 
 ### Added
