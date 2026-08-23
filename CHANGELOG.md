@@ -2,6 +2,14 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.42] — 2026-08-24
+
+### Changed
+
+- **工程模式发起权归用户**：设计评审只能由用户发起——agent 准备设计后只呈递+提醒「设计就绪」，不再自行调 advisor（此前 agent 可自行判断"讨论完了"直接提交评审并开发，属越权）；评审打回后每轮呈递发现+修复建议、用户逐条拍板再改，不再自行修完重送
+- **交付 code review 改为自动流程节点**：eng-coder 返回后自动评审（不问用户）；工程模式下 guard 推回维持关闭
+- 提示词注意力优化：核心规则开头立纲 + 结尾钉死 + 状态表补「Review fix loop」态；设计文档 ENGINEERING-MODE/WORKLOOP/PROMPT-DECOUPLING 同步
+
 ## [0.12.41] — 2026-08-23
 
 ### Added
