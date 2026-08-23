@@ -93,6 +93,8 @@ export const escalateTool = {
     const subId = parent._subAgentCounter
     const tag = label(pick)
     const relayPrefix = `escalate#${subId}/`
+    // Report the escalated model to the display layer (it may differ from the parent's).
+    ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (provider.model ?? tag))
 
     // No wall-clock watchdog — turn cap only, exactly like subagent (the verified write
     // path). Rationale (2026-08-16): a fixed wall-clock aborts NORMAL-but-slow surgery —

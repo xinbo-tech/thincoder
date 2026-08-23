@@ -62,7 +62,7 @@ export function renderSubagent(allSubs, W) {
   for (const s of subs.slice(0, MAX_SUB_LINES)) {
     const icon = s.done ? "✓" : "…"
     const color = s.done ? C.dim : C.tool
-    const label = `[${s.role}]`.padEnd(10)
+    const label = `[${s.role}${s.model ? " · " + s.model : ""}]`.padEnd(10)
     let content
     if (s.done) {
       const elapsed = Math.floor((Date.now() - s.started) / 1000)
@@ -75,7 +75,7 @@ export function renderSubagent(allSubs, W) {
     } else {
       content = "thinking..."
     }
-    out.push(`${color} ${icon} ${label} ${sliceByWidth(content, Math.max(10, W - 14))}${ansi.reset}`)
+    out.push(`${color} ${icon} ${label} ${sliceByWidth(content, Math.max(10, W - 4 - stringWidth(label)))}${ansi.reset}`)
   }
   if (subs.length > MAX_SUB_LINES) {
     out.push(`${C.dim}  ... +${subs.length - MAX_SUB_LINES} more subagents${ansi.reset}`)

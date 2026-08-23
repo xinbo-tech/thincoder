@@ -66,7 +66,12 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
   }
 
   const callbacks = {
-    onToken: (text) => update("agent_message_chunk", { content: { type: "text", text } }),
+    onToken: (text) => {
+      // Strip the subagent `[model]` metadata token (role#id/[model]<name>) — it's a
+      // TUI/webview display signal, not conversation content, and must not reach ACP clients.
+      if (/^[\w-]+#\d+\/\[model\]/.test(text)) return
+      update("agent_message_chunk", { content: { type: "text", text } })
+    },
     onReasoning: (text) => update("agent_thought_chunk", { content: { type: "text", text } }),
     onUsage: (usage) => update("usage_update", { usage }),
     onWait: ({ phase, seconds }) => log(`[rate-limit] ${phase} waiting ~${seconds}s`),

@@ -177,6 +177,8 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     agent._subAgentCounter = (agent._subAgentCounter ?? 0) + 1
     const subId = agent._subAgentCounter
     const relayPrefix = `consult#${subId}/`
+    // Report this consultant's model to the display layer (each consultant may use a different model).
+    ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (provider.model ?? ""))
     const childCallbacks = {
       onToken: ctx.callbacks?.onToken ? (t) => ctx.callbacks.onToken(`${relayPrefix}${t}`) : null,
       onReasoning: ctx.callbacks?.onReasoning ? (r) => ctx.callbacks.onReasoning(`${relayPrefix}${r}`) : null,

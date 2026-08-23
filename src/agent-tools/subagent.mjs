@@ -161,6 +161,10 @@ export const subagentTool = {
     parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
     const subId = parent._subAgentCounter
     const relayPrefix = `${role ?? "sub"}#${subId}/`
+    // Report the subagent's effective model to the display layer (it may differ from the
+    // parent's). Emitted as a `[model]` metadata token via the relay prefix — the TUI/webview
+    // parse it into the subagent block's header instead of showing it as content.
+    ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
     const childOpts = {
       onPermissionRequest: childPermission,
       onToken: ctx.callbacks?.onToken

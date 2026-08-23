@@ -3,7 +3,7 @@ import { saveSession } from "../session.mjs"
 import { sliceByWidth } from "./render.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
-import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
+import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 
 /** Tool execution start timestamps (performance.now ms), keyed by tool name. */
 const _toolTicks = Object.create(null)
@@ -101,6 +101,15 @@ export async function runAgentTurn(ctx, text) {
         if (!state.subTasks[key]) {
           state.subTasks[key] = { key, role: subMatch[1], text: "", tool: null, done: false, started: Date.now() }
         }
+        // `[model]<name>` metadata token: record the subagent's model (may differ from the
+        // parent's) — shown in the subagent header, NOT appended to its content stream.
+        // Only treat as metadata when the model isn't set yet (it's always the FIRST token);
+        // a child content token that happens to start with "[model]" must not be swallowed.
+        if (payload.startsWith("[model]") && state.subTasks[key].model === undefined) {
+          state.subTasks[key].model = payload.slice(7)
+          scheduleRender()
+          return
+        }
         state.subTasks[key].text += payload
         if (state.subTasks[key].text.length > 2000) {
           state.subTasks[key].text = state.subTasks[key].text.slice(-2000)
@@ -149,6 +158,8 @@ export async function runAgentTurn(ctx, text) {
       flushStream()
       ensureAssistantLabel()
       state.currentTool = name
+      // Advisor's effective model (resolved once for the status line + inline title below).
+      const advModel = name === "advisor" ? (() => { try { return resolveAdvisorProvider(agent).model } catch { return null } })() : null
       // Update status bar with current tool and key arguments for user visibility
       if (name === "bash" && args.command) {
         const cmd = args.command.replace(/\s+/g, " ").trim()
@@ -162,13 +173,14 @@ export async function runAgentTurn(ctx, text) {
       } else if (name === "websearch" && args.query) {
         state.status = `search: ${args.query.length > 40 ? args.query.slice(0, 40) + "…" : args.query}`
       } else if (name === "advisor") {
-        state.status = `advisor review (round ${(agent._advisorRound || 0) + 1})`
+        state.status = `advisor review (round ${(agent._advisorRound || 0) + 1}${advModel ? " · " + advModel : ""})`
       } else {
         state.status = `tool: ${name}`
       }
       // Advisor: tag the round in the tool title — the model's own "第N轮" narration
       // is unreliable (it glues onto the previous line), so the round belongs here.
-      const roundTag = name === "advisor" ? ` (round ${(agent._advisorRound || 0) + 1})` : ""
+      // Also show the advisor's effective model (it may differ from the main agent's).
+      const roundTag = name === "advisor" ? ` (round ${(agent._advisorRound || 0) + 1}${advModel ? " · " + advModel : ""})` : ""
       const argSummary = summarize(args)
       // Inline block title — panel tools get both the title AND the
       // streaming output panel, complementary display.
