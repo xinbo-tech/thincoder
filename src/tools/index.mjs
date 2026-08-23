@@ -9,7 +9,7 @@ import { gitTool, questionTool } from "./git.mjs";
 import { checklistTool } from "./checklist.mjs";
 import { lintTool } from "./linter.mjs";
 import { lspTool } from "./lsp.mjs";
-import { codeModeTool } from "./codemode.mjs";
+import { executeTool } from "./execute.mjs";
 import { fileOpsTool, processTool, getCurrentTimeTool, sleepTool } from "./ops.mjs";
 import { treeTool } from "./tree.mjs";
 
@@ -18,7 +18,7 @@ export const builtinTools = [
   readImageTool, bashTool, globTool, grepTool,
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
-  checklistTool, lintTool, lspTool, codeModeTool,
+  checklistTool, lintTool, lspTool, executeTool,
   fileOpsTool, processTool, getCurrentTimeTool, sleepTool,
   treeTool,
 ];
@@ -28,7 +28,7 @@ export {
   readImageTool, bashTool, globTool, grepTool,
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
-  checklistTool, lintTool, lspTool, codeModeTool,
+  checklistTool, lintTool, lspTool, executeTool,
   fileOpsTool, processTool, getCurrentTimeTool, sleepTool,
   treeTool,
 };

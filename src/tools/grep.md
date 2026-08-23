@@ -1,5 +1,7 @@
 Search file contents with a regex. Returns matching lines as path:line: content.
 
+**Route to grep instead of bash:** `findstr /c:"pat" file` / `grep -rn pat .` → grep. Searching file contents is a read — never shell out for it.
+
 Parameters:
 - pattern (required): JavaScript regular expression, or a literal string when literal=true
 - path: Directory or file to search (default cwd)

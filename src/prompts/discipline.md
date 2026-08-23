@@ -20,6 +20,15 @@ UI & interface design:
 - Free-text for a discrete value forces the user to guess the exact spelling, needs manual validation, and fails silently on typos. This has happened repeatedly (e.g. reasoning-effort levels typed by hand).
 - Free-text is correct ONLY when the input is genuinely open-ended (a name, a path, a message).
 
+Tool routing — use the dedicated tool, not bash:
+- **git operations** → `git` tool (action=status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick; `workdir` for sub-repos). Never run git via bash.
+- **JavaScript** → `execute` (inline code; or `scriptFile`+`nodeArgs` for `node <file>` / `node --test` / `node --check`). Never `bash node -e`.
+- **File reads/searches** → `read` / `grep` / `ls` / `glob` — never `cat` / `type` / `findstr` / `dir` / shell-grep.
+- **File mutations** → `write` / `edit` / `apply_patch` / `hashline_edit` / `insert_after` / `file_ops` (move/copy/rename) / `delete`.
+- **Process / time / sleep / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash).
+- Each tool's description carries a "Route to X instead of bash" mapping.
+- **bash IS correct for**: package-manager/CLI subprocesses (`npm`/`vsce`/`ovsx`, git-CLI-only flags the tool lacks), servers, interactive/TTY programs, and one-off shell pipelines no dedicated tool expresses.
+
 Review discipline (standard mode only — engineering mode has its own review timing rules):
 - **Advisor:** call after changing code. Must provide scope: `paths` (files/dirs to review) or `documents` (context).
 - **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).

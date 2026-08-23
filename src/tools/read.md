@@ -1,5 +1,7 @@
 Read a text file. Returns numbered lines. Use offset/limit to page large files.
 
+**Route to read instead of bash:** `cat file` / `type file` / `node -e "fs.readFileSync(...)"` → read. Reading a file is a read — never shell out for it.
+
 **Routing:**
 - Don't know which file? → `repo_outline` / `code_search` / `glob` first
 - Know the symbol but not the location? → `code_search` or `lsp definition`

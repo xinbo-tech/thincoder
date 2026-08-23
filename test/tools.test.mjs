@@ -1138,6 +1138,119 @@ test("git_diff / git_status / git_log: 只读 git 工具", async () => {
   }
 })
 
+test("git: 扩充 action（add/commit 分文件、tag、branch、checkout/restore、stash、reset、revert、merge、cherry-pick、参数校验）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-git-ext-"))
+  const g = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8" })
+  try {
+    g("init", "-q")
+    g("config", "user.name", "t")
+    g("config", "user.email", "t@t.dev")
+    g("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "1\n")
+    g("add", "a.js")
+    g("commit", "-qm", "first")
+    const main = g("branch", "--show-current").trim() // main / master 视 git 版本
+
+    const ctx = { cwd: dir }
+    const git = builtinTools.find((t) => t.name === "git")
+
+    // add（分文件）+ commit（path 分文件）
+    writeFileSync(join(dir, "b.js"), "2\n")
+    const addOut = await git.execute({ action: "add", path: "b.js" }, ctx)
+    assert.ok(!/failed/i.test(addOut))
+    const commitOut = await git.execute({ action: "commit", message: "add b", path: "b.js" }, ctx)
+    assert.ok(!/failed/i.test(commitOut))
+
+    // tag：create → list → delete
+    assert.ok((await git.execute({ action: "tag", tagAction: "create", name: "v0.1" }, ctx)).includes("created"))
+    assert.ok((await git.execute({ action: "tag", tagAction: "list" }, ctx)).includes("v0.1"))
+    assert.ok((await git.execute({ action: "tag", tagAction: "delete", name: "v0.1" }, ctx)).includes("deleted"))
+
+    // branch：create → list → switch
+    assert.ok((await git.execute({ action: "branch", branchAction: "create", name: "feat" }, ctx)).includes("created"))
+    assert.ok((await git.execute({ action: "branch", branchAction: "list" }, ctx)).includes("feat"))
+    assert.ok((await git.execute({ action: "branch", branchAction: "switch", name: "feat" }, ctx)).includes("Switched"))
+    g("checkout", "-q", main) // 回主分支
+
+    // checkout -- <file>（还原工作区改动，先快照）
+    writeFileSync(join(dir, "a.js"), "changed\n")
+    const ck = await git.execute({ action: "checkout", path: "a.js" }, ctx)
+    assert.ok(!/failed/i.test(ck))
+    assert.equal(readFileSync(join(dir, "a.js"), "utf8"), "1\n") // 已还原
+
+    // restore --staged
+    writeFileSync(join(dir, "a.js"), "staged\n")
+    g("add", "a.js")
+    await git.execute({ action: "restore", path: "a.js", staged: true }, ctx)
+    assert.ok((await git.execute({ action: "status" }, ctx)).includes("Unstaged"))
+
+    // stash：push → list → pop
+    writeFileSync(join(dir, "a.js"), "wip\n")
+    assert.ok(!/failed/i.test(await git.execute({ action: "stash", stashAction: "push" }, ctx)))
+    assert.ok((await git.execute({ action: "stash", stashAction: "list" }, ctx)).includes("stash"))
+    assert.ok(!/failed/i.test(await git.execute({ action: "stash", stashAction: "pop" }, ctx)))
+
+    // reset soft + hard（hard 先快照）
+    g("checkout", "-q", "--", ".")
+    const soft = await git.execute({ action: "reset", mode: "soft" }, ctx)
+    assert.ok(!/failed/i.test(soft))
+    const hard = await git.execute({ action: "reset", mode: "hard" }, ctx)
+    assert.ok(!/failed/i.test(hard))
+
+    // revert：还原最近一次提交
+    const rev = await git.execute({ action: "revert" }, ctx)
+    assert.ok(!/failed/i.test(rev))
+
+    // merge + cherry-pick：side 分支提交一个文件，cherry-pick 到 main，再 merge side
+    g("checkout", "-q", main)
+    await git.execute({ action: "branch", branchAction: "create", name: "side" }, ctx)
+    await git.execute({ action: "branch", branchAction: "switch", name: "side" }, ctx)
+    writeFileSync(join(dir, "side.js"), "s\n")
+    await git.execute({ action: "commit", message: "side", path: "side.js" }, ctx)
+    const sideRef = g("rev-parse", "HEAD").trim()
+    await git.execute({ action: "branch", branchAction: "switch", name: main }, ctx)
+    const cp = await git.execute({ action: "cherry-pick", ref: sideRef }, ctx) // main 没有 side.js，干净应用
+    assert.ok(!/fatal|failed/i.test(cp), `cherry-pick: ${cp}`)
+    const mg = await git.execute({ action: "merge", ref: "side" }, ctx) // 内容已含 → Already up to date / 干净合并
+    assert.ok(!/fatal|failed/i.test(mg), `merge: ${mg}`)
+
+    // 参数校验（缺参报错）
+    assert.ok((await git.execute({ action: "commit" }, ctx)).includes("requires message"))
+    assert.ok((await git.execute({ action: "tag", tagAction: "create" }, ctx)).includes("requires name"))
+    assert.ok((await git.execute({ action: "branch", branchAction: "switch" }, ctx)).includes("requires name"))
+    assert.ok((await git.execute({ action: "merge" }, ctx)).includes("requires ref"))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("git: workdir 在 workspace 子目录的 git 仓库运行；越界报错", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-git-wd-"))
+  try {
+    const sub = join(dir, "sub")
+    mkdirSync(sub, { recursive: true })
+    execFileSync("git", ["init", "-q"], { cwd: sub })
+    execFileSync("git", ["config", "user.name", "t"], { cwd: sub })
+    execFileSync("git", ["config", "user.email", "t@t.dev"], { cwd: sub })
+    execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: sub })
+    writeFileSync(join(sub, "x.js"), "1\n")
+    execFileSync("git", ["add", "x.js"], { cwd: sub })
+    execFileSync("git", ["commit", "-qm", "init"], { cwd: sub })
+
+    const ctx = { cwd: dir } // workspace 根 = dir
+    const git = builtinTools.find((t) => t.name === "git")
+    // workdir=sub → 在子仓库运行
+    const log = await git.execute({ action: "log", workdir: "sub" }, ctx)
+    assert.ok(log.includes("init"), `log 应来自子仓库: ${log}`)
+    // 越界（逃出 workspace）→ 报错
+    await assert.rejects(() => git.execute({ action: "status", workdir: "../escape" }, ctx), /escapes the workspace/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test("question: 回调返回用户回答", async () => {
   const qTool = builtinTools.find((t) => t.name === "question")
   // 模拟一个直接返回固定回答的 onQuestion
@@ -1466,12 +1579,12 @@ test("checklist: 手写带前缀的存量文件往返一次后前缀不翻倍", 
 
 // ---------------------------------------------------------------- execute tool regressions
 
-import { codeModeTool } from "../src/tools/codemode.mjs"
+import { executeTool } from "../src/tools/execute.mjs"
 
 test("execute: timeout 生效——无限循环脚本在限定时间内返回错误而不是挂死", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-"))
   try {
-    const out = await codeModeTool.execute({ code: "while (true) {}", timeoutMs: 300 }, { cwd: dir })
+    const out = await executeTool.execute({ code: "while (true) {}", timeoutMs: 300 }, { cwd: dir })
     assert.match(out, /Error/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -1481,7 +1594,7 @@ test("execute: timeout 生效——无限循环脚本在限定时间内返回错
 test("execute: require()/process 可用（无伪沙箱——bash 本就能触达任意 Node API）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec2-"))
   try {
-    const out = await codeModeTool.execute({ code: 'const fs = require("node:fs"); log(typeof fs.readFileSync, typeof process.cwd)' }, { cwd: dir })
+    const out = await executeTool.execute({ code: 'const fs = require("node:fs"); log(typeof fs.readFileSync, typeof process.cwd)' }, { cwd: dir })
     assert.equal(out, "function function")
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -1492,7 +1605,7 @@ test("execute: 正常沙箱行为不受影响（log/readFile/grep）", async () 
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec3-"))
   writeFileSync(join(dir, "f.txt"), "hello\nworld\n")
   try {
-    const out = await codeModeTool.execute({ code: 'log(grep("wor", "f.txt").join(","))' }, { cwd: dir })
+    const out = await executeTool.execute({ code: 'log(grep("wor", "f.txt").join(","))' }, { cwd: dir })
     assert.equal(out, "2: world")
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -1503,11 +1616,38 @@ test("execute: 顶层 await + import() 项目 ESM + console + filter", async () 
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec4-"))
   try {
     writeFileSync(join(dir, "mod.mjs"), 'export const name = "mod"\n')
-    const imp = await codeModeTool.execute({ code: 'const m = await import("./mod.mjs"); console.log(m.name)' }, { cwd: dir })
+    const imp = await executeTool.execute({ code: 'const m = await import("./mod.mjs"); console.log(m.name)' }, { cwd: dir })
     assert.equal(imp, "mod")
 
-    const filt = await codeModeTool.execute({ code: 'console.log("a")\nconsole.log("b")', filter: "a" }, { cwd: dir })
+    const filt = await executeTool.execute({ code: 'console.log("a")\nconsole.log("b")', filter: "a" }, { cwd: dir })
     assert.equal(filt, "a")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--test) + 越界报错", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-sf-"))
+  try {
+    writeFileSync(join(dir, "hello.mjs"), 'console.log("hello from script")\n')
+    const out = await executeTool.execute({ scriptFile: "hello.mjs" }, { cwd: dir })
+    assert.equal(out, "hello from script")
+
+    writeFileSync(join(dir, "good.mjs"), "const x = 1\n")
+    // nodeArgs(--check)：语法校验（好文件无输出即通过；坏文件报 SyntaxError）。用 --check 而非 --test——
+    // 嵌套 node --test（测试套件内再跑 node --test）输出为空，属测试环境伪影，真实场景正常。
+    const good = await executeTool.execute({ scriptFile: "good.mjs", nodeArgs: ["--check"] }, { cwd: dir })
+    assert.equal(good, "(no output)")
+    writeFileSync(join(dir, "bad.mjs"), "const x = \n")
+    const badSyntax = await executeTool.execute({ scriptFile: "bad.mjs", nodeArgs: ["--check"] }, { cwd: dir })
+    assert.match(badSyntax, /SyntaxError|Unexpected/)
+
+    const esc = await executeTool.execute({ scriptFile: "../escape.mjs" }, { cwd: dir })
+    assert.match(esc, /escapes the workspace/)
+    const neither = await executeTool.execute({}, { cwd: dir })
+    assert.match(neither, /either code or scriptFile/)
+    const bad = await executeTool.execute({ scriptFile: "hello.mjs", nodeArgs: ["--eval", "1"] }, { cwd: dir })
+    assert.match(bad, /not allowed/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
