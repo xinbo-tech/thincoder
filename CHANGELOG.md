@@ -2,6 +2,24 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.41] — 2026-08-23
+
+### Added
+
+- **git 工具最全扩充**：add（分文件）/push（带 remote/ref/tags）/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick + `workdir`（子目录/多 repo）；破坏性操作先非破坏快照
+- **execute `scriptFile` + `nodeArgs`**：跑 workspace `.mjs` 文件（`node <script>` / `node --test` / `node --check`），不再只能 inline
+- **子agent/advisor 显示使用的模型**（subagent/escalate/consult/advisor）
+- 反向路由：git/execute/grep/ls/read/delete 描述 + discipline「Tool routing」全工具总表
+
+### Changed
+
+- `codemode.mjs` → `execute.mjs`（`codeModeTool` → `executeTool`，与 VS Code 对齐）
+
+### Fixed
+
+- `runGit` `.trim()` 剥掉 porcelain 前导空格导致 unstaged 被误分类成 staged
+- VS Code `snapshotBefore` 破坏性 stash → 非破坏 `git stash create`+`store`
+
 ## [0.12.40] — 2026-08-23
 
 ### Fixed
