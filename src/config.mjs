@@ -235,7 +235,7 @@ export function loadConfig() {
     try {
       config = JSON.parse(readFileSync(configPath, "utf8"))
     } catch (error) {
-      throw new Error(`Config file is not valid JSON, check or delete it: ${configPath}\n  ${error.message}`)
+      throw new Error(`Config file is not valid JSON, check or delete it: ${configPath}\n  ${error.message}`, { cause: error })
     }
   }
 

@@ -49,7 +49,7 @@ export function collectRepoSnapshots(repos, cwd) {
   const targets = repos.length > 0 ? repos : [cwd]
   const parts = []
   for (const repo of targets) {
-    let status = "", diff = ""
+    let status, diff
     try {
       status = execFileSync("git", ["status", "--porcelain"], {
         cwd: repo, encoding: "utf8", timeout: GIT_TIMEOUT, stdio: ["ignore", "pipe", "pipe"],
@@ -153,7 +153,7 @@ export function isDocOnlyChange(repos, cwd) {
   const targets = repos.length > 0 ? repos : [cwd]
   let sawChanges = false
   for (const repo of targets) {
-    let status = ""
+    let status
     try {
       status = execFileSync("git", ["status", "--porcelain"], {
         cwd: repo, encoding: "utf8", timeout: GIT_TIMEOUT, stdio: ["ignore", "pipe", "pipe"],

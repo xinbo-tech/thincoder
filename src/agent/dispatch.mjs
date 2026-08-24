@@ -49,7 +49,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
   const prepared = []
   for (const toolCall of toolCalls) {
     const tool = toolByName.get(toolCall.name)
-    let args = {}
+    let args
     try {
       args = JSON.parse(toolCall.arguments || "{}")
     } catch {

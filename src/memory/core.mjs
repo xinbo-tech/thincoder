@@ -198,7 +198,7 @@ export async function putMarkdown(memory, { layer, dir, type, title, content, ta
  * vanished entries are removed from the index.
  */
 export async function syncDir(memory, { layer, dir }) {
-  let names = []
+  let names
   try {
     names = (await readdir(dir)).filter((n) => n.endsWith(".md"))
   } catch {

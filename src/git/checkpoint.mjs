@@ -29,7 +29,7 @@ function git(cwd, args, { allowFail = false } = {}) {
     return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim()
   } catch (error) {
     if (allowFail) return null
-    throw new Error(`git ${args.join(" ")} failed: ${error.stderr?.toString().trim() || error.message}`)
+    throw new Error(`git ${args.join(" ")} failed: ${error.stderr?.toString().trim() || error.message}`, { cause: error })
   }
 }
 
@@ -324,7 +324,7 @@ export async function listFileVersions(cwd, filePath) {
     } else if ((meta.tracked ?? []).includes(filePath) || (meta.untracked ?? []).includes(filePath)) {
       // Legacy snapshot (no per-file meta): fall back to stat-ing the copy
       const src = join((meta.tracked ?? []).includes(filePath) ? join(root, id, "files") : join(root, id, "untracked"), filePath)
-      let size = null, sha = null
+      let size, sha
       try {
         const buf = await readFile(src)
         size = buf.length

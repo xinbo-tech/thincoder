@@ -261,7 +261,7 @@ export const insertAfterTool = {
       try {
         regex = new RegExp(args.after_regex)
       } catch (e) {
-        throw new Error(`after_regex /${args.after_regex}/ is not a valid JavaScript regex: ${e.message}`)
+        throw new Error(`after_regex /${args.after_regex}/ is not a valid JavaScript regex: ${e.message}`, { cause: e })
       }
       const matches = []
       for (let i = 0; i < lines.length; i++) {

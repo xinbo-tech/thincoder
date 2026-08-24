@@ -187,6 +187,6 @@ export const fetchTool = {
       const ct = headerOf(response, "content-type") ?? ""
       const body = await response.text()
       return ct.includes("text/html") ? truncate(htmlToText(body)) : truncate(body)
-    } catch (e) { throw new Error(`fetch failed: ${e.cause?.code ?? e.message}`) }
+    } catch (e) { throw new Error(`fetch failed: ${e.cause?.code ?? e.message}`, { cause: e }) }
   },
 }

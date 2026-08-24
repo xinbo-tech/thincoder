@@ -61,7 +61,7 @@ export function computeLayout(state, { cols, rows }) {
   const pickerH = overlay ? Math.min(overlay.lines.length + 1, Math.max(6, rows - 12)) : 0
 
   // Todo
-  let visibleTasks = []
+  let visibleTasks
   if (state.tasks.length <= MAX_TASK_LINES) {
     visibleTasks = state.tasks
   } else {

@@ -32,8 +32,13 @@
   },
   "scripts": {
     "test": "node --test \"test/*.mjs\"",
-    "prepublishOnly": "node --test \"test/*.mjs\""
+    "prepublishOnly": "node --test \"test/*.mjs\"",
+    "lint": "eslint src"
   },
   "author": "liwei <liwei@51marine.com> (上海新舶)",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0"
+  }
 }

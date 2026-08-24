@@ -339,7 +339,7 @@ export const grepTool = {
       const pat = args.literal ? escapeRegExp(String(args.pattern)) : args.pattern
       regex = new RegExp(pat, args.ignoreCase ? "i" : "")
     } catch (e) {
-      throw new Error(`grep pattern /${args.pattern}/ is not a valid regex: ${e.message}`)
+      throw new Error(`grep pattern /${args.pattern}/ is not a valid regex: ${e.message}`, { cause: e })
     }
     const fileFilter = args.glob ? globToRegex(args.glob) : null
     const before = Math.max(0, Math.floor(args.before ?? 0))
@@ -439,7 +439,7 @@ export const lsTool = {
     try {
       entries = await readdir(abs, { withFileTypes: true })
     } catch (e) {
-      if (e.code === "ENOENT" || e.code === "ENOTDIR") throw new Error(`ls: ${args.path ?? "."} — ${e.code === "ENOTDIR" ? "not a directory" : "not found"}`)
+      if (e.code === "ENOENT" || e.code === "ENOTDIR") throw new Error(`ls: ${args.path ?? "."} — ${e.code === "ENOTDIR" ? "not a directory" : "not found"}`, { cause: e })
       throw e
     }
     const rows = await Promise.all(
