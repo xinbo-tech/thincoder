@@ -3280,3 +3280,16 @@ test("runAgent: 蒸馏失败静默——返回不受影响，历史原样（AC4�
     server.close()
   }
 })
+
+test("helpers.mjs: 工具输出旧阈值（16_000/2_000）无残留", () => {
+  const src = readFileSync(new URL("../src/agent/helpers.mjs", import.meta.url), "utf8")
+  // 边界匹配（评审 #5）：\b 防误伤 32_000 / 2_000_000（下划线是单词字符，\b2_000\b 不匹配 2_000_000）
+  assert.ok(!/\b16_000\b/.test(src), "落盘阈值无 16K 残留")
+  assert.ok(!/\b2_000\b/.test(src), "preview 无 2K 残留")
+  assert.ok(src.includes("64 * 1024"), "新阈值在位")
+})
+
+test("advisor/run.mjs: 无 12_000 边界残留（评审 #3）", () => {
+  const src = readFileSync(new URL("../src/advisor/run.mjs", import.meta.url), "utf8")
+  assert.ok(!/\b12_000\b/.test(src), "advisor 截断无 12K 残留")
+})

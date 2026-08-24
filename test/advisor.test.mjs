@@ -19,6 +19,7 @@ import {
   buildAdvisorFollowUp,
   prepareAdvisorMessages,
 } from "../src/advisor.mjs"
+import { MAX_RESULT_CHARS } from "../src/advisor/run.mjs"
 
 
 // ────────────────────────────────────────
@@ -1090,10 +1091,8 @@ test("advisor.mjs: design 提示词硬加载——无 ADVISOR_DESIGN_FALLBACK �
   assert.equal(prompt, file, "设计审查系统提示词与 advisor-design.md 逐字节一致（无静默降级）")
 })
 
-test("advisor run.mjs: MAX_RESULT_CHARS = 64 * 1024（65536，与主链路落盘阈值一致）", () => {
-  const src = readFileSync(join(SRC_DIR_ABS, "advisor", "run.mjs"), "utf8")
-  // 评审 #2（2026-08-24）：常量断言必做——防"只改行为用例不改常量"的漂绿
-  assert.match(src, /const MAX_RESULT_CHARS = 64 \* 1024/, "advisor 工具结果截断上限 = 64K（旧 12K，line-aware 截断逻辑不变）")
+test("advisor: MAX_RESULT_CHARS = 64 * 1024（65536，与主链路落盘阈值一致）", () => {
+  assert.equal(MAX_RESULT_CHARS, 64 * 1024, "advisor 工具结果截断上限 = 64K（旧 12K，line-aware 截断逻辑不变）")
 })
 
 

@@ -30,7 +30,7 @@ export const ADVISOR_THINKING_PLACEHOLDER = "\n[thinking…]\n"
 const MAX_CONTEXT_TOKENS = 120_000 // Reserve headroom to avoid OOM
 const TOOL_TIMEOUT_MS = 30_000 // single tool timeout
 const REVIEW_TIMEOUT_MS = 600_000 // whole review timeout (10 minutes)
-const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, aligned with main offload limit)
+export const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, aligned with main offload limit)
 const MAX_UNFIXED_DISPLAY = 10 // unfixed issues shown in the cap message
 const MAX_KEY_FILES_IN_COMPACTION = 5 // files named in the compaction summary
 
