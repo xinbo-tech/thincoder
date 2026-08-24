@@ -8,9 +8,11 @@
 
 ### 工程模式 · 模式感知 + 自切换（2026-08-01）
 
-- [ ] 每轮用户消息注入工程模式状态提醒（仿 `planReminderForTurn`），让模型显式感知当前模式
-- [ ] `engTool`（仿 `planTool`）：模型可调 `eng(action="on"/"off")` 主动进入/退出工程模式（会话级，不持久化）
-- [ ] 工程模式关闭时注入状态声明以消除歧义
+- [x] 每轮工程模式状态提醒——已实现（ENG_ON_REMINDER 注入 + exit 时 OFF 提醒）
+- [x] engTool——已实现（src/agent-tools/eng.mjs，enter/exit + persistState）
+- [x] 关闭时状态声明——已实现（exit 分支注入 OFF reminder）
+
+（2026-08-25 核对销账：三条均已落地）
 
 ### TUI · 工具输出统一（2026-08-01，长期改进）
 
@@ -20,9 +22,9 @@
 
 ### TUI · 工具输出面板优化（2026-08-01）
 
-- [ ] `renderOutput` 面板加标题行（`❯ [toolName] — streaming` / `❯ [toolName] — done`），与 Permission 面板风格统一
-- [ ] 所有 `outputPanel` 工具的关闭规则统一（延迟 3s + 摘要落回模型可见消息；或从 history 复读不丢）
-- [ ] 非面板工具执行期间无进度反馈（write/read/grep/subagent 等静默等待）——考虑状态栏实时显示当前工具名 + 参数摘要（已有机位 `state.currentTool`）；长工具（subagent）考虑进度脉冲
+- [x] ~~`renderOutput` 面板标题行~~——条目过时：面板区架构已废除（全部内联块渲染，见 TUI-TOOL-OUTPUT.md）；完成行 `❯ name — done(ms) → summary` 已实现（agent-turn.mjs）
+- [x] ~~关闭规则统一~~——同上，面板废弃后不适用；内联块随会话历史持久化
+- [x] 状态栏实时显示当前工具名——已实现（`render-frame.mjs:405` `state.currentTool` → 状态栏提示）
 
 ### 工程模式 · code review 评审范围显式化（2026-08-01）
 
@@ -32,10 +34,10 @@
 
 ### Issue 批量（2026-08-22，来源：Gitee/GitHub issue 巡检）
 
-- [ ] IK9IXD 数学公式渲染（CLI Unicode 近似）——需求层已入 `docs/design/TUI.md` §9.1
-- [ ] IK9UWM Windows 中文粘贴乱码——需求层已入 `docs/design/TUI.md` §9.2
+- [x] IK9IXD 数学公式渲染——已实现（`src/tui/math.mjs` LaTeX→Unicode，commit 127130a）——2026-08-25 核对销账
+- [x] IK9UWM Windows 中文粘贴乱码——已实现（clipboard UTF-8 + BOM 剥离，commit 5c72ec2）——2026-08-25 核对销账
 - [ ] GitHub thincoder#1 embedding 三件套落盘——需求层已入 `docs/design/TUI.md` §9.3
-- [ ] IK9UZ8 思考型模型标题生成失败（两端同修）——需求层已入 `docs/design/SESSION.md` §7
+- [x] IK9UZ8 思考型模型标题生成失败——CLI 已实现（commit 3c1815e）；vscode 侧状态见 vscode TODO 同名条目
 - [ ] GitHub thincoder#2 GLM tool_calls 畸形解析崩溃（扩展端）——需求层已入 `thincoder-vscode/docs/design/ARCHITECTURE.md` 变更段
 - [ ] TUI.md 重复章节号（两个 "## 4."，渲染管线/折叠交互）重编号——评审 🔵（2026-08-22 发现，未改）
 
