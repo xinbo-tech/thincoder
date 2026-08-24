@@ -36,10 +36,10 @@
 
 - [x] IK9IXD 数学公式渲染——已实现（`src/tui/math.mjs` LaTeX→Unicode，commit 127130a）——2026-08-25 核对销账
 - [x] IK9UWM Windows 中文粘贴乱码——已实现（clipboard UTF-8 + BOM 剥离，commit 5c72ec2）——2026-08-25 核对销账
-- [ ] GitHub thincoder#1 embedding 三件套落盘——需求层已入 `docs/design/TUI.md` §9.3
+- [x] GitHub thincoder#1 embedding 三件套——已实现（cmd-config.mjs embeddingPatch 补写 baseURL/model，引用 DEFAULTS）——2026-08-25 核对销账
 - [x] IK9UZ8 思考型模型标题生成失败——CLI 已实现（commit 3c1815e）；vscode 侧状态见 vscode TODO 同名条目
 - [x] GitHub thincoder#2 GLM tool_calls 畸形解析——已实现（openai.mjs droppedToolCalls 防御合并 + agent.mjs 丢弃提醒，0.12.37；vscode 端 128464b normalizeToolPairing）——2026-08-25 核对销账
-- [ ] TUI.md 重复章节号（两个 "## 4."，渲染管线/折叠交互）重编号——评审 🔵（2026-08-22 发现，未改）
+- [x] TUI.md 章节号重编号——已修（2026-08-25，## 4-## 10 顺延，无重复）
 
 ## 已关闭（Done）
 
