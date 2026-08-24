@@ -468,9 +468,12 @@ function mockLLM(script) {
     const server = createServer((req, res) => {
       let bodyText = ""
       req.on("data", (c) => (bodyText += c))
-      req.on("end", () => {
+      req.on("end", async () => {
         requests.push({ ...JSON.parse(bodyText), _url: req.url })
         const step = script[Math.min(i++, script.length - 1)]
+        // Optional per-step delay (ms): simulates a slow LLM call — the async distillation
+        // tests (SEND-STALL-DISTILL) need the distill request to outlast the turn's return.
+        if (step.delay) await new Promise((r) => setTimeout(r, step.delay))
         const reasoningFrame = step.reasoning
           ? `data: ${JSON.stringify({ choices: [{ index: 0, delta: { reasoning_content: step.reasoning } }] })}\n\n`
           : ""
@@ -1758,7 +1761,7 @@ test("runAgent: 目录树注入仅顶层（depth 0 有，depth 1 无）", async 
 
 test("runAgent: 超长工具结果落盘，模型只见预览和路径", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
-  const bigContent = "X".repeat(20_000)
+  const bigContent = "X".repeat(70_000)
   const bigTool = { name: "big", description: "big output", parameters: { type: "object", properties: {} }, readonly: true, execute: async () => bigContent }
   const script = [{ toolCall: { name: "big" } }, { content: "完成" }]
   const { server, port } = await mockLLM(script)
@@ -1768,11 +1771,12 @@ test("runAgent: 超长工具结果落盘，模型只见预览和路径", async (
     const agent = createAgent({ provider, tools: [bigTool], config: {}, cwd })
     await runAgent(agent, "测试")
     const toolMsg = agent.history.find((m) => m.role === "tool")
-    assert.ok(toolMsg.content.length < 5000)          // 上下文里只有预览
+    assert.ok(toolMsg.content.length > 20_000, "AC3: preview 放大到 64K（旧 2K 预览 < 5000）")
+    assert.ok(toolMsg.content.length <= 65_536 + 512, "AC2: preview ≤ 64K + 路径开销（路径 ~100 + 固定后缀 ~186）")
     const m = toolMsg.content.match(/full content saved to: (.+\.log)/)
     assert.ok(m, "应包含落盘路径")
     const saved = (await import("node:fs/promises")).readFile(m[1], "utf8")
-    assert.equal((await saved).length, 20_000)         // 磁盘上是全量
+    assert.equal((await saved).length, bigContent.length) // 磁盘上是全量
     assert.match(toolMsg.content, /Page through it with the read tool/)
     rmSync(cwd, { recursive: true, force: true })
     rmSync((await import("node:path")).dirname(m[1]), { recursive: true, force: true }) // 清理 tool-results
@@ -1816,16 +1820,17 @@ test("offloadToolResult: >3 天旧文件删除，新文件与子目录保留", a
     mkdirSync(subdir)
     writeFileSync(join(subdir, "nested.txt"), "nested")
 
-    const big = "x".repeat(20_000)
+    const big = "x".repeat(70_000)
     const out = await offloadToolResult(big, "call-1", dir)
     assert.ok(!existsSync(oldFile), ">3 天旧文件应被删除")
     assert.ok(existsSync(freshFile), "刚写入的新文件应保留")
     assert.ok(existsSync(join(subdir, "nested.txt")), "子目录不动")
-    // 回归：offload 本身行为不变（磁盘全量 + 2k 预览 + 路径指引）
+    // 回归：offload 本身行为不变（磁盘全量 + 64K 预览 + 路径指引）
     const m = out.match(/full content saved to: (.+\.log)/)
     assert.ok(m, "应包含落盘路径")
-    assert.equal(readFileSync(m[1], "utf8").length, 20_000)
-    assert.ok(out.length < 5000)
+    assert.equal(readFileSync(m[1], "utf8").length, big.length)
+    assert.ok(out.length > 20_000, "AC3: preview 放大到 64K（旧 2K 会 <5000）")
+    assert.ok(out.length <= 65_536 + 512, "AC2: preview ≤ 64K + 路径开销")
     assert.match(out, /Page through it with the read tool/)
     // 回归：小结果不落盘、不触发清理
     assert.equal(await offloadToolResult("short", "call-small", dir), "short")
@@ -1841,7 +1846,7 @@ test("offloadToolResult: 3 天内的边界文件保留", async () => {
     writeFileSync(boundary, "keep me")
     const t = new Date(Date.now() - (TMP_RETENTION_MS - 3600 * 1000)) // 2 天 23 小时前，3 天内
     utimesSync(boundary, t, t)
-    await offloadToolResult("y".repeat(20_000), "call-2", dir)
+    await offloadToolResult("y".repeat(70_000), "call-2", dir) // >64K 触发落盘 → 触发清理
     assert.ok(existsSync(boundary), "mtime 在 3 天内的文件应保留")
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -1852,10 +1857,52 @@ test("offloadToolResult: 目录不存在时清理静默，offload 正常落盘",
   const base = mkdtempSync(join(tmpdir(), "thincoder-cleanup-test-"))
   try {
     const missing = join(base, "no-such-dir")
-    const out = await offloadToolResult("z".repeat(20_000), "call-3", missing)
+    const out = await offloadToolResult("z".repeat(70_000), "call-3", missing)
     assert.match(out, /full content saved to:/, "目录不存在不抛异常，offload 正常返回落盘结果")
     const m = out.match(/full content saved to: (.+\.log)/)
-    assert.equal(readFileSync(m[1], "utf8").length, 20_000)
+    assert.equal(readFileSync(m[1], "utf8").length, 70_000)
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 恰好 65536 字符不落盘，原样返回（AC1）", async () => {
+  const exact = "b".repeat(65_536)
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-offload-limit-"))
+  try {
+    const out = await offloadToolResult(exact, "call-exact", dir)
+    assert.equal(out, exact) // 阈值内返回原文（=== 输入），不落盘
+    assert.equal(readdirSync(dir).length, 0, "不产生落盘文件")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 65537 字符落盘，preview + 路径，磁盘全量（AC2/AC3）", async () => {
+  const over = "c".repeat(65_537)
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-offload-limit-"))
+  try {
+    const out = await offloadToolResult(over, "call-over", dir)
+    const m = out.match(/full content saved to: (.+\.log)/)
+    assert.ok(m, "65537 应落盘并含路径")
+    assert.equal(readFileSync(m[1], "utf8").length, 65_537) // 磁盘全量
+    assert.ok(out.length > 20_000, "AC3: preview 放大到 64K（旧 2K 会 <5000）")
+    assert.ok(out.length <= 65_536 + 512, "AC2: preview ≤ 64K + 路径开销")
+    assert.match(out, /Page through it with the read tool/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 落盘失败回退截断 64K，阈值内信息不丢（AC8）", async () => {
+  const big = "d".repeat(70_000)
+  const base = mkdtempSync(join(tmpdir(), "thincoder-offload-fail-"))
+  try {
+    const blocker = join(base, "blocker-file") // 已存在文件 → mkdir(dir) 失败 → 触发回退
+    writeFileSync(blocker, "i am a file, not a directory")
+    const out = await offloadToolResult(big, "call-fail", blocker)
+    const fallback = `\n\n[... truncated: ${big.length} chars total, offload to disk failed]`
+    assert.equal(out, big.slice(0, 65_536) + fallback) // 回退截断长度 = 65536
   } finally {
     rmSync(base, { recursive: true, force: true })
   }
@@ -1863,7 +1910,7 @@ test("offloadToolResult: 目录不存在时清理静默，offload 正常落盘",
 
 test("runAgent: 子 agent 超长报告不再内部截断，由落盘全量保留", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
-  const hugeReport = "详尽的实现报告。".repeat(5000) // 40k 字符，超过旧的 32k 内部截断点
+  const hugeReport = "详尽的实现报告。".repeat(9000) // 72k 字符（8 chars × 9000），超过 64K 落盘阈值
   const script = [
     { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "大任务", role: "coder" }) } },
     { content: hugeReport },
@@ -1876,7 +1923,7 @@ test("runAgent: 子 agent 超长报告不再内部截断，由落盘全量保留
     const agent = createAgent({ provider, tools: [makeMutationTool()], config: {}, cwd })
     await runAgent(agent, "派活", { onPermissionRequest: async () => true })
     const toolMsg = agent.history.find((m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("full content saved to"))
-    assert.ok(toolMsg, "40k 报告应走落盘")
+    assert.ok(toolMsg, "72k 报告应走落盘")
     const m = toolMsg.content.match(/full content saved to: (.+\.log)/)
     const saved = await (await import("node:fs/promises")).readFile(m[1], "utf8")
     assert.equal(saved.length, hugeReport.length) // 全量保留，无 32k 截断
@@ -3079,4 +3126,157 @@ test("prompts/discipline.md: 读/更新文档已嵌入 Workflow 箭头序列（�
   assert.ok(ownLine, "归属句存在")
   assert.ok(ownLine.includes("find the owner and amend"), "归属句含 find the owner and amend")
 })
+// ---------------------------------------------------------------- 探索蒸馏异步化（SEND-STALL-DISTILL 2026-08-25）
+// 轮末蒸馏不阻塞回合返回（AC1）；下一轮开头 await 落定后再 push 输入（AC2/N1）；
+// onDistilled 仅在替换历史时触发（AC3）；蒸馏失败静默、历史原样（AC4）。
+// 注意：蒸馏触发门槛是单轮 ≥3 条纯探索工具结果（distillExplorations resultCount < 3 → null），
+// 因此每个用例的探索段都用 3 次 read 工具调用凑够门槛。
 
+/** 3 次 read 探索工具调用（凑足蒸馏门槛）的 LLM 脚本前缀。 */
+const READ_TRIPLE = [
+  { toolCall: { name: "read", arguments: JSON.stringify({ path: "a.txt" }) } },
+  { toolCall: { name: "read", arguments: JSON.stringify({ path: "b.txt" }) } },
+  { toolCall: { name: "read", arguments: JSON.stringify({ path: "c.txt" }) } },
+]
+
+test("runAgent: 轮末返回不等待蒸馏——5s 慢蒸馏 <1s 返回（AC1）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const readTool = {
+    name: "read", description: "read a file",
+    parameters: { type: "object", properties: {} }, readonly: true,
+    execute: async () => "file content",
+  }
+  // r0-r2: 3 次 read 探索；r3: 最终回复；r4: 蒸馏（慢 5s，最后一步重复给后续请求）
+  const script = [...READ_TRIPLE, { content: "final answer" }, { content: "slow distill summary", delay: 5000 }]
+  const { server, port, requests } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-distill-async-"))
+    const agent = createAgent({ provider, tools: [readTool], config: {}, cwd })
+    const t0 = Date.now()
+    const out = await runAgent(agent, "探索一下", {})
+    const elapsed = Date.now() - t0
+    assert.equal(out, "final answer")
+    assert.ok(elapsed < 1000, `轮末返回不得等 5s 慢蒸馏（实际 ${elapsed}ms）`)
+    assert.ok(agent._pendingDistill instanceof Promise, "蒸馏 promise 挂 agent._pendingDistill（跨轮存活）")
+    await new Promise((r) => setTimeout(r, 50))
+    assert.equal(requests.length, 5, "蒸馏请求已发出（慢响应在途），不是被跳过：read×3 + 最终回复 + 蒸馏")
+    // 收尾：蒸馏仍在途（5s 未到），等它自然落定（阻塞版实现会在这 5s 里卡住 runAgent，本测试即失败）
+    await agent._pendingDistill
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+test("runAgent: 下一轮开头 await 蒸馏——第二轮起点是压缩版，输入不被替换清掉（AC2/N1）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const readTool = {
+    name: "read", description: "read a file",
+    parameters: { type: "object", properties: {} }, readonly: true,
+    execute: async () => "file content",
+  }
+  // r0-r2: 第一轮 3 次 read；r3: 第一轮最终回复；r4: 蒸馏（慢 400ms，返回时尚未落定）；r5: 第二轮回复
+  const script = [
+    ...READ_TRIPLE,
+    { content: "round one done" },
+    { content: "distilled: found the config in src/config.mjs", delay: 400 },
+    { content: "round two done" },
+  ]
+  const { server, port, requests } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-distill-across-runs-"))
+    const agent = createAgent({ provider, tools: [readTool], config: {}, cwd })
+
+    const t0 = Date.now()
+    const out1 = await runAgent(agent, "第一轮：探索配置", {})
+    assert.equal(out1, "round one done")
+    assert.ok(Date.now() - t0 < 1000, "第一轮返回不等待蒸馏")
+    assert.ok(agent._pendingDistill, "蒸馏在途，promise 已挂载")
+
+    // 蒸馏未落定时立即发第二轮：runAgent 开头必须先 await 蒸馏，再 push 本轮输入（N1）
+    const out2 = await runAgent(agent, "第二轮：继续", {})
+    assert.equal(out2, "round two done")
+    assert.equal(requests.length, 6, "两轮共 6 次调用：探索×3 + 第一轮回复 + 蒸馏 + 第二轮回复")
+    await agent._pendingDistill // 第二轮自身的蒸馏（无探索，立即落定）
+
+    const round2Msgs = requests[5].messages
+    const noteIdx = round2Msgs.findIndex((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]"))
+    assert.ok(noteIdx >= 0, "第二轮请求携带压缩后的 [Exploration summary] note")
+    const userIdx = round2Msgs.findIndex((m) => m.role === "user" && m.content === "第二轮：继续")
+    assert.ok(userIdx > noteIdx, "摘要 note 在第二轮用户输入之前（蒸馏先落位，输入后 push）")
+    assert.ok(!round2Msgs.some((m) => m.content === "file content"), "第二轮请求不再含原始探索结果（已压缩）")
+    assert.ok(agent.history.some((m) => m.role === "user" && m.content === "第二轮：继续"), "第二轮输入未被蒸馏替换清掉")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+test("runAgent: 蒸馏完成触发 onDistilled，无替换不触发（AC3）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const readTool = {
+    name: "read", description: "read a file",
+    parameters: { type: "object", properties: {} }, readonly: true,
+    execute: async () => "file content",
+  }
+  // 有探索：r0-r2 read ×3、r3 最终回复、r4 蒸馏成功
+  const { server, port } = await mockLLM([...READ_TRIPLE, { content: "done" }, { content: "distilled summary" }])
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-distill-cb-"))
+    const agent = createAgent({ provider, tools: [readTool], config: {}, cwd })
+    let distilled = 0
+    const out = await runAgent(agent, "探索", { onDistilled: () => distilled++ })
+    assert.equal(out, "done")
+    await agent._pendingDistill // 蒸馏异步落定后才断言回调
+    assert.equal(distilled, 1, "替换历史后 onDistilled 恰好触发一次")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+
+  // 无探索的普通轮次：蒸馏无替换，onDistilled 不触发
+  const { server: s2, port: p2, requests: r2 } = await mockLLM([{ content: "plain reply" }])
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${p2}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-distill-cb-none-"))
+    const agent = createAgent({ provider, tools: [], config: {}, cwd })
+    let distilled = 0
+    await runAgent(agent, "普通提问", { onDistilled: () => distilled++ })
+    await agent._pendingDistill
+    assert.equal(distilled, 0, "没有探索结果（无替换）不触发 onDistilled")
+    assert.equal(r2.length, 1, "无探索不发起蒸馏调用")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    s2.close()
+  }
+})
+
+test("runAgent: 蒸馏失败静默——返回不受影响，历史原样（AC4）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const readTool = {
+    name: "read", description: "read a file",
+    parameters: { type: "object", properties: {} }, readonly: true,
+    execute: async () => "file content",
+  }
+  // r4 蒸馏返回空内容 → distillExplorations 返回 null（静默失败：不发 onDistilled、不替换历史）
+  const { server, port, requests } = await mockLLM([...READ_TRIPLE, { content: "final" }, { content: "" }])
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-distill-fail-"))
+    const agent = createAgent({ provider, tools: [readTool], config: {}, cwd })
+    let distilled = 0
+    const out = await runAgent(agent, "探索", { onDistilled: () => distilled++ })
+    assert.equal(out, "final")
+    await agent._pendingDistill // 静默落定，不抛
+    assert.equal(distilled, 0, "蒸馏失败不触发 onDistilled")
+    assert.equal(agent.history.filter((m) => m.role === "tool" && m.content === "file content").length, 3, "失败时原始探索结果保留（历史原样）")
+    assert.ok(!agent.history.some((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]")), "失败不产生摘要 note")
+    assert.equal(requests.length, 5, "恰好一次蒸馏调用（失败返回 null）")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
