@@ -1,6 +1,6 @@
 # 工具输出长度限制调整 — 需求（CLI）
 
-> 状态：待评审（2026-08-24）
+> 状态：**已实现**（2026-08-24 评审修订后实施；npm 0.12.43 / vscode 0.1.49 发布）
 > 关联：`docs/design/TOOL-OUTPUT-LIMITS-TUNING.md`（设计）、`docs/design/README.md`（文档地图）
 > 范围：本仓库（thincoder CLI）；VS Code 扩展（thincoder-vscode）有同需求独立文档（`TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`），两端语义一致
 > ⚠️ **两端必须同步改（lockstep）**：阈值/preview/advisor 截断在两仓库各有实现，单边改动会造成行为漂移——评审 #1（2026-08-24）

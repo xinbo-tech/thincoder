@@ -1,6 +1,6 @@
 # sleep 工具删除 — 设计（CLI）
 
-> 状态：待评审（2026-08-25）
+> 状态：**已实现**（2026-08-25 评审修订后实施；npm 0.12.43）
 > 需求：`docs/design/SLEEP-REMOVAL-REQUIREMENTS.md`
 > 关联：`docs/design/README.md`（文档地图）
 

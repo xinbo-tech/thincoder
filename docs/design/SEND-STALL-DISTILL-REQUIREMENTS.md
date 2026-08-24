@@ -1,6 +1,6 @@
 # 探索蒸馏异步化 — 需求（CLI）
 
-> 状态：待评审（2026-08-25）
+> 状态：**已实现**（2026-08-25 评审修订后实施；npm 0.12.43 / vscode 0.1.49 发布）
 > 关联：`docs/design/SEND-STALL-DISTILL-TUNING.md`（设计）、`docs/design/README.md`（文档地图）
 > 范围：本仓库（thincoder CLI）；VS Code 扩展（thincoder-vscode）有同需求独立文档（`SEND-STALL-DISTILL-REQUIREMENTS.md`），两端语义一致
 > ⚠️ **两端必须同步改（lockstep）**：蒸馏逻辑在两仓库各有实现，单边改动会造成行为漂移

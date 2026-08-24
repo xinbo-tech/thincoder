@@ -1,6 +1,6 @@
 # Agent 运行参数调整 — 设计（CLI）
 
-> 状态：待评审（2026-08-24）
+> 状态：**已实现**（2026-08-24 评审修订后实施；npm 0.12.43）
 > 需求：`docs/design/AGENT-PARAMS-REQUIREMENTS.md`
 > 关联：`docs/design/README.md`（文档地图）、`docs/design/AGENT-LOOP.md`、`docs/design/TURN-CAP-CONTINUE.md`
 

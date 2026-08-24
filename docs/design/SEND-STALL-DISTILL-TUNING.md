@@ -1,6 +1,6 @@
 # 探索蒸馏异步化 — 设计（CLI）
 
-> 状态：待评审（2026-08-25）
+> 状态：**已实现**（2026-08-25 评审修订后实施；npm 0.12.43）
 > 需求：`docs/design/SEND-STALL-DISTILL-REQUIREMENTS.md`
 > 关联：`docs/design/README.md`（文档地图）、`docs/design/CONTEXT-COMPACTION.md`（机制背景，不改动）
 

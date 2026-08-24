@@ -1,6 +1,6 @@
 # 覆盖率缺口修复 — 需求（CLI）
 
-> 状态：待评审（2026-08-25）
+> 状态：**已实现**（2026-08-25 评审修订后实施，commit a966af0/acce3e4）
 > 关联：`docs/design/COVERAGE-GAPS-TUNING.md`（设计）、`docs/design/README.md`（文档地图）
 > 范围：本仓库（thincoder CLI）；VS Code 扩展（thincoder-vscode）有同需求独立文档（`COVERAGE-GAPS-REQUIREMENTS.md`），两端语义一致
 > 背景：TOOL-OUTPUT-LIMITS 批代码评审遗留 3 项（2 项在本仓库，1 项在 vscode 端），本批收口
