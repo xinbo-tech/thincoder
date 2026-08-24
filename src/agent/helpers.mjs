@@ -8,7 +8,7 @@ import { writeFile, mkdir, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"
 import { execSync } from "node:child_process"
 
-export const DEFAULT_MAX_TURNS = 100
+export const DEFAULT_MAX_TURNS = 200
 export const DEFAULT_SUBAGENT_TURNS = 100
 export const DEFAULT_GOAL_TURNS = 200
 export const MIN_REPORT_CHARS = 200
@@ -20,8 +20,8 @@ export const REPORT_CONTINUATION =
   "3. How you verified (tests run, commands executed, with results)\n" +
   "4. Anything left undone or worth follow-up"
 
-const TOOL_RESULT_OFFLOAD_LIMIT = 16_000
-const TOOL_RESULT_PREVIEW = 2_000
+const TOOL_RESULT_OFFLOAD_LIMIT = 64 * 1024 // 65536 chars — offload only above 64K (2026-08-24)
+const TOOL_RESULT_PREVIEW = 64 * 1024 // chars shown inline when offloaded (aligns with CLI/VS Code webview)
 
 /** Offload-dir write-time self-cleanup retention window (2026-08-21): files older than 3 days are deleted on the next offload. */
 export const TMP_RETENTION_MS = 3 * 24 * 3600 * 1000
@@ -65,7 +65,7 @@ export async function cleanupOldToolResults(dir) {
   }
 }
 
-/** Offload oversized tool results (>16k chars) to disk, returning a preview + file path.
+/** Offload oversized tool results (>64K chars) to disk, returning a preview + file path.
  *  Writes trigger write-time self-cleanup of the offload dir first (dir param overridable for tests). */
 export async function offloadToolResult(text, callId, dir = join(configDir, "tool-results")) {
   if (text.length <= TOOL_RESULT_OFFLOAD_LIMIT) return text

@@ -39,7 +39,7 @@ export const PROVIDER_PRESETS = {
 export const DEFAULTS = {
   activeModel: null,  // optional: override provider.model (set via /model picker or /model provider:model)
   agent: {
-    maxTurns: 100,
+    maxTurns: 200,
     subagentTurns: 100,
     subagentModel: null,  // default subagent model: "provider:model" | provider name | model name (parent provider); null = inherit parent provider
     subagentModels: {},   // per-type override: { explore, plan, coder, "eng-coder" } — priority: subagent tool model arg > this[role] > subagentModel > parent provider
@@ -52,7 +52,7 @@ export const DEFAULTS = {
     consultTurns: 40,      // per-consultant tool-turn budget (diagnosis tasks)
     consultTimeoutMs: 600000, // wall-clock ceiling per consultant (10min)
     streamRules: [],      // time-traveling stream rules: [{ pattern: "regex", message: "reminder", action: "abort"|"warn", repeat: "always"|"once" }]
-    advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort overrides. Deprecated: enabled (2026-08-21)
+    advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
     engineering: false,   // strict methodology enforcement — read METHODOLOGY.md, design-before-code
   },

@@ -20,7 +20,7 @@
 runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume })
   1. prepareRun：注入上下文 + 组装 systemPrompt/tools/schema + 阈值（详见 §3）
   2. 非 resume 时重置 per-run 状态（mutation/verify/advisor/touchedFiles/emptyRetries/compressFailures）
-  3. turn 循环（≤ maxTurns，默认 100；goal 模式 200；子代理 100）：
+  3. turn 循环（≤ maxTurns，默认 200；goal 模式 200；子代理 100）：
      a. 压缩检查（仅 lastRole ∈ {user, tool} 安全点；见 CONTEXT-COMPACTION.md）
      b. plan-mode 提醒节流注入、工程模式状态注入
      c. autoThink 分类（turn 0 且配置开启）

@@ -234,8 +234,8 @@ export async function handleConfigCommand(ctx, args = []) {
   while (running) {
     const consultCount = (ac.consultModels ?? []).length
     const mainEntries = [
-      { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 100} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"}` },
-      { type: "item", text: `agent.maxTurns = ${ac.maxTurns ?? 100}`, action: "agent.maxTurns" },
+      { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 200} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"}` },
+      { type: "item", text: `agent.maxTurns = ${ac.maxTurns ?? 200}`, action: "agent.maxTurns" },
       { type: "item", text: `agent.subagentTurns = ${ac.subagentTurns ?? 100}`, action: "agent.subagentTurns" },
       { type: "item", text: `agent.compactThreshold = ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, action: "agent.compactThreshold" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
@@ -255,7 +255,7 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLabel("❯ Config", ansi.bold + C.tool)
       pushLine(`Active: ${agent.activeProvider} / ${agent.provider.model}`, C.dim)
       pushLine(`Key:    ${maskKey(agent.provider.apiKey)}`, C.dim)
-      pushLine(`agent.maxTurns: ${ac.maxTurns ?? 100}`, C.dim)
+      pushLine(`agent.maxTurns: ${ac.maxTurns ?? 200}`, C.dim)
       pushLine(`agent.subagentTurns: ${ac.subagentTurns ?? 100}`, C.dim)
       pushLine(`agent.compactThreshold: ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, C.dim)
       pushLine(`agent.verifyGuard: ${ac.verifyGuard === true ? "on" : "off"}`, C.dim)
@@ -304,7 +304,7 @@ export async function handleConfigCommand(ctx, args = []) {
     // Numeric config items
     const label = choice.action
     const isTimeout = label === "agent.consultTimeoutMs"
-    const current = label === "agent.maxTurns" ? (ac.maxTurns ?? 100)
+    const current = label === "agent.maxTurns" ? (ac.maxTurns ?? 200)
       : label === "agent.subagentTurns" ? (ac.subagentTurns ?? 100)
       : label === "agent.compactThreshold" ? (ac.compactThreshold ?? 100000)
       : label === "agent.consultTurns" ? (ac.consultTurns ?? 40)

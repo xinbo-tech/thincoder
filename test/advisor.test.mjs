@@ -1090,6 +1090,13 @@ test("advisor.mjs: design 提示词硬加载——无 ADVISOR_DESIGN_FALLBACK �
   assert.equal(prompt, file, "设计审查系统提示词与 advisor-design.md 逐字节一致（无静默降级）")
 })
 
+test("advisor run.mjs: MAX_RESULT_CHARS = 64 * 1024（65536，与主链路落盘阈值一致）", () => {
+  const src = readFileSync(join(SRC_DIR_ABS, "advisor", "run.mjs"), "utf8")
+  // 评审 #2（2026-08-24）：常量断言必做——防"只改行为用例不改常量"的漂绿
+  assert.match(src, /const MAX_RESULT_CHARS = 64 \* 1024/, "advisor 工具结果截断上限 = 64K（旧 12K，line-aware 截断逻辑不变）")
+})
+
+
 test("buildAdvisorUserMessage: design 分支 Instructions 补 Methodology compliance 维度", () => {
   const agent = { history: [], _advisorRound: 0, cwd: tmpdir(), config: {} }
   const msg = buildAdvisorUserMessage(agent, null, "design")
@@ -1137,5 +1144,105 @@ test("buildAdvisorUserMessage: 子项目有 AGENTS.md + 文档地图 → 注入�
     assert.ok(msg.includes("# 子地图"), "子项目文档地图内容注入")
   } finally {
     rmSync(tmp, { recursive: true, force: true })
+  }
+})
+// ---------------------------------------------------------------- advisor review timeout（agent.advisor.timeoutMs 配置化）
+
+/** 本地 mock LLM server：每轮请求都返回同一个 tool-call SSE 响应（永不产生最终文本），让 advisor 工具循环持续迭代 */
+function mockToolLoopServer() {
+  return import("node:http").then(({ createServer }) => {
+    const hits = { count: 0 }
+    const server = createServer((req, res) => {
+      req.on("data", () => {})
+      req.on("end", () => {
+        hits.count++
+        const frames =
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: `call_${hits.count}`, function: { name: "no_such_tool", arguments: "{}" } }] } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
+          `data: [DONE]\n\n`
+        res.writeHead(200, { "Content-Type": "text/event-stream" })
+        res.end(frames)
+      })
+    })
+    return new Promise((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, hits }))
+    })
+  })
+}
+
+/**
+ * Run an advisor review until the wall-clock timeout returns (no real waiting).
+ * llm: { server, port, hits } from mockToolLoopServer(). mock.timers with apis:["Date"]
+ * freezes Date.now() at 0 and setTime() advances it
+ * (real timers and real I/O keep working — core.mjs's chat path has no clock deps).
+ * The loop captures startTime under the fake clock; once the first chat request hits
+ * the mock server we advance the clock past the budget, so the next loop iteration
+ * returns the timeout message. configTimeoutMs === undefined means "not configured"
+ * (falls back to the default).
+ */
+async function reviewUntilTimeout(llm, agent, { configTimeoutMs, fakeElapsedMs }) {
+  const { mock } = await import("node:test")
+  const { runAdvisorReview } = await import("../src/advisor/run.mjs")
+  mock.timers.enable({ apis: ["Date"] })
+  try {
+    if (configTimeoutMs !== undefined) agent.config = { advisor: { timeoutMs: configTimeoutMs } }
+    const pending = runAdvisorReview(agent, "code", {})
+    let settledEarly = false
+    pending.then(() => { settledEarly = true })
+    // Wait for the first chat request to reach the mock server (real I/O; bounded poll)
+    for (let i = 0; i < 200 && llm.hits.count === 0; i++) {
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    assert.ok(llm.hits.count >= 1, "mock LLM server must receive the advisor's first chat request")
+    assert.equal(settledEarly, false, "review must NOT resolve before the timeout elapses")
+    mock.timers.setTime(fakeElapsedMs)
+    return await pending
+  } finally {
+    mock.timers.reset()
+  }
+}
+
+function timeoutAgent(port) {
+  return {
+    config: {},
+    provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
+    history: [{ role: "user", content: "review the change" }],
+    _touchedFiles: ["x.js"],
+    _advisorRound: 0,
+    cwd: tmpdir(),
+  }
+}
+
+test("advisor timeout: configured agent.advisor.timeoutMs=100 truncates at ~100ms with the timeout message", async () => {
+  const mock = await mockToolLoopServer()
+  try {
+    const result = await reviewUntilTimeout(mock, timeoutAgent(mock.port), { configTimeoutMs: 100, fakeElapsedMs: 101 })
+    assert.match(result, /Advisor: review timeout after \d+s\. Partial results may be available\./)
+    assert.ok(!result.includes("after 600s"), "configured 100ms must win over the 600s default, got: " + result)
+    assert.ok(mock.hits.count <= 100, "review must stop well before the 100-turn cap — timeout fired first (hits=" + mock.hits.count + ")")
+  } finally {
+    mock.server.close()
+  }
+})
+
+test("advisor timeout: no timeoutMs config falls back to the 600s default (message \"after 600s\")", async () => {
+  const mock = await mockToolLoopServer()
+  try {
+    const result = await reviewUntilTimeout(mock, timeoutAgent(mock.port), { fakeElapsedMs: 600_001 })
+    assert.match(result, /Advisor: review timeout after 600s\./)
+  } finally {
+    mock.server.close()
+  }
+})
+
+test("advisor timeout: invalid timeoutMs (0 / -100 / \"abc\") falls back to the 600s default — no immediate truncation", async () => {
+  for (const bad of [0, -100, "abc"]) {
+    const mock = await mockToolLoopServer()
+    try {
+      const result = await reviewUntilTimeout(mock, timeoutAgent(mock.port), { configTimeoutMs: bad, fakeElapsedMs: 600_001 })
+      assert.match(result, /Advisor: review timeout after 600s\./, `invalid value ${JSON.stringify(bad)} must fall back to the default, got: ${result}`)
+    } finally {
+      mock.server.close()
+    }
   }
 })

@@ -207,7 +207,7 @@ export function createAgent({ provider, tools, config, cwd, memory, overlay, ...
 2. 调 provider.chat（带 tools schema）
 3. 无 toolCalls → 流式输出，结束
 4. 有 toolCalls → 按"两段式"执行（见下）→ 结果回喂 context → 回到 2
-5. 循环上限（默认 100 轮）防失控；上下文超阈值时先压缩再继续
+5. 循环上限（默认 200 轮）防失控；上下文超阈值时先压缩再继续
 
 **工具执行：两段式并行（已确认 ✅，调研自三个榜样）**
 
@@ -389,7 +389,7 @@ export function specForModel(model)  // 查模型规格（contextWindow / reason
     { "name": "kimi", "baseURL": "https://api.moonshot.cn/v1", "model": "kimi-k3" }
   ],
   "activeProvider": "deepseek",
-  "agent": { "maxTurns": 100, "compactThreshold": 100000, "compactThresholdAuto": true },
+  "agent": { "maxTurns": 200, "compactThreshold": 100000, "compactThresholdAuto": true },
   "memory": { "dbPath": "~/.thincoder/memory.db" },
   "embedding": { "baseURL": "https://api.siliconflow.cn/v1", "model": "BAAI/bge-m3" }
 }

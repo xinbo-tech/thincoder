@@ -13,7 +13,7 @@
 
 | 执行体 | 预算 | 继续通道 | 次数 |
 |---|---|---|---|
-| 主 agent | maxTurns (100) | TUI 权限面板 | 不限（已有，不动） |
+| 主 agent | maxTurns (200) | TUI 权限面板 | 不限（已有，不动） |
 | 子 agent | subagentTurns (100) | TUI 权限面板（"continue"） | 不限（新增） |
 | 飞刀 escalate | subagentTurns (100) | TUI 权限面板（"continue"） | 不限（去掉 MAX_RESUMES=2） |
 | 会诊 consult | consultTurns (40) | TUI 权限面板（"continue"）；继续时墙钟 watchdog 重置 | 不限（新增） |

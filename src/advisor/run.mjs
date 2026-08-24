@@ -29,8 +29,8 @@ export const ADVISOR_THINKING_PLACEHOLDER = "\n[thinking…]\n"
 // Context window limits
 const MAX_CONTEXT_TOKENS = 120_000 // Reserve headroom to avoid OOM
 const TOOL_TIMEOUT_MS = 30_000 // single tool timeout
-const REVIEW_TIMEOUT_MS = 300_000 // whole review timeout
-const MAX_RESULT_CHARS = 12_000 // tool result truncation (line-aware)
+const REVIEW_TIMEOUT_MS = 600_000 // whole review timeout (10 minutes)
+const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, aligned with main offload limit)
 const MAX_UNFIXED_DISPLAY = 10 // unfixed issues shown in the cap message
 const MAX_KEY_FILES_IN_COMPACTION = 5 // files named in the compaction summary
 
@@ -156,9 +156,13 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     // Interrupted (Ctrl+I) — stop immediately instead of spinning a fresh uncancellable signal
     if (signal?.aborted) return renderTimeline(timeline, "Advisor: interrupted.")
     
-    // Check review timeout (5 minutes)
-    if (Date.now() - startTime > REVIEW_TIMEOUT_MS) {
-      return renderTimeline(timeline, `Advisor: review timeout after ${Math.round(REVIEW_TIMEOUT_MS / 1000)}s. Partial results may be available. Try again with a narrower scope.`)
+    // Check review timeout (10 minutes by default; agent.advisor.timeoutMs overrides)
+    // 运行时校验（设计评审 #1，2026-08-24）：手写 config.json 的非法值（0/负数/字符串）
+    // 不得静默禁用或立即触发超时——非法一律回退默认。
+    const cfg = agent.config?.advisor?.timeoutMs
+    const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
+    if (Date.now() - startTime > timeoutMs) {
+      return renderTimeline(timeline, `Advisor: review timeout after ${Math.round(timeoutMs / 1000)}s. Partial results may be available. Try again with a narrower scope.`)
     }
     
     if (++turns > MAX_ADVISOR_TURNS) {
