@@ -2,6 +2,25 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.44] — 2026-08-25
+
+### Fixed
+
+- **安全修复：subagent 变形 role 绕过工程模式门禁**——`role="Coder"/" coder"` 等非精确字符串穿透两个模式门禁（精确比较），fallthrough 到全工具/无 overlay 子代理，绕过设计评审拿到完整写权限。修复：execute 入口 ROLES 白名单，未知 role 直接 throw（fail-closed）；防回归测试锁定 7 种变形值 × 两种模式
+- IK9UZ8 思考型模型标题生成（vscode 端同修对齐）
+- 文档状态/TODO 销账（24+13 处"待评审"→"已实现"；TODO 7 条已实现条目核对关闭）
+- TUI.md 章节号重编号（## 4-10 顺延，无重复）
+
+### Added
+
+- **ESLint 引入**（规则基线对齐 vscode 端）：lint script + 21 个 error 清零（死赋值/cause 补全）
+- **跨端同构模块语义锚点比对测试**：14 个跨仓库契约（advisor 收敛协议、蒸馏语义、64K 阈值）两端必须一致——单边漂移立即红
+- **RELEASE.md**：npm 发布流程 + 4 条踩坑记录（vsce 自动 bump、Open VSX 异步激活、ovsx 无 TTY 静默失败、prepublishOnly）
+
+### Docs
+
+- 文档债收口：6 处"待合并"全部处理（真碎片合并/归档/独立保留定性）
+
 ## [0.12.43] — 2026-08-25
 
 ### Added
