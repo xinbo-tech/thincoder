@@ -81,7 +81,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 ```
 关键约束：**markdown/math ANSI 在 wrap 之前插入**——但插入的转义序列零显示宽度（`stringWidth` 剥离 ANSI），不参与宽度计算，不破坏对齐。**宽度补偿**：标记（`` ` ``/`**`/`~~`/`$…$`）渲染后消失，含标记的表格行会比 formatTables 计算的列宽短——`renderMarkdownPreservingWidth` 在行尾补空格恢复原宽（竖线对齐）。渲染先于 wrap 执行保证跨 wrap 边界的公式/标记完整转换。窄作用域复位（`22`/`24`/`29` 而非 `0`）保证不冲掉行底色。缓存：`convCacheKey`（lines 长度/最后一行长度/streaming/reasoning 长度 + expandedBlocks 摘要）命中则跳过重建。
 
-## 4. 折叠交互（双向：展开 ↔ 收起）
+## 5. 折叠交互（双向：展开 ↔ 收起）
 
 **折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`）：
 1. **长消息折叠**：**任意**单条消息（主输出 C.text、思考 C.reason、工具摘要 C.dim——凡是 wrap 后 >12 行的都算）→ 折叠为 `[前 4 行, hint, 末行]`（共 5 行内容，hint 位于中间省略号位置）；key = `long-{lines 索引}`（稳定，跨重渲染）。**主输出/思考是折叠的主力对象**——它们才是实际内容最长的；dim 工具摘要反而很少触发。双向折叠保证阅读可控：点击展开看全文，看完点收起提示收回去
@@ -106,11 +106,11 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **宽度数学**（render.mjs）：charWidth——CJK/emoji/全角 2 列、组合字符/零宽 0、其余 1；wrap/slice/pad 全部按显示宽度而非字符数。
 
-## 5. 会话恢复（startup.mjs）
+## 6. 会话恢复（startup.mjs）
 
 优先级：`display` 快照（WYSIWYG，恢复原样）> `history` 重建（user/assistant 逐条渲染，工具结果只显示首行摘要）。**恢复渲染过滤 `[System reminder:` 前缀的机读消息**（人读线本来就不含，过滤是纵深防御）；markdown 表格/行内渲染同样生效。恢复后提示 `/new` 开新会话；多槽位提示 `/session`。
 
-## 6. 回合驱动（agent-turn.mjs）
+## 7. 回合驱动（agent-turn.mjs）
 
 `runAgentTurn(ctx, text)`：
 1. pushLabel "❯ You:" + 输入文本
@@ -120,7 +120,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 5. finally：停 ticker、清 processing、**自动生成会话标题**（首条真实 user 消息 → generateTitle）、saveSession 增量落盘
 6. 队列：processing 期间输入的消息进 `state.queue`，回合结束自动逐条处理（斜杠命令直接执行）
 
-## 7. 交互层与命令层
+## 8. 交互层与命令层
 
 - **interaction.mjs**：`askPermission(name, args)`（y/n/a；a = 批准并开启 AUTO）、`askQuestion(text, options)`（选项列表 ↑↓ 或自由文本）——agent 工具（permission/question）与 TUI 的桥。
 - **slash-commands.mjs**：`SLASH_COMMANDS` 表 + `SLASH_ALIASES`（/h /x /m /p /t /c /n）+ `HANDLERS` 分派；`completions(input)` 按命令/参数补全；Tab 循环候选。命令分两类：**即时反馈**（/plan /auto /fold 等本地状态切换）与 **菜单循环**（/config /think /mcp /provider 等 picker 驱动）。
@@ -130,7 +130,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **wizard.mjs**：首启无 key 时进入——provider 选择（含自定义端点）→ API key → embedding key（可跳过）→ 模型；Esc 可随时跳过。
 - **pickers.mjs**：通用选择器（标题/条目/filter 输入/位置指示/↑ more ↓ more/栈式嵌套）；模型选择器两级（provider → model，可 fetch `/models` 拉取真实列表，失败回退预设）；`/provider` 添加/删除/设 key 的问答流程。
 
-## 8. 关键设计决策
+## 9. 关键设计决策
 
 | 决策 | 理由 |
 |---|---|
@@ -148,11 +148,11 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子任务面板 |
 
 
-## 9. Issue 变更段（2026-08-22 · 需求层）
+## 10. Issue 变更段（2026-08-22 · 需求层）
 
 > 来源：Gitee #IK9IXD / #IK9UWM、GitHub thincoder#1。三层面按板块同文档：需求层 + 设计层 + 测试层齐备。
 
-### 9.1 IK9IXD · 数学公式渲染（Unicode 近似）
+### 10.1 IK9IXD · 数学公式渲染（Unicode 近似）
 
 **总体需求**：CLI TUI 显示模型回答中的数学公式时，把 LaTeX 源码（行内 `$...$`、块级 `$$...$$`）转换为 Unicode 近似可读形式，消除 `\frac`/`\sum` 源码噪声——覆盖工程数学常见子集（issue 截图为 WLS 数据整定公式，行内+块级混合）。
 
@@ -168,7 +168,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - NF3 零依赖：自写表驱动转换器，不引第三方 LaTeX 库。
 - NF4 宽度正确：转换结果按显示宽度参与计算；组合字符（x̂ = x + U+0302）宽计 1——若 `stringWidth` 对组合字符计算有误需一并修正；表格对齐不破坏。
 
-### 9.2 IK9UWM · Windows 中文粘贴乱码
+### 10.2 IK9UWM · Windows 中文粘贴乱码
 
 **总体需求**：Windows 下 Ctrl+V 粘贴中文正确显示。根因已实测验证：`readClipboardText` 调 `powershell Get-Clipboard`，PowerShell 按 `[Console]::OutputEncoding`（中文系统 GBK/936）编码 stdout、node 按 UTF-8 解码 → 乱码。本机 65001 代码页读测正常，反证机制在代码页边界。
 
@@ -181,7 +181,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - NF1 兼容：任意系统代码页（936/65001）输出稳定 UTF-8；65001 系统行为不变。
 - NF2 无额外进程开销（同一 powershell 调用内完成）；失败仍返回空串（现状语义不变）。
 
-### 9.3 GitHub thincoder#1 · embedding 配置三件套落盘
+### 10.3 GitHub thincoder#1 · embedding 配置三件套落盘
 
 **总体需求**：CLI `/config` 保存 embedding key 时 baseURL/model 一并落盘，两端读同一 config.json 判定一致。现状：CLI 只落 apiKey（`cmd-config.mjs` setEmbedKey），baseURL/model 靠 `DEFAULTS.embedding` 内存兜底；扩展 `embed-config.mjs` 要求文件里三件套齐全 → 扩展判定"未配置"，用户需两端各配一遍。
 
@@ -194,7 +194,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 **非功能性需求**：
 - NF1 默认值单一来源（`DEFAULTS.embedding`），杜绝两端字面量漂移。
 
-### 9.1D · 设计层（公式渲染）
+### 10.1D · 设计层（公式渲染）
 
 **方案选型**：自写表驱动 Unicode 转换器，挂现有 markdown 渲染管线（路线 A）。否决项：完整 LaTeX 解析器（零依赖约束冲突 + 范围失控）、多行 unicodeart 排版（路线 B：与行式渲染模型冲突，render.mjs 按行做宽度数学，多行公式块需新块类型，收益边际）。
 
@@ -240,7 +240,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | T13 | 块级含 `\\`：`$$\min_{\hat{x}} \sum_i (…) \\ \text{s.t.} \ f(\hat{x})=0$$` | 输出两行近似（`\\` 处分行，每行独立近似） | F2 |
 | T14 | 反引号代码段 `` `$x_i$` `` 内的公式 | 不转换，原样保留（code-span 不透明） | 边界 |
 
-### 9.2D · 设计层（中文粘贴乱码）
+### 10.2D · 设计层（中文粘贴乱码）
 
 **方案**：Windows 分支 PowerShell 命令强制 UTF-8 输出，命令构造抽为纯函数便于单测。GBK(936) 机器是本 bug 的唯一复现环境（本机 65001 无法复现），故修复正确性由**命令级单测锁定**（断言 UTF-8 前缀存在）+ 本机行为不变回归验证。
 
@@ -261,7 +261,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | T3 | 本机（65001）手动 Ctrl+V 粘贴中文 | 输入框显示正确（行为不变验证） | NF1 |
 | T4 | mock execFile 失败（powershell 不存在/非零退出） | `readClipboardText` 返回 `""`，不抛出 | NF2 |
 
-### 9.3D · 设计层（embedding 三件套落盘）
+### 10.3D · 设计层（embedding 三件套落盘）
 
 **方案**：
 - `config.mjs`：`const DEFAULTS`（line 39）→ `export const DEFAULTS`
