@@ -97,12 +97,21 @@ export function createAgent({
     _compressFailures: 0,
     _emptyRetries: 0, // empty-response retry budget (per-run; reset on a fresh user turn)
     _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here
+    _pendingDistill: null, // in-flight end-of-run exploration distillation (SEND-STALL-DISTILL §2.1) — awaited at next run start / TUI exit flush
     _currentTurn: 0, _maxTurns: 100, // turn counter for status bar display
   }
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
 export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false } = {}) {
+  // Previous run's async exploration distillation must settle before this run pushes new
+  // input (SEND-STALL-DISTILL §2.2, N1): the compressed machine line is this run's starting
+  // point — await BEFORE prepareRun, or the history replacement would wipe the new input.
+  if (agent._pendingDistill) {
+    const p = agent._pendingDistill
+    agent._pendingDistill = null
+    await p
+  }
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(
     agent, input, callbacks,
     { depth, signal, overrideTurns, resume, systemPrompt: SYSTEM_PROMPT, disciplineRules: DISCIPLINE_RULES, mainOverlay: MAIN_OVERLAY },
@@ -309,9 +318,13 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       if (cr.action === "continue") continue
       if (depth === 0) {
         // End-of-run exploration distillation (CONTEXT-COMPACTION §5): this run's inline
-        // exploration results become one semantic note before the final return. Silent (N3):
-        // distillation failure must never block the return or lose history.
-        try { await summarizeRunExplorations(agent, callbacks, signal) } catch { /* silent (N3) */ }
+        // exploration results become one semantic note before the final return. Async
+        // (SEND-STALL-DISTILL §2.1): the turn-end signal goes out first — the promise hangs
+        // on agent._pendingDistill and settles at the next runAgent's start or the TUI's
+        // exit flush. Silent (N3): distillation failure must never block the return or lose
+        // history.
+        const distill = summarizeRunExplorations(agent, callbacks, signal).catch(() => {})
+        agent._pendingDistill = distill
       }
       return cr.content
     }

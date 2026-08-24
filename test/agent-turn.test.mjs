@@ -154,3 +154,71 @@ test("subagent relay: onToolCall eng-coder#3/read 路由 tool 名", async () => 
   assert.equal(ctx.state.subTasks["eng-coder#3"].tool, "read")
   assert.equal(ctx.state.subTasks["eng-coder#3"].toolArgs.path, "src/a.mjs")
 })
+// ---------------------------------------------------------------- 异步蒸馏：保存回调 + 退出 flush（SEND-STALL-DISTILL 2026-08-25）
+// AC5: onDistilled → 磁盘会话为压缩版；AC8: 退出路径先等（≤5s）蒸馏落定再最终保存。
+
+test("onDistilled: 压缩落位后触发保存——磁盘会话含摘要 note（AC5）", async () => {
+  const ctx = trackedCtx()
+  let callbacks = null
+  ctx.runAgent = async (_agent, _text, cb) => { callbacks = cb }
+  const snapshots = []
+  ctx.saveSession = (agent) => {
+    ctx.calls.saved++
+    snapshots.push(JSON.parse(JSON.stringify(agent.history)))
+  }
+  await runAgentTurn(ctx, "探索")
+  assert.ok(callbacks && typeof callbacks.onDistilled === "function", "callbacks 带 onDistilled 钩子")
+  // 模拟蒸馏完成：压缩历史替换 + 触发回调（真实路径：summarizeRunExplorations 内部调用）
+  ctx.agent.history.push({ role: "user", content: "[Exploration summary]\n压缩摘要" })
+  callbacks.onDistilled()
+  assert.ok(
+    snapshots.some((h) => h.some((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]"))),
+    "保存快照含摘要 note（磁盘会话为压缩版，AC5）",
+  )
+  assert.ok(ctx.calls.saved >= 1, "保存发生过")
+})
+
+test("退出 flush: 蒸馏在途时退出——先等蒸馏落定再最终保存（AC8 正常分支）", async () => {
+  const ctx = trackedCtx()
+  const order = []
+  ctx.runAgent = async (agent) => {
+    agent._pendingDistill = new Promise((resolve) => {
+      setTimeout(() => {
+        agent.history.push({ role: "user", content: "[Exploration summary]\n退出前落定" })
+        order.push("distill-done")
+        resolve()
+      }, 150)
+    })
+  }
+  ctx.saveSession = () => { ctx.calls.saved++; order.push("saved") }
+  await runAgentTurn(ctx, "任务")
+  assert.deepEqual(order, ["distill-done", "saved"], "退出路径先等蒸馏落定、再执行最终保存")
+  assert.ok(ctx.calls.saved >= 1)
+})
+
+test("退出 flush: 蒸馏超时上限内返回，不拖慢退出，仍保存（AC8 超时分支）", async () => {
+  const ctx = trackedCtx()
+  const slow = new Promise(() => {}) // 永不落定
+  ctx.runAgent = async (agent) => {
+    agent._pendingDistill = slow
+  }
+  ctx.distillFlushTimeoutMs = 50 // 测试用短超时（生产默认 5000）
+  const t0 = Date.now()
+  await runAgentTurn(ctx, "任务")
+  assert.ok(Date.now() - t0 < 1000, "超时上限内返回，退出不被蒸馏拖住")
+  assert.ok(ctx.calls.saved >= 1, "最终保存仍执行")
+  assert.equal(ctx.agent._pendingDistill, slow, "flush 不摘除 pendingDistill——下一轮 N1 await 仍有效（评审 #1 回归）")
+})
+
+test("退出 flush: 在途蒸馏跨轮存活——下一轮 runAgent 开头仍拿到同一 promise（N1）", async () => {
+  const ctx = trackedCtx()
+  const slow = new Promise(() => {}) // 蒸馏仍在途（flush 超时后）
+  ctx.runAgent = async (agent) => { agent._pendingDistill = slow }
+  ctx.distillFlushTimeoutMs = 50
+  await runAgentTurn(ctx, "第一轮")
+  // 第二轮（flush 窗口内提交的并发 turn）：runAgent 开头必须还能看到在途蒸馏
+  let seen = "not-called"
+  ctx.runAgent = async (agent) => { seen = agent._pendingDistill }
+  await runAgentTurn(ctx, "第二轮")
+  assert.equal(seen, slow, "第二轮 runAgent 开头仍拿到在途蒸馏 promise（N1 await 不被 TUI flush 破坏）")
+})

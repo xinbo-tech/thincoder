@@ -5,6 +5,11 @@ import { ansi, C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 
+/** Exit-flush bound for the async end-of-run distillation (SEND-STALL-DISTILL §2.5):
+ *  wait at most this long for the in-flight distill before the final session save —
+ *  never let shutdown hang on the background summary call. */
+const DISTILL_FLUSH_TIMEOUT_MS = 5000
+
 /** Tool execution start timestamps (performance.now ms), keyed by tool name. */
 const _toolTicks = Object.create(null)
 
@@ -325,6 +330,12 @@ export async function runAgentTurn(ctx, text) {
     onCompress: () => {
       pushLine("  [context] Context too long, auto-compacted (early conversation summarized by LLM, task state preserved)", C.warn)
     },
+    // Async distillation landed (SEND-STALL-DISTILL §2.3): the machine line was replaced by
+    // the compressed version — persist it so the session file ends up compressed. Silent:
+    // a save failure must never surface after the turn already returned.
+    onDistilled: () => {
+      try { saveSessionImpl(agent, state.lines) } catch { /* 静默 */ }
+    },
     onUsage: (usage) => {
       state.tokens.prompt += usage.prompt_tokens ?? 0
       state.tokens.completion += usage.completion_tokens ?? 0
@@ -429,6 +440,10 @@ export async function runAgentTurn(ctx, text) {
     state._advisorBlocks = []
     state.controller = null
     state.status = "Ready"
+    // FR1: status bar must recover immediately — the awaits below (title-gen, distill flush,
+    // save) may take seconds and the 1s ticker is already stopped, so render NOW or the bar
+    // keeps showing the stale "Processing..." until the turn function fully unwinds.
+    render()
     // Auto-collapse todo panel when all tasks done (matching kimi-code TUI; agent.tasks are preserved)
     if (state.tasks.length > 0 && state.tasks.every((t) => t.status === "done")) {
       state.tasks = []
@@ -447,6 +462,17 @@ export async function runAgentTurn(ctx, text) {
       } catch {
         // Title generation failure is non-fatal
       }
+    }
+    // Exit flush (SEND-STALL-DISTILL §2.5): the round-end distillation runs async — before
+    // the final save, give it a bounded window to land the compressed history on disk.
+    // The next turn's runAgent would await it anyway; this covers the real exit path
+    // (no next turn). Bounded: never let shutdown wait longer than the timeout.
+    // NOTE: the promise is NOT detached (no `agent._pendingDistill = null` here) — a submit
+    // during this window starts the next runAgentTurn concurrently, and its runAgent start
+    // MUST still see the in-flight distill to await it BEFORE pushing input (N1). If the
+    // flush times out, the next runAgent's start-await takes over — safe by construction.
+    if (agent._pendingDistill) {
+      await Promise.race([agent._pendingDistill, new Promise((r) => setTimeout(r, ctx.distillFlushTimeoutMs ?? DISTILL_FLUSH_TIMEOUT_MS))])
     }
     // Save session after every turn (survives crashes)
     try {

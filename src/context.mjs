@@ -424,8 +424,9 @@ async function distillExplorations(history, start, provider, signal) {
  * End-of-run exploration distillation (runAgent's final return). Shrinks the MACHINE line
  * (agent.history) only; agent._fullHistory is never touched. Triggers when this run added ≥3
  * exploration tool results; on LLM failure it silently keeps the original history (N3).
- * `callbacks` is accepted for call-site parity with the other lifecycle hooks — the distillation
- * is silent by design and never streams (D11).
+ * The distillation itself is silent and never streams (D11); `callbacks.onDistilled` fires
+ * ONLY after the replacement actually lands (never on no-op/failure) — callers persist the
+ * compressed session (SEND-STALL-DISTILL §2.3).
  */
 export async function summarizeRunExplorations(agent, callbacks, signal) {
   const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal)
@@ -435,4 +436,7 @@ export async function summarizeRunExplorations(agent, callbacks, signal) {
   // Invalidate so the next compaction check re-estimates instead of over-counting stale history.
   agent._lastPromptTokens = null
   agent._usageAtLen = null
+  // The compressed machine line must reach the disk: the run's own save already happened,
+  // so without this hook the async distill would leave the session un-compressed on exit.
+  callbacks.onDistilled?.()
 }

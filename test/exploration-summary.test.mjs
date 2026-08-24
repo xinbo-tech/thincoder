@@ -274,3 +274,47 @@ test("中途压缩重建机器线 → _runStartHistoryLen 重置到 verbatim tai
     server.close()
   }
 })
+// ─── D: onDistilled 回调（SEND-STALL-DISTILL §2.3） ───────────────────
+// 蒸馏异步化后，保存必须由 onDistilled 触发：回调仅在历史被实际替换时发出一次。
+
+test("onDistilled: 实际替换历史后触发一次（AC3）", async () => {
+  const { server, port } = await mockServer(okSummary("distilled note"))
+  try {
+    const pre = [{ role: "user", content: "investigate" }]
+    const agent = makeAgent(port, pre, makeExplorationRun(3))
+    let called = 0
+    await summarizeRunExplorations(agent, { onDistilled: () => called++ }, undefined)
+    assert.equal(called, 1, "替换历史后 onDistilled 恰好触发一次")
+    assert.equal(countSummaryNotes(agent.history), 1, "压缩 note 已落位")
+  } finally {
+    server.close()
+  }
+})
+
+test("onDistilled: <3 探索结果不触发（无替换）", async () => {
+  const { server, port, requests } = await mockServer(okSummary("should not be called"))
+  try {
+    const pre = [{ role: "user", content: "investigate" }]
+    const agent = makeAgent(port, pre, makeExplorationRun(2))
+    let called = 0
+    await summarizeRunExplorations(agent, { onDistilled: () => called++ }, undefined)
+    assert.equal(called, 0, "无替换不触发 onDistilled")
+    assert.equal(requests.length, 0, "<3 条不发起摘要请求")
+  } finally {
+    server.close()
+  }
+})
+
+test("onDistilled: 蒸馏失败不触发（历史原样，AC4）", async () => {
+  const { server, port } = await mockServer(fail401())
+  try {
+    const pre = [{ role: "user", content: "investigate" }]
+    const agent = makeAgent(port, pre, makeExplorationRun(3))
+    let called = 0
+    await summarizeRunExplorations(agent, { onDistilled: () => called++ }, undefined)
+    assert.equal(called, 0, "失败不触发 onDistilled（历史未被替换）")
+    assert.equal(countSummaryNotes(agent.history), 0, "失败不产生 note")
+  } finally {
+    server.close()
+  }
+})
