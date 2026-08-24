@@ -10,7 +10,7 @@ import { checklistTool } from "./checklist.mjs";
 import { lintTool } from "./linter.mjs";
 import { lspTool } from "./lsp.mjs";
 import { executeTool } from "./execute.mjs";
-import { fileOpsTool, processTool, getCurrentTimeTool, sleepTool } from "./ops.mjs";
+import { fileOpsTool, processTool, getCurrentTimeTool } from "./ops.mjs";
 import { treeTool } from "./tree.mjs";
 
 export const builtinTools = [
@@ -19,7 +19,7 @@ export const builtinTools = [
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
   checklistTool, lintTool, lspTool, executeTool,
-  fileOpsTool, processTool, getCurrentTimeTool, sleepTool,
+  fileOpsTool, processTool, getCurrentTimeTool,
   treeTool,
 ];
 
@@ -29,6 +29,6 @@ export {
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
   checklistTool, lintTool, lspTool, executeTool,
-  fileOpsTool, processTool, getCurrentTimeTool, sleepTool,
+  fileOpsTool, processTool, getCurrentTimeTool,
   treeTool,
 };

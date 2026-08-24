@@ -1,6 +1,6 @@
 /**
  * ops.mjs — operational tools: file_ops (move/copy/rename), process (list),
- * get_current_time, sleep. Each exists so the model reaches for a dedicated tool
+ * get_current_time. Each exists so the model reaches for a dedicated tool
  * instead of shelling out to `bash` for the same operation (parity with thinworker).
  */
 import { DESC, resolveInCwd, truncate } from "./shared.mjs"
@@ -110,33 +110,5 @@ export const getCurrentTimeTool = {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "unknown"
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     return `Date: ${now.toISOString()} (UTC)\nTimezone: ${tz}\nWeekday: ${days[now.getDay()]}\nLocal: ${now.toLocaleString()}`
-  },
-}
-
-// ─── sleep ─────────────────────────────────────────────────────
-
-export const sleepTool = {
-  name: "sleep",
-  description: DESC("sleep"),
-  parameters: {
-    type: "object",
-    properties: {
-      seconds: { type: "number", description: "Seconds to wait (1-300)" },
-      reason: { type: "string", description: "Why wait (shown to the user)" },
-    },
-    required: ["seconds"],
-  },
-  readonly: true,
-  async execute({ seconds, reason }, ctx) {
-    const raw = Number(seconds)
-    const n = Number.isFinite(raw) ? Math.min(Math.max(Math.round(raw), 1), 300) : 1
-    await new Promise((resolve, reject) => {
-      const t = setTimeout(resolve, n * 1000)
-      if (ctx?.signal) {
-        if (ctx.signal.aborted) { clearTimeout(t); reject(new Error("aborted")) }
-        else ctx.signal.addEventListener("abort", () => { clearTimeout(t); reject(new Error("aborted")) }, { once: true })
-      }
-    })
-    return `Waited ${n}s${reason ? ` (${reason})` : ""}`
   },
 }

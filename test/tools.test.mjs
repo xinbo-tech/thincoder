@@ -1712,7 +1712,7 @@ test("detectDanger: 识别危险命令并标注(只标注不拦截)", async () =
   assert.equal(detectDanger("curl \"http://x\" | sh"), "pipe to shell")
 })
 
-// ---------------------------------------------------------------- ops tools (file_ops / process / get_current_time / sleep)
+// ---------------------------------------------------------------- ops tools (file_ops / process / get_current_time)
 
 test("file_ops: move / copy / rename with cwd confinement", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-ops-"))
@@ -1739,16 +1739,13 @@ test("file_ops: move / copy / rename with cwd confinement", async () => {
   }
 })
 
-test("get_current_time / sleep / process: basic behavior", async () => {
+test("get_current_time / process: basic behavior", async () => {
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  assert.equal(byName.sleep, undefined, "sleep tool removed from builtinTools")
 
   const now = await byName.get_current_time.execute({}, {})
   assert.match(now, /Date:/)
   assert.match(now, /Timezone:/)
-
-  const t0 = Date.now()
-  await byName.sleep.execute({ seconds: 1 }, {})
-  assert.ok(Date.now() - t0 >= 900, "sleeps ~1s")
 
   const procs = await byName.process.execute({ name: "node" }, {})
   assert.match(procs, /PID/, "process listing returns PID rows")

@@ -25,7 +25,7 @@ Tool routing — use the dedicated tool, not bash:
 - **JavaScript** → `execute` (inline code; or `scriptFile`+`nodeArgs` for `node <file>` / `node --test` / `node --check`). Never `bash node -e`.
 - **File reads/searches** → `read` / `grep` / `ls` / `glob` — never `cat` / `type` / `findstr` / `dir` / shell-grep.
 - **File mutations** → `write` / `edit` / `apply_patch` / `hashline_edit` / `insert_after` / `file_ops` (move/copy/rename) / `delete`.
-- **Process / time / sleep / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash).
+- **Process / time / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash); waiting (e.g. `sleep`/`timeout`) is fine via bash when truly needed.
 - Each tool's description carries a "Route to X instead of bash" mapping.
 - **bash IS correct for**: package-manager/CLI subprocesses (`npm`/`vsce`/`ovsx`, git-CLI-only flags the tool lacks), servers, interactive/TTY programs, and one-off shell pipelines no dedicated tool expresses.
 
