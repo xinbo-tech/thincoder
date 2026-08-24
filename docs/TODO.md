@@ -26,8 +26,8 @@
 
 ### 工程模式 · code review 评审范围显式化（2026-08-01）
 
-- [ ] code review 评审范围改为 task 的 Docs involved + 验收标准（不再遍历 git diff），与已实现的 doc review documents 机制对齐
-- [ ] setup.mjs 提示词解耦（工程模式不注入 main.md/discipline.md；METHODOLOGY 缺失降级为工程模板+警告）——设计见 PROMPT-DECOUPLING.md
+- [x] code review 评审范围改为 task 的 Docs involved + 验收标准——2026-08-25 核对关闭（ENGINEERING-MODE.md FR4：eng-coder 返回后父代理自动 advisor(type=code)，范围=Docs involved+验收标准）
+- [x] setup.mjs 提示词解耦——已实现（PROMPT-DECOUPLING.md 定稿后落地，工程提示词独立组装）
 - [ ] 多设计并行 token 映射化（单值 token → {designPath: token}）
 
 ### Issue 批量（2026-08-22，来源：Gitee/GitHub issue 巡检）

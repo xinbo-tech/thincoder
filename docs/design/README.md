@@ -7,7 +7,7 @@
 
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
-| 架构 | `ARCHITECTURE.md` | 权威源。`ARCHITECTURE-v2.md`（v2 团队记忆）同板块——**待合并（TODO）** |
+| 架构 | `ARCHITECTURE.md` | 权威源。`ARCHITECTURE-v2.md`（2026-08 方向性草案，v2 团队记忆，未启动）归档保留，不合并——启动 v2 时以其为输入 |
 | 需求与决策 | `REQUIREMENTS.md` | 需求讨论记录 |
 | 功能全览 | `FEATURES.md` | |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
@@ -22,11 +22,11 @@
 | 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25） |
 | 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 16K→64K（2026-08-24） |
 | Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限调整（2026-08-24） |
-| Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续）同板块——**待合并（TODO）** |
-| 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（工作循环）同板块——**待合并（TODO）** |
+| Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留——机制自成一体 |
+| 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md 提示词）同板块保留——历史决策记录 |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
-| 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制统一规范）、`VERIFY-DOCONLY.md`（verify 文档快路径）同板块——**待合并（TODO）** |
-| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md` 同板块——**待合并（TODO）** |
+| 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）同板块独立保留——均为已实现专题 |
+| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`（输入框行为契约）、`TUI-TOOL-OUTPUT.md`（工具输出渲染）同板块独立保留——专题契约各自维护 |
 | 记忆 | `MEMORY.md` | |
 | Provider | `PROVIDER.md` | |
 | Proxy | `PROXY.md` | |
@@ -34,7 +34,7 @@
 | ACP 协议 | `ACP-CLIENT.md` | |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
-| 评估 | `EVALUATION.md` | 权威源。`COMPETITIVE-CLI-2026.md`（竞争评估）同板块——**待合并（TODO）** |
+| 评估 | `EVALUATION.md` | 权威源。`COMPETITIVE-CLI-2026.md`（2026-08-04 时点竞评快照）归档保留，不合并 |
 | 路线图 | `ROADMAP-0.9.0.md` | |
 | 参考项目分析 | `KIMI-CODE-PROMPT-ANALYSIS.md`、`TTSR-ANALYSIS.md` | 各自独立主题（不同参考项目），不合并 |
 
@@ -44,7 +44,7 @@
 2. **先查地图定位归属**：写文档前先查本表——找到所属板块就改该板块文档，**不得为既有板块新建文件**。
 3. **新板块才新建**：确无归属的新板块才新建文档，并立即在本表登记。
 4. **单一权威源**：同一机制只在一处详述；其余文档引用（指路），不复制内容——多处复制必然漂移矛盾。
-5. **存量待合并**：表中标注"待合并（TODO）"的是存量碎片，合并不在此表范围内直接进行——统一记录于 `docs/TODO.md`。
+5. **存量碎片处理（2026-08-25 收口）**：历史"待合并（TODO）"标注已全部处理——真碎片已合并（vscode Settings 6→1），方向性/时点文档明确为归档，已实现专题明确为独立保留。新增同主题内容须先查本表归属。
 
 ## 变更记录
 

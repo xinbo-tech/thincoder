@@ -1,6 +1,6 @@
 # TURN-CAP-CONTINUE — 所有 agent 撞轮数墙可无限继续
 
-> 状态：2026-08-17 决定；实现中（与 VS Code 插件同源设计，见插件端 docs/design/TURN-CAP-CONTINUE.md）
+> 状态：**已实现**（2026-08-17，CHANGELOG 0.12.33「撞轮数墙可无限继续」）。与 VS Code 插件端同源——两端语义一致，本文件为 CLI 侧实现记录，插件端 docs/design/TURN-CAP-CONTINUE.md 为其实现记录
 > 用户决定：**所有 agent（主/子/飞刀/会诊）撞轮数墙都应弹"继续"，且不限次数。**
 
 ## 统一语义
