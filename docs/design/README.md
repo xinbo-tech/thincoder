@@ -14,6 +14,10 @@
 | 方法论 | `METHODOLOGY.md` | 与仓库根 METHODOLOGY.md 对应 |
 | 会话 | `SESSION.md` | |
 | 上下文压缩 | `CONTEXT-COMPACTION.md` | |
+| 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25） |
+| 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25） |
+| 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 16K→64K（2026-08-24） |
+| Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限调整（2026-08-24） |
 | Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续）同板块——**待合并（TODO）** |
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（工作循环）同板块——**待合并（TODO）** |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
@@ -41,3 +45,5 @@
 ## 变更记录
 
 - 2026-08-21：初版（文档归属纪律，规格见 `AGENT-LOOP.md` §12）
+- 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
+- 2026-08-25：新增板块「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）与「工具移除」（SLEEP-REMOVAL-*）
