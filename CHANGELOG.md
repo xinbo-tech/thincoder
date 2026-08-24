@@ -2,6 +2,26 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.43] — 2026-08-25
+
+### Added
+
+- **评审超时可配置**：`agent.advisor.timeoutMs`（默认 600s，原固定 300s）——运行期读取，非法值（0/负数/字符串）回退默认；长评审不再被固定墙钟截断
+- **主 agent 轮次上限默认 100 → 200**：大任务（多文件重构、修复-验证循环）不轻易撞墙
+
+### Changed
+
+- **工具输出限制全链路 16K → 64K（65536）**：落盘阈值 `TOOL_RESULT_OFFLOAD_LIMIT`/`TOOL_RESULT_PREVIEW`、advisor 内部截断 `MAX_RESULT_CHARS` 全部放宽——大输出（advisor 评审、大文件读取）不再被过早落盘/截断
+- **轮末探索蒸馏异步化**：回合结束信号先行（TUI 状态栏立即恢复，不再等第二次静默 LLM 调用）；蒸馏 promise 挂 `agent._pendingDistill`，下一轮开头 await（摘要必在下一轮 LLM 调用前落位），退出前 bounded flush（≤5s）；`onDistilled` 回调触发压缩版落盘
+
+### Removed
+
+- **`sleep` 工具删除**：编程场景零真实使用（会话历史 0 次调用），且工具说明误导模型在同步工具（advisor/subagent）后 sleep 空等——白耗 10-300 秒；等待需求改走 bash 内联命令；内部速率限制/重试退避（`_rateHooks.sleep`）不受影响
+
+### Fixed
+
+- 工具输出落盘失败回退截断对齐 64K；旧阈值残留自动化断言（`MAX_RESULT_CHARS` 导出 + import 断言、helpers/run.mjs 边界匹配无残留）
+
 ## [0.12.42] — 2026-08-24
 
 ### Changed
