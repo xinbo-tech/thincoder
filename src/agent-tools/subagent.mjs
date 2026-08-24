@@ -77,6 +77,14 @@ export const subagentTool = {
     const parent = ctx.agent
     const role = args.role
 
+    // Role normalization + whitelist (2026-08-25, coder-leak fix): exact-string gates let
+    // variant roles ("Coder", " coder") bypass BOTH mode gates and fall through to
+    // full tools / no overlay — a full-write coder without design review. Schema enums are
+    // advisory; providers don't enforce them. Fail closed on unknown roles.
+    const ROLES = new Set(["explore", "plan", "coder", "eng-coder"])
+    if (!ROLES.has(role)) {
+      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder (exact spelling).`)
+    }
     // Role is mutually exclusive per mode: normal mode → "coder", engineering mode → "eng-coder"
     if (parent.config?.agent?.engineering && role === "coder") {
       throw new Error("Engineering mode: use role='eng-coder' for implementation tasks.")

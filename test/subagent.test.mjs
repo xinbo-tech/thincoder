@@ -175,3 +175,28 @@ test("subagent tool: user declines at the wall → partial-work return, no resum
   }
 })
 
+
+// ─── variant roles fail closed (coder-leak fix, 2026-08-25) ─────────────────────
+// Exact-string mode gates let "Coder"/" coder" slip through BOTH gates into a full-write
+// child. Unknown roles now throw before any mode check. (CLI parity with the plugin.)
+test("variant roles fail closed — coder leak fix (2026-08-25)", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const makeCtx = (engineering) => ({
+    agent: { config: { agent: { engineering } }, _touchedFiles: [], history: [], cwd: process.cwd() },
+    cwd: process.cwd(), callbacks: {}, depth: 0,
+  })
+  for (const role of ["Coder", "CODER", " coder", "eng-coder ", "Explore", "bogus", ""]) {
+    for (const eng of [true, false]) {
+      await assert.rejects(
+        subagentTool.execute({ task: "x", role }, makeCtx(eng)),
+        /Unknown subagent role/,
+        `role=${JSON.stringify(role)} engineering=${eng} must fail closed`,
+      )
+    }
+  }
+  // Exact roles keep their mode-gate semantics
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "coder" }, makeCtx(true)),
+    /use role='eng-coder'/,
+  )
+})
