@@ -7,6 +7,11 @@ import {
   resolveInCwd,
   resolveExternal,
   normalizeEOL,
+  detectFileEol,
+  joinWithEol,
+  majorityEol,
+  findCandidates,
+  FFFD_WARNING,
 } from "./shared.mjs";
 import { specForModel } from "../config.mjs";
 import { createHash } from "node:crypto";
@@ -160,7 +165,12 @@ export const writeTool = {
     await mkdir(dirname(abs), { recursive: true })
     const st = await stat(abs).catch(() => null)
     if (st?.isDirectory()) throw new Error(`Path is a directory: ${args.path}`)
-    await writeFile(abs, args.content, "utf8")
+    // EOL semantics: overwriting an existing file restores ITS original EOL style (F1);
+    // a new file follows the directory's majority style, defaulting to LF (F2).
+    const prev = st ? await readFile(abs, "utf8").catch(() => null) : null
+    const eol = prev != null ? detectFileEol(prev) : majorityEol(dirname(abs))
+    const content = eol === "\r\n" ? normalizeEOL(args.content).replace(/\n/g, "\r\n") : args.content
+    await writeFile(abs, content, "utf8")
     markDirty(abs)
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Wrote ${args.content.length} chars to ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
@@ -189,15 +199,28 @@ export const editTool = {
     if (!args.old_string) {
       throw new Error("old_string must not be empty (empty string matches everywhere and would corrupt the file)")
     }
-    const content = normalizeEOL(await readFile(abs, "utf8"))
+    const raw = await readFile(abs, "utf8")
+    const content = normalizeEOL(raw)
     const occurrences = content.split(args.old_string).length - 1
     if (occurrences === 0) {
       // Give clues to help the model locate: first-line preview + common causes
       const preview = args.old_string.slice(0, 100).split("\n")[0]
+      // Similarity candidates (LCS, line-level, top 3, score ≥ 0.5) — turns the
+      // "not found" black box into a pointer at the most likely intended line.
+      // Multi-line old_string: only its first line is scored (marked accordingly).
+      const cands = findCandidates(content.split("\n"), args.old_string)
+      let candText = ""
+      if (cands.length > 0) {
+        const header = args.old_string.includes("\n")
+          ? `  similar lines (old_string line 1: "${args.old_string.split("\n")[0].slice(0, 80)}"):`
+          : "  similar lines:"
+        candText = "\n" + header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
+      }
       throw new Error(
         `old_string not found in ${args.path}\n` +
         `  searched: "${preview}${args.old_string.length > 100 ? "…" : ""}"\n` +
-        `  hints: whitespace mismatch? file already changed? try reading the file first`
+        `  hints: whitespace mismatch? file already changed? try reading the file first` +
+        candText
       )
     }
     if (occurrences > 1 && !args.replace_all) {
@@ -207,7 +230,11 @@ export const editTool = {
       ? content.split(args.old_string).join(args.new_string)
       // Functional replacement: avoid $-substitution patterns in new_string (match string / backreference) being expanded
       : content.replace(args.old_string, () => args.new_string)
-    await writeFile(abs, updated, "utf8")
+    // Write back in the file's ORIGINAL EOL style (first-newline rule) — a CRLF
+    // file must not come back as LF (that rewrites every line in the diff).
+    // normalizeEOL first: new_string may carry \r\n (e.g. pasted from a raw CRLF
+    // read); without normalizing, split leaves stray \r and CRLF join makes \r\r\n.
+    await writeFile(abs, joinWithEol(normalizeEOL(updated).split("\n"), raw), "utf8")
     markDirty(abs)
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Edited ${args.path}: replaced ${args.replace_all ? occurrences : 1} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
@@ -244,7 +271,8 @@ export const insertAfterTool = {
         `Read the file again (read tool) to refresh line numbers, then retry insert_after.`
       )
     }
-    const text = normalizeEOL(await readFile(abs, "utf8"))
+    const raw = await readFile(abs, "utf8") // original bytes — EOL detection needs the file's real line endings
+    const text = normalizeEOL(raw)
     const lines = text.split("\n")
 
     let targetLine
@@ -274,8 +302,10 @@ export const insertAfterTool = {
       throw new Error("Either after_line or after_regex is required")
     }
 
-    lines.splice(targetLine, 0, args.content)
-    const updated = lines.join("\n")
+    lines.splice(targetLine, 0, normalizeEOL(args.content))
+    // Write back in the file's ORIGINAL EOL style (review R9#2: same bug class as
+    // edit — a CRLF file must not silently become LF here either).
+    const updated = joinWithEol(lines, raw)
     await writeFile(abs, updated, "utf8")
     markDirty(abs)
     const diff = gitDiffOne(ctx.cwd, abs)
@@ -310,7 +340,11 @@ export const hashlineEditTool = {
   async execute(args, ctx) {
     const abs = resolveInCwd(ctx, args.path)
     if (!args.old_hashes?.length) throw new Error("old_hashes must not be empty — read the file with hashes=true to get line hashes")
-    const content = normalizeEOL(await readFile(abs, "utf8"))
+    const raw = await readFile(abs, "utf8")
+    const content = normalizeEOL(raw)
+    // Encoding-corruption probe: U+FFFD means the file is not clean UTF-8 — hash
+    // addressing may be unreliable. Warn (never block).
+    const corrupted = content.includes("\uFFFD")
     const lines = content.split("\n")
     const fileHashes = lines.map((l) => hashLine(l))
     const target = args.old_hashes
@@ -334,7 +368,8 @@ export const hashlineEditTool = {
       const preview = target.join(" ")
       throw new Error(
         `Hash sequence not found in ${args.path}: ${preview}\n` +
-        `The file may have been modified since you last read it. Current hashes (first ${maxShow} lines):\n${hashDump}`
+        `The file may have been modified since you last read it. Current hashes (first ${maxShow} lines):\n${hashDump}` +
+        (corrupted ? `\n${FFFD_WARNING}` : "")
       )
     }
 
@@ -359,13 +394,14 @@ export const hashlineEditTool = {
 
     const pos = matches[0]
     // Replace: remove old lines, insert new lines at the same position
-    const newLines = args.new_content.split("\n")
+    const newLines = normalizeEOL(args.new_content).split("\n") // normalize: CRLF in new_content would join into \r\r\n
     lines.splice(pos, target.length, ...newLines)
-    const updated = lines.join("\n")
+    // Write back in the file's original EOL style (same rule as edit / apply_patch).
+    const updated = joinWithEol(lines, raw)
     await writeFile(abs, updated, "utf8")
     markDirty(abs)
     const diff = gitDiffOne(ctx.cwd, abs)
-    return `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
+    return `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}${corrupted ? `\n${FFFD_WARNING}` : ""}`
   },
 }
 

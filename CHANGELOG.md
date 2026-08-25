@@ -2,6 +2,22 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.45] — 2026-08-26
+
+### Fixed
+
+- **编辑工具 CRLF 行尾写回丢失**：`edit` / `apply_patch` / `hashline_edit` / `insert_after` 在 Windows CRLF 文件上写回全部被转成 LF（normalize 后直接落盘）——现按"首个换行符类型"检测原文件行尾并原样恢复，diff 不再整文件重写；`new_string`/`new_content` 含 CRLF 时先归一化再转换，杜绝 `\r\r\n`
+- **`old_string not found` 黑盒报错**：失败时返回相似度最高的 top 3 候选行（行号+预览+LCS 相似度，阈值 0.5，多行 old_string 只对首行并标注 `old_string line 1:`）——从盲猜变导航
+
+### Added
+
+- **`write` 行尾语义**：覆盖既有文件按原行尾恢复；新建文件默认 LF，同目录多数派为 CRLF 时跟随（≤20 文件嗅探）
+- **`hashline_edit` 编码损坏探测**：文件含 U+FFFD（替换符）时结果追加警告（编码可能已损坏、哈希寻址可能不可靠），不阻断
+
+### Changed
+
+- 候选相似度 LCS 计算复用模块级 DP 缓冲（大文件失败路径不再有每行分配的 GC 压力）
+
 ## [0.12.44] — 2026-08-25
 
 ### Fixed

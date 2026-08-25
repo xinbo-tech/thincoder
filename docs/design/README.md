@@ -27,6 +27,7 @@
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md 提示词）同板块保留——历史决策记录 |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）同板块独立保留——均为已实现专题 |
+| 编辑工具可靠性 | `EDIT-TOOL-EOL-REQUIREMENTS.md`、`EDIT-TOOL-EOL-DESIGN.md` | edit/apply_patch/hashline_edit/write 行尾语义 + edit 候选提示 + 编码探测（2026-08-26，走查痛点实证；两端实现） |
 | TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`（输入框行为契约）、`TUI-TOOL-OUTPUT.md`（工具输出渲染）同板块独立保留——专题契约各自维护 |
 | 记忆 | `MEMORY.md` | |
 | Provider | `PROVIDER.md` | |

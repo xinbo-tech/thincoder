@@ -1,17 +1,16 @@
 import {
   DESC,
   autoSyntaxCheck,
-  resolveInCwd
+  resolveInCwd,
+  normalizeEOL,
+  detectFileEol,
+  majorityEol
 } from "./shared.mjs";
 import { markDirty } from "./file.mjs";
 import { execFileSync } from "node:child_process";
-import { mkdir } from "node:fs/promises";
-import { readFile } from "node:fs/promises";
-import { stat, lstat } from "node:fs/promises";
-import { writeFile } from "node:fs/promises";
-import { unlink } from "node:fs/promises";
+import { mkdir, readFile, lstat, writeFile, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join, relative, dirname } from "node:path";
+import { relative, dirname } from "node:path";
 
 /**
  * Parse a unified diff: returns [{ path, isNew, hunks: [{ ops: [{type:" "|"-"|"+", text}] }] }]
@@ -121,18 +120,22 @@ export const applyPatchTool = {
       const abs = resolveInCwd(ctx, f.path)
       if (f.isNew) {
         if (existsSync(abs)) throw new Error(`Cannot create ${f.path}: file already exists`)
-        const content = f.hunks.flatMap((h) => h.ops.filter((o) => o.type === "+").map((o) => o.text)).join("\n") + "\n"
+        // New file: follow the directory's majority EOL style (default LF).
+        const eol = majorityEol(dirname(abs))
+        const content = f.hunks.flatMap((h) => h.ops.filter((o) => o.type === "+").map((o) => o.text)).join(eol) + eol
         planned.push({ abs, path: f.path, content, isNew: true })
       } else {
         const original = await readFile(abs, "utf8").catch(() => { throw new Error(`File not found: ${f.path}`) })
-        const eol = original.includes("\r\n") ? "\r\n" : "\n"
-        const lines = original.split("\n")
-        applyHunks(lines, f.hunks, eol, f.path)
-        planned.push({ abs, path: f.path, content: lines.join("\n"), isNew: false })
+        const eol = detectFileEol(original)
+        // Apply hunks in the normalized LF domain, then write back joined with the
+        // file's ORIGINAL EOL style — join("\n") here used to rewrite CRLF files as LF.
+        const lines = normalizeEOL(original).split("\n")
+        applyHunks(lines, f.hunks, "\n", f.path)
+        planned.push({ abs, path: f.path, content: lines.join(eol), isNew: false })
       }
     }
     // Multi-file write: write all to .tmp first, rename only after all succeed — failure cleans up written .tmp without affecting committed files
-    const { rename, unlink } = await import("node:fs/promises")
+    const { rename } = await import("node:fs/promises") // unlink already statically imported
     const written = []
     try {
       for (const p of planned) {

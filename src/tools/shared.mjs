@@ -4,7 +4,7 @@
  */
 
 import { spawn, execFileSync, execFile } from "node:child_process"
-import { readFileSync, existsSync, realpathSync } from "node:fs"
+import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
 import { dirname, join, resolve, relative, isAbsolute, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -54,6 +54,106 @@ export function isPrivateHost(hostname) {
 export function normalizeEOL(text) {
   return text.replace(/\r\n/g, "\n")
 }
+
+/** Detect a file's EOL style by the type of its FIRST newline: "\r\n" first →
+ *  the whole file is written back as CRLF; a bare "\n" or no newline → LF.
+ *  Never counts occurrences (mixed files follow the first line's style). */
+export function detectFileEol(text) {
+  const i = text.indexOf("\n")
+  return i > 0 && text[i - 1] === "\r" ? "\r\n" : "\n"
+}
+
+/** Join lines with the EOL style detected from the original text (write-back restore). */
+export function joinWithEol(lines, originalText) {
+  return lines.join(detectFileEol(originalText))
+}
+
+const MAJORITY_EOL_MAX_FILES = 20
+const EOL_SNIFF_BYTES = 4096
+
+/** Majority EOL style of a directory's existing files (≤20 files, first 4KB each).
+ *  New files follow the directory's majority style; empty dir / tie / LF majority → "\n". */
+export function majorityEol(dirPath) {
+  let names
+  try { names = readdirSync(dirPath) } catch { return "\n" }
+  let crlf = 0, lf = 0
+  for (const name of names) {
+    if (crlf + lf >= MAJORITY_EOL_MAX_FILES) break
+    try {
+      const p = join(dirPath, name)
+      if (!statSync(p).isFile()) continue
+      const fd = openSync(p, "r")
+      let head = ""
+      try {
+        const buf = Buffer.alloc(EOL_SNIFF_BYTES)
+        const n = readSync(fd, buf, 0, EOL_SNIFF_BYTES, 0)
+        head = buf.subarray(0, n).toString("utf8")
+      } finally {
+        closeSync(fd)
+      }
+      if (detectFileEol(head) === "\r\n") crlf++
+      else lf++
+    } catch { /* unreadable entry — skip */ }
+  }
+  return crlf > lf ? "\r\n" : "\n"
+}
+
+const CANDIDATE_MAX_LEN = 500
+const CANDIDATE_PREVIEW_LEN = 80
+
+/** Longest-common-substring length (rolling-row DP). Inputs are pre-truncated by the caller. */
+function lcsLength(a, b) {
+  // Reused DP buffers (review R9#6): per-line allocation caused GC pressure on
+  // large files — hoist two module-level rows, grow to fit, swap by index.
+  const need = b.length + 1
+  if (_lcsBuf0.length < need) {
+    const size = Math.max(need, _lcsBuf0.length * 2)
+    _lcsBuf0 = new Uint16Array(size)
+    _lcsBuf1 = new Uint16Array(size)
+  }
+  let prev = _lcsBuf0, cur = _lcsBuf1
+  prev.fill(0, 0, need)
+  let best = 0
+  for (let i = 1; i <= a.length; i++) {
+    cur[0] = 0
+    const ca = a.charCodeAt(i - 1)
+    for (let j = 1; j < need; j++) {
+      if (ca === b.charCodeAt(j - 1)) {
+        const v = prev[j - 1] + 1
+        cur[j] = v
+        if (v > best) best = v
+      } else cur[j] = 0 // must reset — buffer is reused
+    }
+    const t = prev; prev = cur; cur = t
+  }
+  return best
+}
+let _lcsBuf0 = new Uint16Array(0), _lcsBuf1 = new Uint16Array(0)
+/** Line-level similarity candidates for a failed edit: score = LCS(oldString, line) / max(len).
+ *  Multi-line old_string matches on its FIRST line only (failures usually diverge there).
+ *  Both sides are truncated to 500 chars before scoring so minified files can't blow the budget.
+ *  Returns up to topN [{ line (1-based), preview, score }] with score >= threshold, best first. */
+export function findCandidates(lines, oldString, topN = 3, threshold = 0.5) {
+  const needle = oldString.split("\n")[0].slice(0, CANDIDATE_MAX_LEN)
+  if (!needle) return []
+  const scored = []
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]
+    if (!raw) continue
+    const line = raw.length > CANDIDATE_MAX_LEN ? raw.slice(0, CANDIDATE_MAX_LEN) : raw
+    const longer = Math.max(needle.length, line.length)
+    const shorter = Math.min(needle.length, line.length)
+    // LCS ≤ shorter side — a length ratio below the threshold can never reach it; skip the DP.
+    if (shorter / longer < threshold) continue
+    const score = lcsLength(needle, line) / longer
+    if (score >= threshold) scored.push({ line: i + 1, preview: raw.slice(0, CANDIDATE_PREVIEW_LEN), score })
+  }
+  scored.sort((a, b) => b.score - a.score || a.line - b.line)
+  return scored.slice(0, topN)
+}
+
+/** Appended to hashline_edit results when the file contains U+FFFD (encoding-corruption probe). */
+export const FFFD_WARNING = "⚠ file contains U+FFFD (replacement char) — encoding may be corrupted; hash-based addressing may be unreliable. Consider fixing the file encoding first."
 
 /** Convert to OpenAI tools parameter format */
 export function toOpenAISchema(tool) {

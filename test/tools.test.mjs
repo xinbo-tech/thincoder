@@ -729,6 +729,18 @@ test("checkpoint 工具：list 的文件名做 XML 转义（防注入模型上�
     const created = await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx)
     const id = created.match(/Checkpoint (\S+) created/)[1]
 
+
+    const overview = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, ctx)
+    assert.ok(overview.includes("a&amp;&apos;b&apos;.txt"), `overview 应转义文件名: ${overview}`)
+    assert.ok(!overview.includes("a&'b'.txt"))
+
+    const tree = await byName.git.execute({ action: "checkpoint", checkpointAction: "list", checkpointId: id }, ctx)
+    assert.ok(tree.includes("a&amp;&apos;b&apos;.txt"), `file tree 应转义文件名: ${tree}`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test("bash 工具：后台进程不卡死（子进程持有管道，grace 兜底返回）", async () => {
   const { bashTool } = await import("../src/tools/system.mjs")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-bg-"))
@@ -749,18 +761,6 @@ test("bash 工具：后台进程不卡死（子进程持有管道，grace 兜底
     for (let i = 0; i < 20; i++) {
       try { rmSync(dir, { recursive: true, force: true }); break } catch { await new Promise((r) => setTimeout(r, 500)) }
     }
-  }
-})
-
-
-    const overview = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, ctx)
-    assert.ok(overview.includes("a&amp;&apos;b&apos;.txt"), `overview 应转义文件名: ${overview}`)
-    assert.ok(!overview.includes("a&'b'.txt"))
-
-    const tree = await byName.git.execute({ action: "checkpoint", checkpointAction: "list", checkpointId: id }, ctx)
-    assert.ok(tree.includes("a&amp;&apos;b&apos;.txt"), `file tree 应转义文件名: ${tree}`)
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
   }
 })
 
@@ -847,13 +847,12 @@ test("stripTags: out-of-range numeric entities do not throw (RangeError guard)",
   assert.equal(stripTags("x &#999999999999; y"), "x &#999999999999; y", "invalid entity kept as-is")
   assert.equal(stripTags("&#x110000;"), "&#x110000;", "out-of-Unicode hex entity kept as-is")
   assert.equal(stripTags("&#65;&#x42; ok"), "AB ok", "valid numeric entities still decode")
+})
 
 test("htmlToText: malformed numeric entities do not throw (mirrors stripTags guard)", async () => {
   const { htmlToText } = await import("../src/tools/shared.mjs")
   assert.equal(htmlToText("x &#999999999999; y"), "x &#999999999999; y", "out-of-range entity kept as-is")
   assert.equal(htmlToText("&#65;&#x42; ok"), "AB ok", "valid numeric entities still decode")
-})
-
 })
 
 test("isDestructiveCommand: 决策——全部放行(文本拦截是安全剧场,防线在审批层+快照)", async () => {
@@ -1398,9 +1397,10 @@ test("normalizeEOL: \\r\\n file → edit matches with \\n only", async () => {
     }, ctx)
     assert.ok(out.includes("replaced 1 occurrence"), out)
 
-    // Verify final content has \n only (tools always write \n)
+    // F1: write-back restores the file's ORIGINAL EOL style — CRLF in → CRLF out
+    // (no whole-file rewrite to LF; previously this asserted the old LF-always behavior)
     const content = readFileSync(join(dir, "f.mjs"), "utf8")
-    assert.strictEqual(content, "replaced\n")
+    assert.strictEqual(content, "replaced\r\n")
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -1818,3 +1818,248 @@ test("tree: depth-limited directory tree", async () => {
   }
 })
 
+
+// ---------------------------------------------------------------- EOL semantics + edit candidates + encoding probe (EDIT-TOOL-EOL)
+
+test("EOL F1: edit on pure CRLF file writes back all CRLF, no bare LF", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-edit-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "a\r\nb\r\nc\r\n", "utf8")
+    const out = await byName.edit.execute({ path: "f.txt", old_string: "b", new_string: "B" }, ctx)
+    assert.ok(out.includes("replaced 1 occurrence"), out)
+    const content = readFileSync(join(dir, "f.txt"), "utf8")
+    assert.strictEqual(content, "a\r\nB\r\nc\r\n")
+    assert.ok(!/(?<!\r)\n/.test(content), "no bare LF")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL F1 regression: edit on LF file keeps LF", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-lf-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "a\nb\n", "utf8")
+    await byName.edit.execute({ path: "f.txt", old_string: "b", new_string: "B" }, ctx)
+    assert.strictEqual(readFileSync(join(dir, "f.txt"), "utf8"), "a\nB\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL F1: apply_patch on CRLF file writes back all CRLF", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-patch-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "one\r\ntwo\r\nthree\r\n", "utf8")
+    const patch = `--- a/f.txt
++++ b/f.txt
+@@ -1,3 +1,3 @@
+ one
+-two
++TWO
+ three
+`
+    const out = await byName.apply_patch.execute({ patch }, ctx)
+    assert.match(out, /Applied patch/)
+    assert.strictEqual(readFileSync(join(dir, "f.txt"), "utf8"), "one\r\nTWO\r\nthree\r\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL F1: hashline_edit on CRLF file writes back all CRLF", async () => {
+  const { hashLine } = await import("../src/tools/file.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-hash-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "x\r\ny\r\nz\r\n", "utf8")
+    const out = await byName.hashline_edit.execute({ path: "f.txt", old_hashes: [hashLine("y")], new_content: "Y" }, ctx)
+    assert.ok(out.includes("replaced 1 line(s)"), out)
+    assert.strictEqual(readFileSync(join(dir, "f.txt"), "utf8"), "x\r\nY\r\nz\r\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL F2: new file in CRLF-majority directory follows CRLF (write + apply_patch)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-new-crlf-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "existing.txt"), "e1\r\ne2\r\n", "utf8")
+    await byName.write.execute({ path: "w.txt", content: "l1\nl2\n" }, ctx)
+    assert.strictEqual(readFileSync(join(dir, "w.txt"), "utf8"), "l1\r\nl2\r\n")
+    const patch = `--- /dev/null
++++ b/p.txt
+@@ -0,0 +1,2 @@
++n1
++n2
+`
+    await byName.apply_patch.execute({ patch }, ctx)
+    assert.strictEqual(readFileSync(join(dir, "p.txt"), "utf8"), "n1\r\nn2\r\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL F2: new file in LF-majority / empty directory stays LF", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-new-lf-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    // LF-majority directory
+    writeFileSync(join(dir, "existing.txt"), "e1\ne2\n", "utf8")
+    await byName.write.execute({ path: "w.txt", content: "l1\nl2\n" }, ctx)
+    assert.strictEqual(readFileSync(join(dir, "w.txt"), "utf8"), "l1\nl2\n")
+    // Empty directory
+    const empty = join(dir, "empty")
+    mkdirSync(empty)
+    await byName.write.execute({ path: "empty/f.txt", content: "x\ny\n" }, ctx)
+    assert.strictEqual(readFileSync(join(empty, "f.txt"), "utf8"), "x\ny\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL F2/F1: write overwriting an existing CRLF file restores CRLF", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-overwrite-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "old1\r\nold2\r\n", "utf8")
+    await byName.write.execute({ path: "f.txt", content: "new1\nnew2\n" }, ctx)
+    assert.strictEqual(readFileSync(join(dir, "f.txt"), "utf8"), "new1\r\nnew2\r\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("EOL boundary: mixed-EOL file (first line LF, later CRLF) restores by first-line LF", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-eol-mixed-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "first\nsecond\r\nthird\r\n", "utf8")
+    await byName.edit.execute({ path: "f.txt", old_string: "first", new_string: "FIRST" }, ctx)
+    // First-newline rule: whole file written back in the first line's style (LF).
+    const content = readFileSync(join(dir, "f.txt"), "utf8")
+    assert.strictEqual(content, "FIRST\nsecond\nthird\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit F3: failed edit lists similar lines (line number + preview + score)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cand-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.mjs"), "const timeout = 5000\nfunction start() {\n}\n", "utf8")
+    const err = await byName.edit.execute({ path: "f.mjs", old_string: "const timeout = 6000", new_string: "x" }, ctx).then(() => null, (e) => e)
+    assert.ok(err, "edit should fail")
+    assert.match(err.message, /old_string not found/)
+    assert.match(err.message, /similar lines/)
+    assert.match(err.message, /L1: const timeout = 5000 \(\d+%\)/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit F3: no candidates when every line is below the 0.5 threshold (noise guard)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cand-none-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "alpha\nbeta\ngamma\n", "utf8")
+    const err = await byName.edit.execute({ path: "f.txt", old_string: "xyzzy plugh xyzzard", new_string: "x" }, ctx).then(() => null, (e) => e)
+    assert.ok(err, "edit should fail")
+    assert.match(err.message, /old_string not found/)
+    assert.ok(!err.message.includes("similar lines"), "no candidate block below threshold: " + err.message)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit F3 boundary: multi-line old_string failure scores only line 1, capped at top 3", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cand-multi-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    const body = ["wrong first line a", "wrong first line b", "wrong first line c", "wrong first line d", "wrong first line e"].join("\n") + "\n"
+    writeFileSync(join(dir, "f.txt"), body, "utf8")
+    const err = await byName.edit.execute({
+      path: "f.txt",
+      old_string: "wrong first line X\nsecond line content\nthird line content",
+      new_string: "x",
+    }, ctx).then(() => null, (e) => e)
+    assert.ok(err, "edit should fail")
+    assert.match(err.message, /old_string line 1:/)
+    const candRows = err.message.match(/^ {4}L\d+: /gm) || []
+    assert.strictEqual(candRows.length, 3, "top 3 cap: " + err.message)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("hashline_edit F4: file containing U+FFFD warns but still executes", async () => {
+  const { hashLine } = await import("../src/tools/file.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-fffd-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "good line\nbad \uFFFD line\n", "utf8")
+    const out = await byName.hashline_edit.execute({ path: "f.txt", old_hashes: [hashLine("good line")], new_content: "replaced line" }, ctx)
+    assert.ok(out.includes("replaced 1 line(s)"), out)
+    assert.match(out, /U\+FFFD/)
+    assert.match(out, /encoding may be corrupted/)
+    assert.strictEqual(readFileSync(join(dir, "f.txt"), "utf8"), "replaced line\nbad \uFFFD line\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("hashline_edit F4 regression: clean UTF-8 file produces no warning", async () => {
+  const { hashLine } = await import("../src/tools/file.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-fffd-clean-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "clean\n", "utf8")
+    const out = await byName.hashline_edit.execute({ path: "f.txt", old_hashes: [hashLine("clean")], new_content: "done" }, ctx)
+    assert.ok(!out.includes("U+FFFD"), "no warning on clean file: " + out)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("detectFileEol: first-newline rule (CRLF first → CRLF; bare LF / none → LF)", async () => {
+  const { detectFileEol, joinWithEol, majorityEol, findCandidates } = await import("../src/tools/shared.mjs")
+  assert.strictEqual(detectFileEol("a\r\nb\n"), "\r\n")
+  assert.strictEqual(detectFileEol("a\nb\r\n"), "\n")
+  assert.strictEqual(detectFileEol("no newline"), "\n")
+  assert.strictEqual(detectFileEol(""), "\n")
+  assert.strictEqual(joinWithEol(["a", "b"], "x\r\ny"), "a\r\nb")
+  // majorityEol: empty dir → LF; CRLF-majority dir → CRLF
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-majeol-"))
+  try {
+    assert.strictEqual(majorityEol(dir), "\n")
+    writeFileSync(join(dir, "a.txt"), "x\r\n")
+    writeFileSync(join(dir, "b.txt"), "y\r\n")
+    writeFileSync(join(dir, "c.txt"), "z\n")
+    assert.strictEqual(majorityEol(dir), "\r\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+  // findCandidates: threshold + ranking + first-line-only for multi-line needle
+  const cands = findCandidates(["const timeout = 5000", "unrelated"], "const timeout = 6000")
+  assert.strictEqual(cands.length, 1)
+  assert.strictEqual(cands[0].line, 1)
+  assert.ok(cands[0].score >= 0.5)
+  assert.strictEqual(findCandidates(["short"], "a much longer needle that shares nothing").length, 0)
+})
