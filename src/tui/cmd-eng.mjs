@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url"
 import { ansi, C } from "./ansi.mjs"
 
 const templateDir = join(fileURLToPath(import.meta.url), "..", "..", "prompts")
+import { ENG_OFF_REMINDER } from "../agent.mjs"
 
 export async function handleEngCommand(ctx) {
   const { agent, pushLine, pushLabel, persistRaw, showPicker } = ctx
@@ -31,7 +32,14 @@ export async function handleEngCommand(ctx) {
   }
 
   agent.config.agent.engineering = !agent.config.agent.engineering
-  if (!agent.config.agent.engineering) agent._engDesignToken = null // invalidate stale token
+  if (!agent.config.agent.engineering) {
+    agent._engDesignToken = null // invalidate stale token
+    // OFF must reach the model too (2026-08-25): /auto pushes a reminder on toggle — the
+    // mode flip is invisible to the agent otherwise. (ON needs none here: the injector
+    // in agent.mjs already announces ON transitions on the next turn.)
+    agent._pendingReminders = agent._pendingReminders ?? []
+    agent._pendingReminders.push(ENG_OFF_REMINDER)
+  }
   await persistRaw((raw) => {
     raw.agent ??= {}
     raw.agent.engineering = agent.config.agent.engineering

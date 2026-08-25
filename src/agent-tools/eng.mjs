@@ -3,7 +3,7 @@
  * In engineering mode the agent follows design-before-code methodology.
  * Toggled here at session level; persisted by /eng.
  */
-import { ENG_ON_REMINDER } from "../agent.mjs"
+import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
 
 export const engTool = {
   name: "eng",
@@ -27,8 +27,7 @@ export const engTool = {
       ctx.agent._touchedFiles = []         // clear mutation tracking
       ctx.agent._lastEngState = false
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
-      ctx.agent._pendingReminders.push(
-        "[System reminder: engineering mode is now OFF — standard discipline applies. Changes go through the normal workflow.]")
+      ctx.agent._pendingReminders.push(ENG_OFF_REMINDER)
       // 持久化工程模式状态到会话
       if (ctx.persistState) {
         await ctx.persistState({

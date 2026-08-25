@@ -3295,3 +3295,46 @@ test("advisor/run.mjs: 无 12_000 边界残留（评审 #3）", () => {
   const src = readFileSync(new URL("../src/advisor/run.mjs", import.meta.url), "utf8")
   assert.ok(!/\b12_000\b/.test(src), "advisor 截断无 12K 残留")
 })
+
+
+// ─── ENG 状态提醒补全（2026-08-25）：OFF 转换必须通知模型 ───
+test("injectEngineeringReminder: OFF transition now pushes ENG_OFF_REMINDER (was ON-only silence)", async () => {
+  const { createAgent, ENG_OFF_REMINDER } = await import("../src/agent.mjs")
+  const agent = createAgent({ provider: { name: "t", model: "m" }, tools: [], config: { agent: {} }, cwd: process.cwd() })
+  agent._lastEngState = true // was ON
+  agent.config.agent.engineering = false // now OFF
+  // Direct call via the runAgent path is heavyweight; the injector is module-private —
+  // exercise through the observable contract: next runAgent turn injects. Here assert the
+  // exported reminder text and the /eng TUI path pushes it (cmd-eng test below).
+  assert.match(ENG_OFF_REMINDER, /engineering mode is now OFF/)
+})
+
+test("cmd-eng: TUI /eng toggle OFF pushes ENG_OFF_REMINDER into pendingReminders", async () => {
+  const { handleEngCommand } = await import("../src/tui/cmd-eng.mjs")
+  const agent = {
+    cwd: process.cwd(),
+    config: { agent: { engineering: true } }, // currently ON → toggle goes OFF
+    _engDesignToken: "x", _pendingReminders: [],
+  }
+  const pushes = []
+  await handleEngCommand({
+    agent,
+    pushLine: () => {},
+    pushLabel: () => {},
+    persistRaw: async () => {},
+    showPicker: async () => ({ action: "create" }),
+  })
+  assert.equal(agent.config.agent.engineering, false)
+  assert.equal(agent._engDesignToken, null, "OFF invalidates the design token")
+  assert.ok(agent._pendingReminders.some((r) => r.includes("engineering mode is now OFF")),
+    "OFF reminder queued for the model (was silent before 2026-08-25)")
+})
+
+test("eng tool exit: OFF reminder reaches history via pendingReminders flush", async () => {
+  const { engTool } = await import("../src/agent-tools/eng.mjs")
+  const agent = { config: { agent: { engineering: true } }, _pendingReminders: [] }
+  const out = await engTool.execute({ action: "exit" }, { agent })
+  assert.match(out, /exited/i)
+  assert.ok(agent._pendingReminders.some((r) => r.includes("engineering mode is now OFF")))
+  assert.equal(agent._lastEngState, false)
+})

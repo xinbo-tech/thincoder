@@ -61,14 +61,19 @@ export const ENG_ON_REMINDER =
 // Re-exported for API compatibility (single source of truth: advisor/repos.mjs)
 export { hasCodeMutations } from "./advisor/repos.mjs"
 
-/** Engineering-mode status injection — one reminder when engineering mode is ON. */
+/** Engineering mode OFF reminder — shared with the eng tool and the injector. */
+export const ENG_OFF_REMINDER =
+  "[System reminder: engineering mode is now OFF — standard discipline applies. " +
+  "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
+  "guards apply per config.]"
+
+/** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
+ *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
+ *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */
 function injectEngineeringReminder(agent) {
   const eng = agent.config?.agent?.engineering ?? false
-  // Only notify on transitions into ON — OFF is silence (the system prompt
-  // already carries the standard discipline; no need to remind the model
-  // that it's in the default mode).
-  if (eng && !agent._lastEngState) {
-    agent.history.push({ role: "user", content: ENG_ON_REMINDER, transient: true })
+  if (eng !== agent._lastEngState) {
+    agent.history.push({ role: "user", content: eng ? ENG_ON_REMINDER : ENG_OFF_REMINDER, transient: true })
   }
   agent._lastEngState = eng
 }
