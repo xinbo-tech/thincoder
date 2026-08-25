@@ -17,6 +17,7 @@
 | 路线图（历史） | `ROADMAP-0.9.0.md` | 0.9.0 已发布过，历史路线图归档保留 |
 | 发布流程 | `RELEASE.md` | npm 发布流程 + 踩坑记录（2026-08-25） |
 | CLI Lint 引入 | `CLI-LINT-REQUIREMENTS.md`、`CLI-LINT-TUNING.md` | ESLint 引入 + 21 error 清零（2026-08-25） |
+| Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
 | 覆盖率缺口修复 | `COVERAGE-GAPS-REQUIREMENTS.md`、`COVERAGE-GAPS-TUNING.md` | 遗留测试覆盖收口（2026-08-25） |
 | 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25） |
 | 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25） |

@@ -7,40 +7,40 @@ import { randomUUID, createHmac } from "node:crypto"
 import { runAdvisorReview } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 
-const TOKEN_EXPIRY_MS = 3600000 // 1 hour
+const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides
 const TOKEN_SECRET = process.env.THINCODER_TOKEN_SECRET || "thincoder-default-secret"
 
+/** Effective token TTL: config override with runtime validation (advisor timeoutMs precedent —
+ *  invalid values fall back to the default, never silently disable the ceiling). */
+function effectiveTokenTtlMs(agent) {
+  const cfg = agent?.config?.agent?.engTokenTtlMs
+  return (Number.isFinite(cfg) && cfg > 0) ? cfg : TOKEN_TTL_DEFAULT_MS
+}
+
 /** Generate a signed design token with expiration */
-function generateDesignToken() {
+function generateDesignToken(agent) {
   const uuid = randomUUID()
-  const expiresAt = Date.now() + TOKEN_EXPIRY_MS
+  const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
   const payload = `${uuid}:${expiresAt}`
   const signature = createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex").slice(0, 16)
   return `${payload}:${signature}`
 }
 
-/** Validate design token: check format, expiration, and signature
- *  For backward compatibility, tokens that don't match the new format are accepted as-is
- */
+/** Validate design token: format, expiration, signature — ALL fail-closed (v2 2026-08-25).
+ *  The two legacy fail-open branches (parts!=3 → true, NaN expiry → true) were pass-through
+ *  backdoors: any malformed string bypassed validation. Only exact signed tokens pass now.
+ *  Format must be exactly uuid:expiresAt:hmacSig. */
 export function validateDesignToken(token) {
   if (!token || typeof token !== "string") return false
-  
+
   // New format: uuid:expiresAt:signature (3 parts separated by ':')
   const parts = token.split(":")
-  if (parts.length !== 3) {
-    // Old format or simple token - accept for backward compatibility
-    return true
-  }
-  
+  if (parts.length !== 3) return false // fail-closed (was: return true)
+
   const [uuid, expiresAt, signature] = parts
   const expTime = parseInt(expiresAt, 10)
-  
-  // If it looks like a new format token, validate it properly
-  if (isNaN(expTime)) {
-    // Not a valid new format, treat as old format
-    return true
-  }
-  
+  if (isNaN(expTime)) return false // fail-closed (was: return true)
+
   // Check expiration
   if (Date.now() > expTime) return false
   
@@ -130,7 +130,7 @@ export const advisorTool = {
     // Generate the design token BEFORE the review and inject it into the advisor's prompt.
     // The advisor (LLM) decides pass/fail itself and echoes the token only on approval —
     // the gate is a mechanical string match, not fragile semantics parsing.
-    const designToken = reviewType === "design" ? generateDesignToken() : null
+    const designToken = reviewType === "design" ? generateDesignToken(agent) : null
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
@@ -159,9 +159,13 @@ export const advisorTool = {
         return `${cleanResult}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${designToken}`
       }
       // Review failed (or advisor chose not to pass) → invalidate any previously-issued token.
-      // Guard: result === null means the review was skipped (advisor disabled / not engineering
-      // mode) — a skipped review must not revoke an already-issued token.
-      if (result !== null) agent._engDesignToken = null
+      // Guards (v2 2026-08-25): result === null means the review was SKIPPED (advisor disabled /
+      // not engineering mode) — must not revoke. An error reply (own "Advisor:" prefix — the
+      // error-return convention of runAdvisorReview) is a provider crash/timeout artifact, not
+      // a completed verdict — a network glitch must not revoke unrelated standing tokens.
+      // Only a COMPLETED review that did not pass revokes.
+      const isCompletedReview = result !== null && !result.startsWith("Advisor:")
+      if (isCompletedReview) agent._engDesignToken = null
       // Strip every dead token occurrence from the raw output so the main agent can't grab an invalid one
       if (result) {
         const stripped = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()

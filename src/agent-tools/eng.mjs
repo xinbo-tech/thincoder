@@ -42,8 +42,14 @@ export const engTool = {
       return "Engineering mode exited. Standard discipline now applies. You may edit files directly."
     }
     if (args.action === "enter") {
+      // Idempotent enter (v2 2026-08-25): already in engineering mode → no-op. The old
+      // unconditional token clear killed standing design tokens on a redundant defensive
+      // eng(enter) — only a real off→on transition requires a fresh design review.
+      if (ctx.agent.config.agent.engineering) {
+        return "Engineering mode already active. Existing design tokens stay valid."
+      }
       ctx.agent.config.agent.engineering = true
-      ctx.agent._engDesignToken = null   // re-entering requires a fresh design review
+      ctx.agent._engDesignToken = null   // off→on transition requires a fresh design review
       ctx.agent._lastEngState = true
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_ON_REMINDER)

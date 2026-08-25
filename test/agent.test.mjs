@@ -1555,10 +1555,12 @@ test("runAgent: 子 agent token + 工具调用 relay 到父回调（带 role#id 
 test("runAgent: eng-coder design token is NOT consumed — second spawn with same token succeeds", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   // 同一 token 两次 spawn：第一次实现，第二次（修复循环）重入——token 不消费
+  // Real signed token (v2 fail-closed killed the bare-string pass-through the old test relied on)
+  const realToken = "8048bebc-a2a6-4b50-b198-74f37da606ab:1788243800213:c093cae7ccc4e228"
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现", role: "eng-coder", designToken: "tok-abc" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现", role: "eng-coder", designToken: realToken }) } },
     { content: "实现完成，报告见上。".repeat(30) },        // 子代理 1 交付
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "修复评审问题", role: "eng-coder", designToken: "tok-abc" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "修复评审问题", role: "eng-coder", designToken: realToken }) } },
     { content: "修复完成，报告见上。".repeat(30) },        // 子代理 2 交付
     { content: "全部完成" },
   ]
@@ -1571,10 +1573,10 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
       config: { agent: { engineering: true }, advisor: {} },
       cwd,
     })
-    agent._engDesignToken = "tok-abc" // 设计评审已签发
+    agent._engDesignToken = realToken // 设计评审已签发（真签名 token）
     const out = await runAgent(agent, "派两个实现任务", { onPermissionRequest: async () => true })
     assert.equal(out, "全部完成")
-    assert.equal(agent._engDesignToken, "tok-abc", "token survives both spawns — not consumed")
+    assert.equal(agent._engDesignToken, realToken, "token survives both spawns — not consumed")
     rmSync(cwd, { recursive: true, force: true })
   } finally {
     server.close()
