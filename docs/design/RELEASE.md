@@ -61,7 +61,23 @@ ovsx publish 返回 `🚀 Published` 后,**版本处于"已发布未激活"状�
 
 Windows PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会写 **BOM**(`EF BB BF`),污染 `package.json` 导致 JSON 解析失败、`prepublishOnly` 崩。改版本号用 JSON.parse→改字段→JSON.stringify(无 BOM),或 `-Encoding utf8NoBOM`。判断:发布前 `npm view` 能读到旧版本但 publish 报解析错,先查 package.json 首三字节是否 `EF BB BF`。
 
-### 4.6 marketplace 延迟 + PAT 环境变量(2026-08-27,与 vscode 端同源)
+### 4.6 版本号规范(CalVer,2026-08-27 用户拍板)
+
+**格式**:`年份段.月份段.月内计数段`,三段。
+
+| 段 | 含义 | 规则 |
+|---|---|---|
+| 第一段 | 年份 | 2026=0,2027=1,每年 +1 |
+| 第二段 | 月份 | 1=1 月 … 12=12 月 |
+| 第三段 | 月内发布计数 | **每月从 1 重置**,月内逐次 +1 |
+
+**CLI 切换规则(方案 B)**:现状 0.12.46——第二段"12"是历史乱号。**保持 0.12.x 递增到 2026 年底**(把"12"当年度号,不倒退),**2027-01-01 起切 `1.1.0`** 走规范(第一段 0→1 是前进,npm 接受)。2026 年内**不**套用"月份段=当前月"的映射(否则 0.12→0.8 是倒退,npm 拒绝)。
+
+**硬约束**:版本号必须单调递增,任何切换都不得低于已发布版本(npm/vsce 均拒绝倒退)。切换前先 `npm view thincoder version` 确认当前号。
+
+**判据对照**(本端现状):`0.12.46` = 年份段 0(2026)、月份段 12(乱号,实际已到年底)、计数段 46(历史累计,非月内计数)——从 2027-01 起才真正套用规范,届时月内计数从 1 起。
+
+### 4.7 marketplace 延迟 + PAT 环境变量(2026-08-27,与 vscode 端同源)
 
 - **marketplace 延迟**:`vsce publish` 报 `already exists` 但 `vsce show` 仍显示旧版本——通常是已成功、查询索引缓存延迟。先 `vsce show` 确认新版本是否已进 `versions` 列表,别急着重试(重试会撞"已存在")。
 - **PAT 在环境变量里会忘**:无 TTY 环境(agent 子进程)环境变量可能没继承、CLI 静默 exit 0 假装成功。发布前先 `npm whoami` / `ovsx verify-pat` 显式验证,拿不准就显式传 token。
