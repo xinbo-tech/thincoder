@@ -4,7 +4,10 @@ Items support tree hierarchy via indentation (2 spaces per level) and auto-assig
 
 Parameters:
 - action: "add" | "mark" | "list"
+- id: task ID to mark, e.g. "T3" (with "mark"; preferred — use the ID returned by `add`, or from `list`)
 - item: text for new item (with "add")
-- index: 1-based index (with "mark")  
+- index: 1-based index (with "mark"; fallback — use only when you have no ID)
 - status: "pending" | "in_progress" | "done" (with "mark")
 - parent: parent task ID for hierarchical tasks, e.g. "T1" (with "add")
+
+Note: marking a parent "done" requires all its child tasks already done — otherwise it is rejected (complete the children before marking the parent done).

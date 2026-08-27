@@ -2,6 +2,22 @@
 
 > 状态：2026-08 回补。24 个内置工具 + MCP 客户端 + 元工具（agent-tools），统一 schema（OpenAI function calling）、统一上下文（cwd/agent/callbacks/signal）、统一安全边界（路径/命令/网络/沙箱）。
 
+## 0. 机制目标（总体需求）
+
+工具系统是 agent 与外部世界（文件/命令/网络/git/MCP/项目状态）交互的**唯一通道**：把「能做什么」以统一 schema 暴露给模型，把「怎么安全做」收口到工具内部（路径/命令/网络/沙箱四道边界），把「何时做」交给调度层（只读并行、副作用串行、审批门控）。目标是让模型在能力边界内自助完成任务，同时把破坏性/越界动作挡在真实防线（审批 + 快照）之内——正确性/可用性优先于 token 节省。
+
+## 0.1 非功能性需求（硬指标）
+
+| 项 | 指标 |
+|---|---|
+| 工具超时 | bash 120s；execute 沙箱强杀（默认 30s 上限）；其余工具同步即时返回 |
+| 读/输出上限 | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览） |
+| 网络响应体 | websearch/fetch ≤5MB；HTML 转文本（stripTags/htmlToText） |
+| 路径安全 | `resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算 |
+| 命令安全 | 破坏性命令 snapshot-then-proceed（审批 + gitGuardSnapshot/checkpoint），文本拦截仅提示不拦截 |
+| execute 沙箱 | `import()` 动态加载阻断、`require()`/`process` 禁、超时强杀——只出不进 |
+| 返回契约 | `execute` 必须返回字符串（undefined 视为错误，dispatch 显式检查） |
+
 ## 1. 注册与 schema
 
 - **注册表**（tools/index.mjs）：`builtinTools` 数组（24 个）——file 6（read/write/edit/insert_after/hashline_edit/read_image）、patch 2（apply_patch/delete）、system 4（bash/glob/grep/ls）、web 2（websearch/fetch）、git 2（git/question）、checklist、lint、lsp、codemode、ops 3（file_ops/process/get_current_time）。
@@ -29,12 +45,9 @@
 - **undo 快照**：副作用工具执行前 `snapshotForUndo`（写前文件内容入内存栈），`/undo` 回滚
 - **hooks**（PreToolUse/PostToolUse/PostToolUseFailure）：用户脚本可在 `~/.thincoder/hooks/` 定义门控/后处理（PreToolUse 返回 false 阻断执行）
 
-## 4. MCP 客户端（mcp.mjs + mcp/）
+## 4. MCP 客户端
 
-- **三种 transport**：stdio（`mcp/transport-stdio.mjs`，spawn 子进程 JSON-RPC over stdio）、http、ws（`transport-http/ws.mjs`，零依赖 fetch/WebSocket）
-- **生命周期**：`connectMcpServer` → 握手（initialize/listTools）→ 工具并入注册表（`mcp` 前缀包装成 OpenAI schema）→ 退出 `closeAllMcp`（TUI cleanup 防孤儿进程）
-- **管理**：`/mcp` 命令（connect/disconnect/list/status）；MCP 工具名冲突去重；连接失败注入提醒（启动时 stderr 不可见场景）
-- 工具执行透传：`mcp` 工具 execute → JSON-RPC `tools/call`；stdout/stderr 流式 onOutput
+MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MCP 工具**动态展开**为独立原生工具（`{server}_{tool}` 前缀、完整 inputSchema、execute→tools/call），网关式 `mcp` 工具已废弃移除；连接时机/失败语义/子代理继承均对齐 CLI。此处不重复，仅记工具注册表侧的一点：展开工具并入 `builtinTools` 数组、走统一 OpenAI schema，与内置工具无差别（可并行、完整 schema）。
 
 ## 5. 关键设计决策
 
@@ -71,7 +84,7 @@
 
 **反向路由**（git.md 描述）：加 `**Route to git instead of bash:**` 段 + 逐条 bash→工具映射。
 
-**提示词条款**（discipline.md）：加「git 操作用 git 工具、不要用 bash」的 Tool routing 条款（标准模式纪律，两端 byte-identical；git 路由属编码纪律、放 discipline.md 而非协调职责的 main.md）。
+**提示词条款**（discipline.md）：加「git 操作用 git 工具、不要用 bash」的 Tool routing 条款（标准模式纪律，两端 byte-identical；git 路由属编码纪律、放 discipline.md 而非协调职责的 main.md——main.md 的「无路由条款」缺口**有意不改**，路由条款归属 discipline.md 的编码纪律段，main.md 不需要 cross-reference）。
 
 **破坏性原则**（沿用「破坏性操作 snapshot-then-proceed」）：reset --hard / checkout 丢改动 / rm 等先快照再执行 + 用户确认。CLI 用 `createCheckpoint`（全量复制，非破坏）；VS Code 用 `git stash create`+`git stash store`（非破坏，与 `git stash push` 清工作区不同）。**顺带修复的既有 bug**：`runGit` 对整段输出 `.trim()` 会剥掉 porcelain 首行的「 」（unstaged 标记），把 unstaged 误分类成 staged——status 改用保行前导空格的 `runGitRaw`。
 
@@ -97,3 +110,59 @@
 **测试**（两端各验）：git workdir（子仓库运行 + 越界报错）；execute scriptFile（跑文件 + nodeArgs `--check` 好/坏语法 + 越界 + 缺参 + 禁 flag）；全量回归不降。注：测试里不断言 `node --test` 输出——嵌套 node --test（测试套件内再跑）输出为空属测试环境伪影，真实场景正常。
 
 **受影响文件**：CLI `src/tools/git.mjs` + `git.md` + `codemode.mjs` + `execute.md` + `grep.md`/`ls.md`/`delete.md`/`read.md` + `src/prompts/discipline.md`、VS Code 对应（git.mjs / execute.mjs / search.mjs / more-file.mjs / file.mjs / discipline.md）、两端测试。
+
+---
+
+## 8. checklist 工具坐标系断裂修复（2026-08-27）
+
+**需求**（线上事故，用户报「两端都检查」）：agent 用 `checklist add` 得到任务 ID（`Added: [ ] T63: ...`），随后 `mark index 1-6` 想勾销自己刚加的条目，却误把列表头部无关条目标成 done（T15/T18/T20/T22/T24/T26，属另一任务域）。根因 = **add 返回 ID 坐标系，mark 只收 index 位置坐标系，两者无法对上**——agent 拿不到「T63 是列表第几位」，只能猜 index。
+
+**三个叠加 bug**（三份 `checklist.mjs` 同源：thincoder / thincoder-vscode / thincoder-desktop/vendor）：
+
+| # | bug | 现象 | 根因 |
+|---|---|---|---|
+| 1 | **mark 只收 index 不收 id** | 坐标系断裂，agent 猜 index 误标无关条目 | `mark` 用 `flat[args.index-1]` 定位，无 id 路径；`add` 返回 id，两者对不上 |
+| 2 | **auto-ID 撞号/漂移** | `parse` 每次读文件给「无显式 ID 的行」重分配 ID，`write` 回写后 ID 漂移 | `parse` 第 58-62 行对无 id 根节点按「当前最大根号+1」分配；历史无 id 条目每次 parse 都可能重编号 |
+| 3 | **ID 前缀累积重复** | done 归档出现 `T15: T15: T15: T15: T15: T15:` 六连 | 历史版本 write 时 prepend id 且 text 残留旧 id，round-trip 累积；当前代码已加 idMatch 剥离修复，但旧数据未清理 |
+
+**修法**：
+
+1. **`mark` 加 `id` 参数（string，任务 ID），id 优先于 index**——agent 用 `add` 返回的 ID 直接 `mark id=T63 status=done`，彻底消除坐标系断裂；`index` 降级为 fallback（description 明确「优先 id，index 仅在无 id 时用」）
+2. **auto-ID 撞号/漂移**：`parse` 对文件里**已有的无 id 条目一次性分配 ID 并落盘**（之后不再漂移），新 add 条目按「已存在的最大根号+1 / 该父下已存在的最大子序号+1」分配（`target.length+1` 改「现有子最大号+1」，防非连续 ID 撞号）
+3. **前缀累积归一**：`parse` 的 idMatch 剥离改为「剥**所有**连续的 `T[\d.]+:` 前缀」而非单次，读入即归一历史脏数据
+
+**测试**（两端各验，用例表）：
+
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| T-cl-1 | mark 按 id 命中 | `mark id=T63 status=done`（T63 在列表中部） | 精确命中 T63，头部无关条目不受影响；返回 `Marked T63 → done` |
+| T-cl-2 | add→mark id 闭环 | `add item="x"` 得 `Added: [ ] T63: x`，再 `mark id=T63` | 同一个 id 直通，无坐标系断裂 |
+| T-cl-3 | id 优先 index | 同时给 `id=T63` 和 `index=1` | 按 id 命中 T63，忽略 index |
+| T-cl-4 | index 兼容路径 | 仅给 `index=1`（无 id） | 沿用 `flat[0]` 命中，回归不降 |
+| T-cl-5 | auto-ID 非连续不撞号 | checklist 有 T17/T19/T21（缺 T18/T20），`add` 两条根条目 | 分配 T22/T23（不撞 T18/T20、不覆盖 T19/T21） |
+| T-cl-6 | 前缀累积归一 | 文件里 `- [ ] T15: T15: T15: 文本` | parse 读入剥掉全部 `T[\d.]+:` 前缀，text 仅剩「文本」，write 回写不再累积 |
+| T-cl-7 | 无 id 条目不漂移 | 文件有历史无 id 行，多次 parse→write | ID 一次性分配后落盘稳定，不随每次读重编号 |
+
+**受影响文件**：CLI `src/tools/checklist.mjs` + `src/tools/checklist.md`、VS Code `src/tools/checklist.mjs`、Desktop `vendor/thincoder/src/tools/checklist.mjs`（三份 byte-identical 收敛）+ 两端测试。
+
+### 8.1 交付评审追补（R30 后续，2026-08-27 用户拍板）
+
+交付评审发现两个预存在的边界问题（非 3-bug 引入，但影响正确性），用户拍板「现在修」：
+
+**问题 1：标记父任务 done 静默丢弃子树（数据丢失）**——原 `mark` 只归档父节点（`children: []`），`splice` 把整棵子树一起从树里移除，子任务既不归档也不保留。
+
+**修法（用户定：拒绝非法 + 全 done 才递归归档）**：父任务标 `done` 时——① 若其子树存在任何非 done 节点 → **拒绝并提示**「父任务仍有未完成的子任务，先处理子任务再标父 done」；② 若子树全部 done → **递归归档整棵子树**（父 + 全部子孙，连同 done 文件，层级保留）。不擅自丢弃、不擅自误归档。
+
+**问题 2：归档最大号后 ID 复用（削弱稳定 ID 目标）**——`nextRootId` 只扫 `checklist.md`，归档 T63 后它不再参与 max 计算，下次 add 又得 T63，跨会话历史引用歧义。
+
+**修法**：`nextRootId` 计算 max 时**同时扫描 `checklist.md` + `checklist-done.md` 两个文件的根号**——归档的 ID 恒占位，新 ID 单调递增不复用。
+
+**测试**（两端各验——CLI + VS Code 各跑 `node --test`；Desktop vendor 端不单独跑测试，靠「三份核心逻辑 byte-identical 收敛 + `node --check` 语法校验」保证，追加用例）：
+
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| T-cl-8 | 父 done 子树全 done → 递归归档 | 父 T1 + 子 T1.1/T1.2 全 done，`mark id=T1 status=done` | 父 + 两个子都进 done 文件（层级保留），checklist 无残留 |
+| T-cl-9 | 父 done 子树有 pending → 拒绝 | 父 T1 有子 T1.1(pending)，`mark id=T1 status=done` | 拒绝，返回「先处理子任务」，父子都不归档不删除 |
+| T-cl-10 | 归档后 ID 不复用 | T62 是最大号，`mark id=T62 done` 后 `add` 一条 | 新条目得 T63（T62 归档后仍占位，不复用 T62） |
+
+**受影响文件**（同上三份 + 补 Desktop `vendor/thincoder/src/tools/checklist.md` 描述源）：CLI `src/tools/checklist.mjs` + `src/tools/checklist.md`、VS Code `src/tools/checklist.mjs`、Desktop `vendor/thincoder/src/tools/checklist.mjs` + `checklist.md`（三份核心逻辑 byte-identical）+ 两端测试。

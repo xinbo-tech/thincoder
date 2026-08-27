@@ -2,6 +2,13 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.46] — 2026-08-27
+
+### Fixed
+
+- **checklist 工具坐标系断裂**：`add` 返回任务 ID、`mark` 却只收列表位置 index，agent 拿 ID 定位不到条目、只能猜 index——误标无关条目（线上事故）。修复：`mark` 加 `id` 参数（优先于 index）；auto-ID 按「最大根号+1」分配（含 `checklist-done.md` 双文件扫描，归档 ID 恒占位不复用）；历史重复 `T[\d.]+:` 前缀读入即归一；标记父任务 done 时子任务非全 done 则拒绝（防静默丢弃子树），全 done 则递归归档整棵子树
+- **子 agent/advisor 模型显示补录**（TUI.md 文档欠账，功能此前已实现）
+
 ## [0.12.45] — 2026-08-26
 
 ### Fixed

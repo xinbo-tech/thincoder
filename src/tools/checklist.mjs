@@ -31,40 +31,77 @@ function parse(filePath) {
     const status = raw === "x" ? "done" : raw === "~" ? "in_progress" : "pending"
     const text = m[3].trim()
 
-    // Extract explicit ID if present (e.g. "T1:", "T1.1:") — strip it from the text
-    // so write() doesn't re-prepend it (round-trip would otherwise accumulate "T1: T1: ...")
-    const idMatch = text.match(/^(T[\d.]+):\s*/)
-    const node = {
-      id: idMatch ? idMatch[1] : null,
-      index: flatIdx,
-      depth,
-      status,
-      text: idMatch ? text.slice(idMatch[0].length) : text,
-      children: [],
+    // Strip ALL leading "T[\d.]+:" tokens (historical dirty data can accumulate
+    // "T15: T15: T15:"); keep the first token as the ID and the rest as text.
+    let id = null
+    let bareText = text
+    let idTok
+    while ((idTok = bareText.match(/^(T[\d.]+):\s*/))) {
+      if (id == null) id = idTok[1]
+      bareText = bareText.slice(idTok[0].length)
     }
+    const node = { id, index: flatIdx, depth, status, text: bareText, children: [] }
 
     // Find parent by popping stack until we find a node at depth-1
     while (stack.length > 1 && stack.at(-1).depth >= depth) stack.pop()
     const parent = stack.at(-1)
     parent.children.push(node)
-    // Auto-assign ID if not explicit
-    if (!node.id) {
-      const siblingCount = parent.children.length
-      const base = parent.id ? `${parent.id}` : "T"
-      if (parent.id) {
-        node.id = `${base}.${siblingCount}`
-      } else {
-        // Root level: T1, T2, T3...
-        let rootIdx = 0
-        for (const c of items) {
-          if (c.id?.match(/^T\d+$/)) rootIdx = Math.max(rootIdx, parseInt(c.id.slice(1)))
-        }
-        node.id = `T${rootIdx + 1}`
-      }
-    }
     stack.push({ children: node.children, depth, id: node.id })
   }
+
+  // Assign stable IDs to lines that lacked an explicit one, exactly once.
+  // IDs are "max existing number + 1" (not position-based) so gaps left by
+  // archived items never collide, and persisted IDs never drift on re-read.
+  let assigned = false
+  function assignIds(nodes, parentId) {
+    for (const n of nodes) {
+      if (!n.id) {
+        n.id = parentId ? nextChildId(parentId, nodes) : nextRootId(nodes, doneRoots)
+        assigned = true
+      }
+      if (n.children?.length) assignIds(n.children, n.id)
+    }
+  }
+  // Root IDs archived to the done file also reserve numbers (mirrors the `add`
+  // path's double-file scan), so auto-assigned IDs never collide with them.
+  const doneRoots = readDoneRoots(join(dirname(filePath), DONE))
+  assignIds(items, null)
+  if (assigned) write(filePath, items)
+
   return items
+}
+
+function readDoneRoots(doneFile) {
+  if (!existsSync(doneFile)) return []
+  const roots = []
+  for (const line of readFileSync(doneFile, "utf-8").split("\n")) {
+    const m = line.match(/^- \[.\] (T\d+): /)
+    if (m) roots.push({ id: m[1] })
+  }
+  return roots
+}
+
+function nextRootId(items, doneItems) {
+  let max = 0
+  for (const list of [items, doneItems]) {
+    for (const c of list ?? []) {
+      const m = c.id?.match(/^T(\d+)$/)
+      if (m) max = Math.max(max, parseInt(m[1]))
+    }
+  }
+  return `T${max + 1}`
+}
+
+function nextChildId(parentId, children) {
+  let max = 0
+  const prefix = `${parentId}.`
+  for (const c of children) {
+    if (c.id?.startsWith(prefix)) {
+      const suffix = c.id.slice(prefix.length)
+      if (/^\d+$/.test(suffix)) max = Math.max(max, parseInt(suffix))
+    }
+  }
+  return `${prefix}${max + 1}`
 }
 
 /** Write items back to file, preserving tree structure */
@@ -108,6 +145,26 @@ function flatten(items, out = []) {
   return out
 }
 
+/** True if every descendant (children, grandchildren, …) is done. */
+function allChildrenDone(node) {
+  for (const c of node.children ?? []) {
+    if (c.status !== "done" || !allChildrenDone(c)) return false
+  }
+  return true
+}
+
+/** Recursively clone a subtree for archiving, forcing every status to done. */
+function archiveSubtree(node) {
+  return {
+    id: node.id,
+    index: 0,
+    depth: 0,
+    status: "done",
+    text: node.text,
+    children: (node.children ?? []).map(archiveSubtree),
+  }
+}
+
 /** Parse pending items only (for context injection) */
 export function pendingItems(cwd) {
   const flat = flatten(parse(checklistPath(cwd)))
@@ -125,13 +182,17 @@ export const checklistTool = {
         enum: ["add", "mark", "list"],
         description: "add a new item / mark item status / list all items"
       },
+      id: {
+        type: "string",
+        description: "Task ID to mark (preferred — use the ID returned by add, e.g. 'T3')"
+      },
       item: {
         type: "string",
         description: "Item text (required for add)"
       },
       index: {
         type: "number",
-        description: "1-based item index (required for mark)"
+        description: "1-based item index (fallback for mark, only when id is absent)"
       },
       status: {
         type: "string",
@@ -161,48 +222,46 @@ export const checklistTool = {
           parentId = found.item.id
         }
 
-        // Auto-assign ID
-        let id
-        if (parentId) {
-          id = `${parentId}.${target.length + 1}`
-        } else {
-          let maxIdx = 0
-          for (const c of items) {
-            const m = c.id?.match(/^T(\d+)$/)
-            if (m) maxIdx = Math.max(maxIdx, parseInt(m[1]))
-          }
-          id = `T${maxIdx + 1}`
-        }
-
+        const id = parentId ? nextChildId(parentId, target) : nextRootId(items, parse(donePath(ctx.cwd)))
         const node = { id, index: 0, depth: parentId ? 1 : 0, status: "pending", text: args.item, children: [] }
         target.push(node)
         write(checklistPath(ctx.cwd), items)
         return `Added: [ ] ${id}: ${args.item}${parentId ? ` (under ${parentId})` : ""}`
       }
       case "mark": {
-        if (args.index == null) return "Error: 'index' is required for mark"
+        if (args.id == null && args.index == null) return "Error: 'id' or 'index' is required for mark"
         const status = args.status
         if (!status || !["pending", "in_progress", "done"].includes(status)) return "Error: 'status' is required (pending|in_progress|done)"
         const cp = checklistPath(ctx.cwd)
         const items = parse(cp)
-        const flat = flatten(items)
-        if (args.index < 1 || args.index > flat.length) return `Error: index ${args.index} out of range (1-${flat.length})`
-        const item = flat[args.index - 1]
+        let item
+        if (args.id != null) {
+          const found = findById(items, args.id)
+          if (!found) return `Error: id '${args.id}' not found. Use 'list' to see all task IDs.`
+          item = found.item
+        } else {
+          const flat = flatten(items)
+          if (args.index < 1 || args.index > flat.length) return `Error: index ${args.index} out of range (1-${flat.length})`
+          item = flat[args.index - 1]
+        }
         const old = item.status
         if (old === status) return `Already ${status}: ${item.text}`
+        if (status === "done" && item.children?.length && !allChildrenDone(item)) {
+          return "Error: 父任务仍有未完成的子任务，先处理子任务再标父 done"
+        }
         item.status = status
         if (status === "done") {
-          // Move to done file
+          // Move the whole subtree to the done file (hierarchy preserved).
           const dp = donePath(ctx.cwd)
           const doneItems = parse(dp)
-          doneItems.push({ id: item.id, index: 0, depth: 0, status: "done", text: item.text, children: [] })
+          doneItems.push(archiveSubtree(item))
           write(dp, doneItems)
-          // Remove from tree
+          // Remove the subtree from the tree.
           const found = findById(items, item.id)
           if (found) found.parent.splice(found.idx, 1)
         }
         write(cp, items)
-        return `Marked #${args.index} ${old} → ${status}: ${item.id}: ${item.text}`
+        return `Marked ${item.id} ${old} → ${status}`
       }
       case "list": {
         const items = parse(checklistPath(ctx.cwd))

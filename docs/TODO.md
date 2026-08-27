@@ -1,4 +1,4 @@
-# 项目待办（Project TODO）
+﻿# 项目待办（Project TODO）
 
 > 项目级统一待办清单：所有来源的待办（设计遗留、评审发现、用户指示）汇总于此，不散落在设计文档中。
 > 设计文档只承载设计本身——待办变更不应触发设计文档变更（避免不必要的 doc review）。
@@ -40,6 +40,13 @@
 - [x] IK9UZ8 思考型模型标题生成失败——CLI 已实现（commit 3c1815e）；vscode 侧状态见 vscode TODO 同名条目
 - [x] GitHub thincoder#2 GLM tool_calls 畸形解析——已实现（openai.mjs droppedToolCalls 防御合并 + agent.mjs 丢弃提醒，0.12.37；vscode 端 128464b normalizeToolPairing）——2026-08-25 核对销账
 - [x] TUI.md 章节号重编号——已修（2026-08-25，## 4-## 10 顺延，无重复）
+### TUI · 子agent/advisor 模型显示测试（2026-08-26，来源：模型显示审计）
+
+- [ ] `[model]` token 解析剥离补自动化测试（agent-turn.mjs 解析 / render-frame.mjs header）——功能已实现（CLI 0.12.41），解析路径零测试锁定；契约见 TUI.md §10.4D 测试用例表 T1-T3
+
+### 工具 · checklist 文档完备性（2026-08-27，来源：交付评审）
+
+- [ ] TOOLS.md §6（git 工具扩充）/§7（workdir/scriptFile）测试是散文总结，非用例表（§8/§8.1 已有完整表）——补成 输入/预期 用例表，与 §8 对齐（低价值，回补文档，择机）
 
 ## 已关闭（Done）
 
@@ -52,3 +59,4 @@
 - [x] ENGINEERING-MODE.md 三层结构补全（需求/非功能/测试用例/错误恢复等）
 - [x] METHODOLOGY.md 剥离平台实施细则，重写为用户级方法论
 - [x] Project TODO 机制（docs/TODO.md）+ 方法论规范
+

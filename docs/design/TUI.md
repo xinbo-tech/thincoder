@@ -290,3 +290,35 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | T3 | raw.embedding 为 undefined | 三件套齐（与 T1 同） | F2 |
 | T4 | 仅 apiKey 的存量 config 再保存 | 补齐 baseURL/model | F3 |
 | T5 | 回归：现有 /config 相关测试全过 | 无破坏 | 范围边界 |
+### 10.4 · 子agent/advisor 显示使用的模型（2026-08-26 · 需求层）
+
+**总体需求**：TUI 会话界面展示子 agent（subagent/escalate/consult）与 advisor 实际使用的模型——两端对称交付（2026-08-23：CLI CHANGELOG 0.12.41 / vscode CHANGELOG 0.1.46）。CLI 侧已实现；本文档补记（此功能此前仅记于 CHANGELOG 与 commit，未入文档地图——2026-08-26 审计补录欠账）。
+
+**功能性需求**：
+- F1 子 agent 块 header 显示 `[role · model]`（`render-frame.mjs`）。
+- F2 advisor 状态栏 `advisor review (round N · model)` 与工具标题 `(round N · model)` 显示实际模型（`agent-turn.mjs`）。
+- **范围边界**：仅显示层；模型解析单一来源（`resolveAdvisorProvider` / `resolveChildProvider`）不改。
+
+**非功能性需求**：
+- NF1 `[model]` 元数据 token 解析后剥离，不得污染内容流（`agent-turn.mjs`）。
+- NF2 无模型时优雅降级——header 显示 `[role]`，无 `· model` 后缀。
+
+### 10.4D · 设计层（子agent/advisor 模型显示）
+
+**机制**（已实现，验收勾销 2026-08-23）：
+- **发射**：`subagent.mjs` / `consult.mjs` / `escalate.mjs` 在子流首 token 附带 `[model]<name>` 前缀（仅当实际模型非 undefined 时），配 relay 前缀 `role#id/`。
+- **解析**：`agent-turn.mjs:106-117` 正则 `^([\w-]+)#(\d+)/` 分割子流；`[model]` 前缀存入 `state.subTasks[key].model` 并从内容剥离（NF1）。
+- **渲染**：`render-frame.mjs:65` 子 agent 块 header 拼接 `[role · model]`；advisor 不走 token——TUI 直接 `resolveAdvisorProvider(agent).model`（`agent-turn.mjs` `onToolCall` 时解析一次，状态栏与内联标题共用）。
+- **ACP 例外**：`acp/bridge.mjs:70-72` 剥离 `[model]` token——ACP 会话不承载 TUI 展示，属 ACP 线契约。
+
+**关键决策**：vscode 走结构化消息字段（`toolPanel.model`），CLI 走 `[model]` token——两端渲染架构不同（TUI 可直访 agent 对象，webview 仅收 postMessage），各取所需；决策统一记录在 vscode `ARCHITECTURE.md` 变更段（本文件不复制）。
+
+**测试现状**（如实标注）：`[model]` 解析剥离无自动化测试锁定（2026-08-26 审计确认）——遗留项已记入项目 TODO（docs/TODO.md），不在本文档展开。
+
+**测试用例表**（本次补记不新增代码；若后续补测试按此契约）：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | 子流首 token `role#1/[model]deepseek-v4 内容` | `state.subTasks[key].model === "deepseek-v4"`，内容无 `[model]` 前缀 | F1 / NF1 |
+| T2 | 子流无 `[model]` token | `model` 为 undefined，header 显示 `[role]` | F2 / NF2 |
+| T3 | advisor 调用进行中 | 状态栏显示 `advisor review (round N · 实际模型)` | F2 |
