@@ -165,7 +165,44 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | T2 | 无 `function` 的 tc（`{index:0,id:"a"}`） | 丢弃（name 空）计数 1 | F2 |
 | T3 | tc 无 `index`：第一段 `{id:"call_1",function:{name:"read",arguments:"{\"a\":"}}`、第二段 `{function:{arguments:"1}"}}`（纯增量，无 index 无 id 无 name） | 按 id 归并 + 尾槽延续：单槽、name="read"、arguments=`{"a":1}` 拼接正确 | F2 |
 | T4 | tc 无 `id` | 收尾合成 `call_N`，tool 消息配对不 400 | F2 |
-| T5 | `function: null` 的 tc | 不抛异常，丢弃计数 | F2 |
+| T5 | `function: null` 的 tc（`{index:0, id:"a", function:null}`） | 不抛异常，丢弃计数 | F2 |
 | T6 | `arguments` 为对象（非字符串） | JSON.stringify 追加，不产生 `[object Object]` | F2 |
 | T7 | 混合负载：1 正常 + 2 畸形 | 正常执行；`droppedToolCalls=2`；`_warnings` 1 条 | F1 |
 | T8 | 回归：现有 sse 相关用例全过 | 无破坏 | 范围边界 |
+
+## 11. GLM-5.3-Flash 模型支持（2026-08-28）
+
+> 本文件为 CLI 侧权威源；扩展端设计见 `thincoder-vscode/docs/design/ARCHITECTURE.md` 变更段（不复制）。
+
+**总体需求**：CLI 与 VS Code 两端新增 GLM-5.3-Flash 模型支持——智谱 2026-08-26 发布的 GLM-5 系列首个原生多模态 Flash 档位模型（320B 总参 / 18B 激活 MoE），1M 上下文 + 128K 输出 + 原生文本/图片输入，API 价格约为 GLM-5.3 的 1/10。
+
+**功能性需求**：
+- F1 `MODEL_SPECS` 加 `glm-5.3-flash` 条目：context 1M / maxOutput 128K / thinking 始终开（`thinkApi:"type"`，不可关闭）/ reasoningEffort `low`·`high`·`max` / **multimodal: true**（原生文本+图片，区别于纯文本的 glm-5.3）。
+- F2 `read_image` 对 glm-5.3-flash 放行（靠 `spec.multimodal` 自动生效，file.mjs 门禁无需改）；CLI `src/tools/read_image.md` 的 vision 支持列表补 GLM-5.3-Flash。
+
+**非功能性**：
+- 规格表驱动：只加一行 spec，transport/thinking/续写全自动适配（§9 决策），零其他代码改动。
+- 两端 parity：CLI 与 vscode 同规格（既定纪律）。
+
+**设计**：
+- CLI `src/config.mjs` MODEL_SPECS 加一行（对齐现有 `glm-5.3` 条目，额外 `multimodal: true`）：
+  `["glm-5.3-flash", { context: 1_000_000, maxOutput: 128_000, thinking: true, multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }]`
+- VS Code `src/config.mjs` 加同规格行，补 `reasoningEffortDefault: "max"`（对齐其 `glm-5.3` 写法）。
+- CLI `src/tools/read_image.md` 第 8 行 vision 支持列表补 `GLM-5.3-Flash`。
+
+**关键决策**：
+
+| 决策 | 理由 |
+|---|---|
+| **不改 PROVIDER_PRESETS 默认**（`glm`/`glm-code` 仍 `glm-5.2`） | 方案 A（2026-08-28 用户定）：只加可用性、不惊动现有用户默认；用户手动 `/model glm:glm-5.3-flash` 选择 |
+| 方案 B（默认预设改为 glm-5.3-flash）被否决 | 避免惊动存量用户默认 |
+
+**受影响文件**：`src/config.mjs`（CLI）、`src/tools/read_image.md`（CLI）、`thincoder-vscode/src/config.mjs`。
+
+**测试用例表**：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | `specForModel("glm-5.3-flash")` | context=1_000_000、maxOutput=128_000、multimodal=true、reasoningEffortEnum=[low,high,max]、noUsageStream=true | F1 |
+| T2 | read_image 工具对 glm-5.3-flash 模型 | 不拒绝（multimodal 放行，file.mjs 门禁通过） | F2 |
+| T3 | 回归：PROVIDER_PRESETS.glm.model | 仍 `glm-5.2`（默认未动） | 关键决策 |

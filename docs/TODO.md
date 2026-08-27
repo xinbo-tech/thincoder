@@ -48,6 +48,11 @@
 
 - [ ] TOOLS.md §6（git 工具扩充）/§7（workdir/scriptFile）测试是散文总结，非用例表（§8/§8.1 已有完整表）——补成 输入/预期 用例表，与 §8 对齐（低价值，回补文档，择机）
 
+### 模型 · GLM-5.3-Flash 交付评审遗留（2026-08-28，来源：交付评审）
+
+- [ ] `src/config.mjs` 约 328 行超 300 行阈值——建议把 MODEL_SPECS / PROVIDER_PRESETS 表格抽到独立 spec 模块（本次仅加一行，非本次引入）
+- [ ] PROVIDER.md §11 测试表 T2（read_image 对 glm-5.3-flash 不拒绝）未直接写成自动化用例，仅靠 multimodal=true 断言间接覆盖——择机补 readImageTool.execute 用例
+
 ## 已关闭（Done）
 
 - [x] 语义一致化 4 项（hasCodeMutations src/ 判定、dispatch 未知路径保守、isDocOnlyChange src/ 排除、直接单测）

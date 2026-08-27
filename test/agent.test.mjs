@@ -407,6 +407,20 @@ test("config: MiMo 预设与规格（按量付费 + Token Plan）", async () => 
   assert.equal(specForModel("mimo-v2.5").multimodal, true, "mimo-v2.5 is the multimodal variant")
 })
 
+test("config: GLM-5.3-Flash 规格（1M 上下文 / 128K 输出 / 多模态）", async () => {
+  const { specForModel, PROVIDER_PRESETS } = await import("../src/config.mjs")
+  const s = specForModel("glm-5.3-flash")
+  assert.equal(s.context, 1_000_000)
+  assert.equal(s.maxOutput, 128_000)
+  assert.equal(s.multimodal, true, "glm-5.3-flash is multimodal — read_image must not be gated off")
+  assert.deepEqual(s.reasoningEffortEnum, ["low", "high", "max"])
+  assert.equal(s.noUsageStream, true)
+  assert.equal(s.thinkApi, "type", "thinking 始终开（thinking.type，不可关闭）")
+  // 默认预设未动（方案 A：只加可用性，不惊动存量用户默认）
+  assert.equal(PROVIDER_PRESETS.glm.model, "glm-5.2")
+  assert.equal(PROVIDER_PRESETS["glm-code"].model, "glm-5.2")
+})
+
 
 test("config: 未知模型名警告一次（不静默降级，防刷屏）", async () => {
   const { specForModel } = await import("../src/config.mjs")
