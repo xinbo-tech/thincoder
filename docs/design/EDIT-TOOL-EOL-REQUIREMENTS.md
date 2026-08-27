@@ -18,7 +18,7 @@
 **两端实现现状**（已核实，2026-08-26）：
 - CLI `file.mjs`：edit 写回 `writeFile(abs, updated)`——normalizeEOL 后**不恢复**原行尾；失败仅给 searched 前缀提示。
 - CLI `patch.mjs`：hunk 应用有 EOL 感知（`const eol = raw.includes("\r\n")`），但拼接 `lines.join("\n")`——**写回丢 CRLF**。
-- VS Code `file.mjs`：edit 已做 `fileEol` 检测 + 写回恢复（**这端是正确的，保持**）；失败有 CRLF 诊断。
+- VS Code `file.mjs`：edit 的**磁盘写回**已做 `fileEol` 检测 + 写回恢复（正确）；但**编辑器路径（doc 打开）的 range 编辑有偏移坐标系错位**——2026-08-28 发现，见 F5。
 - VS Code `more-file.mjs`：apply_patch 有 EOL 感知（`op.text + cr`）但 `lines.join("\n")`——**同样丢 CRLF**。
 - 两端 `write`：直接写参数字符串，无行尾语义（新建文件该用什么行尾无规则）。
 
@@ -50,3 +50,15 @@
 | D3 | 候选提示算法 | **最长公共子串相似度（行级）**——对 old_string 与每行算 LCS 长度 / max(len)，取 top 3（阈值 ≥ 0.5）；Levenshtein 距离在行级太贵且对长 old_string 语义差，LCS 更贴"相似一行"的直觉。候选返回含行号+前 80 字符预览+相似度百分数。 |
 | D4 | 编码探测 | **U+FFFD 存在即警告**（用户确认）——U+FFFD 是 UTF-8 解码失败的标准替换符，出现即说明文件不是干净 UTF-8（被别的编码写过或双重编码过）。警告写进返回文本（`⚠ file contains U+FFFD — encoding may be corrupted`），不阻断。 |
 | D5 | 两端一致性 | CLI 与 VS Code **同一套语义各自实现**（两端代码是平行分支非共享）——行为规则一致，代码各自落地，各写各的测试。VS Code 的 edit 行尾恢复已正确，只需补 apply_patch + 候选提示 + 探测；CLI 三处都补。 |
+
+## 变更段 F5：VS Code 编辑器路径 range 偏移坐标系错位（2026-08-28）
+
+> 会诊 4 家一致确认。设计细节见 EDIT-TOOL-EOL-DESIGN.md §7，本处只落需求口径。
+
+**F5**：edit 在 VS Code 编辑器路径（doc 已打开）的 range 编辑，其定位偏移必须与 doc.positionAt 同坐标系——用 lfOffsetToRaw 把 LF 域偏移映射回 CRLF 原文偏移，再做 range 替换。含：
+- 非 replace_all：偏移映射（保留 range 编辑，否决整文档替换——undo 粒度/光标/折叠/大文件性能/并发冲突面）；
+- replace_all：补 EOL 还原（不再静默丢 CRLF）；
+- read(hashes=true)/hashline_edit 哈希域统一（stripBom + normalizeEOL，消除 CRLF 尾 \r 与 BOM 首行造成的哈希失配）；
+- hashline_edit BOM 还原（磁盘写回带 BOM、编辑器分支不带，防双 BOM）；
+- getOpenDoc win32 大小写不敏感（消除 split-brain）；
+- insert_after normalizeEOL + 编辑器分支换行符按 fileEol（消除 $ 锚失配与混合 EOL 注入）。
