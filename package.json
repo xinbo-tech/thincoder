@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "thincoder",
   "version": "0.12.46",
   "description": "Thin coding agent - zero dependencies, no build step, Node.js native. Sharp code, zero bloat.",
