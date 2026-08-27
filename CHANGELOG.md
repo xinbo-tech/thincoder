@@ -2,6 +2,12 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.47] — 2026-08-28
+
+### Added
+
+- **GLM-5.3-Flash 模型支持**：智谱 2026-08-26 发布的原生多模态 Flash 档位模型——1M 上下文 + 128K 输出 + 文本/图片输入，`/model glm:glm-5.3-flash` 即可选用（不改默认预设）
+
 ## [0.12.46] — 2026-08-27
 
 ### Fixed
