@@ -55,7 +55,16 @@ ovsx publish 返回 `🚀 Published` 后,**版本处于"已发布未激活"状�
 
 ### 4.4 npm prepublishOnly 是最后一道门
 
-`npm publish` 自动执行 `prepublishOnly`(package.json 配置为全套测试)——测试不过发布中止,这是有意设计,不要绕过。
+`npm publish` 自动执行 `prepublishOnly`——**现为 `lint && test` 双门禁**(2026-08-27 起;此前只跑 test,lint 错误漏拦),两者不过发布中止,这是有意设计,不要绕过。
+
+### 4.5 版本 bump 别用 PowerShell Set-Content -Encoding UTF8(2026-08-27)
+
+Windows PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会写 **BOM**(`EF BB BF`),污染 `package.json` 导致 JSON 解析失败、`prepublishOnly` 崩。改版本号用 JSON.parse→改字段→JSON.stringify(无 BOM),或 `-Encoding utf8NoBOM`。判断:发布前 `npm view` 能读到旧版本但 publish 报解析错,先查 package.json 首三字节是否 `EF BB BF`。
+
+### 4.6 marketplace 延迟 + PAT 环境变量(2026-08-27,与 vscode 端同源)
+
+- **marketplace 延迟**:`vsce publish` 报 `already exists` 但 `vsce show` 仍显示旧版本——通常是已成功、查询索引缓存延迟。先 `vsce show` 确认新版本是否已进 `versions` 列表,别急着重试(重试会撞"已存在")。
+- **PAT 在环境变量里会忘**:无 TTY 环境(agent 子进程)环境变量可能没继承、CLI 静默 exit 0 假装成功。发布前先 `npm whoami` / `ovsx verify-pat` 显式验证,拿不准就显式传 token。
 
 ## 5. 回滚 / 问题
 

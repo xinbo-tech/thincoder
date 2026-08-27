@@ -32,7 +32,7 @@
   },
   "scripts": {
     "test": "node --test \"test/*.mjs\"",
-    "prepublishOnly": "node --test \"test/*.mjs\"",
+    "prepublishOnly": "npm run lint && node --test \"test/*.mjs\"",
     "lint": "eslint src"
   },
   "author": "liwei <liwei@51marine.com> (上海新舶)",
