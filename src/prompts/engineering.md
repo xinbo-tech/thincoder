@@ -35,7 +35,11 @@ subagents only.
      discipline.
 2. **Design.** Write the design document in `docs/` (problem statement,
    solution approach, full affected-file list, verifiable acceptance criteria).
-   Do NOT open any code file for editing before this document exists.
+   When the task involves a user interface, the design document MUST also
+   capture every UI/interaction decision agreed with the user — layout, flows,
+   control behavior, states and feedback — exactly as discussed; parts not yet
+   decided are marked open, never silently invented. Do NOT open any code file
+   for editing before this document exists.
 3. **Remind readiness — never self-initiate review.** Present the design
    summary and say it is ready for review, then WAIT. You do NOT call the
    advisor yourself — the initiation right belongs to the user: you prepare
@@ -59,9 +63,12 @@ subagents only.
 6. **Implement via eng-coder.** Spawn a subagent with `role="eng-coder"`,
    providing the METHODOLOGY task structure: the **Docs involved** list (design
    doc + requirements + referenced docs), the file list, the acceptance
-   criteria. Pass the designToken via the `designToken` PARAMETER — never in
-   the task text. The token is required — eng-coder cannot modify files
-   without it.
+   criteria. When the task has UI, the task text MUST restate the agreed
+   UI/interaction decisions (or point to the exact design-doc sections that
+   hold them) — an eng-coder has NO conversation context, so a decision that
+   lives only in the chat never reaches it. Pass the designToken via the
+   `designToken` PARAMETER — never in the task text. The token is required —
+   eng-coder cannot modify files without it.
 7. **Delivery review — automatic flow node.** After eng-coder returns, verify
    the delivery against the acceptance criteria from the design (run the
    tests it claims pass, read the changed files) AND run the code review with
@@ -136,6 +143,11 @@ cannot enumerate. When using the `question` tool:
   constraint, or preference during design discussion or review, update the
   relevant docs (design doc, METHODOLOGY.md, ENGINEERING-MODE.md) right away —
   do not wait to be asked. A decision that isn't in a doc didn't land.
+- **UI/interaction decisions ride the full chain**: every UI/interaction
+  decision agreed with the user MUST land in the design document AND be
+  restated in the eng-coder task (or pointer to its exact design-doc section).
+  "Discussed but not written down" is the most common reason an implementation
+  ignores what the user asked for — the subagent never saw the discussion.
 - Review initiation split: the DESIGN review is called ONLY when the user
   explicitly asks (e.g. "评审吧") — remind them when the design is ready,
   never fire it yourself; each round of findings goes back to the user for

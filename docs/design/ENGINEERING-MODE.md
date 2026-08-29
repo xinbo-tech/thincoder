@@ -190,3 +190,19 @@
 3. token 纯内存态——重进重新评审（验证依赖内存字段，持久化恢复低收益，接受）。
 4. multi-repo 时 advisor cwd 取 `repos[0]`——`_touchedFiles` 绝对路径缓解，已知限制。
 5. 架构级文档简化功能性需求（用户故事）——METHODOLOGY 允许，机制约束 FR1-FR7 替代。
+
+## 7. 变更记录
+
+### 2026-08-29：UI/交互决策全链路落档（用户报告"agent 无视讨论过的 UI 设计"）
+
+**需求**（用户拍板）：与用户讨论达成的 UI/交互设计经常不体现在实现里。根因：eng-coder 是零上下文子代理，决策只留在对话里就永远到不了它那里。要求：UI/交互决策必须落设计文档，且必须包含在下达给 eng-coder 的任务中。
+
+**设计**（两端 `src/prompts/` byte-identical）：
+1. `engineering.md` flow 第 2 步（设计文档要素）扩项：任务涉及界面时，设计文档**必须**收录与用户达成的每一条 UI/交互决策（布局、流程、控件行为、状态与反馈），严格照讨论结论；未定部分标 open，绝不静默发明。
+2. `engineering.md` flow 第 6 步（eng-coder 任务书）：涉及 UI 时任务文本**必须**复述已达成的 UI/交互决策（或精确指向设计文档的具体章节）——点破机理"eng-coder has NO conversation context"。
+3. `engineering.md` Hard Rules 加独立条目 "UI/interaction decisions ride the full chain"——"讨论过但没落文档"是实现无视用户要求的最常见原因。
+4. `eng-coder.md` Guidelines 加执行侧闭合：UI/交互严格照任务书与设计文档实现（布局/流程/控件行为/状态/反馈）；任务书与设计文档都没覆盖的界面决策 → 停下报告缺口，不自行发明交互设计。
+
+**测试**（内容级断言英文短语，两端各验；副本未改时必须能失败）：`engineering.md` 三处条款 + `eng-coder.md` 执行闭合，见两端 `test/agent.test.mjs`（"UI/交互决策必须落设计文档且必须进 eng-coder 任务书" / "UI 按任务书与设计文档执行"组）。
+
+**受影响文件**：`src/prompts/engineering.md`、`src/prompts/eng-coder.md`（`thincoder/` + `thincoder-vscode/` 各一份，byte-identical）。

@@ -14,6 +14,7 @@ The parent agent ran an independent design review (`advisor` with `type="design"
 
 - Work independently. The parent only sees your final report.
 - Follow the design document. If you find issues during implementation, note them — do not silently deviate.
+- UI/interaction: implement exactly what the task brief and design doc state (layout, flows, control behavior, states, feedback). If an interface decision the task implies is missing from both, stop and report the gap — do not invent your own interaction design.
 - Write code one file at a time, verify each before moving on: call `verify` after each logical group (it runs syntax checks + related tests), syntax check after each edit.
 - Do not modify any file not listed in the design.
 - If the task is ambiguous, note the ambiguity in your report; do not ask the user.

@@ -3048,6 +3048,38 @@ test("prompts/engineering.md: 写文档前计划确认条款（无豁免）", ()
   assert.ok(text.includes("obvious enough to skip"), "堵死 self-exemption 借口句在")
 })
 
+test("prompts/engineering.md: UI/交互决策必须落设计文档且必须进 eng-coder 任务书（2026-08-29）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
+  assert.ok(
+    /MUST also\s+capture every UI\/interaction decision agreed with the user/.test(text),
+    "设计步骤要求 UI/交互决策落档",
+  )
+  assert.ok(text.includes("marked open, never silently invented"), "未定部分标 open、不自行发明")
+  // 任务书传递强制：eng-coder 无对话上下文
+  assert.ok(
+    text.includes("MUST restate the agreed\n   UI/interaction decisions"),
+    "任务书必须复述 UI/交互决策",
+  )
+  assert.ok(
+    text.includes("an eng-coder has NO conversation context"),
+    "点破机理：子代理零上下文",
+  )
+  // Hard Rules 独立条目：点破"讨论过但没落文档"是实现无视的根因
+  assert.ok(text.includes("UI/interaction decisions ride the full chain"), "Hard Rules 条目在")
+  assert.ok(
+    text.includes('"Discussed but not written down" is the most common reason'),
+    "根因句在（讨论过但没落文档 = 实现无视的最常见原因）",
+  )
+})
+
+test("prompts/eng-coder.md: UI 按任务书与设计文档执行；缺失则停下报告（2026-08-29）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "eng-coder.md"), "utf8")
+  assert.ok(text.includes("UI/interaction: implement exactly what the task brief and design doc state"), "照任务书执行条款")
+  assert.ok(text.includes("stop and report the gap"), "缺失 → 停下报告")
+  assert.ok(text.includes("do not invent your own interaction design"), "禁止自行发明交互设计")
+})
+
 // 两端 15 文件 byte-identical：thincoder-vscode 不存在时动态 skip（如单独 clone CLI 仓库）
 test("两端 src/prompts/ 15 文件 byte-identical（CLI ↔ VS Code）",
   { skip: !existsSync(VSCODE_PROMPTS_DIR) },
