@@ -200,3 +200,25 @@ test("variant roles fail closed — coder leak fix (2026-08-25)", async () => {
     /use role='eng-coder'/,
   )
 })
+test("subagent tool description exposes the role capability matrix (no dev-comment leaks)", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const d = subagentTool.description
+  for (const probe of [
+    "Available roles",
+    "Why delegate?",
+    "already verified",
+    "- explore",
+    "- plan",
+    "- coder",
+    "- eng-coder",
+    "git context auto-injected",
+    "delivery transparency table",
+    "Mode filtering",
+  ]) {
+    assert.ok(d.includes(probe), `description missing "${probe}"`)
+  }
+  assert.ok(!d.includes("OVERRIDDEN"), "dev-comment leak: OVERRIDDEN in description")
+  assert.ok(!d.includes("SETUP.MJS"), "internal impl path leaked into description")
+  const roleDesc = subagentTool.parameters.properties.role.description
+  assert.ok(!roleDesc.includes("OVERRIDDEN"), "role description leaks dev comment")
+})

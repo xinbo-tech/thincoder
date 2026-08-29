@@ -183,12 +183,12 @@ export async function prepareRun(agent, input, callbacks, {
   const subagentRoles = (depth === 0 && agent.config?.agent?.engineering)
     ? {
         enum: ["explore", "plan", "eng-coder"],
-        description: "Sub-agent role: 'explore' (read-only search/analysis), 'plan' (read-only implementation planning), 'eng-coder' (engineering coder — strict methodology, design-driven). 'coder' is disabled in engineering mode.",
+        description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
         suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled).",
       }
     : {
         enum: ["explore", "plan", "coder"],
-        description: "Sub-agent role: 'explore' (read-only search/analysis), 'plan' (read-only implementation planning), or 'coder' (full implementation). 'eng-coder' is disabled in normal mode.",
+        description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
         suffix: "",
       }
   const filteredSubagent = depth === 0 ? {

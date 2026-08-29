@@ -87,6 +87,21 @@ PreToolUse hooks → 阻断
 - 报告契约：<200 字符视为交接不完整，打回扩写一次（`MIN_REPORT_CHARS`）；超长报告落盘全量保留
 - 权限：手动模式下子代理的非只读工具透传到父 agent 的权限审批（人在回路）
 - eng-coder：设计 token 门控（`_engDesignToken`，评审通过后签发，跨 turn 存活；子代理授权在 spawn 前校验）
+### 7.1 子代理工具描述：角色能力矩阵 + 委派动机（2026-08-28）
+
+**需求**（用户研究驱动）：父模型从 subagent 工具 description 只能拿到一行角色标签（explore/plan/coder/eng-coder 各一句），缺"角色×工具×注入×报告契约"能力对照与委派动机——该用哪个角色、为何委派靠猜；且 description 泄漏开发注释（`ENUM IS OVERRIDDEN IN setup.mjs PER ENGINEERING MODE`）。对照参考项目（kimi-code profile 描述动态渲染 / opencode registry"可见性=权限"）+ ThinCoder 既有机制（§7：多角色 overlay、只读过滤、git 注入、报告契约、delivery 表）定案。
+
+**设计**（两端 `src/agent-tools/subagent.mjs` description 逐字对齐）：
+- **Available roles 矩阵**：explore（只读查询族/自动注入 git 上下文/报告须列未找到项/thoroughness 三档）、plan（纯只读规划）、coder（父全量读写执行 + verify/advisor 自评 + 强制交付表）、eng-coder（工程模式替换 coder + 设计驱动 overlay + 必带 designToken）
+- **Mode filtering 说明**：普通模式 explore/plan/coder，工程模式 explore/plan/eng-coder，schema enum 反映现行模式
+- **Why delegate? 段**：隔离上下文（子 agent 全部读写调用不进父窗口）+ 单任务专注 + 并行省时 + coder/eng-coder 自带 verify/advisor 自评（交付前已验）
+- role 参数 description 清理开发注释泄漏（指向工具描述能力矩阵）
+
+**测试**：`test/subagent.test.mjs` 内容断言（两端各一）——probe `Available roles` / `Why delegate?` / `already verified` / `- explore` / `- plan` / `- coder` / `- eng-coder` / `git context auto-injected` / `delivery transparency table` / `Mode filtering`；且 description 与 role 描述不得含 `OVERRIDDEN` / `SETUP.MJS`（防开发注释泄漏回归）。
+
+**研究对照结论（归档）**：kimi-code / opencode 双参考仓探索（2026-08-28）。已落档位 A（静态矩阵）；档位 B（按模式+调用方 allowlist 动态渲染角色×工具，工具集变化自动跟随）入 `docs/TODO.md`。其余差距修正记录：报告长度门禁 ThinCoder **已有**（`MIN_REPORT_CHARS` §7:87，kimi 同能力）——真正缺失的是**可配置化**（minChars/retries/continuationPrompt 挂 profile，kimi）与**子代理实体化 resume 生命周期**（agent_id 持久化续跑，kimi，candidate）；**嵌套深度硬上限 + "子代理默认禁再启子代理"**（opencode，信任层 candidate）；git remote 公共 host 白名单 sanitize（kimi，安全 candidate）。反向结论：ThinCoder 的父上下文注入（`Context:`/`Task:` 包装）+ 记忆/checklist/outline 注入参考项目所无（更主动），保留。
+
+**受影响文件**：`src/agent-tools/subagent.mjs`（description + role 参数）、`src/agent/setup.mjs`（depth-0 组装时 role 参数被 `subagentRoles` 覆盖——2026-08-28 复查发现并统一为同一矩阵引用文本；subagent 工具仅 depth-0 注入，工具内直改的 role 描述若不同步 setup 就是死文本）、`test/subagent.test.mjs`（内容断言）；VS Code 端同款（其 `docs/design/ARCHITECTURE.md` 引用段；role 覆盖点为其 `modeRoleField`，有 mode 互斥 + 描述一致性双测试）。
 
 ## 8. advisor 开关语义重构（2026-08-21）
 

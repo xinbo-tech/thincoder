@@ -84,6 +84,12 @@ export function insertPastedText(state, rawText) {
     q.answer = (q.answer ?? "") + rawText.replace(/[\r\n]+/g, "")
     return
   }
+  // IKBU3J (2026-08-28)：Ctrl+I 注入框激活时，粘贴进注入文本（与按键路径同语义：去换行保单行），
+  // 不得落入主输入框——此前缺失该分支导致粘贴进 state.input、Esc 后残留主输入框。
+  if (state.interruptPrompt) {
+    state.interruptPrompt.text += rawText.replace(/[\r\n]+/g, "")
+    return
+  }
   const text = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\t/g, "  ")
   const chars = [...text]
   state.input.splice(state.cursor, 0, ...chars)

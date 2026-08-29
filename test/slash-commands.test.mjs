@@ -440,3 +440,18 @@ test("cmd-mcp: 原本无 mcp 配置时 Add server 后回主菜单计数更新（
   assert.match(menus[1][0].text, /1 MCP servers configured/, "第二轮主菜单计数为 1")
   assert.match(texts(ctx), /\[mcp\] s1:/, "连接失败提示（config saved）")
 })
+
+test("handleSlash: handler exception is contained into an error line — TUI must not lock up (IKBNUI)", async () => {
+  const lines = []
+  const ctx = {
+    agent: {}, state: {}, memory: {},
+    pushLine: (t) => lines.push(t), render: () => {},
+    showPicker: () => Promise.resolve(null), closePicker: () => {},
+    exit: () => {}, openModelPicker: () => {}, persistRaw: async () => {}, syncProviderField: async () => {},
+  }
+  const { handleSlash } = createSlashCommands(ctx)
+  // /think with an empty agent (no provider) makes the handler throw — the exception must be
+  // caught as an error line, not propagated up into the submit path (which would freeze the TUI).
+  await handleSlash("/think")
+  assert.ok(lines.some((l) => l.startsWith("[error]")), `expected a [error] line, got: ${JSON.stringify(lines)}`)
+})

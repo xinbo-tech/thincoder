@@ -114,7 +114,14 @@ export function createSlashCommands(ctx) {
     const resolved = SLASH_ALIASES[cmd] ?? cmd
     const handler = HANDLERS[resolved]
     if (handler) {
-      await handler(handlerCtx, args)
+      // IKBNUI (2026-08-28)：命令 handler 抛出的异常必须被拦截成错误行，不得击穿 TUI 主循环——
+      // 此前 /think 交互循环里 config 写盘失败会一路冒泡（submit 无 catch）导致面板卡死、回不了输入框。
+      // 调用点（index.mjs submit 路径）统一在 handleSlash 返回后 render，UI 保持存活。
+      try {
+        await handler(handlerCtx, args)
+      } catch (e) {
+        ctx.pushLine(`[error] ${e?.message ?? String(e)}`, C.error)
+      }
       return
     }
     ctx.pushLine(`Unknown command: ${rawCmd} (/help for available commands)`, C.error)

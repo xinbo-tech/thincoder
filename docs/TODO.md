@@ -52,6 +52,9 @@
 
 - [ ] `src/config.mjs` 约 328 行超 300 行阈值——建议把 MODEL_SPECS / PROVIDER_PRESETS 表格抽到独立 spec 模块（本次仅加一行，非本次引入）
 - [ ] PROVIDER.md §11 测试表 T2（read_image 对 glm-5.3-flash 不拒绝）未直接写成自动化用例，仅靠 multimodal=true 断言间接覆盖——择机补 readImageTool.execute 用例
+### Provider · core.mjs 拆分（2026-08-28，来源：Qwen enable_thinking 交付评审 #4）
+
+- [ ] `src/provider/core.mjs` 419 行超 300 建议线（接近 500 硬限）——body 组装（含 enable_thinking 注入段）或 stripImages/normalizeToolPairing 抽独立模块；非本轮引入，择机
 
 ## 已关闭（Done）
 
@@ -65,3 +68,6 @@
 - [x] METHODOLOGY.md 剥离平台实施细则，重写为用户级方法论
 - [x] Project TODO 机制（docs/TODO.md）+ 方法论规范
 
+### Subagent · 角色能力矩阵动态化（2026-08-28，来源：kimi/opencode 对照研究）
+
+- [ ] 档位 B：subagent 工具 description 按模式+调用方 allowlist 动态装配"角色×工具"矩阵（对标 kimi buildProfileDescriptions / opencode registry 动态渲染）——工具集变化时描述自动跟随；2026-08-28 已落档位 A（静态充实版 description + 防泄漏断言，两端对齐），B 留待工具集真频繁变化时再动

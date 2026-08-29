@@ -188,6 +188,36 @@ export function resolveCompactThreshold(explicit, model) {
 }
 
 /**
+ * Bailian (阿里云百炼) host check — enable_thinking is a Bailian-only extension parameter;
+ * sending it to other endpoints (kimi/glm/custom proxies) would pollute the request.
+ */
+export function isBailianHost(baseURL) {
+  return typeof baseURL === "string"
+    && (baseURL.includes("dashscope.aliyuncs.com") || baseURL.includes(".maas.aliyuncs.com"))
+}
+
+/**
+ * Resolve the Bailian `enable_thinking` switch for qwen hybrid-thinking models (PROVIDER.md §12).
+ * qwen3.x on Bailian defaults to thinking ON, so an explicit off must send enable_thinking:false
+ * or the server silently keeps thinking. Whitelist: model name starts with "qwen" (excluding the
+ * non-thinking qwen3-coder line) AND the provider points at a Bailian host.
+ *   provider.thinking === null → false     (explicit off: /think off, panel off — NF1 convention)
+ *   provider.reasoningEffort   → true      (effort tier implies thinking on; rides with reasoning_effort)
+ *   otherwise                  → undefined (field omitted — server default stays, no behavior change)
+ * NOTE: spec carries no model field today — the name comes from provider.model (spec?.model is
+ * a forward-compatible fallback). Keep the body byte-aligned with thincoder-vscode config.mjs
+ * (cross-repo parity test compares them).
+ */
+export function resolveEnableThinking(provider, spec) {
+  const model = (provider?.model ?? spec?.model ?? "").toLowerCase()
+  if (!model.startsWith("qwen") || model.startsWith("qwen3-coder")) return undefined
+  if (!isBailianHost(provider?.baseURL)) return undefined
+  if (provider.thinking === null) return false
+  if (provider.reasoningEffort) return true
+  return undefined
+}
+
+/**
  * Find provider by name in providers[].
  * Throws if name is non-empty but not found — a typo in activeProvider silently falling to the first provider would use the wrong key on the wrong endpoint.
  * Returns the first provider when name is empty.

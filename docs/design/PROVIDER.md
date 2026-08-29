@@ -206,3 +206,67 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | T1 | `specForModel("glm-5.3-flash")` | context=1_000_000、maxOutput=128_000、multimodal=true、reasoningEffortEnum=[low,high,max]、noUsageStream=true | F1 |
 | T2 | read_image 工具对 glm-5.3-flash 模型 | 不拒绝（multimodal 放行，file.mjs 门禁通过） | F2 |
 | T3 | 回归：PROVIDER_PRESETS.glm.model | 仍 `glm-5.2`（默认未动） | 关键决策 |
+## 12. Qwen 思考关闭映射（enable_thinking，2026-08-28）
+
+> 本文件为 CLI 侧权威源；扩展端设计见 `thincoder-vscode/docs/design/ARCHITECTURE.md` 变更段（引用，不复制）。
+
+**总体需求**：qwen 系列在两端能**真正关闭思考**。现状缺陷：qwen3.x（阿里云百炼混合思考模式，默认开启）在 reasoning `off` 时请求体不含任何思考控制字段（transport 只发 `reasoning_effort`，从不发 `enable_thinking`）→ 服务端按默认开启处理 → `/think off` 与面板 off **静默失效**（关不掉且无提示）。官方核验（百炼 deep-thinking 文档 2026-08-28）：混合思考模型 `enable_thinking:false` 即关闭；仅思考模型（如 qwen3.7-max-preview、qwen3.7-max-2026-05-17）无法关闭。
+
+**功能性需求**：
+- F1 百炼 Qwen 白名单模型显式 off → 请求体 `enable_thinking: false`（模型直接回复，不思考）。
+- F2 白名单模型带 effort 档位 → `enable_thinking: true`，与既有 `reasoning_effort` 并存。
+- F3 白名单规则：`spec` 模型名以 `qwen` 开头 **且** provider `baseURL` 含 `dashscope.aliyuncs.com` 或 `.maas.aliyuncs.com`；排除无思考编码型号（模型名以 `qwen3-coder` 开头）。
+- F4 非白名单模型（kimi-k3、glm-*、deepseek-*、MiniMax 及自定义端点）**零变化**——`enable_thinking` 是百炼扩展参数，对其他端点不适用。
+
+**非功能性需求**：
+- NF1 **显式 off 约定统一**：`provider.thinking === null` 表示显式关机（vscode `resolveReasoningMode` off 已产 `thinking:null`）；CLI `/think off` 需改为同一约定（当前 `delete` 后字段不存在，与 autoThink 清空无法区分）。
+- NF2 映射为纯函数，单测锁定（不依赖真实 API）；百炼兼容端点 `enable_thinking` 与 `reasoning_effort` 并存有效性**实现期真实端点冒烟验证**（官方文档无组合示例，unverified 前置项）。
+- NF3 两端 parity：同一纯函数同一行为。
+- NF4 失败模式不劣于现状：仅思考型号（preview）收到 `false` 时服务端若忽略，行为仍为永远思考（与现状一致），不引入 400 风险（冒烟验证确认）。
+
+**设计**：
+- 纯函数 `resolveEnableThinking(provider, spec)`（两端 `src/config.mjs` 导出，同构造）：
+  ```js
+  export function resolveEnableThinking(provider, spec) {
+    if (!spec?.model.startsWith("qwen") || spec.model.startsWith("qwen3-coder")) return undefined
+    if (!prov.isBailianHost(provider.baseURL)) return undefined
+    if (provider.thinking === null) return false         // 显式 off（NF1 约定）
+    if (provider.reasoningEffort) return true            // effort 档位（F2，与 reasoning_effort 并存）
+    return undefined                                     // 未设置 → 服务端默认（qwen3.x 默认开思考，现状不变）
+  }
+  ```
+  `isBailianHost`：`baseURL` 含 `dashscope.aliyuncs.com` 或 `.maas.aliyuncs.com`。
+- CLI 注入点：`src/provider/core.mjs` body 组装（现 reasoning_effort 块附近）：
+  `const enableThinking = resolveEnableThinking(provider, spec); if (enableThinking !== undefined) body.enable_thinking = enableThinking`
+- CLI off 表达修正：`src/tui/cmd-think.mjs` `applyThink` effort-only off 分支（现 103-107 行 `delete cur.reasoningEffort`）改为 `cur.thinking = null; delete cur.reasoningEffort`；on 分支恢复默认（删 thinking:null 语义，默认 effort 从 `spec.reasoningEffortEnum[0]` 取——评审 #2：硬编码 "high" 对 qwen3.8-max（enum xhigh/medium/low）无效会 400）。**effort 分支与 auto 开启分支同样清 `thinking`**——选档位/开 auto = 要思考，清 off 标记（2026-08-28 交付评审 #1 修订：off→effort/auto 序列不得残留 thinking:null，否则 enable_thinking:false 与 reasoning_effort 矛盾同发、F2 违约）。autoThink 清空（off 侧）保持 `delete`（undefined → 不映射，auto 语义不受影响）。
+- vscode 注入点：`src/provider/transports/openai.mjs` body 组装（现 reasoning_effort 行附近）同款注入；`src/extension/reasoning-mode.mjs` off 已产 `thinking:null`，**无需改**。
+
+**受影响文件**：
+- CLI：`src/config.mjs`（新增导出）、`src/provider/core.mjs`（body 注入）、`src/tui/cmd-think.mjs`（off 显式 null）
+- vscode：`src/config.mjs`（同导出）、`src/provider/transports/openai.mjs`（body 注入）
+
+**关键决策**：
+
+| 决策 | 理由 |
+|---|---|
+| `thinking === null` 作为两端统一显式 off 约定 | vscode 已用 null 语义；CLI 补同约定即可精确区分"用户 off"与"autoThink/未设置"，映射函数稳定解耦 UI |
+| 白名单按模型前缀 + baseURL 域名双条件 | `enable_thinking` 仅百炼扩展参数，全局发送会污染 kimi/glm/自定义端点；双条件防误伤（如自建代理转发 qwen） |
+| 不把 `thinking_budget` 纳入本轮 | 独立增值项（限思考 token 上限），与本缺陷（关不掉）正交；记 TODO |
+| 仅思考型号不特殊排除（preview 等） | 规则保持简单可解释；最坏行为 = 现状（仍思考），无回归；冒烟验证确认不 400 |
+| 选档位/开 auto = 隐含 thinking on（清 `thinking:null` off 标记） | 评审 #1：off→effort / off→auto 序列若残留 null，请求体矛盾（`enable_thinking:false` + `reasoning_effort` 同发），F2 违约且比改动前更糟（显式关死）；null 保持"唯一 off 标记"，任何"要思考"的操作清它 |
+| on 分支默认 effort 取 `spec.reasoningEffortEnum[0]` 而非硬编码 "high" | 评审 #2：qwen3.8-max / -preview 枚举不含 high，硬编码值过 core.mjs 校验直接 throw（`/think on` 后下一次请求 400） |
+
+**测试用例表**：
+
+| # | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|
+| T1 | `resolveEnableThinking({model:"qwen3.8-max", baseURL:"https://dashscope.aliyuncs.com/...", thinking:null}, spec)` | `false`（显式 off → enable_thinking:false） | F1 / NF1 |
+| T2 | `resolveEnableThinking({model:"qwen3.8-max", baseURL:"https://dashscope.aliyuncs.com/...", reasoningEffort:"xhigh"}, spec)` | `true`（档位 → enable_thinking:true） | F2 |
+| T3 | `resolveEnableThinking({model:"kimi-k3", baseURL:"https://api.moonshot.cn/v1", thinking:null}, spec)` | `undefined`（非白名单不映射） | F4 |
+| T4 | `resolveEnableThinking({model:"qwen3.7-max", baseURL:"https://my-proxy.example.com/v1", reasoningEffort:"high"}, spec)` | `undefined`（非百炼域名） | F3 |
+| T5 | `resolveEnableThinking({model:"qwen3-coder-plus", baseURL:"https://coding-intl.dashscope.aliyuncs.com/v1", reasoningEffort:"high"}, spec)` | `undefined`（无思考编码型号排除） | F3 |
+| T6 | CLI `/think off` 后 `provider.thinking === null` 且 `reasoningEffort` 无；autoThink 清空后两者皆 undefined | null 语义只来自显式 off | NF1 |
+| T7 | 冒烟（**2026-08-28 已执行 ✅**）：脚本 `test/smoke-qwen-thinking.mjs`（真实端点，读本机 config.json，key 不打印不外传）；qwenplan/qwen3.8-max 实测：off → 响应无 `reasoning_content`（1.0s）、xhigh → 有（291 chars）、未设置 → 默认思考（254 chars）；仅思考 preview off 未测（本机无该型号配置，跳过） | 行为符合官方 deep-thinking 文档 | 已勾销 |
+| T8 | CLI `/think off` → `/think effort xhigh` 后 `provider.thinking` 无（null 标记被清）且 `reasoningEffort:"xhigh"` → `resolveEnableThinking` 返回 `true`；vscode 面板 off → 选档位同语义 | 选档位清 off 标记，无矛盾载荷 | F2 / 评审 #1 |
+| T9 | `applyThink` "on" 分支（effort-only，无既有 effort）：qwen3.8-max → 默认 `reasoningEffort:"xhigh"`（枚举首值）；qwen3.7-max → `"xhigh"` | 默认值必在枚举内，core.mjs 校验不 throw | F2 / 评审 #2 |
+| T10 | `/think` 交互菜单头部（effort-only 模型，`thinking:null` 显式 off） | 显示 "Thinking: OFF"（null 显式排除，不再误显示 ON） | NF1 / 评审 #3 |

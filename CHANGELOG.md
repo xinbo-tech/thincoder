@@ -2,7 +2,27 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.49] — 2026-08-29
+
+### Added
+
+- **Qwen enable_thinking 全链路**（CLI + VS Code 0.8.4 双端 parity）：`resolveEnableThinking` 按"模型前缀 qwen*（排除 qwen3-coder*）+ 百炼域名"白名单注入 `enable_thinking`——`thinking === null` 即显式 off（区别于未设置=ON）；`/think off` 真正关闭百炼强制思考（真实端点冒烟验证：off 1.0s 无 reasoning / 档位有思考）；PROVIDER.md §12 权威文档
+
+### Fixed
+
+- **opencode 400 残余排查**：`stripLocalMessageFields` 补齐 provider 载荷净化（Gitee IKBGX4 follow-up，与 VS Code 端 parity 测试互锁）
+
+### Changed
+
+- **subagent 工具描述升级**：角色能力矩阵 + Mode filtering 段（修复 role 参数 description 被运行期覆盖点的死文本）；read_image 多模态模型清单修正（补 GLM-5.3-Flash、移除纯文本 Qwen3.7）
+
 ## [0.12.48] — 2026-08-28
+
+### Fixed
+
+- **opencode/LiteLLM 严校验端点 400 "Extra inputs are not permitted"（Gitee IKBGX4）**：本地标记 `transient` 泄漏进发送载荷——`escapeMessages` 发送前剥离整消息本地字段（新增 `stripLocalMessageFields`），云端不再拒绝 `messages[i].transient`；VS Code 端口同修（provider.mjs 净化链，函数体 parity）
+- **Ctrl+I 注入框粘贴落主输入框（Gitee IKBU3J）**：`insertPastedText` 目标选择缺 `interruptPrompt` 分支——粘贴直接进 `state.input`、Esc 后残留主输入框；补分支（去换行，与按键路径同语义）
+- **/think 交互异常卡死 TUI（Gitee IKBNUI）**：命令 handler 异常（如 config 写盘失败）一路冒泡击穿 submit 主循环→面板卡死回不了输入框；`handleSlash` 包 try/catch，异常转错误行、UI 保持存活
 
 ### Changed
 

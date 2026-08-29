@@ -43,7 +43,20 @@ export function escapeMessageContent(message) {
   return message
 }
 
-/** 对整个 messages 数组逐条应用 escapeMessageContent。 */
+/** IKBGX4 (2026-08-28)：剥离仅本地使用的整消息标记字段（transient 等）——发送给 provider 前移除。
+ * 严格 OpenAI 兼容服务端（opencode/LiteLLM 等）会拒绝消息级未知 key
+ * （"Extra inputs are not permitted, field: 'messages[i].transient'"）。 */
+export function stripLocalMessageFields(messages) {
+  return messages.map((m) => {
+    if (m && typeof m === "object" && "transient" in m) {
+      const { transient, ...rest } = m
+      return rest
+    }
+    return m
+  })
+}
+
+/** 对整个 messages 数组逐条应用 escapeMessageContent（先剥离本地字段，再转义）。 */
 export function escapeMessages(messages) {
-  return messages.map(escapeMessageContent)
+  return stripLocalMessageFields(messages).map(escapeMessageContent)
 }

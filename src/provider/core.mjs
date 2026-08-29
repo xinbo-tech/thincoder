@@ -4,7 +4,7 @@
  * SSE parsing → provider/sse.mjs
  */
 
-import { specForModel } from "../config.mjs"
+import { specForModel, resolveEnableThinking } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages } from "../escape.mjs"
 import { readSSE } from "./sse.mjs"
@@ -104,6 +104,11 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     }
     body.reasoning_effort = provider.reasoningEffort
   }
+  // enable_thinking — Bailian hybrid-thinking switch (PROVIDER.md §12): qwen3.x defaults to
+  // thinking ON, so an explicit off must send enable_thinking:false or the server keeps thinking.
+  // NOT gated by isRouter: the whitelist keys on model prefix + Bailian host, not the model-ID slash.
+  const enableThinking = resolveEnableThinking(provider, spec)
+  if (enableThinking !== undefined) body.enable_thinking = enableThinking
   if (tools?.length) body.tools = tools
 
   const estimated = estimateRequestTokens(body)
