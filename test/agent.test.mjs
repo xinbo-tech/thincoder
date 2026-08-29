@@ -2998,6 +2998,7 @@ test("cache audit (2026-08-16): OS/cwd reminder injected once per process; resum
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url))                     // thincoder/test
 const PROMPTS_DIR = join(TEST_DIR, "..", "src", "prompts")                   // thincoder/src/prompts
+const SRC_DIR = join(TEST_DIR, "..", "src")                                  // thincoder/src
 const VSCODE_PROMPTS_DIR = join(TEST_DIR, "..", "..", "thincoder-vscode", "src", "prompts")
 
 test("prompts/explore.md: Thoroughness levels 三档 + 默认档", () => {
@@ -3078,6 +3079,30 @@ test("prompts/eng-coder.md: UI 按任务书与设计文档执行；缺失则停�
   assert.ok(text.includes("UI/interaction: implement exactly what the task brief and design doc state"), "照任务书执行条款")
   assert.ok(text.includes("stop and report the gap"), "缺失 → 停下报告")
   assert.ok(text.includes("do not invent your own interaction design"), "禁止自行发明交互设计")
+})
+
+test("prompts/methodology-template.md: 需求文档三层结构落地（2026-08-29 悬空引用修复）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8")
+  assert.ok(text.includes("three layers"), "三层结构点名")
+  assert.ok(text.includes("Overall goal"), "第一层：总目标")
+  assert.ok(text.includes("Functional user stories"), "第二层：功能用户故事")
+  assert.ok(text.includes("Non-functional standards"), "第三层：非功能标准")
+  assert.ok(text.includes("concrete enough to design against"), "完成判据在")
+  assert.ok(text.includes("traces back to a user story"), "设计验收标准回指用户故事")
+})
+
+test("prompts/engineering.md: METHODOLOGY 测试文档是交付评审的一部分（2026-08-29 测试文档口径对齐）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("METHODOLOGY test document is part of the delivery"), "交付评审要求测试文档")
+  assert.ok(text.includes("normal / edge / error"), "覆盖三态点名")
+  assert.ok(text.includes("a delivery without\n   its test coverage fails the review"), "无测试覆盖 = 交付评审不通过")
+})
+
+test("agent/setup.mjs: METHODOLOGY 缺失警告点名后果而非仅缺席（2026-08-29）", () => {
+  const text = readFileSync(join(SRC_DIR, "agent", "setup.mjs"), "utf8")
+  assert.ok(text.includes("every 'per METHODOLOGY' reference in the engineering prompt is dangling"), "悬空引用后果点名")
+  assert.ok(text.includes("three-document hard flow"), "硬流程后果点名")
+  assert.ok(text.includes("Ask the user whether to create METHODOLOGY.md"), "恢复路径：先问用户")
 })
 
 // 两端 15 文件 byte-identical：thincoder-vscode 不存在时动态 skip（如单独 clone CLI 仓库）

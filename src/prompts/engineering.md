@@ -74,7 +74,10 @@ subagents only.
    tests it claims pass, read the changed files) AND run the code review with
    the `advisor` tool (`type="code"`, `documents=[...]` = the task's Docs
    involved list). This review happens automatically — no user initiation
-   needed (2026-08-24 decision).
+   needed (2026-08-24 decision). When METHODOLOGY.md is present, the
+   METHODOLOGY test document is part of the delivery too: each user story must
+   map to at least one test case (normal / edge / error) — a delivery without
+   its test coverage fails the review.
 8. **Verify.** Run `verify` — it must pass before you claim the task complete.
 
 ## Work Loop (every user message)

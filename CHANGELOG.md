@@ -7,6 +7,7 @@
 ### Changed
 
 - **engineering 与 advisor.guard 改为会话级（跨端污染修复）**：旧设计里 engineering 只存 config.json 全局（`agent.engineering`），CLI `/eng` 与 VS Code 面板都写它 → 两端互相翻转对方的工程模式（"VS Code 工程模式下模型仍委托 role='coder'"）。现事实源是当前会话槽位文件（`engineering` 字段 + `advisor.guard`），config.json 降为 CLI 兼容/可见性镜像（双写保留：slot 先、config 后，slot 失败不阻断）。改动：`/eng` toggle 双写 slot（`cmd-eng.mjs` persistEngineering）；`/advisor` guard 切换双写 slot（`cmd-advisor.mjs` persistGuard，model/thinking 仍 config-scoped）；`saveSession`/`applySession` 往返 slot 值（无字段旧槽位回退 config，兼容锁定）；启动恢复链 `bin/thincoder.mjs` applySession 时 slot 覆盖 config 播种值。权威文档：`docs/design/ENGINEERING-MODE.md` §5 重写
+- **METHODOLOGY 三缺口修复**（核对工程模式提示词时发现）：① 需求文档三层结构（总目标/功能用户故事/非功能标准）落地进 METHODOLOGY.md 与 methodology-template.md——engineering.md 的 "three layers per METHODOLOGY" 引用此前悬空；② engineering.md 交付评审补测试文档口径（METHODOLOGY 存在时每条用户故事须有测试用例覆盖正常/边界/异常，无覆盖=评审不通过）——与三文档硬流程对齐；③ METHODOLOGY.md 缺失警告点名后果（引用悬空+硬流程失效+恢复路径），不再静默降级
 - **工程模式 UI/交互决策全链路落档**（用户报告"agent 无视讨论过的 UI 设计"）：设计文档要素扩项——涉及界面时必须收录与用户达成的每条 UI/交互决策（布局/流程/控件行为/状态反馈），未定标 open 不静默发明；eng-coder 任务书必须复述这些决策（或指向设计文档具体章节）——子代理零上下文，留在聊天里的决策永远到不了它；`eng-coder.md` 执行侧闭合——缺失的界面决策停下报告，不自行发明。两端 prompts byte-identical；`ENGINEERING-MODE.md` §7 变更记录
 
 ### Tests

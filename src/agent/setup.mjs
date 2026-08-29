@@ -252,12 +252,12 @@ export async function prepareRun(agent, input, callbacks, {
         warnings.push(`Engineering template (${agent._role === "eng-coder" ? "engineering-sub.md" : "engineering.md"}) not found — using degraded constraints.`)
       }
       if (engResult.methodologyMissing) {
-        warnings.push("METHODOLOGY.md not found — project-specific rules are absent.")
+        warnings.push("METHODOLOGY.md not found in the project root — no project methodology is loaded, so every 'per METHODOLOGY' reference in the engineering prompt is dangling and the three-document hard flow (requirements / design / test doc) is NOT enforced. Ask the user whether to create METHODOLOGY.md (scaffold available as src/prompts/methodology-template.md) before designing.")
       }
       if (warnings.length > 0) {
         agent.history.push({
           role: "user",
-          content: `[System reminder: ENGINEERING MODE is active but ${warnings.join(" ")} Create METHODOLOGY.md and ensure prompt templates exist for full enforcement, or disable engineering mode (/eng).]`,
+          content: `[System reminder: ENGINEERING MODE is active but ${warnings.join(" ")}]`,
         })
       }
     }

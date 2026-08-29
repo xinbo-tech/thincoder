@@ -206,3 +206,16 @@
 **测试**（内容级断言英文短语，两端各验；副本未改时必须能失败）：`engineering.md` 三处条款 + `eng-coder.md` 执行闭合，见两端 `test/agent.test.mjs`（"UI/交互决策必须落设计文档且必须进 eng-coder 任务书" / "UI 按任务书与设计文档执行"组）。
 
 **受影响文件**：`src/prompts/engineering.md`、`src/prompts/eng-coder.md`（`thincoder/` + `thincoder-vscode/` 各一份，byte-identical）。
+
+### 2026-08-29：METHODOLOGY 三缺口修复（核对 engineering.md 提示词时发现）
+
+**需求**（用户要求补齐）：核对工程模式提示词时发现三个规范缺口——① engineering.md 引用 "three layers per METHODOLOGY"，但 METHODOLOGY.md 里没有三层定义（总目标/功能用户故事/非功能标准），引用悬空；② METHODOLOGY 硬流程要求三文档（需求/设计/测试文档），engineering.md 的 8 步 flow 没有测试文档环节，两文档口径不一；③ 项目根目录无 METHODOLOGY.md 时静默降级（只拼 engineering.md 模板），"per METHODOLOGY" 引用全部悬空，用户无感知。
+
+**设计**：
+1. **三层定义落地**（`METHODOLOGY.md` 基本流程 + `methodology-template.md` Requirements 步同步改写）：需求文档按三层组织——总目标（一句话为谁解决什么）/ 功能用户故事（可逐条验收，who/what/why 不写 how）/ 非功能标准（写清度量方式）；补完成判据（三层都具体到可以据此设计）；设计文档要素补"每条验收标准回指用户故事"。
+2. **测试文档口径对齐**（`engineering.md` flow 第 7 步）：交付评审明确"METHODOLOGY 存在时测试文档是交付物的一部分——每条用户故事至少一个测试用例（正常/边界/异常），无测试覆盖 = 交付评审不通过"。措辞用 "When METHODOLOGY.md is present" 条件式，与 ③ 的降级路径兼容。
+3. **缺失警告点名后果**（CLI `agent/setup.mjs` 警告块 + VS Code `agent/setup-reminders.mjs` 同款）：从"METHODOLOGY.md not found — project-specific rules are absent."（仅陈述缺席）升级为点名后果——"每个 'per METHODOLOGY' 引用悬空 + 三文档硬流程不被强制执行"，并给恢复路径（先问用户是否创建 METHODOLOGY.md；VS Code 侧同时删掉不存在的 "eng tool's write mode" 陈旧指引）。
+
+**测试**（内容级断言，两端各验；副本未改时必须能失败）：三层结构/完成判据/验收回指（template）、测试文档交付条件句（engineering.md）、警告后果句/恢复路径/陈旧指引删除（setup）。见两端 `test/agent.test.mjs`。
+
+**受影响文件**：`docs/design/METHODOLOGY.md`（CLI）、`src/prompts/methodology-template.md`（两端）、`src/prompts/engineering.md`（两端）、`src/agent/setup.mjs`（CLI 警告块）、`src/agent/setup-reminders.mjs`（VS Code 警告块）。
