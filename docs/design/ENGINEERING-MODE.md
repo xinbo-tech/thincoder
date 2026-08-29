@@ -170,13 +170,18 @@
 
 ## 5. 配置与会话恢复
 
-```json
-{ "agent": { "engineering": true } }
-```
+**engineering 与 advisor.guard 都是会话级（2026-08-29 重构）**——事实源是当前会话槽位文件（`~/.thincoder/sessions/{hash}.json.N` 的 `engineering` 字段与 `advisor.guard`），config.json 的 `agent.engineering` / `agent.advisor.guard` 降级为 **CLI 兼容/可见性镜像**，不再是事实源。
 
-- 默认 false；TUI `/eng` 切换并持久化。
+背景（跨端污染 bug）：旧设计里 engineering 只存 config.json 全局，而 CLI `/eng` 与 VS Code 设置面板都写它 → 两端互相翻转对方的工程模式（"VS Code 工程模式下模型仍委托 role='coder'"）。会话级化后两端会话各自独立，互不影响。
+
+- 读取优先级（两端一致）：**slot 显式值 > config.json 兜底 > false**。slot 无字段（2026-08-29 前的旧槽位）→ 回退 config.json（兼容锁定，见 `test/session-eng-advisor.test.mjs` / vscode `test/eng-session.test.mjs`）；slot 显式 `false` ≠ 未设置，压过 config 的 `true`。
+- 写入路径（全部双写：slot 先、config 镜像后，slot 写失败不阻断 config 写）：
+  - CLI `/eng`（`src/tui/cmd-eng.mjs` `persistEngineering`）；CLI `eng(enter/exit)` 工具翻转活状态，`saveSession` 每 turn 落盘往返（`session.mjs` 显式字段清单含 `engineering` / `advisor`）
+  - CLI `/advisor` guard 切换（`src/tui/cmd-advisor.mjs` `persistGuard`——仅 guard 双写，model/thinking/effort 仍 config-scoped）
+  - VS Code：设置面板 ENG/GUARD toggle（`panel-messages.mjs` setSlotEngineering/setSlotAdvisorGuard + config 镜像）；`eng` 工具经 `engPersist: { cwd, slot }` 通道（top-level run 专属，subagent 不携带）；`agentState()`（run-helpers.mjs）随每轮 `saveLines` 把 live engineering/advisorGuard 带入槽位
+- agent 初值链（CLI）：`assembleAgent()` 从 config.json 播种 → `bin/thincoder.mjs` 启动 `applySession` 时 slot 值覆盖（TUI 单 agent 长驻，无 per-submit 重建）；VS Code：`setupAgentRun` 每轮从 `engState`（panel-chat 从槽位读）注入。
 - resume 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；**design token 不持久化**（纯内存态，重进重新评审）。
-- 角色互斥：工程模式禁用 `coder`，普通模式禁用 `eng-coder`。
+- 角色互斥：工程模式禁用 `coder`，普通模式禁用 `eng-coder`（schema 枚举 + 运行期硬门禁双保险）。
 
 ## 6. 已知取舍（评审记录）
 

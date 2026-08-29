@@ -2,6 +2,16 @@
 
 本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.12.50] — 2026-08-29
+
+### Changed
+
+- **engineering 与 advisor.guard 改为会话级（跨端污染修复）**：旧设计里 engineering 只存 config.json 全局（`agent.engineering`），CLI `/eng` 与 VS Code 面板都写它 → 两端互相翻转对方的工程模式（"VS Code 工程模式下模型仍委托 role='coder'"）。现事实源是当前会话槽位文件（`engineering` 字段 + `advisor.guard`），config.json 降为 CLI 兼容/可见性镜像（双写保留：slot 先、config 后，slot 失败不阻断）。改动：`/eng` toggle 双写 slot（`cmd-eng.mjs` persistEngineering）；`/advisor` guard 切换双写 slot（`cmd-advisor.mjs` persistGuard，model/thinking 仍 config-scoped）；`saveSession`/`applySession` 往返 slot 值（无字段旧槽位回退 config，兼容锁定）；启动恢复链 `bin/thincoder.mjs` applySession 时 slot 覆盖 config 播种值。权威文档：`docs/design/ENGINEERING-MODE.md` §5 重写
+
+### Tests
+
+- 新增 `test/session-eng-advisor.test.mjs`：/eng 双写断言（slot+config）、applySession slot 恢复（true/false/显式 false 压过 config true）、旧槽位无字段回退 config 锁定、saveSession 每 turn 往返、/advisor guard 双写（model 等仍 config-scoped）
+
 ## [0.12.49] — 2026-08-29
 
 ### Added

@@ -44,6 +44,7 @@ export function sessionPath(cwd) {
 }
 
 function slotPath(cwd, n) { return sessionPath(cwd) + "." + n }
+export { slotPath }
 function manifestPath(cwd) { return sessionPath(cwd) + ".manifest" }
 
 /** Path to the active slot's file */
@@ -417,6 +418,13 @@ export function applySession(agent, data) {
   agent._pendingReminders = data.pendingReminders ?? []
   agent._sessionStart = data.sessionStart ?? null
   agent._engDesignToken = data.engDesignToken ?? null
+  // engineering is session-level (2026-08-29): the slot value is the CLI session's authority
+  // — config.json is only the initial default / cross-end mirror. A legacy slot without the
+  // field keeps whatever config.json seeded (unchanged behavior).
+  if (data.engineering !== undefined) {
+    agent.config.agent ??= {}
+    agent.config.agent.engineering = data.engineering === true
+  }
   if (data.advisor) {
     agent.config.advisor = { ...data.advisor }
   }

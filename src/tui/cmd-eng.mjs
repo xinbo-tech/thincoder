@@ -1,13 +1,28 @@
 /** /eng command: toggle engineering mode.
  *  Requires METHODOLOGY.md in project root. Offers to create one if missing.
  *  ctx: { agent, pushLine, pushLabel, persistRaw, showPicker } */
-import { existsSync, copyFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs"
+import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ansi, C } from "./ansi.mjs"
+import { activeSlot, slotPath } from "../session.mjs"
 
 const templateDir = join(fileURLToPath(import.meta.url), "..", "..", "prompts")
 import { ENG_OFF_REMINDER } from "../agent.mjs"
+
+/** Atomic slot write (same shape as session.mjs writeSessionFile — kept local to avoid a
+ *  private-import; cmd-advisor's guard toggle shares this helper). */
+export function writeSessionFile(p, data) {
+  mkdirSync(dirname(p), { recursive: true })
+  const tmp = `${p}.tmp`
+  writeFileSync(tmp, JSON.stringify(data), "utf8")
+  try {
+    renameSync(tmp, p)
+  } catch {
+    try { unlinkSync(p) } catch {}
+    try { renameSync(tmp, p) } catch { writeFileSync(p, readFileSync(tmp, "utf8"), "utf8") }
+  }
+}
 
 export async function handleEngCommand(ctx) {
   const { agent, pushLine, pushLabel, persistRaw, showPicker } = ctx
@@ -40,13 +55,35 @@ export async function handleEngCommand(ctx) {
     agent._pendingReminders = agent._pendingReminders ?? []
     agent._pendingReminders.push(ENG_OFF_REMINDER)
   }
-  await persistRaw((raw) => {
-    raw.agent ??= {}
-    raw.agent.engineering = agent.config.agent.engineering
-  })
+  await persistEngineering(ctx, agent)
   pushLabel("❯ Eng", ansi.bold + C.tool)
-  pushLine(`Engineering mode: ${agent.config.agent.engineering ? "ON" : "OFF"}`, C.tool)
+  pushLine(`Engineering mode: ${agent.config.agent.engineering ? "ON" : "OFF"} (session)`, C.tool)
   if (agent.config.agent.engineering) {
     pushLine(`  → strictly following ${methodologyPath}`, C.dim)
+  }
+}
+
+/**
+ * Dual persistence (2026-08-29 — engineering is session-level): write the flipped flag into
+ * the CURRENT session slot first (slot authority — shared with VS Code, per-session), then
+ * the config.json mirror (CLI visibility/compat; no longer the cross-session source of truth).
+ * The in-memory agent.config.agent.engineering (already flipped) stays the live authority for
+ * this process; saveSession also round-trips it on every turn-end write.
+ */
+async function persistEngineering(ctx, agent) {
+  const slot = activeSlot(agent.cwd)
+  try {
+    const p = slotPath(agent.cwd, slot)
+    const data = JSON.parse(readFileSync(p, "utf8"))
+    if (data && typeof data === "object" && Array.isArray(data.history)) {
+      data.engineering = agent.config.agent.engineering
+      writeSessionFile(p, data)
+    }
+  } catch { /* slot missing/unreadable — config mirror still written */ }
+  if (ctx.persistRaw) {
+    await ctx.persistRaw((raw) => {
+      raw.agent ??= {}
+      raw.agent.engineering = agent.config.agent.engineering
+    })
   }
 }

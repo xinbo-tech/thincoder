@@ -1,7 +1,10 @@
 /** /advisor command: configure review model/thinking and toggle the review guard.
  *  Interactive loop UX — stays in menu after each action, Esc to exit.
  *  ctx: { agent, showPicker, pushLine, pushLabel, persistRaw } */
+import { readFileSync } from "node:fs"
 import { ansi, C } from "./ansi.mjs"
+import { activeSlot, slotPath } from "../session.mjs"
+import { writeSessionFile } from "./cmd-eng.mjs"
 
 export async function handleAdvisorCommand(ctx) {
   const { agent, showPicker, pushLine, pushLabel } = ctx
@@ -17,6 +20,21 @@ export async function handleAdvisorCommand(ctx) {
         raw.agent.advisor = cfg
       })
     }
+  }
+
+  // Guard-only dual write (2026-08-29 — advisor.guard is session-level): the guard goes into
+  // the CURRENT session slot first (shared with VS Code), the config.json mirror follows.
+  // Other advisor keys (model/thinking/effort/timeout) stay config-scoped — persist() only.
+  const persistGuard = async () => {
+    try {
+      const p = slotPath(agent.cwd, activeSlot(agent.cwd))
+      const data = JSON.parse(readFileSync(p, "utf8"))
+      if (data && typeof data === "object" && Array.isArray(data.history)) {
+        data.advisor = { ...(typeof data.advisor === "object" && data.advisor !== null ? data.advisor : {}), guard: cfg.guard === true }
+        writeSessionFile(p, data)
+      }
+    } catch { /* slot missing/unreadable — config mirror still written */ }
+    await persist()
   }
 
   // Lazy model cache — fetched once per /advisor session
@@ -133,9 +151,9 @@ export async function handleAdvisorCommand(ctx) {
 
     if (choice.action === "guard") {
       cfg.guard = !(cfg.guard === true)
-      await persist().catch(err => pushLine(`[error] ${err.message}`, C.error))
+      await persistGuard().catch(err => pushLine(`[error] ${err.message}`, C.error))
       pushLabel("❯ Advisor", ansi.bold + C.tool)
-      pushLine(`Advisor: ${cfg.guard === true ? "on" : "off"}`, C.tool)
+      pushLine(`Advisor: ${cfg.guard === true ? "on" : "off"} (session)`, C.tool)
       continue
     }
 
