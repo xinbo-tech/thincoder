@@ -317,8 +317,23 @@ export async function startTUI(agent, opts = {}) {
     pushLine)
   const { render, scheduleRender } = renderLoop
 
+  // Trusted-resize settle timer re-check: a drag-to-shrink ends with ONE final
+  // resize event — the shrink is parked (pendingShrink) and needs one more
+  // refresh AFTER the settle window to commit (2026-08-31). Any further resize
+  // resets the timer; growth commits immediately regardless (asymmetric rule).
+  let resizeSettleTimer = null
   process.stdout.on("resize", () => {
-    try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
+    try {
+      state.dims.refresh(true)
+      render()
+      clearTimeout(resizeSettleTimer)
+      resizeSettleTimer = setTimeout(() => {
+        try {
+          state.dims.refresh(true) // settles a parked shrink whose value held ≥ SHRINK_SETTLE_MS
+          render()
+        } catch { /* settle re-check — ignore */ }
+      }, 450)
+    } catch { /* resize error — ignore */ }
   })
   // Startup convergence (2026-08-30 consult, residual fix): ConPTY can report
   // a stale-small 80 at launch AND keep reporting it for a while — sawValid is
