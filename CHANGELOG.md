@@ -1,8 +1,39 @@
-# Changelog
+## [0.12.51] — 2026-08-30
 
-本文件记录 ThinCoder CLI 的发布历史。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)。
+### Added
 
-## [0.12.50] — 2026-08-29
+- **折叠系统大修（0.12.7 单框化的终章）**：公共折叠组件 `src/tui/fold-block.mjs`（147→168 行）——所有可折叠区块（思考/工具/子agent/advisor/长消息/连续 dim）统一：折叠态 = 命名头 + tail 3 行；展开态 = 空行 + ▼ 控制行 + 60% 屏幕封顶（触顶时底部第二个 ▼ 控制行必在视口内）。主输出（C.text）**永不折叠**；思考**无条件折叠**（阈值思路三次真机失败后废弃）；工具摘要（C.dim）>12 行折叠。`/fold off` 全关
+- **工具调用单框化**：`_toolBlock` 载体——头 = `❯ name 参数摘要 · running|耗时·摘要`，体 = 参数 pretty JSON + 流式输出 + 结果（dim）。旧四段式（标题/_live 滚动/done 行）废除
+- **会话文件瘦身（deepseek 会诊方案，`slimForDisplay`）**：写入时人读线截断（tool args 300 字符 / tool 结果 500 / 多模态图剥 base64 只留 text part），机读线（contextHistory）一字不动（provider 前缀缓存/配对/多轮看图零风险）；copy-on-write 绝不原地改（两线共享对象引用）；VS Code 端同款
+- **会诊（consult）体验修复**：consult_check/consult_stop 新增递增 `n` 参数（连续调用参数集不同，绕开循环检测器误报）；会诊结束**会话级结算**（finishSubTasksByRole 全量冻结 N 块，单块 finishSubTask 曾留 N-1 个 running 幽灵）；单条回复按 model 精确收尾（尾段归一化——`[model]` 裸名 vs `r.model` provider:model 曾是死代码）；冻结墓碑防 abort 尾部 token 复活块
+- **终端尺寸单源（`dims.mjs`）**：Windows ConPTY 的 columns/rows 不稳定（启动 falsy、输出活动期报 stale 小值）——sample-and-hold 缓存 + 事件驱动采样（启动收敛重试/resize/空闲看门狗/turn-start/turn-finally），渲染路径纯读缓存；非对称接受（变大立即提交、变小需连续两次确认）
+- **主输出呼吸空行**：主输出段前后各空一行（渲染期插入，不写 state.lines）；streaming 与落盘路径一致（首版漏 streaming 分支，用户实测"生成时不空落盘后才空"）
+- **任务面板顶部分隔线** + **子agent 运行区块段首分隔线**（`─` dim，与上方会话区切分；小终端压缩时 task 分隔线先让位）
+- **会诊四轮**：P0（搜索缓存键/中断清扫/tool_call_id 贯穿）、P1（死代码/缓存维度/增量行数/restore 守卫/foldKey 稳定化）、P3（multimodal flag 驱动 offload/日志截断/事件语法单源）——第三轮会诊（ConPTY）与窄屏真根因（组件漏传 cols）分别独立成条
+
+### Fixed
+
+- **流式窄屏真根因**：`renderExpandedBlock`/`renderFoldedHead` 三处调用漏传 `cols` → 组件按默认 80 wrap（280 列终端"生成中左边一小块、落盘后宽"）；全文扫尾 + 组件 cols 纪律入文档
+- **窄屏误诊链清理**：ConPTY 采样不再每帧 refresh（输出活动期 stale 80 污染缓存）；启动收敛跑满窗口（sawValid 曾提前掐断）；turn-start/turn-finally 采样点
+- **会诊残留双根因**：finishSubTask 单块语义（N-1 幽灵 + interrupted 误标）+ 无墓碑（迟到 token 复活块）
+- **subagent/escalate/advisor 成功调用误标 "(interrupted)"**（settleToolBlock 收尾）；Ctrl+I 中断时 tool_calls 悬空（合成占位 tool 结果，strict provider 400）；main 输出空行 streaming 路径缺失
+- **搜索高亮被缓存吃掉**（convCacheKey 补 search 维度）；[model] token 后头部不刷新（subSig 补 model）；并行同名工具输出/耗时错配（toolCallId 贯穿）
+- **generate-title proxy 路径 bug**（动态 import 相对路径从 src/ 解析到仓库根——静默 ERR_MODULE_NOT_FOUND 被 catch 吞，代理用户标题自创建起失效；静态导入 + 测试缝）
+
+### Changed
+
+- **agent.mjs 拆分**：工具结果提交/记账抽 `src/agent/record-results.mjs`（多模态延迟注入、FILE_MUTATORS 失效链、touchedFiles + reindex）；`_maxTurns` 引用 DEFAULT_MAX_TURNS；escalate 删手写 onToken/output（runWithContinue 统一 capture）；AUTO_REMINDER/ensureAutoReminder 单源（helpers）；魔法数字具名（tool-events caps / consult 默认值）；事件语法分支列表单源（EVENT_PHASE/EVENT_TYPE）
+- **行语法统一**：三个行生产者（live flushStream / 恢复 historyToLines / 注入行）统一打 `_kind` 标记（thinking/text/tool），buildConvLines 读标记不再从颜色猜
+- **live/restore 逐行对齐**：同一载体、同一渲染路径；恢复结果守卫与 live 共享（`slimToolResultForDisplay`：read_image base64 剥离 + 400 行封顶）
+- **折叠 key 稳定化**：工具块 fold key 用行级 `_lineId`（loadOlder unshift 不再错绑展开态）
+- **文档同步**：TUI.md / TUI-TOOL-OUTPUT.md / CONSULTATION.md / SESSION.md / AGENT-LOOP.md 与今日全部机制更新对齐
+
+### Tests
+
+- 812 全量（今日新增：折叠组件、dims 单源（sampler 注入 + 守卫 grep 断言）、会诊残留/精确收尾/墓碑、streaming 空行路径、subagent 分隔线、中断配对、工具块 ids、会话瘦身等 30+ 用例）
+- 会诊四轮评审全部落地并回归锁定：P0/P1/P3 + ConPTY 硬度 + ByModel 生产格式（自洽世界假绿被二次会诊实锤后改用生产报文断言）
+
+
 
 ### Changed
 
