@@ -161,8 +161,8 @@ export const executeTool = {
       timeoutMs: {
         type: "integer",
         minimum: 1,
-        maximum: 60000,
-        description: `Timeout in milliseconds (default ${DEFAULT_TIMEOUT}, max 60000)`,
+        maximum: 600000,
+        description: `Timeout in milliseconds (default ${DEFAULT_TIMEOUT}, max 600000)`,
       },
     },
     required: [],
@@ -175,7 +175,7 @@ export const executeTool = {
     catch (e) { return `Error: ${e.message}` }
 
     const t = Number(args.timeoutMs)
-    const timeoutMs = Number.isFinite(t) && t > 0 ? Math.min(t, 60_000) : DEFAULT_TIMEOUT
+    const timeoutMs = Number.isFinite(t) && t > 0 ? Math.min(t, 600_000) : DEFAULT_TIMEOUT
 
     let childArgs
     if (args.scriptFile) {

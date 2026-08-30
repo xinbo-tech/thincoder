@@ -31,6 +31,22 @@ function applyLineFilter(output, filter) {
   return truncate(lines.join("\n"))
 }
 
+/** POSIX-only constructs that cmd.exe reads literally (and thus breaks). Detected
+ *  so the agent is told IMMEDIATELY instead of chasing a confusing failure — warning
+ *  only, never a block (the approval layer is the real gate, same as destructive-command policy). */
+function posixSyntaxHint(command) {
+  const hits = []
+  if (/\$\([^)]*\)/.test(command)) hits.push("$(...)")
+  if (command.includes("`")) hits.push("backtick")
+  if (/;\s+/.test(command)) hits.push("';' separators (cmd.exe needs && or newline)")
+  if (/2>\s*\/dev\/null|>\s*\/dev\/null|&>\s*\/dev\/null/.test(command)) hits.push("/dev/null (use NUL)")
+  if (/'.*'/.test(command)) hits.push("single quotes (cmd.exe doesn't group)")
+  if (/\$\{[A-Za-z_]/.test(command)) hits.push("${VAR} (use %VAR%)")
+  if (!hits.length) return ""
+  return "[hint: POSIX-only construct(s) detected — " + hits.join(", ") + ". Current shell is cmd.exe; these will NOT work. Use && / NUL / %VAR%, or use the execute tool (node) for complex logic]"
+}
+
+
 // ====================================================================
 // bash — command execution with safety gates
 // ====================================================================
@@ -259,7 +275,9 @@ export const bashTool = {
       shell: ctx.agent?.config?.shell ?? null,
     })
     const filtered = args.filter ? applyLineFilter(result, args.filter) : result
-    return guard ? `${guard.notice}\n\n${filtered}` : filtered
+    const hint = posixSyntaxHint(args.command)
+    const body = guard ? `${guard.notice}\n\n${filtered}` : filtered
+    return hint ? `${hint}\n${body}` : body
   },
 }
 

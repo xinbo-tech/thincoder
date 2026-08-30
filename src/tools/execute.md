@@ -11,7 +11,7 @@ Parameters:
 - nodeArgs: (scriptFile) extra node flags before the script, e.g. ["--test"], ["--check"]. Eval-like flags (--eval/--input-type/--inspect) are rejected.
 - workdir: run in this directory (relative to cwd, confined to the workspace; default cwd)
 - filter: optional — only return output lines matching this regex (case-insensitive)
-- timeoutMs: Timeout in milliseconds (default 30000, max 60000)
+- timeoutMs: Timeout in milliseconds (default 30000, max 600000 — covers slow `node --test` suites and long package scripts)
 
 Notes:
 - `console.log(...)` and `log(...)` both print to the result; objects are JSON-stringified by `log`.

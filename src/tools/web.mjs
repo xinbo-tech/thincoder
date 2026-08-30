@@ -156,6 +156,21 @@ export function resolveRedirectTarget(loc, baseUrl) {
   return { target }
 }
 
+/** Heuristic: a fetch result that is a near-empty shell or a region-block page hides
+ *  the real content. Flags the pattern so the model switches strategy instead of
+ *  re-fetching blind (2026-08-31: 21-char MiniMax SPA shell + "App unavailable in
+ *  region" Claude page both wasted an hour of round trips). */
+export function detectSparseHtml(html, text) {
+  if (text.length >= 300) return ""
+  if (/unavailable in (your )?region|not available in (your )?region|app-unavailable|enable.?javascript|just a moment|attention required|cf-browser-verification/i.test(html)) {
+    return "\n\n[fetch hint: page looks region-blocked or JS-gated (body <300 chars). Try a search MCP tool (configured provider) or the site's .md/raw/mirror endpoint]"
+  }
+  if (/<div[^>]+id="(app|root)"[^>]*>\s*<\/div>|id="app"|id="root"/i.test(html)) {
+    return "\n\n[fetch hint: page is a JS-rendered SPA shell (body <300 chars) — content loads client-side. Try a search MCP tool or the site's .md/API endpoint]"
+  }
+  return ""
+}
+
 export const fetchTool = {
   name: "fetch",
   description: DESC("fetch"),
@@ -179,14 +194,16 @@ export const fetchTool = {
             if (!r2.ok) throw new Error(`fetch failed: HTTP ${r2.status}`)
             const ct2 = headerOf(r2, "content-type") ?? ""
             const b2 = await r2.text()
-            return ct2.includes("text/html") ? truncate(htmlToText(b2)) : truncate(b2)
+            if (ct2.includes("text/html")) { const t = htmlToText(b2); return truncate(t + detectSparseHtml(b2, t)) }
+            return truncate(b2)
           }
         }
         throw new Error(`fetch failed: HTTP ${response.status}`)
       }
       const ct = headerOf(response, "content-type") ?? ""
       const body = await response.text()
-      return ct.includes("text/html") ? truncate(htmlToText(body)) : truncate(body)
+      if (ct.includes("text/html")) { const t = htmlToText(body); return truncate(t + detectSparseHtml(body, t)) }
+      return truncate(body)
     } catch (e) { throw new Error(`fetch failed: ${e.cause?.code ?? e.message}`, { cause: e }) }
   },
 }

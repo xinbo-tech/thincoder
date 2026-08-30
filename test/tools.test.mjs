@@ -1342,6 +1342,83 @@ test("hashline_edit: 多行替换", async () => {
   }
 })
 
+// ---------------------------------------------------------------- 2026-08-31 工具体验评审新增
+
+test("git: ls-remote 返回远端 ref（本地 bare remote，无需网络）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-git-lsr-"))
+  const bare = mkdtempSync(join(tmpdir(), "thincoder-git-bare-"))
+  const g = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
+  try {
+    g("init", "-q"); g("config", "user.name", "t"); g("config", "user.email", "t@t.dev")
+    writeFileSync(join(dir, "a.js"), "1\n"); g("add", "a.js"); g("commit", "-qm", "first")
+    execFileSync("git", ["init", "-q", "--bare", bare], { encoding: "utf8" })
+    g("remote", "add", "origin", bare)
+    g("push", "-q", "origin", "HEAD")
+    const git = builtinTools.find((t) => t.name === "git")
+    const out = await git.execute({ action: "ls-remote", remote: "origin", ref: "HEAD" }, { cwd: dir })
+    assert.match(out, /[0-9a-f]{40}\s+HEAD/, `ls-remote should list the head ref: ${out}`)
+    // config 参数合法化：proxy 项透传不报错（本地文件远端不需要真代理，仅验证参数接线）
+    const out2 = await git.execute({ action: "ls-remote", remote: "origin", config: ["http.proxy=http://127.0.0.1:1"] }, { cwd: dir })
+    assert.ok(!/Invalid git -c/.test(out2), `config array must be accepted: ${out2}`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true }); rmSync(bare, { recursive: true, force: true })
+  }
+})
+
+test("git: 非法 config 参数拒绝（非数组 / 含换行）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-git-cfg-"))
+  const g = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
+  try {
+    g("init", "-q"); g("config", "user.name", "t"); g("config", "user.email", "t@t.dev")
+    const git = builtinTools.find((t) => t.name === "git")
+    await assert.rejects(() => git.execute({ action: "status", config: "http.proxy=x" }, { cwd: dir }), /config must be an array/)
+    await assert.rejects(() => git.execute({ action: "status", config: ["http.proxy=x\n--global"] }, { cwd: dir }), /invalid git -c config entry/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit: 文件自上次读后被写过 → not-found 提示建议重读（2026-08-31 脏标记提示）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-dirty-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "f.mjs", content: "line1\n" }, ctx) // write 标记 dirty
+    await assert.rejects(
+      () => byName.edit.execute({ path: "f.mjs", old_string: "old text that was never there", new_string: "x" }, ctx),
+      /was modified since your last read/,
+      "dirty file must hint re-read instead of a generic whitespace hint",
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("bash: cmd.exe 下 POSIX 痕迹提示（不拦截，仅前置警告）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-bash-posix-"))
+  try {
+    const bash = builtinTools.find((t) => t.name === "bash")
+    const out = await bash.execute({ command: "echo $(echo hi)" }, { cwd: dir })
+    assert.match(out, /\[hint: POSIX-only construct/, "POSIX $(...) must be flagged")
+    assert.doesNotMatch(out, /intercepted|blocked/, "hint must not block execution")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("fetch: detectSparseHtml 区分区域封锁/SPA 空壳/正常页", async () => {
+  const { detectSparseHtml } = await import("../src/tools/web.mjs")
+  const region = '<html>App unavailable in region</html>'
+  assert.match(detectSparseHtml(region, "app unavailable in region"), /region-blocked or JS-gated/)
+  const spa = '<div id="app"></div><script>...</script>'
+  assert.match(detectSparseHtml(spa, ""), /JS-rendered SPA shell/)
+  const normal = "<html><body>" + "x".repeat(500) + "</body></html>"
+  assert.equal(detectSparseHtml(normal, "x".repeat(500)), "")
+})
+
+
 test("hashline_edit: hash 未匹配时报错含当前哈希", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-hashline-"))
   const ctx = { cwd: dir }

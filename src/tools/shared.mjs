@@ -447,10 +447,12 @@ export function htmlToText(html) {
     .trim()
 }
 
-/** Execute a git command. maxBuffer 10MB prevents large diff/log overflow; on overflow, returns truncated partial output rather than empty. */
-export function runGit(cwd, cmdArgs) {
+/** Execute a git command. maxBuffer 10MB prevents large diff/log overflow; on overflow, returns truncated partial output rather than empty.
+ *  config: optional array of `-c key=value` overrides (e.g. ["http.proxy=http://10.2.2.112:3128"]) —
+ *  inserted verbatim after `git`, so network actions (push/fetch/pull/ls-remote) can route through a proxy. */
+export function runGit(cwd, cmdArgs, config = []) {
   try {
-    return execFileSync("git", cmdArgs, { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).trim().replace(/\r/g, "")
+    return execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).trim().replace(/\r/g, "")
   } catch (e) {
     // maxBuffer overflow: e.stdout contains partial collected output — return it
     // (callers show "(truncated)"-style tails). ALL OTHER errors (non-git repo,

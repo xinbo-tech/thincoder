@@ -219,7 +219,9 @@ export const editTool = {
       throw new Error(
         `old_string not found in ${args.path}\n` +
         `  searched: "${preview}${args.old_string.length > 100 ? "…" : ""}"\n` +
-        `  hints: whitespace mismatch? file already changed? try reading the file first` +
+        (isDirty(abs)
+          ? `  hints: this file was modified since your last read (a prior write marked it dirty) — re-read it to refresh your copy of the content, then retry\n`
+          : `  hints: whitespace mismatch? file already changed? try reading the file first\n`) +
         candText
       )
     }
