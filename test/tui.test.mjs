@@ -805,6 +805,52 @@ test("keyHandler: escape in picker pops it (resolve null)", () => {
 
 // ---------------------------------------------------------------- panel render functions (incremental rendering)
 
+
+test("foldKey 稳定: loadOlder 头部 unshift 后展开态仍绑原工具块（P1，2026-08-30）", async () => {
+  // 模拟：restore 一批含工具块的行 → 展开 tool 块 → loadOlder unshift 更早行 → 展开态必须跟随原块
+  const { restoreLines, historyToLines } = await import("../src/tui/startup.mjs")
+  const { isExpanded } = await import("../src/tui/fold-block.mjs")
+  const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
+  const state = {
+    lines: [], expandedBlocks: new Set(),
+    streaming: "", reasoning: "", subTasks: {}, _historyLoaded: 0, _historyTotal: 0, _hasOlder: false,
+    foldEnabled: true, _lineIdCounter: 0, scroll: 0,
+  }
+  const history = [
+    { role: "user", content: "早前消息" },
+    { role: "assistant", content: "", tool_calls: [{ id: "t-old", function: { name: "read", arguments: "{}" } }] },
+    { role: "tool", tool_call_id: "t-old", content: "old result" },
+    { role: "user", content: "看图" },
+    { role: "assistant", content: "", tool_calls: [{ id: "t-new", function: { name: "read", arguments: "{}" } }] },
+    { role: "tool", tool_call_id: "t-new", content: "new result" },
+    { role: "user", content: "独特尾行 " + "x".repeat(120) },
+  ]
+  // restoreLines 物化全部（INITIAL_HISTORY_MESSAGES 可能截断——直接调 historyToLines + 补 id 模拟 loadOlder 前状态）
+  state.lines.push(...historyToLines(history, 0, history.length))
+  for (const l of state.lines) l._lineId = ++state._lineIdCounter
+  // 展开最后一个工具块（new）
+  const lastTool = state.lines.findLast((l) => l._toolBlock)
+  const keyBefore = `tool-${lastTool._lineId}`
+  state.expandedBlocks.add(keyBefore)
+  // 模拟 loadOlder：头部 unshift 两个更早消息（无工具）
+  state.lines.unshift({ text: "更早的 user", color: C.text, _lineId: ++state._lineIdCounter }, { text: "更早的 assistant", color: C.text, _lineId: ++state._lineIdCounter })
+  const lines2 = buildConvLines(state, 80)
+  // 展开态必须还在原块上（new result 可见），而不是错绑到 old
+  const rendered = lines2.map((l) => l.text).join("\n")
+  assert.ok(rendered.includes("new result"), "展开态仍绑 new 块（内容可见）")
+})
+
+test("restore 结果守卫: read_image base64 剥离 + 400 行封顶（P1，2026-08-30）", async () => {
+  const { slimToolResultForDisplay } = await import("../src/tui/tool-events.mjs")
+  const big = JSON.stringify({ text: "ok", images: ["data:image/png;base64," + "Z".repeat(1000)] })
+  const rows = slimToolResultForDisplay(big)
+  assert.deepEqual(rows, ["ok"], "base64 剥离只留 text")
+  const huge = Array.from({ length: 500 }, (_, i) => `row ${i}`).join("\n")
+  const capped = slimToolResultForDisplay(huge)
+  assert.equal(capped.length, 401, "400 行 + 截断提示")
+  assert.ok(capped[400].includes("truncated"), "截断提示行")
+})
+
 test("panel functions: renderHeader includes model name", () => {
   const agent = {
     provider: { model: "deepseek-v4-pro", thinking: null },

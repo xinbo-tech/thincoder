@@ -66,8 +66,17 @@ const countBlockLines = (text) => text.split("\n").length
 export function appendSubBlock(sub, kind, text, { fresh = false } = {}) {
   if (!text) return
   const last = sub.blocks.at(-1)
-  if (!fresh && last && last.kind === kind) last.text += text
-  else sub.blocks.push({ kind, text })
+  if (!fresh && last && last.kind === kind) {
+    // Merged append: account only the NET new lines. Counting the full split of
+    // every single-line chunk (each ends with \n → 2 segments) would inflate the
+    // incremental total far above the block's real line count (P1 修, 2026-08-30).
+    const before = countBlockLines(last.text)
+    last.text += text
+    sub._lineCount = (sub._lineCount ?? 0) + countBlockLines(last.text) - before
+  } else {
+    sub.blocks.push({ kind, text })
+    sub._lineCount = (sub._lineCount ?? 0) + countBlockLines(text)
+  }
   sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
   trimSubBlocks(sub)
 }
@@ -76,8 +85,11 @@ export function appendSubBlock(sub, kind, text, { fresh = false } = {}) {
  *  lines and leave one cumulative "…（已省略 N 行）" marker block. Done blocks
  *  are bounded by the same cap (called from every append). */
 export function trimSubBlocks(sub) {
-  const total = () => sub.blocks.reduce((n, b) => n + countBlockLines(b.text), 0)
-  let over = total() - SUB_BLOCK_LINE_LIMIT
+  // Incremental line accounting (P1, 2026-08-30): appendSubBlock keeps
+  // sub._lineCount; the old implementation recomputed the total with a full
+  // blocks.reduce on EVERY append — O(n) per token, O(n²) over a stream.
+  sub._lineCount = (sub._lineCount ?? 0)
+  let over = sub._lineCount - SUB_BLOCK_LINE_LIMIT
   if (over <= 0) return
   let droppedNow = 0
   while (over > 0 && sub.blocks.length > 0) {
@@ -93,11 +105,12 @@ export function trimSubBlocks(sub) {
     }
     over -= take
   }
+  sub._lineCount -= droppedNow
   sub.dropped += droppedNow
   const marker = `…（已省略 ${sub.dropped} 行）`
   const first = sub.blocks[0]
   if (first && first.kind === "meta") first.text = marker
-  else sub.blocks.unshift({ kind: "meta", text: marker })
+  else { sub.blocks.unshift({ kind: "meta", text: marker }); sub._lineCount += 1 }
 }
 
 /** Mark the earliest running child of the given role(s) as done (✓ header, frozen elapsed). */

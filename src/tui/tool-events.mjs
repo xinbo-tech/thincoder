@@ -68,6 +68,24 @@ export function sweepToolBlocks(state) {
   _toolTicks.clear()
 }
 
+/** Shared display guard for tool results — LIVE and RESTORE use the same
+ *  function (P1, 2026-08-30 consult: restore lacked the live path's guards).
+ *  1) Multimodal results (read_image) embed FULL base64 images in the JSON —
+ *     the human needs only the text part (model gets images via the multimodal
+ *     channel); 2) results beyond maxRows are truncated in the block (full
+ *     text always lives in history for the model). Returns row array. */
+export function slimToolResultForDisplay(result, maxRows = 400) {
+  let displayResult = result
+  try {
+    const parsed = JSON.parse(result)
+    if (parsed?.images?.length) displayResult = parsed.text ?? result
+  } catch { /* not JSON — show as-is */ }
+  const rows = String(displayResult).split("\n").filter((l) => l.trim())
+  return rows.length > maxRows
+    ? [...rows.slice(0, maxRows), `… (result truncated at ${maxRows} rows — full text in history)`]
+    : rows
+}
+
 /** Find the live tool-block carrier for a tool event: exact id match when the
  *  callback carries one (P0-3 — parallel same-name tools route to their own
  *  block); falls back to the last unfinished block of that name. */
@@ -86,22 +104,6 @@ function findToolBlock(state, name, toolId) {
   return null
 }
 
-/** Per-tool streaming preview line limits — tools with verbose output get more lines.
- *  NOTE: `advisor` is intentionally NOT pruned by the live-line mechanism: its
- *  streaming returns early (kind-split into the ordered _advisorBlocks buffer) and
- *  is rendered full-length in render-conversation. The entry is kept for
- *  symmetry with the map's other tools. */
-const LIVE_LINE_LIMITS = {
-  bash: 10,
-  advisor: 15,
-  read: 3,
-  grep: 8,
-  glob: 8,
-  search: 8,
-  websearch: 8,
-  code_search: 8,
-  doc_search: 8,
-}
 
 /** Build the agent callbacks + the shared flushStream for one turn.
  *  deps: { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel,
@@ -198,6 +200,7 @@ export function buildToolCallbacks(deps) {
       // fold-block component; restore (historyToLines) emits the SAME carrier.
       state.lines.push({
         text: "", color: C.tool,
+        _lineId: (state._lineIdCounter = (state._lineIdCounter ?? 0) + 1),
         _toolBlock: {
           name, roundTag, id: toolId,
           argsSummary: argSummary,
@@ -267,17 +270,7 @@ export function buildToolCallbacks(deps) {
           // screen of garbage (user report 2026-08-30). The model gets the image
           // via the multimodal channel (agent.mjs), the human needs only the
           // text part: strip image parts from the displayed result.
-          let displayResult = result
-          try {
-            const parsed = JSON.parse(result)
-            if (parsed?.images?.length) displayResult = parsed.text ?? result
-          } catch { /* not JSON — show as-is */ }
-          const rows = String(displayResult).split("\n").filter((l) => l.trim())
-          // Body-size guard: any tool result beyond 400 rows is truncated in the
-          // block (full text always lives in history for the model).
-          block.result = rows.length > 400
-            ? [...rows.slice(0, 400), "… (result truncated at 400 rows — full text in history)"]
-            : rows
+          block.result = slimToolResultForDisplay(result)
           block.summary = formatToolSummary(name, result)
           block.done = true
           const started = tickTake(name, toolId)

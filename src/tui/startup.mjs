@@ -2,6 +2,7 @@ import { listSlots } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { sliceByWidth } from "./render.mjs"
+import { slimToolResultForDisplay } from "./tool-events.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads
  *  the latest INITIAL_HISTORY_MESSAGES, then PgUp-at-top loads HISTORY_PAGE_MESSAGES
@@ -95,7 +96,7 @@ export function historyToLines(history, startIdx, endIdx) {
             argsSummary,
             argsJson: rawArgs ? [rawArgs] : argJson,
             output: [],
-            result: hasResult ? String(toolResult.content).split("\n").filter((l) => l.trim()) : null,
+            result: hasResult ? slimToolResultForDisplay(String(toolResult.content)) : null,
             summary: null,
             started: 0,
             done: true,
@@ -119,7 +120,13 @@ export function restoreLines(state, history) {
   const total = Array.isArray(history) ? history.length : 0
   if (total === 0) return
   const start = Math.max(0, total - INITIAL_HISTORY_MESSAGES)
-  state.lines.push(...historyToLines(history, start, total))
+  state._lineIdCounter = state._lineIdCounter ?? 0
+  const fresh = historyToLines(history, start, total)
+  // Stable per-line ids (P1, 2026-08-30): fold keys for tool blocks derive from
+  // _lineId so loadOlder's head-unshift cannot re-bind an expanded block to a
+  // different tool (positional tool-{i} keys drift under unshift).
+  for (const l of fresh) l._lineId = ++state._lineIdCounter
+  state.lines.push(...fresh)
   state._historyLoaded = total - start
   state._historyTotal = total
   state._hasOlder = start > 0

@@ -13,7 +13,7 @@ import { ansi, C } from "./ansi.mjs"
 import { formatTables, sanitizeDisplay, sliceByWidth, wrapText } from "./render.mjs"
 import {
   isExpanded, foldHintLine, blankLine, renderExpandedBlock, renderBlockTimeline,
-  renderMathAndMarkdown, foldCapRows, renderFoldedHead,
+  renderMathAndMarkdown, foldCapRows, renderFoldedHead, foldTailLines,
 } from "./fold-block.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 
@@ -44,7 +44,7 @@ export function convCacheKey(state, maxRows) {
     // (long child tool runs with no chunks). Done children are constant — no
     // per-second invalidation for them.
     const elapsedPart = s.done ? "" : `:${Math.floor((Date.now() - s.started) / 1000)}`
-    subSig += `${key}:${s.done ? 1 : 0}${elapsedPart}:${s.turn}/${s.maxTurns}:${s.currentTool ?? ""}:${s.approval ?? ""}:${s.blockEpoch ?? 0};`
+    subSig += `${key}:${s.done ? 1 : 0}${elapsedPart}:${s.turn}/${s.maxTurns}:${s.currentTool ?? ""}:${s.approval ?? ""}:${s.blockEpoch ?? 0}:${s.model ?? ""};`
   }
   // Frozen blocks ride state.lines ({_frozenSubTask}) — the lines.length part of
   // this key covers their existence; expanding/collapsing one flips expandedBlocks
@@ -63,7 +63,7 @@ export function convCacheKey(state, maxRows) {
   let toolSig = ""
   for (const l of state.lines) {
     if (l._frozenSubTask) frozenSig += `${l._frozenSubTask.key};`
-    if (l._toolBlock) toolSig += `${l._toolBlock.done ? 1 : 0}:${l._toolBlock.output.length}:${l._toolBlock.result ? l._toolBlock.result.length : 0};`
+    if (l._toolBlock) toolSig += `${l._toolBlock.done ? 1 : 0}:${l._toolBlock.output.length}:${l._toolBlock.result ? l._toolBlock.result.length : 0}:${l._toolBlock.summary ?? ""}:${l._toolBlock.elapsed ?? ""};`
     colorSig += l.color === C.text ? "T" : l.color === C.dim ? "D" : l.color === C.reason ? "R" : "o"
   }
   // Expansion cap participates: a terminal resize changes the cap, which changes
@@ -136,14 +136,7 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
       color: C.dim,
       _foldToggle: foldKey,
     })
-    const tailLines = []
-    for (let bi = sub.blocks.length - 1; bi >= 0 && tailLines.length < 3; bi--) {
-      const lines = sanitizeDisplay(sub.blocks[bi].text).split("\n").filter((l) => l.trim())
-      for (let li = lines.length - 1; li >= 0 && tailLines.length < 3; li--) {
-        tailLines.unshift(lines[li])
-      }
-    }
-    for (const line of tailLines) {
+    for (const line of foldTailLines(sub.blocks)) {
       out.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim, _skipDimFold: true })
     }
   }
@@ -184,7 +177,10 @@ function buildConvLines(state, cols, maxRows) {
     // ▶ name args · status/summary; expanded = 60%-capped body (shared component).
     if (l._toolBlock) {
       const b = l._toolBlock
-      const foldKey = `tool-${i}`
+      // Stable key from the line's own id (P1 2026-08-30): the line may shift
+      // index when loadOlder unshifts older pages — positional tool-${i} would
+      // re-bind the expand state to a different tool block.
+      const foldKey = `tool-${l._lineId ?? i}`
       const status = !b.done
         ? "running"
         : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || "done"
@@ -354,14 +350,7 @@ function buildConvLines(state, cols, maxRows) {
         convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
       } else {
         // Folded: tail 3 non-empty block lines (most recent activity), dim.
-        const tailLines = []
-        for (let bi = sub.blocks.length - 1; bi >= 0 && tailLines.length < 3; bi--) {
-          const lines = sanitizeDisplay(sub.blocks[bi].text).split("\n").filter((l) => l.trim())
-          for (let li = lines.length - 1; li >= 0 && tailLines.length < 3; li--) {
-            tailLines.unshift(lines[li])
-          }
-        }
-        for (const line of tailLines) {
+        for (const line of foldTailLines(sub.blocks)) {
           convLines.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim })
         }
       }
@@ -405,7 +394,7 @@ function buildConvLines(state, cols, maxRows) {
     const advLineCount = advisorBlocks.reduce((n, b) => n + sanitizeDisplay(b.text).split("\n").filter((l) => l.trim()).length, 0)
     const advHeader = `[advisor · review] ${advLineCount} lines`
     if (isExpanded(state, advKey)) {
-      const body = renderBlockTimeline(advisorBlocks, cols, { stripPlaceholder: true })
+      const body = renderBlockTimeline(advisorBlocks, cols, { strip: [ADVISOR_THINKING_PLACEHOLDER] })
       convLines.push(...renderExpandedBlock({ body, foldKey: advKey, state, maxRows, cols, label: advHeader }))
     } else {
       // Folded: header control line + tail 3 non-empty lines from the tail
@@ -415,16 +404,7 @@ function buildConvLines(state, cols, maxRows) {
         color: C.fold,
         _foldToggle: advKey,
       })
-      const tailLines = []
-      for (let bi = advisorBlocks.length - 1; bi >= 0 && tailLines.length < 3; bi--) {
-        const lines = sanitizeDisplay(advisorBlocks[bi].text)
-          .replaceAll(ADVISOR_THINKING_PLACEHOLDER, "")
-          .split("\n").filter((l) => l.trim())
-        for (let li = lines.length - 1; li >= 0 && tailLines.length < 3; li--) {
-          tailLines.unshift(lines[li])
-        }
-      }
-      for (const line of tailLines) {
+      for (const line of foldTailLines(advisorBlocks, 3, { strip: [ADVISOR_THINKING_PLACEHOLDER] })) {
         convLines.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim, _skipDimFold: true })
       }
     }

@@ -18,7 +18,6 @@ import { C } from "./ansi.mjs"
 import { formatTables, sanitizeDisplay, sliceByWidth, stringWidth, wrapText } from "./render.mjs"
 import { renderMarkdownInline, renderMarkdownHeading } from "./markdown.mjs"
 import { renderMathInline, renderMathBlock } from "./math.mjs"
-import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 
 /** Expanded-section height cap: 60% of the terminal's row count (user ruled
  *  2026-08-30 — the collapse control must stay reachable after expanding).
@@ -44,6 +43,21 @@ export function toggleFoldBlock(state, foldKey) {
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).
  *  No indent — flush with the content below it; callers add a blank line BEFORE the
  *  expanded-state control so it stands apart from unrelated content (reported UX). */
+
+/** Extract the last ≤n non-empty lines across the trailing blocks (folded-tail
+ *  preview). Shared by subagent/advisor folded forms — was 3 hand-written copies
+ *  in render-conversation (P1 收编, 2026-08-30). */
+export function foldTailLines(blocks, n = 3, { strip = [] } = {}) {
+  const out = []
+  for (let bi = blocks.length - 1; bi >= 0 && out.length < n; bi--) {
+    let text = sanitizeDisplay(blocks[bi].text ?? "")
+    for (const marker of strip) text = text.replaceAll(marker, "")
+    const lines = text.split("\n").filter((l) => l.trim())
+    for (let li = lines.length - 1; li >= 0 && out.length < n; li--) out.unshift(lines[li])
+  }
+  return out
+}
+
 export function foldHintLine(text, foldKey, srcIdx) {
   const withUnderline = text.replace(/(click to (?:expand|collapse))/, "\x1b[4m$1\x1b[24m")
   return { text: withUnderline, color: C.fold, _foldToggle: foldKey, _src: srcIdx }
@@ -66,7 +80,7 @@ export function renderFoldedHead({ header, body, tailLines = 3, cols = 80 }) {
     .slice(-tailLines)
     .map((l) => ({
       ...l,
-      text: sliceByWidth(`│ ${l.text.replace(/^(?:│ ?|  │ ?|  )/, "")}`, cols - 2),
+      text: sliceByWidth(`│ ${l.text.replace(/^(?:│ ?| {2}│ ?| {2})/, "")}`, cols - 2),
       color: C.dim,
       _skipDimFold: true,
     }))
@@ -114,12 +128,14 @@ export function renderMathAndMarkdown(text) {
  * All lines carry _skipDimFold: true — the consecutive-dim folder must never
  * nest on top of an expanded block (reported stacking regression).
  */export function renderBlockTimeline(blocks, cols, opts = {}) {
-  const { gutter = "│ ", pad = 3, stripPlaceholder = false } = opts
+  // strip: array of literal substrings removed from every block text (callers
+  // pass advisor-specific markers — the component itself has no advisor deps).
+  const { gutter = "│ ", pad = 3, strip = [] } = opts
   const out = []
   for (const block of blocks) {
     const color = { think: C.reason, tool: C.tool, text: C.text, meta: C.dim }[block.kind] ?? C.dim
     let source = sanitizeDisplay(block.text ?? "")
-    if (stripPlaceholder) source = source.replaceAll(ADVISOR_THINKING_PLACEHOLDER, "")
+    for (const marker of strip) source = source.replaceAll(marker, "")
     if (block.kind === "meta") {
       for (const line of source.split("\n")) out.push({ text: `${gutter}${line}`, color, _skipDimFold: true })
       continue
@@ -170,7 +186,7 @@ export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols
     // Empty rows keep the rule line unbroken: a bare "│" (no trailing space)
     // paints the same column without introducing trailing whitespace.
     if (!l.text || !l.text.trim()) return { ...l, text: "│", _skipDimFold: true }
-    const raw = l.text.replace(/^(?:│ ?|  │ ?|  )/, "")
+    const raw = l.text.replace(/^(?:│ ?| {2}│ ?| {2})/, "")
     return { ...l, text: sliceByWidth(`│ ${raw}`, cols - 2) }
   })
   const out = [blankLine(), foldHintLine(`▼ … ${label} — click to collapse`, foldKey)]

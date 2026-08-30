@@ -277,7 +277,10 @@ export async function startTUI(agent, opts = {}) {
     // Drop the old placeholder, prepend the older page, re-add the placeholder
     // (with an updated count) only if more remain.
     if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
-    state.lines.unshift(...historyToLines(full, start, end))
+    state._lineIdCounter = state._lineIdCounter ?? 0
+    const older = historyToLines(full, start, end)
+    for (const l of older) l._lineId = ++state._lineIdCounter
+    state.lines.unshift(...older)
     state._historyLoaded += end - start
     state._hasOlder = start > 0
     if (state._hasOlder) {
