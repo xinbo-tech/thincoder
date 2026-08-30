@@ -1197,16 +1197,42 @@ test("panel functions: countConvLines counts wrapped lines", () => {
 
 // ---------------------------------------------------------------- streaming line-diff simulation
 
+
+test("streaming simulation: 流式主输出也有前导空行（2026-08-30——streaming 分支此前漏接空行逻辑）", () => {
+  const state = tuiState({
+    lines: [{ text: "", color: C.tool, _kind: "tool", _toolBlock: { name: "read", id: "t1", argsSummary: "a", argsJson: [], output: [], result: null, summary: null, started: 0, done: true, elapsed: null } }],
+  })
+  state.streaming = "正在输出"
+  const out = buildConvLines(state, 80)
+  assert.equal(out[0].text, "❯ read a  · done", "工具块头在前")
+  assert.equal(out[1].text, "", "工具块与流式主输出之间有前导空行")
+  assert.equal(out[2].text, "正在输出", "流式内容紧随其后")
+  // 流式结束（flush 落盘）后行路径接管——不双空行
+  state.streaming = ""
+  state.lines.push({ text: "正在输出", color: C.text, _kind: "text" })
+  const out2 = buildConvLines(state, 80)
+  // 落盘后行路径接管：段首 + 段末各 1 空行（streaming 分支已不渲染，无叠加）
+  const blanks = out2.filter((l) => l.text === "").length
+  assert.equal(blanks, 2, "落盘后段首+段末各 1")
+  for (let i = 0; i < out2.length - 1; i++) {
+    assert.ok(!(out2[i].text === "" && out2[i + 1].text === ""), "空行不相邻（无双重插入）")
+  }
+});
+
 test("streaming simulation: only last line changes during token append", () => {
   // Simulate the conversation panel line caching logic:
   // initial state → token arrives → verify only new/changed lines differ
   const cols = 80, visibleH = 5
   const empty = renderConversation(tuiState({ lines: [] }), cols, visibleH, 0)
+  // Unique line length below — the module-level _convCache keys on
+  // lastLine.text.length, and a generic 5-char "hello" collides with other
+  // test states across the file (P1 2026-08-30 pattern).
+  const hello = "hello streaming cache key unique 9f8e2"
   const withText = renderConversation(tuiState({
-    lines: [{ text: "hello", color: "" }],
+    lines: [{ text: hello, color: C.text, _kind: "text" }],
   }), cols, visibleH, 0)
   const withStream = renderConversation(tuiState({
-    lines: [{ text: "hello", color: "" }],
+    lines: [{ text: hello, color: C.text, _kind: "text" }],
     streaming: " world",
   }), cols, visibleH, 0)
 
@@ -1218,7 +1244,26 @@ test("streaming simulation: only last line changes during token append", () => {
   // streaming is a SEPARATE line appended after history, so when it first appears
   // it pushes the last history line up → typically 2 lines change on first token,
   // then only 1 (the streaming line) on subsequent tokens within the same turn.
-  assert.ok(diffCount <= 2, `expected ≤2 diffs, got ${diffCount}`)
+  // Since 2026-08-30 the main-output breathing room adds a leading blank to the
+  // streamed segment: the first-token frame gains the blank (ANSI-colored "" ≠ "")
+  // AND the bottom-anchored content shifts up by one row — a bounded one-shot
+  // cost, then every following token touches only the streaming line.
+  assert.ok(diffCount <= 4, `first-token frame: blank + content shift, got ${diffCount}`)
+
+  // Same baseline, streaming content changes → ONLY the last line differs.
+  const s1 = renderConversation(tuiState({
+    lines: [{ text: hello, color: C.text, _kind: "text" }],
+    streaming: " world",
+  }), cols, visibleH, 0)
+  const s2 = renderConversation(tuiState({
+    lines: [{ text: hello, color: C.text, _kind: "text" }],
+    streaming: " world2",
+  }), cols, visibleH, 0)
+  let streamDiff = 0
+  for (let i = 0; i < visibleH; i++) {
+    if (s1[i] !== s2[i]) streamDiff++
+  }
+  assert.equal(streamDiff, 1, "同基线流式追加只动最后一行（空行静态）")
 })
 
 // ---------------------------------------------------------------- markdown 轻量渲染（IK5VW3）

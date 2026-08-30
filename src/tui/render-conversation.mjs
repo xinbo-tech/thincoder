@@ -436,6 +436,13 @@ function buildConvLines(state, cols, maxRows) {
     }
   }
   if (state.streaming) {
+    // Main-output breathing room (2026-08-30): the streaming path renders OUTSIDE
+    // the line loop (the reply is still in its buffer, not yet in state.lines),
+    // so the loop's leading blank never applied — a streamed reply showed no
+    // blank until flush landed it in lines and a later frame re-rendered. Apply
+    // the same leading blank here (the trailing blank belongs to the line path
+    // once flushed — mid-stream there is still content to come).
+    if (convLines.at(-1)?.text !== "") convLines.push({ text: "", color: C.text })
     // Rendered BEFORE formatTables — see fold-block.mjs for the width contract.
     const rendered = renderMathAndMarkdown(sanitizeDisplay(state.streaming))
     for (const line of formatTables(rendered, cols - 1)) {
