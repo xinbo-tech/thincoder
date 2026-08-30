@@ -36,7 +36,7 @@ export function scrollToMatch(state, lineIndex) {
   for (let i = 0; i < lineIndex && i < state.lines.length; i++) {
     estimatedLine += Math.max(1, Math.ceil((state.lines[i].text?.length || 0) / 80))
   }
-  const rows = process.stdout.rows || 24
+  const rows = (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24)
   const visibleH = Math.max(5, rows - 10) // reserve space for header, input, status, etc.
   // scroll is number of lines hidden above viewport
   // We want estimatedLine to be near the bottom of the viewport

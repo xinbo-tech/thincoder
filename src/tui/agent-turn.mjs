@@ -124,6 +124,10 @@ export async function runAgentTurn(ctx, text) {
     // an onToolResult their header would say "running" forever; ticks are cleared
     // so no stale start time leaks into the next turn.
     sweepToolBlocks(state)
+    // Output just stopped — the deterministic moment ConPTY's buffer info has
+    // recovered (stale-small only occurs DURING heavy output). Sample here:
+    // a growth is accepted immediately, a shrink still needs double-confirm.
+    state.dims?.refresh()
     state.controller = null
     state.status = "Ready"
     // FR1: status bar must recover immediately — the awaits below (title-gen, distill flush,

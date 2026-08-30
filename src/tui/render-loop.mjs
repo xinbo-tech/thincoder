@@ -111,5 +111,5 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
     }
   }
 
-  return { render, scheduleRender }
+  return { render, scheduleRender, get lastRenderAt() { return lastRenderAt } }
 }

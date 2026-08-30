@@ -9,7 +9,7 @@ import { QUESTION_CUSTOM } from "./interaction.mjs"
 function convMaxScroll(state) {
   // Single source (Windows ConPTY instability, 2026-08-30) — cached dims.
   const d = state.dims ? state.dims.get() : {}
-  const cols = d.cols ?? (process.stdout.columns || 80)
+  const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
   const rows = d.rows ?? (process.stdout.rows || 24)
   const layout = computeLayout(state, { cols, rows })
   return Math.max(0, countConvLines(state, cols, rows) - layout.panels.conversation.h)
@@ -221,7 +221,7 @@ export function createKeyHandler(ctx) {
       const items = p.filteredItems ?? p.entries.filter((e) => e.type === "item")
       // 可视窗高度：直接取 layout 算出的实际 picker 面板高（含小终端 pickerFinalH 压缩），减标题行。
       // 单一数据源，避免与 layout.mjs 公式漂移
-      const winH = Math.max(1, (computeLayout(state, { cols: (state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80), rows: (state.dims?.refresh() ?? {}).rows ?? (process.stdout.rows || 24) }).panels.picker?.h ?? p.lines.length + 1) - 1)
+      const winH = Math.max(1, (computeLayout(state, { cols: (state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80), rows: (state.dims?.get() ?? {}).rows ?? ((state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24)) }).panels.picker?.h ?? p.lines.length + 1) - 1)
       const applyFilter = (f) => {
         p.filter = f
         p.index = 0
@@ -295,13 +295,13 @@ export function createKeyHandler(ctx) {
       if (state._hasOlder && loadOlder && state.scroll >= convMaxScroll(state)) {
         loadOlder()
       } else {
-        state.scroll += Math.max(1, (process.stdout.rows || 24) - 8)
+        state.scroll += Math.max(1, ((state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24)) - 8)
       }
       render()
       return
     }
     if (key.name === "pagedown") {
-      state.scroll = Math.max(0, state.scroll - Math.max(1, (process.stdout.rows || 24) - 8))
+      state.scroll = Math.max(0, state.scroll - Math.max(1, ((state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24)) - 8))
       render()
       return
     }

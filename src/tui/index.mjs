@@ -59,10 +59,11 @@ export async function startTUI(agent, opts = {}) {
 
   const distillOpts = opts
 
-  // Capture terminal dimensions BEFORE raw mode & alt buffer switch.
-  // On Windows, process.stdout.columns/rows can briefly return falsy after the mode switch
-  // (ConPTY buffer transition) — the sample here seeds state.dims; the first
-  // render frame re-samples and self-corrects via dims.refresh() (2026-08-30).
+  // Capture terminal dimensions BEFORE raw mode & alt buffer switch as the
+  // state.dims seed (ConPTY reads are unstable: falsy at startup, stale-small
+  // during output activity). Refresh happens ONLY in event hooks — startup
+  // convergence retry, the 300ms delayed resample, resize events, the idle
+  // watchdog, agent-turn finally — never in the render path (2026-08-30).
   const startupCols = process.stdout.columns || 80
   const startupRows = process.stdout.rows || 24
 
@@ -86,7 +87,7 @@ export async function startTUI(agent, opts = {}) {
     pendingNotice: null, // 后台更新提示：有 picker 打开时挂起，picker 全部关闭后再弹
     wizard: null, // first-launch config wizard { step, index, scroll, selectedLine, fields, error, lines }
     tasks: agent.tasks ?? [], // task list from task tool (progress shown in status bar); carried over on session restore, auto-collapsed when all done
-    dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30) — seeded pre-raw-mode, re-sampled every render frame
+    dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30) — seeded pre-raw-mode, re-sampled by event hooks only (startup retry / resize / idle watchdog)
     tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 }, // cumulative token usage (shown in status bar)
     ctxCache: { len: -1, tokens: 0 }, // context utilization estimate cache (estimateTokens is O(n), only recompute when history grows)
     reasoning: "", // thinking stream buffer (dimmed display)
@@ -275,8 +276,8 @@ export async function startTUI(agent, opts = {}) {
     const end = full.length - loaded
     if (start >= end) return
 
-    const d = state.dims ? state.dims.refresh() : {}
-    const cols = d.cols ?? (process.stdout.columns || 80)
+    const d = state.dims ? state.dims.get() : {}
+    const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
     const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
 
     // Drop the old placeholder, prepend the older page, re-add the placeholder
@@ -294,7 +295,7 @@ export async function startTUI(agent, opts = {}) {
 
     // Scroll compensation: prepending N display rows must move scroll by N to
     // keep the previously-visible bottom-anchored content in place.
-    const after = countConvLines(state, cols, process.stdout.rows || 24)
+    const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
     state.scroll += Math.max(0, after - before)
     render()
   }
@@ -319,11 +320,32 @@ export async function startTUI(agent, opts = {}) {
   process.stdout.on("resize", () => {
     try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
   })
-  // Startup re-sample (2026-08-30): ConPTY's buffer info lags the real window
-  // right after launch (and goes stale DURING heavy output — dims.get() is now
-  // cache-only in the render path). One delayed refresh catches the true size
-  // without per-frame sampling polluting the cache mid-stream.
-  setTimeout(() => { try { state.dims.refresh(); render() } catch { /* ignore */ } }, 300)
+  // Startup convergence (2026-08-30 consult): ConPTY's buffer info can stay
+  // falsy past the initial sample — retry every 150ms until the first sane
+  // size is seen (dims.sawValid), capped at ~3s. Each accepted change repaints.
+  let startupRetries = 0
+  const startupResampler = setInterval(() => {
+    try {
+      const before = state.dims.get()
+      const after = state.dims.refresh()
+      if (state.dims.sawValid || ++startupRetries >= 20) { clearInterval(startupResampler); return }
+      if (after.cols !== before.cols || after.rows !== before.rows) render()
+    } catch { /* ignore */ }
+  }, 150)
+  // Idle watchdog (2026-08-30 consult): the ONLY mid-session recovery channel.
+  // ConPTY reports stale-small sizes during output activity, so sampling is
+  // gated on idleness — skipped while processing/streaming or within 500ms of
+  // the last render (heavy output); a confirmed shrink also repaints.
+  const idleResampler = setInterval(() => {
+    try {
+      const recentRender = performance.now() - renderLoop.lastRenderAt < 500
+      if (state.processing || state.streaming || state.reasoning || recentRender) return
+      const before = state.dims.get()
+      const after = state.dims.refresh()
+      if (after.cols !== before.cols || after.rows !== before.rows) render()
+    } catch { /* ignore */ }
+  }, 2000)
+  idleResampler.unref?.()
 
   // ---------------------------------------------------------- Submit
 
