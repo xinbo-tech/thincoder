@@ -12,8 +12,13 @@ import { sliceByWidth, stringWidth } from "./render.mjs"
 import { specForModel } from "../config.mjs"
 import { computeLayout } from "./layout.mjs"
 import { basename } from "node:path"
+import { readFileSync } from "node:fs"
 
 export { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
+
+// Module-load read, once per process (same pattern as cmd-upgrade.mjs): the
+// header shows the installed version next to the logo (user request 2026-08-31).
+const THINCODER_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version
 
 // ---------- status bar slash-command hints ----------
 const SLASH_HINTS = {
@@ -42,7 +47,7 @@ export function renderHeader(agent, cols) {
   const thinkBadge = t?.type === "disabled" ? "│ think: off"
     : effort ? `│ think: ${effort}`
     : t?.type === thinkOnValue ? "│ think: on" : ""
-  return `${ansi.bold}${C.tool} ThinCoder ${ansi.reset}${ansi.dim}│ ${sliceByWidth(model, 30)}${thinkBadge ? " " + thinkBadge : ""} │ ${sliceByWidth(basename(agent.cwd), Math.max(10, cols - 60))}${ansi.reset}`
+  return `${ansi.bold}${C.tool} ThinCoder ${ansi.reset}${ansi.dim}${THINCODER_VERSION} │ ${sliceByWidth(model, 30)}${thinkBadge ? " " + thinkBadge : ""} │ ${sliceByWidth(basename(agent.cwd), Math.max(10, cols - 60))}${ansi.reset}`
 }
 
 /** Todo/task panel. Returns empty array when no tasks visible. The first row is

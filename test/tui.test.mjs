@@ -873,6 +873,7 @@ test("panel functions: renderHeader includes model name", () => {
   }
   const line = renderHeader(agent, 100)
   assert.ok(line.includes("ThinCoder"))
+  assert.ok(/\d+\.\d+\.\d+/.test(line), "版本号紧跟 logo 后显示（2026-08-31）")
   assert.ok(line.includes("deepseek-v4-pro"))
   assert.ok(line.includes("project"))
 })
