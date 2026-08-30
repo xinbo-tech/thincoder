@@ -18,7 +18,7 @@
 import { isAbsolute, relative } from "node:path"
 import { createAgent, runAgent, CODER_OVERLAY, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent.mjs"
-import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort, stripEventToken, stripEventTokensForCapture, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 
 const label = (m) => `${m.provider}:${m.model}`
 
@@ -93,21 +93,12 @@ export const escalateTool = {
     // signal propagates directly below). maxTurns is the cost budget; hitting it asks
     // the user whether to continue (main-agent parity), falling back to partial work.
 
-    let output = ""
-    // escalate captures RAW child LLM text itself (`output` feeds the partial-output
-    // return); wrapChildCallbacks provides the D7 sentinel strip + prefixed relay for
-    // the display path. Same composite shape for onToken as before spawn-child.
-    const childCallbacks = {
-      ...wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {}),
-      onToken: (t) => {
-        // Review #4 fix: strip sentinel/control chars from the CAPTURE too — `output`
-        // feeds the parent LLM history (partial-output returns), where sanitizeDisplay's
-        // display-layer backstop does not apply. Event tokens are stripped ENTIRELY here
-        // (unlike the display path, partial output needs no event semantics).
-        output += stripEventTokensForCapture(String(t))
-        ctx.callbacks?.onToken?.(relayPrefix + stripEventToken(t))
-      },
-    }
+    // No custom onToken here (consult P2, 2026-08-30): wrapChildCallbacks already
+    // applies the prefixed relay + D7 sentinel strip for the display path, and
+    // runWithContinue owns the capture (stripEventTokensForCapture) for the
+    // partial-output return — a hand-rolled duplicate ran the strip twice and
+    // maintained a second output buffer.
+    const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})
 
     // Declared outside try so the catch can merge mutations even on a partial failure.
     let child = null
@@ -155,17 +146,17 @@ export const escalateTool = {
           askContinue: (e) => (ctx.onPermissionRequest
             ? ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
             : Promise.resolve(false)),
-          onDeclined: (e) => `escalate (${tag}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
+          onDeclined: (e, output) => `escalate (${tag}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
         },
       ).catch((e) => {
         // Generic run failure (not ContinueError): match the original loop's return shape —
         // error text + partial output, mutations already merged in the runner wrapper.
         if (ctx.signal?.aborted || e?.name === "AbortError") throw e
-        return `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${output.slice(0, 2000)}`
+        return `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${(child._capturedOutput ?? "").slice(0, 2000)}`
       })
       // Escalate mutations are the parent's mutations: verify/advisor guards must see them
       mergeChildMutations(parent, child)
-      return `escalate (${tag})${effortNote} post-op report:\n${report || output.slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
+      return `escalate (${tag})${effortNote} post-op report:\n${report || (child._capturedOutput ?? "").slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
     } catch (e) {
       // Reached only when createAgent itself fails or the continue prompt throws —
       // run failures are handled above (mutations merge inside the runner wrapper).

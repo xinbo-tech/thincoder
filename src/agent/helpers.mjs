@@ -8,6 +8,18 @@ import { writeFile, mkdir, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"
 import { execSync } from "node:child_process"
 
+/** Single source for the AUTO-mode reminder (was duplicated in agent.mjs +
+ *  setup.mjs — consult P2, 2026-08-30). */
+export const AUTO_REMINDER = "[System reminder: AUTO mode is active — all tool calls are automatically approved without asking.]"
+
+/** Inject the AUTO reminder once per history (both call sites used the same
+ *  literal + guard — consolidated here). */
+export function ensureAutoReminder(agent) {
+  if (agent.autoApprove && !agent.history.some((m) => m.content === AUTO_REMINDER)) {
+    agent.history.push({ role: "user", content: AUTO_REMINDER })
+  }
+}
+
 export const DEFAULT_MAX_TURNS = 200
 export const DEFAULT_SUBAGENT_TURNS = 100
 export const DEFAULT_GOAL_TURNS = 200

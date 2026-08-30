@@ -29,6 +29,15 @@ import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
  *  without ids (subagent relay). FIFO shift assumes near-call-order completion;
  *  a parallel same-name batch finishing out of order swaps durations between
  *  siblings — same magnitude, both keep an elapsed (display-level, acceptable). */
+
+// Named caps (consult P2, 2026-08-30): inline 200/8/120/3/5 were magic numbers.
+const TOOL_OUTPUT_LINE_CAP = 200          // per-call streaming output ring buffer
+const SUBAGENT_PREVIEW_LINES = 8          // report preview rows in the conversation
+const PREVIEW_LINE_CHARS = 120            // per-line preview slice
+const PREVIEW_TRIM_LINES = 3              // footer rows when a report exceeds the preview
+const REMINDER_CAP = 3                    // max pending reminders shown on turn end
+const REMINDER_PERSIST_TURNS = 5          // persist reminders every N turns
+
 const _toolTicks = new Map()
 
 function tickStart(name, toolId) {
@@ -253,9 +262,9 @@ export function buildToolCallbacks(deps) {
         freezeDoneSubTasks(state)
         // Subagent report preview (max 8 lines) displayed directly in conversation
         const lines = result.split("\n")
-        const preview = lines.slice(0, 8).map((l) => l.slice(0, 120)).join("\n")
+        const preview = lines.slice(0, SUBAGENT_PREVIEW_LINES).map((l) => l.slice(0, PREVIEW_LINE_CHARS)).join("\n")
         if (preview) pushLine(preview, C.dim)
-        if (lines.length > 8) pushLine(`  ... (${lines.length - 8} more lines)`, C.dim)
+        if (lines.length > SUBAGENT_PREVIEW_LINES) pushLine(`  ... (${lines.length - SUBAGENT_PREVIEW_LINES} more lines)`, C.dim)
       } else if (name === "escalate") {
         // 飞刀 post-op report landed → freeze its block into the conversation too.
         settleToolBlock(state, name, toolId, "completed")
@@ -378,8 +387,8 @@ export function buildToolCallbacks(deps) {
           const trimmed = line.trimEnd()
           if (trimmed) block.output.push(trimmed)
         }
-        if (block.output.length > 200) {
-          block.output.splice(0, block.output.length - 200)
+        if (block.output.length > TOOL_OUTPUT_LINE_CAP) {
+          block.output.splice(0, block.output.length - TOOL_OUTPUT_LINE_CAP)
         }
       }
       scheduleRender()

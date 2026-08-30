@@ -10,16 +10,17 @@ import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { executeToolCalls } from "./agent/dispatch.mjs"
+import { recordToolResults } from "./agent/record-results.mjs"
 import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn, STALL_WINDOW_SIZE, STALL_THRESHOLD, GOAL_BUDGET_WARN_RATIO } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
 import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
 import {
-  escapeXml, tryCanonicalize, repairHistory, listWorkDir,
+  escapeXml, repairHistory, listWorkDir, ensureAutoReminder,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
-  ContinueError, FILE_MUTATORS,
+  ContinueError,
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
-  MIN_REPORT_CHARS, REPORT_CONTINUATION, OUTLINE_INJECT_PREFIX,
+  MIN_REPORT_CHARS, REPORT_CONTINUATION,
 } from "./agent/helpers.mjs"
 
 // Prompt files (byte-stable, loaded once)
@@ -47,8 +48,6 @@ export {
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 }
 
-let _reindexFile = null
-const AUTO_REMINDER = "[System reminder: AUTO mode is active — all tool calls are automatically approved without asking.]"
 
 // Engineering mode reminder — shared with eng.mjs tool
 export const ENG_ON_REMINDER =
@@ -103,7 +102,7 @@ export function createAgent({
     _emptyRetries: 0, // empty-response retry budget (per-run; reset on a fresh user turn)
     _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here
     _pendingDistill: null, // in-flight end-of-run exploration distillation (SEND-STALL-DISTILL §2.1) — awaited at next run start / TUI exit flush
-    _currentTurn: 0, _maxTurns: 100, // turn counter for status bar display
+    _currentTurn: 0, _maxTurns: DEFAULT_MAX_TURNS, // turn counter for status bar display
   }
 }
 
@@ -186,9 +185,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
           agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
           recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
           callbacks.onCompress?.()
-          if (agent.autoApprove && !agent.history.some((m) => m.content === AUTO_REMINDER)) {
-            agent.history.push({ role: "user", content: AUTO_REMINDER })
-          }
+          ensureAutoReminder(agent)
         }
       } catch (compressError) {
         // AbortError must not be swallowed: user cancellation must propagate
@@ -381,106 +378,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     guardPushbacks = 0
     advisorPushbacks = 0
 
-    // Multimodal user messages (injected images / not-injected reminders) must NOT be pushed
-    // between tool results of parallel calls — strict providers (DeepSeek) 400 when a tool
-    // message does not immediately follow its assistant tool_calls. Defer to after the loop.
-    // real: image injections are real messages (pushReal → _fullHistory); reminders stay machine-only.
-    const deferredUserMsgs = []
-
-    for (const { toolCall, result, ok } of results) {
-      const tool = toolByName.get(toolCall.name)
-      // Multimodal tools return JSON { text, images } — inject as multimodal user message
-      if (tool?.multimodal && ok) {
-        try {
-          const parsed = JSON.parse(result)
-          if (parsed.images?.length) {
-            // tool message first — closes the tool_call pairing (OpenAI API requires tool result immediately after assistant with tool_calls)
-            pushReal(agent, { role: "tool", tool_call_id: toolCall.id, name: toolCall.name, content: parsed.text })
-            if (specForModel(agent.provider.model).multimodal) {
-              // then inject multimodal user message with base64 images for the model to actually "see" them on the next turn
-              deferredUserMsgs.push({
-                real: true,
-                msg: {
-                  role: "user",
-                  content: [{ type: "text", text: parsed.text }, ...parsed.images],
-                },
-              })
-            } else {
-              // Non-vision model: image parts must never enter history — text-only APIs 400 on them on EVERY
-              // subsequent request, poisoning the conversation. (read_image itself already refuses; this is defense-in-depth.)
-              deferredUserMsgs.push({
-                real: false,
-                msg: {
-                  role: "user",
-                  content: `[System reminder: the image returned by ${toolCall.name} was NOT injected — model ${agent.provider.model} does not support image input. Do not call ${toolCall.name} again under this provider; verify visual output programmatically instead.]`,
-                },
-              })
-            }
-            continue
-          }
-        } catch { /* Parse failure doesn't affect normal tool messages */ }
-      }
-      pushReal(agent, { role: "tool", tool_call_id: toolCall.id, name: toolCall.name, content: result })
-      if (tool && ok) {
-        if (FILE_MUTATORS.has(toolCall.name)) {
-          // Direct file edit — code was changed. The prior advisor review and
-          // verify are stale: a review that ran before the edit no longer
-          // covers the current file state.
-          agent._mutatedThisRun = true
-          agent._calledAdvisorThisRun = false
-          agent._verifiedThisRun = false
-          agent._verifyPassed = undefined
-        } else if (!tool.readonly && !tool.sideEffectExempt) {
-          // Non-mutating side-effect tools (bash, git): do NOT invalidate the
-          // advisor review — a review is triggered by CODE MUTATIONS only
-          // (user decision 2026-08-08: the guard rule is "review after code
-          // changes", not "review after any environment change"; bash is
-          // barred from writing files, so it cannot change the reviewed code).
-          // Verify IS invalidated: its state snapshot (git diff, file list)
-          // may be stale after git/shell operations.
-          if (agent._verifiedThisRun) {
-            agent._verifiedThisRun = false
-            agent._verifyPassed = undefined
-          }
-        }
-        if (toolCall.name === "verify") agent._verifiedThisRun = true
-        if (toolCall.name === "advisor") {
-          agent._calledAdvisorThisRun = true
-          // All advisor calls (code and design) share the 5-round convergence
-          // budget — each advances _advisorRound toward MAX_ADVISOR_ROUNDS.
-          // Always advance the round — the convergence protocol cares about
-          // how many reviews have run (round 1→2→3→4→5), not how many succeeded.
-          // A failed/interrupted review is still a review attempt and should use
-          // the next round's prompt on retry.
-          agent._advisorRound++
-        }
-        if (FILE_MUTATORS.has(toolCall.name)) {
-          const args = JSON.parse(toolCall.arguments)
-          const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
-          for (const p of paths) {
-            const abs = join(agent.cwd, p)
-            if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
-            if (agent.memory) {
-              // Fire-and-forget: don't block the agent loop on indexing.
-              // Reuses a single cached import; errors surface as pending reminders on next turn.
-              if (!_reindexFile) {
-                const mod = await import("./memory.mjs")
-                _reindexFile = mod.reindexFile
-              }
-              _reindexFile(agent.memory, agent.cwd, abs).catch((e) => {
-                agent._pendingReminders.push(`[System reminder: background indexing failed for ${toolCall.name} on ${abs}: ${e.message}. This does not affect your work — the code index will catch up on next reindex.]`)
-              })
-            }
-          }
-        }
-      }
-    }
-
-    // All tool results committed — now safe to inject deferred multimodal user messages
-    for (const { real, msg } of deferredUserMsgs) {
-      if (real) pushReal(agent, msg)
-      else agent.history.push(msg)
-    }
+    // Commit tool results (pairing, multimodal deferral, mutation accounting,
+    // touched files, reindex) — split into record-results.mjs (consult P2,
+    // 2026-08-30).
+    await recordToolResults(agent, toolByName, results)
 
     injectPostTurn(agent, results, recentCallSigs, callbacks, turn)
     }

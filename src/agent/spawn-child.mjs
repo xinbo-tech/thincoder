@@ -139,8 +139,8 @@ export async function runWithContinue(runner, child, input, callbacks, runOpts, 
   // onDeclined's partial-output return, which lands in the PARENT LLM history where
   // the display-layer sanitizeDisplay backstop does not apply.
   const capture = callbacks?.onToken
-    ? (t) => { output += stripEventTokensForCapture(String(t)); callbacks.onToken(t) }
-    : (t) => { output += stripEventTokensForCapture(String(t)) }
+    ? (t) => { output += stripEventTokensForCapture(String(t)); child._capturedOutput = output; callbacks.onToken(t) }
+    : (t) => { output += stripEventTokensForCapture(String(t)); child._capturedOutput = output }
   for (let resume = false; ; resume = true) {
     try {
       return await runner(child, input, { ...callbacks, onToken: capture }, { ...runOpts, resume })

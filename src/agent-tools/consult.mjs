@@ -15,6 +15,11 @@ import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 
+// Named consult defaults (consult P2, 2026-08-30).
+const CONSULT_TIMEOUT_MS = 600_000 // default consult lifecycle timeout
+const CONSULT_TURNS = 40           // default per-child turn cap
+
+
 function consultLabel(m) {
   return `${m.provider}:${m.model}`
 }
@@ -88,7 +93,7 @@ export function makeMainHistoryTool(parentAgent) {
           : ""
         return `--- [${m.role}] ---\n${content}${calls ? "\n" + calls : ""}`
       }
-      const BUDGET = 60_000
+      const BUDGET = 60_000            // per-consult token budget (tokens)
       let out = ""
       for (let i = slice.length - 1; i >= 0; i--) {
         const line = render(slice[i])
@@ -129,7 +134,7 @@ function settleChild(session, id, label, ok, payload) {
 
 async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   const agent = ctx.agent
-  const timeoutMs = agent?.config?.agent?.consultTimeoutMs ?? 600_000
+  const timeoutMs = agent?.config?.agent?.consultTimeoutMs ?? CONSULT_TIMEOUT_MS
   let timedOut = false
   const armWatchdog = () => {
     const t = setTimeout(() => {
@@ -194,7 +199,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
         (childAgent, input, cbs, opts) => runner(childAgent, input, cbs, opts),
         child, "# Problem\n" + problem,
         childCallbacks,
-        { depth: 1, maxTurns: agent?.config?.agent?.consultTurns ?? 40, signal: ctrl.signal },
+        { depth: 1, maxTurns: agent?.config?.agent?.consultTurns ?? CONSULT_TURNS, signal: ctrl.signal },
         {
           askContinue: (e) => {
             if (!ctx.onPermissionRequest) return Promise.resolve(false)

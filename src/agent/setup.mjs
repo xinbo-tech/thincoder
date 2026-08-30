@@ -13,13 +13,12 @@ import { loadSkills, formatSkillListing } from "../skills.mjs"
 import {
   escapeXml, repairHistory, listWorkDir, readonlyToolNames,
   collectGitContext, loadProjectInstructions, OUTLINE_INJECT_PREFIX,
-  DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
+  DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS, ensureAutoReminder,
 } from "./helpers.mjs"
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
-const AUTO_REMINDER = "[System reminder: AUTO mode is active — all tool calls are automatically approved without asking.]"
 const DEFAULT_COMPACT_THRESHOLD = 100_000
 const DOC_SEARCH_LIMIT = 5
 const DOC_CHUNK_PREVIEW_LEN = 300
@@ -285,9 +284,7 @@ export async function prepareRun(agent, input, callbacks, {
     if (listing) systemPrompt += `\n\n${listing}`
   }
 
-  if (agent.autoApprove && !agent.history.some((m) => m.content === AUTO_REMINDER)) {
-    agent.history.push({ role: "user", content: AUTO_REMINDER })
-  }
+  ensureAutoReminder(agent)
 
   return { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt }
 }
