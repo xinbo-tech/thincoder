@@ -47,10 +47,6 @@ export async function runAgentTurn(ctx, text) {
   state.currentTool = null
   state.processingStarted = Date.now()
   state.controller = new AbortController()
-  // Turn-start re-sample (2026-08-30): ConPTY may have recovered the true size
-  // since the last event hook — a growth is accepted immediately (asymmetric
-  // rule), so generation starts full-width instead of waiting for the finally.
-  state.dims?.refresh()
   state.interruptPrompt = null
   // Refresh status bar every second during processing; also refresh when any
   // subagent block is still running so its header elapsed ticks (§7.2 D4 —
@@ -128,10 +124,6 @@ export async function runAgentTurn(ctx, text) {
     // an onToolResult their header would say "running" forever; ticks are cleared
     // so no stale start time leaks into the next turn.
     sweepToolBlocks(state)
-    // Output just stopped — the deterministic moment ConPTY's buffer info has
-    // recovered (stale-small only occurs DURING heavy output). Sample here:
-    // a growth is accepted immediately, a shrink still needs double-confirm.
-    state.dims?.refresh()
     state.controller = null
     state.status = "Ready"
     // FR1: status bar must recover immediately — the awaits below (title-gen, distill flush,

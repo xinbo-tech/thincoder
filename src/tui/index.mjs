@@ -317,53 +317,14 @@ export async function startTUI(agent, opts = {}) {
     pushLine)
   const { render, scheduleRender } = renderLoop
 
-  // Trusted-resize settle timer re-check: a drag-to-shrink ends with ONE final
-  // resize event — the shrink is parked (pendingShrink) and needs one more
-  // refresh AFTER the settle window to commit (2026-08-31). Any further resize
-  // resets the timer; growth commits immediately regardless (asymmetric rule).
-  let resizeSettleTimer = null
+  // Resize events are genuine dimension changes on every terminal (2026-08-31
+  // simplification: the earlier settle-timer/double-confirm machinery was built
+  // on the misdiagnosed ConPTY-stale hypothesis and even stalled drag-shrink).
+  // Any sane sample — larger or smaller — is accepted immediately; the cache
+  // self-corrects on the next real resize.
   process.stdout.on("resize", () => {
-    try {
-      state.dims.refresh(true)
-      render()
-      clearTimeout(resizeSettleTimer)
-      resizeSettleTimer = setTimeout(() => {
-        try {
-          state.dims.refresh(true) // settles a parked shrink whose value held ≥ SHRINK_SETTLE_MS
-          render()
-        } catch { /* settle re-check — ignore */ }
-      }, 450)
-    } catch { /* resize error — ignore */ }
+    try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
   })
-  // Startup convergence (2026-08-30 consult, residual fix): ConPTY can report
-  // a stale-small 80 at launch AND keep reporting it for a while — sawValid is
-  // useless as a stop condition there (80 passes the sanity gate), which let
-  // the session lock at 80 until the first turn's finally re-sampled. Run the
-  // FULL window (~4.5s): any growth is accepted immediately by the asymmetric
-  // rule and repaints; the window just bounds how long we keep looking.
-  let startupRetries = 0
-  const startupResampler = setInterval(() => {
-    try {
-      const before = state.dims.get()
-      const after = state.dims.refresh()
-      if (after.cols !== before.cols || after.rows !== before.rows) render()
-      if (++startupRetries >= 30) clearInterval(startupResampler)
-    } catch { /* ignore */ }
-  }, 150)
-  // Idle watchdog (2026-08-30 consult): the ONLY mid-session recovery channel.
-  // ConPTY reports stale-small sizes during output activity, so sampling is
-  // gated on idleness — skipped while processing/streaming or within 500ms of
-  // the last render (heavy output); a confirmed shrink also repaints.
-  const idleResampler = setInterval(() => {
-    try {
-      const recentRender = performance.now() - renderLoop.lastRenderAt < 500
-      if (state.processing || state.streaming || state.reasoning || recentRender) return
-      const before = state.dims.get()
-      const after = state.dims.refresh()
-      if (after.cols !== before.cols || after.rows !== before.rows) render()
-    } catch { /* ignore */ }
-  }, 2000)
-  idleResampler.unref?.()
 
   // ---------------------------------------------------------- Submit
 

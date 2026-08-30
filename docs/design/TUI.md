@@ -25,7 +25,7 @@
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
 | `render-loop.mjs` | 110 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
 | `layout.mjs` | 145 | 面板布局计算（行/列分配，todo 面板含顶部分隔线高度；小终端压缩链：conversation→picker→permission→todo 分隔线；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
-| `dims.mjs` | 98 | 终端尺寸单源（2026-08-30，2026-08-31 补 trusted 缩放 settle）：makeDimsState 采样-保持缓存——Windows ConPTY 的 columns/rows 不稳定（启动 falsy、输出活动期报 stale 小值），所有消费方读缓存，采样只发生在事件钩子（启动收敛重试/resize/空闲看门狗/turn-start/turn-finally）；非对称接受：变大立即提交、变小需连续两次确认。**trusted 缩放（`refresh(true)`，resize 事件源）**：缩小 sighting 后 400ms 稳定窗口内值未变即提交——拖拽缩放结束只发一次最终事件，"两连确认"永不满足 → 旧宽度卡住（超宽行软折开面板）；非 resize 采样源维持双确认（ConPTY stale 防御原样保留） |
+| `dims.mjs` | 45 | 终端尺寸单源（2026-08-30；2026-08-31 简化——ConPTY stale 假说防御（双确认/trusted settle/空闲看门狗/启动收敛）整体移除，因其建立在"组件漏传 cols=80"误诊上，且双确认反而卡死真实拖拽缩小）：get() 读缓存；refresh() 只在事件钩子（seed/resize），sane-gate（cols≥40/rows≥10）挡 falsy（headless/无 TTY），**任何 sane 采样（含缩小）立即提交**——resize 事件在任意终端都是真实尺寸变更，缓存自校正 |
 
 **渲染内容层**（纯函数）：
 
