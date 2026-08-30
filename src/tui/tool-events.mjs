@@ -85,6 +85,21 @@ export function slimToolResultForDisplay(result, maxRows = 400) {
     ? [...rows.slice(0, maxRows), `… (result truncated at ${maxRows} rows — full text in history)`]
     : rows
 }
+/** Mark the dispatch-level tool carrier done when its result is consumed by a
+ *  dedicated branch (subagent/escalate/advisor blocks) instead of the carrier
+ *  body — without this the turn sweep mislabels successful calls as
+ *  "(interrupted)" (consult P1, 2026-08-30). */
+function settleToolBlock(state, name, toolId, summary) {
+  const block = findToolBlock(state, name, toolId)
+  if (block) {
+    block.done = true
+    block.summary = summary
+    const started = tickTake(name, toolId)
+    block.elapsed = started !== null ? Math.round(performance.now() - started) : null
+  }
+}
+
+
 
 /** Find the live tool-block carrier for a tool event: exact id match when the
  *  callback carries one (P0-3 — parallel same-name tools route to their own
@@ -225,6 +240,11 @@ export function buildToolCallbacks(deps) {
       // only trace of what the child did — memory bounded by the N2 line cap.
       const isSubagent = name === "subagent"
       if (isSubagent) {
+        // The dispatch-level tool-block carrier for this call would otherwise
+        // never be marked done (its result lands in the subagent block, not the
+        // carrier) and the turn sweep would mislabel it "(interrupted)" — every
+        // successful subagent call showed that banner (consult P1, 2026-08-30).
+        settleToolBlock(state, name, toolId, "completed")
         finishSubTask(state, SUBAGENT_ROLES, result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
         // Freeze the finished blocks into the conversation stream (user report
         // 2026-08-30): a pinned tail section left every ✓ block stuck above the
@@ -238,6 +258,7 @@ export function buildToolCallbacks(deps) {
         if (lines.length > 8) pushLine(`  ... (${lines.length - 8} more lines)`, C.dim)
       } else if (name === "escalate") {
         // 飞刀 post-op report landed → freeze its block into the conversation too.
+        settleToolBlock(state, name, toolId, "completed")
         finishSubTask(state, ["escalate"], result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
         freezeDoneSubTasks(state)
       } else if (name === "consult_check" || name === "consult_stop") {
@@ -278,6 +299,10 @@ export function buildToolCallbacks(deps) {
         }
       }
       if (name === "advisor") {
+        // Same carrier settle as subagent/escalate — the advisor result lives in
+        // the frozen box, but the dispatch-level tool carrier must still be
+        // marked done (consult P1, 2026-08-30: sweep mislabeled it interrupted).
+        settleToolBlock(state, name, toolId, "completed")
         // The review's thinking must survive into the conversation history like
         // the main agent's reasoning (flushStream does for state.reasoning) —
         // discarding it left the thought process visible only mid-review, then

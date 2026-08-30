@@ -361,6 +361,14 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // Ctrl+I interrupt during tool execution: skip committing partial results —
     // the tool failure messages would mislead the model. Inject the interrupt and retry.
     if (signal?.reason?.interrupt) {
+      // The assistant tool_calls were already committed above (L347) — a strict
+      // provider 400s on dangling tool_calls, so synthesize placeholder tool
+      // results BEFORE the interrupt message (tool result must immediately
+      // follow its assistant tool_calls). The retry turn then sees a clean,
+      // pairable history (consult P1, 2026-08-30).
+      for (const tc of response.toolCalls) {
+        agent.history.push({ role: "tool", tool_call_id: tc.id, content: "[Tool execution interrupted — results discarded]" })
+      }
       agent.history.push({
         role: "user",
         content: `[User interrupt: ${signal.reason.message}]`,
