@@ -56,7 +56,11 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
 
   function doRender() {
     try {
-      const dims = { cols: process.stdout.columns || startupDims.cols, rows: process.stdout.rows || startupDims.rows }
+      // Single source (Windows ConPTY instability, 2026-08-30): sample-and-hold
+      // via state.dims — a falsy read keeps the last good size instead of
+      // falling back to a cramped 80 and never recovering (streaming output
+      // stuck in a left-hand sliver until a mouse interaction re-sampled).
+      const dims = state.dims ? state.dims.refresh() : { cols: process.stdout.columns || startupDims.cols, rows: process.stdout.rows || startupDims.rows }
 
       // NOTE (§7.2 D6): the old state.outputPanels prune is gone — output panels
       // are abolished; subagent blocks live in the conversation and are never

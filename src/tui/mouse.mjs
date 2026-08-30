@@ -49,7 +49,9 @@ export function handleMouseClick(ctx, col, row) {
   const { state, render } = ctx
   const r = row - 1 // 0-based screen row
   if (r < 0) return false
-  const dims = { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+  // Single source (Windows ConPTY instability, 2026-08-30): the cached dims,
+  // never a live read that can flip between stale and fresh values.
+  const dims = state.dims ? state.dims.refresh() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
   const layout = computeLayout(state, dims)
   const P = layout.panels
 

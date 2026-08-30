@@ -22,6 +22,7 @@ import { saveSession } from "../session.mjs"
 import { closeAllMcp } from "../mcp.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { createRenderLoop } from "./render-loop.mjs"
+import { makeDimsState } from "./dims.mjs"
 import { SLASH_COMMANDS, SLASH_ALIASES, createSlashCommands } from "./slash-commands.mjs"
 import { createWizard } from "./wizard.mjs"
 import { createPickers } from "./pickers.mjs"
@@ -78,6 +79,7 @@ export async function startTUI(agent, opts = {}) {
     pendingNotice: null, // 后台更新提示：有 picker 打开时挂起，picker 全部关闭后再弹
     wizard: null, // first-launch config wizard { step, index, scroll, selectedLine, fields, error, lines }
     tasks: agent.tasks ?? [], // task list from task tool (progress shown in status bar); carried over on session restore, auto-collapsed when all done
+    dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30)
     tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 }, // cumulative token usage (shown in status bar)
     ctxCache: { len: -1, tokens: 0 }, // context utilization estimate cache (estimateTokens is O(n), only recompute when history grows)
     reasoning: "", // thinking stream buffer (dimmed display)
@@ -271,8 +273,9 @@ export async function startTUI(agent, opts = {}) {
     const end = full.length - loaded
     if (start >= end) return
 
-    const cols = process.stdout.columns || 80
-    const before = countConvLines(state, cols, process.stdout.rows || 24)
+    const d = state.dims ? state.dims.refresh() : {}
+    const cols = d.cols ?? (process.stdout.columns || 80)
+    const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
 
     // Drop the old placeholder, prepend the older page, re-add the placeholder
     // (with an updated count) only if more remain.
@@ -312,7 +315,7 @@ export async function startTUI(agent, opts = {}) {
   const { render, scheduleRender } = renderLoop
 
   process.stdout.on("resize", () => {
-    try { render() } catch { /* resize error — ignore */ }
+    try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
   })
 
   // ---------------------------------------------------------- Submit

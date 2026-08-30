@@ -17,6 +17,7 @@ import {
 } from "./fold-block.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 
+
 // Test seam (mirrors the _-prefixed seams in run.mjs) — moved to fold-block.mjs.
 import { renderMarkdownPreservingWidth as _rmpw } from "./fold-block.mjs"
 export { _rmpw as _renderMarkdownPreservingWidth }
