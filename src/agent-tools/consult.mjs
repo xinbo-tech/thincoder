@@ -326,14 +326,19 @@ export const consultCheckTool = {
     "have settled. The reply is raw and unjudged — verify/adopt it with your own tools. When done is true, no more " +
     "replies are coming.\n" +
     "Call it ALONE in a turn — do NOT batch it with calls that depend on its reply (readonly tools run in parallel).\n" +
+    "Replies arrive in arrival order: call it repeatedly (n = 1, 2, 3, …) until done is true.\n" +
     "Parameters:\n" +
-    "- id (required): the consult id from consult_start",
+    "- id (required): the consult id from consult_start\n" +
+    "- n (required): the 1-based read number for this consult — pass 1 on the first check, 2 on the next, and so on. It exists so consecutive checks are distinct tool calls (loop detectors) and the transcript reads as a sequence.",
   parameters: {
     type: "object",
-    properties: { id: { type: "string", description: "Consult id" } },
-    required: ["id"],
+    properties: {
+      id: { type: "string", description: "Consult id" },
+      n: { type: "number", description: "1-based read number: 1 for the first check, incrementing with each subsequent check of the same consult" },
+    },
+    required: ["id", "n"],
   },
-  async execute({ id }, ctx) {
+  async execute({ id, n }, ctx) {
     const s = ctx.agent?._consultSessions?.get(String(id))
     if (!s) return JSON.stringify({ error: "unknown consult id" })
     const abortAll = () => { for (const c of s.controllers) { try { c.abort() } catch { /* noop */ } } }
@@ -380,18 +385,22 @@ export const consultStopTool = {
     "Terminate the still-running consultations of a session once a reply is good enough — saves tokens and time. " +
     "Already-answered replies stay available for consult_check.\n" +
     "Parameters:\n" +
-    "- id (required): the consult id from consult_start",
+    "- id (required): the consult id from consult_start\n" +
+    "- n (required): incrementing call number for this consult (next value after the last consult_check/consult_stop) — keeps repeated calls distinct.",
   parameters: {
     type: "object",
-    properties: { id: { type: "string", description: "Consult id" } },
-    required: ["id"],
+    properties: {
+      id: { type: "string", description: "Consult id" },
+      n: { type: "number", description: "Incrementing call number for this consult (see consult_check)" },
+    },
+    required: ["id", "n"],
   },
-  async execute({ id }, ctx) {
+  async execute({ id, n }, ctx) {
     const s = ctx.agent?._consultSessions?.get(String(id))
     if (!s) return JSON.stringify({ error: "unknown consult id" })
-    const n = s.pending
+    const abandoned = s.pending
     s.stopped = true
     for (const c of s.controllers) { try { c.abort() } catch { /* already settled */ } }
-    return JSON.stringify({ stopped: n })
+    return JSON.stringify({ stopped: n, abandoned })
   },
 }

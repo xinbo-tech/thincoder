@@ -101,12 +101,12 @@ describe("consult mechanism (CLI)", () => {
     })
     const ctx = makeCtx(agent, runner.fn)
     await consultStartTool.execute({ problem: "stuck" }, ctx)
-    const first = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+    const first = JSON.parse(await consultCheckTool.execute({ id: "1", n: 1 }, ctx))
     assert.equal(first.reply, "answer-B", "earliest reply first")
     assert.equal(first.done, false)
-    const second = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+    const second = JSON.parse(await consultCheckTool.execute({ id: "1", n: 2 }, ctx))
     assert.equal(second.reply, "answer-A")
-    const third = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+    const third = JSON.parse(await consultCheckTool.execute({ id: "1", n: 3 }, ctx))
     assert.equal(third.reply, "answer-C")
     assert.equal(third.done, true, "last reply reports done")
   })
@@ -120,13 +120,13 @@ describe("consult mechanism (CLI)", () => {
     })
     const ctx = makeCtx(agent, runner.fn)
     await consultStartTool.execute({ problem: "stuck" }, ctx)
-    const first = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+    const first = JSON.parse(await consultCheckTool.execute({ id: "1", n: 1 }, ctx))
     assert.equal(first.reply, "good")
-    const stop = JSON.parse(await consultStopTool.execute({ id: "1" }, ctx))
+    const stop = JSON.parse(await consultStopTool.execute({ id: "1", n: 2 }, ctx))
     assert.equal(stop.stopped, 2, "two still-running consultations aborted")
     let done = false
     for (let i = 0; i < 5 && !done; i++) {
-      done = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx)).done
+      done = JSON.parse(await consultCheckTool.execute({ id: "1", n: 3 }, ctx)).done
     }
     assert.equal(done, true, "session reaches done after early stop")
   })
@@ -143,7 +143,7 @@ describe("consult mechanism (CLI)", () => {
     await sleep(50)
     let failed = 0
     for (let i = 0; i < 3; i++) {
-      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1", n: 4 }, ctx))
       if (r.failedReply) failed++
     }
     assert.equal(failed, 2, "two failures enqueued")
@@ -165,7 +165,7 @@ describe("consult mechanism (CLI)", () => {
     await consultStartTool.execute({ problem: "stuck" }, ctx)
     const replies = []
     for (;;) {
-      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1", n: 5 }, ctx))
       if (r.reply) replies.push(r)
       if (r.done) break
     }
@@ -182,7 +182,7 @@ describe("consult mechanism (CLI)", () => {
     const runner = fakeRunner({ "m-a": { reply: "x", delay: 5000 }, "m-b": { reply: "y", delay: 5000 }, "m-c": { reply: "z", delay: 5000 } })
     const ctx = makeCtx(agent, runner.fn, ctrl.signal)
     await consultStartTool.execute({ problem: "stuck" }, ctx)
-    const pending = consultCheckTool.execute({ id: "1" }, ctx)
+    const pending = consultCheckTool.execute({ id: "1", n: 6 }, ctx)
     setTimeout(() => ctrl.abort(), 50)
     const r = JSON.parse(await pending)
     assert.equal(r.done, true)
@@ -204,7 +204,7 @@ describe("consult mechanism (CLI)", () => {
     await consultStartTool.execute({ problem: "stuck" }, ctx)
     const replies = []
     for (;;) {
-      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, makeCtx(agent, runner)))
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1", n: 7 }, makeCtx(agent, runner)))
       if (r.reply) replies.push(r)
       if (r.done) break
       await sleep(5)
@@ -227,7 +227,7 @@ describe("consult mechanism (CLI)", () => {
     await consultStartTool.execute({ problem: "stuck" }, ctx)
     const replies = []
     for (;;) {
-      const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, makeCtx(agent, runner)))
+      const r = JSON.parse(await consultCheckTool.execute({ id: "1", n: 8 }, makeCtx(agent, runner)))
       if (r.reply) replies.push(r)
       if (r.done) break
       await sleep(5)
@@ -282,7 +282,7 @@ describe("consult mechanism (CLI)", () => {
     const runner = async (childAgent) => { seenEffort = childAgent.provider.reasoningEffort; return "ok" }
     const ctx = makeCtx(agent, runner)
     await consultStartTool.execute({ problem: "x" }, ctx)
-    const r = JSON.parse(await consultCheckTool.execute({ id: "1" }, ctx))
+    const r = JSON.parse(await consultCheckTool.execute({ id: "1", n: 9 }, ctx))
     assert.equal(r.reply, "ok")
     assert.equal(seenEffort, undefined, "out-of-enum effort dropped, not blindly copied (nor preset residue)")
     await cleanupConsultSessions(agent)
