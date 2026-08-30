@@ -27,11 +27,17 @@ export function quoteArg(s) {
   return /[\s"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-/** Append a Bearer token as a query parameter to a WebSocket URL */
+/** Append a Bearer token as a query parameter to a WebSocket URL.
+ *  2026-08-31 MCP 会诊 #10：畸形 wsUrl 原抛裸 TypeError，改友好消息。 */
 export function withAuthToken(wsUrl, authorization) {
   if (!authorization) return wsUrl
   const token = authorization.replace(/^Bearer\s+/i, "")
-  const u = new URL(wsUrl)
+  let u
+  try {
+    u = new URL(wsUrl)
+  } catch {
+    throw new Error(`Invalid WebSocket URL: ${String(wsUrl).slice(0, 120)}`)
+  }
   u.searchParams.set("token", token)
   return u.href
 }

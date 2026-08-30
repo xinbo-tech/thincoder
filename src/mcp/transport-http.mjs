@@ -122,30 +122,56 @@ export function httpTransport(baseURL, extraHeaders = {}) {
       }).finally(() => pending.delete(id))
     }
 
-    const resp = await fetch(postUrl, {
-      method: "POST",
-      headers: headers(),
-      body,
-      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-    })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-
-    const ct = resp.headers.get("content-type") ?? ""
-    const newSessionId = resp.headers.get("Mcp-Session-Id")
-    if (newSessionId) sessionId = newSessionId
-
-    if (ct.includes("text/event-stream")) {
-      const sse = parseSSE(resp)
-      for await (const { data } of sse) {
-        try {
-          const msg = JSON.parse(data)
-          if (msg.id === id) return msg
-        } catch { /* skip */ }
-      }
-      return { id, error: { code: -32000, message: "No JSON-RPC response in SSE stream" } }
-    }
-
-    return resp.json()
+    // 2026-08-31 MCP 会诊 P4：Streamable HTTP 规范路径（POST→202→GET SSE 回包）。
+    // 原实现非 legacy 分支从不注册 pending：202 空 body → resp.json() 抛 SyntaxError，
+    // 而 SSE 流里 pending.get(id) 永远 miss——每次调用挂满 120s。
+    // 现在两类通道统一：先注册 pending，POST 得到的结果（直接 body / SSE / 202 等待）
+    // 都经 pending resolve；SSE 流由 openSSE() 转发。200+JSON 直接 body 解析。
+    return new Promise((resolve) => {
+      pending.set(id, resolve)
+      fetch(postUrl, { method: "POST", headers: headers(), body, signal: AbortSignal.timeout(CALL_TIMEOUT_MS) })
+        .then(async (resp) => {
+          const ct = resp.headers.get("content-type") ?? ""
+          const newSessionId = resp.headers.get("Mcp-Session-Id")
+          if (newSessionId) sessionId = newSessionId
+          // 202: 已接受，响应将经 GET SSE 流回——pending 保持，由 openSSE 转发 resolve
+          if (resp.status === 202) return
+          if (!resp.ok) {
+            pending.delete(id)
+            resolve({ id, error: { code: -32000, message: `HTTP ${resp.status}` } })
+            return
+          }
+          if (ct.includes("text/event-stream")) {
+            // 响应体本身就是一条 SSE（一次性流）：解析匹配该 id
+            try {
+              for await (const { data } of parseSSE(resp)) {
+                try {
+                  const msg = JSON.parse(data)
+                  if (msg.id === id) { pending.delete(id); resolve(msg); return }
+                } catch { /* skip */ }
+              }
+              pending.delete(id)
+              resolve({ id, error: { code: -32000, message: "No JSON-RPC response in SSE stream" } })
+            } catch (e) {
+              pending.delete(id)
+              resolve({ id, error: { code: -32000, message: `SSE response failed: ${e.message}` } })
+            }
+            return
+          }
+          // 直接 JSON body：拿掉 pending 立即解析
+          pending.delete(id)
+          try {
+            resolve(await resp.json())
+          } catch (e) {
+            resolve({ id, error: { code: -32000, message: `invalid JSON body: ${e.message}` } })
+          }
+        })
+        .catch((e) => {
+          if (pending.delete(id)) {
+            resolve({ id, error: { code: -32000, message: `POST failed: ${e.message}` } })
+          }
+        })
+    }).finally(() => pending.delete(id))
   }
 
   const send = async (method, params) => withTimeout(postRequest(method, params), CALL_TIMEOUT_MS)
@@ -180,5 +206,5 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     pending.clear()
   }
 
-  return { send, notify, close, openSSE, url, headers: extraHeaders }
+  return { send, notify, close, openSSE, url, headers: extraHeaders, isAlive: () => !closed && eventSource != null }
 }

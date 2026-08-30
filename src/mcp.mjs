@@ -31,24 +31,48 @@ async function sendWithSignal(promise, signal) {
 
 function buildTools(mcpTools, transport, config) {
   const prefix = config.name ? `${config.name}_` : "mcp_"
-  return mcpTools.map((t) => ({
-    name: sanitizeToolName(prefix + t.name),
-    description: t.description ?? `MCP tool: ${t.name}`,
-    parameters: t.inputSchema ?? { type: "object", properties: {} },
-    readonly: false,
-    async execute(args, ctx) {
-      // 2026-08-31 会诊 #11（vscode mcp/index.mjs 同步）：MCP tools/call 响应上层 signal——
-      // MCP server 挂死时用户中断要能终止；原实现无 abort 无超时，turn 被挂死。
-      const resp = await sendWithSignal(transport.send("tools/call", { name: t.name, arguments: args }), ctx?.signal)
-      if (resp.error) throw new Error(`MCP tool "${t.name}": ${resp.error.message}`)
-      const content = resp.result?.content ?? []
-      return content
-        .map((c) => (c.type === "text" ? c.text : c.type === "resource" ? `[resource: ${c.resource?.uri}]` : JSON.stringify(c)))
-        .join("\n") || "(no output)"
-    },
-    _mcpTransport: transport,
-    _mcpName: config.name,
-  }))
+  // 2026-08-31 MCP 会诊 P6：sanitize 碰撞/空名防御 + schema/description 类型守卫 + 输出防御
+  const seen = new Set()
+  const out = []
+  for (const t of mcpTools) {
+    const rawName = sanitizeToolName(prefix + t.name)
+    if (!rawName || rawName === "mcp_") continue
+    let name = rawName
+    for (let n = 2; seen.has(name); n++) name = `${rawName}_${n}`
+    seen.add(name)
+    out.push({
+      name,
+      description: typeof t.description === "string" ? t.description : `MCP tool: ${t.name}`,
+      parameters: (t.inputSchema && typeof t.inputSchema === "object") ? t.inputSchema : { type: "object", properties: {} },
+      readonly: false,
+      async execute(args, ctx) {
+        // 2026-08-31 会诊 #11：上层 signal 中断 + send 第 3 参底层取消（pending 即刻作废）
+        const send = transport.send("tools/call", { name: t.name, arguments: args }, ctx?.signal)
+        const resp = await sendWithSignal(send, ctx?.signal)
+        if (resp.error) throw new Error(`MCP tool "${t.name}": ${resp.error.message}`)
+        if (resp.result?.isError) throw new Error(`MCP tool "${t.name}": ${extractMcpText(resp.result.content) || "(server reported an error)"}`)
+        return truncateMcpOutput(extractMcpText(resp.result?.content ?? [])) || "(no output)"
+      },
+      _mcpTransport: transport,
+      _mcpName: config.name,
+    })
+  }
+  return out
+}
+
+/** MCP content 数组 → 文本（非数组/元素非对象防御）。 */
+function extractMcpText(content) {
+  if (!Array.isArray(content)) return typeof content === "string" ? content : JSON.stringify(content)
+  return content
+    .filter((c) => c && typeof c === "object")
+    .map((c) => (c.type === "text" ? c.text : c.type === "resource" ? `[resource: ${c.resource?.uri}]` : JSON.stringify(c)))
+    .join("\n")
+}
+
+/** 输出截断（32KB 上限，防 server 回 10MB 撑爆上下文）。 */
+function truncateMcpOutput(text) {
+  if (text.length <= 32_000) return text
+  return text.slice(0, 32_000) + "\n[… truncated: " + (text.length - 32_000) + " chars omitted]"
 }
 
 async function doInitialize(transport, name) {
@@ -63,9 +87,18 @@ async function doInitialize(transport, name) {
   if (initResp.error) throw new Error(`initialize error: ${initResp.error.message}`)
   transport.notify?.("notifications/initialized", {})
 
-  const toolsResp = await transport.send("tools/list", {})
-  if (toolsResp.error) throw new Error(`tools/list failed: ${toolsResp.error.message}`)
-  return toolsResp.result?.tools ?? []
+  // 2026-08-31 MCP 会诊 P6：tools/list 分页被忽略（nextCursor 多页工具静默丢失）——
+  // 循环跟随 cursor 直到 server 不再返回（上限 20 页防死循环）。
+  const tools = []
+  let cursor
+  for (let page = 0; page < 20; page++) {
+    const toolsResp = await transport.send("tools/list", cursor ? { cursor } : {})
+    if (toolsResp.error) throw new Error(`tools/list failed: ${toolsResp.error.message}`)
+    tools.push(...(toolsResp.result?.tools ?? []))
+    cursor = toolsResp.result?.nextCursor
+    if (!cursor) break
+  }
+  return tools
 }
 
 /** Connect to an MCP server (stdio/http/ws), initialize, and return built tool wrappers */
