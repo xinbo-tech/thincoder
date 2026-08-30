@@ -42,6 +42,7 @@ export function describeToolArgs(name, args) {
       return task ? task.slice(0, 60) + (task.length > 60 ? "…" : "") : ""
     }
     case "advisor": return String(a.type ?? "review")
+    case "read_image": return String(a.path ?? "")
     case "question": return String(a.question ?? "").replace(/\s+/g, " ").trim().slice(0, 60)
     case "memory_put": return String(a.title ?? "")
     case "memory_search": return String(a.query ?? "")

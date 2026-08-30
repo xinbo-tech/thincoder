@@ -218,7 +218,22 @@ export function buildToolCallbacks(deps) {
         // in the header now.
         const block = [...state.lines].reverse().find((l) => l._toolBlock && l._toolBlock.name === name && !l._toolBlock.done)
         if (block) {
-          block._toolBlock.result = String(result).split("\n").filter((l) => l.trim())
+          // Multimodal tool results (read_image) embed the FULL base64 image in
+          // the result JSON — thousands of rows into the block body = a full
+          // screen of garbage (user report 2026-08-30). The model gets the image
+          // via the multimodal channel (agent.mjs), the human needs only the
+          // text part: strip image parts from the displayed result.
+          let displayResult = result
+          try {
+            const parsed = JSON.parse(result)
+            if (parsed?.images?.length) displayResult = parsed.text ?? result
+          } catch { /* not JSON — show as-is */ }
+          const rows = String(displayResult).split("\n").filter((l) => l.trim())
+          // Body-size guard: any tool result beyond 400 rows is truncated in the
+          // block (full text always lives in history for the model).
+          block._toolBlock.result = rows.length > 400
+            ? [...rows.slice(0, 400), "… (result truncated at 400 rows — full text in history)"]
+            : rows
           block._toolBlock.summary = formatToolSummary(name, result)
           block._toolBlock.done = true
           const started = tickTake(name)
