@@ -28,6 +28,11 @@ git tag vX.Y.Z
 git push origin main
 git push origin vX.Y.Z
 
+# 双远端:本项目有 origin(gitee) + github 两个 remote,都要推(2026-08-30 实测教训:
+# 只推 origin 会漏 github;且本机 GitHub 直连被墙,推送需走代理,见 §4.8)
+git -c http.proxy=http://10.2.2.112:3128 push github main
+git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
+
 npm publish                          # prepublishOnly 自动跑全套测试
 ```
 
@@ -83,6 +88,17 @@ Windows PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会写 **BOM**(`EF BB BF
 
 - **marketplace 延迟**:`vsce publish` 报 `already exists` 但 `vsce show` 仍显示旧版本——通常是已成功、查询索引缓存延迟。先 `vsce show` 确认新版本是否已进 `versions` 列表,别急着重试(重试会撞"已存在")。
 - **PAT 在环境变量里会忘**:无 TTY 环境(agent 子进程)环境变量可能没继承、CLI 静默 exit 0 假装成功。发布前先 `npm whoami` / `ovsx verify-pat` 显式验证,拿不准就显式传 token。
+### 4.8 GitHub 双远端 + 被墙走代理(2026-08-30)
+
+- **本仓库有两个 remote**:`origin`(gitee.com/shanghai-xinbo/thincoder)+ `github`(github.com/xinbo-tech/thincoder)。**发版要两端都推**(分支 + tag),只推 origin 会漏 github(0.12.51 实测)。
+- **本机 GitHub 直连被墙**(`Failed to connect to github.com:443` 超时),ghproxy 只能下载不能 push。可用公司 HTTP 代理:`http://10.2.2.112:3128`。推送时临时带 `-c http.proxy` 即可,不改全局配置:
+
+```bash
+git -c http.proxy=http://10.2.2.112:3128 push github main
+git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
+```
+
+- 发布前检查:若某次发版漏了 github 远端,`git log github/main -1` 对比本地 main 即可发现(main 领先于 github/main 即未推)。
 
 ## 5. 回滚 / 问题
 
