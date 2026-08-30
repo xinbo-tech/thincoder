@@ -8,7 +8,7 @@
  */
 import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
-import { sliceByWidth, stringWidth, sanitizeDisplay } from "./render.mjs"
+import { sliceByWidth, stringWidth } from "./render.mjs"
 import { specForModel } from "../config.mjs"
 import { computeLayout } from "./layout.mjs"
 import { basename } from "node:path"

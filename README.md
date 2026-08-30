@@ -354,7 +354,7 @@ Code conventions: pure `.mjs`, no semicolons, no npm dependencies allowed (inclu
 - **Feat**: auto update check on startup + `/upgrade` command
 
 ### 0.8.3 (2026-07)
-- **Output panels**: tools with `outputPanel` flag stream to scrolled panel, auto-collapse to summary on completion (bash, long tool results)
+- **Output panels**: tools with `outputPanel` flag stream to scrolled panel, auto-collapse to summary on completion (bash, long tool results)（机制已于 2026-08-30 废除——D6 清理，见 AGENT-LOOP.md）
 - **Checkpoint enhancements**: `cat` for file preview from snapshots, per-file rewind, auto-recover on apply failure, escape-hatch hints on errors
 - **Bash safety**: `checkpoint-before-destructive` discipline rule; bash guard guides checkpoint instead of just commit/stash
 - **Code review fixes**: output friendliness, readability, English-only strings, TUI polish

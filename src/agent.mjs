@@ -3,7 +3,6 @@
  * LLM ↔ tool-call loop, until the task is done.
  */
 import { chat } from "./provider/index.mjs"
-import { estimateText } from "./provider/rate.mjs"
 import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT, pushReal, summarizeRunExplorations } from "./context.mjs"
 import { specForModel } from "./config.mjs"
 import { readFileSync } from "node:fs"
@@ -12,7 +11,7 @@ import { fileURLToPath } from "node:url"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"
 import { prepareRun } from "./agent/setup.mjs"
-import { injectPostTurn, STALL_WINDOW_SIZE, STALL_THRESHOLD, GOAL_BUDGET_WARN_RATIO } from "./agent/post-turn.mjs"
+import { injectPostTurn } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
 import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
 import {
@@ -43,7 +42,7 @@ export const CONSULT_BASE = _CONSULT_BASE
 // exported for consumption by agent-tools.mjs
 export {
   ContinueError,
-  repairHistory, listWorkDir, loadProjectInstructions,
+  listWorkDir, loadProjectInstructions,
   readonlyToolNames, collectGitContext, escapeXml,
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 }

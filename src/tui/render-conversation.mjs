@@ -12,7 +12,7 @@
 import { ansi, C } from "./ansi.mjs"
 import { formatTables, sanitizeDisplay, sliceByWidth, wrapText } from "./render.mjs"
 import {
-  isExpanded, foldHintLine, blankLine, renderExpandedBlock, renderBlockTimeline,
+  isExpanded, foldHintLine, renderExpandedBlock, renderBlockTimeline,
   renderMathAndMarkdown, foldCapRows, renderFoldedHead, foldTailLines,
 } from "./fold-block.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
@@ -81,7 +81,6 @@ export function convCacheKey(state, maxRows) {
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).
  *  No indent — flush with the content below it; the caller adds a blank line BEFORE it
  *  so the control line stands apart from unrelated content (reported UX). */
-// foldHintLine/blankLine moved to fold-block.mjs (shared with the component).
 
 function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, allMatches, lineIndex) {
   if (!matchesInLine || matchesInLine.length === 0 || !query) return text

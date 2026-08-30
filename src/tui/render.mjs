@@ -203,6 +203,7 @@ export function layoutInput(chars, cursor, width) {
  * Display-layer only — raw tool results the model sees are unchanged; dirty displays already in session
  * are also cleaned during replay.
  */
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
 const ANSI_SEQUENCE = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-B]|\x1b[=>#][0-9]?/
 // Global variant for replace()/split(); the non-global one keeps match.index for slicing
 const ANSI_SEQUENCE_RE = new RegExp(ANSI_SEQUENCE.source, "g")
@@ -211,12 +212,16 @@ export function sanitizeDisplay(s) {
     .replace(ANSI_SEQUENCE_RE, "")
     // §7.2 D5 fallback: an unparsed ⟦ev⟧ event token must never reach the grid —
     // strip the sentinel + its RS-wrapped payload (⟦ev⟧turn\x1e…\x1e / bare RS/GS chars).
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/⟦ev⟧[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e?/g, "")
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/⟦ev⟧[^\x1e\x1d]*/g, "")
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/[\x1d\x1e]/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/\t/g, "    ")
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
     .replace(/\n+$/, "")
 }

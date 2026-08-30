@@ -1,5 +1,3 @@
-const VALID_TASK_STATUS = new Set(["pending", "in_progress", "done"])
-
 /** Common synonyms LLMs tend to use — normalize to canonical values */
 const STATUS_ALIASES = {
   completed: "done",

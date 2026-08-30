@@ -43,7 +43,7 @@ function runGitStrict(cwd, cmdArgs) {
 
 /** Validate a git ref / branch / tag / remote name (no option injection, no whitespace). */
 function validateRef(ref, what = "git ref") {
-  if (!/^[A-Za-z0-9._\/~^@][A-Za-z0-9._\/~^@{}\-]*$/.test(ref)) throw new Error(`Invalid ${what}: ${ref}`)
+  if (!/^[A-Za-z0-9._/~^@][A-Za-z0-9._/~^@{}-]*$/.test(ref)) throw new Error(`Invalid ${what}: ${ref}`)
   return ref
 }
 
@@ -115,7 +115,7 @@ export const gitTool = {
     switch (args.action) {
       case "diff": {
         const ref = args.ref ?? "HEAD"
-        if (!/^[A-Za-z0-9._\/~^@][A-Za-z0-9._\/~^@{}\-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
+        if (!/^[A-Za-z0-9._/~^@][A-Za-z0-9._/~^@{}-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
         const flags = args.staged ? ["--staged"] : []
         const paths = args.path ? [args.path] : []
         const out = runGit(ctx.cwd, ["diff", ...flags, ref, "--", ...paths])
@@ -169,7 +169,7 @@ export const gitTool = {
       }
       case "show": {
         const ref = args.ref ?? "HEAD"
-        if (!/^[A-Za-z0-9._\/~^@][A-Za-z0-9._\/~^@{}\-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
+        if (!/^[A-Za-z0-9._/~^@][A-Za-z0-9._/~^@{}-]*$/.test(ref)) throw new Error(`Invalid git ref: ${ref}`)
         const out = runGit(ctx.cwd, ["show", "--stat", ref])
         return truncate(out || "(no such commit)")
       }

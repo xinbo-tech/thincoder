@@ -1,7 +1,6 @@
 import { listSlots } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
-import { sliceByWidth } from "./render.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads

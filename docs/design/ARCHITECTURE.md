@@ -165,7 +165,6 @@ thinking 模式的协议约束：是否回传 reasoning_content 由规格表 rea
   description: "...",                    // 从 .md 文件动态加载
   parameters: { type: "object", ... },   // JSON Schema
   readonly: true,                        // 只读工具可并行；false 则串行
-  outputPanel: false,                    // 流式输出工具走输出面板
   multimodal: false,                     // 多模态工具返回 { text, images }
   execute: async (args, ctx) => result   // ctx: { cwd, agent, signal, ... }
 }

@@ -170,6 +170,7 @@ export function toOpenAISchema(tool) {
 /** Strip ANSI escape sequences */
 export function sanitizeOutput(s) {
   return s
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/\x1b\[[0-9;?]*[\x40-\x7E]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-B]|\x1b[=>#][0-9]?/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")

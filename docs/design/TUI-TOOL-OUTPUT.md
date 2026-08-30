@@ -30,12 +30,12 @@ TUI 的工具输出统一为**行间区块**：所有工具执行时在对话区
 
 ```
 ❯ bash npm test  (in thincoder)   ← onToolCall：标题行（工具色；可读关键参数摘要）
-  │ line1                         ← onToolOutput：滚动内容（_live 标记，最近 N 行）
+  │ line1                         ← onToolOutput：滚动内容（追加进工具载体 body）
   │ …                               溢出折叠标记
-❯ bash — done (1200ms) → 345 tests passed   ← onToolResult：清滚动块，换完成行
+❯ bash — done (1200ms) → 345 tests passed   ← onToolResult：载体状态改 done（摘要进头部）
 ```
 
-- 数据路径：`onToolOutput` → `state.lines`（`_live: toolName` 标记）→ 按工具滚动清理
+- 数据路径：`onToolOutput` → 追加进该工具的单框载体 `_toolBlock.output`（`TOOL_OUTPUT_LINE_CAP=200` 行截断）→ 载体随 onToolResult 定态
 - 颜色：title 用工具色（bash=黄 warn，verify=青 tool，advisor=亮绿；映射见 tool-events.mjs onToolCall 的 color 表），内容 dim
 - 历史持久化：完整工具结果按现有落盘/截断机制进 history（FR4），区块只是 UI 层预览
 
@@ -96,4 +96,4 @@ TUI 的工具输出统一为**行间区块**：所有工具执行时在对话区
 
 ## 4. 边界划清：普通工具输出 vs 子agent 活动（2026-08-29 交叉引用；D4 落地后窄带由 §7.2 区块取代）
 
-普通工具（bash/read/verify 等）的输出走本文档的行间区块路径（onToolOutput → `_live` 滚动行 → done 行），**不经过** `state.subTasks`。subTasks 只承载带 `role#id/` 前缀的子agent 活动（原窄带渲染；由 AGENT-LOOP.md §7.2 D4 的会话流内可折叠区块取代——状态以该节为准，数据结构升级、名字保留），两条路径数据结构与渲染分支完全分离。子agent 活动输出的统一方案见 `AGENT-LOOP.md` §7.2——窄带退役不影响本文档覆盖的任何工具输出路径。
+普通工具（bash/read/verify 等）的输出走本文档的行间区块路径（onToolOutput → 工具单框载体 `_toolBlock` → done 行），**不经过** `state.subTasks`。subTasks 只承载带 `role#id/` 前缀的子agent 活动（原窄带渲染；由 AGENT-LOOP.md §7.2 D4 的会话流内可折叠区块取代——状态以该节为准，数据结构升级、名字保留），两条路径数据结构与渲染分支完全分离。子agent 活动输出的统一方案见 `AGENT-LOOP.md` §7.2——窄带退役不影响本文档覆盖的任何工具输出路径。

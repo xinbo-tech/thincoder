@@ -73,6 +73,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       // D7 (AGENT-LOOP.md §7.2): strip ⟦ev⟧ event tokens (bare or prefixed variants) —
       // they carry RS control characters and are a TUI display signal; structured ACP
       // mapping (tool_call_update) is tracked separately in docs/TODO.md.
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
       if (/^(?:[\w-]+#\d+\/)?⟦ev⟧(?:turn|approval)\x1e/.test(text)) return
       update("agent_message_chunk", { content: { type: "text", text } })
     },

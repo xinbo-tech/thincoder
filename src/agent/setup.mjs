@@ -11,9 +11,9 @@ import { pushReal } from "../context.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { loadSkills, formatSkillListing } from "../skills.mjs"
 import {
-  escapeXml, repairHistory, listWorkDir, readonlyToolNames,
+  escapeXml, repairHistory, listWorkDir,
   collectGitContext, loadProjectInstructions, OUTLINE_INJECT_PREFIX,
-  DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS, ensureAutoReminder,
+  DEFAULT_MAX_TURNS, ensureAutoReminder,
 } from "./helpers.mjs"
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, dirname } from "node:path"

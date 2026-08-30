@@ -2,7 +2,7 @@
  * agent/helpers.mjs — Agent utility functions and constants
  */
 import { configDir } from "../config.mjs"
-import { readFileSync, readdirSync, existsSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { homedir } from "node:os"
 import { writeFile, mkdir, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"

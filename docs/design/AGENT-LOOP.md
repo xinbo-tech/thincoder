@@ -117,7 +117,7 @@ PreToolUse hooks → 阻断
 - TUI subTasks 窄带退役，职责由区块接管
 - 控制面不变：维持整体停（不做单独中止/跳过某个子agent）
 
-**关键事实（锁定，防重复走查）**：subTasks 窄带只渲染带 `role#id/` 前缀的子agent 活动（`state.subTasks`）；普通工具输出走 onToolOutput → `state.lines(_live)` 行内路径（`src/agent/dispatch.mjs` "Panel area abolished" 注释处）——两条路径数据结构与渲染分支完全分离，**窄带退役对非子agent 工具输出零影响**（2026-08-29 核实；TUI-TOOL-OUTPUT.md §4 交叉引用）。
+**关键事实（锁定，防重复走查）**：subTasks 窄带只渲染带 `role#id/` 前缀的子agent 活动（`state.subTasks`）；普通工具输出走 onToolOutput → 工具单框载体（tool-events.mjs `_toolBlock`：参数 JSON + 流式输出 + 结果，`TOOL_OUTPUT_LINE_CAP=200`，2026-08-30 单框化取代 `_live` 行；TUI-TOOL-OUTPUT.md §2 为权威源）——两条路径数据结构与渲染分支完全分离，**窄带退役对非子agent 工具输出零影响**（2026-08-29 核实；TUI-TOOL-OUTPUT.md §4 交叉引用）。
 
 **范围（用户裁定 2026-08-29；评审 #1 修订 2026-08-29）**：仅 CLI（thincoder）。生成侧 spawnChild 管线收编上述重复（subagent/escalate/consult 接入；advisor 内循环走契约对齐——见 F6 与下方"否决"第二条）；渲染侧仅 TUI（子agent 活动区块与 advisor 块共用折叠块渲染机制，见 D4）。VS Code 端不动（跟进项见 docs/TODO.md）；**ACP 例外**——bridge.mjs 的 `⟦ev⟧` 事件剥除纳入本轮（防本轮引入 ACP 会话回归，见 D7），前缀 token 透传的既有遗留仍在 TODO。
 
@@ -164,7 +164,7 @@ runAgent turn 循环内 `agent._currentTurn` 更新处（`src/agent.mjs`，D2 em
 
 **D6 outputPanels 死代码清理（随本轮）**
 
-layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（renderOutput、PANEL_KIND_COLORS、renderRows output 分支）、render-loop.mjs（outputPanels prune）全删；agent-turn.mjs 的 LIVE_LINE_LIMITS 保留（`_live` 行内在用）。回归断言随 T-H：测试中校验全仓无 `outputPanels` 写入方、layout 无 output/subagent 槽。
+layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（renderOutput、PANEL_KIND_COLORS、renderRows output 分支）、render-loop.mjs（outputPanels prune）全删；agent-turn.mjs 的 LIVE_LINE_LIMITS 与 `_live` 行**已随工具单框化删除**（2026-08-30，e41fad5；见 TUI-TOOL-OUTPUT.md §2.5 清理记录）。回归断言随 T-H：测试中校验全仓无 `outputPanels` 写入方、layout 无 output/subagent 槽。
 
 **D7 ACP 桥剥除 + 哨兵防伪造（评审 #1/#7 修订，2026-08-29）**
 

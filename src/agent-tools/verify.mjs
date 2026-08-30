@@ -1,4 +1,3 @@
-import { repairHistory, listWorkDir } from "../agent.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 import { execSync, spawn, spawnSync } from "node:child_process"
 import { readFileSync, existsSync } from "node:fs"

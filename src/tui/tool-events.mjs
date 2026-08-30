@@ -12,7 +12,6 @@
  * flushStream 同时返回给调用方（回合循环 / onTurnEnd 共用）。纯回调装配，无终端副作用
  * （除经 deps 注入的 pushLine/render）。
  */
-import { sliceByWidth } from "./render.mjs"
 import { C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
@@ -129,10 +128,9 @@ function findToolBlock(state, name, toolId) {
 
 
 /** Build the agent callbacks + the shared flushStream for one turn.
- *  deps: { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel,
- *          askPermission, askQuestion, summarize, saveSessionImpl } */
+ *          askPermission, askQuestion, saveSessionImpl } */
 export function buildToolCallbacks(deps) {
-  const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askQuestion, summarize, saveSessionImpl } = deps
+  const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askQuestion, saveSessionImpl } = deps
 
   // NOTE: advisor buffers (_advisorThink/advisorStreaming) are cleared here too.
   // Timing safety: onToolResult flushes _advisorThink into history and empties

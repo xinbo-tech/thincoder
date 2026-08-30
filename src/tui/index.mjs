@@ -184,6 +184,7 @@ export async function startTUI(agent, opts = {}) {
     }
 
     // Scroll wheel: \x1b[<64;…M = scroll up, \x1b[<65;…M = scroll down (3 lines each)
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     for (const m of text.matchAll(/\x1b\[<(\d+);\d+;\d+([Mm])/g)) {
       if (Number(m[1]) === 64) {
         state.scroll += 3
@@ -203,7 +204,9 @@ export async function startTUI(agent, opts = {}) {
     }
 
     // Strip complete mouse sequences; keep incomplete tail for reassembly with next chunk
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     text = text.replace(/\x1b\[<\d+;\d+;\d+[Mm]/g, "")
+  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     const tail = text.match(/\x1b\[<[\d;]*$/)
     if (tail) {
       mousePending = tail[0]
@@ -384,7 +387,7 @@ export async function startTUI(agent, opts = {}) {
   // Agent loop: implemented in agent-turn.mjs
   const turnCtx = {
     agent, state, pushLine, pushLabel, render, scheduleRender: render, ensureAssistantLabel,
-    askPermission, askQuestion, handleSlash: null, summarize,
+    askPermission, askQuestion, handleSlash: null,
     get assistantLabeled() { return assistantLabeled },
     set assistantLabeled(v) { assistantLabeled = v },
   }
