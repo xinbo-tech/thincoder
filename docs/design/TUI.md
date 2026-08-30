@@ -66,6 +66,8 @@
 
 ## 2. stdin 输入层（index.mjs）
 
+> **行语法单一事实源（2026-08-30，三管道合一）**：对话行有三个生产者——live（`tool-events.mjs` flushStream）、恢复（`startup.mjs` historyToLines）、注入（session/命令）——**全部产出带 `_kind` 类型标记的行**（`"thinking"` / `"text"` / `"tool"` / 无标记=用户消息）。`buildConvLines` 读标记判定折叠行为，不再从颜色猜（颜色降级为纯视觉属性）。这是"恢复体验 = 执行体验"的结构保证：生产端同构后，任何一类内容在三种时刻的形态由同一份判定代码决定，不存在人肉对齐。新增生产者必须打 `_kind` 标记（eng-coder 自查项）。
+
 - `emitKeypressEvents(keyStream)`（node:readline）把原始字节转成 keypress 事件；`keyStream` 是 `process.stdin` 的 PassThrough 副本——**paste 多块数据先写入 keyStream 再交给 readline 解析**，保证按键与粘贴按序到达。
 - **分块解码**：`utf8Decoder.decode(chunk, { stream: true })`——CJK 字符跨 chunk 边界时正确拼装（有专门测试）。鼠标序列可能跨 chunk 截断：`mousePending` 保存不完整尾部，下个 chunk 拼接。
 - **鼠标滚轮**：SGR 序列 `\x1b[<64;…M`（上 3 行）/`<65`（下 3 行），处理后剥离。

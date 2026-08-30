@@ -242,8 +242,8 @@ export async function startTUI(agent, opts = {}) {
   }
   process.on("exit", cleanup)
 
-  const pushLine = (text, color) => {
-    state.lines.push({ text, color })
+  const pushLine = (text, color, kind) => {
+    state.lines.push({ text, color, _kind: kind })
     if (state.lines.length > 5000) {
       state.lines.splice(0, 1000)
       state.lines.unshift({ text: `... [earlier messages trimmed — ${state.lines.length} lines remaining]`, color: C.dim })

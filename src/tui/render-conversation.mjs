@@ -208,8 +208,16 @@ function buildConvLines(state, cols, maxRows) {
     // Keyed by the source-line index (`long-${i}`) so the toggle survives
     // re-renders.
     const longKey = `long-${i}`
-    const foldable = l.color !== C.text
-    const isReasoning = l.color === C.reason
+    // Single source of truth: the producer stamps _kind ("thinking" / "text" /
+    // "tool") — buildConvLines READS the stamp instead of GUESSING from color.
+    // Three producers (live flushStream / restored historyToLines / injected
+    // lines) now emit the identical grammar; the renderer is one place.
+    // Fallback: unstamped lines keep the legacy color-based inference (defensive
+    // for any path this refactor missed — empty until proven otherwise).
+    const isReasoning = l._kind === "thinking" || (l._kind === undefined && l.color === C.reason)
+    // Foldable classes: thinking (ALWAYS — threshold 0) and dim auxiliaries.
+    // "text" (main output / user messages) NEVER folds.
+    const foldable = isReasoning || (l._kind === "tool" || (l._kind === undefined && l.color === C.dim) || (l._kind === undefined && l.color !== C.text && l.color !== C.reason))
     const threshold = isReasoning ? 0 : LONG_FOLD_LINES
     const folded = foldable && state.foldEnabled !== false && !state.expandedBlocks?.has(longKey)
     const block = []

@@ -80,7 +80,7 @@ export function buildToolCallbacks(deps) {
   // in-progress thinking WOULD be lost — keep the ordering, or flush here too.
   const flushStream = () => {
     if (state.reasoning) {
-      pushLine(state.reasoning, C.reason)
+      pushLine(state.reasoning, C.reason, "thinking")
       // Reasoning folds IMMEDIATELY on flush (user ruling 2026-08-30: the old
       // "stay expanded until next turn" auto-expand was a leftover of the
       // rejected pre-fold plan — thinking must be DEFAULT FOLDED in the exact
@@ -89,7 +89,7 @@ export function buildToolCallbacks(deps) {
       state.reasoning = ""
     }
     if (state.streaming) {
-      pushLine(state.streaming, C.text)
+      pushLine(state.streaming, C.text, "text")
       state.streaming = ""
     }
     state._advisorBlocks = []

@@ -32,7 +32,7 @@ export function historyToLines(history, startIdx, endIdx) {
       if (typeof m.content === "string" && m.content.startsWith("[System reminder:")) continue
       if (lines.length > 0) lines.push({ text: "", color: C.dim })
       lines.push({ text: "❯ You:", color: ansi.bold + C.user })
-      if (typeof m.content === "string" && m.content) lines.push({ text: m.content, color: C.text })
+      if (typeof m.content === "string" && m.content) lines.push({ text: m.content, color: C.text, _kind: "text" })
       inTurn = false
     } else if (m.role === "assistant") {
       if (!inTurn) {
@@ -51,7 +51,7 @@ export function historyToLines(history, startIdx, endIdx) {
       // sessions showed every fragment unfolded and mislabeled "tool output";
       // user reported thinking "no longer folds" after a restart, 2026-08-30.)
       const reasoning = m.reasoning_content ?? m.reasoning
-      if (typeof reasoning === "string" && reasoning.trim()) lines.push({ text: reasoning, color: C.reason })
+      if (typeof reasoning === "string" && reasoning.trim()) lines.push({ text: reasoning, color: C.reason, _kind: "thinking" })
       if (typeof m.content === "string" && m.content) lines.push({ text: m.content, color: C.text })
       for (const tc of m.tool_calls ?? []) {
         const toolResult = history[i + 1]
@@ -71,7 +71,7 @@ export function historyToLines(history, startIdx, endIdx) {
           argsSummary = describeToolArgs(tcName, args)
           argLines = toolArgsLines(args)
         } catch { /* malformed args JSON — render the raw string truncated */ }
-        lines.push({ text: `  [tool] ${tcName}${argsSummary ? " — " + argsSummary : ""}`, color: C.tool })
+        lines.push({ text: `  [tool] ${tcName}${argsSummary ? " — " + argsSummary : ""}`, color: C.tool, _kind: "tool" })
         if (!argsSummary && tc.function?.arguments && tc.function.arguments !== "{}") {
           lines.push({ text: "  " + sliceByWidth(tc.function.arguments, 76), color: C.dim })
         }
