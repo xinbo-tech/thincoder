@@ -15,7 +15,7 @@
  * 保留各自语义；本组件统一展开态、封顶、控制行、tail 提取、blocks→行时间线。
  */
 import { C } from "./ansi.mjs"
-import { formatTables, sanitizeDisplay, stringWidth, wrapText } from "./render.mjs"
+import { formatTables, sanitizeDisplay, sliceByWidth, stringWidth, wrapText } from "./render.mjs"
 import { renderMarkdownInline, renderMarkdownHeading } from "./markdown.mjs"
 import { renderMathInline, renderMathBlock } from "./math.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
@@ -60,13 +60,13 @@ export function foldHintLine(text, foldKey, srcIdx) {
  * `▶ <kind> · N lines — click to expand`. Tail rows are dimmed and carry
  * _skipDimFold (never re-enter the consecutive-dim folder).
  */
-export function renderFoldedHead({ header, body, tailLines = 3 }) {
+export function renderFoldedHead({ header, body, tailLines = 3, cols = 80 }) {
   const tail = body
     .filter((l) => l.text && l.text.trim())
     .slice(-tailLines)
     .map((l) => ({
       ...l,
-      text: `│ ${l.text.replace(/^(?:│ ?|  │ ?|  )/, "")}`,
+      text: sliceByWidth(`│ ${l.text.replace(/^(?:│ ?|  │ ?|  )/, "")}`, cols - 2),
       color: C.dim,
       _skipDimFold: true,
     }))
@@ -158,12 +158,17 @@ export function renderMathAndMarkdown(text) {
  * pass RAW rows (no leading `│ `/indent of their own) — double gutters are
  * stripped defensively.
  */
-export function renderExpandedBlock({ body, foldKey, state, maxRows, label }) {
+export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols = 80 }) {
   if (state.foldEnabled === false) return body.slice()
   // Strip caller-side gutters/indents, then apply the single owned gutter.
+  // HARD WIDTH BOUND: caller rows may already be cols-1 wide (wrapped at
+  // cols-1 upstream); adding the 2-char gutter would overflow by one column —
+  // the exact "one char past the border" bug (user report 2026-08-30). The
+  // component owns the final width: every row is sliced to cols-2 AFTER the
+  // gutter, so the frame never sees an overwide row.
   const lined = body.map((l) => {
     const raw = l.text.replace(/^(?:│ ?|  │ ?|  )/, "")
-    return { ...l, text: `│ ${raw}` }
+    return { ...l, text: sliceByWidth(`│ ${raw}`, cols - 2) }
   })
   const out = [blankLine(), foldHintLine(`▼ … ${label} — click to collapse`, foldKey)]
   const cap = foldCapRows(maxRows)

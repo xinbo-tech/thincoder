@@ -123,7 +123,7 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
     // Expanded: shared component renders blank + ▼ control + full timeline,
     // capped at 60% of the screen with a bottom collapse control.
     const body = renderBlockTimeline(sub.blocks, cols)
-    out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: "subagent activity" }))
+    out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
   } else {
     // Folded: the header line itself is the control (▶ affordance), then tail 3.
     out.push({
@@ -226,7 +226,7 @@ function buildConvLines(state, cols, maxRows) {
             body.push({ text: wrapped, color: C.reason, _skipDimFold: true })
           }
         }
-        convLines.push(...renderExpandedBlock({ body, foldKey: frozenAdvKey, state, maxRows, label: "[advisor · review done]" }))
+        convLines.push(...renderExpandedBlock({ body, foldKey: frozenAdvKey, state, maxRows, cols, label: "[advisor · review done]" }))
       } else {
         convLines.push({
           text: `▶ [advisor · review done] … click to expand`,
@@ -285,7 +285,7 @@ function buildConvLines(state, cols, maxRows) {
       const kind = l.color === C.reason ? "thinking" : l.color === C.dim ? "tool output" : "message"
       convLines.push(...renderFoldedHead({
         header: foldHintLine(`▶ ${kind} · ${block.length} lines — click to expand`, longKey, i),
-        body: block,
+        body: block, cols,
       }))
     } else if (foldable && block.length > threshold) {
       if (state.foldEnabled === false) {
@@ -300,7 +300,7 @@ function buildConvLines(state, cols, maxRows) {
         if (l.color === C.dim) {
           for (const line of block) line._skipDimFold = true
         }
-        convLines.push(...renderExpandedBlock({ body: block, foldKey: longKey, state, maxRows, label: `${block.length} lines` }))
+        convLines.push(...renderExpandedBlock({ body: block, foldKey: longKey, state, maxRows, cols, label: `${block.length} lines` }))
       }
     } else {
       convLines.push(...block)
@@ -346,7 +346,7 @@ function buildConvLines(state, cols, maxRows) {
         // 60% screen cap — the header control may sit above the viewport once
         // expanded, the capped bottom control stays reachable).
         const body = renderBlockTimeline(sub.blocks, cols)
-        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: "subagent activity" }))
+        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
       } else {
         // Folded: tail 3 non-empty block lines (most recent activity), dim.
         const tailLines = []
@@ -377,7 +377,7 @@ function buildConvLines(state, cols, maxRows) {
     }
     const expanded = isExpanded(state, liveKey)
     if (expanded) {
-      convLines.push(...renderExpandedBlock({ body, foldKey: liveKey, state, maxRows, label: "thinking (streaming)" }))
+      convLines.push(...renderExpandedBlock({ body, foldKey: liveKey, state, maxRows, cols, label: "thinking (streaming)" }))
     } else {
       convLines.push(...renderFoldedHead({
         header: foldHintLine(`▶ thinking · ${body.length} lines — click to expand`, liveKey),
@@ -401,7 +401,7 @@ function buildConvLines(state, cols, maxRows) {
     const advHeader = `[advisor · review] ${advLineCount} lines`
     if (isExpanded(state, advKey)) {
       const body = renderBlockTimeline(advisorBlocks, cols, { stripPlaceholder: true })
-      convLines.push(...renderExpandedBlock({ body, foldKey: advKey, state, maxRows, label: advHeader }))
+      convLines.push(...renderExpandedBlock({ body, foldKey: advKey, state, maxRows, cols, label: advHeader }))
     } else {
       // Folded: header control line + tail 3 non-empty lines from the tail
       // blocks (most recent activity), dim — mirrors the subagent block fold.
@@ -453,7 +453,7 @@ function buildConvLines(state, cols, maxRows) {
           // long-message fold above).
           folded.push(...renderFoldedHead({
             header: foldHintLine(`▶ tool output · ${blockLen} lines — click to expand`, foldKey),
-            body: convLines.slice(i, j),
+            body: convLines.slice(i, j), cols,
           }))
           i = j
           continue
@@ -464,7 +464,7 @@ function buildConvLines(state, cols, maxRows) {
         if (state.foldEnabled === false) {
           for (let k = i; k < j; k++) folded.push(convLines[k])
         } else {
-          folded.push(...renderExpandedBlock({ body: convLines.slice(i, j), foldKey, state, maxRows, label: `${blockLen} lines` }))
+          folded.push(...renderExpandedBlock({ body: convLines.slice(i, j), foldKey, state, maxRows, cols, label: `${blockLen} lines` }))
         }
         i = j
         continue
