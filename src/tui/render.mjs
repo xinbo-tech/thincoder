@@ -215,7 +215,15 @@ export function sanitizeDisplay(s) {
   // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/⟦ev⟧[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e?/g, "")
   // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-    .replace(/⟦ev⟧[^\x1e\x1d]*/g, "")
+// eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+    // GitHub-#4-class pitfall (2026-08-31): the residue strip used to be
+    // /⟦ev⟧[^\x1e\x1d]*/ — "swallow to end of line/string", which ATE REAL
+    // CONTENT when the user-visible text legitimately contains the literal
+    // sentinel (e.g. a table describing the ACP bridge's ⟦ev⟧ stripping —
+    // everything from the sentinel to the end vanished on screen). Real relay
+    // tokens start with a phase word (turn/approval); a bare sentinel with no
+    // letters attached is not a live token. Strip only sentinel+letters.
+    .replace(/⟦ev⟧[A-Za-z]*/g, "")
   // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/[\x1d\x1e]/g, "")
     .replace(/\r\n/g, "\n")

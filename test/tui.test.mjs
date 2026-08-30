@@ -1002,7 +1002,7 @@ test("panel functions (§7.2 D5): 事件 token 残留被 sanitizeDisplay 兜底�
   assert.ok(!cleaned.includes("⟦ev⟧"), "哨兵剥除")
   assert.ok(!cleaned.includes("\x1e"), "RS 控制字符剥除")
   assert.ok(cleaned.includes("coder#1/"), "普通前缀文本不受影响")
-  assert.equal(sanitizeDisplay("normal ⟦ev⟧ mid-token"), "normal ", "漏解析哨兵串兜底剥到行尾（残段视为事件碎片）")
+  assert.equal(sanitizeDisplay("normal ⟦ev⟧ mid-token"), "normal  mid-token", "哨兵后无字母 phase = 正文合法内容（如讨论 ACP 桥的表格），只剥哨兵本身——2026-08-31 用户实证：旧'剥到行尾'语义把真实正文吃到串尾")
 })
 
 test("panel functions (§7.2 T-H): layout 无 subagent/output 槽 + render-frame 无 renderSubagent/renderOutput 导出", () => {
