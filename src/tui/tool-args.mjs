@@ -50,9 +50,10 @@ export function describeToolArgs(name, args) {
     case "checkpoint": return [a.checkpointAction ?? a.action, a.checkpointId, a.path].filter(Boolean).map(String).join(" ")
     case "git": return [a.action, a.ref, a.name, a.message].filter(Boolean).map(String).join(" ").slice(0, 60)
     default: {
-      // MCP 工具 / 未知工具：单行紧凑 JSON（vscode 卡片头同样给原始 JSON 截断）
+      // MCP 工具 / 未知工具：单行紧凑 JSON（vscode 卡片头同样给原始 JSON 截断）。
+      // 硬上限 160：超大 arguments（如 execute 的千字符 code）绝不进单行头。
       const s = JSON.stringify(a)
-      return s.length > 80 ? sliceByWidth(s, 78) + "…" : s
+      return s.length > 160 ? sliceByWidth(s, 156) + "…" : s.length > 80 ? sliceByWidth(s, 78) + "…" : s
     }
   }
 }

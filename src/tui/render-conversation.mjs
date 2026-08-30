@@ -185,19 +185,29 @@ function buildConvLines(state, cols, maxRows) {
         : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || "done"
       if (isExpanded(state, foldKey)) {
         const body = []
-        for (const jl of b.argsJson) body.push({ text: "  " + jl, color: C.dim, _skipDimFold: true })
-        for (const ol of b.output) body.push({ text: "  │ " + ol, color: C.tool, _skipDimFold: true })
-        if (b.result) for (const rl of b.result) body.push({ text: "  " + rl, color: C.dim, _skipDimFold: true })
+        const pushWrapped = (raw, color) => {
+          for (const w of wrapText(raw, cols - 4)) body.push({ text: "  " + w, color, _skipDimFold: true })
+        }
+        for (const jl of b.argsJson) pushWrapped(jl, C.dim)
+        for (const ol of b.output) pushWrapped(ol, C.tool)
+        if (b.result) for (const rl of b.result) pushWrapped(rl, C.dim)
         convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: `${b.name}${b.roundTag || ""} ${b.argsSummary}`.trim() }))
       } else {
-        const headText = `❯ ${b.name}${b.roundTag || ""}${b.argsSummary ? " " + b.argsSummary : ""}  · ${status}`
+        // Head MUST be width-bounded: argsSummary for unknown/MCP tools is a
+      // JSON.stringify dump that can be thousands of chars — an overwide header
+      // row makes the terminal soft-wrap mid-frame, shifting every panel below
+      // (the "code breaks the input box border" report, 2026-08-30).
+      const headText = sliceByWidth(
+        `❯ ${b.name}${b.roundTag || ""}${b.argsSummary ? " " + b.argsSummary : ""}  · ${status}`,
+        Math.max(20, cols - 2),
+      )
         const body = []
-        for (const jl of b.argsJson) body.push({ text: jl, color: C.dim, _skipDimFold: true })
-        for (const ol of b.output.slice(-3)) body.push({ text: ol, color: C.dim, _skipDimFold: true })
+        for (const jl of b.argsJson) for (const w of wrapText(jl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
+        for (const ol of b.output.slice(-3)) for (const w of wrapText(ol, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
         // Result lines join the tail pool too — restore carrier has no output
         // rows, so without this its folded tail showed only args JSON and the
         // result vanished from the folded view (parity bug, 2026-08-30).
-        if (b.result) for (const rl of b.result) body.push({ text: rl, color: C.dim, _skipDimFold: true })
+        if (b.result) for (const rl of b.result) for (const w of wrapText(rl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
         convLines.push(...renderFoldedHead({ header: { text: headText, color: C.tool, _foldToggle: foldKey }, body }))
       }
       continue
