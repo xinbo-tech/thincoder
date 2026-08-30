@@ -77,7 +77,7 @@ export function createPickers(ctx) {
     // Fallback to a reasonable default when computeLayout can't run (e.g. test mocks without full state)
     let winH
     try {
-      winH = Math.max(1, (computeLayout(state, { cols: (state.dims?.refresh() ?? {}).cols ?? (process.stdout.columns || 80), rows: (state.dims?.refresh() ?? {}).rows ?? (process.stdout.rows || 24) }).panels.picker?.h ?? lines.length + 1) - 1)
+      winH = Math.max(1, (computeLayout(state, { cols: (state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80), rows: (state.dims?.refresh() ?? {}).rows ?? (process.stdout.rows || 24) }).panels.picker?.h ?? lines.length + 1) - 1)
     } catch {
       winH = 8 // safe fallback for test mocks
     }

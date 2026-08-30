@@ -319,6 +319,11 @@ export async function startTUI(agent, opts = {}) {
   process.stdout.on("resize", () => {
     try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
   })
+  // Startup re-sample (2026-08-30): ConPTY's buffer info lags the real window
+  // right after launch (and goes stale DURING heavy output — dims.get() is now
+  // cache-only in the render path). One delayed refresh catches the true size
+  // without per-frame sampling polluting the cache mid-stream.
+  setTimeout(() => { try { state.dims.refresh(); render() } catch { /* ignore */ } }, 300)
 
   // ---------------------------------------------------------- Submit
 

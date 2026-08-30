@@ -56,11 +56,13 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
 
   function doRender() {
     try {
-      // Single source (Windows ConPTY instability, 2026-08-30): sample-and-hold
-      // via state.dims — a falsy read keeps the last good size instead of
-      // falling back to a cramped 80 and never recovering (streaming output
-      // stuck in a left-hand sliver until a mouse interaction re-sampled).
-      const dims = state.dims ? state.dims.refresh() : { cols: process.stdout.columns || startupDims.cols, rows: process.stdout.rows || startupDims.rows }
+      // Single source (Windows ConPTY instability, 2026-08-30). CACHE ONLY —
+      // no per-frame refresh: during heavy streaming output ConPTY reports a
+      // STALE buffer size (80) and per-frame sampling let that stale value
+      // hijack the cache (streaming content crammed into a left-hand sliver,
+      // restored to full width only after flush stopped the output). dims are
+      // updated by: startup seed + a delayed re-sample + resize events.
+      const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || startupDims.cols, rows: process.stdout.rows || startupDims.rows }
 
       // NOTE (§7.2 D6): the old state.outputPanels prune is gone — output panels
       // are abolished; subagent blocks live in the conversation and are never

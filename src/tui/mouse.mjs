@@ -51,7 +51,7 @@ export function handleMouseClick(ctx, col, row) {
   if (r < 0) return false
   // Single source (Windows ConPTY instability, 2026-08-30): the cached dims,
   // never a live read that can flip between stale and fresh values.
-  const dims = state.dims ? state.dims.refresh() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+  const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
   const layout = computeLayout(state, dims)
   const P = layout.panels
 
