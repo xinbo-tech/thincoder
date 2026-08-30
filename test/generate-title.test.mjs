@@ -70,3 +70,24 @@ test("short user text returns null without fetching", async () => {
     restore()
   }
 })
+
+test("proxy branch: provider.proxyUri routes through proxyFetch (import-path regression, 2026-08-30)", async () => {
+  // 回归锁：曾经 dynamic import("../proxy.mjs") 从 src/ 解析到仓库根（不存在），
+  // ERR_MODULE_NOT_FOUND 被 catch 吞掉——代理用户标题静默失效，且零测试覆盖。
+  // 静态导入后模块加载失败会让全部 T1-T4 用例报错（路径回归第一道锁）；
+  // 本用例经 _deps 缝锁定"proxyUri 存在 → 必须走 proxyFetch"（第二道锁）。
+  const { _deps } = await import("../src/generate-title.mjs")
+  const orig = _deps.proxyFetchImpl
+  let viaProxy = false
+  _deps.proxyFetchImpl = async () => {
+    viaProxy = true
+    return new Response(JSON.stringify({ choices: [{ message: { content: "Proxied title" } }] }), { status: 200 })
+  }
+  try {
+    const title = await generateTitle(USER, { ...PROVIDER, proxyUri: "http://127.0.0.1:1" })
+    assert.equal(title, "Proxied title")
+    assert.equal(viaProxy, true, "provider.proxyUri 存在时必须经 proxyFetch")
+  } finally {
+    _deps.proxyFetchImpl = orig
+  }
+})

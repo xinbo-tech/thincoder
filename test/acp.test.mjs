@@ -192,6 +192,29 @@ describe("bridge — runAgent callbacks → session/update notifications", () =>
     assert.equal(events[1].params.update.sessionUpdate, "agent_thought_chunk")
     assert.equal(events[2].params.update.sessionUpdate, "usage_update")
   })
+
+  // D7 (§7.2): ⟦ev⟧ event tokens (bare or role#id/ prefixed) never reach ACP
+  // clients — RS control chars are a TUI display signal; structured mapping is TODO.
+  it("strips ⟦ev⟧ event tokens (bare + prefixed); normal tokens pass through", () => {
+    const events = []
+    const cb = buildAcpCallbacks({
+      sessionId: "s1",
+      notify: (method, params) => events.push(params?.update?.content?.text),
+    })
+    cb.onToken("⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e")            // bare turn event
+    cb.onToken("coder#1/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e")     // prefixed turn event
+    cb.onToken("consult#2/⟦ev⟧approval\x1e1\x1e40\x1eapproval\x1ewrite") // prefixed approval
+    cb.onToken("escalate#1/⟦ev⟧bogus\x1e1\x1e2\x1ex\x1e")     // non-canonical event name → passes (TUI sanitizes)
+    cb.onToken("plain text")                                   // normal token
+    cb.onToken("coder#1/hello world")                          // normal prefixed token
+    const texts = events.filter((t) => typeof t === "string")
+    assert.ok(!texts.includes("⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e"), "bare turn event stripped")
+    assert.ok(!texts.includes("coder#1/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e"), "prefixed turn event stripped")
+    assert.ok(!texts.includes("consult#2/⟦ev⟧approval\x1e1\x1e40\x1eapproval\x1ewrite"), "approval event stripped")
+    assert.ok(texts.includes("escalate#1/⟦ev⟧bogus\x1e1\x1e2\x1ex\x1e"), "non-canonical event name not treated as event (bridge only guards the two real names)")
+    assert.ok(texts.includes("plain text"), "normal token passes")
+    assert.ok(texts.includes("coder#1/hello world"), "prefixed content token passes (existing behavior)")
+  })
 })
 
 describe("session — FIFO queue + cancel", () => {

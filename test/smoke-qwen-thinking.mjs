@@ -7,6 +7,13 @@
 //   3. 对照  ：无思考字段                  → 服务端默认（qwen3.x 默认思考）→ reasoning 非空
 // 通过 = OFF 无思考 且 XHIGH/对照 有思考 且 三请求均无 400/网络错误。退出码 0/1。
 
+/**
+ * 真实端点 smoke（enable_thinking 映射）：花真金白银的 token + 网络抖动，
+ * 不进常规测试层——仅 THINCODER_SMOKE=1 时运行（发版前人工跑）。
+ */
+if (process.env.THINCODER_SMOKE !== "1") {
+  console.log("[smoke] skipped — set THINCODER_SMOKE=1 to run against the real endpoint")
+} else {
 import { loadConfig } from "../src/config.mjs"
 import { chat } from "../src/provider/index.mjs"
 
@@ -59,3 +66,4 @@ if (fail.length) {
   process.exit(1)
 }
 console.log("\nSMOKE PASS — enable_thinking 映射在真实端点生效：OFF 无思考 / 档位与默认有思考")
+}

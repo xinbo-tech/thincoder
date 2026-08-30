@@ -38,65 +38,33 @@ function makeHarness() {
 
 const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms))
 
-/** Mirror of agent-turn.mjs onToolOutput */
-function feedChunk(state, name, chunk) {
-  let panel = state.outputPanels[name]
-  if (!panel) { state.outputPanels[name] = { parts: [], len: 0, done: false }; panel = state.outputPanels[name] }
-  const part = typeof chunk === "string" ? { kind: "text", text: chunk } : { kind: chunk.kind ?? "text", text: String(chunk.text ?? "") }
-  panel.parts.push(part)
-  panel.len += part.text.length
-  while (panel.len > 4000 && panel.parts.length > 1) {
-    const first = panel.parts[0]
-    const excess = panel.len - 4000
-    if (first.text.length <= excess) { panel.len -= first.text.length; panel.parts.shift() }
-    else { first.text = first.text.slice(excess); panel.len -= excess }
-  }
-}
-
-test("output panel: streamed content is drawn and keeps updating past the 4000-char cap", async () => {
+/** D6 (§7.2): output panels are abolished — these tests now lock the RETIRED
+ *  behavior: leftover outputPanels state must not crash the render loop, must
+ *  NOT be pruned anymore (no writer exists), and the row-diff path keeps working. */
+test("output panels abolished (D6): residual state ignored — render loop unaffected", async () => {
   const h = makeHarness()
   try {
-    h.state.outputPanels.bash = { parts: [], len: 0, done: false }
+    h.state.outputPanels.bash = { parts: [{ kind: "text", text: "stale" }], len: 5, done: false }
     h.render()
-    await tick()
-    for (let i = 1; i <= 600; i++) {
-      feedChunk(h.state, "bash", `output-line-${i}\n`)
-      h.render()
-      if (i % 10 === 0) await tick(20) // ~1 paint per 10 lines; tail window is 8 lines
-    }
     await tick(60)
+    assert.ok(h.state.outputPanels.bash, "no prune writer anymore (dead state left untouched)")
     const out = h.output()
-    assert.ok(out.includes("output-line-10"), "early content drawn")
-    // The 4000-char text cap is hit around line ~270; content past it must still repaint
-    // (regression: the old incremental cache keyed on text length, which froze at the cap).
-    assert.ok(/output-line-[45]\d\d/.test(out), "content well past the 4000-char cap still drawn (no freeze)")
-    assert.ok(out.includes("output-line-600"), "final lines drawn")
+    assert.ok(!out.includes("stale"), "residual panel content is NOT rendered (no panel slot)")
+    assert.ok(out.includes("ThinCoder"), "frame still renders normally")
   } finally {
     h.restore()
   }
 })
 
-test("output panel: done panel keeps its content during the closeAt grace, then is pruned", async () => {
-  const h = makeHarness()
-  try {
-    h.state.outputPanels.bash = { parts: [], len: 0, done: false }
-    h.render()
-    await tick()
-    feedChunk(h.state, "bash", "build-ok\n")
-    // onToolResult path: done + close grace
-    h.state.outputPanels.bash.done = true
-    h.state.outputPanels.bash.closeAt = Date.now() + 60_000
-    h.render()
-    await tick(60)
-    assert.ok(h.output().includes("build-ok"), "final content still visible during grace")
-    assert.ok(h.state.outputPanels.bash, "panel not pruned during grace")
-
-    // Expire the grace — next render prunes the panel and repaints without it
-    h.state.outputPanels.bash.closeAt = Date.now() - 1
-    h.render()
-    await tick(60)
-    assert.equal(h.state.outputPanels.bash, undefined, "panel pruned after grace")
-  } finally {
-    h.restore()
-  }
+test("output panels abolished (D6): no prune writer exists in render-loop source (T-H)", async () => {
+  const { readFileSync } = await import("node:fs")
+  const src = readFileSync(new URL("../src/tui/render-loop.mjs", import.meta.url), "utf8")
+  assert.ok(!/delete state\.outputPanels/.test(src), "render-loop no longer prunes outputPanels")
+  const frameSrc = readFileSync(new URL("../src/tui/render-frame.mjs", import.meta.url), "utf8")
+  assert.ok(!/renderOutput|renderSubagent|PANEL_KIND_COLORS/.test(frameSrc), "render-frame has no panel renderers")
+  const layoutSrc = readFileSync(new URL("../src/tui/layout.mjs", import.meta.url), "utf8")
+  assert.ok(!/subPanelH|outputPanelsH|panels\.subagent|panels\.output/.test(layoutSrc), "layout has no subagent/output slots")
+  // 全仓无 outputPanels 写入方残留（D6 验收：仅测试与已删机制的历史状态兜底）
+  const agentTurnSrc = readFileSync(new URL("../src/tui/agent-turn.mjs", import.meta.url), "utf8")
+  assert.ok(!/outputPanels/.test(agentTurnSrc), "agent-turn has no outputPanels writer")
 })

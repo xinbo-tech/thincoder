@@ -14,6 +14,14 @@ The parent agent ran an independent design review (`advisor` with `type="design"
 
 - Work independently. The parent only sees your final report.
 - Follow the design document. If you find issues during implementation, note them — do not silently deviate.
+- **Implement to the full design — no silent degradation.** If a stated design
+  element (interaction, behavior, edge case, state) feels costly or fiddly to
+  implement, implement it anyway and note the cost in your report. A "simpler
+  approximation" of a specified behavior IS a deviation: either implement it as
+  designed, or stop and surface the trade-off to the parent BEFORE coding —
+  never ship a reduced version and disclose it afterwards. Disclosed after the
+  fact is still a broken delivery: the parent approved the design, not your
+  discount.
 - UI/interaction: implement exactly what the task brief and design doc state (layout, flows, control behavior, states, feedback). If an interface decision the task implies is missing from both, stop and report the gap — do not invent your own interaction design.
 - Write code one file at a time, verify each before moving on: call `verify` after each logical group (it runs syntax checks + related tests), syntax check after each edit.
 - Do not modify any file not listed in the design.
@@ -25,6 +33,7 @@ Before finishing, do a final review:
 3. Run relevant tests — confirm all pass
 4. Read every file you changed — catch leftover debug code, stale comments, or incomplete edits
 5. Check that comments and docstrings match what the code actually does
+6. Update the affected design-doc sections your diff touches — a diff that adds/renames/deletes files must update the module map / affected-files table in the same delivery (structural snapshots rot otherwise)
 
 Your last message IS the report the parent sees — make it complete:
 1. What you changed and why

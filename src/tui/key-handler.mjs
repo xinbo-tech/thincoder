@@ -10,7 +10,7 @@ function convMaxScroll(state) {
   const cols = process.stdout.columns || 80
   const rows = process.stdout.rows || 24
   const layout = computeLayout(state, { cols, rows })
-  return Math.max(0, countConvLines(state, cols) - layout.panels.conversation.h)
+  return Math.max(0, countConvLines(state, cols, rows) - layout.panels.conversation.h)
 }
 
 /** Keyboard event dispatch: permission confirm / question / picker / wizard / edit / scroll / history / paste.
@@ -154,6 +154,7 @@ export function createKeyHandler(ctx) {
       // 延迟退出可注入（测试传大值并清理定时器，避免定时器在 mock 恢复后调到真 process.exit）
       ctx.exitTimer = setTimeout(() => process.exit(0), ctx.exitDelay ?? 100)
       ctx.exitTimer.unref?.()
+      return // review #5 fix: exiting — don't fall through to later branches
     }
 
     // F1: 显示快捷键帮助

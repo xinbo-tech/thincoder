@@ -170,6 +170,13 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // Update turn counter for status bar display
     agent._currentTurn = turn + 1
     agent._maxTurns = maxTurns
+    // D2 (AGENT-LOOP.md §7.2): depth>0 children emit a ⟦ev⟧turn progress token on every
+    // turn — a single emit point covering all three spawn tools (natural heartbeat for the
+    // TUI subagent block header: "turn N/max"). phase=llm (tool/done progress rides the
+    // existing onToolCall/onToolResult prefix relay — no token for those).
+    if (depth > 0 && callbacks.onToken) {
+      callbacks.onToken(`⟦ev⟧turn\x1e${turn + 1}\x1e${maxTurns}\x1ellm\x1e`)
+    }
 
     const lastRole = agent.history.at(-1)?.role
     if (lastRole === "user" || lastRole === "tool") {

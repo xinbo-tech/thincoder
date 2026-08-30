@@ -31,9 +31,10 @@
     "url": "git+https://github.com/xinbo-tech/thincoder.git"
   },
   "scripts": {
-    "test": "node --test \"test/*.mjs\"",
+    "test": "node --test \"test/*.test.mjs\"",
     "prepublishOnly": "npm run lint && node --test \"test/*.mjs\"",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test:full": "node test/run-full.mjs"
   },
   "author": "liwei <liwei@51marine.com> (上海新舶)",
   "license": "MIT",

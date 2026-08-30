@@ -1,70 +1,75 @@
 /**
  * render-conversation.mjs — conversation panel line builder
  * Extracted from render-frame.mjs.
+ *
+ * 2026-08-30: all six fold sites (frozen/running subagent blocks, frozen/live
+ * advisor, long-message, consecutive-dim) delegate their EXPANDED-state
+ * rendering to the shared fold-block.mjs component, which caps expansion at
+ * 60% of the terminal height so the collapse control always stays reachable
+ * (user report: an expanded block could push its own control off-screen).
+ * maxRows flows in from every caller; omitted/0 → uncapped (tests, odd envs).
  */
 import { ansi, C } from "./ansi.mjs"
-import { formatTables, sanitizeDisplay, stringWidth, wrapText } from "./render.mjs"
-import { renderMarkdownInline, renderMarkdownHeading } from "./markdown.mjs"
-import { renderMathInline, renderMathBlock } from "./math.mjs"
+import { formatTables, sanitizeDisplay, sliceByWidth, wrapText } from "./render.mjs"
+import {
+  isExpanded, foldHintLine, blankLine, renderExpandedBlock, renderBlockTimeline,
+  renderMathAndMarkdown, foldCapRows, renderFoldedHead,
+} from "./fold-block.mjs"
+import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
+
+// Test seam (mirrors the _-prefixed seams in run.mjs) — moved to fold-block.mjs.
+import { renderMarkdownPreservingWidth as _rmpw } from "./fold-block.mjs"
+export { _rmpw as _renderMarkdownPreservingWidth }
 
 let _convCache = { key: "", cols: 0, lines: [] }
 
-/**
- * Render markdown markers to ANSI, then pad the line tail back to the pre-render
- * display width. Markers (`` ` ``, `**`, `~~`) vanish on render — without the
- * compensation, table rows containing them display shorter than the column widths
- * computed by formatTables and the borders misalign (reported regression).
- * @param {string} text — plain text line (no ANSI yet), already wrapped
- * @returns {string} ANSI-rendered line whose display width equals stringWidth(text)
- */
-function renderMarkdownPreservingWidth(text) {
-  // Line-by-line: render + compensate per line. The per-line padding serves
-  // NON-table text (so `**bold** text` next to plain text keeps its width).
-  // Table alignment is NOT provided by the padding — formatTables strips cell
-  // padding during trim and recomputes widths from the RENDERED text (that is
-  // the render-before-measure contract).
-  return text.split("\n").map((line) => {
-    const rendered = renderMarkdownInline(renderMarkdownHeading(line))
-    const diff = stringWidth(line) - stringWidth(rendered)
-    return diff > 0 ? rendered + " ".repeat(diff) : rendered
-  }).join("\n")
-}
-
-// Math runs BEFORE markdown (TUI.md §9.1D): `$...$`/`$$...$$` are opaque to markdown
-// (so `x**2` inside a formula isn't misread as bold), and the Unicode approximation
-// is measured by renderMarkdownPreservingWidth's width-compensation math.
-function renderMathAndMarkdown(text) {
-  return renderMarkdownPreservingWidth(renderMathInline(renderMathBlock(text)))
-}
-// Test seam (mirrors the _-prefixed seams in run.mjs).
-export { renderMarkdownPreservingWidth as _renderMarkdownPreservingWidth }
-
-
-export function convCacheKey(state) {
+export function convCacheKey(state, maxRows) {
   const lastLine = state.lines.length > 0 ? state.lines[state.lines.length - 1] : null
   // expandedBlocks participates: expanding/folding a block must invalidate the cache
   const exp = state.expandedBlocks ? [...state.expandedBlocks].sort().join(",") : ""
   // Content prefix in the signature: same kind+length with different content
   // would otherwise collide (stale render); 8 chars disambiguate in practice.
   const blocksSig = (state._advisorBlocks ?? []).map((b) => `${b.kind}:${b.text?.length ?? 0}:${String(b.text ?? "").slice(0, 8)}`).join(",")
-  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}`
+  // Subagent activity blocks (§7.2 D5): O(1) counter-style signature — a running
+  // epoch (any block/header change bumps it, subagent-blocks.mjs appendSubBlock /
+  // finishSubTask) + per-child totals. Running children also fold in a
+  // second-granularity elapsed part (see below). NOT a full text concat: N3
+  // forbids O(n) signature cost on every token.
+  let subSig = ""
+  for (const key in state.subTasks) {
+    const s = state.subTasks[key]
+    // Running children include a second-granularity elapsed component: the 1s
+    // ticker re-renders to tick the header countdown — without this the cache
+    // would hit and the "45s" display would freeze during silent stretches
+    // (long child tool runs with no chunks). Done children are constant — no
+    // per-second invalidation for them.
+    const elapsedPart = s.done ? "" : `:${Math.floor((Date.now() - s.started) / 1000)}`
+    subSig += `${key}:${s.done ? 1 : 0}${elapsedPart}:${s.turn}/${s.maxTurns}:${s.currentTool ?? ""}:${s.approval ?? ""}:${s.blockEpoch ?? 0};`
+  }
+  // Frozen blocks ride state.lines ({_frozenSubTask}) — the lines.length part of
+  // this key covers their existence; expanding/collapsing one flips expandedBlocks
+  // (covered by `exp`). One extra: the last frozen payload's header depends on
+  // blocks content which never changes post-freeze — nothing more needed.
+  // Same single pass also builds the per-line COLOR-CLASS signature: foldability
+  // is decided by color class since main output (C.text) never folds while
+  // thinking/dim do (2026-08-30) — two states differing only in line color used
+  // to collide on this key and serve a stale cached render.
+  let frozenSig = ""
+  let colorSig = ""
+  for (const l of state.lines) {
+    if (l._frozenSubTask) frozenSig += `${l._frozenSubTask.key};`
+    colorSig += l.color === C.text ? "T" : l.color === C.dim ? "D" : l.color === C.reason ? "R" : "o"
+  }
+  // Expansion cap participates: a terminal resize changes the cap, which changes
+  // the rendered height of every expanded block — the cache must not survive it.
+  const capPart = maxRows ? `cap${foldCapRows(maxRows)}` : "cap∞"
+  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}`
 }
 
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).
  *  No indent — flush with the content below it; the caller adds a blank line BEFORE it
  *  so the control line stands apart from unrelated content (reported UX). */
-function foldHintLine(text, foldKey, srcIdx) {
-  // Underline just the actionable phrase — link/button convention
-  const withUnderline = text.replace(/(click to (?:expand|collapse))/, "\x1b[4m$1\x1b[24m")
-  return { text: withUnderline, color: C.fold, _foldToggle: foldKey, _src: srcIdx }
-}
-
-/** Blank separator before a fold control line (uncolored — must not join consecutive-dim folding).
- *  Only the EXPANDED state uses it (▼ sits at the block head); the folded state's ▶
- *  control line sits mid-block where the ellipsis used to be, so no separator needed. */
-function blankLine() {
-  return { text: "", color: "" }
-}
+// foldHintLine/blankLine moved to fold-block.mjs (shared with the component).
 
 function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, allMatches, lineIndex) {
   if (!matchesInLine || matchesInLine.length === 0 || !query) return text
@@ -90,24 +95,103 @@ function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, 
   return result
 }
 
+/** Render a FROZEN child activity block carried on a state.lines entry
+ *  (subagent-blocks.mjs freezeSubTaskLines pushes {_frozenSubTask: sub}). Identical
+ *  interaction to the running tail section: folded = `[✓ coder#1 · glm-5.3 ·
+ *  done 45s · turn 12/100] … click to expand` header + tail 3 block lines;
+ *  expanded = blank + ▼ control + full timeline (60% screen cap via the shared
+ *  component — capped view ends in a reachable collapse control). Toggle key
+ *  `sub-${key}` — the SAME key the live section uses, so fold state carries
+ *  across the freeze boundary seamlessly (user ruled 2026-08-30: frozen stays
+ *  clickable — full design interaction, not a dim-lines fallback). */
+function frozenSubTaskLines(state, sub, cols, maxRows) {
+  const foldKey = `sub-${sub.key}`
+  const elapsed = Math.floor(((sub.doneAt ?? Date.now()) - sub.started) / 1000)
+  const modelPart = sub.model ? ` · ${sub.model}` : ""
+  const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
+  const errPart = sub.lastError ? ` — ${sub.lastError}` : ""
+  const icon = sub.approval ? "⏸" : "✓"
+  const header = `[${icon} ${sub.key}${modelPart} · done ${elapsed}s${turnPart}${errPart}]`
+  const out = []
+  if (isExpanded(state, foldKey)) {
+    // Expanded: shared component renders blank + ▼ control + full timeline,
+    // capped at 60% of the screen with a bottom collapse control.
+    const body = renderBlockTimeline(sub.blocks, cols)
+    out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: "subagent activity" }))
+  } else {
+    // Folded: the header line itself is the control (▶ affordance), then tail 3.
+    out.push({
+      text: `▶ ${header} … subagent activity — click to expand`,
+      color: C.dim,
+      _foldToggle: foldKey,
+    })
+    const tailLines = []
+    for (let bi = sub.blocks.length - 1; bi >= 0 && tailLines.length < 3; bi--) {
+      const lines = sanitizeDisplay(sub.blocks[bi].text).split("\n").filter((l) => l.trim())
+      for (let li = lines.length - 1; li >= 0 && tailLines.length < 3; li--) {
+        tailLines.unshift(lines[li])
+      }
+    }
+    for (const line of tailLines) {
+      out.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim, _skipDimFold: true })
+    }
+  }
+  return out
+}
+
 /**
  * Build the conversation lines for the given state.
+ * maxRows: terminal rows for the 60% expansion cap (undefined → uncapped —
+ * unit tests and callers without a terminal rely on that).
  * NOTE: module-level _convCache is read/written as a side effect (keyed by
  * convCacheKey + cols) — the function is pure w.r.t. its input except for
  * that cache; direct callers outside renderConversation/countConvLines
  * should be aware the cache persists across calls.
  */
-function buildConvLines(state, cols) {
-  const key = convCacheKey(state)
+function buildConvLines(state, cols, maxRows) {
+  const key = convCacheKey(state, maxRows)
   if (_convCache.key === key && _convCache.cols === cols) return _convCache.lines
 
   const convLines = []
-  // Folding constants (function scope — used by both the long-message fold below
-  // and the consecutive-dim fold at the bottom)
+  // Folding constants (function scope)
   const LONG_FOLD_LINES = 12
-  const FOLD_KEEP = 5 // content lines kept in the folded state (first 4 + last 1)
+  // THINKING ALWAYS FOLDS (user ruling 2026-08-30, final): no threshold of any
+  // kind — row thresholds died twice on the user's real screen (12 never met on
+  // narrow, 3 never met on wide), a char threshold missed typical sentences.
+  // Thinking is process content: it renders as the named "▶ thinking" block,
+  // expand ≤60%, click back. No exceptions, streaming included.
   for (let i = 0; i < state.lines.length; i++) {
     const l = state.lines[i]
+    // Frozen subagent activity block (§7.2 D4, 2026-08-30): rendered as its own
+    // collapsible section — clickable expand/collapse like the running block.
+    if (l._frozenSubTask) {
+      convLines.push(...frozenSubTaskLines(state, l._frozenSubTask, cols, maxRows))
+      continue
+    }
+    // Frozen advisor review (2026-08-30): same collapsible-box treatment —
+    // folded = one control line; expanded = the full review text (markdown
+    // rendered, no gutter — review history convention kept from the flat era),
+    // 60% cap via the shared component.
+    if (l._frozenAdvisor) {
+      const frozenAdvKey = `advisor-done-${i}`
+      if (isExpanded(state, frozenAdvKey)) {
+        const body = []
+        const rendered = renderMathAndMarkdown(sanitizeDisplay(l._frozenAdvisor))
+        for (const line of formatTables(rendered, cols - 1)) {
+          for (const wrapped of wrapText(line, cols - 1)) {
+            body.push({ text: wrapped, color: C.reason, _skipDimFold: true })
+          }
+        }
+        convLines.push(...renderExpandedBlock({ body, foldKey: frozenAdvKey, state, maxRows, label: "[advisor · review done]" }))
+      } else {
+        convLines.push({
+          text: `▶ [advisor · review done] … click to expand`,
+          color: C.fold,
+          _foldToggle: frozenAdvKey,
+        })
+      }
+      continue
+    }
     let text = l.text
 
     // Apply search highlighting
@@ -115,16 +199,19 @@ function buildConvLines(state, cols) {
       text = highlightSearchMatches(text, state.search.query, l._searchMatches, state.search.index, state.search.matches, i)
     }
 
-    // Long-message folding: ANY single line (main output C.text, thinking C.reason,
-    // tool summaries C.dim — whatever wraps beyond LONG_FOLD_LINES display rows)
-    // collapses to [first 4, ▶, last]; expanded long blocks render as
-    // [blank, ▼, every line]. Main output and thinking are the REAL long
-    // content; bidirectional folding (collapse markers + click toggle) keeps
-    // them readable — the 0.12.7 dim-only restriction was a temporary fix for
-    // the single-direction era and is now reverted. Keyed by the source-line
-    // index (`long-${i}`) so the toggle survives re-renders.
+    // Long-message folding (2026-08-30 user ruling): MAIN OUTPUT / user messages
+    // (C.text) NEVER fold — primary conversation content is read by scrolling,
+    // not by expanding; a folded core answer hid the actual result behind a
+    // click. Foldable subjects narrow to THINKING (C.reason) and dim tool
+    // summaries — the auxiliary streams. (This re-enacts the pre-0.12.7 rule
+    // for main output only; the 0.12.7 "revert" had reopened folding for it.)
+    // Keyed by the source-line index (`long-${i}`) so the toggle survives
+    // re-renders.
     const longKey = `long-${i}`
-    const folded = state.foldEnabled !== false && !state.expandedBlocks?.has(longKey)
+    const foldable = l.color !== C.text
+    const isReasoning = l.color === C.reason
+    const threshold = isReasoning ? 0 : LONG_FOLD_LINES
+    const folded = foldable && state.foldEnabled !== false && !state.expandedBlocks?.has(longKey)
     const block = []
     // Lightweight markdown display (IK5VW3): render BEFORE measuring — the
     // table column math (formatTables) and wrapping must see the RENDERED
@@ -138,69 +225,155 @@ function buildConvLines(state, cols) {
         block.push({ text: wrapped, color: l.color, _foldId: l._foldId, _src: i })
       }
     }
-    if (folded && block.length > LONG_FOLD_LINES) {
-      // Folded state: first 4 content lines, then the ▶ control line where the
-      // ellipsis used to be (the marker itself reads "… N more lines" — ellipsis
-      // semantics built in), then the last line. No leading blank line needed:
-      // the block starts with real content now.
-      convLines.push(...block.slice(0, FOLD_KEEP - 1))
-      convLines.push(foldHintLine(`▶ … ${block.length - FOLD_KEEP} more lines — click to expand`, longKey, i))
-      convLines.push(block[block.length - 1])
-    } else if (block.length > LONG_FOLD_LINES) {
+    if (folded && block.length > threshold) {
+      // FOLDED — unified form (fold-block.mjs renderFoldedHead, 2026-08-30 user
+      // ruling): named identity header + last 3 lines. Replaces the legacy
+      // [first 4, anonymous ▶ at the ellipsis, last] whose orphaned-looking
+      // "… N more lines" segment confused the scrollback.
+      const kind = l.color === C.reason ? "thinking" : l.color === C.dim ? "tool output" : "message"
+      convLines.push(...renderFoldedHead({
+        header: foldHintLine(`▶ ${kind} · ${block.length} lines — click to expand`, longKey, i),
+        body: block,
+      }))
+    } else if (foldable && block.length > threshold) {
       if (state.foldEnabled === false) {
         // Folding fully off — content already fully visible; a "click to
         // collapse" hint would be misleading (toggling has no effect).
         convLines.push(...block)
       } else {
-        // EXPANDED long block: blank line + ▼ control line at the HEAD, directly
-        // before the content. DIM blocks must not re-trigger the consecutive-dim
-        // folding below (folding stacked on folding — reported regression).
+        // EXPANDED thinking/dim long block via the shared component: blank + ▼
+        // control at the HEAD, content, 60% cap with a bottom collapse control.
+        // DIM blocks must not re-trigger the consecutive-dim folding below
+        // (folding stacked on folding — reported regression).
         if (l.color === C.dim) {
           for (const line of block) line._skipDimFold = true
         }
-        convLines.push(blankLine())
-        convLines.push(foldHintLine(`▼ … ${block.length} lines — click to collapse`, longKey, i))
-        convLines.push(...block)
+        convLines.push(...renderExpandedBlock({ body: block, foldKey: longKey, state, maxRows, label: `${block.length} lines` }))
       }
     } else {
       convLines.push(...block)
     }
   }
-  if (state.reasoning) {
-    for (const wrapped of wrapText(sanitizeDisplay(state.reasoning), cols - 1)) {
-      convLines.push({ text: wrapped, color: C.reason })
-    }
-  }
-  const advisorBlocks = state._advisorBlocks ?? []
-  if (advisorBlocks.length > 0) {
-    // ORDERED block display — the blocks preserve the emission order
-    // (think → tool → think → … → final) and render as one interleaved
-    // stream: thinking in reasoning color, tool progress/final in text color.
-    // Full-length, no preview truncation; long content scrolls via the
-    // conversation window like everything else.
-    // NOTE: formatTables returns an ARRAY of lines (not a string) — calling
-    // .split on it crashed the whole render (tools/final never displayed).
-    for (const block of advisorBlocks) {
-      const color = { think: C.reason, tool: C.tool, text: C.text }[block.kind] ?? C.text
-      const source = sanitizeDisplay(block.text)
-      // kind:"text" (the final review prose) gets the same lightweight markdown
-      // styling as the main agent response. Rendered BEFORE measuring: the
-      // width math (formatTables / wrapText) must see the RENDERED text —
-      // measuring raw markdown (`**bold**` = 8) against displayed text (4)
-      // misaligned table columns; wrapping raw markdown sliced markers
-      // mid-sequence (`**bo` + `ld**`) so the renderer never saw complete ones.
-      const rows = block.kind === "think"
-        ? source.split("\n")
-        : formatTables(block.kind === "text" ? renderMathAndMarkdown(source) : source, cols - 3)
-      for (const line of rows) {
-        for (const wrapped of wrapText(line, cols - 3)) {
-          convLines.push({ text: `│ ${wrapped}`, color })
+  // ── Subagent activity blocks (§7.2 D4) — RUNNING blocks only ──────────────
+  // Rendered BEFORE the advisor blocks section. A child's block lives here only
+  // while it runs: on completion onToolResult freezes the block into state.lines
+  // (subagent-blocks.mjs freezeSubTaskLines) so it scrolls away with the conversation
+  // instead of staying pinned above the input box ("ghost" report 2026-08-30).
+  // Default folded = header summary line (▶ role#id · model · elapsed · turn
+  // n/max | current state) + tail 3 block lines; expanded = shared component
+  // (full timeline, 60% screen cap).
+  const subEntries = Object.values(state.subTasks ?? {})
+  if (subEntries.length > 0) {
+    for (const sub of subEntries) {
+      // Done blocks are frozen into state.lines by subagent-blocks.mjs (freezeSubTaskLines)
+      // and removed from subTasks; a done entry reaching this loop is a leftover
+      // (e.g. restored from an old session) — never render it pinned at the tail.
+      if (sub.done) continue
+      const foldKey = `sub-${sub.key}`
+      // Header summary: `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`
+      const icon = sub.approval ? "⏸" : "▶"
+      const elapsed = Math.floor(((sub.done ? sub.doneAt : Date.now()) - sub.started) / 1000)
+      const modelPart = sub.model ? ` · ${sub.model}` : ""
+      const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
+      let statePart
+      if (sub.approval) statePart = `等待审批: ${sub.approval}`
+      else if (sub.done) {
+        statePart = `done ${elapsed}s${sub.lastError ? ` — ${sub.lastError}` : ""}`
+      } else if (sub.currentTool) statePart = sub.currentTool
+      else statePart = "thinking..."
+      const argSummary = sub.currentTool && sub.toolArgs?.command
+        ? ` — ${String(sub.toolArgs.command).replace(/\s+/g, " ").trim().slice(0, 60)}`
+        : ""
+      convLines.push({
+        text: `[${icon} ${sub.key}${modelPart} · ${elapsed}s${turnPart}] ${sliceByWidth(statePart + argSummary, Math.max(20, cols - 30))}`,
+        color: sub.done ? C.dim : C.tool,
+        _foldToggle: foldKey,
+      })
+      if (isExpanded(state, foldKey)) {
+        // Full activity timeline via the shared component (per-kind colors,
+        // 60% screen cap — the header control may sit above the viewport once
+        // expanded, the capped bottom control stays reachable).
+        const body = renderBlockTimeline(sub.blocks, cols)
+        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: "subagent activity" }))
+      } else {
+        // Folded: tail 3 non-empty block lines (most recent activity), dim.
+        const tailLines = []
+        for (let bi = sub.blocks.length - 1; bi >= 0 && tailLines.length < 3; bi--) {
+          const lines = sanitizeDisplay(sub.blocks[bi].text).split("\n").filter((l) => l.trim())
+          for (let li = lines.length - 1; li >= 0 && tailLines.length < 3; li--) {
+            tailLines.unshift(lines[li])
+          }
+        }
+        for (const line of tailLines) {
+          convLines.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim })
         }
       }
     }
   }
+  if (state.reasoning) {
+    // Live thinking streams INSIDE the unified box (user ruling 2026-08-30:
+    // "思考过程中为什么不是直接进这个框" — the flat tail render was a
+    // pre-fold-era leftover). Same folded form as flushed blocks: named header
+    // + tail 3, click expands to the 60%-capped live view. The buffer grows
+    // per token; convCacheKey already includes state.reasoning.length so the
+    // box updates live. Single instance key — one live stream at a time; on
+    // flush the block re-keys to `long-{idx}` with the identical form (seamless).
+    const liveKey = "thinking-live"
+    const body = []
+    for (const wrapped of wrapText(sanitizeDisplay(state.reasoning), cols - 1)) {
+      body.push({ text: wrapped, color: C.reason, _skipDimFold: true })
+    }
+    const expanded = isExpanded(state, liveKey)
+    if (expanded) {
+      convLines.push(...renderExpandedBlock({ body, foldKey: liveKey, state, maxRows, label: "thinking (streaming)" }))
+    } else {
+      convLines.push(...renderFoldedHead({
+        header: foldHintLine(`▶ thinking · ${body.length} lines — click to expand`, liveKey),
+        body,
+      }))
+    }
+  }
+  const advisorBlocks = state._advisorBlocks ?? []
+  if (advisorBlocks.length > 0) {
+    // ── Advisor review block (2026-08-30): collapsible in-conversation box ──
+    // The live stream used to render flat into the conversation and flooded it
+    // (user report). Same interaction as subagent blocks: default FOLDED =
+    // header (running/done + total line count) + tail 3 block lines; expanded =
+    // shared component (▼ control + ordered per-kind timeline — think/tool/text
+    // colors kept, T-F regression; placeholder markers stripped in every view —
+    // unified with the folded tail which always stripped them). Toggle key
+    // `advisor-blocks` (single instance — one advisor runs at a time).
+    const advKey = "advisor-blocks"
+    // Total rendered line count of the timeline (cheap: rough split, no wrap math)
+    const advLineCount = advisorBlocks.reduce((n, b) => n + sanitizeDisplay(b.text).split("\n").filter((l) => l.trim()).length, 0)
+    const advHeader = `[advisor · review] ${advLineCount} lines`
+    if (isExpanded(state, advKey)) {
+      const body = renderBlockTimeline(advisorBlocks, cols, { stripPlaceholder: true })
+      convLines.push(...renderExpandedBlock({ body, foldKey: advKey, state, maxRows, label: advHeader }))
+    } else {
+      // Folded: header control line + tail 3 non-empty lines from the tail
+      // blocks (most recent activity), dim — mirrors the subagent block fold.
+      convLines.push({
+        text: `▶ ${advHeader} — click to expand`,
+        color: C.fold,
+        _foldToggle: advKey,
+      })
+      const tailLines = []
+      for (let bi = advisorBlocks.length - 1; bi >= 0 && tailLines.length < 3; bi--) {
+        const lines = sanitizeDisplay(advisorBlocks[bi].text)
+          .replaceAll(ADVISOR_THINKING_PLACEHOLDER, "")
+          .split("\n").filter((l) => l.trim())
+        for (let li = lines.length - 1; li >= 0 && tailLines.length < 3; li--) {
+          tailLines.unshift(lines[li])
+        }
+      }
+      for (const line of tailLines) {
+        convLines.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim, _skipDimFold: true })
+      }
+    }
+  }
   if (state.streaming) {
-    // Rendered BEFORE formatTables — see the advisor-block comment above.
+    // Rendered BEFORE formatTables — see fold-block.mjs for the width contract.
     const rendered = renderMathAndMarkdown(sanitizeDisplay(state.streaming))
     for (const line of formatTables(rendered, cols - 1)) {
       for (const wrapped of wrapText(line, cols - 1)) {
@@ -224,21 +397,22 @@ function buildConvLines(state, cols) {
       if (blockLen > FOLD_LINES && !hasExpandedLong) {
         const foldKey = `fold-${foldCounter++}`
         if (state.foldEnabled !== false && !state.expandedBlocks?.has(foldKey)) {
-          // First 4 lines, then the ▶ control line (ellipsis position), then the last line
-          folded.push(...convLines.slice(i, i + FOLD_KEEP - 1))
-          folded.push(foldHintLine(`▶ … ${blockLen - FOLD_KEEP} more lines — click to expand`, foldKey))
-          folded.push(convLines[j - 1])
+          // FOLDED — unified named-header + last-3 form (same ruling as the
+          // long-message fold above).
+          folded.push(...renderFoldedHead({
+            header: foldHintLine(`▶ tool output · ${blockLen} lines — click to expand`, foldKey),
+            body: convLines.slice(i, j),
+          }))
           i = j
           continue
         }
-        // EXPANDED consecutive-dim block: blank + ▼ at the HEAD, then every line.
+        // EXPANDED consecutive-dim block via the shared component: blank + ▼ at
+        // the HEAD, then every line, 60% cap with a bottom collapse control.
         // foldEnabled=false → raw block, no hint (toggling would be a no-op).
         if (state.foldEnabled === false) {
           for (let k = i; k < j; k++) folded.push(convLines[k])
         } else {
-          folded.push(blankLine())
-          folded.push(foldHintLine(`▼ … ${blockLen} lines — click to collapse`, foldKey))
-          for (let k = i; k < j; k++) folded.push(convLines[k])
+          folded.push(...renderExpandedBlock({ body: convLines.slice(i, j), foldKey, state, maxRows, label: `${blockLen} lines` }))
         }
         i = j
         continue
@@ -252,14 +426,14 @@ function buildConvLines(state, cols) {
   return folded
 }
 
-export function countConvLines(state, cols) {
-  return buildConvLines(state, cols).length
+export function countConvLines(state, cols, maxRows) {
+  return buildConvLines(state, cols, maxRows).length
 }
 
 export { buildConvLines }
 
-export function renderConversation(state, cols, visibleH, scroll) {
-  const convLines = buildConvLines(state, cols)
+export function renderConversation(state, cols, visibleH, scroll, maxRows) {
+  const convLines = buildConvLines(state, cols, maxRows)
   const maxScroll = Math.max(0, convLines.length - visibleH)
   const clamped = Math.min(scroll, maxScroll)
   const end = convLines.length - clamped

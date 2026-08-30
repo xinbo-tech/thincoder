@@ -4,6 +4,7 @@
  * buildAdvisorUserMessage, and the round-aware guard logic (MAX_ADVISOR_ROUNDS).
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
@@ -202,7 +203,7 @@ test("advisorTool: schema declares documents parameter for design review", async
   assert.ok(documents.description.includes("reviews ONLY these"), "描述声明只评审清单内文档")
 })
 
-test("buildAdvisorUserMessage: design review with documents reviews ONLY the listed docs", () => {
+slow("buildAdvisorUserMessage: design review with documents reviews ONLY the listed docs", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
   try {
     createGitRepo(tmp)
@@ -649,7 +650,7 @@ test("extractConversationBackground: returns null on empty/noise-only history", 
   assert.equal(extractConversationBackground([{ role: "user", content: "[System reminder: x]" }]), null)
 })
 
-test("runAdvisorReview: no doc-only auto-skip — review runs (or fails explicitly), never silently passes", async () => {
+slow("runAdvisorReview: no doc-only auto-skip — review runs (or fails explicitly), never silently passes", async () => {
   // Doc-only fast path was removed — scope is now explicit via paths/documents.
   // With a broken provider the review must surface an explicit failure
   // ("Advisor: review failed …"), never a pass marker. (fetch on the fake
@@ -832,7 +833,7 @@ test("runAdvisorReview: design review below cap reaches the tool loop", async ()
   assert.ok(result.includes("interrupted"), `design review must reach the tool loop, got: ${result}`)
 })
 
-test("runAdvisorReview: code changes do NOT hit the doc-only fast path", async () => {
+slow("runAdvisorReview: code changes do NOT hit the doc-only fast path", async () => {
   let tmp
   try {
     tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))

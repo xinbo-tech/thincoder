@@ -64,7 +64,7 @@ eng-coder && 未过设计评审 && FILE_MUTATORS → denied "engineering design 
 非只读 && !autoApprove → onPermissionRequest（用户确认）；无 handler → denied
 PreToolUse hooks → 阻断
 ```
-**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果 >16K 字符落盘 `~/.thincoder/tool-results/` + 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。
+**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果超限落盘 `~/.thincoder/tool-results/`（阈值以 TOOL-OUTPUT-LIMITS-*.md 为权威源 + `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT 常量，round3 #3 去重——此处不再复述取值沿革）+ 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。
 
 ## 5. 零工具调用回合（completion.mjs handleCompletion）
 
@@ -83,7 +83,7 @@ PreToolUse hooks → 阻断
 ## 7. 子代理（subagent 工具）
 
 - `depth > 0`：独立 agent 对象 + 丢弃式局部双线；role（explore/plan/coder/eng-coder）决定工具集（只读过滤）与 overlay prompt
-- 流式 relay：`role#id/` 前缀 token 转发给父回调（TUI subTasks 面板 / VS Code subagent 面板）。**TUI 消费端正则须含连字符（2026-08-21，已实现 ✅）**：`src/tui/agent-turn.mjs` 三处前缀剥离正则 `/^(\w+)#(\d+)\//` → `/^([\w-]+)#(\d+)\//`——`\w` 不含连字符，`eng-coder#N/` 当前匹配失败，带前缀 token 原样落入主聊天流每个 chunk 刷屏（其余 role 无连字符未暴露）。修复后 eng-coder token 正常路由 subTasks 面板。测试 `test/agent-turn.test.mjs`：① `onToken("eng-coder#1/hello")` → subTasks["eng-coder#1"] 收文、主流无前缀；② `coder#2/` 回归仍路由；③ 无前缀 token 照常进 streaming；④ `onToolCall("eng-coder#3/read")` 路由 tool。VS Code 无此机制（子 agent 走 onToolPanel 通道），不涉及。
+- 流式 relay：`role#id/` 前缀 token 转发给父回调。**TUI 消费端沿革**：2026-08-21 为 subTasks 窄带（连字符正则修复 `/^(\w+)#(\d+)\//` → `/^([\w-]+)#(\d+)\//`——`\w` 不含连字符，`eng-coder#N/` 漏路由致带前缀 token 落入主流刷屏；test/agent-turn.test.mjs 4 断言）；2026-08-29 起 §7.2 D4 定稿：消费端改为会话流内可折叠区块、窄带退役——上述断言随 §7.2 实现按 T-B/T-H 演进，前缀格式与正则不变（round3 #2 压缩为一行沿革）。VS Code 无此机制（子 agent 走 onToolPanel 通道），不涉及。
 - 报告契约：<200 字符视为交接不完整，打回扩写一次（`MIN_REPORT_CHARS`）；超长报告落盘全量保留
 - 权限：手动模式下子代理的非只读工具透传到父 agent 的权限审批（人在回路）
 - eng-coder：设计 token 门控（`_engDesignToken`，评审通过后签发，跨 turn 存活；子代理授权在 spawn 前校验）
@@ -102,6 +102,128 @@ PreToolUse hooks → 阻断
 **研究对照结论（归档）**：kimi-code / opencode 双参考仓探索（2026-08-28）。已落档位 A（静态矩阵）；档位 B（按模式+调用方 allowlist 动态渲染角色×工具，工具集变化自动跟随）入 `docs/TODO.md`。其余差距修正记录：报告长度门禁 ThinCoder **已有**（`MIN_REPORT_CHARS` §7:87，kimi 同能力）——真正缺失的是**可配置化**（minChars/retries/continuationPrompt 挂 profile，kimi）与**子代理实体化 resume 生命周期**（agent_id 持久化续跑，kimi，candidate）；**嵌套深度硬上限 + "子代理默认禁再启子代理"**（opencode，信任层 candidate）；git remote 公共 host 白名单 sanitize（kimi，安全 candidate）。反向结论：ThinCoder 的父上下文注入（`Context:`/`Task:` 包装）+ 记忆/checklist/outline 注入参考项目所无（更主动），保留。
 
 **受影响文件**：`src/agent-tools/subagent.mjs`（description + role 参数）、`src/agent/setup.mjs`（depth-0 组装时 role 参数被 `subagentRoles` 覆盖——2026-08-28 复查发现并统一为同一矩阵引用文本；subagent 工具仅 depth-0 注入，工具内直改的 role 描述若不同步 setup 就是死文本）、`test/subagent.test.mjs`（内容断言）；VS Code 端同款（其 `docs/design/ARCHITECTURE.md` 引用段；role 覆盖点为其 `modeRoleField`，有 mode 互斥 + 描述一致性双测试）。
+
+### 7.2 子agent 活动输出统一（2026-08-29 定稿：需求 + 设计）
+
+**问题**（用户实证：coder/eng-coder 运行"像卡住了"）：输出通道只覆盖 LLM 生成窗口——① 子agent 的工具输出完全不 relay（subagent/escalate/consult 的 childCallbacks 均无 onToolOutput），长工具（npm test / dotnet build）执行期窄带钉死在工具名上；② TUI 丢弃子agent reasoning（agent-turn.mjs 前缀分支只建条目不追加内容）；③ 运行中无计时/turn 进度（elapsed 仅 done 后显示）；④ 等权限审批不可见（手动模式下分不清"在等人"和"卡死"）；⑤ 无占位/心跳。另有重复实现：counter/relayPrefix/`[model]` 元数据/callbacks 包装 ×3 份、turn-cap continue 循环 ×3 份、apiKey 检查 ×4 处、effort 枚举钳制 ×2 份。
+
+**功能性需求**（用户故事总述：作为用户，我想在子agent 运行的任意时刻看到它当前在做什么——工具/输出/思考/等待/进度（round3 #4 补），以便区分"慢"与"卡死"；逐条：）F1 运行态可见——长工具执行期实时显示工具名+节流输出 tail；F2 思考可见——子agent reasoning 显示 tail（与主流 reasoning 同等待遇）；F3 等待可见——等审批时明确显示"等待审批：tool args"；F4 进度语义——`role · model · elapsed(跳动) · turn N/max`，turn 事件由 runAgent depth>0 统一发出（天然心跳）；F5 consult 顾问同等待遇；F6 advisor 输出收编统一契约（有序时间线持久化行为不变，kind 流对渲染端保持兼容映射）；F7 `{kind,text}` 定为 onToolOutput 正式契约（emit 端统一，消费端保留裸串一行容错）。
+
+**UI/交互决策（用户拍板 2026-08-29）**：
+- 子agent 活动显示为**主会话流内可折叠区块**：默认折叠 = 头部摘要行 + 最后几行 tail；展开 = 全部活动按时间序（token 流/工具输出/阶段与审批变化）；完成后**保留、可重新展开**——子agent 的工具调用不进父会话历史，区块是其活动唯一载体（与普通工具"完成收缩为 done 行、完整结果在工具消息"的语义刻意不同）
+- 并行多子agent = 每个一个区块（各自独立折叠/展开）
+- TUI subTasks 窄带退役，职责由区块接管
+- 控制面不变：维持整体停（不做单独中止/跳过某个子agent）
+
+**关键事实（锁定，防重复走查）**：subTasks 窄带只渲染带 `role#id/` 前缀的子agent 活动（`state.subTasks`）；普通工具输出走 onToolOutput → `state.lines(_live)` 行内路径（`src/agent/dispatch.mjs` "Panel area abolished" 注释处）——两条路径数据结构与渲染分支完全分离，**窄带退役对非子agent 工具输出零影响**（2026-08-29 核实；TUI-TOOL-OUTPUT.md §4 交叉引用）。
+
+**范围（用户裁定 2026-08-29；评审 #1 修订 2026-08-29）**：仅 CLI（thincoder）。生成侧 spawnChild 管线收编上述重复（subagent/escalate/consult 接入；advisor 内循环走契约对齐——见 F6 与下方"否决"第二条）；渲染侧仅 TUI（子agent 活动区块与 advisor 块共用折叠块渲染机制，见 D4）。VS Code 端不动（跟进项见 docs/TODO.md）；**ACP 例外**——bridge.mjs 的 `⟦ev⟧` 事件剥除纳入本轮（防本轮引入 ACP 会话回归，见 D7），前缀 token 透传的既有遗留仍在 TODO。
+
+**不合并项（防过度抽象）**：consult 会话/队列语义、报告契约（MIN_REPORT_CHARS 扩写）、webview panels.js 卡片清理策略、resolveChildProvider（已是共享范本）。
+
+**设计（2026-08-29 定稿）**
+
+**D1 事件契约：不新增事件总线，`role#id/` 前缀 relay 扩展两个事件 token**
+
+结构化事件继续走现有 token 管线（`onToken`），以保留字符开头、可机械识别的形式编码（哨兵串为罕见字符组合，正常内容混淆概率极低；生成侧仍对子 agent 文本 strip 哨兵序列防伪造——见 D7）。选择扩展现有管线而非新增 `onSubagentEvent` 回调的理由：① 生成侧（subagent/escalate/consult 三处 childCallbacks）与消费侧（TUI 前缀正则分流）均已存在且稳定，新增回调需要同时改 runAgent 签名、三个生成工具、TUI callbacks 装配——扩散面更大；② 未来端点接入时按既有前缀管线消费（注意：ACP 桥现状是前缀 token 原样透传，事件剥除见 D7——"天然继承"不成立，需端点各自适配）。
+
+- 进度事件 token：带前缀的 onToken chunk，payload 形如 `⟦ev⟧turn\x1e{n}\x1e{max}\x1e{phase}\x1e{detail}`——以字面哨兵串 `⟦ev⟧` 开头（LLM 不会生成），`\x1e`（RS）作字段分隔。phase ∈ `llm | tool | approval | done`；detail 为工具名或审批描述（≤40 字符截断）。TUI 解析后**不进 blocks、不进主流**，仅更新区块头部状态；sanitizeDisplay 兜底 strip（防未来漏解析时控制字符入流）。
+- **事件名 × 发射点 × 载体矩阵（round2 #3 修订，消歧）**：`⟦ev⟧` token 只有两种——`turn`（runAgent depth>0 在 `_currentTurn` 更新处发，phase=llm，{n}/{max} 必填）与 `approval`（dispatch.mjs 权限询问处发，{n}/{max} 取子 agent 当前 turn 计数）；**tool/done phase 不发 token**——由既有 onToolCall/onToolResult 前缀 relay 承担（TUI 前缀分支更新 currentTool 与 done 状态，即 D4）。phase 枚举中的 `tool/done` 描述的是头部状态机的输入来源之一，不是 token 种类。
+- 模型元数据：沿用现有 `[model]` token，不重复设计。
+- **F7 落地方式**：`onToolOutput` 的 `{kind,text}` 契约本已在 advisor/bash 中实际使用（advisor/run.mjs emit() 包装；bash 裸字符串由 TUI 兜底归一化）。本轮仅立规成文（TUI-TOOL-OUTPUT.md §2 已承载），不新增代码。
+- 子agent 工具输出 relay：**复用 dispatch.mjs 的 onOutput → `callbacks.onToolOutput(name, chunk)` 既有接线**——生成侧 childCallbacks 增加 `onToolOutput: (name, chunk) => parent.onToolOutput(`${relayPrefix}${name}`, chunk)`，TUI 端 onToolOutput 对带前缀 name 剥前缀路由进对应区块（kind 解析复用既有 string→{kind,text} 归一化）。节流/截断由渲染层统一施加（生成层原样转发，保持各端自行决定展示粒度）。
+
+**D2 runAgent depth>0 自动发进度事件（生成侧单点）**
+
+runAgent turn 循环内 `agent._currentTurn` 更新处（`src/agent.mjs`，D2 emit 点），`depth > 0` 且 `callbacks.onToken` 存在时 emit 一个 turn 事件 token（含 phase）。工具执行期 phase 变化由 dispatch 层透传的 onToolCall/onToolResult 事件承担——即 D1 的 tool 事件。审批等待：dispatch.mjs 权限询问处 emit `approval` 事件（子agent 的 childPermission 透传链已存在，加一行 emit）。
+
+**D3 生成侧统一：spawnChildAgent 管线模块（agent/spawn-child.mjs，新增）**
+
+收编三份重复（收编范围以"机械同构"为界，业务差异留在各工具内）：
+- `_subAgentCounter` + relayPrefix 生成 + `[model]` 元数据发送 → `makeRelay(parent, label)`
+- onToken/onReasoning/onToolCall/**onToolOutput** 前缀包装 → `wrapChildCallbacks(relayPrefix, parentCallbacks)`
+- turn-cap continue 循环骨架（ContinueError → "continue" 面板 → resume:true → 拒绝降级）→ `runWithContinue(runner, child, input, opts, { label, askContinue })`；差异点经参数注入：subagent 用 `_permQueue` 串行化，escalate 无 permQueue 直接询问，consult 用 session.continueQueue——`askContinue` 为回调参数
+- apiKey trim/检查 → `ensureChildApiKey(provider, label)`
+- effort 枚举钳制 → `clampEffort(provider, model, effort)`（consult/escalate 两份逐行拷贝合并）
+- 不收编：角色过滤/overlay/git 注入/subagent 专属（报告契约、mergeChildMutations）、escalate 专属（touched-files、effortNote）、consult 专属（session 队列、watchdog、main_history 工具）
+
+**D4 TUI 渲染：子agent 活动区块 = 会话流内可折叠块（退役窄带）**
+
+复用现有两套机制拼装，不新造渲染器：
+- **运行态（会话流内联）**：`state.subTasks[key]` 升级为完整活动缓冲 `{ key, role, model, started, done, blocks: [{kind,text}], currentTool, turn, maxTurns, lastError }`。onToken/onReasoning/onToolCall 前缀分支改写：reasoning token **追加进 blocks**（kind=think，不再丢弃）；onToolCall 更新 currentTool 并开新 block（kind=tool）；onToolOutput 带前缀分支把 chunk 追加进当前 tool block（保留换行结构）；turn 事件 token 更新 turn/maxTurns。onToolResult(subagent) 不再 3 秒删除，改为标记 done（头部 ✓）。
+- **落位（渲染）**：子agent 区块渲染进会话流（render-conversation.mjs 新增 subagent blocks 段，位于 advisorBlocks 段之前）：折叠态 = 头部摘要行 `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`（运行中 elapsed 由 1s ticker 刷新）+ tail 3 行（blocks 尾部；2026-08-30 用户拍板 2→3）；展开态 = blocks 全量按 kind 着色（think=C.reason、tool=C.tool、text=C.text），**经公共组件 fold-block.mjs renderBlockTimeline + renderExpandedBlock 渲染，展开封顶屏幕 60% + 底部可达折叠控制行（2026-08-30 用户报告驱动，TUI.md §5）**。展开/折叠走 expandedBlocks 集合（key=`sub-${key}`）+ `toggleFoldBlock` 单源切换。默认折叠；同一 key 折叠状态跨 turn 保持（expandedBlocks 不随 turn 清理该前缀）。
+- **完成态（2026-08-30 修订：冻结进对话流 + 保留独立折叠交互，废除尾部驻留）**：初版实现把区块渲染成会话末尾的固定段且 done 后保留——完成的 ✓ 块永远钉在输入框上方（"残影"，用户报告），多子agent 还会叠加。修订：onToolResult 标记 done 后，完成冻结家族（`subagent-blocks.mjs` freezeSubTaskLines/freezeDoneSubTasks，2026-08-30 自 agent-turn 归位）把整个区块（含 blocks/lastError/耗时）作为 `_frozenSubTask` 载体行存进 `state.lines` 并从 `state.subTasks` 删除——留痕随会话滚走，内存仍受 N2 环形上限约束。**冻结区块保持完整折叠交互（用户拍板 2026-08-30：不因冻结降级）**：render-conversation 识别载体行后按 `sub-${key}`（与运行中区块同一个 key，折叠状态跨冻结边界延续）渲染——折叠态 = `▶ [✓ coder#1 · model · done 45s · turn n/max] … click to expand` + tail 3 行；展开态 = `▼` 控制行 + 全量时间线（kind 着色，`_skipDimFold` 防连续 dim 折叠套叠）；点击 ▶/▼ 切换与运行中区块一致。尾部固定段只渲染**运行中**条目（done 条目若因旧会话残留出现也跳过不渲染）；finally 兜底把中断（Ctrl+C/错误）仍在跑的区块一并冻结（lastError=interrupted）。完整报告前 8 行预览仍由 onToolResult 路径进会话流（不变）。convCacheKey 的 frozenSig 记录载体行 key 集合（展开/折叠翻转由既有 `exp` 项覆盖）。
+- **窄带退役**：layout.mjs 删除 subPanelH/panels.subagent 槽；render-frame.mjs 删除 renderSubagent；agent-turn.mjs 删除 3 秒清理定时器。`state.subTasks` 名字保留（数据结构升级，消费端换了）。
+- **elapsed 跳动**：现有 1s ticker（render-loop）在 subTasks 有运行中条目时触发 scheduleRender——无需新定时器。
+
+**D5 消费端格式约定（TUI strip 规则）**
+
+事件 token 含控制字符，任何渲染路径不得原样显示：render-conversation 的 sanitizeDisplay 扩展 strip `\x1d/\x1e` 包裹段；fold 缓存签名（render-conversation.mjs `convCacheKey`）纳入 subTasks blocks 状态（折叠展开 + blocks 增长都要失效缓存）。
+
+**D6 outputPanels 死代码清理（随本轮）**
+
+layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（renderOutput、PANEL_KIND_COLORS、renderRows output 分支）、render-loop.mjs（outputPanels prune）全删；agent-turn.mjs 的 LIVE_LINE_LIMITS 保留（`_live` 行内在用）。回归断言随 T-H：测试中校验全仓无 `outputPanels` 写入方、layout 无 output/subagent 槽。
+
+**D7 ACP 桥剥除 + 哨兵防伪造（评审 #1/#7 修订，2026-08-29）**
+
+- bridge.mjs onToken（既有 `[model]` 剥除处）加一行：匹配 `⟦ev⟧` 事件 token（含前缀变体 `[\w-]+#\d+/⟦ev⟧…`）直接 return——ACP 客户端不收到控制字符事件；事件对 ACP 的结构化映射（tool_call_update）留后续批次（TODO）。
+- 生成侧 relay（spawn-child 的 wrapChildCallbacks）对子 agent 的 LLM 文本 token strip `⟦ev⟧` 哨兵序列——模型伪造事件 token 的风险面收窄到"仅生成侧发出口"。**已知限制（round2 #7）**：按单 chunk 匹配，若子 agent 文本流把哨兵串切在 chunk 边界（`⟦e` + `v⟧`）会漏剥——残危害由 D5 sanitizeDisplay 兜底，属外观级；接受该限制，不引入跨 chunk carry-over 缓冲（复杂度不值）。
+- 测试：`test/acp.test.mjs` 扩展——事件 token（裸/带前缀）不透传、普通 token 照常；`test/spawn-child.test.mjs` 补 strip 用例。
+
+**非功能性需求（评审 #4 修订，2026-08-29）**
+
+- N1 relay 节流：子agent 工具输出转发由 TUI 渲染层节流 250ms（生成层原样转发，展示粒度各端自定）。
+- N2 缓冲上限：每子agent blocks 缓冲上限 500 行——超限环形丢弃最旧行，留一行 `…（已省略 N 行）` 标记；done 后区块保留但同样受此上限（防长会话内存无界）。
+- N3 渲染成本：事件 token 与 block 追加只更新区块缓冲，不触发会话区全量重绘（复用 scheduleRender 增量路径）；fold 缓存签名纳入 blocks 增长（D5），签名计算 O(1) 计数器式，不拼接全量文本。
+
+**受影响文件清单**
+
+| 文件 | 变更 |
+|---|---|
+| `src/agent/spawn-child.mjs` | 新增：makeRelay / wrapChildCallbacks / runWithContinue / ensureChildApiKey / clampEffort |
+| `src/agent-tools/subagent.mjs` | 接入 spawn-child；childCallbacks 增 onToolOutput relay；删除内联重复 |
+| `src/agent-tools/escalate.mjs` | 接入 spawn-child（runWithContinue/ensureChildApiKey/clampEffort）；删除内联重复 |
+| `src/agent-tools/consult.mjs` | 接入 spawn-child；删除内联重复；watchdog 留在工具内 |
+| `src/agent.mjs` | depth>0 turn 事件 emit（D2）；导出不变 |
+| `src/agent/dispatch.mjs` | 权限询问处 emit approval 事件（D2）；onOutput 接线处注释同步 |
+| `src/tui/agent-turn.mjs` | §7.2 批次：前缀分支改写（reasoning 不丢弃/onToolOutput 路由/事件 token 解析）；删 3 秒清理与窄带特判（完成冻结后经 subagent-blocks.mjs 冻结家族执行，见下行） |
+| `src/tui/render-conversation.mjs` | 新增 subagent blocks 渲染段（折叠头 + tail + 展开全量）；sanitizeDisplay strip 事件 token；fold 缓存签名纳入 subTasks |
+| `src/tui/layout.mjs` | 删 subPanelH/panels.subagent/outputPanelsH/panels.output |
+| `src/tui/render-frame.mjs` | 删 renderSubagent/renderOutput/相关分支 |
+| `src/tui/render-loop.mjs` | 删 outputPanels prune；1s ticker 条件纳入 subTasks 运行中条目 |
+| `src/tui/index.mjs` | subTasks 初始结构注释更新 |
+| `src/tui/subagent-blocks.mjs` | 新增（实现期从 agent-turn.mjs 拆出满足 500 行硬限）：SUB_PREFIX_RE/SUB_EVENT_RE、blocks 环形缓冲（N2）、250ms 渲染节流（N1）、routeSub* 路由、finishSubTask、[model] 元数据记录；完成冻结家族（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks）2026-08-30 自 agent-turn 归位 |
+| `src/tui/tool-events.mjs` | 2026-08-30 新增（agent-turn 534 行超限拆分）：工具事件三回调 + flushStream + onTurnEnd 等回调装配自 agent-turn 迁出 |
+| `test/spawn-child.test.mjs` | 新增：管线单测（relay 包装/continue 循环/apiKey/effort 钳制/`⟦ev⟧` strip） |
+| `test/agent-turn.test.mjs` | 扩展：事件 token 解析、reasoning 进 blocks、onToolOutput 路由、done 保留；[model] 前缀 token 端到端用例（T-A/T-E 等） |
+| `test/subagent-blocks.test.mjs` | 新增（实现期从 agent-turn 测试拆出）：前缀隔离/主流隔离、[model] 只记录一次、事件 token 只进头部、think 合并、tool 标题+输出单块、finishSubTask 最早先 done + epoch、N2 环形丢弃 |
+| `test/tui.test.mjs` | 扩展：折叠/展开渲染、tail 3 行（2026-08-30 拍板 2→3）、缓存失效、事件 token strip |
+| `test/acp.test.mjs` | 扩展：事件 token（裸/带前缀）不透传（D7） |
+| `test/subagent.test.mjs` 等 | 回归：除 T-B 反转的断言外既有断言不动，跑通（round2 #6 澄清） |
+
+**设计层关键决策记录**
+
+- **否决：新增 onSubagentEvent 独立回调总线**——结构更"干净"，但 runAgent 签名、三个生成工具、TUI 装配、ACP 桥四处同改，扩散面大于收益；前缀管线三端已在消费，扩展它最小侵入。代价：事件编码借道 token 流（控制字符包裹保证不与内容混淆）。
+- **否决：advisor 迁移到 spawn-child**——advisor 是内嵌工具循环（自建 chat 调用），不经过 runAgent；其 kind 流契约已符合 D1 的 {kind,text} 规范。F6"收编"的实际含义 = 契约对齐 + 渲染共用折叠块机制，不是代码路径合并。
+- **advisor 渲染改可折叠框（2026-08-30 用户拍板，评估后裁定仍不迁入）**：评估结论 = 执行模型不迁（收敛协议 round1/2/3 提示词轮换 + fresh session + cap 都是修过真实 bug 的机制，迁移=高风险零收益）；但流式输出平铺刷屏是真问题（用户报告）→ **渲染层改为可折叠框**：运行中（`_advisorBlocks`）默认折叠 = `▶ [advisor · review] N lines — click to expand` + tail 3 行（tail 剥 `[thinking…]` 占位符），展开 = `▼` + 有序 kind 着色时间线（think/tool/text 配色不变，T-F 回归保持）；key=`advisor-blocks`（单实例）。完成后 flush 不再平铺全文+自动展开，改为 `_frozenAdvisor` 载体行——冻结折叠语义与子agent 区块对齐（`▶ [advisor · review done] … click to expand`，key=`advisor-done-{i}`），全文仍在工具结果消息中可查。默认折叠运行中也生效（用户拍板："默认折叠吧"）。
+- **否决：TUI 侧新增独立"子agent 时间线视图"**（按 ] 键全屏查看）——折叠区块 + 展开已满足"看全部"诉求；独立视图是新的导航状态机，本轮不加。
+- **turn 事件放 runAgent 而非各工具**：一处 emit 覆盖所有 depth>0 孩子且天然携带真实 turn/maxTurns；工具侧补发会重复计数。
+
+**测试设计（T-A..T-J 场景映射；实现前必须展开为 输入/预期 完整用例表并随实现交付——评审 #5 修订，列为 eng-coder 硬验收项；round2 #2：N1/N2 必须有用例）**
+
+- T-A（F1）：subagent 孩子内 bash 长输出 → 区块 tool block 增长、折叠头显示 bash tail；映射 TUI-TOOL-OUTPUT T4 同构。
+- T-B（F2）：子agent reasoning token → blocks 追加 kind=think（现有测试断言"只建条目"反转为"追加内容"）。
+- T-C（F3）：手动模式子agent 写文件 → approval 事件 → 折叠头显示"等待审批"。
+- T-D（F4）：depth=1 孩子跑 3 turn → 3 个 turn 事件 token、折叠头 turn 3/100 跳动。
+- T-E（F5）：consult 顾问 → 同样的区块渲染 + main_history 调用可见。
+- T-F（F6）：advisor 输出经折叠块渲染回归（现有 _advisorBlocks 行为不变，渲染段共用）。
+- T-G（F7）：bash 裸串 → 归一化为 {kind:"text"}；advisor 对象 chunk 原样。既有行为锁定。
+- T-H（退役）：窄带不再渲染（layout 无 subagent 槽）、3 秒清理删除、outputPanels 无写入方残留（D6 回归断言）、普通工具 `_live` 路径回归不受影响（TUI-TOOL-OUTPUT.md §4 边界锁定）。
+- T-I（错误/边界）：ContinueError 拒绝继续 → 区块冻结进对话行（`[✓ …]` 头 + dim 活动行），lastError 显示 partial；并行 3 子agent → 3 独立区块互不串扰；resume 后 blocks 续接不重建。
+- T-J（D7）：ACP 事件 token 剥除 + 生成侧哨兵 strip（用例见 D7）。
+- T-K（round2 #2，NFR）：N1 节流——250ms 窗口内多次 onToolOutput chunk 至多触发一次渲染提交；N2 缓冲上限——第 501 行起环形丢弃最旧行并出现"…（已省略 N 行）"标记，done 后区块同样受约束。
+- T-L（round3 #5）：escalate 孩子产出区块且其专属行为不被 spawn-child 收编破坏（effortNote 拼接、touched-files 清单、无 permQueue 的 continue 询问路径）。
+
 
 ## 8. advisor 开关语义重构（2026-08-21）
 

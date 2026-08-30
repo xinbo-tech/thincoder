@@ -10,7 +10,7 @@ import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 import { sliceByWidth, stringWidth, sanitizeDisplay } from "./render.mjs"
 import { specForModel } from "../config.mjs"
-import { computeLayout, MAX_SUB_LINES } from "./layout.mjs"
+import { computeLayout } from "./layout.mjs"
 import { basename } from "node:path"
 
 export { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
@@ -52,86 +52,6 @@ export function renderTodo(visibleTasks, cols) {
     const color = t.status === "done" ? `${C.dim}${ESC}[9m` : t.status === "in_progress" ? C.tool : C.text
     return `${color} ${mark} ${sliceByWidth(t.title, cols - 4)}${ansi.reset}`
   })
-}
-
-/** Subagent panel. Returns empty when no subagents. */
-export function renderSubagent(allSubs, W) {
-  const subs = allSubs
-  if (subs.length === 0) return []
-  const out = []
-  for (const s of subs.slice(0, MAX_SUB_LINES)) {
-    const icon = s.done ? "✓" : "…"
-    const color = s.done ? C.dim : C.tool
-    const label = `[${s.role}${s.model ? " · " + s.model : ""}]`.padEnd(10)
-    let content
-    if (s.done) {
-      const elapsed = Math.floor((Date.now() - s.started) / 1000)
-      content = `done ${elapsed}s`
-    } else if (s.tool) {
-      content = s.tool
-    } else if (s.text) {
-      const textLines = s.text.split("\n").filter((l) => l.trim())
-      content = textLines.length > 0 ? textLines[textLines.length - 1] : "thinking..."
-    } else {
-      content = "thinking..."
-    }
-    out.push(`${color} ${icon} ${label} ${sliceByWidth(content, Math.max(10, W - 4 - stringWidth(label)))}${ansi.reset}`)
-  }
-  if (subs.length > MAX_SUB_LINES) {
-    out.push(`${C.dim}  ... +${subs.length - MAX_SUB_LINES} more subagents${ansi.reset}`)
-  }
-  return out
-}
-
-/** Per-kind panel colors: reasoning faint, tool progress cyan, main output gray. */
-const PANEL_KIND_COLORS = { think: C.reason, tool: C.tool, text: C.dim }
-
-/**
- * Flatten panel parts into display lines, tracking each line's kind.
- * A part not starting mid-line continues the previous line (kind of the line's first fragment wins).
- */
-function panelLines(p) {
-  const lines = []
-  for (const part of p.parts ?? []) {
-    part.text.split("\n").forEach((seg, j) => {
-      if (j === 0 && lines.length > 0) {
-        const last = lines[lines.length - 1]
-        // Empty trailing line = previous part ended exactly at a line break — the new
-        // part owns this line's kind. Otherwise it's a genuine mid-line continuation.
-        if (last.text === "") last.kind = part.kind
-        last.text += seg
-      } else {
-        lines.push({ kind: part.kind, text: seg })
-      }
-    })
-  }
-  return lines.filter((l) => l.text.trim())
-}
-
-/** Tool output panels (streaming output like tail -f). Returns empty when no visible output. */
-export function renderOutput(state, W, panelH) {
-  // Same visibility predicate as computeLayout: done panels linger until closeAt
-  const active = Object.entries(state.outputPanels ?? {}).filter(([_, p]) => !p.done || (p.closeAt ?? 0) > Date.now())
-  if (active.length === 0) return []
-  const out = []
-  const linesPerPanel = Math.max(1, Math.floor(panelH / active.length))
-  for (const [toolName, p] of active) {
-    const status = p.done ? `${C.dim}done${ansi.reset}` : `${C.tool}running${ansi.reset}`
-    out.push(`${C.text}❯ ${sliceByWidth(sanitizeDisplay(toolName), Math.max(10, W - 25))} — ${status}`)
-    const titleRows = 1
-    const contentRows = Math.max(0, linesPerPanel - titleRows)
-    const lines = contentRows > 0 ? panelLines(p).slice(-contentRows) : []
-    for (const l of lines) {
-      const color = PANEL_KIND_COLORS[l.kind] ?? C.dim
-      out.push(`${color}  │ ${sliceByWidth(sanitizeDisplay(l.text), W - 5)}${ansi.reset}`)
-    }
-  }
-  // Safety: never exceed allocated height (could happen with many panels + small terminal)
-  if (out.length > panelH) out.length = panelH
-  // Fill remaining rows to match panelH exactly. `out.length` is accurate because
-  // every pushed entry is a non-empty string (title or content line with prefix).
-  for (let i = out.length; i < panelH; i++) out.push("")
-  return out
 }
 
 /** Permission preview panel. Returns empty when no permission request. */
@@ -293,7 +213,7 @@ export function renderRows(state, agent, opts) {
   const slashCommands = opts.slashCommands ?? []
 
   const layout = computeLayout(state, { cols, rows })
-  const { W, panels, inputLayout, inputOffset, boxLines, visibleTasks, allSubs, permPreviewLines, overlay } = layout
+  const { W, panels, inputLayout, inputOffset, boxLines, visibleTasks, permPreviewLines, overlay } = layout
 
   const screen = new Array(rows).fill("")
   const put = (y, lines) => {
@@ -303,9 +223,7 @@ export function renderRows(state, agent, opts) {
   }
 
   put(panels.header.y, [renderHeader(agent, cols)])
-  put(panels.conversation.y, renderConversation(state, cols, panels.conversation.h, state.scroll))
-  if (panels.subagent) put(panels.subagent.y, renderSubagent(allSubs, W))
-  if (panels.output) put(panels.output.y, renderOutput(state, W, panels.output.h))
+  put(panels.conversation.y, renderConversation(state, cols, panels.conversation.h, state.scroll, rows))
   if (panels.todo) put(panels.todo.y, renderTodo(visibleTasks, cols))
   if (panels.picker) put(panels.picker.y, renderPicker(state, cols, panels.picker, overlay))
   if (panels.permission) put(panels.permission.y, renderPermission(permPreviewLines))

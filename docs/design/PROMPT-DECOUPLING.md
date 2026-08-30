@@ -1,6 +1,6 @@
 # 提示词架构解耦：工程模式与普通模式完全独立
 
-> 状态：设计（待 design review）
+> 状态：**已实现**（工程模式顶层 = system.md + engineering.md + METHODOLOGY.md，不注入 main.md/discipline.md；TODO.md「setup.mjs 提示词解耦」已勾销）。下文保留原始设计陈述。
 > 关联：`src/agent/setup.mjs`、`src/prompts/*.md`、`docs/design/ENGINEERING-MODE.md`
 
 ## 问题陈述

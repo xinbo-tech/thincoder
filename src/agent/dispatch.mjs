@@ -111,7 +111,16 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       const allowed = agent.autoApprove
         ? true
         : callbacks.onPermissionRequest
-          ? await callbacks.onPermissionRequest(toolCall.name, args)
+          ? await (async () => {
+              // D2 (AGENT-LOOP.md §7.2): announce the wait BEFORE prompting — the TUI
+              // subagent block header flips to "等待审批" so a waiting child is visibly
+              // different from a stalled one. Depth>0 only (the parent TUI shows its own
+              // permission panel). turn n/max = the child's live turn counters.
+              if (depth > 0) {
+                callbacks.onToken?.(`⟦ev⟧approval\x1e${agent._currentTurn ?? 0}\x1e${agent._maxTurns ?? 0}\x1eapproval\x1e${String(toolCall.name).slice(0, 40)}`)
+              }
+              return await callbacks.onPermissionRequest(toolCall.name, args)
+            })()
           : false
       if (!allowed) {
         prepared.push({ toolCall, tool, denied: true, reason: callbacks.onPermissionRequest ? "denied by user" : "no permission handler" })

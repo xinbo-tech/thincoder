@@ -49,7 +49,7 @@ consult 会话（挂在 agent._consultSessions = Map<id, Session>，turn 结束�
 | provider 解析 | `buildProvider(m.provider)` | `resolveChildProvider(parent, "provider:model")`（复用 subagent） |
 | 只读工具集 | `builtinTools.filter(readonly)` | `readonlyToolNames(agent.tools)` 过滤父工具集 + `main_history` |
 | 系统 prompt | `role:"consult"` → `_CONSULT_BASE` | `role:"consult"` → `CONSULT_BASE`（setup.mjs base 分支） |
-| 活动流上屏 | `onSubagent` / `onToolPanel` → webview 面板卡 | relay 前缀 `consult#<id>/` → TUI `subTasks` 面板 |
+| 活动流上屏 | `onSubagent` / `onToolPanel` → webview | relay 前缀 `consult#<id>/` → TUI 子 agent 活动区块（§7.2 D4） |
 | 工具注册 | agent.mjs `agentTools` 三分支 | setup.mjs `depthOnly`（depth 0 + consultModels 非空） |
 | 配置入口 | 设置面板（模型选择 + effort 下拉） | `/config` 命令（候选池增删改 + effort picker） |
 
@@ -91,7 +91,7 @@ consult_stop
 
 **会话状态**：`agent._consultSessions = Map<id, Session>`。`Session = { controllers, replies, pending, waiters, failed, terminated, stopped, total, received }`。`done = 回复队列空 AND pending==0`——失败的模型也 settle，全失败时 `done` 仍成立，`consult_check` 不挂死。settle 语义：正常回复入队；`session.stopped` 后被 abort 的计 `terminated`（不入队）；报错计 `failed`（入队，带失败 note）。
 
-**TUI 可观测**：每个顾问一条活动卡（`subTasks` 面板），relay 前缀 `consult#<subId>/` 复用 subagent 通道——并行顾问互不覆盖，run 结束随 `processing=false` 面板消失。
+**TUI 可观测**：每个顾问一条活动卡（子 agent 活动区块，`state.subTasks` 承载），relay 前缀 `consult#<subId>/` 复用 subagent 通道——并行顾问互不覆盖，run 结束随 `processing=false` 区块定格（2026-08-30 注：原 subTasks 窄带已随 AGENT-LOOP.md §7.2 D4 退役为会话流内可折叠区块）。
 
 ### 2.4 受影响文件
 

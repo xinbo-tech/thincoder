@@ -16,9 +16,9 @@
  * CLI mergeChildMutations(parent, child) (agent object, not a state sink).
  */
 import { isAbsolute, relative } from "node:path"
-import { createAgent, runAgent, ContinueError, CODER_OVERLAY } from "../agent.mjs"
+import { createAgent, runAgent, CODER_OVERLAY, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent.mjs"
-import { specForModel } from "../config.mjs"
+import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort, stripEventToken, stripEventTokensForCapture, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 
 const label = (m) => `${m.provider}:${m.model}`
 
@@ -70,31 +70,21 @@ export const escalateTool = {
     } catch (e) {
       return `Error: ${e.message}`
     }
-    if (!provider?.apiKey?.trim()) {
+    if (!ensureChildApiKey(provider)) {
       return `Error: provider "${pick.provider}" has no API key — set it in config.json before flying it in`
     }
     let effortNote = ""
-    if (pick.effort) {
-      // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
-      // value makes provider/core.mjs throw on EVERY chat call (candidate dies on takeoff).
-      // Out-of-enum: DROP the effort entirely (the provider preset default may ALSO be
+    if (pick.effort && !clampEffort(provider, pick.model, pick.effort)) {
+      // Out-of-enum effort dropped (see clampEffort): the provider preset default may ALSO be
       // out-of-enum for this override model — e.g. qwenplan preset default "high" is
-      // invalid for qwen3.8-max, enum xhigh/medium/low).
-      const enumList = specForModel(pick.model).reasoningEffortEnum
-      if (enumList && !enumList.includes(pick.effort)) {
-        effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, dropped)`
-        delete provider.reasoningEffort
-      } else {
-        provider.reasoningEffort = pick.effort
-      }
+      // invalid for qwen3.8-max, enum xhigh/medium/low.
+      effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, dropped)`
     }
 
-    parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
-    const subId = parent._subAgentCounter
     const tag = label(pick)
-    const relayPrefix = `escalate#${subId}/`
-    // Report the escalated model to the display layer (it may differ from the parent's).
-    ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (provider.model ?? tag))
+    const relayPrefix = makeRelay(parent, "escalate", ctx.callbacks?.onToken, provider.model ?? tag)
+    // Report the escalated model to the display layer (it may differ from the parent's)
+    // — makeRelay already emitted the `[model]` metadata token above.
 
     // No wall-clock watchdog — turn cap only, exactly like subagent (the verified write
     // path). Rationale (2026-08-16): a fixed wall-clock aborts NORMAL-but-slow surgery —
@@ -104,10 +94,19 @@ export const escalateTool = {
     // the user whether to continue (main-agent parity), falling back to partial work.
 
     let output = ""
+    // escalate captures RAW child LLM text itself (`output` feeds the partial-output
+    // return); wrapChildCallbacks provides the D7 sentinel strip + prefixed relay for
+    // the display path. Same composite shape for onToken as before spawn-child.
     const childCallbacks = {
-      onToken: ctx.callbacks?.onToken ? (t) => { output += t; ctx.callbacks.onToken(`${relayPrefix}${t}`) } : (t) => { output += t },
-      onReasoning: ctx.callbacks?.onReasoning ? (r) => ctx.callbacks.onReasoning(`${relayPrefix}${r}`) : null,
-      onToolCall: ctx.callbacks?.onToolCall ? (name, args) => ctx.callbacks.onToolCall(`${relayPrefix}${name}`, args) : null,
+      ...wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {}),
+      onToken: (t) => {
+        // Review #4 fix: strip sentinel/control chars from the CAPTURE too — `output`
+        // feeds the parent LLM history (partial-output returns), where sanitizeDisplay's
+        // display-layer backstop does not apply. Event tokens are stripped ENTIRELY here
+        // (unlike the display path, partial output needs no event semantics).
+        output += stripEventTokensForCapture(String(t))
+        ctx.callbacks?.onToken?.(relayPrefix + stripEventToken(t))
+      },
     }
 
     // Declared outside try so the catch can merge mutations even on a partial failure.
@@ -127,48 +126,49 @@ export const escalateTool = {
       const runner = ctx.runAgent ?? runAgent
       const runOpts = {
         depth: 1,
-        maxTurns: parent.config?.agent?.subagentTurns ?? 100,
+        maxTurns: parent.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS, // review #7: constant, not literal (single source with subagent.mjs)
         signal: ctx.signal ?? null,
       }
-      // Turn-cap continue, main-agent parity (tui/agent-turn.mjs): when the child hits
-      // ContinueError, ask the user through the SAME channel as child write approval
-      // (ctx.onPermissionRequest). The name "continue" renders the TUI's dedicated y/n
-      // Continue panel — the same panel the main agent's turn-cap pause uses. The
-      // resumed run passes resume:true, so runAgent does NOT re-inject the task text
-      // (setup.mjs skips input on resume) and keeps the child's history + mutation
-      // bookkeeping, with a fresh maxTurns budget per run. No permission handler
-      // (headless) or a declined prompt falls through to the partial-work return.
+      // Turn-cap continue via runWithContinue (§7.2 D3), main-agent parity (tui/agent-turn.mjs):
+      // when the child hits ContinueError, ask the user through the SAME channel as child
+      // write approval (ctx.onPermissionRequest). The name "continue" renders the TUI's
+      // dedicated y/n Continue panel. The resumed run passes resume:true, so runAgent does
+      // NOT re-inject the task text (setup.mjs skips input on resume) and keeps the child's
+      // history + mutation bookkeeping, with a fresh maxTurns budget per run. No permission
+      // handler (headless) or a declined prompt falls through to the partial-work return.
       // Continues are UNLIMITED — the user can decline at any prompt.
-      for (let resumes = 0; ; resumes++) {
-        try {
-          const report = await runner(child, task, {
-            ...childCallbacks,
-            // AUTO parity with subagent.mjs: parent.autoApprove must reach the child even
-            // when no onPermissionRequest exists (ACP/headless embeds) — otherwise every
-            // child write burns a turn on "no permission handler" rejections.
-            onPermissionRequest: parent.autoApprove ? async () => true : (ctx.onPermissionRequest ?? null),
-          }, { ...runOpts, resume: resumes > 0 })
-          // Escalate mutations are the parent's mutations: verify/advisor guards must see them
-          mergeChildMutations(parent, child)
-          return `escalate (${tag})${effortNote} post-op report:\n${report || output.slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
-        } catch (e) {
-          // Even a failed surgery may have written files — merge whatever the child touched.
-          mergeChildMutations(parent, child)
-          const msg = e?.message ?? String(e)
-          if (ctx.signal?.aborted || e?.name === "AbortError") throw e
-          if (e instanceof ContinueError) {
-            if (ctx.onPermissionRequest) {
-              const go = await ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
-              if (go) continue // fresh maxTurns budget; task NOT re-injected (resume:true)
-            }
-            return `escalate (${tag}) stopped: turn cap reached (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`
+      const report = await runWithContinue(
+        async (childAgent, input, cbs, opts) => {
+          // Merge mid-run mutations even when the run throws — the outer catch keeps
+          // handling createAgent failures; AbortError still propagates (user Stop).
+          try {
+            return await runner(childAgent, input, cbs, opts)
+          } catch (e) {
+            mergeChildMutations(parent, childAgent)
+            throw e
           }
-          return `escalate (${tag}) error: ${msg}\nPartial output: ${output.slice(0, 2000)}`
-        }
-      }
+        },
+        child, task, { ...childCallbacks, onPermissionRequest: parent.autoApprove ? async () => true : (ctx.onPermissionRequest ?? null) },
+        runOpts,
+        {
+          // escalate has NO permQueue: prompts go straight to the user (T-L spec).
+          askContinue: (e) => (ctx.onPermissionRequest
+            ? ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
+            : Promise.resolve(false)),
+          onDeclined: (e) => `escalate (${tag}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
+        },
+      ).catch((e) => {
+        // Generic run failure (not ContinueError): match the original loop's return shape —
+        // error text + partial output, mutations already merged in the runner wrapper.
+        if (ctx.signal?.aborted || e?.name === "AbortError") throw e
+        return `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${output.slice(0, 2000)}`
+      })
+      // Escalate mutations are the parent's mutations: verify/advisor guards must see them
+      mergeChildMutations(parent, child)
+      return `escalate (${tag})${effortNote} post-op report:\n${report || output.slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
     } catch (e) {
       // Reached only when createAgent itself fails or the continue prompt throws —
-      // run failures are handled inside the loop above.
+      // run failures are handled above (mutations merge inside the runner wrapper).
       if (child) mergeChildMutations(parent, child)
       if (ctx.signal?.aborted || e?.name === "AbortError") throw e
       return `escalate (${tag}) error: ${e?.message ?? String(e)}`

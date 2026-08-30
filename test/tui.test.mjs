@@ -7,10 +7,11 @@ import assert from "node:assert/strict"
 
 import { stringWidth, wrapText } from "../src/tui/render.mjs"
 import { computeLayout } from "../src/tui/layout.mjs"
+import { buildConvLines } from "../src/tui/render-conversation.mjs"
 import {
   renderFrame, countConvLines, convCacheKey,
-  renderHeader, renderConversation, renderTodo, renderSubagent,
-  renderOutput, renderPermission, renderQueue, renderPicker,
+  renderHeader, renderConversation, renderTodo,
+  renderPermission, renderQueue, renderPicker,
   renderInputBox, renderStatus,
 } from "../src/tui/render-frame.mjs"
 import { createKeyHandler } from "../src/tui/key-handler.mjs"
@@ -133,18 +134,29 @@ test("advisor blocks: interleaved think/tool/table renders in emission order (fo
   // Regression (874d853): non-think blocks went through formatTables whose
   // return value is an ARRAY — calling .split("\n") on it crashed the whole
   // render, so tool progress and the final review never displayed.
+  // 2026-08-30: advisor stream renders as a COLLAPSIBLE box (default folded,
+  // anti-flood) — content visibility moves to the EXPANDED state; folded view
+  // shows the control line + tail 3 lines. Order/crash assertions run on the
+  // expanded form.
   assert.ok(!out.some((l) => typeof l.text !== "string"), "all rendered lines are strings (no crash)")
-  assert.ok(joined.includes("→ read"), "tool progress line visible")
-  assert.ok(joined.includes("先读文件") && joined.includes("看到问题了"), "thinking visible")
-  assert.ok(joined.includes("xxx"), "review table visible")
+  assert.ok(joined.includes("▶ [advisor · review]") && joined.includes("click to expand"), "默认折叠头（防刷屏）")
+  const expanded = buildConvLines(
+    { ...state, expandedBlocks: new Set(["advisor-blocks"]) },
+    100,
+  )
+  const exp = expanded.map((l) => l.text).join("\n")
+  assert.ok(exp.includes("→ read"), "tool progress line visible (expanded)")
+  assert.ok(exp.includes("先读文件") && exp.includes("看到问题了"), "thinking visible (expanded)")
+  assert.ok(exp.includes("xxx"), "review table visible (expanded)")
   assert.ok(
-    joined.indexOf("先读文件") < joined.indexOf("→ read") && joined.indexOf("→ read") < joined.indexOf("看到问题了"),
+    exp.indexOf("先读文件") < exp.indexOf("→ read") && exp.indexOf("→ read") < exp.indexOf("看到问题了"),
     "emission order preserved (think → tool → think)",
   )
   // Per-kind colors: thinking in reasoning color, tool progress in tool color.
-  const thinkLine = out.find((l) => l.text.includes("先读文件"))
-  const toolLine = out.find((l) => l.text.includes("→ read"))
-  const textLine = out.find((l) => l.text.includes("xxx"))
+  // (Checked on the EXPANDED view — the folded view renders dim tails only.)
+  const thinkLine = expanded.find((l) => l.text.includes("先读文件"))
+  const toolLine = expanded.find((l) => l.text.includes("→ read"))
+  const textLine = expanded.find((l) => l.text.includes("xxx"))
   assert.equal(thinkLine?.color, C.reason, "thinking rendered in reasoning color")
   assert.equal(toolLine?.color, C.tool, "tool progress rendered in tool color")
   assert.equal(textLine?.color, C.text, "final output rendered in text color")
@@ -282,8 +294,8 @@ test("computeLayout: basic layout with all panels", () => {
   assert.ok(layout.panels.status, "status bar exists")
   assert.equal(layout.panels.status.h, 1)
   assert.equal(layout.panels.todo, null)
-  assert.equal(layout.panels.subagent, null)
-  assert.equal(layout.panels.output, null)
+  assert.equal(layout.panels.subagent, undefined, "subagent slot abolished (§7.2 D4)")
+  assert.equal(layout.panels.output, undefined, "output slot abolished (§7.2 D6)")
   assert.equal(layout.panels.permission, null)
   assert.equal(layout.panels.queue, null)
 })
@@ -320,39 +332,38 @@ test("computeLayout: tasks truncated at 5, in_progress prioritized", () => {
   assert.equal(layout.visibleTasks[0].status, "in_progress")
 })
 
-test("computeLayout: subagent panel visible when processing", () => {
+test("computeLayout: subagent blocks render inside conversation — no panel slot (§7.2 T-H)", () => {
   const state = tuiState({
     processing: true,
-    subTasks: { "explore#1": { key: "explore#1", role: "explore", text: "searching...", done: false } },
+    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [], done: false, started: Date.now() } },
   })
   const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.ok(layout.panels.subagent, "subagent panel visible")
-  assert.equal(layout.allSubs.length, 1)
+  assert.equal(layout.panels.subagent, undefined, "subagent panel slot retired (D4)")
+  assert.equal(layout.allSubs, undefined, "no allSubs precompute anymore")
+  assert.ok(layout.panels.conversation, "conversation holds the blocks")
 })
 
-test("computeLayout: panel ordering — subagent before todo", () => {
+test("computeLayout: subagent/task 并存 — 只有 todo 槽（§7.2 D4：区块在会话流内）", () => {
   const state = tuiState({
     processing: true,
-    subTasks: { "coder#1": { key: "coder#1", role: "coder", text: "editing...", done: false } },
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", blocks: [], done: false, started: Date.now() } },
     tasks: [{ title: "task 1", status: "in_progress" }],
   })
   const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.ok(layout.panels.subagent, "subagent exists")
+  assert.equal(layout.panels.subagent, undefined)
   assert.ok(layout.panels.todo, "todo exists")
-  assert.ok(layout.panels.subagent.y < layout.panels.todo.y, `subagent.y=${layout.panels.subagent.y} should be < todo.y=${layout.panels.todo.y}`)
 })
 
-test("computeLayout: output panels visible", () => {
-  const state = tuiState({ outputPanels: { bash: { text: "line1\nline2", done: false } } })
+test("computeLayout: subagent/output panels abolished (§7.2 T-H/D6) — blocks live in conversation", () => {
+  const state = tuiState({
+    processing: true,
+    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [], done: false, started: Date.now() } },
+    outputPanels: { bash: { text: "line1\nline2", done: false } },
+  })
   const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.ok(layout.panels.output, "output panel visible")
-  assert.ok(layout.panels.output.h > 0)
-})
-
-test("computeLayout: done output panels excluded", () => {
-  const state = tuiState({ outputPanels: { bash: { text: "done", done: true } } })
-  const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.equal(layout.panels.output, null, "done panels excluded")
+  assert.equal(layout.panels.subagent, undefined, "no subagent panel slot (D4)")
+  assert.equal(layout.panels.output, undefined, "no output panel slot (D6)")
+  assert.ok(layout.panels.conversation, "conversation still holds everything")
 })
 
 // ====================================================================
@@ -403,17 +414,19 @@ test("renderFrame: todo marks show correct status icons", () => {
   assert.ok(frame.includes("○ pending task"), "pending has circle")
 })
 
-test("renderFrame: subagent panel shows role and status", () => {
+test("renderFrame: subagent block renders in conversation (§7.2 T-H: 窄带退役)", () => {
   const state = tuiState({
     processing: true,
     subTasks: {
-      "coder#1": { key: "coder#1", role: "coder", text: "", tool: "write", toolArgs: { path: "file.mjs" }, done: false, started: Date.now() },
+      "coder#1": { key: "coder#1", role: "coder", model: "glm-5.3", blocks: [], currentTool: "write", toolArgs: { path: "file.mjs" }, done: false, started: Date.now(), turn: 2, maxTurns: 100, approval: null, lastError: null },
     },
   })
   const agent = tuiAgent()
   const { frame } = renderFrame(state, agent, { cols: 80, rows: 24, slashCommands: [], platform: "linux" })
-  assert.ok(frame.includes("[coder]"), "subagent panel shows role")
-  assert.ok(frame.includes("write"), "shows current tool")
+  const clean = frame.replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(clean.includes("[▶ coder#1 · glm-5.3"), "block header in conversation stream")
+  assert.ok(clean.includes("turn 2/100"), "header shows turn n/max")
+  assert.ok(clean.includes("write"), "shows current tool")
 })
 
 test("renderFrame: status bar shows task progress", () => {
@@ -853,81 +866,176 @@ test("panel functions: renderTodo shows status marks", () => {
   assert.ok(lines[2].includes("○"))
 })
 
-test("panel functions: renderSubagent shows running and done states", () => {
-  const subs = [
-    { role: "coder", text: "writing tests...", tool: null, done: false, started: Date.now() },
-    { role: "explore", text: "", tool: null, done: true, started: Date.now() - 5000 },
+test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lines + expand full", () => {
+  // buildConvLines imported statically at top
+  const blocks = [
+    { kind: "think", text: "先读文件" },
+    { kind: "tool", text: "❯ bash — npm test\noutput line1\noutput line2\noutput line3\n" },
+    { kind: "text", text: "final summary" },
   ]
-  const lines = renderSubagent(subs, 100)
-  assert.ok(lines.some((l) => l.includes("coder") && l.includes("writing")))
-  assert.ok(lines.some((l) => l.includes("explore") && l.includes("done")))
+  const mk = (expanded) => tuiState({
+    subTasks: {
+      "coder#1": { key: "coder#1", role: "coder", model: "glm-5.3", blocks, done: false, started: Date.now(), currentTool: "bash", turn: 12, maxTurns: 100, approval: null, lastError: null },
+    },
+    expandedBlocks: expanded ? new Set(["sub-coder#1"]) : new Set(),
+  })
+  // 折叠态：头部摘要 + tail 2 行，不出现最旧内容
+  const folded = buildConvLines(mk(false), 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, ""))
+  const headIdx = folded.findIndex((t) => t.includes("[▶ coder#1 · glm-5.3"))
+  assert.ok(headIdx >= 0, "折叠头存在")
+  assert.ok(folded[headIdx].includes("turn 12/100"), "头部含 turn n/max")
+  assert.ok(folded[headIdx].includes("bash"), "头部含当前工具（bash tail 摘要）")
+  const tailCount = folded.filter((t, i) => i > headIdx && t.startsWith("│ ")).length
+  assert.ok(tailCount <= 3, `折叠态 tail ≤ 3 行，实际 ${tailCount}`)
+  assert.ok(tailCount > 0, "折叠态有 tail 行")
+  assert.ok(!folded.some((t) => t.includes("先读文件")), "折叠态不显示最旧的 think 块")
+  // 展开态：全量按 kind 着色
+  const expandedState = mk(true)
+  const expanded = buildConvLines(expandedState, 100)
+  const joined = expanded.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(joined.includes("先读文件"), "展开显示 think 块")
+  assert.ok(joined.includes("output line1") && joined.includes("output line3"), "展开显示全部 tool 输出")
+  assert.ok(joined.includes("final summary"), "展开显示 text 块")
+  const thinkLine = expanded.find((l) => l.text.includes("先读文件"))
+  assert.equal(thinkLine?.color, C.reason, "think=C.reason")
+  const toolLine = expanded.find((l) => l.text.includes("output line1"))
+  assert.equal(toolLine?.color, C.tool, "tool=C.tool")
+  const textLine = expanded.find((l) => l.text.includes("final summary"))
+  assert.equal(textLine?.color, C.text, "text=C.text")
+  // 折叠控制线可点击（foldHint 走法）
+  const head = buildConvLines(mk(false), 100).find((l) => l.text.includes("[▶ coder#1"))
+  assert.equal(head?._foldToggle, "sub-coder#1", "头部 fold key = sub-<key>，跨 turn 保持折叠状态")
 })
 
-test("panel functions: renderOutput formats active panels", () => {
-  const state = tuiState({
-    outputPanels: {
-      test: { parts: [{ kind: "text", text: "running 1/10\nrunning 2/10" }], len: 25, done: false },
+test("panel functions (§7.2 T-C/T-I): 区块头 approval 等待与 done + lastError 定格", () => {
+  // buildConvLines imported statically at top
+  const approvalState = tuiState({
+    subTasks: {
+      "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [], done: false, started: Date.now(), currentTool: null, turn: 3, maxTurns: 100, approval: "write", lastError: null },
     },
   })
-  const lines = renderOutput(state, 80, 4)
-  assert.ok(lines.some((l) => l.includes("❯ test")), "title row shows tool name")
-  assert.ok(lines.some((l) => l.includes("running")), "title row shows running status")
+  const approvalOut = buildConvLines(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(approvalOut.includes("⏸ coder#2"), "等待审批图标")
+  assert.ok(approvalOut.includes("等待审批: write"), "头部显示等待审批：tool")
+  const doneState = tuiState({
+    subTasks: {
+      "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [{ kind: "tool", text: "❯ bash — x\n" }], done: true, doneAt: Date.now(), started: Date.now() - 120000, currentTool: null, turn: 40, maxTurns: 100, approval: null, lastError: "turn cap reached — work may be partial" },
+    },
+  })
+  const doneOut = buildConvLines(doneState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  // 冻结化（2026-08-30）：done 区块由 agent-turn 冻结进 lines，subTasks 段只渲染
+  // 运行中条目——这里断言「done 条目不再出现在尾部固定段」（残影回归锁定）。
+  assert.ok(!doneOut.includes("✓ coder#2"), "done 区块不再驻留尾部固定段（残影修复）")
+  // 运行中条目仍正常渲染（对照）
+  const runningOut = buildConvLines(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(runningOut.includes("⏸ coder#2"), "运行中区块照常显示")
+  assert.ok(runningOut.includes("等待审批: write"), "头部显示等待审批：tool")
 })
 
-test("panel functions: renderOutput colors lines by part kind", () => {
-  const state = tuiState({
-    outputPanels: {
-      advisor: {
-        parts: [
-          { kind: "think", text: "let me check the diff\n" },
-          { kind: "tool", text: "→ git diff\n" },
-          { kind: "text", text: "final answer line" },
-        ],
-        len: 60, done: false,
-      },
-    },
-  })
-  const lines = renderOutput(state, 80, 6)
-  const think = lines.find((l) => l.includes("let me check"))
-  const tool = lines.find((l) => l.includes("→ git diff"))
-  const text = lines.find((l) => l.includes("final answer"))
-  assert.ok(think?.includes(C.reason), "think lines use reason color")
-  assert.ok(tool?.includes(C.tool), "tool lines use tool color")
-  assert.ok(text?.includes(C.dim), "text lines use dim color")
+test("panel functions (§7.2 D5): 事件 token 残留被 sanitizeDisplay 兜底剥除", async () => {
+  const { sanitizeDisplay } = await import("../src/tui/render.mjs")
+  const raw = "coder#1/⟦ev⟧turn\x1e12\x1e100\x1ellm\x1e"
+  const cleaned = sanitizeDisplay(raw)
+  assert.ok(!cleaned.includes("⟦ev⟧"), "哨兵剥除")
+  assert.ok(!cleaned.includes("\x1e"), "RS 控制字符剥除")
+  assert.ok(cleaned.includes("coder#1/"), "普通前缀文本不受影响")
+  assert.equal(sanitizeDisplay("normal ⟦ev⟧ mid-token"), "normal ", "漏解析哨兵串兜底剥到行尾（残段视为事件碎片）")
 })
 
-test("panel functions: renderOutput hides done panels", () => {
-  const state = tuiState({
-    outputPanels: {
-      test: { parts: [{ kind: "text", text: "done all tests pass" }], len: 19, done: true },
-    },
-  })
-  const lines = renderOutput(state, 80, 4)
-  assert.equal(lines.length, 0)
+test("panel functions (§7.2 T-H): layout 无 subagent/output 槽 + render-frame 无 renderSubagent/renderOutput 导出", () => {
+  // D6 回归断言：模块面收敛（面板槽消失）
+  assert.equal(computeLayout(tuiState(), { cols: 80, rows: 24 }).panels.subagent, undefined)
+  assert.equal(computeLayout(tuiState(), { cols: 80, rows: 24 }).panels.output, undefined)
 })
 
-test("panel functions: renderOutput keeps done panel during closeAt grace", () => {
-  const state = tuiState({
-    outputPanels: {
-      bash: { parts: [{ kind: "text", text: "build ok" }], len: 8, done: true, closeAt: Date.now() + 60000 },
-    },
+test("panel functions: convCacheKey 随 subTasks 区块状态失效（§7.2 D5/N3）", () => {
+  const s1 = tuiState({
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now(), currentTool: null, turn: 1, maxTurns: 100, approval: null, lastError: null, blockEpoch: 1 } },
   })
-  const lines = renderOutput(state, 80, 4)
-  assert.ok(lines.some((l) => l.includes("❯ bash")), "title still visible during grace")
-  assert.ok(lines.some((l) => l.includes("build ok")), "content still visible during grace")
+  const k1 = convCacheKey(s1)
+  // 区块增长（epoch bump）
+  s1.subTasks["coder#1"].blockEpoch = 2
+  assert.notEqual(convCacheKey(s1), k1, "blocks 增长失效缓存")
+  // 折叠切换
+  const s2 = tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)), expandedBlocks: new Set(["sub-coder#1"]) })
+  assert.notEqual(convCacheKey(s2), convCacheKey(tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)) })), "展开/折叠失效缓存")
+  // turn 更新
+  const s3 = tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)) })
+  s3.subTasks["coder#1"].turn = 2
+  assert.notEqual(convCacheKey(s3), convCacheKey(tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)) })), "turn 更新失效缓存")
 })
 
-test("panel functions: renderOutput splits height across multiple panels", () => {
-  const state = tuiState({
-    outputPanels: {
-      a: { parts: [{ kind: "text", text: "a1\na2" }], len: 4, done: false },
-      b: { parts: [{ kind: "text", text: "b1" }], len: 2, done: false },
-    },
+test("panel functions: 运行中区块 elapsed 走秒失效缓存（1s ticker 不再命中过期缓存）", () => {
+  // 回归（2026-08-30 评审）：缓存键无时间分量 → 子 agent 静默期（无 chunk 输出）
+  // 1s ticker 触发的 render 全部命中缓存，头部 "45s" 冻结不走。
+  const sub = { key: "coder#1", role: "coder", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now() - 5000, currentTool: null, turn: 1, maxTurns: 100, approval: null, lastError: null, blockEpoch: 1 }
+  const s = tuiState({ subTasks: { "coder#1": sub } })
+  const k1 = convCacheKey(s)
+  // 模拟 1s 后：内容零变化，仅时钟推进 → 键必须变化
+  const keyWith = (now) => {
+    const orig = Date.now
+    Date.now = () => now
+    try { return convCacheKey(s) } finally { Date.now = orig }
+  }
+  assert.notEqual(keyWith(Date.now() + 1000), k1, "运行中：秒级推进失效缓存（elapsed 走秒）")
+  // done 后不再带时间分量——冻结头部恒定，不应每秒踢缓存
+  sub.done = true
+  sub.doneAt = sub.started + 5000
+  const kDone = keyWith(Date.now())
+  assert.equal(keyWith(Date.now() + 5000), kDone, "done 后键稳定（无时间分量）")
+})
+
+test("advisor review 折叠框：默认折叠防刷屏 + 完成后冻结载体行可重开（2026-08-30）", async () => {
+  const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
+  // ── 运行中（live _advisorBlocks）：默认折叠 = ▶ 头 + tail 3 dim 行 ──
+  const live = tuiState({
+    _advisorBlocks: [
+      { kind: "think", text: "step one\nstep two\nstep three\nstep four\nstep five" },
+      { kind: "tool", text: "→ read src/x.mjs" },
+    ],
   })
-  const lines = renderOutput(state, 80, 8)
-  assert.ok(lines.some((l) => l.includes("❯ a")), "panel a title visible")
-  assert.ok(lines.some((l) => l.includes("❯ b")), "panel b title visible")
-  assert.equal(lines.length, 8, "fills exactly allocated height")
+  const liveOut = buildConvLines(live, 100).map((l) => ({ text: l.text.replace(/\x1b\[[0-9;]*m/g, ""), color: l.color, toggle: l._foldToggle }))
+  assert.ok(liveOut.some((l) => l.text.includes("▶ [advisor · review]") && l.text.includes("click to expand")), "折叠头控制行")
+  assert.ok(liveOut.filter((l) => l.text.startsWith("│ ")).length <= 3, "折叠态 tail ≤ 3 行（防刷屏）")
+  assert.ok(liveOut.some((l) => l.toggle === "advisor-blocks"), "toggle key = advisor-blocks")
+  assert.ok(!liveOut.some((l) => l.text.includes("step one") && l.text.includes("step two")), "折叠态不铺开全部内容")
+  // ── 完成后（agent-turn flush 的 _frozenAdvisor 载体行）：▶ 控制行，可点击重开 ──
+  const frozen = tuiState({
+    lines: [{ text: "advisor review", color: C.dim, _frozenAdvisor: "review verdict line 1\nreview verdict line 2" }],
+  })
+  const frozenOut = buildConvLines(frozen, 100).map((l) => ({ text: l.text.replace(/\x1b\[[0-9;]*m/g, ""), toggle: l._foldToggle }))
+  assert.ok(frozenOut.some((l) => l.text.includes("▶ [advisor · review done]") && l.text.includes("click to expand")), "冻结评审折叠头")
+  assert.ok(!frozenOut.some((l) => l.text.includes("verdict line 1")), "冻结默认不铺开全文")
+  const frozenOpen = buildConvLines(
+    { ...frozen, expandedBlocks: new Set(["advisor-done-0"]) },
+    100,
+  ).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(frozenOpen.includes("review verdict line 1") && frozenOpen.includes("review verdict line 2"), "展开可见全文（可重开）")
+})
+
+test("panel functions (§7.2 T-G): advisor 对象 chunk 与 bash 裸串渲染契约回归", () => {  // T-G: advisor blocks 渲染回归（F6/T-F）——_advisorBlocks 行为不变，与 subagent
+  // 区块共用同一 per-kind 渲染走法但数据源独立。
+  // buildConvLines imported statically at top
+  const state = tuiState({
+    _advisorBlocks: [
+      { kind: "think", text: "reviewing the diff" },
+      { kind: "text", text: "final verdict" },
+    ],
+  })
+  const out = buildConvLines(state, 100)
+  const joined = out.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  // 2026-08-30: advisor 流改为默认折叠框（防刷屏）——think 颜色与内容可见性在
+  // 展开态验证（T-F 回归：kind 配色不变）；折叠态验证控制头存在。
+  assert.ok(joined.includes("▶ [advisor · review]") && joined.includes("click to expand"), "advisor 折叠头可见")
+  const expanded = buildConvLines(
+    { ...state, expandedBlocks: new Set(["advisor-blocks"]) },
+    100,
+  )
+  const exp = expanded.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(exp.includes("reviewing the diff"), "advisor think visible (expanded)")
+  assert.ok(exp.includes("final verdict"), "advisor text visible (expanded)")
+  const thinkLine = expanded.find((l) => l.text.includes("reviewing"))
+  assert.equal(thinkLine?.color, C.reason, "advisor think 颜色不变（T-F 回归）")
 })
 
 test("panel functions: renderFrame (legacy) produces valid ANSI", () => {

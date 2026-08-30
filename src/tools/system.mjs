@@ -134,7 +134,9 @@ function runBash(command, cwd, { timeout, signal, onOutput, shell }) {
     const effectiveCommand = process.platform === "win32" && !shell
       ? `chcp 65001 >nul && ${command}`
       : command
-    const child = spawn(effectiveCommand, {
+    // args MUST be an explicit [] — the two-arg spawn(cmd, options) form is
+    // DEP0190-deprecated (Node 24): the options object would be misread as args.
+    const child = spawn(effectiveCommand, [], {
       cwd,
       shell: shell ?? true,
       windowsHide: true,

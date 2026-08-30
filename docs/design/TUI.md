@@ -5,24 +5,64 @@
 
 ## 1. 模块地图
 
+> 纪律（2026-08-30）：本表是结构性快照，随实现同步回写——交付新增/改名/删除文件时同批更新本节（eng-coder 交付自查第 6 项）。行数会漂，以下为 2026-08-30 快照，仅供量级参考。
+
+**核心管线**（stdin → 状态 → 渲染 → 回合）：
+
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `index.mjs` | 433 | startTUI 入口：raw mode、stdin 分块解码、状态对象、cleanup、paste 协议、Shift+Enter 翻译 |
-| `key-handler.mjs` | ~530 | 按键分发：permission/question/search/picker/wizard/interruptPrompt/输入编辑 |
-| `render-frame.mjs` | ~310 | 帧布局：header / todo / conversation / input / status 各面板装配 |
-| `render-conversation.mjs` | ~130 | 对话面板行构建：缓存、搜索高亮、markdown 表格、折叠 |
-| `render.mjs` | 213 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
-| `markdown.mjs` | ~60 | 轻量行内 markdown → ANSI（粗体/下划线/删除线/标题） |
-| `render-loop.mjs` | 112 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
-| `layout.mjs` | 134 | 面板布局计算（行/列分配，含 todo 面板与子代理面板） |
-| `agent-turn.mjs` | ~500 | runAgentTurn：回合驱动、callbacks 构造、ContinueError 续跑、队列 |
-| `startup.mjs` | 116 | 启动屏 + 会话恢复渲染 + 后台索引 |
-| `interaction.mjs` | 82 | 权限确认（y/n/a）、自由提问（question 工具） |
-| `pickers.mjs` | 394 | 通用列表选择器（filter/滚动/栈）+ 模型两级选择器 + /provider 流程 |
-| `slash-commands.mjs` | 165 | /命令表、别名、补全、Tab 循环 |
+| `index.mjs` | 490 | startTUI 入口：raw mode、stdin 分块解码、状态对象（含 subTasks）、cleanup、paste 协议、Shift+Enter 翻译 |
+| `key-handler.mjs` | 464 | 按键分发：permission/question/search/picker/wizard/interruptPrompt/输入编辑 |
+| `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支拆出） |
+| `agent-turn.mjs` | 174 | runAgentTurn：回合驱动（状态复位/runAgent 循环/ContinueError 续跑/中断处理/finally 收尾/队列）；callbacks 装配在 tool-events.mjs |
+| `tool-events.mjs` | 344 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 状态栏与标题行、onToolResult done 行与子agent 完成冻结、onToolOutput `_live` 滚动预览/advisor 有序块、onTurnEnd 增量落盘）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
+| `subagent-blocks.mjs` | 253 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks，2026-08-30 自 agent-turn 归位） |
+| `render-frame.mjs` | 333 | 帧布局：header / todo / conversation / input / status 各面板装配 |
+| `render-conversation.mjs` | 430 | 对话面板行构建：缓存（含 cap/colorSig 分量）、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、子agent/advisor 折叠块渲染（§7.2 D4）、主输出永不折叠（2026-08-30） |
+| `fold-block.mjs` | 168 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
+| `tool-args.mjs` | 65 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
+| `fold-block.mjs` | 147 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
+| `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
+| `render-loop.mjs` | 110 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
+| `layout.mjs` | 139 | 面板布局计算（行/列分配，todo 面板；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
+
+**渲染内容层**（纯函数）：
+
+| 文件 | 行数 | 职责 |
+|---|---|---|
+| `markdown.mjs` | 71 | 轻量行内 markdown → ANSI（粗体/下划线/删除线/标题） |
+| `math.mjs` | 310 | LaTeX → Unicode 近似（表驱动子集，IK9IXD；单测 `test/math.test.mjs`） |
+| `tool-summaries.mjs` | 114 | 工具完成行摘要（done 行首行提取，自 agent-turn 拆出） |
+
+**输入与交互**：
+
+| 文件 | 行数 | 职责 |
+|---|---|---|
+| `mouse.mjs` | 86 | 鼠标序列解析（SGR 滚轮/点击 → picker 选中、折叠块点击切换） |
+| `clipboard.mjs` | 162 | 剪贴板文本/图像读写（Win powershell 强制 UTF-8 / macOS pbpaste）+ `translateShiftEnter` CSI-u→meta+return 翻译 |
+| `interaction.mjs` | 96 | 权限确认（y/n/a）、自由提问（question 工具） |
+| `pickers.mjs` | 416 | 通用列表选择器（filter/滚动/栈）+ 模型两级选择器 + /provider 流程 |
 | `wizard.mjs` | 172 | 首启配置向导（provider → key → embedding → model） |
-| `clipboard.mjs` | 96 | 剪贴板文本/图像读取（Win powershell / macOS pbpaste） |
-| `config-helpers.mjs` | ~60 | persistRaw / syncProviderField / maskKey |
+| `startup.mjs` | 171 | 启动屏 + 会话恢复渲染（historyToLines 从 history 重建——display 快照已废弃，恢复唯一路径；行形态复刻 live：工具参数摘要+全量 JSON、思考单条 C.reason）+ 懒加载历史窗口 + 后台索引 |
+
+**基础设施**：
+
+| 文件 | 行数 | 职责 |
+|---|---|---|
+| `ansi.mjs` | 47 | ANSI 色板/控制序列；键盘增强协议启停（`keyboardPush`/`keyboardPop`，kitty + modifyOtherKeys） |
+| `config-helpers.mjs` | 35 | persistRaw / syncProviderField / maskKey |
+
+**命令层**（`slash-commands.mjs` 187 行：/命令表、别名（/h /x /m /p /t /c /n）、补全、Tab 循环、HANDLERS 分派——每个命令实现独立成 `cmd-*.mjs`）：
+
+| 文件 | 行数 | 职责 |
+|---|---|---|
+| `cmd-config.mjs` | 332 | /config（含 embedding 三件套落盘，§10.3D） |
+| `cmd-advisor.mjs` | 255 | /advisor（评审模型/思考配置 + guard 开关，交互菜单循环） |
+| `cmd-mcp.mjs` | 239 | /mcp |
+| `cmd-submodel.mjs` | 152 | /submodel（子agent 模型槽位，§8） |
+| `cmd-think.mjs` | 139 | /think |
+| `cmd-shell.mjs` | 105 | /shell（shell 配置，§8） |
+| 其余 cmd-* 与 distill-cmd | <100 | /auto /clear /copy /eng /exit /extract /fold /goal /help /init /model /new /plan /reindex /restore /session /skills /undo /upgrade /distill（distill-cmd.mjs 蒸馏交互引擎） |
 
 ## 2. stdin 输入层（index.mjs）
 
@@ -67,7 +107,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 输入框（layoutInput：多行展开、光标定位、粘贴快捷键提示角标）
 状态栏（status：模式/耗时/token/上下文利用率/队列/快捷键提示）
 ```
-布局分配见 `layout.mjs computeLayout`（面板高度随内容伸缩，子代理面板 ≤4 行）。
+布局分配见 `layout.mjs computeLayout`（面板高度随内容伸缩；子代理活动现为会话流内可折叠区块——AGENT-LOOP.md §7.2 D4，数据层 `subagent-blocks.mjs`、渲染层 render-conversation.mjs 折叠块段，旧窄带 ≤4 行已退役）。
 
 **对话行构建**（render-conversation.mjs，纯函数）：
 ```
@@ -81,26 +121,35 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 ```
 关键约束：**markdown/math ANSI 在 wrap 之前插入**——但插入的转义序列零显示宽度（`stringWidth` 剥离 ANSI），不参与宽度计算，不破坏对齐。**宽度补偿**：标记（`` ` ``/`**`/`~~`/`$…$`）渲染后消失，含标记的表格行会比 formatTables 计算的列宽短——`renderMarkdownPreservingWidth` 在行尾补空格恢复原宽（竖线对齐）。渲染先于 wrap 执行保证跨 wrap 边界的公式/标记完整转换。窄作用域复位（`22`/`24`/`29` 而非 `0`）保证不冲掉行底色。缓存：`convCacheKey`（lines 长度/最后一行长度/streaming/reasoning 长度 + expandedBlocks 摘要）命中则跳过重建。
 
-## 5. 折叠交互（双向：展开 ↔ 收起）
+## 5. 折叠交互（双向：展开 ↔ 收起）——公共组件 fold-block.mjs
 
-**折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`）：
-1. **长消息折叠**：**任意**单条消息（主输出 C.text、思考 C.reason、工具摘要 C.dim——凡是 wrap 后 >12 行的都算）→ 折叠为 `[前 4 行, hint, 末行]`（共 5 行内容，hint 位于中间省略号位置）；key = `long-{lines 索引}`（稳定，跨重渲染）。**主输出/思考是折叠的主力对象**——它们才是实际内容最长的；dim 工具摘要反而很少触发。双向折叠保证阅读可控：点击展开看全文，看完点收起提示收回去
-2. **连续 dim 块折叠**：连续 dim 行 >8 → 同样折叠为 `[前 4 行, hint, 末行]`；key = `fold-{n}`
+> **组件化（2026-08-30）**：折叠交互统一收敛到公共组件 `src/tui/fold-block.mjs`——任何"流式/超长输出要可折叠"的功能直接复用，不再复制渲染逻辑。API：`foldCapRows`（60% 封顶数学）、`isExpanded`/`toggleFoldBlock`（折叠态读写与双向切换）、`foldHintLine`/`blankLine`（控制行）、`renderExpandedBlock`（展开态渲染 + 封顶 + 底部可达控制行）、`renderFoldedHead`（折叠态渲染：命名头 + tail）、`renderBlockTimeline`（blocks[]→kind 着色时间线，think=C.reason/tool=C.tool/text=C.text/meta=C.dim，`_skipDimFold` 防套叠）。已接入：子agent 区块（运行中/冻结）、advisor 评审块（运行中/冻结）、长消息、连续 dim；鼠标点击 toggle 也走 `toggleFoldBlock` 单源。
+
+**统一折叠形态（2026-08-30 用户裁定："所有折叠区块 = 默认三行 tail，展开封顶 60%"）**：此前折叠态有两套并存——子agent/advisor 用「头部摘要 + tail 3」，长消息/连续 dim 用老的 `[前 4 行, 匿名 ▶, 末 1 行]`；匿名的 `▶ … N more lines` 头在滚动历史里读起来像孤立碎片（用户报告"很多孤立的 ... xx more lines 段"）。现已全部统一为 `renderFoldedHead` 单源：**`▶ <身份标签> · N lines — click to expand` + 末 3 行（dim）**。身份标签按内容分类：`thinking`（思考块）/ `tool output`（dim 与连续 dim）/ 子agent、advisor 用各自既有的括号身份头。旧形态（前 4 行 + 中置 ▶）废弃，FOLD_KEEP 常量已删。
+
+**展开封顶（60% 屏幕，2026-08-30 用户报告驱动）**：此前展开后长度不受限——超长区块展开时折叠控制行被挤出屏幕，点不到、收不回。现在展开态经 `renderExpandedBlock` 统一渲染，**区块总高 ≤ `floor(rows × 0.6)`**（`foldCapRows`）；触顶时截断内容并渲染封顶提示行 `… N more lines — expansion capped at 60% of screen` + **区块底部的第二个 ▼ 控制行**——区块最高只占屏 60%，底部控件必落在视口内，**展开永远可逆**。`maxRows` 由调用链贯穿（render-frame → renderConversation → buildConvLines → 组件；render-loop/key-handler/index 历史分页/mouse 同步传入），省略 = 不封顶（单测/无终端环境）。`convCacheKey` 含 cap 分量——终端 resize 改变封顶行数必须踢缓存。`foldEnabled=false`（/fold off）时控制行与封顶一并消失（toggle 无效时提示会撒谎，索性不渲染）。
+
+**折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`；**2026-08-30 用户裁定：主输出永不折叠**——会话核心内容由滚动阅读，折叠会把真正的回答藏在点击之后；思考/工具摘要才是辅助流，保留折叠）：
+1. **长消息折叠**：思考（C.reason）**无条件折叠**（2026-08-30 最终裁定：行数阈值两轮死于真机——80 列下真实中文思考 wrap 5~10 行够不着 12；宽屏 200 列下只 wrap 1~3 行够不着 3；字符阈值也漏掉典型句——**"阈值"思路整体废弃，思考是过程内容，一律收进命名头**）；工具摘要（C.dim）等 >12 行折叠（`LONG_FOLD_LINES`）；key = `long-{lines 索引}`。**主输出（C.text）与用户消息不参与**——`foldable = l.color !== C.text` 直接全量渲染
+2. **连续 dim 块折叠**：连续 dim 行 >8 → 同样折叠为统一形态；key = `fold-{n}`
 
 **标志（哪里可折叠一眼可见）**：
-- 折叠控制行**不缩进、与输出内容平齐**，且**行前空一行**（与其他内容区分，避免误认为无关行）
-- **折叠态**：保留**前 4 行 + 末 1 行**（共 5 行内容），**折叠控制行放在中间省略号位置**——`▶ … N more lines — click to expand`（bold cyan + `▶` 图标 + "click to expand" 下划线）本身含省略号语义（"此处有内容被折叠"），不再需要单独的 `…` 行；N = 总行数 − 5
-- **展开态**：**同一位置**（块头部、内容之前）换成 `▼ … N lines — click to collapse`（bold cyan + `▼` 图标 + "click to collapse" 下划线）——收起标志贴着内容开头，不沉到尾部
+- 折叠控制行**不缩进、与输出内容平齐**；**空行分隔仅展开态使用**（▼ 控制行位于块头，**行前空一行**与其他内容区分；折叠态 ▶ 头**不空行**——fold-block.mjs `blankLine` 注释）
+- **折叠态（全类型统一）**：**头部身份行 + 末 3 行**——`▶ <身份> · N lines — click to expand`（bold cyan + `▶` + "click to expand" 下划线）+ dim 的 tail 3 行（`renderFoldedHead` 单源；子agent/advisor 头部各自带状态摘要：`[✓ coder#1 · model · done 45s]`、`[advisor · review done]`）
+- **展开态**：**同一位置**（块头部、内容之前）换成 `▼ … N lines — click to collapse`（bold cyan + `▼` 图标 + "click to collapse" 下划线）——收起标志贴着内容开头，不沉到尾部；**触 60% 封顶时区块底部追加第二个控制行**（唯一保证可达的收起入口）
 
-**动作（点击即切换）**：点击任意带 `_foldToggle` 的行（头部 ▶/▼ 提示）→ `expandedBlocks` **toggle**（有则删=收起、无则加=展开）→ 重渲染。折叠/收起标志**始终在块头部同一位置**——状态切换点稳定，`▶`/`▼` + 下划线文案给出"可点击"的视觉暗示。
+**动作（点击即切换）**：点击任意带 `_foldToggle` 的行（头部 ▶/▼ 提示）→ `toggleFoldBlock`（expandedBlocks **toggle**：有则删=收起、无则加=展开）→ 重渲染。折叠/收起标志**始终在块头部同一位置**——状态切换点稳定，`▶`/`▼` + 下划线文案给出"可点击"的视觉暗示。
 
-**完成回复自动展开（下一轮收起）**：刚完成的回复（主输出/思考）**完成瞬间保持展开**（`flushStream` 把其 `long-{idx}` 加入 expandedBlocks——用户正在看全文，立即收起反而要多点一次展开）；**下一轮用户输入开始时**清理该自动展开标记 → 恢复折叠态。手动展开的块不受影响（仅用户主动收起）。
+**折叠无例外（2026-08-30 用户裁定，废除"完成自动展开"）**：思考块在 flushStream 完成**瞬间即折叠**（命名头 + tail 3，点击展开 ≤60%）——与恢复路径完全同构。旧设计"完成瞬间保持展开、下一轮输入收起"（`_autoExpand` 簿记）是被否掉的预折叠方案的遗留，主输出免折叠后已无存在理由，连根删除（flushStream 簿记 + runAgentTurn 清理 + state 字段）。主输出永不折叠、无需簿记。
+
+**流式过程同框（2026-08-30 用户裁定："思考过程中为什么不是直接进这个框"）**：思考的 **live 流式缓冲**（`state.reasoning`）不再平铺全屏刷——渲染为**同一只折叠框**（key=`thinking-live`）：默认 `▶ thinking · N lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入时框内内容实时增长，`convCacheKey` 的 `state.reasoning.length` 分量驱动实时重绘）；flush 后块重挂到 `long-{idx}`，形态完全一致、无缝衔接。live 与完成态与恢复态三态同构，无一例外。
 
 **约束**：
-- 展开的长 dim 块行带 `_skipDimFold` 标记，不再参与连续 dim 折叠（防折叠套折叠——0.12.7 回归修复）
-- **历史上"主输出/思考永不折叠"的约束已撤销**（0.12.7 的临时修复）：当时只有单向折叠，折叠=内容被锁住影响阅读；双向折叠落地后重新纳入——>12 行的主输出/思考默认折叠为 5 行（前 4 行 + 末 1 行可见），点击展开/收起
+- 展开的块行带 `_skipDimFold` 标记，不再参与连续 dim 折叠（防折叠套折叠——0.12.7 回归修复；renderBlockTimeline 统一携带）
+- **历史上"主输出/思考永不折叠"的约束的完整演进**：0.12.7 曾以"仅 dim 可折叠"临时修复单向折叠时代的问题；双向折叠落地后曾重新放开主输出折叠（"主输出/思考是折叠主力"）；**2026-08-30 用户裁定主输出永久免折叠**（辅助流保留）——最终形态：思考/dim 双向折叠 + 主输出始终全量渲染。缓存键相应增加颜色类别签名（colorSig）：折叠决策按颜色分类，仅颜色不同的两个状态不得共享缓存条目
 - `/fold off` 时两类折叠与全部提示行不出现；`/fold on` 恢复
-- 展开态与折叠态切换由 `convCacheKey` 的 expandedBlocks 摘要驱动缓存失效
+- 展开态与折叠态切换由 `convCacheKey` 的 expandedBlocks 摘要 + cap 分量 + **颜色类别签名（colorSig）** 驱动缓存失效
+- **新功能接入约定**：凡是"超长输出想可折叠"，用 fold-block.mjs 的组件拼装（renderBlockTimeline + renderFoldedHead + renderExpandedBlock + toggleFoldBlock），不要自带展开/折叠渲染——封顶、可达性与统一形态保证只在组件里有
 
 **渲染调度**（render-loop.mjs）：`scheduleRender()`（setImmediate 合并）+ 处理中 1s ticker（耗时刷新）+ `write()` 增量写（比较上一帧，只重绘变化行 + 光标定位），防闪烁。
 
@@ -115,7 +164,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 `runAgentTurn(ctx, text)`：
 1. pushLabel "❯ You:" + 输入文本
 2. 置 processing、新建 AbortController、1s ticker
-3. callbacks 构造（onToken/onReasoning 流式进 streaming/reasoning 缓冲；子代理 `role#id/` 前缀分流到 subTasks 面板；onToolCall/onToolResult 工具摘要行；onUsage 累计 token；onCompress 提示 "[context] Context too long, auto-compacted"）
+3. callbacks 构造（`tool-events.mjs buildToolCallbacks`：onToken/onReasoning 流式进 streaming/reasoning 缓冲；子代理 `role#id/` 前缀分流到子 agent 活动区块 `state.subTasks`（§7.2 D4 会话流内可折叠块）；onToolCall/onToolResult 工具摘要行；onUsage 累计 token；onCompress 提示 "[context] Context too long, auto-compacted"）
 4. runAgent 循环：正常完成 → flushStream；AbortError（Ctrl+I）→ 重开 controller 续跑；ContinueError → permission 询问 "Continue after N turns?"；其他错误 → "[error] …" 一行
 5. finally：停 ticker、清 processing、**自动生成会话标题**（首条真实 user 消息 → generateTitle）、saveSession 增量落盘
 6. 队列：processing 期间输入的消息进 `state.queue`，回合结束自动逐条处理（斜杠命令直接执行）
@@ -134,7 +183,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 | 决策 | 理由 |
 |---|---|
-| 纯函数渲染 | 无终端也能全量单测（tui.test.mjs 1147 行） |
+| 纯函数渲染 | 无终端也能全量单测（tui.test.mjs 1470 行 + math/subagent-blocks 等专项测试） |
 | stdin 双层（keyStream + paste 累积） | 粘贴与按键保序，bracketed paste 大文本不丢 |
 | Ctrl+C 永不直接杀进程 | 防误触（双确认）+ picker/生成语义分层（IK61BI） |
 | markdown/math 渲染在 wrap 之前、宽度补偿保对齐 | ANSI 零显示宽度不干扰宽度数学；行尾补空格恢复原宽；跨 wrap 边界的标记/公式完整转换；窄复位不清行色（IK5VW3） |
@@ -145,7 +194,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 恢复优先 display 快照 | WYSIWYG 保真；history 重建是降级路径 |
 | 恢复过滤 [System reminder: | 机读消息不显示（与 VS Code 渲染契约一致） |
 | 增量渲染 + 缓存键 | 1M 行会话不卡：只重绘变化行 |
-| 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子任务面板 |
+| 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子 agent 活动区块（§7.2 D4：会话流内可折叠块；数据层独立为 subagent-blocks.mjs） |
 
 
 ## 10. Issue 变更段（2026-08-22 · 需求层）
@@ -305,15 +354,15 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 ### 10.4D · 设计层（子agent/advisor 模型显示）
 
-**机制**（已实现，验收勾销 2026-08-23）：
-- **发射**：`subagent.mjs` / `consult.mjs` / `escalate.mjs` 在子流首 token 附带 `[model]<name>` 前缀（仅当实际模型非 undefined 时），配 relay 前缀 `role#id/`。
-- **解析**：`agent-turn.mjs:106-117` 正则 `^([\w-]+)#(\d+)/` 分割子流；`[model]` 前缀存入 `state.subTasks[key].model` 并从内容剥离（NF1）。
-- **渲染**：`render-frame.mjs:65` 子 agent 块 header 拼接 `[role · model]`；advisor 不走 token——TUI 直接 `resolveAdvisorProvider(agent).model`（`agent-turn.mjs` `onToolCall` 时解析一次，状态栏与内联标题共用）。
-- **ACP 例外**：`acp/bridge.mjs:70-72` 剥离 `[model]` token——ACP 会话不承载 TUI 展示，属 ACP 线契约。
+**机制**（已实现，验收勾销 2026-08-23；机制定位随 §7.2 D4 实现拆分更新 2026-08-30）：
+- **发射**：`spawn-child.mjs` `makeRelay`（subagent/escalate/consult 共用生成管线）在子流首 token 附带 `[model]<name>` 前缀（仅当实际模型非 undefined 时），配 relay 前缀 `role#id/`。
+- **解析**：`subagent-blocks.mjs` `SUB_PREFIX_RE`（`^([\w-]+)#(\d+)/`）分割子流；`[model]` 前缀由 `routeSubToken` 存入 `state.subTasks[key].model` 并从内容剥离（NF1）。§7.2 D4 前解析在 agent-turn.mjs 内联，窄带退役时随实现拆出。
+- **渲染**：`render-conversation.mjs` 子agent 折叠块头部拼接 `[role · model]`（运行态与冻结态同 key）；advisor 不走 token——TUI 直接 `resolveAdvisorProvider(agent).model`（`tool-events.mjs` `onToolCall` 时解析一次，状态栏与内联标题共用）。§7.2 D4 前在 render-frame.mjs `renderSubagent`（已随窄带退役删除）。
+- **ACP 例外**：`acp/bridge.mjs` onToken 剥离 `[model]` token（`[\w-]+#\d+/\[model\]` 正则，同行亦剥 `⟦ev⟧` 事件 token）——ACP 会话不承载 TUI 展示，属 ACP 线契约。
 
 **关键决策**：vscode 走结构化消息字段（`toolPanel.model`），CLI 走 `[model]` token——两端渲染架构不同（TUI 可直访 agent 对象，webview 仅收 postMessage），各取所需；决策统一记录在 vscode `ARCHITECTURE.md` 变更段（本文件不复制）。
 
-**测试现状**（如实标注）：`[model]` 解析剥离无自动化测试锁定（2026-08-26 审计确认）——遗留项已记入项目 TODO（docs/TODO.md），不在本文档展开。
+**测试现状**（更新于 2026-08-30）：`[model]` 解析剥离已有自动化测试锁定——`test/subagent-blocks.test.mjs`（[model] 只记录一次、后续 [model] 开头内容不吞）+ `test/agent-turn.test.mjs` 端到端多处；原 2026-08-26 审计发现的零锁定遗留项已在 docs/TODO.md 销账。
 
 **测试用例表**（本次补记不新增代码；若后续补测试按此契约）：
 

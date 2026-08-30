@@ -58,6 +58,7 @@
    ├─ spawn 成功 → child._engDesignReviewed = true（解锁写文件）
    └─ task 含：Docs involved（需求+设计+引用清单）→ 文件清单 → 验收标准（METHODOLOGY Task Structure）
 6. eng-coder 实现（内部小步 verify）
+6.5 首次交付偏差审计（2026-08-30 用户裁定，自动节点）：subagent(role="explore") 对照设计文档审计交付代码——验收标准是否有部分实现/静默简化/文档漂移（模块地图未回写）/超清单改动；**有偏差 → eng-coder 二次修正轮**（偏差清单即任务全文，不发明新内容；返回后逐点核销）→ **无偏差 → 进入交付评审**
 7. 返回时 mergeChildMutations：子代理改动合并进父代理（_mutatedThisRun/_touchedFiles，失效旧 verify/advisor 标记，重置 _advisorRound=0）
 8. 父代理 advisor(type="code", 评审范围=task 的 Docs involved + 设计验收标准) 代码评审——**流程节点自动，不问用户**
    （评审由主代理发起——eng-coder 子代理环境无法真实调用 LLM advisor 自评；评审范围仍显式化，不遍历 git diff）
@@ -105,11 +106,11 @@
 | 文件 | 动作 | 用途 |
 |---|---|---|
 | `src/agent/setup.mjs` | MODIFY | 提示词独立组装（工程模式不注入 main/discipline）；METHODOLOGY 缺失降级为工程模板+警告 |
-| `src/agent/dispatch.mjs` | MODIFY | 父代理门禁（isProductCode）；未知路径保守拦截（待办） |
+| `src/agent/dispatch.mjs` | MODIFY | 父代理门禁（isProductCode）；未知路径保守拦截——已实现（「语义一致化 4 项」已闭环） |
 | `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignReviewed |
 | `src/advisor/messages.mjs` | MODIFY | design 分支按 documents 清单构建评审输入（替代 git diff 收集） |
 | `src/agent-tools/subagent.mjs` | MODIFY | mergeChildMutations（已有）；spawn 校验（已有） |
-| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：主代理发起 code review（范围 = Docs involved + 验收标准）；Work Loop 交付评审状态同步 |
+| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：主代理发起 code review（范围 = Docs involved + 验收标准）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录）** |
 | `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
 | `src/prompts/discipline.md` | 不动 | 普通模式专属（解耦原则） |
 | `src/prompts/main.md` | 不动 | 普通模式专属（解耦原则） |
@@ -165,7 +166,7 @@
 
 - **eng-coder 拦截型机械约束**：token 校验、写文件门禁。质量靠 eng-coder.md 自查 + 交付前自评。
 - **父代理拦截型机械约束**：design token 前写产品代码被拒。其余（等批准、不写实现、验收）靠 engineering.md 提示词。
-- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 METHODOLOGY/README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) || !isDocFile(p)`（一致化待办见 docs/TODO.md）。
+- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 METHODOLOGY/README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) || !isDocFile(p)`（一致化已实现——「语义一致化 4 项」已闭环）。
 - METHODOLOGY.md 缺失：工程模板 + 警告（不再 fallback discipline）。
 
 ## 5. 配置与会话恢复
@@ -193,6 +194,16 @@
 
 ## 7. 变更记录
 
+### 2026-08-30：首次交付偏差审计 + eng-coder 修正轮（用户裁定）
+
+**触发**：用户指示"第一次 eng-coder 开发完成以后先用 explore 查探一次现码与设计文档之间的偏差，然后再跑一次 eng-coder 修正这些偏差"。
+
+**机制**：Mandatory Flow 插入 step 7（偏差审计，自动节点）——首次交付后先 spawn `explore`（thoroughness 按交付规模，默认 medium）对照 Docs involved + 验收标准审计实现：部分实现/静默简化/文档漂移（eng-coder 自查第 6 项的模块地图回写）/超清单改动四类偏差。有偏差 → eng-coder **第二次 spawn**（同一 designToken，偏差清单 = 任务全文，`invent nothing new`——修正轮不发明新需求），返回后逐点核销；无偏差 → 直接进交付评审（原 step 7 顺延为 step 8）。审计是自动节点，不需要用户发起。
+
+**定位**：advisor code review 是独立视角的质量闸（隔离上下文、多模型）；偏差审计是**同源对照**（设计文本 vs 实现文本），explore 的只读全文比对正合适——两者互补，不能互替。静默简化恰是交付报告不会自首的偏差类型（eng-coder 保真条款的执行核查）。
+
+**影响**：`engineering.md`（两端 byte-identical）Flow step 7 + Work Loop "First delivery audit" 状态 + eng-coder delivery 消息处理分支；两端 `test/agent.test.mjs` 新增内容断言（8 项）锁死。每次任务多一个 explore + 可能一轮 eng-coder 的 token 成本，换取静默降级的机械兜底。
+
 ### 2026-08-29：UI/交互决策全链路落档（用户报告"agent 无视讨论过的 UI 设计"）
 
 **需求**（用户拍板）：与用户讨论达成的 UI/交互设计经常不体现在实现里。根因：eng-coder 是零上下文子代理，决策只留在对话里就永远到不了它那里。要求：UI/交互决策必须落设计文档，且必须包含在下达给 eng-coder 的任务中。
@@ -219,3 +230,44 @@
 **测试**（内容级断言，两端各验；副本未改时必须能失败）：三层结构/完成判据/验收回指（template）、测试文档交付条件句（engineering.md）、警告后果句/恢复路径/陈旧指引删除（setup）。见两端 `test/agent.test.mjs`。
 
 **受影响文件**：`docs/design/METHODOLOGY.md`（CLI）、`src/prompts/methodology-template.md`（两端）、`src/prompts/engineering.md`（两端）、`src/agent/setup.mjs`（CLI 警告块）、`src/agent/setup-reminders.mjs`（VS Code 警告块）。
+
+### 2026-08-30：工程模式提示词补委托引导（解耦遗留缺口，用户拍板方案 A）
+
+**需求**（用户核对发现）：提示词解耦（PROMPT-DECOUPLING.md）后工程模式顶层不注入 main.md/discipline.md，而 AGENT-LOOP §13（广度探索下沉 explore）只落在 main.md——工程模式从此只剩 eng-coder 委托，零 explore/plan 引导。后果：架构师在需求澄清/设计阶段做广度探索时无规则可循，大概率内联 read 淹没自己的主历史（正是 §13 要解决的问题在工程模式下同样存在）。核实确认非有意取舍（文档无决策记录）：`explore`/`plan` 在工程模式实际可用（setup.mjs role enum = explore/plan/eng-coder）。
+
+**设计**（两端 `src/prompts/engineering.md` byte-identical，插在 Work Loop 与 Questioning Style 之间新增 "## Delegation (subagents)" 一节，6 条）：
+1. 广度探索 → `explore` 子 agent（任务里标注 thoroughness：quick/medium/thorough）；点破隔离收益——子 agent 的 read/grep 不进主历史，内联扫会把架构师自己的上下文埋进噪声。
+2. `plan` 子 agent 独立验证可行性问题；只读、不问最终用户——歧义经报告回给架构师与用户解决。
+3. 精度例外（沿 §13 口径）：仅即将立刻编辑某文件时才亲自 read——架构师因设计判断需要仍可直接读设计相关代码。
+4. 并行多 eng-coder 不得编辑同一文件。
+5. 不重做已委托的探索——eng-coder 交付验证 = 读其声称改动的文件 + 跑测试。
+6. `escalate` 工程模式不可用（与 setup.mjs fail-closed 不注册一致——措辞用 "unavailable" 不用 "禁用"，模型工具表里确实没有该工具）；`consult` 保留可用（疑难判断）。
+
+**明确不做**：不移植 main.md 的全部条款（consult 简报规范/飞刀时机判断不适用——工程模式 escalate 不可用；goal/skill 与工程模式无关）。
+
+**测试**（两端各一，内容级断言英文短语；副本未改时必须能失败）：CLI `test/agent.test.mjs`（"prompts/engineering.md: 委托引导…"）、vscode `test/agent.test.mjs`（"engineering.md: delegation guidance…"）——断言委托句/三档彻底度/隔离收益/精度例外/并行互斥/不重做/escalate 不可用/consult 保留 8 项关键句 + 既有 15 文件 byte-identical 比对测试兜底。
+
+**受影响文件**：`src/prompts/engineering.md`（thincoder/ + thincoder-vscode/ 各一份，182→208 行）、两端 `test/agent.test.mjs`。验证：两端全量测试 784/784、781/781 全绿；`npm run lint` 两端 0 error；byte-identical 比对通过。
+
+### 2026-08-30：eng-coder 补「实现保真——不许静默降级」条款（用户核对提示词系统后拍板）
+
+**需求**（用户核查触发）：提示词系统对"按设计交付不打折"的覆盖——普通模式 system.md 有完整链条（"Decide what's right before deciding what's smallest" / "deliver exactly what was agreed — no simplifying" / 收尾自检 "not a subset, not a reinterpretation"），工程模式架构师侧也有（no silently deviate / never silently invented / no pre-existing cop-out），但 **eng-coder.md 缺正面禁止句**：L10/L16 的 "not silently deviate" 只封"默默换方向"，未封"默默简化已明确的设计"——实现期把设计明确要求的行为（交互/边界/状态）降级成近似版、交付时才在报告里披露，字面上不构成 deviate，正好是漏洞形状（实证：§7.2 折叠区块交互被实现降级，用户裁定"按照设计做都要讨价还价吗"）。
+
+**设计**（两端 `src/prompts/eng-coder.md` byte-identical，Guidelines 节 Follow-the-design 条之后新增一条）："Implement to the full design — no silent degradation"——① 觉得设计元素实现代价高也照样实现、成本写进报告；② 指定行为的"更简单近似"就是 deviation：要么照设计实现，要么编码前停下向父代理呈报权衡，**不许先交缩水版再事后披露**；③ 点破"父代理批准的是设计，不是你的折扣"。
+
+**测试**（两端各一，内容断言英文短语，5 项关键句；副本未改时必须能失败）：CLI `test/agent.test.mjs`（"prompts/eng-coder.md: 实现保真…"）、vscode `test/agent.test.mjs`（"eng-coder.md: full-design fidelity…"）+ 既有 15 文件 byte-identical 比对兜底。
+
+**受影响文件**：`src/prompts/eng-coder.md`（两端各一份，36→44 行）、两端 `test/agent.test.mjs`。验证：CLI 全量 785/785 全绿、vscode 全量 782/782 全绿、CLI lint 0 error、byte-identical 通过。
+
+### 2026-08-30：system.md 补「设计文档即契约——执行期不许静默降级」（普通模式缝隙，同一触发；同日用户二轮纠偏后改为无条件绑定）
+
+**需求**（用户指出：本会话降级实例发生在**普通模式**）：eng-coder 条款补完后，普通模式的缝隙仍在——① system.md L15 的不降级义务挂在 "Once confirmed" 上，而设计文档驱动的任务（如 §7.2 按文档实现）没有显式 confirm 环节，条款挂不上钩；② L26/L60 是披露义务而非禁止义务——降级后如实披露在形式上"合规"，但按 PHILOSOPHY 交付透明条款，披露该发生在**决策前**（让用户选择）而非交付后（通知既成事实）；③ L25 收尾自检发生在最后，管不住实现中途的降级决策时刻。
+
+**第一版缺陷（用户二轮纠偏）**：初版补句 "whenever the behavior is already fixed by a design document or an agreed decision" 仍带前提——把绑定绑在"设计文档或已达成决策"上，**会话中直接说出的要求**（"改成 3 行""默认折叠吧"）两头不沾，字面上仍在降级许可区。
+
+**修订设计**（两端 `src/prompts/system.md` byte-identical，L15 尾部改写为无条件绑定）：① "This binding is UNCONDITIONAL and does not wait for a formal confirmation round"——绑定无条件；② "every requirement the user states — mid-conversation, in a design doc, or in a confirmed plan — binds the moment it is stated"——要求陈述的那一刻即生效，三个来源（会话直述/设计文档/已确认计划）并列覆盖；③ "A stated request IS the contract; whatever its source, implementation may not quietly shrink it"——陈述即契约，实现不得悄悄缩水；④ 保留"代价高照做+报成本 / 实现前呈报权衡 / 交付后披露≠合规"三条出口语义。
+
+**测试**（两端各一，7 项关键句断言；副本未改时必须能失败）+ 既有 byte-identical 比对兜底。
+
+**受影响文件**：`src/prompts/system.md`（两端各一份）、两端 `test/agent.test.mjs`。至此三层闭合且无条件：普通模式主 agent（本条）/ eng-coder（同日上一条）/ 工程模式架构师（既有 surface-or-propose 条款）。
+

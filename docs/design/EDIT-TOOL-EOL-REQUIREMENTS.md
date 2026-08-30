@@ -1,6 +1,6 @@
 # 编辑工具可靠性（行尾语义 + 候选提示 + 哈希健壮性）
 
-> 状态：需求已澄清（2026-08-26，基于 agent 真实使用走查的痛点实证），设计定稿，待评审。
+> 状态：**已实现**（两端落地；2026-08-26 需求澄清 + 设计定稿，后经实现与 F5 变更段交付——实现状态以 docs/design/README.md 地图为准）。
 > 对应工程：`thincoder`（CLI，`src/tools/file.mjs` + `patch.mjs`）、`thincoder-vscode`（`src/tools/file.mjs` + `more-file.mjs`）。
 
 ## 1. 总体需求

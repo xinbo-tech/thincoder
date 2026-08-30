@@ -7,7 +7,9 @@
 
 ## 1. 发布前检查
 
-- [ ] `node --test "test/*.test.mjs"` 全绿
+- [ ] `npm test` 快层全绿(30 个 slow 测试自动 skip;`test/slow.mjs` 门控,2026-08-30)
+- [ ] `npm run test:full` 全量全绿(slow 全放行;发版必跑,快层 skip 不代表通过)
+- [ ] `THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs` 真实端点 smoke 通过(花真钱,双层之外,发版前人工跑;2026-08-30 起 env 门控)
 - [ ] `npm run lint` 0 error(warning 允许)
 - [ ] `CHANGELOG.md` 已更新新版本条目(Keep a Changelog 格式,中文,Added/Changed/Fixed/Removed 分节)
 - [ ] `package.json` version 已 bump

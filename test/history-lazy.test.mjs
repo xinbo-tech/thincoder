@@ -59,10 +59,15 @@ test("historyToLines restores reasoning and full tool results (fidelity vs the l
   ]
   const lines = historyToLines(history, 0, 3)
   const texts = lines.map((l) => l.text)
-  assert.ok(texts.includes("  thinking line 1"), "reasoning restored as dim lines")
-  assert.ok(texts.includes("  thinking line 2"), "all reasoning lines restored")
+  // Reasoning restores as ONE C.reason entry — the exact shape flushStream
+  // produces live, so buildConvLines folds it under the named "▶ thinking"
+  // header with the SAME thresholds as the live path (2026-08-30: the old
+  // dim-fragment form never hit the consecutive-dim threshold on short
+  // agentic thinking bursts and mislabeled long ones "tool output").
+  const reasoningLine = lines.find((l) => l.text.includes("thinking line 1") && l.text.includes("thinking line 2"))
+  assert.ok(reasoningLine, "reasoning restored as ONE line entry (full string, not fragments)")
+  assert.equal(reasoningLine?.color, C.reason, "reasoning is C.reason — buildConvLines folds it like live thinking")
   assert.ok(texts.includes("  line1") && texts.includes("  line2") && texts.includes("  line3"), "FULL tool result restored (not a one-line summary)")
-  assert.equal(lines.find((l) => l.text.includes("thinking line 1"))?.color, C.dim, "reasoning is dim")
 })
 
 test("historyToLines emits ONE assistant label per turn (multi-segment turns)", () => {

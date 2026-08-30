@@ -58,17 +58,15 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
     try {
       const dims = { cols: process.stdout.columns || startupDims.cols, rows: process.stdout.rows || startupDims.rows }
 
-      // Expired output panels: prune once their close grace elapsed (done + closeAt in the past)
-      const now = Date.now()
-      for (const [name, p] of Object.entries(state.outputPanels ?? {})) {
-        if (p.done && (p.closeAt ?? 0) <= now) delete state.outputPanels[name]
-      }
+      // NOTE (§7.2 D6): the old state.outputPanels prune is gone — output panels
+      // are abolished; subagent blocks live in the conversation and are never
+      // auto-pruned (bounded by the N2 per-child line cap instead).
 
       const { rows, cursorRow, cursorCol, layout } = renderRows(state, agent,
         { cols: dims.cols, rows: dims.rows, slashCommands: SLASH_COMMANDS })
 
       // Clamp scroll (bookkeeping for the status-bar hint; renderConversation clamps internally too)
-      state.scroll = Math.min(state.scroll, Math.max(0, countConvLines(state, dims.cols) - layout.panels.conversation.h))
+      state.scroll = Math.min(state.scroll, Math.max(0, countConvLines(state, dims.cols, dims.rows) - layout.panels.conversation.h))
 
       if (state.ctxCache.len !== agent.history.length) {
         state.ctxCache = { len: agent.history.length, tokens: estimateTokens(agent.history) }

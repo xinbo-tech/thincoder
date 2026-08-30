@@ -154,7 +154,7 @@ export async function prepareRun(agent, input, callbacks, {
   // Tail position keeps the second-precision content out of any prefix — caches stay hit.
   agent.history.push({
     role: "user",
-    content: `[System reminder: current time is ${timeNowLocal()} (local; timezone ${Intl.DateTimeFormat().resolvedOptions().timeZone || "local"}).`,
+    content: `[System reminder: current time is ${timeNowLocal()} (local; timezone ${Intl.DateTimeFormat().resolvedOptions().timeZone || "local"})].`,
     transient: true,
   })
 

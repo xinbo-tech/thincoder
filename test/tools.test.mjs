@@ -3,6 +3,7 @@
  * 从 test/units.test.mjs 提取。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -354,7 +355,7 @@ test("websearch: Tavily 结构化搜索优先，无 key 回退 Bing", async () =
 
 // ---------------------------------------------------------------- bash 流式
 
-test("bash: 流式输出实时透传（onOutput 分块到达）", async () => {
+slow("bash: 流式输出实时透传（onOutput 分块到达）", async () => {
   const bash = builtinTools.find((t) => t.name === "bash")
   const chunks = []
   const result = await bash.execute(
@@ -370,7 +371,7 @@ test("bash: 流式输出实时透传（onOutput 分块到达）", async () => {
 
 // ---------------------------------------------------------------- checkpoint 快照与回滚
 
-test("checkpoint: 全量回滚被禁，单文件恢复可用（v2 全量副本）", async () => {
+slow("checkpoint: 全量回滚被禁，单文件恢复可用（v2 全量副本）", async () => {
   const { execFileSync } = await import("node:child_process")
   const { createCheckpoint, rewind, listCheckpoints } = await import("../src/git/checkpoint.mjs")
   const { writeFile, readFile: rf, mkdir: mk, rm: del, access } = await import("node:fs/promises")
@@ -420,7 +421,7 @@ test("checkpoint: 全量回滚被禁，单文件恢复可用（v2 全量副本�
   }
 })
 
-test("checkpoint: 快照后 commit 再回滚仍然恢复（v2 副本与 HEAD 无关）", async () => {
+slow("checkpoint: 快照后 commit 再回滚仍然恢复（v2 副本与 HEAD 无关）", async () => {
   const { execFileSync } = await import("node:child_process")
   const { createCheckpoint, rewind } = await import("../src/git/checkpoint.mjs")
   const { writeFile, readFile: rf } = await import("node:fs/promises")
@@ -455,7 +456,7 @@ test("checkpoint: 快照后 commit 再回滚仍然恢复（v2 副本与 HEAD 无
   }
 })
 
-test("checkpoint: 超大文件跳过副本并提示（skipped 列表）", async () => {
+slow("checkpoint: 超大文件跳过副本并提示（skipped 列表）", async () => {
   const { execFileSync } = await import("node:child_process")
   const { createCheckpoint, rewind } = await import("../src/git/checkpoint.mjs")
   const { writeFile, readFile: rf } = await import("node:fs/promises")
@@ -486,7 +487,7 @@ test("checkpoint: 超大文件跳过副本并提示（skipped 列表）", async 
   }
 })
 
-test("checkpoint: listFileVersions 区分同一文件的多个历史副本", async () => {
+slow("checkpoint: listFileVersions 区分同一文件的多个历史副本", async () => {
   const { execFileSync } = await import("node:child_process")
   const { createCheckpoint, listFileVersions, restoreFile } = await import("../src/git/checkpoint.mjs")
   const { writeFile, readFile: rf } = await import("node:fs/promises")
@@ -544,7 +545,7 @@ test("checkpoint: listFileVersions 区分同一文件的多个历史副本", asy
   }
 })
 
-test("checkpoint 工具：versions 子命令列出文件历史版本", async () => {
+slow("checkpoint 工具：versions 子命令列出文件历史版本", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-cpver-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
@@ -576,7 +577,7 @@ test("checkpoint 工具：versions 子命令列出文件历史版本", async () 
   }
 })
 
-test("checkpoint 工具：list / create / rewind 走工具入口", async () => {
+slow("checkpoint 工具：list / create / rewind 走工具入口", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-cptool-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
@@ -615,7 +616,7 @@ test("checkpoint 工具：list / create / rewind 走工具入口", async () => {
   }
 })
 
-test("bash 工具：git 破坏性命令先快照后放行（未提交工作不丢且命令正常执行）", async () => {
+slow("bash 工具：git 破坏性命令先快照后放行（未提交工作不丢且命令正常执行）", async () => {
   const { execFileSync } = await import("node:child_process")
   const { bashTool } = await import("../src/tools/system.mjs")
   const { writeFile, readFile: rf } = await import("node:fs/promises")
@@ -650,7 +651,7 @@ test("bash 工具：git 破坏性命令先快照后放行（未提交工作不�
   }
 })
 
-test("bash 工具：变体 git checkout HEAD -- . 同样快照后放行", async () => {
+slow("bash 工具：变体 git checkout HEAD -- . 同样快照后放行", async () => {
   const { execFileSync } = await import("node:child_process")
   const { bashTool } = await import("../src/tools/system.mjs")
   const { writeFile, readFile: rf } = await import("node:fs/promises")
@@ -683,7 +684,7 @@ test("bash 工具：变体 git checkout HEAD -- . 同样快照后放行", async 
   }
 })
 
-test("bash 工具：非破坏性 git 命令不触发保护；非 git 仓库静默放行", async () => {
+slow("bash 工具：非破坏性 git 命令不触发保护；非 git 仓库静默放行", async () => {
   const { execFileSync } = await import("node:child_process")
   const { bashTool } = await import("../src/tools/system.mjs")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-gitguard3-"))
@@ -711,7 +712,7 @@ test("bash 工具：非破坏性 git 命令不触发保护；非 git 仓库静�
   }
 })
 
-test("checkpoint 工具：list 的文件名做 XML 转义（防注入模型上下文）", async () => {
+slow("checkpoint 工具：list 的文件名做 XML 转义（防注入模型上下文）", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-cpxml-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
@@ -741,7 +742,7 @@ test("checkpoint 工具：list 的文件名做 XML 转义（防注入模型上�
   }
 })
 
-test("bash 工具：后台进程不卡死（子进程持有管道，grace 兜底返回）", async () => {
+slow("bash 工具：后台进程不卡死（子进程持有管道，grace 兜底返回）", async () => {
   const { bashTool } = await import("../src/tools/system.mjs")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-bg-"))
   try {
@@ -764,7 +765,7 @@ test("bash 工具：后台进程不卡死（子进程持有管道，grace 兜底
   }
 })
 
-test("bash 护栏：checkout ./restore/clean -f/链式写法先快照后放行，安全写法不触发", async () => {
+slow("bash 护栏：checkout ./restore/clean -f/链式写法先快照后放行，安全写法不触发", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-guard-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
@@ -956,7 +957,7 @@ test("goal: set / cancel", async () => {
   assert.ok(r2.includes("cancelled"))
 })
 
-test("verify: git diff stat in mock repo", async () => {
+slow("verify: git diff stat in mock repo", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-"))
   const { execSync } = await import("node:child_process")
   const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: dir, stdio: "ignore" })
@@ -979,7 +980,7 @@ test("verify: git diff stat in mock repo", async () => {
   }
 })
 
-test("verify: quick 模式下语法失败不能算通过（_verifyPassed=false）", async () => {
+slow("verify: quick 模式下语法失败不能算通过（_verifyPassed=false）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-syn-"))
   const { execSync } = await import("node:child_process")
   const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: dir, stdio: "ignore" })
@@ -1037,7 +1038,7 @@ test("verify: doc-only 改动走快路径（不跑语法检查/测试/任务列�
   }
 })
 
-test("verify: mixed 改动（文档+代码）不走快路径，语法检查照常", async () => {
+slow("verify: mixed 改动（文档+代码）不走快路径，语法检查照常", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-mixed-"))
   const { execSync } = await import("node:child_process")
   const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: dir, stdio: "ignore" })
@@ -1137,7 +1138,7 @@ test("git_diff / git_status / git_log: 只读 git 工具", async () => {
   }
 })
 
-test("git: 扩充 action（add/commit 分文件、tag、branch、checkout/restore、stash、reset、revert、merge、cherry-pick、参数校验）", async () => {
+slow("git: 扩充 action（add/commit 分文件、tag、branch、checkout/restore、stash、reset、revert、merge、cherry-pick、参数校验）", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-git-ext-"))
   const g = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8" })

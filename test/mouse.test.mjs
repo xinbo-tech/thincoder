@@ -116,9 +116,9 @@ describe("handleMouseClick — conversation line actions", () => {
     Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
     try {
       // Layout (80x24, no overlays): conversation starts at row 2 (1-based).
-      // 9 dim lines fold to [dim0..dim3, ▶ hint, dim8] = 6 conv lines;
-      // the ▶ hint is the 5th conv line = 1-based row 6.
-      const consumed = handleMouseClick(ctx, 10, 6)
+      // 9 dim lines fold to [named header, last 3] = 4 conv lines (unified form);
+      // the header is the 1st conv line = 1-based row 2.
+      const consumed = handleMouseClick(ctx, 10, 2)
       assert.equal(consumed, true)
       assert.ok(state.expandedBlocks?.size > 0, "expandedBlocks populated")
       assert.equal(rendered, true)
@@ -154,7 +154,7 @@ describe("handleMouseClick — conversation line actions", () => {
   })
 
 describe("long-message folding (render-conversation)", () => {
-  it("a single long DIM line folds to [first, hint, last] and expands via click key", async () => {
+  it("a single long DIM line folds to [named header, tail 3] and expands via click key", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
     const { buildConvLines, convCacheKey } = await import("../src/tui/render-conversation.mjs")
     const state = {
@@ -164,15 +164,15 @@ describe("long-message folding (render-conversation)", () => {
     }
     const cols = 80
     const folded = buildConvLines(state, cols)
-    // 12-line threshold: full block = 1 + 15 + 1 = 17 lines → [4 lines, ▶, last] = 6
-    assert.equal(folded.length, 6, "long dim message folded to [first 4, ▶, last]")
-    assert.equal(folded[0].text, "L1", "block starts with real content (no blank separator)")
-    assert.equal(folded[3].text, "line2", "4th content line kept")
-    assert.ok(folded[4].text.startsWith("▶ … 12 more lines — "), "▶ control line at the ellipsis position, no indent")
-    assert.ok(!folded[4].text.startsWith(" "), "control line is flush with content (no indent)")
-    assert.ok(folded[4].text.includes("\x1b[4mclick to expand\x1b[24m"), "click phrase underlined")
-    assert.equal(folded[5].text, "last", "last content line kept")
-    const toggleKey = folded[4]._foldToggle
+    // Unified folded form (2026-08-30): [▶ header, last 3 lines] = 4 — NOT the
+    // legacy [first 4, anonymous ▶, last]. First lines are no longer kept.
+    assert.equal(folded.length, 4, "long dim message folded to [header, tail 3]")
+    assert.ok(folded[0].text.startsWith("▶ tool output · 17 lines — "), "named identity header")
+    assert.ok(!folded[0].text.startsWith(" "), "control line is flush with content (no indent)")
+    assert.ok(folded[0].text.includes("\x1b[4mclick to expand\x1b[24m"), "click phrase underlined")
+    assert.equal(folded[3].text, "last", "tail = last 3 content lines")
+    assert.ok(!folded.some((l) => l.text === "L1"), "first lines no longer shown in folded state")
+    const toggleKey = folded[0]._foldToggle
     assert.ok(toggleKey?.startsWith("long-"), "fold key is long-<srcIndex>")
 
     // Expand: add the key → [blank, ▼, full content]; cache key must change
@@ -189,57 +189,78 @@ describe("long-message folding (render-conversation)", () => {
     assert.equal(expanded[2].text, "L1", "content follows the marker")
     assert.ok(expanded[1].text.includes("\x1b[4mclick to collapse\x1b[24m"), "click phrase underlined")
 
-    // Collapse again: delete the key → back to [4 lines, ▶, last] (bidirectional)
+    // Collapse again: delete the key → back to [named header, tail 3] (bidirectional)
     state.expandedBlocks.delete(toggleKey)
     const reFolded = buildConvLines(state, cols)
-    assert.equal(reFolded.length, 6, "collapsed back")
+    assert.equal(reFolded.length, 4, "collapsed back to [header, tail 3]")
   })
 
-  it("MAIN OUTPUT and THINKING fold bidirectionally — they are the real long content", async () => {
+  it("MAIN OUTPUT (C.text) NEVER folds — primary content reads by scrolling (2026-08-30 ruling)", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
     const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
     const longText = "line0\n" + "content\n".repeat(20) + "end" // 22 wrapped lines > 12
 
-  it("completed reply stays expanded until the next turn starts (auto-expand lifecycle)", async () => {
+    const state = {
+      lines: [{ text: longText, color: C.text }],
+      streaming: "", reasoning: "", _advisorBlocks: [],
+      foldEnabled: true, expandedBlocks: new Set(), scroll: 0, search: null,
+    }
+    // No fold markers at all — the whole answer is always fully rendered
+    const out = buildConvLines(state, 80)
+    assert.equal(out.length, 22, "main output renders in full, never folded")
+    assert.ok(!out.some((l) => l._foldToggle), "no fold controls on main output")
+    assert.equal(out[0].text, "line0")
+    assert.equal(out[21].text, "end")
+
+    // THINKING (C.reason) still folds — unified form [named header, tail 3]
+    const rState = { ...state, lines: [{ text: longText, color: C.reason }] }
+    const rFolded = buildConvLines(rState, 80)
+    assert.equal(rFolded.length, 4, "thinking folds to [header, tail 3]")
+    assert.ok(rFolded[0].text.startsWith("▶ thinking · 22 lines — "), "named header")
+    const key = rFolded[0]._foldToggle
+    rState.expandedBlocks.add(key)
+    const rExpanded = buildConvLines(rState, 80)
+    assert.equal(rExpanded.length, 24, "thinking expands to [blank, ▼, 22 lines]")
+    rState.expandedBlocks.delete(key)
+    assert.equal(buildConvLines(rState, 80).length, 4, "thinking collapses back")
+  })
+
+  it("completed reasoning folds IMMEDIATELY on flush — no auto-expand exception (2026-08-30 ruling)", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
     const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
     const state = {
       lines: [],
       streaming: "", reasoning: "", _advisorBlocks: [],
-      foldEnabled: true, expandedBlocks: new Set(), _autoExpand: [], scroll: 0, search: null,
+      foldEnabled: true, expandedBlocks: new Set(), scroll: 0, search: null,
     }
-    const longText = "line0\n" + "content\n".repeat(20) + "end" // 22 wrapped lines > 12
+    const longText = "line0\n" + "content\n".repeat(20) + "end" // 22 wrapped lines > 3
 
-    // Completion moment (flushStream): push + add long-{idx} to expandedBlocks
-    const idx = state.lines.length
-    state.lines.push({ text: longText, color: C.text })
-    state.expandedBlocks.add(`long-${idx}`)
-    state._autoExpand.push(idx)
+    // Completion moment: flushStream pushes the reasoning line — it must render
+    // FOLDED right away. The old "stay expanded until next turn" bookkeeping is
+    // gone (rejected pre-fold plan leftover, user-ruled out with zero exceptions).
+    state.lines.push({ text: longText, color: C.reason })
     const justCompleted = buildConvLines(state, 80)
-    assert.equal(justCompleted.length, 24, "completed reply rendered EXPANDED (marker + 22 lines)")
-
-    // Next turn starts (runAgentTurn head): auto-expand markers cleared
-    for (const i of state._autoExpand) state.expandedBlocks.delete(`long-${i}`)
-    state._autoExpand = []
-    const nextTurn = buildConvLines(state, 80)
-    assert.equal(nextTurn.length, 6, "next turn renders FOLDED (first 4 + ▶ + last)")
-    assert.ok(nextTurn[4].text.startsWith("▶ … 17 more lines — "), "folded control line at the ellipsis position")
+    assert.equal(justCompleted.length, 4, "completed reasoning rendered FOLDED at once (named header + tail 3)")
+    assert.ok(justCompleted[0].text.startsWith("▶ thinking · 22 lines — "), "unified named header, no ▼/expanded state")
   })
 
-    for (const color of [C.text, C.reason]) {
+  it("long DIM lines fold bidirectionally", async () => {
+    const { C } = await import("../src/tui/ansi.mjs")
+    const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
+    const longText = "line0\n" + "content\n".repeat(20) + "end" // 22 wrapped lines > 12
+    for (const color of [C.dim]) {
       const state = {
         lines: [{ text: longText, color }],
         streaming: "", reasoning: "", _advisorBlocks: [],
         foldEnabled: true, expandedBlocks: new Set(), scroll: 0, search: null,
       }
-      // Folded: [first 4, ▶ hint (ellipsis position), last]
+      // Folded: unified [named header, tail 3]
       const folded = buildConvLines(state, 80)
-      assert.equal(folded.length, 6, `${JSON.stringify(color)} folds to [4, ▶, last]`)
-      assert.equal(folded[0].text, "line0", "block starts with real content")
-      assert.ok(folded[4].text.startsWith("▶ … 17 more lines — "), "▶ control line at the ellipsis position")
-      assert.ok(folded[4].text.includes("\x1b[4mclick to expand\x1b[24m"), "click phrase underlined")
-      assert.equal(folded[5].text, "end", "last content line kept")
-      const key = folded[4]._foldToggle
+      assert.equal(folded.length, 4, `${JSON.stringify(color)} folds to [header, tail 3]`)
+      assert.ok(folded[0].text.startsWith("▶ tool output · 22 lines — "), "named header")
+      assert.ok(folded[0].text.includes("\x1b[4mclick to expand\x1b[24m"), "click phrase underlined")
+      assert.equal(folded[3].text, "end", "tail = last 3 content lines")
+      const key = folded[0]._foldToggle
 
       // Expanded: [blank, ▼ at the HEAD, then full content]
       state.expandedBlocks.add(key)
@@ -249,7 +270,7 @@ describe("long-message folding (render-conversation)", () => {
 
       // Collapsed back
       state.expandedBlocks.delete(key)
-      assert.equal(buildConvLines(state, 80).length, 6, `${JSON.stringify(color)} collapses back`)
+      assert.equal(buildConvLines(state, 80).length, 4, `${JSON.stringify(color)} collapses back`)
     }
   })
 
@@ -261,13 +282,12 @@ describe("long-message folding (render-conversation)", () => {
       streaming: "", reasoning: "", _advisorBlocks: [],
       foldEnabled: true, expandedBlocks: new Set(), scroll: 0, search: null,
     }
-    // Folded: [dim0..dim3, ▶ hint, dim8]
+    // Folded: unified [named header, tail 3]
     const folded = buildConvLines(state, 80)
-    assert.equal(folded.length, 6)
-    assert.equal(folded[0].text, "dim0", "block starts with real content")
-    assert.ok(folded[4].text.startsWith("▶ … 4 more lines — "))
-    assert.equal(folded[5].text, "dim8", "last content line kept")
-    const foldKey = folded[4]._foldToggle
+    assert.equal(folded.length, 4)
+    assert.ok(folded[0].text.startsWith("▶ tool output · 9 lines — "))
+    assert.equal(folded[3].text, "dim8", "tail = last 3 content lines")
+    const foldKey = folded[0]._foldToggle
     assert.ok(foldKey?.startsWith("fold-"))
 
     // Expanded: [blank, ▼ marker, then all 9 lines]
@@ -304,5 +324,31 @@ describe("long-message folding (render-conversation)", () => {
       Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
       Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
     }
+  })
+})
+
+
+describe("historyToLines — 恢复会话渲染工具参数（2026-08-30 用户报告）", () => {
+  it("标题行 = 可读关键参数摘要；全量 pretty JSON 落 dim 行；畸形 args 不崩", async () => {
+    const { historyToLines } = await import("../src/tui/startup.mjs")
+    const history = [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "", tool_calls: [
+        { id: "t1", function: { name: "read", arguments: JSON.stringify({ path: "src/x.mjs", offset: 5 }) } },
+        { id: "t2", function: { name: "bash", arguments: JSON.stringify({ command: "npm test" }) } },
+        { id: "t3", function: { name: "mcp__srv__tool", arguments: JSON.stringify({ q: 1, w: 2 }) } },
+      ]},
+      { role: "tool", tool_call_id: "t1", content: "content" },
+    ]
+    const lines = historyToLines(history, 0, history.length).map((l) => l.text)
+    assert.ok(lines.some((t) => t.includes("[tool] read — \"src/x.mjs\"") && t.includes("offset 5")), "read 标题行含路径+选项")
+    assert.ok(lines.some((t) => t.includes("[tool] bash — npm test")), "bash 标题行含命令")
+    assert.ok(lines.some((t) => t.includes("[tool] mcp__srv__tool — ")), "未知工具回退 JSON 摘要")
+    assert.ok(lines.some((t) => t.includes("\"path\": \"src/x.mjs\"")), "全量 JSON 行存在")
+    assert.ok(lines.some((t) => t.includes("\"command\": \"npm test\"")), "bash 全量 JSON 行存在")
+    const bad = [{ role: "user", content: "x" }, { role: "assistant", content: "", tool_calls: [{ id: "t", function: { name: "read", arguments: "{broken" } }] }]
+    const badLines = historyToLines(bad, 0, bad.length).map((l) => l.text)
+    assert.ok(badLines.some((t) => t === "  [tool] read"), "畸形 args 不崩，标题行（无摘要）仍在")
+    assert.ok(badLines.some((t) => t.includes("{broken")), "原始参数串落 dim 行（降级可见）")
   })
 })

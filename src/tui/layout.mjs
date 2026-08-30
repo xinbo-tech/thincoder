@@ -3,8 +3,9 @@
  * Computes position and height of each panel from state + terminal dimensions.
  * Does not modify state — side effects are performed by the caller before rendering.
  *
- *   header → conversation → subagent → output → todo → picker → permission → queue → input → status
- *   header → conversation → todo → subagent → output → picker → permission → queue → input → status
+ *   header → conversation → todo → picker → permission → queue → input → status
+ * Subagent activity renders INSIDE the conversation as collapsible blocks
+ * (AGENT-LOOP.md §7.2 D4) — no dedicated subagent/output panels anymore.
  * Fixed panels deducted first, conditional panels allocated by priority, remaining space to conversation.
  */
 import { layoutInput, wrapText } from "./render.mjs"
@@ -19,7 +20,6 @@ function optText(opt) {
 
 const MAX_INPUT_LINES = 5
 const MAX_TASK_LINES = 5
-export const MAX_SUB_LINES = 4
 const QWIN = 5
 
 /**
@@ -72,16 +72,7 @@ export function computeLayout(state, { cols, rows }) {
   }
   const taskPanelH = visibleTasks.length
 
-  // Subagent (only visible during processing; height matches what's actually rendered)
-  const allSubs = state.processing ? Object.values(state.subTasks) : []
-  const subPanelH = allSubs.length > 0
-    ? Math.min(allSubs.length, MAX_SUB_LINES) + (allSubs.length > MAX_SUB_LINES ? 1 : 0)
-    : 0
-
-  // Tool output panels: max 9 lines per panel (1 title + 8 content), capped at reasonable total.
-  // Done panels stay visible until their closeAt grace elapses (render loop prunes them).
-  const panels = Object.values(state.outputPanels ?? {}).filter((p) => !p.done || (p.closeAt ?? 0) > Date.now())
-  const outputPanelsH = panels.length > 0 ? Math.min(panels.length * 9, rows - 10) : 0
+  // Subagent activity: rendered inside the conversation (§7.2 D4) — no panel slot.
 
   // Permission preview (height depends on wrapped content)
   let permPreviewLines = []
@@ -101,7 +92,7 @@ export function computeLayout(state, { cols, rows }) {
   const queueH = state.queue.length > 0 && state.processing ? 1 : 0
 
   // --- elastic panel: conversation takes remaining space ---
-  const fixedH = headerH + inputBoxH + statusH + pickerH + taskPanelH + subPanelH + outputPanelsH + permPreviewH + queueH
+  const fixedH = headerH + inputBoxH + statusH + pickerH + taskPanelH + permPreviewH + queueH
   let convH = Math.max(1, rows - fixedH)
 
   // 小终端高度补偿：先压 conversation 到最小 1 行，再压 picker 到最小 3 行，
@@ -126,8 +117,6 @@ export function computeLayout(state, { cols, rows }) {
   let y = 0
   const header = { y, h: headerH }; y += headerH
   const conversation = { y, h: convH }; y += convH
-  const subagent = subPanelH > 0 ? { y, h: subPanelH } : null; y += subPanelH
-  const output = outputPanelsH > 0 ? { y, h: outputPanelsH } : null; y += outputPanelsH
   const todo = taskPanelH > 0 ? { y, h: taskPanelH } : null; y += taskPanelH
   const picker = pickerFinalH > 0 ? { y, h: pickerFinalH } : null; y += pickerFinalH
   const permission = permFinalH > 0 ? { y, h: permFinalH } : null; y += permFinalH
@@ -137,13 +126,12 @@ export function computeLayout(state, { cols, rows }) {
 
   return {
     W, cols, rows,
-    panels: { header, conversation, picker, todo, subagent, output, permission, queue, inputBox, status },
+    panels: { header, conversation, picker, todo, permission, queue, inputBox, status },
     // precomputed content (affects height, reused during render)
     inputLayout,
     inputOffset,
     boxLines,
     visibleTasks,
-    allSubs,
     permPreviewLines,
     overlay,
   }

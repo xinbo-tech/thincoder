@@ -209,6 +209,11 @@ const ANSI_SEQUENCE_RE = new RegExp(ANSI_SEQUENCE.source, "g")
 export function sanitizeDisplay(s) {
   return s
     .replace(ANSI_SEQUENCE_RE, "")
+    // §7.2 D5 fallback: an unparsed ⟦ev⟧ event token must never reach the grid —
+    // strip the sentinel + its RS-wrapped payload (⟦ev⟧turn\x1e…\x1e / bare RS/GS chars).
+    .replace(/⟦ev⟧[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e?/g, "")
+    .replace(/⟦ev⟧[^\x1e\x1d]*/g, "")
+    .replace(/[\x1d\x1e]/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/\t/g, "    ")

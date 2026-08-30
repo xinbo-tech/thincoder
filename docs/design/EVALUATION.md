@@ -1,5 +1,7 @@
 # ThinCoder vs 主流编程智能体 — 评估报告
 
+> **归档快照（2026-07-29 时点数据，勿引用为现状）**：数字与断言均截至评估当日——多项已被后续迭代推翻（maxTurns 100→200、LSP 工具/ACP/VS Code 扩展均已交付、测试数已远超 153）。现状以 ARCHITECTURE.md / FEATURES.md 为准；时点竞评见 COMPETITIVE-CLI-2026.md（同为归档）。
+
 **日期**：2026-07-29  
 **评估者**：ThinCoder（自评，基于公开文档与源码审计）
 

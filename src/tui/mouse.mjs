@@ -16,6 +16,7 @@
  */
 import { computeLayout } from "./layout.mjs"
 import { buildConvLines } from "./render-conversation.mjs"
+import { toggleFoldBlock } from "./fold-block.mjs"
 
 /** Extract left-click presses from a chunk. Returns [{ col, row }] (1-based). */
 export function parseMouseClicks(text) {
@@ -68,15 +69,14 @@ export function handleMouseClick(ctx, col, row) {
 
   // ── Conversation: click a fold marker (expand hint or collapse marker) toggles it ──
   if (r >= P.conversation.y && r < P.conversation.y + P.conversation.h) {
-    const convLines = buildConvLines(state, dims.cols)
+    const convLines = buildConvLines(state, dims.cols, dims.rows)
     const gIdx = convGlobalIndex(convLines.length, P.conversation.h, state.scroll ?? 0)(r - P.conversation.y)
     if (gIdx === null) return false
     const lineEl = convLines[gIdx]
     if (!lineEl?._foldToggle) return false
-    state.expandedBlocks ??= new Set()
-    // Bidirectional: click expands a folded block, collapses an expanded one
-    if (state.expandedBlocks.has(lineEl._foldToggle)) state.expandedBlocks.delete(lineEl._foldToggle)
-    else state.expandedBlocks.add(lineEl._foldToggle)
+    // Bidirectional toggle — single source in fold-block.mjs (expand a folded
+    // block, collapse an expanded one).
+    toggleFoldBlock(state, lineEl._foldToggle)
     render()
     return true
   }

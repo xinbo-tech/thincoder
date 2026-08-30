@@ -82,8 +82,8 @@ export async function startTUI(agent, opts = {}) {
     ctxCache: { len: -1, tokens: 0 }, // context utilization estimate cache (estimateTokens is O(n), only recompute when history grows)
     reasoning: "", // thinking stream buffer (dimmed display)
     completion: null, // Tab completion state { candidates, index }
-    _autoExpand: [], // indices of completed replies kept expanded; cleared when the next user turn starts
-    subTasks: {}, // sub-agent panel: { roleName: { role, text, done } }, one line per role, marked done briefly after completion
+
+    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer
     currentTool: null, // currently executing tool name (shown in status bar)
     processingStarted: 0, // current turn start time (status bar timer)
     status: "Ready",
@@ -272,7 +272,7 @@ export async function startTUI(agent, opts = {}) {
     if (start >= end) return
 
     const cols = process.stdout.columns || 80
-    const before = countConvLines(state, cols)
+    const before = countConvLines(state, cols, process.stdout.rows || 24)
 
     // Drop the old placeholder, prepend the older page, re-add the placeholder
     // (with an updated count) only if more remain.
@@ -286,7 +286,7 @@ export async function startTUI(agent, opts = {}) {
 
     // Scroll compensation: prepending N display rows must move scroll by N to
     // keep the previously-visible bottom-anchored content in place.
-    const after = countConvLines(state, cols)
+    const after = countConvLines(state, cols, process.stdout.rows || 24)
     state.scroll += Math.max(0, after - before)
     render()
   }
@@ -319,9 +319,8 @@ export async function startTUI(agent, opts = {}) {
     if (!text) return
     state.input = []
     state.cursor = 0
-    state.history.push(text)
     const wasInHistory = state.historyIndex !== -1
-    state.history.push(text)
+    state.history.push(text) // review #3 fix: single push (was duplicated — every submit appeared twice in ↑/↓ history)
     state.historyIndex = -1
     if (!wasInHistory) state._draft = null // submitted — the draft is now history. Keep draft when submitting from history mode (↓ can recover)
     state.scroll = 0

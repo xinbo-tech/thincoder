@@ -70,6 +70,10 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       // Strip the subagent `[model]` metadata token (role#id/[model]<name>) — it's a
       // TUI/webview display signal, not conversation content, and must not reach ACP clients.
       if (/^[\w-]+#\d+\/\[model\]/.test(text)) return
+      // D7 (AGENT-LOOP.md §7.2): strip ⟦ev⟧ event tokens (bare or prefixed variants) —
+      // they carry RS control characters and are a TUI display signal; structured ACP
+      // mapping (tool_call_update) is tracked separately in docs/TODO.md.
+      if (/^(?:[\w-]+#\d+\/)?⟦ev⟧(?:turn|approval)\x1e/.test(text)) return
       update("agent_message_chunk", { content: { type: "text", text } })
     },
     onReasoning: (text) => update("agent_thought_chunk", { content: { type: "text", text } }),

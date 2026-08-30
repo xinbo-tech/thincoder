@@ -34,10 +34,17 @@
     "agent": {
       "type": "object",
       "properties": {
-        "maxTurns": { "type": "integer", "default": 100, "minimum": 1 },
+        "maxTurns": { "type": "integer", "default": 200, "minimum": 1, "description": "Main agent turn cap (200 since 2026-08-24, AGENT-PARAMS)" },
         "subagentTurns": { "type": "integer", "default": 100, "minimum": 1 },
         "goalTurns": { "type": "integer", "default": 200, "minimum": 1 },
-        "compactThreshold": { "type": "integer", "description": "Context compaction threshold (tokens). Set to override auto-detection." },
+        "compactThreshold": { "type": "integer", "description": "Context compaction threshold (tokens). Set to override auto-detection (auto = model context × 0.6)." },
+        "engineering": { "type": "boolean", "default": false, "description": "Engineering mode CLI-compat mirror (2026-08-29: the session slot is the authority)" },
+        "subagentModel": { "type": "string", "description": "Global subagent model fallback ('provider:model' | provider | model)" },
+        "subagentModels": { "type": "object", "description": "Per-role subagent model slots (explore/plan/coder/eng-coder)" },
+        "consultModels": { "type": "array", "maxItems": 5, "items": { "type": "object", "required": ["provider", "model"], "properties": { "provider": { "type": "string" }, "model": { "type": "string" }, "effort": { "type": "string" } } }, "description": "Consultation pool (also the escalate candidates)" },
+        "consultTurns": { "type": "integer", "default": 40 },
+        "consultTimeoutMs": { "type": "integer", "default": 600000 },
+        "streamPreviewLines": { "type": "integer", "description": "Tool output block rolling preview line count (default 5)" },
         "verifyGuard": { "type": "boolean", "default": false, "description": "Push model to verify mutated files before completion" },
         "streamRules": {
           "type": "array",
@@ -55,11 +62,13 @@
         "advisor": {
           "type": "object",
           "properties": {
-            "enabled": { "type": "boolean", "default": false },
+            "guard": { "type": "boolean", "default": false, "description": "Push back at completion when code changed without a review (advisor.enabled is deprecated — reviews are always available)" },
+            "timeoutMs": { "type": "integer", "minimum": 1, "description": "Whole-review wall clock in ms (default 600000, AGENT-PARAMS)" },
             "provider": { "type": "string", "description": "Override provider for advisor" },
             "model": { "type": "string", "description": "Override model for advisor" }
           }
         },
+        "shell": { "type": "string", "description": "Custom shell for the bash tool (null/unset = platform default: cmd on Windows with UTF-8 chcp prefix, /bin/sh elsewhere)" },
         "autoThink": { "type": "boolean", "default": false, "description": "Auto-classify task difficulty per turn" }
       }
     },
@@ -107,6 +116,15 @@
             }
           }
         }
+      }
+    },
+    "proxy": {
+      "type": "object",
+      "description": "HTTP proxy (PROXY.md)",
+      "properties": {
+        "uri": { "type": "string", "description": "Proxy address (http://host:port)" },
+        "web": { "type": "boolean", "default": true, "description": "Route web tools (fetch/websearch) through the proxy" },
+        "model": { "type": "boolean", "default": false, "description": "Route LLM requests through the proxy (needs provider-level proxy:true too)" }
       }
     },
     "hooks": {

@@ -69,7 +69,7 @@ escalate
   - model (optional): 指定候选池中的模型（provider:model 格式）；缺省 = 候选池第一个
 → 同步执行：spawn 可写子 agent（role "coder" + 候选 effort）
 → 返回子 agent 的最终报告（术后病历：改动清单 / 理由 / 验证结果 + Touched files）
-→ 子 agent 活动流通过 relay 前缀 `escalate#<id>/` 进 TUI subTasks 面板
+→ 子 agent 活动流通过 relay 前缀 `escalate#<id>/` 进 TUI 子 agent 活动区块（§7.2 D4 会话流内可折叠块）
 ```
 
 ### 2.3 CLI 与插件的实现差异
@@ -80,7 +80,7 @@ escalate
 | 子 agent 构建 | runAgent 内部 createAgent + `stateSink` | 显式 `createAgent({ provider, tools, config, cwd, memory, overlay:CODER_OVERLAY, role:"coder" })` |
 | provider 解析 | `buildProvider(m.provider)` | `resolveChildProvider(parent, "provider:model")` |
 | 改动合并 | `mergeChildMutations(parent, sink)`（state sink） | `mergeChildMutations(parent, child)`（child agent 对象） |
-| 活动流上屏 | `onSubagent` / `onToolPanel` → webview | relay 前缀 `escalate#<id>/` → TUI subTasks 面板 |
+| 活动流上屏 | `onSubagent` / `onToolPanel` → webview | relay 前缀 `escalate#<id>/` → TUI 子 agent 活动区块（§7.2 D4；原 subTasks 窄带已退役） |
 | ContinueError | `agentMod.ContinueError` 判断 partial work | `ContinueError`（agent.mjs 导出）判断 partial work |
 | 配置入口 | 设置面板 | `/config` 命令 |
 
@@ -91,7 +91,7 @@ escalate
 - **深度护栏**：`(ctx.depth ?? 0) > 0` 拒绝（飞刀不能再飞刀）。
 - **工程模式禁飞刀**：engineering mode 下 spawn coder 子 agent 是设计禁止的，fail-closed 指向 eng-coder。
 - **无墙钟看门狗**：完全依赖 turn 上限（`subagentTurns` ?? 100），与 subagent 写路径对齐——固定墙钟会误杀正常但慢的手术（2026-08-16 会诊实测：两个 max-effort 顾问仅读 5 个文件即撞 10min 墙）。挂死防护由 FETCH_TIMEOUT_MS（单 LLM 调用）+ 用户 Stop（父 signal 直传子）覆盖。
-- **撞墙后用户可选继续**：子 agent 撞 turn 上限（`ContinueError`）时，复用子 agent 写审批的同一通道 `ctx.onPermissionRequest("continue", { turns })` 弹"继续?"——name `"continue"` 在 TUI 渲染主 agent 同款 y/n Continue 面板（tui/agent-turn.mjs 同款机制）。用户选继续则以 `resume: true` 续跑：runAgent 不重复注入任务文本（setup.mjs resume 分支跳过 input push），child history 与 mutation 簿记保留，预算重置为一轮完整 `maxTurns`。续跑上限 `MAX_RESUMES = 2`，超限或用户放弃或 headless 无回调时退回 partial work 话术。
+- **撞墙后用户可选继续**：子 agent 撞 turn 上限（`ContinueError`）时，复用子 agent 写审批的同一通道 `ctx.onPermissionRequest("continue", { turns })` 弹"继续?"——name `"continue"` 在 TUI 渲染主 agent 同款 y/n Continue 面板（tui/agent-turn.mjs 同款机制）。用户选继续则以 `resume: true` 续跑：runAgent 不重复注入任务文本（setup.mjs resume 分支跳过 input push），child history 与 mutation 簿记保留，预算重置为一轮完整 `maxTurns`。~~续跑上限 `MAX_RESUMES = 2`~~（已删——TURN-CAP-CONTINUE.md 用户决定所有 agent 撞墙可无限继续，次数不设上限）超限或用户放弃或 headless 无回调时退回 partial work 话术。
 - **用户 Stop 传播**：AbortError 向上 rethrow，不吞掉。
 
 ### 2.5 受影响文件
@@ -132,5 +132,5 @@ escalate
 | 改动合并 | 子 agent mutate 重置父级 verify/advisor 预算 + touchedFiles 并入 |
 | 失败也合并 | 中途崩溃仍合并已 touch 的文件 |
 | 用户 Stop | AbortError 向上传播 |
-| ContinueError | 撞墙后用户可选继续（复用 onPermissionRequest 通道，`resume:true` 续跑不重复注入任务，上限 2 次）；放弃/headless 读作 partial work（stopped） |
+| ContinueError | 撞墙后用户可选继续（复用 onPermissionRequest 通道，`resume:true` 续跑不重复注入任务，次数不设上限——TURN-CAP-CONTINUE.md）；放弃/headless 读作 partial work（stopped） |
 | 无墙钟 | turn 帽 + 撞墙继续选择；用户 Stop 经父 signal 直传 |

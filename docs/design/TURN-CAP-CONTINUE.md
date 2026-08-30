@@ -34,4 +34,4 @@
 ## 边界
 
 - 继续次数不设上限（用户明确要求）；防卡死靠用户 Ctrl+C
-- CLI explore 全预算 vs 插件 explore 封顶 30 的不一致不在本次范围
+- CLI explore 全预算 vs 插件 explore 封顶 30 的不一致——已解决（AGENT-PARAMS 2026-08-24：30 硬帽移除，explore 走 `subagentTurns`）

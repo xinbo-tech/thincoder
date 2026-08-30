@@ -143,6 +143,20 @@ if (agent._mutatedThisRun        // ① 本 run 改过代码
 
 `.thincoder/advisor.md` 提供评审准则覆盖；`config.json` 中 `advisor.provider` / `advisor.model` 可选覆盖主 agent 的 provider。
 
+## 变更记录
+
+### 2026-08-30：评审提示词提速——预算压缩 + 删 caller 追踪步骤（用户拍板 A + 删第四步）
+
+**需求**（用户报告：文档审核与代码审核执行时间都非常长）：advisor 耗时 = 每轮 LLM 时间 × 工具轮数，提示词控制后者。两处放大器：① round1 预算 30 轮 + 里程碑引导（8/15/25），模型照着预算花满；② round1 工作流第 4 步 "Use grep or lsp to trace callers, imports, and dependencies — only where genuinely needed"——"genuinely needed" 是弱闸，模型大量执行调用方/导入追踪（每轮一次 LLM 往返）。round2/3 同款追踪条款与 30/15 预算同步改，否则口径分裂。
+
+**设计**（两端 `src/prompts/advisor-round*.md` byte-identical）：
+- 预算压缩（方案 A）：round1 30→**20** 轮，里程碑 8/15/25 → 6/10/17；round2/round3 30→**15** 轮，收敛兜底 15→**8**。硬帽 100 不动（host 机械止损不变）。
+- 删 caller 追踪步骤：round1 工作流删原第 4 步（grep/lsp trace callers）→ 5 步变 4 步；round2/3 删同款条款 → 6 步变 5 步。**明确不做**：§6 需求契合度检查（两对照）与证据引用纪律不动——评审质量红线保留，砍的是探索性追踪，不是证据链。
+
+**已知代价（接受）**：调用方/导入级 bug 的发现率会降（原第 4 步的价值面）；以评审速度换覆盖深度，用户拍板。
+
+**受影响文件**：`src/prompts/advisor-round1.md`（49→48 行）、`advisor-round2.md`（37→36 行）、`advisor-round3.md`（33→32 行）（两端各一份，共 6 个文件）。验证：CLI 全量 787/787 全绿、vscode 全量 783/783 全绿、CLI lint 0 error、三份文件两端 byte-identical。无既有测试断言旧预算值（advisor.test.mjs 87 条不涉及提示词预算文案），无需断言更新。
+
 ## 工程模式（engineering mode）集成
 
 工程模式（`agent.engineering: true`）承诺 "Advisor is mandatory at both design and code gates"，机械强制链如下：

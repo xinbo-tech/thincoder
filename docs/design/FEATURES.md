@@ -16,12 +16,11 @@
 | `apply_patch` | 统一 diff 多文件原子应用，任意 hunk 失败全回滚 |
 | `delete` | 删除文件，git 跟踪文件需 force |
 
-## 二、代码质量（3 个）
+## 二、代码质量（2 个）
 
 | 工具 | 说明 |
 |------|------|
-| `syntax_check` | `node --check` 毫秒级语法检查 |
-| `linter` | 自动检测项目 linter（eslint/tsc/ruff/cargo/go vet） |
+| `linter` | 自动检测项目 linter（node --check 快路径 + eslint/tsc/ruff/cargo/go vet 级联）——已取代旧 syntax_check |
 | `verify` | 预完成自检：语法检查+diff+自审清单，支持 `full=true` 全量测试 |
 
 ## 三、Shell 与搜索（5 个）
@@ -102,7 +101,7 @@
 | `/help` | 命令列表 |
 | `/upgrade` | 检查更新 |
 
-## 十、模型适配（5 家供应商，10+ 模型）
+## 十、模型适配（17 家供应商预设，30+ 模型）
 
 | 供应商 | 模型示例 | 特性 |
 |--------|---------|------|
@@ -126,7 +125,7 @@
 | Ctrl+C 中断 | 中断+退出，或仅中断（processing 时） |
 | 粘贴 | Ctrl+V 文本粘贴，Alt+V 图片粘贴（视觉模型） |
 | Picker 菜单 | 模型选择、配置、Session 切换等统一菜单 |
-| Panel | 子 agent 面板、task 面板、bash 输出面板 |
+| 行间区块与面板 | 工具输出 = 行间区块（`❯ title` → `│ ` 滚动 → done 行，面板区已废除）；todo 面板常驻；子 agent 活动 = 会话流内可折叠区块（TUI-TOOL-OUTPUT.md、AGENT-LOOP §7.2） |
 | Session 恢复 | 启动时恢复上次会话，显示对话历史 |
 
 ## 十二、Session 与会话
@@ -143,7 +142,7 @@
 | 机制 | 说明 |
 |------|------|
 | 工作目录限定 | read/write/edit 禁止越界，realpath 双重校验 |
-| bash 安全 | 危险命令拦截（rm -rf /、git push -f、链式危险写法） |
+| bash 安全 | 零文本拦截（文本匹配是安全剧场）——真实防线 = 审批层 + git 破坏命令自动快照；detectDanger 危险标注只提示不拦截 |
 | verify guard | 改文件未 verify → pushback 强行要验证（最多 2 次） |
 | prompt 注入防护 | escapeXml + `<untrusted_*>` 标签隔离外部内容 |
 | 视觉模型守卫 | 非视觉模型自动剥离 image_url，防 400 |

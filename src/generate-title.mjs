@@ -7,6 +7,15 @@
  * see docs/design/SESSION.md §IK9UZ8-D.
  */
 
+import { proxyFetch } from "./proxy.mjs"
+
+// Test seam (_-prefix, mirrors run.mjs seams): lets the proxy-branch regression
+// test swap the proxy fetch. The branch it exercises used to carry a dynamic
+// import("../proxy.mjs") that silently resolved to the REPO ROOT from src/ —
+// the thrown ERR_MODULE_NOT_FOUND vanished into the catch, and proxy users
+// lost session titles with zero test coverage (2026-08-30 review).
+export const _deps = { proxyFetchImpl: proxyFetch }
+
 const MAX_TITLE_TOKENS = 100
 
 /** Generate a session title from the first user message using an LLM. Returns title string or null. */
@@ -42,7 +51,7 @@ export async function generateTitle(userContent, provider) {
       signal: AbortSignal.timeout(10000),
     }
     const res = provider.proxyUri
-      ? await (await import("../proxy.mjs")).proxyFetch(url, opts, provider.proxyUri)
+      ? await _deps.proxyFetchImpl(url, opts, provider.proxyUri)
       : await fetch(url, opts)
     if (!res.ok) return null
     const data = await res.json()
@@ -51,4 +60,24 @@ export async function generateTitle(userContent, provider) {
   } catch {
     return null
   }
+}
+
+/** Derive + assign the session title from the first user message (once per session).
+ *  Extracted from agent-turn.mjs's finally block (2026-08-30): the lookup + call +
+ *  assign belongs beside generateTitle, not in the turn driver. Non-fatal on
+ *  failure — title generation must never break the turn. Returns the title (or null). */
+export async function ensureSessionTitle(agent) {
+  if (agent.title) return agent.title
+  try {
+    const firstUser = (agent._fullHistory ?? agent.history).find(
+      (m) => m.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:"),
+    )
+    if (firstUser) {
+      const title = await generateTitle(firstUser.content, agent.provider)
+      if (title) agent.title = title
+    }
+  } catch {
+    // Title generation failure is non-fatal
+  }
+  return agent.title ?? null
 }

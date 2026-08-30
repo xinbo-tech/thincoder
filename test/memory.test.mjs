@@ -5,6 +5,7 @@
  * and incremental indexing.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { join } from "node:path"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs"
@@ -163,7 +164,7 @@ test("hybrid: 向量通道 + RRF + 惰性 embedding", async () => {
 
 // ---------------------------------------------------------------- team 层（本地裸仓库模拟远端）
 
-test("team 层: 双 clone 同步 + 冲突诚实报错", async () => {
+slow("team 层: 双 clone 同步 + 冲突诚实报错", async () => {
   const { execFileSync } = await import("node:child_process")
   const { ensureClone, pullTeam, commitAndPush } = await import("../src/git/gitmem.mjs")
   const { writeFileSync, readFileSync } = await import("node:fs")
@@ -227,7 +228,7 @@ test("team 层: 双 clone 同步 + 冲突诚实报错", async () => {
 
 // ========== 代码索引 ==========
 
-test("codeSync: 索引 → 检索 FTS5 → 文件变更后重建 → 文件消失后清理", async () => {
+slow("codeSync: 索引 → 检索 FTS5 → 文件变更后重建 → 文件消失后清理", async () => {
   const { codeSync, codeSearch } = await import("../src/memory.mjs")
   const { writeFile, unlink, mkdir } = await import("node:fs/promises")
   const m = freshMemory()
@@ -419,7 +420,7 @@ test("docSearch: 空查询返回空", async () => {
 
 // ========== 依赖大纲 ==========
 
-test("repo_outline: 全量大纲 + 聚焦查询", async () => {
+slow("repo_outline: 全量大纲 + 聚焦查询", async () => {
   const { codeSync } = await import("../src/memory.mjs")
   const { buildOutline, repoOutlineTool } = await import("../src/tools/repomap.mjs")
   const { writeFile, mkdir } = await import("node:fs/promises")
@@ -523,7 +524,7 @@ test("reindexFile: write 后单文件增量索引", async () => {
   }
 })
 
-test("gitSync: git diff 驱动增量索引，二次调用无变更", async () => {
+slow("gitSync: git diff 驱动增量索引，二次调用无变更", async () => {
   const { codeSync, codeSearch, gitSync } = await import("../src/memory.mjs")
   const { writeFile } = await import("node:fs/promises")
   const { execSync } = await import("node:child_process")

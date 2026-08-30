@@ -3,6 +3,7 @@
  * 覆盖：markdown 解析、task 工具、会话持久化、配置推导、runAgent。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -84,7 +85,7 @@ test("task: 更新 agent 任务列表并触发回调", async () => {
 
 // ---------------------------------------------------------------- 会话持久化
 
-test("session: 保存/恢复/新建 往返（基于槽位）", async () => {
+slow("session: 保存/恢复/新建 往返（基于槽位）", async () => {
   const { saveSession, loadSession, newSession, activePath, sessionPath } = await import("../src/session.mjs")
   const cwd = join(tmpdir(), "thincoder-session-test-" + Date.now())
   const agent = {
@@ -1597,7 +1598,7 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
   }
 })
 
-test("runAgent: explore 子 agent 注入 git 上下文", async () => {
+slow("runAgent: explore 子 agent 注入 git 上下文", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const { execSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-gitctx-"))
@@ -2075,7 +2076,7 @@ test("context: 摘要生成对前端静默（不转发 onToken/onReasoning）", 
   }
 })
 
-test("runAgent: 依赖摘要注入（紧凑版 + 每会话只注一次）", async () => {
+slow("runAgent: 依赖摘要注入（紧凑版 + 每会话只注一次）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const { codeSync } = await import("../src/memory.mjs")
   const { writeFile } = await import("node:fs/promises")
@@ -3028,6 +3029,17 @@ test("prompts/system.md: 确认理解句含 most important acceptance criteria",
   assert.ok(line.includes("Wait for confirmation"), "其余语义保留")
 })
 
+test("prompts/system.md: 设计文档即契约——不许执行期静默降级（2026-08-30）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+  assert.ok(text.includes("This binding is UNCONDITIONAL and does not wait for a formal confirmation round"), "绑定无条件——不等正式确认轮")
+  assert.ok(text.includes("every requirement the user states — mid-conversation, in a design doc, or in a confirmed plan — binds the moment it is stated"), "会话直述要求即刻生效（堵会话内降级缝隙）")
+  assert.ok(text.includes("A stated request IS the contract"), "陈述即契约")
+  assert.ok(text.includes("implementation may not quietly shrink it"), "实现不得悄悄缩水")
+  assert.ok(text.includes("implement it anyway and note the cost, or stop and surface the trade-off BEFORE building the reduced version"), "贵也要实现，或实现前呈报权衡")
+  assert.ok(text.includes("Disclosing a downgrade after delivery is not compliance"), "交付后披露 ≠ 合规")
+  assert.ok(text.includes("reported instead of avoided"), "披露义务是防患不是善后")
+})
+
 // ---------------------------------------------------------------- 开工前计划确认纪律（2026-08-21）
 test("prompts/system.md: 确认纪律 — 写文件动作清单 + 门禁 + doc/code 一致性豁免", () => {
   const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
@@ -3096,6 +3108,45 @@ test("prompts/engineering.md: METHODOLOGY 测试文档是交付评审的一部�
   assert.ok(text.includes("METHODOLOGY test document is part of the delivery"), "交付评审要求测试文档")
   assert.ok(text.includes("normal / edge / error"), "覆盖三态点名")
   assert.ok(text.includes("a delivery without\n   its test coverage fails the review"), "无测试覆盖 = 交付评审不通过")
+})
+
+test("prompts/engineering.md: 委托引导（explore/plan 下沉 + 精度例外 + 并行互斥 + escalate 不可用）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("goes to an `explore` subagent"), "广度探索 → explore 委托")
+  assert.ok(text.includes("quick / medium / thorough"), "彻底度三档")
+  assert.ok(text.includes("never enter your history"), "隔离收益点破")
+  assert.ok(text.includes("about to edit it immediately"), "精度例外")
+  assert.ok(text.includes("same\n  file — conflicts waste"), "并行子 agent 不编辑同一文件")
+  assert.ok(text.includes("Do NOT redo the exploration you already delegated"), "不重做已委托的探索")
+  assert.ok(text.includes("`escalate` is unavailable in engineering mode"), "escalate 不可用（与 setup.mjs fail-closed 一致）")
+  assert.ok(text.includes("`consult` stays available"), "consult 保留可用")
+})
+
+test("prompts/engineering.md: 首次交付偏差审计 + eng-coder 修正轮（2026-08-30 用户裁定）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("7. **Divergence audit"), "流程 step 7 = 偏差审计（自动节点）")
+  assert.ok(text.includes("do NOT go straight to the delivery review"), "首次交付不直接进交付评审")
+  assert.ok(text.includes('spawn an `explore` subagent'), "审计走 explore 子 agent")
+  assert.ok(text.includes("silent simplifications"), "审计点名静默简化")
+  assert.ok(text.includes("SECOND time with the\n     divergence list as the task brief"), "偏差 → eng-coder 二次修正轮")
+  assert.ok(text.includes("invent nothing new"), "修正轮不发明新需求（审计报告即全部任务）")
+  assert.ok(text.includes("verify the\n     divergence list point by point"), "修正轮交付逐点核销")
+  assert.ok(text.includes("First delivery audit"), "工作循环状态表含审计态")
+})
+
+test("prompts/eng-coder.md: 实现保真——不许静默降级（2026-08-30）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "eng-coder.md"), "utf8")
+  assert.ok(text.includes("Implement to the full design — no silent degradation"), "正面禁止句在")
+  assert.ok(text.includes("implement it anyway and note the cost"), "贵也要实现+报告成本")
+  assert.ok(text.includes("A \"simpler\n  approximation\" of a specified behavior IS a deviation"), "近似实现 = 偏离")
+  assert.ok(text.includes("BEFORE coding —\n  never ship a reduced version and disclose it afterwards"), "先停下呈报，不许事后披露降级交付")
+  assert.ok(text.includes("the parent approved the design, not your\n  discount"), "点破：批准的是设计不是折扣")
+})
+
+test("prompts/eng-coder.md: 交付自查第 6 项——设计文档结构快照回写（2026-08-30）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "eng-coder.md"), "utf8")
+  assert.ok(text.includes("6. Update the affected design-doc sections"), "自查第 6 项在")
+  assert.ok(text.includes("module map / affected-files table"), "模块地图/受影响文件表点名")
 })
 
 test("agent/setup.mjs: METHODOLOGY 缺失警告点名后果而非仅缺席（2026-08-29）", () => {
@@ -3212,7 +3263,7 @@ const READ_TRIPLE = [
   { toolCall: { name: "read", arguments: JSON.stringify({ path: "c.txt" }) } },
 ]
 
-test("runAgent: 轮末返回不等待蒸馏——5s 慢蒸馏 <1s 返回（AC1）", async () => {
+slow("runAgent: 轮末返回不等待蒸馏——5s 慢蒸馏 <1s 返回（AC1）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const readTool = {
     name: "read", description: "read a file",
@@ -3242,7 +3293,7 @@ test("runAgent: 轮末返回不等待蒸馏——5s 慢蒸馏 <1s 返回（AC1�
   }
 })
 
-test("runAgent: 下一轮开头 await 蒸馏——第二轮起点是压缩版，输入不被替换清掉（AC2/N1）", async () => {
+slow("runAgent: 下一轮开头 await 蒸馏——第二轮起点是压缩版，输入不被替换清掉（AC2/N1）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const readTool = {
     name: "read", description: "read a file",

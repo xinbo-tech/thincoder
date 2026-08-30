@@ -3,6 +3,7 @@
  * Handlers get a minimal mock ctx (same pattern as test/tui.test.mjs).
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 
 import { createSlashCommands, SLASH_COMMANDS, SLASH_ALIASES, HANDLERS } from "../src/tui/slash-commands.mjs"
@@ -274,7 +275,7 @@ test("completions: /mcp 提供 ai 子命令；remove/connect 服务器名匹配�
 // P0 regressions: cmd-upgrade (ansi/C from ctx) / cmd-goal (missing C import)
 // ====================================================================
 
-test("cmd-upgrade: runs without TypeError (ansi/C imported, not from ctx)", async () => {
+slow("cmd-upgrade: runs without TypeError (ansi/C imported, not from ctx)", async () => {
   const { handleUpgradeCommand } = await import("../src/tui/cmd-upgrade.mjs")
   const ctx = mockCtx()
   // checkForUpdate hits the npm registry with a 5s timeout and swallows errors —

@@ -1,5 +1,7 @@
 import { listSlots } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
+import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
+import { sliceByWidth } from "./render.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads
  *  the latest INITIAL_HISTORY_MESSAGES, then PgUp-at-top loads HISTORY_PAGE_MESSAGES
@@ -39,17 +41,41 @@ export function historyToLines(history, startIdx, endIdx) {
         lines.push({ text: "❯ ThinCoder:", color: ansi.bold + C.assistant })
       }
       inTurn = true
-      // Reasoning restored as dim lines (folded by the consecutive-dim rule when
-      // long) — matches the live thinking stream instead of vanishing on restore.
+      // Reasoning restored as ONE C.reason line entry — the exact shape
+      // flushStream produces live (single line, full string, no indent), so
+      // buildConvLines treats restored thinking IDENTICALLY: >12 wrapped rows
+      // fold under the named "▶ thinking" header, short fragments stay visible
+      // — same thresholds, same label, both paths. (History: restored thinking
+      // used to be split into dim fragments — the consecutive-dim rule's >8
+      // threshold never fired on short agentic thinking bursts, so restored
+      // sessions showed every fragment unfolded and mislabeled "tool output";
+      // user reported thinking "no longer folds" after a restart, 2026-08-30.)
       const reasoning = m.reasoning_content ?? m.reasoning
-      if (typeof reasoning === "string" && reasoning.trim()) {
-        for (const line of reasoning.split("\n")) lines.push({ text: "  " + line, color: C.dim })
-      }
+      if (typeof reasoning === "string" && reasoning.trim()) lines.push({ text: reasoning, color: C.reason })
       if (typeof m.content === "string" && m.content) lines.push({ text: m.content, color: C.text })
       for (const tc of m.tool_calls ?? []) {
         const toolResult = history[i + 1]
         const hasResult = toolResult?.role === "tool" && toolResult?.tool_call_id === tc.id
-        lines.push({ text: `  [tool] ${tc.function?.name ?? "?"}`, color: C.tool })
+        const tcName = tc.function?.name ?? "?"
+        // Tool arguments are part of the visible conversation (2026-08-30 user
+        // report: restored sessions showed no args at all — the deprecated
+        // display snapshot made historyToLines the ONLY restore path, and it
+        // never rendered arguments). Header line = readable key-args summary
+        // (describeToolArgs, vscode card-header parity); full pretty JSON rides
+        // below as dim lines, auto-folded by the consecutive-dim rule exactly
+        // like the restored tool result — same convention, same readability.
+        let argsSummary = ""
+        let argLines = []
+        try {
+          const args = JSON.parse(tc.function?.arguments || "{}")
+          argsSummary = describeToolArgs(tcName, args)
+          argLines = toolArgsLines(args)
+        } catch { /* malformed args JSON — render the raw string truncated */ }
+        lines.push({ text: `  [tool] ${tcName}${argsSummary ? " — " + argsSummary : ""}`, color: C.tool })
+        if (!argsSummary && tc.function?.arguments && tc.function.arguments !== "{}") {
+          lines.push({ text: "  " + sliceByWidth(tc.function.arguments, 76), color: C.dim })
+        }
+        for (const line of argLines) lines.push({ text: "  " + line, color: C.dim })
         if (hasResult && String(toolResult.content).trim()) {
           // FULL tool result as dim lines (auto-folded when > 8) — the old
           // first-line-only summary made restore feel nothing like the live run.

@@ -11,9 +11,9 @@
  * CONSULT_BASE overlay }); activity streams to the parent TUI via the relay
  * prefix `consult#<id>/` (same channel subagent uses), not onSubagent/onToolPanel.
  */
-import { createAgent, runAgent, readonlyToolNames, ContinueError } from "../agent.mjs"
+import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
-import { specForModel } from "../config.mjs"
+import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 
 function consultLabel(m) {
   return `${m.provider}:${m.model}`
@@ -21,7 +21,9 @@ function consultLabel(m) {
 
 /** Narrow the configured consultModels pool to a requested subset.
  *  Each selector is "provider:model", a bare provider name, or a bare model name
- *  (case-insensitive). Returns { models, error } — error set when a selector matches
+ *  (case-insensitive). A trailing " (effort)" suffix is tolerated (round2 复核
+ *  对齐 escalate.mjs：withPool 列表会带 " (high)" 后缀，模型照抄应可匹配).
+ *  Returns { models, error } — error set when a selector matches
  *  nothing (surface the typo rather than silently dropping it). Absent/empty selectors
  *  → the full pool. */
 function selectConsultModels(pool, selectors) {
@@ -31,7 +33,8 @@ function selectConsultModels(pool, selectors) {
   const seen = new Set()
   const unknowns = []
   for (const raw of list) {
-    const s = String(raw).trim().toLowerCase()
+    // eslint-disable-next-line no-control-regex -- fixed non-control suffix
+    const s = String(raw).replace(/\s+\([^)]*\)\s*$/, "").trim().toLowerCase()
     const matches = pool.filter((m) =>
       consultLabel(m).toLowerCase() === s ||
       String(m.provider ?? "").toLowerCase() === s ||
@@ -89,7 +92,14 @@ export function makeMainHistoryTool(parentAgent) {
       let out = ""
       for (let i = slice.length - 1; i >= 0; i--) {
         const line = render(slice[i])
-        if (out.length + line.length > BUDGET) { out = `(earlier messages trimmed — budget ${BUDGET} chars)\n\n` + out; break }
+        if (out.length + line.length > BUDGET) {
+          // A single message over the whole budget: truncate IT (it is the newest
+          // and most relevant) instead of dropping everything with a misleading
+          // "earlier messages trimmed" note. Older accumulation still trims.
+          if (out === "") { out = line.slice(0, BUDGET) + "\n(… truncated — single message exceeded budget " + BUDGET + " chars)"; break }
+          out = `(earlier messages trimmed — budget ${BUDGET} chars)\n\n` + out
+          break
+        }
         out = out ? line + "\n\n" + out : line
       }
       return out
@@ -135,7 +145,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // Provider resolution: consultModels entries are { provider, model, effort? } — resolve
     // via the subagent's provider resolver ("provider:model" handles cross-provider picks).
     const provider = resolveChildProvider(agent, `${m.provider}:${m.model}`)
-    if (!provider?.apiKey?.trim()) {
+    if (!ensureChildApiKey(provider)) {
       // resolveChildProvider may still lack a key; fail loudly like the plugin precheck
       // (settleChild turns this message into a clear failed reply instead of a raw 401)
       throw new Error(`consult model ${label} has no API key — check providers[${m.provider}].apiKey in config.json`)
@@ -145,14 +155,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // Symmetric with escalate.mjs; 2026-08-16 a real consult died on qwen3.8-max
     // effort "high" (enum is xhigh/medium/low). Out-of-enum: DROP the effort entirely
     // (the provider preset default may ALSO be out-of-enum for this override model).
-    if (m.effort) {
-      const enumList = specForModel(m.model).reasoningEffortEnum
-      if (enumList && !enumList.includes(m.effort)) {
-        delete provider.reasoningEffort
-      } else {
-        provider.reasoningEffort = m.effort
-      }
-    }
+    clampEffort(provider, m.model, m.effort)
 
     // Read-only consultant: filter the parent tool set down to readonly tools + main_history.
     const allowed = readonlyToolNames(agent.tools ?? [])
@@ -172,57 +175,57 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       role: "consult",
     })
 
-    // Activity relay: `consult#<subId>/` prefix → the parent TUI's subTasks panel
-    // (same channel subagent uses — parallel consultants stay independent).
-    agent._subAgentCounter = (agent._subAgentCounter ?? 0) + 1
-    const subId = agent._subAgentCounter
-    const relayPrefix = `consult#${subId}/`
-    // Report this consultant's model to the display layer (each consultant may use a different model).
-    ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (provider.model ?? ""))
-    const childCallbacks = {
-      onToken: ctx.callbacks?.onToken ? (t) => ctx.callbacks.onToken(`${relayPrefix}${t}`) : null,
-      onReasoning: ctx.callbacks?.onReasoning ? (r) => ctx.callbacks.onReasoning(`${relayPrefix}${r}`) : null,
-      onToolCall: ctx.callbacks?.onToolCall ? (name, args) => ctx.callbacks.onToolCall(`${relayPrefix}${name}`, args) : null,
-    }
+    // Activity relay via the unified spawn-child pipeline (§7.2 D3): `consult#<subId>/`
+    // prefix (same channel subagent uses — parallel consultants stay independent) +
+    // onToolOutput passthrough so the consultant's tool output lands in its TUI block.
+    const relayPrefix = makeRelay(agent, "consult", ctx.callbacks?.onToken, provider.model ?? "")
+    const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})
+    let declined = false // review #1: guard against double-settle when onDeclined fired
 
-    // Turn-cap continue loop (TURN-CAP-CONTINUE.md): hitting the cap asks the user via
-    // the SAME y/n panel the main agent uses (ctx.onPermissionRequest "continue") —
-    // unlimited continues, each with a fresh turn budget AND a re-armed wall-clock
-    // watchdog (a continue is a fresh budget, the clock restarts too). Parallel
-    // consultants serialize their prompts through a session-level queue. Declined /
-    // headless → failed reply (partial diagnosis).
+    // Turn-cap continue loop (TURN-CAP-CONTINUE.md) via runWithContinue (§7.2 D3): hitting
+    // the cap asks the user via the SAME y/n panel the main agent uses — unlimited
+    // continues, each with a fresh turn budget AND a re-armed wall-clock watchdog (a
+    // continue is a fresh budget, the clock restarts too). Parallel consultants serialize
+    // their prompts through a session-level queue. Declined / headless → failed reply
+    // (partial diagnosis).
     const runner = ctx.runAgent ?? runAgent
-    for (let resume = false; ; resume = true) {
-      try {
-        const result = await runner(child, "# Problem\n" + problem, childCallbacks, {
-          depth: 1,
-          maxTurns: agent?.config?.agent?.consultTurns ?? 40,
-          signal: ctrl.signal,
-          resume,
-        })
-        settleChild(session, id, label, true, String(result ?? ""))
-        return
-      } catch (e) {
-        if (e instanceof ContinueError) {
-          let go = false
-          if (ctx.onPermissionRequest) {
+    try {
+      const result = await runWithContinue(
+        (childAgent, input, cbs, opts) => runner(childAgent, input, cbs, opts),
+        child, "# Problem\n" + problem,
+        childCallbacks,
+        { depth: 1, maxTurns: agent?.config?.agent?.consultTurns ?? 40, signal: ctrl.signal },
+        {
+          askContinue: (e) => {
+            if (!ctx.onPermissionRequest) return Promise.resolve(false)
             const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: label })
             session.continueQueue = (session.continueQueue ?? Promise.resolve()).then(ask, ask)
-            go = await session.continueQueue
-          }
-          if (go) {
-            clearTimeout(watchdog)
-            timedOut = false // fresh budget → fresh clock
-            watchdog = armWatchdog()
-            continue
-          }
-          settleChild(session, id, label, false, `turn cap reached (${e.turn} turns) — stopped, diagnosis may be partial`)
-          return
-        }
-        const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
-        settleChild(session, id, label, false, note)
-        return
-      }
+            return session.continueQueue.then((go) => {
+              if (go) {
+                clearTimeout(watchdog)
+                timedOut = false // fresh budget → fresh clock
+                watchdog = armWatchdog()
+              }
+              return go
+            })
+          },
+          onDeclined: (e) => {
+            declined = true
+            settleChild(session, id, label, false, `turn cap reached (${e.turn} turns) — stopped, diagnosis may be partial`)
+            return undefined
+          },
+        },
+      )
+      // Review #1 fix: onDeclined already settled this child as a failed reply —
+      // settling again here would push a phantom empty success reply and decrement
+      // `pending` twice (negative pending → consult_check's two exits both
+      // unreachable → permanent block until user abort).
+      if (!declined) settleChild(session, id, label, true, String(result ?? ""))
+    } catch (e) {
+      // Runner errors (incl. the watchdog's abort) settle as a failed reply — the
+      // continue/declined paths are already handled inside runWithContinue.
+      const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
+      settleChild(session, id, label, false, note)
     }
   } catch (e) {
     // Errors BEFORE the runner (provider resolution, createAgent) or a throwing

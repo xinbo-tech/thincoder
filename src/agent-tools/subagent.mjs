@@ -1,16 +1,19 @@
 import {
-  createAgent, runAgent, ContinueError,
+  createAgent, runAgent,
   readonlyToolNames, collectGitContext, escapeXml,
   EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY,
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 } from "../agent.mjs"
+import { makeRelay, wrapChildCallbacks, runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 
 /**
  * subagent tool: spawn a child agent to handle an independent subtask (isolated context, only the report is returned).
  * - role: "explore" — read-only tools, search/read/analyze (suitable for codebase exploration)
  * - role: "coder" — full tool set, self-contained implementation tasks (suitable for isolated coding)
- * - no role specified — default behavior, same tool set as parent agent
+ * - no role specified — invalid by design since the 2026-08-25 fail-closed gate
+ *   (role is mandatory; "no role → same tool set as parent" was removed with the
+ *   coder-leak fix and the header text above predates it)
  * - parallel subagent calls via the parallel channel (parallel: true)
  * - non-recursive: child agents do not get the subagent tool (depth > 0 is not injected)
  */
@@ -169,54 +172,48 @@ export const subagentTool = {
       if (gitCtx) input = `<untrusted_git_context>\n${escapeXml(gitCtx)}\n</untrusted_git_context>\n\n${input}`
     }
 
-    // Relay content/reasoning tokens + tool calls to the parent TUI (child agent panel shows activity).
-    // Prefix includes a unique id: parallel child agents with the same role stay independent and don't overwrite each other.
+    // Relay content/reasoning/tool/output to the parent TUI via the unified spawn-child
+    // pipeline (AGENT-LOOP.md §7.2 D3). Prefix includes a unique id: parallel child agents
+    // with the same role stay independent and don't overwrite each other.
     // Format: role#id/  →  onToken("coder#2/writing..."), onToolCall("coder#2/read", args)
-    parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
-    const subId = parent._subAgentCounter
-    const relayPrefix = `${role ?? "sub"}#${subId}/`
-    // Report the subagent's effective model to the display layer (it may differ from the
-    // parent's). Emitted as a `[model]` metadata token via the relay prefix — the TUI/webview
-    // parse it into the subagent block's header instead of showing it as content.
-    ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
+    const relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
     const childOpts = {
       onPermissionRequest: childPermission,
-      onToken: ctx.callbacks?.onToken
-        ? (t) => ctx.callbacks.onToken(`${relayPrefix}${t}`)
-        : null,
-      onReasoning: ctx.callbacks?.onReasoning
-        ? (t) => ctx.callbacks.onReasoning(`${relayPrefix}${t}`)
-        : null,
-      onToolCall: ctx.callbacks?.onToolCall
-        ? (name, args) => ctx.callbacks.onToolCall(`${relayPrefix}${name}`, args)
-        : null,
+      ...wrapChildCallbacks(relayPrefix, ctx.callbacks),
     }
     const childRunOpts = buildChildRunOpts(ctx)
     let report = ""
-    // Turn-cap continue loop (TURN-CAP-CONTINUE.md): hitting the cap asks the user via
-    // the SAME y/n panel the main agent uses (ctx.onPermissionRequest "continue") —
+    // Turn-cap continue loop (TURN-CAP-CONTINUE.md) via runWithContinue (§7.2 D3):
+    // hitting the cap asks the user via the SAME y/n panel the main agent uses —
     // unlimited continues, resume:true keeps the child's history + mutation bookkeeping,
     // fresh budget each run. Prompts queue through parent._permQueue (same as write
     // approval) so parallel children never pop two panels at once. Declined / headless
     // → partial-work return. Non-ContinueError errors still propagate (dispatch.mjs
     // turns them into Error tool results — unchanged behavior).
-    for (let resume = false; ; resume = true) {
-      try {
-        report = await runAgent(child, input, childOpts, { ...childRunOpts, resume })
-        break
-      } catch (e) {
-        if (!(e instanceof ContinueError)) throw e
-        let go = false
-        if (ctx.onPermissionRequest) {
-          const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: `${role ?? "sub"}#${subId}` })
-          parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
-          go = await parent._permQueue
-        }
-        if (go) continue
-        if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
-        return `Subagent (${role}) stopped: turn cap reached (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${report || ""}`
-      }
+    const askSubagentContinue = (e) => {
+      if (!ctx.onPermissionRequest) return Promise.resolve(false)
+      const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: relayPrefix.slice(0, -1) })
+      parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
+      return parent._permQueue
     }
+    const declined = { partial: null }
+    report = await runWithContinue(
+      (child, input, cbs, opts) => runAgent(child, input, cbs, opts), // opts = childRunOpts + resume (managed by the pipeline)
+      child, input, childOpts, childRunOpts,
+      {
+        askContinue: askSubagentContinue,
+        onDeclined: (e, output) => {
+          if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
+          // Early return semantics (unchanged from the inline loop): the declined
+          // partial-work message is returned WITHOUT the MIN_REPORT_CHARS expansion —
+          // re-prompting a capped child for a longer report is wrong.
+          // Review #2 fix: use the pipeline-captured output (the `report` variable is
+          // still "" at this point — runWithContinue hasn't returned yet).
+          declined.partial = `Subagent (${role}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output || ""}`
+        },
+      },
+    )
+    if (declined.partial !== null) return declined.partial
 
     // Report too short = incomplete handoff: send back for expansion once (inspired by kimi-code's summaryPolicy: min 200 chars, retry 1 time).
     // The child agent's history is still intact; the continuation instruction is appended as new input so it can see its own earlier work.
@@ -230,6 +227,10 @@ export const subagentTool = {
     // promised in the engineering prompt.
     // CRITICAL: Only merge if child actually mutated files (defense-in-depth against
     // runAgent throwing before any writes occurred).
+    // Review #8 clarification: eng-coder ONLY is intentional — the mechanical
+    // two-gate merge exists for engineering mode; plain `coder` children carry
+    // their own verify/advisor self-review discipline (per tool description), and
+    // normal mode has no parent advisor/verify gate to feed.
     if (role === "eng-coder" && child._mutatedThisRun) {
       mergeChildMutations(parent, child)
     }
