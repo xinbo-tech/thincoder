@@ -11,6 +11,7 @@ import {
 } from "../src/tui/fold-block.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../src/advisor/run.mjs"
 import { C } from "../src/tui/ansi.mjs"
+const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
 
 test("foldCapRows: 屏幕行数 60% 向下取整，边界安全", () => {
   assert.equal(foldCapRows(24), 14)
@@ -36,7 +37,7 @@ test("renderExpandedBlock: body ≤ cap → 全量 + 顶部控制行", () => {
   // blank + ▼ + 5 body
   assert.equal(out.length, 7)
   assert.ok(out[1]._foldToggle === "k" && out[1].text.includes("click to collapse"), "顶部折叠控制行")
-  assert.ok(out.some((l) => l.text === "l4"), "内容完整")
+  assert.ok(out.some((l) => strip(l.text) === "│ l4"), "内容完整（带竖线）")
   assert.ok(!out.some((l) => l.text.includes("capped")), "未触封顶无标记")
 })
 
@@ -46,8 +47,8 @@ test("renderExpandedBlock: body > cap → 封顶 + 底部控制行必在区块�
   const out = renderExpandedBlock({ body, foldKey: "k", state: { foldEnabled: true, expandedBlocks: new Set(["k"]) }, maxRows: 24, label: "blk" })
   assert.ok(out.length <= cap + 2, `区块总高 ≤ cap+2（blank 上下文），实际 ${out.length}`)
   assert.ok(out.some((l) => l.text.includes("capped at 60%")), "封顶提示行存在")
-  assert.ok(out.some((l) => l.text === "line0"), "保留开头内容")
-  assert.ok(!out.some((l) => l.text === "line99"), "超限尾部不渲染")
+  assert.ok(out.some((l) => strip(l.text) === "│ line0"), "保留开头内容（带竖线）")
+  assert.ok(!out.some((l) => strip(l.text) === "│ line99"), "超限尾部不渲染")
   const last = out[out.length - 1]
   assert.equal(last._foldToggle, "k", "最后一个是折叠控制行——始终可点击收起")
   assert.ok(last.text.includes("click to collapse"))
@@ -97,11 +98,11 @@ test("renderFoldedHead: 统一折叠形态 = 命名头 + 末 3 行（dim + _skip
   const out = renderFoldedHead({ header, body })
   assert.equal(out.length, 4, "header + 3 tail lines")
   assert.equal(out[0], header, "header 原样在最前")
-  assert.deepEqual(out.slice(1).map((l) => l.text), ["line7", "line8", "line9"], "tail = 末 3 行（非前 4 行——旧形态已废弃）")
+  assert.deepEqual(out.slice(1).map((l) => strip(l.text)), ["│ line7", "│ line8", "│ line9"], "tail = 末 3 行，带竖线")
   assert.ok(out.slice(1).every((l) => l.color === C.dim && l._skipDimFold === true), "tail dim + 防连续 dim 套叠")
   // 空行被过滤（不占 tail 名额）
   const withBlanks = renderFoldedHead({ header, body: [...body.slice(0, 8), { text: "  ", color: C.text }, ...body.slice(8)] })
-  assert.deepEqual(withBlanks.slice(1).map((l) => l.text), ["line7", "line8", "line9"], "空白行不进 tail")
+  assert.deepEqual(withBlanks.slice(1).map((l) => strip(l.text)), ["│ line7", "│ line8", "│ line9"], "空白行不进 tail")
   // tailLines 可调
   assert.equal(renderFoldedHead({ header, body, tailLines: 1 }).length, 2)
 })

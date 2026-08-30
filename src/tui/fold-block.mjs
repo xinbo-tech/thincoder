@@ -64,7 +64,12 @@ export function renderFoldedHead({ header, body, tailLines = 3 }) {
   const tail = body
     .filter((l) => l.text && l.text.trim())
     .slice(-tailLines)
-    .map((l) => ({ ...l, color: C.dim, _skipDimFold: true }))
+    .map((l) => ({
+      ...l,
+      text: `│ ${l.text.replace(/^(?:│ ?|  │ ?|  )/, "")}`,
+      color: C.dim,
+      _skipDimFold: true,
+    }))
   return [header, ...tail]
 }
 
@@ -146,20 +151,31 @@ export function renderMathAndMarkdown(text) {
  *   used in both control lines (e.g. "subagent activity", "12 lines");
  *   headBlank=false (tool-args blocks): no leading blank — the args block
  *   belongs tightly to its ❯ title line.
+ *
+ * LEFT RULE LINE (2026-08-30 user request): every body row gets a `│ ` gutter
+ * prefix so the block's content reads as one bordered region, distinct from
+ * surrounding conversation. renderExpandedBlock OWNS the gutter: body callers
+ * pass RAW rows (no leading `│ `/indent of their own) — double gutters are
+ * stripped defensively.
  */
 export function renderExpandedBlock({ body, foldKey, state, maxRows, label }) {
   if (state.foldEnabled === false) return body.slice()
+  // Strip caller-side gutters/indents, then apply the single owned gutter.
+  const lined = body.map((l) => {
+    const raw = l.text.replace(/^(?:│ ?|  │ ?|  )/, "")
+    return { ...l, text: `│ ${raw}` }
+  })
   const out = [blankLine(), foldHintLine(`▼ … ${label} — click to collapse`, foldKey)]
   const cap = foldCapRows(maxRows)
-  if (body.length <= cap) {
-    out.push(...body)
+  if (lined.length <= cap) {
+    out.push(...lined)
     return out
   }
   // Reserve room for blank + top control + cap marker + bottom control.
   const keep = Math.max(1, cap - 4)
-  out.push(...body.slice(0, keep))
+  out.push(...lined.slice(0, keep))
   out.push({
-    text: `… ${body.length - keep} more lines — expansion capped at 60% of screen (collapse to re-expand)`,
+    text: `│ … ${body.length - keep} more lines — expansion capped at 60% of screen (collapse to re-expand)`,
     color: C.dim,
     _skipDimFold: true,
   })

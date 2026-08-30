@@ -156,6 +156,7 @@ describe("handleMouseClick — conversation line actions", () => {
 describe("long-message folding (render-conversation)", () => {
   it("a single long DIM line folds to [named header, tail 3] and expands via click key", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
+    const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
     const { buildConvLines, convCacheKey } = await import("../src/tui/render-conversation.mjs")
     const state = {
       lines: [{ text: "L1\n" + "line2\n".repeat(15) + "last", color: C.dim }],
@@ -170,7 +171,7 @@ describe("long-message folding (render-conversation)", () => {
     assert.ok(folded[0].text.startsWith("▶ tool output · 17 lines — "), "named identity header")
     assert.ok(!folded[0].text.startsWith(" "), "control line is flush with content (no indent)")
     assert.ok(folded[0].text.includes("\x1b[4mclick to expand\x1b[24m"), "click phrase underlined")
-    assert.equal(folded[3].text, "last", "tail = last 3 content lines")
+    assert.equal(strip(folded[3].text), "│ last", "tail = last 3 content lines (rule line)")
     assert.ok(!folded.some((l) => l.text === "L1"), "first lines no longer shown in folded state")
     const toggleKey = folded[0]._foldToggle
     assert.ok(toggleKey?.startsWith("long-"), "fold key is long-<srcIndex>")
@@ -186,7 +187,7 @@ describe("long-message folding (render-conversation)", () => {
     assert.ok(expanded[1].text.startsWith("▼ … 17 lines — "), "▼ marker at the HEAD, before the content")
     assert.ok(!expanded[1].text.startsWith(" "), "no indent on the ▼ control line")
     assert.equal(expanded[1]._foldToggle, toggleKey, "collapse marker shares the fold key")
-    assert.equal(expanded[2].text, "L1", "content follows the marker")
+    assert.equal(strip(expanded[2].text), "│ L1", "content follows the marker (rule line)")
     assert.ok(expanded[1].text.includes("\x1b[4mclick to collapse\x1b[24m"), "click phrase underlined")
 
     // Collapse again: delete the key → back to [named header, tail 3] (bidirectional)
@@ -246,6 +247,7 @@ describe("long-message folding (render-conversation)", () => {
 
   it("long DIM lines fold bidirectionally", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
+    const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
     const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
     const longText = "line0\n" + "content\n".repeat(20) + "end" // 22 wrapped lines > 12
     for (const color of [C.dim]) {
@@ -259,7 +261,7 @@ describe("long-message folding (render-conversation)", () => {
       assert.equal(folded.length, 4, `${JSON.stringify(color)} folds to [header, tail 3]`)
       assert.ok(folded[0].text.startsWith("▶ tool output · 22 lines — "), "named header")
       assert.ok(folded[0].text.includes("\x1b[4mclick to expand\x1b[24m"), "click phrase underlined")
-      assert.equal(folded[3].text, "end", "tail = last 3 content lines")
+      assert.equal(strip(folded[3].text), "│ end", "tail = last 3 content lines (rule line)")
       const key = folded[0]._foldToggle
 
       // Expanded: [blank, ▼ at the HEAD, then full content]
@@ -276,6 +278,7 @@ describe("long-message folding (render-conversation)", () => {
 
   it("expanded consecutive-dim block gets a collapse marker; clicking toggles both ways", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
+    const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
     const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
     const state = {
       lines: Array.from({ length: 9 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
@@ -286,7 +289,7 @@ describe("long-message folding (render-conversation)", () => {
     const folded = buildConvLines(state, 80)
     assert.equal(folded.length, 4)
     assert.ok(folded[0].text.startsWith("▶ tool output · 9 lines — "))
-    assert.equal(folded[3].text, "dim8", "tail = last 3 content lines")
+    assert.equal(strip(folded[3].text), "│ dim8", "tail = last 3 content lines (rule line)")
     const foldKey = folded[0]._foldToggle
     assert.ok(foldKey?.startsWith("fold-"))
 
@@ -297,7 +300,7 @@ describe("long-message folding (render-conversation)", () => {
     assert.equal(expanded[0].text, "")
     assert.ok(expanded[1].text.startsWith("▼ … 9 lines — "))
     assert.equal(expanded[1]._foldToggle, foldKey)
-    assert.equal(expanded[2].text, "dim0", "content follows the marker")
+    assert.equal(strip(expanded[2].text), "│ dim0", "content follows the marker (rule line)")
   })
 
   it("short lines are not folded", async () => {
