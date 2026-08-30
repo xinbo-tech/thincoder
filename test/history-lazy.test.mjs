@@ -20,8 +20,9 @@ test("historyToLines materializes user/assistant/tool lines with summaries", () 
   assert.ok(texts.includes("hi"), "user content present")
   assert.ok(texts.includes("❯ ThinCoder:"), "assistant label present")
   assert.ok(texts.includes("hello"), "assistant content present")
-  assert.ok(texts.some((t) => t.startsWith("❯ bash")), "tool call shown (live-parity title line)")
-  assert.ok(texts.some((t) => t.includes("ls")), "tool result first-line summary shown (lookahead)")
+  assert.ok(lines.some((l) => l._toolBlock?.name === "bash"), "tool call carrier present (single-block)")
+  const carrier = lines.find((l) => l._toolBlock)
+  assert.ok(carrier._toolBlock.result?.includes("ls"), "tool result in carrier (lookahead across page edge)")
 })
 
 test("historyToLines skips system-reminder user messages", () => {
@@ -43,11 +44,12 @@ test("historyToLines slices a page and lookahead works across the page edge", ()
   ]
   // Load only [0,2) — the assistant's tool result lives at index 2 (next page).
   const lines = historyToLines(history, 0, 2)
-  const toolLine = lines.find((l) => l.text.startsWith("❯ read"))
-  assert.ok(toolLine, "tool call line present")
-  assert.ok(
-    lines.some((l) => l.text.includes("file content line")),
-    "FULL tool result restored (dim lines) from the NEXT page (full-array lookahead)",
+  const toolLine = lines.find((l) => l._toolBlock?.name === "read")
+  assert.ok(toolLine, "tool call carrier present")
+  assert.deepEqual(
+    toolLine._toolBlock.result,
+    ["file content line"],
+    "FULL tool result in carrier from the NEXT page (full-array lookahead)",
   )
 })
 
@@ -67,7 +69,9 @@ test("historyToLines restores reasoning and full tool results (fidelity vs the l
   const reasoningLine = lines.find((l) => l.text.includes("thinking line 1") && l.text.includes("thinking line 2"))
   assert.ok(reasoningLine, "reasoning restored as ONE line entry (full string, not fragments)")
   assert.equal(reasoningLine?.color, C.reason, "reasoning is C.reason — buildConvLines folds it like live thinking")
-  assert.ok(texts.includes("  line1") && texts.includes("  line2") && texts.includes("  line3"), "FULL tool result restored (not a one-line summary)")
+  const blk = lines.find((l) => l._toolBlock)
+  assert.ok(blk, "tool call carrier present")
+  assert.deepEqual(blk._toolBlock.result, ["line1", "line2", "line3"], "FULL tool result in carrier (not a one-line summary)")
 })
 
 test("historyToLines emits ONE assistant label per turn (multi-segment turns)", () => {

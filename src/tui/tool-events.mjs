@@ -153,15 +153,25 @@ export function buildToolCallbacks(deps) {
       // and the crucial argument was often past the cut. Unknown/MCP tools
       // fall back to compact JSON inside describeToolArgs.
       const argSummary = describeToolArgs(name, args)
-      // Inline block title — the title line and the inline streaming block
-      // (appended by onToolOutput) are complementary display.
-      const color = ({ advisor: C.advisor, bash: C.warn, verify: C.tool }[name] ?? C.text)
-      pushLine(`❯ ${name}${roundTag}${argSummary ? ` ${argSummary}` : ""}`, color)
-      // Full args as dim lines — restore parity (historyToLines emits the same
-      // pretty-JSON block; user diff report 2026-08-30). Auto-folded like it.
-      for (const jsonLine of toolArgsLines(args)) {
-        pushLine(`  ${jsonLine}`, C.dim)
-      }
+      // ONE BLOCK PER TOOL CALL (user ruling 2026-08-30: "为什么不把名称和参数行
+      // 直接作为流式输出 block 的 title" — the four-piece ❯ title / _live scroll /
+      // done-line arrangement was pre-fold-era residue). The carrier line holds
+      // the whole call: header = name+args+live status, body = args JSON +
+      // streaming output + result. buildConvLines renders it via the shared
+      // fold-block component; restore (historyToLines) emits the SAME carrier.
+      state.lines.push({
+        text: "", color: C.tool,
+        _toolBlock: {
+          name, roundTag,
+          argsSummary: argSummary,
+          argsJson: toolArgsLines(args),
+          output: [],
+          result: null,
+          summary: null,
+          started: performance.now(),
+          done: false,
+        },
+      })
       tickStart(name)
     },
     onToolResult: (name, result) => {
@@ -203,19 +213,16 @@ export function buildToolCallbacks(deps) {
         } catch { /* non-JSON result — leave blocks as-is */ }
       }
       if (!isSubagent && name !== "advisor") {
-        // Remove live streaming lines — done line handles the summary.
-        for (let i = state.lines.length - 1; i >= 0; i--) {
-          if (state.lines[i]._live === name) state.lines.splice(i, 1)
-        }
-        // NOTE: no count-summary line here — the result BODY below replaces it
-        // (restore parity) and the done line's tail already carries the summary.
-        // Result BODY as dim lines — parity with the restored session, which
-        // always shows the full tool result (user diff report 2026-08-30:
-        // live showed a one-line "→ 2 lines" summary while restore showed the
-        // full body; the conversation must carry the same information live).
-        // Auto-folded by the consecutive-dim rule like restore.
-        for (const line of String(result).split("\n")) {
-          if (line.trim()) pushLine(`  ${line}`, C.dim)
+        // Result lands INSIDE the block (restore parity — the restored carrier
+        // carries the same fields). The done line is gone: status/elapsed live
+        // in the header now.
+        const block = [...state.lines].reverse().find((l) => l._toolBlock && l._toolBlock.name === name && !l._toolBlock.done)
+        if (block) {
+          block._toolBlock.result = String(result).split("\n").filter((l) => l.trim())
+          block._toolBlock.summary = formatToolSummary(name, result)
+          block._toolBlock.done = true
+          const started = tickTake(name)
+          block._toolBlock.elapsed = started !== null ? Math.round(performance.now() - started) : null
         }
       }
       if (name === "advisor") {
@@ -245,15 +252,8 @@ export function buildToolCallbacks(deps) {
           }
         }
       }
-      // Done line for ALL tools (panel area abolished — inline only).
-      if (!isSubagent) {
-        const started = tickTake(name)
-        const elapsed = started !== null ? ` (${Math.round(performance.now() - started)}ms)` : ""
-        const summary = formatToolSummary(name, result)
-        const tail = summary ? ` → ${sliceByWidth(summary, 60)}` : ""
-        pushLine(`❯ ${name} — done${elapsed}${tail}`, C.dim)
-      } else {
-        tickTake(name) // subagent: no done line — still settle the tick (queue balance)
+      if (isSubagent) {
+        tickTake(name) // subagent: no per-call block — settle the tick
       }
     },
     onToolOutput: (name, chunk) => {
@@ -292,30 +292,17 @@ export function buildToolCallbacks(deps) {
         scheduleRender()
         return
       }
-      // Rolling output — show latest N lines with fold marker per tool.
-      // _live marker per tool enables per-tool pruning without affecting other content.
-      const color = ({ think: C.reason, tool: C.tool }[part.kind] ?? C.dim)
-      for (const line of part.text.split("\n")) {
-        const trimmed = line.trimEnd()
-        if (!trimmed) continue
-        state.lines.push({ text: `│ ${trimmed}`, color, _live: name })
-      }
-      // Prune: keep at most N lines + "│ …" fold marker per tool (configurable, tool-specific)
-      const configLimit = agent.config?.agent?.streamPreviewLines
-      const toolLimit = LIVE_LINE_LIMITS[name]
-      const previewLines = configLimit ?? toolLimit ?? 5
-      let count = 0
-      let hasFold = false
-      for (let i = state.lines.length - 1; i >= 0; i--) {
-        if (state.lines[i]._live === name) {
-          if (++count > previewLines) {
-            if (!hasFold) {
-              state.lines[i] = { text: "│ …", color: C.dim, _live: name }
-              hasFold = true; count = previewLines
-            } else {
-              state.lines.splice(i, 1)
-            }
-          }
+      // Append into the CURRENT tool block's output buffer (the block is the
+      // display; no _live scroll lines anymore). N2-style cap keeps memory
+      // bounded: keep the LAST 200 output lines per call.
+      const block = [...state.lines].reverse().find((l) => l._toolBlock && l._toolBlock.name === name && !l._toolBlock.done)
+      if (block) {
+        for (const line of part.text.split("\n")) {
+          const trimmed = line.trimEnd()
+          if (trimmed) block._toolBlock.output.push(trimmed)
+        }
+        if (block._toolBlock.output.length > 200) {
+          block._toolBlock.output.splice(0, block._toolBlock.output.length - 200)
         }
       }
       scheduleRender()

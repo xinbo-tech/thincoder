@@ -65,24 +65,33 @@ export function historyToLines(history, startIdx, endIdx) {
         // below as dim lines, auto-folded by the consecutive-dim rule exactly
         // like the restored tool result — same convention, same readability.
         let argsSummary = ""
-        let argLines = []
+        let argJson = []
+        let rawArgs = null
         try {
           const args = JSON.parse(tc.function?.arguments || "{}")
           argsSummary = describeToolArgs(tcName, args)
-          argLines = toolArgsLines(args)
-        } catch { /* malformed args JSON — render the raw string truncated */ }
-        // Title line matches the LIVE tool block header exactly (❯ name args)
-        // — one grammar across both paths (user diff report 2026-08-30).
-        lines.push({ text: `❯ ${tcName}${argsSummary ? " " + argsSummary : ""}`, color: C.tool, _kind: "tool" })
-        if (!argsSummary && tc.function?.arguments && tc.function.arguments !== "{}") {
-          lines.push({ text: "  " + sliceByWidth(tc.function.arguments, 76), color: C.dim })
-        }
-        for (const line of argLines) lines.push({ text: "  " + line, color: C.dim })
-        if (hasResult && String(toolResult.content).trim()) {
-          // FULL tool result as dim lines (auto-folded when > 8) — the old
-          // first-line-only summary made restore feel nothing like the live run.
-          for (const line of String(toolResult.content).split("\n")) lines.push({ text: "  " + line, color: C.dim })
-        }
+          argJson = toolArgsLines(args)
+        } catch { rawArgs = String(tc.function?.arguments ?? "").slice(0, 120) /* malformed — raw fallback */ }
+        // ONE BLOCK PER TOOL CALL — same carrier the live path emits (user
+        // ruling 2026-08-30): header=name+args, body=args JSON + result.
+        // Same carrier the live path emits — identical fields, so buildConvLines
+        // renders both through one code path (line-level parity by construction).
+        lines.push({
+          text: "", color: C.tool,
+          _kind: "tool",
+          _toolBlock: {
+            name: tcName,
+            roundTag: "",
+            argsSummary,
+            argsJson: rawArgs ? [rawArgs] : argJson,
+            output: [],
+            result: hasResult ? String(toolResult.content).split("\n").filter((l) => l.trim()) : null,
+            summary: null,
+            started: 0,
+            done: true,
+            elapsed: null,
+          },
+        })
       }
     }
   }

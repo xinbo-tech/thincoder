@@ -36,7 +36,7 @@ function turnCtx(overrides = {}) {
     agent, state,
     calls: { runAgent: [], slash: [], saved: 0 },
     lines: [],
-    pushLine: (text) => ctx.lines.push({ kind: "line", text }),
+    pushLine: (text, color, kind) => state.lines.push({ text, color, _kind: kind }),
     pushLabel: (text) => ctx.lines.push({ kind: "label", text }),
     render: () => {},
     scheduleRender: () => {},
@@ -96,10 +96,10 @@ test("runAgentTurn: handleSlash 期间新入队项继续被消费且不重复", 
   assert.equal(ctx.state.queue.length, 0, "队列被完全消费，无重复无遗漏")
 })
 
-test("runAgentTurn: 同名并行工具 done 行各自有 elapsed（_toolTicks FIFO 队列，2026-08-30 评审）", async () => {
+test("runAgentTurn: 同名并行工具各自有 elapsed（_toolTicks FIFO 队列，2026-08-30 评审）", async () => {
   // 回归：单槽 _toolTicks 下，并行同名工具（如 read ×2）第二次 onToolCall 覆盖
-  // 第一次的时间戳、onToolResult 的 delete 提早清槽——第一个 done 行耗时错误、
-  // 第二个丢失 elapsed。改 FIFO 队列后按调用序各取各的。
+  // 第一次的时间戳、onToolResult 提早清槽——第一个块耗时错误、第二个丢失。
+  // 改 FIFO 队列后按调用序各取各的。单框化后 elapsed 在载体头部状态（无 done 行）。
   const ctx = trackedCtx({
     summarize: () => "",
     runAgent: async (_agent, _text, cbs) => {
@@ -110,9 +110,9 @@ test("runAgentTurn: 同名并行工具 done 行各自有 elapsed（_toolTicks FI
     },
   })
   await runAgentTurn(ctx, "hello")
-  const doneLines = ctx.lines.map((l) => l.text).filter((t) => t.startsWith("❯ read — done"))
-  assert.equal(doneLines.length, 2, "两个 done 行")
-  for (const t of doneLines) assert.match(t, /\(\d+ms\)/, `各自带 elapsed：${t}`)
+  const toolBlocks = ctx.state.lines.map((l) => l._toolBlock).filter(Boolean)
+  assert.equal(toolBlocks.length, 2, "两个工具块")
+  assert.ok(toolBlocks.every((b) => b.done && typeof b.elapsed === "number"), "各自完成且带 elapsed")
 })
 
 test("runAgentTurn: catch 块内抛异常也能清理 ticker 与状态（try/finally）", async () => {
@@ -205,10 +205,12 @@ test("T-E (F5): consult 顾问前缀路由进区块——main_history 调用可�
   assert.ok(sub.blocks.some((b) => b.kind === "text" && b.text.includes("diagnosis so far")))
 })
 
-test("T-G (F7): bash 裸串归一化 {kind:\"text\"} 进 _live 行；advisor 对象 chunk 原样进 _advisorBlocks", async () => {
+test("T-G (F7): bash 裸串归一化 {kind:\"text\"} 进载体 output；advisor 对象 chunk 原样进 _advisorBlocks", async () => {
   const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToolCall("bash", { command: "echo hi" })
   callbacks.onToolOutput("bash", "raw stdout line\n")
-  assert.ok(ctx.state.lines.some((l) => l._live === "bash" && l.text.includes("raw stdout line")), "裸串按 text kind 走 _live 行内路径（普通工具路径不受区块影响）")
+  const blk = [...ctx.state.lines].reverse().find((l) => l._toolBlock)
+  assert.ok(blk && blk._toolBlock.output.includes("raw stdout line"), "裸串按 text kind 进载体 output（单框化后无 _live 行）")
   callbacks.onToolOutput("advisor", { kind: "think", text: "checking" })
   assert.ok(ctx.state._advisorBlocks.some((b) => b.kind === "think" && b.text === "checking"), "advisor {kind,text} 对象原样入有序块")
 })

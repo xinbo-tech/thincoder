@@ -54,16 +54,22 @@ export function convCacheKey(state, maxRows) {
   // is decided by color class since main output (C.text) never folds while
   // thinking/dim do (2026-08-30) — two states differing only in line color used
   // to collide on this key and serve a stale cached render.
+  // Tool-block carriers ({_toolBlock}) contribute their BUFFER SIZE signature:
+  // output/result arrays mutate in place (streaming appends, result landing),
+  // and carrier text is always "" — without this the cache serves a stale block
+  // while a tool runs (and across live→restore with equal line counts).
   let frozenSig = ""
   let colorSig = ""
+  let toolSig = ""
   for (const l of state.lines) {
     if (l._frozenSubTask) frozenSig += `${l._frozenSubTask.key};`
+    if (l._toolBlock) toolSig += `${l._toolBlock.done ? 1 : 0}:${l._toolBlock.output.length}:${l._toolBlock.result ? l._toolBlock.result.length : 0};`
     colorSig += l.color === C.text ? "T" : l.color === C.dim ? "D" : l.color === C.reason ? "R" : "o"
   }
   // Expansion cap participates: a terminal resize changes the cap, which changes
   // the rendered height of every expanded block — the cache must not survive it.
   const capPart = maxRows ? `cap${foldCapRows(maxRows)}` : "cap∞"
-  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}`
+  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}`
 }
 
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).
@@ -166,6 +172,34 @@ function buildConvLines(state, cols, maxRows) {
     // collapsible section — clickable expand/collapse like the running block.
     if (l._frozenSubTask) {
       convLines.push(...frozenSubTaskLines(state, l._frozenSubTask, cols, maxRows))
+      continue
+    }
+    // ONE BLOCK PER TOOL CALL (2026-08-30 user ruling): header = name+args+
+    // live status, body = args JSON + streaming output + result. Folded =
+    // ▶ name args · status/summary; expanded = 60%-capped body (shared component).
+    if (l._toolBlock) {
+      const b = l._toolBlock
+      const foldKey = `tool-${i}`
+      const status = !b.done
+        ? "running"
+        : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || "done"
+      if (isExpanded(state, foldKey)) {
+        const body = []
+        for (const jl of b.argsJson) body.push({ text: "  " + jl, color: C.dim, _skipDimFold: true })
+        for (const ol of b.output) body.push({ text: "  │ " + ol, color: C.tool, _skipDimFold: true })
+        if (b.result) for (const rl of b.result) body.push({ text: "  " + rl, color: C.dim, _skipDimFold: true })
+        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: `${b.name}${b.roundTag || ""} ${b.argsSummary}`.trim() }))
+      } else {
+        const headText = `❯ ${b.name}${b.roundTag || ""}${b.argsSummary ? " " + b.argsSummary : ""}  · ${status}`
+        const body = []
+        for (const jl of b.argsJson) body.push({ text: jl, color: C.dim, _skipDimFold: true })
+        for (const ol of b.output.slice(-3)) body.push({ text: ol, color: C.dim, _skipDimFold: true })
+        // Result lines join the tail pool too — restore carrier has no output
+        // rows, so without this its folded tail showed only args JSON and the
+        // result vanished from the folded view (parity bug, 2026-08-30).
+        if (b.result) for (const rl of b.result) body.push({ text: rl, color: C.dim, _skipDimFold: true })
+        convLines.push(...renderFoldedHead({ header: { text: headText, color: C.tool, _foldToggle: foldKey }, body }))
+      }
       continue
     }
     // Frozen advisor review (2026-08-30): same collapsible-box treatment —

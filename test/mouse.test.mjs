@@ -340,15 +340,17 @@ describe("historyToLines — 恢复会话渲染工具参数（2026-08-30 用户�
       ]},
       { role: "tool", tool_call_id: "t1", content: "content" },
     ]
-    const lines = historyToLines(history, 0, history.length).map((l) => l.text)
-    assert.ok(lines.some((t) => t.startsWith("❯ read \"src/x.mjs\"") && t.includes("offset 5")), "read 标题行含路径+选项")
-    assert.ok(lines.some((t) => t.startsWith("❯ bash npm test")), "bash 标题行含命令")
-    assert.ok(lines.some((t) => t.startsWith("❯ mcp__srv__tool ")), "未知工具回退 JSON 摘要")
-    assert.ok(lines.some((t) => t.includes("\"path\": \"src/x.mjs\"")), "全量 JSON 行存在")
-    assert.ok(lines.some((t) => t.includes("\"command\": \"npm test\"")), "bash 全量 JSON 行存在")
+    const lines = historyToLines(history, 0, history.length)
+    assert.ok(lines.some((l) => l._toolBlock?.name === "read" && l._toolBlock.argsSummary.includes("src/x.mjs") && l._toolBlock.argsSummary.includes("offset 5")), "read 载体含路径+选项")
+    assert.ok(lines.some((l) => l._toolBlock?.name === "bash" && l._toolBlock.argsSummary.includes("npm test")), "bash 载体含命令")
+    assert.ok(lines.some((l) => l._toolBlock?.name === "mcp__srv__tool"), "未知工具载体存在")
+    const texts = lines.map((l) => l.text)
+    assert.ok(lines.some((l) => l._toolBlock?.argsJson.join("\n").includes("\"path\": \"src/x.mjs\"")), "全量 JSON 在载体 argsJson")
+    assert.ok(lines.some((l) => l._toolBlock?.name === "bash" && l._toolBlock.argsJson.join("\n").includes("\"command\": \"npm test\"")), "bash 全量 JSON 在载体 argsJson")
     const bad = [{ role: "user", content: "x" }, { role: "assistant", content: "", tool_calls: [{ id: "t", function: { name: "read", arguments: "{broken" } }] }]
-    const badLines = historyToLines(bad, 0, bad.length).map((l) => l.text)
-    assert.ok(badLines.some((t) => t === "❯ read"), "畸形 args 不崩，标题行（无摘要）仍在")
-    assert.ok(badLines.some((t) => t.includes("{broken")), "原始参数串落 dim 行（降级可见）")
+    const badLines = historyToLines(bad, 0, bad.length)
+    const badBlk = badLines.find((l) => l._toolBlock)
+    assert.ok(badBlk, "畸形 args 不崩，载体仍在")
+    assert.ok(badBlk._toolBlock.argsJson[0].includes("{broken"), "原始参数串降级可见")
   })
 })
