@@ -59,6 +59,13 @@ export async function startTUI(agent, opts = {}) {
 
   const distillOpts = opts
 
+  // Capture terminal dimensions BEFORE raw mode & alt buffer switch.
+  // On Windows, process.stdout.columns/rows can briefly return falsy after the mode switch
+  // (ConPTY buffer transition) — the sample here seeds state.dims; the first
+  // render frame re-samples and self-corrects via dims.refresh() (2026-08-30).
+  const startupCols = process.stdout.columns || 80
+  const startupRows = process.stdout.rows || 24
+
   const state = {
     lines: [], // conversation lines: { text, color }
     streaming: "", // current streaming buffer
@@ -79,7 +86,7 @@ export async function startTUI(agent, opts = {}) {
     pendingNotice: null, // 后台更新提示：有 picker 打开时挂起，picker 全部关闭后再弹
     wizard: null, // first-launch config wizard { step, index, scroll, selectedLine, fields, error, lines }
     tasks: agent.tasks ?? [], // task list from task tool (progress shown in status bar); carried over on session restore, auto-collapsed when all done
-    dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30)
+    dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30) — seeded pre-raw-mode, re-sampled every render frame
     tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 }, // cumulative token usage (shown in status bar)
     ctxCache: { len: -1, tokens: 0 }, // context utilization estimate cache (estimateTokens is O(n), only recompute when history grows)
     reasoning: "", // thinking stream buffer (dimmed display)
@@ -113,11 +120,6 @@ export async function startTUI(agent, opts = {}) {
   const keyStream = new PassThrough()
   let mousePending = "" // incomplete mouse sequence tail spanning chunks
   let lastRenderedScroll = 0
-  // Capture terminal dimensions before raw mode & alt buffer switch.
-  // On Windows, process.stdout.columns/rows can briefly return falsy after the mode switch
-  // (ConPTY buffer transition), causing the ||80/||24 fallback to produce a cramped initial layout.
-  const startupCols = process.stdout.columns || 80
-  const startupRows = process.stdout.rows || 24
   emitKeypressEvents(keyStream)
   process.stdin.setRawMode(true)
   // Keyboard enhancement — enable BOTH protocols (unsupported terminals ignore them):
