@@ -159,6 +159,7 @@ function buildConvLines(state, cols, maxRows) {
   const convLines = []
   // Folding constants (function scope)
   const LONG_FOLD_LINES = 12
+  let blankAfter = false
   // THINKING ALWAYS FOLDS (user ruling 2026-08-30, final): no threshold of any
   // kind — row thresholds died twice on the user's real screen (12 never met on
   // narrow, 3 never met on wide), a char threshold missed typical sentences.
@@ -166,6 +167,25 @@ function buildConvLines(state, cols, maxRows) {
   // expand ≤60%, click back. No exceptions, streaming included.
   for (let i = 0; i < state.lines.length; i++) {
     const l = state.lines[i]
+    // Main-output breathing room (user request 2026-08-30): a blank line before
+    // and after each main-output segment (assistant replies / user text — the
+    // C.text rows) so the conversation body stands apart from thinking / tool /
+    // subagent blocks. Blank lines are RENDER-only (never written to
+    // state.lines) — convCacheKey is unaffected, and adjacent segments share
+    // one blank line (the trailing blank of segment N and the leading blank of
+    // segment N+1 must not stack into a double row).
+    const isMain = l._kind === "text" || (l._kind === undefined && l.color === C.text)
+    const pushBlank = () => {
+      if (convLines.at(-1)?.text !== "") convLines.push({ text: "", color: C.text })
+    }
+    if (isMain) {
+      const prev = i > 0 ? state.lines[i - 1] : null
+      const next = state.lines[i + 1]
+      const prevMain = prev && (prev._kind === "text" || (prev._kind === undefined && prev.color === C.text))
+      const nextMain = next && (next._kind === "text" || (next._kind === undefined && next.color === C.text))
+      if (!prevMain) pushBlank()
+      blankAfter = !nextMain
+    }
     // Frozen subagent activity block (§7.2 D4, 2026-08-30): rendered as its own
     // collapsible section — clickable expand/collapse like the running block.
     if (l._frozenSubTask) {
@@ -305,6 +325,12 @@ function buildConvLines(state, cols, maxRows) {
       }
     } else {
       convLines.push(...block)
+    }
+    // Trailing blank after a main-output segment (user request 2026-08-30) —
+    // landed after the segment's rendered content.
+    if (blankAfter) {
+      pushBlank()
+      blankAfter = false
     }
   }
   // ── Subagent activity blocks (§7.2 D4) — RUNNING blocks only ──────────────

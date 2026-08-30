@@ -206,12 +206,16 @@ describe("long-message folding (render-conversation)", () => {
       streaming: "", reasoning: "", _advisorBlocks: [],
       foldEnabled: true, expandedBlocks: new Set(), scroll: 0, search: null,
     }
-    // No fold markers at all — the whole answer is always fully rendered
+    // No fold markers at all — the whole answer is always fully rendered.
+    // 22 content rows + leading/trailing blank (main-output breathing room,
+    // user request 2026-08-30).
     const out = buildConvLines(state, 80)
-    assert.equal(out.length, 22, "main output renders in full, never folded")
+    assert.equal(out.length, 24, "main output renders in full, never folded")
     assert.ok(!out.some((l) => l._foldToggle), "no fold controls on main output")
-    assert.equal(out[0].text, "line0")
-    assert.equal(out[21].text, "end")
+    assert.equal(out[0].text, "")
+    assert.equal(out[1].text, "line0")
+    assert.equal(out[22].text, "end")
+    assert.equal(out[23].text, "")
 
     // THINKING (C.reason) still folds — unified form [named header, tail 3]
     const rState = { ...state, lines: [{ text: longText, color: C.reason }] }
