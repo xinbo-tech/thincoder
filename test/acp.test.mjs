@@ -220,7 +220,7 @@ describe("bridge — runAgent callbacks → session/update notifications", () =>
 describe("session — FIFO queue + cancel", () => {
   it("serializes concurrent prompts (FIFO) and exposes busy", async () => {
     const order = []
-    const fakeRun = async (agent, input, cb) => { order.push(input); await new Promise((r) => setTimeout(r, 5)); return "ok" }
+    const fakeRun = async (agent, input, _cb) => { order.push(input); await new Promise((r) => setTimeout(r, 5)); return "ok" }
     const s = createAcpSession({ id: "s1", agent: {}, notify: () => {}, run: fakeRun })
     const p1 = s.run("first")
     const p2 = s.run("second")
@@ -508,7 +508,7 @@ describe("M4 — edge cases (⑦-⑩)", () => {
     const cb = buildAcpCallbacks({
       sessionId: "s1",
       notify: (m, p) => events.push(p),
-      request: async (m, p) => { throw Object.assign(new Error("permission denied by editor"), { code: -32602 }) },
+      request: async (_m, _p) => { throw Object.assign(new Error("permission denied by editor"), { code: -32602 }) },
     })
     const r = await cb.toolRouter("write", { path: "a.txt", content: "x" })
     assert.equal(r.handled, true)

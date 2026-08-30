@@ -1,7 +1,7 @@
 /**
  * mouse.test.mjs — SGR mouse click parsing + hit-testing + line actions
  */
-import { describe, it, beforeEach, afterEach } from "node:test"
+import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { parseMouseClicks, convGlobalIndex, handleMouseClick } from "../src/tui/mouse.mjs"
 
@@ -156,6 +156,7 @@ describe("handleMouseClick — conversation line actions", () => {
 describe("long-message folding (render-conversation)", () => {
   it("a single long DIM line folds to [named header, tail 3] and expands via click key", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
     const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
     const { buildConvLines, convCacheKey } = await import("../src/tui/render-conversation.mjs")
     const state = {
@@ -251,6 +252,7 @@ describe("long-message folding (render-conversation)", () => {
 
   it("long DIM lines fold bidirectionally", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
     const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
     const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
     const longText = "line0\n" + "content\n".repeat(20) + "end" // 22 wrapped lines > 12
@@ -282,6 +284,7 @@ describe("long-message folding (render-conversation)", () => {
 
   it("expanded consecutive-dim block gets a collapse marker; clicking toggles both ways", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
     const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
     const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
     const state = {
@@ -351,8 +354,7 @@ describe("historyToLines — 恢复会话渲染工具参数（2026-08-30 用户�
     assert.ok(lines.some((l) => l._toolBlock?.name === "read" && l._toolBlock.argsSummary.includes("src/x.mjs") && l._toolBlock.argsSummary.includes("offset 5")), "read 载体含路径+选项")
     assert.ok(lines.some((l) => l._toolBlock?.name === "bash" && l._toolBlock.argsSummary.includes("npm test")), "bash 载体含命令")
     assert.ok(lines.some((l) => l._toolBlock?.name === "mcp__srv__tool"), "未知工具载体存在")
-    const texts = lines.map((l) => l.text)
-    assert.ok(lines.some((l) => l._toolBlock?.argsJson.join("\n").includes("\"path\": \"src/x.mjs\"")), "全量 JSON 在载体 argsJson")
+        assert.ok(lines.some((l) => l._toolBlock?.argsJson.join("\n").includes("\"path\": \"src/x.mjs\"")), "全量 JSON 在载体 argsJson")
     assert.ok(lines.some((l) => l._toolBlock?.name === "bash" && l._toolBlock.argsJson.join("\n").includes("\"command\": \"npm test\"")), "bash 全量 JSON 在载体 argsJson")
     const bad = [{ role: "user", content: "x" }, { role: "assistant", content: "", tool_calls: [{ id: "t", function: { name: "read", arguments: "{broken" } }] }]
     const badLines = historyToLines(bad, 0, bad.length)

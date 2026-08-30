@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url"
 
 import { resolveProxyConfig, resolveWebProxy, injectProxy } from "../src/proxy.mjs"
 import { normalizeProxy } from "../src/config.mjs"
-import { websearchTool, fetchTool } from "../src/tools/web.mjs"
+import { websearchTool } from "../src/tools/web.mjs"
 import { handleConfigCommand } from "../src/tui/cmd-config.mjs"
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url))

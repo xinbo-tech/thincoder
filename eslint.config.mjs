@@ -33,6 +33,17 @@ export default [
     },
   },
   {
+    files: ["test/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        // happy-dom-free webview-event constructors used in dispatchEvent tests
+        Event: "readonly",
+        // integration-provider.mjs uses require() in a best-effort cleanup guard
+        require: "readonly",
+      },
+    },
+  },
+  {
     ignores: ["node_modules/**"],
   },
 ]

@@ -15,7 +15,7 @@ import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
 import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, dirname } from "node:path"
+import { join } from "node:path"
 import { configDir } from "../src/config.mjs"
 import { sessionPath } from "../src/session.mjs"
 

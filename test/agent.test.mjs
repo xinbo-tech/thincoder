@@ -13,7 +13,6 @@ import { execSync } from "node:child_process"
 
 import { createMemory, put } from "../src/memory.mjs"
 import { parseEntry, serializeEntry, slugify, entryFilename } from "../src/markdown.mjs"
-import { goalTool } from "../src/agent-tools.mjs"
 import { mergeChildMutations } from "../src/agent-tools/subagent.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
 import { offloadToolResult, TMP_RETENTION_MS } from "../src/agent/helpers.mjs"
@@ -103,11 +102,6 @@ slow("session: 保存/恢复/新建 往返（基于槽位）", async () => {
   agent.history.push({ role: "user", content: "[System reminder: working directory snapshot:\nsrc/]", transient: true })
   // 无会话时 null
   assert.equal(loadSession(cwd), null)
-  const display = [
-    { text: "❯ You:", color: "bold" },
-    { text: "你好", color: "white" },
-    { text: "  [done] ls → src/", color: "dim" },
-  ]
   saveSession(agent)
   // saveSession 直接写入活动槽位
   assert.ok(existsSync(activePath(cwd)))
@@ -308,7 +302,7 @@ test("session: listSlots 向后兼容旧格式 manifest（数字时间戳）", a
 })
 
 test("session: switchToSlot 指针切换（无文件拷贝）", async () => {
-  const { saveSession, newSession, switchToSlot, loadSession, sessionPath } = await import("../src/session.mjs")
+  const { saveSession, newSession, switchToSlot, sessionPath } = await import("../src/session.mjs")
   const cwd = join(tmpdir(), "thincoder-switch-digest-" + Date.now())
   // 创建会话 A（自动进入槽位 1）
   const agentA = {
@@ -2972,7 +2966,7 @@ test("mergeChildMutations: child without mutations changes nothing", () => {
 test("cache audit (2026-08-16): OS/cwd reminder injected once per process; resume re-grounds the time", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const memory = createMemory({ dbPath: join(mkdtempSync(join(tmpdir(), "mem-")), "m.db") })
-  const { server, requests } = await mockLLM([{ content: "a" }, { content: "b" }, { content: "c" }])
+  const { server } = await mockLLM([{ content: "a" }, { content: "b" }, { content: "c" }])
   try {
     const cwd = mkdtempSync(join(tmpdir(), "cache-audit-"))
     const agent = createAgent({ provider: { baseURL: `http://127.0.0.1:${server.address().port}`, apiKey: "x", model: "m" }, tools: [], config: {}, cwd, memory })
@@ -3438,7 +3432,6 @@ test("cmd-eng: TUI /eng toggle OFF pushes ENG_OFF_REMINDER into pendingReminders
     config: { agent: { engineering: true } }, // currently ON → toggle goes OFF
     _engDesignToken: "x", _pendingReminders: [],
   }
-  const pushes = []
   await handleEngCommand({
     agent,
     pushLine: () => {},

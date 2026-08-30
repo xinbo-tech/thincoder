@@ -48,6 +48,10 @@
 
 - [ ] TOOLS.md §6（git 工具扩充）/§7（workdir/scriptFile）测试是散文总结，非用例表（§8/§8.1 已有完整表）——补成 输入/预期 用例表，与 §8 对齐（低价值，回补文档，择机）
 
+### 测试 · test/ 纳入 lint（2026-08-30 来源 CLI-LINT-TUNING §2.4；2026-08-31 销账）
+
+- [x] ~~CLI `test/` 目录纳入 lint（对齐 vscode 端 lint 含 test 的做法）~~——2026-08-31 落地：eslint.config.mjs 加 test 段（globals 补 Event/require——webview 事件 dispatch 与集成测试清理守卫）、lint script 改 `eslint src test`、存量 62 条清零（38 unused：args 改 `_` 前缀 + 死 import/死解构删除；18 control-regex 加 disable 注明"断言 ANSI 转义"；4 regex-spaces 改 `{2}` 精确量词；2 no-undef 由 globals 声明）。教训沉淀：删 unused 解构时**同名变量可能在不同 test 作用域各有声明**（texts/mkdir/writeFile 各踩一次），逐处验证用途再删，不能按符号名全局替换。
+
 ### TUI · agent-turn.mjs 超 500 行硬限（2026-08-30，来源：TUI 文档质量审计）【同日销账：已拆】
 
 - [x] ~~`src/tui/agent-turn.mjs` 534 行已超 500 行硬限（AGENTS.md 🔴 级约束；§7.2 路由接线与冻结逻辑扩张所致）~~——2026-08-30 拆分落地：工具事件回调 + flushStream 迁出至 `src/tui/tool-events.mjs`（344 行，新模块）、完成冻结三函数归位 `subagent-blocks.mjs`（253 行，数据层本位，并消除 onToolResult 三处重复冻结循环 → freezeDoneSubTasks/freezeAllSubTasks）、标题生成段下沉 `generate-title.mjs` `ensureSessionTitle`；agent-turn 余 174 行（纯回合驱动器）。787/787 全绿，行为零变化（既有测试全锁定）。
@@ -84,7 +88,7 @@
 ### 文档完备性补挂（2026-08-30，来源：文档全量扫描发现的漏挂项）
 
 - [ ] PROVIDER §12 `thinking_budget`（限思考 token 上限）——决策表注明"记 TODO"但未入本清单，补挂（独立增值项，与本轮 enable_thinking 正交）
-- [ ] CLI `test/` 目录纳入 lint（对齐 vscode 端 lint 含 test 的做法）——CLI-LINT-TUNING §2.4 明确"后续批次对齐"但未入本清单，补挂
+- [x] ~~CLI `test/` 目录纳入 lint~~——已销账，见上节（2026-08-31）
 - [ ] config.schema.json 同步机制——2026-08-30 已手工校准一轮（maxTurns 200/advisor guard+timeoutMs/proxy/shell/consultModels/subagentModels 等），但该文件无变更纪律触发点，易再漂移；建议：变更 config 默认值的批次把 schema 同步列入受影响文件清单
 
 

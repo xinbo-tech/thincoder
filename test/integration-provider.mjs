@@ -16,8 +16,6 @@ const configPath = join(configDir, "config.json")
 // 更干净的方式：直接测试 loadConfig 的逻辑
 
 describe("multi-provider 集成", () => {
-  let config
-
   before(async () => {
     mkdirSync(configDir, { recursive: true })
     // 写入测试配置——两个 provider

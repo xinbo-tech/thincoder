@@ -244,6 +244,7 @@ test("_renderMarkdownPreservingWidth: display width preserved after rendering (p
   // turn it OFF for the rest of the heading via \x1b[22m)
   const heading = _renderMarkdownPreservingWidth("## **bold** 标题")
   assert.ok(!heading.includes("\x1b[1m\x1b[1m"), "no nested bold-open sequences")
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   assert.equal((heading.match(/\x1b\[1m/g) || []).length, 1, "single bold-open for the heading")
   assert.ok(!heading.includes("**"), "markers stripped")
 })
@@ -423,6 +424,7 @@ test("renderFrame: subagent block renders in conversation (§7.2 T-H: 窄带退�
   })
   const agent = tuiAgent()
   const { frame } = renderFrame(state, agent, { cols: 80, rows: 24, slashCommands: [], platform: "linux" })
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const clean = frame.replace(/\x1b\[[0-9;]*m/g, "")
   assert.ok(clean.includes("[▶ coder#1 · glm-5.3"), "block header in conversation stream")
   assert.ok(clean.includes("turn 2/100"), "header shows turn n/max")
@@ -808,9 +810,8 @@ test("keyHandler: escape in picker pops it (resolve null)", () => {
 
 test("foldKey 稳定: loadOlder 头部 unshift 后展开态仍绑原工具块（P1，2026-08-30）", async () => {
   // 模拟：restore 一批含工具块的行 → 展开 tool 块 → loadOlder unshift 更早行 → 展开态必须跟随原块
-  const { restoreLines, historyToLines } = await import("../src/tui/startup.mjs")
-  const { isExpanded } = await import("../src/tui/fold-block.mjs")
-  const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
+  const { historyToLines } = await import("../src/tui/startup.mjs")
+    const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
   const state = {
     lines: [], expandedBlocks: new Set(),
     streaming: "", reasoning: "", subTasks: {}, _historyLoaded: 0, _historyTotal: 0, _hasOlder: false,
@@ -943,6 +944,7 @@ test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lin
     expandedBlocks: expanded ? new Set(["sub-coder#1"]) : new Set(),
   })
   // 折叠态：头部摘要 + tail 2 行，不出现最旧内容
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const folded = buildConvLines(mk(false), 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, ""))
   const headIdx = folded.findIndex((t) => t.includes("[▶ coder#1 · glm-5.3"))
   assert.ok(headIdx >= 0, "折叠头存在")
@@ -955,6 +957,7 @@ test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lin
   // 展开态：全量按 kind 着色
   const expandedState = mk(true)
   const expanded = buildConvLines(expandedState, 100)
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const joined = expanded.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   assert.ok(joined.includes("先读文件"), "展开显示 think 块")
   assert.ok(joined.includes("output line1") && joined.includes("output line3"), "展开显示全部 tool 输出")
@@ -977,6 +980,7 @@ test("panel functions (§7.2 T-C/T-I): 区块头 approval 等待与 done + lastE
       "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [], done: false, started: Date.now(), currentTool: null, turn: 3, maxTurns: 100, approval: "write", lastError: null },
     },
   })
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const approvalOut = buildConvLines(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   assert.ok(approvalOut.includes("⏸ coder#2"), "等待审批图标")
   assert.ok(approvalOut.includes("等待审批: write"), "头部显示等待审批：tool")
@@ -985,11 +989,13 @@ test("panel functions (§7.2 T-C/T-I): 区块头 approval 等待与 done + lastE
       "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [{ kind: "tool", text: "❯ bash — x\n" }], done: true, doneAt: Date.now(), started: Date.now() - 120000, currentTool: null, turn: 40, maxTurns: 100, approval: null, lastError: "turn cap reached — work may be partial" },
     },
   })
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const doneOut = buildConvLines(doneState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   // 冻结化（2026-08-30）：done 区块由 agent-turn 冻结进 lines，subTasks 段只渲染
   // 运行中条目——这里断言「done 条目不再出现在尾部固定段」（残影回归锁定）。
   assert.ok(!doneOut.includes("✓ coder#2"), "done 区块不再驻留尾部固定段（残影修复）")
   // 运行中条目仍正常渲染（对照）
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const runningOut = buildConvLines(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   assert.ok(runningOut.includes("⏸ coder#2"), "运行中区块照常显示")
   assert.ok(runningOut.includes("等待审批: write"), "头部显示等待审批：tool")
@@ -1073,6 +1079,7 @@ test("advisor review 折叠框：默认折叠防刷屏 + 完成后冻结载体�
       { kind: "tool", text: "→ read src/x.mjs" },
     ],
   })
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const liveOut = buildConvLines(live, 100).map((l) => ({ text: l.text.replace(/\x1b\[[0-9;]*m/g, ""), color: l.color, toggle: l._foldToggle }))
   assert.ok(liveOut.some((l) => l.text.includes("▶ [advisor · review]") && l.text.includes("click to expand")), "折叠头控制行")
   assert.ok(liveOut.filter((l) => l.text.startsWith("│ ")).length <= 3, "折叠态 tail ≤ 3 行（防刷屏）")
@@ -1082,12 +1089,14 @@ test("advisor review 折叠框：默认折叠防刷屏 + 完成后冻结载体�
   const frozen = tuiState({
     lines: [{ text: "advisor review", color: C.dim, _frozenAdvisor: "review verdict line 1\nreview verdict line 2" }],
   })
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const frozenOut = buildConvLines(frozen, 100).map((l) => ({ text: l.text.replace(/\x1b\[[0-9;]*m/g, ""), toggle: l._foldToggle }))
   assert.ok(frozenOut.some((l) => l.text.includes("▶ [advisor · review done]") && l.text.includes("click to expand")), "冻结评审折叠头")
   assert.ok(!frozenOut.some((l) => l.text.includes("verdict line 1")), "冻结默认不铺开全文")
   const frozenOpen = buildConvLines(
     { ...frozen, expandedBlocks: new Set(["advisor-done-0"]) },
     100,
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   ).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   assert.ok(frozenOpen.includes("review verdict line 1") && frozenOpen.includes("review verdict line 2"), "展开可见全文（可重开）")
 })
@@ -1102,6 +1111,7 @@ test("panel functions (§7.2 T-G): advisor 对象 chunk 与 bash 裸串渲染契
     ],
   })
   const out = buildConvLines(state, 100)
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const joined = out.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   // 2026-08-30: advisor 流改为默认折叠框（防刷屏）——think 颜色与内容可见性在
   // 展开态验证（T-F 回归：kind 配色不变）；折叠态验证控制头存在。
@@ -1110,6 +1120,7 @@ test("panel functions (§7.2 T-G): advisor 对象 chunk 与 bash 裸串渲染契
     { ...state, expandedBlocks: new Set(["advisor-blocks"]) },
     100,
   )
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const exp = expanded.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   assert.ok(exp.includes("reviewing the diff"), "advisor think visible (expanded)")
   assert.ok(exp.includes("final verdict"), "advisor text visible (expanded)")
@@ -1239,7 +1250,7 @@ test("streaming simulation: only last line changes during token append", () => {
   // Simulate the conversation panel line caching logic:
   // initial state → token arrives → verify only new/changed lines differ
   const cols = 80, visibleH = 5
-  const empty = renderConversation(tuiState({ lines: [] }), cols, visibleH, 0)
+  const _empty = renderConversation(tuiState({ lines: [] }), cols, visibleH, 0)
   // Unique line length below — the module-level _convCache keys on
   // lastLine.text.length, and a generic 5-char "hello" collides with other
   // test states across the file (P1 2026-08-30 pattern).
@@ -1366,6 +1377,7 @@ test("streaming simulation: new line in middle pushes lines up", () => {
 // picker 重构（Phase A/B/C）：renderFrame 回归 / key-handler picker 分支 / renderPicker / layout 约束
 // ====================================================================
 
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
 const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, "")
 
 /** picker 状态工厂：20 个 item，lines 已构建（winH 依赖 lines.length） */
@@ -1373,7 +1385,7 @@ function pickerState(overrides = {}) {
   const items = Array.from({ length: 20 }, (_, i) => ({ type: "item", text: `item${i}` }))
   return {
     title: "Demo", entries: items,
-    lines: items.map((it, i) => ({ text: `   ${it.text}`, color: "" })),
+    lines: items.map((it, _i) => ({ text: `   ${it.text}`, color: "" })),
     index: 0, scroll: 0, selectedLine: 0, filter: "", filteredItems: items,
     ...overrides,
   }

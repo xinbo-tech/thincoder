@@ -214,8 +214,6 @@ export function sanitizeDisplay(s) {
     // strip the sentinel + its RS-wrapped payload (⟦ev⟧turn\x1e…\x1e / bare RS/GS chars).
   // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/⟦ev⟧[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e[^\x1e\x1d]*\x1e?/g, "")
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-// eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     // GitHub-#4-class pitfall (2026-08-31): the residue strip used to be
     // /⟦ev⟧[^\x1e\x1d]*/ — "swallow to end of line/string", which ATE REAL
     // CONTENT when the user-visible text legitimately contains the literal

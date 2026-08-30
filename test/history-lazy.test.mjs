@@ -15,8 +15,8 @@ test("historyToLines materializes user/assistant/tool lines with summaries", () 
     { role: "tool", tool_call_id: "t1", content: "ls\napp.js" },
   ]
   const lines = historyToLines(history, 0, 3)
-  const texts = lines.map((l) => l.text)
-  assert.ok(texts.includes("❯ You:"), "user label present")
+    const texts = lines.map((l) => l.text)
+    assert.ok(texts.includes("❯ You:"), "user label present")
   assert.ok(texts.includes("hi"), "user content present")
   assert.ok(texts.includes("❯ ThinCoder:"), "assistant label present")
   assert.ok(texts.includes("hello"), "assistant content present")
@@ -60,7 +60,6 @@ test("historyToLines restores reasoning and full tool results (fidelity vs the l
     { role: "tool", tool_call_id: "t1", content: "line1\nline2\nline3" },
   ]
   const lines = historyToLines(history, 0, 3)
-  const texts = lines.map((l) => l.text)
   // Reasoning restores as ONE C.reason entry — the exact shape flushStream
   // produces live, so buildConvLines folds it under the named "▶ thinking"
   // header with the SAME thresholds as the live path (2026-08-30: the old

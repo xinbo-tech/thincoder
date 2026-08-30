@@ -7,7 +7,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 
 import {
-  SUB_BLOCK_LINE_LIMIT, ensureSubTask, finishSubTask, applySubEvent,
+  SUB_BLOCK_LINE_LIMIT, finishSubTask, applySubEvent,
   routeSubToken, routeSubReasoning, routeSubToolCall, routeSubToolOutput,
 } from "../src/tui/subagent-blocks.mjs"
 

@@ -38,7 +38,6 @@ function selectConsultModels(pool, selectors) {
   const seen = new Set()
   const unknowns = []
   for (const raw of list) {
-    // eslint-disable-next-line no-control-regex -- fixed non-control suffix
     const s = String(raw).replace(/\s+\([^)]*\)\s*$/, "").trim().toLowerCase()
     const matches = pool.filter((m) =>
       consultLabel(m).toLowerCase() === s ||

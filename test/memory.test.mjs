@@ -8,7 +8,7 @@ import { test } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { join } from "node:path"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs"
+import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 
@@ -584,7 +584,7 @@ test("gitSync: 非 git 仓库返回 null", async () => {
 
 test("doc_search 工具注册与执行", async () => {
   const { docSync, docSearchTool } = await import("../src/memory.mjs")
-  const { writeFile, mkdir } = await import("node:fs/promises")
+  const { writeFile } = await import("node:fs/promises")
   const m = freshMemory()
 
   const dir = mkdtempSync(join(tmpdir(), "thincoder-doctool-"))

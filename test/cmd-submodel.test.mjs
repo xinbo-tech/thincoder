@@ -38,7 +38,7 @@ test("/submodel <type> <value> sets only that type", async () => {
 })
 
 test("/submodel <type> with no value shows the slot", async () => {
-  const { ctx, calls, agent } = makeCtx({ subagentModel: "deepseek:x", subagentModels: { coder: "glm:glm-5.2" } })
+  const { ctx, calls } = makeCtx({ subagentModel: "deepseek:x", subagentModels: { coder: "glm:glm-5.2" } })
   await handleSubmodelCommand(ctx, ["coder"])
   assert.ok(calls.some((c) => c.includes("coder") && c.includes("glm:glm-5.2")), "shows type value")
   await handleSubmodelCommand(ctx, ["explore"])

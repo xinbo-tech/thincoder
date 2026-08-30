@@ -7,7 +7,7 @@ import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, dirname } from "node:path"
+import { join } from "node:path"
 
 import { builtinTools } from "../src/tools/index.mjs"
 import { createMemory } from "../src/memory.mjs"
@@ -278,15 +278,15 @@ test("ls: 目录列表（目录在前，含大小时间）", async () => {
     const ls = builtinTools.find((t) => t.name === "ls")
     const out = await ls.execute({ path: dir }, { cwd: dir })
     const lines = out.split("\n")
-    assert.match(lines[0], /^d  src\//) // 目录在前
-    assert.match(lines[1], /^-  a\.txt\s+5\s/) // 文件带大小
+    assert.match(lines[0], /^d {2}src\//) // 目录在前
+    assert.match(lines[1], /^- {2}a\.txt\s+5\s/) // 文件带大小
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 })
 
 test("fetch: HTML 转文本（直接测转换函数——本地服务器被 SSRF 防护拦截）", async () => {
-  const { htmlToText, stripTags } = await import("../src/tools/shared.mjs")
+  const { htmlToText } = await import("../src/tools/shared.mjs")
   const html = `<html><head><style>body{color:red}</style><script>var x=1</script></head>
     <body><h1>标题</h1><p>第一段&nbsp;文字</p><ul><li>条目一</li><li>条目二</li></ul></body></html>`
   const out = htmlToText(html)
@@ -319,7 +319,7 @@ test("websearch: Tavily 结构化搜索优先，无 key 回退 Bing", async () =
   const { websearchTool } = await import("../src/tools/web.mjs")
   const origFetch = globalThis.fetch
   let hitTavily = false
-  globalThis.fetch = async (url, opts) => {
+  globalThis.fetch = async (url, _opts) => {
     if (String(url).includes("api.tavily.com")) {
       hitTavily = true
       return new Response(JSON.stringify({
@@ -374,7 +374,7 @@ slow("bash: 流式输出实时透传（onOutput 分块到达）", async () => {
 slow("checkpoint: 全量回滚被禁，单文件恢复可用（v2 全量副本）", async () => {
   const { execFileSync } = await import("node:child_process")
   const { createCheckpoint, rewind, listCheckpoints } = await import("../src/git/checkpoint.mjs")
-  const { writeFile, readFile: rf, mkdir: mk, rm: del, access } = await import("node:fs/promises")
+  const { writeFile, readFile: rf, mkdir: mk, rm: del } = await import("node:fs/promises")
 
   const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
@@ -459,7 +459,7 @@ slow("checkpoint: 快照后 commit 再回滚仍然恢复（v2 副本与 HEAD 无
 slow("checkpoint: 超大文件跳过副本并提示（skipped 列表）", async () => {
   const { execFileSync } = await import("node:child_process")
   const { createCheckpoint, rewind } = await import("../src/git/checkpoint.mjs")
-  const { writeFile, readFile: rf } = await import("node:fs/promises")
+  const { writeFile } = await import("node:fs/promises")
 
   const dir = mkdtempSync(join(tmpdir(), "thincoder-cp3-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
@@ -1254,7 +1254,7 @@ test("git: workdir 在 workspace 子目录的 git 仓库运行；越界报错", 
 test("question: 回调返回用户回答", async () => {
   const qTool = builtinTools.find((t) => t.name === "question")
   // 模拟一个直接返回固定回答的 onQuestion
-  const ctx = { cwd: process.cwd(), onQuestion: async (text) => "选方案A" }
+  const ctx = { cwd: process.cwd(), onQuestion: async (_text) => "选方案A" }
   const result = await qTool.execute({ question: "选哪个？" }, ctx)
   assert.equal(result, "选方案A")
 })
@@ -1268,8 +1268,7 @@ test("question: 无回调时抛错", async () => {
 // ---------------------------------------------------------------- hashline_edit
 
 test("hashline_edit: 按哈希定位替换单行", async () => {
-  const { hashLine } = await import("../src/tools/file.mjs")
-  const dir = mkdtempSync(join(tmpdir(), "thincoder-hashline-"))
+    const dir = mkdtempSync(join(tmpdir(), "thincoder-hashline-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
   try {
@@ -1297,7 +1296,6 @@ test("hashline_edit: 按哈希定位替换单行", async () => {
 })
 
 test("hashline_edit: 多行替换", async () => {
-  const { hashLine } = await import("../src/tools/file.mjs")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-hashline-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -1720,8 +1718,8 @@ test("checklist: T-cl-8 父 done 子树全 done → 递归归档（层级保留�
     assert.doesNotMatch(content, /T1/)                       // 无残留
     const done = readFileSync(join(dir, ".thincoder", "checklist-done.md"), "utf-8")
     assert.match(done, /- \[x\] T1: parent/)
-    assert.match(done, /\n  - \[x\] T1\.1: child1/)          // 子任务层级保留
-    assert.match(done, /\n  - \[x\] T1\.2: child2/)
+    assert.match(done, /\n {2}- \[x\] T1\.1: child1/)          // 子任务层级保留
+    assert.match(done, /\n {2}- \[x\] T1\.2: child2/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
