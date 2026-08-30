@@ -1,3 +1,33 @@
+## [0.12.52] — 2026-08-31
+
+### Fixed
+
+- **sanitizeDisplay 吞正文（用户报障）**：正文含字面 `⟦ev⟧` 时（如讨论 ACP 桥剥除语义的结果表），D5 残段剥除 `/⟦ev⟧[^RS-GS]*/` 按字符类语义"吞到行尾"——该格到回复末尾全没了。真 token = 哨兵+字母 phase 词，收窄为 `/⟦ev⟧[A-Za-z]*/`：裸哨兵正文合法保留，live token 照剥（防伪不破，旧语义断言随测试反转）
+- **窗口拖小不生效**：双次相同确认规则（ConPTY 防御）在"拖动只收一个 resize 事件"的场景永不触发，UI 停在旧大宽度溢出；真 resize 事件 400ms settle 后提交（growth 仍立即、untrusted 采样防御不动）
+- **dims 误诊机器拆除**：ConPTY stale 假说整套机构（双确认/settle/看门狗/启动收敛/turn 采样/sawValid）建立在对折叠块 cols=80 的误诊上——全部删除（dims 98→45 行）；现行铁律 = 渲染只读 get()、refresh() 仅事件钩子（seed/resize）、任何 sane 采样立即提交
+
+### Changed
+
+- **头部显示版本号**：`ThinCoder 0.12.52 │ model │ cwd`（logo 右侧 dim，模块级读 package.json）
+- **提示词**：system prompt "task tracks work for **EVERY tier — even Small**"（注意力层级对齐，修 Small 漏建 task）
+
+### Refactor
+
+- **model-specs.mjs**（TODO #1）：MODEL_SPECS + specForModel 抽出，config.mjs 358→266；re-export 保证 23 个 importer 零改动
+- **provider/normalize.mjs**（TODO #2）：stripImagesForTextModel + normalizeToolPairing（发送前载荷净化）抽出，core.mjs 420→350
+- **config.schema.json 删除**（TODO #8，用户裁定）：从未闭环（线上 URL 未部署/代码零消费/25 键缺 20）；saveConfig 不再注入 $schema
+- **死代码清理**：15 处死 import + 9 无用转义 + 17 control-regex 注明有意；lint warnings 86→44
+- **test/ 纳入 lint**（TODO #7）：62 条存量清零，`eslint src test`
+
+### Perf
+
+- 慢测试修复（TODO #10）："原子写不残留 .tmp" 断言曾 readdirSync 扫 `~/.thincoder/sessions/` 全目录（3 万文件时单次 18s）——改 O(1) existsSync 直探本槽位，session 往返用例 16.4s→28ms（仅测试基建，不影响运行时）
+
+### Tests
+
+- read_image × glm-5.3-flash 直接用例（PROVIDER.md §11 T2 落自动化）；TOOLS.md §6/§7 用例表回补（T-g-1..12 / T-w / T-e，对齐 §8）
+- 812/812 全绿；lint 0 errors（44 warnings 均为 C 类 parity 锚点）
+
 ## [0.12.51] — 2026-08-30
 
 ### Added
