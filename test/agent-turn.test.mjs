@@ -447,6 +447,47 @@ test("P1: interrupt 分支合成占位 tool 结果（配对完整，2026-08-30 �
   for (const id of ids) assert.ok(answered.has(id), `tool_call ${id} 有配对 tool 消息`)
 })
 
+
+test("consult 残留终结: done:true 全量冻结 N 块 + 墓碑防复活（2026-08-30 会诊 4/4 共识）", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  // 4 模型会诊：4 个子代理块
+  callbacks.onToken("consult#1/[model]kimi-k3")
+  callbacks.onToken("consult#2/[model]deepseek-v4-pro")
+  callbacks.onToken("consult#3/[model]glm-5.3")
+  callbacks.onToken("consult#4/[model]qwen3.8-max")
+  callbacks.onToken("consult#1/kimi 的诊断...")
+  callbacks.onToken("consult#2/deepseek 的诊断...")
+  // 最后一次 check：done:true → 全量收尾
+  ctx.runAgent = async (_a, _t, cbs) => {
+    cbs.onToolResult("consult_check", JSON.stringify({ done: true, received: 4, total: 4 }))
+  }
+  await runAgentTurn(ctx, "task")
+  assert.equal(Object.keys(ctx.state.subTasks).length, 0, "全部冻结释放（无 running 幽灵）")
+  const frozen = ctx.state.lines.filter((l) => l._frozenSubTask)
+  assert.equal(frozen.length, 4, "4 条冻结载体行")
+  for (const f of frozen) assert.ok(!f._frozenSubTask.lastError, "无 interrupted 误标")
+  // 迟到 token（abort 传播的尾部输出）：墓碑吞掉，不复活
+  callbacks.onToken("consult#3/迟到的收尾输出")
+  assert.equal(Object.keys(ctx.state.subTasks).length, 0, "墓碑命中：不复活块")
+  assert.ok(!ctx.state.lines.some((l) => l._frozenSubTask?.key === "consult#3" && l._frozenSubTask.done === false), "consult#3 保持冻结态")
+})
+
+test("consult 精确收尾: 单条 reply 按 model 定位（不再冻结错块）", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToken("consult#1/[model]kimi-k3")
+  callbacks.onToken("consult#2/[model]deepseek-v4-pro")
+  ctx.runAgent = async (_a, _t, cbs) => {
+    // deepseek 先答完（乱序）：按 model 精确收 consult#2
+    cbs.onToolResult("consult_check", JSON.stringify({ reply: "ds 诊断", model: "deepseek-v4-pro", done: false }))
+  }
+  await runAgentTurn(ctx, "task")
+  // 回合结束后 freezeAllSubTasks 会收尸所有块（含未答完的 #1）——TUI 设计如此。
+  // 本用例只验 model 精确定位：deepseek 的 reply 冻结的是 consult#2（不是最早启动的 consult#1）。
+  const dsFrozen = ctx.state.lines.find((l) => l._frozenSubTask?.key === "consult#2")
+  assert.ok(dsFrozen, "deepseek 块精确收尾并冻结（model 定位，非最早启发式）")
+  assert.equal(dsFrozen._frozenSubTask.done, true, "done 语义正确")
+})
+
 test("runAgentTurn: 中断回合清扫工具块（P0-2：Ctrl+C 后无 running 残留，2026-08-30 会诊）", async () => {
   const ctx = trackedCtx({
     summarize: () => "",

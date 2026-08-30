@@ -19,7 +19,7 @@ import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 import {
   SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
-  routeSubToolOutput, finishSubTask, freezeDoneSubTasks,
+  routeSubToolOutput, finishSubTask, finishSubTasksByRole, finishSubTaskByModel, freezeDoneSubTasks,
 } from "./subagent-blocks.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 
@@ -270,20 +270,27 @@ export function buildToolCallbacks(deps) {
         finishSubTask(state, ["escalate"], result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
         freezeDoneSubTasks(state)
       } else if (name === "consult_check" || name === "consult_stop") {
-        // Individual consultants settle invisibly to onToolResult (fire-and-forget
-        // children); the check/stop result JSON announces session completion —
-        // freeze every running consult block when it does. A void/undefined
-        // result (older consult_stop) must NOT silently leave the block running
-        // (TUI residual report 2026-08-30) — treat stop as done regardless.
+        // Consult session-level settle (2026-08-30 consult review): a session
+        // spawns N parallel children, so completion must settle ALL of them.
+        // The single-shot finishSubTask here only froze the EARLIEST running
+        // block — the other N-1 stayed "running" pinned above the input box
+        // all through the final answer, then got mislabeled "interrupted".
+        //   - individual reply (done:false): settle precisely by r.model —
+        //     models settle out of order; the earliest-running heuristic froze
+        //     the wrong block.
+        //   - done:true / stopped: settle every remaining consult block.
         try {
           const r = JSON.parse(result)
           if (r?.done || r?.stopped !== undefined) {
-            finishSubTask(state, ["consult"], null)
+            finishSubTasksByRole(state, ["consult"], null)
+            freezeDoneSubTasks(state)
+          } else if (r?.model) {
+            finishSubTaskByModel(state, "consult", r.model)
             freezeDoneSubTasks(state)
           }
         } catch {
           if (name === "consult_stop") {
-            finishSubTask(state, ["consult"], null)
+            finishSubTasksByRole(state, ["consult"], null)
             freezeDoneSubTasks(state)
           }
         } /* non-JSON result — leave blocks as-is */

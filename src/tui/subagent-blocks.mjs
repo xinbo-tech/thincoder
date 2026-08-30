@@ -48,6 +48,12 @@ export function throttleSubRender(scheduleRender) {
 
 export function ensureSubTask(state, subMatch) {
   const key = `${subMatch[1]}#${subMatch[2]}`
+  // Tombstone guard (2026-08-30 consult residual): a child aborted mid-flight
+  // can relay tail tokens AFTER its block was frozen — ensureSubTask must not
+  // resurrect it (the recreated running block had no one left to freeze it and
+  // sat pinned above the input box until the next turn).
+  state._frozenSubKeys ??= new Set()
+  if (state._frozenSubKeys.has(key)) return null
   state.subTasks ??= {}
   if (!state.subTasks[key]) {
     state.subTasks[key] = {
@@ -143,6 +149,8 @@ export function finishSubTask(state, roles, lastError = null) {
  *  freezing — full design interaction, not a dim-lines fallback). subTasks loses
  *  the entry on release; memory stays bounded by N2 (ring buffer already applied). */
 export function freezeSubTaskLines(state, sub) {
+  state._frozenSubKeys ??= new Set()
+  state._frozenSubKeys.add(sub.key)
   if (!sub) return
   sub.done = true
   sub.doneAt = sub.doneAt ?? Date.now()
@@ -158,6 +166,45 @@ export function freezeDoneSubTasks(state) {
       delete state.subTasks[key]
     }
   }
+}
+
+/** Mark ALL running blocks of the given role(s) done — session-level settle.
+ *  A consult spawns N parallel children (consult#1..#N); the single-shot
+ *  finishSubTask only ever settled the earliest one, leaving N-1 running
+ *  ghosts pinned above the input box until turn end (consult residual,
+ *  2026-08-30 consult review — 4/4 models converged on this). */
+export function finishSubTasksByRole(state, roles, lastError = null) {
+  state.subTasks ??= {}
+  const roleSet = new Set(Array.isArray(roles) ? roles : [roles])
+  for (const sub of Object.values(state.subTasks)) {
+    if (!sub.done && roleSet.has(sub.role)) {
+      sub.done = true
+      sub.doneAt = Date.now()
+      sub.currentTool = null
+      sub.approval = null
+      if (lastError) sub.lastError = lastError
+      sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+    }
+  }
+}
+
+/** Precise settle: mark the child of `role` whose [model] token recorded
+ *  `model` as done. consult_check returns the reply's model — the earliest-
+ *  running heuristic froze the WRONG block when models settle out of order. */
+export function finishSubTaskByModel(state, role, model, lastError = null) {
+  state.subTasks ??= {}
+  for (const sub of Object.values(state.subTasks)) {
+    if (!sub.done && sub.role === role && sub.model === model) {
+      sub.done = true
+      sub.doneAt = Date.now()
+      sub.currentTool = null
+      sub.approval = null
+      if (lastError) sub.lastError = lastError
+      sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+      return sub
+    }
+  }
+  return null
 }
 
 /** Turn-end sweep (runAgentTurn finally): freeze ALL remaining blocks — interrupted
@@ -207,6 +254,7 @@ export function routeSubToken(state, t, scheduleRender) {
   const subMatch = t.match(SUB_PREFIX_RE)
   if (!subMatch) return false
   const sub = ensureSubTask(state, subMatch)
+  if (!sub) return true // frozen tombstone — late token from an aborted child: drop
   const payload = t.slice(subMatch[0].length)
   // ⟦ev⟧ event token: turn/approval progress → header ONLY (never blocks,
   // never the main stream — D1).
@@ -234,7 +282,9 @@ export function routeSubToken(state, t, scheduleRender) {
 export function routeSubReasoning(state, t, scheduleRender) {
   const subMatch = t.match(SUB_PREFIX_RE)
   if (!subMatch) return false
-  appendSubBlock(ensureSubTask(state, subMatch), "think", t.slice(subMatch[0].length))
+  const sub = ensureSubTask(state, subMatch)
+  if (!sub) return true // frozen tombstone — drop late token
+  appendSubBlock(sub, "think", t.slice(subMatch[0].length))
   scheduleRender()
   return true
 }
@@ -244,6 +294,7 @@ export function routeSubToolCall(state, name, args, scheduleRender) {
   const subMatch = name.match(SUB_PREFIX_RE)
   if (!subMatch) return false
   const sub = ensureSubTask(state, subMatch)
+  if (!sub) return true // frozen tombstone — drop late token
   sub.currentTool = name.slice(subMatch[0].length)
   sub.toolArgs = args
   sub.approval = null
@@ -258,6 +309,7 @@ export function routeSubToolOutput(state, name, part, scheduleRender) {
   const subMatch = name.match(SUB_PREFIX_RE)
   if (!subMatch) return false
   const sub = ensureSubTask(state, subMatch)
+  if (!sub) return true // frozen tombstone — drop late token
   const toolName = name.slice(subMatch[0].length)
   appendSubBlock(sub, "tool", part.text + "\n", { fresh: sub.currentTool !== toolName })
   if (sub.currentTool !== toolName) sub.currentTool = toolName
