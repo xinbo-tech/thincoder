@@ -30,9 +30,19 @@ export function historyToLines(history, startIdx, endIdx) {
     const m = history[i]
     if (m.role === "user") {
       if (typeof m.content === "string" && m.content.startsWith("[System reminder:")) continue
+      // Label only when there is something to show: multimodal user messages
+      // (content = [text, image] array, injected after read_image) render NO
+      // text on restore — the image is invisible to the terminal and the user
+      // just saw it live. A label with no content under it is noise (user
+      // report 2026-08-30: stray "❯ You:" after the read_image block).
+      const userText = typeof m.content === "string"
+        ? m.content
+        : (Array.isArray(m.content) ? m.content.find((p) => p?.type === "text")?.text ?? "" : "")
+      const displayable = typeof m.content === "string" ? !!m.content : !!(userText && userText.trim())
+      if (!displayable) continue
       if (lines.length > 0) lines.push({ text: "", color: C.dim })
       lines.push({ text: "❯ You:", color: ansi.bold + C.user })
-      if (typeof m.content === "string" && m.content) lines.push({ text: m.content, color: C.text, _kind: "text" })
+      if (userText) lines.push({ text: userText, color: C.text, _kind: "text" })
       inTurn = false
     } else if (m.role === "assistant") {
       if (!inTurn) {
