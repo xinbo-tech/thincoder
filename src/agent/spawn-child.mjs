@@ -48,7 +48,12 @@ export function makeRelay(parent, label, emit, model) {
  * 已知限制（round2 #7）：单 chunk 匹配，哨兵串切在 chunk 边界（⟦e + v⟧）漏剥——
  * 残危害由消费端 sanitizeDisplay 兜底，外观级；不引入跨 chunk carry-over 缓冲。
  */
-const WELL_FORMED_EVENT = new RegExp(`^${EVENT_SENTINEL}(turn|approval)${RS}[^${RS}]*${RS}[^${RS}]*${RS}(llm|tool|approval|done)${RS}`)
+// Single source for the event grammar branch lists (consult P3, 2026-08-30):
+// stripEventToken (display) and stripEventTokensForCapture (capture) shared them
+// literally — extending the event set meant touching both regexes.
+const EVENT_PHASE = "turn|approval"
+const EVENT_TYPE = "llm|tool|approval|done"
+const WELL_FORMED_EVENT = new RegExp(`^${EVENT_SENTINEL}(${EVENT_PHASE})${RS}[^${RS}]*${RS}[^${RS}]*${RS}(${EVENT_TYPE})${RS}`)
 export function stripEventToken(text) {
   if (!text.startsWith(EVENT_SENTINEL)) return text
   if (WELL_FORMED_EVENT.test(text)) return text // 真事件（生成侧发出），放行
@@ -65,7 +70,7 @@ export function stripEventToken(text) {
  */
 export function stripEventTokensForCapture(text) {
   if (!String(text).includes(EVENT_SENTINEL)) return text
-  return String(text).replace(new RegExp(`${EVENT_SENTINEL}(turn|approval)${RS}[^${RS}]*${RS}[^${RS}]*${RS}(llm|tool|approval|done)(?:${RS}[^${RS}]*)?`, "g"), "")
+  return String(text).replace(new RegExp(`${EVENT_SENTINEL}(${EVENT_PHASE})${RS}[^${RS}]*${RS}[^${RS}]*${RS}(${EVENT_TYPE})(?:${RS}[^${RS}]*)?`, "g"), "")
 }
 
 /**

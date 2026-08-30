@@ -27,7 +27,7 @@ function logToolError(toolName, args, error) {
     const entry = [
       `time: ${now.toISOString()}`,
       `tool: ${toolName}`,
-      `args: ${JSON.stringify(args, null, 2)}`,
+      `args: ${JSON.stringify(args, null, 2).slice(0, 2000)}${JSON.stringify(args, null, 2).length > 2000 ? "… (truncated)" : ""}`,
       `error: ${error?.message ?? String(error)}`,
       error?.stack ? `stack:\n${error.stack}` : "",
     ].filter(Boolean).join("\n") + "\n"
@@ -182,7 +182,10 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       })
       if (rawResult === undefined) throw new Error(`Tool "${item.toolCall.name}" returned undefined — all tools must return a string value`)
       const raw = String(rawResult)
-      const result = item.toolCall.name === "read_image" ? raw : await offloadToolResult(raw, item.toolCall.id)
+      // Multimodal tools keep the raw result (base64 images ride the multimodal
+    // channel); everything else offloads oversized text to disk. Flag-driven, not
+    // name-driven (consult P3, 2026-08-30).
+    const result = item.tool?.multimodal ? raw : await offloadToolResult(raw, item.toolCall.id)
       callbacks.onToolResult?.(item.toolCall.name, result, item.toolCall.id)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)
       runHooks("PostToolUse", { agent, toolName: item.toolCall.name, toolArgs: item.args, result: raw }).catch(() => {})

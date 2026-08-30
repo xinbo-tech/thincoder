@@ -34,7 +34,6 @@ import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 const TOOL_OUTPUT_LINE_CAP = 200          // per-call streaming output ring buffer
 const SUBAGENT_PREVIEW_LINES = 8          // report preview rows in the conversation
 const PREVIEW_LINE_CHARS = 120            // per-line preview slice
-const PREVIEW_TRIM_LINES = 3              // footer rows when a report exceeds the preview
 const REMINDER_CAP = 3                    // max pending reminders shown on turn end
 const REMINDER_PERSIST_TURNS = 5          // persist reminders every N turns
 
@@ -442,10 +441,10 @@ export function buildToolCallbacks(deps) {
           // Reminders can embed long prior tables — show only the first lines
           // (the full text is in agent.history); 3 lines + ellipsis.
           const lines = last.content.split("\n")
-          const shown = lines.length > 3 ? lines.slice(0, 3).join("\n") + "\n…" : last.content
+          const shown = lines.length > REMINDER_CAP ? lines.slice(0, REMINDER_CAP).join("\n") + "\n…" : last.content
           pushLine(shown, C.warn)
         }
-        if (++n % 5 !== 0) return
+        if (++n % REMINDER_PERSIST_TURNS !== 0) return
         try { saveSessionImpl(agent, state.lines) } catch (e) { console.error(`[session] incremental save failed: ${e.message}`) }
       }
     })(),

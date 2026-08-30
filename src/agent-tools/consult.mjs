@@ -251,10 +251,11 @@ export function cleanupConsultSessions(agent) {
     for (const w of s.waiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
   }
   agent._consultSessions?.clear()
-  // Return the completion marker: onToolResult uses it to freeze the running
-  // consult block (TUI residual report 2026-08-30 — a void return left the
-  // block "running" and its expanded body pinned on screen forever).
-  return JSON.stringify({ stopped: true })
+  // NOTE: deliberately void (consult P3, 2026-08-30). The { stopped: true } marker
+  // only reaches the TUI via the consult_stop TOOL return (onToolResult freezes
+  // blocks on tool calls) — cleanup runs from the turn finally, where the block
+  // freeze is owned by freezeAllSubTasks + sweepToolBlocks, so a return here is
+  // dead weight. Blocks still get frozen on interrupt via that sweep.
 }
 
 export const consultStartTool = {
