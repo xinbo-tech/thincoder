@@ -47,6 +47,22 @@ test("read_image: 非视觉模型直接拒绝（防 image_url 毒化会话），
   }
 })
 
+test("read_image: glm-5.3-flash 多模态放行（PROVIDER.md §11 T2，2026-08-31 补自动化）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-glmflash-"))
+  try {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64")
+    writeFileSync(join(dir, "a.png"), png)
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    // glm-5.3-flash（multimodal=true）：与 kimi-k3 同样放行，门禁不拒绝
+    const out = await byName.read_image.execute({ path: "a.png" }, { cwd: dir, agent: { provider: { model: "glm-5.3-flash" } } })
+    const parsed = JSON.parse(out)
+    assert.match(parsed.text, /read_image: a\.png/)
+    assert.ok(Array.isArray(parsed.images) && parsed.images.length === 1, "image part 进 multimodal 通道")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test("read_image: svg 返回文本源码（不进 image_url，任何模型可用），bmp 拒绝并提示转 PNG", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-test-"))
   try {

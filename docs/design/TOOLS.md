@@ -90,6 +90,23 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **测试**（两端各验）：每个新 action 的成功路径 + 参数校验 + 破坏性快照触发；反向路由断言（git.md 含 Route to git、discipline.md 含条款）；全量回归不降。
 
+**测试用例表**（对齐 §8 格式，2026-08-31 回补；用例在 `test/tools.test.mjs`）：
+
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| T-g-1 | add 分文件暂存 | git repo + 两个改动文件，`add path="a.txt"` | 仅 a.txt 进暂存区（status 干净区分 staged/unstaged） |
+| T-g-2 | push 带远端/分支 | `push remote="origin" branch="main"` | git push 到指定远端分支 |
+| T-g-3 | tag 三态 | `tag tagAction=create/list/delete` | 创建/列举/删除 tag；delete 走确认 |
+| T-g-4 | branch 管理 | `branch branchAction=list/create/switch` | 列表/创建/切换分支 |
+| T-g-5 | checkout 还原文件 | `checkout path="a.txt"`（有未提交改动） | 先快照（createCheckpoint）再还原 + 用户确认 |
+| T-g-6 | stash push/pop | 改动 → `stash stashAction=push` → `pop` | 工作区暂存与恢复 |
+| T-g-7 | reset hard 快照 | `reset mode="hard" ref=HEAD~1` | 先 createCheckpoint 再 reset |
+| T-g-8 | revert 安全撤销 | `revert ref=<sha>` | 生成反向 commit，工作区干净 |
+| T-g-9 | 参数校验 | 非法 `mode`/`tagAction`/未知 action | 报错列出合法值，不执行 |
+| T-g-10 | workdir 子目录运行 | `git status workdir="sub/repo"` | 在子仓库执行；越界路径报错 |
+| T-g-11 | 反向路由断言 | git.md/discipline.md 文本 | 含 "Route to git instead of bash" / 路由条款 |
+| T-g-12 | status porcelain 保格 | 有 staged+unstaged 混合 | runGitRaw 保前导空格，分类不串 |
+
 **受影响文件**：CLI `src/tools/git.mjs` + `src/tools/git.md` + `src/prompts/discipline.md`、VS Code `src/tools/git.mjs` + `src/prompts/discipline.md`、两端测试、`CHANGELOG.md`。
 
 ---
@@ -108,6 +125,19 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 | 提示词路由零散 | discipline.md「Tool routing」扩为全工具路由总表（git/execute/读写搜/进程 + bash 适用边界） | 两端 discipline.md（byte-identical） |
 
 **测试**（两端各验）：git workdir（子仓库运行 + 越界报错）；execute scriptFile（跑文件 + nodeArgs `--check` 好/坏语法 + 越界 + 缺参 + 禁 flag）；全量回归不降。注：测试里不断言 `node --test` 输出——嵌套 node --test（测试套件内再跑）输出为空属测试环境伪影，真实场景正常。
+
+**测试用例表**（对齐 §8 格式，2026-08-31 回补；用例在 `test/tools.test.mjs` / `test/execute.test.mjs`）：
+
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| T-w-1 | git workdir 子仓库 | git 工具 `workdir="sub/repo"`（内含独立 .git） | 在子仓库执行（log 指向子仓库 HEAD） |
+| T-w-2 | workdir 越界 | `workdir` 指向 workspace 外 | 报错拒绝，不执行 |
+| T-e-1 | scriptFile 跑文件 | execute `scriptFile="x.mjs"`（console.log 输出） | 子进程执行，stdout 返回 |
+| T-e-2 | nodeArgs --check | 好文件（静默）/ 坏文件（SyntaxError） | 退出码区分，语法错误可见 |
+| T-e-3 | scriptFile 越界 | scriptFile 指向 workspace 外 | 报错拒绝 |
+| T-e-4 | 缺参 | code 与 scriptFile 均缺 | 报错提示二选一必填 |
+| T-e-5 | 禁 flag | nodeArgs 含 `--eval`/`--inspect` | 报错拒绝该 flag |
+| T-e-6 | 路由描述断言 | grep.md/ls.md/delete.md/read.md 文本 | 各含 "Route to X instead of bash" |
 
 **受影响文件**：CLI `src/tools/git.mjs` + `git.md` + `codemode.mjs` + `execute.md` + `grep.md`/`ls.md`/`delete.md`/`read.md` + `src/prompts/discipline.md`、VS Code 对应（git.mjs / execute.mjs / search.mjs / more-file.mjs / file.mjs / discipline.md）、两端测试。
 

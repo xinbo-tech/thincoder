@@ -44,9 +44,9 @@
 
 - [x] ~~`[model]` token 解析剥离补自动化测试（agent-turn.mjs 解析 / render-frame.mjs header）~~——2026-08-30 核对销账：已随 §7.2 D4 落地锁定（实现拆分至 subagent-blocks.mjs routeSubToken；header 渲染随窄带退役迁至 render-conversation.mjs）——`test/subagent-blocks.test.mjs` 专项单测（[model] 元数据只记录一次、后续 [model] 开头内容不吞；T2 无 token 降级由 ensureSubTask 默认态 model=undefined 保证）+ `test/agent-turn.test.mjs` 端到端用例多处（T-A/T-E 等）；契约见 TUI.md §10.4D 测试用例表 T1-T3
 
-### 工具 · checklist 文档完备性（2026-08-27，来源：交付评审）
+### 工具 · checklist 文档完备性（2026-08-27，来源：交付评审）【2026-08-31 销账：§6/§7 用例表已补】
 
-- [ ] TOOLS.md §6（git 工具扩充）/§7（workdir/scriptFile）测试是散文总结，非用例表（§8/§8.1 已有完整表）——补成 输入/预期 用例表，与 §8 对齐（低价值，回补文档，择机）
+- [x] ~~TOOLS.md §6（git 工具扩充）/§7（workdir/scriptFile）测试是散文总结，非用例表（§8/§8.1 已有完整表）——补成 输入/预期 用例表，与 §8 对齐~~——2026-08-31 回补：§6 补 T-g-1..12（add 分文件/push 远端/tag 三态/branch/checkout 快照/stash/reset hard/revert/参数校验/workdir/反向路由/status porcelain），§7 补 T-w-1..2（workdir 子仓库/越界）+ T-e-1..6（scriptFile/nodeArgs --check/越界/缺参/禁 flag/路由描述），格式对齐 §8（输入/预期/对应需求）。
 
 ### 测试 · test/ 纳入 lint（2026-08-30 来源 CLI-LINT-TUNING §2.4；2026-08-31 销账）
 
@@ -64,9 +64,9 @@
 
 - [x] ~~`src/provider/core.mjs` 419 行超 300 建议线（接近 500 硬限）——body 组装（含 enable_thinking 注入段）或 stripImages/normalizeToolPairing 抽独立模块~~——2026-08-31 落地：`stripImagesForTextModel` + `normalizeToolPairing`（发送前载荷净化，纯函数、无 chat/重试内部依赖）抽至 `src/provider/normalize.mjs`（82 行）；core.mjs 420→350 行（chat 主流程 + 重试/列表为不可再分的调用核心，345± 为该职责的体量下限，记录为现状）；core **re-export** 两函数——provider/index.mjs 与 tool-pairing.test.mjs 引用零改动。非本轮引入，择机条目按期销账。
 
-### 测试 · 慢测试 fs 优化候选（2026-08-30，来源：测试分层改造）
+### 测试 · 慢测试 fs 优化候选（2026-08-30，来源：测试分层改造）【2026-08-31 销账：真因不在 saveSession】
 
-- [ ] `agent.test.mjs` "session: 保存/恢复/新建 往返" 单测 16.4s、checkpoint 回滚 7.6s——疑似临时目录 fs 抖动/全量副本策略；已入 slow 层不堵快层，但全量（发版必跑）仍受累，可优化 fixture 目录复用或副本策略
+- [x] ~~`agent.test.mjs` "session: 保存/恢复/新建 往返" 单测 16.4s、checkpoint 回滚 7.6s——疑似临时目录 fs 抖动/全量副本策略~~——2026-08-31 定位并修复：**真因是"原子写不残留 .tmp"断言扫描了 `~/.thincoder/sessions/` 全目录**（readdirSync 实测 18s——用户机上 31123 个文件、含 22MB 大会话，Defender 干扰放大；独立复现 saveSession/loadSession 全序列仅 16ms，用例其余逻辑 <15ms）。修复：改为 existsSync 直探本槽位 `.tmp` 路径（O(1)），断言语义不变。16.4s→**17ms**。checkpoint 7.6s 属 git 子进程真实成本，保留 slow 层。
 
 
 ### TUI · 渲染/回调模块 300+ 行 advisory 存档（2026-08-30，来源：agent-turn 拆分评审）【同日更新：render-conversation 已随 fold-block 组件化降到 410 行；tool-events 未动】
