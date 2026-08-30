@@ -43,6 +43,12 @@
 - 真实消息（用户输入/assistant 回复/tool 结果/多模态图像）走 `pushReal` → 同时进 `history`（人读）与 `contextHistory`（机读）
 - 机读消息（`[System reminder:`、`[User interrupt:`、压缩 note、task/plan 回注）只进 `agent.history`，**不进人读线**
 - **transient 消息（编辑器上下文注入等）落盘时过滤**（`saveSession` 的 `!m.transient` + legacy 前缀清理 `LEGACY_TRANSIENT_PREFIXES`）
+- **人读线落盘瘦身（`slimForDisplay`，2026-08-30 会诊 3/3 设计、deepseek 方案）**：`saveSession` 写盘时对 `history` 做 copy-on-write 映射（**绝不原地改**——两线经 pushReal 共享对象引用，原地改会污染机读线与 provider 前缀缓存）：
+  - `assistant.tool_calls[].function.arguments` 截 300 字符（head + `…`）
+  - `tool` 消息 content 截 500 字符（head + `… (truncated for storage)`）
+  - 多模态 user content 数组：保留 text part，**丢弃 image_url base64 part**（显示只需 text；模型侧图像由 multimodal 通道承载）
+  - **`contextHistory` 一字不动**——机读线保持与 provider 前缀缓存逐字节一致（strict pairing/多轮看图全靠它）。实测 18MB 会话重存后大幅缩水（base64 + 工具结果正文占大头）
+  - VS Code 端同批落地（session-io.mjs 同款 `slimForDisplay`）——两端写出的会话文件一致瘦身；vscode 的 historyWindow 只渲染字符串 content，瘦身后显示安全
 
 ## 4. 保存与恢复
 

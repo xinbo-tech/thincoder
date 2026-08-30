@@ -6,12 +6,13 @@
 
 | 文件 | 职责 |
 |---|---|
-| `agent.mjs` | runAgent 主循环：prepareRun → turn 循环 → chat → 分发 → 后处理；ContinueError/resume；usage 基线 |
+| `agent.mjs` | runAgent 主循环：prepareRun → turn 循环 → chat → 分发 → 后处理；ContinueError/resume；usage 基线。结果提交/记账已拆至 `agent/record-results.mjs`（2026-08-30 consult） |
 | `agent/setup.mjs` | prepareRun：上下文注入（git/目录/指令/记忆/文档/outline）、system prompt 组装、阈值解析 |
-| `agent/dispatch.mjs` | executeToolCalls：两段调度（权限预审 → 顺序保序执行）、hooks、错误落盘 |
+| `agent/dispatch.mjs` | executeToolCalls：两段调度（权限预审 → 顺序保序执行）、hooks、错误落盘；onToolCall/onToolOutput/onToolResult 三回调贯穿 toolCallId（并行同名工具在 TUI 侧按 id 精确路由，2026-08-30）；read_image 等多模态工具按 `tool.multimodal` flag 跳过 offload |
 | `agent/completion.mjs` | handleCompletion：零工具调用回合的 guard 链（pending → verify → advisor → 收尾） |
 | `agent/post-turn.mjs` | 回合后注入：停滞检测、goal 预算预警 |
-| `agent/helpers.mjs` | 常量（turn 上限、结果落盘阈值）、escapeXml、repairHistory、git 上下文、目录树 |
+| `agent/helpers.mjs` | 常量（turn 上限、结果落盘阈值）、escapeXml、repairHistory、AUTO_REMINDER/ensureAutoReminder 单源、git 上下文、目录树 |
+| `agent/record-results.mjs` | 工具结果提交 + 变更记账（2026-08-30 consult P2 自 agent.mjs 拆出）：tool 消息落盘（多模态延迟注入——图像不得插在并行工具结果之间）、FILE_MUTATORS 失效链（advisor/verify 状态）、touchedFiles + fire-and-forget reindex |
 | `auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in） |
 
 ## 2. runAgent 主循环
@@ -34,7 +35,8 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume })
 **中断语义**（AbortController + signal.reason）：
 - `controller.abort()`（Ctrl+C abort / /abort）：当前 chat 抛 AbortError → runAgent 直接上抛，不提交半截历史
 - `controller.abort({ interrupt: true, message })`（Ctrl+I）：chat 中断 → 提交部分输出（pushReal）+ 注入 `[User interrupt: message]` → 抛 AbortError；**agent-turn 捕获后重建 controller 续跑**——同一轮内继续，用户消息即时生效
-- 工具执行期间中断：`signal.reason.interrupt` → 不提交半截工具结果，注入中断消息后 continue（下一 turn 重新生成）
+- 工具执行期间中断：`signal.reason.interrupt` → **先为已提交的 tool_calls 合成占位 tool 结果**（`[Tool execution interrupted — results discarded]`，tool 消息必须紧跟 assistant tool_calls——否则 strict provider 对重试轮 400）**再注入中断消息**后 continue（2026-08-30 consult）
+- 中断清扫（runAgentTurn finally）：`freezeAllSubTasks` + `sweepToolBlocks`（未 done 的工具载体标 done+interrupted、清 `_toolTicks`）——保证无 running 残留、无陈旧计时泄漏；`state.dims.refresh()`（输出停止 = ConPTY buffer 信息恢复的确定性时刻）
 
 **resume（ContinueError 续跑）**：`agent._mutatedThisRun/_verifiedThisRun/_verifyRetries/_touchedFiles/_advisorRound` 等 **保留**——guard 连续性和收敛预算不能被续跑重置；`_emptyRetries/_compressFailures` 也保留（预算跨 turn 计数，防刷）。
 

@@ -24,7 +24,8 @@
 | `fold-block.mjs` | 147 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
 | `render-loop.mjs` | 110 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
-| `layout.mjs` | 139 | 面板布局计算（行/列分配，todo 面板；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
+| `layout.mjs` | 145 | 面板布局计算（行/列分配，todo 面板含顶部分隔线高度；小终端压缩链：conversation→picker→permission→todo 分隔线；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
+| `dims.mjs` | 42 | 终端尺寸单源（2026-08-30）：makeDimsState 采样-保持缓存——Windows ConPTY 的 columns/rows 不稳定（启动 falsy、输出活动期报 stale 小值），所有消费方读缓存，采样只发生在事件钩子（启动收敛重试/resize/空闲看门狗/turn-start/turn-finally）；非对称接受：变大立即提交、变小需连续两次确认 |
 
 **渲染内容层**（纯函数）：
 
@@ -148,12 +149,22 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **流式过程同框（2026-08-30 用户裁定："思考过程中为什么不是直接进这个框"）**：思考的 **live 流式缓冲**（`state.reasoning`）不再平铺全屏刷——渲染为**同一只折叠框**（key=`thinking-live`）：默认 `▶ thinking · N lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入时框内内容实时增长，`convCacheKey` 的 `state.reasoning.length` 分量驱动实时重绘）；flush 后块重挂到 `long-{idx}`，形态完全一致、无缝衔接。live 与完成态与恢复态三态同构，无一例外。
 
+**空行分区（2026-08-30 追加，两处规则并存）**：
+- **主输出前后空行**（§5 之外的独立规则，render-conversation `buildConvLines` 行循环 + streaming 分支）：每个主输出段（C.text 行连续段）**前后各插一个空行**，与思考块/工具块/子agent 块拉开距离。渲染期插入（不写 `state.lines`、不影响 convCacheKey）；相邻段共享一个空行（无双重插入）；**streaming 分支同样适用**（两条渲染路径必须一致——首版只改行循环漏了 streaming，用户实测"生成时不空、落盘后才空"）
+- **任务面板顶部分隔线**（renderTodo 首行 `─` × cols-1，dim）：todo 面板与上方会话区域切分；小终端压缩链中**分隔线先让位**（面板高度压回任务行数，任务行永不压缩——put 按面板高度截断自动丢弃分隔线）
+
 **约束**：
 - 展开的块行带 `_skipDimFold` 标记，不再参与连续 dim 折叠（防折叠套折叠——0.12.7 回归修复；renderBlockTimeline 统一携带）
 - **历史上"主输出/思考永不折叠"的约束的完整演进**：0.12.7 曾以"仅 dim 可折叠"临时修复单向折叠时代的问题；双向折叠落地后曾重新放开主输出折叠（"主输出/思考是折叠主力"）；**2026-08-30 用户裁定主输出永久免折叠**（辅助流保留）——最终形态：思考/dim 双向折叠 + 主输出始终全量渲染。缓存键相应增加颜色类别签名（colorSig）：折叠决策按颜色分类，仅颜色不同的两个状态不得共享缓存条目
 - `/fold off` 时两类折叠与全部提示行不出现；`/fold on` 恢复
 - 展开态与折叠态切换由 `convCacheKey` 的 expandedBlocks 摘要 + cap 分量 + **颜色类别签名（colorSig）** 驱动缓存失效
 - **新功能接入约定**：凡是"超长输出想可折叠"，用 fold-block.mjs 的组件拼装（renderBlockTimeline + renderFoldedHead + renderExpandedBlock + toggleFoldBlock），不要自带展开/折叠渲染——封顶、可达性与统一形态保证只在组件里有
+
+**组件 cols 纪律（2026-08-30 窄屏事故，教训级）**：`renderExpandedBlock`/`renderFoldedHead`/`renderBlockTimeline` 的 `cols` 是**必传语义参数**（签名默认 80 只是测试兜底）——**漏传 = 全部生成行按 80 列 wrap，输入框却是全宽**（同帧宽度分裂，280 列终端上表现为"生成中左边一小块"）。已发生 3 处漏传（工具块展开/折叠、thinking 折叠）。任何新增组件调用**必须显式传 cols**；排障口诀：**同帧内 A 面板正常 B 面板异常 → 先查 A/B 的输入参数差异，别先怀疑 B 的内部逻辑或环境**。
+
+**折叠 key 稳定化（2026-08-30）**：工具块的 fold key 用行级 `_lineId`（state 自增计数器，pushLine/historyToLines/loadOlder 统一分配）派生（`tool-{lineId}`）——`loadOlder` 头部 unshift 会使位置键 `tool-{i}` 整体平移，已展开状态会错绑到别的块。
+
+**组件解耦**：fold-block 不 import 任何业务常量（advisor 占位符经 `strip: []` 参数注入）；tail-3 提取单源 `foldTailLines(blocks, n, {strip})`（原 render-conversation 三份手写拷贝收编）。
 
 **渲染调度**（render-loop.mjs）：`scheduleRender()`（setImmediate 合并）+ 处理中 1s ticker（耗时刷新）+ `write()` 增量写（比较上一帧，只重绘变化行 + 光标定位），防闪烁。
 

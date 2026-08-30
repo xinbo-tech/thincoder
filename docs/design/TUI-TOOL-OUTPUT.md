@@ -58,9 +58,20 @@ TUI 的工具输出统一为**行间区块**：所有工具执行时在对话区
 
 | 文件 | 职责 |
 |---|---|
-| `src/agent/dispatch.mjs` | 工具 onOutput → callbacks.onToolOutput(name, chunk) 统一接线 |
-| `src/tui/tool-events.mjs` | onToolOutput 消费（2026-08-30 自 agent-turn 拆出）：advisor 特判进 `_advisorBlocks`；带 `role#id/` 前缀的子agent 输出经 subagent-blocks.mjs routeSubToolOutput 进对应区块（§7.2 D4）；其余进 `_live` 行 |
-| `src/tui/render-conversation.mjs` | `_advisorBlocks` 有序渲染、dim 折叠 |
+| `src/agent/dispatch.mjs` | 工具 onOutput → callbacks.onToolOutput(name, chunk, toolCallId) 统一接线；onToolCall/onToolResult 同样贯穿 toolCallId（2026-08-30，并行同名工具按 id 精确路由到各自块） |
+| `src/tui/tool-events.mjs` | onToolOutput 消费（2026-08-30 自 agent-turn 拆出）：advisor 特判进 `_advisorBlocks`；带 `role#id/` 前缀的子agent 输出经 subagent-blocks.mjs routeSubToolOutput 进对应区块（§7.2 D4）；其余进工具单框载体（`_toolBlock`，2026-08-30 单框化——`❯ name args · status` 头 + args JSON/流式输出/结果 body） |
+| `src/tui/render-conversation.mjs` | `_advisorBlocks` 有序渲染、dim 折叠、`_toolBlock` 载体渲染（fold key 用行级 `_lineId` 派生，loadOlder 不漂移） |
+
+### 2.4 工具单框载体的收尾与共享守卫（2026-08-30 补齐）
+
+- **载体收尾语义分层**：普通工具结果落载体本体（`slimToolResultForDisplay` 共享守卫，见下）；**subagent/escalate/advisor** 的结果由专用分支承载（子agent 冻结框/评审冻结框），但 dispatch 级载体仍需标 done——`settleToolBlock(state, name, toolId, summary)` 统一收尾（否则 turn 清扫会把成功调用误标 "(interrupted)"）。中断清扫：`sweepToolBlocks(state)`（agent-turn finally 调用，与 freezeAllSubTasks 并列——未 done 载体标 `done+interrupted` 并清 `_toolTicks`）。
+- **`slimToolResultForDisplay(result, maxRows=400)`**（tool-events 导出，LIVE 与 RESTORE 共用，2026-08-30 consult）：① read_image 等多模态结果剥离 base64 images 只留 text（模型侧图像走 multimodal 通道）② 超过 maxRows 截断（全文在 history）。restore 路径（historyToLines）同函数——历史上没有守卫导致恢复旧会话时 base64 洪水重现。
+- **工具块宽度的组件 cols 纪律**：工具块展开/折叠态的组件调用**必须传 cols**（漏传 = 组件按默认 80 wrap，生成中"左边一小块"——2026-08-30 真根因，详见 TUI.md §5 组件 cols 纪律）。
+- **中断配对**（agent.mjs executeToolCalls）：工具执行中 Ctrl+I——已提交的 assistant tool_calls 先合成占位 tool 结果（`[Tool execution interrupted — results discarded]`）再注入中断消息，保证重试轮历史可配对（strict provider 否则 400）。
+
+### 2.5 历史包袱清理（2026-08-30 consult 整改）
+
+- `_live` 行与 `LIVE_LINE_LIMITS` 已随单框化废弃（死代码已删）；输出上限具名常量 `TOOL_OUTPUT_LINE_CAP`(200)/`SUBAGENT_PREVIEW_LINES`(8)/`PREVIEW_LINE_CHARS`(120)/`REMINDER_CAP`(3)/`REMINDER_PERSIST_TURNS`(5)。
 
 ## 3. 测试（Testing）
 

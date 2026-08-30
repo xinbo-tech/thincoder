@@ -79,12 +79,14 @@ consult_start
 
 consult_check
   - id (required)
+  - n (required, 2026-08-30): 1-based 递增读序号（首次 1，逐次 +1）——**协议参数，工具体不解构**；作用是让连续 check 的参数集互不相同（循环检测器按参数判重，会诊天然要连续 3~5 次同工具调用）且 transcript 可读（第几次读）
   → 返回「下一个」先到的回复；回复耗尽且全部 settle 时 done:true
   → 边界：未知 id → { error }；done 后再 check → 仍 { done:true }（幂等）
 
 consult_stop
   - id (required)
-  → { stopped: N }   // abort 剩余 N 个（terminated settle，计数不入队）
+  - n (required): 递增调用序号（同上，取最后一个 check/stop 的下一值）
+  → { stopped: N, abandoned: M }   // abort 剩余 N 个（terminated settle，计数不入队）；abandoned = 放弃时的 pending 数
 ```
 
 **main_history**（仅会诊子 agent 可用，readonly）：`limit`（默认 20，最大 100）→ 主 agent 历史尾部窗口，多模态图片替换 `[image omitted]`、tool_calls 显形、60KB 字节预算。
@@ -92,6 +94,15 @@ consult_stop
 **会话状态**：`agent._consultSessions = Map<id, Session>`。`Session = { controllers, replies, pending, waiters, failed, terminated, stopped, total, received }`。`done = 回复队列空 AND pending==0`——失败的模型也 settle，全失败时 `done` 仍成立，`consult_check` 不挂死。settle 语义：正常回复入队；`session.stopped` 后被 abort 的计 `terminated`（不入队）；报错计 `failed`（入队，带失败 note）。
 
 **TUI 可观测**：每个顾问一条活动卡（子 agent 活动区块，`state.subTasks` 承载），relay 前缀 `consult#<subId>/` 复用 subagent 通道——并行顾问互不覆盖，run 结束随 `processing=false` 区块定格（2026-08-30 注：原 subTasks 窄带已随 AGENT-LOOP.md §7.2 D4 退役为会话流内可折叠区块）。
+
+### 2.3.1 会话级收尾与墓碑（2026-08-30 残留修复，会诊 4/4 收敛）
+
+一次会诊 spawn N 个并行子代理 = N 个 `consult#1..#N` 活动块，而"会诊结束"的信号只在 check/stop 的返回里——**结算必须是会话级的**：
+
+- **`finishSubTasksByRole(state, ["consult"])`**（subagent-blocks.mjs）：done:true / stop 时**全量**标记所有 running consult 块 done。单块版 `finishSubTask`（最早 running 启发式）只冻 1 个，其余 N-1 个 running 幽灵钉在尾部直到回合末被 freezeAllSubTasks 误标 "interrupted"。
+- **`finishSubTaskByModel(state, "consult", r.model)`**：单条 reply（done:false）到达时按 model **精确**收尾对应块（提前答完的模型立即 ✓）。比对做**尾段归一化**（`split(":").pop()`）——`[model]` token 是裸名（resolveChildProvider），`r.model` 是 consultLabel（`provider:model`），直接相等比较永不命中（首版回归测试两侧都用裸名，假绿——2026-08-30 二次会诊 3/3 实锤）。
+- **冻结墓碑**：`state._frozenSubKeys`（Set）——freezeSubTaskLines 记 key，`ensureSubTask` 命中返回 null，四个 routeSub* 对 null 吞掉 token（return true）。防的是 abort 子代理的**尾部迟到 token 复活已冻结块**（复活后无人再冻结，钉屏到下一回合）。墓碑无需清理：`_subAgentCounter` 挂 agent 单调递增，key 进程内永不复用。
+- **消费端**（tool-events.mjs consult_check/consult_stop 分支）：单条 reply → ByModel 精确收 + freezeDoneSubTasks；done:true / stopped（含非 JSON 的 stop 防御）→ ByRole 全量收 + freezeDoneSubTasks。
 
 ### 2.4 受影响文件
 
