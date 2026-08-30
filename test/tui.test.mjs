@@ -851,6 +851,21 @@ test("restore 结果守卫: read_image base64 剥离 + 400 行封顶（P1，2026
   assert.ok(capped[400].includes("truncated"), "截断提示行")
 })
 
+
+test("subagent 运行区块带顶部分隔线（2026-08-30，对齐 task 面板；无 running 块时不留悬空线）", () => {
+  const now = Date.now()
+  const state = tuiState({
+    lines: [{ text: "会话内容", color: C.text, _kind: "text" }],
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", model: "m", started: now, done: false, blocks: [{ kind: "text", text: "hello" }], currentTool: null, toolArgs: null, turn: 1, maxTurns: 10, approval: null, lastError: null, dropped: 0 } },
+  })
+  let out = buildConvLines(state, 80)
+  assert.ok(out.some((l) => l.text.startsWith("─") && l.color === C.dim), "有 running 块 → 顶部分隔线")
+  // done 块（冻结进 lines 后 subTasks 里只剩 done 条目）→ 不渲染分隔线
+  state.subTasks["coder#1"].done = true
+  out = buildConvLines(state, 80)
+  assert.ok(!out.some((l) => l.text.startsWith("─")), "无 running 块 → 不留悬空分隔线")
+})
+
 test("panel functions: renderHeader includes model name", () => {
   const agent = {
     provider: { model: "deepseek-v4-pro", thinking: null },

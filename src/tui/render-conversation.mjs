@@ -342,13 +342,23 @@ function buildConvLines(state, cols, maxRows) {
   // Default folded = header summary line (▶ role#id · model · elapsed · turn
   // n/max | current state) + tail 3 block lines; expanded = shared component
   // (full timeline, 60% screen cap).
-  const subEntries = Object.values(state.subTasks ?? {})
-  if (subEntries.length > 0) {
-    for (const sub of subEntries) {
-      // Done blocks are frozen into state.lines by subagent-blocks.mjs (freezeSubTaskLines)
-      // and removed from subTasks; a done entry reaching this loop is a leftover
-      // (e.g. restored from an old session) — never render it pinned at the tail.
-      if (sub.done) continue
+  const runningSubs = Object.values(state.subTasks ?? {}).filter((s) => !s.done)
+  if (runningSubs.length > 0) {
+    // Divider between the conversation body and the running-subagent band
+    // (user request 2026-08-30, mirroring the task-panel divider in
+    // render-frame renderTodo). Only when at least one block actually renders —
+    // done children are frozen into state.lines above, so a divider for an
+    // empty band would hang over the section boundary.
+    // Unconditional divider (task-panel style): the preceding main-output
+    // trailing blank is breathing room, the divider is the section boundary —
+    // both belong. Only dedupe against another divider (idempotent re-render).
+    if (convLines.at(-1)?.color !== C.dim || !convLines.at(-1)?.text?.startsWith("─")) {
+      convLines.push({ text: "─".repeat(Math.max(1, cols - 1)), color: C.dim, _skipDimFold: true })
+    }
+    for (const sub of runningSubs) {
+      // Done children never reach this loop (filtered above): they are frozen
+      // into state.lines by subagent-blocks.mjs freezeSubTaskLines and removed
+      // from subTasks — a restored leftover would otherwise pin at the tail.
       const foldKey = `sub-${sub.key}`
       // Header summary: `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`
       const icon = sub.approval ? "⏸" : "▶"
