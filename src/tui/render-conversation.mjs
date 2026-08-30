@@ -213,7 +213,7 @@ function buildConvLines(state, cols, maxRows) {
         for (const jl of b.argsJson) pushWrapped(jl, C.dim)
         for (const ol of b.output) pushWrapped(ol, C.tool)
         if (b.result) for (const rl of b.result) pushWrapped(rl, C.dim)
-        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, label: `${b.name}${b.roundTag || ""} ${b.argsSummary}`.trim() }))
+        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: `${b.name}${b.roundTag || ""} ${b.argsSummary}`.trim() }))
       } else {
         // Head MUST be width-bounded: argsSummary for unknown/MCP tools is a
       // JSON.stringify dump that can be thousands of chars — an overwide header
@@ -230,7 +230,7 @@ function buildConvLines(state, cols, maxRows) {
         // rows, so without this its folded tail showed only args JSON and the
         // result vanished from the folded view (parity bug, 2026-08-30).
         if (b.result) for (const rl of b.result) for (const w of wrapText(rl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
-        convLines.push(...renderFoldedHead({ header: { text: headText, color: C.tool, _foldToggle: foldKey }, body }))
+        convLines.push(...renderFoldedHead({ header: { text: headText, color: C.tool, _foldToggle: foldKey }, body, cols }))
       }
       continue
     }
@@ -402,7 +402,7 @@ function buildConvLines(state, cols, maxRows) {
     } else {
       convLines.push(...renderFoldedHead({
         header: foldHintLine(`▶ thinking · ${body.length} lines — click to expand`, liveKey),
-        body,
+        body, cols,
       }))
     }
   }
