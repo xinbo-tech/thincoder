@@ -14,8 +14,12 @@
 if (process.env.THINCODER_SMOKE !== "1") {
   console.log("[smoke] skipped — set THINCODER_SMOKE=1 to run against the real endpoint")
 } else {
-import { loadConfig } from "../src/config.mjs"
-import { chat } from "../src/provider/index.mjs"
+  // Dynamic import: a static `import` inside the else block is illegal ESM
+  // (import declarations must be top-level) — the prepublishOnly glob
+  // `node --test "test/*.mjs"` collects this file, parsed it, and the
+  // SyntaxError aborted the npm publish prepublish gate (0.12.51, 2026-08-30).
+  const { loadConfig } = await import("../src/config.mjs")
+  const { chat } = await import("../src/provider/index.mjs")
 
 const cfg = loadConfig()
 const want = process.argv[2] ?? "qwenplan"
