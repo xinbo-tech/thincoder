@@ -405,3 +405,47 @@ test("退出 flush: 在途蒸馏跨轮存活——下一轮 runAgent 开头仍�
   await runAgentTurn(ctx, "第二轮")
   assert.equal(seen, slow, "第二轮 runAgent 开头仍拿到在途蒸馏 promise（N1 await 不被 TUI flush 破坏）")
 })
+
+
+test("runAgentTurn: 中断回合清扫工具块（P0-2：Ctrl+C 后无 running 残留，2026-08-30 会诊）", async () => {
+  const ctx = trackedCtx({
+    summarize: () => "",
+    runAgent: async (_agent, _text, cbs) => {
+      // 只发 onToolCall 不发 onToolResult —— 模拟执行中被中断
+      cbs.onToolCall("bash", { command: "npm test" }, "call-1")
+      throw new Error("interrupted")
+    },
+  })
+  await runAgentTurn(ctx, "跑")
+  const block = ctx.state.lines.find((l) => l._toolBlock)
+  assert.ok(block, "工具块存在")
+  assert.equal(block._toolBlock.done, true, "中断后 done")
+  assert.equal(block._toolBlock.summary, "(interrupted)", "标记 interrupted")
+  assert.equal(block._toolBlock.interrupted, true, "interrupted 标志")
+})
+
+test("runAgentTurn: 并行同名工具按 tool_call_id 精确路由（P0-3：输出/结果/耗时各归各块，2026-08-30 会诊）", async () => {
+  const ctx = trackedCtx({
+    summarize: () => "",
+    runAgent: async (_agent, _text, cbs) => {
+      cbs.onToolCall("read", { path: "a.mjs" }, "call-A")
+      cbs.onToolCall("read", { path: "b.mjs" }, "call-B")
+      // 乱序：B 的输出先到，A 的结果先回
+      cbs.onToolOutput("read", "B output", "call-B")
+      cbs.onToolResult("read", "A result", "call-A")
+      cbs.onToolOutput("read", "A output", "call-A")
+      cbs.onToolResult("read", "B result", "call-B")
+    },
+  })
+  await runAgentTurn(ctx, "hello")
+  const blocks = ctx.state.lines.map((l) => l._toolBlock).filter(Boolean)
+  assert.equal(blocks.length, 2, "两个工具块")
+  const a = blocks.find((b) => b.id === "call-A")
+  const b = blocks.find((b) => b.id === "call-B")
+  assert.ok(a && b, "按 id 找到两块")
+  assert.deepEqual(a.output, ["A output"], "A 块只有 A 的输出")
+  assert.deepEqual(a.result, ["A result"], "A 块只有 A 的结果")
+  assert.deepEqual(b.output, ["B output"], "B 块只有 B 的输出")
+  assert.deepEqual(b.result, ["B result"], "B 块只有 B 的结果")
+  assert.ok(typeof a.elapsed === "number" && typeof b.elapsed === "number", "各自有耗时（id 级 tick）")
+})

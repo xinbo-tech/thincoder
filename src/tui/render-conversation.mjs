@@ -69,7 +69,12 @@ export function convCacheKey(state, maxRows) {
   // Expansion cap participates: a terminal resize changes the cap, which changes
   // the rendered height of every expanded block — the cache must not survive it.
   const capPart = maxRows ? `cap${foldCapRows(maxRows)}` : "cap∞"
-  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}`
+  // Search state participates: highlightSearchMatches re-renders the matching
+  // lines, but performSearch only mutates state.search/_searchMatches — without
+  // this the cache would serve the pre-search rows and highlight would never
+  // appear (P0-1, 2026-08-30 consult). query+index covers match navigation.
+  const searchPart = state.search?.query ? `${state.search.query}:${state.search.index ?? 0}` : ""
+  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}`
 }
 
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).

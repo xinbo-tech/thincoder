@@ -23,30 +23,67 @@ import {
 } from "./subagent-blocks.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 
-/** Tool execution start timestamps (performance.now ms), keyed by tool name.
- *  Per-name FIFO QUEUE (not a single slot): the agent batches parallel same-name
- *  tool calls (e.g. read ×2 in one message) — a single slot let the second
- *  onToolCall overwrite the first's start time (first done line showed the wrong
- *  duration) and its onToolResult delete the tick while the second still ran
- *  (second done line lost its elapsed entirely, 2026-08-30 review). FIFO shift
- *  assumes near-call-order completion; a parallel same-name batch that finishes
- *  out of order swaps durations between siblings — same magnitude, both lines
- *  keep an elapsed (display-level, acceptable). */
+/** Tool execution start timestamps (performance.now ms). Keyed by tool_call id
+ *  when available (parallel same-name tools each get their own tick — the
+ *  P0-3 fix, 2026-08-30), falling back to a per-name FIFO queue for callers
+ *  without ids (subagent relay). FIFO shift assumes near-call-order completion;
+ *  a parallel same-name batch finishing out of order swaps durations between
+ *  siblings — same magnitude, both keep an elapsed (display-level, acceptable). */
 const _toolTicks = new Map()
 
-function tickStart(name) {
-  const q = _toolTicks.get(name) ?? []
+function tickStart(name, toolId) {
+  const key = toolId ?? name
+  if (toolId) { _toolTicks.set(key, performance.now()); return }
+  const q = _toolTicks.get(key) ?? []
   q.push(performance.now())
-  _toolTicks.set(name, q)
+  _toolTicks.set(key, q)
 }
 
-/** Settle one pending tick for `name` (FIFO): returns the start timestamp or null. */
-function tickTake(name) {
-  const q = _toolTicks.get(name)
-  if (!q || q.length === 0) return null
-  const started = q.shift()
-  if (q.length === 0) _toolTicks.delete(name)
+/** Settle one pending tick: by tool_call id, or per-name FIFO. Returns start or null. */
+function tickTake(name, toolId) {
+  const key = toolId ?? name
+  const v = _toolTicks.get(key)
+  if (v === undefined) return null
+  if (toolId) { _toolTicks.delete(key); return v }
+  if (v.length === 0) { _toolTicks.delete(key); return null }
+  const started = v.shift()
+  if (v.length === 0) _toolTicks.delete(key)
   return started
+}
+
+/** P0-2 sweep (2026-08-30 consult): an interrupted turn (Ctrl+C / error) leaves
+ *  running tool-block carriers without an onToolResult — their header would say
+ *  "running" forever. runAgentTurn's finally calls this: mark them done with an
+ *  "(interrupted)" status and clear the tick table so no stale start time leaks
+ *  into the next turn. Mirrors freezeAllSubTasks for the tool-block family. */
+export function sweepToolBlocks(state) {
+  for (const l of state.lines ?? []) {
+    const b = l._toolBlock
+    if (b && !b.done) {
+      b.done = true
+      b.summary = "(interrupted)"
+      b.interrupted = true
+    }
+  }
+  _toolTicks.clear()
+}
+
+/** Find the live tool-block carrier for a tool event: exact id match when the
+ *  callback carries one (P0-3 — parallel same-name tools route to their own
+ *  block); falls back to the last unfinished block of that name. */
+function findToolBlock(state, name, toolId) {
+  const lines = state.lines ?? []
+  if (toolId !== undefined && toolId !== null) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i]._toolBlock?.id === toolId) return lines[i]._toolBlock
+    }
+    return null
+  }
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const b = lines[i]._toolBlock
+    if (b && b.name === name && !b.done) return b
+  }
+  return null
 }
 
 /** Per-tool streaming preview line limits — tools with verbose output get more lines.
@@ -114,7 +151,7 @@ export function buildToolCallbacks(deps) {
       state.reasoning += t
       scheduleRender()
     },
-    onToolCall: (name, args) => {
+    onToolCall: (name, args, toolId) => {
       // Subagent tool call: prefix role#id/toolName → open a fresh tool block and
       // set currentTool for the header summary line.
       if (routeSubToolCall(state, name, args, scheduleRender)) return
@@ -162,7 +199,7 @@ export function buildToolCallbacks(deps) {
       state.lines.push({
         text: "", color: C.tool,
         _toolBlock: {
-          name, roundTag,
+          name, roundTag, id: toolId,
           argsSummary: argSummary,
           argsJson: toolArgsLines(args),
           output: [],
@@ -172,9 +209,9 @@ export function buildToolCallbacks(deps) {
           done: false,
         },
       })
-      tickStart(name)
+      tickStart(name, toolId)
     },
-    onToolResult: (name, result) => {
+    onToolResult: (name, result, toolId) => {
       state.currentTool = null
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the
@@ -223,7 +260,7 @@ export function buildToolCallbacks(deps) {
         // Result lands INSIDE the block (restore parity — the restored carrier
         // carries the same fields). The done line is gone: status/elapsed live
         // in the header now.
-        const block = [...state.lines].reverse().find((l) => l._toolBlock && l._toolBlock.name === name && !l._toolBlock.done)
+        const block = findToolBlock(state, name, toolId)
         if (block) {
           // Multimodal tool results (read_image) embed the FULL base64 image in
           // the result JSON — thousands of rows into the block body = a full
@@ -238,13 +275,13 @@ export function buildToolCallbacks(deps) {
           const rows = String(displayResult).split("\n").filter((l) => l.trim())
           // Body-size guard: any tool result beyond 400 rows is truncated in the
           // block (full text always lives in history for the model).
-          block._toolBlock.result = rows.length > 400
+          block.result = rows.length > 400
             ? [...rows.slice(0, 400), "… (result truncated at 400 rows — full text in history)"]
             : rows
-          block._toolBlock.summary = formatToolSummary(name, result)
-          block._toolBlock.done = true
-          const started = tickTake(name)
-          block._toolBlock.elapsed = started !== null ? Math.round(performance.now() - started) : null
+          block.summary = formatToolSummary(name, result)
+          block.done = true
+          const started = tickTake(name, toolId)
+          block.elapsed = started !== null ? Math.round(performance.now() - started) : null
         }
       }
       if (name === "advisor") {
@@ -278,7 +315,7 @@ export function buildToolCallbacks(deps) {
         tickTake(name) // subagent: no per-call block — settle the tick
       }
     },
-    onToolOutput: (name, chunk) => {
+    onToolOutput: (name, chunk, toolId) => {
       // All tools use inline conversation blocks — panel area is abolished.
       // Stream up to N preview lines (config ?? per-tool ?? 5); the full result
       // is in the tool message.
@@ -317,14 +354,14 @@ export function buildToolCallbacks(deps) {
       // Append into the CURRENT tool block's output buffer (the block is the
       // display; no _live scroll lines anymore). N2-style cap keeps memory
       // bounded: keep the LAST 200 output lines per call.
-      const block = [...state.lines].reverse().find((l) => l._toolBlock && l._toolBlock.name === name && !l._toolBlock.done)
+      const block = findToolBlock(state, name, toolId)
       if (block) {
         for (const line of part.text.split("\n")) {
           const trimmed = line.trimEnd()
-          if (trimmed) block._toolBlock.output.push(trimmed)
+          if (trimmed) block.output.push(trimmed)
         }
-        if (block._toolBlock.output.length > 200) {
-          block._toolBlock.output.splice(0, block._toolBlock.output.length - 200)
+        if (block.output.length > 200) {
+          block.output.splice(0, block.output.length - 200)
         }
       }
       scheduleRender()

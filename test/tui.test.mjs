@@ -983,6 +983,22 @@ test("panel functions: 运行中区块 elapsed 走秒失效缓存（1s ticker �
   sub.doneAt = sub.started + 5000
   const kDone = keyWith(Date.now())
   assert.equal(keyWith(Date.now() + 5000), kDone, "done 后键稳定（无时间分量）")
+
+test("panel functions: search 状态参与缓存键（P0-1：高亮不被缓存吃掉，2026-08-30 会诊）", () => {
+  // performSearch 只改 state.search/_searchMatches——若 key 不含 search，
+  // 内容静止时缓存命中返回无高亮旧行（高亮永不出现）；关闭搜索时残留也不清。
+  const s = tuiState({ lines: [{ text: "hello world", color: C.text }] })
+  const k0 = convCacheKey(s)
+  s.search = { query: "world", index: 0 }
+  const k1 = convCacheKey(s)
+  assert.notEqual(k1, k0, "开启搜索 → 键变化（缓存失效，高亮可渲染）")
+  s.search.index = 1
+  const k2 = convCacheKey(s)
+  assert.notEqual(k2, k1, "切换匹配项 → 键变化（高亮跟随导航）")
+  s.search = null
+  assert.equal(convCacheKey(s), k0, "关闭搜索 → 键复原（残留高亮清除）")
+})
+
 })
 
 test("advisor review 折叠框：默认折叠防刷屏 + 完成后冻结载体行可重开（2026-08-30）", async () => {

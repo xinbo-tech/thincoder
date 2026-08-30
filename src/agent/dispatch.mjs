@@ -136,7 +136,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
 
     // Panel area abolished — all tools now stream inline via onToolOutput.
 
-    callbacks.onToolCall?.(toolCall.name, args)
+    callbacks.onToolCall?.(toolCall.name, args, toolCall.id)
 
     prepared.push({ toolCall, tool, args })
   }
@@ -166,7 +166,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       if (callbacks.toolRouter) {
         const routed = await callbacks.toolRouter(item.toolCall.name, item.args)
         if (routed?.handled) {
-          callbacks.onToolResult?.(item.toolCall.name, routed.result)
+          callbacks.onToolResult?.(item.toolCall.name, routed.result, item.toolCall.id)
           return { ...item, result: routed.result, ok: true }
         }
       }
@@ -176,14 +176,14 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         depth,
         signal,
         callbacks,
-        onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk),
+        onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
         onQuestion: callbacks.onQuestion,
         onPermissionRequest: callbacks.onPermissionRequest,
       })
       if (rawResult === undefined) throw new Error(`Tool "${item.toolCall.name}" returned undefined — all tools must return a string value`)
       const raw = String(rawResult)
       const result = item.toolCall.name === "read_image" ? raw : await offloadToolResult(raw, item.toolCall.id)
-      callbacks.onToolResult?.(item.toolCall.name, result)
+      callbacks.onToolResult?.(item.toolCall.name, result, item.toolCall.id)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)
       runHooks("PostToolUse", { agent, toolName: item.toolCall.name, toolArgs: item.args, result: raw }).catch(() => {})
       return { ...item, result, ok: true }

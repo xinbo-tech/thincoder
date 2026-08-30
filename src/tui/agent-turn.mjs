@@ -11,7 +11,7 @@
 import { runAgent, ContinueError } from "../agent.mjs"
 import { saveSession } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
-import { buildToolCallbacks } from "./tool-events.mjs"
+import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs"
 import { ensureSessionTitle } from "../generate-title.mjs"
 
@@ -120,6 +120,10 @@ export async function runAgentTurn(ctx, text) {
     // would linger as pinned ghosts above the input box — freeze them like normal
     // completions so the trace scrolls away with the conversation (2026-08-30).
     freezeAllSubTasks(state)
+    // Tool-block carriers get the same sweep (P0-2, 2026-08-30 consult): without
+    // an onToolResult their header would say "running" forever; ticks are cleared
+    // so no stale start time leaks into the next turn.
+    sweepToolBlocks(state)
     state.controller = null
     state.status = "Ready"
     // FR1: status bar must recover immediately — the awaits below (title-gen, distill flush,
