@@ -203,14 +203,21 @@ export function buildToolCallbacks(deps) {
       } else if (name === "consult_check" || name === "consult_stop") {
         // Individual consultants settle invisibly to onToolResult (fire-and-forget
         // children); the check/stop result JSON announces session completion —
-        // freeze every running consult block when it does.
+        // freeze every running consult block when it does. A void/undefined
+        // result (older consult_stop) must NOT silently leave the block running
+        // (TUI residual report 2026-08-30) — treat stop as done regardless.
         try {
           const r = JSON.parse(result)
           if (r?.done || r?.stopped !== undefined) {
             finishSubTask(state, ["consult"], null)
             freezeDoneSubTasks(state)
           }
-        } catch { /* non-JSON result — leave blocks as-is */ }
+        } catch {
+          if (name === "consult_stop") {
+            finishSubTask(state, ["consult"], null)
+            freezeDoneSubTasks(state)
+          }
+        } /* non-JSON result — leave blocks as-is */
       }
       if (!isSubagent && name !== "advisor") {
         // Result lands INSIDE the block (restore parity — the restored carrier
