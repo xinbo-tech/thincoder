@@ -7,6 +7,26 @@ import { stdioTransport } from "./mcp/transport-stdio.mjs"
 import { httpTransport } from "./mcp/transport-http.mjs"
 import { wsTransport } from "./mcp/transport-ws.mjs"
 
+
+/** Race a pending MCP request against an abort signal — a hung MCP server must not
+ *  hold the turn hostage. signal absent → passthrough. */
+async function sendWithSignal(promise, signal) {
+  if (!signal) return promise
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      const e = new DOMException("The operation was aborted", "AbortError")
+      e.reason = signal.reason
+      reject(e)
+    }
+    if (signal.aborted) return onAbort()
+    signal.addEventListener("abort", onAbort, { once: true })
+    promise.then(
+      (v) => { signal.removeEventListener("abort", onAbort); resolve(v) },
+      (e) => { signal.removeEventListener("abort", onAbort); reject(e) },
+    )
+  })
+}
+
 // ---- MCP lifecycle ----
 
 function buildTools(mcpTools, transport, config) {
@@ -16,8 +36,10 @@ function buildTools(mcpTools, transport, config) {
     description: t.description ?? `MCP tool: ${t.name}`,
     parameters: t.inputSchema ?? { type: "object", properties: {} },
     readonly: false,
-    async execute(args) {
-      const resp = await transport.send("tools/call", { name: t.name, arguments: args })
+    async execute(args, ctx) {
+      // 2026-08-31 会诊 #11（vscode mcp/index.mjs 同步）：MCP tools/call 响应上层 signal——
+      // MCP server 挂死时用户中断要能终止；原实现无 abort 无超时，turn 被挂死。
+      const resp = await sendWithSignal(transport.send("tools/call", { name: t.name, arguments: args }), ctx?.signal)
       if (resp.error) throw new Error(`MCP tool "${t.name}": ${resp.error.message}`)
       const content = resp.result?.content ?? []
       return content
