@@ -70,7 +70,12 @@ export function computeLayout(state, { cols, rows }) {
     const done = state.tasks.filter((t) => t.status === "done")
     visibleTasks = [...inProgress, ...pending, ...done].slice(0, MAX_TASK_LINES)
   }
-  const taskPanelH = visibleTasks.length
+  // +1 for the divider line separating the todo panel from the conversation
+  // (user request 2026-08-30).
+  const taskPanelH = visibleTasks.length > 0 ? visibleTasks.length + 1 : 0
+  // Squeeze target: the divider line yields first under small terminals (the
+  // task rows themselves never compress away — put() truncates by panel h).
+  let todoFinalH = taskPanelH
 
   // Subagent activity: rendered inside the conversation (§7.2 D4) — no panel slot.
 
@@ -111,13 +116,21 @@ export function computeLayout(state, { cols, rows }) {
       permFinalH = Math.max(1, permPreviewH - remaining)
       convH = Math.max(1, rows - (afterPicker - permPreviewH + permFinalH))
     }
+    // 压缩链末级：todo 面板的分隔线行让位（任务行保留——put 按 h 截断自动
+    // 丢弃第一行的分隔线，2026-08-30 用户请求加的 divider 不得在小终端挤掉输入框）。
+    const afterPerm = afterPicker - permPreviewH + permFinalH
+    const finalOverflow = afterPerm + convH - rows
+    if (finalOverflow > 0 && taskPanelH > visibleTasks.length) {
+      todoFinalH = Math.max(visibleTasks.length, taskPanelH - finalOverflow)
+      convH = Math.max(1, rows - (afterPerm - taskPanelH + todoFinalH))
+    }
   }
 
   // --- Y coordinates (0-indexed, +1 when used with ANSI) ---
   let y = 0
   const header = { y, h: headerH }; y += headerH
   const conversation = { y, h: convH }; y += convH
-  const todo = taskPanelH > 0 ? { y, h: taskPanelH } : null; y += taskPanelH
+  const todo = todoFinalH > 0 ? { y, h: todoFinalH } : null; y += todoFinalH
   const picker = pickerFinalH > 0 ? { y, h: pickerFinalH } : null; y += pickerFinalH
   const permission = permFinalH > 0 ? { y, h: permFinalH } : null; y += permFinalH
   const queue = queueH > 0 ? { y, h: queueH } : null; y += queueH

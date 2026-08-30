@@ -310,7 +310,7 @@ test("computeLayout: tasks panel visible with tasks", () => {
   })
   const layout = computeLayout(state, { cols: 80, rows: 24 })
   assert.ok(layout.panels.todo, "todo panel visible")
-  assert.equal(layout.panels.todo.h, 3)
+  assert.equal(layout.panels.todo.h, 4, "3 tasks + divider line (2026-08-30)")
   assert.equal(layout.visibleTasks.length, 3)
 })
 
@@ -906,10 +906,11 @@ test("panel functions: renderTodo shows status marks", () => {
     { title: "pending", status: "pending" },
   ]
   const lines = renderTodo(tasks, 80)
-  assert.equal(lines.length, 3)
-  assert.ok(lines[0].includes("✓"))
-  assert.ok(lines[1].includes("▶"))
-  assert.ok(lines[2].includes("○"))
+  assert.equal(lines.length, 4, "divider + 3 task rows")
+  assert.ok(lines[0].includes("─"), "divider line on top")
+  assert.ok(lines[1].includes("✓"))
+  assert.ok(lines[2].includes("▶"))
+  assert.ok(lines[3].includes("○"))
 })
 
 test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lines + expand full", () => {

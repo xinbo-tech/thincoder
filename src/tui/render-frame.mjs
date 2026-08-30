@@ -45,13 +45,16 @@ export function renderHeader(agent, cols) {
   return `${ansi.bold}${C.tool} ThinCoder ${ansi.reset}${ansi.dim}│ ${sliceByWidth(model, 30)}${thinkBadge ? " " + thinkBadge : ""} │ ${sliceByWidth(basename(agent.cwd), Math.max(10, cols - 60))}${ansi.reset}`
 }
 
-/** Todo/task panel. Returns empty array when no tasks visible. */
+/** Todo/task panel. Returns empty array when no tasks visible. The first row is
+ *  a divider line separating the panel from the conversation above it (user
+ *  request 2026-08-30). */
 export function renderTodo(visibleTasks, cols) {
-  return visibleTasks.map((t) => {
+  const divider = `${C.dim}${"─".repeat(Math.max(1, cols - 1))}${ansi.reset}`
+  return [divider, ...visibleTasks.map((t) => {
     const mark = t.status === "done" ? "✓" : t.status === "in_progress" ? "▶" : "○"
     const color = t.status === "done" ? `${C.dim}${ESC}[9m` : t.status === "in_progress" ? C.tool : C.text
     return `${color} ${mark} ${sliceByWidth(t.title, cols - 4)}${ansi.reset}`
-  })
+  })]
 }
 
 /** Permission preview panel. Returns empty when no permission request. */
