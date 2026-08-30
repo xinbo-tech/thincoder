@@ -22,6 +22,28 @@ import { C } from "../src/tui/ansi.mjs"
 // render.mjs — stringWidth, wrapText, sanitizeDisplay, formatTables
 // ====================================================================
 
+test("describeToolArgs: 单源参数摘要——主/子agent/advisor 工具行共用（ls 分支 2026-08-31 补）", async () => {
+  const { describeToolArgs } = await import("../src/tui/tool-args.mjs")
+  // read：带引号路径 + 可选限额（主 agent 块/子agent 块/advisor 进度行的统一形态）
+  assert.equal(describeToolArgs("read", { path: "src/a.mjs" }), '"src/a.mjs"')
+  assert.equal(describeToolArgs("read", { path: "src/a.mjs", offset: 10, limit: 5 }), '"src/a.mjs" · offset 10, limit 5')
+  // grep/glob：pattern + path
+  assert.equal(describeToolArgs("grep", { pattern: "foo", path: "src" }), '/foo/ in "src"')
+  assert.equal(describeToolArgs("glob", { pattern: "*.mjs" }), "/*.mjs/")
+  // ls（2026-08-31 补：advisor 工具集含 ls，此前掉进 compact JSON）
+  assert.equal(describeToolArgs("ls", { path: "docs" }), "docs")
+  assert.equal(describeToolArgs("ls", {}), ".")
+  assert.equal(describeToolArgs("ls", { path: "docs", filter: "*.md" }), "docs  (filter: *.md)")
+  // lsp：subcommand + uri
+  assert.equal(describeToolArgs("lsp", { subcommand: "definition", uri: "src/a.mjs" }), "definition src/a.mjs")
+  // bash：命令 + workdir
+  assert.equal(describeToolArgs("bash", { command: "npm  test", workdir: "sub" }), "npm test  (in sub)")
+  // 空 args：空串（调用方负责拼接，不产生尾随空格）
+  assert.equal(describeToolArgs("read", {}), "")
+  assert.equal(describeToolArgs("unknown_tool", { action: "x" }), '{"action":"x"}')
+})
+
+
 test("stringWidth: ascii / cjk / emoji", () => {
   assert.equal(stringWidth("hello"), 5)
   assert.equal(stringWidth("你好"), 4)

@@ -7,6 +7,7 @@ import { findProvider, specForModel } from "../config.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { prepareAdvisorMessages } from "../advisor.mjs"
 import { appendCitationReport } from "./citations.mjs"
+import { describeToolArgs } from "../tui/tool-args.mjs"
 
 const MAX_ADVISOR_TURNS = 100
 // Mechanical convergence cap: the protocol assumes up to 5 rounds suffice
@@ -97,16 +98,12 @@ function advisorToolsFor(agent) {
 // Test seam: the tool set is pure (agent.memory → code_search inclusion).
 export { advisorToolsFor as _advisorToolsFor }
 
-/** Compact one-line summary of tool args for panel progress lines.
- *  Picks the most identifying field; falls back to truncated JSON. */
-function summarizeToolArgs(args) {
-  // e.g. "read src/x.mjs", "grep foo src/", "ls docs" — action first when present
-  const parts = [args.action, args.path ?? args.pattern ?? args.command].filter((v) => v != null)
-  let s = parts.length > 0 ? parts.map(String).join(" ") : JSON.stringify(args)
-  s = s.replace(/\s+/g, " ").trim()
-  return s.length > 80 ? s.slice(0, 79) + "…" : s
-}
-
+/**
+ * Tool-call progress line summary delegates to the single source describeToolArgs
+ * (../tui/tool-args.mjs) — the same function main-agent tool blocks and subagent
+ * blocks use. 2026-08-31: replaced the local picker (action/path/pattern/command-only)
+ * so advisor progress lines show the quoted-path forms everywhere else.
+ */
 /**
  * Render the ordered review timeline — thinking / tool progress / final text
  * interleaved EXACTLY as emitted, so the persisted record shows the review
@@ -246,7 +243,8 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         continue
       }
       
-      onTool(`\n→ ${tc.name} ${summarizeToolArgs(args)}\n`)
+      const argsLine = describeToolArgs(tc.name, args)
+      onTool(`\n→ ${tc.name}${argsLine ? " " + argsLine : ""}\n`)
       let result
       if (!tool) {
         result = `Error: unknown tool "${tc.name}". Available: ${[...toolByName.keys()].join(", ")}`

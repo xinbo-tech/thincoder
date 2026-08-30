@@ -12,6 +12,7 @@
  */
 
 import { C } from "./ansi.mjs"
+import { describeToolArgs } from "./tool-args.mjs"
 
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */
 export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
@@ -307,7 +308,10 @@ export function routeSubToolCall(state, name, args, scheduleRender) {
   sub.currentTool = name.slice(subMatch[0].length)
   sub.toolArgs = args
   sub.approval = null
-  appendSubBlock(sub, "tool", `❯ ${sub.currentTool}${args?.command ? " — " + String(args.command).replace(/\s+/g, " ").trim().slice(0, 80) : ""}\n`, { fresh: true })
+  // 2026-08-31: 工具行带参数摘要（与主 agent 工具块同款 describeToolArgs 单源）——
+  // 此前只显示工具名（bash 独享 "— 命令"），read/grep/glob 等全裸名。
+  const argsDesc = describeToolArgs(sub.currentTool, args)
+  appendSubBlock(sub, "tool", `❯ ${sub.currentTool}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
   scheduleRender()
   return true
 }

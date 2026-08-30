@@ -36,6 +36,10 @@ export function describeToolArgs(name, args) {
       const p = a.path ? ` in "${a.path}"` : ""
       return `/${String(pat)}/${p}`
     }
+    case "ls": {
+      const p = a.path ? String(a.path) : "."
+      return a.filter ? `${p}  (filter: ${String(a.filter)})` : p
+    }
     case "websearch": return String(a.query ?? "")
     case "subagent": case "coder": case "explore": case "plan": case "eng-coder": {
       const task = String(a.task ?? "").replace(/\s+/g, " ").trim()

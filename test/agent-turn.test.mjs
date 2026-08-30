@@ -176,7 +176,7 @@ test("subagent relay (§7.2 D4): onToolCall eng-coder#3/read 开 tool block + cu
   const sub = ctx.state.subTasks["eng-coder#3"]
   assert.equal(sub.currentTool, "read")
   assert.equal(sub.toolArgs.path, "src/a.mjs")
-  assert.ok(sub.blocks.some((b) => b.kind === "tool" && b.text.includes("❯ read")), "tool block 开块")
+  assert.ok(sub.blocks.some((b) => b.kind === "tool" && b.text.includes('❯ read "src/a.mjs"')), "tool block 开块且带参数摘要（2026-08-31：此前只显工具名）")
 })
 
 // ---- §7.2 T-A/T-B/T-C/T-D/T-K：区块数据层用例（渲染断言见 tui.test.mjs） ----
