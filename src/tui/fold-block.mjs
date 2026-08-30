@@ -167,6 +167,9 @@ export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols
   // component owns the final width: every row is sliced to cols-2 AFTER the
   // gutter, so the frame never sees an overwide row.
   const lined = body.map((l) => {
+    // Empty rows keep the rule line unbroken: a bare "│" (no trailing space)
+    // paints the same column without introducing trailing whitespace.
+    if (!l.text || !l.text.trim()) return { ...l, text: "│", _skipDimFold: true }
     const raw = l.text.replace(/^(?:│ ?|  │ ?|  )/, "")
     return { ...l, text: sliceByWidth(`│ ${raw}`, cols - 2) }
   })
