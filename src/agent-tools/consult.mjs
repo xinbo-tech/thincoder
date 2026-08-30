@@ -338,7 +338,7 @@ export const consultCheckTool = {
     },
     required: ["id", "n"],
   },
-  async execute({ id, n }, ctx) {
+  async execute({ id, n: _n }, ctx) {
     const s = ctx.agent?._consultSessions?.get(String(id))
     if (!s) return JSON.stringify({ error: "unknown consult id" })
     const abortAll = () => { for (const c of s.controllers) { try { c.abort() } catch { /* noop */ } } }
