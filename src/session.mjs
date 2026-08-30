@@ -303,6 +303,43 @@ export { isLegacyTransient }
 
 // ========== core read/write ==========
 
+/** Slim the HUMAN line (history) for storage — the machine line (contextHistory)
+ *  keeps everything byte-identical for the provider. Deepseek-consult design
+ *  (2026-08-30): the human line is never compacted and carries the bulk of
+ *  session-file size (tool args JSON / full tool results / base64 images), while
+ *  nothing consumes its verbatim fidelity. Rules (copy-on-write ONLY — the two
+ *  lines share object references via pushReal; mutating in place would corrupt
+ *  the machine line and provider prefix cache):
+ *   - assistant.tool_calls[].function.arguments → trimmed to 300 chars (head + …)
+ *   - tool messages content → 500 chars (head + …)
+ *   - multimodal user content array → keep text parts, DROP image_url base64 parts
+ *   - plain string messages → untouched (not the size driver)
+ */
+function slimForDisplay(m) {
+  if (m && Array.isArray(m.content)) {
+    // Multimodal user message: keep text parts, drop image parts.
+    const textParts = m.content.filter((p) => p?.type !== "image_url")
+    if (textParts.length === m.content.length) return m
+    return { ...m, content: textParts }
+  }
+  if (m && m.role === "assistant" && Array.isArray(m.tool_calls)) {
+    let changed = false
+    const tool_calls = m.tool_calls.map((tc) => {
+      const args = tc.function?.arguments
+      if (typeof args === "string" && args.length > 300) {
+        changed = true
+        return { ...tc, function: { ...tc.function, arguments: args.slice(0, 300) + "…" } }
+      }
+      return tc
+    })
+    return changed ? { ...m, tool_calls } : m
+  }
+  if (m && m.role === "tool" && typeof m.content === "string" && m.content.length > 500) {
+    return { ...m, content: m.content.slice(0, 500) + "\n… (truncated for storage)" }
+  }
+  return m
+}
+
 /** Save agent state to the active slot file (atomic write). `display` (the old
  *  WYSIWYG render snapshot) is DEPRECATED — it drifted out of sync with history
  *  whenever VS Code wrote the slot, and the TUI resumed from a stale snapshot.
@@ -312,7 +349,9 @@ export function saveSession(agent) {
   // history        = FULL, never-compacted (human-readable; VS Code panel & CLI resume read this)
   // contextHistory = machine context (possibly compacted) so CLI resume keeps the token savings
   // Human line: transient machine injections never enter the readable record.
-  const history = (agent._fullHistory ?? agent.history).filter((m) => !m.transient && !isLegacyTransient(m))
+  const history = (agent._fullHistory ?? agent.history)
+    .filter((m) => !m.transient && !isLegacyTransient(m))
+    .map(slimForDisplay)
   // Machine line (contextHistory): KEEP transient messages — resume must rebuild the
   // machine line byte-identical to what the provider cache saw. Dropping them made every
   // process restart diverge at the first injection position (git/OS/time reminders are
