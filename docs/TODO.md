@@ -89,7 +89,7 @@
 
 - [ ] PROVIDER §12 `thinking_budget`（限思考 token 上限）——决策表注明"记 TODO"但未入本清单，补挂（独立增值项，与本轮 enable_thinking 正交）
 - [x] ~~CLI `test/` 目录纳入 lint~~——已销账，见上节（2026-08-31）
-- [ ] config.schema.json 同步机制——2026-08-30 已手工校准一轮（maxTurns 200/advisor guard+timeoutMs/proxy/shell/consultModels/subagentModels 等），但该文件无变更纪律触发点，易再漂移；建议：变更 config 默认值的批次把 schema 同步列入受影响文件清单
+- [x] ~~config.schema.json 同步机制~~——**2026-08-31 用户裁定：彻底删除**（非放弃维护）。核实其从未闭环：①线上 URL（saveConfig 注入的 `https://thincoder.dev/schemas/config.json`）从未部署——thincoder.com 仓库无 schemas 目录；②代码从不消费该文件；③DEFAULTS 顶层 25 键仅覆盖 5，providers 层 20 键从未进 schema——维护成本 > 价值。处理：删 `docs/schemas/`、删 saveConfig 的 `$schema` 注入（今后写出的 config.json 不再带该字段，存量字段无害残留）、README 失实宣传行删除。ROADMAP-0.9.0 的历史计划条目按快照规范保留。
 
 
 ## 已关闭（Done）

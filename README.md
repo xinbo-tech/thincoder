@@ -300,7 +300,7 @@ Code conventions: pure `.mjs`, no semicolons, no npm dependencies allowed (inclu
 - **CodeMode: sandboxed JS execution** — `execute` tool backed by `vm.Script.runInNewContext`. Compose multiple file operations (read/write/glob/grep/log) into a single script, reducing API round-trips and keeping intermediate results out of context. Sandbox strips all Node APIs, limits output to 50KB, enforces 30s timeout, and blocks private IPs in fetch. Script size capped at 50KB.
 
 ### 0.9.0 (2026-07)
-- **Config JSON Schema** — `saveConfig` auto-injects `$schema` reference; `docs/schemas/config.schema.json` provides editor autocompletion/validation for all config fields including the new `hooks` section.
+- **Checkpoint v2** — snapshot-before-destructive with full workspace copies, per-file restore (`cat` preview), auto-recover on failed apply, and escape-hatch hints when git checks fail
 - **Lifecycle Hooks** — `PreToolUse` / `PostToolUse` / `PostToolUseFailure` / `Notification` events. User-defined shell commands in config, with per-tool regex matching, timeout control, and `block`/`allow`/`notify` actions. Implemented in `src/hooks.mjs`, integrated into tool dispatch.
 - **Built-in Skills (5)** — `pdf-create`, `xlsx-create`, `frontend-design`, `code-review`, `api-design` ship with the installation. Each is a standalone markdown instruction file using zero-dependency approaches (Chrome headless for PDF, PowerShell for Excel, etc.).
 - **Conversation message folding** — Long tool result blocks (>8 consecutive dim lines) auto-collapse to first 2 lines + "… N more lines — Enter to expand". `/fold on|off` toggles globally.
