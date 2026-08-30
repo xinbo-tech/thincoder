@@ -320,16 +320,19 @@ export async function startTUI(agent, opts = {}) {
   process.stdout.on("resize", () => {
     try { state.dims.refresh(); render() } catch { /* resize error — ignore */ }
   })
-  // Startup convergence (2026-08-30 consult): ConPTY's buffer info can stay
-  // falsy past the initial sample — retry every 150ms until the first sane
-  // size is seen (dims.sawValid), capped at ~3s. Each accepted change repaints.
+  // Startup convergence (2026-08-30 consult, residual fix): ConPTY can report
+  // a stale-small 80 at launch AND keep reporting it for a while — sawValid is
+  // useless as a stop condition there (80 passes the sanity gate), which let
+  // the session lock at 80 until the first turn's finally re-sampled. Run the
+  // FULL window (~4.5s): any growth is accepted immediately by the asymmetric
+  // rule and repaints; the window just bounds how long we keep looking.
   let startupRetries = 0
   const startupResampler = setInterval(() => {
     try {
       const before = state.dims.get()
       const after = state.dims.refresh()
-      if (state.dims.sawValid || ++startupRetries >= 20) { clearInterval(startupResampler); return }
       if (after.cols !== before.cols || after.rows !== before.rows) render()
+      if (++startupRetries >= 30) clearInterval(startupResampler)
     } catch { /* ignore */ }
   }, 150)
   // Idle watchdog (2026-08-30 consult): the ONLY mid-session recovery channel.

@@ -47,6 +47,10 @@ export async function runAgentTurn(ctx, text) {
   state.currentTool = null
   state.processingStarted = Date.now()
   state.controller = new AbortController()
+  // Turn-start re-sample (2026-08-30): ConPTY may have recovered the true size
+  // since the last event hook — a growth is accepted immediately (asymmetric
+  // rule), so generation starts full-width instead of waiting for the finally.
+  state.dims?.refresh()
   state.interruptPrompt = null
   // Refresh status bar every second during processing; also refresh when any
   // subagent block is still running so its header elapsed ticks (§7.2 D4 —
