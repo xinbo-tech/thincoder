@@ -116,7 +116,6 @@ slow("session: 保存/恢复/新建 往返（基于槽位）", async () => {
   // 原子写不残留临时文件——直接探测本槽位的 .tmp 路径（O(1) existsSync）。
   // 不得扫描 ~/.thincoder/sessions/ 全目录：用户机上可达 3 万+文件（含数十 MB 大会话），
   // readdirSync 实测 18s（Defender 干扰放大，2026-08-31 本条 TODO 的真正慢因——不是 saveSession 本身）
-  const { existsSync } = await import("node:fs")
   assert.ok(!existsSync(sessionPath(cwd) + ".tmp"), "原子写不残留 .tmp")
   // /new：分配新槽位，切换到空会话
   const newSlot = newSession(cwd)
