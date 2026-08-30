@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url"
 
 import { resolveProxyConfig, resolveWebProxy, injectProxy } from "../src/proxy.mjs"
 import { normalizeProxy } from "../src/config.mjs"
-import { websearchTool } from "../src/tools/web.mjs"
+import { websearchTool, fetchTool } from "../src/tools/web.mjs"
 import { handleConfigCommand } from "../src/tui/cmd-config.mjs"
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url))
@@ -126,22 +126,47 @@ async function fakeProxy() {
   }
 }
 
-test("websearch: web:true 走代理（失败时优雅降级），web:false 不碰代理", async () => {
+test("websearch: proxy 参数显式传才走代理；不传（即使 config 配了 web:true）也直连——2026-08-31 裁定", async () => {
   const proxy = await fakeProxy()
   try {
-    const ctxProxied = { agent: { config: { proxy: { uri: proxy.uri, web: true, model: false } } } }
-    const r1 = await websearchTool.execute({ query: "test", engine: "bing" }, ctxProxied)
-    assert.equal(proxy.hits, 1, "web:true 时 websearch 应尝试走代理")
+    // 显式参数：走代理，失败时优雅降级为 no results
+    const r1 = await websearchTool.execute({ query: "test", engine: "bing", proxy: proxy.uri }, { agent: { config: {} } })
+    assert.equal(proxy.hits, 1, "proxy 参数传入时 websearch 应尝试走代理")
     assert.match(r1, /no results/, "代理不可达时优雅失败而不是抛出")
 
-    // web:false：resolveWebProxy 返回 null（不发真实请求，不碰外网）
-    const ctxDirect = { agent: { config: { proxy: { uri: proxy.uri, web: false, model: false } } } }
-    assert.equal(resolveWebProxy(ctxDirect), null, "web:false 时判定为直连")
-    assert.equal(proxy.hits, 1, "不新增代理连接")
+    // 不传 proxy：即使 config.json 固定配置为 web:true，也不得走代理（固定配置自动路由已废止）
+    const ctxProxied = { agent: { config: { proxy: { uri: proxy.uri, web: true, model: false } } } }
+    const r2 = await websearchTool.execute({ query: "test", engine: "bing" }, ctxProxied)
+    assert.equal(proxy.hits, 1, "未传 proxy 参数时不得使用 config.json 的固定代理（直连，不再新增代理连接）")
+    // 直连 Bing 可能真实成功（本机可直连国外）也可能失败降级——两者都是合法"未走代理"行为
+    assert.match(r2, /1\. \[Bing\]|no results/, "直连结果或优雅降级均可，关键是 hits 不变")
+
+    // resolveWebProxy 函数本身仍存在（cmd-config 测试连接用），语义不变
+    assert.equal(resolveWebProxy(ctxProxied), proxy.uri, "resolveWebProxy 供 UI 测试连接用，不自动路由工具")
   } finally {
     proxy.close()
   }
 })
+
+test("fetch: proxy 参数显式传才走代理；不传直连（config 固定配置不再自动路由）——2026-08-31 裁定", async () => {
+  const proxy = await fakeProxy()
+  try {
+    // SSRF guard 拦本地：用不存在的外部域名，仅验证代理连接计数
+    const url = "http://definitely-not-a-real-host.invalid/page"
+    // 显式 proxy 参数：代理必须被尝试（CONNECT 命中计数 1）；假代理 accept 即断 → 抛 fetch failed 属预期
+    try { await fetchTool.execute({ url, proxy: proxy.uri }, { agent: { config: {} } }) } catch { /* fake proxy always dies */ }
+    assert.equal(proxy.hits, 1, "proxy 参数传入时 fetch 应走代理")
+
+    // 未传 proxy：即使 config 配了 web:true，也不得走代理
+    // （proxyFetch 无代理路径是返回 error-object 而非 throw——两者都合法，关键断言 = hits 不变）
+    const ctxProxied = { agent: { config: { proxy: { uri: proxy.uri, web: true, model: false } } } }
+    try { await fetchTool.execute({ url }, ctxProxied) } catch { /* 直连 .invalid 必然失败，不在乎形式 */ }
+    assert.equal(proxy.hits, 1, "未传 proxy 参数时不得使用 config.json 的固定代理")
+  } finally {
+    proxy.close()
+  }
+})
+
 
 // ====================================================================
 // cmd-config proxy 菜单（不落盘的部分，进程内）

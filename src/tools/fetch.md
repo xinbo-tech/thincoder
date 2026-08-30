@@ -2,6 +2,7 @@ Fetch a URL and return its content as text. HTML pages are stripped to readable 
 
 Parameters:
 - url (required): http/https URL
+- proxy: http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); pick per target (github/foreign sites need a proxy, gitee/domestic don't)
 
 Notes:
 - Follows redirects automatically

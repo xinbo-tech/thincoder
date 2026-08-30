@@ -1,6 +1,6 @@
 import { DESC, truncate, stripTags, htmlToText, isPrivateHost } from "./shared.mjs";
 import { URL } from "node:url";
-import { resolveWebProxy, proxyFetch } from "../proxy.mjs";
+import { proxyFetch } from "../proxy.mjs";
 
 export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 const FETCH_TIMEOUT = 15_000
@@ -41,8 +41,9 @@ const ENGINES = [{ name: "bing", label: "Bing", url: bingUrl, extract: extractBi
 const ENGINE_NAMES = ENGINES.map(e => e.name)
 
 /** Structured search via Tavily (optional — config.websearch.apiKey). Returns
- *  { engine, results } or null to fall back to Bing HTML scraping. */
-async function fetchTavily(query, limit, ctx) {
+ *  { engine, results } or null to fall back to Bing HTML scraping.
+ *  proxyUri: explicit per-call proxy (args.proxy) — never the config.json one. */
+async function fetchTavily(query, limit, ctx, proxyUri) {
   const apiKey = ctx?.agent?.config?.websearch?.apiKey
   if (!apiKey) return null
   const ctrl = new AbortController()
@@ -53,7 +54,7 @@ async function fetchTavily(query, limit, ctx) {
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
       body: JSON.stringify({ query, search_depth: "basic", max_results: limit, include_answer: false, include_raw_content: false }),
       signal: ctrl.signal,
-    }, resolveWebProxy(ctx))
+    }, proxyUri)
     if (!response.ok) return null
     const data = await response.json()
     const results = (Array.isArray(data.results) ? data.results : []).map((r) => ({
@@ -64,14 +65,14 @@ async function fetchTavily(query, limit, ctx) {
   finally { clearTimeout(timer) }
 }
 
-async function fetchEngine(engine, query, page, ctx) {
+async function fetchEngine(engine, query, page, proxyUri) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT)
   try {
     const response = await proxyFetch(engine.url(query, page), {
       headers: { "User-Agent": engine.ua, "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8" },
       signal: ctrl.signal,
-    }, resolveWebProxy(ctx))
+    }, proxyUri)
     if (!response.ok) return null
     const html = await response.text()
     const results = engine.extract(html)
@@ -90,6 +91,7 @@ export const websearchTool = {
       limit: { type: "number", description: "Max results (default 8, max 20)" },
       engine: { type: "string", enum: ENGINE_NAMES, description: "Specific engine — \"bing\" (Bing). Omit to search all engines concurrently." },
       page: { type: "number", description: "Page number for pagination (1-based, default 1). Only used when engine is specified." },
+      proxy: { type: "string", description: "http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling: fixed config breaks domestic sites)" },
     },
     required: ["query"],
   },
@@ -97,20 +99,23 @@ export const websearchTool = {
   async execute(args, ctx) {
     const limit = Math.min(args.limit ?? 8, 20)
     const page = Math.max(1, args.page ?? 1)
+    // 2026-08-31 ruling: proxy is a PER-CALL decision (args.proxy), never the config.json
+    // fixed configuration. Model picks by target: github/foreign → pass proxy; gitee/domestic → omit.
+    const proxyUri = args.proxy ?? null
     // Structured search first when a Tavily key is configured — stable, dated,
     // no HTML scraping. Falls back to Bing silently.
-    const tavily = await fetchTavily(args.query, limit, ctx)
+    const tavily = await fetchTavily(args.query, limit, ctx, proxyUri)
     if (tavily && tavily.results.length > 0) {
       return truncate(tavily.results.slice(0, limit).map((r, i) => `${i + 1}. [tavily] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n"))
     }
     if (args.engine) {
       const engine = ENGINES.find(e => e.name === args.engine)
       if (!engine) return `Unknown engine '${args.engine}'. Available: ${ENGINE_NAMES.join(", ")}`
-      const fetched = await fetchEngine(engine, args.query, page, ctx)
+      const fetched = await fetchEngine(engine, args.query, page, proxyUri)
       if (!fetched || fetched.results.length === 0) return "(no results)"
       return truncate(fetched.results.slice(0, limit).map((r, i) => `${i + 1}. [${engine.label}] ${r.title}\n   ${r.href}\n   ${r.snippet}`).join("\n\n"))
     }
-    const promises = ENGINES.map(e => fetchEngine(e, args.query, 1, ctx))
+    const promises = ENGINES.map(e => fetchEngine(e, args.query, 1, proxyUri))
     const fetched = (await Promise.all(promises)).filter(Boolean)
     if (fetched.length === 0) return "(no results)"
     const merged = [], indexes = fetched.map(() => 0)
@@ -174,13 +179,21 @@ export function detectSparseHtml(html, text) {
 export const fetchTool = {
   name: "fetch",
   description: DESC("fetch"),
-  parameters: { type: "object", properties: { url: { type: "string", description: "http/https URL" } }, required: ["url"] },
+  parameters: {
+    type: "object",
+    properties: {
+      url: { type: "string", description: "http/https URL" },
+      proxy: { type: "string", description: "http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); pick per target (github/foreign sites need a proxy, gitee/domestic don't)" },
+    },
+    required: ["url"],
+  },
   readonly: true,
-  async execute(args, ctx) {
+  async execute(args, _ctx) {
     if (!/^https?:\/\//.test(args.url)) throw new Error("url must start with http:// or https://")
     if (isPrivateUrl(args.url)) throw new Error("fetch blocked: internal/private/metadata addresses are not allowed")
     try {
-      const proxyUri = resolveWebProxy(ctx)
+      // 2026-08-31 ruling: per-call decision — args.proxy when passed, direct otherwise.
+      const proxyUri = args.proxy ?? null
       const response = await proxyFetch(args.url, { headers: { "User-Agent": UA } }, proxyUri)
       if (!response.ok) {
         if ([301, 302, 307, 308].includes(response.status)) {
