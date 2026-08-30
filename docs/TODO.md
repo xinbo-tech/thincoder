@@ -58,7 +58,7 @@
 
 ### 模型 · GLM-5.3-Flash 交付评审遗留（2026-08-28，来源：交付评审）
 
-- [ ] `src/config.mjs` 约 328 行超 300 行阈值——建议把 MODEL_SPECS / PROVIDER_PRESETS 表格抽到独立 spec 模块（本次仅加一行，非本次引入）
+- [x] ~~`src/config.mjs` 约 328 行超 300 行阈值——建议把 MODEL_SPECS / PROVIDER_PRESETS 表格抽到独立 spec 模块~~——2026-08-31 落地：MODEL_SPECS + specForModel 抽至 `src/model-specs.mjs`（config.mjs 358→266 行回到建议线内；config **re-export** specForModel——23 个既有 importer 零改动；PROVIDER_PRESETS 仅 23 行留下不抽）；COMPACT_RATIO 归 config（压缩阈值概念本位）。PROVIDER.md §11 T2 用例仍缺（下条）
 - [ ] PROVIDER.md §11 测试表 T2（read_image 对 glm-5.3-flash 不拒绝）未直接写成自动化用例，仅靠 multimodal=true 断言间接覆盖——择机补 readImageTool.execute 用例
 ### Provider · core.mjs 拆分（2026-08-28，来源：Qwen enable_thinking 交付评审 #4）
 
