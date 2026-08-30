@@ -67,6 +67,8 @@
 ## 2. stdin 输入层（index.mjs）
 
 > **行语法单一事实源（2026-08-30，三管道合一）**：对话行有三个生产者——live（`tool-events.mjs` flushStream）、恢复（`startup.mjs` historyToLines）、注入（session/命令）——**全部产出带 `_kind` 类型标记的行**（`"thinking"` / `"text"` / `"tool"` / 无标记=用户消息）。`buildConvLines` 读标记判定折叠行为，不再从颜色猜（颜色降级为纯视觉属性）。这是"恢复体验 = 执行体验"的结构保证：生产端同构后，任何一类内容在三种时刻的形态由同一份判定代码决定，不存在人肉对齐。新增生产者必须打 `_kind` 标记（eng-coder 自查项）。
+>
+> **逐行对齐契约（2026-08-30 用户 diff 报告驱动）**：同一回合在 live 与 restore 两种管道下渲染**逐行一致**（白名单：done 行 `❯ name — done (耗时)` 为 live 独有——历史不存耗时）。为此统一的点：①工具标题行两态同格式 `❯ name <参数摘要>`；②live onToolCall 落参数全量 JSON dim 行（= restore toolArgsLines）；③live onToolResult 落结果正文 dim 行（= restore 全文）；④live 不再有孤立的行数摘要行。回归 guard：`_live` 滚动行清理必须覆盖全部 `_live` 标记来源。
 
 - `emitKeypressEvents(keyStream)`（node:readline）把原始字节转成 keypress 事件；`keyStream` 是 `process.stdin` 的 PassThrough 副本——**paste 多块数据先写入 keyStream 再交给 readline 解析**，保证按键与粘贴按序到达。
 - **分块解码**：`utf8Decoder.decode(chunk, { stream: true })`——CJK 字符跨 chunk 边界时正确拼装（有专门测试）。鼠标序列可能跨 chunk 截断：`mousePending` 保存不完整尾部，下个 chunk 拼接。

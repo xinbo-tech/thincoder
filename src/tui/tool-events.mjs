@@ -15,7 +15,7 @@
 import { sliceByWidth } from "./render.mjs"
 import { C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
-import { describeToolArgs } from "./tool-args.mjs"
+import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 import {
   SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
@@ -157,6 +157,11 @@ export function buildToolCallbacks(deps) {
       // (appended by onToolOutput) are complementary display.
       const color = ({ advisor: C.advisor, bash: C.warn, verify: C.tool }[name] ?? C.text)
       pushLine(`❯ ${name}${roundTag}${argSummary ? ` ${argSummary}` : ""}`, color)
+      // Full args as dim lines — restore parity (historyToLines emits the same
+      // pretty-JSON block; user diff report 2026-08-30). Auto-folded like it.
+      for (const jsonLine of toolArgsLines(args)) {
+        pushLine(`  ${jsonLine}`, C.dim)
+      }
       tickStart(name)
     },
     onToolResult: (name, result) => {
@@ -202,8 +207,16 @@ export function buildToolCallbacks(deps) {
         for (let i = state.lines.length - 1; i >= 0; i--) {
           if (state.lines[i]._live === name) state.lines.splice(i, 1)
         }
-        const summary = formatToolSummary(name, result)
-        if (summary) pushLine(`  ${summary}`, C.dim)
+        // NOTE: no count-summary line here — the result BODY below replaces it
+        // (restore parity) and the done line's tail already carries the summary.
+        // Result BODY as dim lines — parity with the restored session, which
+        // always shows the full tool result (user diff report 2026-08-30:
+        // live showed a one-line "→ 2 lines" summary while restore showed the
+        // full body; the conversation must carry the same information live).
+        // Auto-folded by the consecutive-dim rule like restore.
+        for (const line of String(result).split("\n")) {
+          if (line.trim()) pushLine(`  ${line}`, C.dim)
+        }
       }
       if (name === "advisor") {
         // The review's thinking must survive into the conversation history like

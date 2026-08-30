@@ -71,7 +71,9 @@ export function historyToLines(history, startIdx, endIdx) {
           argsSummary = describeToolArgs(tcName, args)
           argLines = toolArgsLines(args)
         } catch { /* malformed args JSON — render the raw string truncated */ }
-        lines.push({ text: `  [tool] ${tcName}${argsSummary ? " — " + argsSummary : ""}`, color: C.tool, _kind: "tool" })
+        // Title line matches the LIVE tool block header exactly (❯ name args)
+        // — one grammar across both paths (user diff report 2026-08-30).
+        lines.push({ text: `❯ ${tcName}${argsSummary ? " " + argsSummary : ""}`, color: C.tool, _kind: "tool" })
         if (!argsSummary && tc.function?.arguments && tc.function.arguments !== "{}") {
           lines.push({ text: "  " + sliceByWidth(tc.function.arguments, 76), color: C.dim })
         }

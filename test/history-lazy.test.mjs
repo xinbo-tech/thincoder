@@ -20,7 +20,7 @@ test("historyToLines materializes user/assistant/tool lines with summaries", () 
   assert.ok(texts.includes("hi"), "user content present")
   assert.ok(texts.includes("❯ ThinCoder:"), "assistant label present")
   assert.ok(texts.includes("hello"), "assistant content present")
-  assert.ok(texts.some((t) => t.includes("[tool] bash")), "tool call shown")
+  assert.ok(texts.some((t) => t.startsWith("❯ bash")), "tool call shown (live-parity title line)")
   assert.ok(texts.some((t) => t.includes("ls")), "tool result first-line summary shown (lookahead)")
 })
 
@@ -43,7 +43,7 @@ test("historyToLines slices a page and lookahead works across the page edge", ()
   ]
   // Load only [0,2) — the assistant's tool result lives at index 2 (next page).
   const lines = historyToLines(history, 0, 2)
-  const toolLine = lines.find((l) => l.text.includes("[tool] read"))
+  const toolLine = lines.find((l) => l.text.startsWith("❯ read"))
   assert.ok(toolLine, "tool call line present")
   assert.ok(
     lines.some((l) => l.text.includes("file content line")),

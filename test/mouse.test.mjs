@@ -341,14 +341,14 @@ describe("historyToLines — 恢复会话渲染工具参数（2026-08-30 用户�
       { role: "tool", tool_call_id: "t1", content: "content" },
     ]
     const lines = historyToLines(history, 0, history.length).map((l) => l.text)
-    assert.ok(lines.some((t) => t.includes("[tool] read — \"src/x.mjs\"") && t.includes("offset 5")), "read 标题行含路径+选项")
-    assert.ok(lines.some((t) => t.includes("[tool] bash — npm test")), "bash 标题行含命令")
-    assert.ok(lines.some((t) => t.includes("[tool] mcp__srv__tool — ")), "未知工具回退 JSON 摘要")
+    assert.ok(lines.some((t) => t.startsWith("❯ read \"src/x.mjs\"") && t.includes("offset 5")), "read 标题行含路径+选项")
+    assert.ok(lines.some((t) => t.startsWith("❯ bash npm test")), "bash 标题行含命令")
+    assert.ok(lines.some((t) => t.startsWith("❯ mcp__srv__tool ")), "未知工具回退 JSON 摘要")
     assert.ok(lines.some((t) => t.includes("\"path\": \"src/x.mjs\"")), "全量 JSON 行存在")
     assert.ok(lines.some((t) => t.includes("\"command\": \"npm test\"")), "bash 全量 JSON 行存在")
     const bad = [{ role: "user", content: "x" }, { role: "assistant", content: "", tool_calls: [{ id: "t", function: { name: "read", arguments: "{broken" } }] }]
     const badLines = historyToLines(bad, 0, bad.length).map((l) => l.text)
-    assert.ok(badLines.some((t) => t === "  [tool] read"), "畸形 args 不崩，标题行（无摘要）仍在")
+    assert.ok(badLines.some((t) => t === "❯ read"), "畸形 args 不崩，标题行（无摘要）仍在")
     assert.ok(badLines.some((t) => t.includes("{broken")), "原始参数串落 dim 行（降级可见）")
   })
 })
