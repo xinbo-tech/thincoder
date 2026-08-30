@@ -149,6 +149,7 @@ export function finishSubTask(state, roles, lastError = null) {
  *  freezing — full design interaction, not a dim-lines fallback). subTasks loses
  *  the entry on release; memory stays bounded by N2 (ring buffer already applied). */
 export function freezeSubTaskLines(state, sub) {
+  if (!sub) return
   state._frozenSubKeys ??= new Set()
   state._frozenSubKeys.add(sub.key)
   if (!sub) return
@@ -193,8 +194,15 @@ export function finishSubTasksByRole(state, roles, lastError = null) {
  *  running heuristic froze the WRONG block when models settle out of order. */
 export function finishSubTaskByModel(state, role, model, lastError = null) {
   state.subTasks ??= {}
+  // Model-string normalization (2026-08-30 follow-up consult): the [model]
+  // token carries the BARE model name (resolveChildProvider keeps mname),
+  // while consult_check's r.model is consultLabel = "provider:model". Compare
+  // tail segments — a full "provider:model" reply matches a bare-name block.
+  const want = String(model ?? "").includes(":") ? String(model).split(":").pop() : String(model ?? "")
   for (const sub of Object.values(state.subTasks)) {
-    if (!sub.done && sub.role === role && sub.model === model) {
+    const have = String(sub.model ?? "")
+    const haveTail = have.includes(":") ? have.split(":").pop() : have
+    if (!sub.done && sub.role === role && haveTail === want) {
       sub.done = true
       sub.doneAt = Date.now()
       sub.currentTool = null

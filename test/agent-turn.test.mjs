@@ -474,11 +474,15 @@ test("consult 残留终结: done:true 全量冻结 N 块 + 墓碑防复活（202
 
 test("consult 精确收尾: 单条 reply 按 model 定位（不再冻结错块）", async () => {
   const { ctx, callbacks } = await captureCallbacks()
+  // PRODUCTION formats (2026-08-30 follow-up consult): the [model] token is the
+  // BARE name (resolveChildProvider), consult_check's r.model is
+  // consultLabel = "provider:model". A test using bare names on both sides
+  // passed while production never matched — the green was fake.
   callbacks.onToken("consult#1/[model]kimi-k3")
   callbacks.onToken("consult#2/[model]deepseek-v4-pro")
   ctx.runAgent = async (_a, _t, cbs) => {
-    // deepseek 先答完（乱序）：按 model 精确收 consult#2
-    cbs.onToolResult("consult_check", JSON.stringify({ reply: "ds 诊断", model: "deepseek-v4-pro", done: false }))
+    // deepseek 先答完（乱序）：r.model 带 provider 前缀，应按尾段精确匹配 consult#2
+    cbs.onToolResult("consult_check", JSON.stringify({ reply: "ds 诊断", model: "deepseek:deepseek-v4-pro", done: false }))
   }
   await runAgentTurn(ctx, "task")
   // 回合结束后 freezeAllSubTasks 会收尸所有块（含未答完的 #1）——TUI 设计如此。
