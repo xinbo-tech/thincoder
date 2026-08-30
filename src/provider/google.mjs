@@ -59,8 +59,9 @@ export function convertMessages(messages) {
   return contents
 }
 
-/** Build and send a Gemini chat request. Returns the same shape as core.mjs chat. */
-export async function chat(provider, { messages, tools, onToken, onReasoning, signal }) {
+/** Build and send a Gemini chat request. Returns the same shape as core.mjs chat.
+ *  2026-08-31 会诊 #6：接入 rateGate/recordRate（原实现完全绕过 TPM/RPM 闸门）。 */
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal }) {
   const systemMessages = messages.filter((m) => m.role === "system")
   const contents = convertMessages(messages)
 
@@ -90,6 +91,11 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
 
   if (signal?.aborted) throw Object.assign(new DOMException("Aborted", "AbortError"), { reason: signal.reason })
 
+  // 会诊 #6：TPM/RPM 闸门 + 记账
+  const { rateGate, recordRate, estimateRequestTokens } = await import("./rate.mjs")
+  const estimated = estimateRequestTokens({ messages })
+  await rateGate(provider, estimated, onWait, signal)
+
   const response = await proxyFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -97,6 +103,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
     signal: signal
       ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
       : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    _headerTimeoutMs: FETCH_TIMEOUT_MS,
+    _bodyIdleMs: 120_000,
   }, provider.proxyUri)
 
   if (!response.ok) {
@@ -105,6 +113,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
   }
 
   const result = await parseGeminiStream(response, { onToken, onReasoning, signal })
+  recordRate(provider, estimated, result.usage)
 
   const usage = result.usage
   if (usage) {
@@ -177,6 +186,8 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
       throw e
     }
     buffer += decoder.decode(chunk, { stream: true })
+    // BOM 剥除（会诊 #12）：首个 chunk 可能带 \uFEFF，否则首个 data 事件静默丢失
+    if (buffer.charCodeAt(0) === 0xfeff) buffer = buffer.slice(1)
     const lines = buffer.split("\n")
     buffer = lines.pop()
 

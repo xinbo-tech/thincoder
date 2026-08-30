@@ -18,8 +18,11 @@ export function normalizeTools(tools) {
   }))
 }
 
-/** Build and send an Anthropic chat request. Returns the same shape as core.mjs chat. */
-export async function chat(provider, { messages, tools, onToken, onReasoning, signal }) {
+/** Build and send an Anthropic chat request. Returns the same shape as core.mjs chat.
+ *  2026-08-31 会诊 #6：接入 rateGate/recordRate + 429 Retry-After 单次重试
+ *  （原实现完全绕过 TPM/RPM 闸门与记账——用户配了 tpm 以为受控实际不受控）。
+ *  注：5xx/网络退避重试未与 OpenAI 格式对齐（三 transport 共用那步工作量大，见报告）。 */
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal }) {
   // Extract system message(s) — Anthropic uses top-level `system` field
   const systemMessages = []
   const chatMessages = []
@@ -59,6 +62,14 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
   // Active signal check
   if (signal?.aborted) throw Object.assign(new DOMException("Aborted", "AbortError"), { reason: signal.reason })
 
+  // 会诊 #6：TPM/RPM 闸门 + 记账（rate.mjs 与 OpenAI 格式共用同一窗口）
+  const { rateGate, recordRate } = await import("./rate.mjs")
+  const estimated = await (async () => {
+    const { estimateRequestTokens } = await import("./rate.mjs")
+    return estimateRequestTokens(body)
+  })()
+  await rateGate(provider, estimated, onWait, signal)
+
   const response = await proxyFetch(`${provider.baseURL}/messages`, {
     method: "POST",
     headers,
@@ -66,7 +77,33 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
     signal: signal
       ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
       : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    _headerTimeoutMs: FETCH_TIMEOUT_MS,
+    _bodyIdleMs: 120_000,
   }, provider.proxyUri)
+
+  // 会诊 #6：429 尊重 Retry-After 单次重试（OpenAI 格式是完整退避；这里最小对齐）
+  if (response.status === 429) {
+    const retryAfter = parseRetryAfterSafe(response.headers.get("retry-after"))
+    await sleepSafe(retryAfter, signal)
+    const retryResponse = await proxyFetch(`${provider.baseURL}/messages`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
+        : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      _headerTimeoutMs: FETCH_TIMEOUT_MS,
+      _bodyIdleMs: 120_000,
+    }, provider.proxyUri)
+    if (retryResponse.ok) {
+      const retryResult = await parseAnthropicStream(retryResponse, { onToken, onReasoning, signal })
+      recordRate(provider, estimated, retryResult.usage)
+      return finishAnthropic(retryResult)
+    }
+    // 重试仍失败：报告第二次的响应（body 未被流解析消耗，text() 可读）
+    const text = await retryResponse.text().catch(() => "")
+    throw new Error(`Anthropic API error ${retryResponse.status}: ${text}`)
+  }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "")
@@ -74,8 +111,24 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
   }
 
   const result = await parseAnthropicStream(response, { onToken, onReasoning, signal })
+  recordRate(provider, estimated, result.usage)
+  return finishAnthropic(result)
+}
 
-  // Convert Anthropic usage format to OpenAI-compatible
+/** 可中断 sleep（429 重试等待期间 Ctrl+C 立即生效）。 */
+async function sleepSafe(ms, signal) {
+  if (!signal) return new Promise((r) => setTimeout(r, ms))
+  if (signal.aborted) throw Object.assign(new DOMException("Aborted", "AbortError"), { reason: signal.reason })
+  return new Promise((resolve, reject) => {
+    let t
+    const onAbort = () => { clearTimeout(t); reject(Object.assign(new DOMException("Aborted", "AbortError"), { reason: signal.reason })) }
+    signal.addEventListener("abort", onAbort, { once: true })
+    t = setTimeout(() => { signal.removeEventListener("abort", onAbort); resolve() }, ms)
+  })
+}
+
+/** Convert the parsed stream to the core.mjs result shape (usage → OpenAI-compatible). */
+function finishAnthropic(result) {
   const usage = result.usage
   if (usage) {
     return {
@@ -91,8 +144,21 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, si
       toolCalls: result.toolCalls,
     }
   }
-
   return { content: result.content, reasoning: result.reasoning, toolCalls: result.toolCalls }
+}
+
+/** Retry-After 解析（秒数或 HTTP-date，上限 300s）；异常退回 15s。 */
+function parseRetryAfterSafe(header) {
+  if (header == null) return 15_000
+  const numeric = Number(header.trim())
+  let waitMs = 0
+  if (Number.isFinite(numeric) && numeric >= 0) waitMs = numeric * 1000
+  else {
+    const d = Date.parse(header.trim())
+    if (Number.isFinite(d)) waitMs = Math.max(0, d - Date.now())
+  }
+  if (waitMs <= 0) return 15_000
+  return Math.min(waitMs, 300_000)
 }
 
 /**
@@ -157,6 +223,8 @@ async function parseAnthropicStream(response, { onToken, onReasoning, signal }) 
       throw e
     }
     buffer += decoder.decode(chunk, { stream: true })
+    // BOM 剥除（会诊 #12）：首个 chunk 可能带 \uFEFF，否则 message_start 事件被静默丢失（含 usage）
+    if (buffer.charCodeAt(0) === 0xfeff) buffer = buffer.slice(1)
     const lines = buffer.split("\n")
     buffer = lines.pop()
 
@@ -167,7 +235,7 @@ async function parseAnthropicStream(response, { onToken, onReasoning, signal }) 
         currentData = ""
       } else if (line.startsWith("data: ")) {
         currentData = line.slice(6).trim()
-      } else if (line === "") {
+      } else if (line === "" || line === "\r") { // CRLF 空行是 "\r"（会诊 #13）
         if (currentEvent) processEvent(currentEvent, currentData)
         currentEvent = ""
         currentData = ""

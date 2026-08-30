@@ -52,6 +52,11 @@ export function estimateRequestTokens(body) {
 
 /** Gate: sleep until window frees space when over budget */
 export async function rateGate(provider, estimated, onWait, signal) {
+  // 2026-08-31 会诊 #16：单请求估算已超 tpm 时原实现静默放行（必然撞服务端 429）。
+  // 保持放行（tpm 置 null 防止 overTokens 恒正值死等），但明确告警让上层/用户知情。
+  if (provider.tpm != null && estimated > provider.tpm) {
+    onWait?.({ phase: "warn", message: `estimated ${estimated} tokens > tpm ${provider.tpm} — request proceeds and may hit a server 429` })
+  }
   const tpm = provider.tpm != null && estimated <= provider.tpm ? provider.tpm : null
   const rpm = provider.rpm ?? null
   if (tpm == null && rpm == null) return

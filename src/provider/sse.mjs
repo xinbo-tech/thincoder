@@ -91,15 +91,17 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
       throw new Error(`API error: HTTP ${response.status} — ${errorMsg}`)
     }
     // HTTP < 400 non-SSE: might be a valid single-chunk JSON response (e.g. proxy
-    // stripped SSE framing). Try to parse as a chat.completion.chunk.
+    // stripped SSE framing). Parse `choice.message` (full chat.completion) OR
+    // `choice.delta` (chunk shape) — 2026-08-31: gateways downgrading stream:true
+    // to a complete completion used to return EMPTY content silently (message-only shape).
     try {
       const parsed = JSON.parse(body)
       const choice = parsed.choices?.[0]
       if (choice) {
         const result = { content: "", reasoning: "", toolCalls: [], droppedToolCalls: 0, usage: normalizeUsageCache(parsed.usage ?? null), finishReason: null }
-        const delta = choice.delta ?? {}
+        const delta = choice.delta ?? choice.message ?? {}
         result.content = delta.content ?? ""
-        result.reasoning = delta.reasoning_content ?? ""
+        result.reasoning = delta.reasoning_content ?? delta.reasoning ?? ""
         result.finishReason = choice.finish_reason ?? null
         mergeToolCalls(result, delta)
         if (result.content) onToken?.(result.content)
@@ -118,32 +120,48 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
   let hasChoices = false
   const firedPatterns = sharedFired ?? new Set()
 
-  const processLines = (lines) => {
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue
-      const data = line.slice(5).trim()
-      if (!data || data === "[DONE]") continue
+  /** Process one complete SSE event (data lines joined with \n per the SSE spec).
+   *  2026-08-31: rows are buffered per event (multi-line data: support that the
+   *  per-line JSON.parse used to crash on — single-line events behave identically). */
+  const handleEvent = (data) => {
+    if (!data || data === "[DONE]") return
+    let json
+    try { json = JSON.parse(data) } catch { return }
 
-      let json
-      try { json = JSON.parse(data) } catch { continue }
+    if (json.usage) result.usage = normalizeUsageCache(json.usage)
+    const choice = json.choices?.[0]
+    if (!choice) return
+    hasChoices = true
+    if (choice.finish_reason) result.finishReason = choice.finish_reason
 
-      if (json.usage) result.usage = normalizeUsageCache(json.usage)
-      const choice = json.choices?.[0]
-      if (!choice) continue
-      hasChoices = true
-      if (choice.finish_reason) result.finishReason = choice.finish_reason
-
-      const delta = choice.delta ?? {}
-      if (delta.reasoning_content) {
-        result.reasoning += delta.reasoning_content
-        onReasoning?.(delta.reasoning_content)
-      }
-      if (delta.content) {
-        result.content += delta.content
-        onToken?.(delta.content)
-      }
-      mergeToolCalls(result, delta)
+    const delta = choice.delta ?? choice.message ?? {}
+    // reasoning 方言：DeepSeek/Kimi/GLM 用 reasoning_content，OpenAI o 系和部分
+    // 路由器用 reasoning —— 两个都认（2026-08-31 会诊 #9）
+    const rDelta = delta.reasoning_content ?? delta.reasoning
+    if (rDelta) {
+      result.reasoning += rDelta
+      onReasoning?.(rDelta)
     }
+    if (delta.content) {
+      result.content += delta.content
+      onToken?.(delta.content)
+    }
+    mergeToolCalls(result, delta)
+  }
+
+  const processLines = (lines) => {
+    let currentData = ""
+    for (const line of lines) {
+      if (line.startsWith("data:")) {
+        const v = line.slice(5).trim()
+        if (v === "[DONE]") { currentData = ""; continue }
+        // multi-line data: joins with \n (SSE spec); single-line is the common case
+        currentData = currentData ? currentData + "\n" + v : v
+        continue
+      }
+      if (line === "" && currentData) { handleEvent(currentData); currentData = "" }
+    }
+    if (currentData) handleEvent(currentData)
   }
 
   if (!response.body) throw new Error("No stream response body")
@@ -155,6 +173,9 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
         throw e
       }
       buffer += decoder.decode(chunk, { stream: true })
+      // UTF-8 BOM 剥除（2026-08-31 会诊 #12）：某些网关/负载均衡在流首注入 \uFEFF，
+      // 首行 "data:" 前缀匹配失败会被静默丢弃（首个事件整体消失）。
+      if (buffer.charCodeAt(0) === 0xfeff) buffer = buffer.slice(1)
       const lines = buffer.split("\n")
       buffer = lines.pop()
       processLines(lines)
@@ -184,6 +205,19 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     if (e.name === "AbortError" && signal?.reason?.interrupt) {
       result.interrupted = true
       result.interruptMessage = signal.reason.message
+      return result
+    }
+    // 2026-08-31 会诊 #2（流中断丢全部已收内容）：网络级失败（ECONNRESET / 半截 EOF /
+    // proxy 断连）时若已解析出内容，把 partial 交回上层而不是整轮报废重试。
+    // 标记 partial:true + networkError（上层可决定续写/重试/展示部分结果）。
+    if (hasChoices && (result.content || result.toolCalls.length)) {
+      finalizeToolCalls(result)
+      result.partial = true
+      result.networkError = e.message ?? String(e)
+      const existing = result._warnings ??= []
+      if (!existing.some((w) => w.name === "network-partial")) {
+        existing.push({ name: "network-partial", message: `stream interrupted by network error after partial output: ${result.networkError}` })
+      }
       return result
     }
     throw e

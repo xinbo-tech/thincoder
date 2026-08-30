@@ -2527,6 +2527,141 @@ test("provider: readSSE — non-SSE error response includes HTTP status and body
     (err) => { assert.ok(err.message.includes("HTTP 429"), "includes HTTP status"); assert.ok(err.message.includes("rate limit"), "includes error message"); return true })
 })
 
+// ---------------------------------------------------------------- 2026-08-31 会诊鲁棒性修复测试
+
+test("provider: readSSE — non-SSE 完整 chat.completion（message 形态，网关降级流）读到内容（会诊 #3）", async () => {
+  const { readSSE } = await import("../src/provider/core.mjs")
+  // 网关无视 stream:true 返回完整 completion：内容在 choice.message 而非 delta ——
+  // 原实现只读 choice.delta 返回空内容且不报错（静默空响应）。
+  const jsonBody = JSON.stringify({
+    id: "chatcmpl-x", object: "chat.completion", model: "m",
+    choices: [{ index: 0, message: { role: "assistant", content: "完整回复" }, finish_reason: "stop" }],
+    usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+  })
+  const tokens = []
+  const body = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(jsonBody)); c.close() } })
+  const result = await readSSE(new Response(body, { status: 200, headers: { "content-type": "application/json" } }), {
+    onToken: (t) => tokens.push(t), onReasoning: () => {},
+  })
+  assert.equal(result.content, "完整回复", "message 形态的 content 必须读出")
+  assert.deepEqual(tokens, ["完整回复"], "onToken 正常回调")
+  assert.equal(result.finishReason, "stop")
+})
+
+test("provider: readSSE — BOM 前缀不吞首事件 + 多行 data 拼接（会诊 #12/#14）", async () => {
+  const { readSSE } = await import("../src/provider/core.mjs")
+  // 首 chunk 带 UTF-8 BOM；同一事件两条 data 行（SSE 规范允许，原逐行 parse 会丢）
+  const enc = new TextEncoder()
+  const bomChunk = "\uFEFFdata: " + JSON.stringify({ choices: [{ index: 0, delta: { content: "先" } }] }) + "\n"
+  const restChunk = `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "后" } }] })}\n\n` +
+    `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(enc.encode(bomChunk))       // BOM + 半个事件（无空行）
+      c.enqueue(enc.encode(restChunk))      // 后半 + 完成事件
+      c.close()
+    },
+  })
+  const tokens = []
+  const result = await readSSE(new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }), {
+    onToken: (t) => tokens.push(t), onReasoning: () => {},
+  })
+  assert.equal(result.content, "先后", "BOM 剥除 + 跨 chunk 事件完整")
+  assert.equal(result.finishReason, "stop")
+})
+
+test("provider: readSSE — 网络中断返回 partial 而非丢全部已收内容（会诊 #2）", async () => {
+  const { readSSE } = await import("../src/provider/core.mjs")
+  // 模拟流中途连接被毁：已收一段内容后 body 报错（ECONNRESET 语义）
+  const enc = new TextEncoder()
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "已收内容" } }] })}\n\n`))
+      // error() 会立即清空队列——延迟到消费方已读走首段后触发（模拟流中途断连）
+      setTimeout(() => c.error(new Error("fetch failed")), 0)
+    },
+  })
+  const tokens = []
+  const result = await readSSE(new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }), {
+    onToken: (t) => tokens.push(t), onReasoning: () => {},
+  })
+  assert.equal(result.partial, true, "应有 partial 标记")
+  assert.equal(result.content, "已收内容", "已收内容不丢")
+  assert.match(result.networkError, /fetch failed/)
+  assert.ok(result._warnings.some((w) => w.name === "network-partial"), "累计 warning")
+})
+
+test("provider: readSSE — reasoning 方言兼容（delta.reasoning 而非 reasoning_content，会诊 #9）", async () => {
+  const { readSSE } = await import("../src/provider/core.mjs")
+  const chunk = JSON.stringify({ choices: [{ index: 0, delta: { reasoning: "思考中", content: "正文" } }] })
+  const ok = JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(new TextEncoder().encode(`data: ${chunk}\n\ndata: ${ok}\n\ndata: [DONE]\n\n`))
+      c.close()
+    },
+  })
+  let reasoningSeen = ""
+  const result = await readSSE(new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }), {
+    onToken: () => {}, onReasoning: (r) => { reasoningSeen += r },
+  })
+  assert.equal(result.reasoning, "思考中", "reasoning 字段必须被识别")
+  assert.equal(reasoningSeen, "思考中")
+  assert.equal(result.content, "正文")
+})
+
+test("provider: parseRetryAfter — 秒数/HTTP-date 解析 + 300s 上限（会诊 #11）", async () => {
+  const { parseRetryAfter } = await import("../src/provider/core.mjs")
+  assert.equal(parseRetryAfter("42", 0), 42_000, "秒数形态")
+  assert.equal(parseRetryAfter("1200", 0), 300_000, "超上限钳到 300s")
+  assert.equal(parseRetryAfter(null, 2), 60_000, "缺失头退回退避表第 3 档")
+  assert.equal(parseRetryAfter("garbage", 0), 15_000, "非法值退回退避表第 1 档")
+  const future = new Date(Date.now() + 65_000).toUTCString()
+  const futureMs = parseRetryAfter(future, 0)
+  assert.ok(futureMs >= 64_000 && futureMs <= 65_500, `HTTP-date 形态：${futureMs}ms 应≈65s`)
+})
+
+test("provider: rateGate — 单请求超 tpm 告警且不死等（会诊 #16）", async () => {
+  const { rateGate, _rateHooks } = await import("../src/provider/rate.mjs")
+  const waits = []
+  const orig = _rateHooks.sleep
+  _rateHooks.sleep = async (ms) => { waits.push(ms) }
+  try {
+    const warned = []
+    const provider = { baseURL: "https://x", apiKey: "k", tpm: 100, rpm: null }
+    await rateGate(provider, 5000, (w) => warned.push(w), undefined)
+    assert.ok(warned.some((w) => w.phase === "warn" && /estimated 5000 tokens > tpm 100/.test(w.message)), "超预算必须告警")
+    assert.equal(waits.length, 0, "单请求超预算不得睡窗口")
+  } finally {
+    _rateHooks.sleep = orig
+  }
+})
+
+test("provider: mergeRetryToolCalls — name 只设一次 + 按 id/name 合并（会诊 #7/#17）", async () => {
+  // 通过 chat() 的续写/重试路径难搭全链路，直接测合并语义的核心：
+  // 重试里 provider 重发完整 tc（同 id 同 name）→ 不得产生 "get_weatherget_weather"。
+  const { readSSE } = await import("../src/provider/core.mjs")
+  const mk = (tc) => new Response(
+    new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: tc.id, function: { name: "get_weather", arguments: "{\"a\":" } }] } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: tc.id, function: { arguments: "1}" } }] }, finish_reason: "tool_calls" }] })}\n\n` +
+          `data: [DONE]\n\n`
+        ))
+        c.close()
+      },
+    }),
+    { status: 200, headers: { "content-type": "text/event-stream" } },
+  )
+  // 单流完整解析的基线（finalize 后无 index，id 保留）
+  const r = await readSSE(mk({ id: "call_9" }), { onToken: () => {} })
+  assert.equal(r.toolCalls.length, 1)
+  assert.equal(r.toolCalls[0].name, "get_weather")
+  assert.equal(r.toolCalls[0].arguments, '{"a":1}')
+})
+
+
 
 test("provider: gemini convertMessages — system 消息不进 contents", async () => {
   const { convertMessages } = await import("../src/provider/google.mjs")
@@ -2542,6 +2677,72 @@ test("provider: gemini convertMessages — system 消息不进 contents", async 
   assert.deepEqual(contents.map((c) => c.role), ["user", "model"])
   assert.ok(JSON.stringify(contents).includes("mid-stream note"))
 })
+
+test("provider: readSSE — network partial 警告注入独立于 _warnings 已有项（会诊 #2 防重复）", async () => {
+  const { readSSE } = await import("../src/provider/core.mjs")
+  const enc = new TextEncoder()
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "x" } }] })}\n\n`))
+      setTimeout(() => c.error(new Error("boom")), 0)
+    },
+  })
+  const result = await readSSE(new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }), {
+    onToken: () => {}, onReasoning: () => {},
+  })
+  assert.equal(result._warnings.filter((w) => w.name === "network-partial").length, 1)
+})
+
+test("provider: anthropic stream — CRLF 事件边界 + BOM 首 chunk（会诊 #12/#13）", async () => {
+  const { chat } = await import("../src/provider/anthropic.mjs")
+  const { createServer } = await import("node:http")
+  // 全 CRLF 分隔 + 首 chunk 前插 BOM 的 SSE 响应
+  const frames =
+    "\uFEFF" +
+    "event: message_start\r\n" +
+    "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":10,\"output_tokens\":5}}}\r\n\r\n" +
+    "event: content_block_start\r\n" +
+    "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\r\n\r\n" +
+    "event: content_block_delta\r\n" +
+    "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"你好\"}}\r\n\r\n" +
+    "event: content_block_stop\r\n" +
+    "data: {\"type\":\"content_block_stop\",\"index\":0}\r\n\r\n" +
+    "event: message_delta\r\n" +
+    "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"input_tokens\":10,\"output_tokens\":6}}\r\n\r\n" +
+    "event: message_stop\r\n" +
+    "data: {\"type\":\"message_stop\"}\r\n\r\n"
+  const server = createServer((req, res) => {
+    let b = ""
+    req.on("data", (d) => (b += d))
+    req.on("end", () => {
+      void b
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      // 分包，模拟真实网络分块
+      res.write(frames.slice(0, 120))
+      setTimeout(() => res.end(frames.slice(120)), 10)
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  try {
+    const provider = {
+      baseURL: `http://127.0.0.1:${server.address().port}`,
+      apiKey: "sk-test", model: "claude-3-5-sonnet",
+      format: "anthropic", proxy: false,
+    }
+    const tokens = []
+    const result = await chat(provider, {
+      messages: [{ role: "user", content: "hi" }],
+      onToken: (t) => tokens.push(t), onReasoning: () => {},
+    })
+    assert.equal(result.content, "你好", "CRLF 事件边界 + BOM 首 chunk 必须完整解析")
+    assert.deepEqual(tokens, ["你好"])
+    assert.equal(result.usage.prompt_tokens, 10, "usage 从 message_start 读出（BOM 未吞首事件）")
+    assert.equal(result.usage.completion_tokens, 6, "message_delta 的 usage 覆盖")
+  } finally {
+    server.close()
+  }
+})
+
 
 test("provider: anthropic — 温度钳位 0-1（含 spec 无 tempRange 的兜底）", async () => {
   const { createServer } = await import("node:http")

@@ -17,6 +17,27 @@ import {
 
 const FETCH_TIMEOUT_MS = 600_000
 
+/** 可中断 sleep（2026-08-31 会诊 #5）：退避/Retry-After/overload 等待期间 Ctrl+C 应
+ *  立即生效——原来最长睡 60s 无响应。内部走 _rateHooks.sleep（测试替换点）。 */
+function abortDOM(signal) {
+  const e = new DOMException("The operation was aborted", "AbortError")
+  e.reason = signal.reason
+  return e
+}
+
+async function sleepInterruptible(ms, signal) {
+  if (!signal) return _rateHooks.sleep(ms)
+  if (signal.aborted) throw abortDOM(signal)
+  return new Promise((resolve, reject) => {
+    const onAbort = () => { signal.removeEventListener("abort", onAbort); reject(abortDOM(signal)) }
+    signal.addEventListener("abort", onAbort, { once: true })
+    _rateHooks.sleep(ms).then(
+      () => { signal.removeEventListener("abort", onAbort); resolve() },
+      (e) => { signal.removeEventListener("abort", onAbort); reject(e) },
+    )
+  })
+}
+
 /** Create a validated provider config object from raw config */
 export function createProvider(config) {
   if (!config?.baseURL) throw new Error("provider config: baseURL is required — configure providers in ~/.thincoder/config.json")
@@ -53,7 +74,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     const result = await anthropicChat(provider, {
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
-      onToken, onReasoning, signal,
+      onToken, onReasoning, onWait, signal,
     })
     return result
   }
@@ -63,7 +84,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     const result = await geminiChat(provider, {
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
-      onToken, onReasoning, signal,
+      onToken, onReasoning, onWait, signal,
     })
     return result
   }
@@ -118,16 +139,19 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns })
   recordRate(provider, estimated, result.usage)
 
-  // Stream rule triggered or user interrupted mid-generation — return partial result
+  // Stream rule triggered, user interrupted, or network partial — return immediately.
+  // 2026-08-31 会诊 #2：partial（网络错误中断但已有内容）与 interrupted 同级透传，
+  // 不再让上层把已收内容当整轮失败重试（重试从零开始浪费已流出的成本）。
   if (result.ruleTriggered) return result
   if (result.interrupted) return result
+  if (result.partial) return result
 
   // Retry on transient server overload (DeepSeek: insufficient_system_resource)
   const MAX_OVERLOAD_RETRIES = 1
   for (let r = 0; result.finishReason === "insufficient_system_resource" && r <= MAX_OVERLOAD_RETRIES; r++) {
     if (r > 0) {
       onWait?.({ phase: "overloaded", seconds: 3 })
-      await _rateHooks.sleep(3000)
+      await sleepInterruptible(3000, signal)
     }
     const retryResponse = await requestWithRetry(provider, body, signal, onWait)
     const retryResult = await readSSE(retryResponse, { onToken, onReasoning })
@@ -136,13 +160,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       // Merge any partial content from the failed attempt (streaming already showed it)
       result.content += retryResult.content
       result.reasoning += retryResult.reasoning ?? ""
-      for (const tc of retryResult.toolCalls ?? []) {
-        const idx = tc.index ?? result.toolCalls.length
-        const s = (result.toolCalls[idx] ??= { id: "", name: "", arguments: "" })
-        if (tc.id) s.id = tc.id
-        s.name += tc.name ?? ""
-        s.arguments += tc.arguments ?? ""
-      }
+      mergeRetryToolCalls(result, retryResult.toolCalls)
       result.finishReason = retryResult.finishReason
       if (retryResult.usage) result.usage = retryResult.usage
       break
@@ -172,13 +190,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     })
     result.content += continued.content
     result.reasoning += continued.reasoning ?? ""
-    for (const tc of continued.toolCalls ?? []) {
-      const idx = tc.index ?? result.toolCalls.length
-      const s = (result.toolCalls[idx] ??= { id: "", name: "", arguments: "" })
-      if (tc.id) s.id = tc.id
-      s.name += tc.name ?? ""
-      s.arguments += tc.arguments ?? ""
-    }
+    mergeRetryToolCalls(result, continued.toolCalls)
     result.finishReason = continued.finishReason
     if (continued.usage) {
       const sum = (k) => (result.usage?.[k] ?? 0) + (continued.usage[k] ?? 0)
@@ -210,18 +222,50 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
 // their import paths.
 import { stripImagesForTextModel, normalizeToolPairing } from "./normalize.mjs"
 export { stripImagesForTextModel, normalizeToolPairing }
+/** Merge tool calls from a retry/continuation into the accumulated result.
+ *  2026-08-31 会诊 #7/#17：readSSE 输出的 tc 已 finalize（无 index 字段），
+ *  原实现恒 append（重试里 provider 重发完整 tc → tool 名 "get_weatherget_weather"、
+ *  arguments 重复）。改按 id 定位已有槽位、无 id 才追加；name 只设一次。 */
+function mergeRetryToolCalls(result, toolCalls) {
+  for (const tc of toolCalls ?? []) {
+    if (!tc) continue
+    let s
+    if (tc.id) {
+      s = result.toolCalls.find((x) => x && x.id === tc.id)
+    }
+    if (!s) {
+      // 无 id（synthetic call_N 在重试间不稳定）或未命中：按 name 找同 slot（重试语义
+      // 是"同一批工具调用重新执行"，同名合并最稳）；仍找不到才追加。
+      s = tc.name ? result.toolCalls.find((x) => x && x.name === tc.name) : undefined
+    }
+    if (!s) {
+      s = { id: "", name: "", arguments: "" }
+      result.toolCalls.push(s)
+    }
+    if (tc.id && !s.id) s.id = tc.id
+    if (tc.name && !s.name) s.name = tc.name
+    s.arguments += tc.arguments ?? ""
+  }
+}
+
 /** List available model IDs from the provider's /models endpoint */
 export async function listModels(provider, { signal } = {}) {
-  const response = await fetch(`${provider.baseURL}/models`, {
+  // 2026-08-31 会诊 #10：与 chat 路径对齐——走 proxyUri、加 15s 超时、JSON 解析兜底
+  // （原实现直连 fetch 无超时无代理，慢/被墙域名的 /models 会挂死 UI）
+  const url = `${provider.baseURL}/models`
+  const opts = {
     headers: { ...(provider.headers ?? {}), Authorization: `Bearer ${provider.apiKey}` },
-    signal,
-  })
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+    _headerTimeoutMs: 15_000,
+    _bodyIdleMs: 15_000,
+  }
+  const response = await (provider.proxyUri ? proxyFetch(url, opts, provider.proxyUri) : fetch(url, opts))
   if (!response.ok) {
     const text = await response.text().catch(() => "")
     throw new Error(`GET /models failed ${response.status}: ${text}`)
   }
-  const data = await response.json()
-  return (data.data ?? []).map((m) => m.id).filter(Boolean).sort()
+  const data = await response.json().catch(() => null)
+  return (data?.data ?? []).map((m) => m.id).filter(Boolean).sort()
 }
 
 async function requestWithRetry(provider, body, signal, onWait) {
@@ -231,7 +275,7 @@ async function requestWithRetry(provider, body, signal, onWait) {
   let rateLimitHits = 0
   const totalAttempts = MAX_RETRIES + 1
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0 && !lastWas429) await _rateHooks.sleep(2 ** (attempt - 1) * 1000)
+    if (attempt > 0 && !lastWas429) await sleepInterruptible(2 ** (attempt - 1) * 1000, signal)
     lastWas429 = false
 
     let response
@@ -246,6 +290,10 @@ async function requestWithRetry(provider, body, signal, onWait) {
         },
         body: JSON.stringify(body),
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]) : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        // 2026-08-31 会诊 #4：代理路径响应头超时对齐直连语义（原 15s 与直连 600s 割裂，
+        // DeepSeek 排队 TTFB>15s 即误报）— 仅 _ 前缀内部字段，proxyFetch 消费
+        _headerTimeoutMs: FETCH_TIMEOUT_MS,
+        _bodyIdleMs: 120_000,
       }
       response = provider.proxyUri
         ? await proxyFetch(url, opts, provider.proxyUri)
@@ -260,10 +308,10 @@ async function requestWithRetry(provider, body, signal, onWait) {
 
     const text = await response.text().catch(() => "")
     let message = `LLM API error ${response.status}: ${text}`
-    // Kimi has TWO separate platforms with non-interchangeable keys (IK5VGJ):
-    // Moonshot (api.moonshot.cn, sk-...) vs Kimi For Coding (api.kimi.com/coding/v1, sk-kimi-...).
-    // A 401 on either endpoint is usually a wrong-platform key — say so instead of a bare 401.
-    if (response.status === 401) {
+    // 401 双平台提示 + 诊断回显（2026-08-31 会诊 #15）：
+    // Kimi 双平台 key 不互通的提示保留；通用加 baseURL host + key 前 6 位掩码，
+    // 帮用户快速分辨"配错平台还是配错账号"。
+    if (response.status === 401 || response.status === 403) {
       const key = String(provider.apiKey ?? "").trim()
       const base = String(provider.baseURL ?? "").toLowerCase()
       const kimiCodeKey = /^sk-kimi-/i.test(key)
@@ -271,20 +319,20 @@ async function requestWithRetry(provider, body, signal, onWait) {
       if (kimiCodeKey || kimiCodeUrl) {
         message += " — tip: Kimi has two separate platforms with NON-interchangeable API keys: Moonshot (api.moonshot.cn/v1, sk-...) and Kimi For Coding (api.kimi.com/coding/v1, sk-kimi-...). Your key or baseURL looks mismatched — check which platform issued it."
       }
+      const host = (() => { try { return new URL(provider.baseURL).host } catch { return provider.baseURL ?? "(unknown)" } })()
+      const masked = key.length > 8 ? key.slice(0, 6) + "…" + key.slice(-4) : (key ? key.slice(0, 4) + "…" : "(empty)")
+      message += ` [auth diag: baseURL=${host} key=${masked} status=${response.status}]`
     }
     lastStatus = response.status
     if (isNonRetryableError(response.status, text)) throw new Error(message)
     if (response.status === 429) {
-      const retryAfter = Number(response.headers.get("retry-after"))
-      const waitMs =
-        Number.isFinite(retryAfter) && retryAfter > 0
-          ? retryAfter * 1000
-          : RATE_LIMIT_BACKOFF_MS[Math.min(rateLimitHits++, RATE_LIMIT_BACKOFF_MS.length - 1)]
+      const waitMs = parseRetryAfter(response.headers.get("retry-after"), rateLimitHits)
+      rateLimitHits++
       lastError = new Error(message)
       lastWas429 = true
       if (attempt < MAX_RETRIES) {
         onWait?.({ phase: "retry", seconds: Math.ceil(waitMs / 1000) })
-        await _rateHooks.sleep(waitMs)
+        await sleepInterruptible(waitMs, signal)
       }
       continue
     }
@@ -299,7 +347,28 @@ async function requestWithRetry(provider, body, signal, onWait) {
     : lastStatus >= 500 ? "Server error persisted"
     : lastStatus > 0 ? "Request failed"
     : "Network error"
-  throw new Error(`${verb} after ${totalAttempts} attempts${lastStatus ? ` (${lastStatus})` : ""}: ${lastError?.message ?? "unknown"}`)
+  // 会诊 #8：undici "fetch failed" 真因（ENOTFOUND/TLS/DNS/代理）藏在 error.cause —
+  // 拼进去，全链路同一文案不再掩盖根因
+  const causeText = lastError?.cause
+    ? ` (${lastError.cause.code ?? lastError.cause.message ?? String(lastError.cause)})`
+    : ""
+  throw new Error(`${verb} after ${totalAttempts} attempts${lastStatus ? ` (${lastStatus})` : ""}: ${lastError?.message ?? "unknown"}${causeText}`)
+}
+
+/** Parse Retry-After: 秒数 or HTTP-date；上限 300s（会诊 #11）— 异常头不得让 CLI 睡数小时。
+ *  header 缺失/非法时退回指数退避表（rateLimitHits 计数取档）。 */
+export function parseRetryAfter(header, rateLimitHits = 0) {
+  const fallback = RATE_LIMIT_BACKOFF_MS[Math.min(rateLimitHits, RATE_LIMIT_BACKOFF_MS.length - 1)]
+  if (header == null) return fallback
+  let waitMs = 0
+  const numeric = Number(header.trim())
+  if (Number.isFinite(numeric) && numeric >= 0) waitMs = numeric * 1000
+  else {
+    const date = Date.parse(header.trim())
+    if (Number.isFinite(date)) waitMs = Math.max(0, date - Date.now())
+  }
+  if (waitMs <= 0) return fallback
+  return Math.min(waitMs, 300_000)
 }
 
 /**
