@@ -312,7 +312,7 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | D5 不依赖流式 usage 帧 | completed 事件响应对象携带 usage（流末尾一帧）——与 chat completions 的 choices:[] 帧不同 |
 | D6 链失效自动回退 | 404/过期 → 全量重发一次（不是报错）；链是优化不是正确性依赖 |
 | D7 不探测不降级（格式层） | format 显式配置显式失败（同 8-15 §3.4 纪律）；重试/限流/错误语义与 chat 格式共用（requestWithRetry） |
-| 不用内置工具（web_search 等） | 我们的工具集（权限门/审计/活动流）是产品本体；内置工具是响应式转调，链路与审计不透明——后续如需可选项透传（二期） |
+| **D9 内置工具（2026-08-31 用户拍板，一期 web_search）** | 服务端执行——**绕过本地工具权限门/审计**（产品决策，用户拍板，风险明示）；host 映射默认声明（openai/百炼/DeepSeek），`provider.builtinTools:false` 关闭、数组显式覆盖；结果 `builtinToolResults` → agent 本地化 role:"tool" 消息（JSON 含 query/sources）；全量回传时 transport 依 `tool_call_id` 前缀 `web_search_call_` 还原原样 `web_search_call` item（DeepSeek 官方：原样回传服务端自动恢复搜索结果）；code_interpreter/web_extractor 二期 |
 
 ### 13.4 实现影响
 

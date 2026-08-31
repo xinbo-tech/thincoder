@@ -256,10 +256,20 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       throw e
     }
 
+    // 内置工具（Responses web_search）结果本地化：服务端已执行——入历史为 tool 消息，
+    // 模型下一轮可见；全量回传时 transport 依 tool_call_id 前缀还原 web_search_call item。
+    for (const btr of response.builtinToolResults ?? []) {
+      if (!btr?.id) continue
+      pushReal(agent, {
+        role: "tool",
+        tool_call_id: btr.id,
+        content: JSON.stringify({ query: btr.query ?? "", sources: btr.sources ?? [], status: btr.status ?? "completed" }),
+      })
+    }
+
     // Stream rule triggered mid-generation (action: "abort"): halt current output,
     // inject rule's message as a reminder, and retry from the same context.
-    if (response.ruleTriggered) {
-      if (response.content) {
+    if (response.ruleTriggered) {      if (response.content) {
         pushReal(agent, { role: "assistant", content: response.content })
       }
       const label = response.ruleName ? ` — stream rule "${response.ruleName}"` : ""

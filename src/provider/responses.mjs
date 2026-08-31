@@ -49,11 +49,40 @@ function chainKey(messages) {
   return sig + "\u0002u:" + lastUser
 }
 
-/** OpenAI Chat 消息 → Responses input items。system 提升为 instructions（不进 input）。 */
+/** 内置工具声明（2026-08-31 用户拍板"内置工具还是要用"，一期 web_search）。
+ *  按 host 映射默认集；provider.builtinTools === false 关闭、数组显式覆盖。
+ *  注意：内置工具由**服务端执行**——绕过我们的工具权限门/审计（产品决策，用户拍板）。 */
+export function builtinToolsFor(baseURL, providerBuiltin) {
+  if (providerBuiltin === false) return []
+  if (Array.isArray(providerBuiltin)) return providerBuiltin
+  try {
+    const host = new URL(baseURL).hostname
+    if (/(^|\.)openai\.com$/.test(host) || isBailianHost(baseURL) || /(^|\.)deepseek\.com$/.test(host)) {
+      return [{ type: "web_search" }]
+    }
+  } catch { /* fallthrough */ }
+  return []
+}
+
+/** OpenAI Chat 消息 → Responses input items。system 提升为 instructions（不进 input）。
+ *  内置工具结果（web_search_call 本地化 tool 消息）→ 原样 web_search_call item 回传。 */
 function toItems(messages, { instructions } = {}) {
   const items = []
   for (const m of messages ?? []) {
     if (m.role === "system") continue
+    if (typeof m.tool_call_id === "string" && m.tool_call_id.startsWith("web_search_call_") && typeof m.content === "string") {
+      // 内置工具结果本地化消息 → 原样回传（DeepSeek 官方：web_search_call 原样回传即可，
+      // 服务端自动恢复搜索结果）
+      let query = ""
+      let srcs = []
+      try {
+        const parsed = JSON.parse(m.content)
+        query = parsed.query ?? ""
+        srcs = parsed.sources ?? []
+      } catch { /* content 非 JSON（纯展示）→ query 缺省 */ }
+      items.push({ type: "web_search_call", id: m.tool_call_id, status: "completed", action: { query, type: "search", sources: srcs } })
+      continue
+    }
     if (m.role === "user") {
       const content = m.content
       if (Array.isArray(content)) {
@@ -151,6 +180,9 @@ export function buildBody(provider, messages, tools, opts = {}) {
     ...(toolsFlat ? { tools: toolsFlat } : {}),
     ...(spec.maxOutput || provider.maxTokens ? { max_output_tokens: provider.maxTokens ?? spec.maxOutput } : {}),
   }
+  // 内置工具声明追加（2026-08-31 用户拍板）：web_search 与本地 function 工具共存
+  const builtin = builtinToolsFor(provider.baseURL, provider.builtinTools)
+  if (builtin.length) body.tools = [...(toolsFlat ?? []), ...builtin]
   if (provider.temperature != null) body.temperature = spec.tempRange
     ? Math.min(spec.tempRange[1], Math.max(spec.tempRange[0], provider.temperature))
     : provider.temperature
@@ -195,6 +227,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
   const slots = new Map() // call_id → { id, name, arguments }
   const itemToCall = new Map() // item_id → call_id（delta 事件用 item_id 定位）
   const order = [] // 槽顺序（output_index 稳定输出）
+  result.builtinToolResults = [] // 内置工具（web_search_call）结果 —— agent 层本地化为 tool 消息
 
   const seal = (finalResponse) => {
     result.toolCalls = order.map((callId) => slots.get(callId)).filter(Boolean)
@@ -206,6 +239,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
   await readResponseStream(response, {
     onToken: (t) => { result.content += t; onToken?.(t) },
     onReasoning: (t) => { result.reasoning += t; onReasoning?.(t) },
+    onBuiltinWebSearch: (r) => { result.builtinToolResults.push(r) },
     onFunctionCall: (callId, name, itemId) => {
       if (!slots.has(callId)) {
         slots.set(callId, { id: callId, name, arguments: "" })
@@ -283,6 +317,14 @@ function handleEvent(ev, h) {
     case "response.output_item.done": {
       const item = ev.item ?? {}
       if (item.type === "function_call") h.onFunctionDone?.(item.call_id ?? item.id ?? "", item.arguments ?? "")
+      else if (item.type === "web_search_call") {
+        h.onBuiltinWebSearch?.({
+          id: item.id ?? "",
+          query: item.action?.query ?? "",
+          status: item.status ?? "completed",
+          sources: item.action?.sources ?? [],
+        })
+      }
       break
     }
     case "response.completed":

@@ -131,6 +131,40 @@ test("isChainInvalidError: 404/400 → 回退；其他失败重试", () => {
   assert.equal(isChainInvalidError(429), false)
 })
 
+test("内置工具：host 映射声明 + web_search_call 捕获 + 本地化回传（2026-08-31 用户拍板）", async () => {
+  const { buildBody, parseStream, builtinToolsFor } = await import("../src/provider/responses.mjs")
+  // 声明映射：百炼/OpenAI/DeepSeek 默认 web_search；builtinTools:false 关闭；数组覆盖
+  assert.deepEqual(builtinToolsFor("https://dashscope.aliyuncs.com/compatible-mode/v1", undefined), [{ type: "web_search" }])
+  assert.deepEqual(builtinToolsFor("https://api.deepseek.com", undefined), [{ type: "web_search" }])
+  assert.deepEqual(builtinToolsFor("https://api.openai.com/v1", undefined), [{ type: "web_search" }])
+  assert.deepEqual(builtinToolsFor("https://api.moonshot.cn/v1", undefined), [], "Kimi 不声明")
+  assert.deepEqual(builtinToolsFor("https://x.com", false), [], "显式关闭")
+  assert.deepEqual(builtinToolsFor("https://x.com", [{ type: "code_interpreter" }]), [{ type: "code_interpreter" }], "数组覆盖")
+  // 声明进入请求 tools 且与本地 function 共存
+  const { body } = buildBody(provider(), [{ role: "user", content: "搜一下" }], [{ type: "function", function: { name: "read", description: "d", parameters: { type: "object" } } }])
+  assert.equal(body.tools.length, 2)
+  assert.equal(body.tools[1].type, "web_search")
+  // web_search_call item 捕获为 builtinToolResults
+  const events = [
+    { type: "response.output_item.added", item: { id: "ws_1", type: "web_search_call", status: "in_progress" } },
+    { type: "response.output_item.done", item: { id: "ws_1", type: "web_search_call", status: "completed", action: { query: "今日天气", type: "search", sources: [{ type: "url", url: "https://w" }] } } },
+    { type: "response.completed", response: { id: "resp_1", usage: { input_tokens: 1, output_tokens: 1 } } },
+  ]
+  const result = await parseStream(mockSSE(events), { onToken: () => {}, onReasoning: () => {} })
+  assert.equal(result.builtinToolResults.length, 1)
+  assert.equal(result.builtinToolResults[0].query, "今日天气")
+  // 本地化 tool 消息（agent 注入形态）→ 原样 web_search_call item 回传
+  const { body: b2 } = buildBody(provider(), [
+    { role: "user", content: "搜一下" },
+    { role: "tool", tool_call_id: "web_search_call_ws_1", content: JSON.stringify({ query: "今日天气", sources: [{ type: "url", url: "https://w" }] }) },
+  ], null)
+  const wsItem = b2.input.find((i) => i.type === "web_search_call")
+  assert.ok(wsItem, "本地化消息回传为 web_search_call item")
+  assert.equal(wsItem.id, "web_search_call_ws_1")
+  assert.equal(wsItem.action.query, "今日天气")
+})
+
+
 function mockSSE(events) {
   const payload = events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("")
   return {
