@@ -10,6 +10,7 @@ import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"
+import { FILE_MUTATORS } from "./agent/helpers.mjs"
 import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
@@ -371,6 +372,25 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // Ctrl+I interrupt during tool execution: skip committing partial results —
     // the tool failure messages would mislead the model. Inject the interrupt and retry.
     if (signal?.reason?.interrupt) {
+      // 中断变更记账（2026-08-31 评审 #4）：此分支的工具已全部执行完成（磁盘已变，execute 已完成），
+      // 真实结果按语义不进历史（placeholder 替代）——但变更必须记账：否则 guard 看到
+      // "本轮未改代码" 放行，评审/verify 门禁被绕过（文件改了却没评审）。
+      for (const { toolCall, ok } of results) {
+        const tool = toolByName.get(toolCall.name)
+        if (!ok || !tool || !FILE_MUTATORS.has(toolCall.name)) continue
+        agent._mutatedThisRun = true
+        agent._calledAdvisorThisRun = false
+        agent._verifiedThisRun = false
+        agent._verifyPassed = undefined
+        try {
+          const args = JSON.parse(toolCall.arguments)
+          const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
+          for (const p of paths) {
+            const abs = join(agent.cwd, p)
+            if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
+          }
+        } catch { /* 畸形 args 不影响记账（touchedFiles 尽力而为） */ }
+      }
       // The assistant tool_calls were already committed above (L347) — a strict
       // provider 400s on dangling tool_calls, so synthesize placeholder tool
       // results BEFORE the interrupt message (tool result must immediately

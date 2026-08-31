@@ -3724,3 +3724,40 @@ test("eng tool exit: OFF reminder reaches history via pendingReminders flush", a
   assert.ok(agent._pendingReminders.some((r) => r.includes("engineering mode is now OFF")))
   assert.equal(agent._lastEngState, false)
 })
+
+
+test("runAgent: 工具执行完成后的中断也记账（评审 #4——文件类工具已改盘，guard 必须拦截）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const editTool = {
+    name: "write" /* FILE_MUTATORS 成员（记账按名字集合）+ 自定义实现顶替内置仅限本测试实例 */,
+    description: "write（模拟改盘）",
+    parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+    readonly: false,
+    touchedPaths: (a) => [a.path ?? ""],
+    execute: async () => "ok", // 模拟已改盘（真实 write 语义）
+  }
+  const script = [{ toolCall: { name: "write", arguments: JSON.stringify({ path: "x.txt" }) }, usage: { prompt_tokens: 100 } }]
+  const { server, port } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-intr-"))
+    const agent = createAgent({ provider, tools: [editTool], config: { agent: {} }, cwd })
+    agent.autoApprove = true // dispatch L111 读 agent.autoApprove（非只读工具审批凭证）
+    const ac = new AbortController()
+    // onToolResult 时机 = 工具 execute 已完成（改盘已发生）——恰在 executeToolCalls 返回后
+    // runAgent 检查 signal.reason.interrupt → 中断分支（历史不 push 真实结果但必须记账）
+    // 注意：signal 是第四参 options（第三参是 callbacks！）
+    await assert.rejects(
+      runAgent(agent, "改文件", {
+        onToolResult: () => ac.abort({ interrupt: true, message: "停" }),
+      }, { signal: ac.signal }),
+      (e) => e.name === "AbortError" || e.name === "User interrupted",
+    )
+    assert.equal(agent._mutatedThisRun, true, "评审 #4：文件类工具完成 → 中断也必须记账")
+    assert.equal(agent._touchedFiles.length, 1)
+    assert.ok(agent._touchedFiles[0].endsWith("x.txt"))
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
