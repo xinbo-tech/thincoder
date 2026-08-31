@@ -321,6 +321,7 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 - CLI：`src/provider/responses.mjs`（新 transport：buildRequest/parseStream/normalizeUsage/链状态机）、`core.mjs` 分派（format==="responses"）、`config.mjs`（host 白名单/灰名单常量）。
 - vscode：`src/provider/transports/responses.mjs`（同规格）+ `src/provider.mjs` TRANSPORTS 注册（其 requestWithRetry/rateGate 单点共享）。
 - agent 层零改动：transport 返回既有 shape `{content, reasoning, toolCalls, usage, finishReason}`。
+- **已知边界（2026-08-31 评审 #2 显式声明）**：responses 格式**不接 `agent.streamRules`**——core.mjs 分派只透传 messages/tools/onToken/onReasoning/onWait/signal/toolChoice，`response.ruleTriggered` 对 responses 永不触发（配置了 abort/warn 规则的 responses 用户该保护不生效；致意：回应格式事件体与 sse.mjs 规则匹配器不同构，接入成本高而 responses 是显式 opt-in）。`response.incomplete→finishReason`（含 content_filter 区分）与打断后半成品（interrupted+partial）行为已与 core 对齐。
 - preset 不动：默认稳态 chat completions；responses 是显式 opt-in（与 8-15 §3.2 一致）。
 
 ### 13.5 测试用例表
