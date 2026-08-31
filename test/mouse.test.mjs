@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { parseMouseClicks, convGlobalIndex, handleMouseClick } from "../src/tui/mouse.mjs"
+import { parseMouseClicks, convGlobalIndex, handleMouseClick, handleWheel } from "../src/tui/mouse.mjs"
 
 /** Minimal TUI state satisfying computeLayout + buildConvLines accessors. */
 function mockState(extra = {}) {
@@ -389,5 +389,49 @@ describe("historyToLines — 恢复会话渲染工具参数（2026-08-30 用户�
     const badBlk = badLines.find((l) => l._toolBlock)
     assert.ok(badBlk, "畸形 args 不崩，载体仍在")
     assert.ok(badBlk._toolBlock.argsJson[0].includes("{broken"), "原始参数串降级可见")
+  })
+})
+
+
+describe("handleWheel — 块内滚动（2026-08-31 用户需求：滚动读全文）", () => {
+  it("滚轮命中展开块内容行 → 块内 offset ±3 且消费（不触发会话滚动）", async () => {
+    const { C } = await import("../src/tui/ansi.mjs")
+    const state = mockState({
+      lines: Array.from({ length: 40 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
+      expandedBlocks: new Set(["fold-0"]),
+      _foldScroll: new Map(),
+    })
+    const ctx = { state, render: () => {} }
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try {
+      // 展开块窗口行位（同 ▼ 测试）：blank/header/窗口9行 → 窗口内容行 row4-12；点击 row5 = 窗口第 2 行（foldBlock 标记）
+      assert.equal(handleWheel(ctx, 65, 10, 5), true, "命中块行 → 消费")
+      assert.equal(state._foldScroll.get("fold-0"), 3, "滚轮向下 = 块内 offset +3")
+      assert.equal(handleWheel(ctx, 64, 10, 5), true, "向上同样消费")
+      assert.equal(state._foldScroll.get("fold-0"), 0, "滚轮向上 = offset -3（clamp 0）")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  })
+
+  it("未命中展开块（消息行）→ 返回 false 走会话滚动（调用方处理）", async () => {
+    const { C } = await import("../src/tui/ansi.mjs")
+    const state = mockState({
+      lines: [{ text: "hello", color: C.text }, { text: "world", color: C.text }],
+      expandedBlocks: new Set(),
+    })
+    const ctx = { state, render: () => {} }
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try {
+      assert.equal(handleWheel(ctx, 65, 10, 2), false, "普通行未命中 → 会话滚动")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
   })
 })

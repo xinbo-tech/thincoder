@@ -29,7 +29,7 @@ import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
 import { createInteraction } from "./interaction.mjs"
 import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, translateShiftEnter, stripKeyboardProtocol } from "./clipboard.mjs"
-import { parseMouseClicks, handleMouseClick } from "./mouse.mjs"
+import { parseMouseClicks, handleMouseClick, handleWheel } from "./mouse.mjs"
 import { runAgentTurn } from "./agent-turn.mjs"
 import { createKeyHandler } from "./key-handler.mjs"
 import { showStartup, backgroundIndex, historyToLines, HISTORY_PAGE_MESSAGES } from "./startup.mjs"
@@ -185,15 +185,22 @@ export async function startTUI(agent, opts = {}) {
       }
     }
 
-    // Scroll wheel: \x1b[<64;…M = scroll up, \x1b[<65;…M = scroll down (3 lines each)
+    // Scroll wheel: \x1b[<64;col;rowM = up, \x1b[<65;col;rowM = down（3 lines each）
+    // 2026-08-31：坐标命中展开块内容行 → 块内滚动（handleWheel）；未命中 → 会话滚动（现状）
   // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-    for (const m of text.matchAll(/\x1b\[<(\d+);\d+;\d+([Mm])/g)) {
-      if (Number(m[1]) === 64) {
-        state.scroll += 3
-        state._followTail = false // 2026-08-31：用户上滚 = 暂停流式跟随（不抢视角）
-      } else if (Number(m[1]) === 65) {
-        state.scroll = Math.max(0, state.scroll - 3)
-        if (state.scroll === 0) state._followTail = true // 滚回底部恢复跟随
+    for (const m of text.matchAll(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/g)) {
+      const button = Number(m[1])
+      if (button === 64 || button === 65) {
+        const consumed = handleWheel(mouseCtx(), button, Number(m[2]), Number(m[3]))
+        if (!consumed) {
+          if (button === 64) {
+            state.scroll += 3
+            state._followTail = false // 2026-08-31：用户上滚 = 暂停流式跟随（不抢视角）
+          } else {
+            state.scroll = Math.max(0, state.scroll - 3)
+            if (state.scroll === 0) state._followTail = true // 滚回底部恢复跟随
+          }
+        }
       }
     }
 
@@ -452,6 +459,7 @@ export async function startTUI(agent, opts = {}) {
 
   // Mouse clicks (SGR \x1b[<0;col;rowM) — picker selection + fold expansion.
   const onMouseClick = (col, row) => handleMouseClick({ state, render, popPicker }, col, row)
+  const mouseCtx = () => ({ state, render })
 
   // ---------------------------------------------------------- Startup screen + background indexing
 

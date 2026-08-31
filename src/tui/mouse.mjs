@@ -18,6 +18,29 @@ import { computeLayout } from "./layout.mjs"
 import { buildConvLines } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock } from "./fold-block.mjs"
 
+/** 2026-08-31 滚轮事件分派（用户需求"展开块能滚动阅读全文"）：坐标命中展开块内容行 →
+ *  块内逐行滚动（scrollFoldBlock ±3）；未命中 → 会话滚动（调用方继续处理）。
+ *  ctx: { state, render }；返回 true = 已消费（块内滚动），false = 调用方走会话滚动。 */
+export function handleWheel(ctx, button, col, row) {
+  const { state } = ctx
+  const dir = button === 64 ? -1 : 1 // 64=滚上（offset 减）、65=滚下
+  const r = row - 1
+  if (r < 0) return false
+  const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+  const layout = computeLayout(state, dims)
+  const P = layout.panels
+  if (r < P.conversation.y || r >= P.conversation.y + P.conversation.h) return false
+  const convLines = buildConvLines(state, dims.cols, dims.rows)
+  const gIdx = convGlobalIndex(convLines.length, P.conversation.h, state.scroll ?? 0)(r - P.conversation.y)
+  if (gIdx === null) return false
+  const lineEl = convLines[gIdx]
+  if (!lineEl?._foldBlock) return false
+  scrollFoldBlock(state, lineEl._foldBlock, dir, 3)
+  ctx.render?.()
+  return true
+}
+
+
 /** Extract left-click presses from a chunk. Returns [{ col, row }] (1-based). */
 export function parseMouseClicks(text) {
   const out = []

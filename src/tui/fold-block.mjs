@@ -41,18 +41,17 @@ export function toggleFoldBlock(state, foldKey) {
 }
 
 /** 块内滚动：展开态窗口起点（2026-08-31 用户需求——60% 封顶保留、块内可滚动读全文）。
- *  存在 = state._foldScroll: Map<foldKey, offset>（渲染读、点击写）。 */
+ *  存在 = state._foldScroll: Map<foldKey, offset>（渲染读、点击/滚轮写）。 */
 export function foldScrollOffset(state, foldKey) {
   return state._foldScroll?.get(foldKey) ?? 0
 }
 
-/** 块内翻窗（▲/▼ 控制行点击，mouse.mjs 分派）：dir=+1 向下（offset 增）、-1 向上。
- *  返回新 offset；无块滚动状态时不动作。 */
-export function scrollFoldBlock(state, foldKey, dir, winH) {
+/** 块内滚动步长：▲/▼ 控制行 = 一整窗（winH）；滚轮 = 3 行（与外部会话滚动节拍一致）。
+ *  dir=+1 向下（offset 增）、-1 向上。 */
+export function scrollFoldBlock(state, foldKey, dir, step) {
   state._foldScroll ??= new Map()
-  const max = 0
   const prev = state._foldScroll.get(foldKey) ?? 0
-  const next = Math.max(0, prev + dir * Math.max(1, Math.floor(winH)))
+  const next = Math.max(0, prev + dir * Math.max(1, Math.floor(step)))
   state._foldScroll.set(foldKey, next)
   return next
 }
@@ -220,7 +219,10 @@ export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols
   const winH = Math.max(1, cap - 5)
   const total = lined.length
   const offset = Math.min(Math.max(0, foldScrollOffset(state, foldKey)), Math.max(0, total - winH))
-  const window = lined.slice(offset, offset + winH)
+  const window = lined.slice(offset, offset + winH).map((l) => ({
+    ...l,
+    _foldBlock: foldKey, // 2026-08-31 滚轮命中标记：每行自描述所属块（mouse handleWheel 用——无需区间簿记）
+  }))
   if (offset > 0) {
     out.push({
       text: `▲ 上方还有 ${offset} 行（点击向上翻窗）`,
