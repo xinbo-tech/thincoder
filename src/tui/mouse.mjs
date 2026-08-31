@@ -16,7 +16,7 @@
  */
 import { computeLayout } from "./layout.mjs"
 import { buildConvLines } from "./render-conversation.mjs"
-import { toggleFoldBlock, scrollFoldBlock } from "./fold-block.mjs"
+import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 
 /** 2026-08-31 滚轮事件分派（用户需求"展开块能滚动阅读全文"）：坐标命中展开块内容行 →
  *  块内逐行滚动（scrollFoldBlock ±3）；未命中 → 会话滚动（调用方继续处理）。
@@ -35,6 +35,13 @@ export function handleWheel(ctx, button, col, row) {
   if (gIdx === null) return false
   const lineEl = convLines[gIdx]
   if (!lineEl?._foldBlock) return false
+  // 2026-08-31 穿出语义：块内已到边界（向上滚在顶 / 向下滚在底）→ 交还会话滚动——
+  // 否则滚轮永远被块吃掉，会话顶/懒加载不可达（用户实测路径"经过展开块滚不到顶"）
+  const before = foldScrollOffset(state, lineEl._foldBlock)
+  const winH = lineEl._foldWindow ?? 1
+  const total = lineEl._foldTotal ?? 0
+  if (dir < 0 && before <= 0) return false // 块顶滚上 → 穿出（会话滚动 → 顶部自动加载）
+  if (dir > 0 && total > 0 && before >= total - winH) return false // 块底滚下 → 穿出
   scrollFoldBlock(state, lineEl._foldBlock, dir, 3)
   ctx.render?.()
   return true

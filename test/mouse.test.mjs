@@ -475,3 +475,30 @@ describe("convMaxScroll — 滚动到头判定（2026-08-31 懒加载自动触�
     }
   })
 })
+
+  it("穿出语义：块顶滚上 / 块底滚下 → 返回 false（会话滚动接管——懒加载可达）", async () => {
+    const { C } = await import("../src/tui/ansi.mjs")
+    const state = mockState({
+      lines: Array.from({ length: 40 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
+      expandedBlocks: new Set(["fold-0"]),
+      _foldScroll: new Map([["fold-0", 0]]), // 块顶
+    })
+    const ctx = { state, render: () => {} }
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try {
+      // 块顶滚上（dir=-1，offset 0 → clamp 不动）→ 穿出（false）
+      assert.equal(handleWheel(ctx, 64, 10, 5), false, "块顶滚上 → 穿出到会话滚动（顶部自动加载可达）")
+      // 块底滚下（offset 已在 31=40-9 底）→ 穿出（false）
+      state._foldScroll.set("fold-0", 31)
+      assert.equal(handleWheel(ctx, 65, 10, 5), false, "块底滚下 → 穿出到会话滚动")
+      // 块中滚上（offset 31 → 28 变化）→ 消费（true）
+      assert.equal(handleWheel(ctx, 64, 10, 5), true, "块中滚 → 块内滚动消费")
+      assert.equal(state._foldScroll.get("fold-0"), 28, "offset 实际移动")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  })
+

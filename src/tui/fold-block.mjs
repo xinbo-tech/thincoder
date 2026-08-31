@@ -219,9 +219,17 @@ export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols
   const winH = Math.max(1, cap - 5)
   const total = lined.length
   const offset = Math.min(Math.max(0, foldScrollOffset(state, foldKey)), Math.max(0, total - winH))
+  // 2026-08-31：clamp 写回状态——否则 scrollFoldBlock 越界累积（渲染只看 clamped、事件判定
+  // 却看原值），handleWheel 会误判"未到边界"→ 永远命中块 → 穿不出块 → 会话顶/懒加载不可达
+  if (state._foldScroll?.get(foldKey) !== offset) {
+    state._foldScroll ??= new Map()
+    state._foldScroll.set(foldKey, offset)
+  }
   const window = lined.slice(offset, offset + winH).map((l) => ({
     ...l,
     _foldBlock: foldKey, // 2026-08-31 滚轮命中标记：每行自描述所属块（mouse handleWheel 用——无需区间簿记）
+    _foldWindow: winH,
+    _foldTotal: total,
   }))
   if (offset > 0) {
     out.push({
