@@ -340,6 +340,17 @@ function handleEvent(ev, h) {
     case "response.output_text.delta":
       h.onToken?.(ev.delta ?? "")
       break
+    case "response.content_part.delta": {
+      // OpenRouter 变体（2026-08-31 官方文档核实）：事件名 content_part.delta，part.type 区分
+      // output_text / reasoning_text；另以 response.done + data:[DONE] 收尾
+      const part = ev.part ?? {}
+      if (part.type === "reasoning_text") h.onReasoning?.(ev.delta ?? "")
+      else h.onToken?.(ev.delta ?? "")
+      break
+    }
+    case "response.done":
+      h.onCompleted?.(ev.response)
+      break
     case "response.reasoning_text.delta":
       h.onReasoning?.(ev.delta ?? "")
       break

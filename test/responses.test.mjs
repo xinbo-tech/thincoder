@@ -181,6 +181,26 @@ test("内置工具：host 映射声明 + web_search_call 捕获 + 本地化回�
   assert.equal(wsItem.action.query, "今日天气")
 })
 
+test("parseStream: OpenRouter 变体——content_part.delta + response.done + [DONE]（2026-08-31 官方文档核实）", async () => {
+  // OpenRouter 官方 basic-usage 文档事件：content_part.delta（part.type 区分文本/思维）+
+  // response.done + data: [DONE]——与 OpenAI 官方帧名不同，别名兼容
+  const frames = [
+    'data: {"type":"response.content_part.delta","part":{"type":"output_text"},"delta":"Or"}',
+    'data: {"type":"response.content_part.delta","part":{"type":"output_text"},"delta":"ange"}',
+    'data: {"type":"response.content_part.delta","part":{"type":"reasoning_text"},"delta":"想"}',
+    'data: {"type":"response.done","response":{"id":"resp_or","status":"completed","usage":{"input_tokens":12,"output_tokens":45,"total_tokens":57}}}',
+    "data: [DONE]",
+  ]
+  const result = await parseStream({ body: new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(frames.join("\n\n") + "\n\n")); c.close() } }) }, {
+    onToken: () => {}, onReasoning: () => {},
+  })
+  assert.equal(result.content, "Orange", "content_part.delta 累加")
+  assert.equal(result.reasoning, "想")
+  assert.equal(result.responseId, "resp_or")
+  assert.equal(result.usage.total_tokens, 57)
+})
+
+
 
 function mockSSE(events) {
   const payload = events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("")

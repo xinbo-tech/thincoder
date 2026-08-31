@@ -353,3 +353,22 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | **计费口径（如实）** | 百炼 input_tokens 计链上下文（25463→25514 微增）——**收益是请求体体积与延迟，不是计费 token 数**；计费端收益来自缓存命中，非链本身 |
 | store 硬规则 | ①store:false + 链 → 400 Not found（6 组合全测）②store:true 全链路 ✓ —— D10 |
 | 未验项 | OpenAI 官方端点真机（无 key）；GLM 非 Codex 行为；模型主动选 web_search 的端到端（prompt 引导未试） |
+
+## 13.7 预设 provider 全景（2026-08-31 查证：19 家内置预设 → responses 状态）
+
+| 预设 | responses | 链 | 依据/状态 |
+|---|---|---|---|
+| deepseek | ✅ | ❌（官方无状态；灰名单全量） | 真机 ✅ |
+| qwen / qwenplan | ✅ | ✅ | 真机 ✅（98.9% 体积削减实测） |
+| glm / glm-code | ✅ | ✅ | 真机 ✅（baseURL 须 `open.bigmodel.cn/api/v1`——预设是 chat 路径，响应式用户需自配） |
+| openai | ✅ | ✅ | 官方文档（未真机，需官方 key） |
+| minimax | ✅ | ❌（官方 schema 无 previous_response_id/store；中立 host 静默全量） | 官方文档（responses-create.md 主接口）+ 真机 ✅；tool_choice 仅 none/auto（限制记录） |
+| openrouter | ✅ 格式 | ❌（官方文档：**stateless，store/previous_response_id 明确 400 拒绝**） | 官方文档；**事件流变体**（content_part.delta/response.done/[DONE]）已兼容（2026-08-31） |
+| grok (xAI) | ✅ | ✅（官方文档：previous_response_id + 加密 Reasoning） | 官方文档（未真机） |
+| kimi / kimi-code | ❌ | — | 官方全站索引零 responses（Codex 走 CC Switch 兼容层） |
+| claude | ❌（Messages 协议） | — | 协议本体 |
+| gemini | ❌（Google 协议） | — | 协议本体 |
+| mimo / mimoplan | ⚠️ 未证实 | — | 官网仅"OpenAI/Anthropic 兼容"（无 responses 证据） |
+| volcengine / hunyuan / siliconflow / groq / mistral | ⚠️ 未核实 | — | 官方文档未核到 responses 页（搜索工具当日故障，留位） |
+
+**纪律重申**：白名单 = 官方文档 + 真机双实证（openai 未真机属已知例外——官方为协议首发方）；中立 host（格式支持、无链/未证实）= 静默全量 + 无警告；灰名单 = 官方明确"不支持且静默忽略"（仅 DeepSeek）→ warning。
