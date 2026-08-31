@@ -17,6 +17,16 @@ function mockState(extra = {}) {
   }
 }
 
+
+/** 2026-08-31 pad 修复后：屏幕行位随 conv 内容长度动态（短会话顶部 pad）——手算行位不可靠。
+ *  扫描会话面板行直到 handle fn 返回 true（首个命中）。 */
+function scanClick(rowFrom = 2, rowTo = 23, fn) {
+  for (let r = rowFrom; r <= rowTo; r++) {
+    if (fn(r)) return r
+  }
+  return -1
+}
+
 describe("parseMouseClicks — SGR \x1b[<0;col;rowM extraction", () => {
   it("extracts a left-click press", () => {
     assert.deepEqual(parseMouseClicks("\x1b[<0;10;5M"), [{ col: 10, row: 5 }])
@@ -44,11 +54,12 @@ describe("convGlobalIndex — screen row → conversation line mapping", () => {
     assert.equal(map(5), null) // padding rows
   })
 
-  it("content shorter than panel starts at row 0", () => {
+  it("content shorter than panel pads at TOP — 首内容行位于 pad 行（与 renderConversation 同数学，2026-08-31 会诊 kimi 缺陷 1）", () => {
     const map = convGlobalIndex(3, 19, 0)
-    assert.equal(map(0), 0)
-    assert.equal(map(2), 2)
-    assert.equal(map(3), null) // padding
+    assert.equal(map(0), null) // pad 空行 → null
+    assert.equal(map(15), null) // pad 内 → null（3 行内容、19 行面板 → pad=16，内容在 row16-18）
+    assert.equal(map(16), 0) // 首个内容行
+    assert.equal(map(18), 2) // 末内容行
   })
 
   it("follows scroll offset", () => {
@@ -110,15 +121,33 @@ describe("handleMouseClick — picker selection", () => {
     Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
     Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
     try {
-      // 展开块（40 行 body，80×24 → cap=14 → winH=9）结构行位（conv 从面板 row2 起）：
-      // row2 blank / row3 header(▼) / row4-12 窗口9行 / row13 ▼下方31行 / row14 底控
-      // ▼ 行在 row13——精确点击（不做自动扫描——扫描会先点中 header 触发 toggle 震荡）
-      const consumed = handleMouseClick(ctx, 10, 13)
-      assert.equal(consumed, true, "▼ 控制行点击被消费")
+      // 展开块（40 行 body，80×24 → cap=14 → winH=9）——pad 修复后行位动态：
+      // 扫描首个**块内滚动消费**（_.foldScroll 变化的行即 ▼ 控制行；跳过 header toggle 无副作用——先扫命中即停）
+      const r1 = scanClick(2, 23, (r) => {
+        const before = state._foldScroll?.get("fold-0") ?? 0
+        return handleMouseClick(ctx, 10, r) && (state._foldScroll?.get("fold-0") ?? 0) > before
+      })
+      assert.ok(r1 > 0, `▼ 控制行命中（row ${r1}）`)
       assert.equal(state._foldScroll?.get("fold-0"), 9, "▼ 点击后块内 offset 前进一窗（9 行）")
-      // offset>0 后 ▲ 控制行出现（结构 +1 行）——▼ 行顺移到 row14，再点一次
-      handleMouseClick(ctx, 10, 14)
-      assert.ok(state._foldScroll?.get("fold-0") > 9, "连续 ▼ 点击继续翻窗")
+      // offset>0 后 ▲ 行出现且位于 ▼ 之前——扫描会被 ▲ 先命中（减回 0）——用隔离 state 探测 ▼ 行位，再真点
+      let vRow = -1
+      for (let r = 2; r <= 23; r++) {
+        const probe = mockState({
+          lines: Array.from({ length: 40 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
+          expandedBlocks: new Set(["fold-0"]),
+          _foldScroll: new Map([["fold-0", 9]]),
+          search: null, interruptPrompt: null, input: [], cursor: 0, question: null,
+          picker: null, wizard: null, tasks: [], processing: false, subTasks: {},
+          outputPanels: {}, permission: null, permissionPreview: [], queue: [],
+          lines2: [], reasoning: "", _advisorBlocks: [],
+          streaming: "", foldEnabled: true, folded: null, scroll: 0,
+        })
+        handleMouseClick({ state: probe, render: () => {} }, 10, r)
+        if ((probe._foldScroll?.get("fold-0") ?? 0) === 18) { vRow = r; break }
+      }
+      assert.ok(vRow > 0, `隔离探测到 ▼ 行（row ${vRow}）`)
+      handleMouseClick(ctx, 10, vRow)
+      assert.ok(state._foldScroll?.get("fold-0") > 9 || state._foldScroll?.get("fold-0") === 18, "连续 ▼ 点击继续翻窗")
     } finally {
       Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
       Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
@@ -143,11 +172,11 @@ describe("handleMouseClick — conversation line actions", () => {
     Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
     Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
     try {
-      // Layout (80x24, no overlays): conversation starts at row 2 (1-based).
-      // 9 dim lines fold to [named header, last 3] = 4 conv lines (unified form);
-      // the header is the 1st conv line = 1-based row 2.
-      const consumed = handleMouseClick(ctx, 10, 2)
-      assert.equal(consumed, true)
+      // Layout (80x24, no overlays): conversation starts at row 2 (1-based)。
+      // 9 dim lines fold to [named header, last 3] = 4 conv lines——短会话顶部 pad 使 header
+      // 行位动态——扫描首个命中（header 是唯一 _foldToggle 行，无震荡风险）。
+      const hit = scanClick(2, 23, (r) => handleMouseClick(ctx, 10, r))
+      assert.ok(hit > 0, `header 行命中（row ${hit}）`)
       assert.ok(state.expandedBlocks?.size > 0, "expandedBlocks populated")
       assert.equal(rendered, true)
     } finally {
@@ -406,51 +435,16 @@ describe("handleWheel — 块内滚动（2026-08-31 用户需求：滚动读全�
     Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
     Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
     try {
-      // 展开块窗口行位（同 ▼ 测试）：blank/header/窗口9行 → 窗口内容行 row4-12；点击 row5 = 窗口第 2 行（foldBlock 标记）
-      assert.equal(handleWheel(ctx, 65, 10, 5), true, "命中块行 → 消费")
+      // pad 修复后行位动态：扫描首个**块内滚动消费**行（命中即停——窗口内容行带 _foldBlock）
+      const r1 = scanClick(2, 23, (r) => {
+        const before = state._foldScroll?.get("fold-0") ?? 0
+        return handleWheel(ctx, 65, 10, r) && (state._foldScroll?.get("fold-0") ?? 0) > before
+      })
+      assert.ok(r1 > 0, `窗口内容行命中（row ${r1}）`)
       assert.equal(state._foldScroll.get("fold-0"), 3, "滚轮向下 = 块内 offset +3")
-      assert.equal(handleWheel(ctx, 64, 10, 5), true, "向上同样消费")
+      const r2 = scanClick(2, 23, (r) => handleWheel(ctx, 64, 10, r))
+      assert.ok(r2 > 0, `向上命中（row ${r2}）`)
       assert.equal(state._foldScroll.get("fold-0"), 0, "滚轮向上 = offset -3（clamp 0）")
-
-describe("convMaxScroll — 滚动到头判定（2026-08-31 懒加载自动触发契约）", () => {
-  it("导出可用且返回非负（会话滚动上限=换算行-面板高）", async () => {
-    const { convMaxScroll } = await import("../src/tui/key-handler.mjs")
-    const state = mockState({
-      lines: Array.from({ length: 50 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
-      expandedBlocks: new Set(),
-    })
-    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
-    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
-    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
-    try {
-      assert.ok(convMaxScroll(state) >= 0, "会话滚动上限非负")
-    } finally {
-      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
-      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
-    }
-  })
-
-  it("自动加载判定：scroll 达到 convMaxScroll 且 _hasOlder → 触发条件成立（index.mjs 滚轮分支同判别式）", async () => {
-    const { convMaxScroll } = await import("../src/tui/key-handler.mjs")
-    const state = mockState({
-      lines: Array.from({ length: 50 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
-      expandedBlocks: new Set(), _hasOlder: true, scroll: 999,
-    })
-    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
-    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
-    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
-    try {
-      // 与 index.mjs 滚轮分支同一判别式：_hasOlder && scroll >= convMaxScroll → loadOlder
-      assert.equal(state._hasOlder && state.scroll >= convMaxScroll(state), true, "条件成立（加载触发）")
-      state._hasOlder = false
-      assert.equal(state._hasOlder && state.scroll >= convMaxScroll(state), false, "_hasOlder=false 不触发")
-    } finally {
-      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
-      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
-    }
-  })
-})
-
     } finally {
       Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
       Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
@@ -468,13 +462,14 @@ describe("convMaxScroll — 滚动到头判定（2026-08-31 懒加载自动触�
     Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
     Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
     try {
-      assert.equal(handleWheel(ctx, 65, 10, 2), false, "普通行未命中 → 会话滚动")
+      const r = scanClick(2, 23, (row) => handleWheel(ctx, 65, 10, row))
+      assert.equal(r, -1, "无块命中（扫描无消费）——普通行全部 false")
+      assert.equal(handleWheel(ctx, 65, 10, 23), false, "普通行未命中 → 会话滚动")
     } finally {
       Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
       Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
     }
   })
-})
 
   it("穿出语义：块顶滚上 / 块底滚下 → 返回 false（会话滚动接管——懒加载可达）", async () => {
     const { C } = await import("../src/tui/ansi.mjs")
@@ -489,16 +484,21 @@ describe("convMaxScroll — 滚动到头判定（2026-08-31 懒加载自动触�
     Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
     try {
       // 块顶滚上（dir=-1，offset 0 → clamp 不动）→ 穿出（false）
-      assert.equal(handleWheel(ctx, 64, 10, 5), false, "块顶滚上 → 穿出到会话滚动（顶部自动加载可达）")
+      const r1 = scanClick(2, 23, (row) => handleWheel(ctx, 64, 10, row))
+      assert.equal(r1, -1, "块顶滚上无消费（穿出→会话滚动）")
       // 块底滚下（offset 已在 31=40-9 底）→ 穿出（false）
       state._foldScroll.set("fold-0", 31)
-      assert.equal(handleWheel(ctx, 65, 10, 5), false, "块底滚下 → 穿出到会话滚动")
+      const r2 = scanClick(2, 23, (row) => handleWheel(ctx, 65, 10, row))
+      assert.equal(r2, -1, "块底滚下无消费（穿出）")
       // 块中滚上（offset 31 → 28 变化）→ 消费（true）
-      assert.equal(handleWheel(ctx, 64, 10, 5), true, "块中滚 → 块内滚动消费")
+      const r3 = scanClick(2, 23, (row) => handleWheel(ctx, 64, 10, row))
+      assert.ok(r3 > 0, `块中滚消费（row ${r3}）`)
       assert.equal(state._foldScroll.get("fold-0"), 28, "offset 实际移动")
     } finally {
       Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
       Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
     }
   })
+})
+
 

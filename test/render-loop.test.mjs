@@ -68,3 +68,29 @@ test("output panels abolished (D6): no prune writer exists in render-loop source
   const agentTurnSrc = readFileSync(new URL("../src/tui/agent-turn.mjs", import.meta.url), "utf8")
   assert.ok(!/outputPanels/.test(agentTurnSrc), "agent-turn has no outputPanels writer")
 })
+
+test("锚定补偿（2026-08-31 会诊 glm/deepseek）：暂停跟随期间内容增长 → scroll 按增量补偿（视口顶不漂）", async () => {
+  const h = makeHarness()
+  try {
+    // 铺足内容（scroll=5 合法：maxScroll ≥ 5）
+    for (let i = 0; i < 30; i++) h.state.lines.push({ text: `line${i}`, color: "" })
+    h.state._followTail = false
+    h.state.scroll = 5
+    h.render() // 首帧记录锚点
+    await tick(30)
+    const len0 = h.state._pauseAnchorLen
+    assert.ok(len0 >= 0, "锚点已记录")
+    h.state.lines.push({ text: "new line", color: "" })
+    h.render()
+    await tick(30)
+    assert.ok(h.state.scroll > 5, `内容增长 → scroll 补偿（${h.state.scroll} > 5）`)
+    // 恢复跟随：无条件钉底
+    h.state._followTail = true
+    h.render()
+    await tick(30)
+    assert.equal(h.state.scroll, 0, "恢复跟随 → scroll=0")
+  } finally {
+    h.restore()
+  }
+})
+

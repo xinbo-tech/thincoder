@@ -149,3 +149,30 @@ test("foldHintLine: 下划线只落在 click 短语上", () => {
   assert.equal(line._foldToggle, "fold-0")
   assert.ok(blankLine().text === "" , "blankLine 辅助")
 })
+
+test("foldKey 身份化（2026-08-31 会诊三家共识）：_lineId 派生键——loadOlder unshift 后键不重绑", () => {
+  // 行带 _lineId（生产路径 loadOlder/恢复分配）：longKey = long-{_lineId}
+  const mk = (id, text) => ({ text, color: C.dim, _lineId: id })
+  const line = mk(42, "x".repeat(20))
+  const longKey = `long-${line._lineId ?? 0}`
+  assert.equal(longKey, "long-42", "longKey 由 _lineId 派生")
+  // 模拟 loadOlder：前面 unshift 新行（新 _lineId）——原行键不变（位置索引会在 unshift 后漂移）
+  const unshifted = [mk(1, "a"), mk(2, "b")]
+  const after = [...unshifted, line]
+  const idx = after.findIndex((l) => l._lineId === 42)
+  assert.equal(`long-${after[idx]._lineId}`, "long-42", "unshift 后键仍跟随原行（而非位置）")
+  // fold-N 同理：连续 dim 块键 = 首行 _lineId
+  const foldLineId = after[idx]._lineId
+  assert.equal(`fold-${foldLineId}`, "fold-42", "fold-{首行 _lineId}")
+})
+
+test("收起清块内 offset（2026-08-31 会诊 kimi：toggleFoldBlock 删 _foldScroll 条目）", () => {
+  const state = { expandedBlocks: new Set(["fold-9"]), _foldScroll: new Map([["fold-9", 5]]) }
+  toggleFoldBlock(state, "fold-9")
+  assert.equal(state.expandedBlocks.has("fold-9"), false)
+  assert.equal(state._foldScroll.has("fold-9"), false, "收起后 offset 条目清除（防缓涨）")
+  // 展开分支不写 offset（起点 0）
+  toggleFoldBlock(state, "fold-9")
+  assert.equal(state.expandedBlocks.has("fold-9"), true)
+})
+

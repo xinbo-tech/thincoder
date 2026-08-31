@@ -350,6 +350,7 @@ export async function startTUI(agent, opts = {}) {
     state.historyIndex = -1
     if (!wasInHistory) state._draft = null // submitted — the draft is now history. Keep draft when submitting from history mode (↓ can recover)
     state.scroll = 0
+    state._followTail = true // 2026-08-31 会诊 deepseek：新消息恢复跟随（注释曾承诺、实现缺漏）
 
     // Slash commands: handled locally, don't enter agent loop
     if (text.startsWith("/")) {

@@ -134,7 +134,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **展开封顶（60% 屏幕，2026-08-30 用户报告驱动；2026-08-31 增补块内滚动）**：此前展开后长度不受限——超长区块展开时折叠控制行被挤出屏幕，点不到、收不回。现在展开态经 `renderExpandedBlock` 统一渲染，**区块总高 ≤ `floor(rows × 0.6)`**（`foldCapRows`）；**2026-08-31 用户需求修订**：高度封顶保留，但内容不再一次性截断——超过封顶的正文渲染为**窗口**（`state._foldScroll: Map<foldKey, offset>` 记每块窗口起点；窗口可读行 = `cap − 5`，预留 blank+顶部控制+▲+▼+底部收起），窗口上下渲染 **`▲ 上方还有 N 行` / `▼ 下方还有 N 行`** 控制行（带 `_foldScrollUp/_foldScrollDown` + `_foldWindow` 标记，点击翻窗=滑一个窗口）——**滚动读全文、60% 高度内、底部 ▼ 收起控制行永远在块尾**。翻窗经 `scrollFoldBlock(state, foldKey, dir, winH)` 单源；`convCacheKey` 含 `_foldScroll` 分量（翻窗必须重渲染，防缓存旧窗口）。`maxRows` 由调用链贯穿（render-frame → renderConversation → buildConvLines → 组件；render-loop/key-handler/index 历史分页/mouse 同步传入），省略 = 不封顶（单测/无终端环境）。`foldEnabled=false`（/fold off）时控制行与窗口一并消失（toggle 无效时提示会撒谎，索性不渲染）。
 
-**流式跟随尾部（2026-08-31 用户需求）**：输出活动（`state.streaming`/`state.reasoning` 缓冲非空）时渲染前 `state.scroll = 0`（最新内容钉在视口底）——`state._followTail` 默认 true；用户上滚（PgUp/滚轮上/上箭头滚动）→ 暂停跟随（不抢视角）；滚回底部（PgDn/滚轮下至 scroll=0）→ 恢复；后续新输出继续跟随。
+**流式跟随尾部（2026-08-31 用户需求）**：`state._followTail` 默认 true——渲染前 `state.scroll = 0`（最新内容钉在视口底，tool 行/pushLine 同样生效，无跟随空洞）；用户上滚（PgUp/滚轮上）→ 暂停跟随；暂停期间**锚定补偿**（会诊共识：scroll 是距底偏移，内容增长会把用户读的行顶走——渲染帧按 convLen 增量补偿 scroll，视口顶保持绝对行）；PgDn/滚轮滚回底部或新提交消息 → 恢复跟随。（注：↑/↓ 键是输入框历史导航，不执行会话滚动——滚动入口 = PgUp/PgDn 与滚轮。）
 
 **折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`；**2026-08-30 用户裁定：主输出永不折叠**——会话核心内容由滚动阅读，折叠会把真正的回答藏在点击之后；思考/工具摘要才是辅助流，保留折叠）：
 1. **长消息折叠**：思考（C.reason）**无条件折叠**（2026-08-30 最终裁定：行数阈值两轮死于真机——80 列下真实中文思考 wrap 5~10 行够不着 12；宽屏 200 列下只 wrap 1~3 行够不着 3；字符阈值也漏掉典型句——**"阈值"思路整体废弃，思考是过程内容，一律收进命名头**）；工具摘要（C.dim）等 >12 行折叠（`LONG_FOLD_LINES`）；key = `long-{lines 索引}`。**主输出（C.text）与用户消息不参与**——`foldable = l.color !== C.text` 直接全量渲染

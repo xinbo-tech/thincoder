@@ -15,7 +15,7 @@
  *   - folded-block hint click = expand it
  */
 import { computeLayout } from "./layout.mjs"
-import { buildConvLines } from "./render-conversation.mjs"
+import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 
 /** 2026-08-31 滚轮事件分派（用户需求"展开块能滚动阅读全文"）：坐标命中展开块内容行 →
@@ -35,13 +35,16 @@ export function handleWheel(ctx, button, col, row) {
   if (gIdx === null) return false
   const lineEl = convLines[gIdx]
   if (!lineEl?._foldBlock) return false
+  // 2026-08-31 会诊 glm：标记不完整（_foldTotal 缺失=退化路径）不消费——交还会话滚动
+  // （total=0 会让下方边界守卫短路 → 卡在块里回归）
+  if (!lineEl._foldTotal) return false
   // 2026-08-31 穿出语义：块内已到边界（向上滚在顶 / 向下滚在底）→ 交还会话滚动——
   // 否则滚轮永远被块吃掉，会话顶/懒加载不可达（用户实测路径"经过展开块滚不到顶"）
   const before = foldScrollOffset(state, lineEl._foldBlock)
   const winH = lineEl._foldWindow ?? 1
-  const total = lineEl._foldTotal ?? 0
+  const total = lineEl._foldTotal
   if (dir < 0 && before <= 0) return false // 块顶滚上 → 穿出（会话滚动 → 顶部自动加载）
-  if (dir > 0 && total > 0 && before >= total - winH) return false // 块底滚下 → 穿出
+  if (dir > 0 && before >= total - winH) return false // 块底滚下 → 穿出
   scrollFoldBlock(state, lineEl._foldBlock, dir, 3)
   ctx.render?.()
   return true
@@ -60,13 +63,11 @@ export function parseMouseClicks(text) {
 
 /** Map a 0-based screen row to a conversation line index (same math as renderConversation). */
 export function convGlobalIndex(convLen, convH, scroll) {
-  const maxScroll = Math.max(0, convLen - convH)
-  const clamped = Math.min(scroll, maxScroll)
-  const end = convLen - clamped
-  const start = Math.max(0, end - convH) // content shorter than the panel: rows start at 0
+  const { start, pad } = convViewport(convLen, convH, scroll)
   return (localRow) => {
     if (localRow < 0 || localRow >= convH) return null
-    const idx = start + localRow
+    if (localRow < pad) return null // 顶部 pad 空行不是内容行（2026-08-31 会诊 kimi 缺陷 1）
+    const idx = start + localRow - pad
     return idx >= 0 && idx < convLen ? idx : null
   }
 }
@@ -109,7 +110,8 @@ export function handleMouseClick(ctx, col, row) {
     if (lineEl?._foldScrollUp || lineEl?._foldScrollDown) {
       // 2026-08-31 块内滚动：▲/▼ 控制行点击翻窗（60% 封顶保留、窗口随翻滚动，全文可达）
       scrollFoldBlock(state, lineEl._foldScrollUp ?? lineEl._foldScrollDown,
-        lineEl._foldScrollUp ? -1 : 1, lineEl._foldWindow ?? 1)
+        lineEl._foldScrollUp ? -1 : 1, lineEl._foldWindow ?? 1,
+        typeof lineEl._foldTotal === "number" ? Math.max(0, lineEl._foldTotal - (lineEl._foldWindow ?? 1)) : undefined)
       render()
       return true
     }

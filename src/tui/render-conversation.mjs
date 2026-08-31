@@ -274,9 +274,10 @@ function buildConvLines(state, cols, maxRows) {
     // click. Foldable subjects narrow to THINKING (C.reason) and dim tool
     // summaries — the auxiliary streams. (This re-enacts the pre-0.12.7 rule
     // for main output only; the 0.12.7 "revert" had reopened folding for it.)
-    // Keyed by the source-line index (`long-${i}`) so the toggle survives
-    // re-renders.
-    const longKey = `long-${i}`
+    // Keyed by the source line's _lineId (2026-08-31 会诊三家共识：`long-${i}` 位置键在
+    // loadOlder unshift 后重绑——展开态/_foldScroll offset 串位。tool-* 已有判例
+    // （2026-08-30）；_lineId 未分配时退回索引（防御）。
+    const longKey = `long-${l._lineId ?? i}`
     // Single source of truth: the producer stamps _kind ("thinking" / "text" /
     // "tool") — buildConvLines READS the stamp instead of GUESSING from color.
     // Three producers (live flushStream / restored historyToLines / injected
@@ -467,7 +468,6 @@ function buildConvLines(state, cols, maxRows) {
   }
   // Fold long blocks (> 8 consecutive dim lines)
   const FOLD_LINES = 8
-  let foldCounter = 0
   const folded = []
   let i = 0
   while (i < convLines.length) {
@@ -479,7 +479,10 @@ function buildConvLines(state, cols, maxRows) {
       // Expanded long-fold blocks are exempt — otherwise folding stacks on folding
       const hasExpandedLong = convLines.slice(i, j).some((l) => l._skipDimFold)
       if (blockLen > FOLD_LINES && !hasExpandedLong) {
-        const foldKey = `fold-${foldCounter++}`
+        // 2026-08-31 会诊三家共识：fold-N 计数器键在 loadOlder/上游 dim 块增减时重绑——
+        // 用首行 _lineId 身份化（连续 dim 块首行即稳定锚）；无 _lineId 时退 fold-i（防御）
+        const keySource = convLines[i]._lineId ?? i
+        const foldKey = `fold-${keySource}`
         if (state.foldEnabled !== false && !state.expandedBlocks?.has(foldKey)) {
           // FOLDED — unified named-header + last-3 form (same ruling as the
           // long-message fold above).
@@ -518,13 +521,22 @@ export { buildConvLines }
 
 export function renderConversation(state, cols, visibleH, scroll, maxRows) {
   const convLines = buildConvLines(state, cols, maxRows)
-  const maxScroll = Math.max(0, convLines.length - visibleH)
-  const clamped = Math.min(scroll, maxScroll)
-  const end = convLines.length - clamped
-  const visible = convLines.slice(Math.max(0, end - visibleH), end)
-  const pad = visibleH - visible.length
+  const { start, end, pad } = convViewport(convLines.length, visibleH, scroll)
+  const visible = convLines.slice(start, end)
   const out = []
   for (let p = 0; p < pad; p++) out.push("")
   for (const l of visible) out.push(`${l.color ?? ""}${l.text}${ansi.reset}`)
   return out
+}
+
+/** 视口数学单源（2026-08-31 会诊 kimi 缺陷 1——convGlobalIndex 未减 pad：
+ *  短会话顶部补 pad 空行后命中整体偏移，点击/滚轮落空或错行）。
+ *  返回 { start, end, pad }——renderConversation 与鼠标命中测试共用。 */
+export function convViewport(convLen, convH, scroll) {
+  const maxScroll = Math.max(0, convLen - convH)
+  const clamped = Math.min(scroll, maxScroll)
+  const end = Math.max(0, convLen - clamped)
+  const start = Math.max(0, end - convH)
+  const pad = Math.max(0, convH - (end - start))
+  return { start, end, pad }
 }

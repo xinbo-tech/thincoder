@@ -63,11 +63,16 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
       // restored to full width only after flush stopped the output). dims are
       // updated by: startup seed + a delayed re-sample + resize events.
       const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || startupDims.cols, rows: process.stdout.rows || startupDims.rows }
-      // 2026-08-31 流式跟随：输出活动（streaming/reasoning 缓冲非空）且用户未上滚（_followTail）
-      // → 渲染前钉到底部（最新内容 1 行不差可见）；用户上滚暂停、回底恢复（key-handler/index wheel）
-      if (state._followTail && (state.streaming.length > 0 || state.reasoning.length > 0)) {
+      // 2026-08-31 流式跟随（会诊 kimi 简化 + deepseek/glm 锚定）：_followTail 即完整语义——
+      // 开 → 渲染前钉底（tool/pushLine 行同样生效，无跟随空洞）；关（用户上滚）→ 锚定补偿：
+      // scroll 是距底偏移，暂停期间 convLen 增长会把用户读的行顶走——按增长量补偿。
+      const convLen = countConvLines(state, dims.cols, dims.rows)
+      if (state._followTail) {
         state.scroll = 0
+      } else if (state._pauseAnchorLen != null && convLen > state._pauseAnchorLen) {
+        state.scroll += convLen - state._pauseAnchorLen
       }
+      state._pauseAnchorLen = convLen
 
       // NOTE (§7.2 D6): the old state.outputPanels prune is gone — output panels
       // are abolished; subagent blocks live in the conversation and are never

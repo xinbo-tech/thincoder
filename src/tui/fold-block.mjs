@@ -36,8 +36,12 @@ export function isExpanded(state, foldKey) {
 /** Bidirectional toggle (mouse click / future keyboard path share this). */
 export function toggleFoldBlock(state, foldKey) {
   state.expandedBlocks ??= new Set()
-  if (state.expandedBlocks.has(foldKey)) state.expandedBlocks.delete(foldKey)
-  else state.expandedBlocks.add(foldKey)
+  if (state.expandedBlocks.has(foldKey)) {
+    state.expandedBlocks.delete(foldKey)
+    state._foldScroll?.delete(foldKey) // 2026-08-31 会诊 kimi：收起清理块内滚动残留（防 Map 缓涨）
+  } else {
+    state.expandedBlocks.add(foldKey)
+  }
 }
 
 /** 块内滚动：展开态窗口起点（2026-08-31 用户需求——60% 封顶保留、块内可滚动读全文）。
@@ -47,11 +51,14 @@ export function foldScrollOffset(state, foldKey) {
 }
 
 /** 块内滚动步长：▲/▼ 控制行 = 一整窗（winH）；滚轮 = 3 行（与外部会话滚动节拍一致）。
- *  dir=+1 向下（offset 增）、-1 向上。 */
-export function scrollFoldBlock(state, foldKey, dir, step) {
+ *  dir=+1 向下（offset 增）、-1 向上；upper = 合法上限（total-winH），提供时写时钳制
+ *  （2026-08-31 会诊 glm：▲▼ 过冲原靠渲染 clamp 收敛→每次点击双重建缓存）。 */
+export function scrollFoldBlock(state, foldKey, dir, step, upper) {
   state._foldScroll ??= new Map()
   const prev = state._foldScroll.get(foldKey) ?? 0
-  const next = Math.max(0, prev + dir * Math.max(1, Math.floor(step)))
+  let next = prev + dir * Math.max(1, Math.floor(step))
+  if (upper != null) next = Math.min(next, upper)
+  next = Math.max(0, next)
   state._foldScroll.set(foldKey, next)
   return next
 }
@@ -234,14 +241,14 @@ export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols
   if (offset > 0) {
     out.push({
       text: `▲ 上方还有 ${offset} 行（点击向上翻窗）`,
-      color: C.dim, _skipDimFold: true, _foldScrollUp: foldKey, _foldWindow: winH,
+      color: C.dim, _skipDimFold: true, _foldScrollUp: foldKey, _foldWindow: winH, _foldTotal: total,
     })
   }
   out.push(...window)
   if (offset + winH < total) {
     out.push({
       text: `▼ 下方还有 ${total - offset - winH} 行（点击向下翻窗）`,
-      color: C.dim, _skipDimFold: true, _foldScrollDown: foldKey, _foldWindow: winH,
+      color: C.dim, _skipDimFold: true, _foldScrollDown: foldKey, _foldWindow: winH, _foldTotal: total,
     })
   }
   out.push(foldHintLine(`▼ … ${label} — click to collapse`, foldKey))
