@@ -393,3 +393,32 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | T1 | 子流首 token `role#1/[model]deepseek-v4 内容` | `state.subTasks[key].model === "deepseek-v4"`，内容无 `[model]` 前缀 | F1 / NF1 |
 | T2 | 子流无 `[model]` token | `model` 为 undefined，header 显示 `[role]` | F2 / NF2 |
 | T3 | advisor 调用进行中 | 状态栏显示 `advisor review (round N · 实际模型)` | F2 |
+
+### 10.5 · TUI 性能分析（2026-08-31 · 需求层）
+
+**总体结论**：TUI 性能已达标——2026-08-31 懒加载卡顿根治（段级缓存）后**无热点**；剩余空间均"不值得做"。
+
+**实测数据**（真实 3247 条会话存档、200 条初始加载、120×40 终端）：
+
+| 环节 | 实测 | 判断 |
+|---|---|---|
+| 冷启动 buildConvLines（首次渲染） | 100.8ms | 启动一次性——可接受（启动 100ms 无感） |
+| convCacheKey（每帧） | 0.1ms | 快（O(lines)，lines 数小） |
+| countConvLines（convCacheKey 命中） | 0.1ms | 快 |
+| 流式帧（streaming append，段缓存命中） | 1.6ms 单帧 / 0.6ms 均帧 | **远低于 16ms 节流阈值**——不卡 |
+| renderRows 全帧 | 2.2ms | 快 |
+| renderRows 热帧（convCacheKey 命中） | 0.3ms | 快 |
+| 行 diff（rows[i] !== prevRows[i] 字符串比较） | 0.01ms | 快 |
+| loadOlder 后 rebuild（三层缓存后） | 5-8ms 平坦 | **不随已加载历史增长** |
+
+**已做（2026-08-31）**：
+- **三层缓存**（convCacheKey 全量 / 行级 wrapRowsCached / 段级 _lineSegCache）——根治 loadOlder 全量重建（111→5-8ms）
+- **渲染调度**：16ms 节流（MIN_RENDER_INTERVAL_MS）+ 1s ticker（耗时刷新）+ 行 diff（只重绘变化行）
+- **dims 缓存**：ConPTY stale 防御（resize 事件源可信、非 trusted 采样双确认）——2026-08-31 窗口缩放修复
+
+**剩余空间（均不值得做）**：
+- **冷启动 100ms**——启动一次性，延迟渲染/分帧收益微小
+- **convCacheKey O(lines)**——0.1ms 已快，1000 行 ~1ms 仍远低于节流阈值
+- **行 diff**——0.01ms 已快
+
+**监控建议**：真机手感是唯一判据——若再报卡顿，先测 `buildConvLines` rebuild 时间（段缓存命中应为 5-8ms；若 >20ms 说明缓存失效或新热点）。
