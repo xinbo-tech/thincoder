@@ -8,6 +8,12 @@
  * 测试钩子走 rate.mjs 的 _rateHooks.sleep（与 core 同一替换点）。 */
 import { RETRYABLE_STATUS, MAX_RETRIES, RATE_LIMIT_BACKOFF_MS, _rateHooks } from "./rate.mjs"
 
+/** 计费/配额类 429 特征（与 core.mjs isNonRetryableError 同源——round3 #4：
+ *  余额/配额耗尽时立即抛错，不按限流干等 15/30/60s 后报泛化错误）。 */
+function isQuotaExhausted(text) {
+  return /余额不足|充值|insufficient_quota|quota exhausted|billing|1113|1114/i.test(text ?? "")
+}
+
 /** Parse Retry-After: 秒数 or HTTP-date；上限 300s（与 core.mjs parseRetryAfter 同语义，
  *  无 core 依赖复制于此——anthropic/google 引入 core 会造成循环依赖）。 */
 export function parseRetryAfter(header, rateLimitHits = 0) {
@@ -85,6 +91,12 @@ export async function requestWithRetry(request, {
     }
 
     if (response.status === 429) {
+      // 计费/配额类 429（余额不足/充值、insufficient_quota 等）不是限流：重试只会干等
+      // 后报泛化错误——与 core.mjs 的 isNonRetryableError 同语义，立即抛错（round3 #4）
+      if (isQuotaExhausted(text)) {
+        onWait?.({ phase: "quota", message: `quota exhausted: ${text.slice(0, 200)}` })
+        const e = new Error(message); e.status = 429; throw e
+      }
       const waitMs = parseRetryAfter(response.headers.get("retry-after"), rateLimitHits)
       rateLimitHits++
       lastError = new Error(message)

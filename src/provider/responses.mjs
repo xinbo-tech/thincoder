@@ -208,9 +208,14 @@ export function buildBody(provider, messages, tools, opts = {}) {
   // 内置工具声明追加（2026-08-31 用户拍板）：web_search 与本地 function 工具共存
   const builtin = builtinToolsFor(provider.baseURL, provider.builtinTools)
   if (builtin.length) body.tools = [...(toolsFlat ?? []), ...builtin]
-  if (provider.temperature != null) body.temperature = spec.tempRange
-    ? Math.min(spec.tempRange[1], Math.max(spec.tempRange[0], provider.temperature))
-    : provider.temperature
+  if (provider.temperature != null) {
+    let t = provider.temperature
+    if (spec.tempRange) {
+      t = Math.min(spec.tempRange[1], Math.max(spec.tempRange[0], t))
+      t = Math.round(t * 100) / 100 // 与 core.mjs 同语义（round3 #7）
+    }
+    body.temperature = t
+  }
   if (provider.reasoningEffort) body.reasoning = { effort: provider.reasoningEffort }
   if (opts.toolChoice !== undefined) body.tool_choice = opts.toolChoice
 
@@ -456,13 +461,16 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     )
   }
   if (response.ok === false && isChainInvalidError(response.status)) {
-    // 极端：retry 语义回归（返回响应形态）——同处置（防御）
+    // 2026-08-31 round3 #1：requestWithRetry 唯一返回路径是 response.ok（非 2xx 全部 throw）
+    // ——本分支不可达（retry 语义回归时才会走到）。仅作防御：与 catch 分支同处置——
+    // 清链后重发 body 仍带旧 previous_response_id（412 注入）是错的——重建全量。
     provider._responsesChain = null
+    const fresh2 = buildBody(provider, messages, tools, { toolChoice, stateful, forceStateful: true })
     response = await requestWithRetry(
       () => proxyFetch(`${provider.baseURL}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
-        body: JSON.stringify(body),
+        body: JSON.stringify(fresh2.body),
         signal: signal
           ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
           : AbortSignal.timeout(FETCH_TIMEOUT_MS),

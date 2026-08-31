@@ -279,3 +279,46 @@ test("parseStream: incomplete content_filter → finishReason=content_filter 不
   assert.equal(result.finishReason, "content_filter")
 })
 
+test("chat(): 链失效 404 → 清链全量重发一次（round3 #5 补 D6 回退集成——T7 验收）", async () => {
+  // round2 修复把 D6 回退从死代码复活：requestWithRetry 对 400/404 抛 e.status →
+  // chat() catch → 清链 + forceStateful 全量重建 → 重发（无 previous_response_id）。
+  // 此测试锁住"重发 body 不含 previous_response_id 且 input 为全量 items"（回归即挂）。
+  const { chat } = await import("../src/provider/responses.mjs")
+  const p = provider()
+  const messages = [
+    { role: "user", content: "查天气" },
+    { role: "assistant", content: "", tool_calls: [{ id: "call_1", type: "function", function: { name: "get_weather", arguments: "{}" } }] },
+    { role: "tool", tool_call_id: "call_1", content: "晴" },
+  ]
+  // 残留链（模拟上轮链 id 已被服务端 GC → 404）
+  const first = buildBody(p, messages, null)
+  p._responsesChain = { ...first.newChain, id: "resp_stale" }
+  const bodies = []
+  const responses = [
+    // 第一次请求：404（链失效）
+    new Response(JSON.stringify({ error: { message: "not found" } }), { status: 404, headers: { "Content-Type": "application/json" } }),
+    // 重发：正常 SSE 流（completed）
+    new Response('data: {"type":"response.completed","response":{"id":"resp_new","usage":{"input_tokens":5,"output_tokens":3,"total_tokens":8}}}\n\n', { status: 200 }),
+  ]
+  const origFetch = globalThis.fetch
+  globalThis.fetch = async (url, opts) => {
+    bodies.push(JSON.parse(opts.body))
+    return responses.shift()
+  }
+  try {
+    const result = await chat(p, {
+      messages, onToken: () => {}, onReasoning: () => {},
+      toolChoice: undefined,
+    })
+    assert.equal(result.responseId, "resp_new")
+    assert.equal(bodies.length, 2, "先后两次请求")
+    assert.equal(bodies[1].previous_response_id, undefined, "重发不带 previous_response_id（D6 全量语义）")
+    assert.equal(bodies[1].input.length, 4, "重发 input = 全量 items（user+assistant+function_call+tool result）")
+    assert.equal(bodies[1].input.some((i) => i.type === "function_call"), true)
+    assert.equal(p._responsesChain.id, "resp_new", "重发成功后新链建立")
+  } finally {
+    globalThis.fetch = origFetch
+  }
+})
+
+

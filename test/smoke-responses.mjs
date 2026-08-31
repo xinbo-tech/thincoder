@@ -18,7 +18,7 @@ for (let i = 0; i < argv.length; i++) {
   if (argv[i].startsWith("--")) args[argv[i].slice(2)] = (argv[i + 1] && !argv[i + 1].startsWith("--")) ? argv[++i] : true
 }
 const name = args.name
-if (!name) { console.error("usage: node test/smoke-responses.mjs --name <provider>"); process.exit(1) }
+if (!name) { console.error("usage: node test/smoke-responses.mjs --name <provider> [--baseURL <url>] [--prompt \"…\"]"); process.exit(1) }
 
 const cfg = JSON.parse(readFileSync(join(homedir(), ".thincoder", "config.json"), "utf8"))
 const found = (cfg.providers ?? []).find((p) => p.name === name)
@@ -41,7 +41,7 @@ const onReasoning = (r) => { reasoning += r }
 const onToken = (t) => { tokens.push(t) }
 const onWait = (w) => { if (w?.phase === "warn") warnings = w.message ? [...warnings, w.message] : warnings }
 
-console.log(`[smoke] provider=${name} baseURL=${provider.baseURL} (key 存在:${!!provider.apiKey.length}) model=${provider.model}`)
+console.log(`[smoke] provider=${name} baseURL=${provider.baseURL} (key 存在:${!!provider.apiKey?.length}) model=${provider.model}`)
 const t0 = Date.now()
 try {
   const result = await chat(provider, {

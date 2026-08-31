@@ -91,6 +91,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   if (provider.format === "responses") {
     // 2026-08-31：Responses API transport（PROVIDER.md §13）——双轨链在 transport 内部
     // 自行管理（provider._responsesChain），agent 层零改动。
+    // round3 #3：配对归一化必须在此分派前（压缩/中断遗留的孤儿 tool 消息发向严格服务端会 400）
+    messages = normalizeToolPairing(messages)
     const { chat: responsesChat } = await import("./responses.mjs")
     return responsesChat(provider, {
       messages,
