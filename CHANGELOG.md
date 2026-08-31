@@ -1,3 +1,20 @@
+## [0.12.54] — 2026-09-01
+
+### Added
+
+- **Checkpoint 事故恢复闭环（CLI ↔ VS Code 两端）**：git 工具破坏性操作（checkout -- / restore / reset --hard / clean / rebase）前自动快照 + schema 描述含 rewind 恢复指引；`checkpointAction=list` 输出尾部提示行；**commit 后清空该项目 checkpoint**（commit = 安全点；懒兜底覆盖外部 git/IDE commit）；每 cwd 快照上限 100（最旧淘汰）；git 工具补齐 11 个 action（clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv）；`/restore` 改为两级 picker 逐文件恢复；bash guard 保留并对齐（宽匹配 + 全量副本 + rewind 指引，与 VS Code 同构）
+- **TUI 子 agent 运行中面板固定化**：运行中子 agent 活动从会话流内联改为固定底部面板（会话与 todo 之间，不随会话滚动）；完全自适应高度；默认折叠（头部 + tail 3，⏸ = 等待审批）；完成仍冻结进会话流（✓ 头可展开）
+- **TUI 渲染鲁棒性**：wrap-off 硬截断（Ambiguous 宽度字符防软折行污染）；启动/退出序列抽取（tui-lifecycle.mjs）
+
+### Changed
+
+- **跨端会话共享一致性（会诊 4 模型收敛）**：sessionStart 打点（跨端同槽不再 F2 互轮转）；F2 写前磁盘校验（同会话并发追加 → 轮转 .bak 保留）；legacy transient 双端过滤；contextHistory 机读线判定（length>0）；activeModel 双向；cwd 先行校验；newSession 死主清理落盘（deletions）
+- **checkpoint cwdHash 归一化**：`sha1(normalizeCwd(cwd)).slice(0,12)`——CLI/VS Code 快照跨端互通（存量旧路径孤儿化不迁移）
+
+### Fixed
+
+- **hex-escape 毒载荷 400**（deepseek-v4-flash 实测）：发送前统一中和字面 `\\x`/`\\u` 不足位序列（escape.mjs，VS Code 同构）
+
 ## [0.12.52] — 2026-08-31
 ## [0.12.53] — 2026-08-31
 
