@@ -26,7 +26,10 @@ export function wsTransport(wsUrl, extraHeaders = {}) {
 
   const connect = () => {
     if (closed) throw new Error("MCP WebSocket connection closed")
-    ws = new WebSocket(withAuthToken(wsUrl, extraHeaders.Authorization))
+    // 2026-08-31 MCP 会诊 #10：Authorization 经 subprotocol（bearer.<token>）传递，
+    // 不注入 URL query（防代理/网关日志泄露）；无认证时 protocols 为空数组。
+    const { url: wsUrlResolved, protocols } = withAuthToken(wsUrl, extraHeaders.Authorization)
+    ws = new WebSocket(wsUrlResolved, protocols.length ? protocols : undefined)
 
     return new Promise((resolve, reject) => {
       let settled = false

@@ -27,10 +27,13 @@ export function quoteArg(s) {
   return /[\s"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-/** Append a Bearer token as a query parameter to a WebSocket URL.
- *  2026-08-31 MCP 会诊 #10：畸形 wsUrl 原抛裸 TypeError，改友好消息。 */
+/** Convert an Authorization Bearer token into a WebSocket subprotocol.
+ *  2026-08-31 MCP 会诊 #10：原实现把 token 塞进 URL query——代理/网关日志会泄露凭证，
+ *  且无标准依据。Node 内置 WebSocket（undici）无法自定义请求头，MCP 生态的标准替代
+ *  通道是 subprotocol（`bearer.<token>`）。用户 URL 自带的 query token 不动（兼容）。
+ *  @returns {{ url: string, protocols: string[] }} — protocols 为空数组表示无认证。 */
 export function withAuthToken(wsUrl, authorization) {
-  if (!authorization) return wsUrl
+  if (!authorization) return { url: wsUrl, protocols: [] }
   const token = authorization.replace(/^Bearer\s+/i, "")
   let u
   try {
@@ -38,8 +41,8 @@ export function withAuthToken(wsUrl, authorization) {
   } catch {
     throw new Error(`Invalid WebSocket URL: ${String(wsUrl).slice(0, 120)}`)
   }
-  u.searchParams.set("token", token)
-  return u.href
+  // subprotocol 不进入 URL/日志，token 不再注入 query
+  return { url: u.href, protocols: [`bearer.${token}`] }
 }
 
 /** Sanitize a tool name: replace non-alphanumeric chars with underscores, cap at 64 chars */

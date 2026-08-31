@@ -60,11 +60,17 @@ export async function assembleAgent() {
     if (existsSync(mcpJsonPath)) {
       const mcpJson = JSON.parse(readFileSync(mcpJsonPath, "utf8"))
       if (mcpJson.mcpServers && typeof mcpJson.mcpServers === "object") {
-        const configNames = new Set(mcpServers.map((s) => s.name))
-        for (const [name, server] of Object.entries(mcpJson.mcpServers)) {
-          if (configNames.has(name)) continue // config.json takes priority
-          if (!server || typeof server !== "object") continue
-          mcpServers.push({ name, ...server })
+        // 2026-08-31 MCP 会诊 #10：数组型 mcpServers 不是规范形态——Object.entries 会产出
+        // "0"/"1" 数字名（变成工具前缀 "0_tool"），必须跳过；server 条目嵌套数组同理。
+        if (Array.isArray(mcpJson.mcpServers)) {
+          console.error("[mcp] .mcp.json: mcpServers must be a plain object, got array — skipped")
+        } else {
+          const configNames = new Set(mcpServers.map((s) => s.name))
+          for (const [name, server] of Object.entries(mcpJson.mcpServers)) {
+            if (configNames.has(name)) continue // config.json takes priority
+            if (!server || typeof server !== "object" || Array.isArray(server)) continue
+            mcpServers.push({ name, ...server })
+          }
         }
       }
     }

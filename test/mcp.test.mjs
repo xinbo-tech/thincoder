@@ -65,6 +65,57 @@ test("connectMcpServer session: idempotent per name (no double spawn) (P5)", asy
   }
 })
 
+test("legacySSE mode: direct JSON-RPC body on POST resolves (no 120s pending hang) (#10)", async () => {
+  // 违规 server：GET SSE 发 endpoint 事件（进入 legacySSE），POST 直接回 JSON-RPC body
+  const { httpTransport } = await import("../src/mcp/transport-http.mjs")
+  const { createServer } = await import("node:http")
+  const server = createServer((req, res) => {
+    if (req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.write(`event: endpoint\ndata: ${JSON.stringify(`http://127.0.0.1:${server.address().port}/post`)}\n\n`)
+      res.write(": keepalive\n\n") // 保持流开（openSSE 等待 ENDPOINT_WAIT_MS 后返回）
+      return
+    }
+    // POST 直回 JSON-RPC 响应（legacy 规范违规但生态常见）
+    let body = ""
+    req.on("data", (d) => (body += d))
+    req.on("end", () => {
+      const msg = JSON.parse(body)
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { ok: true } }))
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  try {
+    const t = httpTransport(`http://127.0.0.1:${server.address().port}/sse`)
+    await t.openSSE() // 识别 endpoint → legacySSE = true
+    const resp = await Promise.race([
+      t.send("tools/call", { name: "x", arguments: {} }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("still hanging after 3s")), 3000)),
+    ])
+    assert.equal(resp.result?.ok, true, `direct JSON body must resolve, got ${JSON.stringify(resp)}`)
+    t.close()
+  } finally {
+    server.close()
+  }
+})
+
+test("withAuthToken: Bearer → subprotocol, no token in URL query (#10)", async () => {
+  const { withAuthToken } = await import("../src/mcp/helpers.mjs")
+  const { url, protocols } = withAuthToken("ws://example.com/mcp", "Bearer sk-secret")
+  assert.equal(url, "ws://example.com/mcp", "URL must not gain a token query param")
+  assert.deepEqual(protocols, ["bearer.sk-secret"], "token rides the subprotocol")
+  // 用户 URL 自带 query token：保留不动（兼容）
+  const { url: u2, protocols: p2 } = withAuthToken("ws://example.com/mcp?token=user-supplied", "Bearer sk-secret")
+  assert.match(u2, /token=user-supplied/, "user-supplied query token untouched")
+  assert.deepEqual(p2, ["bearer.sk-secret"])
+  // 无 Authorization：原样返回
+  const u3 = withAuthToken("ws://example.com/mcp", undefined)
+  assert.deepEqual(u3, { url: "ws://example.com/mcp", protocols: [] })
+  // 畸形 URL 友好报错
+  assert.throws(() => withAuthToken("not a url", "Bearer t"), /Invalid WebSocket URL/)
+})
+
 test("session self-heal: crashed server reconnects and the SAME tool wrapper works (P5)", async () => {
   // 把退避延迟压到 ~0，全链（onDead→scheduleReconnect→attachSession→旧 tools 可用）在秒级内验证
   const { connectMcpServer, _mcpHooks } = await import("../src/mcp.mjs")
