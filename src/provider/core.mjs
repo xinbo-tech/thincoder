@@ -88,6 +88,16 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     })
     return result
   }
+  if (provider.format === "responses") {
+    // 2026-08-31：Responses API transport（PROVIDER.md §13）——双轨链在 transport 内部
+    // 自行管理（provider._responsesChain），agent 层零改动。
+    const { chat: responsesChat } = await import("./responses.mjs")
+    return responsesChat(provider, {
+      messages,
+      tools,
+      onToken, onReasoning, onWait, signal, toolChoice,
+    })
+  }
 
   messages = normalizeToolPairing(messages)
   // 中和服务端的非标二次转义：会话里若出现字面 "\x"/"\u"（如讨论转义、grep 到含

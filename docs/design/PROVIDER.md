@@ -270,3 +270,68 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | T8 | CLI `/think off` → `/think effort xhigh` 后 `provider.thinking` 无（null 标记被清）且 `reasoningEffort:"xhigh"` → `resolveEnableThinking` 返回 `true`；vscode 面板 off → 选档位同语义 | 选档位清 off 标记，无矛盾载荷 | F2 / 评审 #1 |
 | T9 | `applyThink` "on" 分支（effort-only，无既有 effort）：qwen3.8-max → 默认 `reasoningEffort:"xhigh"`（枚举首值）；qwen3.7-max → `"xhigh"` | 默认值必在枚举内，core.mjs 校验不 throw | F2 / 评审 #2 |
 | T10 | `/think` 交互菜单头部（effort-only 模型，`thinking:null` 显式 off） | 显示 "Thinking: OFF"（null 显式排除，不再误显示 ON） | NF1 / 评审 #3 |
+
+
+## 13. Responses API Transport（2026-08-31 用户拍板实施）
+
+> 状态：**已拍板实施**。旧预案 `thincoder-vscode/docs/design/RESPONSES-TRANSPORT.md`（2026-08-15 会诊"不做"存档）在用户确认"国产已大量支持"后重启；本文件为 CLI 侧权威源，扩展端同规格（引用，不复制）。
+> 支持矩阵 2026-08-31 重新核实（官方文档一手：DeepSeek api-docs / 百炼 help.aliyun.com）。
+
+### 13.1 支持矩阵（2026-08-31 核实）
+
+| 厂商/端点 | 格式 | previous_response_id | reasoning 明文回传 | 判定 |
+|---|---|---|---|---|
+| **OpenAI 官方** `api.openai.com/v1` | ✅ | ✅ store:true 30 天 | ❌ encrypted（无明文） | **完整 → 开链** |
+| **百炼 Qwen** `/compatible-mode/v1/responses` | ✅ | ✅ **7 天**（传顶层 response id，非 output msg id） | ✅ summary 明文 | **完整 → 开链** |
+| **DeepSeek** `api.deepseek.com` | ✅ 事件流同 OpenAI | ❌ **不支持**（无状态；不支持参数**静默忽略**） | ✅ 明文 content | **格式完整、无链 → 全量模式，链禁用** |
+| **智谱 GLM** `open.bigmodel.cn/api/v1` | ✅（Codex 接入姿势） | 未文档化 | ✅ | **未证实 → 全量模式（灰名单）** |
+| Kimi 平台 API | ❌ 无端点 | — | — | 不接（同 8-15 矩阵） |
+| 火山方舟 | ✅ 迁移文档 | 未核实 | 未核实 | 留位（一期不接） |
+
+**重要性提示**：DeepSeek 官方明说"不支持的参数会被**静默忽略**、不会报错"——`previous_response_id` 发给 DeepSeek 会被忽略：只剩增量 input → **无声丢上下文**（比 404 危险）。因此链的应用**必须 host 白名单驱动**，不能只靠服务端报错兜底（§13.3 D8）。
+
+### 13.2 设计概览
+
+- `format: "responses"`（用户拍板命名，四值之一）；`provider.stateful` 默认 `true`（用户拍板）——但链仅在白名单 host 生效（D8）。
+- 双轨：**本地会话/历史仍是唯一事实源**（压缩/落档/恢复/跨端零变化）；`previous_response_id` 链只是发送层优化（D1）。`store: false`（本地有全量，不托管服务端）。
+- 链生命周期 = **单次 turn**（D2）：runAgent 开始重置（发全量建链），turn 内工具往返用链增量（每往返 ≥90% 请求体削减）；跨 turn 无条件重建——上下文正确性优先。
+- 链失效（404/expired）→ 自动重置链 + 本地全量重发一次（D6），无数据丢失。
+- 工具调用：内部 shape `{id, name, arguments}` ↔ responses `function_call` item（call_id 配对 function_call_output）双向适配（D4）。
+- 请求体：system → 顶层 `instructions`；messages → input items；`reasoning: {effort}`；`max_output_tokens`；`stream: true`（流以 `response.completed/incomplete/failed` 结束，**无 `data: [DONE]`**）。
+- reasoning：`response.reasoning_text.delta`（DeepSeek 文档列名）→ onReasoning；usage `output_tokens_details.reasoning_tokens`；cached 走 `input_tokens_details.cached_tokens`。
+
+### 13.3 关键决策
+
+| 决策 | 理由 |
+|---|---|
+| D1 双轨：本地事实源 + 链仅发送层 | 会话是核心资产（审计/恢复/压缩/跨端）；服务端 7 天过期且锁厂商。与 8-15 旧预案"放弃服务端状态"一致（store:false 不托管）；仅"turn 内链"是旧预案未覆盖的新增优化，属今天拍板范围 |
+| D2 链 = 单 turn | 跨 turn/压缩/恢复/换模型漂移不可控；每 turn 重建把"正确性-收益"边界划在最稳点 |
+| D3 默认无状态（stateful 默认 true 但仅白名单生效） | 用户拍板默认 true 针对"支持链"端点；白名单外自动全量（D8），对用户无感且正确 |
+| **D8 host 白名单驱动链** | DeepSeek 静默忽略 = 无声丢上下文；白名单：openai 官方 + 百炼（dashscope/maas compatible-mode）；灰名单（deepseek.com / open.bigmodel.cn 等）→ 全量 + 一次性 warning；provider 显式 `stateful: true/false` 覆盖（高级逃生舱，信任自定义网关时用） |
+| D4 工具 item 双向适配 | function_call/function_call_output ↔ 内部 {id,name,arguments}；call_id 是配对锚点 |
+| D5 不依赖流式 usage 帧 | completed 事件响应对象携带 usage（流末尾一帧）——与 chat completions 的 choices:[] 帧不同 |
+| D6 链失效自动回退 | 404/过期 → 全量重发一次（不是报错）；链是优化不是正确性依赖 |
+| D7 不探测不降级（格式层） | format 显式配置显式失败（同 8-15 §3.4 纪律）；重试/限流/错误语义与 chat 格式共用（requestWithRetry） |
+| 不用内置工具（web_search 等） | 我们的工具集（权限门/审计/活动流）是产品本体；内置工具是响应式转调，链路与审计不透明——后续如需可选项透传（二期） |
+
+### 13.4 实现影响
+
+- CLI：`src/provider/responses.mjs`（新 transport：buildRequest/parseStream/normalizeUsage/链状态机）、`core.mjs` 分派（format==="responses"）、`config.mjs`（host 白名单/灰名单常量）。
+- vscode：`src/provider/transports/responses.mjs`（同规格）+ `src/provider.mjs` TRANSPORTS 注册（其 requestWithRetry/rateGate 单点共享）。
+- agent 层零改动：transport 返回既有 shape `{content, reasoning, toolCalls, usage, finishReason}`。
+- preset 不动：默认稳态 chat completions；responses 是显式 opt-in（与 8-15 §3.2 一致）。
+
+### 13.5 测试用例表
+
+| # | 用例 | 断言 |
+|---|---|---|
+| T1 | buildRequest 消息转换 | system→instructions；user/assistant→message items；assistant tool_calls→function_call item；tool 结果→function_call_output |
+| T2 | buildRequest 工具转换 | OpenAI function schema → 扁平 tools（type:"function"） |
+| T3 | parseStream 文本流 | output_text.delta 序列 → onToken 聚合；completed 携带 usage |
+| T4 | parseStream 工具调用 | output_item.added + function_call_arguments.delta + output_item.done → 完整 toolCalls（多工具并行） |
+| T5 | parseStream reasoning | reasoning_text.delta → onReasoning；reasoning_tokens 计 usage |
+| T6 | 链状态机 | turn 内第 2 次请求带 previous_response_id；turn 开始重置（发全量）；跨 turn 重建 |
+| T7 | 链失效回退 | 404 → 自动全量重发，结果一致 |
+| T8 | 白名单 | dashedscope/maas/openai 开链；deepseek.com 全量 + warning；stateful:false 显式全量 |
+| T9 | 注册 | format:"responses" 命中；未配置仍走 openai |
+| T10 | 续跑/压缩兼容 | 压缩后全量 input（链重置）→ 无分离 |
