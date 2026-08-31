@@ -30,7 +30,7 @@
 
 - [x] code review 评审范围改为 task 的 Docs involved + 验收标准——2026-08-25 核对关闭（ENGINEERING-MODE.md FR4：eng-coder 返回后父代理自动 advisor(type=code)，范围=Docs involved+验收标准）
 - [x] setup.mjs 提示词解耦——已实现（PROMPT-DECOUPLING.md 定稿后落地，工程提示词独立组装）
-- [ ] 多设计并行 token 映射化（单值 token → {designPath: token}）
+- [x] ~~多设计并行 token 映射化（单值 token → {designPath: token}）~~——2026-08-31 用户终裁：**不做（过度工程）**。工程模式实际使用中同一会话并行多设计评审且随后各自派 eng-coder 的场景未发生（评审-实现串行）；文档锚方案（Y）已被用户否决（文档落地中回写状态/改名重组，任何文档锚都会失效）；若未来真有并行需求，评审实例表方案（token 内嵌 reviewId + 父代理评审实例表，文档仅审计不参与校验）可再议，勿提前实现。
 
 ### Issue 批量（2026-08-22，来源：Gitee/GitHub issue 巡检）
 
