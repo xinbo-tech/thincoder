@@ -159,7 +159,9 @@ export function buildBody(provider, messages, tools, opts = {}) {
   let chain = provider._responsesChain ?? null
   const key = chainKey(messages)
 
-  if (hostNonStateful && !opts.forceStateful) {
+  if (!wantStateful) {
+    chain = null // stateful:false 显式覆盖：残留链（同 session 开过）必须作废
+  } else if (hostNonStateful && !opts.forceStateful) {
     // 灰名单：链不支持/未证实（DeepSeek 静默忽略 → 无声丢上下文）——显式全量 + 一次警告
     if (wantStateful) {
       warnings.push({ name: "responses-stateful-unsupported", message: "endpoint 未实证支持 previous_response_id；已发送全量上下文（可 provider.stateful=false 关闭此消息）" })
@@ -170,12 +172,20 @@ export function buildBody(provider, messages, tools, opts = {}) {
   } else if (chain && !hostStateful && !opts.forceStateful) {
     chain = null // 非白名单 host 且无显式 forceStateful：不冒险开链
   }
+  // 2026-08-31 真机冒烟：百炼开链 = 云端留存（store:true）——首次知情警告（不刷屏）
+  if (wantStateful && hostStateful && isBailianHost(provider.baseURL) && !provider._responsesStoreWarned) {
+    provider._responsesStoreWarned = true
+    warnings.push({ name: "responses-store-retention", message: "百炼链生效需要 store:true——对话将在阿里云留存 7 天（PROVIDER.md §13.3 D10；provider.stateful=false 可退出）" })
+  }
 
   const body = {
     model: provider.model,
     input: items, // 占位：chain 有效时下方替换为增量
     stream: true,
-    store: false,
+    // 2026-08-31 真机冒烟实锤：百炼链要求 R1 store:true（store:false → 后续
+    // previous_response_id 返回 400 Not found）；OpenAI 官方 store:false 链仍可用。
+    // 开链时百炼 = 对话在云端留存 7 天（用户知情决策，warning 上报）；灰名单全量 store:false。
+    store: wantStateful && hostStateful && isBailianHost(provider.baseURL),
     ...(extracted ? { instructions: extracted } : {}),
     ...(toolsFlat ? { tools: toolsFlat } : {}),
     ...(spec.maxOutput || provider.maxTokens ? { max_output_tokens: provider.maxTokens ?? spec.maxOutput } : {}),
@@ -286,12 +296,22 @@ async function readResponseStream(response, handlers) {
     while ((idx = buffer.indexOf("\n\n")) >= 0) {
       const frame = buffer.slice(0, idx)
       buffer = buffer.slice(idx + 2)
-      // 2026-08-31 真机冒烟发现：百炼 SSE 帧为 `data:{...}`（无空格），OpenAI/DeepSeek 为
-      // `data: {...}`——必须兼容两种（slice(5).trim()）
+      // 2026-08-31 真机冒烟：①百炼 SSE 帧为 `data:{…}` 无空格（OpenAI/DeepSeek 带空格）——
+      // slice(5).trim() 兼容；②帧 event: 头行（百炼 `event:error` 形态：data 无 type 字段，
+      // HTTP 200 内嵌业务 400——原实现静默吞掉 = 空内容当回复，必须识别后抛错）。
+      const eventHeader = frame.split("\n").find((l) => l.startsWith("event:"))?.slice(6).trim() ?? ""
       const data = frame.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("\n")
       if (!data) continue
       let ev
-      try { ev = JSON.parse(data) } catch { continue }
+      try { ev = JSON.parse(data) } catch {
+        if (eventHeader === "error") throw new Error(`responses API error frame: ${data.slice(0, 300)}`)
+        continue
+      }
+      if (eventHeader === "error" && !ev.type) {
+        const e = new Error(`responses API error ${ev.code ?? ev.status ?? ""}: ${ev.message ?? JSON.stringify(ev).slice(0, 300)}`)
+        e.status = 400
+        throw e
+      }
       handleEvent(ev, handlers)
     }
   }

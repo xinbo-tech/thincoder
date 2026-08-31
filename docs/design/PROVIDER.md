@@ -312,6 +312,8 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | D5 不依赖流式 usage 帧 | completed 事件响应对象携带 usage（流末尾一帧）——与 chat completions 的 choices:[] 帧不同 |
 | D6 链失效自动回退 | 404/过期 → 全量重发一次（不是报错）；链是优化不是正确性依赖 |
 | D7 不探测不降级（格式层） | format 显式配置显式失败（同 8-15 §3.4 纪律）；重试/限流/错误语义与 chat 格式共用（requestWithRetry） |
+| **D10 store 决策（2026-08-31 真机冒烟修正）** | **百炼链硬规则：R1 必须 store:true**——store:false 时 previous_response_id 一律 400 "Not found"（实测，含 deepseek 聚合模型/qwen 原生/单边 store:true 全试过）；OpenAI 官方 store:false 链仍可用。→ 开链时百炼 store:true（**对话云端留存 7 天**——首次 warning「responses-store-retention」知悉，provider.stateful=false 退出）；DeepSeek 灰名单全量恒 store:false。D1 "store:false 不托管" 原语义对百炼失效，按本决策修正 |
+| **D11 事件帧协议（真机冒烟）** | 百炼 SSE：`data:{…}` 无空格 + `event:xxx` 行 + `:HTTP_STATUS/200` 注释行 + **`event:error` 帧（HTTP 200 内嵌业务 400，data 无 type 字段）**——不识别 error 帧 = 静默空内容当回复（round2 实测中招）。解析器兼容 data: 无空格（或全空格）+ event:error → 抛错。**教训：厂商差异 mock 必须按真实帧构造**（mock 全用 OpenAI 形态 → 测试自洽世界假绿） |
 | **D9 内置工具（2026-08-31 用户拍板，一期 web_search）** | 服务端执行——**绕过本地工具权限门/审计**（产品决策，用户拍板，风险明示）；host 映射默认声明（openai/百炼/DeepSeek），`provider.builtinTools:false` 关闭、数组显式覆盖；结果 `builtinToolResults` → agent 本地化 role:"tool" 消息（JSON 含 query/sources）；全量回传时 transport 依 `tool_call_id` 前缀 `web_search_call_` 还原原样 `web_search_call` item（DeepSeek 官方：原样回传服务端自动恢复搜索结果）；code_interpreter/web_extractor 二期 |
 
 ### 13.4 实现影响
@@ -335,3 +337,19 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | T8 | 白名单 | dashedscope/maas/openai 开链；deepseek.com 全量 + warning；stateful:false 显式全量 |
 | T9 | 注册 | format:"responses" 命中；未配置仍走 openai |
 | T10 | 续跑/压缩兼容 | 压缩后全量 input（链重置）→ 无分离 |
+| T11 | event:error 帧识别（百炼形态，真机冒烟发现） | `event:error` + data{code,message} → 抛错（不静默空响应） |
+| T12 | stateful:false 覆盖清残留链 | provider.stateful=false 时既有链作废（全量）——buildBody 清洗链含 wantStateful |
+
+## 13.6 真机冒烟记录（2026-08-31 执行 ✅）
+
+`test/smoke-responses.mjs` + `test/smoke-responses-chain.mjs`（读本机 config.json，key 不打印不外传）：
+
+| 项 | 结果 |
+|---|---|
+| DeepSeek 官方（灰名单） | ✅ content/reasoning 流/usage/warning 全验证；`response.reasoning_text.delta` 帧名实证（46 chars） |
+| 百炼 qwen（白名单） | ✅（修 event:error 静默 + data: 无空格后）reasoning 208 chars 实证 |
+| qwenplan `.maas` 域 | ✅ 同 qwen |
+| **链收益实测** | 39.1KB 上下文 + 工具往返：**请求体 40788B → 468B = 98.9% 削减**（宣称 ≥90% 实证）；链推理连续性 ✓（第二轮模型正确读到 function_call_output）；百炼 prompt_cache_hit 24576 tokens（链下会话缓存命中，服务端也省） |
+| **计费口径（如实）** | 百炼 input_tokens 计链上下文（25463→25514 微增）——**收益是请求体体积与延迟，不是计费 token 数**；计费端收益来自缓存命中，非链本身 |
+| store 硬规则 | ①store:false + 链 → 400 Not found（6 组合全测）②store:true 全链路 ✓ —— D10 |
+| 未验项 | OpenAI 官方端点真机（无 key）；GLM 非 Codex 行为；模型主动选 web_search 的端到端（prompt 引导未试） |

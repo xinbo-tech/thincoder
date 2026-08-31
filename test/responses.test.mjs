@@ -24,7 +24,7 @@ test("buildBody: 消息→items + system→instructions + 工具扁平化", () =
   assert.deepEqual(body.instructions, "你是有帮助的助手", "system → instructions")
   assert.equal(body.input[0].role, "user")
   assert.equal(body.stream, true)
-  assert.equal(body.store, false, "本地有全量，不托管服务端")
+  assert.equal(body.store, true, "百炼开链必须 store:true（真机冒烟 2026-08-31：false → previous_response_id 400 Not found）——链收益的代价是云端留存 7 天，首轮 warning 知悉")
   assert.equal(body.tools[0].name, "get_date")
   assert.equal(body.tools[0].type, "function")
 })
