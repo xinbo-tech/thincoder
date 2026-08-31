@@ -1576,6 +1576,105 @@ test("insert_after: fresh file (never written this session) works without a prio
   }
 })
 
+test("insert_after 精确判定（2026-08-31 工具顺手度）：edit 后未受影响区允许、受影响区拒绝", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-insert-precise-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "f.mjs", content: "line1\nline2\nline3\nline4\nline5\n" }, ctx)
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    // edit L3（替换 line3 → line3 + 新行 = 行数 +1）→ 受影响区 startLine=3
+    await byName.edit.execute({ path: "f.mjs", old_string: "line3", new_string: "line3\nline3b" }, ctx)
+    // 未受影响区（after_line=2 < startLine=3）→ 行号未漂移 → 允许（消掉"必须重 read"摩擦）
+    const ok = await byName.insert_after.execute({ path: "f.mjs", after_line: 2, content: "// ok" }, ctx)
+    assert.ok(ok.includes("Inserted after line 2"), "未受影响区允许")
+    // 受影响区（after_line=4 > startLine=3）→ 行号已漂移 +1 → 拒绝（护栏保留）
+    await assert.rejects(
+      () => byName.insert_after.execute({ path: "f.mjs", after_line: 4, content: "// stale" }, ctx),
+      /行号已漂移/,
+      "受影响区拒绝（stale 防住）"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("insert_after 精确判定：write 全文重写后任何 after_line 拒绝（必须重 read）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-insert-write-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "f.mjs", content: "line1\nline2\n" }, ctx)
+    // write 全文重写 → 全文件受影响 → 任何 after_line 拒绝
+    await assert.rejects(
+      () => byName.insert_after.execute({ path: "f.mjs", after_line: 1, content: "x" }, ctx),
+      /was modified since your last read/,
+      "write 后拒绝（全文重写）"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换——任一失败全不写", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "a.mjs", content: "const A = 1\n" }, ctx)
+    await byName.write.execute({ path: "b.mjs", content: "const B = 2\n" }, ctx)
+    await byName.read.execute({ path: "a.mjs" }, ctx)
+    await byName.read.execute({ path: "b.mjs" }, ctx)
+    // 两文件原子替换——都成功
+    const ok = await byName.edit.execute({
+      edits: [
+        { path: "a.mjs", old_string: "const A = 1", new_string: "const A = 10" },
+        { path: "b.mjs", old_string: "const B = 2", new_string: "const B = 20" },
+      ],
+    }, ctx)
+    assert.ok(ok.includes("Edited a.mjs") && ok.includes("Edited b.mjs"), "两文件都改")
+    assert.ok((await byName.read.execute({ path: "a.mjs" }, ctx)).includes("const A = 10"), "a.mjs 已改")
+    assert.ok((await byName.read.execute({ path: "b.mjs" }, ctx)).includes("const B = 20"), "b.mjs 已改")
+    // 任一失败 → 全不写（原子）
+    await assert.rejects(
+      () => byName.edit.execute({
+        edits: [
+          { path: "a.mjs", old_string: "const A = 10", new_string: "const A = 100" },
+          { path: "b.mjs", old_string: "NOT FOUND", new_string: "x" },
+        ],
+      }, ctx),
+      /edit aborted \(atomic — no files written\)/,
+      "任一失败原子回滚"
+    )
+    // 确认 a.mjs 未被写（原子回滚）
+    assert.ok((await byName.read.execute({ path: "a.mjs" }, ctx)).includes("const A = 10"), "a.mjs 未被写（原子回滚）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组形态：与 path/old_string/new_string 互斥", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-mutex-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "a.mjs", content: "x\n" }, ctx)
+    await assert.rejects(
+      () => byName.edit.execute({
+        path: "a.mjs",
+        old_string: "x",
+        new_string: "y",
+        edits: [{ path: "a.mjs", old_string: "x", new_string: "y" }],
+      }, ctx),
+      /mutually exclusive/,
+      "数组与单文件参数互斥"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
 
 // ---------------------------------------------------------------- grep regex validation
 

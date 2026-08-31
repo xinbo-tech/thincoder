@@ -38,6 +38,18 @@ export function markDirty(abs) { dirtyPaths.add(abs) }
 export function clearDirty(abs) { dirtyPaths.delete(abs) }
 export function isDirty(abs) { return dirtyPaths.has(abs) }
 
+// 2026-08-31 工具顺手度优化（用户批准）：写入工具记录受影响行范围——insert_after
+// 精确判定：after_line 在未受影响区（< lastWrite.startLine）→ 行号未漂移 → 允许
+// （消掉"我写的文件被当外部修改、必须重 read"的摩擦）；受影响区内 → 拒绝（护栏保留）；
+// write 全文重写 → 全文件受影响，任何 after_line 拒绝。
+const lastWrites = new Map() // abs → { type: 'write'|'edit'|'insert', startLine, shift }
+export function recordWrite(abs, write) {
+  lastWrites.set(abs, write)
+  dirtyPaths.delete(abs) // 本 session 写入——等效于刚 read 过（快照在 lastWrites）
+}
+export function lastWriteOf(abs) { return lastWrites.get(abs) }
+export function clearLastWrite(abs) { lastWrites.delete(abs) }
+
 export const readTool = {
   name: "read",
   description: DESC("read"),
@@ -61,6 +73,7 @@ export const readTool = {
     const content = normalizeEOL(await readFile(abs, "utf8"))
     // A read refreshes the agent's view — line numbers are fresh again.
     clearDirty(abs)
+    clearLastWrite(abs) // 2026-08-31：read 同时清写入快照（新视图以 read 为准）
     const lines = content.split("\n")
     const offset = Math.max(1, args.offset ?? 1)
     const limit = Math.min(args.limit ?? MAX_READ_LINES, MAX_READ_LINES)
@@ -171,7 +184,7 @@ export const writeTool = {
     const eol = prev != null ? detectFileEol(prev) : majorityEol(dirname(abs))
     const content = eol === "\r\n" ? normalizeEOL(args.content).replace(/\n/g, "\r\n") : args.content
     await writeFile(abs, content, "utf8")
-    markDirty(abs)
+    recordWrite(abs, { type: "write", startLine: 1, shift: 0 }) // 全文重写——全文件受影响
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Wrote ${args.content.length} chars to ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
@@ -189,12 +202,77 @@ export const editTool = {
       old_string: { type: "string", description: "Exact text to replace" },
       new_string: { type: "string", description: "Replacement text" },
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
+      edits: {
+        type: "array",
+        description: "2026-08-31 工具顺手度：一次多文件原子替换——任一失败全不写（先全量检查所有替换可执行）。与 path/old_string/new_string 互斥。",
+        items: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            old_string: { type: "string" },
+            new_string: { type: "string" },
+            replace_all: { type: "boolean" },
+          },
+          required: ["path", "old_string", "new_string"],
+        },
+      },
     },
-    required: ["path", "old_string", "new_string"],
+    required: [],
   },
   readonly: false,
-  touchedPaths(args) { return args.path ? [args.path] : [] },
+  touchedPaths(args) {
+    if (args.edits) return args.edits.map((e) => e.path).filter(Boolean)
+    return args.path ? [args.path] : []
+  },
   async execute(args, ctx) {
+    // 2026-08-31 工具顺手度（用户批准）：数组形态——一次多文件原子替换
+    if (args.edits) {
+      if (!Array.isArray(args.edits) || args.edits.length === 0) {
+        throw new Error("edits must be a non-empty array of {path, old_string, new_string}")
+      }
+      if (args.path || args.old_string !== undefined || args.new_string !== undefined) {
+        throw new Error("edits array is mutually exclusive with path/old_string/new_string")
+      }
+      // 原子：先全量 read+match 检查（所有文件都能替换）——任一失败全不写
+      const prepared = []
+      for (const e of args.edits) {
+        if (!e.path) throw new Error("each edit must have a path")
+        if (!e.old_string) throw new Error(`edit for ${e.path}: old_string must not be empty`)
+        const abs = resolveInCwd(ctx, e.path)
+        const raw = await readFile(abs, "utf8")
+        const content = normalizeEOL(raw)
+        const occurrences = content.split(e.old_string).length - 1
+        if (occurrences === 0) {
+          throw new Error(
+            `edit aborted (atomic — no files written): old_string not found in ${e.path}\n` +
+            `  searched: "${e.old_string.slice(0, 100).split("\n")[0]}${e.old_string.length > 100 ? "…" : ""}"`
+          )
+        }
+        if (occurrences > 1 && !e.replace_all) {
+          throw new Error(
+            `edit aborted (atomic — no files written): old_string matches ${occurrences} times in ${e.path}; ` +
+            `provide more context or set replace_all`
+          )
+        }
+        const updated = e.replace_all
+          ? content.split(e.old_string).join(e.new_string)
+          : content.replace(e.old_string, () => e.new_string)
+        const matchIdx = content.indexOf(e.old_string)
+        const editStartLine = matchIdx >= 0 ? content.slice(0, matchIdx).split("\n").length : 1
+        const lineShift = e.new_string.split("\n").length - e.old_string.split("\n").length
+        prepared.push({ abs, path: e.path, raw, updated, editStartLine, lineShift, occurrences: e.replace_all ? occurrences : 1 })
+      }
+      // 全部检查通过——逐个写
+      const results = []
+      for (const p of prepared) {
+        await writeFile(p.abs, joinWithEol(normalizeEOL(p.updated).split("\n"), p.raw), "utf8")
+        recordWrite(p.abs, { type: "edit", startLine: p.editStartLine, shift: p.lineShift })
+        results.push(`Edited ${p.path}: replaced ${p.occurrences} occurrence(s)`)
+      }
+      return results.join("\n")
+    }
+
+    // 单文件（现状路径）
     const abs = resolveInCwd(ctx, args.path)
     if (!args.old_string) {
       throw new Error("old_string must not be empty (empty string matches everywhere and would corrupt the file)")
@@ -219,9 +297,11 @@ export const editTool = {
       throw new Error(
         `old_string not found in ${args.path}\n` +
         `  searched: "${preview}${args.old_string.length > 100 ? "…" : ""}"\n` +
-        (isDirty(abs)
-          ? `  hints: this file was modified since your last read (a prior write marked it dirty) — re-read it to refresh your copy of the content, then retry\n`
-          : `  hints: whitespace mismatch? file already changed? try reading the file first\n`) +
+        (lastWriteOf(abs)?.type === "write"
+          ? `  hints: this file was modified since your last read (write 全文重写后内容全变) — re-read it to refresh your copy of the content, then retry\n`
+          : isDirty(abs)
+            ? `  hints: this file was modified since your last read (a prior write marked it dirty) — re-read it to refresh your copy of the content, then retry\n`
+            : `  hints: whitespace mismatch? file already changed? try reading the file first\n`) +
         candText
       )
     }
@@ -237,7 +317,11 @@ export const editTool = {
     // normalizeEOL first: new_string may carry \r\n (e.g. pasted from a raw CRLF
     // read); without normalizing, split leaves stray \r and CRLF join makes \r\r\n.
     await writeFile(abs, joinWithEol(normalizeEOL(updated).split("\n"), raw), "utf8")
-    markDirty(abs)
+    // 2026-08-31 工具顺手度：记录受影响区（替换首行 + 行数差）——insert_after 精确判定
+    const matchIdx = content.indexOf(args.old_string)
+    const editStartLine = matchIdx >= 0 ? content.slice(0, matchIdx).split("\n").length : 1
+    const lineShift = args.new_string.split("\n").length - args.old_string.split("\n").length
+    recordWrite(abs, { type: "edit", startLine: editStartLine, shift: lineShift })
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Edited ${args.path}: replaced ${args.replace_all ? occurrences : 1} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
@@ -267,7 +351,24 @@ export const insertAfterTool = {
     // inserting at a drifted position (the failure mode that corrupted test
     // structure repeatedly). after_regex callers get the same gate — a stale
     // target line is just as wrong, and the rule is simpler to reason about.
-    if (isDirty(abs)) {
+    // 2026-08-31 工具顺手度（用户批准）：判定精确化——本 session 写入工具记录受影响区
+    // （lastWrite），after_line 在未受影响区（<= startLine）→ 行号未漂移 → 允许
+    // （消掉"我写的文件被当外部修改"的摩擦）；受影响区内/write 全文重写 → 拒绝。
+    const lw = lastWriteOf(abs)
+    if (lw && args.after_line != null) {
+      if (lw.type === "write") {
+        throw new Error(
+          `${args.path} 刚被 write 全文重写（was modified since your last read）——任何行号都可能漂移，必须重 read。`
+        )
+      }
+      if (args.after_line > lw.startLine) {
+        throw new Error(
+          `${args.path} 的 after_line ${args.after_line} 在上次写入（L${lw.startLine}）之后——` +
+          `行号已漂移 ${lw.shift >= 0 ? "+" : ""}${lw.shift}，请用新行号或先 read。`
+        )
+      }
+      // after_line <= startLine → 行号未漂移 → 允许
+    } else if (isDirty(abs)) {
       throw new Error(
         `${args.path} was modified since your last read — line numbers may be stale.\n` +
         `Read the file again (read tool) to refresh line numbers, then retry insert_after.`
@@ -309,7 +410,7 @@ export const insertAfterTool = {
     // edit — a CRLF file must not silently become LF here either).
     const updated = joinWithEol(lines, raw)
     await writeFile(abs, updated, "utf8")
-    markDirty(abs)
+    recordWrite(abs, { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length })
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Inserted after line ${targetLine} in ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   },
@@ -401,7 +502,7 @@ export const hashlineEditTool = {
     // Write back in the file's original EOL style (same rule as edit / apply_patch).
     const updated = joinWithEol(lines, raw)
     await writeFile(abs, updated, "utf8")
-    markDirty(abs)
+    recordWrite(abs, { type: "edit", startLine: pos + 1, shift: newLines.length - target.length })
     const diff = gitDiffOne(ctx.cwd, abs)
     return `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}${corrupted ? `\n${FFFD_WARNING}` : ""}`
   },
