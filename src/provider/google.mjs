@@ -5,6 +5,17 @@
  */
 
 import { proxyFetch } from "../proxy.mjs"
+import { requestWithRetry } from "./retry.mjs"
+
+/** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
+function mapFunctionCallingConfig(choice) {
+  if (choice === "auto") return { mode: "AUTO" }
+  if (choice === "required") return { mode: "ANY" }
+  if (choice === "none") return { mode: "NONE" }
+  if (choice && typeof choice === "object" && choice.function?.name) return { mode: "ANY", allowedFunctionNames: [choice.function.name] }
+  throw new Error(`Invalid tool_choice for Gemini format: ${JSON.stringify(choice).slice(0, 120)}`)
+}
+
 
 /** Convert OpenAI-format tools to Gemini format */
 export function normalizeTools(tools) {
@@ -61,7 +72,7 @@ export function convertMessages(messages) {
 
 /** Build and send a Gemini chat request. Returns the same shape as core.mjs chat.
  *  2026-08-31 会诊 #6：接入 rateGate/recordRate（原实现完全绕过 TPM/RPM 闸门）。 */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal }) {
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice }) {
   const systemMessages = messages.filter((m) => m.role === "system")
   const contents = convertMessages(messages)
 
@@ -84,6 +95,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     }
   }
   if (tools?.length) body.tools = tools
+  // 2026-08-31：tool_choice 能力层 → Gemini toolConfig.functionCallingConfig
+  if (toolChoice !== undefined) {
+    body.toolConfig = { functionCallingConfig: mapFunctionCallingConfig(toolChoice) }
+  }
 
   const FETCH_TIMEOUT_MS = 600_000
   // Gemini uses API key as query parameter
@@ -96,21 +111,21 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const estimated = estimateRequestTokens({ messages })
   await rateGate(provider, estimated, onWait, signal)
 
-  const response = await proxyFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-      : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    _headerTimeoutMs: FETCH_TIMEOUT_MS,
-    _bodyIdleMs: 120_000,
-  }, provider.proxyUri)
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => "")
-    throw new Error(`Gemini API error ${response.status}: ${text}`)
-  }
+  // 2026-08-31：5xx/网络与 OpenAI 格式统一退避重试链（原完全无重试——Gemini 高峰
+  // 503 直接抛错崩溃整个 turn）
+  const response = await requestWithRetry(
+    () => proxyFetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
+        : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      _headerTimeoutMs: FETCH_TIMEOUT_MS,
+      _bodyIdleMs: 120_000,
+    }, provider.proxyUri),
+    { signal, onWait, buildMessage: (status, text) => `Gemini API error ${status}: ${text}` },
+  )
 
   const result = await parseGeminiStream(response, { onToken, onReasoning, signal })
   recordRate(provider, estimated, result.usage)

@@ -2693,6 +2693,75 @@ test("provider: readSSE — network partial 警告注入独立于 _warnings 已�
   assert.equal(result._warnings.filter((w) => w.name === "network-partial").length, 1)
 })
 
+test("provider: retry.mjs — 5xx 退避重试链与 OpenAI 格式对齐（会诊 2026-08-31）", async () => {
+  const { requestWithRetry } = await import("../src/provider/retry.mjs")
+  const { _rateHooks } = await import("../src/provider/rate.mjs")
+  const sleeps = []
+  const orig = _rateHooks.sleep
+  _rateHooks.sleep = async (ms) => { sleeps.push(ms) }
+  try {
+    let calls = 0
+    const resp = await requestWithRetry(async () => {
+      calls++
+      if (calls === 1) return new Response("overloaded", { status: 503 })
+      return new Response("OK")
+    }, { signal: undefined, buildMessage: (s, t) => `Gemini API error ${s}: ${t}` })
+    assert.equal(resp.ok, true, "503 后第二次成功")
+    assert.equal(calls, 2)
+    assert.deepEqual(sleeps, [1000], "退避 2^0*1s")
+  } finally {
+    _rateHooks.sleep = orig
+  }
+  // 429 尊重 Retry-After + 上限 300s
+  const sleeps2 = []
+  _rateHooks.sleep = async (ms) => { sleeps2.push(ms) }
+  try {
+    const h = new Headers({ "retry-after": "1200" })
+    let calls = 0
+    const resp = await requestWithRetry(async () => {
+      calls++
+      if (calls === 1) return new Response("nope", { status: 429, headers: h })
+      return new Response("OK")
+    }, { signal: undefined, buildMessage: (s, t) => `e: ${s}` })
+    assert.equal(resp.ok, true)
+    assert.equal(sleeps2[0], 300_000, "Retry-After 超上限钳到 300s")
+  } finally {
+    _rateHooks.sleep = orig
+  }
+})
+
+test("provider: anthropic tool_choice 映射 + google toolConfig 映射（能力层 2026-08-31）", async () => {
+  const { chat: anthropicChat } = await import("../src/provider/anthropic.mjs")
+  const { chat: geminiChat } = await import("../src/provider/google.mjs")
+  const { createServer } = await import("node:http")
+  const captured = []
+  const server = createServer((req, res) => {
+    let b = ""
+    req.on("data", (d) => (b += d))
+    req.on("end", () => {
+      captured.push(JSON.parse(b))
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end("event: message_stop\ndata: {}\n\n")
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  try {
+    const port = server.address().port
+    await anthropicChat({ baseURL: `http://127.0.0.1:${port}`, apiKey: "sk-t", model: "claude-3-5", format: "anthropic" }, {
+      messages: [{ role: "user", content: "hi" }], onToken: () => {}, onReasoning: () => {},
+      toolChoice: { type: "function", function: { name: "get_weather" } },
+    }).catch(() => {}) // Gemini/Anthropic 流解析对非标准 body 不关心，只捕获请求
+    assert.deepEqual(captured.at(-1)?.tool_choice, { type: "tool", name: "get_weather" }, "anthropic 映射 {type:'tool',name}")
+    await geminiChat({ baseURL: `http://127.0.0.1:${port}`, apiKey: "sk-t", model: "g", format: "google" }, {
+      messages: [{ role: "user", content: "hi" }], onToken: () => {}, onReasoning: () => {},
+      toolChoice: "required",
+    }).catch(() => {})
+    assert.deepEqual(captured.at(-1)?.toolConfig?.functionCallingConfig, { mode: "ANY" }, "google required→ANY")
+  } finally {
+    server.close()
+  }
+})
+
 test("provider: anthropic stream — CRLF 事件边界 + BOM 首 chunk（会诊 #12/#13）", async () => {
   const { chat } = await import("../src/provider/anthropic.mjs")
   const { createServer } = await import("node:http")
@@ -2742,7 +2811,6 @@ test("provider: anthropic stream — CRLF 事件边界 + BOM 首 chunk（会诊 
     server.close()
   }
 })
-
 
 test("provider: anthropic — 温度钳位 0-1（含 spec 无 tempRange 的兜底）", async () => {
   const { createServer } = await import("node:http")

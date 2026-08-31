@@ -61,7 +61,7 @@ export function createProvider(config) {
 }
 
 /** Send a streaming chat completion request with automatic continuation on truncation */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns }) {
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls }) {
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
   const spec = specForModel(provider.model)
@@ -74,7 +74,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     const result = await anthropicChat(provider, {
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
-      onToken, onReasoning, onWait, signal,
+      onToken, onReasoning, onWait, signal, toolChoice,
     })
     return result
   }
@@ -84,7 +84,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     const result = await geminiChat(provider, {
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
-      onToken, onReasoning, onWait, signal,
+      onToken, onReasoning, onWait, signal, toolChoice,
     })
     return result
   }
@@ -131,6 +131,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const enableThinking = resolveEnableThinking(provider, spec)
   if (enableThinking !== undefined) body.enable_thinking = enableThinking
   if (tools?.length) body.tools = tools
+  // 2026-08-31：tool_choice 能力层（透传 OpenAI 语义）；
+  // parallel_tool_calls 仅显式 true 时发送（默认不发=不改变现有行为）
+  if (toolChoice !== undefined) body.tool_choice = toolChoice
+  if (parallelToolCalls === true) body.parallel_tool_calls = true
 
   const estimated = estimateRequestTokens(body)
   await rateGate(provider, estimated, onWait, signal)
