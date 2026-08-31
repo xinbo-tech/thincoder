@@ -76,8 +76,13 @@ export async function requestWithRetry(request, {
     const message = buildMessage ? buildMessage(response.status, text) : `LLM API error ${response.status}: ${text}`
     lastStatus = response.status
 
-    if (response.status === 401 || response.status === 403) throw new Error(message)
-    if (response.status >= 400 && response.status < 500 && response.status !== 429 && !RETRYABLE_STATUS.has(response.status)) throw new Error(message)
+    if (response.status === 401 || response.status === 403) {
+      const e = new Error(message); e.status = response.status; throw e
+    }
+    // 4xx 非 429 非可重试：无重试直接抛——带 status 供 responses chat() 的 D6 链失效回退识别（2026-08-31 round2 复验 #1）
+    if (response.status >= 400 && response.status < 500 && response.status !== 429 && !RETRYABLE_STATUS.has(response.status)) {
+      const e = new Error(message); e.status = response.status; throw e
+    }
 
     if (response.status === 429) {
       const waitMs = parseRetryAfter(response.headers.get("retry-after"), rateLimitHits)

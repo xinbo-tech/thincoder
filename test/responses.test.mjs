@@ -6,8 +6,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { buildBody, parseStream, isChainInvalidError } from "../src/provider/responses.mjs"
-
+import { buildBody, parseStream, isChainInvalidError, isStoreRequiredHost } from "../src/provider/responses.mjs"
 const provider = (over = {}) => ({
   baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
   apiKey: "sk-t",
@@ -28,6 +27,15 @@ test("buildBody: 消息→items + system→instructions + 工具扁平化", () =
   assert.equal(body.tools[0].name, "get_date")
   assert.equal(body.tools[0].type, "function")
 })
+
+test("isStoreRequiredHost: GLM 必须带路径判定（round2 复验 #2——正则 \$ 锚定串尾 + 带 /api/v1 路径恒 false 致 GLM 恒 store:false）", () => {
+  // 2026-08-31 round2：isStoreRequiredHost 对完整 baseURL 直接正则测试——baseURL 必带路径
+  // （GLM 响应式契约 open.bigmodel.cn/api/v1）→ 永远不匹配 → GLM 恒 store:false → 链第二轮 400
+  // （D10 真机结论）。修复：与 isStatefulHost 一致先取 hostname。
+  assert.equal(isStoreRequiredHost("https://open.bigmodel.cn/api/v1"), true, "GLM 带路径必须识别")
+  assert.equal(isStoreRequiredHost("https://open.bigmodel.cn/api/paas/v4"), true, "GLM 预设路径同样识别")
+})
+
 
 test("buildBody: 白名单（百炼）默认开链——turn 内增量只发 function_call_output", () => {
   const p = provider()

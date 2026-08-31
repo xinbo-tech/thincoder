@@ -31,8 +31,13 @@ function isStatefulHost(baseURL) {
 
 /** store 必开 host（链保留依赖 store:true——真机：百炼 store:false → 链 400；GLM 同）。
  *  OpenAI 官方 store:false 链仍可用，不在内。 */
-function isStoreRequiredHost(baseURL) {
-  return isBailianHost(baseURL) || /(^|\.)bigmodel\.cn$/.test(baseURL ?? "")
+export function isStoreRequiredHost(baseURL) {
+  try {
+    const host = new URL(baseURL).hostname
+    return isBailianHost(baseURL) || /(^|\.)bigmodel\.cn$/.test(host)
+  } catch {
+    return false
+  }
 }
 
 /** 灰名单：格式完整但链未证实/不支持——显式全量 + 一次性 warning（不靠服务端报错）。
@@ -410,28 +415,33 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const estimated = estimateRequestTokens({ messages })
   await rateGate(provider, estimated, onWait, signal)
 
-  const response = await requestWithRetry(
-    () => proxyFetch(`${provider.baseURL}/responses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
-      body: JSON.stringify(body),
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-        : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      _headerTimeoutMs: FETCH_TIMEOUT_MS,
-      _bodyIdleMs: 120_000,
-    }, provider.proxyUri),
-    { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
-  )
-
-  if (isChainInvalidError(response.status)) {
+  // round2 复验 #1（2026-08-31）：retry 层对 4xx 非可重试是 throw 而非返回——
+  // requestWithRetry 从不返回 400/404 响应 → 下方 isChainInvalidError 分支原来不可达（D6 死代码）。
+  // 修复：catch 出错（e.status 已由 retry.mjs 挂上）→ 链失效时清链全量重发一次（仅一次，防死循环）。
+  let response
+  try {
+    response = await requestWithRetry(
+      () => proxyFetch(`${provider.baseURL}/responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+        body: JSON.stringify(body),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
+          : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        _headerTimeoutMs: FETCH_TIMEOUT_MS,
+        _bodyIdleMs: 120_000,
+      }, provider.proxyUri),
+      { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
+    )
+  } catch (chainErr) {
+    if (!isChainInvalidError(chainErr?.status)) throw chainErr
     // 链失效（404/400）：先清残留链再重建——D6 语义是真·全量重发（body.input=items）。
     // 不清链会走 buildBody 217-224 的增量分支：body.input = 裸 function_call_output 且
     // previousResponseId 未随 fullBody 带走 → 服务端 call_id 无归属 → 二次 400（2026-08-31 评审 #1）
     provider._responsesChain = null
     const fresh = buildBody(provider, messages, tools, { toolChoice, stateful, forceStateful: true })
     const fullBody = { ...fresh.body }
-    const retry = await requestWithRetry(
+    response = await requestWithRetry(
       () => proxyFetch(`${provider.baseURL}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
@@ -444,9 +454,24 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
     )
-    return finish(provider, retry, { onToken, onReasoning, signal, newChain: fresh.newChain, warnings })
   }
-
+  if (response.ok === false && isChainInvalidError(response.status)) {
+    // 极端：retry 语义回归（返回响应形态）——同处置（防御）
+    provider._responsesChain = null
+    response = await requestWithRetry(
+      () => proxyFetch(`${provider.baseURL}/responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+        body: JSON.stringify(body),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
+          : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        _headerTimeoutMs: FETCH_TIMEOUT_MS,
+        _bodyIdleMs: 120_000,
+      }, provider.proxyUri),
+      { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
+    )
+  }
   return finish(provider, response, { onToken, onReasoning, signal, newChain, warnings, estimated })
 }
 
