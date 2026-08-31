@@ -131,6 +131,23 @@ test("isChainInvalidError: 404/400 → 回退；其他失败重试", () => {
   assert.equal(isChainInvalidError(429), false)
 })
 
+test("parseStream: 百炼 SSE 帧 `data:{…}` 无空格（真机冒烟 2026-08-31 发现）", async () => {
+  // 百炼帧形态：id:1\nevent:response.output_text.delta\n:HTTP_STATUS/200\ndata:{...}（data: 后无空格）
+  // mock 此前全用带空格 'data: ' → 测试自洽世界假绿；真机 Qwen 才暴露静默空响应。
+  const frames = [
+    "id:1\nevent:response.output_text.delta\n:HTTP_STATUS/200\ndata:{\"sequence_number\":1,\"type\":\"response.output_text.delta\",\"delta\":\"你好\"}",
+    "id:2\nevent:response.completed\n:HTTP_STATUS/200\ndata:{\"sequence_number\":2,\"type\":\"response.completed\",\"response\":{\"id\":\"resp_q\",\"usage\":{\"input_tokens\":5,\"output_tokens\":2,\"total_tokens\":7}}}",
+  ]
+  const payload = frames.join("\n\n") + "\n\n"
+  const result = await parseStream({ body: new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(payload)); c.close() } }) }, {
+    onToken: () => {}, onReasoning: () => {},
+  })
+  assert.equal(result.content, "你好", "无空格 data: 帧必须解析")
+  assert.equal(result.responseId, "resp_q")
+  assert.equal(result.usage.completion_tokens, 2)
+})
+
+
 test("内置工具：host 映射声明 + web_search_call 捕获 + 本地化回传（2026-08-31 用户拍板）", async () => {
   const { buildBody, parseStream, builtinToolsFor } = await import("../src/provider/responses.mjs")
   // 声明映射：百炼/OpenAI/DeepSeek 默认 web_search；builtinTools:false 关闭；数组覆盖
