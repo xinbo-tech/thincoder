@@ -1297,6 +1297,32 @@ test("streaming simulation: only last line changes during token append", () => {
   // streamed segment: the first-token frame gains the blank (ANSI-colored "" ≠ "")
   // AND the bottom-anchored content shifts up by one row — a bounded one-shot
   // cost, then every following token touches only the streaming line.
+
+test("行级渲染缓存（2026-08-31 懒加载卡顿修复）：同内容行复用一致，streaming 行 text 变 → 失效重算", async () => {
+  const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
+  const cols = 80, rows = 24
+  const hello = "hello wrap cache unique 7c3d1 " + "**bold** markdown ".repeat(4)
+  const mk = (extra = {}) => ({
+    search: null, interruptPrompt: null, input: [], cursor: 0, question: null,
+    picker: null, wizard: null, tasks: [], processing: false, subTasks: {}, outputPanels: {},
+    permission: null, permissionPreview: [], queue: [],
+    lines: [{ text: hello, color: "", _kind: "text", _lineId: 1 }],
+    reasoning: "", streaming: "", _advisorBlocks: [], foldEnabled: true, expandedBlocks: null,
+    scroll: 0, ...extra,
+  })
+  const s = mk()
+  const a = buildConvLines(s, cols, rows)
+  // 逼重建（streaming 分量进 conv 键）——旧行对象不变 → 行缓存复用——输出与首轮一致
+  s.streaming = "x"
+  const b = buildConvLines(s, cols, rows)
+  assert.deepEqual(b.slice(0, a.length), a, "未变行复用缓存 → 输出一致")
+  s.streaming = ""
+  // 同对象 text 变（流式追加语义）→ 行缓存失效 → 输出变化
+  s.lines[0].text = hello + " 追加内容"
+  const c = buildConvLines(s, cols, rows)
+  assert.notDeepEqual(c, a, "text 变 → 行缓存失效重算（不吐旧内容）")
+})
+
   assert.ok(diffCount <= 4, `first-token frame: blank + content shift, got ${diffCount}`)
 
   // Same baseline, streaming content changes → ONLY the last line differs.

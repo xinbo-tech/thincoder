@@ -23,6 +23,25 @@ import { renderMarkdownPreservingWidth as _rmpw } from "./fold-block.mjs"
 export { _rmpw as _renderMarkdownPreservingWidth }
 
 let _convCache = { key: "", cols: 0, lines: [] }
+/** 2026-08-31 懒加载卡顿根因修复：行级 wrap/markdown 渲染缓存。
+ *  buildConvLines 全量重建 O(总行数)——真实 200 条历史 → 987 conv 行 94ms、loadOlder 后
+ *  111ms（主线程阻塞卡顿）。行对象 + cols + 加工后 text（含 search 高亮注入）为键，
+ *  已有行直接复用——loadOlder/prepend 只算新增行；streaming 行 text 变自动失效；
+ *  行对象在 unshift 间引用稳定（行级隔离，无跨 state 串扰）。 */
+const _wrapCache = new WeakMap()
+
+function wrapRowsCached(state, line, text, cols) {
+  const hit = _wrapCache.get(line)
+  if (hit && hit.cols === cols && hit.text === text && hit.color === line.color) return hit.rows
+  const renderedText = renderMathAndMarkdown(sanitizeDisplay(text))
+  const rows = []
+  for (const l of formatTables(renderedText, cols - 1)) {
+    for (const wrapped of wrapText(l, cols - 1)) rows.push(wrapped)
+  }
+  _wrapCache.set(line, { cols, text, color: line.color, rows })
+  return rows
+}
+
 
 export function convCacheKey(state, maxRows) {
   const lastLine = state.lines.length > 0 ? state.lines[state.lines.length - 1] : null
@@ -297,11 +316,12 @@ function buildConvLines(state, cols, maxRows) {
     // ANSI-aware). Rendering after wrapping measured raw markdown
     // (`**bold**` = 8) against displayed text (4) and sliced markers
     // mid-sequence — the table misalignment the user kept reporting.
-    const renderedText = renderMathAndMarkdown(sanitizeDisplay(text))
-    for (const line of formatTables(renderedText, cols - 1)) {
-      for (const wrapped of wrapText(line, cols - 1)) {
-        block.push({ text: wrapped, color: l.color, _foldId: l._foldId, _src: i })
-      }
+    // 2026-08-31 懒加载卡顿根因修复：行级渲染缓存（O(总行数) 全量重建——987 行实测 94ms，
+    // loadOlder 后缓存失效每页 111ms 卡顿；缓存在行对象 + cols + 加工后 text（含 search
+    // 高亮）上——已有行直接复用，加载只算新增行。streaming 行 text 变化自动失效。
+    const renderedRows = wrapRowsCached(state, l, text, cols)
+    for (const wrapped of renderedRows) {
+      block.push({ text: wrapped, color: l.color, _foldId: l._foldId, _src: i })
     }
     if (folded && block.length > threshold) {
       // FOLDED — unified form (fold-block.mjs renderFoldedHead, 2026-08-30 user

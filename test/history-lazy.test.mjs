@@ -103,5 +103,5 @@ test("historyToLines starts mid-turn without re-emitting the label (page edge)",
 
 test("page constants align with VS Code parity (initial window > page size)", () => {
   assert.ok(INITIAL_HISTORY_MESSAGES > HISTORY_PAGE_MESSAGES)
-  assert.equal(HISTORY_PAGE_MESSAGES, 50) // VS Code HISTORY_PAGE_SIZE parity
+  assert.equal(HISTORY_PAGE_MESSAGES, 20) // VS Code HISTORY_PAGE_SIZE parity（2026-08-31 50→20：懒加载每页更平顺，两端同节拍）
 })

@@ -7,7 +7,7 @@ import { slimToolResultForDisplay } from "./tool-events.mjs"
  *  the latest INITIAL_HISTORY_MESSAGES, then PgUp-at-top loads HISTORY_PAGE_MESSAGES
  *  more. Rebuilding an 8000-message session eagerly froze startup + first render. */
 export const INITIAL_HISTORY_MESSAGES = 200
-export const HISTORY_PAGE_MESSAGES = 50
+export const HISTORY_PAGE_MESSAGES = 20
 
 /**
  * Convert history[startIdx, endIdx) into conversation source lines (label lines
