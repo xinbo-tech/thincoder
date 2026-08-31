@@ -643,12 +643,14 @@ test("runAgent: 工具链末尾（last=tool）也是压缩安全点", async () =
     readonly: true,
     execute: async () => "x".repeat(400), // 100 token，增量推过阈值
   }
-  // 主循环第 1 次调用 → 工具（带实测 usage 7950）；工具结果落尾（last=tool）→ 下一轮
-  // 实测基线 7950 + 增量 100 = 8050 > 阈值 8000 → 触发压缩（第 2 次调用是摘要）；压缩后
-  // 基线失效回到纯估算（历史 ~250 + system/tools 开销），远低于 8000 → 第 3 次返回最终答案。
-  // 用实测路径而非纯估算，是因为 system/tools 开销是内部动态值，纯估算场景无法稳定设阈值。
+  // 主循环第 1 次调用 → 工具（带实测 usage 19950）；工具结果落尾（last=tool）→ 下一轮
+  // 实测基线 19950 + 增量 100 = 20050 > 阈值 20000 → 触发压缩（第 2 次调用是摘要）；压缩后
+  // 基线失效回到纯估算（历史 ~250 + system/tools 开销），低于 20000 → 第 3 次返回最终答案。
+  // 阈值 20000（而非旧 8000）：纯估算含 systemPrompt+tools 开销（内部动态值——2026-08-31
+  // discipline.md 路由总表 8KB 后开销 ~8-9K，旧 8000 阈值会在 turn 0 误触发压缩），留 11K
+  // 余量使测试对 prompt 增长稳健；实测分支用 19950 保持"增量推过阈值"的比值不破。
   const script = [
-    { toolCall: { name: "noop" }, usage: { prompt_tokens: 7950 } },
+    { toolCall: { name: "noop" }, usage: { prompt_tokens: 19950 } },
     { content: "这是摘要" },
     { content: "done" },
   ]
@@ -656,8 +658,8 @@ test("runAgent: 工具链末尾（last=tool）也是压缩安全点", async () =
   try {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-tool-"))
-    const agent = createAgent({ provider, tools: [bigNoop], config: { agent: { compactThreshold: 8000 } }, cwd })
-    // 预填 12 条小消息：turn 0 纯估算（~150 + system/tools 开销）低于 8000，不提前压缩
+    const agent = createAgent({ provider, tools: [bigNoop], config: { agent: { compactThreshold: 20000 } }, cwd })
+    // 预填 12 条小消息：turn 0 纯估算（~150 + system/tools 开销）低于 20000，不提前压缩
     agent.history = Array.from({ length: 12 }, (_, i) => ({ role: "user", content: `消息 ${i} ` + "x".repeat(32) }))
     let compressed = 0
     const out = await runAgent(agent, "继续", { onCompress: () => compressed++ })

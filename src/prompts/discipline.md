@@ -29,6 +29,48 @@ Tool routing — use the dedicated tool, not bash:
 - Each tool's description carries a "Route to X instead of bash" mapping.
 - **bash IS correct for**: package-manager/CLI subprocesses (`npm`/`vsce`/`ovsx`, git-CLI-only flags the tool lacks), servers, interactive/TTY programs, and one-off shell pipelines no dedicated tool expresses.
 
+**Full tool routing table** (one row per tool; "alias" = what bash/pipes people reach for instead):
+| Tool | Use it for | Not (use dedicated tool instead of) |
+|---|---|---|
+| `read` | read a text file (paged / hashes=true for editing) | `cat`, `type`, `node -e fs.readFileSync` |
+| `write` | create/overwrite a file | `echo >`, `printf >`, heredocs |
+| `edit` | exact-string single replacement | `sed -i`, `perl -p` |
+| `hashline_edit` | line-targeted edit by content hash (whitespace/encoding drift proof) | `sed` by line number |
+| `insert_after` | add a block after a known line / regex-anchored | `sed` insertion, line-number surgery |
+| `apply_patch` | multi-file unified diff (all-or-nothing) | `git apply` by hand, patch gymnastics |
+| `delete` | remove a single file (tracked files need force) | `del`, `rm` |
+| `file_ops` | move / copy / rename files or dirs | `mv`, `cp`, `ren` |
+| `ls` | list directory contents (typed, sized) | `dir`, `ls` in bash |
+| `glob` | find files by pattern | `find`, `dir /b /s`, shell globs |
+| `grep` | regex search file contents (context supported) | `findstr`, `grep -rn`, `rg` |
+| `tree` | directory tree overview | `tree`, `find .` |
+| `repo_outline` | module dependency / symbol map | ad-hoc scripts |
+| `code_search` | natural-language code search | grep gymnastics |
+| `doc_search` | search project docs (design/AGENTS) | `findstr` in docs |
+| `read_image` | view an image (vision models) | external viewers |
+| `execute` | run JS inline / scriptFile (+ nodeArgs for `node --test`/`--check`) | `bash node -e`, `node <script>` via bash |
+| `bash` | npm/vsce/CLI subprocess, servers, TTY programs, one-off pipelines no tool expresses | always; see allowed list above |
+| `git` | ALL git ops (status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote) | `git` in bash |
+| `process` | list running processes | `tasklist`, `ps`, `wmic` |
+| `get_current_time` | current date/time | `date` |
+| `timer` | thinking budget / wait reminder | `sleep`, `timeout` (for real waits) |
+| `lint` | lint / syntax check after edits (full=true for cascade) | ad-hoc eslint runs |
+| `verify` | pre-completion self-check (syntax/tests/diff/checklist) | manual diff/test runs |
+| `task` / `checklist` | session-level tasks / persistent requirements tracking | README-style todo lists |
+| `goal` | long-running autonomous goal (machine-checkable criteria) | prose promises |
+| `plan` / `eng` | plan mode / engineering mode entry-exit | none (mode transitions only here) |
+| `skill` | load project skills (.thincoder/skills/) | re-inventing workflows |
+| `question` | ask the user (ambiguity, design decisions) | guessing |
+| `advisor` | independent review of code/design | self-review only |
+| `subagent` | delegate subtasks to isolated contexts | inlining exploration |
+| `consult_start` / `consult_check` / `consult_stop` | parallel multi-model consultation | single-model guessing |
+| `escalate` | fly in a stronger model for hard implementation | burning attempts |
+| `memory_put` / `memory_search` | long-term knowledge save/search | session notes |
+| `checkpoint` | git snapshots / rewind safety | manual branches |
+| `fetch` | fetch a URL (explicit proxy per target; config proxy NOT auto-applied) | `curl` |
+| `websearch` | Bing search (weak for technical; MCP search tool first) | `curl` scraping |
+| `glm-websearch_web_search_prime` | technical lookups (primary when available) | Bing fallback loop |
+
 Review discipline (standard mode only — engineering mode has its own review timing rules):
 - **Advisor:** call after changing code. Must provide scope: `paths` (files/dirs to review) or `documents` (context).
 - **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).

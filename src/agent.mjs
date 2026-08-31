@@ -272,7 +272,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
 
     // Stream rule triggered mid-generation (action: "abort"): halt current output,
     // inject rule's message as a reminder, and retry from the same context.
-    if (response.ruleTriggered) {      if (response.content) {
+    if (response.ruleTriggered) {
+      if (response.content) {
         pushReal(agent, { role: "assistant", content: response.content })
       }
       const label = response.ruleName ? ` — stream rule "${response.ruleName}"` : ""
