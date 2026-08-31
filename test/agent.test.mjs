@@ -3515,6 +3515,15 @@ test("prompts/discipline.md: 读/更新文档已嵌入 Workflow 箭头序列（�
   assert.ok(ownLine, "归属句存在")
   assert.ok(ownLine.includes("find the owner and amend"), "归属句含 find the owner and amend")
 })
+
+test("prompts/discipline.md: 用户约定执行纪律条款在（2026-08-31 两次违约教训——滚动翻窗/懒加载 PgUp，防回退）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+  assert.ok(text.includes("用户约定执行纪律"), "纪律条款标题在")
+  assert.ok(text.includes("不得用"), "不得用（等效实现替换约定）在")
+  assert.ok(text.includes("以用户原话为准"), "以用户原话为准在")
+  assert.ok(text.includes("升级路径"), "不得包装成升级路径交付在")
+})
+
 // ---------------------------------------------------------------- 探索蒸馏异步化（SEND-STALL-DISTILL 2026-08-25）
 // 轮末蒸馏不阻塞回合返回（AC1）；下一轮开头 await 落定后再 push 输入（AC2/N1）；
 // onDistilled 仅在替换历史时触发（AC3）；蒸馏失败静默、历史原样（AC4）。

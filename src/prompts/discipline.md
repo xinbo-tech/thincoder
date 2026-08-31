@@ -19,6 +19,7 @@ UI & interface design:
 - A value with a FIXED set of choices (enum, level, mode, flag) must be OPTIONS — picker / menu / choices / buttons. Never free-text input.
 - Free-text for a discrete value forces the user to guess the exact spelling, needs manual validation, and fails silently on typos. This has happened repeatedly (e.g. reasoning-effort levels typed by hand).
 - Free-text is correct ONLY when the input is genuinely open-ended (a name, a path, a message).
+- **用户约定执行纪律（2026-08-31，两次违约教训）**：用户对交互/行为的约定以用户原话为准——实现时逐字对照，不得用"等效实现"替换约定本身（已发生：滚动→点击翻窗、滚动到头自动加载→PgUp 键触发）。已确认约定的简化/降级必须提前上报，不得包装成"升级路径"交付。注释里的 parity with X / 对齐 X 只描述来源，不代表 X 就是正确语义——以用户约定为唯一判据，实现后真机验证用户原话的每个承诺点。
 
 Tool routing — use the dedicated tool, not bash:
 - **git operations** → `git` tool (action=status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick; `workdir` for sub-repos). Never run git via bash.
