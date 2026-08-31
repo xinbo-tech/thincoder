@@ -23,6 +23,133 @@ import { renderMarkdownPreservingWidth as _rmpw } from "./fold-block.mjs"
 export { _rmpw as _renderMarkdownPreservingWidth }
 
 let _convCache = { key: "", cols: 0, lines: [] }
+
+/** 2026-08-31 懒加载卡顿优化②：段级行体缓存（行对象→conv 行数组）。
+ *  与行级 wrapRowsCached 分层：wrap 缓存只省 markdown/换行重算（streaming 行 text 变失效），
+ *  段缓存省**整个行体的折叠/展开/窗口化组装**——loadOlder unshift 后尾部 987 行段全命中，
+ *  rebuild 从 25.7ms → ~8ms 量级。签名由 lineSegSig 集中计算（该段输出的所有决定因素）。 */
+const _lineSegCache = new WeakMap()
+
+/** 段签名：段输出的所有决定因素（漏一项 → 缓存失效不全 → 显示 stale）。
+ *  返回 { textRef, sig }——text 用**引用比较**（O(1)；streaming 同对象 text 变 → 新引用
+ *  ≠ 旧引用 → 失效），其余短字段（列宽/行数上限/颜色/种类/折行 id/lineId/foldEnabled/
+ *  该段折叠展开态+offset/search）拼接——**不**把 l.text 全量拼进 sig（987 行 × KB 级
+ *  字符串拼接实测 20ms，等于没优化）。 */
+function lineSegSig(state, l, i, cols, maxRows) {
+  const longKey = `long-${l._lineId ?? i}`
+  const expanded = state.expandedBlocks?.has(longKey) ? 1 : 0
+  const offset = state._foldScroll?.get(longKey) ?? 0
+  const searchSig = state.search?.query
+    ? `${state.search.query}:${state.search.index ?? 0}:${l._searchMatches?.length ?? 0}`
+    : ""
+  return {
+    textRef: l.text,
+    sig: [
+      cols, maxRows ?? 0, l.color ?? "", l._kind ?? "", l._foldId ?? "",
+      l._lineId ?? "", state.foldEnabled === false ? 0 : 1, expanded, offset, searchSig,
+    ].join("|"),
+  }
+}
+
+/** 普通源行 → conv 行数组（行体；不含前后空行——空行由 buildConvLines 外层逻辑补）。
+ *  从 buildConvLines 循环抽出（2026-08-31 段缓存）；逻辑与原位置逐字同构。 */
+function buildLineSeg(state, l, i, cols, maxRows) {
+  const LONG_FOLD_LINES = 12
+  const out = []
+  let text = l.text
+
+  // Apply search highlighting
+  if (state.search && state.search.query && l._searchMatches) {
+    text = highlightSearchMatches(text, state.search.query, l._searchMatches, state.search.index, state.search.matches, i)
+  }
+
+  const longKey = `long-${l._lineId ?? i}`
+  const isReasoning = l._kind === "thinking" || (l._kind === undefined && l.color === C.reason)
+  const foldable = isReasoning || (l._kind === "tool" || (l._kind === undefined && l.color === C.dim) || (l._kind === undefined && l.color !== C.text && l.color !== C.reason))
+  const threshold = isReasoning ? 0 : LONG_FOLD_LINES
+  const folded = foldable && state.foldEnabled !== false && !state.expandedBlocks?.has(longKey)
+  const block = []
+  const renderedRows = wrapRowsCached(state, l, text, cols)
+  for (const wrapped of renderedRows) {
+    block.push({ text: wrapped, color: l.color, _foldId: l._foldId, _src: i })
+  }
+  if (folded && block.length > threshold) {
+    const kind = l.color === C.reason ? "thinking" : l.color === C.dim ? "tool output" : "message"
+    out.push(...renderFoldedHead({
+      header: foldHintLine(`▶ ${kind} · ${block.length} lines — click to expand`, longKey, i),
+      body: block, cols,
+    }))
+  } else if (foldable && block.length > threshold) {
+    if (state.foldEnabled === false) {
+      out.push(...block)
+    } else {
+      if (l.color === C.dim) {
+        for (const line of block) line._skipDimFold = true
+      }
+      out.push(...renderExpandedBlock({ body: block, foldKey: longKey, state, maxRows, cols, label: `${block.length} lines` }))
+    }
+  } else {
+    out.push(...block)
+  }
+  return out
+}
+
+/** 工具块段（2026-08-31 段缓存抽出——真实会话 106 个工具块每帧全量 wrap 32ms 的根治）。
+ *  返回 conv 行数组（工具块的折叠头+尾/展开窗口+控制行），逻辑与原 L221-258 逐字同构。 */
+function buildToolBlockSeg(state, l, i, cols, maxRows) {
+  const b = l._toolBlock
+  const foldKey = `tool-${l._lineId ?? i}`
+  const out = []
+  const status = !b.done
+    ? "running"
+    : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || "done"
+  if (isExpanded(state, foldKey)) {
+    const body = []
+    const pushWrapped = (raw, color) => {
+      for (const w of wrapText(raw, cols - 4)) body.push({ text: "  " + w, color, _skipDimFold: true })
+    }
+    for (const jl of b.argsJson) pushWrapped(jl, C.dim)
+    for (const ol of b.output) pushWrapped(ol, C.tool)
+    if (b.result) for (const rl of b.result) pushWrapped(rl, C.dim)
+    out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: `${b.name}${b.roundTag || ""} ${b.argsSummary}`.trim() }))
+  } else {
+    const headText = sliceByWidth(
+      `❯ ${b.name}${b.roundTag || ""}${b.argsSummary ? " " + b.argsSummary : ""}  · ${status}`,
+      Math.max(20, cols - 2),
+    )
+    const body = []
+    for (const jl of b.argsJson) for (const w of wrapText(jl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
+    for (const ol of b.output.slice(-3)) for (const w of wrapText(ol, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
+    if (b.result) for (const rl of b.result) for (const w of wrapText(rl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
+    out.push(...renderFoldedHead({ header: { text: headText, color: C.tool, _foldToggle: foldKey }, body, cols }))
+  }
+  return out
+}
+
+/** frozenAdvisor 段（2026-08-31 段缓存抽出）——foldKey 升级为 _lineId 派生（同 long-N 判例）。 */
+function buildFrozenAdvSeg(state, l, i, cols, maxRows) {
+  const frozenAdvKey = `advisor-done-${l._lineId ?? i}`
+  const out = []
+  if (isExpanded(state, frozenAdvKey)) {
+    const body = []
+    const rendered = renderMathAndMarkdown(sanitizeDisplay(l._frozenAdvisor))
+    for (const line of formatTables(rendered, cols - 1)) {
+      for (const wrapped of wrapText(line, cols - 1)) {
+        body.push({ text: wrapped, color: C.reason, _skipDimFold: true })
+      }
+    }
+    out.push(...renderExpandedBlock({ body, foldKey: frozenAdvKey, state, maxRows, cols, label: "[advisor · review done]" }))
+  } else {
+    out.push({
+      text: `▶ [advisor · review done] … click to expand`,
+      color: C.fold,
+      _foldToggle: frozenAdvKey,
+    })
+  }
+  return out
+}
+
+
 /** 2026-08-31 懒加载卡顿根因修复：行级 wrap/markdown 渲染缓存。
  *  buildConvLines 全量重建 O(总行数)——真实 200 条历史 → 987 conv 行 94ms、loadOlder 后
  *  111ms（主线程阻塞卡顿）。行对象 + cols + 加工后 text（含 search 高亮注入）为键，
@@ -212,47 +339,45 @@ function buildConvLines(state, cols, maxRows) {
     // Frozen subagent activity block (§7.2 D4, 2026-08-30): rendered as its own
     // collapsible section — clickable expand/collapse like the running block.
     if (l._frozenSubTask) {
-      convLines.push(...frozenSubTaskLines(state, l._frozenSubTask, cols, maxRows))
+      // 2026-08-31 段缓存：frozenSubTask 冻结后内容不变——签名含 sub.key + blocks 计数
+      const fKey = `sub-${l._frozenSubTask.key}`
+      const fSig = [
+        cols, maxRows ?? 0, l._frozenSubTask.key, l._frozenSubTask.blocks?.length ?? 0,
+        l._frozenSubTask.done ? 1 : 0, state.foldEnabled === false ? 0 : 1,
+        state.expandedBlocks?.has(fKey) ? 1 : 0, state._foldScroll?.get(fKey) ?? 0,
+      ].join("|")
+      const fHit = _lineSegCache.get(l)
+      if (fHit && fHit.textRef === l._frozenSubTask && fHit.sig === fSig) {
+        convLines.push(...fHit.rows)
+      } else {
+        const rows = frozenSubTaskLines(state, l._frozenSubTask, cols, maxRows)
+        _lineSegCache.set(l, { textRef: l._frozenSubTask, sig: fSig, rows })
+        convLines.push(...rows)
+      }
       continue
     }
     // ONE BLOCK PER TOOL CALL (2026-08-30 user ruling): header = name+args+
     // live status, body = args JSON + streaming output + result. Folded =
     // ▶ name args · status/summary; expanded = 60%-capped body (shared component).
     if (l._toolBlock) {
+      // 2026-08-31 段缓存：工具块签名含三缓冲长度+done/elapsed/summary+该块展开态——
+      // 流式 append 使 output.length 变 → 失效；real 会话 106 个工具块每帧全量 wrap 实测
+      // 32ms（rebuild 40ms 的大头），入缓存后命中只算签名拼接。
       const b = l._toolBlock
-      // Stable key from the line's own id (P1 2026-08-30): the line may shift
-      // index when loadOlder unshifts older pages — positional tool-${i} would
-      // re-bind the expand state to a different tool block.
-      const foldKey = `tool-${l._lineId ?? i}`
-      const status = !b.done
-        ? "running"
-        : `${b.elapsed !== null ? b.elapsed + "ms" : ""}${b.summary ? (b.elapsed !== null ? " · " : "") + sliceByWidth(b.summary, 50) : ""}`.trim() || "done"
-      if (isExpanded(state, foldKey)) {
-        const body = []
-        const pushWrapped = (raw, color) => {
-          for (const w of wrapText(raw, cols - 4)) body.push({ text: "  " + w, color, _skipDimFold: true })
-        }
-        for (const jl of b.argsJson) pushWrapped(jl, C.dim)
-        for (const ol of b.output) pushWrapped(ol, C.tool)
-        if (b.result) for (const rl of b.result) pushWrapped(rl, C.dim)
-        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: `${b.name}${b.roundTag || ""} ${b.argsSummary}`.trim() }))
+      const toolFoldKey = `tool-${l._lineId ?? i}`
+      const tSig = [
+        cols, maxRows ?? 0, b.argsJson?.length ?? 0, b.output?.length ?? 0, b.result?.length ?? 0,
+        b.done ? 1 : 0, b.elapsed ?? "", b.summary ?? "", b.name ?? "", b.roundTag ?? "",
+        l._lineId ?? "", state.foldEnabled === false ? 0 : 1,
+        state.expandedBlocks?.has(toolFoldKey) ? 1 : 0, state._foldScroll?.get(toolFoldKey) ?? 0,
+      ].join("|")
+      const tHit = _lineSegCache.get(l)
+      if (tHit && tHit.textRef === b && tHit.sig === tSig) {
+        convLines.push(...tHit.rows)
       } else {
-        // Head MUST be width-bounded: argsSummary for unknown/MCP tools is a
-      // JSON.stringify dump that can be thousands of chars — an overwide header
-      // row makes the terminal soft-wrap mid-frame, shifting every panel below
-      // (the "code breaks the input box border" report, 2026-08-30).
-      const headText = sliceByWidth(
-        `❯ ${b.name}${b.roundTag || ""}${b.argsSummary ? " " + b.argsSummary : ""}  · ${status}`,
-        Math.max(20, cols - 2),
-      )
-        const body = []
-        for (const jl of b.argsJson) for (const w of wrapText(jl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
-        for (const ol of b.output.slice(-3)) for (const w of wrapText(ol, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
-        // Result lines join the tail pool too — restore carrier has no output
-        // rows, so without this its folded tail showed only args JSON and the
-        // result vanished from the folded view (parity bug, 2026-08-30).
-        if (b.result) for (const rl of b.result) for (const w of wrapText(rl, cols - 4)) body.push({ text: w, color: C.dim, _skipDimFold: true })
-        convLines.push(...renderFoldedHead({ header: { text: headText, color: C.tool, _foldToggle: foldKey }, body, cols }))
+        const rows = buildToolBlockSeg(state, l, i, cols, maxRows)
+        _lineSegCache.set(l, { textRef: b, sig: tSig, rows })
+        convLines.push(...rows)
       }
       continue
     }
@@ -261,95 +386,37 @@ function buildConvLines(state, cols, maxRows) {
     // rendered, no gutter — review history convention kept from the flat era),
     // 60% cap via the shared component.
     if (l._frozenAdvisor) {
-      const frozenAdvKey = `advisor-done-${i}`
-      if (isExpanded(state, frozenAdvKey)) {
-        const body = []
-        const rendered = renderMathAndMarkdown(sanitizeDisplay(l._frozenAdvisor))
-        for (const line of formatTables(rendered, cols - 1)) {
-          for (const wrapped of wrapText(line, cols - 1)) {
-            body.push({ text: wrapped, color: C.reason, _skipDimFold: true })
-          }
-        }
-        convLines.push(...renderExpandedBlock({ body, foldKey: frozenAdvKey, state, maxRows, cols, label: "[advisor · review done]" }))
+      // 2026-08-31 段缓存：frozenAdvisor 文本冻结不变——签名含文本长度 + 展开态
+      // 注：foldKey 由 advisor-done-${i}（位置键）升级为 advisor-done-${_lineId ?? i}
+      // （同 long-N 判例——loadOlder unshift 后不重绑）
+      const frozenAdvKey = `advisor-done-${l._lineId ?? i}`
+      const aSig = [
+        cols, maxRows ?? 0, (l._frozenAdvisor ?? "").length,
+        state.foldEnabled === false ? 0 : 1,
+        state.expandedBlocks?.has(frozenAdvKey) ? 1 : 0, state._foldScroll?.get(frozenAdvKey) ?? 0,
+      ].join("|")
+      const aHit = _lineSegCache.get(l)
+      if (aHit && aHit.textRef === l._frozenAdvisor && aHit.sig === aSig) {
+        convLines.push(...aHit.rows)
       } else {
-        convLines.push({
-          text: `▶ [advisor · review done] … click to expand`,
-          color: C.fold,
-          _foldToggle: frozenAdvKey,
-        })
+        const rows = buildFrozenAdvSeg(state, l, i, cols, maxRows)
+        _lineSegCache.set(l, { textRef: l._frozenAdvisor, sig: aSig, rows })
+        convLines.push(...rows)
       }
       continue
     }
-    let text = l.text
 
-    // Apply search highlighting
-    if (state.search && state.search.query && l._searchMatches) {
-      text = highlightSearchMatches(text, state.search.query, l._searchMatches, state.search.index, state.search.matches, i)
-    }
-
-    // Long-message folding (2026-08-30 user ruling): MAIN OUTPUT / user messages
-    // (C.text) NEVER fold — primary conversation content is read by scrolling,
-    // not by expanding; a folded core answer hid the actual result behind a
-    // click. Foldable subjects narrow to THINKING (C.reason) and dim tool
-    // summaries — the auxiliary streams. (This re-enacts the pre-0.12.7 rule
-    // for main output only; the 0.12.7 "revert" had reopened folding for it.)
-    // Keyed by the source line's _lineId (2026-08-31 会诊三家共识：`long-${i}` 位置键在
-    // loadOlder unshift 后重绑——展开态/_foldScroll offset 串位。tool-* 已有判例
-    // （2026-08-30）；_lineId 未分配时退回索引（防御）。
-    const longKey = `long-${l._lineId ?? i}`
-    // Single source of truth: the producer stamps _kind ("thinking" / "text" /
-    // "tool") — buildConvLines READS the stamp instead of GUESSING from color.
-    // Three producers (live flushStream / restored historyToLines / injected
-    // lines) now emit the identical grammar; the renderer is one place.
-    // Fallback: unstamped lines keep the legacy color-based inference (defensive
-    // for any path this refactor missed — empty until proven otherwise).
-    const isReasoning = l._kind === "thinking" || (l._kind === undefined && l.color === C.reason)
-    // Foldable classes: thinking (ALWAYS — threshold 0) and dim auxiliaries.
-    // "text" (main output / user messages) NEVER folds.
-    const foldable = isReasoning || (l._kind === "tool" || (l._kind === undefined && l.color === C.dim) || (l._kind === undefined && l.color !== C.text && l.color !== C.reason))
-    const threshold = isReasoning ? 0 : LONG_FOLD_LINES
-    const folded = foldable && state.foldEnabled !== false && !state.expandedBlocks?.has(longKey)
-    const block = []
-    // Lightweight markdown display (IK5VW3): render BEFORE measuring — the
-    // table column math (formatTables) and wrapping must see the RENDERED
-    // text (ANSI consumes zero display width; the width functions are
-    // ANSI-aware). Rendering after wrapping measured raw markdown
-    // (`**bold**` = 8) against displayed text (4) and sliced markers
-    // mid-sequence — the table misalignment the user kept reporting.
-    // 2026-08-31 懒加载卡顿根因修复：行级渲染缓存（O(总行数) 全量重建——987 行实测 94ms，
-    // loadOlder 后缓存失效每页 111ms 卡顿；缓存在行对象 + cols + 加工后 text（含 search
-    // 高亮）上——已有行直接复用，加载只算新增行。streaming 行 text 变化自动失效。
-    const renderedRows = wrapRowsCached(state, l, text, cols)
-    for (const wrapped of renderedRows) {
-      block.push({ text: wrapped, color: l.color, _foldId: l._foldId, _src: i })
-    }
-    if (folded && block.length > threshold) {
-      // FOLDED — unified form (fold-block.mjs renderFoldedHead, 2026-08-30 user
-      // ruling): named identity header + last 3 lines. Replaces the legacy
-      // [first 4, anonymous ▶ at the ellipsis, last] whose orphaned-looking
-      // "… N more lines" segment confused the scrollback.
-      const kind = l.color === C.reason ? "thinking" : l.color === C.dim ? "tool output" : "message"
-      convLines.push(...renderFoldedHead({
-        header: foldHintLine(`▶ ${kind} · ${block.length} lines — click to expand`, longKey, i),
-        body: block, cols,
-      }))
-    } else if (foldable && block.length > threshold) {
-      if (state.foldEnabled === false) {
-        // Folding fully off — content already fully visible; a "click to
-        // collapse" hint would be misleading (toggling has no effect).
-        convLines.push(...block)
-      } else {
-        // EXPANDED thinking/dim long block via the shared component: blank + ▼
-        // control at the HEAD, content, 60% cap with a bottom collapse control.
-        // DIM blocks must not re-trigger the consecutive-dim folding below
-        // (folding stacked on folding — reported regression).
-        if (l.color === C.dim) {
-          for (const line of block) line._skipDimFold = true
-        }
-        convLines.push(...renderExpandedBlock({ body: block, foldKey: longKey, state, maxRows, cols, label: `${block.length} lines` }))
-      }
+    // ── 普通源行段（2026-08-31 懒加载卡顿优化②：段级缓存——行体 WeakMap 按行对象
+    // 缓存，签名含该段所有决定因素；unshift/loadOlder 后尾部段全命中，只算新增行。
+    // toggle/翻窗/收起只失效该块段，其它段照样命中。行为不变性是硬约束。
+    const seg = lineSegSig(state, l, i, cols, maxRows)
+    const hit = _lineSegCache.get(l)
+    if (hit && hit.textRef === seg.textRef && hit.sig === seg.sig) {
+      convLines.push(...hit.rows)
     } else {
-      convLines.push(...block)
+      const rows = buildLineSeg(state, l, i, cols, maxRows)
+      _lineSegCache.set(l, { textRef: seg.textRef, sig: seg.sig, rows })
+      convLines.push(...rows)
     }
     // Trailing blank after a main-output segment (user request 2026-08-30) —
     // landed after the segment's rendered content.

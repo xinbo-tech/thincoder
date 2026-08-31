@@ -1299,6 +1299,45 @@ test("streaming simulation: only last line changes during token append", () => {
   // cost, then every following token touches only the streaming line.
 
 test("行级渲染缓存（2026-08-31 懒加载卡顿修复）：同内容行复用一致，streaming 行 text 变 → 失效重算", async () => {
+
+test("段级缓存（2026-08-31 懒加载卡顿优化②）：loadOlder unshift 后尾部段命中、工具块 append 失效", async () => {
+  const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
+  const cols = 80, rows = 24
+  const mk = (lines, extra = {}) => ({
+    search: null, interruptPrompt: null, input: [], cursor: 0, question: null,
+    picker: null, wizard: null, tasks: [], processing: false, subTasks: {}, outputPanels: {},
+    permission: null, permissionPreview: [], queue: [],
+    lines, reasoning: "", streaming: "", _advisorBlocks: [], foldEnabled: true,
+    expandedBlocks: null, scroll: 0, ...extra,
+  })
+  // 行 A（普通文本）+ 行 B（工具块）
+  const lineA = { text: "lineA unique " + "data ".repeat(6), color: "", _kind: "text", _lineId: 1 }
+  const toolLine = {
+    text: "", color: "", _lineId: 2,
+    _toolBlock: {
+      name: "read", roundTag: "", argsSummary: "a.txt", done: true, elapsed: 12,
+      argsJson: ["{\"path\":\"a.txt\"}"], output: [], result: ["file content"], summary: "ok",
+    },
+  }
+  const s = mk([lineA, toolLine])
+  const first = buildConvLines(s, cols, rows)
+  // 模拟 loadOlder：头部 unshift 新行（新对象）——尾部行对象引用不变 → 段缓存应命中
+  const newLine = { text: "new older line unique " + "x ".repeat(4), color: "", _kind: "text", _lineId: 99 }
+  s.lines.unshift(newLine)
+  const second = buildConvLines(s, cols, rows)
+  // 输出长度变化 = 新行贡献（段命中不复制旧行内容变化）
+  assert.ok(second.length > first.length, "unshift 后行数增长（新行段计算）")
+  // 尾部行体（lineA + toolLine 的 conv 行）应在 second 中存在且与 first 一致（段命中复用）
+  const firstToolHead = first.find((l) => l.text?.includes("❯ read"))
+  const secondToolHead = second.find((l) => l.text?.includes("❯ read"))
+  assert.ok(firstToolHead && secondToolHead, "工具块头行存在")
+  assert.equal(secondToolHead.text, firstToolHead.text, "工具块头行一致（段命中复用）")
+  // 工具块流式 append → output.length 变 → 段失效 → 输出变
+  toolLine._toolBlock.output.push("new output line")
+  const third = buildConvLines(s, cols, rows)
+  assert.notDeepEqual(third, second, "output append → 工具块段失效重算")
+})
+
   const { buildConvLines } = await import("../src/tui/render-conversation.mjs")
   const cols = 80, rows = 24
   const hello = "hello wrap cache unique 7c3d1 " + "**bold** markdown ".repeat(4)
