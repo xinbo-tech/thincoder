@@ -12,6 +12,16 @@ export function httpTransport(baseURL, extraHeaders = {}) {
   let abortController = null
   let postUrl = url
   let legacySSE = false
+  let deadFired = false
+  let deadListeners = new Set()
+
+  /** 2026-08-31 MCP 会诊 P5：意外死亡通知（SSE 流断/error，非主动 close）。 */
+  const fireDead = (msg) => {
+    if (deadFired) return
+    deadFired = true
+    for (const cb of deadListeners) { try { cb(msg) } catch { /* listener error */ } }
+  }
+  const onDead = (cb) => { deadListeners.add(cb); return () => deadListeners.delete(cb) }
 
   const headers = () => {
     const h = { "Content-Type": "application/json", Accept: "text/event-stream, application/json", ...extraHeaders }
@@ -86,10 +96,14 @@ export function httpTransport(baseURL, extraHeaders = {}) {
             }
           } catch { /* not JSON, ignore */ }
         }
+        // 正常走完 = server 关闭了流（网络/对端退出）→ 非主动关闭视为死亡
+        if (!closed) fireDead("SSE stream ended")
       } catch (error) {
-        if (!closed) {
+        const wasClosed = closed
+        if (!wasClosed) {
           for (const [, resolve] of pending) resolve({ id: null, error: { code: -32000, message: `SSE error: ${error.message}` } })
           pending.clear()
+          fireDead(`SSE error: ${error.message}`)
         }
       }
     })()
@@ -206,5 +220,5 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     pending.clear()
   }
 
-  return { send, notify, close, openSSE, url, headers: extraHeaders, isAlive: () => !closed && eventSource != null }
+  return { send, notify, close, openSSE, url, headers: extraHeaders, isAlive: () => !closed && eventSource != null, onDead }
 }
