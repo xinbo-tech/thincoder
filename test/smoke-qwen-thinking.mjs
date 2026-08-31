@@ -33,6 +33,18 @@ if (!prov.apiKey) {
   process.exit(2)
 }
 
+// 2026-08-31：smoke 的 OFF 语义（enable_thinking:false 必须生效）只对**白名单百炼 qwen**
+// 成立（T4/T5 判例：非白名单域/非 qwen3 型号 → 不映射 thinking，服务端默认思考，OFF 必失败）。
+// 本机现实：qwenplan 常挂 deepseek 等模型——此时 smoke 无目标模型，skip（exit 0），
+// 打印原因并指引——不是失败（环境不满足，非测试失败）。发版判断人工确认。
+const { isBailianHost } = await import("../src/provider/normalize.mjs").catch(() => ({}))
+const baiHost = isBailianHost ? isBailianHost(prov.baseURL ?? "") : false
+const qwenModel = /^qwen/i.test(prov.model ?? "") // T5 判例：qwen3-coder 等非思考型号排除——目标是 enable_thinking 白名单 qwen 思考型号
+if (!baiHost || !qwenModel) {
+  console.log(`[smoke] skip — provider "${prov.name}" model=${prov.model} 非白名单百炼 qwen 思考型号（enable_thinking:false 映射只对百炼 qwen 生效；OFF 断言需要该目标）。指定百炼 qwen 模型（配置 providers 或传 provider 名参数）后再跑。`)
+  process.exit(0)
+}
+
 const base = { baseURL: prov.baseURL, apiKey: prov.apiKey, model: prov.model, maxTokens: 2048 }
 console.log(`provider=${prov.name} model=${prov.model} baseURL=${prov.baseURL.replace(/^https?:\/\//, "")}`)
 
@@ -55,7 +67,12 @@ async function one(label, patch) {
 }
 
 const off = await one("OFF", { thinking: null })
-const xh = await one("XHIGH", { reasoningEffort: "xhigh" })
+// 2026-08-31：XHIGH 档不再写死 "xhigh"——上游模型枚举各异（deepseek-v4-flash 是 low/high/max，
+// qwen3 是 low/medium/high/xhigh）——取 spec 枚举末值（"最高档"语义，任何模型通用）
+const { specForModel } = await import("../src/model-specs.mjs")
+const spec = specForModel(prov.model)
+const effortHigh = spec?.reasoningEffortEnum?.slice(-1)[0] ?? "high"
+const xh = await one("XHIGH", { reasoningEffort: effortHigh })
 const def = await one("DEFAULT", {})
 
 const fail = []

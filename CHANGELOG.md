@@ -1,4 +1,23 @@
 ## [0.12.52] — 2026-08-31
+## [0.12.53] — 2026-08-31
+
+### Added
+
+- **TUI 展开块内滚动**（2026-08-31 用户需求）：折叠区块 60% 高度封顶保留，正文改为滚动视口——`state._foldScroll` 记每块窗口起点；**滚轮命中块内容行 → 块内 ±3 行**（未命中走会话滚动），▲/▼ 控制行点击翻窗（step=winH 快速跳转）；**穿出语义**：块顶滚上/块底滚下 → 交还会话滚动（会话顶懒加载可达）；锚定补偿：暂停流式跟随期间内容增长按 convLen 增量补偿 scroll（读的位置不漂移）。**滚动读全文、永不截断**
+- **流式跟随尾部**：`state._followTail` 默认 true——输出活动期间渲染前钉底；用户上滚（PgUp/滚轮）暂停跟随，PgDn/滚回底部/新提交消息恢复
+- **工具顺手度**（2026-08-31）：① insert_after 精确判定（本 session 写入记录受影响区，未受影响区直接插入不逼重 read、受影响区拒绝保护栏）；② edit 数组形态 `edits: [{path, old_string, new_string}, ...]` 一次多文件原子替换；③ dispatch 拦截工具执行期间 console.log/console.error 回显给模型（异常路径同样回显）；④ 写入工具返回带上下文窗口（edit/insert_after/hashline_edit 返回写入点 ±3 行带行号——模型自检行号语义，防"行号漂移死循环"）
+
+### Changed
+
+- **懒加载滚动到头自动加载**（2026-08-31 用户约定修复）：恢复会话向上滚动到会话顶部自动加载更早一页（原只挂 PgUp 键=违约）；`HISTORY_PAGE_MESSAGES` 50→20（单页更平顺，vscode parity）
+- **三层渲染缓存**（懒加载卡顿根治）：行级 wrapRowsCached + 段级 _lineSegCache（覆盖普通行/工具块/frozenSubTask/frozenAdvisor）——loadOlder 后 rebuild 111ms→5-8ms 平坦（不随已加载历史增长）
+- **折叠 key 身份化**（会诊三家共识）：`long-${i}`/`fold-${foldCounter++}`/`advisor-done-${i}` 位置键全部改 `_lineId` 派生（loadOlder unshift 后展开态/块内滚动 offset 不串位）
+- **视口数学单源** `convViewport`（渲染+鼠标命中共用）：短会话顶部补 pad 后命中整体偏移的存量 bug 修复（点击折叠头/滚轮落空或错行）
+
+### Fixed
+
+- **块内滚动穿出缺陷**：滚到块顶/块尾后滚轮永远命中该块、穿不出 → 会话顶/懒加载不可达（"经过展开块滚不到顶"）——显式边界判定穿出
+- **懒加载只挂 PgUp 键**（小键盘无 PgUp 用户等于无入口）——滚轮滚到会话顶同样触发
 
 ### Fixed
 
