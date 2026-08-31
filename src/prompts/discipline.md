@@ -22,7 +22,7 @@ UI & interface design:
 - **用户约定执行纪律（2026-08-31，两次违约教训）**：用户对交互/行为的约定以用户原话为准——实现时逐字对照，不得用"等效实现"替换约定本身（已发生：滚动→点击翻窗、滚动到头自动加载→PgUp 键触发）。已确认约定的简化/降级必须提前上报，不得包装成"升级路径"交付。注释里的 parity with X / 对齐 X 只描述来源，不代表 X 就是正确语义——以用户约定为唯一判据，实现后真机验证用户原话的每个承诺点。
 
 Tool routing — use the dedicated tool, not bash:
-- **git operations** → `git` tool (action=status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick; `workdir` for sub-repos). Never run git via bash.
+- **git operations** → `git` tool (action=status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote/clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv; `workdir` for sub-repos). Never run git via bash.
 - **JavaScript** → `execute` (inline code; or `scriptFile`+`nodeArgs` for `node <file>` / `node --test` / `node --check`). Never `bash node -e`.
 - **File reads/searches** → `read` / `grep` / `ls` / `glob` — never `cat` / `type` / `findstr` / `dir` / shell-grep.
 - **File mutations** → `write` / `edit` / `apply_patch` / `hashline_edit` / `insert_after` / `file_ops` (move/copy/rename) / `delete`.
@@ -51,7 +51,7 @@ Tool routing — use the dedicated tool, not bash:
 | `read_image` | view an image (vision models) | external viewers |
 | `execute` | run JS inline / scriptFile (+ nodeArgs for `node --test`/`--check`) | `bash node -e`, `node <script>` via bash |
 | `bash` | npm/vsce/CLI subprocess, servers, TTY programs, one-off pipelines no tool expresses | always; see allowed list above |
-| `git` | ALL git ops (status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote) | `git` in bash |
+| `git` | ALL git ops (status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote/clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv) | `git` in bash |
 | `process` | list running processes | `tasklist`, `ps`, `wmic` |
 | `get_current_time` | current date/time | `date` |
 | `timer` | thinking budget / wait reminder | `sleep`, `timeout` (for real waits) |

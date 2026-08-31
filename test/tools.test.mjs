@@ -5,7 +5,7 @@
 import { test } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -433,6 +433,7 @@ slow("checkpoint: 全量回滚被禁，单文件恢复可用（v2 全量副本�
     const cps2 = await listCheckpoints(dir)
     assert.ok(cps2.length >= 3) // 原始 + 两次恢复前的 pre-restore 快照
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -468,6 +469,7 @@ slow("checkpoint: 快照后 commit 再回滚仍然恢复（v2 副本与 HEAD 无
     assert.equal(restored, "const v = 2 // snapshot state\n", "commit 后回滚仍恢复快照状态")
     assert.equal(summary.restored, true)
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -499,6 +501,7 @@ slow("checkpoint: 超大文件跳过副本并提示（skipped 列表）", async 
       /was NOT snapshotted/,
     )
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -557,6 +560,7 @@ slow("checkpoint: listFileVersions 区分同一文件的多个历史副本", asy
     // 未在快照中的文件 → 空列表
     assert.equal((await listFileVersions(dir, "never-existed.js")).length, 0)
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -589,6 +593,7 @@ slow("checkpoint 工具：versions 子命令列出文件历史版本", async () 
       /path is required for versions/,
     )
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -628,6 +633,7 @@ slow("checkpoint 工具：list / create / rewind 走工具入口", async () => {
     await assert.rejects(() => byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, { cwd: plain }), /Not a git repository/)
     rmSync(plain, { recursive: true, force: true })
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -663,6 +669,7 @@ slow("bash 工具：git 破坏性命令先快照后放行（未提交工作不�
     assert.equal((await rf(join(dir, "app.js"), "utf8")).replace(/\r\n/g, "\n"), "const v = 2 // 写好的未提交代码\n", "tracked 未提交修改恢复")
     assert.equal(await rf(join(dir, "new-file.js"), "utf8"), "export const fresh = 42\n", "untracked 新文件恢复")
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -696,6 +703,7 @@ slow("bash 工具：变体 git checkout HEAD -- . 同样快照后放行", async 
     await rewind(dir, id, { path: "app.js" })
     assert.equal((await rf(join(dir, "app.js"), "utf8")).replace(/\r\n/g, "\n"), "const v = 2 // 写好的未提交代码\n", "tracked 未提交修改恢复")
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -754,6 +762,465 @@ slow("checkpoint 工具：list 的文件名做 XML 转义（防注入模型上�
     const tree = await byName.git.execute({ action: "checkpoint", checkpointAction: "list", checkpointId: id }, ctx)
     assert.ok(tree.includes("a&amp;&apos;b&apos;.txt"), `file tree 应转义文件名: ${tree}`)
   } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------- CHECKPOINT 事故恢复闭环（F1-F7，2026-09-01）
+
+/** cwdHash12 契约（与 src/git/checkpoint.mjs 相同）：sha1(normalizeCwd(cwd)).slice(0,12) */
+async function cpRoot(cwd) {
+  const { createHash } = await import("node:crypto")
+  const { configDir } = await import("../src/config.mjs")
+  const norm = cwd.replace(/^([a-z]):/, (_, d) => d.toUpperCase() + ":")
+  return join(configDir, "checkpoints", createHash("sha1").update(norm).digest("hex").slice(0, 12))
+}
+
+/** 测试自清理：删除该 cwd 的快照目录（测试 repo 是唯一 mkdtemp 目录，hash 不与他人冲突） */
+async function cleanupCheckpoints(cwd) {
+  const { rm } = await import("node:fs/promises")
+  await rm(await cpRoot(cwd), { recursive: true, force: true })
+}
+
+slow("T1 F6：commit 成功后清空该项目 checkpoint（返回附清理行）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t1-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  const root = await cpRoot(dir)
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+
+    await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx)
+    assert.ok(existsSync(root), "快照目录存在")
+
+    writeFileSync(join(dir, "a.js"), "const v = 2\n")
+    const out = await byName.git.execute({ action: "commit", message: "second" }, ctx)
+    assert.match(out, /\(checkpoints cleared — commit is a new safety baseline\)/, "返回附清理行")
+    assert.ok(!existsSync(root), "checkpointRoot(cwd) 目录已删除")
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+slow("T2 F6/NF7：commit 失败不清空（nothing to commit → commit.ok=false）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t2-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  const root = await cpRoot(dir)
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx)
+
+    // 无任何改动 → add -A 成功但 commit 失败（nothing to commit）
+    const out = await byName.git.execute({ action: "commit", message: "nope" }, ctx)
+    assert.match(out, /git commit failed/, "commit 失败如实上报")
+    assert.ok(existsSync(root) && readdirSync(root).length >= 1, "快照保留")
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+slow("T2b NF7：清理失败不阻断 commit 结果（返回 cleanup skipped，快照保留）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const { open, chmod } = await import("node:fs/promises")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t2b-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  const root = await cpRoot(dir)
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx)
+    writeFileSync(join(dir, "a.js"), "const v = 2\n")
+
+    // 模拟删除失败：Windows 打开快照内文件句柄不释放；POSIX 把快照目录改为只读（unlink 需目录写权限）
+    let fh = null
+    if (process.platform === "win32") {
+      fh = await open(join(root, readdirSync(root)[0], "meta.json"), "r")
+    } else {
+      await chmod(root, 0o555)
+    }
+    try {
+      const out = await byName.git.execute({ action: "commit", message: "second" }, ctx)
+      assert.match(out, /git commit failed|file changed/, "commit 结果正常返回")
+      assert.match(out, /\(checkpoint cleanup skipped: /, "清理失败附 skipped 行")
+      assert.ok(!out.includes("checkpoints cleared"), "不谎报清理成功")
+      assert.ok(existsSync(root), "快照保留")
+    } finally {
+      if (fh) await fh.close()
+      if (process.platform !== "win32") await chmod(root, 0o755)
+    }
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T2c D2：安静 commit（输出为空）也清理——commit.ok 判定不依赖输出非空", () => {
+  // 行为路径：git commit 成功必有摘要输出（-q 才能安静，工具不传 -q），"输出为空"只能
+  // 在代码结构上证明——清理调用与 commit.out 回显同级、同属 commit.ok 分支，不嵌套在
+  // 输出非空条件内（D2：commit.ok 即成功判定）。
+  const src = readFileSync(join(import.meta.dirname, "..", "src", "tools", "git.mjs"), "utf8")
+  const commitCase = src.slice(src.indexOf('case "commit"'), src.indexOf('case "push"'))
+  const m = commitCase.match(
+    /if \(commit\.ok\) \{\n\s*if \(commit\.out\) parts\.push\(commit\.out\)\n\s*\/\/ F6:[\s\S]*?await deleteCheckpointsForCwd\(ctx\.cwd\)/
+  )
+  assert.ok(m, "清理调用与 commit.out 回显同级（cleanup 不依赖输出非空）")
+  assert.match(commitCase, /\(checkpoints cleared — commit is a new safety baseline\)/, "清理行文本在成功分支内")
+})
+slow("T3 F6 懒兜底：外部 git commit 后 checkpoint list 触发清空（all-or-nothing）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t3-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  const root = await cpRoot(dir)
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx)
+
+    // 外部 commit（绕过 git 工具）：HEAD 时间比最新快照新 → list 触发清空
+    writeFileSync(join(dir, "b.js"), "const v = 2\n")
+    await new Promise((r) => setTimeout(r, 1100)) // %ct 是 epoch 秒——确保 HEAD_ms > 快照 ms
+    git("add", ".")
+    git("commit", "-qm", "external")
+    const listed = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, ctx)
+    assert.equal(listed, "(no checkpoints yet)", "懒检查清空后返回空输出")
+    assert.ok(!existsSync(root), "目录已删除")
+
+    // all-or-nothing：外部 commit 后立即手动 create（快照比 HEAD 新）→ 整体跳过不清空
+    writeFileSync(join(dir, "c.js"), "const v = 3\n")
+    git("add", ".")
+    git("commit", "-qm", "external2")
+    await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx) // 快照时间 > HEAD
+    const kept = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, ctx)
+    assert.ok(kept.includes("意外丢弃改动"), "快照比 HEAD 新 → 不清空（安全启发式）")
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+slow("T4 F2/NF4：checkpoint list 提示行固定文本且幂等（两次调用各只出现一次）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t4-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    await byName.git.execute({ action: "checkpoint", checkpointAction: "create" }, ctx)
+
+    const HINT = "(意外丢弃改动？checkpointAction=rewind 可恢复操作前状态)"
+    const l1 = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, ctx)
+    const l2 = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, ctx)
+    for (const l of [l1, l2]) {
+      assert.ok(l.endsWith(HINT), `输出尾部为 D7 定稿文本: ${l.slice(-40)}`)
+      assert.equal((l.match(/意外丢弃改动/g) || []).length, 1, "只出现一次（幂等）")
+    }
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T4b NF1：schema 描述追加段每处 ≤ 60 字符（F1 描述精简）", () => {
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const props = byName.git.parameters.properties
+  const appends = [
+    "（checkout/restore 操作前自动快照，checkpointAction=rewind 恢复）",
+    "（操作前自动快照，checkpointAction=rewind 恢复）",
+    "（delete 操作前自动快照，checkpointAction=rewind 恢复）",
+    "（pop 操作前自动快照，checkpointAction=rewind 恢复）",
+    "（rewind 可恢复操作前状态，恢复前自动快照可逆）",
+  ]
+  const allDesc = [
+    props.path.description, props.mode.description, props.tagAction.description,
+    props.branchAction.description, props.stashAction.description,
+    props.checkpointAction.description, props.action.description,
+    props.rebaseAction.description, props.dryRun.description,
+  ]
+  for (const a of appends) {
+    assert.ok(allDesc.some((d) => d.includes(a)), `schema 描述含追加段: ${a}`)
+    assert.ok(a.length <= 60, `增量 ≤60 字符（实际 ${a.length}）: ${a}`)
+  }
+  // 新增破坏性 action（clean/rebase）同样带快照字样
+  assert.match(props.action.description, /clean\/rebase 操作前自动快照，checkpointAction=rewind 恢复/)
+  assert.match(props.rebaseAction.description, /操作前自动快照，checkpointAction=rewind 恢复/)
+  assert.match(props.dryRun.description, /操作前自动快照，checkpointAction=rewind 恢复/)
+})
+
+test("T5 F2：checkpoint list 空输出不变（(no checkpoints yet)）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t5-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    const out = await byName.git.execute({ action: "checkpoint", checkpointAction: "list" }, { cwd: dir })
+    assert.equal(out, "(no checkpoints yet)")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T5b F7：git 工具 action 集精确（既有 21 + 新增 11 = 32，不含 P2）", () => {
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const enums = byName.git.parameters.properties.action.enum
+  const EXPECTED = [
+    "diff", "status", "log", "show", "checkpoint", "add", "rm", "commit", "push",
+    "tag", "branch", "checkout", "restore", "stash", "fetch", "pull", "reset",
+    "revert", "merge", "cherry-pick", "ls-remote",
+    "clone", "init", "rebase", "remote", "clean", "switch", "apply", "worktree",
+    "archive", "blame", "mv",
+  ]
+  assert.deepEqual(enums, EXPECTED, "action 集精确（21 既有 + 11 新增）")
+  for (const p of ["gc", "config", "fsck", "bisect", "grep", "ls-files", "merge-base", "am", "submodule"]) {
+    assert.ok(!enums.includes(p), `不含 P2 action: ${p}`)
+  }
+})
+
+slow("T6 NF6：创建 101 个快照 → 最旧被淘汰（上限 100）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const { createCheckpoint, listCheckpoints } = await import("../src/git/checkpoint.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t6-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    const ids = []
+    for (let i = 0; i < 101; i++) {
+      const cp = await createCheckpoint(dir)
+      ids.push(cp.id)
+    }
+    const cps = await listCheckpoints(dir)
+    assert.equal(cps.length, 100, "总数 100")
+    assert.ok(!cps.some((c) => c.id === ids[0]), "最旧的 1 个被删")
+    assert.equal(cps[cps.length - 1].id, ids[1], "倒数第二旧的保留（新→旧排列尾部）")
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+slow("T7 F5 跨端互通：VS Code 镜像建的快照 CLI 直接 list/rewind（同目录同格式）", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const { dirname } = await import("node:path")
+  const { fileURLToPath } = await import("node:url")
+  const vscodeCp = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder-vscode", "src", "tools", "checkpoint.mjs")
+  if (!existsSync(vscodeCp)) return // standalone thincoder clone——vscode 端跑自身镜像一致性测试
+  const vs = await import((await import("node:url")).pathToFileURL(vscodeCp).href)
+  const { createCheckpoint, listCheckpoints, rewind } = await import("../src/git/checkpoint.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t7-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+
+    // VS Code 镜像建快照 → CLI 可见
+    writeFileSync(join(dir, "a.js"), "const v = 2\n")
+    const vscp = await vs.createCheckpoint(dir)
+    const cps = await listCheckpoints(dir)
+    assert.equal(cps.length, 1, "CLI 直接可见 VS Code 建的快照")
+    assert.equal(cps[0].id, vscp.id, "id 格式一致")
+
+    // CLI rewind 恢复 VS Code 建的快照
+    writeFileSync(join(dir, "a.js"), "const v = 999\n")
+    const s = await rewind(dir, vscp.id, { path: "a.js" })
+    assert.equal(s.restored, true)
+    assert.equal(readFileSync(join(dir, "a.js"), "utf8").replace(/\r\n/g, "\n"), "const v = 2\n")
+
+    // 反向：CLI 建 → VS Code 可见
+    const clicp = await createCheckpoint(dir)
+    const vscps = await vs.listCheckpoints(dir)
+    assert.ok(vscps.some((c) => c.id === clicp.id), "CLI 建的快照 VS Code 可见")
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T8 F1：破坏性 action 的 schema 描述含自动快照 + rewind 字样", () => {
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const props = byName.git.parameters.properties
+  const destructiveDescs = [
+    props.path.description, // checkout -- path / restore
+    props.mode.description, // reset --hard
+    props.stashAction.description, // stash pop
+    props.branchAction.description, // branch delete
+    props.tagAction.description, // tag delete
+    props.checkpointAction.description, // rewind
+    props.action.description, // clean/rebase（enum 级）
+  ]
+  for (const d of destructiveDescs) {
+    assert.match(d, /自动快照/, `描述含"自动快照": ${d}`)
+    assert.match(d, /rewind/, `描述含 rewind: ${d}`)
+  }
+})
+
+slow("T8b F7：新增 11 个 action 可用；clean/rebase 执行前输出 snapshot 行", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t8b-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+
+    // clone（本地 bare）
+    const bare = join(dir, "bare.git")
+    execFileSync("git", ["init", "-q", "--bare", bare], { cwd: dir })
+    const cl = await byName.git.execute({ action: "clone", remote: bare, path: "cl" }, ctx)
+    assert.ok(!/failed/i.test(cl), `clone: ${cl}`)
+    assert.ok(existsSync(join(dir, "cl", ".git")), "clone 产物存在")
+
+    // init（非 git 子目录）
+    mkdirSync(join(dir, "plain"), { recursive: true })
+    const init = await byName.git.execute({ action: "init" }, { cwd: join(dir, "plain") })
+    assert.match(init, /Initialized|Reinitialized/, `init: ${init}`)
+
+    // rebase（快照行 + 失败语义）
+    const reb = await byName.git.execute({ action: "rebase", ref: "HEAD" }, ctx)
+    assert.match(reb, /\[snapshot \S+ created before rebase\]/, "rebase 先行快照")
+
+    // remote add/list/set-url/remove
+    const ra = await byName.git.execute({ action: "remote", remoteAction: "add", remote: "origin", remoteUrl: "https://example.com/x.git" }, ctx)
+    assert.match(ra, /added/, `remote add: ${ra}`)
+    assert.match(await byName.git.execute({ action: "remote" }, ctx), /origin/)
+    assert.match(await byName.git.execute({ action: "remote", remoteAction: "set-url", remote: "origin", remoteUrl: "https://example.com/y.git" }, ctx), /URL set/)
+    assert.match(await byName.git.execute({ action: "remote", remoteAction: "remove", remote: "origin" }, ctx), /removed/)
+    assert.match(await byName.git.execute({ action: "blame", path: "a.js" }, ctx), /^[\^]?[0-9a-f]{7,}\s+\(/, "blame 输出提交哈希（干净文件）")
+    // clean（快照行 + 删除）与 dryRun（预览不快照）
+    writeFileSync(join(dir, "junk.tmp"), "x\n")
+    const clean = await byName.git.execute({ action: "clean" }, ctx)
+    assert.match(clean, /\[snapshot \S+ created before clean\]/, "clean 先行快照")
+    assert.ok(!existsSync(join(dir, "junk.tmp")), "untracked 文件被清")
+    writeFileSync(join(dir, "junk2.tmp"), "x\n")
+    const n = readdirSync(await cpRoot(dir)).length
+    const dry = await byName.git.execute({ action: "clean", dryRun: true }, ctx)
+    assert.match(dry, /Would remove/, `dryRun 预览: ${dry}`)
+    assert.equal(readdirSync(await cpRoot(dir)).length, n, "dryRun 不产生快照")
+    assert.ok(existsSync(join(dir, "junk2.tmp")), "dryRun 不删除")
+
+    // switch（含 -c）
+    assert.match(await byName.git.execute({ action: "switch", create: true, name: "feat" }, ctx), /Switched/)
+    assert.match(await byName.git.execute({ action: "switch", name: "master" }, ctx), /Switched/)
+
+    // apply（format-patch 产物：mod commit → reset 回 patch 基准 → 干净应用）
+    writeFileSync(join(dir, "a.js"), "const v = 2\n")
+    await byName.git.execute({ action: "commit", message: "mod", path: "a.js" }, ctx)
+    const patch = git("format-patch", "-1", "--stdout")
+    writeFileSync(join(dir, "p.patch"), patch)
+    git("reset", "-q", "--hard", "HEAD~1") // 回到 patch 基准（a.js = v1）
+    const ap = await byName.git.execute({ action: "apply", path: "p.patch" }, ctx)
+    assert.ok(!/failed/i.test(ap), `apply: ${ap}`)
+    assert.equal(readFileSync(join(dir, "a.js"), "utf8").replace(/\r\n/g, "\n"), "const v = 2\n", "patch 应用生效")
+    // worktree add（commit ref）/list/remove
+    const head = git("rev-parse", "HEAD").trim()
+    const wa = await byName.git.execute({ action: "worktree", worktreeAction: "add", path: "wt", ref: head }, ctx)
+    assert.ok(!/failed/i.test(wa), `worktree add: ${wa}`)
+    assert.ok(existsSync(join(dir, "wt", "a.js")), "worktree 检出")
+    assert.match(await byName.git.execute({ action: "worktree" }, ctx), /wt/)
+    assert.match(await byName.git.execute({ action: "worktree", worktreeAction: "remove", path: "wt" }, ctx), /removed/)
+
+    // archive / mv（blame 在 apply 之前已验——a.js 被 patch 应用后有未提交改动，
+    // blame 会显示 Not Committed Yet；blame 干净文件在 remote 段之后执行过）
+    const ar = await byName.git.execute({ action: "archive", path: "out.tar" }, ctx)
+    assert.ok(!/failed/i.test(ar), `archive: ${ar}`)
+    assert.ok(existsSync(join(dir, "out.tar")), "archive 产物存在")
+    assert.match(await byName.git.execute({ action: "mv", path: "a.js", dest: "a2.js" }, ctx), /Moved/)
+    assert.ok(existsSync(join(dir, "a2.js")), "mv 生效")
+  } finally {
+    await cleanupCheckpoints(dir)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+slow("T8c F7：rebase 保护——未提交改动存在时 snapshotBefore 先行，快照可恢复", async () => {
+  const { execFileSync } = await import("node:child_process")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t8c-"))
+  const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  const ctx = { cwd: dir }
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    git("config", "core.autocrlf", "false")
+    writeFileSync(join(dir, "a.js"), "const v = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+
+    // 未提交改动存在时 rebase：裸 rebase 拒绝（belt-and-braces），但快照先行
+    writeFileSync(join(dir, "a.js"), "const v = 2 // 未提交改动\n")
+    const out = await byName.git.execute({ action: "rebase", ref: "HEAD" }, ctx)
+    assert.match(out, /\[snapshot \S+ created before rebase\]/, "rebase 前自动快照")
+    assert.match(out, /git rebase failed/, "裸 rebase 拒绝未提交改动")
+
+    // 快照恢复未提交改动（rewind 单文件）
+    const id = out.match(/snapshot (\S+) created before rebase/)[1]
+    const { rewind } = await import("../src/git/checkpoint.mjs")
+    const s = await rewind(dir, id, { path: "a.js" })
+    assert.equal(s.restored, true)
+    assert.equal(readFileSync(join(dir, "a.js"), "utf8").replace(/\r\n/g, "\n"), "const v = 2 // 未提交改动\n")
+  } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })
@@ -827,6 +1294,7 @@ slow("bash 护栏：checkout ./restore/clean -f/链式写法先快照后放行�
     }
     git("checkout", "-q", "-") // 回到原分支，清理
   } finally {
+    await cleanupCheckpoints(dir)
     rmSync(dir, { recursive: true, force: true })
   }
 })

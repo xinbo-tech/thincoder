@@ -27,6 +27,7 @@
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md 提示词）同板块保留——历史决策记录 |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）同板块独立保留——均为已实现专题 |
+| Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 + commit 清理（2026-09-01 定稿） |
 | 编辑工具可靠性 | `EDIT-TOOL-EOL-REQUIREMENTS.md`、`EDIT-TOOL-EOL-DESIGN.md` | edit/apply_patch/hashline_edit/write 行尾语义 + edit 候选提示 + 编码探测（2026-08-26，走查痛点实证；两端实现） |
 | TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`（输入框行为契约）、`TUI-TOOL-OUTPUT.md`（工具输出渲染）同板块独立保留——专题契约各自维护 |
 | 记忆 | `MEMORY.md` | |
@@ -53,3 +54,4 @@
 - 2026-08-21：初版（文档归属纪律，规格见 `AGENT-LOOP.md` §12）
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增板块「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）、「CLI Lint 引入」（CLI-LINT-*）与「发布流程」（RELEASE.md）；ROADMAP-0.9.0.md 归档标注（0.9.0 已过，现 0.12.x）
+- 2026-09-01：新增板块「Checkpoint 事故恢复」（CHECKPOINT.md，需求+设计+测试三层定稿）

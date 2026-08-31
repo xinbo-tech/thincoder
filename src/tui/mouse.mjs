@@ -14,7 +14,7 @@
  *   - picker option click = select it
  *   - folded-block hint click = expand it
  */
-import { computeLayout } from "./layout.mjs"
+import { computeLayout, subagentLineIndex } from "./layout.mjs"
 import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 
@@ -29,6 +29,24 @@ export function handleWheel(ctx, button, col, row) {
   const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
   const layout = computeLayout(state, dims)
   const P = layout.panels
+  // §7.2.1 D4: 固定子agent 面板（conversation 与 todo 之间）——面板行默认穿出
+  // 滚会话（F3，与 todo 面板同型）；命中展开区块内容行（_foldBlock 标记）→
+  // 块内滚动（现状能力不丢）。
+  if (P.subagent && r >= P.subagent.y && r < P.subagent.y + P.subagent.h) {
+    // 评审 #4：面板部分压缩（保底截断）后可见行 = 分隔线 + 末尾行——命中映射经
+    // subagentLineIndex（与 render-frame 同一几何契约），不再把行内坐标直接当索引用。
+    const lineEl = layout.subagentLines[subagentLineIndex(layout.subagentLines, P.subagent.h, r - P.subagent.y)]
+    if (!lineEl?._foldBlock || !lineEl._foldTotal) return false
+    // 穿出语义与会话区块一致：块内到边界（顶滚上 / 底滚下）→ 交还会话滚动
+    const before = foldScrollOffset(state, lineEl._foldBlock)
+    const winH = lineEl._foldWindow ?? 1
+    const total = lineEl._foldTotal
+    if (dir < 0 && before <= 0) return false
+    if (dir > 0 && before >= total - winH) return false
+    scrollFoldBlock(state, lineEl._foldBlock, dir, 3)
+    ctx.render?.()
+    return true
+  }
   if (r < P.conversation.y || r >= P.conversation.y + P.conversation.h) return false
   const convLines = buildConvLines(state, dims.cols, dims.rows)
   const gIdx = convGlobalIndex(convLines.length, P.conversation.h, state.scroll ?? 0)(r - P.conversation.y)
@@ -98,6 +116,27 @@ export function handleMouseClick(ctx, col, row) {
     if (lineEl && lineEl._row !== undefined && items[lineEl._row]) {
       ctx.popPicker(items[lineEl._row])
     }
+    return true
+  }
+
+  // ── §7.2.1 D4: 固定子agent 面板（conversation 与 todo 之间）——折叠/展开/翻窗
+  // 坐标映射到面板行（与 todo 面板同型；layout.subagentLines = 面板渲染行）。
+  if (P.subagent && r >= P.subagent.y && r < P.subagent.y + P.subagent.h) {
+    // 评审 #4：保底截断后可见行 ≠ 前 h 行——命中映射与 render-frame 同一几何契约
+    // （subagentLineIndex：分隔线 + 末尾区块行优先）。
+    const lineEl = layout.subagentLines[subagentLineIndex(layout.subagentLines, P.subagent.h, r - P.subagent.y)]
+    if (lineEl?._foldScrollUp || lineEl?._foldScrollDown) {
+      // ▲/▼ 控制行点击翻窗（60% 封顶保留、窗口随翻滚动，全文可达）
+      scrollFoldBlock(state, lineEl._foldScrollUp ?? lineEl._foldScrollDown,
+        lineEl._foldScrollUp ? -1 : 1, lineEl._foldWindow ?? 1,
+        typeof lineEl._foldTotal === "number" ? Math.max(0, lineEl._foldTotal - (lineEl._foldWindow ?? 1)) : undefined)
+      render()
+      return true
+    }
+    if (!lineEl?._foldToggle) return false
+    // 双向切换（fold-block.mjs 单源）：折叠头展开 / ▼ 控制收起
+    toggleFoldBlock(state, lineEl._foldToggle)
+    render()
     return true
   }
 

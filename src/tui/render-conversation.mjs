@@ -181,30 +181,21 @@ export function convCacheKey(state, maxRows) {
   // Content prefix in the signature: same kind+length with different content
   // would otherwise collide (stale render); 8 chars disambiguate in practice.
   const blocksSig = (state._advisorBlocks ?? []).map((b) => `${b.kind}:${b.text?.length ?? 0}:${String(b.text ?? "").slice(0, 8)}`).join(",")
-  // Subagent activity blocks (§7.2 D5): O(1) counter-style signature — a running
-  // epoch (any block/header change bumps it, subagent-blocks.mjs appendSubBlock /
-  // finishSubTask) + per-child totals. Running children also fold in a
-  // second-granularity elapsed part (see below). NOT a full text concat: N3
-  // forbids O(n) signature cost on every token.
-  let subSig = ""
-  for (const key in state.subTasks) {
-    const s = state.subTasks[key]
-    // Running children include a second-granularity elapsed component: the 1s
-    // ticker re-renders to tick the header countdown — without this the cache
-    // would hit and the "45s" display would freeze during silent stretches
-    // (long child tool runs with no chunks). Done children are constant — no
-    // per-second invalidation for them.
-    const elapsedPart = s.done ? "" : `:${Math.floor((Date.now() - s.started) / 1000)}`
-    subSig += `${key}:${s.done ? 1 : 0}${elapsedPart}:${s.turn}/${s.maxTurns}:${s.currentTool ?? ""}:${s.approval ?? ""}:${s.blockEpoch ?? 0}:${s.model ?? ""};`
-  }
-  // Frozen blocks ride state.lines ({_frozenSubTask}) — the lines.length part of
-  // this key covers their existence; expanding/collapsing one flips expandedBlocks
-  // (covered by `exp`). One extra: the last frozen payload's header depends on
-  // blocks content which never changes post-freeze — nothing more needed.
-  // Same single pass also builds the per-line COLOR-CLASS signature: foldability
-  // is decided by color class since main output (C.text) never folds while
-  // thinking/dim do (2026-08-30) — two states differing only in line color used
-  // to collide on this key and serve a stale cached render.
+  // NOTE (§7.2.1): running subagent blocks are NOT part of the conversation
+  // anymore — they render in the fixed bottom panel (subagent-panel.mjs,
+  // uncached per frame: the 1s ticker refreshes the panel's elapsed display).
+  // The old subSig (blockEpoch/turn/elapsed invalidation) is removed: the panel
+  // re-renders independently, so child activity must NOT invalidate the
+  // conversation cache (that would rebuild the whole conversation per child
+  // token — exactly what the 2026-08-31 lazy-load optimization eliminated).
+  // Frozen blocks ride state.lines ({_frozenSubTask}) — the lines.length part
+  // of this key covers their existence; expanding/collapsing one flips
+  // expandedBlocks (covered by `exp`). One extra: the last frozen payload's
+  // header depends on blocks content which never changes post-freeze — nothing
+  // more needed. Same single pass also builds the per-line COLOR-CLASS
+  // signature: foldability is decided by color class since main output (C.text)
+  // never folds while thinking/dim do (2026-08-30) — two states differing only
+  // in line color used to collide on this key and serve a stale cached render.
   // Tool-block carriers ({_toolBlock}) contribute their BUFFER SIZE signature:
   // output/result arrays mutate in place (streaming appends, result landing),
   // and carrier text is always "" — without this the cache serves a stale block
@@ -225,7 +216,7 @@ export function convCacheKey(state, maxRows) {
   // this the cache would serve the pre-search rows and highlight would never
   // appear (P0-1, 2026-08-30 consult). query+index covers match navigation.
   const searchPart = state.search?.query ? `${state.search.query}:${state.search.index ?? 0}` : ""
-  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}|${foldScrollSig}`
+  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}|${foldScrollSig}`
 }
 
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).
@@ -257,14 +248,16 @@ function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, 
 }
 
 /** Render a FROZEN child activity block carried on a state.lines entry
- *  (subagent-blocks.mjs freezeSubTaskLines pushes {_frozenSubTask: sub}). Identical
- *  interaction to the running tail section: folded = `[✓ coder#1 · glm-5.3 ·
- *  done 45s · turn 12/100] … click to expand` header + tail 3 block lines;
- *  expanded = blank + ▼ control + full timeline (60% screen cap via the shared
- *  component — capped view ends in a reachable collapse control). Toggle key
- *  `sub-${key}` — the SAME key the live section uses, so fold state carries
- *  across the freeze boundary seamlessly (user ruled 2026-08-30: frozen stays
- *  clickable — full design interaction, not a dim-lines fallback). */
+ *  (subagent-blocks.mjs freezeSubTaskLines pushes {_frozenSubTask: sub}). The
+ *  running form renders in the fixed bottom panel (§7.2.1 subagent-panel.mjs);
+ *  the frozen form stays in the stream with the same interaction: folded =
+ *  `[✓ coder#1 · glm-5.3 · done 45s · turn 12/100] … click to expand` header +
+ *  tail 3 block lines; expanded = blank + ▼ control + full timeline (60% screen
+ *  cap via the shared component — capped view ends in a reachable collapse
+ *  control). Toggle key `sub-${key}` — the SAME key the panel section uses, so
+ *  fold state carries across the freeze boundary seamlessly (user ruled
+ *  2026-08-30: frozen stays clickable — full design interaction, not a
+ *  dim-lines fallback). */
 function frozenSubTaskLines(state, sub, cols, maxRows) {
   const foldKey = `sub-${sub.key}`
   const elapsed = Math.floor(((sub.doneAt ?? Date.now()) - sub.started) / 1000)
@@ -337,7 +330,8 @@ function buildConvLines(state, cols, maxRows) {
       blankAfter = !nextMain
     }
     // Frozen subagent activity block (§7.2 D4, 2026-08-30): rendered as its own
-    // collapsible section — clickable expand/collapse like the running block.
+    // collapsible section in the stream (running blocks live in the fixed panel,
+    // §7.2.1 — the frozen form keeps the same clickable interaction).
     if (l._frozenSubTask) {
       // 2026-08-31 段缓存：frozenSubTask 冻结后内容不变——签名含 sub.key + blocks 计数
       const fKey = `sub-${l._frozenSubTask.key}`
@@ -425,65 +419,14 @@ function buildConvLines(state, cols, maxRows) {
       blankAfter = false
     }
   }
-  // ── Subagent activity blocks (§7.2 D4) — RUNNING blocks only ──────────────
-  // Rendered BEFORE the advisor blocks section. A child's block lives here only
-  // while it runs: on completion onToolResult freezes the block into state.lines
-  // (subagent-blocks.mjs freezeSubTaskLines) so it scrolls away with the conversation
-  // instead of staying pinned above the input box ("ghost" report 2026-08-30).
-  // Default folded = header summary line (▶ role#id · model · elapsed · turn
-  // n/max | current state) + tail 3 block lines; expanded = shared component
-  // (full timeline, 60% screen cap).
-  const runningSubs = Object.values(state.subTasks ?? {}).filter((s) => !s.done)
-  if (runningSubs.length > 0) {
-    // Divider between the conversation body and the running-subagent band
-    // (user request 2026-08-30, mirroring the task-panel divider in
-    // render-frame renderTodo). Only when at least one block actually renders —
-    // done children are frozen into state.lines above, so a divider for an
-    // empty band would hang over the section boundary.
-    // Unconditional divider (task-panel style): the preceding main-output
-    // trailing blank is breathing room, the divider is the section boundary —
-    // both belong. Only dedupe against another divider (idempotent re-render).
-    if (convLines.at(-1)?.color !== C.dim || !convLines.at(-1)?.text?.startsWith("─")) {
-      convLines.push({ text: "─".repeat(Math.max(1, cols - 1)), color: C.dim, _skipDimFold: true })
-    }
-    for (const sub of runningSubs) {
-      // Done children never reach this loop (filtered above): they are frozen
-      // into state.lines by subagent-blocks.mjs freezeSubTaskLines and removed
-      // from subTasks — a restored leftover would otherwise pin at the tail.
-      const foldKey = `sub-${sub.key}`
-      // Header summary: `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`
-      const icon = sub.approval ? "⏸" : "▶"
-      const elapsed = Math.floor(((sub.done ? sub.doneAt : Date.now()) - sub.started) / 1000)
-      const modelPart = sub.model ? ` · ${sub.model}` : ""
-      const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
-      let statePart
-      if (sub.approval) statePart = `等待审批: ${sub.approval}`
-      else if (sub.done) {
-        statePart = `done ${elapsed}s${sub.lastError ? ` — ${sub.lastError}` : ""}`
-      } else if (sub.currentTool) statePart = sub.currentTool
-      else statePart = "thinking..."
-      const argSummary = sub.currentTool && sub.toolArgs?.command
-        ? ` — ${String(sub.toolArgs.command).replace(/\s+/g, " ").trim().slice(0, 60)}`
-        : ""
-      convLines.push({
-        text: `[${icon} ${sub.key}${modelPart} · ${elapsed}s${turnPart}] ${sliceByWidth(statePart + argSummary, Math.max(20, cols - 30))}`,
-        color: sub.done ? C.dim : C.tool,
-        _foldToggle: foldKey,
-      })
-      if (isExpanded(state, foldKey)) {
-        // Full activity timeline via the shared component (per-kind colors,
-        // 60% screen cap — the header control may sit above the viewport once
-        // expanded, the capped bottom control stays reachable).
-        const body = renderBlockTimeline(sub.blocks, cols)
-        convLines.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
-      } else {
-        // Folded: tail 3 non-empty block lines (most recent activity), dim.
-        for (const line of foldTailLines(sub.blocks)) {
-          convLines.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim })
-        }
-      }
-    }
-  }
+  // ── Subagent activity blocks (§7.2.1 D2) — RUNNING blocks MOVED to the fixed
+  // bottom panel (subagent-panel.mjs renderSubagentPanel, layout.mjs precomputes
+  // the panel height; render-frame puts it between conversation and todo).
+  // buildConvLines no longer renders running children: on completion
+  // onToolResult freezes the block into state.lines (subagent-blocks.mjs
+  // freezeSubTaskLines) and it scrolls away with the conversation (D4 现状).
+  // Frozen blocks render above via the _frozenSubTask branch (frozenSubTaskLines).
+
   if (state.reasoning) {
     // Live thinking streams INSIDE the unified box (user ruling 2026-08-30:
     // "思考过程中为什么不是直接进这个框" — the flat tail render was a

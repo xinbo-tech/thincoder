@@ -10,7 +10,7 @@ import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
 import { specForModel } from "../config.mjs"
-import { computeLayout } from "./layout.mjs"
+import { computeLayout, subagentVisibleLines } from "./layout.mjs"
 import { basename } from "node:path"
 import { readFileSync } from "node:fs"
 
@@ -89,8 +89,10 @@ export function renderPicker(state, cols, panel, overlay) {
   // 过滤提示：无filter时显示 "type to filter"，有filter时显示输入内容
   const filterHint = p ? (p.filter ? `│ ${p.filter}` : "│ type to filter") : ""
   const rawLeft = p ? ` ❯ ${p.title} ${filterHint} ` : " ❯ Setup "
-  const left = sliceByWidth(rawLeft, Math.max(1, cols - 2 - stringWidth(right)))
-  const titlePad = " ".repeat(Math.max(1, cols - 1 - stringWidth(left) - stringWidth(right)))
+  // 2026-08-31 会诊（advisor round1 🔵）：标题行与条目行一致留 8 格余量——Ambiguous 字符
+  // （❯/│ 等）在 CJK 终端渲染 2 格，余量不足时右侧 n/m 位置指示会被截。
+  const left = sliceByWidth(rawLeft, Math.max(1, cols - 8 - stringWidth(right)))
+  const titlePad = " ".repeat(Math.max(1, cols - 8 - stringWidth(left) - stringWidth(right)))
   out.push(`${ansi.bold}${C.tool}${left}${ansi.reset}${ansi.dim}${titlePad}${right}${ansi.reset}`)
   const hasMoreAbove = start > 0
   const hasMoreBelow = start + winH < total
@@ -100,10 +102,14 @@ export function renderPicker(state, cols, panel, overlay) {
     const moreAbove = i === 0 && hasMoreAbove
     const moreBelow = i === shown.length - 1 && hasMoreBelow
     const ind = moreAbove && moreBelow ? "↑↓ more" : moreAbove ? "↑ more" : moreBelow ? "↓ more" : ""
-    const maxW = cols - 1 - (ind ? stringWidth(ind) + 1 : 0)
+    // 2026-08-31 会诊：右边距留 8 格余量——Ambiguous 宽度字符（│/—/●/▸/…/↑↓ 等）在中文
+    // locale 终端渲染 2 格而 stringWidth 按 1 格算，/session 行最坏带 ~7 个（▸ 前缀 +
+    // │×3 + … + — + ●）→ 行宽低估 7+ 格 → 实际超宽 → 物理 wrap → 残影；8 格余量覆盖
+    // 常见低估，最坏残余由 DECAWM 关闭硬截断兜底（见 render-loop）。
+    const maxW = cols - 8 - (ind ? stringWidth(ind) + 1 : 0)
     // 超宽行截断并加省略号
     const text = stringWidth(l.text) > maxW ? sliceByWidth(l.text, Math.max(0, maxW - 1)) + "…" : l.text
-    const pad = ind ? " ".repeat(Math.max(1, cols - 1 - stringWidth(text) - stringWidth(ind))) : ""
+    const pad = ind ? " ".repeat(Math.max(1, cols - 8 - stringWidth(text) - stringWidth(ind))) : ""
     out.push(`${l.color}${text}${ansi.reset}${ind ? `${ansi.dim}${pad}${ind}${ansi.reset}` : ""}`)
   }
   for (let i = shown.length; i < winH; i++) out.push("")
@@ -221,7 +227,7 @@ export function renderRows(state, agent, opts) {
   const slashCommands = opts.slashCommands ?? []
 
   const layout = computeLayout(state, { cols, rows })
-  const { W, panels, inputLayout, inputOffset, boxLines, visibleTasks, permPreviewLines, overlay } = layout
+  const { W, panels, inputLayout, inputOffset, boxLines, visibleTasks, permPreviewLines, overlay, subagentLines } = layout
 
   const screen = new Array(rows).fill("")
   const put = (y, lines) => {
@@ -232,6 +238,16 @@ export function renderRows(state, agent, opts) {
 
   put(panels.header.y, [renderHeader(agent, cols)])
   put(panels.conversation.y, renderConversation(state, cols, panels.conversation.h, state.scroll, rows))
+  // §7.2.1 D2: running-subagent fixed panel (between conversation and todo) —
+  // lines precomputed by layout (subagent-panel.mjs, neutral module), put
+  // directly (no double render); absent when no block is running (F6). Lines
+  // are objects ({text, color, _foldToggle/_foldBlock…} — mouse hit-testing
+  // reads the same array), converted to ANSI strings here like renderTodo.
+  if (panels.subagent) {
+    // 评审 #4：部分压缩（h < 全长）时保底截断——分隔线 + 末尾区块行（最新活动
+    // 优先），与 mouse 命中映射同一几何契约（subagentVisibleLines / subagentLineIndex）。
+    put(panels.subagent.y, subagentVisibleLines(subagentLines, panels.subagent.h).map((l) => `${l.color ?? ""}${l.text}${ansi.reset}`))
+  }
   if (panels.todo) put(panels.todo.y, renderTodo(visibleTasks, cols))
   if (panels.picker) put(panels.picker.y, renderPicker(state, cols, panels.picker, overlay))
   if (panels.permission) put(panels.permission.y, renderPermission(permPreviewLines))

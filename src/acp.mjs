@@ -19,28 +19,15 @@ import { assembleAgent } from "./cli/make-agent.mjs"
 import { createAcpServer, ACP_ERRORS } from "./acp/transport.mjs"
 import { createAcpSession } from "./acp/session.mjs"
 import { replayHistory } from "./acp/bridge.mjs"
-import { listSlots, applySession, deleteSlot, sessionPath, normalizeCwd, isLegacyTransient } from "./session.mjs"
+import { listSlots, applySession, deleteSlot, normalizeCwd, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession } from "./session.mjs"
 import { createCheckpoint, listCheckpoints, rewind, isGitRepo } from "./git/checkpoint.mjs"
 import { createMemory, list as memList, remove as memRemove } from "./memory.mjs"
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
 /** Load a specific slot file (not the active one) — session/load by id.
- *  Same validation as loadSession: version 1/2, cwd match, legacy-transient
- *  filtering (pre-filtering slot files must not leak machine lines into replay). */
-function loadSlotFile(cwd, slot) {
-  const path = `${sessionPath(cwd)}.${slot}`
-  try {
-    const data = JSON.parse(readFileSync(path, "utf8"))
-    if (data?.version !== 1 && data?.version !== 2) return null
-    if (!Array.isArray(data.history)) return null
-    if (data.cwd && normalizeCwd(data.cwd).toLowerCase() !== normalizeCwd(cwd).toLowerCase()) return null
-    data.history = data.history.filter((m) => !isLegacyTransient(m))
-    return data
-  } catch {
-    return null
-  }
-}
+ *  2026-08-31 会诊 deepseek 🟡：改用 session.mjs 共享 loadSlotFile（校验/保现场/.tmp
+ *  回退与主路径一致）——本地实现此前无 .unreadable/.corrupted 保留。 */
 
 /**
  * Apply a session-level config option to the agent instance (memory only —
@@ -160,6 +147,11 @@ export function buildAcpHandlers({
           const id = String(nextId++)
           const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
           // `id` is immutable after construction (baked into the callbacks) — never reassign.
+          // 2026-09-01 会诊 kimi/glm 🔴：立即认领独立槽（对齐 cmd-new）——否则首回合保存
+          // 走 _slot ??= activeSlot() → ensureActive 早退分支（slotSessions[active]===
+          // mySessionId 同进程恒真）→ 第二个会话拿到与第一个相同的槽号 → 双写同槽
+          // F2 互旋。getSessionId() 是进程级，_slot 是 agent 级——粒度错配必须在此切断。
+          session.agent._slot = newSession(getCwd())
           sessions.set(id, session)
           return { id, configOptions: [{ configId: "model" }, { configId: "thinking" }, { configId: "mode" }] }
         } catch (e) {
@@ -185,6 +177,7 @@ export function buildAcpHandlers({
       },
 
       "session/cancel": (params) => {
+        if (!authenticated) return { error: ACP_ERRORS.AUTH_REQUIRED } // 2026-08-31 advisor round2 🔵：与其他 handler 一致
         const found = findSession(params)
         if (found.error) return found
         found.session.cancel()
@@ -192,6 +185,7 @@ export function buildAcpHandlers({
       },
 
       "session/close": (params) => {
+        if (!authenticated) return { error: ACP_ERRORS.AUTH_REQUIRED } // 2026-08-31 advisor round2 🔵：与其他 handler 一致
         const found = findSession(params)
         if (!found.error) {
           // Abort any in-flight turn first — the client is gone, the agent must
@@ -233,11 +227,33 @@ export function buildAcpHandlers({
           const id = String(nextId++)
           const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
           applySession(session.agent, data)
+          // 2026-08-31 advisor round2 🟡：钉 _slot 前查活主——目标槽被另一活进程（CLI/另一
+          // IDE）占用时不得钉回（双方 sessionStart 一致 → F2 永不轮转 → 同槽 last-write-wins
+          // 静默互覆盖）。空闲则认领后钉回；占用则不钉 → 下次保存经 activeSlot 自然 fork
+          // 到新槽（与 switchToSlot 的"占用则 fork"语义对齐）。
+          const occ = slotOccupancy(getCwd(), slot)
+          // 2026-09-01 会诊 kimi/glm 🔴：同进程双会话同槽——slotOccupancy 排除本进程属主后，
+          // 同进程防护完全由 sameProcessPinned 承担：本进程另一 session 已钉该槽即视为占用
+          // （进程级属主无法区分 agent，双方 sessionStart 相同 → F2 永不触发 → 静默互覆盖）。
+          const sameProcessPinned = [...sessions.values()].some((s) => s.agent?._slot === slot)
+          if (!occ.occupied && !sameProcessPinned) {
+            const m = loadManifest(getCwd())
+            m.slotSessions ??= {}
+            m.slotSessions[slot] = getSessionId()
+            saveManifest(getCwd(), m)
+            session.agent._slot = slot
+          } else {
+            // 2026-09-01 advisor 🔴：占用时显式分配全新槽（fork）——原 `_slot = null` 的
+            // fork 会经 saveSession → activeSlot → ensureActive 分支1 早退（slotSessions
+            // [active] === mySessionId 同进程恒真）落回同进程 active 槽 → 两会话写同一槽
+            // 静默互覆盖。newSession 跳过活认领号/现存文件号，必定落到新槽。
+            session.agent._slot = newSession(getCwd())
+          }
           sessions.set(id, session)
           // Replay the human line (role → chunk mapping, design §4.5) so the
           // client renders the restored conversation.
           replayHistory({ sessionId: id, notify: notifyRef.current, history: data.history, log })
-          log(`session ${slot} loaded as session ${id} (${data.history?.length ?? 0} messages replayed)`)
+          log(`session ${slot} loaded as session ${id} (${data.history?.length ?? 0} messages replayed)${occ.occupied || sameProcessPinned ? ` — slot busy, forked to ${session.agent._slot}` : ""}`)
           return { id, cwd: getCwd(), configOptions: [{ configId: "model" }, { configId: "thinking" }, { configId: "mode" }] }
         } catch (e) {
           return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to load session ${slot}: ${e.message}` } }
@@ -258,9 +274,25 @@ export function buildAcpHandlers({
           const id = String(nextId++)
           const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
           applySession(session.agent, data)
+          // 2026-08-31 advisor round2 🟡：同 session/load——活主占用的槽不钉回（防同槽双写，
+          // 下次保存 fork 新槽）；空闲则认领后钉回。
+          const occ = slotOccupancy(getCwd(), slot)
+          // 2026-09-01 会诊 kimi/glm 🔴：同 session/load——同进程其他 session 已钉同槽视为占用 → fork
+          const sameProcessPinned = [...sessions.values()].some((s) => s.agent?._slot === slot)
+          if (!occ.occupied && !sameProcessPinned) {
+            const m = loadManifest(getCwd())
+            m.slotSessions ??= {}
+            m.slotSessions[slot] = getSessionId()
+            saveManifest(getCwd(), m)
+            session.agent._slot = slot
+          } else {
+            // 2026-09-01 advisor 🔴：同 load——显式 newSession fork（_slot=null 的 fork 会
+            // 落回同进程 active 槽 → 两会话写同一槽静默互覆盖）
+            session.agent._slot = newSession(getCwd())
+          }
           sessions.set(id, session)
           // resume: no history replay — the client keeps its own rendering.
-          log(`session ${slot} resumed as session ${id} (no replay)`)
+          log(`session ${slot} resumed as session ${id} (no replay)${occ.occupied || sameProcessPinned ? ` — slot busy, forked to ${session.agent._slot}` : ""}`)
           return { id, cwd: getCwd(), configOptions: [{ configId: "model" }, { configId: "thinking" }, { configId: "mode" }] }
         } catch (e) {
           return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to resume session ${slot}: ${e.message}` } }
@@ -277,6 +309,16 @@ export function buildAcpHandlers({
         // with the same id keeps running (design §4.5).
         if (!deleteSlot(getCwd(), slot)) {
           return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: `session ${slot} not found` } }
+        }
+        // 2026-08-31 会诊 deepseek 🟡：被删槽的在存会话 _slot 仍钉着 → 下次保存会重建
+        // 文件并重注册（删后复活）。清空其 _slot，下次保存重新认领新槽。
+        // 2026-09-01 advisor round2 🔴：不能清 _slot 等下次保存——saveSession 走
+        // activeSlot → ensureActive 分支1 早退（slotSessions[active] === mySessionId 同
+        // 进程恒真）→ 落回同进程 active 槽（另一在存会话的槽）→ 两会话写同一槽静默
+        // 互覆盖（sessionStart 均 null → F2 永不轮转）。与 load/resume 同型修复：
+        // 立即 newSession 钉全新槽（跳过活认领号/现存文件号）。
+        for (const s of sessions.values()) {
+          if (s.agent?._slot === slot) s.agent._slot = newSession(getCwd())
         }
         log(`session ${slot} archive deleted`)
         return {}

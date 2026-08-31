@@ -17,14 +17,15 @@
 | `agent-turn.mjs` | 174 | runAgentTurn：回合驱动（状态复位/runAgent 循环/ContinueError 续跑/中断处理/finally 收尾/队列）；callbacks 装配在 tool-events.mjs |
 | `tool-events.mjs` | 344 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 开工具单框载体、onToolResult 载体定态与子agent 完成冻结、onToolOutput 追加进载体 `_toolBlock.output`/advisor 有序块、onTurnEnd 增量落盘）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
 | `subagent-blocks.mjs` | 253 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks，2026-08-30 自 agent-turn 归位） |
-| `render-frame.mjs` | 333 | 帧布局：header / todo / conversation / input / status 各面板装配 |
-| `render-conversation.mjs` | 630 | 对话面板行构建：缓存三层（convCacheKey 全量 / 行级 wrapRowsCached markdown-wrap / 段级 _lineSegCache 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor；loadOlder 只算新增行，rebuild 111→5-8ms 平坦，2026-08-31 懒加载卡顿根治）；搜索高亮、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、子agent/advisor 折叠块渲染（§7.2 D4）、主输出永不折叠（2026-08-30） |
+| `render-frame.mjs` | 333 | 帧布局：header / conversation / subagent 面板 / todo / input / status 各面板装配（§7.2.1 起运行中子 agent 面板槽，行由 layout 预计算直接 put） |
+| `render-conversation.mjs` | 630 | 对话面板行构建：缓存三层（convCacheKey 全量 / 行级 wrapRowsCached markdown-wrap / 段级 _lineSegCache 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor；loadOlder 只算新增行，rebuild 111→5-8ms 平坦，2026-08-31 懒加载卡顿根治）；搜索高亮、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、frozen 子agent（_frozenSubTask，§7.2 D4 现状）与 advisor 折叠块渲染（运行中区块已迁至 subagent-panel.mjs 固定面板，§7.2.1 D2）、主输出永不折叠（2026-08-30） |
 | `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
+| `subagent-panel.mjs` | 62 | 运行中子 agent 固定底部面板渲染（§7.2.1 D1/D2，中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数——顶部分隔线 + 各区块折叠头 `[▶/⏸ key · model · elapsed · turn] state` / tail 3 / 展开（复用好 fold-block 组件）；无运行区块 → []（F6） |
 | `tool-args.mjs` | 65 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
 | `fold-block.mjs` | 257 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
-| `render-loop.mjs` | 126 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
-| `layout.mjs` | 145 | 面板布局计算（行/列分配，todo 面板含顶部分隔线高度；小终端压缩链：conversation→picker→permission→todo 分隔线；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
+| `render-loop.mjs` | 126 | 渲染调度：增量重绘、光标/滚动维护（1s ticker 在 agent-turn.mjs——§7.2.1 评审 #5） |
+| `layout.mjs` | 145 | 面板布局计算（行/列分配，todo 面板含顶部分隔线高度；运行中区块 → `panels.subagent` 槽 + subagentLines 预计算（调 subagent-panel.mjs renderSubagentPanel，§7.2.1 D1）；小终端压缩链：**subagent 面板最先让位**（可至 0 隐藏）→ conversation → picker → permission → todo 分隔线（§7.2.1 D3/NF1）；output 面板槽已随 §7.2 D6 退役） |
 | `dims.mjs` | 45 | 终端尺寸单源（2026-08-30；2026-08-31 简化——ConPTY stale 假说防御（双确认/trusted settle/空闲看门狗/启动收敛）整体移除，因其建立在"组件漏传 cols=80"误诊上，且双确认反而卡死真实拖拽缩小）：get() 读缓存；refresh() 只在事件钩子（seed/resize），sane-gate（cols≥40/rows≥10）挡 falsy（headless/无 TTY），**任何 sane 采样（含缩小）立即提交**——resize 事件在任意终端都是真实尺寸变更，缓存自校正 |
 
 **渲染内容层**（纯函数）：
@@ -107,12 +108,13 @@ permission（y/n/a/esc）
 **帧装配**（render-frame.mjs `renderFrame`）：
 ```
 header（logo/模型/think 徽章/目录）
-todo 面板（task 列表，≤5 行，全部 done 自动收起）
 对话面板（renderConversation）
+子agent 面板（运行中区块，会话与 todo 之间——§7.2.1）
+todo 面板（task 列表，≤5 行，全部 done 自动收起）
 输入框（layoutInput：多行展开、光标定位、粘贴快捷键提示角标）
 状态栏（status：模式/耗时/token/上下文利用率/队列/快捷键提示）
 ```
-布局分配见 `layout.mjs computeLayout`（面板高度随内容伸缩；子代理活动现为会话流内可折叠区块——AGENT-LOOP.md §7.2 D4，数据层 `subagent-blocks.mjs`、渲染层 render-conversation.mjs 折叠块段，旧窄带 ≤4 行已退役）。
+布局分配见 `layout.mjs computeLayout`（面板高度随内容伸缩；**运行中子代理活动为固定底部面板**——AGENT-LOOP.md §7.2.1：位于会话区与 todo 之间，高度完全自适应（= 全部运行中区块的渲染行数，会话区被挤小），不随会话滚动（滚轮/PgUp/流式均不影响面板位置）；完成后立即冻结进会话流（`_frozenSubTask` 折叠块，§7.2 D4 现状不变，历史可读）；无运行中区块时面板不渲染（无悬空分隔线）。渲染层 subagent-panel.mjs `renderSubagentPanel`（layout 预计算高度、render-frame 直接 put），数据层 `subagent-blocks.mjs`）。
 
 **对话行构建**（render-conversation.mjs，纯函数）：
 ```
@@ -128,7 +130,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 ## 5. 折叠交互（双向：展开 ↔ 收起）——公共组件 fold-block.mjs
 
-> **组件化（2026-08-30）**：折叠交互统一收敛到公共组件 `src/tui/fold-block.mjs`——任何"流式/超长输出要可折叠"的功能直接复用，不再复制渲染逻辑。API：`foldCapRows`（60% 封顶数学）、`isExpanded`/`toggleFoldBlock`（折叠态读写与双向切换）、`foldHintLine`/`blankLine`（控制行）、`renderExpandedBlock`（展开态渲染 + 封顶 + 底部可达控制行）、`renderFoldedHead`（折叠态渲染：命名头 + tail）、`renderBlockTimeline`（blocks[]→kind 着色时间线，think=C.reason/tool=C.tool/text=C.text/meta=C.dim，`_skipDimFold` 防套叠）。已接入：子agent 区块（运行中/冻结）、advisor 评审块（运行中/冻结）、长消息、连续 dim；鼠标点击 toggle 也走 `toggleFoldBlock` 单源。
+> **组件化（2026-08-30）**：折叠交互统一收敛到公共组件 `src/tui/fold-block.mjs`——任何"流式/超长输出要可折叠"的功能直接复用，不再复制渲染逻辑。API：`foldCapRows`（60% 封顶数学）、`isExpanded`/`toggleFoldBlock`（折叠态读写与双向切换）、`foldHintLine`/`blankLine`（控制行）、`renderExpandedBlock`（展开态渲染 + 封顶 + 底部可达控制行）、`renderFoldedHead`（折叠态渲染：命名头 + tail）、`renderBlockTimeline`（blocks[]→kind 着色时间线，think=C.reason/tool=C.tool/text=C.text/meta=C.dim，`_skipDimFold` 防套叠）。已接入：子agent 区块（**运行中 = 固定底部面板 subagent-panel.mjs / 冻结 = 流内 _frozenSubTask**，§7.2.1）、advisor 评审块（运行中/冻结）、长消息、连续 dim；鼠标点击 toggle 也走 `toggleFoldBlock` 单源。
 
 **统一折叠形态（2026-08-30 用户裁定："所有折叠区块 = 默认三行 tail，展开封顶 60%"）**：此前折叠态有两套并存——子agent/advisor 用「头部摘要 + tail 3」，长消息/连续 dim 用老的 `[前 4 行, 匿名 ▶, 末 1 行]`；匿名的 `▶ … N more lines` 头在滚动历史里读起来像孤立碎片（用户报告"很多孤立的 ... xx more lines 段"）。现已全部统一为 `renderFoldedHead` 单源：**`▶ <身份标签> · N lines — click to expand` + 末 3 行（dim）**。身份标签按内容分类：`thinking`（思考块）/ `tool output`（dim 与连续 dim）/ 子agent、advisor 用各自既有的括号身份头。旧形态（前 4 行 + 中置 ▶）废弃，FOLD_KEEP 常量已删。
 
@@ -144,7 +146,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **标志（哪里可折叠一眼可见）**：
 - 折叠控制行**不缩进、与输出内容平齐**；**空行分隔仅展开态使用**（▼ 控制行位于块头，**行前空一行**与其他内容区分；折叠态 ▶ 头**不空行**——fold-block.mjs `blankLine` 注释）
-- **折叠态（全类型统一）**：**头部身份行 + 末 3 行**——`▶ <身份> · N lines — click to expand`（bold cyan + `▶` + "click to expand" 下划线）+ dim 的 tail 3 行（`renderFoldedHead` 单源；子agent/advisor 头部各自带状态摘要：`[✓ coder#1 · model · done 45s]`、`[advisor · review done]`）
+- **折叠态（全类型统一）**：**头部身份行 + 末 3 行**——`▶ <身份> · N lines — click to expand`（bold cyan + `▶` + "click to expand" 下划线）+ dim 的 tail 3 行（`renderFoldedHead` 单源；子agent/advisor 头部各自带状态摘要：运行中 `[▶/⏸ coder#1 · model · 45s · turn 12/100]`（面板，⏸ = 等待审批，§7.2.1）、冻结 `[✓ coder#1 · model · done 45s]`（流内）、`[advisor · review done]`）
 - **展开态**：**同一位置**（块头部、内容之前）换成 `▼ … N lines — click to collapse`（bold cyan + `▼` 图标 + "click to collapse" 下划线）——收起标志贴着内容开头，不沉到尾部；**触 60% 封顶时区块底部追加第二个控制行**（唯一保证可达的收起入口）
 
 **动作（点击即切换）**：点击任意带 `_foldToggle` 的行（头部 ▶/▼ 提示）→ `toggleFoldBlock`（expandedBlocks **toggle**：有则删=收起、无则加=展开）→ 重渲染。折叠/收起标志**始终在块头部同一位置**——状态切换点稳定，`▶`/`▼` + 下划线文案给出"可点击"的视觉暗示。
@@ -156,7 +158,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 **空行分区（2026-08-30 追加，两处规则并存）**：
 - **主输出前后空行**（§5 之外的独立规则，render-conversation `buildConvLines` 行循环 + streaming 分支）：每个主输出段（C.text 行连续段）**前后各插一个空行**，与思考块/工具块/子agent 块拉开距离。渲染期插入（不写 `state.lines`、不影响 convCacheKey）；相邻段共享一个空行（无双重插入）；**streaming 分支同样适用**（两条渲染路径必须一致——首版只改行循环漏了 streaming，用户实测"生成时不空、落盘后才空"）
 - **任务面板顶部分隔线**（renderTodo 首行 `─` × cols-1，dim）：todo 面板与上方会话区域切分；小终端压缩链中**分隔线先让位**（面板高度压回任务行数，任务行永不压缩——put 按面板高度截断自动丢弃分隔线）
-- **子agent 运行区块段首分隔线**（render-conversation subagent blocks 段首，同款 dim `─` 线，2026-08-30 用户要求）：与会话区切分；仅当存在**运行中**区块时出现（done 块已冻结进会话流，空段不留悬空线）。与主输出空行的边界：主输出段末空行是呼吸空间，分隔线是段边界——**两者并存**（线无条件，仅防重复画线）
+- **子agent 固定面板顶部边界线**（subagent-panel.mjs `renderSubagentPanel` 段首，同款 dim `─` 线；2026-08-30 用户要求的段首分隔线随面板迁移，§7.2.1 D2/NF2）：面板与上方会话区切分；**仅当存在运行中区块时面板渲染**（无运行区块 → 无面板、无悬空线；done 块已冻结进会话流）。与主输出空行的边界：主输出段末空行是呼吸空间，分隔线是段边界——两者并存
 
 **约束**：
 - 展开的块行带 `_skipDimFold` 标记，不再参与连续 dim 折叠（防折叠套折叠——0.12.7 回归修复；renderBlockTimeline 统一携带）
@@ -171,9 +173,11 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **组件解耦**：fold-block 不 import 任何业务常量（advisor 占位符经 `strip: []` 参数注入）；tail-3 提取单源 `foldTailLines(blocks, n, {strip})`（原 render-conversation 三份手写拷贝收编）。
 
-**渲染调度**（render-loop.mjs）：`scheduleRender()`（setImmediate 合并）+ 处理中 1s ticker（耗时刷新）+ `write()` 增量写（比较上一帧，只重绘变化行 + 光标定位），防闪烁。
+**渲染调度**（render-loop.mjs）：`scheduleRender()`（setImmediate 合并）+ 增量写 `write()`（比较上一帧，只重绘变化行 + 光标定位），防闪烁。**1s ticker 在 agent-turn.mjs**（处理中耗时刷新，含 `subRunning()` 条件驱动子 agent 面板 elapsed 走秒——§7.2.1 评审 #5 归属更正）。
 
 **宽度数学**（render.mjs）：charWidth——CJK/emoji/全角 2 列、组合字符/零宽 0、其余 1；wrap/slice/pad 全部按显示宽度而非字符数。
+
+**Ambiguous 宽度低估 + DECAWM 防线（2026-08-31 会诊 glm）**：`—`(U+2014)、`│`(U+2502)、`●`(U+25CF)、`▸`(U+25B8)、`…`(U+2026)、`↑↓`(U+2191/2193) 属东亚 Ambiguous 宽度——charWidth 按 1 格算，但中文 locale 终端实际渲染 2 格 → 行宽低估 → 行实际超宽 → 物理 wrap 污染下一行 + `\x1b[K` 清错行 → picker 残影（实锤：/session 行含 4-7 个此类字符）。**三层防御**：① 启动禁环绕（`writeStartupSequence` 的 DECRST 7）+ 每帧 write 包 `wrapOff/wrapOn`（render-loop.mjs）——超宽行硬截断在边距，物理 wrap 不可能发生；退出 `writeCleanupSequence` 恢复 DECSET 7。② renderPicker 行与标题行右边距留 8 格余量（覆盖常见低估）。③ cmd-session 的标签截断改显示宽度（原按 UTF-16 length 截 40 = 中文 80 格，顶到边距）。
 
 ## 6. 会话恢复（startup.mjs）
 
@@ -186,7 +190,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 `runAgentTurn(ctx, text)`：
 1. pushLabel "❯ You:" + 输入文本
 2. 置 processing、新建 AbortController、1s ticker
-3. callbacks 构造（`tool-events.mjs buildToolCallbacks`：onToken/onReasoning 流式进 streaming/reasoning 缓冲；子代理 `role#id/` 前缀分流到子 agent 活动区块 `state.subTasks`（§7.2 D4 会话流内可折叠块）；onToolCall/onToolResult 工具摘要行；onUsage 累计 token；onCompress 提示 "[context] Context too long, auto-compacted"）
+3. callbacks 构造（`tool-events.mjs buildToolCallbacks`：onToken/onReasoning 流式进 streaming/reasoning 缓冲；子代理 `role#id/` 前缀分流到子 agent 活动区块 `state.subTasks`（§7.2 D4 数据层；§7.2.1 起运行区块渲染于固定底部面板 subagent-panel.mjs）；onToolCall/onToolResult 工具摘要行；onUsage 累计 token；onCompress 提示 "[context] Context too long, auto-compacted"）
 4. runAgent 循环：正常完成 → flushStream；AbortError（Ctrl+I）→ 重开 controller 续跑；ContinueError → permission 询问 "Continue after N turns?"；其他错误 → "[error] …" 一行
 5. finally：停 ticker、清 processing、**自动生成会话标题**（首条真实 user 消息 → generateTitle）、saveSession 增量落盘
 6. 队列：processing 期间输入的消息进 `state.queue`，回合结束自动逐条处理（斜杠命令直接执行）
@@ -216,7 +220,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 恢复优先 display 快照 | WYSIWYG 保真；history 重建是降级路径 |
 | 恢复过滤 [System reminder: | 机读消息不显示（与 VS Code 渲染契约一致） |
 | 增量渲染 + 缓存键 | 1M 行会话不卡：只重绘变化行 |
-| 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子 agent 活动区块（§7.2 D4：会话流内可折叠块；数据层独立为 subagent-blocks.mjs） |
+| 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子 agent 活动区块（数据层 `subagent-blocks.mjs`，§7.2 D4；运行中区块渲染于固定底部面板 subagent-panel.mjs，完成冻结进会话流，§7.2.1） |
 
 
 ## 10. Issue 变更段（2026-08-22 · 需求层）

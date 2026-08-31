@@ -114,7 +114,7 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
       const hasOverlay = state.permission || state.question || state.picker || state.wizard?.step === "provider"
       const cursorSuffix = hasOverlay ? "" : `\x1b[${cursorRow};${cursorCol}H${ansi.hideCursor}`
 
-      if (out.length || cursorSuffix) write(ansi.syncUpdateStart + out.join("") + ansi.syncUpdateEnd + cursorSuffix)
+      if (out.length || cursorSuffix) write(ansi.wrapOff + ansi.syncUpdateStart + out.join("") + ansi.syncUpdateEnd + cursorSuffix + ansi.wrapOn)
     } catch (e) {
       // Don't let a render error crash the TUI
       if (process.env.THINCODER_DEBUG_RENDER) process.stderr.write(`[render-error] ${e?.stack ?? e}\n`)

@@ -4,6 +4,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { parseMouseClicks, convGlobalIndex, handleMouseClick, handleWheel } from "../src/tui/mouse.mjs"
+import { computeLayout, subagentVisibleLines } from "../src/tui/layout.mjs"
 
 /** Minimal TUI state satisfying computeLayout + buildConvLines accessors. */
 function mockState(extra = {}) {
@@ -500,5 +501,158 @@ describe("handleWheel — 块内滚动（2026-08-31 用户需求：滚动读全�
     }
   })
 })
+
+describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7）", () => {
+  /** 运行中 coder 子 agent（blocks 可选铺内容行）。 */
+  const mkSub = (blocks) => ({
+    key: "coder#1", role: "coder", model: "glm-5.3", started: Date.now(), done: false, doneAt: null,
+    blocks, currentTool: "bash", toolArgs: { command: "npm test" }, turn: 2, maxTurns: 100,
+    approval: null, lastError: null, dropped: 0, blockEpoch: 1,
+  })
+  const stubDims = (fn) => {
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try { return fn() } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  }
+
+  it("T5: 面板内点击折叠头 → 展开；再点 ▼ 控制 → 收起", () => {
+    const state = mockState({ subTasks: { "coder#1": mkSub([{ kind: "tool", text: "❯ bash — npm test\nline1\nline2\nline3\n" }]) } })
+    let rendered = 0
+    const ctx = { state, render: () => { rendered++ }, showPicker: async () => null, popPicker: () => {} }
+    stubDims(() => {
+      const hit = scanClick(2, 23, (r) => handleMouseClick(ctx, 10, r))
+      assert.ok(hit > 0, `面板折叠头命中（row ${hit}）`)
+      assert.ok(state.expandedBlocks?.has("sub-coder#1"), "点击折叠头 → 展开")
+      // 再扫下一个可点击行（展开后 ▼ 控制）→ 收起
+      const hit2 = scanClick(2, 23, (r) => handleMouseClick(ctx, 10, r))
+      assert.ok(hit2 > 0, `▼ 控制行命中（row ${hit2}）`)
+      assert.ok(!state.expandedBlocks.has("sub-coder#1"), "点击 ▼ 控制 → 收起")
+      assert.ok(rendered > 0, "点击触发重渲染")
+    })
+  })
+
+  it("T5: 展开超限 → 面板内 ▲▼ 控制行翻窗（块内滚动）", () => {
+    const blocks = [{ kind: "tool", text: Array.from({ length: 30 }, (_, i) => `row ${i}`).join("\n") + "\n" }]
+    const state = mockState({ subTasks: { "coder#1": mkSub(blocks) }, expandedBlocks: new Set(["sub-coder#1"]) })
+    const ctx = { state, render: () => {}, showPicker: async () => null, popPicker: () => {} }
+    stubDims(() => {
+      // 80×24 → cap=14 → winH=9：扫描首个让 _foldScroll 前进的点击（▼ 下方控制行）
+      const r1 = scanClick(2, 23, (r) => {
+        const before = state._foldScroll?.get("sub-coder#1") ?? 0
+        return handleMouseClick(ctx, 10, r) && (state._foldScroll?.get("sub-coder#1") ?? 0) > before
+      })
+      assert.ok(r1 > 0, `▼ 控制行命中（row ${r1}）`)
+      assert.equal(state._foldScroll?.get("sub-coder#1"), 9, "▼ 点击翻窗一窗（9 行）")
+      // offset>0 后 ▲ 行出现。隔离探测行位（点击后 offset 归 0 且区块仍展开 =
+      // ▲ 翻窗；▼ 头控制点击=收起，expandedBlocks 丢失 → 排除）
+      let aRow = -1
+      for (let r = 2; r <= 23; r++) {
+        const probe = mockState({
+          subTasks: { "coder#1": mkSub(blocks) }, expandedBlocks: new Set(["sub-coder#1"]),
+          _foldScroll: new Map([["sub-coder#1", 9]]),
+        })
+        handleMouseClick({ state: probe, render: () => {} }, 10, r)
+        if ((probe._foldScroll?.get("sub-coder#1") ?? 0) === 0 && probe.expandedBlocks?.has("sub-coder#1")) { aRow = r; break }
+      }
+      assert.ok(aRow > 0, `▲ 控制行探测（row ${aRow}）`)
+      handleMouseClick(ctx, 10, aRow)
+      assert.equal(state._foldScroll?.get("sub-coder#1"), 0, "▲ 点击减回一窗")
+      assert.ok(state.expandedBlocks?.has("sub-coder#1"), "▲ 翻窗不改变折叠状态")
+    })
+  })
+
+  it("T6: 面板上滚轮未命中展开区块内容行 → 穿出（返回 false，会话滚动）", () => {
+    const state = mockState({ subTasks: { "coder#1": mkSub([{ kind: "tool", text: "a\nb\nc\n" }]) } })
+    const ctx = { state, render: () => {} }
+    stubDims(() => {
+      // 复算面板 y（与 handleWheel 内部同一 computeLayout）
+      const py = computeLayoutPanelY(state)
+      assert.ok(py >= 0, `面板 y=${py}`)
+      // 折叠头（面板第 1 行）与 tail 行均无 _foldBlock → 穿出
+      assert.equal(handleWheel(ctx, 65, 10, py + 1), false, "折叠头滚轮 → 穿出（会话滚动）")
+      assert.equal(handleWheel(ctx, 64, 10, py + 2), false, "tail 行滚轮 → 穿出")
+      // 会话区行同样不消费（对照——逐行扫描无任何面板内消费）
+      const consumed = scanClick(2, 23, (r) => handleWheel(ctx, 65, 10, r))
+      assert.equal(consumed, -1, "折叠态面板全程无消费（全部穿出）")
+    })
+  })
+
+  it("T7: 面板内展开区块内容行滚轮 → 块内滚动（不滚会话）", () => {
+    const blocks = [{ kind: "tool", text: Array.from({ length: 30 }, (_, i) => `row ${i}`).join("\n") + "\n" }]
+    const state = mockState({ subTasks: { "coder#1": mkSub(blocks) }, expandedBlocks: new Set(["sub-coder#1"]) })
+    const ctx = { state, render: () => {} }
+    stubDims(() => {
+      const r1 = scanClick(2, 23, (r) => {
+        const before = state._foldScroll?.get("sub-coder#1") ?? 0
+        return handleWheel(ctx, 65, 10, r) && (state._foldScroll?.get("sub-coder#1") ?? 0) > before
+      })
+      assert.ok(r1 > 0, `展开区块内容行命中（row ${r1}）`)
+      assert.equal(state._foldScroll?.get("sub-coder#1"), 3, "滚轮向下 = 面板块内 offset +3（不滚会话）")
+      // 块底滚下 → 穿出（返回 false）
+      state._foldScroll.set("sub-coder#1", 21) // 30 - 9 = 21 底
+      const r2 = scanClick(2, 23, (r) => handleWheel(ctx, 65, 10, r))
+      assert.equal(r2, -1, "块底滚下无消费（穿出）")
+    })
+  })
+
+  it("评审 #4: 面板部分压缩（保底截断）时命中映射指向可见行（最新活动优先）", () => {
+    // 80×14 + todo（3 任务）+ 展开区块（30 行 → cap=8 → winH=3 → 面板 9 行）：
+    // 压缩链溢出 5 行 → subagentFinalH=4 → 可见 = [分隔线, 窗口行, ▼, 收起控制]
+    // （保底截断：旧 slice(0,h) 语义下可见的是 [分隔线, 头, blank, ▼头]——窗口
+    // 行不可见 → 滚轮穿出；新语义窗口行可见 → 块内滚动）。命中映射经
+    // subagentLineIndex 与 render-frame 同一几何契约。
+    const blocks = [{ kind: "tool", text: Array.from({ length: 30 }, (_, i) => `row ${i}`).join("\n") + "\n" }]
+    const state = mockState({
+      tasks: [{ title: "t1", status: "in_progress" }, { title: "t2", status: "pending" }, { title: "t3", status: "pending" }],
+      subTasks: { "coder#1": mkSub(blocks) },
+      expandedBlocks: new Set(["sub-coder#1"]),
+    })
+    const ctx = { state, render: () => {}, showPicker: async () => null, popPicker: () => {} }
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 14, configurable: true })
+    try {
+      const layout = computeLayout(state, { cols: 80, rows: 14 })
+      const P = layout.panels
+      assert.ok(P.subagent, "面板存在")
+      assert.ok(P.subagent.h < layout.subagentLines.length, `部分压缩（h=${P.subagent.h} < ${layout.subagentLines.length}）`)
+      const visible = subagentVisibleLines(layout.subagentLines, P.subagent.h)
+      const localOf = (lineEl) => visible.indexOf(lineEl)
+      // 窗口内容行（_foldBlock）在可见集合 → 滚轮命中 → 块内滚动。可见窗口行是
+      // 末尾窗口行（保底截断 = 分隔线 + 末尾 h-1 行）——取最后一个 _foldBlock。
+      let winIdx = -1
+      layout.subagentLines.forEach((l, i) => { if (l._foldBlock) winIdx = i })
+      const winLocal = localOf(layout.subagentLines[winIdx])
+      assert.ok(winLocal >= 0, "窗口内容行在可见集合（保底截断保留最新活动）")
+      const before = state._foldScroll?.get("sub-coder#1") ?? 0
+      assert.equal(handleWheel(ctx, 65, 10, P.subagent.y + winLocal + 1), true, "压缩面板滚轮命中窗口行 → 块内滚动消费")
+      assert.equal(state._foldScroll?.get("sub-coder#1"), before + 3, "offset +3")
+      // 窗口内容行点击无 toggle → 不消费（穿出语义保持）
+      assert.equal(handleMouseClick(ctx, 10, P.subagent.y + winLocal + 1), false, "内容行点击不消费")
+      // 末尾收起控制行（_foldToggle，保底截断后可见）→ 点击收起
+      let collapseIdx = -1
+      layout.subagentLines.forEach((l, i) => { if (l._foldToggle) collapseIdx = i })
+      const collapseLocal = localOf(layout.subagentLines[collapseIdx])
+      assert.ok(collapseLocal >= 0, "收起控制行在可见集合")
+      assert.equal(handleMouseClick(ctx, 10, P.subagent.y + collapseLocal + 1), true, "点击可见的收起控制 → 消费")
+      assert.ok(!state.expandedBlocks.has("sub-coder#1"), "区块已收起")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  })
+})
+
+/** 复算面板 y（与 handleWheel 内部同一 computeLayout——测试不可见 dims 时用 stub）。 */
+function computeLayoutPanelY(state) {
+  const dims = { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+  const P = computeLayout(state, dims).panels
+  return P.subagent ? P.subagent.y : -1
+}
+
 
 

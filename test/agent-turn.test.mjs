@@ -534,3 +534,40 @@ test("runAgentTurn: 并行同名工具按 tool_call_id 精确路由（P0-3：输
   assert.deepEqual(b.result, ["B result"], "B 块只有 B 的结果")
   assert.ok(typeof a.elapsed === "number" && typeof b.elapsed === "number", "各自有耗时（id 级 tick）")
 })
+
+test("§7.2.1 走秒 ticker 条件（评审 #6）：processing 或 subRunning 时周期 render，两者皆假静默", async () => {
+  // 回归：面板头部 elapsed 走秒由 1s ticker 驱动（agent-turn.mjs:56-58
+  // `if (state.processing || subRunning()) render()`）——tui.test.mjs 只有纯函数
+  // 级断言（renderSubagentPanel 输出随时间变化），ticker 条件本身若回归（如删掉
+  // subRunning 分支/改成无条件 render）走秒静默失效且无测试拦截。本用例直接观测
+  // ticker：runAgent 挂起期间数 render 调用。
+  const ctx = trackedCtx()
+  let release
+  ctx.runAgent = () => new Promise((resolve) => { release = resolve })
+  // 运行中子 agent 条目（面板头部 elapsed 走秒的刷新对象）
+  ctx.state.subTasks["coder#1"] = { key: "coder#1", role: "coder", model: "glm-5.3", blocks: [], done: false, started: Date.now(), currentTool: null, turn: 1, maxTurns: 100, approval: null, lastError: null }
+  let renders = 0
+  ctx.render = () => { renders++ }
+  const turn = runAgentTurn(ctx, "task")
+  try {
+    // 阶段 1：processing=true → ticker 周期 render（初始 1 次 + 2.4s 内 2 次 tick）
+    await new Promise((r) => setTimeout(r, 2400))
+    assert.ok(renders >= 3, `processing 期间 ticker 周期 render（初始+2 tick，实际 ${renders}）`)
+    // 阶段 2：processing=false、子 agent 仍运行 → subRunning() 分支续命走秒
+    const before = renders
+    ctx.state.processing = false
+    await new Promise((r) => setTimeout(r, 2400))
+    assert.ok(renders >= before + 2, `subRunning 时 ticker 仍周期 render（2 tick，实际 ${renders - before}）`)
+    // 阶段 3：两者皆假 → ticker 静默（若条件被改成无条件 render，1.5s 窗口必
+    // 有 ≥1 tick，本断言拦截）
+    const before2 = renders
+    ctx.state.subTasks["coder#1"].done = true
+    await new Promise((r) => setTimeout(r, 1500))
+    assert.equal(renders, before2, "processing 与 subRunning 皆假 → ticker 不 render")
+  } finally {
+    release()
+    await turn
+  }
+  assert.equal(ctx.state.processing, false, "回合正常收尾（ticker 已清理）")
+})
+

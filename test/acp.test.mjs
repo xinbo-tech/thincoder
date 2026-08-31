@@ -407,6 +407,7 @@ describe("M3 — persisted slots (list/load/resume/delete) + config options", ()
     await c.send({ jsonrpc: "2.0", id: 1, method: "authenticate" })
     c.next()
     await c.send({ jsonrpc: "2.0", id: 2, method: "session/load", params: { sessionId: "1" } })
+
     // Out order: replay notifications first, then the load response.
     const kinds = []
     let loaded = null
@@ -425,6 +426,22 @@ describe("M3 — persisted slots (list/load/resume/delete) + config options", ()
     assert.ok(msgs.some((m) => m.id === 3 && m.result?.stopReason === "end_turn"))
   })
 
+  it("two session/new in ONE process claim DIFFERENT slots (会诊 kimi/glm 🔴 — 进程级认领 vs agent 级 _slot)", async () => {
+    await c.send({ jsonrpc: "2.0", id: 1, method: "authenticate" })
+    c.next()
+    await c.send({ jsonrpc: "2.0", id: 2, method: "session/new", params: { cwd: tmpCwd } })
+    assert.ok(c.next().result?.id, "first session created")
+    await c.send({ jsonrpc: "2.0", id: 3, method: "session/new", params: { cwd: tmpCwd } })
+    assert.ok(c.next().result?.id, "second session created")
+    // 修复点：session/new 立即 newSession() 认领独立槽（对齐 cmd-new）——manifest 此刻
+    // 就应有两个槽条目；修复前首存才认领，且同进程 ensureActive 早退分支会让第二个
+    // 会话拿到与第一个相同的槽号（F2 互旋）。
+    const m = JSON.parse(readFileSync(`${sessionPath(tmpCwd)}.manifest`, "utf8"))
+    const slotCount = Object.keys(m.slots).filter((n) => /^\d+$/.test(n)).length
+    assert.equal(slotCount, 2, "each ACP session claimed its own slot at creation time")
+  })
+
+
   it("resume restores state without replaying events", async () => {
     seedSlot([{ role: "user", content: "hi" }])
     await c.send({ jsonrpc: "2.0", id: 1, method: "authenticate" })
@@ -432,6 +449,51 @@ describe("M3 — persisted slots (list/load/resume/delete) + config options", ()
     await c.send({ jsonrpc: "2.0", id: 2, method: "session/resume", params: { sessionId: "1" } })
     assert.ok(c.next().result.id)
     assert.equal(c.next(), undefined, "no replay events after resume")
+  })
+
+  it("double-load of the same slot forks the second session to a NEW slot (advisor 🔴 回归)", async () => {
+    seedSlot([{ role: "user", content: "hi" }]) // slot 1 由本进程 saveSession 认领
+    await c.send({ jsonrpc: "2.0", id: 1, method: "authenticate" })
+    c.next()
+    // 第一次 load：slotOccupancy 排除本进程属主 + 无 sameProcessPinned → 钉回 slot 1
+    await c.send({ jsonrpc: "2.0", id: 2, method: "session/load", params: { sessionId: "1" } })
+    let first = null
+    for (let msg = c.next(); msg; msg = c.next()) if (msg.id === 2) first = msg.result
+    assert.ok(first?.id, "first load succeeded")
+    // 第二次 load：同进程已有 session 钉 slot 1 → sameProcessPinned → newSession fork 新槽
+    await c.send({ jsonrpc: "2.0", id: 3, method: "session/load", params: { sessionId: "1" } })
+    let second = null
+    for (let msg = c.next(); msg; msg = c.next()) if (msg.id === 3) second = msg.result
+    assert.ok(second?.id, "second load succeeded (forked)")
+    const m = JSON.parse(readFileSync(`${sessionPath(tmpCwd)}.manifest`, "utf8"))
+    const slots = Object.keys(m.slots).filter((n) => /^\d+$/.test(n)).map(Number)
+    assert.ok(slots.length >= 2, `second load forked to a NEW slot (slots on disk: ${slots.join(",")}) — 修复前两会话写同一槽静默互覆盖`)
+  })
+
+
+
+  it("delete of a non-active slot re-pins the surviving session to a NEW slot (advisor round2 🔴 回归)", async () => {
+    seedSlot([{ role: "user", content: "a" }]) // 槽 1
+    await c.send({ jsonrpc: "2.0", id: 1, method: "authenticate" })
+    c.next()
+    await c.send({ jsonrpc: "2.0", id: 2, method: "session/load", params: { sessionId: "1" } })
+    let loaded = null
+    for (let msg = c.next(); msg; msg = c.next()) if (msg.id === 2) loaded = msg.result
+    assert.ok(loaded?.id, "session loaded (pinned to slot 1)")
+    await c.send({ jsonrpc: "2.0", id: 3, method: "session/new", params: { cwd: tmpCwd } }) // 槽 2，active=2
+    assert.ok(c.next().result?.id, "new session created")
+    // 删非 active 槽 1 → 在存会话（钉槽 1）必须立即 newSession 钉新槽（修复前 _slot=null
+    // → 下次保存落回 active 槽 2 → 两会话写同一槽静默互覆盖）
+    await c.send({ jsonrpc: "2.0", id: 4, method: "session/delete", params: { sessionId: "1" } })
+    assert.deepEqual(c.next().result, {}, "archive deleted")
+    const m = JSON.parse(readFileSync(`${sessionPath(tmpCwd)}.manifest`, "utf8"))
+    const slots = Object.keys(m.slots).filter((n) => /^\d+$/.test(n)).map(Number)
+    // 修复点：在存会话被立即重新钉槽。newSession 会复用 deleteSlot 释放的 1 号——
+    // 关键语义是"新钉的槽 ≠ active 槽 2"（否则下次保存落回槽 2 与另一会话互覆盖）。
+    assert.equal(slots.length, 2, `re-pin allocated a slot (reused 1 or new): ${slots.join(",")}`)
+    const s1 = JSON.parse(readFileSync(`${sessionPath(tmpCwd)}.1`, "utf8"))
+    assert.equal(s1.history.length, 0, "slot 1 is a FRESH empty session (newSession), not the deleted session resurrected")
+    assert.ok(!s1.title, "no stale title in the re-pinned slot")
   })
 
   it("load/resume/delete on missing slot → -32602; delete removes the archive", async () => {

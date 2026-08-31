@@ -25,6 +25,7 @@ import { createRenderLoop } from "./render-loop.mjs"
 import { makeDimsState } from "./dims.mjs"
 import { SLASH_COMMANDS, SLASH_ALIASES, createSlashCommands } from "./slash-commands.mjs"
 import { createWizard } from "./wizard.mjs"
+import { writeStartupSequence, createExitCleanup } from "./tui-lifecycle.mjs"
 import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
 import { createInteraction } from "./interaction.mjs"
@@ -129,7 +130,7 @@ export async function startTUI(agent, opts = {}) {
   // kitty push (\x1b[>1u): Shift+Enter → \x1b[13;2u (Windows Terminal 1.19+, VS Code, kitty, iTerm2)
   // modifyOtherKeys lvl 2 (\x1b[>4;2m): Shift+Enter → \x1b[27;2;13~ (mintty / Git Bash)
   // translateShiftEnter (stdin layer) maps both to \x1b\r → meta+return → multiline branch.
-  process.stdout.write(ansi.altBuffer + ansi.hideCursor + ansi.mouseOn + ansi.bracketedPasteOn + ansi.keyboardPush + ansi.modifyOtherKeysOn)
+  writeStartupSequence()
 
   const utf8Decoder = new TextDecoder("utf-8", { fatal: false })
 
@@ -273,27 +274,7 @@ export async function startTUI(agent, opts = {}) {
     }
   })
 
-  let cleanedUp = false
-  const cleanup = () => {
-    if (cleanedUp) return
-    cleanedUp = true
-    // Save session before exit (synchronous write).
-    // Archiving to a slot is handled by /new and /session switch — not on every exit,
-    // otherwise simply opening and closing the TUI repeatedly would fill all slots with duplicates.
-    try {
-      saveSession(agent)
-    } catch {
-      // Save failure shouldn't block exit
-    }
-    // Kill MCP stdio subprocesses, don't leave orphans
-    try {
-      closeAllMcp(agent)
-    } catch {
-      // Can't close? fine, process is exiting anyway
-    }
-    process.stdin.setRawMode(false)
-    process.stdout.write(ansi.clearScreen + ansi.mouseOff + ansi.bracketedPasteOff + ansi.keyboardPop + ansi.modifyOtherKeysOff + ansi.mainBuffer + ansi.showCursor + ansi.reset)
-  }
+  const cleanup = createExitCleanup({ agent, saveSession, closeAllMcp })
   process.on("exit", cleanup)
 
   const pushLine = (text, color, kind) => {

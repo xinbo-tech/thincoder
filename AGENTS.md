@@ -38,7 +38,14 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **Testing policy**: two layers. `npm test` = fast layer — fs/git-subprocess/timer/network-heavy tests are `slow()`-gated (auto-skip, runner output shows them; ~15s). `npm run test:full` (env `THINCODER_TEST_FULL=1`) runs everything — required before release, and after touching session/checkpoint/memory/git-index areas. The real-endpoint smoke (`test/smoke-qwen-thinking.mjs`) is in NEITHER layer: run manually with `THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs` (it spends real API tokens). Gate mechanism: `test/slow.mjs`. Pure documentation updates (`*.md`, `README`, `docs/**`, `AGENTS.md`, `CHANGELOG`) do not require running tests — only commit and push.
 - **Dogfooding feedback (must report)**: using thincoder to build *other* projects (e.g. thinworker) is itself a deep test of thincoder. When you find a thincoder bug, an unusable/awkward tool, or a workflow defect during such work, **report it proactively** — never silently work around it or fix-and-forget. Report routing: **functional bug / tool doesn't fit** → open a Gitee issue (thincoder or thincoder-vscode repo, label `bug`/`feature`; write mode via `thincoder-issues/check-gitee-issues.mjs`, needs `GITEE_TOKEN` env var); **doc flaw / minor polish** → thincoder `docs/TODO.md`. Fixing the bug then follows thincoder's own engineering flow (design doc → review → eng-coder → release).
 
-## Key Modules
+## Checkpoint 事故恢复（快照机制，权威文档：docs/design/CHECKPOINT.md）
+
+- **快照时机**（可验证触发点）：① git 工具破坏性操作前自动快照（`snapshotBefore`——checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）；② bash guard（`gitGuardSnapshot`，宽匹配 `GIT_DESTRUCTIVE_RE` 的破坏性 git 命令先快照后放行）；③ 手动 `git` 工具 `checkpointAction=create`。平台层"任务列表删除/上下文压缩前"自动快照**未在本项目代码中证实**——文档不声称。
+- **恢复流程**：发现未提交改动被丢弃 → `git` 工具 `checkpointAction=list` 查快照 → `checkpointAction=cat` 确认内容 → `checkpointAction=rewind checkpointId=<id> path=<文件>` 单文件恢复（rewind 前自动快照当前状态，可逆；全量回滚被禁——与 `git checkout -- .` 同等危险）。
+- **快照语义边界**：快照 = **"操作前状态"**，质量取决于操作前状态本身——编码损坏/已丢失的内容**无法直接 rewind 恢复完好原文**，但快照文件可 `cat` 读取作**重建参照**（2026-09-01 事故实证：结构/ASCII 常完好）。
+- **commit 清理（F6）**：commit 成功后该项目（cwd）的全部 checkpoint 被清空（commit = 新的安全基线，git 历史 + reflog 是更强恢复手段）；checkpoint list/create 入口懒检查外部 commit（HEAD 时间 > 最新快照时间）同样清空。commit 前如需保留中间状态，先手动 `checkpointAction=create`。
+- **存储**：`~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，Windows 盘符大写归一化）——与 VS Code 端**同存储同格式**，快照跨端互通；每 cwd 上限 100 个（最旧淘汰）。
+- **纪律**：**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底（纵深防御）。
 
 ```
 bin/thincoder.cjs    CLI entry

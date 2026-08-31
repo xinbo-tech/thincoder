@@ -66,6 +66,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // the same way it bricks OpenAI-format ones (all raster-only).
   const spec = specForModel(provider.model)
   messages = stripImagesForTextModel(messages, spec)
+  const _debugBeforeLen = process.env.THIN_DEBUG_BODY ? JSON.stringify(messages).length : 0
 
   // Format dispatch: delegate to non-OpenAI transports
   if (provider.format === "anthropic") {
@@ -106,6 +107,9 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // 转义的代码），Kimi 等会把它们当 hex escape 再解析 → "unexpected end of hex escape" 400。
   // 发送前统一 double 掉会形成非法转义的序列（合法 \xNN/\uNNNN 不受影响）。
   messages = escapeMessages(messages)
+  if (process.env.THIN_DEBUG_BODY) {
+    console.error(`[debug-body] escape: ${_debugBeforeLen} -> ${JSON.stringify(messages).length} chars, ${messages.length} msgs (provider=${provider.name}, model=${provider.model})`)
+  }
   // Compile string-pattern rules to RegExp at call time
   const rules = compileStreamRules(streamRules)
   const body = {
@@ -285,6 +289,44 @@ export async function listModels(provider, { signal } = {}) {
 }
 
 async function requestWithRetry(provider, body, signal, onWait) {
+  // THIN_DEBUG_BODY=1：发送前诊断——复现网关侧 "unexpected end of hex escape" 400 时
+  // 定位真实载荷里的毒序列（2026-08-31 slot 3 deepseek-v4-flash）。模拟网关最宽松的
+  // 爆炸条件：任何字面 "\u"/"\x" 后不足位（不看前置反斜杠）。
+  if (process.env.THIN_DEBUG_BODY) {
+    try {
+      const msgs = body?.messages ?? []
+      const raw = JSON.stringify(body)
+      const hits = []
+      for (let i = 0; i < msgs.length; i++) {
+        const m = msgs[i] ?? {}
+        const fields = []
+        if (typeof m.content === "string") fields.push(["content", m.content])
+        else if (Array.isArray(m.content)) m.content.forEach((p, pi) => { if (p && typeof p.text === "string") fields.push([`content[${pi}]`, p.text]) })
+        if (typeof m.reasoning_content === "string") fields.push(["reasoning_content", m.reasoning_content])
+        if (Array.isArray(m.tool_calls)) m.tool_calls.forEach((tc, ti) => { if (tc && typeof tc.arguments === "string") fields.push([`tool_calls[${ti}].arguments`, tc.arguments]) })
+        if (typeof m.name === "string") fields.push(["name", m.name])
+        for (const [f, t] of fields) {
+          const re = /\\[xu]/g
+          let mm
+          while ((mm = re.exec(t))) {
+            const c = t[mm.index + 1]
+            const need = c === "u" ? 4 : 2
+            const after = t.slice(mm.index + 2, mm.index + 2 + need)
+            if (!new RegExp(`^[0-9a-fA-F]{${need}}$`).test(after)) {
+              hits.push({ i, role: m.role, field: f, ctx: t.slice(Math.max(0, mm.index - 40), mm.index + 12) })
+            }
+          }
+        }
+      }
+      console.error(`[debug-body] messages=${msgs.length} bodyLen=${raw.length} suspicious=${hits.length}`)
+      for (const h of hits.slice(0, 20)) console.error("[debug-body] hit", JSON.stringify(h))
+      if (!hits.length && msgs[1151]) {
+        console.error("[debug-body] no suspicious hit; messages[1151] =", JSON.stringify({ role: msgs[1151].role, contentLen: msgs[1151].content?.length, contentHead: String(msgs[1151].content).slice(0, 150) }))
+      }
+    } catch (e) {
+      console.error("[debug-body] diag failed:", e.message)
+    }
+  }
   let lastError
   let lastStatus = 0
   let lastWas429 = false

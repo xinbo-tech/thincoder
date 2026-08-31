@@ -9,11 +9,12 @@ import { stringWidth, wrapText } from "../src/tui/render.mjs"
 import { computeLayout } from "../src/tui/layout.mjs"
 import { buildConvLines } from "../src/tui/render-conversation.mjs"
 import {
-  renderFrame, countConvLines, convCacheKey,
+  renderRows, renderFrame, countConvLines, convCacheKey,
   renderHeader, renderConversation, renderTodo,
   renderPermission, renderQueue, renderPicker,
   renderInputBox, renderStatus,
 } from "../src/tui/render-frame.mjs"
+import { renderSubagentPanel } from "../src/tui/subagent-panel.mjs"
 import { createKeyHandler } from "../src/tui/key-handler.mjs"
 import { renderMarkdownInline, renderMarkdownHeading } from "../src/tui/markdown.mjs"
 import { C } from "../src/tui/ansi.mjs"
@@ -317,7 +318,8 @@ test("computeLayout: basic layout with all panels", () => {
   assert.ok(layout.panels.status, "status bar exists")
   assert.equal(layout.panels.status.h, 1)
   assert.equal(layout.panels.todo, null)
-  assert.equal(layout.panels.subagent, undefined, "subagent slot abolished (§7.2 D4)")
+  assert.equal(layout.panels.subagent, null, "无运行中区块 → 面板不渲染（§7.2.1 F6）")
+  assert.deepEqual(layout.subagentLines, [], "无运行中区块 → 无面板行")
   assert.equal(layout.panels.output, undefined, "output slot abolished (§7.2 D6)")
   assert.equal(layout.panels.permission, null)
   assert.equal(layout.panels.queue, null)
@@ -355,39 +357,104 @@ test("computeLayout: tasks truncated at 5, in_progress prioritized", () => {
   assert.equal(layout.visibleTasks[0].status, "in_progress")
 })
 
-test("computeLayout: subagent blocks render inside conversation — no panel slot (§7.2 T-H)", () => {
-  const state = tuiState({
-    processing: true,
-    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [], done: false, started: Date.now() } },
-  })
-  const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.equal(layout.panels.subagent, undefined, "subagent panel slot retired (D4)")
-  assert.equal(layout.allSubs, undefined, "no allSubs precompute anymore")
-  assert.ok(layout.panels.conversation, "conversation holds the blocks")
-})
 
-test("computeLayout: subagent/task 并存 — 只有 todo 槽（§7.2 D4：区块在会话流内）", () => {
+test("computeLayout: 运行中子 agent → panels.subagent 位于 conversation 与 todo 之间（§7.2.1 T1）", () => {
   const state = tuiState({
     processing: true,
-    subTasks: { "coder#1": { key: "coder#1", role: "coder", blocks: [], done: false, started: Date.now() } },
+    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now() } },
     tasks: [{ title: "task 1", status: "in_progress" }],
   })
   const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.equal(layout.panels.subagent, undefined)
-  assert.ok(layout.panels.todo, "todo exists")
+  assert.ok(layout.panels.subagent, "有运行中区块 → 面板槽存在")
+  assert.equal(layout.panels.subagent.y, layout.panels.conversation.y + layout.panels.conversation.h, "面板紧贴会话区之下")
+  assert.ok(layout.panels.todo, "todo 面板存在")
+  assert.equal(layout.panels.todo.y, layout.panels.subagent.y + layout.panels.subagent.h, "todo 位于面板之下")
+  assert.equal(layout.subagentLines.length, layout.panels.subagent.h, "subagentH = 渲染行数（F2 完全自适应）")
 })
 
-test("computeLayout: subagent/output panels abolished (§7.2 T-H/D6) — blocks live in conversation", () => {
+test("computeLayout: subagent/task 并存 — subagent 面板 + todo 槽（§7.2.1 F1 布局顺序）", () => {
   const state = tuiState({
     processing: true,
-    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [], done: false, started: Date.now() } },
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now() } },
+    tasks: [{ title: "task 1", status: "in_progress" }],
+  })
+  const layout = computeLayout(state, { cols: 80, rows: 24 })
+  assert.ok(layout.panels.subagent, "运行中区块 → 面板槽")
+  assert.ok(layout.panels.todo, "todo 槽")
+  assert.ok(layout.panels.subagent.y > layout.panels.conversation.y, "面板在会话区之下")
+  assert.ok(layout.panels.todo.y > layout.panels.subagent.y, "todo 在面板之下")
+})
+
+test("computeLayout: done 区块不进面板（§7.2.1 F5）；output 槽仍废弃（§7.2 D6/T-H）", () => {
+  const state = tuiState({
+    processing: true,
+    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [{ kind: "text", text: "a" }], done: true, doneAt: Date.now(), started: Date.now() - 5000 } },
     outputPanels: { bash: { text: "line1\nline2", done: false } },
   })
   const layout = computeLayout(state, { cols: 80, rows: 24 })
-  assert.equal(layout.panels.subagent, undefined, "no subagent panel slot (D4)")
+  assert.equal(layout.panels.subagent, null, "done 已冻结进流 → 面板不渲染（T8 冻结语义）")
   assert.equal(layout.panels.output, undefined, "no output panel slot (D6)")
   assert.ok(layout.panels.conversation, "conversation still holds everything")
 })
+
+test("computeLayout: 小终端压缩链 — subagent 面板最先让位至 0（§7.2.1 T3/NF1）", () => {
+  const state = tuiState({
+    processing: true,
+    picker: pickerState(),
+    tasks: [{ title: "t1", status: "in_progress" }, { title: "t2", status: "pending" }],
+    subTasks: {
+      "coder#1": { key: "coder#1", role: "coder", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now() },
+      "explore#2": { key: "explore#2", role: "explore", blocks: [{ kind: "text", text: "b" }], done: false, started: Date.now() },
+    },
+  })
+  const layout = computeLayout(state, { cols: 80, rows: 12 })
+  assert.equal(layout.panels.subagent, null, "面板先让位至 0（隐藏，活动仍进缓冲区不丢）")
+  assert.equal(layout.panels.conversation.h, 1, "会话区最小 1 行保留")
+  assert.ok(layout.panels.inputBox, "输入框保留")
+  assert.ok(layout.panels.status, "状态栏保留")
+  assert.equal(layout.panels.inputBox.y + layout.panels.inputBox.h, layout.panels.status.y, "inputBox → status 顺序不变")
+})
+
+test("computeLayout: 面板部分压缩 → 保底截断（§7.2.1 评审 #4：分隔线 + 末尾区块行优先）", async () => {
+  const { subagentVisibleLines, subagentLineIndex } = await import("../src/tui/layout.mjs")
+  const lines = [0, 1, 2, 3, 4, 5].map((i) => ({ text: `line${i}` })) // [0] = 分隔线占位
+  // h ≥ 全长 → 原样（无压缩）
+  assert.equal(subagentVisibleLines(lines, 6), lines, "h ≥ 全长 → 原样")
+  // 部分压缩 → 分隔线 + 末尾 (h-1) 行（最新启动区块优先；旧 slice(0,h) 保留
+  // 顶部、裁掉最新活动的语义废弃）
+  assert.deepEqual(subagentVisibleLines(lines, 3), [lines[0], lines[4], lines[5]], "保底：分隔线 + 末尾行")
+  assert.deepEqual(subagentVisibleLines(lines, 1), [lines[0]], "h=1 极端：只留分隔线（面板边界语义）")
+  assert.deepEqual(subagentVisibleLines(lines, 0), [], "h=0：空（layout 侧面板已隐藏）")
+  // 索引映射与可见行集合一致（mouse 命中映射同一契约）
+  for (const h of [3, 1, 6]) {
+    const vis = subagentVisibleLines(lines, h)
+    for (let local = 0; local < h; local++) {
+      assert.equal(subagentLineIndex(lines, h, local), lines.indexOf(vis[local]), `h=${h} local=${local} 索引一致`)
+    }
+  }
+  assert.equal(subagentLineIndex(lines, 3, 3), -1, "越界 → -1")
+  assert.equal(subagentLineIndex(lines, 3, -1), -1, "负行 → -1")
+})
+
+test("renderRows: 面板部分压缩时保底截断——最新区块尾部行可见（§7.2.1 评审 #4）", () => {
+  // 12 行小终端 + todo（3 任务）+ 运行中子 agent（头 + tail 3 = 5 行面板）：
+  // fixedH=14 溢出 3 行 → subagentFinalH = 2（部分压缩），可见 = [分隔线, 末行]
+  const state = tuiState({
+    processing: true,
+    tasks: [{ title: "t1", status: "in_progress" }, { title: "t2", status: "pending" }, { title: "t3", status: "pending" }],
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", model: "glm-5.3", started: Date.now(), done: false, blocks: [{ kind: "tool", text: "❯ bash — npm test\nrow1\nrow2\nrow3\n" }], currentTool: "bash", toolArgs: { command: "npm test" }, turn: 2, maxTurns: 100, approval: null, lastError: null } },
+  })
+  const { rows, layout } = renderRows(state, tuiAgent(), { cols: 80, rows: 12, slashCommands: [], platform: "linux" })
+  assert.ok(layout.panels.subagent, "面板存在")
+  assert.ok(layout.panels.subagent.h < layout.subagentLines.length, `部分压缩（h=${layout.panels.subagent.h} < ${layout.subagentLines.length}）`)
+// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
+  const clean = rows.slice(layout.panels.subagent.y, layout.panels.subagent.y + layout.panels.subagent.h).map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").replace(/\x1b\[K$/, ""))
+  assert.ok(clean[0].startsWith("─"), "分隔线保留（面板边界语义，压缩时不移除）")
+  const last = layout.subagentLines[layout.subagentLines.length - 1]
+  assert.ok(clean[clean.length - 1].includes(last.text.trim()), `末尾区块行可见（最新活动优先，实际 ${JSON.stringify(clean[clean.length - 1])}）`)
+  assert.ok(!clean.join("").includes("[▶"), "顶部（分隔线后首个区块头）在压缩时让位")
+})
+
 
 // ====================================================================
 // render-frame.mjs — renderFrame
@@ -437,7 +504,7 @@ test("renderFrame: todo marks show correct status icons", () => {
   assert.ok(frame.includes("○ pending task"), "pending has circle")
 })
 
-test("renderFrame: subagent block renders in conversation (§7.2 T-H: 窄带退役)", () => {
+test("renderRows: 运行中子 agent 区块渲染于固定底部面板（§7.2.1 T4 渲染目标审计）", () => {
   const state = tuiState({
     processing: true,
     subTasks: {
@@ -445,12 +512,18 @@ test("renderFrame: subagent block renders in conversation (§7.2 T-H: 窄带退�
     },
   })
   const agent = tuiAgent()
-  const { frame } = renderFrame(state, agent, { cols: 80, rows: 24, slashCommands: [], platform: "linux" })
+  const { rows, layout } = renderRows(state, agent, { cols: 80, rows: 24, slashCommands: [], platform: "linux" })
+  assert.ok(layout.panels.subagent, "面板槽存在")
+  // 区块头渲染于面板（conversation 与 todo 之间）；会话区不含运行区块
+  // （T-A/T-C/T-D 渲染目标审计：折叠头现渲染于面板而非会话流）
+  const panelText = rows.slice(layout.panels.subagent.y, layout.panels.subagent.y + layout.panels.subagent.h).join("\n")
+  const convText = rows.slice(layout.panels.conversation.y, layout.panels.conversation.y + layout.panels.conversation.h).join("\n")
 // eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
-  const clean = frame.replace(/\x1b\[[0-9;]*m/g, "")
-  assert.ok(clean.includes("[▶ coder#1 · glm-5.3"), "block header in conversation stream")
-  assert.ok(clean.includes("turn 2/100"), "header shows turn n/max")
-  assert.ok(clean.includes("write"), "shows current tool")
+  const cleanPanel = panelText.replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(cleanPanel.includes("[▶ coder#1 · glm-5.3"), "block header in the panel")
+  assert.ok(cleanPanel.includes("turn 2/100"), "header shows turn n/max")
+  assert.ok(cleanPanel.includes("write"), "shows current tool")
+  assert.ok(!convText.includes("[▶ coder#1"), "会话区不含运行区块")
 })
 
 test("renderFrame: status bar shows task progress", () => {
@@ -875,18 +948,42 @@ test("restore 结果守卫: read_image base64 剥离 + 400 行封顶（P1，2026
 })
 
 
-test("subagent 运行区块带顶部分隔线（2026-08-30，对齐 task 面板；无 running 块时不留悬空线）", () => {
+test("subagent 面板带顶部边界线（§7.2.1 NF2/D2）；无 running 块 → 面板不渲染、无悬空线", () => {
   const now = Date.now()
   const state = tuiState({
     lines: [{ text: "会话内容", color: C.text, _kind: "text" }],
     subTasks: { "coder#1": { key: "coder#1", role: "coder", model: "m", started: now, done: false, blocks: [{ kind: "text", text: "hello" }], currentTool: null, toolArgs: null, turn: 1, maxTurns: 10, approval: null, lastError: null, dropped: 0 } },
   })
-  let out = buildConvLines(state, 80)
-  assert.ok(out.some((l) => l.text.startsWith("─") && l.color === C.dim), "有 running 块 → 顶部分隔线")
-  // done 块（冻结进 lines 后 subTasks 里只剩 done 条目）→ 不渲染分隔线
+  const out = renderSubagentPanel(state, 80, 24)
+  assert.ok(out[0]?.text.startsWith("─") && out[0].color === C.dim, "面板顶部边界线（现状分隔线语义迁移）")
+  assert.ok(out.some((l) => l.text.includes("[▶ coder#1")), "运行区块头在面板")
+  // 运行区块不再进会话流（渲染目标审计：分隔线/区块头均迁出 buildConvLines）
+  const conv = buildConvLines(state, 80)
+  assert.ok(!conv.some((l) => l.text.startsWith("─")), "会话流无面板分隔线残留")
+  // done 块（冻结进 lines 后 subTasks 里只剩 done 条目）→ 面板不渲染（无悬空线）
   state.subTasks["coder#1"].done = true
-  out = buildConvLines(state, 80)
-  assert.ok(!out.some((l) => l.text.startsWith("─")), "无 running 块 → 不留悬空分隔线")
+  assert.deepEqual(renderSubagentPanel(state, 80, 24), [], "无 running 块 → 面板不渲染（F6）")
+})
+
+test("subagent 面板：多子 agent 并行全显示（§7.2.1 T4/F2 自适应高度）", () => {
+  const now = Date.now()
+  const state = tuiState({
+    subTasks: {
+      "coder#1": { key: "coder#1", role: "coder", model: "glm-5.3", started: now, done: false, blocks: [{ kind: "text", text: "alpha\nbeta\ngamma\ndelta" }], currentTool: "write", toolArgs: null, turn: 3, maxTurns: 100, approval: null, lastError: null, dropped: 0 },
+      "explore#2": { key: "explore#2", role: "explore", model: "deepseek-chat", started: now, done: false, blocks: [{ kind: "text", text: "x\ny\nz" }], currentTool: null, toolArgs: null, turn: 1, maxTurns: 20, approval: null, lastError: null, dropped: 0 },
+    },
+  })
+  const out = renderSubagentPanel(state, 80, 24)
+  assert.ok(out[0]?.text.startsWith("─"), "顶部分隔线")
+  const joined = out.map((l) => l.text).join("\n")
+  assert.ok(joined.includes("[▶ coder#1 · glm-5.3") && joined.includes("[▶ explore#2 · deepseek-chat"), "两个并行区块折叠头都在面板")
+  assert.ok(joined.includes("turn 3/100") && joined.includes("turn 1/20"), "各自 turn 状态")
+  // 每个区块折叠态 = 头 + tail ≤3（N 区块 → 面板 = 1 分隔线 + N×(1+tail)）
+  const tailLines = out.filter((l) => l.text.startsWith("│ ")).length
+  assert.ok(tailLines >= 2 && tailLines <= 6, `tail 行在 2..6 之间（每区块 ≤3），实际 ${tailLines}`)
+  // 高度自适应：面板行数 = 全部运行区块完整渲染（layout 预计算同源）
+  const layout = computeLayout(state, { cols: 80, rows: 24 })
+  assert.equal(layout.panels.subagent.h, out.length, "subagentH = 面板渲染行数（F2）")
 })
 
 test("panel functions: renderHeader includes model name", () => {
@@ -952,8 +1049,8 @@ test("panel functions: renderTodo shows status marks", () => {
   assert.ok(lines[3].includes("○"))
 })
 
-test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lines + expand full", () => {
-  // buildConvLines imported statically at top
+test("panel functions (§7.2.1 T4/T-A 渲染目标审计): 子agent 区块 — 面板折叠头 + tail 3 + 展开全量", () => {
+  // 运行区块渲染于固定底部面板（subagent-panel.mjs）；折叠/展开交互与 D4 现状一致
   const blocks = [
     { kind: "think", text: "先读文件" },
     { kind: "tool", text: "❯ bash — npm test\noutput line1\noutput line2\noutput line3\n" },
@@ -965,11 +1062,11 @@ test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lin
     },
     expandedBlocks: expanded ? new Set(["sub-coder#1"]) : new Set(),
   })
-  // 折叠态：头部摘要 + tail 2 行，不出现最旧内容
+  // 折叠态：头部摘要 + tail ≤3 行，不出现最旧内容
 // eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
-  const folded = buildConvLines(mk(false), 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, ""))
+  const folded = renderSubagentPanel(mk(false), 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, ""))
   const headIdx = folded.findIndex((t) => t.includes("[▶ coder#1 · glm-5.3"))
-  assert.ok(headIdx >= 0, "折叠头存在")
+  assert.ok(headIdx >= 0, "折叠头存在（面板）")
   assert.ok(folded[headIdx].includes("turn 12/100"), "头部含 turn n/max")
   assert.ok(folded[headIdx].includes("bash"), "头部含当前工具（bash tail 摘要）")
   const tailCount = folded.filter((t, i) => i > headIdx && t.startsWith("│ ")).length
@@ -978,7 +1075,7 @@ test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lin
   assert.ok(!folded.some((t) => t.includes("先读文件")), "折叠态不显示最旧的 think 块")
   // 展开态：全量按 kind 着色
   const expandedState = mk(true)
-  const expanded = buildConvLines(expandedState, 100)
+  const expanded = renderSubagentPanel(expandedState, 100)
 // eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const joined = expanded.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
   assert.ok(joined.includes("先读文件"), "展开显示 think 块")
@@ -991,36 +1088,32 @@ test("panel functions (§7.2 T-A): subagent block — folded header + tail 2 lin
   const textLine = expanded.find((l) => l.text.includes("final summary"))
   assert.equal(textLine?.color, C.text, "text=C.text")
   // 折叠控制线可点击（foldHint 走法）
-  const head = buildConvLines(mk(false), 100).find((l) => l.text.includes("[▶ coder#1"))
-  assert.equal(head?._foldToggle, "sub-coder#1", "头部 fold key = sub-<key>，跨 turn 保持折叠状态")
+  const head = renderSubagentPanel(mk(false), 100).find((l) => l.text.includes("[▶ coder#1"))
+  assert.equal(head?._foldToggle, "sub-coder#1", "头部 fold key = sub-<key>，跨 turn 保持折叠状态（T9）")
 })
 
-test("panel functions (§7.2 T-C/T-I): 区块头 approval 等待与 done + lastError 定格", () => {
-  // buildConvLines imported statically at top
+test("panel functions (§7.2.1 T-C 渲染目标审计): 面板头 approval 等待 + 冻结 ✓ 头定格（T8）", () => {
+  // 运行中 approval → 面板折叠头 ⏸ + "等待审批"（评审 #5：图标在括号内）
   const approvalState = tuiState({
     subTasks: {
       "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [], done: false, started: Date.now(), currentTool: null, turn: 3, maxTurns: 100, approval: "write", lastError: null },
     },
   })
 // eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
-  const approvalOut = buildConvLines(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
-  assert.ok(approvalOut.includes("⏸ coder#2"), "等待审批图标")
+  const approvalOut = renderSubagentPanel(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(approvalOut.includes("⏸ coder#2"), "等待审批图标（面板）")
   assert.ok(approvalOut.includes("等待审批: write"), "头部显示等待审批：tool")
+  // done 区块：冻结进流（_frozenSubTask ✓ 头 + 定格耗时），面板移除该区块
   const doneState = tuiState({
-    subTasks: {
-      "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [{ kind: "tool", text: "❯ bash — x\n" }], done: true, doneAt: Date.now(), started: Date.now() - 120000, currentTool: null, turn: 40, maxTurns: 100, approval: null, lastError: "turn cap reached — work may be partial" },
-    },
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "coder#2", role: "coder", model: "m", blocks: [{ kind: "tool", text: "❯ bash — x\n" }], done: true, doneAt: Date.now(), started: Date.now() - 120000, currentTool: null, turn: 40, maxTurns: 100, approval: null, lastError: "turn cap reached — work may be partial" } }],
+    subTasks: { "coder#2": { key: "coder#2", role: "coder", model: "m", blocks: [{ kind: "tool", text: "❯ bash — x\n" }], done: true, doneAt: Date.now(), started: Date.now() - 120000, currentTool: null, turn: 40, maxTurns: 100, approval: null, lastError: "turn cap reached — work may be partial" } },
   })
+  assert.deepEqual(renderSubagentPanel(doneState, 100), [], "done → 面板移除该区块（F5）")
 // eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const doneOut = buildConvLines(doneState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
-  // 冻结化（2026-08-30）：done 区块由 agent-turn 冻结进 lines，subTasks 段只渲染
-  // 运行中条目——这里断言「done 条目不再出现在尾部固定段」（残影回归锁定）。
-  assert.ok(!doneOut.includes("✓ coder#2"), "done 区块不再驻留尾部固定段（残影修复）")
-  // 运行中条目仍正常渲染（对照）
-// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
-  const runningOut = buildConvLines(approvalState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
-  assert.ok(runningOut.includes("⏸ coder#2"), "运行中区块照常显示")
-  assert.ok(runningOut.includes("等待审批: write"), "头部显示等待审批：tool")
+  assert.ok(doneOut.includes("✓ coder#2"), "冻结进流渲染 ✓ 头")
+  assert.ok(doneOut.includes("done 120s"), "冻结头定格耗时")
+  assert.ok(doneOut.includes("turn cap reached"), "lastError 定格在冻结头")
 })
 
 test("panel functions (§7.2 D5): 事件 token 残留被 sanitizeDisplay 兜底剥除", async () => {
@@ -1033,47 +1126,78 @@ test("panel functions (§7.2 D5): 事件 token 残留被 sanitizeDisplay 兜底�
   assert.equal(sanitizeDisplay("normal ⟦ev⟧ mid-token"), "normal  mid-token", "哨兵后无字母 phase = 正文合法内容（如讨论 ACP 桥的表格），只剥哨兵本身——2026-08-31 用户实证：旧'剥到行尾'语义把真实正文吃到串尾")
 })
 
-test("panel functions (§7.2 T-H): layout 无 subagent/output 槽 + render-frame 无 renderSubagent/renderOutput 导出", () => {
-  // D6 回归断言：模块面收敛（面板槽消失）
-  assert.equal(computeLayout(tuiState(), { cols: 80, rows: 24 }).panels.subagent, undefined)
-  assert.equal(computeLayout(tuiState(), { cols: 80, rows: 24 }).panels.output, undefined)
+test("panel functions (§7.2.1 T-H 修订): 窄带特有断言保留 — subPanelH/renderSubagent 已删；新面板槽条件存在", () => {
+  // 窄带（D4 前）与 output 面板（D6）的面板槽消亡断言（T-H 语义保留——
+  // 评审 #1：原断言"layout 无 subagent 槽"与本设计重新加槽冲突，改为窄带特有断言）
+  const base = computeLayout(tuiState(), { cols: 80, rows: 24 })
+  assert.equal(base.panels.subagent, null, "无运行中区块 → 面板不渲染（F6）")
+  assert.equal(base.panels.output, undefined, "output 槽仍废弃（D6）")
+  assert.ok(!("subPanelH" in base), "窄带 subPanelH 已删")
+  const running = computeLayout(tuiState({
+    subTasks: { "explore#1": { key: "explore#1", role: "explore", blocks: [], done: false, started: Date.now() } },
+  }), { cols: 80, rows: 24 })
+  assert.ok(running.panels.subagent, "运行中区块 → 面板槽恢复（§7.2.1 D1）")
 })
 
-test("panel functions: convCacheKey 随 subTasks 区块状态失效（§7.2 D5/N3）", () => {
+test("panel functions: convCacheKey 不再随运行中 subTasks 变化失效（§7.2.1：运行区块已移出会话渲染）", () => {
+  // D5/N3 修订：运行区块渲染于固定面板（逐帧重渲染、无缓存）——会话缓存键与
+  // 子agent 活动解耦（否则每次子agent token 追加都全量重建会话，2026-08-31
+  // 懒加载优化被架空）；冻结载体行进流仍失效（lines.length + frozenSig 覆盖）。
   const s1 = tuiState({
     subTasks: { "coder#1": { key: "coder#1", role: "coder", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now(), currentTool: null, turn: 1, maxTurns: 100, approval: null, lastError: null, blockEpoch: 1 } },
   })
   const k1 = convCacheKey(s1)
-  // 区块增长（epoch bump）
   s1.subTasks["coder#1"].blockEpoch = 2
-  assert.notEqual(convCacheKey(s1), k1, "blocks 增长失效缓存")
-  // 折叠切换
-  const s2 = tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)), expandedBlocks: new Set(["sub-coder#1"]) })
-  assert.notEqual(convCacheKey(s2), convCacheKey(tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)) })), "展开/折叠失效缓存")
-  // turn 更新
-  const s3 = tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)) })
-  s3.subTasks["coder#1"].turn = 2
-  assert.notEqual(convCacheKey(s3), convCacheKey(tuiState({ subTasks: JSON.parse(JSON.stringify(s1.subTasks)) })), "turn 更新失效缓存")
+  assert.equal(convCacheKey(s1), k1, "运行区块增长不再失效会话缓存（面板独立渲染）")
+  s1.subTasks["coder#1"].turn = 2
+  assert.equal(convCacheKey(s1), k1, "turn 更新不再失效会话缓存")
+  // 冻结载体行进流 → 会话缓存失效（既有 D5 语义保持）
+  const s2 = tuiState()
+  const k2 = convCacheKey(s2)
+  s2.lines.push({ text: "carrier", color: C.dim, _frozenSubTask: { key: "coder#1", blocks: [], done: true, doneAt: 0, started: 0 } })
+  assert.notEqual(convCacheKey(s2), k2, "冻结进流 → 会话缓存失效")
 })
 
-test("panel functions: 运行中区块 elapsed 走秒失效缓存（1s ticker 不再命中过期缓存）", () => {
-  // 回归（2026-08-30 评审）：缓存键无时间分量 → 子 agent 静默期（无 chunk 输出）
-  // 1s ticker 触发的 render 全部命中缓存，头部 "45s" 冻结不走。
+test("panel functions: 运行中区块 elapsed 走秒由面板逐帧刷新（§7.2.1：面板无缓存）", () => {
+  // 回归（2026-08-30 评审）：运行区块的头部 "45s" 必须走秒——面板渲染无缓存
+  // （每帧重建，layout 预计算），1s ticker（agent-turn subRunning 条件）触发
+  // 渲染即刷新；会话缓存键不再含时间分量（不随走秒失效）。
   const sub = { key: "coder#1", role: "coder", blocks: [{ kind: "text", text: "a" }], done: false, started: Date.now() - 5000, currentTool: null, turn: 1, maxTurns: 100, approval: null, lastError: null, blockEpoch: 1 }
   const s = tuiState({ subTasks: { "coder#1": sub } })
   const k1 = convCacheKey(s)
-  // 模拟 1s 后：内容零变化，仅时钟推进 → 键必须变化
-  const keyWith = (now) => {
+  const panelAt = (now) => {
     const orig = Date.now
     Date.now = () => now
-    try { return convCacheKey(s) } finally { Date.now = orig }
+    try { return renderSubagentPanel(s, 80).map((l) => l.text).join("\n") } finally { Date.now = orig }
   }
-  assert.notEqual(keyWith(Date.now() + 1000), k1, "运行中：秒级推进失效缓存（elapsed 走秒）")
-  // done 后不再带时间分量——冻结头部恒定，不应每秒踢缓存
+  const h1 = panelAt(Date.now())
+  const h2 = panelAt(Date.now() + 1000)
+  assert.notEqual(h1, h2, "面板头部 elapsed 走秒（1s ticker 刷新目标）")
+  assert.equal(convCacheKey(s), k1, "会话缓存键稳定（不随运行区块时间推进）")
+  // done 后面板移除该区块（F5）——不再渲染、无走秒
   sub.done = true
   sub.doneAt = sub.started + 5000
-  const kDone = keyWith(Date.now())
-  assert.equal(keyWith(Date.now() + 5000), kDone, "done 后键稳定（无时间分量）")
+  assert.equal(panelAt(Date.now()), "", "done → 面板移除（无渲染）")
+})
+
+test("panel functions (#1 评审): 折叠头整行 ≤ cols——长模型名 + 长等待审批态", () => {
+  const longModel = "very-long-model-name-with-many-chars-1234567890" // 44 字符
+  const state = tuiState({
+    subTasks: {
+      "coder#1": { key: "coder#1", role: "coder", model: longModel, blocks: [{ kind: "tool", text: "❯ bash — npm test\nrow1\nrow2\nrow3\n" }], done: false, started: Date.now() - 30000, currentTool: "write", toolArgs: { command: "npm test -- --long-flag-option-name" }, turn: 3, maxTurns: 100, approval: "write_file", lastError: null },
+    },
+  })
+  // 整行 ≤ cols 铁律（TUI 布局纪律：任何写入帧的行 ≤ cols）——含窄终端
+  // （括号前缀按 cols-2 截断的兜底路径）
+  for (const cols of [120, 80, 60, 40]) {
+    for (const l of renderSubagentPanel(state, cols)) {
+      assert.ok(stringWidth(l.text) <= cols, `cols=${cols}: 行宽 ${stringWidth(l.text)} ≤ ${cols}（${JSON.stringify(l.text)}）`)
+    }
+  }
+  const head = renderSubagentPanel(state, 80).find((l) => l._foldToggle)?.text ?? ""
+  assert.ok(!head.includes(longModel), "超长模型名按显示宽度截断（不整串上屏挤掉状态区）")
+  assert.ok(head.includes("等待审批"), "等待审批态保留可见（截断模型而非状态）")
+})
 
 test("panel functions: search 状态参与缓存键（P0-1：高亮不被缓存吃掉，2026-08-30 会诊）", () => {
   // performSearch 只改 state.search/_searchMatches——若 key 不含 search，
@@ -1088,8 +1212,6 @@ test("panel functions: search 状态参与缓存键（P0-1：高亮不被缓存�
   assert.notEqual(k2, k1, "切换匹配项 → 键变化（高亮跟随导航）")
   s.search = null
   assert.equal(convCacheKey(s), k0, "关闭搜索 → 键复原（残留高亮清除）")
-})
-
 })
 
 test("advisor review 折叠框：默认折叠防刷屏 + 完成后冻结载体行可重开（2026-08-30）", async () => {

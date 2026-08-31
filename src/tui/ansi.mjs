@@ -25,6 +25,8 @@ export const ansi = {
   restoreCursor: `${ESC}8`,   // DECRC — restore cursor position
   syncUpdateStart: `${ESC}[?2026h`, // DECSET 2026 — buffer output until syncUpdateEnd
   syncUpdateEnd: `${ESC}[?2026l`,   // DECRST 2026 — flush buffered output atomically
+  wrapOff: `${ESC}[?7l`, // DECRST 7 — disable auto-wrap: over-wide rows hard-truncate at the margin instead of wrapping to the next physical line (2026-08-31 会诊：Ambiguous 宽度字符如 │/—/●/▸ 在中文 locale 终端渲染 2 格而 stringWidth 按 1 格算 → 行实际超宽 → wrap 污染下一物理行 + \x1b[K 清错行 → picker 残影)
+  wrapOn: `${ESC}[?7h`,  // DECSET 7 — restore auto-wrap (TUI exit; also re-enable per-frame after write)
   reset: `${ESC}[0m`,
   dim: `${ESC}[2m`,
   bold: `${ESC}[1m`,

@@ -69,9 +69,9 @@
 - [x] ~~`agent.test.mjs` "session: 保存/恢复/新建 往返" 单测 16.4s、checkpoint 回滚 7.6s——疑似临时目录 fs 抖动/全量副本策略~~——2026-08-31 定位并修复：**真因是"原子写不残留 .tmp"断言扫描了 `~/.thincoder/sessions/` 全目录**（readdirSync 实测 18s——用户机上 31123 个文件、含 22MB 大会话，Defender 干扰放大；独立复现 saveSession/loadSession 全序列仅 16ms，用例其余逻辑 <15ms）。修复：改为 existsSync 直探本槽位 `.tmp` 路径（O(1)），断言语义不变。16.4s→**17ms**。checkpoint 7.6s 属 git 子进程真实成本，保留 slow 层。
 
 
-### TUI · 渲染/回调模块 300+ 行 advisory 存档（2026-08-30，来源：agent-turn 拆分评审）【同日更新：render-conversation 已随 fold-block 组件化降到 410 行；tool-events 未动】
+### TUI · 渲染/回调模块 300+ 行 advisory 存档（2026-08-30，来源：agent-turn 拆分评审）【2026-09-01 更新：render-conversation 573 行超 500 硬限，见下条】
 
-- [ ] `src/tui/render-conversation.mjs` 410 行超 300 建议线（组件化后自 472 降 62 行）——剩余主体是长消息/连续 dim 折叠装配，已较薄，观察增长再动
+- [ ] `src/tui/render-conversation.mjs` **573 行（超 500 硬限，2026-09-01 §7.2.1 后实测）**——组件化后自 630 降 573（runningSubs 段迁出 subagent-panel.mjs），仍超硬限——剩余主体 frozenSubTask/advisor/tool-block 折叠装配；建议后续拆分（frozen/tool-block 段渲染独立模块）。附：frozen 头 `▶ [✓ …]` 未做宽度截断（§7.2.1 评审 #1 标注存量）——顺手一并处理
 - [ ] `src/tui/tool-events.mjs` 344 行超 300 建议线——状态栏分支（onToolCall 的 name→status 映射表）可表驱动压缩；刚随拆分落成，观察增长再动
 
 

@@ -406,7 +406,7 @@ export function buildToolCallbacks(deps) {
     // the compressed version — persist it so the session file ends up compressed. Silent:
     // a save failure must never surface after the turn already returned.
     onDistilled: () => {
-      try { saveSessionImpl(agent, state.lines) } catch { /* 静默 */ }
+      try { saveSessionImpl(agent, state.lines) } catch (e) { console.error(`[session] distilled save failed: ${e.message}`) }
     },
     onUsage: (usage) => {
       state.tokens.prompt += usage.prompt_tokens ?? 0

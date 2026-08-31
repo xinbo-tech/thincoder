@@ -86,7 +86,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **提示词条款**（discipline.md）：加「git 操作用 git 工具、不要用 bash」的 Tool routing 条款（标准模式纪律，两端 byte-identical；git 路由属编码纪律、放 discipline.md 而非协调职责的 main.md——main.md 的「无路由条款」缺口**有意不改**，路由条款归属 discipline.md 的编码纪律段，main.md 不需要 cross-reference）。
 
-**破坏性原则**（沿用「破坏性操作 snapshot-then-proceed」）：reset --hard / checkout 丢改动 / rm 等先快照再执行 + 用户确认。CLI 用 `createCheckpoint`（全量复制，非破坏）；VS Code 用 `git stash create`+`git stash store`（非破坏，与 `git stash push` 清工作区不同）。**顺带修复的既有 bug**：`runGit` 对整段输出 `.trim()` 会剥掉 porcelain 首行的「 」（unstaged 标记），把 unstaged 误分类成 staged——status 改用保行前导空格的 `runGitRaw`。
+**破坏性原则**（沿用「破坏性操作 snapshot-then-proceed」）：reset --hard / checkout 丢改动 / rm 等先快照再执行 + 用户确认。**两端统一为全量副本快照**（CLI `createCheckpoint` / VS Code 镜像 `src/tools/checkpoint.mjs`——CHECKPOINT.md F5 存储统一，VS Code 已弃用 git stash；同一目录 `~/.thincoder/checkpoints/{cwdHash12}/`，快照跨端互通。快照时机/恢复流程/commit 清理/语义边界见 **CHECKPOINT.md**，此处不复制）。**顺带修复的既有 bug**：`runGit` 对整段输出 `.trim()` 会剥掉 porcelain 首行的「 」（unstaged 标记），把 unstaged 误分类成 staged——status 改用保行前导空格的 `runGitRaw`。
 
 **测试**（两端各验）：每个新 action 的成功路径 + 参数校验 + 破坏性快照触发；反向路由断言（git.md 含 Route to git、discipline.md 含条款）；全量回归不降。
 
@@ -106,8 +106,10 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 | T-g-10 | workdir 子目录运行 | `git status workdir="sub/repo"` | 在子仓库执行；越界路径报错 |
 | T-g-11 | 反向路由断言 | git.md/discipline.md 文本 | 含 "Route to git instead of bash" / 路由条款 |
 | T-g-12 | status porcelain 保格 | 有 staged+unstaged 混合 | runGitRaw 保前导空格，分类不串 |
+| T-g-13 | F7 新 action 集（2026-09-01） | 枚举两端 git 工具 action 集 | 恰 32 个（既有 21 + 新增 11：clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv），不含 P2（gc/config/fsck/bisect/grep/ls-files/merge-base/am/submodule）；两端一致 |
+| T-g-14 | F7 破坏性快照（2026-09-01） | clean/rebase 执行（有未提交改动） | 执行前输出 `[snapshot … created before …]`；rebase 被拒时快照行仍在（F1 闭环）；dryRun clean 不删不快照 |
 
-**受影响文件**：CLI `src/tools/git.mjs` + `src/tools/git.md` + `src/prompts/discipline.md`、VS Code `src/tools/git.mjs` + `src/prompts/discipline.md`、两端测试、`CHANGELOG.md`。
+**受影响文件**：CLI `src/tools/git.mjs` + `src/tools/git-ext.mjs`（F7 扩展 action + 共享 git 辅助，500 行拆分）+ `src/tools/git-checkpoint.mjs`（checkpoint 子系统）+ `src/tools/git.md` + `src/prompts/discipline.md`、VS Code `src/tools/git.mjs` + `src/tools/git-ext.mjs` + `src/tools/git-checkpoint.mjs` + `src/prompts/discipline.md`、两端测试。
 
 ---
 

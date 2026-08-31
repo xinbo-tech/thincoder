@@ -156,7 +156,7 @@ runAgent turn 循环内 `agent._currentTurn` 更新处（`src/agent.mjs`，D2 em
 - **落位（渲染）**：子agent 区块渲染进会话流（render-conversation.mjs 新增 subagent blocks 段，位于 advisorBlocks 段之前），**段首带一条与会话区切分的分隔线**（`─` × cols-1，dim，与 task 面板顶部线同款，2026-08-30 用户要求；仅当存在运行中区块时出现——done 块已冻结进会话流，空段不留悬空线）：折叠态 = 头部摘要行 `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`（运行中 elapsed 由 1s ticker 刷新）+ tail 3 行（blocks 尾部；2026-08-30 用户拍板 2→3）；展开态 = blocks 全量按 kind 着色（think=C.reason、tool=C.tool、text=C.text），**经公共组件 fold-block.mjs renderBlockTimeline + renderExpandedBlock 渲染，展开封顶屏幕 60% + 底部可达折叠控制行（2026-08-30 用户报告驱动，TUI.md §5）**。展开/折叠走 expandedBlocks 集合（key=`sub-${key}`）+ `toggleFoldBlock` 单源切换。默认折叠；同一 key 折叠状态跨 turn 保持（expandedBlocks 不随 turn 清理该前缀）。
 - **完成态（2026-08-30 修订：冻结进对话流 + 保留独立折叠交互，废除尾部驻留）**：初版实现把区块渲染成会话末尾的固定段且 done 后保留——完成的 ✓ 块永远钉在输入框上方（"残影"，用户报告），多子agent 还会叠加。修订：onToolResult 标记 done 后，完成冻结家族（`subagent-blocks.mjs` freezeSubTaskLines/freezeDoneSubTasks，2026-08-30 自 agent-turn 归位）把整个区块（含 blocks/lastError/耗时）作为 `_frozenSubTask` 载体行存进 `state.lines` 并从 `state.subTasks` 删除——留痕随会话滚走，内存仍受 N2 环形上限约束。**冻结区块保持完整折叠交互（用户拍板 2026-08-30：不因冻结降级）**：render-conversation 识别载体行后按 `sub-${key}`（与运行中区块同一个 key，折叠状态跨冻结边界延续）渲染——折叠态 = `▶ [✓ coder#1 · model · done 45s · turn n/max] … click to expand` + tail 3 行；展开态 = `▼` 控制行 + 全量时间线（kind 着色，`_skipDimFold` 防连续 dim 折叠套叠）；点击 ▶/▼ 切换与运行中区块一致。尾部固定段只渲染**运行中**条目（done 条目若因旧会话残留出现也跳过不渲染）；finally 兜底把中断（Ctrl+C/错误）仍在跑的区块一并冻结（lastError=interrupted）。完整报告前 8 行预览仍由 onToolResult 路径进会话流（不变）。convCacheKey 的 frozenSig 记录载体行 key 集合（展开/折叠翻转由既有 `exp` 项覆盖）。
 - **窄带退役**：layout.mjs 删除 subPanelH/panels.subagent 槽；render-frame.mjs 删除 renderSubagent；agent-turn.mjs 删除 3 秒清理定时器。`state.subTasks` 名字保留（数据结构升级，消费端换了）。
-- **elapsed 跳动**：现有 1s ticker（render-loop）在 subTasks 有运行中条目时触发 scheduleRender——无需新定时器。
+- **elapsed 跳动**：现有 1s ticker（agent-turn.mjs，§7.2.1 评审 #5 归属更正）在 subTasks 有运行中条目时触发 scheduleRender——无需新定时器。
 
 **D5 消费端格式约定（TUI strip 规则）**
 
@@ -192,7 +192,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | `src/tui/render-conversation.mjs` | 新增 subagent blocks 渲染段（折叠头 + tail + 展开全量）；sanitizeDisplay strip 事件 token；fold 缓存签名纳入 subTasks |
 | `src/tui/layout.mjs` | 删 subPanelH/panels.subagent/outputPanelsH/panels.output |
 | `src/tui/render-frame.mjs` | 删 renderSubagent/renderOutput/相关分支 |
-| `src/tui/render-loop.mjs` | 删 outputPanels prune；1s ticker 条件纳入 subTasks 运行中条目 |
+| `src/tui/render-loop.mjs` | 删 outputPanels prune（§7.2）；**1s ticker 条件纳入 subTasks 运行中条目——实现在 agent-turn.mjs**（§7.2.1 评审 #5 归属更正：render-loop 无 ticker） |
 | `src/tui/index.mjs` | subTasks 初始结构注释更新 |
 | `src/tui/subagent-blocks.mjs` | 新增（实现期从 agent-turn.mjs 拆出满足 500 行硬限）：SUB_PREFIX_RE/SUB_EVENT_RE、blocks 环形缓冲（N2）、250ms 渲染节流（N1）、routeSub* 路由、finishSubTask、[model] 元数据记录；完成冻结家族（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks）2026-08-30 自 agent-turn 归位 |
 | `src/tui/tool-events.mjs` | 2026-08-30 新增（agent-turn 534 行超限拆分）：工具事件三回调 + flushStream + onTurnEnd 等回调装配自 agent-turn 迁出 |
@@ -225,6 +225,77 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - T-J（D7）：ACP 事件 token 剥除 + 生成侧哨兵 strip（用例见 D7）。
 - T-K（round2 #2，NFR）：N1 节流——250ms 窗口内多次 onToolOutput chunk 至多触发一次渲染提交；N2 缓冲上限——第 501 行起环形丢弃最旧行并出现"…（已省略 N 行）"标记，done 后区块同样受约束。
 - T-L（round3 #5）：escalate 孩子产出区块且其专属行为不被 spawn-child 收编破坏（effortNote 拼接、touched-files 清单、无 permQueue 的 continue 询问路径）。
+
+### 7.2.1 运行中面板固定化（2026-09-01 用户需求变更：需求层）
+
+**背景**（用户真实使用反馈）：D4 把运行中子 agent 区块渲染进会话流内联（render-conversation.mjs subagent blocks 段 + 分隔线）——用户实测发现**该容器区（"底部画着横线、里面跑着好几个子 agent 的面板"）会随会话滚动，没有固定在底部**。需求：运行中的子 agent 活动改为**固定底部面板**（不随会话滚动），与 todo 面板同型；完成后仍冻结进会话流（D4 现状不变，历史可读）。
+
+**功能性需求**：
+- **F1 · 位置**：固定面板位于**会话区与 todo 面板之间**（布局顺序：header → conversation → subagent 面板 → todo → picker → permission → queue → input → status）——用户拍板
+- **F2 · 高度**：**完全自适应**——面板高度 = 全部运行中区块的完整高度（无上限；并行多个子 agent 内容全显示，会话区相应被挤小）——用户拍板
+- **F3 · 固定**：面板独立于 conversation 滚动区——会话滚动（滚轮/PgUp/流式）不影响面板位置；面板上滚轮**穿出滚会话**（与 todo 面板行为一致）
+- **F4 · 折叠**：面板内每个子 agent 区块**默认折叠**（头部摘要 + tail 3，点击展开）——与现状流内区块一致（用户拍板）；展开态经 fold-block.mjs 公共组件（60% 封顶 + 块内滚动 + 底部可达收起控制行）
+- **F5 · 冻结**：子 agent 完成后**立即冻结进会话流**（✓ 头 + 可展开，D4 现状不变）——面板只显示运行中区块，完成即移出
+- **F6 · 空态**：无运行中区块时面板不渲染（无悬空分隔线——现状分隔线逻辑迁移到面板边界）
+- **F7 · 交互**：面板内点击（展开/收起/块内翻窗）坐标映射到面板行；折叠状态（expandedBlocks key=`sub-${key}`）跨 turn 保持（D4 现状）
+
+**非功能性需求**：
+- **NF1 · 小终端压缩链**：面板加入 fixedH 扣减；终端高度不足时**面板最先让位**（可压缩至 0 隐藏，子 agent 活动仍进缓冲区不丢），输入框/状态栏/会话区保留（会话区最小 1 行）——评审 #2 措辞统一
+- **NF2 · 一致性**：面板滚轮/点击行为与 todo 面板同型（穿出滚会话）；面板边界用分隔线（现状 `─` 线迁移）
+- **NF3 · 测试**：layout 测试（面板位置/高度/压缩链）、渲染测试（区块在面板）、交互测试（面板点击/滚轮映射）、既有 §7.2 T-A..T-L 回归（冻结/折叠/节流/N2 行为不变）
+- **NF4 · 性能**：面板渲染成本与流内渲染同量级（复用 renderBlockTimeline/renderExpandedBlock；无新增每 token 开销）
+
+**范围边界**：仅 CLI TUI 渲染层（layout/render-conversation/render-frame/mouse 命中映射）；数据层（subagent-blocks.mjs 缓冲/冻结/路由）**不改**；VS Code 端不涉及；frozen 区块流内渲染不动。
+
+**设计（2026-09-01）**：
+
+**D1 · 布局（layout.mjs）**：新增 `panels.subagent` 条件面板（运行中区块存在时），位于 conversation 之后 todo 之前。**高度预计算复用既有模式**（与 visibleTasks/permPreviewLines 同型）：layout 内调 `renderSubagentPanel(state, cols)`（纯函数）得 `subagentLines` → `subagentH = subagentLines.length`（完全自适应——所有运行中区块折叠头+tail3 或展开态全量；展开态经 renderExpandedBlock 的 60% 封顶窗口化，输出行数即面板高度）——layout 返回 subagentLines 供 render-frame 直接 put（不重复渲染）。**`renderSubagentPanel` 放中立模块**（不引入 layout↔render-frame 循环依赖——评审 #6：置于既有无环模块或 fold-block 同层）
+
+**D2 · 渲染迁移（render-conversation.mjs / render-frame.mjs）**：runningSubs 段（`buildConvLines` 的 subagent blocks 段：分隔线 + 区块循环——评审 #3 改符号引用）从 buildConvLines **移除**，迁移为 `renderSubagentPanel(state, cols)`（复用同一区块渲染逻辑：折叠头 `[▶/⏸ key · model · elapsed · turn] state`——**⏸ = 等待审批态图标**（sub.approval 非空时显示），评审 #5 定义；`[✓ …]` 为冻结态（图标在括号内，与运行头格式统一）+ tail 3 / 展开 renderBlockTimeline+renderExpandedBlock；顶部一条 `─` 分隔线——现状语义迁移，`if (panels.subagent) put(panels.subagent.y, renderSubagentPanel(...))` 于 conversation 之后 todo 之前）。frozen 段（state.lines `_frozenSubTask`）保持流内不动。
+
+**D3 · 压缩链（layout.mjs）**：subagent 面板加入 fixedH；溢出时**面板最先让位**（可压至 0 隐藏，缓冲区不丢数据；输入框/状态栏/会话区不可挤没——用户 NF1，评审 #2 措辞统一）——压缩顺序：**subagent 面板 → 会话区 → picker → permission → todo divider**。
+
+**D4 · 交互（mouse.mjs）**：
+- **滚轮**：面板行默认穿出滚会话（`handleWheel` 会话区判定自然覆盖——评审 #3 改符号引用）；**面板内展开区块保留块内滚动**——handleWheel 增加面板区命中映射（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldBlock`/`_foldTotal` 标记 → scrollFoldBlock；未命中 → 穿出）——与 todo 面板同型 + 现状块内滚动能力不丢
+- **点击**：handleMouseClick 增加面板区映射（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldToggle` 折叠/展开、`_foldScrollUp/_foldScrollDown` 翻窗）
+
+**D5 · 折叠状态/冻结**：expandedBlocks key=`sub-${key}` 跨 turn 保持（现状不变）；完成后 freezeSubTaskLines 冻结进流（✓ 头），面板下一帧自然移除该区块（runningSubs 过滤——现状逻辑迁移）
+
+**受影响文件**：
+| 文件 | 改动 |
+|---|---|
+| `src/tui/subagent-panel.mjs` | 新增（§7.2.1 D1 中立模块——layout 预计算高度与 render-frame put 共用，避免 layout↔render-frame 循环依赖，评审 #6）：`renderSubagentPanel(state, cols, maxRows)` 纯函数——运行中区块面板行（顶部分隔线 + 折叠头 `[▶/⏸ …]`/tail 3/展开），自 render-conversation runningSubs 段迁移 |
+| `src/tui/layout.mjs` | +`panels.subagent` 槽（conversation 与 todo 之间）+ subagentH 预计算（调 renderSubagentPanel 得 subagentLines，layout 返回供 render-frame 直接 put）+ fixedH 扣减 + 压缩链（**面板最先让位**，可至 0 隐藏；顺序 subagent 面板 → 会话区 → picker → permission → todo 分隔线） |
+| `src/tui/render-conversation.mjs` | -buildConvLines runningSubs 段（含分隔线逻辑；折叠头渲染迁至面板）——frozen 段（`_frozenSubTask`）不动；convCacheKey 的 subSig 分量移除（运行区块已移出会话渲染——子agent 活动不再失效会话缓存，N3 成本同步消除；冻结载体行由 lines.length + frozenSig 覆盖） |
+| `src/tui/render-frame.mjs` | +put 调用（conversation 之后 todo 之前，put layout 预计算的 subagentLines，对象行转 ANSI 字符串） |
+| `src/tui/mouse.mjs` | +面板区命中映射：handleWheel（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldBlock`/`_foldTotal` 标记 → scrollFoldBlock；未命中 → 穿出滚会话）；handleMouseClick（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldToggle` 折叠/展开、`_foldScrollUp/_foldScrollDown` 翻窗） |
+| `docs/design/TUI.md` | 布局段 + **模块地图 + §4/§5 同步更新**（评审 #4：模块地图 render-conversation 行"子agent/advisor 折叠块渲染"、§4"子代理活动现为会话流内可折叠区块"、§5"运行区块段首分隔线（render-conversation subagent blocks 段首）"——按 TUI.md 模块地图随实现同步回写纪律） |
+| 测试：`test/tui.test.mjs`（layout 槽位/空态/压缩链/面板渲染/缓存）+ `test/mouse.test.mjs`（面板点击/滚轮）——按既有测试结构放置（layout 测试现居 tui.test.mjs） | 新用例 T1-T9；`test/render-loop.test.mjs` T-H 源锁正则修订（layout 禁词表移除 `panels\.subagent`，subPanelH/output 禁词保留） |
+
+**验收标准**：
+1. 面板位于会话与 todo 之间；会话滚动（滚轮/PgUp/流式）面板位置不动
+2. 无运行中区块 → 面板不渲染（无悬空分隔线）
+3. 多子 agent 并行 → 面板全显示（自适应高度）
+4. 面板内点击：折叠/展开/翻窗正常；展开超限 → 块内滚动（60% 窗口化保留）
+5. 面板上滚轮：未命中区块 → 穿出滚会话；命中展开区块内容行 → 块内滚动
+6. frozen 行为不变（完成即冻结进流，面板移除该区块）
+7. 小终端：面板先让位（可至 0 隐藏），输入框/状态栏/会话区保留
+8. 折叠状态跨 turn 保持
+9. 全量测试绿（**§7.2 T-A..T-L 回归——T-H 断言随本设计修订**：评审 #1——T-H 原断言"layout 无 subagent 槽"与本设计重新加槽冲突，改为窄带特有断言（renderSubagent/subPanelH 已删、3 秒清理已删）；T-A/T-C/T-D 渲染目标审计（折叠头现渲染于面板而非会话流））；新增用例全过
+10. TUI.md 更新（布局段 + 模块地图 + §4/§5——评审 #4）
+
+**测试用例**：
+| 用例 | 输入 | 预期 |
+|---|---|---|
+| T1 布局槽位 | 有 running 子 agent | panels.subagent 位于 conversation 与 todo 之间（y 顺序正确） |
+| T2 空态 | 无 running | subagentH=0，面板不渲染 |
+| T3 压缩链 | 小终端（rows 不足） | 面板先压至 0；conv ≥1、inputBox/status 保留 |
+| T4 面板渲染 | 2 个并行子 agent（折叠态） | 顶部分隔线 + 各区块折叠头 + tail 3 |
+| T5 面板点击 | 点击面板内折叠头 | 切换展开/折叠；展开超限 → ▲▼ 翻窗 |
+| T6 滚轮穿出 | 面板上滚动（未命中区块内容行） | 会话滚动（面板不动） |
+| T7 块内滚动 | 展开区块内容行上滚轮 | 块内滚动（不滚会话） |
+| T8 冻结回归 | 子 agent 完成 | 面板移除该区块 + 流内 ✓ 头（既有 T-E 语义） |
+| T9 折叠保持回归 | turn 切换 | sub-{key} 折叠状态保持（既有断言） |
 
 
 ## 8. advisor 开关语义重构（2026-08-21）

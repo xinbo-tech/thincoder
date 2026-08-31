@@ -148,7 +148,8 @@ export async function prepareRun(agent, input, callbacks, {
     pushReal(agent, { role: "user", content: input })
   }
   // Time grounding for EVERY agent depth AND every resume, pushed LAST (after the user
-  // input): transient, dropped on persist, fresh at every run start — including resumes
+  // input): transient on the HUMAN line — dropped on persist; on the MACHINE line — kept
+  // (byte-identical resume for the provider prefix cache, 2026-08-16), fresh at every run start
   // (an interrupt-continuation must know NOW, not the pre-interrupt time; 2026-08-16).
   // Tail position keeps the second-precision content out of any prefix — caches stay hit.
   agent.history.push({

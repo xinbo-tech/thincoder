@@ -15,7 +15,12 @@ import { configDir } from "./config.mjs"
  *  Plus the previous migration attempt's assumption (normalized 12 = first 12 of the full hash).
  *  Every combination is tried — a migration that only checks one candidate misses real
  *  legacy files (drive-letter case differs between CLI and VS Code historical paths). */
+/** 2026-09-01 advisor 🔵（VS Code 侧已修，CLI 对称补齐）：已迁移/确认无 legacy 的 hash
+ *  记录在 Set 中短路——否则每次 sessionPath() 都重跑 5 候选 × 3 existsSync 的系统调用。 */
+const migratedHashes = new Set() // full 40-char hash → migration already attempted (found none or done)
+
 export function migrateHashLength(cwd, fullHash) {
+  if (migratedHashes.has(fullHash)) return false
   const dir = join(configDir, "sessions")
   const lower = cwd.replace(/^([A-Z]):/, (_, d) => d.toLowerCase() + ":")
   const candidates = [
@@ -38,5 +43,6 @@ export function migrateHashLength(cwd, fullHash) {
       }
     } catch { /* best-effort; leave files in place on failure */ }
   }
+  migratedHashes.add(fullHash)
   return migrated
 }

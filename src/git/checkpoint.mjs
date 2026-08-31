@@ -16,7 +16,7 @@ import { configDir } from "../config.mjs"
 
 const CWD_HASH_LEN = 12
 
-const MAX_CHECKPOINTS = 20
+const MAX_CHECKPOINTS = 100
 
 /** Files larger than this are NOT copied (sqlite db, bundles…) — they are recorded as skipped. */
 const MAX_FILE_BYTES = 5 * 1024 * 1024
@@ -33,8 +33,16 @@ function git(cwd, args, { allowFail = false } = {}) {
   }
 }
 
+/** Normalize cwd for hashing: uppercase the Windows drive letter so the VS Code
+ *  extension's uri.fsPath (lowercased) produces the SAME cwdHash12 as the CLI's
+ *  process.cwd() — cross-end snapshot sharing (CHECKPOINT.md F5/T7) depends on this
+ *  contract. Same normalization as session storage (session-slots.mjs normalizeCwd). */
+function normalizeCwd(cwd) {
+  return cwd.replace(/^([a-z]):/, (_, d) => d.toUpperCase() + ":")
+}
+
 function checkpointRoot(cwd) {
-  const hash = createHash("sha1").update(cwd).digest("hex").slice(0, CWD_HASH_LEN)
+  const hash = createHash("sha1").update(normalizeCwd(cwd)).digest("hex").slice(0, CWD_HASH_LEN)
   return join(configDir, "checkpoints", hash)
 }
 
@@ -412,11 +420,29 @@ export async function catFile(cwd, id, filePath) {
   }
 }
 
-/** Keep only the most recent MAX_CHECKPOINTS */
-async function pruneCheckpoints(cwd) {
+/** F6: delete ALL checkpoints for a cwd — commit = new safety baseline. Best-effort:
+ *  a missing dir is a no-op; deletion failures propagate so the git tool's commit case
+ *  can report "(checkpoint cleanup skipped: …)" without blocking the commit result. */
+export async function deleteCheckpointsForCwd(cwd) {
+  await rm(checkpointRoot(cwd), { recursive: true, force: true })
+}
+
+/** NF6: keep only the most recent `count` snapshots — oldest removed first (id sort =
+ *  timestamp prefix, so ascending order IS oldest-first). Returns how many were deleted
+ *  (0 when the cwd has no checkpoint dir). */
+export async function deleteCheckpointsOlderThan(cwd, count) {
   const root = checkpointRoot(cwd)
-  const ids = (await readdir(root)).sort()
-  while (ids.length > MAX_CHECKPOINTS) {
+  let ids
+  try { ids = (await readdir(root)).sort() } catch { return 0 }
+  let removed = 0
+  while (ids.length > count) {
     await rm(join(root, ids.shift()), { recursive: true, force: true })
+    removed++
   }
+  return removed
+}
+
+/** Keep only the most recent MAX_CHECKPOINTS (NF6 cap — runs at the end of every create) */
+async function pruneCheckpoints(cwd) {
+  await deleteCheckpointsOlderThan(cwd, MAX_CHECKPOINTS)
 }

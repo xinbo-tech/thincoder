@@ -3,21 +3,11 @@ import {
   truncate,
   runGit
 } from "./shared.mjs";
-import { escapeXml } from "../agent/helpers.mjs";
 import { execFileSync } from "node:child_process";
-import { join, resolve, relative, isAbsolute, sep } from "node:path";
+import { resolve, relative, isAbsolute, sep } from "node:path";
+import { filterLines, runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs";
+import { executeCheckpointAction } from "./git-checkpoint.mjs";
 
-/** Keep only output lines matching a regex (git filter, case-insensitive). */
-function filterLines(output, filter) {
-  if (!filter) return output
-  try {
-    const re = new RegExp(filter, "i")
-    const lines = output.split("\n").filter((l) => re.test(l))
-    return lines.length ? lines.join("\n") : `(no lines matched filter "${filter}")`
-  } catch (e) {
-    return `Error: filter regex invalid: ${e.message}`
-  }
-}
 
 /** Run git PRESERVING per-line leading whitespace. runGit trims the WHOLE output, which
  *  strips a porcelain line's leading " " (the unstaged marker) and misclassifies an
@@ -30,35 +20,8 @@ function runGitRaw(cwd, cmdArgs, config = []) {
   }
 }
 
-/** Run git and report failure (stderr + exit code) instead of swallowing it.
- *  Used by write ops (commit/push/rm) where a silent "" would masquerade as success. */
-function runGitStrict(cwd, cmdArgs, config = []) {
-  try {
-    const out = execFileSync("git", [...config, ...cmdArgs], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim().replace(/\r/g, "")
-    return { ok: true, out }
-  } catch (e) {
-    return { ok: false, out: String(e.stdout || "").trim(), err: String(e.stderr || e.message || "").trim() }
-  }
-}
 
-/** Validate a git ref / branch / tag / remote name (no option injection, no whitespace). */
-function validateRef(ref, what = "git ref") {
-  if (!/^[A-Za-z0-9._/~^@][A-Za-z0-9._/~^@{}-]*$/.test(ref)) throw new Error(`Invalid ${what}: ${ref}`)
-  return ref
-}
 
-/** Normalize args.config into `-c key=value` pairs (git -c overrides, e.g. a proxy).
- *  Values are execFileSync array args (no shell injection) — still reject newlines/empty. */
-function gitConfigArgs(config) {
-  if (config == null) return []
-  if (!Array.isArray(config)) throw new Error("config must be an array of \"key=value\" strings")
-  const out = []
-  for (const c of config) {
-    if (typeof c !== "string" || !c.trim() || c.includes("\n")) throw new Error(`invalid git -c config entry: ${String(c).slice(0, 60)}`)
-    out.push("-c", c)
-  }
-  return out
-}
 
 /** True when `abs` is inside `root` (handles `..` and cross-drive, which relative()
  *  returns as an absolute path on Windows). */
@@ -76,19 +39,7 @@ function resolveBaseDir(cwd, workdir) {
   return abs
 }
 
-/** Snapshot the working tree before a destructive op (reset --hard / checkout file / restore /
- *  stash pop / branch|tag delete). Best-effort — a snapshot failure must not block the op
- *  (the approval/permission layer is the real gate). Returns a note line or "". */
-async function snapshotBefore(ctx, label) {
-  try {
-    const { createCheckpoint, isGitRepo } = await import("../git/checkpoint.mjs")
-    if (!isGitRepo(ctx.cwd)) return ""
-    const cp = await createCheckpoint(ctx.cwd)
-    return `[snapshot ${cp.id} created before ${label}]\n`
-  } catch {
-    return ""
-  }
-}
+
 
 export const gitTool = {
   name: "git",
@@ -96,11 +47,11 @@ export const gitTool = {
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: ["diff", "status", "log", "show", "checkpoint", "add", "rm", "commit", "push", "tag", "branch", "checkout", "restore", "stash", "fetch", "pull", "reset", "revert", "merge", "cherry-pick", "ls-remote"], description: "diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote" },
+      action: { type: "string", enum: ["diff", "status", "log", "show", "checkpoint", "add", "rm", "commit", "push", "tag", "branch", "checkout", "restore", "stash", "fetch", "pull", "reset", "revert", "merge", "cherry-pick", "ls-remote", "clone", "init", "rebase", "remote", "clean", "switch", "apply", "worktree", "archive", "blame", "mv"], description: "diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv — clean/rebase 操作前自动快照，checkpointAction=rewind 恢复" },
       // diff/log params
       staged: { type: "boolean", description: "(diff) Show staged changes instead of working tree" },
-      path: { type: "string", description: "(diff/log/add/commit/checkout/restore/checkpoint:cat/versions/rewind/rm) File or directory to scope to / stage / restore" },
-      ref: { type: "string", description: "(show/diff/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create) Commit/branch/ref; (push/pull/fetch) the branch or tag to push/pull/fetch (space-separated for multiple)" },
+      path: { type: "string", description: "(diff/log/add/commit/checkout/restore/checkpoint:cat/versions/rewind/rm/apply/archive/blame/mv/worktree) File or directory to scope to / stage / restore（checkout/restore 操作前自动快照，checkpointAction=rewind 恢复）" },
+      ref: { type: "string", description: "(diff/show/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create/rebase/worktree:add/archive) Commit/branch/ref; (push/pull/fetch) the branch or tag (space-separated for multiple)" },
       count: { type: "number", description: "(log) Number of commits (default 10)" },
       oneline: { type: "boolean", description: "(log) One-line-per-commit format" },
       message: { type: "string", description: "(commit) Commit message — required for commit; (stash:push) stash message" },
@@ -111,13 +62,21 @@ export const gitTool = {
       workdir: { type: "string", description: "Run git in this workspace subdirectory (monorepo / multi-repo). Confined to the workspace. Default: cwd" },
       config: { type: "array", items: { type: "string" }, description: "(network actions: push/fetch/pull/ls-remote) git -c overrides, e.g. [\"http.proxy=http://10.2.2.112:3128\"] for blocked remotes" },
       tags: { type: "boolean", description: "(push) Also push all tags (--tags)" },
-      mode: { type: "string", enum: ["soft", "mixed", "hard"], description: "(reset) reset mode — hard snapshots the tree first + needs confirmation" },
-      tagAction: { type: "string", enum: ["list", "create", "delete"], description: "(tag) list tags / create one / delete one" },
-      branchAction: { type: "string", enum: ["list", "create", "delete", "switch"], description: "(branch) list branches / create / delete / switch to one" },
-      stashAction: { type: "string", enum: ["push", "pop", "list"], description: "(stash) push (stash now) / pop (apply+drop) / list" },
+      mode: { type: "string", enum: ["soft", "mixed", "hard"], description: "(reset) reset mode — hard snapshots the tree first + needs confirmation（操作前自动快照，checkpointAction=rewind 恢复）" },
+      tagAction: { type: "string", enum: ["list", "create", "delete"], description: "(tag) list tags / create one / delete one（delete 操作前自动快照，checkpointAction=rewind 恢复）" },
+      branchAction: { type: "string", enum: ["list", "create", "delete", "switch"], description: "(branch) list branches / create / delete / switch to one（delete 操作前自动快照，checkpointAction=rewind 恢复）" },
+      stashAction: { type: "string", enum: ["push", "pop", "list"], description: "(stash) push (stash now) / pop (apply+drop) / list（pop 操作前自动快照，checkpointAction=rewind 恢复）" },
       // checkpoint params
-      checkpointAction: { type: "string", enum: ["list", "create", "rewind", "cat", "versions"], description: "(checkpoint) list snapshots / create one / restore by id / read file from snapshot / list a file's historical versions" },
+      checkpointAction: { type: "string", enum: ["list", "create", "rewind", "cat", "versions"], description: "(checkpoint) list snapshots / create one / restore by id / read file from snapshot / list a file's historical versions（rewind 可恢复操作前状态，恢复前自动快照可逆）" },
       checkpointId: { type: "string", description: "(checkpoint) Snapshot id — required for rewind and cat; optional for list (shows file tree)" },
+      // F7 new-action params
+      remoteAction: { type: "string", enum: ["list", "add", "remove", "set-url"], description: "(remote) list remotes / add / remove / set-url" },
+      remoteUrl: { type: "string", description: "(remote add/set-url) Remote URL (https/git/ssh or local path)" },
+      rebaseAction: { type: "string", enum: ["start", "abort", "continue"], description: "(rebase) start (ref required) / abort / continue（操作前自动快照，checkpointAction=rewind 恢复）" },
+      dryRun: { type: "boolean", description: "(clean) preview only (-n) — no deletion, no snapshot; real clean 操作前自动快照，checkpointAction=rewind 恢复" },
+      create: { type: "boolean", description: "(switch) create the branch then switch (-c)" },
+      dest: { type: "string", description: "(mv) destination path (file or directory)" },
+      worktreeAction: { type: "string", enum: ["list", "add", "remove"], description: "(worktree) list / add (path, ref) / remove (path)" },
     },
     required: ["action"],
   },
@@ -203,7 +162,18 @@ export const gitTool = {
         const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
         const parts = []
         if (add.out) parts.push(add.out)
-        if (commit.ok) { if (commit.out) parts.push(commit.out) }
+        if (commit.ok) {
+          if (commit.out) parts.push(commit.out)
+          // F6: commit = new safety baseline — clear this project's checkpoints
+          // (best-effort per NF7: a failed cleanup never blocks the commit result).
+          try {
+            const { deleteCheckpointsForCwd } = await import("../git/checkpoint.mjs")
+            await deleteCheckpointsForCwd(ctx.cwd)
+            parts.push("(checkpoints cleared — commit is a new safety baseline)")
+          } catch (e) {
+            parts.push(`(checkpoint cleanup skipped: ${e.message})`)
+          }
+        }
         else parts.push(`git commit failed: ${commit.err || "(no output)"}`)
         return truncate(parts.join("\n") || "(commit produced no output)")
       }
@@ -357,66 +327,24 @@ export const gitTool = {
         const r = runGitStrict(ctx.cwd, ["cherry-pick", args.ref])
         return r.ok ? truncate(r.out || `Cherry-picked ${args.ref}`) : truncate(`git cherry-pick failed: ${r.err || r.out}`)
       }
-      case "checkpoint": {
-        const { createCheckpoint, listCheckpoints, rewind, listFileVersions, isGitRepo } = await import("../git/checkpoint.mjs")
-        if (!isGitRepo(ctx.cwd)) throw new Error("Not a git repository — checkpoints unavailable")
+      // F7 扩展 action + checkpoint：实现拆在 git-ext.mjs / git-checkpoint.mjs（500 行硬限）
+      case "clone":
+      case "init":
+      case "rebase":
+      case "remote":
+      case "clean":
+      case "switch":
+      case "apply":
+      case "worktree":
+      case "archive":
+      case "blame":
+      case "mv":
+        return executeExtAction(args, ctx)
+      case "checkpoint":
+        return executeCheckpointAction(args, ctx)
 
-        const sub = args.checkpointAction
-        if (!sub) return "checkpoint: missing checkpointAction — use: list | create | rewind | cat | versions"
-
-        if (sub === "create") {
-          const cp = await createCheckpoint(ctx.cwd)
-          return `Checkpoint ${cp.id} created (${cp.files} file(s): ${cp.tracked.length} tracked, ${cp.untracked.length} untracked)`
-        }
-        if (sub === "versions") {
-          if (!args.path) throw new Error("path is required for versions — the file whose history you want")
-          const versions = await listFileVersions(ctx.cwd, args.path)
-          if (versions.length === 0) return `No snapshot copies of "${args.path}" found (it was never part of an auto/protection snapshot).`
-          return (
-            `Historical versions of "${args.path}" (${versions.length}, newest first):\n` +
-            versions.map((v) =>
-              `  ${v.snapshotId}  ${new Date(v.time).toISOString()}  ${v.size}B  sha:${v.sha}  (${v.source})` +
-              (v.sha === versions[versions.indexOf(v) - 1]?.sha ? "  ← same content as previous" : "")
-            ).join("\n") +
-            `\nRestore a version: checkpointAction=rewind checkpointId=<snapshotId> path="${args.path}"`
-          )
-        }
-        if (sub === "rewind") {
-          if (!args.checkpointId) throw new Error("checkpointId is required for rewind — use checkpointAction=list to see snapshot ids")
-          if (!args.path) throw new Error("path is required for rewind — full restore is disabled (as dangerous as `git checkout -- .`). Restore files individually. Use checkpointAction=versions path=<file> to list a file's historical versions.")
-          const s = await rewind(ctx.cwd, args.checkpointId, { path: args.path })
-          return `Restored "${args.path}" (${s.type}) from checkpoint ${args.checkpointId}.\n(The pre-restore state was snapshotted first — you can restore again to go back.)`
-        }
-        if (sub === "cat") {
-          if (!args.checkpointId) throw new Error("checkpointId is required for cat — use checkpointAction=list to see snapshot ids")
-          if (!args.path) throw new Error("path is required for cat — specify which file to read")
-          const { catFile } = await import("../git/checkpoint.mjs")
-          return await catFile(ctx.cwd, args.checkpointId, args.path)
-        }
-        if (sub === "list") {
-          const cps = await listCheckpoints(ctx.cwd)
-          if (cps.length === 0) return "(no checkpoints yet)"
-
-          // Specific id: show the file tree within that snapshot
-          if (args.checkpointId) {
-            const cp = cps.find((c) => c.id === args.checkpointId)
-            if (!cp) throw new Error(`checkpoint ${args.checkpointId} not found`)
-            return formatFileTree(cp)
-          }
-
-          // Overview: list of all snapshots (file names are XML-escaped: they are
-          // untrusted input that flows back into the model's context)
-          return cps.map((c) => {
-            const parts = [`${c.id}  ${new Date(c.time).toISOString()}`]
-            if (c.tracked.length) parts.push(`${c.tracked.length} tracked: ${c.tracked.map(escapeXml).join(", ")}`)
-            if (c.untracked.length) parts.push(`${c.untracked.length} untracked: ${c.untracked.map(escapeXml).join(", ")}`)
-            return parts.join("  ")
-          }).join("\n")
-        }
-        throw new Error(`Unknown checkpoint action: ${sub}. Use: list | create | rewind | cat | versions`)
-      }
       default:
-        return `Unknown action '${args.action}'. Use: diff | status | log | show | checkpoint | add | rm | commit | push | tag | branch | checkout | restore | stash | fetch | pull | reset | revert | merge | cherry-pick`
+        return `Unknown action '${args.action}'. Use: diff | status | log | show | checkpoint | add | rm | commit | push | tag | branch | checkout | restore | stash | fetch | pull | reset | revert | merge | cherry-pick | ls-remote | clone | init | rebase | remote | clean | switch | apply | worktree | archive | blame | mv`
     }
   },
 }
@@ -445,45 +373,3 @@ export const questionTool = {
   },
 }
 
-/** Format a checkpoint's file list as a directory tree (directories first, indented display) */
-function formatFileTree(cp) {
-  // File names are XML-escaped: untrusted input that flows back into the model's context
-  const all = [
-    ...(cp.tracked ?? []).map((f) => ({ path: escapeXml(f), type: "" })),
-    ...(cp.untracked ?? []).map((f) => ({ path: escapeXml(f), type: " (untracked)" })),
-  ]
-  if (all.length === 0) return "(empty checkpoint)"
-
-  all.sort((a, b) => a.path.localeCompare(b.path))
-
-  const tree = new Map()
-  for (const { path, type } of all) {
-    const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "."
-    if (!tree.has(dir)) tree.set(dir, [])
-    tree.get(dir).push({ name: path.slice(dir === "." ? 0 : dir.length + 1), type })
-  }
-
-  const lines = []
-  const dirs = [...tree.keys()].sort()
-  for (const dir of dirs) {
-    if (dir !== "." && !lines.includes(dir + "/")) {
-      const parts = dir.split("/")
-      for (let i = 1; i <= parts.length; i++) {
-        const prefix = parts.slice(0, i).join("/") + "/"
-        if (!lines.includes(prefix)) lines.push(prefix)
-      }
-    }
-  }
-  for (const dir of dirs) {
-    if (dir !== ".") {
-      for (const { name, type } of tree.get(dir)) {
-        lines.push(`  ${dir}/${name}${type}`)
-      }
-    }
-  }
-  for (const { name, type } of tree.get(".") ?? []) {
-    lines.push(name + type)
-  }
-
-  return lines.join("\n")
-}

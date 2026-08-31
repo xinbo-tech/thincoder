@@ -10,7 +10,10 @@
  * 一个字节/码点）。JSON.stringify 层面的反斜杠转义由发送方负责，本模块不碰。
  */
 
-/** 中和单段文本里的非法字面转义序列。 */
+/** 中和单段文本里的非法字面转义序列。
+ *  Known limitation (documented, accepted, VS Code port parity): an ODD backslash
+ *  run of 3+ (e.g. "\\\x") leaves the trailing "\x" un-doubled — vanishingly rare
+ *  in real conversation text (no such hit in the 2026-08-31 repro session). */
 export function escapeLiteralEscapes(text) {
   text = String(text ?? "")
   return text
@@ -20,14 +23,21 @@ export function escapeLiteralEscapes(text) {
     .replace(/(?<!\\)\\(u)(?![0-9a-fA-F]{4})/g, "\\\\$1")
 }
 
-/** 对单条消息的 content 应用 escapeLiteralEscapes（支持字符串或 OpenAI 多模态 part 数组）。 */
+/** 对单条消息的 content 应用 escapeLiteralEscapes（支持字符串或 OpenAI 多模态 part 数组）。
+ *  2026-08-31 会诊 F5：deepseek-v4-flash 网关对 tool_calls[].function.arguments 与
+ *  reasoning_content 做同样的非标二次转义解析（字面 \x/\u 经工具参数/思考回传 → 400，
+ *  列号确定性复现 = 毒序列在 content 之外）——这两个字符串字段同样需要中和。 */
 export function escapeMessageContent(message) {
   const content = message?.content
+  let changed = false
+  let next = message
   if (typeof content === "string") {
-    return { ...message, content: escapeLiteralEscapes(content) }
-  }
-  if (Array.isArray(content)) {
-    let changed = false
+    const escaped = escapeLiteralEscapes(content)
+    if (escaped !== content) {
+      next = { ...next, content: escaped }
+      changed = true
+    }
+  } else if (Array.isArray(content)) {
     const parts = content.map((p) => {
       if (p && typeof p === "object" && p.type === "text" && typeof p.text === "string") {
         const escaped = escapeLiteralEscapes(p.text)
@@ -38,9 +48,34 @@ export function escapeMessageContent(message) {
       }
       return p
     })
-    return changed ? { ...message, content: parts } : message
+    if (changed) next = { ...next, content: parts }
   }
-  return message
+  if (Array.isArray(next.tool_calls)) {
+    let tcChanged = false
+    const tool_calls = next.tool_calls.map((tc) => {
+      const args = tc?.function?.arguments
+      if (typeof args === "string") {
+        const escaped = escapeLiteralEscapes(args)
+        if (escaped !== args) {
+          tcChanged = true
+          return { ...tc, function: { ...tc.function, arguments: escaped } }
+        }
+      }
+      return tc
+    })
+    if (tcChanged) {
+      next = { ...next, tool_calls }
+      changed = true
+    }
+  }
+  if (typeof next.reasoning_content === "string") {
+    const escaped = escapeLiteralEscapes(next.reasoning_content)
+    if (escaped !== next.reasoning_content) {
+      next = { ...next, reasoning_content: escaped }
+      changed = true
+    }
+  }
+  return changed ? next : message
 }
 
 /** IKBGX4 (2026-08-28)：剥离仅本地使用的整消息标记字段（transient 等）——发送给 provider 前移除。
