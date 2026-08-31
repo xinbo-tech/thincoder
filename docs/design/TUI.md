@@ -11,19 +11,19 @@
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `index.mjs` | 490 | startTUI 入口：raw mode、stdin 分块解码、状态对象（含 subTasks）、cleanup、paste 协议、Shift+Enter 翻译 |
+| `index.mjs` | 518 | startTUI 入口：raw mode、stdin 分块解码、状态对象（含 subTasks）、cleanup、paste 协议、Shift+Enter 翻译 |
 | `key-handler.mjs` | 464 | 按键分发：permission/question/search/picker/wizard/interruptPrompt/输入编辑 |
 | `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支拆出） |
 | `agent-turn.mjs` | 174 | runAgentTurn：回合驱动（状态复位/runAgent 循环/ContinueError 续跑/中断处理/finally 收尾/队列）；callbacks 装配在 tool-events.mjs |
 | `tool-events.mjs` | 344 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 开工具单框载体、onToolResult 载体定态与子agent 完成冻结、onToolOutput 追加进载体 `_toolBlock.output`/advisor 有序块、onTurnEnd 增量落盘）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
 | `subagent-blocks.mjs` | 253 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks，2026-08-30 自 agent-turn 归位） |
 | `render-frame.mjs` | 333 | 帧布局：header / todo / conversation / input / status 各面板装配 |
-| `render-conversation.mjs` | 531 | 对话面板行构建：缓存三层（convCacheKey 全量 / 行级 wrapRowsCached markdown-wrap / 段级 _lineSegCache 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor；loadOlder 只算新增行，rebuild 111→5-8ms 平坦，2026-08-31 懒加载卡顿根治）；搜索高亮、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、子agent/advisor 折叠块渲染（§7.2 D4）、主输出永不折叠（2026-08-30） |
-| `fold-block.mjs` | 240 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
+| `render-conversation.mjs` | 630 | 对话面板行构建：缓存三层（convCacheKey 全量 / 行级 wrapRowsCached markdown-wrap / 段级 _lineSegCache 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor；loadOlder 只算新增行，rebuild 111→5-8ms 平坦，2026-08-31 懒加载卡顿根治）；搜索高亮、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、子agent/advisor 折叠块渲染（§7.2 D4）、主输出永不折叠（2026-08-30） |
+| `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
 | `tool-args.mjs` | 65 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
-| `fold-block.mjs` | 240 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
+| `fold-block.mjs` | 257 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
-| `render-loop.mjs` | 110 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
+| `render-loop.mjs` | 126 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
 | `layout.mjs` | 145 | 面板布局计算（行/列分配，todo 面板含顶部分隔线高度；小终端压缩链：conversation→picker→permission→todo 分隔线；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
 | `dims.mjs` | 45 | 终端尺寸单源（2026-08-30；2026-08-31 简化——ConPTY stale 假说防御（双确认/trusted settle/空闲看门狗/启动收敛）整体移除，因其建立在"组件漏传 cols=80"误诊上，且双确认反而卡死真实拖拽缩小）：get() 读缓存；refresh() 只在事件钩子（seed/resize），sane-gate（cols≥40/rows≥10）挡 falsy（headless/无 TTY），**任何 sane 采样（含缩小）立即提交**——resize 事件在任意终端都是真实尺寸变更，缓存自校正 |
 
@@ -39,12 +39,12 @@
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `mouse.mjs` | 86 | 鼠标序列解析（SGR 滚轮/点击 → picker 选中、折叠块点击切换） |
+| `mouse.mjs` | 128 | 鼠标序列解析（SGR 滚轮/点击 → picker 选中、折叠块点击切换） |
 | `clipboard.mjs` | 162 | 剪贴板文本/图像读写（Win powershell 强制 UTF-8 / macOS pbpaste）+ `translateShiftEnter` CSI-u→meta+return 翻译 |
 | `interaction.mjs` | 96 | 权限确认（y/n/a）、自由提问（question 工具） |
 | `pickers.mjs` | 416 | 通用列表选择器（filter/滚动/栈）+ 模型两级选择器 + /provider 流程 |
 | `wizard.mjs` | 172 | 首启配置向导（provider → key → embedding → model） |
-| `startup.mjs` | 171 | 启动屏 + 会话恢复渲染（historyToLines 从 history 重建——display 快照已废弃，恢复唯一路径；行形态复刻 live：工具参数摘要+全量 JSON、思考单条 C.reason）+ 懒加载历史窗口 + 后台索引 |
+| `startup.mjs` | 224 | 启动屏 + 会话恢复渲染（historyToLines 从 history 重建——display 快照已废弃，恢复唯一路径；行形态复刻 live：工具参数摘要+全量 JSON、思考单条 C.reason）+ 懒加载历史窗口 + 后台索引 |
 
 **基础设施**：
 
@@ -134,6 +134,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **展开封顶（60% 屏幕，2026-08-30 用户报告驱动；2026-08-31 增补块内滚动）**：此前展开后长度不受限——超长区块展开时折叠控制行被挤出屏幕，点不到、收不回。现在展开态经 `renderExpandedBlock` 统一渲染，**区块总高 ≤ `floor(rows × 0.6)`**（`foldCapRows`）；**2026-08-31 用户需求修订**：高度封顶保留，但内容不再一次性截断——超过封顶的正文渲染为**窗口**（`state._foldScroll: Map<foldKey, offset>` 记每块窗口起点；窗口可读行 = `cap − 5`，预留 blank+顶部控制+▲+▼+底部收起），窗口上下渲染 **`▲ 上方还有 N 行` / `▼ 下方还有 N 行`** 控制行（带 `_foldScrollUp/_foldScrollDown` + `_foldWindow` 标记，点击翻窗=滑一个窗口）——**滚动读全文、60% 高度内、底部 ▼ 收起控制行永远在块尾**。翻窗经 `scrollFoldBlock(state, foldKey, dir, winH)` 单源；`convCacheKey` 含 `_foldScroll` 分量（翻窗必须重渲染，防缓存旧窗口）。`maxRows` 由调用链贯穿（render-frame → renderConversation → buildConvLines → 组件；render-loop/key-handler/index 历史分页/mouse 同步传入），省略 = 不封顶（单测/无终端环境）。`foldEnabled=false`（/fold off）时控制行与窗口一并消失（toggle 无效时提示会撒谎，索性不渲染）。
 
+**滚轮块内滚动 + 穿出语义（2026-08-31 用户约定"展开后页面能滚动阅读全文"）**：滚轮事件带坐标（`\x1b[<64/65;col;row`）→ `mouse.mjs handleWheel` 命中展开块**内容行**（窗口行带 `_foldBlock/_foldWindow/_foldTotal` 标记——每行自描述所属块，无区间簿记）→ **块内 offset ±3 行**（与外部会话滚动节拍一致）；未命中块 → 走原有会话滚动。**穿出**：块顶滚上 / 块底滚下 → 返回 false 交还会话滚动（否则滚轮永远被块吃掉、会话顶懒加载不可达——"经过展开块滚不到顶"的真实缺陷）；▲/▼ 控制行点击翻窗保留为快速跳转（scrollFoldBlock step=winH）。**视口数学单源 `convViewport(convLen, convH, scroll)`**（render-conversation 导出，渲染+鼠标命中共用）——短会话顶部补 pad 空行后命中整体偏移的存量 bug（convGlobalIndex 未减 pad，点击/滚轮落空或错行）随此修复。
+
 **流式跟随尾部（2026-08-31 用户需求）**：`state._followTail` 默认 true——渲染前 `state.scroll = 0`（最新内容钉在视口底，tool 行/pushLine 同样生效，无跟随空洞）；用户上滚（PgUp/滚轮上）→ 暂停跟随；暂停期间**锚定补偿**（会诊共识：scroll 是距底偏移，内容增长会把用户读的行顶走——渲染帧按 convLen 增量补偿 scroll，视口顶保持绝对行）；PgDn/滚轮滚回底部或新提交消息 → 恢复跟随。（注：↑/↓ 键是输入框历史导航，不执行会话滚动——滚动入口 = PgUp/PgDn 与滚轮。）
 
 **折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`；**2026-08-30 用户裁定：主输出永不折叠**——会话核心内容由滚动阅读，折叠会把真正的回答藏在点击之后；思考/工具摘要才是辅助流，保留折叠）：
@@ -165,7 +167,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **组件 cols 纪律（2026-08-30 窄屏事故，教训级）**：`renderExpandedBlock`/`renderFoldedHead`/`renderBlockTimeline` 的 `cols` 是**必传语义参数**（签名默认 80 只是测试兜底）——**漏传 = 全部生成行按 80 列 wrap，输入框却是全宽**（同帧宽度分裂，280 列终端上表现为"生成中左边一小块"）。已发生 3 处漏传（工具块展开/折叠、thinking 折叠）。任何新增组件调用**必须显式传 cols**；排障口诀：**同帧内 A 面板正常 B 面板异常 → 先查 A/B 的输入参数差异，别先怀疑 B 的内部逻辑或环境**。
 
-**折叠 key 稳定化（2026-08-30）**：工具块的 fold key 用行级 `_lineId`（state 自增计数器，pushLine/historyToLines/loadOlder 统一分配）派生（`tool-{lineId}`）——`loadOlder` 头部 unshift 会使位置键 `tool-{i}` 整体平移，已展开状态会错绑到别的块。
+**折叠 key 稳定化（2026-08-30；2026-08-31 扩展到全部折叠类型）**：工具块的 fold key 用行级 `_lineId`（state 自增计数器，pushLine/historyToLines/loadOlder 统一分配）派生（`tool-${_lineId}`）——loadOlder unshift 后位置索引漂移但 key 不串位（2026-08-30 判例）。**2026-08-31 会诊三家共识扩展**：`long-${i}`/`fold-${foldCounter++}` 同为位置/计数器键，loadOlder 后展开态/_foldScroll offset 串位——全部身份化：`long-${_lineId ?? i}`、`fold-{首行 _lineId ?? i}`（连续 dim 块首行即稳定锚）；`advisor-done-${i}` 同步升级 `advisor-done-${_lineId ?? i}`。
 
 **组件解耦**：fold-block 不 import 任何业务常量（advisor 占位符经 `strip: []` 参数注入）；tail-3 提取单源 `foldTailLines(blocks, n, {strip})`（原 render-conversation 三份手写拷贝收编）。
 
@@ -176,6 +178,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 ## 6. 会话恢复（startup.mjs）
 
 优先级：`display` 快照（WYSIWYG，恢复原样）> `history` 重建（user/assistant 逐条渲染，工具结果只显示首行摘要）。**恢复渲染过滤 `[System reminder:` 前缀的机读消息**（人读线本来就不含，过滤是纵深防御）；markdown 表格/行内渲染同样生效。恢复后提示 `/new` 开新会话；多槽位提示 `/session`。
+
+**懒加载契约（2026-08-31 用户需求+卡顿根治）**：恢复只加载最近 `INITIAL_HISTORY_MESSAGES=200` 条；向上滚动到会话顶部（`scroll >= convMaxScroll` 且 `_hasOlder`）→ **自动加载更早一页**（`loadOlder`，`HISTORY_PAGE_MESSAGES=20`——vscode `HISTORY_PAGE_SIZE` parity；滚轮/PgUp 双入口同一判别式，`convMaxScroll` 从 key-handler 导出复用）。**性能根治**：`buildConvLines` 全量重建 O(总行数) 是卡顿真凶（真实 200 条历史 → 987 conv 行 94ms、loadOlder 后缓存失效 111ms）——**三层缓存**（convCacheKey 全量 / 行级 `wrapRowsCached` markdown-wrap / 段级 `_lineSegCache` 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用比较+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor）——loadOlder 只算新增行，rebuild 111→25.7ms（行缓存）→**5-8ms 平坦**（段缓存，不随已加载历史增长）；toggle/翻窗/流式 append 只失效该块段。
 
 ## 7. 回合驱动（agent-turn.mjs）
 

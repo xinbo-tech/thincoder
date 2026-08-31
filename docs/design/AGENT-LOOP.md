@@ -66,7 +66,7 @@ eng-coder && 未过设计评审 && FILE_MUTATORS → denied "engineering design 
 非只读 && !autoApprove → onPermissionRequest（用户确认）；无 handler → denied
 PreToolUse hooks → 阻断
 ```
-**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果超限落盘 `~/.thincoder/tool-results/`（阈值以 TOOL-OUTPUT-LIMITS-*.md 为权威源 + `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT 常量，round3 #3 去重——此处不再复述取值沿革）+ 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。
+**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果超限落盘 `~/.thincoder/tool-results/`（阈值以 TOOL-OUTPUT-LIMITS-*.md 为权威源 + `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT 常量，round3 #3 去重——此处不再复述取值沿革）+ 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。**console 回显（2026-08-31 工具顺手度，用户批准"你做吧"）**：dispatch 拦截工具 `execute` 期间的 `console.log`/`console.error`（原只到终端、模型看不到），收集后附在工具结果后回显给模型（`[console during <tool>]` 段）；异常路径（工具抛错前的探查输出——调试最有价值）同样回显；嵌套 dispatch（subagent）各自拦截/恢复、捕获分离；bash 工具输出走子进程回显（onOutput）不受影响。
 
 ## 5. 零工具调用回合（completion.mjs handleCompletion）
 
