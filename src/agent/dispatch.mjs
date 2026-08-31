@@ -156,6 +156,13 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
             : "Error: no permission handler configured — this tool requires user approval but the current context doesn't support interaction (e.g. subagent or non-TUI mode)"
       return { ...item, result: reason, ok: false }
     }
+    // 2026-08-31 工具顺手度（用户批准"做吧"）：dispatch 拦截工具执行期间的
+    // console.log/console.error——工具的探查/调试输出（原本只到终端、模型看不到）
+    // 收集后附在工具结果后回显给模型。bash 工具的输出走子进程回显（onOutput），
+    // 不走 dispatch console——拦截安全。嵌套 dispatch（subagent）各自拦截/恢复，
+    // 捕获分离（父恢复原始后子的拦截期间父捕获停止、子恢复后父继续）——正确。
+    // 声明在 try 之外：catch 块（异常路径）也要访问（报错前的探查输出回显）。
+    const capturedConsole = []
     try {
       // Snapshot for undo before side-effect tools (setupOutputPanel already fired in Phase 1)
       if (!item.tool?.readonly && item.args) {
@@ -170,26 +177,40 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
           return { ...item, result: routed.result, ok: true }
         }
       }
-      const rawResult = await item.tool.execute(item.args, {
-        cwd: agent.cwd,
-        agent,
-        depth,
-        signal,
-        callbacks,
-        onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
-        onQuestion: callbacks.onQuestion,
-        onPermissionRequest: callbacks.onPermissionRequest,
-      })
+      const origConsoleLog = console.log
+      const origConsoleErr = console.error
+      console.log = (...a) => capturedConsole.push(a.map(String).join(" "))
+      console.error = (...a) => capturedConsole.push("[err] " + a.map(String).join(" "))
+      let rawResult
+      try {
+        rawResult = await item.tool.execute(item.args, {
+          cwd: agent.cwd,
+          agent,
+          depth,
+          signal,
+          callbacks,
+          onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
+          onQuestion: callbacks.onQuestion,
+          onPermissionRequest: callbacks.onPermissionRequest,
+        })
+      } finally {
+        console.log = origConsoleLog
+        console.error = origConsoleErr
+      }
       if (rawResult === undefined) throw new Error(`Tool "${item.toolCall.name}" returned undefined — all tools must return a string value`)
       const raw = String(rawResult)
       // Multimodal tools keep the raw result (base64 images ride the multimodal
     // channel); everything else offloads oversized text to disk. Flag-driven, not
     // name-driven (consult P3, 2026-08-30).
     const result = item.tool?.multimodal ? raw : await offloadToolResult(raw, item.toolCall.id)
-      callbacks.onToolResult?.(item.toolCall.name, result, item.toolCall.id)
+      // 2026-08-31：工具执行期间捕获的 console 输出附在结果后回显（模型视野）
+      const resultWithConsole = capturedConsole.length > 0
+        ? `${result}\n[console during ${item.toolCall.name}]\n${capturedConsole.join("\n")}`
+        : result
+      callbacks.onToolResult?.(item.toolCall.name, resultWithConsole, item.toolCall.id)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)
       runHooks("PostToolUse", { agent, toolName: item.toolCall.name, toolArgs: item.args, result: raw }).catch(() => {})
-      return { ...item, result, ok: true }
+      return { ...item, result: resultWithConsole, ok: true }
     } catch (error) {
       // Persist to ~/.thincoder/tool-errors/ for post-mortem; only pass message to the model (stack traces confuse LLMs and may leak paths)
       logToolError(item.toolCall.name, item.args, error)
@@ -205,7 +226,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       if (item.args.pattern) ctxParts.push(`pattern=${item.args.pattern}`)
       if (item.args.command) ctxParts.push(`cmd=${item.args.command.slice(0, 80)}`)
       const ctx = ctxParts.length > 0 ? ` [${ctxParts.join(", ")}]` : ""
-      return { ...item, result: `Error: ${error.message}${ctx}`, ok: false }
+      // 2026-08-31：异常路径同样回显捕获的 console（工具报错前的探查输出最有价值）
+      const consolePart = capturedConsole.length > 0
+        ? `\n[console during ${item.toolCall.name}]\n${capturedConsole.join("\n")}`
+        : ""
+      return { ...item, result: `Error: ${error.message}${ctx}${consolePart}`, ok: false }
     }
   }
 

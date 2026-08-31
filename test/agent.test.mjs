@@ -3193,6 +3193,57 @@ test("dispatch: plain tool error is returned as a result even when signal is liv
   assert.ok(results[0].result.includes("disk full"), "normal tool errors stay as model-visible results")
 })
 
+test("dispatch: 工具执行期间的 console.log/console.error 回显到结果（2026-08-31 工具顺手度）", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const noisyTool = {
+    name: "noisy",
+    readonly: true,
+    async execute() {
+      console.log("probe line 1")
+      console.error("warn line 2")
+      return "ok result"
+    },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["noisy", noisyTool]]), [{ name: "noisy", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, true)
+  assert.ok(results[0].result.includes("ok result"), "原结果保留")
+  assert.ok(results[0].result.includes("[console during noisy]"), "console 回显头")
+  assert.ok(results[0].result.includes("probe line 1"), "console.log 捕获")
+  assert.ok(results[0].result.includes("[err] warn line 2"), "console.error 捕获")
+})
+
+test("dispatch: 工具抛错前的 console 输出也回显（异常路径——调试场景最有价值）", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const failNoisyTool = {
+    name: "failnoisy",
+    readonly: true,
+    async execute() {
+      console.log("probe before crash")
+      throw new Error("boom")
+    },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["failnoisy", failNoisyTool]]), [{ name: "failnoisy", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("boom"), "错误消息保留")
+  assert.ok(results[0].result.includes("probe before crash"), "异常前 console 回显")
+})
+
+test("dispatch: 无 console 输出的工具结果不变（不拦截时不影响）", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const quietTool = {
+    name: "quiet",
+    readonly: true,
+    async execute() { return "quiet result" },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["quiet", quietTool]]), [{ name: "quiet", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, true)
+  assert.equal(results[0].result, "quiet result", "无 console → 结果原样（无附加段）")
+})
+
+
 
 // ────────────────────────────────────────
 // mergeChildMutations — engineering-mode mechanical code gate
