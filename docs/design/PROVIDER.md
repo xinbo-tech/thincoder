@@ -284,7 +284,7 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | **OpenAI 官方** `api.openai.com/v1` | ✅ | ✅ store:true 30 天 | ❌ encrypted（无明文） | **完整 → 开链** |
 | **百炼 Qwen** `/compatible-mode/v1/responses` | ✅ | ✅ **7 天**（传顶层 response id，非 output msg id） | ✅ summary 明文 | **完整 → 开链** |
 | **DeepSeek** `api.deepseek.com` | ✅ 事件流同 OpenAI | ❌ **不支持**（无状态；不支持参数**静默忽略**） | ✅ 明文 content | **格式完整、无链 → 全量模式，链禁用** |
-| **智谱 GLM** `open.bigmodel.cn/api/v1` | ✅（Coding Plan 专属，Codex 兼容驱动） | 未文档化 | ✅ | **未证实 → 全量模式（灰名单）**；**搜索/读取 = 官方 MCP 生态**（联网搜索/网页读取/视觉/仓库 MCP Server）——非 responses 内置工具；GLM 用户接入姿势 = MCP server |
+| **智谱 GLM** `open.bigmodel.cn/api/v1` | ✅（Coding Plan 专属，Codex 兼容驱动） | ✅ **2026-08-31 真机验证：store:true 链全链路工作**（store:false → HTTP 400 not_found；事件流与官方一致含 reasoning_text.delta） | ✅ | **升级白名单**（store:true 规则与百炼并列）；搜索/读取 = 官方 MCP 生态（非 responses 内置工具）——GLM 用户接入姿势 = MCP server |
 | Kimi 平台 API | ❌ 无端点 | — | — | 不接（同 8-15 矩阵） |
 | 火山方舟 | ✅ 迁移文档 | 未核实 | 未核实 | 留位（一期不接） |
 

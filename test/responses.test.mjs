@@ -177,7 +177,7 @@ test("内置工具：host 映射声明 + web_search_call 捕获 + 本地化回�
   ], null)
   const wsItem = b2.input.find((i) => i.type === "web_search_call")
   assert.ok(wsItem, "本地化消息回传为 web_search_call item")
-  assert.equal(wsItem.id, "web_search_call_ws_1")
+  assert.equal(wsItem.id, "ws_1", "id 还原为原始服务端 id（前缀仅为本地锚点）")
   assert.equal(wsItem.action.query, "今日天气")
 })
 

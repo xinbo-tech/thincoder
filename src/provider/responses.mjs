@@ -18,21 +18,29 @@ import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
 
 const FETCH_TIMEOUT_MS = 600_000
 
-/** 白名单：已实证 previous_response_id 的官方端（2026-08-31 官方文档核实）。 */
+/** 白名单：已实证 previous_response_id 的官方端（2026-08-31 真机验证：
+ *  百炼 store:true 全链路 ✅；GLM（open.bigmodel.cn/api/v1）store:true 全链路 ✅）。 */
 function isStatefulHost(baseURL) {
   try {
     const host = new URL(baseURL).hostname
-    return /(^|\.)openai\.com$/.test(host) || isBailianHost(baseURL)
+    return /(^|\.)openai\.com$/.test(host) || isBailianHost(baseURL) || /(^|\.)bigmodel\.cn$/.test(host)
   } catch {
     return false
   }
 }
 
-/** 灰名单：格式完整但链未证实/不支持——显式全量 + 一次性 warning（不靠服务端报错）。 */
+/** store 必开 host（链保留依赖 store:true——真机：百炼 store:false → 链 400；GLM 同）。
+ *  OpenAI 官方 store:false 链仍可用，不在内。 */
+function isStoreRequiredHost(baseURL) {
+  return isBailianHost(baseURL) || /(^|\.)bigmodel\.cn$/.test(baseURL ?? "")
+}
+
+/** 灰名单：格式完整但链未证实/不支持——显式全量 + 一次性 warning（不靠服务端报错）。
+ *  2026-08-31 真机后仅剩 DeepSeek（官方明确 previous_response_id 不支持且参数静默忽略）。 */
 function isNonStatefulHost(baseURL) {
   try {
     const host = new URL(baseURL).hostname
-    return /(^|\.)deepseek\.com$/.test(host) || /(^|\.)bigmodel\.cn$/.test(host)
+    return /(^|\.)deepseek\.com$/.test(host)
   } catch {
     return false
   }
@@ -72,15 +80,17 @@ function toItems(messages, { instructions } = {}) {
     if (m.role === "system") continue
     if (typeof m.tool_call_id === "string" && m.tool_call_id.startsWith("web_search_call_") && typeof m.content === "string") {
       // 内置工具结果本地化消息 → 原样回传（DeepSeek 官方：web_search_call 原样回传即可，
-      // 服务端自动恢复搜索结果）
+      // 服务端自动恢复搜索结果）。id 用 content 里的原始服务端 id（msg_xxx），前缀只是本地锚点。
       let query = ""
       let srcs = []
+      let wsId = m.tool_call_id.slice("web_search_call_".length)
       try {
         const parsed = JSON.parse(m.content)
         query = parsed.query ?? ""
         srcs = parsed.sources ?? []
+        if (parsed.id) wsId = parsed.id
       } catch { /* content 非 JSON（纯展示）→ query 缺省 */ }
-      items.push({ type: "web_search_call", id: m.tool_call_id, status: "completed", action: { query, type: "search", sources: srcs } })
+      items.push({ type: "web_search_call", id: wsId, status: "completed", action: { query, type: "search", sources: srcs } })
       continue
     }
     if (m.role === "user") {
@@ -172,20 +182,20 @@ export function buildBody(provider, messages, tools, opts = {}) {
   } else if (chain && !hostStateful && !opts.forceStateful) {
     chain = null // 非白名单 host 且无显式 forceStateful：不冒险开链
   }
-  // 2026-08-31 真机冒烟：百炼开链 = 云端留存（store:true）——首次知情警告（不刷屏）
-  if (wantStateful && hostStateful && isBailianHost(provider.baseURL) && !provider._responsesStoreWarned) {
+  // 2026-08-31 真机冒烟：百炼/GLM 开链 = 云端留存 7 天——首次知情警告（不刷屏）
+  if (wantStateful && hostStateful && isStoreRequiredHost(provider.baseURL) && !provider._responsesStoreWarned) {
     provider._responsesStoreWarned = true
-    warnings.push({ name: "responses-store-retention", message: "百炼链生效需要 store:true——对话将在阿里云留存 7 天（PROVIDER.md §13.3 D10；provider.stateful=false 可退出）" })
+    warnings.push({ name: "responses-store-retention", message: "链生效需要 store:true——对话将在云端留存 7 天（PROVIDER.md §13.3 D10；provider.stateful=false 可退出）" })
   }
 
   const body = {
     model: provider.model,
     input: items, // 占位：chain 有效时下方替换为增量
     stream: true,
-    // 2026-08-31 真机冒烟实锤：百炼链要求 R1 store:true（store:false → 后续
-    // previous_response_id 返回 400 Not found）；OpenAI 官方 store:false 链仍可用。
-    // 开链时百炼 = 对话在云端留存 7 天（用户知情决策，warning 上报）；灰名单全量 store:false。
-    store: wantStateful && hostStateful && isBailianHost(provider.baseURL),
+    // 2026-08-31 真机冒烟实锤：百炼/GLM 链要求 R1 store:true（store:false → 链 400
+    // Not found）；OpenAI 官方 store:false 链仍可用。开链时 = 对话在云端留存 7 天
+    // （警告上报）；灰名单全量 store:false。
+    store: wantStateful && hostStateful && isStoreRequiredHost(provider.baseURL),
     ...(extracted ? { instructions: extracted } : {}),
     ...(toolsFlat ? { tools: toolsFlat } : {}),
     ...(spec.maxOutput || provider.maxTokens ? { max_output_tokens: provider.maxTokens ?? spec.maxOutput } : {}),
