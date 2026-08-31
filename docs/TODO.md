@@ -87,7 +87,7 @@
 
 ### 文档完备性补挂（2026-08-30，来源：文档全量扫描发现的漏挂项）
 
-- [ ] PROVIDER §12 `thinking_budget`（限思考 token 上限）——决策表注明"记 TODO"但未入本清单，补挂（独立增值项，与本轮 enable_thinking 正交）
+- [x] ~~PROVIDER §12 `thinking_budget`（限思考 token 上限）——决策表注明"记 TODO"但未入本清单，补挂（独立增值项，与本轮 enable_thinking 正交）~~——2026-08-31 用户终裁：**否掉（评估后过度工程）**。理由：①现有兜底链已覆盖真实痛点（maxTokens 调大/reasoningEffort 降档/Partial Mode 续写/DeepSeek prefix 续写——真实案例均非"兜底失效"而是"参数未配"）；②支持面窄（2026-08-31 核实矩阵：仅百炼 extra_body.thinking_budget 与 Claude budget_tokens（≥1024 且 <max_tokens 有坑）原生支持；DeepSeek官方/GLM/Kimi/MiniMax/Doubao 均无 budget；deepseek 预设走官方端点即不支持）；③业界趋势收敛回 effort 档位（Claude 新模型 adaptive+effort、Gemini 3+ thinkingLevel），token 预算接口在退场。**临界条件**：若将来出现"百炼用户 maxTokens 拉满仍空响应（思考吃光预算）且调档位不解决"的真实案例，按 30 行内百炼-only 注入（extra_body.thinking_budget，enable_thinking 同注入点）随手补，不欠账。
 - [x] ~~CLI `test/` 目录纳入 lint~~——已销账，见上节（2026-08-31）
 - [x] ~~config.schema.json 同步机制~~——**2026-08-31 用户裁定：彻底删除**（非放弃维护）。核实其从未闭环：①线上 URL（saveConfig 注入的 `https://thincoder.dev/schemas/config.json`）从未部署——thincoder.com 仓库无 schemas 目录；②代码从不消费该文件；③DEFAULTS 顶层 25 键仅覆盖 5，providers 层 20 键从未进 schema——维护成本 > 价值。处理：删 `docs/schemas/`、删 saveConfig 的 `$schema` 注入（今后写出的 config.json 不再带该字段，存量字段无害残留）、README 失实宣传行删除。ROADMAP-0.9.0 的历史计划条目按快照规范保留。
 
