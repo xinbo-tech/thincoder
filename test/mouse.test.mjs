@@ -97,6 +97,34 @@ describe("handleMouseClick — picker selection", () => {
   })
 })
 
+
+  it("clicking the ▼ scroll-down control flips the block window (2026-08-31 块内滚动)", async () => {
+    const { C } = await import("../src/tui/ansi.mjs")
+    const state = mockState({
+      lines: Array.from({ length: 40 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
+      expandedBlocks: new Set(["fold-0"]), // 预展开：长 dim 块展开态
+    })
+    const ctx = { state, render: () => { rendered = true }, showPicker: async () => null, popPicker: () => {} }
+    let rendered = false
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try {
+      // 展开块（40 行 body，80×24 → cap=14 → winH=9）结构行位（conv 从面板 row2 起）：
+      // row2 blank / row3 header(▼) / row4-12 窗口9行 / row13 ▼下方31行 / row14 底控
+      // ▼ 行在 row13——精确点击（不做自动扫描——扫描会先点中 header 触发 toggle 震荡）
+      const consumed = handleMouseClick(ctx, 10, 13)
+      assert.equal(consumed, true, "▼ 控制行点击被消费")
+      assert.equal(state._foldScroll?.get("fold-0"), 9, "▼ 点击后块内 offset 前进一窗（9 行）")
+      // offset>0 后 ▲ 控制行出现（结构 +1 行）——▼ 行顺移到 row14，再点一次
+      handleMouseClick(ctx, 10, 14)
+      assert.ok(state._foldScroll?.get("fold-0") > 9, "连续 ▼ 点击继续翻窗")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  })
+
 describe("handleMouseClick — conversation line actions", () => {
   it("clicking a folded-block hint expands it", async () => {
     const { C } = await import("../src/tui/ansi.mjs")

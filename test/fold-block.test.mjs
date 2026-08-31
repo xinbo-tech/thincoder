@@ -7,7 +7,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {
   foldCapRows, isExpanded, toggleFoldBlock, foldHintLine, blankLine,
-  renderExpandedBlock, renderBlockTimeline, renderFoldedHead,
+  renderExpandedBlock, renderBlockTimeline, renderFoldedHead, scrollFoldBlock,
 } from "../src/tui/fold-block.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../src/advisor/run.mjs"
 import { C } from "../src/tui/ansi.mjs"
@@ -42,17 +42,52 @@ test("renderExpandedBlock: body ≤ cap → 全量 + 顶部控制行", () => {
   assert.ok(!out.some((l) => l.text.includes("capped")), "未触封顶无标记")
 })
 
-test("renderExpandedBlock: body > cap → 封顶 + 底部控制行必在区块末尾（可达性核心保证）", () => {
+test("renderExpandedBlock: body > cap → 窗口显示 + ▲/▼ 翻窗 + 底部控制行必在区块末尾（2026-08-31 契约）", () => {
   const body = Array.from({ length: 100 }, (_, i) => ({ text: `line${i}`, color: C.dim }))
   const cap = foldCapRows(24) // 14
   const out = renderExpandedBlock({ body, foldKey: "k", state: { foldEnabled: true, expandedBlocks: new Set(["k"]) }, maxRows: 24, label: "blk" })
-  assert.ok(out.length <= cap + 2, `区块总高 ≤ cap+2（blank 上下文），实际 ${out.length}`)
-  assert.ok(out.some((l) => l.text.includes("capped at 60%")), "封顶提示行存在")
-  assert.ok(out.some((l) => strip(l.text) === "│ line0"), "保留开头内容（带竖线）")
-  assert.ok(!out.some((l) => strip(l.text) === "│ line99"), "超限尾部不渲染")
+  assert.ok(out.length <= cap, `区块总高 ≤ cap（窗口+控制行），实际 ${out.length}`)
+  assert.ok(out.some((l) => l._foldScrollDown), "下方还有 N 行 → ▼ 翻窗控制行（内容未截断，可滚动读全文）")
+  assert.ok(!out.some((l) => l._foldScrollUp), "窗口在顶部 → 无 ▲ 控制行")
+  assert.ok(out.some((l) => strip(l.text) === "│ line0"), "保留窗口开头内容（带竖线）")
+  assert.ok(!out.some((l) => strip(l.text) === "│ line99"), "超窗尾部由 ▼ 翻窗展示（非一次性截断）")
   const last = out[out.length - 1]
   assert.equal(last._foldToggle, "k", "最后一个是折叠控制行——始终可点击收起")
   assert.ok(last.text.includes("click to collapse"))
+})
+
+test("renderExpandedBlock: 块内滚动 offset 生效 + ▲ 出现 + clamp 到末尾（scrollFoldBlock 窗口）", () => {
+  const body = Array.from({ length: 100 }, (_, i) => ({ text: `line${i}`, color: C.dim }))
+  const state = { foldEnabled: true, expandedBlocks: new Set(["k"]), _foldScroll: new Map() }
+  const cap = foldCapRows(24) // 14；winH = cap-5 = 9
+  // 首次渲染 offset=0
+  let out = renderExpandedBlock({ body, foldKey: "k", state, maxRows: 24, label: "blk" })
+  assert.ok(out.some((l) => l._foldScrollDown === "k"), "初始窗口有 ▼ 翻窗控制行（foldKey 标记）")
+  assert.ok(out.some((l) => /下方还有/.test(l.text ?? "")), "▼ 控制行显示下方剩余行数")
+  // 模拟翻窗（scrollFoldBlock 向下翻）
+  const next = scrollFoldBlock(state, "k", 1, 9)
+  assert.equal(next, 9)
+  out = renderExpandedBlock({ body, foldKey: "k", state, maxRows: 24, label: "blk" })
+  assert.ok(out.some((l) => strip(l.text) === "│ line9"), "翻窗后窗口起点 = line9")
+  assert.ok(out.some((l) => l._foldScrollUp), "offset>0 → ▲ 控制行出现")
+  // 连续翻到末尾 clamp（91 = 100-9）
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  out = renderExpandedBlock({ body, foldKey: "k", state, maxRows: 24, label: "blk" })
+  assert.ok(out.some((l) => strip(l.text) === "│ line81"), "连续翻窗后窗口起点 line81（9×9=81，offset 累计正确）")
+  assert.ok(out.some((l) => l._foldScrollDown), "尚未到末尾（81 < 91）→ 仍有 ▼")
+  // 最后一翻：offset 90 → 渲染 clamp 到 91（末尾窗口）
+  scrollFoldBlock(state, "k", 1, 9)
+  scrollFoldBlock(state, "k", 1, 9)
+  out = renderExpandedBlock({ body, foldKey: "k", state, maxRows: 24, label: "blk" })
+  assert.ok(out.some((l) => strip(l.text) === "│ line91"), "末尾窗口起点 line91（渲染 clamp 不越界）")
+  assert.ok(!out.some((l) => l._foldScrollDown), "末尾无 ▼ 控制行")
 })
 
 test("renderExpandedBlock: foldEnabled=false → 裸内容无控制行无封顶（unfold-all 语义）", () => {

@@ -28,6 +28,10 @@ export function convCacheKey(state, maxRows) {
   const lastLine = state.lines.length > 0 ? state.lines[state.lines.length - 1] : null
   // expandedBlocks participates: expanding/folding a block must invalidate the cache
   const exp = state.expandedBlocks ? [...state.expandedBlocks].sort().join(",") : ""
+  // 2026-08-31 块内滚动：_foldScroll（foldKey→offset）参与签名——翻窗必须重新渲染
+  const foldScrollSig = state._foldScroll
+    ? [...state._foldScroll.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([k, v]) => `${k}:${v}`).join(",")
+    : ""
   // Content prefix in the signature: same kind+length with different content
   // would otherwise collide (stale render); 8 chars disambiguate in practice.
   const blocksSig = (state._advisorBlocks ?? []).map((b) => `${b.kind}:${b.text?.length ?? 0}:${String(b.text ?? "").slice(0, 8)}`).join(",")
@@ -75,7 +79,7 @@ export function convCacheKey(state, maxRows) {
   // this the cache would serve the pre-search rows and highlight would never
   // appear (P0-1, 2026-08-30 consult). query+index covers match navigation.
   const searchPart = state.search?.query ? `${state.search.query}:${state.search.index ?? 0}` : ""
-  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}`
+  return `${state.lines.length}|${lastLine?.text.length ?? 0}|${state.streaming.length}|${state.reasoning.length}|${blocksSig}|${subSig}|${frozenSig}|${toolSig}|${colorSig}|${state.foldEnabled !== false ? "f" : "u"}|${exp}|${capPart}|${searchPart}|${foldScrollSig}`
 }
 
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).

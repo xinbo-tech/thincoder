@@ -77,6 +77,8 @@ export async function startTUI(agent, opts = {}) {
     historyIndex: -1,
     _draft: null, // stashed unsent input while navigating history (restored on down past newest)
     scroll: 0, // scroll lines from bottom upward
+    _foldScroll: new Map(), // 2026-08-31 块内滚动：foldKey → 窗口 offset（展开块 ▲▼ 翻窗）
+    _followTail: true, // 2026-08-31 流式跟随：渲染前 scroll=0；用户上滚暂停、到底/新消息恢复
     processing: false,
     controller: null, // AbortController for current agent run
     permission: null, // { name, args, resolve }
@@ -188,8 +190,10 @@ export async function startTUI(agent, opts = {}) {
     for (const m of text.matchAll(/\x1b\[<(\d+);\d+;\d+([Mm])/g)) {
       if (Number(m[1]) === 64) {
         state.scroll += 3
+        state._followTail = false // 2026-08-31：用户上滚 = 暂停流式跟随（不抢视角）
       } else if (Number(m[1]) === 65) {
         state.scroll = Math.max(0, state.scroll - 3)
+        if (state.scroll === 0) state._followTail = true // 滚回底部恢复跟随
       }
     }
 

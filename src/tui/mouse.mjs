@@ -16,7 +16,7 @@
  */
 import { computeLayout } from "./layout.mjs"
 import { buildConvLines } from "./render-conversation.mjs"
-import { toggleFoldBlock } from "./fold-block.mjs"
+import { toggleFoldBlock, scrollFoldBlock } from "./fold-block.mjs"
 
 /** Extract left-click presses from a chunk. Returns [{ col, row }] (1-based). */
 export function parseMouseClicks(text) {
@@ -76,6 +76,13 @@ export function handleMouseClick(ctx, col, row) {
     const gIdx = convGlobalIndex(convLines.length, P.conversation.h, state.scroll ?? 0)(r - P.conversation.y)
     if (gIdx === null) return false
     const lineEl = convLines[gIdx]
+    if (lineEl?._foldScrollUp || lineEl?._foldScrollDown) {
+      // 2026-08-31 块内滚动：▲/▼ 控制行点击翻窗（60% 封顶保留、窗口随翻滚动，全文可达）
+      scrollFoldBlock(state, lineEl._foldScrollUp ?? lineEl._foldScrollDown,
+        lineEl._foldScrollUp ? -1 : 1, lineEl._foldWindow ?? 1)
+      render()
+      return true
+    }
     if (!lineEl?._foldToggle) return false
     // Bidirectional toggle — single source in fold-block.mjs (expand a folded
     // block, collapse an expanded one).

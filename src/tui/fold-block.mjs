@@ -40,6 +40,23 @@ export function toggleFoldBlock(state, foldKey) {
   else state.expandedBlocks.add(foldKey)
 }
 
+/** 块内滚动：展开态窗口起点（2026-08-31 用户需求——60% 封顶保留、块内可滚动读全文）。
+ *  存在 = state._foldScroll: Map<foldKey, offset>（渲染读、点击写）。 */
+export function foldScrollOffset(state, foldKey) {
+  return state._foldScroll?.get(foldKey) ?? 0
+}
+
+/** 块内翻窗（▲/▼ 控制行点击，mouse.mjs 分派）：dir=+1 向下（offset 增）、-1 向上。
+ *  返回新 offset；无块滚动状态时不动作。 */
+export function scrollFoldBlock(state, foldKey, dir, winH) {
+  state._foldScroll ??= new Map()
+  const max = 0
+  const prev = state._foldScroll.get(foldKey) ?? 0
+  const next = Math.max(0, prev + dir * Math.max(1, Math.floor(winH)))
+  state._foldScroll.set(foldKey, next)
+  return next
+}
+
 /** Fold marker line: bold-cyan icon + "click to …" phrase underlined (clickable affordance).
  *  No indent — flush with the content below it; callers add a blank line BEFORE the
  *  expanded-state control so it stands apart from unrelated content (reported UX). */
@@ -191,18 +208,32 @@ export function renderExpandedBlock({ body, foldKey, state, maxRows, label, cols
   })
   const out = [blankLine(), foldHintLine(`▼ … ${label} — click to collapse`, foldKey)]
   const cap = foldCapRows(maxRows)
-  if (lined.length <= cap) {
+  if (lined.length <= cap - 5) {
+    // 2026-08-31 用户需求：整块（含控制行）≤ 60% 屏时全量显示
     out.push(...lined)
     return out
   }
-  // Reserve room for blank + top control + cap marker + bottom control.
-  const keep = Math.max(1, cap - 4)
-  out.push(...lined.slice(0, keep))
-  out.push({
-    text: `│ … ${body.length - keep} more lines — expansion capped at 60% of screen (collapse to re-expand)`,
-    color: C.dim,
-    _skipDimFold: true,
-  })
+  // 块高 60% 封顶保留（用户 2026-08-30 拍板），正文改窗口显示（2026-08-31）：
+  // 窗口 = cap 内可读行数（扣除 blank+顶部控制+▲+▼+底部收起 = 5 行开销）；
+  // ▲/▼ 控制行点击翻窗（_foldScrollUp/_foldScrollDown 标记，mouse.mjs 分派）——
+  // 滚动读全文、收起控制行永远在块尾。
+  const winH = Math.max(1, cap - 5)
+  const total = lined.length
+  const offset = Math.min(Math.max(0, foldScrollOffset(state, foldKey)), Math.max(0, total - winH))
+  const window = lined.slice(offset, offset + winH)
+  if (offset > 0) {
+    out.push({
+      text: `▲ 上方还有 ${offset} 行（点击向上翻窗）`,
+      color: C.dim, _skipDimFold: true, _foldScrollUp: foldKey, _foldWindow: winH,
+    })
+  }
+  out.push(...window)
+  if (offset + winH < total) {
+    out.push({
+      text: `▼ 下方还有 ${total - offset - winH} 行（点击向下翻窗）`,
+      color: C.dim, _skipDimFold: true, _foldScrollDown: foldKey, _foldWindow: winH,
+    })
+  }
   out.push(foldHintLine(`▼ … ${label} — click to collapse`, foldKey))
   return out
 }

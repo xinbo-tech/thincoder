@@ -18,10 +18,10 @@
 | `tool-events.mjs` | 344 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 开工具单框载体、onToolResult 载体定态与子agent 完成冻结、onToolOutput 追加进载体 `_toolBlock.output`/advisor 有序块、onTurnEnd 增量落盘）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
 | `subagent-blocks.mjs` | 253 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks，2026-08-30 自 agent-turn 归位） |
 | `render-frame.mjs` | 333 | 帧布局：header / todo / conversation / input / status 各面板装配 |
-| `render-conversation.mjs` | 430 | 对话面板行构建：缓存（含 cap/colorSig 分量）、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、子agent/advisor 折叠块渲染（§7.2 D4）、主输出永不折叠（2026-08-30） |
-| `fold-block.mjs` | 168 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
+| `render-conversation.mjs` | 531 | 对话面板行构建：缓存（含 cap/colorSig 分量）、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、子agent/advisor 折叠块渲染（§7.2 D4）、主输出永不折叠（2026-08-30） |
+| `fold-block.mjs` | 240 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
 | `tool-args.mjs` | 65 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
-| `fold-block.mjs` | 147 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
+| `fold-block.mjs` | 240 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
 | `render-loop.mjs` | 110 | 渲染调度：增量重绘、1s ticker、光标/滚动维护 |
 | `layout.mjs` | 145 | 面板布局计算（行/列分配，todo 面板含顶部分隔线高度；小终端压缩链：conversation→picker→permission→todo 分隔线；子代理窄带槽与 output 面板槽已随 §7.2 D4/D6 退役） |
@@ -132,7 +132,9 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **统一折叠形态（2026-08-30 用户裁定："所有折叠区块 = 默认三行 tail，展开封顶 60%"）**：此前折叠态有两套并存——子agent/advisor 用「头部摘要 + tail 3」，长消息/连续 dim 用老的 `[前 4 行, 匿名 ▶, 末 1 行]`；匿名的 `▶ … N more lines` 头在滚动历史里读起来像孤立碎片（用户报告"很多孤立的 ... xx more lines 段"）。现已全部统一为 `renderFoldedHead` 单源：**`▶ <身份标签> · N lines — click to expand` + 末 3 行（dim）**。身份标签按内容分类：`thinking`（思考块）/ `tool output`（dim 与连续 dim）/ 子agent、advisor 用各自既有的括号身份头。旧形态（前 4 行 + 中置 ▶）废弃，FOLD_KEEP 常量已删。
 
-**展开封顶（60% 屏幕，2026-08-30 用户报告驱动）**：此前展开后长度不受限——超长区块展开时折叠控制行被挤出屏幕，点不到、收不回。现在展开态经 `renderExpandedBlock` 统一渲染，**区块总高 ≤ `floor(rows × 0.6)`**（`foldCapRows`）；触顶时截断内容并渲染封顶提示行 `… N more lines — expansion capped at 60% of screen` + **区块底部的第二个 ▼ 控制行**——区块最高只占屏 60%，底部控件必落在视口内，**展开永远可逆**。`maxRows` 由调用链贯穿（render-frame → renderConversation → buildConvLines → 组件；render-loop/key-handler/index 历史分页/mouse 同步传入），省略 = 不封顶（单测/无终端环境）。`convCacheKey` 含 cap 分量——终端 resize 改变封顶行数必须踢缓存。`foldEnabled=false`（/fold off）时控制行与封顶一并消失（toggle 无效时提示会撒谎，索性不渲染）。
+**展开封顶（60% 屏幕，2026-08-30 用户报告驱动；2026-08-31 增补块内滚动）**：此前展开后长度不受限——超长区块展开时折叠控制行被挤出屏幕，点不到、收不回。现在展开态经 `renderExpandedBlock` 统一渲染，**区块总高 ≤ `floor(rows × 0.6)`**（`foldCapRows`）；**2026-08-31 用户需求修订**：高度封顶保留，但内容不再一次性截断——超过封顶的正文渲染为**窗口**（`state._foldScroll: Map<foldKey, offset>` 记每块窗口起点；窗口可读行 = `cap − 5`，预留 blank+顶部控制+▲+▼+底部收起），窗口上下渲染 **`▲ 上方还有 N 行` / `▼ 下方还有 N 行`** 控制行（带 `_foldScrollUp/_foldScrollDown` + `_foldWindow` 标记，点击翻窗=滑一个窗口）——**滚动读全文、60% 高度内、底部 ▼ 收起控制行永远在块尾**。翻窗经 `scrollFoldBlock(state, foldKey, dir, winH)` 单源；`convCacheKey` 含 `_foldScroll` 分量（翻窗必须重渲染，防缓存旧窗口）。`maxRows` 由调用链贯穿（render-frame → renderConversation → buildConvLines → 组件；render-loop/key-handler/index 历史分页/mouse 同步传入），省略 = 不封顶（单测/无终端环境）。`foldEnabled=false`（/fold off）时控制行与窗口一并消失（toggle 无效时提示会撒谎，索性不渲染）。
+
+**流式跟随尾部（2026-08-31 用户需求）**：输出活动（`state.streaming`/`state.reasoning` 缓冲非空）时渲染前 `state.scroll = 0`（最新内容钉在视口底）——`state._followTail` 默认 true；用户上滚（PgUp/滚轮上/上箭头滚动）→ 暂停跟随（不抢视角）；滚回底部（PgDn/滚轮下至 scroll=0）→ 恢复；后续新输出继续跟随。
 
 **折叠对象**（要求 `foldEnabled !== false` 且 key 不在 `expandedBlocks`；**2026-08-30 用户裁定：主输出永不折叠**——会话核心内容由滚动阅读，折叠会把真正的回答藏在点击之后；思考/工具摘要才是辅助流，保留折叠）：
 1. **长消息折叠**：思考（C.reason）**无条件折叠**（2026-08-30 最终裁定：行数阈值两轮死于真机——80 列下真实中文思考 wrap 5~10 行够不着 12；宽屏 200 列下只 wrap 1~3 行够不着 3；字符阈值也漏掉典型句——**"阈值"思路整体废弃，思考是过程内容，一律收进命名头**）；工具摘要（C.dim）等 >12 行折叠（`LONG_FOLD_LINES`）；key = `long-{lines 索引}`。**主输出（C.text）与用户消息不参与**——`foldable = l.color !== C.text` 直接全量渲染

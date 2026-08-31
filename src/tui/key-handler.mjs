@@ -298,11 +298,13 @@ export function createKeyHandler(ctx) {
       } else {
         state.scroll += Math.max(1, ((state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24)) - 8)
       }
+      state._followTail = false // 2026-08-31：用户上滚 = 暂停流式跟随
       render()
       return
     }
     if (key.name === "pagedown") {
       state.scroll = Math.max(0, state.scroll - Math.max(1, ((state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24)) - 8))
+      if (state.scroll === 0) state._followTail = true // 滚回底部恢复跟随
       render()
       return
     }
