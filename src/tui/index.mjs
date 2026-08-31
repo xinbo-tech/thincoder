@@ -31,7 +31,7 @@ import { createInteraction } from "./interaction.mjs"
 import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, translateShiftEnter, stripKeyboardProtocol } from "./clipboard.mjs"
 import { parseMouseClicks, handleMouseClick, handleWheel } from "./mouse.mjs"
 import { runAgentTurn } from "./agent-turn.mjs"
-import { createKeyHandler } from "./key-handler.mjs"
+import { createKeyHandler, convMaxScroll } from "./key-handler.mjs"
 import { showStartup, backgroundIndex, historyToLines, HISTORY_PAGE_MESSAGES } from "./startup.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 import { createConfigHelpers } from "./config-helpers.mjs"
@@ -136,8 +136,41 @@ export async function startTUI(agent, opts = {}) {
   let pasteMode = false
   let pasteAccum = ""
 
+  /** 懒加载更早历史（2026-08-31 用户约定："滚动到头自动加载"——滚轮/PgUp 到顶皆触发；
+   *  2026-08-31 前只挂 PgUp 键 = 违约，滚轮到头无反应）。加载后滚动补偿保持锚定。
+   *  外层作用域：data 回调（滚轮分支）与 createKeyHandler ctx（PgUp 分支）共用。 */
+  const loadOlder = () => {
+    if (!state._hasOlder) return
+    const full = agent._fullHistory ?? []
+    const loaded = state._historyLoaded
+    const start = Math.max(0, full.length - loaded - HISTORY_PAGE_MESSAGES)
+    const end = full.length - loaded
+    if (start >= end) return
+
+    const d = state.dims ? state.dims.get() : {}
+    const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
+    const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
+
+    if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
+    state._lineIdCounter = state._lineIdCounter ?? 0
+    const older = historyToLines(full, start, end)
+    for (const l of older) l._lineId = ++state._lineIdCounter
+    state.lines.unshift(...older)
+    state._historyLoaded += end - start
+    state._hasOlder = start > 0
+    if (state._hasOlder) {
+      state.lines.unshift({ text: `… ${start} more earlier messages (scroll to top to load)`, color: C.dim })
+    }
+
+    const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
+    state.scroll += Math.max(0, after - before)
+    render()
+  }
+
+
   process.stdin.on("data", (chunk) => {
     try {
+
       let text = mousePending + utf8Decoder.decode(chunk, { stream: true })
       mousePending = ""
 
@@ -196,6 +229,8 @@ export async function startTUI(agent, opts = {}) {
           if (button === 64) {
             state.scroll += 3
             state._followTail = false // 2026-08-31：用户上滚 = 暂停流式跟随（不抢视角）
+            // 2026-08-31 用户约定修复：滚动到头自动加载（原来只挂 PgUp 键——违约）
+            if (state._hasOlder && state.scroll >= convMaxScroll(state)) loadOlder()
           } else {
             state.scroll = Math.max(0, state.scroll - 3)
             if (state.scroll === 0) state._followTail = true // 滚回底部恢复跟随
@@ -274,43 +309,6 @@ export async function startTUI(agent, opts = {}) {
   const pushLabel = (text, color) => {
     if (state.lines.length > 0) state.lines.push({ text: "", color: C.dim })
     state.lines.push({ text, color })
-    render()
-  }
-
-  /**
-   * Load the next earlier page of restored history (lazy, parity with VS Code
-   * loadOlder). Prepends earlier source lines and compensates scroll so the
-   * visible content does not jump. Called from key-handler when PgUp hits the top.
-   */
-  const loadOlder = () => {
-    if (!state._hasOlder) return
-    const full = agent._fullHistory ?? []
-    const loaded = state._historyLoaded
-    const start = Math.max(0, full.length - loaded - HISTORY_PAGE_MESSAGES)
-    const end = full.length - loaded
-    if (start >= end) return
-
-    const d = state.dims ? state.dims.get() : {}
-    const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
-    const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
-
-    // Drop the old placeholder, prepend the older page, re-add the placeholder
-    // (with an updated count) only if more remain.
-    if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
-    state._lineIdCounter = state._lineIdCounter ?? 0
-    const older = historyToLines(full, start, end)
-    for (const l of older) l._lineId = ++state._lineIdCounter
-    state.lines.unshift(...older)
-    state._historyLoaded += end - start
-    state._hasOlder = start > 0
-    if (state._hasOlder) {
-      state.lines.unshift({ text: `… ${start} more earlier messages (PgUp at top to load)`, color: C.dim })
-    }
-
-    // Scroll compensation: prepending N display rows must move scroll by N to
-    // keep the previously-visible bottom-anchored content in place.
-    const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
-    state.scroll += Math.max(0, after - before)
     render()
   }
 

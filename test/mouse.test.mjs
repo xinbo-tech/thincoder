@@ -411,6 +411,46 @@ describe("handleWheel — 块内滚动（2026-08-31 用户需求：滚动读全�
       assert.equal(state._foldScroll.get("fold-0"), 3, "滚轮向下 = 块内 offset +3")
       assert.equal(handleWheel(ctx, 64, 10, 5), true, "向上同样消费")
       assert.equal(state._foldScroll.get("fold-0"), 0, "滚轮向上 = offset -3（clamp 0）")
+
+describe("convMaxScroll — 滚动到头判定（2026-08-31 懒加载自动触发契约）", () => {
+  it("导出可用且返回非负（会话滚动上限=换算行-面板高）", async () => {
+    const { convMaxScroll } = await import("../src/tui/key-handler.mjs")
+    const state = mockState({
+      lines: Array.from({ length: 50 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
+      expandedBlocks: new Set(),
+    })
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try {
+      assert.ok(convMaxScroll(state) >= 0, "会话滚动上限非负")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  })
+
+  it("自动加载判定：scroll 达到 convMaxScroll 且 _hasOlder → 触发条件成立（index.mjs 滚轮分支同判别式）", async () => {
+    const { convMaxScroll } = await import("../src/tui/key-handler.mjs")
+    const state = mockState({
+      lines: Array.from({ length: 50 }, (_, i) => ({ text: `dim${i}`, color: C.dim })),
+      expandedBlocks: new Set(), _hasOlder: true, scroll: 999,
+    })
+    const orig = { cols: process.stdout.columns, rows: process.stdout.rows }
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true })
+    Object.defineProperty(process.stdout, "rows", { value: 24, configurable: true })
+    try {
+      // 与 index.mjs 滚轮分支同一判别式：_hasOlder && scroll >= convMaxScroll → loadOlder
+      assert.equal(state._hasOlder && state.scroll >= convMaxScroll(state), true, "条件成立（加载触发）")
+      state._hasOlder = false
+      assert.equal(state._hasOlder && state.scroll >= convMaxScroll(state), false, "_hasOlder=false 不触发")
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
+      Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })
+    }
+  })
+})
+
     } finally {
       Object.defineProperty(process.stdout, "columns", { value: orig.cols, configurable: true })
       Object.defineProperty(process.stdout, "rows", { value: orig.rows, configurable: true })

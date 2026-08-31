@@ -6,7 +6,7 @@ import { countConvLines } from "./render-conversation.mjs"
 import { QUESTION_CUSTOM } from "./interaction.mjs"
 
 /** Current conversation max scroll offset (display lines beyond the visible panel). */
-function convMaxScroll(state) {
+export function convMaxScroll(state) {
   // Single source (Windows ConPTY instability, 2026-08-30) — cached dims.
   const d = state.dims ? state.dims.get() : {}
   const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
