@@ -1654,6 +1654,49 @@ test("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换�
 })
 
 test("edit 数组形态：与 path/old_string/new_string 互斥", async () => {
+
+test("写入工具返回带上下文窗口（2026-08-31 工具顺手度——模型拿到行号锚点的语义自检）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-write-ctx-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "f.mjs", content: "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\n" }, ctx)
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    // edit L4（替换 line4 → LINE4）→ 返回应含上下文（L1-L7，L4 标记 →）
+    const r = await byName.edit.execute({ path: "f.mjs", old_string: "line4", new_string: "LINE4" }, ctx)
+    assert.ok(r.includes("context (L1-L7)"), "含上下文头")
+    assert.ok(r.includes("→ L4\tLINE4"), "写入行标记 → + 新内容")
+    assert.ok(r.includes(" L3\tline3"), "前一行在上下文里")
+    assert.ok(r.includes(" L5\tline5"), "后一行在上下文里")
+    // insert_after L6 → edit L4 后 after_line=6 在受影响区——先 read 再插入（新机制语义）
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    const r2 = await byName.insert_after.execute({ path: "f.mjs", after_line: 6, content: "inserted" }, ctx)
+    assert.ok(r2.includes("context (L"), "insert_after 含上下文头")
+    assert.ok(r2.includes("→ L7\tinserted"), "插入行标记 →")
+    // hashline_edit 同样含上下文
+    const read = await byName.read.execute({ path: "f.mjs", hashes: true }, ctx)
+    const m = read.match(/(\w{12})\] (line8)/)
+    if (m) {
+      const r3 = await byName.hashline_edit.execute({ path: "f.mjs", old_hashes: [m[1]], new_content: "LINE8" }, ctx)
+      assert.ok(r3.includes("context (L"), "hashline_edit 含上下文头")
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("write 全文重写不附上下文（无行号锚点——模型刚写的知道内容）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-write-no-ctx-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    const r = await byName.write.execute({ path: "f.mjs", content: "hello\nworld\n" }, ctx)
+    assert.ok(!r.includes("context (L"), "write 全文重写不附上下文")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-mutex-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))

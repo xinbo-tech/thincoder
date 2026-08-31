@@ -50,6 +50,24 @@ export function recordWrite(abs, write) {
 export function lastWriteOf(abs) { return lastWrites.get(abs) }
 export function clearLastWrite(abs) { lastWrites.delete(abs) }
 
+/** 2026-08-31 工具顺手度（用户批准"可以啊"）：写入工具返回带上下文窗口——
+ *  模型拿到的不只是"inserted at L395"，而是"L395 这行是什么内容"——下次再操作时
+ *  能自检"我的行号 vs 实际内容"是否匹配，匹配不上 = 行号漂了，先 read——
+ *  死循环就断了（根因：模型对行号锚点的"新鲜度"没有感知——数字本身不携带语义）。
+ *  write 全文重写跳过（无行号锚点——模型刚写的知道内容）。 */
+async function appendWriteContext(abs, writeLine, baseResult) {
+  const content = normalizeEOL(await readFile(abs, "utf8"))
+  const lines = content.split("\n")
+  const start = Math.max(1, writeLine - 3)
+  const end = Math.min(lines.length, writeLine + 3)
+  const ctxLines = []
+  for (let i = start; i <= end; i++) {
+    const marker = i === writeLine ? "→" : " "
+    ctxLines.push(`${marker} L${i}\t${lines[i - 1]}`)
+  }
+  return `${baseResult}\ncontext (L${start}-L${end}):\n${ctxLines.join("\n")}`
+}
+
 export const readTool = {
   name: "read",
   description: DESC("read"),
@@ -267,7 +285,8 @@ export const editTool = {
       for (const p of prepared) {
         await writeFile(p.abs, joinWithEol(normalizeEOL(p.updated).split("\n"), p.raw), "utf8")
         recordWrite(p.abs, { type: "edit", startLine: p.editStartLine, shift: p.lineShift })
-        results.push(`Edited ${p.path}: replaced ${p.occurrences} occurrence(s)`)
+        const withCtx = await appendWriteContext(p.abs, p.editStartLine, `Edited ${p.path}: replaced ${p.occurrences} occurrence(s)`)
+        results.push(withCtx)
       }
       return results.join("\n")
     }
@@ -323,7 +342,8 @@ export const editTool = {
     const lineShift = args.new_string.split("\n").length - args.old_string.split("\n").length
     recordWrite(abs, { type: "edit", startLine: editStartLine, shift: lineShift })
     const diff = gitDiffOne(ctx.cwd, abs)
-    return `Edited ${args.path}: replaced ${args.replace_all ? occurrences : 1} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
+    const baseResult = `Edited ${args.path}: replaced ${args.replace_all ? occurrences : 1} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
+    return await appendWriteContext(abs, editStartLine, baseResult)
   },
 }
 
@@ -412,7 +432,8 @@ export const insertAfterTool = {
     await writeFile(abs, updated, "utf8")
     recordWrite(abs, { type: "insert", startLine: targetLine, shift: normalizeEOL(args.content).split("\n").length })
     const diff = gitDiffOne(ctx.cwd, abs)
-    return `Inserted after line ${targetLine} in ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
+    const baseResult = `Inserted after line ${targetLine} in ${args.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
+    return await appendWriteContext(abs, targetLine + 1, baseResult)
   },
 }
 
@@ -504,7 +525,8 @@ export const hashlineEditTool = {
     await writeFile(abs, updated, "utf8")
     recordWrite(abs, { type: "edit", startLine: pos + 1, shift: newLines.length - target.length })
     const diff = gitDiffOne(ctx.cwd, abs)
-    return `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}${corrupted ? `\n${FFFD_WARNING}` : ""}`
+    const baseResult = `Edited ${args.path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}${corrupted ? `\n${FFFD_WARNING}` : ""}`
+    return await appendWriteContext(abs, pos + 1, baseResult)
   },
 }
 
