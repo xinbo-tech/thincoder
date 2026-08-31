@@ -22,7 +22,7 @@ if (!name) { console.error("usage: node test/smoke-responses-chain.mjs --name <p
 const cfg = JSON.parse(readFileSync(join(homedir(), ".thincoder", "config.json"), "utf8"))
 const found = (cfg.providers ?? []).find((p) => p.name === name)
 if (!found) { console.error(`provider "${name}" not found`); process.exit(1) }
-const provider = { ...found, format: "responses", stateful: true }
+const provider = { ...found, baseURL: args.baseURL ?? found.baseURL, format: "responses", stateful: true }
 
 const { chat } = await import("../src/provider/core.mjs")
 const { buildBody } = await import("../src/provider/responses.mjs")

@@ -26,6 +26,7 @@ if (!found) { console.error(`provider "${name}" not found in ~/.thincoder/config
 
 const provider = {
   ...found,
+  baseURL: args.baseURL ?? found.baseURL, // --baseURL 覆盖（GLM responses 端点 ≠ 预设 chat 路径）
   format: "responses", // 冒烟强制 responses
   stateful: true, // 默认值显式化（白名单 host 生效；灰名单自动降级）
 }
