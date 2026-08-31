@@ -17,7 +17,12 @@ for (let i = 0; i < argv.length; i++) {
   if (argv[i].startsWith("--")) args[argv[i].slice(2)] = (argv[i + 1] && !argv[i + 1].startsWith("--")) ? argv[++i] : true
 }
 const name = args.name
-if (!name) { console.error("usage: node test/smoke-responses-chain.mjs --name <provider>"); process.exit(1) }
+if (!name) {
+  // 2026-08-31：无 --name = prepublishOnly glob 收集场景——skip（exit 0）提示手动用法
+  // （同 smoke-responses.mjs / smoke-qwen-thinking.mjs 门控同构）
+  console.log("[smoke] skip — 需手动带 --name 参数运行（真机冒烟不进常规测试层）")
+  process.exit(0)
+}
 
 const cfg = JSON.parse(readFileSync(join(homedir(), ".thincoder", "config.json"), "utf8"))
 const found = (cfg.providers ?? []).find((p) => p.name === name)
