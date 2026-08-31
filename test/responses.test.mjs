@@ -210,3 +210,64 @@ function mockSSE(events) {
     }),
   }
 }
+
+test("buildBody: 链失效回退前置——清链后 buildBody 必须真全量（评审 #1 守卫，D6 语义）", () => {
+  // chat() 400/404 回退先置 provider._responsesChain = null：残留链（key 匹配 + 白名单 host）
+  // 会让 217-224 增量分支输出裸 function_call_output 且 previousResponseId 不随 fullBody 带走
+  // → 服务端 call_id 无归属二次 400（2026-08-31 评审 #1）。这里锁定"清链 → 全量"的必要前置。
+  const p = provider()
+  const messages = [
+    { role: "user", content: "查天气" },
+    { role: "assistant", content: "", tool_calls: [{ id: "call_1", type: "function", function: { name: "get_weather", arguments: "{}" } }] },
+    { role: "tool", tool_call_id: "call_1", content: "晴" },
+  ]
+  p._responsesChain = { id: "resp_stale", key: "stale", outputSent: 1 } // 残留 stale 链
+  p._responsesChain = null // chat() 回退前置（2026-08-31 评审修复）
+  const { body, previousResponseId } = buildBody(p, messages, null)
+  assert.equal(previousResponseId, null, "回退请求不带 previous_response_id")
+  assert.ok(body.input.some((i) => i.type === "function_call"), "全量含 assistant function_call（增量路径会丢）")
+  assert.ok(body.input.some((i) => i.type === "function_call_output"), "全量含工具结果")
+})
+
+test("parseStream: 用户中断（Ctrl+I）不丢部分已生成内容（评审 #3，与 core interrupted 同构）", async () => {
+  const ac = new AbortController()
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(new TextEncoder().encode('data: {"type":"response.content_part.delta","part":{"type":"output_text"},"delta":"部分"}\n\n'))
+      // 异步 error：for-await 先消费已 enqueue 的帧，第二轮迭代才抛（模拟 fetch 流中途中断）
+      setTimeout(() => {
+        const err = new Error("aborted")
+        err.name = "AbortError"
+        c.error(err)
+      }, 5)
+    },
+  })
+  ac.abort({ interrupt: true, message: "用户打断" })
+  const result = await parseStream({ body }, { onToken: () => {}, onReasoning: () => {}, signal: ac.signal })
+  assert.equal(result.interrupted, true, "中断标记供 agent 层提交部分内容")
+  assert.equal(result.content, "部分", "已流出内容不丢")
+  assert.equal(result.interruptMessage, "用户打断")
+})
+
+test("parseStream: 尾部残余错误帧（无 \\n\\n 定界）传播错误不静默（评审 #6）", async () => {
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(new TextEncoder().encode('data: {"type":"response.failed","response":{"error":{"code":"x","message":"boom"}}}'))
+      c.close()
+    },
+  })
+  await assert.rejects(parseStream({ body }, { onToken: () => {}, onReasoning: () => {} }), /boom/)
+})
+
+test("parseStream: incomplete content_filter → finishReason=content_filter 不误报 length（评审 #5）", async () => {
+  const body = new ReadableStream({
+    start(c) {
+      c.enqueue(new TextEncoder().encode(
+        'data: {"type":"response.incomplete","response":{"id":"resp_x","incomplete_details":{"reason":"content_filter"}}}\n\n'))
+      c.close()
+    },
+  })
+  const result = await parseStream({ body }, { onToken: () => {}, onReasoning: () => {} })
+  assert.equal(result.finishReason, "content_filter")
+})
+

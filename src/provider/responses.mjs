@@ -149,7 +149,7 @@ function normalizeUsage(usage) {
     completion_tokens: usage.output_tokens ?? 0,
     total_tokens: usage.total_tokens ?? (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
     prompt_cache_hit_tokens: usage.input_tokens_details?.cached_tokens ?? 0,
-    prompt_cache_miss_tokens: usage.input_tokens ?? 0,
+    prompt_cache_miss_tokens: Math.max(0, (usage.input_tokens ?? 0) - (usage.input_tokens_details?.cached_tokens ?? 0)),
   }
 }
 
@@ -256,8 +256,9 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
     return result
   }
 
-  await readResponseStream(response, {
-    onToken: (t) => { result.content += t; onToken?.(t) },
+  try {
+    await readResponseStream(response, {
+      onToken: (t) => { result.content += t; onToken?.(t) },
     onReasoning: (t) => { result.reasoning += t; onReasoning?.(t) },
     onBuiltinWebSearch: (r) => { result.builtinToolResults.push(r) },
     onFunctionCall: (callId, name, itemId) => {
@@ -280,7 +281,8 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
     onCompleted: seal,
     onIncomplete: (resp) => {
       seal(resp)
-      result.finishReason = "length"
+      // 非长度原因（content_filter 等）不能报成 "length"——agent 层 322 行按原因给用户提示
+      result.finishReason = resp?.incomplete_details?.reason === "content_filter" ? "content_filter" : "length"
     },
     onFailed: (resp) => {
       const err = resp?.error
@@ -290,6 +292,15 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       throw e
     },
   })
+  } catch (e) {
+    // 用户 Ctrl+I 中断：与 core 同构——提交已生成部分（agent 层 interrupted 分支消费）——
+    // 不丢已流出的 token；超时/网络错误仍照常抛（不应伪装成 interrupted）
+    if (e?.name === "AbortError" && signal?.aborted && signal?.reason?.interrupt) {
+      seal(null)
+      return { ...result, interrupted: true, interruptMessage: signal.reason.message }
+    }
+    throw e
+  }
 
   // 无显式 finished 事件（流异常结束）时也收尾
   if (result.toolCalls.length === 0 && order.length === 0) seal(null)
@@ -327,7 +338,13 @@ async function readResponseStream(response, handlers) {
   }
   buffer += decoder.decode()
   const data = buffer.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("\n")
-  if (data) { try { handleEvent(JSON.parse(data), handlers) } catch { /* ignore */ } }
+  if (data) {
+    let ev
+    try { ev = JSON.parse(data) } catch { return }
+    // 残余帧（无 \n\n 定界）同样走完整事件语义：error/failed 帧的错误必须传播——
+    // 静默吞 = 空内容当回复（2026-08-31 真机冒烟同类别缺陷，尾部边界版本）
+    handleEvent(ev, handlers)
+  }
 }
 
 function handleEvent(ev, h) {
@@ -408,7 +425,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   )
 
   if (isChainInvalidError(response.status)) {
-    // 链失效（404/400）：本地全量重建一次——链只是优化，正确性靠本地历史
+    // 链失效（404/400）：先清残留链再重建——D6 语义是真·全量重发（body.input=items）。
+    // 不清链会走 buildBody 217-224 的增量分支：body.input = 裸 function_call_output 且
+    // previousResponseId 未随 fullBody 带走 → 服务端 call_id 无归属 → 二次 400（2026-08-31 评审 #1）
+    provider._responsesChain = null
     const fresh = buildBody(provider, messages, tools, { toolChoice, stateful, forceStateful: true })
     const fullBody = { ...fresh.body }
     const retry = await requestWithRetry(
