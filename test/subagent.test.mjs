@@ -378,10 +378,18 @@ test("§15 T5: 回合收尾——未 check 的 async 自动等待 + 报告注入
           `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
           `data: [DONE]\n\n`
       } else if (bodyText.includes("后台干活")) {
-        frames =
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "主会话收尾" } }] })}\n\n` +
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
-          `data: [DONE]\n\n`
+        // 父回合 2（最终回复）延迟 400ms：无论子代理请求是否晚于本请求到达
+        // （prepareRun 竞态），子代理 settle（即刻响应）都先于收尾 token——
+        // done-先于-结论 的顺序断言确定（旧实现 done 在收尾统一发，必在结论后）。
+        setTimeout(() => {
+          res.writeHead(200, { "Content-Type": "text/event-stream" })
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "主会话收尾" } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            `data: [DONE]\n\n`,
+          )
+        }, 400)
+        return
       } else {
         const subCall = { tool_calls: [{ index: 0, id: "call_1", function: { name: "subagent", arguments: JSON.stringify({ task: "后台干活", role: "coder", async: true }) } }] }
         frames =
@@ -413,10 +421,91 @@ test("§15 T5: 回合收尾——未 check 的 async 自动等待 + 报告注入
     // _asyncSubagents 清空
     assert.equal(parent._asyncSubagents.size, 0, "收尾后清空")
     assert.equal(parent._asyncQueue.length, 0)
-    // TUI done 事件（区块冻结信号）随收尾发出
-    assert.ok(tokens.some((t) => t.includes("coder#1/⟦ev⟧done")), "⟦ev⟧done 事件发出")
+    // TUI done 事件（区块冻结信号）：settle 即发（D-A3 2026-09-02 修复）——
+    // 回合中完成的子代理在收尾前就收到 done；收尾不再补发（恰好一个），
+    // 且位置先于结论（完成即冻结——旧实现 done 在收尾统一发，必在结论后）。
+    const doneTokens = tokens.filter((t) => t.includes("coder#1/⟦ev⟧done"))
+    assert.equal(doneTokens.length, 1, "⟦ev⟧done 恰好一次（settle 即发，收尾不补发）")
+    const doneIdx = tokens.findIndex((t) => t.includes("coder#1/⟦ev⟧done"))
+    const conclusionIdx = tokens.findIndex((t) => t.includes("主会话收尾"))
+    assert.ok(doneIdx >= 0 && conclusionIdx > doneIdx,
+      `done 先于结论（done@${doneIdx} < conclusion@${conclusionIdx}）——完成即冻结，块不在结论之后`)
     // n 计数器 turn-end 清空 → 下轮首调重置 1
     assert.equal(parent._asyncCheckLastN, 0)
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§15 D-A3 修复: 回合中先完成的 async 子代理——settle 即发 ⟦ev⟧done，冻结位置在结论之前", async () => {
+  // Content-aware server（同 T5）：父回合 1 → subagent(async) 工具调用；
+  // 子代理 300ms 后完成；父回合 2 的"结论"500ms 后才到——done 事件（settle 即发）
+  // 必先于结论 token（完成即冻结：块冻结在完成时刻的流位置，不在结论之后）。
+  // 子代理延迟 < 结论延迟：无论子代理请求是否晚于父回合 2 请求到达（prepareRun
+  // 竞态），done 都先于结论——顺序断言确定。
+  const { createServer } = await import("node:http")
+  const server = createServer((req, res) => {
+    let bodyText = ""
+    req.on("data", (c) => (bodyText += c))
+    req.on("end", () => {
+      const send = (frames, delay) => {
+        const go = () => {
+          res.writeHead(200, { "Content-Type": "text/event-stream" })
+          res.end(frames)
+        }
+        if (delay) setTimeout(go, delay)
+        else go()
+      }
+      if (bodyText.includes('"content":"快活"')) {
+        // 子代理：300ms 后完成
+        send(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: LONG_REPORT("快完成") } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          `data: [DONE]\n\n`,
+          300,
+        )
+      } else if (bodyText.includes("快活")) {
+        // 父回合 2（主会话继续）：500ms 后才出结论
+        send(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "主会话结论" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          `data: [DONE]\n\n`,
+          500,
+        )
+      } else {
+        const subCall = { tool_calls: [{ index: 0, id: "call_1", function: { name: "subagent", arguments: JSON.stringify({ task: "快活", role: "coder", async: true }) } }] }
+        send(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: subCall }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
+          `data: [DONE]\n\n`,
+        )
+      }
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
+  try {
+    const { runAgent } = await import("../src/agent.mjs")
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const tokens = []
+    const out = await runAgent(parent, "派活", {
+      onToken: (t) => tokens.push(t),
+      onPermissionRequest: async () => true,
+    })
+    assert.equal(out, "主会话结论")
+    // done 事件：settle 即发（300ms），且先于主会话后续输出（结论 500ms）
+    const doneIdx = tokens.findIndex((t) => t.includes("coder#1/⟦ev⟧done"))
+    const conclusionIdx = tokens.findIndex((t) => t.includes("主会话结论"))
+    assert.ok(doneIdx >= 0, "⟦ev⟧done 事件发出")
+    assert.ok(conclusionIdx > doneIdx,
+      `done 先于结论（done@${doneIdx} < conclusion@${conclusionIdx}）——完成即冻结，冻结块在结论之前`)
+    assert.equal(tokens.filter((t) => t.includes("coder#1/⟦ev⟧done")).length, 1, "恰好一次（收尾不补发）")
+    // 收尾注入仍正常（collect 只注入 + 清空）
+    const injected = parent.history.find((m) => typeof m.content === "string" && m.content.includes("async subagent #1 (coder) finished"))
+    assert.ok(injected, "收尾注入 reminder 仍在")
+    assert.equal(parent._asyncSubagents.size, 0, "收尾后清空")
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })
