@@ -267,7 +267,7 @@ export function createKeyHandler(ctx) {
       } else if (str && !key.ctrl && !key.meta) {
         // 输入即过滤；粘贴的多行文本先去换行（与输入框清洗口径一致），仍含控制字符则整段丢弃
         const text = str.replace(/[\r\n]+/g, "")
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
         if (text && !/[\x00-\x1f\x7f]/.test(text)) applyFilter(p.filter + text)
       }
       return

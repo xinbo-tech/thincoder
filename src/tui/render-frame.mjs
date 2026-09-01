@@ -9,7 +9,7 @@
 import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
-import { specForModel } from "../config.mjs"
+import { providerSpec } from "../config.mjs"
 import { computeLayout, subagentVisibleLines } from "./layout.mjs"
 import { basename } from "node:path"
 import { readFileSync } from "node:fs"
@@ -42,7 +42,9 @@ export function renderHeader(agent, cols) {
   // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
   // —— 可选链守卫，头部显示 "no provider" 占位
   const model = agent.provider?.model ?? "no provider"
-  const spec = specForModel(model)
+  // providerSpec（PROVIDER.md §15）：模型信息显示跟随 provider 级 context 覆盖（D-C5）；
+  // provider 为 null 时返回默认 spec 且不产生 "no provider" 查表警告（specForModel("") 空串不告警）
+  const spec = providerSpec(agent.provider)
   const thinkOnValue = spec.thinkEnabledValue ?? "enabled"
   const t = agent.provider?.thinking
   const effort = agent.provider?.reasoningEffort
@@ -350,8 +352,9 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const elapsed = state.processing ? ` ${Math.floor((Date.now() - state.processingStarted) / 1000)}s` : ""
   const toolHint = state.currentTool ? ` ${state.currentTool}…` : ""
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}` : state.status
-  // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null —— specForModel(undefined) 保守 128K 不抛错
-  const modelContext = specForModel(agent.provider?.model).context
+  // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null —— providerSpec(null) 保守 128K 不抛错
+  // 2026-09-02 §15：context 窗口跟随 providers[].context 覆盖（T-C6——百分比基于覆盖后的窗口）
+  const modelContext = providerSpec(agent.provider).context
   const ctxPct = Math.round((state.ctxCache.tokens / modelContext) * 100)
   const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
   const ctxHint = ctxPct > 0

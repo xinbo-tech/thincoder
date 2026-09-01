@@ -20,7 +20,7 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  phase "done" (§15 D-A3): async child finished — settle-time emits (each entry,
  *  it so the child's block freezes (the spawn tool result is a status JSON and
  *  must not freeze a still-running block). */
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 /** N2: per-child display-line ring buffer cap — oldest lines drop with a marker. */
 export const SUB_BLOCK_LINE_LIMIT = 500

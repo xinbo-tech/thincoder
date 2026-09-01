@@ -102,7 +102,7 @@ export function insertPastedText(state, rawText) {
  *  Terminals without enhancement send a bare \r for Shift+Enter — nothing to translate
  *  (degrades to a normal submit; Alt+Enter remains the fallback). */
 export function translateShiftEnter(text) {
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
   return text.replace(/\x1b\[13;2u/g, "\x1b\r").replace(/\x1b\[27;2;13~/g, "\x1b\r")
 }
 
@@ -111,7 +111,7 @@ export function translateShiftEnter(text) {
  *  modifyOtherKeys: \x1b[27;mod;key~  — function keys
  *  Call AFTER translateShiftEnter (which already handles Shift+Enter). */
 export function stripKeyboardProtocol(text) {
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
   return text.replace(/\x1b\[\d+;\d+u/g, "").replace(/\x1b\[27;\d+;\d+~/g, "")
 }
 

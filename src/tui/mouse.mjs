@@ -72,7 +72,7 @@ export function handleWheel(ctx, button, col, row) {
 /** Extract left-click presses from a chunk. Returns [{ col, row }] (1-based). */
 export function parseMouseClicks(text) {
   const out = []
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
   for (const m of text.matchAll(/\x1b\[<0;(\d+);(\d+)M/g)) {
     out.push({ col: Number(m[1]), row: Number(m[2]) })
   }
