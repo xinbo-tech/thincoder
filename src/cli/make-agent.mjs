@@ -107,6 +107,31 @@ export async function assembleAgent() {
   agent.activeProvider = config.activeProvider
   agent.activeModel = config.activeModel ?? null
   agent._mcpWarnings = mcpWarnings
+  // SESSION.md §8 D-S1：assembleAgent 后唯一校验点（TUI/chat 两路径同源）——不抛错不退出，
+  // 标记由调用侧消费（TUI 弹重选 / headless 报错）。空 provider 由 TUI 路径在 startTUI 前清空。
+  validateProvider(agent)
+  return agent
+}
+
+/**
+ * SESSION.md §8 D-S1 — provider 有效性校验（assembleAgent 后唯一校验点，TUI/chat 两路径同源）。
+ * 判据（评审 #1/#2）：仅 model/baseURL 缺失判 invalid——**不得用 MODEL_SPECS 成员资格判无效**
+ * （未知模型 = 受支持场景：自定义端点模型不在 spec 表是常态，误判会让自定义模型用户每次恢复都弹重选）。
+ * apiKey 缺失不判（既有 wizard /model 流程处理）。幂等：有效时清标记，无效时置标记 + 原因。
+ * 不抛错、不退出。返回 agent 便于链式调用。
+ */
+export function validateProvider(agent) {
+  const ok = Boolean(agent.provider?.name && agent.provider.model && agent.provider.baseURL)
+  if (ok) {
+    delete agent._providerInvalid
+    delete agent._providerInvalidReason
+  } else {
+    agent._providerInvalid = true
+    agent._providerInvalidReason = !agent.provider?.name
+      ? "provider 不存在"
+      : !agent.provider.model ? "model 缺失"
+      : "缺少 baseURL"
+  }
   return agent
 }
 
