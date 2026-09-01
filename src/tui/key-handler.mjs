@@ -26,15 +26,27 @@ export function createKeyHandler(ctx) {
 
   return function onKeypress(str, key = {}) {
     // permission confirm state: y approve / n deny / a approve + turn ON AUTO (no further prompts)
+    // batch state (§16 D-B1): a approve all / o one by one / n deny (Esc = deny)
     if (state.permission) {
       const answer = (str || "").toLowerCase()
       const isContinue = state.permission.name === "continue"
-      const validKeys = isContinue ? ["y", "n"] : ["y", "n", "a"]
+      const isBatch = Boolean(state.permission.batch)
+      const validKeys = isContinue ? ["y", "n"] : isBatch ? ["a", "o", "n"] : ["y", "n", "a"]
       if (validKeys.includes(answer) || key.name === "escape") {
         const { resolve, name } = state.permission
         state.permission = null
         state.permissionPreview = []
         state.status = "Processing..."
+        if (isBatch) {
+          // Merged batch ask: resolve the verdict string; dispatch applies it
+          // (approveAll = batch-scope allowance only, NOT the persistent AUTO flag).
+          const verdict = answer === "a" ? "approveAll" : answer === "o" ? "oneByOne" : "deny"
+          const tone = verdict === "approveAll" ? C.dim : C.error
+          pushLine(`  [${verdict === "approveAll" ? "approved" : verdict === "deny" ? "denied" : "one by one"}] ${name}`, tone)
+          resolve(verdict)
+          render()
+          return
+        }
         if (answer === "a" && !isContinue) {
           agent.autoApprove = true
           agent._pendingReminders = agent._pendingReminders ?? []

@@ -62,6 +62,33 @@ export function createInteraction(ctx) {
     })
   }
 
+  /** Batch permission ask (AGENT-LOOP.md §16 D-B1): one merged prompt covering N
+   *  non-readonly tools from the same toolCalls array — approve all / one by one /
+   *  deny. Verdicts resolve as "approveAll" | "oneByOne" | "deny". */
+  const BATCH_PREVIEW_LINES_PER_TOOL = 8
+  function askBatchPermission({ tools, count }) {
+    if (agent.autoApprove) {
+      pushLine(`  [auto] ${count} tools: ${tools.map((t) => t.name).join(", ")}`, C.warn)
+      return Promise.resolve("approveAll")
+    }
+    const names = [...new Set(tools.map((t) => t.name))]
+    const label = `${count} tools need permission: ${names.join(", ")}`
+    // Preview: one compact block per tool (name header + first N formatted lines)
+    state.permissionPreview = [
+      label,
+      ...tools.flatMap((t) => {
+        const lines = formatPermission(t.name, t.args)
+        const shown = lines.slice(0, BATCH_PREVIEW_LINES_PER_TOOL)
+        return [` ${t.name}:`, ...shown.map((l) => `  ${l}`), ...(lines.length > shown.length ? [`  … (${lines.length - shown.length} more lines)`] : [])]
+      }),
+    ]
+    return new Promise((resolve) => {
+      state.permission = { name: label, args: {}, resolve, batch: { tools, count } }
+      state.status = `Waiting: ${label}`
+      render()
+    })
+  }
+
   function askQuestion(text, options = []) {
     // only one question at a time: question is a read-only tool on a parallel channel,
     // a second concurrent one is rejected directly; otherwise the later one overwrites
@@ -91,5 +118,5 @@ export function createInteraction(ctx) {
     })
   }
 
-  return { askPermission, askQuestion, formatPermission }
+  return { askPermission, askQuestion, formatPermission, askBatchPermission }
 }

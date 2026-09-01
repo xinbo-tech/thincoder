@@ -23,10 +23,10 @@ const DISTILL_FLUSH_TIMEOUT_MS = 5000
 /** Execute one agent conversation turn (triggered by submit or queue).
  *  Extracted from index.mjs: agent loop + callback construction + error handling + queue processing.
  *  ctx: { agent, state, pushLine, pushLabel, render, scheduleRender,
- *         ensureAssistantLabel, askPermission, askQuestion,
+ *         ensureAssistantLabel, askPermission, askBatchPermission, askQuestion,
  *         handleSlash, summarize } */
 export async function runAgentTurn(ctx, text) {
-  const { agent, state, pushLine, pushLabel, render, scheduleRender, ensureAssistantLabel, askPermission, askQuestion, handleSlash } = ctx
+  const { agent, state, pushLine, pushLabel, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, handleSlash } = ctx
   // 可注入覆盖（测试用）；默认走真实实现
   const runAgentImpl = ctx.runAgent ?? runAgent
   const saveSessionImpl = ctx.saveSession ?? saveSession
@@ -59,7 +59,7 @@ export async function runAgentTurn(ctx, text) {
   render()
 
   const { callbacks, flushStream } = buildToolCallbacks({
-    agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askQuestion, saveSessionImpl,
+    agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, saveSessionImpl,
   })
 
   // try/finally: every exit path — including an unexpected throw inside the catch

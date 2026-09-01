@@ -384,7 +384,7 @@ export async function startTUI(agent, opts = {}) {
   }
 
   // Interaction primitives: permission approval + Q&A input, implemented in interaction.mjs
-  const { askPermission, askQuestion } = createInteraction({
+  const { askPermission, askQuestion, askBatchPermission } = createInteraction({
     agent, state, pushLine, pushLabel, render, summarize,
   })
 
@@ -394,7 +394,7 @@ export async function startTUI(agent, opts = {}) {
   // Agent loop: implemented in agent-turn.mjs
   const turnCtx = {
     agent, state, pushLine, pushLabel, render, scheduleRender: render, ensureAssistantLabel,
-    askPermission, askQuestion, handleSlash: null,
+    askPermission, askQuestion, askBatchPermission, handleSlash: null,
     get assistantLabeled() { return assistantLabeled },
     set assistantLabeled(v) { assistantLabeled = v },
   }

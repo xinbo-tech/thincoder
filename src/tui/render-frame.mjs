@@ -290,7 +290,9 @@ function inputBoxStyle(state) {
     borderColor = C.tool; title = " Question "
   } else if (state.permission) {
     borderColor = C.warn
-    title = state.permission.name === "continue" ? " Continue? (y/n) " : ` Allow ${state.permission.name}? (y/n/a) `
+    title = state.permission.name === "continue" ? " Continue? (y/n) "
+      : state.permission.batch ? ` Allow ${state.permission.name}? (a/o/n) `
+      : ` Allow ${state.permission.name}? (y/n/a) `
   } else if (state.picker) {
     title = " Select "
   } else if (state.wizard) {
@@ -314,9 +316,9 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
       : " Type answer then Enter │ Esc: cancel"
   }
   if (state.permission) {
-    return state.permission.name === "continue"
-      ? " y: continue │ n: stop"
-      : " y: approve │ n: deny │ a: approve all (AUTO)"
+    if (state.permission.name === "continue") return " y: continue │ n: stop"
+    if (state.permission.batch) return " a: approve all │ o: one by one │ n: deny"
+    return " y: approve │ n: deny │ a: approve all (AUTO)"
   }
   if (state.picker) return " type: filter │ ↑↓/PgUp/PgDn: select │ Enter: confirm │ Esc: cancel"
   if (state.wizard) {

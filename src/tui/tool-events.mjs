@@ -107,6 +107,21 @@ function settleToolBlock(state, name, toolId, summary) {
   }
 }
 
+/** Async spawn detection (§15 D-A1): the subagent tool's async:true result is a
+ *  status JSON ({id, role, status: running|queued}), NOT a report — the child
+ *  keeps running, so its activity block must not be frozen at spawn time (it
+ *  freezes via the ⟦ev⟧done event at turn-end collection). A real blocking
+ *  report that happens to parse as this shape is a freak accident; the only
+ *  consequence would be a late block freeze at turn end (cosmetic). */
+function isAsyncSpawnResult(result) {
+  try {
+    const o = JSON.parse(result)
+    return Boolean(o && typeof o === "object" && typeof o.id !== "undefined" && (o.status === "running" || o.status === "queued"))
+  } catch {
+    return false
+  }
+}
+
 
 
 /** Find the live tool-block carrier for a tool event: exact id match when the
@@ -131,8 +146,7 @@ function findToolBlock(state, name, toolId) {
 /** Build the agent callbacks + the shared flushStream for one turn.
  *          askPermission, askQuestion, saveSessionImpl } */
 export function buildToolCallbacks(deps) {
-  const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askQuestion, saveSessionImpl } = deps
-
+  const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, saveSessionImpl } = deps
   // NOTE: advisor buffers (_advisorThink/advisorStreaming) are cleared here too.
   // Timing safety: onToolResult flushes _advisorThink into history and empties
   // the buffers BEFORE onTurnEnd can call flushStream (tool result is
@@ -252,17 +266,23 @@ export function buildToolCallbacks(deps) {
         // carrier) and the turn sweep would mislabel it "(interrupted)" — every
         // successful subagent call showed that banner (consult P1, 2026-08-30).
         settleToolBlock(state, name, toolId, "completed")
-        finishSubTask(state, SUBAGENT_ROLES, result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
-        // Freeze the finished blocks into the conversation stream (user report
-        // 2026-08-30): a pinned tail section left every ✓ block stuck above the
-        // input box forever. As lines they scroll away, stay expandable via the
-        // dim auto-fold, and subTasks releases the entry.
-        freezeDoneSubTasks(state)
-        // Subagent report preview (max 8 lines) displayed directly in conversation
-        const lines = result.split("\n")
-        const preview = lines.slice(0, SUBAGENT_PREVIEW_LINES).map((l) => l.slice(0, PREVIEW_LINE_CHARS)).join("\n")
-        if (preview) pushLine(preview, C.dim)
-        if (lines.length > SUBAGENT_PREVIEW_LINES) pushLine(`  ... (${lines.length - SUBAGENT_PREVIEW_LINES} more lines)`, C.dim)
+        // Async spawn (§15 D-A1): the result is a status JSON, not a report — the
+        // child KEEPS running; skip the freeze (it would tombstone a live block
+        // and drop its relay stream). The block freezes on the ⟦ev⟧done event
+        // emitted at turn-end collection.
+        if (!isAsyncSpawnResult(result)) {
+          finishSubTask(state, SUBAGENT_ROLES, result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
+          // Freeze the finished blocks into the conversation stream (user report
+          // 2026-08-30): a pinned tail section left every ✓ block stuck above the
+          // input box forever. As lines they scroll away, stay expandable via the
+          // dim auto-fold, and subTasks releases the entry.
+          freezeDoneSubTasks(state)
+          // Subagent report preview (max 8 lines) displayed directly in conversation
+          const lines = result.split("\n")
+          const preview = lines.slice(0, SUBAGENT_PREVIEW_LINES).map((l) => l.slice(0, PREVIEW_LINE_CHARS)).join("\n")
+          if (preview) pushLine(preview, C.dim)
+          if (lines.length > SUBAGENT_PREVIEW_LINES) pushLine(`  ... (${lines.length - SUBAGENT_PREVIEW_LINES} more lines)`, C.dim)
+        }
       } else if (name === "escalate") {
         // 飞刀 post-op report landed → freeze its block into the conversation too.
         settleToolBlock(state, name, toolId, "completed")
@@ -399,6 +419,10 @@ export function buildToolCallbacks(deps) {
       scheduleRender()
     },
     onPermissionRequest: (name, args) => askPermission(name, args),
+    // Merged batch ask (§16 D-B1): one confirmation for N non-readonly tools in
+    // the same response — "approve all / one by one / deny" (key-handler resolves
+    // the verdict string; approveAll is batch-scope only, never the AUTO flag).
+    onBatchPermissionRequest: (req) => askBatchPermission(req),
     onQuestion: (text, options) => askQuestion(text, options),
     // Compression lifecycle (CONTEXT-COMPACTION.md §7 D-C2): the compression session renders
     // as a subagent-style panel block — start → running panel ("Compressing context…" +
