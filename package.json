@@ -33,13 +33,9 @@
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
     "prepublishOnly": "npm run lint && node --test \"test/*.mjs\"",
-    "lint": "eslint src test",
+    "lint": "node scripts/check-syntax.mjs",
     "test:full": "node test/run-full.mjs"
   },
   "author": "liwei <liwei@51marine.com> (上海新舶)",
-  "license": "MIT",
-  "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "eslint": "^9.0.0"
-  }
+  "license": "MIT"
 }
