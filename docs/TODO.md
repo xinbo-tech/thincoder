@@ -73,6 +73,10 @@
 
 - [ ] `deleteByUid` 对畸形 uid（如 `personal:5:extra`）静默删目标 id（rest[0] 通过且 trailing 段被忽略）——工具生成的 id 均规范（实际不可达），低优先级加固：rest 长度校验或 strict 解析
 
+### MCP · 面板消息路由测试缺口（2026-09-01，来源：MCP §4 交付审计）
+
+- [ ] `src/extension/panel-messages.mjs` 路由层无测试触达（reconnectMcp/editMcp/testMcp 三 case 零覆盖）——VS Code [Reconnect] 死按钮正是「webview 发消息 + 路由缺失」这种无测试接缝处的复发实例；补最小路由断言（消息 → 对应 handler 调用），防同类回归
+
 ### TUI · 渲染/回调模块 300+ 行 advisory 存档（2026-08-30，来源：agent-turn 拆分评审）【2026-09-01 更新：render-conversation 573 行超 500 硬限，见下条】
 
 - [ ] `src/tui/render-conversation.mjs` **573 行（超 500 硬限，2026-09-01 §7.2.1 后实测）**——组件化后自 630 降 573（runningSubs 段迁出 subagent-panel.mjs），仍超硬限——剩余主体 frozenSubTask/advisor/tool-block 折叠装配；建议后续拆分（frozen/tool-block 段渲染独立模块）。附：frozen 头 `▶ [✓ …]` 未做宽度截断（§7.2.1 评审 #1 标注存量）——顺手一并处理
