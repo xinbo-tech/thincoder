@@ -7,6 +7,7 @@
 import { specForModel } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
+import { effectiveFetchTimeoutMs } from "./core.mjs"
 
 const ANTHROPIC_VERSION = "2023-06-01"
 
@@ -67,7 +68,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     body.temperature = t
   }
 
-  const FETCH_TIMEOUT_MS = 600_000
+  // 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟废除）——anthropic/responses 经 core.mjs 的
+// effectiveFetchTimeoutMs 共用；响应头阶段 600s 默认，body 阶段 idle 超时。
   const headers = {
     "Content-Type": "application/json",
     "x-api-key": provider.apiKey,
@@ -92,10 +94,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       method: "POST",
       headers,
       body: JSON.stringify(body),
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-        : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      _headerTimeoutMs: FETCH_TIMEOUT_MS,
+      // 2026-09-01：同 core.mjs——绝对墙钟废除（长生成被 10min 腰斩），signal 只保留用户取消链；
+      // 响应头阶段仍用 fetchTimeoutMs（600s 默认），body 阶段由 parseAnthropicStream 读侧 idle 管
+      signal,
+      _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
       _bodyIdleMs: 120_000,
     }, provider.proxyUri),
     { signal, onWait, buildMessage: (status, text) => `Anthropic API error ${status}: ${text}` },

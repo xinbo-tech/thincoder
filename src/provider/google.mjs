@@ -6,6 +6,7 @@
 
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
+import { effectiveFetchTimeoutMs } from "./core.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -100,7 +101,6 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     body.toolConfig = { functionCallingConfig: mapFunctionCallingConfig(toolChoice) }
   }
 
-  const FETCH_TIMEOUT_MS = 600_000
   // Gemini uses API key as query parameter
   const url = `${provider.baseURL}/models/${provider.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(provider.apiKey)}`
 
@@ -118,10 +118,9 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-        : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      _headerTimeoutMs: FETCH_TIMEOUT_MS,
+      // 2026-09-01：同 core.mjs——绝对墙钟废除；响应头阶段 fetchTimeoutMs（600s 默认），body 阶段读侧 idle 管
+      signal,
+      _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
       _bodyIdleMs: 120_000,
     }, provider.proxyUri),
     { signal, onWait, buildMessage: (status, text) => `Gemini API error ${status}: ${text}` },
@@ -194,32 +193,66 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   }
 
   if (!response.body) throw new Error("No stream response body")
-  for await (const chunk of response.body) {
-    if (signal?.aborted) {
-      const e = new DOMException("Aborted", "AbortError")
-      e.reason = signal.reason
-      throw e
-    }
-    buffer += decoder.decode(chunk, { stream: true })
-    // BOM 剥除（会诊 #12）：首个 chunk 可能带 \uFEFF，否则首个 data 事件静默丢失
-    if (buffer.charCodeAt(0) === 0xfeff) buffer = buffer.slice(1)
-    const lines = buffer.split("\n")
-    buffer = lines.pop()
+  // 2026-09-01 读侧 idle 超时（同 sse.mjs）：body 有数据流动即不超时；连续 120s 无新 chunk 判死
+  const READ_IDLE_MS = 120_000
+  let idleTimer = null
+  const armIdle = () => {
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      try { response.body?.destroy(new Error(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`)) } catch { /* already gone */ }
+    }, READ_IDLE_MS)
+    idleTimer.unref?.()
+  }
+  armIdle()
+  try {
+    for await (const chunk of response.body) {
+      armIdle()
+      if (signal?.aborted) {
+        const e = new DOMException("Aborted", "AbortError")
+        e.reason = signal.reason
+        throw e
+      }
+      buffer += decoder.decode(chunk, { stream: true })
+      // BOM 剥除（会诊 #12）：首个 chunk 可能带 \uFEFF，否则首个 data 事件静默丢失
+      if (buffer.charCodeAt(0) === 0xfeff) buffer = buffer.slice(1)
+      const lines = buffer.split("\n")
+      buffer = lines.pop()
 
-    for (const line of lines) {
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue
+        const data = line.slice(5).trim()
+        if (!data || data === "[DONE]") continue
+        processData(data)
+      }
+    }
+    buffer += decoder.decode()
+    for (const line of buffer.split("\n")) {
       if (!line.startsWith("data:")) continue
       const data = line.slice(5).trim()
       if (!data || data === "[DONE]") continue
       processData(data)
     }
-  }
-  buffer += decoder.decode()
-  for (const line of buffer.split("\n")) {
-    if (!line.startsWith("data:")) continue
-    const data = line.slice(5).trim()
-    if (!data || data === "[DONE]") continue
-    processData(data)
+  } catch (e) {
+    if (idleTimer) clearTimeout(idleTimer)
+    if (e.name === "AbortError" && signal?.reason?.interrupt) {
+      result.interrupted = true
+      result.interruptMessage = signal.reason.message
+      return result
+    }
+    if (hasPartial(e)) {
+      result.partial = true
+      result.networkError = e.message ?? String(e)
+      return result
+    }
+    throw e
+  } finally {
+    if (idleTimer) clearTimeout(idleTimer)
   }
 
   return result
+}
+
+/** google.mjs 无 hasChoices 追踪——只有流中途死且已有内容才标 partial（同 sse.mjs 语义的简化版） */
+function hasPartial(e) {
+  return /ECONNRESET|terminated|idle timeout|network/i.test(e?.message ?? "")
 }

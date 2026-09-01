@@ -165,8 +165,23 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
   }
 
   if (!response.body) throw new Error("No stream response body")
+  // 2026-09-01 读侧 idle 超时（根因修复）：原实现靠 fetch 层的 600s 绝对墙钟兜底——长上下文子代理
+  // 单次生成（或上游排队）超 10 分钟即被腰斩（"The operation was aborted due to timeout" 直透）。
+  // 现改为：读侧空闲超时——body 只要有数据流动就永不超时，连续 READ_IDLE_MS 无新 chunk 才判死。
+  // 直连 fetch 与 proxyFetch 统一走这里（proxy 的 _bodyIdleMs 语义与之等价，双保险）。
+  const READ_IDLE_MS = 120_000
+  let idleTimer = null
+  const armIdle = () => {
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      try { response.body?.destroy(new Error(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`)) } catch { /* already gone */ }
+    }, READ_IDLE_MS)
+    idleTimer.unref?.()
+  }
+  armIdle()
   try {
     for await (const chunk of response.body) {
+      armIdle()
       if (signal?.aborted) {
         const e = new DOMException("The operation was aborted", "AbortError")
         e.reason = signal.reason
@@ -189,6 +204,7 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
               result.ruleTriggered = true
               result.ruleMessage = rule.message
               result.ruleName = rule.name
+              if (idleTimer) clearTimeout(idleTimer)
               return result
             }
             const existing = result._warnings ??= []
@@ -202,9 +218,11 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     buffer += decoder.decode()
     processLines(buffer.split("\n"))
   } catch (e) {
+    if (idleTimer) clearTimeout(idleTimer)
     if (e.name === "AbortError" && signal?.reason?.interrupt) {
       result.interrupted = true
       result.interruptMessage = signal.reason.message
+      if (idleTimer) clearTimeout(idleTimer)
       return result
     }
     // 2026-08-31 会诊 #2（流中断丢全部已收内容）：网络级失败（ECONNRESET / 半截 EOF /
@@ -222,6 +240,8 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     }
     throw e
   }
+
+  if (idleTimer) clearTimeout(idleTimer)
 
   if (!hasChoices) {
     // Stream started as SSE but no choices were parsed — unusual. Include status for debugging.

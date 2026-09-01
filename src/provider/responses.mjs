@@ -12,11 +12,12 @@
  * 没有 "data: [DONE]"。
  */
 import { specForModel, isBailianHost } from "../config.mjs"
+import { effectiveFetchTimeoutMs } from "./core.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
 
-const FETCH_TIMEOUT_MS = 600_000
+// 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟废除）——经 core.mjs effectiveFetchTimeoutMs 共用
 
 /** 白名单：已实证 previous_response_id 的官方端（2026-08-31 真机验证：
  *  百炼 store:true 全链路 ✅；GLM（open.bigmodel.cn/api/v1）store:true 全链路 ✅）。 */
@@ -430,10 +431,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
         body: JSON.stringify(body),
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-          : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        _headerTimeoutMs: FETCH_TIMEOUT_MS,
+        signal,
+          _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
         _bodyIdleMs: 120_000,
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
@@ -451,10 +450,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
         body: JSON.stringify(fullBody),
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-          : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        _headerTimeoutMs: FETCH_TIMEOUT_MS,
+        signal,
+          _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
         _bodyIdleMs: 120_000,
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
@@ -471,10 +468,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
         body: JSON.stringify(fresh2.body),
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
-          : AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        _headerTimeoutMs: FETCH_TIMEOUT_MS,
+        signal,
+          _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
         _bodyIdleMs: 120_000,
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },

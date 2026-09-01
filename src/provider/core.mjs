@@ -15,7 +15,8 @@ import {
   estimateRequestTokens, rateGate, recordRate,
 } from "./rate.mjs"
 
-const FETCH_TIMEOUT_MS = 600_000
+// 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟语义废除）——fetchTimeoutMs 现为每调用从 provider 读
+// （config agent.fetchTimeoutMs 归一化），见 effectiveFetchTimeoutMs；响应头阶段默认 600s，body 阶段 idle 120s。
 
 /** 可中断 sleep（2026-08-31 会诊 #5）：退避/Retry-After/overload 等待期间 Ctrl+C 应
  *  立即生效——原来最长睡 60s 无响应。内部走 _rateHooks.sleep（测试替换点）。 */
@@ -61,6 +62,17 @@ export function createProvider(config) {
 }
 
 /** Send a streaming chat completion request with automatic continuation on truncation */
+// 2026-09-01 根因修复：600s 绝对墙钟会腰斩长上下文子代理（eng-coder 首 token 前 TTFB>10min 即死，
+// "The operation was aborted due to timeout" 直透子代理）。改为：TTFB 阶段仍用 fetchTimeoutMs（默认 600s，
+// agent.fetchTimeoutMs 可配——config.mjs 归一化到 provider.fetchTimeoutMs），body 阶段用 idle 超时
+//（FETCH_BODY_IDLE_MS，无新数据才断——proxy 路径 _bodyIdleMs 已有先例）。
+const FETCH_BODY_IDLE_MS = 120_000
+
+/** 2026-09-01：响应头阶段超时（默认 600s，agent.fetchTimeoutMs 可配）——anthropic/responses transport 共用 */
+export function effectiveFetchTimeoutMs(provider) {
+  return Number.isFinite(provider?.fetchTimeoutMs) && provider.fetchTimeoutMs > 0 ? provider.fetchTimeoutMs : 600_000
+}
+
 export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls }) {
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
@@ -347,11 +359,14 @@ async function requestWithRetry(provider, body, signal, onWait) {
           Authorization: `Bearer ${provider.apiKey}`,
         },
         body: JSON.stringify(body),
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]) : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        // 2026-09-01 根因修复：原 600s 绝对墙钟会腰斩长上下文子代理（TTFB/首 token >10min 即死）。
+        // 拆分语义：响应头阶段仍用 fetchTimeoutMs（600s，覆盖网关排队）；body 阶段由读侧 idle 超时管
+        // （sse.mjs readIdleMs——无新数据才断）。signal 只保留用户取消链，不再叠加绝对墙钟。
+        signal,
         // 2026-08-31 会诊 #4：代理路径响应头超时对齐直连语义（原 15s 与直连 600s 割裂，
         // DeepSeek 排队 TTFB>15s 即误报）— 仅 _ 前缀内部字段，proxyFetch 消费
-        _headerTimeoutMs: FETCH_TIMEOUT_MS,
-        _bodyIdleMs: 120_000,
+        _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
+        _bodyIdleMs: FETCH_BODY_IDLE_MS,
       }
       response = provider.proxyUri
         ? await proxyFetch(url, opts, provider.proxyUri)
