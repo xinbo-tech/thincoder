@@ -295,6 +295,13 @@ export const subagentTool = {
           .finally(() => {
             entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
             entry.done = true
+            // D-A3 发射时机（2026-09-02 用户实证修正）：settle 同刻发射 ⟦ev⟧done——
+            // TUI routeSubToken 立即冻结区块，冻结位置 = 完成时刻的会话流位置
+            // （回合收尾统一发会把块堆在结论之后）。父会话已 abort 不发：TUI 已按
+            // interrupted 冻结，晚到 token 经 tombstone 丢弃——显式守卫更干净。
+            if (!ctx.signal?.aborted) {
+              ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
+            }
             entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
             entry._settle()
             for (const w of parent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
