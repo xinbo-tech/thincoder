@@ -1,3 +1,18 @@
+## [0.12.56] — 2026-09-02
+
+### Added
+
+- **上下文压缩面板 + 压缩失败可见性**（CONTEXT-COMPACTION.md §7）：压缩开始即弹"Compressing…"面板区块（复用子 agent 面板机制：耗时 ticker + summarizing N messages）→ 完成态 `Compressed: N tokens freed → summary (Xs)` 可折叠冻结；失败态显示错误文本，连续 3 次失败后 compressFallback 截断兜底并显示降级说明；摘要正文永不进面板/会话流；headless 回调缺省 no-op
+- **DeepSeek prefix 续写 400 止损**（PROVIDER.md §14）：续写请求精简历史（过滤 tool/assistant(tool_calls) 消息，保留 system + 最近 ≤8 条文本）——真机矩阵实证：thinking 模式 prefix 续写 + 工具链消息必 400（补不补 reasoning_content 分别报 Function call / reasoning_content 错误），纯文本历史 200；续写失败注入 `_warnings` 不再静默飞出；partial 模式不受影响
+- **会话恢复 provider/model 缺失 → 模型重选**（SESSION.md §8）：CLI 启动校验 provider/model/baseURL 缺失 → 不再崩溃退出；TUI 首帧弹模型选择（复用 picker），Esc 仍进 TUI + 提示行；headless 可读错误 + 退出码 1；判据仅空缺失（MODEL_SPECS 未知不判无效——自定义模型保护）
+- **MCP save&test 确认问句废除**（MCP.md §5 变更段）：探活成功直接保存（删 `Save? (Y/n)`）；探活失败报错回表单且无任何保存通道（save-anyway 整个废除）；取消仅剩表单 Esc
+- **搜索工具优先级条款**（PROMPT-DECOUPLING.md）：discipline.md + engineering.md 行为规则——有 MCP 搜索工具优先用 MCP、websearch 仅备用；websearch 连续 2 次垃圾即切；被墙站点走镜像路径；动手抓页面前先扫工具表（两端 prompts byte-identical）
+
+### Fixed
+
+- **hex-escape 400 真凶根治（escape.mjs v5）**：2026-09-02 实锤——`unexpected end of hex escape` 400 的毒源**不是字面 hex 转义序列**，而是 **doc_search 预览 slice 按 UTF-16 码元截断切断了 emoji 代理对**（🔴 → 孤立高代理 D83D）→ deepseek 严格 UTF-16 解码 400。两层修复：① 发送前净化（sanitizeLoneSurrogates：孤立代理 → U+FFFD，全字段）+ hex 转义 odd-run 修复（v1-v4 的 double/替换方向全错，本版为对象层面正解）；② 源头 UTF-16 安全截断（setup.mjs doc_search 预览 + helpers.mjs offloadToolResult 截断点落高代理时向前收一个码元）。验证：真实会话 953 条（含孤立代理）重放 400→200，带 thinking:enabled 6/6 全 200
+- **MCP 磁盘无 mcp 段时 remove/edit 崩溃**（code review #1/#2）：persistRaw 建段守卫（`raw.mcp ??=`）——磁盘 mcp 段被整体删除而连接保留（T23 场景）时，remove 不再 TypeError、edit 不再静默丢（"updated" 提示与落盘一致）
+
 ## [0.12.55] — 2026-09-01
 
 ### Added
