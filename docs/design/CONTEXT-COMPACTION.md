@@ -239,7 +239,7 @@
 - `onCompressFail(error)` → 面板更新为失败态（错误文本可见，console.error 同步落）。
 - 摘要调用保持静默（thinking:null、无 onToken——摘要内容不进会话流、不进面板 body；面板只显示**状态/阶段/耗时/结果**，不显示摘要正文——摘要正文是机器产物，用户看状态就够）。
 
-**D-C3 headless/桥接**：回调链无 UI 时自然 no-op（F4）；VS Code 端（thincoder-vscode）**不在本设计范围**（用户问题批范围仅 CLI——本设计自带范围声明；TODO.md 用户问题批已注）；VS Code 端口留待其独立流程。
+**D-C3 headless/桥接**：回调链无 UI 时自然 no-op（F4）。**VS Code 端（2026-09-02 用户裁定：两端对齐，本批落地）**：VS Code 无 TUI 面板——对齐形态为 onCompressStart/onCompressFail 回调 + webview 压缩状态行（agent.mjs 压缩 catch 静默现状补 console.error + webview 通知行"Compressing context…/Compressed: N tokens freed (Xs)/failed: <错误>"；3 次失败降级说明同 §7 状态机语义）。受影响文件：VS Code `src/agent.mjs`、`src/context.mjs`、`src/compact.mjs`、webview 会话状态渲染。
 
 ### 7.4 测试
 

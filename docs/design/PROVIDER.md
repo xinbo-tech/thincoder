@@ -380,7 +380,7 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 
 > **状态：CLI 已实现**（2026-09-02，T1-T4 全绿 + 全量测试通过；docs/TODO.md Q3 状态由架构师更新）。根因经真机复现实锤（2026-09-02，deepseek-v4-flash 稳定版）。
 >
-> **两端 parity**：本文件为 CLI 侧权威源；扩展端同规格见 thincoder-vscode/docs/design/ARCHITECTURE.md 变更段（引用不复制）——prefix 续写 400 同样影响 VS Code 的 deepseek 用户，**VS Code 端口须同修**（与兄弟节 §10-§13 同一纪律）。
+> **两端 parity**：本文件为 CLI 侧权威源；扩展端同规格见 thincoder-vscode/docs/design/ARCHITECTURE.md 变更段（引用不复制）——prefix 续写 400 同样影响 VS Code 的 deepseek 用户，**VS Code 端口须同修**（与兄弟节 §10-§13 同一纪律）。**VS Code 对齐状态（2026-09-02 探索实证，待实现）**：① escape v5 未同步（VS Code escape.mjs 为 v5 前旧版——无 sanitizeLoneSurrogates、无 arguments/reasoning_content 覆盖）；② UTF-16 安全截断 5 处缺口（context.mjs:247/275 doc 注入、code.mjs:150、run-helpers.mjs:110/113 offloadToolResult、compact.mjs:195/376 序列化）；③ 续写构造全量历史（provider.mjs:195-205 无过滤）且 reasoning 时跳过续写、失败无可见性——**对齐清单见 §14.7**。
 
 ### 14.1 问题
 
@@ -461,3 +461,12 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 - **真机（最强）**：完整真实会话（953 条，含 421 个代理字符其中 1 个孤立）→ normalizeToolPairing + escapeMessages → deepseek **200**（修复前同一链路 400）；带 `thinking:enabled` 真实注入路径 6/6 全 200
 
 **遗留观察项**：03:11 曾复现一次 `reasoning_content must be passed back` 400（根因②），同链路 6 次重试全 200 无法再复现——疑 deepseek 服务端临时状态；若复发，`THIN_DEBUG_BODY=1` 抓 body 定位。14.2/14.3 的续写消息构造规范化**已按设计落地（2026-09-02）**——它同时覆盖 prefix 续写场景的 reasoning_content 回传约束。
+
+### 14.7 VS Code 端对齐清单（2026-09-02，用户裁定两端同修）
+
+| # | 对齐项 | VS Code 位置 | 内容 |
+|---|---|---|---|
+| 1 | escape v5 升级 | `src/escape.mjs` | sanitizeLoneSurrogates（U+FFFD）+ sanitizeText 总入口 + escapeLiteralEscapes odd-run 修复 + escapeMessageContent 覆盖 tool_calls[].arguments/reasoning_content（照 CLI v5） |
+| 2 | UTF-16 安全截断 | context.mjs:247/275、code.mjs:150、run-helpers.mjs:110/113、compact.mjs:195/376 | safeSliceUTF16 等价（截断点落高代理向前收一码元）——5 处 |
+| 3 | 续写构造对齐 | provider.mjs:195-205 | buildContinuationMessages 等价（prefix 过滤工具消息、保留 system + ≤8 文本、reasoning_content 回传继续而非跳过）+ 续写失败可见性（_warnings 等价） |
+| 4 | 两端测试 | VS Code test/ | escape v5 断言 + 续写构造断言 + parity |
