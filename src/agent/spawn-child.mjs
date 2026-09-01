@@ -51,7 +51,9 @@ export function makeRelay(parent, label, emit, model) {
 // Single source for the event grammar branch lists (consult P3, 2026-08-30):
 // stripEventToken (display) and stripEventTokensForCapture (capture) shared them
 // literally — extending the event set meant touching both regexes.
-const EVENT_PHASE = "turn|approval"
+// "done" = §15 D-A3 async-child completion event (emitted by the parent's
+// turn-end collection, not by children — listed so the grammar stays honest).
+const EVENT_PHASE = "turn|approval|done"
 const EVENT_TYPE = "llm|tool|approval|done"
 const WELL_FORMED_EVENT = new RegExp(`^${EVENT_SENTINEL}(${EVENT_PHASE})${RS}[^${RS}]*${RS}[^${RS}]*${RS}(${EVENT_TYPE})${RS}`)
 export function stripEventToken(text) {
