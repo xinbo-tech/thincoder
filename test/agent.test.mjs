@@ -1478,7 +1478,7 @@ test("T3b runAgent: 连续 3 次失败 → compressFallback 实际运行（面�
   try {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-fallback-"))
-    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 10000 } }, cwd })
+    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 11000 } }, cwd })
     agent.history = compressTestHistory()
     const state = mkCompressTuiState()
     const callbacks = await wireCompressTui(agent, state)
@@ -1927,7 +1927,8 @@ test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressi
   assert.ok(text.includes("skip micro-parallelism (<1s ops)"), "微操作不并行")
   assert.ok(text.includes("share NO file"), "并行前置检查：受影响文件集无交集")
   assert.ok(text.includes("Dependency chain → serial"), "依赖链串行")
-  assert.ok(text.includes("at most 3 concurrent eng-coders"), "≤3 并发上限")
+  assert.ok(text.includes("at most 4 concurrent eng-coders"), "≤4 并发上限")
+  assert.ok(text.includes("past 4 the bookkeeping cost"), "并发上限 rationale 同步 3→4（§15 D-A4 T9）")
   assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "并行 spawn 调用形态（各带 designId+token）")
   assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token 隔离语义（不互相覆盖）")
   assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "发起权不变：设计评审仍仅用户发起")
@@ -1942,6 +1943,18 @@ test("prompts/engineering.md: no duplicated section headers (2026-09-01 fix #4 h
     "every ## header appears exactly once: " + dupes.filter((h, i) => dupes.indexOf(h) !== i).join(" | "))
   assert.ok(text.includes("## Questioning Style (requirement clarification)"), "header kept (dedup only)")
 })
+
+test("prompts/system.md: 批量形态引导句（§16 D-B4，并入 §14 D1 并行条款）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+  assert.ok(
+    text.includes("use the `edits` array for independent multi-file changes and apply_patch for whole-file/new-file changes; prefer one batched call over N single edits"),
+    "批量优先句在 D1 并行条款内（edits + apply_patch + batched call）",
+  )
+  // 与既有 §14 断言同处一句——批量句必须是 D1 条款的扩展而非独立句（评审 #8）
+  const clause = text.split("\n").find((l) => l.includes("Parallelize aggressively"))
+  assert.ok(clause.includes("prefer one batched call over N single edits"), "批量句位于 D1 并行条款句内")
+})
+
 
 slow("runAgent: explore 子 agent 注入 git 上下文", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
