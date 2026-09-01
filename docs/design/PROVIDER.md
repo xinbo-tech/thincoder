@@ -41,7 +41,7 @@ chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRu
 - **不重试**（`isNonRetryableError`）：401/403 认证、400 级非 429、429 但 body 含余额/配额特征（中文"余额不足/充值"、`insufficient_quota`、GLM 1113/1114 等）。
 - **Kimi 401 平台提示**（IK5VGJ）：`sk-kimi-` 前缀 key 或 `api.kimi.com` 端点遇 401 → 错误消息追加"Moonshot vs Kimi For Coding 双平台 key 不通用"说明。
 - 全部重试耗尽：按 lastStatus 分类报错（Rate limit not resolved / Server error persisted / Request failed / Network error）。
-- 请求超时 600s（`FETCH_TIMEOUT_MS`），AbortError 透传（用户 Ctrl+I 取消）。
+- 超时语义（**2026-09-01 拆分废弃绝对墙钟**——`FETCH_TIMEOUT_MS` 常量退役，600s 绝对墙钟曾把长上下文子代理（eng-coder 思考 >10min、首 token 前 TTFB 超线）腰斩为 "The operation was aborted due to timeout" 直透子代理）：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配——config.mjs 归一化到 runtimeProvider.fetchTimeoutMs，`effectiveFetchTimeoutMs(provider)` 统一消费，core/anthropic/google/responses 四 transport 共用）；**body 阶段**读侧空闲置超时（`READ_IDLE_MS=120s`——sse.mjs/google.mjs，data 流动即不超时，连续无 chunk 才判死；proxy 路径 `_bodyIdleMs` 与之等价）；AbortError 透传（用户 Ctrl+I 取消）。
 
 ## 4. SSE 流式（sse.mjs readSSE）
 
