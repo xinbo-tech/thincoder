@@ -1,3 +1,12 @@
+## [0.12.58] — 2026-09-02
+
+### Changed
+
+- **开发体验三项（用户需求批 2026-09-02，两端）**：
+  ① **lint 零依赖化**（TOOLS.md §10.2）：eslint 全套删除（devDependencies + eslint.config.mjs + 级联分支），lint = `node scripts/check-syntax.mjs`（node --check 遍历 src/test/bin/scripts 含自检，零依赖）；CLI-LINT-REQUIREMENTS/TUNING.md 标记被取代；package-lock 再生（eslint 树移除）
+  ② **工具作用域限制全部移除**（§10.1）：resolveInCwd 去边界断言（信任模型 + 权限门禁为唯一防线，与 bash 一致）；git workdir / execute scriptFile / file_ops 目录限制一并移除；工具描述与提示词 "confined to workspace" 措辞清理（两端 byte-identical）
+  ③ **模型上下文长度可配置**（PROVIDER.md §15）：`providers[].context`（K 单位，如 128 = 128K）覆盖 MODEL_SPECS——providerSpec 拷贝覆盖不污染共享 spec；压缩阈值（auto ×0.6）/ TOKEN 窗口 / 状态栏显示 / advisor 预算全链路跟随；数字字符串（"128"）两端统一归一；非法值忽略 + 警告一次；CLI /model 管理流 + VS Code settings.json 配置界面
+
 ## [0.12.57] — 2026-09-02
 
 ### Added
