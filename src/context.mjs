@@ -195,8 +195,10 @@ function applyCompression(agent, headEnd, tailStart, note) {
  * Automatically re-injects task list state after compaction.
  * @param {object} agent
  * @param {number} threshold - compaction threshold in tokens
- * @param {object} callbacks - { onToken, onReasoning, onCompress } — summary generation is SILENT
- *   (never forwards onToken/onReasoning: the compaction process is an internal mechanism, not a model reply)
+ * @param {object} callbacks - { onToken, onReasoning, onCompress, onCompressStart } — summary
+ *   generation is SILENT (never forwards onToken/onReasoning: the compaction process is an
+ *   internal mechanism, not a model reply); onCompressStart fires right before the summary call
+ *   (§7 D-C1, compression lifecycle visibility — panel start state)
  * @param {object} extras - { systemPrompt?, tools? } — estimated overhead for the pure-estimation
  *   path (no measured baseline); the measured path already includes system+tools in prompt_tokens.
  */
@@ -239,6 +241,11 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // The summary is a plain-text task, no reasoning needed — passing thinking to the compaction provider wastes tokens.
   // Silent by design (D11): no onToken/onReasoning — the compaction process must not stream to the frontend.
   // signal propagates user cancellation (Ctrl+C) to the in-flight summary call.
+  // Compression visibility (CONTEXT-COMPACTION.md §7 D-C1/D-C2): the frontend learns the compression
+  // STARTED right before the LLM call ("Compressing context… / summarizing N messages" panel) — only
+  // the lifecycle is surfaced, never the summary body. N = the number of history messages being summarized.
+  callbacks?.onCompressStart?.({ messages: middle.length })
+  const startedAt = performance.now()
   const summary = await chat({ ...agent.provider, thinking: null, reasoningEffort: null }, {
     messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
     signal,
@@ -246,6 +253,15 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
 
   applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
 
+  // Completion info for the compression panel (D-C2): tokens freed = the pre-compression prompt
+  // estimate (`tokens` — the value that tripped the threshold, incl. system/tools overhead on the
+  // pure-estimation path) minus the post-compression estimate on the same basis. Elapsed = the
+  // summary call + splice duration. agent.mjs forwards this to onCompress unchanged.
+  agent._lastCompressInfo = {
+    mode: "summary",
+    tokensFreed: Math.max(0, Math.round(tokens - (estimateTokens(agent.history) + overhead))),
+    elapsedMs: performance.now() - startedAt,
+  }
   return true
 }
 
@@ -257,7 +273,11 @@ export function compressFallback(agent) {
   const keepTail = keepTailSize(agent.provider, agent.history.length)
   const split = splitHistory(agent.history, keepTail)
   if (!split) return false
+  const tailMessages = agent.history.length - split.tailStart
   applyCompression(agent, split.headEnd, split.tailStart, FALLBACK_NOTE)
+  // Fallback completion info (D-C2): mode marks the deterministic-truncation path — the panel
+  // shows the degradation note ("truncated to N messages") ONLY after 3 consecutive failures.
+  agent._lastCompressInfo = { mode: "fallback", tailMessages }
   return true
 }
 
