@@ -1,5 +1,5 @@
 import { sliceByWidth } from "./render.mjs"
-import { PROVIDER_PRESETS as PRESETS } from "../config.mjs"
+import { PROVIDER_PRESETS as PRESETS, providerSpec } from "../config.mjs"
 import { computeLayout } from "./layout.mjs"
 
 /** Generic list picker + model/provider management.
@@ -121,6 +121,14 @@ export function createPickers(ctx) {
     return e.action === "switch" ? `switch:${e.provider}:${e.model}` : `action:${e.action}`
   }
 
+  /** 模型信息显示的 context 窗口（PROVIDER.md §15 D-C5）：K 单位形态跟随覆盖值
+   *  （config K 是二进制 K：128 → 128×1024 = 131072 → 显示 "128K"）；≥1M tokens 用 M 形态
+   *  （1_000_000 → "1M"），与 spec 值的大窗口惯例一致。 */
+  function fmtContextK(tokens) {
+    if (tokens >= 1_000_000) return `${Math.round(tokens / 1_048_576)}M`
+    return `${Math.round(tokens / 1024)}K`
+  }
+
   /** Get API key for a provider (config.json only — env vars are not a key source) */
   function getApiKey(providerName, providerConfig) {
     return providerConfig.apiKey
@@ -148,6 +156,8 @@ export function createPickers(ctx) {
         await removeProviderFlow()
       } else if (e.action === "key") {
         await setKeyFlow()
+      } else if (e.action === "context") {
+        await setContextFlow()
       }
     }
   }
@@ -188,9 +198,11 @@ export function createPickers(ctx) {
       const marker = active ? "●" : ""
       const note = active ? " ← current" : ""
       const keyStatus = p.apiKey ? "" : " (no key)"
+      // context 窗口显示（PROVIDER.md §15 D-C5/T-C6）：跟随 providers[].context 覆盖
+      const ctxTag = ` (ctx ${fmtContextK(providerSpec(p).context)})`
       entries.push({
         type: "item",
-        text: `${p.name.padEnd(12)} ${currentModel}${note}`,
+        text: `${p.name.padEnd(12)} ${currentModel}${ctxTag}${note}`,
         action: "open-models",
         provider: p.name,
         marker,
@@ -201,6 +213,7 @@ export function createPickers(ctx) {
     entries.push({ type: "item", text: "Add provider…", action: "add" })
     if (agent.providers.length > 1) entries.push({ type: "item", text: "Remove provider…", action: "remove" })
     entries.push({ type: "item", text: "Set / change API key…", action: "key" })
+    entries.push({ type: "item", text: "Set context window (K units)…", action: "context" })
     return entries
   }
 
@@ -294,7 +307,8 @@ export function createPickers(ctx) {
     agent.provider = { ...target }
     if (agent.config?.agent?.compactThresholdAuto) {
       const { resolveCompactThreshold } = await import("../config.mjs")
-      agent.config.agent.compactThreshold = resolveCompactThreshold(null, item.model).value
+      // provider 对象（非 model 字符串）——阈值跟随 providers[].context 覆盖（PROVIDER.md §15 T-C2）
+      agent.config.agent.compactThreshold = resolveCompactThreshold(null, target).value
     }
     await persistRaw((raw) => {
       // 落盘前剥离运行时注入的 proxyUri（由 loadConfig + injectProxy 在加载时重建）
@@ -382,6 +396,50 @@ export function createPickers(ctx) {
     await persistRaw((raw) => { raw.providers = agent.providers })
   }
 
+  /** /model provider 管理：context 窗口字段（K 单位，PROVIDER.md §15 D-C4/D-C5）——
+   *  picker 选 provider + 表单输入（复用 syncProviderField 的落盘模式：改 agent.providers 目标项
+   *  → persistRaw 全量写盘）；空输入清空（回 spec 值）；非法输入报错不落盘（D-C1 语义同 loadConfig）。 */
+  async function setContextFlow() {
+    const se = await showPicker("Set Context Window", [
+      { type: "header", text: "Select provider" },
+      ...agent.providers.map((p) => ({
+        type: "item",
+        text: `${p.name} (ctx ${fmtContextK(providerSpec(p).context)})`,
+        name: p.name,
+      })),
+    ])
+    if (!se?.name) return // Esc
+    const target = agent.providers.find((p) => p.name === se.name)
+    if (!target) return
+    const current = Number.isInteger(target.context) && target.context > 0 ? target.context : null
+    const val = (await askQuestion(
+      `Context window for ${se.name} in K units (current: ${current ? `${current}K` : "spec default"} — e.g. 128 = 128K; empty to clear):`
+    ))?.trim() ?? ""
+    if (val === "") {
+      delete target.context
+    } else {
+      const n = Number(val)
+      if (!Number.isInteger(n) || n <= 0) {
+        pushLine(`Invalid context: "${val}" — must be a positive integer in K units (e.g. 128 = 128K)`, C.error)
+        return
+      }
+      target.context = n
+    }
+    if (se.name === agent.activeProvider) {
+      // 运行时 provider 同步（同 setProviderKey 先例：只补 context，不重建对象以免丢 activeModel 覆盖）
+      if (target.context === undefined) delete agent.provider.context
+      else agent.provider.context = target.context
+      if (agent.config?.agent?.compactThresholdAuto) {
+        const { resolveCompactThreshold } = await import("../config.mjs")
+        agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
+      }
+    }
+    await persistRaw((raw) => { raw.providers = agent.providers })
+    pushLine(target.context !== undefined
+      ? `ctx = ${target.context}K (${target.context * 1024} tokens)`
+      : `context cleared — using model spec (${fmtContextK(providerSpec(target).context)})`, C.tool)
+  }
+
 
   /** Slot-bound model picker: two-level provider → model selection that RETURNS
    *  { provider, model } instead of writing main-session state — used by /submodel
@@ -411,5 +469,5 @@ export function createPickers(ctx) {
     }
   }
 
-  return { showPicker, closePicker, popPicker, renderPickerLines, openModelPicker, selectModel, setProviderKey, pickModelForSlot }
+  return { showPicker, closePicker, popPicker, renderPickerLines, openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot }
 }
