@@ -19,6 +19,7 @@ import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor
 import {
   SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
   routeSubToolOutput, finishSubTask, finishSubTasksByRole, finishSubTaskByModel, freezeDoneSubTasks,
+  ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "./subagent-blocks.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 
@@ -399,8 +400,28 @@ export function buildToolCallbacks(deps) {
     },
     onPermissionRequest: (name, args) => askPermission(name, args),
     onQuestion: (text, options) => askQuestion(text, options),
-    onCompress: () => {
-      pushLine("  [context] Context too long, auto-compacted (early conversation summarized by LLM, task state preserved)", C.warn)
+    // Compression lifecycle (CONTEXT-COMPACTION.md §7 D-C2): the compression session renders
+    // as a subagent-style panel block — start → running panel ("Compressing context…" +
+    // "summarizing N messages" + elapsed ticker), fail → error text ONLY (no degradation note —
+    // that belongs to the 3-consecutive-failures fallback), success → frozen "Compressed: N
+    // tokens freed → summary (Xs)" / fallback → "truncated to N messages". The summary BODY
+    // never enters the panel or the stream (the summary call is silent). Replaces the old
+    // one-line "[context] Context too long..." warn (user ruling: panel, not a status line).
+    onCompressStart: (info) => {
+      ensureCompressPanel(state, info)
+      scheduleRender()
+    },
+    onCompressFail: (error) => {
+      // Q3 (CONTEXT-COMPACTION §7 F3): failure is no longer silent — visible on the panel AND
+      // logged to stderr so the error is traceable (400/timeout/network).
+      console.error("[context] compression failed:", error?.message ?? error)
+      markCompressFailed(state, error)
+      scheduleRender()
+    },
+    onCompress: (info) => {
+      if (info?.mode === "fallback") markCompressFallback(state, info)
+      else markCompressDone(state, info)
+      scheduleRender()
     },
     // Async distillation landed (SEND-STALL-DISTILL §2.3): the machine line was replaced by
     // the compressed version — persist it so the session file ends up compressed. Silent:
