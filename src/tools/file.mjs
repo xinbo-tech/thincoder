@@ -13,13 +13,10 @@ import {
   findCandidates,
   FFFD_WARNING,
 } from "./shared.mjs";
+import { applyEditBatch } from "./edit-batch.mjs";
 import { specForModel } from "../config.mjs";
 import { createHash } from "node:crypto";
-import { mkdir } from "node:fs/promises";
-import { readFile } from "node:fs/promises";
-import { stat } from "node:fs/promises";
-import { writeFile } from "node:fs/promises";
-import { unlink } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile, unlink } from "node:fs/promises";
 import { join, relative, dirname } from "node:path";
 
 const MAX_FILE_READ_BYTES = 10_000_000
@@ -54,8 +51,9 @@ export function clearLastWrite(abs) { lastWrites.delete(abs) }
  *  模型拿到的不只是"inserted at L395"，而是"L395 这行是什么内容"——下次再操作时
  *  能自检"我的行号 vs 实际内容"是否匹配，匹配不上 = 行号漂了，先 read——
  *  死循环就断了（根因：模型对行号锚点的"新鲜度"没有感知——数字本身不携带语义）。
- *  write 全文重写跳过（无行号锚点——模型刚写的知道内容）。 */
-async function appendWriteContext(abs, writeLine, baseResult) {
+ *  write 全文重写跳过（无行号锚点——模型刚写的知道内容）。
+ *  edit-batch.mjs（数组形态）复用——导出仅供内部模块，非公共 API。 */
+export async function appendWriteContext(abs, writeLine, baseResult) {
   const content = normalizeEOL(await readFile(abs, "utf8"))
   const lines = content.split("\n")
   const start = Math.max(1, writeLine - 3)
@@ -244,57 +242,21 @@ export const editTool = {
   },
   async execute(args, ctx) {
     // 2026-08-31 工具顺手度（用户批准）：数组形态——一次多文件原子替换
-    if (args.edits) {
-      if (!Array.isArray(args.edits) || args.edits.length === 0) {
-        throw new Error("edits must be a non-empty array of {path, old_string, new_string}")
-      }
-      if (args.path || args.old_string !== undefined || args.new_string !== undefined) {
-        throw new Error("edits array is mutually exclusive with path/old_string/new_string")
-      }
-      // 原子：先全量 read+match 检查（所有文件都能替换）——任一失败全不写
-      const prepared = []
-      for (const e of args.edits) {
-        if (!e.path) throw new Error("each edit must have a path")
-        if (!e.old_string) throw new Error(`edit for ${e.path}: old_string must not be empty`)
-        const abs = resolveInCwd(ctx, e.path)
-        const raw = await readFile(abs, "utf8")
-        const content = normalizeEOL(raw)
-        const occurrences = content.split(e.old_string).length - 1
-        if (occurrences === 0) {
-          throw new Error(
-            `edit aborted (atomic — no files written): old_string not found in ${e.path}\n` +
-            `  searched: "${e.old_string.slice(0, 100).split("\n")[0]}${e.old_string.length > 100 ? "…" : ""}"`
-          )
-        }
-        if (occurrences > 1 && !e.replace_all) {
-          throw new Error(
-            `edit aborted (atomic — no files written): old_string matches ${occurrences} times in ${e.path}; ` +
-            `provide more context or set replace_all`
-          )
-        }
-        const updated = e.replace_all
-          ? content.split(e.old_string).join(e.new_string)
-          : content.replace(e.old_string, () => e.new_string)
-        const matchIdx = content.indexOf(e.old_string)
-        const editStartLine = matchIdx >= 0 ? content.slice(0, matchIdx).split("\n").length : 1
-        const lineShift = e.new_string.split("\n").length - e.old_string.split("\n").length
-        prepared.push({ abs, path: e.path, raw, updated, editStartLine, lineShift, occurrences: e.replace_all ? occurrences : 1 })
-      }
-      // 全部检查通过——逐个写
-      const results = []
-      for (const p of prepared) {
-        await writeFile(p.abs, joinWithEol(normalizeEOL(p.updated).split("\n"), p.raw), "utf8")
-        recordWrite(p.abs, { type: "edit", startLine: p.editStartLine, shift: p.lineShift })
-        const withCtx = await appendWriteContext(p.abs, p.editStartLine, `Edited ${p.path}: replaced ${p.occurrences} occurrence(s)`)
-        results.push(withCtx)
-      }
-      return results.join("\n")
-    }
+    // （应用逻辑在 edit-batch.mjs——2026-09-01 拆出，500 行硬限，先例 git-ext.mjs）
+    if (args.edits) return applyEditBatch(args, ctx)
 
     // 单文件（现状路径）
     const abs = resolveInCwd(ctx, args.path)
     if (!args.old_string) {
       throw new Error("old_string must not be empty (empty string matches everywhere and would corrupt the file)")
+    }
+    // #5（2026-09-01 交付评审尾巴）：new_string 非字符串（含 undefined）在写盘前拒绝——
+    // 原缺陷：replace 回调返回 undefined 被字符串化成 "undefined" 写入盘，随后
+    // args.new_string.split 才 TypeError——文件已损坏 + 错误信息不知所云。
+    if (typeof args.new_string !== "string") {
+      throw new Error(
+        `new_string must be a string${args.new_string === undefined ? " (missing)" : ` (got ${typeof args.new_string})`} — nothing written`,
+      )
     }
     const raw = await readFile(abs, "utf8")
     const content = normalizeEOL(raw)

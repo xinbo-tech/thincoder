@@ -49,6 +49,7 @@ export async function handleEngCommand(ctx) {
   agent.config.agent.engineering = !agent.config.agent.engineering
   if (!agent.config.agent.engineering) {
     agent._engDesignToken = null // invalidate stale token
+    agent._engDesignTokens = new Map() // multi-design slots die with the mode (2026-09-01 fix #2)
     // OFF must reach the model too (2026-08-25): /auto pushes a reminder on toggle — the
     // mode flip is invisible to the agent otherwise. (ON needs none here: the injector
     // in agent.mjs already announces ON transitions on the next turn.)

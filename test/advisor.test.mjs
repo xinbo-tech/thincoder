@@ -1314,3 +1314,84 @@ test("eng(enter) idempotent: already-on does not clear the token (AC6)", async (
   assert.match(out, /already active/)
   assert.equal(agent._engDesignToken, "keepme", "redundant enter keeps the standing token")
 })
+
+// ─── designId 多槽 token（ENGINEERING-MODE.md 2026-09-01：AC8/T15/T17；评审 #1 回显） ───
+
+/** Mock advisor LLM：pass=true echoes the injected [DESIGN-TOKEN:…] (review passes);
+ *  pass=false returns a findings table without any token (COMPLETED review, not passed). */
+function mockDesignReviewServer(pass) {
+  return import("node:http").then(({ createServer }) => {
+    const bodies = []
+    const server = createServer((req, res) => {
+      let text = ""
+      req.on("data", (c) => (text += c))
+      req.on("end", () => {
+        const body = JSON.parse(text)
+        bodies.push(body)
+        const m = JSON.stringify(body.messages).match(/([0-9a-f-]+:\d+:[0-9a-f]{16})/)
+        const token = m ? m[1] : "no-token-found"
+        const content = pass
+          ? `## Review\n\n设计通过，未发现问题。\n\n[DESIGN-TOKEN:${token}]`
+          : "## Review\n\n| # | Category | Severity | Issue | Suggestion |\n|---|---------|----------|------|------------|\n| 1 | correctness | 🔴 | spec gap | fix the spec |"
+        const frames =
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          `data: [DONE]\n\n`
+        res.writeHead(200, { "Content-Type": "text/event-stream" })
+        res.end(frames)
+      })
+    })
+    return new Promise((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, bodies }))
+    })
+  })
+}
+
+test("designId 多槽：通过 → designId 回显 + token 入 _engDesignTokens 槽 + 单槽镜像保留（评审 #1）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { server, port } = await mockDesignReviewServer(true)
+  try {
+    const agent = {
+      config: { agent: { engineering: true } },
+      provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
+      history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpdir(),
+    }
+    const out1 = await advisorTool.execute({ type: "design", documents: ["docs/design/A.md"] }, { agent })
+    assert.match(out1, /Approved\. Pass this exact token/, "第一次评审通过")
+    assert.match(out1, /designId: [0-9a-f-]{36}/, "通过结果回显 designId（评审 #1——多设计首 spawn 定向依据）")
+    const out2 = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"] }, { agent })
+    assert.match(out2, /Approved\. Pass this exact token/, "第二次评审通过")
+    const map = agent._engDesignTokens
+    assert.ok(map instanceof Map && map.size === 2, "两槽并存——后签发不覆盖前签发（AC8）")
+    const idOf = (out) => out.match(/designId: ([0-9a-f-]{36})/)[1]
+    assert.notEqual(map.get(idOf(out1)), map.get(idOf(out2)), "两个 designId 各持自己的 token")
+    assert.equal(typeof agent._engDesignToken, "string", "单槽兼容镜像保留（关键决策 ②）")
+    assert.equal(agent._engDesignToken, map.get(idOf(out2)), "镜像 = 最近签发的 token（既有布尔判定语义）")
+    // 回显的 designId 确实能在槽集合中取回对应 token（首 spawn 定向可用）
+    assert.ok(map.has(idOf(out1)) && map.has(idOf(out2)), "回显 designId ↔ 槽一一对应")
+  } finally {
+    server.close()
+  }
+})
+
+test("designId 隔离：复审完成但未通过（无 token 回显）→ 该次 designId 不入槽、既有槽全保留（方案 ②）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { server, port } = await mockDesignReviewServer(false)
+  try {
+    const agent = {
+      config: { agent: { engineering: true } },
+      provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
+      history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpdir(),
+      _engDesignTokens: new Map([["slot-a", "tok-a"], ["slot-b", "tok-b"]]),
+      _engDesignToken: "tok-a",
+    }
+    const out = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"] }, { agent })
+    assert.doesNotMatch(out, /Approved\./, "复审未通过（无 token 回显）")
+    assert.equal(agent._engDesignTokens.size, 2, "失败不清任何既有槽（2026-08-30 隔离逻辑扩至多槽）")
+    assert.equal(agent._engDesignTokens.get("slot-a"), "tok-a", "槽 a 原样（T17）")
+    assert.equal(agent._engDesignTokens.get("slot-b"), "tok-b", "槽 b 原样（T17）")
+    assert.equal(agent._engDesignToken, "tok-a", "单槽镜像同样不被清——旧 token 存活至 TTL（评审 #2 方案 ②）")
+  } finally {
+    server.close()
+  }
+})

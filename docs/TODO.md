@@ -30,7 +30,7 @@
 
 - [x] code review 评审范围改为 task 的 Docs involved + 验收标准——2026-08-25 核对关闭（ENGINEERING-MODE.md FR4：eng-coder 返回后父代理自动 advisor(type=code)，范围=Docs involved+验收标准）
 - [x] setup.mjs 提示词解耦——已实现（PROMPT-DECOUPLING.md 定稿后落地，工程提示词独立组装）
-- [x] ~~多设计并行 token 映射化（单值 token → {designPath: token}）~~——2026-08-31 用户终裁：**不做（过度工程）**。工程模式实际使用中同一会话并行多设计评审且随后各自派 eng-coder 的场景未发生（评审-实现串行）；文档锚方案（Y）已被用户否决（文档落地中回写状态/改名重组，任何文档锚都会失效）；若未来真有并行需求，评审实例表方案（token 内嵌 reviewId + 父代理评审实例表，文档仅审计不参与校验）可再议，勿提前实现。
+- [x] 多设计并行 token 映射化（单值 token → designId 槽集合）——**2026-09-01 已实现销账**（ENGINEERING-MODE.md §FR3/FR8 + 变更记录）：08-31 否决的是"文档锚 `{designPath: token}`"（文档改名/回写失效）——落地采用 **08-31 预留的"评审实例表"路线**（评审调用生成随机 designId + 父代理 `_engDesignTokens` Map，文档仅审计不参与校验），非文档锚。触发场景真实发生：memory_delete + §14 并行 spawn，单值覆盖致 §14 首 spawn 失败。实现：advisor 通过结果回显 designId（评审 #1）、token 入 Map 槽 + 保留 `_engDesignToken` 单槽兼容镜像（关键决策 ②）；spawn 增可选 `designId` 参数按槽定位（单设计省略/多设计必带，T16 不误取）；复审失败不入槽不清槽（评审 #2 方案 ②）；engineering.md 注入并行化纪律 + designId 并行调用形态；两端镜像 + T15-T17/T19 测试。
 
 ### Issue 批量（2026-08-22，来源：Gitee/GitHub issue 巡检）
 

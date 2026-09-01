@@ -22,6 +22,7 @@ export const engTool = {
     if (args.action === "exit") {
       ctx.agent.config.agent.engineering = false
       ctx.agent._engDesignToken = null   // stale token from prior design review invalidated
+      ctx.agent._engDesignTokens = new Map() // multi-design slots die with the mode (2026-09-01 fix #2)
       ctx.agent._engDesignReviewed = false // reset gate state
       ctx.agent._advisorRound = 0          // reset convergence budget
       ctx.agent._touchedFiles = []         // clear mutation tracking
@@ -49,6 +50,7 @@ export const engTool = {
       }
       ctx.agent.config.agent.engineering = true
       ctx.agent._engDesignToken = null   // off→on transition requires a fresh design review
+      ctx.agent._engDesignTokens = new Map() // multi-design slots die with the mode (2026-09-01 fix #2)
       ctx.agent._lastEngState = true
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_ON_REMINDER)

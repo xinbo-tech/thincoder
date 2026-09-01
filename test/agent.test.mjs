@@ -1566,8 +1566,10 @@ test("runAgent: 子 agent token + 工具调用 relay 到父回调（带 role#id 
 test("runAgent: eng-coder design token is NOT consumed — second spawn with same token succeeds", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   // 同一 token 两次 spawn：第一次实现，第二次（修复循环）重入——token 不消费
-  // Real signed token (v2 fail-closed killed the bare-string pass-through the old test relied on)
-  const realToken = "8048bebc-a2a6-4b50-b198-74f37da606ab:1788243800213:c093cae7ccc4e228"
+  // Real signed token, minted at runtime (v2 fail-closed): the original hardcoded
+  // fixture carried a fixed expiry (2026-08-31) and started failing the day it
+  // expired — TTL'd tokens must be generated fresh, never baked into the file.
+  const realToken = await signedToken("8048bebc-a2a6-4b50-b198-74f37da606ab", Date.now() + 24 * 3600 * 1000)
   const script = [
     { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现", role: "eng-coder", designToken: realToken }) } },
     { content: "实现完成，报告见上。".repeat(30) },        // 子代理 1 交付
@@ -1592,6 +1594,169 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
   } finally {
     server.close()
   }
+})
+
+// ─── T15/T16/T17：designId 多槽（ENGINEERING-MODE.md 2026-09-01，AC8） ───
+
+/** Real signed token with a fixed uuid+expiry (matches the v2 HMAC scheme). */
+async function signedToken(uuid, expiresAt) {
+  const { createHmac } = await import("node:crypto")
+  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
+  return `${uuid}:${expiresAt}:${sig}`
+}
+
+test("T15: 双设计并行 spawn 各带 designId+token 互不覆盖（后 spawn 不拒先 spawn）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await signedToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await signedToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const idA = "11111111-1111-4111-8111-aaaaaaaaaaaa"
+  const idB = "22222222-2222-4222-8222-bbbbbbbbbbbb"
+  const script = [
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现A", role: "eng-coder", designId: idA, designToken: tokenA }) } },
+    { content: "A 完成，报告见上。".repeat(30) },          // 子代理 A 交付（单 toolCall 简单路径）
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现B", role: "eng-coder", designId: idB, designToken: tokenB }) } },
+    { content: "B 完成，报告见上。".repeat(30) },          // 子代理 B 交付
+    { content: "双设计完成" },
+  ]
+  const { server, port, requests } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-t15-"))
+    const agent = createAgent({
+      provider, tools: [makeMutationTool()],
+      config: { agent: { engineering: true }, advisor: {} },
+      cwd,
+    })
+    // 两次评审通过、两槽并存（advisor.test.mjs 验证入槽本身；此处验证 spawn 消费端）
+    agent._engDesignTokens = new Map([[idA, tokenA], [idB, tokenB]])
+    agent._engDesignToken = tokenB // 后签发覆盖单值镜像（既有语义：布尔判定用）
+    const out = await runAgent(agent, "双设计并行", { onPermissionRequest: async () => true })
+    assert.equal(out, "双设计完成")
+    assert.equal(agent._engDesignTokens.size, 2, "两槽并存——后 spawn 未覆盖前 spawn 的槽")
+    // 两次子代理调用都成功（任一失败 dispatch 会把 Error 结果回喂模型，最终文本仍完成——
+    // 因此直接校验子代理输入确实收到了各自 token：A 的 spawn 请求在 B 之前发生）
+    const childTasks = requests.filter((r) => (r.messages ?? []).some((m) => m.role === "user" && /实现[AB]/.test(m.content)))
+    assert.ok(childTasks.length >= 2, `two child spawns reached the LLM, got ${childTasks.length}`)
+    // 交付报告回传 designId（修正轮复用）
+    const toolResults = agent.history.filter((m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("designId:"))
+    assert.ok(toolResults.some((m) => m.content.includes(`designId: ${idA}`)), "A 交付报告回传 designId A")
+    assert.ok(toolResults.some((m) => m.content.includes(`designId: ${idB}`)), "B 交付报告回传 designId B")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+test("T16: 多设计缺 designId → throw 要求指定（不误取任一槽）", async () => {
+  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await signedToken("cccccccc-1111-4111-8111-00000000000a", exp)
+  const tokenB = await signedToken("cccccccc-2222-4222-8222-00000000000b", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-x", tokenA], ["id-y", tokenB]]),
+    _engDesignToken: tokenB,
+    _touchedFiles: [],
+  }
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designToken: tokenA }, { agent: parent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
+    /Multiple approved designs[\s\S]*designId/,
+    "多槽缺 designId → throw 要求指定",
+  )
+  // 单元口径同断言
+  assert.throws(() => resolveDesignSlot(parent, undefined), /Multiple approved designs/)
+  assert.throws(() => resolveDesignSlot(parent, "no-such-id"), /designId not found/, "给定 designId 无匹配槽 → 明确报错")
+  assert.throws(
+    () => resolveDesignSlot({ _engDesignTokens: new Map([["k", "v"]]), _engDesignToken: null }, undefined),
+    /Design tokens were reset/,
+    "镜像被 eng(exit/enter) 清空而 Map 残留 → 不复活过期 token，要求重新评审",
+  )
+  // 正常路径：单槽省略 designId → 取唯一槽
+  const single = resolveDesignSlot({ _engDesignTokens: new Map([["only", tokenA]]), _engDesignToken: tokenA }, undefined)
+  assert.equal(single.token, tokenA)
+  // 兼容镜像：无 Map（旧会话）→ 单值镜像兜底
+  const legacy = resolveDesignSlot({ _engDesignToken: tokenA }, undefined)
+  assert.equal(legacy.token, tokenA)
+})
+
+test("T17: 复审失败不波及其他槽——旧 token 存活，其他设计 spawn 仍通过（方案 ②）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await signedToken("dddddddd-1111-4111-8111-00000000000a", exp)
+  const idA = "33333333-3333-4333-8333-aaaaaaaaaaaa"
+  const idB = "44444444-4444-4444-8444-bbbbbbbbbbbb"
+  const script = [
+    // turn 1：模型先复审设计 B（无 token 回显——评审未通过，完整评审文本）
+    { toolCall: { name: "advisor", arguments: JSON.stringify({ type: "design", documents: ["docs/design/B.md"] }) } },
+    { content: "| # | Category | Severity | Issue | Suggestion |\n|---|---------|----------|------|------------|\n| 1 | correctness | 🔴 | spec gap | fix the spec |\n\n已复审，发现问题。" },
+    // turn 2：随后 spawn 设计 A 的 eng-coder（tokenA 必须仍有效）
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现A", role: "eng-coder", designId: idA, designToken: tokenA }) } },
+    { content: "A 完成，报告见上。".repeat(30) },
+    { content: "完成——B 复审失败未影响 A" },
+  ]
+  const { server, port } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-t17-"))
+    try { execSync("git init -q", { cwd, stdio: "ignore" }) } catch {}
+    mkdirSync(join(cwd, "docs", "design"), { recursive: true })
+    writeFileSync(join(cwd, "docs", "design", "B.md"), "# Design B\n")
+    const agent = createAgent({
+      provider, tools: [makeMutationTool()],
+      config: { agent: { engineering: true }, advisor: { provider: "mock-advisor-provider" } },
+      cwd,
+    })
+    agent.activeProvider = { name: "mock-advisor-provider" }
+    agent._engDesignTokens = new Map([[idA, tokenA], [idB, await signedToken("dddddddd-2222-4222-8222-00000000000b", exp)]])
+    agent._engDesignToken = tokenA
+    const out = await runAgent(agent, "复审B然后实现A", { onPermissionRequest: async () => true })
+    assert.equal(out, "完成——B 复审失败未影响 A")
+    // 断言 1：A 的槽原样保留；槽集合仍为 2（失败的复审既没清 A 也没动 B）
+    assert.equal(agent._engDesignTokens.get(idA), tokenA, "其他设计的槽不受波及——tokenA 原样")
+    assert.equal(agent._engDesignTokens.size, 2, "复审失败不清任何既有槽（方案 ②：旧 token 存活至 TTL）")
+    // 断言 2：A 的 eng-coder spawn 真的到达了子代理 LLM（未被 token 门禁拒绝）
+    const childUserMsgs = agent.history.filter((m) => m.role === "user" && typeof m.content === "string" && m.content.includes("实现A"))
+    assert.ok(childUserMsgs.length >= 1, "A 的子代理 spawn 已执行（token 未被复审失败波及）")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+test("T19: 偏差审计自动节点既有断言仍在（engineering.md step 7 + Work Loop 状态）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  // 自动节点语义：无需用户发起
+  assert.ok(text.includes("This audit is an automatic flow node — no user initiation needed"), "审计为自动节点")
+  assert.ok(text.includes("spawn an `explore` subagent"), "审计走 explore 子 agent")
+  // 修正轮复用同 designId+token（本轮新增——多槽下修正轮必须回到同一设计的槽）
+  assert.ok(text.includes("same `designToken`\n     and `designId` parameters"), "修正轮复用同 designId+token")
+})
+
+test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressively + designId 并行形态，2026-09-01）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("## Multi-Task Parallelism"), "工程模式顶层含并行化纪律章节")
+  assert.ok(text.includes("Parallelize aggressively: send multiple\nindependent tool calls in one response"), "§14 D1 条款在工程模式单独出现")
+  assert.ok(text.includes("splitting changes across independent\nsub-projects"), "F7 子项目拆分触发条件")
+  assert.ok(text.includes("Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "五类不并行边界")
+  assert.ok(text.includes("approval storms"), "审批风暴点名")
+  assert.ok(text.includes("skip micro-parallelism (<1s ops)"), "微操作不并行")
+  assert.ok(text.includes("share NO file"), "并行前置检查：受影响文件集无交集")
+  assert.ok(text.includes("Dependency chain → serial"), "依赖链串行")
+  assert.ok(text.includes("at most 3 concurrent eng-coders"), "≤3 并发上限")
+  assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "并行 spawn 调用形态（各带 designId+token）")
+  assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token 隔离语义（不互相覆盖）")
+  assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "发起权不变：设计评审仍仅用户发起")
+  assert.ok(text.includes("plus its designId parameter"), "Work Loop 批准行提 designId")
+})
+
+// ─── 2026-09-01 修复轮 #4：engineering.md 卫生（重复标题去重）───
+test("prompts/engineering.md: no duplicated section headers (2026-09-01 fix #4 hygiene)", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  const dupes = [...text.matchAll(/^## .+$/gm)].map((m) => m[0])
+  assert.equal(dupes.length, new Set(dupes).size,
+    "every ## header appears exactly once: " + dupes.filter((h, i) => dupes.indexOf(h) !== i).join(" | "))
+  assert.ok(text.includes("## Questioning Style (requirement clarification)"), "header kept (dedup only)")
 })
 
 slow("runAgent: explore 子 agent 注入 git 上下文", async () => {
@@ -3783,6 +3948,64 @@ test("eng tool exit: OFF reminder reaches history via pendingReminders flush", a
   assert.match(out, /exited/i)
   assert.ok(agent._pendingReminders.some((r) => r.includes("engineering mode is now OFF")))
   assert.equal(agent._lastEngState, false)
+})
+
+// ─── 2026-09-01 修复轮 #2：清理对称——清单值镜像的位置同步清多槽 Map ───
+test("eng tool exit clears _engDesignTokens along with the single mirror (fix #2)", async () => {
+  const { engTool } = await import("../src/agent-tools/eng.mjs")
+  const agent = {
+    config: { agent: { engineering: true } },
+    _engDesignToken: "tok", _engDesignTokens: new Map([["id-a", "tok-a"], ["id-b", "tok-b"]]),
+    _pendingReminders: [],
+  }
+  const out = await engTool.execute({ action: "exit" }, { agent })
+  assert.match(out, /exited/i)
+  assert.equal(agent._engDesignToken, null)
+  assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
+    "multi-design slots die with the mode — no stale slot set survives eng(exit)")
+})
+
+test("eng tool off→on enter clears _engDesignTokens; idempotent enter keeps them (fix #2)", async () => {
+  const { engTool } = await import("../src/agent-tools/eng.mjs")
+  const agent = {
+    config: { agent: { engineering: false } },
+    _engDesignToken: "stale", _engDesignTokens: new Map([["stale-id", "stale"]]),
+    _pendingReminders: [],
+  }
+  await engTool.execute({ action: "enter" }, { agent })
+  assert.equal(agent._engDesignToken, null)
+  assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
+    "off→on transition kills stale multi-design slots (fresh design review required)")
+  // 幂等 enter：既有槽存活（对齐单值镜像 AC6 语义）
+  const standing = {
+    config: { agent: { engineering: true } },
+    _engDesignToken: "keepme", _engDesignTokens: new Map([["id-a", "tok-a"]]),
+    _pendingReminders: [],
+  }
+  const out = await engTool.execute({ action: "enter" }, { agent: standing })
+  assert.match(out, /already active/)
+  assert.equal(standing._engDesignToken, "keepme", "redundant enter keeps the mirror (AC6)")
+  assert.equal(standing._engDesignTokens.size, 1, "redundant enter keeps the slots too")
+})
+
+test("cmd-eng TUI toggle OFF clears _engDesignTokens (fix #2)", async () => {
+  const { handleEngCommand } = await import("../src/tui/cmd-eng.mjs")
+  const agent = {
+    cwd: process.cwd(),
+    config: { agent: { engineering: true } }, // currently ON → toggle goes OFF
+    _engDesignToken: "x", _engDesignTokens: new Map([["id-a", "tok-a"]]),
+    _pendingReminders: [],
+  }
+  await handleEngCommand({
+    agent,
+    pushLine: () => {}, pushLabel: () => {},
+    persistRaw: async () => {},
+    showPicker: async () => ({ action: "create" }),
+  })
+  assert.equal(agent.config.agent.engineering, false)
+  assert.equal(agent._engDesignToken, null)
+  assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
+    "TUI OFF kills the multi-design slot set")
 })
 
 

@@ -74,7 +74,7 @@ PreToolUse hooks → 阻断
 1. **空响应恢复**（IK60QP）：`!response.content` → 注入 `[System reminder: your last response was empty…]` 重试，上限 `MAX_EMPTY_RETRIES=2`（每次用户消息重置），仍空才抛原错误（含 /think 降档建议）
 2. **pending tasks 提醒**：有 pending → 注入任务列表提醒并继续循环（模型更新 task 状态后再收尾）；**最多推回一次**（`_taskPushbacks`，task 工具更新列表即重置）——模型第二次坚持收尾则放行，避免 pending 项无法解决时无限循环
 3. **verify guard**（opt-in `verifyGuard: true`，工程模式除外）：改过代码未 verify → 推回调 verify（≤2 次）；verify 失败 → 推回修复（≤3 次）；耗尽 → 诚实声明提醒（必须说明哪些测试失败/试了什么/根因）
-4. **advisor guard**（opt-in `advisor.guard === true`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 轮，收敛协议见 ADVISOR-CONVERGENCE.md）。advisor 评审能力本身**恒启用**（不依赖任何开关，未配 advisor.provider 时评审继承主 provider）——`advisor.enabled` 字段已废弃（2026-08-21 语义重构，见下）。**guard 是会话级（2026-08-29）**：初值优先读会话槽位（`/advisor` guard 切换、`saveSession`/`applySession` 往返 `data.advisor.guard`），config.json `agent.advisor.guard` 退为兼容镜像——详见 ENGINEERING-MODE.md「会话级模式开关」段（同一机制的权威描述）。
+4. **advisor guard**（opt-in `advisor.guard === true`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 轮，收敛协议见 ADVISOR-CONVERGENCE.md）。advisor 评审能力本身**恒启用**（不依赖任何开关，未配 advisor.provider 时评审继承主 provider）——`advisor.enabled` 字段已废弃（2026-08-21 语义重构，见下）。**guard 是会话级（2026-08-29）**：初值优先读会话槽位（`/advisor` guard 切换、`saveSession`/`applySession` 往返 `data.advisor.guard`），config.json `agent.advisor.guard` 退为兼容镜像——详见 ENGINEERING-MODE.md §5「配置与会话恢复」（同一机制的权威描述——评审 round3 #5 节题对齐）。
 5. 通过 → pushReal assistant 回复 + 返回 content
 
 ## 6. 回合后注入（post-turn.mjs）
@@ -88,7 +88,7 @@ PreToolUse hooks → 阻断
 - 流式 relay：`role#id/` 前缀 token 转发给父回调。**TUI 消费端沿革**：2026-08-21 为 subTasks 窄带（连字符正则修复 `/^(\w+)#(\d+)\//` → `/^([\w-]+)#(\d+)\//`——`\w` 不含连字符，`eng-coder#N/` 漏路由致带前缀 token 落入主流刷屏；test/agent-turn.test.mjs 4 断言）；2026-08-29 起 §7.2 D4 定稿：消费端改为会话流内可折叠区块、窄带退役——上述断言随 §7.2 实现按 T-B/T-H 演进，前缀格式与正则不变（round3 #2 压缩为一行沿革）。VS Code 无此机制（子 agent 走 onToolPanel 通道），不涉及。
 - 报告契约：<200 字符视为交接不完整，打回扩写一次（`MIN_REPORT_CHARS`）；超长报告落盘全量保留
 - 权限：手动模式下子代理的非只读工具透传到父 agent 的权限审批（人在回路）
-- eng-coder：设计 token 门控（`_engDesignToken`，评审通过后签发，跨 turn 存活；子代理授权在 spawn 前校验）
+- eng-coder：设计 token 门控（designId 多槽 `_engDesignTokens`——评审通过 token 入槽、advisor 结果回显 designId；兼容单槽 `_engDesignToken` 镜像；权威源见 ENGINEERING-MODE.md §2.6——评审 #4）
 ### 7.1 子代理工具描述：角色能力矩阵 + 委派动机（2026-08-28）
 
 **需求**（用户研究驱动）：父模型从 subagent 工具 description 只能拿到一行角色标签（explore/plan/coder/eng-coder 各一句），缺"角色×工具×注入×报告契约"能力对照与委派动机——该用哪个角色、为何委派靠猜；且 description 泄漏开发注释（`ENUM IS OVERRIDDEN IN setup.mjs PER ENGINEERING MODE`）。对照参考项目（kimi-code profile 描述动态渲染 / opencode registry"可见性=权限"）+ ThinCoder 既有机制（§7：多角色 overlay、只读过滤、git 注入、报告契约、delivery 表）定案。
@@ -152,7 +152,7 @@ runAgent turn 循环内 `agent._currentTurn` 更新处（`src/agent.mjs`，D2 em
 **D4 TUI 渲染：子agent 活动区块 = 会话流内可折叠块（退役窄带）**
 
 复用现有两套机制拼装，不新造渲染器：
-- **运行态（会话流内联）**：`state.subTasks[key]` 升级为完整活动缓冲 `{ key, role, model, started, done, blocks: [{kind,text}], currentTool, turn, maxTurns, lastError }`。onToken/onReasoning/onToolCall 前缀分支改写：reasoning token **追加进 blocks**（kind=think，不再丢弃）；onToolCall 更新 currentTool 并开新 block（kind=tool）；onToolOutput 带前缀分支把 chunk 追加进当前 tool block（保留换行结构）；turn 事件 token 更新 turn/maxTurns。onToolResult(subagent) 不再 3 秒删除，改为标记 done（头部 ✓）。
+- **运行态（会话流内联）**：`state.subTasks[key]` 升级为完整活动缓冲 `{ key, role, model, started, done, blocks: [{kind,text}], currentTool, turn, maxTurns, approval, lastError }`（**approval 字段补列——§7.2.1 D2 ⏸ 图标的承载字段，由 `routeSubToken` 事件解析维护，评审 #9 结构定义补齐**）。onToken/onReasoning/onToolCall 前缀分支改写：reasoning token **追加进 blocks**（kind=think，不再丢弃）；onToolCall 更新 currentTool 并开新 block（kind=tool）；onToolOutput 带前缀分支把 chunk 追加进当前 tool block（保留换行结构）；turn 事件 token 更新 turn/maxTurns。onToolResult(subagent) 不再 3 秒删除，改为标记 done（头部 ✓）。
 - **落位（渲染）**：子agent 区块渲染进会话流（render-conversation.mjs 新增 subagent blocks 段，位于 advisorBlocks 段之前），**段首带一条与会话区切分的分隔线**（`─` × cols-1，dim，与 task 面板顶部线同款，2026-08-30 用户要求；仅当存在运行中区块时出现——done 块已冻结进会话流，空段不留悬空线）：折叠态 = 头部摘要行 `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`（运行中 elapsed 由 1s ticker 刷新）+ tail 3 行（blocks 尾部；2026-08-30 用户拍板 2→3）；展开态 = blocks 全量按 kind 着色（think=C.reason、tool=C.tool、text=C.text），**经公共组件 fold-block.mjs renderBlockTimeline + renderExpandedBlock 渲染，展开封顶屏幕 60% + 底部可达折叠控制行（2026-08-30 用户报告驱动，TUI.md §5）**。展开/折叠走 expandedBlocks 集合（key=`sub-${key}`）+ `toggleFoldBlock` 单源切换。默认折叠；同一 key 折叠状态跨 turn 保持（expandedBlocks 不随 turn 清理该前缀）。**【§7.2.1 已变更：运行中区块迁至固定底部面板（会话与 todo 之间）——本段"会话流内联"仅指冻结态落位；运行态见 §7.2.1 D2（评审 #4 supersede 指针）】**
 - **完成态（2026-08-30 修订：冻结进对话流 + 保留独立折叠交互，废除尾部驻留）**：初版实现把区块渲染成会话末尾的固定段且 done 后保留——完成的 ✓ 块永远钉在输入框上方（"残影"，用户报告），多子agent 还会叠加。修订：onToolResult 标记 done 后，完成冻结家族（`subagent-blocks.mjs` freezeSubTaskLines/freezeDoneSubTasks，2026-08-30 自 agent-turn 归位）把整个区块（含 blocks/lastError/耗时）作为 `_frozenSubTask` 载体行存进 `state.lines` 并从 `state.subTasks` 删除——留痕随会话滚走，内存仍受 N2 环形上限约束。**冻结区块保持完整折叠交互（用户拍板 2026-08-30：不因冻结降级）**：render-conversation 识别载体行后按 `sub-${key}`（与运行中区块同一个 key，折叠状态跨冻结边界延续）渲染——折叠态 = `▶ [✓ coder#1 · model · done 45s · turn n/max] … click to expand` + tail 3 行；展开态 = `▼` 控制行 + 全量时间线（kind 着色，`_skipDimFold` 防连续 dim 折叠套叠）；点击 ▶/▼ 切换与运行中区块一致。尾部固定段只渲染**运行中**条目（done 条目若因旧会话残留出现也跳过不渲染）；finally 兜底把中断（Ctrl+C/错误）仍在跑的区块一并冻结（lastError=interrupted）。完整报告前 8 行预览仍由 onToolResult 路径进会话流（不变）。convCacheKey 的 frozenSig 记录载体行 key 集合（展开/折叠翻转由既有 `exp` 项覆盖）。
 - **窄带退役**：layout.mjs 删除 subPanelH/panels.subagent 槽；render-frame.mjs 删除 renderSubagent；agent-turn.mjs 删除 3 秒清理定时器。`state.subTasks` 名字保留（数据结构升级，消费端换了）。
@@ -249,9 +249,9 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 **设计（2026-09-01）**：
 
-**D1 · 布局（layout.mjs）**：新增 `panels.subagent` 条件面板（运行中区块存在时），位于 conversation 之后 todo 之前。**高度预计算复用既有模式**（与 visibleTasks/permPreviewLines 同型）：layout 内调 `renderSubagentPanel(state, cols)`（纯函数）得 `subagentLines` → `subagentH = subagentLines.length`（完全自适应——所有运行中区块折叠头+tail3 或展开态全量；展开态经 renderExpandedBlock 的 60% 封顶窗口化，输出行数即面板高度）——layout 返回 subagentLines 供 render-frame 直接 put（不重复渲染）。**`renderSubagentPanel` 放中立模块**（不引入 layout↔render-frame 循环依赖——评审 #6：置于既有无环模块或 fold-block 同层）
+**D1 · 布局（layout.mjs）**：新增 `panels.subagent` 条件面板（运行中区块存在时），位于 conversation 之后 todo 之前。**高度预计算复用既有模式**（与 visibleTasks/permPreviewLines 同型）：layout 内调 `renderSubagentPanel(state, cols, maxRows)`（纯函数——签名与受影响文件表统一，评审 #8）得 `subagentLines` → `subagentH = subagentLines.length`（完全自适应——所有运行中区块折叠头+tail3 或展开态全量；展开态经 renderExpandedBlock 的 60% 封顶窗口化，输出行数即面板高度）——layout 返回 subagentLines 供 render-frame 直接 put（不重复渲染）。**`renderSubagentPanel` 放中立模块**（不引入 layout↔render-frame 循环依赖——评审 #6：置于既有无环模块或 fold-block 同层）
 
-**D2 · 渲染迁移（render-conversation.mjs / render-frame.mjs）**：runningSubs 段（`buildConvLines` 的 subagent blocks 段：分隔线 + 区块循环——评审 #3 改符号引用）从 buildConvLines **移除**，迁移为 `renderSubagentPanel(state, cols)`（复用同一区块渲染逻辑：折叠头 `[▶/⏸ key · model · elapsed · turn] state`——**⏸ = 等待审批态图标**（sub.approval 非空时显示），评审 #5 定义；`[✓ …]` 为冻结态（图标在括号内，与运行头格式统一）+ tail 3 / 展开 renderBlockTimeline+renderExpandedBlock；顶部一条 `─` 分隔线——现状语义迁移，`if (panels.subagent) put(panels.subagent.y, subagentLines)`（**layout 预计算行，不重复渲染——与 D1 一致，评审 #3 对齐措辞**）于 conversation 之后 todo 之前）。frozen 段（state.lines `_frozenSubTask`）保持流内不动。
+**D2 · 渲染迁移（render-conversation.mjs / render-frame.mjs）**：runningSubs 段（`buildConvLines` 的 subagent blocks 段：分隔线 + 区块循环——评审 #3 改符号引用）从 buildConvLines **移除**，迁移为 `renderSubagentPanel(state, cols, maxRows)`（签名与 D1/受影响文件表统一——评审 #8；复用同一区块渲染逻辑：折叠头 `[▶/⏸ key · model · elapsed · turn] state`——**⏸ = 等待审批态图标**（sub.approval 非空时显示），评审 #5 定义；`[✓ …]` 为冻结态（图标在括号内，与运行头格式统一）+ tail 3 / 展开 renderBlockTimeline+renderExpandedBlock；顶部一条 `─` 分隔线——现状语义迁移，`if (panels.subagent) put(panels.subagent.y, subagentLines)`（**layout 预计算行，不重复渲染——与 D1 一致，评审 #3 对齐措辞**）于 conversation 之后 todo 之前）。frozen 段（state.lines `_frozenSubTask`）保持流内不动。
 
 **D3 · 压缩链（layout.mjs）**：subagent 面板加入 fixedH；溢出时**面板最先让位**（可压至 0 隐藏，缓冲区不丢数据；输入框/状态栏/会话区不可挤没——用户 NF1，评审 #2 措辞统一）——压缩顺序：**subagent 面板 → 会话区 → picker → permission → todo divider**。
 
@@ -270,8 +270,8 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | `src/tui/render-frame.mjs` | +put 调用（conversation 之后 todo 之前，put layout 预计算的 subagentLines，对象行转 ANSI 字符串） |
 | `src/tui/mouse.mjs` | +面板区命中映射：handleWheel（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldBlock`/`_foldTotal` 标记 → scrollFoldBlock；未命中 → 穿出滚会话）；handleMouseClick（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldToggle` 折叠/展开、`_foldScrollUp/_foldScrollDown` 翻窗） |
 | `docs/design/TUI.md` | 布局段 + **模块地图 + §4/§5 同步更新**（评审 #4：模块地图 render-conversation 行"子agent/advisor 折叠块渲染"、§4"子代理活动现为会话流内可折叠区块"、§5"运行区块段首分隔线（render-conversation subagent blocks 段首）"——按 TUI.md 模块地图随实现同步回写纪律） |
-| 两端 `CHANGELOG.md` | 行为变更记录（评审 #5——与 §14 及既有提示词/行为变更段惯例对齐） |
-| 测试：`test/tui.test.mjs`（layout 槽位/空态/压缩链/面板渲染/缓存）+ `test/mouse.test.mjs`（面板点击/滚轮）——按既有测试结构放置（layout 测试现居 tui.test.mjs）；**实现时审计行数**（评审 #7：layout/render-frame/mouse 若超 500 硬限先拆分再报） | 新用例 T1-T9；`test/render-loop.test.mjs` T-H 源锁正则修订（layout 禁词表移除 `panels\.subagent`，subPanelH/output 禁词保留） |
+| `CHANGELOG.md` | CLI 行为变更记录（评审 #5——VS Code 端不涉及，不记其 CHANGELOG） |
+| 测试：`test/tui.test.mjs`（layout 槽位/空态/压缩链/面板渲染/缓存）+ `test/mouse.test.mjs`（面板点击/滚轮）——按既有测试结构放置（layout 测试现居 tui.test.mjs）；**实现时审计行数**（评审 #7：layout/render-frame/mouse 若超 500 硬限先拆分再报；**render-conversation.mjs 改后仍超限（TODO 实测 573）——merge 前完成 frozen/tool-block 段拆分或按 TODO 条目单独收口，评审 #6**） | 新用例 T1-T9；`test/render-loop.test.mjs` T-H 源锁正则修订（layout 禁词表移除 `panels\.subagent`，subPanelH/output 禁词保留） |
 
 **验收标准**：
 1. 面板位于会话与 todo 之间；会话滚动（滚轮/PgUp/流式）面板位置不动

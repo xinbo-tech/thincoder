@@ -130,7 +130,12 @@ export const advisorTool = {
     // Generate the design token BEFORE the review and inject it into the advisor's prompt.
     // The advisor (LLM) decides pass/fail itself and echoes the token only on approval —
     // the gate is a mechanical string match, not fragile semantics parsing.
+    // A random designId is minted for EVERY design-review call (2026-09-01 multi-design
+    // slots): on pass the token is stored in parent._engDesignTokens keyed by this id and
+    // the id is echoed to the parent; on failure the id is dropped — never stored, so it
+    // cannot clobber any other design's slot. Not a document anchor (rejected 2026-08-31).
     const designToken = reviewType === "design" ? generateDesignToken(agent) : null
+    const designId = reviewType === "design" ? randomUUID() : null
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
@@ -144,6 +149,11 @@ export const advisorTool = {
       if (designToken && result && tokenPattern.test(result)) {
         // Advisor echoed the token → review passed. Issue it to the parent for eng-coder.
         // (session cleanup for design reviews is owned by runAdvisorReview)
+        // Multi-design slots (2026-09-01): store under this review's designId; the single
+        // `_engDesignToken` mirror stays for the legacy boolean gates (dispatch "has token",
+        // session persistence) — key decision ② of ENGINEERING-MODE.md §7 2026-09-01.
+        agent._engDesignTokens ??= new Map()
+        agent._engDesignTokens.set(designId, designToken)
         agent._engDesignToken = designToken
         // Unlock the dispatch design gate (dispatch.mjs) for eng-coder SELF-review:
         // an eng-coder whose own design review passed may write files without the
@@ -156,16 +166,16 @@ export const advisorTool = {
         if (agent._role === "eng-coder") agent._engDesignReviewed = true
         // Strip the bracketed token so only ONE unambiguous format (plain UUID) reaches the main agent
         const cleanResult = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-        return `${cleanResult}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${designToken}`
+        // designId rides the Approved block (review #1): the parent needs it to aim the FIRST
+        // eng-coder spawn when several designs live in the same session.
+        return `${cleanResult}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${designId} (pass as the designId parameter when spawning eng-coder; optional while this session holds a single design)`
       }
-      // Review failed (or advisor chose not to pass) → invalidate any previously-issued token.
-      // Guards (v2 2026-08-25): result === null means the review was SKIPPED (advisor disabled /
-      // not engineering mode) — must not revoke. An error reply (own "Advisor:" prefix — the
-      // error-return convention of runAdvisorReview) is a provider crash/timeout artifact, not
-      // a completed verdict — a network glitch must not revoke unrelated standing tokens.
-      // Only a COMPLETED review that did not pass revokes.
-      const isCompletedReview = result !== null && !result.startsWith("Advisor:")
-      if (isCompletedReview) agent._engDesignToken = null
+      // Review failed (or advisor chose not to pass) → do NOT touch ANY slot (方案 ②, review #2:
+      // a failed RE-review leaves the previously approved token alive until TTL; the failed call's
+      // own designId was never stored, so there is nothing to clear). Isolation (2026-08-30,
+      // extended to the multi-slot Map 2026-09-01): a network glitch must not clear / other
+      // designs' slots must not be affected — only a COMPLETED non-passing review lands here,
+      // and it revokes nothing.
       // Strip every dead token occurrence from the raw output so the main agent can't grab an invalid one
       if (result) {
         const stripped = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()

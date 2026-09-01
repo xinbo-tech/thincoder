@@ -159,6 +159,62 @@ test("saveSession stamps the live engineering/advisor config into the slot every
   } finally { cleanup(cwd) }
 })
 
+// ─── 3b. 多槽 token 序列化往返（2026-09-01 审计 #1 修复） ────────
+
+describe("multi-slot token serialization — saveSession/applySession round-trip (audit #1)", () => {
+  test("two slots survive save → load → apply as a Map (fix #1 acceptance 1)", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "tc-save-slots-"))
+    try {
+      const agent = makeAgent(cwd)
+      agent.config.agent.engineering = true
+      agent._engDesignTokens = new Map([["id-a", "tok-a"], ["id-b", "tok-b"]])
+      saveSession(agent)
+      const raw = JSON.parse(readFileSync(`${slotBase(cwd)}.${activeSlot(cwd)}`, "utf8"))
+      assert.deepEqual(raw.engDesignTokens, { "id-a": "tok-a", "id-b": "tok-b" }, "slot file carries the {designId: token} object")
+      const fresh = makeAgent(cwd)
+      applySession(fresh, loadSession(cwd))
+      assert.ok(fresh._engDesignTokens instanceof Map, "restored as a Map")
+      assert.equal(fresh._engDesignTokens.size, 2, "both slots restored")
+      assert.equal(fresh._engDesignTokens.get("id-a"), "tok-a")
+      assert.equal(fresh._engDesignTokens.get("id-b"), "tok-b")
+    } finally { cleanup(cwd) }
+  })
+
+  test("cleared/absent Map → slot has NO engDesignTokens field → restore sets none (back-compat)", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "tc-save-slots-0-"))
+    try {
+      // eng exit cleared the Map (fix #2) → the next save must drop the field, not resurrect
+      const agent = makeAgent(cwd)
+      agent._engDesignToken = null
+      agent._engDesignTokens = new Map()
+      saveSession(agent)
+      const raw = JSON.parse(readFileSync(`${slotBase(cwd)}.${activeSlot(cwd)}`, "utf8"))
+      assert.equal("engDesignTokens" in raw, false, "empty Map serializes to no field (no resurrection)")
+      const fresh = makeAgent(cwd)
+      applySession(fresh, loadSession(cwd))
+      assert.equal(fresh._engDesignTokens, undefined, "no field → no Map (fresh state)")
+    } finally { cleanup(cwd) }
+  })
+
+  test("LEGACY slot without engDesignTokens → restore sets no Map, single token still restored (compat lock)", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "tc-apply-slots-legacy-"))
+    try {
+      const agent = makeAgent(cwd)
+      agent._engDesignToken = "tok-legacy"
+      saveSession(agent)
+      const p = `${slotBase(cwd)}.${activeSlot(cwd)}`
+      const data = JSON.parse(readFileSync(p, "utf8"))
+      delete data.engDesignTokens // simulate a pre-2026-09-01 slot file
+      mkdirSync(dirname(p), { recursive: true })
+      writeFileSync(p, JSON.stringify(data))
+      const fresh = makeAgent(cwd)
+      applySession(fresh, loadSession(cwd))
+      assert.equal(fresh._engDesignTokens, undefined, "no field → no Map, no error")
+      assert.equal(fresh._engDesignToken, "tok-legacy", "single-value token restore unchanged")
+    } finally { cleanup(cwd) }
+  })
+})
+
 // ─── 4. /advisor guard toggle dual-writes the slot ──────────────
 
 describe("cmd-advisor — guard toggle dual-writes the session slot and the config mirror", () => {

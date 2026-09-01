@@ -428,6 +428,8 @@ test("F3: resetSessionState clears every session-scoped field (/new 泄漏回归
   assert.equal(agent.title, "")
   assert.equal(agent._sessionStart, null)
   assert.equal(agent._engDesignToken, null)
+  assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
+    "multi-design slots cleared too (2026-09-01 fix #2 — /new kills the whole slot set)")
   assert.equal(agent._runStartHistoryLen, 0)
   assert.equal(agent._lastPromptTokens, null)
   assert.equal(agent._usageAtLen, null)

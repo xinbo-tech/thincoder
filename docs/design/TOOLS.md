@@ -206,7 +206,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **① insert_after 精确判定**（消摩擦、护栏保留）：写入工具（write/edit/insert_after/hashline_edit）记录**受影响区** `lastWrite = { type, startLine, shift }`——`insert_after` 判定精确化：`after_line` 在**未受影响区**（≤ startLine）→ **允许**（行号未漂移——消掉"我写的文件被当外部修改必须重 read"）；在**受影响区内** → **拒绝**（护栏保留，错误消息含"was modified since your last read"子串向后兼容）；**write 全文重写** → 任何 after_line 拒绝。`read` 同时清 dirty + 写入快照（新视图以 read 为准）。**vscode 端不适用**（无 dirty 机制——getOpenDoc/磁盘读总是最新，行号漂移问题不存在）。
 
-**② edit 数组形态**：`edit(edits: [{path, old_string, new_string, replace_all?}, ...])`——**一次多文件原子替换**（先全量检查所有替换可执行，任一失败全不写），与单文件参数互斥。CLI + vscode 双端（vscode 沿用 doc/磁盘双路径，EOL 保持原样）。
+**② edit 数组形态**：`edit(edits: [{path, old_string, new_string, replace_all?}, ...])`——**一次多文件原子替换**（先全量检查所有替换可执行，任一失败全不写），与单文件参数互斥。CLI + vscode 双端（vscode 沿用 doc/磁盘双路径，EOL 保持原样）。**同文件多条规则（2026-09-01 缺陷修复）**：同一 path 的多条编辑按序**串行累积应用**（第 n 条基于前 n-1 条已应用的内容检查与替换）；跨 path 条目仍并行原子。任一条失败 → 全不写（原子性保留）。
 
 **③ dispatch console 回显**（见 AGENT-LOOP.md §4 dispatch 段）：工具执行期间的 `console.log`/`console.error` 收集后附在工具结果后回显给模型（原只到终端、模型看不到）；异常路径（工具抛错前的探查输出——调试最有价值）同样回显。
 

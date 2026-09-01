@@ -15,6 +15,7 @@ import { loadSkills, formatSkillListing, readSkill } from "../src/skills.mjs"
 import { historyToTranscript, saveCandidate } from "../src/distill.mjs"
 import { planTool, goalTool, verifyTool } from "../src/agent-tools.mjs"
 import { isPrivateHost, isDestructiveCommand } from "../src/tools/shared.mjs"
+import { lastWriteOf } from "../src/tools/file.mjs"
 
 function freshMemory() {
   return createMemory({ dbPath: ":memory:" })
@@ -2122,6 +2123,197 @@ test("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换�
 })
 
 test("edit 数组形态：与 path/old_string/new_string 互斥", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-mutex-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "a.mjs", content: "const A = 1\n" }, ctx)
+    await assert.rejects(
+      () => byName.edit.execute({
+        path: "a.mjs",
+        old_string: "const A = 1",
+        new_string: "const A = 2",
+        edits: [{ path: "a.mjs", old_string: "const A = 1", new_string: "const A = 3" }],
+      }, ctx),
+      /mutually exclusive/,
+      "数组与单文件参数互斥"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组：同文件多条串行累积（2026-09-01 缺陷修复——后者不再静默覆盖前者）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-samefile-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    // T-a：同文件两条 edits（互不重叠区域）→ 两条都生效
+    await byName.write.execute({ path: "f.mjs", content: "const A = 1\nconst B = 2\nconst C = 3\n" }, ctx)
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    const r = await byName.edit.execute({
+      edits: [
+        { path: "f.mjs", old_string: "const A = 1", new_string: "const A = 10" },
+        { path: "f.mjs", old_string: "const B = 2", new_string: "const B = 20" },
+      ],
+    }, ctx)
+    assert.equal((r.match(/Edited f\.mjs: replaced 1 occurrence\(s\)/g) || []).length, 2, "两条都回显")
+    const final = await byName.read.execute({ path: "f.mjs" }, ctx)
+    assert.ok(final.includes("const A = 10"), "第一条生效")
+    assert.ok(final.includes("const B = 20"), "第二条生效（修复前被第一条覆盖静默丢失）")
+    assert.ok(final.includes("const C = 3"), "未编辑行不动")
+
+    // T-b：同文件第二条 old_string not found → 原子失败全不写
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    await assert.rejects(
+      () => byName.edit.execute({
+        edits: [
+          { path: "f.mjs", old_string: "const A = 10", new_string: "const A = 100" },
+          { path: "f.mjs", old_string: "NOT FOUND", new_string: "x" },
+        ],
+      }, ctx),
+      /edit aborted \(atomic — no files written\)/,
+      "同文件原子失败"
+    )
+    const afterAbort = await byName.read.execute({ path: "f.mjs" }, ctx)
+    assert.ok(afterAbort.includes("const A = 10"), "失败后第一条未写入（全不写）")
+
+    // T-c：行偏移累积——第一条在头部 +2 行，第二条的行号基于累积内容计算；
+    // recordWrite 合并快照（startLine=组内最靠上受影响行，shift=全组净漂移）
+    // → 受影响区护栏覆盖两条编辑之间的行区，insert_after 不误判
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    const r2 = await byName.edit.execute({
+      edits: [
+        { path: "f.mjs", old_string: "const A = 10", new_string: "// 头部注释一\n// 头部注释二\nconst A = 100" },
+        { path: "f.mjs", old_string: "const B = 20", new_string: "const B = 200" },
+      ],
+    }, ctx)
+    assert.equal((r2.match(/Edited f\.mjs/g) || []).length, 2, "两条都回显")
+    // 快照与护栏断言必须在 read 之前——read 会清 lastWrite（新视图以 read 为准）
+    const lw = lastWriteOf(join(dir, "f.mjs"))
+    assert.equal(lw.type, "edit", "recordWrite 快照存在")
+    assert.equal(lw.startLine, 1, "合并快照 startLine = 组内最靠上的受影响行")
+    assert.equal(lw.shift, 2, "合并快照 shift = 全组净行数差（+2）")
+    await assert.rejects(
+      () => byName.insert_after.execute({ path: "f.mjs", after_line: 3, content: "x" }, ctx),
+      /行号已漂移/,
+      "受影响区（含累积偏移）内 insert_after 拒绝——两条编辑之间的行区护栏无缺口"
+    )
+    const content = readFileSync(join(dir, "f.mjs"), "utf8")
+    assert.ok(content.includes("// 头部注释一\n// 头部注释二\nconst A = 100"), "第一条生效（+2 行）")
+    assert.ok(content.includes("const B = 200"), "第二条生效（行号基于累积内容）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组：合并快照 startLine 取组内最靠上行（#2——逆序条目护栏无缺口）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-reverse-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    // 逆序组：第一条在 L3，第二条在 L1（调用序在后、行号更靠上）
+    await byName.write.execute({ path: "f.mjs", content: "const A = 1\nconst B = 2\nconst C = 3\n" }, ctx)
+    await byName.read.execute({ path: "f.mjs" }, ctx)
+    await byName.edit.execute({
+      edits: [
+        { path: "f.mjs", old_string: "const C = 3", new_string: "const C = 30" },
+        { path: "f.mjs", old_string: "const A = 1", new_string: "const A = 10\nconst A2 = 11" },
+      ],
+    }, ctx)
+    // 快照与护栏断言必须在 read 之前——read 会清 lastWrite（新视图以 read 为准）
+    const lw = lastWriteOf(join(dir, "f.mjs"))
+    assert.equal(lw.type, "edit", "recordWrite 快照存在")
+    assert.equal(lw.startLine, 1, "startLine = Math.min(组内所有 editStartLine) = 1（修复前 = 首条的 3）")
+    // 护栏：受影响区（startLine=1 起）内 insert_after 拒绝——修复前 startLine=3 时 after_line=2 被放行
+    await assert.rejects(
+      () => byName.insert_after.execute({ path: "f.mjs", after_line: 2, content: "x" }, ctx),
+      /行号已漂移/,
+      "受影响区内 insert_after 拒绝（护栏下界回到组内最靠上行）"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组：.mjs 引入语法错误时结果含语法检查输出（#4——与单文件路径格式对齐）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-syntax-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "g.mjs", content: "const G = 1\n" }, ctx)
+    const r = await byName.edit.execute({
+      edits: [{ path: "g.mjs", old_string: "const G = 1", new_string: "const G = (" }],
+    }, ctx)
+    assert.ok(r.includes("Edited g.mjs"), "编辑成功回显")
+    assert.match(r, /Syntax: FAILED/, "数组路径结果附语法检查输出（修复前缺失）")
+    // 单文件路径对照——同一坏文件的后续单条编辑，格式一致
+    const single = await byName.edit.execute({ path: "g.mjs", old_string: "const G = (", new_string: "const G = )" }, ctx)
+    assert.match(single, /Syntax: FAILED/, "单文件路径同款输出（对照）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit：new_string 非字符串在写盘前友好报错（#5——不再先写 'undefined' 再 TypeError）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-newstring-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "f.mjs", content: "const A = 1\n" }, ctx)
+    // 单文件：new_string 缺失（undefined）
+    await assert.rejects(
+      () => byName.edit.execute({ path: "f.mjs", old_string: "const A = 1" }, ctx),
+      /new_string must be a string/,
+      "单文件 undefined → 友好错误",
+    )
+    // 单文件：非字符串类型
+    await assert.rejects(
+      () => byName.edit.execute({ path: "f.mjs", old_string: "const A = 1", new_string: 42 }, ctx),
+      /new_string must be a string/,
+      "单文件非字符串 → 友好错误",
+    )
+    // 数组路径：同款校验
+    await assert.rejects(
+      () => byName.edit.execute({ edits: [{ path: "f.mjs", old_string: "const A = 1" }] }, ctx),
+      /new_string must be a string/,
+      "数组 undefined → 友好错误",
+    )
+    // 写盘前拒绝——文件未被损坏成 "undefined"
+    const after = await byName.read.execute({ path: "f.mjs" }, ctx)
+    assert.ok(after.includes("const A = 1"), "文件未被写（错误在写盘前抛出）")
+    assert.ok(!after.includes("undefined"), "没有 'undefined' 字面量被写入")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
+test("edit 数组：跨文件条目行为不变（回归——同文件修复不影响多文件原子语义）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-cross-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "a.mjs", content: "const A = 1\nconst A2 = 11\n" }, ctx)
+    await byName.write.execute({ path: "b.mjs", content: "const B = 2\n" }, ctx)
+    await byName.read.execute({ path: "a.mjs" }, ctx)
+    await byName.read.execute({ path: "b.mjs" }, ctx)
+    const r = await byName.edit.execute({
+      edits: [
+        { path: "a.mjs", old_string: "const A = 1", new_string: "const A = 10" },
+        { path: "a.mjs", old_string: "const A2 = 11", new_string: "const A2 = 110" },
+        { path: "b.mjs", old_string: "const B = 2", new_string: "const B = 20" },
+      ],
+    }, ctx)
+    assert.ok(r.includes("Edited a.mjs") && r.includes("Edited b.mjs"), "两个文件都回显")
+    const fa = await byName.read.execute({ path: "a.mjs" }, ctx)
+    const fb = await byName.read.execute({ path: "b.mjs" }, ctx)
+    assert.ok(fa.includes("const A = 10") && fa.includes("const A2 = 110"), "a.mjs 同文件两条都生效")
+    assert.ok(fb.includes("const B = 20"), "b.mjs 独立生效")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
 
 test("写入工具返回带上下文窗口（2026-08-31 工具顺手度——模型拿到行号锚点的语义自检）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-write-ctx-"))
@@ -2164,28 +2356,6 @@ test("write 全文重写不附上下文（无行号锚点——模型刚写的�
     rmSync(dir, { recursive: true, force: true })
   }
 })
-
-  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-mutex-"))
-  const ctx = { cwd: dir }
-  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
-  try {
-    await byName.write.execute({ path: "a.mjs", content: "x\n" }, ctx)
-    await assert.rejects(
-      () => byName.edit.execute({
-        path: "a.mjs",
-        old_string: "x",
-        new_string: "y",
-        edits: [{ path: "a.mjs", old_string: "x", new_string: "y" }],
-      }, ctx),
-      /mutually exclusive/,
-      "数组与单文件参数互斥"
-    )
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
-})
-
-
 
 // ---------------------------------------------------------------- grep regex validation
 

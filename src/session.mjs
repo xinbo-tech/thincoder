@@ -116,6 +116,12 @@ export function saveSession(agent) {
     autoApprove: agent.autoApprove ?? false,
     engineering: agent.config?.agent?.engineering ?? false,
     engDesignToken: agent._engDesignToken ?? null,
+    // Multi-design slots ride the same round-trip (2026-09-01 audit #1): Map → {designId: token}
+    // (JSON-safe). Empty/absent Map → undefined → the key is dropped by JSON.stringify, so a
+    // cleared session writes NO field instead of resurrecting slots from the previous save.
+    engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
+      ? Object.fromEntries(agent._engDesignTokens)
+      : undefined,
     goal: agent.goal ?? null,
     advisor: agent.config?.advisor ?? null,
     pendingReminders: agent._pendingReminders ?? [],
@@ -315,6 +321,14 @@ export function applySession(agent, data) {
   agent._pendingReminders = data.pendingReminders ?? []
   agent._sessionStart = data.sessionStart ?? null
   agent._engDesignToken = data.engDesignToken ?? null
+  // Multi-design slots restore from the {designId: token} object (2026-09-01 audit #1). A legacy
+  // slot without the field restores NO Map (fresh state) — never resurrect slots the writer did
+  // not have. Expired tokens are rejected downstream by validateDesignToken (fail-closed, TTL).
+  if (data.engDesignTokens && typeof data.engDesignTokens === "object" && !Array.isArray(data.engDesignTokens)) {
+    agent._engDesignTokens = new Map(Object.entries(data.engDesignTokens))
+  } else {
+    delete agent._engDesignTokens
+  }
   // engineering is session-level (2026-08-29): the slot value is the CLI session's authority
   // — config.json is only the initial default / cross-end mirror. A legacy slot without the
   // field keeps whatever config.json seeded (unchanged behavior).
@@ -429,6 +443,7 @@ export function resetSessionState(agent) {
   agent.tasks = []
   agent._sessionStart = null
   agent._engDesignToken = null
+  agent._engDesignTokens = new Map() // multi-design slots die with the session (2026-09-01 fix #2)
   agent._compressFailures = 0
   agent._verifyRetries = 0
   agent._verifyPassed = undefined

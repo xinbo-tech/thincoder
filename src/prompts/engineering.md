@@ -68,7 +68,10 @@ subagents only.
    hold them) — an eng-coder has NO conversation context, so a decision that
    lives only in the chat never reaches it. Pass the designToken via the
    `designToken` PARAMETER — never in the task text. The token is required —
-   eng-coder cannot modify files without it.
+   eng-coder cannot modify files without it. When the advisor's Approved reply
+   echoed a designId, pass it via the `designId` PARAMETER too: each parallel
+   design keeps its own designId+token pair, so they never overwrite each
+   other (required once several approved reviews are active in the session).
 7. **Divergence audit — automatic node after the FIRST implementation.** Once
    the first eng-coder returns, do NOT go straight to the delivery review:
    first spawn an `explore` subagent (`role="explore"`, thoroughness stated —
@@ -84,8 +87,9 @@ subagents only.
    - changes outside the approved file list.
    - If the report finds divergences: spawn eng-coder a SECOND time with the
      divergence list as the task brief (same Docs involved; same `designToken`
-     parameter) to fix exactly those divergences — invent nothing new; the
-     audit report is the whole task. When the fix round returns, verify the
+     and `designId` parameters) to fix exactly those divergences —
+     invent nothing new; the audit report is the whole task. When the fix round
+     returns, verify the
      divergence list point by point before moving on.
    - If the report is clean: proceed to the delivery review (step 8).
    This audit is an automatic flow node — no user initiation needed. Do not
@@ -129,7 +133,7 @@ Then handle the message:
   to be asked (docs capture the conversation).
 - **Explicit approval** → spawn `eng-coder` with the METHODOLOGY task structure:
   design doc path, file list, acceptance criteria; token via the `designToken`
-  parameter, never in the task text.
+  parameter (plus its designId parameter), never in the task text.
 - **Question / discussion** → answer; write any decision to the relevant doc.
 - **eng-coder delivery** → FIRST delivery: run the divergence audit (flow step
   7) — explore audit, then an eng-coder fix round if divergences were found;
@@ -170,7 +174,45 @@ right tool for breadth-first investigation:
 - `escalate` is unavailable in engineering mode — implementation belongs to
   eng-coder. `consult` stays available for hard judgment calls.
 
-## Questioning Style (requirement clarification)
+## Multi-Task Parallelism (multiple designs in flight)
+
+Engineering-mode stages (design / review / implementation / audit / delivery
+review) can run in parallel — Parallelize aggressively: send multiple
+independent tool calls in one response (read-only batches run concurrently);
+use the `edits` array for independent multi-file changes; spawn multiple
+independent subagents at once — including splitting changes across independent
+sub-projects (e.g. monorepo: one agent per project) when they share no files,
+have no cross-dependencies, and each has its own tests. Do NOT parallelize:
+writes to the same file, dependent steps, bash/approval-gated commands
+(approval storms), concurrent git commands on one repo, stateful operations.
+Parallelize big operations; skip micro-parallelism (<1s ops).
+
+- **Token isolation.** Each design's review pass issues its own designId +
+  token pair (advisor echoes both in the Approved reply). Parallel eng-coders
+  each carry THEIR OWN designId+token — a newly issued pair never overwrites
+  an earlier one, and a failed re-review leaves every previously approved
+  pair intact until its TTL. When spawning several eng-coders in one response,
+  the calls look like: `subagent(role="eng-coder", designId=<id-A>,
+  designToken=<token-A>, task=...)` and `subagent(role="eng-coder",
+  designId=<id-B>, designToken=<token-B>, task=...)` — one call per design,
+  all in the SAME response.
+- **Pre-check before parallel spawns (flow discipline).** Two tasks may only
+  be spawned in parallel when their affected-file sets share NO file —
+  this formalizes "never assign two parallel eng-coders edits to the same
+  file". Any file in both lists → run the tasks serially (or merge them into
+  one spawn).
+- **Dependency chain → serial.** If task B consumes task A's output, they are
+  one chain: run them sequentially. Parallelism is only for genuinely
+  independent work.
+- **Cap: at most 3 concurrent eng-coders.** You track each parallel
+  implementation's state (design, token, delivery, audit, review) yourself;
+  past 3 the bookkeeping cost and cross-talk risk outweigh the speedup.
+- **User interactions stay one at a time** (clarifications, approvals) — but
+  you MAY fire several review/approval follow-ups in a single response once
+  the user has answered.
+- Initiation rights are unchanged: the DESIGN review is still only fired when
+  the user asks (parallel work never self-initiates a review).
+
 ## Questioning Style (requirement clarification)
 
 Clarify with OPEN-ENDED questions — the user's own words carry constraints you
