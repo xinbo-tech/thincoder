@@ -497,7 +497,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 ## 15. subagent 异步化：真后台并行（2026-09-02，用户问题：并行化缺陷评估）
 
-> **状态：设计定稿，待实现（评审 round 1 findings 已修 + VS Code 两端范围）**。用户实证两缺陷：① 主会话 spawn 子代理后被阻塞——"检查 xxx"类动作做不了（或只能等 spawn 返回后做旧状态检查）；② 同批并行 spawn 的子代理快的早完成，主会话必须等最慢的（先完成结果不能立即处理）。**用户裁定**（2026-09-02 逐项确认）：A 真后台并行（consult 范式：非阻塞 spawn + 轮询 check）；A 显式开启（默认阻塞不变）；A 回合收尾自动等待全部完成；A CLI 强制并发上限（3 → 4）。
+> **状态：设计定稿，待实现（评审 round 1/2 findings 已修 + VS Code 两端范围 + 槽位队列语义）**。用户实证两缺陷：① 主会话 spawn 子代理后被阻塞——"检查 xxx"类动作做不了（或只能等 spawn 返回后做旧状态检查）；② 同批并行 spawn 的子代理快的早完成，主会话必须等最慢的（先完成结果不能立即处理）。**用户裁定**（2026-09-02 逐项确认）：A 真后台并行（consult 范式：非阻塞 spawn + 轮询 check）；A 显式开启（默认阻塞不变）；A 回合收尾自动等待全部完成；A CLI 强制并发上限（3 → 4）。
 
 ### 15.1 问题
 
@@ -511,7 +511,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - F2：新增 `subagent_check` 工具——取回 async 子代理结果；**多 async 按完成顺序（arrival order）消费**——先完成先处理（F-2 消除）
 - F3：回合结束时未完成的 async 子代理**自动等待完成**，报告注入会话（干活型不白做）
 - F4：默认行为不变——不带 async 时完全保持现有阻塞语义（提示词/流程/测试零波及）
-- F5：**CLI 强制并发上限 4（async-only，机械层）**——`_asyncSubagents` 中 running 数 ≥4 时拒绝新 async spawn 并提示；**同步 spawn 不受机械上限约束**（本就阻塞不堆积）。**既有工程纪律上限 3 → 4（提示词层，两端）**：同步并行 eng-coder spawn 的纪律上限同步改为 4（评审 #4 重写——机械上限与提示词纪律是两层，措辞不再混淆）
+- F5：**CLI 并发上限 4 + 槽位队列（async，机械层，用户 2026-09-02 拍板）**——`_asyncSubagents` 中 running 数 <4 时新 async spawn **立即启动**；≥4 时**入队等待**（`status:"queued"`，返回 `position`），**running 子代理完成（promise settle）即腾槽 → 队列头部自动补位启动**——不拒绝、不要求模型分批（"槽位空出立即 spawn 下一个"）。**同步 spawn 不受机械上限约束**（本就阻塞不堆积）。**既有工程纪律上限 3 → 4（提示词层，两端）**：同步并行 eng-coder spawn 的纪律上限同步改为 4
 
 ### 15.3 设计
 
@@ -519,25 +519,25 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 - schema 加 `async: { type: "boolean", description: "true = spawn without waiting — returns {id} immediately, fetch results later via subagent_check. Default false (blocking)." }`
 - `async: true` 分支：子代理照常启动（**复用既有 spawnChild 管线**——relay/turn-cap/权限/mergeChildMutations 全不变），但**父侧不 await 报告**——`agent._asyncSubagents.set(id, { role, promise })`（promise = runWithContinue 的结果，settle 时自动落 `report`/`error` 字段）后**立即返回** `{ id, role, status: "running" }`
-- **上限校验（D-A4）**：async 分支入口检查 `_asyncSubagents` 中 **running 数**（`status==="running"`，已完成未消费不计入）≥ `ASYNC_SUBAGENT_LIMIT (4)` → 抛错拒绝："已有 N 个后台子代理在跑，先 subagent_check 取结果再 spawn"
+- **槽位队列（D-A4/D-A6，用户 2026-09-02 拍板）**：async 分支入口检查 `_asyncSubagents` 中 **running 数**（`status==="running"`，已完成未消费与 `queued` 不计入）——<4 → 立即启动（`status:"running"`）；≥4 → **入队**（`status:"queued"`、`position = 队内序号`），spawn 返回 `{ id, role, status:"queued", position }`。**腾槽补位**：任一 running 子代理 promise settle（无论完成/失败/abort）→ 队列头部 queued 项自动启动（status→running，position 释放）；队列空则止。**不拒绝、不分批**
 - id 分配：复用既有 counter（`_subAgentCounter` 同一序列，`role#N` 与 TUI 区块 key 一致——async 子代理的 TUI 面板行为不变，relay 照常流式显示）
 
 **D-A2 `subagent_check` 工具**（新增，`src/agent-tools/subagent.mjs`）：
 
-- 参数：`id`（可选——缺省 = 任意下一个完成，**arrival order**：多个 async 时按完成顺序返回最快的；带 id = 等特定子代理）、`n`（必填——1-based 读数，consult 同款防循环）；**工具声明 `readonly: true`**（评审 #6——consult_check 先例，planMode 门控需要）
-- 语义：**阻塞到目标完成**（带 id：等该 id；不带 id：等 running 集合中下一个完成的）——返回 `{ id, role, status: "done", report }` 或 `{ id, status: "error", error }`；子代理全完成且已消费 → 返回 `{ done: true }`（consult_check 同款终结语义）
+- 参数：`id`（可选——缺省 = 任意下一个完成，**arrival order**：多个 async 时按完成顺序返回最快的；带 id = 等特定子代理——含 queued 项先等启动）、`n`（必填——**1-based 递增读数**，每次 check 调用必须传 `n = 上次 n + 1`（首调 1），**超过 `MAX_ASYNC_CHECKS = 3` 返回 `{ status:"error", error:"check limit exceeded — use turn-end auto-wait for the rest" }`**——consult 同款防循环，评审 #4 补定义）；**工具声明 `readonly: true`**（评审 #6——consult_check 先例，planMode 门控需要）
+- 语义：**阻塞到目标完成**（带 id：等该 id——含 queued 项，先等它启动再等完成；不带 id：等 running 集合中下一个完成的）——返回 `{ id, role, status: "done", report }` 或 `{ id, status: "error", error }`（**含错误路径：id 未知/已消费 → `{ id, status: "error", error: "unknown async subagent id: <id>" }`**——评审 #5）；子代理全完成且已消费 → 返回 `{ done: true }`（consult_check 同款终结语义）
 - 实现：`_asyncSubagents` Map + 每项 `{ role, promise, report, error, done }`；check 对未完成项 `await promise`（Promise.race 于目标集合）；消费后从 Map 删除；**上限指标 = running 数**（`done` 项不计入，与 D-A1/T6 一致）
 - 描述引导：工具 description 写明用法——"spawn async 后可以继续其他工作（检查/读文件），最后用 subagent_check 取结果；多个 async 时先完成先返回"
 
 **D-A3 回合收尾自动等待**（`src/agent.mjs` runAgent finally）：
 
-- finally 中若 `_asyncSubagents` 有未完成项 → `await Promise.allSettled([...promises])`——等全部完成后，把报告/错误**注入会话**（pushReal 一条 user 角色 `[System reminder: async subagent #id (role) finished]` + 报告或错误文本）——主会话下一回合可见结果。**超长报告（>64K）注入预览 + 落盘路径**（评审 #7——对齐 §7 超长报告处理，避免会话膨胀）
+- finally 中若 `_asyncSubagents` 有 **running + queued** 项 → **先启动全部 queued**（腾槽补位循环跑完）再 `await Promise.allSettled([...promises])`——等全部完成后，把报告/错误**注入会话**（pushReal 一条 user 角色 `[System reminder: async subagent #id (role) finished]` + 报告或错误文本，**报告文本做 XML 转义**——评审 #7，子代理报告可能含来自文件/网页的注入面内容，遵循 reminder 纪律；超长报告（>64K）注入预览 + 落盘路径）——主会话下一回合可见结果。**已知权衡（评审 #8 声明）**：结果在最终回复后才注入，父侧 verify/advisor guard 不复检这批改动——靠 §7.1 子代理自带自评（verify + advisor）兜底，下回合模型可见并处理
 - 注入后清空 `_asyncSubagents`
 - **async 子代理权限交互（评审 #2 补）**：后台子代理撞权限门时审批面板照常弹出（`_permQueue` 串行化，不与其他权限请求重叠）；回合收尾等待把"待审批"视为**可解析状态**——用户批准 → 子代理 settle → 等待完成；无用户在场（headless/无审批回调）→ 权限请求按既有 no-permission-handler 语义拒绝，子代理失败返回（不悬挂）。
 - Ctrl+C 中断：既有 abort 传播（subagent 的 signal 传递）——中断时未完成项随 abort 失败（error 带 AbortError 语义），不再等待（用户显式停）
-- 上限计数：`_asyncSubagents.size`（含已完成未消费）——回合收尾清空后自然归零
+- 回合收尾等待项数 = `_asyncSubagents.size`（含已 settle 未消费——allSettled 立即返回）；**上限口径 = running 数**（D-A1/D-A2/T6 一致，评审 #2 对齐）——回合收尾清空后自然归零
 
-**D-A4 并发上限常量**：`ASYNC_SUBAGENT_LIMIT = 4`（subagent.mjs 模块常量）。**同步纪律上限 3 → 4（两端，评审 #3 修正引用）**：工程模式提示词 `src/prompts/engineering.md` 的 "Cap: at most 3 concurrent eng-coders"（:207）改 4，**配套 rationale 句 "past 3 the bookkeeping cost..."（:209）同步改 past 4**；`docs/design/ENGINEERING-MODE.md` FR8（上限 ≤3）+ 2026-09-01 关键决策④ rationale 同样 3→4（三处同步，缺一处即文档矛盾）。异步化后主会话同一时刻在跑的子代理可能更多，4 是用户拍板值
+**D-A4 并发上限常量**：`ASYNC_SUBAGENT_LIMIT = 4`（subagent.mjs 模块常量）。**同步纪律上限 3 → 4（两端，评审 #3 修正引用——内容锚，不用行号）**：工程模式提示词 `src/prompts/engineering.md` 的 "Cap: at most 3 concurrent eng-coders" 短语改 "Cap: at most 4 concurrent eng-coders"，**配套 rationale 句 "past 3 the bookkeeping cost..." 同步改 "past 4"**（T9 断言短语即正确形态）；`docs/design/ENGINEERING-MODE.md` FR8（上限 ≤3）+ 2026-09-01 关键决策④ rationale 同样 3→4（三处同步，缺一处即文档矛盾）。异步化后主会话同一时刻在跑的子代理可能更多，4 是用户拍板值
 
 **D-A5 提示词/文档**（`src/prompts/system.md` 工具描述 + AGENT-LOOP.md 本节）：
 
@@ -555,20 +555,24 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T3 | 完成顺序 | 2 个 async（快/慢）| `subagent_check`（无 id）先返回快的 id+报告；第二次 check 返回慢的；第三次返回 `{done:true}` | F2/D-A2 |
 | T4 | 特定 id 等待 | 带 id check 慢的 | 阻塞到该 id 完成返回其报告 | F2/D-A2 |
 | T5 | 回合收尾 | async 未 check + runAgent 自然结束 | finally await 全部；报告注入会话（user 角色 reminder）；`_asyncSubagents` 清空 | F3/D-A3 |
-| T6 | 上限 4 | 第 5 个 async spawn | 拒绝 + 提示"已有 4 个后台子代理在跑"；前 4 个不受影响 | F5/D-A4 |
+| T6 | 槽位队列（超限入队） | 第 5 个 async spawn（4 个 running） | **入队**：返回 `{id, status:"queued", position:1}`，不拒绝；前 4 个不受影响 | F5/D-A1 |
+| T10 | 腾槽补位 | 第 5 个入队后，1 个 running 完成（promise settle） | 队列头部 queued 项**自动启动**（status→running，position 释放）；无需模型再 spawn | F5/D-A1 |
+| T11 | 队列位置 | 第 6、7 个 spawn（5 在跑/队） | position 递增（1、2）；位置信息随 spawn 返回可见 | F5/D-A1 |
+| T12 | check 错误路径（评审 #5） | check 未知 id / 已消费 id | `{id, status:"error", error:"unknown async subagent id: <id>"}` 不悬挂 | D-A2 |
+| T13 | n 超限（评审 #4） | check 第 4 次调用（n=4 > MAX_ASYNC_CHECKS=3） | `{status:"error", error:"check limit exceeded — use turn-end auto-wait for the rest"}` | D-A2 |
 | T7 | 默认阻塞回归 | 不带 async 的正常 spawn | 行为与现有一致（阻塞等报告）——既有 subagent 测试全绿 | F4 |
 | T8 | 中断 | async 运行中 Ctrl+C | abort 传播；收尾不再等待（error 带中断语义） | D-A3 |
 | T9 | 上限纪律同步（评审 #4） | 读 engineering.md | 含 "Cap: at most 4 concurrent eng-coders" + "past 4"（两端 byte-identical） | F5/D-A4 |
 
-**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5）；AC4 = 并发上限 4 强制（T6）+ 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）。
+**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）；AC6 = check 错误路径与防循环上限（T12/T13）。
 
 ### 15.5 关键决策
 
 - **consult 范式借鉴而非复用**：consult 是"多模型咨询"语义（会话级、可放弃、main_history 注入）；subagent 是"任务执行"语义（调用级、要收尾、mergeChildMutations 回传）——共享"非阻塞 + 轮询"形态，实现独立（consult.mjs 零改动）
 - **显式 async 而非默认全异步**：现有提示词/流程（偏差审计、交付核验等）都是"spawn 后等报告"的阻塞用法；默认变更会波及全部——显式参数把新能力做成加法
 - **收尾等待而非 abort**：eng-coder 干活型，回合结束 abort = 工作白做（用户明确选等待）；中断（Ctrl+C）仍传播 abort（用户显式停不等待）
-- **上限 4 强制**：async 模式主会话可反复 spawn 不 check——CLI 层强制防呆；同步 spawn 本就不堆积（阻塞），不受限；用户拍板上限 3→4
-- **否决**：a) 默认全异步（波及面大，F4 相反）；b) 回合结束 abort（丢工作）；c) 上限仅自律（防呆失效风险）
+- **槽位队列而非拒绝/分批（用户 2026-09-02 拍板）**：超限入队 + 完成即腾槽补位——模型一次可 spawn 任意数量，无需分批等待（"槽位空出立即 spawn 下一个"）；同步 spawn 本就不堆积（阻塞），不受限；用户拍板上限 3→4
+- **否决**：a) 默认全异步（波及面大，F4 相反）；b) 回合结束 abort（丢工作）；c) 上限仅自律（防呆失效风险）；d) 超限拒绝 + 模型自行分批（正是用户否掉的行为）；e) 消费才腾槽（check 后才补位——槽位利用率低，用户要求完成即补）
 
 ### 15.6 两端对齐（VS Code，2026-09-02 用户确认）
 
@@ -585,8 +589,8 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **设计**：
 
-- **D-B1 同批权限合并询问**：Phase 1 收集同批次（同一 toolCalls 数组）所有非只读工具 → **一次询问**覆盖：`"N 个工具需要权限：A、B、C — approve all / approve one by one / deny"`；拒绝全部 / 逐个选择走二次询问
-- **实现约束（评审 #1 定死）**：新增回调 `onBatchPermissionRequest({ tools: [{name, args}], count })`（返回 "all"/"oneByOne"/"deny"）——`onPermissionRequest(toolName, args)` 契约签名**不变**（ACP/桥/子代理透传零波及）；dispatch 在 Phase 1 聚合：同批非只读工具 >1 时先发聚合询问，`oneByOne`/`deny` 时回退既有逐项通道；`approveAll` 语义复用既有 autoApprove 风格的批次放行标志
+- **D-B1 同批权限合并询问**：Phase 1 收集同批次（同一 toolCalls 数组）所有非只读工具 → **一次询问**覆盖：`"N 个工具需要权限：A、B、C — approve all / approve one by one / deny"`（评审 #1 统一语义：**`deny` → 全批拒绝、无二次询问**；`oneByOne` → 回退逐项二次询问——修掉此前"deny 也回退逐项"的矛盾表述）
+- **实现约束（评审 #1/#6/#9 定死）**：新增回调 `onBatchPermissionRequest({ tools: [{name, args}], count })`（返回 `"approveAll"`/`"oneByOne"`/`"deny"`——**标识符统一为 approveAll**）——`onPermissionRequest(toolName, args)` 契约签名**不变**（ACP/桥/子代理透传零波及）；dispatch 在 Phase 1 聚合：同批非只读工具 >1 时先发聚合询问；**`deny` → 全批拒绝、无二次询问；`oneByOne` → 回退既有逐项通道**；`approveAll` 语义 = 本批放行标志（autoApprove 风格、批次作用域、不持久）。**无 `onBatchPermissionRequest` handler 时缺省 = 回退逐项通道**（与 `onPermissionRequest` 无 handler → denied 的既有语义衔接——ACP 桥/headless/旧版不实现新回调不误伤整批）
 - **autoApprove 短路不变**：autoApprove 时跳过（同批也跳过）
 - **只读工具不参与**：只读批本来就不询问
 
@@ -607,7 +611,8 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
 | T-B1 | 同批 3 非只读工具 | 同一 toolCalls 数组 3 个 write（无 autoApprove） | **一次**权限询问（合并名 + 计数）；批准后逐个执行 | D-B1 |
-| T-B2 | 批内逐项/拒绝 | 批询问选"one by one"/deny | 回退既有逐项通道（签名不变）/全批拒绝 | D-B1 |
+| T-B2 | 批内逐项/拒绝 | 批询问选 "oneByOne"/"deny" | oneByOne → 回退既有逐项通道（签名不变）；deny → **全批拒绝、无二次询问** | D-B1 |
+| T-B6 | 无 handler 缺省（评审 #6） | 不提供 onBatchPermissionRequest（ACP 桥/headless/旧版） | 自动回退逐项通道（同批 N 个仍 N 次既有询问，不误伤、不悬挂） | D-B1 |
 | T-B3 | 批量引导描述 | 读 edit/apply_patch 工具描述 | 含"edits 数组原子/多文件同批""apply_patch 新建多文件"语义句 | D-B2/B3 |
 | T-B4 | 提示词纪律 | 读 system.md | 含批量优先句（两端 byte-identical 断言） | D-B4 |
 | T-B5 | 回归 | 全量 | 既有 dispatch/权限测试全绿（autoApprove 短路/单工具询问不变） | D-B1 |
