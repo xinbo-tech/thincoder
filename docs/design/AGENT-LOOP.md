@@ -153,7 +153,7 @@ runAgent turn 循环内 `agent._currentTurn` 更新处（`src/agent.mjs`，D2 em
 
 复用现有两套机制拼装，不新造渲染器：
 - **运行态（会话流内联）**：`state.subTasks[key]` 升级为完整活动缓冲 `{ key, role, model, started, done, blocks: [{kind,text}], currentTool, turn, maxTurns, lastError }`。onToken/onReasoning/onToolCall 前缀分支改写：reasoning token **追加进 blocks**（kind=think，不再丢弃）；onToolCall 更新 currentTool 并开新 block（kind=tool）；onToolOutput 带前缀分支把 chunk 追加进当前 tool block（保留换行结构）；turn 事件 token 更新 turn/maxTurns。onToolResult(subagent) 不再 3 秒删除，改为标记 done（头部 ✓）。
-- **落位（渲染）**：子agent 区块渲染进会话流（render-conversation.mjs 新增 subagent blocks 段，位于 advisorBlocks 段之前），**段首带一条与会话区切分的分隔线**（`─` × cols-1，dim，与 task 面板顶部线同款，2026-08-30 用户要求；仅当存在运行中区块时出现——done 块已冻结进会话流，空段不留悬空线）：折叠态 = 头部摘要行 `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`（运行中 elapsed 由 1s ticker 刷新）+ tail 3 行（blocks 尾部；2026-08-30 用户拍板 2→3）；展开态 = blocks 全量按 kind 着色（think=C.reason、tool=C.tool、text=C.text），**经公共组件 fold-block.mjs renderBlockTimeline + renderExpandedBlock 渲染，展开封顶屏幕 60% + 底部可达折叠控制行（2026-08-30 用户报告驱动，TUI.md §5）**。展开/折叠走 expandedBlocks 集合（key=`sub-${key}`）+ `toggleFoldBlock` 单源切换。默认折叠；同一 key 折叠状态跨 turn 保持（expandedBlocks 不随 turn 清理该前缀）。
+- **落位（渲染）**：子agent 区块渲染进会话流（render-conversation.mjs 新增 subagent blocks 段，位于 advisorBlocks 段之前），**段首带一条与会话区切分的分隔线**（`─` × cols-1，dim，与 task 面板顶部线同款，2026-08-30 用户要求；仅当存在运行中区块时出现——done 块已冻结进会话流，空段不留悬空线）：折叠态 = 头部摘要行 `[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`（运行中 elapsed 由 1s ticker 刷新）+ tail 3 行（blocks 尾部；2026-08-30 用户拍板 2→3）；展开态 = blocks 全量按 kind 着色（think=C.reason、tool=C.tool、text=C.text），**经公共组件 fold-block.mjs renderBlockTimeline + renderExpandedBlock 渲染，展开封顶屏幕 60% + 底部可达折叠控制行（2026-08-30 用户报告驱动，TUI.md §5）**。展开/折叠走 expandedBlocks 集合（key=`sub-${key}`）+ `toggleFoldBlock` 单源切换。默认折叠；同一 key 折叠状态跨 turn 保持（expandedBlocks 不随 turn 清理该前缀）。**【§7.2.1 已变更：运行中区块迁至固定底部面板（会话与 todo 之间）——本段"会话流内联"仅指冻结态落位；运行态见 §7.2.1 D2（评审 #4 supersede 指针）】**
 - **完成态（2026-08-30 修订：冻结进对话流 + 保留独立折叠交互，废除尾部驻留）**：初版实现把区块渲染成会话末尾的固定段且 done 后保留——完成的 ✓ 块永远钉在输入框上方（"残影"，用户报告），多子agent 还会叠加。修订：onToolResult 标记 done 后，完成冻结家族（`subagent-blocks.mjs` freezeSubTaskLines/freezeDoneSubTasks，2026-08-30 自 agent-turn 归位）把整个区块（含 blocks/lastError/耗时）作为 `_frozenSubTask` 载体行存进 `state.lines` 并从 `state.subTasks` 删除——留痕随会话滚走，内存仍受 N2 环形上限约束。**冻结区块保持完整折叠交互（用户拍板 2026-08-30：不因冻结降级）**：render-conversation 识别载体行后按 `sub-${key}`（与运行中区块同一个 key，折叠状态跨冻结边界延续）渲染——折叠态 = `▶ [✓ coder#1 · model · done 45s · turn n/max] … click to expand` + tail 3 行；展开态 = `▼` 控制行 + 全量时间线（kind 着色，`_skipDimFold` 防连续 dim 折叠套叠）；点击 ▶/▼ 切换与运行中区块一致。尾部固定段只渲染**运行中**条目（done 条目若因旧会话残留出现也跳过不渲染）；finally 兜底把中断（Ctrl+C/错误）仍在跑的区块一并冻结（lastError=interrupted）。完整报告前 8 行预览仍由 onToolResult 路径进会话流（不变）。convCacheKey 的 frozenSig 记录载体行 key 集合（展开/折叠翻转由既有 `exp` 项覆盖）。
 - **窄带退役**：layout.mjs 删除 subPanelH/panels.subagent 槽；render-frame.mjs 删除 renderSubagent；agent-turn.mjs 删除 3 秒清理定时器。`state.subTasks` 名字保留（数据结构升级，消费端换了）。
 - **elapsed 跳动**：现有 1s ticker（agent-turn.mjs，§7.2.1 评审 #5 归属更正）在 subTasks 有运行中条目时触发 scheduleRender——无需新定时器。
@@ -232,7 +232,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 **功能性需求**：
 - **F1 · 位置**：固定面板位于**会话区与 todo 面板之间**（布局顺序：header → conversation → subagent 面板 → todo → picker → permission → queue → input → status）——用户拍板
-- **F2 · 高度**：**完全自适应**——面板高度 = 全部运行中区块的完整高度（无上限；并行多个子 agent 内容全显示，会话区相应被挤小）——用户拍板
+- **F2 · 高度**：**完全自适应**——面板高度 = 全部运行中区块的完整高度（无上限；并行多个子 agent 内容全显示，会话区相应被挤小）——用户拍板。**已知限制（评审 #1，用户拍板方案 a）**：多个展开块总高超屏时面板底部裁剪（无面板级滚动）——展开块自身可滚（60% 窗口化 + 块内滚动保留）——用户逐个展开/收起
 - **F3 · 固定**：面板独立于 conversation 滚动区——会话滚动（滚轮/PgUp/流式）不影响面板位置；面板上滚轮**穿出滚会话**（与 todo 面板行为一致）
 - **F4 · 折叠**：面板内每个子 agent 区块**默认折叠**（头部摘要 + tail 3，点击展开）——与现状流内区块一致（用户拍板）；展开态经 fold-block.mjs 公共组件（60% 封顶 + 块内滚动 + 底部可达收起控制行）
 - **F5 · 冻结**：子 agent 完成后**立即冻结进会话流**（✓ 头 + 可展开，D4 现状不变）——面板只显示运行中区块，完成即移出
@@ -251,7 +251,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 **D1 · 布局（layout.mjs）**：新增 `panels.subagent` 条件面板（运行中区块存在时），位于 conversation 之后 todo 之前。**高度预计算复用既有模式**（与 visibleTasks/permPreviewLines 同型）：layout 内调 `renderSubagentPanel(state, cols)`（纯函数）得 `subagentLines` → `subagentH = subagentLines.length`（完全自适应——所有运行中区块折叠头+tail3 或展开态全量；展开态经 renderExpandedBlock 的 60% 封顶窗口化，输出行数即面板高度）——layout 返回 subagentLines 供 render-frame 直接 put（不重复渲染）。**`renderSubagentPanel` 放中立模块**（不引入 layout↔render-frame 循环依赖——评审 #6：置于既有无环模块或 fold-block 同层）
 
-**D2 · 渲染迁移（render-conversation.mjs / render-frame.mjs）**：runningSubs 段（`buildConvLines` 的 subagent blocks 段：分隔线 + 区块循环——评审 #3 改符号引用）从 buildConvLines **移除**，迁移为 `renderSubagentPanel(state, cols)`（复用同一区块渲染逻辑：折叠头 `[▶/⏸ key · model · elapsed · turn] state`——**⏸ = 等待审批态图标**（sub.approval 非空时显示），评审 #5 定义；`[✓ …]` 为冻结态（图标在括号内，与运行头格式统一）+ tail 3 / 展开 renderBlockTimeline+renderExpandedBlock；顶部一条 `─` 分隔线——现状语义迁移，`if (panels.subagent) put(panels.subagent.y, renderSubagentPanel(...))` 于 conversation 之后 todo 之前）。frozen 段（state.lines `_frozenSubTask`）保持流内不动。
+**D2 · 渲染迁移（render-conversation.mjs / render-frame.mjs）**：runningSubs 段（`buildConvLines` 的 subagent blocks 段：分隔线 + 区块循环——评审 #3 改符号引用）从 buildConvLines **移除**，迁移为 `renderSubagentPanel(state, cols)`（复用同一区块渲染逻辑：折叠头 `[▶/⏸ key · model · elapsed · turn] state`——**⏸ = 等待审批态图标**（sub.approval 非空时显示），评审 #5 定义；`[✓ …]` 为冻结态（图标在括号内，与运行头格式统一）+ tail 3 / 展开 renderBlockTimeline+renderExpandedBlock；顶部一条 `─` 分隔线——现状语义迁移，`if (panels.subagent) put(panels.subagent.y, subagentLines)`（**layout 预计算行，不重复渲染——与 D1 一致，评审 #3 对齐措辞**）于 conversation 之后 todo 之前）。frozen 段（state.lines `_frozenSubTask`）保持流内不动。
 
 **D3 · 压缩链（layout.mjs）**：subagent 面板加入 fixedH；溢出时**面板最先让位**（可压至 0 隐藏，缓冲区不丢数据；输入框/状态栏/会话区不可挤没——用户 NF1，评审 #2 措辞统一）——压缩顺序：**subagent 面板 → 会话区 → picker → permission → todo divider**。
 
@@ -270,7 +270,8 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | `src/tui/render-frame.mjs` | +put 调用（conversation 之后 todo 之前，put layout 预计算的 subagentLines，对象行转 ANSI 字符串） |
 | `src/tui/mouse.mjs` | +面板区命中映射：handleWheel（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldBlock`/`_foldTotal` 标记 → scrollFoldBlock；未命中 → 穿出滚会话）；handleMouseClick（r ∈ subagent 面板 → 面板行 → 区块行 → `_foldToggle` 折叠/展开、`_foldScrollUp/_foldScrollDown` 翻窗） |
 | `docs/design/TUI.md` | 布局段 + **模块地图 + §4/§5 同步更新**（评审 #4：模块地图 render-conversation 行"子agent/advisor 折叠块渲染"、§4"子代理活动现为会话流内可折叠区块"、§5"运行区块段首分隔线（render-conversation subagent blocks 段首）"——按 TUI.md 模块地图随实现同步回写纪律） |
-| 测试：`test/tui.test.mjs`（layout 槽位/空态/压缩链/面板渲染/缓存）+ `test/mouse.test.mjs`（面板点击/滚轮）——按既有测试结构放置（layout 测试现居 tui.test.mjs） | 新用例 T1-T9；`test/render-loop.test.mjs` T-H 源锁正则修订（layout 禁词表移除 `panels\.subagent`，subPanelH/output 禁词保留） |
+| 两端 `CHANGELOG.md` | 行为变更记录（评审 #5——与 §14 及既有提示词/行为变更段惯例对齐） |
+| 测试：`test/tui.test.mjs`（layout 槽位/空态/压缩链/面板渲染/缓存）+ `test/mouse.test.mjs`（面板点击/滚轮）——按既有测试结构放置（layout 测试现居 tui.test.mjs）；**实现时审计行数**（评审 #7：layout/render-frame/mouse 若超 500 硬限先拆分再报） | 新用例 T1-T9；`test/render-loop.test.mjs` T-H 源锁正则修订（layout 禁词表移除 `panels\.subagent`，subPanelH/output 禁词保留） |
 
 **验收标准**：
 1. 面板位于会话与 todo 之间；会话滚动（滚轮/PgUp/流式）面板位置不动
@@ -294,7 +295,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T5 面板点击 | 点击面板内折叠头 | 切换展开/折叠；展开超限 → ▲▼ 翻窗 |
 | T6 滚轮穿出 | 面板上滚动（未命中区块内容行） | 会话滚动（面板不动） |
 | T7 块内滚动 | 展开区块内容行上滚轮 | 块内滚动（不滚会话） |
-| T8 冻结回归 | 子 agent 完成 | 面板移除该区块 + 流内 ✓ 头（既有 T-E 语义） |
+| T8 冻结回归 | 子 agent 完成 | 面板移除该区块 + 流内 ✓ 头（既有冻结语义——§7.2 D4 完成态/T-I，评审 #6 改引用） |
 | T9 折叠保持回归 | turn 切换 | sub-{key} 折叠状态保持（既有断言） |
 
 
@@ -405,6 +406,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - ⑥ 回归：两端全量测试通过；两端 prompts 15 文件 byte-identical
 
 **受影响文件**：`docs/design/README.md`（两端各新建）、`src/prompts/system.md`、`src/prompts/advisor-design.md`（两端各一份）、CLI `src/advisor.mjs` + `src/advisor/messages.mjs`、VS Code `src/advisor/main.mjs` + `src/advisor/messages.mjs`、两端测试、两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同步变更段。
+
 ## 13. 委托策略：广度探索下沉 explore（2026-08-23）
 
 **需求**（用户报告「主 agent 历史被逐步 tool call 淹没、质量差」，选 A+C；A=行为层委托，C=历史卫生见 `CONTEXT-COMPACTION.md`）：
@@ -435,5 +437,60 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - 两端 prompts byte-identical 比对测试继续通过。
 
 **受影响文件**：`src/prompts/main.md`（两端各一份）、两端测试、两端 `CHANGELOG.md`。
+
+## 14. 操作并行化纪律（2026-09-01 用户需求：需求层）
+
+**背景**（用户指示）："能并行化的尽可能并行化，节省用户等待时间"——ThinCoder 执行器**已支持并行**（dispatch.mjs 两段式：readonly/parallel 工具批并行 `Promise.all`、写/bash 串行——§4；subagent/consult 一次多个并行），但**提示词没有引导模型利用**——模型默认一次一个工具调用，独立操作被串行化，用户等待时间翻倍。需求：提示词补并行化纪律（含边界）。
+
+**总体目标**：agent 默认并行化独立操作（信息获取/多文件编辑/子代理），显著减少用户等待；同时明确"不并行"边界——防止冲突、审批风暴、仓库锁。
+
+**功能性需求**：
+- **F1 · 并行发起**：独立信息获取/只读工具调用**一次发起多个**（read/grep/glob/search/lsp 等批并行——执行器自动 Promise.all）——把现有"call tools in parallel"条款从被动允许升级为主动引导
+- **F2 · 多文件编辑**：独立文件的多处编辑用 `edits` 数组形态（原子多文件——一次往返）
+- **F3 · 子代理并行**：相互独立的子任务一次 spawn 多个（subagent 并行执行；**同一文件编辑冲突例外**——不并行派发到同一文件的编辑）
+- **F7 · 多项目独立变更并行（用户补充 2026-09-01：monorepo 场景实证——"变更两个子项目时明显应该分两个子 agent，但实际上很少这么做"）**：变更横跨多个**独立子项目**（如 thincoder / thincoder-vscode——不共享待改文件、无交叉依赖）→ **按项目拆分并行子 agent**（每项目一个，各改各的、各自跑自己的测试）——**触发条件（全部满足才拆）**：① 子项目互相独立（不共享待改文件）；② 改动无耦合（A 的输出不是 B 的输入）；③ 各自有独立测试可自验——任一不满足 → 不拆（主 agent 串行协调或单 agent 处理）
+- **F4 · 会诊并行**：consult 多模型独立并行（已有——不动）
+- **F5 · 不并行边界（必须写明，防滥用）**：① 写**同一文件**（冲突）；② **依赖链**（前一步输出是后一步输入——串行必然）；③ **bash/审批敏感命令**（执行器串行 + 并行 = 审批风暴——多个权限弹窗）；④ **同一 git 仓库并发 git 命令**（仓库锁冲突）；⑤ **有状态操作**（session/权限/队列——串行）
+- **F6 · 收益判断**：并行化**大操作**（用户等待收益可见）；**微操作**（<1s 级）不并行（启动/上下文成本 > 收益）——"尽可能"不等于"无脑全并行"
+
+**非功能性需求**：
+- **NF1 · 两端 byte-identical**：CLI + VS Code `src/prompts/system.md` 条款逐字一致（既有纪律延续）
+- **NF2 · 零执行器改动**：机制已存在（dispatch 批并行）——本需求纯提示词条款 + 文档，**不改 dispatch.mjs/执行器**
+- **NF3 · 测试**：两端各自断言 system.md 含并行化条款（照既有 system.md 内容断言测试的 `readFileSync` + `assert.match` 模式——评审 #2 改符号引用弃行号）+ 既有测试全绿（无行为变更——纯提示词）
+
+**范围边界**：`src/prompts/system.md`（两端）+ AGENT-LOOP.md（本文档 §14）+ 两端提示词内容断言；不改执行器/工具；VS Code 端提示词同步（byte-identical 纪律）。
+
+**设计（2026-09-01）**：
+
+**D1 · system.md 条款**（"How you work — while coding" 段，现有并行条款（"When you need multiple independent pieces of information, call tools in parallel…"）之后追加——英文提示词惯例，两端 byte-identical——评审 #2 改锚点引用，弃行号）：
+> - **Parallelize aggressively:** send multiple independent tool calls in one response (read-only batches run concurrently); use the `edits` array for independent multi-file changes; spawn multiple independent subagents at once — including splitting changes across independent sub-projects (e.g. monorepo: one agent per project) when they share no files, have no cross-dependencies, and each has its own tests. Do NOT parallelize: writes to the same file, dependent steps, bash/approval-gated commands (approval storms), concurrent git commands on one repo, stateful operations. Parallelize big operations; skip micro-parallelism (<1s ops).
+
+**D2 · 语义映射**（条款 ↔ F1-F7）："multiple independent tool calls" → F1；"`edits` array" → F2；"spawn multiple independent subagents" + "splitting changes across independent sub-projects…share no files / no cross-dependencies / each has its own tests" → F3+F7（触发条件逐字）；"Do NOT parallelize" 五项 → F5；"big operations / micro-parallelism" → F6；F4（consult）机制既有，条款不含（不重复）。
+
+**D3 · 测试（NF3）**：两端各自在既有 prompts 内容断言测试文件加一条——断言 `system.md` 含条款关键短语（`Parallelize aggressively`、`splitting changes across independent sub-projects`、`Do NOT parallelize`、`approval storms`）——照既有 prompts 断言测试的 `readFileSync` + `assert.match` 模式（CLI 在 advisor.test.mjs——评审 #2 改符号引用弃行号）；两端提示词文本 byte-identical 比对（既有纪律测试继续通过）。
+
+**受影响文件**：
+| 文件 | 改动 |
+|---|---|
+| `thincoder/src/prompts/system.md` | +并行化条款（D1） |
+| `thincoder-vscode/src/prompts/system.md` | 同（byte-identical） |
+| `thincoder/test/advisor.test.mjs`（或既有 prompts 断言处） | +T1 条款断言 |
+| `thincoder-vscode/test/`（对应 prompts 断言测试） | +T2 条款断言 |
+| `docs/design/AGENT-LOOP.md` | 本文档 §14 |
+| 两端 `CHANGELOG.md` | 提示词变更记录 |
+
+**验收标准**：
+1. 两端 `src/prompts/system.md` byte-identical，含并行化条款（F1/F2/F3+F7/F5/F6 语义逐条可指认）
+2. 条款含 F7 触发条件（share no files / no cross-dependencies / each has its own tests）
+3. 两端条款断言测试通过
+4. 既有测试全绿（纯提示词变更——无行为路径改动）
+5. 两端 CHANGELOG 更新
+
+**测试用例**：
+| 用例 | 输入 | 预期 |
+|---|---|---|
+| T1 CLI 条款断言 | 读 system.md | 含 `Parallelize aggressively` + `splitting changes across independent sub-projects` + `Do NOT parallelize` + `approval storms` |
+| T2 VS Code 条款断言 | 读 system.md | 同 T1（文本与 CLI 逐字一致） |
+| T3 回归 | 既有提示词断言 + 全量 | 全绿 |
 
 

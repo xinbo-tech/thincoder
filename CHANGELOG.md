@@ -10,6 +10,7 @@
 
 - **跨端会话共享一致性（会诊 4 模型收敛）**：sessionStart 打点（跨端同槽不再 F2 互轮转）；F2 写前磁盘校验（同会话并发追加 → 轮转 .bak 保留）；legacy transient 双端过滤；contextHistory 机读线判定（length>0）；activeModel 双向；cwd 先行校验；newSession 死主清理落盘（deletions）
 - **checkpoint cwdHash 归一化**：`sha1(normalizeCwd(cwd)).slice(0,12)`——CLI/VS Code 快照跨端互通（存量旧路径孤儿化不迁移）
+- **操作并行化纪律提示词条款**（2026-09-01 用户需求）：system.md "How you work — while coding" 段在既有并行条款后追加 "Parallelize aggressively"——独立只读调用一次发起多个（执行器批并行）、多文件编辑用 `edits` 数组（原子一次往返）、独立子代理/独立子项目一次 spawn 多个（F7 触发条件：不共享待改文件 + 无交叉依赖 + 各自有独立测试）；明确不并行边界（同一文件写入/依赖链/bash 审批命令 = 审批风暴/同仓库并发 git/有状态操作）与收益判断（大操作并行、<1s 微操作不并行）。两端 system.md byte-identical，测试同步断言
 
 ### Fixed
 

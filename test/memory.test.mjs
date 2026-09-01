@@ -8,11 +8,11 @@ import { test } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { join } from "node:path"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 
-import { createMemory, put, search, list, remove, putMarkdown, syncDir } from "../src/memory.mjs"
+import { createMemory, put, search, list, remove, putMarkdown, syncDir, deleteByUid, fetchEntry, segmentCJK, memoryTools } from "../src/memory.mjs"
 import { serializeEntry } from "../src/markdown.mjs"
 
 // ---------------------------------------------------------------- helpers
@@ -61,6 +61,168 @@ test("memory: put / search / list / remove 全流程", async () => {
   assert.equal(await remove(m, id1), false)
   assert.equal((await list(m)).length, 1)
 })
+
+// ========== memory_delete（MEMORY.md §0/§0.1）==========
+
+test("T1: personal 删除 — entries 行整体删（embedding 随行）+ FTS 零残留 + search 零命中", async () => {
+  const m = freshMemory()
+  const id = await put(m, { type: "rule", title: "旧规则", content: "发布后必须轮询" })
+  m.db.prepare(`UPDATE entries SET embedding = x'01020304' WHERE id = ?`).run(id) // 模拟已嵌入
+  const ftsBefore = m.db.prepare(`SELECT COUNT(*) AS n FROM entries_fts`).get().n
+  const entry = await deleteByUid(m, `personal:${id}`, {})
+  assert.equal(entry.id, `personal:${id}`)
+  assert.equal(entry.title, "旧规则")
+  assert.equal(entry.content, "发布后必须轮询")
+  assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM entries WHERE id = ?`).get(id).n, 0, "entries 行整体删除（embedding 列随行）")
+  assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM entries_fts`).get().n, ftsBefore - 1, "FTS 零残留")
+  assert.equal((await search(m, "轮询")).length, 0, "搜索零命中")
+})
+
+test("T2: project 删除 — 文件删 + files 行删 + search 零命中", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-del-proj-"))
+  const m = freshMemory()
+  try {
+    const memDir = join(dir, ".thincoder", "memory")
+    const filename = await putMarkdown(m, { layer: "project", dir: memDir, type: "knowledge", title: "部署架构", content: "生产环境在单台 VPS", tags: ["deploy"], author: "t" })
+    const uid = `project:${memDir}:${filename}`
+    const entry = await deleteByUid(m, uid, { dirs: { project: memDir } })
+    assert.equal(entry.id, uid)
+    assert.equal(entry.title, "部署架构")
+    assert.equal(existsSync(join(memDir, filename)), false, "markdown 文件已删")
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM files WHERE layer='project' AND origin=? AND path=?`).get(memDir, filename).n, 0, "files 行已删")
+    assert.equal((await search(m, "VPS")).length, 0, "搜索零命中")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T3: 不存在 / 未配置 scope → 明确错误（NF2）", async () => {
+  const m = freshMemory()
+  await assert.rejects(() => deleteByUid(m, "personal:99999", {}), /memory personal:99999 not found in scope personal/)
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-del-miss-"))
+  try {
+    await assert.rejects(() => deleteByUid(m, `project:${dir}:nope.md`, { dirs: { project: dir } }), /not found in scope project/)
+    await assert.rejects(() => deleteByUid(m, "bogus:1", {}), /invalid memory id/)
+    await assert.rejects(() => deleteByUid(m, `team:x:y.md`, {}), /team scope unavailable/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T4: memory_delete 工具 — scope 与 id 前缀不匹配拒绝（NF3）", async () => {
+  const m = freshMemory()
+  const delTool = memoryTools(m, {}).find((t) => t.name === "memory_delete")
+  assert.ok(delTool, "memory_delete 工具应注册")
+  await assert.rejects(() => delTool.execute({ id: "personal:1", scope: "project" }), /id prefix personal: 与 scope project 不匹配/)
+  await assert.rejects(() => delTool.execute({ id: "team:x:y.md", scope: "project" }), /不匹配/)
+  await assert.rejects(() => delTool.execute({ id: "5", scope: "team" }), /不匹配/)
+  // 前缀一致但条目不存在 → 路由层 not found
+  await assert.rejects(() => delTool.execute({ id: "personal:1", scope: "personal" }), /not found in scope personal/)
+})
+
+test("T7: memory remove 命令 — project uid 走 deleteByUid 路由", async () => {
+  const { memoryCommand } = await import("../src/cli/memory-command.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-rm-proj-"))
+  const m = freshMemory()
+  try {
+    const memDir = join(dir, ".thincoder", "memory")
+    const filename = await putMarkdown(m, { layer: "project", dir: memDir, type: "knowledge", title: "待删条目", content: "命令行删除我", tags: [], author: "t" })
+    const lines = []
+    const origLog = console.log
+    const origErr = console.error
+    console.log = (s) => lines.push(s)
+    console.error = () => {}
+    try { await memoryCommand(m, ["remove", `project:${memDir}:${filename}`], { dirs: { project: memDir } }) } finally { console.log = origLog; console.error = origErr }
+    assert.ok(lines.some((l) => l.includes("Removed") && l.includes(filename)), `输出应含 Removed+filename: ${lines}`)
+    assert.equal(existsSync(join(memDir, filename)), false)
+    assert.equal((await search(m, "命令行删除")).length, 0)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T8: team 删除 — 文件删 + syncDir 清 files 行 + search 零命中（不做 git 操作）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-del-team-"))
+  const m = freshMemory()
+  try {
+    const teamDir = join(dir, "team-mem")
+    const filename = await putMarkdown(m, { layer: "team", dir: teamDir, type: "rule", title: "提交规范", content: "commit 用英文", tags: ["git"], author: "A" })
+    const uid = `team:${teamDir}:${filename}`
+    const entry = await deleteByUid(m, uid, { dirs: { team: teamDir } })
+    assert.equal(entry.title, "提交规范")
+    assert.equal(existsSync(join(teamDir, filename)), false)
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM files WHERE layer='team' AND origin=? AND path=?`).get(teamDir, filename).n, 0, "syncDir 清 files 行")
+    assert.equal((await search(m, "commit 用英文")).length, 0, "搜索零命中")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T9: 路径校验（.. / 绝对路径 / ..\\ 变体）+ ENOENT 容错", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-del-path-"))
+  const m = freshMemory()
+  try {
+    const memDir = join(dir, ".thincoder", "memory")
+    // ① 逃逸路径拒绝
+    await assert.rejects(() => deleteByUid(m, `project:${memDir}:..\\..\\evil.md`, { dirs: { project: memDir } }), /must stay within/)
+    await assert.rejects(() => deleteByUid(m, `project:${memDir}:../evil.md`, { dirs: { project: memDir } }), /must stay within/)
+    await assert.rejects(() => deleteByUid(m, `project:${memDir}:${join(dir, "evil.md")}`, { dirs: { project: memDir } }), /must stay within/)
+    // ② files 行存在但文件已缺 → 删除继续（syncDir 清行）
+    const filename = await putMarkdown(m, { layer: "project", dir: memDir, type: "knowledge", title: "幽灵条目", content: "文件已被外部删除", tags: [], author: "t" })
+    const { unlink } = await import("node:fs/promises")
+    await unlink(join(memDir, filename))
+    const entry = await deleteByUid(m, `project:${memDir}:${filename}`, { dirs: { project: memDir } })
+    assert.equal(entry.title, "幽灵条目")
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM files WHERE layer='project' AND origin=? AND path=?`).get(memDir, filename).n, 0, "syncDir 清残留行")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T10: memory_put / memory_search 输出带完整 uid（F2）", async () => {
+  const m = freshMemory()
+  const tools = memoryTools(m, {})
+  const putTool = tools.find((t) => t.name === "memory_put")
+  const searchTool = tools.find((t) => t.name === "memory_search")
+  const putOut = await putTool.execute({ type: "rule", title: "uid 可见", content: "personal 输出应带完整 uid" })
+  const uid = putOut.match(/id=(personal:\d+)/)?.[1]
+  assert.ok(uid, `put 输出应含 personal:<n>: ${putOut}`)
+  const searchOut = await searchTool.execute({ query: "uid 可见", limit: 5 })
+  assert.ok(searchOut.includes(uid), `search 输出应含 ${uid}: ${searchOut}`)
+  // 删除工具可直接消费该 uid
+  await tools.find((t) => t.name === "memory_delete").execute({ id: uid, scope: "personal" })
+  assert.equal((await search(m, "uid 可见")).length, 0)
+
+  // project scope：构造 project:<origin>:<path> 完整 uid（origin = 层目录）
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-uid-proj-"))
+  try {
+    const tools2 = memoryTools(freshMemory(), { cwd: dir, projectDir: ".thincoder/memory", author: "t" })
+    const putOut2 = await tools2.find((t) => t.name === "memory_put").execute({ type: "knowledge", title: "项目 uid", content: "project 输出带完整 uid", scope: "project" })
+    const memDir = join(dir, ".thincoder", "memory")
+    const filename = readdirSync(memDir)[0]
+    assert.ok(filename.endsWith(".md"))
+    assert.ok(putOut2.includes(`project:${memDir}:${filename}`), `put 输出应含完整 uid: ${putOut2}`)
+    const searchOut2 = await tools2.find((t) => t.name === "memory_search").execute({ query: "项目 uid", limit: 5 })
+    assert.ok(searchOut2.includes(`project:${memDir}:${filename}`), `search 输出应含完整 uid: ${searchOut2}`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T11: memory remove 命令 — 裸数字 id 兼容（解析为 personal:<n>）", async () => {
+  const { memoryCommand } = await import("../src/cli/memory-command.mjs")
+  const m = freshMemory()
+  const id = await put(m, { type: "rule", title: "旧命令条目", content: "裸数字删除" })
+  const lines = []
+  const origLog = console.log
+  const origErr = console.error
+  console.log = (s) => lines.push(s)
+  console.error = () => {}
+  try { await memoryCommand(m, ["remove", String(id)], { dirs: { project: null, team: null } }) } finally { console.log = origLog; console.error = origErr }
+  assert.ok(lines.some((l) => l.includes(`Removed personal:${id}`)), `输出应含 Removed personal:${id}: ${lines}`)
+  assert.equal((await list(m)).length, 0)
+})
+
 
 test("memory: 非法 type 拒绝写入", async () => {
   const m = freshMemory()
@@ -161,6 +323,67 @@ test("hybrid: 向量通道 + RRF + 惰性 embedding", async () => {
     server.close()
   }
 })
+
+test("hybrid: Windows 盘符 origin（project/team）— 双通道合并不丢条目（defect#A 回归）", async () => {
+  const { createServer } = await import("node:http")
+  const { createEmbedder } = await import("../src/embedding.mjs")
+  const DIM = 8
+  const vecFor = (text) => {
+    const v = new Array(DIM).fill(0)
+    if (text.includes("盘符")) v[0] = 1
+    return v
+  }
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      const { input } = JSON.parse(body)
+      const texts = Array.isArray(input) ? input : [input]
+      res.setHeader("content-type", "application/json")
+      res.end(JSON.stringify({ data: texts.map((t, i) => ({ embedding: vecFor(t), index: i })) }))
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  // files 行直接入库（origin = Windows 盘符路径，跨平台可测；files_ai 触发器同步 FTS）
+  const insertRow = (m, layer, origin, path, title, content, author) =>
+    m.db.prepare(`INSERT INTO files (layer, origin, path, type, title, content, tags, author, mtime_ms, seg_title, seg_content, seg_tags, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, '', ?, 0, ?, ?, '', ?)`)
+      .run(layer, origin, path, layer === "project" ? "knowledge" : "rule", title, content, author,
+           segmentCJK(title), segmentCJK(content), Date.now())
+  const projUid = "project:C:\\work\\proj:proj-mem.md"
+  const teamUid = "team:C:\\work\\team:team-mem.md"
+  try {
+    // ① fetchEntry 正确解析盘符 origin uid（末个冒号 = origin/path 分隔符）
+    const m0 = freshMemory()
+    insertRow(m0, "project", "C:\\work\\proj", "proj-mem.md", "盘符项目条目", "Windows 盘符 origin 的项目记忆", "t")
+    insertRow(m0, "team", "C:\\work\\team", "team-mem.md", "盘符团队条目", "Windows 盘符 origin 的团队记忆", "A")
+    const pe = fetchEntry(m0, projUid)
+    assert.ok(pe, "fetchEntry 应解析 project:C:\\...:file.md（origin=C:\\work\\proj, path=proj-mem.md）")
+    assert.equal(pe.title, "盘符项目条目")
+    assert.equal(pe.id, projUid)
+    assert.equal(fetchEntry(m0, teamUid).layer, "team")
+
+    // ② FTS 通道（无 embedder）：ftsSearch 输出完整 origin uid，直接命中
+    const ftsOnly = await search(m0, "盘符")
+    assert.ok(ftsOnly.some((r) => r.id === projUid), "FTS-only 应含 project 盘符条目")
+    assert.ok(ftsOnly.some((r) => r.id === teamUid), "FTS-only 应含 team 盘符条目")
+
+    // ③ embedder 混合检索：RRF 合并点（fetchEntry）同时解析 FTS 与向量通道的盘符 uid——均不丢
+    const m = freshMemory()
+    m.embedder = createEmbedder({ baseURL: `http://127.0.0.1:${server.address().port}/v1`, apiKey: "x", model: "mock" })
+    m.projectOrigin = "C:\\work\\proj"
+    insertRow(m, "project", "C:\\work\\proj", "proj-mem.md", "盘符项目条目", "Windows 盘符 origin 的项目记忆", "t")
+    insertRow(m, "team", "C:\\work\\team", "team-mem.md", "盘符团队条目", "Windows 盘符 origin 的团队记忆", "A")
+    const results = await search(m, "盘符")
+    assert.ok(results.some((r) => r.id === projUid), "混合检索应含 project 盘符条目")
+    assert.ok(results.some((r) => r.id === teamUid), "混合检索应含 team 盘符条目")
+    // 惰性嵌入已落库——向量通道确实参与合并
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM files WHERE embedding IS NOT NULL`).get().n, 2)
+  } finally {
+    server.close()
+  }
+})
+
 
 // ---------------------------------------------------------------- team 层（本地裸仓库模拟远端）
 

@@ -1075,6 +1075,16 @@ test("prompts/system.md: 文档归属纪律条款（doc map / update instead of 
   assert.match(text, /exactly ONE place/, "单一权威源语义")
 })
 
+test("prompts/system.md: 操作并行化纪律条款（Parallelize aggressively + F7 触发条件 + 不并行边界）", () => {
+  const text = readFileSync(join(PROMPTS_DIR_ABS, "system.md"), "utf8")
+  assert.match(text, /Parallelize aggressively/, "主动并行引导句存在")
+  assert.match(text, /splitting changes across independent sub-projects/, "F7 多项目拆分语义")
+  assert.match(text, /share no files, have no cross-dependencies, and each has its own tests/, "F7 触发条件（全部满足才拆）")
+  assert.match(text, /Do NOT parallelize/, "不并行边界引导")
+  assert.match(text, /approval storms/, "审批风暴边界（bash/审批敏感命令）")
+  assert.match(text, /micro-parallelism/, "微操作不并行（收益判断）")
+})
+
 test("docs/design/README.md: 文档地图存在且含板块映射表 + 待合并标注", () => {
   const text = readFileSync(join(SRC_DIR_ABS, "..", "docs", "design", "README.md"), "utf8")
   assert.ok(text.includes("板块 → 文档映射"), "映射表存在")

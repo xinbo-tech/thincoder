@@ -4,8 +4,8 @@
 
 import { parseEntry, serializeEntry, entryFilename } from "../markdown.mjs"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
-import { readFile, stat, readdir, writeFile, mkdir } from "node:fs/promises"
-import { join } from "node:path"
+import { readFile, stat, readdir, writeFile, mkdir, unlink } from "node:fs/promises"
+import { join, resolve } from "node:path"
 import { segmentCJK, VALID_TYPES, SCHEMA_VERSION } from "./schema.mjs"
 
 const EMBED_BATCH_SIZE = 256
@@ -92,11 +92,11 @@ export function ftsSearch(memory, ftsQuery, limit) {
   const originFilter = memory.projectOrigin ? `AND (f.layer = 'team' OR f.origin = ?)` : ""
   const originParams = memory.projectOrigin ? [ftsQuery, memory.projectOrigin, limit] : [ftsQuery, limit]
   const files = memory.db.prepare(`
-    SELECT f.layer, f.path, f.type, f.title, f.content, f.tags, f.author, bm25(files_fts) AS rank
+    SELECT f.layer, f.origin, f.path, f.type, f.title, f.content, f.tags, f.author, bm25(files_fts) AS rank
     FROM files_fts JOIN files f ON f.rowid = files_fts.rowid
     WHERE files_fts MATCH ? ${originFilter}
     ORDER BY rank LIMIT ?
-  `).all(...originParams).map((r) => ({ ...r, id: `${r.layer}:${r.origin ?? ""}:${r.path}` }))
+  `).all(...originParams).map((r) => ({ ...r, id: `${r.layer}:${r.origin}:${r.path}` }))
 
   return [...personal, ...files].sort((a, b) => a.rank - b.rank).slice(0, limit)
 }
@@ -110,9 +110,12 @@ export function fetchEntry(memory, uid) {
     const r = memory.db.prepare(`SELECT id, type, title, content, tags FROM entries WHERE id = ?`).get(Number(rest[0]))
     return r ? { ...r, layer, id: uid } : null
   }
-  // rest = [origin, ...pathParts]; origin may be empty string (compat with old format)
-  const origin = rest[0] ?? ""
-  const path = rest.slice(1).join(":")
+  // Files branch: origins may contain colons (Windows drive letters, e.g. project:C:\dir:file.md),
+  // so the LAST colon is always the origin/path separator — same parsing as deleteByUid.
+  // origin may be empty (compat with the old `project::file.md` format).
+  const lastColon = uid.lastIndexOf(":")
+  const origin = lastColon > layer.length ? uid.slice(layer.length + 1, lastColon) : ""
+  const path = lastColon > layer.length ? uid.slice(lastColon + 1) : uid.slice(layer.length + 1)
   if (layer === "project" && memory.projectOrigin) {
     const r = memory.db.prepare(`SELECT type, title, content, tags, author FROM files WHERE layer = ? AND origin = ? AND path = ?`).get(layer, origin || memory.projectOrigin, path)
     if (r) return { ...r, layer, id: uid }
@@ -269,10 +272,75 @@ export async function list(memory, { type, limit = DEFAULT_LIST_LIMIT } = {}) {
     .all(limit)
 }
 
-/** Delete a memory entry. Returns whether deletion succeeded */
+/** Delete a memory entry by unified id. Returns the deleted entry (F3: { id, layer, type, title, content, tags }).
+ *  - personal:<n> (or bare <n>) → DELETE the entries row; FTS syncs via the entries_ad trigger and the
+ *    embedding BLOB column goes with the row.
+ *  - project:<origin>:<path> / team:<origin>:<path> → delete the markdown file (path must resolve inside
+ *    the layer dir — dirs[layer], passed by the caller — `..`/absolute variants (incl. `..\`) are rejected),
+ *    then syncDir clears the files row (single source of index cleanup). ENOENT on the file is treated as
+ *    already-deleted and continues. Team deletion never touches git (git propagation is gitmem's job; a
+ *    later gitmem pull may resurrect the file while the remote still has it).
+ *  Throws on invalid id / missing entry (NF2) / path escaping the layer dir. */
+export async function deleteByUid(memory, uid, { dirs = {} } = {}) {
+  const norm = /^\d+$/.test(uid) ? `personal:${uid}` : String(uid)
+  const [layer, ...rest] = norm.split(":")
+  if (layer === "personal") {
+    const id = rest[0] ?? ""
+    if (!/^\d+$/.test(id)) throw new Error(`invalid memory id: ${norm}`)
+    const entry = fetchEntry(memory, norm)
+    if (!entry) throw new Error(`memory ${norm} not found in scope personal`)
+    memory.db.prepare(`DELETE FROM entries WHERE id = ?`).run(Number(id))
+    return entry
+  }
+  if (layer !== "project" && layer !== "team") throw new Error(`invalid memory id: ${norm}`)
+  const dir = dirs[layer]
+  if (!dir) throw new Error(`${layer} scope unavailable: no ${layer} directory configured`)
+  // path = segment after the LAST colon — origins may contain colons (Windows drive letters)
+  const lastColon = norm.lastIndexOf(":")
+  const path = lastColon > layer.length ? norm.slice(lastColon + 1) : norm.slice(layer.length + 1)
+  assertPathInside(dir, path)
+  let entry = fetchFileEntry(memory, layer, norm, path)
+  const abs = join(dir, path)
+  let fileExists = false
+  try { await stat(abs); fileExists = true } catch { /* ENOENT — treat as already deleted */ }
+  if (!entry && fileExists) {
+    try {
+      const { meta, content } = parseEntry(await readFile(abs, "utf8"))
+      entry = { layer, id: norm, type: meta.type, title: meta.title, content, tags: meta.tags.join(" ") }
+    } catch { /* malformed file — keep the DB row (or null → not found below) */ }
+  }
+  if (!entry) throw new Error(`memory ${norm} not found in scope ${layer}`)
+  if (fileExists) await unlink(abs).catch((e) => { if (e.code !== "ENOENT") throw e })
+  await syncDir(memory, { layer, dir })
+  return entry
+}
+
+/** Legacy personal-only delete (bare numeric id) — kept as the compat surface over deleteByUid. */
 export async function remove(memory, id) {
-  const info = memory.db.prepare(`DELETE FROM entries WHERE id = ?`).run(id)
-  return info.changes > 0
+  const uid = /^\d+$/.test(String(id)) ? `personal:${id}` : String(id)
+  if (!fetchEntry(memory, uid)) return false
+  await deleteByUid(memory, uid, {})
+  return true
+}
+
+/** Fetch a project/team file row for deletion: fetchEntry first, then a path-only fallback
+ *  (origins with Windows drive letters, e.g. project:C:\dir:file.md, break naive ":" splitting). */
+function fetchFileEntry(memory, layer, uid, path) {
+  const entry = fetchEntry(memory, uid)
+  if (entry) return entry
+  const r = memory.db.prepare(`SELECT type, title, content, tags, author FROM files WHERE layer = ? AND path = ?`).get(layer, path)
+  return r ? { ...r, layer, id: uid } : null
+}
+
+/** Separator-agnostic containment check: the resolved path must stay inside dir.
+ *  Both / and \ count as separators, so Windows-style traversal (..\..\x) is caught on every platform. */
+function assertPathInside(dir, path) {
+  if (!path) throw new Error(`invalid memory id: empty path`)
+  const base = resolve(dir).replaceAll("\\", "/")
+  const abs = resolve(dir, path.replaceAll("\\", "/")).replaceAll("\\", "/")
+  if (abs !== base && !abs.startsWith(base + "/")) {
+    throw new Error(`invalid memory path "${path}": must stay within ${dir}`)
+  }
 }
 
 /**

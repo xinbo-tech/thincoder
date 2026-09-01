@@ -48,12 +48,13 @@
 | `code_search` | 源码 FTS5 + 向量混合检索 + JSDoc 提取，26 种语言，仅索引 git 仓库 |
 | `doc_search` | 文档按 ## 标题分块，混合检索 |
 
-## 六、记忆系统（4 个）
+## 六、记忆系统（5 个）
 
 | 工具 | 说明 |
 |------|------|
 | `memory_put` | 写入长期记忆（rule/knowledge/decision/pattern） |
 | `memory_search` | 三层混合检索（personal/project/team），FTS5+向量+RRF |
+| `memory_delete` | 按 id + scope 精确删除记忆（personal/project/team——2026-09-01 MEMORY.md §0.1；search/put 输出带完整 uid 供删除消费） |
 | `doc_search` | 文档检索 |
 | 记忆层 | personal（SQLite ~/.thincoder）、project（.thincoder/memory/*.md）、team（独立 git 仓库） |
 

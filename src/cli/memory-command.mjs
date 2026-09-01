@@ -1,7 +1,12 @@
-import { put, remove, search, list } from "../memory.mjs"
+import { join } from "node:path"
+import { loadConfig } from "../config.mjs"
+import { teamConfig } from "./make-agent.mjs"
+import { put, search, list, deleteByUid } from "../memory/core.mjs"
 
-/** thincoder memory <list|search|put|remove> subcommands */
-export async function memoryCommand(memory, args) {
+/** thincoder memory <list|search|put|remove> subcommands.
+ *  opts.dirs: { project, team } layer directories for project/team file deletion (tests inject their own);
+ *  falls back to the same config-derived dirs the agent uses. */
+export async function memoryCommand(memory, args, opts = {}) {
   const [sub, ...rest] = args
 
   const flags = {}
@@ -37,18 +42,34 @@ export async function memoryCommand(memory, args) {
       break
     }
     case "remove": {
-      const id = Number(positional[0])
-      if (!id) {
-        console.error("Usage: thincoder memory remove <id>")
+      const uid = positional[0]
+      if (!uid) {
+        console.error("Usage: thincoder memory remove <uid>  (uid: personal:<n> | project:<origin>:<path> | team:<origin>:<path>; bare <n> = personal)")
         return 1
       }
-      console.log((await remove(memory, id)) ? `Removed #${id}` : `No entry #${id}`)
+      try {
+        const entry = await deleteByUid(memory, uid, { dirs: opts.dirs ?? cliDirs() })
+        console.log(`Removed ${entry.id}: ${entry.title}`)
+      } catch (e) {
+        console.error(e.message)
+        return 1
+      }
       break
     }
     default:
       console.error("Usage: thincoder memory <list|search|put|remove>")
       return 1
   }
+}
+
+/** Layer directories for project/team file deletion — derived from the same config the agent uses. */
+function cliDirs() {
+  const config = loadConfig()
+  const dirs = { project: null, team: null }
+  if (config.memory?.projectDir) dirs.project = join(process.cwd(), config.memory.projectDir)
+  const team = teamConfig(config)
+  if (team) dirs.team = team.dir
+  return dirs
 }
 
 function printEntries(entries) {

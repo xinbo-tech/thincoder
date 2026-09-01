@@ -7,7 +7,7 @@ import { join } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
 import { DOC_EXTS, SKIP_DIRS, MAX_DOC_FILE_BYTES } from "./schema.mjs"
-import { buildFtsQuery, put, search, putMarkdown, EMBED_TEXT_MAX_LEN } from "./core.mjs"
+import { buildFtsQuery, put, search, putMarkdown, deleteByUid, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { markIndexedCommit, listProjectFiles } from "./code-sync.mjs"
 
@@ -187,12 +187,13 @@ export function docSearchTool(memory) {
 // ---------------------------------------------------------------- agent tools
 
 /**
- * Generate the two memory-related agent tools (following the tools.mjs tool shape).
- * memory_put is a side-effecting tool (needs permission confirmation), memory_search is read-only.
+ * Generate the three memory-related agent tools (following the tools.mjs tool shape).
+ * memory_put and memory_delete are side-effecting (need permission confirmation), memory_search is read-only.
  * opts: { cwd, projectDir, author, team: { dir, name } | null }
  */
 export function memoryTools(memory, opts = {}) {
   const projectDir = opts.projectDir ? join(opts.cwd ?? process.cwd(), opts.projectDir) : null
+  const dirs = { project: projectDir, team: opts.team?.dir ?? null }
   return [
     {
       name: "memory_put",
@@ -214,7 +215,7 @@ export function memoryTools(memory, opts = {}) {
         const scope = args.scope ?? "personal"
         if (scope === "personal") {
           const id = await put(memory, args)
-          return `Saved to personal memory (id=${id}): [${args.type}] ${args.title}`
+          return `Saved to personal memory (id=personal:${id}): [${args.type}] ${args.title}`
         }
         if (scope === "project") {
           if (!projectDir) throw new Error("project scope unavailable: no project directory configured")
@@ -227,7 +228,7 @@ export function memoryTools(memory, opts = {}) {
             tags: (args.tags ?? "").split(/\s+/).filter(Boolean),
             author: opts.author ?? "unknown",
           })
-          return `Saved to project memory (${filename}): [${args.type}] ${args.title}`
+          return `Saved to project memory (id=project:${projectDir}:${filename}): [${args.type}] ${args.title}`
         }
         if (!opts.team?.dir) {
           throw new Error("team scope not configured: set memory.team in ~/.thincoder/config.json")
@@ -242,7 +243,7 @@ export function memoryTools(memory, opts = {}) {
           author: opts.author ?? "unknown",
         })
         await commitAndPush(opts.team.dir, filename, `memory: [${args.type}] ${args.title}`)
-        return `Saved to team memory and pushed (${filename}): [${args.type}] ${args.title}`
+        return `Saved to team memory and pushed (id=team:${opts.team.dir}:${filename}): [${args.type}] ${args.title}`
       },
     },
     {
@@ -261,7 +262,32 @@ export function memoryTools(memory, opts = {}) {
       async execute(args) {
         const results = await search(memory, args.query, { limit: args.limit ?? 5 })
         if (results.length === 0) return "(no matching memories)"
-        return results.map((r) => `[${r.layer}][${r.type}] ${r.title}\n${r.content}`).join("\n\n")
+        return results.map((r) => `[${r.layer}][${r.type}] ${r.title} (id=${r.id})\n${r.content}`).join("\n\n")
+      },
+    },
+    {
+      name: "memory_delete",
+      description:
+        "Delete a memory entry by its id (as returned by memory_put / memory_search) and scope. " +
+        "Scope is required and must match the id prefix — this prevents accidental deletion in another scope. " +
+        "Returns the deleted entry's title and content so the deletion is auditable and recoverable.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Entry id: personal:<n> / project:<origin>:<path> / team:<origin>:<path>" },
+          scope: { type: "string", enum: ["personal", "project", "team"], description: "Scope of the entry to delete (required)" },
+        },
+        required: ["id", "scope"],
+      },
+      readonly: false,
+      async execute(args) {
+        const uid = String(args.id)
+        const prefix = uid.split(":")[0]
+        const uidScope = prefix === "personal" || prefix === "project" || prefix === "team" ? prefix : /^\d+$/.test(prefix) ? "personal" : null
+        if (!uidScope) throw new Error(`invalid memory id: ${uid}`)
+        if (uidScope !== args.scope) throw new Error(`id prefix ${prefix}: 与 scope ${args.scope} 不匹配`)
+        const entry = await deleteByUid(memory, uid, { dirs })
+        return `Deleted ${entry.id}: ${entry.title}\n${(entry.content ?? "").slice(0, 500)}`
       },
     },
   ]
