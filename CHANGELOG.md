@@ -15,6 +15,7 @@
 - **edit 数组形态同文件串行**：同一文件多条 edit 的 raw 域快照随条目推进，第二条不再漂移（编辑器 CRLF 路径 + 磁盘路径双修复）
 - **MCP tools/list 分页超时约束**（MCP.md §4 评审 #8）：每页同受 INIT_TIMEOUT_MS 约束——probe 延迟统计有界
 - **MCP 握手失败 transport 泄漏**（评审 #7）：GET SSE 降级成功但 POST initialize 失败时关闭 transport，不留悬挂流
+- **hex-escape 毒载荷 400 根治（escape.mjs v3）**：v2 的 lookbehind 单字符判定与 hex 窗口越界缺陷在长会话（讨论转义主题）下漏中和 → deepseek 等网关二次解析报 "unexpected end of hex escape"；v3 数反斜杠 run 奇偶 + 窗口越界修复（`\\x/\\u` 相邻双写）+ 孤立代理对（`\\uD83D` 无配对 strict JSON 解析拒绝）预 double；真实会话 74 处毒点全量中和为 0，11 个 case 锁定（含 v1 行为兼容回归）
 
 ## [0.12.54] — 2026-09-01
 
