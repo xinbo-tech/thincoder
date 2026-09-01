@@ -5,7 +5,7 @@
  */
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
-import { specForModel } from "../config.mjs"
+import { providerSpec } from "../config.mjs"
 import { findReviewRepos, collectRepoSnapshots, collectChangedFiles } from "./repos.mjs"
 import { buildConvergenceBody, buildConvergenceInstructions } from "./convergence.mjs"
 import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "./history.mjs"
@@ -90,7 +90,9 @@ function injectProjectGuide(agent, parts, scopeFiles = []) {
   }
   // readFileSync succeeded — compute the budget OUTSIDE the try so a spec
   // lookup failure can never masquerade as "no AGENTS.md".
-  const ctx = specForModel(agent.provider?.model ?? "").context
+  // providerSpec: the project-guide budget follows the provider-level context
+  // override (PROVIDER.md §15 — advisor messages budget is context-based).
+  const ctx = providerSpec(agent.provider).context
   const cap = Math.max(PROJECT_GUIDE_MIN, Math.floor(ctx * PROJECT_GUIDE_FRACTION))
   const shown = text.length <= cap
     ? text

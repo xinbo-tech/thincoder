@@ -3,7 +3,7 @@
  * Message building lives in advisor.mjs.
  */
 import { chat } from "../provider/core.mjs"
-import { findProvider, specForModel } from "../config.mjs"
+import { findProvider, providerSpec } from "../config.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { prepareAdvisorMessages } from "../advisor.mjs"
 import { appendCitationReport } from "./citations.mjs"
@@ -221,7 +221,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         id: tc.id, type: "function",
         function: { name: tc.name, arguments: tc.arguments },
       })),
-      ...(response.reasoning && specForModel(provider.model).reasoningEcho === "required"
+      ...(response.reasoning && providerSpec(provider).reasoningEcho === "required"
         ? { reasoning_content: response.reasoning }
         : {}),
     })
