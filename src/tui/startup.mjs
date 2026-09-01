@@ -140,12 +140,14 @@ export function showStartup(ctx) {
   const { agent, state, opts, pushLine, pushLabel, render, startWizard } = ctx
 
   // Startup screen
-  if (!agent.provider.apiKey) {
+  // 2026-09-02 Q1（SESSION.md §8 D-S2）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
+  // —— 可选链守卫；`!apiKey` 触发既有 wizard（其 provider 菜单列出已存在 providers，可选中恢复，F3）
+  if (!agent.provider?.apiKey) {
     pushLabel(`Welcome to ThinCoder!`, ansi.bold + C.tool)
     pushLine("No API key configured yet — entering initial setup (Esc to skip anytime)", C.text)
     startWizard()
   } else {
-    pushLine(`Welcome to ThinCoder. Provider: ${agent.activeProvider} / ${agent.provider.model}`, C.dim)
+    pushLine(`Welcome to ThinCoder. Provider: ${agent.activeProvider} / ${agent.provider?.model ?? "(none)"}`, C.dim)
   }
   pushLine(`Tools: ${agent.tools.map((t) => t.name).join(", ")}`, C.dim)
 
