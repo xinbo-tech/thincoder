@@ -156,3 +156,74 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 | T5 | vscode：anthropic 分支 body | `max_tokens:100`，无 thinking 字段 | 范围边界 |
 | T6 | vscode：google 分支 body | `maxOutputTokens:100` | 范围边界 |
 | T7 | 回归：标题 ≤40 字符截断、无引号 | 不变 | 范围边界 |
+
+
+---
+
+## 8. 会话恢复 provider/model 缺失 → 模型重选（2026-09-02，用户问题 Q1）
+
+> **状态：设计定稿，待实现**。用户问题批 Q1（docs/TODO.md）：CLI 退出重进时，会话引用的 provider 或 model 已不存在 → 直接报错退出进不了 TUI；期望给用户界面重新选择模型。
+
+### 8.1 问题与根因
+
+**症状**：会话保存时用了 provider A（如某个自定义 provider 或已删模型），重进时 config 里已无 A → CLI 报错退出。
+
+**根因链**（代码已核）：
+
+1. `loadConfig`（config.mjs 的 `runtimeProvider` 构造处——`findProvider(providers, activeProvider)` 返回 undefined → 空对象 `{}`）：`activeProvider` 在 `providers[]` 不存在 → **空对象**——不抛错但无 model/baseURL/apiKey。
+2. `assembleAgent`（make-agent.mjs 的 `provider.proxyUri` 注入处）：`provider = config.provider`（空对象）→ 后续 `provider.proxyUri` 赋值 OK（空对象可加属性）。
+3. **崩溃点**：空 provider 流入 `runAgent` → `chat()` → `provider.model` undefined → body 缺 model → **网关 400**；或 `provider.baseURL` undefined → `fetch("undefined/chat/completions")` → **TypeError "Failed to parse URL"** → uncaughtException → 进程退出。TUI 首帧若解引用 `agent.provider.name` 同崩。
+4. `applySession`（session.mjs 的 `if (p)` 回切分支）对不存在 provider **静默跳过**（`if (p)` 不成立 → return false）——**不报错也不纠正**，空 provider 继续流。
+
+### 8.2 需求
+
+- F1：会话恢复后若**当前 provider 无效**（会话与 config 的 activeProvider 均不存在，或 model 缺失）→ **不退出**，进入 TUI 后引导用户重新选择模型（复用既有 `/model` picker 机制）。**会话 provider 缺失但 config 有有效 provider → 静默用 config 的 provider（不弹重选——D-S3 优先级）**。
+- F2：config 的 `activeProvider` 本身无效（无会话恢复场景，纯配置错误）→ 同样不退出，TUI 启动即弹选择。
+- F3：无任何可用 provider → 明确提示（进入配置向导或提示 `/provider add`），不崩溃。
+- F4：headless（`thincoder chat`）无 TUI → 报可读错误 + 退出码（不弹 UI）；`--auto` 场景同。
+
+### 8.3 设计
+
+**D-S1 启动前校验（bin/thincoder.mjs + make-agent.mjs）**：
+
+- `assembleAgent` 后、`applySession` 前：校验 `agent.provider?.model` 与 `agent.provider?.baseURL` 存在；缺失 → 打标记 `agent._providerInvalid = true`（附原因：provider 不存在 / model 缺失）。
+- **model 无效判据（评审 #1 修正）**：仅当 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（未知模型 = 受支持场景，PROVIDER.md:84 "未知模型保守 128K + 警告"；自定义端点模型不在 MODEL_SPECS 是常态，误判会让自定义模型用户每次恢复都弹重选，违反 AC4 零回归）。
+- 不抛错、不退出；空 provider 不再流入 runAgent——**TUI 路径在 startTUI 前清空无效 provider**（`agent.provider = null`），由 TUI 启动逻辑触发模型选择。
+- **model 退役场景（评审 #2 修正）**：provider 存在但 `provider.model` 空（如 config 里 model 字段被删）→ 判 invalid 引导重选（默认选中该 provider 默认模型）。**MODEL_SPECS 未知不视为退役**——退役只能从"model 字段缺失"或"provider 自身消失"判断，客户端无法可靠区分"模型从 spec 表退役"与"自定义模型"（spec 表不是 allowlist）。
+
+**D-S2 TUI 重选流程**（src/tui.mjs 启动 + pickers.mjs 复用）：
+
+- `startTUI` 首帧前检查 `agent._providerInvalid`（或 `!agent.provider`）→ **先弹模型选择 picker**（复用 `openModelPicker`/`selectModel`，展示当前可用 providers）→ 用户选定后继续正常启动（`agent.provider` 已更新为有效值）。
+- 选择取消（Esc）→ 仍进入 TUI（显示提示行"未配置有效 provider，可用 /model 选择或 /provider 配置"）——**绝不因无 provider 拒绝进入**。
+- `/model` 在无有效 provider 时行为不变（picker 列出可用项）。
+
+**D-S3 会话恢复与 provider 缺失的优先级**：
+
+- 若会话的 `activeProvider` 无效但 config 的 `activeProvider` 有效 → **用 config 的有效 provider**（会话切换失败 = 静默保持现状，已有行为）——仅当**两者都无效**才弹重选。
+- 会话的 `activeModel` 无效（provider 存在但模型退役）→ 弹重选（默认选中该 provider 的默认模型——`selectModel` 现成行为）。
+
+**D-S4 headless**（F4）：`thincoder chat` 路径（bin/thincoder.mjs 的 chat 命令分支）遇无效 provider → `console.error` 可读消息（"会话引用的 provider 'X' 不存在，请运行 thincoder 进入 TUI 重新选择，或编辑 config.json"）+ `exitSoon(1)`——不弹 UI、不崩溃（明确退出码）。
+
+### 8.4 测试
+
+**受影响文件**：`bin/thincoder.mjs`（tui/chat 两路径的启动校验接入）、`src/cli/make-agent.mjs`（assembleAgent 后校验点 + `_providerInvalid` 标记）、`src/session.mjs`（applySession 不变——校验在调用侧）、`src/tui.mjs`（startTUI 首帧检查 + 弹选择）、`src/tui/pickers.mjs`（复用 openModelPicker/selectModel——如无导出改动则仅调用）、`test/session.test.mjs`（T1-T7 + T1b/T6b 恢复场景）、`test/tui.test.mjs`（T2 启动弹选择 + T7 取消）、`docs/design/SESSION.md`（本节）、`CHANGELOG.md`。
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T1 | 会话+config 均无此 provider | mock：会话 activeProvider="ghost"；config.activeProvider="ghost"（均不存在） | 启动不退出；`agent._providerInvalid=true`；TUI 首帧弹模型选择 | F1/D-S1 |
+| T1b | 会话 provider 缺失 + config 有效（D-S3 静默分支） | 会话 activeProvider="ghost"；config.activeProvider="deepseek"（有效） | 不弹重选；静默用 config 的 provider；`_providerInvalid` 不置位 | F1/D-S3 |
+| T2 | config activeProvider 无效 | config activeProvider 指向不存在 provider | 启动不退出；`_providerInvalid=true`；TUI 首帧弹模型选择 | F2/D-S1 |
+| T3 | 无可用 provider | providers 为空 | 明确提示（向导/提示行），不崩溃 | F3/D-S2 |
+| T4 | headless | `thincoder chat "x"` + 无效 provider | 可读错误 + 退出码 1，无 UI | F4/D-S4 |
+| T5 | 会话 provider 有效 | 正常恢复 | 行为不变（回归） | D-S3 |
+| T6 | activeModel 缺失（model 字段被删） | provider 存在但会话 model 为空 | 弹重选，默认该 provider 默认模型 | F2/D-S1 |
+| T6b | 自定义模型（MODEL_SPECS 未知） | provider.model="my-custom-model"（不在 MODEL_SPECS） | **不判 invalid**；正常恢复不弹重选（评审 #1 回归） | F2/D-S1 |
+| T7 | 选择取消 | 弹 picker 后 Esc | 仍进 TUI + 提示行，不退出 | D-S2 |
+
+**验收**：AC1 = 任意无效 provider/model 场景 CLI 不再崩溃退出（T1-T4）；AC2 = TUI 内可完成模型重选（T1/T2/T6）；AC3 = headless 明确报错+退出码（T4）；AC4 = 正常恢复零回归（T5）+ CLI 全量 + lint 绿。
+
+### 8.5 关键决策
+
+- **清空而非修补空 provider**：空对象 `{}` 流入下游是崩溃源——检测后置 `null`，让 TUI 选择流程从干净状态开始（避免"半有效 provider"的隐晦错误）。
+- **校验点收敛到 assembleAgent 之后**：一处检测覆盖 TUI/chat 两路径（F1-F4 同源）；不散落多处判断。
+- **否决**：a) 启动即退出并打印"请编辑 config"（用户已明确要 UI 重选——体验差）；b) 静默回退到第一个可用 provider（用户可能 unaware 换错模型——必须显式选择）；c) 自动用 config.activeProvider 覆盖会话 provider（用户上次明确选的模型不能静默丢）。

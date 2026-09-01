@@ -341,7 +341,7 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 | T11 | event:error 帧识别（百炼形态，真机冒烟发现） | `event:error` + data{code,message} → 抛错（不静默空响应） |
 | T12 | stateful:false 覆盖清残留链 | provider.stateful=false 时既有链作废（全量）——buildBody 清洗链含 wantStateful |
 
-## 13.6 真机冒烟记录（2026-08-31 执行 ✅）
+### 13.6 真机冒烟记录（2026-08-31 执行 ✅）
 
 `test/smoke-responses.mjs` + `test/smoke-responses-chain.mjs`（读本机 config.json，key 不打印不外传）：
 
@@ -357,13 +357,32 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 
 ## 13.7 预设 provider 全景（2026-08-31 查证：19 家内置预设 → responses 状态）
 
+| 预设 | responses | 链 | 依据/状态 |
+|---|---|---|---|
+| deepseek | ✅ | ❌（官方无状态；灰名单全量） | 真机 ✅ |
+| qwen / qwenplan | ✅ | ✅ | 真机 ✅（98.9% 体积削减实测） |
+| glm / glm-code | ✅ | ✅ | 真机 ✅（baseURL 须 `open.bigmodel.cn/api/v1`——预设是 chat 路径，响应式用户需自配） |
+| openai | ✅ | ✅ | 官方文档（未真机，需官方 key） |
+| minimax | ✅ | ❌（官方 schema 无 previous_response_id/store；中立 host 静默全量） | 官方文档（responses-create.md 主接口）+ 真机 ✅；tool_choice 仅 none/auto（限制记录） |
+| openrouter | ✅ 格式 | ❌（官方文档：**stateless，store/previous_response_id 明确 400 拒绝**） | 官方文档；**事件流变体**（content_part.delta/response.done/[DONE]）已兼容（2026-08-31） |
+| grok (xAI) | ✅ | ✅（官方文档：previous_response_id + 加密 Reasoning） | 官方文档（未真机） |
+| kimi / kimi-code | ❌ | — | 官方全站索引零 responses（Codex 走 CC Switch 兼容层） |
+| claude | ❌（Messages 协议） | — | 协议本体 |
+| gemini | ❌（Google 协议） | — | 协议本体 |
+| mimo / mimoplan | ⚠️ 未证实 | — | 官网仅"OpenAI/Anthropic 兼容"（无 responses 证据） |
+| volcengine / hunyuan / siliconflow / groq / mistral | ⚠️ 未核实 | — | 官方文档未核到 responses 页（搜索工具当日故障，留位） |
+
+**纪律重申**：白名单 = 官方文档 + 真机双实证（openai 未真机属已知例外——官方为协议首发方）；中立 host（格式支持、无链/未证实）= 静默全量 + 无警告；灰名单 = 官方明确"不支持且静默忽略"（仅 DeepSeek）→ warning。
+
 ## 14. 截断续写 400 止损与根治（2026-09-02，用户问题 Q3 根因）
 
 > **状态：设计定稿，待实现**（用户问题批 Q3，docs/TODO.md）。根因经真机复现实锤（2026-09-02，deepseek-v4-flash 稳定版）。
+>
+> **两端 parity**：本文件为 CLI 侧权威源；扩展端同规格见 thincoder-vscode/docs/design/ARCHITECTURE.md 变更段（引用不复制）——prefix 续写 400 同样影响 VS Code 的 deepseek 用户，**VS Code 端口须同修**（与兄弟节 §10-§13 同一纪律）。
 
 ### 14.1 问题
 
-DeepSeek 系列（deepseek-v4-pro/v4-flash/v4-flash-vision-exp，model-specs.mjs:29-32 均 `prefixMode: true`）在 `finishReason === "length"`（输出 token 截断）时触发 prefix 续写（§5、core.mjs:203-222）：
+DeepSeek 系列（deepseek-v4-pro/v4-flash/v4-flash-vision-exp，model-specs.mjs 的 `prefixMode: true` 声明）在 `finishReason === "length"`（输出 token 截断）时触发 prefix 续写（§5、core.mjs 的 `chat()` 续写循环）：
 
 - 续写请求发 **`/beta` 端点**（`betaBaseURL`），最后一条消息 = `{ role: "assistant", content: <截断内容>, prefix: true }`
 - **但 messages 数组 = `[...messages, 续写消息]`** —— 全量历史原样带上，**含历史中的 tool_calls / tool 消息与 reasoning_content**
@@ -438,22 +457,3 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类）：
 - **真机（最强）**：完整真实会话（953 条，含 421 个代理字符其中 1 个孤立）→ normalizeToolPairing + escapeMessages → deepseek **200**（修复前同一链路 400）；带 `thinking:enabled` 真实注入路径 6/6 全 200
 
 **遗留观察项**：03:11 曾复现一次 `reasoning_content must be passed back` 400（根因②），同链路 6 次重试全 200 无法再复现——疑 deepseek 服务端临时状态；若复发，`THIN_DEBUG_BODY=1` 抓 body 定位。14.2/14.3 的续写消息构造规范化仍按设计落地（它同时覆盖 prefix 续写场景的 reasoning_content 回传约束）。
-
-
-
-| 预设 | responses | 链 | 依据/状态 |
-|---|---|---|---|
-| deepseek | ✅ | ❌（官方无状态；灰名单全量） | 真机 ✅ |
-| qwen / qwenplan | ✅ | ✅ | 真机 ✅（98.9% 体积削减实测） |
-| glm / glm-code | ✅ | ✅ | 真机 ✅（baseURL 须 `open.bigmodel.cn/api/v1`——预设是 chat 路径，响应式用户需自配） |
-| openai | ✅ | ✅ | 官方文档（未真机，需官方 key） |
-| minimax | ✅ | ❌（官方 schema 无 previous_response_id/store；中立 host 静默全量） | 官方文档（responses-create.md 主接口）+ 真机 ✅；tool_choice 仅 none/auto（限制记录） |
-| openrouter | ✅ 格式 | ❌（官方文档：**stateless，store/previous_response_id 明确 400 拒绝**） | 官方文档；**事件流变体**（content_part.delta/response.done/[DONE]）已兼容（2026-08-31） |
-| grok (xAI) | ✅ | ✅（官方文档：previous_response_id + 加密 Reasoning） | 官方文档（未真机） |
-| kimi / kimi-code | ❌ | — | 官方全站索引零 responses（Codex 走 CC Switch 兼容层） |
-| claude | ❌（Messages 协议） | — | 协议本体 |
-| gemini | ❌（Google 协议） | — | 协议本体 |
-| mimo / mimoplan | ⚠️ 未证实 | — | 官网仅"OpenAI/Anthropic 兼容"（无 responses 证据） |
-| volcengine / hunyuan / siliconflow / groq / mistral | ⚠️ 未核实 | — | 官方文档未核到 responses 页（搜索工具当日故障，留位） |
-
-**纪律重申**：白名单 = 官方文档 + 真机双实证（openai 未真机属已知例外——官方为协议首发方）；中立 host（格式支持、无链/未证实）= 静默全量 + 无警告；灰名单 = 官方明确"不支持且静默忽略"（仅 DeepSeek）→ warning。

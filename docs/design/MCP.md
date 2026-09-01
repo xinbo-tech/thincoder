@@ -280,3 +280,42 @@
 - **测试指认**：`test/mcp.test.mjs` 29 tests（含 T15b stdio 字段表单单元测试——共享机制的 stdio 变体 + env 逗号解析 value 含空格；**2026-09-02 覆盖补全（审计修正轮）**：T15c required 字段拒绝 `-`、T15d duplicate name `already exists`、T16b maskToken len>12 前4+…截断、T16c Save? n 取消不保存不连接；T18b 由 T19 回调内提升为独立顶层 test——测试树结构修正，断言未动）+ `test/slash-commands.test.mjs` 34 tests（33 pass/1 skipped slow）全绿；CLI 全量 `npm test` 994 tests（950 pass / 0 fail / 44 skipped——skipped 均为既有 slow 项，`THINCODER_TEST_FULL=1` 全跑）；`eslint src test` 0 error（warnings 均为既有 no-unused-vars 类，本交付触及文件无新增 lint 问题——mcp.test.mjs 的 countFile warning 系既有模板字符串参数）。
 - **行数审计（评审 #4 复验）**：`cmd-mcp.mjs` 382 行（≤500 硬限）；`cmd-mcp-form.mjs` 198 行（≤300 建议）。后续加功能仍须守拆分纪律。
 
+
+### §5 变更段：save&test 确认问句废除（2026-09-02，用户问题 Q4）
+
+> **状态：设计定稿，待实现**。用户裁定："Save & test 时问的问题完全不知道该填什么，无厘头——不需要问，保存时直接拉一下 MCP 工具，正常就保存，拉不到就报错让用户改"。**终裁补充：探活失败不提供任何保存通道（save-anyway 整个废除——"探活失败还存干嘛"）**。
+
+**需求变更**（覆盖 §5 F2/D-1 的确认环语义）：
+
+| 项 | v2 现状（2026-09-02 交付） | 变更后 |
+|---|---|---|
+| 探活成功 | 预览 + probe ✓ → `Save? (Y/n)` 确认 → 保存 | 预览 + probe ✓ → **直接保存**（无问句） |
+| 探活失败 | `Save anyway? (y/N)` 显式 y 可保存；否则回表单 | **无保存通道**——报错 + 回 fieldPicker 改字段复 probe |
+| save-anyway | 存在（显式 y） | **整个废除** |
+
+**设计**：
+
+- **D-Q1 `confirmLoop` 重构**（cmd-mcp.mjs）：`showPreview` + `probeLineFor` 后——probe ✓ → 直接 `persistRaw` + `connectServer`（返回 entry）；probe ✗ → push 错误行（`[mcp] Probe failed: <错误> — fix it in the form`）+ `retryEntry` 回 fieldPicker（复用现有 retryEntry——AC2 语义不变）。**删除两个 askQuestion 分支**（`Save? (Y/n)` / `Save anyway? (y/N)`）。
+- **D-Q2 取消语义保留**：表单层 Esc 静默返回不变（用户在改字段前放弃 = 不保存）；confirmLoop 内不再有"取消点"（原 Save? n 的取消路径随问句删除——想放弃直接 Esc 表单即可，语义等价）。
+- **D-Q3 测试更新**（test/mcp.test.mjs）：
+  - T16（探活成功）→ 断言**无 Save? 问句**、直接保存（persistRaw + connect 断言保留）
+  - T16c（原 Save? n 取消）→ **删除**（无问句即无该路径）；改补"探活成功直接保存"断言并入 T16
+  - T17（探活失败回表单）→ 断言**无 Save anyway? 问句**、直接回表单（重输 token → 复 probe → 保存）
+  - 新增 T25：探活失败后无任何保存通道（config 未写、agent.tools 无新增）
+
+**受影响文件**：`src/tui/cmd-mcp.mjs`（confirmLoop）、`test/mcp.test.mjs`（T16/T16c/T17 + 新增 T25）、`docs/design/MCP.md`（本节 + §5 F2 表格更新）、`CHANGELOG.md`（0.12.55 或下版条目更新）。
+
+**测试**：
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T16' | 探活成功直接保存 | mock probe ✓ | 无 Save? 问句；persistRaw + connectServer 触发；预览含遮蔽 token | D-Q1 |
+| T17' | 探活失败回表单 | mock probe ✗（401） | 无 Save anyway? 问句；错误行 + 回 fieldPicker；重输 token 复 probe 通过保存 | D-Q1 |
+| T25 | 失败零保存通道 | probe ✗ 后直接退出 | config 未写；agent.tools 无新增；无保存入口 | D-Q1 |
+| T18' | edit 探活失败同语义 | edit 改 url 后 probe ✗ | 回表单改字段；不保存 | D-Q1 |
+| 回归 | 全量 | — | mcp.test.mjs 全绿 + CLI 全量 + lint | — |
+
+**验收**：AC1 = 探活成功零问句直接保存；AC2 = 探活失败报错回表单且无任何保存通道；AC3 = 取消仅剩表单 Esc（放弃）；AC4 = CLI 全量 + lint 绿。
+
+**关键决策**：① **问句废除而非改文案**（用户明确"不需要问"——探活本身就是验证，确认多余）；② **save-anyway 废除**（"探活失败还存干嘛"——失败配置不落盘是数据安全，重启修复场景不存在）；③ 预览保留（保存前一眼可见配置是价值，非负担）；④ probe 失败零副作用语义不变（§4 资产）。
+

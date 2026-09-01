@@ -200,8 +200,66 @@
 **受影响文件**：CLI `src/context.mjs`（`summarizeRunExplorations` + `EXPLORE_SUMMARY_PROMPT` + `SUMMARIZE_PROMPT` 追加清单）、CLI `src/agent.mjs`（run 结束 hook + `_runStartHistoryLen`）、两端测试、两端 `CHANGELOG.md`；VS Code 对应 `src/agent.mjs` + compact/history 模块。（`main.md` 由 AGENT-LOOP §13 改，不在此列）
 
 ---
-
 ## 6. 已知 parity 说明（2026-08-23 评审）
 
 - **CLI `splitHistory` 无「reverse 保护」**（VS Code `compact.mjs` 的 REVERSE protection）：reverse 保护处理「tail 以 tool_calls 悬空 assistant 开头、其 tool 结果在尾部之前被切掉」的**倒序**场景。CLI 不需要——`repairHistory` 在 run 起点已保证 tool_calls→tool 顺序，run 中 append 与原样重建均保序，倒序无法产生。另有边界微差（CLI `i > headEnd` / `tokens <= threshold` vs VS Code `i >= headEnd` / `total < threshold`），为 off-by-one 粒度差、不改变语义。若将来两端 history 来源出现倒序，应回植该保护。
 - **`SUMMARIZE_PROMPT` 两端措辞微差**（语义等价、非 byte-identical）：`EXPLORE_SUMMARY_PROMPT` 两端 byte-identical；`SUMMARIZE_PROMPT` 各端自有措辞（关键清单——D12 区分、FILES CHANGED、UNRESOLVED——均齐全）。如需防漂移可对齐为同一字面量（以 CLI 为准）；本次未对齐，避免牵动压缩行为与既有测试断言。
+
+---
+
+## 7. 压缩体验：进度感知 + 失败可见性（2026-09-02，用户问题 Q2/Q3）
+
+> **状态：设计定稿，待实现**。用户问题批 Q2（压缩中无感知像僵死）+ Q3（压缩失败静默飞出）同板块落地。Q3 的另一根因（deepseek 续写 400）见 PROVIDER.md §14——本节管"压缩/摘要执行过程中的可见性与失败不静默"。
+
+### 7.1 问题
+
+- **Q2**：压缩时 LLM 摘要耗时长（大模型负荷重、跑得慢），TUI 无"压缩中"反馈——用户看到程序"忽然僵住不动"。现状 `onCompress` 回调（agent.mjs 的压缩完成触发点）在压缩**完成后**才触发，TUI 只打一行 `[context] Context too long...` warn（tool-events.mjs 的 onCompress 注入点）——**开始无提示、过程无感知**。
+- **Q3**：压缩失败（摘要调用 400/超时/网络错）→ agent.mjs 压缩 catch 分支 **静默计数**（无 console.error、无 UI 行）→ 用户"一点提示都没有，也不知道出了什么错"。
+
+### 7.2 需求
+
+- F1：压缩**开始**时立即提示（用户马上知道"在压缩，不是卡死"）。
+- F2：压缩执行中在 TUI 显示**进行中状态**（可见"正在压缩…"），完成后显示结果（摘要长度/耗时/成功或失败）。
+- F3：压缩失败不再静默——错误文本可见（UI 行 + console.error），诊断可追踪。
+- F4：非 TUI 环境（headless/VS Code 桥）不崩不阻塞——回调缺省安全。
+
+### 7.3 设计
+
+**D-C1 压缩生命周期回调**（agent.mjs，对齐既有 `onCompress` 形态）：
+
+- 新增 `onCompressStart` 回调——`compressIfNeeded` 进入摘要调用**前**触发（context.mjs 的摘要 `chat()` 调用前）；`onCompress`（完成）保留不动。
+- `onCompressFail(error)` 回调——压缩 catch 分支（`compressIfNeeded` 调用方的 catch）触发，带错误对象（message + name + 是否 400/超时）；现有静默计数逻辑保留（失败策略不变：`COMPRESS_FAILURE_LIMIT` 后 `compressFallback` 截断兜底），**只加可见性**。
+- 回调缺省 = no-op（F4：`callbacks?.onCompressStart?.()` 形式，与现有 onCompress 一致）。
+
+**D-C2 TUI 压缩面板**（复用 AGENT-LOOP.md §7.2.1 子 agent 面板机制——用户要求"像子agent 面板那样显示压缩会话"）：
+
+- `onCompressStart` → **打开一个压缩面板区块**：头部 `Compressing context…`（C.warn）+ 进行中状态（耗时 ticker + "summarizing N messages" 阶段标签——N = 待摘要历史条数，compressIfNeeded 已知）；面板独立于会话流（复用 subagent-blocks 的区块创建/更新/冻结机制——压缩是阻塞主循环的串行步骤，但面板显示的是"正在发生什么"，与并行子 agent 面板同构，不冲突）。
+- **面板状态机**（评审 #2 修订）：`Compressing…`（进行中）→ `Compression failed: <错误>`（失败，仅错误文本，**不含降级说明**）→ 重试时回到进行中（每次 onCompressStart 重置）→ **第 3 次失败后 `compressFallback` 实际运行** → 面板更新为 `Compression failed — fallback: truncated to N messages`（此时降级说明才出现）。**降级说明与"连续 3 次失败"绑定，不在单次失败时显示**。
+- `onCompress`（完成）→ 面板更新为完成态：`Compressed: N tokens freed → summary (Xs)`（**N = 压缩释放的 token 数** = 压缩前估计 − 压缩后估计，语义定死；Xs = 耗时），区块保留可折叠（同子 agent 完成态冻结形态）。
+- `onCompressFail(error)` → 面板更新为失败态（错误文本可见，console.error 同步落）。
+- 摘要调用保持静默（thinking:null、无 onToken——摘要内容不进会话流、不进面板 body；面板只显示**状态/阶段/耗时/结果**，不显示摘要正文——摘要正文是机器产物，用户看状态就够）。
+
+**D-C3 headless/桥接**：回调链无 UI 时自然 no-op（F4）；VS Code 端（thincoder-vscode）**不在本设计范围**（用户问题批范围仅 CLI——本设计自带范围声明；TODO.md 用户问题批已注）；VS Code 端口留待其独立流程。
+
+### 7.4 测试
+
+**受影响文件**：`src/agent.mjs`（onCompressStart/onCompressFail 触发点，compressIfNeeded 调用处 + catch 分支）、`src/context.mjs`（compressIfNeeded 摘要调用前触发 onCompressStart）、`src/tui/tool-events.mjs`（压缩面板回调接线——复用 subagent-blocks 区块创建/更新/冻结）、`src/tui/subagent-blocks.mjs`（压缩面板复用其区块机制——若需导出压缩专用创建函数则此处加）、`test/agent.test.mjs`（T1/T3/T4 回调序 + 失败可见断言）、`test/subagent-blocks.test.mjs`（T5 面板不泄正文）、`docs/design/CONTEXT-COMPACTION.md`（本节）、`CHANGELOG.md`。
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T1 | 压缩开始面板 | mock：触发压缩（历史超阈值） | `onCompressStart` 先于 `onCompress` 触发；面板区块出现（头部"Compressing…" + summarizing N messages + 耗时 ticker） | F1/D-C2 |
+| T2 | 完成冻结 | 压缩成功 | 面板更新为完成态 `Compressed: N tokens freed → summary (Xs)`（N=释放 token 数，Xs=耗时），区块可折叠保留（同子 agent 完成形态） | F2/D-C2 |
+| T3 | 失败可见（单次） | 摘要 chat 抛 400（第 1 次） | `onCompressFail` 触发；面板失败态 = 错误文本（**无降级说明**）；console.error 落；失败计数 +1 未达阈值 | F3/D-C1 |
+| T3b | 3 次失败序列 → 降级 | mock 连续 3 次 400 | 面板：进行中→失败（仅错误）→重试恢复进行中→失败→…→第 3 次失败后 `compressFallback` 运行；面板最终态含降级说明（truncated N messages）；计数在 runAgent 起点重置（既有语义） | F3/D-C2 |
+| T4 | 回调缺省 | 无 callbacks 环境跑压缩 | 不崩（no-op） | F4 |
+| T5 | 摘要不泄正文 | 压缩全程 | 面板无摘要正文（仅状态/阶段/耗时/结果）；会话流无摘要 token 注入 | D-C2 |
+| T6 | 既有回归 | 全量 | onCompress 完成语义不变（压缩后历史替换/task 回注全绿） | D-C1 |
+
+**验收**：AC1 = 压缩开始→完成/失败三态在 TUI **面板**可见（测试断言回调序 + 面板区块形态）；AC2 = 失败错误文本可见（不静默）；AC3 = CLI 全量 + lint 绿；AC4 = 既有压缩契约（§4 行为契约 1-6）全回归。
+
+### 7.5 关键决策
+
+- **压缩面板（用户要求形态）**：用户明确要求"压缩会话像子agent 面板那样显示（可见进度/完成）"——面板是需求本身，不是可裁减项。压缩虽阻塞主循环，但面板复用既有 subagent-blocks 机制（区块创建/更新/冻结/折叠），与子 agent 面板同构，无新布局体系。**摘要正文不流式进面板**（摘要调用保持静默——正文是机器产物，用户看状态/阶段/耗时/结果即可）——这是唯一保留的简化，且不违背"可见进度"需求（进度 = 状态 + 耗时 + 阶段，而非 token 流）。
+- **失败可见但不改变失败策略**：Q3 的"飞出"根因（deepseek 续写 400）由 PROVIDER.md §14 修；本节只补"失败不静默"——错误策略（连续 3 次截断兜底）是既有正确行为，不加行为变更。
+- **否决**：a) 一行状态提示（评审 #7 用户否定——"像子agent 面板那样显示"是明确要求，状态行不满足）；b) 压缩期间阻塞输入（破坏既有交互）；c) 自动重试压缩（摘要失败重试已由计数+截断兜底覆盖）。
+
