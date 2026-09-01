@@ -15,11 +15,9 @@ import {
   estimateRequestTokens, rateGate, recordRate,
 } from "./rate.mjs"
 
-// 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟语义废除）——fetchTimeoutMs 现为每调用从 provider 读
-// （config agent.fetchTimeoutMs 归一化），见 effectiveFetchTimeoutMs；响应头阶段默认 600s，body 阶段 idle 120s。
+// 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟语义废除）——fetchTimeoutMs 现为每调用从 provider 读（config 归一化），见 effectiveFetchTimeoutMs。
 
-/** 可中断 sleep（2026-08-31 会诊 #5）：退避/Retry-After/overload 等待期间 Ctrl+C 应
- *  立即生效——原来最长睡 60s 无响应。内部走 _rateHooks.sleep（测试替换点）。 */
+/** 可中断 sleep（会诊 #5）：退避/Retry-After/overload 等待期 Ctrl+C 立即生效；内部走 _rateHooks.sleep（测试替换点） */
 function abortDOM(signal) {
   const e = new DOMException("The operation was aborted", "AbortError")
   e.reason = signal.reason
@@ -62,11 +60,11 @@ export function createProvider(config) {
 }
 
 /** Send a streaming chat completion request with automatic continuation on truncation */
-// 2026-09-01 根因修复：600s 绝对墙钟会腰斩长上下文子代理（eng-coder 首 token 前 TTFB>10min 即死，
-// "The operation was aborted due to timeout" 直透子代理）。改为：TTFB 阶段仍用 fetchTimeoutMs（默认 600s，
-// agent.fetchTimeoutMs 可配——config.mjs 归一化到 provider.fetchTimeoutMs），body 阶段用 idle 超时
-//（FETCH_BODY_IDLE_MS，无新数据才断——proxy 路径 _bodyIdleMs 已有先例）。
+// 2026-09-01 根因修复：600s 绝对墙钟曾腰斩长上下文子代理（eng-coder TTFB>10min 即死）——TTFB 阶段改用
+// fetchTimeoutMs（默认 600s，agent.fetchTimeoutMs 可配），body 阶段 idle 超时（FETCH_BODY_IDLE_MS，无新数据才断）。
 const FETCH_BODY_IDLE_MS = 120_000
+/** §14.2 设计值：prefix 续写只保留最近 8 条非工具文本（截断点语境足够，N 以测试锁定） */
+const PREFIX_CONTINUATION_KEEP = 8
 
 /** 2026-09-01：响应头阶段超时（默认 600s，agent.fetchTimeoutMs 可配）——anthropic/responses transport 共用 */
 export function effectiveFetchTimeoutMs(provider) {
@@ -202,24 +200,23 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
 
   if (!spec.partialMode && !spec.prefixMode) return result
   for (let n = 0; result.finishReason === "length" && result.content && n < MAX_CONTINUATIONS; n++) {
-    const continued = await chat(spec.prefixMode ? { ...provider, baseURL: betaBaseURL(provider.baseURL) } : provider, {
-      messages: [
-        ...messages,
-        spec.partialMode
-          ? {
-              role: "assistant",
-              content: result.content,
-              partial: true,
-              ...(result.reasoning ? { reasoning_content: result.reasoning } : {}),
-            }
-          : { role: "assistant", content: result.content, prefix: true, ...(result.reasoning ? { reasoning_content: result.reasoning } : {}) },
-      ],
-      tools,
-      onToken,
-      onReasoning,
-      onWait,
-      signal,
-    })
+    let continued
+    try {
+      continued = await chat(spec.prefixMode ? { ...provider, baseURL: betaBaseURL(provider.baseURL) } : provider, {
+        messages: buildContinuationMessages(messages, result, spec),
+        tools,
+        onToken,
+        onReasoning,
+        onWait,
+        signal,
+      })
+    } catch (error) {
+      // §14.3 失败可见性：续写失败注入 _warnings（agent 机读线可见）不整轮飞出；AbortError 用户中断透传
+      if (error?.name === "AbortError") throw error
+      result._warnings ??= []
+      result._warnings.push({ name: "continuation-failed", message: `output continuation failed: ${error.message}` })
+      break
+    }
     result.content += continued.content
     result.reasoning += continued.reasoning ?? ""
     mergeRetryToolCalls(result, continued.toolCalls)
@@ -236,6 +233,14 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     }
   }
   return result
+}
+
+/** 续写消息构造（§14.3）：prefix 精简历史（§14.2——deepseek /beta 网关对含工具链历史必 400，真机矩阵）；partial 保持现状 */
+export function buildContinuationMessages(messages, result, spec) {
+  const tail = (extra) => ({ role: "assistant", content: result.content, ...extra, ...(result.reasoning ? { reasoning_content: result.reasoning } : {}) })
+  if (!spec.prefixMode) return [...messages, tail({ partial: true })]
+  const slim = messages.filter((m) => m.role !== "tool" && !(m.role === "assistant" && m.tool_calls?.length))
+  return [...slim.filter((m) => m.role === "system"), ...slim.filter((m) => m.role !== "system").slice(-PREFIX_CONTINUATION_KEEP), tail({ prefix: true })]
 }
 
 /**
