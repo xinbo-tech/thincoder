@@ -7,6 +7,12 @@ import { stdioTransport } from "./mcp/transport-stdio.mjs"
 import { httpTransport } from "./mcp/transport-http.mjs"
 import { wsTransport } from "./mcp/transport-ws.mjs"
 
+/** F6/D-5：config.token → `Authorization: Bearer <token>` 合成（仅当 headers 未显式给
+ *  Authorization——显式优先，向后兼容）。合成发生在传给 transport 前，不写回 config。 */
+export function withBearerToken(config) {
+  if (!config?.token || config.headers?.Authorization) return config
+  return { ...config, headers: { ...config.headers, Authorization: `Bearer ${config.token}` } }
+}
 
 /** Race a pending MCP request against an abort signal — a hung MCP server must not
  *  hold the turn hostage. signal absent → passthrough. */
@@ -31,8 +37,9 @@ async function sendWithSignal(promise, signal) {
 
 /** 2026-08-31 MCP 会诊 P5：CLI session 注册表（serverName → session）。
  *  session.state.transport 可变（重连替换）；buildTools 的 execute 动态取
- *  session.state.transport——server 崩溃后无需重建 agent.tools 即自愈。 */
-const _sessions = new Map()
+ *  session.state.transport——server 崩溃后无需重建 agent.tools 即自愈。
+ *  2026-09-01 MCP.md §4：导出给 /mcp test 的零副作用断言用（probe 后 _sessions 不增）。 */
+export const _sessions = new Map()
 /** 退避重连进行中（serverName → promise）——与 vscode 语义对齐；延迟表见 _mcpHooks。 */
 const _reconnecting = new Map()
 
@@ -44,7 +51,8 @@ export const _mcpHooks = {
 }
 
 /** 按 config 创建并完成握手的 transport（findTransportConfig 与 vscode 对齐）。 */
-async function createConnectedTransport(config, serverName) {
+async function createConnectedTransport(rawConfig, serverName) {
+  const config = withBearerToken(rawConfig) // F6/D-5：token 合成（不写回原 config）
   let transport
   if (config.wsUrl) {
     transport = wsTransport(config.wsUrl, config.headers ?? {})
@@ -54,13 +62,35 @@ async function createConnectedTransport(config, serverName) {
     try {
       await transport.openSSE()
     } catch {
-      // Server doesn't support GET SSE — degrade to pure Streamable HTTP POST mode
+      // Server doesn't support GET SSE — degrade to pure Streamable HTTP POST mode.
+      // MCP.md §4 D-1：显式标记 postOnly——POST-only server（glm-websearch 类）isAlive
+      // 不得因 eventSource == null 误判死（否则 ensureAlive 触发无意义重连循环）。
+      transport.markPostOnly()
     }
   } else {
     transport = stdioTransport(config.command, config.args ?? [], config.env)
   }
   const mcpTools = await doInitialize(transport, serverName)
   return { transport, mcpTools }
+}
+
+/** F4/D-2：一次性探活——createConnectedTransport（initialize + tools/list）+ 计时。
+ *  零副作用：不进 _sessions、不动 agent.tools、无 onDead 挂钩；finally close
+ *  （closed=true 使 onDead 重连不会触发）。initialize 与 tools/list 同受
+ *  INIT_TIMEOUT_MS 约束（见 doInitialize）。不复用 connectMcpServer（避免污染
+ *  session 幂等表）。 */
+export async function probeMcpServer(config) {
+  const start = Date.now()
+  let transport
+  let mcpTools
+  try {
+    ;({ transport, mcpTools } = await createConnectedTransport(config, config.name ?? config.command ?? config.url ?? config.wsUrl))
+    return { ok: true, toolCount: mcpTools.length, latencyMs: Date.now() - start }
+  } catch (error) {
+    return { ok: false, error: error?.message ?? String(error) }
+  } finally {
+    try { transport?.close() } catch { /* ignore */ }
+  }
 }
 
 /** onDead → 后台退避重连；成功替换 session.state.transport（tools 闭包动态引用，
@@ -173,10 +203,14 @@ async function doInitialize(transport, _name) {
 
   // 2026-08-31 MCP 会诊 P6：tools/list 分页被忽略（nextCursor 多页工具静默丢失）——
   // 循环跟随 cursor 直到 server 不再返回（上限 20 页防死循环）。
+  // MCP.md §4 评审 #8：每页同受 INIT_TIMEOUT_MS 约束（否则 probe 的延迟统计无界）。
   const tools = []
   let cursor
   for (let page = 0; page < 20; page++) {
-    const toolsResp = await transport.send("tools/list", cursor ? { cursor } : {})
+    const toolsResp = await withTimeout(
+      transport.send("tools/list", cursor ? { cursor } : {}),
+      INIT_TIMEOUT_MS,
+    )
     if (toolsResp.error) throw new Error(`tools/list failed: ${toolsResp.error.message}`)
     tools.push(...(toolsResp.result?.tools ?? []))
     cursor = toolsResp.result?.nextCursor
@@ -192,7 +226,9 @@ export async function connectMcpServer(config) {
   if (!config || (!config.command && !config.url && !config.wsUrl))
     throw new Error(`MCP server "${config?.name ?? ""}": needs either 'wsUrl' (websocket), 'command' (stdio), or 'url' (http)`)
   const name = config.name ?? config.command ?? config.url ?? config.wsUrl
-  const configFingerprint = JSON.stringify([config.command ?? null, config.args ?? null, config.url ?? null, config.wsUrl ?? null, config.env ?? null, config.headers ?? null])
+  // MCP.md §4 D-5：fingerprint 计入 token 字段——/mcp edit 改 token → 指纹变更 →
+  // 旧连接主动关闭重建（T13）。
+  const configFingerprint = JSON.stringify([config.command ?? null, config.args ?? null, config.url ?? null, config.wsUrl ?? null, config.env ?? null, config.headers ?? null, config.token ?? null])
 
   const existing = _sessions.get(name)
   if (existing && !existing.closed) {
@@ -208,7 +244,16 @@ export async function connectMcpServer(config) {
     }
   }
 
-  const { transport, mcpTools } = await createConnectedTransport(config, name)
+  let transport
+  let mcpTools
+  try {
+    ;({ transport, mcpTools } = await createConnectedTransport(config, name))
+  } catch (error) {
+    // MCP.md §4 评审 #7：握手失败不泄漏 transport（GET SSE 降级成功但 POST initialize
+    // 失败时，openSSE 若开了流会留一个悬挂的 reader/请求）。
+    try { transport?.close() } catch { /* ignore */ }
+    throw error
+  }
   const session = {
     config, configFingerprint,
     state: { transport, tools: null },

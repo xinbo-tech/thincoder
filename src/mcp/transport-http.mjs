@@ -9,6 +9,9 @@ export function httpTransport(baseURL, extraHeaders = {}) {
   let sessionId = null
   let closed = false
   let eventSource = null
+  // 2026-09-01 MCP.md §4 D-1：GET SSE 不可用（405/不支持）降级后的纯 POST 模式标记。
+  // POST-only server（如 glm-websearch）无流可断：isAlive 不得因 eventSource == null 判死。
+  let postOnly = false
   let abortController = null
   let postUrl = url
   let legacySSE = false
@@ -232,5 +235,14 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     pending.clear()
   }
 
-  return { send, notify, close, openSSE, url, headers: extraHeaders, isAlive: () => !closed && eventSource != null, onDead }
+  /** D-1：openSSE 降级（GET 405/不支持）后由 connect 链调用——标记纯 Streamable POST 模式 */
+  const markPostOnly = () => { postOnly = true }
+
+  return {
+    send, notify, close, openSSE, url, headers: extraHeaders,
+    // F1：POST-only 降级（postOnly）与 legacy SSE 流（eventSource）都算活连接——
+    // 不得因 eventSource == null 误判死（glm-websearch "reconnect failed" 根因）。
+    isAlive: () => !closed && (eventSource != null || postOnly),
+    onDead, markPostOnly,
+  }
 }

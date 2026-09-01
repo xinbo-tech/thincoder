@@ -1,3 +1,20 @@
+## [0.12.55] — 2026-09-01
+
+### Added
+
+- **MCP Streamable POST 误判修复 + `/mcp edit`/`/mcp test` + token 一等字段**（docs/design/MCP.md §4，两端落地）：① `httpTransport` 增 postOnly 标记——GET SSE 405 降级后的纯 POST 模式 `isAlive()` 不再因 `eventSource == null` 误判死（glm-websearch "reconnect failed after 4 attempts" 根因：降级后 isAlive 恒 false → ensureAlive 触发无意义重连循环；legacy SSE 流断仍正常 fireDead 重连不回归）；② `/mcp edit [name]`：逐字段预填重问（空输入保留 / `-` 删除可选字段 / `k=` 删除单个 header 项），persistRaw 原位替换保数组序，保存后自动重连（config 指纹含 token，变更自动关旧连接）；③ `/mcp test [name]`：probeMcpServer 一次性探活（initialize + tools/list 计时 → `OK — N tools, Xms` / 错误透传），零副作用（不进 session 表、不动 agent.tools、探完即关）；④ token 一等字段：config 增 `token` 字段，connect 链自动合成 `Authorization: Bearer <token>`（显式 headers 优先，不写回 config）；⑤ parseHeaders 改逗号分隔（`Authorization=Bearer abc, X-Foo=bar`——修复空格截断把 Bearer token 截成 "Bearer" 的缺陷）；⑥ VS Code 同构：http transport 同款修复 + probeMcpServer 镜像 + 面板 [Edit]/[Test] 按钮（同一表单编辑预填，token 字段 + 逗号分隔 headers 提示）+ **面板 [Reconnect] 死按钮修复**（webview 发的 `reconnectMcp` 消息在路由拆分时丢失 case，按钮此前无效）
+- **memory_delete 工具**（跨端）：三层记忆条目删除——personal 行级删（embedding/FTS 随行）、project/team 文件级删；scope 与 id 前缀匹配校验，非法 scope 明确报错
+
+### Changed
+
+- **multi-design 并行令牌（designId slots）**：eng-coder 子 agent 支持 `{designId, token}` 多槽并行 spawn——各设计独立令牌互不覆盖，复审不通过的设计不挤占既有槽（CLI 与 VS Code 镜像）
+
+### Fixed
+
+- **edit 数组形态同文件串行**：同一文件多条 edit 的 raw 域快照随条目推进，第二条不再漂移（编辑器 CRLF 路径 + 磁盘路径双修复）
+- **MCP tools/list 分页超时约束**（MCP.md §4 评审 #8）：每页同受 INIT_TIMEOUT_MS 约束——probe 延迟统计有界
+- **MCP 握手失败 transport 泄漏**（评审 #7）：GET SSE 降级成功但 POST initialize 失败时关闭 transport，不留悬挂流
+
 ## [0.12.54] — 2026-09-01
 
 ### Added

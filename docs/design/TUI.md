@@ -60,7 +60,7 @@
 |---|---|---|
 | `cmd-config.mjs` | 332 | /config（含 embedding 三件套落盘，§10.3D） |
 | `cmd-advisor.mjs` | 255 | /advisor（评审模型/思考配置 + guard 开关，交互菜单循环） |
-| `cmd-mcp.mjs` | 239 | /mcp |
+| `cmd-mcp.mjs` | 391 | /mcp（§4：+edit/test 子命令、token 一等字段、parseHeaders 逗号分隔） |
 | `cmd-submodel.mjs` | 152 | /submodel（子agent 模型槽位，§8） |
 | `cmd-think.mjs` | 139 | /think |
 | `cmd-shell.mjs` | 105 | /shell（shell 配置，§8） |
