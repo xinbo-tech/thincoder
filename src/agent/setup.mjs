@@ -180,6 +180,7 @@ export async function prepareRun(agent, input, callbacks, {
   // eng-coder subagents get advisor for mandatory design review before coding
   const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool } = await import("../agent-tools.mjs")
   const { consultStartTool, consultCheckTool, consultStopTool } = await import("../agent-tools/consult.mjs")
+  const { subagentCheckTool } = await import("../agent-tools/subagent-check.mjs")
   const { escalateTool } = await import("../agent-tools/escalate.mjs")
   const { CONSULT_BASE } = await import("../agent.mjs")
   // withPool: decorate consult_start/escalate descriptions with the CURRENT candidate pool
@@ -223,7 +224,7 @@ export async function prepareRun(agent, input, callbacks, {
   const consultTools = consultModels.length
     ? [withPool(consultStartTool), consultCheckTool, consultStopTool, ...(engineering ? [] : [withPool(escalateTool)])]
     : []
-  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
+  const depthOnly = depth === 0 ? [filteredSubagent, subagentCheckTool, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
     // Write-permission coder sub-agents (subagent role="coder" + escalate): the
     // system prompt names verify (system.md) and advisor (discipline.md) — without them an
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
