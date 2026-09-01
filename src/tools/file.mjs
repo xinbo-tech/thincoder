@@ -220,7 +220,7 @@ export const editTool = {
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
       edits: {
         type: "array",
-        description: "2026-08-31 工具顺手度：一次多文件原子替换——任一失败全不写（先全量检查所有替换可执行）。与 path/old_string/new_string 互斥。",
+        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. Mutually exclusive with path/old_string/new_string.",
         items: {
           type: "object",
           properties: {

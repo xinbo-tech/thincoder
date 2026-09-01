@@ -103,7 +103,7 @@ export const applyPatchTool = {
   parameters: {
     type: "object",
     properties: {
-      patch: { type: "string", description: "Unified diff. May span multiple files; --- / +++ headers per file, @@ -old,count +new,count @@ hunks. Use --- /dev/null to create a file." },
+      patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks." },
     },
     required: ["patch"],
   },
