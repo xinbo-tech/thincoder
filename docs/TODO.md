@@ -73,6 +73,10 @@
 
 - [ ] `deleteByUid` 对畸形 uid（如 `personal:5:extra`）静默删目标 id（rest[0] 通过且 trailing 段被忽略）——工具生成的 id 均规范（实际不可达），低优先级加固：rest 长度校验或 strict 解析
 
+### MCP · readMcpSection servers 非数组静默当空（2026-09-01，来源：MCP §5 交付审计 #4）
+
+- [ ] `config.mjs readMcpSection`：`mcp.servers` 存在但非数组（如 `"x"`）→ 返回 `ok:true, servers:[]` 被当"disk 为空"——未连接的内存 server 从菜单消失且无 ⚠ 提示（比 JSON 解析失败更隐蔽）。改判 `ok:false` 走畸形回退（方向见本条；MCP.md §5 补记仅留指针——评审 #3 设计文档不承载待办，实现待补）
+
 ### MCP · 面板消息路由测试缺口（2026-09-01，来源：MCP §4 交付审计）
 
 - [ ] `src/extension/panel-messages.mjs` 路由层无测试触达（reconnectMcp/editMcp/testMcp 三 case 零覆盖）——VS Code [Reconnect] 死按钮正是「webview 发消息 + 路由缺失」这种无测试接缝处的复发实例；补最小路由断言（消息 → 对应 handler 调用），防同类回归
