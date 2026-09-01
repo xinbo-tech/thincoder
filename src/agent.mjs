@@ -18,7 +18,7 @@ import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
 import {
   escapeXml, repairHistory, listWorkDir, ensureAutoReminder,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
-  ContinueError,
+  ContinueError, offloadToolResult,
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
 } from "./agent/helpers.mjs"
@@ -140,6 +140,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
     agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
     agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero
+    agent._asyncCheckLastN = 0 // subagent_check read counter is per-run (§15 D-A2): a fresh user turn restarts from 1
   }
   // eng-coder authorization is set by subagent.mjs AFTER token validation but BEFORE runAgent —
   // only reset for the top-level agent (depth 0); child runs must keep their granted authorization
@@ -164,6 +165,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     tools: toolSchemas,
   }
 
+  let thrownError = null
   try {
     for (let turn = 0; turn < maxTurns; turn++) {
     // Update turn counter for status bar display
@@ -429,9 +431,62 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     }
 
     throw new ContinueError(maxTurns)
+  } catch (e) {
+    thrownError = e
+    throw e
   } finally {
     // Turn-end cleanup: abort any leftover consultation children (consult_start spawns
     // fire-and-forget runners; a completed turn must not let them keep burning tokens).
     cleanupConsultSessions(agent)
+    // Async subagent turn-end collection (AGENT-LOOP.md §15 D-A3). Lifecycle:
+    // - Ctrl+C / Ctrl+I (signal aborted): children were aborted with the parent
+    //   signal — clear WITHOUT injecting stale errors (user explicitly stopped).
+    // - ContinueError (turn cap): no wait, no injection — children keep running
+    //   and the RESUME run's turn-end collection takes over.
+    // - anything else: refill loop → wait for all → inject reports → clear.
+    if (signal?.aborted) {
+      agent._asyncSubagents?.clear()
+      agent._asyncQueue = []
+      agent._asyncCheckLastN = 0
+    } else if (thrownError instanceof ContinueError) {
+      // keep _asyncSubagents + the check counter — the resumed run continues them
+    } else {
+      await collectAsyncSubagents(agent, callbacks)
+      agent._asyncCheckLastN = 0
+    }
   }
+}
+
+/**
+ * Turn-end async subagent collection (AGENT-LOOP.md §15 D-A3):
+ * 1. refill loop — start queued heads while slots free (each settle already
+ *    refills via its finally; this drains the tail), keeping the cap ≤4 serial.
+ * 2. wait for every entry to settle (queued entries start through the refill
+ *    chain — the drain loop converges when nothing is running and the queue is empty).
+ * 3. inject one user-role reminder per entry: the report/error text XML-escaped
+ *    (child reports may carry content from files/webpages — reminder discipline),
+ *    >64K offloaded to disk with a preview + path.
+ * 4. clear the map (and emit ⟦ev⟧done tokens so the TUI freezes the child blocks).
+ */
+async function collectAsyncSubagents(agent, callbacks) {
+  const map = agent._asyncSubagents
+  if (!map || map.size === 0) return
+  const { maybeRefillAsync } = await import("./agent-tools/subagent.mjs")
+  for (;;) {
+    maybeRefillAsync(agent)
+    const running = [...map.values()].filter((e) => e.status === "running")
+    if (running.length === 0) break
+    await Promise.allSettled(running.map((e) => e.promise))
+  }
+  for (const e of [...map.values()]) {
+    callbacks.onToken?.(`${e.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
+    const body = e.error ?? e.report ?? "(no report)"
+    const preview = await offloadToolResult(String(body), `async-subagent-${e.id}`)
+    pushReal(agent, {
+      role: "user",
+      content: `[System reminder: async subagent #${e.id} (${e.role}) finished]\n${escapeXml(preview)}`,
+    })
+  }
+  map.clear()
+  agent._asyncQueue = []
 }
