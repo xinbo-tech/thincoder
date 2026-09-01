@@ -227,7 +227,16 @@ export function loadConfig() {
   merged.proxy = normalizeProxy(merged.proxy)
 
   // Get the currently active provider
-  const active = findProvider(merged.providers, merged.activeProvider)
+  // 2026-09-02 Q1（SESSION.md §8）：activeProvider 指向不存在的 provider 不再抛错——runtimeProvider
+  // 置空对象，由 make-agent.mjs assembleAgent 后的校验打 `_providerInvalid` 标记 → TUI 引导重选 /
+  // headless 报可读错误（原 findProvider throw 直接击穿 loadConfig → uncaughtException 退出）。
+  // findProvider 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
+  let active
+  try {
+    active = findProvider(merged.providers, merged.activeProvider)
+  } catch {
+    active = {}
+  }
 
   // Build runtime provider object (for agent.provider usage)
   const runtimeProvider = { ...active }
