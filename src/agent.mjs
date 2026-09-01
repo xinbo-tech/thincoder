@@ -451,7 +451,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     } else if (thrownError instanceof ContinueError) {
       // keep _asyncSubagents + the check counter — the resumed run continues them
     } else {
-      await collectAsyncSubagents(agent, callbacks)
+      await collectAsyncSubagents(agent)
       agent._asyncCheckLastN = 0
     }
   }
@@ -466,9 +466,11 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
  * 3. inject one user-role reminder per entry: the report/error text XML-escaped
  *    (child reports may carry content from files/webpages — reminder discipline),
  *    >64K offloaded to disk with a preview + path.
- * 4. clear the map (and emit ⟦ev⟧done tokens so the TUI freezes the child blocks).
+ * 4. clear the map. (The ⟦ev⟧done freeze signal is NOT emitted here — D-A3
+ *    2026-09-02: each entry's settle callback emits it at completion time so
+ *    blocks freeze at their completion position in the stream.)
  */
-async function collectAsyncSubagents(agent, callbacks) {
+async function collectAsyncSubagents(agent) {
   const map = agent._asyncSubagents
   if (!map || map.size === 0) return
   const { maybeRefillAsync } = await import("./agent-tools/subagent.mjs")
@@ -479,7 +481,6 @@ async function collectAsyncSubagents(agent, callbacks) {
     await Promise.allSettled(running.map((e) => e.promise))
   }
   for (const e of [...map.values()]) {
-    callbacks.onToken?.(`${e.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
     const body = e.error ?? e.report ?? "(no report)"
     const preview = await offloadToolResult(String(body), `async-subagent-${e.id}`)
     pushReal(agent, {
