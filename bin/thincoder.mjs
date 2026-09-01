@@ -17,7 +17,7 @@ import { join } from "node:path"
 import { runAgent } from "../src/agent.mjs"
 import { loadConfig, configPath } from "../src/config.mjs"
 import { createMemory, syncDir } from "../src/memory.mjs"
-import { assembleAgent, teamConfig, gitAuthor } from "../src/cli/make-agent.mjs"
+import { assembleAgent, teamConfig, gitAuthor, validateProvider } from "../src/cli/make-agent.mjs"
 import { memoryCommand } from "../src/cli/memory-command.mjs"
 import { setupWizard } from "../src/cli/setup-wizard.mjs"
 import { summarize, askPermission } from "../src/cli/permission.mjs"
@@ -79,6 +79,13 @@ switch (command) {
     }
 
     const agent = await assembleAgent()
+    // SESSION.md §8 D-S4（F4）：headless 无 TUI —— 可读错误 + 退出码 1，不弹 UI、不崩溃
+    if (agent._providerInvalid) {
+      const prov = agent.activeProvider || "(未设置)"
+      console.error(`[error] 未配置有效 provider（activeProvider "${prov}"：${agent._providerInvalidReason}）。请运行 thincoder 进入 TUI 重新选择，或编辑 ${configPath}`)
+      exitSoon(1)
+      break
+    }
     if (!agent.provider.apiKey) {
       if (!process.stdin.isTTY) {
         console.error(noKeyMessage())
@@ -219,6 +226,9 @@ switch (command) {
   case "tui":
   case undefined: {
     const agent = await assembleAgent()
+    // SESSION.md §8 D-S1：TUI 路径在 startTUI 前清空无效 provider——空 provider 不流入 runAgent
+    // （崩溃源：chat() 缺 model → 网关 400 或 fetch("undefined/...") TypeError）
+    if (agent._providerInvalid) agent.provider = null
     const config = loadConfig()
     // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
     const { loadSession, applySession } = await import("../src/session.mjs")
@@ -231,6 +241,9 @@ switch (command) {
         agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider.model).value
       }
     }
+    // D-S3 优先级补全：applySession 可能已用会话中的有效 provider 修复（config 无效 + 会话有效）——
+    // 修复后复验清除标记，仅当两者都无效才弹重选（validateProvider 幂等）
+    if (agent._providerInvalid) validateProvider(agent)
     // MCP 连接失败在 TUI alt-buffer 下 stderr 不可见，注入为下一条 user 消息后的提醒
     if (agent._mcpWarnings?.length) {
       agent._pendingReminders = agent._pendingReminders ?? []
