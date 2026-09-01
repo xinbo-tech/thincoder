@@ -55,7 +55,7 @@ Tool routing — use the dedicated tool, not bash:
 | `process` | list running processes | `tasklist`, `ps`, `wmic` |
 | `get_current_time` | current date/time | `date` |
 | `timer` | thinking budget / wait reminder | `sleep`, `timeout` (for real waits) |
-| `lint` | lint / syntax check after edits (full=true for cascade) | ad-hoc eslint runs |
+| `lint` | lint / syntax check after edits (full=true for cascade) | ad-hoc node --check runs |
 | `verify` | pre-completion self-check (syntax/tests/diff/checklist) | manual diff/test runs |
 | `task` / `checklist` | session-level tasks / persistent requirements tracking | README-style todo lists |
 | `goal` | long-running autonomous goal (machine-checkable criteria) | prose promises |
