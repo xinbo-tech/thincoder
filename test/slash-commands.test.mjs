@@ -5,6 +5,9 @@
 import { test } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { readFileSync, writeFileSync, rmSync } from "node:fs"
 
 import { createSlashCommands, SLASH_COMMANDS, SLASH_ALIASES, HANDLERS } from "../src/tui/slash-commands.mjs"
 
@@ -418,12 +421,15 @@ test("handleSlash: /mcp remove 无服务器时提示且不开 picker", async () 
   assert.match(texts(ctx), /no MCP server configured/)
 })
 
-test("cmd-mcp: 原本无 mcp 配置时 Add server 后回主菜单计数更新（快照过期回归）", async () => {
+test("cmd-mcp: 原本无 mcp 配置时 Add server 后回主菜单计数更新（快照过期回归；§5 新菜单形态）", async () => {
   const { handleMcpCommand } = await import("../src/tui/cmd-mcp.mjs")
   const ctx = mockCtx()
   ctx.agent.config = {} // 原本无 mcp 配置 —— 旧代码 ?? [] 拿到游离数组
-  const questions = ["s1", "http://127.0.0.1:9/", ""] // name / url / headers（连接必失败，走 error 分支）
+  ctx.configPath = join(tmpdir(), `thincoder-slashmcp-${process.pid}-${Date.now()}.json`) // reloadMcpFromDisk 注入
+  writeFileSync(ctx.configPath, JSON.stringify({}))
+  const questions = ["s1", "http://127.0.0.1:9/", "", "y"] // name / url / token 空 / save-anyway（连接必失败）
   const menus = []
+  const formRounds = []
   await handleMcpCommand({
     ...ctx,
     askQuestion: async () => questions.shift() ?? "",
@@ -434,12 +440,29 @@ test("cmd-mcp: 原本无 mcp 配置时 Add server 后回主菜单计数更新（
         return menus.length === 1 ? entries.find((e) => e.action === "add") : null
       }
       if (title === "MCP Transport") return entries.find((e) => e.action === "http")
+      if (title.startsWith("Add MCP")) {
+        formRounds.push(entries)
+        const seq = ["field:name", "field:url", "field:token", "save"]
+        return entries.find((e) => e.action === seq[Math.min(formRounds.length - 1, 3)]) ?? entries.find((e) => e.action === "save")
+      }
       return null
     },
+    persistRaw: async (mutate) => {
+      const raw = JSON.parse(readFileSync(ctx.configPath, "utf8"))
+      mutate(raw)
+      writeFileSync(ctx.configPath, JSON.stringify(raw))
+    },
   }, [])
-  assert.equal(menus.length, 2, "add 完成后回到主菜单")
-  assert.match(menus[1][0].text, /1 MCP servers configured/, "第二轮主菜单计数为 1")
-  assert.match(texts(ctx), /\[mcp\] s1:/, "连接失败提示（config saved）")
+  try {
+    assert.equal(menus.length, 2, "add 完成后回到主菜单")
+    assert.ok(
+      menus[1].some((e) => e.type === "header" && /1 MCP server configured/.test(e.text)),
+      "第二轮主菜单计数为 1（reloadMcpFromDisk 幂等——自写配置不标 ⚠）",
+    )
+    assert.match(texts(ctx), /\[mcp\] s1:/, "连接失败提示（config saved）")
+  } finally {
+    rmSync(ctx.configPath, { force: true })
+  }
 })
 
 test("handleSlash: handler exception is contained into an error line — TUI must not lock up (IKBNUI)", async () => {
