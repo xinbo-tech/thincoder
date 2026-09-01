@@ -1,3 +1,16 @@
+## [0.12.57] — 2026-09-02
+
+### Added
+
+- **subagent 异步化：真后台并行**（AGENT-LOOP.md §15，两端）：subagent 工具加 `async: true`——spawn 立即返回 `{id, status:"running"}`，主会话可继续自己的回合；新增 `subagent_check` 工具（arrival order 先完成先取 / 带 id 等待 / n 递增校验防循环 / readonly）；**槽位队列**：并发上限 4，超限入队（position 可见），running 完成即腾槽补位（不拒绝、不分批）；回合收尾自动等待全部完成并注入报告（XML 转义 + 超长预览落盘）；Ctrl+C 清空不注入、ContinueError 状态保留；async 仅 depth-0、后台撞 turn-cap 自动拒绝继续
+- **approval 批确认**（AGENT-LOOP.md §16.1，两端）：同批多个非只读工具一次合并询问（approve all / one by one / deny；deny 全批拒绝无二次询问；无 handler 回退逐项；onPermissionRequest 签名不变）
+- **批量形态引导**（§16.2，数据驱动——真实使用 94.6% 单条 edit / apply_patch 0 次 / 35 例手工批量）：edit 描述强化 edits 数组原子批量、apply_patch 补多文件新建场景、system.md 并行条款扩展批量句（两端 byte-identical）
+
+### Changed
+
+- 工程模式并发纪律上限 3 → 4（engineering.md + ENGINEERING-MODE.md FR8/决策③ 三处同步）
+- VS Code 端同批对齐：escape v5 / UTF-16 安全截断 / 续写构造 / 压缩可见性（见 thincoder-vscode CHANGELOG 0.12.57）
+
 ## [0.12.56] — 2026-09-02
 
 ### Added
