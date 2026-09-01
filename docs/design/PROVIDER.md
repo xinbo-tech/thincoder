@@ -357,6 +357,90 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 
 ## 13.7 预设 provider 全景（2026-08-31 查证：19 家内置预设 → responses 状态）
 
+## 14. 截断续写 400 止损与根治（2026-09-02，用户问题 Q3 根因）
+
+> **状态：设计定稿，待实现**（用户问题批 Q3，docs/TODO.md）。根因经真机复现实锤（2026-09-02，deepseek-v4-flash 稳定版）。
+
+### 14.1 问题
+
+DeepSeek 系列（deepseek-v4-pro/v4-flash/v4-flash-vision-exp，model-specs.mjs:29-32 均 `prefixMode: true`）在 `finishReason === "length"`（输出 token 截断）时触发 prefix 续写（§5、core.mjs:203-222）：
+
+- 续写请求发 **`/beta` 端点**（`betaBaseURL`），最后一条消息 = `{ role: "assistant", content: <截断内容>, prefix: true }`
+- **但 messages 数组 = `[...messages, 续写消息]`** —— 全量历史原样带上，**含历史中的 tool_calls / tool 消息与 reasoning_content**
+
+DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类）：
+
+| 错误 | 触发条件 | 证据 |
+|---|---|---|
+| `Function call should not be used with prefix` | prefix 续写请求的历史含 assistant(tool_calls)/tool 消息 | 真机复现 + Kilo-Org/kilocode #10203 + dify #16860 同款 |
+| `The reasoning_content in the thinking mode must be passed back to the API` | thinking 模式下历史 assistant 的 reasoning_content 未回传/顺序不符 | 真机复现 |
+
+**用户可感影响**：长上下文（尤其压缩后）→ 输出更易截断 → 续写触发 → 400 → **压缩/长回合期间 deepseek 直接报错飞出**（Q3 主诉）。
+
+**第三根因（2026-09-02 真机实锤，已修——见 §14.6）**：本日多次 `unexpected end of hex escape` 400 的真实毒源**不是字面 hex 转义序列**，而是 **content 里的孤立 UTF-16 代理字符**（doc_search 结果预览 `slice(0, N)` 按码元截断，emoji `🔴`（D83D+DD34）恰在截断边界被切成孤立高代理 D83D）——JSON.stringify 输出 `\ud83d`（合法 JSON），deepseek 解析器严格 UTF-16 解码孤立代理 → 400。真机验证：孤立高代理单发 400 / 完整 emoji 200。**escape v3/v4 方向全错（字符串转义层打转），v5 换对象层面净化 + 源头 UTF-16 安全截断，已落地**。
+
+### 14.2 止损（本轮立即生效）
+
+**prefix 续写请求的精简历史**——prefix 模式只续文本，不需要工具历史：
+
+- 续写消息构造：**过滤掉历史中的全部 `tool` 消息与 `assistant(tool_calls)` 消息**（含其 reasoning_content 跟随问题一并规避）
+- 保留：system + 最近 N 条非工具 user/assistant 文本消息（N 取 8——截断点上下文足够，prefix 续写只看最近语境；具体值实现时以测试为准）
+- 最后一条续写消息保持 `{ role: "assistant", content, prefix: true }` 形态
+- `reasoning_content` 回传：保留当前实现（`...(result.reasoning ? { reasoning_content: result.reasoning } : {})`）——续写前置的 thinking 内容必须随附；若精简后历史中已无 thinking 依赖，该字段回传逻辑不变
+
+**partialMode（Kimi/Qwen/MiniMax）不受影响**——partial 续写不回传全文、无此 400（机制不同：同端点 + partial:true，网关无 prefix 约束）。**只改 prefixMode 路径**。
+
+### 14.3 根治（同批落地）
+
+- **续写消息构造独立函数** `buildContinuationMessages(messages, result, spec)`：prefix/partial 两分支清晰分离；prefix 分支做 14.2 的精简；partial 分支保持现状
+- **失败可见性**：续写 400 不再静默吞——`chat()` 续写循环 catch 到非重试错误时，注入 `_warnings` + 错误文本进结果（agent 层可见，见 CONTEXT-COMPACTION.md 新段"压缩失败可见性"同思路）；retry 语义不变（400 非重试）
+- **文档**：§5 表格补 prefix 模式历史约束说明
+
+### 14.4 测试
+
+**受影响文件**：`src/provider/core.mjs`（新增 `buildContinuationMessages`——续写消息构造独立函数；续写循环改调它）、`test/provider.test.mjs`（T1-T4：mock 截断续写 + 工具历史 + 400 断言）、`docs/design/PROVIDER.md`（本节 + §5 表格补 prefix 约束）、`CHANGELOG.md`。
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T1 | prefix 续写精简 | mock：finishReason=length + 历史含 3 组 tool_calls/tool + 10 条文本 | 续写请求 messages 无任何 tool/assistant(tool_calls)；文本保留 ≤8 条；末条 = prefix:true | 14.2 |
+| T2 | reasoning 回传 | 同上 + result.reasoning 非空 | 续写末条带 reasoning_content | 14.2 |
+| T3 | partial 不受影响 | mock：partialMode 模型同场景 | 续写请求形态不变（无精简） | 14.2 |
+| T4 | 续写 400 可见性 | mock：续写返回 400 | 结果带 `_warnings`（含错误文本），不静默 | 14.3 |
+
+**验收**：AC1 = 真机 deepseek-v4-flash 长输出触发截断时不再 400（可选验证：`npm test` 全量 + 一次真实长输出冒烟）；AC2 = 既有续写测试（provider 全量）全绿不回归；AC3 = CLI 全量 + lint 绿。
+
+### 14.5 关键决策
+
+- **精简历史而非关闭 prefixMode**：prefix 续写是 deepseek 官方推荐的截断续写通道（保留长输出能力）；过滤工具历史是网关约束的直接解法
+- **N=8 保留量**：prefix 续写语义 = "补全最后一段"——最近语境足够；保留过多（全量文本）徒增 token 且非必需
+- **否决方案**：a) 关闭 prefixMode（失去续写能力，长输出直接丢尾——更差）；b) 续写时降级普通 chat（无 prefix 标志 = 重复上下文，模型重复输出——官方不推荐）；c) 只在无工具历史时续写（复杂判断，放弃续写机会）
+
+### 14.6 已落地：孤立代理 400 修复（2026-09-02 紧急修复，commits f4ed309/4eecdf2/1c5f8ff）
+
+> **状态：已实现并真机验证**。本日 deepseek 多次 `unexpected end of hex escape` 400 的**唯一实锤根因**（见 14.1 第三根因）。**注：14.2/14.3（prefix 续写精简）仍是待实现**——本段与它们独立。
+
+**根因链**（真机 + 代码实证）：
+
+1. `setup.mjs` doc_search 结果预览：`d.content.slice(0, DOC_CHUNK_PREVIEW_LEN)`（300 字符）按 **UTF-16 码元**截断 → emoji `🔴`（U+1F534 = 代理对 D83D+DD34）恰在边界被切成**孤立高代理 D83D** → 注入 system reminder → 每轮发送
+2. JSON.stringify 把孤立代理输出为 `\ud83d`（合法 JSON）
+3. deepseek 解析器**严格 UTF-16 解码**：高代理后找不到低代理 → 400 `unexpected end of hex escape`（真机：孤立高代理单发 400；孤立低代理 400 `lone leading surrogate`；完整 emoji 200）
+
+**修复（两层）**：
+
+| 层 | 位置 | 内容 |
+|---|---|---|
+| 防御（发送前） | `src/escape.mjs` v5 | `sanitizeLoneSurrogates`：孤立高/低代理 → U+FFFD（全字段：content / tool_calls[].arguments / reasoning_content / part 数组）；`escapeLiteralEscapes` 回归 v1 double 语义 + 奇数 run 修复（3+ 反斜杠后裸露的 `\u`/`\x` 也 double）；总入口 `sanitizeText` |
+| 源头（截断点） | `setup.mjs` safeSliceUTF16（doc_search 预览）+ `helpers.mjs` safeSliceUTF16（offloadToolResult 预览/兜底截断） | 截断点落高代理（D800-DBFF）时向前收一个码元——不再产生孤立代理 |
+
+**验证**：
+- 单元：escape.test.mjs 10 项（真毒形态 + 孤立代理净化 + 奇偶 run）、advisor.test.mjs（v5 语义，程序化构造避免转义层混乱）
+- 全量：993/949/0/44 + eslint 0 error
+- **真机（最强）**：完整真实会话（953 条，含 421 个代理字符其中 1 个孤立）→ normalizeToolPairing + escapeMessages → deepseek **200**（修复前同一链路 400）；带 `thinking:enabled` 真实注入路径 6/6 全 200
+
+**遗留观察项**：03:11 曾复现一次 `reasoning_content must be passed back` 400（根因②），同链路 6 次重试全 200 无法再复现——疑 deepseek 服务端临时状态；若复发，`THIN_DEBUG_BODY=1` 抓 body 定位。14.2/14.3 的续写消息构造规范化仍按设计落地（它同时覆盖 prefix 续写场景的 reasoning_content 回传约束）。
+
+
+
 | 预设 | responses | 链 | 依据/状态 |
 |---|---|---|---|
 | deepseek | ✅ | ❌（官方无状态；灰名单全量） | 真机 ✅ |
