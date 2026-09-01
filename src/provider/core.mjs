@@ -4,7 +4,7 @@
  * SSE parsing → provider/sse.mjs
  */
 
-import { specForModel, resolveEnableThinking } from "../config.mjs"
+import { providerSpec, resolveEnableThinking } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages } from "../escape.mjs"
 import { readSSE } from "./sse.mjs"
@@ -74,7 +74,9 @@ export function effectiveFetchTimeoutMs(provider) {
 export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls }) {
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
-  const spec = specForModel(provider.model)
+  // providerSpec: spec with the provider-level context override (PROVIDER.md §15) — the
+  // window/clamping logic below reads the overridden value where it matters.
+  const spec = providerSpec(provider)
   messages = stripImagesForTextModel(messages, spec)
   const _debugBeforeLen = process.env.THIN_DEBUG_BODY ? JSON.stringify(messages).length : 0
 

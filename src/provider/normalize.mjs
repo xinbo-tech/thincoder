@@ -5,8 +5,8 @@
  * pure functions sanitize the message array right before it hits the wire;
  * no dependency on chat()/retry logic. core.mjs re-exports them so
  * provider/index.mjs and tool-pairing.test.mjs keep their import paths.
+ * The caller passes the spec (providerSpec from core.mjs — provider-aware).
  */
-import { specForModel } from "../config.mjs"
 
 const RASTER_IMAGE_URL = /^data:image\/(png|jpe?g|gif|webp);base64,/
 

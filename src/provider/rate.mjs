@@ -3,8 +3,6 @@
  * Sliding-window accounting; pre-check budget before sending requests; sleep until window frees space when over budget.
  */
 
-import { specForModel } from "../config.mjs"
-
 export const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504])
 export const MAX_RETRIES = 3
 export const MAX_CONTINUATIONS = 3
