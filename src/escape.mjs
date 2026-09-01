@@ -1,43 +1,91 @@
 /**
- * escape.mjs — 中和 OpenAI 兼容服务端在 message content 内做的非标二次转义解析。
+ * escape.mjs — 中和 OpenAI 兼容服务端在 message content 内做的非标二次转义解析 + 孤立代理净化。
  *
- * 某些服务端（Kimi、DeepSeek 等）会把 content 里的字面 "\x" / "\u" 当作 hex escape 再解释一遍，
- * 遇到 "\x" 后不足 2 个 hex（或 "\u" 后不足 4 个 hex）时服务端报
- * "unexpected end of hex escape" → 400（首次观察于 2026-08-06；2026-09-01 messages[483].content
- * 在 deepseek 系列 400 复现——大上下文会话讨论转义话题后必然踩中）。
+ * 两个独立毒源（均真机实证）：
  *
- * 对策：把这类"一旦被服务端二次展开就会非法"的字面序列替换为合法 hex 序列（\x5Cu / \x5Cx），
- * 服务端二次解析后还原为字面量；合法完整的 "\xNN" / "\uNNNN" 原样放过。
+ * ① 字面 hex 转义二次解析（2026-08-06 Kimi 首观察）：Kimi/deepseek 等网关会把 content 里的字面
+ *    "\x5Cx" / "\x5Cu" 当作 hex escape 再解释一遍，不足位时 400（"unexpected end of hex escape"）。
+ *    对策：不足位序列前 double 反斜杠（\\x5CxNN 形态还原为字面量）；合法完整序列放行。
+ *    Known limitation（2026-09-01 v3 修复）：反斜杠 run ≥3 时（如 "\\\x5Cu" 三反斜杠+u）v1 的
+ *    lookbehind 只看前 1 字符会整体放行，但二次解析按配对消费后尾部的 \x5Cu 仍裸露 → 炸。
+ *    修复：按 run 奇偶判断——run 为奇数时尾部的 \x5Cu/\x5Cx 裸露（需 double），偶数已配对（放行）。
+ *
+ * ② 孤立 UTF-16 代理对（2026-09-02 deepseek 真机实锤）：content 里的**真实孤立代理字符**
+ *    （高代理 U+D800-DBFF 无低代理跟随，或低代理 U+DC00-DFFF 无高代理前置）——JSON.stringify
+ *    输出 \ud83d（合法 JSON），但 deepseek 解析器严格 UTF-16 解码，孤立代理 → 400
+ *    （"unexpected end of hex escape" / "lone leading surrogate in hex escape"）。
+ *    来源实证：doc_search 结果预览 `slice(0, N)` 按 UTF-16 码元截断，emoji 🔴（代理对）恰在
+ *    截断边界被切成孤立高代理 → 注入 system reminder → 每轮发送 → deepseek 400。
+ *    对策：发送前把孤立代理替换为  U+FFFD（任何来源安全兜底）；源头截断点另修 UTF-16 安全切。
  */
 
-/** 中和单段文本里的非法字面转义序列。
- *  2026-09-02 v4（根治——替换策略，推翻 v1-v3 的 double 方案）：
- *  **网关语义实锤**（core.mjs:306 既有注释 + 2026-09-02 真机）：deepseek/Kimi 网关把 body 当纯文本
- *  扫 \\u/\\x（字面反斜杠+u/x——JSON 转义对形式）——**不看前置反斜杠**。因此 v1-v3 的
- *  "double 反斜杠"全部无效——多少反斜杠网关都命中最后的 \ + u 相邻对。
- *  **v4 = 替换策略**：所有字面 \u（0x5C+'u'）+ 不足 4 hex → 替换为 \x5Cu（反斜杠的 hex
- *  转义 + u）——网关扫 \\x + 5C（合法 2 hex）→ 二次解析展开为 \ + u 字面（还原原文语义），
- *  不炸。同理 \x + 不足 2 hex → \x5Cx。合法完整 \uXXXX/\xNN 原样放行。
- *  证据：当前会话 823 条 v3 后 body 746 处毒；v4 替换策略 body 0 毒；deepseek 真机 200。 */
+/** 中和非法字面 hex 转义序列（毒源①）。 */
 export function escapeLiteralEscapes(text) {
   text = String(text ?? "")
-  return text
-    // \u + 不足 4 hex → \x5Cu（反斜杠 hex 转义 + u——网关展开为 \ + u 字面）
-    .replace(/\\u(?![0-9a-fA-F]{4})/g, "\\x5Cu")
-    // \x + 不足 2 hex → \x5Cx
-    .replace(/\\x(?![0-9a-fA-F]{2})/g, "\\x5Cx")
+  let out = ""
+  let i = 0
+  const n = text.length
+  while (i < n) {
+    const ch = text[i]
+    if (ch !== "\\") { out += ch; i++; continue }
+    // 数反斜杠 run 长度
+    let run = 0
+    while (i + run < n && text[i + run] === "\\") run++
+    const next = text[i + run]
+    if ((next === "x" || next === "u") && run % 2 === 1) {
+      // run 奇数 → 二次解析配对消费后尾部 \x5Cx/\x5Cu 裸露——hex 不足则网关炸 → 前插反斜杠 double
+      const need = next === "u" ? 4 : 2
+      const after = text.slice(i + run + 1, i + run + 1 + need)
+      if (!new RegExp(`^[0-9a-fA-F]{${need}}$`).test(after)) {
+        out += "\\".repeat(run + 1) + next
+        i += run + 1
+        continue
+      }
+      // 合法完整：输出全序列并跳过（hex 尾不重新扫描）
+      out += text.slice(i, i + run + 1 + need)
+      i += run + 1 + need
+      continue
+    }
+    out += "\\".repeat(run)
+    i += run
+  }
+  return out
 }
 
-/** 对单条消息的 content 应用 escapeLiteralEscapes（支持字符串或 OpenAI 多模态 part 数组）。
+/** 净化孤立 UTF-16 代理对（毒源②）：高代理无低代理跟随 / 低代理无高代理前置 → 替换为 。 */
+export function sanitizeLoneSurrogates(text) {
+  text = String(text ?? "")
+  let out = ""
+  let i = 0
+  const n = text.length
+  while (i < n) {
+    const cp = text.charCodeAt(i)
+    if (cp >= 0xd800 && cp <= 0xdbff) {
+      const next = text.charCodeAt(i + 1)
+      if (next >= 0xdc00 && next <= 0xdfff) { out += text[i] + text[i + 1]; i += 2; continue }
+      out += ""; i++; continue // 孤立高代理
+    }
+    if (cp >= 0xdc00 && cp <= 0xdfff) { out += ""; i++; continue } // 孤立低代理
+    out += text[i]; i++
+  }
+  return out
+}
+
+/** 发送前文本净化总入口：hex 转义中和 + 孤立代理净化。 */
+export function sanitizeText(text) {
+  return sanitizeLoneSurrogates(escapeLiteralEscapes(text))
+}
+
+/** 对单条消息的 content 应用 sanitizeText（支持字符串或 OpenAI 多模态 part 数组）。
  *  2026-08-31 会诊 F5：deepseek-v4-flash 网关对 tool_calls[].function.arguments 与
- *  reasoning_content 做同样的非标二次转义解析（字面 \\x/\\u 经工具参数/思考回传 → 400，
+ *  reasoning_content 做同样的非标二次转义解析（字面 \\x5Cx/\\x5Cu 经工具参数/思考回传 → 400，
  *  列号确定性复现 = 毒序列在 content 之外）——这两个字符串字段同样需要中和。 */
 export function escapeMessageContent(message) {
   const content = message?.content
   let changed = false
   let next = message
   if (typeof content === "string") {
-    const escaped = escapeLiteralEscapes(content)
+    const escaped = sanitizeText(content)
     if (escaped !== content) {
       next = { ...next, content: escaped }
       changed = true
@@ -45,7 +93,7 @@ export function escapeMessageContent(message) {
   } else if (Array.isArray(content)) {
     const parts = content.map((p) => {
       if (p && typeof p === "object" && p.type === "text" && typeof p.text === "string") {
-        const escaped = escapeLiteralEscapes(p.text)
+        const escaped = sanitizeText(p.text)
         if (escaped !== p.text) {
           changed = true
           return { ...p, text: escaped }
@@ -60,7 +108,7 @@ export function escapeMessageContent(message) {
     const tool_calls = next.tool_calls.map((tc) => {
       const args = tc?.function?.arguments
       if (typeof args === "string") {
-        const escaped = escapeLiteralEscapes(args)
+        const escaped = sanitizeText(args)
         if (escaped !== args) {
           tcChanged = true
           return { ...tc, function: { ...tc.function, arguments: escaped } }
@@ -74,7 +122,7 @@ export function escapeMessageContent(message) {
     }
   }
   if (typeof next.reasoning_content === "string") {
-    const escaped = escapeLiteralEscapes(next.reasoning_content)
+    const escaped = sanitizeText(next.reasoning_content)
     if (escaped !== next.reasoning_content) {
       next = { ...next, reasoning_content: escaped }
       changed = true
