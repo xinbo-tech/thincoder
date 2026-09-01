@@ -209,7 +209,7 @@
 
 ## 7. 压缩体验：进度感知 + 失败可见性（2026-09-02，用户问题 Q2/Q3）
 
-> **状态：设计定稿，待实现**。用户问题批 Q2（压缩中无感知像僵死）+ Q3（压缩失败静默飞出）同板块落地。Q3 的另一根因（deepseek 续写 400）见 PROVIDER.md §14——本节管"压缩/摘要执行过程中的可见性与失败不静默"。
+> **状态：已实现**（2026-09-02，CLI 端落地 + 测试全绿；VS Code 端口不在本设计范围——见 D-C3）。用户问题批 Q2（压缩中无感知像僵死）+ Q3（压缩失败静默飞出）同板块落地。Q3 的另一根因（deepseek 续写 400）见 PROVIDER.md §14——本节管"压缩/摘要执行过程中的可见性与失败不静默"。
 
 ### 7.1 问题
 
@@ -243,19 +243,19 @@
 
 ### 7.4 测试
 
-**受影响文件**：`src/agent.mjs`（onCompressStart/onCompressFail 触发点，compressIfNeeded 调用处 + catch 分支）、`src/context.mjs`（compressIfNeeded 摘要调用前触发 onCompressStart）、`src/tui/tool-events.mjs`（压缩面板回调接线——复用 subagent-blocks 区块创建/更新/冻结）、`src/tui/subagent-blocks.mjs`（压缩面板复用其区块机制——若需导出压缩专用创建函数则此处加）、`test/agent.test.mjs`（T1/T3/T4 回调序 + 失败可见断言）、`test/subagent-blocks.test.mjs`（T5 面板不泄正文）、`docs/design/CONTEXT-COMPACTION.md`（本节）、`CHANGELOG.md`。
+**受影响文件**：`src/agent.mjs`（✓ onCompressStart 触发点 + onCompressFail catch 分支 + onCompress 携带完成信息）、`src/context.mjs`（✓ compressIfNeeded 摘要调用前触发 onCompressStart + 完成信息 `agent._lastCompressInfo`；compressFallback 记录 tailMessages）、`src/tui/tool-events.mjs`（✓ 压缩面板回调接线——onCompressStart/onCompressFail/onCompress 三态，取代旧单行 warn）、`src/tui/subagent-blocks.mjs`（✓ 压缩面板区块创建/更新/冻结：ensureCompressPanel/markCompressFailed/markCompressDone/markCompressFallback）、`test/agent.test.mjs`（✓ T1/T2/T3/T3b/T4 断言：回调序、面板数据、失败可见性、3 次失败降级、无 callbacks 不崩）、`test/subagent-blocks.test.mjs`（✓ T5 面板不泄摘要正文 + 状态机单测）、`docs/design/CONTEXT-COMPACTION.md`（✓ 本节回写结构快照）、`CHANGELOG.md`（父代理统一更新）。
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
-| T1 | 压缩开始面板 | mock：触发压缩（历史超阈值） | `onCompressStart` 先于 `onCompress` 触发；面板区块出现（头部"Compressing…" + summarizing N messages + 耗时 ticker） | F1/D-C2 |
-| T2 | 完成冻结 | 压缩成功 | 面板更新为完成态 `Compressed: N tokens freed → summary (Xs)`（N=释放 token 数，Xs=耗时），区块可折叠保留（同子 agent 完成形态） | F2/D-C2 |
-| T3 | 失败可见（单次） | 摘要 chat 抛 400（第 1 次） | `onCompressFail` 触发；面板失败态 = 错误文本（**无降级说明**）；console.error 落；失败计数 +1 未达阈值 | F3/D-C1 |
-| T3b | 3 次失败序列 → 降级 | mock 连续 3 次 400 | 面板：进行中→失败（仅错误）→重试恢复进行中→失败→…→第 3 次失败后 `compressFallback` 运行；面板最终态含降级说明（truncated N messages）；计数在 runAgent 起点重置（既有语义） | F3/D-C2 |
-| T4 | 回调缺省 | 无 callbacks 环境跑压缩 | 不崩（no-op） | F4 |
-| T5 | 摘要不泄正文 | 压缩全程 | 面板无摘要正文（仅状态/阶段/耗时/结果）；会话流无摘要 token 注入 | D-C2 |
-| T6 | 既有回归 | 全量 | onCompress 完成语义不变（压缩后历史替换/task 回注全绿） | D-C1 |
+| T1 | ✓ 压缩开始面板 | mock：触发压缩（历史超阈值） | `onCompressStart` 先于 `onCompress` 触发；面板区块出现（头部"Compressing…" + summarizing N messages + 耗时 ticker） | F1/D-C2 |
+| T2 | ✓ 完成冻结 | 压缩成功 | 面板更新为完成态 `Compressed: N tokens freed → summary (Xs)`（N=释放 token 数，Xs=耗时），区块可折叠保留（同子 agent 完成形态） | F2/D-C2 |
+| T3 | ✓ 失败可见（单次） | 摘要 chat 抛 400（第 1 次） | `onCompressFail` 触发；面板失败态 = 错误文本（**无降级说明**）；console.error 落；失败计数 +1 未达阈值 | F3/D-C1 |
+| T3b | ✓ 3 次失败序列 → 降级 | mock 连续 3 次 400 | 面板：进行中→失败（仅错误）→重试恢复进行中→失败→…→第 3 次失败后 `compressFallback` 运行；面板最终态含降级说明（truncated N messages）；计数在 runAgent 起点重置（既有语义） | F3/D-C2 |
+| T4 | ✓ 回调缺省 | 无 callbacks 环境跑压缩 | 不崩（no-op） | F4 |
+| T5 | ✓ 摘要不泄正文 | 压缩全程 | 面板无摘要正文（仅状态/阶段/耗时/结果）；会话流无摘要 token 注入 | D-C2 |
+| T6 | ✓ 既有回归 | 全量 | onCompress 完成语义不变（压缩后历史替换/task 回注全绿） | D-C1 |
 
-**验收**：AC1 = 压缩开始→完成/失败三态在 TUI **面板**可见（测试断言回调序 + 面板区块形态）；AC2 = 失败错误文本可见（不静默）；AC3 = CLI 全量 + lint 绿；AC4 = 既有压缩契约（§4 行为契约 1-6）全回归。
+**验收**：AC1 = 压缩开始→完成/失败三态在 TUI **面板**可见（✓ 测试断言回调序 + 面板区块形态）；AC2 = 失败错误文本可见（✓ 不静默）；AC3 = CLI 全量 + lint 绿（✓ 1024 测试全绿 + eslint 0 error）；AC4 = 既有压缩契约（§4 行为契约 1-6）全回归（✓）。
 
 ### 7.5 关键决策
 

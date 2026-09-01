@@ -60,6 +60,8 @@ chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRu
 
 两者都会注入提醒（"[System reminder: output token limit reached…]"）让模型知道输出被截断过；GLM 的 `reasoningEcho: "optional"` 表示历史 reasoning 默认清除（clear_thinking）。
 
+> **prefix 历史约束（§14，2026-09-02 实锤并修复）**：prefix 续写请求**只带精简历史**——过滤全部 `tool` / `assistant(tool_calls)` 消息（DeepSeek 网关对含工具链历史的 prefix 续写必 400，带不带 reasoning_content 均炸），保留 system + 最近 8 条非工具文本；续写消息构造见 §14.3 `buildContinuationMessages`。partial 续写不受影响（同端点 + partial 标志，网关无此约束）。
+
 ## 6. TPM/RPM 闸门（rate.mjs）
 
 - provider 配置 `tpm`/`rpm` 后启用：**发送前**记账（60s 滑动窗口，`estimateRequestTokens` 估算），超预算 `sleep` 到窗口腾出空间（onWait 通知 UI "TPM throttle wait ~Ns"）；未配置则闸门关闭（429 退避仍生效）。
@@ -376,7 +378,7 @@ for (const tc of kept) {                               // 缺 id 合成，避让
 
 ## 14. 截断续写 400 止损与根治（2026-09-02，用户问题 Q3 根因）
 
-> **状态：设计定稿，待实现**（用户问题批 Q3，docs/TODO.md）。根因经真机复现实锤（2026-09-02，deepseek-v4-flash 稳定版）。
+> **状态：CLI 已实现**（2026-09-02，T1-T4 全绿 + 全量测试通过；docs/TODO.md Q3 状态由架构师更新）。根因经真机复现实锤（2026-09-02，deepseek-v4-flash 稳定版）。
 >
 > **两端 parity**：本文件为 CLI 侧权威源；扩展端同规格见 thincoder-vscode/docs/design/ARCHITECTURE.md 变更段（引用不复制）——prefix 续写 400 同样影响 VS Code 的 deepseek 用户，**VS Code 端口须同修**（与兄弟节 §10-§13 同一纪律）。
 
@@ -419,7 +421,7 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 
 ### 14.4 测试
 
-**受影响文件**：`src/provider/core.mjs`（新增 `buildContinuationMessages`——续写消息构造独立函数；续写循环改调它）、`test/provider.test.mjs`（T1-T4：mock 截断续写 + 工具历史 + 400 断言）、`docs/design/PROVIDER.md`（本节 + §5 表格补 prefix 约束）、`CHANGELOG.md`。
+**受影响文件**：`src/provider/core.mjs`（新增 `buildContinuationMessages`——续写消息构造独立函数；续写循环改调它）、`test/provider.test.mjs`（T1-T4：mock 截断续写 + 工具历史 + 400 断言）、`docs/design/PROVIDER.md`（本节 + §5 表格补 prefix 约束）、`CHANGELOG.md`。**✅ 2026-09-02 已落地**：core.mjs（新增 `buildContinuationMessages` + 续写循环 catch 注入 `_warnings`）+ 新增 `test/provider.test.mjs`（T1-T4 全过）；CHANGELOG.md 由父代理统一更新。
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
@@ -428,7 +430,7 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 | T3 | partial 不受影响 | mock：partialMode 模型同场景 | 续写请求形态不变（无精简） | 14.2 |
 | T4 | 续写 400 可见性 | mock：续写返回 400 | 结果带 `_warnings`（含错误文本），不静默 | 14.3 |
 
-**验收**：AC1 = 真机 deepseek-v4-flash 长输出触发截断时不再 400（可选验证：`npm test` 全量 + 一次真实长输出冒烟）；AC2 = 既有续写测试（provider 全量）全绿不回归；AC3 = CLI 全量 + lint 绿。
+**验收**：AC1 = 真机 deepseek-v4-flash 长输出触发截断时不再 400（可选验证：`npm test` 全量 + 一次真实长输出冒烟）；AC2 = 既有续写测试（provider 全量）全绿不回归；AC3 = CLI 全量 + lint 绿。**✅ 2026-09-02**：AC2 达成（既有 Partial/Prefix 续写用例全绿）、AC3 达成（`npm test` 997 全绿 + eslint 0 error）；AC1 真机冒烟未执行（本环境无真实 API key，留待用户侧验证）。
 
 ### 14.5 关键决策
 
@@ -458,4 +460,4 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 - 全量：993/949/0/44 + eslint 0 error
 - **真机（最强）**：完整真实会话（953 条，含 421 个代理字符其中 1 个孤立）→ normalizeToolPairing + escapeMessages → deepseek **200**（修复前同一链路 400）；带 `thinking:enabled` 真实注入路径 6/6 全 200
 
-**遗留观察项**：03:11 曾复现一次 `reasoning_content must be passed back` 400（根因②），同链路 6 次重试全 200 无法再复现——疑 deepseek 服务端临时状态；若复发，`THIN_DEBUG_BODY=1` 抓 body 定位。14.2/14.3 的续写消息构造规范化仍按设计落地（它同时覆盖 prefix 续写场景的 reasoning_content 回传约束）。
+**遗留观察项**：03:11 曾复现一次 `reasoning_content must be passed back` 400（根因②），同链路 6 次重试全 200 无法再复现——疑 deepseek 服务端临时状态；若复发，`THIN_DEBUG_BODY=1` 抓 body 定位。14.2/14.3 的续写消息构造规范化**已按设计落地（2026-09-02）**——它同时覆盖 prefix 续写场景的 reasoning_content 回传约束。

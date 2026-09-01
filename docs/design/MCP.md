@@ -198,8 +198,8 @@
 | # | 需求 | 说明 |
 |---|---|---|
 | F1 | add 向导瘦身 | HTTP/WS：name → url → token（headers **不进主流程**——末尾追问 "Add custom headers? (y/N)"，默认跳过）；stdio：name → command → args → env 同理。90% 场景 2-3 问搞定 |
-| F2 | 保存前预览 + 探活（纠错回环核心） | 向导收集完 → **预览表**（name/transport/端点/token 遮蔽——`maskToken`：len > 12 显示前 4 字符 + "…"，否则全遮——评审 #6）→ `probeMcpServer` 当场探活 → 报告（✓ N tools, Xms / ✗ 错误）→ "Save? (Y/n)"。探活失败 → "Retry which field? (url/token/headers/save-anyway/cancel)"——**只重问选中的字段**，不重启流程（stdio 同理：command/args/env） |
-| F3 | edit = 字段 picker（v2 修订——推翻逐字段重问） | **Edit 进入字段选择表单**：picker 列出可编辑字段行（`URL       https://…` / `Token     d90c26bb…`（打码）/ `Headers   2 items`；stdio: `Command/Args/Env`），**游标上下选择**要改的字段 → askQuestion 只输入该字段新值（空=不变、`-`=删除该字段/`k=`删 header 项）→ **回到字段 picker 可继续改其他字段** → 选 `✓ Save & test` → 预览 + probe 探活 + 确认（F2）→ 保存自动重连。**废除逐字段预填重问**——改 token 不再被迫路过 URL/headers |
+| F2 | 保存前预览 + 探活（纠错回环核心） | 向导收集完 → **预览表**（name/transport/端点/token 遮蔽——`maskToken`：len > 12 显示前 4 字符 + "…"，否则全遮——评审 #6）→ `probeMcpServer` 当场探活 → 报告（✓ N tools, Xms / ✗ 错误）→ **✓ 直接保存 / ✗ 报错回 fieldPicker 改字段复 probe**（§5 变更段 D-Q1：确认问句与 save-anyway 废除——失败配置零保存通道；stdio 同理：command/args/env） |
+| F3 | edit = 字段 picker（v2 修订——推翻逐字段重问） | **Edit 进入字段选择表单**：picker 列出可编辑字段行（`URL       https://…` / `Token     d90c26bb…`（打码）/ `Headers   2 items`；stdio: `Command/Args/Env`），**游标上下选择**要改的字段 → askQuestion 只输入该字段新值（空=不变、`-`=删除该字段/`k=`删 header 项）→ **回到字段 picker 可继续改其他字段** → 选 `✓ Save & test` → 预览 + probe 探活（F2——✓ 直接保存 / ✗ 回表单）→ 保存自动重连。**废除逐字段预填重问**——改 token 不再被迫路过 URL/headers |
 | F3b | add 与 edit 统一表单 | add 用同一字段 picker（字段行初始为空、`(required)` 标记 name/url/command），Save 时校验必填非空——一个表单机制两处复用，add/edit 体验一致 |
 | F4 | AI 生成降末位 | transport picker 顺序：HTTP / WebSocket / stdio / **AI（最后）**；文案不再首推 |
 | F5 | agent 代配闭环 | ① **`/mcp` 菜单打开时从磁盘重读 config.json**（现状 `getServers()` 读 `agent.config` 内存态——agent 用 edit 工具改磁盘后内存不知，新 server 在菜单里不可见——这是 agent 代配的唯一机械缺口）；② `/mcp` 主菜单固定提示行："复杂配置可让 agent 直接编辑 ~/.thincoder/config.json 的 mcp.servers，改完 /mcp connect 生效"；③ add/edit/remove 的 persistRaw 落盘语义不变（内存态同步写） |
@@ -283,7 +283,7 @@
 
 ### §5 变更段：save&test 确认问句废除（2026-09-02，用户问题 Q4）
 
-> **状态：设计定稿，待实现**。用户裁定："Save & test 时问的问题完全不知道该填什么，无厘头——不需要问，保存时直接拉一下 MCP 工具，正常就保存，拉不到就报错让用户改"。**终裁补充：探活失败不提供任何保存通道（save-anyway 整个废除——"探活失败还存干嘛"）**。
+> **状态：已实现（2026-09-02）**——D-Q1 confirmLoop 重构落地（✓ 直接保存 / ✗ 报错回表单零保存通道），T16'/T17' 重写 + T16c 删除 + T25/T18' 新增全绿。用户裁定："Save & test 时问的问题完全不知道该填什么，无厘头——不需要问，保存时直接拉一下 MCP 工具，正常就保存，拉不到就报错让用户改"。**终裁补充：探活失败不提供任何保存通道（save-anyway 整个废除——"探活失败还存干嘛"）**。
 
 **需求变更**（覆盖 §5 F2/D-1 的确认环语义）：
 
@@ -303,7 +303,7 @@
   - T17（探活失败回表单）→ 断言**无 Save anyway? 问句**、直接回表单（重输 token → 复 probe → 保存）
   - 新增 T25：探活失败后无任何保存通道（config 未写、agent.tools 无新增）
 
-**受影响文件**：`src/tui/cmd-mcp.mjs`（confirmLoop）、`test/mcp.test.mjs`（T16/T16c/T17 + 新增 T25）、`docs/design/MCP.md`（本节 + §5 F2 表格更新）、`CHANGELOG.md`（0.12.55 或下版条目更新）。
+**受影响文件**（**已实现（2026-09-02）**，补记见下节）：`src/tui/cmd-mcp.mjs`（confirmLoop）、`test/mcp.test.mjs`（T16'/T17' 重写、T16c 删除、+T25/+T18'）、`docs/design/MCP.md`（本节 + §5 F2/F3 表格更新）、`CHANGELOG.md`（0.12.55 或下版条目更新——**由父代理统一更新，本交付不触碰**）。
 
 **测试**：
 
@@ -318,4 +318,14 @@
 **验收**：AC1 = 探活成功零问句直接保存；AC2 = 探活失败报错回表单且无任何保存通道；AC3 = 取消仅剩表单 Esc（放弃）；AC4 = CLI 全量 + lint 绿。
 
 **关键决策**：① **问句废除而非改文案**（用户明确"不需要问"——探活本身就是验证，确认多余）；② **save-anyway 废除**（"探活失败还存干嘛"——失败配置不落盘是数据安全，重启修复场景不存在）；③ 预览保留（保存前一眼可见配置是价值，非负担）；④ probe 失败零副作用语义不变（§4 资产）。
+
+### §5 变更段实现补记（2026-09-02，D-Q1 落地后回写）
+
+- **落点**：`src/tui/cmd-mcp.mjs`（confirmLoop 重构——**删除两个 askQuestion 分支**：`Save? (Y/n)` / `Save anyway? (y/N)`；probe ✓ → 直接 `return entry`（走调用方既有 persistRaw + connectServer 链——addAndConnect / edit persistRaw 原位替换均零改动）；probe ✗ → push `[mcp] Probe failed: <错误> — fix it in the form`（C.error，错误取探活行 `✗` 后透传文本）+ `retryEntry` 回 fieldPicker 复 probe——retryEntry 复用（AC2 语义不变）。原 "Probe OK. Review the preview above." 行删除（预览行已含 ✓ 报告，多余）；取消语义 = retryEntry 表单层 Esc（AC3——confirmLoop 内无取消点）。
+- **AC 指认**：AC1 = `T16'`（探活成功零问句：`asked` 无 Save?/Save anyway、直接落盘 + connect 入 agent.tools、预览含遮蔽 token——原 T16 断言保留）；AC2 = `T17'`（401 → 无 Save anyway 问句、`[mcp] Probe failed:` 错误行、回 fieldPicker 只重输 token 复 probe 通过保存——url/headers 保留断言保留）+ `T25`（新增：probe ✗ 后表单 Esc 退出 → persistRaw 零调用、agent.tools 无新增、`[mcp] Cancelled`）+ `T18'`（新增：edit 改 url → probe ✗ → 回表单（改错值保留可见）→ 改回 → 保存重连，失败点零保存）；AC3 = 无 Save? n 取消路径——T16c 删除（无问句即无该路径），取消仅剩表单 Esc（T25 覆盖）；AC4 = 全量 + lint（见本段末行结果）。
+- **附带更新（save-anyway 废除的必然后果——属既有断言随新语义更新）**：`test/mcp.test.mjs` 的 T15/T16b/T18/T18b/T12 原依赖"死端口 url + `Save anyway` 返回 y"（探活失败仍保存）——该通道废除后探活必须 ✓ 才能保存，全部改为真实 `postOnlyServer` url（T18b 改同 server 不同 path 即改 url；T18 重连反馈断言由 `[mcp] srv:` 失败行改为 `srv reconnected, N tools available` 成功行），并补 `removeMcpTools` 清理（原失败路径不产生连接，现在会产生）；`test/slash-commands.test.mjs` 的"Add server 后回主菜单计数"测试同因（死端口 + save-anyway y 在新 confirmLoop 下会无限循环回表单）改用真实 POST-only server（探活 + 连接均成功，计数断言不变）——v1/v2 同款"清单外必要触碰"处置（AC4 要求全绿）。
+- **覆盖收窄说明**：addAndConnect 的"保存后连接失败"分支在新语义下仅剩"探活通过但连接失败"竞态可触发（稳定 mock 无法构造）——该失败路径测试覆盖随语义变更自然收窄，行为代码未动。
+- **测试指认**：`test/mcp.test.mjs` 30 tests（29 → 30：T16c 删除、+T25/+T18'）全绿 + `test/slash-commands.test.mjs` 33 tests 全绿；CLI 全量 `npm test` 1027 tests（983 pass / 0 fail / 44 skipped——skipped 均为既有 slow 项，`THINCODER_TEST_FULL=1` 全跑）；`eslint src test` 0 error（warnings 均为既有 no-unused-vars 类，本交付触及文件无新增 lint 问题）。
+- **行数审计**：`cmd-mcp.mjs` 377 行（≤500 硬限，比 v2 382 行更降——删两个问句分支）；`cmd-mcp-form.mjs` 未动（198 行）。
+
 

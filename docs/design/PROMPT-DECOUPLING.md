@@ -67,7 +67,7 @@
 
 ## 变更段：搜索工具优先级条款（2026-09-02，用户问题 Q5）
 
-> **状态：设计定稿，待实现**。用户裁定："提示词里应该引导一下 websearch 只做备用，有 MCP 搜索服务的时候要用 MCP"。
+> **状态：已实现**（2026-09-02 交付：discipline.md / engineering.md 条款落地，两端 prompts byte-identical，T1/T4 断言锁定措辞；TODO.md Q5 由架构师勾销）。用户裁定："提示词里应该引导一下 websearch 只做备用，有 MCP 搜索服务的时候要用 MCP"。
 
 **问题**：discipline.md:72-73 工具表已标注 `websearch` = "weak for technical; MCP search tool first"、`glm-websearch_web_search_prime` = "primary when available"——但**只是表格罗列，非强制规则**。模型可能直接先跑 websearch（Bing 弱且噪音多），MCP 搜索（glm-websearch 等）闲置。教训案例（2026-08-31）：Bing 连续返回无关结果硬抓官方文档 URL 耗七八轮，切 glm-websearch 一发命中——需把该教训提升为正式提示词行为条款。
 
@@ -78,21 +78,21 @@
   - **websearch 连续 2 次返回垃圾/无关结果 → 立即切 MCP 搜索或换路径**（不恋战、不重复同 query）。
   - **被墙/抓不到站点（docs.claude.com / ai.google.dev 等）→ 优先镜像路径（gh-proxy.com 抓 GitHub SDK 源码/类型定义），不硬猜官方文档 URL**。
   - **动手抓页面前先扫工具表**（"我是不是有现成工具"的自查——fetch/glm-websearch 优先于 curl）。
-- **D-P2 system.md 同步**（普通模式 + 工程模式共享基础）：在"search for information"类指引中补一行"MCP search tools first; websearch is fallback"（若 system.md 已有搜索指引则并入；无则只在 discipline/engineering 加——实现时确认，避免重复）。
+- **D-P2 system.md 同步**（普通模式 + 工程模式共享基础）：在"search for information"类指引中补一行"MCP search tools first; websearch is fallback"（若 system.md 已有搜索指引则并入；无则只在 discipline/engineering 加——实现时确认，避免重复）。**实现结果：system.md 无 web 搜索指引（仅"Codebase exploration order"本地代码探索顺序），按设计不加行，条款只落 discipline.md / engineering.md。**
 - **D-P3 两端一致**：thincoder-vscode 的 src/prompts 与 CLI byte-identical（既有纪律）——VS Code 端口随两端 prompts 同步测试自动覆盖；本设计仅改 CLI 端 prompt 文件（VS Code 端镜像由既有 parity 流程带出，不单独列）。
 
-**受影响文件**：`src/prompts/discipline.md`、`src/prompts/engineering.md`（工程模式同条款——评审 #5 定死）、（+可选 system.md 一行）、两端 prompts 比对测试（既有）、`test/agent.test.mjs`（T4 工程 prompt 断言）、`docs/design/PROMPT-DECOUPLING.md`（本节）、`CHANGELOG.md`。
+**受影响文件**：`src/prompts/discipline.md` ✅（条款落地）、`src/prompts/engineering.md` ✅（同条款——评审 #5 定死）、（+可选 system.md 一行 —— D-P2 判定不加）、两端 prompts 比对测试 ✅（既有，全绿）、`test/agent.test.mjs` ✅（T1+T4 断言新增）、`docs/design/PROMPT-DECOUPLING.md` ✅（本节）、`CHANGELOG.md`（由架构师统一更新，本次未动）。
 
 **测试**：
 
-| # | 场景 | 预期 | 映射 |
-|---|---|---|---|
-| T1 | discipline.md 含优先级条款 | 断言文本含"MCP 优先/websearch 备用"语义句（具体措辞实现时定，测试锁措辞） | D-P1 |
-| T2 | 两端 prompts byte-identical | 既有 parity 测试全绿（若 system.md 改动） | D-P3 |
-| T3 | 既有 prompt 断言回归 | agent.test.mjs prompt 分层测试全绿 | — |
-| T4 | engineering.md 含优先级条款（评审 #5 新增） | 断言工程模式顶层 prompt（system.md + engineering.md 组装）含同语义句——工程模式与普通模式同规则 | D-P1 |
+| # | 场景 | 预期 | 映射 | 结果 |
+|---|---|---|---|---|
+| T1 | discipline.md 含优先级条款 | 断言文本含"MCP 优先/websearch 备用"语义句（具体措辞实现时定，测试锁措辞） | D-P1 | ✅ 通过（锁措辞：MCP search tools / PRIMARY for technical / is ONLY the fallback / twice in a row / repeat the same query / mirror path / scan the tool table） |
+| T2 | 两端 prompts byte-identical | 既有 parity 测试全绿（若 system.md 改动） | D-P3 | ✅ 通过（15 文件逐字节比对全绿） |
+| T3 | 既有 prompt 断言回归 | agent.test.mjs prompt 分层测试全绿 | — | ✅ 通过（CLI 全量回归绿） |
+| T4 | engineering.md 含优先级条款（评审 #5 新增） | 断言工程模式顶层 prompt（system.md + engineering.md 组装）含同语义句——工程模式与普通模式同规则 | D-P1 | ✅ 通过（测试按 setup.mjs:254 纯拼接组装后断言） |
 
-**验收**：AC1 = 提示词明确"有 MCP 搜索先用 MCP、websearch 仅备用"（**普通模式 + 工程模式均含**——T1/T4）；AC2 = 两端 prompts 一致（parity 测试绿）；AC3 = CLI 全量 + lint 绿。
+**验收**：AC1 ✅ = 提示词明确"有 MCP 搜索先用 MCP、websearch 仅备用"（**普通模式 + 工程模式均含**——T1/T4）；AC2 ✅ = 两端 prompts 一致（parity 测试绿）；AC3 ✅ = CLI 全量 + lint 绿。
 
 **关键决策**：① 条款落 discipline.md（普通模式行为规则所在地）而非单独文件——遵守文档地图"功能点并入所属板块"；② 措辞用行为规则（何时先用/何时切换）而非工具描述扩展——工具表已标注优先级，缺的是**行为引导**；③ 不新增工具、不改 websearch 实现（工具本身不动，只改引导）。
 

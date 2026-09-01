@@ -162,15 +162,15 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 
 ## 8. 会话恢复 provider/model 缺失 → 模型重选（2026-09-02，用户问题 Q1）
 
-> **状态：设计定稿，待实现**。用户问题批 Q1（docs/TODO.md）：CLI 退出重进时，会话引用的 provider 或 model 已不存在 → 直接报错退出进不了 TUI；期望给用户界面重新选择模型。
+> **状态：已实现（2026-09-02）**。用户问题批 Q1（docs/TODO.md）：CLI 退出重进时，会话引用的 provider 或 model 已不存在 → 直接报错退出进不了 TUI；期望给用户界面重新选择模型。验收标准逐条核对通过（T1-T7 + T1b/T6b，`test/session.test.mjs` + `test/tui.test.mjs`）。
 
 ### 8.1 问题与根因
 
 **症状**：会话保存时用了 provider A（如某个自定义 provider 或已删模型），重进时 config 里已无 A → CLI 报错退出。
 
-**根因链**（代码已核）：
+**根因链**（代码已核；2026-09-02 实现时修正第 1 环——`findProvider` 实际是 **throw** 而非返回空对象）：
 
-1. `loadConfig`（config.mjs 的 `runtimeProvider` 构造处——`findProvider(providers, activeProvider)` 返回 undefined → 空对象 `{}`）：`activeProvider` 在 `providers[]` 不存在 → **空对象**——不抛错但无 model/baseURL/apiKey。
+1. `loadConfig`（config.mjs 的 `runtimeProvider` 构造处——`findProvider(providers, activeProvider)`）：`activeProvider` 在 `providers[]` 不存在且名字非空 → **throw**（`activeProvider "ghost" not in providers list`）→ loadConfig 整体抛错 → `assembleAgent` 抛错 → bin 的 uncaughtException → 报错退出。**已修：loadConfig 对缺失 activeProvider 不再抛错**——runtimeProvider 置空对象 `{}`（不抛错但无 model/baseURL/apiKey），providers 列表与 activeProvider 原值保留；findProvider 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖，integration-provider 测试断言不变）。
 2. `assembleAgent`（make-agent.mjs 的 `provider.proxyUri` 注入处）：`provider = config.provider`（空对象）→ 后续 `provider.proxyUri` 赋值 OK（空对象可加属性）。
 3. **崩溃点**：空 provider 流入 `runAgent` → `chat()` → `provider.model` undefined → body 缺 model → **网关 400**；或 `provider.baseURL` undefined → `fetch("undefined/chat/completions")` → **TypeError "Failed to parse URL"** → uncaughtException → 进程退出。TUI 首帧若解引用 `agent.provider.name` 同崩。
 4. `applySession`（session.mjs 的 `if (p)` 回切分支）对不存在 provider **静默跳过**（`if (p)` 不成立 → return false）——**不报错也不纠正**，空 provider 继续流。
@@ -184,17 +184,19 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 
 ### 8.3 设计
 
-**D-S1 启动前校验（bin/thincoder.mjs + make-agent.mjs）**：
+**D-S1 启动前校验（bin/thincoder.mjs + make-agent.mjs + config.mjs）**：
 
-- `assembleAgent` 后、`applySession` 前：校验 `agent.provider?.model` 与 `agent.provider?.baseURL` 存在；缺失 → 打标记 `agent._providerInvalid = true`（附原因：provider 不存在 / model 缺失）。
+- `loadConfig`（config.mjs）：activeProvider 缺失不再抛错（见 8.1 修正）——runtimeProvider 空对象，providers 列表保留。
+- `assembleAgent` 后、`applySession` 前：校验 `agent.provider?.model` 与 `agent.provider?.baseURL` 存在；缺失 → 打标记 `agent._providerInvalid = true`（附原因 `_providerInvalidReason`：provider 不存在 / model 缺失 / 缺少 baseURL）——实现为 make-agent.mjs 导出的 `validateProvider(agent)`（幂等：有效时清标记），assembleAgent 末尾调用。
 - **model 无效判据（评审 #1 修正）**：仅当 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（未知模型 = 受支持场景，PROVIDER.md:84 "未知模型保守 128K + 警告"；自定义端点模型不在 MODEL_SPECS 是常态，误判会让自定义模型用户每次恢复都弹重选，违反 AC4 零回归）。
 - 不抛错、不退出；空 provider 不再流入 runAgent——**TUI 路径在 startTUI 前清空无效 provider**（`agent.provider = null`），由 TUI 启动逻辑触发模型选择。
 - **model 退役场景（评审 #2 修正）**：provider 存在但 `provider.model` 空（如 config 里 model 字段被删）→ 判 invalid 引导重选（默认选中该 provider 默认模型）。**MODEL_SPECS 未知不视为退役**——退役只能从"model 字段缺失"或"provider 自身消失"判断，客户端无法可靠区分"模型从 spec 表退役"与"自定义模型"（spec 表不是 allowlist）。
+- **D-S3 补全（bin 复验）**：applySession 后若标记仍置位则复验一次 `validateProvider`——applySession 可能已用会话中的有效 provider 修复（config 无效 + 会话有效），修复后清除标记，仅当两者都无效才弹重选。
 
-**D-S2 TUI 重选流程**（src/tui.mjs 启动 + pickers.mjs 复用）：
+**D-S2 TUI 重选流程**（src/tui/index.mjs 启动 + pickers.mjs 复用）：
 
-- `startTUI` 首帧前检查 `agent._providerInvalid`（或 `!agent.provider`）→ **先弹模型选择 picker**（复用 `openModelPicker`/`selectModel`，展示当前可用 providers）→ 用户选定后继续正常启动（`agent.provider` 已更新为有效值）。
-- 选择取消（Esc）→ 仍进入 TUI（显示提示行"未配置有效 provider，可用 /model 选择或 /provider 配置"）——**绝不因无 provider 拒绝进入**。
+- `startTUI` 首帧前检查 `agent._providerInvalid`（或 `!agent.provider`）→ **先弹模型选择 picker**（复用 `openModelPicker`/`selectModel`，展示当前可用 providers）→ 用户选定后继续正常启动（`agent.provider` 已更新为有效值）。实现为 index.mjs 导出的 `promptProviderIfInvalid(agent, openModelPicker, pushLine)`。
+- 选择取消（Esc）→ 仍进入 TUI（显示提示行"未配置有效 provider，可用 /model 选择或 /provider 配置"）——**绝不因无 provider 拒绝进入**。提示行后 showStartup 的既有 no-key 触发条件（`!agent.provider?.apiKey`，已加 `?.` 守卫）会让 wizard 弹出——其 provider 菜单列出已存在 providers（可选中恢复）与 presets，符合 F3"进入配置向导或提示"；空 provider 下渲染路径（renderHeader/renderStatus 的 `agent.provider?.model`）已加可选链守卫，屏幕不再冻结。
 - `/model` 在无有效 provider 时行为不变（picker 列出可用项）。
 
 **D-S3 会话恢复与 provider 缺失的优先级**：
@@ -206,7 +208,7 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 
 ### 8.4 测试
 
-**受影响文件**：`bin/thincoder.mjs`（tui/chat 两路径的启动校验接入）、`src/cli/make-agent.mjs`（assembleAgent 后校验点 + `_providerInvalid` 标记）、`src/session.mjs`（applySession 不变——校验在调用侧）、`src/tui.mjs`（startTUI 首帧检查 + 弹选择）、`src/tui/pickers.mjs`（复用 openModelPicker/selectModel——如无导出改动则仅调用）、`test/session.test.mjs`（T1-T7 + T1b/T6b 恢复场景）、`test/tui.test.mjs`（T2 启动弹选择 + T7 取消）、`docs/design/SESSION.md`（本节）、`CHANGELOG.md`。
+**受影响文件**（实现后勾销）：`src/config.mjs`（loadConfig 对缺失 activeProvider 不抛错）、`bin/thincoder.mjs`（tui/chat 两路径的启动校验接入 + applySession 后复验）、`src/cli/make-agent.mjs`（assembleAgent 后校验点 `validateProvider` + `_providerInvalid` 标记）、`src/session.mjs`（applySession 不变——校验在调用侧）、`src/tui/index.mjs`（startTUI 首帧检查 + 弹选择，`promptProviderIfInvalid`；设计稿的 `src/tui.mjs` 是 re-export hub，实现落在 index.mjs）、`src/tui/startup.mjs` + `src/tui/render-frame.mjs`（空 provider 渲染守卫——T7 必需）、`src/tui/pickers.mjs`（复用 openModelPicker/selectModel——无导出改动，仅调用）、`test/session.test.mjs`（**新增**，T1-T7 + T1b/T6b 恢复场景）、`test/tui.test.mjs`（T2 启动弹选择 + T7 取消）、`docs/design/SESSION.md`（本节）、`CHANGELOG.md`（父代理统一更新）。
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
@@ -226,4 +228,7 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 
 - **清空而非修补空 provider**：空对象 `{}` 流入下游是崩溃源——检测后置 `null`，让 TUI 选择流程从干净状态开始（避免"半有效 provider"的隐晦错误）。
 - **校验点收敛到 assembleAgent 之后**：一处检测覆盖 TUI/chat 两路径（F1-F4 同源）；不散落多处判断。
+- **loadConfig 不抛错而非容忍 throw**（2026-09-02 实现修正）：findProvider 的 throw 击穿 loadConfig → assembleAgent，TUI/chat 都进不来——校验点无从执行；改在 loadConfig 调用侧捕获（runtimeProvider 空对象），findProvider 的 throw 契约保留给直接调用方（advisor）。
+- **复验而非二次校验点**：applySession 可能用会话中的有效 provider 修复 config 的错误（config 无效 + 会话有效）——bin 在 applySession 后复验同一 `validateProvider`（幂等清标记），维持"仅两者都无效才弹重选"（D-S3）而不散落新判据。
+- **Esc 后渲染守卫**：provider=null 时 renderHeader/renderStatus/showStartup 的解引用必须可选链（否则 T7"仍进 TUI"在首帧即崩/冻结）；showStartup 的 no-key 触发会带出 wizard（其菜单列出已存在 providers，可选中恢复——符合 F3，非拒绝进入）。
 - **否决**：a) 启动即退出并打印"请编辑 config"（用户已明确要 UI 重选——体验差）；b) 静默回退到第一个可用 provider（用户可能 unaware 换错模型——必须显式选择）；c) 自动用 config.activeProvider 覆盖会话 provider（用户上次明确选的模型不能静默丢）。
