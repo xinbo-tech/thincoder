@@ -28,26 +28,27 @@ test("stripLocalMessageFields keeps every other field; leaves non-objects untouc
 })
 
 test("escapeLiteralEscapes still neutralizes illegal hex sequences (regression)", () => {
-  assert.equal(escapeLiteralEscapes("\\xzz"), "\\\\xzz")
+  // v4 替换策略（2026-09-02）：\x 不足 2hex → \x5Cx（不是 v1-v3 的 double——网关不看前置反斜杠）
+  assert.equal(escapeLiteralEscapes("\\xzz"), "\\x5Cxzz")
   assert.equal(escapeLiteralEscapes("\\x41"), "\\x41") // valid hex passes untouched
 })
 
 test("escapeMessages still escapes message content after stripping (combined path)", () => {
   const out = escapeMessages([{ role: "user", content: "write \\x not hex", transient: true }])
-  assert.deepEqual(out, [{ role: "user", content: "write \\\\x not hex" }])
+  assert.deepEqual(out, [{ role: "user", content: "write \\x5Cx not hex" }])
 })
 
 test("escapeMessageContent neutralizes tool_calls[].function.arguments (F5 — deepseek v4-flash 400 vector)", () => {
   const out = escapeMessages([
     { role: "assistant", content: "", tool_calls: [{ id: "c1", type: "function", function: { name: "grep", arguments: '{"p":"\\u12"}' } }] },
   ])
-  // arguments 里字面 \u 不足 4 hex → 双写为 \\u（JSON 字符串值内合法；网关二次解码还原为字面）
-  assert.equal(out[0].tool_calls[0].function.arguments, '{"p":"\\\\u12"}')
+  // v4 替换策略（2026-09-02）：arguments 里字面 \\u 不足 4 hex → 替换为 \\x5Cu（网关展开为 \\+u 字面，不炸）
+  assert.equal(out[0].tool_calls[0].function.arguments, '{"p":"\\x5Cu12"}')
 })
 
 test("escapeMessageContent neutralizes reasoning_content (F5 — same server-side re-escape)", () => {
   const out = escapeMessages([{ role: "assistant", content: "ok", reasoning_content: "used \\x escape" }])
-  assert.equal(out[0].reasoning_content, "used \\\\x escape")
+  assert.equal(out[0].reasoning_content, "used \\x5Cx escape")
 })
 
 test("escapeMessageContent leaves well-formed escapes and already-doubled arguments untouched", () => {
@@ -60,27 +61,30 @@ test("escapeMessageContent leaves well-formed escapes and already-doubled argume
 
 // ── 2026-09-01 v3：真实 400 形态锁定（escapemessage 窗口越界/孤立代理/多层 run） ──
 
-test("v3: x/u 相邻形态必须同时 double（窗口越界回归——\\x 的 hex 窗口不得吞 \\u 的反斜杠）", () => {
-  // 真实会话 400 原文："invalid literal \\x/\\u sequences"
-  // v2 的 bug：处理 \\x 时 need=2 的窗口把 "/\\" 当 hex 吞掉 → \\u 的反斜杠丢失 → 毒保留
-  assert.equal(escapeLiteralEscapes("invalid literal \\x/\\u sequences"), "invalid literal \\\\x/\\\\u sequences")
+test("v4: x/u 相邻形态同时替换（替换策略——无 double）", () => {
+  // 真实会话 400 原文："invalid literal \\x/\\u sequences"——v4 替换为 \x5Cx/\x5Cu
+  assert.equal(escapeLiteralEscapes("invalid literal \\x/\\u sequences"), "invalid literal \\x5Cx/\\x5Cu sequences")
 })
 
-test("v3: 2 个反斜杠后的 \\u 必须放行（已配对形态——Windows 路径 \\u 前无配对才 double）", () => {
-  // "\\u"（2 反斜杠）在二次解析中 \\ 配对消费 → u 普通字符 → 安全；不得再 double
-  assert.equal(escapeLiteralEscapes("\\\\u123"), "\\\\u123")
-  assert.equal(escapeLiteralEscapes("C:\\users\\temp"), "C:\\\\users\\temp") // 只有 \\u 的 \ 被补
+test("v4: 2 反斜杠后的 \\u 不足位仍替换（v1-v3 的配对放行模型已废弃——网关不看前置反斜杠）", () => {
+  // "\\u"（2 反斜杠 + u + 123 不足 4hex）→ 仍替换（网关扫最后一个 \\+u 相邻对）
+  assert.equal(escapeLiteralEscapes("\\\\u123"), "\\\\x5Cu123")
+  // Windows 路径 C:\\users\\temp：\\u（1 反斜杠+u+不足4hex）→ 替换为 \\x5Cu
+  assert.equal(escapeLiteralEscapes("C:\\users\\temp"), "C:\\x5Cusers\\temp")
 })
 
-test("v3: 孤立代理对不得留（strict JSON 解析会炸——D800-DFFF 无配对）", () => {
-  assert.equal(escapeLiteralEscapes("\\uD83D"), "\\\\uD83D") // 孤立高代理 → double
-  assert.equal(escapeLiteralEscapes("\\uDFFF"), "\\\\uDFFF") // 孤立低代理 → double
-  assert.equal(escapeLiteralEscapes("\\uD83D\\uDE00"), "\\uD83D\\uDE00") // 成对 emoji → 放行
-  assert.equal(escapeLiteralEscapes("\\uD83D\\uDE00 \\uD83D"), "\\uD83D\\uDE00 \\\\uD83D") // 混合
+test("v4: 孤立代理对放行（\\uXXXX 合法 hex 不炸——网关展开为码点，严格 JSON 解析是否炸待真机验）", () => {
+  // v4 简化：\\u + 4hex 完整 → 放行（网关能展开）。孤立代理对的 strict 语义不做额外处理（真机再验证）。
+  assert.equal(escapeLiteralEscapes("\\uD83D"), "\\uD83D")
+  assert.equal(escapeLiteralEscapes("\\uDFFF"), "\\uDFFF")
+  assert.equal(escapeLiteralEscapes("\\uD83D\\uDE00"), "\\uD83D\\uDE00")
 })
 
-test("v3: 3+ 反斜杠 run 的奇偶正确（v1 Known limitation 修复）", () => {
-  assert.equal(escapeLiteralEscapes("\\\\\\xzz"), "\\\\\\\\xzz") // 3 反斜杠+非法 x → double（v1 Known limitation 修复）
-  assert.equal(escapeLiteralEscapes("\\\\\\x41"), "\\\\\\x41") // 3 反斜杠+合法 \x41 → 放行（二次解析成功）
-  assert.equal(escapeLiteralEscapes("\\\\\\\\u0041"), "\\\\\\\\u0041") // 4 反斜杠+合法 → 放行
+test("v4: 多反斜杠 run 一律按末尾 \\x/\\u 判断（v1-v3 奇偶模型废弃）", () => {
+  // 3 反斜杠+非法 x（x 后不足 2hex）→ 末尾 \\x 替换为 \\x5Cx
+  assert.equal(escapeLiteralEscapes("\\\\\\xzz"), "\\\\\\x5Cxzz")
+  // 3 反斜杠+合法 x41 → 放行（\\x41 合法）
+  assert.equal(escapeLiteralEscapes("\\\\\\x41"), "\\\\\\x41")
+  // 4 反斜杠+合法 u0041 → 放行（\\u0041 合法）
+  assert.equal(escapeLiteralEscapes("\\\\\\\\u0041"), "\\\\\\\\u0041")
 })
