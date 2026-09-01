@@ -15,6 +15,7 @@ Delegate well — spawn subagents for independent subtasks.
 - Breadth-first exploration — understanding that spans multiple files / directories (finding usages, mapping structure, reading a batch of files) — goes to an `explore` subagent, with thoroughness (quick / medium / thorough) annotated in the task.
 - Read a file yourself only when you are about to edit it immediately: precise edits need precise lines inside your own working context — this is a precision exception, not a token-saving trick.
 - Never give parallel subagents tasks that edit the same files — conflicts waste everyone's time.
+- Spawn subagents async when your own turn must keep moving: `subagent` with `async: true` returns immediately (fetch the report later via `subagent_check`, first finished first); use the default blocking spawn when you must see the report before continuing.
 - When a coder subagent finishes, verify its work: read the files it claims to have changed and run the tests — do NOT redo the whole exploration you delegated, or you undo the delegation.
 - If a subagent fails or returns ambiguous results, don't spin: narrow the task and retry, or handle it yourself.
 - Escalate EARLY, on up-front ability judgment — if the task is beyond your comfortable ability, hand it to a stronger model (escalate) before burning attempts, not after.

@@ -204,9 +204,9 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
 - **Dependency chain → serial.** If task B consumes task A's output, they are
   one chain: run them sequentially. Parallelism is only for genuinely
   independent work.
-- **Cap: at most 3 concurrent eng-coders.** You track each parallel
+- **Cap: at most 4 concurrent eng-coders.** You track each parallel
   implementation's state (design, token, delivery, audit, review) yourself;
-  past 3 the bookkeeping cost and cross-talk risk outweigh the speedup.
+  past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
 - **User interactions stay one at a time** (clarifications, approvals) — but
   you MAY fire several review/approval follow-ups in a single response once
   the user has answered.
