@@ -211,3 +211,47 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 **③ dispatch console 回显**（见 AGENT-LOOP.md §4 dispatch 段）：工具执行期间的 `console.log`/`console.error` 收集后附在工具结果后回显给模型（原只到终端、模型看不到）；异常路径（工具抛错前的探查输出——调试最有价值）同样回显。
 
 **受影响文件**：CLI `src/tools/file.mjs`（lastWrite/recordWrite/edit 数组）、`src/agent/dispatch.mjs`（console 回显）、VS Code `src/tools/file.mjs`（edit 数组 parity）+ 两端测试（CLI 869/839/0、vscode 804/804）。
+
+
+## 10. 工具作用域限制移除 + lint 基建零依赖化（2026-09-02，用户需求批：开发体验三项）
+
+> **状态：设计定稿，待实现**。用户裁定三项：① 删 eslint 全套改 node --check；② 工具工作目录作用域限制**全部移除**（bash 可绕过、拦不住还空耗 token）；③ 模型上下文长度可配置（见 PROVIDER.md 变更段）。
+
+### 10.1 工具作用域限制移除
+
+**问题**：`shared.mjs` 的 `resolveInCwd` 对路径做双重边界断言（`assertInside`：resolve + realpath 逃逸抛 "Access denied outside working directory"）——file/patch/ops/edit-batch/tree/linter/system 等工具受限；但 **bash 工具无任何限制**（本就可任意路径），模型碰到限制就用 bash 绕——机制拦不住真实意图，只增加一次失败往返 + token 空耗（用户实证判断）。
+
+**需求**：F1 = 所有工具路径解析**不再做工作目录边界断言**（与 bash 对齐：信任模型 + 权限门禁是唯一防线）；F2 = 工具描述中 "confined to workspace" 类措辞移除（避免误导模型绕行）。
+
+**设计**：
+
+- **D-W1 边界断言移除**（两端）：`shared.mjs` `resolveInCwd` 改为与 `resolveExternal` 等价（无 `assertInside`）——或直接删除 `resolveInCwd`/统一为 `resolveExternal`（实现时选：保留函数名零调用方改动 vs 删名改调用方——**保留 resolveInCwd 名但去掉断言**，7 个调用方零改动，语义从"限界"变"解析"）；`assertInside`/realpath 双重检查删除
+- **D-W2 工具描述同步**（两端）：file/execute/git 等描述中的 "confined/within the working directory/边界" 措辞移除或改"路径相对 cwd 解析，不做目录限制"
+- **D-W3 测试**：逃逸断言测试（"Access denied outside working directory" 相关）删除或改"路径正常解析"；回归全绿
+
+**受影响文件（两端）**：`src/tools/shared.mjs`（resolveInCwd 去断言 + 删 assertInside）、file/edit-batch/patch/ops/tree/linter/system.mjs（调用方零改动——若删函数名则改 import）、工具描述文本、逃逸测试（CLI test/tools*.test.mjs + VS Code 对应）、AGENTS.md（目录限制纪律若提及则更新）。
+
+**测试**：T-W1 外部路径（`../outside.txt`）read/write/edit 正常解析执行（不再抛 Access denied）| F1；T-W2 bash 与文件工具行为一致（同路径均可达）| F1；T-W3 工具描述无 "confined to workspace" 类措辞 | F2；T-W4 回归全量绿。
+
+### 10.2 lint 基建零依赖化（删 eslint 全套）
+
+**问题**：CLI + VS Code 的 `package.json` 都有 devDependencies（eslint + @eslint/js）——与"零依赖"承诺相悖；eslint 是开发期工具，唯一有值输出是 no-unused-vars 类警告（CLI 49 条既有 warning 全部 unused 类）。
+
+**需求**：F1 = 删除 eslint 全套（devDependencies + eslint.config.mjs + lint script 中的 eslint 调用）；F2 = 语法检查用 node 自带能力（`node --check`），零依赖脚本。
+
+**设计**：
+
+- **D-L1 删除**（两端）：`package.json` devDependencies 移除 eslint/@eslint/js；`eslint.config.mjs` 删除；`scripts.lint` 改为 `node scripts/check-syntax.mjs`
+- **D-L2 check-syntax 脚本**（新增，CLI + VS Code 各一）：遍历 `src/**/*.mjs` + `test/**/*.mjs` + `bin/*.cjs`，逐个 `node --check`（spawnSync(process.execPath, ["--check", file])）；非零退出汇总报错文件清单；零依赖（node 自带）
+- **D-L3 引用面更新**：AGENTS.md（"Every change must be verified by running it" 段若提 lint）、RELEASE.md（发布门禁若含 eslint）、README（零依赖声明不变——删 devDeps 后更纯粹）、CHANGELOG
+- **D-L4 测试**：check-syntax 脚本自身跑通（全文件语法通过）；删除 eslint 后 `npm test` 回归全绿
+
+**受影响文件（两端）**：`package.json`（devDeps 删 + lint script 改）、`eslint.config.mjs`（删）、`scripts/check-syntax.mjs`（新增）、AGENTS.md/RELEASE.md（引用面）、CHANGELOG.md（父代理）。
+
+**测试**：T-L1 `npm run lint` = node --check 全量语法通过（0 报错）| F2；T-L2 `npm test` 回归全绿 | F1；T-L3 无 eslint 引用残留（grep eslint 于 package.json/scripts）| F1。
+
+### 10.3 关键决策
+
+- **保留 resolveInCwd 函数名**（去断言而非删名）：7 个调用方零改动，语义从"限界解析"变"解析"——最小面；`resolveExternal` 保留（兼容既有引用）
+- **node --check 而非自定义 linter**：语法级检查覆盖"写坏文件"主风险（解析错误）；unused vars 类警告放弃（49 条全 unused、无行为价值）；零依赖目标优先
+- **否决**：a) 保留 eslint 挪全局（仍依赖、违零依赖）；b) 只移除部分工具限制（"不少工具有限制"——全部移除，bash 一致性）；c) 作用域限制改"警告不阻断"（仍空耗 token——用户裁定干脆去掉）

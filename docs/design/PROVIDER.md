@@ -470,3 +470,44 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 | 2 | UTF-16 安全截断 | context.mjs:247/275、code.mjs:150、run-helpers.mjs:110/113、compact.mjs:195/376 | safeSliceUTF16 等价（截断点落高代理向前收一码元）——5 处 |
 | 3 | 续写构造对齐 | provider.mjs:195-205 | buildContinuationMessages 等价（prefix 过滤工具消息、保留 system + ≤8 文本、reasoning_content 回传继续而非跳过）+ 续写失败可见性（_warnings 等价） |
 | 4 | 两端测试 | VS Code test/ | escape v5 断言 + 续写构造断言 + parity |
+
+
+## 15. 模型上下文长度可配置（2026-09-02，用户需求批：开发体验三项）
+
+> **状态：设计定稿，待实现**。用户实证：本地部署 deepseek v4 flash 上下文不是 1M（MODEL_SPECS 写死 1_000_000），压缩阈值/窗口显示全按 1M 算——需用户可配。
+
+### 15.1 问题与需求
+
+**问题**：`MODEL_SPECS` 的 `context` 写死（如 deepseek-v4-flash 1_000_000）；`specForModel(model)` 纯查表（20+ 调用方），无 provider 级覆盖——本地部署/私有端点模型的真实上下文与 spec 不符时，压缩阈值（auto = context × 0.6）偏高 → 溢出风险、窗口显示误导。
+
+**需求**：F1 = config 的 provider 级 `context` 字段（**K 为单位**，如 `128` = 128K）覆盖 MODEL_SPECS 值；F2 = 覆盖后全链路跟随（压缩阈值 / TOKEN 窗口显示 / 估算 / 钳制）；F3 = CLI + VS Code 两端；F4 = 可通过配置界面配置；F5 = 未配置时行为不变（用 spec 值）。
+
+### 15.2 设计
+
+- **D-C1 config 字段**（两端）：`config.json providers[].context`（K 单位正整数；非法值（0/负数/非数字）→ 忽略 + 警告一次，用 spec 值）
+- **D-C2 解析覆盖**：`model-specs.mjs` 新增 `providerSpec(provider)`：`const spec = specForModel(provider.model); return provider.context ? { ...spec, context: provider.context * 1024 } : spec`（拷贝覆盖，不污染共享 spec 对象）；`specForModel` 保持纯函数不变
+- **D-C3 调用方改造**：需要 provider 感知的调用方从 `specForModel` 换 `providerSpec`——context.mjs（压缩阈值 resolveCompactThreshold）、provider/core.mjs（窗口/钳制）、provider/rate.mjs（TPM 记账若用 context）、provider/normalize.mjs、advisor（messages/run 的预算）、TUI render-frame（模型信息显示）、auto-think.mjs（若用 context）；纯模型查表处（不含 provider）保持 `specForModel`
+- **D-C4 配置界面**：CLI `/model` 的 provider 管理流加 context 字段（K 单位，picker/表单——复用 syncProviderField 先例）；VS Code settings 的 providers[].context（配置界面落点实现时确认：settings 面板或会话面板）
+- **D-C5 显示**：TUI/VS Code 模型信息显示 `context 窗口`（如 "128K"）跟随覆盖值
+
+**受影响文件（两端）**：`src/model-specs.mjs`（providerSpec）、`src/config.mjs`（loadConfig 校验 context 字段）、context.mjs / provider/core.mjs / rate.mjs / normalize.mjs / advisor/ / TUI render-frame / auto-think.mjs（换 providerSpec）、CLI cmd-model 或对应 provider 管理（配置界面）、VS Code settings/配置界面、测试（providerSpec 覆盖 / 非法值 / 全链路跟随）、CHANGELOG.md（父代理）。
+
+### 15.3 测试
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-C1 | provider 级覆盖 | providers[].context=128（deepseek-v4-flash） | providerSpec 返回 context=131072；specForModel 仍 1_000_000 | F1/D-C2 |
+| T-C2 | 压缩阈值跟随 | 同上 + auto 阈值 | 阈值 = 131072 × 0.6（非 1M × 0.6） | F2/D-C3 |
+| T-C3 | 非法值 | context=0 / -5 / "abc" | 忽略 + 警告一次；用 spec 值 | F1/D-C1 |
+| T-C4 | 未配置 | 无 context 字段 | 行为与现有一致（回归） | F5 |
+| T-C5 | 配置界面 | /model 设 context=128 | 落盘 providers[].context；显示 128K | F4/D-C4 |
+| T-C6 | 显示 | TUI 模型信息 | context 窗口显示覆盖值 | F2/D-C5 |
+
+**验收**：AC1 = context 可配且全链路跟随（T-C1/T-C2/T-C6）；AC2 = 非法值安全（T-C3）；AC3 = 未配置零回归（T-C4）；AC4 = 两端配置界面可配（T-C5 + VS Code）；AC5 = 全量 + lint 绿。
+
+### 15.4 关键决策
+
+- **provider 级而非模型级**：同一模型不同端点（官方/本地部署）上下文不同——provider 是配置粒度；MODEL_SPECS 不改（官方值权威）
+- **K 单位整数**：用户明确"以 K 为单位"——128 = 128K；换算在 providerSpec 一处（× 1024）
+- **拷贝覆盖不污染 spec**：spec 是共享对象（SORTED_SPECS 查表）——覆盖必须拷贝（{ ...spec, context }），避免跨 provider 串扰
+- **否决**：a) 改 MODEL_SPECS 值（官方值被本地部署污染）；b) 全局 context 字段（粒度太粗，多 provider 场景错误）；c) 自动探测（无可靠 API——用户手配是唯一可信源）
