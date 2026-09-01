@@ -46,7 +46,12 @@ function logToolError(toolName, args, error) {
  */
 export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, depth = 0, signal) {
   // ---- Phase 1: serial preparation ----
+  // Pre-gates run per tool (parse/planMode/engineering gates); non-readonly tools
+  // that REACH the permission stage are collected into one batch — a single merged
+  // ask covers the whole toolCalls array (§16 D-B1, "approve all / one by one /
+  // deny"). Tools stopped by a pre-gate never join the batch (review #7).
   const prepared = []
+  const permPending = [] // { toolCall, tool, args } — reached the permission stage
   for (const toolCall of toolCalls) {
     const tool = toolByName.get(toolCall.name)
     let args
@@ -106,39 +111,74 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       }
     }
 
-    if (!tool.readonly) {
-      // autoApprove short-circuit: skip prompt when agent is already marked for auto-approval
-      const allowed = agent.autoApprove
-        ? true
-        : callbacks.onPermissionRequest
-          ? await (async () => {
-              // D2 (AGENT-LOOP.md §7.2): announce the wait BEFORE prompting — the TUI
-              // subagent block header flips to "等待审批" so a waiting child is visibly
-              // different from a stalled one. Depth>0 only (the parent TUI shows its own
-              // permission panel). turn n/max = the child's live turn counters.
-              if (depth > 0) {
-                callbacks.onToken?.(`⟦ev⟧approval\x1e${agent._currentTurn ?? 0}\x1e${agent._maxTurns ?? 0}\x1eapproval\x1e${String(toolCall.name).slice(0, 40)}`)
-              }
-              return await callbacks.onPermissionRequest(toolCall.name, args)
-            })()
-          : false
-      if (!allowed) {
-        prepared.push({ toolCall, tool, denied: true, reason: callbacks.onPermissionRequest ? "denied by user" : "no permission handler" })
+    // Readonly tools (and autoApprove — the short-circuit, unchanged for the
+    // whole batch too) skip the permission stage entirely.
+    if (tool.readonly || agent.autoApprove) {
+      if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
+        prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
         continue
       }
-    }
-
-    // PreToolUse hooks: allow user scripts to gate tool execution
-    if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
-      prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
+      // Panel area abolished — all tools now stream inline via onToolOutput.
+      callbacks.onToolCall?.(toolCall.name, args, toolCall.id)
+      prepared.push({ toolCall, tool, args })
       continue
     }
+    permPending.push({ toolCall, tool, args })
+  }
 
-    // Panel area abolished — all tools now stream inline via onToolOutput.
+  // ---- Permission stage: one merged ask for the whole batch (§16 D-B1) ----
+  // >1 non-readonly tools in the same toolCalls array → a single
+  // onBatchPermissionRequest({ tools, count }) ask; verdicts:
+  //   "approveAll" → batch-scope allowance (autoApprove style, NOT persistent)
+  //   "deny"       → the whole batch is rejected, no second ask
+  //   "oneByOne" (or anything else / no handler) → the existing per-item
+  //     onPermissionRequest channel, signature unchanged (NF-B1: ACP bridge /
+  //     headless / old versions without the new callback are never harmed).
+  if (permPending.length > 0) {
+    let batchAllowed = null // true = approveAll, false = deny, null = per-item fallback
+    if (permPending.length > 1 && callbacks.onBatchPermissionRequest) {
+      const verdict = await callbacks.onBatchPermissionRequest({
+        tools: permPending.map((p) => ({ name: p.toolCall.name, args: p.args })),
+        count: permPending.length,
+      })
+      if (verdict === "approveAll") batchAllowed = true
+      else if (verdict === "deny") batchAllowed = false
+      // anything else (oneByOne/unknown) → fall through to the per-item channel
+    }
+    for (const p of permPending) {
+      let allowed
+      if (batchAllowed === true) allowed = true
+      else if (batchAllowed === false) allowed = false
+      else if (callbacks.onPermissionRequest) {
+        allowed = await (async () => {
+          // D2 (AGENT-LOOP.md §7.2): announce the wait BEFORE prompting — the TUI
+          // subagent block header flips to "等待审批" so a waiting child is visibly
+          // different from a stalled one. Depth>0 only (the parent TUI shows its own
+          // permission panel). turn n/max = the child's live turn counters.
+          if (depth > 0) {
+            callbacks.onToken?.(`⟦ev⟧approval\x1e${agent._currentTurn ?? 0}\x1e${agent._maxTurns ?? 0}\x1eapproval\x1e${String(p.toolCall.name).slice(0, 40)}`)
+          }
+          return await callbacks.onPermissionRequest(p.toolCall.name, p.args)
+        })()
+      } else allowed = false
+      if (!allowed) {
+        prepared.push({
+          toolCall: p.toolCall, tool: p.tool, denied: true,
+          reason: (callbacks.onPermissionRequest || batchAllowed === false) ? "denied by user" : "no permission handler",
+        })
+        continue
+      }
 
-    callbacks.onToolCall?.(toolCall.name, args, toolCall.id)
+      // PreToolUse hooks: allow user scripts to gate tool execution
+      if (!(await runHooks("PreToolUse", { agent, toolName: p.toolCall.name, toolArgs: p.args }))) {
+        prepared.push({ toolCall: p.toolCall, tool: p.tool, denied: true, reason: "blocked by PreToolUse hook" })
+        continue
+      }
 
-    prepared.push({ toolCall, tool, args })
+      // Panel area abolished — all tools now stream inline via onToolOutput.
+      callbacks.onToolCall?.(p.toolCall.name, p.args, p.toolCall.id)
+      prepared.push({ toolCall: p.toolCall, tool: p.tool, args: p.args })
+    }
   }
 
   // ---- Phase 2: order-preserving execution ----
