@@ -387,12 +387,14 @@ DeepSeek 系列（deepseek-v4-pro/v4-flash/v4-flash-vision-exp，model-specs.mjs
 - 续写请求发 **`/beta` 端点**（`betaBaseURL`），最后一条消息 = `{ role: "assistant", content: <截断内容>, prefix: true }`
 - **但 messages 数组 = `[...messages, 续写消息]`** —— 全量历史原样带上，**含历史中的 tool_calls / tool 消息与 reasoning_content**
 
-DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类）：
+DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触发条件 2026-09-02 实锤**）：
 
 | 错误 | 触发条件 | 证据 |
 |---|---|---|
-| `Function call should not be used with prefix` | prefix 续写请求的历史含 assistant(tool_calls)/tool 消息 | 真机复现 + Kilo-Org/kilocode #10203 + dify #16860 同款 |
-| `The reasoning_content in the thinking mode must be passed back to the API` | thinking 模式下历史 assistant 的 reasoning_content 未回传/顺序不符 | 真机复现 |
+| `Function call should not be used with prefix` | prefix 续写请求历史含 assistant(tool_calls)/tool 消息 **且工具链 assistant 带 reasoning_content** | 真机复现（2026-09-02 实验 D）+ Kilo-Org/kilocode #10203 + dify #16860 同款 |
+| `The reasoning_content in the thinking mode must be passed back to the API` | prefix 续写请求历史含工具链 **且工具链 assistant 缺 reasoning_content**（thinking 模式回传约束） | 真机复现（实验 A/C；03:11 完整会话一次 + 本日复现） |
+
+**铁律（真机矩阵）**：thinking 模式下 **prefix 续写 + 历史含任何工具链消息 → 必 400**（补不补 reasoning_content 都炸，错误二选一）；纯文本历史 + prefix → 200（实验 B/E）。§14.2 止损方案（过滤工具消息）实测 200（实验 E）。
 
 **用户可感影响**：长上下文（尤其压缩后）→ 输出更易截断 → 续写触发 → 400 → **压缩/长回合期间 deepseek 直接报错飞出**（Q3 主诉）。
 
@@ -400,7 +402,7 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类）：
 
 ### 14.2 止损（本轮立即生效）
 
-**prefix 续写请求的精简历史**——prefix 模式只续文本，不需要工具历史：
+**prefix 续写请求的精简历史**——prefix 模式只续文本，不需要工具历史（**真机矩阵实证：过滤工具消息后 200，见 14.1 铁律/实验 E**）：
 
 - 续写消息构造：**过滤掉历史中的全部 `tool` 消息与 `assistant(tool_calls)` 消息**（含其 reasoning_content 跟随问题一并规避）
 - 保留：system + 最近 N 条非工具 user/assistant 文本消息（N 取 8——截断点上下文足够，prefix 续写只看最近语境；具体值实现时以测试为准）
