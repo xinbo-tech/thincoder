@@ -11,7 +11,7 @@
 
 import { chat } from "./provider/index.mjs"
 import { estimateText } from "./provider/rate.mjs"
-import { specForModel } from "./config.mjs"
+import { providerSpec } from "./config.mjs"
 
 const IMAGE_TOKEN_ESTIMATE = 2000 // rough estimate for image content tokens (CLI legacy 256 underestimated real image costs, delaying compaction)
 
@@ -41,10 +41,11 @@ const KEEP_HEAD = 0 // No dedicated head: earliest messages may be a COMPLETED e
 // capped at 40% of history so small histories don't over-reserve. Window-adaptive
 // replaces the old fixed 10: on a 1M window, 10 messages is too thin for recent work.
 function keepTailSize(provider, historyLen) {
-  // provider is guaranteed at every call site (runAgent always builds one); specForModel
-  // degrades to DEFAULT_SPEC (128K) only if provider/model is somehow absent — acceptable
-  // because the 40% history cap still bounds the tail.
-  const ctxWindow = specForModel(provider?.model ?? "").context
+  // provider is guaranteed at every call site (runAgent always builds one); providerSpec
+  // degrades to DEFAULT_SPEC (128K) only if provider is somehow absent — acceptable
+  // because the 40% history cap still bounds the tail. providers[].context override
+  // (K units) is honored here (PROVIDER.md §15 T-C2: tail formula follows the window).
+  const ctxWindow = providerSpec(provider).context
   return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
 }
 
