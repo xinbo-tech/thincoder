@@ -39,11 +39,13 @@ const SLASH_HINTS = {
 
 /** Header panel (always 1 line). */
 export function renderHeader(agent, cols) {
-  const model = agent.provider.model
+  // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null（无效 provider 被清空后用户 Esc 取消重选）
+  // —— 可选链守卫，头部显示 "no provider" 占位
+  const model = agent.provider?.model ?? "no provider"
   const spec = specForModel(model)
   const thinkOnValue = spec.thinkEnabledValue ?? "enabled"
-  const t = agent.provider.thinking
-  const effort = agent.provider.reasoningEffort
+  const t = agent.provider?.thinking
+  const effort = agent.provider?.reasoningEffort
   const thinkBadge = t?.type === "disabled" ? "│ think: off"
     : effort ? `│ think: ${effort}`
     : t?.type === thinkOnValue ? "│ think: on" : ""
@@ -346,7 +348,8 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const elapsed = state.processing ? ` ${Math.floor((Date.now() - state.processingStarted) / 1000)}s` : ""
   const toolHint = state.currentTool ? ` ${state.currentTool}…` : ""
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}` : state.status
-  const modelContext = specForModel(agent.provider.model).context
+  // 2026-09-02 Q1（SESSION.md §8）：provider 可为 null —— specForModel(undefined) 保守 128K 不抛错
+  const modelContext = specForModel(agent.provider?.model).context
   const ctxPct = Math.round((state.ctxCache.tokens / modelContext) * 100)
   const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
   const ctxHint = ctxPct > 0
