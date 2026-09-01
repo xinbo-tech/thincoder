@@ -6,7 +6,8 @@ import { cloneEntry, fieldPicker, maskToken } from "./cmd-mcp-form.mjs"
  *  MCP.md §5（2026-09-02，v2）：列表即菜单（F7/D-2）、edit/add 统一字段 picker 表单
  *  （F3/F3b/D-1——表单机制在 cmd-mcp-form.mjs，本文件只调 fieldPicker）、保存前预览
  *  +探活（F2：探活失败回同一 fieldPicker——AC2）、AI 降 transport picker 末位（F4）、
- *  菜单打开边界磁盘重读 config.json（F5①/D-3，reloadMcpFromDisk in config.mjs）。 */
+ *  菜单打开边界磁盘重读 config.json（F5①/D-3，reloadMcpFromDisk in config.mjs）、
+ *  save&test 确认问句废除（§5 变更段 D-Q1：probe ✓ 直接保存、✗ 报错回表单零保存通道）。 */
 
 /** F7/D-2：主菜单行与子菜单 picker 行共用——●/○ 连接态 + (端点) + N tools。 */
 function serverLine(srv, connected, toolCount) {
@@ -82,7 +83,8 @@ export async function handleMcpCommand(ctx, args = []) {
 
   async function removeServer(name) {
     agent.config.mcp.servers = getServers().filter((s) => s.name !== name)
-    await persistRaw((raw) => { raw.mcp.servers = agent.config.mcp.servers })
+    // 评审 #1：磁盘无 mcp 段时（T23 场景——mcp 段被整体删除而连接保留）raw.mcp 为 undefined → 先建段再写
+    await persistRaw((raw) => { raw.mcp ??= { servers: [] }; raw.mcp.servers = agent.config.mcp.servers })
     // Remove from tool list
     const { removeMcpTools } = await import("../mcp.mjs")
     removeMcpTools(agent, name)
@@ -127,24 +129,18 @@ export async function handleMcpCommand(ctx, args = []) {
     return r.ok ? `✓ ${r.toolCount} tools, ${r.latencyMs}ms` : `✗ ${r.error}`
   }
 
-  /** F2 确认循环（D-1 v2）：预览+探活 → Save? (Y/n)；失败 → Save anyway? (y/N)
-   *  （显式 y——探活失败的坏配置不能被回车顺手存进去）→ 回 fieldPicker 重输
-   *  （AC2：retryEntry 回调复用同一表单、已改值保留）→ 复 probe。返回 entry / null。 */
+  /** F2 确认环（D-Q1，2026-09-02 变更段）：预览+探活 → probe ✓ 直接保存（返回
+   *  entry——无任何问句）；probe ✗ → 报错 + retryEntry 回 fieldPicker 改字段复 probe
+   *  （AC2：retryEntry 回调复用同一表单、已改值保留；save-anyway 整个废除——失败
+   *  配置零保存通道）。返回 entry / null（null = retryEntry 表单层 Esc 放弃）。 */
   async function confirmLoop(entry, retryEntry) {
     for (;;) {
       pushLabel(`❯ MCP Preview`, ansi.bold + C.tool)
       const probe = await probeLineFor(entry)
       showPreview(entry, probe)
-      if (probe.startsWith("✓")) {
-        pushLine("[mcp] Probe OK. Review the preview above.", C.dim)
-        const ok = ((await askQuestion("Save? (Y/n):")) || "").trim().toLowerCase()
-        if (ok === "" || ok === "y" || ok === "yes") return entry
-        return null
-      }
-      pushLine("[mcp] Probe failed — fix it in the form, or save anyway and fix after restart.", C.dim)
-      const ok = ((await askQuestion("Save anyway? (y/N):")) || "").trim().toLowerCase()
-      if (ok === "y" || ok === "yes") return entry
-      // 探活失败 = 回 fieldPicker 选中失败字段重输（机制天然合一——不再有独立 retry 路径）
+      if (probe.startsWith("✓")) return entry // D-Q1：探活成功 → 直接保存（问句废除）
+      // D-Q1：探活失败 → 无保存通道——报错 + 回 fieldPicker 改字段复 probe（AC2）
+      pushLine(`[mcp] Probe failed: ${probe.slice(2)} — fix it in the form`, C.error)
       const retried = await retryEntry(entry)
       if (!retried) return null
       entry = retried
@@ -152,7 +148,7 @@ export async function handleMcpCommand(ctx, args = []) {
   }
 
   /** F4：AI 生成配置（transport picker 末位——文案不再首推）。生成的 entry 同走
-   *  预览+探活+确认环（F2 语义一致；仍显式 y 确认）。 */
+   *  预览+探活+确认环（F2 语义一致——D-Q1：✓ 直接保存 / ✗ 回表单）。 */
   async function addWithAI() {
     const description = await askQuestion("Describe the MCP server you want to add (e.g. 'a filesystem server that gives access to /tmp'):")
     if (!description) return
@@ -270,8 +266,8 @@ Return ONLY the JSON object:`,
 
   /** F3（D-1 v2）：edit = 字段 picker 表单——fieldPicker 列可编辑字段行（URL/Token/
    *  Headers 或 Command/Args/Env；name 不可改——无 name 行）+ `✓ Save & test`；
-   *  收集完成走 confirmLoop（预览+探活+确认；探活失败回同一 fieldPicker——AC2/AC5）
-   *  → persistRaw 原位替换保数组序 → connectServer 自动重连。取消 → 零保存。 */
+   *  收集完成走 confirmLoop（预览+探活——D-Q1：✓ 直接保存 / ✗ 回 fieldPicker
+   *  AC2/AC5）→ persistRaw 原位替换保数组序 → connectServer 自动重连。取消 → 零保存。 */
   async function editServerWithConfirm(srv) {
     const name = srv.name
     const entry = cloneEntry(srv) // 工作副本——取消不污染原配置
@@ -284,7 +280,9 @@ Return ONLY the JSON object:`,
     })
     if (!saved) { pushLine("[mcp] Edit cancelled — nothing saved", C.dim); return }
     await persistRaw((raw) => {
-      const servers = raw.mcp?.servers
+      // 评审 #2：磁盘无 mcp 段时（T23 场景）先建段——否则静默 return 导致"updated"报错但磁盘零写入
+      raw.mcp ??= { servers: [] }
+      const servers = raw.mcp.servers
       if (!Array.isArray(servers)) return
       const idx = servers.findIndex((s) => s?.name === name)
       if (idx === -1) return
