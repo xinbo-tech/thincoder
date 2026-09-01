@@ -106,3 +106,26 @@ export function specForModel(model) {
   }
   return DEFAULT_SPEC
 }
+
+/**
+ * providerSpec(provider) — spec with a provider-level context override (PROVIDER.md §15, 2026-09-02).
+ *
+ * providers[].context is configured in K units (128 = 128K = 131072 tokens) and overrides the
+ * MODEL_SPECS value for THIS provider only — the same model can have different real context
+ * windows on different endpoints (official vs local deployment). The ×1024 conversion happens
+ * HERE and nowhere else.
+ *
+ * Returns a COPY ({ ...spec, context }) — the shared spec object from the SORTED_SPECS lookup
+ * must never be mutated, or the override would leak across providers (T-C1).
+ *
+ * Validation is defensive (pure function): absent/invalid context falls back to the plain spec
+ * (config.mjs loadConfig already warns + strips invalid values; this guard covers direct callers
+ * and keeps the function total). specForModel stays a pure table lookup — callers without a
+ * provider keep using it.
+ */
+export function providerSpec(provider) {
+  const spec = specForModel(provider?.model ?? "")
+  const k = Number(provider?.context) // Number() 接受数字字符串（"128"）——两端语义统一（code review #1）
+  if (Number.isInteger(k) && k > 0) return { ...spec, context: k * 1024 }
+  return spec
+}
