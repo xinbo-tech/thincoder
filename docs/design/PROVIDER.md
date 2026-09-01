@@ -1,7 +1,7 @@
 # Provider 层设计（thincoder/src/provider/）
 
 > 状态：2026-08 回补。LLM 调用层：OpenAI 兼容协议为主 + Anthropic/Gemini 原生 transport，SSE 流式、重试/退避、TPM/RPM 闸门、截断续写、流规则、发送前载荷净化。
-> 规格表（MODEL_SPECS）是能力中枢：上下文窗口、maxOutput、thinking API、reasoningEcho、tempRange、partialMode/prefixMode 等全部模型差异在此声明（见 `src/config.mjs`）。
+> 规格表（MODEL_SPECS）是能力中枢：上下文窗口、maxOutput、thinking API、reasoningEcho、tempRange、partialMode/prefixMode 等全部模型差异在此声明（见 `src/model-specs.mjs`——2026-08-31 自 config.mjs 迁出，config re-export specForModel；评审 #9 修正陈旧引用）。
 
 ## 1. 模块地图
 
@@ -485,9 +485,9 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 ### 15.2 设计
 
 - **D-C1 config 字段**（两端）：`config.json providers[].context`（K 单位正整数；非法值（0/负数/非数字）→ 忽略 + 警告一次，用 spec 值）
-- **D-C2 解析覆盖**：`model-specs.mjs` 新增 `providerSpec(provider)`：`const spec = specForModel(provider.model); return provider.context ? { ...spec, context: provider.context * 1024 } : spec`（拷贝覆盖，不污染共享 spec 对象）；`specForModel` 保持纯函数不变
+- **D-C2 解析覆盖**：`model-specs.mjs` 新增 `providerSpec(provider)`：`const spec = specForModel(provider.model); return provider.context ? { ...spec, context: provider.context * 1024 } : spec`（拷贝覆盖，不污染共享 spec 对象）；`specForModel` 保持纯函数不变；**`config.mjs` re-export `providerSpec`（照 specForModel 先例，评审 #9 定死）**——既有 importers 从 config 取
 - **D-C3 调用方改造**：需要 provider 感知的调用方从 `specForModel` 换 `providerSpec`——context.mjs（压缩阈值 resolveCompactThreshold）、provider/core.mjs（窗口/钳制）、provider/rate.mjs（TPM 记账若用 context）、provider/normalize.mjs、advisor（messages/run 的预算）、TUI render-frame（模型信息显示）、auto-think.mjs（若用 context）；纯模型查表处（不含 provider）保持 `specForModel`
-- **D-C4 配置界面**：CLI `/model` 的 provider 管理流加 context 字段（K 单位，picker/表单——复用 syncProviderField 先例）；VS Code settings 的 providers[].context（配置界面落点实现时确认：settings 面板或会话面板）
+- **D-C4 配置界面（评审 #10 定死）**：CLI `/model` 的 provider 管理流加 context 字段（K 单位，picker/表单——复用 syncProviderField 先例）；**VS Code = settings.json 的 providers[].context（VS Code 设置 UI 编辑，migrate-settings 同源——不做会话面板入口，settings 是 provider 配置唯一权威）**
 - **D-C5 显示**：TUI/VS Code 模型信息显示 `context 窗口`（如 "128K"）跟随覆盖值
 
 **受影响文件（两端）**：`src/model-specs.mjs`（providerSpec）、`src/config.mjs`（loadConfig 校验 context 字段）、context.mjs / provider/core.mjs / rate.mjs / normalize.mjs / advisor/ / TUI render-frame / auto-think.mjs（换 providerSpec）、CLI cmd-model 或对应 provider 管理（配置界面）、VS Code settings/配置界面、测试（providerSpec 覆盖 / 非法值 / 全链路跟随）、CHANGELOG.md（父代理）。

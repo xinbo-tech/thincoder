@@ -13,7 +13,7 @@
 | 工具超时 | bash 120s；execute 沙箱强杀（默认 30s 上限）；其余工具同步即时返回 |
 | 读/输出上限 | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览） |
 | 网络响应体 | websearch/fetch ≤5MB；HTML 转文本（stripTags/htmlToText） |
-| 路径安全 | `resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算 |
+| 路径安全 | ~~`resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算~~——**被 §10.1 取代（2026-09-02）**：边界断言移除，路径仅相对 cwd 解析，权限门禁为唯一防线 |
 | 命令安全 | 破坏性命令 snapshot-then-proceed（审批 + gitGuardSnapshot/checkpoint），文本拦截仅提示不拦截 |
 | execute 沙箱 | `import()` 动态加载阻断、`require()`/`process` 禁、超时强杀——只出不进 |
 | 返回契约 | `execute` 必须返回字符串（undefined 视为错误，dispatch 显式检查） |
@@ -29,7 +29,7 @@
 
 | 面 | 机制 |
 |---|---|
-| **路径** | `resolveInCwd(ctx, p)`（防 `../` 逃逸到工作区外）+ `assertInside` + `realpathNearest`（符号链接解算）；`resolveExternal` 显式白名单外部路径（仅 question 等特殊工具） |
+| **路径** | ~~`resolveInCwd(ctx, p)`（防 `../` 逃逸到工作区外）+ `assertInside` + `realpathNearest`（符号链接解算）；`resolveExternal` 显式白名单外部路径（仅 question 等特殊工具）~~——**被 §10.1 取代（2026-09-02）**：统一为无边界解析（resolveInCwd/resolveExternal 等价），信任模型 + 权限门禁为唯一防线 |
 | **命令**（bash） | **零文本拦截**：破坏性命令（rm -rf/DROP TABLE 等）一律放行——恶意模型可用空白变体/heredoc/node -e 绕过，文本匹配拦不住且误伤正常操作；真实防线 = 审批层 + 快照。保留：`hasFileRedirection`（禁止 bash 写文件，路由到 write/edit，引导性非安全门）、`detectDanger`（危险标注只提示不拦截：recursive-delete/sudo/pipe-to-shell/dd/mkfs/raw-device/chmod-777/fork-bomb，审批面板红标，引号感知防 commit message 误标）、git 破坏操作快照后放行（gitGuardSnapshot，永不拦截）；超时 120s |
 | **网络**（websearch/fetch） | `isPrivateHost`（localhost/内网/云元数据 169.254.169.254）——SSRF 防护；响应体 ≤5MB；HTML 转文本（stripTags/htmlToText） |
 | **文件** | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 node --check 预检） |
@@ -223,27 +223,29 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **需求**：F1 = 所有工具路径解析**不再做工作目录边界断言**（与 bash 对齐：信任模型 + 权限门禁是唯一防线）；F2 = 工具描述中 "confined to workspace" 类措辞移除（避免误导模型绕行）。
 
+**残留风险声明（评审 #4 补）**：受认可的写通道（write/edit/apply_patch）失去工作区约束后**写面扩大**（可写工作区外 dotfiles/敏感路径）——此前 bash 写文件的重定向拦截仅是引导性（bash 可经 `node -e`/`cp` 等绕过），故实际能力并无新增，只是去掉"Access denied"失败往返（用户裁定：拦不住还空耗 token）。**权限门禁（审批）+ 破坏性操作快照（gitGuardSnapshot）不变**，仍是防线；用户接受此残留风险。
+
 **设计**：
 
-- **D-W1 边界断言移除**（两端）：`shared.mjs` `resolveInCwd` 改为与 `resolveExternal` 等价（无 `assertInside`）——或直接删除 `resolveInCwd`/统一为 `resolveExternal`（实现时选：保留函数名零调用方改动 vs 删名改调用方——**保留 resolveInCwd 名但去掉断言**，7 个调用方零改动，语义从"限界"变"解析"）；`assertInside`/realpath 双重检查删除
+- **D-W1 边界断言移除（全工具，评审 #3 定死）**（两端）：`shared.mjs` `resolveInCwd` 改为与 `resolveExternal` 等价（**保留函数名去掉断言**——7 个调用方零改动，语义从"限界"变"解析"）；`assertInside`/realpath 双重检查删除。**逐工具枚举（评审 #3）**：file/edit-batch/patch/ops/tree/linter/system/read_image 等全部文件类工具（resolveInCwd 调用方）；**git workdir 的 isInside 越界检查一并移除**（§7 T-w-2 改"越界正常执行"——git 命令本身不限目录，与 bash 一致）；**execute scriptFile 越界拒绝一并移除**（§7 T-e-3 改"可指向 workspace 外文件"——bash 可执行任意脚本，保持一致）；**file_ops（move/copy/rename）目录限制一并移除**
 - **D-W2 工具描述同步**（两端）：file/execute/git 等描述中的 "confined/within the working directory/边界" 措辞移除或改"路径相对 cwd 解析，不做目录限制"
 - **D-W3 测试**：逃逸断言测试（"Access denied outside working directory" 相关）删除或改"路径正常解析"；回归全绿
 
-**受影响文件（两端）**：`src/tools/shared.mjs`（resolveInCwd 去断言 + 删 assertInside）、file/edit-batch/patch/ops/tree/linter/system.mjs（调用方零改动——若删函数名则改 import）、工具描述文本、逃逸测试（CLI test/tools*.test.mjs + VS Code 对应）、AGENTS.md（目录限制纪律若提及则更新）。
+**受影响文件（两端，评审 #3 补全）**：`src/tools/shared.mjs`（resolveInCwd 去断言 + 删 assertInside）、file/edit-batch/patch/ops/tree/linter/system.mjs（resolveInCwd 调用方，保留函数名零改动）、**git.mjs（workdir isInside 移除）、codemode.mjs/execute（scriptFile 越界拒绝移除）、file_ops（目录限制移除）**、工具描述文本（"confined to workspace" 类措辞）、逃逸测试（CLI test/tools*.test.mjs + VS Code 对应，含 §7 T-w-2/T-e-3 更新）、**TOOLS.md §0/§0.1/§2 取代指针（评审 #2）**、AGENTS.md（目录限制纪律若提及则更新）。
 
-**测试**：T-W1 外部路径（`../outside.txt`）read/write/edit 正常解析执行（不再抛 Access denied）| F1；T-W2 bash 与文件工具行为一致（同路径均可达）| F1；T-W3 工具描述无 "confined to workspace" 类措辞 | F2；T-W4 回归全量绿。
+**测试**：T-W1 外部路径（`../outside.txt`）read/write/edit 正常解析执行（不再抛 Access denied）| F1；T-W2 bash 与文件工具行为一致（同路径均可达）| F1；T-W3 工具描述无 "confined to workspace" 类措辞 | F2；T-W4 回归全量绿；**T-W5 symlink（评审 #11）**：workspace 内符号链接指向外部文件 → read 正常解析执行（realpathNearest 移除后语义）| D-W1。
 
 ### 10.2 lint 基建零依赖化（删 eslint 全套）
 
-**问题**：CLI + VS Code 的 `package.json` 都有 devDependencies（eslint + @eslint/js）——与"零依赖"承诺相悖；eslint 是开发期工具，唯一有值输出是 no-unused-vars 类警告（CLI 49 条既有 warning 全部 unused 类）。
+**问题**：CLI + VS Code 的 `package.json` 都有 devDependencies（eslint + @eslint/js）——与"零依赖"承诺相悖。**检测能力损失（评审 #6 声明）**：eslint 除 unused-vars 外还抓过 control-regex/regex-spaces/no-undef 等真实 bug 类（2026-08-31 test/ 清理：18 control-regex + 4 regex-spaces + 2 no-undef）——`node --check` 仅语法级，不再覆盖这些；用户裁定接受该损失（零依赖优先），遗留风险由测试与真实链路验证兜底。
 
-**需求**：F1 = 删除 eslint 全套（devDependencies + eslint.config.mjs + lint script 中的 eslint 调用）；F2 = 语法检查用 node 自带能力（`node --check`），零依赖脚本。
+**需求**：F1 = 删除 eslint 全套（devDependencies + eslint.config.mjs + lint script 中的 eslint 调用）；F2 = 语法检查用 node 自带能力（`node --check`），零依赖脚本。**板块取代（评审 #5）**：本文档文档地图"CLI Lint 引入"板块（CLI-LINT-REQUIREMENTS.md / CLI-LINT-TUNING.md）的 eslint 引入决策被本段**取代（2026-09-02）**——实现时在 CLI-LINT-REQUIREMENTS.md / CLI-LINT-TUNING.md 头部标记"被 TOOLS.md §10.2 取代"，保留沿革快照不删内容。
 
 **设计**：
 
 - **D-L1 删除**（两端）：`package.json` devDependencies 移除 eslint/@eslint/js；`eslint.config.mjs` 删除；`scripts.lint` 改为 `node scripts/check-syntax.mjs`
 - **D-L2 check-syntax 脚本**（新增，CLI + VS Code 各一）：遍历 `src/**/*.mjs` + `test/**/*.mjs` + `bin/*.cjs`，逐个 `node --check`（spawnSync(process.execPath, ["--check", file])）；非零退出汇总报错文件清单；零依赖（node 自带）
-- **D-L3 引用面更新**：AGENTS.md（"Every change must be verified by running it" 段若提 lint）、RELEASE.md（发布门禁若含 eslint）、README（零依赖声明不变——删 devDeps 后更纯粹）、CHANGELOG
+- **D-L3 引用面更新（评审 #5 补全）**：AGENTS.md（"Every change must be verified by running it" 段若提 lint）、RELEASE.md（发布门禁若含 eslint）、README（零依赖声明不变——删 devDeps 后更纯粹）、**CLI-LINT-REQUIREMENTS.md / CLI-LINT-TUNING.md（标记被取代）**、CHANGELOG
 - **D-L4 测试**：check-syntax 脚本自身跑通（全文件语法通过）；删除 eslint 后 `npm test` 回归全绿
 
 **受影响文件（两端）**：`package.json`（devDeps 删 + lint script 改）、`eslint.config.mjs`（删）、`scripts/check-syntax.mjs`（新增）、AGENTS.md/RELEASE.md（引用面）、CHANGELOG.md（父代理）。
