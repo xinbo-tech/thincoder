@@ -166,8 +166,8 @@ test("openModelPicker: 两级 picker — Level 1 显示 provider 列表", async 
     await new Promise((r) => setTimeout(r, 50))
 
     const items = state.picker?.filteredItems ?? []
-    // Level 1: 2 providers + 3 management items (add/remove/key)
-    assert.equal(items.length, 5, "Level 1 应有 2 个 provider + 3 个 management 项")
+    // Level 1: 2 providers + 4 management items (add/remove/key/context — PROVIDER.md §15 D-C4)
+    assert.equal(items.length, 6, "Level 1 应有 2 个 provider + 4 个 management 项")
 
     // 验证 provider 项
     const providerItems = items.filter((i) => i.action === "open-models")
@@ -176,8 +176,8 @@ test("openModelPicker: 两级 picker — Level 1 显示 provider 列表", async 
     assert.equal(providerItems[1].provider, "active")
 
     // 验证 management 项
-    const managementItems = items.filter((i) => ["add", "remove", "key"].includes(i.action))
-    assert.equal(managementItems.length, 3)
+    const managementItems = items.filter((i) => ["add", "remove", "key", "context"].includes(i.action))
+    assert.equal(managementItems.length, 4)
 
     popPicker(null) // Esc 退出菜单循环
     await flow

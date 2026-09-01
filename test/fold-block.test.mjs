@@ -11,7 +11,6 @@ import {
 } from "../src/tui/fold-block.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../src/advisor/run.mjs"
 import { C } from "../src/tui/ansi.mjs"
-// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
 const strip = (s) => (s || "").replace(/\x1b\[[0-9;]*m/g, "")
 
 test("foldCapRows: 屏幕行数 60% 向下取整，边界安全", () => {

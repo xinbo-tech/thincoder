@@ -303,7 +303,6 @@ test("T-I: ContinueError 拒绝 → done + lastError partial", async () => {
   const carrier = ctx.state.lines.find((l) => l._frozenSubTask?.key === "coder#1")
   assert.ok(carrier, "冻结载体行在 state.lines（随会话滚动，无残影）")
   assert.equal(carrier._frozenSubTask.lastError, "turn cap reached — work may be partial", "partial 语义保留在冻结区块")
-// eslint-disable-next-line no-control-regex -- 有意为之：断言 ANSI 转义序列（测试需要匹配真实终端输出）
   const frozen = buildConvLines(ctx.state, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, ""))
   assert.ok(frozen.some((t) => t.includes("✓ coder#1") && t.includes("done")), "折叠头 ✓ + 定格耗时")
   assert.ok(frozen.some((t) => t.includes("click to expand") && t.includes("coder#1")), "冻结区块可点击展开（_foldToggle 交互在）")

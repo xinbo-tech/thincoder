@@ -7,7 +7,8 @@ import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, relative, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
 
 import { builtinTools } from "../src/tools/index.mjs"
 import { createMemory } from "../src/memory.mjs"
@@ -211,9 +212,12 @@ test("tools: apply_patch 多文件原子应用 / 新建文件 / 失败不落盘"
     const ambiguous = ["--- a/dup.txt", "+++ b/dup.txt", "@@ -1,2 +1,2 @@", " x", "-y", "+z", ""].join("\n")
     await assert.rejects(() => byName.apply_patch.execute({ patch: ambiguous }, ctx), /matches \d+ locations/)
 
-    // 路径越界拒绝
-    const escape = ["--- a/../evil.txt", "+++ b/../evil.txt", "@@ -1,1 +1,1 @@", "-a", "+b", ""].join("\n")
-    await assert.rejects(() => byName.apply_patch.execute({ patch: escape }, ctx), /Access denied/)
+    // 路径越界不再拒绝（TOOLS.md §10.1：作用域限制移除）——cwd 之外的路径正常解析执行
+    const ws = join(dir, "ws")
+    mkdirSync(ws)
+    const esc = ["--- /dev/null", "+++ b/../outside.txt", "@@ -0,0 +1,1 @@", "+hello", ""].join("\n")
+    await byName.apply_patch.execute({ patch: esc }, { cwd: ws })
+    assert.equal(readFileSync(join(dir, "outside.txt"), "utf8"), "hello\n")
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -1710,9 +1714,10 @@ slow("git: 扩充 action（add/commit 分文件、tag、branch、checkout/restor
   }
 })
 
-test("git: workdir 在 workspace 子目录的 git 仓库运行；越界报错", async () => {
+test("git: workdir 在 workspace 子目录的 git 仓库运行；越界（外部仓库）正常执行（§10.1 T-w-2 语义改）", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-git-wd-"))
+  const ext = mkdtempSync(join(tmpdir(), "thincoder-git-ext-")) // 独立仓库，位于 workspace 之外
   try {
     const sub = join(dir, "sub")
     mkdirSync(sub, { recursive: true })
@@ -1723,16 +1728,26 @@ test("git: workdir 在 workspace 子目录的 git 仓库运行；越界报错", 
     writeFileSync(join(sub, "x.js"), "1\n")
     execFileSync("git", ["add", "x.js"], { cwd: sub })
     execFileSync("git", ["commit", "-qm", "init"], { cwd: sub })
+    // 外部仓库（dir 之外）：commit 标记 ext-commit
+    execFileSync("git", ["init", "-q"], { cwd: ext })
+    execFileSync("git", ["config", "user.name", "t"], { cwd: ext })
+    execFileSync("git", ["config", "user.email", "t@t.dev"], { cwd: ext })
+    execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: ext })
+    writeFileSync(join(ext, "y.js"), "2\n")
+    execFileSync("git", ["add", "y.js"], { cwd: ext })
+    execFileSync("git", ["commit", "-qm", "ext-commit"], { cwd: ext })
 
     const ctx = { cwd: dir } // workspace 根 = dir
     const git = builtinTools.find((t) => t.name === "git")
     // workdir=sub → 在子仓库运行
     const log = await git.execute({ action: "log", workdir: "sub" }, ctx)
     assert.ok(log.includes("init"), `log 应来自子仓库: ${log}`)
-    // 越界（逃出 workspace）→ 报错
-    await assert.rejects(() => git.execute({ action: "status", workdir: "../escape" }, ctx), /escapes the workspace/)
+    // T-w-2 语义改（TOOLS.md §10.1）：workdir 指向 workspace 外 → 正常执行（不再报错拒绝）
+    const extLog = await git.execute({ action: "log", workdir: relative(dir, ext) }, ctx)
+    assert.ok(extLog.includes("ext-commit"), `外部仓库 log 应正常执行: ${extLog}`)
   } finally {
     rmSync(dir, { recursive: true, force: true })
+    rmSync(ext, { recursive: true, force: true })
   }
 })
 
@@ -2696,8 +2711,9 @@ test("execute: 顶层 await + import() 项目 ESM + console + filter", async () 
   }
 })
 
-test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--test) + 越界报错", async () => {
+test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--check) + 越界（外部文件）正常执行（§10.1 T-e-3 语义改）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-sf-"))
+  const ext = mkdtempSync(join(tmpdir(), "thincoder-exec-ext-"))
   try {
     writeFileSync(join(dir, "hello.mjs"), 'console.log("hello from script")\n')
     const out = await executeTool.execute({ scriptFile: "hello.mjs" }, { cwd: dir })
@@ -2712,14 +2728,18 @@ test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--test) + 越界
     const badSyntax = await executeTool.execute({ scriptFile: "bad.mjs", nodeArgs: ["--check"] }, { cwd: dir })
     assert.match(badSyntax, /SyntaxError|Unexpected/)
 
-    const esc = await executeTool.execute({ scriptFile: "../escape.mjs" }, { cwd: dir })
-    assert.match(esc, /escapes the workspace/)
+    // T-e-3 语义改（TOOLS.md §10.1）：scriptFile 指向 workspace 外 → 正常执行（不再报错拒绝）
+    writeFileSync(join(ext, "external.mjs"), 'console.log("external script")\n')
+    const extOut = await executeTool.execute({ scriptFile: join(relative(dir, ext), "external.mjs") }, { cwd: dir })
+    assert.equal(extOut, "external script")
+
     const neither = await executeTool.execute({}, { cwd: dir })
     assert.match(neither, /either code or scriptFile/)
     const bad = await executeTool.execute({ scriptFile: "hello.mjs", nodeArgs: ["--eval", "1"] }, { cwd: dir })
     assert.match(bad, /not allowed/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
+    rmSync(ext, { recursive: true, force: true })
   }
 })
 
@@ -2784,7 +2804,7 @@ test("detectDanger: 识别危险命令并标注(只标注不拦截)", async () =
 
 // ---------------------------------------------------------------- ops tools (file_ops / process / get_current_time)
 
-test("file_ops: move / copy / rename with cwd confinement", async () => {
+test("file_ops: move / copy / rename（越界路径正常执行，§10.1）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-ops-"))
   try {
     const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -2800,10 +2820,121 @@ test("file_ops: move / copy / rename with cwd confinement", async () => {
 
     assert.match(await byName.file_ops.execute({ action: "rename", source: "c.txt", dest: "d.txt" }, ctx), /Renamed/)
 
-    // escape attempt is confined away (resolveInCwd throws)
-    await assert.rejects(() => byName.file_ops.execute({ action: "copy", source: "a.txt", dest: "../escape.txt" }, ctx))
+    // 越界路径（cwd 之外）正常执行——目录限制移除（TOOLS.md §10.1）
+    const ws = join(dir, "ws")
+    mkdirSync(ws)
+    writeFileSync(join(ws, "in.txt"), "x")
+    const esc = await byName.file_ops.execute({ action: "copy", source: "in.txt", dest: "../escaped.txt" }, { cwd: ws })
+    assert.match(esc, /Copied/)
+    assert.equal(readFileSync(join(dir, "escaped.txt"), "utf8"), "x")
 
     assert.match(await byName.file_ops.execute({ action: "nuke", source: "a.txt", dest: "x.txt" }, ctx), /action must be/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------- TOOLS.md §10.1 作用域限制移除（2026-09-02）
+
+test("T-W1: 外部路径（../）read/write/edit 正常解析执行（不再抛 Access denied）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-scope-"))
+  try {
+    const ws = join(dir, "ws")
+    mkdirSync(ws)
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    const ctx = { cwd: ws }
+
+    // write 到 cwd 之外（../ 逃逸路径）→ 正常写入
+    const w = await byName.write.execute({ path: "../outside.txt", content: "hello\n" }, ctx)
+    assert.match(w, /Wrote/)
+    assert.equal(readFileSync(join(dir, "outside.txt"), "utf8"), "hello\n")
+
+    // read 同路径 → 正常读取
+    const r = await byName.read.execute({ path: "../outside.txt" }, ctx)
+    assert.match(r, /hello/)
+
+    // edit 同路径 → 正常替换
+    await byName.edit.execute({ path: "../outside.txt", old_string: "hello", new_string: "world" }, ctx)
+    assert.equal(readFileSync(join(dir, "outside.txt"), "utf8"), "world\n")
+
+    // 补充（评审 round2 #5）：绝对路径语义定死——resolve 原样解析，不重新锚定到 cwd
+    const absPath = join(dir, "abs.txt")
+    const a = await byName.write.execute({ path: absPath, content: "abs\n" }, ctx)
+    assert.match(a, /Wrote/)
+    assert.equal(readFileSync(absPath, "utf8"), "abs\n")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T-W2: bash 与文件工具对外部路径行为一致（同路径均可达）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-scope2-"))
+  try {
+    const ws = join(dir, "ws")
+    mkdirSync(ws)
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    const ctx = { cwd: ws }
+
+    // bash 写外部文件 → read 工具读同路径
+    await byName.bash.execute(
+      { command: `node -e "require('fs').writeFileSync(require('path').join('..','bash-out.txt'),'from bash')"` },
+      ctx,
+    )
+    const r1 = await byName.read.execute({ path: "../bash-out.txt" }, ctx)
+    assert.match(r1, /from bash/)
+
+    // 文件工具写外部文件 → bash 读同路径
+    await byName.write.execute({ path: "../file-out.txt", content: "from file tool\n" }, ctx)
+    const b2 = await byName.bash.execute(
+      { command: `node -e "process.stdout.write(require('fs').readFileSync(require('path').join('..','file-out.txt'),'utf8'))"` },
+      ctx,
+    )
+    assert.match(b2, /from file tool/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T-W3: 工具描述无 'confined to workspace' 类措辞（F2，md 描述源 + 工具定义 description）", () => {
+  const toolsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "tools")
+  const bad = ["confined to the workspace", "confined to the working directory", "within the working directory", "escapes the workspace", "directory confinement"]
+  // md 描述源（DESC 机制）
+  for (const f of readdirSync(toolsDir).filter((x) => x.endsWith(".md"))) {
+    const text = readFileSync(join(toolsDir, f), "utf8").toLowerCase()
+    for (const phrase of bad) assert.ok(!text.includes(phrase), `${f} 含 "${phrase}"`)
+  }
+  // 工具定义 description（parameters 内联描述）
+  for (const t of builtinTools) {
+    const descs = [
+      t.description,
+      ...Object.values(t.parameters?.properties ?? {}).map((p) => p.description).filter(Boolean),
+    ]
+    for (const d of descs) {
+      for (const phrase of bad) assert.ok(!d.toLowerCase().includes(phrase), `工具 ${t.name} description 含 "${phrase}"`)
+    }
+  }
+})
+
+test("T-W5: workspace 内符号链接指向外部文件 → read 正常解析执行（realpathNearest 移除后语义）", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-sym-"))
+  try {
+    const ws = join(dir, "ws")
+    mkdirSync(ws)
+    writeFileSync(join(dir, "target.txt"), "symlinked content\n")
+    const { symlinkSync } = await import("node:fs")
+    try {
+      symlinkSync(join(dir, "target.txt"), join(ws, "link.txt"))
+    } catch (e) {
+      // Windows 无开发者模式/无权限时创建符号链接被拒——环境限制，跳过（非功能失败）
+      if (e.code === "EPERM" || e.code === "EACCES" || e.code === "ENOTSUP" || e.code === "EINVAL") {
+        t.skip(`symlink not permitted in this environment: ${e.code}`)
+        return
+      }
+      throw e
+    }
+    const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+    const out = await byName.read.execute({ path: "link.txt" }, { cwd: ws })
+    assert.match(out, /symlinked content/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
