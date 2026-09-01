@@ -466,22 +466,21 @@ test("agent: _advisorRound initialized to 0 in runAgent", () => {
   assert.equal(_mutatedThisRun && !_calledAdvisorThisRun, false)
 })
 
-test("escapeLiteralEscapes: neutralizes invalid literal \\x/\\u sequences, passes valid ones through (v4 替换策略)", async () => {
+test("escapeLiteralEscapes: v5 double 策略 + 奇数 run + 真毒形态（程序化构造避免转义层混乱）", async () => {
   const { escapeLiteralEscapes } = await import("../src/advisor.mjs")
+  const BS = String.fromCharCode(0x5c) // 单反斜杠
   const cases = [
-    ["\\x（单反斜杠）", "\\x5Cx（单反斜杠）"], // \\x + non-hex → 替换为 \\x5Cx（v4）
-    ["末尾\\x", "末尾\\x5Cx"], // \\x at end → 替换
-    ["\\x1b[31m", "\\x1b[31m"], // \\x + 2 hex → untouched
-    ["\\x1b3", "\\x1b3"], // \\x + 3+ hex → \x1b valid + literal 3 → untouched
-    ["\\x1后跟", "\\x5Cx1后跟"], // \\x + 1 hex (truncated) → 替换
-    ["\\u12中文", "\\x5Cu12中文"], // \\u + <4 hex → 替换
-    ["\\uFFFF", "\\uFFFF"], // \\u + 4 hex → untouched
-    ["\\uFFFF1", "\\uFFFF1"], // \\u + 5 hex → \uFFFF valid + literal 1 → untouched
-    ["\\n字面", "\\n字面"], // non-hex escapes untouched
-    ["\\\\x", "\\\\x5Cx"], // 2 反斜杠+x+非hex → 末尾 \\x 替换（v4：网关不看前置反斜杠）
-    ["hello", "hello"], // plain text untouched
-    [null, ""], // null → coerced to empty
-    [undefined, ""], // undefined → coerced to empty
+    // [输入, 期望]
+    [BS + "xzz", BS + BS + "xzz"], // 真毒：\x5Cx+非hex → double
+    [BS + "x41", BS + "x41"], // 合法 \x5Cx41 → 放行
+    [BS + "u12中文", BS + BS + "u12中文"], // 真毒：\x5Cu+不足4hex → double
+    [BS + "u0041", BS + "u0041"], // 合法 \x5Cu0041 → 放行
+    [BS + BS + "u12中文", BS + BS + "u12中文"], // 2 反斜杠偶数已配对 → 放行
+    [BS + BS + BS + "xzz", BS + BS + BS + BS + "xzz"], // 3 反斜杠奇数尾部裸露 → double 为 4
+    ["C:" + BS + "users" + BS + "temp", "C:" + BS + BS + "users" + BS + "temp"], // Windows 路径：\\x5Cu+sers 不足4hex 是真毒 → double；\\t 合法转义放行
+    ["hello", "hello"],
+    [null, ""],
+    [undefined, ""],
   ]
   for (const [input, expected] of cases) {
     assert.equal(escapeLiteralEscapes(input), expected, JSON.stringify(input))
