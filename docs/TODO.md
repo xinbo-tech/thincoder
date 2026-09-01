@@ -4,6 +4,13 @@
 > 设计文档只承载设计本身——待办变更不应触发设计文档变更（避免不必要的 doc review）。
 > 维护：工程模式下由架构师（agent）在对话中即时更新；用户在需要时增删。
 
+### 并行化优化批（2026-09-02，来源：用户并行化缺陷评估 + 工具使用数据审计）——**已实现（2026-09-02，两端落地 + 测试全绿 + code review 通过）**
+
+- [x] ~~subagent 异步化（AGENT-LOOP.md §15：async + subagent_check + 槽位队列 + 收尾等待 + 上限 4）~~——两端实现，CLI 1046/1002 + VS Code 871/871
+- [x] ~~approval 批确认 + 批量形态引导（§16：onBatchPermissionRequest + edit/apply_patch 描述 + system.md 批量句）~~——两端实现 + code review 修复轮（touchedPaths/原子性/isDirty）
+- [x] ~~VS Code deepseek 400 对齐（PROVIDER.md §14.7：escape v5 / UTF-16 截断 5 处 / 续写构造）~~——VS Code 落地
+- [x] ~~VS Code 压缩可见性（CONTEXT-COMPACTION.md §7 D-C3：回调 + webview 状态行）~~——VS Code 落地
+
 ## 待办（Open）
 
 ### 工程模式 · 模式感知 + 自切换（2026-08-01）
