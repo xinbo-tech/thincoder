@@ -244,10 +244,93 @@ export function loadConfig() {
 
   // Write back to merged for convenient access by upper layers
   merged.provider = runtimeProvider
+  // fetch 超时可配置（2026-09-01：agent.fetchTimeoutMs——provider/core.mjs effectiveFetchTimeoutMs 消费）
+  runtimeProvider.fetchTimeoutMs = Number.isFinite(merged.agent?.fetchTimeoutMs) && merged.agent.fetchTimeoutMs > 0
+    ? merged.agent.fetchTimeoutMs : undefined
   merged.providersList = merged.providers
   merged.advisor = { ...merged.agent.advisor }  // promote for consistent access (decoupled copy)
 
   return merged
+}
+
+/**
+ * MCP.md §5 D-3 (2026-09-01): re-read config.json and replace ONLY the agent's mcp section
+ * — the agent 代配 closed loop (agent edits config.json with its edit tool, /mcp picks it
+ * up). Never touches other config sections (providers/activeProvider stay as loaded).
+ *
+ * Malformed disk config → memory state kept, { ok:false, error } returned (the /mcp menu
+ * shows "⚠ disk config unreadable"). Never throws.
+ *
+ * 对账 (reconciliation, MCP.md §5 D-3 / T23): returns which disk servers CHANGED
+ * (fingerprint differs) or are DELETED from disk while still connected — fingerprint =
+ * endpoint + token + headers/env key order. Existing connections are NOT torn down (an
+ * in-use server must not be dropped): a deleted-but-connected server KEEPS its memory
+ * entry (appended after the disk list) so the /mcp list can still show the row with the
+ * "⚠ disk changed" mark. A server that is merely NEW on disk is not drift. persistRaw
+ * write + reload is idempotent (fingerprints equal → no drift mark).
+ *
+ * @param path optional config path override (tests inject a tmp file; default configPath)
+ */
+export function reloadMcpFromDisk(agent, path) {
+  const memoryServers = Array.isArray(agent.config?.mcp?.servers) ? agent.config.mcp.servers : []
+  const fileExists = existsSync(path ?? configPath)
+  const diskMcp = readMcpSection(path)
+  if (!diskMcp.ok) return { ok: false, error: diskMcp.error, changedNames: [] }
+  // Missing/deleted config file → keep whichever mcp servers the session had (never
+  // silently drop user servers because the file vanished — same memory-keeps policy
+  // as the malformed-disk fallback).
+  let diskServers = diskMcp.servers
+  if (diskServers.length === 0 && !fileExists) diskServers = memoryServers
+  // Drift vs the RAW disk list: fingerprint-changed or deleted-from-disk (T23 ⚠ 标记依据)
+  const diskNames = new Set(diskServers.filter((s) => s?.name).map((s) => s.name))
+  const changedNames = diffMcpServers(memoryServers, diskServers)
+  // Connected servers deleted from disk stay in the list (memory copy) — T23: the row
+  // must remain visible (marked ⚠) and its live connection untouched. They are already
+  // in changedNames (absent from disk), and stay flagged on every reload until the user
+  // reconnects (re-persists them) or removes them — real drift, honestly reported.
+  const connectedNames = new Set((agent.tools ?? []).filter((t) => t?._mcpName).map((t) => t._mcpName))
+  const keptConnected = memoryServers.filter((s) => s?.name && connectedNames.has(s.name) && !diskNames.has(s.name))
+  const finalServers = [...diskServers, ...keptConnected]
+  agent.config ??= {}
+  agent.config.mcp = { ...agent.config.mcp, servers: finalServers }
+  return { ok: true, servers: finalServers, changedNames }
+}
+
+/** Disk read behind reloadMcpFromDisk — bounded, never throws. */
+function readMcpSection(path = configPath) {
+  try {
+    if (!existsSync(path)) return { ok: true, servers: [] }
+    const raw = JSON.parse(readFileSync(path, "utf8"))
+    const servers = raw?.mcp?.servers
+    if (servers !== undefined && !Array.isArray(servers)) return { ok: true, servers: [] }
+    return { ok: true, servers: Array.isArray(servers) ? servers : [] }
+  } catch (error) {
+    return { ok: false, error: error?.message ?? String(error) }
+  }
+}
+
+/** Fingerprint = endpoint + token + headers/env entries in key order (JSON.stringify
+ *  of a normalized subset — key order included, matching connectMcpServer's
+ *  configFingerprint semantics: any change the connect layer would see counts).
+ *  Drift = CHANGED (fingerprint differs) or DELETED (missing from disk) — a server
+ *  that is new on disk is not drift (no live connection to protect). */
+function diffMcpServers(memoryServers, diskServers) {
+  const memFp = new Map(memoryServers.filter((s) => s?.name).map((s) => [s.name, mcpFingerprint(s)]))
+  const diskFp = new Map(diskServers.filter((s) => s?.name).map((s) => [s.name, mcpFingerprint(s)]))
+  const changed = []
+  for (const [name, fp] of diskFp) if (memFp.has(name) && memFp.get(name) !== fp) changed.push(name)
+  for (const name of memFp.keys()) if (!diskFp.has(name)) changed.push(name)
+  return changed
+}
+
+function mcpFingerprint(s) {
+  return JSON.stringify([
+    s.wsUrl ?? s.url ?? s.command ?? null,
+    s.args ?? null,
+    s.token ?? null,
+    s.headers ?? null,
+    s.env ?? null,
+  ])
 }
 
 /**
