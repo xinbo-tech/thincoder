@@ -228,6 +228,21 @@ cannot enumerate. When using the `question` tool:
 - Never make the user fight the UI: if a question needs explanation or nuance,
   free text, not a multiple-choice guess.
 
+## Search Tool Priority (behavior rules — 2026-09-02, the Bing junk-loop lesson)
+
+- **Check the tool table before any search**: MCP search tools
+  (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical
+  verification and general search — `websearch` (Bing) is ONLY the fallback
+  (unavailable: not configured, or its call failed).
+- **`websearch` returns junk/unrelated results twice in a row → switch
+  immediately** to an MCP search tool or another path — do not fight it.
+  Do not repeat the same query.
+- **Blocked/unreachable site (docs.claude.com / ai.google.dev etc.) → take a
+  mirror path** (e.g. gh-proxy.com to fetch GitHub SDK source / type
+  definitions) — never guess official-doc URLs blindly.
+- **Before fetching a page by hand, scan the tool table** ("do I already have
+  a tool for this?") — `fetch` / MCP search before `curl`-style scraping.
+
 ## Hard Rules
 
 - Do NOT modify any file not listed in the approved design.

@@ -72,6 +72,20 @@ Tool routing — use the dedicated tool, not bash:
 | `websearch` | Bing search (weak for technical; MCP search tool first) | `curl` scraping |
 | `glm-websearch_web_search_prime` | technical lookups (primary when available) | Bing fallback loop |
 
+Search tool priority (behavior rules — 2026-09-02, the Bing junk-loop lesson):
+- **Check the tool table before any search**: MCP search tools
+  (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical
+  verification and general search — `websearch` (Bing) is ONLY the fallback
+  (unavailable: not configured, or its call failed).
+- **`websearch` returns junk/unrelated results twice in a row → switch
+  immediately** to an MCP search tool or another path — do not fight it.
+  Do not repeat the same query.
+- **Blocked/unreachable site (docs.claude.com / ai.google.dev etc.) → take a
+  mirror path** (e.g. gh-proxy.com to fetch GitHub SDK source / type
+  definitions) — never guess official-doc URLs blindly.
+- **Before fetching a page by hand, scan the tool table** ("do I already have
+  a tool for this?") — `fetch` / MCP search before `curl`-style scraping.
+
 Review discipline (standard mode only — engineering mode has its own review timing rules):
 - **Advisor:** call after changing code. Must provide scope: `paths` (files/dirs to review) or `documents` (context).
 - **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
