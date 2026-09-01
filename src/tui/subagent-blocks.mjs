@@ -329,3 +329,102 @@ export function routeSubToolOutput(state, name, part, scheduleRender) {
   throttleSubRender(scheduleRender)
   return true
 }
+
+// ─── Compression panel (CONTEXT-COMPACTION.md §7 D-C2) ─────────────────────
+// The compression session reuses the subagent block machinery — user ruling
+// "压缩会话像子agent 面板那样显示". While the summary call is in flight the panel
+// lives in state.subTasks (role "compress") and renders in the running subagent
+// panel (subagent-panel.mjs) — the existing 1s turn ticker (agent-turn.mjs
+// subRunning) makes the elapsed header tick; on completion/fallback it freezes
+// into the stream as a collapsible block via freezeSubTaskLines, exactly like a
+// finished child. The panel carries STATUS ONLY (D-C2): the summary body is a
+// machine artifact and never enters the blocks.
+
+let _compressSeq = 0
+
+/** Live compression panel (role "compress", not done) or null. */
+function liveCompressPanel(state) {
+  return Object.values(state.subTasks ?? {}).find((s) => s.role === "compress" && !s.done) ?? null
+}
+
+/**
+ * Open (or reset — retry) the compression panel. Fired by onCompressStart BEFORE
+ * the summary LLM call. info.messages = number of history messages being
+ * summarized ("summarizing N messages" stage label). Each attempt restarts the
+ * elapsed ticker (panel.started); the previous attempt's failure line stays in
+ * the block timeline so the retry history is visible.
+ */
+export function ensureCompressPanel(state, info = {}) {
+  state.subTasks ??= {}
+  let panel = liveCompressPanel(state)
+  if (!panel) {
+    panel = {
+      key: `compress#${++_compressSeq}`,
+      role: "compress",
+      model: undefined,
+      started: Date.now(), done: false, doneAt: null,
+      blocks: [], currentTool: null, toolArgs: null,
+      turn: 0, maxTurns: 0, approval: null,
+      lastError: null, dropped: 0,
+    }
+    state.subTasks[panel.key] = panel
+  }
+  // Per-attempt reset (D-C2 state machine): retries return to "Compressing…",
+  // the elapsed ticker restarts from this attempt's start.
+  panel.done = false
+  panel.doneAt = null
+  panel.lastError = null
+  panel.started = Date.now()
+  panel.currentTool = "compressing context…"
+  const messages = Number.isInteger(info.messages) && info.messages >= 0 ? info.messages : "?"
+  appendSubBlock(panel, "status", "Compressing context…\n", { fresh: true })
+  appendSubBlock(panel, "meta", `summarizing ${messages} messages\n`, { fresh: true })
+  return panel
+}
+
+/** Failure state (onCompressFail): error text ONLY — no degradation note. The
+ *  fallback note is bound to 3 CONSECUTIVE failures (markCompressFallback) and
+ *  must not appear on a single failure (D-C2 state machine). */
+export function markCompressFailed(state, error) {
+  const panel = liveCompressPanel(state)
+  if (!panel) return
+  const text = error?.message ? String(error.message) : String(error ?? "unknown error")
+  panel.lastError = text
+  appendSubBlock(panel, "err", `Compression failed: ${text}\n`, { fresh: true })
+}
+
+/** Freeze the compression panel into the stream (collapsible, subagent-style —
+ *  same carrier/fold-key as a finished child) and release the live entry. */
+function freezeCompressPanel(state, panel) {
+  freezeSubTaskLines(state, panel)
+  delete state.subTasks[panel.key]
+}
+
+/** Completion state (onCompress, LLM summary): "Compressed: N tokens freed →
+ *  summary (Xs)" — N = pre-compression estimate − post-compression estimate,
+ *  Xs = elapsed seconds. Block frozen + collapsible (T2). */
+export function markCompressDone(state, info = {}) {
+  const panel = liveCompressPanel(state)
+  if (!panel) return
+  const tokensFreed = Number.isFinite(info.tokensFreed) ? Math.max(0, Math.round(info.tokensFreed)) : 0
+  const seconds = Number.isFinite(info.elapsedMs) ? Math.max(0, Math.round(info.elapsedMs / 1000)) : 0
+  panel.done = true
+  panel.doneAt = Date.now()
+  panel.currentTool = null
+  appendSubBlock(panel, "status", `Compressed: ${tokensFreed} tokens freed → summary (${seconds}s)\n`, { fresh: true })
+  freezeCompressPanel(state, panel)
+}
+
+/** Fallback state (onCompress with mode:"fallback"): the 3-consecutive-failures
+ *  degradation note "Compression failed — fallback: truncated to N messages"
+ *  (N = tail messages retained). Frozen + collapsible (T3b). */
+export function markCompressFallback(state, info = {}) {
+  const panel = liveCompressPanel(state)
+  if (!panel) return
+  const tailMessages = Number.isFinite(info.tailMessages) ? Math.round(info.tailMessages) : "?"
+  panel.done = true
+  panel.doneAt = Date.now()
+  panel.currentTool = null
+  appendSubBlock(panel, "err", `Compression failed — fallback: truncated to ${tailMessages} messages\n`, { fresh: true })
+  freezeCompressPanel(state, panel)
+}
