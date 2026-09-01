@@ -36,7 +36,7 @@ Run a git command. Only works inside a git repository.
 
 Parameters:
 - action (required): diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv
-- workdir: run git in this workspace subdirectory (monorepo / multi-repo). Confined to the workspace. Default: cwd
+- workdir: run git in this subdirectory (monorepo / multi-repo). Path relative to cwd — no directory restriction. Default: cwd
 - config: (network actions push/fetch/pull/ls-remote/clone) git -c overrides, e.g. ["http.proxy=http://10.2.2.112:3128"] for blocked remotes
 - path: (diff/log/add/commit/checkout/restore/rm/apply/archive/blame/mv/worktree) file or directory to scope / stage / restore
 - ref: (show/diff/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create/rebase/worktree:add/archive) commit/branch/ref; (push/pull/fetch) the branch or tag (space-separated for multiple)

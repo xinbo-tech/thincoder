@@ -11,6 +11,6 @@ Parameters:
 - dest (required): destination path
 
 Notes:
-- Paths are confined to the working directory (same safety as write/edit) — bash has NO directory confinement.
+- Paths resolve relative to cwd — no directory restriction (same boundary as bash; the approval gate is the guard).
 - `dest` is overwritten if it already exists. `copy` is recursive for directories.
 - To create a directory, use `write` (creates parent dirs) or `bash mkdir`.

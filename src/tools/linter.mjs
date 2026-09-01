@@ -1,7 +1,7 @@
 import { DESC, resolveInCwd } from "./shared.mjs"
 import { execFileSync } from "node:child_process"
 import { existsSync } from "node:fs"
-import { join, relative } from "node:path"
+import { join } from "node:path"
 
 export const lintTool = {
   name: "lint",
@@ -26,7 +26,8 @@ export const lintTool = {
       return nodeCheckResult(abs)
     }
 
-    // Full cascade: language-aware (eslint → tsc → node --check, etc.)
+    // Full cascade: language-aware (tsc → node --check, ruff, cargo, go vet —
+    // third-party linter cascade removed 2026-09-02, TOOLS.md §10.2: zero-dependency lint)
     const ext = abs.split(".").pop()?.toLowerCase()
     const checkers = LANG_CHECKERS[ext]
     if (!checkers) return nodeCheckResult(abs) // fall back to node --check
@@ -54,33 +55,7 @@ function nodeCheckResult(abs) {
   }
 }
 
-// ─── Full-check cascade checkers ──────────────────────
-
-async function eslintCheck(file, { cwd, existsSync, execFileSync, join, relative }) {
-  let dir = file.split(/[\\/]/).slice(0, -1).join("/") || "."
-  while (true) {
-    for (const cfg of [".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json", ".eslintrc.yaml", ".eslintrc.yml", "eslint.config.js", "eslint.config.mjs"]) {
-      if (existsSync(join(cwd, dir, cfg))) {
-        try {
-          const cfgDir = join(cwd, dir)
-          const relPath = relative(cfgDir, file)
-          execFileSync("npx", ["eslint", "--no-color", "--format", "compact", relPath], {
-            cwd: cfgDir, encoding: "utf8", timeout: 30000, stdio: ["ignore", "pipe", "pipe"],
-          })
-          return "✓ eslint: no issues"
-        } catch (e) {
-          const stdout = (e.stdout || "").trim()
-          if (stdout) return stdout
-          return `✗ eslint: ${(e.stderr || e.message).slice(0, 500)}`
-        }
-      }
-    }
-    const parent = dir.split("/").slice(0, -1).join("/")
-    if (!parent || parent === dir) break
-    dir = parent
-  }
-  return null
-}
+// ─── Full-check cascade checkers (third-party linter branch removed 2026-09-02, TOOLS.md §10.2) ──────
 
 async function tscCheck(file, { cwd, existsSync, execFileSync, join }) {
   if (!existsSync(join(cwd, "tsconfig.json"))) return null
@@ -142,14 +117,11 @@ async function goVet(file, { cwd, execFileSync }) {
 }
 
 const LANG_CHECKERS = {
-  js:  [eslintCheck],
-  mjs: [eslintCheck],
-  cjs: [eslintCheck],
-  jsx: [eslintCheck],
-  ts:  [eslintCheck, tscCheck],
-  tsx: [eslintCheck, tscCheck],
-  mts: [eslintCheck, tscCheck],
-  cts: [eslintCheck, tscCheck],
+  // js/mjs/cjs/jsx fall back to node --check (no entry — third-party linter cascade removed 2026-09-02, TOOLS.md §10.2)
+  ts:  [tscCheck],
+  tsx: [tscCheck],
+  mts: [tscCheck],
+  cts: [tscCheck],
   py:  [ruffCheck],
   rs:  [cargoCheck],
   go:  [goVet],

@@ -4,7 +4,7 @@ import {
   runGit
 } from "./shared.mjs";
 import { execFileSync } from "node:child_process";
-import { resolve, relative, isAbsolute, sep } from "node:path";
+import { resolve } from "node:path";
 import { filterLines, runGitStrict, validateRef, gitConfigArgs, snapshotBefore, executeExtAction } from "./git-ext.mjs";
 import { executeCheckpointAction } from "./git-checkpoint.mjs";
 
@@ -23,20 +23,12 @@ function runGitRaw(cwd, cmdArgs, config = []) {
 
 
 
-/** True when `abs` is inside `root` (handles `..` and cross-drive, which relative()
- *  returns as an absolute path on Windows). */
-function isInside(root, abs) {
-  const rel = relative(root, abs)
-  if (isAbsolute(rel)) return false
-  return rel !== ".." && !rel.startsWith(".." + sep)
-}
-
-/** Resolve workdir relative to cwd, asserting it stays within the workspace. */
+/** Resolve workdir relative to cwd — no boundary assertion
+ *  (§10.1 2026-09-02: workspace confinement removed; git itself is not
+ *  directory-limited — same boundary as bash). */
 function resolveBaseDir(cwd, workdir) {
   if (!workdir || typeof workdir !== "string") return cwd
-  const abs = resolve(cwd, workdir)
-  if (!isInside(cwd, abs)) throw new Error(`workdir escapes the workspace: ${workdir}`)
-  return abs
+  return resolve(cwd, workdir)
 }
 
 
@@ -59,7 +51,7 @@ export const gitTool = {
       // write-op params
       name: { type: "string", description: "(branch/tag) The branch or tag name (create/delete/switch)" },
       remote: { type: "string", description: "(push/fetch/pull) Remote name (e.g. origin). Default: current upstream" },
-      workdir: { type: "string", description: "Run git in this workspace subdirectory (monorepo / multi-repo). Confined to the workspace. Default: cwd" },
+      workdir: { type: "string", description: "Run git in this subdirectory (monorepo / multi-repo). Path relative to cwd — no directory restriction. Default: cwd" },
       config: { type: "array", items: { type: "string" }, description: "(network actions: push/fetch/pull/ls-remote) git -c overrides, e.g. [\"http.proxy=http://10.2.2.112:3128\"] for blocked remotes" },
       tags: { type: "boolean", description: "(push) Also push all tags (--tags)" },
       mode: { type: "string", enum: ["soft", "mixed", "hard"], description: "(reset) reset mode — hard snapshots the tree first + needs confirmation（操作前自动快照，checkpointAction=rewind 恢复）" },
@@ -82,8 +74,8 @@ export const gitTool = {
   },
   readonly: false,
   async execute(args, ctx) {
-    // workdir: run git in a workspace subdirectory (monorepo / multi-repo). Shadow ctx.cwd so
-    // every action + snapshotBefore + checkpoint resolves against the workdir, confined to the workspace.
+    // workdir: run git in a subdirectory (monorepo / multi-repo). Shadow ctx.cwd so
+    // every action + snapshotBefore + checkpoint resolves against the workdir.
     if (args.workdir) ctx = { ...ctx, cwd: resolveBaseDir(ctx.cwd, args.workdir) }
     // git -c overrides (proxy etc.) — only network actions need them; passing to every
     // action would be harmless but noisy. cfgArgs stays [] for local ops.

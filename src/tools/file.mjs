@@ -75,7 +75,7 @@ export const readTool = {
       path: { type: "string", description: "File path (relative to cwd or absolute)" },
       offset: { type: "number", description: "1-based line number to start from" },
       limit: { type: "number", description: `Max lines to return (default ${MAX_READ_LINES})` },
-      allowExternal: { type: "boolean", description: "Allow reading files outside the working directory. Only set true when the user explicitly provided an external path — never use this to explore beyond cwd on your own." },
+      allowExternal: { type: "boolean", description: "No-op retained for API compatibility — path resolution no longer asserts a working-directory boundary (all paths resolve relative to cwd)." },
       hashes: { type: "boolean", description: "Include SHA256 line hashes for hash-based editing (default false). Use when you plan to edit the file with hashline_edit." },
     },
     required: ["path"],

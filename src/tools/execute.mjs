@@ -11,19 +11,20 @@
  * process is killed like bash).
  *
  * The child `import()`-s exec-prelude.mjs first for readFile/writeFile/glob/grep/
- * log/require (paths confined to the workspace root). Full Node via require()/
- * process/import() is available — same boundary as bash, no fake sandbox.
+ * log/require (helper paths resolve against the working directory — orthopedic
+ * guard, not a sandbox). Full Node via require()/process/import() is available —
+ * same boundary as bash, no fake sandbox.
  *
  * Parameters:
  *   code       — JS to run inline (top-level await and import() supported). Use this OR scriptFile.
- *   scriptFile — run a workspace .mjs/.js file with node (self-contained, no prelude). Use this OR code.
+ *   scriptFile — run a .mjs/.js file with node (self-contained, no prelude). Use this OR code.
  *   nodeArgs   — (scriptFile) extra node flags before the script (e.g. --test, --check); eval-like flags rejected
- *   workdir    — run in this sub-directory (confined to the workspace)
+ *   workdir    — run in this sub-directory (no directory restriction)
  *   filter     — return only output lines matching this regex (case-insensitive)
  *   timeoutMs  — timeout (default 30s, max 60s)
  */
 import { spawn } from "node:child_process"
-import { dirname, resolve, relative, isAbsolute, sep } from "node:path"
+import { dirname, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { DESC } from "./shared.mjs"
 
@@ -34,20 +35,12 @@ const DEFAULT_TIMEOUT = 30_000
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PRELUDE_URL = pathToFileURL(resolve(__dirname, "exec-prelude.mjs")).href
 
-/** True when `abs` is inside `root` (handles `..` and cross-drive, which
- *  relative() returns as an absolute path on Windows). */
-function isInside(root, abs) {
-  const rel = relative(root, abs)
-  if (isAbsolute(rel)) return false
-  return rel !== ".." && !rel.startsWith(".." + sep)
-}
-
-/** Resolve workdir relative to cwd, asserting it stays within the workspace. */
+/** Resolve workdir relative to cwd — no boundary assertion
+ *  (§10.1 2026-09-02: workspace confinement removed; the child node process is
+ *  not directory-limited — same boundary as bash). */
 function resolveBaseDir(cwd, workdir) {
   if (!workdir || typeof workdir !== "string") return cwd
-  const abs = resolve(cwd, workdir)
-  if (!isInside(cwd, abs)) throw new Error(`workdir escapes the workspace: ${workdir}`)
-  return abs
+  return resolve(cwd, workdir)
 }
 
 /** Keep only output lines matching a regex (execute filter, case-insensitive). */
@@ -143,7 +136,7 @@ export const executeTool = {
       },
       scriptFile: {
         type: "string",
-        description: "Run a workspace .mjs/.js file with node (self-contained, no prelude). Path relative to workdir, confined to the workspace. Use this OR code. For `node <script>` / `node --test <file>` / `node --check <file>`.",
+        description: "Run a .mjs/.js file with node (self-contained, no prelude). Path relative to workdir — no directory restriction. Use this OR code. For `node <script>` / `node --test <file>` / `node --check <file>`.",
       },
       nodeArgs: {
         type: "array",
@@ -152,7 +145,7 @@ export const executeTool = {
       },
       workdir: {
         type: "string",
-        description: "Run in this directory (relative to cwd, confined to the workspace; default cwd)",
+        description: "Run in this directory (relative to cwd — no directory restriction; default cwd)",
       },
       filter: {
         type: "string",
@@ -180,10 +173,9 @@ export const executeTool = {
     let childArgs
     if (args.scriptFile) {
       if (args.code?.trim()) return "Error: pass code OR scriptFile, not both"
-      // scriptFile mode: run a workspace .mjs/.js file with node [nodeArgs...]. Self-contained —
-      // no prelude (a real node process imports what it needs). Confined to the workspace.
+      // scriptFile mode: run a .mjs/.js file with node [nodeArgs...]. Self-contained —
+      // no prelude (a real node process imports what it needs). No directory restriction.
       const scriptAbs = resolve(baseDir, args.scriptFile)
-      if (!isInside(ctx.cwd, scriptAbs)) return `Error: scriptFile escapes the workspace: ${args.scriptFile}`
       let nodeArgs
       try { nodeArgs = validateNodeArgs(args.nodeArgs) }
       catch (e) { return `Error: ${e.message}` }

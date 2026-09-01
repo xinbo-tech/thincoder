@@ -33,5 +33,5 @@ Notes:
 - Never use bash to read, copy, or transmit secret files (.env, keys, tokens)
 - Do NOT run destructive commands (rm -rf, force-push, drop table) without explicit user confirmation
 - After commands that change files (git checkout, npm install, etc.), repo_outline and code_search may be stale — re-run them to get current results.
-- Prefer read/glob/grep/ls for file operations inside the project — bash has no directory confinement.
-- NEVER use bash to write or modify files (echo/sed/printf > file, cat << EOF, etc.). Use write/edit/insert_after/apply_patch instead — they handle encoding, escaping, and directory confinement correctly.
+- Prefer read/glob/grep/ls for file operations inside the project — file tools and bash reach the same paths (no directory restriction).
+- NEVER use bash to write or modify files (echo/sed/printf > file, cat << EOF, etc.). Use write/edit/insert_after/apply_patch instead — they handle encoding, escaping, and EOL conventions correctly.

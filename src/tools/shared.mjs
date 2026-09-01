@@ -5,7 +5,7 @@
 
 import { spawn, execFileSync, execFile } from "node:child_process"
 import { readFileSync, existsSync, realpathSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs"
-import { dirname, join, resolve, relative, isAbsolute, sep } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -170,7 +170,7 @@ export function toOpenAISchema(tool) {
 /** Strip ANSI escape sequences */
 export function sanitizeOutput(s) {
   return s
-  // eslint-disable-next-line no-control-regex -- 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+    // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     .replace(/\x1b\[[0-9;?]*[\x40-\x7E]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-B]|\x1b[=>#][0-9]?/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
@@ -276,27 +276,14 @@ function realCwd(cwd) {
   return realCwdCache.get(cwd)
 }
 
-/** Assert that a resolved path is inside cwd; throws on escape */
-function assertInside(cwd, resolved, p) {
-  // relative() returns platform-native separators; ".." + sep therefore
-  // matches both / and \ traversal on the respective platform.
-  const rel = relative(cwd, resolved)
-  if (isAbsolute(rel) || rel === ".." || rel.startsWith(".." + sep)) {
-    throw new Error(`Access denied outside working directory: ${p}`)
-  }
-}
-
-/** Resolve a user-supplied path relative to cwd, asserting it stays within cwd */
+/** Resolve a user-supplied path relative to cwd — no directory boundary assertion
+ *  (§10.1 2026-09-02: workspace confinement removed; resolveInCwd ≡ resolveExternal,
+ *  trust model + approval gate is the only guard — same boundary as bash). */
 export function resolveInCwd(ctx, p) {
-  const cwd = realCwd(ctx.cwd)
-  const resolved = resolve(cwd, p)
-  assertInside(cwd, resolved, p)
-  const real = realpathNearest(resolved)
-  assertInside(cwd, real, p)
-  return resolved
+  return resolveExternal(ctx, p)
 }
 
-/** Resolve a path relative to cwd without boundary check — use only when the user explicitly provides an external path */
+/** Resolve a path relative to cwd without boundary check — kept for compatibility (≡ resolveInCwd) */
 export function resolveExternal(ctx, p) {
   const cwd = realCwd(ctx.cwd)
   return resolve(cwd, p)

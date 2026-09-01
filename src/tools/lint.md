@@ -1,6 +1,6 @@
 Run the appropriate linter/checker for a file. Auto-detects based on file extension and project config.
 Without 'full', runs a fast node --check (JS/TS syntax only, catches parse errors in milliseconds).
-With 'full', runs the language-aware cascade: eslint → tsc –noEmit → node --check (JS/TS/TSX); ruff (Python); cargo check (Rust); go vet (Go).
+With 'full', runs the language-aware cascade: tsc –noEmit (TS); ruff (Python); cargo check (Rust); go vet (Go). JS/JSX files fall back to node --check; TS uses tsc --noEmit (requires tsconfig.json).
 Use the fast default after every write/edit; use 'full' before declaring a task complete.
 
 Parameters:
