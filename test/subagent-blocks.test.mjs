@@ -9,6 +9,7 @@ import assert from "node:assert/strict"
 import {
   SUB_BLOCK_LINE_LIMIT, finishSubTask, applySubEvent,
   routeSubToken, routeSubReasoning, routeSubToolCall, routeSubToolOutput,
+  ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "../src/tui/subagent-blocks.mjs"
 
 const noop = () => {}
@@ -85,4 +86,68 @@ test("N2: 环形上限经路由同样生效（跨回调类型）", () => {
   const sub = s.subTasks["coder#1"]
   const total = sub.blocks.reduce((n, b) => n + b.text.split("\n").length, 0)
   assert.ok(total <= SUB_BLOCK_LINE_LIMIT + 1, `≤ 501（500 + meta 标记行），实际 ${total}`)
+})
+
+// ---------------------------------------------------------------- 压缩面板（CONTEXT-COMPACTION §7 D-C2）
+
+const panelText = (panel) => panel.blocks.map((b) => b.text).join("")
+/** 压缩面板测试夹具：冻结路径（freezeSubTaskLines）需要 state.lines。 */
+const panelState = () => ({ subTasks: {}, lines: [] })
+
+test("压缩面板: 开始→失败→重试→3 次失败→降级（状态机，降级说明与连续失败绑定）", () => {
+  const s = panelState()
+  // 第 1 次尝试：进行中
+  const p = ensureCompressPanel(s, { messages: 9 })
+  assert.ok(p.key.startsWith("compress#"))
+  assert.equal(p.role, "compress")
+  const t1 = panelText(p)
+  assert.match(t1, /Compressing context…/)
+  assert.match(t1, /summarizing 9 messages/)
+  const started1 = p.started
+  // 失败：仅错误文本，无降级说明；不冻结（可重试）
+  markCompressFailed(s, new Error("API error: HTTP 400 — bad request"))
+  assert.match(panelText(p), /Compression failed: API error: HTTP 400 — bad request/)
+  assert.ok(!panelText(p).includes("fallback"), "单次失败不得出现降级说明")
+  assert.equal(p.done, false, "失败不冻结——重试继续同一面板")
+  assert.equal(p.lastError, "API error: HTTP 400 — bad request")
+  // 重试：同一面板回到进行中，耗时 ticker 重置
+  ensureCompressPanel(s, { messages: 9 })
+  assert.equal(p.done, false)
+  assert.ok(p.started >= started1, "每次 onCompressStart 重置耗时基座")
+  // 第 2 次失败 + 重试
+  markCompressFailed(s, new Error("API error: HTTP 400 — bad request"))
+  ensureCompressPanel(s, { messages: 9 })
+  // 第 3 次失败 → fallback 实际执行 → 降级说明 + 冻结
+  markCompressFailed(s, new Error("API error: HTTP 400 — bad request"))
+  markCompressFallback(s, { mode: "fallback", tailMessages: 6 })
+  assert.equal(p.done, true)
+  assert.match(panelText(p), /Compression failed — fallback: truncated to 6 messages/)
+  assert.ok(s.lines.some((l) => l._frozenSubTask?.role === "compress"), "冻结进会话流")
+  assert.equal(Object.values(s.subTasks).some((x) => x.role === "compress"), false, "live 条目释放")
+})
+
+test("T5 压缩面板: 摘要正文永不进面板（仅状态/阶段/耗时/结果 kind）", () => {
+  const s = panelState()
+  const p = ensureCompressPanel(s, { messages: 9 })
+  // 模拟压缩全程：开始 → 失败 → 重试 → 完成（摘要正文 "这是摘要正文" 全程不得进入面板）
+  markCompressFailed(s, new Error("API error: HTTP 400 — bad request"))
+  ensureCompressPanel(s, { messages: 9 })
+  markCompressDone(s, { mode: "summary", tokensFreed: 1234, elapsedMs: 12_345 })
+  const text = panelText(p)
+  assert.match(text, /Compressed: 1234 tokens freed → summary \(12s\)/)
+  assert.ok(!text.includes("这是摘要正文"), "摘要正文不泄入面板")
+  const frozen = s.lines.find((l) => l._frozenSubTask?.role === "compress")
+  const kinds = new Set(frozen._frozenSubTask.blocks.map((b) => b.kind))
+  assert.ok([...kinds].every((k) => ["status", "meta", "err"].includes(k)), `仅状态 kind，实际 ${[...kinds].join(",")}`)
+  const frozenText = frozen._frozenSubTask.blocks.map((b) => b.text).join("")
+  assert.ok(!frozenText.includes("这是摘要正文"), "冻结形态同样无正文")
+})
+
+test("压缩面板: 无 live 面板时完成/失败回调安全 no-op", () => {
+  const s = panelState()
+  markCompressDone(s, { mode: "summary", tokensFreed: 1, elapsedMs: 1 })
+  markCompressFailed(s, new Error("x"))
+  markCompressFallback(s, { mode: "fallback", tailMessages: 1 })
+  assert.deepEqual(s.lines, [])
+  assert.deepEqual(s.subTasks, {})
 })
