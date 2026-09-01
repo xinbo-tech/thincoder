@@ -236,9 +236,10 @@ switch (command) {
     if (restored) {
       const switched = applySession(agent, restored)
       if (switched && agent.config?.agent?.compactThresholdAuto) {
-        // 压缩阈值跟模型走（与 TUI 切换 provider 时的处理一致）
+        // 压缩阈值跟模型走（与 TUI 切换 provider 时的处理一致）；传 provider 对象——
+        // providers[].context 覆盖生效（PROVIDER.md §15 T-C2）
         const { resolveCompactThreshold } = await import("../src/config.mjs")
-        agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider.model).value
+        agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
       }
     }
     // D-S3 优先级补全：applySession 可能已用会话中的有效 provider 修复（config 无效 + 会话有效）——
