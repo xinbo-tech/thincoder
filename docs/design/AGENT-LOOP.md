@@ -494,3 +494,124 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T3 回归 | 既有提示词断言 + 全量 | 全绿 |
 
 
+
+## 15. subagent 异步化：真后台并行（2026-09-02，用户问题：并行化缺陷评估）
+
+> **状态：设计定稿，待实现（评审 round 1 findings 已修 + VS Code 两端范围）**。用户实证两缺陷：① 主会话 spawn 子代理后被阻塞——"检查 xxx"类动作做不了（或只能等 spawn 返回后做旧状态检查）；② 同批并行 spawn 的子代理快的早完成，主会话必须等最慢的（先完成结果不能立即处理）。**用户裁定**（2026-09-02 逐项确认）：A 真后台并行（consult 范式：非阻塞 spawn + 轮询 check）；A 显式开启（默认阻塞不变）；A 回合收尾自动等待全部完成；A CLI 强制并发上限（3 → 4）。
+
+### 15.1 问题
+
+- **F-1 阻塞**：`subagent` 工具内部 `await runWithContinue(...)`（src/agent-tools/subagent.mjs 的 `runWithContinue` 调用点）——调用后主会话停等子代理完成，无法在后台运行期间推进自己的回合（检查/读文件/其他工具）
+- **F-2 批尾效应**：同一响应多个 spawn 并行跑（平台并发），但**全部完成后统一返回**——快的子代理报告不能先到先处理
+- consult 已有异步范式（`consult_start` 非阻塞 + `consult_check` 轮询）可借鉴——subagent 缺同款能力
+
+### 15.2 需求
+
+- F1：`subagent` 工具加 `async: true` 参数——显式开启后 spawn **立即返回** `{ id, role, status: "running" }`（不 await 报告）；主会话可继续自己的回合
+- F2：新增 `subagent_check` 工具——取回 async 子代理结果；**多 async 按完成顺序（arrival order）消费**——先完成先处理（F-2 消除）
+- F3：回合结束时未完成的 async 子代理**自动等待完成**，报告注入会话（干活型不白做）
+- F4：默认行为不变——不带 async 时完全保持现有阻塞语义（提示词/流程/测试零波及）
+- F5：**CLI 强制并发上限 4（async-only，机械层）**——`_asyncSubagents` 中 running 数 ≥4 时拒绝新 async spawn 并提示；**同步 spawn 不受机械上限约束**（本就阻塞不堆积）。**既有工程纪律上限 3 → 4（提示词层，两端）**：同步并行 eng-coder spawn 的纪律上限同步改为 4（评审 #4 重写——机械上限与提示词纪律是两层，措辞不再混淆）
+
+### 15.3 设计
+
+**D-A1 `subagent` 工具 async 分支**（`src/agent-tools/subagent.mjs`）：
+
+- schema 加 `async: { type: "boolean", description: "true = spawn without waiting — returns {id} immediately, fetch results later via subagent_check. Default false (blocking)." }`
+- `async: true` 分支：子代理照常启动（**复用既有 spawnChild 管线**——relay/turn-cap/权限/mergeChildMutations 全不变），但**父侧不 await 报告**——`agent._asyncSubagents.set(id, { role, promise })`（promise = runWithContinue 的结果，settle 时自动落 `report`/`error` 字段）后**立即返回** `{ id, role, status: "running" }`
+- **上限校验（D-A4）**：async 分支入口检查 `_asyncSubagents` 中 **running 数**（`status==="running"`，已完成未消费不计入）≥ `ASYNC_SUBAGENT_LIMIT (4)` → 抛错拒绝："已有 N 个后台子代理在跑，先 subagent_check 取结果再 spawn"
+- id 分配：复用既有 counter（`_subAgentCounter` 同一序列，`role#N` 与 TUI 区块 key 一致——async 子代理的 TUI 面板行为不变，relay 照常流式显示）
+
+**D-A2 `subagent_check` 工具**（新增，`src/agent-tools/subagent.mjs`）：
+
+- 参数：`id`（可选——缺省 = 任意下一个完成，**arrival order**：多个 async 时按完成顺序返回最快的；带 id = 等特定子代理）、`n`（必填——1-based 读数，consult 同款防循环）；**工具声明 `readonly: true`**（评审 #6——consult_check 先例，planMode 门控需要）
+- 语义：**阻塞到目标完成**（带 id：等该 id；不带 id：等 running 集合中下一个完成的）——返回 `{ id, role, status: "done", report }` 或 `{ id, status: "error", error }`；子代理全完成且已消费 → 返回 `{ done: true }`（consult_check 同款终结语义）
+- 实现：`_asyncSubagents` Map + 每项 `{ role, promise, report, error, done }`；check 对未完成项 `await promise`（Promise.race 于目标集合）；消费后从 Map 删除；**上限指标 = running 数**（`done` 项不计入，与 D-A1/T6 一致）
+- 描述引导：工具 description 写明用法——"spawn async 后可以继续其他工作（检查/读文件），最后用 subagent_check 取结果；多个 async 时先完成先返回"
+
+**D-A3 回合收尾自动等待**（`src/agent.mjs` runAgent finally）：
+
+- finally 中若 `_asyncSubagents` 有未完成项 → `await Promise.allSettled([...promises])`——等全部完成后，把报告/错误**注入会话**（pushReal 一条 user 角色 `[System reminder: async subagent #id (role) finished]` + 报告或错误文本）——主会话下一回合可见结果。**超长报告（>64K）注入预览 + 落盘路径**（评审 #7——对齐 §7 超长报告处理，避免会话膨胀）
+- 注入后清空 `_asyncSubagents`
+- **async 子代理权限交互（评审 #2 补）**：后台子代理撞权限门时审批面板照常弹出（`_permQueue` 串行化，不与其他权限请求重叠）；回合收尾等待把"待审批"视为**可解析状态**——用户批准 → 子代理 settle → 等待完成；无用户在场（headless/无审批回调）→ 权限请求按既有 no-permission-handler 语义拒绝，子代理失败返回（不悬挂）。
+- Ctrl+C 中断：既有 abort 传播（subagent 的 signal 传递）——中断时未完成项随 abort 失败（error 带 AbortError 语义），不再等待（用户显式停）
+- 上限计数：`_asyncSubagents.size`（含已完成未消费）——回合收尾清空后自然归零
+
+**D-A4 并发上限常量**：`ASYNC_SUBAGENT_LIMIT = 4`（subagent.mjs 模块常量）。**同步纪律上限 3 → 4（两端，评审 #3 修正引用）**：工程模式提示词 `src/prompts/engineering.md` 的 "Cap: at most 3 concurrent eng-coders"（:207）改 4，**配套 rationale 句 "past 3 the bookkeeping cost..."（:209）同步改 past 4**；`docs/design/ENGINEERING-MODE.md` FR8（上限 ≤3）+ 2026-09-01 关键决策④ rationale 同样 3→4（三处同步，缺一处即文档矛盾）。异步化后主会话同一时刻在跑的子代理可能更多，4 是用户拍板值
+
+**D-A5 提示词/文档**（`src/prompts/system.md` 工具描述 + AGENT-LOOP.md 本节）：
+
+- subagent 工具 description 追加 async 用法段（D-A2 描述同款）
+- "Delegate well" 段补一句：可 async spawn 后台子代理后继续主会话工作（何时用 async——需要主会话并行推进时；何时不用——必须等报告才能继续时用默认阻塞）
+
+**受影响文件（两端）**：CLI `src/agent-tools/subagent.mjs`（async 分支 + subagent_check + 上限）、CLI `src/agent.mjs`（回合收尾 await + 注入）、VS Code `thincoder-vscode/src/agent-tools/subagent.mjs`（同实现——VS Code subagent 完整对齐，MAX_PARALLEL_SUBAGENTS 3→4 同改）、VS Code `thincoder-vscode/src/agent.mjs`（收尾）、`src/prompts/system.md`（工具描述 + Delegate well 段，两端 byte-identical）、`src/prompts/engineering.md`（上限 3→4 同步）、`docs/design/ENGINEERING-MODE.md`（FR8 + 决策④ rationale 3→4）、`docs/design/AGENT-LOOP.md`（本节）、CLI `test/subagent.test.mjs`（T1-T8）+ VS Code 对应测试、`CHANGELOG.md`（两端）；consult.mjs **不改**（范式参考，不复制——consult 是咨询语义可放弃，subagent 是任务语义要收尾，独立实现）
+
+### 15.4 测试
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T1 | async 立即返回 | mock 慢子代理（延迟完成）+ async:true | spawn 返回 `{id, status:"running"}` **早于**子代理完成；`_asyncSubagents` 有该项 | F1/D-A1 |
+| T2 | 主会话继续 | async spawn 后同一回合再调另一只读工具 | 第二工具正常执行返回（不被 spawn 阻塞） | F1/D-A1 |
+| T3 | 完成顺序 | 2 个 async（快/慢）| `subagent_check`（无 id）先返回快的 id+报告；第二次 check 返回慢的；第三次返回 `{done:true}` | F2/D-A2 |
+| T4 | 特定 id 等待 | 带 id check 慢的 | 阻塞到该 id 完成返回其报告 | F2/D-A2 |
+| T5 | 回合收尾 | async 未 check + runAgent 自然结束 | finally await 全部；报告注入会话（user 角色 reminder）；`_asyncSubagents` 清空 | F3/D-A3 |
+| T6 | 上限 4 | 第 5 个 async spawn | 拒绝 + 提示"已有 4 个后台子代理在跑"；前 4 个不受影响 | F5/D-A4 |
+| T7 | 默认阻塞回归 | 不带 async 的正常 spawn | 行为与现有一致（阻塞等报告）——既有 subagent 测试全绿 | F4 |
+| T8 | 中断 | async 运行中 Ctrl+C | abort 传播；收尾不再等待（error 带中断语义） | D-A3 |
+| T9 | 上限纪律同步（评审 #4） | 读 engineering.md | 含 "Cap: at most 4 concurrent eng-coders" + "past 4"（两端 byte-identical） | F5/D-A4 |
+
+**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5）；AC4 = 并发上限 4 强制（T6）+ 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）。
+
+### 15.5 关键决策
+
+- **consult 范式借鉴而非复用**：consult 是"多模型咨询"语义（会话级、可放弃、main_history 注入）；subagent 是"任务执行"语义（调用级、要收尾、mergeChildMutations 回传）——共享"非阻塞 + 轮询"形态，实现独立（consult.mjs 零改动）
+- **显式 async 而非默认全异步**：现有提示词/流程（偏差审计、交付核验等）都是"spawn 后等报告"的阻塞用法；默认变更会波及全部——显式参数把新能力做成加法
+- **收尾等待而非 abort**：eng-coder 干活型，回合结束 abort = 工作白做（用户明确选等待）；中断（Ctrl+C）仍传播 abort（用户显式停不等待）
+- **上限 4 强制**：async 模式主会话可反复 spawn 不 check——CLI 层强制防呆；同步 spawn 本就不堆积（阻塞），不受限；用户拍板上限 3→4
+- **否决**：a) 默认全异步（波及面大，F4 相反）；b) 回合结束 abort（丢工作）；c) 上限仅自律（防呆失效风险）
+
+### 15.6 两端对齐（VS Code，2026-09-02 用户确认）
+
+VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/subagent.mjs`——独立上下文 runAgent(depth=1)、role 白名单、并行 spawn、eng-coder designToken 多槽）——**本节全部机制两端同实现**：async 分支 + subagent_check（readonly）+ 回合收尾 + 上限（`MAX_PARALLEL_SUBAGENTS` 3→4 + ASYNC_SUBAGENT_LIMIT=4）。VS Code 无 TUI 面板——子代理活动走 webview 活动流（onToolPanel），async 子代理活动照常显示，收尾注入走既有会话消息通道。
+
+
+## 16. 工具使用优化：approval 批确认 + 批量形态引导（2026-09-02，用户问题：工具操作并行化评估）
+
+> **状态：设计定稿，待实现（评审 round 1 findings 已修 + VS Code 两端范围）**。两项均来自 2026-09-02 并行化评估：① 同批多个非只读工具逐个弹权限确认（点击疲劳）；② 真实使用数据实证（1187 会话文件 / 1248 回合）：edit 单条 243/257（94.6%）vs `edits` 数组 14/257（5.4%）、apply_patch 0 次、**35 例同回合手工批量**（同一回合连发 2-8 次单条 edit 改多处）——批量能力存在但模型不习惯用，**不是缺工具，是缺引导**。
+
+### 16.1 approval 批确认（防点击疲劳）
+
+**问题**：dispatch Phase 1 对非只读工具**逐项** `await onPermissionRequest(...)`（src/agent/dispatch.mjs 的 Phase-1 预审 `onPermissionRequest` 调用点）——同响应 N 个非只读工具（如 3 个 write）→ N 次确认弹窗（已串行排队不重叠，但用户逐次点击）。
+
+**设计**：
+
+- **D-B1 同批权限合并询问**：Phase 1 收集同批次（同一 toolCalls 数组）所有非只读工具 → **一次询问**覆盖：`"N 个工具需要权限：A、B、C — approve all / approve one by one / deny"`；拒绝全部 / 逐个选择走二次询问
+- **实现约束（评审 #1 定死）**：新增回调 `onBatchPermissionRequest({ tools: [{name, args}], count })`（返回 "all"/"oneByOne"/"deny"）——`onPermissionRequest(toolName, args)` 契约签名**不变**（ACP/桥/子代理透传零波及）；dispatch 在 Phase 1 聚合：同批非只读工具 >1 时先发聚合询问，`oneByOne`/`deny` 时回退既有逐项通道；`approveAll` 语义复用既有 autoApprove 风格的批次放行标志
+- **autoApprove 短路不变**：autoApprove 时跳过（同批也跳过）
+- **只读工具不参与**：只读批本来就不询问
+
+### 16.2 批量形态引导（数据驱动，非新增工具）
+
+**数据**（2026-09-02 实证）：edit 单条 94.6%；apply_patch 0 使用；35 例手工批量（如 8 个 .gitignore 连发、compact.mjs 4 连发、CHANGELOG 6 连发——同一回合多次单条 edit 替代一次批量）。
+
+**设计**：
+
+- **D-B2 edit 工具描述批量引导**（src/tools/edit.mjs 的 schema description + 工具定义描述，两端同改）：明确"**同文件多处修改 → `edits` 数组一次调用原子完成**（多条目同文件串行执行，2026-09-01 已支持——TOOLS.md 权威）；多文件独立修改 → 同一 `edits` 数组多条目"——把 35 例手工批量收敛为 edits 数组（回合数↓、原子性↑：任一失败全不写）
+- **D-B3 apply_patch 场景引导**：描述补"新建多个文件（`--- /dev/null`）/整文件替换/统一 diff 形态"——apply_patch 0 使用主因是模型不知道它覆盖多文件新建场景；保留工具（与 edits 各有价值：edits 适合逐条精确替换、hunk 适合整块/新建）
+- **D-B4 提示词纪律同步（并入 §14 D1 条款，评审 #8）**：不新增独立句——在 system.md "How you work — while coding" 段 §14 D1 的并行条款（"use the `edits` array for independent multi-file changes"）内扩展：追加 "and apply_patch for whole-file/new-file changes; prefer one batched call over N single edits"（两端 byte-identical，避免相邻两句）
+
+**受影响文件（两端）**：CLI `src/agent/dispatch.mjs`（D-B1 批确认聚合 + 回调接线）、CLI `src/tui/` 权限面板（合并询问 UI——approve all / one by one / deny 三选项）、VS Code `thincoder-vscode/src/agent/execute-tools.mjs`（批聚合——permission-gate 已有 approve-all 三按钮雏形，对齐合并询问形态）、VS Code `thincoder-vscode/src/webview/permission.js`（合并行 UI）、`src/tools/edit.mjs`（D-B2 描述，两端同改）、`src/tools/apply-patch.mjs`（D-B3 描述，两端同改）、`src/prompts/system.md`（D-B4，两端 byte-identical）、`docs/design/AGENT-LOOP.md`（本节）、CLI `test/dispatch.test.mjs`（T-B1/T-B2）+ VS Code 对应测试、`test/` prompts 断言（T-B3）、`CHANGELOG.md`（两端）
+
+**测试**：
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-B1 | 同批 3 非只读工具 | 同一 toolCalls 数组 3 个 write（无 autoApprove） | **一次**权限询问（合并名 + 计数）；批准后逐个执行 | D-B1 |
+| T-B2 | 批内逐项/拒绝 | 批询问选"one by one"/deny | 回退既有逐项通道（签名不变）/全批拒绝 | D-B1 |
+| T-B3 | 批量引导描述 | 读 edit/apply_patch 工具描述 | 含"edits 数组原子/多文件同批""apply_patch 新建多文件"语义句 | D-B2/B3 |
+| T-B4 | 提示词纪律 | 读 system.md | 含批量优先句（两端 byte-identical 断言） | D-B4 |
+| T-B5 | 回归 | 全量 | 既有 dispatch/权限测试全绿（autoApprove 短路/单工具询问不变） | D-B1 |
+
+**验收**：AC1 = 同批多非只读工具一次询问（T-B1）；AC2 = 权限契约签名零破坏（T-B2 + 既有测试）；AC3 = edit/apply_patch 描述含批量引导（T-B3）；AC4 = system.md 批量句两端一致（T-B4）；AC5 = CLI 全量 + lint 绿（T-B5）。
+
+**关键决策**：① **批确认而非排队展示**：排队已有（串行 await），痛点是逐次点击——合并询问是真正的解法；② **引导而非新工具**：数据证明批量能力存在（edits 数组/apply_patch/execute），缺的是模型使用习惯——描述层引导零机制风险；③ apply_patch 保留（与 edits 场景互补：逐条精确 vs 整块/新建）；④ 否决：a) 新批量 write 工具（第 5 种批量形态，工具面膨胀）；b) 权限静默自动批准（安全红线）；c) 默认全异步（§15 已否决同款）。
