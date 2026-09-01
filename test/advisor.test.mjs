@@ -466,19 +466,19 @@ test("agent: _advisorRound initialized to 0 in runAgent", () => {
   assert.equal(_mutatedThisRun && !_calledAdvisorThisRun, false)
 })
 
-test("escapeLiteralEscapes: neutralizes invalid literal \\x/\\u sequences, passes valid ones through", async () => {
+test("escapeLiteralEscapes: neutralizes invalid literal \\x/\\u sequences, passes valid ones through (v4 替换策略)", async () => {
   const { escapeLiteralEscapes } = await import("../src/advisor.mjs")
   const cases = [
-    ["\\x（单反斜杠）", "\\\\x（单反斜杠）"], // \x + non-hex → doubled
-    ["末尾\\x", "末尾\\\\x"], // \x at end → doubled
-    ["\\x1b[31m", "\\x1b[31m"], // \x + 2 hex → untouched
-    ["\\x1b3", "\\x1b3"], // \x + 3+ hex → \x1b valid + literal 3 → untouched
-    ["\\x1后跟", "\\\\x1后跟"], // \x + 1 hex (truncated) → doubled
-    ["\\u12中文", "\\\\u12中文"], // \u + <4 hex → doubled
-    ["\\uFFFF", "\\uFFFF"], // \u + 4 hex → untouched
-    ["\\uFFFF1", "\\uFFFF1"], // \u + 5 hex → \uFFFF valid + literal 1 → untouched
+    ["\\x（单反斜杠）", "\\x5Cx（单反斜杠）"], // \\x + non-hex → 替换为 \\x5Cx（v4）
+    ["末尾\\x", "末尾\\x5Cx"], // \\x at end → 替换
+    ["\\x1b[31m", "\\x1b[31m"], // \\x + 2 hex → untouched
+    ["\\x1b3", "\\x1b3"], // \\x + 3+ hex → \x1b valid + literal 3 → untouched
+    ["\\x1后跟", "\\x5Cx1后跟"], // \\x + 1 hex (truncated) → 替换
+    ["\\u12中文", "\\x5Cu12中文"], // \\u + <4 hex → 替换
+    ["\\uFFFF", "\\uFFFF"], // \\u + 4 hex → untouched
+    ["\\uFFFF1", "\\uFFFF1"], // \\u + 5 hex → \uFFFF valid + literal 1 → untouched
     ["\\n字面", "\\n字面"], // non-hex escapes untouched
-    ["\\\\x", "\\\\x"], // already-doubled backslash untouched
+    ["\\\\x", "\\\\x5Cx"], // 2 反斜杠+x+非hex → 末尾 \\x 替换（v4：网关不看前置反斜杠）
     ["hello", "hello"], // plain text untouched
     [null, ""], // null → coerced to empty
     [undefined, ""], // undefined → coerced to empty
