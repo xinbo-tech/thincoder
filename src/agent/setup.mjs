@@ -22,6 +22,17 @@ import { fileURLToPath } from "node:url"
 const DEFAULT_COMPACT_THRESHOLD = 100_000
 const DOC_SEARCH_LIMIT = 5
 const DOC_CHUNK_PREVIEW_LEN = 300
+/** UTF-16 安全截断（2026-09-02 deepseek 400 根因）：slice(0, N) 按码元切会把 emoji 代理对切成孤立
+ *  高代理（如 🔴=U+D83D+DD34 只剩 D83D）——deepseek 解析器严格 UTF-16 报 400
+ *  "unexpected end of hex escape"。截断点落在高代理上时向前收一个码元。 */
+function safeSliceUTF16(text, max) {
+  if (text.length <= max) return text
+  const end = max
+  // 截断点恰在高代理（D800-DBFF）上 → 收到高代理之前（不带它）
+  const cp = text.charCodeAt(end - 1)
+  if (cp >= 0xd800 && cp <= 0xdbff) return text.slice(0, end - 1)
+  return text.slice(0, end)
+}
 const MEMORY_SEARCH_LIMIT = 3
 
 /** Build engineering-mode system prompt by reading METHODOLOGY.md and wrapping it in the engineering template */
@@ -114,7 +125,7 @@ export async function prepareRun(agent, input, callbacks, {
           role: "user",
           content:
             `[Relevant documentation${more}:\n` +
-            docs.map((d) => `- ${d.path}${d.heading ? " > " + d.heading : ""}: <untrusted_doc_chunk>${escapeXml(d.content.slice(0, DOC_CHUNK_PREVIEW_LEN))}</untrusted_doc_chunk>`).join("\n") +
+            docs.map((d) => `- ${d.path}${d.heading ? " > " + d.heading : ""}: <untrusted_doc_chunk>${escapeXml(safeSliceUTF16(d.content, DOC_CHUNK_PREVIEW_LEN))}</untrusted_doc_chunk>`).join("\n") +
             "]",
           transient: true,
         })
