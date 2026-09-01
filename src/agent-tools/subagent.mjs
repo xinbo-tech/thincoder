@@ -7,6 +7,11 @@ import {
 import { makeRelay, wrapChildCallbacks, runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 
+// Async subagent limits (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
+// background spawns + the per-turn check budget (consult-style loop guard).
+export const ASYNC_SUBAGENT_LIMIT = 4
+export const MAX_ASYNC_CHECKS = 3
+
 /**
  * subagent tool: spawn a child agent to handle an independent subtask (isolated context, only the report is returned).
  * - role: "explore" — read-only tools, search/read/analyze (suitable for codebase exploration)
@@ -95,6 +100,7 @@ export const subagentTool = {
     "- coder — full implementation. The parent's complete read/write/execute toolset plus verify and advisor for self-review. Its final report must include a delivery transparency table with one row per task requirement (Done / Simplified / Not done — no deferred column).\n" +
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round.\n" +
     "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-coder. The schema enum reflects the active mode.\n\n" +
+    "Async spawn (AGENT-LOOP.md §15): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. Collect results with subagent_check — multiple async children return in completion (arrival) order, first finished first, so fast results are handled immediately. Use async when your own turn must keep moving; use the default blocking spawn when you must see the report before continuing. Async spawns are capped at 4 concurrent (further spawns queue with a position), and top-level only.\n\n" +
     "Writing the prompt:\n" +
     "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
     "- Put exact paths and commands in the prompt when you know them. The sub-agent should not search for things you already know.\n" +
@@ -109,6 +115,7 @@ export const subagentTool = {
       model: { type: "string", description: "Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModel config, then the parent's provider. Useful for offloading heavy work to a cheaper model." },
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
+      async: { type: "boolean", description: "true = spawn without waiting — returns {id} immediately, fetch results later via subagent_check. Default false (blocking)." },
     },
     required: ["task"],
   },
@@ -218,13 +225,22 @@ export const subagentTool = {
     // pipeline (AGENT-LOOP.md §7.2 D3). Prefix includes a unique id: parallel child agents
     // with the same role stay independent and don't overwrite each other.
     // Format: role#id/  →  onToken("coder#2/writing..."), onToolCall("coder#2/read", args)
-    const relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
+    // Async id allocation (AGENT-LOOP.md §15 D-A1): reserve the relay counter at
+    // spawn time — the returned id must be stable while the item sits in the queue.
+    // The [model] token (TUI block creation) is DEFERRED to actual start so queued
+    // children don't paint an empty panel block ("queued 态不显示").
+    let relayPrefix
+    if (args.async === true) {
+      parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
+      relayPrefix = `${role}#${parent._subAgentCounter}/`
+    } else {
+      relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
+    }
     const childOpts = {
       onPermissionRequest: childPermission,
       ...wrapChildCallbacks(relayPrefix, ctx.callbacks),
     }
     const childRunOpts = buildChildRunOpts(ctx)
-    let report = ""
     // Turn-cap continue loop (TURN-CAP-CONTINUE.md) via runWithContinue (§7.2 D3):
     // hitting the cap asks the user via the SAME y/n panel the main agent uses —
     // unlimited continues, resume:true keeps the child's history + mutation bookkeeping,
@@ -238,59 +254,145 @@ export const subagentTool = {
       parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
       return parent._permQueue
     }
-    const declined = { partial: null }
-    report = await runWithContinue(
-      (child, input, cbs, opts) => runAgent(child, input, cbs, opts), // opts = childRunOpts + resume (managed by the pipeline)
-      child, input, childOpts, childRunOpts,
-      {
-        askContinue: askSubagentContinue,
-        onDeclined: (e, output) => {
-          if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
-          // Early return semantics (unchanged from the inline loop): the declined
-          // partial-work message is returned WITHOUT the MIN_REPORT_CHARS expansion —
-          // re-prompting a capped child for a longer report is wrong.
-          // Review #2 fix: use the pipeline-captured output (the `report` variable is
-          // still "" at this point — runWithContinue hasn't returned yet).
-          declined.partial = `Subagent (${role}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output || ""}`
-        },
-      },
-    )
-    if (declined.partial !== null) {
-      // declined eng-coder delivery still carries its designId — the fix round
-      // re-spawns with the same slot (2026-09-01).
-      if (role === "eng-coder") declined.partial += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse it (with the same designToken) when re-spawning this eng-coder.`
-      return declined.partial
+
+    // ── Async branch (AGENT-LOOP.md §15 D-A1/D-A6): spawn without waiting ──
+    // The child runs the EXACT blocking pipeline (runChildPipeline below — relay /
+    // turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
+    // but the parent does not await it: the promise is parked in _asyncSubagents and
+    // consumed via subagent_check or the turn-end auto-wait. Slot queue: running
+    // count < ASYNC_SUBAGENT_LIMIT → start now; ≥ limit → enqueue (status "queued",
+    // position = queue index) — never rejected, never requiring the model to batch.
+    if (args.async === true) {
+      if ((ctx.depth ?? 0) > 0) {
+        throw new Error("async spawn only available at the top level")
+      }
+      parent._asyncSubagents ??= new Map()
+      parent._asyncQueue ??= []
+      const running = [...parent._asyncSubagents.values()].filter((e) => e.status === "running").length
+      const id = parent._subAgentCounter
+      const entry = {
+        id, role, relayPrefix,
+        status: running >= ASYNC_SUBAGENT_LIMIT ? "queued" : "running",
+        position: undefined,
+        report: null, error: null, done: false,
+        promise: null, _settle: null, _settleSeq: 0,
+      }
+      // The settle signal — resolves when the run chain settles (never rejects).
+      entry.promise = new Promise((res) => { entry._settle = res })
+      entry.start = () => {
+        entry.status = "running"
+        entry.position = undefined
+        // Deferred [model] emit: the TUI block is created at ACTUAL start.
+        ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
+        // Turn-cap on background children NEVER pops the continue panel (D-A3):
+        // auto-decline, the partial-work report carries the cap reason.
+        runChildPipeline(child, input, childOpts, childRunOpts, {
+          parent, role, args,
+          askContinue: () => Promise.resolve(false),
+        })
+          .then((report) => { entry.report = report })
+          .catch((err) => { entry.error = err?.message ?? String(err) })
+          .finally(() => {
+            entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
+            entry.done = true
+            entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
+            entry._settle()
+            for (const w of parent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
+            maybeRefillAsync(parent)
+          })
+      }
+      parent._asyncSubagents.set(String(id), entry)
+      if (entry.status === "queued") {
+        parent._asyncQueue.push(entry)
+        entry.position = parent._asyncQueue.length
+        return JSON.stringify({ id: String(id), role, status: "queued", position: entry.position })
+      }
+      entry.start()
+      return JSON.stringify({ id: String(id), role, status: "running" })
     }
 
-    // Report too short = incomplete handoff: send back for expansion once (inspired by kimi-code's summaryPolicy: min 200 chars, retry 1 time).
-    // The child agent's history is still intact; the continuation instruction is appended as new input so it can see its own earlier work.
-    if (report.length < MIN_REPORT_CHARS) {
-      report = await runAgent(child, REPORT_CONTINUATION, childOpts, childRunOpts)
-    }
-
-    // Engineering mode mechanical code gate: delegated file changes must not
-    // bypass the parent's advisor/verify guards. Merge the child's mutations
-    // into the parent so "advisor mandatory at both gates" is enforced, not just
-    // promised in the engineering prompt.
-    // CRITICAL: Only merge if child actually mutated files (defense-in-depth against
-    // runAgent throwing before any writes occurred).
-    // Review #8 clarification: eng-coder ONLY is intentional — the mechanical
-    // two-gate merge exists for engineering mode; plain `coder` children carry
-    // their own verify/advisor self-review discipline (per tool description), and
-    // normal mode has no parent advisor/verify gate to feed.
-    if (role === "eng-coder" && child._mutatedThisRun) {
-      mergeChildMutations(parent, child)
-    }
-
-    // designId rides the delivery report (2026-09-01): the divergence-audit fix round
-    // re-spawns with the SAME designId+token — the parent copies it from here, and the
-    // prompt tells the model exactly where the matching token came from.
-    if (role === "eng-coder") {
-      report += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse this designId with the same designToken (from the approved advisor type='design' review) when re-spawning this eng-coder for an audit fix round.`
-    }
-
-    return report
+    // ── Blocking path (unchanged semantics): await the full pipeline ──
+    return await runChildPipeline(child, input, childOpts, childRunOpts, {
+      parent, role, args,
+      askContinue: askSubagentContinue,
+    })
   },
+}
+
+/**
+ * Shared post-spawn pipeline (blocking AND async — AGENT-LOOP.md §15 D-A1: the
+ * async branch reuses the exact same spawn-child pipeline, "全不变"):
+ * turn-cap continue loop → declined partial-work return → MIN_REPORT_CHARS
+ * expansion → eng-coder mutation merge → designId suffix. Returns the report.
+ * onDeclined lives here (identical for both paths) — only askContinue differs:
+ * blocking asks the user via the permission panel, async auto-declines.
+ */
+async function runChildPipeline(child, input, childOpts, childRunOpts, { parent, role, args, askContinue }) {
+  const declined = { partial: null }
+  let report = await runWithContinue(
+    (child, input, cbs, opts) => runAgent(child, input, cbs, opts), // opts = childRunOpts + resume (managed by the pipeline)
+    child, input, childOpts, childRunOpts,
+    {
+      askContinue,
+      onDeclined: (e, output) => {
+        if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
+        // Early return semantics (unchanged from the inline loop): the declined
+        // partial-work message is returned WITHOUT the MIN_REPORT_CHARS expansion —
+        // re-prompting a capped child for a longer report is wrong.
+        // Review #2 fix: use the pipeline-captured output (the `report` variable is
+        // still "" at this point — runWithContinue hasn't returned yet).
+        declined.partial = `Subagent (${role}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output || ""}`
+      },
+    },
+  )
+  if (declined.partial !== null) {
+    // declined eng-coder delivery still carries its designId — the fix round
+    // re-spawns with the same slot (2026-09-01).
+    if (role === "eng-coder") declined.partial += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse it (with the same designToken) when re-spawning this eng-coder.`
+    return declined.partial
+  }
+
+  // Report too short = incomplete handoff: send back for expansion once (inspired by kimi-code's summaryPolicy: min 200 chars, retry 1 time).
+  // The child agent's history is still intact; the continuation instruction is appended as new input so it can see its own earlier work.
+  if (report.length < MIN_REPORT_CHARS) {
+    report = await runAgent(child, REPORT_CONTINUATION, childOpts, childRunOpts)
+  }
+
+  // Engineering mode mechanical code gate: delegated file changes must not
+  // bypass the parent's advisor/verify guards. Merge the child's mutations
+  // into the parent so "advisor mandatory at both gates" is enforced, not just
+  // promised in the engineering prompt.
+  // CRITICAL: Only merge if child actually mutated files (defense-in-depth against
+  // runAgent throwing before any writes occurred).
+  // Review #8 clarification: eng-coder ONLY is intentional — the mechanical
+  // two-gate merge exists for engineering mode; plain `coder` children carry
+  // their own verify/advisor self-review discipline (per tool description), and
+  // normal mode has no parent advisor/verify gate to feed.
+  if (role === "eng-coder" && child._mutatedThisRun) {
+    mergeChildMutations(parent, child)
+  }
+
+  // designId rides the delivery report (2026-09-01): the divergence-audit fix round
+  // re-spawns with the SAME designId+token — the parent copies it from here, and the
+  // prompt tells the model exactly where the matching token came from.
+  if (role === "eng-coder") {
+    report += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse this designId with the same designToken (from the approved advisor type='design' review) when re-spawning this eng-coder for an audit fix round.`
+  }
+
+  return report
+}
+
+/** Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6): start queue heads while a
+ *  running slot is free — called from every settle (completion frees a slot) and
+ *  from the turn-end collection's refill loop. Serial by construction: one slot
+ *  frees per settle, one head starts per call. */
+export function maybeRefillAsync(parent) {
+  const queue = parent._asyncQueue ?? []
+  while (queue.length > 0) {
+    const running = [...(parent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length
+    if (running >= ASYNC_SUBAGENT_LIMIT) return
+    queue.shift().start()
+  }
 }
 
 /**
