@@ -78,8 +78,8 @@ export const DEFAULTS = {
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
 // extract — config.mjs had grown past the 300-line advisory). Re-exported here
 // so the 23 existing importers keep their import paths.
-import { specForModel } from "./model-specs.mjs"
-export { specForModel }
+import { specForModel, providerSpec } from "./model-specs.mjs"
+export { specForModel, providerSpec }
 
 
 // Window utilization threshold: compacts at 60% context, reserving 40% headroom
@@ -87,10 +87,14 @@ export { specForModel }
 // memory/doc search results) which can consume 30-50K tokens each turn.
 const COMPACT_RATIO = 0.6
 
-/** Derive compaction threshold; explicit is the value explicitly set in config file (takes priority), otherwise auto-computed from model */
-export function resolveCompactThreshold(explicit, model) {
+/** Derive compaction threshold; explicit is the value explicitly set in config file (takes priority), otherwise auto-computed from model.
+ *  Second param accepts EITHER a model name string (pure spec lookup — legacy caller:
+ *  first-run wizard) OR a provider object (providerSpec — the providers[].context
+ *  override in K units is honored, PROVIDER.md §15 T-C2). */
+export function resolveCompactThreshold(explicit, modelOrProvider) {
   if (explicit != null) return { value: explicit, auto: false }
-  const spec = specForModel(model)
+  const provider = typeof modelOrProvider === "string" ? { model: modelOrProvider } : (modelOrProvider ?? {})
+  const spec = providerSpec(provider)
   const value = Math.floor(spec.context * COMPACT_RATIO)
   return { value, auto: true }
 }
@@ -124,6 +128,9 @@ export function resolveEnableThinking(provider, spec) {
   if (provider.reasoningEffort) return true
   return undefined
 }
+
+/** Module-level one-time warn dedupe for invalid providers[].context (PROVIDER.md §15 D-C1). */
+const warnedContextProviders = new Set()
 
 /**
  * Find provider by name in providers[].
@@ -190,6 +197,19 @@ export function loadConfig() {
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
   }
 
+  // providers[].context (K units, PROVIDER.md §15 D-C1): positive integer only — invalid
+  // values (0/negative/non-numeric) are IGNORED (spec value applies) with a ONE-TIME warn
+  // per provider name (module-level dedupe, same precedent as warnedModels in model-specs.mjs).
+  for (const p of merged.providers) {
+    if (p.context === undefined) continue
+    if (Number.isInteger(Number(p.context)) && Number(p.context) > 0) { p.context = Number(p.context); continue } // 数字字符串（"128"）归一为数字——两端语义统一（code review #1）
+    if (!warnedContextProviders.has(p.name ?? "(unnamed)")) {
+      warnedContextProviders.add(p.name ?? "(unnamed)")
+      console.warn(`[config] provider "${p.name}" context must be a positive integer in K units (e.g. 128 = 128K) — got ${JSON.stringify(p.context)} — ignored, using the model spec value`)
+    }
+    delete p.context
+  }
+
   // Consult/escalate pool validation (CLI parity with the plugin): up to 5 candidates.
   const cm = merged.agent.consultModels
   if (cm !== undefined && !Array.isArray(cm)) {
@@ -245,9 +265,9 @@ export function loadConfig() {
   if (merged.activeModel) runtimeProvider.model = merged.activeModel
   merged.activeModel = merged.activeModel || null  // normalize for agent.activeModel
 
-  // Compaction threshold follows the model
+  // Compaction threshold follows the model (provider-level context override honored — providerSpec)
   const explicitThreshold = config.agent?.compactThreshold
-  const { value, auto } = resolveCompactThreshold(explicitThreshold, runtimeProvider.model)
+  const { value, auto } = resolveCompactThreshold(explicitThreshold, runtimeProvider)
   merged.agent.compactThreshold = value
   merged.agent.compactThresholdAuto = auto
 
