@@ -1832,3 +1832,63 @@ test("layout: 小终端全局约束 — 总行数 ≤ rows，conversation ≥ 1�
     if (layout.panels.picker) assert.ok(layout.panels.picker.h >= 3 || layout.panels.picker.h >= state.picker.lines.length + 1, `rows=${rows}: picker 最小 3 行`)
   }
 })
+
+
+// ====================================================================
+// SESSION.md §8 — T2 启动弹选择 + T7 取消（promptProviderIfInvalid）
+// ====================================================================
+
+test("T2 启动弹选择：_providerInvalid → openModelPicker 被调用；选定后无提示行", async () => {
+  const { promptProviderIfInvalid } = await import("../src/tui/index.mjs")
+  let picked = false
+  const pushed = []
+  const agent = { _providerInvalid: true, provider: null }
+  // 用户选定 → selectModel 后 agent.provider 为有效值
+  const openModelPicker = async () => { picked = true; agent.provider = { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-chat" } }
+  const r = await promptProviderIfInvalid(agent, openModelPicker, (t) => pushed.push(t))
+  assert.equal(r, true)
+  assert.equal(picked, true, "先弹模型选择 picker")
+  assert.equal(pushed.length, 0, "选定后不推提示行")
+})
+
+test("T7 选择取消（Esc）：provider 仍 null → 提示行 + 不抛错，仍进 TUI（D-S2）", async () => {
+  const { promptProviderIfInvalid } = await import("../src/tui/index.mjs")
+  const pushed = []
+  const agent = { _providerInvalid: true, provider: null }
+  const openModelPicker = async () => { /* Esc → provider 保持 null */ }
+  const r = await promptProviderIfInvalid(agent, openModelPicker, (t) => pushed.push(t))
+  assert.equal(r, true)
+  assert.equal(pushed.length, 1, "推送提示行")
+  assert.equal(pushed[0], "未配置有效 provider，可用 /model 选择或 /provider 配置", "提示行文案逐字")
+})
+
+test("T7b 无 provider 直接进入（_providerInvalid 未置位但 provider 为 null）→ 同样弹选择", async () => {
+  const { promptProviderIfInvalid } = await import("../src/tui/index.mjs")
+  let picked = false
+  const agent = { provider: null }
+  const r = await promptProviderIfInvalid(agent, async () => { picked = true }, () => {})
+  assert.equal(r, true)
+  assert.equal(picked, true, "!agent.provider 即触发（D-S2 判据之一）")
+})
+
+test("T5 回归：provider 有效 → 不弹选择，不推提示行", async () => {
+  const { promptProviderIfInvalid } = await import("../src/tui/index.mjs")
+  let picked = false
+  const agent = { provider: { name: "deepseek", model: "deepseek-chat" } }
+  const r = await promptProviderIfInvalid(agent, async () => { picked = true }, () => {})
+  assert.equal(r, false)
+  assert.equal(picked, false)
+})
+
+test("T7 渲染守卫：renderHeader/renderStatus 在 provider 为 null 时不抛错（Esc 后仍进 TUI）", () => {
+  const line = renderHeader({ provider: null, cwd: "C:\\x" }, 80)
+  assert.ok(line.includes("no provider"), "头部显示占位")
+  const state = {
+    input: [], cursor: 0, scroll: 0, tasks: [], queue: [], processing: false, status: "Ready",
+    currentTool: null, picker: null, permission: null, question: null, wizard: null,
+    tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 },
+    ctxCache: { len: -1, tokens: 0 },
+  }
+  const statusLine = renderStatus(state, { provider: null, _currentTurn: 0, _maxTurns: 0 }, 80, [])
+  assert.ok(statusLine.includes("Enter: send"), "状态栏正常渲染")
+})
