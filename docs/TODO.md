@@ -103,6 +103,16 @@
 - [x] ~~CLI `test/` 目录纳入 lint~~——已销账，见上节（2026-08-31）
 - [x] ~~config.schema.json 同步机制~~——**2026-08-31 用户裁定：彻底删除**（非放弃维护）。核实其从未闭环：①线上 URL（saveConfig 注入的 `https://thincoder.dev/schemas/config.json`）从未部署——thincoder.com 仓库无 schemas 目录；②代码从不消费该文件；③DEFAULTS 顶层 25 键仅覆盖 5，providers 层 20 键从未进 schema——维护成本 > 价值。处理：删 `docs/schemas/`、删 saveConfig 的 `$schema` 注入（今后写出的 config.json 不再带该字段，存量字段无害残留）、README 失实宣传行删除。ROADMAP-0.9.0 的历史计划条目按快照规范保留。
 
+### 用户问题批（2026-09-02，来源：用户口头提出 5 条——**设计定稿，待实现**，设计落点见各条）
+
+- [ ] **Q1 会话恢复 provider/model 缺失**：CLI 退出重进时，会话引用的 provider 或 model 已不存在 → 直接报错退出进不了 TUI；期望给用户一个界面重新选择模型。**设计已定稿：SESSION.md §8**（D-S1 判据改空判据——MODEL_SPECS 未知不判无效，评审 #1/#2 已修正）
+- [ ] **Q2 压缩进度感知**：上下文压缩时 LLM 摘要耗时长 → TUI 无"压缩中"反馈像僵死；现状 `onCompress` 是**压缩完成后**才触发（agent.mjs:187/196），TUI 只打一行 `[context] Context too long...` warn（tool-events.mjs:402）。期望：压缩**开始**即提示 + 压缩会话像子agent 面板那样显示（可见进度/完成）。**设计已定稿：CONTEXT-COMPACTION.md §7**（D-C2 压缩面板——复用 subagent-blocks 区块机制，用户要求形态）
+- [ ] **Q3 压缩失败静默飞出**：压缩出错（尤其 deepseek）→ 程序直接飞出零提示。**三根因**：① **prefix 续写 400（Function call should not be used with prefix）**——deepseek 系列 `prefixMode: true`，截断触发续写发 `/beta` + `prefix:true` + 全量历史（含 tool_calls）→ 网关 400（Kilo/dify issue 同款）。**设计已定稿：PROVIDER.md §14.2/14.3（止损：prefix 续写精简历史——过滤工具消息，保留 ≤8 条文本；根治：buildContinuationMessages + 失败可见性）——待实现**；② **reasoning_content 回传 400**——thinking 模式历史 reasoning 未回传；03:11 复现一次后无法再复现（疑服务端临时状态），续写构造规范化（14.2/14.3）一并覆盖——**待实现**；③ **hex escape 400——已修（2026-09-02）**：真凶 = doc_search 预览 slice 截断切断 emoji 代理对 → 孤立 UTF-16 代理 → deepseek 严格解码 400。落地：escape.mjs v5 sanitizeLoneSurrogates + setup.mjs/helpers.mjs safeSliceUTF16 源头修复（详见 PROVIDER.md §14.6，真机 200 验证）；另：压缩失败静默（agent.mjs:183 catch 无 console.error）→ 补可见性（CONTEXT-COMPACTION.md §7 设计已定稿，待实现）。escape v3 已修 hex escape 类（本问题另一独立根因）。
+- [ ] **Q4 MCP save&test 确认问句废除**：刚刚 §5 v2 的 `Save? (Y/n)`（探活成功）/`Save anyway? (y/N)`（失败）问句——用户裁定**不需要问**：保存时直接探活 → 正常即保存；失败报错让用户改。**用户 2026-09-02 终裁：探活失败不提供任何保存通道（save-anyway 整个废除——"探活失败还存干嘛"）**。**设计已定稿：MCP.md §5 变更段**（D-Q1 confirmLoop 重构——probe ✓ 直接保存、✗ 报错回表单；T16/T16c/T17 重写 + T25 新增）
+- [ ] **Q5 搜索工具优先级引导**：提示词应把 websearch（Bing）定位为**纯备选**——有 MCP 搜索服务（glm-websearch_web_search_prime 等）时必须优先用 MCP，Bing 只在其不可用/失败时兜底。现状：discipline.md:72-73 工具表已标注（"weak for technical; MCP search tool first" / "primary when available"）但只是**表格罗列，非强制规则**。**设计已定稿：PROMPT-DECOUPLING.md 变更段**（D-P1 discipline.md 行为规则：MCP 优先/websearch 备用/连续 2 次垃圾即切/镜像路径优先/动手前扫工具表）
+
+
+
 
 ## 已关闭（Done）
 
