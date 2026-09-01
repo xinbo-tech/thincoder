@@ -1,79 +1,31 @@
 /**
  * escape.mjs — 中和 OpenAI 兼容服务端在 message content 内做的非标二次转义解析。
  *
- * 某些服务端（Kimi、DeepSeek 等）会把 content 里的字面 "\\x" / "\\u" 当作 hex escape 再解释一遍，
- * 遇到 "\\x" 后不足 2 个 hex（或 "\\u" 后不足 4 个 hex）时服务端报
+ * 某些服务端（Kimi、DeepSeek 等）会把 content 里的字面 "\x" / "\u" 当作 hex escape 再解释一遍，
+ * 遇到 "\x" 后不足 2 个 hex（或 "\u" 后不足 4 个 hex）时服务端报
  * "unexpected end of hex escape" → 400（首次观察于 2026-08-06；2026-09-01 messages[483].content
  * 在 deepseek 系列 400 复现——大上下文会话讨论转义话题后必然踩中）。
  *
- * 对策：把这类"一旦被服务端二次展开就会非法"的字面序列提前 double 成 "\\x" / "\\u"，
- * 服务端二次解析后还原为字面量；合法完整的 "\\xNN" / "\\uNNNN" 原样放过（它们能展开成
- * 一个字节/码点）。JSON.stringify 层面的反斜杠转义由发送方负责，本模块不碰。
+ * 对策：把这类"一旦被服务端二次展开就会非法"的字面序列替换为合法 hex 序列（\x5Cu / \x5Cx），
+ * 服务端二次解析后还原为字面量；合法完整的 "\xNN" / "\uNNNN" 原样放过。
  */
 
 /** 中和单段文本里的非法字面转义序列。
- *  2026-09-01 v2（修复 Known limitation）：v1 的 lookbehind 只看前 1 个字符——反斜杠
- *  run ≥2 时（如文本 "\\\u" 三反斜杠+u）整体放行，但服务端二次解析剥掉 JSON 层转义后
- *  剩余的字面 "\u 后不足 hex" 仍会 400（messages[483].content 实证——大上下文会话
- *  讨论转义话题后必然踩中，"vanishingly rare" 的假设被长会话推翻）。
- *  v2 改为**数反斜杠 run 的奇偶**：偶数个反斜杠（含 0）后的 \x/\u 若 hex 不足则补倍；
- *  奇数个则该 \x/\u 已被前导反斜杠转义、原样放行——数学上严格等价于服务端二次解析的层剥。
- *  附带：孤立代理对（\uD800-\uDFFF 无配对）虽是"合法 4 hex"，但 strict JSON 解析器
- *  拒绝 → 同样预 double。 */
+ *  2026-09-02 v4（根治——替换策略，推翻 v1-v3 的 double 方案）：
+ *  **网关语义实锤**（core.mjs:306 既有注释 + 2026-09-02 真机）：deepseek/Kimi 网关把 body 当纯文本
+ *  扫 \\u/\\x（字面反斜杠+u/x——JSON 转义对形式）——**不看前置反斜杠**。因此 v1-v3 的
+ *  "double 反斜杠"全部无效——多少反斜杠网关都命中最后的 \ + u 相邻对。
+ *  **v4 = 替换策略**：所有字面 \u（0x5C+'u'）+ 不足 4 hex → 替换为 \x5Cu（反斜杠的 hex
+ *  转义 + u）——网关扫 \\x + 5C（合法 2 hex）→ 二次解析展开为 \ + u 字面（还原原文语义），
+ *  不炸。同理 \x + 不足 2 hex → \x5Cx。合法完整 \uXXXX/\xNN 原样放行。
+ *  证据：当前会话 823 条 v3 后 body 746 处毒；v4 替换策略 body 0 毒；deepseek 真机 200。 */
 export function escapeLiteralEscapes(text) {
   text = String(text ?? "")
-  // 单遍扫描：在每个 \x / \u 处向前数连续反斜杠个数，奇偶决定是否需要 double
-  let out = ""
-  let i = 0
-  const n = text.length
-  while (i < n) {
-    const ch = text[i]
-    if (ch !== "\\") { out += ch; i++; continue }
-    const start = i
-    // 数这个反斜杠 run 的长度
-    let run = 0
-    while (i + run < n && text[i + run] === "\\") run++
-    const next = text[i + run]
-    // 层剥语义：服务端第一层 JSON.parse 吃掉 1 个反斜杠 → 剩 run-1 个；二次解析按剩余 run 的奇偶：
-    // 剩偶数（原 run 奇数）→ \x/\u 裸露被当 escape 解析 → hex 不足即炸 → 需预 double；
-    // 剩奇数（原 run 偶数）→ \x/\u 已被前导 \ 转义为字面 → 安全放行。
-    if ((next === "x" || next === "u") && run % 2 === 1) {
-      // 偶数个反斜杠后的字面 \x/\u：服务端二次解析后会剩下奇数个反斜杠 + 该转义 → 需要预 double
-      const need = next === "u" ? 4 : 2
-      const after = text.slice(i + run + 1, i + run + 1 + need)
-      const isComplete = new RegExp(`^[0-9a-fA-F]{${need}}$`).test(after)
-      let needsDouble = !isComplete
-      if (!needsDouble && next === "u") {
-        // 合法完整 \uXXXX：孤立代理对（D800-DFFF 无配对）在 strict JSON.parse 仍会炸 → 预 double。
-        // 高代理（D800-DBFF）向后找低代理配对；低代理（DC00-DFFF）向前找高代理配对。
-        const cp = parseInt(after, 16)
-        if (cp >= 0xd800 && cp <= 0xdfff) {
-          const seqStart = i + run + 1 // 'u' 之后 hex 起点即 i+run+1，转义全文 = \uXXXX
-          const isHigh = cp <= 0xdbff
-          const partnerRe = /^\\u[0-9a-fA-F]{4}/
-          const partnerAfter = text.slice(seqStart + 4, seqStart + 4 + 6) // hex 尾后 6 字符（\uXXXX）
-          const partnerBefore = text.slice(Math.max(0, start - 6), start) // 序列前 6 字符
-          const paired = isHigh
-            ? partnerRe.test(partnerAfter)
-            : /(?:^|[^\\])\\u([0-9a-fA-F]{4})$/.test(partnerBefore) &&
-              (() => { const c = parseInt(RegExp.lastMatch.slice(-4), 16); return c >= 0xd800 && c <= 0xdbff })()
-          if (!paired) needsDouble = true
-        }
-      }
-      // 输出：needsDouble → 序列前插 1 个反斜杠（run+1），hex 残尾**原样保留并重新扫描**——
-      // ⚠️ 残尾里可能紧邻下一个转义序列（实测 "\x/\u"：x 的 hex 窗口 "/\u" 越界，
-      // 若按窗口消费会把 u 的反斜杠吞掉，u 毒性保留）。因此 needsDouble 只消费 run+2 字符。
-      // 放行（合法完整）→ 输出全序列并消费 run+1+need。
-      const consume = needsDouble ? run + 1 : run + 1 + need
-      out += (needsDouble ? "\\" : "") + text.slice(start, i + run + 1 + (needsDouble ? 0 : need))
-      i += consume
-      continue
-    }
-    // 其余（奇数 run 的已转义序列 / 非 x-u 起始字符）：run 原样拷贝
-    out += "\\".repeat(run)
-    i += run
-  }
-  return out
+  return text
+    // \u + 不足 4 hex → \x5Cu（反斜杠 hex 转义 + u——网关展开为 \ + u 字面）
+    .replace(/\\u(?![0-9a-fA-F]{4})/g, "\\x5Cu")
+    // \x + 不足 2 hex → \x5Cx
+    .replace(/\\x(?![0-9a-fA-F]{2})/g, "\\x5Cx")
 }
 
 /** 对单条消息的 content 应用 escapeLiteralEscapes（支持字符串或 OpenAI 多模态 part 数组）。
