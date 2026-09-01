@@ -1,39 +1,27 @@
 import { ansi, C } from "./ansi.mjs"
+import { cloneEntry, fieldPicker, maskToken } from "./cmd-mcp-form.mjs"
 
 /** /mcp command handler: view/add/edit/remove/test/reconnect MCP server.
- *  Extracted from slash-commands.mjs, includes /mcp-specific parseHeaders / addAndConnect helpers.
- *  ctx: { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, ansi, C } */
+ *  ctx: { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, ansi, C }
+ *  MCP.md §5（2026-09-02，v2）：列表即菜单（F7/D-2）、edit/add 统一字段 picker 表单
+ *  （F3/F3b/D-1——表单机制在 cmd-mcp-form.mjs，本文件只调 fieldPicker）、保存前预览
+ *  +探活（F2：探活失败回同一 fieldPicker——AC2）、AI 降 transport picker 末位（F4）、
+ *  菜单打开边界磁盘重读 config.json（F5①/D-3，reloadMcpFromDisk in config.mjs）。 */
 
-/** F6③（MCP.md §4）：headers 输入改逗号分隔解析（`key=value, key2=value2`——value 可含
- *  空格）。旧 `split(/\s+/)` 把 `Authorization=Bearer xxx` 的 value 截成 "Bearer"（token
- *  丢失）。add（headers/env 输入）共用；逗号在 value 中不支持（已知限制，评审 #9）。 */
-function parseHeaders(input) {
-  const headers = {}
-  for (const pair of String(input).split(",")) {
-    const eq = pair.indexOf("=")
-    if (eq > 0) {
-      const key = pair.slice(0, eq).trim()
-      const value = pair.slice(eq + 1).trim().replace(/^["']|["']$/g, "")
-      if (key && value) headers[key] = value
-    }
-  }
-  return headers
+/** F7/D-2：主菜单行与子菜单 picker 行共用——●/○ 连接态 + (端点) + N tools。 */
+function serverLine(srv, connected, toolCount) {
+  const desc = srv.wsUrl ? srv.wsUrl : srv.url ? srv.url : `${srv.command} ${(srv.args ?? []).join(" ")}`
+  return `${connected ? "●" : "○"} ${srv.name} (${desc})${connected ? ` — ${toolCount} tools` : ""}`
 }
 
-/** F3 评审 #3 清除语义（T12）：`k=`（空 value）= 从 merged 中删除该项；`k=v` = 设置。
- *  返回更新后的对象（无项时 null——调用方据此 delete 字段）。 */
-function mergeKeyValuePairs(merged, input) {
-  for (const pair of String(input).split(",")) {
-    const eq = pair.indexOf("=")
-    if (eq > 0) {
-      const key = pair.slice(0, eq).trim()
-      const value = pair.slice(eq + 1).trim().replace(/^["']|["']$/g, "")
-      if (!key) continue
-      if (value) merged[key] = value
-      else delete merged[key]
-    }
-  }
-  return Object.keys(merged).length > 0 ? merged : null
+/** persistRaw/edit 落盘的磁盘 entry 形态（name + 按 transport 的可选字段）——add 与
+ *  edit 共用，两处序列化不再漂移。 */
+function configEntry(srv) {
+  const entry = { name: srv.name }
+  if (srv.url) { entry.url = srv.url; if (srv.token) entry.token = srv.token; if (srv.headers) entry.headers = srv.headers }
+  else if (srv.wsUrl) { entry.wsUrl = srv.wsUrl; if (srv.token) entry.token = srv.token; if (srv.headers) entry.headers = srv.headers }
+  else { entry.command = srv.command; if (srv.args) entry.args = srv.args; if (srv.env) entry.env = srv.env }
+  return entry
 }
 
 /** /mcp shared helper: save config + connect (persistRaw obtained from ctx) */
@@ -41,11 +29,7 @@ async function addAndConnect(ctx, srv) {
   const { agent, pushLine, pushLabel, persistRaw } = ctx
   await persistRaw((raw) => {
     raw.mcp ??= { servers: [] }
-    const entry = { name: srv.name }
-    if (srv.url) { entry.url = srv.url; if (srv.token) entry.token = srv.token; if (srv.headers) entry.headers = srv.headers }
-    else if (srv.wsUrl) { entry.wsUrl = srv.wsUrl; if (srv.token) entry.token = srv.token; if (srv.headers) entry.headers = srv.headers }
-    else { entry.command = srv.command; if (srv.args) entry.args = srv.args; if (srv.env) entry.env = srv.env }
-    raw.mcp.servers.push(entry)
+    raw.mcp.servers.push(configEntry(srv))
   })
   agent.config ??= {}
   agent.config.mcp ??= { servers: [] }
@@ -68,6 +52,20 @@ export async function handleMcpCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw } = ctx
   // 每轮重读：原本无 mcp 配置时 `?? []` 会拿到游离数组，Add server 后快照过期
   const getServers = () => agent.config?.mcp?.servers ?? []
+  // D-3/T24：本菜单会话内最新一次磁盘重读是否失败（畸形 config.json → 内存态兜底）
+  let diskUnreadable = false
+  /** F5①/D-3：菜单打开边界统一走这里——磁盘→内存仅替换 mcp 段（config.mjs 的
+   *  reloadMcpFromDisk）。畸形磁盘配置回退内存态 + 提示行（T24）；persistRaw 落盘后
+   *  重读幂等（fingerprint 一致 → 无 ⚠ disk changed 标记，D-3 防环）。ctx.configPath
+   *  测试注入 tmp config 路径用（生产 undefined → 默认 ~/.thincoder）。 */
+  let changedNames = [] // 最近一次成功重读的对账结果（T23 ⚠ 标记）
+  async function reloadFromDisk() {
+    const { reloadMcpFromDisk } = await import("../config.mjs")
+    const r = reloadMcpFromDisk(agent, ctx.configPath)
+    diskUnreadable = !r.ok
+    if (r.ok) changedNames = r.changedNames
+    return r
+  }
 
   function listServers() {
     const servers = getServers()
@@ -77,11 +75,8 @@ export async function handleMcpCommand(ctx, args = []) {
     }
     for (const srv of servers) {
       const connected = agent.tools.some((t) => t._mcpName === srv.name)
-      const mark = connected ? "●" : "○"
-      const color = connected ? C.tool : C.dim
       const toolCount = agent.tools.filter((t) => t._mcpName === srv.name).length
-      const desc = srv.wsUrl ? srv.wsUrl : srv.url ? srv.url : `${srv.command} ${(srv.args ?? []).join(" ")}`
-      pushLine(`  ${mark} ${srv.name} (${desc})${connected ? ` — ${toolCount} tools` : ""}`, color)
+      pushLine(`  ${serverLine(srv, connected, toolCount)}`, connected ? C.tool : C.dim)
     }
   }
 
@@ -109,132 +104,65 @@ export async function handleMcpCommand(ctx, args = []) {
     }
   }
 
-  /** F3/D-3：edit 逐字段预填重问——空输入保留旧值，`-` 删除该可选字段，`k=` 删除该
-   *  header/env 项；name 不可改。保存 persistRaw（原位替换保持数组序）→ connectServer
-   *  自动重连（configFingerprint 含 token，变更自动关旧连接重建）。 */
-  async function editServer(srv) {
-    const name = srv.name
-    const next = { ...srv } // 浅拷贝合并结果；headers/env/token 整体或按项替换
-    if (srv.wsUrl || srv.url) {
-      const urlPrompt = srv.wsUrl ? `WebSocket URL (current: ${srv.wsUrl}):` : `HTTP URL (current: ${srv.url}):`
-      const url = ((await askQuestion(urlPrompt)) || "").trim()
-      if (url) { if (srv.wsUrl) next.wsUrl = url; else next.url = url }
-      const tokenInput = ((await askQuestion("Auth token (Bearer, optional; '-' clears, empty keeps):")) || "").trim()
-      if (tokenInput === "-") delete next.token
-      else if (tokenInput) next.token = tokenInput
-      const curHeaders = Object.entries(srv.headers ?? {})
-      const headerPrompt = curHeaders.length > 0
-        ? `Headers (key=value, comma-separated; key= removes; empty keeps; '-' clears all) (current: ${curHeaders.map(([k, v]) => `${k}=${v}`).join(", ")}):`
-        : "Headers (key=value, comma-separated; empty keeps; '-' clears all):"
-      const headersInput = ((await askQuestion(headerPrompt)) || "").trim()
-      if (headersInput === "-") delete next.headers
-      else if (headersInput) {
-        const updated = mergeKeyValuePairs({ ...(srv.headers ?? {}) }, headersInput)
-        if (updated) next.headers = updated
-        else delete next.headers
-      }
-    } else {
-      const cmd = ((await askQuestion(`Command (current: ${srv.command}):`)) || "").trim()
-      if (cmd) next.command = cmd
-      const argsInput = ((await askQuestion(`Arguments (space-separated; '-' clears, empty keeps) (current: ${(srv.args ?? []).join(" ")}):`)) || "").trim()
-      if (argsInput === "-") delete next.args
-      else if (argsInput) next.args = argsInput.split(/\s+/)
-      const curEnv = Object.entries(srv.env ?? {})
-      const envPrompt = curEnv.length > 0
-        ? `Environment variables (KEY=value, comma-separated; key= removes; empty keeps; '-' clears all) (current: ${curEnv.map(([k, v]) => `${k}=${v}`).join(", ")}):`
-        : "Environment variables (KEY=value, comma-separated; empty keeps; '-' clears all):"
-      const envInput = ((await askQuestion(envPrompt)) || "").trim()
-      if (envInput === "-") delete next.env
-      else if (envInput) {
-        const updated = mergeKeyValuePairs({ ...(srv.env ?? {}) }, envInput)
-        if (updated) next.env = updated
-        else delete next.env
-      }
-    }
-    await persistRaw((raw) => {
-      const servers = raw.mcp?.servers
-      if (!Array.isArray(servers)) return
-      const idx = servers.findIndex((s) => s?.name === name)
-      if (idx === -1) return
-      const entry = { name } // 原位替换——数组序保持
-      if (next.url) { entry.url = next.url; if (next.token) entry.token = next.token; if (next.headers) entry.headers = next.headers }
-      else if (next.wsUrl) { entry.wsUrl = next.wsUrl; if (next.token) entry.token = next.token; if (next.headers) entry.headers = next.headers }
-      else { entry.command = next.command; if (next.args) entry.args = next.args; if (next.env) entry.env = next.env }
-      servers[idx] = entry
-    })
-    agent.config.mcp.servers = getServers().map((s) => (s.name === name ? next : s))
-    pushLine(`[mcp] ${name} updated`, C.tool)
-    await connectServer(name) // F3：自动重连
+  /** F2（D-1）：预览表——name/transport/端点/token 遮蔽 + headers/env 键列表；
+   *  probeLine 非空时拼在尾部（✓ C.tool 色 / ✗ C.error 色）——预览与探活报告同屏。 */
+  function showPreview(entry, probeLine) {
+    const endpoint = entry.wsUrl ?? entry.url ?? `${entry.command} ${(entry.args ?? []).join(" ")}`.trim()
+    const transport = entry.wsUrl ? "WebSocket" : entry.url ? "HTTP" : "stdio"
+    pushLine(`  name:      ${entry.name}`, C.tool)
+    pushLine(`  transport: ${transport}`, C.tool)
+    pushLine(`  endpoint:  ${endpoint}`, C.tool)
+    if (entry.token) pushLine(`  token:     ${maskToken(entry.token)}`, C.tool)
+    if (entry.headers) pushLine(`  headers:   ${Object.keys(entry.headers).join(", ")}`, C.tool)
+    if (entry.env) pushLine(`  env:       ${Object.keys(entry.env).join(", ")}`, C.tool)
+    if (probeLine) pushLine(`  ${probeLine}`, probeLine.startsWith("✓") ? C.tool : C.error)
   }
 
-  /** edit 入口：`/mcp edit [name]`——带 name 直达，否则 picker 选择。 */
-  async function editFlow(nameArg) {
-    const servers = getServers()
-    if (servers.length === 0) {
-      pushLine("[mcp] no MCP server configured", C.error)
-      return
-    }
-    let srv
-    if (nameArg) {
-      srv = servers.find((s) => s.name === nameArg)
-      if (!srv) {
-        pushLine(`[mcp] no server named "${nameArg}" (${servers.map((s) => s.name).join(", ") || "none configured"})`, C.error)
-        return
-      }
-    } else {
-      const se = await showPicker("Edit MCP Server", [
-        { type: "header", text: "Select server to edit" },
-        ...servers.map((s) => ({ type: "item", text: `${s.name} (${s.wsUrl ?? s.url ?? s.command})`, name: s.name })),
-      ])
-      if (!se) return // Esc 取消
-      srv = servers.find((s) => s.name === se.name)
-      if (!srv) return
-    }
-    await editServer(srv)
-  }
-
-  /** F4：`/mcp test [name]`——probeMcpServer 一次性探活（零副作用：不进 session 表、
-   *  不动 agent.tools、探完即关）。成功报工具数/延迟，失败透传错误（405/401/超时）。 */
-  async function testServer(nameArg) {
-    const servers = getServers()
-    if (servers.length === 0) {
-      pushLine("[mcp] no MCP server configured", C.error)
-      return
-    }
-    let srv
-    if (nameArg) {
-      srv = servers.find((s) => s.name === nameArg)
-      if (!srv) {
-        pushLine(`[mcp] no server named "${nameArg}" (${servers.map((s) => s.name).join(", ") || "none configured"})`, C.error)
-        return
-      }
-    } else {
-      const se = await showPicker("Test MCP Server", [
-        { type: "header", text: "Select server to test" },
-        ...servers.map((s) => ({ type: "item", text: `${s.name} (${s.wsUrl ?? s.url ?? s.command})`, name: s.name })),
-      ])
-      if (!se) return // Esc 取消
-      srv = servers.find((s) => s.name === se.name)
-      if (!srv) return
-    }
-    pushLine(`[mcp] Testing ${srv.name}...`, C.dim)
+  /** F2：保存前探活——probeMcpServer（§4 资产，零副作用：不进 _sessions、不动
+   *  agent.tools、探完即关）。未保存的临时 entry 直接传 probe（§5 D-1）。 */
+  async function probeLineFor(entry) {
+    pushLine(`[mcp] Probing ${entry.name}...`, C.dim)
     const { probeMcpServer } = await import("../mcp.mjs")
-    const r = await probeMcpServer(srv)
-    if (r.ok) pushLine(`[mcp] ${srv.name}: OK — ${r.toolCount} tools, ${r.latencyMs}ms`, C.tool)
-    else pushLine(`[mcp] ${srv.name}: ${r.error}`, C.error)
+    const r = await probeMcpServer(entry)
+    return r.ok ? `✓ ${r.toolCount} tools, ${r.latencyMs}ms` : `✗ ${r.error}`
   }
 
-  async function addWithTransport(transport) {
-    if (transport === "ai") {
-      const description = await askQuestion("Describe the MCP server you want to add (e.g. 'a filesystem server that gives access to /tmp'):")
-      if (!description) return
-      pushLine("[mcp] Generating config from description...", C.dim)
-      try {
-        const { chat } = await import("../provider/index.mjs")
-        const res = await chat(agent.provider, {
-          messages: [{
-            role: "user",
-            content: `Generate an MCP server configuration JSON from this description. Return ONLY the JSON object, no explanation.
+  /** F2 确认循环（D-1 v2）：预览+探活 → Save? (Y/n)；失败 → Save anyway? (y/N)
+   *  （显式 y——探活失败的坏配置不能被回车顺手存进去）→ 回 fieldPicker 重输
+   *  （AC2：retryEntry 回调复用同一表单、已改值保留）→ 复 probe。返回 entry / null。 */
+  async function confirmLoop(entry, retryEntry) {
+    for (;;) {
+      pushLabel(`❯ MCP Preview`, ansi.bold + C.tool)
+      const probe = await probeLineFor(entry)
+      showPreview(entry, probe)
+      if (probe.startsWith("✓")) {
+        pushLine("[mcp] Probe OK. Review the preview above.", C.dim)
+        const ok = ((await askQuestion("Save? (Y/n):")) || "").trim().toLowerCase()
+        if (ok === "" || ok === "y" || ok === "yes") return entry
+        return null
+      }
+      pushLine("[mcp] Probe failed — fix it in the form, or save anyway and fix after restart.", C.dim)
+      const ok = ((await askQuestion("Save anyway? (y/N):")) || "").trim().toLowerCase()
+      if (ok === "y" || ok === "yes") return entry
+      // 探活失败 = 回 fieldPicker 选中失败字段重输（机制天然合一——不再有独立 retry 路径）
+      const retried = await retryEntry(entry)
+      if (!retried) return null
+      entry = retried
+    }
+  }
+
+  /** F4：AI 生成配置（transport picker 末位——文案不再首推）。生成的 entry 同走
+   *  预览+探活+确认环（F2 语义一致；仍显式 y 确认）。 */
+  async function addWithAI() {
+    const description = await askQuestion("Describe the MCP server you want to add (e.g. 'a filesystem server that gives access to /tmp'):")
+    if (!description) return
+    pushLine("[mcp] Generating config from description...", C.dim)
+    try {
+      const { chat } = await import("../provider/index.mjs")
+      const res = await chat(agent.provider, {
+        messages: [{
+          role: "user",
+          content: `Generate an MCP server configuration JSON from this description. Return ONLY the JSON object, no explanation.
 
 Description: "${description}"
 
@@ -247,79 +175,131 @@ Example HTTP: {"name":"filesystem","url":"https://example.com/mcp","headers":{"A
 Example stdio: {"name":"filesystem","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"]}
 
 Return ONLY the JSON object:`,
-          }],
-          tools: [],
-          signal: AbortSignal.timeout(15_000),
+        }],
+        tools: [],
+        signal: AbortSignal.timeout(15_000),
+      })
+      const jsonMatch = (res.content ?? "").match(/\{[\s\S]*\}/)
+      if (!jsonMatch) { pushLine("[mcp] AI response not valid JSON", C.error); return }
+      const srv = JSON.parse(jsonMatch[0])
+      if (!srv.name) { pushLine("[mcp] AI response missing 'name' field", C.error); return }
+      // F2：同一预览+探活+确认环；探活失败回 fieldPicker 重输（AC2——AI 生成的 entry
+      // 字段不完整时可在表单里补齐/修正，mode add = name 可改）
+      const saved = await confirmLoop(srv, async (cur) => {
+        const r = await fieldPicker(ctx, {
+          title: `Fix MCP: ${cur.name ?? "ai"}`,
+          mode: "add",
+          entry: cur,
+          existingNames: getServers().map((s) => s.name),
         })
-        const jsonMatch = (res.content ?? "").match(/\{[\s\S]*\}/)
-        if (!jsonMatch) { pushLine("[mcp] AI response not valid JSON", C.error); return }
-        const srv = JSON.parse(jsonMatch[0])
-        if (!srv.name) { pushLine("[mcp] AI response missing 'name' field", C.error); return }
-        // Show preview and confirm
-        pushLine(`[mcp] Generated config: ${JSON.stringify(srv)}`, C.tool)
-        const confirm = await askQuestion("Add this server? (y/n):")
-        if (confirm?.toLowerCase() !== "y") { pushLine("[mcp] Cancelled", C.dim); return }
-        await addAndConnect(ctx, srv)
-      } catch (err) {
-        pushLine(`[mcp] AI generation failed: ${err.message}`, C.error)
-      }
-      return
-    }
-    const name = await askQuestion("Server name:")
-    if (!name) return
-    const existing = (agent.config?.mcp?.servers ?? []).find((s) => s.name === name)
-    if (existing) { pushLine(`[mcp] "${name}" already exists`, C.error); return }
-    if (transport === "stdio") {
-      const cmd = await askQuestion("Command (e.g. npx, python):")
-      if (!cmd) return
-      const argsInput = await askQuestion("Arguments (space-separated, or leave empty):")
-      const cmdArgs = argsInput ? argsInput.split(/\s+/) : undefined
-      const envInput = await askQuestion("Environment variables (KEY=value, comma-separated, or leave empty):")
-      const env = envInput ? parseHeaders(envInput) : undefined
-      await addAndConnect(ctx, { name, command: cmd, args: cmdArgs, env })
-    } else {
-      const urlPrompt = transport === "ws" ? "WebSocket URL (ws://…):" : "HTTP URL (https://…):"
-      const url = await askQuestion(urlPrompt)
-      if (!url) return
-      // F6②：token 一等字段——单行粘贴替代手工拼 Authorization header
-      const token = ((await askQuestion("Auth token (Bearer, optional):")) || "").trim()
-      const headersInput = await askQuestion("Headers (key=value, comma-separated, or leave empty):")
-      const headers = headersInput ? parseHeaders(headersInput) : undefined
-      const srv = transport === "ws"
-        ? { name, wsUrl: url, headers: Object.keys(headers ?? {}).length > 0 ? headers : undefined, token: token || undefined }
-        : { name, url, headers: Object.keys(headers ?? {}).length > 0 ? headers : undefined, token: token || undefined }
-      await addAndConnect(ctx, srv)
+        return r.action === "save" ? r.entry : null
+      })
+      if (saved) await addAndConnect(ctx, saved)
+      else pushLine("[mcp] Cancelled", C.dim)
+    } catch (err) {
+      pushLine(`[mcp] AI generation failed: ${err.message}`, C.error)
     }
   }
 
+  /** F1/F3b（D-1 v2）：add 流程——fieldPicker 空 entry 起（必填 (required) 标注、
+   *  只填所选字段、headers/env 不选即跳过）→ 预览+探活+确认环 → addAndConnect。 */
+  async function addWithTransport(transport) {
+    if (transport === "ai") { await addWithAI(); return }
+    const entry = {}
+    const existingNames = getServers().map((s) => s.name)
+    const formOpts = {
+      title: `Add MCP: ${transport === "ws" ? "WebSocket" : transport === "http" ? "HTTP" : "stdio"}`,
+      mode: "add",
+      transport,
+      existingNames,
+    }
+    const first = await fieldPicker(ctx, { ...formOpts, entry })
+    if (first.action === "cancel") return
+    const saved = await confirmLoop(first.entry, async (cur) => {
+      const r = await fieldPicker(ctx, { ...formOpts, entry: cur })
+      return r.action === "save" ? r.entry : null
+    })
+    if (saved) await addAndConnect(ctx, saved)
+    else pushLine("[mcp] Cancelled", C.dim)
+  }
+
+  /** F4：transport picker——HTTP / WebSocket / stdio / AI（末位，文案不再首推）。 */
   async function addFlow() {
-    // Pick transport type first, then ask name + URL/command
     const te = await showPicker("MCP Transport", [
-      { type: "header", text: "Select transport or use AI assist" },
-      { type: "item", text: "🤖 Describe with AI — natural language → config", action: "ai" },
+      { type: "header", text: "Select transport" },
       { type: "item", text: "HTTP (https://…)", action: "http" },
       { type: "item", text: "WebSocket (ws://…)", action: "ws" },
       { type: "item", text: "stdio (local command)", action: "stdio" },
+      { type: "item", text: "AI — describe in natural language", action: "ai" },
     ])
     if (te) await addWithTransport(te.action)
   }
 
-  /** remove/connect 的服务器选择 picker + 执行。返回 true = 已执行；false = Esc 取消。 */
-  async function pickAndRun(action) {
+  /** 服务器选择共用：带 name 直达（校验存在性）；无 name → picker。返回 srv / null。
+   *  NF1：带 name 的直达路径语义与旧实现逐字一致（空列表也报 no server named）。 */
+  async function resolveServer(nameArg, { title, headerText }) {
     const servers = getServers()
+    if (nameArg) {
+      const srv = servers.find((s) => s.name === nameArg) // NF1：与旧直达路径逐字一致（精确匹配）
+      if (!srv) {
+        pushLine(`[mcp] no server named "${nameArg}" (${servers.map((s) => s.name).join(", ") || "none configured"})`, C.error)
+        return null
+      }
+      return srv
+    }
     if (servers.length === 0) {
       pushLine("[mcp] no MCP server configured", C.error)
-      return true
+      return null
     }
-    const subEntries = [
-      { type: "header", text: action === "remove" ? "Select server to remove" : "Select server to reconnect" },
+    const se = await showPicker(title, [
+      { type: "header", text: headerText },
       ...servers.map((s) => ({ type: "item", text: `${s.name} (${s.wsUrl ?? s.url ?? s.command})`, name: s.name })),
-    ]
-    const se = await showPicker(action === "remove" ? "Remove MCP Server" : "Reconnect MCP", subEntries)
-    if (!se) return false // Esc 取消
-    if (action === "remove") await removeServer(se.name)
-    else await connectServer(se.name)
-    return true
+    ])
+    if (!se) return null // Esc 取消
+    return servers.find((s) => s.name === se.name) ?? null
+  }
+
+  /** F4（§4 资产）：`/mcp test [name]`——probeMcpServer 一次性探活（零副作用）。 */
+  async function testServer(nameArg) {
+    const srv = await resolveServer(nameArg, { title: "Test MCP Server", headerText: "Select server to test" })
+    if (!srv) return
+    pushLine(`[mcp] Testing ${srv.name}...`, C.dim)
+    const r = await probeLineFor(srv)
+    pushLine(`[mcp] ${srv.name}: ${r}`, r.startsWith("✓") ? C.tool : C.error)
+  }
+
+  /** F3（D-1 v2）：edit = 字段 picker 表单——fieldPicker 列可编辑字段行（URL/Token/
+   *  Headers 或 Command/Args/Env；name 不可改——无 name 行）+ `✓ Save & test`；
+   *  收集完成走 confirmLoop（预览+探活+确认；探活失败回同一 fieldPicker——AC2/AC5）
+   *  → persistRaw 原位替换保数组序 → connectServer 自动重连。取消 → 零保存。 */
+  async function editServerWithConfirm(srv) {
+    const name = srv.name
+    const entry = cloneEntry(srv) // 工作副本——取消不污染原配置
+    const formOpts = { title: `Edit MCP: ${name}`, mode: "edit" }
+    const first = await fieldPicker(ctx, { ...formOpts, entry })
+    if (first.action === "cancel") { pushLine("[mcp] Edit cancelled — nothing saved", C.dim); return }
+    const saved = await confirmLoop(first.entry, async (cur) => {
+      const r = await fieldPicker(ctx, { ...formOpts, entry: cur })
+      return r.action === "save" ? r.entry : null
+    })
+    if (!saved) { pushLine("[mcp] Edit cancelled — nothing saved", C.dim); return }
+    await persistRaw((raw) => {
+      const servers = raw.mcp?.servers
+      if (!Array.isArray(servers)) return
+      const idx = servers.findIndex((s) => s?.name === name)
+      if (idx === -1) return
+      servers[idx] = configEntry(saved) // 原位替换——数组序保持
+    })
+    agent.config.mcp.servers = getServers().map((s) => (s.name === name ? saved : s))
+    pushLine(`[mcp] ${name} updated`, C.tool)
+    await connectServer(name) // F3：自动重连
+  }
+
+  /** edit 入口：`/mcp edit [name]`——带 name 直达，否则 picker 选择。 */
+  async function editFlowWithConfirm(nameArg) {
+    const srv = await resolveServer(nameArg, { title: "Edit MCP Server", headerText: "Select server to edit" })
+    if (!srv) return
+    await editServerWithConfirm(srv)
   }
 
   // Direct args: /mcp list │ /mcp add │ /mcp http|ws|stdio|ai │ /mcp edit [name] │ /mcp test [name] │ /mcp remove [name] │ /mcp connect [name]
@@ -327,64 +307,75 @@ Return ONLY the JSON object:`,
   if (sub === "list") { listServers(); return }
   if (sub === "add") { await addFlow(); return }
   if (sub === "http" || sub === "ws" || sub === "stdio" || sub === "ai") { await addWithTransport(sub); return }
-  if (sub === "edit") { await editFlow(args[1]); return }
+  if (sub === "edit") { await editFlowWithConfirm(args[1]); return }
   if (sub === "test") { await testServer(args[1]); return }
   if (sub === "remove" || sub === "connect") {
-    const name = args[1]
-    if (name) {
-      const servers = getServers()
-      if (!servers.some((s) => s.name === name)) {
-        pushLine(`[mcp] no server named "${name}" (${servers.map((s) => s.name).join(", ") || "none configured"})`, C.error)
-        return
-      }
-      if (sub === "remove") await removeServer(name)
-      else await connectServer(name)
-      return
-    }
-    // 已明确 remove/connect 意图但没带 name → 直接进服务器选择 picker，不落主菜单
-    await pickAndRun(sub)
+    const srv = await resolveServer(args[1], {
+      title: sub === "remove" ? "Remove MCP Server" : "Reconnect MCP",
+      headerText: sub === "remove" ? "Select server to remove" : "Select server to reconnect",
+    })
+    if (!srv) return
+    if (sub === "remove") await removeServer(srv.name)
+    else await connectServer(srv.name)
     return
   } else if (sub) {
     pushLine("Usage: /mcp [list|add|edit [name]|test [name]|http|ws|stdio|ai|remove [name]|connect [name]]", C.error)
     return
   }
 
-  // 主菜单循环：选中即关闭，子菜单 Esc 返回主菜单，主菜单 Esc 退出
+  // F7/D-2 主菜单循环：列表即菜单（server 行 → per-server 子菜单；Esc 回主菜单），
+  // 顶部固定 agent 代配提示行（F5②）+ 每轮边界磁盘重读（F5①/D-3）。
+  // 主菜单 Esc 退出；Add/Refresh 动作后 continue（Refresh 显式重开菜单重读磁盘）。
+  // server 行 action 用 `@name:` 命名空间——与 add/refresh 保留动作永不撞名
+  //（server 可以叫 "add" 或 "refresh"）。
   for (;;) {
+    await reloadFromDisk()
     const servers = getServers()
+    const connected = (s) => agent.tools.some((t) => t._mcpName === s.name)
+    const toolCount = (s) => agent.tools.filter((t) => t._mcpName === s.name).length
     const entries = [
-      { type: "header", text: `${servers.length} MCP servers configured` },
-      { type: "item", text: "View list", action: "list" },
-      { type: "item", text: "Add server", action: "add" },
+      { type: "header", text: "Tip: complex configs — ask the agent to edit the mcp.servers section of ~/.thincoder/config.json directly, then Reconnect here" },
     ]
+    if (diskUnreadable) entries.push({ type: "header", text: "⚠ disk config unreadable — showing in-memory state" })
     if (servers.length > 0) {
+      // D-3/T23 对账：disk 删除/变更的已连接 server——连接不断，行尾 ⚠ disk changed
+      const drift = (s) => (changedNames.includes(s.name) ? " — ⚠ disk changed" : "")
       entries.push(
-        { type: "item", text: "Edit server", action: "edit" },
-        { type: "item", text: "Test connection", action: "test" },
-        { type: "item", text: "Remove server", action: "remove" },
-        { type: "item", text: "Reconnect server", action: "connect" },
+        { type: "header", text: `${servers.length} MCP server${servers.length === 1 ? "" : "s"} configured` },
+        ...servers.map((s) => ({ type: "item", text: `${serverLine(s, connected(s), toolCount(s))}${drift(s)}`, action: `@${s.name}:` })),
       )
+    } else {
+      entries.push({ type: "header", text: "No MCP servers configured" })
     }
+    entries.push(
+      { type: "item", text: "+ Add server", action: "add" },
+      { type: "item", text: "↻ Refresh", action: "refresh" },
+    )
     const e = await showPicker("MCP", entries)
     if (!e) return // Esc 退出
-    if (e.action === "list") {
-      listServers()
-      return
+    if (e.action === "add") { await addFlow(); continue }
+    if (e.action === "refresh") continue // 重开菜单即重读磁盘（reloadFromDisk 在循环顶部）
+    if (!e.action.startsWith("@")) continue // 未知动作防御——回主菜单
+    // 选中 server 行 → per-server 子菜单：Edit config / Test connection / Reconnect / Remove
+    const name = e.action.slice(1, -1)
+    const se = await showPicker(`MCP: ${name}`, [
+      { type: "header", text: "Server actions" },
+      { type: "item", text: "Edit config", action: "edit" },
+      { type: "item", text: "Test connection", action: "test" },
+      { type: "item", text: "Reconnect", action: "connect" },
+      { type: "item", text: "Remove", action: "remove" },
+    ])
+    if (!se) continue // 子菜单 Esc → 回主菜单
+    const srv = getServers().find((s) => s.name === name)
+    if (se.action === "edit") await editFlowWithConfirm(name)
+    else if (se.action === "test") await testServer(name)
+    else if (se.action === "connect") {
+      if (srv) await connectServer(name)
+      else pushLine(`[mcp] no server named "${name}"`, C.error)
+    } else if (se.action === "remove") {
+      if (srv) await removeServer(name)
+      else pushLine(`[mcp] no server named "${name}"`, C.error)
     }
-    if (e.action === "add") {
-      await addFlow()
-      continue
-    }
-    if (e.action === "edit") {
-      await editFlow()
-      return
-    }
-    if (e.action === "test") {
-      await testServer()
-      return
-    }
-    const done = await pickAndRun(e.action)
-    if (!done) continue // 子菜单 Esc → 回主菜单
-    return
+    continue
   }
 }
