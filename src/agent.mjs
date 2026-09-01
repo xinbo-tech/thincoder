@@ -184,16 +184,25 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
           agent._compressFailures = 0
           agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
           recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
-          callbacks.onCompress?.()
+          // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode: "summary", tokensFreed, elapsedMs }
+          // from compressIfNeeded, or { mode: "fallback", tailMessages } from compressFallback below —
+          // the TUI panel renders the matching completion state. Existing callers that ignore the
+          // argument keep the exact previous onCompress semantics.
+          callbacks.onCompress?.(agent._lastCompressInfo ?? {})
           ensureAutoReminder(agent)
         }
       } catch (compressError) {
         // AbortError must not be swallowed: user cancellation must propagate
         if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
         agent._compressFailures = (agent._compressFailures ?? 0) + 1
+        // Q3 visibility (CONTEXT-COMPACTION §7 D-C1): a failed compression is no longer silent —
+        // the frontend updates the compression panel with the error text (and logs to stderr).
+        // Failure STRATEGY is unchanged: COMPRESS_FAILURE_LIMIT consecutive failures still degrade
+        // to compressFallback — this only adds observability.
+        callbacks?.onCompressFail?.(compressError)
         if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
           agent._compressFailures = 0
-          if (compressFallback(agent)) callbacks.onCompress?.()
+          if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})
         }
       }
     }
