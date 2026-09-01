@@ -533,7 +533,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 - finally 中若 `_asyncSubagents` 有 **running + queued** 项 → **收尾补位循环**（评审 #2 定死：**保持并发上限 ≤4 串行补位**——当前 running settle 一个才启动下一个 queued，不解除上限；`Promise.allSettled` 在补位循环完成后对最终 running 集合取快照）再 `await Promise.allSettled([...promises])`——等全部完成后，把报告/错误**注入会话**（pushReal 一条 user 角色 `[System reminder: async subagent #id (role) finished]` + 报告或错误文本，**报告文本做 XML 转义**——评审 #7，子代理报告可能含来自文件/网页的注入面内容，遵循 reminder 纪律；超长报告（>64K）注入预览 + 落盘路径）——主会话下一回合可见结果。**已知权衡（评审 #8 声明）**：结果在最终回复后才注入，父侧 verify/advisor guard 不复检这批改动——靠 §7.1 子代理自带自评（verify + advisor）兜底，下回合模型可见并处理
 - 注入后清空 `_asyncSubagents`
-- **`⟦ev⟧done` 收尾事件（code review #7 补记）**：回合收尾集合完成后，对每个 entry 发 `${relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e` token（TUI tool-events 消费以冻结区块）——§7.2 D1 "tool/done phase 不发 token" 的**§15 例外**（该句原意是同步子代理的 tool/done 由 onToolResult 前缀 relay 承担；async 子代理的完成发生在父工具返回之后，需显式 done 事件通知 TUI 冻结）
+- **`⟦ev⟧done` 事件（code review #7 补记 + 用户问题 2026-09-02 修正发射时机）**：**每个 async entry 在 promise settle 时立即发** `${relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e` token（subagent.mjs 的 settle 回调发，非回合收尾统一发）——完成即冻结、冻结块位置 = 完成时刻的会话流位置（对齐同步子代理行为；用户实证：收尾统一发导致"直到所有任务完成后才变灰 + 冻结块堆在会话末尾结论之后"）。回合收尾 collectAsyncSubagents 不再发 done（只注入 reminder + 清空）——收尾时仍在跑的最后几个经 settle 回调发 done（主会话已结束，块在末尾，合理）——§7.2 D1 "tool/done phase 不发 token" 的**§15 例外**（该句原意是同步子代理的 tool/done 由 onToolResult 前缀 relay 承担；async 子代理的完成发生在父工具返回之后，需显式 done 事件通知 TUI 冻结）
 - **async 子代理权限交互（评审 #2 补）**：后台子代理撞权限门时审批面板照常弹出（`_permQueue` 串行化，不与其他权限请求重叠）；回合收尾等待把"待审批"视为**可解析状态**——用户批准 → 子代理 settle → 等待完成；无用户在场（headless/无审批回调）→ 权限请求按既有 no-permission-handler 语义拒绝，子代理失败返回（不悬挂）。
 - **使用层级（评审 #4 定死）**：`async: true` 仅 **depth-0 主会话**有效——depth>0 子代理内传 async → 报错拒绝（"async spawn only available at the top level"）；后台子代理撞 turn-cap → **自动拒绝继续（不弹 continue 面板）**，子代理失败返回（报告带 turn-cap 原因）——不打扰主会话
 - **中断/resume 生命周期（评审 #3 定死）**：Ctrl+C 中断 → abort 传播（subagent 的 signal 传递），未完成项随 abort 失败（AbortError 语义），**`_asyncSubagents` 立即清空（不注入陈旧错误）**——用户显式停；ContinueError（turn cap）→ **finally 不等待不注入，`_asyncSubagents` 原样保留**（避免延迟 continue 面板），resume 后回合收尾语义顺延（下轮 turn-end 再收尾）
@@ -580,6 +580,9 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 ### 15.6 两端对齐（VS Code，2026-09-02 用户确认）
 
 VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/subagent.mjs`——独立上下文 runAgent(depth=1)、role 白名单、并行 spawn、eng-coder designToken 多槽）——**本节全部机制两端同实现**：async 分支 + subagent_check（readonly）+ 回合收尾 + 上限（`MAX_PARALLEL_SUBAGENTS` 3→4 + ASYNC_SUBAGENT_LIMIT=4）。VS Code 无 TUI 面板——子代理活动走 webview 活动流（onToolPanel），async 子代理活动照常显示，收尾注入走既有会话消息通道。
+
+**完成态同修（2026-09-02 修复轮，D-A3 对齐）**：async 子代理 settle 即发 `onSubagent({ id, role, status: "done" })` 通知（subagent.mjs `runChild` 完成路径——与 CLI `⟦ev⟧done` settle 即发同语义，回合中完成即通知，不等到收尾）；webview 消费端 `handleSubagentMessage`（webview/panels.js）收到 done/error 即折叠对应活动区块（`sub:role#id` / `sub:escalate <tag> #id` 键匹配——保留可展开、不移除，对齐 CLI 冻结语义；此前只有 consult 区块在终态折叠，subagent/escalate 区块会保持"运行中"外观直到回合结束）。
+
 
 
 ## 16. 工具使用优化：approval 批确认 + 批量形态引导（2026-09-02，用户问题：工具操作并行化评估）
