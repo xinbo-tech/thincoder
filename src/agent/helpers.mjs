@@ -35,6 +35,17 @@ export const REPORT_CONTINUATION =
 const TOOL_RESULT_OFFLOAD_LIMIT = 64 * 1024 // 65536 chars — offload only above 64K (2026-08-24)
 const TOOL_RESULT_PREVIEW = 64 * 1024 // chars shown inline when offloaded (aligns with CLI/VS Code webview)
 
+/** UTF-16 安全截断（2026-09-02 deepseek 400 根因）：slice(0, N) 按码元切会把 emoji 代理对切成孤立
+ *  高代理（如 🔴=U+D83D+DD34 只剩 D83D）——deepseek 解析器严格 UTF-16 报 400
+ *  "unexpected end of hex escape"。截断点落在高代理上时向前收一个码元。
+ *  与 setup.mjs 的 safeSliceUTF16 同语义（两处独立实现——escape.mjs 的 sanitizeLoneSurrogates 是发送兜底，此处是源头）。 */
+function safeSliceUTF16(text, max) {
+  if (text.length <= max) return text
+  const cp = text.charCodeAt(max - 1)
+  if (cp >= 0xd800 && cp <= 0xdbff) return text.slice(0, max - 1)
+  return text.slice(0, max)
+}
+
 /** Offload-dir write-time self-cleanup retention window (2026-08-21): files older than 3 days are deleted on the next offload. */
 export const TMP_RETENTION_MS = 3 * 24 * 3600 * 1000
 
@@ -87,12 +98,12 @@ export async function offloadToolResult(text, callId, dir = join(configDir, "too
     const file = join(dir, `${Date.now()}-${String(callId).replace(/[^a-zA-Z0-9_-]/g, "_")}.log`)
     await writeFile(file, text, "utf8")
     return (
-      text.slice(0, TOOL_RESULT_PREVIEW) +
+      safeSliceUTF16(text, TOOL_RESULT_PREVIEW) +
       `\n\n[... output too large (${text.length} chars total), full content saved to: ${file}\n` +
       `Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do NOT re-run the tool blindly.]`
     )
   } catch {
-    return text.slice(0, TOOL_RESULT_OFFLOAD_LIMIT) + `\n\n[... truncated: ${text.length} chars total, offload to disk failed]`
+    return safeSliceUTF16(text, TOOL_RESULT_OFFLOAD_LIMIT) + `\n\n[... truncated: ${text.length} chars total, offload to disk failed]`
   }
 }
 
