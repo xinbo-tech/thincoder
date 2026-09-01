@@ -110,7 +110,7 @@ function settleToolBlock(state, name, toolId, summary) {
 /** Async spawn detection (§15 D-A1): the subagent tool's async:true result is a
  *  status JSON ({id, role, status: running|queued}), NOT a report — the child
  *  keeps running, so its activity block must not be frozen at spawn time (it
- *  freezes via the ⟦ev⟧done event at turn-end collection). A real blocking
+ *  freezes via the ⟦ev⟧done event emitted at settle time — §15 D-A3). A real blocking
  *  report that happens to parse as this shape is a freak accident; the only
  *  consequence would be a late block freeze at turn end (cosmetic). */
 function isAsyncSpawnResult(result) {
