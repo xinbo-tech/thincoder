@@ -8,6 +8,7 @@ import assert from "node:assert/strict"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { readFileSync, writeFileSync, rmSync } from "node:fs"
+import { createServer } from "node:http"
 
 import { createSlashCommands, SLASH_COMMANDS, SLASH_ALIASES, HANDLERS } from "../src/tui/slash-commands.mjs"
 
@@ -423,45 +424,68 @@ test("handleSlash: /mcp remove 无服务器时提示且不开 picker", async () 
 
 test("cmd-mcp: 原本无 mcp 配置时 Add server 后回主菜单计数更新（快照过期回归；§5 新菜单形态）", async () => {
   const { handleMcpCommand } = await import("../src/tui/cmd-mcp.mjs")
+  const { removeMcpTools } = await import("../src/mcp.mjs")
+  // D-Q1（2026-09-02）：探活 ✗ 无保存通道——add 要完成必须 probe ✓；旧死端口 +
+  // save-anyway "y" 流程已废除，改用真实 POST-only server（探活 + 连接均成功）
+  const server = createServer((req, res) => {
+    if (req.method === "GET") {
+      res.writeHead(405, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ error: "Method Not Allowed" }))
+      return
+    }
+    let body = ""
+    req.on("data", (d) => (body += d))
+    req.on("end", () => {
+      const msg = JSON.parse(body)
+      const result = msg.method === "initialize"
+        ? { protocolVersion: "2024-11-05", capabilities: {}, serverInfo: { name: "t", version: "1" } }
+        : msg.method === "tools/list" ? { tools: [] } : {}
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result }))
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const ctx = mockCtx()
   ctx.agent.config = {} // 原本无 mcp 配置 —— 旧代码 ?? [] 拿到游离数组
   ctx.configPath = join(tmpdir(), `thincoder-slashmcp-${process.pid}-${Date.now()}.json`) // reloadMcpFromDisk 注入
   writeFileSync(ctx.configPath, JSON.stringify({}))
-  const questions = ["s1", "http://127.0.0.1:9/", "", "y"] // name / url / token 空 / save-anyway（连接必失败）
+  const questions = ["s1", `http://127.0.0.1:${server.address().port}/mcp`, ""] // name / url / token 空（无确认问句——D-Q1）
   const menus = []
   const formRounds = []
-  await handleMcpCommand({
-    ...ctx,
-    askQuestion: async () => questions.shift() ?? "",
-    showPicker: async (title, entries) => {
-      if (title === "MCP") {
-        menus.push(entries)
-        // 第一轮选 Add server；第二轮 Esc 退出
-        return menus.length === 1 ? entries.find((e) => e.action === "add") : null
-      }
-      if (title === "MCP Transport") return entries.find((e) => e.action === "http")
-      if (title.startsWith("Add MCP")) {
-        formRounds.push(entries)
-        const seq = ["field:name", "field:url", "field:token", "save"]
-        return entries.find((e) => e.action === seq[Math.min(formRounds.length - 1, 3)]) ?? entries.find((e) => e.action === "save")
-      }
-      return null
-    },
-    persistRaw: async (mutate) => {
-      const raw = JSON.parse(readFileSync(ctx.configPath, "utf8"))
-      mutate(raw)
-      writeFileSync(ctx.configPath, JSON.stringify(raw))
-    },
-  }, [])
   try {
+    await handleMcpCommand({
+      ...ctx,
+      askQuestion: async () => questions.shift() ?? "",
+      showPicker: async (title, entries) => {
+        if (title === "MCP") {
+          menus.push(entries)
+          // 第一轮选 Add server；第二轮 Esc 退出
+          return menus.length === 1 ? entries.find((e) => e.action === "add") : null
+        }
+        if (title === "MCP Transport") return entries.find((e) => e.action === "http")
+        if (title.startsWith("Add MCP")) {
+          formRounds.push(entries)
+          const seq = ["field:name", "field:url", "field:token", "save"]
+          return entries.find((e) => e.action === seq[Math.min(formRounds.length - 1, 3)]) ?? entries.find((e) => e.action === "save")
+        }
+        return null
+      },
+      persistRaw: async (mutate) => {
+        const raw = JSON.parse(readFileSync(ctx.configPath, "utf8"))
+        mutate(raw)
+        writeFileSync(ctx.configPath, JSON.stringify(raw))
+      },
+    }, [])
     assert.equal(menus.length, 2, "add 完成后回到主菜单")
     assert.ok(
       menus[1].some((e) => e.type === "header" && /1 MCP server configured/.test(e.text)),
       "第二轮主菜单计数为 1（reloadMcpFromDisk 幂等——自写配置不标 ⚠）",
     )
-    assert.match(texts(ctx), /\[mcp\] s1:/, "连接失败提示（config saved）")
+    assert.match(texts(ctx), /\[mcp\] Connecting s1/, "探活 ✓ 直接保存 → add 走连接（D-Q1）")
   } finally {
+    removeMcpTools(ctx.agent, "s1")
     rmSync(ctx.configPath, { force: true })
+    server.close()
   }
 })
 
