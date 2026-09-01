@@ -76,7 +76,7 @@ thincoder/
 │   │   ├── web.mjs       # websearch / fetch
 │   │   ├── patch.mjs     # apply_patch / delete（JS 自动语法预检 autoSyntaxCheck 内置）
 │   │   ├── shared.mjs    # 工具共享工具函数
-│   │   ├── linter.mjs    # lint（node --check / eslint）
+│   │   ├── linter.mjs    # lint（node --check / 语言级联：tsc/ruff/cargo/go vet——eslint 2026-09-02 §10.2 删除）
 │   │   ├── lsp.mjs       # LSP 代码智能
 │   │   ├── codemode.mjs  # 沙箱代码执行（execute 工具）
 │   │   ├── checklist.mjs # 项目级 checklist 管理

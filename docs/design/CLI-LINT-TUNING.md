@@ -1,5 +1,7 @@
 # CLI Lint 引入 — 设计（CLI）
 
+> ⚠️ **已被 TOOLS.md §10.2 取代（2026-09-02）**：ESLint 全套已删除，改为零依赖 `node scripts/check-syntax.mjs`（node --check）。本文件保留为沿革快照，内容不再生效。
+>
 > 状态：**已实现**（2026-08-25 评审修订后实施；0 error 达成，668 测试全绿（普通模式直接实施））
 > 需求：`docs/design/CLI-LINT-REQUIREMENTS.md`
 > 关联：`docs/design/README.md`（文档地图）；规则基线参考 thincoder-vscode `eslint.config.mjs`

@@ -30,6 +30,7 @@
 
 - 现状：CLI `spec.context × 0.6`（resolveCompactThreshold）；VS Code `× 0.8`。
 - **统一**：显式 `config.agent.compactThreshold` 优先；否则 auto = `specForModel(model).context × 0.6`。
+  - **输入可被 provider 级覆盖**：`providers[].context`（K 单位）覆盖 MODEL_SPECS 的 context 后，阈值与 tail 公式（D4）跟随覆盖值（`providerSpec`，权威规格见 `PROVIDER.md §15`——公式权威不复制）。
 - 理由：0.6 为注入上下文（git/目录/outline/memory/文档，实测每轮 30–50K）+ 输出/reasoning（部分模型 maxOutput 384K）留余量；0.8 在 1M 窗口只剩 200K，刚压缩完可能又超。
 - **判定对象统一**：完整 prompt 估算（system + tools + history）≥ threshold 即触发。
   - CLI 现状缺口：纯估算路径不含 system/tools（首轮/恢复后/压缩后会漏算约 10–40K）。

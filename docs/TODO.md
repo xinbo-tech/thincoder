@@ -110,11 +110,11 @@
 - [x] ~~CLI `test/` 目录纳入 lint~~——已销账，见上节（2026-08-31）
 - [x] ~~config.schema.json 同步机制~~——**2026-08-31 用户裁定：彻底删除**（非放弃维护）。核实其从未闭环：①线上 URL（saveConfig 注入的 `https://thincoder.dev/schemas/config.json`）从未部署——thincoder.com 仓库无 schemas 目录；②代码从不消费该文件；③DEFAULTS 顶层 25 键仅覆盖 5，providers 层 20 键从未进 schema——维护成本 > 价值。处理：删 `docs/schemas/`、删 saveConfig 的 `$schema` 注入（今后写出的 config.json 不再带该字段，存量字段无害残留）、README 失实宣传行删除。ROADMAP-0.9.0 的历史计划条目按快照规范保留。
 
-### 开发体验三项（2026-09-02，来源：用户需求批——**设计定稿，待实现**，设计落点见各条）
+### 开发体验三项（2026-09-02，来源：用户需求批——**已实现（2026-09-02 两端落地）**，设计落点见各条）
 
-- [ ] **开发① 删 eslint 全套改 node --check**（TOOLS.md §10.2：devDependencies + eslint.config.mjs 删除，lint script 改 node scripts/check-syntax.mjs；CLI-LINT-REQUIREMENTS/TUNING.md 标记被取代）
-- [ ] **开发② 工具工作目录作用域限制全部移除**（TOOLS.md §10.1：resolveInCwd 去断言；git workdir/execute scriptFile 越界检查一并移除；工具描述同步）
-- [ ] **开发③ 模型上下文长度可配置（K 单位）**（PROVIDER.md §15：providers[].context 覆盖 spec；providerSpec 全链路跟随；CLI /model + VS Code settings 配置界面）
+- [x] **开发① 删 eslint 全套改 node --check**（TOOLS.md §10.2：devDependencies + eslint.config.mjs 删除，lint script 改 node scripts/check-syntax.mjs；CLI-LINT-REQUIREMENTS/TUNING.md 标记被取代）
+- [x] **开发② 工具工作目录作用域限制全部移除**（TOOLS.md §10.1：resolveInCwd 去断言；git workdir/execute scriptFile 越界检查一并移除；工具描述同步）
+- [x] **开发③ 模型上下文长度可配置（K 单位）**（PROVIDER.md §15：providers[].context 覆盖 spec；providerSpec 全链路跟随；CLI /model + VS Code settings 配置界面）
 
 ### 用户问题批（2026-09-02，来源：用户口头提出 5 条——**已实现（2026-09-02 落地）**，设计落点见各条）
 

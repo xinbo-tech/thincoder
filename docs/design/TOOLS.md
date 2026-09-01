@@ -33,7 +33,7 @@
 | **命令**（bash） | **零文本拦截**：破坏性命令（rm -rf/DROP TABLE 等）一律放行——恶意模型可用空白变体/heredoc/node -e 绕过，文本匹配拦不住且误伤正常操作；真实防线 = 审批层 + 快照。保留：`hasFileRedirection`（禁止 bash 写文件，路由到 write/edit，引导性非安全门）、`detectDanger`（危险标注只提示不拦截：recursive-delete/sudo/pipe-to-shell/dd/mkfs/raw-device/chmod-777/fork-bomb，审批面板红标，引号感知防 commit message 误标）、git 破坏操作快照后放行（gitGuardSnapshot，永不拦截）；超时 120s |
 | **网络**（websearch/fetch） | `isPrivateHost`（localhost/内网/云元数据 169.254.169.254）——SSRF 防护；响应体 ≤5MB；HTML 转文本（stripTags/htmlToText） |
 | **文件** | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 node --check 预检） |
-| **lint** | `node --check` fast path + eslint 级联（flat config 检测）——取代旧 syntax_check |
+| **lint** | `node --check` fast path + 语言级联（tsc/ruff/cargo/go vet）——~~eslint 级联~~（2026-09-02 §10.2 删除，零依赖） |
 | **lsp** | 按需 spawn LSP server（`process.execPath` 直跑，无 shell），语义级诊断/跳转兜底 |
 
 **execute 工具（沙箱）**：`import()` 动态加载被阻断（防沙箱逃逸）、`require()`/`process` 访问被禁、超时强杀——代码执行只出不进（模型在隔离环境跑用户代码）。
@@ -215,7 +215,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 ## 10. 工具作用域限制移除 + lint 基建零依赖化（2026-09-02，用户需求批：开发体验三项）
 
-> **状态：设计定稿，待实现**。用户裁定三项：① 删 eslint 全套改 node --check；② 工具工作目录作用域限制**全部移除**（bash 可绕过、拦不住还空耗 token）；③ 模型上下文长度可配置（见 PROVIDER.md 变更段）。
+> **状态：已实现（2026-09-02，开发①②；CLI 端）**。用户裁定三项：① 删 eslint 全套改 node --check（✅ §10.2）；② 工具工作目录作用域限制**全部移除**（bash 可绕过、拦不住还空耗 token）（✅ §10.1）；③ 模型上下文长度可配置（见 PROVIDER.md §15，开发③已实现）。
 
 ### 10.1 工具作用域限制移除
 
@@ -233,7 +233,11 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **受影响文件（两端，评审 #3 补全）**：`src/tools/shared.mjs`（resolveInCwd 去断言 + 删 assertInside）、file/edit-batch/patch/ops/tree/linter/system.mjs（resolveInCwd 调用方，保留函数名零改动）、**git.mjs（workdir isInside 移除）、codemode.mjs/execute（scriptFile 越界拒绝移除）、file_ops（目录限制移除）**、工具描述文本（"confined to workspace" 类措辞）、逃逸测试（CLI test/tools*.test.mjs + VS Code 对应，含 §7 T-w-2/T-e-3 更新）、**TOOLS.md §0/§0.1/§2 取代指针（评审 #2）**、AGENTS.md（目录限制纪律若提及则更新）。
 
+**受影响文件（CLI，✅ 2026-09-02 已实现）**：`src/tools/shared.mjs`（resolveInCwd ≡ resolveExternal，assertInside/realpath 双重检查删除）、`src/tools/git.mjs` + `src/tools/execute.mjs`（resolveBaseDir 去 isInside；execute scriptFile 越界检查移除）、`src/tools/file.mjs`（allowExternal 参数描述改 no-op）、工具描述（`execute.md`/`git.md`/`file_ops.md` + 工具定义 description）、`src/prompts/system.md`（工作目录边界规则改"路径相对 cwd 解析不做目录限制"——**VS Code 端待镜像**）、`test/tools.test.mjs`（T-W1/W2/W5 新增 + T-w-2/T-e-3 改语义 + apply_patch/file_ops 逃逸测试改写）。**VS Code 端文件集由并行任务处理（1b）**。
+
 **测试**：T-W1 外部路径（`../outside.txt`）read/write/edit 正常解析执行（不再抛 Access denied）| F1；T-W2 bash 与文件工具行为一致（同路径均可达）| F1；T-W3 工具描述无 "confined to workspace" 类措辞 | F2；T-W4 回归全量绿；**T-W5 symlink（评审 #11）**：workspace 内符号链接指向外部文件 → read 正常解析执行（realpathNearest 移除后语义）| D-W1。
+
+**测试（✅ 2026-09-02 已实现，`test/tools.test.mjs`）**：T-W1 ✅（read/write/edit `../` + 绝对路径原样解析（评审 round2 #5））；T-W2 ✅（bash 与文件工具同路径互达）；T-W3 ✅（描述文本 grep 干净：src/tools 无 confined/workspace 类措辞）；T-W4 ✅（全量回归绿）；T-W5 ✅（symlink 指向外部 → read 正常；Windows 无权限时 t.skip）。
 
 ### 10.2 lint 基建零依赖化（删 eslint 全套）
 
@@ -250,7 +254,11 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **受影响文件（两端）**：`package.json`（devDeps 删 + lint script 改）、`eslint.config.mjs`（删）、`scripts/check-syntax.mjs`（新增）、AGENTS.md/RELEASE.md（引用面）、CHANGELOG.md（父代理）。
 
+**受影响文件（CLI，✅ 2026-09-02 已实现）**：`package.json`（devDeps 删 + lint script 改 `node scripts/check-syntax.mjs`）、`eslint.config.mjs`（已删除）、`scripts/check-syntax.mjs`（新增，遍历 src/test/bin/scripts 含自检，可选路径参数供失败路径测试）、`src/tools/linter.mjs` + `lint.md`（eslint 级联分支删除，tsc/ruff/cargo/go 保留）、`src/prompts/discipline.md`（lint 路由行 "ad-hoc eslint runs" → "ad-hoc node --check runs"——**VS Code 端待镜像**）、CLI-LINT-REQUIREMENTS/TUNING.md（标记被取代）、docs/design/README.md（地图条目）。AGENTS.md/RELEASE.md 检查无 lint/eslint 提及（无需改）。**VS Code 端文件集由并行任务处理（1b）**。
+
 **测试**：T-L1 `npm run lint` = node --check 全量语法通过（0 报错）| F2；T-L2 `npm test` 回归全绿 | F1；T-L3 无 eslint 引用残留（grep eslint 于 package.json/scripts）| F1。
+
+**测试（✅ 2026-09-02 已实现，`test/lint.test.mjs`）**：T-L1 ✅（slow 测试：check-syntax 默认集全过；另命令级验证 `npm run lint`）；T-L2 ✅（全量回归绿）；T-L3 ✅（grep eslint 于 package.json/scripts/**src/**（评审 round2 #1 扩范围）零命中）；T-L4 ✅（评审 round2 #3 新增：坏文件非零退出 + 错误文件出现在清单——check-syntax 支持显式路径参数供注入）。
 
 ### 10.3 关键决策
 

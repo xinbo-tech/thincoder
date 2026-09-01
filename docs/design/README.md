@@ -16,7 +16,7 @@
 | 上下文压缩 | `CONTEXT-COMPACTION.md` | |
 | 路线图（历史） | `ROADMAP-0.9.0.md` | 0.9.0 已发布过，历史路线图归档保留 |
 | 发布流程 | `RELEASE.md` | npm 发布流程 + 踩坑记录（2026-08-25） |
-| CLI Lint 引入 | `CLI-LINT-REQUIREMENTS.md`、`CLI-LINT-TUNING.md` | ESLint 引入 + 21 error 清零（2026-08-25） |
+| CLI Lint 引入 | `CLI-LINT-REQUIREMENTS.md`、`CLI-LINT-TUNING.md` | ~~ESLint 引入 + 21 error 清零（2026-08-25）~~——**被 TOOLS.md §10.2 取代（2026-09-02）**：ESLint 全套删除，改零依赖 check-syntax（node --check） |
 | Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
 | 覆盖率缺口修复 | `COVERAGE-GAPS-REQUIREMENTS.md`、`COVERAGE-GAPS-TUNING.md` | 遗留测试覆盖收口（2026-08-25） |
 | 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25） |
@@ -55,3 +55,4 @@
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增板块「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）、「CLI Lint 引入」（CLI-LINT-*）与「发布流程」（RELEASE.md）；ROADMAP-0.9.0.md 归档标注（0.9.0 已过，现 0.12.x）
 - 2026-09-01：新增板块「Checkpoint 事故恢复」（CHECKPOINT.md，需求+设计+测试三层定稿）
+- 2026-09-02：CLI Lint 板块（CLI-LINT-*）标记**被 TOOLS.md §10.2 取代**——ESLint 全套删除，改零依赖 check-syntax（node --check）

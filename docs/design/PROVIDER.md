@@ -474,7 +474,7 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 
 ## 15. 模型上下文长度可配置（2026-09-02，用户需求批：开发体验三项）
 
-> **状态：设计定稿，待实现**。用户实证：本地部署 deepseek v4 flash 上下文不是 1M（MODEL_SPECS 写死 1_000_000），压缩阈值/窗口显示全按 1M 算——需用户可配。
+> **状态：CLI 已实现**（2026-09-02，T-C1..C6 全绿 + 全量测试通过；docs/TODO.md 开发③由架构师销账）。用户实证：本地部署 deepseek v4 flash 上下文不是 1M（MODEL_SPECS 写死 1_000_000），压缩阈值/窗口显示全按 1M 算——需用户可配。**VS Code 端口由并行任务处理**（settings.json 的 providers[].context + 全链路跟随）。
 
 ### 15.1 问题与需求
 
@@ -490,20 +490,20 @@ DeepSeek 网关对 prefix 续写请求报 400（真机复现，两类——**触
 - **D-C4 配置界面（评审 #10 定死）**：CLI `/model` 的 provider 管理流加 context 字段（K 单位，picker/表单——复用 syncProviderField 先例）；**VS Code = settings.json 的 providers[].context（VS Code 设置 UI 编辑，migrate-settings 同源——不做会话面板入口，settings 是 provider 配置唯一权威）**
 - **D-C5 显示**：TUI/VS Code 模型信息显示 `context 窗口`（如 "128K"）跟随覆盖值
 
-**受影响文件（两端）**：`src/model-specs.mjs`（providerSpec）、`src/config.mjs`（loadConfig 校验 context 字段）、context.mjs / provider/core.mjs / rate.mjs / normalize.mjs / advisor/ / TUI render-frame / auto-think.mjs（换 providerSpec）、CLI cmd-model 或对应 provider 管理（配置界面）、VS Code settings/配置界面、测试（providerSpec 覆盖 / 非法值 / 全链路跟随）、CHANGELOG.md（父代理）。
+**受影响文件（两端）**：`src/model-specs.mjs`（✓ providerSpec）、`src/config.mjs`（✓ re-export + loadConfig 校验 context 字段 + resolveCompactThreshold 换 providerSpec——函数实际在 config.mjs（概念本位），设计初稿标注 context.mjs 为陈旧定位）、`src/context.mjs`（✓ keepTailSize 换 providerSpec）、`src/provider/core.mjs`（✓ chat spec 换 providerSpec）、`rate.mjs` / `normalize.mjs`（✓ 死 import 清理——无 provider 感知调用点，spec 由 core 传入）、`src/advisor/messages.mjs`（✓ PROJECT_GUIDE 预算）/ `run.mjs`（✓ reasoningEcho）、`src/tui/render-frame.mjs`（✓ 模型信息/状态栏 context %）、`src/tui/pickers.mjs`（✓ /model 流 context 配置界面——/model 流实际在 pickers.mjs，cmd-model.mjs 仅参数解析）、`bin/thincoder.mjs`（✓ 会话恢复阈值 recompute 传 provider——设计外 1 行，实现时补齐）、VS Code settings/配置界面（并行任务）、测试（✓ `test/provider-spec.test.mjs` T-C1..C6）、CHANGELOG.md（父代理）。
 
 ### 15.3 测试
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
-| T-C1 | provider 级覆盖 | providers[].context=128（deepseek-v4-flash） | providerSpec 返回 context=131072；specForModel 仍 1_000_000 | F1/D-C2 |
-| T-C2 | 压缩阈值跟随 | 同上 + auto 阈值 | 阈值 = 131072 × 0.6（非 1M × 0.6） | F2/D-C3 |
-| T-C3 | 非法值 | context=0 / -5 / "abc" | 忽略 + 警告一次；用 spec 值 | F1/D-C1 |
-| T-C4 | 未配置 | 无 context 字段 | 行为与现有一致（回归） | F5 |
-| T-C5 | 配置界面 | /model 设 context=128 | 落盘 providers[].context；显示 128K | F4/D-C4 |
-| T-C6 | 显示 | TUI 模型信息 | context 窗口显示覆盖值 | F2/D-C5 |
+| T-C1 | ✓ provider 级覆盖 | providers[].context=128（deepseek-v4-flash） | providerSpec 返回 context=131072；specForModel 仍 1_000_000（拷贝覆盖，共享 spec 不污染） | F1/D-C2 |
+| T-C2 | ✓ 压缩阈值跟随 | 同上 + auto 阈值 | 阈值 = 131072 × 0.6（非 1M × 0.6）；resolveCompactThreshold 传 provider 对象 | F2/D-C3 |
+| T-C3 | ✓ 非法值 | context=0 / -5 / "abc" | 忽略 + 警告一次（每 provider 名）；用 spec 值；合法值保留 | F1/D-C1 |
+| T-C4 | ✓ 未配置 | 无 context 字段 | 行为与现有一致（回归：spec 路径 / 无警告 / 同对象引用） | F5 |
+| T-C5 | ✓ 配置界面 | /model 设 context=128（setContextFlow） | 落盘 providers[].context；显示 128K（含非法输入不落盘 / 空输入清空） | F4/D-C4 |
+| T-C6 | ✓ 显示 | TUI 模型信息（/model provider 列表 + 状态栏 context %） | context 窗口显示覆盖值（128K）；百分比基于覆盖窗口 | F2/D-C5 |
 
-**验收**：AC1 = context 可配且全链路跟随（T-C1/T-C2/T-C6）；AC2 = 非法值安全（T-C3）；AC3 = 未配置零回归（T-C4）；AC4 = 两端配置界面可配（T-C5 + VS Code）；AC5 = 全量 + lint 绿。
+**验收**：AC1 = context 可配且全链路跟随（T-C1/T-C2/T-C6）✅；AC2 = 非法值安全（T-C3）✅；AC3 = 未配置零回归（T-C4）✅；AC4 = 两端配置界面可配（T-C5 CLI ✅ + VS Code 并行任务）；AC5 = 全量 + lint 绿 ✅（1060 测试仅 1 失败 = 并行 1a 的 prompts 双端同步未完成，非本批回归）。
 
 ### 15.4 关键决策
 

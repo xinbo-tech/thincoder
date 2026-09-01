@@ -1,5 +1,7 @@
 # CLI Lint 引入 — 需求（CLI）
 
+> ⚠️ **已被 TOOLS.md §10.2 取代（2026-09-02）**：ESLint 全套已删除，改为零依赖 `node scripts/check-syntax.mjs`（node --check）。本文件保留为沿革快照，内容不再生效。
+>
 > 状态：**已实现**（2026-08-25 实施完成：0 error / 668 测试全绿；普通模式直接实施，评审未走）
 > 关联：`docs/design/CLI-LINT-TUNING.md`（设计）、`docs/design/README.md`（文档地图）
 > 范围：本仓库（thincoder CLI）；VS Code 扩展已有 eslint（0 error），本批不动 vscode 端

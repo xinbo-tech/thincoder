@@ -20,7 +20,7 @@
 
 | 工具 | 说明 |
 |------|------|
-| `linter` | 自动检测项目 linter（node --check 快路径 + eslint/tsc/ruff/cargo/go vet 级联）——已取代旧 syntax_check |
+| `linter` | 自动检测项目 linter（node --check 快路径 + tsc/ruff/cargo/go vet 语言级联——eslint 2026-09-02 §10.2 删除）——已取代旧 syntax_check |
 | `verify` | 预完成自检：语法检查+diff+自审清单，支持 `full=true` 全量测试 |
 
 ## 三、Shell 与搜索（5 个）
