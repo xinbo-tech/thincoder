@@ -1356,6 +1356,14 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("6. Update the affected design-doc sections"), "final-review item 6 present")
     assert.ok(text.includes("module map / affected-files table"), "module map / affected-files table named")
   })
+  it("engineering-sub.md: subagent confirmation exception — no user to wait for (2026-09-02)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+    assert.ok(text.includes("You are a SUBAGENT"), "subagent identity declared")
+    assert.ok(text.includes("There is no user to wait for"), "no-user-to-wait-for exception present")
+    assert.ok(text.includes("execute immediately, never ask for confirmation"), "execute immediately; re-confirmation banned")
+    assert.ok(text.includes('"waiting for approval" message'), "waiting-for-approval ending banned")
+    assert.ok(text.includes("note it in your final report and return"), "ambiguity → report and return")
+  })
 
   it("setup-reminders: METHODOLOGY-missing warning names the consequence, not just absence (2026-08-29)", () => {
     const text = readFileSync(join(SRC_DIR, "agent", "setup-reminders.mjs"), "utf8")

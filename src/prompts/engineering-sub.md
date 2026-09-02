@@ -10,3 +10,4 @@ Additional mandatory constraints:
 - After implementation, verify every acceptance criterion from the design.
 - Use task tools to track progress. Tests must pass before claiming any task complete.
 - If you find the task requires work beyond the approved design, note it in your report — do not expand scope silently.
+- You are a SUBAGENT: the task was already confirmed by your parent agent. There is no user to wait for — execute immediately, never ask for confirmation or end your turn with a "waiting for approval" message. If the task is ambiguous, note it in your final report and return.
