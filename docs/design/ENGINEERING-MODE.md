@@ -18,7 +18,7 @@
 |---|---|---|
 | FR1 | 设计先行 | 设计文档（三层）存在且通过设计评审前，任何代码文件（含 `src/prompts/*.md`）不可被修改 |
 | FR2 | 设计评审独立 | design review 由独立上下文执行；评审对象 = 调用时显式传入的文档清单，不遍历 git diff |
-| FR3 | 授权链 | 设计评审通过签发 token——连同**随机 designId**（**评审调用时生成、通过时入槽**——评审 #7 时机口径统一；不锚定文档路径/内容，避开 2026-08-31 已否决的"文档锚失效"问题）存于会话内多设计槽 `Map<designId,{token}>`；spawn eng-coder 必须携带 designId + 匹配 token（单设计时 designId 可省略）；token 纯内存态，重进后重新评审 |
+| FR3 | 授权链 | 设计评审通过签发 token——连同**随机 designId**（**评审调用时生成、通过时入槽**——评审 #7 时机口径统一；不锚定文档路径/内容，避开 2026-08-31 已否决的"文档锚失效"问题）存于会话内多设计槽 `Map<designId,{token}>`；spawn eng-coder 必须携带 designId + 匹配 token（单设计时 designId 可省略）；token 随会话 slot 持久化跨进程（TTL 7 天 fail-closed；评审 2026-09-02 #1 统一口径——见 §2.6 持久化边界） |
 | FR4 | 代码评审归属 | eng-coder 交付前自查（对照验收标准/文件范围，非 LLM）；父代理在 eng-coder 返回后调 `advisor(type="code")` 评审——修复循环在父代理与 eng-coder 之间闭环（eng-coder 子代理环境无法真实调用 LLM advisor，2026-08-01 裁定） |
 | FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现+修复建议、用户逐条拍板；**交付 code review 流程节点自动**（eng-coder 返回后自动，不问用户）；失败停止重试（2026-08-24 决策，见头部） |
 | FR6 | 范围约束 | eng-coder 不得修改 Implementation Handoff 文件清单外的任何文件；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
@@ -31,7 +31,7 @@
 |---|---|---|
 | NFR1 | 性能 | token 校验在 spawn 时同步完成（<10ms，无网络依赖）；design review 每轮一次 LLM 调用 |
 | NFR2 | 收敛性 | code review 最多 5 轮（MAX_ADVISOR_ROUNDS），第 6 次调用被机械拒绝；design 评审不消耗该预算 |
-| NFR3 | 安全 | token 机械匹配（正则锚定 + HMAC/TTL fail-closed）+ designId 定位槽；design 评审失败**不波及其他设计的槽**（2026-08-30 隔离逻辑扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL——已知取舍）；token 纯内存态（重进重新评审） |
+| NFR3 | 安全 | token 机械匹配（正则锚定 + HMAC/TTL fail-closed）+ designId 定位槽；design 评审失败**不波及其他设计的槽**（2026-08-30 隔离逻辑扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL——已知取舍）；token 随 slot 持久化跨进程（TTL 7 天 fail-closed，重进 TTL 内恢复、过期重新评审——评审 2026-09-02 #1） |
 | NFR4 | 兼容 | 两种模式互斥：工程模式禁用 `coder` 角色，普通模式禁用 `eng-coder`；行为不互相污染（提示词两套独立） |
 | NFR5 | 可维护 | 判定逻辑单一来源：`isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（相对路径语义）；对存绝对路径的 `_touchedFiles` 使用组件级匹配 `/(?:^|[\\/])src[\\/]/`（2026-08-01 实现修正，已接受）——统一用于门禁/guard/doc-only 判定 |
 | NFR6 | 可恢复 | eng-coder 失败/中断可重新 spawn（同 token）；advisor 工具失败不重试，向用户报告 |
@@ -99,7 +99,7 @@
 - 失效：design review 失败 → 该次调用的 designId 不入槽（本就为空）；**既有槽不被清除，旧 token 存活至 TTL**（用户拍板方案 ②，评审 #2：与已知取舍 #2 同窗口——需模型故意提取历史 token，接受；主防线为提示词纪律）。隔离性不变：任一评审结果不影响其他设计的槽（2026-08-30 隔离逻辑扩至多槽）。
 - 消费：不消费（一个设计可 spawn 多个 eng-coder，修正轮复用同 designId+token）。
 - 已知缺口：
-  - 重进/续跑后 token 丢失 → 重新设计评审（接受：评审-修复循环通常在同一会话内完成；跨会话继续属罕见路径）。
+  - 重进/续跑后 token 随 slot 恢复（TTL 内）；过期/换槽 → 重新设计评审（TTL 语义已覆盖原"接受"取舍——评审 2026-09-02 #1 统一）。
   - token 跨任务存活可复用——低风险接受（需模型故意提取历史 token）。
   - ~~多设计并行为单值 token，后签发覆盖前签发~~ → **2026-09-01 已解决**（designId 多槽集合；触发场景：同会话 memory_delete + §14 并行 spawn，单值覆盖致 §14 首 spawn 失败重跑）。
   - 复审失败后旧 token 存活至 TTL（2026-09-01 用户拍板方案 ②）——与取舍 #2 同窗口接受；主防线为提示词纪律（打回即修订复审，spawn 过时设计需模型主动绕过整条流程）。
@@ -110,13 +110,15 @@
 |---|---|---|
 | `src/agent/setup.mjs` | MODIFY | 提示词独立组装（工程模式不注入 main/discipline）；METHODOLOGY 缺失降级为工程模板+警告 |
 | `src/agent/dispatch.mjs` | MODIFY | 父代理门禁（isProductCode）；未知路径保守拦截——已实现（「语义一致化 4 项」已闭环） |
-| `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignReviewed；**2026-09-01**：评审调用生成随机 designId，**通过结果携带 designId 回显给父代理**（评审 #1——多设计首 spawn 的定向依据），通过时 token 存入 `_engDesignTokens` Map（多设计并存）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL） |
+| `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignToken（存入 _engDesignTokens Map——评审 2026-09-02 #3 修正；_engDesignReviewed 为 spawn 时子代理侧标志，非此处）；**2026-09-01**：评审调用生成随机 designId，**通过结果携带 designId 回显给父代理**（评审 #1——多设计首 spawn 的定向依据），通过时 token 存入 `_engDesignTokens` Map（多设计并存）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL） |
 | `src/advisor/messages.mjs` | MODIFY | design 分支按 documents 清单构建评审输入（替代 git diff 收集） |
 | `src/agent-tools/subagent.mjs` | MODIFY | mergeChildMutations（已有）；**2026-09-01**：spawn eng-coder 增 `designId` 参数（schema，可选），token 校验改按 `_engDesignTokens` 槽定位——单设计省略 designId 取唯一槽、多设计缺 designId 拒并要求指定、给定 designId 无匹配槽明确报错；修正轮 spawn 回传 designId |
 | 两端 `src/agent-tools/advisor.mjs` + `subagent.mjs` + `src/prompts/engineering.md` + 测试 | **VS Code 端镜像同步（评审 #5）**——engineering.md byte-identical 硬约束 + `_engDesignTokens` 两端同构；VS Code 测试同步加 designId/隔离断言；**VS Code 端 `advisor.mjs` paths 描述同步 CLI（"never inspects diffs"——2026-08-25 documents 改造时 VS Code 漏改，审计 #4 补记）** |
 | 两端 `run-helpers.mjs`（VS Code `agentState()`）/ `session.mjs`（CLI slot 持久化）/ `panel-session.mjs`（VS Code 往返） | **多槽序列化（2026-09-01 审计 #1 修复）**——`_engDesignTokens` Map 随 slot 持久化（VS Code 跨轮 agent 重建场景的必要补齐）；§2.6 持久化边界同步。序列化格式 `{ [designId]: token }`（JSON 安全），恢复 `new Map(Object.entries)`；旧 slot 无字段 → 不设 Map（fail-closed TTL 兜底过期 token）。**修复轮补记实际触点**：VS Code 恢复链 `panel-chat.mjs`（engState 携带）→ `setup.mjs`（恢复 Map）；清理对称（**审计修复 #2**）——两端 `agent-tools/eng.mjs`（exit + off→on）+ CLI `tui/cmd-eng.mjs` + `session.mjs` `resetSessionState` 同步 `_engDesignTokens = new Map()`，resolveDesignSlot 的"有 Map 无镜像"防护降级为防御冗余 |
+| 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复 |
+| 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复 |
 | 两端 `CHANGELOG.md` | 变更记录（下一版本号——0.12.54/0.8.9 已发布，评审 #3 补记） |
-| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：主代理发起 code review（范围 = Docs involved + 验收标准）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤3 并发/并行 spawn 调用形态 |
+| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：主代理发起 code review（范围 = Docs involved + 验收标准）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态 |
 | `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
 | `src/prompts/discipline.md` | 不动 | 普通模式专属（解耦原则） |
 | `src/prompts/main.md` | 不动 | 普通模式专属（解耦原则） |
@@ -133,7 +135,7 @@
 | advisor 工具失败/中断 | 停止重试，向用户报告（评审时机纪律） |
 | merge 冲突/异常 | mergeChildMutations 为纯内存操作，冲突不可能（单线程）；异常向上抛，父代理见错误结果 |
 | 并发 spawn（同一或不同 designId） | 允许（token 不消费）；各 eng-coder 携自己 designId+token 独立实现，父代理分别验收（2026-09-01 多设计并行） |
-| 会话恢复/重进 | token 不持久化（纯内存态）——重进后重新设计评审（接受） |
+| 会话恢复/重进 | token 随 slot 持久化（TTL 7 天 fail-closed）——重进 TTL 内恢复；过期/换槽才需重新设计评审（评审 2026-09-02 #1） |
 
 ## 3. 测试（Testing）
 
@@ -160,7 +162,8 @@
 | T5 | 边界：设计前写 src/prompts/*.md | 同上，写 src/prompts/x.md | 拒绝（isProductCode） | FR1 |
 | T6 | 边界：设计前写 docs/ 文档 | 同上，写 docs/design/x.md | 放行 | FR1 |
 | T7 | 错误：advisor 失败 | advisor 调用 aborted | 停止重试，报告中说明 | FR5 |
-| T8 | 边界：resume/重进后 token 丢失 | 会话恢复后 spawn | 需重新设计评审（接受） | FR3 |
+| T8 | 边界：resume/重进后 token 恢复（TTL 内） | 会话恢复后 spawn（同 slot、TTL 内） | token 校验通过，eng-coder 解锁写文件——不再重新评审（评审 2026-09-02 #1 重写） | FR3 |
+| T8b | 边界：角色互斥（评审 2026-09-02 #6 补） | 工程模式 spawn `role="coder"` | 拒绝（schema 枚举 + 运行期硬门禁） | NFR4 |
 | T9 | 正常：主代理评审 | eng-coder 实现 → 返回 → 父代理调 advisor(code) | 评审通过 → 对照验收标准验收 | FR4 |
 | T10 | 边界：评审范围显式化 | design review 传 documents=[X.md]，diff 含无关文档 Y.md | 只评审 X.md，Y.md 不被提及 | FR2 |
 | T11 | 边界：范围外写文件 | eng-coder 试图写文件清单外路径 | 停下报告，不静默扩展（eng-coder.md 纪律，机械层无此检查——记录为纪律保障） | FR6 |
@@ -180,7 +183,7 @@
 - **eng-coder 拦截型机械约束**：token 校验、写文件门禁。质量靠 eng-coder.md 自查 + 交付前自评。
 - **父代理拦截型机械约束**：design token 前写产品代码被拒。其余（等批准、不写实现、验收）靠 engineering.md 提示词。
 - **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 METHODOLOGY/README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) || !isDocFile(p)`（一致化已实现——「语义一致化 4 项」已闭环）。
-- METHODOLOGY.md 缺失：工程模板 + 警告（不再 fallback discipline）。
+- METHODOLOGY.md 缺失：工程模板 + 警告（不再 fallback discipline）；警告含模板**绝对路径**与**模板正文**（2026-09-02：模板可达性修复——模型可直接 read 或参考正文，不再手写）。
 
 ## 5. 配置与会话恢复
 
@@ -194,7 +197,7 @@
   - CLI `/advisor` guard 切换（`src/tui/cmd-advisor.mjs` `persistGuard`——仅 guard 双写，model/thinking/effort 仍 config-scoped）
   - VS Code：设置面板 ENG/GUARD toggle（`panel-messages.mjs` setSlotEngineering/setSlotAdvisorGuard + config 镜像）；`eng` 工具经 `engPersist: { cwd, slot }` 通道（top-level run 专属，subagent 不携带）；`agentState()`（run-helpers.mjs）随每轮 `saveLines` 把 live engineering/advisorGuard 带入槽位
 - agent 初值链（CLI）：`assembleAgent()` 从 config.json 播种 → `bin/thincoder.mjs` 启动 `applySession` 时 slot 值覆盖（TUI 单 agent 长驻，无 per-submit 重建）；VS Code：`setupAgentRun` 每轮从 `engState`（panel-chat 从槽位读）注入。
-- resume 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；**design token 不持久化**（纯内存态，重进重新评审）。
+- resume 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；design token **随 slot 持久化**（TTL 7 天 fail-closed，重进 TTL 内恢复；过期重新评审——评审 2026-09-02 #1 统一口径）。
 - 角色互斥：工程模式禁用 `coder`，普通模式禁用 `eng-coder`（schema 枚举 + 运行期硬门禁双保险）。
 
 ## 6. 已知取舍（评审记录）
@@ -222,7 +225,7 @@
 
 **受影响文件**：`src/agent/setup.mjs`（CLI）、`src/agent/run-helpers.mjs` + `src/agent/setup-reminders.mjs`（VS Code）、两端 `test/agent.test.mjs`（警告文本断言）。
 
-**验收**：AC1 = 无 METHODOLOGY.md 项目进入工程模式 → 警告含模板绝对路径 + 模板正文（D-M1/D-M2）；AC2 = 模型可沿该路径 read 到模板（真机可验证）；AC3 = 互动流程不变——仍由模型询问用户后生成（D-M3）；AC4 = 两端测试全绿（D-M5）。
+**验收**：D-AC1 = 无 METHODOLOGY.md 项目进入工程模式 → 警告含模板绝对路径 + 模板正文（D-M1/D-M2）；D-AC2 = 模型可沿该路径 read 到模板（真机可验证）；D-AC3 = 互动流程不变——仍由模型询问用户后生成（D-M3）；D-AC4 = 两端测试全绿（D-M5）。
 
 
 
@@ -233,7 +236,7 @@
 **改动**（全走 eng-coder，两端镜像——评审 #5）：
 1. `src/agent-tools/advisor.mjs`——评审调用生成 designId；**通过结果携带 designId 回显给父代理（评审 #1——多设计首 spawn 定向依据）**，通过时 token 入 `_engDesignTokens` Map（保留 `_engDesignToken` 单槽兼容）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL）
 2. `src/agent-tools/subagent.mjs`——eng-coder 增可选 `designId` 参数；token 校验按槽定位（单设计省略取唯一槽 / 多设计缺 designId 拒 / 给定 designId 无匹配拒）；修正轮回传 designId
-3. `src/prompts/engineering.md`——注入"Parallelize aggressively"（§14 纪律，顶层 system.md 不含）+ 多任务并行纪律（前置文件集交集检查 / ≤3 并发 / 依赖链串行 / 并行 spawn 调用形态）
+3. `src/prompts/engineering.md`——注入"Parallelize aggressively"（§14 纪律，顶层 system.md 不含）+ 多任务并行纪律（前置文件集交集检查 / ≤4 并发 / 依赖链串行 / 并行 spawn 调用形态——决策③ 取代原 ≤3）
 4. `test/agent.test.mjs` + `test/advisor.test.mjs`——T15-T18 + 多槽/隔离断言 + engineering.md 并行条款断言
 5. `docs/TODO.md`——"多设计并行 token 映射化"条目销账（09-01 规格定稿、评审通过后随 eng-coder 落地销账——落地前条目保持 Open，评审 #3 生命周期统一）；**VS Code 端镜像改动同批（评审 #5：engineering.md byte-identical + 两端同构 + vscode 测试）**
 
