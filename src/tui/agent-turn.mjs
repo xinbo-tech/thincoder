@@ -327,13 +327,19 @@ function backgroundStatusText(agent) {
 async function digestTurn(ctx) {
   const { agent, pushLine } = ctx
   const manual = !agent.autoApprove
+  const diagTs = Date.now()
+  console.error(`[diag] ${diagTs} digestTurn:enter manual=${manual}`)
   pushLine(manual
     ? "[auto-turn: digesting finished subagent reports…]"
     : "[auto-turn: continuing background work…]", C.dim)
   const digestCtx = manual
     ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null }
     : ctx
-  await runAgentTurn(digestCtx, "", { autoTurn: true, skipSession: true })
+  try {
+    await runAgentTurn(digestCtx, "", { autoTurn: true, skipSession: true })
+  } finally {
+    console.error(`[diag] ${Date.now()} digestTurn:exit elapsedMs=${Date.now() - diagTs}`)
+  }
 }
 
 /**
@@ -365,6 +371,7 @@ async function suspensionSession(ctx) {
   try {
     while (!state._suspAborted && !agent._sessionAbort.signal.aborted) {
       sweepSettledToPending(agent)
+      console.error(`[diag] ${Date.now()} suspensionSession:iter pending=${agent._pendingAsyncResults?.length ?? 0} pool=${agent._asyncSubagents?.size ?? 0} subQueue=${agent._asyncQueue?.length ?? 0} userQ=${state.pendingInput.length}/${state.queue.length} suspended=${agent._suspended}`)
       // 1. 用户输入优先（D-S5）：pendingInput 队列 + 消化期排队的 slash 命令
       const queuedText = state.pendingInput.length > 0 ? state.pendingInput.shift()
         : state.queue.length > 0 ? state.queue.shift().text : null
@@ -389,7 +396,9 @@ async function suspensionSession(ctx) {
       // 3. 池空（无 running/queued/未注入）→ 自然退出回 idle（补发冻结在 finally）
       if (!poolLive(agent)) break
       // 4. 等下一 settle / 用户唤醒（Enter 入队、Ctrl+C）
-      await waitForSettleOrWake(agent, state)
+      console.error(`[diag] ${Date.now()} suspensionSession:wait enter`)
+      const diagWhy = await waitForSettleOrWake(agent, state)
+      console.error(`[diag] ${Date.now()} suspensionSession:wait exit why=${diagWhy}`)
     }
   } finally {
     clearInterval(suspTick)

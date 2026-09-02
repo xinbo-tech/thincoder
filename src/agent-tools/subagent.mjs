@@ -286,11 +286,13 @@ export const subagentTool = {
         position: undefined,
         report: null, error: null, done: false,
         promise: null, _settle: null, _settleSeq: 0,
+        _spawnTs: Date.now(), // [diag] temporary instrumentation
       }
       // The settle signal — resolves when the run chain settles (never rejects).
       entry.promise = new Promise((res) => { entry._settle = res })
       entry.start = () => {
         entry.status = "running"
+        entry._startTs = Date.now() // [diag] temporary instrumentation
         entry.position = undefined
         // Deferred [model] emit: the TUI block is created at ACTUAL start.
         ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
@@ -303,6 +305,7 @@ export const subagentTool = {
           .then((report) => { entry.report = report })
           .catch((err) => { entry.error = err?.message ?? String(err) })
           .finally(() => {
+            console.error(`[diag] ${Date.now()} asyncSubagent:settle id=${entry.id} runMs=${Date.now() - (entry._startTs ?? entry._spawnTs)} queuedMs=${(entry._startTs ?? entry._spawnTs) - entry._spawnTs} suspended=${parent._suspended} waiters=${parent._asyncWaiters?.length ?? 0}`)
             entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
             entry.done = true
             // 完成信号按会话态分流（§17 D-S8 冻结门控 + D-S3 记账——以读取时刻为准，确定性）：

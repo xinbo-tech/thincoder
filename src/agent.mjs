@@ -119,7 +119,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   if (agent._pendingDistill) {
     const p = agent._pendingDistill
     agent._pendingDistill = null
+    const diagTs = Date.now()
+    console.error(`[diag] ${diagTs} runAgent:awaitPendingDistill enter autoTurn=${autoTurn}`)
     await p
+    console.error(`[diag] ${Date.now()} runAgent:awaitPendingDistill done elapsedMs=${Date.now() - diagTs}`)
   }
   // §17 D-S3: suspension-settled async results inject before EVERY run's prepareRun
   // (user + auto-turn); spliced = consumed. collectSettledAsync owns a different

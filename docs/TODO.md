@@ -144,3 +144,8 @@
 - [x] Project TODO 机制（docs/TODO.md）+ 方法论规范
 
 （本节已并入上方 Open 区同名条目，round3 #7 清理——此处不再保留）
+
+### async settle 挂起缺陷（2026-09-02，来源：用户实测——待复现定位）
+
+- [ ] **同回合两个 async 子代理——第二个完成后主 agent 长期 processing（十几分钟）卡住**（用户两次 Ctrl+C 均因此）：第一个正常注入，第二个"已完成（区块输出完毕）但主 agent 收不到"。候选卡点 A-D：digest LLM 挂起（600s fetchTimeout）/ runAgent 开头 await 上轮 `_pendingDistill`（distill LLM 挂起）/ digest 触发压缩摘要挂起 / settle 唤醒丢失。**诊断插桩已就绪**（4 文件 26 行 [diag] 日志——commit 见 git log "temporary diag instrumentation"——复现后撤除）。**复现**：同回合派两个 async → 第二个卡住时（先别 Ctrl+C）复制终端 [diag] 行。**判读**：digestTurn:enter 无 exit → 看 runAgent:awaitPendingDistill / compressIfNeeded:chatStart 有无 chatDone（B/C），皆无则 A（600s 后 chatFail 证实）；asyncSubagent:settle 有但 suspensionSession:wait exit 无 → D。复现后：定位修复 → 撤插桩 commit → 全量验证。
+

@@ -282,10 +282,18 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   // the lifecycle is surfaced, never the summary body. N = the number of history messages being summarized.
   callbacks?.onCompressStart?.({ messages: middle.length })
   const startedAt = performance.now()
-  const summary = await chat({ ...agent.provider, thinking: null, reasoningEffort: null }, {
-    messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
-    signal,
-  })
+  console.error(`[diag] ${Date.now()} compressIfNeeded:chatStart tokens=${Math.round(tokens)} middle=${middle.length}`)
+  let summary
+  try {
+    summary = await chat({ ...agent.provider, thinking: null, reasoningEffort: null }, {
+      messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
+      signal,
+    })
+  } catch (e) {
+    console.error(`[diag] ${Date.now()} compressIfNeeded:chatFail elapsedMs=${Math.round(performance.now() - startedAt)}`)
+    throw e
+  }
+  console.error(`[diag] ${Date.now()} compressIfNeeded:chatDone elapsedMs=${Math.round(performance.now() - startedAt)}`)
 
   applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
 
@@ -440,10 +448,18 @@ function serializeExplorationMessages(messages) {
  * whole assistant→tool blocks are removed, so no orphan tool_calls/tool can survive.
  */
 async function distillExplorations(history, start, provider, signal) {
-  if (!Array.isArray(history) || history.length - start < 2) return null
+  const diagTs = Date.now()
+  console.error(`[diag] ${diagTs} distillExplorations:enter hlen=${history?.length} start=${start}`)
+  if (!Array.isArray(history) || history.length - start < 2) {
+    console.error(`[diag] ${Date.now()} distillExplorations:exit reason=short`)
+    return null
+  }
   const blocks = findExplorationBlocks(history, start)
   const resultCount = blocks.reduce((n, b) => n + b.toolCount, 0)
-  if (resultCount < 3) return null
+  if (resultCount < 3) {
+    console.error(`[diag] ${Date.now()} distillExplorations:exit reason=few(${resultCount})`)
+    return null
+  }
 
   const serialized = blocks.map((b) => serializeExplorationMessages(b.messages)).join("\n")
 
@@ -451,15 +467,21 @@ async function distillExplorations(history, start, provider, signal) {
   try {
     // Silent by design (D11): thinking:null and no onToken/onReasoning — this internal
     // distillation must not stream to the frontend. signal propagates user cancellation.
+    console.error(`[diag] ${Date.now()} distillExplorations:chatStart serializedLen=${serialized.length}`)
     const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
       messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
       signal,
     })
+    console.error(`[diag] ${Date.now()} distillExplorations:chatDone elapsedMs=${Date.now() - diagTs}`)
     summary = resp?.content
   } catch {
+    console.error(`[diag] ${Date.now()} distillExplorations:chatFail elapsedMs=${Date.now() - diagTs}`)
     return null // N3: never block the run's return or lose history — original results stay
   }
-  if (!summary) return null
+  if (!summary) {
+    console.error(`[diag] ${Date.now()} distillExplorations:exit reason=emptySummary elapsedMs=${Date.now() - diagTs}`)
+    return null
+  }
 
   const drop = new Set()
   for (const b of blocks) for (let k = b.start; k < b.end; k++) drop.add(k)
@@ -473,6 +495,7 @@ async function distillExplorations(history, start, provider, signal) {
     }
     next.push(history[k])
   }
+  console.error(`[diag] ${Date.now()} distillExplorations:exit applied blocks=${blocks.length} elapsedMs=${Date.now() - diagTs}`)
   return next
 }
 
@@ -485,8 +508,13 @@ async function distillExplorations(history, start, provider, signal) {
  * compressed session (SEND-STALL-DISTILL §2.3).
  */
 export async function summarizeRunExplorations(agent, callbacks, signal) {
+  const diagTs = Date.now()
+  console.error(`[diag] ${diagTs} summarizeRunExplorations:enter`)
   const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal)
-  if (!next) return
+  if (!next) {
+    console.error(`[diag] ${Date.now()} summarizeRunExplorations:exit noop elapsedMs=${Date.now() - diagTs}`)
+    return
+  }
   agent.history = next
   // The machine line changed shape — the measured token baseline was for the pre-shrink context.
   // Invalidate so the next compaction check re-estimates instead of over-counting stale history.
@@ -495,4 +523,5 @@ export async function summarizeRunExplorations(agent, callbacks, signal) {
   // The compressed machine line must reach the disk: the run's own save already happened,
   // so without this hook the async distill would leave the session un-compressed on exit.
   callbacks.onDistilled?.()
+  console.error(`[diag] ${Date.now()} summarizeRunExplorations:exit applied elapsedMs=${Date.now() - diagTs}`)
 }
