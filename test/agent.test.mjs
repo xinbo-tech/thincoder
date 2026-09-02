@@ -3827,11 +3827,35 @@ test("prompts/eng-coder.md: 交付自查第 6 项——设计文档结构快照�
   assert.ok(text.includes("module map / affected-files table"), "模块地图/受影响文件表点名")
 })
 
-test("agent/setup.mjs: METHODOLOGY 缺失警告点名后果而非仅缺席（2026-08-29）", () => {
+test("agent/setup.mjs: METHODOLOGY 缺失警告——模板绝对路径 + 正文注入 + 询问引导保留（2026-09-02 D-M1..D-M3/D-AC1..D-AC2）", async () => {
   const text = readFileSync(join(SRC_DIR, "agent", "setup.mjs"), "utf8")
+  // 2026-08-29 既有断言保留：点名后果而非仅缺席
   assert.ok(text.includes("every 'per METHODOLOGY' reference in the engineering prompt is dangling"), "悬空引用后果点名")
   assert.ok(text.includes("three-document hard flow"), "硬流程后果点名")
+  // D-M3：恢复路径仍先问用户（确认后写 cwd/METHODOLOGY.md，不自动脚手架）
   assert.ok(text.includes("Ask the user whether to create METHODOLOGY.md"), "恢复路径：先问用户")
+  assert.ok(text.includes("write cwd/METHODOLOGY.md before designing"), "确认后写 cwd/METHODOLOGY.md")
+  // D-M1：模板路径为运行时解析的绝对路径（import.meta.url 同源拼接），静态相对路径已移除
+  assert.match(text, /resolve\(dirname\(fileURLToPath\(import\.meta\.url\)\)[^;]*methodology-template\.md/, "模板绝对路径解析表达式在")
+  assert.ok(!text.includes("scaffold available as src/prompts/methodology-template.md"), "静态相对路径已移除")
+  // D-M2：正文前缀为设计文档字面标注（与 VS Code setup-reminders.mjs 同文，两端一致）
+  assert.ok(text.includes("built-in template（可 read ${engResult.methodologyTemplatePath} 或直接参考以下内容）:"), "D-M2 标注句（设计文档字面）")
+  // D-AC2：该路径真实存在——模型可沿绝对路径 read 到模板
+  const tmplPath = join(PROMPTS_DIR, "methodology-template.md")
+  assert.ok(existsSync(tmplPath), "模板文件存在（模型可 read）")
+  // D-M2/D-AC1：缺失 METHODOLOGY.md 时返回模板绝对路径 + 模板正文（首行内容断言）
+  const { buildEngineeringPrompt } = await import("../src/agent/setup.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "thincoder-methodology-missing-"))
+  try {
+    const result = await buildEngineeringPrompt(cwd, "eng-coder")
+    assert.equal(result.methodologyMissing, true, "无 METHODOLOGY.md → methodologyMissing")
+    assert.ok(result.methodologyTemplatePath, "返回模板绝对路径")
+    assert.ok(result.methodologyTemplatePath.endsWith(join("prompts", "methodology-template.md")), "路径指向 methodology-template.md")
+    assert.ok(result.methodologyTemplateBody, "返回模板正文")
+    assert.ok(result.methodologyTemplateBody.startsWith("# METHODOLOGY — AI Agent Collaboration"), "模板首行内容注入")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
 })
 
 // 两端 15 文件 byte-identical：thincoder-vscode 不存在时动态 skip（如单独 clone CLI 仓库）
