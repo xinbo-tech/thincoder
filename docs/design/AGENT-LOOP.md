@@ -768,7 +768,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 18. 工程交付协议：eng-coder 默认 async + 内部自审计闭环（2026-09-02，用户重构裁定：链下沉 eng-coder 内部）
 
-> **状态：设计定稿（2026-09-02——round2 评审后用户方案重构，待复评审）**。用户实测痛点：同步 spawn 的 eng-coder 阻塞主会话——"功能目的就是 eng-coder 执行中主会话能去干别的"。初版设计（主会话跨 digest 自动链状态机）经 round1/round2 评审暴露状态机载体/驱动/停止机制缺陷后，**用户拍板重构：把交付后审计/修正/review 全部移入 eng-coder 子代理内部**——主会话只 spawn 一次（默认 async），子代理内部完成"实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛"后一次交付。主会话侧无链状态机。用户裁定要点：① eng-coder **默认 async**（§15 F4 修订）；② 交付协议在 **eng-coder 内部**闭环（B1 全自动——手动档也跑，无需用户在旁）；③ **eng-coder 工具集加 explore**（内部 spawn 同源偏差审计）；④ 收敛上限 5 轮修正；⑤ 双通道并行（§17 既有——用户输入与 async 子代理互不打断——无链状态可停）。
+> **状态：设计批准（2026-09-02 round5 通过——0🔴，4🟡+3🔵 advisory 已处置——designToken 已签发）**。用户实测痛点：同步 spawn 的 eng-coder 阻塞主会话——"功能目的就是 eng-coder 执行中主会话能去干别的"。初版设计（主会话跨 digest 自动链状态机）经 round1/round2 评审暴露状态机载体/驱动/停止机制缺陷后，**用户拍板重构：把交付后审计/修正/review 全部移入 eng-coder 子代理内部**——主会话只 spawn 一次（默认 async），子代理内部完成"实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛"后一次交付。主会话侧无链状态机。用户裁定要点：① eng-coder **默认 async**（§15 F4 修订）；② 交付协议在 **eng-coder 内部**闭环（B1 全自动——手动档也跑，无需用户在旁）；③ **eng-coder 工具集加 explore**（内部 spawn 同源偏差审计）；④ 收敛上限 5 轮修正；⑤ 双通道并行（§17 既有——用户输入与 async 子代理互不打断——无链状态可停）。
 
 ### 18.1 需求
 
@@ -791,6 +791,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ② 自查透明表（交付报告逐条 Done/Simplified/Not done——既有）
 ③ spawn explore 偏差审计——对照设计逐条查四类偏差
    （部分实现/静默简化/文档漂移/超清单改动——与 2026-08-30 主侧审计同规格）。
+   **文档漂移处置（round5 #5）**：eng-coder **永不编辑设计文档**（设计文档是输入非交付物——"清单外文件零触碰"含设计文档）——真实文档漂移（设计本身需改）→ 写入交付报告/stalled 注记——文档修订归架构师/父侧（防子代理改文档洗审计）
    **审计任务书独立性（round4 #4）**：任务书基于**父 spawn 任务书**（设计文档 + 验收标准 +
    受影响文件清单——架构师 spawn 时已传入——非 eng-coder 自由生成）；交付文件清单
    = 父任务书文件清单 ∪ eng-coder 实际 _touchedFiles 的**机械并集**（不取自 eng-coder 自述——
@@ -798,11 +799,11 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ④ 审计 dirty → 同一子代理回合继续自修（不需要第二个 spawn——invent nothing new：
     审计发现清单即任务）→ 回 ③（explore 再审计）
 ⑤ 审计 clean → 调 advisor（type=code，documents = 设计文档 + 交付文件清单）
-⑥ advisor 有需修 findings → 自修 → 回 ③/⑤（复评）
+⑥ advisor 有需修 findings → 自修 → 回 ⑤（advisor 复评）——**仅当修复触碰了上次评审未覆盖的文件**才先回 ③ 再审计（round5 #1 定稿路由）
 ⑦ clean → 交付报告：Done 透明表 + 审计轮次/评审轮次/终态（clean/stalled）
 ```
 
-- **收敛计数（评审 round3 #5 定稿——提示词轮次提醒）**：修正轮（④⑥的每次自修）计数 ≤5——**计数载体 = engineering-sub.md 每轮注入的"修正轮 N/5"提醒**（协议节点前模型自述轮次——工具层不加状态机——纯提示词纪律 + 报告自述终态）——超限即停，交付报告标注 `stalled` + 未收敛点清单（不静默）
+- **收敛计数（评审 round3 #5 定稿 + round5 #1 明确——提示词轮次提醒）**：修正轮（④⑥的每次自修——**④⑥ 共享同一计数**）计数 ≤5——**计数载体 = engineering-sub.md 每轮注入的"修正轮 N/5"提醒**（协议节点前模型自述轮次——纯提示词纪律 + 报告自述终态）——超限即停，交付报告标注 `stalled` + 未收敛点清单（不静默）。**机械后备（round5 #2）**：spawn-child 拒绝 eng-coder 子代理**第 7 次 explore 审计 spawn**（error 提示"修正轮超限——交付 stalled 报告"）——复用既有"节点失败重试 1 次仍败 → stalled"错误路径——5 轮纪律失效时不静默（提示词层 + 计数层双保险）
 - **父侧 NFR2/MAX_ADVISOR_ROUNDS 交互（round4 #5）**：父侧"第 6 次 advisor 调用机械拒绝"只约束父代理发起的 code review（ENGINEERING-MODE NFR2）——in-child advisor 调用豁免该计数（bounds = 子代理 100 turn 上限 + stalled 报告兜底——§18.4 N1 "复评 ≤6" 是子代理内部纪律估计，不触发父侧 NFR2）
 - **子代理 turn 上限交互（评审 round3 #4）**：内部协议回合计入子代理既有 100 turn 上限（§2）——大实现 + 审计≤6 + 复评≤6 可能撞 cap：撞 cap = 子代理按既有语义返回（手动档自动拒续——报告带 turn-cap 原因 = 部分交付不静默；工程模式 && AUTO → 自动续跑（§15 D-A3 例外既有））——协议不为此调高上限（AUTO 续跑兜底）
 - **主会话 digest 只做既有消化**（手动档：整理交付报告要点——交付报告自带审计/评审记录，用户一眼看到质量闭环状态；AUTO：可继续推进后续任务）
@@ -813,7 +814,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - **async 强制 false**（同步——eng-coder 内部回合等审计报告再决策——§15 顶层限制不变：async 仍仅 depth-0）
 - explore 审计报告经子代理 relay 注入 eng-coder 回合（既有 §7.1 管线——子代理区块/报告形态复用——无新接线）
 - 递归深度自然受控（explore 无 subagent 工具——审计链路不长于 1 层孙子）
-- **任务域授权（用户裁定——评审 round3 #1）**：授权点 = **spawn 时刻**（架构师 spawn eng-coder 前用户已批准设计+任务）→ eng-coder **内部所有写操作自动放行**（autoApprove 等效——豁免 §7 手动档子代理写透传父审批（:91 人在回路）/§15 D-A3 无 handler 拒绝（:542）——不弹逐写面板——与 18.3 "用户批准任务 = 授权" 一致）。**作用域限定**：任务域 = designId 对应设计文档 + 任务书文件清单（越界写仍受 eng-coder 纪律约束——交付偏差审计兜底（T-E13）。**交叉引用注**：§7 手动档子代理写透传（:91 人在回路）与 §15 D-A3 无 handler 拒绝（:542）的 blanket 句对 eng-coder 不再成立——两处同批加"eng-coder 例外见 §18 D-E3"指向（单源纪律）——T-E15 手动档写权限用例：autoApprove=false 会话中 eng-coder 写文件成功）。**非 eng-coder 子代理（explore/coder 等）手动档语义不变**（§7 人在回路保留）。实现：spawn eng-coder 时 child runOpts 置授权标志——**豁免粒度 = 仅 onPermissionRequest 阶段**（autoApprove 等效——round4 #3：Phase-1 清单的 JSON 解析/未知工具/planMode deny/design-token deny 照常生效——绝不全清单豁免）——受影响：src/dispatch 权限门（onPermissionRequest 分支）+ setup/spawn-child runOpts
+- **任务域授权（用户裁定——评审 round3 #1）**：授权点 = **spawn 时刻**（架构师 spawn eng-coder 前用户已批准设计+任务）→ eng-coder **内部所有写操作自动放行**（autoApprove 等效——豁免 §7 手动档子代理写透传父审批（:91 人在回路）/§15 D-A3 无 handler 拒绝（:542）——不弹逐写面板——与 18.3 "用户批准任务 = 授权" 一致）。**作用域限定**：任务域 = designId 对应设计文档 + 任务书文件清单（越界写仍受 eng-coder 纪律约束——交付偏差审计兜底（T-E13）。**交叉引用注（round5 #6 锚点化）**：§7「权限」条（手动档子代理写透传——人在回路）与 §15 D-A3「权限交互」条（无审批回调拒绝）的 blanket 句对 eng-coder 不再成立——两处同批加"eng-coder 例外见 §18 D-E3"指向（单源纪律——AC-E7）——T-E15 手动档写权限用例：autoApprove=false 会话中 eng-coder 写文件成功）。**非 eng-coder 子代理（explore/coder 等）手动档语义不变**（§7 人在回路保留）。实现：spawn eng-coder 时 child runOpts 置授权标志——**豁免粒度 = 仅 onPermissionRequest 阶段**（autoApprove 等效——round4 #3：Phase-1 清单的 JSON 解析/未知工具/planMode deny/design-token deny 照常生效——绝不全清单豁免）——受影响：src/dispatch 权限门（onPermissionRequest 分支）+ setup/spawn-child runOpts
 - explore 内部 spawn 只读——无权限门问题（§4 只读豁免）
 
 **D-E4 交付与消化（主会话侧）**：eng-coder settle → 交付报告注入（§15/§17 既有 collectSettled/pending 注入——无交付检测/链启动逻辑）→ 下一 digest/用户回合消化（手动档 digest 总结要点注入会话流——交付报告含"审计 N 轮 clean / advisor 复评 M 轮 clean/stalled"记录——质量闭环可见）。
@@ -841,7 +842,8 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
   - T-E13 域外写：eng-coder 写任务域外文件——机械上不拦（纪律层）——交付偏差审计报告含"超清单改动"标注（审计兜底可见）
   - T-E14 授权粒度：授权标志只豁免 onPermissionRequest 阶段——planMode/design-token 门仍在子代理内生效（回归）
   - T-E15 审计任务书独立性：内部 explore 审计任务书基于**父 spawn 任务书**（设计文档 + 验收标准 + 受影响文件清单）——非 eng-coder 自由生成（round4 #4）
-- 验收：AC-E1 = eng-coder 默认 async（T-E1/T-E2）；AC-E2 = 内部协议闭环（T-E3..E6）；AC-E3 = 收敛上限不静默（T-E7/T-E8）；AC-E4 = 受限 spawn 边界（T-E4/T-E5）；AC-E5 = 双通道与中止（T-E9）；AC-E6 = 两端全量绿（T-E10/E11）
+  - T-E16 **prompt 内容断言（round5 #4——工程惯例 T9/T-B4 式）**：engineering-sub.md 含协议步骤 + "修正轮 N/5"提醒（byte-identical 两端）；engineering.md 含 async 交付叙述（byte-identical 两端）+ **重断言 "Cap: at most 4 concurrent eng-coders"/"past 4"**（保 §15 T9 不破）；subagent schema async 描述 = 角色级默认措辞
+- 验收：AC-E1 = eng-coder 默认 async（T-E1/T-E2）；AC-E2 = 内部协议闭环（T-E3..E6）；AC-E3 = 收敛上限不静默（T-E7/T-E8）；AC-E4 = 受限 spawn 边界（T-E4/T-E5）；AC-E5 = 双通道与中止（T-E9）；AC-E6 = 两端全量绿（T-E10/E11）；AC-E7 = §7 权限条与 §15 D-A3 权限交互条同批加"eng-coder 例外见 §18 D-E3"指向（round5 #3——doc 断言随 T-E16）
 
 ### 18.3 关键决策
 
