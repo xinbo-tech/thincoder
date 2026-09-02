@@ -21,7 +21,7 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  it so the child's block freezes (the spawn tool result is a status JSON and
  *  must not freeze a still-running block). */
   // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
+export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 /** N2: per-child display-line ring buffer cap — oldest lines drop with a marker. */
 export const SUB_BLOCK_LINE_LIMIT = 500
 /** N1: render-layer throttle for child tool-output appends (generation relays verbatim). */
@@ -272,8 +272,22 @@ export function routeSubToken(state, t, scheduleRender) {
   // ⟦ev⟧ event token: turn/approval progress → header ONLY (never blocks,
   // never the main stream — D1). phase "done" (§15 D-A3): the async child
   // finished — freeze its block (it stayed live through the background run).
+  // phase "settled" (§17 D-S8 冻结门控): the child finished while the session is
+  // SUSPENDED — freeze is deferred: the block stays in the running panel with
+  // the "done · awaiting digestion" intermediate state until the pool drains
+  // (the suspension driver then 补发 the freeze — freezeAllSubTasks).
   if (payload.startsWith("⟦ev⟧")) {
     const ev = payload.match(SUB_EVENT_RE)
+    if (ev?.[1] === "settled") {
+      sub.done = true
+      sub.doneAt = Date.now()
+      sub.awaitingDigest = true
+      sub.currentTool = null
+      sub.approval = null
+      sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+      scheduleRender()
+      return true
+    }
     if (ev?.[1] === "done") {
       sub.done = true
       sub.doneAt = Date.now()

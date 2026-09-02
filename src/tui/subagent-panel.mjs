@@ -6,7 +6,9 @@
  * 运行中区块的渲染行数（F2，会话区被挤小）；无运行中区块 → 返回 []（F6 空态，
  * 无悬空分隔线）。子 agent 完成后立即冻结进会话流（subagent-blocks.mjs
  * freezeSubTaskLines，✓ 头 + 可展开，§7.2 D4 现状不变），面板下一帧自然移除
- * 该区块（F5）——本模块只渲染 `!done` 条目。
+ * 该区块（F5）——本模块只渲染 `!done` 条目。§17 T-S14 中间态例外：挂起期已结算
+ * 区块（sub.done && sub.awaitingDigest）冻结被延迟，驻留面板显示
+ * "done · awaiting digestion"，池空补发冻结后才移除。
  *
  * 中立模块（D1 评审 #6）：layout.mjs 调 renderSubagentPanel 预计算面板高度
  * （subagentLines → subagentH），render-frame.mjs 直接 put 预计算行（不重复
@@ -30,7 +32,7 @@ import { isExpanded, renderBlockTimeline, renderExpandedBlock, foldTailLines } f
  * @returns {Array<{text: string, color: string, ...}>}
  */
 export function renderSubagentPanel(state, cols, maxRows) {
-  const runningSubs = Object.values(state.subTasks ?? {}).filter((s) => !s.done)
+  const runningSubs = Object.values(state.subTasks ?? {}).filter((s) => !s.done || s.awaitingDigest)
   if (runningSubs.length === 0) return []
   const out = []
   // 面板顶部边界线（现状分隔线语义迁移，§7.2.1 D2/NF2）——面板存在即画线，
@@ -41,8 +43,8 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // 头部摘要：`[▶ coder#1 · glm-5.3 · 45s · turn 12/100] bash — npm test`
     // ⏸ = 等待审批态（sub.approval 非空，评审 #5 定义）；图标在括号内，
     // 与冻结头 `[✓ …]` 格式统一（任务简报 UI 决策）。
-    const icon = sub.approval ? "⏸" : "▶"
-    const elapsed = Math.floor((Date.now() - sub.started) / 1000)
+    const icon = sub.approval ? "⏸" : sub.done ? "✓" : "▶"
+    const elapsed = Math.floor(((sub.done ? (sub.doneAt ?? Date.now()) : Date.now()) - sub.started) / 1000)
     // 评审 #1 宽度预算：模型名先单独按显示宽度截断（[model] token 原样记录可长
     // 20-30+ 字符，不截断则括号前缀宽度不可预算、状态区被挤出终端右边距）；
     // 再量括号前缀实际显示宽度，状态区按 cols - bracketWidth - 2 截断——整行
@@ -56,6 +58,7 @@ export function renderSubagentPanel(state, cols, maxRows) {
     const bracketWidth = stringWidth(bracket)
     let statePart
     if (sub.approval) statePart = `等待审批: ${sub.approval}`
+    else if (sub.awaitingDigest) statePart = "done · awaiting digestion"
     else if (sub.currentTool) statePart = sub.currentTool
     else statePart = "thinking..."
     const argSummary = sub.currentTool && sub.toolArgs?.command

@@ -18,7 +18,7 @@ import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
 import {
   escapeXml, repairHistory, listWorkDir, ensureAutoReminder,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
-  ContinueError, offloadToolResult,
+  ContinueError,
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
 } from "./agent/helpers.mjs"
@@ -66,6 +66,12 @@ export const ENG_OFF_REMINDER =
   "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
   "guards apply per config.]"
 
+/** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
+ *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
+ *  mechanically denied (no permission handler + spawn gate); this steers first. */
+const AUTO_TURN_DIGEST_DOMAIN =
+  "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
+
 /** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
  *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
  *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */
@@ -107,59 +113,75 @@ export function createAgent({
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false } = {}) {
-  // Previous run's async exploration distillation must settle before this run pushes new
-  // input (SEND-STALL-DISTILL §2.2, N1): the compressed machine line is this run's starting
-  // point — await BEFORE prepareRun, or the history replacement would wipe the new input.
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false } = {}) {
+  // Previous run's async exploration distillation must settle before this run pushes
+  // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
     const p = agent._pendingDistill
     agent._pendingDistill = null
     await p
   }
+  // §17 D-S3: suspension-settled async results inject before EVERY run's prepareRun
+  // (user + auto-turn); spliced = consumed. collectSettledAsync owns a different
+  // container, so no double-inject across the two consumption points.
+  const pendingAsync = agent._pendingAsyncResults
+  if (pendingAsync?.length) {
+    const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
+    for (const e of pendingAsync.splice(0)) await injectAsyncResult(agent, e)
+  }
+  agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3)
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(
     agent, input, callbacks,
-    { depth, signal, overrideTurns, resume, systemPrompt: SYSTEM_PROMPT, disciplineRules: DISCIPLINE_RULES, mainOverlay: MAIN_OVERLAY },
+    { depth, signal, overrideTurns, resume: resume || autoTurn, systemPrompt: SYSTEM_PROMPT, disciplineRules: DISCIPLINE_RULES, mainOverlay: MAIN_OVERLAY },
   )
 
-  // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): prepareRun has already
-  // pushed the user input + injections, so everything appended from here is "this run's" work.
+  // Exploration-distillation boundary (CONTEXT-COMPACTION §5): prepareRun already
+  // pushed input + injections — appended from here counts as "this run's" work.
   agent._runStartHistoryLen = agent.history.length
 
-  // Per-run bookkeeping reset. On `resume` (ContinueError continuation) these are
-  // PRESERVED: the resumed run must keep mutation tracking so the advisor/verify
-  // guards stay active (a guard pushback on the last turn must not silently vanish),
-  // and the convergence budget must not be resettable by continuing the session.
+  // Per-run bookkeeping reset — PRESERVED on `resume` (ContinueError continuation):
+  // mutation/guard continuity and the convergence budget must survive a continuation.
   if (!resume) {
-    agent._mutatedThisRun = false
-    agent._verifiedThisRun = false
-    agent._verifyPassed = undefined
-    agent._calledAdvisorThisRun = false
-    agent._touchedFiles = []
-    agent._verifyRetries = 0
-    agent._advisorRound = 0
-    agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
-    agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
-    agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero
-    agent._asyncCheckLastN = 0 // subagent_check read counter is per-run (§15 D-A2): a fresh user turn restarts from 1
+    // §17 D-S6: an auto-turn's guard marks are inherited by the next USER run (not
+    // reset) so auto-turn changes never escape the guard silently.
+    const g = agent._inheritedGuard
+    if (g) {
+      for (const k of ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]) agent[k] = g[k]
+      agent._inheritedGuard = null
+    } else {
+      agent._mutatedThisRun = false
+      agent._verifiedThisRun = false
+      agent._verifyPassed = undefined
+      agent._calledAdvisorThisRun = false
+      agent._touchedFiles = []
+      agent._verifyRetries = 0
+      agent._advisorRound = 0
+      agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
+      agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
+      agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero
+      agent._asyncCheckLastN = 0 // subagent_check read counter is per-run (§15 D-A2): a fresh user turn restarts from 1
+    }
   }
-  // eng-coder authorization is set by subagent.mjs AFTER token validation but BEFORE runAgent —
-  // only reset for the top-level agent (depth 0); child runs must keep their granted authorization
+  // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).
+  if (autoTurn && !agent.autoApprove) {
+    agent.history.push({ role: "user", content: AUTO_TURN_DIGEST_DOMAIN, transient: true })
+  }
+  // eng-coder authorization is set by subagent.mjs AFTER token validation but BEFORE
+  // runAgent — only reset for the top-level agent (depth 0); child runs keep theirs
   if (depth === 0) agent._engDesignReviewed = false
-  // _engDesignToken survives across turns within the same agent (design review → user approval → spawn eng-coder).
-  // Lifecycle: invalidated on a failed re-review (advisor.mjs), issued on a passing review.
+  // _engDesignToken survives across turns (design review → approval → eng-coder spawn);
+  // lifecycle: invalidated on failed re-review (advisor.mjs), issued on a passing one.
   let guardPushbacks = 0
   let advisorPushbacks = 0
   let honestReminderInjected = false
   const recentCallSigs = []
-  // repeat: "once" stream rules fire at most once per runAgent call (user turn):
-  // this set survives across chat() calls (rule abort-retry, tool loop) within the turn.
+  // "once" stream rules fire at most once per runAgent call; the set survives across
+  // chat() calls (rule abort-retry, tool loop) within the turn.
   const streamRuleFired = new Set()
 
   // Compaction overhead for the pure-estimation path: system prompt + tools schema are
-  // part of every request but not in history — without them the first-turn/restored/just-
-  // compacted estimate under-counts and may never trigger compaction. Measured baseline
-  // path already includes both (prompt_tokens is the full context), so this only applies
-  // when _lastPromptTokens is null.
+  // in every request but not in history — without them the first-turn/just-compacted
+  // estimate under-counts and may never trigger. Measured path already includes both.
   const compactionOverhead = {
     systemPrompt,
     tools: toolSchemas,
@@ -171,10 +193,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // Update turn counter for status bar display
     agent._currentTurn = turn + 1
     agent._maxTurns = maxTurns
-    // D2 (AGENT-LOOP.md §7.2): depth>0 children emit a ⟦ev⟧turn progress token on every
-    // turn — a single emit point covering all three spawn tools (natural heartbeat for the
-    // TUI subagent block header: "turn N/max"). phase=llm (tool/done progress rides the
-    // existing onToolCall/onToolResult prefix relay — no token for those).
+    // D2 (AGENT-LOOP.md §7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
+    // single emit point covering all three spawn tools; phase=llm (tool/done progress rides
+    // the onToolCall/onToolResult relay — no token for those).
     if (depth > 0 && callbacks.onToken) {
       callbacks.onToken(`⟦ev⟧turn\x1e${turn + 1}\x1e${maxTurns}\x1ellm\x1e`)
     }
@@ -186,10 +207,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
           agent._compressFailures = 0
           agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
           recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
-          // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode: "summary", tokensFreed, elapsedMs }
-          // from compressIfNeeded, or { mode: "fallback", tailMessages } from compressFallback below —
-          // the TUI panel renders the matching completion state. Existing callers that ignore the
-          // argument keep the exact previous onCompress semantics.
+          // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode, tokensFreed, elapsedMs } —
+          // the TUI panel renders it; callers that ignore the arg keep prior onCompress semantics.
           callbacks.onCompress?.(agent._lastCompressInfo ?? {})
           ensureAutoReminder(agent)
         }
@@ -197,10 +216,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         // AbortError must not be swallowed: user cancellation must propagate
         if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
         agent._compressFailures = (agent._compressFailures ?? 0) + 1
-        // Q3 visibility (CONTEXT-COMPACTION §7 D-C1): a failed compression is no longer silent —
-        // the frontend updates the compression panel with the error text (and logs to stderr).
-        // Failure STRATEGY is unchanged: COMPRESS_FAILURE_LIMIT consecutive failures still degrade
-        // to compressFallback — this only adds observability.
+        // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
+        // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
         callbacks?.onCompressFail?.(compressError)
         if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
           agent._compressFailures = 0
@@ -210,8 +227,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     }
 
     // Plan-mode reminder cadence: re-inject constraint reminders while plan mode is active
-    // (sparse every 2 turns, full every 5 turns or when the user sends a new message),
-    // so the read-only restriction never fades from context.
+    // (sparse every 2 turns, full every 5 / on new user message) so the restriction never fades.
     if (agent.planMode) {
       const lastMsg = agent.history.at(-1)
       const realUserMsg = lastMsg?.role === "user"
@@ -227,9 +243,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       }
     }
 
-    // Engineering-mode status injection: every new user message carries a
-    // reminder so the model always knows whether it's in design-before-code
-    // mode or standard discipline mode.
+    // Engineering-mode status injection on every new user message (design-before-code
+    // vs standard discipline) — see injectEngineeringReminder.
     if (depth === 0) {
       injectEngineeringReminder(agent)
     }
@@ -237,8 +252,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     const messages = [{ role: "system", content: systemPrompt }, ...agent.history]
     let response
 
-    // Auto-think: classify task difficulty and set reasoning effort before the real prompt.
-    // Runs only on turn 0 of user input; failure is silent — falls back to current setting.
+    // Auto-think: classify difficulty and set reasoning effort on turn 0; silent on failure.
     if (agent.config?.agent?.autoThink && turn === 0) {
       const { classifyAndApply } = await import("./auto-think.mjs")
       await classifyAndApply(agent, turn).catch(() => {})
@@ -255,12 +269,12 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         firedPatterns: streamRuleFired,
       })
     } catch (e) {
-      // User interrupt (Ctrl+I): controller.abort({ interrupt: true, message: "…" }).
-      // Inject the message into history and let the outer loop recreate the controller.
+      // User interrupt (Ctrl+I): controller.abort({ interrupt: true, message }).
+      // Inject into history; the outer loop recreates the controller and resumes.
       if (e.name === "AbortError" && signal?.reason?.interrupt) {
         const msg = `[User interrupt: ${signal.reason.message}]`
-        // Dedup: if the interrupt was already handled during tool execution (L302-310),
-        // don't push a duplicate — the outer loop will still recreate the controller.
+        // Dedup: if already handled during tool execution (interrupt branch below),
+        // don't push a duplicate — the outer loop still recreates the controller.
         if (agent.history.at(-1)?.content !== msg) {
           agent.history.push({ role: "user", content: msg })
         }
@@ -268,11 +282,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       throw e
     }
 
-    // 内置工具（Responses web_search）结果本地化：服务端已执行——入历史为 tool 消息，
-    // 模型下一轮可见；全量回传时 transport 依 tool_call_id 前缀还原 web_search_call item。
-    // 注意：服务端 item id 是 msg_xxx 非 web_search_call_ 前缀——必须合成前缀（toItems 识别锚点），
-    // 原始 id 存入 content（真机冒烟 2026-08-31：直接用 msg_xxx 会被转成 function_call_output
-    // 与服务端不配对，属蒙对）。
+    // 内置工具（Responses web_search）结果本地化：服务端已执行——入历史为 tool 消息；
+    // 服务端 item id 是 msg_xxx 非 web_search_call_ 前缀——必须合成前缀（toItems 识别锚点），
+    // 原始 id 存入 content（真机冒烟 2026-08-31 验证）。
     for (const btr of response.builtinToolResults ?? []) {
       if (!btr?.id) continue
       pushReal(agent, {
@@ -282,8 +294,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       })
     }
 
-    // Stream rule triggered mid-generation (action: "abort"): halt current output,
-    // inject rule's message as a reminder, and retry from the same context.
+    // Stream rule triggered mid-generation (action: "abort"): halt, inject the rule's
+    // message as a reminder, retry from the same context.
     if (response.ruleTriggered) {
       if (response.content) {
         pushReal(agent, { role: "assistant", content: response.content })
@@ -296,9 +308,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       continue
     }
 
-    // Stream rule warnings (action: "warn"): the stream completed, but one or more
-    // non-interrupting rules matched. Inject warnings after the turn so the model
-    // sees them before its next response — without aborting mid-generation.
+    // Stream rule warnings (action: "warn"): stream completed; inject de-duplicated
+    // warnings so the model sees them before its next response.
     if (response._warnings?.length) {
       const deDuplicated = [...new Map(response._warnings.map(w => [w.name || w.pattern, w])).values()]
       agent.history.push({
@@ -307,9 +318,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       })
     }
 
-    // User interrupted mid-generation (Ctrl+I): the SSE stream was aborted while content
-    // was partially generated. Commit partial output + inject user message, then signal
-    // the outer loop to recreate the controller and resume.
+    // User interrupted mid-generation (Ctrl+I): commit partial output + inject the
+    // message, then signal the outer loop to recreate the controller and resume.
     if (response.interrupted) {
       if (response.content) {
         pushReal(agent, { role: "assistant", content: response.content })
@@ -329,8 +339,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       }
     }
 
-    // Warn on abnormal finish reasons — the model stopped for a reason other than
-    // "stop" or "tool_calls", meaning the response may be incomplete or truncated.
+    // Warn on abnormal finish reasons — the response may be incomplete/truncated.
     if (response.finishReason && response.finishReason !== "stop" && response.finishReason !== "tool_calls") {
       const reasonMap = {
         length: "output token limit reached after exhausting continuations",
@@ -351,12 +360,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       advisorPushbacks = cr.advisorPushbacks
       if (cr.action === "continue") continue
       if (depth === 0) {
-        // End-of-run exploration distillation (CONTEXT-COMPACTION §5): this run's inline
-        // exploration results become one semantic note before the final return. Async
-        // (SEND-STALL-DISTILL §2.1): the turn-end signal goes out first — the promise hangs
-        // on agent._pendingDistill and settles at the next runAgent's start or the TUI's
-        // exit flush. Silent (N3): distillation failure must never block the return or lose
-        // history.
+        // End-of-run exploration distillation (CONTEXT-COMPACTION §5 + SEND-STALL-DISTILL
+        // §2.1): async — the promise hangs on _pendingDistill, settling at the next run's
+        // start or the TUI exit flush. Silent (N3): failure never blocks return/history.
         const distill = summarizeRunExplorations(agent, callbacks, signal).catch(() => {})
         agent._pendingDistill = distill
       }
@@ -380,8 +386,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
 
     const results = await executeToolCalls(agent, toolByName, response.toolCalls, callbacks, depth, signal)
 
-    // Ctrl+I interrupt during tool execution: skip committing partial results —
-    // the tool failure messages would mislead the model. Inject the interrupt and retry.
+    // Ctrl+I interrupt during tool execution: skip committing partial results — inject
+    // the interrupt and retry (placeholder results keep strict providers pairable).
     if (signal?.reason?.interrupt) {
       // 中断变更记账（2026-08-31 评审 #4）：此分支的工具已全部执行完成（磁盘已变，execute 已完成），
       // 真实结果按语义不进历史（placeholder 替代）——但变更必须记账：否则 guard 看到
@@ -402,11 +408,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
           }
         } catch { /* 畸形 args 不影响记账（touchedFiles 尽力而为） */ }
       }
-      // The assistant tool_calls were already committed above (L347) — a strict
-      // provider 400s on dangling tool_calls, so synthesize placeholder tool
-      // results BEFORE the interrupt message (tool result must immediately
-      // follow its assistant tool_calls). The retry turn then sees a clean,
-      // pairable history (consult P1, 2026-08-30).
+      // The assistant tool_calls were committed above — synthesize placeholder tool
+      // results BEFORE the interrupt message (strict providers 400 on dangling
+      // tool_calls; consult P1, 2026-08-30).
       for (const tc of response.toolCalls) {
         agent.history.push({ role: "tool", tool_call_id: tc.id, content: "[Tool execution interrupted — results discarded]" })
       }
@@ -418,13 +422,11 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       continue
     }
 
-    // Model is executing tools → doing real work, reset guard pushback counter
+    // Model is executing tools → real work: reset guard pushback counters
     guardPushbacks = 0
     advisorPushbacks = 0
 
-    // Commit tool results (pairing, multimodal deferral, mutation accounting,
-    // touched files, reindex) — split into record-results.mjs (consult P2,
-    // 2026-08-30).
+    // Commit tool results (pairing, multimodal deferral, mutation accounting, reindex)
     await recordToolResults(agent, toolByName, results)
 
     injectPostTurn(agent, results, recentCallSigs, callbacks, turn)
@@ -438,56 +440,59 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // Turn-end cleanup: abort any leftover consultation children (consult_start spawns
     // fire-and-forget runners; a completed turn must not let them keep burning tokens).
     cleanupConsultSessions(agent)
-    // Async subagent turn-end collection (AGENT-LOOP.md §15 D-A3). Lifecycle:
-    // - Ctrl+C / Ctrl+I (signal aborted): children were aborted with the parent
-    //   signal — clear WITHOUT injecting stale errors (user explicitly stopped).
-    // - ContinueError (turn cap): no wait, no injection — children keep running
-    //   and the RESUME run's turn-end collection takes over.
-    // - anything else: refill loop → wait for all → inject reports → clear.
-    if (signal?.aborted) {
+    // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1). Lifecycle:
+    // - Ctrl+C (plain abort): children were aborted with the parent signal — clear
+    //   WITHOUT injecting stale errors (user explicitly stopped). Ctrl+I (interrupt)
+    //   keeps the pool: the turn resumes with the interrupt message, children stay
+    //   tracked (in a suspension session children hold agent._sessionSignal and a
+    //   digest's own Ctrl+I must not orphan them).
+    // - ContinueError (turn cap): no wait, no injection — children keep running and
+    //   the RESUME run's turn-end collection takes over.
+    // - anything else: inject the SETTLED entries only; running/queued stay in the
+    //   pool for the suspension session (D-S1 — no allSettled turn-end wait).
+    if (signal?.aborted && !signal?.reason?.interrupt) {
       agent._asyncSubagents?.clear()
       agent._asyncQueue = []
       agent._asyncCheckLastN = 0
     } else if (thrownError instanceof ContinueError) {
       // keep _asyncSubagents + the check counter — the resumed run continues them
     } else {
-      await collectAsyncSubagents(agent)
+      await collectSettledAsync(agent)
       agent._asyncCheckLastN = 0
+    }
+    agent._inAutoTurn = false
+    // §17 D-S6: auto-turn guard marks survive into the next USER run (restored at its
+    // !resume reset above). Normal ends only — abort discards; ContinueError lets the
+    // auto-resumed run snapshot at its own end.
+    if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
+      agent._inheritedGuard = {
+        _mutatedThisRun: agent._mutatedThisRun, _verifiedThisRun: agent._verifiedThisRun,
+        _verifyPassed: agent._verifyPassed, _calledAdvisorThisRun: agent._calledAdvisorThisRun,
+        _touchedFiles: agent._touchedFiles, _verifyRetries: agent._verifyRetries,
+        _advisorRound: agent._advisorRound,
+      }
     }
   }
 }
 
 /**
- * Turn-end async subagent collection (AGENT-LOOP.md §15 D-A3):
- * 1. refill loop — start queued heads while slots free (each settle already
- *    refills via its finally; this drains the tail), keeping the cap ≤4 serial.
- * 2. wait for every entry to settle (queued entries start through the refill
- *    chain — the drain loop converges when nothing is running and the queue is empty).
- * 3. inject one user-role reminder per entry: the report/error text XML-escaped
- *    (child reports may carry content from files/webpages — reminder discipline),
- *    >64K offloaded to disk with a preview + path.
- * 4. clear the map. (The ⟦ev⟧done freeze signal is NOT emitted here — D-A3
- *    2026-09-02: each entry's settle callback emits it at completion time so
- *    blocks freeze at their completion position in the stream.)
- */
-async function collectAsyncSubagents(agent) {
+ * Turn-end async subagent collection (AGENT-LOOP.md §17 D-S1): inject every entry
+ * that SETTLED during this run (XML-escaped report/error — child reports may carry
+ * file/webpage content; >64K offloaded with preview + path) and remove it from the
+ * pool. Running/queued STAY — no allSettled wait: the suspension loop digests them
+ * as they settle (D-S2/D-S9). Refill starts queued heads whose slot freed this run.
+ * Single ownership: entries settled inside a suspension session were moved to
+ * _pendingAsyncResults by the settle callback, so this only sees user-turn settles
+ * (no double inject — D-S3 points ①/②). The ⟦ev⟧done freeze is NOT emitted here —
+ * each settle callback emits it (§15 D-A3). */
+async function collectSettledAsync(agent) {
   const map = agent._asyncSubagents
   if (!map || map.size === 0) return
-  const { maybeRefillAsync } = await import("./agent-tools/subagent.mjs")
-  for (;;) {
-    maybeRefillAsync(agent)
-    const running = [...map.values()].filter((e) => e.status === "running")
-    if (running.length === 0) break
-    await Promise.allSettled(running.map((e) => e.promise))
-  }
+  const { maybeRefillAsync, injectAsyncResult } = await import("./agent-tools/subagent.mjs")
+  maybeRefillAsync(agent) // start queued heads now that slots may have freed — no waiting
   for (const e of [...map.values()]) {
-    const body = e.error ?? e.report ?? "(no report)"
-    const preview = await offloadToolResult(String(body), `async-subagent-${e.id}`)
-    pushReal(agent, {
-      role: "user",
-      content: `[System reminder: async subagent #${e.id} (${e.role}) finished]\n${escapeXml(preview)}`,
-    })
+    if (!e.done) continue // still running — stays in the pool (D-S1)
+    await injectAsyncResult(agent, e)
+    map.delete(String(e.id))
   }
-  map.clear()
-  agent._asyncQueue = []
 }

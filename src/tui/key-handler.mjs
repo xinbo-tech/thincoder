@@ -7,8 +7,7 @@ import { QUESTION_CUSTOM } from "./interaction.mjs"
 
 /** Current conversation max scroll offset (display lines beyond the visible panel). */
 export function convMaxScroll(state) {
-  // Single source (Windows ConPTY instability, 2026-08-30) — cached dims.
-  const d = state.dims ? state.dims.get() : {}
+  const d = state.dims ? state.dims.get() : {} // Single source (ConPTY instability, 2026-08-30) — cached dims
   const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
   const rows = d.rows ?? (process.stdout.rows || 24)
   const layout = computeLayout(state, { cols, rows })
@@ -25,8 +24,7 @@ export function createKeyHandler(ctx) {
   const { agent, state, render, popPicker, renderPickerLines, handleSlash, handleTab, submit, pasteClipboardImage, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems, renderWizard, pushLine, cleanup, showPicker, loadOlder } = ctx
 
   return function onKeypress(str, key = {}) {
-    // permission confirm state: y approve / n deny / a approve + turn ON AUTO (no further prompts)
-    // batch state (§16 D-B1): a approve all / o one by one / n deny (Esc = deny)
+    // permission confirm: y/n/a (a = approve + AUTO ON); batch (§16 D-B1): a/o/n (Esc = deny)
     if (state.permission) {
       const answer = (str || "").toLowerCase()
       const isContinue = state.permission.name === "continue"
@@ -147,6 +145,41 @@ export function createKeyHandler(ctx) {
         popPicker(null)
         return
       }
+      if (state.suspended) {
+        // §17 D-S9 + round2 偏差 #4（2026-09-02）：挂起态 Ctrl+C = 武装窗口两级中止——
+        // 一次按键直接清池中止全部后台子代理的误触代价高（digest 刷屏时用户可能只想
+        // 停住当前回合）；仿空闲态退出武装语义（:166-174）：
+        //   ① 未武装 + 有回合在跑（digest 消化/会话内回合）：仅中止当前回合
+        //      （controller.abort()）——会话继续、后台子代理不受影响，回挂起等待；
+        //   ② 未武装 + 纯挂起等待：仅提示不清池；
+        //   ③ 3s 武装窗口内再次 Ctrl+C：彻底中止——abort 集合 = 链条内全部 controller
+        //      （含 Ctrl+I/ContinueError 重建的旧 controller——children 不逃逸，round1
+        //      偏差 #3）+ 标记 _suspAborted + 唤醒 driver（driver 收尾清池）。
+        if (!state.suspAbortArmed) {
+          if (state.processing && state.controller) {
+            state.controller.abort() // ① 仅中止当前回合（digest/会话内回合），不碰后台池
+            pushLine("[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]", C.warn)
+          } else {
+            const bgActive = [...(agent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length + (agent._asyncQueue?.length ?? 0)
+            pushLine(`[abort] Press Ctrl+C again within 3s to abort all background subagents (${bgActive} running)`, C.warn)
+          }
+          state.suspAbortArmed = true
+          if (ctx.suspArmTimer) clearTimeout(ctx.suspArmTimer)
+          ctx.suspArmTimer = setTimeout(() => { state.suspAbortArmed = false }, ctx.exitArmDelay ?? 3000)
+          ctx.suspArmTimer.unref?.()
+          render()
+          return
+        }
+        if (ctx.suspArmTimer) clearTimeout(ctx.suspArmTimer)
+        state.suspAbortArmed = false
+        if (state.processing && state.controller) state.controller.abort()
+        for (const c of agent._sessionAbortAll ?? (agent._sessionAbort ? [agent._sessionAbort] : [])) c?.abort()
+        state._suspAborted = true
+        state._suspWake?.()
+        pushLine("[Aborting background subagents…]", C.warn)
+        render()
+        return
+      }
       if (state.processing && state.controller) {
         state.controller.abort()
         pushLine("[Aborting…]", C.warn)
@@ -174,7 +207,7 @@ export function createKeyHandler(ctx) {
     // F1: 显示快捷键帮助
     if (key.name === "f1" && !state.picker && !state.permission && !state.question) {
       showPicker("Keyboard Shortcuts", [
-        { type: "item", text: "Ctrl+C — Cancel/Abort; idle: press twice to exit" },
+        { type: "item", text: "Ctrl+C — Cancel/Abort; suspended/idle: press twice to stop all/exit" },
         { type: "item", text: "Ctrl+I — Interrupt and inject message" },
         { type: "item", text: "Ctrl+F — Search conversation history" },
         { type: "item", text: "Shift+Enter / Ctrl+J — Insert newline (multiline input)" },
@@ -423,19 +456,28 @@ export function createKeyHandler(ctx) {
       return
     }
     if (key.name === "return" || key.name === "enter" || str === "\r") {
-      // Multiline newline — three entry points (docs/design/TUI-INPUT-BOX.md §1.5):
-      //  1. Alt+Enter: readline parses \x1b\r as meta+return (all terminals)
-      //  2. Shift+Enter: keyboard-enhanced terminals send \x1b[13;2u / \x1b[27;2;13~,
-      //     translateShiftEnter maps them to \x1b\r → also meta+return
-      //  3. Ctrl+J: sends \n (0x0A), readline parses as name:"enter" — the universal
-      //     fallback: \n and \r are distinct bytes in EVERY terminal, no protocol needed
-      //     (legacy conhost users: Shift+Enter is a bare \r there, physically
-      //     indistinguishable from Enter — Ctrl+J is their newline key)
+      // Multiline newline (docs/design/TUI-INPUT-BOX.md §1.5): Alt+Enter / Shift+Enter
+      // (translateShiftEnter) / Ctrl+J — the universal no-protocol fallback.
       if ((key.name === "return" && key.meta) || key.name === "enter") {
         state.input.splice(state.cursor, 0, "\n")
         state.cursor++
         render()
       } else {
+        const text = state.input.join("").trim()
+        // §17 D-S5/F3/F7 + 偏差 #1：挂起态（suspended 或释放窗口 _suspPending）Enter =
+        // 新回合输入（非打断）——入 pendingInput 由挂起会话调度；输入框零干扰（F3）。
+        if ((state.suspended || state._suspPending) && text && !text.startsWith("/")) {
+          state.input = []
+          state.cursor = 0
+          state.history.push(text)
+          state.historyIndex = -1
+          state._draft = null
+          state.pendingInput ??= []
+          state.pendingInput.push(text)
+          state._suspWake?.()
+          render()
+          return
+        }
         submit().catch((e) => pushLine(`[error] ${e.message}`, C.error))
       }
       return

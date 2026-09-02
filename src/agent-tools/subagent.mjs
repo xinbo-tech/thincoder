@@ -6,6 +6,8 @@ import {
 } from "../agent.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
+import { pushReal } from "../context.mjs"
+import { offloadToolResult } from "../agent/helpers.mjs"
 
 // Async subagent limits (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
 // background spawns + the per-turn check budget (consult-style loop guard).
@@ -140,6 +142,14 @@ export const subagentTool = {
     }
     if (!parent.config?.agent?.engineering && role === "eng-coder") {
       throw new Error("Engineering mode is not active — use role='coder' for implementation tasks.")
+    }
+
+    // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async
+    // OR blocking — the digest must stay organize-only. AUTO tier (autoApprove) is
+    // exempt (推进型 — user authorized unattended continuation). Mechanical refusal
+    // so the digest never pops a permission panel or chains new background work.
+    if (parent._inAutoTurn && !parent.autoApprove) {
+      return JSON.stringify({ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" })
     }
 
     // Provider/model override: tool `model` arg > subagentModels[role] > subagentModel > parent provider
@@ -295,12 +305,22 @@ export const subagentTool = {
           .finally(() => {
             entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
             entry.done = true
-            // D-A3 发射时机（2026-09-02 用户实证修正）：settle 同刻发射 ⟦ev⟧done——
-            // TUI routeSubToken 立即冻结区块，冻结位置 = 完成时刻的会话流位置
-            // （回合收尾统一发会把块堆在结论之后）。父会话已 abort 不发：TUI 已按
-            // interrupted 冻结，晚到 token 经 tombstone 丢弃——显式守卫更干净。
+            // 完成信号按会话态分流（§17 D-S8 冻结门控 + D-S3 记账——以读取时刻为准，确定性）：
+            // - 非挂起态（普通回合内 settle）：照发 ⟦ev⟧done —— TUI 立即冻结区块，冻结位置 =
+            //   完成时刻的流位置（§15 D-A3 2026-09-02 用户实证修正：收尾统一发会把块堆在结论之后）。
+            // - 挂起态（_suspended：回合已结束或 auto-turn 消化中）：冻结延迟——改发 ⟦ev⟧settled
+            //   （区块显示 "done · awaiting digestion" 驻留面板），条目移交 _pendingAsyncResults
+            //   由下个回合 prepareRun 前注入（D-S3 ②；注入即从池/pending 移除，无重复）。
+            // 父会话 abort 两种都不发：TUI 已按 interrupted 冻结，晚到 token 经 tombstone 丢弃。
             if (!ctx.signal?.aborted) {
-              ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
+              if (parent._suspended) {
+                parent._pendingAsyncResults ??= []
+                parent._pendingAsyncResults.push(entry)
+                parent._asyncSubagents?.delete(String(entry.id))
+                ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
+              } else {
+                ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
+              }
             }
             entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
             entry._settle()
@@ -403,16 +423,35 @@ export function maybeRefillAsync(parent) {
 }
 
 /**
+ * Inject one settled async entry into the parent history as a user-role reminder
+ * (§17 D-S3 — single shared form for BOTH consumption points: turn-end collection
+ * (collectSettledAsync, agent.mjs) and the run-start _pendingAsyncResults injection;
+ * the message shape is identical to the §15 collector's). Consumed = the caller
+ * removes the entry from its container; no double-inject across the two paths.
+ */
+export async function injectAsyncResult(agent, entry) {
+  const body = entry.error ?? entry.report ?? "(no report)"
+  const preview = await offloadToolResult(String(body), `async-subagent-${entry.id}`)
+  pushReal(agent, {
+    role: "user",
+    content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n${escapeXml(preview)}`,
+  })
+}
+
+/**
  * Child agent run options — the parent's abort signal MUST propagate to the
  * child: without it, Ctrl+C aborts the parent's controller but the child keeps
  * running its full turn budget (up to subagentTurns) while the parent awaits —
  * the interrupt appears to do nothing.
+ * §17 D-S9: during a suspension session children share the SESSION signal instead
+ * (agent._sessionSignal) — a digest's own Ctrl+I/Ctrl+C must not abort the whole
+ * pool; the session driver aborts the session controller to stop everything.
  */
 export function buildChildRunOpts(ctx) {
   return {
     depth: (ctx.depth ?? 0) + 1,
     maxTurns: ctx.agent?.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS,
-    signal: ctx.signal ?? null,
+    signal: ctx.agent?._sessionSignal ?? ctx.signal ?? null,
   }
 }
 

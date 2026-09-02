@@ -156,11 +156,8 @@ export function buildToolCallbacks(deps) {
   const flushStream = () => {
     if (state.reasoning) {
       pushLine(state.reasoning, C.reason, "thinking")
-      // Reasoning folds IMMEDIATELY on flush (user ruling 2026-08-30: the old
-      // "stay expanded until next turn" auto-expand was a leftover of the
-      // rejected pre-fold plan — thinking must be DEFAULT FOLDED in the exact
-      // unified form: named header + tail 3, expand ≤60%, click back). Same
-      // shape as the restore path — zero exceptions on either path.
+      // Reasoning folds IMMEDIATELY on flush (user ruling 2026-08-30): default-folded,
+      // named header + tail 3 — same shape as the restore path, zero exceptions.
       state.reasoning = ""
     }
     if (state.streaming) {
@@ -181,9 +178,8 @@ export function buildToolCallbacks(deps) {
       scheduleRender()
     },
     onReasoning: (t) => {
-      // Subagent reasoning tokens also carry role#id/ prefix — appended into the
-      // block buffer as kind=think (F2: same treatment as the main reasoning stream;
-      // previously the token only created the entry and the content was discarded).
+      // Subagent reasoning tokens also carry role#id/ prefix — appended into the block
+      // buffer as kind=think (F2: same treatment as the main reasoning stream).
       if (routeSubReasoning(state, t, scheduleRender)) return
       ensureAssistantLabel()
       state.reasoning += t
@@ -193,9 +189,8 @@ export function buildToolCallbacks(deps) {
       // Subagent tool call: prefix role#id/toolName → open a fresh tool block and
       // set currentTool for the header summary line.
       if (routeSubToolCall(state, name, args, scheduleRender)) return
-      // Redundant with flushStream() below (it clears both buffers) — kept as
-      // defense-in-depth so a future flushStream change cannot leak advisor
-      // buffers into the next tool's view.
+      // Redundant with flushStream() below (it clears both buffers) — defense-in-depth
+      // so a future flushStream change cannot leak advisor buffers into the next view.
       if (name === "advisor") { state._advisorBlocks = [] }
       flushStream()
       ensureAssistantLabel()
@@ -228,12 +223,9 @@ export function buildToolCallbacks(deps) {
       // and the crucial argument was often past the cut. Unknown/MCP tools
       // fall back to compact JSON inside describeToolArgs.
       const argSummary = describeToolArgs(name, args)
-      // ONE BLOCK PER TOOL CALL (user ruling 2026-08-30: "为什么不把名称和参数行
-      // 直接作为流式输出 block 的 title" — the four-piece ❯ title / _live scroll /
-      // done-line arrangement was pre-fold-era residue). The carrier line holds
-      // the whole call: header = name+args+live status, body = args JSON +
-      // streaming output + result. buildConvLines renders it via the shared
-      // fold-block component; restore (historyToLines) emits the SAME carrier.
+      // ONE BLOCK PER TOOL CALL (user ruling 2026-08-30): header = name+args+live
+      // status, body = args JSON + streaming output + result. buildConvLines renders
+      // it via the shared fold-block component; restore emits the SAME carrier.
       state.lines.push({
         text: "", color: C.tool,
         _lineId: (state._lineIdCounter = (state._lineIdCounter ?? 0) + 1),
@@ -254,11 +246,8 @@ export function buildToolCallbacks(deps) {
       state.currentTool = null
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the
-      // child's activity (D4: no 3-second cleanup anymore). The report preview
-      // (max 8 lines) still enters the conversation via the existing path below.
-      // Block buffers survive the turn (no wipe in runAgentTurn start/finally):
-      // child tool calls never enter the parent's history, so the block is the
-      // only trace of what the child did — memory bounded by the N2 line cap.
+      // child's activity; buffers survive the turn (child tool calls never enter the
+      // parent's history) — memory bounded by the N2 line cap.
       const isSubagent = name === "subagent"
       if (isSubagent) {
         // The dispatch-level tool-block carrier for this call would otherwise
@@ -267,9 +256,8 @@ export function buildToolCallbacks(deps) {
         // successful subagent call showed that banner (consult P1, 2026-08-30).
         settleToolBlock(state, name, toolId, "completed")
         // Async spawn (§15 D-A1): the result is a status JSON, not a report — the
-        // child KEEPS running; skip the freeze (it would tombstone a live block
-        // and drop its relay stream). The block freezes on the ⟦ev⟧done event
-        // emitted at turn-end collection.
+        // child KEEPS running; skip the freeze (it would tombstone a live block and
+        // drop its relay stream). The block freezes on the ⟦ev⟧done settle event.
         if (!isAsyncSpawnResult(result)) {
           finishSubTask(state, SUBAGENT_ROLES, result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
           // Freeze the finished blocks into the conversation stream (user report
@@ -289,14 +277,11 @@ export function buildToolCallbacks(deps) {
         finishSubTask(state, ["escalate"], result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
         freezeDoneSubTasks(state)
       } else if (name === "consult_check" || name === "consult_stop") {
-        // Consult session-level settle (2026-08-30 consult review): a session
-        // spawns N parallel children, so completion must settle ALL of them.
-        // The single-shot finishSubTask here only froze the EARLIEST running
-        // block — the other N-1 stayed "running" pinned above the input box
-        // all through the final answer, then got mislabeled "interrupted".
-        //   - individual reply (done:false): settle precisely by r.model —
-        //     models settle out of order; the earliest-running heuristic froze
-        //     the wrong block.
+        // Consult session-level settle (2026-08-30 consult review): a session spawns
+        // N parallel children, so completion must settle ALL of them (single-shot
+        // finishSubTask froze only the earliest — N-1 stayed "running" then got
+        // mislabeled "interrupted").
+        //   - individual reply (done:false): settle precisely by r.model.
         //   - done:true / stopped: settle every remaining consult block.
         try {
           const r = JSON.parse(result)
@@ -337,16 +322,11 @@ export function buildToolCallbacks(deps) {
         // the frozen box, but the dispatch-level tool carrier must still be
         // marked done (consult P1, 2026-08-30: sweep mislabeled it interrupted).
         settleToolBlock(state, name, toolId, "completed")
-        // The review's thinking must survive into the conversation history like
-        // the main agent's reasoning (flushStream does for state.reasoning) —
-        // discarding it left the thought process visible only mid-review, then
-        // gone. Flush BEFORE the done line so the block sits above it.
-        // 2026-08-30: flushed as a COLLAPSIBLE box (frozen-folded semantics,
-        // aligned with subagent blocks) instead of a flat auto-expanded line —
-        // the flat form flooded the conversation. Full text still lives in the
-        // tool result message; the box is the reviewable record. Live
-        // _advisorBlocks keep rendering the running view until cleared in the
-        // turn finally.
+        // The review's thinking must survive into the conversation history like the
+        // main agent's reasoning — flushed as a COLLAPSIBLE box before the done
+        // line (frozen-folded semantics, aligned with subagent blocks; the flat
+        // form flooded the conversation). Full text lives in the tool result;
+        // _advisorBlocks keep rendering the running view until cleared at turn end.
         const blocks = state._advisorBlocks ?? []
         if (blocks.length > 0) {
           const text = blocks
@@ -386,13 +366,9 @@ export function buildToolCallbacks(deps) {
         // NOTE: the advisor tool ALWAYS emits {kind, text} objects (run.mjs's
         // emit() wrapper) — a raw string chunk is never think; if that ever
         // changes, plain-string think would land in advisorStreaming.
-        // ORDERED block buffer — preserves the interleaved emission order
-        // (think → tool → think → … → final). Two separate buffers (_advisorThink
-        // vs advisorStreaming) rendered think-block-then-main-block, which
-        // regrouped ALL thinking above ALL tool progress — the alternating
-        // timeline was destroyed. Consecutive chunks of the same kind merge
-        // into one block; kind flips start a new block; render walks the
-        // blocks in order with per-kind colors.
+        // ORDERED block buffer — preserves the interleaved emission order (think →
+        // tool → think → … → final); consecutive chunks of the same kind merge
+        // into one block, kind flips start a new block, render walks them in order.
         const isString = typeof chunk === "string"
         const raw = isString ? chunk : String(chunk?.text ?? "")
         const kind = isString ? "text" : (chunk?.kind ?? "text")
@@ -418,19 +394,20 @@ export function buildToolCallbacks(deps) {
       }
       scheduleRender()
     },
-    onPermissionRequest: (name, args) => askPermission(name, args),
+    // Manual-tier auto-turn digests (agent-turn.mjs suspension driver) pass null
+    // handlers — permission requests then deny WITHOUT a panel (§17 D-S7: no modal
+    // during unattended digestion) and question errors out instead of hanging.
+    ...(askPermission ? { onPermissionRequest: (name, args) => askPermission(name, args) } : {}),
     // Merged batch ask (§16 D-B1): one confirmation for N non-readonly tools in
     // the same response — "approve all / one by one / deny" (key-handler resolves
     // the verdict string; approveAll is batch-scope only, never the AUTO flag).
-    onBatchPermissionRequest: (req) => askBatchPermission(req),
-    onQuestion: (text, options) => askQuestion(text, options),
-    // Compression lifecycle (CONTEXT-COMPACTION.md §7 D-C2): the compression session renders
-    // as a subagent-style panel block — start → running panel ("Compressing context…" +
-    // "summarizing N messages" + elapsed ticker), fail → error text ONLY (no degradation note —
-    // that belongs to the 3-consecutive-failures fallback), success → frozen "Compressed: N
-    // tokens freed → summary (Xs)" / fallback → "truncated to N messages". The summary BODY
-    // never enters the panel or the stream (the summary call is silent). Replaces the old
-    // one-line "[context] Context too long..." warn (user ruling: panel, not a status line).
+    ...(askBatchPermission ? { onBatchPermissionRequest: (req) => askBatchPermission(req) } : {}),
+    ...(askQuestion ? { onQuestion: (text, options) => askQuestion(text, options) } : {}),
+    // Compression lifecycle (CONTEXT-COMPACTION.md §7 D-C2): the compression session
+    // renders as a subagent-style panel block — start → running panel ("Compressing
+    // context…" + "summarizing N messages" + elapsed ticker), fail → error text only,
+    // success → frozen "Compressed: N tokens freed → summary (Xs)" / fallback →
+    // "truncated to N messages". The summary BODY never enters the panel or stream.
     onCompressStart: (info) => {
       ensureCompressPanel(state, info)
       scheduleRender()
