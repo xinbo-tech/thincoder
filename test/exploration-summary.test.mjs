@@ -129,6 +129,25 @@ test("SUMMARIZE_PROMPT 追加两清单：已改动文件 + 未决点/待办", ()
   assert.match(SUMMARIZE_PROMPT, /Distinguish COMPLETED vs IN-PROGRESS/, "D12 已完成 vs 进行中仍在")
 })
 
+// ─── §8 摘要大小目标 ≤1K tokens（CONTEXT-COMPACTION.md §8 D13，2026-09-02）───
+// T-D13c（FILES CHANGED / UNRESOLVED / COMPLETED vs IN-PROGRESS 断言不回归）由上方
+// "SUMMARIZE_PROMPT 追加两清单" 测试持续覆盖——本节补 T-D13a / T-D13b。
+
+test("T-D13a: SUMMARIZE_PROMPT 尾句含 ≤1K 硬目标、旧无界长度语义已删（F1/D13-1）", () => {
+  assert.match(SUMMARIZE_PROMPT, /Stay under ~1K tokens \(≈1000 Chinese chars \/ 4000 ASCII chars\) — a hard target/, "≤1K 硬目标句在")
+  assert.match(SUMMARIZE_PROMPT, /An oversized summary wastes window and dilutes the tail/, "超长摘要代价句在")
+  assert.doesNotMatch(SUMMARIZE_PROMPT, /err on the long side/, "旧 err-on-the-long-side 语义已删除")
+  assert.doesNotMatch(SUMMARIZE_PROMPT, /not a hard word limit/, '旧“无字数上限”措辞已删除')
+})
+
+test("T-D13b: 砍价优先级 ①②③④ 全句在——优先级必须进 prompt 模型才能执行（F2/D13-2，评审 #1）", () => {
+  assert.match(SUMMARIZE_PROMPT, /When over budget, trim in this order/, "优先级总起句在")
+  assert.match(SUMMARIZE_PROMPT, /completed recaps to one line/, "① 已完成 recap → 每项一行")
+  assert.match(SUMMARIZE_PROMPT, /FILES CHANGED why-notes to bare paths/, "② FILES CHANGED why 注释 → 裸路径")
+  assert.match(SUMMARIZE_PROMPT, /in-progress prose tightened/, "③ 进行中叙述 → 收紧")
+  assert.match(SUMMARIZE_PROMPT, /NEVER cut design anchors or UNRESOLVED ISSUES\/TODOs/, "④ 永不砍设计锚点/未决清单")
+})
+
 test("EXPLORE_TOOLS 只含只读知识型（execute 不计入）", () => {
   for (const name of ["read", "grep", "glob", "ls", "code_search", "doc_search", "repo_outline"]) {
     assert.ok(EXPLORE_TOOLS.has(name), `${name} 属于探索类`)
