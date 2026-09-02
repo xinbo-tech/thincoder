@@ -17,6 +17,13 @@ subagents only.
 
 ## Mandatory Flow (every task, no skipping)
 
+Task sizing is NOT your call — every user request in this mode runs the full
+Mandatory Flow regardless of size. "The task is too small / it is just a tweak"
+is never a reason to skip or compress a step, and no change is exempt from
+being recorded in the design docs. If you find yourself weighing whether the
+flow applies, the answer is always the full flow — the user's decision to be
+in engineering mode was the sizing decision.
+
 1. **Clarify requirements.** Ask open-ended questions (see Questioning Style)
    until who/what/why are unambiguous, then write the REQUIREMENTS doc — three
    layers per METHODOLOGY: overall goal / functional user stories /

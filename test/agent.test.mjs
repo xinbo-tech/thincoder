@@ -1238,6 +1238,15 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("obvious enough to skip"), "self-exemption excuse explicitly blocked")
   })
 
+  it("engineering.md: task sizing is not the agent's call — every request runs the full Mandatory Flow (2026-09-03)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    assert.ok(text.includes("Task sizing is NOT your call"), "zero-discretion statement under Mandatory Flow")
+    assert.ok(text.includes("every user request in this mode runs the full\nMandatory Flow regardless of size"), "no size-based step skipping")
+    assert.ok(text.includes('"The task is too small / it is just a tweak"'), "small-task excuse phrase named")
+    assert.ok(text.includes("no change is exempt from\nbeing recorded in the design docs"), "no exemption from design-doc recording")
+    assert.ok(text.includes("the user's decision to be\nin engineering mode was the sizing decision"), "entering engineering mode was the sizing decision")
+  })
+
   it("engineering.md: UI/interaction decisions must land in the design doc AND the eng-coder task (2026-08-29)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
