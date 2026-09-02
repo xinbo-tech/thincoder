@@ -516,6 +516,235 @@ describe("compaction — threshold is model-aware", () => {
   })
 })
 
+// ─── §9 tail token 预算（CONTEXT-COMPACTION §9 D-T1..T7，VS Code 语义） ───
+// 测试侧估算与 src/compact.mjs 同口径（estimateText：ASCII/4 + 非 ASCII/1）。
+
+/** ASCII/4 + 非 ASCII/1（compact.mjs estimateText parity，测试侧实现）。 */
+const estText = (s) => {
+  let na = 0
+  for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) > 0x7f) na++
+  return Math.ceil((s.length - na) / 4) + na
+}
+
+/** 消息数组估算（compact.mjs estimateTokens parity：content/reasoning/tool_calls 计入）。 */
+const estMsgs = (msgs) =>
+  msgs.reduce((t, m) => {
+    if (typeof m.content === "string") t += estText(m.content)
+    else if (Array.isArray(m.content)) for (const p of m.content) if (p?.type === "text") t += estText(p.text)
+    if (typeof m.reasoning_content === "string") t += estText(m.reasoning_content)
+    for (const tc of m.tool_calls ?? []) t += estText(tc.function?.name ?? "") + estText(tc.function?.arguments ?? "")
+    return t
+  }, 0)
+
+/** 文本对：user 499 字符（125 tok）+ assistant 400 字符（100 tok）→ 每对 225 tok（全 ASCII 估算精确）。 */
+const estPair = (i) => [
+  { role: "user", content: "u".repeat(495) + String(i).padStart(4, "0") },
+  { role: "assistant", content: "a".repeat(400) },
+]
+
+describe("§9 tail token 预算（CONTEXT-COMPACTION §9 D-T1..T7 + T-DT8 倒序配对增强）", () => {
+  it("T-DT1/T-DT7/T-DT4: 600K 场景 → 压缩后段估算 ≤15% 窗口；摘要输入 ≤ 0.6×ctx − tail 预算；摘要指令带 ≤1K 句", async () => {
+    const cwd = setupTempDir()
+    const { server, port, requests } = await mockLLMServer()
+    try {
+      // providers[].context 600K 覆盖 → 窗口 614_400；阈值 0.6 = 368_640；预算 = 0.15 − 1100 = 91_060
+      const provider = { ...mockProvider("unknown-model", port), context: 600 }
+      const W = 614_400
+      const history = []
+      for (let i = 0; i < 830; i++) history.push(...estPair(i)) // mid 830×225 = 186_750
+      for (let i = 0; i < 184; i++) history.push({ role: "assistant", content: "t".repeat(4000) }) // tail 候选 184×1000 = 184_000
+      // 总量 370_750 ≥ 368_640 触发；keepCount = floor(614.4K/100K×30) = 184；tail 超预算 → 裁剪
+      const agent = {}
+      const result = await compactHistory(history, "system", provider, null, null, null, null, null, agent)
+      assert.notEqual(result, null, "应触发压缩")
+      // 裁剪循环确定性：91 条 × 1000 = 91_000 ≤ 91_060（下一裁剪点 92_000 超）
+      assert.equal(result.length, 2 + 91, `tail 184 → 91 条（实际 ${result.length - 2}）`)
+      const tailEst = estMsgs(result.slice(2))
+      assert.ok(tailEst <= Math.floor(W * 0.15) - 1100 && tailEst > Math.floor(W * 0.15) - 2100, `tail 估算 ${tailEst} 落在预算内（最小裁剪）`)
+      const seg = estMsgs(result)
+      assert.ok(seg <= W * 0.15, `压缩后 history 段估算 ${seg} ≤ 窗口 15%（${W * 0.15}，±5% 容差内）`)
+      assert.ok(agent._lastCompressInfo.tokensFreed > 0, "释放 token 数可见")
+      // T-DT7（D-T3）：摘要调用输入 ≤ 0.6×ctx − tail 预算（不超模型窗口）
+      const bound = 0.6 * W - (Math.floor(W * 0.15) - 1100)
+      assert.ok(estText(requests[0]) <= bound, `摘要输入 ${estText(requests[0])} ≤ 声明界 ${bound}`)
+      // T-DT4 协同（§8）：同一压缩的摘要指令携带 ≤1K 目标句
+      assert.match(requests[0], /~1K tokens/, "摘要请求体含 §8 ≤1K 目标句")
+    } finally {
+      server.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it("T-DT2: 普通会话预算未超 → tailStart 与现状完全一致（零变化回归）", async () => {
+    const cwd = setupTempDir()
+    const { server, port } = await mockLLMServer()
+    try {
+      const provider = mockProvider("unknown-model", port) // 128K：阈值 76_800，预算 18_100
+      const history = []
+      for (let i = 0; i < 400; i++) history.push(...estPair(i)) // 90_000 ≥ 阈值
+      // keepCount = min(max(10, 38), 0.4×800) = 38；tail 38×225 = 8_550 ≤ 预算 → 不裁剪
+      const result = await compactHistory(history, "system", provider)
+      assert.notEqual(result, null, "应触发压缩")
+      assert.equal(result.length, 2 + 38, "tail 保持 count 公式位置（38 条）")
+      assert.deepEqual(
+        result.slice(2).map((m) => m.content),
+        history.slice(800 - 38).map((m) => m.content),
+        "tail 逐条与压缩前一致——预算未超时行为零变化",
+      )
+    } finally {
+      server.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it("T-DT3a: 预算不足以保 10 条 → 保底 10 条原文（超支接受）", async () => {
+    const cwd = setupTempDir()
+    const { server, port } = await mockLLMServer()
+    try {
+      const provider = { ...mockProvider("unknown-model", port), context: 64 } // 65_536：阈值 39_321
+      const history = []
+      for (let i = 0; i < 100; i++) history.push(...estPair(i)) // 22_500
+      for (let i = 0; i < 19; i++) history.push({ role: "assistant", content: "t".repeat(4000) }) // 19×1000
+      // 总量 41_500 ≥ 阈值；keepCount = min(max(10, 19), 0.4×219 = 87) = 19
+      // 预算 = 9_830 − 1100 = 8_730：19 条 19K 超、10 条 10K 仍超 → 无边界满足 → 保底 10
+      const result = await compactHistory(history, "system", provider)
+      assert.notEqual(result, null, "应触发压缩")
+      assert.equal(result.length, 2 + 10, "保底 10 条原文（floor = len − 10）")
+      assert.deepEqual(
+        result.slice(2).map((m) => m.content),
+        history.slice(219 - 10).map((m) => m.content),
+        "最近 10 条原文保底保留",
+      )
+      assert.ok(estMsgs(result.slice(2)) > 0.15 * 65_536, "15% 目标让位于保底（超支被接受）")
+    } finally {
+      server.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it("T-DT3b: 短历史（候选 <10）→ 预算逻辑不触发（保底上限 = 候选条数，不突破 40% cap）", async () => {
+    const cwd = setupTempDir()
+    const { server, port } = await mockLLMServer()
+    try {
+      const provider = { ...mockProvider("unknown-model", port), context: 64 } // 阈值 39_321
+      const history = []
+      for (let i = 0; i < 10; i++) {
+        history.push({ role: "user", content: "u".repeat(8000) }) // 2000 tok
+        history.push({ role: "assistant", content: "a".repeat(8000) }) // 2000 tok
+      }
+      // 总量 40_000 ≥ 阈值；len 20 → keepCount = min(19, 0.4×20 = 8) = 8 < 10 → 无预算逻辑
+      // tail 8×2000 = 16_000 远超预算 8_730 仍保留（40% cap 是短历史唯一约束）
+      const result = await compactHistory(history, "system", provider)
+      assert.notEqual(result, null, "应触发压缩")
+      assert.equal(result.length, 2 + 8, "tail 保持 8 条候选（未被预算砍）")
+      assert.deepEqual(
+        result.slice(2).map((m) => m.content),
+        history.slice(12).map((m) => m.content),
+        "候选尾完整保留（防压缩了个寂寞）",
+      )
+    } finally {
+      server.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it("T-DT6: 预算裁剪只落 pair-safe 边界——tool 位跳过、整对同切，无 orphan（D5 回归）", async () => {
+    const cwd = setupTempDir()
+    const { server, port, requests } = await mockLLMServer()
+    try {
+      const provider = mockProvider("unknown-model", port) // 128K：预算 18_100
+      const history = []
+      for (let i = 0; i < 300; i++) history.push(...estPair(i)) // 67_500
+      // tail 38 条：头部 = assistant(tool X)（500 字符 ≈127 tok）→ tool X 结果（50 tok）→ 36 条 × 2000 字符（500 tok）
+      history.push({
+        role: "assistant",
+        content: "x".repeat(500),
+        tool_calls: [{ id: "tX", type: "function", function: { name: "read", arguments: "{}" } }],
+      })
+      history.push({ role: "tool", tool_call_id: "tX", name: "read", content: "t".repeat(200) })
+      for (let i = 0; i < 36; i++) history.push({ role: "assistant", content: "t".repeat(2000) })
+      // 总量 ≈ 85_700 ≥ 76_800；tail ≈ 18_177 > 预算；裸切在 q=601（tool 位）估 18_050 ≤ 预算——
+      // 若允许 orphan 会停在那；pair-safe 跳过 → q=602（36 条大消息整对进摘要）
+      const result = await compactHistory(history, "system", provider)
+      assert.notEqual(result, null, "应触发压缩")
+      assert.equal(result.length, 2 + 36, "边界跳过 tool 位，落在配对之后的 36 条")
+      assert.ok(!result.some((m) => m.role === "tool"), "无 orphan tool 留在 tail（整对进摘要）")
+      assert.match(requests[0], /\[assistant\] \[called tools: read\]/, "配对（owner + 结果）序列化进摘要材料")
+      const tailEst = estMsgs(result.slice(2))
+      assert.ok(tailEst <= 0.15 * 128_000, `tail 估算 ${tailEst} ≤ 15% 窗口`)
+    } finally {
+      server.close()
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it("T-DT8: 预算收紧 × 倒序配对——不停在倒序 assistant 位（results 已切），边界落安全位；tail 无悬空 tool_calls", async () => {
+    // 不变式（发送 400 防护）：tail 内每个 assistant(tool_calls) 声明的 id 都须有对应 tool 结果
+    const assertNoDangling = (tailMsgs) => {
+      const haveIds = new Set(tailMsgs.filter((m) => m.role === "tool").map((m) => m.tool_call_id))
+      for (const m of tailMsgs) {
+        if (m.role !== "assistant" || !m.tool_calls?.length) continue
+        for (const tc of m.tool_calls) {
+          assert.ok(haveIds.has(tc.id), `tail 内 assistant 声明的 tool_call ${tc.id} 无对应 tool 结果（悬空 → 400）`)
+        }
+      }
+    }
+    // 场景 A（主循环收紧）：倒序配对 [tool tX, assistant(tX)] 在候选尾头部，预算拟合点恰在 assistant
+    // 位——修复前停在此（tX 结果已切进中段 → 悬空）；修复后 callsGapAfter 判据跳过 → 边界落在其后
+    {
+      const { server, port, requests } = await mockLLMServer()
+      try {
+        const provider = mockProvider("unknown-model", port) // 128K：预算 = 0.15×128K − 1100 = 18_100
+        const history = []
+        for (let i = 0; i < 300; i++) history.push(...estPair(i)) // mid 67_500
+        history.push({ role: "tool", tool_call_id: "tX", name: "read", content: "t".repeat(300) }) // 75 tok —— tool 结果块在 assistant 前（倒序）
+        history.push({
+          role: "assistant",
+          content: "x".repeat(500), // 125 tok
+          tool_calls: [{ id: "tX", type: "function", function: { name: "read", arguments: "{}" } }],
+        }) // +2 tok
+        for (let i = 0; i < 36; i++) history.push({ role: "assistant", content: "t".repeat(1992) }) // 36×498 tok
+        // tail 候选 38 条 = 18_130 > 预算 → 收紧；q=601（倒序 assistant 位）cut 75 → 18_055 拟合——
+        // 悬空点；跳过 → q=602 拟合（17_928），tail = 36 条
+        const result = await compactHistory(history, "system", provider)
+        assert.notEqual(result, null, "应触发压缩")
+        assert.equal(result.length, 2 + 36, "边界跳过倒序 assistant 位，落在其后安全位")
+        assertNoDangling(result.slice(2))
+        assert.match(requests[0], /\[tool\]/, "倒序配对的 tool 结果并入中段（摘要材料）")
+        assert.match(requests[0], /\[assistant\] \[called tools: read\]/, "倒序配对的 assistant 并入中段——配对在中段序列化无害")
+      } finally {
+        server.close()
+      }
+    }
+    // 场景 B（floor 回退）：保底边界（len−10）正落在倒序 assistant 位（其 results 在 len−11 已被切），
+    // 预算无任何拟合位 → floor 回退——修复前回退只跳 tool 位、停在此 → 悬空；修复后继续回退到安全位
+    {
+      const { server, port } = await mockLLMServer()
+      try {
+        const provider = mockProvider("unknown-model", port)
+        const history = []
+        for (let i = 0; i < 300; i++) history.push(...estPair(i))
+        for (let i = 0; i < 27; i++) history.push({ role: "assistant", content: "t".repeat(4000) }) // 27×1000
+        history.push({ role: "tool", tool_call_id: "tX", name: "read", content: "t".repeat(300) }) // len−11
+        history.push({
+          role: "assistant",
+          content: "x".repeat(500), // len−10 = floor 位
+          tool_calls: [{ id: "tX", type: "function", function: { name: "read", arguments: "{}" } }],
+        })
+        for (let i = 0; i < 9; i++) history.push({ role: "assistant", content: "t".repeat(12_000) }) // 9×3000
+        // tail ≈ 54_202：任意 q ≤ floor 的剩余都 > 18_100 → floor 回退；越过 628（倒序 assistant）与
+        // 627（tool）→ 626 安全位——tail 12 条 ≥ 保底 10 条（按消息计数不变）
+        const result = await compactHistory(history, "system", provider)
+        assert.notEqual(result, null, "应触发压缩")
+        assert.equal(result.length, 2 + 12, "floor 回退越过倒序 assistant 位到安全位（12 条 ≥ 10 条）")
+        assertNoDangling(result.slice(2)) // tool tX 与 assistant(tX) 同在 tail 内——非空断言
+      } finally {
+        server.close()
+      }
+    }
+  })
+})
+
 
 // ─── V4（CONTEXT-COMPACTION §7 D-C1/D-C3）：压缩可见性回调 + 3 次失败降级 ───
 
@@ -1295,6 +1524,17 @@ describe("Delegate well rewrite + exploration distillation", () => {
     )
     assert.match(SUMMARIZE_PROMPT, /Explicitly list FILES CHANGED/, "已改动文件清单在")
     assert.match(SUMMARIZE_PROMPT, /Explicitly list UNRESOLVED ISSUES \/ TODOs/, "未决点/待办清单在")
+  })
+
+  it("SUMMARIZE_PROMPT §8 D13：≤1K 硬目标句 + 砍价优先级 ①②③④（旧无界指引删除）", () => {
+    assert.ok(SUMMARIZE_PROMPT.includes("~1K tokens"), "≤1K 硬目标句在（D13-1）")
+    assert.ok(SUMMARIZE_PROMPT.includes("1000 Chinese chars / 4000 ASCII chars"), "中/英文直觉换算在（D13-1）")
+    assert.ok(!SUMMARIZE_PROMPT.includes("err on the long side"), "旧无界长度指引已删除（D13-1）")
+    assert.ok(SUMMARIZE_PROMPT.includes("When over budget, trim in this order"), "砍价优先级句在（D13-2）")
+    assert.ok(SUMMARIZE_PROMPT.includes("completed recaps to one line"), "① 已完成 recap → 一行")
+    assert.ok(SUMMARIZE_PROMPT.includes("FILES CHANGED why-notes to bare paths"), "② FILES CHANGED why 注释 → 裸路径")
+    assert.ok(SUMMARIZE_PROMPT.includes("in-progress prose tightened"), "③ 进行中叙述 → 收紧")
+    assert.ok(SUMMARIZE_PROMPT.includes("NEVER cut design anchors or UNRESOLVED ISSUES/TODOs"), "④ 永不砍设计锚点/未决清单")
   })
 
   it("EXPLORE_TOOLS 只含只读知识型（execute 不计入）", () => {
