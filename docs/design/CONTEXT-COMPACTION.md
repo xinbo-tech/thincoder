@@ -29,7 +29,7 @@
 ### D2 阈值 —— 显式优先，auto = context × 0.6
 
 - 现状：CLI `spec.context × 0.6`（resolveCompactThreshold）；VS Code `× 0.8`。
-- **统一**：显式 `config.agent.compactThreshold` 优先；否则 auto = `specForModel(model).context × 0.6`。
+- **统一**：显式 `config.agent.compactThreshold` 优先；否则 auto = `specForModel(model).context × 0.6`。**tail 保留量最终受 §9 token 预算约束（2026-09-02）**——本条为候选条数规则。
   - **输入可被 provider 级覆盖**：`providers[].context`（K 单位）覆盖 MODEL_SPECS 的 context 后，阈值与 tail 公式（D4）跟随覆盖值（`providerSpec`，权威规格见 `PROVIDER.md §15`——公式权威不复制）。
 - 理由：0.6 为注入上下文（git/目录/outline/memory/文档，实测每轮 30–50K）+ 输出/reasoning（部分模型 maxOutput 384K）留余量；0.8 在 1M 窗口只剩 200K，刚压缩完可能又超。
 - **判定对象统一**：完整 prompt 估算（system + tools + history）≥ threshold 即触发。
@@ -76,7 +76,7 @@
 - **统一**：CLI 三级模型：
   1. LLM 摘要（`thinking: null`，序列化 user 8000 / tool+assistant 2000 cap）
   2. 连续 `COMPRESS_FAILURE_LIMIT = 3` 次失败 → 确定性截断（FALLBACK_NOTE，丢 middle 不碰网络）
-  3. 超阈值但无 middle 可切（历史 ≤13 条，单条巨型消息）→ 单消息截断（`shrinkOversized`：user/tool 体 8000 上限、keepHead 50%/keepTail 25%，不动 reasoning/tool_calls 结构）
+  3. 超阈值但无 middle 可切（~~历史 ≤13 条~~——**被 D12（KEEP_HEAD=0）取代：历史 ≥2 条即可切出中间段，本步仅剩"历史 =1 条单条巨型消息"场景，评审 2026-09-02 #4**）→ 单消息截断（`shrinkOversized`：user/tool 体 8000 上限、keepHead 50%/keepTail 25%，不动 reasoning/tool_calls 结构）
 - **废弃** VS Code 启发式摘要：`User:/Assistant:` 流水账对 agent 工作日志价值低，且与真实消息难以区分（模型会把"User:" 当真实输入）；确定性截断 + 明确 note 更诚实。
 - 失败计数语义统一：**每次 runAgent（用户消息）开始时重置**（CLI 现状跨消息累计，改为一致、可预测）。
 
@@ -275,14 +275,14 @@
 
 此前 SUMMARIZE_PROMPT 尾句为 "aim for information completeness, not a hard word limit (old 500-char cap is deprecated; in a 1M-context era, err on the long side)"——摘要大小**无目标**，模型自定。用户裁定：**约定目标 ≤1K tokens**（长会话多次压缩时旧摘要再被摘要，失控摘要会逐层放大占窗）。
 
-**需求**：F1 = 摘要输出目标 **≤1K tokens**（≈1000 中文字符 / 2000 ASCII 字符，估算口径同 estimateText）；F2 = 超限时的砍价优先级明确；F3 = **形态 A：纯 prompt 指令，无 max_tokens 机械保险丝**（用户拍板——模型自控，偶超可接受）；F4 = 两端语义一致。
+**需求**：F1 = 摘要输出目标 **≤1K tokens**（≈1000 中文字符 / 4000 ASCII 字符——按 estimateText 口径 ASCII/4，评审 #7 修正）；F2 = 超限时的砍价优先级明确；F3 = **形态 A：纯 prompt 指令，无 max_tokens 机械保险丝**（用户拍板——模型自控，偶超可接受）；F4 = 两端语义一致。
 
 ### 8.2 设计（D13）
 
 - **D13-1 prompt 尾句改写**（两端 SUMMARIZE_PROMPT，语义同构——CLI `src/context.mjs` export 版 / VS Code `src/compact.mjs` 版各自的尾句段）：
-  - 删除 "err on the long side" 语义，改为："**Stay under ~1K tokens (≈1000 Chinese chars / 2000 ASCII) — a hard target.** An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated."
+  - 删除 "err on the long side" 语义，改为："**Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target.** An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated."
   - **保留**信息完整性基调（要点式、决策锚点必保）——只约束长度，不退回 500-char 时代"越短越好"
-- **D13-2 砍价优先级（超限时按序）**：① 已完成任务 recap → 每项一行（既有规则重申为第一砍项）；② FILES CHANGED 的 why 注释 → 裸路径或分组；③ 进行中任务的细节叙述 → 收紧；④ **永不砍**：设计决策/锚点（架构选择、API 契约、命名、trade-off）与 UNRESOLVED ISSUES/TODOs——压缩后续接恢复依赖它们
+- **D13-2 砍价优先级（超限时按序）——整条写入两端 SUMMARIZE_PROMPT 尾句段**（评审 #1：优先级必须进 prompt 模型才能执行，仅留文档无效）：① 已完成任务 recap → 每项一行（既有规则重申为第一砍项）；② FILES CHANGED 的 why 注释 → 裸路径或分组；③ 进行中任务的细节叙述 → 收紧；④ **永不砍**：设计决策/锚点（架构选择、API 契约、命名、trade-off）与 UNRESOLVED ISSUES/TODOs——压缩后续接恢复依赖它们。prompt 措辞建议：When over budget, trim in this order: completed recaps to one line; FILES CHANGED why-notes to bare paths; in-progress prose tightened. NEVER cut design anchors or UNRESOLVED ISSUES/TODOs.
 - **D13-3 无机械拦截**（A 形态取舍记录）：不设 max_tokens 上限——模型失控长写时摘要被硬切会丢尾部且无标记；宁可偶超（prompt 约束 + COMPACTION_PREFIX 语义兜底 + 人读线完整可恢复）
 - **D13-4 既有规则不动**：两清单（FILES CHANGED / UNRESOLVED）、COMPLETED vs IN-PROGRESS 区分、第一人称、honest 标注——全部保留
 
@@ -298,16 +298,16 @@
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
 | T-D13a | 目标句存在 | 两端 SUMMARIZE_PROMPT | 含 "1K"（或 "~1K tokens"）硬目标句；不含 "err on the long side" | F1/D13-1 |
-| T-D13b | 砍价优先级 | 两端 SUMMARIZE_PROMPT | 含"永不砍"类句（decision anchors / UNRESOLVED 不被裁） | F2/D13-2 |
+| T-D13b | 砍价优先级（评审 #1 扩展） | 两端 SUMMARIZE_PROMPT | 含 ①②③④ 全部优先级句（one-line recap → bare paths → tightened prose → NEVER cut anchors/UNRESOLVED），不只"永不砍" | F2/D13-2 |
 | T-D13c | 既有规则不回归 | 两端 SUMMARIZE_PROMPT | FILES CHANGED / UNRESOLVED / COMPLETED vs IN-PROGRESS 断言仍过 | D13-4 |
 | T-D13d | 全量回归 | 两端全量测试 | 全绿 | F4 |
 
-**验收**：AC-D13-1 = 两端 prompt 尾句含 ≤1K 硬目标 + 砍价优先级（T-D13a/b）；AC-D13-2 = 既有 SUMMARIZE_PROMPT 断言不回归（T-D13c）；AC-D13-3 = 两端全量 + lint 绿（T-D13d）。
+**验收**：AC-D13-1 = 两端 prompt 尾句含 ≤1K 硬目标 + 砍价优先级（T-D13a/b）；AC-D13-2 = 既有 SUMMARIZE_PROMPT 断言不回归（T-D13c）；AC-D13-3 = 两端全量 + check-syntax（node --check，eslint 2026-09-02 已删）0 error（T-D13d，评审 #5）。
 
 ### 8.5 关键决策
 
 - **A 形态（用户拍板）**：纯 prompt 指令、无机械保险丝——信任模型遵循；偶超可接受（取舍记录于 D13-3）
-- **目标定"约 1K"非精确**：token 无精确计（estimateText 粗算）——"~1K tokens ≈ 1000 中文字符 / 2000 ASCII"给模型可操作直觉
+- **目标定"约 1K"非精确**：token 无精确计（estimateText 粗算）——"~1K tokens ≈ 1000 中文字符 / 4000 ASCII"给模型可操作直觉（ASCII/4 口径，评审 #7）
 - **砍价优先级写死**：防模型为凑长度误砍续接锚点（决策/未决清单）——这是压缩后恢复的关键
 - **否决**：a) max_tokens 保险丝（硬切丢尾部无标记，用户拍板不用）；b) 回到 500-char 硬 cap（信息保真倒退，2026-08 明确废弃过）
 
@@ -328,7 +328,7 @@
 
 ### 9.2 设计
 
-- **D-T1 tail token 预算**：`tailBudget = context × 0.15 − 摘要估算`（摘要 ~1K，预算 ≈ 窗口 15%）。实现：`keepTailSize` 改为**候选条数 + 预算双约束**——先按条数公式取候选尾，再估算候选尾 token（estimateTokens 复用，含 reasoning/tool_calls/图像 2000）；超预算 → **tailStart 前移**（候选尾头部消息并入摘要段）直到估算 ≤ 预算 或触保底
+- **D-T1 tail token 预算**：`tailBudget = context × 0.15 − 摘要估算`（摘要 ~1K，预算 ≈ 窗口 15%）。实现：`keepTailSize` 改为**候选条数 + 预算双约束**——先按条数公式取候选尾，再估算候选尾 token（estimateTokens 复用，含 reasoning/tool_calls/图像 2000）；超预算 → **tailStart 前移**（候选尾头部消息并入摘要段）直到估算 ≤ 预算 或触保底。**pair-safe 边界约束（评审 #2）**：tailStart 只允许落在配对安全边界——plain 消息，或完整 assistant(tool_calls)→tools 对的起点（D5 tail 侧 orphan 拉回语义下，切在 assistant 与其 tool 结果之间会把 owner 拉回 tail 使预算重新超支）；无 pair-safe 边界能满足预算 → 显式进入 D-T2 保底并接受超支
 - **D-T2 保底 10 条**：预算不足以保留 10 条原文时，**保底优先**（保留最近 10 条，允许小幅超预算）——tail 原文的作用是让模型看到最近真实对话（工具调用链、最近请求语境），全吞进摘要会失真；10 条即使单条偏大（~1.3K 均值场景 ≈ 13K）也不足以再现 40% 问题。**单条巨型消息**（估算 > 预算总量）保留该条本身（64K 落盘/预览机制已管大工具结果；单条截断是 shrinkOversized 的职责，不在 tail 预算内二次处理）
 - **D-T3 摘要材料相应扩大**：tailStart 前移 → 更多中间内容进摘要——与 §8 摘要 ≤1K 协同（砍价优先级 D13-2 已保证决策锚点/未决清单优先保留；材料更大时信息密度压力由模型按优先级处理）
 - **D-T4 压缩触发与预算解耦**：预算只在压缩发生时计算（不改变触发阈值 0.6）；压缩后 history ≈ 摘要 + 占位 + ≤预算 tail
@@ -338,24 +338,25 @@
 
 - `thincoder/src/context.mjs`：`keepTailSize` 增预算逻辑（或新增 `tailStartByBudget`）+ `splitHistory`/`compressIfNeeded` 接线（估算尾 token、超预算前移 tailStart）
 - `thincoder-vscode/src/compact.mjs`：同构移植（CLI 为准）
-- 两端测试：`test/session-compaction.test.mjs`（CLI）+ VS Code 对应（新增 T-DT1..3；既有 tail 自适应断言若与预算冲突需按新语义更新）
+- 两端测试：`test/session-compaction.test.mjs`（CLI）+ VS Code 对应（新增 T-DT1..3 + **T-DT6 pair-safe 边界**；既有 tail 自适应断言若与预算冲突需按新语义更新）
 - `docs/design/CONTEXT-COMPACTION.md`（本节状态回写）
 
 ### 9.4 测试与验收
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
-| T-DT1 | 工具密集超预算（600K 场景） | 构造 tail 估算 > 90K 的历史 | 压缩后 history 段（摘要+占位+tail）估算 ≤ 窗口 15%（±5% 容差） | F1/D-T1 |
+| T-DT1 | 工具密集超预算（600K 场景，评审 #3 限定：最近 10 条估算 ≤ 预算——测预算循环本体） | 构造 tail 估算 > 90K 但最近 10 条 ≤ 预算的历史 | 压缩后 history 段（摘要+占位+tail）估算 ≤ 窗口 15%（±5% 容差） | F1/D-T1 |
 | T-DT2 | 普通会话预算未超 | 常规对话 tail（~150 token/条均值） | tailStart 不变——行为与现状一致（回归） | F2 |
-| T-DT3 | 保底条数 | 预算不足以保 10 条（极端小窗口/巨型消息） | tail ≥ 10 条原文（保底优先） | D-T2 |
+| T-DT3 | 保底条数（评审 #3 补上限） | 预算不足以保 10 条（极端小窗口/巨型消息） | tail ≥ 10 条原文（保底优先）；超支上限 = 保底 10 条估算值本身（≤64K 窗口时 15% 目标让位于保底——小窗口取舍注于 9.5） | D-T2 |
 | T-DT4 | 摘要协同 | 压缩后 | 摘要 ≤1K（§8 断言不回归） | F3 |
 | T-DT5 | 两端全量回归 | — | 全绿 | F4 |
+| T-DT6 | pair-safe 边界（评审 #2 补） | tailStart 候选落在 assistant(tool_calls) 与其 tool 结果之间 | 边界上移到配对安全起点；无安全边界满足预算 → 进保底且不产生 orphan（D5 回归） | D-T1/D5 |
 
-**验收**：AC-DT1 = T-DT1 通过（600K 场景压缩后 history ≤15%）；AC-DT2 = T-DT2 通过（普通会话零变化）；AC-DT3 = T-DT3 通过（保底不归零）；AC-DT4 = 两端全量 + lint 绿。
+**验收**：AC-DT1 = T-DT1 通过（600K 场景压缩后 history ≤15%）；AC-DT2 = T-DT2 通过（普通会话零变化）；AC-DT3 = T-DT3 通过（保底不归零）；AC-DT4 = 两端全量 + check-syntax（node --check）0 error（评审 #5）。
 
 ### 9.5 关键决策
 
 - **B 口径（用户拍板）**：history 段单独 ≤ 窗口 15%——不把 system/tools 固定开销计入（小窗口下固定开销本身可能 >15%，计入则永远不可达）
-- **预算为主、条数为辅、保底 10 条**：条数公式保留为候选上限（普通会话不误伤）；预算超限才前移 tailStart；保底 10 条防"最近对话失真"
+- **预算为主、条数为辅、保底 10 条**：条数公式保留为候选上限（普通会话不误伤）；预算超限才前移 tailStart；保底 10 条防"最近对话失真"。**小窗口取舍（评审 #3）**：≤64K 窗口 15% 预算可能小于保底 10 条估算（10×~1.3K ≈ 13K ≈ 20-40% 窗口）——保底优先于 15% 目标（最近真实对话保真 > 压缩率；小窗口模型成本低、重触发代价小），实现时保底可取 min(10, ⌊预算/当前尾单条均值⌋) 缓解（评审 #3 可选项，实施时按实测决定是否启用）
 - **预算只作用于 tail，不作用触发**：触发阈值 0.6 不变（预算是压缩"结果"目标不是"何时压"判据）
 - **否决**：a) 对 tail 内单条巨型消息二次截断（与 shrinkOversized/64K 落盘职责重叠——大消息处理有专门机制，tail 预算只做段边界选择）；b) 预算不足时砍光 tail 全靠摘要（最近真实对话失真——保底 10 条否决此路线）
