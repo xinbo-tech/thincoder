@@ -217,5 +217,9 @@
   "search.prev": "Previous match",
   "search.next": "Next match",
   "search.close": "Close search",
-  "search.noMatch": "No matches"
+  "search.noMatch": "No matches",
+  "sub.awaitingDigest": "done · awaiting digestion",
+  "susp.running": "${n} background subagent(s) running",
+  "susp.digesting": "${n} awaiting digestion",
+  "susp.winding": "background subagents finishing…"
 }
