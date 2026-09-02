@@ -633,3 +633,85 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 **验收**：AC1 = 同批多非只读工具一次询问（T-B1）；AC2 = 权限契约签名零破坏（T-B2 + 既有测试）；AC3 = edit/apply_patch 描述含批量引导（T-B3）；AC4 = system.md 批量句两端一致（T-B4）；AC5 = CLI 全量 + lint 绿（T-B5）。
 
 **关键决策**：① **批确认而非排队展示**：排队已有（串行 await），痛点是逐次点击——合并询问是真正的解法；② **引导而非新工具**：数据证明批量能力存在（edits 数组/apply_patch/execute），缺的是模型使用习惯——描述层引导零机制风险；③ apply_patch 保留（与 edits 场景互补：逐条精确 vs 整块/新建）；④ 否决：a) 新批量 write 工具（第 5 种批量形态，工具面膨胀）；b) 权限静默自动批准（安全红线）；c) 默认全异步（§15 已否决同款）。
+
+---
+
+## 17. 挂起回合：会话级后台双通道（2026-09-02，用户方案：async 子代理运行中主会话可继续对话）
+
+> **状态：设计草稿（需求已逐项拍板，可行性评估完成，待评审定范围 V1/V2）**。
+> 权威源补充：本节是 §15（subagent 异步化）的语义演进——**F3"回合收尾自动等待"被本节挂起语义取代**（见 17.3 评估①）。
+
+### 17.1 问题与需求
+
+**用户问题（网友需求传导）**：async 子代理运行期间，主会话**回合尾阻塞等待全部完成**（§15 F3/D-A3——collectAsyncSubagents 等 running 全 settle 才结束回合，可能几分钟）——等待期用户无法输入。网友要"生成/子代理运行期间插话"；Ctrl+I 只解决生成中插话，不解决回合尾后台等待。
+
+**用户方案（2026-09-02 逐项拍板）**：
+- 主会话自己的工作做完后**不真结束回合**——进入挂起态，用类似 question 的界面接收用户输入
+- 有用户输入 → 执行用户输入；等待输入期间子代理完成 → **先处理子代理完成后的工作**
+- **#1 挂起退出（前者）**：子代理全完成 + 最后一条输入已执行完 → 自然结束（回合结束，回正常空闲态）
+- **#2 允许叠加（后者）**：跨回合 async 累积并发——新回合可不收完旧 async（新回合继续派新活，池叠加）
+- **#3 与 Ctrl+I 关系（不相关，两种模式）**：挂起态输入 ≠ 打断（子代理继续跑）；普通生成中 Ctrl+I 插话语义保留
+- **#4 核心语义（输入到一半子代理回来了）**：**输入框与子代理处理完全独立**——子代理完成 → **立即自动处理**（不等用户输入、不看输入框状态）；输入框不清空、不抢焦点；处理轮运行中用户 Enter → **排队**（处理轮结束后自动以用户消息续发；Ctrl+I 仍可立即打断处理轮）
+- **死锁否决**：用户指出"输入到一半人离开（抽烟/开会）→ 输入框非空判据会永久挂起子代理"——**否决**"输入框非空不处理"与"非空+空闲超时"两个方案——判据根本不该存在：子代理完成是自动事件，用户输入是独立通道，两通道永不互等
+
+**功能需求**：
+- F1：回合尾 async 未完成 → 不阻塞等待（进入挂起态）；已完成结果不丢
+- F2：双通道事件循环——子代理完成 → 自动处理（无用户输入也处理）；用户提交 → 新回合
+- F3：输入框永不被后台事件干扰（不清空/不抢焦点/不判定输入状态）
+- F4：处理轮（模型消化子代理结果）运行中用户 Enter → 排队，处理轮结束自动续发用户消息
+- F5：挂起自然退出 = 后台池空（无 running/queued/未注入）+ 无待处理用户输入 → 回空闲态
+- F6：跨回合 async 叠加（并发上限 4 全局不变——_asyncSubagents 是 agent 对象级，天然跨轮）
+- F7：两种模式并存——挂起态输入模式（新回合，不打断后台）vs 普通模式（Ctrl+I 插话保留）
+- F8：子代理完成处理的**自动性**——不依赖用户在场（人离开回来即见处理完的报告）
+
+**非功能需求**：
+- N1：自动处理回合（若做 V2 auto-turn）的成本护栏——不得无限烧模型轮次
+- N2：自动处理撞权限门 → 无用户在场按 no-permission-handler 拒绝（§15 D-A3 评审 #2 同语义），不悬挂
+- N3：防后台链失控——自动处理中不得无限 spawn 新 async（失控循环防护）
+- N4：上下文膨胀防护——挂起期注入在无输入期可能累积 → 下轮开跑压缩兜底（已有：runAgent 轮内首查 compressIfNeeded agent.mjs:183-189）
+- N5：两端一致（CLI TUI / VS Code 面板同构交付）
+
+### 17.2 可行性评估（2026-09-02 一手代码核实，用户要求"好好评估"）
+
+① **runAgent 是单输入回合模型**（agent.mjs:110 `runAgent(agent, input, ...)`）——一轮输入 → chat/tools 循环 → finally 收尾。挂起循环**必须落在调用方/交互层**（CLI agent-turn/startup 的 turn 循环、VS Code 面板消息循环），runAgent 保持"单输入 → 输出"不变式——压缩/回注/task/纪律全部按轮执行，**不改造 runAgent 内部循环**（在内部做事件等待会让一轮无限长，压缩/权限/审计语义全乱）。结论：**挂起态 = 交互层状态**，runAgent 是它的"执行原语"。
+
+② **现 finally 收尾等待语义**（agent.mjs:437-457 + collectAsyncSubagents:473-492）：turn 尾 `await Promise.allSettled` 等全部 running → 注入全部报告 → 清空。改造点 = **回合尾语义从"等全部"改为"收已完成 + 移交未完成"**：collectAsyncSubagents 拆两半——已 settle 的立即注入（保留现注入形态：user reminder + XML 转义 + 64K 落盘）；未 settle 的移交会话级后台池（不等待）。finally 不再阻塞。
+
+③ **后台池零新状态**：`agent._asyncSubagents` / `agent._asyncQueue` 已是 **agent 对象级**（跨 runAgent 调用存活——§15 D-A1/D-A3 的 Ctrl+C 清空/ContinueError 保留语义都在 runAgent finally 里按 agent 处理）——"移交池"就是"不清不注入不等待"，F6 叠加并发自动成立。并发上限 4（running 数口径）天然全局。
+
+④ **跨 run 延迟注入有现成先例**：`agent._pendingDistill`（agent.mjs:114-118——上次运行的探索蒸馏在 prepareRun 前 await 落定，防机器线重建吞掉新输入）——已完成 async 结果注入"下一回合 prepareRun 前"可复用同款机制（_pendingAsyncResults 数组，prepareRun 前 pushReal 注入）。SEND-STALL-DISTILL §2.2/N1 语义同构。
+
+⑤ **"子代理完成 → 立即自动处理"两个实现档位**：
+- **V1 注入档（无模型回合）**：完成即注入历史（reminder 形态，同现收尾注入）→ 用户下一条消息模型自然看到并处理。改动小（④ 机制 + 回合尾移交），但"处理"滞后到用户下次输入——不满足用户"先处理子代理完成后的工作"的字面意图（用户没输入时结果只是躺着）
+- **V2 自动消化档（auto-turn）**：完成且无用户输入 → 系统驱动一次**无输入的模型回合**（注入 [System reminder: async #N finished] + 报告 → runAgent 空输入消化——模型总结/派后续活/回挂起）。**这是本节最大复杂度点**：auto-turn 的成本（每次完成烧一轮模型）、权限（撞门 → N2 拒绝）、循环防护（消化中再 spawn async → 链式永动——需 **auto-turn 禁 spawn async** 或深度上限）、与压缩/纪律的交互。F4 排队输入在 V2 才有意义（处理轮存在）
+- **范围建议**：评审定 V1 或 V2——V1 满足网友"能输入"痛点（回合不等、输入可用、结果下轮见）；V2 满足"自动处理"完整语义但成本/护栏重
+
+⑥ **输入 UI 现状**：CLI TUI 输入框 processing 期禁输（key-handler：processing 中 Enter 走 interruptPrompt 分支），挂起态需放开输入（processing=false + 后台池非空 → 输入可用，Enter = 新回合而非 Ctrl+I 打断）；VS Code 面板输入框同构放开。question 界面（工具问答）不复用——挂起输入是**交互层通道**不是工具调用（语义：用户自由消息，非结构化问答）。
+
+⑦ **TUI 子代理区块**：现回合结束收尾注入后 done 冻结（D-A3 settle 回调发 ⟦ev⟧done）。挂起态下回合已结束但区块**继续 live**（子代理还在跑）——渲染层需"后台模式"（状态行：后台 N 子代理运行中 + 输入框可用）；池空 → 区块自然冻结 + 挂起退出。VS Code 面板同构。
+
+⑧ **中断/异常兼容**（沿用 §15 D-A3 既有语义，agent.mjs:447-452）：挂起态 Ctrl+C → 清池退出（abort 传播）；ContinueError（turn cap）→ 池保留、resume 顺延；会话关闭 → 池 abort。**挂起态不是新异常路径**——是 finally 语义的放宽，既有分支全部保留。
+
+⑨ **压缩兜底**：挂起期注入累积（无输入期多子代理完成 → 多条 reminder 注入）——下轮开跑 runAgent 轮内首查 compressIfNeeded（agent.mjs:183-189，history 尾 user → 触发）自动压缩。V2 auto-turn 每次消化前同样走轮内压缩。无需新压缩机制。
+
+⑩ **风险清单**：
+- R1（V2 才有）：auto-turn 链式 spawn 失控 → N3 护栏（禁 spawn 或上限）
+- R2：auto-turn 模型消化质量——无用户上下文时模型可能"自作主张"推进工作 → auto-turn 注入模板限定消化动作域（仅总结报告 + 更新任务状态，不主动执行新工具？——评审定）
+- R3：挂起态时长无界（用户拍板 #1 自然退出——池空即退；池不空可无限挂——用户主动行为，接受）
+- R4：V1 下用户输入时池中仍有未完成项 → 该轮 prepareRun 前只注入已完成项，未完成项下轮继续注入（F6 叠加语义自然成立）——用户可能困惑"报告分轮到达" → UI 提示（区块逐个冻结 + 状态行计数）
+
+**评估结论**：方案可行，架构落点明确（交互层挂起态 + 回合尾移交 + prepareRun 前注入 + 既有 agent 级池），无颠覆性改造；V1 是小改造（finally 语义放宽 + 交互层状态 + 注入机制复用），V2 引入 auto-turn 需额外护栏。**建议 V1 起步**（满足网友核心痛点），V2 作后续演进。
+
+### 17.3 设计（评审定范围后细化；以下为 V1+V2 共用骨架）
+
+- **D-S1 回合尾语义（V1 核心）**：`collectAsyncSubagents` 拆为 `collectSettledAsync(agent)`（注入已完成，形态不变）+ 未完成项**保留在池**（不清空、不等待、不发 done 冻结——区块继续 live）。finally 分支（agent.mjs:447-452）在"anything else"路径调用 collectSettled 后**直接返回**，不再 allSettled 等待
+- **D-S2 交互层挂起态**（CLI agent-turn/startup turn 循环、VS Code 面板循环）：回合返回后 `agent._asyncSubagents` 非空 → 进入挂起态（非 processing——输入框可用、状态行"后台 N 子代理运行中"）；退出条件 = 池空（无 running/queued）+ 无排队输入 → 回空闲
+- **D-S3 prepareRun 前注入**：`_pendingAsyncResults` 数组（同 _pendingDistill 模式，agent.mjs:114-118 处落定）——每回合开始前把已 settle 未注入项注入历史；V1 的"处理"= 注入（模型下轮可见）
+- **D-S4 输入通道**：挂起态提交 = 普通新回合（D-S3 注入先行）；**输入框状态永不被后台事件读写**（F3 铁律——事件处理与输入框零耦合）
+- **D-S5 排队（V2，配合 auto-turn）**：auto-turn 处理轮 running 中用户 Enter → 消息入队（交互层 pendingInput），处理轮结束自动以该消息开新回合；Ctrl+I 仍可立即打断
+- **D-S6 auto-turn（V2）**：池项 settle 且无排队用户输入 → 交互层自动开无输入回合（注入 [System reminder: async #N finished] + 报告，模板限定消化动作域——R2）；**auto-turn 内禁 spawn 新 async**（N3：防链式永动——违反返回错误提示模型用同步 spawn 或等用户）
+- **D-S7 权限（V2）**：auto-turn 撞权限门 → 无用户在场按 no-permission-handler 拒绝（N2，§15 同语义）
+- **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构
+- **受影响文件**（预估，评审后定稿）：CLI agent.mjs（finally/collectSettled + _pendingAsyncResults 注入）、agent-turn.mjs 或 startup.mjs（挂起态循环）、TUI key-handler/状态行/渲染（输入放开 + 后台模式）、VS Code 同构（extension/面板消息循环 + agent.mjs）；两端测试
+- **测试（V1 核心用例）**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；V2 追加：T-S7 auto-turn 消化（完成无输入 → 自动回合注入消化）；T-S8 auto-turn 禁 spawn；T-S9 排队续发；T-S10 权限拒绝
+- **验收**：AC-S1 = 回合尾不阻塞（网友痛点：async 跑着主会话可继续对话）；AC-S2 = 子代理结果零丢失（下轮/自动可见）；AC-S3 = 输入框零干扰；AC-S4 = 挂起自然退出；AC-S5 = 既有 §15 语义回归（阻塞模式/check/上限/中断全不变）；AC-S6 = 两端全量绿
