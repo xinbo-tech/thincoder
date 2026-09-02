@@ -189,12 +189,12 @@ user input
 - `tempRange`：温度范围钳制
 - `reasoningEcho`：thinking token 回传策略
 
-### 5. src/context.mjs — 上下文管理
+### 5. src/context.mjs / src/compact.mjs — 上下文管理（code review #6：压缩/蒸馏逻辑 2026-08 拆至 compact.mjs，本节为两文件共同语义）
 
-**上下文压缩**（与 CLI 统一规范，见 thincoder `docs/design/CONTEXT-COMPACTION.md`）：
+**上下文压缩**（与 CLI 统一规范，见 thincoder `docs/design/CONTEXT-COMPACTION.md`；实现主体 = `src/compact.mjs`——compactHistory/truncateFallback/shrinkOversized/摘要/蒸馏/§8 ≤1K/§9 预算与 `tailStartByBudget`，context.mjs 保留 doc 注入等非压缩职责）：
 - 触发：仅安全点（history 末尾为 user/tool）且完整 prompt 估算 ≥ 阈值；**实测优先**——上次响应的 `usage.prompt_tokens` 为基线，之后的消息按增量估算（无基线时 system+tools+history 纯估算）
 - 阈值：显式 `agent.compactThreshold` 优先，否则 auto = 模型 context × **0.6**（为注入上下文与输出/reasoning 留余量）
-- 策略：head（最早 2 条，tool_calls 配对保护）+ LLM 摘要（thinking 关闭，对前端静默）+ tail（窗口自适应 `max(10, ctx/100K×30)`，≤40% 历史，orphan tool 拉回 owner）
+- 策略：无 head（KEEP_HEAD=0——最早消息可能是已完成的旧任务，锚点留给当前任务）+ LLM 摘要（thinking 关闭，对前端静默；**摘要目标 ≤1K tokens**，CONTEXT-COMPACTION §8 D13）+ tail（窗口自适应 `max(10, ctx/100K×30)` ≤40% 历史，orphan tool 拉回 owner；**再受 15% token 预算约束** §9 D-T1/D-T2——超预算 pair-safe 前移 tailStart、保底 10 条）
 - 降级链：摘要 LLM 失败 → 连续 3 次后 `truncateFallback` 确定性截断（无 LLM 调用）；无 middle 可切 → `shrinkOversized` 单消息截断
 - 压缩后回注：task 列表（先清旧注入去重）+ plan mode + AUTO/permission reminder
 - 空响应（reasoning 耗尽/输出截断）：注入 reminder 重试，上限 2 次，仍空才抛错（IK60QP，CLI 同语义）
@@ -452,3 +452,21 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 - 配置界面 = `~/.thincoder/config.json` 的 `providers[].context`（VS Code 设置 UI 编辑，migrate-settings 同源——`src/config-migrate.mjs` 迁移时透传 context 字段；**不做会话面板入口**，settings 是 provider 配置唯一权威，评审 round2 #10 定死）
 
 测试：`test/agent.test.mjs`（providerSpec 覆盖/非法值/未配置/独立拷贝 + ctxPercentForModel 显示跟随 + T-C2 压缩阈值跟随——同批消息 1M spec 不触发、128K 覆盖触发）、`test/config-io.test.mjs`（resolveProviders 非法值 warn 一次 + 合法保留 + 未配置回归 + migrate 透传）。
+
+### 压缩目标调优：摘要 ≤1K + tail 15% token 预算（2026-09-02 · 引用）
+
+需求与设计见 CLI `docs/design/CONTEXT-COMPACTION.md` §8/§9（8.2 D13-1..D13-4 + 9.2 D-T1..D-T5，单一权威源，本文件不复制；CLI 端同批落地，本端与设计同规格实现）。本仓库改动点：
+
+- `src/compact.mjs`：`SUMMARIZE_PROMPT` 尾句改写（§8 D13-1/D13-2）——删除 "err on the long side" 无界语义 → "Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target…" 硬目标句 + 砍价优先级整条写入（① 已完成 recap 一行 ② FILES CHANGED why 注释 → 裸路径 ③ 进行中叙述收紧 ④ NEVER cut 设计锚点/UNRESOLVED）；无 max_tokens 机械保险丝（D13-3），既有规则（两清单/COMPLETED vs IN-PROGRESS/honest）全保留（D13-4）
+- `src/compact.mjs`：tail token 预算（§9 D-T1/D-T2/D-T4）——新增 `tailStartByBudget(history, provider, tailStart)`：count 公式候选尾 + 既有配对保护之后，估算候选尾超预算（`context×0.15 − SUMMARY_SEGMENT_ESTIMATE=1100`——摘要段 note+占位+~1K 目标固定估算）→ tailStart 前移（旧消息并入摘要段）；**pair-safe 边界**（tool 位置跳过：整对同切，切在中间会 orphan 且预算重新超支）；保底 10 条（floor = len−10，超支接受；短历史候选 <10 → 40% cap 已封顶、预算逻辑 no-op）；`compactHistory` + `truncateFallback` 两路接线（降级路径形状契约一致）；`estimateTokens` 拆出单条 `estimateMessage` 供预算扫描增量裁剪
+- 触发阈值 0.6 不变（D-T4：预算只约束压缩结果，不改变触发判据）
+
+测试：`test/agent.test.mjs` §9 组（T-DT1：600K 场景压缩后 history 段估算 ≤15% 窗口 ±5% 容差 + T-DT7 摘要输入 ≤ 0.6×ctx − tail 预算 + T-DT4 摘要指令携带 ≤1K 句；T-DT2 普通会话 tailStart 零变化回归；T-DT3a 保底 10 条超支接受；T-DT3b 短历史候选 <10 无预算逻辑；T-DT6 pair-safe 边界——tool 位跳过、整对进摘要、无 orphan）+ D13 组（T-D13a/b：~1K 硬目标句、无 "err on the long side"、砍价优先级①②③④；既有 SUMMARIZE_PROMPT 断言不回归）。
+
+### tailStartByBudget 倒序配对保护增强（2026-09-02 · 偏差修复，VS Code 独有）
+
+> 来源：偏差审计 2026-09-02。**CLI 端不涉及**：CLI `repairHistory` 在 run 起点保证 tool_calls→tool 正向顺序，其 `tightenTailByBudget` 只跳 tool 位即安全（审计论证）；VS Code 历史流可产生倒序形状（tool 结果块在 assistant 前，2026-08-16 400 事故实证）——REVERSE 保护防的类别，预算收紧在保护之后运行可重新制造。
+
+- `src/compact.mjs`：pair-safe 判据**增强为单一实现**——新增 `callsGapAfter(history, q)`（assistant 位 q 声明的 tool_calls 是否有缺口：ids 未被 q 后连续 tool 块全盖住——与既有 REVERSE 保护同判据）+ `reverseProtectTail`（两处 REVERSE 保护块收敛为同源调用，行为不变）。`tailStartByBudget` 主循环与 floor 回退统一走该判据：倒序配对的 assistant 位（其 results 已切进中段）不停——主循环继续前移（该 assistant 整体并入摘要段，配对在中段序列化无害）；floor 回退继续回退到安全位（保底语义不变：tail ≥ 10 条按消息计数）。
+
+测试：`test/agent.test.mjs` §9 组新增 **T-DT8**（倒序配对 [tool, assistant] + 预算超限——主循环场景边界落在安全位、floor 场景回退越过倒序 assistant 位；断言压缩结果 tail 内每个 assistant(tool_calls) 的 ids 均有对应 tool 结果——无悬空）；T-DT1..7 与既有 REVERSE 保护（`test/tool-pairing.test.mjs`）回归全绿。
