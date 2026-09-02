@@ -239,7 +239,7 @@ test("T-S2b 挂起期 settle → pending → 下回合 prepareRun 前注入（D-
     const map = new Map()
     history._asyncSubagents = map
     const parent = fakeParent(port, { _asyncSubagents: map, history })
-    const spawn = await subagentTool.execute({ task: "后台活", role: "coder", async: true }, { agent: parent, cwd, callbacks: {}, depth: 0 })
+    const spawn = JSON.parse(String(await subagentTool.execute({ task: "后台活", role: "coder", async: true }, { agent: parent, cwd, callbacks: {}, depth: 0 })))
     const entry = map.get(spawn.id)
     assert.equal(entry.status, "running")
     // 模拟挂起会话开始：_suspended = true → settle 回调走挂起分流（延迟冻结 + 入 pending）
@@ -275,8 +275,8 @@ test("T-S4 叠加并发：跨批次 async 池累积 + 完成未消费项保留�
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
     const parent = fakeParent(port)
     const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
-    const a = await subagentTool.execute({ task: "活A", role: "coder", async: true }, ctx)
-    const b = await subagentTool.execute({ task: "活B", role: "coder", async: true }, ctx)
+    const a = JSON.parse(String(await subagentTool.execute({ task: "活A", role: "coder", async: true }, ctx)))
+    const b = JSON.parse(String(await subagentTool.execute({ task: "活B", role: "coder", async: true }, ctx)))
     assert.equal(a.status, "running")
     assert.equal(b.status, "running")
     assert.ok(a.id !== b.id, "id 独立")
@@ -337,7 +337,7 @@ test("T-S8 禁 spawn 分档：手动档 async+同步均机械拒绝 / AUTO 档�
     assert.equal(parent._asyncSubagents.size, 0, "拒绝不登记")
     // AUTO 档：放行——async spawn 正常启动（推进链成立）
     const autoCtx = { agent: parent, cwd, callbacks: {}, depth: 0, getAuto: () => true }
-    const ok = await subagentTool.execute({ task: "AUTO 活", role: "coder", async: true }, autoCtx)
+    const ok = JSON.parse(String(await subagentTool.execute({ task: "AUTO 活", role: "coder", async: true }, autoCtx)))
     assert.equal(ok.status, "running", "AUTO 档放行 async")
     const entry = parent._asyncSubagents.get(ok.id)
     await entry.settled
@@ -804,7 +804,7 @@ test("T-S19 aborted settle 出池清理：中止的池项 settle 即从共享 ma
     parent.history._asyncSubagents = map // agent.mjs 同款：共享 history 载体
     const controller = new AbortController()
     const ctx = { agent: parent, cwd, callbacks: {}, depth: 0, signal: controller.signal }
-    const spawned = await subagentTool.execute({ task: "T-S19 慢活", role: "coder", async: true }, ctx)
+    const spawned = JSON.parse(String(await subagentTool.execute({ task: "T-S19 慢活", role: "coder", async: true }, ctx)))
     assert.equal(spawned.status, "running")
     const entry = map.get(spawned.id)
     assert.ok(poolLive(parent.history), "池 live 前提")
@@ -838,7 +838,7 @@ test("T-S20 会话中止统一 abort：持旧 controller signal 的池 children 
     const stale = new AbortController()
     D.panel._turnControllers = [stale] // runPanelChat 登记（会话入口快照 → susp.abortControllers）
     const ctx = { agent: parent, cwd, callbacks: {}, depth: 0, signal: stale.signal }
-    const spawned = await subagentTool.execute({ task: "T-S20 慢活", role: "coder", async: true }, ctx)
+    const spawned = JSON.parse(String(await subagentTool.execute({ task: "T-S20 慢活", role: "coder", async: true }, ctx)))
     const entry = map.get(spawned.id)
     const sessionP = suspensionSession(D.panel, D.entry)
     await waitFor(() => D.panel._suspWake, 3000) // 会话 parked（child running——5s 延迟未到）

@@ -1299,16 +1299,23 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("`consult` stays available"), "consult remains available")
   })
 
-  it("engineering.md: first-delivery divergence audit + eng-coder fix round (2026-08-30)", () => {
+  it("engineering.md: first-delivery divergence audit assertions superseded by §18 internal protocol (2026-09-02)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
-    assert.ok(text.includes("7. **Divergence audit"), "flow step 7 = divergence audit (automatic node)")
-    assert.ok(text.includes("do NOT go straight to the delivery review"), "first delivery does not go straight to the delivery review")
-    assert.ok(text.includes("spawn an `explore` subagent"), "audit runs via an explore subagent")
-    assert.ok(text.includes("silent simplifications"), "audit names silent simplifications")
-    assert.ok(text.includes("SECOND time with the\n     divergence list as the task brief"), "divergences → eng-coder second fix round")
-    assert.ok(text.includes("invent nothing new"), "fix round invents nothing new (audit report IS the task)")
-    assert.ok(text.includes("verify the\n     divergence list point by point"), "fix-round delivery verified point by point")
-    assert.ok(text.includes("First delivery audit"), "work-loop state table carries the audit state")
+    // step 7：交付已内部审计——父侧不双重审计（2026-08-30 父侧审计节点随 §18 下沉）
+    assert.ok(text.includes("7. **Delivery arrives already audited"), "flow step 7 = 已内部审计（标题）")
+    assert.ok(text.includes("do not double-audit"), "防双重审计/误用")
+    assert.ok(text.includes("`explore` subagent audited the delivered code"), "内部审计走 explore 子 agent")
+    assert.ok(text.includes("silent simplifications"), "审计点名静默简化")
+    assert.ok(text.includes("changes outside the approved file list"), "超清单改动点名")
+    assert.match(text, /capped at 5\s+correction rounds/, "修正轮 ≤5（内部）")
+    assert.match(text, /7th audit spawn is\s+refused mechanically/, "第 7 次审计 spawn 机械拒绝")
+    assert.ok(text.includes("spawn the fix round with the report's"), "stalled → 修正轮任务 = 未收敛点清单")
+    assert.ok(text.includes("unconverged points as the task brief"), "任务书 = 未收敛点清单（不发明新内容）")
+    assert.ok(!text.includes("SECOND time with the\n     divergence list as the task brief"), "2026-08-30 父侧二次 spawn 句式已随 §18 移除")
+    assert.ok(!text.includes("verify the\n     divergence list point by point"), "父侧逐点核销句式已随 §18 移除")
+    assert.ok(text.includes("Delivery (async settle)"), "work-loop 状态表含 async settle 态（替代 First delivery audit）")
+    assert.ok(!text.includes("First delivery audit"), "First delivery audit 父侧审计态已移除")
+    assert.ok(text.includes("Automatic either way"), "自动节点语义保留（内部协议默认承担）")
   })
 
   it("engineering.md: multi-task parallelism discipline injected at top level (2026-09-01, CLI parity)", () => {
@@ -1328,10 +1335,52 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("plus its designId parameter"), "work-loop approval line mentions designId")
   })
 
-  it("engineering.md: divergence-audit fix round reuses the same designId+token (2026-09-01, T19)", () => {
+  it("engineering.md: §18 async delivery + internal-protocol narrative; fix round reuses the same designId+token (2026-09-01 T19 / 2026-09-02 §18)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
-    assert.ok(text.includes("This audit is an automatic flow node — no user initiation needed"), "audit is an automatic node (AC9)")
-    assert.ok(text.includes("same `designToken`\n     and `designId` parameters"), "fix round reuses the same designId+token")
+    // async 交付：eng-coder 默认 async + 内部协议闭环（防双重审计/误用）
+    assert.ok(text.includes("Eng-coder spawns are async by default (AGENT-LOOP.md §18)"), "默认 async 叙述（step 6）")
+    assert.ok(text.includes('returns `{id, status:"running"}` immediately'), "spawn 立即返回 running")
+    assert.ok(text.includes("runs INSIDE the child"), "交付协议在子代理内部闭环")
+    assert.ok(text.includes("Pass `async:false`"), "显式 async:false 覆盖保留")
+    // step 7：交付已内部审计——父侧不重复审计
+    assert.ok(text.includes("Delivery arrives already audited — do not double-audit"), "父侧不双重审计（step 7 标题）")
+    assert.ok(text.includes("terminal state `clean` | `stalled`"), "终态 clean/stalled")
+    assert.ok(text.includes("same `designToken` and `designId` parameters"), "修正轮复用同 designId+token（内部收敛外的父侧处理）")
+    assert.ok(text.includes("invent nothing\n   new"), "不发明新需求")
+    // step 8：父侧复核保留可选（默认内部协议承担）
+    assert.ok(text.includes("OPTIONAL second opinion"), "父侧 advisor = 可选第二意见")
+    assert.ok(text.includes("no user\n   initiation needed (2026-08-24 decision)"), "自动节点语义保留")
+    // Work Loop：旧 First delivery audit 父侧审计态已由内部协议态取代
+    assert.ok(!text.includes("First delivery audit"), "父侧 First delivery audit 态已移除（§18 下沉）")
+    assert.ok(text.includes("Delivery (async settle)"), "Work Loop 含 async settle 态")
+    assert.ok(text.includes("internally audited + advisor-reviewed inside the child"), "内部审计+复评口径")
+  })
+
+  it("engineering-sub.md: internal delivery protocol — audit/self-fix/re-review/convergence + Fix round N/5 + never edit design docs (2026-09-02 §18)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+    assert.ok(text.includes("## Internal Delivery Protocol"), "内部协议附录段头在（eng-coder 系统提示词）")
+    // ①-⑦ 协议步骤
+    assert.ok(text.includes("① **Implement**"), "① 实现（零清单外触碰 + 验收自验）")
+    assert.ok(text.includes("② **Self-check**"), "② 自查透明表")
+    assert.ok(text.includes("③ **Audit**"), "③ explore 偏差审计")
+    assert.ok(text.includes("④ Audit dirty"), "④ dirty → 自修 → 再审计")
+    assert.ok(text.includes("⑤ Audit clean"), "⑤ clean → advisor code review")
+    assert.ok(text.includes("⑥ Findings to fix"), "⑥ findings 自修 → 复评")
+    assert.ok(text.includes("⑦ Clean → deliver"), "⑦ 收敛交付（轮次 + 终态）")
+    assert.ok(text.includes("terminal state (`clean` | `stalled`)"), "终态 clean/stalled")
+    // 审计四类偏差点名
+    assert.ok(text.includes("partially implemented acceptance criteria / silent simplifications / doc drift / out-of-list changes"), "四类偏差点名")
+    // round4 #4：审计任务书机械并集（非自述）
+    assert.ok(text.includes("appended MECHANICALLY (your own spawn task + your actually-touched files)"), "审计任务书机械并集（防自述漏报逃逸）")
+    assert.ok(text.includes("never hand the audit a self-written file list"), "禁止自写文件清单")
+    // round5 #5：永不编辑设计文档
+    assert.ok(text.includes("**Never edit design documents**"), "永不编辑设计文档（设计文档是输入非交付物）")
+    // round5 #1：修正轮 N/5 提醒 + 5 轮上限 + stalled 不静默
+    assert.ok(text.includes("Correction rounds — max 5"), "修正轮上限 5")
+    assert.ok(text.includes("修正轮 N/5"), "每轮 `修正轮 N/5` 提醒")
+    assert.ok(text.includes("STOP and deliver a **stalled** report listing the unconverged points"), "超限 → stalled 报告（不静默）")
+    assert.ok(text.includes("fails twice in a row → same stalled report"), "节点失败重试 1 次仍败 → stalled")
+    assert.ok(text.includes("7th audit spawn is refused mechanically"), "第 7 次审计 spawn 机械拒绝 = stalled 信号")
   })
 
   it("engineering.md: no duplicated section headers (2026-09-01 fix #4 hygiene)", () => {
