@@ -210,6 +210,18 @@
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+### 2026-09-03：任务大小零裁量声明（用户裁定：工程模式不分大小全流程）
+
+**触发**：agent 反复纠结"小任务是否该走完整 Mandatory Flow"——病根 = METHODOLOGY 旧"小改动不新建文档"豁免条款给了轻走依据（该豁免已于 2026-09-03 删除；METHODOLOGY.md:47 同批确立"代码变更都必须落文档（无改动太小免文档通道）"）。
+
+**裁定（用户）**：工程模式下任务**不分大小**全走 Mandatory Flow——任务大小不是 agent 的裁量项；"任务太小 / 只是小改"永远不是跳过或压缩某一步的理由，也没有任何变更免于在设计文档落档。**进入工程模式这件事本身就是尺寸裁定**（用户已替 agent 做了该决定）。
+
+**加固**：两端 `src/prompts/engineering.md` "## Mandatory Flow (every task, no skipping)" 标题下、第 1 步之前注入零裁量声明段（6 行英文提示词——首句 "Task sizing is NOT your call — every user request in this mode runs the full Mandatory Flow regardless of size."，末句 "...the user's decision to be in engineering mode was the sizing decision."；两端 byte-identical 保持，CLI 既有 15 文件比对断言覆盖）。
+
+**受影响文件**：两端 `src/prompts/engineering.md`（零裁量声明段）+ 两端 `test/agent.test.mjs`（新增 engineering.md 内容断言 "Task sizing is NOT your call"——仿既有 engineering.md 断言风格，防回退）+ 本文档 §7（本条）。本变更无文件增删——§2.7 受影响文件表结构与文件集不变。
+
+**验收**：两端 engineering.md 改后 byte-identical；两端新断言测试通过 + node --check；不 commit。
+
 ### 2026-09-02：§18 工程交付协议——eng-coder 默认 async + 内部自审计闭环（用户重构裁定）
 
 **需求**：用户实测同步 spawn eng-coder 阻塞主会话（"功能目的就是 eng-coder 执行中主会话能去干别的"）；初版跨 digest 链状态机方案评审否决后，用户拍板把交付后审计/修正/review 全部移入 eng-coder 子代理内部——主会话只 spawn 一次（默认 async），子代理内部完成"实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛"后一次交付。

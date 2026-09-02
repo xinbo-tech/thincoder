@@ -3751,6 +3751,15 @@ test("prompts/engineering.md: 写文档前计划确认条款（无豁免）", ()
   assert.ok(text.includes("obvious enough to skip"), "堵死 self-exemption 借口句在")
 })
 
+test("prompts/engineering.md: 任务大小零裁量声明（2026-09-03——工程模式不分大小全流程）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("Task sizing is NOT your call"), "零裁量声明句在（Mandatory Flow 标题下）")
+  assert.ok(text.includes("every user request in this mode runs the full\nMandatory Flow regardless of size"), "不分大小全流程")
+  assert.ok(text.includes('"The task is too small / it is just a tweak"'), "小任务借口句点名")
+  assert.ok(text.includes("no change is exempt from\nbeing recorded in the design docs"), "无豁免落档语义在")
+  assert.ok(text.includes("the user's decision to be\nin engineering mode was the sizing decision"), "进入工程模式即完成尺寸裁定")
+})
+
 test("prompts/engineering.md: UI/交互决策必须落设计文档且必须进 eng-coder 任务书（2026-08-29）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
