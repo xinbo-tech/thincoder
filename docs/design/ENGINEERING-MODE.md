@@ -19,8 +19,8 @@
 | FR1 | 设计先行 | 设计文档（三层）存在且通过设计评审前，任何代码文件（含 `src/prompts/*.md`）不可被修改 |
 | FR2 | 设计评审独立 | design review 由独立上下文执行；评审对象 = 调用时显式传入的文档清单，不遍历 git diff |
 | FR3 | 授权链 | 设计评审通过签发 token——连同**随机 designId**（**评审调用时生成、通过时入槽**——评审 #7 时机口径统一；不锚定文档路径/内容，避开 2026-08-31 已否决的"文档锚失效"问题）存于会话内多设计槽 `Map<designId,{token}>`；spawn eng-coder 必须携带 designId + 匹配 token（单设计时 designId 可省略）；token 随会话 slot 持久化跨进程（TTL 7 天 fail-closed；评审 2026-09-02 #1 统一口径——见 §2.6 持久化边界） |
-| FR4 | 代码评审归属 | eng-coder 交付前自查（对照验收标准/文件范围，非 LLM）；父代理在 eng-coder 返回后调 `advisor(type="code")` 评审——修复循环在父代理与 eng-coder 之间闭环（eng-coder 子代理环境无法真实调用 LLM advisor，2026-08-01 裁定） |
-| FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现+修复建议、用户逐条拍板；**交付 code review 流程节点自动**（eng-coder 返回后自动，不问用户）；失败停止重试（2026-08-24 决策，见头部） |
+| FR4 | 代码评审归属 | eng-coder 交付前自查（对照验收标准/文件范围，非 LLM）；**2026-09-02 §18 反转**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs depthOnly 装配）且实现无 depth/role 限制（advisor.mjs——readonly 内嵌循环）——2026-08-01 裁定依据（当时工具未装配）已过时——**eng-coder 内部自审计闭环：实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛后一次交付（内部协议，权威源 AGENT-LOOP.md §18 D-E2）**；父侧复核保留可选（默认由内部协议承担——stalled/存疑才复核） |
+| FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现+修复建议、用户逐条拍板；**交付 code review 流程节点自动**（2026-09-02 §18 起默认由 eng-coder 内部协议承担——in-child advisor 复评自动运行、不问用户；父侧复核保留可选——stalled/存疑才复核）；失败停止重试（2026-08-24 决策，见头部） |
 | FR6 | 范围约束 | eng-coder 不得修改 Implementation Handoff 文件清单外的任何文件；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
 | FR7 | 待办管理 | 技术待办统一在 `docs/TODO.md`，不落入设计文档（避免触发重新 doc review） |
 | FR8 | 多任务并行 | 相互独立的设计可**并行推进**（设计/评审/实现/审计/交付评审各环节），上限 ≤4 并发（2026-09-02 用户拍板 3→4——AGENT-LOOP.md §15 D-A4 同步点；**提示词纪律——与文件集交集检查同级，无机械门禁，评审 round3 #2 补记**）。**前置检查（流程强制——提示词纪律，无机械门禁，评审 #6 措辞对齐）**：两任务"受影响文件"集无交集才可并行 spawn eng-coder（engineering.md Delegation 节「并行多 eng-coder 不得编辑同一文件」条款的形式化——评审 #3 具名锚点）；任务间有依赖链 → 串行。用户澄清/批准逐个进行（但可一次连发多个评审/批准）。token 按 designId 隔离（FR3）——各 eng-coder 携自己设计的 designId+token，互不覆盖。**发起权不变**：设计评审仍仅由用户发起（FR5），并行不改变这一点。 |
@@ -42,8 +42,8 @@
 
 | 角色 | 职责 | 机械约束 |
 |---|---|---|
-| **父代理**（顶层，`role` 未定义） | 架构师：需求/设计文档 → 提醒设计就绪 → 用户发起设计评审（传文档清单）→ 打回呈递+用户拍板 → 用户批准 → spawn eng-coder → 交付自动评审+验收 | 拦截型：design token 前写代码被拒；提示词约束：不写实现、不发起评审、等批准、验收 |
-| **eng-coder**（子代理，`role="eng-coder"`） | 实现者：按设计实现 → 自评 → 修复 → 交付 | 拦截型：spawn 需 token、写文件需 `_engDesignReviewed`；流程驱动：交付前自评 |
+| **父代理**（顶层，`role` 未定义） | 架构师：需求/设计文档 → 提醒设计就绪 → 用户发起设计评审（传文档清单）→ 打回呈递+用户拍板 → 用户批准 → spawn eng-coder（默认 async——§18）→ 交付验证（可选的父侧复核） | 拦截型：design token 前写代码被拒；提示词约束：不写实现、不发起评审、等批准、验收 |
+| **eng-coder**（子代理，`role="eng-coder"`） | 实现者：按设计实现 → **内部协议闭环**（§18：explore 偏差审计 → 自修 → advisor 复评 → 收敛，≤5 修正轮）→ 交付（报告含审计/评审轮次 + clean/stalled；永不编辑设计文档） | 拦截型：spawn 需 token、写文件需 `_engDesignReviewed`；内部 spawn 仅 explore+同步（机械门）；审计 ≤6 次（第 7 次机械拒绝） |
 
 ### 2.2 主流程
 
@@ -54,15 +54,15 @@
    ├─ 有 🔴 → 呈递发现+逐项修复建议 → 用户逐条拍板 → 修改 → 再提醒 → 用户发起复审
    └─ 无 🔴 → 回显 [DESIGN-TOKEN:…] + designId（评审调用时已生成）→ designId+token 入槽
 4. 用户批准设计
-5. subagent(role="eng-coder", designId=<可选，单设计省略>, designToken=token)
+5. subagent(role="eng-coder", designId=<可选，单设计省略>, designToken=token) —— **默认 async（§18 F1/D-E1）**：spawn 返回 {id, running}——交付协议在子代理内部闭环（主会话派完即挂起/可交互——§17 双通道）
    ├─ 机械校验 _engDesignTokens.get(designId) === token（单设计取唯一槽），不符即 throw
-   ├─ spawn 成功 → child._engDesignReviewed = true（解锁写文件）
+   ├─ spawn 成功 → child._engDesignReviewed = true（解锁写文件）+ 任务域授权（内部写豁免逐写审批）
    └─ task 含：Docs involved（需求+设计+引用清单）→ 文件清单 → 验收标准（METHODOLOGY Task Structure）
-6. eng-coder 实现（内部小步 verify）
-6.5 首次交付偏差审计（2026-08-30 用户裁定，自动节点）：subagent(role="explore") 对照设计文档审计交付代码——验收标准是否有部分实现/静默简化/文档漂移（模块地图未回写）/超清单改动；**有偏差 → eng-coder 二次修正轮**（偏差清单即任务全文，不发明新内容；返回后逐点核销）→ **无偏差 → 进入交付评审**
+6. eng-coder **内部交付协议**（§18 D-E2，子代理内部闭环——实现 → 自查透明表 → explore 偏差审计（审计任务书 = 父 spawn 任务书 ∪ 实际 _touchedFiles 机械并集；对照设计查验收覆盖/静默简化/文档漂移/超清单改动）→ dirty 自修（修正轮 ≤5，`修正轮 N/5` 提醒）→ clean → advisor(type=code) 复评 → findings 自修 → 收敛）——eng-coder 永不编辑设计文档（真实文档漂移写报告归父侧）
+6.5 交付 settle → 报告注入 → digest/用户回合消化（既有语义——父侧不再自动 spawn 审计/评审）
 7. 返回时 mergeChildMutations：子代理改动合并进父代理（_mutatedThisRun/_touchedFiles，失效旧 verify/advisor 标记，重置 _advisorRound=0）
-8. 父代理 advisor(type="code", 评审范围=task 的 Docs involved + 设计验收标准) 代码评审——**流程节点自动，不问用户**
-   （评审由主代理发起——eng-coder 子代理环境无法真实调用 LLM advisor 自评；评审范围仍显式化，不遍历 git diff）
+8. 父代理交付验证（对照验收标准：跑测试/读改动文件）；**父侧复核（explore 审计 / advisor code review）保留可选**——默认信任内部协议（报告自述轮次+终态 clean/stalled）；stalled/存疑才复核（2026-09-02 §18 反转原自动审计节点）
+   （2026-08-01 裁定"eng-coder 子代理环境无法真实调用 LLM advisor"随 §18 反转——见 FR4；评审范围仍显式化，不遍历 git diff）
 9. 父代理 verify（对照验收标准）
 10. 完成：验收标准勾销到设计文档
 ```
@@ -75,20 +75,20 @@
 |---|---|---|---|
 | **Design gate — token** | 拦截 | spawn 按 designId 定位 `parent._engDesignTokens.get(designId)`，校验 `args.designToken === 槽值` + `validateDesignToken`（HMAC/TTL 不变），不符即拒；会话内仅一个设计时 designId 可省略（取唯一槽），多个设计时缺 designId → 拒并要求指定 | subagent.mjs |
 | **Design gate — 产品代码变更** | 拦截 | eng-coder `!_engDesignReviewed` → 写/删/改产品代码被拒；父代理 `!_engDesignToken` → 产品代码写/删/改被拒（豁免仅设计产出物；评审 2026-09-02 #8：门禁覆盖全部变更形态，非仅写） | dispatch.mjs |
-| **Code review** | 流程驱动 | **主代理发起**：eng-coder 返回后，父代理调 `advisor(type="code")` 评审（评审范围 = task 的 Docs involved + 设计验收标准，显式化）；发现问题回 eng-coder 修复或 minor 直修。eng-coder 子代理环境无法真实调用 LLM advisor，自评不可行（2026-08-01 裁定）。mergeChildMutations 合并改动供评审使用，并重置 `_advisorRound = 0` | engineering.md；eng-coder.md |
-| **偏差审计** | 流程驱动 | 首次交付后**父代理自动** spawn explore 审计（对照设计查验收覆盖/静默简化/文档漂移/超清单改动）；有偏差 → eng-coder 修正轮（同 designId+token）；无偏差 → 进交付评审（2026-08-30，见 §2.2 step 6.5——T19/AC9） | engineering.md |
+| **Code review** | 流程驱动 | **eng-coder 内部协议默认承担（2026-09-02 §18 反转）**：子代理内部 advisor(type="code") 复评（documents = 设计文档 + 交付文件清单——实际文件为对象，非自述）→ findings 自修 → 收敛 ≤5 修正轮；in-child advisor 不消耗父侧 NFR2 预算（AGENT-LOOP.md §18 round4 #5）。父侧复核保留可选（stalled/存疑/用户要求——见 AGENT-LOOP.md §18 D-E6）；mergeChildMutations 合并改动供父侧复核使用 | engineering.md；eng-coder.md |
+| **偏差审计** | 流程驱动 | **eng-coder 内部协议默认承担（2026-09-02 §18 下沉）**：子代理内部 explore 审计（对照设计查验收覆盖/静默简化/文档漂移/超清单改动；审计任务书 = 父 spawn 任务书 ∪ _touchedFiles 机械并集）；dirty → 自修 → 再审计；审计 ≤6 次、第 7 次机械拒绝（stalled 信号）。父侧复核保留可选（2026-08-30 裁定"父代理自动"随之反转——见 AGENT-LOOP.md §18） | engineering.md |
 | **收敛上限** | 拦截 | code review 最多 5 轮；design 不消耗轮次；eng-coder 非 LLM 自检不消耗轮次（上限只约束父代理发起的 code review——评审 2026-09-02 #5 澄清） | advisor/run.mjs |
 
 ### 2.4 评审范围（Review Scope）——评审对象由任务定义，不由遍历决定
 
 - **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + METHODOLOGY + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（现机制按 diff 找文档——范围大、不准、与任务无关；上轮误审 VERIFY-DOCONLY.md 的教训）。显式传路径同时解决 untracked 新文档 diff 不可见问题（advisor 直接 read）。
-- **code review**：主代理发起，评审范围 = task 的 Docs involved + 设计验收标准（显式化）；不遍历 git diff 找评审对象。
+- **code review**：评审范围 = task 的 Docs involved（设计文档）+ 交付文件清单/验收标准（显式化）；不遍历 git diff 找评审对象——2026-09-02 §18 起默认由 eng-coder 内部协议承担（in-child advisor 复评 documents 同此范围），父侧复核可选。
 - 父代理负责收集涉及文档，在设计评审（documents 参数）与 spawn（Docs involved）两处传入。
 
 ### 2.5 评审时机（Review Timing）
 
 - **设计评审（doc review）**：仅由**用户发起**——父代理呈递设计就绪并提醒，用户发话才调 advisor；打回后每轮呈递发现+修复建议、用户逐条拍板再改、再提醒复审（agent 不自行修完重送）。
-- **交付 code review**：流程节点自动——eng-coder 返回后父代理自动评审（不问用户）；发现问题回 eng-coder 修复或 minor 直修。
+- **交付 code review**：流程节点自动、不问用户（2026-09-02 §18 起默认由 **eng-coder 内部协议承担**——in-child advisor 复评 → findings 子代理内自修收敛 → 收敛交付；父侧复核保留可选——stalled/存疑才复核，发现问题回 eng-coder 修复（同 designId+token，任务 = 未收敛点清单）或 minor 直修）。
 - **系统推回**：工程模式下 advisor guard 推回一律关闭（§2.3），如未来启用也只作提示用户之用，由用户发起评审。
 - advisor 失败/中断：停止重试，向用户报告原因。
 
@@ -117,13 +117,14 @@
 | 两端 `run-helpers.mjs`（VS Code `agentState()`）/ `session.mjs`（CLI slot 持久化）/ `panel-session.mjs`（VS Code 往返） | **多槽序列化（2026-09-01 审计 #1 修复）**——`_engDesignTokens` Map 随 slot 持久化（VS Code 跨轮 agent 重建场景的必要补齐）；§2.6 持久化边界同步。序列化格式 `{ [designId]: token }`（JSON 安全），恢复 `new Map(Object.entries)`；旧 slot 无字段 → 不设 Map（fail-closed TTL 兜底过期 token）。**修复轮补记实际触点**：VS Code 恢复链 `panel-chat.mjs`（engState 携带）→ `setup.mjs`（恢复 Map）；清理对称（**审计修复 #2**）——两端 `agent-tools/eng.mjs`（exit + off→on）+ CLI `tui/cmd-eng.mjs` + `session.mjs` `resetSessionState` 同步 `_engDesignTokens = new Map()`，resolveDesignSlot 的"有 Map 无镜像"防护降级为防御冗余 |
 | 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）+ `run-helpers.mjs`（VS Code `loadEngineeringPrompt`，评审 2026-09-02 #3 补全）/ METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复（CLI 端已实现 2026-09-02，D-AC 勾销见 §7 状态行；VS Code 端并行任务进行中） |
 | 两端 `CHANGELOG.md` | 变更记录（下一版本号——0.12.54/0.8.9 已发布，评审 #3 补记） |
-| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：主代理发起 code review（范围 = Docs involved + 验收标准）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态 |
+| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：交付验证 + 可选的父侧复核（原"主代理发起 code review"随 §18 反转——2026-09-02，见变更记录）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录——§18 起由子代理内部协议承担，父侧复核可选）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态；**2026-09-02 §18**：async 交付叙述 + 内部协议口径（防双重审计/误用） |
 | `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
 | `src/prompts/discipline.md` | 不动 | 普通模式专属（解耦原则） |
 | `src/prompts/main.md` | 不动 | 普通模式专属（解耦原则） |
 | `test/agent.test.mjs` | MODIFY | 门禁/guard 测试；doc review 范围测试；**2026-09-01**：+designId 多槽 spawn 校验（T15/T16/T17）；engineering.md 并行化条款断言 |
 | `test/advisor.test.mjs` | MODIFY | design 评审输入构建测试；**2026-09-01**：+多设计 token 并存、失败不波及其他槽隔离测试、**advisor 通过结果含 designId 断言（评审 #1）** |
 | `docs/TODO.md` | MODIFY | 待办统一维护（已有） |
+| **§18 工程交付协议（2026-09-02）**：`src/agent-tools/subagent.mjs` + `src/agent/setup.mjs` + `src/agent/spawn-child.mjs` + `src/agent/dispatch.mjs` + `src/prompts/engineering-sub.md` + `test/agent.test.mjs` + `test/suspension.test.mjs` | MODIFY | eng-coder 默认 async + 内部自审计闭环——机制与受影响文件权威源 = AGENT-LOOP.md §18；本文档同批同步 FR4/FR5/§2.1/§2.2/§2.3/§2.4 code review 归属句/§2.5 交付评审时机/AC5/AC6/AC9/用例表（见 §7 变更记录 2026-09-02 条） |
 
 ### 2.8 错误与恢复（Error & Recovery）
 
@@ -144,11 +145,11 @@
 - AC2: spawn eng-coder 时 token 不匹配即 throw；匹配则 `_engDesignReviewed = true` 解锁写文件。
 - AC3: 工程模式顶层 system prompt 不含 main.md/discipline.md 条款（解耦后）。
 - AC4: doc review 按显式 documents 清单评审——清单外文档（如无关的 git diff 变更）不被评审。
-- AC5: eng-coder 交付前自查（验收标准/文件范围/测试）；父代理在 eng-coder 返回后**自动**调 `advisor(type="code")` 评审（不问用户），对照验收标准验收。
-- AC6: 评审时机纪律生效——设计评审仅用户发起时调用；无用户发起/交付流程节点时，父代理不调 advisor。
+- AC5: eng-coder 交付前自查（验收标准/文件范围/测试）；**2026-09-02 §18 修订**：自查扩展为**内部协议闭环**——explore 偏差审计 + advisor code review 复评在子代理内部自动运行（默认承担，无需用户在场），eng-coder 返回的交付 = 已审计已评审的最终交付（报告含审计/评审轮次与终态 clean/stalled）；父侧复核保留可选。
+- AC6: 评审时机纪律生效——设计评审仅用户发起时调用；无用户发起/交付流程节点时，父代理不调 advisor（§18 起交付评审节点 = eng-coder 内部协议自动承担，父侧 advisor 仅可选复核时调用）。
 - AC7: `npm test`（fast 层，slow 门控跳过）与 `npm run test:full`（含 slow 层——session/token 持久化区域按项目测试策略走 full）均通过（平台无关路径写法）。
 - AC8（2026-09-01）: 多设计并行——各 eng-coder 凭自己 designId+token 独立通过，后签发**不覆盖**前签发；单值覆盖缺口消除；某 design 复审失败 → 该次 designId 不入槽、**既有槽不清**（旧 token 存活至 TTL，方案 ②）、其他设计槽不受波及；engineering.md 顶层注入并行化纪律（§14 条款在工程模式生效，断言可指认）。
-- AC9（2026-09-01，评审 round3 #1）: 首次交付偏差审计（§2.2 step 6.5）自动运行——无需用户发起；有偏差 → eng-coder 修正轮 spawn（同 designId+token，任务仅偏差清单）；无偏差 → 直接进交付评审。
+- AC9（2026-09-01，评审 round3 #1；**2026-09-02 §18 修订**）: 首次交付偏差审计随 §18 **下沉 eng-coder 内部协议**（§2.2 step 6——自动节点无需用户发起不变：内部 explore 审计 + dirty 自修在子代理内部自动闭环，不依赖用户在场）；父侧复核保留可选（stalled/存疑才复核）。
 
 ### 3.2 用例表
 
@@ -164,7 +165,7 @@
 | T7 | 错误：advisor 失败 | advisor 调用 aborted | 停止重试，报告中说明 | FR5 |
 | T8 | 边界：resume/重进后 token 恢复（TTL 内） | 会话恢复后 spawn（同 slot、TTL 内） | token 校验通过，eng-coder 解锁写文件——不再重新评审（评审 2026-09-02 #1 重写） | FR3 |
 | T8b | 边界：角色互斥（评审 2026-09-02 #6 补） | 工程模式 spawn `role="coder"` | 拒绝（schema 枚举 + 运行期硬门禁） | NFR4 |
-| T9 | 正常：主代理评审 | eng-coder 实现 → 返回 → 父代理调 advisor(code) | 评审通过 → 对照验收标准验收 | FR4 |
+| T9 | 正常：eng-coder 内部复评（2026-09-02 §18 反转） | eng-coder 内部协议 advisor(type=code) 复评（documents=设计文档+交付清单——实际文件为对象，非自述） | 复评通过（或 findings 自修收敛）→ 交付报告含轮次 + clean/stalled；父侧复核可选 | FR4 |
 | T10 | 边界：评审范围显式化 | design review 传 documents=[X.md]，diff 含无关文档 Y.md | 只评审 X.md，Y.md 不被提及 | FR2 |
 | T11 | 边界：范围外写文件 | eng-coder 试图写文件清单外路径 | 停下报告，不静默扩展（eng-coder.md 纪律，机械层无此检查——记录为纪律保障） | FR6 |
 | T12 | 边界：收敛上限 | 工程模式下 code review 第 6 次调用 | 被 MAX_ADVISOR_ROUNDS 拒绝（详见 ADVISOR-CONVERGENCE.md，覆盖于 test/advisor.test.mjs cap 用例） | NFR2 |
@@ -174,7 +175,7 @@
 | T16 | 边界：designId 缺失+多设计 | 会话内有两个不同 designId，spawn 只带 designToken 不带 designId | throw 要求指定 designId（不误取任一槽） | FR3 |
 | T17 | 边界：评审失效隔离 | 某 design 的复审失败（含 🔴） | 该次 designId 不入槽；**其他并行设计槽不受波及、token 仍有效**（评审 #2 方案 ②：旧 token 存活至 TTL） | FR8/NFR3 |
 | T18 | 边界：并行文件集交集 | 两任务"受影响文件"有交集时父代理试图并行 spawn | 提示串行/停（提示词纪律——engineering.md 条款；机械层无检查，记为纪律保障） | FR8 |
-| T19 | 正常：首次交付偏差审计（评审 round3 #1） | eng-coder 首次交付 → explore 审计（自动节点，无用户发起） | 有偏差 → 修正轮 spawn（同 designId+token，任务仅偏差清单）；无偏差 → 直接进交付评审 | FR4/AC9 |
+| T19 | 正常：内部偏差审计闭环（2026-09-02 §18 下沉原父侧审计节点） | eng-coder 交付前 → 内部 explore 审计（自动，无用户发起）→ dirty 自修 → 再审计 clean → advisor 复评 | 收敛 → 交付（报告含审计/评审轮次 + clean/stalled）；5 轮未收敛或审计节点重试 1 次仍败 → stalled 报告（不静默） | FR4/AC9 |
 
 （FR7 待办管理为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。）
 
@@ -209,6 +210,19 @@
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+### 2026-09-02：§18 工程交付协议——eng-coder 默认 async + 内部自审计闭环（用户重构裁定）
+
+**需求**：用户实测同步 spawn eng-coder 阻塞主会话（"功能目的就是 eng-coder 执行中主会话能去干别的"）；初版跨 digest 链状态机方案评审否决后，用户拍板把交付后审计/修正/review 全部移入 eng-coder 子代理内部——主会话只 spawn 一次（默认 async），子代理内部完成"实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛"后一次交付。
+
+**机制（权威源 = AGENT-LOOP.md §18，本节仅同步点）**：
+- **F1/D-E1 角色级缺省**：`role === "eng-coder" ? true : false`（其余角色默认阻塞不变；`async:false` 显式覆盖）——§15 F4 修订
+- **D-E2 内部交付协议**：实现 → 自查透明表 → explore 偏差审计（对照设计四类偏差；审计任务书 = 父 spawn 任务书 ∪ 实际 _touchedFiles **机械并集**，非 eng-coder 自述）→ dirty 自修（修正轮 ≤5，`修正轮 N/5` 提醒）→ clean → advisor(type=code) 复评 → findings 自修 → 收敛 → 交付报告（轮次 + clean/stalled）；eng-coder **永不编辑设计文档**（round5 #5）；审计 ≤6 次、第 7 次 spawn 机械拒绝 = stalled 信号（round5 #2）；in-child advisor 不消耗父侧 NFR2 预算（round4 #5）
+- **D-E3 工具扩展 + 任务域授权**：eng-coder 子代理工具集补受限 subagent（role 枚举仅 explore + 同步——setup.mjs 参数层过滤 + spawn-child 机械门）；spawn 时任务域授权——child 内部写豁免逐写审批（豁免粒度 = **仅 onPermissionRequest 阶段**——JSON 解析/未知工具/planMode deny/design-token deny 照常生效）；§7「权限」与 §15 D-A3「权限交互」两处 blanket 句加"eng-coder 例外见 §18 D-E3"指向（AC-E7）
+- **反转 2026-08-01 裁定**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs depthOnly）且实现无 depth/role 限制——"子代理环境无法真实调用 LLM advisor"依据过时；交付 code review 与偏差审计由**父代理发起**改为 **eng-coder 内部协议默认承担**（父侧复核保留可选——stalled/存疑/用户要求才复核）——本文档 FR4/FR5/§2.1/§2.2 step 6-8/§2.3 两行/§2.4 code review 归属句/§2.5 交付评审时机/AC5/AC6/AC9/用例表 T9/T19 同批同步
+- **受影响文件（CLI）**：`src/agent-tools/subagent.mjs`（schema 角色级 async 缺省 + 内部 spawn 门 + 审计任务书机械并集 + `_engTaskAuthorized`/`_engTaskInput`）、`src/agent/spawn-child.mjs`（gateEngCoderSpawn + ENG_AUDIT_SPAWN_LIMIT=6）、`src/agent/setup.mjs`（eng-coder depthOnly 补受限 subagent）、`src/agent/dispatch.mjs`（权限门 onPermissionRequest 分支授权豁免）、`src/prompts/engineering-sub.md`（内部协议附录 + 修正轮提醒）、`src/prompts/engineering.md`（async 交付叙述 + 内部协议口径——防双重审计/误用；"Cap: at most 4 concurrent eng-coders"/"past 4" 短语保留）、`test/agent.test.mjs` + `test/suspension.test.mjs`（T-E1..E16）；VS Code 端同构镜像（并行 eng-coder，byte-identical 纪律）
+
+**验收**：AC-E1..E7（AGENT-LOOP.md §18 验收标准——T-E1..E16 用例表展开 + 全量绿）；两端 prompts byte-identical（CLI 交付后 VS Code 端对齐）；本文档无残留矛盾（FR4/门表/AC/用例表口径一致）
+
 ### 2026-09-02：engineering-sub.md 子代理确认例外声明（用户实测：eng-coder 输出"确认后开始"空转等用户——子代理无用户可等）
 
 **问题**：eng-coder 子代理误用"确认范式"——输出"确认后开始"结束回合空转等用户，但子代理无用户。根因 = 模型自发套用训练范式，非提示词直接诱导（engineering-sub.md 已核实无确认句）。

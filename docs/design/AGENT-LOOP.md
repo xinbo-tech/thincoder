@@ -88,7 +88,7 @@ PreToolUse hooks → 阻断
 - `depth > 0`：独立 agent 对象 + 丢弃式局部双线；role（explore/plan/coder/eng-coder）决定工具集（只读过滤）与 overlay prompt
 - 流式 relay：`role#id/` 前缀 token 转发给父回调。**TUI 消费端沿革**：2026-08-21 为 subTasks 窄带（连字符正则修复 `/^(\w+)#(\d+)\//` → `/^([\w-]+)#(\d+)\//`——`\w` 不含连字符，`eng-coder#N/` 漏路由致带前缀 token 落入主流刷屏；test/agent-turn.test.mjs 4 断言）；2026-08-29 起 §7.2 D4 定稿：消费端改为会话流内可折叠区块、窄带退役——上述断言随 §7.2 实现按 T-B/T-H 演进，前缀格式与正则不变（round3 #2 压缩为一行沿革）。VS Code 无此机制（子 agent 走 onToolPanel 通道），不涉及。
 - 报告契约：<200 字符视为交接不完整，打回扩写一次（`MIN_REPORT_CHARS`）；超长报告落盘全量保留
-- 权限：手动模式下子代理的非只读工具透传到父 agent 的权限审批（人在回路）
+- 权限：手动模式下子代理的非只读工具透传到父 agent 的权限审批（人在回路）——**eng-coder 例外：spawn 时任务域授权（已批准设计+任务书即授权）——内部写豁免逐写审批（不弹面板）——见 §18 D-E3（T-E12）**；非 eng-coder 子代理（explore/coder 等）手动档语义不变
 - eng-coder：设计 token 门控（designId 多槽 `_engDesignTokens`——评审通过 token 入槽、advisor 结果回显 designId；兼容单槽 `_engDesignToken` 镜像；权威源见 ENGINEERING-MODE.md §2.6——评审 #4）
 ### 7.1 子代理工具描述：角色能力矩阵 + 委派动机（2026-08-28）
 
@@ -539,7 +539,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - finally 中若 `_asyncSubagents` 有 **running + queued** 项 → **收尾补位循环**（评审 #2 定死：**保持并发上限 ≤4 串行补位**——当前 running settle 一个才启动下一个 queued，不解除上限；`Promise.allSettled` 在补位循环完成后对最终 running 集合取快照）再 `await Promise.allSettled([...promises])`——等全部完成后，把报告/错误**注入会话**（pushReal 一条 user 角色 `[System reminder: async subagent #id (role) finished]` + 报告或错误文本，**报告文本做 XML 转义**——评审 #7，子代理报告可能含来自文件/网页的注入面内容，遵循 reminder 纪律；超长报告（>64K）注入预览 + 落盘路径）——主会话下一回合可见结果。**已知权衡（评审 #8 声明）**：结果在最终回复后才注入，父侧 verify/advisor guard 不复检这批改动——靠 §7.1 子代理自带自评（verify + advisor）兜底，下回合模型可见并处理
 - 注入后清空 `_asyncSubagents`
 - **`⟦ev⟧done` 事件（code review #7 补记 + 用户问题 2026-09-02 修正发射时机）**：**每个 async entry 在 promise settle 时立即发** `${relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e` token（subagent.mjs 的 settle 回调发，非回合收尾统一发）——完成即冻结、冻结块位置 = 完成时刻的会话流位置（对齐同步子代理行为；用户实证：收尾统一发导致"直到所有任务完成后才变灰 + 冻结块堆在会话末尾结论之后"）。回合收尾 collectAsyncSubagents 不再发 done（只注入 reminder + 清空）——收尾时仍在跑的最后几个经 settle 回调发 done（主会话已结束，块在末尾，合理）——§7.2 D1 "tool/done phase 不发 token" 的**§15 例外**（该句原意是同步子代理的 tool/done 由 onToolResult 前缀 relay 承担；async 子代理的完成发生在父工具返回之后，需显式 done 事件通知 TUI 冻结）
-- **async 子代理权限交互（评审 #2 补）**：后台子代理撞权限门时审批面板照常弹出（`_permQueue` 串行化，不与其他权限请求重叠）；回合收尾等待把"待审批"视为**可解析状态**——用户批准 → 子代理 settle → 等待完成；无用户在场（headless/无审批回调）→ 权限请求按既有 no-permission-handler 语义拒绝，子代理失败返回（不悬挂）。
+- **async 子代理权限交互（评审 #2 补）**：后台子代理撞权限门时审批面板照常弹出（`_permQueue` 串行化，不与其他权限请求重叠）；回合收尾等待把"待审批"视为**可解析状态**——用户批准 → 子代理 settle → 等待完成；无用户在场（headless/无审批回调）→ 权限请求按既有 no-permission-handler 语义拒绝，子代理失败返回（不悬挂）。——**eng-coder 例外（§18 D-E3）：spawn 时任务域授权——child 内部 onPermissionRequest 豁免（autoApprove 等效，仅该阶段）——"无 handler 拒绝"对 eng-coder 不再成立**；非 eng-coder 子代理不受影响
 - **使用层级（评审 #4 定死）**：`async: true` 仅 **depth-0 主会话**有效——depth>0 子代理内传 async → 报错拒绝（"async spawn only available at the top level"）；后台子代理撞 turn-cap → **自动拒绝继续（不弹 continue 面板）**，子代理失败返回（报告带 turn-cap 原因）——不打扰主会话；**例外（2026-09-02 统一规则）**：工程模式 && AUTO 开 → 自动续跑（同 §2 规则——AUTO 授权无人值守）
 - **中断/resume 生命周期（评审 #3 定死）**：Ctrl+C 中断 → abort 传播（subagent 的 signal 传递），未完成项随 abort 失败（AbortError 语义），**`_asyncSubagents` 立即清空（不注入陈旧错误）**——用户显式停；ContinueError（turn cap）→ **finally 不等待不注入，`_asyncSubagents` 原样保留**（避免延迟 continue 面板），resume 后回合收尾语义顺延（下轮 turn-end 再收尾）
 - 回合收尾等待项数 = `_asyncSubagents.size`（含已 settle 未消费——allSettled 立即返回）；**上限口径 = running 数**（D-A1/D-A2/T6 一致，评审 #2 对齐）——回合收尾清空后自然归零
