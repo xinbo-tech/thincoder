@@ -264,3 +264,49 @@
 - **失败可见但不改变失败策略**：Q3 的"飞出"根因（deepseek 续写 400）由 PROVIDER.md §14 修；本节只补"失败不静默"——错误策略（连续 3 次截断兜底）是既有正确行为，不加行为变更。
 - **否决**：a) 一行状态提示（评审 #7 用户否定——"像子agent 面板那样显示"是明确要求，状态行不满足）；b) 压缩期间阻塞输入（破坏既有交互）；c) 自动重试压缩（摘要失败重试已由计数+截断兜底覆盖）。
 
+
+---
+
+## 8. 摘要大小目标 ≤1K tokens（2026-09-02，用户拍板：约定目标，不超过 1K）
+
+> **状态：设计定稿，待实现**。
+
+### 8.1 问题与需求
+
+此前 SUMMARIZE_PROMPT 尾句为 "aim for information completeness, not a hard word limit (old 500-char cap is deprecated; in a 1M-context era, err on the long side)"——摘要大小**无目标**，模型自定。用户裁定：**约定目标 ≤1K tokens**（长会话多次压缩时旧摘要再被摘要，失控摘要会逐层放大占窗）。
+
+**需求**：F1 = 摘要输出目标 **≤1K tokens**（≈1000 中文字符 / 2000 ASCII 字符，估算口径同 estimateText）；F2 = 超限时的砍价优先级明确；F3 = **形态 A：纯 prompt 指令，无 max_tokens 机械保险丝**（用户拍板——模型自控，偶超可接受）；F4 = 两端语义一致。
+
+### 8.2 设计（D13）
+
+- **D13-1 prompt 尾句改写**（两端 SUMMARIZE_PROMPT，语义同构——CLI `src/context.mjs` export 版 / VS Code `src/compact.mjs` 版各自的尾句段）：
+  - 删除 "err on the long side" 语义，改为："**Stay under ~1K tokens (≈1000 Chinese chars / 2000 ASCII) — a hard target.** An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated."
+  - **保留**信息完整性基调（要点式、决策锚点必保）——只约束长度，不退回 500-char 时代"越短越好"
+- **D13-2 砍价优先级（超限时按序）**：① 已完成任务 recap → 每项一行（既有规则重申为第一砍项）；② FILES CHANGED 的 why 注释 → 裸路径或分组；③ 进行中任务的细节叙述 → 收紧；④ **永不砍**：设计决策/锚点（架构选择、API 契约、命名、trade-off）与 UNRESOLVED ISSUES/TODOs——压缩后续接恢复依赖它们
+- **D13-3 无机械拦截**（A 形态取舍记录）：不设 max_tokens 上限——模型失控长写时摘要被硬切会丢尾部且无标记；宁可偶超（prompt 约束 + COMPACTION_PREFIX 语义兜底 + 人读线完整可恢复）
+- **D13-4 既有规则不动**：两清单（FILES CHANGED / UNRESOLVED）、COMPLETED vs IN-PROGRESS 区分、第一人称、honest 标注——全部保留
+
+### 8.3 受影响文件
+
+- `thincoder/src/context.mjs`（SUMMARIZE_PROMPT 尾句段）
+- `thincoder-vscode/src/compact.mjs`（SUMMARIZE_PROMPT 尾句段——语义同构）
+- 两端测试：`thincoder/test/exploration-summary.test.mjs`（CLI SUMMARIZE_PROMPT 断言区补 1K 句）+ `thincoder-vscode/test/agent.test.mjs`（同）
+- `docs/design/CONTEXT-COMPACTION.md`（本节状态回写）
+
+### 8.4 测试与验收
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-D13a | 目标句存在 | 两端 SUMMARIZE_PROMPT | 含 "1K"（或 "~1K tokens"）硬目标句；不含 "err on the long side" | F1/D13-1 |
+| T-D13b | 砍价优先级 | 两端 SUMMARIZE_PROMPT | 含"永不砍"类句（decision anchors / UNRESOLVED 不被裁） | F2/D13-2 |
+| T-D13c | 既有规则不回归 | 两端 SUMMARIZE_PROMPT | FILES CHANGED / UNRESOLVED / COMPLETED vs IN-PROGRESS 断言仍过 | D13-4 |
+| T-D13d | 全量回归 | 两端全量测试 | 全绿 | F4 |
+
+**验收**：AC-D13-1 = 两端 prompt 尾句含 ≤1K 硬目标 + 砍价优先级（T-D13a/b）；AC-D13-2 = 既有 SUMMARIZE_PROMPT 断言不回归（T-D13c）；AC-D13-3 = 两端全量 + lint 绿（T-D13d）。
+
+### 8.5 关键决策
+
+- **A 形态（用户拍板）**：纯 prompt 指令、无机械保险丝——信任模型遵循；偶超可接受（取舍记录于 D13-3）
+- **目标定"约 1K"非精确**：token 无精确计（estimateText 粗算）——"~1K tokens ≈ 1000 中文字符 / 2000 ASCII"给模型可操作直觉
+- **砍价优先级写死**：防模型为凑长度误砍续接锚点（决策/未决清单）——这是压缩后恢复的关键
+- **否决**：a) max_tokens 保险丝（硬切丢尾部无标记，用户拍板不用）；b) 回到 500-char 硬 cap（信息保真倒退，2026-08 明确废弃过）
