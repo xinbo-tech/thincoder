@@ -2,6 +2,14 @@
  * panel-chat.mjs — ChatPanel chat turn runner (split out of chat-panel.mjs).
  * Resolves the provider, loads the dual history lines, runs the agent with
  * streaming callbacks, persists the lines on complete.
+ * §17 (2026-09-02，AGENT-LOOP.md §17 D-S1..S9): a turn ending with the async pool
+ * still live enters the suspension session (suspension.mjs) — input stays usable,
+ * settles drive auto-turn digests (manual tier organize-only / AUTO full semantics),
+ * pool-empty + no queued input exits naturally back to idle. Digests are plain
+ * runPanelChat turns with autoTurn: true inside the session.
+ * §17 偏差修复（2026-09-02 #2/#3）: 挂起入口在 finally 先于任何释放点登记（_suspPending——
+ * 关闭 generateTitle 释放窗口的并发新回合）；控制器重建全部登记（_turnControllers →
+ * 会话统一 abort）。
  */
 import * as vscode from "vscode"
 import { resolveProviders } from "../config-io.mjs"
@@ -22,6 +30,7 @@ import { traceStop } from "./stop-trace.mjs"
 import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
+import { suspensionSession, poolLive } from "./suspension.mjs"
 
 /**
  * Build the `toolPanel` postMessage payload (pure — directly testable without a
@@ -37,10 +46,29 @@ export function toolPanelPayload(name, chunk) {
 }
 
 /**
+ * §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
+ * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
+ * controller 的 children 仍在跑。每次重建都登记进 panel._turnControllers：会话入口快照为
+ * susp.abortControllers，Stop 统一 abort——否则会话中止句柄只取最后一个 controller，旧
+ * children 逃逸中止（跑完整个 turn 预算 + mergeChildMutations 写父 guard 标记被下轮重置
+ * 清掉——用户以为全停但磁盘仍被改、advisor/verify 门被绕过）。
+ */
+function newTurnController(panel) {
+  const c = new AbortController()
+  ;(panel._turnControllers ??= []).push(c)
+  panel._abortController = c
+  return c
+}
+
+/**
  * Run one chat turn: resolve provider → build callbacks → runAgent →
  * persist both lines on complete. `panel` is the ChatPanel instance.
+ * §17 options: autoTurn (digest — system-driven, no user input), susp (active
+ * suspension session context: keeps the in-memory lines, promotes the session
+ * controller, never re-enters the driver), skipSession (the caller — the
+ * suspension driver — already owns the D-S9 loop).
  */
-export async function runPanelChat(panel, { text, modelOverride, reasoning, providerName, images }) {
+export async function runPanelChat(panel, { text, modelOverride, reasoning, providerName, images, autoTurn = false, susp = null, skipSession = false } = {}) {
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
 
   // 交付评审 🔴#1（2026-08-28）：turn 启动的守卫标志与槽绑定必须发生在任何 await 之前——
@@ -49,9 +77,11 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   // ensureSlot（而非裸读 _slot）：首次 turn 可能先于 status() 解析（面板命令直呼 _chat），
   // 裸读会把 null 冻进 distillSlot、使 onDistilled 的槽守卫恒拒绝（AC5 回归）。
   panel._turnActive = true
-  const turnSlot = ensureSlot(panel)
+  const turnSlot = susp?.turnSlot ?? ensureSlot(panel)
   const distillSlot = turnSlot
+  const suspLines = susp?.lines ?? null // suspension turns keep the LIVE lines (pool/pending ride them)
   let isFirstMessage // assigned inside the try (needs the loaded lines); read after finally
+  let engState = null // assigned inside the try; the suspension entry below reads it
   let fullHistory = [] // hoisted: the finally-block save must see them even on early-return paths
   let history = []
   try {
@@ -126,35 +156,50 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   // history = machine line (compaction shrinks it); old sessions fall back to the human line.
   // runAgent appends this turn's real messages (user input, assistant replies, tool results) to
   // both lines via its internal pushReal — chat-panel only supplies the lines and persists them.
-  const loadedLines = panel._activeLines(turnSlot)
+  // §17: suspension-session turns keep the session's LIVE lines (the pool map, pending results
+  // and _suspended flag ride the history array — reloading from disk would orphan the pool).
+  const loadedLines = suspLines ?? panel._activeLines(turnSlot)
   fullHistory = loadedLines.fullHistory
   history = loadedLines.contextHistory // activeLines 已处理机读线判定（length>0 + strip 截断 args）
   // Slot snapshot comment: turnSlot/distillSlot are captured at function entry (above, before
   // any await) — see the 交付评审 🔴#1 note at the top of this function.
-  const isFirstMessageNow = fullHistory.filter((m) => (m.type ?? m.role) === "user").length === 0
+  const isFirstMessageNow = !suspLines && fullHistory.filter((m) => (m.type ?? m.role) === "user").length === 0
   isFirstMessage = isFirstMessageNow
 
   // Restore the session-scoped design token AND the session-level mode flags: engineering
   // and advisor.guard are SLOT-authoritative (2026-08-29 refactor) — config.json is only a
   // CLI-compat mirror and the setup fallback. `null` = the session never set the flag,
-  // setup falls back to config (legacy slots).
-  const sessionData = panel._activeData(turnSlot) ?? {}
-  const engState = {
-    enabled: sessionData.engineering ?? null,
-    advisorGuard: sessionData.advisor?.guard ?? null,
-    engDesignToken: sessionData.engDesignToken ?? null,
-    engDesignTokens: sessionData.engDesignTokens ?? null,
+  // setup falls back to config (legacy slots). Suspension turns reuse the session's capture
+  // (the session was entered from this slot; switching is blocked while it is active).
+  if (!susp) {
+    const sessionData = panel._activeData(turnSlot) ?? {}
+    engState = {
+      enabled: sessionData.engineering ?? null,
+      advisorGuard: sessionData.advisor?.guard ?? null,
+      engDesignToken: sessionData.engDesignToken ?? null,
+      engDesignTokens: sessionData.engDesignTokens ?? null,
+    }
+  } else {
+    engState = susp.engState
   }
 
   // Persist model selection
   const prefs = { model: modelOverride || p.model, provider: providerName, reasoning: reasoning || "" }
-  saveModelPrefs(panel._context.workspaceState, prefs)
+  if (!autoTurn) saveModelPrefs(panel._context.workspaceState, prefs)
 
   panel._panel?.webview.postMessage({ type: "loading", loading: true })
   panel._turnActive = true
   panel._setStatus("running")
-  panel._abortController?.abort()
-  panel._abortController = new AbortController()
+  // §17: suspension-session turns must NOT abort the previous controller — the session
+  // handle (susp.abort = the entering turn's controller) is what pool children hold; a
+  // digest's Stop must not kill the pool. Per-turn controllers only exist for the turn.
+  // 偏差修复 #3：顶层回合起点清空 controller 登记表（#2 释放窗口守卫保证此刻池已空——旧
+  // 回合 controller 不再被任何 live child 持有）；会话内回合（susp）只追加不重置。
+  if (!susp) {
+    panel._abortController?.abort()
+    panel._turnControllers = []
+  }
+  newTurnController(panel)
 
   // Token stream is forwarded live to the webview; the assistant reply is persisted by runAgent's
   // pushReal into fullHistory (no separate accumulation needed here).
@@ -240,7 +285,9 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
       panel._panel?.webview.postMessage({ type: "complete" })
       panel._pushSessions()
       // Native notification when the user is in another window (no-op when focused).
-      notifyCompletionIfUnfocused()
+      // §17: digests are system-driven turns — no completion notification per digest
+      // (the user sees the summarized results when they return).
+      if (!autoTurn) notifyCompletionIfUnfocused()
     },
     // Distillation finished and the machine line was REPLACED by the compressed version — the
     // onComplete save above holds the pre-shrink line, so persist again (FR3/AC5). Slot guard:
@@ -255,8 +302,43 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
     // §16 D-B1: same-response non-readonly tools ask ONCE (approveAll / oneByOne / deny).
     onBatchPermissionRequest: batchPermissionGate(panel),
     onQuestion: (question, options) => askInPanel(question, options),
+    // §17: async settle events wake the suspension driver (no-op when it isn't parked —
+    // panel._suspWake is set only while the driver waits for the next settle).
+    onAsyncSettled: () => panel._suspWake?.(),
   })
-  const runOpts = (resume) => ({ mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory, engState, injections: [collectEditorInjection(cwd)].filter(Boolean), resume, planMode: panel._activeData(turnSlot)?.planMode ?? false, distillState: panel._distillState, distillSignal: panel._distillController?.signal, engPersist: { cwd, slot: turnSlot } })
+  // §17 D-S7 (manual tier): digest turns must not pop permission/question UI — an
+  // unattended digest may neither hang on a panel prompt nor be interrupted by one.
+  // The VS Code dispatch executes un-gated when no handler is present (unlike the CLI's
+  // "no handler = denied"), so explicit deny stubs replace the panel prompts — the
+  // semantic outcome matches the CLI contract: denied without a panel, no hang.
+  const callbacks = buildCallbacks()
+  if (autoTurn && !panel._autoApprove) {
+    callbacks.onPermissionRequired = async () => false
+    callbacks.onBatchPermissionRequest = async () => "deny"
+    callbacks.onQuestion = async () => null
+  }
+
+  // §17 D-S6 guard-carry bookkeeping: auto-turn end-state guard marks (mutations,
+  // verify/advisor flags) accumulate on panel._guardCarry and are inherited by the
+  // next USER run (runAgent applies opts.inheritedGuard at its start; consumed once).
+  let carryTaken = false
+  const runOpts = (resume) => {
+    const inherited = (!resume && !autoTurn && !carryTaken) ? (panel._guardCarry ?? null) : undefined
+    if (inherited) { carryTaken = true; panel._guardCarry = null }
+    return {
+      mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory, engState,
+      injections: [collectEditorInjection(cwd)].filter(Boolean), resume,
+      planMode: panel._activeData(turnSlot)?.planMode ?? false,
+      distillState: panel._distillState, distillSignal: panel._distillController?.signal,
+      engPersist: { cwd, slot: turnSlot },
+      // §17 D-S6/D-S9: digest turns skip the input push (setupAgentRun autoTurn),
+      // session children share the session abort signal, guard marks flow per tier.
+      autoTurn,
+      sessionSignal: susp?.abort?.signal ?? null,
+      inheritedGuard: inherited,
+      guardCarry: autoTurn ? (panel._guardCarry ??= {}) : undefined,
+    }
+  }
   // Turn-cap continue loop (CLI agent-turn.mjs parity): each ContinueError offers
   // "Continue" — unlimited, resume:true keeps history, fresh budget per run. The loop
   // also folds in the Ctrl+I interrupt resume (same rebuild-controller semantics).
@@ -265,7 +347,7 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   for (let resume = false; ; resume = true) {
     try {
       traceStop("runAgent: turn starting (no pending click)", panel._stopClickTs)
-      await runAgent(p, cwd, text, buildCallbacks(), panel._abortController.signal, () => panel._autoApprove, runOpts(resume))
+      await runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))
       traceStop("runAgent: turn ended normally", panel._stopClickTs)
       break
     } catch (e) {
@@ -274,10 +356,21 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
       // controller and RESUME the same turn (the interrupt message is already in
       // history; the model continues from there). CLI agent-turn.mjs parity.
       if (e?.name === "AbortError" && e.reason?.interrupt) {
-        panel._abortController = new AbortController()
+        newTurnController(panel)
         continue
       }
       if (e instanceof ContinueError) {
+        if (autoTurn) {
+          // §17 D-S9 ContinueError row (digest): NO panel — AUTO auto-resumes (the
+          // user authorized unattended operation, §2 unified rule), manual silently
+          // stops (the partial digest stays in history — finished reports are not
+          // lost, we just stop burning turns unattended).
+          if (panel._autoApprove) {
+            newTurnController(panel)
+            continue
+          }
+          break
+        }
         // Turn-cap exhaustion: offer to continue from the current context, NOT error
         // (CLI agent-turn.mjs parity — "Ran N turns. Continue?"). Rebuilding the
         // controller + resume re-runs the loop from the SAME history (the user message
@@ -288,7 +381,7 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
           ["Continue", "Stop"],
         )
         if (willContinue === "Continue") {
-          panel._abortController = new AbortController()
+          newTurnController(panel)
           continue
         }
         panel._panel?.webview.postMessage({ type: "aborted" })
@@ -321,6 +414,16 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   } finally {
     traceStop("finally: turn complete — UI released", panel._stopClickTs)
     panel._stopClickTs = null
+    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2）：挂起决策先于任何释放点登记。
+    // finally → generateTitle（可达秒级 LLM 调用）的窗口内用户消息若只走 susp?.active 分流
+    // 会不命中而直接新开回合——新回合从磁盘重载 lines（新 history 数组与池所在数组分离）
+    // + abort 外回合 controller → 池 children 全中止 → 僵尸挂起（aborted settle 不出池 →
+    // poolLive 恒真）或池结果随旧数组静默丢弃（AC-S2 双违）。_suspPending 置位期间 _chat
+    // 把消息入队 panel._suspQueue，由下面回合尾的会话入口消费（带队列进会话 / 无会话则
+    // 普通回合兜底——零丢失）。
+    if (!skipSession && !susp && !panel._susp && panel._panel && poolLive(history)) {
+      panel._suspPending = true
+    }
     panel._turnActive = false
     panel._refreshStatus()
     panel._panel?.webview.postMessage({ type: "loading", loading: false })
@@ -336,4 +439,35 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   }
   // Generate session title from first message (after agent completes)
   if (isFirstMessage) await panel._generateTitle(turnSlot)
+
+  // §17 D-S2 释放窗口接管（2026-09-02 偏差修复 #2）：finally 已登记 panel._suspPending——
+  // generateTitle await 窗口期经 _chat 入队的消息（panel._suspQueue）在这里消费：池仍
+  // live 且会话 controller 未被中止 → 带队列进挂起会话（用户输入优先于 digest，D-S5）；
+  // 池已空 / Stop 已中止 / 面板消失 → 队列消息以普通回合兜底执行——入队消息零丢失（AC-S2）。
+  if (panel._suspPending) {
+    panel._suspPending = false
+    const queued = (panel._suspQueue ?? []).splice(0)
+    const enter = !skipSession && !susp && !panel._susp && panel._panel
+      && poolLive(history) && !panel._abortController?.signal.aborted
+    if (enter) {
+      const cwd = _cwd() || process.cwd()
+      const runTurn = async ({ text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto }) => {
+        await runPanelChat(panel, { text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto === true, susp: panel._susp, skipSession: true })
+      }
+      await suspensionSession(panel, {
+        turnSlot, distillSlot,
+        // lines 双键形：driver 用 lines.history/lines.fullHistory；会话内回合（runPanelChat
+        // susp 路径）按 activeLines 契约读 loadedLines.contextHistory——缺键会让 in-session
+        // 回合的 history=undefined（onComplete 落盘崩 + run-start pending 注入不消费 →
+        // digest 死循环；T-S18 全路径回归实证，2026-09-02 偏差修复轮补正）。
+        lines: { history, fullHistory, contextHistory: history },
+        engState,
+        cwd,
+        runTurn,
+        pendingInput: queued,
+      })
+    } else if (queued.length > 0 && panel._panel) {
+      for (const q of queued) await runPanelChat(panel, { ...q })
+    }
+  }
 }

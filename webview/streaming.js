@@ -7,9 +7,10 @@ import { ctx, S } from "./state.js"
 import { md } from "./md.js"
 import { t } from "./i18n.js"
 import {
-  newBlock, setLoading, maybeScrollDown, escHtml,
+  newBlock, maybeScrollDown, escHtml,
   buildAdvisorBlock, appendAdvisorChunk,
 } from "./ui.js"
+import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
@@ -165,7 +166,11 @@ export function finish(aborted) {
   ctx._toolRefs = {}
   S._currentTool = null
   S._turnStart = null
-  S._advisorBlock = null; S._subBlocks.clear() // turn over — blocks reset with the turn
+  // §17: subagent/advisor activity blocks are NOT cleared while the suspension
+  // session is live — background children's blocks must stay addressable across
+  // digest turns (their settle/freeze notifications collapse them); a turn end
+  // inside a session is not the end of the children's life.
+  if (!S._suspended) { S._advisorBlock = null; S._subBlocks.clear() } // turn over — blocks reset with the turn
   setLoading(ctx, false)
   renderStatusBar()
 }

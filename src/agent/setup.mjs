@@ -54,7 +54,7 @@ function withPool(tool) {
 }
 
 export async function setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto }) {
-  const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false } = opts
+  const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false, autoTurn = false } = opts
 
   const agentTools = depth === 0
     ? [taskTool, recentChangesTool, subagentTool, subagentCheckTool, planTool, goalTool, skillTool, verifyTool, timerTool, advisorTool, engTool,
@@ -262,11 +262,14 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
 
   // resume (interrupt continuation): the input is already in history — pushing it
   // again would duplicate the user message (CLI setup.mjs resume parity).
+  // §17 D-S6 autoTurn (digest): system-driven turn with NO user input — same
+  // no-push semantic, but as a fresh run (per-run state resets like a normal turn;
+  // resume additionally preserves guard state for ContinueError continuations).
   // The pushed object is captured BY REFERENCE: the paste-image pointer below
   // appends to THIS message (never history.at(-1) — the transient time reminder
   // pushed afterwards is last, and mutating it re-sent the image pointer every run).
   let userMsg = null
-  if (!resume) {
+  if (!resume && !autoTurn) {
     userMsg = { role: "user", content: input }
     pushReal(history, fullHistory, userMsg)
   }

@@ -6,8 +6,9 @@
 import { ctx, vscode, S } from "./state.js"
 import {
   showWelcome, showBanner, addUser, addAssistantHistory,
-  addTool, addToolHistory, finishTool, setLoading, showError, maybeScrollDown, escHtml,
+  addTool, addToolHistory, finishTool, showError, maybeScrollDown, escHtml,
 } from "./ui.js"
+import { setLoading } from "./loading.js"
 import { MAX_TOOL_OUTPUT } from "./lib.js"
 import { setStrings, t } from "./i18n.js"
 import { initAutocomplete } from "./autocomplete.js"
@@ -17,7 +18,7 @@ import { applyI18nToDOM } from "./i18n-dom.js"
 import { send } from "./send.js"
 import { onToken, onReasoning, onTurnBreak, finish, attachCopyButtons, advisorChunk, subagentChunk } from "./streaming.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
-import { handleTaskProgress, handleSubagentMessage, handleGoalMessage } from "./panels.js"
+import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage } from "./panels.js"
 import { updateSessionTitle, handleProjectMessage } from "./session-bar.js"
 import { initOnboarding, showWelcomePanel, maybeShowWelcome } from "./onboarding.js"
 import { handleAutoApprove, handleAgentSettings, handlePlanMode } from "./mode-buttons.js"
@@ -237,6 +238,7 @@ window.addEventListener("message", (e) => {
     case "planMode":         handlePlanMode(m); break
     case "subagent":         handleSubagentMessage(m); break
     case "goal":             handleGoalMessage(m); break
+    case "suspension":       handleSuspensionMessage(m); break
     case "toolPanel":
       // Advisor streams into an in-conversation details block (like reasoning),
       // round-tagged and never truncated — NOT a side panel.

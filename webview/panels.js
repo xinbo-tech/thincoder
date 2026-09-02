@@ -1,11 +1,12 @@
 /**
  * panels.js — side panels: task progress, subagents/consultants, goal.
- * Owns the auto-clean interval and the taskProgress / subagent / goal message
- * handlers.
+ * Owns the auto-clean interval and the taskProgress / subagent / goal /
+ * suspension message handlers.
  */
-import { S } from "./state.js"
+import { ctx, S } from "./state.js"
 import { t } from "./i18n.js"
 import { escHtml } from "./ui.js"
+import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
 
 export function renderTaskPanel() {
@@ -42,12 +43,17 @@ export function renderSubagentPanel() {
   panel.innerHTML = `<div class="panel-desc">${t("panel.subDesc") || "Background sub-tasks — explore, plan, or implement independently"}${consultProgress}</div>` +
     subs.map((s) => {
     // Consult states get their own colors + labels (answered was rendering as red "error")
+    // §17: "settled" = the child finished while the suspension session is active —
+    // "done · awaiting digestion" intermediate state, stays in the panel until the
+    // pool drains (the session-exit freeze then flips it to done).
     const statusCls = s.status === "started" ? "started"
       : (s.status === "done" || s.status === "answered") ? "done"
+      : s.status === "settled" ? "settled"
       : s.status === "terminated" ? "terminated"
       : "error"
     const statusText = s.status === "started" ? t("sub.running")
       : s.status === "answered" ? t("consult.answered")
+      : s.status === "settled" ? t("sub.awaitingDigest")
       : s.status === "terminated" ? t("consult.terminated")
       : s.status === "failed" ? t("consult.failed")
       : s.status
@@ -132,6 +138,18 @@ export function handleTaskProgress(m) {
   renderStatusBar()
 }
 
+/** Collapse one subagent/escalate activity block (by role + id). Block keys:
+ *  subagents `sub:${role}#${id}`, escalate `sub:escalate ${tag} #${id}` (tag = model)
+ *  — match by role prefix + `#${id}` suffix (ids are unique per turn via
+ *  _subIdCounter). Kept in the conversation (expandable) — never removed. */
+function collapseSubBlocks(role, id) {
+  for (const [name, block] of S._subBlocks) {
+    if (name.startsWith(`sub:${role}`) && name.endsWith(`#${id}`)) {
+      block.open = false
+    }
+  }
+}
+
 /** subagent message: track lifecycle; collapse activity blocks on terminal state. */
 export function handleSubagentMessage(m) {
   if (m.status === "started") {
@@ -151,19 +169,45 @@ export function handleSubagentMessage(m) {
     // done = collapsed, kept in the conversation, expandable — not removed.
     // The done notification fires at child settle (subagent.mjs runChild), so
     // this collapses the moment the child completes — no turn-end wait.)
-    // Block keys: subagents `sub:${role}#${id}`, escalate `sub:escalate ${tag} #${id}`
-    // (tag = model) — match by role prefix + `#${id}` suffix (ids are unique per
-    // turn via _subIdCounter).
-    if (m.role !== "consult" && m.status !== "started") {
-      for (const [name, block] of S._subBlocks) {
-        if (name.startsWith(`sub:${m.role}`) && name.endsWith(`#${m.id}`)) {
-          block.open = false
-        }
+    // §17 D-S8: a "settled" notification (child finished while the suspension
+    // session is active) does NOT collapse — the block stays live with the
+    // "done · awaiting digestion" intermediate state (panel row); the session-exit
+    // freeze (handleSuspensionMessage active:false + freeze) collapses it.
+    // done AND error are terminal — both collapse immediately (regression guard:
+    // ui.test.mjs "error 终态同样折叠").
+    if (m.role !== "consult" && (m.status === "done" || m.status === "error")) {
+      collapseSubBlocks(m.role, m.id)
+    }
+  }
+  renderSubagentPanel()
+  renderStatusBar()
+}
+
+/** §17 D-S2/D-S8: the suspension-session message from the host — activates the
+ *  background mode (input stays usable, Stop aborts the whole session), updates the
+ *  status-line counts, and on session exit freezes the settled blocks into the
+ *  conversation (CLI freezeAllSubTasks parity — "done · awaiting digestion" rows
+ *  flip to done and collapse; the report summaries are already in the conversation). */
+export function handleSuspensionMessage(m) {
+  S._suspended = !!m.active
+  if (m.active) {
+    S._suspCounts = { running: m.running ?? 0, queued: m.queued ?? 0, pending: m.pending ?? 0 }
+  } else {
+    S._suspCounts = null
+    if (m.freeze) {
+      for (const [id, s] of Object.entries(S._subagentMap)) {
+        if (s.status !== "settled") continue
+        s.status = "done"
+        s.doneAt = Date.now()
+        collapseSubBlocks(s.role, id)
       }
     }
   }
   renderSubagentPanel()
   renderStatusBar()
+  // Re-derive send/abort button visibility from the current loading state — entering
+  // suspension shows Stop (abort the background session), exiting hides it again.
+  setLoading(ctx, ctx.isRunning)
 }
 
 /** goal message: refresh the goal panel + status badge. */

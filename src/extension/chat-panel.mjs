@@ -41,6 +41,14 @@ export class ChatPanel {
     this._questionQueue = []  // pending inline question-tool prompts (panel, not native popups)
     this._statusBar = null    // status-bar run indicator (idle/running/waiting)
     this._turnActive = false  // an agent turn is running (drives the status indicator)
+    // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
+    // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
+    // _suspPending/_suspQueue = 释放窗口守卫（偏差修复 #2——回合尾已登记挂起、会话未建立
+    // （generateTitle await 窗口）期间 _chat 入队等待会话接管）；
+    // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
+    this._suspPending = false
+    this._suspQueue = null
+    this._turnControllers = []
     // The slot number this panel is bound to. Set once when a session is opened/created,
     // then used for ALL reads and writes — we never re-read the shared manifest's active
     // pointer mid-conversation (it can be changed by a concurrently running CLI).
@@ -155,6 +163,12 @@ export class ChatPanel {
     closeAllMcp()
     this._abortController?.abort()
     this._distillController?.abort()  // in-flight async distillation belongs to the dying panel (SEND-STALL-DISTILL)
+    // §17: a live suspension session dies with the panel — abort the session controller
+    // AND the entering turn's full controller set (偏差修复 #3: children spawned under
+    // rebuilt controllers would otherwise escape; their settles then no-op on the
+    // aborted signal).
+    this._susp?.abortControllers?.forEach((c) => c.abort())
+    this._susp?.abort?.abort()
     this._statusBar?.dispose()
     this._statusBar = null
     this._panel?.dispose()
@@ -268,6 +282,30 @@ export class ChatPanel {
   // ─── Chat ─────────────────────────────────────
 
   async _chat(text, modelOverride, reasoning, providerName, images) {
+    // §17 D-S4/D-S5: while a suspension session is active the message goes to the
+    // driver's queue — input during a digest queues (auto-continues after the digest
+    // ends), input while waiting wakes the driver for immediate processing. Never
+    // launches a concurrent independent turn (it would reload the lines from disk and
+    // orphan the background pool).
+    const susp = this._susp
+    if (susp?.active) {
+      susp.pendingInput.push({ text, modelOverride, reasoning, providerName, images })
+      // 唤醒走 panel._suspWake 单槽（waitForSettleOrWake 在纯等待期注入；digest/回合执行期
+      // 为 null → no-op——排队消息由驱动轮末 pendingInput 检查接走）。susp.wake 曾是死字段
+      // （2026-09-02 偏差修复 #4 已从 suspension.mjs 删除——唤醒槽单槽化至 _suspWake，
+      // 历史说明见 ARCHITECTURE.md「挂起唤醒断链修复」段）。
+      this._suspWake?.()
+      return
+    }
+    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2）：回合尾已登记挂起（_suspPending）但会话
+    // 尚未建立（generateTitle await 窗口，可达秒级）——消息入队等待会话接管，不得开并发
+    // 独立回合：新回合从磁盘重载 lines（孤儿化池）+ abort 外回合 controller（池 children
+    // 全中止 → 僵尸挂起或结果丢失，AC-S2）。队列由 runPanelChat 回合尾消费（带队列进会话
+    // / 无会话则普通回合兜底）——入队消息零丢失。
+    if (this._suspPending) {
+      (this._suspQueue ??= []).push({ text, modelOverride, reasoning, providerName, images })
+      return
+    }
     await runPanelChat(this, { text, modelOverride, reasoning, providerName, images })
   }
 

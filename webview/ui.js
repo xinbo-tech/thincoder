@@ -1,6 +1,7 @@
 /**
  * ui.js — DOM helpers for the chat panel
  * All functions take `ctx` which provides DOM refs and mutable state.
+ * Leaf module: NO state.js import (loading.js owns the S-dependent setLoading).
  */
 
 import { md, mdInline, esc } from "./md.js"
@@ -291,14 +292,8 @@ export function finishTool(ctx, name, id, text, links) {
 }
 
 // ─── Loading / Error ───────────────────────────
-
-export function setLoading(ctx, on) {
-  ctx.sendBtn.style.display = on ? "none" : "flex"
-  ctx.abortBtn.style.display = on ? "flex" : "none"
-  ctx.inputEl.disabled = on
-  if (!on) ctx.inputEl.focus()
-  ctx.isRunning = on
-}
+// setLoading moved to loading.js (§17 split — ui.js stays free of the state.js
+// bridge dependency; suspension-aware loading state lives with state.js consumers)
 
 /** Historical tool call rendered from the human line (collapsed card, read-only). */
 export function buildToolHistory(ctx, name, text, idx) {

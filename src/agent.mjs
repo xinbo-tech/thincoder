@@ -1,7 +1,6 @@
 /**
- * agent.mjs — Agent loop for VS Code context.
- * Full thincoder feature set: subagents, plan mode, goal tracking, verify guard.
- * Setup (tools/config/prompt/history/injection) lives in agent/setup.mjs.
+ * agent.mjs — Agent loop for VS Code context (full thincoder feature set: subagents,
+ * plan mode, goal tracking, verify guard; setup lives in agent/setup.mjs).
  */
 import { chat } from "./provider.mjs"
 import { specForModel } from "./specs.mjs"
@@ -11,7 +10,7 @@ import { traceStop } from "./extension/stop-trace.mjs"
 import {
   MAX_ADVISOR_PUSHBACKS, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, MAX_EMPTY_RETRIES,
   configuredMaxTurns, hasCodeMutations,
-  pushReal, agentState, reinjectAfterCompaction, escapeXml, offloadToolResult,
+  pushReal, agentState, reinjectAfterCompaction,
 } from "./agent/run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
@@ -23,6 +22,17 @@ export const ENG_OFF_REMINDER =
   "[System reminder: engineering mode is now OFF — standard discipline applies. " +
   "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
   "guards apply per config.]"
+
+/** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
+ *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
+ *  mechanically denied (deny-stub permission/question handlers + the spawn gate in
+ *  subagent.mjs); this reminder steers the model before it hits those denials. */
+const AUTO_TURN_DIGEST_DOMAIN =
+  "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
+
+/** Guard bookkeeping keys an auto-turn's end state inherits into the next USER run
+ *  (§17 D-S6 — auto-turn changes never escape the verify/advisor guards silently). */
+export const INHERITED_GUARD_KEYS = ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]
 
 /** Engineering-mode status injection (CLI parity, agent.mjs injectEngineeringReminder):
  *  one reminder on EVERY transition (ON and OFF) — the model must always know the mode
@@ -51,19 +61,15 @@ export class ContinueError extends Error {
 
 export { builtinTools } from "./tools.mjs"
 
-/**
- * Run the agent loop.
- * @param {object} opts - { depth, role, maxTurns } for subagent context
- */
+/** Run the agent loop: opts — { depth, role, maxTurns, autoTurn (§17 digest), … }. */
 export async function runAgent(provider, cwd, input, callbacks = {}, signal, autoApprove = true, opts = {}) {
   const depth = opts.depth ?? 0
   const role = opts.role ?? null
   const overrideTurns = opts.maxTurns
+  const autoTurn = opts.autoTurn === true // §17 D-S6: system-driven digest turn (no user input)
 
-  // Live autoApprove read (CLI parity: agent.autoApprove is a live field, not a snapshot).
-  // The panel passes a getter because approve-all / the AUTO toolbar button flip the flag
-  // MID-TURN — a plain boolean snapshot could never see it. The permission gate and the
-  // AUTO reminder both re-read it on every iteration.
+  // Live autoApprove read (CLI parity): the panel passes a getter — approve-all / the
+  // AUTO toolbar button flip the flag MID-TURN; the gate + AUTO reminder re-read it.
   const getAuto = typeof autoApprove === "function" ? autoApprove : () => autoApprove
 
   // Previous turn's async exploration distillation must land FIRST: the compressed machine
@@ -75,12 +81,36 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     await prev
   }
 
+  // §17 D-S3 ② run-start injection: suspension-settled entries parked on
+  // history._pendingAsyncResults are consumed BEFORE setupAgentRun pushes this run's
+  // input (spliced = consumed — single injection point; turn-end pool entries are ①).
+  if (depth === 0 && Array.isArray(opts.history?._pendingAsyncResults)) {
+    const hist = opts.history
+    const pend = hist._pendingAsyncResults
+    if (pend.length > 0) {
+      const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
+      for (const e of pend.splice(0)) await injectAsyncResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
+    }
+  }
+
   const { agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt } =
     await setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto })
 
-  // §15 D-A3（VS Code 对齐）：async 子代理注册表挂在 agent 上；depth-0 的 map 沿共享
-  // history 数组跨 runAgent 调用存活（panel 每次 run 传同一数组——ContinueError 中断后
-  // resume 的下轮回合收尾继续顺延等待）。n 读数计数器随 runAgent 非 resume 重置。
+  // §17 per-run flags: _inAutoTurn = manual-tier digest spawn gate; _sessionSignal =
+  // suspension-session abort signal — digest's own Stop/interrupt never kills the pool.
+  agent._inAutoTurn = autoTurn
+  agent._sessionSignal = opts.sessionSignal ?? null
+  // §17 D-S6: an auto-turn's guard marks are inherited by the next USER run (not reset).
+  if (!opts.resume && opts.inheritedGuard) {
+    for (const k of INHERITED_GUARD_KEYS) if (k in opts.inheritedGuard) agent[k] = opts.inheritedGuard[k]
+  }
+  // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).
+  if (autoTurn && !getAuto()) {
+    history.push({ role: "user", content: AUTO_TURN_DIGEST_DOMAIN, transient: true })
+  }
+
+  // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的 map 沿共享 history
+  // 数组跨 runAgent 调用存活（agent 对象 per-run 重建）。n 读数非 resume 重置。
   agent._asyncSubagents = (depth === 0 && history._asyncSubagents instanceof Map) ? history._asyncSubagents : new Map()
   if (!opts.resume) agent._asyncCheckN = 0
 
@@ -93,7 +123,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   const recentSigs = []
   let guardPushbacks = 0
   let advisorPushbacks = 0
-  let exitedNormally = false
+  let thrownError = null
 
   try {
   for (let turn = 0; turn < maxTurns; turn++) {
@@ -370,7 +400,6 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
           .catch(() => null)
         if (opts.distillState) opts.distillState.pending = distill
       }
-      exitedNormally = true
       return response.content
     }
 
@@ -396,7 +425,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       })
     }
 
-    await executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, cwd, recentSigs, depth })
+    await executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, sessionSignal: opts.sessionSignal ?? null, cwd, recentSigs, depth })
     traceStop(`turn ${turn}: tool batches complete`)
 
     // Ctrl+I interrupt during tool execution (CLI agent.mjs parity): skip committing
@@ -426,46 +455,45 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   }
 
   throw new ContinueError(maxTurns)
+  } catch (e) {
+    // Track the exit cause — the finally below must distinguish a ContinueError
+    // (pool kept for the resumed run, no collection) from other exits.
+    thrownError = e
+    throw e
   } finally {
     // Turn-bound cleanup (CONSULTATION.md): abort any leftover consultation sessions
     // started during this turn — no orphan sub-agents past the turn's end.
     cleanupConsultSessions(agent)
-    // §15 D-A3 turn-end async-subagent drain (VS Code alignment): normal exit awaits all
-    // background children and injects their reports; user abort drops them without
-    // injecting (explicit stop); ContinueError/other errors keep the map so the resumed
-    // turn drains it at ITS turn-end (avoid delaying the continue panel).
+    // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1; the collector
+    // lives in agent-tools/subagent.mjs with the async machinery — 500-line split):
+    // - Stop (plain abort): children were aborted with the run signal — clear WITHOUT
+    //   injecting stale errors. Ctrl+I (interrupt) keeps the pool (turn resumes).
+    // - ContinueError (turn cap): no wait, no injection — children keep running, the
+    //   RESUME run's turn-end collection takes over.
+    // - anything else: inject SETTLED entries only (direct form, D-S3 ①); running/queued
+    //   STAY in the pool — no allSettled wait — the suspension session digests them (D-S2).
     const asyncMap = agent._asyncSubagents
     if (asyncMap && asyncMap.size > 0) {
-      if (signal?.aborted) {
+      if (signal?.aborted && !signal?.reason?.interrupt) {
         asyncMap.clear()
-      } else if (exitedNormally) {
-        await drainAsyncSubagents(agent, { history, fullHistory, cwd })
+      } else if (!(thrownError instanceof ContinueError)) {
+        const { collectSettledAsync } = await import("./agent-tools/subagent.mjs")
+        await collectSettledAsync(agent, { history, fullHistory, cwd })
       }
-      if (depth === 0) history._asyncSubagents = exitedNormally ? undefined : asyncMap
+    }
+    // The pool rides the shared depth-0 history array across runAgent calls (the agent
+    // object itself is per-run) — attach while entries remain, drop when drained.
+    if (depth === 0) history._asyncSubagents = (asyncMap && asyncMap.size > 0) ? asyncMap : undefined
+    agent._inAutoTurn = false
+    // §17 D-S6: an auto-turn's end-state guard marks carry into the next USER run via
+    // opts.guardCarry (restored at its start above). Normal ends only — Stop discards
+    // (user cancelled the work); ContinueError lets the auto-resumed run snapshot at
+    // its own end (CLI parity).
+    if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
+      const carry = opts.guardCarry
+      if (carry) {
+        for (const k of INHERITED_GUARD_KEYS) carry[k] = agent[k]
+      }
     }
   }
-}
-
-/**
- * §15 D-A3 turn-end drain: wait for every running/queued async subagent (queued entries
- * auto-start as running slots settle — entry.start cascade via settleAsyncEntry), then
- * inject each report/error into the session as a user-role reminder (XML-escaped — child
- * reports may carry file/web content; >64K reports get a preview + disk path via
- * offloadToolResult). Clears the registry.
- */
-async function drainAsyncSubagents(agent, { history, fullHistory, cwd }) {
-  const map = agent._asyncSubagents
-  if (!map || map.size === 0) return
-  const entries = [...map.values()]
-  await Promise.allSettled(entries.map((e) => e.settled))
-  for (const e of [...entries].sort((a, b) => a.id - b.id)) {
-    const body = e.error != null
-      ? `error: ${escapeXml(e.error)}`
-      : escapeXml(offloadToolResult(cwd, e.report ?? ""))
-    pushReal(history, fullHistory, {
-      role: "user",
-      content: `[System reminder: async subagent #${e.id} (${e.role}) finished]\n\n${body}`,
-    })
-  }
-  map.clear()
 }

@@ -34,6 +34,17 @@ export function renderStatusBar(m) {
   const subCount = Object.keys(S._subagentMap).length
   if (subCount > 0) parts.push(`<span id="sub-badge" role="button" tabindex="0" aria-label="${subCount} subagents" style="cursor:pointer">sub:${subCount}</span>`)
   if (S._taskStatus) parts.push(`<span id="task-badge" role="button" tabindex="0" aria-label="Task progress" style="cursor:pointer">${S._taskStatus}</span>`)
+  // §17 background-mode status line (D-S8): "后台 N 子代理运行中" while the suspension
+  // session is live — appended after the usage stats, dim badge.
+  if (S._suspended) {
+    const c = S._suspCounts
+    const n = (c?.running ?? 0) + (c?.queued ?? 0)
+    const pending = c?.pending ?? 0
+    const text = n > 0
+      ? t("susp.running", { n }) + (pending > 0 ? " · " + t("susp.digesting", { n: pending }) : "")
+      : pending > 0 ? t("susp.digesting", { n: pending }) : t("susp.winding")
+    parts.push(`<span class="susp-status">⏳ ${escHtml(text)}</span>`)
+  }
   document.getElementById("status-line").innerHTML = parts.join(` <span class="status-sep">|</span> `)
   // Wire click handlers for all three badges — `onclick` (not addEventListener):
   // the status line is rebuilt by innerHTML on every render, so old elements

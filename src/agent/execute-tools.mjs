@@ -77,7 +77,7 @@ async function collectBatchPermission(agent, { response, toolByName, getAuto, ca
  * in parallel (each has its own agent). sideEffectExempt tools (like subagent) don't block
  * readonly merging. Batch order is serial — results are committed in call order.
  */
-export async function executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, cwd, recentSigs, depth }) {
+export async function executeToolBatches(agent, { response, history, fullHistory, toolByName, getAuto, callbacks, signal, sessionSignal = null, cwd, recentSigs, depth }) {
   // §16 D-B1：同批（同一 toolCalls 数组）权限合并询问——执行前一次聚合，deny/approveAll
   // 以 tc.id 标记，逐项执行时套用；oneByOne/无 handler 走既有逐项通道。
   const batchPerm = await collectBatchPermission(agent, { response, toolByName, getAuto, callbacks, depth })
@@ -189,6 +189,11 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         try {
           const raw = await tool.execute(args, {
             cwd, agent, callbacks, signal, depth,
+            // §17 D-S7/D-S9 tool-context passthrough: the subagent tool's manual-tier
+            // spawn gate reads the LIVE autoApprove (ctx.getAuto), and children spawned
+            // during a suspension session share the session signal (ctx.sessionSignal).
+            getAuto,
+            sessionSignal,
             // Live output streaming (bash etc.) — mirrors CLI dispatch's onOutput;
             // the id lets the webview route chunks to the right tool card.
             onOutput: (chunk) => callbacks.onToolOutput?.(toolName, chunk, tc.id),

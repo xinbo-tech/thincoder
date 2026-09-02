@@ -74,12 +74,17 @@ export async function handlePanelMessage(panel, msg) {
       saveModelPrefs(panel._context.workspaceState, prefs)
       break
     }
-    case "newSession": panel._newSession(); break
+    case "newSession":
+      // §17: session switch during a suspension session would orphan the background pool
+      // (its lines/pool belong to the current session). Stop the session first.
+      if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before starting a new session."); break }
+      panel._newSession(); break
     case "switchSession": {
       // 会话切换竞态守卫（GitHub #2/#5，2026-08-28）：运行中禁止切换——此前只改 _slot 指针
       // 不 abort，旧 turn 的 stream/complete/标题会灌进新会话视图（"思考串台"）、内容落错槽
       // （"写错会话文件"）。与 applyProjectSwitch（panel-project.mjs）的运行中拒绝同模式。
-      if (panel._turnActive) {
+      // §17：挂起会话（后台子代理 + 待消化结果）同属运行中守卫。
+      if (panel._turnActive || panel._susp?.active) {
         vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before switching sessions.")
         break
       }
@@ -101,7 +106,10 @@ export async function handlePanelMessage(panel, msg) {
       await panel._loadSession()
       break
     }
-    case "deleteSession": await panel._deleteSession(msg.slot); break
+    case "deleteSession": {
+      if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before deleting a session."); break }
+      await panel._deleteSession(msg.slot); break
+    }
     case "renameSession": {
       // Manual rename: prefill the current title; empty input = cancel (keep old title).
       const title = await vscode.window.showInputBox({
@@ -116,6 +124,9 @@ export async function handlePanelMessage(panel, msg) {
       break
     }
     case "setProject": {
+      // §17: project switch mid-suspension would yank cwd out from under the session —
+      // the suspension lines/slot belongs to the old project's session store.
+      if (panel._susp?.active) { vscode.window.showWarningMessage("ThinCoder: background subagents are still running — stop them before switching projects."); break }
       // Current-project switcher (multi-root): with fsPath → switch directly;
       // without → show the native folder picker.
       if (msg.fsPath) await panel._applyProjectSwitch(msg.fsPath)
@@ -131,7 +142,21 @@ export async function handlePanelMessage(panel, msg) {
     case "abort":
       panel._stopClickTs = Date.now()
       traceStop("click received — abort() called", panel._stopClickTs)
-      panel._abortController?.abort()
+      // §17 D-S9: Stop during a suspension session aborts the WHOLE background session
+      // (CLI Ctrl+C parity — digests' own per-turn controllers only kill the digest):
+      // session controller (pool children) + current turn controller + wake the driver.
+      // 偏差修复 #3: 统一 abort 进入回合的全部 controller（abortControllers）——Ctrl+I /
+      // ContinueError 重建后持旧 controller signal 的池 children 一并中止（否则跑完整个
+      // turn 预算 + mergeChildMutations 写父 guard 标记——磁盘被改、advisor/verify 门被绕过）。
+      if (panel._susp?.active) {
+        panel._susp.aborted = true
+        panel._susp.abortControllers?.forEach((c) => c.abort())
+        panel._susp.abort?.abort()
+        panel._abortController?.abort()
+        panel._suspWake?.()
+      } else {
+        panel._abortController?.abort()
+      }
       break
     // Ctrl+I inject (CLI parity): abort with an interrupt reason — the agent loop
     // commits partial output, injects the message, and resumes from the same context.

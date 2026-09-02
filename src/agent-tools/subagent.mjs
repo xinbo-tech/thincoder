@@ -2,8 +2,11 @@
  * subagent.mjs — subagentTool
  * Spawn a sub-agent for an independent subtask.
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
+ * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
+ * history._pendingAsyncResults), manual-tier auto-turn spawn gate, shared injector.
  */
 import { validateDesignToken } from "./advisor.mjs"
+import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 
 /**
  * Mode-dependent subagent role schema field (CLI setup.mjs parity). The role enum is
@@ -128,6 +131,19 @@ export const subagentTool = {
     const parent = ctx.agent
     const cwd = ctx.cwd
 
+    // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async
+    // OR blocking — the digest must stay organize-only. AUTO tier (ctx.getAuto) is
+    // exempt (推进型 — the user authorized unattended continuation). Mechanical
+    // refusal so the digest never pops a permission panel or chains background work.
+    if (parent._inAutoTurn && !(ctx.getAuto?.() ?? false)) {
+      return JSON.stringify({ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" })
+    }
+    // §17 D-S9: during a suspension session children share the SESSION signal
+    // (ctx.sessionSignal) — a digest's own Stop/interrupt must not abort the pool;
+    // the session abort controller stops everything. Outside a session children ride
+    // the spawning turn's controller (existing semantics).
+    const childSignal = ctx.sessionSignal ?? ctx.signal ?? null
+
     // Role normalization + whitelist (2026-08-25, coder-leak fix): the runtime gates below
     // used exact string comparison — a variant role ("Coder", " coder") bypassed BOTH gates
     // and fell through to full-tool/no-overlay (a full-write coder without design review).
@@ -186,6 +202,12 @@ export const subagentTool = {
       const sink = {}
       const panel = (chunk) => ctx.callbacks?.onToolPanel?.(`sub:${role}#${subId}`, chunk)
       const agentMod = await import("../agent.mjs")
+      // §17 D-S8 冻结门控: an ASYNC child that settles while the suspension session is
+      // active reports "settled" (block stays live as "done · awaiting digestion");
+      // the pool-drain freeze at session exit later reports the terminal collapse.
+      // SYNC children settle inline inside their turn — the caller consumes the result
+      // directly, so their terminal notification stays "done" regardless of suspension.
+      const terminalStatus = () => (asyncFlag && parent.history?._suspended === true ? "settled" : "done")
       const baseOpts = {
         depth: 1, role, maxTurns,
         streamOutput: true, // exempt from the agent.mjs onToken depth gate (escalate parity)
@@ -207,11 +229,11 @@ export const subagentTool = {
             onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
             onComplete: () => {},
             onQuestion: ctx.callbacks?.onQuestion ?? null,
-          }, ctx.signal, true, { ...baseOpts, resume, ...(resume ? { history: sink.history } : {}) })
+          }, childSignal, true, { ...baseOpts, resume, ...(resume ? { history: sink.history } : {}) })
 
           mergeChildMutations(parent, sink)
 
-          ctx.callbacks?.onSubagent?.({ id: subId, role, status: "done" })
+          ctx.callbacks?.onSubagent?.({ id: subId, role, status: terminalStatus() })
           // designId rides the delivery report (2026-09-01, CLI parity): the audit fix
           // round re-spawns with the SAME designId+token — the parent copies it from here.
           const designIdNote = role === "eng-coder"
@@ -258,14 +280,17 @@ export const subagentTool = {
       status: "queued", position: 0,
       report: null, error: null, done: false,
       settled: null, _resolve: null,
+      // §17: the child's effective signal (session-first) — the settle callback reads it
+      // to skip the pending transfer when the session was aborted (abort = discard).
+      signal: childSignal,
     }
     entry.settled = new Promise((res) => { entry._resolve = res })
     entry.start = () => {
       entry.status = "running"
       ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "started", startedAt: Date.now(), model: provider.model ?? null })
       runChild().then(
-        (report) => settleAsyncEntry(parent, entry, report, null),
-        (err) => settleAsyncEntry(parent, entry, null, err?.message ?? String(err)),
+        (report) => settleAsyncEntry(parent, entry, report, null, ctx.callbacks?.onAsyncSettled),
+        (err) => settleAsyncEntry(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
       )
     }
     parent._asyncSubagents.set(id, entry)
@@ -284,14 +309,35 @@ export const subagentTool = {
  * subagent_check / 回合收尾）→ 腾槽补位（running settle 一个即启动队列头部——完成即补位，
  * 不消费才补；失败/abort 同样腾槽）。entry.start 绑定创建它的 execute 调用上下文，
  * 因此补位启动的子代理跑的是它自己的 pipeline。
+ * §17 D-S3 ②/D-S8（VS Code 对齐）：settle 时若处于挂起态（parent.history._suspended——
+ * 共享数组，跨 runAgent 调用存活；读取时刻为准，确定性）→ 延迟冻结：条目移交
+ * history._pendingAsyncResults（由下个回合 prepareRun 前注入，D-S3 ② 记账点）并从池
+ * 移除；正常回合内 settle 行为不变（留池，回合尾 collectSettledAsync 直注入 ①）。
+ * 会话中止（entry.signal aborted）跳过移交并**出池清理**（2026-09-02 偏差修复 #2）——
+ * abort 清池不注入陈旧错误，且 done 僵尸条目不得留在池里让 poolLive 恒真。
  */
-function settleAsyncEntry(parent, entry, report, error) {
+function settleAsyncEntry(parent, entry, report, error, notifySettle) {
   entry.report = report
   entry.error = error
   entry.done = true
+  // 2026-09-02 偏差修复 #2（abort 分支出池清理）：中止的池项 = 丢弃（D-S5——abort 清池
+  // 不注入陈旧错误）。先前 aborted 项不移交 pending 也不出池——done 僵尸条目留在共享
+  // map，poolLive 恒真（释放窗口竞态后果 (a)：僵尸挂起会话、驱动器 waitForSettleOrWake
+  // 空转直到用户手动 Stop）。abort 分支做与挂起移交同构的出池清理：从池移除、不注入。
+  if (entry.signal?.aborted) {
+    parent.history?._asyncSubagents?.delete(entry.id)
+    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
+  } else if (parent.history?._suspended === true) {
+    const hist = parent.history
+    const pend = (hist._pendingAsyncResults ??= [])
+    if (!pend.includes(entry)) pend.push(entry)
+    hist._asyncSubagents?.delete(entry.id)
+    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
+  }
   entry._resolve?.(entry)
-  const queued = [...parent._asyncSubagents.values()].filter((x) => x.status === "queued")
+  const queued = [...(parent._asyncSubagents?.values() ?? [])].filter((x) => x.status === "queued")
   if (queued.length > 0) queued[0].start()
+  notifySettle?.()
 }
 
 /**
@@ -320,13 +366,51 @@ export function mergeChildMutations(parent, sink) {
 }
 
 
-// ─── Async subagent machinery（AGENT-LOOP.md §15，CLI D-A1/D-A2/D-A4 同规格）───
+// ─── Async subagent machinery（AGENT-LOOP.md §15 + §17，CLI D-A1/D-A2/D-A4/D-S3 同规格）───
 
 /** 机械并发上限：running 数 <4 时新 async spawn 立即启动，≥4 入队等待（用户 2026-09-02 拍板）。 */
 export const ASYNC_SUBAGENT_LIMIT = 4
 
 /** subagent_check 单回合最多读取次数（consult_check 同款防循环，评审 #1 补定义）。 */
 export const MAX_ASYNC_CHECKS = 3
+
+/**
+ * §17 D-S3 shared injector: inject one settled async entry into the session as a
+ * user-role reminder (XML-escaped — child reports may carry file/web content; >64K
+ * offloaded with preview + path). Single shared form for ALL consumption points —
+ * the turn-end collection (collectSettledAsync below), the run-start
+ * history._pendingAsyncResults injection — plus the suspension-exit residual flush.
+ * Consumed = the caller removes the entry from its container; no double inject.
+ */
+export async function injectAsyncResult(entry, { history, fullHistory, cwd }) {
+  const body = entry.error != null
+    ? `error: ${escapeXml(entry.error)}`
+    : escapeXml(offloadToolResult(cwd, entry.report ?? ""))
+  pushReal(history, fullHistory, {
+    role: "user",
+    content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n\n${body}`,
+  })
+}
+
+/**
+ * §17 D-S1 turn-end async collection (AGENT-LOOP.md §17 D-S1 — lives here with the
+ * async machinery; agent.mjs's finally calls it, 500-line split): inject every entry
+ * that SETTLED during this run (shared injector form — XML-escaped, >64K offloaded)
+ * and remove it from the pool. Running/queued STAY — no allSettled wait: the
+ * suspension session digests them as they settle (D-S2/D-S9). Single ownership:
+ * entries settled inside a suspension session were moved to
+ * history._pendingAsyncResults by the settle callback, so this only sees
+ * non-suspended settles (no double inject — D-S3 ①/②).
+ */
+export async function collectSettledAsync(agent, { history, fullHistory, cwd }) {
+  const map = agent._asyncSubagents
+  if (!map || map.size === 0) return
+  for (const e of [...map.values()]) {
+    if (!e.done) continue // still running — stays in the pool (D-S1)
+    await injectAsyncResult(e, { history, fullHistory, cwd })
+    map.delete(e.id) // map keys are the spawn-time id (number — subagent.mjs async branch)
+  }
+}
 
 /**
  * subagent_check — fetch results of ASYNC subagents (spawned with async: true).
