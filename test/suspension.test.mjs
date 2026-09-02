@@ -984,3 +984,156 @@ test("round2 偏差#4 TUI：digest 处理中首次 Ctrl+C 仅中止当前回合�
   }
 })
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §18 工程交付协议（AGENT-LOOP.md §18）——挂起/消化侧用例：
+//   T-E9 双通道：eng-coder 缺省 async 运行中用户输入 → 新回合正常（§17/§15 回归）
+//   T-E10 消化分档回归：手动档 digest 禁 spawn eng-coder（默认 async 也不放行）；
+//         AUTO 档可 spawn（推进链不受 §18 影响）
+//   T-E11 交付报告 digest 消化：手动档 digest 总结注入（审计/评审记录可见——D-E4）
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 真签名 token（agent.test.mjs signedToken 同款——TTL 令牌不能烘焙固定过期）。 */
+async function signedToken(uuid, expiresAt) {
+  const { createHmac } = await import("node:crypto")
+  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
+  return `${uuid}:${expiresAt}:${sig}`
+}
+
+test("T-E9: eng-coder 缺省 async 双通道——后台运行中用户输入照常开新回合；交付 settle 后下轮注入（§18 F5/§15 回归）", async () => {
+  const { createServer } = await import("node:http")
+  const token = await signedToken("e9e9e9e9-9999-4999-8999-0000000000e9", Date.now() + 24 * 3600 * 1000)
+  const server = createServer((req, res) => {
+    let bodyText = ""
+    req.on("data", (c) => (bodyText += c))
+    req.on("end", () => {
+      const send = (content, delay) => {
+        const frames = content.startsWith("TOOL:")
+          ? `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "subagent", arguments: content.slice(5) } }] } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
+            `data: [DONE]\n\n`
+          : `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            `data: [DONE]\n\n`
+        const respond = () => { res.writeHead(200, { "Content-Type": "text/event-stream" }); res.end(frames) }
+        if (delay) setTimeout(respond, delay)
+        else respond()
+      }
+      // 路由（T-S1 同款内容字段匹配——父历史里的 tool_calls arguments 是转义形态，
+      // 不会误中 content 字段锚点）：
+      //  1. eng-coder 子代理（user content "后台 eng 交付"）→ 600ms 慢交付
+      //  2. 父首回合（user content "派后台 eng 活" 且尚无 tool 消息）→ spawn eng-coder（无 async 参数 = 缺省 async）
+      //  3. 其余父回合按输入文本回话（后续回合含 "role":"tool" 历史，不再命中 spawn 路由）
+      if (bodyText.includes('"content":"后台 eng 交付"')) {
+        send(LONG_REPORT("E9 eng 交付"), 600)
+      } else if (bodyText.includes('"content":"派后台 eng 活"') && !bodyText.includes('"role":"tool"')) {
+        send(`TOOL:${JSON.stringify({ task: "后台 eng 交付", role: "eng-coder", designToken: token })}`)
+      } else if (bodyText.includes("插话")) {
+        send("回合2回复")
+      } else {
+        send("回合1收尾")
+      }
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "cli-e9-"))
+  try {
+    const { runAgent, createAgent } = await import("../src/agent.mjs")
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      tools: [], config: { agent: { engineering: true }, advisor: {} }, cwd,
+    })
+    parent._engDesignTokens = new Map([["e9e9e9e9-9999-4999-8999-0000000000e9", token]])
+    parent._engDesignToken = token
+    // 回合 1：派 eng-coder（不带 async 参数 = 缺省 async）→ 回合立即收尾（不阻塞 600ms）
+    const t0 = Date.now()
+    const out1 = await runAgent(parent, "派后台 eng 活", { onPermissionRequest: async () => true })
+    const elapsed1 = Date.now() - t0
+    assert.equal(out1, "回合1收尾", "T-E9: 主回合收尾（子代理在后台）")
+    assert.ok(elapsed1 < 500, `T-E9: 回合尾不等子代理（elapsed=${elapsed1}ms < 600ms）`)
+    const entry = [...(parent._asyncSubagents?.values() ?? [])][0]
+    assert.ok(entry && entry.role === "eng-coder", "T-E9: eng-coder 子代理在池（缺省 async 生效）")
+    assert.equal(entry.done, false, "T-E9: 子代理仍在 running")
+    // 双通道：子代理运行中用户输入 → 新回合照常执行（§17 F5/F2）
+    const out2 = await runAgent(parent, "插话", { onPermissionRequest: async () => true })
+    assert.equal(out2, "回合2回复", "T-E9: 后台运行中用户回合正常")
+    // 子代理 settle → 下个回合收尾注入交付报告
+    await entry.promise
+    assert.equal(entry.done, true)
+    await runAgent(parent, "收尾", { onPermissionRequest: async () => true })
+    const injected = parent.history.find((m) => String(m.content ?? "").includes("async subagent #1 (eng-coder) finished"))
+    assert.ok(injected, "T-E9: 交付报告注入（零丢失）")
+    assert.ok(String(injected.content).includes("E9 eng 交付 report"), "T-E9: 报告正文注入")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-E10: digest 禁 spawn 分档回归——手动档 digest 连默认 async 的 eng-coder 也机械拒绝；AUTO 档放行（§18 不影响 §17 N3/D-S6）", async () => {
+  const { server, port } = await asyncServer([{ content: LONG_REPORT("AUTO eng 交付") }])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-e10-"))
+  try {
+    const { createAgent } = await import("../src/agent.mjs")
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const token = await signedToken("e1e0e1e0-1010-4101-8101-0000000000e0", Date.now() + 24 * 3600 * 1000)
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      tools: [], config: { agent: { engineering: true }, advisor: {} }, cwd,
+    })
+    parent._engDesignTokens = new Map([["e1e0e1e0-1010-4101-8101-0000000000e0", token]])
+    parent._engDesignToken = token
+    // 手动档 digest：eng-coder 缺省 async 也不放行（禁 spawn 机械门先于角色/async 解析）
+    parent._inAutoTurn = true
+    parent.autoApprove = false
+    const ref = JSON.parse(String(await subagentTool.execute(
+      { task: "x", role: "eng-coder", designToken: token }, // 无 async 参数——§18 缺省 async
+      { agent: parent, cwd, callbacks: {}, depth: 0 },
+    )))
+    assert.equal(ref.status, "error", "T-E10: 手动档 digest spawn eng-coder 拒绝（默认 async 不例外）")
+    assert.equal(ref.error, "cannot spawn subagents from a manual auto-turn — wait for user input")
+    // AUTO 档：放行（推进链）——eng-coder 缺省 async spawn 正常启动
+    parent.autoApprove = true
+    const ok = JSON.parse(String(await subagentTool.execute(
+      { task: "AUTO eng 活", role: "eng-coder", designToken: token },
+      { agent: parent, cwd, callbacks: {}, depth: 0 },
+    )))
+    assert.equal(ok.status, "running", "T-E10: AUTO 档 digest 放行 eng-coder（缺省 async）")
+    const entry = parent._asyncSubagents.get(String(ok.id))
+    await entry.promise
+    assert.equal(entry.done, true)
+    assert.ok(String(entry.report).includes("AUTO eng 交付 report"))
+    parent._inAutoTurn = false
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-E11: 交付报告 digest 消化——手动档 auto-turn 注入报告（含审计/评审轮次记录），摘要进会话流（§18 D-E4——既有消化零改动）", async () => {
+  const { server, port } = await asyncServer([{ content: "digested: 交付要点总结（audit 2 clean / advisor 1 clean）" }])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-e11-"))
+  try {
+    const { runAgent } = await import("../src/agent.mjs")
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    // eng-coder 交付报告（settle 后挂起移交形态）——自带审计/评审轮次 + 终态
+    parent._pendingAsyncResults = [{
+      id: "1", role: "eng-coder",
+      report: LONG_REPORT("交付完成：审计 2 轮 clean；advisor 复评 1 轮 clean；终态 clean"),
+    }]
+    const out = await runAgent(parent, "", {}, { autoTurn: true })
+    assert.equal(out, "digested: 交付要点总结（audit 2 clean / advisor 1 clean）", "T-E11: digest 正常消化 eng-coder 交付")
+    const injected = parent.history.find((m) => String(m.content ?? "").includes("async subagent #1 (eng-coder) finished"))
+    assert.ok(injected, "T-E11: 交付报告注入（与 coder 条目同通道——D-E4 零改动）")
+    assert.ok(String(injected.content).includes("advisor 复评 1 轮 clean"), "T-E11: 审计/评审轮次记录注入后可见（质量闭环可见）")
+    assert.ok(String(injected.content).includes("终态 clean"), "T-E11: 终态标记注入后可见")
+    assert.equal(parent._pendingAsyncResults.length, 0, "T-E11: 注入即消费")
+    // 手动档消化动作域模板照常注入（digest 只整理不执行）
+    assert.ok(parent.history.some((m) => String(m.content ?? "").includes("auto-turn — background async subagents finished")), "T-E11: 手动档动作域注入")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
