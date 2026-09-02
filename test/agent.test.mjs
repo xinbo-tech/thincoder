@@ -13,7 +13,8 @@ import { tmpdir } from "node:os"
 import { compactHistory, truncateFallback, shrinkOversized, summarizeRunExplorations, SUMMARIZE_PROMPT, EXPLORE_TOOLS } from "../src/compact.mjs"
 import { specForModel, ctxPercentForModel, contextWindowForModel, providerSpec } from "../src/config.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
-import { MAX_ADVISOR_PUSHBACKS } from "../src/agent/run-helpers.mjs"
+import { MAX_ADVISOR_PUSHBACKS, loadEngineeringPrompt } from "../src/agent/run-helpers.mjs"
+import { pushModeReminders } from "../src/agent/setup-reminders.mjs"
 import { runAgent } from "../src/agent.mjs"
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -1133,6 +1134,25 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("three-document hard flow"), "hard-flow consequence named")
     assert.ok(text.includes("Ask the user whether to create METHODOLOGY.md"), "recovery path: ask the user")
     assert.ok(!text.includes("eng tool's write mode"), "stale VS Code-specific scaffold pointer removed")
+  })
+
+  it("setup-reminders: METHODOLOGY-missing warning carries absolute template path + body (2026-09-02 D-M1/D-M2)", () => {
+    const dir = setupTempDir() // no METHODOLOGY.md → methodologyMissing branch
+    const engResult = loadEngineeringPrompt(dir, "eng-coder")
+    assert.equal(engResult.methodologyMissing, true)
+    assert.ok(engResult.methodologyTemplatePath, "template absolute path resolved")
+    assert.match(engResult.methodologyTemplatePath, /(?:thincoder|thincoder-vscode)[\\/].*methodology-template\.md/, "absolute path shape")
+    assert.ok(existsSync(engResult.methodologyTemplatePath), "template path exists on disk (D-AC2)")
+    assert.ok(engResult.methodologyTemplateBody?.startsWith("# METHODOLOGY — AI Agent Collaboration"), "template body loaded (first line)")
+    const history = []
+    pushModeReminders(history, { depth: 0, freshMachineLine: true, getAuto: () => false, role: "eng-coder", engPromptActive: true, engResult })
+    const warning = history.map((m) => m.content).join("\n")
+    assert.ok(warning.includes(engResult.methodologyTemplatePath), "warning contains absolute path")
+    assert.ok(warning.includes("# METHODOLOGY — AI Agent Collaboration"), "warning contains template body")
+    assert.ok(warning.includes("Ask the user whether to create METHODOLOGY.md"), "recovery path: ask the user")
+    assert.ok(warning.includes("write cwd/METHODOLOGY.md before designing"), "confirm-then-write flow kept (D-M3, CLI parity)")
+    assert.ok(warning.includes("built-in template（可 read"), "prefix literal intact (D-M2 design literal, audit-fix 2026-09-02)")
+    rmSync(dir, { recursive: true, force: true })
   })
 })
 // ─── Workflow/Debugging 必须用 task（2026-08-23）───
