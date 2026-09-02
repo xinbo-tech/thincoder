@@ -712,7 +712,11 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - **D-S6 auto-turn（V2 核心）**：
   - **入口（一手核实 2026-09-02）**：`runAgent` 加 `{ autoTurn: true }` 选项——prepareRun 的 input 注入在 `!resume` 块内（setup.mjs:85-169，168 行 pushReal input），autoTurn 语义 = **不 push input + per-run 状态重置（如普通回合）+ history 尾 = 已注入的 reminder user 消息**——复用 resume 的"不 push input"机制但**不绑定 ContinueError 语义**（resume preserve per-run 状态是给续跑守卫用的；autoTurn 是系统驱动新回合，per-run 重置如普通回合：_advisorRound/_compressFailures/_asyncCheckLastN 等全重置）
   - **触发**：挂起态池项 settle 且无 pendingInput → 交互层注入该 settle 项 reminder（`[System reminder: async subagent #id (role) finished]` + 报告，XML 转义 + 64K 落盘——现收尾注入形态）→ 开 auto-turn；**合并**：触发时收集全部已 settle 未注入项一次注入（多子代理近邻完成 → 一轮消化全部，N1 成本护栏）
-  - **消化动作域（R2 定稿）**：注入模板限定 auto-turn 任务 = ① 总结子代理报告要点（注入会话流，用户回来可读）② 更新任务清单（子代理完成的任务标 done）③ 标记需用户决策的点（"待你确认：…"）④ **不主动推进新工作**（不自行决定执行写操作/派新活——无用户在场语义）；**禁 spawn 一切子代理**（async + 同步——N3 广义防链式永动，subagent.mjs 入口机械拒绝：`agent._inAutoTurn` 标记 → 返回 `{ status: "error", error: "cannot spawn subagents from an auto-turn — wait for user input" }`）
+  - **消化动作域（用户 2026-09-02 定稿判据：auto-turn 只做"信息整理"，不做"状态改变"）**——auto-turn = 一次系统事件驱动、无用户输入的 runAgent 回合（模型只会回合式工作；"处理子代理报告"在架构上必然 = 开一个回合，触发者不是人是系统）。动作域：
+    - **允许（整理已发生的）**：① 总结报告要点注入会话流（用户回来可读；只读验证报告声称——read/搜索类工具放行，灰度 3 裁定）② 更新任务清单（子代理完成的任务标 done）③ 标记需决策点 + 写下建议（"建议下一步：可派 B 跟进 X"——只写建议不执行）④ **不主动推进新工作**（精确判据见下）
+    - **禁止（让新事情发生的）**：写文件/改代码（AUTO 下与普通回合同权限——用户 2026-09-02 否决机械拦写，过度工程）；执行类工具 bash/execute/verify（灰度 1 裁定：verify/跑测试写成建议不跑——进程活动且可触发审批）；spawn 一切子代理（async + 同步——N3 结构防链式永动）
+    - **灰度裁定（2026-09-02）**：灰度 1（auto-turn 自跑 verify/测试）→ **不跑**，写成建议；灰度 2（把子代理产出落盘成报告文件）→ **不写**——子代理自己的产出自己已落盘，auto-turn 无需再写（状态改变）；灰度 3（只读 read 验证报告声称——如确认"改了 3 个文件"属实）→ **允许**——纯信息获取，总结里写"已核实"比盲抄强
+    - **机械禁 spawn**：subagent.mjs 入口检查 `agent._inAutoTurn` → 返回 `{ status: "error", error: "cannot spawn subagents from an auto-turn — wait for user input" }`（async + 同步都拒）
   - **写工具策略（用户 2026-09-02 否决 AUTO 拦截——过度工程）**：auto-turn 写工具权限 = **与 async 子代理同级**（async 子代理是独立 runAgent 走同一权限门，AUTO 下后台写早已存在——auto-turn 信任级一致，无机械特判）：AUTO 模式 → 自动执行；手动模式 → 权限门无 handler 拒绝（D-S7）。不该写的由消化动作域模板语义约束（④ 不主动推进），该写的（子代理产出落盘等合理继续动作）不拦
   - **循环终止**：auto-turn 内无新 async（禁 spawn）→ 无新池项 settle → auto-turn 结束后池空或剩 running 旧项 → 池空 → 挂起自然退出；剩 running → 继续挂起等下一 settle → 下一 auto-turn（每次消化后都会收敛到池空——链式不可能）
 - **D-S7 权限（N2）**：auto-turn 撞权限门（手动模式）→ 无用户在场按 no-permission-handler 拒绝（§15 同语义，不悬挂）
