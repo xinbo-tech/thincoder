@@ -206,6 +206,25 @@
 5. 架构级文档简化功能性需求（用户故事）——METHODOLOGY 允许，机制约束 FR1-FR8 替代。
 
 ## 7. 变更记录
+### 2026-09-02：METHODOLOGY 缺失模板可达性（用户报告：模型说"模板在源码里访问不到，自己写了一个"）
+
+**问题**：项目根无 `METHODOLOGY.md` 时，工程模式注入缺失警告，指引模型参考 `src/prompts/methodology-template.md` 创建——但该路径是**产品源码相对路径**（CLI npm 包 / VS Code 扩展安装目录），用户项目 cwd 下不存在 → 模型读取失败（"模板在源码里，访问不到"）→ 只能自己手写一个，模板参考链路断裂。
+
+**需求**：F1 = 模板路径对模型**可达**（真实路径或内容直达）；F2 = **保留模型互动**（模型询问用户 → 确认后写入 cwd/METHODOLOGY.md——用户裁定：不经过模型不询问的自动脚手架不好，喜欢有模型互动的体验）；F3 = 两端（CLI + VS Code）同行为。
+
+**设计**（用户确认 2026-09-02）：
+
+- **D-M1 警告文本给真实路径**：缺失警告中模板路径从静态相对路径 `src/prompts/methodology-template.md` 改为**运行时解析的绝对路径**——setup 代码用 `dirname(import.meta.url)` 拼模板真实位置（`../prompts/methodology-template.md` 的绝对形式），CLI npm 包与 VS Code 扩展安装目录下模型均可直接 read
+- **D-M2 模板正文直接注入警告**：缺失警告消息内附模板**完整正文**（44 行 ≈1.5KB，仅缺失时注入一次）——模型零文件访问障碍，参考内容生成；正文前加注"built-in template（可 read <绝对路径> 或直接参考以下内容）"
+- **D-M3 互动流程保留**：警告文本引导"与用户确认是否创建 METHODOLOGY.md，确认后写 cwd/METHODOLOGY.md"——询问 + 写文件仍由模型主导，系统不做自动脚手架
+- **D-M4 两端落地**：CLI `src/agent/setup.mjs`（buildEngineeringPrompt 缺失警告 + 模板绝对路径解析）；VS Code `src/agent/run-helpers.mjs`（loadEngineeringPrompt 同）+ `src/agent/setup-reminders.mjs`（警告文本同）
+- **D-M5 测试**：两端断言更新——缺失警告含**模板绝对路径**（断言 /(?:thincoder|thincoder-vscode)[\\/].*methodology-template.md/ 或扩展绝对路径形态）与**模板首行内容**（"# METHODOLOGY — AI Agent Collaboration"）；"Ask the user whether to create METHODOLOGY.md" 引导语义保留（新文本断言）
+
+**受影响文件**：`src/agent/setup.mjs`（CLI）、`src/agent/run-helpers.mjs` + `src/agent/setup-reminders.mjs`（VS Code）、两端 `test/agent.test.mjs`（警告文本断言）。
+
+**验收**：AC1 = 无 METHODOLOGY.md 项目进入工程模式 → 警告含模板绝对路径 + 模板正文（D-M1/D-M2）；AC2 = 模型可沿该路径 read 到模板（真机可验证）；AC3 = 互动流程不变——仍由模型询问用户后生成（D-M3）；AC4 = 两端测试全绿（D-M5）。
+
+
 
 ### 2026-09-01：多任务并行化 + designId 多槽 token（用户拍板方案 a）
 
