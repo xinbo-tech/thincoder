@@ -37,9 +37,13 @@ export function estimateTokens(messages) {
 const KEEP_HEAD = 0 // No dedicated head: earliest messages may be a COMPLETED earlier task in multi-task
 // sessions — keeping them verbatim anchored attention on stale work. Everything before the tail is
 // summarized (the summary itself distinguishes completed vs in-progress work; see SUMMARIZE_PROMPT).
-// Tail size scales with the model context window (~30 messages per 100K tokens),
-// capped at 40% of history so small histories don't over-reserve. Window-adaptive
-// replaces the old fixed 10: on a 1M window, 10 messages is too thin for recent work.
+// Tail count formula (D4): window-adaptive (~30 msgs per 100K — old fixed 10 too thin on 1M), capped
+// at 40% of history; §9 D-T1/D-T2 make the count only a CANDIDATE — a token budget (TAIL_BUDGET_FRACTION
+// × window − SUMMARY_TOKEN_ESTIMATE ≈1K, §8) tightens it over pair-safe boundaries when compaction runs,
+// never below TAIL_FLOOR_MESSAGES; ordinary sessions never reach it (D-T4: trigger 0.6 untouched).
+const TAIL_BUDGET_FRACTION = 0.15
+const SUMMARY_TOKEN_ESTIMATE = 1000 // §8: summary output target ~1K tokens — reserved from the 15%
+const TAIL_FLOOR_MESSAGES = 10 // §9 D-T2: the tail keeps ≥10 verbatim messages — floor beats budget
 function keepTailSize(provider, historyLen) {
   // provider is guaranteed at every call site (runAgent always builds one); providerSpec
   // degrades to DEFAULT_SPEC (128K) only if provider is somehow absent — acceptable
@@ -47,6 +51,10 @@ function keepTailSize(provider, historyLen) {
   // (K units) is honored here (PROVIDER.md §15 T-C2: tail formula follows the window).
   const ctxWindow = providerSpec(provider).context
   return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
+}
+// §9 D-T1 tail token budget: window×15% − summary ~1K — the compressed history segment (summary + placeholder + tail) lands ≈ 15% (B 口径 §9.5).
+function tailBudgetTokens(provider) {
+  return Math.max(0, Math.floor(providerSpec(provider).context * TAIL_BUDGET_FRACTION) - SUMMARY_TOKEN_ESTIMATE)
 }
 
 export const SUMMARIZE_PROMPT = `You are a conversation compressor. Summarize the following agent work log into a compact summary for use as context in the ongoing conversation.
@@ -59,7 +67,7 @@ Requirements:
 - Explicitly list UNRESOLVED ISSUES / TODOs: anything still open plus the next steps — so post-compaction recovery knows where to resume
 - Drop: pleasantries, repetition, fine-grained tool output details
 - Honestly mark uncertain items: anything not actually verified must say "unverified"; do not present guesses as facts
-- Use bullet-point output; aim for information completeness, not a hard word limit (old 500-char cap is deprecated; in a 1M-context era, err on the long side)
+- Use bullet-point output. Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target. An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated. When over budget, trim in this order: completed recaps to one line; FILES CHANGED why-notes to bare paths; in-progress prose tightened. NEVER cut design anchors or UNRESOLVED ISSUES/TODOs — recovery depends on them.
 
 Work log:
 `
@@ -84,12 +92,13 @@ const FALLBACK_NOTE =
 
 /**
  * Split history into head / middle (to be summarized) / tail; return null if no middle to compress.
- * head is normally empty (KEEP_HEAD = 0 — earliest messages go into the summary); the
- * tool_calls-extension logic below is defensive for future KEEP_HEAD > 0.
- * The tail boundary must include any assistant whose tool results are in the tail — if the assistant is in the middle,
- * the summary swallows it, leaving orphan tool results → protocol 400.
+ * head is normally empty (KEEP_HEAD = 0 — earliest messages go into the summary); the tool_calls-extension logic below is defensive for future KEEP_HEAD > 0.
+ * The tail boundary must include any assistant whose tool results are in the tail — if the assistant is in the middle, the summary swallows it, leaving orphan tool results → protocol 400.
+ * `budgetTokens` (optional, §9 D-T1): when the candidate's estimate exceeds it, the boundary moves
+ * forward until the tail fits — never below the D-T2 floor (10 msgs, or the candidate itself when
+ * the 40% cap made it < 10 — short history).
  */
-function splitHistory(history, keepTail) {
+function splitHistory(history, keepTail, budgetTokens = null) {
   if (history.length <= KEEP_HEAD + keepTail + 1) return null
   let headEnd = KEEP_HEAD
   // head must not end with dangling tool_calls: when assistant declares tool_calls, all its tool results must stay in head.
@@ -97,10 +106,24 @@ function splitHistory(history, keepTail) {
   if (history[headEnd - 1]?.role === "assistant" && history[headEnd - 1].tool_calls?.length) {
     while (headEnd < history.length && history[headEnd].role === "tool") headEnd++
   }
-  let tailStart = history.length - keepTail
+  const candidate = repairedTailStart(history, headEnd, history.length - keepTail)
+  if (candidate <= headEnd) return null
+  let tailStart = candidate
+  // §9 D-T1: tighten only above the floor — a candidate ≤ 10 IS the floor (short history under the 40% cap must not tighten further, review #5); the floor is D5-repaired too.
+  if (budgetTokens > 0 && keepTail > TAIL_FLOOR_MESSAGES) {
+    const floor = repairedTailStart(history, headEnd, history.length - TAIL_FLOOR_MESSAGES)
+    if (floor > candidate) tailStart = tightenTailByBudget(history, candidate, floor, budgetTokens)
+  }
+  return { headEnd, tailStart }
+}
 
-  // Tool messages in the tail region whose assistant tool_calls are in the middle: the summary would swallow the assistant,
-  // leaving orphan tool results → protocol 400. Collect tool_call_ids from the tail, find their owner assistants and pull them into tail
+/**
+ * D5 tail-side pairing repair for a raw cut at history.length − tailCount: pull into the tail any
+ * assistant whose tool results are in the tail (the summary swallowing the owner leaves orphan tool
+ * results → protocol 400), then skip orphan tool messages at the new boundary. Single-assistant
+ * assumption (nearest owner only — a tail spans at most one assistant→tools cycle); bounds-guarded.
+ */
+function repairedTailStart(history, headEnd, tailStart) {
   const tailToolIds = new Set()
   for (let i = tailStart; i < history.length; i++) {
     if (history[i].role === "tool") tailToolIds.add(history[i].tool_call_id)
@@ -112,16 +135,28 @@ function splitHistory(history, keepTail) {
       break
     }
   }
-
-  // skip orphan tool messages at the new tail boundary (tool whose assistant was pulled in above)
-  // NOTE: single-assistant assumption — the backwards scan pulls the nearest owner only; in
-  // practice a tail spans at most one assistant→tools cycle (parallel calls share one assistant).
-  // Bounds-guarded so an all-tool tail cannot push tailStart past history.length.
   while (tailStart < history.length && tailStart > headEnd && history[tailStart].role === "tool") {
     tailStart++
   }
-  if (tailStart <= headEnd) return null
-  return { headEnd, tailStart }
+  return tailStart
+}
+
+/**
+ * §9 D-T1 budget tightening (pair-safe, review #2): walk the boundary FORWARD (fewer tail messages —
+ * the rest joins the summary) while the tail's estimated tokens exceed the budget. Only pair-safe
+ * positions may stop the walk: a boundary ON a tool message would orphan its owner assistant into the
+ * middle (D5); pairing is contiguous in the machine line (§6 note) — every non-tool boundary is safe.
+ * No fit before the floor → keep the floor, accept the overrun.
+ */
+function tightenTailByBudget(history, start, floorStart, budgetTokens) {
+  const suffixTokens = new Array(history.length + 1)
+  suffixTokens[history.length] = 0
+  for (let i = history.length - 1; i >= 0; i--) suffixTokens[i] = suffixTokens[i + 1] + estimateTokens([history[i]])
+  if (suffixTokens[start] <= budgetTokens) return start // already fits — ordinary sessions stay untouched (D-T2)
+  for (let p = start + 1; p <= floorStart; p++) { // first fit keeps the most recent verbatim context
+    if (history[p].role !== "tool" && suffixTokens[p] <= budgetTokens) return p
+  }
+  return floorStart
 }
 
 /**
@@ -217,7 +252,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   if (tokens <= threshold) return false
 
   const keepTail = keepTailSize(agent.provider, history.length)
-  const split = splitHistory(history, keepTail)
+  const split = splitHistory(history, keepTail, tailBudgetTokens(agent.provider))
   if (!split) {
     // History is too short (≤KEEP_HEAD+keepTail+1 messages) to find a middle section, but tokens exceed threshold — typically a single giant message
     // (large paste / huge injection). When summarization has no room, degrade to deterministic shrinking to ensure context always reduces
@@ -272,7 +307,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
  */
 export function compressFallback(agent) {
   const keepTail = keepTailSize(agent.provider, agent.history.length)
-  const split = splitHistory(agent.history, keepTail)
+  const split = splitHistory(agent.history, keepTail, tailBudgetTokens(agent.provider))
   if (!split) return false
   const tailMessages = agent.history.length - split.tailStart
   applyCompression(agent, split.headEnd, split.tailStart, FALLBACK_NOTE)
