@@ -209,6 +209,16 @@
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+### 2026-09-02：engineering-sub.md 子代理确认例外声明（用户实测：eng-coder 输出"确认后开始"空转等用户——子代理无用户可等）
+
+**问题**：eng-coder 子代理误用"确认范式"——输出"确认后开始"结束回合空转等用户，但子代理无用户。根因 = 模型自发套用训练范式，非提示词直接诱导（engineering-sub.md 已核实无确认句）。
+
+**加固**：两端 `src/prompts/engineering-sub.md` "Additional mandatory constraints:" 追加一条（英文、与既有条目同风格，两端 byte-identical 保持）——子代理任务已由父代理确认、无用户可等、立即执行、禁止确认式提问或以 "waiting for approval" 收尾、任务歧义写最终报告返回。
+
+**受影响文件**：两端 `src/prompts/engineering-sub.md`（追加子代理确认例外声明）+ 两端 `test/agent.test.mjs`（engineering-sub.md 内容断言——此前无断言，补防回退）。
+
+**验收**：两端 engineering-sub.md 改后 byte-identical（既有 15 文件比对断言覆盖）；两端新增断言测试通过。
+
 ### 2026-09-02：METHODOLOGY 缺失模板可达性（用户报告：模型说"模板在源码里访问不到，自己写了一个"）
 
 **问题**：项目根无 `METHODOLOGY.md` 时，工程模式注入缺失警告，指引模型参考 `src/prompts/methodology-template.md` 创建——但该路径是**产品源码相对路径**（CLI npm 包 / VS Code 扩展安装目录），用户项目 cwd 下不存在 → 模型读取失败（"模板在源码里，访问不到"）→ 只能自己手写一个，模板参考链路断裂。

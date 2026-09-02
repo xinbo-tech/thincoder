@@ -3826,6 +3826,14 @@ test("prompts/eng-coder.md: 交付自查第 6 项——设计文档结构快照�
   assert.ok(text.includes("6. Update the affected design-doc sections"), "自查第 6 项在")
   assert.ok(text.includes("module map / affected-files table"), "模块地图/受影响文件表点名")
 })
+test("prompts/engineering-sub.md: 子代理确认例外——无用户可等、执行不空转（2026-09-02）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+  assert.ok(text.includes("You are a SUBAGENT"), "子代理身份声明在")
+  assert.ok(text.includes("There is no user to wait for"), "无用户可等声明在（确认例外）")
+  assert.ok(text.includes("execute immediately, never ask for confirmation"), "立即执行 + 禁止再确认")
+  assert.ok(text.includes('"waiting for approval" message'), "禁止等待批准式收尾")
+  assert.ok(text.includes("note it in your final report and return"), "歧义 → 写最终报告返回")
+})
 
 test("agent/setup.mjs: METHODOLOGY 缺失警告——模板绝对路径 + 正文注入 + 询问引导保留（2026-09-02 D-M1..D-M3/D-AC1..D-AC2）", async () => {
   const text = readFileSync(join(SRC_DIR, "agent", "setup.mjs"), "utf8")
