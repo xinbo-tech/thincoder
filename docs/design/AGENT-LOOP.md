@@ -638,7 +638,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 17. 挂起回合：会话级后台双通道（2026-09-02，用户方案：async 子代理运行中主会话可继续对话）
 
-> **状态：设计草稿（需求已逐项拍板，可行性评估完成，待评审定范围 V1/V2）**。
+> **状态：设计定稿（2026-09-02，V2 完整版——用户拍板"更倾向于完整实现 v2"）**。
 > 权威源补充：本节是 §15（subagent 异步化）的语义演进——**F3"回合收尾自动等待"被本节挂起语义取代**（见 17.3 评估①）。
 
 ### 17.1 问题与需求
@@ -702,16 +702,27 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **评估结论**：方案可行，架构落点明确（交互层挂起态 + 回合尾移交 + prepareRun 前注入 + 既有 agent 级池），无颠覆性改造；V1 是小改造（finally 语义放宽 + 交互层状态 + 注入机制复用），V2 引入 auto-turn 需额外护栏。**建议 V1 起步**（满足网友核心痛点），V2 作后续演进。
 
-### 17.3 设计（评审定范围后细化；以下为 V1+V2 共用骨架）
+### 17.3 设计（V2 完整版——V1 注入档并入为 D-S3/D-S4 的基础语义，V2 auto-turn 为 D-S5..D-S7）
 
 - **D-S1 回合尾语义（V1 核心）**：`collectAsyncSubagents` 拆为 `collectSettledAsync(agent)`（注入已完成，形态不变）+ 未完成项**保留在池**（不清空、不等待、不发 done 冻结——区块继续 live）。finally 分支（agent.mjs:447-452）在"anything else"路径调用 collectSettled 后**直接返回**，不再 allSettled 等待
 - **D-S2 交互层挂起态**（CLI agent-turn/startup turn 循环、VS Code 面板循环）：回合返回后 `agent._asyncSubagents` 非空 → 进入挂起态（非 processing——输入框可用、状态行"后台 N 子代理运行中"）；退出条件 = 池空（无 running/queued）+ 无排队输入 → 回空闲
 - **D-S3 prepareRun 前注入**：`_pendingAsyncResults` 数组（同 _pendingDistill 模式，agent.mjs:114-118 处落定）——每回合开始前把已 settle 未注入项注入历史；V1 的"处理"= 注入（模型下轮可见）
 - **D-S4 输入通道**：挂起态提交 = 普通新回合（D-S3 注入先行）；**输入框状态永不被后台事件读写**（F3 铁律——事件处理与输入框零耦合）
-- **D-S5 排队（V2，配合 auto-turn）**：auto-turn 处理轮 running 中用户 Enter → 消息入队（交互层 pendingInput），处理轮结束自动以该消息开新回合；Ctrl+I 仍可立即打断
-- **D-S6 auto-turn（V2）**：池项 settle 且无排队用户输入 → 交互层自动开无输入回合（注入 [System reminder: async #N finished] + 报告，模板限定消化动作域——R2）；**auto-turn 内禁 spawn 新 async**（N3：防链式永动——违反返回错误提示模型用同步 spawn 或等用户）
-- **D-S7 权限（V2）**：auto-turn 撞权限门 → 无用户在场按 no-permission-handler 拒绝（N2，§15 同语义）
+- **D-S5 排队（F4）**：auto-turn 处理轮 running 中用户 Enter → 消息入队（交互层 `pendingInput` 单槽队列——F3 铁律：输入框不清空、文本保留在框内可继续编辑，Enter 后消息进队列并清框），处理轮结束交互层**自动以该消息开新回合**；队列非空期间**不触发新 auto-turn**（排队输入优先）；Ctrl+I 仍可立即打断处理轮（普通插话语义保留）
+- **D-S6 auto-turn（V2 核心）**：
+  - **入口（一手核实 2026-09-02）**：`runAgent` 加 `{ autoTurn: true }` 选项——prepareRun 的 input 注入在 `!resume` 块内（setup.mjs:85-169，168 行 pushReal input），autoTurn 语义 = **不 push input + per-run 状态重置（如普通回合）+ history 尾 = 已注入的 reminder user 消息**——复用 resume 的"不 push input"机制但**不绑定 ContinueError 语义**（resume preserve per-run 状态是给续跑守卫用的；autoTurn 是系统驱动新回合，per-run 重置如普通回合：_advisorRound/_compressFailures/_asyncCheckLastN 等全重置）
+  - **触发**：挂起态池项 settle 且无 pendingInput → 交互层注入该 settle 项 reminder（`[System reminder: async subagent #id (role) finished]` + 报告，XML 转义 + 64K 落盘——现收尾注入形态）→ 开 auto-turn；**合并**：触发时收集全部已 settle 未注入项一次注入（多子代理近邻完成 → 一轮消化全部，N1 成本护栏）
+  - **消化动作域（R2 定稿）**：注入模板限定 auto-turn 任务 = ① 总结子代理报告要点（注入会话流，用户回来可读）② 更新任务清单（子代理完成的任务标 done）③ 标记需用户决策的点（"待你确认：…"）④ **不主动推进新工作**（不自行决定执行写操作/派新活——无用户在场语义）；**禁 spawn 一切子代理**（async + 同步——N3 广义防链式永动，subagent.mjs 入口机械拒绝：`agent._inAutoTurn` 标记 → 返回 `{ status: "error", error: "cannot spawn subagents from an auto-turn — wait for user input" }`）
+  - **写工具策略（auto-turn 无用户在场）**：手动模式权限门自然拦（无 handler → 拒绝，D-S7）；**AUTO 模式同样拦截写类工具**——auto-turn 标记 noUserPresent，写工具（Risk ≥ SideEffect）→ 转为"待用户确认"提示注入并跳过该调用（后台无人自动改文件风险 > 便利；读类工具放行——报告验证需要）——评审确认项
+  - **循环终止**：auto-turn 内无新 async（禁 spawn）→ 无新池项 settle → auto-turn 结束后池空或剩 running 旧项 → 池空 → 挂起自然退出；剩 running → 继续挂起等下一 settle → 下一 auto-turn（每次消化后都会收敛到池空——链式不可能）
+- **D-S7 权限（N2）**：auto-turn 撞权限门 → 无用户在场按 no-permission-handler 拒绝（§15 同语义）；AUTO 模式写工具拦截转提示（见 D-S6 写工具策略）
 - **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构
-- **受影响文件**（预估，评审后定稿）：CLI agent.mjs（finally/collectSettled + _pendingAsyncResults 注入）、agent-turn.mjs 或 startup.mjs（挂起态循环）、TUI key-handler/状态行/渲染（输入放开 + 后台模式）、VS Code 同构（extension/面板消息循环 + agent.mjs）；两端测试
-- **测试（V1 核心用例）**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；V2 追加：T-S7 auto-turn 消化（完成无输入 → 自动回合注入消化）；T-S8 auto-turn 禁 spawn；T-S9 排队续发；T-S10 权限拒绝
+- **受影响文件（两端）**：
+  - CLI `src/agent.mjs`：finally 收尾改 collectSettledAsync（等全部 → 收已完成 + 移交未完成）；runAgent 加 `autoTurn` 选项；_pendingAsyncResults 注入（prepareRun 前，同 _pendingDistill 模式 agent.mjs:114-118）
+  - CLI `src/agent-tools/subagent.mjs`：`_inAutoTurn` 机械拒绝 spawn（async + 同步）
+  - CLI 交互层（agent-turn.mjs / startup.mjs / TUI key-handler + 状态行 + 渲染）：挂起态循环、pendingInput 队列、输入放开、后台模式呈现、auto-turn 触发
+  - VS Code 同构（src/agent.mjs + 面板消息循环 + webview 输入态）
+  - 两端测试 + `docs/design/AGENT-LOOP.md` 本节回写 + VS Code `docs/design/ARCHITECTURE.md` 引用段 + 两端 CHANGELOG（父代理统一）
+  - **consult.mjs / advisor / verify 不动**（auto-turn 是新回合——advisor/verify 守卫按 per-run 语义自然生效或由交互层决定是否跳过——评审确认项）
+- **测试**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S7 auto-turn 消化（完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 auto-turn 禁 spawn（async + 同步均拒绝）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写工具拦截（auto-turn 下写调用 → 转待确认提示）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
 - **验收**：AC-S1 = 回合尾不阻塞（网友痛点：async 跑着主会话可继续对话）；AC-S2 = 子代理结果零丢失（下轮/自动可见）；AC-S3 = 输入框零干扰；AC-S4 = 挂起自然退出；AC-S5 = 既有 §15 语义回归（阻塞模式/check/上限/中断全不变）；AC-S6 = 两端全量绿
