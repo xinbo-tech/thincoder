@@ -713,9 +713,9 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
   - **入口（一手核实 2026-09-02）**：`runAgent` 加 `{ autoTurn: true }` 选项——prepareRun 的 input 注入在 `!resume` 块内（setup.mjs:85-169，168 行 pushReal input），autoTurn 语义 = **不 push input + per-run 状态重置（如普通回合）+ history 尾 = 已注入的 reminder user 消息**——复用 resume 的"不 push input"机制但**不绑定 ContinueError 语义**（resume preserve per-run 状态是给续跑守卫用的；autoTurn 是系统驱动新回合，per-run 重置如普通回合：_advisorRound/_compressFailures/_asyncCheckLastN 等全重置）
   - **触发**：挂起态池项 settle 且无 pendingInput → 交互层注入该 settle 项 reminder（`[System reminder: async subagent #id (role) finished]` + 报告，XML 转义 + 64K 落盘——现收尾注入形态）→ 开 auto-turn；**合并**：触发时收集全部已 settle 未注入项一次注入（多子代理近邻完成 → 一轮消化全部，N1 成本护栏）
   - **消化动作域（R2 定稿）**：注入模板限定 auto-turn 任务 = ① 总结子代理报告要点（注入会话流，用户回来可读）② 更新任务清单（子代理完成的任务标 done）③ 标记需用户决策的点（"待你确认：…"）④ **不主动推进新工作**（不自行决定执行写操作/派新活——无用户在场语义）；**禁 spawn 一切子代理**（async + 同步——N3 广义防链式永动，subagent.mjs 入口机械拒绝：`agent._inAutoTurn` 标记 → 返回 `{ status: "error", error: "cannot spawn subagents from an auto-turn — wait for user input" }`）
-  - **写工具策略（auto-turn 无用户在场）**：手动模式权限门自然拦（无 handler → 拒绝，D-S7）；**AUTO 模式同样拦截写类工具**——auto-turn 标记 noUserPresent，写工具（Risk ≥ SideEffect）→ 转为"待用户确认"提示注入并跳过该调用（后台无人自动改文件风险 > 便利；读类工具放行——报告验证需要）——评审确认项
+  - **写工具策略（用户 2026-09-02 否决 AUTO 拦截——过度工程）**：auto-turn 写工具权限 = **与 async 子代理同级**（async 子代理是独立 runAgent 走同一权限门，AUTO 下后台写早已存在——auto-turn 信任级一致，无机械特判）：AUTO 模式 → 自动执行；手动模式 → 权限门无 handler 拒绝（D-S7）。不该写的由消化动作域模板语义约束（④ 不主动推进），该写的（子代理产出落盘等合理继续动作）不拦
   - **循环终止**：auto-turn 内无新 async（禁 spawn）→ 无新池项 settle → auto-turn 结束后池空或剩 running 旧项 → 池空 → 挂起自然退出；剩 running → 继续挂起等下一 settle → 下一 auto-turn（每次消化后都会收敛到池空——链式不可能）
-- **D-S7 权限（N2）**：auto-turn 撞权限门 → 无用户在场按 no-permission-handler 拒绝（§15 同语义）；AUTO 模式写工具拦截转提示（见 D-S6 写工具策略）
+- **D-S7 权限（N2）**：auto-turn 撞权限门（手动模式）→ 无用户在场按 no-permission-handler 拒绝（§15 同语义，不悬挂）
 - **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构
 - **受影响文件（两端）**：
   - CLI `src/agent.mjs`：finally 收尾改 collectSettledAsync（等全部 → 收已完成 + 移交未完成）；runAgent 加 `autoTurn` 选项；_pendingAsyncResults 注入（prepareRun 前，同 _pendingDistill 模式 agent.mjs:114-118）
@@ -724,5 +724,5 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
   - VS Code 同构（src/agent.mjs + 面板消息循环 + webview 输入态）
   - 两端测试 + `docs/design/AGENT-LOOP.md` 本节回写 + VS Code `docs/design/ARCHITECTURE.md` 引用段 + 两端 CHANGELOG（父代理统一）
   - **consult.mjs / advisor / verify 不动**（auto-turn 是新回合——advisor/verify 守卫按 per-run 语义自然生效或由交互层决定是否跳过——评审确认项）
-- **测试**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S7 auto-turn 消化（完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 auto-turn 禁 spawn（async + 同步均拒绝）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写工具拦截（auto-turn 下写调用 → 转待确认提示）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
+- **测试**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S7 auto-turn 消化（完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 auto-turn 禁 spawn（async + 同步均拒绝）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写一致性（auto-turn 下写调用在 AUTO 模式自动执行——与 async 子代理同级信任；手动模式拒绝）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
 - **验收**：AC-S1 = 回合尾不阻塞（网友痛点：async 跑着主会话可继续对话）；AC-S2 = 子代理结果零丢失（下轮/自动可见）；AC-S3 = 输入框零干扰；AC-S4 = 挂起自然退出；AC-S5 = 既有 §15 语义回归（阻塞模式/check/上限/中断全不变）；AC-S6 = 两端全量绿
