@@ -764,3 +764,60 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - **#3 注释整段重复**：agent-turn.mjs finally abort 集合快照注释逐字重复两份（语句夹在中间）——删第二份保留一份。
 - **#4 挂起态 Ctrl+C 无二次确认**：一次按键即 abort 全部 controller + 清池终止整个后台会话；空闲态 Ctrl+C 有 3s 防误触武装，挂起态（消化中用户可能只想让刷屏的 digest 停下）与彻底中止共用同一无确认路径，误触代价高（子代理工作被 abort 丢弃）。**修复（武装窗口两级，仿空闲态退出语义）**：未武装时——处理中（digest 消化/会话内回合）首次 Ctrl+C 仅中止当前回合（`state.controller.abort()`，会话与后台子代理不受影响）+ 武装 3s；纯挂起等待期首次仅提示武装（提示含运行中数量，不中止不清池）；3s 窗口内再次 Ctrl+C 才彻底中止（abort 集合 = 链条内全部 controller + `_suspAborted` 标记 + 唤醒 driver 清池）。`state.suspAbortArmed` + `ctx.suspArmTimer`（3s，可注入 `exitArmDelay` 同款窗口）；会话退出（suspensionSession finally）解除武装防跨会话粘滞。**测试兼容（按修复要求注明）**：既有单次中止断言（TUI "偏差#3"用例——round1 #3 abort 集合全覆盖）更新为两次制（首次仅武装、二次彻底中止——children 不逃逸语义保留）；T-S5 driver 级用例直接模拟二次效果（语义不变）；新增 digest 处理中首次仅停当前回合的 TUI 用例。
 - 受影响：`src/tui/key-handler.mjs`（挂起 Ctrl+C 两级 + F1 帮助文案）、`src/tui/agent-turn.mjs`（标志复位 + pendingInput 转移 + 注释去重 + 会话退出解除武装）、`test/suspension.test.mjs`（T-S5b / round2 #2-CLI / round2 #4 TUI ×2 / T-S5 注释 + TUI 用例更新）、本节 + `docs/design/TUI.md` / `TUI-INPUT-BOX.md`（同步）
+---
+
+## 18. 工程交付自动链：eng-coder 默认 async + 后台审计/修正/review 全自动（2026-09-02，用户拍板 B1 全链自动）
+
+> **状态：设计定稿，待评审**。用户实测痛点：同步 spawn 的 eng-coder 阻塞主会话——"功能目的就是 eng-coder 执行中主会话能去干别的"，同步默认让 §17 挂起功能形同虚设。用户拍板（2026-09-02 逐项）：① eng-coder **默认 async**（§15 F4 修订）；② 交付后审计/修正/review 移入**挂起后台链**自动推进（B1 全链自动——手动档也跑，修正轮无人值守自动 spawn）；③ 收敛轮数 5；④ code review（advisor）也进链；⑤ 双通道并行——用户输入与链互不打断（§17 既有语义，无暂停机制）。
+
+### 18.1 需求
+
+- F1：`subagent` 工具 **eng-coder role 默认 async**（不带 async 参数 = async:true）——explore/plan 等其余角色默认阻塞不变（§15 F4 仅对 eng-coder 修订）；显式 `async: false` 可强制同步（需要"派完立即连续处理"的场景）
+- F2：eng-coder async 交付 → 主会话回合结束进挂起 → **工程交付自动链**在后台推进：偏差审计 → 有偏差自动修正轮 → 再审计 → clean → advisor code review → findings 自动修正轮 → 收敛
+- F3：链在**手动模式也自动跑**（B1——修正轮无人值守自动 spawn eng-coder 改代码；责任在派发时转移）
+- F4：收敛上限 **5 轮修正**——超限停链 + 注入"需人工介入"标记（结果不静默）
+- F5：**双通道并行**（§17 既有语义重申）：用户输入 = 主会话新回合，与链并行、互不打断——链停止条件只有收敛/节点失败/用户显式叫停（回合里说"停链"→ 模型标记）
+- F6：链内 spawn 受**节点白名单**约束（审计 explore / 修正 eng-coder / review advisor 三类）——防 digest 模型失控任意 spawn
+- F7：两端一致（CLI/VS Code 同构）
+
+### 18.2 设计
+
+**D-E1 eng-coder 默认 async（§15 F4 修订）**：`subagent` schema 的 `async` 布尔——**缺省按 role 解析**：`role === "eng-coder" ? true : false`（schema description 注明）；`async: false` 显式覆盖。调用方（架构师）派 eng-coder 默认 async → 主回合立即结束 → 挂起（§17）→ 交付触发自动链。**子代理内（depth>0）spawn 规则不变**（§15 顶层限制）。
+
+**D-E2 链状态（agent 级 `_engChain`）**：`{ stage, round, designId, designTokenRef, docs, fileList, status, lastNodeAt }`——跨 digest 回合存活（agent 对象级，同 _asyncSubagents 模式）；stage ∈ { delivery, audit, fix, review, done, stalled }。链状态每次 digest 回合注入（模型决策依据——"你在链的哪一步、下一步该做什么"）。
+
+**D-E3 交付检测与链启动**：digest 注入的 eng-coder 交付报告（role=eng-coder + designId 后缀——runChildPipeline 既有注入形态）→ 检测到即初始化 `_engChain`（stage=audit, round=0）——下一 digest 回合模型按注入的链状态启动审计节点。
+
+**D-E4 链节点执行（模型决策 + 机械护栏）**：
+- **审计节点**：digest 模型 spawn explore（role=explore，任务 = 偏差审计四类——任务书由模型基于链状态生成：docs/design 文档引用 + 交付文件清单）——探索完成注入 → 下一 digest：模型读审计报告判断
+- **修正节点**：审计 dirty → digest 模型 spawn eng-coder（async:true——链内修正轮也是后台；任务书 = 审计发现清单——invent nothing new 语义；**designToken 从链状态引用传入**（spawn 参数——token 是会话既有凭证，digest 模型作为主 agent 有权限使用；不进任务文本））→ 修正交付 → 再审计
+- **review 节点**：审计 clean → digest 模型调 advisor（type=code，documents = 设计文档 + 交付文件）→ review 结果注入 → 有需修 findings → 修正节点；clean → stage=done
+- **机械护栏（subagent.mjs/advisor 入口）**：链期 spawn 白名单校验——`agent._engChain?.active` 时仅允许（explore 且链状态 stage=audit）或（eng-coder 且 stage=fix）——不匹配拒绝（error 提示）；**收敛计数**：修正轮 spawn 时 round+1，`round > 5` → 停链（stage=stalled）+ 注入"需人工介入"标记
+- **手动档例外**：§17 手动档 digest 禁 spawn 的**链节点白名单放开**——链状态 active 时上述三类 spawn 放行（非链 spawn 仍拒——白名单是唯一例外）
+
+**D-E5 链与用户回合交互（F5）**：无机械暂停——用户输入 = 新回合（§17 双通道）；回合里模型看到链状态（注入）可响应"停链/调整"指令（模型改 `_engChain.status`）；链节点完成注入与用户回合的处理顺序由 §17 既有调度（pendingInput 优先）自然解决。
+
+**D-E6 收敛与终态**：`stage=done`（审计 clean + review clean）→ digest 注入链总结（几轮审计/修正/review、终态文件）；`stage=stalled`（5 轮修正未收敛）→ 注入需人工介入标记 + 链状态保留（用户回合可指示续链或手动处理）。节点失败（spawn 错误/子代理 error）→ 该节点重试 1 次仍败 → stalled（不静默）。
+
+**受影响文件（两端）**：`src/agent-tools/subagent.mjs`（schema 默认按 role + 链白名单门 + 收敛计数）、`src/agent.mjs`（_engChain 初始化/注入——digest 回合）、`src/tui/agent-turn.mjs`（digest 链状态注入 + 交付检测）、`src/advisor` 调用点（review 节点——digest 模型经 advisor 工具自然调用，无新接线？评审确认）、AGENT-LOOP.md §15 F4 修订注 + §18 本节、两端测试、两端 prompts（subagent 工具描述——async 缺省语义 + 链白名单说明——byte-identical 三件套）、ENGINEERING-MODE.md（交付自动链流程记录——原 step 7 偏差审计从"架构师 spawn"改为"链自动"的口径修订——架构师 spawn 审计仍可用（手动触发）但默认由链承担）
+
+**测试（评审后展开完整用例表——eng-coder 硬验收项）**：
+- T-E1 eng-coder 缺省 async（spawn 返回 running 不阻塞）——explore 缺省阻塞（回归）
+- T-E2 async:false 显式覆盖（eng-coder 同步）
+- T-E3 链启动：eng-coder 交付注入 → _engChain 初始化 → 审计节点 spawn explore
+- T-E4 修正节点：审计 dirty → spawn eng-coder 修正（designToken 传入验证）→ 再审计
+- T-E5 review 节点：审计 clean → advisor code review → clean → done
+- T-E6 收敛上限：5 轮修正未收敛 → stalled + 人工介入标记
+- T-E7 白名单：链期 spawn 非白名单角色 → 拒绝；非链期手动档 spawn 仍拒（§17 回归）
+- T-E8 双通道：链运行中用户输入 → 新回合正常（不打断链节点）；回合指示停链 → 链停
+- T-E9 节点失败重试 1 次仍败 → stalled
+- T-E10 §15/§17 全回归（阻塞模式/挂起/消化分档）
+
+**验收**：AC-E1 = eng-coder 默认 async（T-E1/T-E2）；AC-E2 = 链全自动推进到收敛（T-E3..E5）；AC-E3 = 5 轮上限不静默（T-E6）；AC-E4 = 白名单/手动档边界不破（T-E7）；AC-E5 = 双通道并行（T-E8）；AC-E6 = 两端全量绿（T-E10）
+
+### 18.3 关键决策
+
+- **B1 全链自动（用户拍板）**：修正轮无人值守自动改代码——手动档也跑——责任在派发时转移（与 AUTO 责任转移同哲学——用户显式选择让链自动）
+- **模型决策 + 机械护栏分层**：链节点"做什么/下一步"由 digest 模型判断（需上下文理解审计报告/评审结果）；白名单/收敛计数/失败重试为机械层（防失控/防无限）
+- **eng-coder 默认 async 是角色级默认**（非全局默认）——explore/plan 同步保留（审计链内 explore 也 async？——链内 spawn 用 async（后台链）——E4 修正节点 async、审计节点 async——链节点全部 async：子代理完成注入 → 下一 digest 决策——链状态机由 settle 事件驱动）
+- **否决**：a) 链内同步 spawn（阻塞 digest 回合——与后台链语义矛盾）；b) 机械自动审计（不经模型判断——审计任务书需上下文理解，模型生成）；c) 用户输入暂停链（双通道并行是 §17 核心——见 D-E5）
