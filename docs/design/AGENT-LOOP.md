@@ -862,7 +862,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 19. subagent 工具面合并：单工具三动作（spawn/check/status）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事）
 
-> **状态：设计批准（2026-09-03 round1 通过——0🔴，5 项 refinement 已处置——designToken 已签发）**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
+> **状态：设计批准 + escalate 范围扩展（2026-09-03 round1 通过 0🔴 + 用户裁定"并飞刀，会诊先独立"——范围扩至 escalate——consult 维持独立——待复审）**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
 
 ### 19.1 需求
 
@@ -872,6 +872,8 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - F4：`action` 缺省 = "spawn"——既有 subagent 调用（无 action 参数）零迁移——所有既有 spawn 用例/提示词行为不变
 - F5：eng-coder 覆盖不变（role 参数照旧——§18 协议零影响）
 - F6：两端一致（CLI/VS Code 同构——含 subagent_check 退役同步）
+- F7：**escalate（飞刀）并入**（用户 2026-09-03 裁定——工具面继续收敛）——`action:"escalate"` = 既有飞刀语义（consultModels 池选强模型 + WRITE 干活 + 术后报告——docs/design/ESCALATE.md 语义不变）——`escalate` 工具退役
+- F8：**consult 家族维持独立**（用户裁定"会诊先独立"——多模型会话级生命周期与单 spawn 调用级不同——不并入——§19.3 否决 b 更新）
 
 ### 19.2 设计
 
@@ -884,12 +886,15 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 **action 级门控（评审 #1——dispatch 分类）**：工具级 readonly 标志无法同时表达 spawn（副作用）与 check/status（只读）——dispatch Phase-1/Phase-2 按 **action 参数**分类：`check`/`status` 动作按 readonly 处理（planMode 放行、免权限审批、可批并行——继承 §15 D-A2 readonly:true 决策）；`spawn` 动作按非只读处理（planMode deny、串行、门禁照常——§18 任务域授权仅涉 child 内部权限不涉 spawn 门禁）——实现点：dispatch 预审读 action 参数分支（受影响文件补 `src/agent/dispatch.mjs`）
 | check | id?（省 = 下一完成）/ n（必填） | 报告（arrival order/指定 id——消费） | **阻塞**（等目标 settle——显式取回语义） |
 | status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?}`——不消费 | **不阻塞**（立即） |
+| escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义） |
 
 **D-M2 status 形态**：`{ overview?: {running:[ids], queued:[{id, position}], done:[ids]}, target?: {...} }`——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
 
+**D-M4 escalate 并入（评审 2026-09-03 用户裁定）**：既有 escalate 执行逻辑（escalate.mjs——resolveChildProvider 选模型/createAgent coder role/runWithContinue/mergeChildMutations/术后报告）搬入 subagent 工具的 `action:"escalate"` 分支——保留全部既有约束：depth-0 only（depth>0 → error）、工程模式禁用（engineering → error——"实现走 eng-coder"）、consultModels 空 → error、模型选择校验、**relay 前缀 `escalate#N/` 保留**（action 名 escalate 与既有前缀同名——TUI 路由/subagent-blocks/tool-events **零改动**——区块显示/活动流不变）。`escalateTool` 退役（escalate.mjs 移除——setup.mjs 注册点删——subagent 工具常驻——escalate action 在 consultModels 空时返回 error——既有错误语义）。触发词条款（提示词——"用户说 飞刀/escalate → 调 subagent action:escalate"）随提示词迁移。**引用面**：174 处——~113 为 escalate.mjs 自身 + escalate.test.mjs（随迁移消解）；外部集成 = setup.mjs 注册（删）+ 提示词条款（改）+ 测试迁移（escalate.test.mjs 直接调 escalateTool → subagent action:"escalate"）——UI/事件/配置零改动。
+
 **D-M3 迁移（subagent_check 退役）**：17 处引用改——`subagent-async.mjs`（subagentCheckTool 定义 → 并入 subagentTool 的 check 动作——模块内合并）、`subagent.mjs`（工具描述重写——含 check 阻塞警告 + status 提示——"查进度用 status——check 会阻塞直到完成"——防 §19 触发场景重演）、`main.md`/`engineering.md` 等提示词引用（subagent_check 名称 → subagent action 语义）、测试（subagent_check 直接调用点 → action:"check"）。**挂住问题根治 = 描述层**：status 存在 + check 描述显式"阻塞"——模型查进度选 status。**文件归属定句（评审 #3）**：`subagentCheckTool` 现定义于 `subagent-check.mjs`（退役——并入 subagent.mjs 的 check 动作）；`subagent-async.mjs` 保留 async 机制（settle/collect/审计任务书等）——迁移清单以此为准
 
-**受影响文件（两端）**：`src/agent-tools/subagent-check.mjs`（退役——内容并入）、`src/agent-tools/subagent.mjs`/`subagent-async.mjs`（工具定义合并 + action 分流 + status 实现 + 描述重写）、`src/prompts/main.md` + `src/prompts/engineering.md`（工具描述引用——byte-identical 两端）、AGENT-LOOP.md §15（D-A2 修订注——subagent_check → check 动作）+ §19 本节、两端测试（subagent.test.mjs——spawn 缺省零迁移回归 + check 迁移 + status 新用例）、VS Code ARCHITECTURE.md 引用段（实现时按其惯例落）、两端 CHANGELOG（父代理统一更新——评审 #5）
+**受影响文件（两端）**：`src/agent-tools/subagent-check.mjs`（退役——内容并入）、`src/agent-tools/escalate.mjs`（退役——escalate action 逻辑并入——2026-09-03 用户裁定）、`src/agent/setup.mjs`（escalateTool 注册删——subagent 常驻）、`src/agent-tools/subagent.mjs`/`subagent-async.mjs`（工具定义合并 + action 分流 + status/escalate 实现 + 描述重写）、`src/prompts/main.md` + `src/prompts/engineering.md`（工具描述引用——byte-identical 两端）、AGENT-LOOP.md §15（D-A2 修订注——subagent_check → check 动作）+ §19 本节、两端测试（subagent.test.mjs——spawn 缺省零迁移回归 + check 迁移 + status 新用例）、VS Code ARCHITECTURE.md 引用段（实现时按其惯例落）、两端 CHANGELOG（父代理统一更新——评审 #5）
 
 **测试（实现前展开为用例表——eng-coder 硬验收项）**：
 - T-M1 spawn 缺省 action 行为不变（同步阻塞 / async 立即返回——既有用例零改全绿）
@@ -905,13 +910,16 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - T-M11 subagent_check 工具名消失（schema 无此工具——两端）
 - T-M12 提示词内容断言：subagent 描述含 action/status/"check 会阻塞" 引导（两端 byte-identical）
 - T-M13 §15/§17/§18 全回归（挂起/消化/内部协议——eng-coder role spawn 路径）
+  - T-M14 escalate action 迁移回归（既有 escalate 测试——指定模型/默认池首/术后报告/merge 回传）
+  - T-M15 escalate 保留约束（depth>0 拒/工程模式拒/consultModels 空拒——迁移回归）
+  - T-M16 escalate relay 前缀 `escalate#N/` 不变（TUI 区块/活动流回归——route 零改动验证）
 
-**验收**：AC-M1 = 单工具三动作（T-M1..M4 迁移回归 + T-M11）；AC-M2 = status 非阻塞（T-M5..M10——主会话查状态不挂）；AC-M3 = 描述引导防误用（T-M12）；AC-M4 = 两端全量绿（T-M13）
+**验收**：AC-M1 = 单工具三动作（T-M1..M4 迁移回归 + T-M11）；AC-M2 = status 非阻塞（T-M5..M10——主会话查状态不挂）；AC-M3 = 描述引导防误用（T-M12）；AC-M4 = 两端全量绿（T-M13）；AC-M5 = escalate 并入零行为变化（T-M14..M16——飞刀语义/约束/区块前缀全保留——仅工具面收敛）
 
 ### 19.3 关键决策
 
 - **单工具 action 分流而非多工具**（用户裁定——"工具会爆炸——靠参数做不同的事"）：subagent 家族同生命周期（spawn 产 id → check/status 消费/查询）——天然一体——硬拆（subagent_status 新工具）违背收敛方向
 - **check/status 独立动作**（用户裁定——"独立动作会更好吧"）：语义分离——check = 显式取回（消费 + 可阻塞——取回本来就要等）；status = 只读查询（不消费不阻塞）——不合并成 wait 布尔（动作面清晰）
 - **action 缺省 = spawn**：既有 spawn 调用面（提示词/流程/测试）零迁移——破坏面只限 subagent_check 调用点（17 处——一次性迁移）
-- **范围仅 subagent 家族**：escalate（单人升级——不同生命周期）与 consult（会话级多模型会诊——N child 一会话）语义差异大——硬并参数爆炸——保留独立（用户裁定 A 范围）
+- **范围 = subagent + escalate（2026-09-03 用户裁定扩展）**：escalate 与 subagent 同为调用级单 spawn 机制（当初收编共享 runChildPipeline）——并入为 action:"escalate"——约束/前缀/语义全保留——工具面 subagent/escalate → 单 subagent；**consult 维持独立**（用户裁定"会诊先独立"——多模型会话级生命周期——start/check 循环/stop/N child 一会话——与单 spawn 调用级不兼容——硬并参数爆炸——维持三个独立工具）
 - **否决**：a) status 并入 check 加 wait:false（动作含混——check 的"消费/计数"语义与查询纠缠）；b) 新独立工具 subagent_status（工具面继续膨胀——违裁定方向）；c) 提示词层规避不改工具（用户问进度时模型无信息可答——根治需要 status）
