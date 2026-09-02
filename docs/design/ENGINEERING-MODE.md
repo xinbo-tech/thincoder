@@ -115,7 +115,7 @@
 | `src/agent-tools/subagent.mjs` | MODIFY | mergeChildMutations（已有）；**2026-09-01**：spawn eng-coder 增 `designId` 参数（schema，可选），token 校验改按 `_engDesignTokens` 槽定位——单设计省略 designId 取唯一槽、多设计缺 designId 拒并要求指定、给定 designId 无匹配槽明确报错；修正轮 spawn 回传 designId |
 | 两端 `src/agent-tools/advisor.mjs` + `subagent.mjs` + `src/prompts/engineering.md` + 测试 | **VS Code 端镜像同步（评审 #5）**——engineering.md byte-identical 硬约束 + `_engDesignTokens` 两端同构；VS Code 测试同步加 designId/隔离断言；**VS Code 端 `advisor.mjs` paths 描述同步 CLI（"never inspects diffs"——2026-08-25 documents 改造时 VS Code 漏改，审计 #4 补记）** |
 | 两端 `run-helpers.mjs`（VS Code `agentState()`）/ `session.mjs`（CLI slot 持久化）/ `panel-session.mjs`（VS Code 往返） | **多槽序列化（2026-09-01 审计 #1 修复）**——`_engDesignTokens` Map 随 slot 持久化（VS Code 跨轮 agent 重建场景的必要补齐）；§2.6 持久化边界同步。序列化格式 `{ [designId]: token }`（JSON 安全），恢复 `new Map(Object.entries)`；旧 slot 无字段 → 不设 Map（fail-closed TTL 兜底过期 token）。**修复轮补记实际触点**：VS Code 恢复链 `panel-chat.mjs`（engState 携带）→ `setup.mjs`（恢复 Map）；清理对称（**审计修复 #2**）——两端 `agent-tools/eng.mjs`（exit + off→on）+ CLI `tui/cmd-eng.mjs` + `session.mjs` `resetSessionState` 同步 `_engDesignTokens = new Map()`，resolveDesignSlot 的"有 Map 无镜像"防护降级为防御冗余 |
-| 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）+ `run-helpers.mjs`（VS Code `loadEngineeringPrompt`，评审 2026-09-02 #3 补全）/ METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复 |
+| 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）+ `run-helpers.mjs`（VS Code `loadEngineeringPrompt`，评审 2026-09-02 #3 补全）/ METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复（CLI 端已实现 2026-09-02，D-AC 勾销见 §7 状态行；VS Code 端并行任务进行中） |
 | 两端 `CHANGELOG.md` | 变更记录（下一版本号——0.12.54/0.8.9 已发布，评审 #3 补记） |
 | `src/prompts/engineering.md` | MODIFY | Delivery review 一步：主代理发起 code review（范围 = Docs involved + 验收标准）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态 |
 | `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
@@ -227,6 +227,10 @@
 **受影响文件**：`src/agent/setup.mjs`（CLI）、`src/agent/run-helpers.mjs` + `src/agent/setup-reminders.mjs`（VS Code）、两端 `test/agent.test.mjs`（警告文本断言）。
 
 **验收**：D-AC1 = 无 METHODOLOGY.md 项目进入工程模式 → 警告含模板绝对路径 + 模板正文（D-M1/D-M2）；D-AC2 = 模型可沿该路径 read 到模板（真机可验证）；D-AC3 = 互动流程不变——仍由模型询问用户后生成（D-M3）；D-AC4 = 两端测试全绿（D-M5）。
+
+**状态（2026-09-02，两端均已实现）**：受影响文件 ✓——CLI `setup.mjs`（buildEngineeringPrompt 增绝对路径解析 + methodologyTemplatePath/Body 返回；缺失警告含绝对路径 + 正文 + 读取失败降级分支）；VS Code `run-helpers.mjs`（loadEngineeringPrompt 同构返回）+ `setup-reminders.mjs`（警告文本与 CLI 逐字一致——D-M3 句 + D-M2 设计字面前缀 + 降级不补句，审计 2026-09-02 修复编码损坏后逐字统一）；两端 `test/agent.test.mjs`（运行时断言：绝对路径形态 + existsSync true（D-AC2）+ 模板首行 + Ask 语义 + write cwd/METHODOLOGY.md + 前缀字面断言（审计补——防编码损坏漏网））。D-AC1 ✓、D-AC2 ✓、D-AC3 ✓、D-AC4 ✓（CLI 1061/0 + lint 209 OK；VS Code 888/888 + lint 197 OK——两端全量全绿，警告文本逐字一致）。
+
+**状态（2026-09-02，CLI 端）**：已实现——受影响文件 ✓：`src/agent/setup.mjs`（D-M1 模板绝对路径运行时解析、D-M2 模板正文注入、D-M3 询问引导保留——警告文本 "Ask the user whether to create METHODOLOGY.md; if the user confirms, write cwd/METHODOLOGY.md before designing." + 正文前缀 "built-in template（可 read <绝对路径> 或直接参考以下内容）:"（设计 D-M2 字面，CLI 为准）+ 正文块；降级：正文读取失败 → 基础警告不补句，保持现有降级路径）、`test/agent.test.mjs`（断言更新，行为级 + 文本级，含 D-M2 标注句字面断言）。验收勾销：D-AC1 ✓、D-AC2 ✓、D-AC3 ✓、D-AC4 ✓（CLI 端 `npm test` 1061/0 fail + `npm run lint` 209 files OK；VS Code 端 888/888 全绿，两端警告文本逐字一致——审计 2026-09-02 修复编码损坏后统一）。
 
 
 
