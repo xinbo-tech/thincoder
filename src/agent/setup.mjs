@@ -224,6 +224,29 @@ export async function prepareRun(agent, input, callbacks, {
     },
   } : subagentTool
 
+  // §18 D-E3: eng-coder children (depth>0) get an audit-only subagent channel —
+  // role enum limited to explore and NO async parameter (sync only). This is the
+  // parameter-level filter (the schema the model sees); the mechanical re-check
+  // lives in subagent.mjs execute → gateEngCoderSpawn (spawn-child.mjs) — schema
+  // enums are advisory, providers don't enforce them.
+  const engAuditSubagent = depth > 0 && agent._role === "eng-coder"
+    ? (() => {
+        const props = { ...subagentTool.parameters.properties }
+        delete props.async // sync only — the eng-coder blocks on the audit report
+        props.role = {
+          type: "string",
+          enum: ["explore"],
+          description: "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
+        }
+        return {
+          ...subagentTool,
+          name: "subagent",
+          description: "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+          parameters: { ...subagentTool.parameters, properties: props },
+        }
+      })()
+    : null
+
   // Consult/escalate tools registered only when configured — an unconfigured pool would
   // otherwise make the model call them and eat an error turn (plugin parity).
   // escalate is fail-closed in engineering mode (execute() rejects there) — registering it
@@ -238,7 +261,8 @@ export async function prepareRun(agent, input, callbacks, {
     // system prompt names verify (system.md) and advisor (discipline.md) — without them an
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
     // self-verify (2026-08-16 deepseek escalate diagnosis; plugin parity).
-    : agent._role === "eng-coder" ? [advisorTool, verifyTool]
+    // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).
+    : agent._role === "eng-coder" ? [advisorTool, verifyTool, ...(engAuditSubagent ? [engAuditSubagent] : [])]
     : agent._role === "coder" ? [verifyTool, advisorTool]
     : agent._role === "consult" ? [recentChangesTool]
     : []

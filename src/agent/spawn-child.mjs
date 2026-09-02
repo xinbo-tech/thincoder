@@ -27,6 +27,31 @@ const RS = "\x1e"
 export const TURN_CAP_MARK = "stopped: turn cap reached"
 
 /**
+ * §18 D-E3 eng-coder 内部 spawn 机械门（AGENT-LOOP.md §18 D-E2 round5 #2 后备）：
+ * eng-coder 子代理（depth>0 且 parent._role==="eng-coder"）的内部 spawn 通道只做
+ * 偏差审计——role 仅 explore、async 强制同步；审计 spawn 预算 = 首审 1 + 修正轮
+ * ≤5 的再审（第 7 次审计 spawn 机械拒绝——5 轮纪律失效时不静默，错误即 stalled
+ * 信号）。返回 null = 非 eng-coder 上下文（不加限制）；返回审计尝试序号 = 通过。
+ * schema 层过滤（setup.mjs 受限变体）只是给模型的参数提示——本函数是机械强制。
+ */
+export const ENG_AUDIT_SPAWN_LIMIT = 6 // 允许 6 次审计 spawn；第 7 次拒绝
+export function gateEngCoderSpawn(parent, depth, role, async) {
+  if ((depth ?? 0) <= 0 || parent?._role !== "eng-coder") return null
+  if (role !== "explore") {
+    throw new Error("eng-coder subagents may only spawn role='explore' — internal spawns exist solely for the read-only divergence audit (AGENT-LOOP.md §18 D-E3)")
+  }
+  if (async === true) {
+    throw new Error("eng-coder internal spawns are sync-only — the audit report must return before the next protocol step; async spawn is only available at the top level (AGENT-LOOP.md §18 D-E3)")
+  }
+  const attempt = (parent._engAuditSpawns ?? 0) + 1
+  if (attempt > ENG_AUDIT_SPAWN_LIMIT) {
+    throw new Error("correction-round limit exceeded — deliver a stalled report (AGENT-LOOP.md §18: max 5 fix rounds; the 7th audit spawn is refused mechanically)")
+  }
+  parent._engAuditSpawns = attempt
+  return attempt
+}
+
+/**
  * 构造 relay 前缀 + 发送 `[model]` 元数据 token（显示层据此更新区块头部，
  * 不进内容流）。counter 挂在 parent agent 上，多轮/并行子代理互不冲突。
  * @returns {string} relayPrefix，形如 "coder#3/"

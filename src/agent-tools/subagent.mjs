@@ -1,18 +1,15 @@
 import {
-  createAgent, runAgent,
+  createAgent,
   readonlyToolNames, collectGitContext, escapeXml,
   EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY,
-  MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 } from "../agent.mjs"
-import { makeRelay, wrapChildCallbacks, runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { makeRelay, wrapChildCallbacks, gateEngCoderSpawn } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
-import { pushReal } from "../context.mjs"
-import { offloadToolResult } from "../agent/helpers.mjs"
+import { runChildPipeline, ASYNC_SUBAGENT_LIMIT, buildChildRunOpts, maybeRefillAsync } from "./subagent-async.mjs"
 
-// Async subagent limits (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
-// background spawns + the per-turn check budget (consult-style loop guard).
-export const ASYNC_SUBAGENT_LIMIT = 4
-export const MAX_ASYNC_CHECKS = 3
+// 2026-09-03 拆分轮: subagent.mjs 超 500 硬顶——async 常量、共享 post-spawn 管线
+//（runChildPipeline）与队列/注入/并账机械迁至 ./subagent-async.mjs。execute
+//（async 分支 + 阻塞路径）原样保留于本文件；导出面由文末 re-export shim 兜住。
 
 /**
  * subagent tool: spawn a child agent to handle an independent subtask (isolated context, only the report is returned).
@@ -102,7 +99,7 @@ export const subagentTool = {
     "- coder — full implementation. The parent's complete read/write/execute toolset plus verify and advisor for self-review. Its final report must include a delivery transparency table with one row per task requirement (Done / Simplified / Not done — no deferred column).\n" +
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round.\n" +
     "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-coder. The schema enum reflects the active mode.\n\n" +
-    "Async spawn (AGENT-LOOP.md §15): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. Collect results with subagent_check — multiple async children return in completion (arrival) order, first finished first, so fast results are handled immediately. Use async when your own turn must keep moving; use the default blocking spawn when you must see the report before continuing. Async spawns are capped at 4 concurrent (further spawns queue with a position), and top-level only.\n\n" +
+    "Async spawn (AGENT-LOOP.md §15/§18): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. Collect results with subagent_check — multiple async children return in completion (arrival) order, first finished first, so fast results are handled immediately. The DEFAULT is role-level: role='eng-coder' spawns async (its delivery protocol runs fully inside the child — implementation → audit → self-fix → advisor re-review → converged delivery; pass async:false only when you must handle the report synchronously); every other role defaults to blocking. Use async when your own turn must keep moving; use a blocking spawn when you must see the report before continuing. Async spawns are capped at 4 concurrent (further spawns queue with a position), and top-level only.\n\n" +
     "Writing the prompt:\n" +
     "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
     "- Put exact paths and commands in the prompt when you know them. The sub-agent should not search for things you already know.\n" +
@@ -117,7 +114,7 @@ export const subagentTool = {
       model: { type: "string", description: "Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModel config, then the parent's provider. Useful for offloading heavy work to a cheaper model." },
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
-      async: { type: "boolean", description: "true = spawn without waiting — returns {id} immediately, fetch results later via subagent_check. Default false (blocking)." },
+      async: { type: "boolean", description: "true = spawn without waiting — returns {id, status:\"running\"} immediately, fetch results later via subagent_check. Default is role-level: role='eng-coder' → true (async; its internal delivery protocol runs in the background — pass async:false to force the blocking spawn when you must process the report before continuing); all other roles → false (blocking)." },
     },
     required: ["task"],
   },
@@ -127,6 +124,9 @@ export const subagentTool = {
   async execute(args, ctx) {
     const parent = ctx.agent
     const role = args.role
+    // §18 F1/D-E1 role-level async default: eng-coder spawns async unless the
+    // caller explicitly passes async:false; every other role stays blocking.
+    const wantAsync = args.async ?? role === "eng-coder"
 
     // Role normalization + whitelist (2026-08-25, coder-leak fix): exact-string gates let
     // variant roles ("Coder", " coder") bypass BOTH mode gates and fall through to
@@ -136,6 +136,13 @@ export const subagentTool = {
     if (!ROLES.has(role)) {
       throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder (exact spelling).`)
     }
+    // §18 D-E3 internal-spawn gate: an eng-coder sub-agent may only spawn sync
+    // explore (audit) children — non-explore roles and async are refused here
+    // (mechanical), the audit budget is enforced (7th audit spawn refused), and
+    // the returned attempt number marks this spawn as an audit for the task-book
+    // augmentation below. Runs BEFORE the mode gates so the eng-coder-specific
+    // error (not the generic engineering-mode one) surfaces.
+    const engAuditAttempt = gateEngCoderSpawn(ctx.agent, ctx.depth, role, args.async)
     // Role is mutually exclusive per mode: normal mode → "coder", engineering mode → "eng-coder"
     if (parent.config?.agent?.engineering && role === "coder") {
       throw new Error("Engineering mode: use role='eng-coder' for implementation tasks.")
@@ -217,6 +224,12 @@ export const subagentTool = {
 
     // Token-verified design review → child is authorized to modify files without re-reviewing
     if (role === "eng-coder") child._engDesignReviewed = true
+    // §18 D-E3 task-domain authorization: approved design + spawn task = authorization.
+    // The child's OWN tools skip ONLY the onPermissionRequest ask (autoApprove
+    // equivalent — dispatch.mjs permission stage); every other gate (JSON parse /
+    // unknown tool / planMode / design-token) still applies (T-E14). Non-eng-coder
+    // children keep the manual per-write parent approval (human in the loop).
+    if (role === "eng-coder") child._engTaskAuthorized = true
     // designId+token ride the child bookkeeping: the delivery report carries the designId
     // so the divergence-audit fix round re-spawns with the SAME slot (2026-09-01 FR3).
     if (role === "eng-coder" && issuedToken) {
@@ -230,6 +243,20 @@ export const subagentTool = {
       const gitCtx = collectGitContext(parent.cwd)
       if (gitCtx) input = `<untrusted_git_context>\n${escapeXml(gitCtx)}\n</untrusted_git_context>\n\n${input}`
     }
+    // §18 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
+    // the eng-coder's OWN spawn task (docs involved / acceptance criteria / file
+    // list — mechanically kept as _engTaskInput by the parent spawn) ∪ the
+    // mechanically tracked _touchedFiles — NEVER the eng-coder's self-written list:
+    // a self-report could omit exactly the out-of-scope file the audit must catch.
+    if (engAuditAttempt !== null) {
+      const touched = (ctx.agent._touchedFiles ?? []).map((f) => `- ${f}`).join("\n") || "- (none yet)"
+      input += `\n\n[Audit scope — mechanical context, independent of the eng-coder's self-report:]\n` +
+        `Parent spawn task book (Docs involved / file list / acceptance criteria — the eng-coder's own task, verbatim):\n${ctx.agent._engTaskInput ?? "(unavailable)"}\n` +
+        `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}`
+    }
+    // The child's own task input rides the child object: an eng-coder's audit
+    // spawns reuse it verbatim as the audit task book (see above).
+    if (role === "eng-coder") child._engTaskInput = input
 
     // Relay content/reasoning/tool/output to the parent TUI via the unified spawn-child
     // pipeline (AGENT-LOOP.md §7.2 D3). Prefix includes a unique id: parallel child agents
@@ -240,7 +267,7 @@ export const subagentTool = {
     // The [model] token (TUI block creation) is DEFERRED to actual start so queued
     // children don't paint an empty panel block ("queued 态不显示").
     let relayPrefix
-    if (args.async === true) {
+    if (wantAsync) {
       parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
       relayPrefix = `${role}#${parent._subAgentCounter}/`
     } else {
@@ -272,7 +299,7 @@ export const subagentTool = {
     // consumed via subagent_check or the turn-end auto-wait. Slot queue: running
     // count < ASYNC_SUBAGENT_LIMIT → start now; ≥ limit → enqueue (status "queued",
     // position = queue index) — never rejected, never requiring the model to batch.
-    if (args.async === true) {
+    if (wantAsync) {
       if ((ctx.depth ?? 0) > 0) {
         throw new Error("async spawn only available at the top level")
       }
@@ -295,10 +322,15 @@ export const subagentTool = {
         // Deferred [model] emit: the TUI block is created at ACTUAL start.
         ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
         // Turn-cap on background children NEVER pops the continue panel (D-A3):
-        // auto-decline, the partial-work report carries the cap reason.
+        // §15 D-A3 exception (2026-09-02 unified rule, AGENT-LOOP.md §2): in an
+        // engineering && AUTO session the child auto-resumes — the user authorized
+        // unattended runs, no one is at the panel. Every other tier auto-declines
+        // and the partial-work report carries the cap reason. §18 D-E2 relies on
+        // this exception as the turn-cap fallback for the default-async eng-coder
+        // delivery (the internal protocol does not raise the 100-turn cap).
         runChildPipeline(child, input, childOpts, childRunOpts, {
           parent, role, args,
-          askContinue: () => Promise.resolve(false),
+          askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
         })
           .then((report) => { entry.report = report })
           .catch((err) => { entry.error = err?.message ?? String(err) })
@@ -346,146 +378,15 @@ export const subagentTool = {
   },
 }
 
-/**
- * Shared post-spawn pipeline (blocking AND async — AGENT-LOOP.md §15 D-A1: the
- * async branch reuses the exact same spawn-child pipeline, "全不变"):
- * turn-cap continue loop → declined partial-work return → MIN_REPORT_CHARS
- * expansion → eng-coder mutation merge → designId suffix. Returns the report.
- * onDeclined lives here (identical for both paths) — only askContinue differs:
- * blocking asks the user via the permission panel, async auto-declines.
- */
-async function runChildPipeline(child, input, childOpts, childRunOpts, { parent, role, args, askContinue }) {
-  const declined = { partial: null }
-  let report = await runWithContinue(
-    (child, input, cbs, opts) => runAgent(child, input, cbs, opts), // opts = childRunOpts + resume (managed by the pipeline)
-    child, input, childOpts, childRunOpts,
-    {
-      askContinue,
-      onDeclined: (e, output) => {
-        if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
-        // Early return semantics (unchanged from the inline loop): the declined
-        // partial-work message is returned WITHOUT the MIN_REPORT_CHARS expansion —
-        // re-prompting a capped child for a longer report is wrong.
-        // Review #2 fix: use the pipeline-captured output (the `report` variable is
-        // still "" at this point — runWithContinue hasn't returned yet).
-        declined.partial = `Subagent (${role}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output || ""}`
-      },
-    },
-  )
-  if (declined.partial !== null) {
-    // declined eng-coder delivery still carries its designId — the fix round
-    // re-spawns with the same slot (2026-09-01).
-    if (role === "eng-coder") declined.partial += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse it (with the same designToken) when re-spawning this eng-coder.`
-    return declined.partial
-  }
-
-  // Report too short = incomplete handoff: send back for expansion once (inspired by kimi-code's summaryPolicy: min 200 chars, retry 1 time).
-  // The child agent's history is still intact; the continuation instruction is appended as new input so it can see its own earlier work.
-  if (report.length < MIN_REPORT_CHARS) {
-    report = await runAgent(child, REPORT_CONTINUATION, childOpts, childRunOpts)
-  }
-
-  // Engineering mode mechanical code gate: delegated file changes must not
-  // bypass the parent's advisor/verify guards. Merge the child's mutations
-  // into the parent so "advisor mandatory at both gates" is enforced, not just
-  // promised in the engineering prompt.
-  // CRITICAL: Only merge if child actually mutated files (defense-in-depth against
-  // runAgent throwing before any writes occurred).
-  // Review #8 clarification: eng-coder ONLY is intentional — the mechanical
-  // two-gate merge exists for engineering mode; plain `coder` children carry
-  // their own verify/advisor self-review discipline (per tool description), and
-  // normal mode has no parent advisor/verify gate to feed.
-  if (role === "eng-coder" && child._mutatedThisRun) {
-    mergeChildMutations(parent, child)
-  }
-
-  // designId rides the delivery report (2026-09-01): the divergence-audit fix round
-  // re-spawns with the SAME designId+token — the parent copies it from here, and the
-  // prompt tells the model exactly where the matching token came from.
-  if (role === "eng-coder") {
-    report += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse this designId with the same designToken (from the approved advisor type='design' review) when re-spawning this eng-coder for an audit fix round.`
-  }
-
-  return report
-}
-
-/** Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6): start queue heads while a
- *  running slot is free — called from every settle (completion frees a slot) and
- *  from the turn-end collection's refill loop. Serial by construction: one slot
- *  frees per settle, one head starts per call. */
-export function maybeRefillAsync(parent) {
-  const queue = parent._asyncQueue ?? []
-  while (queue.length > 0) {
-    const running = [...(parent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length
-    if (running >= ASYNC_SUBAGENT_LIMIT) return
-    queue.shift().start()
-  }
-}
-
-/**
- * Inject one settled async entry into the parent history as a user-role reminder
- * (§17 D-S3 — single shared form for BOTH consumption points: turn-end collection
- * (collectSettledAsync, agent.mjs) and the run-start _pendingAsyncResults injection;
- * the message shape is identical to the §15 collector's). Consumed = the caller
- * removes the entry from its container; no double-inject across the two paths.
- */
-export async function injectAsyncResult(agent, entry) {
-  const body = entry.error ?? entry.report ?? "(no report)"
-  const preview = await offloadToolResult(String(body), `async-subagent-${entry.id}`)
-  pushReal(agent, {
-    role: "user",
-    content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n${escapeXml(preview)}`,
-  })
-}
-
-/**
- * Child agent run options — the parent's abort signal MUST propagate to the
- * child: without it, Ctrl+C aborts the parent's controller but the child keeps
- * running its full turn budget (up to subagentTurns) while the parent awaits —
- * the interrupt appears to do nothing.
- * §17 D-S9: during a suspension session children share the SESSION signal instead
- * (agent._sessionSignal) — a digest's own Ctrl+I/Ctrl+C must not abort the whole
- * pool; the session driver aborts the session controller to stop everything.
- */
-export function buildChildRunOpts(ctx) {
-  return {
-    depth: (ctx.depth ?? 0) + 1,
-    maxTurns: ctx.agent?.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS,
-    signal: ctx.agent?._sessionSignal ?? ctx.signal ?? null,
-  }
-}
-
-/**
- * Merge an eng-coder child's mutations into the parent agent's bookkeeping.
- * The parent must stay aware of delegated file changes: `_touchedFiles` enables
- * the advisor guard (completion.mjs) to detect that code was modified and
- * pushback for review. Prior verify/advisor state is invalidated because it
- * judged an older state.
- *
- * `_advisorRound` is NOT reset: merged code enters the CURRENT convergence
- * cycle. Resetting here would break the review→fix→re-review loop (the parent
- * reviews, spawns an eng-coder to fix, merges, reviews again — every merge
- * would restart at round 1 and the 5-round cap could never be reached).
- * `_calledAdvisorThisRun` IS cleared so the merged code triggers a fresh
- * advisor call (the guard demands review of new mutations).
- *
- * Returns true when mutations were merged (kept for future caller checks).
- */
-export function mergeChildMutations(parent, child) {
-  // A child claiming mutations without any touched file is a misbehaving
-  // child (or a bookkeeping bug) — do not propagate an empty mutation claim
-  // to the parent's guard state.
-  if (!child._mutatedThisRun || !(child._touchedFiles?.length)) return false
-  parent._mutatedThisRun = true
-  for (const abs of child._touchedFiles ?? []) {
-    if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
-  }
-  if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false
-  if (parent._verifiedThisRun) {
-    parent._verifiedThisRun = false
-    parent._verifyPassed = undefined
-  }
-  // Stale session cleanup only — the round counter survives (see above).
-  parent._advisorSession = null
-  return true
-}
+// Re-export shim (2026-09-03 拆分轮): async 机械迁至 ./subagent-async.mjs——保留本文件
+// 导出面，消费点（agent.mjs / agent-turn.mjs / escalate.mjs / subagent-check.mjs / 测试）
+// 导入路径零改动。execute 仍直接使用 ASYNC_SUBAGENT_LIMIT / maybeRefillAsync /
+// buildChildRunOpts / runChildPipeline（文件头部 import）。
+export {
+  ASYNC_SUBAGENT_LIMIT,
+  MAX_ASYNC_CHECKS,
+  maybeRefillAsync,
+  injectAsyncResult,
+  buildChildRunOpts,
+  mergeChildMutations,
+} from "./subagent-async.mjs"

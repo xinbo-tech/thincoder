@@ -113,7 +113,15 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
 
     // Readonly tools (and autoApprove — the short-circuit, unchanged for the
     // whole batch too) skip the permission stage entirely.
-    if (tool.readonly || agent.autoApprove) {
+    // §18 D-E3 task-domain authorization (spawn-time): an eng-coder child's
+    // tools skip the permission ASK stage exactly like autoApprove — granted by
+    // the parent spawn (approved design + task = authorization; subagent.mjs
+    // sets _engTaskAuthorized on the child). Everything EARLIER in Phase 1
+    // (JSON parse / unknown tool / planMode / design-token gates) ran unchanged
+    // — the exemption never widens what reaches this stage (round4 #3, T-E14).
+    // PreToolUse hooks still run below. Non-eng-coder children keep the manual
+    // parent ask (human in the loop).
+    if (tool.readonly || agent.autoApprove || agent._engTaskAuthorized) {
       if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
         prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
         continue
