@@ -12,15 +12,15 @@
 | 文件 | 行数 | 职责 |
 |---|---|---|
 | `index.mjs` | 518 | startTUI 入口：raw mode、stdin 分块解码、状态对象（含 subTasks）、cleanup、paste 协议、Shift+Enter 翻译 |
-| `key-handler.mjs` | 464 | 按键分发：permission/question/search/picker/wizard/interruptPrompt/输入编辑 |
+| `key-handler.mjs` | 523 | 按键分发：permission/question/search/picker/wizard/interruptPrompt/输入编辑；**§17 挂起态输入**——`state.suspended` 时 Enter（非 slash）→ pendingInput 队列 + 唤醒（不打断后台；输入框零干扰 F3），Ctrl+C → 武装窗口两级中止（round2 偏差 #4：未武装时处理中仅停当前回合/纯等待仅提示武装，3s 窗口内再按才彻底中止——abort 集合全部 controller + `_suspAborted` + 唤醒清池） |
 | `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支拆出） |
-| `agent-turn.mjs` | 174 | runAgentTurn：回合驱动（状态复位/runAgent 循环/ContinueError 续跑/中断处理/finally 收尾/队列）；callbacks 装配在 tool-events.mjs |
-| `tool-events.mjs` | 344 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 开工具单框载体、onToolResult 载体定态与子agent 完成冻结、onToolOutput 追加进载体 `_toolBlock.output`/advisor 有序块、onTurnEnd 增量落盘）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
-| `subagent-blocks.mjs` | 253 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks，2026-08-30 自 agent-turn 归位） |
+| `agent-turn.mjs` | 433 | runAgentTurn（`{ autoTurn, skipSession }`）：回合驱动（状态复位/runAgent 循环/ContinueError 续跑——autoTurn 无面板：AUTO 自动 resume、手动静默拒/中断处理/finally 收尾——willSuspend 时区块不冻结 + controller 交 `_sessionAbort`/队列）；**§17 挂起会话驱动 suspensionSession + digestTurn + poolLive/sweepSettledToPending/waitForSettleOrWake/backgroundStatusText**（AGENT-LOOP.md §17 D-S2/D-S9 行表：settle→pending→合并消化轮、pendingInput 优先、池空补发冻结自然退出；round2 偏差 #1 会话退出复位 `_suspAborted` / #2-CLI 中止分支 pendingInput 残余转回 queue；详见本文件 §7）；callbacks 装配在 tool-events.mjs |
+| `tool-events.mjs` | 481 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 开工具单框载体、onToolResult 载体定态与子agent 完成冻结、onToolOutput 追加进载体 `_toolBlock.output`/advisor 有序块、onTurnEnd 增量落盘）；**权限/批权限/问答 handler 按 ctx 提供与否条件接线**（手动档 auto-turn 传 null → denied 不弹面板，§17 D-S7）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
+| `subagent-blocks.mjs` | 460 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则（`SUB_EVENT_RE` 含 **settled** phase——§17 挂起期延迟冻结信号）、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由（**⟦ev⟧settled → done + awaitingDigest 中间态驻留面板**）、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks——挂起退出补发 done 冻结复用，2026-08-30 自 agent-turn 归位） |
 | `render-frame.mjs` | 333 | 帧布局：header / conversation / subagent 面板 / todo / input / status 各面板装配（§7.2.1 起运行中子 agent 面板槽，行由 layout 预计算直接 put） |
 | `render-conversation.mjs` | 630 | 对话面板行构建：缓存三层（convCacheKey 全量 / 行级 wrapRowsCached markdown-wrap / 段级 _lineSegCache 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor；loadOlder 只算新增行，rebuild 111→5-8ms 平坦，2026-08-31 懒加载卡顿根治）；搜索高亮、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、frozen 子agent（_frozenSubTask，§7.2 D4 现状）与 advisor 折叠块渲染（运行中区块已迁至 subagent-panel.mjs 固定面板，§7.2.1 D2）、主输出永不折叠（2026-08-30） |
 | `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
-| `subagent-panel.mjs` | 62 | 运行中子 agent 固定底部面板渲染（§7.2.1 D1/D2，中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数——顶部分隔线 + 各区块折叠头 `[▶/⏸ key · model · elapsed · turn] state` / tail 3 / 展开（复用好 fold-block 组件）；无运行区块 → []（F6） |
+| `subagent-panel.mjs` | 84 | 运行中子 agent 固定底部面板渲染（§7.2.1 D1/D2，中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数——顶部分隔线 + 各驻留区块折叠头 `[▶/⏸/✓ key · model · elapsed · turn] state`（**✓ + "done · awaiting digestion" = §17 挂起期已结算待消化中间态，T-S14**）/ tail 3 / 展开（复用好 fold-block 组件）；无驻留区块 → []（F6） |
 | `tool-args.mjs` | 65 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
 | `fold-block.mjs` | 257 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
@@ -94,10 +94,11 @@ permission（y/n/a/esc）
   → 正常输入编辑（字符/退格/Ctrl+U/Ctrl+V/↑↓历史/多行）
 ```
 
-**Ctrl+C 三态**（IK61BI）：
+**Ctrl+C 四态**（IK61BI + §17 挂起态）：
 1. picker 打开 → 取消当前 picker（等同 Esc），不杀进程
 2. processing 且有 controller → `abort()` + "[Aborting…]" 提示，不退出
-3. 空闲态 → **双确认**：第一次只提示"Press Ctrl+C again within 3s to exit"并置 `exitArmed`（超时自动解除，可注入 `exitArmDelay`）；窗口内再按才走 cleanup + 延迟退出（`exitTimer`，测试注入大延迟防真退出）
+3. **挂起态（`state.suspended`，§17 round2 偏差 #4）→ 武装窗口两级中止**：未武装时——digest/会话内回合处理中首次 Ctrl+C 仅中止当前回合（回挂起等待，后台子代理不受影响）；纯挂起等待期首次仅提示武装（含运行中数量）；3s 窗口内（`suspAbortArmed` + `suspArmTimer`）再次按下才彻底中止（abort 集合全部 controller + `_suspAborted` + 唤醒 driver 清池 → idle）
+4. 空闲态 → **双确认**：第一次只提示"Press Ctrl+C again within 3s to exit"并置 `exitArmed`（超时自动解除，可注入 `exitArmDelay`）；窗口内再按才走 cleanup + 延迟退出（`exitTimer`，测试注入大延迟防真退出）
 
 **Ctrl+I 中断注入**：processing 时进入 interruptPrompt 状态，输入消息 Enter 提交 → `controller.abort({ interrupt: true, message })` → agent 循环把 `[User interrupt: …]` 注入历史后重开 controller 续跑（见 AGENT-LOOP.md §中断语义）。
 
@@ -187,13 +188,14 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 ## 7. 回合驱动（agent-turn.mjs）
 
-`runAgentTurn(ctx, text)`：
-1. pushLabel "❯ You:" + 输入文本
+`runAgentTurn(ctx, text, { autoTurn = false, skipSession = false })`：
+1. pushLabel "❯ You:" + 输入文本（autoTurn 消化轮跳过——系统驱动回合无用户消息）
 2. 置 processing、新建 AbortController、1s ticker
-3. callbacks 构造（`tool-events.mjs buildToolCallbacks`：onToken/onReasoning 流式进 streaming/reasoning 缓冲；子代理 `role#id/` 前缀分流到子 agent 活动区块 `state.subTasks`（§7.2 D4 数据层；§7.2.1 起运行区块渲染于固定底部面板 subagent-panel.mjs）；onToolCall/onToolResult 工具摘要行；onUsage 累计 token；onCompress 提示 "[context] Context too long, auto-compacted"）
-4. runAgent 循环：正常完成 → flushStream；AbortError（Ctrl+I）→ 重开 controller 续跑；ContinueError → permission 询问 "Continue after N turns?"；其他错误 → "[error] …" 一行
-5. finally：停 ticker、清 processing、**自动生成会话标题**（首条真实 user 消息 → generateTitle）、saveSession 增量落盘
+3. callbacks 构造（`tool-events.mjs buildToolCallbacks`：onToken/onReasoning 流式进 streaming/reasoning 缓冲；子代理 `role#id/` 前缀分流到子 agent 活动区块 `state.subTasks`（§7.2 D4 数据层；§7.2.1 起运行区块渲染于固定底部面板 subagent-panel.mjs）；onToolCall/onToolResult 工具摘要行；onUsage 累计 token；onCompress 提示 "[context] Context too long, auto-compacted"；**权限/批权限/问答 handler 按 ctx 提供与否条件接线**——手动档 auto-turn 传 null → dispatch 无 handler 即 denied，不弹面板（AGENT-LOOP.md §17 D-S7））
+4. runAgent 循环：正常完成 → flushStream；AbortError（Ctrl+I）→ 重开 controller 续跑；ContinueError → permission 询问 "Continue after N turns?"（**autoTurn 消化轮例外：无面板——AUTO 档自动 resume，手动档静默拒绝**）；其他错误 → "[error] …" 一行
+5. finally：停 ticker、清 processing、**自动生成会话标题**（首条真实 user 消息 → generateTitle）、saveSession 增量落盘；**§17 挂起决策**——回合正常结束且后台池仍 live（`poolLive`：running/queued 子代理或 `_pendingAsyncResults` 非空）→ 子 agent 区块**不冻结**（各 settle 事件自行处理），本次回合 controller 记为 `agent._sessionAbort`（挂起期 Ctrl+C 中止全部后台子代理的句柄）；池空/中断/错误 → 现状 `freezeAllSubTasks`（中断态块标 interrupted）
 6. 队列：processing 期间输入的消息进 `state.queue`，回合结束自动逐条处理（斜杠命令直接执行）
+7. **§17 挂起会话**（`suspensionSession`，AGENT-LOOP.md §17 D-S9 状态机行表）：队列清空后池仍 live → 进入挂起态——`agent._suspended = true`（settle 回调据此延迟冻结 + 移交 pending）、状态行"后台 N 子代理运行中 · M 待消化"、输入放开（Enter 走 pendingInput）；循环：用户输入优先（pendingInput/queue → 会话内普通新回合）→ pending 非空 → **合并消化轮**（`digestTurn` → `runAgentTurn("", { autoTurn: true })`——注入由 runAgent 首行统一完成）→ 池空退出（补发 done 冻结 `freezeAllSubTasks` + 兜底直注入残余 + 清 `_suspended`）；Ctrl+C → 武装窗口两级中止（round2 偏差 #4：首次处理中仅停当前回合/等待期仅提示武装，3s 内再按才彻底中止——清池不注入）；彻底中止后会话退出复位 `_suspAborted`（round2 #1——池再 live 可重新进入挂起态）、残余 pendingInput 转回 `state.queue`（round2 #2-CLI——不静默丢）。会话内用户回合执行期 `_suspended=false`（普通回合语义），消化轮执行期保持 true
 
 ## 8. 交互层与命令层
 

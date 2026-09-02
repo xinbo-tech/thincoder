@@ -34,6 +34,17 @@
 | Ctrl+I / Tab(处理中) | 中断注入模式 |
 | PgUp/PgDn | 会话区滚动 |
 
+### 1.2a §17 挂起态输入契约（2026-09-02，评审 #3——输入框契约归属本档）
+
+挂起会话期间（`state.suspended`，AGENT-LOOP.md §17 D-S2/D-S9）输入框放开：
+
+- **不变量（F3 铁律）**：`state.input` **永不被后台事件读写**——settle/消化轮/注入全部经独立通道（token/`state.pendingInput`），后台代码零接触输入框；框内文本在后台事件前后逐字不变（T-S15 断言）
+- **Enter（非 slash 文本，含 digest 运行中）**：不入 `state.queue`、不打断当前消化轮——消息入 **`state.pendingInput` 队列**（key-handler 分流 + 清框，与 submit 同款清理；history 照常收录），经 `state._suspWake?.()` 唤醒挂起会话循环；纯挂起期立即调度新回合，digest 运行中排队续发（D-S5 队列非空期间不触发新 auto-turn）
+- **斜杠命令**：挂起分流不拦截——走 submit 正常路径（纯挂起期直接执行；digest 中 allowlist 直行/其余入 `state.queue`，会话循环排空）
+- **Ctrl+C**：挂起/消化中 = 武装窗口两级中止（round2 偏差 #4，仿空闲态退出武装）——**未武装首次按下**：digest/会话内回合处理中仅中止当前回合（`state.controller.abort()`，会话与后台子代理不受影响，回挂起等待）；纯挂起等待期仅提示武装（含运行中数量，不清池）。**3s 窗口内再次按下**（`state.suspAbortArmed` + `ctx.suspArmTimer`）才彻底中止：abort 集合 = 链条内全部 controller（`agent._sessionAbortAll`，含旧 controller 下 children）+ `_suspAborted` + 唤醒 driver → 清池（§15 abort 语义）→ idle。中止后会话退出复位 `_suspAborted`（round2 #1——池再 live 可重新进入挂起态）；digest 期间排队的 pendingInput 残余转回 `state.queue` 由普通回合续发 + 提示行（round2 #2-CLI——不静默丢）
+- **Ctrl+I**：仅 digest 处理中有效（`processing && controller`）——立即打断（interruptPrompt，插话语义保留，F7 双模式）；纯挂起等待期 Ctrl+I 无动作（Enter 即插话通道）
+- 消化轮输出照常流式显示（assistant 标签 + 摘要进会话流）；状态行显示"后台 N 子代理运行中 · M 待消化"（processing 期由工具事件接管）
+
 ### 1.3 历史导航语义（FIX-5 已实现草稿保护）
 
 - ↑：`historyIndex` 回退，加载历史条目；**首次进入导航前，未提交的输入存入 `state._draft`**
