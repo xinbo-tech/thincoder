@@ -62,6 +62,55 @@ function keepTailSize(provider, historyLen) {
   return Math.min(Math.max(10, Math.floor((ctxWindow / 100_000) * 30)), Math.floor(historyLen * 0.4))
 }
 
+/** §9 D-T1: 摘要段（压缩 note + 占位 + ~1K 目标摘要）固定估算——tail 预算从 15% 窗口扣除它。 */
+const SUMMARY_SEGMENT_ESTIMATE = 1_100
+
+/**
+ * REVERSE 配对判据（2026-08-16 400 类别）：assistant 位 q 声明的 tool_calls 是否有缺口——ids 未被
+ * q 后**连续** tool 块全盖住（倒序配对 [tool…, assistant] 的 results 被切/不连续时停在此即悬空 400）。
+ * 非 assistant / 无 tool_calls → 无缺口；tailStartByBudget 与 REVERSE 保护共用（T-DT8）。
+ */
+function callsGapAfter(history, q) {
+  const m = history[q]
+  if (m?.role !== "assistant" || !m.tool_calls?.length) return false
+  const needIds = new Set(m.tool_calls.map((tc) => tc.id))
+  const haveIds = new Set()
+  for (let i = q + 1; i < history.length && history[i].role === "tool"; i++) haveIds.add(history[i].tool_call_id)
+  return needIds.size > 0 && [...needIds].some((id) => !haveIds.has(id))
+}
+
+/**
+ * REVERSE 保护（2026-08-16）：tail 以声明 tool_calls 的 assistant 开头、其 tool 结果被切在 tailStart
+ * 前（倒序配对，结果块与 owner 相邻）→ tailStart 拉回覆盖——发送历史不得含悬空 tool_calls。
+ */
+function reverseProtectTail(history, tailStart, headEnd) {
+  if (!callsGapAfter(history, tailStart)) return tailStart
+  let back = tailStart - 1
+  while (back >= headEnd && history[back]?.role === "tool") back--
+  return back + 1 // include the missing tool results (they sit contiguously before the assistant)
+}
+
+/** §9 D-T1/D-T2 (CLI parity + T-DT8 增强): 预算裁剪 tailStart——count 公式候选尾 + 配对保护后，
+ *  估算尾超预算（context×0.15 − SUMMARY_SEGMENT_ESTIMATE）→ 前移（旧消息入摘要段），pair-safe
+ *  边界（tool 位 / 缺口 assistant 位都不停——整对同切，切中间会 orphan 且预算重新超支）；
+ *  保底 10 条（floor = len−10，超支接受；短历史候选 <10 → floor = tailStart no-op）。 */
+function tailStartByBudget(history, provider, tailStart) {
+  const tailBudget = Math.floor(providerSpec(provider).context * 0.15) - SUMMARY_SEGMENT_ESTIMATE
+  const floor = Math.max(tailStart, history.length - 10)
+  if (tailStart >= floor) return tailStart // 短历史：预算逻辑不触发（保底上限 = 候选条数）
+  const tailEst = estimateTokens(history.slice(tailStart))
+  if (tailEst <= tailBudget) return tailStart // F2：普通会话预算未超 → 零变化
+  let cut = 0
+  for (let q = tailStart + 1; q <= floor; q++) {
+    cut += estimateMessage(history[q - 1])
+    if (history[q]?.role === "tool" || callsGapAfter(history, q)) continue // pair-safe：tool 位 / 倒序 assistant 位都不停
+    if (tailEst - cut <= tailBudget) return q
+  }
+  let q = floor // 保底 10 条（D-T2）：超支接受；边界仍须 pair-safe（tool 位 / 缺口 assistant 位继续回退）
+  while (q > tailStart && (history[q]?.role === "tool" || callsGapAfter(history, q))) q--
+  return q
+}
+
 export const SUMMARIZE_PROMPT = `You are a conversation compressor. Summarize the following agent work log. Write in first person ("I") — these are handover notes to your future self.
 
 Requirements:
@@ -73,31 +122,36 @@ Requirements:
 - Explicitly list UNRESOLVED ISSUES / TODOs: anything still open plus the next steps — so post-compaction recovery knows where to resume
 - Drop: pleasantries, repetition, fine-grained tool output
 - Be honest: mark uncertain items as "unverified"; don't present guesses as facts
-- Output as bullet points; err on the long side in the 1M-context era
+- Output as bullet points. Stay under ~1K tokens (≈1000 Chinese chars / 4000 ASCII chars) — a hard target. An oversized summary wastes window and dilutes the tail; the old unbounded-length guidance is deprecated.
+- When over budget, trim in this order: completed recaps to one line; FILES CHANGED why-notes to bare paths; in-progress prose tightened. NEVER cut design anchors or UNRESOLVED ISSUES/TODOs — recovery depends on them.
 
 Work log:
 `
+
+/** Token cost of a single message (CLI parity: reasoning_content + tool_calls + images counted). */
+function estimateMessage(m) {
+  let tokens = 0
+  if (typeof m.content === "string") tokens += estimateText(m.content)
+  else if (Array.isArray(m.content)) {
+    for (const part of m.content) {
+      if (part.type === "text") tokens += estimateText(part.text)
+      else if (part.type === "image_url") tokens += IMAGE_TOKEN_ESTIMATE
+    }
+  }
+  if (typeof m.reasoning_content === "string") tokens += estimateText(m.reasoning_content)
+  for (const tc of m.tool_calls ?? []) {
+    tokens += estimateText(tc.function?.name ?? "") + estimateText(tc.function?.arguments ?? "")
+  }
+  return tokens
+}
 
 /**
  * Estimate token count from message array (CLI parity: reasoning_content + tool_calls + images counted).
  */
 function estimateTokens(messages) {
-  let tokens = 0
-  for (const m of messages) {
-    if (typeof m.content === "string") {
-      tokens += estimateText(m.content)
-    } else if (Array.isArray(m.content)) {
-      for (const part of m.content) {
-        if (part.type === "text") tokens += estimateText(part.text)
-        else if (part.type === "image_url") tokens += IMAGE_TOKEN_ESTIMATE
-      }
-    }
-    if (typeof m.reasoning_content === "string") tokens += estimateText(m.reasoning_content)
-    for (const tc of m.tool_calls ?? []) {
-      tokens += estimateText(tc.function?.name ?? "") + estimateText(tc.function?.arguments ?? "")
-    }
-  }
-  return tokens
+  let total = 0
+  for (const m of messages) total += estimateMessage(m)
+  return total
 }
 
 /**
@@ -167,22 +221,11 @@ export async function compactHistory(history, systemPrompt, provider, explicitTh
   while (tailStart > headEnd && history[tailStart].role === "tool") {
     tailStart++
   }
-    // REVERSE protection (2026-08-16): if the tail opens with an assistant declaring
-    // tool_calls whose tool results were cut just before tailStart, extend tailStart
-    // back over them — dangling tool_calls in the sent history 400 on strict providers.
-    if (history[tailStart]?.role === "assistant" && history[tailStart].tool_calls?.length) {
-      const needIds = new Set(history[tailStart].tool_calls.map((tc) => tc.id))
-      const haveIds = new Set()
-      for (let i = tailStart + 1; i < history.length && history[i].role === "tool"; i++) {
-        haveIds.add(history[i].tool_call_id)
-      }
-      if (needIds.size > 0 && [...needIds].some((id) => !haveIds.has(id))) {
-        let back = tailStart - 1
-        while (back >= headEnd && history[back]?.role === "tool") back--
-        // include the missing tool results (they sit contiguously before the assistant)
-        tailStart = back + 1
-      }
-    }
+  // REVERSE protection (2026-08-16): tail 以声明 tool_calls 的 assistant 开头、其 results 已切到
+  // tailStart 前（倒序配对）→ 拉回覆盖——发送历史不得含悬空 tool_calls（callsGapAfter 判据）
+  tailStart = reverseProtectTail(history, tailStart, headEnd)
+  // §9 D-T1: tail token 预算——count 公式候选尾超 15% 预算时 pair-safe 前移 tailStart
+  tailStart = tailStartByBudget(history, provider, tailStart)
   
   if (tailStart <= headEnd) return null
 
@@ -276,22 +319,11 @@ export function truncateFallback(history, provider) {
     }
   }
   while (tailStart > headEnd && history[tailStart].role === "tool") tailStart++
-    // REVERSE protection (2026-08-16): if the tail opens with an assistant declaring
-    // tool_calls whose tool results were cut just before tailStart, extend tailStart
-    // back over them — dangling tool_calls in the sent history 400 on strict providers.
-    if (history[tailStart]?.role === "assistant" && history[tailStart].tool_calls?.length) {
-      const needIds = new Set(history[tailStart].tool_calls.map((tc) => tc.id))
-      const haveIds = new Set()
-      for (let i = tailStart + 1; i < history.length && history[i].role === "tool"; i++) {
-        haveIds.add(history[i].tool_call_id)
-      }
-      if (needIds.size > 0 && [...needIds].some((id) => !haveIds.has(id))) {
-        let back = tailStart - 1
-        while (back >= headEnd && history[back]?.role === "tool") back--
-        // include the missing tool results (they sit contiguously before the assistant)
-        tailStart = back + 1
-      }
-    }
+  // REVERSE protection (2026-08-16): tail 以声明 tool_calls 的 assistant 开头、其 results 已切到
+  // tailStart 前（倒序配对）→ 拉回覆盖——发送历史不得含悬空 tool_calls（callsGapAfter 判据）
+  tailStart = reverseProtectTail(history, tailStart, headEnd)
+  // §9 D-T1: 降级路径保持同一形状契约——tail 同样受 15% token 预算约束
+  tailStart = tailStartByBudget(history, provider, tailStart)
   
   if (tailStart <= headEnd) return null
   return [
