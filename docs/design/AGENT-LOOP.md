@@ -638,7 +638,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 17. 挂起回合：会话级后台双通道（2026-09-02，用户方案：async 子代理运行中主会话可继续对话）
 
-> **状态：设计定稿（2026-09-02，V2 完整版——用户拍板"更倾向于完整实现 v2"）**。
+> **状态：设计定稿（2026-09-02，V2 完整版 + 推进型——用户拍板：AUTO 模式下 auto-turn 可推进（写/spawn 全开放），手动模式维持消化型）**。
 > 权威源补充：本节是 §15（subagent 异步化）的语义演进——**F3"回合收尾自动等待"被本节挂起语义取代**（见 17.3 评估①）。**§15.4 T5/AC3 断言随本节修订（评审 #1）**：T5 原期望"finally await 全部 + _asyncSubagents 清空"（`thincoder/test/subagent.test.mjs`）改为 collectSettled 语义（收已完成注入 + 未完成移交池）；AC3"回合结束未取结果不丢"语义保留（结果经 D-S3 下轮注入/auto-turn 消化）但实现断言同步改。
 
 ### 17.1 问题与需求
@@ -667,7 +667,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 **非功能需求**：
 - N1：自动处理回合（若做 V2 auto-turn）的成本护栏——不得无限烧模型轮次
 - N2：自动处理撞权限门 → 无用户在场按 no-permission-handler 拒绝（§15 D-A3 评审 #2 同语义），不悬挂
-- N3：防后台链失控——自动处理中不得无限 spawn 新 async（失控循环防护）
+- N3：防后台链失控——**手动档**自动处理中禁 spawn 新 async（结构防失控）；**AUTO 档**允许推进链（用户授权无人值守，2026-09-02 裁定）——链终止靠池空自然停 + 用户输入随时打断（D-S5 pendingInput 优先），不设代数上限（"不各搞一套"——无新机制，AUTO 责任转移）
 - N4：上下文膨胀防护——挂起期注入在无输入期可能累积 → 下轮开跑压缩兜底（已有：runAgent 轮内首查 compressIfNeeded agent.mjs:183-189）
 - N5：两端一致（CLI TUI / VS Code 面板同构交付）
 
@@ -712,22 +712,21 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - **D-S6 auto-turn（V2 核心）**：
   - **入口（一手核实 2026-09-02）**：`runAgent` 加 `{ autoTurn: true }` 选项——prepareRun 的 input 注入在 `!resume` 块内（`prepareRun` 的 pushReal input 处，setup.mjs:168 as-of），autoTurn 语义 = **不 push input + per-run 状态重置（如普通回合）+ history 尾 = 已注入的 reminder user 消息**——复用 resume 的"不 push input"机制但**不绑定 ContinueError 语义**（resume preserve per-run 状态是给续跑守卫用的；autoTurn 是系统驱动新回合，per-run 重置如普通回合：_advisorRound/_compressFailures/_asyncCheckLastN 等全重置）
   - **触发**：挂起态池项 settle 且无 pendingInput → 交互层注入该 settle 项 reminder（`[System reminder: async subagent #id (role) finished]` + 报告，XML 转义 + 64K 落盘——现收尾注入形态）→ 开 auto-turn；**合并**：触发时收集全部已 settle 未注入项一次注入（多子代理近邻完成 → 一轮消化全部，N1 成本护栏）
-  - **消化动作域（用户 2026-09-02 定稿判据：auto-turn 只做"信息整理"，不做"状态改变"）**——auto-turn = 一次系统事件驱动、无用户输入的 runAgent 回合（模型只会回合式工作；"处理子代理报告"在架构上必然 = 开一个回合，触发者不是人是系统）。动作域：
-    - **允许（整理已发生的）**：① 总结报告要点注入会话流（用户回来可读；只读验证报告声称——read/搜索类工具放行，灰度 3 裁定）② 更新任务清单（子代理完成的任务标 done）③ 标记需决策点 + 写下建议（"建议下一步：可派 B 跟进 X"——只写建议不执行）④ **不主动推进新工作**（精确判据见下）
-    - **禁止（让新事情发生的）**：写文件/改代码（AUTO 下与普通回合同权限——用户 2026-09-02 否决机械拦写，过度工程）；执行类工具 bash/execute/verify（灰度 1 裁定：verify/跑测试写成建议不跑——进程活动且可触发审批）；spawn 一切子代理（async + 同步——N3 结构防链式永动）
-    - **灰度裁定（2026-09-02）**：灰度 1（auto-turn 自跑 verify/测试）→ **不跑**，写成建议；灰度 2（把子代理产出落盘成报告文件）→ **不写**——子代理自己的产出自己已落盘，auto-turn 无需再写（状态改变）；灰度 3（只读 read 验证报告声称——如确认"改了 3 个文件"属实）→ **允许**——纯信息获取，总结里写"已核实"比盲抄强
-    - **机械禁 spawn**：subagent.mjs 入口检查 `agent._inAutoTurn` → 返回 `{ status: "error", error: "cannot spawn subagents from an auto-turn — wait for user input" }`（async + 同步都拒）
-  - **写工具策略（用户 2026-09-02 否决 AUTO 拦截——过度工程）**：auto-turn 写工具权限 = **与 async 子代理同级**（async 子代理是独立 runAgent 走同一权限门，AUTO 下后台写早已存在——auto-turn 信任级一致，无机械特判）：AUTO 模式 → 自动执行；手动模式 → 权限门无 handler 拒绝（D-S7）。不该写的由消化动作域模板语义约束（④ 不主动推进），该写的（子代理产出落盘等合理继续动作）不拦
-  - **循环终止**：auto-turn 内无新 async（禁 spawn）→ 无新池项 settle → auto-turn 结束后池空或剩 running 旧项 → 池空 → 挂起自然退出；剩 running → 继续挂起等下一 settle → 下一 auto-turn（每次消化后都会收敛到池空——链式不可能）
-  - **轮次上限（用户 2026-09-02 裁定，评审 #4 撤销专属预算）**：auto-turn **不另设轮次预算**——统一用系统 maxTurns 设定（runAgent 默认 200/overrideTurns 机制，§2）——"不要每个地方各搞一套"；成本护栏 = 消化动作域 + 合并消化 + 禁 spawn + **AUTO 责任转移**（用户开 AUTO = 授权无人值守成本）；单次挂起内 auto-turn 次数自然受池大小约束（每 settle ≤1 次 + 合并消化）；撞 ContinueError → 按 §2 统一续跑规则
+  - **消化动作域（两档，用户 2026-09-02 拍板推进型——动作域 = 模式函数）**：
+    - **手动档（无 AUTO——auto-turn 只做"信息整理"，不做"状态改变"）**：auto-turn = 系统事件驱动、无用户输入的 runAgent 回合（模型只会回合式工作；"处理子代理报告"在架构上必然 = 开一个回合）。动作域：
+    - **允许（整理已发生的）**：① 总结报告要点注入会话流（用户回来可读；只读验证报告声称——read/搜索类工具放行）② 更新任务清单（标 done）③ 标记需决策点 + 写下建议（"建议下一步：…"——只写不执行）
+    - **禁止（让新事情发生的）**：写文件/改代码；执行类工具 bash/execute/verify（灰度 1）；spawn 一切子代理（async + 同步——**机械拒绝**，subagent.mjs 入口检查 `agent._inAutoTurn && !agent.autoApprove` → 返回 `{ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" }`）
+    - **灰度裁定（2026-09-02，手动档）**：灰度 1（自跑 verify/测试）→ 不跑，写成建议；灰度 2（产出落盘）→ 不写；灰度 3（只读 read 验证）→ 允许
+    - **AUTO 档（autoApprove 开——auto-turn = 普通回合全语义，推进型）**：动作域 = **与用户回合一致**——读/写/spawn（async + 同步）/verify/执行类全开放（AUTO 自动执行——用户已授权无人值守，责任在用户，2026-09-02 裁定与 async 子代理同级信任）；**禁 spawn 机械限制撤销**（推进链成立：auto-turn spawn async → 池项 settle → 新 auto-turn 消化 + 可再 spawn——链终止 = 池空自然停 + 用户输入随时打断（D-S5 pendingInput 优先，输入即新回合链断））；guard 语义 = 普通回合同款（mutation → 回合内 guard 推回自验——评审 #5 修订：推进档不跳 guard）；auto-turn 结束仍有残留未验证 mutation → _inheritedGuard 并入下一用户回合（防静默漏验）
+  - **轮次上限（用户 2026-09-02 裁定，评审 #4 撤销专属预算）**：auto-turn **不另设轮次预算**——统一用系统 maxTurns 设定（runAgent 默认 200/overrideTurns 机制，§2）——"不要每个地方各搞一套"；成本护栏 = 手动档消化动作域（禁 spawn/写）+ 合并消化 + **AUTO 责任转移**（用户开 AUTO = 授权无人值守成本）；单次挂起内 auto-turn 次数自然受池大小约束（每 settle ≤1 次 + 合并消化）；撞 ContinueError → 按 §2 统一续跑规则
 - **D-S7 权限（N2）**：auto-turn 撞权限门（手动模式）→ 无用户在场按 no-permission-handler 拒绝（§15 同语义，不悬挂）
 - **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构。**冻结门控（评审 #2）**：§15 "settle 即发 ⟦ev⟧done"（subagent.mjs settle 回调无条件发）在**挂起态改为延迟发**——settle 时若处于挂起态（回合已结束且池未空）→ 不发 done 冻结，区块头保持 ✓-pending 中间态（`role#id · done · awaiting digestion`）；池空冻结退出时统一补发 done；正常回合内 settle（非挂起态）行为不变（完成即冻结）——subagent.mjs settle 回调需感知挂起态（agent 级标志 `_suspended`）
 - **受影响文件（两端）**：
   - CLI `src/agent.mjs`：finally 收尾改 collectSettledAsync（等全部 → 收已完成 + 移交未完成）；runAgent 加 `autoTurn` 选项；_pendingAsyncResults 注入（prepareRun 前，同 _pendingDistill 模式 agent.mjs:114-118）
-  - CLI `src/agent-tools/subagent.mjs`：`_inAutoTurn` 机械拒绝 spawn（async + 同步）
+  - CLI `src/agent-tools/subagent.mjs`：`_inAutoTurn && !autoApprove` 机械拒绝 spawn（手动档；AUTO 档放行）
   - CLI 交互层（agent-turn.mjs / startup.mjs / TUI key-handler + 状态行 + 渲染）：挂起态循环、pendingInput 队列、输入放开、后台模式呈现、auto-turn 触发
   - VS Code 同构（src/agent.mjs + 面板消息循环 + webview 输入态）
   - 两端测试 + `docs/design/AGENT-LOOP.md` 本节回写 + VS Code `docs/design/ARCHITECTURE.md` 引用段 + `docs/design/TUI.md`（状态行/后台模式/挂起态段 + 模块地图——评审 #3）+ `docs/design/TUI-INPUT-BOX.md`（挂起输入放开 + Enter 排队语义——评审 #3，输入框契约归属）+ 两端 CHANGELOG（父代理统一）
-  - **consult.mjs / advisor / verify 不动**。**guard 语义（评审 #5 裁定）**：auto-turn **结束路径不跑 guard 推回**（消化语义——无用户在场推回会自锁：动作域禁 verify/测试，verify guard 推回要求跑测试 → 死循环到次数耗尽）；**auto-turn 产生的 mutation 标记（_mutatedThisRun/_touchedFiles 等）不随下轮 per-run 重置而丢**——autoTurn 结束时把 guard 相关字段合并保留（resume 式语义），下一用户回合 prepareRun **不重置**这些字段（`_inheritedGuard` 标志）→ 下轮用户回合的 verify/advisor guard 覆盖 auto-turn 期间改动（防"auto-turn 写过的代码静默无验证"）
-- **测试**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S7 auto-turn 消化（完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 auto-turn 禁 spawn（async + 同步均拒绝）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写一致性（auto-turn 下写调用在 AUTO 模式自动执行——与 async 子代理同级信任；手动模式拒绝）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
+  - **consult.mjs / advisor / verify 不动**。**guard 语义（评审 #5 裁定 + 2026-09-02 推进型修订，分档）**：**手动档** auto-turn 结束路径不跑 guard 推回（消化语义——动作域禁 verify/测试，推回会自锁死循环）；**AUTO 档** guard 语义 = 普通回合同款（mutation → 回合内 guard 推回自验，见 D-S6 AUTO 档）；**两档通用**：auto-turn 产生的 mutation 标记（_mutatedThisRun/_touchedFiles 等）不随下轮 per-run 重置而丢——autoTurn 结束时把 guard 相关字段合并保留（resume 式语义），下一用户回合 prepareRun **不重置**这些字段（`_inheritedGuard` 标志）→ 下轮用户回合的 verify/advisor guard 覆盖 auto-turn 期间改动（防"auto-turn 写过的代码静默无验证"）
+- **测试**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S7 auto-turn 消化（手动档：完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 禁 spawn 分档（手动档 async + 同步均拒绝 / AUTO 档放行——推进链：auto-turn spawn async → settle → 新 auto-turn 消化，链在用户输入或池空时终止）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写一致性（auto-turn 下写调用在 AUTO 模式自动执行——与 async 子代理同级信任；手动模式拒绝）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
 - **验收**：AC-S1 = 回合尾不阻塞（网友痛点：async 跑着主会话可继续对话）；AC-S2 = 子代理结果零丢失（下轮/自动可见）；AC-S3 = 输入框零干扰；AC-S4 = 挂起自然退出；AC-S5 = 既有 §15 语义回归（阻塞模式/check/上限/中断全不变）；AC-S6 = 两端全量绿
