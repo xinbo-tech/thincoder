@@ -149,3 +149,9 @@
 
 - [ ] **同回合两个 async 子代理——第二个完成后主 agent 长期 processing（十几分钟）卡住**（用户两次 Ctrl+C 均因此）：第一个正常注入，第二个"已完成（区块输出完毕）但主 agent 收不到"。候选卡点 A-D：digest LLM 挂起（600s fetchTimeout）/ runAgent 开头 await 上轮 \`_pendingDistill\`（distill LLM 挂起）/ digest 触发压缩摘要挂起 / settle 唤醒丢失。**诊断插桩已撤除（2026-09-02——[diag] 干扰正常显示）**——复现时按插桩点清单重加（曾落于 eea8fcc，可 git show eea8fcc 取 diff 恢复）：① context.mjs distillExplorations/summarizeRunExplorations/compressIfNeeded chat 前后（chatStart/chatDone/chatFail）② agent.mjs runAgent 开头 _pendingDistill await 前后 ③ subagent.mjs settle 回调（id/耗时/suspended/waiters 数）④ agent-turn.mjs digestTurn enter/exit + suspensionSession 每轮迭代/进 wait。**复现**：同回合派两个 async → 第二个卡住时（先别 Ctrl+C）复制终端 [diag] 行。**判读**：digestTurn:enter 无 exit → 看 runAgent:awaitPendingDistill / compressIfNeeded:chatStart 有无 chatDone（B/C），皆无则 A（600s 后 chatFail 证实）；asyncSubagent:settle 有但 suspensionSession:wait exit 无 → D。复现后：定位修复 → 全量验证。
 
+
+### §19 遗留硬化（2026-09-03——来源：§19 交付 advisor 发现——归 §15/§17 后续轮）
+
+- [ ] **并行 check 双消费竞态**（subagent-async.mjs check——同批两个无 id check 并行可能双消费同一条目——§15 遗留特性：旧 subagent_check 同为 readonly 可批并行——修复需牵动 settle 回调挂起记账）
+- [ ] **挂起期阻塞 check 双投**（LOW-3——挂起态 check 与 settle 记账交互——同归 §17 硬化）
+

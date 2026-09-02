@@ -189,11 +189,11 @@ export async function prepareRun(agent, input, callbacks, {
   // eng-coder subagents get advisor for mandatory design review before coding
   const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool } = await import("../agent-tools.mjs")
   const { consultStartTool, consultCheckTool, consultStopTool } = await import("../agent-tools/consult.mjs")
-  const { subagentCheckTool } = await import("../agent-tools/subagent-check.mjs")
-  const { escalateTool } = await import("../agent-tools/escalate.mjs")
   const { CONSULT_BASE } = await import("../agent.mjs")
-  // withPool: decorate consult_start/escalate descriptions with the CURRENT candidate pool
-  // so the model knows which models it can pick (CLI parity with the plugin).
+  // withPool: decorate the consult_start description with the CURRENT candidate pool
+  // so the model knows which models it can pick (CLI parity with the plugin). The
+  // retired escalate tool surface is now the subagent action:"escalate" — its pool
+  // list is decorated onto the action property description below (same intent).
   const withPool = (tool) => {
     const models = agent.config?.agent?.consultModels ?? []
     const list = models.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")
@@ -220,45 +220,68 @@ export async function prepareRun(agent, input, callbacks, {
       properties: {
         ...subagentTool.parameters.properties,
         role: { ...subagentTool.parameters.properties.role, ...subagentRoles },
+        // §19: escalate 动作的候选池 = consultModels（缺省池首 / 指定 provider:model）。
+        // 池装饰挂在 action 属性描述（原 escalate 工具注册时 withPool 同款意图——模型
+        // 需要知道可选候选人）。escalate 在工程模式禁用——装饰只对正常模式有意义。
+        action: (agent.config?.agent?.consultModels?.length && !agent.config?.agent?.engineering)
+          ? {
+              ...subagentTool.parameters.properties.action,
+              description: subagentTool.parameters.properties.action.description +
+                `\nCurrently configured escalate candidates (agent.consultModels pool): ${agent.config.agent.consultModels.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")}`,
+            }
+          : subagentTool.parameters.properties.action,
       },
     },
   } : subagentTool
 
   // §18 D-E3: eng-coder children (depth>0) get an audit-only subagent channel —
-  // role enum limited to explore and NO async parameter (sync only). This is the
-  // parameter-level filter (the schema the model sees); the mechanical re-check
-  // lives in subagent.mjs execute → gateEngCoderSpawn (spawn-child.mjs) — schema
-  // enums are advisory, providers don't enforce them.
+  // role enum limited to explore, NO async parameter (sync only) and action pinned
+  // to spawn (§19 D-M3 restricted-variant action gate — escalate/check/status are
+  // refused here at the schema level too; the mechanical re-check lives in
+  // subagent.mjs execute → the §19 action gate + gateEngCoderSpawn (spawn-child.mjs)
+  // — schema enums are advisory, providers don't enforce them).
   const engAuditSubagent = depth > 0 && agent._role === "eng-coder"
     ? (() => {
         const props = { ...subagentTool.parameters.properties }
+        // §19 review hygiene: the audit channel is spawn-only sync explore — drop
+        // async, the check/status params (id/n) and the eng-coder token params
+        // (designToken/designId are meaningless for a read-only audit spawn; the
+        // parent spawn already carried the token). Schema noise would invite the
+        // model to pass irrelevant args.
         delete props.async // sync only — the eng-coder blocks on the audit report
+        delete props.id
+        delete props.n
+        delete props.designToken
+        delete props.designId
         props.role = {
           type: "string",
           enum: ["explore"],
           description: "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
         }
+        props.action = {
+          type: "string",
+          enum: ["spawn"],
+          description: "spawn only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §19 D-M3); escalate/check/status are refused (escalate spawns a coder+WRITE child — against explore-only intent; check/status have no async pool in a child context).",
+        }
         return {
           ...subagentTool,
           name: "subagent",
-          description: "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+          description: "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/check/status are not available (AGENT-LOOP.md §19). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
           parameters: { ...subagentTool.parameters, properties: props },
         }
       })()
     : null
 
-  // Consult/escalate tools registered only when configured — an unconfigured pool would
-  // otherwise make the model call them and eat an error turn (plugin parity).
-  // escalate is fail-closed in engineering mode (execute() rejects there) — registering it
-  // anyway would hand the model a tool that is guaranteed to eat an error turn.
+  // consult 工具仅在配置时注册（consultModels 空池时注册会让模型调用后吃一个错误回合）——
+  // §19: escalate 已并入常驻 subagent 的 action:"escalate"（无空池注册问题——动作在
+  // 池空时返回既有错误语义，工程模式 fail-closed 在 execute 内拒绝）。
   const consultModels = agent.config?.agent?.consultModels ?? []
-  const engineering = agent.config?.agent?.engineering
   const consultTools = consultModels.length
-    ? [withPool(consultStartTool), consultCheckTool, consultStopTool, ...(engineering ? [] : [withPool(escalateTool)])]
+    ? [withPool(consultStartTool), consultCheckTool, consultStopTool]
     : []
-  const depthOnly = depth === 0 ? [filteredSubagent, subagentCheckTool, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
-    // Write-permission coder sub-agents (subagent role="coder" + escalate): the
-    // system prompt names verify (system.md) and advisor (discipline.md) — without them an
+  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
+    // Write-permission coder sub-agents (subagent role="coder" + escalate action):
+    // the system prompt names verify (system.md) and advisor (discipline.md) — without them an
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
     // self-verify (2026-08-16 deepseek escalate diagnosis; plugin parity).
     // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).

@@ -570,3 +570,49 @@ test("§7.2.1 走秒 ticker 条件（评审 #6）：processing 或 subRunning �
   assert.equal(ctx.state.processing, false, "回合正常收尾（ticker 已清理）")
 })
 
+// ─── §19 工具面合并：TUI 按 action 路由（T-M16——escalate#N/ 前缀/区块零改动验证）───
+// 工具面合并后 subagent 家族全部以工具名 "subagent" + action 到达——onToolResult 按
+// onToolCall 记录的 action 分流：escalate 冻结 escalate#N 区块（无报告预览——legacy
+// 表面）；check/status 走普通工具块（结果入块，不冻结子 agent 区块）；spawn 行为不变。
+
+test("§19 T-M16: escalate action 结果冻结 escalate#N 区块（前缀路由不变——飞刀完成不留 running 残影）", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  // 模拟真实 dispatch：escalate action 的载体块 + 子代理活动 + 术后报告结果
+  callbacks.onToolCall("subagent", { task: "硬骨头", action: "escalate" }, "call-E1")
+  callbacks.onToken("escalate#1/[model]kimi-k3")
+  callbacks.onToken("escalate#1/专家手术中...")
+  callbacks.onToken("escalate#1/❯ read src/a.mjs")
+  ctx.runAgent = async (_a, _t, cbs) => {
+    cbs.onToolResult("subagent", "escalate (kimi:kimi-k3) post-op report:\n改了什么、为什么、验证结果", "call-E1")
+  }
+  await runAgentTurn(ctx, "task")
+  const carrier = ctx.state.lines.find((l) => l._toolBlock?.id === "call-E1")
+  assert.ok(carrier, "escalate action 的工具载体块存在")
+  assert.equal(carrier._toolBlock.done, true, "载体已 done（非 interrupted 兜底）")
+  assert.equal(carrier._toolBlock.summary, "completed")
+  const frozen = ctx.state.lines.find((l) => l._frozenSubTask?.key === "escalate#1")
+  assert.ok(frozen, "escalate#1 区块冻结进会话流（escalate# 前缀路由不变——T-M16）")
+  assert.equal(frozen._frozenSubTask.done, true)
+  assert.ok(!frozen._frozenSubTask.lastError, "无 interrupted/错误误标——完成冻结而非回合尾收尸")
+  assert.equal(Object.keys(ctx.state.subTasks).length, 0, "无 running 残留")
+  const preview = ctx.state.lines.filter((l) => l.text && l.text.includes("post-op report"))
+  assert.equal(preview.length, 0, "escalate 术后报告不推预览行（legacy escalate 分支行为）")
+})
+
+test("§19 T-M16: check/status action 结果走普通工具块——不冻结子 agent 区块、无报告预览", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  ctx.runAgent = async (_a, _t, cbs) => {
+    cbs.onToolResult("subagent", JSON.stringify({ id: "1", role: "coder", status: "done", report: "取回的异步报告" }), "call-C1")
+  }
+  callbacks.onToolCall("subagent", { action: "check", id: "1", n: 1 }, "call-C1")
+  await runAgentTurn(ctx, "task")
+  const carrier = ctx.state.lines.find((l) => l._toolBlock?.id === "call-C1")
+  assert.ok(carrier, "check action 的工具块存在")
+  assert.equal(carrier._toolBlock.done, true, "结果入块 → 块 done")
+  assert.equal(carrier._toolBlock.result.join("\n").includes("取回的异步报告"), true, "check 结果落在块体内")
+  assert.ok(!ctx.state.lines.some((l) => l._frozenSubTask), "check 不冻结任何子 agent 区块")
+  const dimPreviews = ctx.state.lines.filter((l) => l.text?.includes("取回的异步报告"))
+  assert.equal(dimPreviews.length, 0, "check 结果不推会话预览行（subagent_check 时代行为——普通工具块）")
+})
+
+

@@ -159,7 +159,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
       agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
       agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero
-      agent._asyncCheckLastN = 0 // subagent_check read counter is per-run (§15 D-A2): a fresh user turn restarts from 1
+      agent._asyncCheckLastN = 0 // check action read counter is per-run (§15 D-A2): a fresh user turn restarts from 1
     }
   }
   // §17 D-S6 manual tier: digest action-domain reminder (system-driven turn — organize only).

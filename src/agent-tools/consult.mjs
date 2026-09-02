@@ -27,7 +27,7 @@ function consultLabel(m) {
 /** Narrow the configured consultModels pool to a requested subset.
  *  Each selector is "provider:model", a bare provider name, or a bare model name
  *  (case-insensitive). A trailing " (effort)" suffix is tolerated (round2 复核
- *  对齐 escalate.mjs：withPool 列表会带 " (high)" 后缀，模型照抄应可匹配).
+ *  对齐 escalate 动作（subagent action:"escalate"）：withPool 列表会带 " (high)" 后缀，模型照抄应可匹配).
  *  Returns { models, error } — error set when a selector matches
  *  nothing (surface the typo rather than silently dropping it). Absent/empty selectors
  *  → the full pool. */
@@ -156,9 +156,10 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     }
     // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
     // value makes provider/core throw on EVERY chat call (candidate dies on takeoff).
-    // Symmetric with escalate.mjs; 2026-08-16 a real consult died on qwen3.8-max
-    // effort "high" (enum is xhigh/medium/low). Out-of-enum: DROP the effort entirely
-    // (the provider preset default may ALSO be out-of-enum for this override model).
+    // Symmetric with the escalate action (subagent action:"escalate"); 2026-08-16
+    // a real consult died on qwen3.8-max effort "high" (enum is xhigh/medium/low).
+    // Out-of-enum: DROP the effort entirely (the provider preset default may ALSO be
+    // out-of-enum for this override model).
     clampEffort(provider, m.model, m.effort)
 
     // Read-only consultant: filter the parent tool set down to readonly tools + main_history.

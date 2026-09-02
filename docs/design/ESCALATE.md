@@ -1,3 +1,5 @@
+> **§19 修订标注（2026-09-03）**：`escalate` 工具已并入 `subagent` 工具 `action:"escalate"`（工具面收敛——语义/约束/relay 前缀 escalate#N 全保留——见 AGENT-LOOP.md §19）——本文件机制描述仍有效（飞刀语义/模型池/术后报告），工具注册/调用表述以 §19 为准。
+
 # 飞刀（Escalate）— 需求与设计（CLI）
 
 > 状态：**已实施**（2026-08-16，commit 596a69f；0.12.30 随版发布）。与 VS Code 插件同源设计（`thincoder-vscode/docs/design/ESCALATE.md`），本文件记录 CLI 端的实现差异与接线。

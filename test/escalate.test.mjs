@@ -1,17 +1,25 @@
 /**
- * escalate.test.mjs — 飞刀 (ESCALATE.md), CLI edition.
+ * escalate.test.mjs — 飞刀 (ESCALATE.md), CLI edition — §19 merged surface:
+ * the escalate tool is retired; its semantics run as subagent action:"escalate"
+ * (AGENT-LOOP.md §19 D-M4 — T-M14..M16 migration regression).
  * The child runner signature is CLI's runAgent(childAgent, input, callbacks, opts).
  * Mutations merge via the child AGENT object (not a state sink).
  */
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { join } from "node:path"
-import { escalateTool } from "../src/agent-tools/escalate.mjs"
+import { subagentTool } from "../src/agent-tools/subagent.mjs"
 
 const CONSULTS = [
   { provider: "kimi", model: "kimi-k3", effort: "max" },
   { provider: "zhipu-plan", model: "glm-5.2", effort: "high" },
 ]
+
+/** §19: escalate 语义经 subagent action:"escalate" 调用（既有 escalate 直接调用
+ *  用例迁移——约束/前缀/术后报告全保留）。 */
+function escalateExecute(args, ctx) {
+  return subagentTool.execute({ action: "escalate", ...args }, ctx)
+}
 
 function makeAgent(models) {
   return {
@@ -36,7 +44,7 @@ function makeCtx(agent, runner, depth = 0) {
 
 describe("escalate (飞刀, CLI)", () => {
   it("no consult models → error explaining the prerequisite", async () => {
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(makeAgent([])))
+    const r = await escalateExecute({ task: "x" }, makeCtx(makeAgent([])))
     assert.ok(String(r).includes("no escalate candidates"))
     assert.ok(String(r).includes("agent.consultModels"), "points at the right config")
   })
@@ -44,7 +52,7 @@ describe("escalate (飞刀, CLI)", () => {
   it("delegates to the first consult model with configured effort, coder role, depth 1", async () => {
     const seen = []
     const runner = async (childAgent, input, callbacks, opts) => { seen.push({ child: childAgent, opts }); return "post-op report" }
-    const r = await escalateTool.execute({ task: "hard refactor" }, makeCtx(makeAgent(CONSULTS), runner))
+    const r = await escalateExecute({ task: "hard refactor" }, makeCtx(makeAgent(CONSULTS), runner))
     assert.equal(seen.length, 1)
     assert.equal(seen[0].child.provider.name, "kimi", "default = first consult model")
     assert.equal(seen[0].child.provider.reasoningEffort, "max", "configured effort injected")
@@ -58,22 +66,22 @@ describe("escalate (飞刀, CLI)", () => {
     const seen = []
     const runner = async (childAgent) => { seen.push(childAgent.provider.name); return "ok" }
     const ctx = makeCtx(makeAgent(CONSULTS), runner)
-    await escalateTool.execute({ task: "x", model: "zhipu-plan:glm-5.2" }, ctx)
+    await escalateExecute({ task: "x", model: "zhipu-plan:glm-5.2" }, ctx)
     assert.equal(seen[0], "zhipu-plan")
-    const bad = await escalateTool.execute({ task: "x", model: "deepseek:deepseek-v4-pro" }, makeCtx(makeAgent(CONSULTS), runner))
+    const bad = await escalateExecute({ task: "x", model: "deepseek:deepseek-v4-pro" }, makeCtx(makeAgent(CONSULTS), runner))
     assert.ok(String(bad).includes("not a consult candidate"))
     assert.ok(String(bad).includes("kimi:kimi-k3"), "pool listed in the error")
   })
 
   it("depth guard: an escalate cannot fly in another escalate", async () => {
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(makeAgent(CONSULTS), async () => "never", 1))
+    const r = await escalateExecute({ task: "x" }, makeCtx(makeAgent(CONSULTS), async () => "never", 1))
     assert.ok(String(r).includes("only available at depth 0"))
   })
 
   it("engineering mode is a fail-closed backdoor guard", async () => {
     const agent = makeAgent(CONSULTS)
     agent.config.agent.engineering = true
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, async () => "never"))
+    const r = await escalateExecute({ task: "x" }, makeCtx(agent, async () => "never"))
     assert.ok(String(r).includes("engineering mode is ON"))
   })
 
@@ -89,7 +97,7 @@ describe("escalate (飞刀, CLI)", () => {
       onToken: (t) => relayed.push(["token", t]),
       onToolCall: (name, args) => relayed.push(["tool", name, args]),
     }
-    const r = await escalateTool.execute({ task: "x" }, ctx)
+    const r = await escalateExecute({ task: "x" }, ctx)
     assert.ok(String(r).includes("report"))
     assert.ok(relayed.every(([kind, nameOrText]) => kind === "tool" ? nameOrText.startsWith("escalate#") : nameOrText.startsWith("escalate#")), "all relay entries carry the escalate# prefix")
     assert.ok(relayed.some(([kind, v]) => kind === "tool" && v.endsWith("/read")), "tool call relayed")
@@ -107,7 +115,7 @@ describe("escalate (飞刀, CLI)", () => {
       childAgent._touchedFiles = [join(process.cwd(), "src", "x.mjs")]
       return "post-op report"
     }
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    const r = await escalateExecute({ task: "x" }, makeCtx(agent, runner))
     assert.ok(String(r).includes("post-op"))
     assert.equal(agent._verifiedThisRun, false, "fresh code invalidates the parent's prior verify — the surgery must not bypass the parent's gates")
     assert.equal(agent._verifyPassed, undefined)
@@ -123,7 +131,7 @@ describe("escalate (飞刀, CLI)", () => {
       childAgent._touchedFiles = [join(process.cwd(), "src", "y.mjs")]
       throw new Error("mid-surgery crash")
     }
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    const r = await escalateExecute({ task: "x" }, makeCtx(agent, runner))
     assert.ok(String(r).includes("error"))
     assert.ok(agent._touchedFiles.some((f) => f.endsWith("y.mjs")), "partial writes still merged")
   })
@@ -139,7 +147,7 @@ describe("escalate (飞刀, CLI)", () => {
     const ctrl = new AbortController()
     const ctx = makeCtx(agent, runner)
     ctx.signal = ctrl.signal
-    const p = escalateTool.execute({ task: "x" }, ctx)
+    const p = escalateExecute({ task: "x" }, ctx)
     setTimeout(() => ctrl.abort(), 30)
     await assert.rejects(p, (e) => e.name === "AbortError", "user Stop propagates to the parent loop")
   })
@@ -149,7 +157,7 @@ describe("escalate (飞刀, CLI)", () => {
     const { ContinueError } = await import("../src/agent.mjs")
     let calls = 0
     const runner = async () => { calls++; throw new ContinueError(100) }
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    const r = await escalateExecute({ task: "x" }, makeCtx(agent, runner))
     assert.equal(calls, 1, "no continue prompt possible → no resume attempted")
     assert.ok(String(r).includes("stopped: turn cap reached"))
     assert.ok(String(r).includes("(100 turns)"), "ContinueError.turn surfaced")
@@ -168,7 +176,7 @@ describe("escalate (飞刀, CLI)", () => {
     const asks = []
     const ctx = makeCtx(agent, runner)
     ctx.onPermissionRequest = async (name, args) => { asks.push([name, args]); return true }
-    const r = await escalateTool.execute({ task: "hard refactor" }, ctx)
+    const r = await escalateExecute({ task: "hard refactor" }, ctx)
     assert.equal(seen.length, 2, "first run hit the wall, second run finished")
     assert.equal(seen[0].resume, false)
     assert.equal(seen[1].resume, true, "resumed run — runAgent does NOT re-inject the task text")
@@ -187,7 +195,7 @@ describe("escalate (飞刀, CLI)", () => {
     const runner = async () => { calls++; throw new ContinueError(100) }
     const ctx = makeCtx(agent, runner)
     ctx.onPermissionRequest = async () => false
-    const r = await escalateTool.execute({ task: "x" }, ctx)
+    const r = await escalateExecute({ task: "x" }, ctx)
     assert.equal(calls, 1, "declined → no resume run")
     assert.ok(String(r).includes("stopped: turn cap reached"))
     assert.ok(String(r).includes("Partial output"))
@@ -206,7 +214,7 @@ describe("escalate (飞刀, CLI)", () => {
     // Never-ending walls: the user keeps choosing Continue — resumes are unlimited.
     // The 4th prompt answers Stop (the user's escape hatch), so the test terminates.
     ctx.onPermissionRequest = async () => { asks++; return asks < 4 }
-    const r = await escalateTool.execute({ task: "x" }, ctx)
+    const r = await escalateExecute({ task: "x" }, ctx)
     assert.deepEqual(resumes, [false, true, true, true], "initial run + 3 resumed runs — no MAX_RESUMES cap")
     assert.equal(asks, 4, "every wall prompts (4 asks)")
     assert.ok(String(r).includes("stopped: turn cap reached"))
@@ -225,7 +233,7 @@ describe("escalate (飞刀, CLI)", () => {
     }
     const ctx = { ...makeCtx(agent, runner), signal: ctrl.signal }
     // Parent aborts mid-run → child run rejects with AbortError → escalate rethrows (user Stop)
-    const pending = escalateTool.execute({ task: "x" }, ctx)
+    const pending = escalateExecute({ task: "x" }, ctx)
     // Wait until the child runner has captured the signal, then abort the parent
     await new Promise((r) => setTimeout(r, 30))
     assert.equal(seenSignal, ctrl.signal, "child receives the parent signal directly (no intermediate controller)")
@@ -240,7 +248,7 @@ describe("escalate (飞刀, CLI)", () => {
     // qwen3.8-max enum = ["xhigh","high"] → "max" is out-of-enum
     let seenProvider = null
     const runner = async (childAgent) => { seenProvider = childAgent.provider; return "done" }
-    const r = await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    const r = await escalateExecute({ task: "x" }, makeCtx(agent, runner))
     assert.ok(seenProvider, "child spawned")
     assert.equal(seenProvider.reasoningEffort, undefined, "out-of-enum effort NOT copied (would throw in chat)")
     assert.ok(String(r).includes("unsupported"), "result notes the fallback")
@@ -254,9 +262,22 @@ describe("escalate (飞刀, CLI)", () => {
       seenPermission = callbacks?.onPermissionRequest ?? null
       return "done"
     }
-    await escalateTool.execute({ task: "x" }, makeCtx(agent, runner))
+    await escalateExecute({ task: "x" }, makeCtx(agent, runner))
     assert.equal(typeof seenPermission, "function", "permission resolver injected")
     assert.equal(await seenPermission("write", {}), true, "AUTO approves child writes")
+  })
+
+  it("manual auto-turn digest refuses escalate (spawns a write child — §17 N3 机械拒绝；AUTO 放行)", async () => {
+    const agent = makeAgent(CONSULTS)
+    agent._inAutoTurn = true
+    const runner = async () => { throw new Error("must not spawn") }
+    const r = await escalateExecute({ task: "x" }, makeCtx(agent, runner))
+    assert.ok(String(r).includes("cannot spawn subagents from a manual auto-turn"), "手动档 digest 拒 escalate（同 spawn 语义——不烧一轮专家）")
+    agent.autoApprove = true
+    const seen = []
+    const runnerAuto = async (childAgent) => { seen.push(childAgent); return "done" }
+    await escalateExecute({ task: "x" }, makeCtx(agent, runnerAuto))
+    assert.equal(seen.length, 1, "AUTO 档 digest 放行 escalate（推进链授权）")
   })
 
 })

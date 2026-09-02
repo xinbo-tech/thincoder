@@ -3,14 +3,16 @@
  * 满足 500 行硬限）。只做「事件 → TUI 状态/对话行」的映射：
  *
  *  - onToken/onReasoning  : 子agent 前缀分流（routeSub*）→ 主流 streaming/reasoning
- *  - onToolCall           : 状态栏 + `❯ name args` 标题行 + 计时
+ *  - onToolCall           : 状态栏 + `❯ name args` 标题行 + 计时 + §19 action 记录
  *  - onToolResult         : 子agent 完成冻结（finishSubTask + freezeDoneSubTasks）、
- *                           _live 行清理、done 行、advisor 评审冻结框
- *  - onToolOutput         : advisor 有序块缓冲 / `_live` 滚动预览（N 行 + `│ …` 折叠）
+ *                           工具块结果入块、advisor 评审冻结框
+ *  - onToolOutput         : advisor 有序块缓冲 / 工具块输出流
  *  - 其余                 : usage 累计、等待提示、task 面板、回合末增量落盘
  *
  * flushStream 同时返回给调用方（回合循环 / onTurnEnd 共用）。纯回调装配，无终端副作用
- * （除经 deps 注入的 pushLine/render）。
+ * （除经 deps 注入的 pushLine/render）。§19: subagent_check/escalate 工具退役后，
+ * subagent 家族全部调用以工具名 "subagent" + action 到达——完成路由按 onToolCall 时
+ * 记录的 action 分流（spawn 区块 / escalate 区块 / check·status 普通工具块）。
  */
 import { C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
@@ -38,6 +40,11 @@ const REMINDER_CAP = 3                    // max pending reminders shown on turn
 const REMINDER_PERSIST_TURNS = 5          // persist reminders every N turns
 
 const _toolTicks = new Map()
+// §19 action registry: tool_call id → subagent action (non-spawn only — spawn is
+// the default when no record exists). onToolCall sees the args, onToolResult only
+// the name; without the record every subagent result would route as a spawn.
+const _subActions = new Map()
+const _subActionQ = [] // FIFO for subagent calls without a tool id (same fallback as tick queue)
 
 function tickStart(name, toolId) {
   const key = toolId ?? name
@@ -74,6 +81,8 @@ export function sweepToolBlocks(state) {
     }
   }
   _toolTicks.clear()
+  _subActions.clear()
+  _subActionQ.length = 0
 }
 
 /** Shared display guard for tool results — LIVE and RESTORE use the same
@@ -94,9 +103,8 @@ export function slimToolResultForDisplay(result, maxRows = 400) {
     : rows
 }
 /** Mark the dispatch-level tool carrier done when its result is consumed by a
- *  dedicated branch (subagent/escalate/advisor blocks) instead of the carrier
- *  body — without this the turn sweep mislabels successful calls as
- *  "(interrupted)" (consult P1, 2026-08-30). */
+ *  dedicated branch (subagent/escalate/advisor blocks) — without this the turn
+ *  sweep mislabels successful calls as "(interrupted)" (consult P1, 2026-08-30). */
 function settleToolBlock(state, name, toolId, summary) {
   const block = findToolBlock(state, name, toolId)
   if (block) {
@@ -110,9 +118,7 @@ function settleToolBlock(state, name, toolId, summary) {
 /** Async spawn detection (§15 D-A1): the subagent tool's async:true result is a
  *  status JSON ({id, role, status: running|queued}), NOT a report — the child
  *  keeps running, so its activity block must not be frozen at spawn time (it
- *  freezes via the ⟦ev⟧done event emitted at settle time — §15 D-A3). A real blocking
- *  report that happens to parse as this shape is a freak accident; the only
- *  consequence would be a late block freeze at turn end (cosmetic). */
+ *  freezes via the ⟦ev⟧done event at settle — §15 D-A3). */
 function isAsyncSpawnResult(result) {
   try {
     const o = JSON.parse(result)
@@ -189,6 +195,12 @@ export function buildToolCallbacks(deps) {
       // Subagent tool call: prefix role#id/toolName → open a fresh tool block and
       // set currentTool for the header summary line.
       if (routeSubToolCall(state, name, args, scheduleRender)) return
+      // §19: record the action of a merged subagent-family call (spawn is the
+      // default — only non-spawn actions need a record for result-time routing).
+      if (name === "subagent" && args?.action && args.action !== "spawn") {
+        if (toolId !== undefined && toolId !== null) _subActions.set(toolId, args.action)
+        else _subActionQ.push(args.action)
+      }
       // Redundant with flushStream() below (it clears both buffers) — defense-in-depth
       // so a future flushStream change cannot leak advisor buffers into the next view.
       if (name === "advisor") { state._advisorBlocks = [] }
@@ -218,10 +230,8 @@ export function buildToolCallbacks(deps) {
       // is unreliable (it glues onto the previous line), so the round belongs here.
       // Also show the advisor's effective model (it may differ from the main agent's).
       const roundTag = name === "advisor" ? ` (round ${(agent._advisorRound || 0) + 1}${advModel ? " · " + advModel : ""})` : ""
-      // Readable key-args summary (vscode card-header parity, 2026-08-30) —
-      // replaces the raw JSON.stringify-80 slice: long paths landed mid-string,
-      // and the crucial argument was often past the cut. Unknown/MCP tools
-      // fall back to compact JSON inside describeToolArgs.
+      // Readable key-args summary (vscode card-header parity, 2026-08-30) — replaces
+      // the raw JSON.stringify-80 slice. Unknown/MCP tools fall back to compact JSON.
       const argSummary = describeToolArgs(name, args)
       // ONE BLOCK PER TOOL CALL (user ruling 2026-08-30): header = name+args+live
       // status, body = args JSON + streaming output + result. buildConvLines renders
@@ -244,16 +254,23 @@ export function buildToolCallbacks(deps) {
     },
     onToolResult: (name, result, toolId) => {
       state.currentTool = null
+      // §19 merged family: route per the action recorded at onToolCall (no record = default spawn).
+      let subAction = null
+      if (name === "subagent") {
+        subAction = (toolId !== undefined && toolId !== null)
+          ? _subActions.get(toolId) ?? null
+          : _subActionQ.shift() ?? null
+        if (toolId !== undefined && toolId !== null) _subActions.delete(toolId)
+      }
+      const isSubagent = name === "subagent" && subAction !== "check" && subAction !== "status" && subAction !== "escalate"
+      const isEscalate = name === "subagent" && subAction === "escalate"
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the
-      // child's activity; buffers survive the turn (child tool calls never enter the
-      // parent's history) — memory bounded by the N2 line cap.
-      const isSubagent = name === "subagent"
+      // child's activity; memory bounded by the N2 line cap.
       if (isSubagent) {
         // The dispatch-level tool-block carrier for this call would otherwise
         // never be marked done (its result lands in the subagent block, not the
-        // carrier) and the turn sweep would mislabel it "(interrupted)" — every
-        // successful subagent call showed that banner (consult P1, 2026-08-30).
+        // carrier) and the turn sweep would mislabel it "(interrupted)".
         settleToolBlock(state, name, toolId, "completed")
         // Async spawn (§15 D-A1): the result is a status JSON, not a report — the
         // child KEEPS running; skip the freeze (it would tombstone a live block and
@@ -271,8 +288,9 @@ export function buildToolCallbacks(deps) {
           if (preview) pushLine(preview, C.dim)
           if (lines.length > SUBAGENT_PREVIEW_LINES) pushLine(`  ... (${lines.length - SUBAGENT_PREVIEW_LINES} more lines)`, C.dim)
         }
-      } else if (name === "escalate") {
-        // 飞刀 post-op report landed → freeze its block into the conversation too.
+      } else if (isEscalate) {
+        // 飞刀 post-op report landed under the subagent tool name — freeze the
+        // escalate#N activity block (no preview; legacy surface).
         settleToolBlock(state, name, toolId, "completed")
         finishSubTask(state, ["escalate"], result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
         freezeDoneSubTasks(state)
@@ -299,7 +317,7 @@ export function buildToolCallbacks(deps) {
           }
         } /* non-JSON result — leave blocks as-is */
       }
-      if (!isSubagent && name !== "advisor") {
+      if (!isSubagent && !isEscalate && name !== "advisor") {
         // Result lands INSIDE the block (restore parity — the restored carrier
         // carries the same fields). The done line is gone: status/elapsed live
         // in the header now.

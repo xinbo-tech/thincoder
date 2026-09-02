@@ -38,6 +38,24 @@ function logToolError(toolName, args, error) {
 }
 
 /**
+ * §19 action-level classification (AGENT-LOOP.md §19 D-M1): the merged subagent
+ * tool expresses spawn (side effect) and check/status (read-only queries) through
+ * its `action` parameter — the tool-level readonly flag can no longer express both.
+ * dispatch Phase-1/Phase-2 classifies per action: check/status behave as readonly
+ * (planMode pass / no permission ask / batchable), spawn keeps its non-readonly
+ * gates, escalate runs non-readonly AND serially (the retired escalate tool had no
+ * parallel flag — zero behavior change under the merged surface).
+ */
+function isSubagentReadonlyAction(toolName, args) {
+  if (toolName !== "subagent" || !args || typeof args !== "object") return false
+  const action = args.action
+  return action === "check" || action === "status"
+}
+function isSubagentEscalateAction(toolName, args) {
+  return toolName === "subagent" && args?.action === "escalate"
+}
+
+/**
  * Two-phase execution:
  * Phase 1 (serial): parse args one by one + planMode check + permission confirmation (side-effecting tools)
  * Phase 2 (order-preserving): strictly preserve model call order — consecutive readonly/parallel tools run as concurrent batches,
@@ -69,7 +87,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       continue
     }
 
-    if (agent.planMode && !tool.readonly) {
+    if (agent.planMode && !tool.readonly && !isSubagentReadonlyAction(toolCall.name, args)) {
       prepared.push({ toolCall, tool, denied: true, reason: "plan mode" })
       continue
     }
@@ -121,7 +139,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // — the exemption never widens what reaches this stage (round4 #3, T-E14).
     // PreToolUse hooks still run below. Non-eng-coder children keep the manual
     // parent ask (human in the loop).
-    if (tool.readonly || agent.autoApprove || agent._engTaskAuthorized) {
+    if (tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
       if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
         prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
         continue
@@ -290,7 +308,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     batch = []
   }
   for (const item of prepared) {
-    if (item.tool && !item.tool.readonly && !item.tool.parallel) {
+    // escalate action keeps the retired escalate tool's serial placement (no
+    // parallel flag): it flushes the batch and runs alone in call order (§19 —
+    // spawn stays parallel; check/status classify as readonly and batch freely).
+    if (item.tool && !item.tool.readonly
+        && (!item.tool.parallel || isSubagentEscalateAction(item.tool.name, item.args))) {
       await flush()
       results.push(await runOne(item))
     } else {
