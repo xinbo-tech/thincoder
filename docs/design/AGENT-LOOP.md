@@ -515,7 +515,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - F1：`subagent` 工具加 `async: true` 参数——显式开启后 spawn **立即返回** `{ id, role, status: "running" }`（不 await 报告）；主会话可继续自己的回合
 - F2：新增 `subagent_check` 工具——取回 async 子代理结果；**多 async 按完成顺序（arrival order）消费**——先完成先处理（F-2 消除）
 - F3：回合结束时未完成的 async 子代理**自动等待完成**，报告注入会话（干活型不白做）
-- F4：默认行为不变——不带 async 时完全保持现有阻塞语义（提示词/流程/测试零波及）~~——**§18 F1 修订（2026-09-02）：eng-coder role 缺省 async（其余角色不变）**~~
+- F4：默认行为不变——不带 async 时完全保持现有阻塞语义（提示词/流程/测试零波及）——**§18 F1 修订（2026-09-02）：eng-coder role 缺省 async（其余角色不变）——见 §18 D-E1**
 - F5：**CLI 并发上限 4 + 槽位队列（async，机械层，用户 2026-09-02 拍板）**——`_asyncSubagents` 中 running 数 <4 时新 async spawn **立即启动**；≥4 时**入队等待**（`status:"queued"`，返回 `position`），**running 子代理完成（promise settle）即腾槽 → 队列头部自动补位启动**——不拒绝、不要求模型分批（"槽位空出立即 spawn 下一个"）。**同步 spawn 不受机械上限约束**（本就阻塞不堆积）。**既有工程纪律上限 3 → 4（提示词层，两端）**：同步并行 eng-coder spawn 的纪律上限同步改为 4
 
 ### 15.3 设计
@@ -572,12 +572,12 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T8 | ✓ 中断 | async 运行中 Ctrl+C | abort 传播；收尾不再等待（error 带中断语义） | D-A3 |
 | T9 | ✓ 上限纪律同步（评审 #4） | 读 engineering.md | 含 "Cap: at most 4 concurrent eng-coders" + "past 4"（两端 byte-identical） | F5/D-A4 |
 
-**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5——**§17 落地后语义 = 未 settle 移交池 + 下轮 D-S3 注入，round2 #1**）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）~~——**§18 修订：eng-coder 除外（角色级缺省 async）**~~；AC6 = check 错误路径与防循环上限（T12/T13）。
+**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5——**§17 落地后语义 = 未 settle 移交池 + 下轮 D-S3 注入，round2 #1**）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）——**§18 修订：eng-coder 除外（角色级缺省 async——见 §18 D-E1，T7 适用其余角色）**；AC6 = check 错误路径与防循环上限（T12/T13）。
 
 ### 15.5 关键决策
 
 - **consult 范式借鉴而非复用**：consult 是"多模型咨询"语义（会话级、可放弃、main_history 注入）；subagent 是"任务执行"语义（调用级、要收尾、mergeChildMutations 回传）——共享"非阻塞 + 轮询"形态，实现独立（consult.mjs 零改动）
-- **显式 async 而非默认全异步**：现有提示词/流程（偏差审计、交付核验等）都是"spawn 后等报告"的阻塞用法；默认变更会波及全部——显式参数把新能力做成加法~~——**§18 F1 修订（2026-09-02）：角色级缺省例外——eng-coder 默认 async（工程交付自动链需要——见 §18）**~~
+- **显式 async 而非默认全异步**：现有提示词/流程（偏差审计、交付核验等）都是"spawn 后等报告"的阻塞用法；默认变更会波及全部——显式参数把新能力做成加法——**§18 F1 修订（2026-09-02）：角色级缺省例外——eng-coder 默认 async（工程交付协议需要——见 §18）**
 - **收尾等待而非 abort**：eng-coder 干活型，回合结束 abort = 工作白做（用户明确选等待）；中断（Ctrl+C）仍传播 abort（用户显式停不等待）
 - **槽位队列而非拒绝/分批（用户 2026-09-02 拍板）**：超限入队 + 完成即腾槽补位——模型一次可 spawn 任意数量，无需分批等待（"槽位空出立即 spawn 下一个"）；同步 spawn 本就不堆积（阻塞），不受限；用户拍板上限 3→4
 - **否决**：a) 默认全异步（波及面大，F4 相反）；b) 回合结束 abort（丢工作）；c) 上限仅自律（防呆失效风险）；d) 超限拒绝 + 模型自行分批（正是用户否掉的行为）；e) 消费才腾槽（check 后才补位——槽位利用率低，用户要求完成即补）
@@ -799,25 +799,27 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ⑦ clean → 交付报告：Done 透明表 + 审计轮次/评审轮次/终态（clean/stalled）
 ```
 
-- **收敛计数（内部纪律 + 机械提示）**：修正轮（④⑥的每次自修）计数 ≤5——超限即停，交付报告标注 `stalled` + 未收敛点清单（不静默）
+- **收敛计数（评审 round3 #5 定稿——提示词轮次提醒）**：修正轮（④⑥的每次自修）计数 ≤5——**计数载体 = engineering-sub.md 每轮注入的"修正轮 N/5"提醒**（协议节点前模型自述轮次——工具层不加状态机——纯提示词纪律 + 报告自述终态）——超限即停，交付报告标注 `stalled` + 未收敛点清单（不静默）
+- **子代理 turn 上限交互（评审 round3 #4）**：内部协议回合计入子代理既有 100 turn 上限（§2）——大实现 + 审计≤6 + 复评≤6 可能撞 cap：撞 cap = 子代理按既有语义返回（手动档自动拒续——报告带 turn-cap 原因 = 部分交付不静默；工程模式 && AUTO → 自动续跑（§15 D-A3 例外既有））——协议不为此调高上限（AUTO 续跑兜底）
 - **主会话 digest 只做既有消化**（手动档：整理交付报告要点——交付报告自带审计/评审记录，用户一眼看到质量闭环状态；AUTO：可继续推进后续任务）
 - **无跨 digest 状态机**：无 _engChain/无白名单门/无 poke/无退出门控/无冲突仲裁——round2 评审 #1/#2 的全部状态机问题随重构消解（复杂度归位到子代理内部回合循环——子代理回合本来就有 chat/tools 迭代能力）
 
-**D-E3 工具扩展：eng-coder 加受限 subagent（explore-only）**（setup.mjs depthOnly 装配——当前 eng-coder = [advisorTool, verifyTool]——补 subagent 受限变体）：
+**D-E3 工具扩展 + 任务域授权（评审 round3 #1——用户裁定：进子代理前授权，内部自动）**（setup.mjs depthOnly 装配——当前 eng-coder = [advisorTool, verifyTool]——补 subagent 受限变体）：
 - eng-coder 子代理的 subagent 工具 schema：**role 枚举只有 explore**（参数层过滤——spawnChild 处机械校验：eng-coder 上下文（depth>0 且角色 eng-coder）spawn 非 explore role → 拒绝 error）
 - **async 强制 false**（同步——eng-coder 内部回合等审计报告再决策——§15 顶层限制不变：async 仍仅 depth-0）
 - explore 审计报告经子代理 relay 注入 eng-coder 回合（既有 §7.1 管线——子代理区块/报告形态复用——无新接线）
 - 递归深度自然受控（explore 无 subagent 工具——审计链路不长于 1 层孙子）
-- 权限：explore 只读——内部 spawn 无权限门问题（§4 只读豁免）；与 D-E7（初版作用域授权）关系：**本轮不再需要**——修正发生在 eng-coder 自身回合（父任务已批准——eng-coder 作为已授权执行者照既有写权限语义工作，无"链修正节点"二次授权问题）
+- **任务域授权（用户裁定——评审 round3 #1）**：授权点 = **spawn 时刻**（架构师 spawn eng-coder 前用户已批准设计+任务）→ eng-coder **内部所有写操作自动放行**（autoApprove 等效——豁免 §7 手动档子代理写透传父审批（:91 人在回路）/§15 D-A3 无 handler 拒绝（:542）——不弹逐写面板——与 18.3 "用户批准任务 = 授权" 一致）。**作用域限定**：任务域 = designId 对应设计文档 + 任务书文件清单（越界写仍受 eng-coder 纪律约束——交付偏差审计兜底——T-E15 手动档写权限用例：autoApprove=false 会话中 eng-coder 写文件成功）。**非 eng-coder 子代理（explore/coder 等）手动档语义不变**（§7 人在回路保留）。实现：spawn eng-coder 时 child runOpts 置授权标志（dispatch Phase-1 豁免）——受影响：src/dispatch 权限门 + setup/spawn-child runOpts
+- explore 内部 spawn 只读——无权限门问题（§4 只读豁免）
 
 **D-E4 交付与消化（主会话侧）**：eng-coder settle → 交付报告注入（§15/§17 既有 collectSettled/pending 注入——无交付检测/链启动逻辑）→ 下一 digest/用户回合消化（手动档 digest 总结要点注入会话流——交付报告含"审计 N 轮 clean / advisor 复评 M 轮 clean/stalled"记录——质量闭环可见）。
 
 **D-E5 双通道与中止（F5）**：§17 既有语义——用户输入 = 新回合与 async 子代理并行；"停链/调整" = 用户回合指示 → 模型中止该 async 子代理（§15 既有 abort 路径——子代理中止 → settle error → 注入）或 Ctrl+C（挂起态两级中止——round2 #4）。**无链状态可改**（重构红利）。
 
-**D-E6 收敛与终态**：eng-coder 报告自述终态——`clean`（审计 clean + advisor clean——报告含轮次）或 `stalled`（5 轮修正未收敛 / explore 或 advisor 节点失败重试 1 次仍败——报告含未收敛点/失败原因）。主会话不额外判定（报告可信——父侧手动复核仍可用：ENGINEERING-MODE.md step 7 原手动 explore 审计保留为可选复核——默认由内部协议承担）。
+**D-E6 收敛与终态**：eng-coder 报告自述终态——`clean`（审计 clean + advisor clean——报告含轮次）或 `stalled`（5 轮修正未收敛 / explore 或 advisor 节点失败重试 1 次仍败——报告含未收敛点/失败原因）。**盲信对齐（评审 round3 #8）**：内部 advisor code review 以实际文件为对象（documents = 设计文档 + 交付文件清单——独立于 eng-coder 自述——§13 禁盲信纪律在子代理内部落实）；主会话对报告的信任 = 对"内部已做文件级复核"的信任——父侧手动复核（ENGINEERING-MODE.md step 7 原手动 explore 审计）保留可选——默认由内部协议承担。
 
 **受影响文件（两端）**：
-- CLI：`src/agent-tools/subagent.mjs`（schema 默认按 role 解析 async）、`src/agent/setup.mjs`（eng-coder depthOnly 工具装配——加受限 subagent（explore-only + 同步））、`src/agent/spawn-child.mjs`（role 过滤校验：eng-coder 上下文 spawn 仅 explore）、`src/prompts/engineering-sub.md`（内部交付协议附录——byte-identical 三件套）、`src/agent.mjs`（无改动？——验证：digest 消化既有——确认零改动后从清单移除）、docs/design/AGENT-LOOP.md §18 本节、ENGINEERING-MODE.md（step 7 口径修订：默认由 eng-coder 内部协议承担——主侧手动 explore 复核保留可选）、CHANGELOG（两端，父代理统一更新）、两端测试
+- CLI：`src/agent-tools/subagent.mjs`（schema 默认按 role 解析 async）、`src/agent/setup.mjs`（eng-coder depthOnly 工具装配——加受限 subagent（explore-only + 同步））、`src/agent/spawn-child.mjs`（role 过滤校验：eng-coder 上下文 spawn 仅 explore）、`src/prompts/engineering-sub.md`（内部交付协议附录 + 修正轮计数提醒——byte-identical 三件套）、`src/prompts/engineering.md`（两端——架构师侧 spawn→等报告→主侧审计流程改 async+内部协议口径——防双重审计/误用）、`src/agent.mjs`（核验：digest 消化既有——若零改动从清单移除——实现前定稿）、docs/design/AGENT-LOOP.md §18 本节、ENGINEERING-MODE.md（step 7 口径修订：默认由 eng-coder 内部协议承担——主侧手动 explore 复核保留可选）、CHANGELOG（两端，父代理统一更新）、两端测试
 - VS Code：同构（setup-reminders.mjs/run-helpers 装配对应 + prompts 同批）
 - 测试（实现前展开为 §15.4 式完整用例表——eng-coder 硬验收项）：
   - T-E1 eng-coder 缺省 async（spawn 返回 running 不阻塞）——explore 缺省阻塞（回归）
@@ -829,7 +831,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
   - T-E7 收敛上限：5 轮自修未 clean → stalled 报告（含未收敛点）
   - T-E8 explore/advisor 节点失败重试 1 次仍败 → stalled 报告
   - T-E9 主会话双通道：eng-coder async 运行中用户输入 → 新回合正常；回合指示中止 → 子代理中止（§15 回归）
-  - T-E10 §15/§17 全回归（阻塞模式/挂起/消化分档——含手动档 digest 禁 spawn 不变（digest 不 spawn——只有 eng-coder 内部 spawn））
+  - T-E10 §15/§17 全回归（阻塞模式/挂起/消化分档——手动档 digest 禁 spawn（§17 N3）不变；AUTO 档 digest 可 spawn（推进链——§17 D-S6 AUTO 档）不受 §18 影响）
   - T-E11 交付报告 digest 消化：手动档 digest 总结注入（含审计/评审记录可见）
 - 验收：AC-E1 = eng-coder 默认 async（T-E1/T-E2）；AC-E2 = 内部协议闭环（T-E3..E6）；AC-E3 = 收敛上限不静默（T-E7/T-E8）；AC-E4 = 受限 spawn 边界（T-E4/T-E5）；AC-E5 = 双通道与中止（T-E9）；AC-E6 = 两端全量绿（T-E10/E11）
 
