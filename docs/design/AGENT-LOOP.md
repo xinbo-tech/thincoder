@@ -29,7 +29,7 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume })
      e. 响应后处理：流规则 abort/warn、用户中断（Ctrl+I）、usage 基线、异常 finishReason 提醒
      f. 有 toolCalls → executeToolCalls（§4）→ 结果回喂 → 回到 a
        无 toolCalls → handleCompletion（§5）→ done / continue（guard 推回）
-  4. 超 turn 上限 → throw ContinueError（TUI 询问是否续跑，续跑走 resume 保状态）
+  4. 超 turn 上限 → throw ContinueError。**续跑决策统一规则（2026-09-02 用户裁定：工程模式 && AUTO 开 → 自动续跑，不弹面板不询问——AUTO = 用户授权无人值守，责任在用户）**：`engineering && autoApprove → 自动 resume 续跑`（resume 保 guard 状态）；否则 TUI 询问是否续跑（续跑走 resume）。规则适用于所有回合（depth-0 用户回合 / auto-turn；depth>0 子代理同规则——async 子代理无面板通道时 AUTO && 工程 → 自动续跑，否则维持"失败返回报告"语义见 §15）
 ```
 
 **中断语义**（AbortController + signal.reason）：
@@ -535,7 +535,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - 注入后清空 `_asyncSubagents`
 - **`⟦ev⟧done` 事件（code review #7 补记 + 用户问题 2026-09-02 修正发射时机）**：**每个 async entry 在 promise settle 时立即发** `${relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e` token（subagent.mjs 的 settle 回调发，非回合收尾统一发）——完成即冻结、冻结块位置 = 完成时刻的会话流位置（对齐同步子代理行为；用户实证：收尾统一发导致"直到所有任务完成后才变灰 + 冻结块堆在会话末尾结论之后"）。回合收尾 collectAsyncSubagents 不再发 done（只注入 reminder + 清空）——收尾时仍在跑的最后几个经 settle 回调发 done（主会话已结束，块在末尾，合理）——§7.2 D1 "tool/done phase 不发 token" 的**§15 例外**（该句原意是同步子代理的 tool/done 由 onToolResult 前缀 relay 承担；async 子代理的完成发生在父工具返回之后，需显式 done 事件通知 TUI 冻结）
 - **async 子代理权限交互（评审 #2 补）**：后台子代理撞权限门时审批面板照常弹出（`_permQueue` 串行化，不与其他权限请求重叠）；回合收尾等待把"待审批"视为**可解析状态**——用户批准 → 子代理 settle → 等待完成；无用户在场（headless/无审批回调）→ 权限请求按既有 no-permission-handler 语义拒绝，子代理失败返回（不悬挂）。
-- **使用层级（评审 #4 定死）**：`async: true` 仅 **depth-0 主会话**有效——depth>0 子代理内传 async → 报错拒绝（"async spawn only available at the top level"）；后台子代理撞 turn-cap → **自动拒绝继续（不弹 continue 面板）**，子代理失败返回（报告带 turn-cap 原因）——不打扰主会话
+- **使用层级（评审 #4 定死）**：`async: true` 仅 **depth-0 主会话**有效——depth>0 子代理内传 async → 报错拒绝（"async spawn only available at the top level"）；后台子代理撞 turn-cap → **自动拒绝继续（不弹 continue 面板）**，子代理失败返回（报告带 turn-cap 原因）——不打扰主会话；**例外（2026-09-02 统一规则）**：工程模式 && AUTO 开 → 自动续跑（同 §2 规则——AUTO 授权无人值守）
 - **中断/resume 生命周期（评审 #3 定死）**：Ctrl+C 中断 → abort 传播（subagent 的 signal 传递），未完成项随 abort 失败（AbortError 语义），**`_asyncSubagents` 立即清空（不注入陈旧错误）**——用户显式停；ContinueError（turn cap）→ **finally 不等待不注入，`_asyncSubagents` 原样保留**（避免延迟 continue 面板），resume 后回合收尾语义顺延（下轮 turn-end 再收尾）
 - 回合收尾等待项数 = `_asyncSubagents.size`（含已 settle 未消费——allSettled 立即返回）；**上限口径 = running 数**（D-A1/D-A2/T6 一致，评审 #2 对齐）——回合收尾清空后自然归零
 
@@ -719,7 +719,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
     - **机械禁 spawn**：subagent.mjs 入口检查 `agent._inAutoTurn` → 返回 `{ status: "error", error: "cannot spawn subagents from an auto-turn — wait for user input" }`（async + 同步都拒）
   - **写工具策略（用户 2026-09-02 否决 AUTO 拦截——过度工程）**：auto-turn 写工具权限 = **与 async 子代理同级**（async 子代理是独立 runAgent 走同一权限门，AUTO 下后台写早已存在——auto-turn 信任级一致，无机械特判）：AUTO 模式 → 自动执行；手动模式 → 权限门无 handler 拒绝（D-S7）。不该写的由消化动作域模板语义约束（④ 不主动推进），该写的（子代理产出落盘等合理继续动作）不拦
   - **循环终止**：auto-turn 内无新 async（禁 spawn）→ 无新池项 settle → auto-turn 结束后池空或剩 running 旧项 → 池空 → 挂起自然退出；剩 running → 继续挂起等下一 settle → 下一 auto-turn（每次消化后都会收敛到池空——链式不可能）
-  - **轮次预算（评审 #4）**：per-auto-turn 上限 `AUTO_TURN_MAX_TURNS = 8`（覆盖 runAgent 默认 maxTurns 200——无人值守单轮消化不应跑长；超限（或撞 ContinueError——评审 #7）→ **auto-refuse 不弹 continue 面板**（仿 §15 子代理 turn-cap 规则）+ 已生成部分以"部分消化"形态注入 + 回挂起态）；单次挂起内 auto-turn 次数自然受池大小约束（每 settle ≤1 次 + 合并消化）
+  - **轮次上限（用户 2026-09-02 裁定，评审 #4 撤销专属预算）**：auto-turn **不另设轮次预算**——统一用系统 maxTurns 设定（runAgent 默认 200/overrideTurns 机制，§2）——"不要每个地方各搞一套"；成本护栏 = 消化动作域 + 合并消化 + 禁 spawn + **AUTO 责任转移**（用户开 AUTO = 授权无人值守成本）；单次挂起内 auto-turn 次数自然受池大小约束（每 settle ≤1 次 + 合并消化）；撞 ContinueError → 按 §2 统一续跑规则
 - **D-S7 权限（N2）**：auto-turn 撞权限门（手动模式）→ 无用户在场按 no-permission-handler 拒绝（§15 同语义，不悬挂）
 - **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构。**冻结门控（评审 #2）**：§15 "settle 即发 ⟦ev⟧done"（subagent.mjs settle 回调无条件发）在**挂起态改为延迟发**——settle 时若处于挂起态（回合已结束且池未空）→ 不发 done 冻结，区块头保持 ✓-pending 中间态（`role#id · done · awaiting digestion`）；池空冻结退出时统一补发 done；正常回合内 settle（非挂起态）行为不变（完成即冻结）——subagent.mjs settle 回调需感知挂起态（agent 级标志 `_suspended`）
 - **受影响文件（两端）**：
