@@ -716,7 +716,7 @@ test("depth>0 传 async → 报错拒绝（§15 D-A3：async 仅顶层可用）"
   )
 })
 
-test("T5 (vscode): 回合收尾——未 check 的 async 在 runAgent 结束自动等待 + 注入会话 + 注册表清空", async () => {
+test("T5 (vscode, §17 D-S1 superseded): 回合收尾——回合内已 settle 的 async 收已完成直注入 + 注册表清空（collectSettledAsync 语义；不再 allSettled 等待——未完成项移交挂起会话，见 suspension.test.mjs T-S1）", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "tc-sub-"))
   const { runAgent } = await import("../src/agent.mjs")
   let parentCalls = 0
@@ -741,12 +741,16 @@ test("T5 (vscode): 回合收尾——未 check 的 async 在 runAgent 结束自�
         const frame = { choices: [{ index: 0, finish_reason: "tool_calls", delta: { content: "", tool_calls: [{ index: 0, id: "t1", type: "function", function: { name: "subagent", arguments: JSON.stringify({ task: "child job", role: "coder", async: true }) } }] } }] }
         res.end(`data: ${JSON.stringify(frame)}\n\ndata: [DONE]\n\n`)
       } else {
-        // 父回合 2：最终回复
-        res.end(
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "final" } }] })}\n\n` +
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
-          "data: [DONE]\n\n"
-        )
+        // 父回合 2（最终回复）延迟 400ms：无论子代理请求是否晚于本请求到达
+        // （prepareRun 竞态），子代理 settle（即刻响应）都先于父回合收尾——
+        // collectSettledAsync 直注入路径的确定断言（CLI T5 同款手法）。
+        setTimeout(() => {
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "final" } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            "data: [DONE]\n\n"
+          )
+        }, 400)
       }
     })
   })
@@ -766,7 +770,7 @@ test("T5 (vscode): 回合收尾——未 check 的 async 在 runAgent 结束自�
     assert.ok(injected[0].content.includes("child report"), "报告文本注入（XML 转义后仍在）")
     // pushReal 双线同步：真实消息 + 收尾注入都进人读线（机读线另有 system/time 注入，天然更长）
     assert.equal(fullHistory.filter((m) => typeof m.content === "string" && m.content.includes("async subagent #1")).length, 1, "人读线同步注入")
-    assert.equal(history._asyncSubagents, undefined, "收尾后注册表清空（depth-0 载体释放）")
+    assert.equal(history._asyncSubagents, undefined, "收尾后注册表清空（depth-0 载体释放——已注入项移出池）")
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })

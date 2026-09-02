@@ -2,6 +2,9 @@
  * ui.test.mjs — webview DOM builders (happy-dom).
  * First DOM-level coverage for the message/tool rendering layer — the area
  * where i18n loss ("msg.user"), bad tool cards, and broken diff previews lived.
+ * ui.js is a state-free leaf (§17: setLoading moved to loading.js) — static
+ * import is safe; state.js-dependent chat.js loads inside the nested describe
+ * AFTER the bridge stub + body (see below).
  */
 import { describe, it, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -206,8 +209,8 @@ describe("subagent activity stream — one block per #subId channel", () => {
     const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
     const body = html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? ""
     document.body.innerHTML = body.replace(/<script[\s\S]*?<\/script>/g, "")
-    // chat.js calls the VS Code webview bridge acquireVsCodeApi() at module top —
-    // stub it so the module initializes.
+    // chat.js (→ state.js) calls the VS Code webview bridge acquireVsCodeApi() at
+    // module top — stub it so the module initializes with the real body in place.
     globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
     await import("../webview/chat.js")
   })
