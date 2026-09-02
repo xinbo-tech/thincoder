@@ -130,7 +130,7 @@ PreToolUse hooks → 阻断
 结构化事件继续走现有 token 管线（`onToken`），以保留字符开头、可机械识别的形式编码（哨兵串为罕见字符组合，正常内容混淆概率极低；生成侧仍对子 agent 文本 strip 哨兵序列防伪造——见 D7）。选择扩展现有管线而非新增 `onSubagentEvent` 回调的理由：① 生成侧（subagent/escalate/consult 三处 childCallbacks）与消费侧（TUI 前缀正则分流）均已存在且稳定，新增回调需要同时改 runAgent 签名、三个生成工具、TUI callbacks 装配——扩散面更大；② 未来端点接入时按既有前缀管线消费（注意：ACP 桥现状是前缀 token 原样透传，事件剥除见 D7——"天然继承"不成立，需端点各自适配）。
 
 - 进度事件 token：带前缀的 onToken chunk，payload 形如 `⟦ev⟧turn\x1e{n}\x1e{max}\x1e{phase}\x1e{detail}`——以字面哨兵串 `⟦ev⟧` 开头（LLM 不会生成），`\x1e`（RS）作字段分隔。phase ∈ `llm | tool | approval | done`；detail 为工具名或审批描述（≤40 字符截断）。TUI 解析后**不进 blocks、不进主流**，仅更新区块头部状态；sanitizeDisplay 兜底 strip（防未来漏解析时控制字符入流）。
-- **事件名 × 发射点 × 载体矩阵（round2 #3 修订，消歧；code review #7 补 §15 例外）**：`⟦ev⟧` token 常规只有两种——`turn`（runAgent depth>0 在 `_currentTurn` 更新处发，phase=llm，{n}/{max} 必填）与 `approval`（dispatch.mjs 权限询问处发，{n}/{max} 取子 agent 当前 turn 计数）；**tool/done phase 不发 token**——由既有 onToolCall/onToolResult 前缀 relay 承担（TUI 前缀分支更新 currentTool 与 done 状态，即 D4）。**§15 例外：`done`**——仅 async 子代理回合收尾集合完成后由 agent.mjs 发（见 §15 D-A3），TUI 冻结区块信号（同步子代理的 done 仍由 onToolResult 前缀 relay 承担）。phase 枚举中的 `tool/done` 描述的是头部状态机的输入来源之一，不是 token 种类。
+- **事件名 × 发射点 × 载体矩阵（round2 #3 修订，消歧；code review #7 补 §15 例外）**：`⟦ev⟧` token 常规只有两种——`turn`（runAgent depth>0 在 `_currentTurn` 更新处发，phase=llm，{n}/{max} 必填）与 `approval`（dispatch.mjs 权限询问处发，{n}/{max} 取子 agent 当前 turn 计数）；**tool/done phase 不发 token**——由既有 onToolCall/onToolResult 前缀 relay 承担（TUI 前缀分支更新 currentTool 与 done 状态，即 D4）。**§15 例外：`done`**——仅 async 子代理回合收尾集合完成后由 agent.mjs 发（见 §15 D-A3；**§17 D-S8 修订：挂起态延迟至池空冻结补发，round2 #1**），TUI 冻结区块信号（同步子代理的 done 仍由 onToolResult 前缀 relay 承担）。phase 枚举中的 `tool/done` 描述的是头部状态机的输入来源之一，不是 token 种类。
 - 模型元数据：沿用现有 `[model]` token，不重复设计。
 - **F7 落地方式**：`onToolOutput` 的 `{kind,text}` 契约本已在 advisor/bash 中实际使用（advisor/run.mjs emit() 包装；bash 裸字符串由 TUI 兜底归一化）。本轮仅立规成文（TUI-TOOL-OUTPUT.md §2 已承载），不新增代码。
 - 子agent 工具输出 relay：**复用 dispatch.mjs 的 onOutput → `callbacks.onToolOutput(name, chunk)` 既有接线**——生成侧 childCallbacks 增加 `onToolOutput: (name, chunk) => parent.onToolOutput(`${relayPrefix}${name}`, chunk)`，TUI 端 onToolOutput 对带前缀 name 剥前缀路由进对应区块（kind 解析复用既有 string→{kind,text} 归一化）。节流/截断由渲染层统一施加（生成层原样转发，保持各端自行决定展示粒度）。
@@ -235,7 +235,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - **F2 · 高度**：**完全自适应**——面板高度 = 全部运行中区块的完整高度（无上限；并行多个子 agent 内容全显示，会话区相应被挤小）——用户拍板。**已知限制（评审 #1，用户拍板方案 a）**：多个展开块总高超屏时面板底部裁剪（无面板级滚动）——展开块自身可滚（60% 窗口化 + 块内滚动保留）——用户逐个展开/收起
 - **F3 · 固定**：面板独立于 conversation 滚动区——会话滚动（滚轮/PgUp/流式）不影响面板位置；面板上滚轮**穿出滚会话**（与 todo 面板行为一致）
 - **F4 · 折叠**：面板内每个子 agent 区块**默认折叠**（头部摘要 + tail 3，点击展开）——与现状流内区块一致（用户拍板）；展开态经 fold-block.mjs 公共组件（60% 封顶 + 块内滚动 + 底部可达收起控制行）
-- **F5 · 冻结**：子 agent 完成后**立即冻结进会话流**（✓ 头 + 可展开，D4 现状不变）——面板只显示运行中区块，完成即移出
+- **F5 · 冻结**：子 agent 完成后**立即冻结进会话流**（✓ 头 + 可展开，D4 现状不变；**挂起态例外：§17 挂起期间 settled 块驻留面板 "done · awaiting digestion" 中间态，池空冻结退出时统一补发 done——round2 #4**）——面板只显示运行中区块，完成即移出
 - **F6 · 空态**：无运行中区块时面板不渲染（无悬空分隔线——现状分隔线逻辑迁移到面板边界）
 - **F7 · 交互**：面板内点击（展开/收起/块内翻窗）坐标映射到面板行；折叠状态（expandedBlocks key=`sub-${key}`）跨 turn 保持（D4 现状）
 
@@ -556,7 +556,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T2 | ✓ 主会话继续 | async spawn 后同一回合再调另一只读工具 | 第二工具正常执行返回（不被 spawn 阻塞） | F1/D-A1 |
 | T3 | ✓ 完成顺序 | 2 个 async（快/慢）| `subagent_check`（无 id）先返回快的 id+报告；第二次 check 返回慢的；第三次返回 `{done:true}` | F2/D-A2 |
 | T4 | ✓ 特定 id 等待 | 带 id check 慢的 | 阻塞到该 id 完成返回其报告 | F2/D-A2 |
-| T5 | ✓ 回合收尾 | async 未 check + runAgent 自然结束 | finally await 全部；报告注入会话（user 角色 reminder）；`_asyncSubagents` 清空 | F3/D-A3 |
+| T5 | ✓ 回合收尾（~~旧语义：finally await 全部 + 清空~~——**被 §17 D-S1 取代：collectSettled 收已完成注入 + 未完成移交池**，round2 #1） | async 未 check + runAgent 自然结束 | §17 落地后：回合自然结束不等待；已 settle 注入 + 未 settle 保留池 | §17 D-S1 |
 | T6 | ✓ 槽位队列（超限入队） | 第 5 个 async spawn（4 个 running） | **入队**：返回 `{id, status:"queued", position:1}`，不拒绝；前 4 个不受影响 | F5/D-A1 |
 | T10 | ✓ 腾槽补位 | 第 5 个入队后，1 个 running 完成（promise settle） | 队列头部 queued 项**自动启动**（status→running，position 释放）；无需模型再 spawn | F5/D-A1 |
 | T11 | ✓ 队列位置 | 第 6、7 个 spawn（5 在跑/队） | position 递增（1、2）；位置信息随 spawn 返回可见 | F5/D-A1 |
@@ -567,7 +567,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T8 | ✓ 中断 | async 运行中 Ctrl+C | abort 传播；收尾不再等待（error 带中断语义） | D-A3 |
 | T9 | ✓ 上限纪律同步（评审 #4） | 读 engineering.md | 含 "Cap: at most 4 concurrent eng-coders" + "past 4"（两端 byte-identical） | F5/D-A4 |
 
-**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）；AC6 = check 错误路径与防循环上限（T12/T13）。
+**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5——**§17 落地后语义 = 未 settle 移交池 + 下轮 D-S3 注入，round2 #1**）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）；AC6 = check 错误路径与防循环上限（T12/T13）。
 
 ### 15.5 关键决策
 
@@ -639,7 +639,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ## 17. 挂起回合：会话级后台双通道（2026-09-02，用户方案：async 子代理运行中主会话可继续对话）
 
 > **状态：设计定稿（2026-09-02，V2 完整版 + 推进型——用户拍板：AUTO 模式下 auto-turn 可推进（写/spawn 全开放），手动模式维持消化型）**。
-> 权威源补充：本节是 §15（subagent 异步化）的语义演进——**F3"回合收尾自动等待"被本节挂起语义取代**（见 17.3 评估①）。**§15.4 T5/AC3 断言随本节修订（评审 #1）**：T5 原期望"finally await 全部 + _asyncSubagents 清空"（`thincoder/test/subagent.test.mjs`）改为 collectSettled 语义（收已完成注入 + 未完成移交池）；AC3"回合结束未取结果不丢"语义保留（结果经 D-S3 下轮注入/auto-turn 消化）但实现断言同步改。
+> 权威源补充：本节是 §15（subagent 异步化）的语义演进——**F3"回合收尾自动等待"被本节挂起语义取代**（见 17.3 评估①）。**§15.4 T5/AC3 断言随本节修订（评审 #1）**：T5 原期望"finally await 全部 + _asyncSubagents 清空"（`thincoder/test/subagent.test.mjs`）改为 `collectSettledAsync` 语义（收已完成注入 + 未完成移交池——函数名统一 collectSettledAsync，round2 #6）；AC3"回合结束未取结果不丢"语义保留（结果经 D-S3 下轮注入/auto-turn 消化）但实现断言同步改。
 
 ### 17.1 问题与需求
 
@@ -704,29 +704,45 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 17.3 设计（V2 完整版——V1 注入档并入为 D-S3/D-S4 的基础语义，V2 auto-turn 为 D-S5..D-S7）
 
-- **D-S1 回合尾语义（V1 核心）**：`collectAsyncSubagents` 拆为 `collectSettledAsync(agent)`（注入已完成，形态不变）+ 未完成项**保留在池**（不清空、不等待、不发 done 冻结——区块继续 live）。finally 分支（agent.mjs:447-452）在"anything else"路径调用 collectSettled 后**直接返回**，不再 allSettled 等待
+- **D-S1 回合尾语义**：`collectAsyncSubagents` 拆为 `collectSettledAsync(agent)`（注入已完成，形态不变——函数名统一，round2 #6）+ 未完成项**保留在池**（不清空、不等待、不发 done 冻结——区块继续 live）。finally 分支（agent.mjs:447-452）在"anything else"路径调用 collectSettled 后**直接返回**，不再 allSettled 等待
 - **D-S2 交互层挂起态**（CLI agent-turn/startup turn 循环、VS Code 面板循环）：回合返回后 `agent._asyncSubagents` 非空 → 进入挂起态（非 processing——输入框可用、状态行"后台 N 子代理运行中"）；退出条件 = 池空（无 running/queued/**未注入**——与 F5 同口径，评审 #8）+ 无排队输入 → 回空闲（settled 未注入残余由 D-S3 下轮 prepareRun 吸收，退出前如有残余先注入再退）
-- **D-S3 prepareRun 前注入**：`_pendingAsyncResults` 数组（同 _pendingDistill 模式，agent.mjs:114-118 处落定）——每回合开始前把已 settle 未注入项注入历史；V1 的"处理"= 注入（模型下轮可见）
+- **D-S9 交互层挂起状态机（round2 #5）**——状态 × 事件 × 动作 × 出口：
+
+| 状态 | 事件 | 动作 | 出口 |
+|---|---|---|---|
+| idle | 回合返回且池非空 | 置 `_suspended` → 挂起态（输入可用 + 状态行"后台 N 子代理"） | → suspension |
+| idle | 回合返回且池空 | 正常回 idle | 不变 |
+| suspension | 池项 settle 且无 pendingInput | settle 项入 _pendingAsyncResults → 开 auto-turn（消化/推进按档） | auto-turn 期间仍挂起（_suspended 保持） |
+| suspension | 用户 Enter（无 pendingInput 在消化） | 普通新回合（D-S4；prepareRun 注入 pending） | 回合结束时池空 → idle；非空 → 回 suspension |
+| suspension | 用户 Enter（消化 auto-turn 运行中） | 入 pendingInput 单槽队列（输入框清空） | auto-turn 结束后自动以该消息开新回合 |
+| auto-turn | 结束且池空 + 无 pendingInput | 补发 done 冻结 + 清 _suspended | → idle（挂起自然退出） |
+| auto-turn | 结束且池非空 | 回挂起等下一 settle（_suspended 保持） | → suspension |
+| auto-turn | 结束且有 pendingInput | 自动以该消息开新回合（不触发新 auto-turn） | → 回合（结束后按池态回 idle/suspension） |
+| suspension/auto-turn | Ctrl+C | 清池（§15 abort 语义）+ 清 _suspended | → idle |
+| suspension/auto-turn | ContinueError | 按 §2 统一续跑规则（工程 && AUTO → 自动 resume；否则询问/auto-refuse） | → 续跑回合或回挂起 |
+
+时序边界（round2 #5）：settle 与 `_suspended` 翻转竞态——`_suspended` 在 runAgent finally 返回后（交互层进入挂起前）置位；settle 回调读到的标志若为 false（回合刚结束瞬间）→ 按正常回合语义发 done 冻结（该块本就在流尾，无害）；D-S8 门控以回调读取时刻为准（确定性，无锁需求）
+  - **D-S3 prepareRun 前注入（注入单主，round2 #3）**：`_pendingAsyncResults` 数组（同 _pendingDistill 模式，agent.mjs:114-118 处落定）——每回合（用户回合与 auto-turn）开始前把已 settle 未注入项注入历史。**条目生命周期（唯一记账点）**：settle → 入 `_pendingAsyncResults`（pending）→ **仅在 prepareRun 前注入点消费**（injected 后即从数组移除 = consumed）——D-S6 触发不再自行注入（只负责触发 auto-turn，注入由 auto-turn 的 prepareRun 统一完成）；D-S2 池空判据的"未注入" = `_pendingAsyncResults` 非空；负测试：settle 与回合边界竞态只注入一次
 - **D-S4 输入通道**：挂起态提交 = 普通新回合（D-S3 注入先行）；**输入框状态永不被后台事件读写**（F3 铁律——事件处理与输入框零耦合）
 - **D-S5 排队（F4）**：auto-turn 处理轮 running 中用户 Enter → 消息入队（交互层 `pendingInput` 单槽队列——F3 铁律：输入框不清空、文本保留在框内可继续编辑，Enter 后消息进队列并清框），处理轮结束交互层**自动以该消息开新回合**；队列非空期间**不触发新 auto-turn**（排队输入优先）；Ctrl+I 仍可立即打断处理轮（普通插话语义保留）
 - **D-S6 auto-turn（V2 核心）**：
   - **入口（一手核实 2026-09-02）**：`runAgent` 加 `{ autoTurn: true }` 选项——prepareRun 的 input 注入在 `!resume` 块内（`prepareRun` 的 pushReal input 处，setup.mjs:168 as-of），autoTurn 语义 = **不 push input + per-run 状态重置（如普通回合）+ history 尾 = 已注入的 reminder user 消息**——复用 resume 的"不 push input"机制但**不绑定 ContinueError 语义**（resume preserve per-run 状态是给续跑守卫用的；autoTurn 是系统驱动新回合，per-run 重置如普通回合：_advisorRound/_compressFailures/_asyncCheckLastN 等全重置）
-  - **触发**：挂起态池项 settle 且无 pendingInput → 交互层注入该 settle 项 reminder（`[System reminder: async subagent #id (role) finished]` + 报告，XML 转义 + 64K 落盘——现收尾注入形态）→ 开 auto-turn；**合并**：触发时收集全部已 settle 未注入项一次注入（多子代理近邻完成 → 一轮消化全部，N1 成本护栏）
+  - **触发**：挂起态池项 settle 且无 pendingInput → settle 项入 `_pendingAsyncResults`（D-S3 记账）→ 交互层开 auto-turn（**注入由 auto-turn 的 prepareRun 统一完成**——单注入点，round2 #3）；**合并**：触发时 `_pendingAsyncResults` 全部已 settle 未注入项在 auto-turn prepareRun 一次注入（多子代理近邻完成 → 一轮消化全部，N1 成本护栏）
   - **消化动作域（两档，用户 2026-09-02 拍板推进型——动作域 = 模式函数）**：
     - **手动档（无 AUTO——auto-turn 只做"信息整理"，不做"状态改变"）**：auto-turn = 系统事件驱动、无用户输入的 runAgent 回合（模型只会回合式工作；"处理子代理报告"在架构上必然 = 开一个回合）。动作域：
     - **允许（整理已发生的）**：① 总结报告要点注入会话流（用户回来可读；只读验证报告声称——read/搜索类工具放行）② 更新任务清单（标 done）③ 标记需决策点 + 写下建议（"建议下一步：…"——只写不执行）
     - **禁止（让新事情发生的）**：写文件/改代码；执行类工具 bash/execute/verify（灰度 1）；spawn 一切子代理（async + 同步——**机械拒绝**，subagent.mjs 入口检查 `agent._inAutoTurn && !agent.autoApprove` → 返回 `{ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" }`）
     - **灰度裁定（2026-09-02，手动档）**：灰度 1（自跑 verify/测试）→ 不跑，写成建议；灰度 2（产出落盘）→ 不写；灰度 3（只读 read 验证）→ 允许
-    - **AUTO 档（autoApprove 开——auto-turn = 普通回合全语义，推进型）**：动作域 = **与用户回合一致**——读/写/spawn（async + 同步）/verify/执行类全开放（AUTO 自动执行——用户已授权无人值守，责任在用户，2026-09-02 裁定与 async 子代理同级信任）；**禁 spawn 机械限制撤销**（推进链成立：auto-turn spawn async → 池项 settle → 新 auto-turn 消化 + 可再 spawn——链终止 = 池空自然停 + 用户输入随时打断（D-S5 pendingInput 优先，输入即新回合链断））；guard 语义 = 普通回合同款（mutation → 回合内 guard 推回自验——评审 #5 修订：推进档不跳 guard）；auto-turn 结束仍有残留未验证 mutation → _inheritedGuard 并入下一用户回合（防静默漏验）
+    - **AUTO 档（autoApprove 开——auto-turn = 普通回合全语义，推进型）**：动作域 = **与用户回合一致**——读/写/spawn（async + 同步）/verify/执行类全开放（AUTO 自动执行——用户已授权无人值守，责任在用户，2026-09-02 裁定与 async 子代理同级信任）；**禁 spawn 机械限制撤销**（推进链成立：auto-turn spawn async → 池项 settle → 新 auto-turn 消化 + 可再 spawn——链终止 = 池空自然停 + 用户输入随时打断（D-S5 pendingInput 优先，输入即新回合链断））；guard 语义 = 普通回合同款（mutation → 回合内 guard 推回自验——评审 #5 修订：推进档不跳 guard）；auto-turn 结束仍有残留未验证 mutation → _inheritedGuard 并入下一用户回合（防静默漏验）。**guard 分档总则（round2 #6 归位）**：手动档结束路径不跑 guard 推回（消化语义——动作域禁 verify/测试，推回会自锁死循环）；AUTO 档 = 普通回合同款（回合内推回自验）；**两档通用**：auto-turn 的 mutation 标记（_mutatedThisRun/_touchedFiles 等）不随下轮 per-run 重置而丢——autoTurn 结束时 guard 字段合并保留（resume 式语义），下一用户回合 prepareRun 不重置（`_inheritedGuard`）→ 下轮 guard 覆盖 auto-turn 期间改动（防静默漏验）
   - **轮次上限（用户 2026-09-02 裁定，评审 #4 撤销专属预算）**：auto-turn **不另设轮次预算**——统一用系统 maxTurns 设定（runAgent 默认 200/overrideTurns 机制，§2）——"不要每个地方各搞一套"；成本护栏 = 手动档消化动作域（禁 spawn/写）+ 合并消化 + **AUTO 责任转移**（用户开 AUTO = 授权无人值守成本）；单次挂起内 auto-turn 次数自然受池大小约束（每 settle ≤1 次 + 合并消化）；撞 ContinueError → 按 §2 统一续跑规则
 - **D-S7 权限（N2）**：auto-turn 撞权限门（手动模式）→ 无用户在场按 no-permission-handler 拒绝（§15 同语义，不悬挂）
-- **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构。**冻结门控（评审 #2）**：§15 "settle 即发 ⟦ev⟧done"（subagent.mjs settle 回调无条件发）在**挂起态改为延迟发**——settle 时若处于挂起态（回合已结束且池未空）→ 不发 done 冻结，区块头保持 ✓-pending 中间态（`role#id · done · awaiting digestion`）；池空冻结退出时统一补发 done；正常回合内 settle（非挂起态）行为不变（完成即冻结）——subagent.mjs settle 回调需感知挂起态（agent 级标志 `_suspended`）
+- **D-S8 状态呈现**：TUI 状态行（后台 N 子代理）/区块不冻结继续 live/池空冻结退出；VS Code 面板同构。**冻结门控（评审 #2）**：§15 "settle 即发 ⟦ev⟧done"（subagent.mjs settle 回调无条件发）在**挂起态改为延迟发**——settle 时若处于挂起态（回合已结束且池未空）→ 不发 done 冻结，区块头保持 ✓-pending 中间态（`role#id · done · awaiting digestion`）；池空冻结退出时统一补发 done；正常回合内 settle（非挂起态）行为不变（完成即冻结）——subagent.mjs settle 回调需感知挂起态（agent 级标志 `_suspended`）。**`_suspended` 翻转点（round2 #7）**：交互层在 runAgent finally 返回后、进入挂起前置位；挂起自然退出（池空冻结补发后）清除；回合运行中（用户回合/auto-turn 执行期）恒 false——settle 回调以读取时刻为准（见 D-S9 时序边界，确定性无竞态锁）
 - **受影响文件（两端）**：
   - CLI `src/agent.mjs`：finally 收尾改 collectSettledAsync（等全部 → 收已完成 + 移交未完成）；runAgent 加 `autoTurn` 选项；_pendingAsyncResults 注入（prepareRun 前，同 _pendingDistill 模式 agent.mjs:114-118）
   - CLI `src/agent-tools/subagent.mjs`：`_inAutoTurn && !autoApprove` 机械拒绝 spawn（手动档；AUTO 档放行）
   - CLI 交互层（agent-turn.mjs / startup.mjs / TUI key-handler + 状态行 + 渲染）：挂起态循环、pendingInput 队列、输入放开、后台模式呈现、auto-turn 触发
   - VS Code 同构（src/agent.mjs + 面板消息循环 + webview 输入态）
   - 两端测试 + `docs/design/AGENT-LOOP.md` 本节回写 + VS Code `docs/design/ARCHITECTURE.md` 引用段 + `docs/design/TUI.md`（状态行/后台模式/挂起态段 + 模块地图——评审 #3）+ `docs/design/TUI-INPUT-BOX.md`（挂起输入放开 + Enter 排队语义——评审 #3，输入框契约归属）+ 两端 CHANGELOG（父代理统一）
-  - **consult.mjs / advisor / verify 不动**。**guard 语义（评审 #5 裁定 + 2026-09-02 推进型修订，分档）**：**手动档** auto-turn 结束路径不跑 guard 推回（消化语义——动作域禁 verify/测试，推回会自锁死循环）；**AUTO 档** guard 语义 = 普通回合同款（mutation → 回合内 guard 推回自验，见 D-S6 AUTO 档）；**两档通用**：auto-turn 产生的 mutation 标记（_mutatedThisRun/_touchedFiles 等）不随下轮 per-run 重置而丢——autoTurn 结束时把 guard 相关字段合并保留（resume 式语义），下一用户回合 prepareRun **不重置**这些字段（`_inheritedGuard` 标志）→ 下轮用户回合的 verify/advisor guard 覆盖 auto-turn 期间改动（防"auto-turn 写过的代码静默无验证"）
-- **测试**：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S7 auto-turn 消化（手动档：完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 禁 spawn 分档（手动档 async + 同步均拒绝 / AUTO 档放行——推进链：auto-turn spawn async → settle → 新 auto-turn 消化，链在用户输入或池空时终止）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写一致性（auto-turn 下写调用在 AUTO 模式自动执行——与 async 子代理同级信任；手动模式拒绝）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
+  - **consult.mjs / advisor / verify 不动**（guard 分档语义见 D-S6 正文，round2 #6 归位）
+- **测试**（round2 #2：T-S1..S13 实现前必须展开为 §15.4 式完整用例表——#/场景/输入/预期/映射 + 正常/边界/错误标注 + F1-F8/N1-N5 覆盖检查——列为 eng-coder 硬验收项，§7.2 先例）：T-S1 回合尾不等（慢 async + 回合自然结束早于子代理完成）；T-S2 注入不丢（已完成项在下轮 prepareRun 前注入）；T-S3 挂起态输入可用（池非空时新回合正常开跑）；T-S4 叠加并发（两回合各派 async，池累积，上限 4 全局）；T-S5 Ctrl+C 清池回归；T-S6 挂起自然退出（池空 → 回空闲）；T-S14 中间态渲染（round2 #4：挂起期 settled 块显示 "done · awaiting digestion" 驻留面板；池空冻结退出时补发 done 冻结进流——§7.2.1 F5 挂起例外回归）；T-S7 auto-turn 消化（手动档：完成无输入 → 自动回合注入消化 + 要点总结进会话流）；T-S8 禁 spawn 分档（手动档 async + 同步均拒绝 / AUTO 档放行——推进链：auto-turn spawn async → settle → 新 auto-turn 消化，链在用户输入或池空时终止）；T-S9 排队续发（auto-turn 中 Enter → 队列 → 结束后自动新回合）；T-S10 权限拒绝（auto-turn 撞权限门 → 拒绝不悬挂）；T-S11 合并消化（多子代理近邻完成 → 一轮注入全部）；T-S12 AUTO 写一致性（auto-turn 下写调用在 AUTO 模式自动执行——与 async 子代理同级信任；手动模式拒绝）；T-S13 既有 §15 全回归（阻塞模式/check/上限/中断）
 - **验收**：AC-S1 = 回合尾不阻塞（网友痛点：async 跑着主会话可继续对话）；AC-S2 = 子代理结果零丢失（下轮/自动可见）；AC-S3 = 输入框零干扰；AC-S4 = 挂起自然退出；AC-S5 = 既有 §15 语义回归（阻塞模式/check/上限/中断全不变）；AC-S6 = 两端全量绿
