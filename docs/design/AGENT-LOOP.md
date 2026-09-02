@@ -515,7 +515,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - F1：`subagent` 工具加 `async: true` 参数——显式开启后 spawn **立即返回** `{ id, role, status: "running" }`（不 await 报告）；主会话可继续自己的回合
 - F2：新增 `subagent_check` 工具——取回 async 子代理结果；**多 async 按完成顺序（arrival order）消费**——先完成先处理（F-2 消除）
 - F3：回合结束时未完成的 async 子代理**自动等待完成**，报告注入会话（干活型不白做）
-- F4：默认行为不变——不带 async 时完全保持现有阻塞语义（提示词/流程/测试零波及）
+- F4：默认行为不变——不带 async 时完全保持现有阻塞语义（提示词/流程/测试零波及）~~——**§18 F1 修订（2026-09-02）：eng-coder role 缺省 async（其余角色不变）**~~
 - F5：**CLI 并发上限 4 + 槽位队列（async，机械层，用户 2026-09-02 拍板）**——`_asyncSubagents` 中 running 数 <4 时新 async spawn **立即启动**；≥4 时**入队等待**（`status:"queued"`，返回 `position`），**running 子代理完成（promise settle）即腾槽 → 队列头部自动补位启动**——不拒绝、不要求模型分批（"槽位空出立即 spawn 下一个"）。**同步 spawn 不受机械上限约束**（本就阻塞不堆积）。**既有工程纪律上限 3 → 4（提示词层，两端）**：同步并行 eng-coder spawn 的纪律上限同步改为 4
 
 ### 15.3 设计
@@ -572,12 +572,12 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T8 | ✓ 中断 | async 运行中 Ctrl+C | abort 传播；收尾不再等待（error 带中断语义） | D-A3 |
 | T9 | ✓ 上限纪律同步（评审 #4） | 读 engineering.md | 含 "Cap: at most 4 concurrent eng-coders" + "past 4"（两端 byte-identical） | F5/D-A4 |
 
-**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5——**§17 落地后语义 = 未 settle 移交池 + 下轮 D-S3 注入，round2 #1**）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）；AC6 = check 错误路径与防循环上限（T12/T13）。
+**验收**：AC1 = async spawn 不阻塞主会话（T1/T2）；AC2 = 多 async 先完成先取（T3/T4）；AC3 = 回合结束未取结果不丢（T5——**§17 落地后语义 = 未 settle 移交池 + 下轮 D-S3 注入，round2 #1**）；AC4 = **槽位队列：超限入队不拒绝（T6）+ 完成即腾槽补位（T10）+ 位置信息（T11）** + 同步 spawn 上限 3→4 生效（T9：`engineering.md` 内容断言含 "Cap: at most 4 concurrent eng-coders" + "past 4"——照 §16 T-B4 模式）；AC5 = 默认阻塞零回归（T7 + CLI 全量 + lint 绿）~~——**§18 修订：eng-coder 除外（角色级缺省 async）**~~；AC6 = check 错误路径与防循环上限（T12/T13）。
 
 ### 15.5 关键决策
 
 - **consult 范式借鉴而非复用**：consult 是"多模型咨询"语义（会话级、可放弃、main_history 注入）；subagent 是"任务执行"语义（调用级、要收尾、mergeChildMutations 回传）——共享"非阻塞 + 轮询"形态，实现独立（consult.mjs 零改动）
-- **显式 async 而非默认全异步**：现有提示词/流程（偏差审计、交付核验等）都是"spawn 后等报告"的阻塞用法；默认变更会波及全部——显式参数把新能力做成加法
+- **显式 async 而非默认全异步**：现有提示词/流程（偏差审计、交付核验等）都是"spawn 后等报告"的阻塞用法；默认变更会波及全部——显式参数把新能力做成加法~~——**§18 F1 修订（2026-09-02）：角色级缺省例外——eng-coder 默认 async（工程交付自动链需要——见 §18）**~~
 - **收尾等待而非 abort**：eng-coder 干活型，回合结束 abort = 工作白做（用户明确选等待）；中断（Ctrl+C）仍传播 abort（用户显式停不等待）
 - **槽位队列而非拒绝/分批（用户 2026-09-02 拍板）**：超限入队 + 完成即腾槽补位——模型一次可 spawn 任意数量，无需分批等待（"槽位空出立即 spawn 下一个"）；同步 spawn 本就不堆积（阻塞），不受限；用户拍板上限 3→4
 - **否决**：a) 默认全异步（波及面大，F4 相反）；b) 回合结束 abort（丢工作）；c) 上限仅自律（防呆失效风险）；d) 超限拒绝 + 模型自行分批（正是用户否掉的行为）；e) 消费才腾槽（check 后才补位——槽位利用率低，用户要求完成即补）
@@ -768,7 +768,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 18. 工程交付自动链：eng-coder 默认 async + 后台审计/修正/review 全自动（2026-09-02，用户拍板 B1 全链自动）
 
-> **状态：设计定稿，待评审**。用户实测痛点：同步 spawn 的 eng-coder 阻塞主会话——"功能目的就是 eng-coder 执行中主会话能去干别的"，同步默认让 §17 挂起功能形同虚设。用户拍板（2026-09-02 逐项）：① eng-coder **默认 async**（§15 F4 修订）；② 交付后审计/修正/review 移入**挂起后台链**自动推进（B1 全链自动——手动档也跑，修正轮无人值守自动 spawn）；③ 收敛轮数 5；④ code review（advisor）也进链；⑤ 双通道并行——用户输入与链互不打断（§17 既有语义，无暂停机制）。
+> **状态：设计定稿（2026-09-02 评审 round1 后修订——findings #1-#8 已处置，待复评审）**。用户实测痛点：同步 spawn 的 eng-coder 阻塞主会话——"功能目的就是 eng-coder 执行中主会话能去干别的"，同步默认让 §17 挂起功能形同虚设。用户拍板（2026-09-02 逐项）：① eng-coder **默认 async**（§15 F4 修订）；② 交付后审计/修正/review 移入**挂起后台链**自动推进（B1 全链自动——手动档也跑，修正轮无人值守自动 spawn）；③ 收敛轮数 5；④ code review（advisor）也进链；⑤ 双通道并行——用户输入与链互不打断（§17 既有语义，无暂停机制）。评审 round1 裁定（#1 权限委托）：**进子代理前要求授权（任务/链批准点），子代理内部全部自动**——见 D-E7。
 
 ### 18.1 需求
 
@@ -784,40 +784,58 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **D-E1 eng-coder 默认 async（§15 F4 修订）**：`subagent` schema 的 `async` 布尔——**缺省按 role 解析**：`role === "eng-coder" ? true : false`（schema description 注明）；`async: false` 显式覆盖。调用方（架构师）派 eng-coder 默认 async → 主回合立即结束 → 挂起（§17）→ 交付触发自动链。**子代理内（depth>0）spawn 规则不变**（§15 顶层限制）。
 
-**D-E2 链状态（agent 级 `_engChain`）**：`{ stage, round, designId, designTokenRef, docs, fileList, status, lastNodeAt }`——跨 digest 回合存活（agent 对象级，同 _asyncSubagents 模式）；stage ∈ { delivery, audit, fix, review, done, stalled }。链状态每次 digest 回合注入（模型决策依据——"你在链的哪一步、下一步该做什么"）。
+**D-E2 链状态（agent 级 `_engChain`）**：`{ stage, round, designId, designTokenRef, docs, fileList, status, lastNodeAt }`——跨 digest 回合存活（agent 对象级，同 _asyncSubagents 模式）；stage ∈ { audit, fix, review, done, stalled, conflict }。链状态每次 digest 回合**和用户回合**注入（模型决策依据——"你在链的哪一步、下一步该做什么"——评审 #6：用户回合也需看到链状态才能响应停链/调整指令）。
 
-**D-E3 交付检测与链启动**：digest 注入的 eng-coder 交付报告（role=eng-coder + designId 后缀——runChildPipeline 既有注入形态）→ 检测到即初始化 `_engChain`（stage=audit, round=0）——下一 digest 回合模型按注入的链状态启动审计节点。
+**D-E3 交付检测与链启动（评审 #2 修订）**：**注入点检测**——eng-coder 交付报告（role=eng-coder + designId 后缀——runChildPipeline 既有注入形态）无论经 **digest 还是用户回合的 prepareRun pending 注入**（D-S3）注入 → 检测到即初始化 `_engChain`（stage=audit, round=0）——不依赖回合类型（双通道下交付随时可能落进任一回合的注入点）；链启动后的推进由 settle 事件驱动 digest（§17 既有调度）。
 
 **D-E4 链节点执行（模型决策 + 机械护栏）**：
 - **审计节点**：digest 模型 spawn explore（role=explore，任务 = 偏差审计四类——任务书由模型基于链状态生成：docs/design 文档引用 + 交付文件清单）——探索完成注入 → 下一 digest：模型读审计报告判断
-- **修正节点**：审计 dirty → digest 模型 spawn eng-coder（async:true——链内修正轮也是后台；任务书 = 审计发现清单——invent nothing new 语义；**designToken 从链状态引用传入**（spawn 参数——token 是会话既有凭证，digest 模型作为主 agent 有权限使用；不进任务文本））→ 修正交付 → 再审计
+- **修正节点**：审计 dirty → digest 模型 spawn eng-coder（任务书 = 审计发现清单——invent nothing new 语义；**designToken 从链状态引用传入**（spawn 参数——token 是会话既有凭证，digest 模型作为主 agent 有权限使用；不进任务文本）；**写权限 = D-E7 作用域授权**——spawn 即获任务级授权，内部不再逐写审批）→ 修正交付 → 再审计
 - **review 节点**：审计 clean → digest 模型调 advisor（type=code，documents = 设计文档 + 交付文件）→ review 结果注入 → 有需修 findings → 修正节点；clean → stage=done
-- **机械护栏（subagent.mjs/advisor 入口）**：链期 spawn 白名单校验——`agent._engChain?.active` 时仅允许（explore 且链状态 stage=audit）或（eng-coder 且 stage=fix）——不匹配拒绝（error 提示）；**收敛计数**：修正轮 spawn 时 round+1，`round > 5` → 停链（stage=stalled）+ 注入"需人工介入"标记
-- **手动档例外**：§17 手动档 digest 禁 spawn 的**链节点白名单放开**——链状态 active 时上述三类 spawn 放行（非链 spawn 仍拒——白名单是唯一例外）
+- **机械护栏（subagent.mjs/advisor 入口）**：① **链节点 spawn 机械强制 async:true**（评审 #4——无视模型参数——explore 缺省阻塞会被模型不带参 spawn 成同步、阻塞 digest——白名单入口统一强制）；② 链期 spawn 白名单校验——`agent._engChain?.active` 时仅允许（explore 且 stage=audit）或（eng-coder 且 stage=fix）——不匹配拒绝（error 提示——含 **stage 耦合负例**：stage=fix 期 spawn explore 拒）；③ **收敛计数**：修正轮 spawn 时 round+1，`round > 5` → 停链（stage=stalled）+ 注入"需人工介入"标记
+- **手动档例外**：§17 手动档 digest 禁 spawn 的**链节点白名单放开**——链状态 active 时上述三类 spawn 放行（非链 spawn 仍拒——白名单是唯一例外）；修正节点写权限另由 D-E7 委托（不经手动档逐写审批）
 
-**D-E5 链与用户回合交互（F5）**：无机械暂停——用户输入 = 新回合（§17 双通道）；回合里模型看到链状态（注入）可响应"停链/调整"指令（模型改 `_engChain.status`）；链节点完成注入与用户回合的处理顺序由 §17 既有调度（pendingInput 优先）自然解决。
+**D-E5 链与用户回合交互（F5 + 评审 #5 修订）**：无机械暂停——用户输入 = 新回合（§17 双通道）；回合里模型看到链状态（注入）可响应"停链/调整"指令（模型改 `_engChain.status`）；链节点完成注入与用户回合的处理顺序由 §17 既有调度（pendingInput 优先）自然解决。
 
-**D-E6 收敛与终态**：`stage=done`（审计 clean + review clean）→ digest 注入链总结（几轮审计/修正/review、终态文件）；`stage=stalled`（5 轮修正未收敛）→ 注入需人工介入标记 + 链状态保留（用户回合可指示续链或手动处理）。节点失败（spawn 错误/子代理 error）→ 该节点重试 1 次仍败 → stalled（不静默）。
+**链驻留与无进展守护（评审 #5）**：① **退出门控**——suspensionSession 退出条件（池空 + 无 pendingInput）补：`_engChain` 非激活或 stage ∈ {done, stalled, conflict} 才允许自然退出——链非终态时池空不退出（链本身是驻留理由——digest 可继续决策下一步）；② **无进展 poke**——`_engChain.lastNodeAt` 记最近节点动作时刻：连续 N（=2）个 digest 回合无节点动作（没 spawn/没调 advisor/没改 stage）→ 注入提醒（"链无进展——digest 未推进：续链/停链？"）并置 stage=stalled（不静默搁浅——评审 #5 场景：digest 误判 clean 不调 advisor）。
 
-**受影响文件（两端）**：`src/agent-tools/subagent.mjs`（schema 默认按 role + 链白名单门 + 收敛计数）、`src/agent.mjs`（_engChain 初始化/注入——digest 回合）、`src/tui/agent-turn.mjs`（digest 链状态注入 + 交付检测）、`src/advisor` 调用点（review 节点——digest 模型经 advisor 工具自然调用，无新接线？评审确认）、AGENT-LOOP.md §15 F4 修订注 + §18 本节、两端测试、两端 prompts（subagent 工具描述——async 缺省语义 + 链白名单说明——byte-identical 三件套）、ENGINEERING-MODE.md（交付自动链流程记录——原 step 7 偏差审计从"架构师 spawn"改为"链自动"的口径修订——架构师 spawn 审计仍可用（手动触发）但默认由链承担）
+**写冲突仲裁（评审 #6）**：用户回合 `_touchedFiles` 与 `_engChain.fileList` 重叠（用户回合改了链修正目标文件）→ 链标记 stage=conflict + 注入提醒（"用户改动与链修正域重叠——链已暂停待决策：继续修正（以链为准覆盖）/终止链（以用户改动为准）"）——用户回合模型据此指示；不自动覆盖用户改动（链让位于在途用户工作）。
 
-**测试（评审后展开完整用例表——eng-coder 硬验收项）**：
+**D-E6 收敛与终态**：`stage=done`（审计 clean + review clean）→ digest 注入链总结（几轮审计/修正/review、终态文件）；`stage=stalled`（5 轮修正未收敛 / 无进展 poke / 节点失败重试 1 次仍败）→ 注入需人工介入标记 + 链状态保留（用户回合可指示续链或手动处理）；`stage=conflict`（写冲突——见 D-E5）→ 同 stalled 处置（人工决策不静默）。
+
+**D-E7 链修正节点作用域授权（评审 #1——用户裁定：进子代理前授权，内部自动）**：授权点 = **spawn 时刻**（任务/链被批准时——架构师派发前用户已批准设计+任务；链修正轮是该任务的延续——"责任在派发时转移"）→ 修正节点 eng-coder **spawn 即获任务级授权：子代理内部所有操作自动放行**（autoApprove 等效——写文件/执行工具不再透传父审批、不弹面板——§4 权限门/§7 透传/§17 D-S7 手动档逐写审批对链修正节点豁免）。作用域限定：修正只触碰 `_engChain.fileList` + 关联设计文档（任务书含清单；子代理越清单改动仍由 eng-coder 纪律约束——交付偏差审计兜底）。与 AUTO 责任转移同哲学：用户显式批准任务 = 授权链在该任务域内自动改代码；用户在/不在场同语义（无人值守承诺）。实现：修正节点 spawn 时子代理 runOpts 置 autoApprove 等效标志（链节点专用——非链手动档 spawn 语义不变——§7 人在回路保留）；与 §16 批审批的关系：链节点不经批审批队列（无面板可弹）。
+
+**受影响文件（两端）**：`src/agent-tools/subagent.mjs`（schema 默认按 role + 链白名单门 + 收敛计数 + 链节点强制 async + D-E7 授权标志）、`src/agent.mjs`（_engChain 初始化/注入——注入点检测（collectSettledAsync/prepareRun）+ digest 回合注入）、`src/tui/agent-turn.mjs`（digest 链状态注入 + suspensionSession 退出门控 + 无进展 poke + 写冲突检测）、`src/advisor` 调用点（review 节点——**评审确认：无新接线**——advisor 恒启用（§8）工具内嵌循环，digest 内经 advisor 工具自然调用；documents 取 `_engChain.docs/fileList`；manual digest 未传问答/权限 handler 不影响 advisor）、AGENT-LOOP.md §15 F4 修订注（本次一并加被取代标注——见 §15.2 F4/§15.4 AC5/§15.5 决策）+ §18 本节、两端测试（CLI `test/agent.test.mjs` + `test/suspension.test.mjs` 链用例扩展；VS Code 对应 + `test/suspension.test.mjs`）、两端 prompts（subagent 工具描述——async 缺省语义 + 链白名单/授权说明——byte-identical 三件套）、ENGINEERING-MODE.md（交付自动链流程记录——原 step 7 偏差审计从"架构师 spawn"改为"链自动"的口径修订——架构师 spawn 审计仍可用（手动触发）但默认由链承担）、VS Code 镜像（suspension.mjs 链驱动扩展 + panel/webview 链状态显示——实现时按其 ARCHITECTURE.md 惯例落引用段）
+
+**测试（实现前展开为 §15.4 式完整用例表（场景/输入/预期/映射 F1-F7）——eng-coder 硬验收项；评审 #6 补三例）**：
 - T-E1 eng-coder 缺省 async（spawn 返回 running 不阻塞）——explore 缺省阻塞（回归）
 - T-E2 async:false 显式覆盖（eng-coder 同步）
-- T-E3 链启动：eng-coder 交付注入 → _engChain 初始化 → 审计节点 spawn explore
-- T-E4 修正节点：审计 dirty → spawn eng-coder 修正（designToken 传入验证）→ 再审计
+- T-E3 链启动：**任一注入路径（digest 或用户回合 prepareRun）**交付注入 → _engChain 初始化（stage=audit）→ 下一 digest spawn 审计 explore
+- T-E4 修正节点：审计 dirty → spawn eng-coder 修正（designToken 传入验证 + **D-E7 授权标志生效——子代理写文件不弹审批直接成功**）→ 再审计
 - T-E5 review 节点：审计 clean → advisor code review → clean → done
 - T-E6 收敛上限：5 轮修正未收敛 → stalled + 人工介入标记
-- T-E7 白名单：链期 spawn 非白名单角色 → 拒绝；非链期手动档 spawn 仍拒（§17 回归）
+- T-E7 白名单：链期 spawn 非白名单角色 → 拒绝；**stage 耦合负例：stage=fix 期 spawn explore → 拒绝**；非链期手动档 spawn 仍拒（§17 回归）
 - T-E8 双通道：链运行中用户输入 → 新回合正常（不打断链节点）；回合指示停链 → 链停
 - T-E9 节点失败重试 1 次仍败 → stalled
 - T-E10 §15/§17 全回归（阻塞模式/挂起/消化分档）
+- T-E11 **链节点强制 async**：模型（mock）不带 async 参数 spawn 审计 explore → 仍 async（不阻塞 digest）
+- T-E12 **链状态注入**：digest 与用户回合的注入内容含 stage/round/下一步提示
+- T-E13 **写冲突**：用户回合改 _engChain.fileList 文件 → conflict 标记 + 提醒注入；指示后续链/终止链两分支
+- T-E14 **无进展 poke**：连续 2 digest 无节点动作 → stalled + 提醒；**退出门控**：链非终态池空 → 不退出挂起
+- T-E15 手动档链修正节点写权限：autoApprove=false 会话中链修正 spawn 写文件成功（D-E7）；非链手动档子代理写仍走审批（回归）
 
-**验收**：AC-E1 = eng-coder 默认 async（T-E1/T-E2）；AC-E2 = 链全自动推进到收敛（T-E3..E5）；AC-E3 = 5 轮上限不静默（T-E6）；AC-E4 = 白名单/手动档边界不破（T-E7）；AC-E5 = 双通道并行（T-E8）；AC-E6 = 两端全量绿（T-E10）
+**验收**：AC-E1 = eng-coder 默认 async（T-E1/T-E2）；AC-E2 = 链全自动推进到收敛（T-E3..E5/E11）；AC-E3 = 5 轮上限不静默（T-E6/E14）；AC-E4 = 白名单/手动档边界不破（T-E7/T-E15）；AC-E5 = 双通道并行 + 冲突仲裁（T-E8/T-E13）；AC-E6 = 两端全量绿（T-E10）
 
 ### 18.3 关键决策
 
 - **B1 全链自动（用户拍板）**：修正轮无人值守自动改代码——手动档也跑——责任在派发时转移（与 AUTO 责任转移同哲学——用户显式选择让链自动）
-- **模型决策 + 机械护栏分层**：链节点"做什么/下一步"由 digest 模型判断（需上下文理解审计报告/评审结果）；白名单/收敛计数/失败重试为机械层（防失控/防无限）
-- **eng-coder 默认 async 是角色级默认**（非全局默认）——explore/plan 同步保留（审计链内 explore 也 async？——链内 spawn 用 async（后台链）——E4 修正节点 async、审计节点 async——链节点全部 async：子代理完成注入 → 下一 digest 决策——链状态机由 settle 事件驱动）
-- **否决**：a) 链内同步 spawn（阻塞 digest 回合——与后台链语义矛盾）；b) 机械自动审计（不经模型判断——审计任务书需上下文理解，模型生成）；c) 用户输入暂停链（双通道并行是 §17 核心——见 D-E5）
+- **模型决策 + 机械护栏分层**：链节点"做什么/下一步"由 digest 模型判断（需上下文理解审计报告/评审结果）；白名单/强制 async/收敛计数/失败重试/无进展 poke 为机械层（防失控/防无限/防静默）
+- **eng-coder 默认 async 是角色级默认**（非全局默认）——explore/plan 同步保留；**链节点全部 async 由白名单入口机械强制**（不依赖模型带参——评审 #4）——子代理完成注入 → 下一 digest 决策——链状态机由 settle 事件驱动
+- **作用域授权（用户裁定）**：授权点在进子代理前（任务/链批准）——子代理内部自动（D-E7）——不做逐写审批（无人在场逐写审批 = 链必然 stalled）
+- **否决**：a) 链内同步 spawn（阻塞 digest 回合——与后台链语义矛盾）；b) 机械自动审计（不经模型判断——审计任务书需上下文理解，模型生成）；c) 用户输入暂停链（双通道并行是 §17 核心——见 D-E5）；d) 链节点逐写审批（无人在场不可行——D-E7 一次性授权替代）
+
+### 18.4 非功能需求（评审 #7 补）
+
+- N1：**成本有界**——链每节点 ≤1 个 settle 驱动 digest（审计 settle → 1 digest 决策；修正 settle → 1 digest）——总自动回合数上界 ≈ 5 修正 × 3（审计+决策+修正消化）+ review 2 ≈ 20 回合——受 §17 N1 既有成本纪律约束
+- N2：**不静默**——stalled/conflict/无进展/节点失败均有注入标记或提醒行（D-E6/E5）；链无"悄悄死掉"路径
+- N3：**两端一致**——CLI/VS Code 同规格（F7）——VS Code 链驱动/状态显示按其 ARCHITECTURE.md 惯例落实现+引用段
