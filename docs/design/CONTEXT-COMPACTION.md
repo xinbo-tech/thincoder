@@ -142,10 +142,10 @@
 |---|---|---|
 | V1 | 触发加安全点（D1）：history 末尾 role ∈ {user, tool} 才检查 | `src/agent.mjs` 主循环 |
 | V2 | usage 实测基线（D3）：`_lastPromptTokens`/`_usageAtLen` 记录 + 压缩/新 run 失效 | `src/agent.mjs`（response.usage 处已有回调，补记录） |
-| V3 | 阈值 0.8 → 0.6（D2） | `src/context.mjs` `THRESHOLD_FRACTION` |
-| V4 | 估算公式对齐 CLI（D3）：ASCII/4 + 非 ASCII/1、reasoning/tool_calls 计入、图像 2000、system+tools 计入 | `src/context.mjs` `estimateTokens` + `compactHistory` |
-| V5 | head 配对保护（D5） | `src/context.mjs` `compactHistory` 切割前 |
-| V6 | 降级链：LLM 失败计数（3 次）→ 确定性截断；无 middle → 单消息截断；废弃启发式摘要（D6） | `src/context.mjs`；失败计数状态由调用方（agent.mjs）持有传入，runAgent 内跨 turn 存活 |
+| V3 | 阈值 0.8 → 0.6（D2） | `src/compact.mjs` `THRESHOLD_FRACTION`（2026-08 自 context.mjs 拆出——code review #2 修正路径） |
+| V4 | 估算公式对齐 CLI（D3）：ASCII/4 + 非 ASCII/1、reasoning/tool_calls 计入、图像 2000、system+tools 计入 | `src/compact.mjs` `estimateTokens` + `compactHistory` |
+| V5 | head 配对保护（D5） | `src/compact.mjs` `compactHistory` 切割前 |
+| V6 | 降级链：LLM 失败计数（3 次）→ 确定性截断；无 middle → 单消息截断；废弃启发式摘要（D6） | `src/compact.mjs`；失败计数状态由调用方（agent.mjs）持有传入，runAgent 内跨 turn 存活 |
 | V7 | task 回注去重（D7） | `src/agent.mjs` 压缩后回注处 |
 | V8 | empty-response 重试移植（E1） | `src/agent.mjs` |
 | V9 | 测试：配对保护 / 降级链 / 阈值 / 基线 | `test/`（既有 compactHistory 测试扩展） |
@@ -240,7 +240,7 @@
 - `onCompressFail(error)` → 面板更新为失败态（错误文本可见，console.error 同步落）。
 - 摘要调用保持静默（thinking:null、无 onToken——摘要内容不进会话流、不进面板 body；面板只显示**状态/阶段/耗时/结果**，不显示摘要正文——摘要正文是机器产物，用户看状态就够）。
 
-**D-C3 headless/桥接**：回调链无 UI 时自然 no-op（F4）。**VS Code 端（2026-09-02 用户裁定：两端对齐，本批落地）**：VS Code 无 TUI 面板——对齐形态为 onCompressStart/onCompressFail 回调 + webview 压缩状态行（agent.mjs 压缩 catch 静默现状补 console.error + webview 通知行"Compressing context…/Compressed: N tokens freed (Xs)/failed: <错误>"；3 次失败降级说明同 §7 状态机语义）。受影响文件：VS Code `src/agent.mjs`、`src/context.mjs`、`src/compact.mjs`、webview 会话状态渲染。
+**D-C3 headless/桥接**：回调链无 UI 时自然 no-op（F4）。**VS Code 端（2026-09-02 用户裁定：两端对齐，本批落地）**：VS Code 无 TUI 面板——对齐形态为 onCompressStart/onCompressFail 回调 + webview 压缩状态行（agent.mjs 压缩 catch 静默现状补 console.error + webview 通知行"Compressing context…/Compressed: N tokens freed (Xs)/failed: <错误>"；3 次失败降级说明同 §7 状态机语义）。受影响文件：VS Code `src/agent.mjs`（回调接线）、`src/compact.mjs`（压缩/蒸馏/预算逻辑实际所在——2026-08 自 context.mjs 拆出，code review #2 修正路径）、webview 会话状态渲染。
 
 ### 7.4 测试
 
@@ -256,7 +256,7 @@
 | T5 | ✓ 摘要不泄正文 | 压缩全程 | 面板无摘要正文（仅状态/阶段/耗时/结果）；会话流无摘要 token 注入 | D-C2 |
 | T6 | ✓ 既有回归 | 全量 | onCompress 完成语义不变（压缩后历史替换/task 回注全绿） | D-C1 |
 
-**验收**：AC1 = 压缩开始→完成/失败三态在 TUI **面板**可见（✓ 测试断言回调序 + 面板区块形态）；AC2 = 失败错误文本可见（✓ 不静默）；AC3 = CLI 全量 + lint 绿（✓ 1024 测试全绿 + eslint 0 error）；AC4 = 既有压缩契约（§4 行为契约 1-6）全回归（✓）。**VS Code 端口测试位置（评审 round2 #6 补注）**：`thincoder-vscode/test/agent.test.mjs` §"V4 压缩可见性（§7 D-C1/D-C3，VS Code 对齐形态）"（L584 起——onCompressStart/onCompressFail/3 次失败降级/回调缺省 no-op 全断言，与 CLI T1-T4 同语义）。
+**验收**：AC1 = 压缩开始→完成/失败三态在 TUI **面板**可见（✓ 测试断言回调序 + 面板区块形态）；AC2 = 失败错误文本可见（✓ 不静默）；AC3 = CLI 全量 + lint 绿（✓ 1024 测试全绿 + eslint 0 error）；AC4 = 既有压缩契约（§4 行为契约 1-6）全回归（✓）。**VS Code 端口测试位置（评审 round2 #6 补注）**：`thincoder-vscode/test/agent.test.mjs` §"V4 压缩可见性（§7 D-C1/D-C3，VS Code 对齐形态）"（§9 组插入后 V4 组现起 L813——onCompressStart/onCompressFail/3 次失败降级/回调缺省 no-op 全断言，与 CLI T1-T4 同语义；code review #5：行号易漂移，以段名定位为准）。
 
 ### 7.5 关键决策
 
@@ -269,7 +269,7 @@
 
 ## 8. 摘要大小目标 ≤1K tokens（2026-09-02，用户拍板：约定目标，不超过 1K）
 
-> **状态：设计定稿，待实现**。
+> **状态：已实现**（2026-09-02，两端落地 + 测试全绿：SUMMARIZE_PROMPT 尾句 ≤1K 硬目标 + 砍价优先级写入 prompt——CLI `src/context.mjs` + VS Code `src/compact.mjs` 同批落地，状态由架构师统一回写）。
 
 ### 8.1 问题与需求
 
@@ -288,21 +288,21 @@
 
 ### 8.3 受影响文件
 
-- `thincoder/src/context.mjs`（SUMMARIZE_PROMPT 尾句段）
-- `thincoder-vscode/src/compact.mjs`（SUMMARIZE_PROMPT 尾句段——语义同构）
-- 两端测试：`thincoder/test/exploration-summary.test.mjs`（CLI SUMMARIZE_PROMPT 断言区补 1K 句）+ `thincoder-vscode/test/agent.test.mjs`（同）
-- `docs/design/CONTEXT-COMPACTION.md`（本节状态回写）
+- `thincoder/src/context.mjs`（✓ SUMMARIZE_PROMPT 尾句段改写：D13-1 硬目标句 + D13-2 优先级句，旧 "err on the long side" 删除；D13-3 无 max_tokens / D13-4 既有规则未动）
+- `thincoder-vscode/src/compact.mjs`（✓ SUMMARIZE_PROMPT 尾句段——语义同构，2026-09-02 同批落地，code review #1 销账）
+- 两端测试：`thincoder/test/exploration-summary.test.mjs`（✓ T-D13a/b 新增；T-D13c 由既有 "SUMMARIZE_PROMPT 追加两清单" 测试持续覆盖）+ `thincoder-vscode/test/agent.test.mjs`（✓ 同——D13 断言 L1529 起，2026-09-02 同批落地，code review #1 销账）
+- `docs/design/CONTEXT-COMPACTION.md`（✓ 本节状态回写）
 
 ### 8.4 测试与验收
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
-| T-D13a | 目标句存在 | 两端 SUMMARIZE_PROMPT | 含 "1K"（或 "~1K tokens"）硬目标句；不含 "err on the long side" | F1/D13-1 |
-| T-D13b | 砍价优先级（评审 #1 扩展） | 两端 SUMMARIZE_PROMPT | 含 ①②③④ 全部优先级句（one-line recap → bare paths → tightened prose → NEVER cut anchors/UNRESOLVED），不只"永不砍" | F2/D13-2 |
-| T-D13c | 既有规则不回归 | 两端 SUMMARIZE_PROMPT | FILES CHANGED / UNRESOLVED / COMPLETED vs IN-PROGRESS 断言仍过 | D13-4 |
-| T-D13d | 全量回归 | 两端全量测试 | 全绿 | F4 |
+| T-D13a | ✓ 目标句存在 | 两端 SUMMARIZE_PROMPT | 含 "1K"（或 "~1K tokens"）硬目标句；不含 "err on the long side" | F1/D13-1 |
+| T-D13b | ✓ 砍价优先级（评审 #1 扩展） | 两端 SUMMARIZE_PROMPT | 含 ①②③④ 全部优先级句（one-line recap → bare paths → tightened prose → NEVER cut anchors/UNRESOLVED），不只"永不砍" | F2/D13-2 |
+| T-D13c | ✓ 既有规则不回归 | 两端 SUMMARIZE_PROMPT | FILES CHANGED / UNRESOLVED / COMPLETED vs IN-PROGRESS 断言仍过 | D13-4 |
+| T-D13d | 全量回归（CLI ✓ / VS Code 父代理统一跑） | 两端全量测试 | 全绿 | F4 |
 
-**验收**：AC-D13-1 = 两端 prompt 尾句含 ≤1K 硬目标 + 砍价优先级（T-D13a/b）；AC-D13-2 = 既有 SUMMARIZE_PROMPT 断言不回归（T-D13c）；AC-D13-3 = 两端全量 + check-syntax（node --check，eslint 2026-09-02 已删）0 error（T-D13d，评审 #5）。
+**验收**：AC-D13-1 = 两端 prompt 尾句含 ≤1K 硬目标 + 砍价优先级（✓ T-D13a/b，CLI 已过）；AC-D13-2 = 既有 SUMMARIZE_PROMPT 断言不回归（✓ T-D13c，CLI 已过）；AC-D13-3 = 两端全量 + check-syntax（node --check，eslint 2026-09-02 已删）0 error（✓ CLI 全量绿 + node --check 0 error；VS Code 由父代理跑）。
 
 ### 8.5 关键决策
 
@@ -315,7 +315,7 @@
 
 ## 9. tail 按 token 预算：压缩后 history ≤ 窗口 15%（2026-09-02，用户实测驱动）
 
-> **状态：设计定稿，待实现**。用户实测：600K 窗口模型压缩后上下文仍占 ~40%——`keepTailSize` 只按**条数**（每 100K 30 条）缩放，无 token 预算；工具密集会话中单条消息 token 大（assistant 工具链 + 大 tool 结果），tail 条数公式失控 → 压缩释放空间小、很快再触发。用户目标：**压缩后 15%**。
+> **状态：已实现**（2026-09-02，两端落地 + 测试全绿：tail 双约束（候选条数 + token 预算）+ pair-safe 收紧 + 保底 10 条——CLI `splitHistory`/`tightenTailByBudget` + VS Code `tailStartByBudget` 同构；VS Code 端同批落地，状态由架构师统一回写）。用户实测：600K 窗口模型压缩后上下文仍占 ~40%——`keepTailSize` 只按**条数**（每 100K 30 条）缩放，无 token 预算；工具密集会话中单条消息 token 大（assistant 工具链 + 大 tool 结果），tail 条数公式失控 → 压缩释放空间小、很快再触发。用户目标：**压缩后 15%**。
 
 ### 9.1 问题与需求
 
@@ -328,7 +328,8 @@
 
 ### 9.2 设计
 
-- **D-T1 tail token 预算**：`tailBudget = context × 0.15 − 摘要估算`（摘要 ~1K，预算 ≈ 窗口 15%）。**测量边界（评审 round2 #4）**：15% 目标按压缩时刻的 history 段（摘要+占位+tail）计量——D7 压缩后回注（task/plan/AUTO 注记）不计入预算，其增量（通常 ≤ 几 K，plan 回注最长）由 T-DT1 的 ±5% 容差吸收；验收口径与用户实测口径一致（用户 40% 观察含回注，本设计保证回注前段 ≤15%，回注后仍远低于 40%）。实现：`keepTailSize` 改为**候选条数 + 预算双约束**——先按条数公式取候选尾，再估算候选尾 token（estimateTokens 复用，含 reasoning/tool_calls/图像 2000）；超预算 → **tailStart 前移**（候选尾头部消息并入摘要段）直到估算 ≤ 预算 或触保底。**pair-safe 边界约束（评审 #2）**：tailStart 只允许落在配对安全边界——plain 消息，或完整 assistant(tool_calls)→tools 对的起点（D5 tail 侧 orphan 拉回语义下，切在 assistant 与其 tool 结果之间会把 owner 拉回 tail 使预算重新超支）；无 pair-safe 边界能满足预算 → 显式进入 D-T2 保底并接受超支
+- **D-T1 tail token 预算**：`tailBudget = context × 0.15 − 摘要估算`（摘要 ~1K，预算 ≈ 窗口 15%）。
+- **两端常量实现差（审计 2026-09-02 记录，可接受）**：CLI `SUMMARY_TOKEN_ESTIMATE = 1000`（note+占位由 ±5% 容差吸收）；VS Code `SUMMARY_SEGMENT_ESTIMATE = 1100`（= note+占位 ~90 + 1K 目标，显式预留后严格断言）。语义等价（<0.2% 窗口差），两端各按本地断言强度实现。**测量边界（评审 round2 #4）**：15% 目标按压缩时刻的 history 段（摘要+占位+tail）计量——D7 压缩后回注（task/plan/AUTO 注记）不计入预算，其增量（通常 ≤ 几 K，plan 回注最长）由 T-DT1 的 ±5% 容差吸收；验收口径与用户实测口径一致（用户 40% 观察含回注，本设计保证回注前段 ≤15%，回注后仍远低于 40%）。落地形态（CLI 2026-09-02，VS Code 移植以 CLI 为准）：`keepTailSize` 保持**纯条数公式（语义改为“候选条数”）**，预算双约束在 `splitHistory` 接线——候选尾估算超预算（estimateTokens 复用，含 reasoning/tool_calls/图像 2000）→ `tightenTailByBudget` 把 **tailStart 前移**（候选尾头部消息并入摘要段）直到估算 ≤ 预算 或触保底；D5 修复提取为 `repairedTailStart` 供候选/floor 两边界复用。**pair-safe 边界约束（评审 #2）**：tailStart 只允许落在配对安全边界——plain 消息，或完整 assistant(tool_calls)→tools 对的起点（D5 tail 侧 orphan 拉回语义下，切在 assistant 与其 tool 结果之间会把 owner 拉回 tail 使预算重新超支）；无 pair-safe 边界能满足预算 → 显式进入 D-T2 保底并接受超支；**VS Code 倒序配对（REVERSE）位同样不停**（assistant 位其 tool_calls 未被 q 后连续 tool 块覆盖 → 悬空 400 类——`callsGapAfter` 判据，T-DT8，code review #7 补基准）
 - **D-T2 保底 10 条**：预算不足以保留 10 条原文时，**保底优先**（保留最近 10 条，允许小幅超预算）——tail 原文的作用是让模型看到最近真实对话（工具调用链、最近请求语境），全吞进摘要会失真；10 条即使单条偏大（~1.3K 均值场景 ≈ 13K）也不足以再现 40% 问题。**单条巨型消息**（估算 > 预算总量）保留该条本身（64K 落盘/预览机制已管大工具结果；单条截断是 shrinkOversized 的职责，不在 tail 预算内二次处理）。**短历史优先级（评审 round2 #5）**：历史 <25 条时 D4 的 ⌊len×0.4⌋ cap 使候选 <10——保底上限 = 候选条数（保底 = min(10, 候选条数)，不突破 40% cap——防"压缩了个寂寞"）；预算不足仅在候选 ≥10 且 10 条仍超预算时触发
 - **D-T3 摘要材料相应扩大**：tailStart 前移 → 更多中间内容进摘要——与 §8 摘要 ≤1K 协同（砍价优先级 D13-2 已保证决策锚点/未决清单优先保留；材料更大时信息密度压力由模型按优先级处理）。**摘要调用输入（评审 round2 #3 补记）**：600K 工具密集场景 tail 200-300K→≤90K → mid 增 ~100-200K 进摘要 LLM 调用（D6 序列化 cap 是单条非总量，无总量上限）——输入增大使摘要变慢/超时概率升，失败走 3 连败降级（§7 面板可见，人读线兜底正确性）；600K 窗口内输入仍可容纳（≤0.6×ctx − tail），**接受的取舍**：摘要质量与耗时换取 tail 释放空间，T-DT7 锁输入界断言
 - **D-T4 压缩触发与预算解耦**：预算只在压缩发生时计算（不改变触发阈值 0.6）；压缩后 history ≈ 摘要 + 占位 + ≤预算 tail
@@ -336,24 +337,25 @@
 
 ### 9.3 受影响文件
 
-- `thincoder/src/context.mjs`：`keepTailSize` 增预算逻辑（或新增 `tailStartByBudget`）+ `splitHistory`/`compressIfNeeded` 接线（估算尾 token、超预算前移 tailStart）
-- `thincoder-vscode/src/compact.mjs`：同构移植（CLI 为准）
-- 两端测试：`test/session-compaction.test.mjs`（CLI）+ VS Code 对应（新增 T-DT1..3 + **T-DT6 pair-safe 边界**；既有 tail 自适应断言若与预算冲突需按新语义更新）
-- `docs/design/CONTEXT-COMPACTION.md`（本节状态回写）
+- `thincoder/src/context.mjs`（✓ `keepTailSize` 保持纯条数公式——语义改为"候选"；新增 `TAIL_BUDGET_FRACTION`/`SUMMARY_TOKEN_ESTIMATE`/`TAIL_FLOOR_MESSAGES` 常量 + `tailBudgetTokens()` + `repairedTailStart()`（D5 修复逻辑从 splitHistory 提取复用——候选与 floor 两边界共用）+ `tightenTailByBudget()`（pair-safe 前移扫描）+ `splitHistory`/`compressIfNeeded`/`compressFallback` 接线）
+- `thincoder-vscode/src/compact.mjs`（✓ 同构移植，CLI 为准——`tailStartByBudget` + D13 尾句，2026-09-02 同批落地，code review #1 销账）
+- 两端测试：`test/session-compaction.test.mjs`（✓ 新增 T-DT1/2/3/4/6a/6b/7；既有 tail 自适应断言——agent.test.mjs "tail 保留量随模型窗口自适应"——基于小消息、预算永不触及，与新语义无冲突，无需更新）+ VS Code 对应（✓ `test/agent.test.mjs` §9 组 L545-746 + T-DT8，2026-09-02 同批落地，code review #1 销账）
+- `docs/design/CONTEXT-COMPACTION.md`（✓ 本节状态回写）
 
 ### 9.4 测试与验收
 
 | # | 场景 | 输入 | 预期 | 映射 |
 |---|---|---|---|---|
-| T-DT1 | 工具密集超预算（600K 场景，评审 #3 限定：最近 10 条估算 ≤ 预算——测预算循环本体） | 构造 tail 估算 > 90K 但最近 10 条 ≤ 预算的历史 | 压缩后 history 段（摘要+占位+tail）估算 ≤ 窗口 15%（±5% 容差） | F1/D-T1 |
-| T-DT2 | 普通会话预算未超 | 常规对话 tail（~150 token/条均值） | tailStart 不变——行为与现状一致（回归） | F2 |
-| T-DT3 | 保底条数（评审 #3 补上限） | 预算不足以保 10 条（极端小窗口/巨型消息） | tail ≥ 10 条原文（保底优先）；超支上限 = 保底 10 条估算值本身（≤64K 窗口时 15% 目标让位于保底——小窗口取舍注于 9.5） | D-T2 |
-| T-DT4 | 摘要协同 | 压缩后 | 摘要 ≤1K（§8 断言不回归） | F3 |
-| T-DT5 | 两端全量回归 | — | 全绿 | F4 |
-| T-DT6 | pair-safe 边界（评审 #2 补） | tailStart 候选落在 assistant(tool_calls) 与其 tool 结果之间 | 边界上移到配对安全起点；无安全边界满足预算 → 进保底且不产生 orphan（D5 回归） | D-T1/D5 |
-| T-DT7 | 摘要输入界（评审 round2 #3 补） | 600K 工具密集场景压缩 | 摘要调用输入（序列化材料估算）≤ 声明界（≤0.6×ctx − tail 预算），不超模型窗口 | D-T3 |
+| T-DT1 | ✓ 工具密集超预算（600K 场景，评审 #3 限定：最近 10 条估算 ≤ 预算——测预算循环本体） | 构造 tail 估算 > 90K 但最近 10 条 ≤ 预算的历史 | 压缩后 history 段（摘要+占位+tail）估算 ≤ 窗口 15%（±5% 容差） | F1/D-T1 |
+| T-DT2 | ✓ 普通会话预算未超 | 常规对话 tail（~150 token/条均值） | tailStart 不变——行为与现状一致（回归） | F2 |
+| T-DT3 | ✓ 保底条数（评审 #3 补上限） | 预算不足以保 10 条（极端小窗口/巨型消息） | tail ≥ 10 条原文（保底优先）；超支上限 = 保底 10 条估算值本身（≤64K 窗口时 15% 目标让位于保底——小窗口取舍注于 9.5） | D-T2 |
+| T-DT4 | ✓ 摘要协同 | 压缩后 | 摘要 ≤1K（§8 断言不回归；实测 = mock 摘要 ~1K token 下 history 段仍 ≤15%+容差） | F3 |
+| T-DT5 | 两端全量回归（CLI ✓ / VS Code 父代理统一跑） | — | 全绿 | F4 |
+| T-DT6 | ✓ pair-safe 边界（评审 #2 补） | tailStart 候选落在 assistant(tool_calls) 与其 tool 结果之间 | 边界上移到配对安全起点；无安全边界满足预算 → 进保底且不产生 orphan（D5 回归） | D-T1/D5 |
+| T-DT7 | ✓ 摘要输入界（评审 round2 #3 补） | 600K 工具密集场景压缩 | 摘要调用输入（序列化材料估算）≤ 声明界（≤0.6×ctx − tail 预算），不超模型窗口 | D-T3 |
+| T-DT8 | ✓ 预算收紧 × 倒序配对（VS Code 独有，code review #7 补基准） | 倒序形状（tool 块在 assistant 前）+ 预算超限 | 收紧与 floor 回退均跳过倒序 assistant 位（callsGapAfter）；无悬空 tool_calls；REVERSE 保护回归 | D-T1/D5 |
 
-**验收**：AC-DT1 = T-DT1 通过（600K 场景压缩后 history ≤15%）；AC-DT2 = T-DT2 通过（普通会话零变化）；AC-DT3 = T-DT3 通过（保底不归零）；AC-DT4 = 两端全量 + check-syntax（node --check）0 error（评审 #5）。
+**验收**：AC-DT1 = ✓ T-DT1 通过（600K 场景压缩后 history ≤15%）；AC-DT2 = ✓ T-DT2 通过（普通会话零变化）；AC-DT3 = ✓ T-DT3 通过（保底不归零）；AC-DT4 = 两端全量 + check-syntax（node --check）0 error（✓ CLI 全量绿 + node --check 0 error；VS Code 由父代理跑）。
 
 ### 9.5 关键决策
 
