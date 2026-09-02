@@ -357,7 +357,11 @@ test("§15 T4: 带 id check 阻塞到该子代理完成", async () => {
   }
 })
 
-test("§15 T5: 回合收尾——未 check 的 async 自动等待 + 报告注入 + 清空", async () => {
+test("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 async 收已完成直注入 + 清空（collectSettledAsync 语义）", async () => {
+  // §17 D-S1：回合尾不再 allSettled 等待——collectSettledAsync 只注入"回合内已 settle"
+  // 项（① 直注入，形态同 §15）并移出池；未完成项移交挂起会话（agent-turn.mjs
+  // suspensionSession——见 test/suspension.test.mjs T-S1）。本用例子代理在回合内完成
+  // （快子代理），收尾注入路径与旧语义观察一致（已 settle → 注入 + 清空）。
   // Content-aware server: the child's requests carry its task text ("后台干活"),
   // the parent's carry "派活". Parent calls: #1 → subagent(async) tool call,
   // #2 → final answer. (A plain script index races: the child's async prepareRun
