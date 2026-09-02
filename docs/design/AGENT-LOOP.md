@@ -862,7 +862,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 19. subagent 工具面合并：单工具三动作（spawn/check/status）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事）
 
-> **状态：设计定稿，待评审**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
+> **状态：设计批准（2026-09-03 round1 通过——0🔴，5 项 refinement 已处置——designToken 已签发）**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
 
 ### 19.1 需求
 
@@ -880,14 +880,16 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 | action | 参数 | 返回 | 阻塞 |
 |---|---|---|---|
 | spawn（缺省） | task/role/async/designToken/designId（既有全集） | `{id, role, status:"running"/"queued", position?}` | 同步 role 等完成；async 立即返回 |
+
+**action 级门控（评审 #1——dispatch 分类）**：工具级 readonly 标志无法同时表达 spawn（副作用）与 check/status（只读）——dispatch Phase-1/Phase-2 按 **action 参数**分类：`check`/`status` 动作按 readonly 处理（planMode 放行、免权限审批、可批并行——继承 §15 D-A2 readonly:true 决策）；`spawn` 动作按非只读处理（planMode deny、串行、门禁照常——§18 任务域授权仅涉 child 内部权限不涉 spawn 门禁）——实现点：dispatch 预审读 action 参数分支（受影响文件补 `src/agent/dispatch.mjs`）
 | check | id?（省 = 下一完成）/ n（必填） | 报告（arrival order/指定 id——消费） | **阻塞**（等目标 settle——显式取回语义） |
 | status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?}`——不消费 | **不阻塞**（立即） |
 
-**D-M2 status 形态**：`{ overview?: {running:[ids], queued:[{id, position}], done:[ids]}, target?: {...} }`——done 条目附注"报告未取——回合尾自动注入或 check 取回"；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
+**D-M2 status 形态**：`{ overview?: {running:[ids], queued:[{id, position}], done:[ids]}, target?: {...} }`——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
 
-**D-M3 迁移（subagent_check 退役）**：17 处引用改——`subagent-async.mjs`（subagentCheckTool 定义 → 并入 subagentTool 的 check 动作——模块内合并）、`subagent.mjs`（工具描述重写——含 check 阻塞警告 + status 提示——"查进度用 status——check 会阻塞直到完成"——防 §19 触发场景重演）、`main.md`/`engineering.md` 等提示词引用（subagent_check 名称 → subagent action 语义）、测试（subagent_check 直接调用点 → action:"check"）。**挂住问题根治 = 描述层**：status 存在 + check 描述显式"阻塞"——模型查进度选 status。
+**D-M3 迁移（subagent_check 退役）**：17 处引用改——`subagent-async.mjs`（subagentCheckTool 定义 → 并入 subagentTool 的 check 动作——模块内合并）、`subagent.mjs`（工具描述重写——含 check 阻塞警告 + status 提示——"查进度用 status——check 会阻塞直到完成"——防 §19 触发场景重演）、`main.md`/`engineering.md` 等提示词引用（subagent_check 名称 → subagent action 语义）、测试（subagent_check 直接调用点 → action:"check"）。**挂住问题根治 = 描述层**：status 存在 + check 描述显式"阻塞"——模型查进度选 status。**文件归属定句（评审 #3）**：`subagentCheckTool` 现定义于 `subagent-check.mjs`（退役——并入 subagent.mjs 的 check 动作）；`subagent-async.mjs` 保留 async 机制（settle/collect/审计任务书等）——迁移清单以此为准
 
-**受影响文件（两端）**：`src/agent-tools/subagent-check.mjs`（退役——内容并入）、`src/agent-tools/subagent.mjs`/`subagent-async.mjs`（工具定义合并 + action 分流 + status 实现 + 描述重写）、`src/prompts/main.md` + `src/prompts/engineering.md`（工具描述引用——byte-identical 两端）、AGENT-LOOP.md §15（D-A2 修订注——subagent_check → check 动作）+ §19 本节、两端测试（subagent.test.mjs——spawn 缺省零迁移回归 + check 迁移 + status 新用例）、VS Code ARCHITECTURE.md 引用段（实现时按其惯例落）
+**受影响文件（两端）**：`src/agent-tools/subagent-check.mjs`（退役——内容并入）、`src/agent-tools/subagent.mjs`/`subagent-async.mjs`（工具定义合并 + action 分流 + status 实现 + 描述重写）、`src/prompts/main.md` + `src/prompts/engineering.md`（工具描述引用——byte-identical 两端）、AGENT-LOOP.md §15（D-A2 修订注——subagent_check → check 动作）+ §19 本节、两端测试（subagent.test.mjs——spawn 缺省零迁移回归 + check 迁移 + status 新用例）、VS Code ARCHITECTURE.md 引用段（实现时按其惯例落）、两端 CHANGELOG（父代理统一更新——评审 #5）
 
 **测试（实现前展开为用例表——eng-coder 硬验收项）**：
 - T-M1 spawn 缺省 action 行为不变（同步阻塞 / async 立即返回——既有用例零改全绿）
@@ -896,7 +898,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - T-M4 check n 计数/超限拒绝（迁移回归）
 - T-M5 status 指定 running id → 立即返回 running（**不阻塞——主回合不挂**——§19 触发场景）
 - T-M6 status 指定 queued id → 返回 position
-- T-M7 status 指定 done 未取 id → 返回 done + "未取"注记——**不消费**（随后 check 仍可取回）
+- T-M7 status 指定 done 未取 id（**回合内 settle 场景**——挂起期 settle 项已移 pending 不在池）→ 返回 done + "未取"注记——**不消费**（随后 check 仍可取回——评审 #2 范围注）
 - T-M8 status 省略 id → 全部概览（running/queued/done 三类）
 - T-M9 status 未知 id → error（不消费）
 - T-M10 status 后接 check——n 计数不受 status 影响
@@ -904,7 +906,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - T-M12 提示词内容断言：subagent 描述含 action/status/"check 会阻塞" 引导（两端 byte-identical）
 - T-M13 §15/§17/§18 全回归（挂起/消化/内部协议——eng-coder role spawn 路径）
 
-**验收**：AC-M1 = 单工具三动作（T-M1..E4 迁移回归 + T-M11）；AC-M2 = status 非阻塞（T-M5..E10——主会话查状态不挂）；AC-M3 = 描述引导防误用（T-M12）；AC-M4 = 两端全量绿（T-M13）
+**验收**：AC-M1 = 单工具三动作（T-M1..M4 迁移回归 + T-M11）；AC-M2 = status 非阻塞（T-M5..M10——主会话查状态不挂）；AC-M3 = 描述引导防误用（T-M12）；AC-M4 = 两端全量绿（T-M13）
 
 ### 19.3 关键决策
 
