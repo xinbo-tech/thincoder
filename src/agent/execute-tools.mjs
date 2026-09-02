@@ -17,8 +17,11 @@ import { isDocFile } from "../advisor/repos.mjs"
  * 被前置门禁拦下的工具不计入批询问）。返回 { blocked, content }。
  */
 function preGateBlocked(agent, { tool, toolName, args, depth }) {
-  // Plan mode guard
-  if (agent._planMode && tool && !tool.readonly) {
+  // Plan mode guard — §19 round2 #2 (AGENT-LOOP.md): readonly classification is
+  // ACTION-LEVEL. A tool may declare action-level readonly-ness (isReadonlyAction —
+  // e.g. subagent action:'check'/'status'): those pass plan mode like readonly tools,
+  // while the same tool's side-effecting actions (subagent spawn/escalate) stay denied.
+  if (agent._planMode && tool && !tool.readonly && !(tool.isReadonlyAction?.(args) ?? false)) {
     return { blocked: true, content: "Error: plan mode active" }
   }
   // Engineering coder hard gate: no file modification before the design review passed (CLI dispatch.mjs parity).
@@ -87,11 +90,17 @@ export async function executeToolBatches(agent, { response, history, fullHistory
   // Group tool calls into batches — consecutive readonly tools run in parallel,
   // consecutive subagent calls also run in parallel (each has its own agent).
   // sideEffectExempt tools (like subagent) don't block readonly merging.
+  // §19 round2 #2: action-level readonly classification joins the grouping — subagent
+  // action:'check'/'status' calls merge into the readonly parallel batch like the
+  // retired readonly subagent_check tool did; spawn/escalate keep the subagent path.
   const batches = []
   let pendingReadonly = []
   for (const tc of response.toolCalls) {
     const tool = toolByName.get(tc.name)
-    if (tool?.readonly) {
+    let args
+    try { args = JSON.parse(tc.arguments || "{}") } catch { args = {} } // grouping-only read — per-call parse errors are handled in runOne below
+    const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
+    if (tool?.readonly || actionReadonly) {
       pendingReadonly.push({ tc, tool })
     } else {
       // Flush pending readonly batch before this mutation

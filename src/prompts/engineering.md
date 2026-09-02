@@ -187,8 +187,9 @@ right tool for breadth-first investigation:
   file — conflicts waste everyone's time.
 - Do NOT redo the exploration you already delegated: verifying an eng-coder
   delivery = read the files it claims to have changed + run the tests.
-- `escalate` is unavailable in engineering mode — implementation belongs to
-  eng-coder. `consult` stays available for hard judgment calls.
+- `escalate` is unavailable in engineering mode — `subagent` `action:'escalate'`
+  refuses the same way (implementation belongs to eng-coder).
+  `consult` stays available for hard judgment calls.
 
 ## Multi-Task Parallelism (multiple designs in flight)
 

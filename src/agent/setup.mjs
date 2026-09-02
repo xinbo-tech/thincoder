@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url"
 import * as os from "node:os"
 import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 import {
-  taskTool, recentChangesTool, subagentTool, subagentCheckTool,
+  taskTool, recentChangesTool, subagentTool,
   planTool, goalTool, skillTool, verifyTool, timerTool,
-  advisorTool, engTool, consultStartTool, consultCheckTool, consultStopTool, escalateTool,
+  advisorTool, engTool, consultStartTool, consultCheckTool, consultStopTool,
 } from "../agent-tools.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
@@ -39,9 +39,12 @@ try { _ENG_SUB = readFileSync(join(__dirname, "..", "prompts", "engineering-sub.
 /**
  * Decorate a consult-related tool's description with the CURRENT configured candidate
  * pool (provider:model list). Without this the model cannot know which models a consult
- * or escalate call can pick from — it would hallucinate provider:model names or never
- * pass `model`. The tool table is assembled per-run from loadRaw(), so the list stays
- * fresh. Description-only: the tool object is cloned shallowly, execute untouched.
+ * start / subagent action:'escalate' call can pick from — it would hallucinate
+ * provider:model names or never pass `model`. The tool table is assembled per-run from
+ * loadRaw(), so the list stays fresh. Description-only: the tool object is cloned
+ * shallowly, execute untouched. §19 (2026-09-03): applied to the depth-0 subagentTool
+ * too — its escalate action picks from the same pool (the standalone escalate tool was
+ * merged in as action:"escalate").
  */
 function withPool(tool) {
   const models = loadRaw().agent?.consultModels ?? []
@@ -49,20 +52,24 @@ function withPool(tool) {
   if (!list) return tool
   return {
     ...tool,
-    description: tool.description + `\nCurrently configured consultants (this tool's pool): ${list}`,
+    description: tool.description + `\nCurrently configured consultants (pool for consult_start / subagent action:'escalate'): ${list}`,
   }
 }
 
 /**
  * §18 D-E3 (AGENT-LOOP.md): the eng-coder child's restricted subagent channel —
  * built when an eng-coder child (depth>0) toolset is assembled. Schema level:
- * role enum is explore-only and the async parameter is REMOVED (sync only) — the
- * model-facing filter; the mechanical enforcement lives in subagent.mjs execute →
- * gateEngCoderSpawn (schema enums are advisory, providers don't enforce them).
+ * role enum is explore-only, the async parameter is REMOVED (sync only), and the
+ * action parameter is REMOVED (spawn-only — §19 round2 #3: escalate/check/status
+ * are refused in-child) — the model-facing filters; the mechanical enforcement
+ * lives in subagent.mjs execute → gateEngCoderSpawn (role/async) + the §19
+ * restricted-variant action gate (schema enums are advisory, providers don't
+ * enforce them).
  */
 function engAuditSubagentTool() {
   const props = { ...subagentTool.parameters.properties }
   delete props.async // sync only — the eng-coder blocks on the audit report
+  delete props.action // spawn-only — the audit channel has no check/status/escalate
   props.role = {
     type: "string",
     enum: ["explore"],
@@ -72,7 +79,7 @@ function engAuditSubagentTool() {
     ...subagentTool,
     name: "subagent",
     description:
-      "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+      "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only (no action:'check'/'status'/'escalate', no async): the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
     parameters: { ...subagentTool.parameters, properties: props },
   }
 }
@@ -81,20 +88,26 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false, autoTurn = false } = opts
 
   const agentTools = depth === 0
-    ? [taskTool, recentChangesTool, subagentTool, subagentCheckTool, planTool, goalTool, skillTool, verifyTool, timerTool, advisorTool, engTool,
+    ? [taskTool, recentChangesTool,
+      // §19 (2026-09-03): the subagent family is ONE resident tool — subagent_check and
+      // the standalone escalate tool retired (check/status/escalate are action params).
+      // The escalate action errors when the pool is empty (existing error semantics);
+      // with a pool configured the tool description lists the current candidates
+      // (withPool — escalate picks 'provider:model' from it), same as consult_start.
+      ...(loadRaw().agent?.consultModels?.length ? [withPool(subagentTool)] : [subagentTool]),
+      planTool, goalTool, skillTool, verifyTool, timerTool, advisorTool, engTool,
       // consult tools registered only when configured — an unconfigured model would otherwise
       // see the tool, call it, and eat an error turn (prompt-system review 2026-08-15).
       ...(loadRaw().agent?.consultModels?.length
-        ? [withPool(consultStartTool), consultCheckTool, consultStopTool, withPool(escalateTool)]
+        ? [withPool(consultStartTool), consultCheckTool, consultStopTool]
         : [])]
     : role === "eng-coder"
       ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool,
-         engAuditSubagentTool()] // §18 D-E3: the audit-only restricted subagent channel (explore + sync — schema level; the mechanical gate is subagent.mjs gateEngCoderSpawn)
-    // Write-permission coder sub-agents (subagentTool + escalate): their system
-    // prompt names verify (system.md) and advisor (discipline.md) — without them the
-    // escalate hit "unknown tool" and fell back to bash node --check / npm test to
-    // self-verify (2026-08-16 deepseek escalate diagnosis). eng-coder already had both;
-    // plain coder was the missed branch.
+         engAuditSubagentTool()] // §18 D-E3: the audit-only restricted subagent channel (explore + sync + spawn-only — schema level; the mechanical gates are subagent.mjs gateEngCoderSpawn + the §19 restricted-variant action gate)
+    // Write-permission coder sub-agents: their system prompt names verify (system.md)
+    // and advisor (discipline.md) — without them the escalate/coder hit "unknown tool"
+    // and fell back to bash node --check / npm test to self-verify (2026-08-16 deepseek
+    // escalate diagnosis). eng-coder already had both; plain coder was the missed branch.
     : role === "coder"
       ? [taskTool, recentChangesTool, verifyTool, advisorTool]
       : [taskTool, recentChangesTool] // read-only subagents get fewer meta-tools

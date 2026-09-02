@@ -402,6 +402,8 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 
 ### subagent 异步化：async 分支 + 槽位队列 + subagent_check（2026-09-02 · 引用）
 
+> **§19 修订（2026-09-03 实现时标注）：`subagent_check` 工具退役——语义并入 `subagent` 工具的 `action:"check"`（原样保留——arrival order / 阻塞 / n 计数 / 消费删除）——本节保留为 as-of 快照，现状见文末「subagent 工具面合并」段**
+
 需求与设计见 CLI `docs/design/AGENT-LOOP.md` §15（15.6 VS Code 对齐，单一权威源，本文件不复制；CLI 端同批落地，本端与设计同规格实现）。本仓库改动点：
 
 - `src/agent-tools/subagent.mjs`：subagent schema 加 `async` 布尔参数；execute 重构出 `runChild`（同步/异步共享同一子代理管线——relay/turn-cap/权限/mergeChildMutations 全不变）；async 分支：`parent._asyncSubagents` Map + **槽位队列**（running 数 < `ASYNC_SUBAGENT_LIMIT=4` 立即启动返回 `{id, role, status:"running"}`；≥4 入队返回 `{status:"queued", position}`；任一 running settle → 队列头部自动补位——settle 逻辑绑定 entry 自身，不同 execute 调用不串扰）；turn-cap 撞墙自动拒绝继续（不弹 continue 面板）；depth>0 传 async → 报错拒绝
@@ -535,3 +537,19 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 - **askContinue AUTO 续跑**（CLI advisor 发现镜像）：async 分支撞 turn-cap 硬编码 auto-decline → 改 `shouldAutoResume`（`ctx.getAuto` 载体——VS Code agent 是 per-run 对象无 `parent.autoApprove` 字段——live AUTO 规范读法；CLI 用 `parent.autoApprove`——两端语义等价）——AUTO+工程 async eng-coder 撞 cap 自动续跑完整交付；测试 T-E17 + T-E17-manual（反例锁——AUTO 关 → auto-decline partial 零续跑）
 - **subagent.mjs 500 行拆分**（574 超硬顶——§15/§17/§18 累积）：async 机械迁 `src/agent-tools/subagent-async.mjs`（282 行——settleAsyncEntry/collectSettledAsync/subagentCheckTool/常量/gateEngCoderSpawn/auditTaskBook/spawnAsyncSubagent/injectAsyncResult）——subagent.mjs 357 行——re-export shim 零消费点改动——导出面 13 名一致（脚本验证）——纯移动零逻辑改动
 - 受影响文件：`subagent.mjs` + `subagent-async.mjs`（新）+ `agent.mjs`（注释指向）
+
+### subagent 工具面合并：单工具四动作 spawn/check/status/escalate（2026-09-03 · 引用，AGENT-LOOP.md §19）
+
+需求与设计见 CLI `docs/design/AGENT-LOOP.md` §19（19.1 F1-F8 / 19.2 D-M1..M4 + 测试 T-M1..M17 / 19.3 关键决策 / 19.4 N1-N4，单一权威源，本文件不复制）——本端与设计同规格实现（用户裁定：工具会爆炸——靠参数做不同的事；escalate 并入二次裁定）。**核心语义**：① `subagent` 单工具四动作——`action` 缺省 spawn（既有调用零迁移）；② `action:"check"` = 退役 `subagent_check` 语义原样保留（arrival order / 指定 id 阻塞 / n 计数 / MAX_ASYNC_CHECKS / 消费后删除）；③ `action:"status"` = 新增非阻塞查询（不消费、不动 n 计数、立即返回——主回合查进度不挂的根治）；④ `action:"escalate"` = 退役 escalateTool（飞刀）执行 verbatim 并入（约束/前缀/术后报告全保留）。本仓库改动点：
+
+- `src/agent-tools/subagent-async.mjs`：`subagentCheckTool` 定义移除（工具退役）——新增 §19 action handler：`subagentCheck`（check 动作——语义 verbatim）、`subagentStatus`（status 动作——概览/单查两形态，done 条目带"未取"注记，挂起期项已移 pending 不在池 → 按 id 查为 unknown）、`escalateAction`（escalate 动作——escalate.mjs 执行逻辑整体迁入：池选模型/effort 钳制/ContinueError 续跑/mergeChildMutations/术后报告 + `sub:escalate <label> #N` relay 前缀不变——TUI 区块/活动流路由零改动 T-M16）；`mergeChildMutations` 迁入本模块（subagent.mjs re-export 兜住消费点——模块图无环）
+- `src/agent-tools/subagent.mjs`：工具描述重写（四动作矩阵 + **查进度用 status——check 会阻塞直到完成**防误用引导 + escalate 触发词条款随迁——"用户说 飞刀/escalate → 调 action:'escalate'"）；parameters 合并单 schema（action 枚举 + task/role/model/designToken/designId/async/id/n——required 移出 schema，按动作 execute 内校验）；execute 前插 action 分流（缺省 spawn 走既有路径零改动）；`isReadonlyAction(args)` 钩子（check/status → 只读分类；spawn/escalate → 副作用）；导出面删 `subagentCheckTool`（T-M11 工具名消失）；**受限变体 action 门（round2 #3 机械层）**——eng-coder 子代理 ctx（depth>0 且 `_role==="eng-coder"`）内非 spawn 动作工具层拒绝（镜像 T-E4/E5 的 action 维度）
+- `src/agent-tools/escalate.mjs`：**退役删除**（逻辑并入 escalate 动作）；`src/agent-tools/index.mjs`：`subagentCheckTool`/`escalateTool` 导出删
+- `src/agent/setup.mjs`：depth-0 装配 `subagentTool` 常驻（consultModels 非空时 withPool 装饰——escalate 动作候选池列出——escalateTool 注册点删；池空时 escalate 动作运行时返回既有错误语义）；`engAuditSubagentTool()` 受限变体参数删 async + **删 action**（schema 层 spawn-only 提示）
+- `src/agent/execute-tools.mjs`：**action 级门控（round2 #2）**——前置门禁 planMode 判定与只读批分组纳入 `tool.isReadonlyAction(args)`（status/check = readonly 分类：planMode 放行、免权限审批、并入只读并行批；spawn/escalate = 非只读分类：planMode deny、批审批照常）——collectBatchPermission/权限阶段既有 `isReadonlyAction` 钩子共用（git 先例）
+- `src/prompts/main.md` + `engineering.md` + `discipline.md`：工具描述引用迁移（subagent_check → action:'check'/'status'；escalate 触发词条款 → `subagent` `action:'escalate'`；discipline 工具表 escalate 行并入 subagent 行）——**两端 byte-identical（CLI 端同批落地，交付前字节对比验证）**
+- 文档：`docs/design/ESCALATE.md` 为历史设计文档（escalate 机制语义不变——工具注册表述为 as-of 快照，未改——按实现惯例仅本节记录迁移）
+
+测试：`test/subagent.test.mjs`（§19 组——**T-M1** action 缺省 spawn 零迁移回归 / **T-M2..M4** check 迁移（既有 T3/T4/T12-14 改 `action:"check"` 后全绿）/ **T-M5..M10** status 非阻塞新用例（running 立即返回不阻塞 / queued 带 position / done 未取注记不消费→check 仍可取回 / 全概览三类 / 未知 id error / status 不扰 n 计数）/ **T-M11** 工具名消失（subagentCheckTool/escalateTool 导出 undefined + 四动作枚举 + required 移出）/ **T-M12** 描述锚点（四动作 + check 阻塞警告 + 飞刀触发词）/ **T-M17a** planMode 下 status/check 放行 vs spawn/escalate 拒绝 / **T-M17b** 混合批次批审批按 action 分组（check/status 不入审批组零询问）/ 受限变体 action 门（round2 #3））；`test/escalate.test.mjs`（**T-M14..M16 迁移**——escalate.test.mjs 直调 `escalateTool` → `subagentTool` `action:"escalate"`——既有语义/约束/前缀断言原样 + 新增 onSubagent role/model 事件断言（UI 路由零改动））；全量回归 = 既有 §15/§17/§18 套件零改全绿（T-M13）。
+
+**code review 修正轮（2026-09-03 内部复评 #1——advisor round1 三发现）**：① 🔴 **async 子代理 id 跨 runAgent 复用**——agent 对象（含 `_subIdCounter`）per-run 重建而池沿 `history._asyncSubagents` 跨 run 存活：次 run 的 spawn 会复用仍在池中条目的 id，`map.set` 直接覆盖 → 旧条目报告永不注入（collectSettledAsync 只遍历现存条目——违 §17 零丢失）+ check/status 错指——新增共享分配器 `nextSubagentId(parent)`（计数器与池内最大 key 取上界续号，spawn 与 escalate 动作同用）——测试 advisor#1 ×2；② 🟡 **status 的 queued position 是入队瞬间快照**——settle 腾槽补位后变陈旧（CLI 端为查询时实时计算）——status/概览改为查询时实时计算（`queuePosition`——map 插入序即 FIFO 队列序）——测试 advisor#2；③ 🔵 **id 寻址严格数值键**——模型可能把工具返回的 id 以字符串回传而误报 unknown（CLI 端 String(id) 归一化对称语义）——check/status 查找前对纯数字字符串归一化（错误消息回显原值）——测试 advisor#3。受影响文件：`subagent-async.mjs` + `subagent.mjs` + `test/subagent.test.mjs`（新增 4 用例——全量 58 绿）。

@@ -1,5 +1,5 @@
 /**
- * subagent.mjs — subagentTool
+ * subagent.mjs — subagentTool (single tool, four actions — AGENT-LOOP.md §19)
  * Spawn a sub-agent for an independent subtask.
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
  * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
@@ -7,22 +7,31 @@
  * §18 (AGENT-LOOP.md D-E1..E3): role-level async default (eng-coder → async),
  * internal delivery protocol; eng-coder children may only spawn synchronous explore
  * audit children (gateEngCoderSpawn — mechanical, incl. the 7th-spawn backstop).
- *
- * Split (2026-09-03, 500-line discipline): the async/audit machinery — gateEngCoderSpawn,
- * auditTaskBook, shouldAutoResume, spawnAsyncSubagent, settleAsyncEntry, ASYNC_SUBAGENT_LIMIT,
- * MAX_ASYNC_CHECKS, injectAsyncResult, collectSettledAsync, subagentCheckTool — lives in
- * subagent-async.mjs (pure mechanical move, zero behavior change; public names re-exported
- * below). This file keeps the tool entry (execute), the blocking path and the shared
- * runChild pipeline.
+ * §19 (AGENT-LOOP.md §19, 2026-09-03): the subagent family merged into ONE tool —
+ * action:"spawn" (default) / action:"check" (retired subagent_check — blocking fetch,
+ * consume) / action:"status" (new — non-blocking progress query, never consumes) /
+ * action:"escalate" (retired escalate.mjs — 飞刀; constraints and the `sub:escalate`
+ * relay prefix unchanged). The action HANDLERS (check/status/escalate) + the async/
+ * audit machinery — gateEngCoderSpawn, auditTaskBook, shouldAutoResume,
+ * spawnAsyncSubagent, settleAsyncEntry, ASYNC_SUBAGENT_LIMIT, MAX_ASYNC_CHECKS,
+ * injectAsyncResult, collectSettledAsync, mergeChildMutations — live in
+ * subagent-async.mjs (500-line discipline; public names re-exported below). This
+ * file keeps the tool entry (description/schema/execute dispatch), the blocking
+ * spawn path and the mode helpers.
  */
 import { validateDesignToken } from "./advisor.mjs"
-import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent } from "./subagent-async.mjs"
-// Re-export shim (2026-09-03 split): the async/audit machinery below moved to
+import {
+  auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent,
+  subagentCheck, subagentStatus, escalateAction, mergeChildMutations, nextSubagentId,
+} from "./subagent-async.mjs"
+// Re-export shim (2026-09-03 split/merge): the machinery + §19 action handlers moved to
 // subagent-async.mjs — its public names stay importable from subagent.mjs so no
-// consumer (agent.mjs / suspension.mjs / index.mjs / setup.mjs / escalate.mjs / tests) changed.
+// consumer (agent.mjs / suspension.mjs / index.mjs / setup.mjs / tests) changed.
+// subagentCheckTool is GONE (§19 T-M11 — the subagent_check tool was retired; its
+// semantics are action:"check").
 export {
   ASYNC_SUBAGENT_LIMIT, MAX_ASYNC_CHECKS, ENG_AUDIT_SPAWN_LIMIT, gateEngCoderSpawn,
-  injectAsyncResult, collectSettledAsync, subagentCheckTool,
+  injectAsyncResult, collectSettledAsync, mergeChildMutations,
 } from "./subagent-async.mjs"
 
 /**
@@ -115,10 +124,23 @@ export function resolveDesignSlot(parent, designIdArg) {
 export const subagentTool = {
   name: "subagent",
   sideEffectExempt: true, // subagent mutations are tracked by the child, not the parent
+  // §19 (2026-09-03): action-level readonly classification — check/status are readonly
+  // actions (plan mode passes them, no approval, readonly-parallel batches — §15 D-A2
+  // readonly:true heritage); spawn (the default) and escalate are side-effecting.
+  // Used by execute-tools.mjs preGateBlocked / batch grouping / permission stage.
+  isReadonlyAction(args) {
+    const action = args?.action
+    return action === "check" || action === "status"
+  },
   description:
     "Spawn a sub-agent to handle an independent subtask in an isolated context. The sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
+    "One tool, FOUR actions — the action parameter picks (default: \"spawn\" — omit action to spawn):\n" +
+    "- spawn — run a sub-agent (task + role required; optionally model, designToken/designId for eng-coder, async). Blocking by default — returns the final report; with async:true it returns {id, role, status} immediately (see Async mode below).\n" +
+    "- check — fetch the result of a previously spawned ASYNC subagent: pass n = a 1-based read counter that must increment by 1 on every call (first check of the turn: n=1); without an id it returns the NEXT completed one in arrival order (fastest first); with an id it waits for that specific subagent (including still-queued ones). Returns {done:true} once everything is consumed; unchecked results are auto-injected at turn end. WARNING: check BLOCKS until the target finishes — to look at progress without blocking use action:'status'.\n" +
+    "- status — NON-BLOCKING progress query: without an id returns {overview:{running, queued, done}} over the async pool; with an id returns that subagent's status immediately. Never waits and never consumes — a finished entry stays fetchable by action:'check'. Query progress with status; only fetch with check.\n" +
+    "- escalate — fly in a stronger model for hard implementation (task required; optional model = 'provider:model' from the consult models pool, default the first): the expert gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification) that you review and relay. Terminology: escalate is the ONLY name — the action and the expert role are both 'escalate'; 飞刀 is the Chinese alias. When the user says 飞刀 / escalate / 'fly in <model>', call action:'escalate' directly — never via a script importing the module. Not available in engineering mode (implementation goes through eng-coder subagents). For parallel READ-ONLY opinions use consult_start instead.\n\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
-    "Async mode (async: true): spawn WITHOUT waiting — the tool returns {id, role, status} immediately and you can keep working (checking files, running other tools). Fetch results later with the subagent_check tool (arrival order — fastest first); unchecked results are auto-injected into the session at turn end, so nothing is lost. Role-based default (§18): role='eng-coder' spawns ASYNC by default — its internal delivery protocol (implementation → explore divergence audit → self-fix → advisor re-review → converged delivery) runs fully inside the child and settles in the background; pass async:false to force the blocking spawn when you must handle the report in this same turn. Every other role defaults to the blocking spawn. Use async when the main session must keep moving in parallel; use the default blocking spawn when you need the report before continuing.\n\n" +
+    "Async mode (async: true): spawn WITHOUT waiting — the tool returns {id, role, status} immediately and you can keep working (checking files, running other tools). Fetch results later with action:'check' (arrival order — fastest first); to check progress WITHOUT blocking your turn use action:'status' — action:'check' blocks until the target finishes; unchecked results are auto-injected into the session at turn end, so nothing is lost. Role-based default (§18): role='eng-coder' spawns ASYNC by default — its internal delivery protocol (implementation → explore divergence audit → self-fix → advisor re-review → converged delivery) runs fully inside the child and settles in the background; pass async:false to force the blocking spawn when you must handle the report in this same turn. Every other role defaults to the blocking spawn. Use async when the main session must keep moving in parallel; use the default blocking spawn when you need the report before continuing.\n\n" +
     "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
     "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). Receives git context auto-injected (branch, recent commits, working-tree state) when the project is a git repo. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
     "- plan — read-only implementation planning. Same read/search toolset; NEVER edits files. Returns a step-by-step plan for the parent to execute.\n" +
@@ -133,19 +155,37 @@ export const subagentTool = {
   parameters: {
     type: "object",
     properties: {
-      task: { type: "string", description: "Task description" },
-      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required." },
-      model: { type: "string", description: "Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModel config, then the parent's provider. Useful for offloading heavy work to a cheaper model." },
-      designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
-      designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
-      async: { type: "boolean", description: "true = spawn without waiting — returns {id, status} immediately, fetch results later via subagent_check. Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },
+      action: { type: "string", enum: ["spawn", "check", "status", "escalate"], description: "Which action of the subagent tool family to run (default: spawn). spawn = run a new sub-agent; check = fetch an async result (BLOCKS until the target settles; n = 1-based read counter required, id optional); status = non-blocking progress query (id optional); escalate = fly in a stronger model for hard implementation (task required, model optional)." },
+      task: { type: "string", description: "Task description (required for spawn and escalate). For spawn: self-contained — the sub-agent has no conversation context. For escalate: goal, constraints, entry files, acceptance criteria." },
+      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role (action:'spawn' only) — see the tool description for the role capability matrix. Exact spelling required." },
+      model: { type: "string", description: "(spawn) Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModel config, then the parent's provider. Useful for offloading heavy work to a cheaper model. (escalate) The consult candidate to fly in as 'provider:model' — default = the first consult model." },
+      designToken: { type: "string", description: "Required when role='eng-coder' (spawn): the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
+      designId: { type: "string", description: "Optional when role='eng-coder' (spawn): the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
+      async: { type: "boolean", description: "(spawn) true = spawn without waiting — returns {id, status} immediately, fetch results later via action:'check' (peek without blocking via action:'status'). Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },
+      id: { type: "number", description: "(check/status) The subagent id to address, as returned by an async spawn. For check: waits for that specific subagent (including still-queued ones); omit to fetch the next completed one (arrival order). For status: returns that subagent's status without waiting or consuming; omit for the full overview." },
+      n: { type: "number", description: "(check — required) 1-based read counter — must increment by 1 on every check call (n=1 for the first check of the turn); out-of-order/duplicate n is rejected. Not used by status." },
     },
-    required: ["task", "role"],
   },
   async execute(args, ctx) {
+    // §19 action dispatch（AGENT-LOOP.md §19 D-M1）：缺省 spawn——既有调用零迁移。
+    const action = args?.action ?? "spawn"
+    const parent = ctx.agent
+    if (!["spawn", "check", "status", "escalate"].includes(action)) {
+      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), check, status, escalate.`)
+    }
+    // §19 round2 #3 restricted-variant action gate（机械层——schema 层提示在 setup.mjs
+    // engAuditSubagentTool）：eng-coder 子代理的受限通道仅 spawn（sync explore 审计）——
+    // escalate 会内部 spawn coder+WRITE（违 explore-only 意图）；check/status 无意义
+    // （子代理上下文无 async 池）。镜像 T-E4/E5 的 action 维度。
+    if ((ctx.depth ?? 0) > 0 && parent?._role === "eng-coder" && action !== "spawn") {
+      throw new Error(`action:'${action}' is unavailable inside an eng-coder subagent — the restricted subagent channel is spawn-only (sync role='explore' audits, AGENT-LOOP.md §18 D-E3)`)
+    }
+    if (action === "check") return await subagentCheck(args, ctx)
+    if (action === "status") return subagentStatus(args, ctx)
+    if (action === "escalate") return await escalateAction(args, ctx)
+    // ── spawn（缺省 action）——既有 execute 原样 ──
     const { task, role, designToken, designId, model, async: asyncArg } = args
     const { runAgent } = await import("../agent.mjs")
-    const parent = ctx.agent
     const cwd = ctx.cwd
     // §18 F1/D-E1 role-level async default (AGENT-LOOP.md §18 D-E1): an eng-coder
     // spawn is ASYNC unless the caller explicitly passes async:false — its internal
@@ -212,8 +252,9 @@ export const subagentTool = {
 
     // Turn cap from shared config (CLI parity)
     const maxTurns = parent.config?.agent?.subagentTurns ?? 100
-    parent._subIdCounter = (parent._subIdCounter ?? 0) + 1
-    const subId = parent._subIdCounter
+    // advisor fix #1：id 分配跨 runAgent 单调（池沿 history 存活——agent._subIdCounter
+    // per-run 重建，重复 id 会覆盖池条目——nextSubagentId 以池内最大 id 续号）。
+    const subId = nextSubagentId(parent)
 
     // §18 D-E2 ③: the audit spawn's task book is appended MECHANICALLY — the eng-coder's
     // OWN spawn task (verbatim _engTaskInput) ∪ mechanically tracked _touchedFiles, never a
@@ -328,29 +369,4 @@ export const subagentTool = {
     // slot queue — returns immediately, does not await the report.
     return spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild })
   },
-}
-
-/**
- * Merge a child's mutations into the parent's bookkeeping
- * (CLI mergeChildMutations parity): the parent's advisor/verify guards must see
- * delegated file changes. Fresh code → fresh convergence budget: a verify/advisor
- * pass earned on the pre-delegation code is stale the moment the child writes.
- * Shared by subagent (eng-coder) and escalate — three-way review
- * 2026-08-16: escalate's local copy skipped the resets, letting surgery bypass
- * the parent's verify/advisor gates.
- */
-export function mergeChildMutations(parent, sink) {
-  const touched = sink?.touchedFiles ?? []
-  if (touched.length === 0) return
-  parent._mutatedThisRun = true
-  for (const abs of touched) {
-    if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
-  }
-  if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false
-  if (parent._verifiedThisRun) {
-    parent._verifiedThisRun = false
-    parent._verifyPassed = undefined
-  }
-  parent._advisorRound = 0
-  parent._advisorSession = null
 }
