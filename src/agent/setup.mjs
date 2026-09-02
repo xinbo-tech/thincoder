@@ -36,7 +36,7 @@ function safeSliceUTF16(text, max) {
 const MEMORY_SEARCH_LIMIT = 3
 
 /** Build engineering-mode system prompt by reading METHODOLOGY.md and wrapping it in the engineering template */
-async function buildEngineeringPrompt(cwd, role) {
+export async function buildEngineeringPrompt(cwd, role) {
   const engFile = role === "eng-coder" ? "engineering-sub.md" : "engineering.md"
   const engTemplatePath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "prompts", engFile)
   let engTemplate = ""
@@ -49,8 +49,17 @@ async function buildEngineeringPrompt(cwd, role) {
   const methodologyPath = resolve(cwd, "METHODOLOGY.md")
   if (!existsSync(methodologyPath)) {
     // Template-only — engineering constraints stay active, minus project rules.
-    // The caller injects a warning into the history.
-    return { prompt: engTemplate || null, templateMissing, methodologyMissing: true }
+    // The caller injects a warning into the history. Resolve the built-in
+    // methodology template to an absolute path (same-source join as the
+    // engineering template above — the packaged path is unreachable from the
+    // user's cwd) and carry its body so the warning can embed it verbatim
+    // (2026-09-02 D-M1/D-M2: template reachability for the model).
+    const methodologyTemplatePath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "prompts", "methodology-template.md")
+    let methodologyTemplateBody = null
+    try { methodologyTemplateBody = readFileSync(methodologyTemplatePath, "utf8") } catch {
+      // Template unreadable (packaging) — degraded: base warning only (no path/body injected), same as VS Code.
+    }
+    return { prompt: engTemplate || null, templateMissing, methodologyMissing: true, methodologyTemplatePath, methodologyTemplateBody }
   }
   const methodology = readFileSync(methodologyPath, "utf8")
   const prompt = engTemplate
@@ -264,7 +273,15 @@ export async function prepareRun(agent, input, callbacks, {
         warnings.push(`Engineering template (${agent._role === "eng-coder" ? "engineering-sub.md" : "engineering.md"}) not found — using degraded constraints.`)
       }
       if (engResult.methodologyMissing) {
-        warnings.push("METHODOLOGY.md not found in the project root — no project methodology is loaded, so every 'per METHODOLOGY' reference in the engineering prompt is dangling and the three-document hard flow (requirements / design / test doc) is NOT enforced. Ask the user whether to create METHODOLOGY.md (scaffold available as src/prompts/methodology-template.md) before designing.")
+        let warning = "METHODOLOGY.md not found in the project root — no project methodology is loaded, so every 'per METHODOLOGY' reference in the engineering prompt is dangling and the three-document hard flow (requirements / design / test doc) is NOT enforced. Ask the user whether to create METHODOLOGY.md; if the user confirms, write cwd/METHODOLOGY.md before designing."
+        // 2026-09-02 D-M1/D-M2 (template accessibility): absolute path + full body — the model
+        // can read the template directly instead of hand-writing one from an unreachable source
+        // path. Body read failure → degraded warning above (path/body not injected). VS Code
+        // setup-reminders.mjs parity (两端警告文本一致，本端以 CLI 为准).
+        if (engResult.methodologyTemplateBody) {
+          warning += `\n\nbuilt-in template（可 read ${engResult.methodologyTemplatePath} 或直接参考以下内容）:\n\n${engResult.methodologyTemplateBody}`
+        }
+        warnings.push(warning)
       }
       if (warnings.length > 0) {
         agent.history.push({
