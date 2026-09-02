@@ -110,6 +110,10 @@
 - [x] ~~CLI `test/` 目录纳入 lint~~——已销账，见上节（2026-08-31）
 - [x] ~~config.schema.json 同步机制~~——**2026-08-31 用户裁定：彻底删除**（非放弃维护）。核实其从未闭环：①线上 URL（saveConfig 注入的 `https://thincoder.dev/schemas/config.json`）从未部署——thincoder.com 仓库无 schemas 目录；②代码从不消费该文件；③DEFAULTS 顶层 25 键仅覆盖 5，providers 层 20 键从未进 schema——维护成本 > 价值。处理：删 `docs/schemas/`、删 saveConfig 的 `$schema` 注入（今后写出的 config.json 不再带该字段，存量字段无害残留）、README 失实宣传行删除。ROADMAP-0.9.0 的历史计划条目按快照规范保留。
 
+### 压缩调优遗留（2026-09-02，来源：压缩目标调优 code review）
+
+- [ ] **文件行数拆模块**（code review #3/#4，advisory 非阻塞）：CLI `src/context.mjs` 499 行 + VS Code `src/compact.mjs` 496 行——均超 300 行 advisory、距 500 硬限 ≤4 行。拆法：探索蒸馏段（CLI L360-499 / VS Code L363-495：EXPLORE_TOOLS/EXPLORE_SUMMARY_PROMPT/distillExplorations/summarizeRunExplorations 系）拆为独立模块（如 `context-explore.mjs`），压缩主路径留在原文件回到 ~360 行。拆前过设计评审（模块归属 CONTEXT-COMPACTION.md §5/ARCHITECTURE.md §5）。
+
 ### 开发体验三项（2026-09-02，来源：用户需求批——**已实现（2026-09-02 两端落地）**，设计落点见各条）
 
 - [x] **开发① 删 eslint 全套改 node --check**（TOOLS.md §10.2：devDependencies + eslint.config.mjs 删除，lint script 改 node scripts/check-syntax.mjs；CLI-LINT-REQUIREMENTS/TUNING.md 标记被取代）
