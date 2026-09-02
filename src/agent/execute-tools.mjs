@@ -22,6 +22,9 @@ function preGateBlocked(agent, { tool, toolName, args, depth }) {
     return { blocked: true, content: "Error: plan mode active" }
   }
   // Engineering coder hard gate: no file modification before the design review passed (CLI dispatch.mjs parity).
+  // §18 D-E3 granularity: this design-token gate runs BEFORE the permission stage — an
+  // eng-coder child's spawn-time authorization (engDesignReviewed, subagent.mjs) exempts
+  // ONLY the onPermissionRequest ask; it never widens what reaches that stage (T-E14).
   if (agent._role === "eng-coder" && agent.config?.agent?.engineering
       && !agent._engDesignReviewed && FILE_MUTATORS.has(toolName)) {
     return { blocked: true, content: "Error: engineering design gate — call advisor with type='design' to review the design document before any file modification. If the review found issues, report them to the parent agent." }
@@ -129,6 +132,12 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       // Permission gate: any non-readonly tool at depth 0 in manual mode. getAuto() is the
       // LIVE flag (CLI parity) — approve-all / the AUTO button can flip it mid-turn, so
       // re-read it per tool call instead of using the startup snapshot.
+      // §18 D-E3: eng-coder children never reach this stage — their writes are authorized
+      // at spawn time (approved design + task = authorization; runChild passes the child
+      // autoApprove=true), so no per-write panel ever pops for them. The exemption is
+      // stage-limited by construction: JSON parse, unknown-tool, planMode and design-token
+      // gates all run earlier (preGateBlocked) and stay fully effective (T-E14). Non-eng-
+      // coder children keep the pre-existing semantics unchanged.
       // Tools may declare action-level readonly-ness (e.g. git diff/status/log/show) —
       // those skip approval while write actions (git commit/push/rm) still prompt.
       const actionReadonly = tool?.isReadonlyAction?.(args) ?? false

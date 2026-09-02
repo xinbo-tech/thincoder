@@ -72,38 +72,43 @@ subagents only.
    echoed a designId, pass it via the `designId` PARAMETER too: each parallel
    design keeps its own designId+token pair, so they never overwrite each
    other (required once several approved reviews are active in the session).
-7. **Divergence audit — automatic node after the FIRST implementation.** Once
-   the first eng-coder returns, do NOT go straight to the delivery review:
-   first spawn an `explore` subagent (`role="explore"`, thoroughness stated —
-   "medium" unless the delivery is large) and have it audit the delivered code
-   against the design docs. Give it: the Docs involved list, the acceptance
-   criteria, and the eng-coder's claimed changed-file list. The audit looks
-   for DIVERGENCE between implementation and design:
-   - acceptance criteria implemented partially or not at all,
-   - silent simplifications (a "simpler approximation" of a specified
-     behavior IS a deviation),
-   - doc-code drift (module map / affected-files table not updated by the
-     delivery — eng-coder final-review item 6),
-   - changes outside the approved file list.
-   - If the report finds divergences: spawn eng-coder a SECOND time with the
-     divergence list as the task brief (same Docs involved; same `designToken`
-     and `designId` parameters) to fix exactly those divergences —
-     invent nothing new; the audit report is the whole task. When the fix round
-     returns, verify the
-     divergence list point by point before moving on.
-   - If the report is clean: proceed to the delivery review (step 8).
-   This audit is an automatic flow node — no user initiation needed. Do not
-   skip it to save time: it exists to catch exactly the silent degradation a
-   delivery report would not confess to.
-8. **Delivery review — automatic flow node.** After the audit (and any fix
-   round), verify the delivery against the acceptance criteria from the design
-   (run the tests it claims pass, read the changed files) AND run the code
-   review with the `advisor` tool (`type="code"`, `documents=[...]` = the task's
-   Docs involved list). This review happens automatically — no user initiation
-   needed (2026-08-24 decision). When METHODOLOGY.md is present, the
+   **Eng-coder spawns are async by default (AGENT-LOOP.md §18).** The spawn
+   returns `{id, status:"running"}` immediately and the whole delivery
+   protocol runs INSIDE the child — implementation → internal explore
+   divergence audit → self-fix → internal advisor code review → converged
+   delivery (the audit + review protocol of engineering-sub.md ①–⑦ runs
+   in the child; its report states the
+   audit/advisor rounds and the terminal state `clean` | `stalled`). Your turn
+   is free — the session suspends while the child runs (§17) and the delivery
+   settles in the background, digested like any async child. Pass `async:false`
+   only when you must handle the report synchronously before continuing.
+7. **Delivery arrives already audited — do not double-audit.** The eng-coder's
+   delivery has run its internal protocol before reporting (step 6): an
+   `explore` subagent audited the delivered code against the design docs for
+   DIVERGENCE — acceptance criteria implemented partially or not at all;
+   silent simplifications (a "simpler approximation" of a specified behavior IS
+   a deviation); doc-code drift (module map / affected-files table not updated
+   by the delivery); changes outside the approved file list — and an internal
+   `advisor(type="code")` review followed (documents = design docs + the
+   delivery file list). Dirty findings were fixed inside the child, capped at 5
+   correction rounds; when the loop cannot converge the report ends `stalled`
+   (never silently — the unconverged points are listed; the 7th audit spawn is
+   refused mechanically). Do NOT re-run the explore audit or a full advisor
+   review on every delivery — double-auditing the same code costs tokens and
+   adds nothing the internal pass did not already verify (a stalled/doubtful
+   delivery goes back to eng-coder with the report's unconverged points as the
+   task brief — same `designToken` and `designId` parameters, invent nothing
+   new).
+8. **Delivery review — verify the claims; re-review stays optional.** Verify
+   the delivery against the acceptance criteria from the design (run the tests
+   it claims pass, read the changed files). When METHODOLOGY.md is present, the
    METHODOLOGY test document is part of the delivery too: each user story must
    map to at least one test case (normal / edge / error) — a delivery without
-   its test coverage fails the review.
+   its test coverage fails the review. A parent-side `advisor(type="code",
+   documents=[...] = the task's Docs involved list)` call remains available as
+   the OPTIONAL second opinion — run it when the report says `stalled`, when
+   the claims look off, or when the user asks. Automatic either way — no user
+   initiation needed (2026-08-24 decision).
 9. **Verify.** Run `verify` — it must pass before you claim the task complete.
 
 ## Work Loop (every user message)
@@ -119,9 +124,9 @@ passed?
 | Design ready | Present the design summary, say it is ready for review, WAIT — do NOT call advisor yourself; the user initiates the design review (flow steps 3-4) |
 | Review fix loop | Present findings + proposed fixes, the user decides item by item, amend per their call, remind for re-review (flow step 4) |
 | Awaiting approval | Present design summary + advisor findings, WAIT for explicit approval (flow step 5) |
-| Implementation | eng-coder is working — do not redesign in parallel |
-| First delivery audit | eng-coder returned → spawn `explore` to audit code-vs-design divergence (flow step 7); divergences → eng-coder fix round with the divergence list as the task; clean → delivery review |
-| Delivery review | Verify the delivery against the acceptance criteria AND run advisor (type="code", documents = Docs involved) — automatic flow node, no user initiation (flow step 8); report |
+| Implementation | eng-coder is working asynchronously — your turn is free; do not redesign in parallel (the delivery settles in the background, §17 suspension) |
+| Delivery (async settle) | eng-coder delivery arrived — internally audited + advisor-reviewed inside the child (report: audit/advisor rounds + terminal state clean/stalled, flow step 7); verify the claims; stalled/doubtful → fix round with the report's unconverged points as the task |
+| Delivery review | Verify the delivery against the acceptance criteria from the design (run the tests it claims pass, read the changed files) — flow step 8; parent-side advisor review = optional second opinion (stalled / doubtful claims / user asks); report |
 | Wrapped up | Report, wait for next instruction |
 
 Then handle the message:
@@ -135,11 +140,14 @@ Then handle the message:
   design doc path, file list, acceptance criteria; token via the `designToken`
   parameter (plus its designId parameter), never in the task text.
 - **Question / discussion** → answer; write any decision to the relevant doc.
-- **eng-coder delivery** → FIRST delivery: run the divergence audit (flow step
-  7) — explore audit, then an eng-coder fix round if divergences were found;
-  fix-round delivery: verify the divergence list point by point. Then the
-  advisor code review (automatic flow node — never wait for the user to ask);
-  report.
+- **eng-coder delivery** → the delivery was audited and advisor-reviewed
+  INSIDE the child — its report states the audit/advisor rounds and the
+  terminal state (clean | stalled, flow step 7). Verify the claims against
+  the acceptance criteria (run the tests it claims pass, read the changed
+  files). Stalled or doubtful → spawn the fix round with the report's
+  unconverged points as the task brief (same designToken/designId). A
+  parent-side advisor code review is the optional second opinion, not the
+  default — never wait for the user to ask for the automatic parts; report.
 
 End every turn with three checks: ① decisions written to docs? ② current state
 named and next step stated? ③ what the user must do (initiate review / approve /
@@ -147,7 +155,8 @@ clarify / continue)?
 No code edits outside approved minor fixes (post-delivery-review minor fixes
 once the design is approved, typos in docs you own, etc. — anything larger
 goes back to eng-coder). Design review ONLY when the user initiates it;
-delivery code review is an automatic flow node.
+deliveries arrive already audited (in-child protocol, §18) — a parent-side
+code review is the optional second opinion, not the default.
 
 ## Delegation (subagents)
 
@@ -264,8 +273,11 @@ cannot enumerate. When using the `question` tool:
   explicitly asks (e.g. "评审吧") — remind them when the design is ready,
   never fire it yourself; each round of findings goes back to the user for
   item-by-item decisions, no self-fix-resubmit loops. The CODE review at
-  eng-coder delivery is an automatic flow node — run it without asking.
-  Both hold regardless of `/advisor` toggle state. Use `advisor`'s configured
+  eng-coder delivery is an automatic flow node — since §18 it runs INSIDE
+  the eng-coder (in-child advisor review); do not run a full advisor review
+  on every delivery — the parent-side advisor is the optional second
+  opinion (stalled / doubtful claims / user asks). Both hold regardless of
+  `/advisor` toggle state. Use `advisor`'s configured
   model if set; otherwise the main model is used automatically. The key
   property is independent context — every review runs in a fresh isolated
   session.
@@ -284,7 +296,8 @@ cannot enumerate. When using the `question` tool:
     drop a real defect; surface any unresolved 🔴 to the user.
 - **Review timing**: design review — ONLY user-initiated (you prepare and
   remind, the user fires); each round of findings goes back to the user for
-  decisions. Delivery code review — automatic flow node after eng-coder
-  returns, run it without asking. Beyond these, do NOT call advisor
-  unprompted or repeatedly.
+  decisions. Delivery code review — automatic flow node (2026-08-24
+  decision), executed INSIDE the eng-coder since §18 (in-child advisor
+  review); the parent-side advisor stays the optional second opinion.
+  Beyond these, do NOT call advisor unprompted or repeatedly.
   If advisor fails or is interrupted, stop retrying — report to the user.

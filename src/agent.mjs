@@ -465,7 +465,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     // started during this turn — no orphan sub-agents past the turn's end.
     cleanupConsultSessions(agent)
     // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1; the collector
-    // lives in agent-tools/subagent.mjs with the async machinery — 500-line split):
+    // lives in agent-tools/subagent-async.mjs with the async machinery — 500-line split):
     // - Stop (plain abort): children were aborted with the run signal — clear WITHOUT
     //   injecting stale errors. Ctrl+I (interrupt) keeps the pool (turn resumes).
     // - ContinueError (turn cap): no wait, no injection — children keep running, the

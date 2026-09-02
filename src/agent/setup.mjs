@@ -53,6 +53,30 @@ function withPool(tool) {
   }
 }
 
+/**
+ * §18 D-E3 (AGENT-LOOP.md): the eng-coder child's restricted subagent channel —
+ * built when an eng-coder child (depth>0) toolset is assembled. Schema level:
+ * role enum is explore-only and the async parameter is REMOVED (sync only) — the
+ * model-facing filter; the mechanical enforcement lives in subagent.mjs execute →
+ * gateEngCoderSpawn (schema enums are advisory, providers don't enforce them).
+ */
+function engAuditSubagentTool() {
+  const props = { ...subagentTool.parameters.properties }
+  delete props.async // sync only — the eng-coder blocks on the audit report
+  props.role = {
+    type: "string",
+    enum: ["explore"],
+    description: "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
+  }
+  return {
+    ...subagentTool,
+    name: "subagent",
+    description:
+      "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+    parameters: { ...subagentTool.parameters, properties: props },
+  }
+}
+
 export async function setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto }) {
   const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false, autoTurn = false } = opts
 
@@ -64,7 +88,8 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
         ? [withPool(consultStartTool), consultCheckTool, consultStopTool, withPool(escalateTool)]
         : [])]
     : role === "eng-coder"
-      ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool] // eng-coder: design review + verify gates
+      ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool,
+         engAuditSubagentTool()] // §18 D-E3: the audit-only restricted subagent channel (explore + sync — schema level; the mechanical gate is subagent.mjs gateEngCoderSpawn)
     // Write-permission coder sub-agents (subagentTool + escalate): their system
     // prompt names verify (system.md) and advisor (discipline.md) — without them the
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
@@ -182,6 +207,9 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     _role: role,
     _advisorRound: 0,
     _advisorSession: null,
+    // §18 D-E2 ③: the eng-coder's own spawn task — verbatim source of the audit
+    // task book its internal explore-audit spawns get (subagent.mjs augmentation).
+    _engTaskInput: opts.engTaskInput ?? null,
     _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
     _engDesignToken: engState?.engDesignToken ?? null,
     // Multi-design slots restored from the slot's {designId: token} object (2026-09-01 audit #1);

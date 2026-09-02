@@ -4,9 +4,26 @@
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
  * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
  * history._pendingAsyncResults), manual-tier auto-turn spawn gate, shared injector.
+ * §18 (AGENT-LOOP.md D-E1..E3): role-level async default (eng-coder → async),
+ * internal delivery protocol; eng-coder children may only spawn synchronous explore
+ * audit children (gateEngCoderSpawn — mechanical, incl. the 7th-spawn backstop).
+ *
+ * Split (2026-09-03, 500-line discipline): the async/audit machinery — gateEngCoderSpawn,
+ * auditTaskBook, shouldAutoResume, spawnAsyncSubagent, settleAsyncEntry, ASYNC_SUBAGENT_LIMIT,
+ * MAX_ASYNC_CHECKS, injectAsyncResult, collectSettledAsync, subagentCheckTool — lives in
+ * subagent-async.mjs (pure mechanical move, zero behavior change; public names re-exported
+ * below). This file keeps the tool entry (execute), the blocking path and the shared
+ * runChild pipeline.
  */
 import { validateDesignToken } from "./advisor.mjs"
-import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
+import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent } from "./subagent-async.mjs"
+// Re-export shim (2026-09-03 split): the async/audit machinery below moved to
+// subagent-async.mjs — its public names stay importable from subagent.mjs so no
+// consumer (agent.mjs / suspension.mjs / index.mjs / setup.mjs / escalate.mjs / tests) changed.
+export {
+  ASYNC_SUBAGENT_LIMIT, MAX_ASYNC_CHECKS, ENG_AUDIT_SPAWN_LIMIT, gateEngCoderSpawn,
+  injectAsyncResult, collectSettledAsync, subagentCheckTool,
+} from "./subagent-async.mjs"
 
 /**
  * Mode-dependent subagent role schema field (CLI setup.mjs parity). The role enum is
@@ -101,7 +118,7 @@ export const subagentTool = {
   description:
     "Spawn a sub-agent to handle an independent subtask in an isolated context. The sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
-    "Async mode (async: true): spawn WITHOUT waiting — the tool returns {id, role, status} immediately and you can keep working (checking files, running other tools). Fetch results later with the subagent_check tool (arrival order — fastest first); unchecked results are auto-injected into the session at turn end, so nothing is lost. Use async when the main session must keep moving in parallel; use the default blocking spawn when you need the report before continuing.\n\n" +
+    "Async mode (async: true): spawn WITHOUT waiting — the tool returns {id, role, status} immediately and you can keep working (checking files, running other tools). Fetch results later with the subagent_check tool (arrival order — fastest first); unchecked results are auto-injected into the session at turn end, so nothing is lost. Role-based default (§18): role='eng-coder' spawns ASYNC by default — its internal delivery protocol (implementation → explore divergence audit → self-fix → advisor re-review → converged delivery) runs fully inside the child and settles in the background; pass async:false to force the blocking spawn when you must handle the report in this same turn. Every other role defaults to the blocking spawn. Use async when the main session must keep moving in parallel; use the default blocking spawn when you need the report before continuing.\n\n" +
     "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
     "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). Receives git context auto-injected (branch, recent commits, working-tree state) when the project is a git repo. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
     "- plan — read-only implementation planning. Same read/search toolset; NEVER edits files. Returns a step-by-step plan for the parent to execute.\n" +
@@ -121,15 +138,19 @@ export const subagentTool = {
       model: { type: "string", description: "Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModel config, then the parent's provider. Useful for offloading heavy work to a cheaper model." },
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
-      async: { type: "boolean", description: "true = spawn without waiting — returns {id} immediately, fetch results later via subagent_check. Default false (blocking)." },
+      async: { type: "boolean", description: "true = spawn without waiting — returns {id, status} immediately, fetch results later via subagent_check. Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },
     },
     required: ["task", "role"],
   },
   async execute(args, ctx) {
-    const { task, role, designToken, designId, model, async: asyncFlag } = args
+    const { task, role, designToken, designId, model, async: asyncArg } = args
     const { runAgent } = await import("../agent.mjs")
     const parent = ctx.agent
     const cwd = ctx.cwd
+    // §18 F1/D-E1 role-level async default (AGENT-LOOP.md §18 D-E1): an eng-coder
+    // spawn is ASYNC unless the caller explicitly passes async:false — its internal
+    // delivery protocol settles in the background; every other role stays blocking.
+    const asyncFlag = asyncArg ?? role === "eng-coder"
 
     // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async
     // OR blocking — the digest must stay organize-only. AUTO tier (ctx.getAuto) is
@@ -153,6 +174,14 @@ export const subagentTool = {
     if (!ROLES.has(role)) {
       throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder (exact spelling).`)
     }
+    // §18 D-E3 internal-spawn mechanical gate: an eng-coder sub-agent may only spawn
+    // SYNC explore (audit) children — non-explore roles and async spawns are refused,
+    // and the audit budget is enforced (the 7th audit spawn is refused — the stalled
+    // signal of the 5-fix-round cap). Runs BEFORE the mode gates so the eng-coder-
+    // specific error (not the generic engineering-mode one) surfaces. Returns the
+    // audit attempt number — the mechanical audit-scope augmentation below uses it —
+    // or null outside an eng-coder context.
+    const engAuditAttempt = gateEngCoderSpawn(ctx.agent, ctx.depth, role, asyncArg)
     // Role is mutually exclusive per mode: normal mode → "coder", engineering mode → "eng-coder" (CLI parity)
     if (parent.config?.agent?.engineering && role === "coder") {
       throw new Error("Engineering mode: use role='eng-coder' for implementation tasks.")
@@ -186,6 +215,11 @@ export const subagentTool = {
     parent._subIdCounter = (parent._subIdCounter ?? 0) + 1
     const subId = parent._subIdCounter
 
+    // §18 D-E2 ③: the audit spawn's task book is appended MECHANICALLY — the eng-coder's
+    // OWN spawn task (verbatim _engTaskInput) ∪ mechanically tracked _touchedFiles, never a
+    // self-written list (mechanism lives in subagent-async.mjs auditTaskBook).
+    const childInput = auditTaskBook(task, ctx.agent, engAuditAttempt)
+
     // Subagent runs without MAIN-CONVERSATION callbacks — results are captured.
     // onQuestion: the child's question tool must surface in the panel like the parent's.
     // onToolCall/onToolResult/onToken/onReasoning: forwarded to the toolPanel channel as a
@@ -212,17 +246,27 @@ export const subagentTool = {
         depth: 1, role, maxTurns,
         streamOutput: true, // exempt from the agent.mjs onToken depth gate (escalate parity)
         engState: { enabled: parent.config?.agent?.engineering ?? false, engDesignToken: parent._engDesignToken },
+        // §18 D-E3 task-domain authorization (spawn-time): the design token was
+        // verified above — approved design + spawn task = authorization for the
+        // child's writes. The exemption granularity is ONLY the permission/approval
+        // stage (autoApprove equivalent — the child never pops a per-write panel):
+        // JSON parse / unknown tool / planMode / design-token gates run BEFORE the
+        // permission stage in execute-tools and stay fully effective (T-E14).
         engDesignReviewed: role === "eng-coder", // token verified above → child may write files
+        // §18 D-E2 ③: the eng-coder's own spawn task rides the child as the verbatim
+        // source for its audit task book (mechanical — never self-written).
+        ...(role === "eng-coder" ? { engTaskInput: task } : {}),
         stateSink: sink,
       }
       // Turn-cap continue loop (escalate parity): hitting the cap asks the user through
       // the panel's question card — unlimited continues, each with a fresh budget and the
       // child's own history (resume:true, opts.history=sink.history). Declined / headless
-      // (no onQuestion) → partial-work return. ASYNC children auto-decline (§15 D-A3:
-      // a background child must never pop a continue panel on the main session).
+      // (no onQuestion) → partial-work return. ASYNC children never pop a continue panel
+      // (§15 D-A3): auto-decline, except engineering && AUTO, which auto-resumes — see the
+      // ContinueError branch below (§18 D-E2 cap fallback for the default-async eng-coder).
       for (let resume = false; ; resume = true) {
         try {
-          const result = await runAgent(provider, cwd, task, {
+          const result = await runAgent(provider, cwd, childInput, {
             onToken: (t) => { output += t; panel({ kind: "text", text: t }) },
             onReasoning: (r) => panel({ kind: "think", text: r }),
             onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
@@ -244,12 +288,24 @@ export const subagentTool = {
           // Max-turns exhaustion may still have written files — merge whatever the child touched
           if (role === "eng-coder") mergeChildMutations(parent, sink)
           if (e instanceof agentMod.ContinueError) {
+            // Blocking children ask the user through the panel question card below.
+            // §15 D-A3 (2026-09-02 unified rule, CLI parity — CLI async askContinue:
+            // () => Promise.resolve(Boolean(config.agent.engineering && autoApprove));
+            // the VS Code live-AUTO equivalent is ctx.getAuto — execute-tools wires
+            // runAgent's live autoApprove getter into every tool ctx, the per-run
+            // VS Code agent has no autoApprove field): a background (async) child
+            // NEVER pops a continue panel.
             if (!asyncFlag && ctx.callbacks?.onQuestion) {
               const go = await ctx.callbacks.onQuestion(
                 `Subagent (${role}) reached ${e.turns} turns (limit). Continue from here?`,
                 ["Continue", "Stop"],
               )
               if (go === "Continue") continue
+            }
+            // §15 D-A3 exception / §18 D-E2 cap fallback: engineering && AUTO → the async
+            // child auto-resumes (mechanical check lives in subagent-async.mjs shouldAutoResume).
+            if (shouldAutoResume(asyncFlag, parent, ctx)) {
+              continue // AUTO 自动续跑：resume:true + 子代理自身 history、fresh budget（与用户 Continue 同路径）
             }
             ctx.callbacks?.onSubagent?.({ id: subId, role, status: "error", error: `turn cap reached (${e.turns} turns) — work may be partial` })
             // declined eng-coder delivery still carries its designId — the fix round
@@ -268,76 +324,10 @@ export const subagentTool = {
       return await runChild()
     }
 
-    // ─── Async branch（§15 D-A1/D-A4）：槽位队列——立即返回，不 await 报告 ───
-    // 上限指标 = running 数（done/queued 不计入）；≥ ASYNC_SUBAGENT_LIMIT → 入队
-    // （status:"queued" + position），任一 running settle → 队列头部自动补位启动。
-    // 关键结构：settle 逻辑绑定 ENTRY 自身（entry._resolve / entry.start）——不同 execute
-    // 调用之间互不串扰（本调用的 finish 不得去解析另一个调用的 entry.settled）。
-    parent._asyncSubagents = parent._asyncSubagents ?? new Map()
-    const id = subId
-    const entry = {
-      id, role,
-      status: "queued", position: 0,
-      report: null, error: null, done: false,
-      settled: null, _resolve: null,
-      // §17: the child's effective signal (session-first) — the settle callback reads it
-      // to skip the pending transfer when the session was aborted (abort = discard).
-      signal: childSignal,
-    }
-    entry.settled = new Promise((res) => { entry._resolve = res })
-    entry.start = () => {
-      entry.status = "running"
-      ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "started", startedAt: Date.now(), model: provider.model ?? null })
-      runChild().then(
-        (report) => settleAsyncEntry(parent, entry, report, null, ctx.callbacks?.onAsyncSettled),
-        (err) => settleAsyncEntry(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
-      )
-    }
-    parent._asyncSubagents.set(id, entry)
-    const runningCount = [...parent._asyncSubagents.values()].filter((x) => x.status === "running").length
-    if (runningCount < ASYNC_SUBAGENT_LIMIT) {
-      entry.start()
-      return { id, role, status: "running" }
-    }
-    entry.position = [...parent._asyncSubagents.values()].filter((x) => x.status === "queued").length
-    return { id, role, status: "queued", position: entry.position }
+    // Async branch (moved to subagent-async.mjs spawnAsyncSubagent — 2026-09-03 split):
+    // slot queue — returns immediately, does not await the report.
+    return spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild })
   },
-}
-
-/**
- * §15 D-A1 settle：落 report/error + 解析该 entry 自己的 settled（arrival-order 唤醒
- * subagent_check / 回合收尾）→ 腾槽补位（running settle 一个即启动队列头部——完成即补位，
- * 不消费才补；失败/abort 同样腾槽）。entry.start 绑定创建它的 execute 调用上下文，
- * 因此补位启动的子代理跑的是它自己的 pipeline。
- * §17 D-S3 ②/D-S8（VS Code 对齐）：settle 时若处于挂起态（parent.history._suspended——
- * 共享数组，跨 runAgent 调用存活；读取时刻为准，确定性）→ 延迟冻结：条目移交
- * history._pendingAsyncResults（由下个回合 prepareRun 前注入，D-S3 ② 记账点）并从池
- * 移除；正常回合内 settle 行为不变（留池，回合尾 collectSettledAsync 直注入 ①）。
- * 会话中止（entry.signal aborted）跳过移交并**出池清理**（2026-09-02 偏差修复 #2）——
- * abort 清池不注入陈旧错误，且 done 僵尸条目不得留在池里让 poolLive 恒真。
- */
-function settleAsyncEntry(parent, entry, report, error, notifySettle) {
-  entry.report = report
-  entry.error = error
-  entry.done = true
-  // 2026-09-02 偏差修复 #2（abort 分支出池清理）：中止的池项 = 丢弃（D-S5——abort 清池
-  // 不注入陈旧错误）。先前 aborted 项不移交 pending 也不出池——done 僵尸条目留在共享
-  // map，poolLive 恒真（释放窗口竞态后果 (a)：僵尸挂起会话、驱动器 waitForSettleOrWake
-  // 空转直到用户手动 Stop）。abort 分支做与挂起移交同构的出池清理：从池移除、不注入。
-  if (entry.signal?.aborted) {
-    parent.history?._asyncSubagents?.delete(entry.id)
-    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
-  } else if (parent.history?._suspended === true) {
-    const hist = parent.history
-    const pend = (hist._pendingAsyncResults ??= [])
-    if (!pend.includes(entry)) pend.push(entry)
-    hist._asyncSubagents?.delete(entry.id)
-    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
-  }
-  entry._resolve?.(entry)
-  const queued = [...(parent._asyncSubagents?.values() ?? [])].filter((x) => x.status === "queued")
-  if (queued.length > 0) queued[0].start()
-  notifySettle?.()
 }
 
 /**
@@ -363,116 +353,4 @@ export function mergeChildMutations(parent, sink) {
   }
   parent._advisorRound = 0
   parent._advisorSession = null
-}
-
-
-// ─── Async subagent machinery（AGENT-LOOP.md §15 + §17，CLI D-A1/D-A2/D-A4/D-S3 同规格）───
-
-/** 机械并发上限：running 数 <4 时新 async spawn 立即启动，≥4 入队等待（用户 2026-09-02 拍板）。 */
-export const ASYNC_SUBAGENT_LIMIT = 4
-
-/** subagent_check 单回合最多读取次数（consult_check 同款防循环，评审 #1 补定义）。 */
-export const MAX_ASYNC_CHECKS = 3
-
-/**
- * §17 D-S3 shared injector: inject one settled async entry into the session as a
- * user-role reminder (XML-escaped — child reports may carry file/web content; >64K
- * offloaded with preview + path). Single shared form for ALL consumption points —
- * the turn-end collection (collectSettledAsync below), the run-start
- * history._pendingAsyncResults injection — plus the suspension-exit residual flush.
- * Consumed = the caller removes the entry from its container; no double inject.
- */
-export async function injectAsyncResult(entry, { history, fullHistory, cwd }) {
-  const body = entry.error != null
-    ? `error: ${escapeXml(entry.error)}`
-    : escapeXml(offloadToolResult(cwd, entry.report ?? ""))
-  pushReal(history, fullHistory, {
-    role: "user",
-    content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n\n${body}`,
-  })
-}
-
-/**
- * §17 D-S1 turn-end async collection (AGENT-LOOP.md §17 D-S1 — lives here with the
- * async machinery; agent.mjs's finally calls it, 500-line split): inject every entry
- * that SETTLED during this run (shared injector form — XML-escaped, >64K offloaded)
- * and remove it from the pool. Running/queued STAY — no allSettled wait: the
- * suspension session digests them as they settle (D-S2/D-S9). Single ownership:
- * entries settled inside a suspension session were moved to
- * history._pendingAsyncResults by the settle callback, so this only sees
- * non-suspended settles (no double inject — D-S3 ①/②).
- */
-export async function collectSettledAsync(agent, { history, fullHistory, cwd }) {
-  const map = agent._asyncSubagents
-  if (!map || map.size === 0) return
-  for (const e of [...map.values()]) {
-    if (!e.done) continue // still running — stays in the pool (D-S1)
-    await injectAsyncResult(e, { history, fullHistory, cwd })
-    map.delete(e.id) // map keys are the spawn-time id (number — subagent.mjs async branch)
-  }
-}
-
-/**
- * subagent_check — fetch results of ASYNC subagents (spawned with async: true).
- * readonly: true（评审 #6——consult_check 先例，planMode 门控需要）。
- * - n（必填）：1-based 递增读数——每回合首调 n=1，之后逐次 +1；乱序/重复 n 拒绝。
- * - 不带 id：按完成顺序（arrival order）返回下一个完成的 async 子代理——先完成先处理。
- * - 带 id：等该特定子代理（含 queued 项——先等它启动再等完成）。
- * - 全部已消费 → { done: true }（consult_check 同款终结语义）。
- * - 错误路径：未知/已消费 id → { id, status:"error", error:"unknown async subagent id: <id>" }。
- */
-export const subagentCheckTool = {
-  name: "subagent_check",
-  readonly: true,
-  description:
-    "Fetch the result of a previously spawned ASYNC subagent (subagent with async: true). " +
-    "Pass n = the 1-based read counter — it must increment by 1 on every call (first call of the turn: n=1). " +
-    "Without an id, returns the NEXT completed async subagent in arrival order (fastest first); " +
-    "with an id, waits for that specific subagent (including still-queued ones). " +
-    "Returns {done: true} when everything is consumed. Unchecked results are automatically " +
-    "injected into the session at turn end — you do not need to check every one.",
-  parameters: {
-    type: "object",
-    properties: {
-      id: { type: "number", description: "Optional: the subagent id to wait for (as returned by the async spawn). Omit to fetch the next completed one (arrival order)." },
-      n: { type: "number", description: "Required: 1-based read counter — increment by 1 on every call (n=1 for the first check of the turn)." },
-    },
-    required: ["n"],
-  },
-  async execute({ id, n }, ctx) {
-    const parent = ctx.agent
-    const map = parent._asyncSubagents
-    // 未知/已消费 id 优先报错（评审 #5：即使注册表已空也要明确错误，不悬挂不误报 done）
-    if (id != null && (!map || !map.has(id))) {
-      return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
-    }
-    if (!map || map.size === 0) return JSON.stringify({ done: true })
-    if (typeof n !== "number" || !Number.isInteger(n) || n < 1) {
-      return JSON.stringify({ status: "error", error: "invalid read counter — pass n = lastN+1" })
-    }
-    if (n > MAX_ASYNC_CHECKS) {
-      return JSON.stringify({ status: "error", error: "check limit exceeded — use turn-end auto-wait for the rest" })
-    }
-    const lastN = parent._asyncCheckN ?? 0
-    if (n !== lastN + 1) {
-      return JSON.stringify({ status: "error", error: "invalid read counter — pass n = lastN+1" })
-    }
-    parent._asyncCheckN = n
-    if (id != null) {
-      const entry = map.get(id)
-      if (!entry) return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
-      await entry.settled
-      map.delete(id)
-      return entry.error != null
-        ? JSON.stringify({ id, status: "error", error: entry.error })
-        : JSON.stringify({ id, role: entry.role, status: "done", report: entry.report })
-    }
-    const pending = [...map.values()]
-    if (pending.length === 0) return JSON.stringify({ done: true })
-    const entry = await Promise.race(pending.map((e) => e.settled))
-    map.delete(entry.id)
-    return entry.error != null
-      ? JSON.stringify({ id: entry.id, status: "error", error: entry.error })
-      : JSON.stringify({ id: entry.id, role: entry.role, status: "done", report: entry.report })
-  },
 }
