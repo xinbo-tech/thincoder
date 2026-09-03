@@ -180,11 +180,12 @@ export function executeStatusAction(args, ctx) {
     if (entry.status === "queued") {
       return JSON.stringify({ ...target, status: "queued", position: queuedPosition(key) ?? entry.position })
     }
-    // done = settled during this turn and not yet consumed — check still retrieves it.
+    // done = settled during this turn and not yet consumed — check still retrieves it
+    // (§17.5: at a driven turn end it stays pooled → the suspension digest consumes it).
     target.status = "done"
     target.done = true
     if (entry.error) target.error = entry.error
-    target.note = "settled, not yet consumed — retrieve via check or the turn-end auto-wait injects it"
+    target.note = "settled, not yet consumed — retrieve via check or the suspension digest injects it"
     return JSON.stringify(target)
   }
   const overview = { running: [], queued: [], done: [] }

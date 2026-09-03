@@ -41,44 +41,82 @@ export function createKeyHandler(ctx) {
         popPicker(null)
         return
       }
-      if (state.suspended) {
-        // §17 D-S9 + round2 偏差 #4（2026-09-02）：挂起态 Ctrl+C = 武装窗口两级中止——
-        // 一次按键直接清池中止全部后台子代理的误触代价高（digest 刷屏时用户可能只想
-        // 停住当前回合）；仿空闲态退出武装语义（同下方空闲态 exitArmed 双确认分支）：
-        //   ① 未武装 + 有回合在跑（digest 消化/会话内回合）：仅中止当前回合
-        //      （controller.abort()）——会话继续、后台子代理不受影响，回挂起等待；
-        //   ② 未武装 + 纯挂起等待：仅提示不清池；
-        //   ③ 3s 武装窗口内再次 Ctrl+C：彻底中止——abort 集合 = 链条内全部 controller
-        //      （含 Ctrl+I/ContinueError 重建的旧 controller——children 不逃逸，round1
-        //      偏差 #3）+ 标记 _suspAborted + 唤醒 driver（driver 收尾清池）。
-        if (!state.suspAbortArmed) {
-          if (state.processing && state.controller) {
-            state.controller.abort() // ① 仅中止当前回合（digest/会话内回合），不碰后台池
-            pushLine("[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]", C.warn)
-          } else {
-            const bgActive = [...(agent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length + (agent._asyncQueue?.length ?? 0)
-            pushLine(`[abort] Press Ctrl+C again within 3s to abort all background subagents (${bgActive} running)`, C.warn)
+      // §17.6（2026-09-03）：武装窗口内第二次 Ctrl+C = 显式全停（D-C4 /abort 语义）。
+      // 在状态路由前检查（picker 取消分支例外——picker 打开时 Ctrl+C 语义 = 取消
+      // picker，武装让位；场景极窄——3s 窗口内需另有 picker 被打开）——两次按下之间
+      // 状态会迁移（首按停回合 → 释放窗口/挂起会话启动），武装必须跨态桥接：只查挂起
+      // 分支会让非挂起 processing 首按后的二按落入空闲退出分支（三按误退出应用）。
+      if (state.suspAbortArmed) {
+        if (ctx.suspArmTimer) clearTimeout(ctx.suspArmTimer)
+        state.suspAbortArmed = false
+        // 无可停目标（无 processing 回合 / 无会话 abort 集合 / 未挂起）时不吞键：
+        // 首按停的是普通回合（无后台池）——二按落回下方空闲退出分支（exitArmed 双
+        // 确认），不打印误导性的 "[Aborting background subagents…]"（advisor round1
+        // 🟡——停回合后连按退出的第二次按下被空转吞掉 → 退出从 3 按变 4 按）。
+        const hasStopTarget = (state.processing && state.controller) ||
+          (agent._sessionAbortAll?.length ?? 0) > 0 ||
+          (agent._sessionAbort != null && !agent._sessionAbort.signal.aborted) ||
+          state.suspended
+        if (hasStopTarget) {
+          // 当前回合平 abort（无 interrupt——命中 agent.mjs 回合收尾清池分支——全停）
+          if (state.processing && state.controller) state.controller.abort()
+          // 会话 abort 集合 = 链条内全部 controller（含 Ctrl+I/ContinueError 重建的旧
+          // controller——children 不逃逸，round1 偏差 #3）。挂起态才标记 _suspAborted +
+          // 唤醒 driver（driver 收尾清池）——非挂起语境置位会粘滞阻塞未来挂起会话重入
+          // （round2 偏差 #1 语义）。
+          for (const c of agent._sessionAbortAll ?? (agent._sessionAbort ? [agent._sessionAbort] : [])) c?.abort()
+          if (state.suspended) {
+            state._suspAborted = true
+            state._suspWake?.()
           }
-          state.suspAbortArmed = true
-          if (ctx.suspArmTimer) clearTimeout(ctx.suspArmTimer)
-          ctx.suspArmTimer = setTimeout(() => { state.suspAbortArmed = false }, ctx.exitArmDelay ?? 3000)
-          ctx.suspArmTimer.unref?.()
+          pushLine("[Aborting background subagents…]", C.warn)
           render()
           return
         }
+        // 无目标可停 → 落空继续到下方分支（processing 已停 → 空闲态 exitArmed 双确认）
+      }
+      if (state.suspended) {
+        // §17 D-S9 + round2 偏差 #4（2026-09-02）+ §17.6 修订（2026-09-03）：挂起态
+        // Ctrl+C = 武装窗口两级中止——一次按键直接清池中止全部后台子代理的误触代价高
+        // （digest 刷屏时用户可能只想停住当前回合）；仿空闲态退出武装语义（同下方空闲态
+        // exitArmed 双确认分支）。§17.6 修订 ①：中止当前回合的 abort 带 interrupt
+        // （无 message）——此前平 abort 命中 agent.mjs 回合收尾清池分支（aborted &&
+        // !reason.interrupt → 无条件 _asyncSubagents.clear()），一次首按即误杀全部后台
+        // 子代理（2026-09-03 用户两次实测——提示"再按才杀"与实际"一次就全杀"不符）；
+        // interrupt 排除清池分支——会话与后台保留（agent-turn 区分：无 message 停回合
+        // 不续跑）：
+        //   ① 未武装 + 有回合在跑（digest 消化/会话内回合）：仅中止当前回合
+        //      （controller.abort({ interrupt: true })）——会话继续、后台子代理不受
+        //      影响，回挂起等待；
+        //   ② 未武装 + 纯挂起等待：仅提示不清池；
+        //   ③ 3s 武装窗口内再次 Ctrl+C：彻底中止——上方统一块（二按语义不变）。
+        if (state.processing && state.controller) {
+          state.controller.abort({ interrupt: true }) // ① 仅中止当前回合（digest/会话内回合），不碰后台池
+          pushLine("[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]", C.warn)
+        } else {
+          const bgActive = [...(agent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length + (agent._asyncQueue?.length ?? 0)
+          pushLine(`[abort] Press Ctrl+C again within 3s to abort all background subagents (${bgActive} running)`, C.warn)
+        }
+        state.suspAbortArmed = true
         if (ctx.suspArmTimer) clearTimeout(ctx.suspArmTimer)
-        state.suspAbortArmed = false
-        if (state.processing && state.controller) state.controller.abort()
-        for (const c of agent._sessionAbortAll ?? (agent._sessionAbort ? [agent._sessionAbort] : [])) c?.abort()
-        state._suspAborted = true
-        state._suspWake?.()
-        pushLine("[Aborting background subagents…]", C.warn)
+        ctx.suspArmTimer = setTimeout(() => { state.suspAbortArmed = false }, ctx.exitArmDelay ?? 3000)
+        ctx.suspArmTimer.unref?.()
         render()
         return
       }
       if (state.processing && state.controller) {
-        state.controller.abort()
-        pushLine("[Aborting…]", C.warn)
+        // §17.6 D-C1（2026-09-03 紧急修复——processing 态曾无武装窗口，第一按直接平
+        // abort() → 命中 agent.mjs 回合收尾清池分支 → 一次 Ctrl+C 误杀全部后台子代理，
+        // 用户两次实测被坑）：首按 = interrupt 语义（无 message——停当前回合不续跑——
+        // interrupt 排除 agent.mjs 清池分支——后台池保留——agent-turn 区分不重建续跑）
+        // + 武装 3s（复用 suspArmTimer/exitArmDelay——与挂起态同构——过期自动复位）；
+        // 窗口内再按 = 上方统一块全停（平 abort → agent.mjs 清池）。
+        state.controller.abort({ interrupt: true })
+        pushLine("[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]", C.warn)
+        state.suspAbortArmed = true
+        if (ctx.suspArmTimer) clearTimeout(ctx.suspArmTimer)
+        ctx.suspArmTimer = setTimeout(() => { state.suspAbortArmed = false }, ctx.exitArmDelay ?? 3000)
+        ctx.suspArmTimer.unref?.()
         render()
         return
       }
@@ -103,7 +141,7 @@ export function createKeyHandler(ctx) {
     // F1: 显示快捷键帮助
     if (key.name === "f1" && !state.picker && !state.permission && !state.question) {
       showPicker("Keyboard Shortcuts", [
-        { type: "item", text: "Ctrl+C — Cancel/Abort; suspended/idle: press twice to stop all/exit" },
+        { type: "item", text: "Ctrl+C — Cancel/Abort; first press stops the turn (or arms), twice within 3s stops all / exits" },
         { type: "item", text: "Ctrl+I — Interrupt and inject message" },
         { type: "item", text: "Ctrl+F — Search conversation history" },
         { type: "item", text: "Shift+Enter / Ctrl+J — Insert newline (multiline input)" },

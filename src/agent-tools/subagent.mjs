@@ -445,9 +445,12 @@ export const subagentTool = {
               // 完成信号按会话态分流（§17 D-S8 冻结门控 + D-S3 记账——以读取时刻为准，确定性）：
               // - 非挂起态（普通回合内 settle）：照发 ⟦ev⟧done —— TUI 立即冻结区块，冻结位置 =
               //   完成时刻的流位置（§15 D-A3 2026-09-02 用户实证修正：收尾统一发会把块堆在结论之后）。
+              //   §17.5 supersede：回合尾 collectSettledAsync（suspDriven）不再直注入——条目留池
+              //   由挂起会话首轮 sweep → digest 消化（17.5.2 方案 B——块已冻结不受影响）。
               // - 挂起态（_suspended：回合已结束或 auto-turn 消化中）：冻结延迟——改发 ⟦ev⟧settled
               //   （区块显示 "done · awaiting digestion" 驻留面板），条目移交 _pendingAsyncResults
-              //   由下个回合 prepareRun 前注入（D-S3 ②；注入即从池/pending 移除，无重复）。
+              //   由下个回合 prepareRun 前注入（D-S3 ②；注入即从池/pending 移除，无重复）；
+              //   §17.5.5：注入完成后 freezeReclaimDigestedBlocks 逐条回收冻结（不等池空）。
               // 父会话 abort 两种都不发：TUI 已按 interrupted 冻结，晚到 token 经 tombstone 丢弃。
               if (parent._suspended) {
                 parent._pendingAsyncResults ??= []

@@ -764,7 +764,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - **#1 `_suspAborted` 粘滞**：key-handler 彻底中止置 `state._suspAborted = true`，只在 suspensionSession 首行复位——但会话入口（runAgentTurn 挂起分支 `!state._suspAborted` 门控）在标志为 true 时永不再次进入 → 首行复位是死代码。后果：① 中止后用户再 spawn async、回合尾池 live → 不再进挂起态（D-S9 "回合返回且池非空 → 置 _suspended → 挂起态"被破坏）——子代理结果退化到"下个回合尾 collectSettledAsync 才注入"，状态行/自动消化/区块驻留全消失且无提示；② 释放窗口守卫（`_suspPending = willSuspend && !skipSession && !_suspAborted`）同步失效——释放窗口 Enter 重新并发开第二个 runAgentTurn（双驱动器竞态复现）。**修复**：suspensionSession 返回后（runAgentTurn 挂起分支内、await 之后）复位 `state._suspAborted = false`——中止 unwind 已完成、池已清空/耗尽，复位不误触发重入；彻底中止路径恒 abort 会话 signal，会话退出判定不受复位影响。**测试 T-S5b**。
 - **#2-CLI 中止静默丢消息**：挂起中 Enter 已清输入框并入 pendingInput（用户视为已发送）；彻底中止分支只清池（`_asyncSubagents.clear()` / `_asyncQueue` / `_pendingAsyncResults`），不处理 `state.pendingInput` → 消息在输入框已清空的情况下永久消失，无任何提示。**修复**：中止分支把残余 pendingInput 转回 `state.queue`（`{text}` 条目——下个普通回合的队列循环续发，零丢失）+ 提示行明示去向（`[background work stopped — N queued message(s) will run as a normal turn]`）。**测试 round2 #2-CLI**。
 - **#3 注释整段重复**：agent-turn.mjs finally abort 集合快照注释逐字重复两份（语句夹在中间）——删第二份保留一份。
-- **#4 挂起态 Ctrl+C 无二次确认**：一次按键即 abort 全部 controller + 清池终止整个后台会话；空闲态 Ctrl+C 有 3s 防误触武装，挂起态（消化中用户可能只想让刷屏的 digest 停下）与彻底中止共用同一无确认路径，误触代价高（子代理工作被 abort 丢弃）。**修复（武装窗口两级，仿空闲态退出语义）**：未武装时——处理中（digest 消化/会话内回合）首次 Ctrl+C 仅中止当前回合（`state.controller.abort()`，会话与后台子代理不受影响）+ 武装 3s；纯挂起等待期首次仅提示武装（提示含运行中数量，不中止不清池）；3s 窗口内再次 Ctrl+C 才彻底中止（abort 集合 = 链条内全部 controller + `_suspAborted` 标记 + 唤醒 driver 清池）。`state.suspAbortArmed` + `ctx.suspArmTimer`（3s，可注入 `exitArmDelay` 同款窗口）；会话退出（suspensionSession finally）解除武装防跨会话粘滞。**测试兼容（按修复要求注明）**：既有单次中止断言（TUI "偏差#3"用例——round1 #3 abort 集合全覆盖）更新为两次制（首次仅武装、二次彻底中止——children 不逃逸语义保留）；T-S5 driver 级用例直接模拟二次效果（语义不变）；新增 digest 处理中首次仅停当前回合的 TUI 用例。
+- **#4 挂起态 Ctrl+C 无二次确认**：一次按键即 abort 全部 controller + 清池终止整个后台会话；空闲态 Ctrl+C 有 3s 防误触武装，挂起态（消化中用户可能只想让刷屏的 digest 停下）与彻底中止共用同一无确认路径，误触代价高（子代理工作被 abort 丢弃）。**修复（武装窗口两级，仿空闲态退出语义）**：未武装时——处理中（digest 消化/会话内回合）首次 Ctrl+C 仅中止当前回合（`state.controller.abort()`，会话与后台子代理不受影响——**supersede（2026-09-03 §17.6）：平 abort 命中 agent.mjs 回合收尾清池分支（aborted && !interrupt）一次误杀全部后台——停回合改 `abort({ interrupt: true })` 无 message——见 §17.6.2/17.6.4**）+ 武装 3s；纯挂起等待期首次仅提示武装（提示含运行中数量，不中止不清池）；3s 窗口内再次 Ctrl+C 才彻底中止（abort 集合 = 链条内全部 controller + `_suspAborted` 标记 + 唤醒 driver 清池——**supersede：二按统一为状态路由前检查（跨态桥接）——§17.6.4**）。`state.suspAbortArmed` + `ctx.suspArmTimer`（3s，可注入 `exitArmDelay` 同款窗口）；会话退出（suspensionSession finally）解除武装防跨会话粘滞。**测试兼容（按修复要求注明）**：既有单次中止断言（TUI "偏差#3"用例——round1 #3 abort 集合全覆盖）更新为两次制（首次仅武装、二次彻底中止——children 不逃逸语义保留）；T-S5 driver 级用例直接模拟二次效果（语义不变）；新增 digest 处理中首次仅停当前回合的 TUI 用例。
 - 受影响：`src/tui/key-handler.mjs`（挂起 Ctrl+C 两级 + F1 帮助文案）、`src/tui/agent-turn.mjs`（标志复位 + pendingInput 转移 + 注释去重 + 会话退出解除武装）、`test/suspension.test.mjs`（T-S5b / round2 #2-CLI / round2 #4 TUI ×2 / T-S5 注释 + TUI 用例更新）、本节 + `docs/design/TUI.md` / `TUI-INPUT-BOX.md`（同步）
 ---
 
@@ -820,11 +820,11 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **不变面**：suspension 内 Ctrl+C 两级中止清 pending（用户显式停——语义与现状一致）；check/status 在 sweep 前仍从池读（语义保持）；ContinueError/cancel 路径既有消化语义不变。
 
-**受影响的测试语义**：test/subagent.test.mjs T5（subagent.test.mjs 回合收尾用例——现断言"直注入+清空+done 先于结论"——符号锚）→ 改断言为"回合尾消化轮注入"。
+**受影响的测试语义**：test/subagent.test.mjs T5（subagent.test.mjs 回合收尾用例——现断言"直注入+清空+done 先于结论"——符号锚）→ 改断言为"回合尾消化轮注入"——**round1 #2 裁决覆盖本条（见下受影响文件清单）：agent 级无驱动 T5 断言不变——"回合尾消化轮注入"仅适用驱动级用例（T-S2/T-H 系列——T-H6 改指）**。
 
-**受影响文件（round1 补全）**：
-- CLI：`src/agent.mjs`（collectSettledAsync——回合尾不再直注入——**无 suspension 驱动调用方保留直注入兜底**（round1 #2——标志/检测——headless/直连 runAgent 不丢结果））；`src/tui/agent-turn.mjs`（willSuspend 判 true 路径——digest 触发检查点——settled-only 池也进挂起）；**TUI 渲染层零改动**（round1 #5——mid-turn settle 块已在 settle 时刻 ⟦ev⟧done 冻结入流——消化文本落其后——无需改渲染）
-- VS Code（round1 #1——N5 两端一致）：collectSettledAsync 同语义 + suspension 驱动核对 + ARCHITECTURE.md 引用段 + 对应 T5 断言——同批或架构师统一回写标注
+**受影响文件（round1 补全 + 实现版自查补实际模块——2026-09-03 交付）**：
+- CLI：`src/agent.mjs`（collectSettledAsync——回合尾不再直注入——**无 suspension 驱动调用方保留直注入兜底**（round1 #2——标志/检测——headless/直连 runAgent 不丢结果）；suspDriven runAgent 选项）；`src/tui/agent-turn.mjs`（runAgentTurn 驱动标记 suspDriven:true + willSuspend 判 true 路径——digest 触发检查点——settled-only 池也进挂起 + inSessionTurn 收尾守卫 + suspensionSession 内 digest/用户回合后逐条回收调用 + 状态行文案区分（round1 #6））；`src/tui/subagent-blocks.mjs`（freezeReclaimDigestedBlocks——17.5.5 逐条冻结回收实现载体）；**TUI 渲染层零改动**（round1 #5——mid-turn settle 块已在 settle 时刻 ⟦ev⟧done 冻结入流——消化文本落其后——无需改渲染）
+- VS Code（round1 #1——N5 两端一致）：`src/agent.mjs`（collectSettledAsync suspDriven 透传）+ `src/agent-tools/subagent-async.mjs`（collectSettledAsync 同语义——留池不排空）+ `src/extension/panel-chat.mjs`（runOpts suspDriven:true——面板 = 挂起驱动）+ `src/extension/suspension.mjs`（驱动核对 + reclaimDigestedBlocks——17.5.5 逐条补发 done）+ ARCHITECTURE.md 引用段（supersede 注）+ 对应 T5 断言——同批或架构师统一回写标注
 - test/subagent.test.mjs（T5 断言——**round1 #2 裁决：T5 = agent 级无驱动用例——保留直注入兜底语义——T5 断言不变**——"回合尾消化轮注入"仅适用驱动级用例（T-S2/T-H 系列——T-H6 改指））+ §17 T-S2 核对（agent 级——兜底覆盖）
 - 文档修订注扩至（round1 #3）：**§17 D-S1/D-S3 ① + D-S8 + §17.3 文件表 + §15.4 T5/AC3 + §15 D-A3**（supersede 注——§15 D-A2/§19.5 先例）+ AGENT-LOOP 本段权威
 - **AC-H4 新增**（round1 #3）：文档修订注已全部落地（上列各处——实现验收项）
@@ -1221,9 +1221,9 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **验收（round2 #1——T-SD9..13 回指）**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8）；AC-SD3 = 死锁/取消安全（T-SD5/6/9/10——含依赖取消释放 + unknown id 拒）；AC-SD4 = 状态可见（T-SD7/11/12——含 waiting 面板标注）；AC-SD5 = 既有语义零回归（T-SD1/13——sync 冲突错误）
 
-### 17.6 Ctrl+C processing 态武装化 + 回合 abort 与池解耦（2026-09-03 · 紧急修复——用户两次实测被坑——待评审）
+### 17.6 Ctrl+C processing 态武装化 + 回合 abort 与池解耦（2026-09-03 · 紧急修复——用户两次实测被坑——已实现 17.6.4）
 
-> 状态：设计定稿，待评审。触发：用户实测——"输错半句一 Ctrl+C 把 eng-coder#14 杀了"（同日第二次——id:13 亦误杀）——提示"3s 内再按才杀"与实际"一次就全杀"不符。
+> 状态：设计批准（评审 0🔴——round1 处置 742ae35：D-C1 round1#1 agent-turn 区分机制 + D-C4 /abort 语义）+ **已实现（2026-09-03——见 17.6.4 实现记录）**。触发：用户实测——"输错半句一 Ctrl+C 把 eng-coder#14 杀了"（同日第二次——id:13 亦误杀）——提示"3s 内再按才杀"与实际"一次就全杀"不符。
 
 #### 17.6.1 根因（代码实锤）
 
@@ -1250,6 +1250,31 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-C5：挂起态/空闲态既有双确认回归（零变化）
 
 **验收**：AC-C1 = processing Ctrl+C 首按不再误杀后台（T-C1——核心）；AC-C2 = 全停仍可达（T-C2）；AC-C3 = 三态零回归（T-C3..C5）
+
+#### 17.6.4 实现记录（2026-09-03——实现交付 + 偏差落文）
+
+**改动文件**：`src/tui/key-handler.mjs`（Ctrl+C 重构）、`src/tui/agent-turn.mjs`（interrupt 区分 + 垃圾回滚）、`test/suspension.test.mjs`（T-C1..C5 + T-C5b，38/38）、`docs/design/TUI.md` §1 模块地图 + §3 键分发注、本段。agent.mjs 零改动确认（D-C2——清池条件未动）。
+
+- **D-C1 落点**（key-handler Ctrl+C 重构——三态一致）：
+  - 非挂起 processing 首按 → `abort({ interrupt: true })`（无 message）+ 提示（D-C3 文案）+ 武装 3s（复用 `suspAbortArmed`/`suspArmTimer`/`exitArmDelay`）；
+  - 挂起态①（digest/会话内回合首按）同步改 interrupt 语义（**偏差落文 1——超出 D-C1 字面 scope**）：设计 D-C1 只写非挂起 processing 分支，但挂起态①原平 abort 命中同一根因 A（agent.mjs `aborted && !interrupt` → 无条件清池）——用户实证场景（提示"再按才杀"与实际"一次就全杀"不符 = 挂起态①的提示文案）正是此路径：digest/会话内回合首按平 abort → 回合收尾清池 → 会话即死、后台全灭。不改则 AC-C1 在用户真实场景不成立。interrupt 无 message + agent-turn 区分（不续跑）后：回合停、池保留、会话续活（T-C5/T-C5b）。与 AGENT-LOOP §17 设计声明"digest 自身 Ctrl+C 不误伤"一致。
+  - **二按统一全停块（偏差落文 2——结构选择）**：武装检查提升到状态路由之前——两次按下之间状态会迁移（首按停回合 → 释放窗口 → 挂起会话启动），若武装只查挂起分支，非挂起 processing 首按后的二按会落入空闲退出分支（三按误退出应用）。二按 = 当前回合平 abort（无 interrupt——agent.mjs 清池）+ abort 集合全部 controller；仅挂起态置 `_suspAborted` + 唤醒（非挂起语境置位会粘滞阻塞未来会话重入——round2 偏差 #1 语义）。
+  - 空闲态 exitArmed 双确认零改动。
+- **agent-turn 区分（round1 #1 落点）**：`reason.interrupt && reason.message`（Ctrl+I）= 重建续跑（既有）；无 message（Ctrl+C 首按）= break 停回合不续跑。**垃圾回滚（偏差落文 3）**：agent.mjs 中断三段（chat catch / response.interrupted / 工具执行中断）无条件注入 `[User interrupt: <message>]`，对 message 存在无守卫——无 message interrupt 落 "[User interrupt: undefined]" 垃圾上下文。D-C2 agent.mjs 零改动约束下在 agent-turn 无 message 分支回滚尾部垃圾（确定性：chat catch / response.interrupted 两路径注入恒为 history 最后一条；工具执行中断第三点常规路径经下一次 chat 的 dedup 后垃圾仍居尾——**已知窄边（审计 🔵-4）**：第三点 continue 后若轮顶压缩注入先于重抛落尾，回滚够不到更深的垃圾——仅历史残留外观级，未做跨段扫描）。**partial 部分输出保留（advisor round1 🟡 裁定——2026-09-03）**：无 message interrupt 走 provider interrupted 路径时 agent.mjs 先提交部分输出再抛——agent-turn 只回滚垃圾、**保留 partial**——interrupt 家族语义（§2 Ctrl+I 同款"提交部分输出"，停回合沿用；修复前平 abort 不落 history 的差异即 interrupt 语义本身）。回滚 partial 需在 history 层区分工具/子代理路径的既有完整消息（不可靠）——不做；行为由 T-C4 场景 2 断言锁定（partial 保留 + 垃圾清除）。
+- **D-C4 /abort（偏差落文 4）**：核对结论——CLI 无 `/abort` 命令实体（SLASH_COMMANDS/HANDLERS 无此命令；§19.5 决策"全停走 Ctrl+C、不加 cancel-all"同族）。D-C4 语义（显式全停无武装）由**二按全停**承担并锁定：T-C2（handler 级二按平 abort 断言）+ 既有驱动级全停回归（T-S5/偏差#3/round2 偏差#4 ×2）。如需真实 `/abort` slash 命令（slash-commands.mjs + cmd 文件 + /help 行——超本段受影响文件清单），列为后续候选。
+- **实现时核实的 e2e 语义事实（记录——非偏差）**：非挂起 processing 态的后台池条目只可能是**本回合** spawn 的 children（baseSignal = 当前回合 controller——subagent.mjs L368——偏差#3 测试同语义）——回合中止时随 controller 中止属既有接受语义（Ctrl+I 同）；本修复保护的是**会话期** children（持会话 signal——digest/会话内回合首按后存活——T-C5b E2E）与池账本本身。AC-C1 的"池保留"在 handler/机器层成立（T-C1——interrupt 排除 agent.mjs 清池分支）。
+- **测试**：T-C1（processing 首按 interrupt 无 message + 池保留 + 武装）/ T-C2（二按平 abort 全停——不粘滞）/ **T-C2b（advisor round1 🟡 处置——无后台池二按不吞键落回空闲退出双确认）**/ **T-C2c（advisor round2 🟡 处置——回合启动解除 exitArmed 残留）**/ T-C3（过期复位再按 = 首按语义）/ T-C4（agent-turn 区分：message 续跑 vs 无 message 停 + 垃圾回滚 + partial 保留锁定）/ T-C5（挂起态① interrupt 语义 + 双确认零回归）/ T-C5b（会话内回合首按停——会话与池保留——settle 照常消化——用户实证场景 E2E）。T-C6（/abort 显式全停回归）→ 映射 T-C2 + 既有 T-S5/偏差#3。**全量测试记录（2026-09-03 实现后，CLI）**：`npm test` 全绿（45 skipped = 既有 THINCODER_TEST_FULL slow-test 豁免）；`test/suspension.test.mjs` 40/40（含 8 新用例——3 次重跑稳定）；agent-turn/tui 套件随全量绿。
+
+**advisor round1 处置（2026-09-03——1🔴 + 2🟡 + 1🔵）**：
+- 🔴 agent-turn.mjs 524 行超 500 硬限——**归属：超限由既有未提交 §17.5.5 工作造成（HEAD 433 → 交付前 509），本批 +15 叠加至 524**——拆分（挂起驱动段迁出）会重构他人未提交代码 + 新增文件超本段清单——**不在此交付内拆**——父侧 TODO 登记候选（与 §17.5.5 交付协调拆分；tool-events 先例）。
+- 🟡 二按空转吞键 → 已修复（key-handler armed 块加 hasStopTarget 门——无目标落回空闲退出分支——T-C2b 锁定）。
+- 🟡 partial 部分输出保留语义 → 已裁定（interrupt 家族语义——见偏差落文 3）+ T-C4 断言锁定；如需"停 = 不留下半截"需 agent.mjs 源头守卫（D-C2 约束外）——父侧裁定候选。
+- 🔵 picker 分支先于武装检查 → 注释注明例外（picker 语义优先——场景极窄），零行为变更。
+
+**advisor round2 处置（2026-09-03——收敛复核）**：
+- prior 🟡 二按空转吞键 → 已修复（hasStopTarget——T-C2b 锁定）；prior 🟡 partial 语义 → 已裁定落文 + T-C4 锁定；prior 🔵 picker 例外 → 注释落文。**Verified（round2 复核确认）**。
+- 新 🟡 落空穿透 + 陈旧 exitArmed → **已修复**：回合启动即解除空闲退出武装（agent-turn runAgentTurnInner——`state.exitArmed = false` + 清 `ctx.exitArmTimer`——exitArmed 只属于空闲态双确认，不跨回合残留——T-C2c 锁定：清除 + timer 不触发）。
+- prior 🔴 agent-turn.mjs 行数超限 → **不在此交付内拆（向父侧路由）**：超限由既有未提交 §17.5.5/§20 并行工作造成（HEAD 433 → 本交付前 509），本批叠加至 526（round2 记），round3 exitArmed 修复 +9 → 现 535 内容行（536 含尾空行）；拆分会重构并行任务未提交代码（freezeReclaimDigestedBlocks 集成段）——实测该并行任务本会话内仍在写树（docs/TODO.md 于本交付进行中变更——16:10）——同文件并发重构即本修复所治事故（id:13/14 同文件并发）本身，不在并行未落盘代码上动刀。父侧处置建议：§17.5.5/§20 交付落盘后登记 docs/TODO.md 拆分项（挂起驱动段 suspensionSession/digestTurn/waitForSettleOrWake/backgroundStatusText/sweepSettledToPending/poolLive 迁出——tool-events 先例——render-conversation L93 开放登记同款），或由该任务交付时一并拆。**round3 复核（2026-09-03）：fixable 项全清（#2..#5 Verified）——本项仍不通过——评审通道连续两轮受阻于同一 scope 外项 → 按 AGENT-LOOP §18 协议交付 stalled 报告（父侧裁定：拆分协调或 TODO 登记收口）。**
 
 #### 20.4 评审处置（2026-09-03——round1 1🔴 + round2 0🔴 通过）
 

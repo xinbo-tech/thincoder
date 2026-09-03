@@ -14,7 +14,8 @@ import { describeToolArgs } from "./tool-args.mjs"
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */
 export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
 /** ⟦ev⟧ token parser：`⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`。phase done
- *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至池空补发；
+ *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
+ *  完成（§17.5.5 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
  *  stopped（§19.5 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
  *  async（§19.5 D-M7b）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
  *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）。 */
@@ -240,9 +241,12 @@ export function finishSubTaskByModel(state, role, model, lastError = null) {
   return null
 }
 
-/** 回合尾清扫（runAgentTurn finally）：冻结全部剩余块——中断（Ctrl+C/错误）不留下
- *  钉住输入框的 ghost。未 done 者 lastError="interrupted"（Ready 态跳过）。锚点降序同
- *  freezeDoneSubTasks（挂起期 settle 锚点交错批次各按其 settle 位置落位）。 */
+/** 回合尾/挂起退出清扫（runAgentTurn finally / suspensionSession finally）：冻结全部
+ *  剩余块——中断（Ctrl+C/错误）不留下钉住输入框的 ghost；未 done 者
+ *  lastError="interrupted"（Ready 态跳过）。§17.5.5：挂起自然退出时本函数只兜底
+ *  **未消化残项**（已消化块由 freezeReclaimDigestedBlocks 逐条先行回收——块回收与
+ *  池空解耦）。锚点降序同 freezeDoneSubTasks（挂起期 settle 锚点交错批次各按其
+ *  settle 位置落位）。 */
 export function freezeAllSubTasks(state) {
   const subs = Object.values(state.subTasks ?? {})
     .sort((a, b) => (b._freezeAt ?? -1) - (a._freezeAt ?? -1))
@@ -255,6 +259,27 @@ export function freezeAllSubTasks(state) {
     freezeSubTaskLines(state, sub)
     delete state.subTasks[sub.key]
   }
+}
+
+/** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订 + round1 #1 位置裁定）：digest/会话内
+ *  用户回合消化完 pending 条目（run 首行已注入）后调用——把"已消化但仍驻留面板"的
+ *  awaitingDigest 块立即冻结进流（不等池空——块回收与池空解耦；池空 freezeAllSubTasks
+ *  仅兜底未消化残项）。归属不变式：会话内任何 run 开始前 pinned 块的条目必在 pending
+ *  （settle 即移交）；run 消费后条目不在 pending 的 pinned 块 = 本 run 消化者——无需
+ *  快照即精确归属。位置（round1 #1 裁定——与 17.5.5 早版文本的矛盾已消解，见
+ *  AGENT-LOOP.md §17.5.5）：**settle 锚点 splice 落位——digest 总览文本之前**——同
+ *  §7.2 D4 修复轮/D-S8 锚点语义（T-S6/T-S14 位置断言同口径）——锚点降序逐块冻结
+ *  （splice 绝对位互不位移）。@returns {number} 回收块数 */
+export function freezeReclaimDigestedBlocks(state, pendingList) {
+  const pend = pendingList ?? []
+  const targets = Object.values(state.subTasks ?? {})
+    .filter((s) => s.awaitingDigest && !pend.some((e) => `${e.role}#${e.id}` === s.key))
+    .sort((a, b) => (b._freezeAt ?? -1) - (a._freezeAt ?? -1)) // 锚点降序（同 freezeAllSubTasks）
+  for (const sub of targets) {
+    freezeSubTaskLines(state, sub) // splice 落 settle 锚点（digest 总览文本之前）
+    delete state.subTasks[sub.key]
+  }
+  return targets.length
 }
 
 /** 事件 token → 区块头部（turn/approval 更新 turn n/max + 等待态）。事件永不进
@@ -303,7 +328,9 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.done = true
       sub.doneAt = Date.now()
       sub.awaitingDigest = true
-      // 冻结锚点（2026-09-03 修复轮）：settle 时刻流位置——池空补发冻结 splice 落其前
+      // 冻结锚点（2026-09-03 修复轮）：settle 时刻流位置——§17.5.5 digest 完成逐条回收
+      // （freezeReclaimDigestedBlocks）与未消化残项的池空退出兜底（freezeAllSubTasks）
+      // 都按它 splice 落位——digest 总览文本之前（round1 #1 裁定——T-S6/T-S14 同口径）。
       sub._freezeAt = state.lines?.length ?? 0
       sub.currentTool = null
       sub.approval = null

@@ -114,7 +114,7 @@ export function createAgent({
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -464,7 +464,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     } else if (thrownError instanceof ContinueError) {
       // keep _asyncSubagents + the check counter — the resumed run continues them
     } else {
-      await collectSettledAsync(agent)
+      await collectSettledAsync(agent, { suspDriven })
       agent._asyncCheckLastN = 0
     }
     agent._inAutoTurn = false
@@ -483,20 +483,28 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
 }
 
 /**
- * Turn-end async subagent collection (AGENT-LOOP.md §17 D-S1): inject every entry
- * that SETTLED during this run (XML-escaped report/error — child reports may carry
- * file/webpage content; >64K offloaded with preview + path) and remove it from the
- * pool. Running/queued STAY — no allSettled wait: the suspension loop digests them
- * as they settle (D-S2/D-S9). Refill starts queued heads whose slot freed this run.
+ * Turn-end async subagent collection (AGENT-LOOP.md §17 D-S1 + §17.5 supersede):
+ * two modes, selected by the caller's driver context (17.5.2/17.5.4 #2):
+ * - suspDriven=false (fallback — headless/direct runAgent callers without a
+ *   suspension driver): inject every entry that SETTLED during this run
+ *   (XML-escaped report/error — child reports may carry file/webpage content;
+ *   >64K offloaded with preview + path) and remove it from the pool. Running/
+ *   queued STAY — no allSettled wait. Results never lost without a session.
+ * - suspDriven=true (the interaction layer runs suspensionSession after this
+ *   run): NO direct inject — settled entries STAY pooled (settled not consumed)
+ *   for the session's first sweepSettledToPending → digest turn (§17.5 — done
+ *   条目留池等消化轮注入；check/status 在 sweep 前仍从池读——17.5.2 不变面)。
+ * maybeRefillAsync runs in both modes (starts queued heads whose slot freed).
  * Single ownership: entries settled inside a suspension session were moved to
- * _pendingAsyncResults by the settle callback, so this only sees user-turn settles
- * (no double inject — D-S3 points ①/②). The ⟦ev⟧done freeze is NOT emitted here —
- * each settle callback emits it (§15 D-A3). */
-async function collectSettledAsync(agent) {
+ * _pendingAsyncResults by the settle callback, so this only sees user-turn
+ * settles (no double inject — D-S3 points ①/②). The ⟦ev⟧done freeze is NOT
+ * emitted here — each settle callback emits it (§15 D-A3). */
+async function collectSettledAsync(agent, { suspDriven = false } = {}) {
   const map = agent._asyncSubagents
   if (!map || map.size === 0) return
   const { maybeRefillAsync, injectAsyncResult } = await import("./agent-tools/subagent.mjs")
   maybeRefillAsync(agent) // start queued heads now that slots may have freed — no waiting
+  if (suspDriven) return // §17.5: settled stays pooled — the suspension session digests it
   for (const e of [...map.values()]) {
     if (!e.done) continue // still running — stays in the pool (D-S1)
     await injectAsyncResult(agent, e)

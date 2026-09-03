@@ -18,7 +18,7 @@ import { runAgent, ContinueError } from "../agent.mjs"
 import { saveSession } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
-import { freezeAllSubTasks } from "./subagent-blocks.mjs"
+import { freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-blocks.mjs"
 import { ensureSessionTitle } from "../generate-title.mjs"
 import { logEvent, errText } from "../log.mjs"
 
@@ -82,6 +82,16 @@ async function runAgentTurnInner(ctx, text, opts) {
   ctx.assistantLabeled = false
   state.processing = true
   state.status = "Processing..."
+  // §17.6（advisor round2 🟡）：回合启动即解除空闲退出武装——exitArmed 只属于空闲态
+  // 双确认，跨回合残留会让"停回合后的 armed 落空穿透 + 陈旧 exitArmed"组合把一次
+  // 意图为全停/退出的按下变成无二次确认的即时退出（key-handler 落空分支落回空闲
+  // 分支时 `!state.exitArmed` 判假即 exit）；计时一并清（key-handler 空闲分支按
+  // ctx.exitArmTimer 有无决定是否重建——陈旧 timer 残留会在回合中途复位新武装）。
+  state.exitArmed = false
+  if (ctx.exitArmTimer) {
+    clearTimeout(ctx.exitArmTimer)
+    ctx.exitArmTimer = null
+  }
   state.streaming = ""
   state.reasoning = ""
   state._advisorBlocks = []
@@ -134,19 +144,36 @@ async function runAgentTurnInner(ctx, text, opts) {
   try {
     for (let resume = false; ; resume = true) {
       try {
-        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn })
+        await runAgentImpl(agent, text, callbacks, { signal: state.controller.signal, resume, autoTurn, suspDriven: true })
         flushStream()
         break // Normal completion, exit loop
       } catch (error) {
         flushStream()
         if (error.name === "AbortError" || state.controller?.signal.aborted) {
-          // Ctrl+I inject: the signal was aborted with an interrupt message — the agent loop
-          // may have already injected it into history, but the aborted signal prevents retry.
-          // Recreate the controller and resume from the same context.
-          if (state.controller?.signal?.reason?.interrupt) {
+          const reason = state.controller?.signal?.reason
+          // §17.6 D-C1（round1 #1 区分机制——2026-09-03）：interrupt 两种语义——
+          //  有 message（Ctrl+I 注入——key-modes handleInterruptMode）= 重建 controller
+          //  续跑（既有语义——agent loop 已把消息注入 history，中止的 signal 不能重试）；
+          //  无 message（Ctrl+C 首按停回合——key-handler abort({ interrupt: true })
+          //  不带 message——非挂起 processing 态 / 挂起态 digest·会话内回合）
+          //  = 停回合不续跑——池保留由 agent.mjs 回合收尾的 !interrupt 清池条件排除
+          //  实现（D-C2——agent.mjs 零改动）。
+          if (reason?.interrupt && reason?.message) {
             state.controller = makeController()
             resume = true
             continue
+          }
+          if (reason?.interrupt) {
+            // 无 message interrupt 的注入副作用回滚：agent.mjs 中断三段（chat catch /
+            // response.interrupted / 工具执行中断）无条件把 "[User interrupt: <msg>]"
+            // 落 history，对 message 存在性无守卫——无 message 时成为 "[User interrupt:
+            // undefined]" 垃圾上下文（消息注入语义只属于 Ctrl+I 续跑——停回合无注入
+            // 消息）。D-C2 agent.mjs 零改动约束下在回合层回滚尾部垃圾（确定性：中断
+            // 注入恒为最后一条——break 前 history 不再追加）。partial 部分输出不回滚
+            // ——interrupt 家族语义（§2 Ctrl+I 同款"提交部分输出"）——advisor round1
+            // 🟡 裁定：回滚需区分工具/子代理路径的既有完整消息（history 层不可靠）。
+            const h = agent.history
+            while (h?.length > 0 && String(h.at(-1)?.content ?? "") === "[User interrupt: undefined]") h.pop()
           }
           pushLine("[stopped]", C.warn)
           if (opts?._logOutcome) opts._logOutcome.result = "stopped"
@@ -203,7 +230,14 @@ async function runAgentTurnInner(ctx, text, opts) {
     // （挂起期 Ctrl+C 中止全部后台子代理）；池空 / 中断 / 错误 → 现状 freezeAllSubTasks
     // （中断态块标 interrupted；正常态块已在 settle 时各自冻结）。
     const willSuspend = poolLive(agent)
-    if (!willSuspend) {
+    // §17.5.5：挂起会话内回合（digest/会话内用户回合——skipSession 且 suspended）的
+    // 收尾**不冻结驻留块**——已消化（pinned 且条目已注入）块由 suspensionSession 在
+    // run 返回后 freezeReclaimDigestedBlocks 逐条回收（settle 锚点 splice——digest 总览文本
+    // 之前——round1 #1 裁定，不等池空）；
+    // 未消化残项由会话退出 freezeAllSubTasks 兜底。若无此例外，池空的 digest 回合会在
+    // finally 抢先按 settle 锚点冻结（旧池空补发语义）——回收时序被抢占（T-S6）。
+    const inSessionTurn = skipSession && state.suspended
+    if (!willSuspend && !inSessionTurn) {
       // Interrupted runs (Ctrl+C abort / error mid-turn): still-running child blocks
       // would linger as pinned ghosts above the input box — freeze them like normal
       // completions so the trace scrolls away with the conversation (2026-08-30).
@@ -350,15 +384,19 @@ function waitForSettleOrWake(agent, state) {
   })
 }
 
-/** 后台模式状态行文本（D-S8）："后台 N 子代理运行中 · M 待消化"。 */
+/** 后台模式状态行文本（D-S8；17.5.4 #6 顺手对齐）："后台 N 子代理运行中 · M 完成待消化"
+ *  ——"运行中" = running + queued；"完成待消化" = pending 移交项 + §17.5 回合尾留池的
+ *  settled 未消费项（挂起会话 sweep 前的可见窗口）。 */
 function backgroundStatusText(agent) {
   const map = agent._asyncSubagents
   const running = map ? [...map.values()].filter((e) => e.status === "running").length : 0
   const queued = agent._asyncQueue?.length ?? 0
   const pending = agent._pendingAsyncResults?.length ?? 0
+  const doneInPool = map ? [...map.values()].filter((e) => e.done).length : 0 // §17.5 留池未消费
+  const awaiting = pending + doneInPool
   const active = running + queued
-  return active > 0 || pending > 0
-    ? `后台 ${active} 子代理运行中${pending ? ` · ${pending} 待消化` : ""}`
+  return active > 0 || awaiting > 0
+    ? `后台 ${active} 子代理运行中${awaiting ? ` · ${awaiting} 完成待消化` : ""}`
     : "后台子代理收尾…"
 }
 
@@ -388,7 +426,11 @@ async function digestTurn(ctx) {
  *   用户 Enter → pendingInput（digest 运行中排队，D-S5）——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
- * - 退出：池空 + pending 空 + 无待处理输入 → 补发 done 冻结（freezeAllSubTasks）→ idle。
+ * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → freezeReclaimDigestedBlocks
+ *   逐条冻结回收（消化完成块不滞留面板——不等池空；settle 锚点 splice——digest 总览
+ *   文本之前——round1 #1 裁定）；
+ * - 退出：池空 + pending 空 + 无待处理输入 → freezeAllSubTasks 补发冻结（仅兜底
+ *   未消化残项——17.5.5 块回收与池空解耦）→ idle。
  * _suspended 翻转：会话期 true（settle 回调据此延迟冻结 + 移交 pending）；会话内
  * 用户回合执行期翻 false（普通回合语义：settle 即冻结 + 回合尾直注入 ①）。
  */
@@ -426,12 +468,22 @@ async function suspensionSession(ctx) {
         agent._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
         await runAgentTurn(ctx, String(queuedText), { skipSession: true })
         agent._suspended = true
+        // §17.5.5：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
+        // （不等池空——settle 锚点 splice——digest 总览文本之前；与 digest 回收同规则）
+        freezeReclaimDigestedBlocks(state, agent._pendingAsyncResults ?? [])
         state.status = backgroundStatusText(agent)
         continue
       }
       // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）
       if ((agent._pendingAsyncResults?.length ?? 0) > 0) {
         await digestTurn(ctx)
+        // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 逐条补发
+        // done 冻结回收——不等池空——块从面板移除进流（settle 锚点 splice 落位——digest
+        // 总览文本之前——round1 #1 裁定）；池空 freeze-out 仅兜底未消化残项（挂起会话
+        // 结束统一清场）——块回收与池空解耦（T-H7/AC-H5）。
+        // 归属不变式：会话内任何 run 开始前 pinned 块（awaitingDigest）的条目必在 pending
+        // ——run 消费后不在 pending 的 pinned 块即本 run 消化者（无需快照即精确归属）。
+        freezeReclaimDigestedBlocks(state, agent._pendingAsyncResults ?? [])
         state.status = backgroundStatusText(agent)
         continue
       }

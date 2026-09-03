@@ -461,6 +461,88 @@ test("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 
   }
 })
 
+test("§17.5 T5b（agent 级——collectSettledAsync suspDriven 驱动分支）: 驱动回合尾不再直注入——settled 留池 → sweep → 消化轮 run 首行注入（round1 #2：无驱动兜底 = T5 直注入——本用例显式传 suspDriven 验驱动分支）", async () => {
+  // 17.5.2/17.5.4 #2：suspDriven=true（agent-turn 驱动层传）→ collectSettledAsync 回合尾
+  // 不直注入排空——done 条目留池（settled not consumed）→ 挂起会话首轮 sweep → 消化轮
+  // （auto-turn）run 首行统一注入（D-S3 单注入点）。T5（无 suspDriven）= 兜底直注入对照。
+  const { createServer } = await import("node:http")
+  const server = createServer((req, res) => {
+    let bodyText = ""
+    req.on("data", (c) => (bodyText += c))
+    req.on("end", () => {
+      let frames
+      if (bodyText.includes('"content":"后台干活"')) {
+        // 子代理请求：即刻完成（先于父回合 2 的收尾——done 先于结论）
+        frames =
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: LONG_REPORT("后台完成") } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          `data: [DONE]\n\n`
+      } else if (bodyText.includes("async subagent #1 (coder) finished")) {
+        // 消化轮（auto-turn）：pending 已在其 run 首行注入——返回消化总结
+        frames =
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "消化轮总结" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          `data: [DONE]\n\n`
+      } else if (bodyText.includes("后台干活")) {
+        setTimeout(() => {
+          res.writeHead(200, { "Content-Type": "text/event-stream" })
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "主会话收尾" } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            `data: [DONE]\n\n`,
+          )
+        }, 400)
+        return
+      } else {
+        const subCall = { tool_calls: [{ index: 0, id: "call_1", function: { name: "subagent", arguments: JSON.stringify({ task: "后台干活", role: "coder", async: true }) } }] }
+        frames =
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: subCall }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
+          `data: [DONE]\n\n`
+      }
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end(frames)
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
+  try {
+    const { runAgent } = await import("../src/agent.mjs")
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    // 回合 1（驱动）：子代理回合中 settle——collectSettledAsync 跳过直注入
+    const out = await runAgent(parent, "派活", { onPermissionRequest: async () => true }, { suspDriven: true })
+    assert.equal(out, "主会话收尾")
+    assert.ok(!parent.history.some((m) => String(m.content ?? "").includes("async subagent #1 (coder) finished")),
+      "驱动回合尾不直注入（settled 留池——等待挂起消化轮）")
+    assert.equal(parent._asyncSubagents.size, 1, "settled 条目留池（settled not consumed）")
+    const entry = [...parent._asyncSubagents.values()][0]
+    assert.equal(entry.done, true, "条目已 settle 未消费")
+    // 挂起会话首轮 sweep（suspensionSession loop top 同语义）→ pending
+    parent._pendingAsyncResults ??= []
+    for (const e of [...parent._asyncSubagents.values()]) {
+      if (e.done && !e._inPending) {
+        e._inPending = true
+        parent._pendingAsyncResults.push(e)
+        parent._asyncSubagents.delete(String(e.id))
+      }
+    }
+    // 消化轮（auto-turn）：run 首行统一注入 pending
+    const digestOut = await runAgent(parent, "", { onPermissionRequest: async () => true }, { autoTurn: true, suspDriven: true })
+    assert.equal(digestOut, "消化轮总结")
+    const injected = parent.history.find((m) => typeof m.content === "string" && m.content.includes("async subagent #1 (coder) finished"))
+    assert.ok(injected, "消化轮 run 首行注入 [System reminder: async subagent #id (role) finished]")
+    assert.equal(injected.role, "user")
+    assert.ok(injected.content.includes("后台完成 report"), "报告文本注入")
+    assert.equal(parent._pendingAsyncResults.length, 0, "pending 消费清空")
+    assert.equal(parent._asyncSubagents.size, 0, "池空（消化轮收尾无残留）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+
 test("§15 D-A3 修复: 回合中先完成的 async 子代理——settle 即发 ⟦ev⟧done，冻结位置在结论之前", async () => {
   // Content-aware server（同 T5）：父回合 1 → subagent(async) 工具调用；
   // 子代理 300ms 后完成；父回合 2 的"结论"500ms 后才到——done 事件（settle 即发）
