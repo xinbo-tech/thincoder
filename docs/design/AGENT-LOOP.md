@@ -771,11 +771,11 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 7.2.3 sync spawn 完成精确冻结（2026-09-03 · 设计——方案 e——待评审）
 
-> 状态：设计定稿，待评审。触发：用户实测——"主 agent 同步发起的 explore 完成后未从 subagent 面板回收"——场景确认：sync explore 与后台 async eng-coder 并存面板——explore 完成残留面板。
+> 状态：设计批准（2026-09-03 round1 通过——0🔴——7 项 advisory 处置注见 7.2.3.4）。触发：用户实测——"主 agent 同步发起的 explore 完成后未从 subagent 面板回收"——场景确认：sync explore 与后台 async eng-coder 并存面板——explore 完成残留面板。
 
 #### 7.2.3.1 问题（根因——代码已确认）
 
-finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式冻结（L151-158）——假设"完成的就是最早启动的"——**只在面板单 running 块时成立**。§15 async 化后：async eng-coder（先 started）与 sync explore 并存——explore 完成 → onToolResult → finishSubTask 冻最早 started = **误冻 eng-coder 块**（还在跑——迟到 token 靠墓碑吞）——**explore 块残留面板不回收**。对照：async settle 精确（⟦ev⟧done 带 relayPrefix）——**sync 是唯一启发式路径**（§15 前单块假设残留）。
+finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式冻结（finishSubTask 无 id——择块逻辑 as-of 2026-09-03）——假设"完成的就是最早启动的"——**只在面板单 running 块时成立**。§15 async 化后：async eng-coder（先 started）与 sync explore 并存——explore 完成 → onToolResult → finishSubTask 冻最早 started = **误冻 eng-coder 块**（还在跑——迟到 token 靠墓碑吞）——**explore 块残留面板不回收**。对照：async settle 精确（⟦ev⟧done 带 relayPrefix）——**sync 是唯一启发式路径**（§15 前单块假设残留）。
 
 #### 7.2.3.2 设计（方案 e——ctx 回传 key → onToolResult 精确冻）
 
@@ -784,7 +784,9 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 3. **TUI onToolResult**：sync 完成（非 async 结果）——`subKey` 有值 → **新 finishSubTaskKey(state, key, lastError)** 精确冻（含 freezeDoneSubTasks——删条目）；subKey undefined（旧路径/异常）→ 启发式兜底保留
 4. **并行 sync spawn**（同批 N explore——dispatch 批并行）——各 runOne 独立 ctx——各带自己 key——乱序完成精确 ✓
 5. **async 路径零改动**（⟦ev⟧done 已精确——settle 回调带 relayPrefix）
-6. 启发式状态：全部 sync 路径带 key 后——启发式仅兜底（未知工具/老回调）——不删（防御）
+6. **错误/拒绝路径不冻结**（round1 #1）：execute 抛错/Phase-1 拒绝时 ctx 未设——该结果走普通工具错误块——**不触发 finishSubTask 启发式**（错误路径不冻结任何 running 块）——T-F5 扩为"失败/拒绝 → 不误冻"
+7. **escalate 同享**（round1 #2）：§19 合并后 escalate = subagent action——同 spawn 管线同享 ctx._subagentKey（relayPrefix escalate#N）——同步完成精确冻
+8. **VS Code 端声明**（round1 #6）：VS Code webview 活动流按 sub:role#id 键匹配（无启发式）——本修复 **CLI-only**——两端不需同步改
 
 **受影响文件**：src/agent-tools/subagent.mjs（sync spawn execute ctx._subagentKey）、src/agent/dispatch.mjs（runOne onToolResult 传参）、src/tui/tool-events.mjs（onToolResult 收 subKey——sync 分支精确冻）、src/tui/subagent-blocks.mjs（新 finishSubTaskKey）、测试（subagent-blocks/tool-events——sync + async 混跑面板回收用例）
 
@@ -798,7 +800,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **验收**：AC-F1 = sync 完成必回收且不误冻他块（T-F2/F3）；AC-F2 = async/既有路径零回归（T-F1/F4）；AC-F3 = 兜底防御（T-F5）
 
-### 17.5 §17 硬化轮：settle 完成队列（2026-09-03 · 设计——方案 B 用户批准——待评审）
+### 17.5 §17 硬化轮：settle 完成队列（2026-09-03 · 设计——方案 B 用户批准——**已批准**——round1 处置注见 17.5.4）
 
 > 状态：设计批准（2026-09-03 round1 通过——0🔴——6 refinement 处置注见 17.5.4——designToken 已签发）。触发：用户复现——"前端回合在跑时后端 eng-coder 完成——丢 digest——没看到交付后处理"——建议"先进完成队列——前端忙完再挨个处理"（explore 诊断 2026-09-03——缝隙 A 滞留/B 结构性互斥/C 可见性——TODO 立项）。
 
@@ -1084,4 +1086,14 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 4. 行号锚 → 符号（collectSettledAsync/sweepSettledToPending/digestTurn 函数锚——确需行号标 as-of）
 5. 受影响文件逐文件具体化（上表——渲染零改动结论句）
 6. 状态行文案区分（🔵——"N 完成待消化"与"N 运行中"——实现时顺手对齐——不阻塞）
+
+#### 7.2.3.4 round1 评审处置（2026-09-03——0🔴 通过——7 项）
+
+1. 错误/拒绝路径不冻结（7.2.3.2 第 6 点——execute 抛错/拒绝走工具错误块——不触发启发式——T-F5 扩）
+2. escalate 同享 subKey（第 7 点——§19 合并后同管线）
+3. T-F 用例表实现前展开（§15.4 式 N/E/A——eng-coder 验收随交付）
+4. 行号锚 → 符号（finishSubTask + as-of 注）
+5. §17.5 标题同步"已批准"（17.5.4 已在——标题残留修）
+6. VS Code 声明（CLI-only——webview 键匹配无启发式——不需同步改）
+7. 本节状态同步"设计批准"（即本段——token 已签发——实现排队）
 
