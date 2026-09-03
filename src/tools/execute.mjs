@@ -9,25 +9,23 @@
  * AND a killable timeout (an in-process infinite loop would freeze the
  * extension host; a child process is killed).
  *
- * The child `import()`-s exec-prelude.mjs first for readFile/writeFile/glob/
- * grep/log/require (paths confined to the workspace root). Full Node via
- * require()/process/import() is available — same boundary as bash.
+ * The child runs PURE node ESM — no helpers are injected (exec-prelude.mjs
+ * retired 2026-09-03, TOOLS.md §12: preloaded readFile/writeFile/glob/grep/log
+ * helpers made execute look like a file tool, bypassing the dedicated
+ * read/ls/glob/grep/write/edit tools). Scripts that need fs/path import the
+ * node: modules themselves — same boundary as bash, no fake sandbox.
  *
- * Two modes: inline `code` (prelude + eval) OR `scriptFile` (run a workspace
+ * Two modes: inline `code` (pure eval) OR `scriptFile` (run a workspace
  * .mjs/.js file with node [nodeArgs...], self-contained — for `node <script>` /
  * `node --test <file>` / `node --check <file>`). Both run as real node child
  * processes — NO directory restrictions (bash parity, TOOLS.md §10.1).
  */
 import { spawn } from "node:child_process"
-import { dirname, resolve } from "node:path"
-import { fileURLToPath, pathToFileURL } from "node:url"
+import { resolve } from "node:path"
 
 const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
 const DEFAULT_TIMEOUT = 30_000
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const PRELUDE_URL = pathToFileURL(resolve(__dirname, "exec-prelude.mjs")).href
 
 /** Resolve workdir relative to cwd (no workspace boundary assertion — bash parity,
  *  TOOLS.md §10.1 D-W1: paths are resolved, not restricted). */
@@ -47,13 +45,12 @@ function applyFilter(output, filter) {
   }
 }
 
-/** Spawn node, run code + prelude, capture stdout/stderr, enforce timeout/abort.
+/** Spawn node, run code, capture stdout/stderr, enforce timeout/abort.
  *  Resolves { text, ok } — ok=false on non-zero exit / timeout / abort. */
-function runNode(childArgs, baseDir, root, timeoutMs, signal) {
+function runNode(childArgs, baseDir, timeoutMs, signal) {
   return new Promise((resolvePromise) => {
     const child = spawn(process.execPath, childArgs, {
       cwd: baseDir,
-      env: { ...process.env, THINCODER_EXEC_ROOT: root },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     })
@@ -120,25 +117,36 @@ function validateNodeArgs(nodeArgs) {
 export const executeTool = {
   name: "execute",
   description:
-    "Execute JavaScript — either inline `code` or a workspace `scriptFile` — in a real node process with full Node access (top-level await and dynamic import() supported). Use inline code to compose multiple operations into one call — read, write, glob, grep, log, import, or require() — instead of shelling out to bash node -e.\n" +
-    "Route to execute instead of bash: `node -e \"…\"` → execute (inline code); `node <script.mjs>` → execute scriptFile; `node --test <file>` / `node --check <file>` → execute scriptFile + nodeArgs.\n" +
+    "Execute JavaScript — either inline `code` or a `scriptFile`. Runs in a real child `node` process — a pure node ESM environment: top-level `await` and dynamic `import()` are available, no globals are injected. File reads/writes/searches belong to the dedicated read/ls/glob/grep/write/edit tools — not to execute. If a script genuinely needs fs/path, `import` the `node:` module inside the code (one explicit import line).\n" +
+    "\n" +
+    "**Route to execute instead of bash:**\n" +
+    "- `node -e \"…\"` → execute (inline code; top-level await + import() + console all work)\n" +
+    "- `node <script.mjs>` → execute with scriptFile (runs the file in a child node process)\n" +
+    "- `node --test <file>` / `node --check <file>` → execute with scriptFile + nodeArgs\n" +
+    "\n" +
     "Parameters:\n" +
-    "- code: JavaScript to run inline. Top-level await and import('./x.mjs') work. Globals: readFile(path), writeFile(path, content), glob(pattern), grep(pattern, file), log(...args) — plus native require/process/console/fetch/import. Use this OR scriptFile.\n" +
-    "- scriptFile: run a workspace .mjs/.js file with node (self-contained, no prelude). Path relative to workdir (no directory restrictions). Use this OR code.\n" +
-    "- nodeArgs: (scriptFile) extra node flags before the script, e.g. [\"--test\"], [\"--check\"]. Eval-like flags rejected.\n" +
-    "- workdir: run in this directory (relative to cwd, no directory restrictions)\n" +
+    "- code: JavaScript to run inline. Top-level `await` and `import('./x.mjs')` are supported. Pure node ESM — no preloaded helpers; import `node:fs`/`node:path` etc. yourself when needed. File reads/writes go through the dedicated read/ls/glob/grep/write/edit tools. Use this OR scriptFile.\n" +
+    "- scriptFile: run a .mjs/.js file with node (self-contained — the file imports what it needs). Path relative to workdir — no directory restriction. Use this OR code.\n" +
+    "- nodeArgs: (scriptFile) extra node flags before the script, e.g. [\"--test\"], [\"--check\"]. Eval-like flags (--eval/--input-type/--inspect) are rejected.\n" +
+    "- workdir: run in this directory (relative to cwd — no directory restriction; default cwd)\n" +
     "- filter: optional — only return output lines matching this regex (case-insensitive)\n" +
-    "- timeoutMs: Timeout in milliseconds (default 30000, max 600000 — covers node --test suites / package scripts). Use bash for servers and interactive programs.",
+    "- timeoutMs: Timeout in milliseconds (default 30000, max 600000 — covers `node --test` suites and package scripts)\n" +
+    "\n" +
+    "Notes:\n" +
+    "- `console.log(...)` prints to the result; objects are JSON-stringified where needed.\n" +
+    "- A non-zero exit / thrown exception returns the stderr (error + stack) as the result.\n" +
+    "- Output is capped at ~50KB; when a script overruns it, an explicit `[output truncated]` marker is appended — print large results in chunks, or have the script write them to a file (node:fs) and read that file back with the `read` tool.\n" +
+    "- Use `write`/`edit`/`apply_patch` for source edits. Still use `bash` for package-manager/CLI subprocesses (`npm test`/`npm publish`/`vsce`), servers, and interactive/TTY programs — execute covers in-process JS and `node <script>`/`node --test`/`node --check`, not arbitrary CLI or long-running programs.\n",
   parameters: {
     type: "object",
     properties: {
       code: {
         type: "string",
-        description: "JavaScript code to execute (top-level await and dynamic import() supported). Globals: readFile/writeFile/glob/grep/log + native require/process/console/fetch/import. Use this OR scriptFile.",
+        description: "JavaScript code to execute (top-level await and dynamic import() supported). Pure node ESM — no preloaded globals; import node: modules (fs/path) yourself when needed. File reads/writes go through the dedicated read/ls/glob/grep/write/edit tools. Use this OR scriptFile.",
       },
       scriptFile: {
         type: "string",
-        description: "Run a workspace .mjs/.js file with node (self-contained, no prelude). Path relative to workdir, no directory restrictions. Use this OR code. For `node <script>` / `node --test <file>` / `node --check <file>`.",
+        description: "Run a .mjs/.js file with node (self-contained — the file imports what it needs). Path relative to workdir — no directory restriction. Use this OR code. For `node <script>` / `node --test <file>` / `node --check <file>`.",
       },
       nodeArgs: {
         type: "array",
@@ -147,7 +155,7 @@ export const executeTool = {
       },
       workdir: {
         type: "string",
-        description: "Run in this directory (relative to cwd, no directory restrictions)",
+        description: "Run in this directory (relative to cwd — no directory restriction; default cwd)",
       },
       filter: {
         type: "string",
@@ -176,7 +184,7 @@ export const executeTool = {
     if (args.scriptFile) {
       if (args.code?.trim()) return "Error: pass code OR scriptFile, not both"
       // scriptFile mode: run a workspace .mjs/.js file with node [nodeArgs...]. Self-contained —
-      // no prelude (a real node process imports what it needs). No directory restrictions (bash parity).
+      // a real node process imports what it needs. No directory restrictions (bash parity).
       const scriptAbs = resolve(baseDir, args.scriptFile)
       let nodeArgs
       try { nodeArgs = validateNodeArgs(args.nodeArgs) }
@@ -188,10 +196,11 @@ export const executeTool = {
       if (code.length > MAX_SCRIPT) {
         return `Error: script too large (${code.length} > ${MAX_SCRIPT} bytes). Split into smaller scripts or use individual tools.`
       }
-      childArgs = ["--input-type=module", "--eval", `await import(${JSON.stringify(PRELUDE_URL)});\n${code}`]
+      // inline mode: pure node ESM — no prelude, nothing injected (TOOLS.md §12).
+      childArgs = ["--input-type=module", "--eval", code]
     }
 
-    const { text, ok } = await runNode(childArgs, baseDir, ctx.cwd, timeoutMs, ctx.signal)
+    const { text, ok } = await runNode(childArgs, baseDir, timeoutMs, ctx.signal)
     // Only filter successful output — never swallow an error report behind a filter.
     if (!ok) return text
     return args.filter ? applyFilter(text, args.filter) : text

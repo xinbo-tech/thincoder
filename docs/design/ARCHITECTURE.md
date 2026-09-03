@@ -124,7 +124,7 @@ user input
 | 交互 | `question` |
 | 媒体 | `read_image` |
 | 补丁 | `apply_patch` |
-| 代码智能 | `lsp`（VS Code 原生语言服务）, `execute`（vm 沙箱 JS） |
+| 代码智能 | `lsp`（VS Code 原生语言服务）, `execute`（纯净 node 子进程 ESM——2026-09-03 §12：无预置全局） |
 | 元工具 | `task`, `recent_changes`, `subagent`, `plan`, `goal`, `skill`, `verify`, `timer`, `advisor`, `eng` |
 
 **lsp（VS Code 原生实现）**：CLI 的 lsp 工具自起 LSP server 进程（JSON-RPC over stdio，需 config.json `lsp.servers` 配置）；VS Code 侧直接用编辑器自己的语言服务（`vscode.executeDefinitionProvider` / `executeReferenceProvider` / `executeHoverProvider` / `executeDocumentSymbolProvider` + `languages.getDiagnostics`），无需配置、无需进程管理，任何装有语言扩展的语言都可用。子命令与 CLI 一致：definition / references / hover / symbols / diagnostics。
@@ -429,8 +429,8 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 
 - `src/tools/execute.mjs`：`isInside` 删除；`resolveBaseDir` 去断言（纯 resolve——workdir 越界正常执行）；scriptFile 越界拒绝删除（可指向 workspace 外文件，bash 一致性）；工具描述 "confined to the workspace" 措辞改 "no directory restrictions"
 - `src/tools/git.mjs`：同上（`isInside` 删除、`resolveBaseDir` 去断言、workdir 描述同步）
-- `src/tools/exec-prelude.mjs`：**保留**（safe() 的 workspace-root 约束是 execute 内联辅助 API 的 orthopedic guard——同一调用内可经 require()/process 绕过，不产生失败往返；设计定稿枚举未列，照设计不动）
-- 逃逸测试更新：`test/execute.test.mjs`（workdir 越界正常执行 / scriptFile 指向外部文件正常执行；prelude 的 Path traversal denied 测试保留）、`test/tools.test.mjs`（git workdir 越界不再拒绝 + T-W1 外部路径 read/write + T-W5 symlink——Windows 无权限时 skip）
+- `src/tools/exec-prelude.mjs`：**保留**（safe() 的 workspace-root 约束是 execute 内联辅助 API 的 orthopedic guard——同一调用内可经 require()/process 绕过，不产生失败往返；设计定稿枚举未列，照设计不动）——**2026-09-03 §12 退役更新：已删除**（TOOLS.md §12 权威——execute 回归纯净 node ESM 子进程——readFile/writeFile/glob/grep/log/require 预置全局全删——文件操作走 read/ls/glob/grep/write/edit 专用工具）
+- 逃逸测试更新：`test/execute.test.mjs`（workdir 越界正常执行 / scriptFile 指向外部文件正常执行；prelude 的 Path traversal denied 测试保留——**2026-09-03 §12 退役更新：prelude 助手测试全删——改为 T-E1（typeof 全 undefined）/T-E4（调用已删助手 → ReferenceError）**）、`test/tools.test.mjs`（git workdir 越界不再拒绝 + T-W1 外部路径 read/write + T-W5 symlink——Windows 无权限时 skip）
 
 ### lint 基建零依赖化（2026-09-02 · 引用）
 

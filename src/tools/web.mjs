@@ -47,7 +47,7 @@ export const websearchTool = {
     "- query (required): Search query\n" +
     "- limit: Max results (default 8)\n" +
     "- proxy: http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); Bing/foreign sites usually need a proxy, domestic targets don't\n" +
-    "Notes: Bing's index is noisy for technical queries — if a first search returns irrelevant results, DO NOT retry the same query. Configure a search MCP tool (e.g. glm-websearch) for technical lookups; websearch is the fallback. Call memory_search first — the answer may already be in a previous session.",
+    "Notes: Bing's index is noisy for technical queries — if a first search returns irrelevant results, DO NOT retry the same query. Configure a search MCP tool (e.g. glm-websearch) for technical lookups; websearch is the fallback. Call the memory tool (action: search) first — the answer may already be in a previous session.",
   parameters: {
     type: "object",
     properties: {

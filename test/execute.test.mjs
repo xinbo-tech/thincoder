@@ -4,7 +4,7 @@
  */
 import { describe, it, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync, readFileSync, existsSync } from "node:fs"
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 
@@ -28,9 +28,9 @@ async function run(code, extra = {}) {
   return executeTool.execute({ code, ...extra }, ctx())
 }
 
-describe("execute — sandbox API", () => {
-  it("runs simple code and returns logged output", async () => {
-    const out = await run('log("hello", 1 + 1)')
+describe("execute — pure node ESM (no preloaded helpers, TOOLS.md §12)", () => {
+  it("runs simple code and returns console output", async () => {
+    const out = await run('console.log("hello", 1 + 1)')
     assert.equal(out, "hello 2")
   })
 
@@ -39,84 +39,67 @@ describe("execute — sandbox API", () => {
     assert.equal(out, "(no output)")
   })
 
-  it("readFile reads relative to cwd", async () => {
-    const out = await run('log(readFile("a.txt").split("\\n").length)')
+  it("T-E1: inline code has no injected globals (readFile/writeFile/glob/grep/log/require all undefined)", async () => {
+    const out = await run('console.log(typeof readFile, typeof writeFile, typeof glob, typeof grep, typeof log, typeof require)')
+    assert.equal(out, "undefined undefined undefined undefined undefined undefined")
+  })
+
+  it("T-E4: calling a retired helper (readFile) fails with a clear ReferenceError", async () => {
+    const out = await run('readFile("a.txt")')
+    assert.match(out, /ReferenceError/)
+    assert.match(out, /readFile is not defined/)
+  })
+
+  it("T-E2: description claims no preloaded globals and routes file ops to dedicated tools", () => {
+    const desc = executeTool.description
+    const codeParam = executeTool.parameters.properties.code.description
+    for (const [name, text] of Object.entries({ description: desc, "code param description": codeParam })) {
+      for (const stale of ["Globals:", "readFile(path)", "writeFile(path, content)", "prelude"]) {
+        assert.ok(!text.includes(stale), `${name} still advertises "${stale}"`)
+      }
+      assert.ok(text.includes("read/ls/glob/grep/write/edit"), `${name} missing file-op routing sentence`)
+      assert.ok(text.includes("no globals are injected") || text.includes("no preloaded"), `${name} missing pure-ESM statement`)
+    }
+  })
+
+  it("native fs import reads a file relative to cwd", async () => {
+    const out = await run('const { readFileSync } = await import("node:fs"); console.log(readFileSync("a.txt", "utf8").split("\\n").length)')
     assert.equal(out, "4") // 3 lines + trailing empty
   })
 
-  it("readFile normalizes line endings", async () => {
-    writeFileSync(join(tmpDir, "crlf.txt"), "a\r\nb\r\n")
-    const out = await run('const t = readFile("crlf.txt"); log(t.includes("\\r") ? "crlf" : "lf")')
-    assert.equal(out, "lf")
-  })
-
-  it("writeFile creates parent dirs and writes", async () => {
-    await run('writeFile("deep/nested/out.txt", "written")')
-    assert.equal(readFileSync(join(tmpDir, "deep", "nested", "out.txt"), "utf8"), "written")
-  })
-
-  it("glob matches patterns recursively", async () => {
-    const out = await run('log(glob("**/*.js").join(","))')
-    assert(out.includes("sub/b.js"))
-  })
-
-  it("glob skips dot dirs and node_modules", async () => {
-    mkdirSync(join(tmpDir, ".hidden"), { recursive: true })
-    writeFileSync(join(tmpDir, ".hidden", "x.txt"), "x")
-    mkdirSync(join(tmpDir, "node_modules", "pkg"), { recursive: true })
-    writeFileSync(join(tmpDir, "node_modules", "pkg", "y.txt"), "y")
-    const out = await run('log(glob("**/*.txt").join("\\n"))')
-    assert(!out.includes(".hidden"))
-    assert(!out.includes("node_modules"))
-  })
-
-  it("grep returns line-numbered matches", async () => {
-    const out = await run('log(grep("line t", "a.txt").join("\\n"))')
+  it("native fs read + regex filter replaces the retired grep helper", async () => {
+    const out = await run('const { readFileSync } = await import("node:fs"); const ls = readFileSync("a.txt", "utf8").split("\\n"); console.log(ls.map((l, i) => `${i + 1}: ${l}`).filter((x) => /line t/.test(x)).join("\\n"))')
     assert.equal(out, "2: line two\n3: line three")
   })
 
-  it("composes multiple operations in one script", async () => {
-    await run(`
-      const files = glob("*.txt")
+  it("composes multiple operations in one script (native fs)", async () => {
+    const out = await run(`
+      const { readFileSync, readdirSync } = await import("node:fs")
+      const files = readdirSync(".").filter((f) => f.endsWith(".txt"))
       let count = 0
-      for (const f of files) count += readFile(f).split("\\n").length
-      log("files", files.length, "lines", count)
+      for (const f of files) count += readFileSync(f, "utf8").split("\\n").length
+      console.log("files", files.length, "lines", count)
     `)
+    assert.match(out, /files \d+ lines \d+/)
     assert(existsSync(join(tmpDir, "a.txt")))
   })
 })
 
 describe("execute — full Node access (no fake sandbox)", () => {
-  it("require() is available", async () => {
-    const out = await run('const fs = require("node:fs"); log(typeof fs.readFileSync)')
-    assert.equal(out, "function")
-  })
-
   it("process is available", async () => {
-    const out = await run('log(typeof process, typeof process.cwd)')
+    const out = await run('console.log(typeof process, typeof process.cwd)')
     assert.equal(out, "object function")
   })
 
-  it("require resolves Node builtins", async () => {
-    const out = await run('const p = require("node:path"); log(p.basename("/a/b.txt"))')
+  it("dynamic import() resolves Node builtins", async () => {
+    const out = await run('const { basename } = await import("node:path"); console.log(basename("/a/b.txt"))')
     assert.equal(out, "b.txt")
   })
 
-  it("require resolves project modules relative to cwd", async () => {
-    writeFileSync(join(tmpDir, "lib.js"), "module.exports = { answer: 42 }")
-    const out = await run('const lib = require("./lib.js"); log(lib.answer)')
+  it("dynamic import() resolves project modules relative to cwd", async () => {
+    writeFileSync(join(tmpDir, "lib.mjs"), "export const answer = 42\n")
+    const out = await run('const lib = await import("./lib.mjs"); console.log(lib.answer)')
     assert.equal(out, "42")
-  })
-
-  it("denies path traversal above cwd", async () => {
-    const out = await run('readFile("../escape.txt")')
-    assert(out.includes("Path traversal denied"))
-  })
-
-  it("denies absolute paths outside cwd", async () => {
-    const outside = join(tmpdir(), "does-not-matter.txt")
-    const out = await run(`readFile(${JSON.stringify(outside)})`)
-    assert(out.includes("Path traversal denied") || out.includes("File not found"))
   })
 
   it("rejects oversize scripts", async () => {
@@ -128,7 +111,7 @@ describe("execute — full Node access (no fake sandbox)", () => {
 
 describe("execute — error handling and limits", () => {
   it("reports runtime errors with partial output", async () => {
-    const out = await run('log("before"); throw new Error("boom")')
+    const out = await run('console.log("before"); throw new Error("boom")')
     assert(out.includes("before"))
     assert(out.includes("Error: boom"))
   })
@@ -139,13 +122,8 @@ describe("execute — error handling and limits", () => {
   })
 
   it("caps timeoutMs at 60s", async () => {
-    const out = await run('log("ok")', { timeoutMs: 999_999_999 })
+    const out = await run('console.log("ok")', { timeoutMs: 999_999_999 })
     assert.equal(out, "ok")
-  })
-
-  it("missing file gives a clear error", async () => {
-    const out = await run('readFile("nope.txt")')
-    assert(out.includes("File not found"))
   })
 })
 
@@ -155,7 +133,7 @@ describe("execute — async / import / console / workdir / filter", () => {
   })
 
   it("supports top-level await + dynamic import() of project ESM", async () => {
-    const out = await run('const m = await import("./mod.mjs"); log(m.name, m.default)')
+    const out = await run('const m = await import("./mod.mjs"); console.log(m.name, m.default)')
     assert.equal(out, "mod 7")
   })
 
@@ -170,18 +148,18 @@ describe("execute — async / import / console / workdir / filter", () => {
   })
 
   it("workdir runs in a subdirectory", async () => {
-    const out = await run('log(readFile("b.js").trim())', { workdir: "sub" })
+    const out = await run('const { readFileSync } = await import("node:fs"); console.log(readFileSync("b.js", "utf8").trim())', { workdir: "sub" })
     assert.equal(out, "export const x = 1")
   })
 
   it("workdir outside the workspace resolves and runs (bash parity, TOOLS.md §10.1)", async () => {
     // Boundary assertion removed 2026-09-02: paths are resolved, not restricted.
-    const out = await run('log("x")', { workdir: ".." })
+    const out = await run('console.log("x")', { workdir: ".." })
     assert.equal(out, "x")
   })
 
   it("filter keeps only matching output lines", async () => {
-    const out = await run('log("alpha")\nlog("beta")\nlog("gamma")', { filter: "beta" })
+    const out = await run('console.log("alpha")\nconsole.log("beta")\nconsole.log("gamma")', { filter: "beta" })
     assert.equal(out, "beta")
   })
 
@@ -191,8 +169,8 @@ describe("execute — async / import / console / workdir / filter", () => {
   })
 
   it("non-numeric / zero timeoutMs falls back to default", async () => {
-    assert.equal(await run('log("fast")', { timeoutMs: "abc" }), "fast")
-    assert.equal(await run('log("fast2")', { timeoutMs: 0 }), "fast2")
+    assert.equal(await run('console.log("fast")', { timeoutMs: "abc" }), "fast")
+    assert.equal(await run('console.log("fast2")', { timeoutMs: 0 }), "fast2")
   })
 })
 

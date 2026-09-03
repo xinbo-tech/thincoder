@@ -16,7 +16,7 @@ import { questionTool } from "./question.mjs"
 import { readImageTool } from "./read_image.mjs"
 import { codeSearchTool, docSearchTool } from "./code.mjs"
 import { repoOutlineTool } from "../repomap.mjs"
-import { memoryPutTool, memorySearchTool, memoryDeleteTool } from "../memory.mjs"
+import { memoryTool } from "../memory.mjs"
 import { contextTool } from "./context.mjs"
 import { focusTool } from "./focus.mjs"
 import { fileOpsTool, processTool, getCurrentTimeTool } from "./ops.mjs"
@@ -52,7 +52,7 @@ export const builtinTools = [
   websearchTool, fetchTool, questionTool,
   repoOutlineTool, codeSearchTool, docSearchTool,
   lspTool, executeTool,
-  memoryPutTool, memorySearchTool, memoryDeleteTool,
+  memoryTool,
   contextTool, focusTool,
   fileOpsTool, processTool, getCurrentTimeTool,
   treeTool,
