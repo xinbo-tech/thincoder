@@ -210,6 +210,14 @@
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+### 2026-09-03：范围扩展评审链——"用户拍板 ≠ 设计批准"条款（用户实测：形态确认被当批准直接开工）
+
+**触发**：D-M7b（§19.5 范围扩展——async 标识 + ⏹ 门控——新事件类型牵 §7.2 事件契约）用户拍板形态 B 后 agent 直接派 eng-coder——跳过"提醒评审就绪 → 用户发起 advisor → 批准"链。定性：**用户对设计内容/形态的选择是需求确认——不是设计批准**——扩展（含已批准设计的范围扩展）与修正轮（偏差/评审 fix——同 token 合法）是两条路径——上一轮 docs FIRST 条款的 token 边界句（"beyond file list = NEW task"）未显式挂评审链——缺口。
+
+**加固**：两端 `src/prompts/engineering.md` Mandatory Flow 评审步处加条款——"A user ruling on design content (form/shape/option choice) is requirements confirmation — NOT design approval. New scope (including extensions to an approved design) still needs the full review chain: design ready → user-initiated advisor review → approval → implementation. Only explicit sign-off after review unlocks eng-coder."——两端 byte-identical + 断言 + 本节记录。
+
+**受影响文件**：两端 `src/prompts/engineering.md`、两端 `test/agent.test.mjs`（断言）、本节。
+
 ### 2026-09-03：修正轮先落档——docs FIRST（用户实测：同设计修正轮直接 spawn 未先落档）
 
 **触发**：用户实测工程模式同设计修正轮（token 复用合法）但修正前没先落文档——直接 spawn eng-coder——文档纪律断链。"代码变更都必须落文档"对修正轮无豁免（METHODOLOGY.md:47——无"改动太小免文档"通道，2026-09-03 同批确立），但 engineering.md 修正轮句未挂钩落档步。
