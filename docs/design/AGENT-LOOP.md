@@ -34,7 +34,7 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume })
 ```
 
 **中断语义**（AbortController + signal.reason）：
-- `controller.abort()`（Ctrl+C abort / /abort）：当前 chat 抛 AbortError → runAgent 直接上抛，不提交半截历史
+- `controller.abort()`（Ctrl+C **二按**全停 / **无 /abort 命令**——评审 #1：/abort 不存在（17.6.4 核对）——本行 Ctrl+C 映射随 §17.6 修订）：当前 chat 抛 AbortError → runAgent 直接上抛，不提交半截历史——**supersede（2026-09-03 §17.6）：processing 态 Ctrl+C 首按 = interrupt 无 message（停回合不清池——部分输出提交）——二按才平 abort 全停——见 §17.6.2**
 - `controller.abort({ interrupt: true, message })`（Ctrl+I）：chat 中断 → 提交部分输出（pushReal）+ 注入 `[User interrupt: message]` → 抛 AbortError；**agent-turn 捕获后重建 controller 续跑**——同一轮内继续，用户消息即时生效
 - 工具执行期间中断：`signal.reason.interrupt` → **先为已提交的 tool_calls 合成占位 tool 结果**（`[Tool execution interrupted — results discarded]`，tool 消息必须紧跟 assistant tool_calls——否则 strict provider 对重试轮 400）**再注入中断消息**后 continue（2026-08-30 consult）
 - 中断清扫（runAgentTurn finally）：`freezeAllSubTasks` + `sweepToolBlocks`（未 done 的工具载体标 done+interrupted、清 `_toolTicks`）——保证无 running 残留、无陈旧计时泄漏；`state.dims.refresh()`（输出停止 = ConPTY buffer 信息恢复的确定性时刻）
@@ -280,7 +280,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 **验收标准**：
 1. 面板位于会话与 todo 之间；会话滚动（滚轮/PgUp/流式）面板位置不动
-2. 无运行中区块 → 面板不渲染（无悬空分隔线）
+2. 无运行中区块且无 queued/waiting → 面板不渲染（无悬空分隔线——supersede by §20 D-SD3b）
 3. 多子 agent 并行 → 面板全显示（自适应高度）
 4. 面板内点击：折叠/展开/翻窗正常；展开超限 → 块内滚动（60% 窗口化保留）
 5. 面板上滚轮：未命中区块 → 穿出滚会话；命中展开区块内容行 → 块内滚动
@@ -294,7 +294,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | 用例 | 输入 | 预期 |
 |---|---|---|
 | T1 布局槽位 | 有 running 子 agent | panels.subagent 位于 conversation 与 todo 之间（y 顺序正确） |
-| T2 空态 | 无 running | subagentH=0，面板不渲染 |
+| T2 空态 | 无 running 且无 queued/waiting（supersede by §20 D-SD3b——评审 #2） | subagentH=0，面板不渲染 |
 | T3 压缩链 | 小终端（rows 不足） | 面板先压至 0；conv ≥1、inputBox/status 保留 |
 | T4 面板渲染 | 2 个并行子 agent（折叠态） | 顶部分隔线 + 各区块折叠头 + tail 3 |
 | T5 面板点击 | 点击面板内折叠头 | 切换展开/折叠；展开超限 → ▲▼ 翻窗 |
@@ -1046,7 +1046,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - VS Code：webview 子块标题行 ⏹ 按钮（DOM click → postMessage cancel → extension 层定向 abort——同样不经模型）
 - 与 Ctrl+C 的关系：UI 停止 = 单子代理定向；Ctrl+C = 既有全停（挂起两级——round2 #4）——并存
 
-**D-M7b async 标记 + sync/async 显式标识 + ⏹ 门控（2026-09-03 用户裁定——实现后补充）**：**① 事件通道**：async spawn 分支（makeRelay 后）emit `⟦ev⟧async\x1e` 事件 token（与 ⟦ev⟧turn 同族——sync 不发）→ routeSubToken 解析设 `sub.async = true`（makeRelay emit 在 spawn 返回前——区块创建即知——时序安全）。**② 标题行显式标识（用户裁定 B 形态——sync/async 都标）**：`[▶ eng-coder#2 · async · glm-5.3 · running …]` / `[▶ explore#1 · sync · glm-5.3 · …]`——`async`/`sync` 文字（dim 色——与模型名并列——running 态显示）——不靠"没标推断"。**③ ⏹ 门控**：⏹ 只对 async 区块（running && SUBAGENT_ROLES && sub.async——sync 区块无 ⏹——杜绝"可见但不可中止"误导——id:9 交付曾以"可操作指引"过渡）。渲染纯读 state ✓（纯函数设计不破坏）。测试：async 区块 async 标识 + ⏹ 显示可中止；sync 区块 sync 标识 + 无 ⏹；async 事件解析。
+**D-M7b async 标记 + sync/async 显式标识 + ⏹ 门控（2026-09-03 用户裁定——实现后补充）**：**① 事件通道**：async spawn 分支（makeRelay 后）emit `⟦ev⟧async\x1e` 事件 token（与 ⟦ev⟧turn 同族——sync 不发）→ routeSubToken 解析设 `sub.async = true`（makeRelay emit 在**实际启动时**（评审 #4——slot-queued/waiting-deps spawn 无 relay 流——spawn 返回前 emit 会在块存在前丢——排队条目启动时 emit → waiting 块已在（D-SD3b）→ sub.async 设置成功——routeSubToken 对缺失 key 的 async 事件缓冲 pending 标志（兜底）——补 queued→running ⏹ 可见性测试）。**② 标题行显式标识（用户裁定 B 形态——sync/async 都标）**：`[▶ eng-coder#2 · async · glm-5.3 · running …]` / `[▶ explore#1 · sync · glm-5.3 · …]`——`async`/`sync` 文字（dim 色——与模型名并列——running 态显示）——不靠"没标推断"。**③ ⏹ 门控**：⏹ 只对 async 区块（running && SUBAGENT_ROLES && sub.async——sync 区块无 ⏹——杜绝"可见但不可中止"误导——id:9 交付曾以"可操作指引"过渡）。渲染纯读 state ✓（纯函数设计不破坏）。测试：async 区块 async 标识 + ⏹ 显示可中止；sync 区块 sync 标识 + 无 ⏹；async 事件解析。
 
 **D-M8 嵌套 relay 前缀子标（方案 A）**：`parseRelayPath(text)` 通用解析——`eng-coder#N/explore#M/read` → 首段（块路由——现状逻辑零改——兼容单层）+ 剩余段渲染规则：
 - 文本行（onToken）：内层段前缀（如 `explore#1/`）替换为块内行首 dim 子标 `explore#1 · `（内容跟随）
@@ -1120,7 +1120,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——**已批准**）
 
-> 状态：**已实现（2026-09-03 交付——CLI 1268/0——AC-P1..P4 勾销——实现记录见 19.6.5）**
+> 状态：**已实现（2026-09-03 交付——CLI 1268/0——AC-P1..P4 勾销——实现记录见 19.6.5——评审 #5 注：基于 §19 action-dispatch 门控基础实现——§19/§19.5 状态标记滞后（实现已含其基础面——标记后续刷新））**
 
 #### 19.6.1 需求
 
@@ -1235,10 +1235,10 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-SD4b：混合队列（waiting-deps + slot-queued 共存）启动序断言（round2 #6）
 
 
-**NF-SD（round1 #4 + round2 #8 补）**：准入检测 O(running∪queued × files) 每 spawn（槽 ≤4 + 队列有限——可接受）；每次 settle 重扫 waiting-deps 队列同界；spawn 描述预算增量（files/dependsOn 两可选参——T-M12 锚复核同 §19.6 NF-P）；**VS Code 对等验证（F-SD5）**：§15.6 模式——双端同构 + 双端测试（T-SD 镜像子集）——受影响文件含 VS Code 测试；**排队滞留可见性（round2 #8）**：waiting-deps 长滞（依赖取消留 queued 分支）不静默——status/面板恒显示 dependency cancelled 标注 + 注入提醒——可 cancel（不阻塞挂起退出——条目显式可清）
+**NF-SD（round1 #4 + round2 #8 补）**：准入检测 O(running∪queued × files) 每 spawn（槽 ≤4 + 队列有限——可接受）；每次 settle 重扫 waiting-deps 队列同界；spawn 描述预算增量（files/dependsOn 两可选参——T-M12 锚复核同 §19.6 NF-P）；**VS Code 对等验证（F-SD5）**：§15.6 模式——双端同构 + 双端测试（T-SD 镜像子集）——受影响文件含 VS Code 测试；**排队滞留可见性（round2 #8）**：waiting-deps 长滞（依赖取消留 queued 分支）不静默——status/面板恒显示 dependency cancelled 标注 + 注入提醒——可 cancel（**评审 #6 澄清：滞留条目使挂起持续（D-S2 池空退出判据含 queued）——用户/模型 cancel 该条目后池空才自然退出——显式可清——不静默——行为有意**）
 
 
-**验收（round2 #1——T-SD9..13 回指）**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8）；AC-SD3 = 死锁/取消安全（T-SD5/6/9/10——含依赖取消释放 + unknown id 拒）；AC-SD4 = 状态可见（T-SD7/11/12——含 waiting 面板标注）；AC-SD5 = 既有语义零回归（T-SD1/13——sync 冲突错误）
+**验收（round2 #1——T-SD9..13 回指）**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8）；AC-SD3 = 死锁/取消安全（T-SD5/6/9/10——依赖取消/失败处置 = 留 queued 标注 + 模型提醒（不自动释放——round2 #3）——unknown id 拒——评审 #3）；AC-SD4 = 状态可见（T-SD7/11/12——含 waiting 面板标注）；AC-SD5 = 既有语义零回归（T-SD1/13——sync 冲突错误）
 
 ### 17.6 Ctrl+C processing 态武装化 + 回合 abort 与池解耦（2026-09-03 · 紧急修复——用户两次实测被坑——已实现 17.6.4）
 
