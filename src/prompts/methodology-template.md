@@ -20,6 +20,18 @@ Every task follows four steps, no skipping:
 
 These four steps are not "best practice" — they are hard process. Three documents required: **requirements doc**, **design doc**, **test doc**. Skipping to step 3 and writing code first is wrong nine times out of ten.
 
+## Requirement-Pool Batched Workflow（2026-09-03 · design — user ruling — pending review）
+
+> Motivation: per-request pipelines（one requirement → clarify → design → review → implement）carry high fixed process cost per single point; batching amortizes it across multiple requirements without cutting quality — per-point engineering rigor is untouched; only the *trigger timing* changes（accumulate, then start design）.
+
+1. **Register（when a requirement is stated）**: ordinary requirement → clarify on the spot → update the owning board's requirements section（the clarified requirement sentence — the clarification product）→ register one line in the project `docs/TODO.md`「Requirement Pool」group（date / requirement sentence / owning board / status=awaiting design）— **no design work yet**.
+2. **Accumulate**: requirements accumulate — the design-start initiative stays with the user（say "start this batch"）.
+3. **Suggested threshold**: same board ≥2 points or pool-wide ≥3 points → remind once（"pool is big enough — design can start"）— reminder never replaces initiative.
+4. **Batch design**: land multiple points in one pass（same board = multiple sections of its design doc; cross-board = multiple docs reviewed in one batch）→ batch review → user approval → batch implementation.
+5. **Fast lane**: "this is urgent / do it now" → skip the pool — single-point full existing flow（no step cut）.
+6. **Boundary**: the pool takes **user requirement points only** — technical backlog stays in the TODO technical groups — never mixed.
+
+
 ## Checklist
 
 Always maintain a checklist tracking what's planned, in progress, and done. This is project-level — checklist entries are created after requirements are confirmed, marked in_progress when work starts, and marked done after verification passes.

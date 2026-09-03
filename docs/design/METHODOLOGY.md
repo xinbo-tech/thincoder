@@ -50,7 +50,7 @@
 
 ### 受影响文件
 
-- `docs/design/METHODOLOGY.md`（本节）+ 根模板 `METHODOLOGY.md`（同机制节——英文同构）+ `docs/TODO.md`（需求池组——初始化）+ 实现批：`src/prompts/engineering.md`（两端）+ 两端测试断言。
+- `docs/design/METHODOLOGY.md`（本节）+ 根模板 `METHODOLOGY.md`（同机制节——英文同构）+ **`src/prompts/methodology-template.md`（模板真身——15 文件对之一——CLI + VS Code 双端同改 byte-identical）** + `docs/TODO.md`（需求池组——初始化）+ 实现批：`src/prompts/engineering.md`（两端）+ 两端测试断言。
 
 
 ## 检查表
