@@ -1364,6 +1364,8 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(flat.includes("**Declare spawn scheduling metadata in task briefs**: spawn with `files` (write domain) and `dependsOn` (prior async ids) — the scheduler gates admission: async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order. Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized."), "T-PS1: D-PS2 anchor verbatim (files/dependsOn declaration + admission gate + mirror parallel queue semantics)")
     assert.ok(text.includes("never hand-serialized"), "T-PS1: scheduler owns serialization — no manual hand-serialization")
     assert.ok(text.includes("at most 4 concurrent eng-coders"), "≤4 concurrency cap")
+    // §19.5.5 T-CL2: cancel-discipline anchor present (D-CL2 verbatim — post-D-PS2 text — fail-when-unchanged)
+    assert.ok(flat.includes("assertions stay green).** Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."), "T-CL2: D-CL2 anchor verbatim after D-PS2 text (last resort + verify-first)")
     assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "parallel spawn call form (each with designId+token)")
     assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token isolation semantics")
     assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "initiation rights unchanged")

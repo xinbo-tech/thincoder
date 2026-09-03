@@ -1815,6 +1815,14 @@ test("T-M12: 描述引导——五动作 + 查进度用 status（check 会阻塞
   assert.ok(d.includes("Not available in engineering mode"), "escalate 工程模式禁用提示保留")
 })
 
+test("T-CL1: cancel description carries the cancel-verification anchor (last resort + verify alarming signals — fail-when-unchanged)", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const d = subagentTool.description
+  assert.ok(d.includes("Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first"), "T-CL1: last-resort + verify-first (reliable checks, not guesses)")
+  assert.ok(d.includes("prefer scoped recovery (restore a single affected file) over killing the child"), "T-CL1: scoped recovery over killing the child")
+  assert.ok(d.includes("a running child's in-flight work dies with it, partial changes stay unmerged and unaudited"), "T-CL1: in-flight dies with the child (§18 partial-never-merged)")
+})
+
 test("T-M17a: action 级门控——planMode 下 status/check/cancel 放行（readonly/控制类）vs spawn/escalate 拒绝", async () => {
   const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")

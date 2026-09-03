@@ -240,7 +240,10 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
   spawn as parallel eng-coders, each declaring its own file domain —
   overlapping domains are queued by the scheduler, never hand-serialized.
   **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 —
-  phrase preserved, T9/T-E16 assertions stay green).**
+  phrase preserved, T9/T-E16 assertions stay green).** Cancelling a running
+  eng-coder is a last resort — its in-flight delivery dies unmerged and
+  unaudited; verify the alarm with reliable checks and prefer scoped recovery
+  first.
 - **Cap: at most 4 concurrent eng-coders.** You track each parallel
   implementation's state (design, token, delivery, audit, review) yourself;
   past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
