@@ -942,7 +942,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - N3：**两端一致**——CLI/VS Code 同规格（F7）——VS Code 实现按 ARCHITECTURE.md 惯例落引用段
 ---
 
-## 19. subagent 工具面合并：单工具四动作（spawn/check/status/escalate）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事——escalate 并入 2026-09-03 二次裁定）
+## 19. subagent 工具面合并：单工具动作面（**六动作：spawn/check/status/escalate/cancel/panel——评审 #1：标题数随扩展刷新——2026-09-03**）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事——escalate 并入 2026-09-03 二次裁定）
 
 > **状态：已实现（2026-09-03 双端——§19 单工具五动作本体 + §19.5 控制面（实现记录见 19.5.4——CLI db408d2/b66831d + VS Code 70f3f8f 同规格镜像）+ §19.6 panel 六动作（19.6.5 记录）；设计批准沿革与处置注见 §19.5 状态行/19.5.4——标记刷新 2026-09-03（19.6.5 评审 #5 注承诺））**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
 
@@ -969,7 +969,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | check | id?（省 = 下一完成）/ n（必填） | 报告（arrival order/指定 id——消费） | **阻塞**（等目标 settle——显式取回语义） |
 | status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?, ...}`——不消费（§19.5：running 带 model/elapsedSec/turn/maxTurns） | **不阻塞**（立即） |
 | escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义） |
-| cancel（§19.5 新增——19.5.2b 承诺同批修订） | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效） |
+| panel（§19.6 新增——评审 #1 补行：view=readonly 类/freeze=控制类（门禁分类见 19.6.2——digest 放行/受限变体拒） | {view?, freeze?}（互斥——view 默认） | 镜像快照/冻结回收确认 | 读时交叉 pending 标注 digested | | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效） |
 
 > **supersede 注（2026-09-03 §19.5 实现轮）**：本矩阵 action 面随 §19.5 控制面扩展为**五动作**——cancel 行的门禁分类（控制类豁免）、定向中止语义（cancelled settle/queued 出队/模型可见提醒）与 AC-M1 措辞见 §19.5（D-M6/19.5.2b）——§15 D-A2 先例：本段保留为 as-of 快照，实现以 §19.5 为准。——**域澄清（评审 #2）：AC-M1 五动作 = §19 cancel 批域验收——§19.6 加 panel 后工具面六动作（NF-P 口径）——域不同不冲突——2026-09-03**
 
@@ -1331,4 +1331,4 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - round2 #6 越行/position 语义 + T-SD4b
 - round2 #7 sync 冲突 error + 元数据
 - round2 #8 NFR/滞留可见性
-- round2 复审 #1..8（本批——区分机制/abort 语义/supersede 标注/状态行/事件矩阵/头注/墓碑）——token 8a85b23d
+- **§17.6 round2 复审注（误置 §20.4——评审 #2 归位标注）**：复审 #1..8（区分机制/abort 语义/supersede 标注/状态行/事件矩阵/头注/墓碑）——token 8a85b23d = §17.6 评审批签发——§20 自身 round2 见上
