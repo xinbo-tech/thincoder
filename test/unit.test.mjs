@@ -13,7 +13,8 @@ import { fileURLToPath } from "node:url"
 
 // ─── memory.mjs ──────────────────────────────────────────────
 
-import { tokenizeQuery, scoreEntry, search, memoryPutTool, memorySearchTool, memoryDeleteTool } from "../src/memory.mjs"
+import { tokenizeQuery, scoreEntry, search } from "../src/memory.mjs"
+import { memoryTool } from "../src/memory-tool.mjs"
 
 describe("memory — tokenizeQuery", () => {
   it("deduplicates repeated keywords", () => {
@@ -125,11 +126,13 @@ describe("memory — search (integration)", () => {
   })
 })
 
-describe("memory — memory_delete (integration, MEMORY.md §0/§0.1 T5/T6/T10)", () => {
+describe("memory — merged memory tool (MEMORY.md §6: single tool, five actions)", () => {
   let tmpDir, memDir
+  const ctx = (cwd = tmpDir) => ({ cwd })
+  const exec = (args, cwd = tmpDir) => memoryTool.execute(args, { cwd })
 
   before(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "thincoder-test-mdel-"))
+    tmpDir = mkdtempSync(join(tmpdir(), "thincoder-test-mmem-"))
     memDir = join(tmpDir, ".thincoder", "memory")
   })
 
@@ -137,11 +140,27 @@ describe("memory — memory_delete (integration, MEMORY.md §0/§0.1 T5/T6/T10)"
     try { rmSync(tmpDir, { recursive: true }) } catch {}
   })
 
-  it("T5: put → memory_delete → 文件删 + search 零命中 + 返回内容", () => {
-    const putOut = memoryPutTool.execute({ type: "rule", title: "Delete me", content: "this must vanish after delete", scope: "personal" }, { cwd: tmpDir })
-    const id = putOut.match(/id=([\w-]+\.md)/)?.[1]
+  it("S6-1: single memory tool — five actions, readonly classification, old names gone", () => {
+    assert.equal(memoryTool.name, "memory")
+    assert.equal(memoryTool.readonly, false)
+    assert.deepEqual(memoryTool.parameters.properties.action.enum, ["search", "put", "list", "delete", "clear"])
+    assert.deepEqual(memoryTool.parameters.required, ["action"])
+    assert.equal(memoryTool.isReadonlyAction({ action: "search" }), true, "search 只读动作")
+    assert.equal(memoryTool.isReadonlyAction({ action: "list" }), true, "list 只读动作")
+    assert.equal(memoryTool.isReadonlyAction({ action: "put" }), false, "put 侧效动作")
+    assert.equal(memoryTool.isReadonlyAction({ action: "delete" }), false, "delete 侧效动作")
+    assert.equal(memoryTool.isReadonlyAction({ action: "clear" }), false, "clear 侧效动作")
+    assert.deepEqual(memoryTool.parameters.properties.scope.enum, ["personal", "project"], "scope 值域按端（VS Code 无 team）")
+    assert.ok(memoryTool.description.includes("confirm:true"), "描述含 confirm 门禁语义")
+    assert.ok(memoryTool.description.includes("team sync may resurrect"), "描述含 team 复活注")
+    assert.ok(!memoryTool.description.includes("memory_"), "描述不含旧工具名")
+  })
+
+  it("T5: put → delete 单条 → 文件删 + search 零命中 + 返回内容", () => {
+    const putOut = exec({ action: "put", type: "rule", title: "Delete me", content: "this must vanish after delete", scope: "personal" })
+    const id = putOut.match(/id=([^\s)]+\.md)/)?.[1]
     assert.ok(id, `put 输出应含 id（文件名）: ${putOut}`)
-    const delOut = memoryDeleteTool.execute({ id, scope: "personal" }, { cwd: tmpDir })
+    const delOut = exec({ action: "delete", id, scope: "personal" })
     assert.ok(delOut.includes(id), `删除返回应含 id: ${delOut}`)
     assert.ok(delOut.includes("Delete me"), `删除返回应含标题: ${delOut}`)
     assert.equal(existsSync(join(memDir, "personal", id)), false, "文件已删")
@@ -149,29 +168,116 @@ describe("memory — memory_delete (integration, MEMORY.md §0/§0.1 T5/T6/T10)"
   })
 
   it("T6: 不存在 / scope 目录校验（NF2/NF3 同语义）", () => {
-    const putOut = memoryPutTool.execute({ type: "knowledge", title: "Scoped entry", content: "lives in personal", scope: "personal" }, { cwd: tmpDir })
-    const id = putOut.match(/id=([\w-]+\.md)/)?.[1]
+    const putOut = exec({ action: "put", type: "knowledge", title: "Scoped entry", content: "lives in personal", scope: "personal" })
+    const id = putOut.match(/id=([^\s)]+\.md)/)?.[1]
     assert.ok(id)
     // 文件在 personal/ 目录 → project scope 必须报 not found（目录定位校验）
-    const wrongScope = memoryDeleteTool.execute({ id, scope: "project" }, { cwd: tmpDir })
+    const wrongScope = exec({ action: "delete", id, scope: "project" })
     assert.match(wrongScope, /not found in scope project/)
     // 不存在 id
-    const missing = memoryDeleteTool.execute({ id: "20260101-nope-ab12.md", scope: "personal" }, { cwd: tmpDir })
+    const missing = exec({ action: "delete", id: "20260101-nope-ab12.md", scope: "personal" })
     assert.match(missing, /not found in scope personal/)
     // 路径逃逸拒绝（分隔符 / ".." 不可能是合法文件名 id）
-    const evil = memoryDeleteTool.execute({ id: "../outside.md", scope: "personal" }, { cwd: tmpDir })
+    const evil = exec({ action: "delete", id: "../outside.md", scope: "personal" })
     assert.match(evil, /not found in scope personal/)
+    // team scope 明确拒绝并指引 CLI（scope 值域按端）
+    assert.match(exec({ action: "delete", id: "20260101-x.md", scope: "team" }), /no team layer.*CLI/)
     // 条目未被误删
     assert.equal(existsSync(join(memDir, "personal", id)), true)
   })
 
-  it("T10: memory_put / memory_search 输出带 id（文件名）", async () => {
-    const putOut = memoryPutTool.execute({ type: "decision", title: "Id visible", content: "agent can find this id", scope: "project" }, { cwd: tmpDir })
-    const id = putOut.match(/id=([\w-]+\.md)/)?.[1]
+  it("T10: put/search 输出带 id（文件名）", async () => {
+    const putOut = exec({ action: "put", type: "decision", title: "Id visible", content: "agent can find this id", scope: "project" })
+    const id = putOut.match(/id=([^\s)]+\.md)/)?.[1]
     assert.ok(id, `put 输出应含 id: ${putOut}`)
     assert.equal(existsSync(join(memDir, "project", id)), true, "project scope 写入 scope 子目录")
-    const searchOut = await memorySearchTool.execute({ query: "Id visible", limit: 5 }, { cwd: tmpDir })
+    const searchOut = await exec({ action: "search", query: "Id visible", limit: 5 })
     assert.match(searchOut, new RegExp(id), `search 输出应含 id: ${searchOut}`)
+    const scopedOut = await exec({ action: "search", query: "Id visible", scope: "project", limit: 5 })
+    assert.match(scopedOut, new RegExp(id), "search scope 过滤仍命中")
+    assert.equal(await exec({ action: "search", query: "Id visible", scope: "personal", limit: 5 }), "No matching memories found.", "personal scope 不含 project 条目")
+  })
+
+  it("S6-2: action list — scope/type/keyword/limit 过滤 + 行形态 + 截断注 + 空库", () => {
+    // 独立状态：清掉前序用例（T5/T6/T10）留下的条目
+    try { rmSync(memDir, { recursive: true }) } catch {}
+    mkdirSync(memDir, { recursive: true })
+    exec({ action: "put", type: "rule", title: "代码风格", content: "不加分号", scope: "personal" })
+    exec({ action: "put", type: "knowledge", title: "部署架构", content: "单台 VPS", scope: "personal" })
+    exec({ action: "put", type: "decision", title: "选型决策", content: "PostgreSQL 做主库", scope: "project" })
+    const all = exec({ action: "list" })
+    assert.ok(/^\d{8}-.+\.md \[rule\] 代码风格（\d{4}-\d{2}-\d{2}）$/m.test(all), `行形态: ${all}`)
+    assert.ok(all.includes("[knowledge] 部署架构"), all)
+    assert.ok(all.includes("[decision] 选型决策"), all)
+    const personal = exec({ action: "list", scope: "personal" })
+    assert.ok(personal.includes("代码风格") && !personal.includes("选型决策"), personal)
+    const typed = exec({ action: "list", type: "rule" })
+    assert.equal(typed.split("\n").length, 1)
+    assert.ok(typed.includes("代码风格"), typed)
+    const kw = exec({ action: "list", keyword: "VPS" })
+    assert.ok(kw.includes("部署架构") && !kw.includes("选型决策"), kw)
+    const truncated = exec({ action: "list", limit: 1 })
+    assert.ok(truncated.startsWith("1 条——截断前 3\n"), `截断注: ${truncated}`)
+    assert.equal(truncated.split("\n").length, 2)
+    assert.match(exec({ action: "list", type: "bogus" }), /Invalid memory type "bogus"/)
+    assert.match(exec({ action: "list", scope: "team" }), /no team layer.*CLI/)
+  })
+
+  it("S6-3: action delete 批量 — 无过滤拒/无 confirm 预览拒/0 匹配/confirm 执行/预览截断", () => {
+    try { rmSync(memDir, { recursive: true }) } catch {}
+    mkdirSync(memDir, { recursive: true })
+    exec({ action: "put", type: "rule", title: "保留规则", content: "不要删我", scope: "personal" })
+    const targets = []
+    for (let i = 0; i < 6; i++) {
+      const out = exec({ action: "put", type: "knowledge", title: `批量目标 ${i}`, content: "bulk delete target ZQX", scope: "project" })
+      targets.push(out.match(/id=([^\s)]+\.md)/)[1])
+    }
+    // 无过滤条件批量删拒绝
+    assert.match(exec({ action: "delete", scope: "project" }), /type and\/or keyword filter/)
+    assert.match(exec({ action: "delete", scope: "project", confirm: true }), /type and\/or keyword filter/)
+    assert.match(exec({ action: "delete" }), /batch delete requires scope/)
+    // 无 confirm → 预览（不删）
+    const preview = exec({ action: "delete", scope: "project", keyword: "批量" })
+    const previewLines = preview.split("\n")
+    assert.equal(previewLines[0], "将删 6 条：前 5 条预览", previewLines[0])
+    assert.equal(previewLines.length, 8, "首行 + 5 预览行 + 截断注 + confirm 提示")
+    assert.ok(previewLines.slice(1, 6).every((l) => l.includes("批量目标")), preview)
+    assert.ok(preview.endsWith("confirm:true required — re-send with it to execute the deletion"), preview)
+    assert.ok(preview.includes("5 条——截断前 6"), preview)
+    assert.equal(existsSync(join(memDir, "project", targets[0])), true, "无 confirm 不删")
+    // 0 匹配不报错
+    assert.equal(exec({ action: "delete", scope: "project", keyword: "不存在", confirm: true }), "0 条匹配")
+    // confirm 后执行
+    assert.equal(exec({ action: "delete", scope: "project", keyword: "批量", confirm: true }), "Deleted 6 entries in scope project")
+    assert.equal(targets.filter((f) => existsSync(join(memDir, "project", f))).length, 0, "全部文件已删")
+    assert.equal(search(tmpDir, "ZQX", { limit: 5 }).length, 0, "搜索零命中")
+    // personal 批量 + type 过滤
+    assert.equal(exec({ action: "delete", scope: "personal", type: "rule", confirm: true }), "Deleted 1 entries in scope personal")
+    assert.equal(search(tmpDir, "不要删我", { limit: 5 }).length, 0)
+  })
+
+  it("S6-4: action clear — 门禁四拒 + personal 清空 + 共享层不动", () => {
+    try { rmSync(memDir, { recursive: true }) } catch {}
+    mkdirSync(memDir, { recursive: true })
+    exec({ action: "put", type: "rule", title: "待清规则", content: "personal 要清空", scope: "personal" })
+    exec({ action: "put", type: "knowledge", title: "共享知识", content: "project 不许 clear", scope: "project" })
+    assert.match(exec({ action: "clear" }), /clear requires scope "personal"/)
+    assert.match(exec({ action: "clear", scope: "project", confirm: true }), /shared layers don't support clear/)
+    assert.match(exec({ action: "clear", scope: "personal" }), /clear requires confirm:true/)
+    assert.match(exec({ action: "clear", scope: "personal", confirm: false }), /clear requires confirm:true/)
+    assert.match(exec({ action: "clear", scope: "team", confirm: true }), /no team layer.*CLI/)
+    assert.equal(search(tmpDir, "待清", { limit: 5 }).length, 1, "未确认前不动")
+    const out = exec({ action: "clear", scope: "personal", confirm: true })
+    assert.equal(out, "Cleared personal memory (1 entries deleted)")
+    assert.equal(search(tmpDir, "待清", { limit: 5 }).length, 0, "personal 清空后 search 零命中")
+    assert.equal(search(tmpDir, "不许", { limit: 5 }).length, 1, "project 层不受 clear 影响")
+  })
+
+  it("S6-5: 未知 action / 缺参 put / 非法 scope 明确报错", () => {
+    assert.match(exec({}), /unknown action ""/)
+    assert.match(exec({ action: "bogus" }), /unknown action "bogus"/)
+    assert.match(exec({ action: "put", type: "rule", title: "t", scope: "personal" }), /requires title and content/)
+    assert.match(exec({ action: "put", scope: "team", type: "rule", title: "t", content: "c" }), /no team layer.*CLI/)
   })
 })
 

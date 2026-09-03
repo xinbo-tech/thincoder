@@ -1204,7 +1204,7 @@ describe("prompt borrowing increments (kimi-code comparison)", () => {
     assert.ok(text.includes("reported instead of avoided"), "transparency duty prevents, not reports")
   })
 
-  it("system.md: parallelize aggressively — parallel discipline with F7 trigger conditions and do-not-parallelize boundaries (2026-09-01)", () => {
+  it("system.md: parallelize aggressively — parallel discipline with F7 trigger conditions, do-not-parallelize boundaries + scheduler carve-out (2026-09-01 / §20.7 T-PS3)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
     assert.match(text, /Parallelize aggressively/, "proactive parallel guidance present")
     assert.match(text, /splitting changes across independent sub-projects/, "F7: split changes across independent sub-projects")
@@ -1212,6 +1212,9 @@ describe("prompt borrowing increments (kimi-code comparison)", () => {
     assert.match(text, /Do NOT parallelize/, "do-not-parallelize boundary guidance")
     assert.match(text, /approval storms/, "approval-storm boundary named")
     assert.match(text, /micro-parallelism/, "micro-parallelism skipped (value judgment)")
+    // §20.7 T-PS3: D1 carve-out — async spawns declaring files are queued by the scheduler (ban scoped to undeclared/tool-level parallel writes)
+    assert.match(text, /writes to the same file \(except async spawns with `files` declared/, "T-PS3: same-file ban carved out for declared-files async spawns")
+    assert.match(text, /scheduler queues overlapping ones until clear/, "T-PS3: carve-out terms consistent with D-PS1/D-PS2 (scheduler/queued)")
   })
 })
 
@@ -1356,13 +1359,20 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "five no-parallel boundaries")
     assert.ok(text.includes("approval storms"), "approval storms named")
     assert.ok(text.includes("skip micro-parallelism (<1s ops)"), "no micro-parallelism")
-    assert.ok(text.includes("share NO file"), "parallel pre-check: affected-file sets disjoint")
-    assert.ok(text.includes("Dependency chain → serial"), "dependency chains run serially")
+    // §20.7 T-PS1: scheduler clause replaces the manual same-file/dependency discipline (D-PS2 anchor)
+    const flat = text.replace(/\n[ \t]+/g, " ") // fold wraps so the multi-line anchor can be asserted
+    assert.ok(flat.includes("**Declare spawn scheduling metadata in task briefs**: spawn with `files` (write domain) and `dependsOn` (prior async ids) — the scheduler gates admission: async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order. Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized."), "T-PS1: D-PS2 anchor verbatim (files/dependsOn declaration + admission gate + mirror parallel queue semantics)")
+    assert.ok(text.includes("never hand-serialized"), "T-PS1: scheduler owns serialization — no manual hand-serialization")
     assert.ok(text.includes("at most 4 concurrent eng-coders"), "≤4 concurrency cap")
     assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "parallel spawn call form (each with designId+token)")
     assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token isolation semantics")
     assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "initiation rights unchanged")
     assert.ok(text.includes("plus its designId parameter"), "work-loop approval line mentions designId")
+    // §20.7 T-PS2: old manual-avoidance wording zero residue in engineering.md (pre-grep confirmed present before the swap)
+    assert.ok(!text.includes("share NO file"), "T-PS2: old disjoint-fileset pre-check zero residue")
+    assert.ok(!text.includes("run the tasks serially (or merge them into one spawn)"), "T-PS2: old serialize/merge fallback zero residue")
+    assert.ok(!text.includes("Dependency chain → serial"), "T-PS2: old serial-dependency discipline zero residue")
+    assert.ok(!text.includes("Pre-check before parallel spawns"), "T-PS2: old manual pre-check zero residue")
   })
 
   it("engineering.md: §18 async delivery + internal-protocol narrative; fix round reuses the same designId+token (2026-09-01 T19 / 2026-09-02 §18)", () => {
@@ -1588,7 +1598,9 @@ describe("Delegate well rewrite + exploration distillation", () => {
     assert.match(text, /precision exception, not a token-saving trick/, "精度例外不是省 token 技巧")
     assert.match(text, /When a coder subagent finishes, verify its work/, "coder 完成后的验证句")
     assert.match(text, /do NOT redo the whole exploration/, "不重做已委托的整段探索")
-    assert.match(text, /Never give parallel subagents tasks that edit the same files/, "并行不编辑同一文件条款保留")
+    assert.match(text, /Declare spawn scheduling metadata/, "T-PS1: scheduler clause present (D-PS1 anchor)")
+    assert.match(text, /Same-file async spawns are safe to fire with files declared/, "T-PS1: same-file async spawns safe — the queue handles contention")
+    assert.ok(!text.includes("Never give parallel subagents tasks that edit the same files"), "T-PS2: old manual-avoidance sentence zero residue")
     assert.match(text, /When multiple subagent reports conflict, read the relevant code yourself/, "冲突仲裁条款保留")
   })
 

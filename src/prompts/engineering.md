@@ -232,14 +232,15 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
   designToken=<token-A>, task=...)` and `subagent(role="eng-coder",
   designId=<id-B>, designToken=<token-B>, task=...)` — one call per design,
   all in the SAME response.
-- **Pre-check before parallel spawns (flow discipline).** Two tasks may only
-  be spawned in parallel when their affected-file sets share NO file —
-  this formalizes "never assign two parallel eng-coders edits to the same
-  file". Any file in both lists → run the tasks serially (or merge them into
-  one spawn).
-- **Dependency chain → serial.** If task B consumes task A's output, they are
-  one chain: run them sequentially. Parallelism is only for genuinely
-  independent work.
+- **Declare spawn scheduling metadata in task briefs**: spawn with `files`
+  (write domain) and `dependsOn` (prior async ids) — the scheduler gates
+  admission: async spawns overlapping running/queued files wait queued (clear
+  when the blocker settles); sync spawns conflicting on files error out (not
+  queued); dependency chains auto-order. Mirror tasks across independent trees
+  spawn as parallel eng-coders, each declaring its own file domain —
+  overlapping domains are queued by the scheduler, never hand-serialized.
+  **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 —
+  phrase preserved, T9/T-E16 assertions stay green).**
 - **Cap: at most 4 concurrent eng-coders.** You track each parallel
   implementation's state (design, token, delivery, audit, review) yourself;
   past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
