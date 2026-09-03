@@ -936,7 +936,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 19.5 控制面扩展：status 增强 + cancel + UI 停止 + 嵌套前缀子标（2026-09-03，用户裁定）
 
-> **状态：设计定稿，待评审**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
+> **状态：设计定稿（2026-09-03 round1 后修订——1🔴+3🟡+2🔵 已处置——待复审）**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
 
 #### 19.5.1 需求
 
@@ -948,9 +948,13 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 #### 19.5.2 设计
 
-**D-M5 status 全览增强**：全览条目从 id 数组改结构化对象数组——`running: [{id, role, model, elapsedSec, turn, maxTurns}]`、`queued: [{id, role, position}]`、`done: [{id, role}]`——数据源 = 池条目（entry 已含 role/status——补 model（entry 或 spawn 记录）与 elapsed（now - startedAt）与 turn/maxTurns（entry 需记 startedAt/turn 计数——子代理区块已有 elapsed 数据——池条目对齐补齐）——单查（id）形态不变 + 同字段。
+**D-M5 status 全览增强**：全览条目从 id 数组改结构化对象数组——`running: [{id, role, model, elapsedSec, turn, maxTurns}]`、`queued: [{id, role, position}]`、`done: [{id, role}]`——**数据装配锚点（round1 #3）**：spawn 时（subagent-async spawn 分支）记 `entry.model`（childProvider.model）与 `entry.startedAt`；turn/maxTurns 在**子代理 callbacks 包装层同步**（wrapChildCallbacks 内解析 ⟦ev⟧turn 更新 entry——或 spawnChild 提供 per-child turn 钩子——选改动最小方案——实现时定并注）；`elapsedSec = (now - startedAt)/1000` 计算于 status 调用时——单查（id）形态不变 + 同字段。
 
-**D-M6 cancel 动作**：`action:"cancel"` + `id`（必填）→ 定位池条目 → **定向 abort**（条目 controller——§15 abort 传播——子代理 runAgent signal abort）→ settle interrupted（不注入陈旧错误——清池规则同 Ctrl+C 全停但**只清该条目**）→ 区块冻结 interrupted（标题显示 "stopped"——与 Ctrl+C 中止同视觉语义）+ digest 提示"已中止 explore#N/eng-coder#N（主会话决定）"。未知/已完成 id → error（同 status/check 错误形态）。**只允许主会话（depth-0）**（子代理上下文无 cancel 意义——受限变体已禁）。cancel 后槽位腾出（maybeRefillAsync——queued 补位——既有机制）。
+**D-M6 cancel 动作**：`action:"cancel"` + `id`（必填）→ 定位池条目 → **定向 abort**（条目 controller——§15 abort 传播——子代理 runAgent signal abort）→ **cancelled settle（round1 #1 机制定稿）**：
+- **条目标记**：cancel 时置 `entry.cancelled = true`（清池/注入判定依据）
+- **settle 回调 cancelled 分支**（subagent-async.mjs settle 回调）：`entry.cancelled` → **不入 `_pendingAsyncResults`、不参与 collectSettledAsync 直注入**（清池规则同 Ctrl+C 全停但只清该条目——陈旧错误零注入）→ 发**停止冻结事件**（`⟦ev⟧stopped`——新相位——TUI routeSubToken 识别 → 区块以 interrupted 语义冻结——标题 "stopped"）→ digest 提示"已中止 explore#N/eng-coder#N（主会话决定）"（经 pending 提示行——非错误报告形态）
+- 未知/已完成 id → error（同 status/check 错误形态）；**只允许主会话（depth-0）**（子代理上下文无 cancel 意义——受限变体已禁）；cancel 后槽位腾出（maybeRefillAsync——queued 补位——既有机制）
+- **queued 目标（round1 #2 定稿）**：id 命中 queued 条目（未启动无 controller）→ **出队移除 + position 释放（后续条目 position 前移）+ 返回确认**（`{id, status:"cancelled", was:"queued"}`——不 abort）
 
 **D-M7 UI 停止（两端）**：
 - CLI：运行中区块折叠头右侧停止标记（`⏹`——dim——仅 running 态显示——done/冻结后消失）——复用既有鼠标管线（mouse.mjs SGR 点击 + handleMouseClick）——点击命中区 = 标题行右缘（宽度 = ⏹ 标记列）→ cancel（定向该子代理——经 TUI 层调用池 abort——与 D-M6 同实现路径——不经过模型回合）——**用户点击是即时动作不依赖模型**（关键属性：失控子代理时模型可能不可靠——UI 停止必须不经模型）
@@ -962,6 +966,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - 工具行（onToolCall）：`explore#1/read` → 行首子标 + 工具名（dim `explore#1 · ` + 既有工具行形态）
 - 工具输出：跟随最近子标归属（不重复前缀——输出行接在对应工具行后——现状块内顺序天然如此）
 - 任意嵌套深度通用（未来子代理内子代理不限一层——循环解析）
+- **嵌套事件类 token 处置（round1 #4）**：双层前缀的 `⟦ev⟧turn`/`⟦ev⟧done`/`⟦ev⟧settled`/`[model]` 等事件类 token——**剥除不路由**（不更新外层块头 turn/maxTurns——防 explore 进度污染 eng-coder 块头——eng-coder 自身的单层 ⟦ev⟧turn 照常）；reasoning（think）token 走子标渲染（同文本行规则——dim `explore#1 · ` 后接思考行）
 - VS Code 同构（webview 子块行渲染——子标 span）
 - explore 是**同步** spawn（§18 受限变体）——无独立生命周期事件（settle/done 不到主会话——在 eng-coder 回合内跑完）——**无需嵌套块状态管理**（复杂度关键洞察——只处理活动行带子标）
 
@@ -980,10 +985,15 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **验收**：AC-M6 = status 可决策字段（T-M18）；AC-M7 = cancel 定向中止语义（T-M19..M21）；AC-M8 = UI 停止不经模型（T-M22/M23）；AC-M9 = 嵌套前缀无泄漏 + 子标渲染（T-M24/M25）；AC-M10 = 两端全量绿（T-M26）
 
+#### 19.5.2b §19 修订注（round1 #5）
+
+§19 批准后控制面扩展使工具面为**五动作**：D-M1 动作矩阵补 `cancel` 行（`| cancel | id（必填——防误全停） | {id, status:"cancelled"/"error"} | 立即（定向 abort——异步生效） |`）；AC-M1 措辞改"单工具五动作 spawn/check/status/escalate/cancel（cancel 见 19.5）"——实现时同批修订 §19 对应行并加 supersede 注（§15 D-A2 先例）。
+
 #### 19.5.3 关键决策
 
 - **UI 停止不经模型**（关键属性）：失控子代理时模型可能不可靠/回合已结束——UI 停止直连 TUI/extension 层 abort 路径（不经模型回合）——与工具 cancel（模型可用时）并存
 - **cancel 单 id 必填**：防误全停（明确目标）——全停仍走 Ctrl+C（既有）——不加 cancel-all（模型循环逐 id 明确性优先）
 - **嵌套前缀子标而非块中块**（方案 A——用户确认）：explore 同步 spawn 无生命周期——纯活动行——子标（dim 行首标记）足够归属可辨——块中块（D 方案）为无生命周期实体建层级 UI 过度
+- **动作域（round1 #6）**：cancel/status 在手动档 auto-turn（digest）动作域内**放行**（控制类动作——同 task/checklist 自省类——D-S7 分类补 cancel/status——digest 期间模型可中止失控子代理）；UI ⏹ 命中区与折叠头点击**列级区分**（⏹ 区点击 = cancel——不触发折叠翻转——T-M22 断言）
 - **否决**：a) pause/resume（子代理独立回合进程——真暂停需冻结/解冻上下文——复杂易错——cancel + 同 token 重 spawn（§2.8）覆盖）；b) cancel-all 参数（误触风险——Ctrl+C 已覆盖）；c) 嵌套块中块（过度——见上）；d) 剥掉内层前缀（行不可辨——explore 审计过程与 eng-coder 自身活动混淆）
 
