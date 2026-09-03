@@ -269,6 +269,9 @@ export const subagentTool = {
     // invocation gets its OWN block (webview _subBlocks keys by name). subId is fixed
     // before the turn-cap continue loop below — a resume reuses it, so continuation
     // chunks keep streaming into the SAME block instead of opening a new one.
+    // onToolPanel (2026-09-03): the child's OWN tool-panel emissions (advisor review
+    // stream, nested-spawn activity) forward into the same channel — see the callback
+    // entry below.
     // stateSink receives the child's live mutation state (runAgent fills it every turn).
     // The whole pipeline is one async function so the SYNC path can await it and the
     // ASYNC path (§15 D-A1) can fire it in the background with the same semantics.
@@ -312,6 +315,16 @@ export const subagentTool = {
             onReasoning: (r) => panel({ kind: "think", text: r }),
             onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
             onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
+            // §18 visibility (2026-09-03 可见性补齐, CLI parity — 两边都修): the child's
+            // ctx.callbacks.onToolPanel (advisor long-form stream, advisor.mjs:142-144;
+            // nested-spawn activity) was empty here — runChild forwarded only
+            // onToken/onReasoning/onToolCall/onToolResult, so the §18 in-child advisor
+            // review was silently dropped (user saw just the advisor tool line + the
+            // 80-char result line). Forward VERBATIM into the child's OWN sub-block
+            // channel: chunk kinds (think/tool/text/start) and the same-kind merge
+            // semantics pass through untouched (webview appendAdvisorChunk) — never the
+            // CLI TUI's per-chunk line breaks.
+            onToolPanel: (name, chunk) => panel(chunk),
             onComplete: () => {},
             onQuestion: ctx.callbacks?.onQuestion ?? null,
           }, childSignal, true, { ...baseOpts, resume, ...(resume ? { history: sink.history } : {}) })

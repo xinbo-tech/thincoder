@@ -1247,6 +1247,15 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("the user's decision to be\nin engineering mode was the sizing decision"), "entering engineering mode was the sizing decision")
   })
 
+  it("engineering.md: fix rounds land in docs FIRST — no spawn before the deviation record (2026-09-03)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    assert.ok(text.includes("Fix rounds reuse the same designToken — but docs FIRST"), "docs-FIRST statement for same-design fix rounds")
+    assert.ok(text.includes("has no exemption for fix rounds"), "no doc exemption for fix rounds")
+    assert.ok(text.includes("is a NEW task needing its own flow and a fresh token"), "beyond the file list = new task with fresh token")
+    assert.ok(text.includes("BEFORE the eng-coder spawn"), "doc landing precedes the spawn")
+    assert.ok(text.includes("Fix-round re-spawns are docs FIRST too"), "flow-step-7 fix-round docs-FIRST hook present")
+  })
+
   it("engineering.md: UI/interaction decisions must land in the design doc AND the eng-coder task (2026-08-29)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明

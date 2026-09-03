@@ -240,11 +240,21 @@ describe("subagent activity stream — one block per #subId channel", () => {
 // ─── handleSubagentMessage: 完成态即折叠活动区块（2026-09-02 修复轮，CLI ⟦ev⟧done 对齐）───
 // async 子代理 settle 即发 onSubagent({status:"done"})（subagent.mjs runChild）——webview
 // 收到 done/error 即折叠对应活动区块（保留可展开、不移除；此前只有 consult 区块在终态
-// 折叠，subagent 区块会保持"运行中"外观直到回合结束）。依赖上一 describe 已加载的
-// index.html body + chat.js（模块缓存，不重复执行；不重置 body——state.js 的
-// ctx.messagesEl 是导入时捕获的旧元素引用）。
+// 折叠，subagent 区块会保持"运行中"外观直到回合结束）。全量跑时复用上一 describe 已加载
+// 的 index.html body + chat.js（模块缓存，不重复执行；不重置 body——state.js 的
+// ctx.messagesEl 是导入时捕获的旧元素引用）；name-pattern 单独跑时本 describe 自备
+// body + bridge stub（2026-09-03 补强——见 before 内守卫）。
 describe("subagent 完成态 — done/error 通知即折叠活动区块", () => {
   before(async () => {
+    // Self-sufficient under --test-name-pattern (2026-09-03 retrofit — same guard as the
+    // advisor-stream describe below): chat.js's state.js calls acquireVsCodeApi() at module
+    // top and captures DOM refs — when this describe runs without the activity-stream
+    // describe (name-pattern), body + bridge stub must be in place BEFORE the import.
+    if (!globalThis.acquireVsCodeApi) {
+      const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
+      document.body.innerHTML = (html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? "").replace(/<script[\s\S]*?<\/script>/g, "")
+      globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
+    }
     await import("../webview/chat.js") // module cache — no re-init, no body reset
   })
 
@@ -282,4 +292,50 @@ describe("subagent 完成态 — done/error 通知即折叠活动区块", () => 
     assert.equal(block.open, false, "escalate 终态同款折叠（键含 model tag）")
   })
 })
+
+// ─── eng-coder 子代理内 advisor 流渲染（2026-09-03 可见性补齐）───
+// runChild 现转发子代理 ctx.callbacks.onToolPanel（subagent.mjs）——advisor 形态 chunk
+// 序列（start → think → text…tool 行）直接落入子代理活动块频道 sub:eng-coder#N。
+// webview 复用 subagentChunk 路由 + appendAdvisorChunk 渲染：start 空文本 no-op、
+// 同 kind 连续 text 合并进同一 div（无逐 chunk 换行）、tool 行为独立行、长文不截断。
+describe("eng-coder 子代理内 advisor 流渲染", () => {
+  before(async () => {
+    // Self-sufficient under --test-name-pattern: the activity-stream describe above
+    // normally loads index.html body + the bridge stub BEFORE chat.js initializes
+    // (state.js calls acquireVsCodeApi at module top). Skip when the stub is already
+    // up (full-file run — body and captured DOM refs stay untouched).
+    if (!globalThis.acquireVsCodeApi) {
+      const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
+      document.body.innerHTML = (html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? "").replace(/<script[\s\S]*?<\/script>/g, "")
+      globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
+    }
+    await import("../webview/chat.js") // module cache — no re-init when already loaded
+  })
+
+  const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
+  const findBlock = (label) =>
+    [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent === label)
+
+  it("advisor 形态流进入子代理块——start 空文本 no-op、同 kind text 合并、tool 行独立、长文完整", () => {
+    const name = "sub:eng-coder#7"
+    post({ type: "toolPanel", name, kind: "start", text: "", round: 1, model: "deepseek-v4" }) // advisor 开块 start chunk
+    post({ type: "toolPanel", name, kind: "think", text: "\n[thinking…]\n" })
+    post({ type: "toolPanel", name, kind: "text", text: "ADVISOR REVIEW round one — " })
+    post({ type: "toolPanel", name, kind: "text", text: "long form conclusion VERDICT-MARKER-x7k2" })
+    post({ type: "toolPanel", name, kind: "tool", text: "→ read impl-x.mjs" })
+    const block = findBlock("eng-coder#7")
+    assert.ok(block, "start chunk 即建子代理块（无空 start 元素）")
+    assert.equal(block.querySelector("summary").textContent, "eng-coder#7", "标题 = label（去 sub: 前缀）")
+    const content = block.querySelector(".advisor-content")
+    const texts = [...content.querySelectorAll(".advisor-text")].map((el) => el.textContent)
+    assert.deepEqual(texts, [
+      "\n[thinking…]\n",
+      "ADVISOR REVIEW round one — long form conclusion VERDICT-MARKER-x7k2",
+    ], "think/text 分元素；两段连续 text 合并进同一 div——无逐 chunk 换行")
+    const toolLines = [...content.querySelectorAll(".advisor-tool-line")].map((el) => el.textContent)
+    assert.deepEqual(toolLines, ["→ read impl-x.mjs"], "tool 行为独立行")
+    assert.ok(content.textContent.includes("VERDICT-MARKER-x7k2"), "长文完整渲染（不截断）")
+  })
+})
+
 

@@ -72,7 +72,7 @@ test("effectiveSubagentModel: tool arg > type-level > global > null", async () =
 
 // ─── turn-cap continue (TURN-CAP-CONTINUE.md): every wall prompts, unlimited ───
 
-import { mkdtempSync, rmSync, readFileSync } from "node:fs"
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createServer } from "node:http"
@@ -843,6 +843,7 @@ test("T8 (vscode): 中断——signal aborted → 注册表立即清空、不注
 // / T-E4 非 explore role 拒绝 / T-E5 async 强制同步 / T-E7 第 7 次审计 spawn 拒绝（机械后备）
 // / T-E12 域内写授权（autoApprove=false 零面板）/ T-E14 授权粒度（前置门仍生效）
 // / T-E6 内部协议闭环 wiring / T-E16 schema 角色级默认 + 受限审计变体。
+// / T-E18 子代理内 advisor 流可见性（runChild onToolPanel 转发——2026-09-03 可见性补齐）。
 // 提示词层断言（engineering-sub.md 协议步骤/修正轮 N/5 / engineering.md async 口径）在 agent.test.mjs。
 
 /** 单发 SSE server：每个 LLM 请求一律立即以 `text` 完成（无工具调用）。 */
@@ -1354,6 +1355,89 @@ test("T-E6: 内部协议闭环 wiring——脚本化 eng-coder runAgent：audit 
     rmSync(cwd, { recursive: true, force: true })
   }
 })
+
+test("T-E18 (可见性补齐 2026-09-03): eng-coder 子代理内 advisor 长文流转发——runChild onToolPanel 接线 → 顶层 sub:eng-coder#N 频道（kind 原样、无逐 chunk 换行）", async () => {
+  // 真实 run wiring 测试：eng-coder 子代理执行**真实** code review——advisor.mjs 经
+  // ctx.callbacks.onToolPanel("advisor", chunk) 发射（该 callbacks = runChild 传给
+  // runAgent 的参数对象——修复前无 onToolPanel 键 → 静默丢弃）。评审尾部标记
+  // VERDICT-MARKER-x7k2 故意跨两个 SSE delta 拆开发送——转发若注入任何分隔符
+  // （CLI 式逐 chunk 换行即违禁形态）重组即失败。配置沙箱：子代理 + advisor 的
+  // provider 解析全落沙箱 config——真实 ~/.thincoder/config.json 的 provider/advisor
+  // 段不得泄漏进 mock server 的回合预算（任何机器上确定性）。
+  const { _configPath, _setConfigPathForTest } = await import("../src/config-io.mjs")
+  const prevConfigPath = _configPath()
+  const cwd = mkdtempSync(join(tmpdir(), "tc-e18-"))
+  const cfgPath = join(cwd, "config.json")
+  const reviewText = [
+    "ADVISOR REVIEW round 1 — full long-form review. The implementation covers every ",
+    "acceptance criterion of the design doc. Files under review match the approved ",
+    "design; no divergence found in the protocol trace. Final verdict: all clear — VERDICT-MAR",
+    "KER-x7k2 complete.",
+  ]
+  const calls = { n: 0 }
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      calls.n++
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      if (calls.n === 1) {
+        // 子代理 turn 1：真实 advisor code review 调用
+        const frame = { choices: [{ index: 0, finish_reason: "tool_calls", delta: { content: "", tool_calls: [{ index: 0, id: "t1", type: "function", function: { name: "advisor", arguments: JSON.stringify({ type: "code", paths: ["impl-x.mjs"] }) } }] } }] }
+        res.end(`data: ${JSON.stringify(frame)}\n\ndata: [DONE]\n\n`)
+      } else if (calls.n === 2) {
+        // advisor 自身的单发评审（chat-panel T1 形态）：content 分 4 个 delta 流式
+        res.end(
+          reviewText.map((t) => `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: t } }] })}\n\n`).join("") +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          "data: [DONE]\n\n",
+        )
+      } else {
+        res.end(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "eng-coder delivery done" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          "data: [DONE]\n\n",
+        )
+      }
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  writeFileSync(cfgPath, JSON.stringify({
+    providers: [{ name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" }],
+    activeProvider: "t",
+  }), "utf8")
+  _setConfigPathForTest(cfgPath)
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    writeFileSync(join(cwd, "impl-x.mjs"), "export const x = 1\n")
+    const token = await signedToken("e18e18e1-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
+    const parent = engParent(port, token)
+    const panels = []
+    const ctx = { agent: parent, cwd, callbacks: { onToolPanel: (name, chunk) => panels.push({ name, chunk }) } }
+    const r = String(await subagentTool.execute({ task: "implement per design X", role: "eng-coder", designId: "eng", designToken: token, async: false }, ctx))
+    assert.ok(r.includes("Subagent (eng-coder) completed"), "子代理回合完成")
+    assert.ok(calls.n >= 3, "子代理 2 turn + advisor 1 发 = ≥3 次 LLM 请求")
+    const child = panels.filter((p) => p.name === "sub:eng-coder#1")
+    assert.ok(child.length > 0, "子代理活动流到达顶层频道")
+    assert.equal(child.length, panels.length, "本次 spawn 全部 chunk 同频道（单块不串扰）")
+    const textJoin = child.filter((p) => p.chunk.kind === "text").map((p) => p.chunk.text).join("")
+    // 修复前红：advisor 评审流在 child ctx 静默丢弃——text 频道只有子代理自己的输出
+    assert.ok(textJoin.includes("VERDICT-MARKER-x7k2"),
+      "子代理内 advisor 长文（尾部标记跨 delta 拆分）完整进入子代理块频道——原样透传、无注入分隔符")
+    assert.ok(textJoin.includes("ADVISOR REVIEW round 1"), "advisor 评审开头同样可见")
+    assert.ok(child.some((p) => p.chunk.kind === "think"), "advisor think 占位块透传（kind=think）")
+    assert.ok(child.some((p) => p.chunk.kind === "tool"), "工具行照旧（kind=tool）")
+    for (const p of child) {
+      assert.ok(["text", "think", "tool", "start"].includes(p.chunk.kind), `转发不发明新 kind: ${p.chunk.kind}`)
+    }
+  } finally {
+    _setConfigPathForTest(prevConfigPath)
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 
 test("T-E16 (schema): subagent async 描述 = 角色级默认措辞；eng-coder 子代理的 subagent schema = 受限审计变体（role 仅 explore、无 async）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
