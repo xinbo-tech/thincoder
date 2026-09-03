@@ -473,6 +473,7 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 
 测试：`test/agent.test.mjs` §9 组新增 **T-DT8**（倒序配对 [tool, assistant] + 预算超限——主循环场景边界落在安全位、floor 场景回退越过倒序 assistant 位；断言压缩结果 tail 内每个 assistant(tool_calls) 的 ids 均有对应 tool 结果——无悬空）；T-DT1..7 与既有 REVERSE 保护（`test/tool-pairing.test.mjs`）回归全绿。
 ### 挂起回合：会话级后台双通道（2026-09-02 · 引用，§17 V2 完整版 + 推进型）
+**§17.5 supersede（2026-09-03）**：本段"回合尾 collectSettled 收已完成直注入"的形态在面板驱动下再修订——`collectSettledAsync`（subagent-async.mjs）不再直注入排空（opts.suspDriven——panel-chat 驱动层传）——done 条目留池（settled not consumed）由挂起会话首轮 sweep → digest 消化轮注入（17.5.2/17.5.4 #2，无驱动直连调用方保留直注入兜底）；digest/会话内用户回合消化完成后逐条补发 done 回收驻留块（17.5.5——reclaimDigestedBlocks——块回收与池空解耦——会话退出 freeze 仅兜底未消化残项）。本端改动点见 AGENT-LOOP.md §17.5.2 受影响文件清单。
 
 需求与设计见 CLI `docs/design/AGENT-LOOP.md` §17（17.1 F1-F8/N1-N5、17.3 D-S1..S9/T-S1..S17/AC-S1..S7，单一权威源，本文件不复制）——本端与设计同规格实现（CLI 端先落地，同语义移植）。**核心语义**：回合尾 async 池未空 → 不阻塞等待（回合尾 collectSettled 收已完成直注入、未完成移交池）→ 交互层进入挂起会话——输入放开（Enter = 新回合 / digest 中 Enter 排队 pendingInput）、settle 驱动 auto-turn 消化（手动档 organize-only 禁 spawn/写 / AUTO 档全语义推进）、池空 + 无待处理输入 → 补发冻结自然退出。**与 CLI 的结构差异**：CLI 的池/pending/_suspended 挂 agent 对象（跨 run 存活）；VS Code 的 agent 对象 per-run 重建——全部挂在**共享 depth-0 history 数组**（`_asyncSubagents` / `_pendingAsyncResults` / `_suspended`；JSON 序列化只走数组下标，附加属性不污染会话文件）。本仓库改动点：
 

@@ -39,10 +39,12 @@ export function renderStatusBar(m) {
   if (S._suspended) {
     const c = S._suspCounts
     const n = (c?.running ?? 0) + (c?.queued ?? 0)
-    const pending = c?.pending ?? 0
+    // §17.5（17.5.4 #6 文案区分）：pending 移交项 + 回合尾留池 settled 未消费项（done）
+    // 同为"完成待消化"——纯 settled 池进挂起时首帧不误报 winding/0
+    const digesting = (c?.pending ?? 0) + (c?.done ?? 0)
     const text = n > 0
-      ? t("susp.running", { n }) + (pending > 0 ? " · " + t("susp.digesting", { n: pending }) : "")
-      : pending > 0 ? t("susp.digesting", { n: pending }) : t("susp.winding")
+      ? t("susp.running", { n }) + (digesting > 0 ? " · " + t("susp.digesting", { n: digesting }) : "")
+      : digesting > 0 ? t("susp.digesting", { n: digesting }) : t("susp.winding")
     parts.push(`<span class="susp-status">⏳ ${escHtml(text)}</span>`)
   }
   document.getElementById("status-line").innerHTML = parts.join(` <span class="status-sep">|</span> `)

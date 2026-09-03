@@ -361,7 +361,10 @@ async function runPanelChatImpl(panel, opts = {}) {
       engPersist: { cwd, slot: turnSlot },
       // §17 D-S6/D-S9: digest turns skip the input push (setupAgentRun autoTurn),
       // session children share the session abort signal, guard marks flow per tier.
+      // §17.5: the panel is the suspension driver — turn-end collection must NOT
+      // drain settled entries (they stay pooled → the session digests them).
       autoTurn,
+      suspDriven: true,
       sessionSignal: susp?.abort?.signal ?? null,
       inheritedGuard: inherited,
       guardCarry: autoTurn ? (panel._guardCarry ??= {}) : undefined,

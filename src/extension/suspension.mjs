@@ -50,7 +50,25 @@ export function sweepSettledToPending(history) {
   }
 }
 
-/** 后台模式状态行数据（D-S8）：{ running, queued, pending } —— webview 端按 locale 组合文案。 */
+/** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订——CLI freezeReclaimDigestedBlocks
+ *  parity）：digest/会话内用户回合消化完 pending 条目（run 首行已注入）后调用——对该轮
+ *  已消化条目（before 快照中已不在 pending 者）逐条补发 {type:"subagent", status:"done"}
+ *  通知 → webview 把 "done · awaiting digestion" 驻留行折叠回收（不等池空——块回收与
+ *  池空解耦；会话退出 freeze 仅兜底未消化残项）。归属：快照 = run 开跑时 pending——
+ *  run 消费后不在 pending 者即本 run 消化者（settle 回调挂起分流先入 pending 再被注入，
+ *  无重复）。已知边界：run 首行注入前数毫秒窗口内 settle 的条目（入 pending 后即被本
+ *  run 消费、却不在快照内）由会话退出 freeze 兜底折叠——极窄窗口、可接受。 */
+function reclaimDigestedBlocks(panel, history, before) {
+  const pend = history._pendingAsyncResults ?? []
+  for (const e of before) {
+    if (pend.includes(e)) continue // 未消费——留驻等下轮消化
+    panel._panel?.webview.postMessage({ type: "subagent", id: e.id, role: e.role, status: "done" })
+  }
+}
+
+/** 后台模式状态行数据（D-S8；17.5.4 #6 顺手对齐）：{ running, queued, pending, done }
+ *  —— webview 端按 locale 组合文案。"done" = §17.5 回合尾留池的 settled 未消费项
+ *  （挂起会话首轮 sweep 前的可见窗口——纯 settled 池进挂起时首帧不误报 0）。 */
 export function backgroundStatus(history) {
   const map = history?._asyncSubagents
   const entries = map ? [...map.values()] : []
@@ -58,6 +76,7 @@ export function backgroundStatus(history) {
     running: entries.filter((e) => e.status === "running").length,
     queued: entries.filter((e) => e.status === "queued").length,
     pending: history?._pendingAsyncResults?.length ?? 0,
+    done: entries.filter((e) => e.done).length, // §17.5 留池未消费（sweep 前窗口）
   }
 }
 
@@ -90,7 +109,11 @@ function waitForSettleOrWake(panel, susp) {
  *   用户消息 → pendingInput 队列（digest 运行中排队，D-S5）——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
- * - 退出：池空 + pending 空 + 无待处理输入 → 残余直注入（③）→ 补发冻结 → idle。
+ * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → reclaimDigestedBlocks 对该
+ *   轮已消化条目逐条补发 done（webview 折叠回收——不等池空；CLI freezeReclaim
+ *   DigestedBlocks parity）；
+ * - 退出：池空 + pending 空 + 无待处理输入 → 残余直注入（③）→ 补发冻结（freeze 仅
+ *   兜底未消化残项——17.5.5 块回收与池空解耦）→ idle。
  * _suspended 翻转：会话期 true（settle 回调据此延迟冻结 + 移交 pending）；会话内
  * 用户回合执行期翻 false（普通回合语义：① 直注入 + settle 即冻结）。
  *
@@ -136,21 +159,30 @@ export async function suspensionSession(panel, entry) {
       // 1. 用户输入优先（D-S5）：pendingInput 队列（digest 运行中排队的消息）
       if (susp.pendingInput.length > 0) {
         const q = susp.pendingInput.shift()
+        // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）
+        const before = [...(history._pendingAsyncResults ?? [])]
         history._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
         try {
           await entry.runTurn(q)
         } finally {
           history._suspended = true
         }
+        // §17.5.5：该回合消化完 pending → 逐条补发 done（webview 折叠回收——不等池空）
+        reclaimDigestedBlocks(panel, history, before)
         postSuspension(panel, susp)
         continue
       }
       // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）
       if ((history._pendingAsyncResults?.length ?? 0) > 0) {
+        const before = [...history._pendingAsyncResults]
         const d0 = Date.now()
         logEvent("digest:start", { pendingN: history._pendingAsyncResults.length })
         await entry.runTurn({ autoTurn: true, text: "" })
         logEvent("digest:end", { pendingN: history._pendingAsyncResults?.length ?? 0, ms: Date.now() - d0 })
+        // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 对该轮
+        // 已消化条目逐条补发 done（webview 折叠回收——不等池空；块回收与池空解耦——
+        // CLI freezeReclaimDigestedBlocks parity——池空 freeze 仅兜底未消化残项）
+        reclaimDigestedBlocks(panel, history, before)
         postSuspension(panel, susp)
         continue
       }

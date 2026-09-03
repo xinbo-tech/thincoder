@@ -261,7 +261,7 @@ export function handleSubagentMessage(m) {
 export function handleSuspensionMessage(m) {
   S._suspended = !!m.active
   if (m.active) {
-    S._suspCounts = { running: m.running ?? 0, queued: m.queued ?? 0, pending: m.pending ?? 0 }
+    S._suspCounts = { running: m.running ?? 0, queued: m.queued ?? 0, pending: m.pending ?? 0, done: m.done ?? 0 }
   } else {
     S._suspCounts = null
     if (m.freeze) {

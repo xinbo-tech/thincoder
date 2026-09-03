@@ -663,6 +663,63 @@ test("T-S17 settle-during-digest：消化中 B settle → 轮末自动续开合�
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
+// §17.5 硬化轮（AGENT-LOOP.md §17.5/17.5.5——collectSettled 语义变更 + digest
+// 完成逐条冻结回收；VS Code 同构）
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("T-H7 (vscode, §17.5.5) digest 完成逐条回收：池内其他子代理运行中——已消化条目即发 done（块回收与池空解耦）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-susp-"))
+  const D = driverCtx(cwd)
+  const A8 = runningEntry(D.history, 8)
+  const A9 = runningEntry(D.history, 9)
+  try {
+    const { suspensionSession } = await import("../src/extension/suspension.mjs")
+    const sessionP = suspensionSession(D.panel, D.entry)
+    await waitFor(() => D.panel._suspWake) // 挂起 wait（A8/A9 都在跑）
+    // A9 挂起期 settle → pending → digest1 消化 → reclaimDigestedBlocks 逐条 done
+    settleToPending(D.panel, D.history, A9, LONG_REPORT("A9 结果"))
+    await waitFor(() => D.consumed.n === 1)
+    const done9 = D.posts.find((p) => p.type === "subagent" && p.id === 9 && p.status === "done")
+    assert.ok(done9, "digest1 完成即对 A9 补发 done（回收——不等池空；A8 仍运行）")
+    assert.equal(D.panel._susp.active, true, "A8 仍在跑——会话未退出（块回收与池空解耦）")
+    // A8 后 settle → digest2 消化 → 逐条回收 → 池空退出
+    settleToPending(D.panel, D.history, A8, LONG_REPORT("A8 结果"))
+    await sessionP
+    assert.equal(D.consumed.n, 2, "A8 被消化")
+    const done8 = D.posts.find((p) => p.type === "subagent" && p.id === 8 && p.status === "done")
+    assert.ok(done8, "digest2 完成即对 A8 补发 done")
+    assert.ok(D.posts.indexOf(done9) >= 0 && D.posts.indexOf(done9) < D.posts.indexOf(done8), "done9 先于 done8（各自 digest 后回收）")
+    assert.equal(D.history._suspended, false, "池空自然退出")
+    assert.equal(D.panel._susp, null)
+    assert.equal(D.history._asyncSubagents?.size ?? 0, 0)
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("17.5.4 #6 (vscode): backgroundStatus 计入留池 settled 未消费项（done）——纯 settled 池进挂起状态行不误报 0", async () => {
+  const { backgroundStatus } = await import("../src/extension/suspension.mjs")
+  const history = []
+  // 回合尾留池未消费条目（§17.5 核心场景：sweep 前的可见窗口——done 且仍在池）
+  history._asyncSubagents = new Map([
+    [1, { id: 1, role: "coder", status: "done", done: true }],
+  ])
+  const s = backgroundStatus(history)
+  assert.equal(s.running, 0)
+  assert.equal(s.queued, 0)
+  assert.equal(s.pending, 0)
+  assert.equal(s.done, 1, "留池 settled 未消费项计入 done（状态行 'N 完成待消化'）")
+  // 对照：挂起期 settle 移交 pending 后池空——done 归零、pending 计数（sweep 后口径）
+  history._asyncSubagents = undefined
+  history._pendingAsyncResults = [{ id: 1, role: "coder", done: true }]
+  const s2 = backgroundStatus(history)
+  assert.equal(s2.done, 0)
+  assert.equal(s2.pending, 1)
+})
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 偏差修复轮（2026-09-02 code review #2/#3/#4——ARCHITECTURE.md 变更段）：
 //   T-S18   释放窗口：generateTitle await 期 _chat 入队 → 会话接管（不并发开回合、池不丢）
 //   T-S18a 会话入口 pendingInput 预装载（驱动级——窗口队列移交 wiring）
@@ -956,7 +1013,7 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
   const findBlock = (label) =>
     [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent === label)
 
-  it("T-S14 settled 中间态：'done · awaiting digestion' 驻留面板不折叠；池空冻结补发 done 折叠", async () => {
+  it("T-S14 settled 中间态 + §17.5.5 逐条回收：'done · awaiting digestion' 驻留不折叠；digest 消化完成逐条 done 折叠（不等池空）；退出 freeze 仅兜底残项", async () => {
     const { ctx, S } = chatModules
     S._subagentMap = {} // 测试间隔离（面板行/折叠互不串扰）
     post({ type: "subagent", id: 21, role: "coder", status: "started", startedAt: Date.now(), model: "m" })
@@ -973,10 +1030,23 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
     assert.ok(row, "面板行驻留")
     assert.match(row.textContent, /done · awaiting digestion/, "✓-pending 中间态（§7.2.1 挂起例外）")
     assert.equal(block.open, true, "settled 不折叠——驻留面板等消化")
-    // 池空冻结退出 → 补发 done：折叠进流
+    // 17.5.4 #6：回合尾留池 settled 未消费项（done 计数）进状态行——不误报 winding/0
+    post({ type: "suspension", active: true, running: 0, queued: 0, pending: 0, done: 1 })
+    assert.match(document.getElementById("status-line").textContent, /awaiting digestion/, "留池未消费项显示完成待消化计数（done→digesting）")
+    // §17.5.5：digest 消化完成 → host reclaimDigestedBlocks 对该条目逐条补发 done——
+    // 立即折叠回收（不等池空；同池其他子代理仍运行）
+    post({ type: "subagent", id: 21, role: "coder", status: "done" })
+    assert.equal(block.open, false, "digest 完成逐条 done → 折叠回收（保留可展开——17.5.5/T-H7）")
+    assert.equal(S._subagentMap[21].status, "done", "settled → done（消化回收）")
+    // 残项（未消化——仍驻留）：另一子代理 settled 后会话退出 → 退出 freeze 兜底折叠
+    post({ type: "subagent", id: 22, role: "coder", status: "started", startedAt: Date.now(), model: "m" })
+    post({ type: "toolPanel", name: "sub:coder#22", kind: "text", text: "working…" })
+    const block22 = findBlock("coder#22")
+    post({ type: "subagent", id: 22, role: "coder", status: "settled" })
+    assert.equal(block22.open, true, "未消化残项驻留（等待下轮 digest 或退出 freeze）")
     post({ type: "suspension", active: false, freeze: true })
-    assert.equal(block.open, false, "冻结补发折叠（保留可展开）")
-    assert.equal(S._subagentMap[21].status, "done", "settled → done")
+    assert.equal(block22.open, false, "退出 freeze 兜底折叠残项（17.5.5——仅兜底未消化）")
+    assert.equal(S._subagentMap[22].status, "done", "残项 settled → done")
     assert.ok(!document.getElementById("status-line").textContent.includes("background subagent"), "退出后状态行恢复")
     // 视图复位
     post({ type: "suspension", active: false, freeze: false })

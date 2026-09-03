@@ -781,6 +781,94 @@ test("T5 (vscode, §17 D-S1 superseded): 回合收尾——回合内已 settle �
   }
 })
 
+test("T5b (vscode, §17.5): collectSettledAsync suspDriven 驱动分支——驱动回合尾不直注入：settled 留池 → sweep → 消化轮 run 首行注入（round1 #2：无驱动兜底 = T5 直注入）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-sub-"))
+  const { runAgent } = await import("../src/agent.mjs")
+  let parentCalls = 0
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      const hasToolCalls = body.includes('"tool_calls"') // 父回合 2/消化轮的历史含工具调用；子请求与父回合 1 无
+      if (!hasToolCalls && body.includes("child job")) {
+        // 子代理请求：直接完成（先于父回合收尾）
+        res.end(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "child report" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          "data: [DONE]\n\n"
+        )
+        return
+      }
+      if (body.includes("async subagent #1 (coder) finished")) {
+        // 消化轮（auto-turn）：pending 已在其 run 首行注入——返回消化总结
+        res.end(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "digest summary" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          "data: [DONE]\n\n"
+        )
+        return
+      }
+      parentCalls++
+      if (parentCalls === 1) {
+        // 父回合 1：spawn async 子代理
+        const frame = { choices: [{ index: 0, finish_reason: "tool_calls", delta: { content: "", tool_calls: [{ index: 0, id: "t1", type: "function", function: { name: "subagent", arguments: JSON.stringify({ task: "child job", role: "coder", async: true }) } }] } }] }
+        res.end(`data: ${JSON.stringify(frame)}\n\ndata: [DONE]\n\n`)
+      } else {
+        setTimeout(() => {
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "final" } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            "data: [DONE]\n\n"
+          )
+        }, 400)
+      }
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  try {
+    const history = []
+    const fullHistory = []
+    const out = await runAgent(
+      { baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
+      cwd, "spawn and finish", {}, undefined, true,
+      { history, fullHistory, suspDriven: true }, // §17.5: 面板驱动（回合尾 collect 不排空）
+    )
+    assert.equal(out, "final")
+    assert.ok(!history.some((m) => typeof m.content === "string" && m.content.includes("async subagent #1 (coder) finished")),
+      "驱动回合尾不直注入（settled 留池——等待挂起消化轮）")
+    assert.ok(history._asyncSubagents?.size === 1, "settled 条目留池（settled not consumed）")
+    const entry = [...history._asyncSubagents.values()][0]
+    assert.equal(entry.done, true, "条目已 settle 未消费")
+    // 挂起会话首轮 sweep（suspension.mjs sweepSettledToPending 同语义）→ pending
+    const pend = (history._pendingAsyncResults ??= [])
+    for (const e of [...history._asyncSubagents.values()]) {
+      if (e.done && !e._inPending) {
+        e._inPending = true
+        pend.push(e)
+        history._asyncSubagents.delete(e.id)
+      }
+    }
+    // 消化轮（auto-turn）：run 首行统一注入 pending
+    const digestOut = await runAgent(
+      { baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
+      cwd, "", {}, undefined, true,
+      { history, fullHistory, autoTurn: true, suspDriven: true },
+    )
+    assert.equal(digestOut, "digest summary")
+    const injected = history.filter((m) => typeof m.content === "string" && m.content.includes("async subagent #1 (coder) finished"))
+    assert.equal(injected.length, 1, "消化轮 run 首行注入 reminder")
+    assert.ok(injected[0].content.includes("child report"), "报告文本注入（XML 转义后仍在）")
+    assert.equal(history._pendingAsyncResults?.length ?? 0, 0, "pending 消费清空")
+    assert.equal(history._asyncSubagents, undefined, "消化轮收尾注册表清空（depth-0 载体释放）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+
 test("D-A3 (vscode): async 子代理 settle 即发 onSubagent done 通知——完成即冻结信号，不等到回合收尾", async () => {
   const { server } = await asyncChildServer(200)
   await new Promise((r) => server.listen(0, "127.0.0.1", r))

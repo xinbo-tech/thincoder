@@ -471,11 +471,17 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     // Turn-bound cleanup (CONSULTATION.md): abort any leftover consultation sessions
     // started during this turn — no orphan sub-agents past the turn's end.
     cleanupConsultSessions(agent)
-    // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1; the collector
-    // lives in agent-tools/subagent-async.mjs with the async machinery — 500-line split):
+    // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1 + §17.5
+    // supersede; the collector lives in agent-tools/subagent-async.mjs with the async
+    // machinery — 500-line split):
     // Stop (plain abort) → clear WITHOUT injecting stale errors (Ctrl+I keeps the pool);
-    // ContinueError → no wait/no injection; else → inject SETTLED entries only (D-S3 ①)
-    // — running/queued STAY (no allSettled wait) — the suspension session digests them (D-S2).
+    // ContinueError → no wait/no injection; else → collect SETTLED entries (D-S3 ①) —
+    // running/queued STAY (no allSettled wait) — the suspension session digests them (D-S2).
+    // §17.5: a suspension-driven run (opts.suspDriven — the panel-chat layer runs
+    // suspensionSession after this run) NO LONGER drains settled entries at turn end —
+    // they stay pooled (settled not consumed) so the session's first sweep → digest
+    // turn digests them (17.5.2 方案 B). Undriven callers keep the direct turn-end
+    // injection (17.5.4 #2 兜底 — results never lost without a session).
     const asyncMap = agent._asyncSubagents
     if (asyncMap && asyncMap.size > 0) {
       if (signal?.aborted && !signal?.reason?.interrupt) {
@@ -483,7 +489,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         asyncMap.clear()
       } else if (!(thrownError instanceof ContinueError)) {
         const { collectSettledAsync } = await import("./agent-tools/subagent.mjs")
-        await collectSettledAsync(agent, { history, fullHistory, cwd })
+        await collectSettledAsync(agent, { history, fullHistory, cwd, suspDriven: opts.suspDriven === true })
       }
     }
     // The pool rides the shared depth-0 history array across runAgent calls (the agent

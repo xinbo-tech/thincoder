@@ -266,18 +266,26 @@ export async function injectAsyncResult(entry, { history, fullHistory, cwd }) {
 }
 
 /**
- * §17 D-S1 turn-end async collection (AGENT-LOOP.md §17 D-S1 — lives here with the
- * async machinery; agent.mjs's finally calls it, 500-line split): inject every entry
- * that SETTLED during this run (shared injector form — XML-escaped, >64K offloaded)
- * and remove it from the pool. Running/queued STAY — no allSettled wait: the
- * suspension session digests them as they settle (D-S2/D-S9). Single ownership:
- * entries settled inside a suspension session were moved to
- * history._pendingAsyncResults by the settle callback, so this only sees
- * non-suspended settles (no double inject — D-S3 ①/②).
+ * §17 D-S1 + §17.5 supersede turn-end async collection (lives here with the async
+ * machinery; agent.mjs's finally calls it, 500-line split): two modes by caller
+ * driver context (17.5.2/17.5.4 #2):
+ * - suspDriven=false (fallback — headless/direct runAgent callers without a
+ *   suspension driver): inject every entry that SETTLED during this run (shared
+ *   injector form — XML-escaped, >64K offloaded) and remove it from the pool.
+ *   Results never lost without a session.
+ * - suspDriven=true (panel-chat drives suspensionSession after this run): NO
+ *   direct inject — settled entries STAY pooled (settled not consumed) for the
+ *   session's first sweepSettledToPending → digest turn (§17.5).
+ * Running/queued STAY in both modes — no allSettled wait: the suspension session
+ * digests them as they settle (D-S2/D-S9). Single ownership: entries settled
+ * inside a suspension session were moved to history._pendingAsyncResults by the
+ * settle callback, so this only sees non-suspended settles (no double inject —
+ * D-S3 ①/②).
  */
-export async function collectSettledAsync(agent, { history, fullHistory, cwd }) {
+export async function collectSettledAsync(agent, { history, fullHistory, cwd, suspDriven = false }) {
   const map = agent._asyncSubagents
   if (!map || map.size === 0) return
+  if (suspDriven) return // §17.5: settled stays pooled — the suspension session digests it
   for (const e of [...map.values()]) {
     if (!e.done) continue // still running — stays in the pool (D-S1)
     await injectAsyncResult(e, { history, fullHistory, cwd })
@@ -391,7 +399,8 @@ function queuePosition(map, target) {
  * - 未知 id → { id, status: "error", error: "unknown async subagent id: <id>" }（与 check 同）
  */
 function statusEntryFields(entry, map) {
-  if (entry.done) return { id: entry.id, role: entry.role, status: "done", note: "settled this turn — unconsumed; fetch with action:'check' or it is auto-injected at turn end" }
+  // §17.5: a driven turn end leaves the entry pooled → the suspension digest consumes it
+  if (entry.done) return { id: entry.id, role: entry.role, status: "done", note: "settled this turn — unconsumed; fetch with action:'check' or the suspension digest injects it" }
   if (entry.status === "queued") return { id: entry.id, role: entry.role, status: "queued", position: queuePosition(map, entry) }
   return {
     id: entry.id, role: entry.role, status: "running",
