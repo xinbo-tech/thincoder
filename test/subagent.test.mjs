@@ -2181,7 +2181,7 @@ test("T-M20: cancel 错误路径——未知 id / 已完成 id / 省略 id → e
   }
 })
 
-test("T-M21: cancel 后槽位补位——queued 自动启动（既有补位机制回归——D-M6）", async () => {
+test("T-M21: cancel 后槽位补位——queued 自动启动（既有补位机制回归——D-M6）+ 处置 #4（评审 #4——queued→running ⏹ 可见性）：补位启动发 started + pool:true（webview ⏹ 门控源——async 池条目才挂 ⏹）", async () => {
   const { server } = await asyncChildServer(300)
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
@@ -2189,18 +2189,26 @@ test("T-M21: cancel 后槽位补位——queued 自动启动（既有补位机�
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
     const parent = asyncParent(port)
-    const ctx = asyncCtx(parent, cwd)
+    const notes = []
+    const ctx = asyncCtx(parent, cwd, { callbacks: { onSubagent: (info) => notes.push(info) } })
     for (let i = 1; i <= 4; i++) {
       await subagentTool.execute({ task: `slow task ${i}`, role: "coder", async: true }, ctx)
     }
     const fifth = spawnJson(await subagentTool.execute({ task: "slow task 5", role: "coder", async: true }, ctx))
     assert.equal(fifth.status, "queued", "第 5 个入队")
+    // 处置 #4：queued 入队期无 started 事件（无块无 ⏹——块与 ⏹ 随实际启动出现）
+    assert.ok(!notes.some((n) => n.id === fifth.id), "queued 入队期无 started 事件（不 paint——⏹ 无从显示）")
     // cancel 一个 running（id 1）→ 腾槽 → 队首（5th）自动补位启动
     const res = JSON.parse(await subagentTool.execute({ action: "cancel", id: 1 }, ctx))
     assert.equal(res.status, "cancelled")
     await parent._asyncSubagents.get(1).settled
     const started = await waitFor(() => parent._asyncSubagents.get(fifth.id)?.status === "running")
     assert.ok(started, "cancel 腾槽后 queued 队首自动启动（补位机制未被 cancel 破坏）")
+    // 处置 #4：补位启动（实际启动时）发 started 且带 pool:true——webview ⏹ 门控源
+    // （started 恒于 entry.start 发——块由事件创建——无缺失 key 窗口——CLI routeSubToken
+    // pending 缓冲无对应物——同语义：queued→running 后 ⏹ 可见）
+    const fifthStarted = await waitFor(() => notes.some((n) => n.id === fifth.id && n.status === "started" && n.pool === true))
+    assert.ok(fifthStarted, "补位启动发 started+pool:true（queued→running ⏹ 可见性门控源——处置 #4）")
     // 收尾
     await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.settled))
   } finally {
