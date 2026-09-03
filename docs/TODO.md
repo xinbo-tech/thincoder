@@ -232,12 +232,12 @@
 - [ ] **doc-sweep 旧名残留**（2026-09-03——§6 交付上报）：FEATURES.md 工具表现列三旧名、ARCHITECTURE.md:378/462、AGENT-LOOP.md:50、ARCHITECTURE-v2.md:115、ENGINEERING-WORKLOOP.md:73、VS Code CAPABILITY_GAP.md:17-18/49——memory 旧裸工具名——独立 doc-sweep（FEATURES/CAPABILITY_GAP 优先）
 - [ ] **子代理 memory search 行为侧注**（2026-09-03——§6 交付上报）：memory 单工具 readonly:false——从只读子代理工具表消失（旧 memory_search readonly:true 在内）——如需 explore/plan/consult 内 search 需 allowed 集动作感知——列后续
 - [ ] **engineering.md 旧手动避让句残留清理**（2026-09-03——advisor #4 交付轮 🟡 + §20.7 实现期已报）：Delegation 段 "Never assign two parallel eng-coders edits to the same file"（§15 前存句——§20.7 设计范围外保留）与调度器条款（同文件 async spawn + files 声明安全——§20.7 D-PS1）矛盾——清理 = 删除或改指向调度条款（小设计轮）
+- [ ] **setup.mjs:295-298 knife-edge 注记过期**（2026-09-03——id:4 报告——评审 #2 从池移回技术组）："adjusted to 12500" 已过时（T3b 重校准 14000）——随下个 setup 触碰轮
+- [ ] **cancel status 增强候选**（2026-09-03——personal:58 第 5 点——R2 占位撤销——等用户拍是否立项再入池）：status 条目带 touched files 摘要——杀子代理前看得见代价
 
 
 ---
 
-## 需求池（2026-09-03 建——需求点攒批——登记 = 澄清 + 板块需求文档已更新 + 本组一行——设计启动权在用户——阈值：同板块≥2 或全局≥3 提醒——快车道：用户说"急"走单点不入池）
+## 需求池（2026-09-03 建——需求点攒批——登记 = 澄清 + 板块需求文档已更新 + 本组一行——设计启动权在用户——阈值：同板块≥2 或全局≥3 提醒——快车道：用户说"急"走单点不入池——生命周期：实现后行勾销 + 指向板块文档引用（评审 #7））
 
-- [ ] **R1**（2026-09-03 · 工程模式耗时优化——需求池攒批机制本身——用户裁定 C+E）——机制设计已落双 METHODOLOGY（项目版 + 根模板——待评审）——评审过 → 实现批（engineering.md Mandatory Flow 分流句 + 阈值提醒句 + 内容断言）——板块：方法论
-- [ ] **R2**（2026-09-03 · cancel status 增强候选——personal:58 第 5 点机制化：status 条目带 touched files 摘要——杀子代理前看得见代价）——板块：AGENT-LOOP——**待用户拍是否立项**（未拍不入池——占位）
-- [ ] **setup.mjs:295-298 knife-edge 注记过期**（2026-09-03——id:4 报告）："adjusted to 12500" 已过时（T3b 重校准 14000）——随下个 setup 触碰轮
+- [ ] **R1**（2026-09-03 · 工程模式耗时优化——需求池攒批机制本身——用户裁定 C+E）——机制设计已落三 METHODOLOGY 载体（项目版/根模板/methodology-template 双端）——**评审 1🔴 处置中**（逐字锚补定）——处置完复审 → token → 实现批（engineering.md 三分句 + 断言）——板块：方法论

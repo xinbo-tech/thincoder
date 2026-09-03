@@ -38,10 +38,19 @@
 5. **快车道**：你说"这个急/马上做" → 不登记——单点走现有完整流程（设计 → 评审 → 实现——一步不少）。
 6. **边界**：池只收**用户需求点**——技术待办（设计遗留/评审发现/债）仍走 `docs/TODO.md` 技术组——不混池；紧急 bug 由快车道覆盖。
 
-### 提示词同步（实现批）
+### 提示词同步（实现批——评审 #1 逐字锚定稿）
 
-- `engineering.md` Mandatory Flow 加"需求入池"分流句（普通需求 → 池登记——非急不直接启动设计）+ "阈值提醒"句（两端 byte-identical + 内容断言）。
-- main.md 普通模式不加（需求池是工程模式机制——但普通模式提需求的登记动作由 agent 纪律承担——见 METHODOLOGY 本文档——不落提示词）。
+- `engineering.md` Mandatory Flow 加**三分句逐字锚**（两端 byte-identical——照抄——评审 #1 补定）：
+  > 1. **Pool routing**——"ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
+  > 2. **Threshold reminder**——"same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
+  > 3. **Fast lane**——"the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
+- **断言目标 1:1 对齐**（与三句——fail-when-unchanged）：engineering.md 含「Requirement Pool」组短语 +「pool-wide ≥3」+「single-point full flow」——**规格/测试句清单统一为三句（评审 #1——原"分流+阈值 vs 分流+快车道"不一致消除）**。
+- `methodology-template.md` 英文节锚 = 根模板本机制节（字节源——逐字复制——15 对双端）。
+- `main.md` 普通模式不加——池是**工程模式机制**——普通模式登记**不承诺**（评审 #5——删原"普通模式跟随"句——未落实承诺不做）。
+- **归属文档指针（评审 #6）**：实现批落 ENGINEERING-MODE.md 变更段（engineering.md 内容改动记录）——防碎片化。
+- **三副本不变量断言（评审 #8）**：实现批测试锚机制不变量（阈值 ≥2/≥3 + 边界"池只收用户需求点"）跨三副本（根模板/项目版/template 对）在——防单向漂移。
+- **用例表（评审 #4——实现批展开）**：N/E/A——N 登记流（提需求→落档→池行）；E 同点重复提（dedup——池行已存在则更新不新增）/批进行中阈值再达（提醒延后——不打断批）；A 撤回需求（池行撤销注）——每用例输入/预期输出明确。
+- **main.md 普通模式**——工程模式专用（如上）。
 
 ### 测试（实现批展开）
 
