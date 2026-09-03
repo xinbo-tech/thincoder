@@ -178,3 +178,43 @@
 
 - [ ] **sync spawn 完成精确冻结**（根因已确认：finishSubTask "最早 started"启发式——async eng-coder 与 sync explore 并存面板时——explore 完成误冻 eng-coder 块——explore 残留面板）——方案 e：subagent execute ctx 留 _subagentKey（relayPrefix）→ dispatch onToolResult 传 subKey → TUI finishSubTaskKey 精确冻——启发式降级兜底——async 路径不动（⟦ev⟧done 已精确）——设计落 AGENT-LOOP §7.2（待当前批交付后）
 
+
+### 子 agent 任务调度器（2026-09-03——来源：用户提议——"评审好了就 spawn——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队"）
+
+- [ ] **依赖感知调度层**（根治父代理手动调度：冲突检查/并行串行/cancel 重派全靠脑内——id:13/14 同文件并发失误为实证）——机制级设计（§15 池已管并发槽 4 + FIFO 队列——**缺 = 文件域冲突检测 + 依赖序**）——待需求澄清（形态/依赖声明方式/与 §17 挂起关系/范围）——落 AGENT-LOOP §15.x/新机制段
+
+
+### Ctrl+C processing 态误杀后台（2026-09-03——来源：用户两次实测被坑——"输错半句一 Ctrl+C 把 eng-coder#14 杀了"）
+
+- [ ] **processing 态 Ctrl+C 武装化 + 回合 abort 与池解耦**（根因：① agent.mjs:457-463——回合 abort（非 interrupt）无条件清池——连坐杀全部后台；② key-handler:79-84——processing 态第一按无武装直接 abort（无 reason.interrupt——命中①）——挂起/空闲态有双确认而 processing 没有——三态不一致）——修复：processing Ctrl+C 第一按 = interrupt 语义（abort({interrupt:true})——停回合不清池——后台保留——提示再按全停）——3s 内第二按 = 显式清池全停——与挂起/空闲同构——受影响：key-handler.mjs + agent.mjs 清池条件核对（interrupt 路径是否已安全）+ 测试（processing Ctrl+C 首按不清池/次按清池）
+
+
+### 重启交接（2026-09-03——用户重启 CLI——已批 designToken 全部失效——未实现设计需重新评审后重派）
+
+> 背景：designToken/designId 存于会话内存态——重启后失效——以下"已批未实现"设计重启后**重新走 advisor 设计评审**（拿新 token/designId）再派实现。已交付提交的不受影响（LOGGING/T129/T128/SESSION§9/read_pdf——已落地）。
+
+- [ ] **§7.2.3 sync spawn 精确冻结**——已批（token 9505071c/designId 126fd7be——**未重启仍有效**）——id:13 曾 cancel——§17.5 已交付（blocks 稳定）——id:15 交付后即可重派（无需重评审——token 活）
+- [x] ~~**§17.5 settle 完成队列**——已批（token ced16654/a8db8329）——**2026-09-03 16:09 交付完成（id:12——双端 clean——CLI 1242/0 + VS Code 1034/0）——真相：id:12 一直存活（15:08 查池误判被杀——id:14 是重复实例被 Ctrl+C 杀——原实例幸存）——工作区 §17.5 文件 = id:12 完整交付（非残留——无需清理）**——待提交（等 id:15 交付后合批）~~
+- [ ] **§19.5 控制面扩展**（status 增强/cancel/UI 停止/嵌套前缀）——已批（9505071c 批内——作废）——未实现——重启后重评审
+- [ ] **§19.6 panel 检查工具**——已批（旧 token 73ff0a6d/designId 87c40452——作废）——未实现——重启后重评审
+- [ ] **§20 任务调度器**——已批（旧 token 8a85b23d/designId a9ac6bca——作废）——未实现（依赖 §19.5 cancel 基础）——重启后重评审
+- [x] ~~**§17.6 Ctrl+C 武装化**——2026-09-03 16:27 交付提交（id:15——5d500c4——三态武装/agent-turn 区分——CLI 1238/0）~~
+- 设计文档现状（重评审的依据不变）：AGENT-LOOP.md §7.2.3/§17.5/§17.6/§19.5/§19.6/§20 全部设计定稿批准状态在文档内——重评审即按文档再评一轮
+
+
+### agent-turn.mjs 超 500 硬限（2026-09-03——来源：§17.6 交付 stalled 项——§17.5/§17.6 叠加至 535 行）
+
+- [ ] **agent-turn.mjs 535 行拆分**（HEAD 433 → §17.5（collectSettled suspDriven + inSessionTurn 守卫）+ §17.6（interrupt 区分/垃圾回滚/exitArmed 解除）叠加 +102——超 500 硬限）——拆分建议（§17.6 交付注）：挂起驱动段迁出（tool-events/render-conversation L93 先例——agent-turn 174 行先例）——**当前代码已稳定提交（5d500c4）——可拆**——立项排轮（小拆——零行为变化——测试零改动或断言归位）
+
+
+### TUI 行数债合并轮（2026-09-03——来源：§7.2.3 交付 code review advisory + §17.6 stalled 项）
+
+- [ ] **超 500 行文件合并拆分轮**：agent-turn.mjs 535（§17.6 注——挂起驱动段迁出）/ tool-events.mjs 537（本批 499→537——spawn 冻结三支路由或预览段外抽）/ subagent-blocks.mjs 529（冻结家族 freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks/finishSubTaskKey 整体抽 freeze.mjs）/ subagent.mjs 523 / subagent-async.mjs 521（既有债）——先例：cmd-mcp 499→382 / agent-turn 534→174 / index 545→447——排独立拆分轮（§19.5/19.6/§20 后——避免与在跑轮同文件并发）
+
+
+### §19.6 交付跟进（2026-09-03——id:17 交付）
+
+- [x] ~~§19.6 panel 检查工具——已实现（aeff441——CLI 1268/0——镜像/门控/降级/分类四表）~~——文档 19.6.5 已落
+- [ ] **tool-args 块标题兜底**（§19.6 交付 🔵 残留——tool-args.mjs:44-47——action-only subagent 调用（panel/check/status/cancel）块标题光秃 "❯ subagent"——建议 a.action 兜底显示——非本批清单——后续小轮
+- [ ] **§19.5 控制面扩展 token 重建受阻**（评审验证模式不发 token——已批设计在文档（AGENT-LOOP §19.5——round2 通过状态）——重启后新会话重评审签发——§20 依赖其 cancel 基础——排队顺延
+
