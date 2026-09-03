@@ -228,3 +228,14 @@
 - [ ] **TOOLS.md §12 execute prelude 退役**——设计已落（eca6dc8——纯净 node 子进程——删两端 exec-prelude.mjs + 描述重写 + 测试改写 T-E1）——**重启后评审**（拿新 token）→ 派 eng-coder（两端同步——用户裁定"可以，两端同样处理"）
 - [x] ~~id:2（§20 调度器）——2026-09-03 19:49 交付提交（CLI 5f9748f + VS Code 8f1acb4——1288/1243 + 1019/1019）~~
 
+
+- [ ] **doc-sweep 旧名残留**（2026-09-03——§6 交付上报）：FEATURES.md 工具表现列三旧名、ARCHITECTURE.md:378/462、AGENT-LOOP.md:50、ARCHITECTURE-v2.md:115、ENGINEERING-WORKLOOP.md:73、VS Code CAPABILITY_GAP.md:17-18/49——memory 旧裸工具名——独立 doc-sweep（FEATURES/CAPABILITY_GAP 优先）
+- [ ] **子代理 memory search 行为侧注**（2026-09-03——§6 交付上报）：memory 单工具 readonly:false——从只读子代理工具表消失（旧 memory_search readonly:true 在内）——如需 explore/plan/consult 内 search 需 allowed 集动作感知——列后续
+
+
+---
+
+## 需求池（2026-09-03 建——需求点攒批——登记 = 澄清 + 板块需求文档已更新 + 本组一行——设计启动权在用户——阈值：同板块≥2 或全局≥3 提醒——快车道：用户说"急"走单点不入池）
+
+- [ ] **R1**（2026-09-03 · 工程模式耗时优化——需求池攒批机制本身——用户裁定 C+E）——机制设计已落双 METHODOLOGY（项目版 + 根模板——待评审）——评审过 → 实现批（engineering.md Mandatory Flow 分流句 + 阈值提醒句 + 内容断言）——板块：方法论
+- [ ] **R2**（2026-09-03 · cancel status 增强候选——personal:58 第 5 点机制化：status 条目带 touched files 摘要——杀子代理前看得见代价）——板块：AGENT-LOOP——**待用户拍是否立项**（未拍不入池——占位）
