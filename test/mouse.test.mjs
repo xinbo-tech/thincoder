@@ -500,9 +500,9 @@ describe("handleWheel — 块内滚动（2026-08-31 用户需求：滚动读全�
 })
 
 describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7）", () => {
-  /** 运行中 coder 子 agent（blocks 可选铺内容行）。 */
+  /** 运行中 async coder 子 agent（async:true → ⏹ 门控放行——D-M7b；blocks 可选铺内容行）。 */
   const mkSub = (blocks) => ({
-    key: "coder#1", role: "coder", model: "glm-5.3", started: Date.now(), done: false, doneAt: null,
+    key: "coder#1", role: "coder", model: "glm-5.3", async: true, started: Date.now(), done: false, doneAt: null,
     blocks, currentTool: "bash", toolArgs: { command: "npm test" }, turn: 2, maxTurns: 100,
     approval: null, lastError: null, dropped: 0, blockEpoch: 1,
   })
@@ -545,17 +545,27 @@ describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7
       const layout = computeLayout(state, { cols: 80, rows: 24 })
       const lineEl = layout.subagentLines[1]
       assert.ok(lineEl?._stopSub, "运行中折叠头带 _stopSub（⏹ 标记）")
-      // ⏹ 列（cols=80——右缘标记列）点击 → cancel；不触发折叠翻转
-      assert.equal(handleMouseClick(ctx, 80, headRow), true, "⏹ 列点击被消费")
-      assert.equal(cancelled, "coder#1", "cancelSubagent 收到定向 key（直连——不经模型回合）")
+      // ⏹ 区（glyph cols−1=79 内收 + 右 margin col 80——内收几何 code review 🟡#1）
+      assert.equal(handleMouseClick(ctx, 80, headRow), true, "⏹ 右 margin 列点击被消费")
+      assert.equal(cancelled, "coder#1", "margin 列点击 = cancel（命中区 col ≥ _stopCol）")
       assert.ok(!state.expandedBlocks?.has("sub-coder#1"), "⏹ 点击不触发折叠翻转（round1 #6）")
       assert.ok(rendered > 0)
-      // ⏹ 区外点击（同行的普通区）→ 照常折叠翻转；cancelSubagent 不再被调
+      cancelled = null
+      assert.equal(handleMouseClick(ctx, 79, headRow), true, "glyph 列（cols−1）点击被消费")
+      assert.equal(cancelled, "coder#1", "glyph 列点击 = cancel（内收一列——不再依赖终端最末列）")
+      assert.ok(!state.expandedBlocks?.has("sub-coder#1"), "glyph 列点击不触发折叠翻转")
+      // 近失点击（padding 空格 cols−2=78——glyph 左邻）→ 照常折叠；cancelSubagent 不再被调
       cancelled = null
       const beforeExpand = state.expandedBlocks?.has("sub-coder#1")
+      assert.equal(handleMouseClick(ctx, 78, headRow), true, "⏹ 左邻（padding）点击被消费")
+      assert.equal(cancelled, null, "padding 列点击不 cancel")
+      assert.notEqual(state.expandedBlocks?.has("sub-coder#1"), beforeExpand, "padding 列点击触发折叠翻转（列级区分回归）")
+      // ⏹ 区外点击（同行的普通区）→ 照常折叠翻转；cancelSubagent 不再被调
+      cancelled = null
+      const beforeExpand2 = state.expandedBlocks?.has("sub-coder#1")
       assert.equal(handleMouseClick(ctx, 10, headRow), true, "头部普通区点击被消费")
       assert.equal(cancelled, null, "普通区点击不 cancel")
-      assert.notEqual(state.expandedBlocks?.has("sub-coder#1"), beforeExpand, "普通区点击触发折叠翻转（列级区分）")
+      assert.notEqual(state.expandedBlocks?.has("sub-coder#1"), beforeExpand2, "普通区点击触发折叠翻转（列级区分）")
     })
   })
 
@@ -564,7 +574,7 @@ describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7
     const run = mockState({ subTasks: { "coder#1": mkSub([]) } })
     stubDims(() => {
       const head = renderSubagentPanel(run, 80).find((x) => x._foldToggle === "sub-coder#1")
-      assert.ok(head?._stopSub === "coder#1" && head?._stopCol === 80, "running 折叠头带 ⏹ 命中元数据（右缘列）")
+      assert.ok(head?._stopSub === "coder#1" && head?._stopCol === 79, "running 折叠头带 ⏹ 命中元数据（内收一列——glyph cols−1）")
       // done（挂起期中间态 awaitingDigest——冻结延迟驻留面板）→ 无 ⏹（仅 running）
       const dig = mockState({ subTasks: { "coder#1": { ...mkSub([]), done: true, awaitingDigest: true } } })
       const lines = renderSubagentPanel(dig, 80)
@@ -576,6 +586,29 @@ describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7
       const compHead = renderSubagentPanel(comp, 80).find((x) => x._foldToggle === "sub-compress#9")
       assert.ok(compHead, "压缩面板头在面板")
       assert.ok(!compHead._stopSub && !String(compHead.text).includes("⏹"), "compress 头无 ⏹（subagent 角色门）")
+      // §19.5 D-M7b ③：sync 区块（无 async 标记）无 ⏹——渲染元数据缺失（sync 门控）
+      const sync = mockState({ subTasks: { "coder#1": { ...mkSub([]), async: undefined } } })
+      const syncHead = renderSubagentPanel(sync, 80).find((x) => x._foldToggle === "sub-coder#1")
+      assert.ok(syncHead && !syncHead._stopSub && !String(syncHead.text).includes("⏹"), "sync 区块头无 ⏹（D-M7b——杜绝可见但不可中止）")
+    })
+  })
+
+  it("§19.5 D-M7b ③ 鼠标回归：sync 区块头无 ⏹ 元数据——右缘列点击 = 折叠翻转（不 cancel）", () => {
+    const state = mockState({ subTasks: { "coder#1": { ...mkSub([{ kind: "tool", text: "❯ bash\n" }]), async: undefined } } })
+    let cancelled = null
+    const ctx = { state, render: () => {}, cancelSubagent: (k) => { cancelled = k } }
+    stubDims(() => {
+      const P = computeLayout(state, { cols: 80, rows: 24 }).panels
+      const headRow = P.subagent.y + 2
+      const layout = computeLayout(state, { cols: 80, rows: 24 })
+      const lineEl = layout.subagentLines[1]
+      assert.ok(lineEl?._foldToggle === "sub-coder#1", "sync 头仍是折叠控制行")
+      assert.ok(!lineEl._stopSub, "sync 头无 _stopSub（⏹ 元数据——async 专属）")
+      // 右缘（⏹ 若存在的位置 col=80）点击 → 不 cancel、走折叠翻转（列级区分的回归：sync 无 ⏹ 列）
+      const before = state.expandedBlocks?.has("sub-coder#1")
+      assert.equal(handleMouseClick(ctx, 80, headRow), true, "右缘点击被消费（折叠控制）")
+      assert.equal(cancelled, null, "sync 头右缘点击不触发 cancel（无 ⏹ 元数据——D-M7b ③）")
+      assert.notEqual(state.expandedBlocks?.has("sub-coder#1"), before, "sync 头右缘点击 = 折叠切换回归")
     })
   })
 

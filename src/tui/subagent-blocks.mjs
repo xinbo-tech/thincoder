@@ -1,6 +1,7 @@
 /**
  * subagent-blocks.mjs — 子agent 活动区块缓冲（AGENT-LOOP.md §7.2 D4，消费端）。
- * state.subTasks[key] = { key, role, model, started, done, doneAt, blocks:
+ * state.subTasks[key] = { key, role, model, async（§19.5 D-M7b——⟦ev⟧async 标记——
+ * undefined = sync）, started, done, doneAt, blocks:
  * [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError,
  * dropped, blockEpoch, awaitingDigest（§17）, _freezeAt（冻结锚点）, stopped（§19.5）}。
  * 职责：前缀路由（parseRelayPath 嵌套段→子标）、事件 token 解析、kind 合并、
@@ -14,7 +15,9 @@ import { describeToolArgs } from "./tool-args.mjs"
 export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
 /** ⟦ev⟧ token parser：`⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`。phase done
  *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至池空补发；
- *  stopped（§19.5 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）。 */
+ *  stopped（§19.5 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
+ *  async（§19.5 D-M7b）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
+ *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
 /** §19.5 D-M8 嵌套 relay 前缀通用解析（循环解析任意深度）：
@@ -287,6 +290,14 @@ export function routeSubToken(state, t, scheduleRender) {
   // "done · awaiting digestion"，池空补发冻结；stopped（§19.5）= cancel——立即冻结。
   if (payload.startsWith("⟦ev⟧")) {
     if (nested) return true // 内层事件剥除不路由（防 explore 进度污染外层块头）
+    // §19.5 D-M7b ①: 零字段 async 标记（async spawn 实际启动即发——sync 不发——
+    // 区块创建即知）。精确匹配（async 后须 RS 或串尾——正文伪前缀形态不误吞；
+    // 内容侧伪哨兵已由生成侧 stripEventToken 先行剥除——本分支只见真事件）。
+    if (/^⟦ev⟧async(\x1e|$)/.test(payload)) {
+      sub.async = true
+      scheduleRender()
+      return true
+    }
     const ev = payload.match(SUB_EVENT_RE)
     if (ev?.[1] === "settled") {
       sub.done = true

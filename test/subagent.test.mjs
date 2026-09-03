@@ -1056,6 +1056,39 @@ test("§19.5 T-M18: status 全览含 role/model/elapsedSec/turn/maxTurns（可�
   }
 })
 
+test("§19.5 D-M7b ①: async spawn 发 ⟦ev⟧async 标记（实际启动——先于 [model]）；sync spawn 不发", async () => {
+  const { server, port } = await asyncServer([
+    { content: LONG_REPORT("异步活"), delay: 250 },
+    { content: LONG_REPORT("同步活") },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-m7b-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "glm-child" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    // async 分支：spawn 同步 emit 标记 + [model]（execute 返回前已发出——无需 waitFor）
+    const aTokens = []
+    const aCtx = tokenCtx(parent, cwd, aTokens)
+    const a = JSON.parse(String(await subagentTool.execute({ task: "异步活", role: "coder", async: true }, aCtx)))
+    assert.equal(a.status, "running")
+    const marker = `${a.role}#${a.id}/⟦ev⟧async\x1e`
+    const markerIdx = aTokens.indexOf(marker)
+    assert.ok(markerIdx >= 0, `async spawn 流含 ⟦ev⟧async 标记（前 4 token: ${JSON.stringify(aTokens.slice(0, 4))}）`)
+    assert.equal(aTokens.filter((t) => t === marker).length, 1, "标记恰好一次")
+    const modelIdx = aTokens.findIndex((t) => t.includes(`${a.role}#${a.id}/[model]`))
+    assert.ok(modelIdx > markerIdx, "标记先于 [model] 发出（区块创建即知 async——时序安全）")
+    // sync 分支：同一 parent（counter 续号）——阻塞完成，零 async 标记
+    const sTokens = []
+    const sCtx = tokenCtx(parent, cwd, sTokens)
+    const s = String(await subagentTool.execute({ task: "同步活", role: "coder" }, sCtx))
+    assert.ok(s.includes("同步活 report"), "sync spawn 阻塞返回报告")
+    assert.ok(!sTokens.some((t) => t.includes("⟦ev⟧async")), "sync spawn 不发 async 标记（sync 区块 = 无标记 = sync 头标）")
+    assert.ok(sTokens.some((t) => t.includes("/[model]")), "sync spawn [model] token 照常（makeRelay——区块仍建）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 test("§19.5 T-M19: cancel 定向中止——cancelled settle（⟦ev⟧stopped 冻结 + 模型提醒注入 + 无陈旧注入），其余子代理不受影响", async () => {
   // 内容感知服务器：target 子代理请求长延迟（不自然完成——须由 cancel 中止）；
   // other 子代理 250ms 自然完成（证明 cancel 不波及其余）。
@@ -1149,26 +1182,34 @@ test("§19.5 T-M20: cancel 错误路径——未知 id / 已完成 id / 省略 i
   }
 })
 
-test("§19.5 T-M21: cancel 后槽位补位——running 槽腾出 → queued 队首自动启动（maybeRefillAsync 回归）", async () => {
+test("§19.5 T-M21: cancel 后槽位补位——running 槽腾出 → queued 队首自动启动（maybeRefillAsync 回归）+ D-M7b 标记时序（入队不发、实际启动才发）", async () => {
   const { server, port } = await asyncServer(Array.from({ length: 5 }, () => ({ content: LONG_REPORT("占槽"), delay: 6000 })))
   const cwd = mkdtempSync(join(tmpdir(), "cli-m21-"))
   try {
     const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const ctx = tokenCtx(parent, cwd, [])
+    const tokens = []
+    const ctx = tokenCtx(parent, cwd, tokens)
     const spawned = []
     for (let n = 1; n <= 4; n++) {
       const s = JSON.parse(String(await subagentTool.execute({ task: `占槽${n}`, role: "coder", async: true }, ctx)))
       assert.equal(s.status, "running", `前置：第 ${n} 个立即启动`)
       spawned.push(s)
     }
+    assert.equal(
+      tokens.filter((t) => /^coder#\d+\/⟦ev⟧async\x1e$/.test(t)).length, 4,
+      "D-M7b: 4 个 running spawn 各自发 async 标记（区块创建即知）",
+    )
     const q1 = JSON.parse(String(await subagentTool.execute({ task: "排队1", role: "coder", async: true }, ctx)))
     assert.equal(q1.status, "queued", "前置：4 槽占满 → 入队")
+    const q1Marker = `coder#${q1.id}/⟦ev⟧async\x1e`
+    assert.ok(!tokens.includes(q1Marker), "D-M7b: queued 入队不发 async 标记（区块不 paint——实际启动才发）")
     // cancel 第一个 running → 其 settle（abort）腾出槽位 → 队首自动补位启动
     const c = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: spawned[0].id }, ctx)))
     assert.equal(c.status, "cancelled")
     await waitFor(() => parent._asyncSubagents.get(String(q1.id))?.status === "running", 6000)
     assert.ok(parent._asyncSubagents.get(String(q1.id))?.status === "running", "T-M21: 取消后槽位腾出——queued 自动启动")
+    assert.ok(tokens.includes(q1Marker), "D-M7b: 补位启动时 async 标记随 [model] 一起发出")
     // 收尾：清池退出（其余 running 长延迟——不悬挂）
     parent._asyncSubagents.clear()
     parent._asyncQueue = []

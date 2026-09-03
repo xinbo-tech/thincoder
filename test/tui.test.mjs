@@ -517,7 +517,7 @@ test("renderRows: 运行中子 agent 区块渲染于固定底部面板（§7.2.1
   const panelText = rows.slice(layout.panels.subagent.y, layout.panels.subagent.y + layout.panels.subagent.h).join("\n")
   const convText = rows.slice(layout.panels.conversation.y, layout.panels.conversation.y + layout.panels.conversation.h).join("\n")
   const cleanPanel = panelText.replace(/\x1b\[[0-9;]*m/g, "")
-  assert.ok(cleanPanel.includes("[▶ coder#1 · glm-5.3"), "block header in the panel")
+  assert.ok(cleanPanel.includes("[▶ coder#1 · sync · glm-5.3"), "block header in the panel（sync 显式头标——D-M7b B 形态）")
   assert.ok(cleanPanel.includes("turn 2/100"), "header shows turn n/max")
   assert.ok(cleanPanel.includes("write"), "shows current tool")
   assert.ok(!convText.includes("[▶ coder#1"), "会话区不含运行区块")
@@ -972,8 +972,8 @@ test("subagent 面板：多子 agent 并行全显示（§7.2.1 T4/F2 自适应�
   })
   const out = renderSubagentPanel(state, 80, 24)
   assert.ok(out[0]?.text.startsWith("─"), "顶部分隔线")
-  const joined = out.map((l) => l.text).join("\n")
-  assert.ok(joined.includes("[▶ coder#1 · glm-5.3") && joined.includes("[▶ explore#2 · deepseek-chat"), "两个并行区块折叠头都在面板")
+  const joined = out.map((l) => String(l.text).replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(joined.includes("[▶ coder#1 · sync · glm-5.3") && joined.includes("[▶ explore#2 · sync · deepseek-chat"), "两个并行区块折叠头都在面板（sync 显式头标）")
   assert.ok(joined.includes("turn 3/100") && joined.includes("turn 1/20"), "各自 turn 状态")
   // 每个区块折叠态 = 头 + tail ≤3（N 区块 → 面板 = 1 分隔线 + N×(1+tail)）
   const tailLines = out.filter((l) => l.text.startsWith("│ ")).length
@@ -1061,8 +1061,8 @@ test("panel functions (§7.2.1 T4/T-A 渲染目标审计): 子agent 区块 — �
   })
   // 折叠态：头部摘要 + tail ≤3 行，不出现最旧内容
   const folded = renderSubagentPanel(mk(false), 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, ""))
-  const headIdx = folded.findIndex((t) => t.includes("[▶ coder#1 · glm-5.3"))
-  assert.ok(headIdx >= 0, "折叠头存在（面板）")
+  const headIdx = folded.findIndex((t) => t.includes("[▶ coder#1 · sync · glm-5.3"))
+  assert.ok(headIdx >= 0, "折叠头存在（面板）——含 sync 显式头标（无 async 标记 = sync——D-M7b）")
   assert.ok(folded[headIdx].includes("turn 12/100"), "头部含 turn n/max")
   assert.ok(folded[headIdx].includes("bash"), "头部含当前工具（bash tail 摘要）")
   const tailCount = folded.filter((t, i) => i > headIdx && t.startsWith("│ ")).length
@@ -1110,21 +1110,58 @@ test("panel functions (§7.2.1 T-C 渲染目标审计): 面板头 approval 等�
 })
 
 test("panel functions (§19.5 T-M19/T-M23 渲染): ⟦ev⟧stopped 冻结头标题 \"stopped\"（interrupted 语义）+ ⏹ 标记仅 running", () => {
-  // stopped 冻结：流内冻结块头 = "stopped Ns"（非 done）
+  // stopped 冻结：流内冻结块头 = "stopped Ns"（非 done）；async 标识随冻结保留
   const stoppedState = tuiState({
-    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "eng-coder#3", role: "eng-coder", model: "m", blocks: [{ kind: "text", text: "partial work" }], done: true, doneAt: Date.now(), started: Date.now() - 3000, stopped: true, currentTool: null, turn: 2, maxTurns: 100, approval: null, lastError: null } }],
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "eng-coder#3", role: "eng-coder", async: true, model: "m", blocks: [{ kind: "text", text: "partial work" }], done: true, doneAt: Date.now(), started: Date.now() - 3000, stopped: true, currentTool: null, turn: 2, maxTurns: 100, approval: null, lastError: null } }],
   })
   const stoppedOut = buildConvLines(stoppedState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
-  assert.ok(stoppedOut.includes("[✓ eng-coder#3 · m · stopped 3s"), `stopped 冻结头标题（实际: ${stoppedOut.slice(0, 120)}）`)
+  assert.ok(stoppedOut.includes("[✓ eng-coder#3 · async · m · stopped 3s"), `stopped 冻结头标题 + async 标识保留（实际: ${stoppedOut.slice(0, 120)}）`)
   assert.ok(!stoppedOut.includes("· done "), "stopped 块不显示 done 动词")
-  // running 面板头带 ⏹（dim 标记在右缘——_stopSub/_stopCol 元数据）
+  // running async 面板头带 ⏹（dim 标记在右缘——_stopSub/_stopCol 元数据）
   const runState = tuiState({
-    subTasks: { "coder#1": { key: "coder#1", role: "coder", model: "m", blocks: [], done: false, started: Date.now(), currentTool: "bash", turn: 1, maxTurns: 100, approval: null, lastError: null } },
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", async: true, model: "m", blocks: [], done: false, started: Date.now(), currentTool: "bash", turn: 1, maxTurns: 100, approval: null, lastError: null } },
   })
   const panel = renderSubagentPanel(runState, 100)
   const head = panel.find((l) => l._foldToggle === "sub-coder#1")
-  assert.ok(head && head._stopSub === "coder#1" && head._stopCol === 100, "运行头 ⏹ 命中元数据")
+  assert.ok(head && head._stopSub === "coder#1" && head._stopCol === 99, "运行头 ⏹ 命中元数据（内收一列——glyph cols−1）")
   assert.ok(String(head.text).includes("⏹"), "运行头渲染 ⏹ 标记")
+})
+
+test("panel functions (§19.5 D-M7b): 头标 async/sync 显式标识 + ⏹ 仅 async 门控（running/冻结/角色门）", () => {
+  // ① async 区块：async 头标（dim——ANSI 注入）+ ⏹ 元数据齐全
+  const asyncState = tuiState({
+    subTasks: { "eng-coder#2": { key: "eng-coder#2", role: "eng-coder", async: true, model: "glm-5.3", blocks: [], done: false, started: Date.now(), currentTool: "read", turn: 2, maxTurns: 100, approval: null, lastError: null } },
+  })
+  const aHead = renderSubagentPanel(asyncState, 100).find((l) => l._foldToggle === "sub-eng-coder#2")
+  const aText = String(aHead.text).replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(aText.includes("[▶ eng-coder#2 · async · glm-5.3"), `async 头标在 key 后模型前（实际: ${aText.slice(0, 60)}）`)
+  assert.ok(String(aHead.text).includes("\x1b[2masync\x1b[36m"), "async 词套 dim + 恢复行色（截断后注入——自闭合，code review 🔵#4）")
+  assert.ok(aHead._stopSub === "eng-coder#2" && aHead._stopCol === 99, "async 运行头带 ⏹（内收一列——glyph cols−1——code review 🟡#1）")
+  // ② sync 区块（无 async 标记）：sync 显式头标 + 无 ⏹（杜绝"可见但不可中止"误导）
+  const syncState = tuiState({
+    subTasks: { "explore#1": { key: "explore#1", role: "explore", model: "deepseek-chat", blocks: [], done: false, started: Date.now(), currentTool: "read", turn: 1, maxTurns: 100, approval: null, lastError: null } },
+  })
+  const sHead = renderSubagentPanel(syncState, 100).find((l) => l._foldToggle === "sub-explore#1")
+  const sText = String(sHead.text).replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(sText.includes("[▶ explore#1 · sync · deepseek-chat"), `sync 显式头标——不靠没标推断（实际: ${sText.slice(0, 60)}）`)
+  assert.ok(!sHead._stopSub && !sText.includes("⏹"), "sync 区块无 ⏹（门控：running && SUBAGENT_ROLES && sub.async）")
+  // ③ frozen 保留（done 头历史语义——与 model 标识同生命周期）：async 与 sync 都保留
+  const frozenAsync = tuiState({
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "coder#7", role: "coder", async: true, model: "glm-5.3", blocks: [], done: true, doneAt: Date.now(), started: Date.now() - 5000, turn: 1, maxTurns: 100, approval: null, lastError: null } }],
+  })
+  const fa = buildConvLines(frozenAsync, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(fa.includes("[✓ coder#7 · async · glm-5.3 · done 5s"), "冻结 async 头保留 async 标识")
+  const frozenSync = tuiState({
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "explore#3", role: "explore", blocks: [], done: true, doneAt: Date.now(), started: Date.now() - 8000, turn: 1, maxTurns: 20, approval: null, lastError: null } }],
+  })
+  const fs = buildConvLines(frozenSync, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(fs.includes("[✓ explore#3 · sync · done 8s"), "冻结 sync 头保留 sync 标识")
+  // ④ 角色门：压缩面板（role compress——复用面板槽但非 subagent spawn）无 sync/async 标识
+  const compState = tuiState({
+    subTasks: { "compress#9": { key: "compress#9", role: "compress", blocks: [], done: false, started: Date.now(), currentTool: "compressing context…", turn: 0, maxTurns: 0, approval: null, lastError: null } },
+  })
+  const cText = String(renderSubagentPanel(compState, 100).find((l) => l._foldToggle === "sub-compress#9").text).replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(!cText.includes("· sync ·") && !cText.includes("· async ·"), "compress 头无 sync/async 标识（真实 subagent 角色门）")
 })
 
 test("panel functions (§19.5 T-M25 渲染): 嵌套子标行 dim 样式——行首子标 gray、内容恢复 kind 色", async () => {
@@ -1147,6 +1184,9 @@ test("panel functions (§7.2 D5): 事件 token 残留被 sanitizeDisplay 兜底�
   assert.ok(!cleaned.includes("⟦ev⟧"), "哨兵剥除")
   assert.ok(!cleaned.includes("\x1e"), "RS 控制字符剥除")
   assert.ok(cleaned.includes("coder#1/"), "普通前缀文本不受影响")
+  // §19.5 D-M7b：零字段 async 标记（无 4 字段——走哨兵+字母剥除 + RS 剥除兜底）
+  const rawAsync = "coder#2/⟦ev⟧async\x1e"
+  assert.equal(sanitizeDisplay(rawAsync), "coder#2/", "async 零字段标记兜底剥净（prefix 保留）")
   assert.equal(sanitizeDisplay("normal ⟦ev⟧ mid-token"), "normal  mid-token", "哨兵后无字母 phase = 正文合法内容（如讨论 ACP 桥的表格），只剥哨兵本身——2026-08-31 用户实证：旧'剥到行尾'语义把真实正文吃到串尾")
 })
 

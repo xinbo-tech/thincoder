@@ -125,9 +125,10 @@ export function handleMouseClick(ctx, col, row) {
     // 评审 #4：保底截断后可见行 ≠ 前 h 行——命中映射与 render-frame 同一几何契约
     // （subagentLineIndex：分隔线 + 末尾区块行优先）。
     const lineEl = layout.subagentLines[subagentLineIndex(layout.subagentLines, P.subagent.h, r - P.subagent.y)]
-    // §19.5 D-M7 ⏹ 停止标记（round1 #6）：列级命中——⏹ 列点击 = cancel（定向该
-    // 子代理——ctx.cancelSubagent 直连池 abort 路径，不经模型回合），不触发折叠
-    // 翻转；⏹ 区外点击照常走折叠/翻窗。
+    // §19.5 D-M7/D-M7b ⏹ 停止标记（round1 #6 + 用户裁定 B 形态）：列级命中——⏹ 列
+    // 点击 = cancel（定向该子代理——ctx.cancelSubagent 直连池 abort 路径，不经模型
+    // 回合），不触发折叠翻转；**仅 async 区块带 _stopSub 元数据**（sync 无 ⏹——
+    // 其右缘点击照常走折叠翻转——D-M7b ③）；⏹ 区外点击照常走折叠/翻窗。
     if (lineEl?._stopSub && col >= (lineEl._stopCol ?? Infinity)) {
       ctx.cancelSubagent?.(lineEl._stopSub)
       render()

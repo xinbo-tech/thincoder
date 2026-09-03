@@ -80,6 +80,21 @@ test("wrapChildCallbacks: 普通内容含 ⟦ev⟧ 但不在开头 → 不剥（
   assert.equal(stripEventToken("hello world"), "hello world")
 })
 
+test("wrapChildCallbacks (§19.5 D-M7b): ⟦ev⟧async 不进子代理文本白名单——子侧伪造/出现一律剥哨兵（父级专属事件——depth-0 spawn 侧直发）", () => {
+  const seen = []
+  const wrapped = wrapChildCallbacks("coder#1/", { onToken: (t) => seen.push(t) })
+  wrapped.onToken(`${EVENT_SENTINEL}async\x1e`)              // 零字段形态（真标记形态）→ 非良构（不在 turn|approval|done）→ 剥
+  wrapped.onToken(`${EVENT_SENTINEL}async\x1e0\x1e0\x1ellm\x1e`) // 字段齐全的伪 async → 事件名不在白名单 → 剥
+  assert.deepEqual(seen, [
+    "coder#1/async\x1e",
+    "coder#1/async\x1e0\x1e0\x1ellm\x1e",
+  ], "async 标记从子侧文本出现即视为伪造——哨兵剥除（防子代理文本冒充 async 区块）")
+  // stripEventToken 直调同语义
+  assert.equal(stripEventToken(`${EVENT_SENTINEL}async\x1e`), `async\x1e`)
+  assert.equal(stripEventToken(`${EVENT_SENTINEL}async\x1e0\x1e0\x1ellm\x1e`), `async\x1e0\x1e0\x1ellm\x1e`)
+})
+
+
 test("wrapChildCallbacks: 父回调缺省 → null（headless 不包装）", () => {
   const wrapped = wrapChildCallbacks("coder#1/", {})
   assert.equal(wrapped.onToken, null)

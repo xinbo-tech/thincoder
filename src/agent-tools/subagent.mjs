@@ -384,6 +384,12 @@ export const subagentTool = {
         entry.status = "running"
         entry.position = undefined
         entry.startedAt = Date.now()
+        // §19.5 D-M7b ①: async 标记事件——零字段 ⟦ev⟧async token（sync 不发）。
+        // 锚点 = 实际启动（与 [model] 同步——queued 入队不 paint，补位启动才发）；
+        // 先于 [model] 发出——区块创建即知 sub.async（routeSubToken 解析——
+        // ⏹ 门控与头标 async 的判定源）。父级直接 emit（depth-0 专属路径——
+        // 不经子代理文本 strip 白名单——与 ⟦ev⟧stopped/settled 同族）。
+        ctx.callbacks?.onToken?.(relayPrefix + "⟦ev⟧async\x1e")
         // Deferred [model] emit: the TUI block is created at ACTUAL start.
         ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
         // Turn-cap on background children NEVER pops the continue panel (D-A3):

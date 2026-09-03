@@ -209,6 +209,9 @@ describe("bridge — runAgent callbacks → session/update notifications", () =>
     cb.onToken("coder#3/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")     // async-child done (prefixed)
     cb.onToken("coder#3/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e") // suspension settle (prefixed)
     cb.onToken("coder#3/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e") // §19.5 cancel freeze (prefixed)
+    cb.onToken("coder#4/⟦ev⟧async\x1e")                        // §19.5 D-M7b async spawn marker (prefixed, zero-field)
+    cb.onToken("⟦ev⟧async\x1e")                                // bare async marker
+    cb.onToken("eng-coder#2/explore#1/⟦ev⟧async\x1e")          // nested async marker (multi-segment)
     cb.onToken("coder#1/[model]glm-5.3")                       // model metadata
     cb.onToken("eng-coder#2/explore#1/⟦ev⟧turn\x1e1\x1e100\x1ellm\x1e") // nested multi-segment event
     cb.onToken("eng-coder#2/explore#1/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e")
@@ -223,6 +226,7 @@ describe("bridge — runAgent callbacks → session/update notifications", () =>
     assert.ok(!texts.includes("coder#1/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e"), "prefixed turn event stripped")
     assert.ok(!texts.includes("consult#2/⟦ev⟧approval\x1e1\x1e40\x1eapproval\x1ewrite"), "approval event stripped")
     assert.ok(!texts.some((t) => t.includes("⟦ev⟧done") || t.includes("⟦ev⟧settled") || t.includes("⟦ev⟧stopped")), "done/settled/stopped events stripped")
+    assert.ok(!texts.some((t) => t.includes("⟦ev⟧async")), "async spawn marker stripped (bare + prefixed + nested — §19.5 D-M7b)")
     assert.ok(!texts.some((t) => t.includes("[model]")), "[model] metadata stripped (single + nested depth)")
     assert.ok(!texts.some((t) => t.includes("eng-coder#2/explore#1/⟦ev⟧")), "nested multi-segment events stripped (§19.5 round2 #6)")
     assert.ok(texts.includes("escalate#1/⟦ev⟧bogus\x1e1\x1e2\x1ex\x1e"), "non-canonical event name not treated as event (bridge only guards the real names)")

@@ -70,6 +70,17 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // 与冻结头 `[✓ …]` 格式统一（任务简报 UI 决策）。
     const icon = sub.approval ? "⏸" : sub.done ? "✓" : "▶"
     const elapsed = Math.floor(((sub.done ? (sub.doneAt ?? Date.now()) : Date.now()) - sub.started) / 1000)
+    // §19.5 D-M7b ②: sync/async 显式头标（B 形态——不靠"没标推断"）——async 由
+    // ⟦ev⟧async 标记置位；sync 区块（无标记）显式标 sync。仅真实 subagent 角色
+    // （escalate/consult/compress 等复用面板槽的条目无语义——非 spawn 角色豁免）；
+    // 冻结后保留（与 model 标识同生命周期——render-conversation frozenSubTaskLines
+    // 同款 modePart）。**颜色后置注入**（code review 🔵#4）：bracket 宽度预算用纯文
+    // 本（dim ANSI 内嵌会被 sliceByWidth 截断在 restore 之前 → 行尾残留 dim）——
+    // 截断后对完整存活的 mode word 单独套 dim + 恢复行色（自闭合——截断落在词内
+    // 则 replace 不命中 → 无 ANSI 泄漏，词以行色显示）。
+    const isSubRole = SUBAGENT_ROLES.includes(sub.role)
+    const modeWord = isSubRole ? (sub.async === true ? "async" : "sync") : null
+    const modePart = modeWord ? ` · ${modeWord}` : ""
     // 评审 #1 宽度预算：模型名先单独按显示宽度截断（[model] token 原样记录可长
     // 20-30+ 字符，不截断则括号前缀宽度不可预算、状态区被挤出终端右边距）；
     // 再量括号前缀实际显示宽度，状态区按 cols - bracketWidth - 2 截断——整行
@@ -79,7 +90,12 @@ export function renderSubagentPanel(state, cols, maxRows) {
       ? ` · ${sliceByWidth(sub.model, Math.max(8, Math.floor(cols / 3)))}`
       : ""
     const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
-    const bracket = sliceByWidth(`[${icon} ${sub.key}${modelPart} · ${elapsed}s${turnPart}]`, Math.max(1, cols - 2))
+    const bracketRaw = `[${icon} ${sub.key}${modePart}${modelPart} · ${elapsed}s${turnPart}]`
+    let bracket = sliceByWidth(bracketRaw, Math.max(1, cols - 2))
+    if (modeWord) {
+      const painted = bracket.replace(` · ${modeWord}`, ` · ${ansi.dim}${modeWord}${C.tool}`)
+      if (painted !== bracket) bracket = painted // 词被截断则保持纯文本（不泄漏 dim）
+    }
     const bracketWidth = stringWidth(bracket)
     let statePart
     if (sub.approval) statePart = `等待审批: ${sub.approval}`
@@ -91,16 +107,19 @@ export function renderSubagentPanel(state, cols, maxRows) {
       : ""
     let headText = `${bracket} ${sliceByWidth(statePart + argSummary, Math.max(0, cols - 2 - bracketWidth))}`
     const line = { color: C.tool, _foldToggle: foldKey }
-    // §19.5 D-M7 ⏹（仅 running 且真实 subagent 角色——done/awaitingDigest/压缩面板
-    // （role compress）/consult 无标记——点击只对池内 async 子代理有意义）：dim 停止
-    // 标记钉在折叠头右缘（宽度 = ⏹ 标记列）——_stopCol 供 mouse 列级命中（⏹ 列点击 =
-    // cancel，不触发折叠翻转——round1 #6）。整行 ≤ cols：内容先按 cols−2 截断。
-    if (!sub.done && SUBAGENT_ROLES.includes(sub.role)) {
-      const cut = sliceByWidth(headText, Math.max(0, cols - 2))
-      headText = cut + " ".repeat(Math.max(0, cols - 2 - stringWidth(cut)))
-      line.text = `${headText} ${ansi.dim}⏹${ansi.reset}`
+    // §19.5 D-M7 ⏹ + D-M7b ③ 门控：⏹ 只对 async 区块（running && SUBAGENT_ROLES &&
+    // sub.async——sync 区块无 ⏹——杜绝"可见但不可中止"误导——用户裁定 B 形态）。
+    // done/awaitingDigest/压缩面板（role compress）/consult 无标记（点击只对池内
+    // async 子代理有意义）：dim 停止标记钉在折叠头右缘**内收一列**（code review
+    // 🟡#1——glyph 在 cols−1、最右列留 margin——避免终端最末列点击不可靠/全角字形
+    // 顶格被裁；命中区 = col ≥ _stopCol = cols−1——含 glyph 与其右 margin，左邻
+    // padding 空格仍走折叠）。整行 ≤ cols：内容先按 cols−3 截断。
+    if (!sub.done && sub.async === true && SUBAGENT_ROLES.includes(sub.role)) {
+      const cut = sliceByWidth(headText, Math.max(0, cols - 3))
+      headText = cut + " ".repeat(Math.max(0, cols - 3 - stringWidth(cut)))
+      line.text = `${headText} ${ansi.dim}⏹${ansi.reset} `
       line._stopSub = sub.key
-      line._stopCol = cols
+      line._stopCol = Math.max(1, cols - 1)
     } else {
       line.text = headText
     }

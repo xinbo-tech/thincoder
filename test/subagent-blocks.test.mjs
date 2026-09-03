@@ -332,3 +332,30 @@ test("压缩面板: 无 live 面板时完成/失败回调安全 no-op", () => {
   assert.deepEqual(s.lines, [])
   assert.deepEqual(s.subTasks, {})
 })
+
+test("§19.5 D-M7b 数据层: ⟦ev⟧async 零字段标记 → sub.async = true（sync 无标记保持 undefined；嵌套剥除不路由；伪形态不设标记）", () => {
+  // async 标记（实际启动即发——先于 [model]）：事件只设标记，不进 blocks
+  const s = state()
+  assert.equal(routeSubToken(s, "eng-coder#2/⟦ev⟧async\x1e", noop), true)
+  const sub = s.subTasks["eng-coder#2"]
+  assert.equal(sub.async, true, "⟦ev⟧async 解析 → sub.async = true")
+  assert.equal(sub.blocks.length, 0, "事件 token 不进 blocks（与 ⟦ev⟧turn 同族——仅头部）")
+  // [model]/turn 等随后照常（标记与模型名并列渲染——互不干扰）
+  routeSubToken(s, "eng-coder#2/[model]glm-5.3", noop)
+  routeSubToken(s, "eng-coder#2/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e", noop)
+  assert.equal(sub.model, "glm-5.3")
+  assert.equal(sub.turn, 3)
+  // 嵌套 async（理论不产生——eng-coder 内部受限 spawn 同步强制）→ 剥除不路由
+  const s2 = state()
+  routeSubToken(s2, "eng-coder#5/explore#1/⟦ev⟧async\x1e", noop)
+  assert.equal(s2.subTasks["eng-coder#5"].async, undefined, "内层 async 标记剥除——不设外层 async")
+  // sync 块（无标记——sync spawn 不发）：async 保持 undefined → 渲染端显式标 sync
+  const s3 = state()
+  routeSubToken(s3, "explore#1/hello", noop)
+  assert.equal(s3.subTasks["explore#1"].async, undefined, "sync 块无 async 字段（undefined = sync——D-M7b B 形态）")
+  // 伪形态（async 后无 RS/串尾——正文误前缀）不设标记（严格匹配）
+  const s4 = state()
+  routeSubToken(s4, "coder#1/⟦ev⟧asyncronous text", noop)
+  assert.equal(s4.subTasks["coder#1"].async, undefined, "asyncronous 伪前缀不设标记")
+})
+

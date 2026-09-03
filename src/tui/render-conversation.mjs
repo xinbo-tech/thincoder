@@ -16,6 +16,7 @@ import {
   renderMathAndMarkdown, foldCapRows, renderFoldedHead, foldTailLines,
 } from "./fold-block.mjs"
 import { styleSubLabelRow } from "./subagent-panel.mjs"
+import { SUBAGENT_ROLES } from "./subagent-blocks.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 
 
@@ -263,12 +264,17 @@ function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, 
 function frozenSubTaskLines(state, sub, cols, maxRows) {
   const foldKey = `sub-${sub.key}`
   const elapsed = Math.floor(((sub.doneAt ?? Date.now()) - sub.started) / 1000)
+  // §19.5 D-M7b ②: 冻结头保留 sync/async 标识（done 头含历史语义——与 model 标识
+  // 同生命周期）；仅真实 subagent 角色（compress 冻结等无语义）。整行 dim——
+  // 无需 ANSI 注入（running 面板头则套 dim + 恢复行色——subagent-panel.mjs）。
+  const isSubRole = SUBAGENT_ROLES.includes(sub.role)
+  const modePart = isSubRole ? ` · ${sub.async === true ? "async" : "sync"}` : ""
   const modelPart = sub.model ? ` · ${sub.model}` : ""
   const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
   const errPart = sub.lastError ? ` — ${sub.lastError}` : ""
   const icon = sub.approval ? "⏸" : "✓"
   const verb = sub.stopped ? "stopped" : "done" // §19.5: cancel 冻结标题 "stopped"
-  const header = `[${icon} ${sub.key}${modelPart} · ${verb} ${elapsed}s${turnPart}${errPart}]`
+  const header = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}${errPart}]`
   const out = []
   if (isExpanded(state, foldKey)) {
     // Expanded: shared component renders blank + ▼ control + full timeline,
