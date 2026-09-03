@@ -20,18 +20,55 @@ import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs"
 import { ensureSessionTitle } from "../generate-title.mjs"
+import { logEvent, errText } from "../log.mjs"
 
 /** Exit-flush bound for the async end-of-run distillation (SEND-STALL-DISTILL §2.5):
  *  wait at most this long for the in-flight distill before the final session save —
  *  never let shutdown hang on the background summary call. */
 const DISTILL_FLUSH_TIMEOUT_MS = 5000
 
-/** Execute one agent conversation turn (triggered by submit or queue).
- *  Extracted from index.mjs: agent loop + callback construction + error handling + queue processing.
- *  ctx: { agent, state, pushLine, pushLabel, render, scheduleRender,
- *         ensureAssistantLabel, askPermission, askBatchPermission, askQuestion,
- *         handleSlash, summarize } */
-export async function runAgentTurn(ctx, text, { autoTurn = false, skipSession = false } = {}) {
+/** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
+ *  poolN = _asyncSubagents map 大小（queued 条目同样在 map 内——2026-09-03 code
+ *  review #2：不再 +queue.length 双计；与 vscode suspension poolCounts 口径一致）。 */
+function poolCounts(agent) {
+  const map = agent?._asyncSubagents
+  const running = map ? [...map.values()].filter((e) => e.status === "running").length : 0
+  return {
+    poolN: map?.size ?? 0,
+    pendingN: agent?._pendingAsyncResults?.length ?? 0,
+    runningN: running,
+  }
+}
+
+/**
+ * LOGGING（docs/design/LOGGING.md）包装：回合骨架事件（turn:start/turn:end——kind
+ * user/auto；result ok/stopped/error）。内层经 _logOutcome 载具回传终止原因（中止/
+ * turn-cap 拒绝/错误 vs 正常完成）——嵌套回合（队列递归/挂起会话内 digest 轮）各自
+ * 新开载具（每次包装调用独立），互不串扰。err:internal = 逃出内层的未分类异常。
+ */
+export async function runAgentTurn(ctx, text, opts = {}) {
+  const kind = opts?.autoTurn ? "auto" : "user"
+  const runOpts = { ...(opts ?? {}) }
+  delete runOpts._logOutcome
+  const carrier = {}
+  runOpts._logOutcome = carrier
+  const t0 = Date.now()
+  logEvent("turn:start", { kind })
+  try {
+    const result = await runAgentTurnInner(ctx, text, runOpts)
+    return result
+  } catch (e) {
+    carrier.result = "error"
+    logEvent("err:internal", { msg: errText(e, 200), where: "runAgentTurn" })
+    throw e
+  } finally {
+    logEvent("turn:end", { kind, ms: Date.now() - t0, result: carrier.result ?? "ok" })
+  }
+}
+
+/** runAgentTurn 本体（LOGGING 包装之外——见上方包装器）。 */
+async function runAgentTurnInner(ctx, text, opts) {
+  const { autoTurn = false, skipSession = false } = opts ?? {}
   const { agent, state, pushLine, pushLabel, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, handleSlash } = ctx
   // 可注入覆盖（测试用）；默认走真实实现
   const runAgentImpl = ctx.runAgent ?? runAgent
@@ -112,6 +149,7 @@ export async function runAgentTurn(ctx, text, { autoTurn = false, skipSession = 
             continue
           }
           pushLine("[stopped]", C.warn)
+          if (opts?._logOutcome) opts._logOutcome.result = "stopped"
           break
         }
         if (error instanceof ContinueError) {
@@ -125,6 +163,7 @@ export async function runAgentTurn(ctx, text, { autoTurn = false, skipSession = 
               continue
             }
             pushLine(`[auto-turn stopped at ${error.turn} turns — partial digest; finished reports stay in history]`, C.warn)
+            if (opts?._logOutcome) opts._logOutcome.result = "stopped"
             break
           }
           pushLabel(`❯ Continue`, ansi.bold + C.warn)
@@ -142,6 +181,7 @@ export async function runAgentTurn(ctx, text, { autoTurn = false, skipSession = 
           state.permission = null
           if (!willContinue) {
             pushLine("[continue cancelled]", C.warn)
+            if (opts?._logOutcome) opts._logOutcome.result = "stopped"
             break
           }
           pushLine("[continuing…]", C.tool)
@@ -150,6 +190,7 @@ export async function runAgentTurn(ctx, text, { autoTurn = false, skipSession = 
           continue
         }
         pushLine(`[error] ${error.message}`, C.error)
+        if (opts?._logOutcome) opts._logOutcome.result = "error"
         break
       }
     }
@@ -333,7 +374,12 @@ async function digestTurn(ctx) {
   const digestCtx = manual
     ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null }
     : ctx
+  // LOGGING：digest:* 事件（D-S9 消化轮边界——LOGGING.md F-L4 挂起态覆盖）
+  const d0 = Date.now()
+  const pend0 = agent?._pendingAsyncResults?.length ?? 0
+  logEvent("digest:start", { pendingN: pend0 })
   await runAgentTurn(digestCtx, "", { autoTurn: true, skipSession: true })
+  logEvent("digest:end", { pendingN: agent?._pendingAsyncResults?.length ?? 0, ms: Date.now() - d0 })
 }
 
 /**
@@ -362,6 +408,9 @@ async function suspensionSession(ctx) {
   }, 1000)
   state.status = backgroundStatusText(agent)
   render()
+  // LOGGING：susp:* 事件（挂起态进入/退出——F-L4；挂起期输入事件 v1 不记——refinement #1）
+  const s0 = Date.now()
+  logEvent("susp:enter", poolCounts(agent))
   try {
     while (!state._suspAborted && !agent._sessionAbort.signal.aborted) {
       sweepSettledToPending(agent)
@@ -394,6 +443,8 @@ async function suspensionSession(ctx) {
   } finally {
     clearInterval(suspTick)
     const aborted = state._suspAborted || agent._sessionAbort.signal.aborted
+    if (aborted && (agent._asyncSubagents?.size ?? 0) > 0) logEvent("ev:stopped", { poolN: agent._asyncSubagents?.size ?? 0, where: "suspension-abort" })
+    logEvent("susp:exit", { ...poolCounts(agent), ms: Date.now() - s0, reason: aborted ? "aborted" : "idle" })
     agent._suspended = false
     agent._sessionSignal = null
     agent._sessionAbort = null

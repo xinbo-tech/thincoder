@@ -1,6 +1,7 @@
 /**
  * agent/dispatch.mjs — two-phase tool call execution
  */
+import { logEvent, errText, headText } from "../log.mjs"
 import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../tui/cmd-undo.mjs"
@@ -236,6 +237,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // 捕获分离（父恢复原始后子的拦截期间父捕获停止、子恢复后父继续）——正确。
     // 声明在 try 之外：catch 块（异常路径）也要访问（报错前的探查输出回显）。
     const capturedConsole = []
+    // LOGGING（LOGGING.md）：tool:* 事件——仅真实执行（pre-gate 拦截项在下方早退分支不入事件）。
+    // 参数值永不落盘（NF-L3——工具事件不记 args）；child=子代理 id（agent._logId，spawn 时 stamp）。
+    const toolT0 = Date.now()
+    const toolName = item.toolCall.name
+    logEvent("tool:call", { tool: toolName, child: agent?._logId })
     try {
       // Snapshot for undo before side-effect tools (setupOutputPanel already fired in Phase 1)
       if (!item.tool?.readonly && item.args) {
@@ -247,6 +253,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         const routed = await callbacks.toolRouter(item.toolCall.name, item.args)
         if (routed?.handled) {
           callbacks.onToolResult?.(item.toolCall.name, routed.result, item.toolCall.id)
+          logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(routed.result, 200), child: agent?._logId })
           return { ...item, result: routed.result, ok: true }
         }
       }
@@ -283,6 +290,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       callbacks.onToolResult?.(item.toolCall.name, resultWithConsole, item.toolCall.id)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)
       runHooks("PostToolUse", { agent, toolName: item.toolCall.name, toolArgs: item.args, result: raw }).catch(() => {})
+      logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(resultWithConsole, 200), child: agent?._logId })
       return { ...item, result: resultWithConsole, ok: true }
     } catch (error) {
       // Persist to ~/.thincoder/tool-errors/ for post-mortem; only pass message to the model (stack traces confuse LLMs and may leak paths)
@@ -292,6 +300,9 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       // asked to stop — worst case with subagents, where the child runs its
       // whole turn budget and the interrupt appears to do nothing.
       if (signal?.aborted) throw error
+      // LOGGING（2026-09-03 code review #4）：中止先于事件——用户停不落 tool:error
+      //（vscode execute-tools parity；阻塞子代理 child:error 同款抑制）
+      logEvent("tool:error", { tool: toolName, ms: Date.now() - toolT0, err: errText(error, 200), child: agent?._logId })
       runHooks("PostToolUseFailure", { agent, toolName: item.toolCall.name, toolArgs: item.args, error }).catch(() => {})
       // Build contextual error: tool name + key args so the model can reason about what went wrong
       const ctxParts = []

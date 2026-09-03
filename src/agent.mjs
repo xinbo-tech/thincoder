@@ -15,6 +15,7 @@ import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
 import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
+import { logEvent } from "./log.mjs"
 import {
   escapeXml, repairHistory, listWorkDir, ensureAutoReminder,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
@@ -267,6 +268,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         signal,
         streamRules: agent.config.agent?.streamRules ?? [],
         firedPatterns: streamRuleFired,
+        // LOGGING（LOGGING.md）：llm:* 事件的语义上下文（stage=turn 主循环回合——含
+        // digest 消化轮 auto=true；child=子代理 id（spawn 时 stamp 于 child._logId））
+        logCtx: { stage: "turn", turn: turn + 1, auto: autoTurn, child: agent._logId },
       })
     } catch (e) {
       // User interrupt (Ctrl+I): controller.abort({ interrupt: true, message }).
@@ -451,6 +455,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // - anything else: inject the SETTLED entries only; running/queued stay in the
     //   pool for the suspension session (D-S1 — no allSettled turn-end wait).
     if (signal?.aborted && !signal?.reason?.interrupt) {
+      if (agent._asyncSubagents?.size > 0) {
+        logEvent("ev:stopped", { poolN: agent._asyncSubagents?.size ?? 0, where: "turn-end-abort" })
+      }
       agent._asyncSubagents?.clear()
       agent._asyncQueue = []
       agent._asyncCheckLastN = 0
