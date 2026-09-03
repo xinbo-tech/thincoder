@@ -15,6 +15,17 @@
  * 装配真实实现，测试注入 mock——CLI agent-turn ctx.runAgent 同款手法）。
  */
 import { injectAsyncResult } from "../agent-tools/subagent.mjs"
+import { logEvent } from "../log.mjs"
+
+/** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity） */
+function poolCounts(history) {
+  const map = history?._asyncSubagents
+  return {
+    poolN: map?.size ?? 0,
+    pendingN: history?._pendingAsyncResults?.length ?? 0,
+    runningN: map ? [...map.values()].filter((e) => e.status === "running").length : 0,
+  }
+}
 
 /** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理，或已 settle 未注入结果
  *  （_pendingAsyncResults 非空 = D-S3 "未注入"）。回合尾与每次轮末都用它评估退出。 */
@@ -115,6 +126,10 @@ export async function suspensionSession(panel, entry) {
   panel._turnControllers = []
   history._suspended = true
   postSuspension(panel, susp)
+  // LOGGING（LOGGING.md——CLI agent-turn.mjs parity）：susp:*（挂起态进入/退出）+
+  // digest:*（消化轮边界）。挂起期输入事件 v1 不记（refinement #1）。
+  const s0 = Date.now()
+  logEvent("susp:enter", poolCounts(history))
   try {
     while (!susp.aborted && !susp.abort.signal.aborted) {
       sweepSettledToPending(history)
@@ -132,7 +147,10 @@ export async function suspensionSession(panel, entry) {
       }
       // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）
       if ((history._pendingAsyncResults?.length ?? 0) > 0) {
+        const d0 = Date.now()
+        logEvent("digest:start", { pendingN: history._pendingAsyncResults.length })
         await entry.runTurn({ autoTurn: true, text: "" })
+        logEvent("digest:end", { pendingN: history._pendingAsyncResults?.length ?? 0, ms: Date.now() - d0 })
         postSuspension(panel, susp)
         continue
       }
@@ -143,6 +161,8 @@ export async function suspensionSession(panel, entry) {
     }
   } finally {
     const aborted = susp.aborted || susp.abort.signal.aborted
+    if (aborted && (history?._asyncSubagents?.size ?? 0) > 0) logEvent("ev:stopped", { poolN: history?._asyncSubagents?.size ?? 0, where: "suspension-abort" })
+    logEvent("susp:exit", { ...poolCounts(history), ms: Date.now() - s0, reason: aborted ? "aborted" : "idle" })
     history._suspended = false
     if (aborted) {
       // §15 abort 语义：清池不注入（用户显式停——不注入陈旧错误）。

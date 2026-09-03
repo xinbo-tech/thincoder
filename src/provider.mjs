@@ -7,6 +7,7 @@ import { specForModel } from "./specs.mjs"
 import { proxyFetch } from "./proxy.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import { escapeMessages } from "./escape.mjs"
+import { logEvent, errText, classifyErr, headText } from "./log.mjs"
 export { stripLocalMessageFields } from "./escape.mjs"
 import {
   RETRYABLE_STATUS, MAX_RETRIES, MAX_CONTINUATIONS,
@@ -126,7 +127,40 @@ function getTransport(provider) {
 }
 
 /** Send a streaming chat completion request with automatic continuation on truncation */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, parallelToolCalls }) {
+export async function chat(provider, opts = {}) {
+  // LOGGING（docs/design/LOGGING.md——CLI core.mjs 同构）：llm:* 事件统一落点——所有
+  // LLM 调用（主回合/消化轮/compact/distill/advisor/子代理）都经本函数——单点全覆盖。
+  // 续写递归（下方 chatImpl 内）各为独立请求（嵌套 llm:start/done 对）；重试内部不可见。
+  const logCtx = opts.logCtx ?? {}
+  const t0 = Date.now()
+  const pname = provider?.name ?? provider?.model ?? "unknown"
+  logEvent("llm:start", { provider: pname, model: provider?.model ?? "", stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child, role: logCtx.role })
+  try {
+    const result = await chatImpl(provider, opts)
+    logEvent("llm:done", {
+      provider: pname, model: provider?.model ?? "",
+      ms: Date.now() - t0,
+      stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child, role: logCtx.role,
+      head: headText(result?.content ?? "", 300, { paragraph: true }),
+      len: String(result?.content ?? "").length,
+      finish: result?.finishReason ?? null,
+      tools: Array.isArray(result?.toolCalls) ? result.toolCalls.length : 0,
+    })
+    return result
+  } catch (e) {
+    logEvent("llm:error", {
+      provider: pname, model: provider?.model ?? "",
+      ms: Date.now() - t0,
+      stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child, role: logCtx.role,
+      err: errText(e, 200),
+      kind: classifyErr(e, opts.signal),
+    })
+    throw e
+  }
+}
+
+/** chat 本体（LOGGING llm:* 包装之外——见上方 chat）。 */
+async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, parallelToolCalls }) {
   const spec = specForModel(provider.model)
   const transport = getTransport(provider)
   messages = stripImagesForTextModel(messages, spec)

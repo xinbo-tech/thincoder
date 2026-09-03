@@ -262,13 +262,18 @@ export async function compactHistory(history, systemPrompt, provider, explicitTh
   const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
     messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
     signal: signal ?? null,
+    // LOGGING：vscode agent 对象 per-run 重建、从不 stamp _logId——只带 stage 归属
+    //（2026-09-03 code review #7：去掉死引用 child: agent?._logId——CLI 专属字段）
+    logCtx: { stage: "compress" },
   })
   const summary = resp.content || ""
+  const now = Date.now() // SESSION.md §9 D-S1 (CLI parity): compaction injections carry the compaction moment
 
   const result = [
     ...history.slice(0, headEnd), // head (empty by default — KEEP_HEAD=0, CLI parity)
     {
       role: "user",
+      ts: now,
       content:
         "[Context was automatically compacted. Below is a summary of earlier work. " +
         "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
@@ -277,6 +282,7 @@ export async function compactHistory(history, systemPrompt, provider, explicitTh
     },
     {
       role: "assistant",
+      ts: now,
       content: "Understood. I'll continue from these notes, re-verifying anything transient.",
     },
     ...recentMessages,
@@ -326,10 +332,11 @@ export function truncateFallback(history, provider) {
   tailStart = tailStartByBudget(history, provider, tailStart)
   
   if (tailStart <= headEnd) return null
+  const now = Date.now() // SESSION.md §9 D-S1 (CLI parity): fallback injections carry ts too
   return [
     ...history.slice(0, headEnd),
-    { role: "user", content: FALLBACK_NOTE },
-    { role: "assistant", content: "Understood. I'll continue from these notes, re-verifying anything transient." },
+    { role: "user", content: FALLBACK_NOTE, ts: now },
+    { role: "assistant", content: "Understood. I'll continue from these notes, re-verifying anything transient.", ts: now },
     ...history.slice(tailStart),
   ]
 }
@@ -459,6 +466,7 @@ async function distillExplorations(history, runStartLen, provider, signal) {
     const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
       messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
       signal: signal ?? null,
+      logCtx: { stage: "distill" }, // LOGGING（LOGGING.md——CLI context.mjs parity）：A/C 候选区分
     })
     summary = resp?.content
   } catch {

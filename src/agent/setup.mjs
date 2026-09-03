@@ -11,7 +11,7 @@ import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 import {
   taskTool, recentChangesTool, subagentTool,
   planTool, goalTool, skillTool, verifyTool, timerTool,
-  advisorTool, engTool, consultStartTool, consultCheckTool, consultStopTool,
+  advisorTool, engTool, readHistoryTool, consultStartTool, consultCheckTool, consultStopTool,
 } from "../agent-tools.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
@@ -88,7 +88,7 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false, autoTurn = false } = opts
 
   const agentTools = depth === 0
-    ? [taskTool, recentChangesTool,
+    ? [taskTool, recentChangesTool, readHistoryTool, // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session" would mix its throwaway lines with the parent record (semantic confusion); readonly → planMode pass / no permission ask (T-S9)
       // §19 (2026-09-03): the subagent family is ONE resident tool — subagent_check and
       // the standalone escalate tool retired (check/status/escalate are action params).
       // The escalate action errors when the pool is empty (existing error semantics);
@@ -289,6 +289,10 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   // keep those aliases live so the ported modules work unchanged.
   agent.cwd = cwd
   agent.history = history
+  // read_history (SESSION.md §9 D-S2): the tool reads the HUMAN line via agent._fullHistory —
+  // attach at depth 0 only (subagent throwaway lines are never reachable, the tool is not
+  // registered for them anyway).
+  if (depth === 0) agent._fullHistory = fullHistory
 
   // Live history reference for the parent: same array the loop appends to — a caller
   // that catches ContinueError can hand it back via opts.history to resume the child

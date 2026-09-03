@@ -34,6 +34,7 @@
  * changed) — shared by the eng-coder spawn merge and the escalate engine.
  */
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
+import { logEvent, errText } from "../log.mjs"
 
 /**
  * §18 D-E3 eng-coder internal-spawn mechanical gate (AGENT-LOOP.md §18 D-E2 round5 #2
@@ -170,9 +171,13 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
   // parity — the CLI stringifies the same shapes).
   if (runningCount < ASYNC_SUBAGENT_LIMIT) {
     entry.start()
+    // LOGGING（LOGGING.md——CLI parity）：child:spawn async（立即启动）
+    logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: "running" })
     return JSON.stringify({ id, role, status: "running" })
   }
   entry.position = [...parent._asyncSubagents.values()].filter((x) => x.status === "queued").length
+  // LOGGING（LOGGING.md——CLI parity）：child:spawn async（排队——启动由补位触发）
+  logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: "queued" })
   return JSON.stringify({ id, role, status: "queued", position: entry.position })
 }
 
@@ -195,6 +200,21 @@ function settleAsyncEntry(parent, entry, report, error, notifySettle) {
   entry.report = report
   entry.error = error
   entry.done = true
+  // LOGGING（LOGGING.md——CLI parity）：settle 分流事件——child:done/child:error（结果）+
+  // ev:cancelled/ev:settled（settle 回调分流；正常回合内 settle 由 child:done 覆盖——
+  // ev:stopped 见中止清池点）
+  const childLogId = `${entry.role}#${entry.id}`
+  const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
+  // 中止守卫（2026-09-03 code review #6）：Ctrl+C/会话中止时子代理以 error 形态 settle——
+  // 不落 child:error/done/ev:settled（ev:stopped 已在中止清池点表达；同端阻塞路径同款
+  // 抑制——"用户停——不落错误事件"）。定向 cancel 走 ev:cancelled。
+  if (entry.cancelled) {
+    logEvent("ev:cancelled", { id: childLogId })
+  } else if (!entry.signal?.aborted && !entry.controller?.signal?.aborted) {
+    if (error != null) logEvent("child:error", { role: entry.role, id: childLogId, ms: childMs, err: errText(error, 200) })
+    else logEvent("child:done", { role: entry.role, id: childLogId, ms: childMs, kind: String(report ?? "").includes("turn cap reached") ? "partial" : "ok" })
+    if (parent.history?._suspended === true) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
+  }
   // §19.5 D-M6 cancelled settle（round1 #1 + round2 #2 定稿）：entry.cancelled（cancel
   // 动作 / UI ⏹）→ **不入 _pendingAsyncResults、不参与 collectSettledAsync 直注入**
   // （无错误报告——陈旧结果零注入）——出池清理同 Ctrl+C 全停但只清该条目 + 停止冻结

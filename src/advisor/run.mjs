@@ -203,6 +203,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       signal: signal ?? null,
       onToken: onText,
       onReasoning: onThink,
+      logCtx: { stage: "advisor" },
     })
 
     // No tool calls — this is the final review text

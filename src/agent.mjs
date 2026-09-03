@@ -16,6 +16,7 @@ import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { setupAgentRun } from "./agent/setup.mjs"
 import { AUTO_REMINDER } from "./agent/setup-reminders.mjs"
+import { logEvent } from "./log.mjs"
 
 /** Engineering mode OFF reminder (CLI parity — cmd-eng / injector transitions). */
 export const ENG_OFF_REMINDER =
@@ -231,6 +232,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       onReasoning: callbacks.onReasoning,
       onWait: callbacks.onWait,
       signal,
+      // LOGGING（LOGGING.md——CLI parity）：llm:* 语义上下文（stage=turn 主循环回合——
+      // digest autoTurn=true；role/depth = 子代理上下文归属——vscode agent 对象 per-run 重建）
+      logCtx: { stage: "turn", turn: turn + 1, auto: autoTurn, role, depth },
     })
     traceStop(`turn ${turn}: LLM stream ended`)
 
@@ -475,6 +479,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     const asyncMap = agent._asyncSubagents
     if (asyncMap && asyncMap.size > 0) {
       if (signal?.aborted && !signal?.reason?.interrupt) {
+        logEvent("ev:stopped", { poolN: asyncMap.size, where: "turn-end-abort" })
         asyncMap.clear()
       } else if (!(thrownError instanceof ContinueError)) {
         const { collectSettledAsync } = await import("./agent-tools/subagent.mjs")

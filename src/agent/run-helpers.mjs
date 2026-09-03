@@ -154,6 +154,11 @@ export function offloadToolResult(cwd, text) {
  * Mirrors thincoder/src/context.mjs:pushReal — the two lines are written independently at the source.
  */
 export function pushReal(history, fullHistory, msg) {
+  // SESSION.md §9 D-S1 (CLI parity): real messages carry an epoch-ms ts stamped HERE at push
+  // time — one point covers every real message. Pre-existing ts is preserved; restored old
+  // messages keep no ts rather than getting a misleading backdate (D-S3). ts is LOCAL-ONLY:
+  // the send layer strips it before any provider request (T-S3).
+  if (msg && msg.ts === undefined) msg.ts = Date.now()
   fullHistory.push(msg)
   history.push(msg)
 }

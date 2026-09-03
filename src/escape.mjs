@@ -133,13 +133,14 @@ export function escapeMessageContent(message) {
   return changed ? next : message
 }
 
-/** IKBGX4：剥离仅本地使用的整消息标记字段（transient 等）——发送给 provider 前移除。
- * 严格 OpenAI 兼容服务端（opencode/LiteLLM 等）会拒绝消息级未知 key
- * （"Extra inputs are not permitted, field: 'messages[i].transient'"）。 */
+/** IKBGX4 + SESSION.md §9 D-S1（CLI parity）：剥离仅本地使用的整消息标记字段（transient/ts）——
+ * 发送给 provider 前移除。严格 OpenAI 兼容服务端（opencode/LiteLLM 等）会拒绝消息级未知 key
+ * （"Extra inputs are not permitted, field: 'messages[i].transient'"）；ts 同理（消息时间戳是
+ * 本地取证字段，不进任何 provider 请求——T-S3）。copy-on-write：历史里的原对象不动。 */
 export function stripLocalMessageFields(messages) {
   return messages.map((m) => {
-    if (m && typeof m === "object" && "transient" in m) {
-      const { transient, ...rest } = m
+    if (m && typeof m === "object" && ("transient" in m || "ts" in m)) {
+      const { transient, ts, ...rest } = m
       return rest
     }
     return m

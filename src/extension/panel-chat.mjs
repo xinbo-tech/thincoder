@@ -31,6 +31,7 @@ import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
 import { suspensionSession, poolLive } from "./suspension.mjs"
+import { logEvent, errText } from "../log.mjs"
 
 /**
  * Build the `toolPanel` postMessage payload (pure — directly testable without a
@@ -63,14 +64,34 @@ function newTurnController(panel) {
 }
 
 /**
- * Run one chat turn: resolve provider → build callbacks → runAgent →
- * persist both lines on complete. `panel` is the ChatPanel instance.
- * §17 options: autoTurn (digest — system-driven, no user input), susp (active
- * suspension session context: keeps the in-memory lines, promotes the session
- * controller, never re-enters the driver), skipSession (the caller — the
- * suspension driver — already owns the D-S9 loop).
+ * LOGGING（docs/design/LOGGING.md——CLI agent-turn.mjs parity）包装：回合骨架事件
+ * （turn:start/turn:end——kind user/auto；result ok/stopped/error）。turn:start 在
+ * provider 解析通过后、执行循环前发射（面板缺失/未配置 provider 等早退路径不产生伪
+ * 回合事件）；内层经 opts._logOutcome 载具回传终止原因（Stop/ContinueError 拒绝/错误
+ * vs 正常完成）——嵌套回合（digest/挂起会话内回合）各自独立载具。err:internal = 逃出
+ * 内层的未分类异常。
  */
-export async function runPanelChat(panel, { text, modelOverride, reasoning, providerName, images, autoTurn = false, susp = null, skipSession = false } = {}) {
+export async function runPanelChat(panel, opts = {}) {
+  const kind = opts?.autoTurn ? "auto" : "user"
+  const runOpts = { ...(opts ?? {}) }
+  delete runOpts._logOutcome
+  const marker = { started: false }
+  runOpts._logOutcome = marker
+  const t0 = Date.now()
+  try {
+    return await runPanelChatImpl(panel, runOpts)
+  } catch (e) {
+    if (marker.started) marker.result = marker.result ?? "error"
+    logEvent("err:internal", { msg: errText(e, 200), where: "runPanelChat" })
+    throw e
+  } finally {
+    if (marker.started) logEvent("turn:end", { kind, ms: Date.now() - t0, result: marker.result ?? "ok" })
+  }
+}
+
+/** runPanelChat 本体（LOGGING 包装之外——见上方 runPanelChat 包装器）。 */
+async function runPanelChatImpl(panel, opts = {}) {
+  let { text, modelOverride, reasoning, providerName, images, autoTurn = false, susp = null, skipSession = false } = opts
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
 
   // 交付评审 🔴#1（2026-08-28）：turn 启动的守卫标志与槽绑定必须发生在任何 await 之前——
@@ -351,6 +372,10 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   // also folds in the Ctrl+I interrupt resume (same rebuild-controller semantics).
   // (The entry try at the top of this function owns the guard-flag finally; exceptions
   // from the loop propagate through it and up to the message handler.)
+  // LOGGING：turn:start（执行循环前——早退路径无回合事件）
+  const tLog = opts._logOutcome ?? {}
+  tLog.started = true
+  logEvent("turn:start", { kind: autoTurn ? "auto" : "user" })
   for (let resume = false; ; resume = true) {
     try {
       traceStop("runAgent: turn starting (no pending click)", panel._stopClickTs)
@@ -376,6 +401,7 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
             newTurnController(panel)
             continue
           }
+          tLog.result = "stopped"
           break
         }
         // Turn-cap exhaustion: offer to continue from the current context, NOT error
@@ -392,6 +418,7 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
           continue
         }
         panel._panel?.webview.postMessage({ type: "aborted" })
+        tLog.result = "stopped"
         break
       }
       // Persist the interrupted/errored turn: the user message and any partial output
@@ -406,6 +433,7 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
       }
       if (e.name === "AbortError") {
         panel._panel?.webview.postMessage({ type: "aborted" })
+        tLog.result = "stopped"
       } else {
         console.error("[chat-panel] runAgent failed:", e.message, "provider:", p.baseURL, "model:", p.model)
         // Friendly surface: first line only, URLs stripped (provider errors leak
@@ -414,6 +442,7 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
         const text = rawMsg.split("\n")[0].replace(/https?:\/\/[^\s,)"]+/g, "[endpoint]")
         const techInfo = [rawMsg, `→ Provider: ${p.baseURL}`, `→ Model: ${p.model}`].join("\n")
         panel._panel?.webview.postMessage({ type: "error", text, techInfo })
+        tLog.result = "error"
       }
       break
     }

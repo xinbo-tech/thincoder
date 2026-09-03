@@ -25,6 +25,7 @@
  * onAgentTurn turn sync), nested sub-attribution forwarding (D-M8 webview 子标)。
  */
 import { validateDesignToken } from "./advisor.mjs"
+import { logEvent, errText } from "../log.mjs"
 import {
   auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent,
   subagentCheck, subagentStatus, cancelSubagentAction,
@@ -437,7 +438,23 @@ export const subagentTool = {
 
     if (!asyncFlag) {
       ctx.callbacks?.onSubagent?.({ id: subId, role, status: "started", startedAt: Date.now(), model: provider.model ?? null })
-      return await runChild()
+      // LOGGING（LOGGING.md——CLI parity）：child:* 阻塞 spawn——runChild 前后；
+      // partial = turn-cap 拒绝（TURN_CAP_MARK 检出）；cancel 非阻塞路径不适用。
+      const childLogId = `${role}#${subId}`
+      const cT0 = Date.now()
+      logEvent("child:spawn", { role, id: childLogId, kind: "blocking" })
+      try {
+        const report = await runChild()
+        const r = String(report)
+        const ms = Date.now() - cT0
+        if (r.startsWith(`Subagent (${role}) error:`)) logEvent("child:error", { role, id: childLogId, ms, err: errText(r.split("\n")[0].replace(/^Subagent \([^)]*\) error: /, ""), 200) })
+        else logEvent("child:done", { role, id: childLogId, ms, kind: r.includes("turn cap reached") ? "partial" : "ok" })
+        return report
+      } catch (e) {
+        if (ctx.signal?.aborted || e?.name === "AbortError") throw e // 用户停——不落错误事件
+        logEvent("child:error", { role, id: childLogId, ms: Date.now() - cT0, err: errText(e, 200) })
+        throw e
+      }
     }
 
     // Async branch (moved to subagent-async.mjs spawnAsyncSubagent — 2026-09-03 split):

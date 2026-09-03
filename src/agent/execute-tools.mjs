@@ -11,6 +11,7 @@ import {
   offloadToolResult, pushReal, runWithLimit,
 } from "./run-helpers.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
+import { logEvent, errText, headText } from "../log.mjs"
 
 /**
  * 前置门禁（planMode / 工程设计闸）——单点判定，批扫描与逐项执行共用（§16 D-B1：
@@ -209,9 +210,14 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       callbacks.onToolCall?.(toolName, args, tc.id) // subagents forward to the activity stream (depth guard removed)
 
       let result
+      let toolErrored = false // LOGGING：catch 记 tool:error 后不再落 tool:done（CLI dispatch parity——单事件）
       if (!tool) {
         result = `Error: unknown tool "${toolName}"`
       } else {
+        // LOGGING（LOGGING.md——CLI dispatch parity）：tool:* 事件——参数值永不落盘；
+        // 前置门禁（planMode/权限拒绝/未知工具）不入事件（与 CLI 语义一致）
+        const toolT0 = Date.now()
+        logEvent("tool:call", { tool: toolName })
         try {
           const raw = await tool.execute(args, {
             cwd, agent, callbacks, signal, depth,
@@ -231,6 +237,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             try {
               const parsed = JSON.parse(result)
               if (parsed.images?.length) {
+                logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(parsed.text, 200) })
                 return { tool_call_id: tc.id, toolName, content: parsed.text, multimodal: { text: parsed.text, images: parsed.images } }
               }
             } catch { /* fall through */ }
@@ -240,8 +247,11 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           // the AbortError keeps the loop running after the user asked to stop (CLI
           // dispatch.mjs parity: rethrow when aborted).
           if (e?.name === "AbortError" || signal?.aborted) throw e
+          toolErrored = true
+          logEvent("tool:error", { tool: toolName, ms: Date.now() - toolT0, err: errText(e, 200) })
           result = `Error: ${e.message}`
         }
+        if (!toolErrored) logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(result, 200) })
       }
 
       // Truncate large results: save to disk so agent can read with read tool

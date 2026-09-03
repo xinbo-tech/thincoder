@@ -49,6 +49,7 @@ Tool routing — use the dedicated tool, not bash:
 | `code_search` | natural-language code search | grep gymnastics |
 | `doc_search` | search project docs (design/AGENTS) | `findstr` in docs |
 | `read_image` | view an image (vision models) | external viewers |
+| `read_pdf` | extract text from PDF files (pages param; scanned pages → multimodal channel) | `pdftotext`, pdf libraries |
 | `execute` | run JS inline / scriptFile (+ nodeArgs for `node --test`/`--check`) | `bash node -e`, `node <script>` via bash |
 | `bash` | npm/vsce/CLI subprocess, servers, TTY programs, one-off pipelines no tool expresses | always; see allowed list above |
 | `git` | ALL git ops (status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote/clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv) | `git` in bash |

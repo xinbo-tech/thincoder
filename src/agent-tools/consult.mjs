@@ -11,6 +11,7 @@
  */
 import { buildProvider } from "../extension/presets.mjs"
 import { specForModel } from "../specs.mjs"
+import { logEvent, errText } from "../log.mjs"
 
 /** Read-only tool injected into consultation children (via runAgent opts.extraTools).
  *  Lets the consultant pull the main agent's conversation history on demand —
@@ -166,6 +167,20 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // label (subagent visibility — same channel the subagent tool uses).
     const panel = (chunk) => ctx.callbacks?.onToolPanel?.(`sub:consult ${label} #${id}`, chunk)
     const sink = {}
+    // LOGGING（LOGGING.md——CLI consult parity）：child:*（consult——spawn 于 provider
+    // 解析通过后；settle 分流 = 下方 consSettle——ok / partial（turn-cap 拒绝）/
+    // error（运行失败/超时））
+    const consId = `consult#${id}-${label}`
+    const cT0 = Date.now()
+    logEvent("child:spawn", { role: "consult", id: consId, kind: "consult" })
+    let consDone = false
+    const consSettle = (kind, payload) => {
+      if (consDone) return
+      consDone = true
+      const ms = Date.now() - cT0
+      if (kind === "error") logEvent("child:error", { role: "consult", id: consId, ms, err: errText(payload, 200) })
+      else logEvent("child:done", { role: "consult", id: consId, ms, kind: kind === "partial" ? "partial" : "ok" })
+    }
     // Turn-cap continue loop (TURN-CAP-CONTINUE.md): hitting the cap asks the user through
     // the panel's question card — unlimited continues, each with a fresh turn budget AND a
     // re-armed wall-clock watchdog (a continue is a fresh budget, the clock restarts too).
@@ -195,6 +210,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
           ...(resume ? { history: sink.history } : {}),
         })
         settleChild(ctx, session, id, label, true, String(result ?? ""))
+        consSettle("ok")
         return
       } catch (e) {
         if (e instanceof agentMod.ContinueError) {
@@ -214,11 +230,13 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
             continue
           }
           settleChild(ctx, session, id, label, false, `turn cap reached (${e.turns} turns) — stopped, diagnosis may be partial`)
+          consSettle("partial")
           return
         }
         // Timeout reads as timeout — "(consultation failed: aborted)" would read as a provider crash
         const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
         settleChild(ctx, session, id, label, false, note)
+        consSettle("error", note)
         return
       }
     }
