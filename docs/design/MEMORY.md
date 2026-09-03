@@ -137,3 +137,37 @@ search(memory, query, { limit })
 | CJK 单字分段 | FTS5 无中文分词器；单字索引保召回（BM25 排序仍合理） |
 | git diff 增量同步 | 大仓库全扫太慢；diff 只处理改动文件 |
 | schema 版本迁移 | node:sqlite 迁移脚本按版本号递进，破坏性变更显式处理 |
+
+
+## 6. memory 工具面重构：单工具多动作 + list/条件批量 delete/clear（2026-09-03 · 设计——用户裁定——待评审）
+
+> 状态：设计（2026-09-03 用户裁定——需求层确认——方案 1 + 全层批量删）。触发：用户连续指出——①memory_put/search/delete 三个裸工具名分散（"不要每个操作一个工具名"——对齐 subagent 六动作先例——§19 裁定"工具会爆炸——靠参数做不同的事"）；②无列表操作（"记忆里有什么"无一等工具答案——memory_search 只按相关度回 top-N——2026-09-03 实证缺口）；③需清空/条件批量删能力。
+
+### 6.1 需求
+
+**总体需求**：memory 三件套合并为单工具 `memory`（action 路由——五动作 search/put/list/delete/clear）——新增 list（清单）+ delete 条件批量 + clear（personal 全清）——个人记忆与共享层都可治理——工具面收敛（防裸工具名继续膨胀）。
+
+**功能性需求**：
+- F-M1：单工具 `memory`——action: "search"（现 memory_search——query/scope/limit——只读）
+- F-M2：action: "put"（现 memory_put——type/title/content/tags/scope——side-effect 权限门维持）
+- F-M3：action: "list"（新）——{scope?, type?, keyword?, limit?} 过滤——输出紧凑清单（id/title/type/日期——不拉全文——limit 默认 50）
+- F-M4：action: "delete"——单条形态（id + scope——现语义）+ **条件批量形态**（scope 必填 + type?/keyword? → 匹配多条删除——删除前返回将删条数/预览——**confirm:true 必填**——全层开放（personal + project/team——共享层可治理））
+- F-M5：action: "clear"（新）——**仅 personal 层全清**——confirm:true 必填——project/team 拒绝 clear（错误提示指引条件批量 delete）
+- F-M6：两端对称（CLI src/memory/docs.mjs + VS Code src/memory.mjs——byte-identical 工具面）
+
+**非功能性需求**：既有行为零回归（search 语义/put 权限门/delete 单条等价——action 路由后行为不变）；门禁纪律（批量删/clear = side-effect 高危——confirm 必填 + scope 必填——project/team clear 拒）。
+
+### 6.2 设计
+
+- **D-M1 工具定义重构**（CLI `src/memory/docs.mjs` + VS Code `src/memory.mjs`——同构）：`memoryTools()` 三工具（memory_put/search/delete）→ 单工具 `memory`——action enum ["search","put","list","delete","clear"]——参数按 action 分支——**描述写清 action 语义 + list/delete 批量/clear 的门禁要求**——旧工具名从工具表消失（退役——引用面同批清理）
+- **D-M2 list 实现**：按 scope/type/keyword 过滤 entries/files——keyword 对 title/content LIKE——limit 截断 + 总条数注（"N 条——截断前 M"）——输出行：`id [type] title（date）`——compact
+- **D-M3 delete 双形态**：单条（id + scope——现 deleteByScope 语义）；批量（scope 必填 + type?/keyword?——先 count 匹配 → 返回 "将删 N 条：<前 5 条预览>"——confirm:true 后执行——无匹配 = 明确"0 条匹配"不报错——**confirm 缺失 = 拒绝（不删——返回预览让调用方带 confirm 重发）**）
+- **D-M4 clear**：仅 personal——confirm:true 必填——执行清空 entries 表 personal 全部——project/team scope 传入 → 拒绝错误（"共享层不支持 clear——用 delete 批量条件删"）
+- **D-M5 引用面同步**：permission.mjs（memory_put 特判 → memory action:put 判定——侧效确认同面）、interaction.mjs 预览、tool-args.mjs 标题路由（memory_put/search 特判 → action 路由）、context.mjs 提示词提及（memory_search → memory search）——两端——discipline.md/README 工具表
+- **D-M6 测试**（CLI + VS Code）：list（scope/type/keyword/limit 过滤 + 输出形态 + 空库）；delete 批量（匹配删/confirm 缺失拒绝返回预览/无匹配明确/单条形态回归）；clear（personal confirm 后清空/project 拒绝/无 confirm 拒绝）；search/put 经 action 路由行为等价回归（既有用例改路由断言）
+- **D-M7 验收**：五动作全绿两端——门禁四拒（批量无 confirm/clear 无 confirm/clear project/clear 无 scope）——既有 memory 行为回归（等价）——旧工具名零残留（grep memory_put/memory_search/memory_delete 工具注册处——引用面已清）——MEMORY.md §6 勾销
+
+### 6.3 受影响文件（两仓）
+
+- CLI：`src/memory/docs.mjs`（重构）+ `src/memory/core.mjs`（只读——如需批量删辅助函数）+ `src/cli/permission.mjs` + `src/tui/interaction.mjs` + `src/tui/tool-args.mjs` + `src/context.mjs`（提示词）+ 测试 + `docs/design/MEMORY.md`（本段）+ discipline.md/README（工具表——若列旧名）
+- VS Code：`src/memory.mjs`（重构）+ 对应引用面 + 测试
