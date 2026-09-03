@@ -1041,6 +1041,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **模型可见提醒（round2 #3）**：cancel 生效后注入短 user-role 提醒（形态仿 injectAsyncResult——XML 转义）：`[System reminder: subagent eng-coder#N cancelled by user — partial changes not merged/audited]`——cancelled settle 不入 pending/不直注入（无错误报告）但**取消事实与半成品警示对模型可见**（防基于半成品树继续——mergeChildMutations 不覆盖 abort 路径）——T-M19 断言补
 - 未知/已完成 id → error（同 status/check 错误形态）；**只允许主会话（depth-0）**（子代理上下文无 cancel 意义——受限变体已禁）；cancel 后槽位腾出（maybeRefillAsync——queued 补位——既有机制）
 - **queued 目标（round1 #2 定稿）**：id 命中 queued 条目（未启动无 controller）→ **出队移除 + position 释放（后续条目 position 前移）+ 返回确认**（`{id, status:"cancelled", was:"queued"}`——不 abort）
+- **决策注（§19.5.5 D-CL3——2026-09-03）**：cancel = 最后手段——父侧核实纪律（personal:58——核实优先/最小干预/最后手段）——§18 交付协议下 partial 永不合并
 
 **D-M7 UI 停止（两端）**：
 - CLI：运行中区块折叠头右侧停止标记（`⏹`——dim——仅 running 态显示——done/冻结后消失）——复用既有鼠标管线（mouse.mjs SGR 点击 + handleMouseClick）——点击命中区 = 标题行右缘（宽度 = ⏹ 标记列）→ cancel（定向该子代理——经 TUI 层调用池 abort——与 D-M6 同实现路径——不经过模型回合）——**用户点击是即时动作不依赖模型**（关键属性：失控子代理时模型可能不可靠——UI 停止必须不经模型）

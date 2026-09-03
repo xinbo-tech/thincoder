@@ -1465,10 +1465,14 @@ test("T3b runAgent: 连续 3 次失败 → compressFallback 实际运行（面�
     readonly: true, execute: async () => "ok",
   }
   // 每轮：压缩摘要 400 → 主循环调 noop（保下一轮仍超阈值）→ 第 3 次失败后 fallback → 主循环收尾
-  // 阈值档位：fallback 后检查（实测 ≈11380 token）必须低于阈值（不复发），首轮检查（≈17300）
-  // 必须高于阈值。12500 留 ~1.1K 双面余量——阈值曾为 11000（fallback 后 ~10910，余 90 token），
-  // read_history 工具 schema 入 depth-0 工具集把 overhead 抬升 ~470 token 后越过刀锋
-  // （setup.mjs 注记同源）——压缩 fixture 对工具 schema 变化天生敏感。
+  // 阈值档位：fallback 后检查必须低于阈值（不复发），首轮检查必须高于阈值——压缩 fixture 对
+  // 工具 schema 变化天生敏感（纯估算路径含 depth-0 全工具 schema——context.mjs extras.tools——
+  // setup.mjs 注记同源）。沿革：11000 →（read_history schema 入 depth-0 工具集 +~470 token
+  // 越过刀锋，余量耗尽）→ 12500 →（2026-09-03 §19.5.5 D-CL1 cancel 描述尾句 +~330 字符
+  // ≈ +85 token 再越 12500 刀锋——fallback 后档位实测已漂至 ≈12600）→ 14000 重校准
+  // （fallback 后 ≈12600、首轮 ≈15-17K——双面余量 ~1.1-2.4K）。
+  // 阈值曾为 11000（fallback 后 ~10910，余 90 token）时 read_history schema 抬升 ~470 token
+  // 即越线——任何 tool schema 文本增删都要重跑本测试。
   const script = [
     { fail: 400 }, { toolCall: { name: "noop" } },
     { fail: 400 }, { toolCall: { name: "noop" } },
@@ -1482,7 +1486,7 @@ test("T3b runAgent: 连续 3 次失败 → compressFallback 实际运行（面�
   try {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-fallback-"))
-    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 12500 } }, cwd })
+    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 14000 } }, cwd })
     agent.history = compressTestHistory()
     const state = mkCompressTuiState()
     const callbacks = await wireCompressTui(agent, state)
@@ -1947,6 +1951,8 @@ test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressi
   assert.ok(text.includes("never hand-serialized"), "T-PS1: 调度器接管——不手动串行")
   assert.ok(text.includes("at most 4 concurrent eng-coders"), "≤4 并发上限")
   assert.ok(text.includes("past 4 the bookkeeping cost"), "并发上限 rationale 同步 3→4（§15 D-A4 T9）")
+  // §19.5.5 T-CL2：cancel 核实纪律锚（D-CL2 逐字——post-D-PS2 文本——fail-when-unchanged——AGENT-LOOP §19.5.5 D-CL2）
+  assert.ok(flat.includes("assertions stay green).** Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."), "T-CL2: D-CL2 锚逐字在 D-PS2 文本后（cancel = last resort + 核实优先）")
   assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "并行 spawn 调用形态（各带 designId+token）")
   assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token 隔离语义（不互相覆盖）")
   assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "发起权不变：设计评审仍仅用户发起")

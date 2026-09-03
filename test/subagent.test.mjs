@@ -1133,6 +1133,14 @@ test("§19 T-M12: 描述/提示词内容引导——action/status/check 阻塞�
   assert.ok(!discMd.includes("| `escalate` |"), "T-M12: discipline.md 无独立 escalate 工具行")
 })
 
+test("§19.5.5 T-CL1: cancel 动作描述含核实纪律锚——last resort + verify alarming signals（fail-when-unchanged——AGENT-LOOP §19.5.5 D-CL1）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const d = subagentTool.description
+  assert.ok(d.includes("Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first"), "T-CL1: 最后手段 + 核实优先（可靠检查——非猜测）")
+  assert.ok(d.includes("prefer scoped recovery (restore a single affected file) over killing the child"), "T-CL1: 最小干预——scoped recovery 优先于杀子代理")
+  assert.ok(d.includes("a running child's in-flight work dies with it, partial changes stay unmerged and unaudited"), "T-CL1: §18 交付代价——in-flight 随杀而逝、partial 永不合并")
+})
+
 test("§19 T-M17: action 门控——planMode status/check/cancel 放行 vs spawn/escalate 拒绝；混合批次批审批按 action 分组", async () => {
   const { executeToolCalls } = await import("../src/agent/dispatch.mjs")
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
