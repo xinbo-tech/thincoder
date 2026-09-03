@@ -1187,16 +1187,16 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **D-SD3 准入检测（spawn 时）**：新任务 spawn：若 (running ∪ queued).some(e => e._files ∩ new.files ≠ ∅) 或 dependsOn 任一条目未 done → **不立即 start——入 queued（waiting-deps 态——记原因）**——否则立即 start（既有语义）
 
-**D-SD3b 面板 UX（2026-09-03 用户裁定——spawn 即见 + waiting 标注）**：**任何排队 spawn（waiting-deps 或 slot-queued）在 spawn 返回时立即建面板块**（不等子代理首 token——排队子代理未启动无 relay 流——块由 spawn 侧直接建）——块头标注：`[▶ role#N · waiting] waiting for: explore#2（域冲突 src/x.mjs）、eng-coder#1（依赖未完成）`——slot-queued 标注 `queued · position 3`（槽满等位）——**启动后块头转正常 running 态**（relay 首 token 接管——既有 ensureSubTaskKey 命中同 key 不重建）——块不可展开（无活动）——取消/出队时移除。**waiting 语义对模型可见**（spawn 返回 {id, status:"queued", reason} + §19.5 status 含 waiting 态 + 原因——§20 受影响文件补 subagent-blocks.mjs（waiting 块建/转/撤）与渲染（块头 waiting 标注）——测试补 T-SD11（spawn 即面板可见 + waiting for 标注）T-SD12（启动后转 running——同 key 不重建））
+**D-SD3b 面板 UX（2026-09-03 用户裁定——spawn 即见 + waiting 标注）**：**任何排队 spawn（waiting-deps 或 slot-queued）在 spawn 返回时立即建面板块**（不等子代理首 token——排队子代理未启动无 relay 流——块由 spawn 侧直接建——**通道（round2 #2）：新 ⟦ev⟧queued/cancelled 事件 token（spawn 返回时发 queued——出队/取消发 cancelled——TUI routeSubToken 消费——与 7.2.3.2 #2 async ack 跳过冻结不冲突——tool-events/routeSubToken 分支补受影响文件）**）——块头标注：`[▶ role#N · waiting] waiting for: explore#2（域冲突 src/x.mjs）、eng-coder#1（依赖未完成）`——slot-queued 标注 `queued · position 3`（槽满等位）——**启动后块头转正常 running 态**（relay 首 token 接管——既有 ensureSubTaskKey 命中同 key 不重建）——块不可展开（无活动）——取消/出队时移除。**waiting 语义对模型可见**（spawn 返回 {id, status:"queued", reason} + §19.5 status 含 waiting 态 + 原因——§20 受影响文件补 subagent-blocks.mjs（waiting 块建/转/撤）与渲染（块头 waiting 标注）——测试补 T-SD11（spawn 即面板可见 + waiting for 标注）T-SD12（启动后转 running——同 key 不重建））
 
 **D-SD4 补位增强（maybeRefillAsync）**：settle/cancel 释放槽后——从 queued 选"依赖全满足 + 域无冲突"的最早条目启动——**多任务同时解除（一批 eng-coder 全等同一依赖）→ 按 queued 序逐个启动到槽满**（上限 4 不变）
 
 
-**D-SD5 死锁防御 + 取消（round1 #1 补——依赖终态释放规则）**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；受保护任务（同批同依赖释放）无抢占（v1 不做优先级）。**依赖释放规则（终态语义）**：依赖在目标 settle（任何终态——成功/错误/取消）或条目移除（check 消费/出队）时视为满足——waiting-deps 条目重新评估：目标取消/错误 → 依赖者自动释放启动（父代理负责失败处置）或标 "dependency cancelled" 供模型决定；spawn 时 dependsOn 引用 unknown id → 明确错误（对齐 check/status 未知 id 语义 T12）——补 T-SD9（cancel queued 依赖 → 依赖者自动释放）T-SD10（unknown id 拒绝）
+**D-SD5 死锁防御 + 取消（round1 #1 补——依赖终态释放规则）**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；受保护任务（同批同依赖释放）无抢占（v1 不做优先级）。**依赖释放规则（终态语义）**：依赖在目标 settle（任何终态——成功/错误/取消）或条目移除（check 消费/出队）时视为满足——waiting-deps 条目重新评估：目标取消/错误 → 依赖者自动释放启动（父代理负责失败处置）——**默认分支（round2 #3 定死）：依赖取消/失败 → 依赖者留 queued 标 dependency cancelled + 注入提醒供模型决策——仅父代理显式处置或 AUTO 档才自动启动**；spawn 时 dependsOn 引用 unknown id → 明确错误（对齐 check/status 未知 id 语义 T12）——补 T-SD9（cancel queued 依赖 → 依赖者自动释放）T-SD10（unknown id 拒绝）
 
 **v1 边界**：不做优先级/抢占/超时重调度/自动域解析——files 声明缺失的任务不参与冲突检测（行为 = 现状——逐步迁移）——round1 #5：声明错误（漏文件/path 形态不一 src/x vs ./src/x）静默绕过串行化——false-negative 风险明示——实现时 path 归一化再交集——eng-coder spawn 带 designId 时尽量从 §18 任务域（设计文档 + 交付文件清单）播种 _files
 
-**受影响文件**：src/agent-tools/subagent.mjs（spawn 参数 + 准入）、src/agent-tools/subagent-async.mjs（池条目域 + maybeRefillAsync 增强）、status 输出（waiting-deps 态 + 原因）、测试（subagent.test——准入/排队/补位/取消/环拒绝）、AGENT-LOOP 本段 + §15 池引用注 + §19.2 D-M1 矩阵 queued/返回形态行 + §19.5 D-M5 status 形态 + T-M6/T-M8/T-M18 + §19.4 N1/T-M12 描述预算（supersede 注——round1 #3——19.5.2b 先例——实现时同批修订列具体行）、两端同构 + VS Code 测试（T-SD 镜像子集——round1 #4）
+**受影响文件**：src/agent-tools/subagent.mjs（spawn 参数 + 准入）、src/agent-tools/subagent-async.mjs（池条目域 + maybeRefillAsync 增强）、status 输出（waiting-deps 态 + 原因）、测试（subagent.test——准入/排队/补位/取消/环拒绝）、AGENT-LOOP 本段 + §15 池引用注 + §19.2 D-M1 矩阵 queued/返回形态行 + §19.5 D-M5 status 形态 + T-M6/T-M8/T-M18 + §19.4 N1/T-M12 描述预算（supersede 注——round1 #3——19.5.2b 先例——实现时同批修订列具体行）、两端同构 + VS Code 测试（T-SD 镜像子集——round1 #4）+ **docs/design/TUI.md（round2 #4——面板段/module map——waiting 标注/queued 块）——两端 CHANGELOG（父代理统一）——§19.6 D-P1 _panelSnapshot 写点随 waiting 块生命周期扩展（指注）**
 
 ### 20.3 测试（硬验收——eng-coder 展开 N/E/A）
 
@@ -1204,10 +1204,20 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-SD2：同文件域冲突 spawn → waiting-deps（不入 running——status 显示原因）
 - T-SD3：依赖完成 settle → 排队任务自动补位启动（槽空即启）
 - T-SD4：多任务同依赖 → 释放后逐个启动到槽满（上限 4）
-- T-SD5：dependsOn 成环 → spawn 拒绝（错误明确）
+- T-SD5：dependsOn 成环 → spawn 拒绝（错误明确——round2 #5：自然流程不可达（unknown id 拒 + spawn 序天然无环）——人工向池注入构造——防御断言定位）
 - T-SD6：cancel waiting-deps 任务 → 出队 + 后续前移（既有 queued 取消语义）
 - T-SD7：status 显示 waiting-deps 态（模型可见排队原因）
 - T-SD8：文件域不相交 + 无依赖 → 并行（不误排）
+- T-SD9：cancel queued 依赖 → 依赖者自动释放（round1 #1）
+- T-SD10：dependsOn unknown id → spawn 拒绝（round1 #1）
+- T-SD11：排队 spawn 返回即面板可见 + waiting for 标注（D-SD3b）
+- T-SD12：启动后转 running——同 key 不重建（D-SD3b）
+- T-SD13：sync spawn 带调度参数命中冲突 → 明确错误（round2 #7——sync 不队列化）
+- T-SD4b：混合队列（waiting-deps + slot-queued 共存）启动序断言（round2 #6）
 
-**验收**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8——域不相交照常并发）；AC-SD3 = 死锁/取消安全（T-SD5/6）；AC-SD4 = 状态可见（T-SD7）；AC-SD5 = 既有语义零回归（T-SD1）
+
+**NF-SD（round1 #4 + round2 #8 补）**：准入检测 O(running∪queued × files) 每 spawn（槽 ≤4 + 队列有限——可接受）；每次 settle 重扫 waiting-deps 队列同界；spawn 描述预算增量（files/dependsOn 两可选参——T-M12 锚复核同 §19.6 NF-P）；**VS Code 对等验证（F-SD5）**：§15.6 模式——双端同构 + 双端测试（T-SD 镜像子集）——受影响文件含 VS Code 测试；**排队滞留可见性（round2 #8）**：waiting-deps 长滞（依赖取消留 queued 分支）不静默——status/面板恒显示 dependency cancelled 标注 + 注入提醒——可 cancel（不阻塞挂起退出——条目显式可清）
+
+
+**验收（round2 #1——T-SD9..13 回指）**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8）；AC-SD3 = 死锁/取消安全（T-SD5/6/9/10——含依赖取消释放 + unknown id 拒）；AC-SD4 = 状态可见（T-SD7/11/12——含 waiting 面板标注）；AC-SD5 = 既有语义零回归（T-SD1/13——sync 冲突错误）
 
