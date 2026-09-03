@@ -1120,7 +1120,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——**已批准**）
 
-> 状态：设计批准（2026-09-03 round1 通过——0🔴——9 项 advisory 处置注见 19.6.4——designToken 已签发）。触发：用户实测困惑（eng-coder#9 完成且已消化仍挂面板）——模型侧只有"池视图"（_asyncSubagents）——用户看到的是"面板视图"（TUI state.subTasks——驻留 awaitingDigest 等）——**池与面板两个状态机模型看不到面板那半——无法自查解释 UI 怪相/诊断池↔面板脱节**。用户裁定：**面板视图 + 干预（可修异常驻留块——补发冻结）**——把 UI 修复能力交给模型。
+> 状态：**已实现（2026-09-03 交付——CLI 1268/0——AC-P1..P4 勾销——实现记录见 19.6.5）**
 
 #### 19.6.1 需求
 
@@ -1155,6 +1155,18 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 **NF-P（round1 #8 补）**：镜像刷新成本 O(n) 每块级变更（n ≤ N2 500 环形上限——不逐 token 刷）；六动作描述预算复核（§19.4 N1 扩展——T-M12 断言同步扩）；panel 归只读/控制类——不触项目文件
 
 **验收（round1 #6——T-P 实现前展开为 N/E/A 完整用例表——eng-coder 硬验收项）**：AC-P1 = 面板视图与用户所见一致（T-P1/P6）；AC-P2 = 门控安全（T-P3/P4）；AC-P3 = 降级（T-P5）；AC-P4 = CLI-only 声明落地（round1 #1）
+
+
+
+#### 19.6.5 实现记录（2026-09-03 交付——id:17——CLI 1268/0）
+
+1. D-P1 镜像：state._agent 挂载 + _panelSnapshot 初始 []——subagent-blocks 13 个块级变更点 sync（不逐 token——NF-P）
+2. D-P2/D-P3：action:"panel" view/freeze——门控（awaitingDigest 且池/pending 无对应——digested 读时交叉标注）——freeze 发 key/⟦ev⟧done 字面 token（_freezeAt 锚点复用——无锚点尾推——ack note 注明）——门禁分类四表（view 只读/freeze 控制类——planMode 放行——受限变体拒绝——digest 放行）
+3. F-P3：headless/VS Code 恒降级池视图（degraded:true + no-panel——AC-P4）——VS Code 独立树无 panel schema——天然降级
+4. 集成点补充（审计裁定合理）：tool-events onToolResult isSubagent 排除 panel action 结果（防 panel 调用误冻 running 子块——1 行）
+5. 工具层 bug 顺手修：blockKeyIn spread Map 得 [key,value] 对（门控池检查形同虚设）→ values() 取值 + 测试锁定
+6. 残留 advisory：tool-args.mjs action-only subagent 调用块标题光秃（a.action 兜底建议——非本批——TODO）
+7. 行数债：subagent-async 649/subagent-blocks 562/tool-events 537/subagent 531——并入拆分轮
 
 #### 19.6.4 round1 评审处置（2026-09-03——0🔴 通过——9 项）
 
