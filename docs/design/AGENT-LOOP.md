@@ -1159,3 +1159,49 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 7. scope 最小面（view 优先——freeze 门控从严——CHANGELOG 诊断定位——不叠新能力）
 8. NF-P 段补（快照成本界/六动作预算复核 T-M12 扩展）
 9. 状态行同步（顶部刷新枚举含 §19.6）
+
+
+## 20. 子 agent 任务调度器（2026-09-03 · 需求 + 设计——方案 1 用户确认——待评审）
+
+> 状态：设计定稿，待评审。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。
+
+### 20.1 需求
+
+- F-SD1：**流式提交**——父代理评审好即 spawn（带调度元数据）——提交后零调度心智（不盯队列/不手动 cancel 重排）
+- F-SD2：**同文件域自动串行**——新任务 files 与 running/queued 任务域交集 → 自动排队（waiting-deps）——依赖完成自动补位启动
+- F-SD3：**显式依赖**——dependsOn 未完成 → 排队（文件域外依赖——如"等 X 交付后再做 Y"）
+- F-SD4：**状态可见**——status 显示 waiting-deps + 原因（冲突对象/依赖对象）——模型可查
+- F-SD5：两端一致（CLI/VS Code 同构）
+
+### 20.2 设计（D-SD1..SD5）
+
+**D-SD1 spawn 调度参数（可选——零改动兼容既有 spawn）**：
+- `files?: string[]`——写域声明（eng-coder 纪律"不碰清单外文件"+ 偏差审计兜底——声明即契约——**不做任务书文本自动解析**（不可靠——v1 边界））
+- `dependsOn?: string[]`——子代理 id 列表（显式依赖）
+- 缺省（无 files 无 dependsOn）= 既有语义（立即启动——不参与冲突检测——子代理/explore 等不受影响）
+
+**D-SD2 池条目域元数据**：spawn 时 entry 记 `_files`/`_dependsOn`——running ∪ queued 条目全带
+
+**D-SD3 准入检测（spawn 时）**：新任务 spawn：若 (running ∪ queued).some(e => e._files ∩ new.files ≠ ∅) 或 dependsOn 任一条目未 done → **不立即 start——入 queued（waiting-deps 态——记原因）**——否则立即 start（既有语义）
+
+**D-SD4 补位增强（maybeRefillAsync）**：settle/cancel 释放槽后——从 queued 选"依赖全满足 + 域无冲突"的最早条目启动——**多任务同时解除（一批 eng-coder 全等同一依赖）→ 按 queued 序逐个启动到槽满**（上限 4 不变）
+
+**D-SD5 死锁防御 + 取消**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；**受保护任务（同批同依赖释放）无抢占**（v1 不做优先级）
+
+**v1 边界**：不做优先级/抢占/超时重调度/自动域解析——files 声明缺失的任务不参与冲突检测（行为 = 现状——逐步迁移）
+
+**受影响文件**：src/agent-tools/subagent.mjs（spawn 参数 + 准入）、src/agent-tools/subagent-async.mjs（池条目域 + maybeRefillAsync 增强）、status 输出（waiting-deps 态 + 原因）、测试（subagent.test——准入/排队/补位/取消/环拒绝）、AGENT-LOOP 本段 + §15 池引用注、两端同构
+
+### 20.3 测试（硬验收——eng-coder 展开 N/E/A）
+
+- T-SD1：无调度参数 spawn → 立即启动（既有语义回归）
+- T-SD2：同文件域冲突 spawn → waiting-deps（不入 running——status 显示原因）
+- T-SD3：依赖完成 settle → 排队任务自动补位启动（槽空即启）
+- T-SD4：多任务同依赖 → 释放后逐个启动到槽满（上限 4）
+- T-SD5：dependsOn 成环 → spawn 拒绝（错误明确）
+- T-SD6：cancel waiting-deps 任务 → 出队 + 后续前移（既有 queued 取消语义）
+- T-SD7：status 显示 waiting-deps 态（模型可见排队原因）
+- T-SD8：文件域不相交 + 无依赖 → 并行（不误排）
+
+**验收**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8——域不相交照常并发）；AC-SD3 = 死锁/取消安全（T-SD5/6）；AC-SD4 = 状态可见（T-SD7）；AC-SD5 = 既有语义零回归（T-SD1）
+
