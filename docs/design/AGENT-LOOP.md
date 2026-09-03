@@ -767,6 +767,42 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - 受影响：`src/tui/key-handler.mjs`（挂起 Ctrl+C 两级 + F1 帮助文案）、`src/tui/agent-turn.mjs`（标志复位 + pendingInput 转移 + 注释去重 + 会话退出解除武装）、`test/suspension.test.mjs`（T-S5b / round2 #2-CLI / round2 #4 TUI ×2 / T-S5 注释 + TUI 用例更新）、本节 + `docs/design/TUI.md` / `TUI-INPUT-BOX.md`（同步）
 ---
 
+
+### 17.5 §17 硬化轮：settle 完成队列（2026-09-03 · 设计——方案 B 用户批准——待评审）
+
+> 状态：设计定稿，待评审。触发：用户复现——"前端回合在跑时后端 eng-coder 完成——丢 digest——没看到交付后处理"——建议"先进完成队列——前端忙完再挨个处理"（explore 诊断 2026-09-03——缝隙 A 滞留/B 结构性互斥/C 可见性——TODO 立项）。
+
+#### 17.5.1 问题（诊断结论）
+
+回合中 settle（_suspended=false——前端 processing）→ 非挂起分支（subagent.mjs ~L444-456）只发 ⟦ev⟧done + 条目留池等"回合尾 collect"——缝隙：
+- **A 滞留**：长回合（工具循环）报告滞留池内无通知
+- **B 结构性互斥（正主）**：collectSettledAsync 回合尾**先注入排空**（最终答复后——本轮模型已不可能处理）→ 池空 → willSuspend=false → **挂起会话不启动 → digest 永不触发**——消化机制只服务挂起态 settle——回合中 settle 与消化互斥（对照：ContinueError 取消路径反而消化——collect 被跳过 → 留池 → 挂起 → digest）
+- **C 可见性/丢失**：注入不进 state.lines（当前会话不可见——"似乎丢失"字面来源）——滞留期 Ctrl+C 清池不注入 → 报告真丢
+
+#### 17.5.2 设计（方案 B——用户批准——"空闲再挨个处理"语义）
+
+**collectSettledAsync（agent.mjs ~L493-503）语义变更**：回合尾**不再直注入排空**——done 条目**留池**（状态不变——settled not consumed）→ agent-turn willSuspend（poolLive 已覆盖池非空）判 true → 进 suspensionSession → 首轮 sweepSettledToPending（:415）→ pending 非空 → digestTurn（:432）→ digest runAgent 首行统一注入（agent.mjs :128-132）→ 模型消化 → 池空自然退出冻结。多条目近邻完成 = 合并消化一轮（D-S6 既有）。
+
+**语义变化（显式接受）**：正常回合尾残留已 settle 未消费条目 → 烧一个 auto-turn 消化轮（手动档 organize-only / AUTO 档全语义——既有护栏复用）——消化输出进流 → 用户可见 "[auto-turn: digesting finished subagent reports…]" + 消化总结——**补可见性缺口（C）**。
+
+**不变面**：suspension 内 Ctrl+C 两级中止清 pending（用户显式停——语义与现状一致）；check/status 在 sweep 前仍从池读（语义保持）；ContinueError/cancel 路径既有消化语义不变。
+
+**受影响的测试语义**：test/subagent.test.mjs T5（:379-462——现断言"直注入+清空+done 先于结论"）→ 改断言为"回合尾消化轮注入"。
+
+**受影响文件**：src/agent.mjs（collectSettledAsync）、src/tui/agent-turn.mjs（若 willSuspend/digest 时序需调——自查）、test/subagent.test.mjs（T5 断言）、AGENT-LOOP §17 D-S1/D-S3 ① 修订注（本段权威）、§15 D-A3 权衡注同步。
+
+#### 17.5.3 测试（硬验收——eng-coder）
+
+- T-H1：回合中 settle（子代理先于父最终答复完成 + 模型不调 check）→ 回合自然结束后——消化轮触发（digest auto-turn）——报告注入模型上下文 + 消化输出进流可见
+- T-H2：多条目近邻 settle → 合并一轮消化
+- T-H3：check 提前消费（模型调 check 取走）→ 池空——无多余消化轮（不重复烧）
+- T-H4：滞留期 Ctrl+C → 清 pending 不注入（既有语义回归）
+- T-H5：挂起态 settle 路径回归（既有好路径不变——T-S14 等）
+- T-H6：T5 断言更新（直注入 → 回合尾消化轮）
+
+**验收**：AC-H1 = 回合中 settle 报告必达模型（消化轮——T-H1）；AC-H2 = 无重复消化（check 消费后不烧——T-H3）；AC-H3 = 既有挂起/Ctrl+C 语义零回归（T-H4/H5）
+
+
 ## 18. 工程交付协议：eng-coder 默认 async + 内部自审计闭环（2026-09-02，用户重构裁定：链下沉 eng-coder 内部）
 
 > **状态：设计批准（2026-09-02 round5 通过——0🔴，4🟡+3🔵 advisory 已处置——designToken 已签发）**。用户实测痛点：同步 spawn 的 eng-coder 阻塞主会话——"功能目的就是 eng-coder 执行中主会话能去干别的"。初版设计（主会话跨 digest 自动链状态机）经 round1/round2 评审暴露状态机载体/驱动/停止机制缺陷后，**用户拍板重构：把交付后审计/修正/review 全部移入 eng-coder 子代理内部**——主会话只 spawn 一次（默认 async），子代理内部完成"实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛"后一次交付。主会话侧无链状态机。用户裁定要点：① eng-coder **默认 async**（§15 F4 修订）；② 交付协议在 **eng-coder 内部**闭环（B1 全自动——手动档也跑，无需用户在旁）；③ **eng-coder 工具集加 explore**（内部 spawn 同源偏差审计）；④ 收敛上限 5 轮修正；⑤ 双通道并行（§17 既有——用户输入与 async 子代理互不打断——无链状态可停）。
