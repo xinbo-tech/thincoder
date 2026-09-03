@@ -1131,6 +1131,48 @@ test("subagent 面板带顶部边界线（§7.2.1 NF2/D2）；无 running 块 �
   assert.deepEqual(renderSubagentPanel(state, 80, 24), [], "无 running 块 → 面板不渲染（F6）")
 })
 
+test("subagent 面板存在条件扩（§20 D-SD3b supersede §7.2.1 F6/T2）：queued-only（无 running）→ 面板保持——waiting 块 waiting for 标注/槽等位标注", () => {
+  const now = Date.now()
+  // ① waiting-deps 块（depc 标注——依赖取消留 queued 分支）
+  const depcState = tuiState({
+    lines: [{ text: "会话内容", color: C.text, _kind: "text" }],
+    subTasks: {
+      "eng-coder#3": {
+        key: "eng-coder#3", role: "eng-coder", started: now, done: false, async: undefined,
+        blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0,
+        approval: null, lastError: null, dropped: 0,
+        queued: { kind: "depc", position: 1, detail: "dependency cancelled: eng-coder#1 — waiting for your decision (cancel this task to release, or AUTO starts it)" },
+      },
+    },
+  })
+  const out = renderSubagentPanel(depcState, 80, 24)
+  assert.ok(out.length > 0, "queued-only → 面板保持（running ∪ queued 非空——D-SD3b）")
+  const depcText = out.map((l) => String(l.text).replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(depcText.includes("[▶ eng-coder#3 · waiting"), "waiting 块括号词 waiting（不误标 sync——未启动）")
+  assert.ok(depcText.includes("dependency cancelled"), "depc 原因恒显示（滞留不静默——NF-SD）")
+  assert.ok(!depcText.includes("⏹"), "waiting 块无 ⏹（未启动——门控不变）")
+  const layout = computeLayout(depcState, { cols: 80, rows: 24 })
+  assert.ok(layout.panels.subagent.h > 0, "layout 含面板槽（queued-only 保持）")
+  // ② slot 等位标注（槽满等位——position 可见）
+  const slotState = tuiState({
+    subTasks: {
+      "explore#4": {
+        key: "explore#4", role: "explore", started: now, done: false,
+        blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0,
+        approval: null, lastError: null, dropped: 0,
+        queued: { kind: "slot", position: 2, detail: "" },
+      },
+    },
+  })
+  const slotText = renderSubagentPanel(slotState, 80, 24).map((l) => String(l.text).replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(slotText.includes("[▶ explore#4 · queued"), "slot 等位头括号词 queued")
+  assert.ok(slotText.includes("queued · position 2（槽满等位）"), "等位标注含 position + 原因")
+  // ③ 空态回归：全 done → 无面板（F6 原义——无悬空线）
+  depcState.subTasks["eng-coder#3"].done = true
+  assert.deepEqual(renderSubagentPanel(depcState, 80, 24), [], "done-only → 面板不渲染（F6 回归）")
+})
+
+
 test("subagent 面板：多子 agent 并行全显示（§7.2.1 T4/F2 自适应高度）", () => {
   const now = Date.now()
   const state = tuiState({
@@ -1333,7 +1375,7 @@ test("panel functions (§19.5 D-M7b): 头标 async/sync 显式标识 + ⏹ 仅 a
   assert.ok(!cText.includes("· sync ·") && !cText.includes("· async ·"), "compress 头无 sync/async 标识（真实 subagent 角色门）")
 })
 
-test("panel functions (§19.5 D-M7b 处置 #4——评审 #4): queued→running 补位启动——async 标记缓冲 → [model] 创建块即 async——⏹ 随实际启动可见（queued 入队期无块无 ⏹）", async () => {
+test("panel functions (§19.5 D-M7b 处置 #4——评审 #4, superseded by §20 D-SD3b): queued→running——排队 spawn 返回即建 waiting 块（⟦ev⟧queued）——补位启动 async 清标转 running（同 key 不重建）——⏹ 随实际启动可见", async () => {
   const { routeSubToken } = await import("../src/tui/subagent-blocks.mjs")
   const noop = () => {}
   const s = tuiState()
@@ -1343,15 +1385,32 @@ test("panel functions (§19.5 D-M7b 处置 #4——评审 #4): queued→running 
     routeSubToken(s, `coder#${i}/[model]glm-5.3`, noop)
     routeSubToken(s, `coder#${i}/working on task ${i}`, noop)
   }
-  // 第 5 个 async spawn 入队（queued——D-A1/D-M7b：不 paint——无区块、无面板行）
-  assert.equal(s.subTasks["coder#5"], undefined, "queued 入队期无区块（不 paint——⏹ 无从显示）")
-  assert.ok(!renderSubagentPanel(s, 100).some((l) => l.text.includes("coder#5")), "queued 无面板行（无 ⏹ 无头）")
-  // 腾槽补位启动：实际启动 token 流（标记缺失 key → 缓冲 pending → [model] 创建块应用）
+  // 第 5 个 async spawn 入队——§20 D-SD3b（supersede 旧"入队不 paint"语义）：spawn 返回
+  // 即发 ⟦ev⟧queued（事件通道——round2 #2）→ 块即刻存在（slot 等位标注）——面板保持
+  // 条件 = running ∪ queued 非空（queued-only 面板保持——T2 断言同步扩）。
+  routeSubToken(s, "coder#5/⟦ev⟧queued\x1eslot\x1e1\x1equeued\x1e", noop)
+  assert.ok(s.subTasks["coder#5"], "排队 spawn 返回即建块（不等首 token/不待启动）")
+  assert.deepEqual(
+    s.subTasks["coder#5"].queued,
+    { kind: "slot", position: 1, detail: "" },
+    "slot 等位标注（kind/position——启动后清除）",
+  )
+  assert.equal(s.subTasks["coder#5"].async, undefined, "未启动——async 标记未置（⏹ 门控判定源）")
+  const qHeads = renderSubagentPanel(s, 100).filter((l) => l._foldToggle === "sub-coder#5")
+  assert.ok(qHeads.length === 1, "queued-only 块渲染于面板（面板存在条件扩——queued 驻留面板保持）")
+  const qText = String(qHeads[0].text).replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(qText.includes("[▶ coder#5 · queued"), `slot 等位头括号词 queued（实际: ${qText.slice(0, 70)}）`)
+  assert.ok(qText.includes("queued · position 1"), `等位标注含 position（实际: ${qText.slice(0, 90)}）`)
+  assert.ok(!qHeads[0]._stopSub && !qText.includes("⏹"), "等位块无 ⏹（未启动——⏹ 随实际启动出现）")
+  // 腾槽补位启动：实际启动 token 流——async 事件命中同 key 转 running（不重建——块清除
+  // waiting 标注 + started 归零）；⏹ 门控随 async 置位出现。
+  const keyRef = s.subTasks["coder#5"]
   routeSubToken(s, "coder#5/⟦ev⟧async\x1e", noop)
   routeSubToken(s, "coder#5/[model]glm-5.3", noop)
   routeSubToken(s, "coder#5/starting now", noop)
-  assert.ok(s.subTasks["coder#5"], "补位启动后区块出现（queued→running 可见）")
-  assert.equal(s.subTasks["coder#5"].async, true, "缓冲 pending 在块创建时应用（async 门控判定源保真）")
+  assert.equal(s.subTasks["coder#5"], keyRef, "同 key 不重建（既有 ensureSubTaskKey 语义——D-SD3b）")
+  assert.equal(s.subTasks["coder#5"].queued, undefined, "启动后 waiting 标注清除（转正常 running 态）")
+  assert.equal(s.subTasks["coder#5"].async, true, "async 标记置位（⏹ 门控判定源）")
   const head5 = renderSubagentPanel(s, 100).find((l) => l._foldToggle === "sub-coder#5")
   assert.ok(head5, "补位启动块渲染于面板")
   assert.equal(head5._stopSub, "coder#5", "⏹ 命中元数据随补位启动出现（queued→running ⏹ 可见性——处置 #4）")

@@ -534,3 +534,88 @@ test("§19.6 T-P6 扩展: routeSubToken done/stopped 分支 + freezeReclaimDiges
 })
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// §20 子 agent 任务调度器——TUI 数据层（AGENT-LOOP.md §20 D-SD3b——T-SD11/12 + N/E）
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("§20 T-SD11 数据层: ⟦ev⟧queued 建 waiting 块（spawn 返回即面板可见——wait 标注/waiting for 原因——无活动流不可展开内容）", () => {
+  const s = state()
+  routeSubToken(s, "eng-coder#4/⟦ev⟧queued\x1ewait\x1e2\x1equeued\x1ewaiting for: explore#2（域冲突 src/x.mjs）、eng-coder#1（依赖未完成）", noop)
+  const sub = s.subTasks["eng-coder#4"]
+  assert.ok(sub, "排队 spawn 返回即建块（D-SD3b——不等子代理首 token）")
+  assert.equal(sub.done, false, "非 done（面板保持——running ∪ queued 非空）")
+  assert.deepEqual(
+    sub.queued,
+    { kind: "wait", position: 2, detail: "waiting for: explore#2（域冲突 src/x.mjs）、eng-coder#1（依赖未完成）" },
+    "waiting 标注（kind/position/原因 detail——渲染端 waiting for 头）",
+  )
+  assert.equal(sub.blocks.length, 0, "无活动流（排队子代理未启动——无 relay）")
+  assert.equal(sub.model, undefined, "无 [model]（未启动）")
+  assert.equal(sub.async, undefined, "async 标记未置（⏹ 门控——未启动无 ⏹）")
+  // depc 形态：dependency cancelled 标注
+  routeSubToken(s, "explore#5/⟦ev⟧queued\x1edepc\x1e1\x1equeued\x1edependency cancelled: eng-coder#1 — waiting for your decision", noop)
+  assert.equal(s.subTasks["explore#5"].queued.kind, "depc", "depc 标注（依赖取消/失败——round2 #3）")
+  // 同 key 重复 queued 事件（位置/原因刷新）→ 覆盖式更新不重建
+  const keyRef = s.subTasks["explore#5"]
+  routeSubToken(s, "explore#5/⟦ev⟧queued\x1eslot\x1e1\x1equeued\x1e", noop)
+  assert.equal(s.subTasks["explore#5"], keyRef, "刷新不重建（同 key）")
+  assert.equal(s.subTasks["explore#5"].queued.kind, "slot", "位置/原因刷新覆盖")
+})
+
+test("§20 T-SD11 数据层 N/E: queued 事件缺字段兜底 / 迟到 queued（已启动块）丢弃 / 镜像 queued 态", () => {
+  const s = state()
+  // kind 未知 → 兜底 slot；position 非数 → undefined
+  routeSubToken(s, "coder#9/⟦ev⟧queued\x1ebogus\x1eabc\x1equeued\x1e", noop)
+  assert.deepEqual(s.subTasks["coder#9"].queued, { kind: "slot", position: undefined, detail: "" }, "未知 kind/坏 position 兜底（不崩）")
+  // 已启动块（async 置位）收到迟到 queued → 丢弃（不复活 waiting 标注盖 running）
+  routeSubToken(s, "coder#10/⟦ev⟧async\x1e", noop)
+  routeSubToken(s, "coder#10/[model]m", noop)
+  routeSubToken(s, "coder#10/hello", noop)
+  routeSubToken(s, "coder#10/⟦ev⟧queued\x1eslot\x1e1\x1equeued\x1e", noop)
+  assert.equal(s.subTasks["coder#10"].queued, undefined, "running 块迟到 queued 事件丢弃")
+  // 镜像（§19.6 D-P1——_panelSnapshot 写点随 waiting 块扩展）：queued 块以 queued 态入镜
+  const agent = { _panelSnapshot: null }
+  const st = { subTasks: {}, _agent: agent }
+  routeSubToken(st, "eng-coder#7/⟦ev⟧queued\x1ewait\x1e1\x1equeued\x1ewaiting for: explore#1（依赖未完成）", noop)
+  assert.equal(agent._panelSnapshot[0].status, "queued", "waiting 块镜像态 = queued（面板视图一致）")
+  routeSubToken(st, "eng-coder#7/⟦ev⟧async\x1e", noop)
+  assert.equal(agent._panelSnapshot[0].status, "running", "启动 → 镜像转 running")
+})
+
+test("§20 T-SD11 数据层: ⟦ev⟧cancelled 移除等待块（不冻结——无活动可冻结）；running 块不被误删", () => {
+  const s = state()
+  routeSubToken(s, "coder#5/⟦ev⟧queued\x1eslot\x1e1\x1equeued\x1e", noop)
+  assert.ok(s.subTasks["coder#5"], "等待块在")
+  routeSubToken(s, "coder#5/⟦ev⟧cancelled\x1e", noop)
+  assert.equal(s.subTasks["coder#5"], undefined, "取消/出队 → 块移除（不冻结进流——无 activity 载体）")
+  assert.equal(s._frozenSubKeys?.has("coder#5"), false, "无冻结 tombstone（非冻结路径）")
+  // 缺失块 no-op（事件迟到/重复）——不建块不崩
+  routeSubToken(s, "coder#6/⟦ev⟧cancelled\x1e", noop)
+  assert.equal(s.subTasks["coder#6"], undefined, "缺失块 cancelled no-op")
+  // running 块（async 置位）不被 cancelled 误删（通道分明——running 取消走 stopped 冻结）
+  routeSubToken(s, "eng-coder#2/⟦ev⟧async\x1e", noop)
+  routeSubToken(s, "eng-coder#2/[model]m", noop)
+  routeSubToken(s, "eng-coder#2/working", noop)
+  routeSubToken(s, "eng-coder#2/⟦ev⟧cancelled\x1e", noop)
+  assert.ok(s.subTasks["eng-coder#2"], "running 块不因 cancelled 事件被删（守卫——stopped 通道专属）")
+})
+
+test("§20 T-SD12 数据层: 启动后转 running——同 key 不重建 + waiting 清标 + started 归零（实际启动计时）", () => {
+  const s = state()
+  routeSubToken(s, "coder#8/⟦ev⟧queued\x1ewait\x1e1\x1equeued\x1ewaiting for: coder#1（依赖未完成）", noop)
+  const before = s.subTasks["coder#8"]
+  const waitStart = Date.now() - 5000 // 排队期 started（块建于 spawn 返回）——存数值（同对象后读恒等）
+  before.started = waitStart
+  routeSubToken(s, "coder#8/⟦ev⟧async\x1e", noop)
+  assert.equal(s.subTasks["coder#8"], before, "T-SD12: 同 key 不重建（relay 首 token 接管既有块）")
+  const after = s.subTasks["coder#8"]
+  assert.equal(after.queued, undefined, "waiting 标注清除（转正常 running 头）")
+  assert.equal(after.async, true, "async 标记置位（⏹/async 头标判定源）")
+  assert.ok(after.started > waitStart, "started 归零（排队等待不计 elapsed——与池 startedAt 同语义）")
+  routeSubToken(s, "coder#8/[model]glm-5.3", noop)
+  routeSubToken(s, "coder#8/content flows", noop)
+  assert.equal(after.model, "glm-5.3", "model 元数据照常记录")
+  assert.ok(after.blocks.some((b) => b.text.includes("content flows")), "relay 内容照常入块")
+})
+
+

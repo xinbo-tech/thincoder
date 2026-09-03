@@ -78,7 +78,10 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   // 同生命周期）；仅真实 subagent 角色（compress 冻结等无语义）。整行 dim——
   // 无需 ANSI 注入（running 面板头则套 dim + 恢复行色——subagent-panel.mjs）。
   const isSubRole = SUBAGENT_ROLES.includes(sub.role)
-  const modePart = isSubRole ? ` · ${sub.async === true ? "async" : "sync"}` : ""
+  // §20：冻结的 queued 块（中止清场兜底——interrupted）标 waiting——不误标 sync
+  const modePart = isSubRole
+    ? ` · ${sub.queued ? "waiting" : (sub.async === true ? "async" : "sync")}`
+    : ""
   const modelPart = sub.model ? ` · ${sub.model}` : ""
   const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
   const errPart = sub.lastError ? ` — ${sub.lastError}` : ""

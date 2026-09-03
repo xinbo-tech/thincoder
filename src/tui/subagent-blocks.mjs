@@ -17,10 +17,14 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
  *  完成（§17.5.5 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
  *  stopped（§19.5 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
+ *  queued（§20 D-SD3b）= 排队 spawn 返回即建 waiting 块（round2 #2 事件通道——
+ *  `⟦ev⟧queued\x1e<kind>\x1e<position>\x1equeued\x1e<detail>`——kind slot/wait/depc）——
+ *  启动后 ⟦ev⟧async 转 running（同 key 不重建）；cancelled（§20）= 出队/取消——**零字段**
+ *  移除块（不冻结——无活动可冻结）——与 async 同型单独解析（不入本正则）；
  *  async（§19.5 D-M7b + 处置 #4）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
  *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）；**缺失 key
  *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
-export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
+export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
 /** §19.5 D-M8 嵌套 relay 前缀通用解析（循环解析任意深度）：
  *  `eng-coder#2/explore#1/read` → { head（块路由）, inner[], label（子标）, rest }。
@@ -73,7 +77,9 @@ function syncPanelSnapshot(state) {
   if (!agent) return // 未挂载（headless/mock 无 TUI 装配）——无镜像
   const snap = []
   for (const sub of Object.values(state.subTasks ?? {})) {
-    const status = sub.done ? (sub.awaitingDigest ? "awaitingDigest" : "done") : "running"
+    // §20 D-SD3b：waiting/等位块（sub.queued——未启动）以 queued 态入镜（镜像与面板
+    // 所见一致——action:'panel' 视图 + freeze 门控读此态）。
+    const status = sub.done ? (sub.awaitingDigest ? "awaitingDigest" : "done") : (sub.queued ? "queued" : "running")
     snap.push({ key: sub.key, role: sub.role ?? null, status, startedAt: sub.started ?? Date.now() })
   }
   agent._panelSnapshot = snap
@@ -368,12 +374,36 @@ export function routeSubToken(state, t, scheduleRender) {
   // pending 标志**（state._pendingAsyncKeys——ensureSubTaskKey 块创建时应用——async
   // 事件先于块存在到达不丢——queued→running ⏹ 可见性保真——⏹ 门控与头标 async 判定源）。
   // 内层（嵌套 explore#M/）async 剥除不路由（防污染外层块头）。
+  // §20 D-SD3b：queued 等待块实际启动（补位/释放）→ **转 running——同 key 不重建**
+  // ——清 waiting 标注（sub.queued）+ started 归零（elapsed 从实际启动计时——与池
+  // startedAt 语义一致——排队等待不计 elapsed）。
   if (!nested && /^⟦ev⟧async(\x1e|$)/.test(payload)) {
     const live = state.subTasks?.[path.head]
-    if (live) live.async = true
+    if (live) {
+      live.async = true
+      if (live.queued) {
+        delete live.queued
+        live.started = Date.now()
+        syncPanelSnapshot(state) // §19.6 D-P1: queued → running 状态变更刷镜
+      }
+    }
     else {
       state._pendingAsyncKeys ??= new Set()
       state._pendingAsyncKeys.add(path.head)
+    }
+    scheduleRender()
+    return true
+  }
+  // §20 D-SD3b（round2 #2——cancelled 事件）：取消/出队 → 移除等待块（**不冻结**——
+  // 从未启动无活动可冻结；running 取消走 ⟦ev⟧stopped 冻结——两者通道分明）。守卫：
+  // 仅 !async 块（waiting 块未启动——async 置位 = running——running 的取消以 stopped
+  // 通道表达，cancelled 永不合法指向 running 块——迟到/失序事件不误删）。缺失块
+  // （headless 竞态/已移除）→ no-op。零字段解析同 async（不入 SUB_EVENT_RE）。
+  if (!nested && /^⟦ev⟧cancelled(\x1e|$)/.test(payload)) {
+    const live = state.subTasks?.[path.head]
+    if (live && !live.done && live.async !== true) {
+      delete state.subTasks[path.head]
+      syncPanelSnapshot(state) // §19.6 D-P1: 移除后刷镜（块出面板）
     }
     scheduleRender()
     return true
@@ -382,10 +412,28 @@ export function routeSubToken(state, t, scheduleRender) {
   if (!sub) return true // frozen tombstone — late token from an aborted child: drop
   // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（§15 D-A3）=
   // 完成即冻结（settle 时发）；settled（§17 D-S8）= 挂起期完成——驻留面板中间态
-  // "done · awaiting digestion"，池空补发冻结；stopped（§19.5）= cancel——立即冻结。
+  // "done · awaiting digestion"，池空补发冻结；stopped（§19.5）= cancel——立即冻结；
+  // queued（§20 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
+  // 更新 sub.queued——块不可展开（无活动流）；启动后 async 事件清标转 running）。
   if (payload.startsWith("⟦ev⟧")) {
     if (nested) return true // 内层事件剥除不路由（防 explore 进度污染外层块头）
     const ev = payload.match(SUB_EVENT_RE)
+    if (ev?.[1] === "queued") {
+      // 防御：已启动块（async 标记已置）收到迟到的 queued 刷新 → 丢弃（事件序保证
+      // queued 恒先于 async——迟到即陈旧——不复活 waiting 标注盖住 running 态）。
+      if (sub.async === true) return true
+      sub.queued = {
+        kind: ev[2] === "wait" || ev[2] === "depc" ? ev[2] : "slot",
+        position: Number(ev[3]) > 0 ? Number(ev[3]) : undefined,
+        detail: ev[5] ?? "",
+      }
+      sub.currentTool = null
+      sub.approval = null
+      sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+      syncPanelSnapshot(state) // §19.6 D-P1: waiting 块建/刷新刷镜
+      scheduleRender()
+      return true
+    }
     if (ev?.[1] === "settled") {
       sub.done = true
       sub.doneAt = Date.now()

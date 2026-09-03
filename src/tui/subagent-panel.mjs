@@ -79,8 +79,14 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // 截断后对完整存活的 mode word 单独套 dim + 恢复行色（自闭合——截断落在词内
     // 则 replace 不命中 → 无 ANSI 泄漏，词以行色显示）。
     const isSubRole = SUBAGENT_ROLES.includes(sub.role)
-    const modeWord = isSubRole ? (sub.async === true ? "async" : "sync") : null
-    const modePart = modeWord ? ` · ${modeWord}` : ""
+    // §20 D-SD3b waiting 块（sub.queued——排队 spawn 返回即建——未启动无 relay 流）：
+    // 括号状态词 = waiting（依赖/域冲突等位——detail 即原因）或 queued（槽满等位——
+    // 状态区显示 position）；不显示 sync/async 词（尚未启动——无 async 标记可言——
+    // sync 词会误导：async spawn 排队的块不是 sync）；⏹ 门控不变（async 启动后才置）。
+    const queued = sub.queued ?? null
+    const statusWord = queued ? (queued.kind === "slot" ? "queued" : "waiting") : null
+    const modeWord = isSubRole && !queued ? (sub.async === true ? "async" : "sync") : null
+    const modePart = modeWord ? ` · ${modeWord}` : (statusWord ? ` · ${statusWord}` : "")
     // 评审 #1 宽度预算：模型名先单独按显示宽度截断（[model] token 原样记录可长
     // 20-30+ 字符，不截断则括号前缀宽度不可预算、状态区被挤出终端右边距）；
     // 再量括号前缀实际显示宽度，状态区按 cols - bracketWidth - 2 截断——整行
@@ -96,9 +102,19 @@ export function renderSubagentPanel(state, cols, maxRows) {
       const painted = bracket.replace(` · ${modeWord}`, ` · ${ansi.dim}${modeWord}${C.tool}`)
       if (painted !== bracket) bracket = painted // 词被截断则保持纯文本（不泄漏 dim）
     }
+    if (statusWord) {
+      const painted = bracket.replace(` · ${statusWord}`, ` · ${ansi.dim}${statusWord}${C.tool}`)
+      if (painted !== bracket) bracket = painted
+    }
     const bracketWidth = stringWidth(bracket)
     let statePart
-    if (sub.approval) statePart = `等待审批: ${sub.approval}`
+    if (queued) {
+      // waiting 块状态区：detail 即原因文本（waiting for: …/dependency cancelled: …）；
+      // slot 等位 → queued · position N（槽满）。
+      statePart = queued.kind === "slot"
+        ? `queued · position ${queued.position ?? "?"}（槽满等位）`
+        : (queued.detail || "queued")
+    } else if (sub.approval) statePart = `等待审批: ${sub.approval}`
     else if (sub.awaitingDigest) statePart = "done · awaiting digestion"
     else if (sub.currentTool) statePart = sub.currentTool
     else statePart = "thinking..."

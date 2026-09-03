@@ -12,6 +12,10 @@ import {
   buildChildRunOpts, maybeRefillAsync,
   executeCheckAction, executeStatusAction, executeEscalateAction, executeCancelAction,
   executePanelAction,
+  // §20 调度器（AGENT-LOOP.md §20——D-SD1..SD5）：文件域归一化/等待态派生/环防御/
+  // 排队态面板刷新/依赖者标注。
+  normalizeFileList, describeBlockers, queueRunnable, refreshQueuedTokens,
+  assertNoDepCycle, depInfo, dependentLabels,
 } from "./subagent-async.mjs"
 
 // 2026-09-03 拆分轮: subagent.mjs 超 500 硬顶——async 常量、共享 post-spawn 管线
@@ -97,6 +101,7 @@ export const subagentTool = {
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round.\n" +
     "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-coder. The schema enum reflects the active mode.\n\n" +
     "Async spawn (AGENT-LOOP.md §15/§18): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. Fetch the report later with action:'check' — multiple async children return in completion (arrival) order, first finished first, so fast results are handled immediately. Query progress with action:'status' (non-blocking) — action:'check' BLOCKS until the target finishes. The DEFAULT is role-level: role='eng-coder' spawns async (its delivery protocol runs fully inside the child — implementation → audit → self-fix → advisor re-review → converged delivery; pass async:false only when you must handle the report synchronously); every other role defaults to blocking. Use async when your own turn must keep moving; use a blocking spawn when you must see the report before continuing. Async spawns are capped at 4 concurrent (further spawns queue with a position), and top-level only.\n\n" +
+    "Task scheduling (AGENT-LOOP.md §20): declare the scheduling metadata to let the SCHEDULER order your spawns — files: the file paths this task will modify, dependsOn: ids from prior async spawn returns whose outcome this task needs. Overlapping-file tasks are serialized and dependent tasks are started in order automatically: a spawn that would conflict, or whose dependencies have not settled, queues instead of running ({id, status:\"queued\", position, reason} — the waiting task auto-starts when the conflict clears / its dependency settles; cancel a queued task to drop it). A spawn whose dependency was cancelled or failed stays queued and marked \"dependency cancelled\" until you decide (cancel it) — in an AUTO session it starts by itself. Referencing an unknown id errors; an id already consumed by check counts as satisfied. Omit both parameters for the plain immediate spawn (no scheduler involvement).\n\n" +
     "Writing the prompt:\n" +
     "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
     "- Put exact paths and commands in the prompt when you know them. The sub-agent should not search for things you already know.\n" +
@@ -115,6 +120,8 @@ export const subagentTool = {
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
       async: { type: "boolean", description: "true = spawn without waiting — returns {id, status:\"running\"} immediately, fetch results later via action:'check'. Default is role-level: role='eng-coder' → true (async; its internal delivery protocol runs in the background — pass async:false to force the blocking spawn when you must process the report before continuing); all other roles → false (blocking)." },
+      files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares (cwd-relative or absolute paths). Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:\"queued\", position, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
+      dependsOn: { type: "array", items: { type: "string" }, description: "action:'spawn' only: ids from prior async spawn returns whose outcome this task needs — the task queues ({id, status:\"queued\", position, reason}) until every dependency settles, then starts automatically. Ids consumed by action:'check' count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
       id: { type: "string", description: "action:'check'/'status'/'cancel': the subagent id from the async spawn return. check: omit = the next completed child (arrival order); status: omit = overview of the whole pool; cancel: REQUIRED (never omit — a blanket cancel is unsupported)." },
       n: { type: "number", description: "action:'check' (required): 1-based read counter — 1 for the first check of the turn, incrementing with each subsequent check (loop detector — consecutive checks must be distinct tool calls)." },
     },
@@ -198,6 +205,42 @@ export const subagentTool = {
     // （escalate 动作的同类拒绝在 action 分流处——本检查只管 spawn 路径。）
     if (parent._inAutoTurn && !parent.autoApprove) {
       return JSON.stringify({ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" })
+    }
+
+    // ── §20 spawn 调度参数准入（AGENT-LOOP.md §20 D-SD1/D-SD3 + 20.4 round2 #5/#7）──
+    // files/dependsOn 声明即契约（v1：不做任务书文本自动解析——不可靠）。缺省（两者皆
+    // 缺）= 既有语义零改动（不参与冲突检测/无校验——legacy spawn 零开销直通）。
+    // 校验序：参数形态 → 依赖 unknown id（非 consumed 墓碑——T-SD10）→ 依赖环可达
+    // （T-SD5——防御断言：自然流程不可达）→ 等待态判定。判定结果：wait/depc 阻塞 →
+    // async 入 queued 等位（spawn 返回带 reason——D-SD3b）；**sync spawn（async:false）
+    // 命中阻塞 → 明确错误——不队列化 sync——sync 语义零变更（round2 #7——T-SD13）**。
+    const filesRaw = args.files
+    const dependsRaw = args.dependsOn
+    const files = filesRaw !== undefined && filesRaw !== null ? normalizeFileList(filesRaw, parent.cwd) : []
+    if (filesRaw !== undefined && filesRaw !== null && !Array.isArray(filesRaw)) {
+      throw new Error("subagent files must be an array of file paths (the write domain this task declares)")
+    }
+    const dependsOn = []
+    if (dependsRaw !== undefined && dependsRaw !== null) {
+      if (!Array.isArray(dependsRaw)) throw new Error("subagent dependsOn must be an array of async subagent ids (from prior spawn returns)")
+      for (const d of dependsRaw) {
+        if (typeof d !== "string" && typeof d !== "number") {
+          throw new Error(`subagent dependsOn entries must be async subagent ids — got ${JSON.stringify(d)}`)
+        }
+        dependsOn.push(String(d))
+      }
+    }
+    if (files.length > 0 || dependsOn.length > 0) {
+      for (const d of dependsOn) {
+        if (depInfo(parent, d).state === "unknown") {
+          throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed by action:'check' (or auto-injected) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
+        }
+      }
+      assertNoDepCycle(parent, dependsOn)
+      const block = describeBlockers(parent, { _files: files, _dependsOn: dependsOn })
+      if (!wantAsync && block.kind !== "slot") {
+        throw new Error(`sync spawn (async:false) cannot queue behind a scheduling conflict: ${block.detail} — pass async:true to queue the task (the scheduler starts it when the blockers clear), or wait for them to finish first (AGENT-LOOP.md §20 round2 #7)`)
+      }
     }
 
     // Provider/model override: tool `model` arg > subagentModels[role] > subagentModel > parent provider
@@ -353,7 +396,7 @@ export const subagentTool = {
       const id = parent._subAgentCounter
       const entry = {
         id, role, relayPrefix,
-        status: running >= ASYNC_SUBAGENT_LIMIT ? "queued" : "running",
+        status: "queued", // 下面按等待态/槽位重定（避免两处判断漂移）
         position: undefined,
         report: null, error: null, done: false, cancelled: false,
         promise: null, _settle: null, _settleSeq: 0,
@@ -366,6 +409,21 @@ export const subagentTool = {
         // §19.5 D-M6 (round2 #2)：条目级 AbortController——cancel 定向 abort 本
         // 条目（runAgent signal 链）；Ctrl+C 全停语义不变（基信号 abort 逐链传播）。
         controller: null,
+        // §20 D-SD2 域元数据（AGENT-LOOP.md §20）：running ∪ queued 条目全带——
+        // _files（归一化绝对路径）/ _dependsOn（字符串 id）——冲突检测与补位判据
+        // 的事实源；无调度参数 spawn 两字段皆空（legacy——不参与冲突检测——零改动）。
+        _files: files,
+        _dependsOn: dependsOn,
+        _lastQueuedSig: null, // ⟦ev⟧queued 去重 sig（refreshQueuedTokens）
+      }
+      // §20 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
+      // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ queued（等位）；否则立即启动。
+      // 派生实时计算（describeBlockers——池状态在 spawn 同步段内不变——与前面准入一致）。
+      const blockers = describeBlockers(parent, entry)
+      if (blockers.kind === "slot") {
+        entry.status = running >= ASYNC_SUBAGENT_LIMIT ? "queued" : "running"
+      } else {
+        entry.status = "queued" // waiting-deps / dependency-cancelled——slot 空也不启动
       }
       // The settle signal — resolves when the run chain settles (never rejects).
       entry.promise = new Promise((res) => { entry._settle = res })
@@ -442,12 +500,21 @@ export const subagentTool = {
             // 冻结事件（TUI 区块 interrupted 语义冻结——标题 "stopped"）；取消事实与半成品
             // 警示对模型可见（user-role 提醒——形态仿 injectAsyncResult、XML 转义——防基于
             // 半成品树继续：mergeChildMutations 不覆盖 abort 路径）。
+            // §20 D-SD5：running 依赖取消的 settle 终态点——写终态墓碑（running 取消无
+            // 出队事件——出池在 settle）；queued 依赖者随之标注 dependency cancelled
+            // （refreshQueuedTokens——settle 后统一段）；提醒文本列出依赖者（供模型决策）。
             if (entry.cancelled) {
               parent._asyncSubagents?.delete(String(entry.id))
+              const tombstones = (parent._asyncTombstones ??= new Map())
+              tombstones.set(String(entry.id), { status: "cancelled", role: entry.role })
               ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
+              const dependents = dependentLabels(parent, String(entry.id))
+              const autoNote = parent.autoApprove
+                ? " — AUTO session: they auto-start on slot availability (round2 #3)"
+                : " — they stay queued until you cancel them or an AUTO session starts them"
               pushReal(parent, {
                 role: "user",
-                content: `[System reminder: subagent ${escapeXml(entry.role)}#${entry.id} cancelled by user — partial changes not merged/audited]`,
+                content: `[System reminder: subagent ${escapeXml(entry.role)}#${entry.id} cancelled by user — partial changes not merged/audited${dependents.length > 0 ? `; queued dependents ${dependents.join(", ")} marked "dependency cancelled"${autoNote}` : ""}]`,
               })
             } else if (!ctx.signal?.aborted) {
               // 完成信号按会话态分流（§17 D-S8 冻结门控 + D-S3 记账——以读取时刻为准，确定性）：
@@ -472,7 +539,11 @@ export const subagentTool = {
             entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
             entry._settle()
             for (const w of parent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
+            // §20 D-SD4 释放点：settle 腾槽 + 依赖终态转移 → 补位（依赖满足者/域冲突
+            // 解除者自动启动——槽 ≤4）→ 排队态面板刷新（等待块头标注随终态更新——
+            // dependency cancelled / 位置前移）。
             maybeRefillAsync(parent)
+            refreshQueuedTokens(parent, ctx.callbacks?.onToken)
           })
       }
       parent._asyncSubagents.set(String(id), entry)
@@ -482,7 +553,17 @@ export const subagentTool = {
       if (entry.status === "queued") {
         parent._asyncQueue.push(entry)
         entry.position = parent._asyncQueue.length
-        return JSON.stringify({ id: String(id), role, status: "queued", position: entry.position })
+        // §20 D-SD3b：排队 spawn 返回即建面板 waiting 块（⟦ev⟧queued 事件——spawn 侧
+        // 发——TUI routeSubToken 消费建块/更新头；启动后 ⟦ev⟧async 转 running——同 key
+        // 不重建）。refreshQueuedTokens 同时校正既有排队条目的位置/等待态头。
+        refreshQueuedTokens(parent, ctx.callbacks?.onToken)
+        const blk = describeBlockers(parent, entry)
+        const out = { id: String(id), role, status: "queued", position: entry.position }
+        if (blk.kind !== "slot") {
+          out.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
+          out.reason = blk.detail
+        }
+        return JSON.stringify(out)
       }
       entry.start()
       return JSON.stringify({ id: String(id), role, status: "running" })

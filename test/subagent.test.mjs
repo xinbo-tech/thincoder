@@ -1716,3 +1716,550 @@ test("§19.6 门禁分类（round1 #5）: planMode 下 panel view（只读类）
 })
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// §20 子 agent 任务调度器（AGENT-LOOP.md §20——T-SD1..14 池层 N/E/A 展开）
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("§20 T-SD1/T-SD8: 无调度参数 spawn → 立即启动（既有语义回归——零 queued 事件）；文件域不相交 → 并行（不误排）", async () => {
+  const { server, port } = await asyncServer([
+    { content: LONG_REPORT("占槽"), delay: 1500 },
+    { content: LONG_REPORT("a 域"), delay: 1500 },
+    { content: LONG_REPORT("b 域") },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd1-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const tokens = []
+    const ctx = tokenCtx(parent, cwd, tokens)
+    // T-SD1: 无调度参数 → 立即启动（legacy——零改动）
+    const p = JSON.parse(String(await subagentTool.execute({ task: "占槽", role: "coder", async: true }, ctx)))
+    assert.equal(p.status, "running", "T-SD1: 无参数 async spawn 立即启动（既有语义回归）")
+    // T-SD8: 文件域不相交 + 无依赖 → 并行（第二个不因第一个在跑而排队）
+    const a = JSON.parse(String(await subagentTool.execute({ task: "a 域", role: "coder", async: true, files: ["a/one.mjs"] }, ctx)))
+    const b = JSON.parse(String(await subagentTool.execute({ task: "b 域", role: "coder", async: true, files: ["b/two.mjs"] }, ctx)))
+    assert.equal(a.status, "running")
+    assert.equal(b.status, "running", "T-SD8: 不相交文件域并行启动（不误排）")
+    assert.equal(
+      [...parent._asyncSubagents.values()].filter((e) => e.status === "running").length,
+      3,
+      "三个条目并行 running",
+    )
+    assert.ok(!tokens.some((t) => t.includes("⟦ev⟧queued")), "立即启动路径零 queued 事件（块由 async/[model] 建）")
+    // 收尾：等全部 settle（快者先——b 无 delay）
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD2/T-SD7: 同文件域冲突 spawn → waiting-deps（不入 running——status 显示原因——路径归一化）→ 域持有者 settle 自动补位启动", async () => {
+  const { server, port } = await asyncServer([
+    { content: LONG_REPORT("持域"), delay: 1200 },
+    { content: LONG_REPORT("冲突者"), delay: 1200 },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd2-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const tokens = []
+    const ctx = tokenCtx(parent, cwd, tokens)
+    // 形态一：相对路径；形态二：绝对路径——归一化后判定同文件（round1 #5）
+    const a = JSON.parse(String(await subagentTool.execute({ task: "持域任务", role: "coder", async: true, files: ["src/x.mjs"] }, ctx)))
+    assert.equal(a.status, "running")
+    const entryA = parent._asyncSubagents.get(String(a.id))
+    assert.ok(entryA._files.length === 1 && entryA._files[0].endsWith(join("src", "x.mjs")), "D-SD2: _files 归一化为绝对路径")
+    const b = JSON.parse(String(await subagentTool.execute({ task: "冲突任务", role: "coder", async: true, files: [join(cwd, "src", "x.mjs")] }, ctx)))
+    assert.equal(b.status, "queued", "T-SD2: 同文件域冲突 → waiting-deps（不入 running）")
+    assert.equal(b.waiting, "waiting-deps")
+    assert.ok(b.reason.includes(`coder#${a.id}`) && b.reason.includes("x.mjs"), `reason 含冲突对象与文件（实际: ${b.reason}）`)
+    const eb = parent._asyncSubagents.get(String(b.id))
+    assert.equal(eb.status, "queued", "池状态 queued（不占槽）")
+    assert.ok(!eb.startedAt, "未启动（无 startedAt）")
+    // T-SD7: status 显示 waiting-deps + 原因（模型可见——F-SD4）
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: b.id }, ctx)))
+    assert.equal(st.status, "queued")
+    assert.equal(st.waiting, "waiting-deps")
+    assert.ok(st.reason.includes(`coder#${a.id}`), `status reason 含冲突对象（实际: ${st.reason}）`)
+    const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, ctx)))
+    const ovRow = ov.overview.queued.find((e) => String(e.id) === String(b.id))
+    assert.equal(ovRow.waiting, "waiting-deps", "概览 queued 条目同带 waiting 标注")
+    assert.ok(tokens.some((t) => t.startsWith(`coder#${b.id}/⟦ev⟧queued\x1ewait\x1e1\x1e`)), "D-SD3b: queued 事件随 spawn 返回（waiting 块通道——wait kind）")
+    // 域持有者 settle（1200ms）→ 冲突解除 → 自动补位启动（槽空即启——D-SD4）
+    await waitFor(() => parent._asyncSubagents.get(String(b.id))?.status === "running", 6000)
+    assert.ok(parent._asyncSubagents.get(String(b.id))?.status === "running", "冲突解除自动启动（waiting 块转 running）")
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD3: dependsOn 未满足 → queued（依赖原因）；依赖 settle → 自动补位启动", async () => {
+  const { server, port } = await asyncServer([
+    { content: LONG_REPORT("依赖目标"), delay: 1200 },
+    { content: LONG_REPORT("依赖者"), delay: 900 },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd3-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = tokenCtx(parent, cwd, [])
+    const dep = JSON.parse(String(await subagentTool.execute({ task: "依赖目标", role: "coder", async: true }, ctx)))
+    assert.equal(dep.status, "running")
+    const child = JSON.parse(String(await subagentTool.execute({ task: "依赖者", role: "coder", async: true, dependsOn: [String(dep.id)] }, ctx)))
+    assert.equal(child.status, "queued", "T-SD3: 依赖未完成 → 排队（waiting-deps）")
+    assert.equal(child.waiting, "waiting-deps")
+    assert.ok(child.reason.includes(`coder#${dep.id}`) && child.reason.includes("依赖未完成"), `reason 含依赖对象与原因（实际: ${child.reason}）`)
+    assert.equal(parent._asyncSubagents.get(String(child.id)).status, "queued", "不入 running（不占槽）")
+    await waitFor(() => parent._asyncSubagents.get(String(child.id))?.status === "running", 6000)
+    assert.ok(parent._asyncSubagents.get(String(child.id))?.status === "running", "依赖 settle → 自动补位启动（槽空即启）")
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD4: 多任务同依赖 → 释放后逐个启动到槽满（上限 4——D-SD4）", async () => {
+  const { server, port } = await asyncServer([
+    { content: LONG_REPORT("被依赖"), delay: 1500 },
+    { content: LONG_REPORT("依赖者1"), delay: 900 },
+    { content: LONG_REPORT("依赖者2"), delay: 900 },
+    { content: LONG_REPORT("依赖者3"), delay: 900 },
+    { content: LONG_REPORT("依赖者4"), delay: 900 },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd4-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = tokenCtx(parent, cwd, [])
+    const dep = JSON.parse(String(await subagentTool.execute({ task: "被依赖", role: "coder", async: true }, ctx)))
+    const kids = []
+    for (let i = 1; i <= 4; i++) {
+      const k = JSON.parse(String(await subagentTool.execute({ task: `依赖者${i}`, role: "coder", async: true, dependsOn: [String(dep.id)] }, ctx)))
+      assert.equal(k.status, "queued", `第 ${i} 个依赖者排队`)
+      kids.push(k)
+    }
+    assert.equal((parent._asyncSubagents.get(String(dep.id))).status, "running", "依赖目标仍在跑")
+    await waitFor(() => kids.every((k) => parent._asyncSubagents.get(String(k.id))?.status === "running"), 8000)
+    assert.equal(
+      [...parent._asyncSubagents.values()].filter((e) => e.status === "running").length,
+      4,
+      "T-SD4: 一批依赖者同时解除 → 逐个启动到槽满（≤4）",
+    )
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD4b: 混合队列（waiting-deps 在前 + slot-queued 在后）——槽释放时 earliest-runnable 启动（waiting 越行不阻塞槽位）", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 7 }, (_, i) => ({ content: LONG_REPORT(`槽${i}`), delay: i === 0 ? 3000 : 2000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd4b-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = tokenCtx(parent, cwd, [])
+    const fillers = []
+    for (let n = 1; n <= 4; n++) {
+      const s = JSON.parse(String(await subagentTool.execute({ task: `占槽${n}`, role: "coder", async: true }, ctx)))
+      fillers.push(s)
+    }
+    // 队首 Z：依赖占槽 2（waiting-deps——长期等）；队后 W：无阻塞（slot 等位）
+    const z = JSON.parse(String(await subagentTool.execute({ task: "等依赖", role: "coder", async: true, dependsOn: [String(fillers[1].id)] }, ctx)))
+    const w = JSON.parse(String(await subagentTool.execute({ task: "纯等位", role: "coder", async: true }, ctx)))
+    assert.equal(z.status, "queued")
+    assert.equal(z.waiting, "waiting-deps", "Z 依赖未满足——waiting")
+    assert.equal(w.status, "queued")
+    assert.equal(w.position, 2, "W slot 等位（position 2——Z 在前）")
+    // cancel 占槽 1 → 腾 1 槽 → 补位扫描：Z 不可启动（依赖占槽2 未 settle）→ W 越行启动
+    const c = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: fillers[0].id }, ctx)))
+    assert.equal(c.status, "cancelled")
+    await waitFor(() => parent._asyncSubagents.get(String(w.id))?.status === "running", 6000)
+    assert.ok(parent._asyncSubagents.get(String(w.id))?.status === "running", "T-SD4b: 槽释放 → earliest runnable（W）越行启动")
+    assert.equal(parent._asyncSubagents.get(String(z.id))?.status, "queued", "Z（waiting-deps 在前）仍排队（不阻塞槽位——也不被跳过误启动）")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD5/T-SD10: dependsOn 成环 → spawn 拒绝（人工注入构造——防御断言）；unknown id → 明确错误", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = process.cwd()
+  // T-SD10: unknown id（非 consumed——从未存在）→ 明确错误
+  const empty = { config: { agent: {} }, _asyncSubagents: new Map(), cwd }
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "coder", async: true, dependsOn: ["42"] }, { agent: empty, cwd, callbacks: {}, depth: 0 }),
+    /unknown async subagent id: 42/,
+    "T-SD10: unknown id 拒绝（错误明确）",
+  )
+  // T-SD5: 人工向池注入成环条目（1→2→1——自然流程不可达）——spawn 依赖 1 → 拒绝
+  const mk = (id, deps) => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status: "queued", position: id,
+    _files: [], _dependsOn: deps, report: null, error: null, done: false, cancelled: false,
+  })
+  const cyc = { config: { agent: {} }, _asyncSubagents: new Map([["1", mk(1, ["2"])], ["2", mk(2, ["1"])]]), cwd }
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "coder", async: true, dependsOn: ["1"] }, { agent: cyc, cwd, callbacks: {}, depth: 0 }),
+    /cycle detected: 1 → 2 → 1/,
+    "T-SD5: 可达环拒绝（错误列路径）",
+  )
+})
+
+test("§20 T-SD6: cancel waiting-deps 任务 → 出队移除 + 后续 position 前移 + cancelled 块移除事件", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 5 }, () => ({ content: LONG_REPORT("占槽"), delay: 3000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd6-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const tokens = []
+    const ctx = tokenCtx(parent, cwd, tokens)
+    const fillers = []
+    for (let n = 1; n <= 4; n++) {
+      // 占槽 1 声明文件域 only.mjs（running 域持有者）——B 与之冲突排队
+      const s = JSON.parse(String(await subagentTool.execute({ task: `占槽${n}`, role: "coder", async: true, ...(n === 1 ? { files: ["only.mjs"] } : {}) }, ctx)))
+      fillers.push(s)
+    }
+    // B：与 running 占槽 1 同文件域 → waiting-deps；C：纯 slot 等位
+    const b = JSON.parse(String(await subagentTool.execute({ task: "冲突等位", role: "coder", async: true, files: ["only.mjs"] }, ctx)))
+    assert.equal(b.waiting, "waiting-deps")
+    assert.ok(b.reason.includes(`coder#${fillers[0].id}`), `B 冲突对象 = running 占槽 1（实际: ${b.reason}）`)
+    const c = JSON.parse(String(await subagentTool.execute({ task: "纯等位", role: "coder", async: true }, ctx)))
+    assert.equal(c.position, 2, "C 在 B 之后（position 2）")
+    // cancel waiting-deps 任务 B → 出队（was:"queued"——无依赖者故无 note）+ C position 前移 + 块移除事件
+    const cb = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: b.id }, ctx)))
+    assert.equal(cb.id, String(b.id))
+    assert.equal(cb.status, "cancelled")
+    assert.equal(cb.was, "queued", "queued 取消确认形态")
+    assert.equal(cb.dependents, undefined, "无依赖者 → 无 note 字段（干净确认形态）")
+    assert.ok(!parent._asyncSubagents.has(String(b.id)), "T-SD6: waiting-deps 条目出队移除")
+    assert.equal(parent._asyncQueue.length, 1)
+    assert.equal(parent._asyncQueue[0].id, Number(c.id), "剩余队项 = C")
+    assert.equal(parent._asyncQueue[0].position, 1, "T-SD6: 后续项 position 前移（2 → 1）")
+    assert.ok(tokens.includes(`coder#${b.id}/⟦ev⟧cancelled\x1e`), "D-SD3b: cancelled 事件发出（waiting 块移除通道）")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD9: cancel queued 依赖 → 依赖者留 queued 标 dependency cancelled（round2 #3 锁——手动档腾槽也不自动启动——工具结果内注记）——父显式 cancel 释放", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 8 }, () => ({ content: LONG_REPORT("槽"), delay: 4000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd9-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = tokenCtx(parent, cwd, [])
+    const fillers = []
+    for (let n = 1; n <= 4; n++) {
+      const s = JSON.parse(String(await subagentTool.execute({ task: `占槽${n}`, role: "coder", async: true }, ctx)))
+      fillers.push(s)
+    }
+    const x = JSON.parse(String(await subagentTool.execute({ task: "排队依赖", role: "coder", async: true }, ctx))) // queued（slot）
+    const y = JSON.parse(String(await subagentTool.execute({ task: "依赖者", role: "coder", async: true, dependsOn: [String(x.id)] }, ctx)))
+    assert.equal(y.status, "queued")
+    // cancel queued 依赖 X（无 settle 事件——round1 #4：cancel 返回即处置）→ 依赖者 Y 留
+    // queued 标 dependency cancelled——工具结果内注记（模型可见通道）
+    const cx = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: x.id }, ctx)))
+    assert.equal(cx.status, "cancelled")
+    assert.equal(cx.was, "queued")
+    assert.deepEqual(cx.dependents, [`coder#${y.id}`], "依赖者列表随 cancel 返回（工具结果内）")
+    assert.ok(cx.note.includes("dependency cancelled"), `注记说明处置选项（实际: ${cx.note?.slice(0, 120)}）`)
+    assert.ok(parent._asyncSubagents.has(String(y.id)), "依赖者未出队")
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: y.id }, ctx)))
+    assert.equal(st.status, "queued")
+    assert.equal(st.waiting, "dependency-cancelled", "T-SD9: 依赖者留 queued 标 dependency cancelled（模型可见）")
+    assert.ok(st.reason.includes("dependency cancelled"), `reason 标注取消事实（实际: ${st.reason}）`)
+    // 腾槽也不自动启动（round2 #3 锁——仅父显式处置或 AUTO）：cancel 占槽 1 → 槽空 →
+    // 补位扫描：Y depc 锁 → 留 queued（稍候断言——防迟发补位竞态）
+    const c1 = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: fillers[0].id }, ctx)))
+    assert.equal(c1.status, "cancelled")
+    await new Promise((r) => setTimeout(r, 250))
+    assert.equal(parent._asyncSubagents.get(String(y.id))?.status, "queued", "手动档：槽空也不自动启动（depc 锁——滞留有意——显式可清）")
+    // 父显式处置（cancel 该依赖者）→ 出队释放（评审 #6：显式可清——不静默）
+    const cy = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: y.id }, ctx)))
+    assert.equal(cy.status, "cancelled")
+    assert.equal(cy.was, "queued")
+    assert.ok(!parent._asyncSubagents.has(String(y.id)), "显式 cancel 释放 depc 滞留条目")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD9b: AUTO 档——依赖取消后依赖者自动启动（round2 #3——仅 AUTO/父显式才启动）", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 8 }, () => ({ content: LONG_REPORT("槽"), delay: 4000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd9b-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    parent.autoApprove = true // AUTO 档（无人值守——digest 决策）
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = tokenCtx(parent, cwd, [])
+    const fillers = []
+    for (let n = 1; n <= 4; n++) {
+      const s = JSON.parse(String(await subagentTool.execute({ task: `占槽${n}`, role: "coder", async: true }, ctx)))
+      fillers.push(s)
+    }
+    const x = JSON.parse(String(await subagentTool.execute({ task: "排队依赖", role: "coder", async: true }, ctx)))
+    const y = JSON.parse(String(await subagentTool.execute({ task: "依赖者", role: "coder", async: true, dependsOn: [String(x.id)] }, ctx)))
+    assert.equal(y.status, "queued")
+    // AUTO：cancel queued 依赖 X → 依赖者 Y 仍留 queued（槽满）……
+    const cx = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: x.id }, ctx)))
+    assert.equal(cx.status, "cancelled")
+    assert.equal(parent._asyncSubagents.get(String(y.id))?.status, "queued", "AUTO：槽满时 Y 仍排队（depc 视为可启动——等槽）")
+    // ……腾槽 → 自动启动（不须父显式处置）
+    const c1 = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: fillers[0].id }, ctx)))
+    assert.equal(c1.status, "cancelled")
+    await waitFor(() => parent._asyncSubagents.get(String(y.id))?.status === "running", 6000)
+    assert.ok(parent._asyncSubagents.get(String(y.id))?.status === "running", "T-SD9b: AUTO——依赖取消后腾槽即自动启动（round2 #3）")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD9c: cancel running 依赖 → settle cancelled 分支（终态释放点）——依赖者标 dependency cancelled + 提醒含依赖者注记", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 6 }, () => ({ content: LONG_REPORT("槽"), delay: 20000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd9c-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const tokens = []
+    const ctx = tokenCtx(parent, cwd, tokens)
+    const dep = JSON.parse(String(await subagentTool.execute({ task: "running 依赖", role: "coder", async: true }, ctx)))
+    assert.equal(dep.status, "running")
+    const y = JSON.parse(String(await subagentTool.execute({ task: "依赖者", role: "coder", async: true, dependsOn: [String(dep.id)] }, ctx)))
+    assert.equal(y.waiting, "waiting-deps")
+    // cancel running 依赖 → abort → settle cancelled 分支：墓碑 + 依赖者 depc 标注 + 提醒
+    const c = JSON.parse(String(await subagentTool.execute({ action: "cancel", id: dep.id }, ctx)))
+    assert.equal(c.status, "cancelled")
+    await waitFor(() => !parent._asyncSubagents.has(String(dep.id)), 6000)
+    assert.equal(parent._asyncTombstones.get(String(dep.id))?.status, "cancelled", "running 取消 settle → 终态墓碑（cancelled）")
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: y.id }, ctx)))
+    assert.equal(st.status, "queued")
+    assert.equal(st.waiting, "dependency-cancelled", "settle 终态释放：依赖者留 queued 标 dependency cancelled")
+    assert.ok(st.reason.includes("dependency cancelled"), `reason 标注（实际: ${st.reason}）`)
+    assert.ok(
+      parent.history.some((m) => String(m.content ?? "").includes("queued dependents") && String(m.content ?? "").includes(`coder#${y.id}`)),
+      "settle 提醒含依赖者注记（模型可见——供决策）",
+    )
+    assert.ok(tokens.some((t) => t.startsWith(`coder#${y.id}/⟦ev⟧queued\x1edepc\x1e`)), "depc 块头刷新 token（面板恒标滞留原因）")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+
+test("§20 T-SD13: sync spawn 带调度参数命中冲突 → 明确错误（不队列化 sync）；无冲突 → 正常阻塞跑（sync 语义零变更）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd13-"))
+  try {
+    // ① 冲突（域冲突——池内 running 持域）→ sync spawn 明确错误
+    const holder = {
+      id: 1, role: "eng-coder", relayPrefix: "eng-coder#1/", status: "running",
+      _files: [join(cwd, "src", "shared.mjs")], _dependsOn: [],
+      report: null, error: null, done: false, cancelled: false, controller: null,
+    }
+    const conflictParent = { config: { agent: {} }, _asyncSubagents: new Map([["1", holder]]), _asyncQueue: [], cwd }
+    await assert.rejects(
+      subagentTool.execute({ task: "x", role: "coder", files: ["src/shared.mjs"] }, { agent: conflictParent, cwd, callbacks: {}, depth: 0 }),
+      /sync spawn \(async:false\) cannot queue/,
+      "T-SD13: sync 冲突 → 明确错误（错误文本含处置建议）",
+    )
+    // ② 依赖未满足同拒（sync 不队列化）
+    const depParent = { config: { agent: {} }, _asyncSubagents: new Map(), _asyncQueue: [], _asyncTombstones: new Map([["7", { status: "cancelled", role: "eng-coder" }]]), cwd }
+    await assert.rejects(
+      subagentTool.execute({ task: "x", role: "coder", dependsOn: ["7"] }, { agent: depParent, cwd, callbacks: {}, depth: 0 }),
+      /sync spawn \(async:false\) cannot queue/,
+      "T-SD13b: sync dependsOn 已取消依赖 → 同拒（不队列化）",
+    )
+    // ③ 无冲突（域空/无依赖）→ 正常阻塞执行（sync 语义零变更——真实子代理跑完）
+    const { server, port } = await asyncServer([{ content: LONG_REPORT("sync 无冲突") }])
+    try {
+      const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+      const r = String(await subagentTool.execute({ task: "x", role: "coder", files: ["unrelated.mjs"] }, {
+        agent: parent, cwd, callbacks: {}, depth: 0,
+      }))
+      assert.ok(r.includes("sync 无冲突 report"), "sync spawn（带 files 无冲突）正常阻塞返回报告——语义零变更")
+    } finally {
+      server.close()
+    }
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 T-SD14: check 消费条目（终态墓碑）——dependsOn 引用视为已满足（非 consumed unknown 才拒）", async () => {
+  const { server, port } = await asyncServer([
+    { content: LONG_REPORT("先完成") },
+    { content: LONG_REPORT("依赖者") },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sd14-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = tokenCtx(parent, cwd, [])
+    const first = JSON.parse(String(await subagentTool.execute({ task: "先完成", role: "coder", async: true }, ctx)))
+    assert.equal(first.status, "running")
+    // check 消费（n=1）→ 条目删除 + 终态墓碑（consumed）
+    const c1 = JSON.parse(await subagentTool.execute({ action: "check", n: 1, id: first.id }, ctx))
+    assert.equal(c1.status, "done")
+    assert.ok(!parent._asyncSubagents.has(String(first.id)), "check 消费删除")
+    assert.equal(parent._asyncTombstones.get(String(first.id)).status, "consumed", "终态墓碑记录（consumed——T-SD14）")
+    // dependsOn 引用 consumed id → 视为满足 → 无阻塞 → 立即启动（而非 unknown 错误）
+    const kid = JSON.parse(String(await subagentTool.execute({ task: "依赖者", role: "coder", async: true, dependsOn: [String(first.id)] }, ctx)))
+    assert.equal(kid.status, "running", "T-SD14: consumed 墓碑 id 视为已满足（dependsOn 语义完成——不拒不排）")
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§20 advisor 处置（code review 🟡）: check 对 depc 锁定条目不无界阻塞——指定 id 返回 queued+原因；arrival-order 池全锁定返回明确错误", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = process.cwd()
+  // ① 指定 id：queued + depc 锁定（依赖取消墓碑）→ 立即返回（不等待——无悬挂）
+  const mkLocked = (id) => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status: "queued", position: 1,
+    _files: [], _dependsOn: ["99"], report: null, error: null, done: false, cancelled: false,
+    startedAt: null, turn: 0, maxTurns: 0, controller: null, promise: null, _settle: null, _settleSeq: 0,
+  })
+  const locked = mkLocked(1)
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["1", locked]]),
+    _asyncQueue: [locked],
+    _asyncTombstones: new Map([["99", { status: "cancelled", role: "eng-coder" }]]),
+    _asyncCheckLastN: 0,
+  }
+  const r1 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1, id: "1" }, { agent, depth: 0, callbacks: {} })))
+  assert.equal(r1.status, "queued", "depc 锁定目标不阻塞——立即返回 queued")
+  assert.equal(r1.waiting, "dependency-cancelled")
+  assert.ok(r1.reason.includes("dependency cancelled"), `reason 标注锁定原因（实际: ${r1.reason}）`)
+  assert.ok(r1.note.includes("cancel"), "note 引导处置（cancel/AUTO）")
+  assert.ok(agent._asyncSubagents.has("1"), "未消费（条目仍在池——check 不删除）")
+  // ② arrival-order：池内无 running/done、全 depc 锁定 → 明确错误（无界等待守卫）
+  const agent2 = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["1", mkLocked(1)], ["2", mkLocked(2)]]),
+    _asyncQueue: [mkLocked(1), mkLocked(2)],
+    _asyncTombstones: new Map([["99", { status: "cancelled", role: "eng-coder" }]]),
+    _asyncCheckLastN: 0,
+  }
+  const r2 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1 }, { agent: agent2, depth: 0, callbacks: {} })))
+  assert.equal(r2.status, "error", "arrival-order 全锁定池 → 明确错误（不悬挂）")
+  assert.ok(r2.error.includes("dependency-cancelled"), `错误列原因（实际: ${r2.error?.slice(0, 120)}）`)
+  // ③ 残留守卫（round2 #7——advisor 复审发现）：wait-kind 条目被 queued-depc 条目阻塞
+  // （文件域链）——池无 running → 同样立即返回（不悬挂）——specific-id + arrival-order
+  const mkFileBlocked = (id, files) => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status: "queued", position: 1,
+    _files: files, _dependsOn: [], report: null, error: null, done: false, cancelled: false,
+    startedAt: null, turn: 0, maxTurns: 0, controller: null, promise: null, _settle: null, _settleSeq: 0,
+  })
+  const fx = [join(cwd, "src", "x.mjs")] // 归一化同文件域——B(#4) 与 C(#5) 冲突
+  const bStuck = mkFileBlocked(4, fx) // depc（依赖 99 已取消）+ 持域
+  bStuck._dependsOn = ["99"]
+  const cStuck = mkFileBlocked(5, fx) // wait-on-B（无自身依赖）
+  const agent4 = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["4", bStuck], ["5", cStuck]]),
+    _asyncQueue: [bStuck, cStuck],
+    _asyncTombstones: new Map([["99", { status: "cancelled", role: "eng-coder" }]]),
+    _asyncCheckLastN: 0,
+  }
+  // specific-id check(C#5——wait-kind）→ 立即返回 queued（池无 running——不悬挂）
+  const r4 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1, id: "5" }, { agent: agent4, depth: 0, callbacks: {} })))
+  assert.equal(r4.status, "queued", "wait-kind 目标 + 无 running 池 → 立即返回（#7 残留闭合）")
+  assert.equal(r4.position, 2, "返回带实时位置")
+  // arrival-order 同池 → 明确错误（不再要求全 depc——结构性守卫）
+  agent4._asyncCheckLastN = 1
+  const r5 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 2 }, { agent: agent4, depth: 0, callbacks: {} })))
+  assert.equal(r5.status, "error", "arrival-order：全 queued 无 running → 明确错误（含混合锁池）")
+  assert.ok(r5.error.includes("coder#4") && r5.error.includes("coder#5"), `错误列出 stuck 条目（实际: ${r5.error?.slice(0, 160)}）`)
+  // ④ 对照：池有 running 条目时守卫放行（正常等待语义——不误伤）
+  const runningEntry = {
+    id: 8, role: "coder", relayPrefix: "coder#8/", status: "running",
+    _files: [], _dependsOn: [], report: null, error: null, done: false, cancelled: false,
+    startedAt: Date.now(), turn: 0, maxTurns: 0, controller: null, promise: null, _settle: null, _settleSeq: 0,
+  }
+  const agent5 = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["4", bStuck], ["5", cStuck], ["8", runningEntry]]),
+    _asyncQueue: [bStuck, cStuck],
+    _asyncTombstones: new Map([["99", { status: "cancelled", role: "eng-coder" }]]),
+    _asyncCheckLastN: 0,
+  }
+  const p5 = subagentTool.execute({ action: "check", n: 1, id: "5" }, { agent: agent5, depth: 0, callbacks: {} })
+  const stillWait = await Promise.race([
+    p5.then(() => "returned"),
+    new Promise((r) => setTimeout(() => r("still-waiting"), 120)),
+  ])
+  assert.equal(stillWait, "still-waiting", "有 running 条目 → 守卫放行（等待语义保留——running settle 会唤醒）")
+  // ⑤ 对照：AUTO 档 depc 非锁定——但池无 running 同样不可启动 → 立即返回 queued
+  // （语义修订——原③"等待放行"改为"立即返回"：refill 由 settle 驱动——无 running 时
+  // AUTO 也无法触发启动——带 AUTO 引导注记返回比悬挂正确）
+  const agent3 = {
+    config: { agent: {} }, cwd, autoApprove: true,
+    _asyncSubagents: new Map([["1", mkLocked(1)]]),
+    _asyncQueue: [mkLocked(1)],
+    _asyncTombstones: new Map([["99", { status: "cancelled", role: "eng-coder" }]]),
+    _asyncCheckLastN: 0,
+  }
+  const r6 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1, id: "1" }, { agent: agent3, depth: 0, callbacks: {} })))
+  assert.equal(r6.status, "queued", "AUTO 池无 running → 立即返回 queued（含 AUTO 引导注记——不悬挂）")
+  assert.ok(r6.note.includes("AUTO session"), "注记含 AUTO 引导（下个 settle/refill 启动）")
+})
+
+test("§20 advisor 处置（code review 🟡）: check 消费 × 挂起移交竞态——消费时反向清除 pending（双送达守卫）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = process.cwd()
+  // 构造竞态：check 在途等待条目 X（池内 running）→ 期间 X 经挂起分支 settle（done +
+  // 移交 pending + 出池）→ 唤醒 check waiter → check 消费：pending 必须被反向清除
+  // （否则下轮 prepareRun 重复注入——同一报告双送达——D-S3 只注入一次不变式）。
+  const entry = {
+    id: 7, role: "coder", relayPrefix: "coder#7/", status: "running",
+    _files: [], _dependsOn: [], report: "race report", error: null, done: false, cancelled: false,
+    startedAt: Date.now(), turn: 0, maxTurns: 0, controller: null,
+    _settleSeq: 0, _lastQueuedSig: null,
+  }
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["7", entry]]),
+    _asyncQueue: [],
+    _pendingAsyncResults: [],
+    _asyncWaiters: [],
+    _asyncCheckLastN: 0,
+  }
+  const p = subagentTool.execute({ action: "check", n: 1, id: "7" }, { agent, depth: 0, callbacks: {} })
+  // 等 check 进入等待（waiter 注册）后模拟挂起 settle：done + 移交 pending + 出池 + 唤醒
+  await new Promise((r) => setTimeout(r, 20))
+  entry.done = true
+  entry.status = "done"
+  agent._pendingAsyncResults.push(entry)
+  agent._asyncSubagents.delete("7")
+  for (const w of agent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
+  const r = JSON.parse(String(await p))
+  assert.equal(r.status, "done", "check 取回报告")
+  assert.equal(r.report, "race report")
+  assert.equal(agent._pendingAsyncResults.length, 0, "消费时反向清除 pending——防下轮重复注入（双送达守卫）")
+  assert.equal(agent._asyncTombstones.get("7")?.status, "consumed", "墓碑照记 consumed")
+})
+
+
+

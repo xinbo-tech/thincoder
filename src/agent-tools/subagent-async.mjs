@@ -7,7 +7,7 @@
  * 工具与 TUI ⏹ 共用）/ executePanelAction（§19.6——面板镜像 view + 门控 freeze）/ executeEscalateAction /
  * runChildPipeline + maybeRefillAsync + injectAsyncResult + buildChildRunOpts + mergeChildMutations。
  */
-import { isAbsolute, relative } from "node:path"
+import { isAbsolute, relative, resolve } from "node:path"
 import {
   runAgent, createAgent, escapeXml, CODER_OVERLAY,
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
@@ -103,9 +103,33 @@ export async function executeCheckAction(args, ctx) {
   }
 
   // Block until the target settles (specific id / next completed in arrival order).
+  // §20（advisor code review 🟡 处置）：不可启动的 queued 条目会让阻塞等待永久悬挂
+  // （check 是同步工具调用——模型回合被钉死——仅 Ctrl+C 可解）。补位（refill）只由
+  // settle/cancel/spawn 事件驱动：**池内无 running 条目 = 无未来 settle 事件 = queued
+  // 条目永不启动**（槽满等位的 slot 条目在 running 归零时已被最后一次 settle 的 refill
+  // 启动——此时仍 queued 者必为不可启动：depc 锁定或阻塞源本身不可启动）。
   for (;;) {
     if (target) {
       if (target.done) break
+      // 守卫 ①（target 级）：queued 目标在无 running 池中不可启动 → 立即返回（无论
+      // wait/depc——阻塞源链底为 depc 的 wait 条目同样无 settle 可期）。
+      if (target.status === "queued" && !target.cancelled) {
+        const blk = describeBlockers(agent, target)
+        if (blk.kind === "depc") {
+          return JSON.stringify({
+            id: String(target.id), status: "queued", waiting: "dependency-cancelled",
+            reason: blk.detail,
+            note: "check would block forever — this task is locked by a cancelled/failed dependency and will not start on its own; cancel it (action:'cancel') or run an AUTO session to release it (AGENT-LOOP.md §20 round2 #3)",
+          })
+        }
+        if (![...map.values()].some((e) => e.status === "running")) {
+          const qi = (agent._asyncQueue ?? []).indexOf(target)
+          const out = { id: String(target.id), status: "queued", position: qi >= 0 ? qi + 1 : undefined }
+          if (blk.detail) out.reason = blk.detail
+          out.note = "check would block indefinitely — this queued task cannot start while the pool has no running task (starts are settle-driven); cancel it (action:'cancel') or make pool progress (AUTO session starts it on the next settle/refill)"
+          return JSON.stringify(out)
+        }
+      }
       const woke = await wakeOnAsyncSettle(agent, ctx)
       if (woke === "aborted") return JSON.stringify({ done: true, stopped: true })
       continue
@@ -116,15 +140,44 @@ export async function executeCheckAction(args, ctx) {
       break
     }
     if (map.size === 0) return JSON.stringify({ done: true })
+    // 守卫 ②（arrival-order）：池内无 running（completed 已空 → 无 done）且仍有条目 →
+    // 全为 queued 且永不启动 → 立即返回明确错误（防无界悬挂——补 cancel 引导）。
+    if (![...map.values()].some((e) => e.status === "running")) {
+      const stuck = [...map.values()]
+        .map((e) => `${e.role}#${e.id}（${describeBlockers(agent, e).kind === "depc" ? "dependency-cancelled" : "blocked"}）`)
+        .join(", ")
+      return JSON.stringify({
+        status: "error",
+        error: `nothing will settle — the pool holds only queued task(s) that cannot start without a running task: ${stuck}; cancel them (action:'cancel') or make pool progress (AUTO session starts them on the next settle/refill)`,
+      })
+    }
     const woke = await wakeOnAsyncSettle(agent, ctx)
     if (woke === "aborted") return JSON.stringify({ done: true, stopped: true })
   }
 
   map.delete(String(target.id))
-  // Cancelled entries are removed from the pool at their cancel — an in-flight
-  // check that held the entry object observes `cancelled` and reports the same
-  // unknown-id error a fresh check gets (nothing to consume; §19.5 T-M27).
-  if (target.cancelled) return JSON.stringify({ id: String(target.id), status: "error", error: `unknown async subagent id: ${target.id}` })
+  // §20（advisor code review 🟡 处置）：check 消费与挂起期 settle 的竞态——settle 在挂起
+  // 分支先把条目移交 _pendingAsyncResults（本 check 在途等待期间发生——digest 回合）——
+  // 消费时若条目已被移入 pending，反向清除（两消费点互斥——防下轮 prepareRun 重复注入
+  // ——D-S3"只注入一次"不变式——同一报告双送达违例）。
+  const pend = agent._pendingAsyncResults
+  if (Array.isArray(pend)) {
+    const pendIdx = pend.findIndex((x) => String(x.id) === String(target.id))
+    if (pendIdx >= 0) pend.splice(pendIdx, 1)
+  }
+  // §20 D-SD5 终态墓碑（T-SD14）：消费即终态——dependsOn 引用该 id 的条目视其终态
+  // 满足/标注（consumed-ok = 已满足；failed/cancelled = 依赖取消/失败分支）。写于
+  // 观察 cancelled/error 之后——取消/失败条目不被误记 consumed。
+  if (target.cancelled) {
+    const tombstones = (agent._asyncTombstones ??= new Map())
+    tombstones.set(String(target.id), { status: "cancelled", role: target.role })
+    // Cancelled entries are removed from the pool at their cancel — an in-flight
+    // check that held the entry object observes `cancelled` and reports the same
+    // unknown-id error a fresh check gets (nothing to consume; §19.5 T-M27).
+    return JSON.stringify({ id: String(target.id), status: "error", error: `unknown async subagent id: ${target.id}` })
+  }
+  const tombstones = (agent._asyncTombstones ??= new Map())
+  tombstones.set(String(target.id), { status: target.error ? "failed" : "consumed", role: target.role })
   if (target.error) return JSON.stringify({ id: String(target.id), status: "error", error: target.error })
   return JSON.stringify({ id: String(target.id), role: target.role, status: "done", report: target.report ?? "" })
 }
@@ -178,7 +231,15 @@ export function executeStatusAction(args, ctx) {
     const target = statusFields(entry)
     if (entry.status === "running") return JSON.stringify({ ...target, status: "running" })
     if (entry.status === "queued") {
-      return JSON.stringify({ ...target, status: "queued", position: queuedPosition(key) ?? entry.position })
+      // §20 F-SD4/D-SD3b：waiting 语义对模型可见——排队原因（冲突对象/依赖对象）随
+      // status 返回；纯槽满等位（kind slot）无 waiting 字段（position 已足够）。
+      const blk = describeBlockers(agent, entry)
+      const out = { ...target, status: "queued", position: queuedPosition(key) ?? entry.position }
+      if (blk.kind !== "slot") {
+        out.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
+        out.reason = blk.detail
+      }
+      return JSON.stringify(out)
     }
     // done = settled during this turn and not yet consumed — check still retrieves it
     // (§17.5: at a driven turn end it stays pooled → the suspension digest consumes it).
@@ -191,7 +252,16 @@ export function executeStatusAction(args, ctx) {
   const overview = { running: [], queued: [], done: [] }
   for (const entry of map.values()) {
     if (entry.status === "running") overview.running.push(statusFields(entry))
-    else if (entry.status === "queued") overview.queued.push({ id: String(entry.id), role: entry.role, position: queuedPosition(String(entry.id)) ?? entry.position })
+    else if (entry.status === "queued") {
+      // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）
+      const blk = describeBlockers(agent, entry)
+      const row = { id: String(entry.id), role: entry.role, position: queuedPosition(String(entry.id)) ?? entry.position }
+      if (blk.kind !== "slot") {
+        row.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
+        row.reason = blk.detail
+      }
+      overview.queued.push(row)
+    }
     else if (entry.done) overview.done.push({ id: String(entry.id), role: entry.role })
   }
   return JSON.stringify({ overview })
@@ -229,6 +299,10 @@ export function cancelAsyncSubagent(agent, id) {
     entry.done = true
     entry.status = "done"
     map.delete(key)
+    // §20 D-SD5 终态墓碑：queued 取消（无 settle 事件——出队即终态）——依赖者经
+    // 墓碑查得 cancelled 分支（round1 #4——cancel 返回时即重估标注）。
+    const tombstones = (agent._asyncTombstones ??= new Map())
+    tombstones.set(key, { status: "cancelled", role: entry.role })
     entry._settle?.()
     for (const w of agent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
     return { id: key, status: "cancelled", was: "queued" }
@@ -239,7 +313,11 @@ export function cancelAsyncSubagent(agent, id) {
   return { id: key, status: "cancelled" }
 }
 
-/** subagent action:"cancel" (§19.5 D-M6): depth-0 main-session control only. */
+/** subagent action:"cancel" (§19.5 D-M6): depth-0 main-session control only.
+ *  §20 D-SD5/round1 #4（queued 依赖取消——无 settle 事件）：出队后**返回即**重估
+ *  依赖者——依赖者留 queued 标 dependency cancelled（refreshQueuedTokens 发更新块头
+ *  token）+ 工具结果内注依赖者（模型可见——工具结果内——round1 #4 明示通道）+ 补位
+ *  （AUTO 档依赖者自动启动/槽位竞态释放）。被取消条目自身发 ⟦ev⟧cancelled 移除等待块。 */
 export function executeCancelAction(args, ctx) {
   if ((ctx.depth ?? 0) > 0) {
     return JSON.stringify({ status: "error", error: "cancel is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §19.5 D-M6)" })
@@ -248,7 +326,32 @@ export function executeCancelAction(args, ctx) {
   if (id === undefined || id === null || String(id) === "") {
     return JSON.stringify({ status: "error", error: "cancel requires the id of the async subagent to stop — omitting it would mean a blanket cancel (Ctrl+C stops everything; AGENT-LOOP.md §19.5 D-M6)" })
   }
-  return JSON.stringify(cancelAsyncSubagent(ctx.agent, String(id)))
+  const key = String(id)
+  const agent = ctx.agent
+  const entry = agent._asyncSubagents?.get(key)
+  const wasQueued = entry?.status === "queued"
+  // 依赖者快照（出队前——用于 AUTO 分支判定"是否有依赖者被本次取消波及"；note 组装在
+  // refill 后按**仍 queued** 的实况重算——防 AUTO 已自动启动后文案称 "stay queued"）
+  const hadDependents = entry ? dependentLabels(agent, key).length > 0 : false
+  const result = cancelAsyncSubagent(agent, key)
+  if (wasQueued && result.status === "cancelled" && result.was === "queued" && entry) {
+    // §20 D-SD3b：取消/出队 → 移除等待块（不冻结——TUI routeSubToken cancelled 分支）
+    ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧cancelled\x1e`)
+    // 依赖者标注 + 位置前移 + AUTO 自动启动（round2 #3：AUTO 档才启动——手动留 queued）
+    maybeRefillAsync(agent)
+    refreshQueuedTokens(agent, ctx.callbacks?.onToken)
+    if (hadDependents) {
+      // refill 后重算——AUTO 下依赖者已启动者不再列（文案与实际状态一致——code review 🔵）
+      const dependents = dependentLabels(agent, key)
+      if (dependents.length > 0) {
+        result.dependents = dependents
+        result.note = `queued dependents ${dependents.join(", ")} marked "dependency cancelled" — they stay queued until you cancel them (this action again with their id) or an AUTO session starts them (AGENT-LOOP.md §20 D-SD5)`
+      } else if (agent.autoApprove) {
+        result.note = `dependents of the cancelled task auto-started (AUTO session — round2 #3: an AUTO session starts dependency-cancelled dependents on slot availability)`
+      }
+    }
+  }
+  return JSON.stringify(result)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -573,16 +676,198 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
   return report
 }
 
-/** Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6): start queue heads while a
- *  running slot is free — called from every settle (completion frees a slot) and
- *  from the turn-end collection's refill loop. Serial by construction: one slot
- *  frees per settle, one head starts per call. */
+// ═══════════════════════════════════════════════════════════════════════════
+// §20 子 agent 任务调度器（AGENT-LOOP.md §20——D-SD1..SD5 + 20.4 处置注）
+// 池条目域元数据（D-SD2：entry._files/_dependsOn——running ∪ queued 全带）、准入
+// （D-SD3：域冲突/依赖未满足 → queued 等位）、补位扫描（D-SD4：最早可启动——
+// 依赖全满足 + 域无冲突——waiting 越行不阻塞 slot 位）、释放规则（D-SD5——round2
+// #3 锁定默认：依赖取消/失败 → 依赖者留 queued 标 dependency cancelled——仅父显式
+// 处置或 AUTO 自动启动）、终态墓碑（round1 #8/T-SD14：check/注入消费与取消写墓碑——
+// consumed 视为满足；非 consumed unknown id 才拒）。状态全部派生不存储（单点事实）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 文件域归一化（round1 #5——路径归一化再交集）：相对 cwd 解析为绝对路径 + 去重；
+ *  非字符串/空项静默跳过（声明错误 = false-negative 明示风险——v1 边界）。 */
+export function normalizeFileList(files, cwd) {
+  const out = []
+  for (const f of Array.isArray(files) ? files : []) {
+    if (typeof f !== "string" || !f.trim()) continue
+    const abs = resolve(cwd ?? process.cwd(), f)
+    if (!out.includes(abs)) out.push(abs)
+  }
+  return out
+}
+
+/** 文件域相等比较键：Windows 大小写不敏感（vs Uri.fsPath 小写盘符差异同族——
+ *  normalizeCwd 先例）——src/x vs ./src/X 在 win32 是同一文件。 */
+const fileKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
+
+/** 两文件域首个共同文件（比较键）——无交集 null。 */
+export function filesOverlap(a, b) {
+  if (!a?.length || !b?.length) return null
+  const keys = new Set(b.map(fileKey))
+  const hit = a.map(fileKey).find((k) => keys.has(k))
+  return hit ?? null
+}
+
+/** 冲突文件的显示形态（优先相对 cwd——面板/返回文本可读）。 */
+function showFile(parent, key) {
+  const cwd = parent.cwd ?? process.cwd()
+  const rel = relative(cwd, key)
+  return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : key
+}
+
+/**
+ * §20 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
+ * 终态墓碑（check/注入消费——consumed；取消/失败——D-SD5 分支））：
+ * - ok      = settle 成功（报告已产出）/ consumed（check/注入消费——T-SD14 视为满足）
+ * - pending = running/queued 未终态（等启动/等完成）
+ * - failed / cancelled = 终态但非成功——依赖者走 dependency cancelled 分支（round2 #3）
+ * - unknown = 从未存在（spawn 时明确错误——非 consumed 的 unknown 拒——T-SD10）
+ */
+export function depInfo(parent, id) {
+  const key = String(id)
+  const e = parent._asyncSubagents?.get(key)
+  if (e) {
+    if (e.cancelled) return { state: "cancelled", role: e.role }
+    if (e.done) return e.error != null ? { state: "failed", role: e.role } : { state: "ok", role: e.role }
+    return { state: "pending", role: e.role }
+  }
+  const pend = (parent._pendingAsyncResults ?? []).find((x) => String(x.id) === key)
+  if (pend) return pend.error != null ? { state: "failed", role: pend.role } : { state: "ok", role: pend.role }
+  const t = parent._asyncTombstones?.get(key)
+  if (t) return { state: t.status === "cancelled" || t.status === "failed" ? t.status : "ok", role: t.role }
+  return { state: "unknown", role: null }
+}
+
+/** §20 等待态派生（无存储——refill/status/面板/spawn 返回同一事实源）。kind：
+ *  - slot = 无阻塞（依赖全满足 + 域无冲突）——纯槽满等位（可启动——等 slot）
+ *  - wait = 依赖未完成 / 域冲突（running ∪ queued——D-SD3 同界——self 除外）
+ *  - depc = 依赖取消/失败（round2 #3——非 AUTO 锁住——需父显式处置；AUTO 视为可启动）
+ *  detail 为状态行共享文本（面板 waiting for 标注 / status reason / spawn reason）。 */
+export function describeBlockers(parent, entry) {
+  const wait = []
+  const depc = []
+  for (const depId of entry._dependsOn ?? []) {
+    const info = depInfo(parent, String(depId))
+    if (info.state === "pending" || info.state === "unknown") {
+      wait.push(`${info.role ?? "sub"}#${depId}（依赖未完成）`)
+    } else if (info.state === "cancelled" || info.state === "failed") {
+      if (parent.autoApprove) continue // AUTO 档自动启动（D-SD5——父不在场由 digest 决策）
+      depc.push(`${info.role ?? "sub"}#${depId}`)
+    }
+  }
+  const myFiles = entry._files ?? []
+  if (myFiles.length > 0) {
+    for (const e of parent._asyncSubagents?.values() ?? []) {
+      if (e === entry) continue
+      if (e.status !== "running" && e.status !== "queued") continue
+      const hit = filesOverlap(myFiles, e._files ?? [])
+      if (!hit) continue
+      wait.push(`${e.role}#${e.id}（域冲突 ${showFile(parent, hit)}）`)
+    }
+  }
+  // 长列表裁剪（块头宽度预算——细节 status 可查全量）
+  const cut = (arr) => (arr.length > 3 ? [...arr.slice(0, 3), `…（共 ${arr.length} 项）`] : arr)
+  if (depc.length > 0) {
+    const body = cut(depc).join("、")
+    return { kind: "depc", detail: wait.length > 0 ? `dependency cancelled: ${body}；${cut(wait).join("、")}` : `dependency cancelled: ${body} — waiting for your decision (cancel this task to release, or AUTO starts it)` }
+  }
+  if (wait.length > 0) return { kind: "wait", detail: `waiting for: ${cut(wait).join("、")}` }
+  return { kind: "slot", detail: "" }
+}
+
+/** §20 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running ∪ queued——
+ *  队列序保证同文件串行：先入者启动后以 running 身份继续挡住后入者；后入者只被先入
+ *  者阻塞——self 除外）。 */
+export function queueRunnable(parent, entry) {
+  for (const depId of entry._dependsOn ?? []) {
+    const state = depInfo(parent, String(depId)).state
+    if (state === "pending" || state === "unknown") return false
+    if ((state === "cancelled" || state === "failed") && !parent.autoApprove) return false
+  }
+  const myFiles = entry._files ?? []
+  if (myFiles.length > 0) {
+    for (const e of parent._asyncSubagents?.values() ?? []) {
+      if (e === entry) continue
+      if (e.status !== "running" && e.status !== "queued") continue
+      if (filesOverlap(myFiles, e._files ?? [])) return false
+    }
+  }
+  return true
+}
+
+/** §20 D-SD5 环防御（round2 #5——自然流程不可达：unknown id 拒 + spawn 序天然无环——
+ *  仅人工向池注入可构造——防御断言定位）：从新 spawn 的依赖集出发沿池内条目
+ *  _dependsOn 边做路径 DFS——路径上重复访问（可达环）→ 拒绝（A→B→A 永不自启——
+ *  错误明确——T-SD5）。运行/排队条目皆可成环节点；池小（≤4 槽 + 有限队列）深度有限。 */
+export function assertNoDepCycle(parent, dependsOn) {
+  const edges = new Map()
+  for (const e of parent._asyncSubagents?.values() ?? []) {
+    if (e.status === "running" || e.status === "queued") {
+      edges.set(String(e.id), (e._dependsOn ?? []).map(String))
+    }
+  }
+  const onPath = new Set()
+  const visit = (id) => {
+    if (onPath.has(id)) {
+      throw new Error(`subagent dependsOn cycle detected: ${[...onPath, id].join(" → ")} — entries in a dependency loop can never start; cancel the dependents and restructure the chain (AGENT-LOOP.md §20 D-SD5)`)
+    }
+    onPath.add(id)
+    for (const dep of edges.get(id) ?? []) visit(dep)
+    onPath.delete(id)
+  }
+  for (const d of dependsOn) visit(String(d))
+}
+
+/** 依赖某 id 的 queued 条目显示标签（D-SD5 提醒/标注——依赖者列表）。 */
+export function dependentLabels(parent, depId) {
+  const key = String(depId)
+  const out = []
+  for (const e of parent._asyncQueue ?? []) {
+    if ((e._dependsOn ?? []).some((d) => String(d) === key)) out.push(`${e.role}#${e.id}`)
+  }
+  return out
+}
+
+/** §20 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
+ *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
+ *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
+ *  出队 / check 消费）。position = 队列序（D-A1 既有——cancel 前移同源）。 */
+export function refreshQueuedTokens(parent, onToken) {
+  if (typeof onToken !== "function") return
+  const queue = parent._asyncQueue ?? []
+  for (let i = 0; i < queue.length; i++) {
+    const e = queue[i]
+    const blk = describeBlockers(parent, e)
+    const sig = `${blk.kind}\x1e${i + 1}\x1e${blk.detail}`
+    if (e._lastQueuedSig === sig) continue
+    e._lastQueuedSig = sig
+    try {
+      onToken(`${e.relayPrefix}⟦ev⟧queued\x1e${blk.kind}\x1e${i + 1}\x1equeued\x1e${blk.detail}`)
+    } catch { /* relay 失败不影响池状态 */ }
+  }
+}
+
+/**
+ * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4): start queue heads
+ * while a running slot is free — called from every settle (completion frees a slot)
+ * and from the turn-end collection's refill loop. §20：队列现可混合 waiting-deps 与
+ * slot-queued——扫描选"依赖全满足 + 域无冲突"的最早条目启动（waiting 越行不阻塞
+ * 槽位；多任务同时解除按 queued 序逐个启动到槽满——上限 4 不变）。纯 slot 队列的
+ * 行为与旧 shift 完全一致（全部条目可启动 → 最早 == 队首）。
+ */
 export function maybeRefillAsync(parent) {
   const queue = parent._asyncQueue ?? []
-  while (queue.length > 0) {
+  for (;;) {
     const running = [...(parent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length
     if (running >= ASYNC_SUBAGENT_LIMIT) return
-    queue.shift().start()
+    let pick = -1
+    for (let i = 0; i < queue.length; i++) {
+      if (queueRunnable(parent, queue[i])) { pick = i; break }
+    }
+    if (pick < 0) return
+    queue.splice(pick, 1)[0].start()
   }
 }
 
@@ -600,6 +885,12 @@ export async function injectAsyncResult(agent, entry) {
     role: "user",
     content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n${escapeXml(preview)}`,
   })
+  // §20 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
+  // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
+  // 后续 spawn 视为已满足（T-SD14 同 check 消费语义；error 条目记 failed——依赖取消/
+  // 失败分支照旧，不误标成功）。
+  const tombstones = (agent._asyncTombstones ??= new Map())
+  tombstones.set(String(entry.id), { status: entry.error != null ? "failed" : "consumed", role: entry.role })
 }
 
 /**
