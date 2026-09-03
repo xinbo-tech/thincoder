@@ -863,7 +863,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ## 19. subagent 工具面合并：单工具四动作（spawn/check/status/escalate）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事——escalate 并入 2026-09-03 二次裁定）
 
-> **状态：设计批准（2026-09-03 round2 通过——0🔴——8 项 refinement 已处置（含 escalate 并入复审——designToken 已签发））**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
+> **状态：设计批准（round2 通过 0🔴——控制面扩展 19.5 待评审——2026-09-03）**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
 
 ### 19.1 需求
 
@@ -932,3 +932,58 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - N2：**语义保证**——check 的消费/删除/n 计数与 status 的零消费/零计数完全隔离（T-M4/M10 断言——action 间不串扰）
 - N3：**零改动面**——TUI/ACP relay 路由零改动（escalate# 前缀保留——T-M16 断言）；配置零改动（consultModels 语义照旧）
 - N4：**两端一致**——subagent 工具 schema/描述与 prompts 两端 byte-identical（T-M12——既有 15 文件比对覆盖）
+
+
+### 19.5 控制面扩展：status 增强 + cancel + UI 停止 + 嵌套前缀子标（2026-09-03，用户裁定）
+
+> **状态：设计定稿，待评审**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
+
+#### 19.5.1 需求
+
+- F9：`status` 全览条目补**可决策字段**——`{id, role, model, elapsedSec, turn, maxTurns}`（决定中止谁时看得清——现状只有 id 数组）
+- F10：**cancel 动作**——定向中止单个后台子代理——`action:"cancel"` + `id`（必填——防误全停——省略 id = error）——其余子代理/挂起会话不受影响
+- F11：**UI 停止**——运行中子代理标题行停止控件（CLI 鼠标 + VS Code webview ⏹）——点击 = cancel 同语义（定向）
+- F12：**嵌套 relay 前缀子标**（方案 A）——eng-coder 内 explore（§18 受限变体——同步 spawn）活动经双层前缀（`eng-coder#N/explore#M/`）到主会话——首段路由块 + 剩余段渲染为块内 dim 子标行（`explore#1 · read — …`）——前缀不再字面泄漏进内容
+- F13：两端一致（CLI/VS Code 同构）
+
+#### 19.5.2 设计
+
+**D-M5 status 全览增强**：全览条目从 id 数组改结构化对象数组——`running: [{id, role, model, elapsedSec, turn, maxTurns}]`、`queued: [{id, role, position}]`、`done: [{id, role}]`——数据源 = 池条目（entry 已含 role/status——补 model（entry 或 spawn 记录）与 elapsed（now - startedAt）与 turn/maxTurns（entry 需记 startedAt/turn 计数——子代理区块已有 elapsed 数据——池条目对齐补齐）——单查（id）形态不变 + 同字段。
+
+**D-M6 cancel 动作**：`action:"cancel"` + `id`（必填）→ 定位池条目 → **定向 abort**（条目 controller——§15 abort 传播——子代理 runAgent signal abort）→ settle interrupted（不注入陈旧错误——清池规则同 Ctrl+C 全停但**只清该条目**）→ 区块冻结 interrupted（标题显示 "stopped"——与 Ctrl+C 中止同视觉语义）+ digest 提示"已中止 explore#N/eng-coder#N（主会话决定）"。未知/已完成 id → error（同 status/check 错误形态）。**只允许主会话（depth-0）**（子代理上下文无 cancel 意义——受限变体已禁）。cancel 后槽位腾出（maybeRefillAsync——queued 补位——既有机制）。
+
+**D-M7 UI 停止（两端）**：
+- CLI：运行中区块折叠头右侧停止标记（`⏹`——dim——仅 running 态显示——done/冻结后消失）——复用既有鼠标管线（mouse.mjs SGR 点击 + handleMouseClick）——点击命中区 = 标题行右缘（宽度 = ⏹ 标记列）→ cancel（定向该子代理——经 TUI 层调用池 abort——与 D-M6 同实现路径——不经过模型回合）——**用户点击是即时动作不依赖模型**（关键属性：失控子代理时模型可能不可靠——UI 停止必须不经模型）
+- VS Code：webview 子块标题行 ⏹ 按钮（DOM click → postMessage cancel → extension 层定向 abort——同样不经模型）
+- 与 Ctrl+C 的关系：UI 停止 = 单子代理定向；Ctrl+C = 既有全停（挂起两级——round2 #4）——并存
+
+**D-M8 嵌套 relay 前缀子标（方案 A）**：`parseRelayPath(text)` 通用解析——`eng-coder#N/explore#M/read` → 首段（块路由——现状逻辑零改——兼容单层）+ 剩余段渲染规则：
+- 文本行（onToken）：内层段前缀（如 `explore#1/`）替换为块内行首 dim 子标 `explore#1 · `（内容跟随）
+- 工具行（onToolCall）：`explore#1/read` → 行首子标 + 工具名（dim `explore#1 · ` + 既有工具行形态）
+- 工具输出：跟随最近子标归属（不重复前缀——输出行接在对应工具行后——现状块内顺序天然如此）
+- 任意嵌套深度通用（未来子代理内子代理不限一层——循环解析）
+- VS Code 同构（webview 子块行渲染——子标 span）
+- explore 是**同步** spawn（§18 受限变体）——无独立生命周期事件（settle/done 不到主会话——在 eng-coder 回合内跑完）——**无需嵌套块状态管理**（复杂度关键洞察——只处理活动行带子标）
+
+**受影响文件（两端）**：subagent 工具（status 字段 + cancel action——subagent-async.mjs/子模块）、池条目字段（startedAt/turn/model 记录）、TUI（subagent-panel/subagent-blocks 标题行 ⏹ + handleMouseClick 命中区 + parseRelayPath 子标渲染）、VS Code webview（panels/chat 标题行 ⏹ + 子标 span + cancel 消息路由）、extension 层 cancel 接线、测试、AGENT-LOOP §19.5 本节、CHANGELOG（父代理统一）
+
+**测试（实现前展开——eng-coder 硬验收项）**：
+- T-M18 status 全览含 role/model/elapsedSec/turn/maxTurns（running 条目）
+- T-M19 cancel 定向中止（目标 interrupted settle——无陈旧注入——其余子代理继续跑——区块 stopped）
+- T-M20 cancel 未知 id / 已完成 id → error；省略 id → error（防误全停）
+- T-M21 cancel 后槽位补位（queued 自动启动——既有 maybeRefillAsync 回归）
+- T-M22 UI 停止：CLI 鼠标点击标题行 ⏹ 区 → 定向 abort（不经模型——mock 验证直连路径）；VS Code webview ⏹ 点击 → cancel 消息
+- T-M23 UI ⏹ 仅 running 显示（done/冻结后消失）
+- T-M24 嵌套前缀解析：`eng-coder#2/explore#1/read` → 块路由 eng-coder#2 + 子标 explore#1（单层兼容回归——无嵌套前缀时零变化）
+- T-M25 嵌套文本/工具/输出三形态子标渲染（CLI + VS Code 断言）
+- T-M26 §15/§17/§19 全回归
+
+**验收**：AC-M6 = status 可决策字段（T-M18）；AC-M7 = cancel 定向中止语义（T-M19..M21）；AC-M8 = UI 停止不经模型（T-M22/M23）；AC-M9 = 嵌套前缀无泄漏 + 子标渲染（T-M24/M25）；AC-M10 = 两端全量绿（T-M26）
+
+#### 19.5.3 关键决策
+
+- **UI 停止不经模型**（关键属性）：失控子代理时模型可能不可靠/回合已结束——UI 停止直连 TUI/extension 层 abort 路径（不经模型回合）——与工具 cancel（模型可用时）并存
+- **cancel 单 id 必填**：防误全停（明确目标）——全停仍走 Ctrl+C（既有）——不加 cancel-all（模型循环逐 id 明确性优先）
+- **嵌套前缀子标而非块中块**（方案 A——用户确认）：explore 同步 spawn 无生命周期——纯活动行——子标（dim 行首标记）足够归属可辨——块中块（D 方案）为无生命周期实体建层级 UI 过度
+- **否决**：a) pause/resume（子代理独立回合进程——真暂停需冻结/解冻上下文——复杂易错——cancel + 同 token 重 spawn（§2.8）覆盖）；b) cancel-all 参数（误触风险——Ctrl+C 已覆盖）；c) 嵌套块中块（过度——见上）；d) 剥掉内层前缀（行不可辨——explore 审计过程与 eng-coder 自身活动混淆）
+
