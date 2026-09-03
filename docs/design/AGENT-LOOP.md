@@ -779,7 +779,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 #### 7.2.3.2 设计（方案 e——ctx 回传 key → onToolResult 精确冻）
 
-1. **subagent execute（sync spawn 路径）**：makeRelay 已生成 relayPrefix（role#N）——execute 返回前 ctx 上留 `ctx._subagentKey = relayPrefix.slice(0, -1)`——**async 分支明确不设 ctx._subagentKey（round2 #2——async ack 结果 {id, status:"running"} 到 onToolResult 时 subKey undefined——TUI 对 status:running 结果跳过冻结（既有 isAsyncSpawnResult 判定）——不落启发式）**——**async 分支明确不设 ctx._subagentKey（round2 #2——async ack 结果 {id,status:running} 到 onToolResult 时 subKey undefined——TUI 走既有 isAsyncSpawnResult 判定跳过冻结——不落启发式）**
+1. **subagent execute（sync spawn 路径）**：makeRelay 已生成 relayPrefix（role#N）——execute 返回前 ctx 上留 `ctx._subagentKey = relayPrefix.slice(0, -1)`——**async 分支明确不设 ctx._subagentKey（round2 #2——async ack 结果 {id, status:"running"} 到 onToolResult 时 subKey undefined——TUI 对 status:running 结果跳过冻结（既有 isAsyncSpawnResult 判定）——不落启发式）**
 2. **dispatch runOne**：execute 返回后、onToolResult 前——读 `ctx._subagentKey`——`callbacks.onToolResult(name, result, toolId, subKey)`（第四参——undefined 兼容既有签名）
 3. **TUI onToolResult**：sync 完成（非 async 结果）——`subKey` 有值 → **新 finishSubTaskKey(state, key, lastError)** 精确冻（含 freezeDoneSubTasks——删条目）；subKey undefined（旧路径/异常）→ 启发式兜底保留
 4. **并行 sync spawn**（同批 N explore——dispatch 批并行）——各 runOne 独立 ctx——各带自己 key——乱序完成精确 ✓
@@ -1099,7 +1099,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 **验收补充**：AC-H5 = 消化完成块不滞留面板（T-H7——不等池空）——（AC-H4 已被 17.5.4 #3 占用——doc-landing——17.5.5 改用 AC-H5——round1 #3 评审）
 
 
-#### 7.2.3.4 round1 评审处置（2026-09-03——0🔴 通过——7 项）
+#### 7.2.3.4 round1 评审处置（2026-09-03——0🔴 通过——8 项（7 advisory + CHANGELOG 记录））
 
 1. 错误/拒绝路径不冻结（7.2.3.2 第 6 点——execute 抛错/拒绝走工具错误块——不触发启发式——T-F5 扩）
 2. escalate 同享 subKey（第 7 点——§19 合并后同管线）
@@ -1163,8 +1163,10 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ## 20. 子 agent 任务调度器（2026-09-03 · 需求 + 设计——方案 1 用户确认——待评审）
 
-> 状态：设计定稿，待评审。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。
+> 状态：设计定稿，待评审（round1 1🔴 已处置——待复审）。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。
 
+
+**总体目标**：把"任务执行序"从父代理脑内移入机制——父代理只声明域与依赖、提交即走——调度器保证同文件串行、依赖有序、并发不误伤——根治同文件并发失误与手动排队（今日 id:13/14 事故为证）。
 ### 20.1 需求
 
 - F-SD1：**流式提交**——父代理评审好即 spawn（带调度元数据）——提交后零调度心智（不盯队列/不手动 cancel 重排）
@@ -1175,7 +1177,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ### 20.2 设计（D-SD1..SD5）
 
-**D-SD1 spawn 调度参数（可选——零改动兼容既有 spawn）**：
+**D-SD1 spawn 调度参数（可选——零改动兼容既有 spawn（**round1 #2：仅 async spawn 参与调度——sync spawn（async:false eng-coder/coder）带 files/dependsOn 且命中冲突 → 明确错误——不队列化 sync——sync 语义零变更**）**：
 - `files?: string[]`——写域声明（eng-coder 纪律"不碰清单外文件"+ 偏差审计兜底——声明即契约——**不做任务书文本自动解析**（不可靠——v1 边界））
 - `dependsOn?: string[]`——子代理 id 列表（显式依赖）
 - 缺省（无 files 无 dependsOn）= 既有语义（立即启动——不参与冲突检测——子代理/explore 等不受影响）
@@ -1186,11 +1188,12 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **D-SD4 补位增强（maybeRefillAsync）**：settle/cancel 释放槽后——从 queued 选"依赖全满足 + 域无冲突"的最早条目启动——**多任务同时解除（一批 eng-coder 全等同一依赖）→ 按 queued 序逐个启动到槽满**（上限 4 不变）
 
-**D-SD5 死锁防御 + 取消**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；**受保护任务（同批同依赖释放）无抢占**（v1 不做优先级）
 
-**v1 边界**：不做优先级/抢占/超时重调度/自动域解析——files 声明缺失的任务不参与冲突检测（行为 = 现状——逐步迁移）
+**D-SD5 死锁防御 + 取消（round1 #1 补——依赖终态释放规则）**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；受保护任务（同批同依赖释放）无抢占（v1 不做优先级）。**依赖释放规则（终态语义）**：依赖在目标 settle（任何终态——成功/错误/取消）或条目移除（check 消费/出队）时视为满足——waiting-deps 条目重新评估：目标取消/错误 → 依赖者自动释放启动（父代理负责失败处置）或标 "dependency cancelled" 供模型决定；spawn 时 dependsOn 引用 unknown id → 明确错误（对齐 check/status 未知 id 语义 T12）——补 T-SD9（cancel queued 依赖 → 依赖者自动释放）T-SD10（unknown id 拒绝）
 
-**受影响文件**：src/agent-tools/subagent.mjs（spawn 参数 + 准入）、src/agent-tools/subagent-async.mjs（池条目域 + maybeRefillAsync 增强）、status 输出（waiting-deps 态 + 原因）、测试（subagent.test——准入/排队/补位/取消/环拒绝）、AGENT-LOOP 本段 + §15 池引用注、两端同构
+**v1 边界**：不做优先级/抢占/超时重调度/自动域解析——files 声明缺失的任务不参与冲突检测（行为 = 现状——逐步迁移）——round1 #5：声明错误（漏文件/path 形态不一 src/x vs ./src/x）静默绕过串行化——false-negative 风险明示——实现时 path 归一化再交集——eng-coder spawn 带 designId 时尽量从 §18 任务域（设计文档 + 交付文件清单）播种 _files
+
+**受影响文件**：src/agent-tools/subagent.mjs（spawn 参数 + 准入）、src/agent-tools/subagent-async.mjs（池条目域 + maybeRefillAsync 增强）、status 输出（waiting-deps 态 + 原因）、测试（subagent.test——准入/排队/补位/取消/环拒绝）、AGENT-LOOP 本段 + §15 池引用注 + §19.2 D-M1 矩阵 queued/返回形态行 + §19.5 D-M5 status 形态 + T-M6/T-M8/T-M18 + §19.4 N1/T-M12 描述预算（supersede 注——round1 #3——19.5.2b 先例——实现时同批修订列具体行）、两端同构 + VS Code 测试（T-SD 镜像子集——round1 #4）
 
 ### 20.3 测试（硬验收——eng-coder 展开 N/E/A）
 
