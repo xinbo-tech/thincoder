@@ -265,3 +265,44 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **保留 resolveInCwd 函数名**（去断言而非删名）：7 个调用方零改动，语义从"限界解析"变"解析"——最小面；`resolveExternal` 保留（兼容既有引用）
 - **node --check 而非自定义 linter**：语法级检查覆盖"写坏文件"主风险（解析错误）；unused vars 类警告放弃（49 条全 unused、无行为价值）；零依赖目标优先
 - **否决**：a) 保留 eslint 挪全局（仍依赖、违零依赖）；b) 只移除部分工具限制（"不少工具有限制"——全部移除，bash 一致性）；c) 作用域限制改"警告不阻断"（仍空耗 token——用户裁定干脆去掉）
+
+
+## 9. read_pdf：文本型 PDF 提取（2026-09-03 · 设计——待评审）
+
+> 老 TODO（2026-08-27 立项——误标 done 恢复——docs/TODO.md 条目待本设计批准后补回）。现状缺口：read 对 .pdf 直接 utf8 解码出乱码——无拦截无引导。约束：纯 Node ≥24、ESM、零 npm 依赖（node:zlib 内置——全仓首个 zlib 用户）。
+
+### 9.1 需求
+
+- F-P1：read_pdf 工具——**文本型 PDF** 提取为纯文本（read 家族对齐：行号分页心智、64K 落盘机制白拿）
+- F-P2：加密 PDF（/Encrypt）拒绝并明示；**扫描/图像型 PDF** 报错（指向 read_image 视觉通道——read_image 拒 bmp 提示 PNG 先例）
+- F-P3：不支持形态（Type3 字形 run/LZW/无法解码编码）明确报错或警告+尽力输出——**不静默**
+- F-P4：page 选择参数（形态见决策点）
+
+### 9.2 设计（8 段解析管线——explore 可行性确认 ✓）
+
+1. **头校验**：%PDF-x.y——容忍尾部垃圾取最后 startxref
+2. **xref 双形态**：经典文本表 + XRef 流（/W//Index + Flate + **PNG 预测器**——必踩坑）
+3. **trailer**：/Root、/Encrypt 检测→拒绝、/Prev 链取最新段
+4. **对象解析**：直接对象 + /ObjStm 对象流
+5. **页树**：/Pages /Kids 递归、/Contents 单流或数组
+6. **内容流解码**：Flate=zlib inflateSync ✓、ASCIIHex/ASCII85、/Filter 链逆序；LZW 拒
+7. **文本操作符**：BT/ET、Tf/Td/TD/T*/Tm 位置追踪、Tj/TJ/'/"，\(/\ddd 八进制转义、hex 串
+8. **编码映射**（最复杂）：/ToUnicode CMap bfchar/bfrange（1 字节 simple + 2 字节 CID/Identity-H）；无则 WinAnsi/Standard/MacRoman + /Differences 回退；Type0 无 ToUnicode → 警告
+9. **布局**：(x,y) 收集、y 降序 x 升序组行、间隙插空格、分段、--- Page N ---
+
+**复杂度分档（关键——v1 必须含 Tier 2）**：Tier 1（教科书）不够——Chrome 打印/Word/LibreOffice/LaTeX/Quartz 全在 Tier 2（XRef 流 + ObjStm + PNG 预测器 + Type0/ToUnicode 2 字节 + TJ + /Prev）——只做 Tier 1 会"demo 能跑、真实 PDF 大面积失败"。
+
+**文件形态**：独立模块 src/tools/pdf-parse.mjs（解析核心）+ pdf.mjs（工具壳——read_pdf 注册 + DESC——readonly: true 即全链路生效：planMode 白名单/免审批/explore 只读集零额外代码）——file.mjs 495 行不能承接。
+
+**同步面**：read.md 路由段 + discipline.md 工具总表（**两端 prompts 15 文件 byte-identical 铁律**——thincoder-vscode/src/prompts/discipline.md 必须同改）+ TOOLS.md §1 计数 + ARCHITECTURE.md 模块注释 + FEATURES.md。
+
+**测试**：fixture 全部运行时生成（仓库零二进制——buildPdf 帮助函数同构 oh-my-pi warningPdf——字节偏移运行时算 + zlib deflateSync）——用例矩阵 10 项（最小经典 xref/Flate 流/ToUnicode bfrange/Type0 CJK/XRef 流+ObjStm/TJ 空格/加密拒绝/WinAnsi 回退/嵌套页序/坏 xref）——test/pdf.test.mjs。
+
+### 9.3 决策点（评审/用户拍）
+
+1. pages 参数形态（read 的 offset/limit 心智 → "1-3,5" 页选择？）与单页输出上限
+2. 扫描件错误是否给 read_image 指引（F-P2 已建议——确认措辞）
+3. 多栏/表格不识别是否需文档声明（第一版声明不支持——还是尽力拼接）
+
+**受影响文件**：新 src/tools/pdf.mjs + pdf-parse.mjs + read_pdf.md、file.mjs read.md 路由段、两端 discipline.md（byte-identical）、TOOLS.md、ARCHITECTURE.md、FEATURES.md、新 test/pdf.test.mjs、docs/TODO.md（条目补回）。
+

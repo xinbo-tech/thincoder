@@ -453,3 +453,24 @@ question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文�
 
 **验收**：Custom provider 流程 format 为 picker 选择（无手输）；wizard Custom 含 format 步；question 自由文本态光标可见可编辑（T-Q1..Q7）；全量测试绿。
 
+
+### 10.7 行数债拆分：index.mjs/render-conversation.mjs（2026-09-03 · 需求层 + 设计层）
+
+**背景**：index.mjs 545 行 + render-conversation.mjs 581 行超 500 硬限（既有债——§19.5 交付后 advisor 建议立项——TODO.md:161 在案）。explore 一手边界分析（2026-09-03——行数以实测为准）。
+
+**设计（D-S1..S3——导出面保留原则——测试零改动——normalize.mjs re-export 先例）**：
+
+**index.mjs（545 → ~455-460）**：
+- D-S1a：鼠标装配簇（cancelSubagent/onMouseClick/mouseCtx——L462-484——23 行）→ mouse.mjs 的 createMouseDispatch——依赖 cancelAsyncSubagent（agent-tools——无环——tui→core 同向）——mouse.mjs 176→~215
+- D-S1b：loadOlder 闭包（L158-187——30 行）→ startup.mjs 的 createLoadOlder——文档对齐（startup 职责本含"懒加载历史窗口"——TUI.md §1 归属修复）——依赖 countConvLines（render-conversation——无环）
+- D-S1c：升级提示簇 + upgradeFailureText/pendingNoticeReady（L43-51 + L495-537——50 行）→ 新 update-notice.mjs——index re-export 两纯函数（tui.test 动态 import 零改动）
+- 红线：writeStartupSequence + createExitCleanup 留 index（render-loop.test source-lock）
+
+**render-conversation.mjs（581 → ~435-440）**：
+- D-S2：三个特殊段（tool/frozen-sub/frozen-adv——段渲染 + sig 分支共 ~150 行）→ 新 render-segments.mjs——各段自带独立 WeakMap（行对象类型互斥——分支互斥 if——行为等价）——render-conversation 主循环分支缩 ~3 行调用——import 面收窄
+- 否决项：frozen 段迁 subagent-panel（R1）——subagent-panel 是纯函数模块（D1 钦定）——带缓存分支违反纯度契约——否决
+
+**验收**：拆分后 index/render-conversation <500（预计 455-460/435-440）；新模块 <300 advisory；npm test 全绿零测试改动；模块地图同批回写（TUI.md §1——update-notice.mjs/render-segments.mjs 新行 + 行数更新）；TODO.md:161 销账。
+
+**受影响文件**：src/tui/index.mjs、render-conversation.mjs、mouse.mjs、startup.mjs、新 update-notice.mjs、新 render-segments.mjs、TUI.md §1、TODO.md。附加可选（评审裁）：顺带删 render-conversation L224-226 孤儿注释。
+

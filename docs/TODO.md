@@ -155,3 +155,10 @@
 - [ ] **并行 check 双消费竞态**（subagent-async.mjs check——同批两个无 id check 并行可能双消费同一条目——§15 遗留特性：旧 subagent_check 同为 readonly 可批并行——修复需牵动 settle 回调挂起记账）
 - [ ] **挂起期阻塞 check 双投**（LOW-3——挂起态 check 与 settle 记账交互——同归 §17 硬化）
 
+
+### §19.5 交付跟进（2026-09-03——来源：id:9 交付报告 + advisor 🟡——父代理裁量）
+
+- [ ] **index.mjs 545 行 / render-conversation.mjs 576 行超 500 硬限**（既有债——基线 524/573——cancelSubagent/mouse ctx 装配可迁 mouse.mjs——拆分轮立项）
+- [ ] **sync（阻塞）spawn 区块 ⏹ 语义裁决**：面板无池信号无法区分 sync/async——sync 运行中 ⏹ 可见但不可中止（已实现"可操作指引"提示 Ctrl+C）——彻底方案（⏹ 按池成员门控）需跨 TUI 数据流改造——用户裁决后立项
+- [ ] **setup.mjs 受限变体 schema 描述补 cancel 词**（工具层错误信息已含——描述层同步）
+
