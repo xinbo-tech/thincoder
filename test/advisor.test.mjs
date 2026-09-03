@@ -1074,7 +1074,7 @@ test("prompts/system.md: 文档归属纪律条款（doc map / update instead of 
   assert.match(text, /exactly ONE place/, "单一权威源语义")
 })
 
-test("prompts/system.md: 操作并行化纪律条款（Parallelize aggressively + F7 触发条件 + 不并行边界）", () => {
+test("prompts/system.md: 操作并行化纪律条款（Parallelize aggressively + F7 触发条件 + 不并行边界 + 调度器 carve-out）", () => {
   const text = readFileSync(join(PROMPTS_DIR_ABS, "system.md"), "utf8")
   assert.match(text, /Parallelize aggressively/, "主动并行引导句存在")
   assert.match(text, /splitting changes across independent sub-projects/, "F7 多项目拆分语义")
@@ -1082,6 +1082,9 @@ test("prompts/system.md: 操作并行化纪律条款（Parallelize aggressively 
   assert.match(text, /Do NOT parallelize/, "不并行边界引导")
   assert.match(text, /approval storms/, "审批风暴边界（bash/审批敏感命令）")
   assert.match(text, /micro-parallelism/, "微操作不并行（收益判断）")
+  // §20.7 T-PS3：D1 条款 carve-out——声明 files 的 async spawn → 调度器排队（旧禁令限定未声明/工具级并行写）
+  assert.match(text, /writes to the same file \(except async spawns with `files` declared/, "carve-out：声明 files 的 async spawn 例外在（T-PS3）")
+  assert.match(text, /scheduler queues overlapping ones until clear/, "carve-out 术语与 D-PS1/D-PS2 一致（scheduler/queued）")
 })
 
 test("docs/design/README.md: 文档地图存在且含板块映射表 + 待合并标注", () => {

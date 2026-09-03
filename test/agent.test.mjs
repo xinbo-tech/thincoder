@@ -1941,14 +1941,32 @@ test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressi
   assert.ok(text.includes("Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "五类不并行边界")
   assert.ok(text.includes("approval storms"), "审批风暴点名")
   assert.ok(text.includes("skip micro-parallelism (<1s ops)"), "微操作不并行")
-  assert.ok(text.includes("share NO file"), "并行前置检查：受影响文件集无交集")
-  assert.ok(text.includes("Dependency chain → serial"), "依赖链串行")
+  // §20.7 T-PS1：调度器条款替换旧手动避让纪律（D-PS2 逐字锚——AGENT-LOOP.md §20.7.2）
+  const flat = text.replace(/\n[ \t]+/g, " ") // 折叠续行缩进——锚跨行断言
+  assert.ok(flat.includes("**Declare spawn scheduling metadata in task briefs**: spawn with `files` (write domain) and `dependsOn` (prior async ids) — the scheduler gates admission: async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order. Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized."), "T-PS1: D-PS2 锚逐字在（files/dependsOn 声明 + 调度器准入闸 + 镜像并行排队语义）")
+  assert.ok(text.includes("never hand-serialized"), "T-PS1: 调度器接管——不手动串行")
   assert.ok(text.includes("at most 4 concurrent eng-coders"), "≤4 并发上限")
   assert.ok(text.includes("past 4 the bookkeeping cost"), "并发上限 rationale 同步 3→4（§15 D-A4 T9）")
   assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "并行 spawn 调用形态（各带 designId+token）")
   assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token 隔离语义（不互相覆盖）")
   assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "发起权不变：设计评审仍仅用户发起")
   assert.ok(text.includes("plus its designId parameter"), "Work Loop 批准行提 designId")
+  // §20.7 T-PS2：engineering.md 旧手动纪律措辞零残留（替换前已在位——grep 确认过）
+  assert.ok(!text.includes("share NO file"), "T-PS2: 旧「受影响文件集无交集」前置检查零残留")
+  assert.ok(!text.includes("run the tasks serially (or merge them into one spawn)"), "T-PS2: 旧「串行/合并」手动处置零残留")
+  assert.ok(!text.includes("Dependency chain → serial"), "T-PS2: 旧「依赖链串行」零残留")
+  assert.ok(!text.includes("Pre-check before parallel spawns"), "T-PS2: 旧「spawn 前人工预检」零残留")
+})
+
+test("prompts/main.md: Delegation 调度器条款（§20.7 D-PS1——T-PS1/T-PS2）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+  // T-PS1：D-PS1 逐字锚在（fail-when-unchanged——替换前旧句已 grep 确认在位）
+  assert.ok(
+    text.includes("**Declare spawn scheduling metadata**: pass `files` (the write domain) and `dependsOn` (prior async ids) when delegating — **for async spawns with `files` declared**, the scheduler auto-serializes overlapping-file tasks (queued until clear) and orders dependency chains. Same-file async spawns are safe to fire with files declared — the queue handles contention; **declare `files` or the scheduler can't serialize (undeclared = no detection); sync spawns conflicting on files error out (not queued)**; never hand-serialize what the scheduler queues."),
+    "T-PS1: D-PS1 锚逐字在（files/dependsOn 声明引导 + sync 冲突报错 + 不手动串行）",
+  )
+  // T-PS2：旧手动避让句零残留
+  assert.ok(!text.includes("Never give parallel subagents tasks that edit the same files"), "T-PS2: 旧「并行不编辑同一文件」句零残留")
 })
 
 // ─── 2026-09-01 修复轮 #4：engineering.md 卫生（重复标题去重）───

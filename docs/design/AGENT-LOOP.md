@@ -435,7 +435,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
    - 宽度优先探索——跨多文件/目录的理解（找用法、摸结构、读一批文件）——交给 `explore` 子代理，任务里标注 thoroughness（quick/medium/thorough）。
    - 只有当你**即将立刻编辑**某文件时才自己 read 它：精确编辑需要精确行在你的工作上下文里——这是**精度例外，不是省 token 技巧**。
 3. **验证句**（替换原句「When a coder subagent finishes, verify its report: read the files it claims to have changed, run the tests — do not trust subagent reports blindly」）：coder 子代理完成后，验证 = 读它**声称改动**的文件 + 运行测试；**不要重做你已委托的那整段探索**——那会抵消委托。
-4. 其余各条（并行不编辑同一文件、失败就收窄重试或自己做、escalate EARLY、冲突时自己读代码仲裁）保持不变。
+4. 其余各条（并行不编辑同一文件、失败就收窄重试或自己做、escalate EARLY、冲突时自己读代码仲裁）保持不变。——**supersede 注（2026-09-03 §20.7）："并行不编辑同一文件"条随 §20.7 从 main.md Delegation 段移除（调度器条款取代——声明 files 的 async spawn 可同文件并行派）——本行 as-of 保留**
 
 **测试**（实现前补全，两端各断言）：
 - `main.md` 含委托收益句（isolated context / only its final report / flood 类）、含「about to edit it immediately」触发句、含「Do NOT redo the whole exploration」句。
@@ -468,7 +468,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 **设计（2026-09-01）**：
 
 **D1 · system.md 条款**（"How you work — while coding" 段，现有并行条款（"When you need multiple independent pieces of information, call tools in parallel…"）之后追加——英文提示词惯例，两端 byte-identical——评审 #2 改锚点引用，弃行号）：
-> - **Parallelize aggressively:** send multiple independent tool calls in one response (read-only batches run concurrently); use the `edits` array for independent multi-file changes; spawn multiple independent subagents at once — including splitting changes across independent sub-projects (e.g. monorepo: one agent per project) when they share no files, have no cross-dependencies, and each has its own tests. Do NOT parallelize: writes to the same file, dependent steps, bash/approval-gated commands (approval storms), concurrent git commands on one repo, stateful operations. Parallelize big operations; skip micro-parallelism (<1s ops).
+> - **Parallelize aggressively:** send multiple independent tool calls in one response (read-only batches run concurrently); use the `edits` array for independent multi-file changes — **§20.7 carve-out（2026-09-03）：本并行条款的 "writes to the same file" 禁令对声明 files 的 async spawn 例外——调度器自动排队重叠任务（见 §20 D-SD3/§20.7——system.md 实际文本含 carve-out 句）**; spawn multiple independent subagents at once — including splitting changes across independent sub-projects (e.g. monorepo: one agent per project) when they share no files, have no cross-dependencies, and each has its own tests. Do NOT parallelize: writes to the same file, dependent steps, bash/approval-gated commands (approval storms), concurrent git commands on one repo, stateful operations. Parallelize big operations; skip micro-parallelism (<1s ops).
 
 **D2 · 语义映射**（条款 ↔ F1-F7）："multiple independent tool calls" → F1；"`edits` array" → F2；"spawn multiple independent subagents" + "splitting changes across independent sub-projects…share no files / no cross-dependencies / each has its own tests" → F3+F7（触发条件逐字）；"Do NOT parallelize" 五项 → F5；"big operations / micro-parallelism" → F6；F4（consult）机制既有，条款不含（不重复）。
 
@@ -614,7 +614,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 - **D-B2 edit 工具描述批量引导**（src/tools/edit.mjs 的 schema description + 工具定义描述，两端同改）：明确"**同文件多处修改 → `edits` 数组一次调用原子完成**（多条目同文件串行执行，2026-09-01 已支持——TOOLS.md 权威）；多文件独立修改 → 同一 `edits` 数组多条目"——把 35 例手工批量收敛为 edits 数组（回合数↓、原子性↑：任一失败全不写）
 - **D-B3 apply_patch 场景引导**：描述补"新建多个文件（`--- /dev/null`）/整文件替换/统一 diff 形态"——apply_patch 0 使用主因是模型不知道它覆盖多文件新建场景；保留工具（与 edits 各有价值：edits 适合逐条精确替换、hunk 适合整块/新建）
-- **D-B4 提示词纪律同步（并入 §14 D1 条款，评审 #8）**：不新增独立句——在 system.md "How you work — while coding" 段 §14 D1 的并行条款（"use the `edits` array for independent multi-file changes"）内扩展：追加 "and apply_patch for whole-file/new-file changes; prefer one batched call over N single edits"（两端 byte-identical，避免相邻两句）
+- **D-B4 提示词纪律同步（并入 §14 D1 条款，评审 #8）**：不新增独立句——在 system.md "How you work — while coding" 段 §14 D1 的并行条款（"use the `edits` array for independent multi-file changes"）内扩展：追加 "and apply_patch for whole-file/new-file changes; prefer one batched call over N single edits"（两端 byte-identical，避免相邻两句）——**引用注（2026-09-03 §20.7）：同一 D1 条款随后再经 §20.7 carve-out（并行禁令对声明 files 的 async spawn 例外）——§14 D1 实际文本的沿革 = §16 D-B4 扩展 + §20.7 carve-out 叠加——以 system.md 实际文本为准**
 
 ### 16.3 非功能需求（评审 #6 补）
 
@@ -1398,3 +1398,9 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 
 - CLI + VS Code：`src/prompts/main.md`、`src/prompts/engineering.md`、**`src/prompts/system.md`（§14 D1 carve-out——评审 #1）**（各 15 文件对中的 3——byte-identical）+ 测试（CLI advisor.test.mjs/VS Code 对应——T-PS1..3 + **既有 §15 T9/§18 T-E16 保持绿（评审 #2）**）+ AGENT-LOOP.md（**本段 + §14 F3/F5/F7/D1 supersede 指针 + §13 point 4 注（评审 #1）+ §16 D-B4 引用注（评审 #4——同一 system.md 条款的扩展沿革）**）+ **两端 CHANGELOG（父代理统一）+ VS Code ARCHITECTURE.md 引用段注（评审 #5——§14/§16 先例）**
 - **状态注（评审 #5）**：本段内"评审 #N"标记 = 批准前 informal 迭代处置（并入本版）——正式评审 = 2026-09-03 轮（token 1c6431c1）
+
+**实现记录（2026-09-03——id:3 交付中途父侧 cancel——prompts/测试双端已完整落盘并验证——AGENT-LOOP 注父侧补）**：
+
+- 改动（双端 byte-identical）：main.md Delegation 段旧句 → D-PS1 逐字锚；engineering.md Multi-Task Parallelism 段 → D-PS2 逐字锚（cap 句保留——T9/T-E16 绿）；system.md §14 D1 → carve-out 句。测试：CLI advisor.test.mjs + agent.test.mjs（291/283 绿）+ VS Code agent.test.mjs + unit.test.mjs（182/182 绿）。
+- 验收勾销：AC-PS1..5 全 ✓（锚句在/旧句零残留/cap 在/carve-out 在/byte-identical 双端口查在/全量回归绿）。
+- 父侧注：§14 D1 carve-out 注 + §13 point 4 supersede 注 + §16 D-B4 引用注（同批落）。两端 CHANGELOG 父代理统一。
