@@ -1221,3 +1221,30 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **验收（round2 #1——T-SD9..13 回指）**：AC-SD1 = 流式提交零调度心智（T-SD2/3——冲突自动排——依赖自动启）；AC-SD2 = 并行不误伤（T-SD8）；AC-SD3 = 死锁/取消安全（T-SD5/6/9/10——含依赖取消释放 + unknown id 拒）；AC-SD4 = 状态可见（T-SD7/11/12——含 waiting 面板标注）；AC-SD5 = 既有语义零回归（T-SD1/13——sync 冲突错误）
 
+### 17.6 Ctrl+C processing 态武装化 + 回合 abort 与池解耦（2026-09-03 · 紧急修复——用户两次实测被坑——待评审）
+
+> 状态：设计定稿，待评审。触发：用户实测——"输错半句一 Ctrl+C 把 eng-coder#14 杀了"（同日第二次——id:13 亦误杀）——提示"3s 内再按才杀"与实际"一次就全杀"不符。
+
+#### 17.6.1 根因（代码实锤）
+
+- **A**：agent.mjs 回合收尾（signal.aborted && !reason.interrupt）→ 无条件 _asyncSubagents.clear()——任何非 interrupt 回合中止连坐清池（杀全部后台）
+- **B**：key-handler processing 态 Ctrl+C（非挂起）无武装窗口——第一按直接 controller.abort()（无 interrupt reason——命中 A）——挂起态/空闲态有双确认而 processing 没有——三态不一致
+- 对照：Ctrl+I（reason.interrupt）路径不清池（正确）——processing 态 Ctrl+C 应同语义
+
+#### 17.6.2 修复（D-C1..C3）
+
+- **D-C1 key-handler processing 态武装化**：第一按 → abort({interrupt: true})（停当前回合——不清池——后台保留——提示 "[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]"）——3s 内第二按 → 全停（clearTimeout + abort（无 interrupt——走 agent.mjs 清池分支）+ _suspAborted + 唤醒）——与挂起态分支同构——武装计时/过期复位复用既有语义（实现选最小）
+- **D-C2 agent.mjs 清池条件核对**：interrupt 路径已安全（!interrupt 条件排除——不改）——全停清池走既有 abort 分支（二按 abort 无 interrupt → 清池）——agent.mjs 零改动（核对确认）
+- **D-C3 提示一致性**：processing 首按提示含"再按中止全部后台"字样（对齐挂起态文案）
+
+**受影响文件**：src/tui/key-handler.mjs（processing Ctrl+C 武装化——~10 行）、测试（key-handler/tui——首按不清池/次按清池/过期复位）、AGENT-LOOP 本段 + TUI.md §3 键分发注（Ctrl+C 三态武装一致）
+
+#### 17.6.3 测试（硬验收）
+
+- T-C1：processing + 池有 running 条目——Ctrl+C 首按 → 回合停（interrupt 标记）——池保留（后台不死）
+- T-C2：3s 内次按 → 池清 + 全停标记
+- T-C3：首按后 3s 过期——再按 = 首按语义（不清池）
+- T-C4：Ctrl+I 路径回归（既有 interrupt 不清池不变）
+- T-C5：挂起态/空闲态既有双确认回归（零变化）
+
+**验收**：AC-C1 = processing Ctrl+C 首按不再误杀后台（T-C1——核心）；AC-C2 = 全停仍可达（T-C2）；AC-C3 = 三态零回归（T-C3..C5）
