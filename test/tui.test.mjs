@@ -1333,6 +1333,33 @@ test("panel functions (§19.5 D-M7b): 头标 async/sync 显式标识 + ⏹ 仅 a
   assert.ok(!cText.includes("· sync ·") && !cText.includes("· async ·"), "compress 头无 sync/async 标识（真实 subagent 角色门）")
 })
 
+test("panel functions (§19.5 D-M7b 处置 #4——评审 #4): queued→running 补位启动——async 标记缓冲 → [model] 创建块即 async——⏹ 随实际启动可见（queued 入队期无块无 ⏹）", async () => {
+  const { routeSubToken } = await import("../src/tui/subagent-blocks.mjs")
+  const noop = () => {}
+  const s = tuiState()
+  // 4 个 running async 槽（真实 token 流：async 标记 → [model] → 内容）
+  for (let i = 1; i <= 4; i++) {
+    routeSubToken(s, `coder#${i}/⟦ev⟧async\x1e`, noop)
+    routeSubToken(s, `coder#${i}/[model]glm-5.3`, noop)
+    routeSubToken(s, `coder#${i}/working on task ${i}`, noop)
+  }
+  // 第 5 个 async spawn 入队（queued——D-A1/D-M7b：不 paint——无区块、无面板行）
+  assert.equal(s.subTasks["coder#5"], undefined, "queued 入队期无区块（不 paint——⏹ 无从显示）")
+  assert.ok(!renderSubagentPanel(s, 100).some((l) => l.text.includes("coder#5")), "queued 无面板行（无 ⏹ 无头）")
+  // 腾槽补位启动：实际启动 token 流（标记缺失 key → 缓冲 pending → [model] 创建块应用）
+  routeSubToken(s, "coder#5/⟦ev⟧async\x1e", noop)
+  routeSubToken(s, "coder#5/[model]glm-5.3", noop)
+  routeSubToken(s, "coder#5/starting now", noop)
+  assert.ok(s.subTasks["coder#5"], "补位启动后区块出现（queued→running 可见）")
+  assert.equal(s.subTasks["coder#5"].async, true, "缓冲 pending 在块创建时应用（async 门控判定源保真）")
+  const head5 = renderSubagentPanel(s, 100).find((l) => l._foldToggle === "sub-coder#5")
+  assert.ok(head5, "补位启动块渲染于面板")
+  assert.equal(head5._stopSub, "coder#5", "⏹ 命中元数据随补位启动出现（queued→running ⏹ 可见性——处置 #4）")
+  assert.equal(head5._stopCol, 99, "⏹ 内收一列（glyph cols−1）")
+  const t5 = String(head5.text).replace(/\x1b\[[0-9;]*m/g, "")
+  assert.ok(t5.includes("⏹") && t5.includes("[▶ coder#5 · async"), `补位启动头含 async 标识 + ⏹（实际: ${t5.slice(0, 80)}）`)
+})
+
 test("panel functions (§19.5 T-M25 渲染): 嵌套子标行 dim 样式——行首子标 gray、内容恢复 kind 色", async () => {
   const { styleSubLabelRow } = await import("../src/tui/subagent-panel.mjs")
   const { ansi, C: CC } = await import("../src/tui/ansi.mjs")

@@ -17,8 +17,9 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
  *  完成（§17.5.5 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
  *  stopped（§19.5 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
- *  async（§19.5 D-M7b）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
- *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）。 */
+ *  async（§19.5 D-M7b + 处置 #4）= **零字段**标记（`⟦ev⟧async\x1e`——无 n/max/phase/detail 段）——
+ *  routeSubToken 单独解析设 sub.async = true（不入本正则——本正则要求 4 字段）；**缺失 key
+ *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
 /** §19.5 D-M8 嵌套 relay 前缀通用解析（循环解析任意深度）：
@@ -113,6 +114,10 @@ export function ensureSubTaskKey(state, key, role) {
       lastError: null, dropped: 0,
       stopped: false, // §19.5: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
     }
+    // §19.5 D-M7b ①（处置 #4 兜底——2026-09-03）：缺失 key 的 ⟦ev⟧async 事件已缓冲
+    // pending 标志（routeSubToken——async 先于块创建到达：排队条目补位启动的时序窗口）
+    // ——块创建（此处）即应用——sub.async 区块创建即知（⏹ 门控/头标判定源保真）。
+    if (state._pendingAsyncKeys?.delete(key)) state.subTasks[key].async = true
     syncPanelSnapshot(state) // §19.6 D-P1: 块创建 → running 入镜
   }
   return state.subTasks[key]
@@ -353,23 +358,33 @@ export function applySubEvent(sub, payload) {
 export function routeSubToken(state, t, scheduleRender) {
   const path = parseRelayPath(t)
   if (!path) return false
-  const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
-  if (!sub) return true // frozen tombstone — late token from an aborted child: drop
   const payload = path.rest
   const nested = path.inner.length > 0
+  // §19.5 D-M7b ① + 处置 #4（2026-09-03 评审 #4——兜底）：零字段 async 标记在
+  // ensureSubTaskKey **之前**单独消费（async spawn 实际启动即发——sync 不发——精确
+  // 匹配：async 后须 RS 或串尾——正文伪前缀形态不误吞；内容侧伪哨兵已由生成侧
+  // stripEventToken 先行剥除——本分支只见真事件）。live 区块直接置位 sub.async；
+  // **缺失 key（区块尚未创建——排队条目补位启动的时序窗口 / tombstone）→ 缓冲
+  // pending 标志**（state._pendingAsyncKeys——ensureSubTaskKey 块创建时应用——async
+  // 事件先于块存在到达不丢——queued→running ⏹ 可见性保真——⏹ 门控与头标 async 判定源）。
+  // 内层（嵌套 explore#M/）async 剥除不路由（防污染外层块头）。
+  if (!nested && /^⟦ev⟧async(\x1e|$)/.test(payload)) {
+    const live = state.subTasks?.[path.head]
+    if (live) live.async = true
+    else {
+      state._pendingAsyncKeys ??= new Set()
+      state._pendingAsyncKeys.add(path.head)
+    }
+    scheduleRender()
+    return true
+  }
+  const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
+  if (!sub) return true // frozen tombstone — late token from an aborted child: drop
   // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（§15 D-A3）=
   // 完成即冻结（settle 时发）；settled（§17 D-S8）= 挂起期完成——驻留面板中间态
   // "done · awaiting digestion"，池空补发冻结；stopped（§19.5）= cancel——立即冻结。
   if (payload.startsWith("⟦ev⟧")) {
     if (nested) return true // 内层事件剥除不路由（防 explore 进度污染外层块头）
-    // §19.5 D-M7b ①: 零字段 async 标记（async spawn 实际启动即发——sync 不发——
-    // 区块创建即知）。精确匹配（async 后须 RS 或串尾——正文伪前缀形态不误吞；
-    // 内容侧伪哨兵已由生成侧 stripEventToken 先行剥除——本分支只见真事件）。
-    if (/^⟦ev⟧async(\x1e|$)/.test(payload)) {
-      sub.async = true
-      scheduleRender()
-      return true
-    }
     const ev = payload.match(SUB_EVENT_RE)
     if (ev?.[1] === "settled") {
       sub.done = true

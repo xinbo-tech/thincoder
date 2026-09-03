@@ -944,7 +944,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ## 19. subagent 工具面合并：单工具四动作（spawn/check/status/escalate）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事——escalate 并入 2026-09-03 二次裁定）
 
-> **状态：设计批准（round2 通过 0🔴——控制面扩展 19.5 已批准（round2 0🔴——2026-09-03））**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
+> **状态：已实现（2026-09-03 双端——§19 单工具五动作本体 + §19.5 控制面（实现记录见 19.5.4——CLI db408d2/b66831d + VS Code 70f3f8f 同规格镜像）+ §19.6 panel 六动作（19.6.5 记录）；设计批准沿革与处置注见 §19.5 状态行/19.5.4——标记刷新 2026-09-03（19.6.5 评审 #5 注承诺））**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
 
 ### 19.1 需求
 
@@ -1020,7 +1020,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ### 19.5 控制面扩展：status 增强 + cancel + UI 停止 + 嵌套前缀子标（2026-09-03，用户裁定）
 
-> **状态：设计批准（2026-09-03 round2 通过——0🔴——7 项 refinement 已处置——designToken 已签发）**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
+> **状态：设计批准（2026-09-03 round2 通过——0🔴——7 项 refinement 已处置——designToken 已签发）+ 已实现（2026-09-03 双端交付 + 重启重评审（token 54e3e5f5——处置 commit 1721d21）对齐轮——实现记录见 19.5.4）**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
 
 #### 19.5.1 需求
 
@@ -1084,6 +1084,31 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **嵌套前缀子标而非块中块**（方案 A——用户确认）：explore 同步 spawn 无生命周期——纯活动行——子标（dim 行首标记）足够归属可辨——块中块（D 方案）为无生命周期实体建层级 UI 过度
 - **动作域（round1 #6）**：cancel/status 在手动档 auto-turn（digest）动作域内**放行**（控制类动作——同 task/checklist 自省类——D-S7 分类补 cancel/status——digest 期间模型可中止失控子代理）；UI ⏹ 命中区与折叠头点击**列级区分**（⏹ 区点击 = cancel——不触发折叠翻转——T-M22 断言）
 - **否决**：a) pause/resume（子代理独立回合进程——真暂停需冻结/解冻上下文——复杂易错——cancel + 同 token 重 spawn（§2.8）覆盖）；b) cancel-all 参数（误触风险——Ctrl+C 已覆盖）；c) 嵌套块中块（过度——见上）；d) 剥掉内层前缀（行不可辨——explore 审计过程与 eng-coder 自身活动混淆）
+
+#### 19.5.4 实现记录（2026-09-03——双端交付 + 重启重评审处置对齐轮）
+
+**交付轮**：CLI db408d2（§19.5 控制面本体——T-M18..M27）+ b66831d（D-M7b async 标记/头标/⏹ 门控）+ aeff441（§19.6 panel 以其为基座）；VS Code 70f3f8f 同规格镜像 + 审计/评审修正轮（记录于本仓库 ARCHITECTURE.md §19.5 引用段——结构差异同载）。**本段 = 重启重评审（token 54e3e5f5——处置 commit 1721d21）后的对齐 + 补漏轮**（§19.6.5 评审 #5 注承诺的 §19/§19.5 状态标记刷新随本段落地）。
+
+**落点（符号锚——CLI）**：
+1. **status 可决策字段**（F9/D-M5）：spawn 时记 `entry.model`（`subagent.mjs` async 分支装配）；`startedAt` 记于 **entry.start() = 实际启动时刻**（queued 等待不计 elapsed）；turn/maxTurns 在 callbacks 包装层解析 ⟦ev⟧turn 镜像（`subagent.mjs` trackOpts.onToken——以 entry 自身 relay 流为界——round2 #4 裁定）；elapsedSec 计算于 status 调用时（`subagent-async.mjs` statusFields/executeStatusAction——单查 + overview {running/queued/done} 结构化对象数组——T-M18/M8）
+2. **cancel 动作**（F10/D-M6）：`subagent-async.mjs` cancelAsyncSubagent——工具路径（executeCancelAction——depth-0 only + id 必填）与 TUI ⏹（`mouse.mjs` createMouseDispatch cancelSubagent——key 尾段取 id）共用核心；running 目标条目级 controller abort（`subagent.mjs` async 分支 entry.controller——链 `_sessionSignal ?? ctx.signal`——Ctrl+C 全停逐链传播语义不变）→ settle finally **cancelled 分支**（不入 `_pendingAsyncResults`/不参与 collect 直注入 + ⟦ev⟧stopped 冻结 + user-role 提醒 XML 转义——round2 #3）；queued 目标出队 + position 前移 + `was:"queued"` 确认（T-M27）；未知/已完成/省略 id → error（T-M20）；cancel 后 maybeRefillAsync 补位（T-M21）
+3. **UI ⏹**（F11/D-M7/D-M7b）：CLI 面板折叠头右缘 ⏹（`subagent-panel.mjs` renderSubagentPanel——_stopSub/_stopCol 元数据——glyph 内收一列——code review 🟡#1）+ 列级点击命中（`mouse.mjs` handleMouseClick——⏹ 区 cancel 不触发折叠翻转——T-M22）；**门控 = running && SUBAGENT_ROLES && sub.async**（sync 区块无 ⏹——D-M7b ③——T-M23/mouse D-M7b ③ 回归）；头标 sync/async 显式文字（dim——与模型名并列——渲染端 subagent-panel.mjs/render-segments.mjs——B 形态——冻结后保留）
+4. **⟦ev⟧async 标记**（D-M7b ① + 处置 #4）：`subagent.mjs` entry.start() 发射（**实际启动时**——queued 入队不 paint 不发——补位启动先发 async 后发 [model]——sync 不发）；`subagent-blocks.mjs` routeSubToken 解析设 `sub.async`；**缺失 key 缓冲 pending 标志（处置 #4 兜底——本对齐轮补——CLI）：async 事件在块创建（ensureSubTaskKey）之前到达 → 缓冲 state._pendingAsyncKeys → 块创建时应用——async 事件先于块存在到达不丢——queued→running ⏹ 可见性保真**（补测试：subagent-blocks 数据层缓冲用例 + tui.test 面板层 queued→running ⏹ 可见性用例）
+5. **嵌套前缀子标**（F12/D-M8）：`subagent-blocks.mjs` parseRelayPath 循环解析（任意深度）——首段路由 + 剩余段行首 dim 子标（sublabelLine + `subagent-panel.mjs` styleSubLabelRow）——内层 ⟦ev⟧/[model] 剥除不路由（防 explore 进度污染 eng-coder 块头）；ACP 桥剥除正则扩展多段（`acp/bridge.mjs`——acp.test.mjs 嵌套前缀用例）
+6. **门禁分类**（19.5.2b round2 #4）：`agent/dispatch.mjs` isSubagentControlAction（cancel + panel freeze）——planMode 放行/免权限审批/批审批不入组/无 handler 不拒；手动档 digest 内放行（subagent.mjs cancel/panel 动作分支 + 测试）；受限变体 spawn-only（subagent.mjs execute 分流——depth>0 eng-coder 上下文拒绝非 spawn 动作）
+
+**VS Code 结构差异**（ARCHITECTURE.md §19.5 引用段）：CLI 的文本事件通道（⟦ev⟧async/turn/stopped + routeSubToken）→ 本端 `callbacks.onSubagent` 消息族（started **带 `pool:true`** = ⏹ 门控源——恒于 entry.start 实际启动时发——同步 spawn 的 started 无 pool 标记——审计 F1）+ onAgentTurn 钩子同步 entry.turn + cancelled 冻结相位（webview stopped）；嵌套子标经 chunk.sub 透传（toolPanelPayload 白名单——`String.prototype.sub` 陷阱规避）。
+
+**偏差落文**：
+- **处置 #4（⟦ev⟧async 发射点）**：CLI/VS Code 早期交付已按"实际启动"实现（entry.start——评审前设计文本写"makeRelay 后 spawn 返回前"——代码先于文档修订）；本对齐轮补的是文档措辞（1721d21 D-M7b 修订）与实现的**缓冲兜底 + queued→running ⏹ 可见性测试**（CLI routeSubToken pending 缓冲 + tui 面板层测试；VS Code T-M21 补 started+pool 断言——started 恒由事件创建块——无缺失 key 窗口——pending 缓冲无对应物——语义等价注释落测试）
+- **§19.5 早交付未落实现记录**（状态行滞留"设计批准"）——19.5.4 本段补记 + §19 状态行刷新（19.6.5 评审 #5 承诺）
+- 行数债：CLI subagent-async 656/subagent-blocks 577/subagent.mjs 531——本批零增长或微小——并入拆分轮（docs/TODO.md）；VS Code subagent.mjs 465/subagent-async 529/subagent-escalate 189（超过 500 硬顶的拆分候选——tool-events 先例——2026-09-03 实测行数）
+
+**测试**：CLI T-M18..M27（test/subagent.test.mjs + subagent-blocks.test.mjs + mouse.test.mjs + tui.test.mjs + agent-turn.test.mjs + acp.test.mjs/spawn-child.test.mjs 扩展——N/E/A 展开随交付）；VS Code T-M18..M27（test/subagent.test.mjs + ui.test.mjs + chat-panel.test.mjs）。**全量（2026-09-03 对齐轮后）**：CLI `npm test` 1224/0 全绿（45 slow 豁免）；VS Code `npm test` 1006/0 全绿。
+
+**验收勾销**：AC-M6 = status 可决策字段（T-M18）；AC-M7 = cancel 定向中止（T-M19..M21/M27）；AC-M8 = UI 停止不经模型（T-M22/M23）；AC-M9 = 嵌套前缀无泄漏 + 子标渲染（T-M24/M25）；AC-M10 = 两端全量绿（T-M26——§15/§17/§19 回归随双端全量）
+
+
 
 
 

@@ -402,30 +402,46 @@ test("压缩面板: 无 live 面板时完成/失败回调安全 no-op", () => {
   assert.deepEqual(s.subTasks, {})
 })
 
-test("§19.5 D-M7b 数据层: ⟦ev⟧async 零字段标记 → sub.async = true（sync 无标记保持 undefined；嵌套剥除不路由；伪形态不设标记）", () => {
-  // async 标记（实际启动即发——先于 [model]）：事件只设标记，不进 blocks
+test("§19.5 D-M7b 数据层 + 处置 #4（2026-09-03 评审 #4）: ⟦ev⟧async 零字段标记——live 区块置位 / 缺失 key 缓冲 pending（块创建即应用——sync 无标记；嵌套剥除；伪形态不设）", () => {
+  // ① 实际启动流（标记先于 [model]）：标记到达时区块尚不存在 → 缓冲 pending 标志——
+  // 紧随的 [model] 创建区块时应用（sub.async = true——区块创建即知——⏹ 门控判定源）
   const s = state()
   assert.equal(routeSubToken(s, "eng-coder#2/⟦ev⟧async\x1e", noop), true)
-  const sub = s.subTasks["eng-coder#2"]
-  assert.equal(sub.async, true, "⟦ev⟧async 解析 → sub.async = true")
-  assert.equal(sub.blocks.length, 0, "事件 token 不进 blocks（与 ⟦ev⟧turn 同族——仅头部）")
-  // [model]/turn 等随后照常（标记与模型名并列渲染——互不干扰）
+  assert.equal(s.subTasks["eng-coder#2"], undefined, "async 标记本身不创建区块（缺失 key → 缓冲 pending——块由随后的 [model] 创建）")
+  assert.deepEqual([...s._pendingAsyncKeys], ["eng-coder#2"], "缺失 key 的 async 事件缓冲 pending 标志（兜底——不丢）")
   routeSubToken(s, "eng-coder#2/[model]glm-5.3", noop)
+  const sub = s.subTasks["eng-coder#2"]
+  assert.ok(sub, "[model] 创建区块")
+  assert.equal(sub.async, true, "pending async 标志在块创建时应用（⟦ev⟧async 解析 → sub.async = true）")
+  assert.equal(sub.blocks.length, 0, "事件 token 不进 blocks（与 ⟦ev⟧turn 同族——仅头部）")
+  assert.ok(!s._pendingAsyncKeys.has("eng-coder#2"), "pending 标志应用后清除（不留滞）")
+  // [model]/turn 等随后照常（标记与模型名并列渲染——互不干扰）
   routeSubToken(s, "eng-coder#2/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e", noop)
   assert.equal(sub.model, "glm-5.3")
   assert.equal(sub.turn, 3)
-  // 嵌套 async（理论不产生——eng-coder 内部受限 spawn 同步强制）→ 剥除不路由
+  // ② live 区块 + 晚到标记（块先建——§20 排队等待块/顺序漂移）→ 直接置位（无缓冲）
   const s2 = state()
-  routeSubToken(s2, "eng-coder#5/explore#1/⟦ev⟧async\x1e", noop)
-  assert.equal(s2.subTasks["eng-coder#5"].async, undefined, "内层 async 标记剥除——不设外层 async")
-  // sync 块（无标记——sync spawn 不发）：async 保持 undefined → 渲染端显式标 sync
-  const s3 = state()
-  routeSubToken(s3, "explore#1/hello", noop)
-  assert.equal(s3.subTasks["explore#1"].async, undefined, "sync 块无 async 字段（undefined = sync——D-M7b B 形态）")
-  // 伪形态（async 后无 RS/串尾——正文误前缀）不设标记（严格匹配）
+  routeSubToken(s2, "coder#1/[model]glm-5.3", noop)
+  routeSubToken(s2, "coder#1/⟦ev⟧async\x1e", noop)
+  assert.equal(s2.subTasks["coder#1"].async, true, "live 区块的 async 标记直接置位")
+  assert.ok(!s2._pendingAsyncKeys?.has("coder#1"), "live 置位路径不缓冲")
+  // ③ tombstone（冻结）key 的 async 标记：缓冲（不崩、不复活——冻结块永不重建——惰性留驻零影响）
+  const s3 = { ...state(), _frozenSubKeys: new Set(["explore#7"]) }
+  assert.equal(routeSubToken(s3, "explore#7/⟦ev⟧async\x1e", noop), true, "tombstone key 的 async 标记被消费（晚到 token 语义）")
+  assert.ok(!s3.subTasks["explore#7"], "tombstone 不复活")
+  // ④ 嵌套 async（理论不产生——eng-coder 内部受限 spawn 同步强制）→ 剥除不路由
   const s4 = state()
-  routeSubToken(s4, "coder#1/⟦ev⟧asyncronous text", noop)
-  assert.equal(s4.subTasks["coder#1"].async, undefined, "asyncronous 伪前缀不设标记")
+  routeSubToken(s4, "eng-coder#5/explore#1/⟦ev⟧async\x1e", noop)
+  assert.equal(s4.subTasks["eng-coder#5"].async, undefined, "内层 async 标记剥除——不设外层 async")
+  // ⑤ sync 块（无标记——sync spawn 不发）：async 保持 undefined → 渲染端显式标 sync
+  const s5 = state()
+  routeSubToken(s5, "explore#1/hello", noop)
+  assert.equal(s5.subTasks["explore#1"].async, undefined, "sync 块无 async 字段（undefined = sync——D-M7b B 形态）")
+  // ⑥ 伪形态（async 后无 RS/串尾——正文误前缀）不设标记、不缓冲（严格匹配）
+  const s6 = state()
+  routeSubToken(s6, "coder#1/⟦ev⟧asyncronous text", noop)
+  assert.equal(s6.subTasks["coder#1"].async, undefined, "asyncronous 伪前缀不设标记")
+  assert.ok(!s6._pendingAsyncKeys?.has("coder#1"), "伪形态不缓冲（正则严格——async 后须 RS/串尾）")
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
