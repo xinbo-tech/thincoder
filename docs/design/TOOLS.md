@@ -298,13 +298,13 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **测试**：fixture 全部运行时生成（仓库零二进制——buildPdf 帮助函数同构 oh-my-pi warningPdf——字节偏移运行时算 + zlib deflateSync）——用例矩阵 10 项（最小经典 xref/Flate 流/ToUnicode bfrange/Type0 CJK/XRef 流+ObjStm/TJ 空格/加密拒绝/WinAnsi 回退/嵌套页序/坏 xref）——test/pdf.test.mjs。
 
-### 9.3 决策点（评审/用户拍）
+### 11.2a 决策点初稿（评审/用户拍——**11.3 定稿替代——历史保留**）
 
 1. pages 参数形态（read 的 offset/limit 心智 → "1-3,5" 页选择？）与单页输出上限
 2. 扫描件错误是否给 read_image 指引（F-P2 已建议——确认措辞）
 3. 多栏/表格不识别是否需文档声明（第一版声明不支持——还是尽力拼接）
 
-**受影响文件**：新 src/tools/pdf.mjs + pdf-parse.mjs + read_pdf.md、file.mjs read.md 路由段、两端 discipline.md（byte-identical）、TOOLS.md、ARCHITECTURE.md、FEATURES.md、新 test/pdf.test.mjs、docs/TODO.md（条目补回）。
+**受影响文件**：新 src/tools/pdf.mjs（壳）+ pdf-parse-xref.mjs + pdf-parse-text.mjs（双核——500 硬限预拆）+ read_pdf.md、tools/index.mjs 注册、read.md 路由段、两端 discipline.md（byte-identical）、TOOLS.md、ARCHITECTURE.md、FEATURES.md、新 test/pdf.test.mjs（17 用例）——**2026-09-03 交付实测**：xref 499 / text 497 行——**11.2 旧"9 段管线"散文与 11.3 用例矩阵以交付为准**（TOOLS.md §1 计数 + ARCHITECTURE/FEATURES 已同步）f.test.mjs、docs/TODO.md（条目补回）。
 
 ### 11.3 决策点定稿（2026-09-03 用户拍板）
 
