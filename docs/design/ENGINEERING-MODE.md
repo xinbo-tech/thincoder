@@ -218,6 +218,8 @@
 
 **受影响文件**：两端 `src/prompts/engineering.md`、两端 `test/agent.test.mjs`（断言）、本节。
 
+**复评修正（2026-09-03 实现轮后补）**：条款最终落地 = Mandatory Flow step 5（User sign-off）补指针句（"评审后显式批准才解锁——见 :70-73"）+ Work Loop "eng-coder delivery" 分支 token 边界句后全规则（6 行——含 "A user ruling on design CONTENT (form/shape/option choice) is requirements confirmation — NOT design approval…Approving a form (\"B\", \"可以\") never shortcuts past review"）——两端 byte-identical 331 行 + 断言 8 项（CLI :3772-3782 / vscode :1259-1269）——本条目引文为压缩版，以落地文本为准。
+
 ### 2026-09-03：修正轮先落档——docs FIRST（用户实测：同设计修正轮直接 spawn 未先落档）
 
 **触发**：用户实测工程模式同设计修正轮（token 复用合法）但修正前没先落文档——直接 spawn eng-coder——文档纪律断链。"代码变更都必须落文档"对修正轮无豁免（METHODOLOGY.md:47——无"改动太小免文档"通道，2026-09-03 同批确立），但 engineering.md 修正轮句未挂钩落档步。
