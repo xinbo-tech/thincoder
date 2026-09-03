@@ -463,11 +463,35 @@ test("T-S16 压缩兜底回归（N4）：挂起期多注入后 auto-turn 开跑�
 // 驱动级：挂起会话状态机（T-S3 / T-S5 / T-S6 / T-S9 / T-S17）
 // ═══════════════════════════════════════════════════════════════════════════
 
-test("T-S6 挂起自然退出：池空（settle → digest 消化完）→ 补发冻结 → idle", async () => {
-  const ctx = trackedCtx()
+test("T-S6 挂起自然退出：池空（settle → digest 消化完）→ 补发冻结 → idle（冻结块按 settle 锚点落 digest 总览文本之前）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, cbs, opts) => {
+      const rec = { text, autoTurn: opts?.autoTurn ?? false, suspended: agent._suspended }
+      ctx.calls.runAgent.push(rec)
+      // 真实 settle 回调序列（subagent.mjs 挂起分流：_suspended 时 [model]/⟦ev⟧settled
+      // token + pending 移交 + wake）——从首回合的 callbacks 发射（settle 回调持有
+      // spawn 回合的 callbacks），TUI token 在 digest 文本进流之前路由
+      if (rec.text === "首回合") {
+        setTimeout(() => {
+          cbs.onToken?.(`${ctx.entryA.relayPrefix}[model]test-model`)
+          cbs.onToken?.(`${ctx.entryA.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
+          mockSettle(agent, ctx.entryA, LONG_REPORT("A 结果"))
+        }, 60)
+      }
+      const pend = agent._pendingAsyncResults
+      if (pend?.length) {
+        for (const e of pend.splice(0)) {
+          agent.history.push({ role: "user", content: `[System reminder: async subagent #${e.id} finished]\n${e.report ?? e.error ?? ""}` })
+        }
+      }
+      // digest 轮的模型总览文本（真实路径 = digest LLM 输出流进会话流——在 settle 之后）
+      if (opts?.autoTurn) ctx.pushLine("[digest 总览] A 结果要点…", undefined, undefined)
+      return "ok"
+    },
+  })
   const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
   const A = fakeEntry(ctx.agent, 1)
-  setTimeout(() => mockSettle(ctx.agent, A, LONG_REPORT("A 结果")), 60)
+  ctx.entryA = A
   await runAgentTurn(ctx, "首回合")
   // 回合 → 挂起 → settle → 1 次消化 → 池空 → 退出 idle
   assert.deepEqual(ctx.calls.runAgent.map((c) => c.text), ["首回合", ""], "用户回合 + 一个消化轮")
@@ -479,6 +503,11 @@ test("T-S6 挂起自然退出：池空（settle → digest 消化完）→ 补�
   assert.equal(ctx.agent._sessionSignal, null)
   assert.equal(ctx.state.pendingInput.length, 0)
   assert.equal(poolSize(ctx.agent), 0, "池清空")
+  // 冻结块落位（2026-09-03 修复轮）：settle 锚点——用户回合内容之后、digest 总览文本之前
+  const frozen = ctx.state.lines[2]._frozenSubTask
+  assert.equal(frozen?.key, "coder#1", "补发冻结块 splice 落 settle 锚点（用户回合内容之后）")
+  const digestIdx = ctx.state.lines.findIndex((l) => String(l.text).includes("digest 总览"))
+  assert.ok(digestIdx > 2, `冻结块（idx=2）位于 digest 总览文本（idx=${digestIdx}）之前`)
 })
 
 test("T-S3 挂起态输入可用：池非空时用户 Enter → 新回合立即开跑（不打断后台）", async () => {
@@ -802,8 +831,17 @@ test("T-S14 中间态渲染：挂起期 settled 块 'done · awaiting digestion'
   const panelLines = renderSubagentPanel(state, 100)
   assert.ok(panelLines.some((l) => String(l.text).includes("done · awaiting digestion")), "面板显示 awaiting digestion")
   assert.ok(panelLines.some((l) => String(l.text).includes("[✓ coder#1")), "✓ 中间态图标")
+  // digest 总览文本在 settle 之后进流（真实时序：settle → auto-turn digest 输出）——
+  // 池空补发冻结必须 splice 落其前（2026-09-03 修复轮：锚点断言）
+  assert.equal(sub._freezeAt, 0, "锚点 = settle 时刻流位置（digest 文本入流前）")
+  state.lines.push({ text: "digest 总览: 要点A、要点B", color: undefined })
+  state.lines.push({ text: "auto-turn 消化收尾", color: undefined })
   // 池空冻结补发（挂起退出路径 freezeAllSubTasks）
   freezeAllSubTasks(state)
+  const carrierIdx = state.lines.findIndex((l) => l._frozenSubTask?.key === "coder#1")
+  const digestIdx = state.lines.findIndex((l) => String(l.text).includes("digest 总览"))
+  assert.ok(carrierIdx === 0 && digestIdx > carrierIdx,
+    `冻结块（idx=${carrierIdx}）位于 digest 总览文本（idx=${digestIdx}）之前`)
   assert.equal(state._frozenSubKeys.has("coder#1"), true, "补发 done 冻结进流")
   assert.equal(state.subTasks["coder#1"], undefined, "冻结后从驻留面板释放")
 })

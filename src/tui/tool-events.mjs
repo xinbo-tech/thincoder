@@ -19,7 +19,7 @@ import { formatToolSummary } from "./tool-summaries.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 import {
-  SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
+  SUB_PREFIX_RE, SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
   routeSubToolOutput, finishSubTask, finishSubTasksByRole, finishSubTaskByModel, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "./subagent-blocks.mjs"
@@ -366,17 +366,17 @@ export function buildToolCallbacks(deps) {
       }
     },
     onToolOutput: (name, chunk, toolId) => {
-      // All tools use inline conversation blocks — panel area is abolished.
-      // Stream up to N preview lines (config ?? per-tool ?? 5); the full result
-      // is in the tool message.
-      const part = typeof chunk === "string"
-        ? { kind: "text", text: chunk.trimEnd() }
-        : { kind: chunk?.kind ?? "text", text: String(chunk?.text ?? "").trimEnd() }
+      // Subagent relays (name "role#id/tool", D1) route RAW — chunks are
+      // child-stdout/SSE fragments at arbitrary byte boundaries; trimEnd eats
+      // real trailing newlines and routeSubToolOutput's verbatim concat would
+      // glue lines (2026-09-03 修复轮; main path keeps the trimmed form below).
+      const isSubRelay = SUB_PREFIX_RE.test(name)
+      const rawText = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
+      const part = {
+        kind: typeof chunk === "string" ? "text" : (chunk?.kind ?? "text"),
+        text: isSubRelay ? rawText : rawText.trimEnd(),
+      }
       if (!part.text) return
-      // Subagent tool output (D1: childCallbacks.onToolOutput relays under the
-      // prefixed name "role#id/toolName") → append into the CURRENT tool block of
-      // that child's activity buffer. Render throttled at 250ms (N1); the data
-      // append itself is never delayed.
       if (routeSubToolOutput(state, name, part, scheduleRender)) return
       if (name === "advisor") {
         // Accumulate to buffer — formatTables + wrapText in render-conversation

@@ -105,7 +105,9 @@ in engineering mode was the sizing decision.
    adds nothing the internal pass did not already verify (a stalled/doubtful
    delivery goes back to eng-coder with the report's unconverged points as the
    task brief — same `designToken` and `designId` parameters, invent nothing
-   new).
+   new). Fix-round re-spawns are docs FIRST too — the deviation record / change
+   note lands in the owning design doc BEFORE the eng-coder spawn (full rule:
+   the eng-coder delivery bullet under Then handle the message).
 8. **Delivery review — verify the claims; re-review stays optional.** Verify
    the delivery against the acceptance criteria from the design (run the tests
    it claims pass, read the changed files). When METHODOLOGY.md is present, the
@@ -152,8 +154,15 @@ Then handle the message:
   terminal state (clean | stalled, flow step 7). Verify the claims against
   the acceptance criteria (run the tests it claims pass, read the changed
   files). Stalled or doubtful → spawn the fix round with the report's
-  unconverged points as the task brief (same designToken/designId). A
-  parent-side advisor code review is the optional second opinion, not the
+  unconverged points as the task brief (same designToken/designId).
+  Fix rounds reuse the same designToken — but docs FIRST. Every fix round's
+  findings + planned changes land in the owning design doc (deviation record /
+  change note appended to the section) BEFORE the eng-coder spawn. "Code
+  changes must land in docs" has no exemption for fix rounds — a fix that skips
+  the doc is doc drift, identical to a silent change. Same-design fix rounds
+  are the only legitimate token reuse; anything beyond the design's file list
+  is a NEW task needing its own flow and a fresh token.
+  A parent-side advisor code review is the optional second opinion, not the
   default — never wait for the user to ask for the automatic parts; report.
 
 End every turn with three checks: ① decisions written to docs? ② current state

@@ -193,6 +193,19 @@ test("T-A (F1): 子agent bash 长输出 → tool block 增长、currentTool=bash
   for (const i of [0, 10, 19]) assert.ok(toolBlock.text.includes(`output line ${i}`), `line ${i} 保留`)
 })
 
+test("T-Ab (2026-09-03 修复轮): 子agent 工具输出 raw 透传真实管线——行尾 \\n 不被 trimEnd 吃、跨 chunk 词不拆行", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToolCall("coder#1/bash", { command: "npm test" })
+  // 真实 relay chunk 形态：子进程 stdout 任意字节边界碎片（无行尾 \\n 的切词 chunk、
+  // 带行尾 \\n 的整行 chunk、无尾 chunk 混合）
+  callbacks.onToolOutput("coder#1/bash", "line1\nline2 par")
+  callbacks.onToolOutput("coder#1/bash", "tial\nline4\n")
+  callbacks.onToolOutput("coder#1/bash", "tail")
+  const toolBlock = ctx.state.subTasks["coder#1"].blocks.find((b) => b.kind === "tool")
+  assert.ok(toolBlock.text.includes("line1\nline2 partial\nline4\ntail"),
+    `原文还原（无逐 chunk 断行 / trim 粘行），实际: ${JSON.stringify(toolBlock.text)}`)
+})
+
 test("T-E (F5): consult 顾问前缀路由进区块——main_history 调用可见", async () => {
   const { ctx, callbacks } = await captureCallbacks()
   callbacks.onToken("consult#1/[model]glm-5.2")

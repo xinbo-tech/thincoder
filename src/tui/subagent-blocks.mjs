@@ -3,12 +3,14 @@
  *
  * state.subTasks[key] 是完整的活动缓冲：{ key, role, model, started, done, doneAt,
  * blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError,
- * dropped, blockEpoch }。区块是子agent 活动的唯一载体（子工具调用不进父历史），
+ * dropped, blockEpoch, awaitingDigest（§17 挂起中间态）, _freezeAt（冻结锚点）}。
+ * 区块是子agent 活动的唯一载体（子工具调用不进父历史），
  * 跨 turn 保留、可重新展开；渲染为会话流内可折叠区块（render-conversation.mjs）。
  *
  * 数据层职责：前缀路由、事件 token 解析（D1/D2）、kind 合并追加、N2 环形上限、
  * N1 渲染节流（渲染调度节流，数据追加永不延迟）、完成冻结（freezeSubTaskLines
- * 家族——_frozenSubTask 载体行，渲染端 render-conversation.mjs 识别）。
+ * 家族——settle 锚点 splice 插入（2026-09-03）/ _frozenSubTask 载体行，渲染端
+ * render-conversation.mjs 识别）。
  */
 
 import { C } from "./ansi.mjs"
@@ -17,10 +19,11 @@ import { describeToolArgs } from "./tool-args.mjs"
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */
 export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
 /** ⟦ev⟧ event token parser (D1/D2): `⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`.
- *  phase "done" (§15 D-A3): async child finished — settle-time emits (each entry,
- *  it so the child's block freezes (the spawn tool result is a status JSON and
- *  must not freeze a still-running block). */
-  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+ *  phase "done" (§15 D-A3): async child finished — one settle-time emit per async
+ *  entry, so its block freezes at the completion stream position (the spawn tool
+ *  result is a status JSON and must not freeze a still-running block).
+ *  phase "settled" (§17 D-S8): finished while the session is suspended — freeze
+ *  deferred ("done · awaiting digestion") until the pool drains (freezeAllSubTasks). */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 /** N2: per-child display-line ring buffer cap — oldest lines drop with a marker. */
 export const SUB_BLOCK_LINE_LIMIT = 500
@@ -157,20 +160,43 @@ export function freezeSubTaskLines(state, sub) {
   if (!sub) return
   state._frozenSubKeys ??= new Set()
   state._frozenSubKeys.add(sub.key)
-  if (!sub) return
   sub.done = true
   sub.doneAt = sub.doneAt ?? Date.now()
-  state.lines.push({ text: `subagent activity: ${sub.key}`, color: C.dim, _frozenSubTask: sub })
+  // 锚点插入（2026-09-03 修复轮）：settled 块带 _freezeAt（settle 时刻流位置）——
+  // splice 落位使挂起期补发冻结块位于其 digest 总览文本之前而非流尾；无锚点
+  // （即时完成/中断路径）`?? state.lines.length` 尾推不变。多锚点批量冻结
+  // （freezeDoneSubTasks/freezeAllSubTasks）按锚点降序执行——splice 是绝对位置
+  // 插入，先插小锚点会把大锚点目标整体后移一位。
+  const anchor = sub._freezeAt ?? state.lines.length
+  state.lines.splice(Math.min(anchor, state.lines.length), 0, {
+    text: `subagent activity: ${sub.key}`, color: C.dim, _frozenSubTask: sub,
+  })
+}
+
+/** 头裁锚点校正（2026-09-03 修复轮；index.mjs pushLine 调用）：state.lines 头部被裁
+ *  removedCount 行并补 1 条裁切标记行（splice(0,N) + unshift）——内容净位移是
+ *  removedCount−1（code review round1 #3：按 removedCount 校正在锚点 ≥ 裁切量时
+ *  会偏早 1 行）；在途 settled 锚点按净位移前移，min 0 兜底（锚点行已被裁时落
+ *  流头）。 */
+export function shiftFreezeAnchors(state, removedCount) {
+  const shift = removedCount - 1
+  for (const sub of Object.values(state.subTasks ?? {})) {
+    if (sub._freezeAt !== undefined) sub._freezeAt = Math.max(0, sub._freezeAt - shift)
+  }
 }
 
 /** Freeze + release every already-done child block (tool-result sweep:
- *  subagent/escalate/consult-check completions each call this after finishSubTask). */
+ *  subagent/escalate/consult-check completions each call this after finishSubTask).
+ *  锚点降序（2026-09-03 修复轮）：同批多个锚定块按 _freezeAt 降序冻结（后 settle
+ *  先插——绝对位置 splice 语义，见 freezeSubTaskLines）；无锚点条目（-1）排末尾推。
+ *  sort 稳定——同锚点/无锚点条目相对顺序不变。 */
 export function freezeDoneSubTasks(state) {
-  for (const key of Object.keys(state.subTasks ?? {})) {
-    if (state.subTasks[key].done) {
-      freezeSubTaskLines(state, state.subTasks[key])
-      delete state.subTasks[key]
-    }
+  const subs = Object.values(state.subTasks ?? {})
+    .filter((s) => s.done)
+    .sort((a, b) => (b._freezeAt ?? -1) - (a._freezeAt ?? -1))
+  for (const sub of subs) {
+    freezeSubTaskLines(state, sub)
+    delete state.subTasks[sub.key]
   }
 }
 
@@ -223,17 +249,20 @@ export function finishSubTaskByModel(state, role, model, lastError = null) {
 /** Turn-end sweep (runAgentTurn finally): freeze ALL remaining blocks — interrupted
  *  runs (Ctrl+C abort / error mid-turn) would otherwise linger as pinned ghosts
  *  above the input box. Not-done children get done + lastError="interrupted"
- *  (skipped when the status already recovered to "Ready"). */
+ *  (skipped when the status already recovered to "Ready"). 锚点降序同
+ *  freezeDoneSubTasks（2026-09-03 修复轮）——挂起期 settle 锚点交错的批次各按
+ *  自己 settle 位置落位。 */
 export function freezeAllSubTasks(state) {
-  for (const key of Object.keys(state.subTasks ?? {})) {
-    const sub = state.subTasks[key]
+  const subs = Object.values(state.subTasks ?? {})
+    .sort((a, b) => (b._freezeAt ?? -1) - (a._freezeAt ?? -1))
+  for (const sub of subs) {
     if (!sub.done) {
       sub.done = true
       sub.doneAt = Date.now()
       if (!sub.lastError && state.status !== "Ready") sub.lastError = "interrupted"
     }
     freezeSubTaskLines(state, sub)
-    delete state.subTasks[key]
+    delete state.subTasks[sub.key]
   }
 }
 
@@ -282,6 +311,11 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.done = true
       sub.doneAt = Date.now()
       sub.awaitingDigest = true
+      // 冻结锚点（2026-09-03 修复轮）：记录 settle 时刻的流位置——池空补发冻结
+      // （freezeAllSubTasks）按此 splice 插入，冻结块落在其 digest 总览文本之前
+      // （还原 §15 "冻结位置 = 完成时刻流位置" 语义；此前无条件尾推把块堆在
+      // digest 结论之后——用户实测。机制见 freezeSubTaskLines）。
+      sub._freezeAt = state.lines?.length ?? 0
       sub.currentTool = null
       sub.approval = null
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
@@ -347,6 +381,11 @@ export function routeSubToolCall(state, name, args, scheduleRender) {
 }
 
 /** Child tool output (D1 prefixed-name relay) → append into the CURRENT tool block.
+ *  RAW 拼接（2026-09-03 修复轮——用户实测"逐 chunk 分行"）：此前每 chunk 强加
+ *  "\n"，而 relay chunk 是子进程 stdout/LLM SSE 的任意字节边界碎片（无换行、切词
+ *  中）——每碎片成独立显示行 + 词拦腰断，还烧 N2 行配额；emit 端（advisor/run.mjs
+ *  进度收尾行、system/verify onOutput）自带换行结构，raw 无损还原（§7.2 D4
+ *  "保留换行结构"契约）。消费端归一化（tool-events trimEnd）同样绕过子代理路径。
  *  Data append immediate; render throttled (N1). */
 export function routeSubToolOutput(state, name, part, scheduleRender) {
   const subMatch = name.match(SUB_PREFIX_RE)
@@ -354,7 +393,7 @@ export function routeSubToolOutput(state, name, part, scheduleRender) {
   const sub = ensureSubTask(state, subMatch)
   if (!sub) return true // frozen tombstone — drop late token
   const toolName = name.slice(subMatch[0].length)
-  appendSubBlock(sub, "tool", part.text + "\n", { fresh: sub.currentTool !== toolName })
+  appendSubBlock(sub, "tool", part.text, { fresh: sub.currentTool !== toolName })
   if (sub.currentTool !== toolName) sub.currentTool = toolName
   throttleSubRender(scheduleRender)
   return true

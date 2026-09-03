@@ -210,6 +210,18 @@
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+### 2026-09-03：修正轮先落档——docs FIRST（用户实测：同设计修正轮直接 spawn 未先落档）
+
+**触发**：用户实测工程模式同设计修正轮（token 复用合法）但修正前没先落文档——直接 spawn eng-coder——文档纪律断链。"代码变更都必须落文档"对修正轮无豁免（METHODOLOGY.md:47——无"改动太小免文档"通道，2026-09-03 同批确立），但 engineering.md 修正轮句未挂钩落档步。
+
+**加固**：两端 `src/prompts/engineering.md` 修正轮 spawn 指令（"Then handle the message" 节 eng-coder delivery 条——"Stalled or doubtful → spawn the fix round …（same designToken/designId）"）后追加 docs FIRST 条款段（7 行英文提示词，首句 "Fix rounds reuse the same designToken — but docs FIRST."）：修正轮 findings + planned changes 必须先落所属设计文档（deviation record / change note 追加至对应章节）再 spawn eng-coder；跳档 = 文档漂移，等同静默改动（与零裁量声明同款语义）；token 复用边界重申——同设计修正轮是唯一合法 token 复用，超出设计文件清单 = 新任务，需自有流程与新 token。两端 byte-identical 保持。
+
+**受影响文件**：两端 `src/prompts/engineering.md`（修正轮句后追加 docs FIRST 条款段）+ 两端 `test/agent.test.mjs`（新增 engineering.md 内容断言 "Fix rounds reuse the same designToken — but docs FIRST"——仿既有 engineering.md 断言风格，防回退）+ 本文档 §7（本条）。本变更无文件增删——§2.7 受影响文件表结构与文件集不变。
+
+**验收**：两端 engineering.md 改后 byte-identical（node 字节对比）；两端新断言测试通过 + node --check；不 commit。
+
+**复评修正（同日 advisor code review round 1——docs FIRST 纪律自证：修正先落档再改码）**：🟡1 补全——同一修正轮 spawn 指令在 Mandatory Flow step 7（交付回退句 :106-108）亦有表述且未挂钩落档步：step 7 句尾补指针句 "Fix-round re-spawns are docs FIRST too — the deviation record / change note lands in the owning design doc BEFORE the eng-coder spawn (full rule: the eng-coder delivery bullet under Then handle the message)"（两端 byte-identical，step 7 与 eng-coder delivery 条两处描述现均挂钩）；🔵3 补断言——两端测试各加 "BEFORE the eng-coder spawn"（锁落档先于 spawn 的命令句）与 "Fix-round re-spawns are docs FIRST too"（锁 step 7 指针句）；🟡2 驳复（Not an issue）——§2.6 "一个设计可 spawn 多个 eng-coder" 同句随文即指"修正轮复用同 designId+token"，非另一合法复用类别；§2.8 失败/中断重 spawn 为同一 task brief/文件清单的重试（非跨任务"复用"），条款操作边界句（anything beyond the design's file list is a NEW task…）已覆盖——条款文本保持任务书逐字（探索审计已验逐字一致），改写需父侧裁定。受影响文件不变（同一 5 文件集，无增删）。
+
 ### 2026-09-03：任务大小零裁量声明（用户裁定：工程模式不分大小全流程）
 
 **触发**：agent 反复纠结"小任务是否该走完整 Mandatory Flow"——病根 = METHODOLOGY 旧"小改动不新建文档"豁免条款给了轻走依据（该豁免已于 2026-09-03 删除；METHODOLOGY.md:47 同批确立"代码变更都必须落文档（无改动太小免文档通道）"）。

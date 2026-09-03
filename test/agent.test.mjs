@@ -3760,6 +3760,15 @@ test("prompts/engineering.md: 任务大小零裁量声明（2026-09-03——工�
   assert.ok(text.includes("the user's decision to be\nin engineering mode was the sizing decision"), "进入工程模式即完成尺寸裁定")
 })
 
+test("prompts/engineering.md: 修正轮 docs FIRST 条款（2026-09-03——同设计修正轮先落档再 spawn）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("Fix rounds reuse the same designToken — but docs FIRST"), "docs FIRST 声明句在（token 复用 ≠ 免落档）")
+  assert.ok(text.includes("has no exemption for fix rounds"), "修正轮无免落档豁免")
+  assert.ok(text.includes("is a NEW task needing its own flow and a fresh token"), "token 复用边界：超清单 = 新任务新 token")
+  assert.ok(text.includes("BEFORE the eng-coder spawn"), "落档先于 spawn 的命令句在")
+  assert.ok(text.includes("Fix-round re-spawns are docs FIRST too"), "step 7 修正轮句 docs FIRST 指针在")
+})
+
 test("prompts/engineering.md: UI/交互决策必须落设计文档且必须进 eng-coder 任务书（2026-08-29）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
