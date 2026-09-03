@@ -236,7 +236,7 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 
 ## 9. 消息时间戳 + read_history 会话查询工具（2026-09-03 · 用户补救拍板——需求层 + 设计层）
 
-> 状态：设计定稿，待评审。触发：用户补救拍板——"① 会话消息加上时间戳；② 工具里加一个查会话历史的工具，应该能够查找筛选过滤"（教训源：advisor 并行取证困境——会话消息无 ts——历史无法回溯工具执行时序——只能靠 UI 观察）。用户裁定：read_history 带时间窗（since/until——配合 ts 新能力——取证完整）。
+> 状态：设计批准（2026-09-03 round1 通过——0🔴——9 refinement 处置注见 §9.5——designToken 已签发）。触发：用户补救拍板——"① 会话消息加上时间戳；② 工具里加一个查会话历史的工具，应该能够查找筛选过滤"（教训源：advisor 并行取证困境——会话消息无 ts——历史无法回溯工具执行时序——只能靠 UI 观察）。用户裁定：read_history 带时间窗（since/until——配合 ts 新能力——取证完整）。
 
 ### 9.1 需求
 
@@ -288,4 +288,17 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 | 文档 | SESSION.md（本节权威——v2 双线结构 §3 消息格式同步补 ts 字段）、两端 AGENTS 模块表 |
 
 **今日场景价值**：ts 落盘后——4 advisor 时序取证 = `read_history tool=advisor since=<评审开始>`——各 tool 消息 ts 一目了然——串行/并行硬数据（不再靠 UI 观察或猜测）。
+
+
+### 9.5 round1 评审处置（2026-09-03——0🔴 通过——9 项）
+
+1. **depth 门裁决 (b)**：保持 depth-0 only——"今日场景价值"改写 = **主代理取证**（主代理 read_history tool=advisor since=… 拿时序——附 advisor 评审上下文——advisor 不自查父史——D-S2 语义自洽）
+2. **行号 → 符号锚**：D-S1 改 pushReal(agent, msg)（context.mjs）+ applyCompression 注入点——去 L171/L187-189
+3. **跨文档同步（实现时确认）**：ARCHITECTURE.md §双结构消息形态 + TOOLS.md 工具目录——ts 字段/read_history 条目同批落——单源纪律
+4. **AC-S5 补**：治理面 = readonly 放行（T-S9）+ depth 门（T-S11）+ 压缩后 _fullHistory 全量可查（T-S10）
+5. **since/until 语义**：inclusive-inclusive（ts == since/until 边界含）——since > until → 空结果——limit > 200 钳制 200——T-S6 补边界用例
+6. **T-S1 非递减**：同 ms 相等 ts 合法（Date.now() 分辨率）——排序按数组序（ts 仅过滤不重排）
+7. **措辞收窄**：AC-S1 = 双线真实消息（pushReal）+ 压缩注入带 ts——机读（[System reminder:）/瞬态消息无 ts 属设计（D-S3 容忍）
+8. **multimodal content 数组**：keyword 匹配文本 part（数组串化摘要）——截断按文本——补 multimodal 用例
+9. **UI 显示**：ts 仅 read_history 输出/会话 JSON 可见——TUI/VS Code 显示不在本 scope——后续立项（用户确认中）
 
