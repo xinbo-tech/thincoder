@@ -232,3 +232,60 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 - **复验而非二次校验点**：applySession 可能用会话中的有效 provider 修复 config 的错误（config 无效 + 会话有效）——bin 在 applySession 后复验同一 `validateProvider`（幂等清标记），维持"仅两者都无效才弹重选"（D-S3）而不散落新判据。
 - **Esc 后渲染守卫**：provider=null 时 renderHeader/renderStatus/showStartup 的解引用必须可选链（否则 T7"仍进 TUI"在首帧即崩/冻结）；showStartup 的 no-key 触发会带出 wizard（其菜单列出已存在 providers，可选中恢复——符合 F3，非拒绝进入）。
 - **否决**：a) 启动即退出并打印"请编辑 config"（用户已明确要 UI 重选——体验差）；b) 静默回退到第一个可用 provider（用户可能 unaware 换错模型——必须显式选择）；c) 自动用 config.activeProvider 覆盖会话 provider（用户上次明确选的模型不能静默丢）。
+
+
+## 9. 消息时间戳 + read_history 会话查询工具（2026-09-03 · 用户补救拍板——需求层 + 设计层）
+
+> 状态：设计定稿，待评审。触发：用户补救拍板——"① 会话消息加上时间戳；② 工具里加一个查会话历史的工具，应该能够查找筛选过滤"（教训源：advisor 并行取证困境——会话消息无 ts——历史无法回溯工具执行时序——只能靠 UI 观察）。用户裁定：read_history 带时间窗（since/until——配合 ts 新能力——取证完整）。
+
+### 9.1 需求
+
+- F-S1：**消息级时间戳**——每条消息落对象时打 `ts`（epoch ms——UTC）——历史可回溯执行时序（工具何时调用/结果何时落）
+- F-S2：**read_history 工具**（模型工具面——readonly）——查本会话历史——筛选过滤：role/keyword/tool/**since/until（时间窗）**/limit/direction
+- F-S3：旧消息（无 ts）容忍——读取/恢复/渲染零变化——时间窗只匹配有 ts 消息（无 ts 显示无时间戳标记）
+- F-S4：两端一致（消息格式契约两端共享——read_history 工具两端注册）
+
+### 9.2 设计
+
+**D-S1 消息 ts——pushReal 单点**：`context.mjs pushReal(agent, msg)`（L171——唯一消息入口——_fullHistory + history 同 push）内统一：`if (msg.ts === undefined) msg.ts = Date.now()`——所有调用点（agent.mjs 的 user/assistant/tool 消息/record-results）自动带 ts——**一处改全生效**。
+- 压缩重建注入消息（applyCompression L187-189 手写 note/Understood 对象——不经 pushReal）——同规则补 ts（Date.now()——压缩时刻）
+- 恢复路径（startup 从存档读入 history）——旧消息无 ts——**不补**（补近似值误导取证——D-S3 容忍）
+- 渲染/上下文零变化（ts 是附加字段——**发送层消息字段白名单——ts 不进 provider 请求**——实现时自查 core.mjs 消息发送形态——防多余字段污染请求）
+
+**D-S2 read_history 工具**（新 `src/agent-tools/read-history.mjs`）：
+- 描述：查本会话消息历史（_fullHistory——压缩不丢——审计完整）——回忆之前说过/做过的事（决策/工具时序/过去裁定）——筛选：role/keyword（content 子串）/tool（工具消息 name）/since/until（epoch ms——配合消息 ts）/limit（默认 50——上限 200）/direction（oldest/newest——默认 newest）——返回匹配消息含 ts——内容逐条截断（~500 字符 + truncated 标记——全文看会话文件）
+- 数据源：`agent._fullHistory`（全量）——readonly: true（planMode 放行/免审批/explore 只读集自动）
+- 返回：JSON 数组——{ts, role, name?, tool_call_id?, content 截断, tool_calls 概要（assistant——工具名列表不展开 arguments）}
+- 注册：agent-tools.mjs 聚合 + setup.mjs——**depth-0 only**（子代理各自上下文——查父历史语义混淆——保守——评审定）
+- VS Code 镜像（两端同批——agent 结构同）
+
+**D-S3 兼容**：旧存档/旧消息无 ts——读取容忍（session-io 不动）——saveSession 序列化原样（有 ts 的带出）——恢复后 ts 保留——read_history 无 ts 消息：不匹配时间窗 + 返回 ts: null 标记
+
+### 9.3 测试（用例表）
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-S1 | pushReal 带 ts | 跑回合（mock） | 每条消息 ts = 落对象时刻（数值——递增） | F-S1 |
+| T-S2 | 旧消息兼容 | 手工构造无 ts 消息入 history | 读写/发送/渲染不崩 | F-S3 |
+| T-S3 | 发送剥离 | mock chat 捕获请求体 | 请求消息无 ts 字段（不污染 provider） | D-S1 |
+| T-S4 | read_history 全量 | 无筛选 | 返回最新 50 条（默认）——含 ts/role/name | F-S2 |
+| T-S5 | role/keyword/tool 筛选 | role=assistant + keyword=X + tool=read | 交集匹配 | F-S2 |
+| T-S6 | 时间窗 | since/until 圈定一段 | 只返回窗内 ts 消息——无 ts 被排除 | F-S2 |
+| T-S7 | limit/direction | limit=5 + oldest | 最旧 5 条 | F-S2 |
+| T-S8 | 截断 | tool 结果 10K | 500 字符 + truncated 标记 | D-S2 |
+| T-S9 | readonly 特性 | planMode 下调 | 放行（readonly 机制自动） | D-S2 |
+| T-S10 | 压缩后全量 | 触发压缩后查 | _fullHistory 含压缩前消息（审计完整） | D-S2 |
+| T-S11 | depth 门 | 子代理内调 | 拒绝/不可用 | D-S2 |
+
+**验收**：AC-S1 = 全消息带 ts（T-S1——含压缩注入）；AC-S2 = read_history 筛选面全生效（T-S4..S8）；AC-S3 = 兼容与零污染（T-S2/S3）；AC-S4 = 两端（VS Code 镜像测试）
+
+### 9.4 受影响文件
+
+| 端 | 文件 |
+|---|---|
+| CLI | `src/context.mjs`（pushReal 加 ts + applyCompression 注入补 ts）、新 `src/agent-tools/read-history.mjs`、`src/agent-tools.mjs`（聚合）、`src/agent/setup.mjs`（depth-0 注册）、发送层自查（core.mjs 消息字段剥离——若需）、新 `test/read-history.test.mjs` + context 相关测试、SESSION.md 本节 |
+| VS Code | 同构镜像（pushReal 对应 + read-history 工具 + 测试） |
+| 文档 | SESSION.md（本节权威——v2 双线结构 §3 消息格式同步补 ts 字段）、两端 AGENTS 模块表 |
+
+**今日场景价值**：ts 落盘后——4 advisor 时序取证 = `read_history tool=advisor since=<评审开始>`——各 tool 消息 ts 一目了然——串行/并行硬数据（不再靠 UI 观察或猜测）。
+
