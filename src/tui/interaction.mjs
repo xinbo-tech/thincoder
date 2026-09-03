@@ -42,7 +42,16 @@ export function createInteraction(ctx) {
     }
     if (base === "delete") return [`${args.path}${args.force ? " (force: also delete tracked files)" : ""}`]
     if (base === "subagent") return cap(args.task ?? "", 500).split("\n")
-    if (base === "memory_put") return [`[${args.type ?? ""}] ${args.title ?? ""}`, ...cap(args.content ?? "", 500).split("\n")]
+    if (base === "memory") {
+      // §6 action-routed preview (D-M5): put shows content, batch delete/clear show gate args
+      const action = String(args.action ?? "")
+      if (action === "put") return [`[${args.type ?? ""}] ${args.title ?? ""}`, ...cap(args.content ?? "", 500).split("\n")]
+      if (action === "delete") return args.id
+        ? [`delete single: ${args.id} (scope ${args.scope})`]
+        : [`batch delete scope=${args.scope} type=${args.type ?? ""} keyword=${args.keyword ?? ""}`, `confirm=${args.confirm}`]
+      if (action === "clear") return [`clear personal memory`, `scope=${args.scope} confirm=${args.confirm}`]
+      return [cap(summarize(args), 300)]
+    }
     return [cap(summarize(args), 300)]
   }
 

@@ -39,6 +39,13 @@ test("describeToolArgs: 单源参数摘要——主/子agent/advisor 工具行�
   assert.equal(describeToolArgs("lsp", { subcommand: "definition", uri: "src/a.mjs" }), "definition src/a.mjs")
   // bash：命令 + workdir
   assert.equal(describeToolArgs("bash", { command: "npm  test", workdir: "sub" }), "npm test  (in sub)")
+  // memory（§6 单工具——action 路由摘要）
+  assert.equal(describeToolArgs("memory", { action: "put", title: "部署约定" }), "部署约定")
+  assert.equal(describeToolArgs("memory", { action: "search", query: "分号" }), "分号")
+  assert.equal(describeToolArgs("memory", { action: "list", scope: "project", type: "rule" }), "scope project type rule")
+  assert.equal(describeToolArgs("memory", { action: "delete", id: "personal:3", scope: "personal" }), "id personal:3 (personal)")
+  assert.equal(describeToolArgs("memory", { action: "delete", scope: "team", type: "rule" }), "batch team type rule")
+  assert.equal(describeToolArgs("memory", { action: "clear", scope: "personal" }), "clear personal")
   // 空 args：空串（调用方负责拼接，不产生尾随空格）
   assert.equal(describeToolArgs("read", {}), "")
   assert.equal(describeToolArgs("unknown_tool", { action: "x" }), '{"action":"x"}')

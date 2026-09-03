@@ -62,7 +62,7 @@ test("memory: put / search / list / remove 全流程", async () => {
   assert.equal((await list(m)).length, 1)
 })
 
-// ========== memory_delete（MEMORY.md §0/§0.1）==========
+// ========== 删除能力（MEMORY.md §0/§0.1 路由——单条删除语义）==========
 
 test("T1: personal 删除 — entries 行整体删（embedding 随行）+ FTS 零残留 + search 零命中", async () => {
   const m = freshMemory()
@@ -109,15 +109,15 @@ test("T3: 不存在 / 未配置 scope → 明确错误（NF2）", async () => {
   }
 })
 
-test("T4: memory_delete 工具 — scope 与 id 前缀不匹配拒绝（NF3）", async () => {
+test("T4: memory 工具 delete 单条 — scope 与 id 前缀不匹配拒绝（NF3）", async () => {
   const m = freshMemory()
-  const delTool = memoryTools(m, {}).find((t) => t.name === "memory_delete")
-  assert.ok(delTool, "memory_delete 工具应注册")
-  await assert.rejects(() => delTool.execute({ id: "personal:1", scope: "project" }), /id prefix personal: 与 scope project 不匹配/)
-  await assert.rejects(() => delTool.execute({ id: "team:x:y.md", scope: "project" }), /不匹配/)
-  await assert.rejects(() => delTool.execute({ id: "5", scope: "team" }), /不匹配/)
+  const memTool = memoryTools(m, {})[0]
+  assert.equal(memTool.name, "memory", "memory 单工具注册")
+  await assert.rejects(() => memTool.execute({ action: "delete", id: "personal:1", scope: "project" }), /id prefix personal: 与 scope project 不匹配/)
+  await assert.rejects(() => memTool.execute({ action: "delete", id: "team:x:y.md", scope: "project" }), /不匹配/)
+  await assert.rejects(() => memTool.execute({ action: "delete", id: "5", scope: "team" }), /不匹配/)
   // 前缀一致但条目不存在 → 路由层 not found
-  await assert.rejects(() => delTool.execute({ id: "personal:1", scope: "personal" }), /not found in scope personal/)
+  await assert.rejects(() => memTool.execute({ action: "delete", id: "personal:1", scope: "personal" }), /not found in scope personal/)
 })
 
 test("T7: memory remove 命令 — project uid 走 deleteByUid 路由", async () => {
@@ -179,30 +179,28 @@ test("T9: 路径校验（.. / 绝对路径 / ..\\ 变体）+ ENOENT 容错", asy
   }
 })
 
-test("T10: memory_put / memory_search 输出带完整 uid（F2）", async () => {
+test("T10: memory 工具 put/search 输出带完整 uid（F2）", async () => {
   const m = freshMemory()
-  const tools = memoryTools(m, {})
-  const putTool = tools.find((t) => t.name === "memory_put")
-  const searchTool = tools.find((t) => t.name === "memory_search")
-  const putOut = await putTool.execute({ type: "rule", title: "uid 可见", content: "personal 输出应带完整 uid" })
+  const memTool = memoryTools(m, {})[0]
+  const putOut = await memTool.execute({ action: "put", type: "rule", title: "uid 可见", content: "personal 输出应带完整 uid" })
   const uid = putOut.match(/id=(personal:\d+)/)?.[1]
   assert.ok(uid, `put 输出应含 personal:<n>: ${putOut}`)
-  const searchOut = await searchTool.execute({ query: "uid 可见", limit: 5 })
+  const searchOut = await memTool.execute({ action: "search", query: "uid 可见", limit: 5 })
   assert.ok(searchOut.includes(uid), `search 输出应含 ${uid}: ${searchOut}`)
-  // 删除工具可直接消费该 uid
-  await tools.find((t) => t.name === "memory_delete").execute({ id: uid, scope: "personal" })
+  // delete 单条动作可直接消费该 uid
+  await memTool.execute({ action: "delete", id: uid, scope: "personal" })
   assert.equal((await search(m, "uid 可见")).length, 0)
 
   // project scope：构造 project:<origin>:<path> 完整 uid（origin = 层目录）
   const dir = mkdtempSync(join(tmpdir(), "thincoder-uid-proj-"))
   try {
-    const tools2 = memoryTools(freshMemory(), { cwd: dir, projectDir: ".thincoder/memory", author: "t" })
-    const putOut2 = await tools2.find((t) => t.name === "memory_put").execute({ type: "knowledge", title: "项目 uid", content: "project 输出带完整 uid", scope: "project" })
+    const memTool2 = memoryTools(freshMemory(), { cwd: dir, projectDir: ".thincoder/memory", author: "t" })[0]
+    const putOut2 = await memTool2.execute({ action: "put", type: "knowledge", title: "项目 uid", content: "project 输出带完整 uid", scope: "project" })
     const memDir = join(dir, ".thincoder", "memory")
     const filename = readdirSync(memDir)[0]
     assert.ok(filename.endsWith(".md"))
     assert.ok(putOut2.includes(`project:${memDir}:${filename}`), `put 输出应含完整 uid: ${putOut2}`)
-    const searchOut2 = await tools2.find((t) => t.name === "memory_search").execute({ query: "项目 uid", limit: 5 })
+    const searchOut2 = await memTool2.execute({ action: "search", query: "项目 uid", limit: 5 })
     assert.ok(searchOut2.includes(`project:${memDir}:${filename}`), `search 输出应含完整 uid: ${searchOut2}`)
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -827,3 +825,222 @@ test("doc_search 工具注册与执行", async () => {
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+// ========== memory 工具面重构（MEMORY.md §6——单工具 memory 五动作）==========
+
+test("S6-1: memoryTools 单工具 memory——五动作枚举 + 描述含门禁；旧裸工具名从工具表消失", () => {
+  const tools = memoryTools(freshMemory(), {})
+  assert.equal(tools.length, 1, "memoryTools 只产出单工具")
+  const tool = tools[0]
+  assert.equal(tool.name, "memory")
+  assert.equal(tool.readonly, false, "工具级 non-readonly——动作级只读由 dispatch 分类")
+  assert.deepEqual(tool.parameters.properties.action.enum, ["search", "put", "list", "delete", "clear"])
+  assert.deepEqual(tool.parameters.required, ["action"])
+  const desc = tool.description
+  assert.ok(desc.includes("confirm:true"), "描述含 confirm 门禁语义")
+  assert.ok(desc.includes("team sync may resurrect"), "描述含 team 复活注（gitmem）")
+  assert.ok(!tools.some((t) => t.name.startsWith("memory_")), "旧裸工具名从工具表消失（单工具 memory 五动作）")
+})
+
+test("S6-2: action list — scope/type/keyword/limit 过滤 + 行形态 + 截断注 + 空库", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-list-"))
+  const m = freshMemory()
+  const tool = memoryTools(m, { cwd: dir, projectDir: ".thincoder/memory", author: "t" })[0]
+  try {
+    // 空库
+    assert.equal(await tool.execute({ action: "list" }), "0 条匹配")
+    assert.equal(await tool.execute({ action: "list", type: "rule" }), "0 条匹配")
+
+    // 种子：personal 2 + project 1
+    await tool.execute({ action: "put", type: "rule", title: "代码风格", content: "不加分号，不用 TypeScript" })
+    await tool.execute({ action: "put", type: "knowledge", title: "部署架构", content: "单台 VPS，Caddy 反向代理" })
+    const memDir = join(dir, ".thincoder", "memory")
+    const filename = await putMarkdown(m, { layer: "project", dir: memDir, type: "decision", title: "选型决策", content: "PostgreSQL 做主库", tags: [], author: "t" })
+
+    // 全量：行形态 id [type] title（date）
+    const all = await tool.execute({ action: "list" })
+    assert.ok(/^personal:1 \[rule\] 代码风格（\d{4}-\d{2}-\d{2}）$/m.test(all), `personal 行形态: ${all}`)
+    assert.ok(all.includes("personal:2 [knowledge] 部署架构"), all)
+    assert.ok(all.includes(`project:${memDir}:${filename} [decision] 选型决策（`), `project uid 行: ${all}`)
+
+    // scope 过滤
+    const personal = await tool.execute({ action: "list", scope: "personal" })
+    assert.ok(personal.includes("代码风格") && !personal.includes("选型决策"), personal)
+    const project = await tool.execute({ action: "list", scope: "project" })
+    assert.ok(project.includes("选型决策") && !project.includes("代码风格"), project)
+
+    // type 过滤
+    const typed = await tool.execute({ action: "list", type: "rule" })
+    assert.equal(typed.split("\n").length, 1)
+    assert.ok(typed.includes("代码风格"), typed)
+
+    // keyword 过滤（title/content 子串）
+    const kw = await tool.execute({ action: "list", keyword: "VPS" })
+    assert.ok(kw.includes("部署架构") && !kw.includes("代码风格"), kw)
+    const kwTitle = await tool.execute({ action: "list", keyword: "选型" })
+    assert.ok(kwTitle.includes("选型决策"), kwTitle)
+
+    // limit 截断 + 总条数注（"N 条——截断前 M"——N = 展示数 M = 截断前总数）
+    const truncated = await tool.execute({ action: "list", limit: 1 })
+    assert.ok(truncated.startsWith("1 条——截断前 3\n"), `截断注: ${truncated}`)
+    assert.equal(truncated.split("\n").length, 2)
+
+    // 非法 type/scope 明确报错
+    await assert.rejects(() => tool.execute({ action: "list", type: "bogus" }), /Invalid memory type "bogus"/)
+    await assert.rejects(() => tool.execute({ action: "list", scope: "bogus" }), /invalid scope "bogus"/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("S6-3: action delete 批量 — 无过滤拒/无 confirm 预览拒/0 匹配/confirm 执行/预览截断", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-delbatch-"))
+  const m = freshMemory()
+  const tool = memoryTools(m, { cwd: dir, projectDir: ".thincoder/memory", author: "t" })[0]
+  try {
+    // 种子：personal 1 rule + project 6 条（keyword 批量目标）
+    await put(m, { type: "rule", title: "保留规则", content: "不要删我" })
+    await put(m, { type: "knowledge", title: "保留知识", content: "不是批量目标" })
+    const memDir = join(dir, ".thincoder", "memory")
+    const targets = []
+    for (let i = 0; i < 6; i++) {
+      const filename = await putMarkdown(m, { layer: "project", dir: memDir, type: "knowledge", title: `批量目标 ${i}`, content: "批量预删除目标内容", tags: [], author: "t" })
+      targets.push(filename)
+    }
+
+    // 门禁①：无过滤条件批量删拒绝（含 confirm 也拒——整层清空绕过 clear 拒共享层门禁）
+    await assert.rejects(() => tool.execute({ action: "delete", scope: "project" }), /type and\/or keyword filter/)
+    await assert.rejects(() => tool.execute({ action: "delete", scope: "project", confirm: true }), /type and\/or keyword filter/)
+    await assert.rejects(() => tool.execute({ action: "delete", scope: "personal", type: null }), /type and\/or keyword filter/)
+    await assert.rejects(() => tool.execute({ action: "delete" }), /batch delete requires scope/)
+
+    // 门禁②：无 confirm → 返回预览（含将删条数 + 前 5 行 + 截断注 + confirm 提示），不删
+    const preview = await tool.execute({ action: "delete", scope: "project", keyword: "批量" })
+    const previewLines = preview.split("\n")
+    assert.equal(previewLines[0], "将删 6 条：前 5 条预览", `预览首行: ${previewLines[0]}`)
+    assert.equal(previewLines.length, 8, "首行 + 5 预览行 + 截断注 + confirm 提示")
+    assert.ok(previewLines.slice(1, 6).every((l) => l.includes("批量目标")), `预览行形态: ${preview}`)
+    assert.ok(preview.endsWith("confirm:true required — re-send with it to execute the deletion"), preview)
+    assert.ok(preview.includes("5 条——截断前 6"), preview)
+    assert.equal(existsSync(join(memDir, targets[0])), true, "无 confirm 不删")
+
+    // 门禁③：0 匹配不报错
+    const none = await tool.execute({ action: "delete", scope: "project", keyword: "不存在的关键字", confirm: true })
+    assert.equal(none, "0 条匹配")
+
+    // confirm 后执行：文件删 + files 行删 + search 零命中
+    const done = await tool.execute({ action: "delete", scope: "project", keyword: "批量", confirm: true })
+    assert.equal(done, "Deleted 6 entries in scope project")
+    assert.equal(targets.filter((f) => existsSync(join(memDir, f))).length, 0, "全部文件已删")
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM files WHERE layer='project' AND origin=?`).get(memDir).n, 0, "files 行已清")
+    assert.equal((await search(m, "批量预删除")).length, 0, "搜索零命中")
+    assert.equal((await search(m, "不要删我")).length, 1, "非匹配条目不受影响")
+
+    // personal 批量 + type 过滤
+    const r = await tool.execute({ action: "delete", scope: "personal", type: "rule", confirm: true })
+    assert.equal(r, "Deleted 1 entries in scope personal")
+    assert.equal((await search(m, "不要删我")).length, 0)
+    assert.equal((await search(m, "保留知识")).length, 1)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("S6-4: action clear — 四拒门禁 + personal 清空零残留（FTS/embedding）+ 共享层不动", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-clear-"))
+  const m = freshMemory()
+  const tool = memoryTools(m, { cwd: dir, projectDir: ".thincoder/memory", author: "t" })[0]
+  try {
+    const id1 = await put(m, { type: "rule", title: "待清规则", content: "personal 要清空我" })
+    await put(m, { type: "knowledge", title: "待清知识", content: "personal 也要清空" })
+    m.db.prepare(`UPDATE entries SET embedding = x'01020304' WHERE id = ?`).run(id1) // 模拟已嵌入
+    const memDir = join(dir, ".thincoder", "memory")
+    const filename = await putMarkdown(m, { layer: "project", dir: memDir, type: "decision", title: "共享决策", content: "project 层不许 clear", tags: [], author: "t" })
+
+    // 门禁四拒：无 scope / 非 personal scope / 无 confirm / confirm=false
+    await assert.rejects(() => tool.execute({ action: "clear" }), /clear requires scope "personal"/)
+    await assert.rejects(() => tool.execute({ action: "clear", scope: "project", confirm: true }), /shared layers don't support clear/)
+    await assert.rejects(() => tool.execute({ action: "clear", scope: "personal" }), /clear requires confirm:true/)
+    await assert.rejects(() => tool.execute({ action: "clear", scope: "personal", confirm: false }), /clear requires confirm:true/)
+    assert.equal((await search(m, "待清")).length, 2, "未确认前不动")
+
+    // 执行：清空 personal 全部 + 检索/FTS/embedding 零残留 + 共享层不受影响
+    const out = await tool.execute({ action: "clear", scope: "personal", confirm: true })
+    assert.equal(out, "Cleared personal memory (2 entries deleted)")
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM entries`).get().n, 0, "entries 全清")
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM entries_fts`).get().n, 0, "FTS 零残留")
+    assert.equal(m.db.prepare(`SELECT COUNT(*) AS n FROM entries WHERE embedding IS NOT NULL`).get().n, 0, "embedding 随行清零")
+    assert.equal((await search(m, "待清")).length, 0, "search 零命中")
+    assert.equal((await search(m, "共享决策")).length, 1, "project 层不受 clear 影响")
+    assert.equal(existsSync(join(memDir, filename)), true)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("S6-5: dispatch 动作门禁 — memory search/list 只读不过门（planMode 放行/免询问）；put/delete/clear 侧效门", async () => {
+  const { executeToolCalls } = await import("../src/agent/dispatch.mjs")
+  const m = freshMemory()
+  const tool = memoryTools(m, {})[0]
+  const toolByName = new Map([["memory", tool]])
+  const base = () => ({ tools: [tool], cwd: process.cwd(), config: { agent: {} }, planMode: false, autoApprove: false, _role: null, _touchedFiles: [] })
+  const call = (args) => ({ id: "c1", name: "memory", arguments: JSON.stringify(args) })
+  const asks = []
+  const ask = async (name, args) => { asks.push([name, args]); return true }
+
+  // search/list：手动档不询问、直接执行
+  for (const action of ["search", "list"]) {
+    asks.length = 0
+    const r = await executeToolCalls(base(), toolByName, [call({ action })], { onPermissionRequest: ask }, 0, undefined)
+    assert.equal(r[0].ok, true, `${action} 直接执行`)
+    assert.equal(asks.length, 0, `${action} 只读——无权限询问`)
+  }
+  // put：手动档询问后才执行（拒绝则 deny）
+  asks.length = 0
+  const rPut = await executeToolCalls(base(), toolByName, [call({ action: "put", type: "rule", title: "t", content: "c" })], { onPermissionRequest: ask }, 0, undefined)
+  assert.equal(asks.length, 1, "put 维持侧效确认门")
+  assert.equal(rPut[0].ok, true)
+  // clear：同样侧效门
+  asks.length = 0
+  const rClear = await executeToolCalls(base(), toolByName, [call({ action: "clear", scope: "personal", confirm: true })], { onPermissionRequest: ask }, 0, undefined)
+  assert.equal(asks.length, 1, "clear 侧效门")
+  assert.equal(rClear[0].ok, true)
+  // delete 批量：同走侧效门（询问先于执行内校验——无过滤也在批准后才报错）
+  asks.length = 0
+  const rDelBatch = await executeToolCalls(base(), toolByName, [call({ action: "delete", scope: "personal" })], { onPermissionRequest: ask }, 0, undefined)
+  assert.equal(asks.length, 1, "delete 批量侧效门")
+  assert.equal(rDelBatch[0].ok, false)
+  assert.ok(String(rDelBatch[0].result).includes("type and/or keyword"), "批准后执行内校验拒绝无过滤批量删")
+  // 用户拒绝 → deny 回显
+  const rDeny = await executeToolCalls(base(), toolByName, [call({ action: "put", type: "rule", title: "t", content: "c" })], { onPermissionRequest: async () => false }, 0, undefined)
+  assert.equal(rDeny[0].ok, false)
+  assert.ok(String(rDeny[0].result).includes("permission denied"))
+  // planMode：search/list 放行；put/clear 拒绝
+  const plan = { onPermissionRequest: ask }
+  const rPlanSearch = await executeToolCalls({ ...base(), planMode: true }, toolByName, [call({ action: "search" })], plan, 0, undefined)
+  assert.equal(rPlanSearch[0].ok, true, "planMode 下 search 放行（只读动作）")
+  const rPlanPut = await executeToolCalls({ ...base(), planMode: true }, toolByName, [call({ action: "put", type: "rule", title: "t", content: "c" })], plan, 0, undefined)
+  assert.equal(rPlanPut[0].ok, false)
+  assert.ok(String(rPlanPut[0].result).includes("plan mode"), "planMode 下 put 拒绝")
+})
+
+test("S6-6: 回归 — search scope 过滤 + 空 action 报错 + put 非法 scope 拒绝", async () => {
+  const m = freshMemory()
+  const tool = memoryTools(m, {})[0]
+  await put(m, { type: "rule", title: "路由规则", content: "search scope 过滤个人条目" })
+  // 空库 search 形态不变
+  assert.equal(await tool.execute({ action: "search", query: "不存在" }), "(no matching memories)")
+  // 空 query 短路（两端同语义——评审 code review #4）
+  assert.equal(await tool.execute({ action: "search" }), "(no matching memories)")
+  assert.equal(await tool.execute({ action: "search", query: "   " }), "(no matching memories)")
+  // scope 过滤：personal 有 / project 无（未配置 projectDir 时 project 层空）
+  const scoped = await tool.execute({ action: "search", query: "路由", scope: "personal" })
+  assert.ok(scoped.includes("[personal][rule] 路由规则 (id=personal:1)"), scoped)
+  assert.equal(await tool.execute({ action: "search", query: "路由", scope: "project" }), "(no matching memories)")
+  // 未知 action / 非法 scope / 非法 type 明确报错
+  await assert.rejects(() => tool.execute({}), /unknown action ""/)
+  await assert.rejects(() => tool.execute({ action: "bogus" }), /unknown action "bogus"/)
+  await assert.rejects(() => tool.execute({ action: "search", scope: "team2" }), /invalid scope/)
+  await assert.rejects(() => tool.execute({ action: "put", scope: "bogus", type: "rule", title: "t", content: "c" }), /invalid scope "bogus"/)
+})
+

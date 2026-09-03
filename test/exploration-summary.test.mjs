@@ -117,8 +117,9 @@ test("main.md: Delegate well 收益句 + 委托规则句 + 精度例外 + 验证
   assert.match(mainmd, /When a coder subagent finishes, verify its work/, "coder 完成后的验证句")
   assert.match(mainmd, /read the files it claims to have changed and run the tests/, "验证=读声称改动的文件+跑测试")
   assert.match(mainmd, /do NOT redo the whole exploration/, "不重做已委托的整段探索")
-  // 其余条保持不变
-  assert.match(mainmd, /Never give parallel subagents tasks that edit the same files/, "并行不编辑同一文件条款保留")
+  // 其余条：并行避让句已由调度器条款替换（§20.7 D-PS1——T-PS1 在 / T-PS2 旧句零残留）
+  assert.match(mainmd, /Declare spawn scheduling metadata/, "T-PS1: 调度器条款在（D-PS1 锚——files/dependsOn 声明）")
+  assert.ok(!mainmd.includes("Never give parallel subagents tasks that edit the same files"), "T-PS2: 旧「并行不编辑同一文件」句零残留")
   assert.match(mainmd, /When multiple subagent reports conflict, read the relevant code yourself/, "冲突仲裁条款保留")
 })
 

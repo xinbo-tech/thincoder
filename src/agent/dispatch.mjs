@@ -55,6 +55,14 @@ function logToolError(toolName, args, error) {
  * 批审批不入组、digest 内放行）。freeze 存在（非空 key）即控制类——否则只读类。
  */
 function isSubagentReadonlyAction(toolName, args) {
+  // §6 memory 工具面重构（MEMORY.md §6 D-M5）：memory search/list 是只读动作——与
+  // subagent check/status 同分类（planMode 放行/免审批——Phase-2 批并行只认工具级
+  // readonly/parallel，memory 无 parallel → 按非只读串行，见 MEMORY.md §6.4 实现注）。
+  // 动作级判定——不能按工具名（同一 memory 工具的 put/delete/clear 保持侧效门）。
+  if (toolName === "memory") {
+    const action = args?.action
+    return action === "search" || action === "list"
+  }
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
   if (action === "check" || action === "status") return true

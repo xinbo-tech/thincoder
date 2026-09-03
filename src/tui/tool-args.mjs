@@ -48,8 +48,16 @@ export function describeToolArgs(name, args) {
     case "advisor": return String(a.type ?? "review")
     case "read_image": return String(a.path ?? "")
     case "question": return String(a.question ?? "").replace(/\s+/g, " ").trim().slice(0, 60)
-    case "memory_put": return String(a.title ?? "")
-    case "memory_search": return String(a.query ?? "")
+    case "memory": {
+      // §6 action-routed summary (D-M5): one readable line per action
+      const action = String(a.action ?? "")
+      if (action === "put") return String(a.title ?? "")
+      if (action === "search") return String(a.query ?? "")
+      if (action === "list") return [a.scope && `scope ${a.scope}`, a.type && `type ${a.type}`, a.keyword && `kw ${a.keyword}`].filter(Boolean).join(" ")
+      if (action === "delete") return a.id ? `id ${a.id} (${a.scope ?? ""})` : `batch ${a.scope ?? ""} ${a.type ? `type ${a.type} ` : ""}${a.keyword ? `kw ${a.keyword}` : ""}`.trim()
+      if (action === "clear") return `clear ${a.scope ?? ""}`
+      return action || JSON.stringify(a)
+    }
     case "lsp": return [a.subcommand, a.uri].filter(Boolean).map(String).join(" ")
     case "repo_outline": return a.path ? String(a.path) : ""
     case "checkpoint": return [a.checkpointAction ?? a.action, a.checkpointId, a.path].filter(Boolean).map(String).join(" ")

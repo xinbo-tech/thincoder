@@ -272,6 +272,104 @@ export async function list(memory, { type, limit = DEFAULT_LIST_LIMIT } = {}) {
     .all(limit)
 }
 
+/** LIKE pattern from a keyword (wildcards escaped — literal substring match, MEMORY.md §6 keyword filter). */
+function likePattern(keyword) {
+  return `%${keyword.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+}
+
+/**
+ * Shared row query for the §6 list action and the §6 batch delete (one match surface —
+ * rows carry { layer, id, type, title, ts }). Filters:
+ *   scope: "personal" | "project" | "team" | null (null = all layers)
+ *   type / keyword: optional (keyword matches title OR content, LIKE)
+ * File-layer rows are restricted to the dirs this memory context manages (origin = the
+ * passed dir — search parity): project rows to projectDir, team rows to teamDir. Rows
+ * from other projects'/team repos' origins stay out of list AND batch delete — the tool
+ * can only act on files it can locate. Sorted by ts (created/updated, ms) DESC.
+ */
+export function matchMemoryRows(memory, { scope = null, type = null, keyword = null, projectDir = null, teamDir = null } = {}) {
+  const rows = []
+  const wantLayer = (l) => !scope || scope === l
+  if (wantLayer("personal")) {
+    let sql = `SELECT id, type, title, created_at AS ts FROM entries`
+    const cond = []
+    const params = []
+    if (type) { cond.push("type = ?"); params.push(type) }
+    if (keyword) { cond.push("(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"); const p = likePattern(keyword); params.push(p, p) }
+    if (cond.length) sql += " WHERE " + cond.join(" AND ")
+    sql += " ORDER BY created_at DESC"
+    for (const r of memory.db.prepare(sql).all(...params)) {
+      rows.push({ layer: "personal", id: `personal:${r.id}`, uid: `personal:${r.id}`, type: r.type, title: r.title, ts: r.ts })
+    }
+  }
+  if (wantLayer("project") && projectDir) {
+    for (const r of fileRows(memory, "project", projectDir, type, keyword)) rows.push({ ...r, id: `project:${projectDir}:${r.path}` })
+  }
+  if (wantLayer("team") && teamDir) {
+    for (const r of fileRows(memory, "team", teamDir, type, keyword)) rows.push({ ...r, id: `team:${teamDir}:${r.path}` })
+  }
+  rows.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
+  return rows
+}
+
+function fileRows(memory, layer, dir, type, keyword) {
+  let sql = `SELECT path, type, title, updated_at AS ts FROM files WHERE layer = ? AND origin = ?`
+  const cond = []
+  const params = [layer, dir]
+  if (type) { cond.push("type = ?"); params.push(type) }
+  if (keyword) { cond.push("(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"); const p = likePattern(keyword); params.push(p, p) }
+  if (cond.length) sql += " AND " + cond.join(" AND ")
+  sql += " ORDER BY updated_at DESC"
+  return memory.db.prepare(sql).all(...params).map((r) => ({ layer, path: r.path, type: r.type, title: r.title, ts: r.ts }))
+}
+
+/**
+ * §6 batch delete (action delete + type/keyword filter, confirm handled by the tool layer):
+ * deletes every row matchMemoryRows returns for the scope. Personal rows go straight to the
+ * DB (FTS + embedding cleanup via row triggers); project/team rows delete the markdown file
+ * (path containment enforced, ENOENT tolerated) then re-sync the layer dir once (index
+ * cleanup single source). Team deletion never touches git — a later gitmem pull may
+ * resurrect the file while the remote still has it (same semantics as deleteByUid).
+ * Returns the number of deleted rows.
+ */
+export async function deleteWhere(memory, { scope, type = null, keyword = null } = {}, { dirs = {} } = {}) {
+  const rows = matchMemoryRows(memory, { scope, type, keyword, projectDir: dirs.project ?? null, teamDir: dirs.team ?? null })
+  if (rows.length === 0) return 0
+  const personalIds = []
+  const byDir = new Map() // "layer\x00dir" → { layer, dir, paths: [] }
+  for (const r of rows) {
+    if (r.layer === "personal") {
+      const id = Number(String(r.uid).split(":")[1])
+      if (Number.isInteger(id)) personalIds.push(id)
+      continue
+    }
+    const dir = r.layer === "project" ? dirs.project : dirs.team
+    if (!dir) continue
+    const key = `${r.layer}\x00${dir}`
+    let group = byDir.get(key)
+    if (!group) { group = { layer: r.layer, dir, paths: [] }; byDir.set(key, group) }
+    group.paths.push(r.path)
+  }
+  const del = memory.db.prepare(`DELETE FROM entries WHERE id = ?`)
+  for (const id of personalIds) del.run(id)
+  for (const group of byDir.values()) {
+    for (const path of group.paths) {
+      assertPathInside(group.dir, path)
+      const abs = join(group.dir, path)
+      await unlink(abs).catch((e) => { if (e.code !== "ENOENT") throw e })
+    }
+    await syncDir(memory, { layer: group.layer, dir: group.dir })
+  }
+  return rows.length
+}
+
+/** §6 clear action: wipe ALL personal entries (pure DB rows — files are project/team only).
+ *  FTS + embedding go with the row triggers. Returns the number of deleted rows. */
+export function clearPersonal(memory) {
+  const { changes } = memory.db.prepare(`DELETE FROM entries`).run()
+  return changes
+}
+
 /** Delete a memory entry by unified id. Returns the deleted entry (F3: { id, layer, type, title, content, tags }).
  *  - personal:<n> (or bare <n>) → DELETE the entries row; FTS syncs via the entries_ad trigger and the
  *    embedding BLOB column goes with the row.

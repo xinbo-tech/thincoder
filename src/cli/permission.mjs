@@ -19,7 +19,14 @@ export function formatPermission(name, args) {
   }
   if (base === "delete") return `${args.path}${args.force ? "（force：跟踪文件也删）" : ""}`
   if (base === "subagent") return cap(args.task ?? "", 500)
-  if (base === "memory_put") return `[${args.type ?? ""}] ${args.title ?? ""}\n${cap(args.content ?? "", 500)}`
+  if (base === "memory") {
+    // §6 action-routed preview: put shows content, batch delete/clear show the gate args
+    const action = String(args.action ?? "")
+    if (action === "put") return `[${args.type ?? ""}] ${args.title ?? ""}\n${cap(args.content ?? "", 500)}`
+    if (action === "delete") return args.id ? `id=${args.id} scope=${args.scope}` : `batch delete scope=${args.scope} type=${args.type ?? ""} keyword=${args.keyword ?? ""} confirm=${args.confirm}`
+    if (action === "clear") return `clear scope=${args.scope} confirm=${args.confirm}`
+    return cap(summarize(args), 300)
+  }
   return cap(summarize(args), 300)
 }
 

@@ -7,7 +7,7 @@ export async function handleExtractCommand(ctx) {
   pushLine("[extract] Analyzing session...", C.dim)
   const count = await runDistill()
   const msg = count > 0
-    ? `Knowledge extracted: ${count} candidate(s) saved to memory (agent will recall them via memory_search)`
+    ? `Knowledge extracted: ${count} candidate(s) saved to memory (agent will recall them via the memory tool)`
     : "No new knowledge found in this session."
   pushLine(msg, count > 0 ? C.tool : C.dim)
 }

@@ -76,7 +76,7 @@ Work log:
 const COMPACTION_PREFIX =
   "[Context was automatically compacted. Below is a summary of earlier work. " +
   "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
-  "but re-verify transient state with tools. Check memory_search for any missing decisions.]\n\n"
+  "but re-verify transient state with tools. Check memory search for any missing decisions.]\n\n"
 
 /** After this many consecutive compaction summary failures, degrade to deterministic truncation (losing info is better than task-killing 400 errors) */
 export const COMPRESS_FAILURE_LIMIT = 3

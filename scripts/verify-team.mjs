@@ -27,9 +27,9 @@ try {
   git(dirA, "config", "user.email", "a@t.dev")
   const memA = createMemory({ dbPath: ":memory:" })
   const toolsA = memoryTools(memA, { team: { dir: dirA }, author: "A" })
-  const putTool = toolsA.find((t) => t.name === "memory_put")
-  console.log("A 写入团队记忆（经 memory_put 工具, scope=team）...")
-  const r1 = await putTool.execute({ type: "decision", title: "数据库选型", content: "团队统一用 PostgreSQL，不引入 MongoDB", scope: "team" })
+  const memTool = toolsA.find((t) => t.name === "memory")
+  console.log("A 写入团队记忆（经 memory 工具 action=put, scope=team）...")
+  const r1 = await memTool.execute({ action: "put", type: "decision", title: "数据库选型", content: "团队统一用 PostgreSQL，不引入 MongoDB", scope: "team" })
   console.log(" ", r1.split("\n")[0])
 
   // 用户 B：clone + 同步 + 检索

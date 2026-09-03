@@ -86,7 +86,7 @@
 
 - **DB**：`~/.thincoder/memory.db`（`node:sqlite`，FTS5 虚表，BM25 排序，schema 版本 9，busy timeout 3s）
 - **三层**（写入时指定 layer）：
-  - `personal`：个人记忆（`~/.thincoder/memory/` 目录 + DB）
+  - `personal`：个人记忆——**纯 DB entries 行**（`~/.thincoder/memory.db`——无 markdown 文件目录；FTS/embedding 随行触发器清理——2026-09-03 评审 #2 措辞更正）
   - `project`：项目共享（`{cwd}/.thincoder/memory/` 目录，markdown 文件为源，DB 索引）
   - `team`：团队层（git 仓库同步，`gitmem.mjs`——提交/拉取记忆文件）
 - **条目类型**：`rule | knowledge | decision | pattern`（四类，检索/展示区分）
@@ -117,13 +117,13 @@ search(memory, query, { limit })
 
 **代码分块**（code-index.mjs）：按函数/类/export 边界切块（`chunkCode`，≤30 行、3 行重叠；`detectLanguage` + 语言专属符号提取——JS/Py 等）；doc 按 `##` 标题或空行切块（≤20 行）。每块带 `{idx, startLine, endLine}` 定位。
 
-**检索**（`codeSearch` / `docSearch`）：`{kind: code|doc|memory}` 限定——FTS 候选 + 向量重排，返回 `{file, startLine, endLine, snippet, score}`。暴露为工具：`code_search`（codeSearchTool）/ `doc_search`（docSearchTool）/ `memory_search` / `memory_put` / `memory_delete`（memoryTools）。
+**检索**（`codeSearch` / `docSearch`）：`{kind: code|doc|memory}` 限定——FTS 候选 + 向量重排，返回 `{file, startLine, endLine, snippet, score}`。暴露为工具：`code_search`（codeSearchTool）/ `doc_search`（docSearchTool）/ `memory`（memoryTools——§6 单工具五动作 search/put/list/delete/clear——2026-09-03 工具枚举同步）。
 
 **doc 同步**（docs.mjs docSync）：扫描 `docs/`、`*.md`、AGENTS.md 等 → 分块 → FTS+向量；`doc_search` 在 agent 循环里按用户输入关键词匹配 chunk 注入（见 AGENT-LOOP.md §3）。
 
 ## 4. 主循环集成
 
-- 记忆工具（memory_put/memory_search/memory_delete）供 agent 自主存取；`search` 结果注入 system 上下文（`<untrusted_memory>` 包裹）
+- 记忆工具（memory 单工具——§6：action search/put/list/delete/clear——只读动作 search/list 免门、put 侧效门、批量删/clear confirm 门）供 agent 自主存取；`search` 结果注入 system 上下文（`<untrusted_memory>` 包裹）
 - **`put` 自动嵌入选块**：新条目写 DB 后若嵌入器可用，异步补向量（不阻塞写入）
 - 目录/条目变更后由 `reindexFile` 增量刷新代码索引（后台，失败注入提醒不阻塞）
 
@@ -139,9 +139,11 @@ search(memory, query, { limit })
 | schema 版本迁移 | node:sqlite 迁移脚本按版本号递进，破坏性变更显式处理 |
 
 
-## 6. memory 工具面重构：单工具多动作 + list/条件批量 delete/clear（2026-09-03 · 设计——用户裁定——待评审）
+## 6. memory 工具面重构：单工具多动作 + list/条件批量 delete/clear（2026-09-03 · 设计——用户裁定——✅ 已实现）
 
 > 状态：设计（2026-09-03 用户裁定——需求层确认——方案 1 + 全层批量删）。触发：用户连续指出——①memory_put/search/delete 三个裸工具名分散（"不要每个操作一个工具名"——对齐 subagent 六动作先例——§19 裁定"工具会爆炸——靠参数做不同的事"）；②无列表操作（"记忆里有什么"无一等工具答案——memory_search 只按相关度回 top-N——2026-09-03 实证缺口）；③需清空/条件批量删能力。
+>
+> **已实现，验收勾销 2026-09-03**（评审 0🔴 通过 + 处置 commit f0b41c4——实现记录见 §6.4——设计正文保留 as-of 快照）。
 
 ### 6.1 需求
 
@@ -172,3 +174,27 @@ search(memory, query, { limit })
 - CLI：`src/memory/docs.mjs`（重构）+ `src/memory/core.mjs`（只读——如需批量删辅助函数）+ `src/cli/permission.mjs` + `src/tui/interaction.mjs` + `src/tui/tool-args.mjs` + `src/context.mjs`（提示词提及）+ 主循环挂钩点（`<untrusted_memory>` 注入——评审 #8）+ 测试 + `docs/design/MEMORY.md`（**本段 + §1 personal 存储措辞更正（评审 #2）+ §3/§4 工具枚举同步（评审 #6）**）+ discipline.md/README（工具表——若列旧名）
 - VS Code：`src/memory.mjs`（重构）+ 对应引用面 + 测试
 - **范围声明（评审 #10）：CLI 人类命令面（memory-command.mjs search/put/remove）本次不扩展 list/clear/批量删——工具面重构不影响命令面（核心路由复用——无漂移）**
+- **实现期补（2026-09-03 实现记录——见 §6.4）**：CLI `src/agent/dispatch.mjs`（动作级只读分类——评审 #7 批准链必需的判定位）+ `src/memory.mjs`（hub 导出 matchMemoryRows/deleteWhere/clearPersonal）+ `src/prompts/system.md`/`src/tools/question.md`/`src/tools/websearch.md`/`src/tui/cmd-extract.mjs`/`README.md`/`scripts/verify-team.mjs`（旧名引用面清理——零残留验收）+ `test/tui.test.mjs`（describeToolArgs 补 memory action 行）+ `test/memory.test.mjs`（T4/T10 改动作路由 + S6-1..6）；VS Code `src/tools/index.mjs`（注册 memoryTool）+ `src/compact.mjs`/`src/tools/web.mjs`/`src/prompts/system.md`/`src/prompts/discipline.md`（旧名清理）+ `test/unit.test.mjs`（T5/T6/T10 改动作路由 + S6-1..5）+ **`src/memory-tool.mjs`（新增——合并工具段从 memory.mjs 拆出（500 行硬限——实现期按 539 行拆分：memory.mjs 收 core/search 273 行 + memory-tool.mjs 收工具面 278 行——导出 memoryTool；memory.mjs 补内部符号导出供工具模块引用））**
+
+### 6.4 实现记录（2026-09-03——双端交付——实现注 + 偏差落文）
+
+**验收勾销**（对照 D-M7，证据 = 测试用例）：
+1. ✅ 五动作全绿两端——CLI `test/memory.test.mjs` S6-1..S6-6 + dispatch 门禁 S6-5（`executeToolCalls` 真路由）；VS Code `test/unit.test.mjs` S6-1..S6-5（动作级 `isReadonlyAction` 断言）——两端全量 npm test 全绿（2026-09-03）
+2. ✅ 门禁四拒——批量无 confirm（预览拒绝不删——CLI S6-3 / VS Code S6-3）；批量无过滤条件（S6-3——含 confirm 也拒——整层清空不能绕过 clear 拒共享层门禁）；clear 无 confirm（S6-4）；clear 非 personal（S6-4——project 拒 + VS Code team → CLI 指引）
+3. ✅ 既有 memory 行为回归（等价）——search/put/delete 单条的输出契约与错误文本原样保留（CLI T4/T10、VS Code T5/T6/T10 改动作路由后断言不变）
+4. ✅ 旧工具名零残留——**代码 + prompts/工具描述文本全清**（清理文件清单见 §6.3 实现期补）；**as-of 历史段豁免**（§0/§0.1 本文件 + CHANGELOG + 带日期设计段——含 AGENT-LOOP.md/ARCHITECTURE.md/ARCHITECTURE-v2.md/ENGINEERING-MODE.md/ENGINEERING-WORKLOOP.md/EVALUATION.md/FEATURES.md/TODO.md 的 memory_put/search/delete 提及 + VS Code 仓 docs/CAPABILITY_GAP.md（审计 2026-09-03 补录）——subagent_check 退役先例同款处置——**列为后续项：独立 doc-sweep 任务改活文（FEATURES.md 工具表/ARCHITECTURE.md 模块段/AGENT-LOOP.md 机制行/CAPABILITY_GAP.md 清单等未含日期的现状描述最优先）**）
+5. ✅ byte-identical 边界落地——两端工具定义共用同一描述/参数文本（§6 单一来源逐字复制），scope 值域按端（CLI personal/project/team；VS Code personal/project——收到 team 明确拒绝并指引 CLI——每动作均查）；CLI ↔ VS Code `src/prompts/*.md` 15 文件 byte-identical 测试守护 prompts 侧
+6. ✅ MEMORY.md §6 勾销 + §1/§3/§4 工具枚举同步（本记录 + 下两节措辞更新）
+
+**实现注**：
+- **code review 修正轮（2026-09-03——round1 0🔴 + 4🔵 全修——round2 0🔴）**：① search 空 query（含纯空白）两端短路——CLI `(no matching memories)` / VS Code `No matching memories found.`（旧工具 schema query 必填——非回归；两端对齐）；② VS Code search limit 归一化（normalizeLimit——与 CLI/execList 同款）；③ CLI scope 过滤超采样窗口 max(limit*4,20) 为召回上限——注释落档（接受的取舍）；④ dispatch.mjs 注释订正（search/list 不并入 Phase-2 批并行——串行——与本节既有偏差记录一致）
+- **list/批量删的 origin 限定**：CLI files 层行按当前上下文目录（projectDir/team dir——与 search 的 projectOrigin 同源）过滤——其他项目/团队克隆的存量行不进入 list/批量删（工具只能动它能定位的文件；单条 delete 仍按 uid 全语义）；team scope 的 search 仍全 origin（检索面语义不变）
+- **dispatch 动作级分类**（CLI dispatch.mjs `isSubagentReadonlyAction` 扩展）：memory search/list 与 subagent check/status 同归类——planMode 放行/免权限询问；put/delete/clear 维持侧效门。VS Code 侧走工具级 `isReadonlyAction`（execute-tools.mjs 既有动作分类——三处门位自动生效）
+- **门禁实现顺序**：批量删/clear 在工具内校验 scope → type/keyword 过滤（批量）→ confirm——confirm 参数即门禁（直接删裁定——无第二层人类确认）
+- **VS Code put 补 scope 校验**（原实现 scope 未校验——任意目录名会写成 `memory/<bogus>/`）：现非法 scope 拒绝 + team 指引 CLI
+- **输出契约逐字**（两端同文，测试逐字断言）：list 空 = `0 条匹配`；list 截断 = `N 条——截断前 M`（N = 展示数，M = 截断前总数）+ 行 `id [type] title（date）`；批量删预览 = `将删 N 条`（N>5 时 `将删 N 条：前 5 条预览` + 5 行 + `5 条——截断前 N`）+ `confirm:true required — re-send with it to execute the deletion`；执行 = `Deleted N entries in scope X` / clear = `Cleared personal memory (N entries deleted)`
+
+**偏差落文**（上报父侧，非静默）：
+- explore/plan/consult 子代理按 **工具级 readonly 过滤**工具集（readonlyToolNames）——合并后 memory 工具（工具级 readonly:false）从这些只读子代理的工具表消失，子代理不再能 memory search（此前 memory_search readonly:true 在内）——动作级只读分类只覆盖 dispatch 门位，不覆盖子代理工具集过滤——**后续项：如需子代理 memory search，改 allowed 集为动作感知**
+- 旧工具名在 as-of 历史文档中保留（见上验收 #4 豁免清单）——活文 doc-sweep 列后续项
+- CLI dispatch Phase-2 批并行：memory search/list 仍按非只读串行执行（此前 memory_search 并批）——正确性无影响，只读并行属优化面，未做动作级并行标记

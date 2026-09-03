@@ -41,7 +41,7 @@ Three layers, all "query if present, skip if absent", unified hybrid retrieval:
 - **Hybrid retrieval**: FTS5 (BM25, per-character CJK indexing, bigrams matchable) + embedding vectors (brute-force cosine) + RRF(k=60) fusion ranking
 - **Embeddings**: OpenAI-compatible `/v1/embeddings`, defaults to SiliconFlow `BAAI/bge-m3` (free tier, good CJK support); Ollama works as an offline option. Vectors generated lazily — not computed on write, backfilled and persisted on first search
 - **Entry format**: Markdown + frontmatter (type/title/tags/author/created), readable and reviewable directly on GitHub; one file per entry, naturally avoiding merge conflicts; real conflicts produce honest errors, never auto-merged
-- **Dual-track accumulation**: conventions written manually (`memory_put`), experience extracted from sessions via `/extract` — **the LLM proposes candidates, a human confirms each y/n** before anything is stored; never fully automatic
+- **Dual-track accumulation**: conventions written manually (the `memory` tool, action put), experience extracted from sessions via `/extract` — **the LLM proposes candidates, a human confirms each y/n** before anything is stored; never fully automatic
 - **Retrieval isolation**: the Project layer is isolated by project path — project A's memories never leak into project B
 
 - **Agent Client Protocol** ⭐: `thincoder acp` exposes the agent over [ACP](https://agentclientprotocol.com/) v1 on stdio — one terminal login drives sessions from **Zed**, **JetBrains** AI chat, or **Paseo**:
