@@ -1366,3 +1366,33 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 - **🔵5 AUTO 取消注记文案**：queued 依赖取消的 dependents/note 与 running 取消提醒——AUTO 档依赖者同段已自动启动时文案仍称 "stay queued"。修复：note/提醒在 refill 后重算（仍 queued 者才列）；AUTO 且全部已启动 → "auto-started (AUTO session)"措辞（CLI executeCancelAction + settle 提醒 autoNote；VS Code cancelSubagent + injectCancelReminder）。
 - **🔵6 两端形态分叉落文（有意偏差）**：在途 check 观察到 cancelled 目标——CLI 返回 "unknown async subagent id" 错误、VS Code 返回 `{status:"cancelled"}`——两形态均各有测试锁定（§19.5 既有——非 §20 引入）——按 §19.4 N4 精神明示为两端各自既有测试断言形态，统一留后续批次。
 - **复审轮 #7/#8 残留闭合（结构性守卫）**：advisor round2 发现守卫仅覆盖 depc-kind——wait-kind 条目（文件域阻塞源 = 另一条 queued-depc 条目）在无 running 池中同样永不启动（refill 由 settle 驱动——无 running = 无 settle）→ check 仍悬挂。修复：守卫扩为**结构性判据**——① target 级：queued 目标且池内无 running → 立即返回 queued+位置/原因+引导注记（depc 分支保持优先——原文案）；② arrival-order：无 running 且无 done（done 条目经已 resolve settled 即时消费——不误伤）→ 明确错误（逐条列 stuck 状态）。池有 running → 守卫放行（等待语义保留——running settle 唤醒——对照用例锁定）。AUTO 无 running 同样立即返回（带 AUTO 引导注记——语义修订：原③"等待放行"改为"立即返回"——无 running 时 AUTO 也无法触发 refill）。双端测试扩展（CLI subagent.test #3 场景 ③④⑤ / VS Code 镜像 ③④⑤⑥）。
+
+
+#### 20.7 prompts 调度器条款升级（2026-09-03 · 设计——用户指出——待评审）
+
+> 状态：设计（2026-09-03 用户指出——§20 实现后提示词同步缺口——"现在不是有调度器了吗？子agent任务排队应该让调度器去处理，提示词里反映了吗？"）。来源：TODO 立项（f874a4f）——main.md Delegation 段旧纪律未随 §20 升级。
+
+### 20.7.1 需求
+
+**总体需求**：主提示词（main.md Delegation 段 + engineering.md 并行段）从"手动并行避让纪律"升级为"调度器驱动派发"——模型知道 spawn 声明 files/dependsOn——冲突/依赖/排队全交调度器——调度器能力不被闲置（旧条款教模型自己判断"同文件别并行"——否定式自我管理——§20 的正向用法是声明写域让调度器自动排队）。
+
+**功能性需求**：
+- F-PS1：main.md Delegation 段旧条款（"Never give parallel subagents tasks that edit the same files——conflicts waste everyone's time"）→ 调度器条款（镜像锚逐字定稿——见 20.7.2 D-PS1）
+- F-PS2：engineering.md 并行段（Multi-Task Parallelism——同文件不并行/依赖串行手动纪律）同款升级
+- F-PS3：任务书引导——spawn 声明 files（写域）+ dependsOn（依赖）——调度器自动准入/排队/补位——同文件任务可并行派（自动 queued——冲突清自动启动）
+- F-PS4：两端 byte-identical（15 prompts 铁律）
+
+**非功能性需求**：条款精简短（提示词预算——不喧宾夺主）；模型可操作（读完知道 spawn 时该带什么参数）。
+
+### 20.7.2 设计
+
+- **D-PS1 镜像锚（main.md Delegation 段替换句——逐字定稿——两端照抄）**：
+  > "**Declare spawn scheduling metadata**: pass `files` (the write domain) and `dependsOn` (prior async ids) when delegating — the scheduler auto-serializes overlapping-file tasks (queued until clear) and orders dependency chains. Same-file parallel spawns are safe to fire — the queue handles contention; never hand-serialize what the scheduler queues."
+- **D-PS2 engineering.md 并行段替换句（逐字定稿）**：
+  > 现有"两任务共享文件 → 串行/合并"措辞改为"声明 files/dependsOn——调度器准入闸自动处理重叠（冲突 spawn 排队等清——依赖链自动排序）——镜像型双端任务拆并行 eng-coder（各声明自己的文件域）——只有文件域重叠才由调度器排队（仍可并行派）"
+- **D-PS3 测试**：T-PS1 内容断言（main.md/engineering.md 含新条款字样——fail-when-unchanged——两端 byte-identical——T-W3 式）；T-PS2 旧条款零残留（"Never give parallel subagents tasks that edit the same files" 字样消失）
+- **D-PS4 验收**：两端 prompts 同步（byte-identical）；内容断言过；T-M12 描述预算不受影响（subagent 工具描述无改动——纯 prompts 文本）
+
+### 20.7.3 受影响文件
+
+- CLI + VS Code：`src/prompts/main.md`、`src/prompts/engineering.md`（各 15 文件对中的 2——byte-identical）+ 测试 + AGENT-LOOP.md（本段勾销）
