@@ -965,6 +965,8 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - VS Code：webview 子块标题行 ⏹ 按钮（DOM click → postMessage cancel → extension 层定向 abort——同样不经模型）
 - 与 Ctrl+C 的关系：UI 停止 = 单子代理定向；Ctrl+C = 既有全停（挂起两级——round2 #4）——并存
 
+**D-M7b ⏹ 按 async 门控（2026-09-03 用户裁定——实现后补充——sync/async 区分）**：面板 ⏹ 只对**池内 async 子代理**（可中止）——sync（阻塞）区块**不显示 ⏹**（杜绝"可见但不可中止"的误导形态——id:9 交付曾以"可操作指引"提示 Ctrl+C 过渡）。机制：async spawn 分支（makeRelay 后）emit `⟦ev⟧async\x1e` 事件 token（与 ⟦ev⟧turn 同族——sync 不发）→ routeSubToken 解析设 `sub.async = true`（makeRelay emit 在 spawn 返回前——区块创建即知——时序安全）→ ⏹ 显示条件 = running && SUBAGENT_ROLES && sub.async——sync 区块无 ⏹。渲染纯读 state ✓（纯函数设计不破坏）。测试：async 区块 ⏹ 显示可中止 + sync 区块无 ⏹ + async 事件解析。
+
 **D-M8 嵌套 relay 前缀子标（方案 A）**：`parseRelayPath(text)` 通用解析——`eng-coder#N/explore#M/read` → 首段（块路由——现状逻辑零改——兼容单层）+ 剩余段渲染规则：
 - 文本行（onToken）：内层段前缀（如 `explore#1/`）替换为块内行首 dim 子标 `explore#1 · `（内容跟随）
 - 工具行（onToolCall）：`explore#1/read` → 行首子标 + 工具名（dim `explore#1 · ` + 既有工具行形态）
