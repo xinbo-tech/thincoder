@@ -166,3 +166,63 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 | `src/tui/clipboard.mjs` | translateShiftEnter（CSI-u / modifyOtherKeys → `\x1b\r`） |
 | `src/tui/render-frame.mjs` | 输入框边框提示 "Shift+Enter newline" |
 | `test/tui.test.mjs` | §5 的测试 + translateShiftEnter/多行键测试 |
+
+
+---
+
+## 7. question 自由文本输入态：光标与编辑键（2026-09-03，用户报告"主输入框有光标但 question 没光标——不方便"）
+
+### 7.1 问题
+
+用户实测：主输入框有光标（视觉反显 + 硬件定位双机制），question 自由文本输入框没有——盲输 + 仅回退。explore 一手查证差距链（2026-09-03）：
+
+1. **渲染数据源**：`layout.mjs:46-56`——question 存在时 boxLines 被替换为 options 列表或 `["▸ " + (q.answer ?? "")]`（无光标列概念）；同文件 inputLayout 按 state.input 计算——question 模式下被弃用
+2. **视觉光标压制**：`render-frame.mjs:148-150`——hasOverlay 含 question → curLine/curCol = -1 → renderInputBox 反显光标块整体跳过
+3. **硬件光标压制**：`render-frame.mjs:262-266`——question 时 cursorRow/Col 不计算（停 0,0）；`render-loop.mjs:114-115`——hasOverlay 帧 `cursorSuffix = ""`（连 hideCursor 都不发）
+4. **编辑能力最弱**：`key-handler.mjs:98-137` 自由文本分支只处理 Esc/Enter/backspace/字符追加/Ctrl+V——无 ←→/Home/End/Ctrl+U
+
+### 7.2 设计（D-Q1 question 输入态纳入输入框契约）
+
+**状态模型扩展**（§1.1 不变量同精神）：`state.question.cursor` 整数——question 处于**自由文本态**（无 options 或选中 Custom answer…）时恒满足 `0 <= cursor <= answer.length`（answer 为字符串——按 UTF-16 单位索引——与 input 字符数组同语义的简化形态）；options 态无 cursor 字段（选择标记即反馈——不变量不适用）。
+
+**渲染**：
+- 自由文本态 question：boxLines = layoutAnswer(q.answer, q.cursor, width)——复用 layoutInput 同式纯函数（单行不换行——answer 无 \n——简化——返回 {line, cursorCol}）——`▸ ` 前缀后光标列偏移 2
+- hasOverlay 例外细化：permission/picker/wizard-provider/options 态维持无光标；**question 自由文本态保留视觉反显 + 硬件定位**（与主输入框同路径——cursorSuffix 正常发）
+- options 态：无光标不变（▸ 标记即反馈）
+
+**按键**（自由文本态补全编辑键——与主输入框对齐的最小集）：
+| 键 | 行为 |
+|---|---|
+| ← / → | cursor 移动（0 边界停） |
+| Home / End | 跳首/尾 |
+| Ctrl+U | 清空 answer 与 cursor（同主输入框语义） |
+| Backspace | 删 cursor 前字符（现状保留——cursor 位置感知） |
+| 可打印字符 | 插入 cursor 位置（现状仅追加——改插入） |
+
+（Esc/Enter/Ctrl+V 粘贴语义不变；粘贴落 cursor 位置）
+
+**options 态**：↑↓/Enter/Esc 不变；选中后自由文本态（Custom answer…）自动进入上述光标态。
+
+### 7.3 测试（§5 测试要求——test/tui.test.mjs + key-handler 测试）
+
+- T-Q1 自由文本态光标渲染：answer 中段光标列 = 2 + 前缀后偏移（mock layout/渲染断言）
+- T-Q2 ←→/Home/End 移动边界（0 与 len 停——不越界）
+- T-Q3 中段插入 + backspace 位置正确（非仅尾删）
+- T-Q4 Ctrl+U 清空（cursor 归 0）
+- T-Q5 options 态无光标回归（选择标记不变）
+- T-Q6 粘贴落 cursor 位置（clipboard 路径）
+- T-Q7 Esc/Enter 语义不变回归
+
+### 7.4 受影响文件
+
+| 文件 | 变更 |
+|---|---|
+| `src/tui/layout.mjs` | question 自由文本态 boxLines 光标计算（layoutAnswer——复用 layoutInput 同式） |
+| `src/tui/render-frame.mjs` | hasOverlay 细化——question 自由文本态保留反显 + 硬件定位 |
+| `src/tui/render-loop.mjs` | 同上——question 自由文本态 cursorSuffix 正常发 |
+| `src/tui/key-handler.mjs` | 自由文本分支补 ←→/Home/End/Ctrl+U/中段插入 |
+| `src/tui/interaction.mjs`（askQuestion 装配——自查） | q.cursor 初始化/维护 |
+| `test/tui.test.mjs` 等 | T-Q1..Q7 |
+| 本文档 §1.1/§7 | 契约同步 |
+
+（本文档为权威——TUI.md 仅模块地图行引用更新）

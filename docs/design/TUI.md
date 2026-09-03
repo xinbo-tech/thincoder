@@ -16,11 +16,11 @@
 | `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支拆出） |
 | `agent-turn.mjs` | 433 | runAgentTurn（`{ autoTurn, skipSession }`）：回合驱动（状态复位/runAgent 循环/ContinueError 续跑——autoTurn 无面板：AUTO 自动 resume、手动静默拒/中断处理/finally 收尾——willSuspend 时区块不冻结 + controller 交 `_sessionAbort`/队列）；**§17 挂起会话驱动 suspensionSession + digestTurn + poolLive/sweepSettledToPending/waitForSettleOrWake/backgroundStatusText**（AGENT-LOOP.md §17 D-S2/D-S9 行表：settle→pending→合并消化轮、pendingInput 优先、池空补发冻结自然退出；round2 偏差 #1 会话退出复位 `_suspAborted` / #2-CLI 中止分支 pendingInput 残余转回 queue；详见本文件 §7）；callbacks 装配在 tool-events.mjs |
 | `tool-events.mjs` | 481 | 工具事件 → TUI 状态：callbacks 构造 + flushStream（onToolCall 开工具单框载体、onToolResult 载体定态与子agent 完成冻结、onToolOutput 追加进载体 `_toolBlock.output`/advisor 有序块、onTurnEnd 增量落盘）；**权限/批权限/问答 handler 按 ctx 提供与否条件接线**（手动档 auto-turn 传 null → denied 不弹面板，§17 D-S7）——2026-08-30 自 agent-turn 拆出满足 500 行硬限 |
-| `subagent-blocks.mjs` | 460 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则（`SUB_EVENT_RE` 含 **settled** phase——§17 挂起期延迟冻结信号）、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由（**⟦ev⟧settled → done + awaitingDigest 中间态驻留面板**）、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks——挂起退出补发 done 冻结复用，2026-08-30 自 agent-turn 归位） |
+| `subagent-blocks.mjs` | 476 | 子agent 活动区块数据层（§7.2 D4 消费端）：前缀/事件 token 正则（`SUB_EVENT_RE` 含 **settled/stopped** phase——§17 挂起期延迟冻结 + §19.5 cancel 立即冻结信号）、**parseRelayPath/sublabelLine（§19.5 D-M8 嵌套前缀解析——首段路由块 + 剩余段 dim 子标 `explore#1 · ` 行首变换；内层 ⟦ev⟧/[model] 剥除不路由）**、`state.subTasks` blocks 缓冲（N2 环形上限 500）、渲染节流（N1，`SUB_RELAY_THROTTLE_MS` 250ms）、`[model]` 元数据记录、routeSub* 路由（**⟦ev⟧settled → done + awaitingDigest 中间态驻留面板；⟦ev⟧stopped → 立即冻结（stopped 标记）**）、finishSubTask + 完成冻结（freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks——挂起退出补发 done 冻结复用，2026-08-30 自 agent-turn 归位） |
 | `render-frame.mjs` | 333 | 帧布局：header / conversation / subagent 面板 / todo / input / status 各面板装配（§7.2.1 起运行中子 agent 面板槽，行由 layout 预计算直接 put） |
 | `render-conversation.mjs` | 630 | 对话面板行构建：缓存三层（convCacheKey 全量 / 行级 wrapRowsCached markdown-wrap / 段级 _lineSegCache 行体——行对象 WeakMap→conv 行数组，签名=textRef 引用+短字段拼接，覆盖普通行/工具块/frozenSubTask/frozenAdvisor；loadOlder 只算新增行，rebuild 111→5-8ms 平坦，2026-08-31 懒加载卡顿根治）；搜索高亮、搜索高亮、表格、折叠装配（六处折叠点的展开态委托 fold-block.mjs，60% 封顶；折叠态委托 renderFoldedHead——统一命名头+tail3；思考阈值 3 行/其他 12 行按颜色分流）、frozen 子agent（_frozenSubTask，§7.2 D4 现状）与 advisor 折叠块渲染（运行中区块已迁至 subagent-panel.mjs 固定面板，§7.2.1 D2）、主输出永不折叠（2026-08-30） |
 | `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30 抽出，TUI.md §5 契约）：foldCapRows 60% 封顶、renderExpandedBlock 展开态+底部可达控制行、renderFoldedHead 统一折叠态、renderBlockTimeline、toggleFoldBlock |
-| `subagent-panel.mjs` | 84 | 运行中子 agent 固定底部面板渲染（§7.2.1 D1/D2，中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数——顶部分隔线 + 各驻留区块折叠头 `[▶/⏸/✓ key · model · elapsed · turn] state`（**✓ + "done · awaiting digestion" = §17 挂起期已结算待消化中间态，T-S14**）/ tail 3 / 展开（复用好 fold-block 组件）；无驻留区块 → []（F6） |
+| `subagent-panel.mjs` | 133 | 运行中子 agent 固定底部面板渲染（§7.2.1 D1/D2，中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数——顶部分隔线 + 各驻留区块折叠头 `[▶/⏸/✓ key · model · elapsed · turn] state`（**✓ + "done · awaiting digestion" = §17 挂起期已结算待消化中间态，T-S14**）/ tail 3 / 展开（复用好 fold-block 组件）；**§19.5 D-M7 ⏹ 停止标记（仅 running 折叠头右缘——_stopSub/_stopCol 供 mouse 列级命中）+ styleSubLabelRow（D-M8 子标 dim 样式——面板与冻结渲染共用导出）**；无驻留区块 → []（F6） |
 | `tool-args.mjs` | 65 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
 | `fold-block.mjs` | 257 | **公共可折叠区块组件**（2026-08-30）：60% 屏幕展开封顶 + 底部可达折叠控制行、`renderExpandedBlock`/`renderBlockTimeline`/`toggleFoldBlock`/`foldCapRows`——子agent/advisor/长消息/连续 dim 共用；新功能接可折叠输出走此组件（TUI.md §5 约定） |
 | `render.mjs` | 242 | 纯函数：字符宽度（CJK/emoji）、wrap、slice、markdown 表格对齐、sanitize |
@@ -40,7 +40,7 @@
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `mouse.mjs` | 128 | 鼠标序列解析（SGR 滚轮/点击 → picker 选中、折叠块点击切换） |
+| `mouse.mjs` | 170 | 鼠标序列解析（SGR 滚轮/点击 → picker 选中、折叠块点击切换；**§19.5 D-M7 ⏹ 列级命中——面板头右缘停止标记列点击 = cancel（ctx.cancelSubagent 直连，不触发折叠翻转——round1 #6）**） |
 | `clipboard.mjs` | 162 | 剪贴板文本/图像读写（Win powershell 强制 UTF-8 / macOS pbpaste）+ `translateShiftEnter` CSI-u→meta+return 翻译 |
 | `interaction.mjs` | 96 | 权限确认（y/n/a）、自由提问（question 工具） |
 | `pickers.mjs` | 416 | 通用列表选择器（filter/滚动/栈）+ 模型两级选择器 + /provider 流程 |
@@ -75,7 +75,7 @@
 - `emitKeypressEvents(keyStream)`（node:readline）把原始字节转成 keypress 事件；`keyStream` 是 `process.stdin` 的 PassThrough 副本——**paste 多块数据先写入 keyStream 再交给 readline 解析**，保证按键与粘贴按序到达。
 - **分块解码**：`utf8Decoder.decode(chunk, { stream: true })`——CJK 字符跨 chunk 边界时正确拼装（有专门测试）。鼠标序列可能跨 chunk 截断：`mousePending` 保存不完整尾部，下个 chunk 拼接。
 - **鼠标滚轮**：SGR 序列 `\x1b[<64;…M`（上 3 行）/`<65`（下 3 行），处理后剥离。
-- **鼠标点击**（`mouse.mjs`）：左键按下 `\x1b[<0;col;rowM` → picker 选项点击选中（跳过标题行，按 `_row` 映射 filteredItems）；对话区点击带 `_foldToggle` 的行**折叠/收起切换**（`expandedBlocks` toggle）。消息行点击无动作——行菜单已移除（终端拖选复制是原生能力，菜单是多余中间层）。坐标 1-based、col 在前；release/滚轮不消费。点击映射与渲染共用同一套布局数学（`convGlobalIndex` 与 renderConversation 同式）。
+- **鼠标点击**（`mouse.mjs`）：左键按下 `\x1b[<0;col;rowM` → picker 选项点击选中（跳过标题行，按 `_row` 映射 filteredItems）；对话区点击带 `_foldToggle` 的行**折叠/收起切换**（`expandedBlocks` toggle）。**子agent 面板头 ⏹ 标记列点击 = cancel（§19.5 D-M7——ctx.cancelSubagent 定向 abort——UI 停止不经模型回合；列级区分：⏹ 区不触发折叠翻转）**。消息行点击无动作——行菜单已移除（终端拖选复制是原生能力，菜单是多余中间层）。坐标 1-based、col 在前；release/滚轮不消费。点击映射与渲染共用同一套布局数学（`convGlobalIndex` 与 renderConversation 同式）。
 - **粘贴协议**（bracketed paste）：`\x1b[200~` 进入 pasteMode，`\x1b[201~` 退出；跨多 chunk 的粘贴先写前缀 + 进入 paste 模式累积，退出时一次性写入。粘贴文本**跳过按键分发**直接进输入缓冲（`insertPastedText`）。
 - **Shift+Enter**（多行输入第一协议，键盘增强终端）：stdin 层 `translateShiftEnter` 把 CSI-u 的 Shift+Enter 序列翻译为 `\x1b\r`（meta+return）→ key-handler 的 `key.alt && key.name === "return"` 分支插入 `\n`。Ctrl+J（`\n` 字节）是第二协议（全终端兜底）；Alt+Enter 是后备（旧控制台可能被系统截走）。
 - **state 对象**（渲染全部数据源）：lines / streaming / reasoning / advisorStreaming / input（codepoint 数组）/ cursor / history / scroll / processing / controller / permission / question / picker + pickerStack / wizard / tasks / tokens / search / expandedBlocks / foldEnabled / **exitArmed（Ctrl+C 双确认，IK61BI）** 等。
@@ -115,7 +115,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 输入框（layoutInput：多行展开、光标定位、粘贴快捷键提示角标）
 状态栏（status：模式/耗时/token/上下文利用率/队列/快捷键提示）
 ```
-布局分配见 `layout.mjs computeLayout`（面板高度随内容伸缩；**运行中子代理活动为固定底部面板**——AGENT-LOOP.md §7.2.1：位于会话区与 todo 之间，高度完全自适应（= 全部运行中区块的渲染行数，会话区被挤小），不随会话滚动（滚轮/PgUp/流式均不影响面板位置）；完成后立即冻结进会话流（`_frozenSubTask` 折叠块，§7.2 D4 现状不变，历史可读）；无运行中区块时面板不渲染（无悬空分隔线）。渲染层 subagent-panel.mjs `renderSubagentPanel`（layout 预计算高度、render-frame 直接 put），数据层 `subagent-blocks.mjs`）。
+布局分配见 `layout.mjs computeLayout`（面板高度随内容伸缩；**运行中子代理活动为固定底部面板**——AGENT-LOOP.md §7.2.1：位于会话区与 todo 之间，高度完全自适应（= 全部运行中区块的渲染行数，会话区被挤小），不随会话滚动（滚轮/PgUp/流式均不影响面板位置）；完成后立即冻结进会话流（`_frozenSubTask` 折叠块，§7.2 D4 现状不变，历史可读）；无运行中区块时面板不渲染（无悬空分隔线）。**§19.5 控制面（AGENT-LOOP.md §19.5 D-M7/D-M8）**：运行中（非 done）折叠头右缘 ⏹ 停止标记（dim——仅 running，done/冻结后消失）——点击 = 定向 cancel（不经模型回合）；冻结块头动词按状态区分（done / **stopped**——cancel 冻结）；嵌套 relay 前缀（eng-coder 内 explore）显示为块内 dim 子标行（`explore#1 · `——数据层 subagent-blocks.mjs parseRelayPath/行首变换，dim 样式 subagent-panel.mjs styleSubLabelRow，内层事件 token 不污染外层块头）。渲染层 subagent-panel.mjs `renderSubagentPanel`（layout 预计算高度、render-frame 直接 put），数据层 `subagent-blocks.mjs`）。
 
 **对话行构建**（render-conversation.mjs，纯函数）：
 ```
@@ -222,7 +222,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 | 恢复优先 display 快照 | WYSIWYG 保真；history 重建是降级路径 |
 | 恢复过滤 [System reminder: | 机读消息不显示（与 VS Code 渲染契约一致） |
 | 增量渲染 + 缓存键 | 1M 行会话不卡：只重绘变化行 |
-| 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子 agent 活动区块（数据层 `subagent-blocks.mjs`，§7.2 D4；运行中区块渲染于固定底部面板 subagent-panel.mjs，完成冻结进会话流，§7.2.1） |
+| 子代理流 `role#id/` 前缀 | 主/子流共用一套回调，按前缀分流到子 agent 活动区块（数据层 `subagent-blocks.mjs`，§7.2 D4；运行中区块渲染于固定底部面板 subagent-panel.mjs，完成冻结进会话流，§7.2.1；**§19.5 嵌套前缀 parseRelayPath——首段路由块 + 剩余段块内子标行**） |
 
 
 ## 10. Issue 变更段（2026-08-22 · 需求层）
@@ -428,3 +428,28 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **行 diff**——0.01ms 已快
 
 **监控建议**：真机手感是唯一判据——若再报卡顿，先测 `buildConvLines` rebuild 时间（段缓存命中应为 5-8ms；若 >20ms 说明缓存失效或新热点）。
+
+
+### 10.6 配置界面 picker 化审查 + question 光标（2026-09-03 · 需求层）
+
+**用户报告**：① question 等其他输入框没光标（主输入框有）——不方便；② 盘点所有 CLI 配置界面——固定选项仍手输的地方应改 picker。
+
+**盘点结论**（explore 全命令 × 交互形态 × 枚举对照 2026-09-03）：全 CLI 交互面**仅一处"固定枚举手输"违约**——Add Provider → Custom 的 API format（pickers.mjs:345：手输 openai/anthropic/google——打错静默 abort——违反本文件 9 章决策与 ARCHITECTURE-v2 契约"所有需要用户选择的选项统一使用列表游标选择器"）。其余全部 picker 化（effort 档/transport/模型/会话/undo…——effort 枚举来源走 specForModel 动态枚举——2026-08-17 教训：不硬编码）；数值型手输（/config 5 项、context K）非枚举属合理自由文本。
+
+question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文件不复制）。
+
+### 10.6D 设计层（2026-09-03）
+
+**D-C1 API format picker**（pickers.mjs:345）：手输改 `showPicker("API format", [openai, anthropic, google])`（默认 index=0 openai）——Esc/取消 = 中止整个流程（与现手输非法 abort 同语义——安全：无半配置落盘）。与 preset picker（pickers.mjs:328-334）形态一致——零新机制。
+
+**D-C2 wizard Custom 路径同步（决策点）**：wizard.mjs:34-57 WIZARD_STEPS 不问 format（隐式 openai）——与 picker 路径不一致。**决策：wizard 同步加 format 步**（Custom provider 两入口行为一致——用户选非 openai 兼容格式时 wizard 路径不再静默错配）。
+
+**旁支（决策点——用户未拍——默认不纳入本轮）**：
+1. picker item.note 渲染丢弃（pickers.mjs:60-72 只消费 header.note——buildProviderEntries 的 baseURL/无 key 提示、cmd-advisor 主菜单 Provider 注记写在 item.note 实际不显示）——信息缺失疑似 bug——另案
+2. question options/wizard provider 与 picker 并行实现（第二/三套选择 UI）——统一属架构决策——记 TODO
+3. /config 数值项档位预设（consultTurns 20/40/60 等）——非违约增强——不做
+
+**受影响文件**：`src/tui/pickers.mjs`（:345 format 枚举 picker + wizard 步）、`src/tui/wizard.mjs`（WIZARD_STEPS + format 步）、测试（pickers/wizard——API format 选择用例）、本文件（模块地图 cmd 行）+ TUI-INPUT-BOX.md §7（question 光标——同批交付）。
+
+**验收**：Custom provider 流程 format 为 picker 选择（无手输）；wizard Custom 含 format 步；question 自由文本态光标可见可编辑（T-Q1..Q7）；全量测试绿。
+
