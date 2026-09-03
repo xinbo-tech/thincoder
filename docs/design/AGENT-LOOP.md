@@ -241,7 +241,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 - **F3 · 固定**：面板独立于 conversation 滚动区——会话滚动（滚轮/PgUp/流式）不影响面板位置；面板上滚轮**穿出滚会话**（与 todo 面板行为一致）
 - **F4 · 折叠**：面板内每个子 agent 区块**默认折叠**（头部摘要 + tail 3，点击展开）——与现状流内区块一致（用户拍板）；展开态经 fold-block.mjs 公共组件（60% 封顶 + 块内滚动 + 底部可达收起控制行）
 - **F5 · 冻结**：子 agent 完成后**立即冻结进会话流**（✓ 头 + 可展开，D4 现状不变；**挂起态例外：§17 挂起期间 settled 块驻留面板 "done · awaiting digestion" 中间态，池空冻结退出时统一补发 done——round2 #4**）——面板只显示运行中区块，完成即移出
-- **F6 · 空态**：无运行中区块时面板不渲染（无悬空分隔线——现状分隔线逻辑迁移到面板边界）
+- **F6 · 空态**：无运行中区块时面板不渲染（无悬空分隔线——**superseded by §20 D-SD3b：queued/waiting 块驻留时面板保持——存在条件 = running ∪ queued 非空——2026-09-03**——现状分隔线逻辑迁移到面板边界）
 - **F7 · 交互**：面板内点击（展开/收起/块内翻窗）坐标映射到面板行；折叠状态（expandedBlocks key=`sub-${key}`）跨 turn 保持（D4 现状）
 
 **非功能性需求**：
@@ -751,7 +751,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
   - CLI `src/agent-tools/subagent.mjs`（✓）：`_inAutoTurn && !autoApprove` 机械拒绝 spawn（async + 同步，手动档；AUTO 档放行）；settle 回调挂起分流——`parent._suspended` 时改发 ⟦ev⟧settled（延迟冻结）+ 条目移交 `_pendingAsyncResults`（D-S3 ② 记账点），非挂起照发 ⟦ev⟧done；`injectAsyncResult(agent, entry)` 共享注入器（collectSettled 直注入 ① 与 run 首行 pending 注入共用，形态同 §15）；`buildChildRunOpts` signal 优先 `agent._sessionSignal`（会话 children 与回合 controller 隔离）
   - CLI 交互层（✓ agent-turn.mjs / key-handler.mjs——按实现定位；startup.mjs 无需改动）：`runAgentTurn(ctx, text, { autoTurn, skipSession })` + 挂起会话驱动 `suspensionSession`（D-S9 状态机行表：settle→pending→合并消化轮、pendingInput 优先、池空补发冻结退出）、`digestTurn`（手动档不传权限/问答 handler——D-S7 装配契约；AUTO 档普通回调）、`poolLive/sweepSettledToPending/waitForSettleOrWake/backgroundStatusText`；key-handler：挂起态 Enter（非 slash）→ pendingInput 队列 + 唤醒（F3：输入框零干扰）、Ctrl+C → 武装窗口两级中止（round2 偏差 #4：未武装时处理中仅停当前回合（digest/会话内回合）、纯等待仅提示武装，3s 窗口内再次按下才彻底中止——abort 集合全部 controller + `_suspAborted` 标记 + 唤醒）；agent-turn.mjs（round2 偏差 #1/#2-CLI）：挂起会话退出复位 `state._suspAborted`（不粘滞——中止后池再 live 可重新进入挂起态）、abort 分支残余 pendingInput 转回 `state.queue`（不静默丢）；tool-events.mjs（✓ 交互层回调装配）：权限/批权限/问答 handler 按 ctx 提供与否条件接线（手动 digest 传 null → denied 不弹面板）
   - TUI 渲染（✓）：subagent-blocks.mjs `SUB_EVENT_RE` 加 `settled` phase + routeSubToken 中间态（done + awaitingDigest 驻留面板不冻结）；subagent-panel.mjs 渲染 `!done || awaitingDigest` 条目，头部 `[✓ key · …] done · awaiting digestion`（✓-pending 中间态）；池空退出补发 done 冻结 = 既有 `freezeAllSubTasks`（runAgentTurn finally 在 willSuspend 时跳过冻结——区块跨回合 live）
-  - VS Code 同构（✓ 2026-09-02 交付：suspension.mjs/panel-chat/webview 输入态/ARCHITECTURE.md:473-486 引用段 + test/suspension.test.mjs T-S1..S17；偏差修复轮：_chat 唤醒断链 D1 + T-S3b——架构师统一回写）
+  - VS Code 同构（✓ 2026-09-02 交付：suspension.mjs/panel-chat/webview 输入态/ARCHITECTURE.md §17 引用段 + test/suspension.test.mjs T-S1..S17；偏差修复轮：_chat 唤醒断链 D1 + T-S3b——架构师统一回写）
   - 测试（✓）：`test/suspension.test.mjs` 新增（T-S1..S17 完整用例表实现，agent 级/驱动级/TUI 级三层）；`test/subagent.test.mjs` §15 T5 标题与注释随 collectSettled 语义更新；§15 其余用例零改动全绿（T-S13 回归）
   - 文档（✓ 本节 + `docs/design/TUI.md` §7/模块地图 + `docs/design/TUI-INPUT-BOX.md` §1 挂起输入契约——评审 #3）；VS Code `docs/design/ARCHITECTURE.md` 引用段 + 两端 CHANGELOG（父代理统一，未做）
   - **§17.5 supersede（2026-09-03）**：本表 `collectSettledAsync` 语义与文件面在挂起驱动下再修订——CLI/VS Code `agent.mjs`（collectSettledAsync 不再直注入——suspDriven 标志/检测，无驱动调用方保留直注入兜底）+ 交互层（agent-turn.mjs / VS Code suspension 驱动——settled-only 池也进挂起、digest 触发检查点）+ TUI 渲染层零改动（17.5.4 #5）+ digest 完成逐条冻结回收（17.5.5）——详见 §17.5；受影响文件逐文件见 §17.5.2 清单
@@ -906,7 +906,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 **D-E6 收敛与终态**：eng-coder 报告自述终态——`clean`（审计 clean + advisor clean——报告含轮次）或 `stalled`（5 轮修正未收敛 / explore 或 advisor 节点失败重试 1 次仍败——报告含未收敛点/失败原因）。**盲信对齐（评审 round3 #8）**：内部 advisor code review 以实际文件为对象（documents = 设计文档 + 交付文件清单——独立于 eng-coder 自述——§13 禁盲信纪律在子代理内部落实）；**可行性注（round4 #1 核实）**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs eng-coder depthOnly 装配分支——§7.1 角色矩阵"coder/eng-coder 自带 verify/advisor 自评"——round2 #7 符号锚点化）且实现无 depth/role 限制——ENGINEERING-MODE.md 2026-08-01 裁定（"子代理环境无法真实调用 LLM advisor"）依据 = 当时工具未装配——随本设计同批反转（见受影响文件）；主会话对报告的信任 = 对"内部已做文件级复核"的信任——父侧复核（ENGINEERING-MODE.md 原 step 7 父侧自动偏差审计——round4 #6 术语：该节点原为**自动**（2026-08-30 裁定——无需用户发起）非"手动"——随本设计改为父侧**可选**复核——默认由内部协议承担）保留可选——两文档口径同批一致化。
 
 **受影响文件（两端）**：
-- CLI：`src/agent-tools/subagent.mjs`（schema 默认按 role 解析 async）、`src/agent/setup.mjs`（eng-coder depthOnly 工具装配——加受限 subagent（explore-only + 同步））、`src/agent/spawn-child.mjs`（role 过滤校验：eng-coder 上下文 spawn 仅 explore）、`src/prompts/engineering-sub.md`（内部交付协议附录 + 修正轮计数提醒——byte-identical 三件套）、`src/prompts/engineering.md`（两端——架构师侧 spawn→等报告→主侧审计流程改 async+内部协议口径——防双重审计/误用）、`src/agent.mjs`（核验：digest 消化既有——若零改动从清单移除——实现前定稿）、docs/design/AGENT-LOOP.md §18 本节、ENGINEERING-MODE.md（**全量同步点**——round4 评审 #1：① FR4 代码评审归属行——2026-08-01 裁定"eng-coder 子代理环境无法真实调用 LLM advisor"**反转**：advisorTool 现已在 eng-coder 子代理工具集（setup.mjs:240）且工具实现无 depth/role 限制（advisor.mjs——readonly 内嵌循环）——裁定依据（当时工具未装配）已过时——同批更新 FR4 + §2.3 门表两行（Code review/偏差审计）+ AC5/AC9 + §7 变更记录 2026-08-30 条——不留双文档矛盾）、CHANGELOG（两端，父代理统一更新）、两端测试
+- CLI：`src/agent-tools/subagent.mjs`（schema 默认按 role 解析 async）、`src/agent/setup.mjs`（eng-coder depthOnly 工具装配——加受限 subagent（explore-only + 同步））、`src/agent/spawn-child.mjs`（role 过滤校验：eng-coder 上下文 spawn 仅 explore）、`src/prompts/engineering-sub.md`（内部交付协议附录 + 修正轮计数提醒——byte-identical 三件套）、`src/prompts/engineering.md`（两端——架构师侧 spawn→等报告→主侧审计流程改 async+内部协议口径——防双重审计/误用）、`src/agent.mjs`（核验：digest 消化既有——若零改动从清单移除——实现前定稿）、docs/design/AGENT-LOOP.md §18 本节、ENGINEERING-MODE.md（**全量同步点**——round4 评审 #1：① FR4 代码评审归属行——2026-08-01 裁定"eng-coder 子代理环境无法真实调用 LLM advisor"**反转**：advisorTool 现已在 eng-coder 子代理工具集（eng-coder 子代理工具装配点——advisorTool）且工具实现无 depth/role 限制（advisor.mjs——readonly 内嵌循环）——裁定依据（当时工具未装配）已过时——同批更新 FR4 + §2.3 门表两行（Code review/偏差审计）+ AC5/AC9 + §7 变更记录 2026-08-30 条——不留双文档矛盾）、CHANGELOG（两端，父代理统一更新）、两端测试
 - VS Code：同构（setup-reminders.mjs/run-helpers 装配对应 + prompts 同批）
 - 测试（实现前展开为 §15.4 式完整用例表——eng-coder 硬验收项）：
   - T-E1 eng-coder 缺省 async（spawn 返回 running 不阻塞）——explore 缺省阻塞（回归）
@@ -971,7 +971,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义） |
 | cancel（§19.5 新增——19.5.2b 承诺同批修订） | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效） |
 
-> **supersede 注（2026-09-03 §19.5 实现轮）**：本矩阵 action 面随 §19.5 控制面扩展为**五动作**——cancel 行的门禁分类（控制类豁免）、定向中止语义（cancelled settle/queued 出队/模型可见提醒）与 AC-M1 措辞见 §19.5（D-M6/19.5.2b）——§15 D-A2 先例：本段保留为 as-of 快照，实现以 §19.5 为准。
+> **supersede 注（2026-09-03 §19.5 实现轮）**：本矩阵 action 面随 §19.5 控制面扩展为**五动作**——cancel 行的门禁分类（控制类豁免）、定向中止语义（cancelled settle/queued 出队/模型可见提醒）与 AC-M1 措辞见 §19.5（D-M6/19.5.2b）——§15 D-A2 先例：本段保留为 as-of 快照，实现以 §19.5 为准。——**域澄清（评审 #2）：AC-M1 五动作 = §19 cancel 批域验收——§19.6 加 panel 后工具面六动作（NF-P 口径）——域不同不冲突——2026-09-03**
 
 **D-M2 status 形态**（§19.5 D-M5 修订：概览条目从 id 数组改**结构化对象数组**——`{ overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}] }, target?: {...} }`）——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
 
@@ -1118,7 +1118,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 7. 本节状态同步"设计批准"（即本段——token 已签发——实现排队）
 8. CHANGELOG 记录（round2 #6——本节 CLI 行为变更（面板回收时序）——父代理统一批记录——§19 sweep 惯例——§17.5 同）
 
-### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——待评审）
+### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——**已批准**）
 
 > 状态：设计批准（2026-09-03 round1 通过——0🔴——9 项 advisory 处置注见 19.6.4——designToken 已签发）。触发：用户实测困惑（eng-coder#9 完成且已消化仍挂面板）——模型侧只有"池视图"（_asyncSubagents）——用户看到的是"面板视图"（TUI state.subTasks——驻留 awaitingDigest 等）——**池与面板两个状态机模型看不到面板那半——无法自查解释 UI 怪相/诊断池↔面板脱节**。用户裁定：**面板视图 + 干预（可修异常驻留块——补发冻结）**——把 UI 修复能力交给模型。
 
@@ -1169,7 +1169,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 9. 状态行同步（顶部刷新枚举含 §19.6）
 
 
-## 20. 子 agent 任务调度器（2026-09-03 · 需求 + 设计——方案 1 用户确认——待评审）
+## 20. 子 agent 任务调度器（2026-09-03 · 需求 + 设计——方案 1 用户确认——**已批准**）
 
 > 状态：设计批准（2026-09-03 round1 1🔴 + round2 0🔴 通过——advisory 处置注见 20.4——designToken 已签发）。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。
 
@@ -1194,7 +1194,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **D-SD3 准入检测（spawn 时）**：新任务 spawn：若 (running ∪ queued).some(e => e._files ∩ new.files ≠ ∅) 或 dependsOn 任一条目未 done → **不立即 start——入 queued（waiting-deps 态——记原因）**——否则立即 start（既有语义）
 
-**D-SD3b 面板 UX（2026-09-03 用户裁定——spawn 即见 + waiting 标注）**：**任何排队 spawn（waiting-deps 或 slot-queued）在 spawn 返回时立即建面板块**（不等子代理首 token——排队子代理未启动无 relay 流——块由 spawn 侧直接建——**通道（round2 #2）：新 ⟦ev⟧queued/cancelled 事件 token（spawn 返回时发 queued——出队/取消发 cancelled——TUI routeSubToken 消费——与 7.2.3.2 #2 async ack 跳过冻结不冲突——tool-events/routeSubToken 分支补受影响文件）**）——块头标注：`[▶ role#N · waiting] waiting for: explore#2（域冲突 src/x.mjs）、eng-coder#1（依赖未完成）`——slot-queued 标注 `queued · position 3`（槽满等位）——**启动后块头转正常 running 态**（relay 首 token 接管——既有 ensureSubTaskKey 命中同 key 不重建）——块不可展开（无活动）——取消/出队时移除。**waiting 语义对模型可见**（spawn 返回 {id, status:"queued", reason} + §19.5 status 含 waiting 态 + 原因——§20 受影响文件补 subagent-blocks.mjs（waiting 块建/转/撤）与渲染（块头 waiting 标注）——测试补 T-SD11（spawn 即面板可见 + waiting for 标注）T-SD12（启动后转 running——同 key 不重建））
+**D-SD3b 面板 UX（2026-09-03 用户裁定——spawn 即见 + waiting 标注）——supersede §7.2.1 F6/T2（评审 #1：面板存在条件从"running 非空"扩为"running ∪ queued/waiting 非空"——waiting 块驻留期面板保持渲染——T2 断言同步扩——§7.2.1 F6 行加 supersede 指针）**：**任何排队 spawn（waiting-deps 或 slot-queued）在 spawn 返回时立即建面板块**（不等子代理首 token——排队子代理未启动无 relay 流——块由 spawn 侧直接建——**通道（round2 #2）：新 ⟦ev⟧queued/cancelled 事件 token（spawn 返回时发 queued——出队/取消发 cancelled——TUI routeSubToken 消费——与 7.2.3.2 #2 async ack 跳过冻结不冲突——tool-events/routeSubToken 分支补受影响文件）**）——块头标注：`[▶ role#N · waiting] waiting for: explore#2（域冲突 src/x.mjs）、eng-coder#1（依赖未完成）`——slot-queued 标注 `queued · position 3`（槽满等位）——**启动后块头转正常 running 态**（relay 首 token 接管——既有 ensureSubTaskKey 命中同 key 不重建）——块不可展开（无活动）——取消/出队时移除。**waiting 语义对模型可见**（spawn 返回 {id, status:"queued", reason} + §19.5 status 含 waiting 态 + 原因——§20 受影响文件补 subagent-blocks.mjs（waiting 块建/转/撤）与渲染（块头 waiting 标注）——测试补 T-SD11（spawn 即面板可见 + waiting for 标注）T-SD12（启动后转 running——同 key 不重建））
 
 **D-SD4 补位增强（maybeRefillAsync）**：settle/cancel 释放槽后——从 queued 选"依赖全满足 + 域无冲突"的最早条目启动——**多任务同时解除（一批 eng-coder 全等同一依赖）→ 按 queued 序逐个启动到槽满**（上限 4 不变）
 
@@ -1269,7 +1269,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
   - 空闲态 exitArmed 双确认零改动。
 - **agent-turn 区分（round1 #1 落点）**：`reason.interrupt && reason.message`（Ctrl+I）= 重建续跑（既有）；无 message（Ctrl+C 首按）= break 停回合不续跑。**垃圾回滚（偏差落文 3）**：agent.mjs 中断三段（chat catch / response.interrupted / 工具执行中断）无条件注入 `[User interrupt: <message>]`，对 message 存在无守卫——无 message interrupt 落 "[User interrupt: undefined]" 垃圾上下文。D-C2 agent.mjs 零改动约束下在 agent-turn 无 message 分支回滚尾部垃圾（确定性：chat catch / response.interrupted 两路径注入恒为 history 最后一条；工具执行中断第三点常规路径经下一次 chat 的 dedup 后垃圾仍居尾——**已知窄边（审计 🔵-4）**：第三点 continue 后若轮顶压缩注入先于重抛落尾，回滚够不到更深的垃圾——仅历史残留外观级，未做跨段扫描）。**partial 部分输出保留（advisor round1 🟡 裁定——2026-09-03）**：无 message interrupt 走 provider interrupted 路径时 agent.mjs 先提交部分输出再抛——agent-turn 只回滚垃圾、**保留 partial**——interrupt 家族语义（§2 Ctrl+I 同款"提交部分输出"，停回合沿用；修复前平 abort 不落 history 的差异即 interrupt 语义本身）。回滚 partial 需在 history 层区分工具/子代理路径的既有完整消息（不可靠）——不做；行为由 T-C4 场景 2 断言锁定（partial 保留 + 垃圾清除）。
 - **D-C4 /abort（偏差落文 4）**：核对结论——CLI 无 `/abort` 命令实体（SLASH_COMMANDS/HANDLERS 无此命令；§19.5 决策"全停走 Ctrl+C、不加 cancel-all"同族）。D-C4 语义（显式全停无武装）由**二按全停**承担并锁定：T-C2（handler 级二按平 abort 断言）+ 既有驱动级全停回归（T-S5/偏差#3/round2 偏差#4 ×2）。如需真实 `/abort` slash 命令（slash-commands.mjs + cmd 文件 + /help 行——超本段受影响文件清单），列为后续候选。
-- **实现时核实的 e2e 语义事实（记录——非偏差）**：非挂起 processing 态的后台池条目只可能是**本回合** spawn 的 children（baseSignal = 当前回合 controller——subagent.mjs L368——偏差#3 测试同语义）——回合中止时随 controller 中止属既有接受语义（Ctrl+I 同）；本修复保护的是**会话期** children（持会话 signal——digest/会话内回合首按后存活——T-C5b E2E）与池账本本身。AC-C1 的"池保留"在 handler/机器层成立（T-C1——interrupt 排除 agent.mjs 清池分支）。
+- **实现时核实的 e2e 语义事实（记录——非偏差）**：非挂起 processing 态的后台池条目只可能是**本回合** spawn 的 children（baseSignal = 当前回合 controller——subagent.mjs settle cancelled 分支——偏差#3 测试同语义）——回合中止时随 controller 中止属既有接受语义（Ctrl+I 同）；本修复保护的是**会话期** children（持会话 signal——digest/会话内回合首按后存活——T-C5b E2E）与池账本本身。AC-C1 的"池保留"在 handler/机器层成立（T-C1——interrupt 排除 agent.mjs 清池分支）。
 - **测试**：T-C1（processing 首按 interrupt 无 message + 池保留 + 武装）/ T-C2（二按平 abort 全停——不粘滞）/ **T-C2b（advisor round1 🟡 处置——无后台池二按不吞键落回空闲退出双确认）**/ **T-C2c（advisor round2 🟡 处置——回合启动解除 exitArmed 残留）**/ T-C3（过期复位再按 = 首按语义）/ T-C4（agent-turn 区分：message 续跑 vs 无 message 停 + 垃圾回滚 + partial 保留锁定）/ T-C5（挂起态① interrupt 语义 + 双确认零回归）/ T-C5b（会话内回合首按停——会话与池保留——settle 照常消化——用户实证场景 E2E）。T-C6（/abort 显式全停回归）→ 映射 T-C2 + 既有 T-S5/偏差#3。**全量测试记录（2026-09-03 实现后，CLI）**：`npm test` 全绿（45 skipped = 既有 THINCODER_TEST_FULL slow-test 豁免）；`test/suspension.test.mjs` 40/40（含 8 新用例——3 次重跑稳定）；agent-turn/tui 套件随全量绿。
 
 **advisor round1 处置（2026-09-03——1🔴 + 2🟡 + 1🔵）**：
