@@ -14,6 +14,8 @@
  *   config-helpers.mjs — persistRaw / syncProviderField / maskKey
  *   clipboard.mjs     — clipboard image paste
  *   distill-cmd.mjs   — /distill command
+ *   mouse.mjs         — SGR mouse parsing + dispatch assembly (createMouseDispatch)
+ *   update-notice.mjs — background update notice + startup check
  */
 
 import { emitKeypressEvents } from "node:readline"
@@ -30,25 +32,15 @@ import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
 import { createInteraction } from "./interaction.mjs"
 import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, translateShiftEnter, stripKeyboardProtocol } from "./clipboard.mjs"
-import { parseMouseClicks, handleMouseClick, handleWheel } from "./mouse.mjs"
+import { parseMouseClicks, handleWheel, createMouseDispatch } from "./mouse.mjs"
 import { runAgentTurn } from "./agent-turn.mjs"
 import { createKeyHandler, convMaxScroll } from "./key-handler.mjs"
-import { showStartup, backgroundIndex, historyToLines, HISTORY_PAGE_MESSAGES } from "./startup.mjs"
-import { countConvLines } from "./render-conversation.mjs"
+import { showStartup, backgroundIndex, createLoadOlder } from "./startup.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
-import { cancelAsyncSubagent } from "../agent-tools/subagent-async.mjs"
 import { createConfigHelpers } from "./config-helpers.mjs"
+import { createUpdateNotice, pendingNoticeReady } from "./update-notice.mjs"
 
-/** 升级失败提示文案：附 npm 输出尾部（最多 3 行），方便定位失败原因。 */
-export function upgradeFailureText(code, output) {
-  const tail = (output ?? "").trimEnd().split("\n").slice(-3).join("\n")
-  return `✗ Upgrade failed (exit ${code}). Run \`thincoder upgrade\` manually.${tail ? `\n${tail}` : ""}`
-}
-
-/** 后台更新提示可弹出的条件：无任何交互弹层（picker/permission/question）激活。 */
-export function pendingNoticeReady(state) {
-  return Boolean(state.pendingNotice && !state.picker && !state.permission && !state.question)
-}
+export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
 /**
  * SESSION.md §8 D-S2 — TUI 启动首帧前的 provider 重选流程：
@@ -155,38 +147,6 @@ export async function startTUI(agent, opts = {}) {
   let pasteMode = false
   let pasteAccum = ""
 
-  /** 懒加载更早历史（2026-08-31 用户约定："滚动到头自动加载"——滚轮/PgUp 到顶皆触发；
-   *  2026-08-31 前只挂 PgUp 键 = 违约，滚轮到头无反应）。加载后滚动补偿保持锚定。
-   *  外层作用域：data 回调（滚轮分支）与 createKeyHandler ctx（PgUp 分支）共用。 */
-  const loadOlder = () => {
-    if (!state._hasOlder) return
-    const full = agent._fullHistory ?? []
-    const loaded = state._historyLoaded
-    const start = Math.max(0, full.length - loaded - HISTORY_PAGE_MESSAGES)
-    const end = full.length - loaded
-    if (start >= end) return
-
-    const d = state.dims ? state.dims.get() : {}
-    const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
-    const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
-
-    if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
-    state._lineIdCounter = state._lineIdCounter ?? 0
-    const older = historyToLines(full, start, end)
-    for (const l of older) l._lineId = ++state._lineIdCounter
-    state.lines.unshift(...older)
-    state._historyLoaded += end - start
-    state._hasOlder = start > 0
-    if (state._hasOlder) {
-      state.lines.unshift({ text: `… ${start} more earlier messages (scroll to top to load)`, color: C.dim })
-    }
-
-    const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
-    state.scroll += Math.max(0, after - before)
-    render()
-  }
-
-
   process.stdin.on("data", (chunk) => {
     try {
 
@@ -239,7 +199,6 @@ export async function startTUI(agent, opts = {}) {
 
     // Scroll wheel: \x1b[<64;col;rowM = up, \x1b[<65;col;rowM = down（3 lines each）
     // 2026-08-31：坐标命中展开块内容行 → 块内滚动（handleWheel）；未命中 → 会话滚动（现状）
-  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     for (const m of text.matchAll(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/g)) {
       const button = Number(m[1])
       if (button === 64 || button === 65) {
@@ -269,9 +228,7 @@ export async function startTUI(agent, opts = {}) {
     }
 
     // Strip complete mouse sequences; keep incomplete tail for reassembly with next chunk
-  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     text = text.replace(/\x1b\[<\d+;\d+;\d+[Mm]/g, "")
-  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
     const tail = text.match(/\x1b\[<[\d;]*$/)
     if (tail) {
       mousePending = tail[0]
@@ -331,6 +288,10 @@ export async function startTUI(agent, opts = {}) {
       pendingNoticeReady, get showUpdateNotice() { return showUpdateNotice } },
     pushLine)
   const { render, scheduleRender } = renderLoop
+
+  // 懒加载更早历史（startup.mjs createLoadOlder——D-S1b）：滚轮/PgUp 到顶自动加载；
+  // 声明在此（render 已可用）——data 回调（滚轮分支）与 createKeyHandler ctx（PgUp）共用。
+  const loadOlder = createLoadOlder({ agent, state, render })
 
   // Resize events are genuine dimension changes on every terminal (2026-08-31
   // simplification: the earlier settle-timer/double-confirm machinery was built
@@ -459,29 +420,8 @@ export async function startTUI(agent, opts = {}) {
     }
   })
 
-  // Mouse clicks — §19.5 D-M7: ⏹ 停止标记 → cancelSubagent（UI 停止不经模型回合，直连
-  // 池 abort——与 action:"cancel" 同实现路径）。block key "role#id" → 池条目 id。
-  const cancelSubagent = (key) => {
-    try {
-      const id = key.slice(key.lastIndexOf("#") + 1)
-      const r = cancelAsyncSubagent(agent, id)
-      if (r?.status === "error") {
-        // 池内无此条目但区块仍 live（!done）→ 阻塞型（sync）spawn 中——无池条目可定向
-        // 中止（§19.5 cancel 只针对 async 后台子代理）；给出可操作指引而非神秘 unknown id
-        const liveBlock = state.subTasks?.[key] && !state.subTasks[key].done
-        pushLine(liveBlock
-          ? `[subagent stop] ${key} is a blocking (sync) child mid-call — targeted stop is not available; use Ctrl+C to interrupt the turn`
-          : `[subagent stop] ${r.error}`, C.error)
-      } else {
-        pushLine(`[subagent ${key} stop requested]`, C.warn)
-      }
-    } catch (e) {
-      pushLine(`[subagent stop] ${e?.message ?? String(e)}`, C.error)
-    }
-    render()
-  }
-  const onMouseClick = (col, row) => handleMouseClick({ state, render, popPicker, cancelSubagent }, col, row)
-  const mouseCtx = () => ({ state, render })
+  // 鼠标点击/滚轮 ctx 装配（mouse.mjs createMouseDispatch——D-S1a：cancelSubagent/onMouseClick/mouseCtx）
+  const { onMouseClick, mouseCtx } = createMouseDispatch({ agent, state, pushLine, render, popPicker })
 
   // ---------------------------------------------------------- Startup screen + background indexing
 
@@ -492,49 +432,11 @@ export async function startTUI(agent, opts = {}) {
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })
   backgroundIndex({ agent, state, render })
 
-  // Check for updates (non-blocking, after startup screen)
-  // 有 picker 打开时不硬抢：挂到 state.pendingNotice，picker 全部关闭后由 doRender 弹出
-  const showUpdateNotice = async (result) => {
-    const sel = await showPicker(`Update available: ${result.local} → ${result.latest}`, [
-      { type: "header", text: `thincoder ${result.latest} is available (current: ${result.local})` },
-      { type: "item", text: "Upgrade now", action: "upgrade" },
-      { type: "item", text: "Later", action: "later" },
-    ])
-    if (sel?.action !== "upgrade") return
-    pushLabel(`❯ Upgrade`, ansi.bold + C.tool)
-    pushLine(`Upgrading to ${result.latest}...`, C.tool)
-    const { exec } = await import("node:child_process")
-    const cp = exec("npm install -g thincoder@latest", { windowsHide: true })
-    let stdout = ""
-    cp.stdout?.on("data", (d) => { stdout += d })
-    cp.stderr?.on("data", (d) => { stdout += d })
-    cp.on("close", (code) => {
-      if (code === 0) {
-        pushLine(`✓ Upgraded to ${result.latest}. Restart to apply.`, C.tool)
-      } else {
-        pushLine(upgradeFailureText(code, stdout), C.error)
-      }
-      render()
-    })
-  }
-  ;(async () => {
-    try {
-      const { readFileSync } = await import("node:fs")
-      const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"))
-      const { checkForUpdate } = await import("../upgrade.mjs")
-      const result = await checkForUpdate(pkg.version)
-      if (result?.newer) {
-        // Defer: if wizard is still active, just show a dim line
-        if (state.wizard) {
-          pushLine(`Tip: thincoder ${result.latest} is available (run /upgrade later or restart)`, C.dim)
-          render()
-        } else {
-          state.pendingNotice = result
-          render()
-        }
-      }
-    } catch { /* network error or timeout — silently skip */ }
-  })()
+  // Check for updates (non-blocking, after startup screen)——实现 update-notice.mjs
+  // （D-S1c）：有 picker 打开时不硬抢——挂到 state.pendingNotice，picker 全部关闭后由
+  // doRender 弹出（showUpdateNotice 经 renderLoop ctx getter 懒引用）。
+  const { showUpdateNotice, checkUpdates } = createUpdateNotice({ state, showPicker, pushLine, pushLabel, render })
+  checkUpdates()
 }
 
 function summarize(obj) {

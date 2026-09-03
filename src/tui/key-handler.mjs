@@ -3,7 +3,7 @@ import { readClipboardText, insertPastedText } from "./clipboard.mjs"
 import { computeLayout } from "./layout.mjs"
 import { handleSearchKey } from "./key-handler-search.mjs"
 import { countConvLines } from "./render-conversation.mjs"
-import { QUESTION_CUSTOM } from "./interaction.mjs"
+import { handlePermissionMode, handleQuestionMode, handleInterruptMode } from "./key-modes.mjs"
 
 /** Current conversation max scroll offset (display lines beyond the visible panel). */
 export function convMaxScroll(state) {
@@ -25,121 +25,17 @@ export function createKeyHandler(ctx) {
 
   return function onKeypress(str, key = {}) {
     // permission confirm: y/n/a (a = approve + AUTO ON); batch (§16 D-B1): a/o/n (Esc = deny)
-    if (state.permission) {
-      const answer = (str || "").toLowerCase()
-      const isContinue = state.permission.name === "continue"
-      const isBatch = Boolean(state.permission.batch)
-      const validKeys = isContinue ? ["y", "n"] : isBatch ? ["a", "o", "n"] : ["y", "n", "a"]
-      if (validKeys.includes(answer) || key.name === "escape") {
-        const { resolve, name } = state.permission
-        state.permission = null
-        state.permissionPreview = []
-        state.status = "Processing..."
-        if (isBatch) {
-          // Merged batch ask: resolve the verdict string; dispatch applies it
-          // (approveAll = batch-scope allowance only, NOT the persistent AUTO flag).
-          const verdict = answer === "a" ? "approveAll" : answer === "o" ? "oneByOne" : "deny"
-          const tone = verdict === "approveAll" ? C.dim : C.error
-          pushLine(`  [${verdict === "approveAll" ? "approved" : verdict === "deny" ? "denied" : "one by one"}] ${name}`, tone)
-          resolve(verdict)
-          render()
-          return
-        }
-        if (answer === "a" && !isContinue) {
-          agent.autoApprove = true
-          agent._pendingReminders = agent._pendingReminders ?? []
-          agent._pendingReminders.push("[System reminder: AUTO mode is now ON. All tool calls are automatically approved. Use /auto to disable.]")
-          pushLine(`  [auto] AUTO ON: tool calls no longer prompt for approval (/auto to disable)`, C.warn)
-        }
-        const approved = answer === "y" || (answer === "a" && !isContinue)
-        // leave trail: record approval/denial in conversation (continue prompt has its own output, don't duplicate)
-        if (!isContinue) {
-          pushLine(`  [${approved ? "approved" : "denied"}] ${name}`, approved ? C.dim : C.error)
-        }
-        resolve(approved)
-        render()
-      }
-      return
-    }
+    // ——模态实现 key-modes.mjs handlePermissionMode（2026-09-03 D-S4）
+    if (handlePermissionMode(str, key, { state, agent, pushLine, render })) return
 
-    // question tool callback: free text / option selection
-    if (state.question) {
-      const q = state.question
-      if (q.options.length > 0) {
-        // options mode: ↑↓ select, Enter confirm, Esc cancel
-        if (key.name === "escape") {
-          q.resolve("")
-          state.question = null
-          state.status = "Processing..."
-          render()
-        } else if (key.name === "up") {
-          q.selected = Math.max(0, (q.selected ?? 0) - 1)
-          render()
-        } else if (key.name === "down") {
-          q.selected = Math.min(q.options.length - 1, (q.selected ?? 0) + 1)
-          render()
-        } else if (key.name === "return") {
-          const answer = q.options[q.selected ?? 0]
-          if (answer === QUESTION_CUSTOM) {
-            // Switch to free-text mode — the user wants to type their own answer.
-            q.options = []
-            q.answer = ""
-            q.selected = undefined
-            state.status = "Waiting for answer..."
-            render()
-            return
-          }
-          q.resolve(answer)
-          state.question = null
-          state.status = "Processing..."
-          pushLine(`  → ${answer}`, C.tool)
-          render()
-        }
-      } else {
-        // free text: type answer, Enter submit, Esc cancel
-        if (key.name === "escape") {
-          q.resolve("")
-          state.question = null
-          state.status = "Processing..."
-          render()
-        } else if (key.name === "return") {
-          if (q._pasting) return // block Enter while paste is in flight
-          const answer = (q.answer ?? "").trim()
-          q.resolve(answer || "")
-          state.question = null
-          state.status = "Processing..."
-          pushLine(`  → ${answer || "(empty)"}`, C.tool)
-          render()
-        } else if (key.name === "backspace") {
-          q.answer = (q.answer ?? "").slice(0, -1)
-          render()
-        } else if (key.ctrl && !key.alt && key.name === "v") {
-          // Ctrl+V paste: read clipboard text (fires when the terminal passes Ctrl+V through
-          // as a key event; bracketed-paste terminals are handled upstream in the stdin handler)
-          if (q._pasting) return
-          q._pasting = true
-          readClipboardText().then((text) => {
-            q._pasting = false
-            if (text) {
-              insertPastedText(state, text)
-              render()
-            }
-          }).catch((e) => {
-            q._pasting = false
-            console.error(`[tui] clipboard paste failed: ${e.message}`)
-          })
-        } else if (str && !key.ctrl && !key.meta) {
-          q.answer = (q.answer ?? "") + str
-          render()
-        }
-      }
-      return
-    }
+    // question tool callback: free text / option selection——模态实现
+    // key-modes.mjs handleQuestionMode（D-S4）
+    if (handleQuestionMode(str, key, { state, pushLine, render })) return
 
     // Search mode: Ctrl+F to enter, Ctrl+N/Ctrl+P (or Ctrl+G/Ctrl+R) navigate, Esc exit
     if (handleSearchKey(str, key, state, render)) return
 
-  if (key.ctrl && key.name === "c") {
+    if (key.ctrl && key.name === "c") {
       // picker 打开时 Ctrl+C = 取消当前 picker（等同 Esc），不杀进程
       if (state.picker) {
         popPicker(null)
@@ -148,7 +44,7 @@ export function createKeyHandler(ctx) {
       if (state.suspended) {
         // §17 D-S9 + round2 偏差 #4（2026-09-02）：挂起态 Ctrl+C = 武装窗口两级中止——
         // 一次按键直接清池中止全部后台子代理的误触代价高（digest 刷屏时用户可能只想
-        // 停住当前回合）；仿空闲态退出武装语义（:166-174）：
+        // 停住当前回合）；仿空闲态退出武装语义（同下方空闲态 exitArmed 双确认分支）：
         //   ① 未武装 + 有回合在跑（digest 消化/会话内回合）：仅中止当前回合
         //      （controller.abort()）——会话继续、后台子代理不受影响，回挂起等待；
         //   ② 未武装 + 纯挂起等待：仅提示不清池；
@@ -231,34 +127,9 @@ export function createKeyHandler(ctx) {
       return
     }
 
-    // Interrupt prompt mode: type message, Enter to inject, Esc to cancel
-    if (state.interruptPrompt) {
-      if (key.name === "escape") {
-        state.interruptPrompt = null
-        render()
-      } else if (key.name === "return") {
-        const msg = (state.interruptPrompt.text ?? "").trim()
-        state.interruptPrompt = null
-        if (msg) {
-          // Guard: if the turn already finished while the user was typing, the controller
-          // may have been replaced or already aborted — don't abort a live turn by mistake.
-          if (state.processing && state.controller && !state.controller.signal.aborted) {
-            pushLine(`  [inject] ${msg}`, C.warn)
-            state.controller.abort({ interrupt: true, message: msg })
-          } else {
-            pushLine(`  [inject — turn ended, message queued] ${msg}`, C.dim)
-          }
-          render()
-        }
-      } else if (key.name === "backspace") {
-        state.interruptPrompt.text = state.interruptPrompt.text.slice(0, -1)
-        render()
-      } else if (str && !key.ctrl && !key.meta) {
-        state.interruptPrompt.text += str.replace(/[\r\n]+/g, "")
-        render()
-      }
-      return
-    }
+    // Interrupt prompt mode: type message, Enter to inject, Esc to cancel——模态实现
+    // key-modes.mjs handleInterruptMode（D-S4）
+    if (handleInterruptMode(str, key, { state, pushLine, render })) return
 
     // generic list picker: ↑↓/PgUp/PgDn/Home/End 导航，输入即过滤，Enter 选中，Esc 取消
     if (state.picker) {
@@ -300,7 +171,6 @@ export function createKeyHandler(ctx) {
       } else if (str && !key.ctrl && !key.meta) {
         // 输入即过滤；粘贴的多行文本先去换行（与输入框清洗口径一致），仍含控制字符则整段丢弃
         const text = str.replace(/[\r\n]+/g, "")
-  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
         if (text && !/[\x00-\x1f\x7f]/.test(text)) applyFilter(p.filter + text)
       }
       return

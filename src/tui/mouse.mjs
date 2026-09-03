@@ -17,6 +17,8 @@
 import { computeLayout, subagentLineIndex } from "./layout.mjs"
 import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
+import { cancelAsyncSubagent } from "../agent-tools/subagent-async.mjs"
+import { C } from "./ansi.mjs"
 
 /** 2026-08-31 滚轮事件分派（用户需求"展开块能滚动阅读全文"）：坐标命中展开块内容行 →
  *  块内逐行滚动（scrollFoldBlock ±3）；未命中 → 会话滚动（调用方继续处理）。
@@ -172,4 +174,33 @@ export function handleMouseClick(ctx, col, row) {
   }
 
   return false
+}
+
+/** 鼠标装配簇（2026-09-03 D-S1a 自 index.mjs 迁入）：index.mjs 只留装配调用。
+ *  ctx: { agent, state, pushLine, render, popPicker }；返回 { onMouseClick, mouseCtx }。
+ *  cancelSubagent（⏹ 停止标记，§19.5 D-M7）：UI 停止不经模型回合，直连池 abort——
+ *  与 action:"cancel" 同实现路径。block key "role#id" → 池条目 id。 */
+export function createMouseDispatch({ agent, state, pushLine, render, popPicker }) {
+  const cancelSubagent = (key) => {
+    try {
+      const id = key.slice(key.lastIndexOf("#") + 1)
+      const r = cancelAsyncSubagent(agent, id)
+      if (r?.status === "error") {
+        // 池内无此条目但区块仍 live（!done）→ 阻塞型（sync）spawn 中——无池条目可定向
+        // 中止（§19.5 cancel 只针对 async 后台子代理）；给出可操作指引而非神秘 unknown id
+        const liveBlock = state.subTasks?.[key] && !state.subTasks[key].done
+        pushLine(liveBlock
+          ? `[subagent stop] ${key} is a blocking (sync) child mid-call — targeted stop is not available; use Ctrl+C to interrupt the turn`
+          : `[subagent stop] ${r.error}`, C.error)
+      } else {
+        pushLine(`[subagent ${key} stop requested]`, C.warn)
+      }
+    } catch (e) {
+      pushLine(`[subagent stop] ${e?.message ?? String(e)}`, C.error)
+    }
+    render()
+  }
+  const onMouseClick = (col, row) => handleMouseClick({ state, render, popPicker, cancelSubagent }, col, row)
+  const mouseCtx = () => ({ state, render })
+  return { onMouseClick, mouseCtx }
 }

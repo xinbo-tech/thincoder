@@ -133,6 +133,7 @@
 
 ## 已关闭（Done）
 
+- [x] **read_pdf 工具（2026-08-27 立项；TOOLS.md §11 设计 2026-09-03 评审 0🔴 + 用户拍板决策点）——已实现销账（CLI v1，2026-09-03）**：9 段解析管线落地——`pdf-parse-xref.mjs`（xref 经典表 + XRef 流 + PNG 预测器、ObjStm、Flate/ASCIIHex/85 + LZW 拒、inflate 上限 + 链式守卫、/Encrypt 拒绝）+ `pdf-parse-text.mjs`（页树、内容流操作符（后缀操作数）、ToUnicode CMap bfchar/bfrange + 编码回退（WinAnsi/Standard/MacRoman + /Differences，表对 Unicode.org/pdf.js 交叉验证）、ActualText ligature、(x,y) 布局 + 轻量 x 聚类分栏 + 段落）+ `pdf.mjs` 工具壳（multimodal:true 扫描页 {text,images} 回传——DCT JPEG 直提/Flate 灰阶转 PNG——视觉门降级文字提示；pages "1-3,5" 50 页上限坏规格报错；readonly）。同步面：index.mjs 注册（24→25 工具）、read_pdf.md DESC、read.md 路由行、双端 discipline.md 工具表 byte-identical、TOOLS.md §1/ARCHITECTURE.md/FEATURES.md。测试 test/pdf.test.mjs（fixture 运行时生成 + Chrome 打印 golden base64 交叉验证）。VS Code 镜像后续立项。
 - [x] 语义一致化 4 项（hasCodeMutations src/ 判定、dispatch 未知路径保守、isDocOnlyChange src/ 排除、直接单测）
 - [x] Verify 文档改动快路径（VERIFY-DOCONLY.md）
 - [x] Token 不消费——已确认（二次 spawn 测试锁死，T14）
@@ -158,7 +159,17 @@
 
 ### §19.5 交付跟进（2026-09-03——来源：id:9 交付报告 + advisor 🟡——父代理裁量）
 
-- [ ] **index.mjs 545 行 / render-conversation.mjs 576 行超 500 硬限**（既有债——基线 524/573——cancelSubagent/mouse ctx 装配可迁 mouse.mjs——拆分轮立项）
+- [x] ~~**index.mjs 545 行 / render-conversation.mjs 576 行超 500 硬限**（既有债——基线 524/573——cancelSubagent/mouse ctx 装配可迁 mouse.mjs——拆分轮立项）~~——2026-09-03 TUI.md §10.7 拆分轮落地（行数实测）：index.mjs 447 / render-conversation.mjs 425 / key-handler.mjs 393（D-S4 同批纳入）；迁入方 mouse.mjs 207 / startup.mjs 262；新模块 update-notice.mjs 73 / render-segments.mjs 163 / key-modes.mjs 163——npm test 全量绿、零测试改动（导出面 re-export 保证：upgradeFailureText/pendingNoticeReady 经 index 转发）
 - [ ] **sync（阻塞）spawn 区块 ⏹ 语义裁决**：面板无池信号无法区分 sync/async——sync 运行中 ⏹ 可见但不可中止（已实现"可操作指引"提示 Ctrl+C）——彻底方案（⏹ 按池成员门控）需跨 TUI 数据流改造——用户裁决后立项
 - [ ] **setup.mjs 受限变体 schema 描述补 cancel 词**（工具层错误信息已含——描述层同步）
+
+
+### 平台执行问题（2026-09-03——来源：用户实测观察）
+
+- [x] ~~**advisor 并行调用实为串行**~~——研究结论 v3（2026-09-03——**矛盾未解**）：仓内证据全指并行（dispatch 批并行——mock 日志实测 tA/tB 同刻 2011ms 完成；chat 并发实测 130-266ms 间隔；用户 CLI = 0.12.58 新版含批并行）——但**用户直接观察 = 4 advisor 块严格逐个出现（事实）**——矛盾 = 验证链盲区（模型响应与 CLI 执行间未知环节）——**处置：①多设计评审改逐个发起（绕开批量）②LOGGING 落地后（llm:start/done + tool:call/done 时间戳）下次批量调用日志自动取证定论——不再插桩/猜测**
+
+
+### §17 settle 时序缺陷（2026-09-03——来源：用户复现——"前端忙时后端 eng-coder 完成——丢 digest——没看到交付后处理"）
+
+- [ ] **settle 完成队列改造**（用户建议方向——正确）：settle 无条件入完成队列（不按 _suspended 分流）——空闲（回合尾/挂起/digest 轮）逐个消费注入——根治"回合尾 collect 直注入"的时序缝隙（settle 窗口与 collect/digest 判定错位——报告滞留池——digest 不触发——交付"丢"）——诊断 explore 已派——收尾链完整时序定位后落设计（§17 硬化轮——与"4 explore 主回合未消化"同族）
 

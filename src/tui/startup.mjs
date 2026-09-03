@@ -2,6 +2,7 @@ import { listSlots } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"
+import { countConvLines } from "./render-conversation.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads
  *  the latest INITIAL_HISTORY_MESSAGES, then PgUp-at-top loads HISTORY_PAGE_MESSAGES
@@ -133,6 +134,41 @@ export function restoreLines(state, history) {
     state.lines.unshift({ text: `… ${start} more earlier messages (PgUp at top to load)`, color: C.dim })
   }
 }
+/** 懒加载更早历史（2026-08-31 用户约定："滚动到头自动加载"——滚轮/PgUp 到顶皆触发；
+ *  2026-08-31 前只挂 PgUp 键 = 违约，滚轮到头无反应）。加载后滚动补偿保持锚定。
+ *  2026-09-03 D-S1b 自 index.mjs 迁入（startup 职责本含懒加载历史窗口——TUI.md §1 归属修复）：
+ *  调用方（index.mjs）= stdin data 滚轮分支 + createKeyHandler ctx（PgUp 分支）。
+ *  ctx: { agent, state, render } */
+export function createLoadOlder({ agent, state, render }) {
+  return () => {
+    if (!state._hasOlder) return
+    const full = agent._fullHistory ?? []
+    const loaded = state._historyLoaded
+    const start = Math.max(0, full.length - loaded - HISTORY_PAGE_MESSAGES)
+    const end = full.length - loaded
+    if (start >= end) return
+
+    const d = state.dims ? state.dims.get() : {}
+    const cols = d.cols ?? ((state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80))
+    const before = countConvLines(state, cols, d.rows ?? (process.stdout.rows || 24))
+
+    if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
+    state._lineIdCounter = state._lineIdCounter ?? 0
+    const older = historyToLines(full, start, end)
+    for (const l of older) l._lineId = ++state._lineIdCounter
+    state.lines.unshift(...older)
+    state._historyLoaded += end - start
+    state._hasOlder = start > 0
+    if (state._hasOlder) {
+      state.lines.unshift({ text: `… ${start} more earlier messages (scroll to top to load)`, color: C.dim })
+    }
+
+    const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
+    state.scroll += Math.max(0, after - before)
+    render()
+  }
+}
+
 /** Startup screen + session recovery + background indexing.
  *  Extracted from index.mjs.
  *  ctx: { agent, state, opts, pushLine, pushLabel, render, startWizard } */
