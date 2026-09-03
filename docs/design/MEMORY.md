@@ -151,9 +151,9 @@ search(memory, query, { limit })
 - F-M1：单工具 `memory`——action: "search"（现 memory_search——query/scope/limit——只读）
 - F-M2：action: "put"（现 memory_put——type/title/content/tags/scope——side-effect 权限门维持）
 - F-M3：action: "list"（新）——{scope?, type?, keyword?, limit?} 过滤——输出紧凑清单（id/title/type/日期——不拉全文——limit 默认 50）
-- F-M4：action: "delete"——单条形态（id + scope——现语义）+ **条件批量形态**（scope 必填 + type?/keyword? → 匹配多条删除——删除前返回将删条数/预览——**confirm:true 必填**——全层开放（personal + project/team——共享层可治理））
-- F-M5：action: "clear"（新）——**仅 personal 层全清**——confirm:true 必填——project/team 拒绝 clear（错误提示指引条件批量 delete）
-- F-M6：两端对称（CLI src/memory/docs.mjs + VS Code src/memory.mjs——byte-identical 工具面）
+- F-M4：action: "delete"——单条形态（id + scope——现语义）+ **条件批量形态**（scope 必填 + **type/keyword 至少其一（评审 #4）** → 匹配多条删除——删除前返回将删条数/预览——**confirm:true 必填**——全层开放（personal + project/team——共享层可治理——team 复活注沿用））
+- F-M5：action: "clear"（新）——**scope 必填且仅接受 personal（评审 #3——缺省/其他 scope 拒绝）**——confirm:true 必填——project/team 拒绝 clear（错误提示指引条件批量 delete）
+- F-M6：两端对称（CLI src/memory/docs.mjs + VS Code src/memory.mjs——**byte-identical 边界：action 枚举/参数形态/描述逐字一致——scope 值域按端能力（评审 #5——VS Code 无 team——收到 team → 明确拒绝并指引 CLI）**）
 
 **非功能性需求**：既有行为零回归（search 语义/put 权限门/delete 单条等价——action 路由后行为不变）；门禁纪律（批量删/clear = side-effect 高危——confirm 必填 + scope 必填——project/team clear 拒）。
 
@@ -161,13 +161,14 @@ search(memory, query, { limit })
 
 - **D-M1 工具定义重构**（CLI `src/memory/docs.mjs` + VS Code `src/memory.mjs`——同构）：`memoryTools()` 三工具（memory_put/search/delete）→ 单工具 `memory`——action enum ["search","put","list","delete","clear"]——参数按 action 分支——**描述写清 action 语义 + list/delete 批量/clear 的门禁要求**——旧工具名从工具表消失（退役——引用面同批清理）
 - **D-M2 list 实现**：按 scope/type/keyword 过滤 entries/files——keyword 对 title/content LIKE——limit 截断 + 总条数注（"N 条——截断前 M"）——输出行：`id [type] title（date）`——compact
-- **D-M3 delete 双形态**：单条（id + scope——现 deleteByScope 语义）；批量（scope 必填 + type?/keyword?——先 count 匹配 → 返回 "将删 N 条：<前 5 条预览>"——confirm:true 后执行——无匹配 = 明确"0 条匹配"不报错——**confirm 缺失 = 拒绝（不删——返回预览让调用方带 confirm 重发）**）
-- **D-M4 clear**：仅 personal——confirm:true 必填——执行清空 entries 表 personal 全部——project/team scope 传入 → 拒绝错误（"共享层不支持 clear——用 delete 批量条件删"）
-- **D-M5 引用面同步**：permission.mjs（memory_put 特判 → memory action:put 判定——侧效确认同面）、interaction.mjs 预览、tool-args.mjs 标题路由（memory_put/search 特判 → action 路由）、context.mjs 提示词提及（memory_search → memory search）——两端——discipline.md/README 工具表
-- **D-M6 测试**（CLI + VS Code）：list（scope/type/keyword/limit 过滤 + 输出形态 + 空库）；delete 批量（匹配删/confirm 缺失拒绝返回预览/无匹配明确/单条形态回归）；clear（personal confirm 后清空/project 拒绝/无 confirm 拒绝）；search/put 经 action 路由行为等价回归（既有用例改路由断言）
-- **D-M7 验收**：五动作全绿两端——门禁四拒（批量无 confirm/clear 无 confirm/clear project/clear 无 scope）——既有 memory 行为回归（等价）——旧工具名零残留（grep memory_put/memory_search/memory_delete 工具注册处——引用面已清）——MEMORY.md §6 勾销
+- **D-M3 delete 双形态**：单条（id + scope——现 **deleteByUid 单条语义（CLI——评审 #1 符号修正）**/VS Code 单删语义）；批量（scope 必填 + **type/keyword 至少其一（评审 #4——无过滤批量删 = 整层清空会绕过 clear 拒共享层门禁——拒绝并指引）**——先 count 匹配 → 返回 "将删 N 条：<前 5 条预览>"——confirm:true 后执行——无匹配 = 明确"0 条匹配"不报错——**confirm 缺失 = 拒绝（不删——返回预览让调用方带 confirm 重发）**）
+- **D-M4 clear**：**scope 必填且仅接受 personal（评审 #3——缺省/其他 scope → 拒绝并指引——规格句自洽）**——confirm:true 必填——执行清空 personal 全部（**personal = 纯 DB entries 行——无 markdown 文件（评审 #2——§1 存储表述同批更正）——FTS/embedding 随行触发器清理——清空后检索零残留**）——project/team scope 传入 → 拒绝错误（"共享层不支持 clear——用 delete 批量条件删"）
+- **D-M5 引用面同步（评审 #7 批准链补全——按 action 判定——不能按工具名）**：permission.mjs/interaction.mjs/tool-args.mjs 的既有特判全部改按 action 路由——**search/list 只读不过门；put 维持侧效确认门；批量 delete/clear = confirm:true + scope 门禁（评审 #7——是否叠加人类确认由实现核实现有单删先例——沿用直接删裁定——confirm 参数即门禁）**——context.mjs 提示词提及（memory_search → memory search）——主循环按名挂钩（`<untrusted_memory>` 注入点——评审 #8——列入引用面清理）——两端——discipline.md/README 工具表——**team 批量删复用 gitmem 复活注（评审 #7——单删既有语义：本地删 + gitmem 拉取可能复活——批量同注）**
+- **D-M6 测试**（CLI + VS Code）：list（scope/type/keyword/limit 过滤 + 输出形态 + 空库）；delete 批量（匹配删/confirm 缺失拒绝返回预览/无匹配明确/单条形态回归）；clear（personal confirm 后清空/project 拒绝/无 confirm 拒绝——**评审 #9 补断言：clear 后 search 零命中 + FTS 零残留**）；search/put 经 action 路由行为等价回归（既有用例改路由断言）——**批量删返回预览文本/截断提示（"N 条——截断前 M"）逐字断言（评审 #9）**
+- **D-M7 验收**：五动作全绿两端——门禁四拒（批量无 confirm/批量无过滤条件/clear 无 confirm/clear 非 personal）——既有 memory 行为回归（等价）——旧工具名零残留（**评审 #8：全仓 grep——含 prompts/docs 文本——排除 §0/§0.1 as-of 历史段**）——**byte-identical 边界（评审 #5：action 枚举/参数形态/描述逐字一致——scope 值域按端——VS Code team → 明确拒绝并指引 CLI）**——MEMORY.md §6 勾销 + §3/§4 工具枚举同步（评审 #6）
 
 ### 6.3 受影响文件（两仓）
 
-- CLI：`src/memory/docs.mjs`（重构）+ `src/memory/core.mjs`（只读——如需批量删辅助函数）+ `src/cli/permission.mjs` + `src/tui/interaction.mjs` + `src/tui/tool-args.mjs` + `src/context.mjs`（提示词）+ 测试 + `docs/design/MEMORY.md`（本段）+ discipline.md/README（工具表——若列旧名）
+- CLI：`src/memory/docs.mjs`（重构）+ `src/memory/core.mjs`（只读——如需批量删辅助函数）+ `src/cli/permission.mjs` + `src/tui/interaction.mjs` + `src/tui/tool-args.mjs` + `src/context.mjs`（提示词提及）+ 主循环挂钩点（`<untrusted_memory>` 注入——评审 #8）+ 测试 + `docs/design/MEMORY.md`（**本段 + §1 personal 存储措辞更正（评审 #2）+ §3/§4 工具枚举同步（评审 #6）**）+ discipline.md/README（工具表——若列旧名）
 - VS Code：`src/memory.mjs`（重构）+ 对应引用面 + 测试
+- **范围声明（评审 #10）：CLI 人类命令面（memory-command.mjs search/put/remove）本次不扩展 list/clear/批量删——工具面重构不影响命令面（核心路由复用——无漂移）**
