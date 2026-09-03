@@ -1381,6 +1381,7 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 - F-PS2：engineering.md 并行段（Multi-Task Parallelism——同文件不并行/依赖串行手动纪律）同款升级
 - F-PS3：任务书引导——spawn 声明 files（写域）+ dependsOn（依赖）——调度器自动准入/排队/补位——同文件任务可并行派（自动 queued——冲突清自动启动）
 - F-PS4：两端 byte-identical（15 prompts 铁律）
+- **F-PS5（复审 #6 补——system.md §14 D1 carve-out）：system.md "Do NOT parallelize" 条款加 carve-out（声明 files 的 async spawn → 调度器排队例外——旧禁令限定未声明/工具级并行写）——T-PS3/AC-PS4 承载**
 
 **非功能性需求**：条款精简短（提示词预算——不喧宾夺主）；模型可操作（读完知道 spawn 时该带什么参数）。
 
