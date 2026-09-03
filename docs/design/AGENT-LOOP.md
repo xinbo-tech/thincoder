@@ -969,13 +969,14 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | check | id?（省 = 下一完成）/ n（必填） | 报告（arrival order/指定 id——消费） | **阻塞**（等目标 settle——显式取回语义） |
 | status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?, ...}`——不消费（§19.5：running 带 model/elapsedSec/turn/maxTurns；queued 带 position——**§20：queued 等待态带 waiting/reason**——20.5） | **不阻塞**（立即） |
 | escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义） |
-| panel（§19.6 新增——评审 #1 补行：view=readonly 类/freeze=控制类（门禁分类见 19.6.2——digest 放行/受限变体拒） | {view?, freeze?}（互斥——view 默认） | 镜像快照/冻结回收确认 | 读时交叉 pending 标注 digested | | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效） |
+| panel（§19.6 新增——评审 #1 补行：view=readonly 类/freeze=控制类（门禁分类见 19.6.2——digest 放行/受限变体拒） | {view?, freeze?}（互斥——view 默认） | 镜像快照/冻结回收确认 | 同步（工具调用即返回——镜像/冻结动作即时完成） |
+| cancel（§19.5 新增——评审 #1 拆行修正：原行与 panel 行融合损坏） | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效——同 §19.5.2b 行逐字） |
 
 > **supersede 注（2026-09-03 §19.5 实现轮）**：本矩阵 action 面随 §19.5 控制面扩展为**五动作**——cancel 行的门禁分类（控制类豁免）、定向中止语义（cancelled settle/queued 出队/模型可见提醒）与 AC-M1 措辞见 §19.5（D-M6/19.5.2b）——§15 D-A2 先例：本段保留为 as-of 快照，实现以 §19.5 为准。——**域澄清（评审 #2）：AC-M1 五动作 = §19 cancel 批域验收——§19.6 加 panel 后工具面六动作（NF-P 口径）——域不同不冲突——2026-09-03**
 
 **D-M2 status 形态**（§19.5 D-M5 修订：概览条目从 id 数组改**结构化对象数组**——`{ overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}] }, target?: {...} }`）——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
 
-**D-M4 escalate 并入（评审 2026-09-03 用户裁定）**：既有 escalate 执行逻辑（escalate.mjs——resolveChildProvider 选模型/createAgent coder role/runWithContinue/mergeChildMutations/术后报告）搬入 subagent 工具的 `action:"escalate"` 分支——保留全部既有约束：depth-0 only（depth>0 → error）、工程模式禁用（engineering → error——"实现走 eng-coder"）、consultModels 空 → error、模型选择校验、**relay 前缀 `escalate#N/` 保留**（action 名 escalate 与既有前缀同名——TUI 路由/subagent-blocks/tool-events **零改动**——区块显示/活动流不变）。`escalateTool` 退役（escalate.mjs 移除——setup.mjs 注册点删——subagent 工具常驻——escalate action 在 consultModels 空时返回 error——既有错误语义）。触发词条款（提示词——"用户说 飞刀/escalate → 调 subagent action:escalate"）随提示词迁移。**引用面**：174 处——~113 为 escalate.mjs 自身 + escalate.test.mjs（随迁移消解）；外部集成 = setup.mjs 注册（删）+ 提示词条款（改）+ 测试迁移（escalate.test.mjs 直接调 escalateTool → subagent action:"escalate"）——UI/事件/配置零改动。
+**D-M4 escalate 并入（评审 2026-09-03 用户裁定）**：既有 escalate 执行逻辑（escalate.mjs——resolveChildProvider 选模型/createAgent coder role/runWithContinue/mergeChildMutations/术后报告）搬入 subagent 工具的 `action:"escalate"` 分支——保留全部既有约束：depth-0 only（depth>0 → error）、工程模式禁用（engineering → error——"实现走 eng-coder"）、consultModels 空 → error、模型选择校验、**relay 前缀 `escalate#N/` 保留**（action 名 escalate 与既有前缀同名——TUI 路由/subagent-blocks/tool-events **零改动**——区块显示/活动流不变）。`escalateTool` 退役（escalate.mjs 移除——setup.mjs 注册点删——subagent 工具常驻——escalate action 在 consultModels 空时返回 error——既有错误语义）。触发词条款（提示词——"用户说 飞刀/escalate → 调 subagent action:escalate"）随提示词迁移。**引用面**：174 处——~113 为 escalate.mjs 自身 + escalate.test.mjs（随迁移消解）；外部集成 = setup.mjs 注册（删）+ 提示词条款（改）+ 测试迁移（escalate.test.mjs 直接调 escalateTool → subagent action:"escalate"）——UI/事件/配置零改动。——**评审 #2 补：受影响清单加 docs/design/ESCALATE.md（supersede/指向编辑——工具面退役但机制文档更新调用路径为 action:"escalate"）+ TOOLS.md 工具注册表核验（escalate/subagent_check 名称残留——同批清）**
 
 **D-M3 迁移（subagent_check 退役）**：17 处引用改——`subagent-async.mjs`（subagentCheckTool 定义 → 并入 subagentTool 的 check 动作——模块内合并）、`subagent.mjs`（工具描述重写——含 check 阻塞警告 + status 提示——"查进度用 status——check 会阻塞直到完成"——防 §19 触发场景重演）、`main.md`/`engineering.md` 等提示词引用（subagent_check 名称 → subagent action 语义）、测试（subagent_check 直接调用点 → action:"check"）。**挂住问题根治 = 描述层**：status 存在 + check 描述显式"阻塞"——模型查进度选 status。**受限变体 action 门控（round2 #3）**：§18 D-E3 的 eng-coder 受限 subagent 变体（explore-only + 同步）机械门控扩展——变体内仅 `action:"spawn"`（+ explore role + sync）放行——`escalate`/`check`/`status` 动作工具层拒绝（escalate 会内部 spawn coder+WRITE——违 explore-only 意图；check/status 在子代理上下文无意义——无 async 池）——补测试（镜像 T-E4/E5 的 action 维度）。**文件归属定句（评审 #3）**：`subagentCheckTool` 现定义于 `subagent-check.mjs`（退役——并入 subagent.mjs 的 check 动作）；`subagent-async.mjs` 保留 async 机制（settle/collect/审计任务书等）——迁移清单以此为准
 
@@ -1131,7 +1132,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 - **D-CL1 镜像锚（subagent.mjs cancel 动作描述尾句追加——逐字定稿——双端照抄）**：
   > "Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives. **Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first; prefer scoped recovery (restore a single affected file) over killing the child — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited.**"
-- **D-CL2 镜像锚（engineering.md Multi-Task Parallelism 段尾句追加——逐字定稿）**：
+- **D-CL2 镜像锚（engineering.md Multi-Task Parallelism 段尾句追加——逐字定稿——评审 #3：与 §20.7 D-PS2 同段——实现时锚 post-D-PS2 文本——两节互指——不先于 §20.7 落）**：
   > "Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."
 - **D-CL3 AGENT-LOOP 注**：§19.5 D-M6（cancel 语义）行补决策注（"cancel = 最后手段——父侧核实纪律（personal:58——核实优先/最小干预/最后手段）——§18 交付协议下 partial 永不合并"）
 - **D-CL4 测试**：T-CL1 内容断言（subagent.mjs 描述含 "last resort" + "verify alarming signals"——fail-when-unchanged——双端）；T-CL2（engineering.md 含 "Cancelling a running eng-coder is a last resort"——双端）；既有 T-M12（subagent 描述内容锚）若断言全文则同步
@@ -1398,9 +1399,9 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 - **复审轮 #7/#8 残留闭合（结构性守卫）**：advisor round2 发现守卫仅覆盖 depc-kind——wait-kind 条目（文件域阻塞源 = 另一条 queued-depc 条目）在无 running 池中同样永不启动（refill 由 settle 驱动——无 running = 无 settle）→ check 仍悬挂。修复：守卫扩为**结构性判据**——① target 级：queued 目标且池内无 running → 立即返回 queued+位置/原因+引导注记（depc 分支保持优先——原文案）；② arrival-order：无 running 且无 done（done 条目经已 resolve settled 即时消费——不误伤）→ 明确错误（逐条列 stuck 状态）。池有 running → 守卫放行（等待语义保留——running settle 唤醒——对照用例锁定）。AUTO 无 running 同样立即返回（带 AUTO 引导注记——语义修订：原③"等待放行"改为"立即返回"——无 running 时 AUTO 也无法触发 refill）。双端测试扩展（CLI subagent.test #3 场景 ③④⑤ / VS Code 镜像 ③④⑤⑥）。
 
 
-#### 20.7 prompts 调度器条款升级（2026-09-03 · 设计——用户指出——待评审）
+#### 20.7 prompts 调度器条款升级（2026-09-03 · 设计——用户裁定——**已批准**——评审 #4 标题同步）
 
-> 状态：设计（2026-09-03 用户指出——§20 实现后提示词同步缺口——"现在不是有调度器了吗？子agent任务排队应该让调度器去处理，提示词里反映了吗？"）。来源：TODO 立项（f874a4f）——main.md Delegation 段旧纪律未随 §20 升级。
+> 状态：**设计批准（2026-09-03 评审 0🔴 通过——token 00fde4f4——实现记录见下——评审 #4 生命周期标记修正）**。来源：TODO 立项（f874a4f）——main.md Delegation 段旧纪律未随 §20 升级。
 
 ### 20.7.1 需求
 
