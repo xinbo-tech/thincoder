@@ -1387,12 +1387,11 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 ### 20.7.2 设计
 
 - **D-PS1 镜像锚（main.md Delegation 段替换句——逐字定稿——两端照抄）**：
-  > "**Declare spawn scheduling metadata**: pass `files` (the write domain) and `dependsOn` (prior async ids) when delegating — the scheduler auto-serializes overlapping-file tasks (queued until clear) and orders dependency chains. Same-file parallel spawns are safe to fire — the queue handles contention; never hand-serialize what the scheduler queues."
-- **D-PS2 engineering.md 并行段替换句（逐字定稿）**：
-  > 现有"两任务共享文件 → 串行/合并"措辞改为"声明 files/dependsOn——调度器准入闸自动处理重叠（冲突 spawn 排队等清——依赖链自动排序）——镜像型双端任务拆并行 eng-coder（各声明自己的文件域）——只有文件域重叠才由调度器排队（仍可并行派）"
-- **D-PS3 测试**：T-PS1 内容断言（main.md/engineering.md 含新条款字样——fail-when-unchanged——两端 byte-identical——T-W3 式）；T-PS2 旧条款零残留（"Never give parallel subagents tasks that edit the same files" 字样消失）
-- **D-PS4 验收**：两端 prompts 同步（byte-identical）；内容断言过；T-M12 描述预算不受影响（subagent 工具描述无改动——纯 prompts 文本）
+  > "**Declare spawn scheduling metadata**: pass `files` (the write domain) and `dependsOn` (prior async ids) when delegating — **for async spawns with `files` declared**, the scheduler auto-serializes overlapping-file tasks (queued until clear) and orders dependency chains. Same-file async spawns are safe to fire with files declared — the queue handles contention; **declare `files` or the scheduler can't serialize (undeclared = no detection); sync spawns conflicting on files error out (not queued)**; never hand-serialize what the scheduler queues."（评审 #3 限定——不过度承诺）
+- **D-PS2 engineering.md 并行段替换（评审 #2——逐字锚——实现时先贴出 engineering.md Multi-Task Parallelism 段当前原文作内容锚——替换后旧措辞零残留断言同 T-PS2）**：现有"同文件不并行/依赖串行手动纪律"措辞改为"声明 files/dependsOn——调度器准入闸自动处理重叠（async 冲突 spawn 排队等清——sync 冲突报错——依赖链自动排序）——镜像型双端任务拆并行 eng-coder（各声明自己的文件域）——文件域重叠由调度器排队（仍可并行派）"
+- **D-PS3 测试（评审 #4——in-file 先例 + 具名文件）**：T-PS1 内容断言（main.md/engineering.md 含新条款——fail-when-unchanged——T-B4 式（§16）——CLI advisor.test.mjs/VS Code 对应测试）；T-PS2 旧条款零残留（main.md "Never give parallel subagents tasks that edit the same files" + **engineering.md 旧措辞同断言（评审 #2）**——两端）；**T-PS3（评审 #1——system.md 一致性）：system.md §14 D1 条款含 carve-out（"declared files → scheduler queues"——旧禁令限定为未声明/工具级并行写）——T1 断言（§14——system.md 文本锚）同步更新**
+- **D-PS4 验收（AC 表回指 F-PS1..4——评审 #2）**：AC-PS1（F-PS1）main.md 新条款在 + 旧句零残留（T-PS1/2）；AC-PS2（F-PS2）engineering.md 同（T-PS1/2）；AC-PS3（F-PS3）任务书引导可验证——spawn 参数声明引导句在（D-PS1 内嵌——T-PS1 锚该句）；AC-PS4（F-PS4）两端 prompts 同步 byte-identical + **system.md carve-out 两端同（T-PS3）**；AC-PS5（NFR）T-M12 描述预算不受影响（subagent 工具描述无改动——纯 prompts 文本）
 
 ### 20.7.3 受影响文件
 
-- CLI + VS Code：`src/prompts/main.md`、`src/prompts/engineering.md`（各 15 文件对中的 2——byte-identical）+ 测试 + AGENT-LOOP.md（本段勾销）
+- CLI + VS Code：`src/prompts/main.md`、`src/prompts/engineering.md`、**`src/prompts/system.md`（§14 D1 carve-out——评审 #1）**（各 15 文件对中的 3——byte-identical）+ 测试（CLI advisor.test.mjs/VS Code 对应——T-PS1..3）+ AGENT-LOOP.md（**本段 + §14 F3/F5/F7/D1 supersede 指针 + §13 point 4 注（评审 #1）**）+ **两端 CHANGELOG（父代理统一）+ VS Code ARCHITECTURE.md 引用段注（评审 #5——§14/§16 先例）**
