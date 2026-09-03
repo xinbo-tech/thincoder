@@ -768,6 +768,36 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ---
 
 
+
+### 7.2.3 sync spawn 完成精确冻结（2026-09-03 · 设计——方案 e——待评审）
+
+> 状态：设计定稿，待评审。触发：用户实测——"主 agent 同步发起的 explore 完成后未从 subagent 面板回收"——场景确认：sync explore 与后台 async eng-coder 并存面板——explore 完成残留面板。
+
+#### 7.2.3.1 问题（根因——代码已确认）
+
+finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式冻结（L151-158）——假设"完成的就是最早启动的"——**只在面板单 running 块时成立**。§15 async 化后：async eng-coder（先 started）与 sync explore 并存——explore 完成 → onToolResult → finishSubTask 冻最早 started = **误冻 eng-coder 块**（还在跑——迟到 token 靠墓碑吞）——**explore 块残留面板不回收**。对照：async settle 精确（⟦ev⟧done 带 relayPrefix）——**sync 是唯一启发式路径**（§15 前单块假设残留）。
+
+#### 7.2.3.2 设计（方案 e——ctx 回传 key → onToolResult 精确冻）
+
+1. **subagent execute（sync spawn 路径）**：makeRelay 已生成 relayPrefix（role#N）——execute 返回前 ctx 上留 `ctx._subagentKey = relayPrefix.slice(0, -1)`
+2. **dispatch runOne**：execute 返回后、onToolResult 前——读 `ctx._subagentKey`——`callbacks.onToolResult(name, result, toolId, subKey)`（第四参——undefined 兼容既有签名）
+3. **TUI onToolResult**：sync 完成（非 async 结果）——`subKey` 有值 → **新 finishSubTaskKey(state, key, lastError)** 精确冻（含 freezeDoneSubTasks——删条目）；subKey undefined（旧路径/异常）→ 启发式兜底保留
+4. **并行 sync spawn**（同批 N explore——dispatch 批并行）——各 runOne 独立 ctx——各带自己 key——乱序完成精确 ✓
+5. **async 路径零改动**（⟦ev⟧done 已精确——settle 回调带 relayPrefix）
+6. 启发式状态：全部 sync 路径带 key 后——启发式仅兜底（未知工具/老回调）——不删（防御）
+
+**受影响文件**：src/agent-tools/subagent.mjs（sync spawn execute ctx._subagentKey）、src/agent/dispatch.mjs（runOne onToolResult 传参）、src/tui/tool-events.mjs（onToolResult 收 subKey——sync 分支精确冻）、src/tui/subagent-blocks.mjs（新 finishSubTaskKey）、测试（subagent-blocks/tool-events——sync + async 混跑面板回收用例）
+
+#### 7.2.3.3 测试（硬验收）
+
+- T-F1：sync explore 完成（面板仅它）→ 回收（既有行为回归）
+- T-F2：**sync explore + async eng-coder 并存**——explore 完成 → explore 块冻结回收——eng-coder 块保持 running（不误冻）
+- T-F3：并行 2 sync explore 乱序完成 → 各自块精确回收（无误冻错位）
+- T-F4：async settle 路径回归（⟦ev⟧done 精确冻结不变）
+- T-F5：subKey undefined 兜底（启发式——异常路径不崩）
+
+**验收**：AC-F1 = sync 完成必回收且不误冻他块（T-F2/F3）；AC-F2 = async/既有路径零回归（T-F1/F4）；AC-F3 = 兜底防御（T-F5）
+
 ### 17.5 §17 硬化轮：settle 完成队列（2026-09-03 · 设计——方案 B 用户批准——待评审）
 
 > 状态：设计批准（2026-09-03 round1 通过——0🔴——6 refinement 处置注见 17.5.4——designToken 已签发）。触发：用户复现——"前端回合在跑时后端 eng-coder 完成——丢 digest——没看到交付后处理"——建议"先进完成队列——前端忙完再挨个处理"（explore 诊断 2026-09-03——缝隙 A 滞留/B 结构性互斥/C 可见性——TODO 立项）。
