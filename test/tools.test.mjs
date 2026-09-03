@@ -2676,21 +2676,61 @@ test("execute: timeout 生效——无限循环脚本在限定时间内返回错
   }
 })
 
-test("execute: require()/process 可用（无伪沙箱——bash 本就能触达任意 Node API）", async () => {
+test("execute: inline code 是纯净 node ESM——process/import() 全 Node 可用（无伪沙箱）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec2-"))
   try {
-    const out = await executeTool.execute({ code: 'const fs = require("node:fs"); log(typeof fs.readFileSync, typeof process.cwd)' }, { cwd: dir })
+    const out = await executeTool.execute({ code: 'const fs = await import("node:fs"); console.log(typeof fs.readFileSync, typeof process.cwd)' }, { cwd: dir })
     assert.equal(out, "function function")
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 })
 
-test("execute: 正常沙箱行为不受影响（log/readFile/grep）", async () => {
+test("T-E1: execute inline code 不注入预置全局（readFile/writeFile/glob/grep/log/require 全 undefined——§12 F-E1）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-tE1-"))
+  try {
+    const out = await executeTool.execute(
+      { code: 'console.log(typeof readFile, typeof writeFile, typeof glob, typeof grep, typeof log, typeof require)' },
+      { cwd: dir },
+    )
+    assert.equal(out, "undefined undefined undefined undefined undefined undefined")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T-E4: execute inline code 调用已删助手（readFile）→ ReferenceError 明确失败（不静默）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-tE4-"))
+  try {
+    const out = await executeTool.execute({ code: 'readFile("x.txt")' }, { cwd: dir })
+    assert.match(out, /ReferenceError/)
+    assert.match(out, /readFile is not defined/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("T-E2: execute 描述不再宣称预置全局 + 含文件操作路由句（§12 F-E2——absence + presence 双断言）", () => {
+  const mdDir = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "tools")
+  const md = readFileSync(join(mdDir, "execute.md"), "utf8")
+  const codeParam = executeTool.parameters.properties.code.description
+  const surfaces = { "execute.md": md, "execute 工具 description": executeTool.description, "code 参数 description": codeParam }
+  for (const [name, text] of Object.entries(surfaces)) {
+    for (const stale of ["Globals:", "readFile(path)", "writeFile(path, content)", "prelude"]) {
+      assert.ok(!text.includes(stale), `${name} 仍含 prelude 预置声明 "${stale}"`)
+    }
+    assert.ok(text.includes("read/ls/glob/grep/write/edit"), `${name} 缺文件操作路由句（read/ls/glob/grep/write/edit 专用工具）`)
+    assert.ok(text.includes("no globals are injected") || text.includes("no preloaded"), `${name} 缺纯净 ESM 声明`)
+  }
+})
+
+test("execute: 原生 fs 读取 + 正则过滤（grep 助手退役后同语义的 node 实现——D-E5）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec3-"))
   writeFileSync(join(dir, "f.txt"), "hello\nworld\n")
   try {
-    const out = await executeTool.execute({ code: 'log(grep("wor", "f.txt").join(","))' }, { cwd: dir })
+    const out = await executeTool.execute({
+      code: 'const { readFileSync } = await import("node:fs"); const ls = readFileSync("f.txt", "utf8").split("\\n"); console.log(ls.map((l, i) => `${i + 1}: ${l}`).filter((x) => /wor/.test(x)).join(","))',
+    }, { cwd: dir })
     assert.equal(out, "2: world")
   } finally {
     rmSync(dir, { recursive: true, force: true })

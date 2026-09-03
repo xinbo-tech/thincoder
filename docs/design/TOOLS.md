@@ -10,12 +10,12 @@
 
 | 项 | 指标 |
 |---|---|
-| 工具超时 | bash 120s；execute 沙箱强杀（默认 30s 上限）；其余工具同步即时返回 |
+| 工具超时 | bash 120s；execute 子进程超时强杀（默认 30s、上限 60s）；其余工具同步即时返回 |
 | 读/输出上限 | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览） |
 | 网络响应体 | websearch/fetch ≤5MB；HTML 转文本（stripTags/htmlToText） |
-| 路径安全 | ~~`resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算~~——**被 §10.1 取代（2026-09-02）**：边界断言移除，路径仅相对 cwd 解析，权限门禁为唯一防线 |
+| 路径安全 | ~~`resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算~~——**被 §10.1 取代（2026-09-02）**：边界断言移除——统一为无边界解析（resolveInCwd/resolveExternal 等价：相对路径相对 cwd 解析、绝对路径原样解析）；信任模型 + 权限门禁为唯一防线 |
 | 命令安全 | 破坏性命令 snapshot-then-proceed（审批 + gitGuardSnapshot/checkpoint），文本拦截仅提示不拦截 |
-| execute 沙箱 | `import()` 动态加载阻断、`require()`/`process` 禁、超时强杀——只出不进 |
+| execute | 纯净 node ESM 子进程（与 bash 同边界：`import()`/`require()`/`process` 全可用、无阻断、无目录限制）——超时强杀（默认 30s、上限 60s）；**exec-prelude 助手已退役（2026-09-03 §12——不预置任何全局——文件操作走专用工具）** |
 | 返回契约 | `execute` 必须返回字符串（undefined 视为错误，dispatch 显式检查） |
 
 ## 1. 注册与 schema
@@ -36,7 +36,7 @@
 | **lint** | `node --check` fast path + 语言级联（tsc/ruff/cargo/go vet）——~~eslint 级联~~（2026-09-02 §10.2 删除，零依赖） |
 | **lsp** | 按需 spawn LSP server（`process.execPath` 直跑，无 shell），语义级诊断/跳转兜底 |
 
-**execute 工具（沙箱）**：`import()` 动态加载被阻断（防沙箱逃逸）、`require()`/`process` 访问被禁、超时强杀——代码执行只出不进（模型在隔离环境跑用户代码）。
+**execute 工具**（纯净子进程——2026-09-03 §12 更新）：子进程跑 `node --input-type=module --eval`/scriptFile——顶层 await/动态 `import()`/`console`/`fetch`/`process` 全可用（非 vm 沙箱、无 import 阻断、无 require 禁）——与 bash 同边界（无目录限制、无伪沙箱）；超时 SIGKILL 强杀（默认 30s、上限 60s）。**exec-prelude 助手已退役（2026-09-03 §12）**：readFile/writeFile/glob/grep/log/require 预置全局全删——inline code 纯净 node ESM——需要 fs/path 时 `import` node: 模块——文件读取/修改走 read/ls/glob/grep/write/edit 专用工具。
 
 ## 3. 调度与权限（见 AGENT-LOOP.md §4）
 
@@ -56,7 +56,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 | md 文件即 description | 长文档描述模型才理解边界；与代码分离便于迭代不触发 schema 变更 |
 | bash 命令零文本拦截 | 文本匹配是安全剧场：恶意模型必然绕过（空白/heredoc/node -e），拦住的只有正常操作；真实防线 = 审批层（autoApprove）+ 快照（gitGuardSnapshot/checkpoint）。危险标注（detectDanger）只给人看，不构成边界 |
 | 超限落盘而非截断 | 模型可再用 read 工具读全量；预览 2K 字符足够决策 |
-| 沙箱只出不进 | 模型执行用户代码时，网络/文件系统读写按工具授权而非代码内自由 |
+| 沙箱只出不进 | 模型执行用户代码时，网络/文件系统读写按工具授权而非代码内自由——**2026-09-03 §12 注**：exec-prelude 退役后 execute 与 bash 同边界（无预置文件面——文件能力唯一入口 = 工具授权）；本行保留为历史决策记录 |
 | 工具全部字符串返回 | schema 简单、dispatch 统一、流式展示统一 |
 
 ## 6. git 工具能力扩充（2026-08-23）
@@ -133,10 +133,10 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 | # | 用例 | 输入 | 预期 |
 |---|---|---|---|
 | T-w-1 | git workdir 子仓库 | git 工具 `workdir="sub/repo"`（内含独立 .git） | 在子仓库执行（log 指向子仓库 HEAD） |
-| T-w-2 | workdir 越界 | `workdir` 指向 workspace 外 | 报错拒绝，不执行 |
+| T-w-2 | workdir 越界 | `workdir` 指向 workspace 外 | 越界正常执行（§10.1——无边界断言，与 bash 一致） |
 | T-e-1 | scriptFile 跑文件 | execute `scriptFile="x.mjs"`（console.log 输出） | 子进程执行，stdout 返回 |
 | T-e-2 | nodeArgs --check | 好文件（静默）/ 坏文件（SyntaxError） | 退出码区分，语法错误可见 |
-| T-e-3 | scriptFile 越界 | scriptFile 指向 workspace 外 | 报错拒绝 |
+| T-e-3 | scriptFile 越界 | scriptFile 指向 workspace 外 | 可指向 workspace 外文件——正常执行（§10.1） |
 | T-e-4 | 缺参 | code 与 scriptFile 均缺 | 报错提示二选一必填 |
 | T-e-5 | 禁 flag | nodeArgs 含 `--eval`/`--inspect` | 报错拒绝该 flag |
 | T-e-6 | 路由描述断言 | grep.md/ls.md/delete.md/read.md 文本 | 各含 "Route to X instead of bash" |
@@ -317,9 +317,9 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 1. 编号 §11（上文）2. 9 段计数对齐 3. 测试矩阵补：图像型页 multimodal 回传用例（F-P2）/Type3 字体 run 报错/LZW 拒（F-P3）/pages 选择 + 坏页规格（F-P4）4. pdf-parse 超 500 预拆边界：**pdf-parse-xref.mjs（xref/流/ObjStm/预测器）+ pdf-parse-text.mjs（页树/内容流/文本操作符/CMap/编码/布局）双核**（AGENTS.md 500 硬限纪律）5. VS Code parity：**v1 CLI-only 明示**（VS Code 镜像后续立项——discipline.md 两端 byte-identical 仍同批）6. golden fixture：测试内嵌 1 个外部真实 PDF（base64——浏览器打印产物）交叉验证（防解析器与 fixture 生成器同手同错）7. 64K 阈值语义：实现时核实 read 家族实际落盘阈值（TOOL-OUTPUT-LIMITS 权威——文档措辞跟随）8. 加密/坏 xref/ObjStm 循环——inflate 尺寸上限 + 递归守卫（hostile PDF 韧性）
 
-## 12. execute prelude 助手退役：纯净 node 子进程（2026-09-03 · 设计——用户裁定——待评审）
+## 12. execute prelude 助手退役：纯净 node 子进程（2026-09-03 · ✅ 已实现——用户裁定——评审通过）
 
-> 状态：设计（2026-09-03 用户连续两轮指出后裁定——需求层确认——触发：execute 描述宣称预置 readFile/writeFile/glob/grep/log/require 全局——实际使用中模型反复绕开专用工具（read/ls/glob/grep/write/edit）在 execute 内做文件操作——bash 重定向有硬拦截而 execute 助手零拦截——不对称）。
+> 状态：✅ 已实现（2026-09-03——评审 0🔴 通过 + 复审 0🔴——token 85521a97——CLI thincoder + VS Code thincoder-vscode 两端同步落地——D-E1..E7 全落地——T-E1..E4 两端全绿——commit 444bc28 处置必读）。触发：execute 描述宣称预置 readFile/writeFile/glob/grep/log/require 全局——实际使用中模型反复绕开专用工具（read/ls/glob/grep/write/edit）在 execute 内做文件操作——bash 重定向有硬拦截而 execute 助手零拦截——不对称。
 
 ### 12.1 需求
 
@@ -347,6 +347,8 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **D-E2 修订注（评审 #5）**：顶部注释位置改内容锚（"头部注释区"——不用行号）
 - **D-E7 引用面 sweep（评审 #3——对齐 §10.2 D-L3 先例）**：grep "prelude"/"Globals"/"预置 readFile" 跨 prompts（discipline.md 等）+ docs（README/ARCHITECTURE/FEATURES）——两端——残留声明同批清理或加退役指向
 - **受影响文件清单（合并——评审 #3）**：CLI `src/tools/exec-prelude.mjs`（删）+ `src/tools/execute.mjs`（净化）+ `src/tools/execute.md`（描述）+ `test/tools.test.mjs`（用例改写/T-E1..4）+ `docs/design/TOOLS.md`（§12 本段 + D-E4 同步点）；VS Code `src/tools/exec-prelude.mjs`（删）+ `src/tools/execute.mjs`/`execute.md`（对应）+ 对应测试
-- **D-E6 验收**：T-E1..E4 全绿（两端）；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤——**路径语义按 §10.1：无越界拒绝（评审 #1——T-w-2/T-e-3 行随 §10.1 已改"可指向 workspace 外"——本批 sweep 残留旧行）**）；**D-E4 文档编辑与代码同批落（评审 #8——不在实现后补）**；TOOLS.md §12 本段勾销
+- **D-E6 验收（✅ 2026-09-03 全过）**：T-E1..E4 全绿（两端——CLI test/tools.test.mjs + VS Code test/execute.test.mjs）；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤——**路径语义按 §10.1：无越界拒绝（评审 #1——T-w-2/T-e-3 行随 §10.1 已改"可指向 workspace 外"——本批已 sweep 残留旧行）**）；**D-E4 文档编辑与代码同批落（评审 #8——不在实现后补）**；TOOLS.md §12 本段勾销
+
+**交付记录（2026-09-03）**：两端 exec-prelude.mjs 已删；execute.mjs inline code = 纯净 `node --input-type=module --eval`（无 prelude import、无 THINCODER_EXEC_ROOT env）；描述 byte-identical（CLI execute.md 与 VS Code execute.mjs 内嵌 description 逐字节相等——程序化校验 === true：字符串 2354 字符 / UTF-8 落盘 2384 字节——三面：整体描述/code 参数/scriptFile 参数相等；措辞避开 mock 词 "slow/queued"——VS Code subagent T3 的 body 正则会把 execute 描述误判为慢任务）；T-E1..E4 + 既有能力用例 CLI execute 段 8 绿 / VS Code 27 绿；D-E7 sweep：prompts/discipline 无残留、VS Code ARCHITECTURE.md 退役指向已加（含 §3 工具清单 execute 行改纯净子进程口径——原 "vm 沙箱 JS" 陈旧声明已清）；desktop vendor 副本不在范围（工作区无 vendor 副本可同步——glob 全仓零命中）。遗留（🔵 已知残留，非本设计范围）：VS Code ARCHITECTURE.md §3 "路径安全" 行（L112-114）仍描述 §10.1 移除前的 resolvePath 边界断言——属 2026-09-02 §10.1 交付的文档同步缺口，后续可同批加 "——§10.1 移除" 指向。
 
 
