@@ -595,5 +595,7 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 
 **测试（2026-09-03）**：VS Code `npm test` 全绿（T-SD 镜像子集——10 池层用例 + webview 行 2 用例 + 既有 T-M21/advisor#2 断言按 D-SD3b supersede 同步）。**code review 处置（CLI AGENT-LOOP.md §20.6 同载）**：check depc 锁守卫 + 结构性 no-running 守卫（subagentCheck——指定 id/arrival 双分支——done 条目即时消费不误伤）+ purgePending（消费 × 挂起移交双送达守卫）+ AUTO 取消注记实况化——随批测试锁定。**形态分叉明示**：在途 check 观察到 cancelled 目标 VS Code 返回 `{status:"cancelled"}`（CLI 为 unknown-id 错误）——各自既有测试断言形态（§19.5）——有意保留。偏差与行数债随 CLI AGENT-LOOP.md §20.5 同载（subagent-async 超 500 硬顶——并入拆分轮——本交付不新拆）。
 
+**§20.7 prompts 调度器条款升级（2026-09-03 · 引用，AGENT-LOOP.md §20.7——§14/§16 先例式引用段注）**：调度器落地后提示词同步——旧"手动并行避让纪律"升级为"调度器驱动派发"。需求/设计/验收见 CLI AGENT-LOOP.md §20.7（D-PS1/D-PS2 逐字镜像锚 + system.md carve-out——单一权威源，本文件不复制）。本端改动点：`src/prompts/main.md`（Delegation 段 D-PS1 锚替换旧句）、`src/prompts/engineering.md`（Multi-Task Parallelism 段 Pre-check/Dependency-chain 两 bullets → D-PS2 锚——旧 Cap 条保留）、`src/prompts/system.md`（§14 D1 条款 carve-out 句）——三文件与 CLI 端 byte-identical；测试 `test/agent.test.mjs` T-PS1..3 断言镜像 + 既有 T9/T-E16 cap 断言保持绿（prompts 全量比对在 CLI 侧 agent.test.mjs 15 文件测试）。
+
 
 

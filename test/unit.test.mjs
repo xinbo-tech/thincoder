@@ -273,11 +273,14 @@ describe("memory — merged memory tool (MEMORY.md §6: single tool, five action
     assert.equal(search(tmpDir, "不许", { limit: 5 }).length, 1, "project 层不受 clear 影响")
   })
 
-  it("S6-5: 未知 action / 缺参 put / 非法 scope 明确报错", () => {
+  it("S6-5: 未知 action / 缺参 put / 非法 scope / 空 query 明确处理", () => {
     assert.match(exec({}), /unknown action ""/)
     assert.match(exec({ action: "bogus" }), /unknown action "bogus"/)
     assert.match(exec({ action: "put", type: "rule", title: "t", scope: "personal" }), /requires title and content/)
     assert.match(exec({ action: "put", scope: "team", type: "rule", title: "t", content: "c" }), /no team layer.*CLI/)
+    // 空 query 短路（两端同语义——评审 code review #4）
+    assert.equal(exec({ action: "search" }), "No matching memories found.")
+    assert.equal(exec({ action: "search", query: "   " }), "No matching memories found.")
   })
 })
 
