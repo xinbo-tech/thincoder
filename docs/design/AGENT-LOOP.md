@@ -1114,9 +1114,9 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 
 
-#### 19.5.5 cancel 核实纪律增强（2026-09-03 · 设计——用户批评确立——待评审）
+#### 19.5.5 cancel 核实纪律增强（2026-09-03 · 设计——用户批评确立——**已实现**）
 
-> 状态：设计（2026-09-03——用户批评"杀 subagent 太随意"——起因：误报 AGENT-LOOP 丢行（PowerShell ANSI 行数误读）→ 未核实即 cancel 34 轮 eng-coder——运气好成果完整——过程暴露缺陷——纪律落 personal:58 + 本设计机制化到工具描述/提示词）。
+> 状态：设计批准 + 已实现（2026-09-03——评审 0🔴 通过（token 00fde4f4）——id:4 交付 clean（audit 1 轮 + advisor 1 轮 0🔴——CLI 1299/0 + VS Code 1020/0）——commit 2ee884f/d6cd34f——本段勾销）
 
 ### 19.5.5.1 需求
 
