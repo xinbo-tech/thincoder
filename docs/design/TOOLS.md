@@ -317,3 +317,29 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 1. 编号 §11（上文）2. 9 段计数对齐 3. 测试矩阵补：图像型页 multimodal 回传用例（F-P2）/Type3 字体 run 报错/LZW 拒（F-P3）/pages 选择 + 坏页规格（F-P4）4. pdf-parse 超 500 预拆边界：**pdf-parse-xref.mjs（xref/流/ObjStm/预测器）+ pdf-parse-text.mjs（页树/内容流/文本操作符/CMap/编码/布局）双核**（AGENTS.md 500 硬限纪律）5. VS Code parity：**v1 CLI-only 明示**（VS Code 镜像后续立项——discipline.md 两端 byte-identical 仍同批）6. golden fixture：测试内嵌 1 个外部真实 PDF（base64——浏览器打印产物）交叉验证（防解析器与 fixture 生成器同手同错）7. 64K 阈值语义：实现时核实 read 家族实际落盘阈值（TOOL-OUTPUT-LIMITS 权威——文档措辞跟随）8. 加密/坏 xref/ObjStm 循环——inflate 尺寸上限 + 递归守卫（hostile PDF 韧性）
 
+## 12. execute prelude 助手退役：纯净 node 子进程（2026-09-03 · 设计——用户裁定——待评审）
+
+> 状态：设计（2026-09-03 用户连续两轮指出后裁定——需求层确认——触发：execute 描述宣称预置 readFile/writeFile/glob/grep/log/require 全局——实际使用中模型反复绕开专用工具（read/ls/glob/grep/write/edit）在 execute 内做文件操作——bash 重定向有硬拦截而 execute 助手零拦截——不对称）。
+
+### 12.1 需求
+
+**总体需求**：execute = "跑代码的地方"，不是读文件/改文件的地方——预置文件助手制造"execute 是全能文件入口"的心智锚，诱导模型在 execute 内做本应走专用工具的操作（读写皆然）——全部退役——execute 回归纯净 node 子进程（与 bash 同边界——需要 fs/path 自己 `import` node: 模块——一行 import 不比 readFile() 长——但显式性让模型知道自己在用通用 node 能力）。
+
+**功能性需求**：
+- F-E1：execute inline code 子进程不再注入任何预置全局（readFile/writeFile/glob/grep/log/require 全删——exec-prelude.mjs 整体退役）
+- F-E2：execute 描述（execute.md + 内嵌 description）不再宣称任何预置全局——明示"纯净 node ESM 环境——文件操作走 read/ls/glob/grep/write/edit 专用工具——需要 fs/path 时 `import` node: 模块自己写"
+- F-E3：scriptFile/nodeArgs/过滤/超时/路径语义不变（scriptFile 本就无 prelude——零影响）
+- F-E4：两端对称（CLI thincoder + VS Code thincoder-vscode——VS Code src/tools/exec-prelude.mjs 同删）
+
+**非功能性需求**：工具路由纪律闭环（bash 重定向硬拦 + execute 无诱导源 = 对称）；零行为回归（execute 能力面：inline/import/scriptFile/超时/过滤全保留）。
+
+### 12.2 设计
+
+- **D-E1 删文件**：CLI `src/tools/exec-prelude.mjs` + VS Code `src/tools/exec-prelude.mjs`——整体删除（readFile/writeFile/glob/grep/log/require/safe/globToRegex 全随删——无其他文件 import 它——test/ 无引用）
+- **D-E2 execute.mjs 净化**（CLI + VS Code）：删 import prelude 逻辑——inline code 子进程 = 纯净 `node --input-type=module --eval`——顶部注释（L13 区）同步改写
+- **D-E3 描述重写**（CLI src/tools/execute.md + VS Code 对应——两端 byte-identical）：删 "Globals: readFile/writeFile/..." 清单——改为"纯净 node ESM（顶层 await/动态 import 可用）——不预置任何全局——文件读取/修改走 read/ls/glob/grep/write/edit/apply_patch 专用工具——execute 内需要 node:fs 时自行 import"——L18 prelude 注删、L20 "use writeFile to a file" 改 "output capped——大输出经 bash 落盘或分段"（注：实际大输出机制 = 超限落盘自动——措辞由实现者核实现状再写）——execute.mjs 内嵌 description（L135）同改
+- **D-E4 TOOLS.md 同步**：L39 "execute 工具（沙箱）" 段早已过时（import 阻断/require 禁——712af6f 子进程化后不实）——顺带修正为纯净子进程现状 + prelude 退役注；L56 决策表 "沙箱只出不进" 行加注（execute 与 bash 同边界——无预置文件面——文件能力走工具授权）
+- **D-E5 测试改写**（CLI test/tools.test.mjs L2667-2738 execute 段）：L2693 grep 助手用例改 node 原生实现（fs.readFileSync + 正则匹配——验证"自己 import 可用"）；L2682 log/require 用例改 console.log/原生——**新增 T-E1：助手消失验证**（execute code 里 typeof readFile/writeFile/glob/grep/log === "undefined"——需 fs 时 import("node:fs") 正常）；scriptFile/import/超时/过滤用例保持（零变化验证）
+- **D-E6 验收**：T-E1 助手全消失 + 原生 import 可用；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤/越界拒绝）；两端对称（byte-identical 描述）；TOOLS.md §12 本段勾销
+
+
