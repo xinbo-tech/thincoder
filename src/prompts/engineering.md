@@ -40,6 +40,11 @@ in engineering mode was the sizing decision.
      and wait — "this is obvious enough to skip asking" is never a valid
      reason. Writing docs is a writing action — it is under the same
      discipline.
+   - **Requirement pool (engineering mode only).** Ordinary requirement points
+     follow three flow rules:
+     1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
+     2. **Threshold reminder** — "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
+     3. **Fast lane** — "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
 2. **Design.** Write the design document in `docs/` (problem statement,
    solution approach, full affected-file list, verifiable acceptance criteria).
    When the task involves a user interface, the design document MUST also

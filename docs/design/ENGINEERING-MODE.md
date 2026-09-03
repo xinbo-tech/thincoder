@@ -117,7 +117,7 @@
 | 两端 `run-helpers.mjs`（VS Code `agentState()`）/ `session.mjs`（CLI slot 持久化）/ `panel-session.mjs`（VS Code 往返） | **多槽序列化（2026-09-01 审计 #1 修复）**——`_engDesignTokens` Map 随 slot 持久化（VS Code 跨轮 agent 重建场景的必要补齐）；§2.6 持久化边界同步。序列化格式 `{ [designId]: token }`（JSON 安全），恢复 `new Map(Object.entries)`；旧 slot 无字段 → 不设 Map（fail-closed TTL 兜底过期 token）。**修复轮补记实际触点**：VS Code 恢复链 `panel-chat.mjs`（engState 携带）→ `setup.mjs`（恢复 Map）；清理对称（**审计修复 #2**）——两端 `agent-tools/eng.mjs`（exit + off→on）+ CLI `tui/cmd-eng.mjs` + `session.mjs` `resetSessionState` 同步 `_engDesignTokens = new Map()`，resolveDesignSlot 的"有 Map 无镜像"防护降级为防御冗余 |
 | 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）+ `run-helpers.mjs`（VS Code `loadEngineeringPrompt`，评审 2026-09-02 #3 补全）/ METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复（CLI 端已实现 2026-09-02，D-AC 勾销见 §7 状态行；VS Code 端并行任务进行中） |
 | 两端 `CHANGELOG.md` | 变更记录（下一版本号——0.12.54/0.8.9 已发布，评审 #3 补记） |
-| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：交付验证 + 可选的父侧复核（原"主代理发起 code review"随 §18 反转——2026-09-02，见变更记录）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录——§18 起由子代理内部协议承担，父侧复核可选）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态；**2026-09-02 §18**：async 交付叙述 + 内部协议口径（防双重审计/误用） |
+| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：交付验证 + 可选的父侧复核（原"主代理发起 code review"随 §18 反转——2026-09-02，见变更记录）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录——§18 起由子代理内部协议承担，父侧复核可选）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态；**2026-09-02 §18**：async 交付叙述 + 内部协议口径（防双重审计/误用）；**2026-09-03 R1**：Mandatory Flow step 1 完成点注入需求池三规则（Pool routing / Threshold reminder / Fast lane 三分句逐字锚——见 §7 变更记录） |
 | `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
 | `src/prompts/discipline.md` | 不动 | 普通模式专属（解耦原则） |
 | `src/prompts/main.md` | 不动 | 普通模式专属（解耦原则） |
@@ -210,6 +210,20 @@
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+### 2026-09-03：需求池攒批工作流提示词落地（R1——用户裁定 C+E——设计已批准 token eb58941f）
+
+**机制**：普通需求点攒批后再启动设计（摊薄单点 ~40min 固定流程成本）——工程模式专用（main.md 普通模式不承诺）。权威源 = `docs/design/METHODOLOGY.md`「需求池攒批工作流」节（三分句逐字锚 D-锚1..3 定稿）。机制 6 步：登记（板块需求文档落句 + docs/TODO.md「需求池」组一行）→ 攒批（设计启动权在用户）→ 阈值提醒（同板块 ≥2 或池全局 ≥3，提醒一次不代替发起）→ 批设计（同批评审 → 用户批准 → 批实现）→ 快车道（"急/马上做"跳过池走单点完整流程）→ 边界（池只收用户需求点，技术待办不混池；紧急 bug 走快车道）。
+
+**加固（两端 byte-identical）**：
+- `src/prompts/engineering.md` Mandatory Flow step 1 完成点后注入需求池三规则子条目——Pool routing / Threshold reminder / Fast lane 三分句**逐字锚照抄**（设计文档逐字定稿，禁止自行解释）；工程模式顶层生效（普通模式 main.md 零触碰）。
+- `src/prompts/methodology-template.md` Requirement-Pool 节按**根模板用户面向块**替换（状态头 approved + 动机 + Mechanism 6 步——排除 Prompt sync/Acceptance/Affected 书账子节与"评审 #N"注——模板措辞 = 根模板逐字，非旧版自写措辞）；根模板 `METHODOLOGY.md` 状态头同步批准（根文件非 git 仓——文件级落）。
+- 两端 `test/agent.test.mjs` 增加 T-R1 断言（fail-when-unchanged）：engineering.md 三分句逐字（CLI 侧对照设计文档锚抽取）+「Requirement Pool」组短语 +「pool-wide ≥3」+「single-point full flow」+ 幂等唯一出现；methodology-template 含段头/approved 状态/~40 min 动机阈值句/6 步/无书账子节。
+- CLI + VS Code 15 对 prompts byte-identical 保持（本次只动 engineering.md + methodology-template.md 两对——其余 13 对零触碰）。
+
+**受影响文件**：两端 `src/prompts/engineering.md`、两端 `src/prompts/methodology-template.md`、两端 `test/agent.test.mjs`（T-R1 断言）、根模板 `METHODOLOGY.md`（状态头）、`thincoder/docs/TODO.md`（R1 池行核销）、本节。本变更无新的产品代码文件——§2.7 受影响文件表行更新见下（engineering.md 行追加 R1 注）。
+
+**验收**：两端 engineering.md/methodology-template.md 逐字锚 = 设计锚（程序化校验）；两端 15 对 byte-identical 比对绿；T-R1 两端绿 + 全量测试绿；node --check。不 commit。
+
 ### 2026-09-03：范围扩展评审链——"用户拍板 ≠ 设计批准"条款（用户实测：形态确认被当批准直接开工）
 
 **触发**：D-M7b（§19.5 范围扩展——async 标识 + ⏹ 门控——新事件类型牵 §7.2 事件契约）用户拍板形态 B 后 agent 直接派 eng-coder——跳过"提醒评审就绪 → 用户发起 advisor → 批准"链。定性：**用户对设计内容/形态的选择是需求确认——不是设计批准**——扩展（含已批准设计的范围扩展）与修正轮（偏差/评审 fix——同 token 合法）是两条路径——上一轮 docs FIRST 条款的 token 边界句（"beyond file list = NEW task"）未显式挂评审链——缺口。

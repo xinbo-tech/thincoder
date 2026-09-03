@@ -3809,6 +3809,70 @@ test("prompts/engineering.md: 范围扩展评审链——用户对设计形态�
   assert.ok(text.indexOf("5. **User sign-off.**") < text.indexOf("NOT this sign-off"), "指针句锚在 step 5（User sign-off）内")
 })
 
+test("prompts/engineering.md: 需求池攒批三分句逐字锚（R1——2026-09-03——对照设计文档逐字——fail-when-unchanged）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  const design = readFileSync(join(DOCS_DESIGN_DIR, "METHODOLOGY.md"), "utf8")
+  // 三分句 = 设计文档逐字定稿（评审 #1）——从设计锚抽取后逐一断言在 engineering.md 内
+  const anchors = [
+    design.match(/1\. \*\*Pool routing\*\*——"([^"]+)"/)[1],
+    design.match(/2\. \*\*Threshold reminder\*\*——"([^"]+)"/)[1],
+    design.match(/3\. \*\*Fast lane\*\*——"([^"]+)"/)[1],
+  ]
+  assert.equal(anchors.length, 3, "设计文档锚三分句可抽取")
+  for (const a of anchors) {
+    assert.ok(text.includes(a), `engineering.md 含逐字锚句: ${a.slice(0, 60)}…`)
+  }
+  // 语义断言目标 1:1（fail-when-unchanged——副本未改必须能失败）
+  assert.ok(text.includes("「Requirement Pool」group"), "组短语在（登记去向点名）")
+  assert.ok(text.includes("pool-wide ≥3"), "阈值短语在（pool-wide ≥3）")
+  assert.ok(text.includes("single-point full flow"), "快车道短语在（single-point full flow）")
+  // 幂等性：三分句只出现一次（防重复注入）
+  for (const a of anchors) {
+    assert.equal(text.split(a).length - 1, 1, `锚句唯一出现: ${a.slice(0, 40)}…`)
+  }
+})
+
+test("prompts/methodology-template.md: 需求池攒批用户面向块 = 根模板逐字（R1——2026-09-03——fail-when-unchanged）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8")
+  // 语义锚（fail-when-unchanged）
+  assert.ok(text.includes("## Requirement-Pool Batched Workflow"), "段头在")
+  assert.ok(text.includes("~40 min fixed process cost"), "动机句在（~40 min fixed process cost）")
+  assert.ok(text.includes("same board ≥2 points or pool-wide ≥3 points"), "阈值句在（同板块 ≥2 / 池全局 ≥3）")
+  assert.ok(text.includes("「Requirement Pool」group"), "组短语在")
+  assert.ok(text.includes("single-point full existing flow"), "快车道措辞在（模板语域）")
+  // 状态头已批准（根模板同步——非 pending/design）
+  assert.ok(text.includes("design — user ruling — approved"), "状态头 = approved")
+  // 6 步齐全
+  for (const head of ["**Register", "**Accumulate", "**Suggested threshold", "**Batch design", "**Fast lane", "**Boundary"]) {
+    assert.ok(text.includes(head), `机制第 ${head} 步在`)
+  }
+  // 排除书账子节（模板只承载用户面向块）
+  assert.ok(!text.includes("### Prompt sync"), "模板无 Prompt sync 书账子节")
+  assert.ok(!text.includes("### Acceptance"), "模板无 Acceptance 书账子节")
+  assert.ok(!text.includes("### Affected files"), "模板无 Affected files 书账子节")
+})
+
+test("需求池三副本不变量断言（评审 #8——阈值 ≥2/≥3 + 边界「池只收用户需求点」跨根模板/项目版/template 对在——防单向漂移）",
+  { skip: !existsSync(join(TEST_DIR, "..", "..", "METHODOLOGY.md")) },
+  () => {
+    // 三副本：根模板（D:/teamcode/METHODOLOGY.md，非 git 文件级）、项目版（docs/design/METHODOLOGY.md）、template 对（两端 src/prompts/methodology-template.md byte-identical）
+    // 根模板在仓外——单独 clone CLI 仓时缺失，动态 skip（同 15 对 byte-identical 测试惯例）
+    const root = readFileSync(join(TEST_DIR, "..", "..", "METHODOLOGY.md"), "utf8")
+    const project = readFileSync(join(DOCS_DESIGN_DIR, "METHODOLOGY.md"), "utf8")
+    const tmpl = readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8")
+    const copies = { 根模板: root, 项目版: project, "template(CLI)": tmpl }
+    // 阈值不变量（≥2/≥3）
+    for (const [name, c] of Object.entries(copies)) {
+      assert.ok(c.includes("≥2") && c.includes("≥3"), `${name} 阈值 ≥2/≥3 在`)
+    }
+    // 边界不变量（池只收用户需求点——项目版中文/根模板与 template 英文，语义同构；去 ** 加粗标记后匹配机制步原文）
+    for (const [name, c] of Object.entries(copies)) {
+      const flat = c.replace(/\*/g, "")
+      const boundary = /user requirement points? only/i.test(flat) || flat.includes("池只收用户需求点")
+      assert.ok(boundary, `${name} 边界「用户需求点 only」在（机制步）`)
+    }
+  })
+
 test("prompts/engineering.md: UI/交互决策必须落设计文档且必须进 eng-coder 任务书（2026-08-29）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
