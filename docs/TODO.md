@@ -209,12 +209,12 @@
 
 ### TUI 行数债合并轮（2026-09-03——来源：§7.2.3 交付 code review advisory + §17.6 stalled 项）
 
-- [ ] **超 500 行文件合并拆分轮**：agent-turn.mjs 535（§17.6 注——挂起驱动段迁出）/ tool-events.mjs 537（本批 499→537——spawn 冻结三支路由或预览段外抽）/ subagent-blocks.mjs 529（冻结家族 freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks/finishSubTaskKey 整体抽 freeze.mjs）/ subagent.mjs 523 / subagent-async.mjs 521（既有债）——先例：cmd-mcp 499→382 / agent-turn 534→174 / index 545→447——排独立拆分轮（§19.5/19.6/§20 后——避免与在跑轮同文件并发）
+- [ ] **超 500 行文件合并拆分轮**：subagent-blocks.mjs 577（2026-09-03 实测——id:1 stalled 项——冻结家族 freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks/finishSubTaskKey 整体抽 freeze.mjs——re-export 保 API——subagent-blocks 回落 ~460）/ agent-turn.mjs 535（§17.6 注——挂起驱动段迁出）/ tool-events.mjs 537（spawn 冻结三支路由或预览段外抽）/ subagent-async.mjs 649 / subagent.mjs 531（既有债）——先例：cmd-mcp 499→382 / agent-turn 534→174 / index 545→447——排独立拆分轮（§20 交付后——避免同文件并发）
 
 
 ### §19.6 交付跟进（2026-09-03——id:17 交付）
 
 - [x] ~~§19.6 panel 检查工具——已实现（aeff441——CLI 1268/0——镜像/门控/降级/分类四表）~~——文档 19.6.5 已落
 - [ ] **tool-args 块标题兜底**（§19.6 交付 🔵 残留——tool-args.mjs:44-47——action-only subagent 调用（panel/check/status/cancel）块标题光秃 "❯ subagent"——建议 a.action 兜底显示——非本批清单——后续小轮
-- [ ] **§19.5 控制面扩展 token 重建受阻**（评审验证模式不发 token——已批设计在文档（AGENT-LOOP §19.5——round2 通过状态）——重启后新会话重评审签发——§20 依赖其 cancel 基础——排队顺延
+- [x] ~~**§19.5 控制面扩展**——早前已实现（CLI db408d2 + VS Code 70f3f8f——重启前）——重启后重评审（54e3e5f5）+ 处置 #4 对齐轮交付（8e9adbc + 50bffd2——⟦ev⟧async 缓冲/⏹ 测试——CLI 1224 + VS Code 1006 全绿）~~
 
