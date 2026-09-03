@@ -822,7 +822,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **D-E5 双通道与中止（F5）**：§17 既有语义——用户输入 = 新回合与 async 子代理并行；"停链/调整" = 用户回合指示 → 模型中止该 async 子代理（§15 既有 abort 路径——子代理中止 → settle error → 注入）或 Ctrl+C（挂起态两级中止——round2 #4）。**无链状态可改**（重构红利）。
 
-**D-E6 收敛与终态**：eng-coder 报告自述终态——`clean`（审计 clean + advisor clean——报告含轮次）或 `stalled`（5 轮修正未收敛 / explore 或 advisor 节点失败重试 1 次仍败——报告含未收敛点/失败原因）。**盲信对齐（评审 round3 #8）**：内部 advisor code review 以实际文件为对象（documents = 设计文档 + 交付文件清单——独立于 eng-coder 自述——§13 禁盲信纪律在子代理内部落实）；**可行性注（round4 #1 核实）**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs:240——§7.1 角色矩阵"coder/eng-coder 自带 verify/advisor 自评"）且实现无 depth/role 限制——ENGINEERING-MODE.md 2026-08-01 裁定（"子代理环境无法真实调用 LLM advisor"）依据 = 当时工具未装配——随本设计同批反转（见受影响文件）；主会话对报告的信任 = 对"内部已做文件级复核"的信任——父侧复核（ENGINEERING-MODE.md 原 step 7 父侧自动偏差审计——round4 #6 术语：该节点原为**自动**（2026-08-30 裁定——无需用户发起）非"手动"——随本设计改为父侧**可选**复核——默认由内部协议承担）保留可选——两文档口径同批一致化。
+**D-E6 收敛与终态**：eng-coder 报告自述终态——`clean`（审计 clean + advisor clean——报告含轮次）或 `stalled`（5 轮修正未收敛 / explore 或 advisor 节点失败重试 1 次仍败——报告含未收敛点/失败原因）。**盲信对齐（评审 round3 #8）**：内部 advisor code review 以实际文件为对象（documents = 设计文档 + 交付文件清单——独立于 eng-coder 自述——§13 禁盲信纪律在子代理内部落实）；**可行性注（round4 #1 核实）**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs eng-coder depthOnly 装配分支——§7.1 角色矩阵"coder/eng-coder 自带 verify/advisor 自评"——round2 #7 符号锚点化）且实现无 depth/role 限制——ENGINEERING-MODE.md 2026-08-01 裁定（"子代理环境无法真实调用 LLM advisor"）依据 = 当时工具未装配——随本设计同批反转（见受影响文件）；主会话对报告的信任 = 对"内部已做文件级复核"的信任——父侧复核（ENGINEERING-MODE.md 原 step 7 父侧自动偏差审计——round4 #6 术语：该节点原为**自动**（2026-08-30 裁定——无需用户发起）非"手动"——随本设计改为父侧**可选**复核——默认由内部协议承担）保留可选——两文档口径同批一致化。
 
 **受影响文件（两端）**：
 - CLI：`src/agent-tools/subagent.mjs`（schema 默认按 role 解析 async）、`src/agent/setup.mjs`（eng-coder depthOnly 工具装配——加受限 subagent（explore-only + 同步））、`src/agent/spawn-child.mjs`（role 过滤校验：eng-coder 上下文 spawn 仅 explore）、`src/prompts/engineering-sub.md`（内部交付协议附录 + 修正轮计数提醒——byte-identical 三件套）、`src/prompts/engineering.md`（两端——架构师侧 spawn→等报告→主侧审计流程改 async+内部协议口径——防双重审计/误用）、`src/agent.mjs`（核验：digest 消化既有——若零改动从清单移除——实现前定稿）、docs/design/AGENT-LOOP.md §18 本节、ENGINEERING-MODE.md（**全量同步点**——round4 评审 #1：① FR4 代码评审归属行——2026-08-01 裁定"eng-coder 子代理环境无法真实调用 LLM advisor"**反转**：advisorTool 现已在 eng-coder 子代理工具集（setup.mjs:240）且工具实现无 depth/role 限制（advisor.mjs——readonly 内嵌循环）——裁定依据（当时工具未装配）已过时——同批更新 FR4 + §2.3 门表两行（Code review/偏差审计）+ AC5/AC9 + §7 变更记录 2026-08-30 条——不留双文档矛盾）、CHANGELOG（两端，父代理统一更新）、两端测试
@@ -936,7 +936,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 19.5 控制面扩展：status 增强 + cancel + UI 停止 + 嵌套前缀子标（2026-09-03，用户裁定）
 
-> **状态：设计定稿（2026-09-03 round1 后修订——1🔴+3🟡+2🔵 已处置——待复审）**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
+> **状态：设计批准（2026-09-03 round2 通过——0🔴——7 项 refinement 已处置——designToken 已签发）**。触发：用户实测控制面薄弱（"至少应该有列表，是不是还应该有其他的必要控制能力？比如中止？"）+ 嵌套 relay 前缀泄漏（"explore 子 agent 在 eng-coder 中显示不正常——出现了好多 explore#1/ 字样"）。用户裁定：① 主会话工具面补控制能力；② 界面上也应能停止（子 agent 标题行加停止）；③ 嵌套前缀显示形态 = 方案 A（块内子标）。
 
 #### 19.5.1 需求
 
@@ -950,9 +950,10 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **D-M5 status 全览增强**：全览条目从 id 数组改结构化对象数组——`running: [{id, role, model, elapsedSec, turn, maxTurns}]`、`queued: [{id, role, position}]`、`done: [{id, role}]`——**数据装配锚点（round1 #3）**：spawn 时（subagent-async spawn 分支）记 `entry.model`（childProvider.model）与 `entry.startedAt`；turn/maxTurns 在**子代理 callbacks 包装层同步**（wrapChildCallbacks 内解析 ⟦ev⟧turn 更新 entry——或 spawnChild 提供 per-child turn 钩子——选改动最小方案——实现时定并注）；`elapsedSec = (now - startedAt)/1000` 计算于 status 调用时——单查（id）形态不变 + 同字段。
 
-**D-M6 cancel 动作**：`action:"cancel"` + `id`（必填）→ 定位池条目 → **定向 abort**（条目 controller——§15 abort 传播——子代理 runAgent signal abort）→ **cancelled settle（round1 #1 机制定稿）**：
+**D-M6 cancel 动作**：`action:"cancel"` + `id`（必填）→ 定位池条目 → **定向 abort**（**条目级 AbortController（round2 #2 定稿）**：async spawn 时每条目建独立 controller（链到会话/回合 signal——consult `session.controllers` 为仓内先例）存条目——Ctrl+C 全停语义不变（session abort 逐链传播）——abort → 子代理 runAgent signal →）→ **cancelled settle（round1 #1 机制定稿）**：
 - **条目标记**：cancel 时置 `entry.cancelled = true`（清池/注入判定依据）
 - **settle 回调 cancelled 分支**（subagent-async.mjs settle 回调）：`entry.cancelled` → **不入 `_pendingAsyncResults`、不参与 collectSettledAsync 直注入**（清池规则同 Ctrl+C 全停但只清该条目——陈旧错误零注入）→ 发**停止冻结事件**（`⟦ev⟧stopped`——新相位——TUI routeSubToken 识别 → 区块以 interrupted 语义冻结——标题 "stopped"）→ digest 提示"已中止 explore#N/eng-coder#N（主会话决定）"（经 pending 提示行——非错误报告形态）
+- **模型可见提醒（round2 #3）**：cancel 生效后注入短 user-role 提醒（形态仿 injectAsyncResult——XML 转义）：`[System reminder: subagent eng-coder#N cancelled by user — partial changes not merged/audited]`——cancelled settle 不入 pending/不直注入（无错误报告）但**取消事实与半成品警示对模型可见**（防基于半成品树继续——mergeChildMutations 不覆盖 abort 路径）——T-M19 断言补
 - 未知/已完成 id → error（同 status/check 错误形态）；**只允许主会话（depth-0）**（子代理上下文无 cancel 意义——受限变体已禁）；cancel 后槽位腾出（maybeRefillAsync——queued 补位——既有机制）
 - **queued 目标（round1 #2 定稿）**：id 命中 queued 条目（未启动无 controller）→ **出队移除 + position 释放（后续条目 position 前移）+ 返回确认**（`{id, status:"cancelled", was:"queued"}`——不 abort）
 
@@ -966,11 +967,11 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - 工具行（onToolCall）：`explore#1/read` → 行首子标 + 工具名（dim `explore#1 · ` + 既有工具行形态）
 - 工具输出：跟随最近子标归属（不重复前缀——输出行接在对应工具行后——现状块内顺序天然如此）
 - 任意嵌套深度通用（未来子代理内子代理不限一层——循环解析）
-- **嵌套事件类 token 处置（round1 #4）**：双层前缀的 `⟦ev⟧turn`/`⟦ev⟧done`/`⟦ev⟧settled`/`[model]` 等事件类 token——**剥除不路由**（不更新外层块头 turn/maxTurns——防 explore 进度污染 eng-coder 块头——eng-coder 自身的单层 ⟦ev⟧turn 照常）；reasoning（think）token 走子标渲染（同文本行规则——dim `explore#1 · ` 后接思考行）
+- **嵌套事件类 token 处置（round1 #4 + round2 #6）**：双层前缀的 `⟦ev⟧turn`/`⟦ev⟧done`/`⟦ev⟧settled`/`[model]` 等事件类 token——**剥除不路由**（不更新外层块头 turn/maxTurns——防 explore 进度污染 eng-coder 块头——eng-coder 自身的单层 ⟦ev⟧turn 照常）；reasoning（think）token 走子标渲染（同文本行规则——dim `explore#1 · ` 后接思考行）；**ACP 桥剥除正则扩展多段**（bridge.mjs D7 剥除——`(?:[\w-]+#\d+/)+⟦ev⟧`——防双段事件漏过桥进 ACP 客户端流——违 D7 不变式——acp.test.mjs 补嵌套前缀用例）
 - VS Code 同构（webview 子块行渲染——子标 span）
 - explore 是**同步** spawn（§18 受限变体）——无独立生命周期事件（settle/done 不到主会话——在 eng-coder 回合内跑完）——**无需嵌套块状态管理**（复杂度关键洞察——只处理活动行带子标）
 
-**受影响文件（两端）**：subagent 工具（status 字段 + cancel action——subagent-async.mjs/子模块）、池条目字段（startedAt/turn/model 记录）、TUI（subagent-panel/subagent-blocks 标题行 ⏹ + handleMouseClick 命中区 + parseRelayPath 子标渲染）、VS Code webview（panels/chat 标题行 ⏹ + 子标 span + cancel 消息路由）、extension 层 cancel 接线、测试、AGENT-LOOP §19.5 本节、CHANGELOG（父代理统一）
+**受影响文件（两端）**：subagent 工具（status 字段 + cancel action——subagent-async.mjs/子模块）、池条目字段（startedAt/turn/model 记录）、TUI（subagent-panel/subagent-blocks 标题行 ⏹ + handleMouseClick 命中区 + parseRelayPath 子标渲染）、VS Code webview（panels/chat 标题行 ⏹ + 子标 span + cancel 消息路由）、extension 层 cancel 接线、测试、AGENT-LOOP §19.5 本节、**docs/design/TUI.md（round2 #5——模块地图 subagent-blocks/agent-turn 行 + 面板/区块描述段——⏹ 控件/⟦ev⟧stopped/子标渲染——§7.2.1 评审 #4 先例——doc 断言随 T-M25）**、CHANGELOG（父代理统一）
 
 **测试（实现前展开——eng-coder 硬验收项）**：
 - T-M18 status 全览含 role/model/elapsedSec/turn/maxTurns（running 条目）
@@ -982,12 +983,13 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - T-M24 嵌套前缀解析：`eng-coder#2/explore#1/read` → 块路由 eng-coder#2 + 子标 explore#1（单层兼容回归——无嵌套前缀时零变化）
 - T-M25 嵌套文本/工具/输出三形态子标渲染（CLI + VS Code 断言）
 - T-M26 §15/§17/§19 全回归
+  - T-M27 queued 取消（round2 #1）：入队 2 项后取消队首 → 返回 `{status:"cancelled", was:"queued"}`——后续项 position 前移——running 槽不受影响——无 abort 发生（AC-M7 同步含 T-M27）
 
 **验收**：AC-M6 = status 可决策字段（T-M18）；AC-M7 = cancel 定向中止语义（T-M19..M21）；AC-M8 = UI 停止不经模型（T-M22/M23）；AC-M9 = 嵌套前缀无泄漏 + 子标渲染（T-M24/M25）；AC-M10 = 两端全量绿（T-M26）
 
 #### 19.5.2b §19 修订注（round1 #5）
 
-§19 批准后控制面扩展使工具面为**五动作**：D-M1 动作矩阵补 `cancel` 行（`| cancel | id（必填——防误全停） | {id, status:"cancelled"/"error"} | 立即（定向 abort——异步生效） |`）；AC-M1 措辞改"单工具五动作 spawn/check/status/escalate/cancel（cancel 见 19.5）"——实现时同批修订 §19 对应行并加 supersede 注（§15 D-A2 先例）。
+§19 批准后控制面扩展使工具面为**五动作**：D-M1 动作矩阵补 `cancel` 行（`| cancel | id（必填——防误全停） | {id, status:"cancelled"/"error"} | 立即（定向 abort——异步生效） |`）；AC-M1 措辞改"单工具五动作 spawn/check/status/escalate/cancel（cancel 见 19.5）"——实现时同批修订 §19 对应行并加 supersede 注（§15 D-A2 先例）。**cancel 门禁分类（round2 #4 定稿）**：cancel 归**控制类豁免**（仿 check `readonly: true` 先例——§15 D-A2:532——dispatch 层面按控制动作处理：**免权限审批（只停不启——无新副作用）**、planMode **允许**（取消既有子代理——spawn 仍拒）、批审批分组不入组；手动档 digest 内 cancel 放行（19.5.3 动作域）与该分类一致——无 permission handler 也不拒（控制类豁免）——补 digest 内 cancel 放行用例
 
 #### 19.5.3 关键决策
 
