@@ -204,7 +204,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **/submodel 命令**（cmd-submodel.mjs）：子 agent 模型设置入口——与 `/model`（主会话模型）对称。**按类型分别配置**：4 种子 agent 类型（explore / plan / coder / eng-coder）各有独立配置项。**picker 菜单导航**（无参时）：菜单列出全局 + 4 类型共 5 个槽位（各显示当前生效值与继承来源）——选中槽位进入二级选择：provider 列表 → 模型列表（复用两级模型选择器，选中写入该槽位而非主会话），另提供快捷项（设为父模型 / 清除该槽位 / 全部清除）。**参数直设快捷路径**保留：`/submodel <type> <value>` / `/submodel <value>`（全局）/ `/submodel <type>`（查看）/ `/submodel reset [type]`；参数三态与 subagent 工具 `model` 参数同构：`provider:model`（跨 provider）/ `provider` 名（其配置模型）/ `model` 名（父 provider 换模型）。持久化到 `config.agent.subagentModel`（全局）与 `config.agent.subagentModels[role]`（类型级），立即生效。**优先级链**：subagent 工具 `model` 参数 > 类型级 `subagentModels[role]` > 全局 `subagentModel` > 继承父 provider（`resolveChildProvider` 单一解析源）。Tab 补全 provider 名 + 类型名。实现注记：`openModelPicker` 绑定主会话状态不可直接复用——pickers 需新增"选中写入指定槽位"的参数化变体（复用 provider/模型列表构建与两级交互）。设计决策：**独立命令而非扩展 /model**——/model 语义是主会话 provider 切换，混入子模型会混淆；子 agent 模型是高频习惯性操作，picker 与直参双通道（图形导航 + 快捷输入）。
 - **/shell 命令**（cmd-shell.mjs）：bash 工具 shell 配置入口。**配置字段**：`config.shell`（字符串路径/命令名，null = 系统默认——Windows 用 cmd、其他平台 /bin/sh）。**Windows 编码策略**：未配置 shell（cmd）时每条命令自动前缀 `chcp 65001 >nul && `——子进程独立无副作用，cmd 的 GBK 输出不再乱码（UTF-8 解码器 + chcp 强制 UTF-8 代码页）；配置了 shell（git-bash/pwsh）时其原生输出即 UTF-8，无需前缀。**picker 菜单导航**（无参时）：按平台给出常用选项 + **可用性检测**（检测不到的自动隐藏）——Windows：System default(cmd+UTF-8) / pwsh / Git Bash（existsSync 常见安装路径）/ WSL bash / Custom path…；Linux 与 macOS：System default(/bin/sh) / bash / zsh / fish / Custom path…（同一候选集，检测后按实际安装显示）。检测方式：`spawnSync` 跑 `where <name>`（win）/ `command -v <name>`（posix），非零退出即隐藏（静默）。Custom path… 走 askQuestion 输入任意路径。**直参快捷路径保留**：`/shell <path|name>`（设置，引号自动剥离）/ `/shell reset`（恢复默认，大小写不敏感）。**生效**：立即生效（bash 工具每次调用实时读 `agent.config.shell`），`persistRaw` 持久化。VS Code 扩展共享同一 config.json 字段。**决策**：平台感知 picker——用户按平台选常用 shell 免记路径（修正早期"不做 picker"决策：shell 虽多为路径，但常用候选有限且平台差异大，检测后选择比记忆路径可靠）；直参与 custom 保留任意路径灵活性。
 
-- **wizard.mjs**：首启无 key 时进入——provider 选择（含自定义端点）→ API key → embedding key（可跳过）→ 模型；Esc 可随时跳过。
+- **wizard.mjs**：首启无 key 时进入——provider 选择（含自定义端点）→ API key → embedding key（可跳过）→ 模型；**Custom 分支 2026-09-03 起含 API format 步（endpoint 后 key 前——D-C2）**；Esc 可随时跳过（全步可跳——无半配置落盘）。
 - **pickers.mjs**：通用选择器（标题/条目/filter 输入/位置指示/↑ more ↓ more/栈式嵌套）；模型选择器两级（provider → model，可 fetch `/models` 拉取真实列表，失败回退预设）；`/provider` 添加/删除/设 key 的问答流程。
 
 ## 9. 关键设计决策
@@ -436,7 +436,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 **盘点结论**（explore 全命令 × 交互形态 × 枚举对照 2026-09-03）：全 CLI 交互面**仅一处"固定枚举手输"违约**——Add Provider → Custom 的 API format（pickers.mjs:345：手输 openai/anthropic/google——打错静默 abort——违反本文件 9 章决策与 ARCHITECTURE-v2 契约"所有需要用户选择的选项统一使用列表游标选择器"）。其余全部 picker 化（effort 档/transport/模型/会话/undo…——effort 枚举来源走 specForModel 动态枚举——2026-08-17 教训：不硬编码）；数值型手输（/config 5 项、context K）非枚举属合理自由文本。
 
-question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文件不复制）。
+question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文件不复制）。**其余文本面现状**（round2 #7 补）：wizard 文本步复用 state.input 全功能（有光标）、picker filter 行内输入（有光标）、**interruptPrompt（Ctrl+I 注入）复用主输入渲染（有光标）**——均不属缺口——本次仅 question 自由文本态扩展。
 
 ### 10.6D 设计层（2026-09-03）
 
@@ -484,7 +484,7 @@ question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文�
 - **行号→符号锚（评审 #2-5）**：L462-484/L43-51/L495-537/L224-226 → createMouseDispatch/createLoadOlder/update-notice 簇/孤儿注释（符号+近似区间 as-of）
 - **孤儿注释删（评审 #2-8）**：render-conversation 孤儿注释删除**纳入本批**（零风险）
 - **行数估算（评审 #2-8b）**：445-450 实际（545−(23+30+50)+re-export 胶水 ≈ 448）——验收 <500 为准——地图回写实测数
-- **key-handler 关联（评审 #1-4）**：§7 question 光标增行会加深 key-handler（523 基线）超限——TODO 登记拆分（与 index/render-conversation 同族评估——不在本批文件清单）
+- **key-handler 关联（评审 #1-4 + round2 #4 定稿）**：§7 question 光标增行会加深 key-handler（523 基线）超限——**key-handler 拆分纳入本批**（round2 裁定——同日同族——D-S4：key-handler question/permission/search/interruptPrompt 各模式分支抽 `key-modes.mjs`——估算 ~250 行迁出 → key-handler ~320——验收同批 <500）——TODO.md 登记确认
 
 **验收**：拆分后 index/render-conversation <500（预计 445-460）；新模块 <300 advisory；npm test 全绿零测试改动；模块地图同批回写（TUI.md §1——update-notice.mjs/render-segments.mjs 新行 + 行数更新 + fold-block 重复行删）；TODO.md:161 销账。
 

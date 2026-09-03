@@ -176,17 +176,17 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 
 用户实测：主输入框有光标（视觉反显 + 硬件定位双机制），question 自由文本输入框没有——盲输 + 仅回退。explore 一手查证差距链（2026-09-03）：
 
-1. **渲染数据源**：`layout.mjs:46-56`——question 存在时 boxLines 被替换为 options 列表或 `["▸ " + (q.answer ?? "")]`（无光标列概念）；同文件 inputLayout 按 state.input 计算——question 模式下被弃用
-2. **视觉光标压制**：`render-frame.mjs:148-150`——hasOverlay 含 question → curLine/curCol = -1 → renderInputBox 反显光标块整体跳过
-3. **硬件光标压制**：`render-frame.mjs:262-266`——question 时 cursorRow/Col 不计算（停 0,0）；`render-loop.mjs:114-115`——hasOverlay 帧 `cursorSuffix = ""`（连 hideCursor 都不发）
-4. **编辑能力最弱**：`key-handler.mjs:98-137` 自由文本分支只处理 Esc/Enter/backspace/字符追加/Ctrl+V——无 ←→/Home/End/Ctrl+U
+1. **渲染数据源**：`layout.mjs` question boxLines 分支——question 存在时 boxLines 被替换为 options 列表或 `["▸ " + (q.answer ?? "")]`（无光标列概念）；同文件 inputLayout 按 state.input 计算——question 模式下被弃用
+2. **视觉光标压制**：`render-frame.mjs` hasOverlay 判定——含 question → curLine/curCol = -1 → renderInputBox 反显光标块整体跳过
+3. **硬件光标压制**：`render-frame.mjs` cursorRow/Col 计算 + `render-loop.mjs` cursorSuffix 发射——question 时均跳过（连 hideCursor 都不发）
+4. **编辑能力最弱**：`key-handler.mjs` question 自由文本分支只处理 Esc/Enter/backspace/字符追加/Ctrl+V——无 ←→/Home/End/Ctrl+U
 
 ### 7.2 设计（D-Q1 question 输入态纳入输入框契约）
 
-**状态模型扩展**（§1.1 不变量同精神）：`state.question.cursor` 整数——question 处于**自由文本态**（无 options 或选中 Custom answer…）时恒满足 `0 <= cursor <= answer.length`（answer 为字符串——按 UTF-16 单位索引——与 input 字符数组同语义的简化形态）；options 态无 cursor 字段（选择标记即反馈——不变量不适用）。
+**状态模型扩展**（§1.1 不变量同精神）：`state.question.cursor` 整数——question 处于**自由文本态**（无 options 或选中 Custom answer…）时恒满足 `0 <= cursor <= answer.length`——**answer 存 codepoint 数组**（同 state.input 语义——非 UTF-16 串——emoji/代理对不劈半——round2 #1 定稿）；options 态无 cursor 字段（选择标记即反馈——不变量不适用）。提交时 Array.join 还原串。
 
 **渲染**：
-- 自由文本态 question：boxLines = layoutAnswer(q.answer, q.cursor, width)——复用 layoutInput 同式纯函数（单行不换行——answer 无 \n——简化——返回 {line, cursorCol}）——`▸ ` 前缀后光标列偏移 2
+- 自由文本态 question：boxLines = layoutAnswer(q.answer, q.cursor, width)——**与 layoutInput 同实现**（多行换行展开——`▸ ` 首行 + 续行 2 空格缩进——返回 {lines, cursorLine, cursorCol}——round2 #1 弃"单行简化"）；**行数上限复用主输入 cap（MAX_INPUT_LINES 5 + inputOffset 滚动）**（round2 #6——防长答案挤压会话面板到零行）——光标随行滚动
 - hasOverlay 例外细化：permission/picker/wizard-provider/options 态维持无光标；**question 自由文本态保留视觉反显 + 硬件定位**（与主输入框同路径——cursorSuffix 正常发）
 - options 态：无光标不变（▸ 标记即反馈）
 
@@ -199,7 +199,7 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 | Backspace | 删 cursor 前字符（现状保留——cursor 位置感知） |
 | 可打印字符 | 插入 cursor 位置（现状仅追加——改插入） |
 
-（Esc/Enter/Ctrl+V 粘贴语义不变；粘贴落 cursor 位置）
+（**Esc 语义 round2 #5 定稿**：有 options 时自由文本态 Esc = **回 options 态**（非中止——误触 Custom 有逃生口）；无 options 时 Esc = 中止 question。Enter 提交。Ctrl+V 粘贴落 cursor 位置——**粘贴含 \n → 替换为空格**（保文本——单行不变式硬守卫）。**Ctrl+J = no-op 吞**（不插换行——round2 #2 定稿）——未列键一律消费 return 无 fall-through）
 
 **options 态**：↑↓/Enter/Esc 不变；选中后自由文本态（Custom answer…）自动进入上述光标态。
 
@@ -211,7 +211,11 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 - T-Q4 Ctrl+U 清空（cursor 归 0）
 - T-Q5 options 态无光标回归（选择标记不变）
 - T-Q6 粘贴落 cursor 位置（clipboard 路径）
-- T-Q7 Esc/Enter 语义不变回归
+- T-Q7 Esc/Enter 语义回归（有 options 时 Esc 回 options 态——无 options 中止——round2 #5）
+- T-Q8 粘贴含 \n → 空格（单行不变式硬守卫——round2 #2）
+- T-Q9 Ctrl+J no-op 吞——不插换行无 fall-through（search 穿透教训回归）
+- T-Q10 长答案超宽换行 + cap 滚动（光标随行——round2 #1/#6）
+- T-Q11 emoji 中段移动/删除不劈代理对（codepoint——round2 #1）
 
 ### 7.4 受影响文件
 
@@ -221,7 +225,7 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 | `src/tui/render-frame.mjs` | hasOverlay 细化——question 自由文本态保留反显 + 硬件定位 |
 | `src/tui/render-loop.mjs` | 同上——question 自由文本态 cursorSuffix 正常发 |
 | `src/tui/key-handler.mjs` | 自由文本分支补 ←→/Home/End/Ctrl+U/中段插入 |
-| `src/tui/interaction.mjs`（askQuestion 装配——自查） | q.cursor 初始化/维护 |
+| `src/tui/interaction.mjs`（askQuestion 装配——q.cursor 归属处） | q.cursor 初始化/维护（自由文本态进入时 cursor = answer.length——options→Custom 转换时同步初始化） |
 | `test/tui.test.mjs` 等 | T-Q1..Q7 |
 | 本文档 §1.1/§7 | 契约同步 |
 
