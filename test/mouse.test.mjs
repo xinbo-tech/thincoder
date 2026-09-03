@@ -532,6 +532,54 @@ describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7
     })
   })
 
+  it("§19.5 T-M22: ⏹ 列点击 = cancel（ctx.cancelSubagent 直连——mock 不经模型）；不触发折叠翻转；⏹ 区外照常折叠", () => {
+    const state = mockState({ subTasks: { "coder#1": mkSub([{ kind: "tool", text: "❯ bash\n" }]) } })
+    let rendered = 0
+    let cancelled = null
+    const ctx = { state, render: () => { rendered++ }, cancelSubagent: (k) => { cancelled = k } }
+    stubDims(() => {
+      const P = computeLayout(state, { cols: 80, rows: 24 }).panels
+      assert.ok(P.subagent, "面板存在")
+      // 折叠头 = 分隔线后一行（subagentLines[1] 的本地行 1——行 y+2）
+      const headRow = P.subagent.y + 2
+      const layout = computeLayout(state, { cols: 80, rows: 24 })
+      const lineEl = layout.subagentLines[1]
+      assert.ok(lineEl?._stopSub, "运行中折叠头带 _stopSub（⏹ 标记）")
+      // ⏹ 列（cols=80——右缘标记列）点击 → cancel；不触发折叠翻转
+      assert.equal(handleMouseClick(ctx, 80, headRow), true, "⏹ 列点击被消费")
+      assert.equal(cancelled, "coder#1", "cancelSubagent 收到定向 key（直连——不经模型回合）")
+      assert.ok(!state.expandedBlocks?.has("sub-coder#1"), "⏹ 点击不触发折叠翻转（round1 #6）")
+      assert.ok(rendered > 0)
+      // ⏹ 区外点击（同行的普通区）→ 照常折叠翻转；cancelSubagent 不再被调
+      cancelled = null
+      const beforeExpand = state.expandedBlocks?.has("sub-coder#1")
+      assert.equal(handleMouseClick(ctx, 10, headRow), true, "头部普通区点击被消费")
+      assert.equal(cancelled, null, "普通区点击不 cancel")
+      assert.notEqual(state.expandedBlocks?.has("sub-coder#1"), beforeExpand, "普通区点击触发折叠翻转（列级区分）")
+    })
+  })
+
+  it("§19.5 T-M23 渲染侧：⏹ 仅 running 折叠头有标记——done/awaitingDigest 头无 _stopSub", async () => {
+    const { renderSubagentPanel } = await import("../src/tui/subagent-panel.mjs")
+    const run = mockState({ subTasks: { "coder#1": mkSub([]) } })
+    stubDims(() => {
+      const head = renderSubagentPanel(run, 80).find((x) => x._foldToggle === "sub-coder#1")
+      assert.ok(head?._stopSub === "coder#1" && head?._stopCol === 80, "running 折叠头带 ⏹ 命中元数据（右缘列）")
+      // done（挂起期中间态 awaitingDigest——冻结延迟驻留面板）→ 无 ⏹（仅 running）
+      const dig = mockState({ subTasks: { "coder#1": { ...mkSub([]), done: true, awaitingDigest: true } } })
+      const lines = renderSubagentPanel(dig, 80)
+      const head2 = lines.find((x) => x._foldToggle === "sub-coder#1")
+      assert.ok(head2, "awaitingDigest 块驻留面板")
+      assert.ok(head2 && !head2._stopSub && !String(head2.text).includes("⏹"), "done 中间态无 ⏹ 标记（仅 running 显示）")
+      // 压缩面板（role compress——复用面板槽）头无 ⏹——点击不会误 cancel 池条目（审计问题 #2）
+      const comp = mockState({ subTasks: { "compress#9": { key: "compress#9", role: "compress", model: undefined, blocks: [], done: false, started: Date.now(), currentTool: "compressing context…", turn: 0, maxTurns: 0, approval: null, lastError: null } } })
+      const compHead = renderSubagentPanel(comp, 80).find((x) => x._foldToggle === "sub-compress#9")
+      assert.ok(compHead, "压缩面板头在面板")
+      assert.ok(!compHead._stopSub && !String(compHead.text).includes("⏹"), "compress 头无 ⏹（subagent 角色门）")
+    })
+  })
+
+
   it("T5: 展开超限 → 面板内 ▲▼ 控制行翻窗（块内滚动）", () => {
     const blocks = [{ kind: "tool", text: Array.from({ length: 30 }, (_, i) => `row ${i}`).join("\n") + "\n" }]
     const state = mockState({ subTasks: { "coder#1": mkSub(blocks) }, expandedBlocks: new Set(["sub-coder#1"]) })

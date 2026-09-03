@@ -69,12 +69,14 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     onToken: (text) => {
       // Strip the subagent `[model]` metadata token (role#id/[model]<name>) — it's a
       // TUI/webview display signal, not conversation content, and must not reach ACP clients.
-      if (/^[\w-]+#\d+\/\[model\]/.test(text)) return
-      // D7 (AGENT-LOOP.md §7.2): strip ⟦ev⟧ event tokens (bare or prefixed variants) —
-      // they carry RS control characters and are a TUI display signal; structured ACP
+      // §19.5 D-M8 (round2 #6): nested prefixes recurse — eng-coder#2/explore#1/[model]…
+      if (/^(?:[\w-]+#\d+\/)*\[model\]/.test(text)) return
+      // D7 (AGENT-LOOP.md §7.2 + §19.5 round2 #6): strip ⟦ev⟧ event tokens (bare or
+      // any-depth prefixed variants — turn/approval/done/settled/stopped) — they
+      // carry RS control characters and are a TUI display signal; structured ACP
       // mapping (tool_call_update) is tracked separately in docs/TODO.md.
-  // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-      if (/^(?:[\w-]+#\d+\/)?⟦ev⟧(?:turn|approval)\x1e/.test(text)) return
+      // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
+      if (/^(?:[\w-]+#\d+\/)*⟦ev⟧(?:turn|approval|done|settled|stopped)\x1e/.test(text)) return
       update("agent_message_chunk", { content: { type: "text", text } })
     },
     onReasoning: (text) => update("agent_thought_chunk", { content: { type: "text", text } }),

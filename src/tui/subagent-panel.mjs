@@ -10,6 +10,10 @@
  * 区块（sub.done && sub.awaitingDigest）冻结被延迟，驻留面板显示
  * "done · awaiting digestion"，池空补发冻结后才移除。
  *
+ * §19.5 D-M7 ⏹：运行中（非 done）折叠头右缘停止标记（dim，仅折叠头）——点击 =
+ * cancel（mouse.mjs 列级命中 _stopCol——不触发折叠翻转）。
+ * §19.5 D-M8：本模块同时承载子标行 dim 样式（styleSubLabelRow——面板与冻结渲染共用）。
+ *
  * 中立模块（D1 评审 #6）：layout.mjs 调 renderSubagentPanel 预计算面板高度
  * （subagentLines → subagentH），render-frame.mjs 直接 put 预计算行（不重复
  * 渲染）——若本函数放 render-frame 会引入 layout↔render-frame 循环依赖。
@@ -21,9 +25,30 @@
  * 折叠状态 key = `sub-${key}` 跨 turn 保持（D5，与冻结区块同一 key——冻结边界
  * 无缝衔接）。
  */
-import { C } from "./ansi.mjs"
+import { ansi, C } from "./ansi.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
 import { isExpanded, renderBlockTimeline, renderExpandedBlock, foldTailLines } from "./fold-block.mjs"
+import { SUBAGENT_ROLES } from "./subagent-blocks.mjs"
+
+/** 子标行行首标记（`explore#1 · `——sublabelLine 写入的字面形态）。 */
+const SUB_LABEL_RE = /^([\w-]+#\d+(?:\/[\w-]+#\d+)* · )/
+
+/** §19.5 D-M8 子标行 dim 样式（最终渲染点注入——行对象单色外 wrap 无法表达行内
+ *  双色）：行首 `explore#1 · ` 子标转 gray（90m），其后内容恢复该行 kind 色
+ *  （tool=cyan / text=白 / think=默认 fg——dim 属性本就由 C.reason 施加，不受
+ *  fg 切换影响）。折叠 tail / dim 行不需调用（整行已 dim）。返回新行对象。 */
+export function styleSubLabelRow(row) {
+  const content = String(row.text).replace(/^│ /, "")
+  const m = content.match(SUB_LABEL_RE)
+  if (!m) return row
+  const restore = row.color === C.tool ? ansi.fg(6)
+    : row.color === C.text ? ansi.fg(7)
+    : ansi.fg(9) // 默认 fg（think 行 C.reason=dim 属性——90m 后切回默认即还原 dim 白）
+  return {
+    ...row,
+    text: `│ ${ansi.gray}${m[1]}${restore}${content.slice(m[1].length)}`,
+  }
+}
 
 /**
  * 面板行构建（纯函数）：顶部分隔线 `─` + 各运行中区块（折叠头 + tail 3 /
@@ -64,14 +89,26 @@ export function renderSubagentPanel(state, cols, maxRows) {
     const argSummary = sub.currentTool && sub.toolArgs?.command
       ? ` — ${String(sub.toolArgs.command).replace(/\s+/g, " ").trim().slice(0, 60)}`
       : ""
-    out.push({
-      text: `${bracket} ${sliceByWidth(statePart + argSummary, Math.max(0, cols - 2 - bracketWidth))}`,
-      color: C.tool,
-      _foldToggle: foldKey,
-    })
+    let headText = `${bracket} ${sliceByWidth(statePart + argSummary, Math.max(0, cols - 2 - bracketWidth))}`
+    const line = { color: C.tool, _foldToggle: foldKey }
+    // §19.5 D-M7 ⏹（仅 running 且真实 subagent 角色——done/awaitingDigest/压缩面板
+    // （role compress）/consult 无标记——点击只对池内 async 子代理有意义）：dim 停止
+    // 标记钉在折叠头右缘（宽度 = ⏹ 标记列）——_stopCol 供 mouse 列级命中（⏹ 列点击 =
+    // cancel，不触发折叠翻转——round1 #6）。整行 ≤ cols：内容先按 cols−2 截断。
+    if (!sub.done && SUBAGENT_ROLES.includes(sub.role)) {
+      const cut = sliceByWidth(headText, Math.max(0, cols - 2))
+      headText = cut + " ".repeat(Math.max(0, cols - 2 - stringWidth(cut)))
+      line.text = `${headText} ${ansi.dim}⏹${ansi.reset}`
+      line._stopSub = sub.key
+      line._stopCol = cols
+    } else {
+      line.text = headText
+    }
+    out.push(line)
     if (isExpanded(state, foldKey)) {
       // 展开态：全量活动时间线（per-kind 着色，60% 屏封顶 + 块内滚动——公共组件）。
-      const body = renderBlockTimeline(sub.blocks, cols)
+      // §19.5 D-M8：时间线行过 styleSubLabelRow——行首子标 dim、内容恢复 kind 色。
+      const body = renderBlockTimeline(sub.blocks, cols).map(styleSubLabelRow)
       out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
     } else {
       // 折叠态：tail 3 非空 block 行（最近活动），dim。

@@ -628,4 +628,41 @@ test("§19 T-M16: check/status action 结果走普通工具块——不冻结子
   assert.equal(dimPreviews.length, 0, "check 结果不推会话预览行（subagent_check 时代行为——普通工具块）")
 })
 
+test("§19.5 T-M19 集成: cancel action 结果走普通工具块——不冻结子 agent 区块（区块冻结由 ⟦ev⟧stopped 承担）", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  // 真实时序：先 async spawn 建运行中区块，随后模型调 cancel（ack 返回）。池里有 live
+  // 条目（回合尾 willSuspend——区块不被 freezeAllSubTasks 收尸，等待 settle 的 stopped）
+  ctx.agent._asyncSubagents = new Map([["1", { id: "1", role: "coder", status: "running" }]])
+  callbacks.onToolCall("subagent", { task: "慢活", role: "coder", async: true }, "call-S1")
+  callbacks.onToolCall("subagent", { action: "cancel", id: "1" }, "call-C1")
+  callbacks.onToken("coder#1/[model]m")
+  ctx.runAgent = async (_a, _t, cbs) => {
+    cbs.onToolResult("subagent", JSON.stringify({ id: "1", status: "cancelled" }), "call-C1")
+  }
+  await runAgentTurn(ctx, "task", { skipSession: true }) // 池 live → 挂起会话由调用方驱动（本单测只验回合内路由）
+  const carrier = ctx.state.lines.find((l) => l._toolBlock?.id === "call-C1")
+  assert.ok(carrier, "cancel action 的工具块存在")
+  assert.equal(carrier._toolBlock.done, true, "ack 入块 → 块 done")
+  assert.equal(carrier._toolBlock.result.join("\n").includes('"cancelled"'), true, "cancel ack 落在块体内")
+  assert.ok(
+    !ctx.state.lines.some((l) => l._frozenSubTask),
+    "cancel ack 不冻结任何子 agent 区块（区块 stopped 冻结由 ⟦ev⟧stopped settle 事件承担——审计偏差 #1 修复）",
+  )
+  assert.ok(ctx.state.subTasks["coder#1"], "运行中区块保留（等待 settle 的 ⟦ev⟧stopped）")
+  const dimPreviews = ctx.state.lines.filter((l) => l.text?.includes("cancelled"))
+  assert.equal(dimPreviews.length, 0, "cancel ack 不推会话预览行")
+  // 错误路径（未知 id）同走普通工具块——不误冻区块（注入运行中区块——区分力与 ack 同）
+  const { ctx: ctx2, callbacks: cbs2 } = await captureCallbacks()
+  ctx2.agent._asyncSubagents = new Map([["1", { id: "1", role: "coder", status: "running" }]])
+  cbs2.onToolCall("subagent", { action: "cancel", id: "999" }, "call-C2")
+  cbs2.onToken("coder#1/[model]m")
+  ctx2.runAgent = async (_a, _t, cbs) => {
+    cbs.onToolResult("subagent", JSON.stringify({ id: "999", status: "error", error: "unknown async subagent id: 999" }), "call-C2")
+  }
+  await runAgentTurn(ctx2, "task", { skipSession: true })
+  assert.ok(!ctx2.state.lines.some((l) => l._frozenSubTask), "cancel error 同样不冻结区块")
+  assert.ok(ctx2.state.subTasks["coder#1"], "error 路径运行中区块同样保留（等待 stopped）")
+})
+
+
 

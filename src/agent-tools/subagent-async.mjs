@@ -1,21 +1,11 @@
 /**
- * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + §19 合体动作执行器
- * （AGENT-LOOP.md §19：subagent 单工具四动作 spawn/check/status/escalate——消费侧
- * subagent-check.mjs 与 escalate.mjs 退役，check/status/escalate 动作执行器并入本模块，
- * subagent.mjs 保持 500 行硬限内只承载 spawn 路径与工具面）。
- *
- * 内容：
- * - resolveChildProvider：子代理 provider 解析（原 subagent.mjs——spawn 与 escalate
- *   动作共用，故随 escalate 并入）
- * - async 常量（§15 D-A4）：ASYNC_SUBAGENT_LIMIT（槽位机械上限）与 MAX_ASYNC_CHECKS
- *   （check 动作 per-turn 检查预算）
- * - executeCheckAction：§19 check 动作 = 原 subagent_check 语义原样（arrival order /
- *   指定 id 阻塞 / n 计数 / MAX_ASYNC_CHECKS / 消费后删除——T-M2..M4 迁移回归）
- * - executeStatusAction：§19 status 动作（新增——非阻塞只读池查询，不消费不计数）
- * - executeEscalateAction：§19 escalate 动作 = 原飞刀语义原样（ESCALATE.md——depth-0
- *   only / 工程模式拒 / consultModels 空拒 / relay 前缀 escalate#N/——T-M14..M16 迁移回归）
- * - runChildPipeline / maybeRefillAsync / injectAsyncResult / buildChildRunOpts /
- *   mergeChildMutations：run 管线支撑（导出经 subagent.mjs re-export shim 等价保留）
+ * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + §19/§19.5 合体动作执行器
+ * （AGENT-LOOP.md §19：subagent 单工具五动作 spawn/check/status/escalate/cancel——check/
+ * escalate 动作执行器并入本模块；subagent.mjs 只承载 spawn 路径与工具面）。
+ * 内容：resolveChildProvider / async 常量 / executeCheckAction / executeStatusAction
+ * （§19.5 D-M5 可决策字段）/ executeCancelAction + cancelAsyncSubagent（§19.5 D-M6——
+ * 工具与 TUI ⏹ 共用）/ executeEscalateAction / runChildPipeline + maybeRefillAsync +
+ * injectAsyncResult + buildChildRunOpts + mergeChildMutations。
  */
 import { isAbsolute, relative } from "node:path"
 import {
@@ -130,6 +120,10 @@ export async function executeCheckAction(args, ctx) {
   }
 
   map.delete(String(target.id))
+  // Cancelled entries are removed from the pool at their cancel — an in-flight
+  // check that held the entry object observes `cancelled` and reports the same
+  // unknown-id error a fresh check gets (nothing to consume; §19.5 T-M27).
+  if (target.cancelled) return JSON.stringify({ id: String(target.id), status: "error", error: `unknown async subagent id: ${target.id}` })
   if (target.error) return JSON.stringify({ id: String(target.id), status: "error", error: target.error })
   return JSON.stringify({ id: String(target.id), role: target.role, status: "done", report: target.report ?? "" })
 }
@@ -140,13 +134,31 @@ export async function executeCheckAction(args, ctx) {
  * counter (T-M10). Source of truth = the pool (_asyncSubagents): entries moved
  * to _pendingAsyncResults during a suspension (§17 D-S3 ② — injected at the next
  * run start) are no longer in the pool and are NOT counted as done-waiting.
- * - id given → { id, role, status, ... } for that entry; unknown id → error
- *   (same wording as check — T12 semantics)
- * - id omitted → { overview: { running: [ids], queued: [{id, position}],
- *   done: [ids] } } — live queue positions (index in _asyncQueue + 1).
+ * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?, ... } for
+ *   that entry; unknown id → error (same wording as check — T12 semantics)
+ * - id omitted → { overview: { running: [{id, role, model, elapsedSec, turn,
+ *   maxTurns}], queued: [{id, role, position}], done: [{id, role}] } } — live
+ *   queue positions (index in _asyncQueue + 1).
  * A settled-but-unconsumed entry (settled during a NORMAL turn) reports done
  * with a "not yet consumed" note — check still retrieves it afterwards.
  */
+/** §19.5 D-M5 decision-field assembly (F9): running entries report
+ *  {id, role, model, elapsedSec, turn, maxTurns} — the data needed to decide
+ *  WHO to cancel. Model is recorded at spawn (childProvider), startedAt at
+ *  ACTUAL start (queued waits don't count), turn/maxTurns mirrored from the
+ *  child's ⟦ev⟧turn events at the callbacks-wrap layer (subagent.mjs tracker).
+ *  elapsedSec computed at call time from startedAt. */
+function statusFields(entry) {
+  const base = { id: String(entry.id), role: entry.role }
+  if (entry.status === "running") {
+    base.model = entry.model ?? null
+    base.elapsedSec = entry.startedAt ? Math.max(0, Math.floor((Date.now() - entry.startedAt) / 1000)) : 0
+    base.turn = entry.turn ?? 0
+    base.maxTurns = entry.maxTurns ?? 0
+  }
+  return base
+}
+
 export function executeStatusAction(args, ctx) {
   const agent = ctx.agent
   const map = agent._asyncSubagents ?? new Map()
@@ -162,34 +174,86 @@ export function executeStatusAction(args, ctx) {
     if (!entry) {
       return JSON.stringify({ id: key, status: "error", error: `unknown async subagent id: ${key}` })
     }
-    if (entry.status === "running") return JSON.stringify({ id: key, role: entry.role, status: "running" })
+    const target = statusFields(entry)
+    if (entry.status === "running") return JSON.stringify({ ...target, status: "running" })
     if (entry.status === "queued") {
-      return JSON.stringify({ id: key, role: entry.role, status: "queued", position: queuedPosition(key) ?? entry.position })
+      return JSON.stringify({ ...target, status: "queued", position: queuedPosition(key) ?? entry.position })
     }
     // done = settled during this turn and not yet consumed — check still retrieves it.
-    const target = { id: key, role: entry.role, status: "done", done: true }
+    target.status = "done"
+    target.done = true
     if (entry.error) target.error = entry.error
     target.note = "settled, not yet consumed — retrieve via check or the turn-end auto-wait injects it"
     return JSON.stringify(target)
   }
   const overview = { running: [], queued: [], done: [] }
   for (const entry of map.values()) {
-    if (entry.status === "running") overview.running.push(String(entry.id))
-    else if (entry.status === "queued") overview.queued.push({ id: String(entry.id), position: queuedPosition(String(entry.id)) ?? entry.position })
-    else if (entry.done) overview.done.push(String(entry.id))
+    if (entry.status === "running") overview.running.push(statusFields(entry))
+    else if (entry.status === "queued") overview.queued.push({ id: String(entry.id), role: entry.role, position: queuedPosition(String(entry.id)) ?? entry.position })
+    else if (entry.done) overview.done.push({ id: String(entry.id), role: entry.role })
   }
   return JSON.stringify({ overview })
 }
 
 /**
- * subagent action:"escalate" (§19 D-M4 — the retired escalate tool's semantics
- * verbatim, docs/design/ESCALATE.md): 飞刀 — hand an implementation task to a
- * STRONGER model (a consultModels candidate) which gets WRITE access and does
- * the work itself, then returns a post-op report. All legacy constraints are
- * preserved: depth-0 only, engineering mode fail-closed, empty consultModels
- * error, model pick validation, relay prefix `escalate#N/` (the action name and
- * the legacy prefix match — TUI routing is untouched), NO permQueue (continue
- * prompts go straight to the user), mutations merge into the parent.
+ * §19.5 D-M6 cancel 核心（工具路径与 TUI ⏹ 共用）：定向中止单个后台子代理，id 必填。
+ * - queued 目标（未启动无 controller）：出队 + 后续 position 前移 + settle waiter
+ *   → { id, status:"cancelled", was:"queued" }——无 abort（T-M27）
+ * - running 目标：置 entry.cancelled + 条目 controller abort（child runAgent signal）
+ *   → settle finally 跑 cancelled 分支（⟦ev⟧stopped 冻结 + 模型提醒；不入 pending/
+ *   不直注入）→ { id, status:"cancelled" }（T-M19）
+ * - 未知/已完成 id → error（T-M20）；重复 cancel 幂等（abort 已在途）
+ */
+export function cancelAsyncSubagent(agent, id) {
+  const key = String(id)
+  const map = agent._asyncSubagents ?? new Map()
+  const entry = map.get(key)
+  if (!entry) {
+    return { id: key, status: "error", error: `unknown async subagent id: ${key}` }
+  }
+  if (entry.done) {
+    return { id: key, status: "error", error: `async subagent #${key} has already finished — nothing to cancel` }
+  }
+  if (entry.cancelled) return { id: key, status: "cancelled" } // abort already in flight — idempotent
+  if (entry.status === "queued") {
+    // 出队 + position 释放/前移；settle 使在途 check waiter 终止（观察 cancelled）
+    const queue = agent._asyncQueue ?? []
+    const qi = queue.indexOf(entry)
+    if (qi >= 0) {
+      queue.splice(qi, 1)
+      for (let i = 0; i < queue.length; i++) queue[i].position = i + 1
+    }
+    entry.cancelled = true
+    entry.done = true
+    entry.status = "done"
+    map.delete(key)
+    entry._settle?.()
+    for (const w of agent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
+    return { id: key, status: "cancelled", was: "queued" }
+  }
+  // running：标记 + 条目 abort——settle finally 跑 cancelled 分支（移除 + stopped + 提醒）
+  entry.cancelled = true
+  entry.controller?.abort?.()
+  return { id: key, status: "cancelled" }
+}
+
+/** subagent action:"cancel" (§19.5 D-M6): depth-0 main-session control only. */
+export function executeCancelAction(args, ctx) {
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "cancel is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §19.5 D-M6)" })
+  }
+  const id = args?.id
+  if (id === undefined || id === null || String(id) === "") {
+    return JSON.stringify({ status: "error", error: "cancel requires the id of the async subagent to stop — omitting it would mean a blanket cancel (Ctrl+C stops everything; AGENT-LOOP.md §19.5 D-M6)" })
+  }
+  return JSON.stringify(cancelAsyncSubagent(ctx.agent, String(id)))
+}
+
+/**
+ * subagent action:"escalate"（§19 D-M4——退役 escalate 工具语义原样，ESCALATE.md）：
+ * 飞刀——交给 consultModels 池里更强模型（WRITE + 术后报告）。约束全保留：depth-0
+ * only / 工程模式拒 / consultModels 空拒 / relay 前缀 `escalate#N/`（与既有前缀同名
+ * ——TUI 路由零改动）/ 无 permQueue（continue 直达用户）/ mutations merge 回父。
  */
 export async function executeEscalateAction(args, ctx) {
   const parent = ctx.agent
@@ -201,9 +265,7 @@ export async function executeEscalateAction(args, ctx) {
   if (pool.length === 0) return "Error: no escalate candidates — configure at least one consult model (agent.consultModels)"
 
   const { task, model } = args ?? {}
-  // Escalate requires the task brief (schema `required` is advisory in the
-  // multi-action schema) — an absent task would otherwise flow downstream as
-  // `content: undefined` and surface as an obscure child-run error.
+  // task 机械必填（多动作 schema 的 required 只是建议——缺 task 会以晦涩 child-run 错浮现）
   if (typeof task !== "string" || !task.trim()) {
     return "Error: escalate requires a task — the task description with goal, constraints, entry files and acceptance criteria"
   }
@@ -225,36 +287,24 @@ export async function executeEscalateAction(args, ctx) {
   }
   let effortNote = ""
   if (pick.effort && !clampEffort(provider, pick.model, pick.effort)) {
-    // Out-of-enum effort dropped (see clampEffort): the provider preset default may ALSO be
-    // out-of-enum for this override model — e.g. qwenplan preset default "high" is
-    // invalid for qwen3.8-max, enum xhigh/medium/low.
+    // enum 外 effort 丢弃（preset 默认也可能对 override model 是 enum 外值）
     effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, dropped)`
   }
 
   const tag = label(pick)
   const relayPrefix = makeRelay(parent, "escalate", ctx.callbacks?.onToken, provider.model ?? tag)
-  // Report the escalated model to the display layer (it may differ from the parent's)
-  // — makeRelay already emitted the `[model]` metadata token above.
 
-  // No wall-clock watchdog — turn cap only, exactly like subagent (the verified write
-  // path). Rationale (2026-08-16): a fixed wall-clock aborts NORMAL-but-slow surgery —
-  // two max-effort consultants hit a 10min wall just READING files. Hang protection is
-  // already covered by FETCH_TIMEOUT_MS (per LLM call) and the user's Stop (parent
-  // signal propagates directly below). maxTurns is the cost budget; hitting it asks
-  // the user whether to continue (main-agent parity), falling back to partial work.
+  // 无墙钟 watchdog——turn cap 即成本预算（2026-08-16 rationale：固定墙钟会误杀正常慢速
+  // 手术；挂起防护 = FETCH_TIMEOUT_MS + 父 signal 直传）
 
-  // No custom onToken here (consult P2, 2026-08-30): wrapChildCallbacks already
-  // applies the prefixed relay + D7 sentinel strip for the display path, and
-  // runWithContinue owns the capture (stripEventTokensForCapture) for the
-  // partial-output return — a hand-rolled duplicate ran the strip twice and
-  // maintained a second output buffer.
+  // 不自建 onToken（consult P2）：wrapChildCallbacks 已承担前缀 relay + D7 哨兵剥除，
+  // runWithContinue 拥有 capture（stripEventTokensForCapture）——手写副本会双剥+双缓冲
   const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})
 
-  // Declared outside try so the catch can merge mutations even on a partial failure.
+  // try 外声明：catch 也能在部分失败时 merge mutations
   let child = null
   try {
-    // Full write path (role "coder"): permission gate via the parent's onPermissionRequest,
-    // recent-changes tracking, mutations merge into the parent below.
+    // 全写路径（role "coder"）：权限经父 onPermissionRequest，mutations merge 回父
     child = createAgent({
       provider,
       tools: parent.tools,
@@ -270,14 +320,9 @@ export async function executeEscalateAction(args, ctx) {
       maxTurns: parent.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS, // review #7: constant, not literal (single source with subagent)
       signal: ctx.signal ?? null,
     }
-    // Turn-cap continue via runWithContinue (§7.2 D3), main-agent parity (tui/agent-turn.mjs):
-    // when the child hits ContinueError, ask the user through the SAME channel as child
-    // write approval (ctx.onPermissionRequest). The name "continue" renders the TUI's
-    // dedicated y/n Continue panel. The resumed run passes resume:true, so runAgent does
-    // NOT re-inject the task text (setup.mjs skips input on resume) and keeps the child's
-    // history + mutation bookkeeping, with a fresh maxTurns budget per run. No permission
-    // handler (headless) or a declined prompt falls through to the partial-work return.
-    // Continues are UNLIMITED — the user can decline at any prompt.
+    // Continue 经 runWithContinue（§7.2 D3，主会话同等 y/n 面板）：resume:true 不重注入
+    // task 文本（setup 跳 input）且保留 child history + mutation 记账，刷新 turn 预算；
+    // 无权限 handler（headless）或拒绝 → 部分工作返回；continue 次数无限（每轮可拒）。
     const report = await runWithContinue(
       async (childAgent, input, cbs, opts) => {
         // Merge mid-run mutations even when the run throws — the outer catch keeps
@@ -299,8 +344,7 @@ export async function executeEscalateAction(args, ctx) {
         onDeclined: (e, output) => `escalate (${tag}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
       },
     ).catch((e) => {
-      // Generic run failure (not ContinueError): match the original loop's return shape —
-      // error text + partial output, mutations already merged in the runner wrapper.
+      // 非 ContinueError 运行失败：错误文本 + partial 输出（mutations 已在 runner 包装层 merge）
       if (ctx.signal?.aborted || e?.name === "AbortError") throw e
       return `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${(child._capturedOutput ?? "").slice(0, 2000)}`
     })
@@ -308,8 +352,7 @@ export async function executeEscalateAction(args, ctx) {
     mergeChildMutations(parent, child)
     return `escalate (${tag})${effortNote} post-op report:\n${report || (child._capturedOutput ?? "").slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
   } catch (e) {
-    // Reached only when createAgent itself fails or the continue prompt throws —
-    // run failures are handled above (mutations merge inside the runner wrapper).
+    // 仅 createAgent 失败/continue 询问抛出才到这（运行失败已在上面 catch 处理）
     if (child) mergeChildMutations(parent, child)
     if (ctx.signal?.aborted || e?.name === "AbortError") throw e
     return `escalate (${tag}) error: ${e?.message ?? String(e)}`
@@ -328,62 +371,45 @@ function touchedFilesNote(child, cwd) {
 }
 
 /**
- * Shared post-spawn pipeline (blocking AND async — AGENT-LOOP.md §15 D-A1: the
- * async branch reuses the exact same spawn-child pipeline, "全不变"):
- * turn-cap continue loop → declined partial-work return → MIN_REPORT_CHARS
- * expansion → eng-coder mutation merge → designId suffix. Returns the report.
- * onDeclined lives here (identical for both paths) — only askContinue differs:
- * blocking asks the user via the permission panel; async NEVER pops a panel —
- * auto-declines except engineering && AUTO, which auto-resumes (§15 D-A3).
+ * 共享 post-spawn 管线（阻塞与 async 同一条——§15 D-A1 "全不变"）：turn-cap continue
+ * 循环 → 拒绝降级 partial 返回 → MIN_REPORT_CHARS 扩写 → eng-coder mutation merge →
+ * designId 后缀。onDeclined 在此（两路同一形态）——只有 askContinue 不同：阻塞经权限
+ * 面板询问；async 永不弹面板（自动拒绝；engineering && AUTO 自动 resume——§15 D-A3）。
  */
 export async function runChildPipeline(child, input, childOpts, childRunOpts, { parent, role, args, askContinue }) {
   const declined = { partial: null }
   let report = await runWithContinue(
-    (child, input, cbs, opts) => runAgent(child, input, cbs, opts), // opts = childRunOpts + resume (managed by the pipeline)
+    (child, input, cbs, opts) => runAgent(child, input, cbs, opts), // opts = childRunOpts + resume (由管线管理)
     child, input, childOpts, childRunOpts,
     {
       askContinue,
       onDeclined: (e, output) => {
         if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
-        // Early return semantics (unchanged from the inline loop): the declined
-        // partial-work message is returned WITHOUT the MIN_REPORT_CHARS expansion —
-        // re-prompting a capped child for a longer report is wrong.
-        // Review #2 fix: use the pipeline-captured output (the `report` variable is
-        // still "" at this point — runWithContinue hasn't returned yet).
+        // 拒绝 = 早退语义：不带 MIN_REPORT_CHARS 扩写（对已 cap 的 child 追问长报告是错的）；
+        // review #2：用管线捕获的 output（此时 report 仍 ""——runWithContinue 未返回）
         declined.partial = `Subagent (${role}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output || ""}`
       },
     },
   )
   if (declined.partial !== null) {
-    // declined eng-coder delivery still carries its designId — the fix round
-    // re-spawns with the same slot (2026-09-01).
+    // 被拒的 eng-coder 交付仍带 designId（fix round 以同 slot 重 spawn——2026-09-01）
     if (role === "eng-coder") declined.partial += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse it (with the same designToken) when re-spawning this eng-coder.`
     return declined.partial
   }
 
-  // Report too short = incomplete handoff: send back for expansion once (inspired by kimi-code's summaryPolicy: min 200 chars, retry 1 time).
-  // The child agent's history is still intact; the continuation instruction is appended as new input so it can see its own earlier work.
+  // 报告过短 = 交接不完整：送回扩写一次（kimi-code summaryPolicy: min 200 chars 同源）
   if (report.length < MIN_REPORT_CHARS) {
     report = await runAgent(child, REPORT_CONTINUATION, childOpts, childRunOpts)
   }
 
-  // Engineering mode mechanical code gate: delegated file changes must not
-  // bypass the parent's advisor/verify guards. Merge the child's mutations
-  // into the parent so "advisor mandatory at both gates" is enforced, not just
-  // promised in the engineering prompt.
-  // CRITICAL: Only merge if child actually mutated files (defense-in-depth against
-  // runAgent throwing before any writes occurred).
-  // Review #8 clarification: eng-coder ONLY is intentional — the mechanical
-  // two-gate merge exists for engineering mode; plain `coder` children carry
-  // their own verify/advisor self-review discipline (per tool description), and
-  // normal mode has no parent advisor/verify gate to feed.
+  // 工程模式机械码门：委托的文件改动不得绕过父侧 advisor/verify guard——eng-coder ONLY
+  // 有意为之（review #8）：普通 coder 自带自评纪律；normal 模式无父侧 gate 可喂。
+  // 只在实际 mutated 时 merge（防 runAgent 写前抛错时传播空 mutation 声明——纵深防御）
   if (role === "eng-coder" && child._mutatedThisRun) {
     mergeChildMutations(parent, child)
   }
 
-  // designId rides the delivery report (2026-09-01): the divergence-audit fix round
-  // re-spawns with the SAME designId+token — the parent copies it from here, and the
-  // prompt tells the model exactly where the matching token came from.
+  // designId 随交付报告（2026-09-01）：divergence audit fix round 用同一 designId+token 重 spawn
   if (role === "eng-coder") {
     report += `\ndesignId: ${args.designId ?? "(single-design session — designId optional)"} — reuse this designId with the same designToken (from the approved advisor type='design' review) when re-spawning this eng-coder for an audit fix round.`
   }

@@ -193,9 +193,11 @@ describe("bridge — runAgent callbacks → session/update notifications", () =>
     assert.equal(events[2].params.update.sessionUpdate, "usage_update")
   })
 
-  // D7 (§7.2): ⟦ev⟧ event tokens (bare or role#id/ prefixed) never reach ACP
-  // clients — RS control chars are a TUI display signal; structured mapping is TODO.
-  it("strips ⟦ev⟧ event tokens (bare + prefixed); normal tokens pass through", () => {
+  // D7 (§7.2 + §19.5 round2 #6): ⟦ev⟧ event tokens (bare / role#id/ prefixed /
+  // multi-segment nested prefixes) never reach ACP clients — RS control chars
+  // are a TUI display signal; structured mapping is TODO. [model] metadata
+  // strips at ANY prefix depth; nested relay CONTENT passes (TUI renders sublabels).
+  it("strips ⟦ev⟧ event tokens (bare + prefixed + nested); normal tokens pass through", () => {
     const events = []
     const cb = buildAcpCallbacks({
       sessionId: "s1",
@@ -204,16 +206,29 @@ describe("bridge — runAgent callbacks → session/update notifications", () =>
     cb.onToken("⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e")            // bare turn event
     cb.onToken("coder#1/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e")     // prefixed turn event
     cb.onToken("consult#2/⟦ev⟧approval\x1e1\x1e40\x1eapproval\x1ewrite") // prefixed approval
+    cb.onToken("coder#3/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")     // async-child done (prefixed)
+    cb.onToken("coder#3/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e") // suspension settle (prefixed)
+    cb.onToken("coder#3/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e") // §19.5 cancel freeze (prefixed)
+    cb.onToken("coder#1/[model]glm-5.3")                       // model metadata
+    cb.onToken("eng-coder#2/explore#1/⟦ev⟧turn\x1e1\x1e100\x1ellm\x1e") // nested multi-segment event
+    cb.onToken("eng-coder#2/explore#1/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e")
+    cb.onToken("eng-coder#2/explore#1/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e")
+    cb.onToken("eng-coder#2/explore#1/[model]deepseek-chat")   // nested [model]
     cb.onToken("escalate#1/⟦ev⟧bogus\x1e1\x1e2\x1ex\x1e")     // non-canonical event name → passes (TUI sanitizes)
     cb.onToken("plain text")                                   // normal token
     cb.onToken("coder#1/hello world")                          // normal prefixed token
+    cb.onToken("eng-coder#2/explore#1/nested relay content")   // nested CONTENT passes
     const texts = events.filter((t) => typeof t === "string")
     assert.ok(!texts.includes("⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e"), "bare turn event stripped")
     assert.ok(!texts.includes("coder#1/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e"), "prefixed turn event stripped")
     assert.ok(!texts.includes("consult#2/⟦ev⟧approval\x1e1\x1e40\x1eapproval\x1ewrite"), "approval event stripped")
-    assert.ok(texts.includes("escalate#1/⟦ev⟧bogus\x1e1\x1e2\x1ex\x1e"), "non-canonical event name not treated as event (bridge only guards the two real names)")
+    assert.ok(!texts.some((t) => t.includes("⟦ev⟧done") || t.includes("⟦ev⟧settled") || t.includes("⟦ev⟧stopped")), "done/settled/stopped events stripped")
+    assert.ok(!texts.some((t) => t.includes("[model]")), "[model] metadata stripped (single + nested depth)")
+    assert.ok(!texts.some((t) => t.includes("eng-coder#2/explore#1/⟦ev⟧")), "nested multi-segment events stripped (§19.5 round2 #6)")
+    assert.ok(texts.includes("escalate#1/⟦ev⟧bogus\x1e1\x1e2\x1ex\x1e"), "non-canonical event name not treated as event (bridge only guards the real names)")
     assert.ok(texts.includes("plain text"), "normal token passes")
     assert.ok(texts.includes("coder#1/hello world"), "prefixed content token passes (existing behavior)")
+    assert.ok(texts.includes("eng-coder#2/explore#1/nested relay content"), "nested relay content passes (TUI-side sublabels)")
   })
 })
 

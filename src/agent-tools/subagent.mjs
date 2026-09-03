@@ -5,10 +5,11 @@ import {
 } from "../agent.mjs"
 import { makeRelay, wrapChildCallbacks, gateEngCoderSpawn } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
+import { pushReal } from "../context.mjs"
 import {
   runChildPipeline, resolveChildProvider, ASYNC_SUBAGENT_LIMIT,
   buildChildRunOpts, maybeRefillAsync,
-  executeCheckAction, executeStatusAction, executeEscalateAction,
+  executeCheckAction, executeStatusAction, executeEscalateAction, executeCancelAction,
 } from "./subagent-async.mjs"
 
 // 2026-09-03 拆分轮: subagent.mjs 超 500 硬顶——async 常量、共享 post-spawn 管线
@@ -19,9 +20,10 @@ import {
 // spawn 路径 + 动作分流。
 
 /**
- * subagent tool — ONE tool, four actions (AGENT-LOOP.md §19): spawn (default) /
- * check (fetch async results, blocking + consuming) / status (non-blocking pool
- * query) / escalate (飞刀 — hand implementation to a stronger model).
+ * subagent tool — ONE tool, FIVE actions (AGENT-LOOP.md §19/§19.5): spawn
+ * (default) / check (fetch async results, blocking + consuming) / status
+ * (non-blocking pool query) / escalate (飞刀 — hand implementation to a
+ * stronger model) / cancel (stop ONE background subagent — §19.5).
  * - action:"spawn" roles: "explore" — read-only tools, search/read/analyze
  *   (suitable for codebase exploration); "coder" — full tool set, self-contained
  *   implementation tasks; "plan" — read-only planning; "eng-coder" —
@@ -77,11 +79,12 @@ export function resolveDesignSlot(parent, designIdArg) {
 export const subagentTool = {
   name: "subagent",
   description:
-    "ONE tool, FOUR actions (AGENT-LOOP.md §19) — pick by what you need:\n" +
+    "ONE tool, FIVE actions (AGENT-LOOP.md §19/§19.5) — pick by what you need:\n" +
     "- action:'spawn' (DEFAULT): spawn a sub-agent to handle an independent subtask in an isolated context; the sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
     "- action:'check': fetch the report of an async spawn (async:true). BLOCKS until the target finishes — this is the explicit consuming fetch, NOT a progress query. Multiple async children return in completion (arrival) order, first finished first. Pass n = 1 on the first check of the turn, 2 on the next... (loop guard; at most 3 per turn — the rest arrive at turn end).\n" +
-    "- action:'status': NON-BLOCKING progress query — returns immediately and consumes nothing. Give the spawn's id for one child ({id, role, status: running|queued|done, position?}), or omit it for an overview of the whole pool ({overview: {running, queued, done}}). Use THIS to check progress — action:'check' blocks until the target finishes (checking progress with check is what hangs a parallel turn).\n" +
-    "- action:'escalate' (飞刀 — a flown-in expert): hand an implementation task to a STRONGER model from your consult models (agent.consultModels). It gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification). Use it when YOU judge the task calls for stronger hands (complex multi-file refactoring, an intractable bug, intricate algorithm work — or work beyond your comfortable ability); escalate EARLY, not after burning attempts. model: pick a candidate as 'provider:model' (default = the first consult model). Not available in engineering mode (implementation goes through eng-coder spawns there).\n\n" +
+    "- action:'status': NON-BLOCKING progress query — returns immediately and consumes nothing. Give the spawn's id for one child ({id, role, status: running|queued|done, model, elapsedSec, turn, maxTurns, position?}), or omit it for an overview of the whole pool ({overview: {running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}]}}). Use THIS to check progress — action:'check' blocks until the target finishes (checking progress with check is what hangs a parallel turn).\n" +
+    "- action:'escalate' (飞刀 — a flown-in expert): hand an implementation task to a STRONGER model from your consult models (agent.consultModels). It gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification). Use it when YOU judge the task calls for stronger hands (complex multi-file refactoring, an intractable bug, intricate algorithm work — or work beyond your comfortable ability); escalate EARLY, not after burning attempts. model: pick a candidate as 'provider:model' (default = the first consult model). Not available in engineering mode (implementation goes through eng-coder spawns there).\n" +
+    "- action:'cancel': STOP one background subagent — pass the id from the async spawn return (REQUIRED — omitting it errors; a blanket cancel is unsupported, Ctrl+C stops everything). Running target aborts immediately ({id, status:'cancelled'}); a queued target is removed from the queue ({id, status:'cancelled', was:'queued'} and later queue positions shift forward). Other children and the session keep running — cancellation is targeted. Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives.\n\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
     "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
     "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). Receives git context auto-injected (branch, recent commits, working-tree state) when the project is a git repo. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
@@ -98,7 +101,7 @@ export const subagentTool = {
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: ["spawn", "check", "status", "escalate"], description: "Which subagent-family action — spawn (default), check (fetch async results — BLOCKS until the target finishes and consumes the report), status (non-blocking progress query — never consumes), escalate (飞刀 — hand implementation to a stronger consult model). See the tool description for the full action matrix." },
+      action: { type: "string", enum: ["spawn", "check", "status", "escalate", "cancel"], description: "Which subagent-family action — spawn (default), check (fetch async results — BLOCKS until the target finishes and consumes the report), status (non-blocking progress query — never consumes), escalate (飞刀 — hand implementation to a stronger consult model), cancel (stop ONE background subagent — pass its id; never omit). See the tool description for the full action matrix." },
       task: { type: "string", description: "Required for action:'spawn' (the self-contained task brief) and action:'escalate' (goal, constraints, entry files, acceptance criteria). Not used by check/status." },
       context: { type: "string", description: "Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only." },
       role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
@@ -106,7 +109,7 @@ export const subagentTool = {
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
       async: { type: "boolean", description: "true = spawn without waiting — returns {id, status:\"running\"} immediately, fetch results later via action:'check'. Default is role-level: role='eng-coder' → true (async; its internal delivery protocol runs in the background — pass async:false to force the blocking spawn when you must process the report before continuing); all other roles → false (blocking)." },
-      id: { type: "string", description: "action:'check'/'status': the subagent id from the async spawn return. check: omit = the next completed child (arrival order); status: omit = overview of the whole pool." },
+      id: { type: "string", description: "action:'check'/'status'/'cancel': the subagent id from the async spawn return. check: omit = the next completed child (arrival order); status: omit = overview of the whole pool; cancel: REQUIRED (never omit — a blanket cancel is unsupported)." },
       n: { type: "number", description: "action:'check' (required): 1-based read counter — 1 for the first check of the turn, incrementing with each subsequent check (loop detector — consecutive checks must be distinct tool calls)." },
     },
     required: [],
@@ -126,7 +129,7 @@ export const subagentTool = {
       // coder+WRITE child (violates explore-only intent) and check/status have
       // no async pool to query in a child context.
       if ((ctx.depth ?? 0) > 0 && ctx.agent?._role === "eng-coder") {
-        throw new Error(`only action:'spawn' (sync explore audits) is available inside an eng-coder — escalate/check/status are not (AGENT-LOOP.md §19 D-M3)`)
+        throw new Error(`only action:'spawn' (sync explore audits) is available inside an eng-coder — escalate/check/status/cancel are not (AGENT-LOOP.md §19 D-M3)`)
       }
       // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn —
       // async OR blocking — the digest must stay organize-only. The escalate
@@ -138,7 +141,10 @@ export const subagentTool = {
       if (action === "check") return await executeCheckAction(args, ctx)
       if (action === "status") return executeStatusAction(args, ctx)
       if (action === "escalate") return await executeEscalateAction(args, ctx)
-      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn, check, status, escalate.`)
+      // §19.5 控制类动作：digest 内放行（D-S7 分类——控制/自省；dispatch 控制类
+      // 豁免同批生效——19.5.2b round2 #4；escalate 的 digest 拒绝在上一分支）
+      if (action === "cancel") return executeCancelAction(args, ctx)
+      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn, check, status, escalate, cancel.`)
     }
 
     const parent = ctx.agent
@@ -337,14 +343,47 @@ export const subagentTool = {
         id, role, relayPrefix,
         status: running >= ASYNC_SUBAGENT_LIMIT ? "queued" : "running",
         position: undefined,
-        report: null, error: null, done: false,
+        report: null, error: null, done: false, cancelled: false,
         promise: null, _settle: null, _settleSeq: 0,
+        // §19.5 D-M5 可决策字段（status 数据装配锚点）：model 在 spawn 时记录；
+        // startedAt 在 ACTUAL start（queued 等待不计 elapsed）；turn/maxTurns 由
+        // 下方 onToken 拦截层从子代理 ⟦ev⟧turn 事件镜像（T-M18 正确性断言）。
+        model: childProvider?.model ?? null,
+        startedAt: null,
+        turn: 0, maxTurns: 0,
+        // §19.5 D-M6 (round2 #2)：条目级 AbortController——cancel 定向 abort 本
+        // 条目（runAgent signal 链）；Ctrl+C 全停语义不变（基信号 abort 逐链传播）。
+        controller: null,
       }
       // The settle signal — resolves when the run chain settles (never rejects).
       entry.promise = new Promise((res) => { entry._settle = res })
+      // §19.5 D-M6：条目 controller 链到会话/回合基信号（_sessionSignal 优先——
+      // §17 挂起会话内 children 持会话 signal，digest 自身 Ctrl+C 不误伤）。
+      const ctrl = new AbortController()
+      entry.controller = ctrl
+      const baseSignal = parent._sessionSignal ?? ctx.signal ?? null
+      if (baseSignal) {
+        if (baseSignal.aborted) ctrl.abort()
+        else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+      }
+      // §19.5 D-M5：turn 镜像拦截层（callbacks 包装层——选改动最小方案：在既有
+      // wrapChildCallbacks 之外再包一层，只解析 ⟦ev⟧turn 更新条目，其余原样转发）。
+      const trackOpts = { ...childOpts }
+      const parentOnToken = trackOpts.onToken
+      if (parentOnToken) {
+        trackOpts.onToken = (t) => {
+          const ev = String(t).match(/^⟦ev⟧turn\x1e(\d+)\x1e(\d+)\x1e/)
+          if (ev) {
+            entry.turn = Number(ev[1]) || 0
+            entry.maxTurns = Number(ev[2]) || 0
+          }
+          return parentOnToken(t)
+        }
+      }
       entry.start = () => {
         entry.status = "running"
         entry.position = undefined
+        entry.startedAt = Date.now()
         // Deferred [model] emit: the TUI block is created at ACTUAL start.
         ctx.callbacks?.onToken?.(relayPrefix + "[model]" + (childProvider.model ?? ""))
         // Turn-cap on background children NEVER pops the continue panel (D-A3):
@@ -354,7 +393,7 @@ export const subagentTool = {
         // and the partial-work report carries the cap reason. §18 D-E2 relies on
         // this exception as the turn-cap fallback for the default-async eng-coder
         // delivery (the internal protocol does not raise the 100-turn cap).
-        runChildPipeline(child, input, childOpts, childRunOpts, {
+        runChildPipeline(child, input, trackOpts, { ...childRunOpts, signal: entry.controller.signal }, {
           parent, role, args,
           askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
         })
@@ -363,14 +402,27 @@ export const subagentTool = {
           .finally(() => {
             entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
             entry.done = true
-            // 完成信号按会话态分流（§17 D-S8 冻结门控 + D-S3 记账——以读取时刻为准，确定性）：
-            // - 非挂起态（普通回合内 settle）：照发 ⟦ev⟧done —— TUI 立即冻结区块，冻结位置 =
-            //   完成时刻的流位置（§15 D-A3 2026-09-02 用户实证修正：收尾统一发会把块堆在结论之后）。
-            // - 挂起态（_suspended：回合已结束或 auto-turn 消化中）：冻结延迟——改发 ⟦ev⟧settled
-            //   （区块显示 "done · awaiting digestion" 驻留面板），条目移交 _pendingAsyncResults
-            //   由下个回合 prepareRun 前注入（D-S3 ②；注入即从池/pending 移除，无重复）。
-            // 父会话 abort 两种都不发：TUI 已按 interrupted 冻结，晚到 token 经 tombstone 丢弃。
-            if (!ctx.signal?.aborted) {
+            // §19.5 cancelled settle 分支（D-M6 round1 #1 + round2 #3）：cancel 定向
+            // 中止的条目——不入 _pendingAsyncResults、不参与 collectSettledAsync 直注入
+            // （清池规则同 Ctrl+C 全停但只清该条目——陈旧错误零注入）；发 ⟦ev⟧stopped
+            // 冻结事件（TUI 区块 interrupted 语义冻结——标题 "stopped"）；取消事实与半成品
+            // 警示对模型可见（user-role 提醒——形态仿 injectAsyncResult、XML 转义——防基于
+            // 半成品树继续：mergeChildMutations 不覆盖 abort 路径）。
+            if (entry.cancelled) {
+              parent._asyncSubagents?.delete(String(entry.id))
+              ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
+              pushReal(parent, {
+                role: "user",
+                content: `[System reminder: subagent ${escapeXml(entry.role)}#${entry.id} cancelled by user — partial changes not merged/audited]`,
+              })
+            } else if (!ctx.signal?.aborted) {
+              // 完成信号按会话态分流（§17 D-S8 冻结门控 + D-S3 记账——以读取时刻为准，确定性）：
+              // - 非挂起态（普通回合内 settle）：照发 ⟦ev⟧done —— TUI 立即冻结区块，冻结位置 =
+              //   完成时刻的流位置（§15 D-A3 2026-09-02 用户实证修正：收尾统一发会把块堆在结论之后）。
+              // - 挂起态（_suspended：回合已结束或 auto-turn 消化中）：冻结延迟——改发 ⟦ev⟧settled
+              //   （区块显示 "done · awaiting digestion" 驻留面板），条目移交 _pendingAsyncResults
+              //   由下个回合 prepareRun 前注入（D-S3 ②；注入即从池/pending 移除，无重复）。
+              // 父会话 abort 两种都不发：TUI 已按 interrupted 冻结，晚到 token 经 tombstone 丢弃。
               if (parent._suspended) {
                 parent._pendingAsyncResults ??= []
                 parent._pendingAsyncResults.push(entry)

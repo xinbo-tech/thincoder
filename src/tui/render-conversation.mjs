@@ -15,6 +15,7 @@ import {
   isExpanded, foldHintLine, renderExpandedBlock, renderBlockTimeline,
   renderMathAndMarkdown, foldCapRows, renderFoldedHead, foldTailLines,
 } from "./fold-block.mjs"
+import { styleSubLabelRow } from "./subagent-panel.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 
 
@@ -252,8 +253,9 @@ function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, 
  *  running form renders in the fixed bottom panel (§7.2.1 subagent-panel.mjs);
  *  the frozen form stays in the stream with the same interaction: folded =
  *  `[✓ coder#1 · glm-5.3 · done 45s · turn 12/100] … click to expand` header +
- *  tail 3 block lines; expanded = blank + ▼ control + full timeline (60% screen
- *  cap via the shared component — capped view ends in a reachable collapse
+ *  tail 3 block lines (verb "stopped" when the child was cancelled — §19.5
+ *  ⟦ev⟧stopped); expanded = blank + ▼ control + full timeline (60% screen cap
+ *  via the shared component — capped view ends in a reachable collapse
  *  control). Toggle key `sub-${key}` — the SAME key the panel section uses, so
  *  fold state carries across the freeze boundary seamlessly (user ruled
  *  2026-08-30: frozen stays clickable — full design interaction, not a
@@ -265,12 +267,13 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
   const errPart = sub.lastError ? ` — ${sub.lastError}` : ""
   const icon = sub.approval ? "⏸" : "✓"
-  const header = `[${icon} ${sub.key}${modelPart} · done ${elapsed}s${turnPart}${errPart}]`
+  const verb = sub.stopped ? "stopped" : "done" // §19.5: cancel 冻结标题 "stopped"
+  const header = `[${icon} ${sub.key}${modelPart} · ${verb} ${elapsed}s${turnPart}${errPart}]`
   const out = []
   if (isExpanded(state, foldKey)) {
     // Expanded: shared component renders blank + ▼ control + full timeline,
     // capped at 60% of the screen with a bottom collapse control.
-    const body = renderBlockTimeline(sub.blocks, cols)
+    const body = renderBlockTimeline(sub.blocks, cols).map(styleSubLabelRow)
     out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
   } else {
     // Folded: the header line itself is the control (▶ affordance), then tail 3.

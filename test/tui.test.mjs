@@ -1109,6 +1109,37 @@ test("panel functions (§7.2.1 T-C 渲染目标审计): 面板头 approval 等�
   assert.ok(doneOut.includes("turn cap reached"), "lastError 定格在冻结头")
 })
 
+test("panel functions (§19.5 T-M19/T-M23 渲染): ⟦ev⟧stopped 冻结头标题 \"stopped\"（interrupted 语义）+ ⏹ 标记仅 running", () => {
+  // stopped 冻结：流内冻结块头 = "stopped Ns"（非 done）
+  const stoppedState = tuiState({
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "eng-coder#3", role: "eng-coder", model: "m", blocks: [{ kind: "text", text: "partial work" }], done: true, doneAt: Date.now(), started: Date.now() - 3000, stopped: true, currentTool: null, turn: 2, maxTurns: 100, approval: null, lastError: null } }],
+  })
+  const stoppedOut = buildConvLines(stoppedState, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(stoppedOut.includes("[✓ eng-coder#3 · m · stopped 3s"), `stopped 冻结头标题（实际: ${stoppedOut.slice(0, 120)}）`)
+  assert.ok(!stoppedOut.includes("· done "), "stopped 块不显示 done 动词")
+  // running 面板头带 ⏹（dim 标记在右缘——_stopSub/_stopCol 元数据）
+  const runState = tuiState({
+    subTasks: { "coder#1": { key: "coder#1", role: "coder", model: "m", blocks: [], done: false, started: Date.now(), currentTool: "bash", turn: 1, maxTurns: 100, approval: null, lastError: null } },
+  })
+  const panel = renderSubagentPanel(runState, 100)
+  const head = panel.find((l) => l._foldToggle === "sub-coder#1")
+  assert.ok(head && head._stopSub === "coder#1" && head._stopCol === 100, "运行头 ⏹ 命中元数据")
+  assert.ok(String(head.text).includes("⏹"), "运行头渲染 ⏹ 标记")
+})
+
+test("panel functions (§19.5 T-M25 渲染): 嵌套子标行 dim 样式——行首子标 gray、内容恢复 kind 色", async () => {
+  const { styleSubLabelRow } = await import("../src/tui/subagent-panel.mjs")
+  const { ansi, C: CC } = await import("../src/tui/ansi.mjs")
+  // 行首子标行（renderBlockTimeline 形态——gutter + 字面子标 + 内容）
+  const toolRow = styleSubLabelRow({ text: "│ explore#1 · ❯ read — x", color: CC.tool })
+  assert.ok(toolRow.text.includes(`${ansi.gray}explore#1 · ${ansi.fg(6)}❯ read`), "工具行：子标 gray + 内容恢复 cyan（ANSI 注入）")
+  const textRow = styleSubLabelRow({ text: "│ explore#1 · 摘要", color: CC.text })
+  assert.ok(textRow.text.includes(`${ansi.gray}explore#1 · ${ansi.fg(7)}摘要`), "文本行同规则（恢复白）")
+  // 无子标行原样
+  const plain = styleSubLabelRow({ text: "│ 普通内容", color: CC.tool })
+  assert.equal(plain.text, "│ 普通内容")
+})
+
 test("panel functions (§7.2 D5): 事件 token 残留被 sanitizeDisplay 兜底剥除", async () => {
   const { sanitizeDisplay } = await import("../src/tui/render.mjs")
   const raw = "coder#1/⟦ev⟧turn\x1e12\x1e100\x1ellm\x1e"

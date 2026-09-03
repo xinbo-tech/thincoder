@@ -4819,7 +4819,7 @@ test("T-E16: schema async 描述 = 角色级默认措辞 + spawn-child 门文案
   assert.ok(setupSrc.includes('agent._role === "eng-coder" ? [advisorTool, verifyTool, ...(engAuditSubagent'), "eng-coder depthOnly 装配 = advisor + verify + 受限 subagent")
   // ④ dispatch 授权豁免在 Phase-1 权限短路（autoApprove 等效——仅询问阶段，前置门照常）
   const dispatchSrc = readFileSync(join(SRC_DIR, "agent", "dispatch.mjs"), "utf8")
-  assert.ok(dispatchSrc.includes("tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized"), "授权豁免 = autoApprove 等效短路（仅询问阶段——§19 起 check/status 动作同按只读分类）")
+  assert.ok(dispatchSrc.includes("tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || isSubagentControlAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized"), "授权豁免 = autoApprove 等效短路（仅询问阶段——§19 起 check/status 动作同按只读分类；§19.5 cancel 控制类豁免同入此短路）")
   assert.ok(dispatchSrc.includes("JSON parse / unknown tool / planMode / design-token gates"), "前置门不豁免（注释口径）")
   // ⑤ AC-E7：§7 权限条 + §15 D-A3 权限交互条同批加了 §18 D-E3 指向
   const loopDoc = readFileSync(join(DOCS_DESIGN_DIR, "AGENT-LOOP.md"), "utf8")

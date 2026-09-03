@@ -8,6 +8,7 @@ import assert from "node:assert/strict"
 
 import {
   SUB_BLOCK_LINE_LIMIT, finishSubTask, applySubEvent,
+  parseRelayPath,
   routeSubToken, routeSubReasoning, routeSubToolCall, routeSubToolOutput,
   freezeDoneSubTasks, freezeAllSubTasks, shiftFreezeAnchors,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
@@ -92,6 +93,89 @@ test("N2: 环形上限经路由同样生效（跨回调类型）", () => {
   const sub = s.subTasks["coder#1"]
   const total = sub.blocks.reduce((n, b) => n + b.text.split("\n").length, 0)
   assert.ok(total <= SUB_BLOCK_LINE_LIMIT + 1, `≤ 501（500 + meta 标记行），实际 ${total}`)
+})
+
+
+// -------------------------------------------- §19.5 嵌套前缀子标（T-M24/M25 数据层）+ stopped
+
+test("§19.5 T-M24: parseRelayPath——单层兼容（inner 空）+ 嵌套多层循环解析", () => {
+  assert.equal(parseRelayPath("无前缀"), null)
+  const single = parseRelayPath("coder#1/hello")
+  assert.deepEqual({ ...single }, { head: "coder#1", inner: [], label: "", rest: "hello" })
+  const nested = parseRelayPath("eng-coder#2/explore#1/read")
+  assert.equal(nested.head, "eng-coder#2", "首段路由（块）")
+  assert.deepEqual(nested.inner, ["explore#1"], "剩余段 = 内层链")
+  assert.equal(nested.label, "explore#1")
+  assert.equal(nested.rest, "read", "段后余量 = 内容")
+  const deep = parseRelayPath("eng-coder#2/explore#1/audit#3/x")
+  assert.deepEqual(deep.inner, ["explore#1", "audit#3"], "任意深度循环解析")
+  assert.equal(deep.rest, "x")
+})
+
+test("§19.5 T-M25 数据层: 嵌套文本/think/工具/输出三形态子标渲染 + 事件 token 剥除不路由", () => {
+  const s = state()
+  // 单层（无内层段）内容零变化——回归基线
+  assert.equal(routeSubToken(s, "coder#1/hello", noop), true)
+  assert.ok(s.subTasks["coder#1"].blocks.some((b) => b.kind === "text" && b.text === "hello"), "单层文本零变化")
+  // 外层自身文本照常（eng-coder 单层前缀——以 \n 收尾模拟行完成）
+  assert.equal(routeSubToken(s, "eng-coder#2/hello\n", noop), true)
+  const outer = s.subTasks["eng-coder#2"]
+  assert.ok(outer.blocks.some((b) => b.kind === "text" && b.text === "hello\n"), "单层文本零变化")
+  // 内层文本：行首（块首或上一内容以 \n 收尾）→ 字面子标 `explore#1 · `；行中 → 前缀静默剥除
+  assert.equal(routeSubToken(s, "eng-coder#2/explore#1/报告摘要\n", noop), true)
+  assert.ok(outer.blocks.some((b) => b.kind === "text" && String(b.text).endsWith("explore#1 · 报告摘要\n")), "文本行行首子标（块首——同 kind 块合并追加）")
+  assert.equal(routeSubToken(s, "eng-coder#2/explore#1/续行", noop), true)
+  assert.ok(outer.blocks.some((b) => b.kind === "text" && String(b.text).endsWith("explore#1 · 续行")), "换行后新行首也带子标")
+  assert.equal(routeSubToken(s, "eng-coder#2/explore#1/继续", noop), true)
+  assert.ok(outer.blocks.some((b) => b.kind === "text" && String(b.text).endsWith("继续")), "行中前缀静默剥除——内容续接")
+  assert.ok(!outer.blocks.some((b) => String(b.text).includes("explore#1/")), "内层前缀不再字面泄漏（只剩 · 子标形态）")
+  // 工具行：子标 + 既有工具行形态；currentTool = 全路径（归属判别）
+  assert.equal(routeSubToolCall(s, "eng-coder#2/explore#1/read", { path: "x" }, noop), true)
+  const tools = outer.blocks.filter((b) => b.kind === "tool")
+  assert.ok(tools.some((b) => b.text.includes("explore#1 · ❯ read")), "工具行 = 子标 + 既有形态")
+  assert.equal(outer.currentTool, "explore#1/read", "currentTool 全路径")
+  // 工具输出：跟随最近工具行归属——raw 追加、不重复前缀（块以 \n 收尾）
+  assert.equal(routeSubToolOutput(s, "eng-coder#2/explore#1/read", { kind: "text", text: "file content\n" }, noop), true)
+  const toolBlock = tools.at(-1)
+  assert.ok(toolBlock.text.includes("file content"), "输出进对应工具块")
+  // 内层 think：同文本规则（行首——上一块以 \n 收尾）
+  assert.equal(routeSubReasoning(s, "eng-coder#2/explore#1/思考行", noop), true)
+  const thinks = outer.blocks.filter((b) => b.kind === "think")
+  assert.ok(thinks.some((b) => b.text === "explore#1 · 思考行"), "think 行行首子标")
+  assert.equal(routeSubReasoning(s, "eng-coder#2/explore#1/续想", noop), true)
+  assert.ok(thinks.some((b) => String(b.text).endsWith("续想")), "think 行中前缀同样剥除")
+  assert.ok(!outer.blocks.some((b) => String(b.text).includes("explore#1/续")), "think 无前缀泄漏")
+  // 内层事件类 token：剥除不路由（不更新外层块头 turn/maxTurns——round1 #4）
+  routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧turn\x1e5\x1e100\x1ellm\x1e", noop)
+  assert.equal(outer.turn, 0, "内层 ⟦ev⟧turn 不污染外层块头")
+  assert.equal(outer.maxTurns, 0)
+  routeSubToken(s, "eng-coder#2/explore#1/[model]inner-model", noop)
+  assert.equal(outer.model, undefined, "内层 [model] 不污染外层 model")
+  // 外层自身单层事件照常（eng-coder 进度驱动自身块头）
+  routeSubToken(s, "eng-coder#2/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e", noop)
+  assert.equal(outer.turn, 3, "单层 ⟦ev⟧turn 照常路由")
+  assert.equal(outer.maxTurns, 100)
+})
+
+test("§19.5 T-M19 数据层: ⟦ev⟧stopped → interrupted 语义冻结（stopped 标记 + 面板释放 + 冻结载体）", () => {
+  const s = freezeState()
+  routeSubToken(s, "eng-coder#2/hello", noop)
+  assert.equal(routeSubToken(s, "eng-coder#2/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e", noop), true, "stopped 事件消费")
+  assert.equal(s.subTasks["eng-coder#2"], undefined, "stopped 立即冻结——从 live 集合释放")
+  assert.ok(s._frozenSubKeys.has("eng-coder#2"), "tombstone 登记")
+  const frozen = s.lines.find((l) => l._frozenSubTask?.key === "eng-coder#2")
+  assert.ok(frozen, "冻结载体行入流")
+  assert.equal(frozen._frozenSubTask.stopped, true, "stopped 标记（冻结头显示 \"stopped\"）")
+  assert.equal(frozen._frozenSubTask.done, true)
+  // done 冻结不带 stopped 标记（对照）
+  const s2 = freezeState()
+  routeSubToken(s2, "coder#1/hello", noop)
+  routeSubToken(s2, "coder#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
+  const f2 = s2.lines.find((l) => l._frozenSubTask?.key === "coder#1")
+  assert.equal(f2._frozenSubTask.stopped, false, "done 冻结无 stopped 标记")
+  // 冻结后晚到 token 经 tombstone 丢弃（不复活）
+  assert.equal(routeSubToken(s2, "coder#1/晚到", noop), true)
+  assert.equal(s2.subTasks["coder#1"], undefined)
 })
 
 // -------------------------------------------- 冻结锚点（2026-09-03 修复轮：症状 2）

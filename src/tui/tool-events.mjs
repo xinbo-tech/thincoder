@@ -262,11 +262,13 @@ export function buildToolCallbacks(deps) {
           : _subActionQ.shift() ?? null
         if (toolId !== undefined && toolId !== null) _subActions.delete(toolId)
       }
-      const isSubagent = name === "subagent" && subAction !== "check" && subAction !== "status" && subAction !== "escalate"
+      const isSubagent = name === "subagent" && subAction !== "check" && subAction !== "status" && subAction !== "escalate" && subAction !== "cancel"
       const isEscalate = name === "subagent" && subAction === "escalate"
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the
       // child's activity; memory bounded by the N2 line cap.
+      // §19.5: cancel 动作排除在 isSubagent 外——ack/错误 JSON 走普通工具块；区块冻结由
+      // ⟦ev⟧stopped settle 事件承担（此处 finishSubTask 会误冻最早 running 区块）。
       if (isSubagent) {
         // The dispatch-level tool-block carrier for this call would otherwise
         // never be marked done (its result lands in the subagent block, not the
@@ -277,10 +279,7 @@ export function buildToolCallbacks(deps) {
         // drop its relay stream). The block freezes on the ⟦ev⟧done settle event.
         if (!isAsyncSpawnResult(result)) {
           finishSubTask(state, SUBAGENT_ROLES, result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
-          // Freeze the finished blocks into the conversation stream (user report
-          // 2026-08-30): a pinned tail section left every ✓ block stuck above the
-          // input box forever. As lines they scroll away, stay expandable via the
-          // dim auto-fold, and subTasks releases the entry.
+          // 冻结块进会话流（2026-08-30：钉尾段=残影；进流随会话滚走且保留可展开交互）
           freezeDoneSubTasks(state)
           // Subagent report preview (max 8 lines) displayed directly in conversation
           const lines = result.split("\n")

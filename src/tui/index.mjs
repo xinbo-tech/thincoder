@@ -36,6 +36,7 @@ import { createKeyHandler, convMaxScroll } from "./key-handler.mjs"
 import { showStartup, backgroundIndex, historyToLines, HISTORY_PAGE_MESSAGES } from "./startup.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
+import { cancelAsyncSubagent } from "../agent-tools/subagent-async.mjs"
 import { createConfigHelpers } from "./config-helpers.mjs"
 
 /** 升级失败提示文案：附 npm 输出尾部（最多 3 行），方便定位失败原因。 */
@@ -458,8 +459,28 @@ export async function startTUI(agent, opts = {}) {
     }
   })
 
-  // Mouse clicks (SGR \x1b[<0;col;rowM) — picker selection + fold expansion.
-  const onMouseClick = (col, row) => handleMouseClick({ state, render, popPicker }, col, row)
+  // Mouse clicks — §19.5 D-M7: ⏹ 停止标记 → cancelSubagent（UI 停止不经模型回合，直连
+  // 池 abort——与 action:"cancel" 同实现路径）。block key "role#id" → 池条目 id。
+  const cancelSubagent = (key) => {
+    try {
+      const id = key.slice(key.lastIndexOf("#") + 1)
+      const r = cancelAsyncSubagent(agent, id)
+      if (r?.status === "error") {
+        // 池内无此条目但区块仍 live（!done）→ 阻塞型（sync）spawn 中——无池条目可定向
+        // 中止（§19.5 cancel 只针对 async 后台子代理）；给出可操作指引而非神秘 unknown id
+        const liveBlock = state.subTasks?.[key] && !state.subTasks[key].done
+        pushLine(liveBlock
+          ? `[subagent stop] ${key} is a blocking (sync) child mid-call — targeted stop is not available; use Ctrl+C to interrupt the turn`
+          : `[subagent stop] ${r.error}`, C.error)
+      } else {
+        pushLine(`[subagent ${key} stop requested]`, C.warn)
+      }
+    } catch (e) {
+      pushLine(`[subagent stop] ${e?.message ?? String(e)}`, C.error)
+    }
+    render()
+  }
+  const onMouseClick = (col, row) => handleMouseClick({ state, render, popPicker, cancelSubagent }, col, row)
   const mouseCtx = () => ({ state, render })
 
   // ---------------------------------------------------------- Startup screen + background indexing

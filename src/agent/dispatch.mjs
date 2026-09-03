@@ -45,11 +45,18 @@ function logToolError(toolName, args, error) {
  * (planMode pass / no permission ask / batchable), spawn keeps its non-readonly
  * gates, escalate runs non-readonly AND serially (the retired escalate tool had no
  * parallel flag — zero behavior change under the merged surface).
+ * §19.5 cancel (19.5.2b round2 #4): CONTROL-class exemption — cancel only
+ * stops, never starts. isSubagentControlAction feeds the SAME two gate sites as
+ * readonly (planMode pass / no permission ask — never joins a batch approval
+ * group / no handler → not denied — digest 内 cancel 放行).
  */
 function isSubagentReadonlyAction(toolName, args) {
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
   return action === "check" || action === "status"
+}
+function isSubagentControlAction(toolName, args) {
+  return toolName === "subagent" && args?.action === "cancel"
 }
 function isSubagentEscalateAction(toolName, args) {
   return toolName === "subagent" && args?.action === "escalate"
@@ -87,7 +94,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       continue
     }
 
-    if (agent.planMode && !tool.readonly && !isSubagentReadonlyAction(toolCall.name, args)) {
+    if (agent.planMode && !tool.readonly && !isSubagentReadonlyAction(toolCall.name, args) && !isSubagentControlAction(toolCall.name, args)) {
       prepared.push({ toolCall, tool, denied: true, reason: "plan mode" })
       continue
     }
@@ -139,7 +146,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // — the exemption never widens what reaches this stage (round4 #3, T-E14).
     // PreToolUse hooks still run below. Non-eng-coder children keep the manual
     // parent ask (human in the loop).
-    if (tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
+    if (tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || isSubagentControlAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
       if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
         prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
         continue

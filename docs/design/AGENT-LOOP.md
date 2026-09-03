@@ -880,16 +880,19 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **D-M1 动作/参数矩阵**（单 schema——description 说明按 action 取参数）：
 
+**action 级门控（评审 #1——dispatch 分类；§19.5 round2 #4 扩展）**：工具级 readonly 标志无法同时表达 spawn（副作用）与 check/status（只读）/cancel（控制）——dispatch Phase-1/Phase-2 按 **action 参数**分类：`check`/`status` 动作按 readonly 处理（planMode 放行、免权限审批、可批并行——继承 §15 D-A2 readonly:true 决策）；`cancel` 归**控制类豁免**（dispatch `isSubagentControlAction`——免权限审批（只停不启——无新副作用）、planMode 允许（取消既有子代理——spawn 仍拒）、批审批不入组、手动档 digest 内放行——见 §19.5 D-M6/19.5.2b）；`spawn` 动作按非只读处理（planMode deny、串行、门禁照常——§18 任务域授权仅涉 child 内部权限不涉 spawn 门禁）——实现点：dispatch 预审读 action 参数分支（受影响文件补 `src/agent/dispatch.mjs`）
+
 | action | 参数 | 返回 | 阻塞 |
 |---|---|---|---|
 | spawn（缺省） | task/role/async/designToken/designId（既有全集） | `{id, role, status:"running"/"queued", position?}` | 同步 role 等完成；async 立即返回 |
-
-**action 级门控（评审 #1——dispatch 分类）**：工具级 readonly 标志无法同时表达 spawn（副作用）与 check/status（只读）——dispatch Phase-1/Phase-2 按 **action 参数**分类：`check`/`status` 动作按 readonly 处理（planMode 放行、免权限审批、可批并行——继承 §15 D-A2 readonly:true 决策）；`spawn` 动作按非只读处理（planMode deny、串行、门禁照常——§18 任务域授权仅涉 child 内部权限不涉 spawn 门禁）——实现点：dispatch 预审读 action 参数分支（受影响文件补 `src/agent/dispatch.mjs`）
 | check | id?（省 = 下一完成）/ n（必填） | 报告（arrival order/指定 id——消费） | **阻塞**（等目标 settle——显式取回语义） |
-| status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?}`——不消费 | **不阻塞**（立即） |
+| status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?, ...}`——不消费（§19.5：running 带 model/elapsedSec/turn/maxTurns） | **不阻塞**（立即） |
 | escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义） |
+| cancel（§19.5 新增——19.5.2b 承诺同批修订） | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效） |
 
-**D-M2 status 形态**：`{ overview?: {running:[ids], queued:[{id, position}], done:[ids]}, target?: {...} }`——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
+> **supersede 注（2026-09-03 §19.5 实现轮）**：本矩阵 action 面随 §19.5 控制面扩展为**五动作**——cancel 行的门禁分类（控制类豁免）、定向中止语义（cancelled settle/queued 出队/模型可见提醒）与 AC-M1 措辞见 §19.5（D-M6/19.5.2b）——§15 D-A2 先例：本段保留为 as-of 快照，实现以 §19.5 为准。
+
+**D-M2 status 形态**（§19.5 D-M5 修订：概览条目从 id 数组改**结构化对象数组**——`{ overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}] }, target?: {...} }`）——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
 
 **D-M4 escalate 并入（评审 2026-09-03 用户裁定）**：既有 escalate 执行逻辑（escalate.mjs——resolveChildProvider 选模型/createAgent coder role/runWithContinue/mergeChildMutations/术后报告）搬入 subagent 工具的 `action:"escalate"` 分支——保留全部既有约束：depth-0 only（depth>0 → error）、工程模式禁用（engineering → error——"实现走 eng-coder"）、consultModels 空 → error、模型选择校验、**relay 前缀 `escalate#N/` 保留**（action 名 escalate 与既有前缀同名——TUI 路由/subagent-blocks/tool-events **零改动**——区块显示/活动流不变）。`escalateTool` 退役（escalate.mjs 移除——setup.mjs 注册点删——subagent 工具常驻——escalate action 在 consultModels 空时返回 error——既有错误语义）。触发词条款（提示词——"用户说 飞刀/escalate → 调 subagent action:escalate"）随提示词迁移。**引用面**：174 处——~113 为 escalate.mjs 自身 + escalate.test.mjs（随迁移消解）；外部集成 = setup.mjs 注册（删）+ 提示词条款（改）+ 测试迁移（escalate.test.mjs 直接调 escalateTool → subagent action:"escalate"）——UI/事件/配置零改动。
 
@@ -914,9 +917,9 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
   - T-M14 escalate action 迁移回归（既有 escalate 测试——指定模型/默认池首/术后报告/merge 回传）
   - T-M15 escalate 保留约束（depth>0 拒/工程模式拒/consultModels 空拒——迁移回归）
   - T-M16 escalate relay 前缀 `escalate#N/` 不变（TUI 区块/活动流回归——route 零改动验证）
-  - T-M17 **action 门控（round2 #2）**：planMode 下 status/check 放行（readonly 分类）vs spawn/escalate 拒绝（非只读分类）；混合 action 批次批审批按 action 分组（check/status 不入审批组）
+  - T-M17 **action 门控（round2 #2 + §19.5）**：planMode 下 status/check 放行（readonly 分类）vs spawn/escalate 拒绝（非只读分类）；**cancel 控制类豁免（19.5.2b round2 #4——planMode 放行/免审批/批审批不入组）**；混合 action 批次批审批按 action 分组（check/status/cancel 不入审批组）
 
-**验收**：AC-M1 = 单工具四动作 spawn/check/status/escalate（T-M1..M4 迁移回归 + T-M11 + T-M14..M16）；AC-M2 = status 非阻塞（T-M5..M10——主会话查状态不挂）；AC-M3 = 描述引导防误用（T-M12）；AC-M4 = 两端全量绿（T-M13）；AC-M5 = escalate 并入零行为变化（T-M14..M16——飞刀语义/约束/区块前缀全保留——仅工具面收敛）
+**验收**：AC-M1 = 单工具**五动作** spawn/check/status/escalate/cancel（cancel 见 19.5——T-M1..M4 迁移回归 + T-M11 + T-M14..M16 + T-M20/M27——19.5.2b 修订注承诺同批落地）；AC-M2 = status 非阻塞（T-M5..M10——主会话查状态不挂）；AC-M3 = 描述引导防误用（T-M12）；AC-M4 = 两端全量绿（T-M13）；AC-M5 = escalate 并入零行为变化（T-M14..M16——飞刀语义/约束/区块前缀全保留——仅工具面收敛）
 
 ### 19.3 关键决策
 
@@ -928,7 +931,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 19.4 非功能需求（round2 #8 补）
 
-- N1：**描述预算**——四动作单工具描述在既有 schema description 预算内（工具描述重写后模型可解析——T-M12 断言 byte-identical + 内容锚）
+- N1：**描述预算**——五动作单工具描述在既有 schema description 预算内（工具描述重写后模型可解析——T-M12 断言 byte-identical + 内容锚）
 - N2：**语义保证**——check 的消费/删除/n 计数与 status 的零消费/零计数完全隔离（T-M4/M10 断言——action 间不串扰）
 - N3：**零改动面**——TUI/ACP relay 路由零改动（escalate# 前缀保留——T-M16 断言）；配置零改动（consultModels 语义照旧）
 - N4：**两端一致**——subagent 工具 schema/描述与 prompts 两端 byte-identical（T-M12——既有 15 文件比对覆盖）
