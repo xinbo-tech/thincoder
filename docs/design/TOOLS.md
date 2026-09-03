@@ -267,18 +267,18 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **否决**：a) 保留 eslint 挪全局（仍依赖、违零依赖）；b) 只移除部分工具限制（"不少工具有限制"——全部移除，bash 一致性）；c) 作用域限制改"警告不阻断"（仍空耗 token——用户裁定干脆去掉）
 
 
-## 9. read_pdf：文本型 PDF 提取（2026-09-03 · 设计——待评审）
+## 11. read_pdf：文本型 PDF 提取（2026-09-03 · 设计——评审通过——决策点定稿）
 
 > 老 TODO（2026-08-27 立项——误标 done 恢复——docs/TODO.md 条目待本设计批准后补回）。现状缺口：read 对 .pdf 直接 utf8 解码出乱码——无拦截无引导。约束：纯 Node ≥24、ESM、零 npm 依赖（node:zlib 内置——全仓首个 zlib 用户）。
 
-### 9.1 需求
+### 11.1 需求
 
 - F-P1：read_pdf 工具——**文本型 PDF** 提取为纯文本（read 家族对齐：行号分页心智、64K 落盘机制白拿）
-- F-P2：加密 PDF（/Encrypt）拒绝并明示；**扫描/图像型 PDF** 报错（指向 read_image 视觉通道——read_image 拒 bmp 提示 PNG 先例）
+- F-P2：加密 PDF（/Encrypt）拒绝并明示；**扫描/图像型 PDF = 自动 multimodal 回传**（提取页图像随结果回传——模型视觉读——无视觉 provider 时降级文字指引——2026-09-03 用户裁定 c2）
 - F-P3：不支持形态（Type3 字形 run/LZW/无法解码编码）明确报错或警告+尽力输出——**不静默**
 - F-P4：page 选择参数（形态见决策点）
 
-### 9.2 设计（8 段解析管线——explore 可行性确认 ✓）
+### 11.2 设计（9 段解析管线——explore 可行性确认 ✓）
 
 1. **头校验**：%PDF-x.y——容忍尾部垃圾取最后 startxref
 2. **xref 双形态**：经典文本表 + XRef 流（/W//Index + Flate + **PNG 预测器**——必踩坑）
@@ -292,7 +292,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **复杂度分档（关键——v1 必须含 Tier 2）**：Tier 1（教科书）不够——Chrome 打印/Word/LibreOffice/LaTeX/Quartz 全在 Tier 2（XRef 流 + ObjStm + PNG 预测器 + Type0/ToUnicode 2 字节 + TJ + /Prev）——只做 Tier 1 会"demo 能跑、真实 PDF 大面积失败"。
 
-**文件形态**：独立模块 src/tools/pdf-parse.mjs（解析核心）+ pdf.mjs（工具壳——read_pdf 注册 + DESC——readonly: true 即全链路生效：planMode 白名单/免审批/explore 只读集零额外代码）——file.mjs 495 行不能承接。
+**文件形态**：独立模块 **src/tools/pdf-parse-xref.mjs + pdf-parse-text.mjs（双核——500 硬限预拆）+ pdf.mjs（工具壳——read_pdf 注册 + DESC + multimodal:true——readonly: true 即全链路生效——read_pdf 注册 + DESC——readonly: true 即全链路生效：planMode 白名单/免审批/explore 只读集零额外代码）——file.mjs 495 行不能承接。
 
 **同步面**：read.md 路由段 + discipline.md 工具总表（**两端 prompts 15 文件 byte-identical 铁律**——thincoder-vscode/src/prompts/discipline.md 必须同改）+ TOOLS.md §1 计数 + ARCHITECTURE.md 模块注释 + FEATURES.md。
 
@@ -305,4 +305,15 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 3. 多栏/表格不识别是否需文档声明（第一版声明不支持——还是尽力拼接）
 
 **受影响文件**：新 src/tools/pdf.mjs + pdf-parse.mjs + read_pdf.md、file.mjs read.md 路由段、两端 discipline.md（byte-identical）、TOOLS.md、ARCHITECTURE.md、FEATURES.md、新 test/pdf.test.mjs、docs/TODO.md（条目补回）。
+
+### 11.3 决策点定稿（2026-09-03 用户拍板）
+
+1. **pages 参数 = "1-3,5" 页选择**（PDF 原生心智——页上限 50 页/次——超限报错提示缩小范围——结果超限走 64K 落盘机制白拿——与 read 家族同管线）
+2. **扫描件 = c2 multimodal 自动回传（用户裁定）**：read_pdf 遇无文本操作符页 → 提取页图像（DCTDecode JPEG 直接提/Flate 灰度转 PNG——DCT 为常见扫描件形态）→ 工具结果 {text, images} multimodal 回传（**read_image 同机制——multimodal:true——agent 层转视觉消息——模型自动读图转录**）——零新架构（视觉门复用：model.multimodal false 时扫描页降级为文字提示"需多模态 provider——以 read_image 通道读"）——F-P2 修订（原"报错指引"改"自动回传"）
+3. **多栏 = v1 轻量 x 聚类分栏**（布局段 +100-150 行——x 坐标分布找栏间隙 gap → 分栏内 y 序排——双栏论文/杂志可用——不规则布局尽力）；**表格识别 v1 不做**（明示声明——行列结构推断独立研究题）
+4. 节编号 = §11（原重复 §9 已改——评审 #1）——管线 9 段计数对齐（评审 #2）
+
+### 11.4 评审 refinement 处置（2026-09-03——0🔴 通过——8 项）
+
+1. 编号 §11（上文）2. 9 段计数对齐 3. 测试矩阵补：图像型页 multimodal 回传用例（F-P2）/Type3 字体 run 报错/LZW 拒（F-P3）/pages 选择 + 坏页规格（F-P4）4. pdf-parse 超 500 预拆边界：**pdf-parse-xref.mjs（xref/流/ObjStm/预测器）+ pdf-parse-text.mjs（页树/内容流/文本操作符/CMap/编码/布局）双核**（AGENTS.md 500 硬限纪律）5. VS Code parity：**v1 CLI-only 明示**（VS Code 镜像后续立项——discipline.md 两端 byte-identical 仍同批）6. golden fixture：测试内嵌 1 个外部真实 PDF（base64——浏览器打印产物）交叉验证（防解析器与 fixture 生成器同手同错）7. 64K 阈值语义：实现时核实 read 家族实际落盘阈值（TOOL-OUTPUT-LIMITS 权威——文档措辞跟随）8. 加密/坏 xref/ObjStm 循环——inflate 尺寸上限 + 递归守卫（hostile PDF 韧性）
 
