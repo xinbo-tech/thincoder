@@ -71,6 +71,9 @@ thincoder/
 │   ├── tools/            # 工具系统（20+ 文件/网络/git 工具）
 │   │   ├── index.mjs     # builtinTools 注册
 │   │   ├── file.mjs      # read / write / edit / insert_after / read_image
+│   │   ├── pdf.mjs       # read_pdf 工具壳（multimodal:true——扫描页图像回传；pages 页选择）
+│   │   ├── pdf-parse-xref.mjs # PDF 对象层：xref 双形态/ObjStm/流过滤器 + PNG 预测器/加密拒绝（TOOLS.md §11 双核）
+│   │   ├── pdf-parse-text.mjs # PDF 文本层：页树/内容流操作符/CMap+编码/布局 + 轻量 x 聚类分栏（TOOLS.md §11 双核）
 │   │   ├── system.mjs    # bash / glob / grep / ls（bash 支持 config.shell 自定义 shell，win32 默认 cmd 前缀 chcp 65001 强制 UTF-8）
 │   │   ├── git.mjs       # git 综合工具（diff / status / log / checkpoint 子命令）+ question
 │   │   ├── web.mjs       # websearch / fetch
@@ -81,7 +84,7 @@ thincoder/
 │   │   ├── codemode.mjs  # 沙箱代码执行（execute 工具）
 │   │   ├── checklist.mjs # 项目级 checklist 管理
 │   │   ├── repomap.mjs   # 依赖大纲（repo_outline 工具）
-│   │   └── *.md          # 工具描述（19 个）
+│   │   └── *.md          # 工具描述（25 个）
 │   ├── tools.mjs         # 重导出 shim → src/tools/index.mjs
 │   ├── context.mjs       # 上下文压缩（关键决策保存 + task/plan 回注）
 │   ├── memory/           # 三层记忆
@@ -188,6 +191,7 @@ export function toOpenAISchema(tool)     // 转成 OpenAI tools 参数格式
 - `dispatch.mjs`：两段式工具调度（阶段一权限确认，阶段二分类执行）
 - `setup.mjs`：系统提示词组装（记忆注入、技能列表、项目指令）
 - `helpers.mjs`：工具函数与常量
+- 诊断事件日志：`src/log.mjs`（[`LOGGING.md`](LOGGING.md)——回合/LLM/工具/子代理事件统一入口——llm/tool 事件在 chat()/dispatch 落点统一发射）
 
 自律工具（task/plan/goal/verify/subagent/skill）在 `src/agent-tools/`，由 `agent-tools.mjs` 注册。
 
@@ -310,6 +314,8 @@ export function pushReal(agent, msg)          // 真实消息双写：同时追�
 压缩策略（学 kimi-code，简化版）：保留最近 N 条（窗口自适应），其余全部用 LLM 摘要成一条——**不保留头部**（KEEP_HEAD=0，2026-08 决策：多任务会话里最早消息是已完成的旧任务，原文保留会锚定旧事；摘要提示词区分已完成/进行中工作）。token 判定**实测优先**：上次响应的 `usage.prompt_tokens` 是完整上下文的实测值。安全点是 user **或 tool** 结尾（splitHistory 保证 tool_calls 配对完整）。摘要 LLM 连续 3 次失败降级为确定性截断（`compressFallback`，丢 middle 不碰网络——丢信息好过任务被 400 打死）。压缩后以独立 system reminder 回注 task 列表。原子写（tmp+rename）；每 5 个工具 turn 增量保存。**CLI 与 VS Code 的压缩语义统一规范见 `CONTEXT-COMPACTION.md`（D1–D12：窗口自适应 tail、实测基线、双侧配对保护、三级降级、摘要对前端静默、KEEP_HEAD=0 等）——两端实现以该文档为准。**
 
 **机读上下文与人读历史分离（双结构）**：`agent.history` 是机读上下文（压缩照常），`agent._fullHistory` 是**永不压缩**的完整记录（人读）。压缩只作用前者；后者只追加。两线在**源头各自独立写入**：真实消息（用户输入、assistant 回复、tool 结果、多模态图像）统一走 `pushReal`——同时追加进 `agent.history` 与 `agent._fullHistory`（后者懒初始化）；机读消息（`[System reminder:`、`[User interrupt:`、压缩 note、task/plan/checkpoint 回注等 transient 注入）直接 push 进 `agent.history`，**不经过** `pushReal`，因此永远不进人读线。这一版取代了旧的事后差量同步（`syncFullHistory`/`_syncedLen` 基线）：差量基线需要在 reminder/checkpoint splice 时手工补偿，太脆、易错；源头双写语义直白——两条线各写各的，无需事后对账。checkpoint 引用、压缩 note、task/plan reminder 等机读消息**有意不进** `_fullHistory`。
+
+**消息形态：ts 字段（2026-09-03，权威：SESSION.md §9）**：每条真实消息带 `ts`（epoch ms）——`pushReal` 落对象时刻单点打点；压缩重建注入的 note/"Understood" 同刻打点。恢复的旧消息不补 ts（不伪造取证时间）。`ts` 是本地字段：发送层 `stripLocalMessageFields` 在格式分派前剥离（anthropic/responses 直传原始消息对象——剥离必须在最前），**不进任何 provider 请求**；TUI/VS Code 渲染不读它（零 UI 变化）。depth-0 的 `read_history` 只读工具查询人读线（role/keyword/tool/since-until/limit/direction 筛选）——取证面（工具时序）见 SESSION.md §9。
 
 **会话文件双写**（session.mjs）：`history` 字段存完整 `_fullHistory`（人读，VS Code 历史面板与 CLI resume 渲染读它）；`contextHistory` 字段存压缩后机读 `agent.history`。恢复（`applySession`）：**人读线 `_fullHistory ← history`**；**机读线 `agent.history ← contextHistory`**（缺失或为空才回退用 `history` 播种）。机读线必须优先从 `contextHistory` 恢复，而非从完整 `history` 重建——后者会把已压缩掉的中间过程重新塞回机读上下文，使 prompt 体积远超压缩目标（实测曾到 283%）。盘上两线是同一时刻的快照；VS Code 追加的尾巴本就该在机读线里。临时上下文打 `transient` 标记，保存时过滤。
 

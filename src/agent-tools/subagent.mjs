@@ -3,9 +3,10 @@ import {
   readonlyToolNames, collectGitContext, escapeXml,
   EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY,
 } from "../agent.mjs"
-import { makeRelay, wrapChildCallbacks, gateEngCoderSpawn } from "../agent/spawn-child.mjs"
+import { makeRelay, wrapChildCallbacks, gateEngCoderSpawn, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 import { pushReal } from "../context.mjs"
+import { logEvent, errText } from "../log.mjs"
 import {
   runChildPipeline, resolveChildProvider, ASYNC_SUBAGENT_LIMIT,
   buildChildRunOpts, maybeRefillAsync,
@@ -305,6 +306,9 @@ export const subagentTool = {
     } else {
       relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
     }
+    // LOGGING（LOGGING.md）：子代理内部事件（子内 llm:*/tool:*）以 childId 归属——
+    // agent._logId 随 runAgent 的 logCtx 透出（主文件单文件全记、按 childId grep）。
+    child._logId = relayPrefix.slice(0, -1)
     const childOpts = {
       onPermissionRequest: childPermission,
       ...wrapChildCallbacks(relayPrefix, ctx.callbacks),
@@ -408,6 +412,22 @@ export const subagentTool = {
           .finally(() => {
             entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
             entry.done = true
+            // LOGGING（LOGGING.md）：settle 分流事件——child:done/child:error（结果）+
+            // ev:cancelled/ev:settled（settle 回调分流——取消/挂起移交；正常回合内 settle
+            // 由 child:done 覆盖不另发 ev——ev:stopped 见中止清池点）
+            const childLogId = `${entry.role}#${entry.id}`
+            const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
+            // 中止守卫（2026-09-03 code review #5）：Ctrl+C/会话中止时子代理以 error 形态
+            // settle——不落 child:error/done/ev:settled（ev:stopped 已在中止清池点表达；
+            // 同文件阻塞路径同款抑制——"用户停——不落错误事件"）。定向 cancel 走 ev:cancelled。
+            const parentAborted = ctx.signal?.aborted || entry.controller?.signal?.aborted
+            if (entry.cancelled) {
+              logEvent("ev:cancelled", { id: childLogId })
+            } else if (!parentAborted) {
+              if (entry.error != null) logEvent("child:error", { role: entry.role, id: childLogId, ms: childMs, err: errText(entry.error, 200) })
+              else logEvent("child:done", { role: entry.role, id: childLogId, ms: childMs, kind: String(entry.report ?? "").includes(TURN_CAP_MARK) ? "partial" : "ok" })
+              if (parent._suspended) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
+            }
             // §19.5 cancelled settle 分支（D-M6 round1 #1 + round2 #3）：cancel 定向
             // 中止的条目——不入 _pendingAsyncResults、不参与 collectSettledAsync 直注入
             // （清池规则同 Ctrl+C 全停但只清该条目——陈旧错误零注入）；发 ⟦ev⟧stopped
@@ -445,6 +465,9 @@ export const subagentTool = {
           })
       }
       parent._asyncSubagents.set(String(id), entry)
+      // LOGGING（LOGGING.md）：child:spawn（async——注册即事件；status 记 queued/running 分流；
+      // 实际启动由补位 start() 触发——运行中由子内 llm/tool 事件可见）
+      logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: entry.status, ms: 0 })
       if (entry.status === "queued") {
         parent._asyncQueue.push(entry)
         entry.position = parent._asyncQueue.length
@@ -455,10 +478,22 @@ export const subagentTool = {
     }
 
     // ── Blocking path (unchanged semantics): await the full pipeline ──
-    return await runChildPipeline(child, input, childOpts, childRunOpts, {
-      parent, role, args,
-      askContinue: askSubagentContinue,
-    })
+    // LOGGING（LOGGING.md）：child:*（阻塞 spawn——runChildPipeline 前后；declined
+    // partial 由 TURN_CAP_MARK 检出；错误原样上抛（dispatch 转 tool:error））
+    const blockT0 = Date.now()
+    logEvent("child:spawn", { role, id: child._logId, kind: "blocking" })
+    try {
+      const pipelineReport = await runChildPipeline(child, input, childOpts, childRunOpts, {
+        parent, role, args,
+        askContinue: askSubagentContinue,
+      })
+      logEvent("child:done", { role, id: child._logId, ms: Date.now() - blockT0, kind: String(pipelineReport).includes(TURN_CAP_MARK) ? "partial" : "ok" })
+      return pipelineReport
+    } catch (e) {
+      if (ctx.signal?.aborted || e?.name === "AbortError") throw e // 用户停——不落错误事件
+      logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(e, 200) })
+      throw e
+    }
   },
 }
 

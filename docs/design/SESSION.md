@@ -55,6 +55,7 @@
   - 多模态 user content 数组：保留 text part，**丢弃 image_url base64 part**（显示只需 text；模型侧图像由 multimodal 通道承载）
   - **`contextHistory` 一字不动**——机读线保持与 provider 前缀缓存逐字节一致（strict pairing/多轮看图全靠它）。实测 18MB 会话重存后大幅缩水（base64 + 工具结果正文占大头）
   - VS Code 端同批落地（session-io.mjs 同款 `slimForDisplay`）——两端写出的会话文件一致瘦身；vscode 的 historyWindow 只渲染字符串 content，瘦身后显示安全
+- **消息 ts（§9 权威，2026-09-03）**：每条**真实消息**带 `ts`（epoch ms——pushReal 落对象时刻，单点打点）；压缩重建注入的 note/"Understood" 同刻打点（Date.now()——压缩时刻）；**旧消息（恢复自存档）不补 ts**——补近似值误导取证（D-S3 容忍）；`slimForDisplay` copy-on-write 保留 ts。ts 是**本地字段**：发送层剥离（`stripLocalMessageFields`——ts/transient 同规则，不进任何 provider 请求），UI 不渲染（仅 read_history 输出/会话 JSON 可见）
 
 ## 4. 保存与恢复
 

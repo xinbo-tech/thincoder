@@ -167,9 +167,14 @@ function tightenTailByBudget(history, start, floorStart, budgetTokens) {
  * Machine-only messages ([System reminder:...], compaction notes, task/plan/checkpoint re-injections)
  * are pushed directly to agent.history WITHOUT going through here, so they never enter _fullHistory.
  * The two lines are written independently at the source — no after-the-fact delta sync.
+ * Message timestamps (SESSION.md §9 D-S1): stamped HERE once at push time (epoch ms) — a single
+ * point covers every real message. Pre-existing ts (e.g. from another end writing the shared slot)
+ * is preserved; restored old messages keep no ts rather than getting a misleading backdate (D-S3).
+ * ts is a LOCAL-ONLY field — the send layer strips it before any provider request (T-S3).
  */
 export function pushReal(agent, msg) {
   if (!Array.isArray(agent._fullHistory)) agent._fullHistory = []
+  if (msg && msg.ts === undefined) msg.ts = Date.now()
   agent._fullHistory.push(msg)
   agent.history.push(msg)
 }
@@ -183,10 +188,14 @@ function applyCompression(agent, headEnd, tailStart, note) {
   // possibly-completed earlier requests.
   const head = agent.history.slice(0, headEnd)
   const tail = agent.history.slice(tailStart)
+  // SESSION.md §9 D-S1: compaction-injected messages (note + "Understood") carry a ts —
+  // Date.now() at the compaction moment. They are machine-only (never in _fullHistory),
+  // but the machine-line timeline stays consistent for any audit use.
+  const now = Date.now()
   agent.history = [
     ...head,
-    { role: "user", content: note },
-    { role: "assistant", content: "Understood. I'll continue from these notes, re-verifying anything transient." },
+    { role: "user", content: note, ts: now },
+    { role: "assistant", content: "Understood. I'll continue from these notes, re-verifying anything transient.", ts: now },
     ...tail,
   ]
   // Compaction REBUILDS the machine line (head + note + "Understood" + tail), so the pre-compaction
@@ -285,6 +294,7 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   const summary = await chat({ ...agent.provider, thinking: null, reasoningEffort: null }, {
     messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
     signal,
+    logCtx: { stage: "compress", child: agent._logId },
   })
 
   applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
@@ -439,7 +449,7 @@ function serializeExplorationMessages(messages) {
  * or null when there is nothing to shrink (<3 exploration results / LLM failure). Pairing-safe:
  * whole assistant→tool blocks are removed, so no orphan tool_calls/tool can survive.
  */
-async function distillExplorations(history, start, provider, signal) {
+async function distillExplorations(history, start, provider, signal, logChild) {
   if (!Array.isArray(history) || history.length - start < 2) return null
   const blocks = findExplorationBlocks(history, start)
   const resultCount = blocks.reduce((n, b) => n + b.toolCount, 0)
@@ -454,6 +464,7 @@ async function distillExplorations(history, start, provider, signal) {
     const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
       messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
       signal,
+      logCtx: { stage: "distill", child: logChild },
     })
     summary = resp?.content
   } catch {
@@ -485,7 +496,7 @@ async function distillExplorations(history, start, provider, signal) {
  * compressed session (SEND-STALL-DISTILL §2.3).
  */
 export async function summarizeRunExplorations(agent, callbacks, signal) {
-  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal)
+  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent._logId)
   if (!next) return
   agent.history = next
   // The machine line changed shape — the measured token baseline was for the pre-shrink context.

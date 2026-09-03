@@ -18,6 +18,7 @@ import {
 } from "../agent/spawn-child.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
+import { logEvent, errText } from "../log.mjs"
 
 // Async subagent limits (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
 // background spawns + the per-turn check budget (consult-style loop guard).
@@ -303,6 +304,9 @@ export async function executeEscalateAction(args, ctx) {
 
   // try 外声明：catch 也能在部分失败时 merge mutations
   let child = null
+  let escErr = null // LOGGING outcome（string 形态返回 vs 异常——见下方事件点）
+  const escId = relayPrefix.slice(0, -1)
+  let escT0 = Date.now()
   try {
     // 全写路径（role "coder"）：权限经父 onPermissionRequest，mutations merge 回父
     child = createAgent({
@@ -314,6 +318,9 @@ export async function executeEscalateAction(args, ctx) {
       overlay: CODER_OVERLAY,
       role: "coder",
     })
+    child._logId = escId // LOGGING：子内事件归属（escalate#N）
+    escT0 = Date.now()
+    logEvent("child:spawn", { role: "escalate", id: escId, kind: "escalate" })
     const runner = ctx.runAgent ?? runAgent
     const runOpts = {
       depth: 1,
@@ -346,14 +353,22 @@ export async function executeEscalateAction(args, ctx) {
     ).catch((e) => {
       // 非 ContinueError 运行失败：错误文本 + partial 输出（mutations 已在 runner 包装层 merge）
       if (ctx.signal?.aborted || e?.name === "AbortError") throw e
+      escErr = { err: e?.message ?? String(e) } // LOGGING：错误路径（返回形态——不抛）
       return `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${(child._capturedOutput ?? "").slice(0, 2000)}`
     })
     // Escalate mutations are the parent's mutations: verify/advisor guards must see them
     mergeChildMutations(parent, child)
+    if (escErr) logEvent("child:error", { role: "escalate", id: escId, ms: Date.now() - escT0, err: errText(escErr.err, 200) })
+    else logEvent("child:done", { role: "escalate", id: escId, ms: Date.now() - escT0, kind: String(report).includes(TURN_CAP_MARK) ? "partial" : "ok" })
     return `escalate (${tag})${effortNote} post-op report:\n${report || (child._capturedOutput ?? "").slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
   } catch (e) {
     // 仅 createAgent 失败/continue 询问抛出才到这（运行失败已在上面 catch 处理）
-    if (child) mergeChildMutations(parent, child)
+    if (child) {
+      mergeChildMutations(parent, child)
+      if (!escErr && !(ctx.signal?.aborted) && e?.name !== "AbortError") {
+        logEvent("child:error", { role: "escalate", id: escId, ms: Date.now() - escT0, err: errText(e, 200) })
+      }
+    }
     if (ctx.signal?.aborted || e?.name === "AbortError") throw e
     return `escalate (${tag}) error: ${e?.message ?? String(e)}`
   }

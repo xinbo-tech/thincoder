@@ -1,6 +1,6 @@
 # 工具系统设计（thincoder/src/tools/ + src/agent-tools/ + src/mcp/）
 
-> 状态：2026-08 回补。24 个内置工具 + MCP 客户端 + 元工具（agent-tools），统一 schema（OpenAI function calling）、统一上下文（cwd/agent/callbacks/signal）、统一安全边界（路径/命令/网络/沙箱）。
+> 状态：2026-08 回补。25 个内置工具 + MCP 客户端 + 元工具（agent-tools），统一 schema（OpenAI function calling）、统一上下文（cwd/agent/callbacks/signal）、统一安全边界（路径/命令/网络/沙箱）。
 
 ## 0. 机制目标（总体需求）
 
@@ -20,10 +20,10 @@
 
 ## 1. 注册与 schema
 
-- **注册表**（tools/index.mjs）：`builtinTools` 数组（24 个）——file 6（read/write/edit/insert_after/hashline_edit/read_image）、patch 2（apply_patch/delete）、system 4（bash/glob/grep/ls）、web 2（websearch/fetch）、git 2（git/question）、checklist、lint、lsp、codemode、ops 3（file_ops/process/get_current_time）。
+- **注册表**（tools/index.mjs）：`builtinTools` 数组（25 个）——file 7（read/write/edit/insert_after/hashline_edit/read_image/read_pdf）、patch 2（apply_patch/delete）、system 4（bash/glob/grep/ls）、web 2（websearch/fetch）、git 2（git/question）、checklist、lint、lsp、codemode、tree、ops 3（file_ops/process/get_current_time）。
 - **schema 生成**：`toOpenAISchema(tool)`（shared.mjs）——name/description/parameters 转 OpenAI function 格式；description 来自 `tools/*.md`（`DESC(name)` 机制：md 文件即描述源，带参数说明，模型看到的是完整使用手册而非一行字符串）。
 - **工具契约**：`{ name, description, parameters, readonly?, sideEffectExempt?, parallel?, multimodal?, execute(args, ctx) → string }`；`ctx = { cwd, agent, depth, signal, callbacks, onOutput, onQuestion, onPermissionRequest }`。**execute 必须返回字符串**（undefined 视为错误，dispatch 显式检查）。
-- **元工具**（agent-tools.mjs）：task / plan / goal / verify / subagent / skill / recent_changes / advisor / eng / timer——`readonly` 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）。
+- **元工具**（agent-tools.mjs）：task / plan / goal / verify / subagent / skill / recent_changes / advisor / eng / timer / **read_history**——`readonly` 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）。**read_history**（SESSION.md §9 权威）：查本会话人读线（`_fullHistory`——永不压缩、审计完整）——role/keyword/tool/since-until（epoch ms 时间窗）/limit/direction 筛选，返回 JSON 数组（内容截断 ~500 带标记、tool_calls 只列名）；**depth-0 only**（子代理各自上下文——语义混淆）；readonly → planMode 放行/免审批。
 
 ## 2. 安全边界（shared.mjs + 各工具）
 

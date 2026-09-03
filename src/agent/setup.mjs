@@ -187,7 +187,7 @@ export async function prepareRun(agent, input, callbacks, {
 
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool } = await import("../agent-tools.mjs")
   const { consultStartTool, consultCheckTool, consultStopTool } = await import("../agent-tools/consult.mjs")
   const { CONSULT_BASE } = await import("../agent.mjs")
   // withPool: decorate the consult_start description with the CURRENT candidate pool
@@ -279,7 +279,10 @@ export async function prepareRun(agent, input, callbacks, {
   const consultTools = consultModels.length
     ? [withPool(consultStartTool), consultCheckTool, consultStopTool]
     : []
-  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, advisorTool, ...consultTools]
+  const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool, ...consultTools]
+    // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session"
+    // would mix its throwaway context with the parent's record (semantic confusion).
+    // It is readonly:true, so planMode pass and no permission ask come automatically (T-S9).
     // Write-permission coder sub-agents (subagent role="coder" + escalate action):
     // the system prompt names verify (system.md) and advisor (discipline.md) — without them an
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
@@ -289,6 +292,10 @@ export async function prepareRun(agent, input, callbacks, {
     : agent._role === "coder" ? [verifyTool, advisorTool]
     : agent._role === "consult" ? [recentChangesTool]
     : []
+  // NOTE: every depth-0 tool schema is estimated into the compaction overhead per turn
+  // (context.mjs extras.tools) — a tool-schema change shifts the compaction fixture
+  // knife-edges (agent.test T3b: read_history's schema +~470 tokens once crossed its
+  // 11000 threshold; fixture adjusted to 12500 — rationale in the test comment).
   const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly]
   const toolSchemas = tools.map(toOpenAISchema)
   const toolByName = new Map(tools.map((t) => [t.name, t]))

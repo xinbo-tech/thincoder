@@ -13,6 +13,7 @@
  */
 import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
+import { logEvent, errText } from "../log.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 
 // Named consult defaults (consult P2, 2026-08-30).
@@ -145,6 +146,21 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   }
   let watchdog = armWatchdog()
   const label = consultLabel(m)
+  // LOGGING（LOGGING.md）：child:*（consult）——logSettle 在函数作用域声明（外层 catch
+  // 覆盖 spawn 前失败路径）；spawn 事件在 relay 建立后发射（logArmed 翻转——provider/
+  // 创建失败 = 从未启动，不落子事件、错误仅经 settleChild 进会话）。
+  let childLogId = null
+  let logT0 = 0
+  let logArmed = false
+  let logDone = false
+  const logSettle = (kind, payload) => {
+    if (!logArmed || logDone || !childLogId) return
+    logDone = true
+    const ms = Date.now() - logT0
+    const base = { role: "consult", id: childLogId, ms }
+    if (kind === "ok" || kind === "partial") logEvent("child:done", { ...base, kind })
+    else logEvent("child:error", { ...base, err: errText(payload, 200) })
+  }
   try {
     // Provider resolution: consultModels entries are { provider, model, effort? } — resolve
     // via the subagent's provider resolver ("provider:model" handles cross-provider picks).
@@ -184,6 +200,12 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // prefix (same channel subagent uses — parallel consultants stay independent) +
     // onToolOutput passthrough so the consultant's tool output lands in its TUI block.
     const relayPrefix = makeRelay(agent, "consult", ctx.callbacks?.onToken, provider.model ?? "")
+    // LOGGING：arm（spawn 事件——relay 建立后；子内事件归属 _logId）
+    childLogId = relayPrefix.slice(0, -1)
+    child._logId = childLogId
+    logT0 = Date.now()
+    logArmed = true
+    logEvent("child:spawn", { role: "consult", id: childLogId, kind: "consult" })
     const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})
     let declined = false // review #1: guard against double-settle when onDeclined fired
 
@@ -217,6 +239,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
           onDeclined: (e) => {
             declined = true
             settleChild(session, id, label, false, `turn cap reached (${e.turn} turns) — stopped, diagnosis may be partial`)
+            logSettle("partial", null)
             return undefined
           },
         },
@@ -225,18 +248,23 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       // settling again here would push a phantom empty success reply and decrement
       // `pending` twice (negative pending → consult_check's two exits both
       // unreachable → permanent block until user abort).
-      if (!declined) settleChild(session, id, label, true, String(result ?? ""))
+      if (!declined) {
+        settleChild(session, id, label, true, String(result ?? ""))
+        logSettle("ok", null)
+      }
     } catch (e) {
       // Runner errors (incl. the watchdog's abort) settle as a failed reply — the
       // continue/declined paths are already handled inside runWithContinue.
       const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
       settleChild(session, id, label, false, note)
+      logSettle("error", note)
     }
   } catch (e) {
     // Errors BEFORE the runner (provider resolution, createAgent) or a throwing
     // continue-prompt settle as failed replies — the runner's own errors are already
     // handled inside the loop above.
     settleChild(session, id, label, false, e?.message ?? String(e))
+    logSettle("error", e?.message ?? String(e))
   } finally {
     clearTimeout(watchdog)
   }

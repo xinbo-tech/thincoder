@@ -68,8 +68,12 @@ test("handleCompletion: non-empty response unaffected (normal completion path)",
   const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
   assert.equal(cr.action, "done")
   assert.equal(cr.content, "ok")
-  assert.deepEqual(agent.history.at(-1), { role: "assistant", content: "ok" }, "real response committed via pushReal")
-  assert.deepEqual(agent._fullHistory.at(-1), { role: "assistant", content: "ok" }, "and mirrored to the human-readable line")
+  // Real response committed via pushReal — which stamps ts (SESSION.md §9). Both lines hold the same object.
+  const committed = agent.history.at(-1)
+  assert.equal(committed.role, "assistant")
+  assert.equal(committed.content, "ok")
+  assert.equal(typeof committed.ts, "number", "pushReal stamps an epoch-ms ts on real messages")
+  assert.deepEqual(agent._fullHistory.at(-1), committed, "and mirrored to the human-readable line (same object)")
 })
 
 test("handleCompletion: pending tasks still take priority over empty retry? no — empty check first", () => {

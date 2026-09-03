@@ -6,7 +6,8 @@
 
 import { providerSpec, resolveEnableThinking } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
-import { escapeMessages } from "../escape.mjs"
+import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
+import { logEvent, errText, classifyErr, headText } from "../log.mjs"
 import { readSSE } from "./sse.mjs"
 export { readSSE } from "./sse.mjs"
 import {
@@ -71,13 +72,53 @@ export function effectiveFetchTimeoutMs(provider) {
   return Number.isFinite(provider?.fetchTimeoutMs) && provider.fetchTimeoutMs > 0 ? provider.fetchTimeoutMs : 600_000
 }
 
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls }) {
+export async function chat(provider, opts = {}) {
+  // LOGGING（docs/design/LOGGING.md）：llm:* 事件统一在此落点——所有 chat 调用
+  // （主回合/消化轮/compress/distill/advisor/子代理/auto-think/consult）都经本函数，
+  // 格式分派（anthropic/google/responses）在内部——单点覆盖即 llm:* 全覆盖。
+  // 续写/重试各自为独立 HTTP 请求——续写递归（下方 chatImpl 内）会再包一层（嵌套
+  // llm:start/done 对——每请求一事件）；重试在 requestWithRetry 内部不可见。
+  const logCtx = opts.logCtx ?? {}
+  const t0 = Date.now()
+  const pname = provider?.name ?? provider?.model ?? "unknown"
+  logEvent("llm:start", { provider: pname, model: provider?.model ?? "", stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child })
+  try {
+    const result = await chatImpl(provider, opts)
+    logEvent("llm:done", {
+      provider: pname, model: provider?.model ?? "",
+      ms: Date.now() - t0,
+      stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child,
+      head: headText(result?.content ?? "", 300, { paragraph: true }),
+      len: String(result?.content ?? "").length,
+      finish: result?.finishReason ?? null,
+      tools: Array.isArray(result?.toolCalls) ? result.toolCalls.length : 0,
+    })
+    return result
+  } catch (e) {
+    logEvent("llm:error", {
+      provider: pname, model: provider?.model ?? "",
+      ms: Date.now() - t0,
+      stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child,
+      err: errText(e, 200),
+      kind: classifyErr(e, opts.signal),
+    })
+    throw e
+  }
+}
+
+/** chat 本体（LOG(LLM) 事件包装之外——见上方 chat 包装器）。 */
+async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls }) {
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
   // providerSpec: spec with the provider-level context override (PROVIDER.md §15) — the
   // window/clamping logic below reads the overridden value where it matters.
   const spec = providerSpec(provider)
   messages = stripImagesForTextModel(messages, spec)
+  // SESSION.md §9 T-S3: local-only message fields (ts/transient) never reach the wire.
+  // Stripped BEFORE format dispatch — anthropic/responses transports pass whole message
+  // objects through verbatim (only the OpenAI path ran escapeMessages). Copy-on-write:
+  // history keeps the fields, the request never sees them.
+  messages = stripLocalMessageFields(messages)
   const _debugBeforeLen = process.env.THIN_DEBUG_BODY ? JSON.stringify(messages).length : 0
 
   // Format dispatch: delegate to non-OpenAI transports

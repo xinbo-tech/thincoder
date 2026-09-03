@@ -81,6 +81,7 @@ export async function classifyAndApply(agent, turn) {
       ],
       tools: [],
       signal: AbortSignal.timeout(5_000),
+      logCtx: { stage: "autothink", turn, child: agent._logId },
     })
     const word = (response.content ?? "").trim().toLowerCase()
     if (word.startsWith("low")) level = "low"

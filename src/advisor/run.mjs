@@ -198,6 +198,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       signal: signal ?? null,
       onToken: onText,
       onReasoning: onThink,
+      logCtx: { stage: "advisor" }, // LOGGING（vscode advisor/run.mjs parity——按 stage 可 grep）
     })
 
     // No tool calls — this is the final review text. The final answer was

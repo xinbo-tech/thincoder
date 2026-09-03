@@ -57,3 +57,4 @@
 - 2026-08-25：新增板块「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）、「CLI Lint 引入」（CLI-LINT-*）与「发布流程」（RELEASE.md）；ROADMAP-0.9.0.md 归档标注（0.9.0 已过，现 0.12.x）
 - 2026-09-01：新增板块「Checkpoint 事故恢复」（CHECKPOINT.md，需求+设计+测试三层定稿）
 - 2026-09-02：CLI Lint 板块（CLI-LINT-*）标记**被 TOOLS.md §10.2 取代**——ESLint 全套删除，改零依赖 check-syntax（node --check）
+- 2026-09-03：新增板块「诊断事件日志」（LOGGING.md，需求+设计+测试三层定稿 + 评审 0🔴 + 两端实现交付——T-L1..L10/镜像用例全绿）

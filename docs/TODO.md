@@ -173,3 +173,8 @@
 
 - [ ] **settle 完成队列改造**（用户建议方向——正确）：settle 无条件入完成队列（不按 _suspended 分流）——空闲（回合尾/挂起/digest 轮）逐个消费注入——根治"回合尾 collect 直注入"的时序缝隙（settle 窗口与 collect/digest 判定错位——报告滞留池——digest 不触发——交付"丢"）——诊断 explore 已派——收尾链完整时序定位后落设计（§17 硬化轮——与"4 explore 主回合未消化"同族）
 
+
+### §7.2 sync spawn 回收缺陷（2026-09-03——来源：用户实测——"主 agent 同步 explore 完成后未从面板回收"）
+
+- [ ] **sync spawn 完成精确冻结**（根因已确认：finishSubTask "最早 started"启发式——async eng-coder 与 sync explore 并存面板时——explore 完成误冻 eng-coder 块——explore 残留面板）——方案 e：subagent execute ctx 留 _subagentKey（relayPrefix）→ dispatch onToolResult 传 subKey → TUI finishSubTaskKey 精确冻——启发式降级兜底——async 路径不动（⟦ev⟧done 已精确）——设计落 AGENT-LOOP §7.2（待当前批交付后）
+

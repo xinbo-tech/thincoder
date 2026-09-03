@@ -51,7 +51,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 bin/thincoder.cjs    CLI entry
 src/agent.mjs        main loop + reminder injection + verifyGuard (opt-in) + incremental indexing
 src/agent/           loop helpers (dispatch, setup, helpers, post-turn, completion)
-src/agent-tools/     self-discipline tools (task/plan/goal/verify/subagent/skill)
+src/agent-tools/     self-discipline tools (task/plan/goal/verify/subagent/skill/read_history)
 src/prompts/         system prompts (system.md / discipline.md / main.md + subagent roles)
 src/provider/        LLM calls (native fetch + SSE)
 src/tools/           built-in tools (file/git/bash/search/web/checklist)
@@ -60,5 +60,6 @@ src/memory/          three-layer FTS5 + vector memory
 src/context.mjs      context compaction
 src/config.mjs       config + provider presets
 src/mcp/             MCP client (stdio/http/ws transports)
+src/log.mjs          diagnostic event log (LOGGING.md — logEvent/rotation/blacklist; shared ~/.thincoder/logs/)
 test/                test suite
 ```
