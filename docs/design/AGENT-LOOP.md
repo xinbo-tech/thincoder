@@ -1112,6 +1112,36 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 
 
+#### 19.5.5 cancel 核实纪律增强（2026-09-03 · 设计——用户批评确立——待评审）
+
+> 状态：设计（2026-09-03——用户批评"杀 subagent 太随意"——起因：误报 AGENT-LOOP 丢行（PowerShell ANSI 行数误读）→ 未核实即 cancel 34 轮 eng-coder——运气好成果完整——过程暴露缺陷——纪律落 personal:58 + 本设计机制化到工具描述/提示词）。
+
+### 19.5.5.1 需求
+
+**总体需求**：cancel 子代理的**判断纪律**机制化——不只靠父代理记忆——模型在调用 cancel 动作那一刻看到条款（工具描述）+ 工程模式提示词句（eng-coder 管理场景）——防随意杀（核实优先/最小干预/最后手段）。
+
+**功能性需求**：
+- F-CL1：subagent 工具 cancel 动作描述补判断纪律尾句（逐字英文锚——双端 byte-identical）
+- F-CL2：engineering.md Multi-Task Parallelism 段补 cancel 纪律一句（逐字锚——工程模式 eng-coder 管理主场景）
+- F-CL3：AGENT-LOOP §19.5 D-M6 cancel 语义补决策注（cancel = 最后手段——§18 交付协议代价）
+
+**非功能性需求**：描述预算（cancel 动作描述 +1-2 句内——不喧宾夺主）；措辞与既有描述风格一致（英文——机制陈述 + 判断引导）。
+
+### 19.5.5.2 设计
+
+- **D-CL1 镜像锚（subagent.mjs cancel 动作描述尾句追加——逐字定稿——双端照抄）**：
+  > "Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives. **Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first; prefer scoped recovery (restore a single affected file) over killing the child — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited.**"
+- **D-CL2 镜像锚（engineering.md Multi-Task Parallelism 段尾句追加——逐字定稿）**：
+  > "Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."
+- **D-CL3 AGENT-LOOP 注**：§19.5 D-M6（cancel 语义）行补决策注（"cancel = 最后手段——父侧核实纪律（personal:58——核实优先/最小干预/最后手段）——§18 交付协议下 partial 永不合并"）
+- **D-CL4 测试**：T-CL1 内容断言（subagent.mjs 描述含 "last resort" + "verify alarming signals"——fail-when-unchanged——双端）；T-CL2（engineering.md 含 "Cancelling a running eng-coder is a last resort"——双端）；既有 T-M12（subagent 描述内容锚）若断言全文则同步
+- **D-CL5 验收**：双端 byte-identical——内容断言绿——既有全量回归绿（描述变化影响 T-M12 式锚断言——核实现有断言再落）
+
+### 19.5.5.3 受影响文件
+
+- CLI + VS Code：`src/agent-tools/subagent.mjs`（cancel 描述——schema 区）+ `src/prompts/engineering.md`（尾句）+ 测试（subagent 描述内容锚断言所在——核实现有）+ AGENT-LOOP.md（本段 + §19.5 D-M6 注）
+
+
 #### 17.5.4 round1 评审处置（2026-09-03——0🔴 通过——6 项）
 
 1. VS Code 受影响面已补（上表——N5 两端一致）
