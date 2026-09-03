@@ -121,7 +121,13 @@ export async function startTUI(agent, opts = {}) {
     _historyLoaded: 0, // messages loaded from the TAIL of _fullHistory
     _historyTotal: 0, // total messages in the restored session
     _hasOlder: false, // more earlier messages remain unloaded
+    _agent: null, // §19.6 D-P1 面板镜像挂载点：startTUI 装配时置 agent 引用——subagent-blocks
+    // syncPanelSnapshot 经此写 agent._panelSnapshot（块级状态变更即刷——subagent
+    // action:"panel" 读——模型可查面板视图 + 门控补发冻结）。headless/VS Code 无此
+    // 挂载 = 无镜像 → panel 动作恒降级池视图（CLI-only 完整能力——AC-P4）。
   }
+  state._agent = agent
+  agent._panelSnapshot = [] // 镜像初始态 = 空面板（非"无镜像"——[] 与 undefined 区分）
 
   // On session restore, if all tasks are completed, auto-collapse the todo panel (match runtime behavior)
   if (state.tasks.length > 0 && state.tasks.every((t) => t.status === "done")) {

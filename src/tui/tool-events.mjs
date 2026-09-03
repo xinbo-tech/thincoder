@@ -278,7 +278,7 @@ export function buildToolCallbacks(deps) {
           : _subActionQ.shift() ?? null
         if (toolId !== undefined && toolId !== null) _subActions.delete(toolId)
       }
-      const isSubagent = name === "subagent" && subAction !== "check" && subAction !== "status" && subAction !== "escalate" && subAction !== "cancel"
+      const isSubagent = name === "subagent" && subAction !== "check" && subAction !== "status" && subAction !== "escalate" && subAction !== "cancel" && subAction !== "panel"
       const isEscalate = name === "subagent" && subAction === "escalate"
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the

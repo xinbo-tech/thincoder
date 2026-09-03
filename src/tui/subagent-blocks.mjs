@@ -58,6 +58,26 @@ export const SUB_RELAY_THROTTLE_MS = 250
 /** Roles a subagent tool child can take (finishSubTask matches the block's role). */
 export const SUBAGENT_ROLES = ["sub", "explore", "plan", "coder", "eng-coder"]
 
+// ─── §19.6 D-P1 面板镜像（subagent panel 检查工具）───
+// TUI 装配处（index.mjs startTUI）state._agent = agent——块级状态变更点经
+// syncPanelSnapshot 刷新 agent._panelSnapshot（区块数组快照：{key, role,
+// status: running|done|awaitingDigest, startedAt}——状态变更即刷——O(n) 小——
+// 不逐 token——NF-P）。agent 层 subagent action:"panel" 读此镜像（视图与用户
+// 所见一致）+ 冻结门控（D-P3）。未挂载（headless/mock——无 state._agent）=
+// 无镜像——no-op（降级路径由 agent 侧判定）。
+
+/** 刷新面板镜像（调用点 = 本模块全部 state.subTasks 块级变更点末尾——map 已稳定）。 */
+function syncPanelSnapshot(state) {
+  const agent = state._agent
+  if (!agent) return // 未挂载（headless/mock 无 TUI 装配）——无镜像
+  const snap = []
+  for (const sub of Object.values(state.subTasks ?? {})) {
+    const status = sub.done ? (sub.awaitingDigest ? "awaitingDigest" : "done") : "running"
+    snap.push({ key: sub.key, role: sub.role ?? null, status, startedAt: sub.started ?? Date.now() })
+  }
+  agent._panelSnapshot = snap
+}
+
 let _subRenderLast = 0
 let _subRenderTimer = null
 
@@ -93,6 +113,7 @@ export function ensureSubTaskKey(state, key, role) {
       lastError: null, dropped: 0,
       stopped: false, // §19.5: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
     }
+    syncPanelSnapshot(state) // §19.6 D-P1: 块创建 → running 入镜
   }
   return state.subTasks[key]
 }
@@ -163,6 +184,7 @@ export function finishSubTask(state, roles, lastError = null) {
   sub.approval = null
   if (lastError) sub.lastError = lastError
   sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+  syncPanelSnapshot(state) // §19.6 D-P1: done 状态变更刷镜
 }
 
 /** §7.2.3 sync spawn 完成精确冻结（2026-09-03）：按 relay key 精确 settle。finishSubTask
@@ -181,6 +203,7 @@ export function finishSubTaskKey(state, key, lastError = null) {
   sub.approval = null
   if (lastError) sub.lastError = lastError
   sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+  syncPanelSnapshot(state) // §19.6 D-P1: done 状态变更刷镜
   return sub
 }
 
@@ -220,6 +243,7 @@ export function freezeDoneSubTasks(state) {
     freezeSubTaskLines(state, sub)
     delete state.subTasks[sub.key]
   }
+  syncPanelSnapshot(state) // §19.6 D-P1: 删除后刷镜（块移出面板）
 }
 
 /** 按角色整组标记 done——consult N 并行 children 的会话级 settle（单发
@@ -237,6 +261,7 @@ export function finishSubTasksByRole(state, roles, lastError = null) {
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
     }
   }
+  syncPanelSnapshot(state) // §19.6 D-P1: done 状态变更刷镜
 }
 
 /** 按 [model] 记录的 model 精确 settle（consult_check 返回 provider:model——
@@ -254,6 +279,7 @@ export function finishSubTaskByModel(state, role, model, lastError = null) {
       sub.approval = null
       if (lastError) sub.lastError = lastError
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+      syncPanelSnapshot(state) // §19.6 D-P1: done 状态变更刷镜
       return sub
     }
   }
@@ -278,6 +304,7 @@ export function freezeAllSubTasks(state) {
     freezeSubTaskLines(state, sub)
     delete state.subTasks[sub.key]
   }
+  syncPanelSnapshot(state) // §19.6 D-P1: 冻结回收后刷镜（块移出面板）
 }
 
 /** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订 + round1 #1 位置裁定）：digest/会话内
@@ -298,6 +325,7 @@ export function freezeReclaimDigestedBlocks(state, pendingList) {
     freezeSubTaskLines(state, sub) // splice 落 settle 锚点（digest 总览文本之前）
     delete state.subTasks[sub.key]
   }
+  syncPanelSnapshot(state) // §19.6 D-P1: 逐条回收后刷镜（块移出面板）
   return targets.length
 }
 
@@ -354,6 +382,7 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.currentTool = null
       sub.approval = null
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+      syncPanelSnapshot(state) // §19.6 D-P1: settled → awaitingDigest 状态变更刷镜
       scheduleRender()
       return true
     }
@@ -365,6 +394,7 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
       freezeSubTaskLines(state, sub)
       delete state.subTasks[sub.key]
+      syncPanelSnapshot(state) // §19.6 D-P1: 冻结删除后刷镜
       scheduleRender()
       return true
     }
@@ -377,6 +407,7 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
       freezeSubTaskLines(state, sub)
       delete state.subTasks[sub.key]
+      syncPanelSnapshot(state) // §19.6 D-P1: 冻结删除后刷镜
       scheduleRender()
       return true
     }
@@ -484,6 +515,7 @@ export function ensureCompressPanel(state, info = {}) {
   const messages = Number.isInteger(info.messages) && info.messages >= 0 ? info.messages : "?"
   appendSubBlock(panel, "status", "Compressing context…\n", { fresh: true })
   appendSubBlock(panel, "meta", `summarizing ${messages} messages\n`, { fresh: true })
+  syncPanelSnapshot(state) // §19.6 D-P1: 压缩面板建/重置刷镜
   return panel
 }
 
@@ -500,6 +532,7 @@ export function markCompressFailed(state, error) {
 function freezeCompressPanel(state, panel) {
   freezeSubTaskLines(state, panel)
   delete state.subTasks[panel.key]
+  syncPanelSnapshot(state) // §19.6 D-P1: 压缩面板冻结删除后刷镜
 }
 
 /** 完成态（onCompress）："Compressed: N tokens freed → summary (Xs)"——冻结可折叠。 */

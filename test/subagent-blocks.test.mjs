@@ -7,10 +7,10 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 
 import {
-  SUB_BLOCK_LINE_LIMIT, finishSubTask, finishSubTaskKey, applySubEvent,
+  SUB_BLOCK_LINE_LIMIT, finishSubTask, finishSubTaskKey, finishSubTasksByRole, finishSubTaskByModel, applySubEvent,
   parseRelayPath,
   routeSubToken, routeSubReasoning, routeSubToolCall, routeSubToolOutput,
-  freezeDoneSubTasks, freezeAllSubTasks, shiftFreezeAnchors,
+  freezeDoneSubTasks, freezeAllSubTasks, shiftFreezeAnchors, freezeReclaimDigestedBlocks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "../src/tui/subagent-blocks.mjs"
 
@@ -427,4 +427,94 @@ test("§19.5 D-M7b 数据层: ⟦ev⟧async 零字段标记 → sub.async = true
   routeSubToken(s4, "coder#1/⟦ev⟧asyncronous text", noop)
   assert.equal(s4.subTasks["coder#1"].async, undefined, "asyncronous 伪前缀不设标记")
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §19.6 D-P1 面板镜像（AGENT-LOOP.md §19.6——T-P6 + 冻结家族刷新点）
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 挂载 mock：state._agent = agent（index.mjs 装配同构）→ 镜像 = agent._panelSnapshot。 */
+const mounted = () => {
+  const agent = {}
+  return { agent, s: { ...state(), _agent: agent, lines: [], _frozenSubKeys: new Set() } }
+}
+const mirror = (agent) => agent._panelSnapshot ?? null
+
+test("§19.6 T-P6: 镜像同步——state.subTasks 块级变更 → agent._panelSnapshot 刷新（块创建/settled/冻结删除）", () => {
+  const { agent, s } = mounted()
+  // ① 未挂载（headless/mock——无 state._agent）：零变更零镜像（降级判定靠 agent 侧）
+  const bare = state()
+  routeSubToken(bare, "coder#1/hello", noop)
+  assert.equal(agent._panelSnapshot, undefined, "挂载前（裸 state 无 _agent）不产生镜像")
+  // ② 块创建（routeSubToken 经 ensureSubTaskKey）→ running 入镜
+  routeSubToken(s, "coder#1/hello", noop)
+  assert.deepEqual(mirror(agent).map((b) => [b.key, b.role, b.status]), [["coder#1", "coder", "running"]],
+    "块创建 → running 镜像条目")
+  // ③ 第二块 + async 标记（标记不进镜——非块级状态）
+  routeSubToken(s, "eng-coder#2/[model]glm-5.3", noop)
+  routeSubToken(s, "eng-coder#2/⟦ev⟧async\x1e", noop)
+  routeSubToken(s, "eng-coder#2/工作中...", noop)
+  assert.equal(mirror(agent).length, 2, "第二块入镜")
+  assert.equal(mirror(agent)[1].async, undefined, "镜像条目无 async 字段（快照字段 = key/role/status/startedAt）")
+  assert.ok(mirror(agent).every((b) => typeof b.startedAt === "number"), "startedAt 入镜（elapsed 读时算——round1 #4）")
+  // ④ 文本/tool 内容流：不逐 token 刷（NF-P——块级变更才刷）
+  const before = mirror(agent)
+  routeSubToken(s, "coder#1/继续写...", noop)
+  assert.equal(mirror(agent), before, "内容 token 不触发刷镜（同一数组引用——非块级变更零开销）")
+  // ⑤ finishSubTaskKey 精确 done → 状态 done（冻结家族后续才移出）
+  finishSubTaskKey(s, "coder#1", null)
+  assert.deepEqual(mirror(agent).map((b) => [b.key, b.status]), [["coder#1", "done"], ["eng-coder#2", "running"]],
+    "done 标记 → 镜像状态 done")
+  // ⑥ 冻结删除（freezeDoneSubTasks）→ 移出镜像
+  freezeDoneSubTasks(s)
+  assert.deepEqual(mirror(agent).map((b) => b.key), ["eng-coder#2"], "冻结回收后刷镜——块移出面板")
+  // ⑦ settled → awaitingDigest（驻留中间态入镜）
+  routeSubToken(s, "eng-coder#2/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e", noop)
+  assert.deepEqual(mirror(agent).map((b) => [b.key, b.status]), [["eng-coder#2", "awaitingDigest"]],
+    "settled 驻留 → awaitingDigest 状态入镜")
+  // ⑧ freezeAllSubTasks 兜底删除 → 空镜（镜像非 undefined——挂载后 [] 与无镜像区分）
+  freezeAllSubTasks(s)
+  assert.deepEqual(mirror(agent), [], "兜底冻结 → 空面板镜像（[] ≠ undefined——区分空面板与无镜像）")
+  assert.equal(agent._panelSnapshot !== undefined, true)
+})
+
+test("§19.6 T-P6 扩展: routeSubToken done/stopped 分支 + freezeReclaimDigestedBlocks 删除 → 镜像同步", () => {
+  // done 事件（回合内 settle）→ 冻结删除即时刷镜
+  const a = mounted()
+  routeSubToken(a.s, "coder#1/hello", noop)
+  routeSubToken(a.s, "coder#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
+  assert.deepEqual(mirror(a.agent), [], "⟦ev⟧done 冻结删除 → 刷镜")
+  // stopped 事件（cancel——§19.5）→ 冻结删除即时刷镜
+  const b = mounted()
+  routeSubToken(b.s, "eng-coder#2/hello", noop)
+  routeSubToken(b.s, "eng-coder#2/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e", noop)
+  assert.deepEqual(mirror(b.agent), [], "⟦ev⟧stopped 冻结删除 → 刷镜")
+  // finishSubTask / finishSubTasksByRole / finishSubTaskByModel 同刷（done 状态入镜）
+  const c = mounted()
+  routeSubToken(c.s, "coder#1/hello", noop)
+  finishSubTask(c.s, ["coder"], null)
+  assert.deepEqual(mirror(c.agent).map((b) => [b.key, b.status]), [["coder#1", "done"]], "finishSubTask done 刷镜")
+  const d = mounted()
+  routeSubToken(d.s, "consult#1/hello", noop)
+  finishSubTasksByRole(d.s, ["consult"], null)
+  assert.deepEqual(mirror(d.agent).map((b) => b.status), ["done"], "finishSubTasksByRole done 刷镜")
+  const e = mounted()
+  routeSubToken(e.s, "consult#1/[model]kimi-k3", noop)
+  finishSubTaskByModel(e.s, "consult", "kimi-k3")
+  assert.deepEqual(mirror(e.agent).map((b) => b.status), ["done"], "finishSubTaskByModel done 刷镜")
+  // freezeReclaimDigestedBlocks（§17.5.5 逐条回收）→ 刷镜
+  const f = mounted()
+  routeSubToken(f.s, "eng-coder#9/hello", noop)
+  routeSubToken(f.s, "eng-coder#9/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e", noop)
+  assert.equal(freezeReclaimDigestedBlocks(f.s, []), 1, "已消化（pending 空）→ 逐条回收")
+  assert.deepEqual(mirror(f.agent), [], "freezeReclaim 删除 → 刷镜")
+  // 压缩面板建/冻结 → 同镜（面板视图与用户所见一致——含 compress 区块）
+  const g = mounted()
+  ensureCompressPanel(g.s, { messages: 10 })
+  assert.equal(mirror(g.agent).length, 1, "压缩面板建 → 入镜")
+  assert.equal(mirror(g.agent)[0].role, "compress")
+  assert.equal(mirror(g.agent)[0].status, "running")
+  markCompressDone(g.s, { tokensFreed: 5, elapsedMs: 1000 })
+  assert.deepEqual(mirror(g.agent), [], "压缩面板冻结 → 刷镜移除")
+})
+
 

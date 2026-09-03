@@ -50,14 +50,24 @@ function logToolError(toolName, args, error) {
  * stops, never starts. isSubagentControlAction feeds the SAME two gate sites as
  * readonly (planMode pass / no permission ask — never joins a batch approval
  * group / no handler → not denied — digest 内 cancel 放行).
+ * §19.6 panel (round1 #5): view 面归只读类（同 check/status——planMode 放行、免
+ * 审批、可批并行）；freeze 面归控制类（同 cancel——planMode 放行、免权限审批、
+ * 批审批不入组、digest 内放行）。freeze 存在（非空 key）即控制类——否则只读类。
  */
 function isSubagentReadonlyAction(toolName, args) {
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
-  return action === "check" || action === "status"
+  if (action === "check" || action === "status") return true
+  // §19.6 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
+  if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
+  return false
 }
 function isSubagentControlAction(toolName, args) {
-  return toolName === "subagent" && args?.action === "cancel"
+  if (toolName !== "subagent") return false
+  if (args?.action === "cancel") return true
+  // §19.6 panel freeze 面（D-P3 门控在 executor——只读/控制分类在此）
+  if (args?.action === "panel" && args.freeze !== undefined && args.freeze !== null && String(args.freeze) !== "") return true
+  return false
 }
 function isSubagentEscalateAction(toolName, args) {
   return toolName === "subagent" && args?.action === "escalate"

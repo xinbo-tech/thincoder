@@ -664,6 +664,47 @@ test("§19.5 T-M19 集成: cancel action 结果走普通工具块——不冻结
   assert.ok(ctx2.state.subTasks["coder#1"], "error 路径运行中区块同样保留（等待 stopped）")
 })
 
+test("§19.6 集成: panel action 结果走普通工具块——不冻结子 agent 区块（view JSON / freeze ack 均不触发启发式冻结）", async () => {
+  // view（readonly——无副作用结果）→ 普通工具块。场景 = §17.5.5 实证：digested 驻留块 + 池内其他子代理运行中
+  const { ctx, callbacks } = await captureCallbacks()
+  ctx.agent._asyncSubagents = new Map([["1", { id: "1", role: "explore", status: "running" }]])
+  ctx.agent._pendingAsyncResults = []
+  ctx.agent._panelSnapshot = [{ key: "eng-coder#9", role: "eng-coder", status: "awaitingDigest", startedAt: Date.now() }]
+  callbacks.onToolCall("subagent", { action: "panel" }, "call-P1")
+  callbacks.onToken("eng-coder#9/hello") // 驻留块（用户仍见）——panel 不得误冻它
+  callbacks.onToken("eng-coder#9/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e")
+  ctx.runAgent = async (_a, _t, cbs) => {
+    cbs.onToolResult("subagent", JSON.stringify({ panel: [{ key: "eng-coder#9", role: "eng-coder", status: "awaitingDigest", digested: true }] }), "call-P1")
+  }
+  await runAgentTurn(ctx, "task", { skipSession: true })
+  const carrier = ctx.state.lines.find((l) => l._toolBlock?.id === "call-P1")
+  assert.ok(carrier, "panel action 的工具块存在")
+  assert.equal(carrier._toolBlock.done, true, "结果入块 → 块 done")
+  assert.ok(carrier._toolBlock.result.join("\n").includes("digested"), "panel view 结果落在块体内")
+  assert.ok(!ctx.state.lines.some((l) => l._frozenSubTask), "panel view 不冻结任何子 agent 区块")
+  assert.ok(ctx.state.subTasks["eng-coder#9"], "驻留块保留（view 只读——不干预）")
+  // freeze ack（门控后结果）→ 普通工具块；区块冻结由发往 TUI 的 ⟦ev⟧done token 承担（T-P2 已验 token → routeSubToken 回收）
+  const { ctx: ctx2, callbacks: cbs2 } = await captureCallbacks()
+  ctx2.agent._asyncSubagents = new Map([["1", { id: "1", role: "explore", status: "running" }]])
+  ctx2.agent._pendingAsyncResults = []
+  ctx2.agent._panelSnapshot = [{ key: "eng-coder#9", role: "eng-coder", status: "awaitingDigest", startedAt: Date.now() }]
+  cbs2.onToolCall("subagent", { action: "panel", freeze: "eng-coder#9" }, "call-P2")
+  cbs2.onToken("eng-coder#9/hello")
+  cbs2.onToken("eng-coder#9/⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e")
+  ctx2.runAgent = async (_a, _t, cbs) => {
+    // 真实时序：工具内部经 ctx.callbacks.onToken 发 ⟦ev⟧done → routeSubToken 冻结回收——此处模拟
+    cbs.onToken("eng-coder#9/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+    cbs.onToolResult("subagent", JSON.stringify({ key: "eng-coder#9", status: "frozen", note: "done freeze event issued" }), "call-P2")
+  }
+  await runAgentTurn(ctx2, "task", { skipSession: true })
+  const carrier2 = ctx2.state.lines.find((l) => l._toolBlock?.id === "call-P2")
+  assert.ok(carrier2 && carrier2._toolBlock.done, "freeze ack 入普通工具块")
+  assert.ok(carrier2._toolBlock.result.join("\n").includes('"frozen"'), "freeze ack 落在块体内")
+  assert.ok(!ctx2.state.subTasks["eng-coder#9"], "冻结 token 已回收驻留块（done 事件承担冻结——ack 不双冻）")
+  assert.equal(ctx2.state.lines.filter((l) => l._frozenSubTask).length, 1, "恰一块冻结（token 一次）")
+})
+
+
 // ─── §7.2.3 sync spawn 完成精确冻结（2026-09-03——T-F1..F5 的 TUI 路由层：onToolResult
 // 收 dispatch 传的 subKey（ctx._subagentKey）→ finishSubTaskKey 精确冻；无 subKey →
 // 老回调启发式兜底；spawn 门拒错误不冻结——错误路径不冻 running 块）───────────────

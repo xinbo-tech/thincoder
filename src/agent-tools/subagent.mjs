@@ -11,6 +11,7 @@ import {
   runChildPipeline, resolveChildProvider, ASYNC_SUBAGENT_LIMIT,
   buildChildRunOpts, maybeRefillAsync,
   executeCheckAction, executeStatusAction, executeEscalateAction, executeCancelAction,
+  executePanelAction,
 } from "./subagent-async.mjs"
 
 // 2026-09-03 拆分轮: subagent.mjs 超 500 硬顶——async 常量、共享 post-spawn 管线
@@ -21,10 +22,11 @@ import {
 // spawn 路径 + 动作分流。
 
 /**
- * subagent tool — ONE tool, FIVE actions (AGENT-LOOP.md §19/§19.5): spawn
+ * subagent tool — ONE tool, SIX actions (AGENT-LOOP.md §19/§19.5/§19.6): spawn
  * (default) / check (fetch async results, blocking + consuming) / status
  * (non-blocking pool query) / escalate (飞刀 — hand implementation to a
- * stronger model) / cancel (stop ONE background subagent — §19.5).
+ * stronger model) / cancel (stop ONE background subagent — §19.5) / panel
+ * (view + fix the live subagent panel — §19.6).
  * - action:"spawn" roles: "explore" — read-only tools, search/read/analyze
  *   (suitable for codebase exploration); "coder" — full tool set, self-contained
  *   implementation tasks; "plan" — read-only planning; "eng-coder" —
@@ -80,12 +82,13 @@ export function resolveDesignSlot(parent, designIdArg) {
 export const subagentTool = {
   name: "subagent",
   description:
-    "ONE tool, FIVE actions (AGENT-LOOP.md §19/§19.5) — pick by what you need:\n" +
+    "ONE tool, SIX actions (AGENT-LOOP.md §19/§19.5/§19.6) — pick by what you need:\n" +
     "- action:'spawn' (DEFAULT): spawn a sub-agent to handle an independent subtask in an isolated context; the sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
     "- action:'check': fetch the report of an async spawn (async:true). BLOCKS until the target finishes — this is the explicit consuming fetch, NOT a progress query. Multiple async children return in completion (arrival) order, first finished first. Pass n = 1 on the first check of the turn, 2 on the next... (loop guard; at most 3 per turn — the rest arrive at turn end).\n" +
     "- action:'status': NON-BLOCKING progress query — returns immediately and consumes nothing. Give the spawn's id for one child ({id, role, status: running|queued|done, model, elapsedSec, turn, maxTurns, position?}), or omit it for an overview of the whole pool ({overview: {running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}]}}). Use THIS to check progress — action:'check' blocks until the target finishes (checking progress with check is what hangs a parallel turn).\n" +
     "- action:'escalate' (飞刀 — a flown-in expert): hand an implementation task to a STRONGER model from your consult models (agent.consultModels). It gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification). Use it when YOU judge the task calls for stronger hands (complex multi-file refactoring, an intractable bug, intricate algorithm work — or work beyond your comfortable ability); escalate EARLY, not after burning attempts. model: pick a candidate as 'provider:model' (default = the first consult model). Not available in engineering mode (implementation goes through eng-coder spawns there).\n" +
-    "- action:'cancel': STOP one background subagent — pass the id from the async spawn return (REQUIRED — omitting it errors; a blanket cancel is unsupported, Ctrl+C stops everything). Running target aborts immediately ({id, status:'cancelled'}); a queued target is removed from the queue ({id, status:'cancelled', was:'queued'} and later queue positions shift forward). Other children and the session keep running — cancellation is targeted. Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives.\n\n" +
+    "- action:'cancel': STOP one background subagent — pass the id from the async spawn return (REQUIRED — omitting it errors; a blanket cancel is unsupported, Ctrl+C stops everything). Running target aborts immediately ({id, status:'cancelled'}); a queued target is removed from the queue ({id, status:'cancelled', was:'queued'} and later queue positions shift forward). Other children and the session keep running — cancellation is targeted. Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives.\n" +
+    "- action:'panel': DIAGNOSE + fix the subagent panel — the collapsible blocks under the conversation the user sees (CLI TUI panel mirror; headless/VS Code degrade to a 'no panel' pool view). view (default — call it with no params or view:true): returns the live panel blocks [{key, role, status: running|done|awaitingDigest} — running entries also carry elapsedSec; awaitingDigest entries whose report is ALREADY digested carry digested:true (stuck blocks — the freezable ones — explain odd panel states here)] exactly as the user sees them. freeze: pass the block key of a digested-stuck block ({action:'panel', freeze:'role#N'}) to reclaim it into the conversation — the freeze ONLY passes for awaitingDigest blocks with no live pool entry and no pending report (gated); freezing a block whose report is still pending would break the digestion order and is refused with a clear error.\n\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
     "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
     "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). Receives git context auto-injected (branch, recent commits, working-tree state) when the project is a git repo. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
@@ -102,7 +105,9 @@ export const subagentTool = {
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: ["spawn", "check", "status", "escalate", "cancel"], description: "Which subagent-family action — spawn (default), check (fetch async results — BLOCKS until the target finishes and consumes the report), status (non-blocking progress query — never consumes), escalate (飞刀 — hand implementation to a stronger consult model), cancel (stop ONE background subagent — pass its id; never omit). See the tool description for the full action matrix." },
+      action: { type: "string", enum: ["spawn", "check", "status", "escalate", "cancel", "panel"], description: "Which subagent-family action — spawn (default), check (fetch async results — BLOCKS until the target finishes and consumes the report), status (non-blocking progress query — never consumes), escalate (飞刀 — hand implementation to a stronger consult model), cancel (stop ONE background subagent — pass its id; never omit), panel (view the live subagent panel / freeze a digested-stuck block — §19.6). See the tool description for the full action matrix." },
+      view: { type: "boolean", description: "action:'panel' only: true (default) = return the live panel blocks (the mirror of what the user sees). false with no freeze = nothing to do — error. Mutually exclusive with freeze (freeze wins)." },
+      freeze: { type: "string", description: "action:'panel' only: block key of a digested-stuck awaitingDigest block (e.g. \"eng-coder#9\") to reclaim into the conversation via the gated done-freeze event. Refused when the block is running/done/unknown or its report is still pending digestion (would break the digestion order). Requires the CLI TUI panel mirror — headless/VS Code report the freeze unavailable." },
       task: { type: "string", description: "Required for action:'spawn' (the self-contained task brief) and action:'escalate' (goal, constraints, entry files, acceptance criteria). Not used by check/status." },
       context: { type: "string", description: "Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only." },
       role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
@@ -127,10 +132,10 @@ export const subagentTool = {
     if (action !== "spawn") {
       // §19 restricted-variant action gate (round2 #3): the eng-coder audit
       // channel (depth>0, role eng-coder) is spawn-only — escalate spawns a
-      // coder+WRITE child (violates explore-only intent) and check/status have
-      // no async pool to query in a child context.
+      // coder+WRITE child (violates explore-only intent) and check/status/panel
+      // have no async pool / panel mirror to query in a child context.
       if ((ctx.depth ?? 0) > 0 && ctx.agent?._role === "eng-coder") {
-        throw new Error(`only action:'spawn' (sync explore audits) is available inside an eng-coder — escalate/check/status/cancel are not (AGENT-LOOP.md §19 D-M3)`)
+        throw new Error(`only action:'spawn' (sync explore audits) is available inside an eng-coder — escalate/check/status/cancel/panel are not (AGENT-LOOP.md §19 D-M3)`)
       }
       // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn —
       // async OR blocking — the digest must stay organize-only. The escalate
@@ -145,7 +150,10 @@ export const subagentTool = {
       // §19.5 控制类动作：digest 内放行（D-S7 分类——控制/自省；dispatch 控制类
       // 豁免同批生效——19.5.2b round2 #4；escalate 的 digest 拒绝在上一分支）
       if (action === "cancel") return executeCancelAction(args, ctx)
-      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn, check, status, escalate, cancel.`)
+      // §19.6 panel 动作：view（readonly 面——digest 内放行——自省类）与 freeze
+      // （控制类——同 cancel——digest 内放行）。深度/门控检查在 executePanelAction 内。
+      if (action === "panel") return executePanelAction(args, ctx)
+      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn, check, status, escalate, cancel, panel.`)
     }
 
     const parent = ctx.agent
