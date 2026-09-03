@@ -770,7 +770,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 17.5 §17 硬化轮：settle 完成队列（2026-09-03 · 设计——方案 B 用户批准——待评审）
 
-> 状态：设计定稿，待评审。触发：用户复现——"前端回合在跑时后端 eng-coder 完成——丢 digest——没看到交付后处理"——建议"先进完成队列——前端忙完再挨个处理"（explore 诊断 2026-09-03——缝隙 A 滞留/B 结构性互斥/C 可见性——TODO 立项）。
+> 状态：设计批准（2026-09-03 round1 通过——0🔴——6 refinement 处置注见 17.5.4——designToken 已签发）。触发：用户复现——"前端回合在跑时后端 eng-coder 完成——丢 digest——没看到交付后处理"——建议"先进完成队列——前端忙完再挨个处理"（explore 诊断 2026-09-03——缝隙 A 滞留/B 结构性互斥/C 可见性——TODO 立项）。
 
 #### 17.5.1 问题（诊断结论）
 
@@ -789,7 +789,12 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 **受影响的测试语义**：test/subagent.test.mjs T5（:379-462——现断言"直注入+清空+done 先于结论"）→ 改断言为"回合尾消化轮注入"。
 
-**受影响文件**：src/agent.mjs（collectSettledAsync）、src/tui/agent-turn.mjs（若 willSuspend/digest 时序需调——自查）、test/subagent.test.mjs（T5 断言）、AGENT-LOOP §17 D-S1/D-S3 ① 修订注（本段权威）、§15 D-A3 权衡注同步。
+**受影响文件（round1 补全）**：
+- CLI：`src/agent.mjs`（collectSettledAsync——回合尾不再直注入——**无 suspension 驱动调用方保留直注入兜底**（round1 #2——标志/检测——headless/直连 runAgent 不丢结果））；`src/tui/agent-turn.mjs`（willSuspend 判 true 路径——digest 触发检查点——settled-only 池也进挂起）；**TUI 渲染层零改动**（round1 #5——mid-turn settle 块已在 settle 时刻 ⟦ev⟧done 冻结入流——消化文本落其后——无需改渲染）
+- VS Code（round1 #1——N5 两端一致）：collectSettledAsync 同语义 + suspension 驱动核对 + ARCHITECTURE.md 引用段 + 对应 T5 断言——同批或架构师统一回写标注
+- test/subagent.test.mjs（T5 断言）+ §17 T-S2 核对（agent 级无驱动用例——若为直连形态需兜底覆盖）
+- 文档修订注扩至（round1 #3）：**§17 D-S1/D-S3 ① + D-S8 + §17.3 文件表 + §15.4 T5/AC3 + §15 D-A3**（supersede 注——§15 D-A2/§19.5 先例）+ AGENT-LOOP 本段权威
+- **AC-H4 新增**（round1 #3）：文档修订注已全部落地（上列各处——实现验收项）
 
 #### 17.5.3 测试（硬验收——eng-coder）
 
@@ -1039,4 +1044,14 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 - **嵌套前缀子标而非块中块**（方案 A——用户确认）：explore 同步 spawn 无生命周期——纯活动行——子标（dim 行首标记）足够归属可辨——块中块（D 方案）为无生命周期实体建层级 UI 过度
 - **动作域（round1 #6）**：cancel/status 在手动档 auto-turn（digest）动作域内**放行**（控制类动作——同 task/checklist 自省类——D-S7 分类补 cancel/status——digest 期间模型可中止失控子代理）；UI ⏹ 命中区与折叠头点击**列级区分**（⏹ 区点击 = cancel——不触发折叠翻转——T-M22 断言）
 - **否决**：a) pause/resume（子代理独立回合进程——真暂停需冻结/解冻上下文——复杂易错——cancel + 同 token 重 spawn（§2.8）覆盖）；b) cancel-all 参数（误触风险——Ctrl+C 已覆盖）；c) 嵌套块中块（过度——见上）；d) 剥掉内层前缀（行不可辨——explore 审计过程与 eng-coder 自身活动混淆）
+
+
+#### 17.5.4 round1 评审处置（2026-09-03——0🔴 通过——6 项）
+
+1. VS Code 受影响面已补（上表——N5 两端一致）
+2. 无驱动调用方兜底已补（collectSettledAsync 保留直注入——标志/检测）
+3. 修订注范围已扩（D-S8/§17.3/§15.4 T5+AC3——AC-H4 文档落地验收）
+4. 行号锚 → 符号（collectSettledAsync/sweepSettledToPending/digestTurn 函数锚——确需行号标 as-of）
+5. 受影响文件逐文件具体化（上表——渲染零改动结论句）
+6. 状态行文案区分（🔵——"N 完成待消化"与"N 运行中"——实现时顺手对齐——不阻塞）
 
