@@ -1,6 +1,6 @@
 # Agent 主循环设计（thincoder/src/agent.mjs + agent/）
 
-> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5/§19.6——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展/panel 检查））。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
+> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5/§19.6/§20/§17.6——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展/panel 检查））。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
 
 ## 1. 模块地图
 
@@ -133,7 +133,7 @@ PreToolUse hooks → 阻断
 结构化事件继续走现有 token 管线（`onToken`），以保留字符开头、可机械识别的形式编码（哨兵串为罕见字符组合，正常内容混淆概率极低；生成侧仍对子 agent 文本 strip 哨兵序列防伪造——见 D7）。选择扩展现有管线而非新增 `onSubagentEvent` 回调的理由：① 生成侧（subagent/escalate/consult 三处 childCallbacks）与消费侧（TUI 前缀正则分流）均已存在且稳定，新增回调需要同时改 runAgent 签名、三个生成工具、TUI callbacks 装配——扩散面更大；② 未来端点接入时按既有前缀管线消费（注意：ACP 桥现状是前缀 token 原样透传，事件剥除见 D7——"天然继承"不成立，需端点各自适配）。
 
 - 进度事件 token：带前缀的 onToken chunk，payload 形如 `⟦ev⟧turn\x1e{n}\x1e{max}\x1e{phase}\x1e{detail}`——以字面哨兵串 `⟦ev⟧` 开头（LLM 不会生成），`\x1e`（RS）作字段分隔。phase ∈ `llm | tool | approval | done`；detail 为工具名或审批描述（≤40 字符截断）。TUI 解析后**不进 blocks、不进主流**，仅更新区块头部状态；sanitizeDisplay 兜底 strip（防未来漏解析时控制字符入流）。
-- **事件名 × 发射点 × 载体矩阵（round2 #3 修订，消歧；code review #7 补 §15 例外）**：`⟦ev⟧` token 常规只有两种——`turn`（runAgent depth>0 在 `_currentTurn` 更新处发，phase=llm，{n}/{max} 必填）与 `approval`（dispatch.mjs 权限询问处发，{n}/{max} 取子 agent 当前 turn 计数）；**tool/done phase 不发 token**——由既有 onToolCall/onToolResult 前缀 relay 承担（TUI 前缀分支更新 currentTool 与 done 状态，即 D4）。**§15 例外：`done`**——仅 async 子代理回合收尾集合完成后由 agent.mjs 发（见 §15 D-A3；**§17 D-S8 修订：挂起态延迟至池空冻结补发，round2 #1**），TUI 冻结区块信号（同步子代理的 done 仍由 onToolResult 前缀 relay 承担）。phase 枚举中的 `tool/done` 描述的是头部状态机的输入来源之一，不是 token 种类。
+- **事件名 × 发射点 × 载体矩阵（round2 #3 修订，消歧；code review #7 补 §15 例外）**：`⟦ev⟧` token 常规只有两种——`turn`（runAgent depth>0 在 `_currentTurn` 更新处发，phase=llm，{n}/{max} 必填）与 `approval`（dispatch.mjs 权限询问处发，{n}/{max} 取子 agent 当前 turn 计数）；**tool/done phase 不发 token**——由既有 onToolCall/onToolResult 前缀 relay 承担（TUI 前缀分支更新 currentTool 与 done 状态，即 D4）。**§15 例外：`done`**——仅 async 子代理回合收尾集合完成后由 agent.mjs 发（见 §15 D-A3；**§17 D-S8 修订：挂起态延迟至池空冻结补发，round2 #1**），TUI 冻结区块信号（同步子代理的 done 仍由 onToolResult 前缀 relay 承担）。phase 枚举中的 `tool/done` 描述的是头部状态机的输入来源之一，不是 token 种类。——**superseded（2026-09-03）：事件族持续扩展——done（§15）/settled（§17）/stopped+async（§19.5）/queued+cancelled（§20）——各节为准**
 - 模型元数据：沿用现有 `[model]` token，不重复设计。
 - **F7 落地方式**：`onToolOutput` 的 `{kind,text}` 契约本已在 advisor/bash 中实际使用（advisor/run.mjs emit() 包装；bash 裸字符串由 TUI 兜底归一化）。本轮仅立规成文（TUI-TOOL-OUTPUT.md §2 已承载），不新增代码。
 - 子agent 工具输出 relay：**复用 dispatch.mjs 的 onOutput → `callbacks.onToolOutput(name, chunk)` 既有接线**——生成侧 childCallbacks 增加 `onToolOutput: (name, chunk) => parent.onToolOutput(`${relayPrefix}${name}`, chunk)`，TUI 端 onToolOutput 对带前缀 name 剥前缀路由进对应区块（kind 解析复用既有 string→{kind,text} 归一化）。节流/截断由渲染层统一施加（生成层原样转发，保持各端自行决定展示粒度）。
@@ -1164,7 +1164,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ## 20. 子 agent 任务调度器（2026-09-03 · 需求 + 设计——方案 1 用户确认——待评审）
 
-> 状态：设计定稿，待评审（round1 1🔴 已处置——待复审）。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。
+> 状态：设计批准（2026-09-03 round1 1🔴 + round2 0🔴 通过——advisory 处置注见 20.4——designToken 已签发）。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。
 
 
 **总体目标**：把"任务执行序"从父代理脑内移入机制——父代理只声明域与依赖、提交即走——调度器保证同文件串行、依赖有序、并发不误伤——根治同文件并发失误与手动排队（今日 id:13/14 事故为证）。
@@ -1192,7 +1192,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 **D-SD4 补位增强（maybeRefillAsync）**：settle/cancel 释放槽后——从 queued 选"依赖全满足 + 域无冲突"的最早条目启动——**多任务同时解除（一批 eng-coder 全等同一依赖）→ 按 queued 序逐个启动到槽满**（上限 4 不变）
 
 
-**D-SD5 死锁防御 + 取消（round1 #1 补——依赖终态释放规则）**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；受保护任务（同批同依赖释放）无抢占（v1 不做优先级）。**依赖释放规则（终态语义）**：依赖在目标 settle（任何终态——成功/错误/取消）或条目移除（check 消费/出队）时视为满足——waiting-deps 条目重新评估：目标取消/错误 → 依赖者自动释放启动（父代理负责失败处置）——**默认分支（round2 #3 定死）：依赖取消/失败 → 依赖者留 queued 标 dependency cancelled + 注入提醒供模型决策——仅父代理显式处置或 AUTO 档才自动启动**；spawn 时 dependsOn 引用 unknown id → 明确错误（对齐 check/status 未知 id 语义 T12）——补 T-SD9（cancel queued 依赖 → 依赖者自动释放）T-SD10（unknown id 拒绝）
+**D-SD5 死锁防御 + 取消（round1 #1 补——依赖终态释放规则）**：dependsOn 成环（A→B→A）→ spawn 时检测拒绝（错误明确）；域冲突天然无环（串行释放）；cancel queued waiting-deps = 出队（既有——后续项前移）；受保护任务（同批同依赖释放）无抢占（v1 不做优先级）。**依赖释放规则（终态语义）**：依赖在目标 settle（任何终态——成功/错误/取消）或条目移除（check 消费/出队）时视为满足——waiting-deps 条目重新评估：目标取消/错误 → 依赖者自动释放启动（父代理负责失败处置）——**被 round2 #3 默认分支取代（supersede——见下）**——**默认分支（round2 #3 定死）：依赖取消/失败 → 依赖者留 queued 标 dependency cancelled + 注入提醒供模型决策——仅父代理显式处置或 AUTO 档才自动启动——**round1 #4：queued（未运行）依赖被 cancel 无 settle 事件——"dependency cancelled" 提醒在 cancel 动作返回时即注入（模型可见——工具结果内）——面板/status 恒显示标注——滞留有意（挂起持续至用户/模型处置——显式可清——不静默）****；spawn 时 dependsOn 引用 unknown id → 明确错误（对齐 check/status 未知 id 语义 T12）——**round1 #8：被 check 消费的条目（池删除）——dependsOn 引用 → 消费即终态——保留终态墓碑（consumed id 视为已满足——dependsOn 语义完成）——非 consumed 的 unknown id 才拒绝——补 T-SD14**——补 T-SD9（cancel queued 依赖 → 依赖者自动释放）T-SD10（unknown id 拒绝）
 
 **v1 边界**：不做优先级/抢占/超时重调度/自动域解析——files 声明缺失的任务不参与冲突检测（行为 = 现状——逐步迁移）——round1 #5：声明错误（漏文件/path 形态不一 src/x vs ./src/x）静默绕过串行化——false-negative 风险明示——实现时 path 归一化再交集——eng-coder spawn 带 designId 时尽量从 §18 任务域（设计文档 + 交付文件清单）播种 _files
 
@@ -1208,7 +1208,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-SD6：cancel waiting-deps 任务 → 出队 + 后续前移（既有 queued 取消语义）
 - T-SD7：status 显示 waiting-deps 态（模型可见排队原因）
 - T-SD8：文件域不相交 + 无依赖 → 并行（不误排）
-- T-SD9：cancel queued 依赖 → 依赖者自动释放（round1 #1）
+- T-SD9：cancel queued 依赖 → 依赖者留 queued 标 dependency cancelled + 提醒（round2 #3 锁定默认——仅 AUTO/父显式处置才启动——supersede round1 #1）
 - T-SD10：dependsOn unknown id → spawn 拒绝（round1 #1）
 - T-SD11：排队 spawn 返回即面板可见 + waiting for 标注（D-SD3b）
 - T-SD12：启动后转 running——同 key 不重建（D-SD3b）
@@ -1233,9 +1233,11 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 #### 17.6.2 修复（D-C1..C3）
 
-- **D-C1 key-handler processing 态武装化**：第一按 → abort({interrupt: true})（停当前回合——不清池——后台保留——提示 "[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]"）——3s 内第二按 → 全停（clearTimeout + abort（无 interrupt——走 agent.mjs 清池分支）+ _suspAborted + 唤醒）——与挂起态分支同构——武装计时/过期复位复用既有语义（实现选最小）
+- **D-C1 key-handler processing 态武装化**：第一按 → abort({interrupt: true})——**无 message（round1 #1——agent-turn 区分：有 message 的 interrupt（Ctrl+I）= 重建续跑——无 message 的 interrupt（Ctrl+C 首按）= 停回合不续跑——受影响文件补 agent-turn.mjs 核对）**（停当前回合——不清池——后台保留——提示 "[stopped current turn — press Ctrl+C again within 3s to abort all background subagents]"）——3s 内第二按 → 全停（clearTimeout + abort（无 interrupt——走 agent.mjs 清池分支）+ _suspAborted + 唤醒）——与挂起态分支同构——武装计时/过期复位复用既有语义
 - **D-C2 agent.mjs 清池条件核对**：interrupt 路径已安全（!interrupt 条件排除——不改）——全停清池走既有 abort 分支（二按 abort 无 interrupt → 清池）——agent.mjs 零改动（核对确认）
 - **D-C3 提示一致性**：processing 首按提示含"再按中止全部后台"字样（对齐挂起态文案）
+
+**D-C4 /abort 语义（round1 #2）**：/abort = 显式全停——对齐二按语义（无武装直接全停——用户显式命令——可辩护）——注一句 + 回归测试锁定
 
 **受影响文件**：src/tui/key-handler.mjs（processing Ctrl+C 武装化——~10 行）、测试（key-handler/tui——首按不清池/次按清池/过期复位）、AGENT-LOOP 本段 + TUI.md §3 键分发注（Ctrl+C 三态武装一致）
 
@@ -1248,3 +1250,16 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-C5：挂起态/空闲态既有双确认回归（零变化）
 
 **验收**：AC-C1 = processing Ctrl+C 首按不再误杀后台（T-C1——核心）；AC-C2 = 全停仍可达（T-C2）；AC-C3 = 三态零回归（T-C3..C5）
+
+#### 20.4 评审处置（2026-09-03——round1 1🔴 + round2 0🔴 通过）
+
+- round1 #1 依赖终态释放规则（D-SD5）——round2 复审确认
+- round2 #1 T-SD9..13 入表 + AC 回指
+- round2 #2 waiting 块通道（⟦ev⟧queued/cancelled）
+- round2 #3 释放默认分支定死（留 queued + 标注 + 提醒——supersede 旧自动释放句——T-SD9 同步）
+- round2 #4 queued-cancel 注入触发（cancel 返回即发）+ 滞留有意明示
+- round2 #5 T-SD5 人工注入/防御断言
+- round2 #6 越行/position 语义 + T-SD4b
+- round2 #7 sync 冲突 error + 元数据
+- round2 #8 NFR/滞留可见性
+- round2 复审 #1..8（本批——区分机制/abort 语义/supersede 标注/状态行/事件矩阵/头注/墓碑）——token 8a85b23d
