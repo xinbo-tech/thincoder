@@ -207,7 +207,11 @@
 - [ ] **agent-turn.mjs 535 行拆分**（HEAD 433 → §17.5（collectSettled suspDriven + inSessionTurn 守卫）+ §17.6（interrupt 区分/垃圾回滚/exitArmed 解除）叠加 +102——超 500 硬限）——拆分建议（§17.6 交付注）：挂起驱动段迁出（tool-events/render-conversation L93 先例——agent-turn 174 行先例）——**当前代码已稳定提交（5d500c4）——可拆**——立项排轮（小拆——零行为变化——测试零改动或断言归位）
 
 
-### TUI 行数债合并轮（2026-09-03——来源：§7.2.3 交付 code review advisory + §17.6 stalled 项）
+### prompts 调度器条款升级（2026-09-03——来源：§20 交付后提示词同步缺口——用户指出）
+
+- [ ] **main.md Delegation 段升级**：L17 旧条款（"Never give parallel subagents tasks that edit the same files"——否定式手动避让）→ 调度器条款（§20 能力：spawn 声明 files 写域 + dependsOn 依赖——冲突/顺序交调度器（自动 queued——冲突清自动启动）——同文件任务可并行派——不用手动预判/串行等待）——engineering.md 并行段同款——两端 15 prompts byte-identical——小设计→评审→eng-coder
+
+
 
 - [ ] **超 500 行文件合并拆分轮**（§20 交付后实测——2026-09-03 id:2 落）：CLI subagent-async.mjs 947 / subagent-blocks.mjs 625（冻结家族抽 freeze.mjs——re-export 保 API——回落 ~460）/ subagent.mjs 611 / subagent-panel.mjs 超限待测 / agent-turn.mjs 535（挂起驱动段迁出）/ tool-events.mjs 537——**VS Code 登记**：subagent-async.mjs 885 / subagent.mjs 510——先例：cmd-mcp 499→382 / agent-turn 534→174——排独立拆分轮（避免同文件并发）
 
