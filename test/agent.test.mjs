@@ -1256,6 +1256,18 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("Fix-round re-spawns are docs FIRST too"), "flow-step-7 fix-round docs-FIRST hook present")
   })
 
+  it("engineering.md: scope extensions run the full review chain — a user ruling on form/shape is NOT design approval (2026-09-03)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    assert.ok(text.includes("A user ruling on design CONTENT"), "main clause: content ruling = requirements confirmation, not design approval")
+    assert.ok(text.includes("NOT design approval"), "ruling-never-approval semantics present")
+    assert.ok(text.includes("still runs the full review chain"), "new scope (incl. extensions to an approved design) still runs the full review chain")
+    assert.ok(text.includes("user-initiated advisor review"), "chain includes user-initiated advisor review")
+    assert.ok(text.includes('("B", "可以") never shortcuts past review'), "form-ruling example present (root cause named — never shortcuts past review)")
+    assert.ok(text.includes("after the advisor review unlocks eng-coder"), "only the explicit sign-off after the advisor review unlocks eng-coder")
+    assert.ok(text.includes("A user ruling on design form/shape/option choice is NOT this sign-off"), "step-5 pointer: form ruling is not the sign-off gate")
+    assert.ok(text.indexOf("5. **User sign-off.**") < text.indexOf("NOT this sign-off"), "pointer anchored inside step 5 (User sign-off)")
+  })
+
   it("engineering.md: UI/interaction decisions must land in the design doc AND the eng-coder task (2026-08-29)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
