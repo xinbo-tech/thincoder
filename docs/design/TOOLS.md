@@ -337,9 +337,9 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 - **D-E1 删文件**：CLI `src/tools/exec-prelude.mjs` + VS Code `src/tools/exec-prelude.mjs`——整体删除（readFile/writeFile/glob/grep/log/require/safe/globToRegex 全随删——无其他文件 import 它——test/ 无引用）
 - **D-E2 execute.mjs 净化**（CLI + VS Code）：删 import prelude 逻辑——inline code 子进程 = 纯净 `node --input-type=module --eval`——顶部注释（L13 区）同步改写
-- **D-E3 描述重写**（CLI src/tools/execute.md + VS Code 对应——两端 byte-identical）：删 "Globals: readFile/writeFile/..." 清单——改为"纯净 node ESM（顶层 await/动态 import 可用）——不预置任何全局——文件读取/修改走 read/ls/glob/grep/write/edit/apply_patch 专用工具——execute 内需要 node:fs 时自行 import"——L18 prelude 注删、L20 "use writeFile to a file" 改 "output capped——大输出经 bash 落盘或分段"（注：实际大输出机制 = 超限落盘自动——措辞由实现者核实现状再写）——execute.mjs 内嵌 description（L135）同改
+- **D-E3 描述重写**（CLI src/tools/execute.md + VS Code 对应——两端 byte-identical）：删 "Globals: readFile/writeFile/..." 清单——改为"纯净 node ESM 子进程（顶层 await/动态 import 可用）——不预置任何全局——文件读取/修改走 read/ls/glob/grep/write/edit/apply_patch 专用工具"——L18 prelude 注删、L20 "use writeFile to a file" 改 "output capped——大输出经 bash 落盘或分段"（注：实际大输出机制 = 超限落盘自动——措辞由实现者核实现状再写）——execute.mjs 内嵌 description（L135）同改
 - **D-E4 TOOLS.md 同步**：L39 "execute 工具（沙箱）" 段早已过时（import 阻断/require 禁——712af6f 子进程化后不实）——顺带修正为纯净子进程现状 + prelude 退役注；L56 决策表 "沙箱只出不进" 行加注（execute 与 bash 同边界——无预置文件面——文件能力走工具授权）
-- **D-E5 测试改写**（CLI test/tools.test.mjs L2667-2738 execute 段）：L2693 grep 助手用例改 node 原生实现（fs.readFileSync + 正则匹配——验证"自己 import 可用"）；L2682 log/require 用例改 console.log/原生——**新增 T-E1：助手消失验证**（execute code 里 typeof readFile/writeFile/glob/grep/log === "undefined"——需 fs 时 import("node:fs") 正常）；scriptFile/import/超时/过滤用例保持（零变化验证）
+- **D-E5 测试改写**（CLI test/tools.test.mjs L2667-2738 execute 段）：L2693 grep 助手用例改原生实现（fs 读+正则——它本来就该这么写）；L2682 log/require 用例改 console.log/原生——**新增 T-E1：助手消失验证**（execute code 里 typeof readFile/writeFile/glob/grep/log === "undefined"）；scriptFile/import/超时/过滤用例保持（零变化验证）
 - **D-E6 验收**：T-E1 助手全消失 + 原生 import 可用；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤/越界拒绝）；两端对称（byte-identical 描述）；TOOLS.md §12 本段勾销
 
 
