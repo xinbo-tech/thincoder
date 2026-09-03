@@ -3769,6 +3769,18 @@ test("prompts/engineering.md: 修正轮 docs FIRST 条款（2026-09-03——同�
   assert.ok(text.includes("Fix-round re-spawns are docs FIRST too"), "step 7 修正轮句 docs FIRST 指针在")
 })
 
+test("prompts/engineering.md: 范围扩展评审链——用户对设计形态的拍板 ≠ 设计批准（2026-09-03——扩展仍走完整评审链）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes("A user ruling on design CONTENT"), "主句在：设计内容拍板 = 需求确认非设计批准")
+  assert.ok(text.includes("NOT design approval"), "拍板 ≠ 批准语义在")
+  assert.ok(text.includes("still runs the full review chain"), "扩展（含已批准设计的扩展）仍走完整评审链")
+  assert.ok(text.includes("user-initiated advisor review"), "评审链含用户发起的 advisor 评审")
+  assert.ok(text.includes('("B", "可以") never shortcuts past review'), "形态拍板示例句在（根因点名——永不越过评审）")
+  assert.ok(text.includes("after the advisor review unlocks eng-coder"), "仅评审后的显式 sign-off 解锁 eng-coder")
+  assert.ok(text.includes("A user ruling on design form/shape/option choice is NOT this sign-off"), "step 5 指针句在（形态拍板 ≠ sign-off 门）")
+  assert.ok(text.indexOf("5. **User sign-off.**") < text.indexOf("NOT this sign-off"), "指针句锚在 step 5（User sign-off）内")
+})
+
 test("prompts/engineering.md: UI/交互决策必须落设计文档且必须进 eng-coder 任务书（2026-08-29）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明

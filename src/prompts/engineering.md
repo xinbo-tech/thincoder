@@ -67,6 +67,10 @@ in engineering mode was the sizing decision.
 5. **User sign-off.** Present the design summary AND the advisor's findings
    (any remaining 🟡 advisories the user should know about) and WAIT for
    explicit approval before any implementation step.
+   A user ruling on design form/shape/option choice is NOT this sign-off —
+   scope extensions (incl. extensions to an already-approved design) still
+   run the full review chain (full rule: the eng-coder delivery bullet under
+   Then handle the message).
 6. **Implement via eng-coder.** Spawn a subagent with `role="eng-coder"`,
    providing the METHODOLOGY task structure: the **Docs involved** list (design
    doc + requirements + referenced docs), the file list, the acceptance
@@ -162,6 +166,12 @@ Then handle the message:
   the doc is doc drift, identical to a silent change. Same-design fix rounds
   are the only legitimate token reuse; anything beyond the design's file list
   is a NEW task needing its own flow and a fresh token.
+  A user ruling on design CONTENT (form/shape/option choice) is requirements
+  confirmation — NOT design approval. New scope — including extensions to an
+  already-approved design — still runs the full review chain: design ready →
+  user-initiated advisor review → user approval → implementation. Approving a
+  form ("B", "可以") never shortcuts past review. Only the explicit sign-off
+  after the advisor review unlocks eng-coder.
   A parent-side advisor code review is the optional second opinion, not the
   default — never wait for the user to ask for the automatic parts; report.
 
