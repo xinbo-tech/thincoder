@@ -292,7 +292,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **复杂度分档（关键——v1 必须含 Tier 2）**：Tier 1（教科书）不够——Chrome 打印/Word/LibreOffice/LaTeX/Quartz 全在 Tier 2（XRef 流 + ObjStm + PNG 预测器 + Type0/ToUnicode 2 字节 + TJ + /Prev）——只做 Tier 1 会"demo 能跑、真实 PDF 大面积失败"。
 
-**文件形态**：独立模块 **src/tools/pdf-parse-xref.mjs + pdf-parse-text.mjs（双核——500 硬限预拆）+ pdf.mjs（工具壳——read_pdf 注册 + DESC + multimodal:true——readonly: true 即全链路生效——read_pdf 注册 + DESC——readonly: true 即全链路生效：planMode 白名单/免审批/explore 只读集零额外代码）——file.mjs 495 行不能承接。
+**文件形态**：独立模块 **src/tools/pdf-parse-xref.mjs + pdf-parse-text.mjs（双核——500 硬限预拆）+ pdf.mjs（工具壳——read_pdf 注册 + DESC + multimodal:true——readonly: true 即全链路生效：planMode 白名单/免审批/explore 只读集零额外代码）——file.mjs 495 行不能承接。
 
 **同步面**：read.md 路由段 + discipline.md 工具总表（**两端 prompts 15 文件 byte-identical 铁律**——thincoder-vscode/src/prompts/discipline.md 必须同改）+ TOOLS.md §1 计数 + ARCHITECTURE.md 模块注释 + FEATURES.md。
 
@@ -304,7 +304,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 2. 扫描件错误是否给 read_image 指引（F-P2 已建议——确认措辞）
 3. 多栏/表格不识别是否需文档声明（第一版声明不支持——还是尽力拼接）
 
-**受影响文件**：新 src/tools/pdf.mjs（壳）+ pdf-parse-xref.mjs + pdf-parse-text.mjs（双核——500 硬限预拆）+ read_pdf.md、tools/index.mjs 注册、read.md 路由段、两端 discipline.md（byte-identical）、TOOLS.md、ARCHITECTURE.md、FEATURES.md、新 test/pdf.test.mjs（17 用例）——**2026-09-03 交付实测**：xref 499 / text 497 行——**11.2 旧"9 段管线"散文与 11.3 用例矩阵以交付为准**（TOOLS.md §1 计数 + ARCHITECTURE/FEATURES 已同步）f.test.mjs、docs/TODO.md（条目补回）。
+**受影响文件**：新 src/tools/pdf.mjs（壳）+ pdf-parse-xref.mjs + pdf-parse-text.mjs（双核——500 硬限预拆）+ read_pdf.md、tools/index.mjs 注册、read.md 路由段、两端 discipline.md（byte-identical）、TOOLS.md、ARCHITECTURE.md、FEATURES.md、新 test/pdf.test.mjs（17 用例）——**2026-09-03 交付实测**：xref 499 / text 497 行——**11.2 旧"9 段管线"散文与 11.3 用例矩阵以交付为准**（TOOLS.md §1 计数 + ARCHITECTURE/FEATURES 已同步）、docs/TODO.md（条目补回）。
 
 ### 11.3 决策点定稿（2026-09-03 用户拍板）
 
@@ -335,11 +335,18 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 ### 12.2 设计
 
-- **D-E1 删文件**：CLI `src/tools/exec-prelude.mjs` + VS Code `src/tools/exec-prelude.mjs`——整体删除（readFile/writeFile/glob/grep/log/require/safe/globToRegex 全随删——无其他文件 import 它——test/ 无引用）
+- **D-E1 删文件**：CLI `src/tools/exec-prelude.mjs` + VS Code `src/tools/exec-prelude.mjs`——整体删除（readFile/writeFile/glob/grep/log/require/safe/globToRegex 全随删——无其他文件 import 它——test/ 无引用）——**desktop vendor 副本不在本次范围（评审 #2——若 vendor 树含 exec-prelude 由 desktop 仓后续同步——不静默）**
 - **D-E2 execute.mjs 净化**（CLI + VS Code）：删 import prelude 逻辑——inline code 子进程 = 纯净 `node --input-type=module --eval`——顶部注释（L13 区）同步改写
-- **D-E3 描述重写**（CLI src/tools/execute.md + VS Code 对应——两端 byte-identical）：删 "Globals: readFile/writeFile/..." 清单——改为"纯净 node ESM 子进程（顶层 await/动态 import 可用）——不预置任何全局——文件读取/修改走 read/ls/glob/grep/write/edit/apply_patch 专用工具"——L18 prelude 注删、L20 "use writeFile to a file" 改 "output capped——大输出经 bash 落盘或分段"（注：实际大输出机制 = 超限落盘自动——措辞由实现者核实现状再写）——execute.mjs 内嵌 description（L135）同改
-- **D-E4 TOOLS.md 同步（评审 #3 补全）**：L39 "execute 工具（沙箱）" 段早已过时（import 阻断/require 禁——712af6f 子进程化后不实）——顺带修正为纯净子进程现状 + prelude 退役注；**§0.1 表 execute 沙箱行（L18——同款 stale 声明 import 阻断/require 禁/只出不进——评审 #3）+ L13 "execute 沙箱强杀" 措辞检查**——一并改纯净现状口径；§5 决策表 "沙箱只出不进" 行（**评审 #4：实际 L59 非 L56**——按行名锚定）加注（execute 与 bash 同边界——无预置文件面——文件能力走工具授权）
-- **D-E5 测试改写**（CLI test/tools.test.mjs execute 段 + **VS Code 对应测试（评审 #6——F-E4 两端对称需测试侧同镜像）**）：grep 助手用例改原生实现（fs 读+正则——它本来就该这么写）；log/require 用例改 console.log/原生——**新增 T-E1：助手消失验证**（execute code 里 typeof readFile/writeFile/glob/grep/log === "undefined"——两端各一）+ **T-E2 内容断言（评审 #2——T-W3 式）**：execute.md/内嵌描述不含 prelude 预置声明（fail-when-unchanged——两端各断言）；scriptFile/import/超时/过滤用例保持（零变化验证）
-- **D-E6 验收**：T-E1 助手全消失（typeof readFile/writeFile/glob/grep/log === "undefined"——两端）；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤——**路径语义按 §10.1：无越界拒绝（评审 #1——T-w-2/T-e-3 行随 §10.1 已改"可指向 workspace 外"——本批 sweep 残留旧行）**）；**内容断言（评审 #2——防 byte-identical 漂绿——T-W3 式）：execute.md + execute.mjs 内嵌描述不含 prelude 预置声明（"Globals:"/"readFile/writeFile/glob/grep/log 预置"字样——两端各断言——副本未改即失败）**；TOOLS.md §12 本段勾销
+- **D-E3 描述重写**（CLI src/tools/execute.md + VS Code 对应——两端 byte-identical）：删 "Globals: readFile/writeFile/..." 清单——改为"纯净 node ESM 子进程（顶层 await/动态 import 可用）——不预置任何全局——文件读取/修改走 read/ls/glob/grep/write/edit/apply_patch 专用工具"——头部注释 prelude 注删、"use writeFile to a file" 句改 "output capped——大输出经 bash 落盘或分段"（注：实际大输出机制 = 超限落盘自动——措辞由实现者核实现状再写）——execute.mjs 内嵌 description 同改（评审 #5——行名/内容锚——不用行号）
+- **D-E4 TOOLS.md 同步（评审 #3 补全——评审 #5 行名锚——不用行号）**：§2 "execute 工具（沙箱）" 段早已过时（import 阻断/require 禁——712af6f 子进程化后不实）——顺带修正为纯净子进程现状 + prelude 退役注；**§0.1 表 execute 沙箱行（同款 stale 声明 import 阻断/require 禁/只出不进——评审 #3）+ §0.1 工具超时行 "execute 沙箱强杀" 措辞检查**——一并改纯净现状口径；§5 决策表 "沙箱只出不进" 行（按行名锚定——评审 #4）加注（execute 与 bash 同边界——无预置文件面——文件能力走工具授权）；**§0.1 路径安全行 "路径仅相对 cwd 解析" 与 §2 路径行 "无边界解析" 措辞统一（评审 #8——§10.1 语义：相对→cwd、绝对原样、无边界断言）**
+- **D-E5 测试改写**（CLI test/tools.test.mjs execute 段 + **VS Code 对应测试（评审 #6——F-E4 两端对称需测试侧同镜像）**）：grep 助手用例改原生实现（fs 读+正则——它本来就该这么写）；log/require 用例改 console.log/原生——用例表：
+  - **T-E1（F-E1——正常）**：execute inline code 里 typeof readFile/writeFile/glob/grep/log/require === "undefined"——两端各一
+  - **T-E2（F-E2——正常/内容断言——fail-when-unchanged）**：execute.md + 内嵌描述**不含** prelude 预置声明（"Globals:"/"预置 readFile/writeFile" 字样）且**含** routing 句（"文件操作走 read/ls/glob/grep/write/edit 专用工具"——评审 #4 加强——presence + absence 双断言）——两端各断言
+  - **T-E3（F-E3——回归——零变化验证）**：inline 纯代码/import()/scriptFile/nodeArgs/超时/过滤既有用例全保持绿
+  - **T-E4（F-E1——错误路径——评审 #1 补）**：inline code 调用已删助手（readFile("x")）→ ReferenceError 出现在工具结果（明确失败——不静默）
+- **D-E2 修订注（评审 #5）**：顶部注释位置改内容锚（"头部注释区"——不用行号）
+- **D-E7 引用面 sweep（评审 #3——对齐 §10.2 D-L3 先例）**：grep "prelude"/"Globals"/"预置 readFile" 跨 prompts（discipline.md 等）+ docs（README/ARCHITECTURE/FEATURES）——两端——残留声明同批清理或加退役指向
+- **受影响文件清单（合并——评审 #3）**：CLI `src/tools/exec-prelude.mjs`（删）+ `src/tools/execute.mjs`（净化）+ `src/tools/execute.md`（描述）+ `test/tools.test.mjs`（用例改写/T-E1..4）+ `docs/design/TOOLS.md`（§12 本段 + D-E4 同步点）；VS Code `src/tools/exec-prelude.mjs`（删）+ `src/tools/execute.mjs`/`execute.md`（对应）+ 对应测试
+- **D-E6 验收**：T-E1..E4 全绿（两端）；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤——**路径语义按 §10.1：无越界拒绝（评审 #1——T-w-2/T-e-3 行随 §10.1 已改"可指向 workspace 外"——本批 sweep 残留旧行）**）；**D-E4 文档编辑与代码同批落（评审 #8——不在实现后补）**；TOOLS.md §12 本段勾销
 
 
