@@ -71,17 +71,28 @@ function spawnWait(spawn, cmd, args, stdinText) {
 }
 
 /** Insert pasted text into the active text target.
- *  Free-text question active → append to its answer (single-line field: newlines stripped).
+ *  Free-text question active → splice into its answer at cursor (codepoint array; \r\n runs
+ *  collapse to spaces — single-line field invariant, text preserved).
  *  Options question active → ignore (no text field; must not leak into the input box).
  *  Otherwise → splice into the main input box at cursor (newlines kept, tabs → 2 spaces).
  *  Shared by bracketed paste (stdin data handler) and Ctrl+V clipboard read,
- *  so pasted content lands in the same place regardless of how the terminal delivered it. */
-export function insertPastedText(state, rawText) {
+ *  so pasted content lands in the same place regardless of how the terminal delivered it.
+ *  activeQuestion（异步 Ctrl+V 路径传发起时的 q）：目标 question 已关闭/被换（Esc 中止后
+ *  readClipboardText 才 resolve）→ 整段丢弃——不得落主输入框（审计 F1 竞态守卫）。 */
+export function insertPastedText(state, rawText, activeQuestion = null) {
   if (!rawText) return
+  if (activeQuestion !== null && state.question !== activeQuestion) return // stale async paste（Esc/Enter 后到达）
   const q = state.question
   if (q) {
     if (q.options.length > 0) return
-    q.answer = (q.answer ?? "") + rawText.replace(/[\r\n]+/g, "")
+    // 自由文本态（TUI-INPUT-BOX.md §7.2 round2 #1/#2/#9）：answer 是 codepoint 数组——
+    // 粘贴落 cursor 位置；\r\n/\r 折叠为空格、\t → 2 空格（单行不变式硬守卫：不劈行、
+    // 不吞文本——粘贴文本保字）。options 态无文本字段——不落输入框。
+    if (!Array.isArray(q.answer)) q.answer = q.answer ? [...q.answer] : []
+    const cur = Math.max(0, Math.min(q.cursor ?? q.answer.length, q.answer.length))
+    const chars = [...rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n+/g, " ").replace(/\t/g, "  ")]
+    q.answer.splice(cur, 0, ...chars)
+    q.cursor = cur + chars.length
     return
   }
   // IKBU3J (2026-08-28)：Ctrl+I 注入框激活时，粘贴进注入文本（与按键路径同语义：去换行保单行），

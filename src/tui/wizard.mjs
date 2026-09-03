@@ -1,6 +1,7 @@
 /**
  * wizard.mjs — first-launch config wizard
- * Extracted from index.mjs: provider select → step-by-step input (name/baseURL/model/key/embedkey) → persist → then model picker.
+ * Extracted from index.mjs: provider select → step-by-step input (name/baseURL/model/format/key/embedkey)
+ * → persist → then model picker. Custom 分支含 API format 步（D-C2，TUI.md §10.6D）。
  * Accesses shared state and UI functions from the startTUI closure via ctx object.
  * ctx: { agent, state, pushLine, pushLabel, render, persistRaw, openModelPicker }
  */
@@ -23,7 +24,13 @@ export function createWizard(ctx) {
     }
     for (const [name, p] of Object.entries(PRESETS)) {
       if (!agent.providers.some((x) => x.name === name)) {
-        items.push({ kind: "preset", name, baseURL: p.baseURL, model: p.model, label: `${name} (${p.desc})` })
+        items.push({
+          kind: "preset", name, baseURL: p.baseURL, model: p.model, label: `${name} (${p.desc})`,
+          // 预设自身声明的扩展字段随 preset 直达落盘（code review 🟡——与 pickers preset 路径同构；
+          // claude/gemini 缺 format、deepseek/glm 缺 thinking/maxTokens 会静默错配）；不新增提问步。
+          format: p.format, thinking: p.thinking, reasoningEffort: p.reasoningEffort,
+          maxTokens: p.maxTokens, chatPath: p.chatPath,
+        })
       }
     }
     items.push({ kind: "custom", name: null, label: "Custom endpoint…" })
@@ -45,6 +52,14 @@ export function createWizard(ctx) {
       prompt: "Enter model name (e.g. gpt-4o)",
       validate: (v) => v.length > 0 || "Model name required",
     },
+    // D-C2（TUI.md §10.6D）：Custom 分支的 API format 步（endpoint 后 key 前——与 Add Provider
+    // picker 路径两入口一致；默认 openai）。空输入 = openai 直过（Enter 即默认——同 D-C1 index=0）；
+    // Esc 在该步沿用 wizard 既有“Esc 随时跳过”语义（取消整个向导——无半配置落盘）。
+    format: {
+      prompt: "API format [openai/anthropic/google] (Enter = openai default)",
+      // 大小写不敏感（旧手输口径——输入统一 toLowerCase 后落盘）；空输入 = openai 默认
+      validate: (v) => !v || /^(openai|anthropic|google)$/i.test(v) || "API format must be one of: openai, anthropic, google",
+    },
     key: {
       prompt: "Enter API key",
       validate: (v) => v.length > 0 || "Key must not be empty",
@@ -54,7 +69,7 @@ export function createWizard(ctx) {
       validate: () => true, // skippable
     },
   }
-  const WIZARD_NEXT = { name: "baseURL", baseURL: "model", model: "key", key: "embedkey", embedkey: null }
+  const WIZARD_NEXT = { name: "baseURL", baseURL: "model", model: "format", format: "key", key: "embedkey", embedkey: null }
 
   function startWizard() {
     state.wizard = { step: "provider", index: 0, scroll: 0, selectedLine: 0, fields: {}, error: null, lines: [] }
@@ -94,6 +109,11 @@ export function createWizard(ctx) {
       w.step = "name"
     } else {
       w.fields = { name: item.name, baseURL: item.baseURL, model: item.model }
+      // preset 直达：预设声明的扩展字段（format/thinking/maxTokens/chatPath…）直接带进 fields——
+      // 无 format 提问步（T-C4）但落盘不丢字段（code review 🟡——picker preset 路径同款复制）。
+      for (const k of ["format", "thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
+        if (item[k]) w.fields[k] = item[k]
+      }
       w.step = "key"
     }
     renderWizard()
@@ -111,7 +131,9 @@ export function createWizard(ctx) {
     w.error = null
     state.input = []
     state.cursor = 0
-    w.fields[w.step === "key" ? "key" : w.step] = w.step === "baseURL" ? value.replace(/\/+$/, "") : value
+    w.fields[w.step === "key" ? "key" : w.step] = w.step === "baseURL" ? value.replace(/\/+$/, "")
+      : w.step === "format" ? (value.toLowerCase() || "openai") // 空输入 = openai 默认（D-C2）
+      : value
     const next = WIZARD_NEXT[w.step]
     if (next) {
       w.step = next
@@ -131,9 +153,17 @@ export function createWizard(ctx) {
   async function finishWizard() {
     const f = state.wizard.fields
     state.wizard = null
+    // D-C2：format 非默认（anthropic/google）时落盘；openai = 默认省略（与 D-C1 picker 路径同构）
+    const providerRec = { name: f.name, baseURL: f.baseURL, model: f.model, apiKey: f.key }
+    if (f.format && f.format !== "openai") providerRec.format = f.format
+    // code review 🟡：preset 直达带来的扩展字段一并落盘（truthy 语义与 pickers preset 分支一致——
+    // thinking: null 不落；Custom 路径无这些字段不受影响）
+    for (const k of ["thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
+      if (f[k]) providerRec[k] = f[k]
+    }
     const existing = agent.providers.find((p) => p.name === f.name)
-    if (existing) Object.assign(existing, { baseURL: f.baseURL, model: f.model, apiKey: f.key })
-    else agent.providers.push({ name: f.name, baseURL: f.baseURL, model: f.model, apiKey: f.key })
+    if (existing) Object.assign(existing, providerRec)
+    else agent.providers.push(providerRec)
     agent.activeProvider = f.name
     agent.activeModel = null
     agent.provider = { ...agent.providers.find((p) => p.name === f.name) }

@@ -46,7 +46,7 @@
 | `clipboard.mjs` | 172 | 剪贴板文本/图像读写（Win powershell 强制 UTF-8 / macOS pbpaste）+ `translateShiftEnter` CSI-u→meta+return 翻译；insertPastedText 目标路由——question 自由文本落 cursor + \r\n→空格（单行守卫）、options 忽略、注入框去换行、主输入光标 splice（TUI-INPUT-BOX.md §7.2） |
 | `interaction.mjs` | 125 | 权限确认（y/n/a）、自由提问（question 工具）；askQuestion 装配 q.answer codepoint 数组 + q.cursor（options 态无——TUI-INPUT-BOX.md §7.2） |
 | `pickers.mjs` | 482 | 通用列表选择器（filter/滚动/栈）+ 模型两级选择器 + /provider 流程（Add Provider Custom 的 API format 走 picker 枚举——openai/anthropic/google 默认 0，§10.6D D-C1） |
-| `wizard.mjs` | 184 | 首启配置向导（provider 菜单：preset 直达 key / Custom 文本步 name→baseURL→model→**format（D-C2，默认 openai）**→key→embedkey → 落盘 → 模型选择；Esc 全步可跳无半配置） |
+| `wizard.mjs` | 202 | 首启配置向导（provider 菜单：preset 直达 key——**preset 声明字段 format/thinking/reasoningEffort/maxTokens/chatPath 随 item 直达落盘，与 pickers preset 路径同构（code review 🟡）** / Custom 文本步 name→baseURL→model→**format（D-C2，默认 openai）**→key→embedkey → 落盘 → 模型选择；Esc 全步可跳无半配置） |
 | `startup.mjs` | 262 | 启动屏 + 会话恢复渲染（historyToLines 从 history 重建——display 快照已废弃，恢复唯一路径；行形态复刻 live：工具参数摘要+全量 JSON、思考单条 C.reason）+ 懒加载历史窗口（**createLoadOlder 装配本模块——2026-09-03 D-S1b 归属修复**，index 只留调用）+ 后台索引 |
 
 **基础设施**：

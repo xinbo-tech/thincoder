@@ -556,12 +556,13 @@ test("renderFrame: multimodal hint on supported model with image paste shortcut"
 // clipboard.mjs — insertPastedText routing
 // ====================================================================
 
-test("insertPastedText: free-text question active → appends to answer, strips newlines, input untouched", async () => {
+test("insertPastedText: free-text question active → splices into answer at cursor, \r\n → space, input untouched", async () => {
   const { insertPastedText } = await import("../src/tui/clipboard.mjs")
   const state = tuiState()
-  state.question = { text: "Enter API key:", options: [], answer: "sk-", resolve: noop }
+  state.question = { text: "Enter API key:", options: [], answer: [..."sk-"], cursor: 3, resolve: noop }
   insertPastedText(state, "abc123\r\n")
-  assert.equal(state.question.answer, "sk-abc123")
+  assert.equal(state.question.answer.join(""), "sk-abc123 ", "answer 是 codepoint 数组；尾随 \r\n → 空格（保文本）")
+  assert.equal(state.question.cursor, 10)
   assert.equal(state.input.length, 0, "pasted text must not leak into main input box")
 })
 
@@ -834,7 +835,7 @@ test("keyHandler: permission 'a' sets AUTO and approves", () => {
 })
 
 test("keyHandler: question free-text submit resolves answer", () => {
-  const state = tuiState({ question: { text: "What?", options: [], answer: "my answer", resolve: () => {} } })
+  const state = tuiState({ question: { text: "What?", options: [], answer: [..."my answer"], cursor: 9, resolve: () => {} } })
   let resolved = null
   state.question.resolve = (v) => { resolved = v }
   const handler = createKeyHandler(keyCtx(state))
@@ -857,6 +858,174 @@ test("keyHandler: question option selection via up/down/enter", () => {
   handler("", { name: "return" })
   assert.equal(resolved, "C")
   assert.equal(state.question, null)
+})
+
+// ====================================================================
+// question 自由文本态：光标与编辑键（TUI-INPUT-BOX.md §7——T-Q1..Q11）
+// ====================================================================
+
+test("T-Q1 renderRows: question 自由文本态保留反显光标 + 硬件定位（hasOverlay 例外细化）", () => {
+  const agent = tuiAgent()
+  const state = tuiState({ question: { text: "q", options: [], answer: [..."abc"], cursor: 1, resolve: noop } })
+  const { rows, layout, cursorRow, cursorCol } = renderRows(state, agent, { cols: 80, rows: 24, slashCommands: [] })
+  assert.equal(layout.questionLayout.cursorCol, 3, "中段光标列 = 2（前缀） + 1（a 后）")
+  assert.equal(layout.questionLayout.cursorLine, 0)
+  const boxRow = rows[layout.panels.inputBox.y + 1]
+  assert.ok(boxRow.includes("\x1b[7mb\x1b[27m"), "光标在 'b' 上反显（▸ abc 第 3 列）")
+  assert.ok(cursorRow > 0 && cursorCol > 0, "自由文本态硬件光标定位恢复（不再整体隐藏）")
+  assert.equal(cursorRow, layout.panels.inputBox.y + 2, "硬件光标行 = box 首行（1-based）")
+  assert.equal(cursorCol, 3 + layout.questionLayout.cursorCol)
+})
+
+test("T-Q2 keyHandler: question 自由文本态 ←→/Home/End 移动（0 与 len 边界停）", () => {
+  const state = tuiState({ question: { text: "q", options: [], answer: [..."ab"], cursor: 1, resolve: noop } })
+  const handler = createKeyHandler(keyCtx(state))
+  handler("", { name: "home" })
+  assert.equal(state.question.cursor, 0)
+  handler("", { name: "left" })
+  assert.equal(state.question.cursor, 0, "左边界停")
+  handler("", { name: "right" })
+  assert.equal(state.question.cursor, 1)
+  handler("", { name: "end" })
+  assert.equal(state.question.cursor, 2)
+  handler("", { name: "right" })
+  assert.equal(state.question.cursor, 2, "右边界停")
+})
+
+test("T-Q3 keyHandler: question 自由文本态中段插入 + Backspace 位置感知（非仅尾删）", () => {
+  const state = tuiState({ question: { text: "q", options: [], answer: [..."ac"], cursor: 1, resolve: noop } })
+  const handler = createKeyHandler(keyCtx(state))
+  handler("b", { name: "b" })
+  assert.equal(state.question.answer.join(""), "abc")
+  assert.equal(state.question.cursor, 2)
+  handler("", { name: "backspace" })
+  assert.equal(state.question.answer.join(""), "ac", "光标位置感知——删 'b' 而非尾字符")
+  assert.equal(state.question.cursor, 1)
+  handler("", { name: "backspace" })
+  assert.equal(state.question.answer.join(""), "c")
+  assert.equal(state.question.cursor, 0)
+  handler("", { name: "backspace" })
+  assert.equal(state.question.answer.join(""), "c", "0 处不再删")
+})
+
+test("T-Q4 keyHandler: question 自由文本态 Ctrl+U 清空（cursor 归 0）", () => {
+  const state = tuiState({ question: { text: "q", options: [], answer: [..."xyz"], cursor: 2, resolve: noop } })
+  const handler = createKeyHandler(keyCtx(state))
+  handler("", { name: "u", ctrl: true })
+  assert.deepEqual(state.question.answer, [])
+  assert.equal(state.question.cursor, 0)
+})
+
+test("T-Q5 renderRows: question options 态无光标（选择标记即反馈——回归）", () => {
+  const agent = tuiAgent()
+  const state = tuiState({ question: { text: "pick", options: ["A", "B", "C"], selected: 0, resolve: noop } })
+  const { rows, layout, cursorRow, cursorCol } = renderRows(state, agent, { cols: 80, rows: 24, slashCommands: [] })
+  const boxRows = rows.slice(layout.panels.inputBox.y + 1, layout.panels.inputBox.y + 4).join("")
+  assert.ok(!boxRows.includes("\x1b[7m"), "options 态无反显光标")
+  assert.equal(cursorRow, 0, "硬件光标行 0（隐藏）")
+  assert.equal(cursorCol, 0, "硬件光标列 0（隐藏）")
+  assert.ok(boxRows.includes("\u25b8 A"), "选中项标记不变（▸ A）")
+})
+
+test("T-Q7 keyHandler: question Esc 语义——Custom 自由文本态 Esc 回 options；无 options 中止", () => {
+  // (a) options → 选 ✍ Custom answer… → 输入 → Esc → 回 options（逃生口，选中位恢复）
+  let resolved = "unset"
+  const state = tuiState({
+    question: { text: "pick", options: ["A", "B", "C", "\u0001custom-answer"], selected: 3, resolve: (v) => { resolved = v } },
+  })
+  const handler = createKeyHandler(keyCtx(state))
+  handler("", { name: "return" })
+  assert.deepEqual(state.question.options, [], "Custom → 自由文本态")
+  assert.deepEqual(state.question.answer, [])
+  assert.equal(state.question.cursor, 0)
+  handler("z", { name: "z" })
+  assert.equal(state.question.answer.join(""), "z")
+  handler("", { name: "escape" })
+  assert.deepEqual(state.question.options, ["A", "B", "C", "\u0001custom-answer"], "Esc 回 options 态")
+  assert.equal(state.question.selected, 3, "选中位恢复")
+  assert.equal(state.question.answer, undefined, "options 态无 answer/cursor（不变量）")
+  assert.equal(resolved, "unset", "未 resolve（非中止）")
+  // options 态再 Esc = 中止
+  handler("", { name: "escape" })
+  assert.equal(state.question, null)
+  assert.equal(resolved, "")
+  // (b) 无 options 的自由文本 Esc = 中止 question
+  const state2 = tuiState({ question: { text: "q", options: [], answer: [..."hi"], cursor: 2, resolve: noop } })
+  let resolved2 = "unset"
+  state2.question.resolve = (v) => { resolved2 = v }
+  const handler2 = createKeyHandler(keyCtx(state2))
+  handler2("", { name: "escape" })
+  assert.equal(state2.question, null)
+  assert.equal(resolved2, "")
+})
+
+test("T-Q9 keyHandler: question 自由文本态 Ctrl+J no-op + 未列键吞（无 fall-through——search 穿透教训回归）", () => {
+  const state = tuiState({ question: { text: "q", options: [], answer: [..."ab"], cursor: 2, resolve: noop } })
+  const handler = createKeyHandler(keyCtx(state))
+  handler("\n", { name: "enter" }) // Ctrl+J（\n → name "enter"）
+  assert.equal(state.question.answer.join(""), "ab", "Ctrl+J 不插换行")
+  assert.equal(state.question.cursor, 2)
+  handler("\t", { name: "tab" })
+  assert.equal(state.question.answer.join(""), "ab", "Tab 未列键吞")
+  handler("", { name: "up" })
+  handler("", { name: "pagedown" })
+  handler("", { name: "delete" })
+  assert.equal(state.question.answer.join(""), "ab")
+  assert.equal(state.input.length, 0, "无 fall-through——主输入框未被触碰")
+  assert.ok(state.question, "question 仍激活")
+})
+
+test("T-Q10 computeLayout: question 长答案折行 + MAX_INPUT_LINES cap 滚动（光标随行）", () => {
+  const long = "x".repeat(400) // 内容宽 ~73 → 6 行
+  const state = tuiState({ question: { text: "q", options: [], answer: [...long], cursor: 400, resolve: noop } })
+  const layout = computeLayout(state, { cols: 80, rows: 24 })
+  assert.ok(layout.questionLayout.lines.length > 5, "长答案多行展开")
+  assert.equal(layout.boxLines.length, 5, "cap 5 行（同主输入 MAX_INPUT_LINES）")
+  assert.ok(layout.questionOffset > 0, "光标在尾部 → offset > 0（滚动到底）")
+  assert.equal(layout.boxLines.at(-1), layout.questionLayout.lines.at(-1), "末行可见（可视窗尾 = 布局末行）")
+  assert.equal(layout.panels.inputBox.h, 7, "box 高 = 5 + 2 边框")
+})
+
+test("T-Q11 keyHandler: question 自由文本态 emoji 不劈半（codepoint 数组移动/删除）", () => {
+  const state = tuiState({ question: { text: "q", options: [], answer: [..."a\u{1F600}b"], cursor: 3, resolve: noop } })
+  assert.deepEqual(state.question.answer, ["a", "\u{1F600}", "b"], "emoji 单 codepoint 元素（代理对不劈半）")
+  const handler = createKeyHandler(keyCtx(state))
+  handler("", { name: "left" })
+  assert.equal(state.question.cursor, 2)
+  handler("", { name: "backspace" })
+  assert.equal(state.question.answer.join(""), "ab", "退格删整个 emoji")
+  assert.equal(state.question.cursor, 1)
+  // ←→ 步进 codepoint：从头部右移两格 = 越过 emoji（不在代理对中间停）
+  const state2 = tuiState({ question: { text: "q", options: [], answer: [..."a\u{1F600}b"], cursor: 0, resolve: noop } })
+  const handler2 = createKeyHandler(keyCtx(state2))
+  handler2("", { name: "right" })
+  assert.equal(state2.question.cursor, 1)
+  handler2("", { name: "right" })
+  assert.equal(state2.question.cursor, 2)
+  handler2("", { name: "right" })
+  assert.equal(state2.question.cursor, 3)
+  assert.equal(state2.question.answer.join(""), "a\u{1F600}b", "移动不改变内容")
+})
+
+test("askQuestion: 自由文本态装配 q.answer=codepoint 数组 + q.cursor（options 态无 cursor）", async () => {
+  const { createInteraction } = await import("../src/tui/interaction.mjs")
+  const agent = tuiAgent()
+  const state = tuiState()
+  const lines = []
+  const inter = createInteraction({
+    agent, state, pushLine: (t) => lines.push(t), pushLabel: () => {}, render: noop, summarize: () => "",
+  })
+  const p1 = inter.askQuestion("type:")
+  assert.deepEqual(state.question.answer, [], "answer 初始化为 codepoint 数组")
+  assert.equal(state.question.cursor, 0, "进入自由文本态 cursor = answer.length")
+  state.question.resolve("")
+  await p1
+  state.question = null // 生产清空在 key-modes（Enter/Esc）——测试手动复位以发第二个问
+  const p2 = inter.askQuestion("pick:", ["x"])
+  assert.equal(state.question.answer, undefined, "options 态无 answer（不变量）")
+  assert.equal(state.question.cursor, undefined, "options 态无 cursor（不变量）")
+  state.question.resolve("x")
+  await p2
 })
 
 test("keyHandler: ctrl+c during processing aborts controller", () => {

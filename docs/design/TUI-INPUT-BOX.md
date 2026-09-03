@@ -14,6 +14,7 @@
 5. `layoutInput(chars, cursor, width)` 是纯函数：`(chars, cursor, width) → { lines, cursorLine, cursorCol }`，遇 `\n` 强制换行
 6. 输入框渲染宽度 = `W - 4`；最多显示 `MAX_INPUT_LINES`（5）行，超出滚动（`inputOffset`）
 7. 渲染层是 `renderRows`（row-diff）：每帧全量计算屏幕行 → 与上一帧 diff → 只重写变化行。输入框内容变化靠"行内容不同则重写"，无独立缓存
+8. `state.question` **自由文本态**（无 options 或选中 Custom answer…）：`q.answer` 是 codepoint 数组（同 `state.input` 语义——emoji/代理对不劈半），`q.cursor` 是整数且恒满足 `0 <= cursor <= answer.length`（§7 契约）；options 态无 answer/cursor 字段（选择标记即反馈——不变量不适用）。提交时 `Array.join` 还原串
 
 ### 1.2 按键表（正常输入模式）
 
@@ -221,12 +222,13 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 
 | 文件 | 变更 |
 |---|---|
-| `src/tui/layout.mjs` | question 自由文本态 boxLines 光标计算（layoutAnswer——复用 layoutInput 同式） |
-| `src/tui/render-frame.mjs` | hasOverlay 细化——question 自由文本态保留反显 + 硬件定位 |
+| `src/tui/layout.mjs` | question 自由文本态 boxLines 光标计算（layoutAnswer——与 layoutInput 同实现：折行/光标 + MAX_INPUT_LINES cap + offset 滚动——输出 questionLayout/questionOffset 供渲染层） |
+| `src/tui/render-frame.mjs` | hasOverlay 例外细化——question 自由文本态保留反显 + 硬件定位（box 布局随 questionLayout/questionOffset） |
 | `src/tui/render-loop.mjs` | 同上——question 自由文本态 cursorSuffix 正常发 |
-| `src/tui/key-handler.mjs` | 自由文本分支补 ←→/Home/End/Ctrl+U/中段插入 |
-| `src/tui/interaction.mjs`（askQuestion 装配——q.cursor 归属处） | q.cursor 初始化/维护（自由文本态进入时 cursor = answer.length——options→Custom 转换时同步初始化） |
-| `test/tui.test.mjs` 等 | T-Q1..Q7 |
+| `src/tui/key-modes.mjs`（2026-09-03 D-S4 拆分后 question 模态居此——key-handler 只分派） | 自由文本分支补 ←→/Home/End/Ctrl+U/Backspace 位置感知/中段插入；Esc 语义（Custom 回 options 态——`_backOptions` 备份；无 options 中止）；粘贴/可打印落 cursor（answer codepoint 数组） |
+| `src/tui/clipboard.mjs` | insertPastedText question 自由文本分支：粘贴落 cursor + \n/\r 折叠为空格 + \t→2 空格（单行不变式硬守卫——Ctrl+V 与 bracketed paste 共用同一实现） |
+| `src/tui/interaction.mjs`（askQuestion 装配——q.cursor 归属处） | q.cursor/answer 初始化（自由文本态进入时 answer=[]、cursor = answer.length——options→Custom 转换时同步初始化） |
+| `test/tui.test.mjs` / `test/clipboard.test.mjs` | T-Q1..Q11（§7.3 全量） |
 | 本文档 §1.1/§7 | 契约同步 |
 
 （本文档为权威——TUI.md 仅模块地图行引用更新）

@@ -26,6 +26,14 @@ const MAX_INPUT_LINES = 5
 const MAX_TASK_LINES = 5
 const QWIN = 5
 
+/** question 自由文本态渲染布局：与主输入框同实现（TUI-INPUT-BOX.md §7.2 round2 #1/#6）——
+ *  折行展开（`▸ ` 首行 + 续行 2 空格缩进）+ 光标行列；answer 单行不变式（无 \n 字符）由
+ *  输入侧硬守卫（Ctrl+J no-op / 粘贴 \n→空格），此处只复用 layoutInput 的折行/光标语义，
+ *  cap/滚动由 computeLayout 以 MAX_INPUT_LINES + questionOffset 承担（同主输入 inputOffset）。 */
+export function layoutAnswer(chars, cursor, width) {
+  return layoutInput(chars, cursor, width)
+}
+
 /**
  * Computes layout. Returns panel coordinates + precomputed content (height-affecting parts).
  * Pure function: does not modify state.
@@ -43,6 +51,11 @@ export function computeLayout(state, { cols, rows }) {
   }
   const inputLines = inputLayout.lines.slice(inputOffset, inputOffset + MAX_INPUT_LINES)
   let boxLines = inputLines
+  // question 自由文本态（无 options）：boxLines = layoutAnswer 行（同主输入 cap + offset 滚动——
+  // 光标随行；长答案不挤压会话面板到零行——TUI-INPUT-BOX.md §7.2 round2 #6）。questionLayout/
+  // questionOffset 供 render-frame 反显光标与硬件定位（hasOverlay 例外细化同 §7.2）。
+  let questionLayout = null
+  let questionOffset = 0
   if (state.question) {
     const q = state.question
     if (q.options.length > 0) {
@@ -51,7 +64,13 @@ export function computeLayout(state, { cols, rows }) {
       boxLines = q.options.slice(start, start + QWIN).map((opt, i) =>
         (start + i === sel ? "▸ " : "  ") + (opt === QUESTION_CUSTOM ? "✍ Custom answer…" : optText(opt)))
     } else {
-      boxLines = ["▸ " + (q.answer ?? "")]
+      const answerChars = Array.isArray(q.answer) ? q.answer : q.answer ? [...q.answer] : []
+      const qCursor = Math.max(0, Math.min(q.cursor ?? answerChars.length, answerChars.length))
+      questionLayout = layoutAnswer(answerChars, qCursor, W - 4)
+      if (questionLayout.lines.length > MAX_INPUT_LINES) {
+        questionOffset = Math.min(questionLayout.cursorLine, questionLayout.lines.length - MAX_INPUT_LINES)
+      }
+      boxLines = questionLayout.lines.slice(questionOffset, questionOffset + MAX_INPUT_LINES)
     }
   }
   const inputBoxH = boxLines.length + 2
@@ -174,6 +193,8 @@ export function computeLayout(state, { cols, rows }) {
     // precomputed content (affects height, reused during render)
     inputLayout,
     inputOffset,
+    questionLayout,
+    questionOffset,
     boxLines,
     visibleTasks,
     permPreviewLines,

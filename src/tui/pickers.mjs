@@ -342,10 +342,18 @@ export function createPickers(ctx) {
       if (!baseURL) return
       const model = await askQuestion("Enter model name:")
       if (!model) return
-      const format = (await askQuestion("API format [openai/anthropic/google] (default: openai):")).trim().toLowerCase()
+      // D-C1（TUI.md §10.6D）：API format 改 picker 选择（openai/anthropic/google——默认 index=0
+      // openai）——固定枚举不再手输；Esc/取消 = 中止整个 Add Provider 流程（cfg 尚未落盘——
+      // 无半配置，与旧手输非法 abort 同语义）。与 preset 选择器同形态——零新机制。
+      const format = await showPicker("API format", [
+        { type: "item", text: "openai", name: "openai" },
+        { type: "item", text: "anthropic", name: "anthropic" },
+        { type: "item", text: "google", name: "google" },
+      ])
+      if (!format) return // Esc/取消 → 中止流程
       const cfg = { name, baseURL, model }
-      if (format === "anthropic" || format === "google") cfg.format = format
-      else if (format && format !== "openai") return // unknown format → abort
+      if (format.name === "anthropic" || format.name === "google") cfg.format = format.name
+      else if (format.name !== "openai") return // 防御：未知格式（理论不可达——picker 枚举）
       agent.providers.push(cfg)
       await persistRaw((raw) => { raw.providers = agent.providers })
       const key = await askQuestion(`Enter API key for ${name} (skip if none):`)

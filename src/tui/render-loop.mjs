@@ -111,7 +111,10 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
       }
       prevRows = rows
 
-      const hasOverlay = state.permission || state.question || state.picker || state.wizard?.step === "provider"
+      // hasOverlay 例外细化（TUI-INPUT-BOX.md §7.2）：question 自由文本态（无 options）
+      // 保留硬件定位（cursorSuffix 正常发——与主输入框同路径）；options 态无光标。
+      const qOptionsOnly = Boolean(state.question && state.question.options.length > 0)
+      const hasOverlay = state.permission || qOptionsOnly || state.picker || state.wizard?.step === "provider"
       const cursorSuffix = hasOverlay ? "" : `\x1b[${cursorRow};${cursorCol}H${ansi.hideCursor}`
 
       if (out.length || cursorSuffix) write(ansi.wrapOff + ansi.syncUpdateStart + out.join("") + ansi.syncUpdateEnd + cursorSuffix + ansi.wrapOn)

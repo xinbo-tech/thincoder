@@ -98,10 +98,12 @@ export function createInteraction(ctx) {
     }
     if (!options.length) {
       // free text: open input mode for user typing, Enter to submit
+      // q.cursor 装配（TUI-INPUT-BOX.md §7.2/§7.5 #10b）：answer 存 codepoint 数组（同
+      // state.input 语义——emoji 不劈半），进入自由文本态即 cursor = answer.length（= 0）。
       pushLabel(`❯ Question`, ansi.bold + C.tool)
       for (const line of text.split("\n")) pushLine(`  ${line}`, C.text)
       return new Promise((resolve) => {
-        state.question = { text, options: [], resolve }
+        state.question = { text, options: [], answer: [], cursor: 0, resolve }
         state.status = "Waiting for answer..."
         render()
       })

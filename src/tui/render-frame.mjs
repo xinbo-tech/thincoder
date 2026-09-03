@@ -132,11 +132,19 @@ export function renderInputBox(state, W, boxLines, cols, inputLayout, inputOffse
   if (title === " Input " || title === " Question " || title === " Inject Message " || title === " Processing... ") {
     const parts = []
     if (title === " Input " || title === " Processing... ") parts.push(" Ctrl+U clear ")
-    if (title === " Question ") parts.push(" Enter submit ")
+    if (title === " Question ") {
+      // question 两形态各自真实按键提示（TUI-INPUT-BOX.md §7.2——自由文本态单行不变式：
+      // 无换行键——Shift+Enter/Ctrl+J 不插行，提示不沿用主输入框那组）。
+      parts.push((state.question?.options?.length ?? 0) > 0
+        ? " ↑↓ select │ Enter confirm │ Esc: cancel "
+        : " Enter submit │ Esc: cancel │ Ctrl+U clear │ Ctrl+V paste ")
+    }
     if (title === " Inject Message ") parts.push(" Enter send, Esc cancel ")
-    parts.push(" Shift+Enter / Ctrl+J newline ")
-    parts.push(" Ctrl+V paste ")
-    parts.push(" Ctrl+I inject ")
+    if (title !== " Question ") {
+      parts.push(" Shift+Enter / Ctrl+J newline ")
+      parts.push(" Ctrl+V paste ")
+      parts.push(" Ctrl+I inject ")
+    }
     const hint = parts.join("")
     topBorder = `╭─${title}${"─".repeat(Math.max(0, W - 4 - stringWidth(title) - stringWidth(hint)))}${hint}─╮`
   } else {
@@ -144,8 +152,11 @@ export function renderInputBox(state, W, boxLines, cols, inputLayout, inputOffse
   }
   const out = [`${borderColor}${topBorder}${ansi.reset}`]
 
-  // Visual cursor position in the input box (hardware cursor stays hidden)
-  const hasOverlay = state.permission || state.question || state.picker || state.wizard?.step === "provider"
+  // Visual cursor position in the input box (hardware cursor stays hidden).
+  // hasOverlay 例外细化（TUI-INPUT-BOX.md §7.2）：question 自由文本态（无 options）保留
+  // 反显光标（与主输入框同路径）；options/permission/picker/wizard-provider 态无光标。
+  const qOptionsOnly = Boolean(state.question && state.question.options.length > 0)
+  const hasOverlay = state.permission || qOptionsOnly || state.picker || state.wizard?.step === "provider"
   const curLine = (!hasOverlay && inputLayout) ? inputLayout.cursorLine - (inputOffset ?? 0) : -1
   const curCol = (!hasOverlay && inputLayout) ? inputLayout.cursorCol : -1
 
@@ -256,13 +267,19 @@ export function renderRows(state, agent, opts) {
   if (panels.picker) put(panels.picker.y, renderPicker(state, cols, panels.picker, overlay))
   if (panels.permission) put(panels.permission.y, renderPermission(permPreviewLines))
   if (panels.queue) put(panels.queue.y, [renderQueue(state, W)])
-  put(panels.inputBox.y, renderInputBox(state, W, boxLines, cols, inputLayout, inputOffset))
+  // question 自由文本态：box 内容是 layoutAnswer 行——光标布局/滚动随 box 内容走
+  // （questionLayout/questionOffset）；主输入 inputLayout 此时无意义（被 question 行替换）。
+  const qFree = Boolean(state.question && state.question.options.length === 0)
+  const qOptionsOnly = Boolean(state.question && state.question.options.length > 0)
+  const boxLayout = qFree ? (layout.questionLayout ?? layout.inputLayout) : layout.inputLayout
+  const boxOffset = qFree ? (layout.questionOffset ?? 0) : layout.inputOffset
+  put(panels.inputBox.y, renderInputBox(state, W, boxLines, cols, boxLayout, boxOffset))
   put(panels.status.y, [renderStatus(state, agent, cols, slashCommands)])
 
   let cursorRow = 0, cursorCol = 0
-  if (!state.permission && !state.question && !state.picker && state.wizard?.step !== "provider") {
-    cursorRow = panels.inputBox.y + 1 + (inputLayout.cursorLine - inputOffset) + 1
-    cursorCol = 3 + inputLayout.cursorCol
+  if (!state.permission && !state.picker && state.wizard?.step !== "provider" && !qOptionsOnly) {
+    cursorRow = panels.inputBox.y + 1 + (boxLayout.cursorLine - boxOffset) + 1
+    cursorCol = 3 + boxLayout.cursorCol
   }
 
   return { rows: screen, cursorRow, cursorCol, layout }
