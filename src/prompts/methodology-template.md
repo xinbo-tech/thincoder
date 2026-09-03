@@ -20,16 +20,18 @@ Every task follows four steps, no skipping:
 
 These four steps are not "best practice" — they are hard process. Three documents required: **requirements doc**, **design doc**, **test doc**. Skipping to step 3 and writing code first is wrong nine times out of ten.
 
-## Requirement-Pool Batched Workflow（2026-09-03 · design — user ruling — pending review）
+## Requirement-Pool Batched Workflow（2026-09-03 · design — user ruling — approved）
 
-> Motivation: per-request pipelines（one requirement → clarify → design → review → implement）carry high fixed process cost per single point; batching amortizes it across multiple requirements without cutting quality — per-point engineering rigor is untouched; only the *trigger timing* changes（accumulate, then start design）.
+> 状态：approved。动机：per-request pipelines（one requirement → clarify → design → review → implement）carry ~40 min fixed process cost per single point; batching amortizes it across multiple requirements without cutting quality — per-point engineering rigor (review/audit/test discipline) is untouched; only the *trigger timing* changes (accumulate, then start design).
 
-1. **Register（when a requirement is stated）**: ordinary requirement → clarify on the spot → update the owning board's requirements section（the clarified requirement sentence — the clarification product）→ register one line in the project `docs/TODO.md`「Requirement Pool」group（date / requirement sentence / owning board / status=awaiting design）— **no design work yet**.
+### Mechanism
+
+1. **Register（when you state a requirement）**: ordinary requirement → agent clarifies on the spot → updates the owning board's requirements section（the clarified requirement sentence — the clarification product）→ registers one line in the project `docs/TODO.md`「Requirement Pool」group（date / requirement sentence / owning board / status=awaiting design）— **no design work yet**.
 2. **Accumulate**: requirements accumulate — the design-start initiative stays with the user（say "start this batch"）.
-3. **Suggested threshold**: same board ≥2 points or pool-wide ≥3 points → remind once（"pool is big enough — design can start"）— reminder never replaces initiative.
-4. **Batch design**: land multiple points in one pass（same board = multiple sections of its design doc; cross-board = multiple docs reviewed in one batch）→ batch review → user approval → batch implementation.
-5. **Fast lane**: "this is urgent / do it now" → skip the pool — single-point full existing flow（no step cut）.
-6. **Boundary**: the pool takes **user requirement points only** — technical backlog stays in the TODO technical groups — never mixed.
+3. **Suggested threshold**: same board ≥2 points or pool-wide ≥3 points → agent reminds once（"pool is big enough — design can start"）— reminder never replaces initiative.
+4. **Batch design**: land multiple points in one pass（same board = multiple sections of its design doc; cross-board = multiple docs reviewed in one batch）→ batch review → user approval → batch implementation（single eng-coder for merged work or mirrored parallel spawns — the multi-surface rule applies unchanged）.
+5. **Fast lane**: you say "this is urgent / do it now" → skip the pool — single-point full existing flow（design → review → implementation — no step cut）.
+6. **Boundary**: the pool takes **user requirement points only** — technical backlog（design leftovers / review findings / debt）stays in the TODO technical groups — never mixed; urgent bugs are covered by the fast lane.
 
 
 ## Checklist

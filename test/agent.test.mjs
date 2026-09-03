@@ -1271,6 +1271,63 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.indexOf("5. **User sign-off.**") < text.indexOf("NOT this sign-off"), "pointer anchored inside step 5 (User sign-off)")
   })
 
+  it("engineering.md: requirement-pool three verbatim anchor sentences (R1 — fail-when-unchanged)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    // 三分句 = 设计文档逐字定稿（METHODOLOGY.md 评审 #1）——字面断言防回退
+    const anchors = [
+      "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane).",
+      "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval.",
+      "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut).",
+    ]
+    for (const a of anchors) {
+      assert.ok(text.includes(a), `verbatim anchor sentence present: ${a.slice(0, 60)}…`)
+    }
+    // 语义断言目标 1:1（fail-when-unchanged）
+    assert.ok(text.includes("「Requirement Pool」group"), "group phrase present")
+    assert.ok(text.includes("pool-wide ≥3"), "threshold phrase present (pool-wide ≥3)")
+    assert.ok(text.includes("single-point full flow"), "fast-lane phrase present (single-point full flow)")
+    // 幂等性：每句只出现一次
+    for (const a of anchors) {
+      assert.equal(text.split(a).length - 1, 1, `anchor appears exactly once: ${a.slice(0, 40)}…`)
+    }
+  })
+
+  it("methodology-template.md: requirement-pool section is the root user-facing block — approved status + Mechanism 6 steps (R1 — fail-when-unchanged)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8")
+    assert.ok(text.includes("## Requirement-Pool Batched Workflow"), "section header present")
+    assert.ok(text.includes("design — user ruling — approved"), "status header approved (root-template sync)")
+    assert.ok(text.includes("~40 min fixed process cost"), "motivation sentence present (~40 min fixed process cost)")
+    assert.ok(text.includes("same board ≥2 points or pool-wide ≥3 points"), "threshold sentence present (≥2 / ≥3)")
+    assert.ok(text.includes("「Requirement Pool」group"), "group phrase present")
+    assert.ok(text.includes("single-point full existing flow"), "fast-lane phrasing present (template register)")
+    for (const head of ["**Register", "**Accumulate", "**Suggested threshold", "**Batch design", "**Fast lane", "**Boundary"]) {
+      assert.ok(text.includes(head), `Mechanism step ${head} present`)
+    }
+    // 排除书账子节（模板只承载用户面向块）
+    assert.ok(!text.includes("### Prompt sync"), "no Prompt sync bookkeeping subsection")
+    assert.ok(!text.includes("### Acceptance"), "no Acceptance bookkeeping subsection")
+    assert.ok(!text.includes("### Affected files"), "no Affected files bookkeeping subsection")
+  })
+
+  it("requirement-pool three-copy invariant (评审 #8 — threshold ≥2/≥3 + boundary 'user requirement points only' across root template / project version / template pair — anti-drift)",
+    { skip: !existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "METHODOLOGY.md")) || !existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder", "docs", "design", "METHODOLOGY.md")) },
+    () => {
+      // 三副本：根模板（D:/teamcode/METHODOLOGY.md，非 git 文件级）、项目版（thincoder/docs/design/METHODOLOGY.md）、template 对
+      // 根模板与兄弟仓均在仓外——单独 clone 时缺失，动态 skip（同 CLI 侧 15 对 byte-identical 测试惯例）
+      const vscDir = dirname(fileURLToPath(import.meta.url))
+      const copies = {
+        根模板: readFileSync(join(vscDir, "..", "..", "METHODOLOGY.md"), "utf8"),
+        项目版: readFileSync(join(vscDir, "..", "..", "thincoder", "docs", "design", "METHODOLOGY.md"), "utf8"),
+        "template(this end)": readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8"),
+      }
+      for (const [name, c] of Object.entries(copies)) {
+        assert.ok(c.includes("≥2") && c.includes("≥3"), `${name} threshold ≥2/≥3 present`)
+        const flat = c.replace(/\*/g, "")
+        const boundary = /user requirement points? only/i.test(flat) || flat.includes("池只收用户需求点")
+        assert.ok(boundary, `${name} boundary present (user requirement points only, mechanism step)`)
+      }
+    })
+
   it("engineering.md: UI/interaction decisions must land in the design doc AND the eng-coder task (2026-08-29)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
