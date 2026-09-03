@@ -1,6 +1,6 @@
 # Agent 主循环设计（thincoder/src/agent.mjs + agent/）
 
-> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新）。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
+> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展））。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
 
 ## 1. 模块地图
 
@@ -769,7 +769,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 
 
-### 7.2.3 sync spawn 完成精确冻结（2026-09-03 · 设计——方案 e——待评审）
+### 7.2.3 sync spawn 完成精确冻结（2026-09-03 · 设计——方案 e——**已批准**——处置注见 7.2.3.4）
 
 > 状态：设计批准（2026-09-03 round1 通过——0🔴——7 项 advisory 处置注见 7.2.3.4）。触发：用户实测——"主 agent 同步发起的 explore 完成后未从 subagent 面板回收"——场景确认：sync explore 与后台 async eng-coder 并存面板——explore 完成残留面板。
 
@@ -796,7 +796,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-F2：**sync explore + async eng-coder 并存**——explore 完成 → explore 块冻结回收——eng-coder 块保持 running（不误冻）
 - T-F3：并行 2 sync explore 乱序完成 → 各自块精确回收（无误冻错位）
 - T-F4：async settle 路径回归（⟦ev⟧done 精确冻结不变）
-- T-F5：subKey undefined 兜底（启发式——异常路径不崩）
+- T-F5：**sync spawn 失败/被拒（execute 抛错/Phase-1 拒绝——ctx 未设）+ async running → 不触发启发式冻结（round1 #1——错误路径不冻结任何 running 块）**——subKey undefined 兜底仅成功路径未知工具/老回调——不崩
 
 **验收**：AC-F1 = sync 完成必回收且不误冻他块（T-F2/F3）；AC-F2 = async/既有路径零回归（T-F1/F4）；AC-F3 = 兜底防御（T-F5）
 
@@ -819,12 +819,12 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 **不变面**：suspension 内 Ctrl+C 两级中止清 pending（用户显式停——语义与现状一致）；check/status 在 sweep 前仍从池读（语义保持）；ContinueError/cancel 路径既有消化语义不变。
 
-**受影响的测试语义**：test/subagent.test.mjs T5（:379-462——现断言"直注入+清空+done 先于结论"）→ 改断言为"回合尾消化轮注入"。
+**受影响的测试语义**：test/subagent.test.mjs T5（subagent.test.mjs 回合收尾用例——现断言"直注入+清空+done 先于结论"——符号锚）→ 改断言为"回合尾消化轮注入"。
 
 **受影响文件（round1 补全）**：
 - CLI：`src/agent.mjs`（collectSettledAsync——回合尾不再直注入——**无 suspension 驱动调用方保留直注入兜底**（round1 #2——标志/检测——headless/直连 runAgent 不丢结果））；`src/tui/agent-turn.mjs`（willSuspend 判 true 路径——digest 触发检查点——settled-only 池也进挂起）；**TUI 渲染层零改动**（round1 #5——mid-turn settle 块已在 settle 时刻 ⟦ev⟧done 冻结入流——消化文本落其后——无需改渲染）
 - VS Code（round1 #1——N5 两端一致）：collectSettledAsync 同语义 + suspension 驱动核对 + ARCHITECTURE.md 引用段 + 对应 T5 断言——同批或架构师统一回写标注
-- test/subagent.test.mjs（T5 断言）+ §17 T-S2 核对（agent 级无驱动用例——若为直连形态需兜底覆盖）
+- test/subagent.test.mjs（T5 断言——**round1 #2 裁决：T5 = agent 级无驱动用例——保留直注入兜底语义——T5 断言不变**——"回合尾消化轮注入"仅适用驱动级用例（T-S2/T-H 系列——T-H6 改指））+ §17 T-S2 核对（agent 级——兜底覆盖）
 - 文档修订注扩至（round1 #3）：**§17 D-S1/D-S3 ① + D-S8 + §17.3 文件表 + §15.4 T5/AC3 + §15 D-A3**（supersede 注——§15 D-A2/§19.5 先例）+ AGENT-LOOP 本段权威
 - **AC-H4 新增**（round1 #3）：文档修订注已全部落地（上列各处——实现验收项）
 
@@ -835,7 +835,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-H3：check 提前消费（模型调 check 取走）→ 池空——无多余消化轮（不重复烧）
 - T-H4：滞留期 Ctrl+C → 清 pending 不注入（既有语义回归）
 - T-H5：挂起态 settle 路径回归（既有好路径不变——T-S14 等）
-- T-H6：T5 断言更新（直注入 → 回合尾消化轮）
+- T-H6：驱动级测试断言更新（直注入 → 回合尾消化轮——T-S2/T-H 系列——agent 级 T5 因无驱动兜底保留直注入——round1 #2）
 
 **验收**：AC-H1 = 回合中 settle 报告必达模型（消化轮——T-H1）；AC-H2 = 无重复消化（check 消费后不烧——T-H3）；AC-H3 = 既有挂起/Ctrl+C 语义零回归（T-H4/H5）
 
@@ -936,7 +936,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ## 19. subagent 工具面合并：单工具四动作（spawn/check/status/escalate）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事——escalate 并入 2026-09-03 二次裁定）
 
-> **状态：设计批准（round2 通过 0🔴——控制面扩展 19.5 待评审——2026-09-03）**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
+> **状态：设计批准（round2 通过 0🔴——控制面扩展 19.5 已批准（round2 0🔴——2026-09-03））**。触发：§18 后 async eng-coder 不阻塞主会话——但用户实测"主会话里查一下子代理状态就又挂住了"——根因 = `subagent_check` 是无条件阻塞工具（id 给定 → "Blocks until the target finishes"——查进度把并行主回合重新钉死）。用户裁定：① 工具面收敛——subagent 家族（subagent + subagent_check）合并成一个 `subagent` 工具靠 action 参数分流；② **独立动作**（status 非阻塞查询 = 独立 action——check/status 分离）；③ 接受破坏性迁移。eng-coder 是 subagent 的 role（非独立工具）——合并零影响。
 
 ### 19.1 需求
 
@@ -1079,16 +1079,6 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 
 
-#### 17.5.5 实测修订：digest 完成即逐条冻结回收（2026-09-03——用户实测——"eng-coder#9 完成且已消化仍挂面板"）
-
-**实测**：async 子代理在挂起期 settle → settled 分支（驻留面板 awaitingDigest）→ digest 消化完成（报告已进上下文）——但**块冻结回收与池空耦合**（freeze-out 在池空才补发）——同池其他子代理（id:8）仍在跑 → 已消化块滞留面板——状态滞后（显示 awaiting digestion 但已消化完）。
-
-**修订（补 17.5.2）**：digest 消化完成（pending 条目注入后）→ **逐条补发 done 冻结回收**（不等池空——块从面板移除进流——位置 = 消化文本之后）——池空 freeze-out 仅兜底未消化残项（挂起会话结束统一清场）——**块回收与池空解耦**。
-
-**受影响测试补充**：T-H7 = 池内其他子代理运行中——某 settled 条目被 digest 消化 → 该块立即冻结回收（面板仅剩仍 running 的）——T-H5 回归不变。
-
-**验收补充**：AC-H4 = 消化完成块不滞留面板（T-H7——不等池空）
-
 #### 17.5.4 round1 评审处置（2026-09-03——0🔴 通过——6 项）
 
 1. VS Code 受影响面已补（上表——N5 两端一致）
@@ -1097,6 +1087,17 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 4. 行号锚 → 符号（collectSettledAsync/sweepSettledToPending/digestTurn 函数锚——确需行号标 as-of）
 5. 受影响文件逐文件具体化（上表——渲染零改动结论句）
 6. 状态行文案区分（🔵——"N 完成待消化"与"N 运行中"——实现时顺手对齐——不阻塞）
+
+#### 17.5.5 实测修订：digest 完成即逐条冻结回收（2026-09-03——用户实测——"eng-coder#9 完成且已消化仍挂面板"）
+
+**实测**：async 子代理在挂起期 settle → settled 分支（驻留面板 awaitingDigest）→ digest 消化完成（报告已进上下文）——但**块冻结回收与池空耦合**（freeze-out 在池空才补发）——同池其他子代理（id:8）仍在跑 → 已消化块滞留面板——状态滞后（显示 awaiting digestion 但已消化完）。
+
+**修订（补 17.5.2）**：digest 消化完成（pending 条目注入后）→ **逐条补发 done 冻结回收**（不等池空——块从面板移除进流——**位置 = settle 锚点（splice 落位——digest 总览文本之前——同 §7.2 D4 修复轮/D-S8 锚点语义——评审 round1 #1 裁定**）——池空 freeze-out 仅兜底未消化残项（挂起会话结束统一清场）——**块回收与池空解耦**。
+
+**受影响测试补充**：T-H7 = 池内其他子代理运行中——某 settled 条目被 digest 消化 → 该块立即冻结回收（面板仅剩仍 running 的——**冻结块 splice 落 settle 锚点——digest 总览文本之前——T-S6/T-S14 位置断言同口径**）——T-H5 回归不变。
+
+**验收补充**：AC-H5 = 消化完成块不滞留面板（T-H7——不等池空）——（AC-H4 已被 17.5.4 #3 占用——doc-landing——17.5.5 改用 AC-H5——round1 #3 评审）
+
 
 #### 7.2.3.4 round1 评审处置（2026-09-03——0🔴 通过——7 项）
 
