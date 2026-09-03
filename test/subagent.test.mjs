@@ -1631,15 +1631,17 @@ test("T-M8: status 省略 id → 全部概览（running/queued/done 三类）", 
     assert.equal(slow.status, "running")
     const ov = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview
     assert.ok(Array.isArray(ov.running) && Array.isArray(ov.queued) && Array.isArray(ov.done), "三类数组齐备")
-    assert.ok(ov.running.includes(slow.id), "running 列出进行中 id")
-    assert.ok(ov.done.includes(fast.id), "done 列出 settle 未取 id")
+    assert.ok(ov.running.some((x) => x.id === slow.id), "running 列出进行中 id（结构化对象——§19.5 D-M5）")
+    assert.equal(ov.running.find((x) => x.id === slow.id).role, "coder", "running 条目带 role")
+    assert.ok(ov.done.some((x) => x.id === fast.id), "done 列出 settle 未取 id（结构化对象——§19.5 D-M5）")
+    assert.equal(ov.done.find((x) => x.id === fast.id).role, "coder", "done 条目带 role")
     assert.equal(ov.queued.length, 0)
     // 空池概览
     const doneAll = JSON.parse(await subagentTool.execute({ action: "check", id: fast.id, n: 1 }, ctx))
     assert.equal(doneAll.status, "done")
     await parent._asyncSubagents.get(slow.id).settled
     const ov2 = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview
-    assert.deepEqual(ov2, { running: [], queued: [], done: [slow.id] }, "empty-pool overview 形状")
+    assert.deepEqual(ov2, { running: [], queued: [], done: [{ id: slow.id, role: "coder" }] }, "empty-pool overview 形状")
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })
@@ -1683,39 +1685,49 @@ test("T-M10: status 后接 check——n 计数不受 status 影响（只读查�
   }
 })
 
-test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent 四动作 schema（T-M11）", async () => {
+test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent 五动作 schema（T-M11 + §19.5）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const mod = await import("../src/agent-tools/subagent.mjs")
   assert.equal(mod.subagentCheckTool, undefined, "subagentCheckTool 导出消失")
   assert.equal((await import("../src/agent-tools/index.mjs")).escalateTool, undefined, "escalateTool 导出消失")
   const actionProp = subagentTool.parameters.properties.action
   assert.ok(actionProp, "schema 含 action 参数")
-  assert.deepEqual(actionProp.enum, ["spawn", "check", "status", "escalate"], "四动作枚举")
-  assert.equal(subagentTool.parameters.required, undefined, "required 移出 schema——按动作在 execute 内校验（spawn 需 task+role / check 需 n / escalate 需 task）")
+  assert.deepEqual(actionProp.enum, ["spawn", "check", "status", "cancel", "escalate"], "五动作枚举（§19.5 cancel 并入）")
+  assert.equal(subagentTool.parameters.required, undefined, "required 移出 schema——按动作在 execute 内校验（spawn 需 task+role / check 需 n / escalate 需 task / cancel 需 id）")
   assert.ok(subagentTool.parameters.properties.n.description.includes("(check — required)"), "n 的专属语义在参数描述中（check 必填）")
-  assert.ok(subagentTool.parameters.properties.id.description.includes("(check/status)"), "id 的 check/status 语义在参数描述中")
+  assert.ok(subagentTool.parameters.properties.id.description.includes("(check/status/cancel)"), "id 的 check/status/cancel 语义在参数描述中")
   assert.equal(typeof subagentTool.isReadonlyAction, "function", "action 级只读分类钩子存在")
   assert.equal(subagentTool.isReadonlyAction({ action: "check" }), true)
   assert.equal(subagentTool.isReadonlyAction({ action: "status" }), true)
   assert.equal(subagentTool.isReadonlyAction({ action: "spawn" }), false, "spawn 非只读")
   assert.equal(subagentTool.isReadonlyAction({ action: "escalate" }), false, "escalate 非只读")
+  assert.equal(subagentTool.isReadonlyAction({ action: "cancel" }), false, "cancel 非只读（控制类——isControlAction）")
   assert.equal(subagentTool.isReadonlyAction({}), false, "缺省（spawn）非只读")
+  assert.equal(typeof subagentTool.isControlAction, "function", "action 级控制类分类钩子存在（§19.5 round2 #4）")
+  assert.equal(subagentTool.isControlAction({ action: "cancel" }), true)
+  assert.equal(subagentTool.isControlAction({ action: "status" }), false)
+  assert.equal(subagentTool.isControlAction({ action: "check" }), false)
+  assert.equal(subagentTool.isControlAction({ action: "spawn" }), false)
+  assert.equal(subagentTool.isControlAction({}), false)
 })
 
-test("T-M12: 描述引导——四动作 + 查进度用 status（check 会阻塞）防误用", async () => {
+test("T-M12: 描述引导——五动作 + 查进度用 status（check 会阻塞）防误用 + cancel 定位", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
-  assert.ok(d.includes("FOUR actions"), "四动作总述")
+  assert.ok(d.includes("FIVE actions"), "五动作总述（§19.5——cancel 并入）")
   assert.ok(/action parameter picks/.test(d), "action 参数引导")
   assert.ok(d.includes("check BLOCKS until the target finishes"), "check 阻塞显式警告（防 §19 触发场景重演）")
   assert.ok(d.includes("NON-BLOCKING progress query"), "status 非阻塞定位")
   assert.ok(d.includes("action:'check' blocks until the target finishes"), "async 段重复阻塞警告（查进度用 status）")
+  assert.ok(d.includes("cancel — STOP one background async subagent"), "cancel 动作定位（定向中止——不经模型也可从 UI ⏹）")
+  assert.ok(d.includes("id REQUIRED"), "cancel id 必填警告（防误全停）")
+  assert.ok(d.includes("action:'cancel' (its id)"), "async 段 cancel 引导（停失控子代理）")
   assert.ok(d.includes("飞刀"), "escalate 中文别名在描述中（触发词条款）")
   assert.ok(d.includes("action:'escalate' directly"), "触发词 → 直接调 action:'escalate'")
   assert.ok(d.includes("Not available in engineering mode"), "escalate 工程模式禁用提示保留")
 })
 
-test("T-M17a: action 级门控——planMode 下 status/check 放行（readonly 分类）vs spawn/escalate 拒绝", async () => {
+test("T-M17a: action 级门控——planMode 下 status/check/cancel 放行（readonly/控制类）vs spawn/escalate 拒绝", async () => {
   const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const executed = []
@@ -1732,9 +1744,10 @@ test("T-M17a: action 级门控——planMode 下 status/check 放行（readonly 
   const calls = [
     { id: "1", name: "subagent", arguments: JSON.stringify({ action: "status" }) }, // 放行（只读）
     { id: "2", name: "subagent", arguments: JSON.stringify({ action: "check", n: 1 }) }, // 放行（只读）
-    { id: "3", name: "subagent", arguments: JSON.stringify({ action: "spawn", task: "x", role: "explore" }) }, // 拒绝
-    { id: "4", name: "subagent", arguments: JSON.stringify({ action: "escalate", task: "x" }) }, // 拒绝
-    { id: "5", name: "write", arguments: JSON.stringify({ path: "x" }) }, // 拒绝（对照）
+    { id: "3", name: "subagent", arguments: JSON.stringify({ action: "cancel", id: 9 }) }, // 放行（控制类豁免——§19.5 round2 #4——planMode 允许取消既有子代理）
+    { id: "4", name: "subagent", arguments: JSON.stringify({ action: "spawn", task: "x", role: "explore" }) }, // 拒绝
+    { id: "5", name: "subagent", arguments: JSON.stringify({ action: "escalate", task: "x" }) }, // 拒绝
+    { id: "6", name: "write", arguments: JSON.stringify({ path: "x" }) }, // 拒绝（对照）
   ]
   await executeToolBatches(agent, {
     response: { toolCalls: calls }, history, fullHistory: [],
@@ -1742,9 +1755,10 @@ test("T-M17a: action 级门控——planMode 下 status/check 放行（readonly 
   })
   const contents = history.filter((m) => m.role === "tool").map((m) => m.content)
   const blocked = contents.filter((c) => c.includes("plan mode active"))
-  assert.equal(blocked.length, 3, "spawn/escalate/write 被 planMode 拦（status/check 不计入）")
+  assert.equal(blocked.length, 3, "spawn/escalate/write 被 planMode 拦（status/check/cancel 不计入）")
   assert.ok(contents.some((c) => c.includes('"overview"')), "status 放行并返回概览")
   assert.ok(contents.some((c) => c.includes('"done":true')), "check（空池）放行并返回 done:true")
+  assert.ok(contents.some((c) => c.includes("unknown async subagent id: 9")), "cancel 放行（控制类豁免——空池未知 id error 而非 planMode 拒绝）")
 })
 
 test("T-M17b: 混合 action 批次批审批按 action 分组——check/status 不入审批组（免询问）", async () => {
@@ -1890,7 +1904,7 @@ test("advisor#2: status queued position 实时计算——腾槽补位后不再�
     assert.equal(st6.status, "queued")
     assert.equal(st6.position, 1, "补位后 position 实时更新为 1（非陈旧快照 2）")
     const ov = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview
-    assert.deepEqual(ov.queued, [{ id: sixth.id, position: 1 }], "概览 queued 同样实时")
+    assert.deepEqual(ov.queued, [{ id: sixth.id, role: "coder", position: 1 }], "概览 queued 同样实时（§19.5 D-M5——带 role）")
     await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.settled))
   } finally {
     server.close()
@@ -1898,13 +1912,14 @@ test("advisor#2: status queued position 实时计算——腾槽补位后不再�
   }
 })
 
-test("受限变体 action 门（round2 #3）：eng-coder 子代理内 escalate/check/status 动作工具层拒绝（镜像 T-E4/E5 的 action 维度）", async () => {
+test("受限变体 action 门（round2 #3 + §19.5）：eng-coder 子代理内 escalate/check/status/cancel 动作工具层拒绝（镜像 T-E4/E5 的 action 维度）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = engChildCtx(1, process.cwd())
   for (const args of [
     { action: "escalate", task: "x" },
     { action: "check", n: 1 },
     { action: "status" },
+    { action: "cancel", id: 1 }, // §19.5: cancel 同属 spawn-only 受限通道外动作——子代理上下文无 cancel 意义
   ]) {
     await assert.rejects(
       subagentTool.execute(args, ctx),
@@ -1919,5 +1934,443 @@ test("受限变体 action 门（round2 #3）：eng-coder 子代理内 escalate/c
   const coderChild = { _role: "coder", config: { agent: { engineering: false, consultModels: [] } }, _touchedFiles: [], _subIdCounter: 0 }
   const r = String(await subagentTool.execute({ action: "escalate", task: "x" }, { agent: coderChild, cwd: process.cwd(), depth: 1, callbacks: {} }))
   assert.ok(r.includes("only available at depth 0"), "depth>0 非 eng-coder → escalate 既有 depth 守卫语义（非受限门——消息不同）")
+})
+
+// ─── §19.5 控制面：status 决策字段 + cancel 定向中止 + queued 取消（AGENT-LOOP.md §19.5，VS Code 对齐）───
+// 用例映射：T-M18 status 决策字段 / T-M19 cancel 定向中止（interrupted settle——无陈旧注入——
+// 其余继续跑）/ T-M20 cancel 错误路径（未知/已完成/省略 id）/ T-M21 cancel 后槽位补位 /
+// T-M27 queued 取消（出队 + position 前移 + 无 abort）。UI ⏹/stopped 冻结/子标渲染在
+// ui.test.mjs + chat-panel.test.mjs（T-M22..M25 webview 端）。
+
+/** 等待条件为真（settle 补位等异步链——既有测试同款轮询）。 */
+async function waitFor(fn, ms = 1500) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) {
+    if (fn()) return true
+    await new Promise((r) => setTimeout(r, 20))
+  }
+  return fn()
+}
+
+test("T-M18: status 决策字段（§19.5 D-M5）——running 条目带 role/model/elapsedSec/turn/maxTurns；单查同字段", async () => {
+  const { server } = await asyncChildServer(400)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m18-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    const spawned = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctx))
+    assert.equal(spawned.status, "running")
+    // 子代理已进入 runAgent（慢 LLM 挂起中——turn≥1 已报）
+    await waitFor(() => parent._asyncSubagents.get(spawned.id)?.turn >= 1)
+    const entry = parent._asyncSubagents.get(spawned.id)
+    assert.equal(entry.model, "deepseek-v4-pro", "条目记录 childProvider.model（spawn 时装配）")
+    assert.equal(entry.maxTurns, 5, "条目记录 maxTurns（config.agent.subagentTurns）")
+    assert.ok(entry.startedAt && entry.startedAt > 0, "startedAt 记录于实际启动")
+    const st = JSON.parse(await subagentTool.execute({ action: "status", id: spawned.id }, ctx))
+    assert.equal(st.id, spawned.id)
+    assert.equal(st.role, "coder")
+    assert.equal(st.status, "running")
+    assert.equal(st.model, "deepseek-v4-pro", "单查 running 带 model")
+    assert.equal(typeof st.elapsedSec, "number", "elapsedSec 计算于查询时")
+    assert.ok(st.elapsedSec >= 0)
+    assert.equal(typeof st.turn, "number", "turn 实时同步（onAgentTurn）")
+    assert.equal(st.maxTurns, 5)
+    // 全览 running 条目同字段（D-M5 结构化对象）
+    const ov = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview
+    assert.equal(ov.running.length, 1)
+    const item = ov.running[0]
+    assert.equal(item.id, spawned.id)
+    assert.equal(item.role, "coder")
+    assert.equal(item.model, "deepseek-v4-pro")
+    assert.equal(item.maxTurns, 5)
+    assert.equal(typeof item.elapsedSec, "number")
+    // 收尾
+    await entry.settled
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M18b: turn 跟踪子代理真实轮次——回合收尾时 entry.turn = LLM 调用数（wall 循环 4 次）", async () => {
+  const { server, calls } = wallServer(3)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m18b-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    const spawned = spawnJson(await subagentTool.execute({ task: "loop until done", role: "coder", async: true }, ctx))
+    const entry = parent._asyncSubagents.get(spawned.id)
+    await entry.settled
+    assert.equal(calls.n, 4, "3 个 wall + 1 次收尾 = 4 次 LLM 调用")
+    assert.equal(entry.turn, 4, "entry.turn 跟踪到真实轮次（非 0/1 静态值）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M19: cancel 定向中止——目标 interrupted settle（无陈旧注入/无 error 报告）+ 停止冻结通知——其余子代理继续跑", async () => {
+  const { server } = await asyncChildServer(400)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m19-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const notes = []
+    const parent = asyncParent(port, { history: [] }) // history = 机读线（取消提醒注入载体）
+    const ctx = asyncCtx(parent, cwd, { callbacks: { onSubagent: (info) => notes.push(info) } })
+    const a = spawnJson(await subagentTool.execute({ task: "slow task a", role: "coder", async: true }, ctx))
+    const b = spawnJson(await subagentTool.execute({ task: "slow task b", role: "coder", async: true }, ctx))
+    assert.equal(a.status, "running")
+    assert.equal(b.status, "running")
+    const entryA = parent._asyncSubagents.get(a.id)
+    const entryB = parent._asyncSubagents.get(b.id)
+    // 定向 cancel A（id 必填——只停 A）
+    const res = JSON.parse(await subagentTool.execute({ action: "cancel", id: a.id }, ctx))
+    assert.equal(res.id, a.id)
+    assert.equal(res.status, "cancelled", "cancel 返回确认（定向中止——异步生效）")
+    assert.equal(entryA.cancelled, true, "条目置 cancelled 标记")
+    assert.equal(entryA.controller.signal.aborted, true, "条目级 controller 已 abort")
+    assert.equal(entryB.cancelled, false, "B 不受影响")
+    assert.equal(entryB.controller.signal.aborted, false, "B 的 controller 未被 abort——其余子代理继续跑")
+    // cancelled settle：出池 + 停止冻结通知（status:"cancelled"——无 error 报告）
+    await entryA.settled
+    assert.equal(parent._asyncSubagents.has(a.id), false, "cancel 后条目出池清理")
+    assert.ok(parent._asyncSubagents.has(b.id), "B 仍留池")
+    const cancelNote = notes.find((n) => n.id === a.id && n.status === "cancelled")
+    assert.ok(cancelNote, "settle 时收到停止冻结通知（onSubagent cancelled——webview stopped 相位）")
+    assert.equal(cancelNote.role, "coder")
+    assert.ok(!notes.some((n) => n.id === a.id && n.status === "error"), "cancelled settle 无 error 通知（无陈旧错误形态）")
+    // 模型可见提醒（机读线注入——cancelled settle 不注入报告——提醒补位）
+    const reminder = parent.history.filter((m) => typeof m.content === "string" && m.content.includes(`subagent coder#${a.id} cancelled by user`))
+    assert.equal(reminder.length, 1, "取消提醒注入机读线（半成品警示——模型可见）")
+    assert.match(reminder[0].content, /partial changes not merged\/audited/, "半成品警示措辞")
+    // B 照常完成
+    await entryB.settled
+    assert.equal(entryB.done, true, "其余子代理不受 cancel 影响（正常 settle）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M20: cancel 错误路径——未知 id / 已完成 id / 省略 id → error（防误全停）", async () => {
+  const { server } = await asyncChildServer(0)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m20-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    // 省略 id → error（防误全停——全停走 Ctrl+C / Stop）
+    const noId = JSON.parse(await subagentTool.execute({ action: "cancel" }, ctx))
+    assert.equal(noId.status, "error")
+    assert.match(noId.error, /requires an id/)
+    // 未知 id → error（同 status/check 形态）
+    const unknown = JSON.parse(await subagentTool.execute({ action: "cancel", id: 999 }, ctx))
+    assert.equal(unknown.status, "error")
+    assert.match(unknown.error, /unknown async subagent id: 999/)
+    // 已完成 id（回合内 settle 未取）→ error——nothing to cancel
+    const spawned = spawnJson(await subagentTool.execute({ task: "fast task", role: "coder", async: true }, ctx))
+    const entry = parent._asyncSubagents.get(spawned.id)
+    await entry.settled
+    assert.equal(entry.done, true, "settle 留池（未取）")
+    const doneRes = JSON.parse(await subagentTool.execute({ action: "cancel", id: spawned.id }, ctx))
+    assert.equal(doneRes.status, "error")
+    assert.match(doneRes.error, /already finished/)
+    assert.equal(entry.cancelled, false, "已完成条目不置 cancelled——报告照常可取")
+    assert.equal(parent._asyncSubagents.has(spawned.id), true, "cancel error 不消费/不删除条目（check 仍可取回）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M21: cancel 后槽位补位——queued 自动启动（既有补位机制回归——D-M6）", async () => {
+  const { server } = await asyncChildServer(300)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m21-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    for (let i = 1; i <= 4; i++) {
+      await subagentTool.execute({ task: `slow task ${i}`, role: "coder", async: true }, ctx)
+    }
+    const fifth = spawnJson(await subagentTool.execute({ task: "slow task 5", role: "coder", async: true }, ctx))
+    assert.equal(fifth.status, "queued", "第 5 个入队")
+    // cancel 一个 running（id 1）→ 腾槽 → 队首（5th）自动补位启动
+    const res = JSON.parse(await subagentTool.execute({ action: "cancel", id: 1 }, ctx))
+    assert.equal(res.status, "cancelled")
+    await parent._asyncSubagents.get(1).settled
+    const started = await waitFor(() => parent._asyncSubagents.get(fifth.id)?.status === "running")
+    assert.ok(started, "cancel 腾槽后 queued 队首自动启动（补位机制未被 cancel 破坏）")
+    // 收尾
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.settled))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M27: queued 取消（round2 #1）——出队移除 + position 前移 + running 槽不受影响 + 无 abort", async () => {
+  const { server } = await asyncChildServer(300)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m27-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const notes = []
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd, { callbacks: { onSubagent: (info) => notes.push(info) } })
+    for (let i = 1; i <= 4; i++) {
+      await subagentTool.execute({ task: `slow task ${i}`, role: "coder", async: true }, ctx)
+    }
+    const fifth = spawnJson(await subagentTool.execute({ task: "slow task 5", role: "coder", async: true }, ctx))
+    const sixth = spawnJson(await subagentTool.execute({ task: "slow task 6", role: "coder", async: true }, ctx))
+    assert.equal(fifth.status, "queued")
+    assert.equal(sixth.status, "queued")
+    const entry5 = parent._asyncSubagents.get(fifth.id)
+    // 取消队首 queued（5th）→ 出队确认——不 abort（未启动无 controller abort）
+    const res = JSON.parse(await subagentTool.execute({ action: "cancel", id: fifth.id }, ctx))
+    assert.deepEqual(res, { id: fifth.id, status: "cancelled", was: "queued" }, "queued 取消返回 was:'queued' 确认")
+    assert.equal(parent._asyncSubagents.has(fifth.id), false, "queued 条目出队移除")
+    assert.equal(entry5.controller.signal.aborted, false, "queued 取消无 abort 发生（未启动）")
+    assert.ok(notes.some((n) => n.id === fifth.id && n.status === "cancelled"), "queued 取消即时冻结通知（无 settle 依赖）")
+    // 后续项 position 前移（status 实时计算）
+    const st6 = JSON.parse(await subagentTool.execute({ action: "status", id: sixth.id }, ctx))
+    assert.equal(st6.status, "queued")
+    assert.equal(st6.position, 1, "出队后后续条目 position 前移（6th: 2 → 1）")
+    assert.equal(st6.role, "coder", "queued 单查带 role（D-M5）")
+    // running 槽不受影响：4 个 running 仍 running（无补位启动——6th 保持 queued）
+    const running = [...parent._asyncSubagents.values()].filter((x) => x.status === "running")
+    assert.equal(running.length, 4, "running 槽位不受 queued 取消影响")
+    assert.equal(parent._asyncSubagents.get(sixth.id).status, "queued", "6th 未自动启动（无腾槽——取消的是 queued 非 running）")
+    // 收尾
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.settled))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M25-engine（审计 F4）: runChild forward 引擎级——eng-coder 内同步 explore spawn 的 chunk 带 sub 子标到达主会话；eng-coder 自身 chunk 不带", async () => {
+  // 真实链路：主会话 spawn eng-coder（sync）→ eng-coder runAgent 内部 spawn explore
+  // （受限审计变体）→ 内层 explore 文本经双层转发到主会话 onToolPanel：
+  // 频道 sub:eng-coder#1 + chunk.sub === "explore#1"（D-M8 webview 子标渲染输入）。
+  const token = await signedToken("f4f4f4f4-1111-4111-8111-0000000000f4", Date.now() + 24 * 3600 * 1000)
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      if (body.includes("Subagent (explore) completed")) {
+        // eng-coder 第 2 回合（内层审计已回）→ 收尾
+        res.end(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "eng delivery done" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          "data: [DONE]\n\n",
+        )
+      } else if (body.includes("audit child task")) {
+        // 内层 explore 审计子代理 → 文本报告（经双层转发）
+        res.end(
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "AUDIT REPORT: clean" } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          "data: [DONE]\n\n",
+        )
+      } else {
+        // eng-coder 第 1 回合 → 调受限 subagent（explore 审计 spawn）
+        const frame = { choices: [{ index: 0, finish_reason: "tool_calls", delta: { content: "", tool_calls: [{ index: 0, id: "t1", type: "function", function: { name: "subagent", arguments: JSON.stringify({ task: "audit child task", role: "explore" }) } }] } }] }
+        res.end(`data: ${JSON.stringify(frame)}\n\ndata: [DONE]\n\n`)
+      }
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m25e-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = engParent(port, token)
+    const panels = []
+    const ctx = { agent: parent, cwd, callbacks: { onToolPanel: (name, chunk) => panels.push({ name, chunk }) } }
+    const r = String(await subagentTool.execute({ task: "child eng task", role: "eng-coder", designId: "eng", designToken: token, async: false }, ctx))
+    assert.ok(r.includes("Subagent (eng-coder) completed"), "eng-coder 同步完成")
+    const innerChunks = panels.filter((p) => p.chunk?.sub === "explore#1")
+    assert.ok(innerChunks.length > 0, "内层 explore 活动经双层转发到达主会话且带子标")
+    assert.ok(innerChunks.some((p) => p.chunk.text.includes("AUDIT REPORT")), "内层文本带 explore#1 子标（webview 渲染输入）")
+    assert.ok(innerChunks.every((p) => p.name === "sub:eng-coder#1"), "外层频道 = eng-coder 块（首段路由不变——D-M8）")
+    const ownChunks = panels.filter((p) => p.name === "sub:eng-coder#1" && (p.chunk?.sub ?? null) === null)
+    assert.ok(ownChunks.some((p) => p.chunk.text.includes("eng delivery done")), "eng-coder 自身文本不带子标（own activity 不误标）")
+    // 审计预算计数载体 = eng-coder 子代理自身 history（T-E7 覆盖）——此处不断言主会话
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M19c（advisor round 2 #4）: eng-coder cancel——partial 磁盘写入不 merge 父 guard（not merged/audited 文案与实现一致）", async () => {
+  const token = await signedToken("f9f9f9f9-1111-4111-8111-0000000000f9", Date.now() + 24 * 3600 * 1000)
+  const bodies = []
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      bodies.push(body)
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      if (bodies.length === 1) {
+        // eng-coder 第 1 回合：真实 write 工具调用（磁盘半成品）
+        const frame = { choices: [{ index: 0, finish_reason: "tool_calls", delta: { content: "", tool_calls: [{ index: 0, id: "t1", type: "function", function: { name: "write", arguments: JSON.stringify({ path: "out.mjs", content: "partial-x" }) } }] } }] }
+        res.end(`data: ${JSON.stringify(frame)}\n\ndata: [DONE]\n\n`)
+      } else {
+        // 第 2 回合：慢响应——给 cancel 留窗口（写已执行后挂起中取消）
+        setTimeout(() => {
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "child done" } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            "data: [DONE]\n\n",
+          )
+        }, 800)
+      }
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m19c-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const { existsSync } = await import("node:fs")
+    const parent = engParent(port, token, { history: [] })
+    const ctx = { agent: parent, cwd, callbacks: {} }
+    // eng-coder 缺省 async
+    const spawned = spawnJson(await subagentTool.execute({ task: "child eng task", role: "eng-coder", designId: "eng", designToken: token }, ctx))
+    assert.equal(spawned.status, "running")
+    const entry = parent._asyncSubagents.get(spawned.id)
+    // 等写入执行 + 第二轮请求发出（child 挂在慢 LLM 上——cancel 窗口）
+    const twoCalls = await waitFor(() => bodies.length >= 2, 3000)
+    assert.ok(twoCalls, "子代理第二轮请求已发出（写已执行）")
+    assert.ok(existsSync(join(cwd, "out.mjs")), "半成品确在磁盘（写工具真实执行）")
+    const res = JSON.parse(await subagentTool.execute({ action: "cancel", id: spawned.id }, ctx))
+    assert.equal(res.status, "cancelled")
+    await entry.settled
+    assert.equal(parent._asyncSubagents.has(spawned.id), false, "settle 出池")
+    // #4 核心：取消路径不 merge——partial changes NOT merged/audited（描述/提醒文案与行为一致）
+    assert.equal(parent._touchedFiles.length, 0, "cancel 不合并 touched files（不入父 guard 记账）")
+    assert.notEqual(parent._mutatedThisRun, true, "cancel 不置父 mutation 标记（不触发 verify/advisor 推回）")
+    const reminder = parent.history.filter((m) => typeof m.content === "string" && m.content.includes("cancelled by user"))
+    assert.equal(reminder.length, 1, "机读线取消提醒在")
+    assert.match(reminder[0].content, /partial changes not merged\/audited/)
+    // 顺带：取消后同一 id 不可再 cancel（settle 已出池 → unknown）
+    const again = JSON.parse(await subagentTool.execute({ action: "cancel", id: spawned.id }, ctx))
+    assert.equal(again.status, "error")
+    assert.match(again.error, /unknown async subagent id/)
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M27c（advisor round 2 #5）: spawn 缺 task → 干净工具错误（required 移出 schema 的 execute 级校验补齐）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const parent = asyncParent(1)
+  const ctx = asyncCtx(parent, process.cwd())
+  await assert.rejects(
+    subagentTool.execute({ role: "explore" }, ctx),
+    /requires a task description/,
+    "缺 task → 干净错误（不再带 undefined 输入跑子代理）",
+  )
+  await assert.rejects(
+    subagentTool.execute({ task: "   ", role: "explore" }, ctx),
+    /requires a task description/,
+    "空白 task 同样拒绝",
+  )
+  assert.equal(parent._asyncSubagents.size, 0)
+  assert.equal(parent._subIdCounter, 0, "拒绝不消耗 id")
+})
+
+test("T-M27b: cancel depth>0 → 拒绝（子代理上下文无 cancel 意义——D-M6 只允许主会话）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const parent = asyncParent(1)
+  const r = JSON.parse(await subagentTool.execute({ action: "cancel", id: 1 }, asyncCtx(parent, process.cwd(), { depth: 1 })))
+  assert.equal(r.status, "error")
+  assert.match(r.error, /only available at the top level/)
+  assert.equal(parent._asyncSubagents.size, 0)
+})
+
+test("T-M19b（审计 F2）: cancel 幂等——settle 前重复 cancel 同一 running 条目 → 确认返回、提醒只注入一次", async () => {
+  const { server } = await asyncChildServer(400)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-m19b-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port, { history: [] })
+    const ctx = asyncCtx(parent, cwd)
+    const spawned = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctx))
+    const first = JSON.parse(await subagentTool.execute({ action: "cancel", id: spawned.id }, ctx))
+    assert.equal(first.status, "cancelled")
+    // settle 前（⏹ 尚在、模型再 cancel）二次取消 → 确认返回、不重复注入
+    const second = JSON.parse(await subagentTool.execute({ action: "cancel", id: spawned.id }, ctx))
+    assert.equal(second.status, "cancelled", "重复 cancel 幂等确认（无 error）")
+    const reminders = parent.history.filter((m) => typeof m.content === "string" && m.content.includes("cancelled by user"))
+    assert.equal(reminders.length, 1, "机读线提醒只注入一次（无重复半成品警示）")
+    await parent._asyncSubagents.get(spawned.id).settled
+    assert.equal(parent._asyncSubagents.has(spawned.id), false, "settle 出池照常")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-M17c（§19.5.2b）: 手动档 auto-turn（digest）动作域——spawn 拒、cancel 放行（控制类豁免）", async () => {
+  const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const asks = []
+  const pool = new Map([
+    [7, { id: 7, role: "eng-coder", status: "running", done: false, cancelled: false,
+         controller: { abort: () => { pool.get(7).aborted = true }, signal: { aborted: false } },
+         _onCancelled: () => {}, _resolve: () => {} }],
+  ])
+  const history = []
+  history._asyncSubagents = pool
+  const agent = {
+    _role: null, _planMode: false, _inAutoTurn: true, // 手动档 digest（§17 D-S7——deny-stub 阶段）
+    config: { agent: { engineering: false } },
+    _asyncSubagents: pool,
+    history,
+    _touchedFiles: [], _mutatedThisRun: false, _calledAdvisorThisRun: false,
+    _verifiedThisRun: false, _verifyPassed: undefined, _advisorRound: 0,
+  }
+  const toolByName = new Map([["subagent", subagentTool]])
+  const calls = [
+    { id: "1", name: "subagent", arguments: JSON.stringify({ task: "digest spawn", role: "explore" }) }, // digest 禁 spawn（既有门）
+    { id: "2", name: "subagent", arguments: JSON.stringify({ action: "cancel", id: 7 }) }, // 控制类放行——digest 内可中止失控子代理
+  ]
+  await executeToolBatches(agent, {
+    response: { toolCalls: calls }, history, fullHistory: [],
+    toolByName, getAuto: () => false, depth: 0,
+    callbacks: {
+      // §17 D-S7 手动档 digest：写权限/询问全部 deny-stub（panel-chat 装配）——cancel 不经过它
+      onPermissionRequired: async () => { asks.push("permission"); return false },
+      onBatchPermissionRequest: async () => { asks.push("batch"); return "deny" },
+    },
+    signal: undefined, cwd: process.cwd(), recentSigs: [],
+  })
+  const contents = history.filter((m) => m.role === "tool").map((m) => m.content)
+  // §17 D-S7 手动档 digest：写/启类工具被 deny-stub 权限阶段拦下（panel-chat 装配——
+  // spawn 逐项询问返回 false）——cancel 因控制类豁免跳过权限阶段照常执行
+  assert.ok(contents.some((c) => c.includes("Denied by user (permission mode)")), "digest 禁 spawn（deny-stub 权限阶段——不含 cancel）")
+  assert.ok(contents.some((c) => c.includes('"cancelled"')), "digest 内 cancel 执行（控制类豁免——可中止失控子代理）")
+  assert.equal(pool.get(7).cancelled, true, "digest cancel 定向 abort 生效")
+  assert.equal(pool.get(7).aborted, true)
+  // 两个非只读调用只产生一次逐项询问（spawn 的 deny-stub）——cancel 零询问（控制类豁免）
+  assert.deepEqual(asks, ["permission"], "cancel 不入询问（唯一 ask = spawn 的 deny-stub）")
 })
 

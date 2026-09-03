@@ -50,12 +50,14 @@ export function renderSubagentPanel() {
       : (s.status === "done" || s.status === "answered") ? "done"
       : s.status === "settled" ? "settled"
       : s.status === "terminated" ? "terminated"
+      : s.status === "cancelled" ? "cancelled" // §19.5 D-M6（stopped 冻结——行态灰色）
       : "error"
     const statusText = s.status === "started" ? t("sub.running")
       : s.status === "answered" ? t("consult.answered")
       : s.status === "settled" ? t("sub.awaitingDigest")
       : s.status === "terminated" ? t("consult.terminated")
       : s.status === "failed" ? t("consult.failed")
+      : s.status === "cancelled" ? (t("sub.cancelled") || "cancelled") // §19.5
       : s.status
     // Rows with a model tag (consult, escalate) show it so parallel consultants and
     // the flown-in escalate are distinguishable (three-way review 2026-08-16 — surgeon
@@ -112,7 +114,7 @@ function autoCleanPanels() {
     const linger = s.role === "consult" ? 60000 : 3000
     const lingerErr = s.role === "consult" ? 60000 : 5000
     if ((s.status === "done" || s.status === "answered" || s.status === "terminated") && s.doneAt && now - s.doneAt > linger) delete S._subagentMap[id]
-    if ((s.status === "error" || s.status === "failed") && s.doneAt && now - s.doneAt > lingerErr) delete S._subagentMap[id]
+    if ((s.status === "error" || s.status === "failed" || s.status === "cancelled") && s.doneAt && now - s.doneAt > lingerErr) delete S._subagentMap[id]
   }
   renderSubagentPanel()
   // Refresh elapsed seconds while a turn is running (CLI 1s ticker parity)
@@ -150,13 +152,76 @@ function collapseSubBlocks(role, id) {
   }
 }
 
+// ─── §19.5 D-M7 子块 ⏹ 停止控件 + ⟦ev⟧stopped 冻结相位（AGENT-LOOP.md §19.5 D-M7/D-M8）───
+// ⏹ 只在运行中子代理块标题行显示（T-M23）；点击 = postMessage cancelSubagent →
+// extension 层定向 abort（不经模型回合——失控子代理时模型可能不可靠——chat.js 委托）。
+// 块键 = async spawn 频道 `sub:role#id`（explore/plan/coder/eng-coder——池条目）；
+// escalate/consult 块键含 model tag 且非池条目——无 ⏹。
+
+/** 可取消块键解析：`sub:eng-coder#1` → { role, id }（CANCELABLE_BLOCK 匹配；其余 null）。 */
+export function subBlockTarget(name) {
+  const m = /^sub:(explore|plan|coder|eng-coder)#(\d+)$/.exec(String(name ?? ""))
+  return m ? { role: m[1], id: Number(m[2]) } : null
+}
+
+/** 按 role+id 遍历匹配块（subagent 块键 = `sub:${role}#${id}` 后缀匹配——与
+ *  collapseSubBlocks 同规则；escalate/consult 键不命中——无 ⏹）。 */
+function eachSubBlock(role, id, fn) {
+  for (const [name, block] of S._subBlocks) {
+    if (name.startsWith(`sub:${role}`) && name.endsWith(`#${id}`)) fn(block)
+  }
+}
+
+/** ⏹ 显示/移除（仅 running 态显示——done/error/settled/cancelled 后消失——T-M23）。
+ *  按钮为块级 overlay（absolute 定位于标题行右缘——不落入 summary 文本——块键
+ *  label 的 textContent 匹配与既有折叠测试零干扰；点击不触发 details 折叠翻转）。 */
+export function updateBlockStopButtons(role, id, running) {
+  eachSubBlock(role, id, (block) => {
+    const btn = block.querySelector(".sub-stop-btn")
+    if (running && !btn) {
+      const b = document.createElement("button")
+      b.className = "sub-stop-btn"
+      b.type = "button"
+      b.dataset.subId = String(id)
+      b.dataset.subRole = role
+      b.textContent = "⏹"
+      b.title = t("sub.stopBtn") || "Stop this subagent"
+      block.appendChild(b)
+    } else if (!running && btn) {
+      btn.remove()
+    }
+  })
+}
+
+/** ⟦ev⟧stopped 冻结相位（D-M6 cancelled settle → webview 端）：折叠 + ⏹ 移除 +
+ *  标题行 stopped 标记（CLI 冻结标题 parity——区块保留可展开）。 */
+export function freezeStoppedBlocks(role, id) {
+  eachSubBlock(role, id, (block) => {
+    block.open = false
+    block.querySelector(".sub-stop-btn")?.remove()
+    const summary = block.querySelector("summary")
+    if (summary && !summary.querySelector(".sub-stopped")) {
+      const tag = document.createElement("span")
+      tag.className = "sub-stopped"
+      tag.textContent = " · " + (t("sub.stopped") || "stopped")
+      summary.appendChild(tag)
+    }
+  })
+}
+
 /** subagent message: track lifecycle; collapse activity blocks on terminal state. */
 export function handleSubagentMessage(m) {
   if (m.status === "started") {
-    S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), tool: null, model: m.model ?? null }
+    S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), tool: null, model: m.model ?? null, pool: !!m.pool }
+    // §19.5 D-M7: 仅池条目（async spawn——m.pool——cancel 路由可达）的块挂 ⏹；同步
+    // spawn 的 started 无 pool 标记——不挂（无效 ⏹——审计 F1）。块创建时也已按行态装过
+    // （streaming.js）——此处覆盖消息乱序/历史场景。
+    if (m.pool) updateBlockStopButtons(m.role, m.id, true)
   } else {
     const s = S._subagentMap[m.id]
     if (s) { s.status = m.status; s.doneAt = Date.now(); if (m.error) s.error = m.error; if (m.replyPreview) s.replyPreview = m.replyPreview }
+    // §19.5: ⏹ 在任何非 running 终态/冻结态消失（T-M23——done/冻结后不残留）。
+    if (m.role !== "consult") updateBlockStopButtons(m.role, m.id, false)
     // Consult terminal state → collapse its activity block (consult-UI review 2026-08-15;
     // the "collapses when done" comment was a promise the code never kept).
     if (m.role === "consult" && m.model && m.status !== "started") {
@@ -177,6 +242,11 @@ export function handleSubagentMessage(m) {
     // ui.test.mjs "error 终态同样折叠").
     if (m.role !== "consult" && (m.status === "done" || m.status === "error")) {
       collapseSubBlocks(m.role, m.id)
+    }
+    // §19.5 ⟦ev⟧stopped（D-M6 cancelled settle → 冻结相位）：区块以 interrupted 语义
+    // 冻结——折叠 + 标题 stopped 标记（T-M22/T-M23 webview 断言）。
+    if (m.role !== "consult" && m.status === "cancelled") {
+      freezeStoppedBlocks(m.role, m.id)
     }
   }
   renderSubagentPanel()

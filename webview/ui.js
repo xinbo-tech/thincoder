@@ -31,28 +31,61 @@ export function buildAdvisorBlock(roundLabel) {
  * Append one advisor progress chunk ({ kind: "think"|"tool"|"text", text }) to
  * the block's scrolling content region. Same-kind text runs merge; nothing is
  * ever truncated — the full review stays in the block (scrolling).
+ * §19.5 D-M8 nested sub-label: `sub` (e.g. "explore#1" — an INNER spawn's
+ * attribution, carried on the chunk by subagent.mjs runChild forward) renders as
+ * a dim row-start tag. The tag repeats only when the attribution CHANGES or a
+ * run starts — rows of the same sub follow unprefixed (CLI sub-label parity);
+ * the block's current sub rides a DOM expando (block._subCur).
  */
-export function appendAdvisorChunk(block, kind, text) {
+export function appendAdvisorChunk(block, kind, text, sub) {
   const content = block.querySelector(".advisor-content")
   if (!content) return
   const str = String(text ?? "")
   if (!str) return
+  const subLabel = typeof sub === "string" && sub ? sub : null
+  const changedSub = subLabel !== null && (block._subCur ?? null) !== subLabel
   if (kind === "tool") {
     const line = document.createElement("div")
     line.className = "advisor-tool-line"
-    line.textContent = str
+    if (subLabel) {
+      if (changedSub) {
+        const tag = document.createElement("span")
+        tag.className = "advisor-sub"
+        tag.textContent = subLabel + " · "
+        line.appendChild(tag)
+      }
+      block._subCur = subLabel
+    } else {
+      block._subCur = null
+    }
+    if (line.childNodes.length > 0) line.appendChild(document.createTextNode(str))
+    else line.textContent = str
     content.appendChild(line)
     return
   }
   const k = kind ?? "text"
   const last = content.lastElementChild
-  if (last && last.classList.contains("advisor-text") && last.dataset.kind === k) {
-    last.textContent += str
+  const sameRow = last && last.classList.contains("advisor-text")
+    && last.dataset.kind === k && (last.dataset.sub ?? "") === (subLabel ?? "")
+  if (sameRow) {
+    // textContent += would nuke the row's child nodes (sub-label span) — append a text node
+    last.appendChild(document.createTextNode(str))
   } else {
     const div = document.createElement("div")
     div.className = "advisor-text" + (k === "think" ? " advisor-think" : "")
     div.dataset.kind = k
-    div.textContent = str
+    if (subLabel) {
+      div.dataset.sub = subLabel
+      const tag = document.createElement("span")
+      tag.className = "advisor-sub"
+      tag.textContent = subLabel + " · "
+      div.appendChild(tag)
+      div.appendChild(document.createTextNode(str))
+      block._subCur = subLabel
+    } else {
+      block._subCur = null
+      div.textContent = str
+    }
     content.appendChild(div)
   }
 }

@@ -158,6 +158,25 @@ export async function handlePanelMessage(panel, msg) {
         panel._abortController?.abort()
       }
       break
+    // §19.5 D-M7 UI 停止（VS Code ⏹——不经模型回合——直连 extension 层定向 abort）：
+    // webview 子块标题行 ⏹ 点击 → cancelSubagent 消息 → 定位 live lines 的池条目 →
+    // 条目级 abort（cancelSubagent——与工具 action:'cancel' 同实现路径——D-M6）。
+    // live lines 锚点 = panel._liveLines（runPanelChat 每回合登记——挂起期与
+    // susp.lines 同一数组）。未知 id（陈旧按钮/池已清）→ no-op（无虚构状态）。
+    case "cancelSubagent": {
+      const lines = panel._liveLines ?? panel._susp?.lines
+      const id = Number(msg.id)
+      const entry = lines?.history?._asyncSubagents?.get(id)
+      // advisor round 2 #6：role 交叉校验——陈旧按钮命中同 id 异 role 的极端情况防御
+      // （webview ⏹ 携带 block 的 role——消息契约不设死参数）
+      if (!lines || !entry || entry.role !== msg.role) {
+        console.warn(`[chat-panel] cancelSubagent: no live pool entry for id ${msg.id} role ${msg.role}`)
+        break
+      }
+      const { cancelSubagent } = await import("../agent-tools/subagent.mjs")
+      cancelSubagent({ _asyncSubagents: lines.history._asyncSubagents, history: lines.history }, id)
+      break
+    }
     // Ctrl+I inject (CLI parity): abort with an interrupt reason — the agent loop
     // commits partial output, injects the message, and resumes from the same context.
     case "interrupt": panel._stopClickTs = Date.now(); traceStop("interrupt received", panel._stopClickTs); panel._abortController?.abort({ interrupt: true, message: msg.message }); break

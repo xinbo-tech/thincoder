@@ -447,6 +447,51 @@ describe("toolPanel bridge — model passthrough (advisor/subagent model display
     assert.equal(payload.model, undefined, "string chunk carries no model — chunk?.model safely undefined")
     assert.equal(payload.round, undefined, "string chunk carries no round")
   })
+
+  it("T5 — §19.5 D-M8: toolPanelPayload forwards chunk.sub (nested sub-label) — string chunks stay clean", async () => {
+    const { toolPanelPayload } = await import("../src/extension/panel-chat.mjs")
+    const p = toolPanelPayload("sub:eng-coder#1", { kind: "tool", text: "read x", sub: "explore#1" })
+    assert.equal(p.name, "sub:eng-coder#1")
+    assert.equal(p.sub, "explore#1", "嵌套子代理段标随桥透传（webview 子标渲染输入）")
+    assert.equal(p.kind, "tool")
+    assert.equal(toolPanelPayload("sub:eng-coder#1", "raw").sub, undefined, "string 兼容分支无 sub（chunk?.sub 安全 undefined）")
+  })
+
+  it("T6 — §19.5 D-M7: cancelSubagent 消息路由 → 定向 abort（extension 层直连——不经模型回合）", async () => {
+    const { handlePanelMessage } = await import("../src/extension/panel-messages.mjs")
+    // 假面板：_liveLines = 挂起/运行中会话的 live lines（runPanelChat 登记——池 + 机读线载体）
+    const history = []
+    const aborted = []
+    const notify = []
+    const pool = new Map([
+      [1, { id: 1, role: "eng-coder", status: "running", done: false, cancelled: false,
+           controller: { abort: () => aborted.push(1), signal: { aborted: false } },
+           _onCancelled: () => notify.push("cancelled-1") }],
+      [2, { id: 2, role: "explore", status: "queued", done: false, cancelled: false,
+           controller: { abort: () => aborted.push(2), signal: { aborted: false } },
+           _onCancelled: () => notify.push("cancelled-2"), _resolve: () => {} }],
+    ])
+    history._asyncSubagents = pool
+    const panel = { _liveLines: { history, fullHistory: [] }, _susp: null }
+    // running 目标 → 定向 abort（只停该条目——标记 + controller abort + 机读线提醒注入）
+    await handlePanelMessage(panel, { type: "cancelSubagent", id: 1, role: "eng-coder" })
+    assert.deepEqual(aborted, [1], "条目级 controller 被 abort（其余不受影响）")
+    assert.equal(pool.get(1).cancelled, true, "条目置 cancelled 标记（settle 走 cancelled 分支）")
+    const reminder = history.filter((m) => typeof m.content === "string" && m.content.includes("subagent eng-coder#1 cancelled by user"))
+    assert.equal(reminder.length, 1, "模型可见取消提醒注入机读线（半成品警示——UI ⏹ 与工具 cancel 同路径）")
+    assert.match(reminder[0].content, /partial changes not merged\/audited/)
+    // queued 目标 → 出队（无 abort）+ 即时冻结通知
+    await handlePanelMessage(panel, { type: "cancelSubagent", id: 2, role: "explore" })
+    assert.deepEqual(aborted, [1], "queued 取消无 abort（未启动）")
+    assert.equal(pool.has(2), false, "queued 条目出队移除")
+    assert.deepEqual(notify, ["cancelled-2"], "queued 取消即时冻结通知（entry._onCancelled——spawn 上下文绑定）")
+    // 未知 id / role 不匹配（陈旧 ⏹/池已清）→ no-op（不虚构状态、不抛——advisor round 2 #6）
+    await handlePanelMessage(panel, { type: "cancelSubagent", id: 99, role: "coder" })
+    await handlePanelMessage(panel, { type: "cancelSubagent", id: 1, role: "explore" })
+    assert.equal(pool.has(1), true, "role 不匹配 → no-op（同 id 异 role 不误停）")
+    assert.equal(pool.get(1).cancelled, true, "既有取消标记未被二次触碰")
+    assert.deepEqual(aborted, [1], "role 不匹配无 abort")
+  })
 })
 
 describe("session switch race guards (GitHub #2/#5 — 2026-08-28)", () => {

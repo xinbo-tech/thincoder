@@ -128,6 +128,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   try {
   for (let turn = 0; turn < maxTurns; turn++) {
     if (signal?.aborted) { traceStop(`agent loop turn ${turn}: aborted at loop head`) ; throw new DOMException("Aborted", "AbortError") }
+    // §19.5 D-M5 per-child turn hook (CLI ⟦ev⟧turn 解析的 VS Code 等价): 每轮迭代通报
+    // turn 号——subagent runChild 同步进 async 池条目的 entry.turn（status 决策字段）。
+    callbacks.onAgentTurn?.(turn + 1)
 
     // Context compaction check — only at safe points: history ends with a complete
     // exchange (user input or tool result), never mid-assistant (CLI parity D1).
@@ -466,12 +469,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     cleanupConsultSessions(agent)
     // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1; the collector
     // lives in agent-tools/subagent-async.mjs with the async machinery — 500-line split):
-    // - Stop (plain abort): children were aborted with the run signal — clear WITHOUT
-    //   injecting stale errors. Ctrl+I (interrupt) keeps the pool (turn resumes).
-    // - ContinueError (turn cap): no wait, no injection — children keep running, the
-    //   RESUME run's turn-end collection takes over.
-    // - anything else: inject SETTLED entries only (direct form, D-S3 ①); running/queued
-    //   STAY in the pool — no allSettled wait — the suspension session digests them (D-S2).
+    // Stop (plain abort) → clear WITHOUT injecting stale errors (Ctrl+I keeps the pool);
+    // ContinueError → no wait/no injection; else → inject SETTLED entries only (D-S3 ①)
+    // — running/queued STAY (no allSettled wait) — the suspension session digests them (D-S2).
     const asyncMap = agent._asyncSubagents
     if (asyncMap && asyncMap.size > 0) {
       if (signal?.aborted && !signal?.reason?.interrupt) {

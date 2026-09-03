@@ -339,3 +339,137 @@ describe("eng-coder 子代理内 advisor 流渲染", () => {
 })
 
 
+
+// ─── §19.5 控制面 UI：⏹ 仅 running + ⏹ 点击 cancel 消息 + ⟦ev⟧stopped 冻结 + 嵌套子标 ───
+// （AGENT-LOOP.md §19.5 D-M7/D-M8——T-M22/T-M23/T-M24/T-M25 webview 断言。置于文件尾：
+// chat.js 已由前序 describe 导入——window._vscode 即其捕获的 bridge 对象——直接 patch 其
+// postMessage 捕获 ⏹ 点击消息（不经自己 import——无首序/残留时序问题）。
+describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻结 + 嵌套子标）", () => {
+  before(() => {
+    // 前序 describe 已确保 body + chat.js 就位——window._vscode 即 state.js 持有的 bridge
+    // 对象（vscode.postMessage 调用时属性查找——可 patch 捕获）。
+    window._vscode.postMessage = (m) => posts.push(m)
+    posts.length = 0
+  })
+
+
+  const posts = []
+  const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
+  const blockById = (id) =>
+    [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent.includes(`#${id}`))
+
+  it("T-M23: ⏹ 仅 running 且仅池条目（async spawn——pool 标记）——started 后块标题行出现 ⏹；done/error/settled 冻结后消失（不留残）", () => {
+    // 同步（阻塞）spawn 形态的 started（无 pool）→ 块不带 ⏹（cancel 路由只认池——无效
+    // ⏹ 防回归——审计 F1）
+    post({ type: "subagent", id: 30, role: "explore", status: "started", model: "m" })
+    post({ type: "toolPanel", name: "sub:explore#30", kind: "text", text: "sync child…" })
+    const syncBlock = blockById(30)
+    assert.ok(syncBlock, "同步 spawn 活动块照常创建")
+    assert.ok(!syncBlock.querySelector(".sub-stop-btn"), "同步 spawn 块不挂 ⏹（非池条目——点击无处可达）")
+    // async（池条目）started → ⏹ 装上（行态 started = running）
+    post({ type: "subagent", id: 31, role: "eng-coder", status: "started", model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#31", kind: "text", text: "working…" })
+    const live = blockById(31)
+    assert.ok(live, "活动块已创建")
+    assert.ok(live.querySelector(".sub-stop-btn"), "池条目 running 态块标题行显示 ⏹")
+    assert.equal(live.querySelector("summary").textContent, "eng-coder#31", "⏹ 不落入 summary 文本（label 匹配/折叠语义零干扰）")
+    assert.equal(live.open, true, "running 块展开")
+    // done → 折叠 + ⏹ 消失（T-M23——done/冻结后不留残）
+    post({ type: "subagent", id: 31, role: "eng-coder", status: "done" })
+    assert.equal(live.open, false, "done 折叠（既有语义回归）")
+    assert.ok(!live.querySelector(".sub-stop-btn"), "done 后 ⏹ 消失")
+    // error 终态 → 折叠 + ⏹ 消失（F6——error 与 done 同走终态分支）
+    post({ type: "subagent", id: 37, role: "coder", status: "started", model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:coder#37", kind: "text", text: "risky…" })
+    const errBlock = blockById(37)
+    assert.ok(errBlock.querySelector(".sub-stop-btn"), "started → ⏹ 在")
+    post({ type: "subagent", id: 37, role: "coder", status: "error", error: "boom" })
+    assert.equal(errBlock.open, false, "error 折叠")
+    assert.ok(!errBlock.querySelector(".sub-stop-btn"), "error 后 ⏹ 消失")
+    // settled（挂起中间态——不折叠）→ ⏹ 同样消失（子代理已完成——无可停）
+    post({ type: "subagent", id: 32, role: "coder", status: "started", model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:coder#32", kind: "text", text: "bg…" })
+    const settledBlock = blockById(32)
+    assert.ok(settledBlock.querySelector(".sub-stop-btn"), "started → ⏹ 在")
+    post({ type: "suspension", active: true, running: 1, queued: 0, pending: 0 })
+    post({ type: "subagent", id: 32, role: "coder", status: "settled" })
+    assert.equal(settledBlock.open, true, "settled 不折叠（§17 D-S8——驻留等消化）")
+    assert.ok(!settledBlock.querySelector(".sub-stop-btn"), "settled 后 ⏹ 消失（已完成——冻结前不留停止控件）")
+    post({ type: "suspension", active: false, freeze: true })
+    post({ type: "suspension", active: false, freeze: false })
+  })
+
+  it("T-M22: ⏹ 点击 → cancelSubagent 消息（定向 id+role——不经模型）；块折叠翻转不被触发", () => {
+    post({ type: "subagent", id: 33, role: "coder", status: "started", model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:coder#33", kind: "text", text: "running…" })
+    const block = blockById(33)
+    const btn = block.querySelector(".sub-stop-btn")
+    assert.ok(btn, "⏹ 在标题行")
+    assert.equal(btn.dataset.subId, "33")
+    assert.equal(btn.dataset.subRole, "coder")
+    posts.length = 0
+    btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }))
+    const cancelMsg = posts.find((m) => m.type === "cancelSubagent")
+    assert.ok(cancelMsg, "⏹ 点击发出 cancelSubagent 消息")
+    assert.deepEqual({ id: cancelMsg.id, role: cancelMsg.role }, { id: 33, role: "coder" }, "定向目标（id + role）随消息")
+    assert.equal(block.open, true, "⏹ 命中区不触发折叠翻转（与 CLI 命中列级区分同规则）")
+    // 收尾：取消 → 冻结（下一用例详测）——本用例只锁定点击消息面
+    post({ type: "subagent", id: 33, role: "coder", status: "cancelled" })
+    assert.ok(!block.querySelector(".sub-stop-btn"), "冻结后 ⏹ 移除")
+  })
+
+  it("T-M23c/⟦ev⟧stopped: cancelled 冻结——折叠 + 标题 stopped 标记 + ⏹ 移除 + 冻结后不复活", () => {
+    post({ type: "subagent", id: 34, role: "eng-coder", status: "started", model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#34", kind: "text", text: "delivering…" })
+    const block = blockById(34)
+    assert.ok(block.querySelector(".sub-stop-btn"), "运行中 ⏹ 在")
+    post({ type: "subagent", id: 34, role: "eng-coder", status: "cancelled" })
+    assert.equal(block.open, false, "cancelled 即折叠（interrupted 冻结语义）")
+    const tag = block.querySelector(".sub-stopped")
+    assert.ok(tag, "标题行带 stopped 标记")
+    assert.equal(tag.textContent.trim(), "· stopped", "stopped 标记文本（CLI 冻结标题 parity——en locale）")
+    assert.ok(block.querySelector("summary").textContent.includes("stopped"), "stopped 随标题渲染")
+    assert.ok(!block.querySelector(".sub-stop-btn"), "⏹ 随冻结移除")
+    block.open = true // 用户重开阅读
+    assert.ok(!block.querySelector(".sub-stop-btn"), "冻结块重开后 ⏹ 不复活（T-M23——仅 running 显示）")
+  })
+
+  it("T-M24/T-M25: 嵌套子标渲染——sub chunk 行首 dim 子标；同 sub 文本合并不重复前缀；无 sub 活动切回不带标；单层零变化", () => {
+    // 无 started 通知 → 无 ⏹（纯渲染断言）
+    const name = "sub:eng-coder#35"
+    post({ type: "toolPanel", name, kind: "text", text: "inner audit note part one ", sub: "explore#1" })
+    post({ type: "toolPanel", name, kind: "text", text: "part two", sub: "explore#1" })
+    post({ type: "toolPanel", name, kind: "tool", text: "→ read impl-x.mjs", sub: "explore#1" })
+    post({ type: "toolPanel", name, kind: "text", text: "eng-coder own reasoning" }) // 无 sub——eng-coder 自身活动
+    post({ type: "toolPanel", name, kind: "text", text: "audit verdict — ", sub: "explore#1" }) // 切换回内层 → 新带标行
+    post({ type: "toolPanel", name, kind: "text", text: "done", sub: "explore#1" })
+    const block = blockById(35)
+    const content = block.querySelector(".advisor-content")
+    const textRows = [...content.querySelectorAll(".advisor-text")]
+    assert.equal(textRows.length, 3, "3 个文本行段（内层合并 1 + 自身 1 + 切回内层 1）")
+    const tagged = textRows.filter((el) => el.querySelector(".advisor-sub"))
+    assert.equal(tagged.length, 2, "子标只出现在归属段行首（不重复前缀）")
+    assert.equal(tagged[0].querySelector(".advisor-sub").textContent, "explore#1 · ", "子标形态 = 段标 + ' · '（dim 行首标记）")
+    assert.equal(tagged[0].textContent, "explore#1 · inner audit note part one part two", "同 sub 连续 text 合并进同一带标行（无逐 chunk 换行/重复前缀）")
+    assert.equal(textRows[1].textContent, "eng-coder own reasoning", "无 sub 活动不带子标（块主体活动照常）")
+    assert.equal(tagged[1].textContent, "explore#1 · audit verdict — done", "内层再活动 → 新带标行 + 后续合并")
+    const toolLines = [...content.querySelectorAll(".advisor-tool-line")]
+    assert.equal(toolLines.length, 1)
+    assert.equal(toolLines[0].textContent, "→ read impl-x.mjs", "工具输出行跟随最近子标归属——不重复前缀（D-M8）")
+    // 单层（无嵌套 sub 字段）→ 既有形态零变化（子标 span 数 0）
+    post({ type: "toolPanel", name: "sub:eng-coder#36", kind: "text", text: "plain single-layer" })
+    const plain = blockById(36)
+    assert.equal(plain.querySelectorAll(".advisor-sub").length, 0, "无嵌套 chunk 不带子标——单层兼容回归（T-M24）")
+  })
+  after(async () => {
+    // 跨 describe 隔离：本 describe 独占 id 31-36 的会话块/面板行清出
+    const { S } = await import("../webview/state.js")
+    S._subBlocks.clear()
+    S._subagentMap = {}
+    S._advisorBlock = null
+    for (const el of [...document.querySelectorAll("#messages .sub-block")]) {
+      const label = el.querySelector("summary")?.textContent ?? ""
+      if (/#(3[0-7])$/.test(label)) el.remove()
+    }
+  })
+})

@@ -21,7 +21,10 @@ function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // ACTION-LEVEL. A tool may declare action-level readonly-ness (isReadonlyAction —
   // e.g. subagent action:'check'/'status'): those pass plan mode like readonly tools,
   // while the same tool's side-effecting actions (subagent spawn/escalate) stay denied.
-  if (agent._planMode && tool && !tool.readonly && !(tool.isReadonlyAction?.(args) ?? false)) {
+  // §19.5 D-M6 round2 #4: control actions (isControlAction — subagent action:'cancel')
+  // are a separate exemption class: 只停不启（无新副作用）——planMode 放行（取消既有
+  // 子代理——spawn 仍拒）、免权限审批、批审批分组不入组、手动档 digest 放行。
+  if (agent._planMode && tool && !tool.readonly && !(tool.isReadonlyAction?.(args) ?? false) && !(tool.isControlAction?.(args) ?? false)) {
     return { blocked: true, content: "Error: plan mode active" }
   }
   // Engineering coder hard gate: no file modification before the design review passed (CLI dispatch.mjs parity).
@@ -64,7 +67,9 @@ async function collectBatchPermission(agent, { response, toolByName, getAuto, ca
     const pre = preGateBlocked(agent, { tool, toolName: tc.name, args, depth })
     if (pre.blocked) continue // 前置门禁拦下的不计入批询问（评审 #7）
     const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
-    if (!tool || tool.readonly || actionReadonly) continue
+    // §19.5 D-M6 round2 #4: cancel 类控制动作不入批审批组（免询问——只停不启）
+    const controlAction = tool?.isControlAction?.(args) ?? false
+    if (!tool || tool.readonly || actionReadonly || controlAction) continue
     list.push({ id: tc.id, name: tc.name, args })
   }
   if (list.length < 2) return null
@@ -149,8 +154,11 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       // coder children keep the pre-existing semantics unchanged.
       // Tools may declare action-level readonly-ness (e.g. git diff/status/log/show) —
       // those skip approval while write actions (git commit/push/rm) still prompt.
+      // §19.5 D-M6 round2 #4: control actions (cancel) skip approval the same way —
+      // 只停不启（无新副作用）——控制类豁免（无 permission handler 也不拒）。
       const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
-      if (!getAuto() && tool && !tool.readonly && !actionReadonly && depth === 0 && callbacks.onPermissionRequired) {
+      const controlAction = tool?.isControlAction?.(args) ?? false
+      if (!getAuto() && tool && !tool.readonly && !actionReadonly && !controlAction && depth === 0 && callbacks.onPermissionRequired) {
         // §16 D-B1 批确认结果套用：deny → 全批拒绝（无二次询问）；approveAll → 本批放行
         if (batchPerm?.denied?.has(tc.id)) {
           return { tool_call_id: tc.id, toolName, content: "Denied by user (permission mode).", meta: null }

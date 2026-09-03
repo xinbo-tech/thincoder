@@ -42,7 +42,9 @@ import { suspensionSession, poolLive } from "./suspension.mjs"
 export function toolPanelPayload(name, chunk) {
   const kind = typeof chunk === "string" ? "text" : (chunk?.kind ?? "text")
   const text = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
-  return { type: "toolPanel", name, kind, text, round: chunk?.round, model: chunk?.model }
+  // §19.5 D-M8: `sub`（嵌套子代理段标——runChild forward 附加，如 "explore#1"）随桥
+  // 透传——webview 在子代理块内渲染行首 dim 子标 span。白名单字段（NF1——不静默丢字段）。
+  return { type: "toolPanel", name, kind, text, round: chunk?.round, model: chunk?.model, sub: typeof chunk === "string" ? undefined : chunk?.sub }
 }
 
 /**
@@ -161,6 +163,11 @@ export async function runPanelChat(panel, { text, modelOverride, reasoning, prov
   const loadedLines = suspLines ?? panel._activeLines(turnSlot)
   fullHistory = loadedLines.fullHistory
   history = loadedLines.contextHistory // activeLines 已处理机读线判定（length>0 + strip 截断 args）
+  // §19.5 UI ⏹ cancel 路由锚点（extension 层直连路径——不经模型）：本回合 live lines
+  // 常驻面板——池（history._asyncSubagents）与机读线跨 runAgent/挂起期都存活在这同一
+  // 数组上；挂起会话期 susp 路径传入的 suspLines 即 panel._susp.lines 同一引用——
+  // cancelSubagent 消息据此定位池条目 + 注入模型可见提醒（panel-messages.mjs）。
+  panel._liveLines = { history, fullHistory, cwd }
   // Slot snapshot comment: turnSlot/distillSlot are captured at function entry (above, before
   // any await) — see the 交付评审 🔴#1 note at the top of this function.
   const isFirstMessageNow = !suspLines && fullHistory.filter((m) => (m.type ?? m.role) === "user").length === 0

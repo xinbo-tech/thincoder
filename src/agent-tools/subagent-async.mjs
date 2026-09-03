@@ -19,20 +19,21 @@
  * settled-while-suspended → history._pendingAsyncResults, aborted → pool discard),
  * collectSettledAsync (turn-end collection), injectAsyncResult (the shared D-S3 injector).
  *
- * §19 (AGENT-LOOP.md §19, 2026-09-03): the single-tool four-action merge dispatches to the
- * action HANDLERS in this module — subagentCheck (action:"check" — the retired
- * subagent_check semantics verbatim: read-counter gated, arrival-order fetch,
- * consume-on-read), subagentStatus (action:"status" — non-blocking pool query, never
- * consumes, never touches the read counter), escalateAction (action:"escalate" — the
- * retired escalate.mjs execution verbatim: pool pick, expert run, post-op report;
- * the `sub:escalate <label> #N` relay prefix and all constraints unchanged).
- * mergeChildMutations moved here with the merge (subagent.mjs re-exports it — no consumer
- * changed) so the escalate handler never imports subagent.mjs (module graph cycle-free).
+ * §19 (AGENT-LOOP.md §19, 2026-09-03): the single-tool merge dispatches to the action
+ * HANDLERS in this module — subagentCheck (action:"check" — the retired subagent_check
+ * semantics verbatim), subagentStatus (action:"status" — non-blocking pool query).
+ * The escalate handler lives in subagent-escalate.mjs (2026-09-03 advisor round —
+ * 500-line hard cap; VERBATIM move, zero behavior change — it imports
+ * mergeChildMutations + nextSubagentId from here, one-way, no cycle).
+ * §19.5 (AGENT-LOOP.md §19.5, 2026-09-03): control surface — cancelSubagent/cancelSubagentAction
+ * (action:"cancel" + UI ⏹ 共用——per-entry AbortController 定向中止, queued 出队),
+ * D-M5 status decision fields (model/elapsedSec/turn/maxTurns on pool entries and
+ * status output), the cancelled-settle branch (no pending transfer, no collect
+ * injection — stopped-freeze notification only).
+ * mergeChildMutations lives here (subagent.mjs re-exports it — no consumer
+ * changed) — shared by the eng-coder spawn merge and the escalate engine.
  */
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
-import { isAbsolute, relative } from "node:path"
-import { buildProvider } from "../extension/presets.mjs"
-import { specForModel } from "../specs.mjs"
 
 /**
  * §18 D-E3 eng-coder internal-spawn mechanical gate (AGENT-LOOP.md §18 D-E2 round5 #2
@@ -110,6 +111,14 @@ export function shouldAutoResume(asyncFlag, parent, ctx) {
  * （status:"queued" + position），任一 running settle → 队列头部自动补位启动。
  * 关键结构：settle 逻辑绑定 ENTRY 自身（entry._resolve / entry.start）——不同 execute
  * 调用之间互不串扰（本调用的 finish 不得去解析另一个调用的 entry.settled）。
+ * §19.5 (AGENT-LOOP.md §19.5 D-M5/D-M6)：条目级控制面——entry.controller（per-entry
+ * AbortController——cancel 定向 abort 只停该条目；childSignal abort 逐链传播——
+ * Ctrl+C/Stop 全停语义不变）；entry.cancelled 标记（settle 回调据此走 cancelled 分支：
+ * 不入 pending、不参与 collect 直注入、停止冻结通知）；D-M5 可决策字段
+ * （model/startedAt/turn/maxTurns——turn 由 runChild 的 onAgentTurn 回调同步，见
+ * subagent.mjs——startedAt 记于 entry.start = 实际启动时刻，elapsedSec 以它计算：
+ * 队列等待不计入运行时长）；entry._onCancelled = 停止冻结通知（onSubagent
+ * status:"cancelled"——spawn 上下文绑定——webview ⟦ev⟧stopped 冻结相位）。
  */
 export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild }) {
   parent._asyncSubagents = parent._asyncSubagents ?? new Map()
@@ -122,12 +131,32 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     // §17: the child's effective signal (session-first) — the settle callback reads it
     // to skip the pending transfer when the session was aborted (abort = discard).
     signal: childSignal,
+    // §19.5 D-M5 可决策字段（status 输出 + cancel 决策）——spawn 时装配。
+    model: provider.model ?? null,
+    maxTurns: parent.config?.agent?.subagentTurns ?? 100,
+    turn: 0,
+    startedAt: null, // entry.start 时记（实际启动时刻——elapsedSec = 运行时长，队列等待不计入）
+    // §19.5 D-M6: 条目级 AbortController + cancelled 标记 + 停止冻结通知器。
+    cancelled: false,
+    controller: null,
+    _onCancelled: null,
   }
   entry.settled = new Promise((res) => { entry._resolve = res })
+  // Per-entry controller chained to the shared child signal（D-M6 round2 #2 定稿——
+  // session/回合 abort 逐链传播保 Ctrl+C 全停；cancel 只 abort 本条目的 controller）。
+  entry.controller = new AbortController()
+  if (childSignal?.aborted) entry.controller.abort()
+  else childSignal?.addEventListener?.("abort", () => entry.controller.abort(), { once: true })
+  // 停止冻结通知：cancelled settle（或 queued 取消）时发给 spawn 上下文（webview 行 +
+  // 区块 stopped 冻结相位——不经当前调用者——挂起期 UI ⏹ 直连路径同样靠它渲染）。
+  entry._onCancelled = () => ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "cancelled" })
   entry.start = () => {
     entry.status = "running"
-    ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "started", startedAt: Date.now(), model: provider.model ?? null })
-    runChild().then(
+    entry.startedAt = Date.now()
+    // pool: true —— 异步池条目标记：webview 只有池条目（async spawn）的块挂 ⏹——
+    // 同步 spawn 同样发 started 但无池条目（cancel 路由定位不到——防无效 ⏹，审计 F1）
+    ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "started", startedAt: entry.startedAt, model: provider.model ?? null, pool: true })
+    runChild(entry).then(
       (report) => settleAsyncEntry(parent, entry, report, null, ctx.callbacks?.onAsyncSettled),
       (err) => settleAsyncEntry(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
     )
@@ -156,6 +185,9 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
  * 共享数组，跨 runAgent 调用存活；读取时刻为准，确定性）→ 延迟冻结：条目移交
  * history._pendingAsyncResults（由下个回合 prepareRun 前注入，D-S3 ② 记账点）并从池
  * 移除；正常回合内 settle 行为不变（留池，回合尾 collectSettledAsync 直注入 ①）。
+ * §19.5 D-M6 cancelled settle（第一分支）：entry.cancelled（cancel 定向中止）→ 不入
+ * pending、不参与 collect 直注入（无错误报告——陈旧结果零注入）——出池清理 + 停止冻结
+ * 通知（_onCancelled——webview stopped 相位）——腾槽补位照常。
  * 会话中止（entry.signal aborted）跳过移交并**出池清理**（2026-09-02 偏差修复 #2）——
  * abort 清池不注入陈旧错误，且 done 僵尸条目不得留在池里让 poolLive 恒真。
  */
@@ -163,11 +195,15 @@ function settleAsyncEntry(parent, entry, report, error, notifySettle) {
   entry.report = report
   entry.error = error
   entry.done = true
-  // 2026-09-02 偏差修复 #2（abort 分支出池清理）：中止的池项 = 丢弃（D-S5——abort 清池
-  // 不注入陈旧错误）。先前 aborted 项不移交 pending 也不出池——done 僵尸条目留在共享
-  // map，poolLive 恒真（释放窗口竞态后果 (a)：僵尸挂起会话、驱动器 waitForSettleOrWake
-  // 空转直到用户手动 Stop）。abort 分支做与挂起移交同构的出池清理：从池移除、不注入。
-  if (entry.signal?.aborted) {
+  // §19.5 D-M6 cancelled settle（round1 #1 + round2 #2 定稿）：entry.cancelled（cancel
+  // 动作 / UI ⏹）→ **不入 _pendingAsyncResults、不参与 collectSettledAsync 直注入**
+  // （无错误报告——陈旧结果零注入）——出池清理同 Ctrl+C 全停但只清该条目 + 停止冻结
+  // 事件（entry._onCancelled——webview ⟦ev⟧stopped 冻结——"stopped"）。
+  if (entry.cancelled) {
+    parent.history?._asyncSubagents?.delete(entry.id)
+    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
+    entry._onCancelled?.()
+  } else if (entry.signal?.aborted) {
     parent.history?._asyncSubagents?.delete(entry.id)
     parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
   } else if (parent.history?._suspended === true) {
@@ -289,6 +325,7 @@ export async function subagentCheck({ id, n }, ctx) {
     if (!entry) return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
     await entry.settled
     map.delete(idNum)
+    if (entry.cancelled) return JSON.stringify({ id, status: "cancelled", note: "cancelled before completion" })
     return entry.error != null
       ? JSON.stringify({ id, status: "error", error: entry.error })
       : JSON.stringify({ id, role: entry.role, status: "done", report: entry.report })
@@ -297,6 +334,7 @@ export async function subagentCheck({ id, n }, ctx) {
   if (pending.length === 0) return JSON.stringify({ done: true })
   const entry = await Promise.race(pending.map((e) => e.settled))
   map.delete(entry.id)
+  if (entry.cancelled) return JSON.stringify({ id: entry.id, status: "cancelled", note: "cancelled before completion" })
   return entry.error != null
     ? JSON.stringify({ id: entry.id, status: "error", error: entry.error })
     : JSON.stringify({ id: entry.id, role: entry.role, status: "done", report: entry.report })
@@ -322,180 +360,112 @@ function queuePosition(map, target) {
  * 注入——措辞对齐 §17 D-S1）。不消费：status 后接 check 无 n 冲突（不动 lastN）。
  * advisor fix #2：queued position 查询时实时计算（entry.position 是入队瞬间快照——
  * settle 腾槽补位后变陈旧；FIFO 队列顺序 == map 插入顺序）。
+ * §19.5 D-M5 status 全览增强（决定中止谁时看得清）：running 条目从裸 id 改结构化对象
+ * { id, role, model, elapsedSec, turn, maxTurns }——elapsedSec 计算于查询时
+ * （(now - entry.startedAt)/1000——startedAt 记于实际启动时刻）；queued 条目补 role；
+ * done 条目 { id, role }。单查（id）形态不变 + running 同字段。
  * 返回形态（JSON 字符串——工具结果契约）：
- * - 不带 id → { overview: { running: [id...], queued: [{id, position}], done: [id...] } }
- * - 带 id   → { id, role, status: "running" | "queued" | "done", position?, note? }
+ * - 不带 id → { overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}],
+ *   queued: [{id, role, position}], done: [{id, role}] } }
+ * - 带 id   → { id, role, status: "running"|"queued"|"done", position?/note?, model?/elapsedSec?/turn?/maxTurns? }
  * - 未知 id → { id, status: "error", error: "unknown async subagent id: <id>" }（与 check 同）
  */
+function statusEntryFields(entry, map) {
+  if (entry.done) return { id: entry.id, role: entry.role, status: "done", note: "settled this turn — unconsumed; fetch with action:'check' or it is auto-injected at turn end" }
+  if (entry.status === "queued") return { id: entry.id, role: entry.role, status: "queued", position: queuePosition(map, entry) }
+  return {
+    id: entry.id, role: entry.role, status: "running",
+    model: entry.model ?? null,
+    elapsedSec: entry.startedAt ? Math.max(0, Math.round((Date.now() - entry.startedAt) / 1000)) : null,
+    turn: entry.turn ?? 0,
+    maxTurns: entry.maxTurns ?? 100,
+  }
+}
 export function subagentStatus({ id }, ctx) {
   const map = ctx.agent._asyncSubagents
-  const note = "settled this turn — unconsumed; fetch with action:'check' or it is auto-injected at turn end"
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // advisor fix #3（同 check）
   if (idNum != null) {
     if (!map || !map.has(idNum)) {
       return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
     }
-    const entry = map.get(idNum)
-    if (entry.done) return JSON.stringify({ id, role: entry.role, status: "done", note })
-    if (entry.status === "queued") return JSON.stringify({ id, role: entry.role, status: "queued", position: queuePosition(map, entry) })
-    return JSON.stringify({ id, role: entry.role, status: "running" })
+    return JSON.stringify(statusEntryFields(map.get(idNum), map))
   }
   const overview = { running: [], queued: [], done: [] }
   for (const entry of map?.values() ?? []) {
-    if (entry.done) overview.done.push(entry.id)
-    else if (entry.status === "queued") overview.queued.push({ id: entry.id, position: queuePosition(map, entry) })
-    else overview.running.push(entry.id)
+    if (entry.done) overview.done.push({ id: entry.id, role: entry.role })
+    else if (entry.status === "queued") overview.queued.push({ id: entry.id, role: entry.role, position: queuePosition(map, entry) })
+    else overview.running.push(statusEntryFields(entry, map))
   }
   return JSON.stringify({ overview })
 }
 
-// ─── §19 escalate 动作（AGENT-LOOP.md §19 D-M4/F7——escalate.mjs 退役，执行逻辑 verbatim 并入）───
+// ─── §19.5 cancel 动作（AGENT-LOOP.md §19.5 D-M6——定向中止 + 控制面）───
 
-const escalateLabel = (m) => `${m.provider}:${m.model}`
-
-/**
- * §19 action:'escalate' handler — the retired escalate.mjs execution VERBATIM
- * (飞刀——consultModels 池选强模型 + WRITE 干活 + 术后报告；约束全保留：depth-0 only /
- * 工程模式禁用 / 池空 error / 模型选择校验 / relay 前缀 `sub:escalate <label> #N` 不变
- * ——TUI 区块路由零改动）。调用面：subagent.mjs execute 的 action 分流。
- */
-export async function escalateAction({ task, model }, ctx) {
-  const parent = ctx.agent
-  if (!task || typeof task !== "string") {
-    return "Error: escalate requires a task description with acceptance criteria"
-  }
-  // Depth guard: an escalate must not fly in another escalate (ESCALATE.md §1.3 US-F5)
-  if ((ctx.depth ?? 0) > 0) return "Error: escalate is only available at depth 0 (an escalate's work cannot be delegated again)"
-  // Engineering-mode backdoor guard (three-way review 2026-08-16): an escalate IS a
-  // coder sub-agent — subagent.mjs forbids role='coder' in engineering mode, and an
-  // unconditional coder escalate would bypass the design-token discipline. Fail closed
-  // and point at the engineering path, same as subagent does.
-  if (parent?.config?.agent?.engineering) {
-    return "Error: engineering mode is ON — escalate is unavailable (it spawns a coder sub-agent, which engineering mode forbids). Use subagent with role='eng-coder' and a designToken from advisor(type='design') instead."
-  }
-  // All consult models are escalate candidates (decision 2026-08-16: the 飞刀 hook checkbox
-  // was removed — every configured consultant can fly in; fewer knobs, less mental load).
-  const pool = parent?.config?.agent?.consultModels ?? []
-  if (pool.length === 0) return "Error: no escalate candidates — configure at least one consult model (agent.consultModels)"
-
-  // Model-pick tolerance: withPool lists candidates as "provider:model (effort)" —
-  // a model that copies the listing verbatim must still match (strip the suffix).
-  const wanted = typeof model === "string" ? model.replace(/\s+\([^)]*\)\s*$/, "").trim() : model
-  const pick = wanted
-    ? pool.find((m) => escalateLabel(m) === wanted)
-    : pool[0]
-  if (!pick) {
-    return `Error: "${model}" is not a consult candidate. Available: ${pool.map(escalateLabel).join(", ")}`
-  }
-
-  const build = ctx.buildProvider ?? buildProvider // test-injectable (consult.mjs parity)
-  const provider = await build(pick.provider)
-  if (!provider) return `Error: provider "${pick.provider}" not configured`
-  // Key precheck: fail BEFORE the child spawns, not at its first chat call — an
-  // auth failure there would surface as an escalate crash, misdiagnosing the cause.
-  if (!provider.apiKey?.trim()) {
-    return `Error: provider "${pick.provider}" has no API key — set it in Settings before flying it in`
-  }
-  let effortNote = ""
-  const withEffort = pick.effort
-    ? (() => {
-        // Clamp the pool's effort to the model's reasoningEffortEnum — an out-of-enum
-        // value makes provider/core throw on EVERY chat call (candidate dies on takeoff).
-        // Out-of-enum: DROP the effort entirely (the preset default may ALSO be out-of-enum
-        // for this override model).
-        const enumList = specForModel(pick.model).reasoningEffortEnum
-        if (enumList && !enumList.includes(pick.effort)) {
-          effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, dropped)`
-          const { reasoningEffort: _drop, ...rest } = provider
-          return rest
-        }
-        return { ...provider, reasoningEffort: pick.effort }
-      })()
-    : provider
-  const agentMod = await import("../agent.mjs")
-  const runner = ctx.runAgent ?? agentMod.runAgent
-
-  // advisor fix #1：与 spawn 共用跨 run 单调的 id 分配器（子代理 id 空间一致——escalate
-  // 的 onSubagent/panel 事件与 async 池不冲突）。
-  const subId = nextSubagentId(parent)
-  const tag = escalateLabel(pick)
-  ctx.callbacks?.onSubagent?.({ id: subId, role: "escalate", status: "started", startedAt: Date.now(), model: tag })
-
-  let output = ""
-  const sink = {}
-  const panel = (chunk) => ctx.callbacks?.onToolPanel?.(`sub:escalate ${tag} #${subId}`, chunk)
-
-  // No wall-clock watchdog — turn cap only (CLI parity, 2026-08-16): a fixed wall-clock
-  // aborts NORMAL-but-slow surgery (two max-effort consultants hit a 10min wall just
-  // READING files). Hang protection = FETCH_TIMEOUT (per LLM call) + user Stop (signal
-  // propagates directly). Turn-cap continue reuses the panel's onQuestion channel —
-  // the SAME y/n card the main agent's question tool uses; continues are UNLIMITED
-  // (each gives a fresh budget; Stop is always an option at the prompt).
-  const runOpts = (resume) => ({
-    depth: 1, role: "coder", // full write path: permission gate, recent-changes tracking
-    streamOutput: true, // exempt from the agent.mjs onToken depth gate (consult role parity)
-    maxTurns: parent.config?.agent?.subagentTurns ?? 100,
-    stateSink: sink,
-    resume,
-    // Resume hands the child its own conversation back — subagent history is otherwise
-    // throwaway per runAgent call (agent.mjs). sink.history is the LIVE array reference.
-    ...(resume ? { history: sink.history } : {}),
-  })
-  for (let resumes = 0; ; resumes++) {
-    try {
-      const report = await runner({ ...withEffort, model: pick.model }, ctx.cwd, task, {
-        // Full reasoning + output stream (consult-UI parity): a long surgery is silent
-        // without it — the panel shows WHAT the expert is thinking, not just tool calls.
-        onToken: (t) => { output += t; panel({ kind: "text", text: String(t ?? "") }) },
-        onReasoning: (r) => panel({ kind: "think", text: String(r ?? "") }),
-        onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
-        onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
-        onComplete: () => {},
-        onQuestion: ctx.callbacks?.onQuestion ?? null,
-      }, ctx.signal ?? null, true, runOpts(resumes > 0))
-      // Escalate mutations are the parent's mutations: verify/advisor guards must see them
-      mergeChildMutations(parent, sink)
-      ctx.callbacks?.onSubagent?.({ id: subId, role: "escalate", status: "done", model: tag })
-      return `escalate (${tag})${effortNote} post-op report:\n${report || output.slice(0, 4000)}${touchedFilesNote(sink, ctx.cwd)}`
-    } catch (e) {
-      // Even a failed surgery may have written files — merge whatever the child touched.
-      mergeChildMutations(parent, sink)
-      const msg = e?.message ?? String(e)
-      // User Stop must propagate (execute-tools.mjs rethrows AbortError — swallowing
-      // it keeps the parent running after the user asked to stop).
-      if (ctx.signal?.aborted || e?.name === "AbortError") {
-        ctx.callbacks?.onSubagent?.({ id: subId, role: "escalate", status: "error", error: msg, model: tag })
-        throw e
-      }
-      // Turn-cap exhaustion is not a crash: offer to continue from the current context
-      // (main-agent panel-chat parity — "reached N turns. Continue?"), resuming with
-      // resume:true + the child's own history. No onQuestion (headless) or declined →
-      // partial-work return. Unlimited continues — the user can Stop at any prompt.
-      if (e instanceof agentMod.ContinueError) {
-        if (ctx.callbacks?.onQuestion) {
-          const go = await ctx.callbacks.onQuestion(
-            `飞刀 ${tag} reached ${e.turns} turns (limit). Continue from here?`,
-            ["Continue", "Stop"],
-          )
-          if (go === "Continue") continue
-        }
-        return `escalate (${tag}) stopped: turn cap reached (${e.turns} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}${touchedFilesNote(sink, ctx.cwd)}`
-      }
-      ctx.callbacks?.onSubagent?.({ id: subId, role: "escalate", status: "error", error: msg, model: tag })
-      return `escalate (${tag}) error: ${msg}\nPartial output: ${output.slice(0, 2000)}${touchedFilesNote(sink, ctx.cwd)}`
-    }
-  }
+/** §19.5 模型可见取消提醒（D-M6 round2 #3——形态仿 injectAsyncResult：短 user-role
+ *  提醒、XML 转义；cancelled settle 不入 pending/不直注入（无错误报告）——取消事实与
+ *  半成品警示靠这条注入对模型可见）。注入点 = 机读线（模型通道）；人读线由 UI 冻结相位
+ *  （区块 stopped + 面板行）承载。 */
+function injectCancelReminder(parent, entry, wasQueued) {
+  if (!parent?.history) return
+  const body = wasQueued
+    ? `[System reminder: subagent ${entry.role}#${entry.id} cancelled by user (was queued — never started)]`
+    : `[System reminder: subagent ${entry.role}#${entry.id} cancelled by user — partial changes not merged/audited]`
+  parent.history.push({ role: "user", content: escapeXml(body) })
 }
 
-/** Relative touched-file list appended to every escalate return (sink paths are absolute). */
-function touchedFilesNote(sink, cwd) {
-  const touched = sink?.touchedFiles ?? []
-  if (touched.length === 0) return ""
-  const shown = touched.map((f) => {
-    const r = relative(cwd ?? process.cwd(), f)
-    return r && !r.startsWith("..") && !isAbsolute(r) ? r : f
-  })
-  return `\nTouched files: ${shown.join(", ")}`
+/**
+ * §19.5 action:'cancel' handler + UI ⏹ 共用核心（D-M6）——定向中止单个后台 async 子代理：
+ * - id 必填（防误全停——省略/未知/已完成 → error JSON——全停走 Ctrl+C / Stop）；
+ * - queued 目标（未启动——无 abort）：**出队移除 + position 释放**（queuePosition 实时
+ *   计算——后续条目自动前移）+ 返回 {id, status:"cancelled", was:"queued"}——无 abort；
+ * - running 目标：置 entry.cancelled + abort 条目级 controller（entry.controller——
+ *   round2 #2 定稿）→ 子代理 runAgent signal → settle 回调的 cancelled 分支完成出池
+ *   清理 + 停止冻结通知（_onCancelled）+ 槽位补位（settle 公共段——T-M21）——其余
+ *   子代理/挂起会话不受影响（只动本条目）；
+ * - 取消事实 + 半成品警示 = 机读线 user-role 提醒注入（injectCancelReminder——模型可见）。
+ * 调用面：subagent.mjs execute（action:"cancel"——ctx.agent 即 parent）与 extension 层
+ * UI ⏹ 路由（panel-messages.mjs——以 live lines 的池 map + history 构造 parent）。
+ */
+export function cancelSubagent(parent, id) {
+  const map = parent._asyncSubagents
+  const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // advisor fix #3（同 check/status）
+  if (idNum == null) {
+    return JSON.stringify({ status: "error", error: "cancel requires an id — pass the target subagent's id (no id = no-op; Ctrl+C / the Stop button stop everything)" })
+  }
+  if (!map || !map.has(idNum)) {
+    return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
+  }
+  const entry = map.get(idNum)
+  if (entry.done) {
+    return JSON.stringify({ id, status: "error", error: `async subagent id ${id} has already finished — nothing to cancel; fetch its report with action:'check'` })
+  }
+  if (entry.status === "queued") {
+    entry.cancelled = true
+    map.delete(idNum)
+    injectCancelReminder(parent, entry, true)
+    entry._resolve?.(entry) // 释放可能的并发等待者（check 挂起——不悬挂）
+    entry._onCancelled?.()
+    return JSON.stringify({ id, status: "cancelled", was: "queued" })
+  }
+  // running 目标：幂等（审计 F2——settle 前重复 cancel/UI ⏹ 双击不重复注入提醒——
+  // abort 本身幂等——二次取消仅返回确认）。
+  if (!entry.cancelled) {
+    entry.cancelled = true
+    entry.controller?.abort()
+    injectCancelReminder(parent, entry, false)
+  }
+  return JSON.stringify({ id, status: "cancelled" })
+}
+
+/**
+ * §19.5 action:'cancel' execute 分支——depth-0 only（子代理上下文无 async 池——
+ * cancel 无意义；受限 eng-coder 变体已被 §19 的 spawn-only 门先行拒绝）。
+ */
+export function cancelSubagentAction({ id }, ctx) {
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "cancel is only available at the top level — subagent contexts have no async pool (AGENT-LOOP.md §19.5 D-M6)" })
+  }
+  return cancelSubagent(ctx.agent, id)
 }
 
 /**
@@ -503,12 +473,14 @@ function touchedFilesNote(sink, cwd) {
  * (CLI mergeChildMutations parity): the parent's advisor/verify guards must see
  * delegated file changes. Fresh code → fresh convergence budget: a verify/advisor
  * pass earned on the pre-delegation code is stale the moment the child writes.
- * Shared by subagent (eng-coder spawn) and the escalate action — three-way review
- * 2026-08-16: escalate's local copy skipped the resets, letting surgery bypass
- * the parent's verify/advisor gates. Moved here in the §19 merge (2026-09-03):
- * the escalate action handler lives in this module — defining the merger here
- * keeps the module graph cycle-free (subagent.mjs re-exports it; no consumer
- * changed).
+ * Shared by the eng-coder spawn merge (subagent.mjs runChild) and the escalate
+ * engine (subagent-escalate.mjs) — three-way review 2026-08-16: escalate's local
+ * copy skipped the resets, letting surgery bypass the parent's verify/advisor
+ * gates. Defined here so subagent.mjs re-exports it (no consumer changed) and
+ * subagent-escalate.mjs imports it one-way (module graph cycle-free).
+ * §19.5 (AGENT-LOOP.md D-M6 round2 #3): the CANCEL path never reaches this
+ * function — runChild checks entry.cancelled BEFORE merging (partial changes are
+ * NOT merged into the parent guards; the cancel reminder says so).
  */
 export function mergeChildMutations(parent, sink) {
   const touched = sink?.touchedFiles ?? []

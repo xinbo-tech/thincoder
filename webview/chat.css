@@ -300,6 +300,29 @@
 .advisor-think { opacity: 0.55; }
 .advisor-tool-line { color: var(--accent); opacity: 0.8; margin-top: 2px; }
 
+/* §19.5 D-M8 嵌套子代理子标（块内行首 dim 归属标记——"explore#1 · …"） */
+.advisor-sub { opacity: 0.55; font-style: italic; }
+
+/* §19.5 D-M7 子代理块 ⏹ 停止控件（仅 running 显示——done/stopped 后移除）。
+   块级 overlay：absolute 定位在标题行右缘——不改变 summary 文本/折叠语义。 */
+.advisor-block.sub-block { position: relative; }
+.sub-stop-btn {
+  position: absolute;
+  top: 1px;
+  right: 6px;
+  padding: 0 5px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.sub-stop-btn:hover { opacity: 1; transform: scale(1.15); }
+/* ⟦ev⟧stopped 冻结标记（标题行 " · stopped"——dim） */
+.sub-stopped { opacity: 0.55; font-style: italic; }
+
 .error-text { flex: 1; }
 .error-retry-btn {
   margin-top: 6px;
@@ -388,6 +411,7 @@
 
 
 .sub-status.terminated { color: var(--muted, #888); }
+.sub-status.cancelled { color: var(--muted, #888); } /* §19.5 D-M6 stopped 行态（与 terminated 同灰——interrupted 语义） */
 
 /* Consultation reply preview (collapsible, inside the subagent panel row) */
 .sub-item .consult-reply { width: 100%; margin-top: 4px; font-size: 12px; }

@@ -12,6 +12,9 @@ import {
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
+// §19.5 D-M7: subagent block stop controls (⏹ add-on-create when running) — no cycle:
+// panels.js never imports streaming.js.
+import { subBlockTarget, updateBlockStopButtons } from "./panels.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
 // markdown + innerHTML on EVERY chunk is O(n²) and floods the main thread — the backlog
@@ -220,7 +223,10 @@ export function advisorChunk(m) {
 
 /** Subagent/consultant activity stream — same in-conversation details block as the
  *  advisor, one block per subagent label ("sub:explore", "sub:consult glm:glm-5.2" ...).
- *  Collapses when done so a busy turn with several children stays readable. */
+ *  Collapses when done so a busy turn with several children stays readable.
+ *  §19.5 D-M7/D-M8: 块创建时按面板行状态装 ⏹（仅 running——T-M23；终态由
+ *  handleSubagentMessage 移除）；chunk 携带的 `sub`（嵌套内层 spawn 段标——如
+ *  "explore#1"）随 appendAdvisorChunk 渲染为行首 dim 子标 span。 */
 export function subagentChunk(m) {
   let block = S._subBlocks.get(m.name)
   if (!block) {
@@ -230,8 +236,17 @@ export function subagentChunk(m) {
     if (ctx.currentBlock) ctx.currentBlock.appendChild(block)
     else ctx.messagesEl.appendChild(block)
     S._subBlocks.set(m.name, block)
+    const target = subBlockTarget(m.name)
+    // §19.5 D-M7: ⏹ 仅池条目（async spawn——行态 started + pool 标记）——同步 spawn
+    // 块不挂（cancel 路由只认池——审计 F1）。
+    if (target) {
+      const row = S._subagentMap[target.id]
+      if (row?.status === "started" && row.pool) {
+        updateBlockStopButtons(target.role, target.id, true)
+      }
+    }
   }
-  appendAdvisorChunk(block, m.kind ?? "tool", m.text)
+  appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
   _advisorScrollDirty = true
   scheduleStreamRender()
 }
