@@ -1110,3 +1110,39 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 7. 本节状态同步"设计批准"（即本段——token 已签发——实现排队）
 8. CHANGELOG 记录（round2 #6——本节 CLI 行为变更（面板回收时序）——父代理统一批记录——§19 sweep 惯例——§17.5 同）
 
+### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——待评审）
+
+> 状态：设计定稿，待评审。触发：用户实测困惑（eng-coder#9 完成且已消化仍挂面板）——模型侧只有"池视图"（_asyncSubagents）——用户看到的是"面板视图"（TUI state.subTasks——驻留 awaitingDigest 等）——**池与面板两个状态机模型看不到面板那半——无法自查解释 UI 怪相/诊断池↔面板脱节**。用户裁定：**面板视图 + 干预（可修异常驻留块——补发冻结）**——把 UI 修复能力交给模型。
+
+#### 19.6.1 需求
+
+- F-P1：模型可查**面板视图**（TUI 运行面板正在显示的区块——与用户所见一致）
+- F-P2：模型可对**异常驻留块**（digest 已完成仍驻留 awaitingDigest）触发**补发冻结回收**
+- F-P3：headless/无面板会话降级（池视图）
+
+#### 19.6.2 设计（D-P1..P4）
+
+**D-P1 面板镜像**：TUI 装配处（index.mjs state._agent = agent——state 挂 agent 引用）→ subagent-blocks 的 state.subTasks 变更点（ensureSubTaskKey/冻结家族/删除/routeSub*）同步写 agent._panelSnapshot（区块数组快照：{key, role, status: running|done|awaitingDigest, elapsedSec, frozen: bool}——状态变更即刷新——O(n) 小）——agent 层工具可读。
+
+**D-P2 subagent action:"panel"**（subagent.mjs——readonly 面）：
+- 参数 {view?: bool（默认 true——返回镜像区块列表）, freeze?: key}——单动作双参（互斥——freeze 优先）
+- view 返回：_panelSnapshot（无镜像——headless——返回池视图 + 注明 no panel）
+- freeze:key → 门控（D-P3）通过 → 发 key + "/" + 哨兵 done token（onToken——settle 同机制——TUI routeSubToken 冻结回收）
+
+**D-P3 冻结门控（安全）**：仅允许冻结 awaitingDigest 且池无对应运行条目（= 已消化驻留块——pending 已消费——状态滞后）——pending 仍有对应（报告未达模型）拒绝（提前回收破坏消化顺序）——不存在的 key/仍 running 的块拒绝——错误信息明确
+
+**D-P4 语义定位**：这是 §17.5.5（digest 完成逐条冻结）的**工具面冗余通道**——代码修复后异常驻留自然消失——panel 工具是诊断 + 兜底干预（模型解释怪相 + 修旧会话残留）——不替代机制修复
+
+**受影响文件**：src/agent-tools/subagent.mjs（panel action）、src/tui/index.mjs（state._agent 挂载）、src/tui/subagent-blocks.mjs（镜像写入点）、测试（subagent 工具 panel 用例 + 镜像同步用例——headless 降级/门控拒绝/成功冻结）
+
+#### 19.6.3 测试（硬验收）
+
+- T-P1：面板 2 块（1 running + 1 awaitingDigest 已消化）——view 返回镜像（状态准确）
+- T-P2：freeze 已消化驻留块 → done token 发出 → 块冻结回收（mock TUI 断言）
+- T-P3：freeze pending 有对应的块 → 拒绝（不破坏消化顺序）
+- T-P4：freeze running 块 → 拒绝
+- T-P5：headless（无镜像）→ view 降级池视图——freeze 报不可用
+- T-P6：镜像同步（state.subTasks 变更 → _panelSnapshot 刷新——mock 断言）
+
+**验收**：AC-P1 = 面板视图与用户所见一致（T-P1/P6）；AC-P2 = 门控安全（T-P3/P4——不破坏消化顺序/不误冻 running）；AC-P3 = 降级（T-P5）
+
