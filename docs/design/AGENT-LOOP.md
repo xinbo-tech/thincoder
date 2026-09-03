@@ -1,6 +1,6 @@
 # Agent 主循环设计（thincoder/src/agent.mjs + agent/）
 
-> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展））。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
+> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5/§19.6——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展/panel 检查））。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
 
 ## 1. 模块地图
 
@@ -1112,7 +1112,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——待评审）
 
-> 状态：设计定稿，待评审。触发：用户实测困惑（eng-coder#9 完成且已消化仍挂面板）——模型侧只有"池视图"（_asyncSubagents）——用户看到的是"面板视图"（TUI state.subTasks——驻留 awaitingDigest 等）——**池与面板两个状态机模型看不到面板那半——无法自查解释 UI 怪相/诊断池↔面板脱节**。用户裁定：**面板视图 + 干预（可修异常驻留块——补发冻结）**——把 UI 修复能力交给模型。
+> 状态：设计批准（2026-09-03 round1 通过——0🔴——9 项 advisory 处置注见 19.6.4——designToken 已签发）。触发：用户实测困惑（eng-coder#9 完成且已消化仍挂面板）——模型侧只有"池视图"（_asyncSubagents）——用户看到的是"面板视图"（TUI state.subTasks——驻留 awaitingDigest 等）——**池与面板两个状态机模型看不到面板那半——无法自查解释 UI 怪相/诊断池↔面板脱节**。用户裁定：**面板视图 + 干预（可修异常驻留块——补发冻结）**——把 UI 修复能力交给模型。
 
 #### 19.6.1 需求
 
@@ -1122,18 +1122,18 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 #### 19.6.2 设计（D-P1..P4）
 
-**D-P1 面板镜像**：TUI 装配处（index.mjs state._agent = agent——state 挂 agent 引用）→ subagent-blocks 的 state.subTasks 变更点（ensureSubTaskKey/冻结家族/删除/routeSub*）同步写 agent._panelSnapshot（区块数组快照：{key, role, status: running|done|awaitingDigest, elapsedSec, frozen: bool}——状态变更即刷新——O(n) 小）——agent 层工具可读。
+**D-P1 面板镜像**：TUI 装配处（index.mjs state._agent = agent——state 挂 agent 引用）→ subagent-blocks 的 state.subTasks 变更点（ensureSubTaskKey/冻结家族/删除/routeSub*）同步写 agent._panelSnapshot（区块数组快照：{key, role, status: running|done|awaitingDigest, startedAt（读时算 elapsedSec——round1 #4）}——状态变更即刷新——O(n) 小）——agent 层工具可读。
 
 **D-P2 subagent action:"panel"**（subagent.mjs——readonly 面）：
 - 参数 {view?: bool（默认 true——返回镜像区块列表）, freeze?: key}——单动作双参（互斥——freeze 优先）
-- view 返回：_panelSnapshot（无镜像——headless——返回池视图 + 注明 no panel）
-- freeze:key → 门控（D-P3）通过 → 发 key + "/" + 哨兵 done token（onToken——settle 同机制——TUI routeSubToken 冻结回收）
+- view 返回：_panelSnapshot——**awaitingDigest 条目交叉 _pendingAsyncResults 标注 digested（agent 侧读时增强——round1 #3）**——无镜像（headless/VS Code——round1 #1：VS Code webview 无 state.subTasks 对应物——恒降级池视图 + no panel——CLI-only 完整能力——7.2.3.2 #8 先例）
+- freeze:key → 门控（D-P3）通过 → 发 key + "/" + 哨兵 done token（onToken——settle 同机制字面格式——TUI routeSubToken 冻结回收）——**落位：复用既有 sub._freezeAt（若仍在——settle 锚点 splice）——否则 §17.5.5 同口径尾推兜底并注明（round1 #2）**
 
 **D-P3 冻结门控（安全）**：仅允许冻结 awaitingDigest 且池无对应运行条目（= 已消化驻留块——pending 已消费——状态滞后）——pending 仍有对应（报告未达模型）拒绝（提前回收破坏消化顺序）——不存在的 key/仍 running 的块拒绝——错误信息明确
 
 **D-P4 语义定位**：这是 §17.5.5（digest 完成逐条冻结）的**工具面冗余通道**——代码修复后异常驻留自然消失——panel 工具是诊断 + 兜底干预（模型解释怪相 + 修旧会话残留）——不替代机制修复
 
-**受影响文件**：src/agent-tools/subagent.mjs（panel action）、src/tui/index.mjs（state._agent 挂载）、src/tui/subagent-blocks.mjs（镜像写入点）、测试（subagent 工具 panel 用例 + 镜像同步用例——headless 降级/门控拒绝/成功冻结）
+**受影响文件（round1 #5 补）**：src/agent-tools/subagent.mjs（panel action + 门禁分类——view/freeze 归只读/控制类——planMode/审批/受限变体（eng-coder 内拒绝）/digest 动作域四表扩展）、src/agent/dispatch.mjs（分类接线）、src/tui/index.mjs（state._agent 挂载）、src/tui/subagent-blocks.mjs（镜像写入点）、测试（subagent 工具 panel 用例 + 镜像同步用例——headless 降级/门控拒绝/成功冻结）
 
 #### 19.6.3 测试（硬验收）
 
@@ -1144,5 +1144,18 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - T-P5：headless（无镜像）→ view 降级池视图——freeze 报不可用
 - T-P6：镜像同步（state.subTasks 变更 → _panelSnapshot 刷新——mock 断言）
 
-**验收**：AC-P1 = 面板视图与用户所见一致（T-P1/P6）；AC-P2 = 门控安全（T-P3/P4——不破坏消化顺序/不误冻 running）；AC-P3 = 降级（T-P5）
+**NF-P（round1 #8 补）**：镜像刷新成本 O(n) 每块级变更（n ≤ N2 500 环形上限——不逐 token 刷）；六动作描述预算复核（§19.4 N1 扩展——T-M12 断言同步扩）；panel 归只读/控制类——不触项目文件
 
+**验收（round1 #6——T-P 实现前展开为 N/E/A 完整用例表——eng-coder 硬验收项）**：AC-P1 = 面板视图与用户所见一致（T-P1/P6）；AC-P2 = 门控安全（T-P3/P4）；AC-P3 = 降级（T-P5）；AC-P4 = CLI-only 声明落地（round1 #1）
+
+#### 19.6.4 round1 评审处置（2026-09-03——0🔴 通过——9 项）
+
+1. VS Code CLI-only 降级声明（D-P2——webview 无 state.subTasks 对应物——7.2.3.2 #8 先例——AC-P4）
+2. freeze token 字面格式 + 落位规则（复用 _freezeAt 若在——否则尾推兜底注明）
+3. view 交叉 _pendingAsyncResults 标注 digested（模型可定位异常块）
+4. frozen 死字段删除 + startedAt 读时算 elapsed
+5. action 门禁分类（view/freeze 只读/控制类——planMode/审批/受限变体/digest 四表——受影响文件补 dispatch.mjs）
+6. T-P 实现前展开 N/E/A 完整用例表（eng-coder 硬验收）
+7. scope 最小面（view 优先——freeze 门控从严——CHANGELOG 诊断定位——不叠新能力）
+8. NF-P 段补（快照成本界/六动作预算复核 T-M12 扩展）
+9. 状态行同步（顶部刷新枚举含 §19.6）
