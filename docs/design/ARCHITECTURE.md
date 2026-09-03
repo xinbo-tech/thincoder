@@ -587,4 +587,13 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 
 **续跑轮注（2026-09-03——前次 eng-coder id:10 中断后续接）**：前次实现完成代码 + 文档 + 审计 #1 修正后被中断于全量测试（测试进程群被杀——残留进程疑点经本轮排查无复现）。续跑轮以**逐文件带硬超时**（100s/文件）重跑全量 50 个测试文件——**零失败、零挂起**（最长单文件 tools.test 61.5s；suspension.test 3.9s 通过——settle 分流改动无挂起根因）。中断根因判断为进程管理而非测试缺陷：`node --test` 全量单次调用的并行子进程在驱动进程被杀后成孤儿残留——本轮全部测试均在 execute 超时帽内独立进程完成。验收 AC-M6..M10 逐项绿（见上文测试清单——全量回归 T-M26 = 50 文件全绿）。
 
+### §20 子 agent 任务调度器（2026-09-03 · 引用，AGENT-LOOP.md §20）
+
+需求/设计/用例见 CLI `docs/design/AGENT-LOOP.md` §20（F-SD1..5/D-SD1..SD5/20.4 处置注/20.5 实现记录——单一权威源，本文件不复制）——本端同规格镜像 + T-SD 镜像子集（round1 #4）。**结构差异**：池沿 `history._asyncSubagents` 跨 runAgent 存活（agent.mjs :115 重建绑定 + :497 回写）——调度元数据（`entry._files`/`_dependsOn`/`_waitKind`）随池条目；**终态墓碑沿 history 载体**（`history._asyncTombstones`——check/注入消费与取消写入——agent.mjs 重建不丢）；无独立 `_asyncQueue`——队列序 = 池 Map 插入序（queued 过滤——`queuePosition` 先例）；**AUTO 档 = `ctx.getAuto` 活读**（无 autoApprove 字段——execute-tools 注入 live getter——条目 `_auto` 绑定 spawn 上下文，settle 无 ctx 路径照读——T-SD9b）。settle 即翻 `entry.status = "done"`（CLI parity——D-A1 上限口径——修补位/准入计数失真）。
+
+**落点（符号锚）**：`src/agent-tools/subagent-async.mjs`（调度核心 `normalizeFileList`/`filesOverlap`/`depInfo`/`describeBlockers`/`queueRunnable`/`refreshQueuedRows`/`dependentLabels`/`assertNoDepCycle` + `refillPool`（最早可启动扫描——waiting 越行不阻塞槽位）+ `spawnAsyncSubagent` 准入落点（等待态强制 queued 不占槽——spawn 返回带 waiting/reason——排队即发 queued 行通知）+ `settleAsyncEntry`（释放点 + 墓碑 + 行刷新）+ `cancelSubagent`（queued 出队墓碑/依赖者注记/`was:"queued"` 通知——running 取消经 settle cancelled 分支墓碑）+ `subagentCheck` 消费墓碑 + `subagentStatus` queued waiting/reason + `injectAsyncResult` 墓碑）、`src/agent-tools/subagent.mjs`（schema `files`/`dependsOn` + 描述调度段 + execute 准入（unknown 拒/环拒/sync 冲突 error——T-SD10/5/13））、webview `panels.js`（§20 waiting 行——queued 建行/刷新覆盖/started 转 running/cancelled+was:"queued" 移除行/suspension 退出清 queued 残留）+ `chat.css`（queued 行态）、`locales/en.json`+`zh.json`（`sub.queued`）、测试（`test/subagent.test.mjs` §20 节——T-SD1..14 镜像子集 10 池层用例 + `test/ui.test.mjs` §20 waiting 行 2 用例）。**提醒注入点结构差异（CLI 20.5 偏差 4 的 VS Code 镜像）**：running 依赖取消的模型提醒——CLI 在 settle-finally cancelled 分支注入；VS Code 沿 §19.5 既有形态在 cancel 调用点注入（幂等守卫 !entry.cancelled——两次取消不重复）——依赖者注记同点随行（T-SD9c）。
+
+**测试（2026-09-03）**：VS Code `npm test` 全绿（T-SD 镜像子集——10 池层用例 + webview 行 2 用例 + 既有 T-M21/advisor#2 断言按 D-SD3b supersede 同步）。**code review 处置（CLI AGENT-LOOP.md §20.6 同载）**：check depc 锁守卫 + 结构性 no-running 守卫（subagentCheck——指定 id/arrival 双分支——done 条目即时消费不误伤）+ purgePending（消费 × 挂起移交双送达守卫）+ AUTO 取消注记实况化——随批测试锁定。**形态分叉明示**：在途 check 观察到 cancelled 目标 VS Code 返回 `{status:"cancelled"}`（CLI 为 unknown-id 错误）——各自既有测试断言形态（§19.5）——有意保留。偏差与行数债随 CLI AGENT-LOOP.md §20.5 同载（subagent-async 超 500 硬顶——并入拆分轮——本交付不新拆）。
+
+
 

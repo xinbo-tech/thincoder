@@ -46,14 +46,18 @@ export function renderSubagentPanel() {
     // §17: "settled" = the child finished while the suspension session is active —
     // "done · awaiting digestion" intermediate state, stays in the panel until the
     // pool drains (the session-exit freeze then flips it to done).
+    // §20 D-SD3b: "queued" rows = scheduler wait states (spawn-return visibility —
+    // waiting-deps reason / slot position in the tool column; no ⏹ — never started).
     const statusCls = s.status === "started" ? "started"
       : (s.status === "done" || s.status === "answered") ? "done"
+      : s.status === "queued" ? "queued"
       : s.status === "settled" ? "settled"
       : s.status === "terminated" ? "terminated"
       : s.status === "cancelled" ? "cancelled" // §19.5 D-M6（stopped 冻结——行态灰色）
       : "error"
     const statusText = s.status === "started" ? t("sub.running")
       : s.status === "answered" ? t("consult.answered")
+      : s.status === "queued" ? (t("sub.queued") || (s.waiting === "dependency-cancelled" ? "dependency cancelled" : "queued"))
       : s.status === "settled" ? t("sub.awaitingDigest")
       : s.status === "terminated" ? t("consult.terminated")
       : s.status === "failed" ? t("consult.failed")
@@ -62,7 +66,9 @@ export function renderSubagentPanel() {
     // Rows with a model tag (consult, escalate) show it so parallel consultants and
     // the flown-in escalate are distinguishable (three-way review 2026-08-16 — surgeon
     // rows rendered as a bare "surgeon" even though the event carries the model).
-    const label = s.model ? `${s.role} · ${s.model}` : s.role
+    // §20: queued rows show the wait annotation in the tool column
+    // （waiting for:/dependency cancelled: 恒标——slot 等位 `queued · position N`）。
+    const label = s.model ? `${s.role} · ${s.model}` : (s.status === "queued" ? `${s.role} · ${s.waiting ?? "waiting"}` : s.role)
     // answered consults carry a collapsible preview of the reply (review D10)
     const preview = s.role === "consult" && s.replyPreview
       ? `<details class="consult-reply"><summary>${t("consult.replyPreview") || "view reply"}</summary><pre>${escHtml(s.replyPreview)}</pre></details>`
@@ -211,6 +217,26 @@ export function freezeStoppedBlocks(role, id) {
 
 /** subagent message: track lifecycle; collapse activity blocks on terminal state. */
 export function handleSubagentMessage(m) {
+  if (m.status === "queued") {
+    // §20 D-SD3b：排队 spawn 行（spawn 返回即见——waiting 标注/等位——CLI waiting 块
+    // 的 webview 行等价）。重复 queued 消息（位置/等待态刷新——cancel 前移/依赖终态
+    // 转移）覆盖式更新行内容；启动（started）后行转 running——cancelled（was:"queued"）
+    // 移除行（不冻结——从未启动无活动块）。
+    const prev = S._subagentMap[m.id]
+    S._subagentMap[m.id] = {
+      role: m.role, status: "queued", startedAt: prev?.startedAt ?? Date.now(),
+      // 等待标注显示于 tool 列：waiting for:/dependency cancelled: 原因恒标（不静默——
+      // NF-SD）；slot 等位 = `queued · position N`。
+      tool: m.reason ?? (m.position != null ? `queued · position ${m.position}` : "queued"),
+      model: null, pool: false,
+      position: m.position ?? prev?.position ?? null,
+      waiting: m.waiting ?? prev?.waiting ?? null,
+      reason: m.reason ?? prev?.reason ?? null,
+    }
+    renderSubagentPanel()
+    renderStatusBar()
+    return
+  }
   if (m.status === "started") {
     S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), tool: null, model: m.model ?? null, pool: !!m.pool }
     // §19.5 D-M7: 仅池条目（async spawn——m.pool——cancel 路由可达）的块挂 ⏹；同步
@@ -245,8 +271,14 @@ export function handleSubagentMessage(m) {
     }
     // §19.5 ⟦ev⟧stopped（D-M6 cancelled settle → 冻结相位）：区块以 interrupted 语义
     // 冻结——折叠 + 标题 stopped 标记（T-M22/T-M23 webview 断言）。
+    // §20 D-SD3b：cancelled 带 was:"queued" = queued 取消（从未启动——无活动块可冻结）
+    // → 行移除（不留 stopped 残行——CLI waiting 块移除同语义）。
     if (m.role !== "consult" && m.status === "cancelled") {
-      freezeStoppedBlocks(m.role, m.id)
+      if (m.was === "queued") {
+        delete S._subagentMap[m.id]
+      } else {
+        freezeStoppedBlocks(m.role, m.id)
+      }
     }
   }
   renderSubagentPanel()
@@ -271,6 +303,12 @@ export function handleSuspensionMessage(m) {
         s.doneAt = Date.now()
         collapseSubBlocks(s.role, id)
       }
+    }
+    // §20 D-SD3b：会话退出（含 Stop 全停——池被清空）时移除残留 waiting 行（queued——
+    // 池空/清池后无对应条目——CLI freezeAllSubTasks 兜底清场的 webview 等价；自然退出
+    // 池空本就无 queued 行——no-op）。
+    for (const id of Object.keys(S._subagentMap)) {
+      if (S._subagentMap[id].status === "queued") delete S._subagentMap[id]
     }
   }
   renderSubagentPanel()

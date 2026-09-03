@@ -30,6 +30,9 @@ import {
   auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent,
   subagentCheck, subagentStatus, cancelSubagentAction,
   mergeChildMutations, nextSubagentId, cancelSubagent,
+  // §20 调度器（AGENT-LOOP.md §20——D-SD1..SD5——CLI 同规格镜像）：文件域归一化/依赖态/
+  // 等待态/环防御。
+  normalizeFileList, depInfo, describeBlockers, assertNoDepCycle,
 } from "./subagent-async.mjs"
 import { escalateAction } from "./subagent-escalate.mjs" // §19 escalate 引擎（2026-09-03 拆出——500 行纪律——verbatim 迁移）
 // Re-export shim (2026-09-03 split/merge): the machinery + §19 action handlers moved to
@@ -157,6 +160,7 @@ export const subagentTool = {
     "- escalate — fly in a stronger model for hard implementation (task required; optional model = 'provider:model' from the consult models pool, default the first): the expert gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification) that you review and relay. Terminology: escalate is the ONLY name — the action and the expert role are both 'escalate'; 飞刀 is the Chinese alias. When the user says 飞刀 / escalate / 'fly in <model>', call action:'escalate' directly — never via a script importing the module. Not available in engineering mode (implementation goes through eng-coder subagents). For parallel READ-ONLY opinions use consult_start instead.\n\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
     "Async mode (async: true): spawn WITHOUT waiting — the tool returns {id, role, status} immediately and you can keep working (checking files, running other tools). Fetch results later with action:'check' (arrival order — fastest first); to check progress WITHOUT blocking your turn use action:'status' — action:'check' blocks until the target finishes; stop a runaway with action:'cancel' (its id); unchecked results are auto-injected into the session at turn end, so nothing is lost. Role-based default (§18): role='eng-coder' spawns ASYNC by default — its internal delivery protocol (implementation → explore divergence audit → self-fix → advisor re-review → converged delivery) runs fully inside the child and settles in the background; pass async:false to force the blocking spawn when you must handle the report in this same turn. Every other role defaults to the blocking spawn. Use async when the main session must keep moving in parallel; use the default blocking spawn when you need the report before continuing.\n\n" +
+    "Task scheduling (AGENT-LOOP.md §20): declare the scheduling metadata to let the SCHEDULER order your spawns — files: the file paths this task will modify, dependsOn: ids from prior async spawn returns whose outcome this task needs. Overlapping-file tasks are serialized and dependent tasks are started in order automatically: a spawn that would conflict, or whose dependencies have not settled, queues instead of running ({id, status:'queued', position, waiting, reason} — the waiting task auto-starts when the conflict clears / its dependency settles; cancel a queued task to drop it). A spawn whose dependency was cancelled or failed stays queued and marked \"dependency cancelled\" until you decide (cancel it) — in an AUTO session it starts by itself. Referencing an unknown id errors; an id already consumed by check counts as satisfied. Omit both parameters for the plain immediate spawn (no scheduler involvement).\n\n" +
     "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
     "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). Receives git context auto-injected (branch, recent commits, working-tree state) when the project is a git repo. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
     "- plan — read-only implementation planning. Same read/search toolset; NEVER edits files. Returns a step-by-step plan for the parent to execute.\n" +
@@ -178,6 +182,8 @@ export const subagentTool = {
       designToken: { type: "string", description: "Required when role='eng-coder' (spawn): the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder' (spawn): the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
       async: { type: "boolean", description: "(spawn) true = spawn without waiting — returns {id, status} immediately, fetch results later via action:'check' (peek without blocking via action:'status'; stop via action:'cancel'). Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },
+      files: { type: "array", items: { type: "string" }, description: "(spawn) the file write-domain this task declares (cwd-relative or absolute paths — AGENT-LOOP.md §20). Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:'queued', position, waiting, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
+      dependsOn: { type: "array", items: { type: "string" }, description: "(spawn) ids from prior async spawn returns whose outcome this task needs (AGENT-LOOP.md §20) — the task queues until every dependency settles, then starts automatically. Ids consumed by action:'check' count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
       id: { type: "number", description: "(check/status/cancel) The subagent id to address, as returned by an async spawn. For check: waits for that specific subagent (including still-queued ones); omit to fetch the next completed one (arrival order). For status: returns that subagent's status without waiting or consuming; omit for the full overview. For cancel: REQUIRED — the target to stop (omitting it errors; a mistaken all-stop is impossible)." },
       n: { type: "number", description: "(check — required) 1-based read counter — must increment by 1 on every check call (n=1 for the first check of the turn); out-of-order/duplicate n is rejected. Not used by status." },
     },
@@ -221,6 +227,43 @@ export const subagentTool = {
     // refusal so the digest never pops a permission panel or chains background work.
     if (parent._inAutoTurn && !(ctx.getAuto?.() ?? false)) {
       return JSON.stringify({ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" })
+    }
+
+    // ── §20 spawn 调度参数准入（AGENT-LOOP.md §20 D-SD1/D-SD3 + 20.4 round2 #5/#7——
+    // CLI 同规格镜像）── files/dependsOn 声明即契约（v1：不做任务书文本自动解析）。
+    // 缺省（两者皆缺）= 既有语义零改动（不参与冲突检测/无校验——legacy spawn 零开销）。
+    // 校验序：参数形态 → 依赖 unknown id（非 consumed 墓碑——T-SD10）→ 依赖环可达
+    // （T-SD5——防御断言）→ 等待态判定（spawnAsyncSubagent 内复算落点）。等待态命中 →
+    // async 入 queued 等位（返回带 waiting/reason）；**sync spawn（async:false）命中 →
+    // 明确错误——不队列化 sync——sync 语义零变更（T-SD13）**。
+    const filesArg = args.files
+    const dependsRaw = args.dependsOn
+    const files = filesArg !== undefined && filesArg !== null ? normalizeFileList(filesArg, cwd) : []
+    if (filesArg !== undefined && filesArg !== null && !Array.isArray(filesArg)) {
+      throw new Error("subagent files must be an array of file paths (the write domain this task declares)")
+    }
+    const dependsOn = []
+    if (dependsRaw !== undefined && dependsRaw !== null) {
+      if (!Array.isArray(dependsRaw)) throw new Error("subagent dependsOn must be an array of async subagent ids (from prior spawn returns)")
+      for (const d of dependsRaw) {
+        if (typeof d !== "string" && typeof d !== "number") {
+          throw new Error(`subagent dependsOn entries must be async subagent ids — got ${JSON.stringify(d)}`)
+        }
+        dependsOn.push(String(d))
+      }
+    }
+    if (files.length > 0 || dependsOn.length > 0) {
+      const auto = ctx.getAuto?.() ?? false
+      for (const d of dependsOn) {
+        if (depInfo(parent, d).state === "unknown") {
+          throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed by action:'check' (or auto-injected) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
+        }
+      }
+      assertNoDepCycle(parent, dependsOn)
+      const block = describeBlockers(parent, { _files: files, _dependsOn: dependsOn }, auto)
+      if (!asyncFlag && block.kind !== "slot") {
+        throw new Error(`sync spawn (async:false) cannot queue behind a scheduling conflict: ${block.detail} — pass async:true to queue the task (the scheduler starts it when the blockers clear), or wait for them to finish first (AGENT-LOOP.md §20 round2 #7)`)
+      }
     }
     // §17 D-S9: during a suspension session children share the SESSION signal
     // (ctx.sessionSignal) — a digest's own Stop/interrupt must not abort the pool;
@@ -459,6 +502,8 @@ export const subagentTool = {
 
     // Async branch (moved to subagent-async.mjs spawnAsyncSubagent — 2026-09-03 split):
     // slot queue — returns immediately, does not await the report.
-    return spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild })
+    // §20：files/dependsOn 域元数据随 spawn 传入（entry _files/_dependsOn——D-SD2——
+    // 等待态准入落点在 spawnAsyncSubagent 内复算：非 slot → 强制 queued 不占槽）。
+    return spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild, files, dependsOn })
   },
 }

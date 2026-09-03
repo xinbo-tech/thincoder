@@ -412,6 +412,7 @@
 
 .sub-status.terminated { color: var(--muted, #888); }
 .sub-status.cancelled { color: var(--muted, #888); } /* §19.5 D-M6 stopped 行态（与 terminated 同灰——interrupted 语义） */
+.sub-status.queued { color: var(--muted, #888); font-style: italic; } /* §20 D-SD3b waiting 行态（排队等位——spawn 即见） */
 
 /* Consultation reply preview (collapsible, inside the subagent panel row) */
 .sub-item .consult-reply { width: 100%; margin-top: 4px; font-size: 12px; }

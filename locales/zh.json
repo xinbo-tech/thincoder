@@ -137,6 +137,7 @@
   "goal.objective": "目标",
   "goal.criteria": "验收标准",
   "sub.running": "运行中",
+  "sub.queued": "排队中",
   "sub.cancelled": "已取消",
   "sub.stopped": "已停止",
   "sub.stopBtn": "停止该子代理",

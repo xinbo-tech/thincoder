@@ -473,3 +473,78 @@ describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻�
     }
   })
 })
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §20 D-SD3b waiting 行（webview——T-SD11/12 镜像）：排队 spawn 返回即见 + 启动转
+// running + queued 取消移除行 + 会话退出清残留
+// ═══════════════════════════════════════════════════════════════════════════
+describe("§20 waiting 行（排队 spawn 即见——queued→running→移除生命周期）", () => {
+  before(async () => {
+    // Self-sufficient under --test-name-pattern（同 subagent 完成态 describe 守卫）：
+    // chat.js 的 state.js 模块顶部取 bridge + DOM refs——body + bridge stub 先于导入。
+    if (!globalThis.acquireVsCodeApi) {
+      const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
+      document.body.innerHTML = (html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? "").replace(/<script[\s\S]*?<\/script>/g, "")
+      globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
+    }
+    await import("../webview/chat.js") // module cache — no re-init, no body reset
+    // 行状态隔离（前序 describe 的残留行会干扰行数断言——同模块单例——直接清 map）
+    const { S } = await import("../webview/state.js")
+    S._subagentMap = {}
+  })
+  const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
+  const rows = () => [...document.querySelectorAll("#subagent-panel .sub-item")]
+  const rowTexts = () => rows().map((r) => r.textContent)
+
+  it("T-SD11 (vscode): queued 消息建行——waiting 标注 + 等位 position（slot）/原因（wait）——面板保持（queued-only）", () => {
+    // slot 等位行
+    post({ type: "subagent", id: 50, role: "coder", status: "queued", position: 1 })
+    let texts = rowTexts().join("\n")
+    assert.ok(texts.includes("queued"), "slot 等位行显示 queued")
+    assert.ok(texts.includes("queued · position 1"), "等位 position 显示（槽满等位——tool 列）")
+    assert.equal(document.getElementById("subagent-panel").style.display, "block", "queued-only 面板保持（running ∪ queued 非空——D-SD3b）")
+    // wait 标注（waiting-deps——原因恒标——不静默）
+    post({ type: "subagent", id: 51, role: "eng-coder", status: "queued", position: 2, waiting: "waiting-deps", reason: "waiting for: coder#1（依赖未完成）" })
+    texts = rowTexts().join("\n")
+    assert.ok(texts.includes("waiting for: coder#1"), "waiting 原因恒标（waiting for 标注）")
+    assert.ok(texts.includes("waiting-deps"), "waiting 态标注")
+    // depc 标注（依赖取消失败——滞留可见）
+    post({ type: "subagent", id: 52, role: "coder", status: "queued", position: 3, waiting: "dependency-cancelled", reason: "dependency cancelled: eng-coder#1 — waiting for your decision" })
+    assert.ok(rowTexts().join("\n").includes("dependency cancelled"), "depc 标注恒显（滞留不静默——NF-SD）")
+    // 刷新消息覆盖式更新（cancel 前移后 position 刷新——同 id 覆盖）
+    post({ type: "subagent", id: 50, role: "coder", status: "queued", position: 1, waiting: "waiting-deps", reason: "waiting for: coder#1（域冲突 src/x.mjs）" })
+    assert.ok(rowTexts().join("\n").includes("域冲突 src/x.mjs"), "queued 刷新覆盖（等待态变迁更新行内容）")
+    // 行数 = 3（不重建不翻倍）
+    assert.equal(rows().length, 3, "覆盖更新不新建行")
+  })
+
+  it("T-SD12 (vscode): started 覆盖 queued 行 → running；queued 取消（was:queued）移除行（不冻结）；suspension 退出清 queued 残留", () => {
+    // name-pattern 自足：重建 50/51/52 排队行（幂等——T-SD11 已跑则覆盖刷新）
+    post({ type: "subagent", id: 50, role: "coder", status: "queued", position: 1 })
+    post({ type: "subagent", id: 51, role: "eng-coder", status: "queued", position: 2, waiting: "waiting-deps", reason: "waiting for: coder#1（依赖未完成）" })
+    post({ type: "subagent", id: 52, role: "coder", status: "queued", position: 3, waiting: "dependency-cancelled", reason: "dependency cancelled: eng-coder#1" })
+    assert.equal(rows().length, 3, "前置：3 排队行")
+    // queued 行 → started（补位启动）→ 行转 running（同 id 覆盖——不新建）
+    post({ type: "subagent", id: 50, role: "coder", status: "started", startedAt: Date.now(), model: "glm-5.3", pool: true })
+    const texts = rowTexts().join("\n")
+    assert.ok(texts.includes("running"), "启动后行转 running")
+    assert.equal(rows().length, 3, "启动转 running 不新建行（同 id 覆盖——D-SD3b 同 key 语义镜像）")
+    // queued 取消（was:"queued"——从未启动）→ 行移除（不留 stopped 残行）
+    post({ type: "subagent", id: 51, role: "eng-coder", status: "cancelled", was: "queued" })
+    const afterCancelRows = rows()
+    assert.ok(
+      !afterCancelRows.some((r) => String(r.querySelector(".sub-role")?.textContent ?? "").startsWith("eng-coder")),
+      `queued 取消 → 行移除（不冻结——无活动块）行: ${JSON.stringify(rowTexts())}`,
+    )
+    assert.equal(afterCancelRows.length, 2, "行数 3 → 2（eng-coder 行移除——depc 行内容含其 id 不算）")
+    // running 取消（无 was）→ 既有冻结相位（行 cancelled——不删行——stopped 语义回归）
+    post({ type: "subagent", id: 50, role: "coder", status: "cancelled" })
+    assert.ok(rowTexts().join("\n").includes("cancelled"), "running 取消走既有 cancelled 行态（冻结相位——was 区分）")
+    // 会话退出（含 Stop 清池）→ queued 残留行清理
+    post({ type: "subagent", id: 53, role: "coder", status: "queued", position: 1 })
+    assert.ok(rowTexts().join("\n").includes("queued"), "depc/等位行驻留（挂起持续语义）")
+    post({ type: "suspension", active: false, freeze: true })
+    assert.ok(!rowTexts().join("\n").includes("queued"), "会话退出移除 queued 残留行（池已清——CLI freezeAll 兜底清场镜像）")
+  })
+})
