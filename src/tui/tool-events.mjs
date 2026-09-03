@@ -20,7 +20,7 @@ import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 import {
   SUB_PREFIX_RE, SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
-  routeSubToolOutput, finishSubTask, finishSubTasksByRole, finishSubTaskByModel, freezeDoneSubTasks,
+  routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, finishSubTaskByModel, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "./subagent-blocks.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
@@ -123,6 +123,19 @@ function isAsyncSpawnResult(result) {
   try {
     const o = JSON.parse(result)
     return Boolean(o && typeof o === "object" && typeof o.id !== "undefined" && (o.status === "running" || o.status === "queued"))
+  } catch {
+    return false
+  }
+}
+
+/** §7.2.3 spawn 门拒错误探测（T-F5）：subagent spawn 的机械拒绝以 {status:"error"}
+ *  JSON 返回（例：manual auto-turn digest spawn 门——digest 语义 organize-only）——
+ *  错误路径不得触发完成冻结（round1 #1——错误路径不冻结任何 running 块）。该形态只
+ *  出现在无 subKey 的拒绝路径（成功路径恒带 dispatch 传的 ctx._subagentKey）。 */
+function isSpawnErrorResult(result) {
+  try {
+    const o = JSON.parse(result)
+    return Boolean(o && typeof o === "object" && o.status === "error")
   } catch {
     return false
   }
@@ -252,7 +265,10 @@ export function buildToolCallbacks(deps) {
       })
       tickStart(name, toolId)
     },
-    onToolResult: (name, result, toolId) => {
+    // §7.2.3（方案 e）：dispatch runOne 把工具 ctx 上的 _subagentKey（sync spawn/
+    // escalate 成功路径设置——relayPrefix 去尾）作为第 4 参传来——undefined 兼容既有
+    // 签名（普通工具/老回调/错误路径不带 key）。
+    onToolResult: (name, result, toolId, subKey) => {
       state.currentTool = null
       // §19 merged family: route per the action recorded at onToolCall (no record = default spawn).
       let subAction = null
@@ -278,9 +294,23 @@ export function buildToolCallbacks(deps) {
         // child KEEPS running; skip the freeze (it would tombstone a live block and
         // drop its relay stream). The block freezes on the ⟦ev⟧done settle event.
         if (!isAsyncSpawnResult(result)) {
-          finishSubTask(state, SUBAGENT_ROLES, result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
-          // 冻结块进会话流（2026-08-30：钉尾段=残影；进流随会话滚走且保留可展开交互）
-          freezeDoneSubTasks(state)
+          // §7.2.3 sync spawn 完成精确冻结：结果按 key 归属三支——
+          // ① dispatch 同步成功路径带 subKey（ctx._subagentKey = relayPrefix 去尾）：
+          //    finishSubTaskKey 按 key 精确冻——不再落 finishSubTask 的"最早 started"
+          //    启发式（async eng-coder 先启动时 explore 完成会误冻其块——7.2.3.1/T-F2）；
+          // ② spawn 门拒错误（{status:"error"} JSON——auto-turn digest spawn 拒绝）：
+          //    不冻结任何块（round1 #1——错误路径不冻结 running 块——T-F5）；
+          // ③ subKey undefined 非错误（老回调/测试直调——成功路径未知工具）→ 启发式
+          //    兜底（既有行为不变——面板单块时与精确冻同效——T-F1）。
+          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null
+          const hasSubKey = subKey !== undefined && subKey !== null && subKey !== ""
+          if (hasSubKey) {
+            finishSubTaskKey(state, String(subKey), lastError)
+            freezeDoneSubTasks(state)
+          } else if (!isSpawnErrorResult(result)) {
+            finishSubTask(state, SUBAGENT_ROLES, lastError)
+            freezeDoneSubTasks(state)
+          }
           // Subagent report preview (max 8 lines) displayed directly in conversation
           const lines = result.split("\n")
           const preview = lines.slice(0, SUBAGENT_PREVIEW_LINES).map((l) => l.slice(0, PREVIEW_LINE_CHARS)).join("\n")
@@ -291,7 +321,15 @@ export function buildToolCallbacks(deps) {
         // 飞刀 post-op report landed under the subagent tool name — freeze the
         // escalate#N activity block (no preview; legacy surface).
         settleToolBlock(state, name, toolId, "completed")
-        finishSubTask(state, ["escalate"], result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null)
+        // §7.2.3（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
+        // 失败/老回调无 subKey → escalate 角色启发式兜底（escalate 串行 + 角色限定——
+        // 既有行为）。
+        const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null
+        if (subKey !== undefined && subKey !== null && subKey !== "") {
+          finishSubTaskKey(state, String(subKey), lastError)
+        } else {
+          finishSubTask(state, ["escalate"], lastError)
+        }
         freezeDoneSubTasks(state)
       } else if (name === "consult_check" || name === "consult_stop") {
         // Consult session-level settle (2026-08-30 consult review): a session spawns

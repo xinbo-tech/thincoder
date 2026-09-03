@@ -772,7 +772,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 7.2.3 sync spawn 完成精确冻结（2026-09-03 · 设计——方案 e——**已批准**——处置注见 7.2.3.4）
 
-> 状态：设计批准（2026-09-03 round1 通过——0🔴——7 项 advisory 处置注见 7.2.3.4）。触发：用户实测——"主 agent 同步发起的 explore 完成后未从 subagent 面板回收"——场景确认：sync explore 与后台 async eng-coder 并存面板——explore 完成残留面板。
+> 状态：**已实现（2026-09-03 CLI 落地——方案 e——T-F1..F5 展开用例全绿——实现记录见 7.2.3.2 段尾）**。触发：用户实测——"主 agent 同步发起的 explore 完成后未从 subagent 面板回收"——场景确认：sync explore 与后台 async eng-coder 并存面板——explore 完成残留面板。
 
 #### 7.2.3.1 问题（根因——代码已确认）
 
@@ -790,6 +790,13 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 8. **VS Code 端声明**（round1 #6）：VS Code webview 活动流按 sub:role#id 键匹配（无启发式）——本修复 **CLI-only**——两端不需同步改
 
 **受影响文件**：src/agent-tools/subagent.mjs（sync spawn execute ctx._subagentKey）、src/agent/dispatch.mjs（runOne onToolResult 传参）、src/tui/tool-events.mjs（onToolResult 收 subKey——sync 分支精确冻）、src/tui/subagent-blocks.mjs（新 finishSubTaskKey）、测试（subagent-blocks/tool-events——sync + async 混跑面板回收用例）
+
+**实现记录（2026-09-03 CLI 交付——符号锚纪律，无行号引用）**：
+
+- **完成链**：subagent.mjs 阻塞 spawn（sync 成功路径）返回前 `ctx._subagentKey = relayPrefix.slice(0, -1)`——**仅成功路径**：async 分支不设（round2 #2——ack 结果带 status:running 由既有 isAsyncSpawnResult 跳过冻结）；错误/拒绝（throw/门拒早退 return）到该点之前已离开——ctx 未设。escalate 同享（round1 #2）：subagent-async.mjs 成功返回前同设（`!escErr`——运行中途失败不设）。dispatch runOne 把工具 ctx 对象提升为变量、execute 返回后读 `toolCtx._subagentKey` 作 `onToolResult(name, result, toolId, subKey)` 第 4 参——undefined 兼容既有签名（普通工具/老回调零波及；toolRouter 短路路径不带 key）。TUI tool-events onToolResult 收 subKey——完成分支路由 subagent-blocks.mjs 新 `finishSubTaskKey(state, key, lastError)` 按 key 标 done（冻结载体进流 + 删条目由既有 freezeDoneSubTasks 承接——与 §17.5.5 freezeReclaimDigestedBlocks 等锚点冻结家族并存不冲突）。
+- **兜底三支**（onToolResult spawn 完成分支）：① subKey 有值 → finishSubTaskKey 精确冻（T-F2/F3）；② spawn 门拒错误（`{status:"error"}` JSON——manual auto-turn spawn 门拒绝即此形态）→ **不冻结任何块**（round1 #1"错误路径不冻结任何 running 块"的机械落实——错误文本预览保留供用户可见——T-F5）；③ subKey undefined 非错误（老回调/测试直调/未知工具成功路径）→ 既有 finishSubTask 启发式兜底（面板单块时与精确冻同效——T-F1）。escalate 分支同款（subKey 有值精确冻 / 无值角色启发式——escalate 串行 + 角色限定，启发式天然精确）。
+- **行为差异（如实上报，非简化）**：escalate 运行中途失败（escErr 软返回——错误文本形态）不设 key——TUI 走 escalate 角色启发式冻结自身 partial 块（legacy 行为不变——角色限定不触他块）；sync spawn 硬失败（throw）由 dispatch 错误块承接——不调 onToolResult（既有架构事实，T-F5 断言锁定）。
+- **测试落位**：finishSubTaskKey 数据层（test/subagent-blocks.test.mjs——T-F1/F2/F3/F5 + escalate key + lastError）；TUI 路由层（test/agent-turn.test.mjs——T-F2 核心混跑面板 / T-F3 乱序 / T-F5 门拒不冻 / T-F4 ⟦ev⟧done 回归 / escalate subKey + 兜底）；工具层（test/subagent.test.mjs——sync 成功设 key / async 不设（round2 #2）/ 拒绝与抛错不设）；dispatch 层（test/dispatch.test.mjs——第 4 参透传 / 并行独立 ctx / undefined 兼容 / 抛错与 Phase-1 拒绝不调 onToolResult）。全量 CLI 测试绿（0 fail）。
 
 #### 7.2.3.3 测试（硬验收）
 

@@ -491,6 +491,13 @@ export const subagentTool = {
         askContinue: askSubagentContinue,
       })
       logEvent("child:done", { role, id: child._logId, ms: Date.now() - blockT0, kind: String(pipelineReport).includes(TURN_CAP_MARK) ? "partial" : "ok" })
+      // §7.2.3 sync spawn 完成精确冻结（方案 e）：execute 返回前 ctx 留子代理 key
+      // （relayPrefix 去尾 = `role#N`）——dispatch runOne 读它作 onToolResult 第 4 参 →
+      // TUI finishSubTaskKey 按 key 精确冻（async eng-coder 先启动时不再误冻其块——
+      // T-F2）。仅成功路径设置：async 分支不设（round2 #2——ack 带 status:running 由
+      // isAsyncSpawnResult 跳过冻结）；错误/拒绝路径到此之前已 throw/return——ctx 未设
+      // ——错误路径不触发冻结（round1 #1——T-F5）。
+      ctx._subagentKey = relayPrefix.slice(0, -1)
       return pipelineReport
     } catch (e) {
       if (ctx.signal?.aborted || e?.name === "AbortError") throw e // 用户停——不落错误事件

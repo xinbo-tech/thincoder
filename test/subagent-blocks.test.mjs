@@ -7,7 +7,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 
 import {
-  SUB_BLOCK_LINE_LIMIT, finishSubTask, applySubEvent,
+  SUB_BLOCK_LINE_LIMIT, finishSubTask, finishSubTaskKey, applySubEvent,
   parseRelayPath,
   routeSubToken, routeSubReasoning, routeSubToolCall, routeSubToolOutput,
   freezeDoneSubTasks, freezeAllSubTasks, shiftFreezeAnchors,
@@ -85,6 +85,75 @@ test("finishSubTask: 最早运行的同角色子代理标记 done + lastError + 
   assert.ok(done1.doneAt >= done1.started)
   assert.notEqual(done1.blockEpoch, epochBefore, "fold 签名失效（epoch bump）")
   assert.equal(s.subTasks["coder#2"].done, false, "其余不受影响")
+})
+
+// -------------------------------------------- §7.2.3 sync spawn 完成精确冻结（finishSubTaskKey——T-F1..F5 数据层）
+
+test("§7.2.3 T-F2 数据层: finishSubTaskKey 按 key 精确 done——async eng-coder 先启动也不误冻（启发式对照）", () => {
+  const s = state()
+  // async eng-coder 先 spawn/启动（先建块、started 更早）；sync explore 后 spawn
+  routeSubToken(s, "eng-coder#1/[model]glm-5.3", noop)
+  routeSubToken(s, "eng-coder#1/后台实现中...", noop)
+  routeSubToken(s, "explore#2/[model]glm-5.3", noop)
+  routeSubToken(s, "explore#2/搜索中...", noop)
+  const eng = s.subTasks["eng-coder#1"]
+  const exp = s.subTasks["explore#2"]
+  assert.ok(eng.started <= exp.started, "eng-coder#1 先启动（启发式会先选它）")
+  // sync explore 完成 → 精确按 explore#2 冻——eng-coder#1 保持 running
+  const ret = finishSubTaskKey(s, "explore#2", null)
+  assert.equal(ret, exp, "返回被精确 settle 的块")
+  assert.equal(exp.done, true, "explore#2 done（完成块）")
+  assert.notEqual(exp.blockEpoch, undefined)
+  assert.equal(eng.done, false, "eng-coder#1 不被误冻（启发式下会误冻它——T-F2 核心）")
+  // done 后再按同一 key 调用幂等（已 done 标记保持）
+  finishSubTaskKey(s, "explore#2")
+  assert.equal(exp.done, true)
+})
+
+test("§7.2.3 T-F3 数据层: 并行 2 sync 乱序完成——各自 key 精确 settle 互不串扰", () => {
+  const s = state()
+  routeSubToken(s, "explore#1/搜索 A...", noop)
+  routeSubToken(s, "explore#2/搜索 B...", noop)
+  // 乱序完成：先 finishSubTaskKey(#2)——#1 仍 running
+  finishSubTaskKey(s, "explore#2", null)
+  assert.equal(s.subTasks["explore#2"].done, true)
+  assert.equal(s.subTasks["explore#1"].done, false, "先完成的 key 不冻另一块")
+  finishSubTaskKey(s, "explore#1", null)
+  assert.equal(s.subTasks["explore#1"].done, true)
+  assert.equal(s.subTasks["explore#2"].done, true)
+})
+
+test("§7.2.3 T-F5 数据层: finishSubTaskKey 未知 key → null 零状态变更（不落启发式兜底——不误冻他块）", () => {
+  const s = state()
+  routeSubToken(s, "eng-coder#1/hello", noop)
+  const eng = s.subTasks["eng-coder#1"]
+  assert.equal(finishSubTaskKey(s, "explore#99", null), null, "无匹配 key 返回 null")
+  assert.equal(eng.done, false, "running 块不受影响（无启发式兜底误冻）")
+  assert.deepEqual(Object.keys(s.subTasks), ["eng-coder#1"], "无新条目/无删除")
+})
+
+test("§7.2.3 finishSubTaskKey: lastError 落位 + 跨角色 key（escalate#N——round1 #2 同享路径）", () => {
+  const s = state()
+  routeSubToken(s, "escalate#1/[model]kimi-k3", noop)
+  const esc = s.subTasks["escalate#1"]
+  const epochBefore = esc.blockEpoch
+  finishSubTaskKey(s, "escalate#1", "turn cap reached — work may be partial")
+  assert.equal(esc.done, true)
+  assert.equal(esc.lastError, "turn cap reached — work may be partial")
+  assert.notEqual(esc.blockEpoch, epochBefore, "epoch bump（fold 签名失效）")
+  assert.equal(esc.currentTool, null, "currentTool 清空")
+  assert.equal(esc.approval, null, "approval 清空")
+})
+
+test("§7.2.3 T-F1 数据层: 单块面板精确冻与启发式同效（既有语义回归——同走 freezeDoneSubTasks 冻结家族）", () => {
+  const s = freezeState()
+  routeSubToken(s, "explore#1/hello", noop)
+  finishSubTaskKey(s, "explore#1", null)
+  freezeDoneSubTasks(s)
+  assert.equal(s.subTasks["explore#1"], undefined, "条目释放")
+  assert.ok(s._frozenSubKeys.has("explore#1"), "tombstone 登记")
+  const frozen = s.lines.find((l) => l._frozenSubTask?.key === "explore#1")
+  assert.ok(frozen, "冻结载体行入流（同 freezeDoneSubTasks 机制——与 §17.5.5 freezeReclaimDigestedBlocks 并存不冲突）")
 })
 
 test("N2: 环形上限经路由同样生效（跨回调类型）", () => {

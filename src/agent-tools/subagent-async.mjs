@@ -361,6 +361,11 @@ export async function executeEscalateAction(args, ctx) {
     mergeChildMutations(parent, child)
     if (escErr) logEvent("child:error", { role: "escalate", id: escId, ms: Date.now() - escT0, err: errText(escErr.err, 200) })
     else logEvent("child:done", { role: "escalate", id: escId, ms: Date.now() - escT0, kind: String(report).includes(TURN_CAP_MARK) ? "partial" : "ok" })
+    // §7.2.3（round1 #2）：escalate 与 spawn 同享 ctx._subagentKey——同步完成精确冻
+    // （relayPrefix 去尾 = `escalate#N`）。仅成功路径（escErr = 运行中途失败——不设
+    // key——TUI 回落 escalate 角色启发式：escalate 串行 + 角色限定，天然精确——legacy
+    // 行为不变——错误路径不触发冻结 round1 #1）。
+    if (!escErr) ctx._subagentKey = escId
     return `escalate (${tag})${effortNote} post-op report:\n${report || (child._capturedOutput ?? "").slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
   } catch (e) {
     // 仅 createAgent 失败/continue 询问抛出才到这（运行失败已在上面 catch 处理）

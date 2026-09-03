@@ -262,17 +262,22 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       console.log = (...a) => capturedConsole.push(a.map(String).join(" "))
       console.error = (...a) => capturedConsole.push("[err] " + a.map(String).join(" "))
       let rawResult
+      // ctx 对象提升为变量（§7.2.3）：subagent 阻塞 execute 返回前在 ctx 上留
+      // _subagentKey（relayPrefix 去尾）——runOne 在 execute 返回后读它作 onToolResult
+      // 第 4 参（普通工具/错误路径无此字段——undefined 兼容既有签名）。每次工具调用
+      // 独立 ctx——并行同名工具（批并行 runOne）各自带自己的 key，互不串扰。
+      const toolCtx = {
+        cwd: agent.cwd,
+        agent,
+        depth,
+        signal,
+        callbacks,
+        onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
+        onQuestion: callbacks.onQuestion,
+        onPermissionRequest: callbacks.onPermissionRequest,
+      }
       try {
-        rawResult = await item.tool.execute(item.args, {
-          cwd: agent.cwd,
-          agent,
-          depth,
-          signal,
-          callbacks,
-          onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
-          onQuestion: callbacks.onQuestion,
-          onPermissionRequest: callbacks.onPermissionRequest,
-        })
+        rawResult = await item.tool.execute(item.args, toolCtx)
       } finally {
         console.log = origConsoleLog
         console.error = origConsoleErr
@@ -287,7 +292,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       const resultWithConsole = capturedConsole.length > 0
         ? `${result}\n[console during ${item.toolCall.name}]\n${capturedConsole.join("\n")}`
         : result
-      callbacks.onToolResult?.(item.toolCall.name, resultWithConsole, item.toolCall.id)
+      callbacks.onToolResult?.(item.toolCall.name, resultWithConsole, item.toolCall.id, toolCtx._subagentKey)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)
       runHooks("PostToolUse", { agent, toolName: item.toolCall.name, toolArgs: item.args, result: raw }).catch(() => {})
       logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(resultWithConsole, 200), child: agent?._logId })

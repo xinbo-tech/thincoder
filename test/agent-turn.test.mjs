@@ -664,5 +664,106 @@ test("§19.5 T-M19 集成: cancel action 结果走普通工具块——不冻结
   assert.ok(ctx2.state.subTasks["coder#1"], "error 路径运行中区块同样保留（等待 stopped）")
 })
 
+// ─── §7.2.3 sync spawn 完成精确冻结（2026-09-03——T-F1..F5 的 TUI 路由层：onToolResult
+// 收 dispatch 传的 subKey（ctx._subagentKey）→ finishSubTaskKey 精确冻；无 subKey →
+// 老回调启发式兜底；spawn 门拒错误不冻结——错误路径不冻 running 块）───────────────
+
+/** 建 sync/async 混跑面板：async eng-coder#1 先启动（live）+ sync explore#2 后 spawn
+ *  （live）——§7.2.3.1 实证场景（启发式按最早 started 会误冻 eng-coder#1）。 */
+function mixedPanel(ctx, callbacks) {
+  callbacks.onToken("eng-coder#1/⟦ev⟧async\x1e")
+  callbacks.onToken("eng-coder#1/[model]glm-5.3")
+  callbacks.onToken("eng-coder#1/后台实现中...")
+  callbacks.onToolCall("subagent", { task: "派 explore 查证", role: "explore" }, "call-S1")
+  callbacks.onToken("explore#2/[model]glm-5.3")
+  callbacks.onToken("explore#2/搜索中...")
+}
+
+test("§7.2.3 T-F2（核心验收）: sync explore 完成——subKey 精确冻 explore#2 块；并存 async eng-coder#1 块保持 running 不误冻", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  mixedPanel(ctx, callbacks)
+  const eng = ctx.state.subTasks["eng-coder#1"]
+  const exp = ctx.state.subTasks["explore#2"]
+  assert.ok(eng.started <= exp.started, "前置：eng-coder#1 先启动（启发式必误冻它）")
+  // dispatch 同步成功路径：onToolResult 第 4 参 = subKey（relayPrefix 去尾）
+  callbacks.onToolResult("subagent", "explore report: 找到了三处调用点……", "call-S1", "explore#2")
+  assert.equal(ctx.state.subTasks["explore#2"], undefined, "explore#2 完成 → 面板释放（冻结回收）")
+  assert.ok(ctx.state.lines.some((l) => l._frozenSubTask?.key === "explore#2"), "explore#2 冻结载体进会话流")
+  assert.ok(eng && eng.done === false, "eng-coder#1 块保持 running（不误冻——启发式下会冻它）")
+  assert.ok(ctx.state.lines.some((l) => l.text?.includes("explore report")), "报告预览行进会话")
+})
+
+test("§7.2.3 T-F3: 并行 2 sync explore 乱序完成——各自 subKey 精确回收（无误冻错位）", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToken("explore#1/[model]m1")
+  callbacks.onToken("explore#1/搜索 A...")
+  callbacks.onToken("explore#2/[model]m2")
+  callbacks.onToken("explore#2/搜索 B...")
+  // 乱序完成：explore#2 先回（subKey=explore#2）
+  callbacks.onToolCall("subagent", { task: "A", role: "explore" }, "call-2")
+  callbacks.onToolResult("subagent", "B 完成报告", "call-2", "explore#2")
+  assert.equal(ctx.state.subTasks["explore#2"], undefined, "explore#2 回收")
+  assert.ok(ctx.state.subTasks["explore#1"], "explore#1 仍 running（不误冻错位）")
+  assert.equal(ctx.state.subTasks["explore#1"].done, false)
+  // explore#1 后完成——同样精确
+  callbacks.onToolCall("subagent", { task: "B", role: "explore" }, "call-1")
+  callbacks.onToolResult("subagent", "A 完成报告", "call-1", "explore#1")
+  assert.equal(ctx.state.subTasks["explore#1"], undefined, "explore#1 随后回收")
+  const frozen = ctx.state.lines.filter((l) => l._frozenSubTask).map((l) => l._frozenSubTask.key)
+  assert.deepEqual(frozen, ["explore#2", "explore#1"], "两冻结载体各自落位（完成序）")
+})
+
+test("§7.2.3 T-F5: spawn 门拒错误（{status:error} JSON——无 subKey）+ async running → 不冻结任何块", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  mixedPanel(ctx, callbacks)
+  // manual auto-turn digest spawn 拒绝（subagent.mjs 早退 return——ctx._subagentKey 未设）
+  callbacks.onToolCall("subagent", { task: "x", role: "explore" }, "call-G1")
+  callbacks.onToolResult("subagent", JSON.stringify({ status: "error", error: "cannot spawn subagents from a manual auto-turn — wait for user input" }), "call-G1", undefined)
+  assert.ok(ctx.state.subTasks["eng-coder#1"] && !ctx.state.subTasks["eng-coder#1"].done, "eng-coder#1 不被误冻（错误路径不触发启发式）")
+  assert.ok(ctx.state.subTasks["explore#2"] && !ctx.state.subTasks["explore#2"].done, "explore#2 运行中同样保留（错误与其无关）")
+  assert.ok(!ctx.state.lines.some((l) => l._frozenSubTask), "无任何块被冻结")
+  assert.ok(ctx.state.lines.some((l) => l.text?.includes("cannot spawn subagents")), "门拒原因预览保留（用户可见）")
+})
+
+test("§7.2.3 T-F1/兜底: subKey undefined 老回调（测试直调/未知工具成功路径）→ 启发式兜底冻结（既有行为回归）", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  // 面板仅一个 sync explore（老回调不传 subKey——启发式与精确冻同效）
+  callbacks.onToken("explore#1/[model]m")
+  callbacks.onToken("explore#1/搜索...")
+  callbacks.onToolCall("subagent", { task: "x", role: "explore" }, "call-S1")
+  callbacks.onToolResult("subagent", "report done", "call-S1")
+  assert.equal(ctx.state.subTasks["explore#1"], undefined, "单块启发式同样回收（T-F1 语义）")
+  assert.ok(ctx.state.lines.some((l) => l._frozenSubTask?.key === "explore#1"), "冻结载体入流")
+})
+
+test("§7.2.3 T-F4: async settle ⟦ev⟧done 回归——精确冻 eng-coder#1 不误伤并存 sync explore#2", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  mixedPanel(ctx, callbacks)
+  // async 完成信号（settle 即发——§15 D-A3）：只冻 eng-coder#1 自己的块
+  callbacks.onToken("eng-coder#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  assert.equal(ctx.state.subTasks["eng-coder#1"], undefined, "eng-coder#1 settle 冻结回收（既有语义不变）")
+  assert.ok(ctx.state.subTasks["explore#2"] && !ctx.state.subTasks["explore#2"].done, "sync explore#2 保持 running")
+  const frozen = ctx.state.lines.find((l) => l._frozenSubTask?.key === "eng-coder#1")
+  assert.ok(frozen, "eng-coder#1 冻结载体入流（done 事件路径——与 finishSubTaskKey 并行不冲突）")
+})
+
+test("§7.2.3 escalate 同享（round1 #2）: escalate 成功带 subKey → 精确冻 escalate#N；无 subKey 老回调 → 角色启发式兜底", async () => {
+  const { ctx, callbacks } = await captureCallbacks()
+  callbacks.onToken("escalate#1/[model]kimi-k3")
+  callbacks.onToken("escalate#1/专家手术中...")
+  callbacks.onToolCall("subagent", { action: "escalate", task: "复杂重构" }, "call-E1")
+  callbacks.onToolResult("subagent", "escalate (kimi:kimi-k3) post-op report:\n改了什么", "call-E1", "escalate#1")
+  assert.equal(ctx.state.subTasks["escalate#1"], undefined, "escalate#1 按 key 回收")
+  assert.ok(ctx.state.lines.some((l) => l._frozenSubTask?.key === "escalate#1"), "冻结载体入流")
+  // 兜底：无 subKey（老回调）→ escalate 角色启发式（串行 + 角色限定——同效）
+  const { ctx: ctx2, callbacks: cbs2 } = await captureCallbacks()
+  cbs2.onToken("escalate#2/[model]kimi-k3")
+  cbs2.onToken("escalate#2/工作...")
+  cbs2.onToolCall("subagent", { action: "escalate", task: "y" }, "call-E2")
+  cbs2.onToolResult("subagent", "escalate (kimi:kimi-k3) post-op report:\n结果", "call-E2")
+  assert.equal(ctx2.state.subTasks["escalate#2"], undefined, "无 subKey → 启发式兜底同样回收")
+  assert.ok(ctx2.state.lines.some((l) => l._frozenSubTask?.key === "escalate#2"))
+})
+
 
 

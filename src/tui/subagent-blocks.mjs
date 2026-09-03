@@ -165,6 +165,25 @@ export function finishSubTask(state, roles, lastError = null) {
   sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
 }
 
+/** §7.2.3 sync spawn 完成精确冻结（2026-09-03）：按 relay key 精确 settle。finishSubTask
+ *  的"最早 started"启发式只在面板单 running 块时成立——§15 async 化后 async eng-coder
+ *  （先启动）与 sync explore 并存时 explore 完成会误冻先启动的 eng-coder 块（7.2.3.1）。
+ *  dispatch 沿 ctx._subagentKey（relayPrefix 去尾 = `role#N`）把 key 传进 onToolResult——
+ *  有 key 即精确标 done（冻结载体进流 + 删条目由调用方 freezeDoneSubTasks 承接——与
+ *  finishSubTask 同一契约）；无匹配块（已冻结 tombstone/不存在）返回 null——调用方不得
+ *  落启发式兜底（精确 key 无匹配 = 无从归属——不误冻他块）。 */
+export function finishSubTaskKey(state, key, lastError = null) {
+  const sub = state.subTasks?.[key]
+  if (!sub) return null
+  sub.done = true
+  sub.doneAt = Date.now()
+  sub.currentTool = null
+  sub.approval = null
+  if (lastError) sub.lastError = lastError
+  sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
+  return sub
+}
+
 /** 冻结完成/中断区块进 state.lines（§7.2 D4——_frozenSubTask 载体行，渲染端
  *  render-conversation 识别；折叠交互 key = sub-${key} 与运行面板同源跨冻结延续）。
  *  锚点插入（2026-09-03 修复轮）：settled 块带 _freezeAt（settle 时刻流位置）——

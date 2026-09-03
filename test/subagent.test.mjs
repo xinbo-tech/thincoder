@@ -175,6 +175,106 @@ test("subagent tool: user declines at the wall → partial-work return, no resum
   }
 })
 
+// ─── §7.2.3 sync spawn 完成精确冻结——工具层 ctx._subagentKey（方案 e，T-F1..F5 之一环）───
+
+test("§7.2.3: sync spawn 成功返回前 ctx 留 _subagentKey（relayPrefix 去尾）；async 分支不设（round2 #2）", async () => {
+  const { server, calls } = wallServer(0) // 0 wall：首请求即出报告（单轮完成）
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "cli-fz-"))
+  try {
+    const { createAgent } = await import("../src/agent.mjs")
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    // sync（阻塞）spawn：成功后 execute 的 ctx 上留 key = relayPrefix 去尾
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-pro" },
+      tools: [noopRead],
+      config: { agent: {} },
+      cwd,
+    })
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const r = String(await subagentTool.execute({ task: "quick job", role: "coder" }, ctx))
+    assert.ok(r.includes("child done"), "sync spawn 正常完成")
+    assert.equal(calls.n, 1, "单轮完成")
+    assert.equal(ctx._subagentKey, "coder#1", "ctx._subagentKey = relayPrefix 去尾（role#N）")
+    // async spawn：ack 立即返回——ctx._subagentKey 明确不设（async ack 由 isAsyncSpawnResult 跳过冻结）
+    const parent2 = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-pro" },
+      tools: [noopRead],
+      config: { agent: {} },
+      cwd,
+    })
+    const actx = { agent: parent2, cwd, callbacks: {}, depth: 0 }
+    const ack = JSON.parse(String(await subagentTool.execute({ task: "bg job", role: "coder", async: true }, actx)))
+    assert.equal(ack.status, "running", "async ack 立即返回")
+    assert.equal(actx._subagentKey, undefined, "async 分支不设 ctx._subagentKey（round2 #2）")
+    const entry = parent2._asyncSubagents.get(String(ack.id))
+    await entry.promise // 收尾等后台完成（清理不悬挂）
+    assert.ok(String(entry.report ?? "").includes("child done"))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§7.2.3: sync spawn 失败/被拒路径 ctx._subagentKey 不设（错误路径不触发冻结——T-F5 工具层）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = process.cwd()
+  // ① 拒绝（manual auto-turn spawn 门——错误字符串返回，早于 relay）
+  const gateParent = {
+    config: { agent: {} }, _inAutoTurn: true, autoApprove: false,
+    _touchedFiles: [], history: [], _subAgentCounter: 0,
+  }
+  const gctx = { agent: gateParent, cwd, callbacks: {}, depth: 0 }
+  const gateOut = String(await subagentTool.execute({ task: "x", role: "explore" }, gctx))
+  assert.ok(gateOut.includes("cannot spawn subagents from a manual auto-turn"), "门拒错误文本返回")
+  assert.equal(gctx._subagentKey, undefined, "拒绝路径 ctx 未设 key")
+  // ② execute 抛错（未知 role——早于 makeRelay）
+  const errCtx = { agent: { config: { agent: {} } }, cwd, callbacks: {}, depth: 0 }
+  await assert.rejects(subagentTool.execute({ task: "x", role: "bogus" }, errCtx), /Unknown subagent role/)
+  assert.equal(errCtx._subagentKey, undefined, "抛错路径 ctx 未设 key")
+  // ③ 非 spawn 动作（status/check/cancel 面）不经 spawn 成功路径——不设 key（escalate
+  //    例外：成功路径同享设 key——见下方 escalate 用例）
+  const sc = { agent: { config: { agent: {} } }, cwd, callbacks: {}, depth: 0 }
+  const st = String(await subagentTool.execute({ action: "status" }, sc))
+  assert.ok(st.includes("running"), "status 返回池概览")
+  assert.equal(sc._subagentKey, undefined)
+})
+
+test("§7.2.3（round1 #2）: escalate 成功路径 ctx 留 _subagentKey（escalate#N）；escErr 中途失败不设", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-esc-"))
+  try {
+    const pool = [{ provider: "kimi", model: "kimi-k3" }]
+    // 成功路径（注入假 runAgent——不触网）：execute 返回前 ctx 留 key = relayPrefix 去尾
+    const parent = {
+      tools: [],
+      config: {
+        agent: { consultModels: pool },
+        providersList: [{ name: "kimi", baseURL: "http://127.0.0.1:1", model: "kimi-k3", apiKey: "k" }],
+      },
+      cwd,
+    }
+    const ectx = {
+      agent: parent, cwd, callbacks: {}, depth: 0,
+      runAgent: async () => "post-op body " + "x".repeat(300),
+    }
+    const out = String(await subagentTool.execute({ action: "escalate", task: "复杂重构" }, ectx))
+    assert.ok(out.includes("post-op report"), "escalate 成功返回术后报告")
+    assert.equal(ectx._subagentKey, "escalate#1", "escalate 成功 → ctx._subagentKey = relayPrefix 去尾（escalate#N）")
+    // escErr（运行中途失败——runAgent 抛错）：软返回错误文本——不设 key——TUI 回落角色启发式
+    const fctx = {
+      agent: { ...parent, _subAgentCounter: 1 }, cwd, callbacks: {}, depth: 0,
+      runAgent: async () => { throw new Error("escalate child boom") },
+    }
+    const fout = String(await subagentTool.execute({ action: "escalate", task: "会失败的活" }, fctx))
+    assert.ok(fout.includes("escalate (kimi:kimi-k3) error: escalate child boom"), "失败返回错误文本（软返回——escErr）")
+    assert.equal(fctx._subagentKey, undefined, "escErr 中途失败不设 key（错误路径不触发冻结——round1 #1）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 
 // ─── variant roles fail closed (coder-leak fix, 2026-08-25) ─────────────────────
 // Exact-string mode gates let "Coder"/" coder" slip through BOTH gates into a full-write
