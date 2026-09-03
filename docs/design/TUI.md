@@ -451,6 +451,13 @@ question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文�
 
 **受影响文件**：`src/tui/pickers.mjs`（:345 format 枚举 picker + wizard 步）、`src/tui/wizard.mjs`（WIZARD_STEPS + format 步）、测试（pickers/wizard——API format 选择用例）、本文件（模块地图 cmd 行）+ TUI-INPUT-BOX.md §7（question 光标——同批交付）。
 
+**round1/round2 评审处置（2026-09-03）**：
+- **范围声明（评审 #2/#4）**：光标修复覆盖 question 自由文本态（权威 TUI-INPUT-BOX §7）——其余文本面现状：wizard 文本步（API key/Custom path）与 picker filter 输入经 explore 核实已有光标或复用主输入渲染（wizard 复用 state.input 全功能——picker filter 行内输入）——不属缺口——本次不扩展
+- **D-C2 细化（评审 #2-1）**：format 步插入点 = wizard Custom 分支 endpoint 后 key 前（provider=Custom → endpoint → **format** → key → embedding → model）；默认 openai（同 D-C1 index=0）；**Esc 在该步 = 沿用 wizard 既有"Esc 随时跳过"语义（跳过向导——无半配置落盘——wizard 本就全步可跳）**——与 D-C1 picker 路径"Esc 中止 Add Provider 流程"入口级一致（两入口都无半配置）
+- **测试用例枚举（评审 #2-2）**：T-C1 format picker 默认 index=0 openai（Enter 直过）；T-C2 Esc 中止 Add Provider——无半配置落盘断言；T-C3 wizard Custom 流程含 format 步（默认 openai 直过）；T-C4 非 Custom（preset）路径不受影响（无 format 步）；T-C5 选 anthropic 生效落盘
+- **受影响文件补（评审 #2-6）**：TUI.md §8 wizard bullet 流文本（"provider 选择 → API key → …"句）随 D-C2 同步改写——本文件 10.6 段行号锚改符号（showPicker/WIZARD_STEPS）
+- **行号改符号锚（评审 #1-5）**：pickers.mjs:345 → Add-Provider 流程 format 手输点（showPicker 调用位）；wizard.mjs:34-57 → WIZARD_STEPS 数组
+
 **验收**：Custom provider 流程 format 为 picker 选择（无手输）；wizard Custom 含 format 步；question 自由文本态光标可见可编辑（T-Q1..Q7）；全量测试绿。
 
 
@@ -470,7 +477,16 @@ question 光标差距链与设计见 TUI-INPUT-BOX.md §7（权威——本文�
 - D-S2：三个特殊段（tool/frozen-sub/frozen-adv——段渲染 + sig 分支共 ~150 行）→ 新 render-segments.mjs——各段自带独立 WeakMap（行对象类型互斥——分支互斥 if——行为等价）——render-conversation 主循环分支缩 ~3 行调用——import 面收窄
 - 否决项：frozen 段迁 subagent-panel（R1）——subagent-panel 是纯函数模块（D1 钦定）——带缓存分支违反纯度契约——否决
 
-**验收**：拆分后 index/render-conversation <500（预计 455-460/435-440）；新模块 <300 advisory；npm test 全绿零测试改动；模块地图同批回写（TUI.md §1——update-notice.mjs/render-segments.mjs 新行 + 行数更新）；TODO.md:161 销账。
+**评审处置（2026-09-03——round2 通过 0🔴——8 refinement 并入）**：
+- **§6/§9 恢复路径旧描述同批修正（评审 #3）**：§6 首段与 §9 决策表"恢复优先 display 快照"行——改为与 §1/§2 一致（display 快照已废弃——historyToLines 唯一路径）——本批 D-S1b 归属修复时同步
+- **header 标签修正（评审 #1-8）**：D-S1..S3 → D-S1a/b/c + D-S2（无 S3——header 改实际编号——避免与 AGENT-LOOP §17 D-S* 词汇混淆）
+- **模块地图重复行删（评审 #2-7）**：fold-block.mjs 重复两行删一——render-conversation 职责"搜索高亮、搜索高亮"重复词修
+- **行号→符号锚（评审 #2-5）**：L462-484/L43-51/L495-537/L224-226 → createMouseDispatch/createLoadOlder/update-notice 簇/孤儿注释（符号+近似区间 as-of）
+- **孤儿注释删（评审 #2-8）**：render-conversation 孤儿注释删除**纳入本批**（零风险）
+- **行数估算（评审 #2-8b）**：445-450 实际（545−(23+30+50)+re-export 胶水 ≈ 448）——验收 <500 为准——地图回写实测数
+- **key-handler 关联（评审 #1-4）**：§7 question 光标增行会加深 key-handler（523 基线）超限——TODO 登记拆分（与 index/render-conversation 同族评估——不在本批文件清单）
+
+**验收**：拆分后 index/render-conversation <500（预计 445-460）；新模块 <300 advisory；npm test 全绿零测试改动；模块地图同批回写（TUI.md §1——update-notice.mjs/render-segments.mjs 新行 + 行数更新 + fold-block 重复行删）；TODO.md:161 销账。
 
 **受影响文件**：src/tui/index.mjs、render-conversation.mjs、mouse.mjs、startup.mjs、新 update-notice.mjs、新 render-segments.mjs、TUI.md §1、TODO.md。附加可选（评审裁）：顺带删 render-conversation L224-226 孤儿注释。
 

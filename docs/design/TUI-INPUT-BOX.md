@@ -10,7 +10,7 @@
 1. `state.input` 是字符数组（`string[]`）；`state.cursor` 是整数，恒满足 `0 <= cursor <= input.length`
 2. `state.history` 是已提交文本的字符串数组；`historyIndex === -1` 表示不在历史导航中
 3. `submit()`：清空 input/cursor → `history.push(text)` → `historyIndex = -1` → `scroll = 0`
-4. 模式栈互斥，优先级从高到低：`permission → question → search → interruptPrompt → picker → wizard → 正常输入`。每个模式处理自己的键后必须 `return`
+4. 模式栈互斥，优先级从高到低：`permission → question → search → picker 栈/wizard → interruptPrompt → 正常输入`（2026-09-03 §7 评审 #1 修正——picker 打开期间 Ctrl+I 不接收不处理——picker 吃掉按键——与 TUI.md §3 链一致——原链 interruptPrompt 在 picker 上是错误）。每个模式处理自己的键后必须 `return`
 5. `layoutInput(chars, cursor, width)` 是纯函数：`(chars, cursor, width) → { lines, cursorLine, cursorCol }`，遇 `\n` 强制换行
 6. 输入框渲染宽度 = `W - 4`；最多显示 `MAX_INPUT_LINES`（5）行，超出滚动（`inputOffset`）
 7. 渲染层是 `renderRows`（row-diff）：每帧全量计算屏幕行 → 与上一帧 diff → 只重写变化行。输入框内容变化靠"行内容不同则重写"，无独立缓存
@@ -226,3 +226,15 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 | 本文档 §1.1/§7 | 契约同步 |
 
 （本文档为权威——TUI.md 仅模块地图行引用更新）
+
+### 7.5 §7 round1 评审处置（2026-09-03——1🔴+9 refinement——修订注）
+
+**🔴 #1（用户裁定——picker 期间不接收 Ctrl+I）**：§1.1(4) 模式链已修正（interruptPrompt 移至 picker 栈/wizard 后——TUI.md §3 一致）。
+
+**refinement 处置**：
+1. **answer 无 \n 不变式守卫**（#3）：自由文本态下 Ctrl+J/粘贴含 \n —— **strip/替换为空格**（answer 单行不变式硬守卫——layoutAnswer 不处理换行）；长答案超宽（>box 宽）—— **复用 layoutInput 完整换行语义**（弃"单行简化"——layoutAnswer 与 layoutInput 同实现——多行展开 box——光标随行）——T-Q 补长答案用例
+2. **q.cursor 按 codepoint**（#9）：answer 存 codepoint 数组（同 state.input 语义——非 UTF-16 串）——emoji 不劈半——←→ 步进 codepoint——T-Q2 补 emoji 用例——提交时 Array.join 还原串
+3. **未列键显式吞**（#10）：自由文本态未列键（含 Ctrl+J 等）一律消费 return——无 fall-through 到正常编辑（search 穿透 bug 教训——§3.2 BUG-2）
+4. **interaction.mjs 定稿**（#10b）：q.cursor 归属 = askQuestion 装配处（interaction.mjs）——进入自由文本态初始化 cursor = answer.length——options→Custom 转换时同步初始化——移除"自查"占位
+5. **行号改符号锚**（#5）：§7.1 差距链定位改符号（layout.mjs 的 question boxLines 分支/render-frame hasOverlay 判定/render-loop cursorSuffix/key-handler question 分支）
+6. **key-handler 超限**（#4）：§7 增行使 key-handler（523 行基线）加深超限——记 TODO 拆分（与 index/render-conversation 拆分轮同批评估）
