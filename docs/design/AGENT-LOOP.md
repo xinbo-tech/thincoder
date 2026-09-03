@@ -562,7 +562,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T2 | ✓ 主会话继续 | async spawn 后同一回合再调另一只读工具 | 第二工具正常执行返回（不被 spawn 阻塞） | F1/D-A1 |
 | T3 | ✓ 完成顺序 | 2 个 async（快/慢）| `subagent_check`（无 id）先返回快的 id+报告；第二次 check 返回慢的；第三次返回 `{done:true}` | F2/D-A2 |
 | T4 | ✓ 特定 id 等待 | 带 id check 慢的 | 阻塞到该 id 完成返回其报告 | F2/D-A2 |
-| T5 | ✓ 回合收尾（~~旧语义：finally await 全部 + 清空~~——**被 §17 D-S1 取代：collectSettled 收已完成注入 + 未完成移交池**，round2 #1） | async 未 check + runAgent 自然结束 | §17 落地后：回合自然结束不等待；已 settle 注入 + 未 settle 保留池 | §17 D-S1 |
+| T5 | ✓ 回合收尾（~~旧语义：finally await 全部 + 清空~~——**被 §17 D-S1 取代：collectSettled 收已完成注入 + 未完成移交池**，round2 #1）——**再被 §17.5 取代（2026-09-03——回合尾留池 digest——详见 §17.5.2——agent 级无驱动用例保留直注入）** | async 未 check + runAgent 自然结束 | §17 落地后：回合自然结束不等待；已 settle 注入 + 未 settle 保留池 | §17 D-S1 |
 | T6 | ✓ 槽位队列（超限入队） | 第 5 个 async spawn（4 个 running） | **入队**：返回 `{id, status:"queued", position:1}`，不拒绝；前 4 个不受影响 | F5/D-A1 |
 | T10 | ✓ 腾槽补位 | 第 5 个入队后，1 个 running 完成（promise settle） | 队列头部 queued 项**自动启动**（status→running，position 释放）；无需模型再 spawn | F5/D-A1 |
 | T11 | ✓ 队列位置 | 第 6、7 个 spawn（5 在跑/队） | position 递增（1、2）；位置信息随 spawn 返回可见 | F5/D-A1 |
@@ -710,7 +710,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 
 ### 17.3 设计（V2 完整版——V1 注入档并入为 D-S3/D-S4 的基础语义，V2 auto-turn 为 D-S5..D-S7）
 
-- **D-S1 回合尾语义**：`collectAsyncSubagents` 拆为 `collectSettledAsync(agent)`（注入已完成，形态不变——函数名统一，round2 #6）+ 未完成项**保留在池**（不清空、不等待、不发 done 冻结——区块继续 live）。finally 分支（agent.mjs:447-452）在"anything else"路径调用 collectSettled 后**直接返回**，不再 allSettled 等待
+- **D-S1 回合尾语义**：`collectAsyncSubagents` 拆为 `collectSettledAsync(agent)`（注入已完成，形态不变——函数名统一，round2 #6）——**注入语义被 §17.5 替代（2026-09-03——回合尾不再直注入——详见 §17.5.2）**+ 未完成项**保留在池**（不清空、不等待、不发 done 冻结——区块继续 live）。finally 分支（agent.mjs:447-452）在"anything else"路径调用 collectSettled 后**直接返回**，不再 allSettled 等待
 - **D-S2 交互层挂起态**（CLI agent-turn/startup turn 循环、VS Code 面板循环）：回合返回后 `agent._asyncSubagents` 非空 → 进入挂起态（非 processing——输入框可用、状态行"后台 N 子代理运行中"）；退出条件 = 池空（无 running/queued/**未注入**——与 F5 同口径，评审 #8）+ 无排队输入 → 回空闲。**退出判据 = 持续评估（round3 #1）**：每次 settle / 轮末 / 注入后都检查池态（无 running/queued/未注入 + 无 pendingInput 即退），不依赖"等到下一 settle"事件
 - **D-S9 交互层挂起状态机（round2 #5）**——状态 × 事件 × 动作 × 出口：
 
@@ -731,7 +731,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 | suspension/auto-turn | ContinueError | 按 §2 统一续跑规则（工程 && AUTO → 自动 resume；否则询问/auto-refuse——**实现裁定：digest 撞 turn cap 无面板——AUTO 档自动 resume（agent.autoApprove 短路），手动档静默拒绝**（部分消化留在历史、会话回挂起，结果不丢；无人值守期不弹 continue 面板）） | → 续跑回合或回挂起 |
 
 时序边界（round2 #5）：settle 与 `_suspended` 翻转竞态——`_suspended` 在 runAgent finally 返回后（交互层进入挂起前）置位；settle 回调读到的标志若为 false（回合刚结束瞬间）→ 按正常回合语义发 done 冻结（该块本就在流尾，无害）；D-S8 门控以回调读取时刻为准（确定性，无锁需求）
-  - **D-S3 prepareRun 前注入（注入单主，round2 #3；行号改符号锚点——round3 #4）**：`_pendingAsyncResults` 数组（同 `_pendingDistill` 的 runAgent 首行 await 落定模式，agent.mjs:114-118 仅作 as-of 快照）——每回合（用户回合与 auto-turn）开始前把已 settle 未注入项注入历史。**条目生命周期（唯一记账点）**：settle → 入 `_pendingAsyncResults`（pending）→ **仅在 prepareRun 前注入点消费**（injected 后即从数组移除 = consumed）——D-S6 触发不再自行注入（只负责触发 auto-turn，注入由 auto-turn 的 prepareRun 统一完成）；D-S2 池空判据的"未注入" = `_pendingAsyncResults` 非空；负测试：settle 与回合边界竞态只注入一次。**消费点集合（round3 #2 收敛）**：① 回合尾 collectSettledAsync 对"回合内已 settle"项**直注入**（不经 pending，形态同 §15）；② 挂起期 settle 项入 pending → 由下个回合（用户回合或 auto-turn）prepareRun 注入；③ 退出前若仍有残余（② 的极端竞态）→ 兜底直注入再退——三路互斥：注入即从对应容器移除（直注入从池移除 / pending 注入从数组移除），负测试"只注入一次"覆盖 ① 与 ② 边界
+  - **D-S3 prepareRun 前注入（注入单主，round2 #3；行号改符号锚点——round3 #4）**：`_pendingAsyncResults` 数组（同 `_pendingDistill` 的 runAgent 首行 await 落定模式，agent.mjs:114-118 仅作 as-of 快照）——每回合（用户回合与 auto-turn）开始前把已 settle 未注入项注入历史。**条目生命周期（唯一记账点）**：settle → 入 `_pendingAsyncResults`（pending）→ **仅在 prepareRun 前注入点消费**（injected 后即从数组移除 = consumed）——D-S6 触发不再自行注入（只负责触发 auto-turn，注入由 auto-turn 的 prepareRun 统一完成）；D-S2 池空判据的"未注入" = `_pendingAsyncResults` 非空；负测试：settle 与回合边界竞态只注入一次。**消费点集合（round3 #2 收敛）**：① 回合尾 collectSettledAsync 对"回合内已 settle"项**直注入**（不经 pending，形态同 §15）——**被 §17.5 替代（2026-09-03——回合尾不再直注入排空——done 留池 → 挂起 digest——无驱动调用方保留直注入兜底——详见 §17.5.2）**；② 挂起期 settle 项入 pending → 由下个回合（用户回合或 auto-turn）prepareRun 注入；③ 退出前若仍有残余（② 的极端竞态）→ 兜底直注入再退——三路互斥：注入即从对应容器移除（直注入从池移除 / pending 注入从数组移除），负测试"只注入一次"覆盖 ① 与 ② 边界
 - **D-S4 输入通道**：挂起态提交 = 普通新回合（D-S3 注入先行）；**输入框状态永不被后台事件读写**（F3 铁律——事件处理与输入框零耦合）
 - **D-S5 排队（F4）**：auto-turn 处理轮 running 中用户 Enter → 消息入队（交互层 `pendingInput` 单槽队列——F3 铁律：输入框不清空、文本保留在框内可继续编辑，Enter 后消息进队列并清框），处理轮结束交互层**自动以该消息开新回合**；队列非空期间**不触发新 auto-turn**（排队输入优先）；Ctrl+I 仍可立即打断处理轮（普通插话语义保留）
 - **D-S6 auto-turn（V2 核心）**：
@@ -779,7 +779,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 #### 7.2.3.2 设计（方案 e——ctx 回传 key → onToolResult 精确冻）
 
-1. **subagent execute（sync spawn 路径）**：makeRelay 已生成 relayPrefix（role#N）——execute 返回前 ctx 上留 `ctx._subagentKey = relayPrefix.slice(0, -1)`
+1. **subagent execute（sync spawn 路径）**：makeRelay 已生成 relayPrefix（role#N）——execute 返回前 ctx 上留 `ctx._subagentKey = relayPrefix.slice(0, -1)`——**async 分支明确不设 ctx._subagentKey（round2 #2——async ack 结果 {id, status:"running"} 到 onToolResult 时 subKey undefined——TUI 对 status:running 结果跳过冻结（既有 isAsyncSpawnResult 判定）——不落启发式）**——**async 分支明确不设 ctx._subagentKey（round2 #2——async ack 结果 {id,status:running} 到 onToolResult 时 subKey undefined——TUI 走既有 isAsyncSpawnResult 判定跳过冻结——不落启发式）**
 2. **dispatch runOne**：execute 返回后、onToolResult 前——读 `ctx._subagentKey`——`callbacks.onToolResult(name, result, toolId, subKey)`（第四参——undefined 兼容既有签名）
 3. **TUI onToolResult**：sync 完成（非 async 结果）——`subKey` 有值 → **新 finishSubTaskKey(state, key, lastError)** 精确冻（含 freezeDoneSubTasks——删条目）；subKey undefined（旧路径/异常）→ 启发式兜底保留
 4. **并行 sync spawn**（同批 N explore——dispatch 批并行）——各 runOne 独立 ctx——各带自己 key——乱序完成精确 ✓
@@ -806,14 +806,14 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 #### 17.5.1 问题（诊断结论）
 
-回合中 settle（_suspended=false——前端 processing）→ 非挂起分支（subagent.mjs ~L444-456）只发 ⟦ev⟧done + 条目留池等"回合尾 collect"——缝隙：
+回合中 settle（_suspended=false——前端 processing）→ 非挂起分支（subagent.mjs settle finally 分流处）只发 ⟦ev⟧done + 条目留池等"回合尾 collect"——缝隙：
 - **A 滞留**：长回合（工具循环）报告滞留池内无通知
 - **B 结构性互斥（正主）**：collectSettledAsync 回合尾**先注入排空**（最终答复后——本轮模型已不可能处理）→ 池空 → willSuspend=false → **挂起会话不启动 → digest 永不触发**——消化机制只服务挂起态 settle——回合中 settle 与消化互斥（对照：ContinueError 取消路径反而消化——collect 被跳过 → 留池 → 挂起 → digest）
 - **C 可见性/丢失**：注入不进 state.lines（当前会话不可见——"似乎丢失"字面来源）——滞留期 Ctrl+C 清池不注入 → 报告真丢
 
 #### 17.5.2 设计（方案 B——用户批准——"空闲再挨个处理"语义）
 
-**collectSettledAsync（agent.mjs ~L493-503）语义变更**：回合尾**不再直注入排空**——done 条目**留池**（状态不变——settled not consumed）→ agent-turn willSuspend（poolLive 已覆盖池非空）判 true → 进 suspensionSession → 首轮 sweepSettledToPending（:415）→ pending 非空 → digestTurn（:432）→ digest runAgent 首行统一注入（agent.mjs :128-132）→ 模型消化 → 池空自然退出冻结。多条目近邻完成 = 合并消化一轮（D-S6 既有）。
+**collectSettledAsync（agent.mjs 回合尾 collect 函数）语义变更**：回合尾**不再直注入排空**——done 条目**留池**（状态不变——settled not consumed）→ agent-turn willSuspend（poolLive 已覆盖池非空）判 true → 进 suspensionSession → 首轮 sweepSettledToPending → pending 非空 → digestTurn → digest runAgent 首行统一注入（prepareRun pending 注入）→ 模型消化 → 池空自然退出冻结。多条目近邻完成 = 合并消化一轮（D-S6 既有）。
 
 **语义变化（显式接受）**：正常回合尾残留已 settle 未消费条目 → 烧一个 auto-turn 消化轮（手动档 organize-only / AUTO 档全语义——既有护栏复用）——消化输出进流 → 用户可见 "[auto-turn: digesting finished subagent reports…]" + 消化总结——**补可见性缺口（C）**。
 
@@ -1024,7 +1024,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 #### 19.5.2 设计
 
-**D-M5 status 全览增强**：全览条目从 id 数组改结构化对象数组——`running: [{id, role, model, elapsedSec, turn, maxTurns}]`、`queued: [{id, role, position}]`、`done: [{id, role}]`——**数据装配锚点（round1 #3）**：spawn 时（subagent-async spawn 分支）记 `entry.model`（childProvider.model）与 `entry.startedAt`；turn/maxTurns 在**子代理 callbacks 包装层同步**（wrapChildCallbacks 内解析 ⟦ev⟧turn 更新 entry——或 spawnChild 提供 per-child turn 钩子——选改动最小方案——实现时定并注）；`elapsedSec = (now - startedAt)/1000` 计算于 status 调用时——单查（id）形态不变 + 同字段。
+**D-M5 status 全览增强**：全览条目从 id 数组改结构化对象数组——`running: [{id, role, model, elapsedSec, turn, maxTurns}]`、`queued: [{id, role, position}]`、`done: [{id, role}]`——**数据装配锚点（round1 #3）**：spawn 时（subagent-async spawn 分支）记 `entry.model`（childProvider.model）与 `entry.startedAt`；turn/maxTurns 在**子代理 callbacks 包装层同步**（wrapChildCallbacks 内解析 ⟦ev⟧turn 更新 entry——或 spawnChild 提供 per-child turn 钩子——选改动最小方案——**round2 #4 裁定：wrapChildCallbacks 内解析 ⟦ev⟧turn 更新 entry（wrapper 侧——以 entry 自身 relayPrefix 定位）**）；`elapsedSec = (now - startedAt)/1000` 计算于 status 调用时——单查（id）形态不变 + 同字段。
 
 **D-M6 cancel 动作**：`action:"cancel"` + `id`（必填）→ 定位池条目 → **定向 abort**（**条目级 AbortController（round2 #2 定稿）**：async spawn 时每条目建独立 controller（链到会话/回合 signal——consult `session.controllers` 为仓内先例）存条目——Ctrl+C 全停语义不变（session abort 逐链传播）——abort → 子代理 runAgent signal →）→ **cancelled settle（round1 #1 机制定稿）**：
 - **条目标记**：cancel 时置 `entry.cancelled = true`（清池/注入判定依据）
@@ -1108,4 +1108,5 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 5. §17.5 标题同步"已批准"（17.5.4 已在——标题残留修）
 6. VS Code 声明（CLI-only——webview 键匹配无启发式——不需同步改）
 7. 本节状态同步"设计批准"（即本段——token 已签发——实现排队）
+8. CHANGELOG 记录（round2 #6——本节 CLI 行为变更（面板回收时序）——父代理统一批记录——§19 sweep 惯例——§17.5 同）
 
