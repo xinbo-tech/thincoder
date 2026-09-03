@@ -7,6 +7,7 @@ Read a text file. Returns numbered lines. Use offset/limit to page large files.
 - Know the symbol but not the location? → `code_search` or `lsp definition`
 - Know the file but not the lines? → `grep` to find line numbers, then read that range with offset/limit
 - Reading an image? → `read_image` instead
+- Reading a PDF? → `read_pdf` instead (read would decode the binary as UTF-8 garbage)
 
 Parameters:
 - path (required): File path, relative to cwd or absolute (alias: filePath)

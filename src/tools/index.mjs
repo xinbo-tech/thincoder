@@ -2,6 +2,7 @@
 export { toOpenAISchema } from "./shared.mjs";
 
 import { readTool, writeTool, editTool, insertAfterTool, readImageTool, hashlineEditTool } from "./file.mjs";
+import { readPdfTool } from "./pdf.mjs";
 import { applyPatchTool, deleteTool } from "./patch.mjs";
 import { bashTool, globTool, grepTool, lsTool } from "./system.mjs";
 import { websearchTool, fetchTool } from "./web.mjs";
@@ -15,7 +16,7 @@ import { treeTool } from "./tree.mjs";
 
 export const builtinTools = [
   readTool, writeTool, editTool, insertAfterTool, hashlineEditTool, applyPatchTool,
-  readImageTool, bashTool, globTool, grepTool,
+  readImageTool, readPdfTool, bashTool, globTool, grepTool,
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
   checklistTool, lintTool, lspTool, executeTool,
@@ -25,7 +26,7 @@ export const builtinTools = [
 
 export {
   readTool, writeTool, editTool, insertAfterTool, hashlineEditTool, applyPatchTool,
-  readImageTool, bashTool, globTool, grepTool,
+  readImageTool, readPdfTool, bashTool, globTool, grepTool,
   websearchTool, lsTool, fetchTool, deleteTool,
   gitTool, questionTool,
   checklistTool, lintTool, lspTool, executeTool,
