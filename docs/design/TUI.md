@@ -435,6 +435,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 ### 10.6 配置界面 picker 化审查 + question 光标（2026-09-03 · 需求层）
 
+> 状态：**已实现（2026-09-03/04——D-C1 API format picker（T-C1/C2/C5）+ D-C2 wizard Custom format 步（wizard 测试全绿）+ D-Q1 question 光标（TUI-INPUT-BOX.md §7 权威——layoutAnswer/key-modes.mjs——T-Q1..Q11 全绿）+ D-S4 key-handler 拆分（key-modes.mjs 纳出——test/tui.test.mjs——父侧 L2 1359/1359 核销））**。
+
 **用户报告**：① question 等其他输入框没光标（主输入框有）——不方便；② 盘点所有 CLI 配置界面——固定选项仍手输的地方应改 picker。
 
 **盘点结论**（explore 全命令 × 交互形态 × 枚举对照 2026-09-03）：全 CLI 交互面**仅一处"固定枚举手输"违约**——Add Provider → Custom 的 API format（pickers.mjs:345：手输 openai/anthropic/google——打错静默 abort——违反本文件 9 章决策与 ARCHITECTURE-v2 契约"所有需要用户选择的选项统一使用列表游标选择器"）。其余全部 picker 化（effort 档/transport/模型/会话/undo…——effort 枚举来源走 specForModel 动态枚举——2026-08-17 教训：不硬编码）；数值型手输（/config 5 项、context K）非枚举属合理自由文本。

@@ -1304,33 +1304,42 @@ slow("bash 护栏：checkout ./restore/clean -f/链式写法先快照后放行�
   }
 })
 
-test("bash 护栏：重定向检测引号感知——脚本内比较运算符不误伤，真重定向仍拦截", async () => {
-  const { hasFileRedirection } = await import("../src/tools/shared.mjs")
-  // 放行：引号脚本里的 > < => 比较/箭头函数不是重定向
-  for (const ok of [
-    `node -e "if (a.length > 0) console.log(a)"`,
-    `node -e "const f = (x) => x * 2"`,
-    `node -e "while (i < 10) i++"`,
-    `echo "a > b"`,
-    `node -e 'console.log(JSON.stringify({a:1}))'`,
-  ]) {
-    assert.equal(hasFileRedirection(ok), false, `不应误判: ${ok}`)
-  }
-  // 拦截：引号外的真实重定向（含 heredoc、fd 前缀、反引号命令替换）
-  for (const blocked of [
-    "echo hi > out.txt",
-    "echo hi >> out.txt",
-    "cat < input.txt",
-    "echo ok && node app.js > log.txt",
-    "cat << EOF",
-    "node app.js 2> err.txt",
-    "node app.js 1>> log.txt",
-    "echo `cat > /tmp/evil`", // 反引号是命令替换——内容执行，> 必须拦
-    "grep x file `echo y > z`",
-  ]) {
-    assert.equal(hasFileRedirection(blocked), true, `应拦截: ${blocked}`)
+test("bash 护栏已删：echo hi > f.txt 重定向写文件成功——无拦截消息（T-B1'.0 正路径）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-redirect-"))
+  try {
+    const bash = builtinTools.find((t) => t.name === "bash")
+    const out = await bash.execute({ command: "echo hi > f.txt" }, { cwd: dir })
+    assert.match(out, /exit code 0/, "重定向命令应正常执行")
+    const content = readFileSync(join(dir, "f.txt"), "utf8").replace(/\r\n/g, "\n").trimEnd()
+    assert.equal(content, "hi", "文件应被创建——bash 写文件不拦（权限层裁决）")
+    assert.doesNotMatch(out, /not allowed|intercepted|blocked/, "无护栏拦截消息")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test("bash 护栏防回潮：src/ 无重定向检测函数残留 + 旧测试段无复活（T-B1'.1/.2）", () => {
+  // 拼接构造——测试自身源码不得包含被搜索的连续字符串（防自匹配）
+  const needle = ["hasFile", "Redirection"].join("")
+  const oldTitle = "bash 护栏：" + "重定向检测引号感知"
+  // T-B1'.1: src/ 全量零命中（导出/消费方均无）——fail-when-unchanged 精神
+  const hits = []
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name.startsWith(".") || e.name === "node_modules") continue
+      const p = join(dir, e.name)
+      if (e.isDirectory()) walk(p)
+      else if (/\.(?:mjs|md)$/.test(e.name) && readFileSync(p, "utf8").includes(needle)) hits.push(p)
+    }
+  }
+  walk(join(dirname(fileURLToPath(import.meta.url)), "..", "src"))
+  assert.deepEqual(hits, [], "src/ 无重定向检测函数残留（护栏已删——回潮即失败）")
+  // T-B1'.2: 旧测试段已删除确认——引用断链零
+  const self = readFileSync(fileURLToPath(import.meta.url), "utf8")
+  assert.ok(!self.includes(oldTitle), "tools.test.mjs 无旧测试段标题")
+  assert.ok(!self.includes(needle), `tools.test.mjs 无 ${needle} 导入（护栏彻底删除）`)
+})
+
 
 test("stripTags: out-of-range numeric entities do not throw (RangeError guard)", async () => {
   const { stripTags } = await import("../src/tools/shared.mjs")
@@ -1553,6 +1562,129 @@ slow("verify: mixed 改动（文档+代码）不走快路径，语法检查照�
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+// ---------------------------------------------------------------- verify 定位（§18.12 T-VR —— _touchedFiles ∪ git diff）
+
+test("§18.12 T-VR1: cwd 非 git 根（workspace 根）——_touchedFiles 定向 + 相关测试按项目根解析（F-VR1 真实形态）", async () => {
+  const ws = mkdtempSync(join(tmpdir(), "thincoder-verify-vr1-"))
+  try {
+    const proj = join(ws, "proj")
+    mkdirSync(join(ws, ".git")) // 空 .git 目录——git 在此确定性失败（防 tmpdir 恰在父仓库内）
+    mkdirSync(join(proj, "src", "agent-tools"), { recursive: true })
+    mkdirSync(join(proj, "test"), { recursive: true })
+    writeFileSync(join(proj, "src", "agent-tools", "x.mjs"), "export const v = 1\n")
+    writeFileSync(join(proj, "test", "tools.test.mjs"), 'import { test } from "node:test"\nimport assert from "node:assert/strict"\ntest("ok", () => assert.equal(1, 1))\n')
+    writeFileSync(join(proj, "package.json"), '{ "name": "proj" }\n') // 项目根锚
+    // 子代理场景：cwd = 非 git 根 workspace——git 链必失败；定位只靠 _touchedFiles；
+    // 相关测试文件在 <projectRoot>/test/ 下——按项目根解析才能真跑（F-VR1）
+    const agent = { cwd: ws, tasks: [], _touchedFiles: [join(proj, "src", "agent-tools", "x.mjs")] }
+    const result = await verifyTool.execute({}, { agent })
+    assert.ok(result.includes("not a git repo"), "git 回退路径信息仍在")
+    assert.ok(result.includes("src/agent-tools/x.mjs"), "touched 文件进入定位（绝对路径归一化后）")
+    assert.ok(result.includes("Syntax check"), "语法检查运行")
+    assert.ok(result.includes("Related tests"), "相关测试识别——定向而非全量")
+    assert.ok(!result.includes("Tests (full suite)"), "不跑全量")
+    assert.ok(result.includes("test/tools.test.mjs"), "相关测试文件被运行（按项目根解析）")
+    assert.ok(result.includes("All related tests passed"), result)
+    assert.strictEqual(agent._verifyPassed, true)
+  } finally {
+    rmSync(ws, { recursive: true, force: true })
+  }
+})
+
+slow("§18.12 T-VR2: 正常 cwd（git 根）——git diff 仍生效，_touchedFiles ∪ git diff", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-vr2-"))
+  const { execSync } = await import("node:child_process")
+  const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: dir, stdio: "ignore" })
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    mkdirSync(join(dir, "src", "agent-tools"), { recursive: true })
+    mkdirSync(join(dir, "test"), { recursive: true })
+    writeFileSync(join(dir, "src", "agent-tools", "a.mjs"), "export const a = 1\n")
+    writeFileSync(join(dir, "test", "tools.test.mjs"), 'import { test } from "node:test"\nimport assert from "node:assert/strict"\ntest("ok", () => assert.equal(1, 1))\n')
+    git("add", ".")
+    git("commit", "-qm", "init")
+
+    // git 链可见的改动（modified tracked）
+    writeFileSync(join(dir, "src", "agent-tools", "a.mjs"), "export const a = 2\n")
+    // _touchedFiles 覆盖而 git diff --name-only 不可见的改动（untracked）——并集
+    writeFileSync(join(dir, "src", "agent-tools", "b.mjs"), "export const b = 1\n")
+    const agent = { cwd: dir, tasks: [], _touchedFiles: [join(dir, "src", "agent-tools", "b.mjs")] }
+    const result = await verifyTool.execute({}, { agent })
+    assert.ok(result.includes("Changed files (git diff --stat)"), "git diff 链仍生效")
+    assert.ok(result.includes("src/agent-tools/a.mjs"), "git diff 文件进入定位")
+    assert.ok(result.includes("src/agent-tools/b.mjs"), "_touchedFiles 并集进入定位")
+    assert.ok(result.includes("Syntax check"), "语法检查运行")
+    assert.ok(result.includes("All related tests passed"), "相关测试真实运行（test/tools.test.mjs 存在）")
+    assert.strictEqual(agent._verifyPassed, true)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+slow("§18.12 T-VR2b（审计 #1 修正——git 在仓库子目录调用）：相对路径按 git 根 resolve，不产生 <subdir>/src/ junk", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-vr2b-"))
+  const { execSync } = await import("node:child_process")
+  const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: dir, stdio: "ignore" })
+  try {
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    mkdirSync(join(dir, "src", "agent-tools"), { recursive: true })
+    mkdirSync(join(dir, "test"), { recursive: true })
+    writeFileSync(join(dir, "src", "agent-tools", "a.mjs"), "export const a = 1\n")
+    writeFileSync(join(dir, "test", "tools.test.mjs"), 'import { test } from "node:test"\nimport assert from "node:assert/strict"\ntest("ok", () => assert.equal(1, 1))\n')
+    git("add", ".")
+    git("commit", "-qm", "init")
+    writeFileSync(join(dir, "src", "agent-tools", "a.mjs"), "export const a = 2\n")
+
+    // workdir 指向仓库子目录 → git 首次尝试在子目录（成功）——输出为根相对路径
+    const agent = { cwd: dir, tasks: [] }
+    const result = await verifyTool.execute({ workdir: "src" }, { agent })
+    const norm = join(dir, "src", "agent-tools", "a.mjs").replace(/\\/g, "/")
+    assert.ok(result.includes(`✓ ${norm}`), `子目录调用定位到根绝对路径（含语法检查行）——got: ${result.slice(0, 400)}`)
+    assert.ok(!result.includes("src/src/"), "无 <subdir>/src/ 拼接 junk")
+    assert.ok(result.includes("Syntax check"), "语法检查运行")
+    assert.strictEqual(agent._verifyPassed, true)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
+test("§18.12 T-VR3: _touchedFiles 空 + git diff 全失败——回退现有行为（空列表→正常路径，不崩）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-vr3-"))
+  try {
+    const agent = { cwd: dir, tasks: [], _touchedFiles: [] }
+    const result = await verifyTool.execute({}, { agent })
+    assert.ok(result.includes("not a git repo"), "git 失败路径信息在")
+    assert.ok(result.includes("no source .mjs files changed"), "空列表→正常路径（nothing to test）")
+    assert.ok(result.includes("Self-review checklist"), "正常报告路径完整")
+    assert.strictEqual(agent._verifyPassed, true)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("§18.12 T-VR2c（advisor 🟡1 ② 修正——相关测试文件缺失）：警告 + 不判过（防 'All related tests passed' 假 pass）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-vr2c-"))
+  try {
+    mkdirSync(join(dir, ".git")) // 空 .git 目录——git 确定性失败
+    mkdirSync(join(dir, "src", "agent-tools"), { recursive: true })
+    writeFileSync(join(dir, "src", "agent-tools", "x.mjs"), "export const v = 1\n")
+    // 模块有映射（agent-tools → test/tools.test.mjs）但测试文件不存在
+    const agent = { cwd: dir, tasks: [], _touchedFiles: [join(dir, "src", "agent-tools", "x.mjs")] }
+    const result = await verifyTool.execute({}, { agent })
+    assert.ok(result.includes("did NOT certify"), "缺失时明确警告——不输出假 pass")
+    assert.strictEqual(agent._verifyPassed, false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
 
 // ---------------------------------------------------------------- delete / git 工具
 

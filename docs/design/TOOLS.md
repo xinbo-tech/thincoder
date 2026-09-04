@@ -30,7 +30,7 @@
 | 面 | 机制 |
 |---|---|
 | **路径** | ~~`resolveInCwd(ctx, p)`（防 `../` 逃逸到工作区外）+ `assertInside` + `realpathNearest`（符号链接解算）；`resolveExternal` 显式白名单外部路径（仅 question 等特殊工具）~~——**被 §10.1 取代（2026-09-02）**：统一为无边界解析（resolveInCwd/resolveExternal 等价），信任模型 + 权限门禁为唯一防线 |
-| **命令**（bash） | **零文本拦截**：破坏性命令（rm -rf/DROP TABLE 等）一律放行——恶意模型可用空白变体/heredoc/node -e 绕过，文本匹配拦不住且误伤正常操作；真实防线 = 审批层 + 快照。保留：`hasFileRedirection`（禁止 bash 写文件，路由到 write/edit，引导性非安全门）、`detectDanger`（危险标注只提示不拦截：recursive-delete/sudo/pipe-to-shell/dd/mkfs/raw-device/chmod-777/fork-bomb，审批面板红标，引号感知防 commit message 误标）、git 破坏操作快照后放行（gitGuardSnapshot，永不拦截）；超时 120s |
+| **命令**（bash） | **零文本拦截（彻底——2026-09-04 已删除）**：破坏性命令（rm -rf/DROP TABLE 等）一律放行——恶意模型可用空白变体/heredoc/node -e 绕过，文本匹配拦不住且误伤正常操作；真实防线 = 审批层 + 快照。~~保留：`hasFileRedirection`（禁止 bash 写文件，路由到 write/edit，引导性非安全门）~~——**本函数 2026-09-04 已删除（用户裁定：写好文件想方设法绕——拦截只误伤正常操作——见 §13）**；保留 `detectDanger`（危险标注只提示不拦截：recursive-delete/sudo/pipe-to-shell/dd/mkfs/raw-device/chmod-777/fork-bomb，审批面板红标，引号感知防 commit message 误标）、git 破坏操作快照后放行（gitGuardSnapshot，永不拦截）；超时 120s |
 | **网络**（websearch/fetch） | `isPrivateHost`（localhost/内网/云元数据 169.254.169.254）——SSRF 防护；响应体 ≤5MB；HTML 转文本（stripTags/htmlToText） |
 | **文件** | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 node --check 预检） |
 | **lint** | `node --check` fast path + 语言级联（tsc/ruff/cargo/go vet）——~~eslint 级联~~（2026-09-02 §10.2 删除，零依赖） |
@@ -54,7 +54,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 | 决策 | 理由 |
 |---|---|
 | md 文件即 description | 长文档描述模型才理解边界；与代码分离便于迭代不触发 schema 变更 |
-| bash 命令零文本拦截 | 文本匹配是安全剧场：恶意模型必然绕过（空白/heredoc/node -e），拦住的只有正常操作；真实防线 = 审批层（autoApprove）+ 快照（gitGuardSnapshot/checkpoint）。危险标注（detectDanger）只给人看，不构成边界 |
+| bash 命令零文本拦截（**2026-09-04 彻底——重定向护栏已删除——§13**） | 文本匹配是安全剧场：恶意模型必然绕过（空白/heredoc/node -e），拦住的只有正常操作；真实防线 = 审批层（autoApprove）+ 快照（gitGuardSnapshot/checkpoint）。危险标注（detectDanger）只给人看，不构成边界——**2026-09-04 曾漏网 `hasFileRedirection`（引导性硬拦——2>&1 误报实证）——已随 §13 删除——彻底对齐** |
 | 超限落盘而非截断 | 模型可再用 read 工具读全量；预览 2K 字符足够决策 |
 | 沙箱只出不进 | 模型执行用户代码时，网络/文件系统读写按工具授权而非代码内自由——**2026-09-03 §12 注**：exec-prelude 退役后 execute 与 bash 同边界（无预置文件面——文件能力唯一入口 = 工具授权）；本行保留为历史决策记录 |
 | 工具全部字符串返回 | schema 简单、dispatch 统一、流式展示统一 |
@@ -223,7 +223,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **需求**：F1 = 所有工具路径解析**不再做工作目录边界断言**（与 bash 对齐：信任模型 + 权限门禁是唯一防线）；F2 = 工具描述中 "confined to workspace" 类措辞移除（避免误导模型绕行）。
 
-**残留风险声明（评审 #4 补）**：受认可的写通道（write/edit/apply_patch）失去工作区约束后**写面扩大**（可写工作区外 dotfiles/敏感路径）——此前 bash 写文件的重定向拦截仅是引导性（bash 可经 `node -e`/`cp` 等绕过），故实际能力并无新增，只是去掉"Access denied"失败往返（用户裁定：拦不住还空耗 token）。**权限门禁（审批）+ 破坏性操作快照（gitGuardSnapshot）不变**，仍是防线；用户接受此残留风险。
+**残留风险声明（评审 #4 补）**：受认可的写通道（write/edit/apply_patch）失去工作区约束后**写面扩大**（可写工作区外 dotfiles/敏感路径）——此前 bash 写文件的重定向拦截仅导引导性（bash 可经 `node -e`/`cp` 等绕过——**2026-09-04 连同已被删除——§13**），故实际能力并无新增，只是去掉"Access denied"失败往返（用户裁定：拦不住还空耗 token）。**权限门禁（审批）+ 破坏性操作快照（gitGuardSnapshot）不变**，仍是防线；用户接受此残留风险。
 
 **设计**：
 
@@ -350,5 +350,41 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **D-E6 验收（✅ 2026-09-03 全过）**：T-E1..E4 全绿（两端——CLI test/tools.test.mjs + VS Code test/execute.test.mjs）；既有 execute 能力用例全绿（inline/import/scriptFile/nodeArgs/超时/过滤——**路径语义按 §10.1：无越界拒绝（评审 #1——T-w-2/T-e-3 行随 §10.1 已改"可指向 workspace 外"——本批已 sweep 残留旧行）**）；**D-E4 文档编辑与代码同批落（评审 #8——不在实现后补）**；TOOLS.md §12 本段勾销
 
 **交付记录（2026-09-03）**：两端 exec-prelude.mjs 已删；execute.mjs inline code = 纯净 `node --input-type=module --eval`（无 prelude import、无 THINCODER_EXEC_ROOT env）；描述 byte-identical（CLI execute.md 与 VS Code execute.mjs 内嵌 description 逐字节相等——程序化校验 === true：字符串 2354 字符 / UTF-8 落盘 2384 字节——三面：整体描述/code 参数/scriptFile 参数相等；措辞避开 mock 词 "slow/queued"——VS Code subagent T3 的 body 正则会把 execute 描述误判为慢任务）；T-E1..E4 + 既有能力用例 CLI execute 段 8 绿 / VS Code 27 绿；D-E7 sweep：prompts/discipline 无残留、VS Code ARCHITECTURE.md 退役指向已加（含 §3 工具清单 execute 行改纯净子进程口径——原 "vm 沙箱 JS" 陈旧声明已清）；desktop vendor 副本不在范围（工作区无 vendor 副本可同步——glob 全仓零命中）。遗留（🔵 已知残留，非本设计范围）：VS Code ARCHITECTURE.md §3 "路径安全" 行（L112-114）仍描述 §10.1 移除前的 resolvePath 边界断言——属 2026-09-02 §10.1 交付的文档同步缺口，后续可同批加 "——§10.1 移除" 指向。
+
+## 13. bash 工具重定向护栏删除（2026-09-04 · 用户裁定——R3'——替换原 R3 修误报设计）
+
+> 状态：**已实现（2026-09-04——用户裁定方向变更：不修误报——整个删除 `hasFileRedirection` 拦截——"agent 决定要写会想方设法绕——拦截也拦不住"——与 §5 既有决策"bash 命令零文本拦截（安全剧场）"彻底一致——原 R3（修 fd 误报——评审 0🔴 token bd955bb8）已被替换——round2 复审 0🔴（token d6f6bd3a——6+7 项建议全处置）——用户批准——实现：id:13（clean——L1 1360/1312/0 fail——T-B1'.0 正路径 + T-B1'.1/.2 防回潮——bash.md 失实句清——父侧 L2 核销 2026-09-04））**。
+
+**需求（F-B1'——登记句——用户裁定版）**：作为用户，我希望 bash 工具**不拦截写文件**——agent 决定要写会想方设法绕（`node -e`/`cp`/heredoc/空白变体）——文本匹配拦不住且只误伤正常操作——`hasFileRedirection`（src/tools/shared.mjs）整条删除——与既有"零文本拦截"决策（§5 关键决策——安全剧场）对齐——`2>&1` 误报、测试收窄被拦、被迫重跑整链消除。
+
+**范围（用户裁定——已确认）**：
+- ✅ 删：`hasFileRedirection` 函数（shared.mjs——含 blankQuoted 若仅此引用）+ 调用点（system.mjs bash 护栏）+ 相关测试段（tools.test.mjs"bash 护栏：重定向检测引号感知"——整套删除——用户"现在测试爆炸得太厉害了"）；
+- ✅ 保：**DANGER_PATTERNS 危险标注**（detectDanger——只给人看不拦——用户明确"保留"）；
+- ✅ 保：审批层 + 快照（真实防线——不变）；
+- ⚠️ 不碰：危险标注/其他机制（本批只删重定向护栏——不引入替代）。
+
+**设计（D-B1'）**：
+- **D-B1'.1（删函数）**：shared.mjs `hasFileRedirection` 整段删除（含 blankQuoted——实现批 grep 核实 blankQuoted 无其他引用则一并删——有则留）；
+- **D-B1'.2（删调用点）**：system.mjs bash 护栏检测处（hasFileRedirection 调用）删除——bash 执行不再做重定向检测——直接进权限/快照层；
+- **D-B1'.3（零新机制）**：不引入替代检测——信任模型生效（§5 决策已定——本批补上漏网的最后一块——§5 决策表行注明 2026-09-04 彻底）。
+
+**测试（T-B1'——用户"删掉"——删整段 + 防回潮负断言）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-B1'.1 | N | grep src/ 无 `hasFileRedirection`（导出/消费方均无） | 零命中（防回潮——fail-when-unchanged 精神） |
+| T-B1'.2 | N | tools.test.mjs 无"bash 护栏：重定向检测"测试段 | 删除确认——既有引用断链零（node --check 绿） |
+| T-B1'.3 | E | 全量快层回归——既有测试零破坏（删除不引起引用错误） | npm test 快层全绿 |
+| T-B1'.0 | N | **正路径（评审 #1——METHODOLOGY 硬流程：每条用户故事至少一用例）**：bash 执行 `echo hi > f.txt`（重定向写文件） | **成功——文件创建——无护栏消息**（护栏不存在 = 直接执行——由权限层裁决） |
+
+**受影响文件**：
+- CLI `src/tools/shared.mjs`（删 hasFileRedirection——blankQuoted 核实后随删或留）；
+- CLI `src/tools/system.mjs`（删护栏调用点）；
+- CLI `test/tools.test.mjs`（删"bash 护栏：重定向检测引号感知"测试段——约 27 行——**删除前核对段边界不吞 detectDanger 测试——评审 #5**——T-B1'.0 正路径用例加入——评审 #1）；
+- **VS Code 端：零**（grep 核实——检测器 CLI 独有——terminal-bash 无此护栏——实现前重新 grep 两端确认零命中——**grep 范围含 test/——评审 #5**）；
+- **实现批 sweep（评审 #3）**：grep `hasFileRedirection`/`重定向`/`redirect`（两端 src/ + prompts + docs）——残留措辞同批清理或加删除指向——至少确认零命中；
+- 文档：TOOLS.md §2（命令行——删"保留：hasFileRedirection"）+ §5（决策表——行注明 2026-09-04 裁定）+ §13（本节）+ TODO.md 需求池 R3（**行文本改 F-B1' 句——评审 #4**——实现后勾销）。
+
+**验收（AC-B1'）**：AC-B1'.0 = T-B1'.0 绿（正路径——bash 重定向写文件成功——用户故事直接映射——评审 #1）；AC-B1'.1 = src/ 无 `hasFileRedirection` 残留（grep 零命中——T-B1'.1）；AC-B1'.2 = 测试段删除确认（T-B1'.2）；AC-B1'.3 = 引入后 npm test 快层全绿（零破坏——T-B1'.3）；AC-B1'.4 = 父侧 L2 test:full 核销。
+
 
 

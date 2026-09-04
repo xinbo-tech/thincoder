@@ -6,7 +6,6 @@ import {
   BASH_TIMEOUT_MS,
   IGNORED_DIRS,
   resolveInCwd,
-  hasFileRedirection,
   globToRegex,
   normalizeEOL,
 } from "./shared.mjs";
@@ -50,20 +49,6 @@ function posixSyntaxHint(command) {
 // ====================================================================
 // bash — command execution with safety gates
 // ====================================================================
-
-/**
- * Pre-execution safety checks for bash commands.
- * Layers: file redirection (guides toward structured tools, not a security gate).
- * Destructive commands (rm -rf, DROP TABLE, ...) are deliberately NOT rejected:
- * a determined model bypasses text matching anyway — real security is at the
- * tool approval layer plus snapshot backups (gitGuardSnapshot / checkpoint).
- * Git destructive ops: snapshot-then-proceed, never block.
- */
-function checkBashSafety(command, cwd) {
-  if (hasFileRedirection(command)) {
-    throw new Error("File redirection via bash is not allowed — use the write/edit/insert_after tools instead")
-  }
-}
 
 /**
  * Build environment for child process.
@@ -113,11 +98,12 @@ function killProcessTree(child) {
  * cannot help (it was taken before the code was written); only a snapshot taken
  * immediately before the destructive command can.
  *
- * This is layer 1 (defense in depth): a WIDE match that snapshots before the command
- * runs. Layer 2 (checkBashSafety) then rejects the command when uncommitted changes
- * exist — but a rejection alone is not enough: the model may retry a variant that
- * slips through the exact matcher (e.g. `git checkout HEAD -- .`), or run git outside
- * the bash tool. The snapshot taken here survives all of those paths.
+ * This is the defense-in-depth guard: a WIDE match that snapshots before the command
+ * runs — the command itself is NEVER blocked (a determined model bypasses text
+ * matching anyway; the real gate is the approval layer). A snapshot alone is not
+ * enough: the model may retry a variant that slips through the exact matcher
+ * (e.g. `git checkout HEAD -- .`), or run git outside the bash tool. The snapshot
+ * taken here survives all of those paths.
  *
  * Matching is intentionally WIDE (false positives are harmless — one extra snapshot;
  * a missed match is a data-loss disaster).
@@ -266,7 +252,6 @@ export const bashTool = {
     // guard anyway. Instead: snapshot every uncommitted file first, then ALLOW
     // the command. The snapshot makes the rollback reversible (defense in depth:
     // the wide matcher also covers variants like `git checkout HEAD -- .`).
-    checkBashSafety(args.command, ctx.cwd)
     const guard = await gitGuardSnapshot(args.command, ctx.cwd)
     const result = await runBash(args.command, ctx.cwd, {
       timeout: args.timeout ?? BASH_TIMEOUT_MS,

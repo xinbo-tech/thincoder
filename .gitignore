@@ -17,3 +17,6 @@ coverage/
 # Auto-generated agent state
 .thincoder/index/
 .thincoder/tmp/
+
+# 仓库根临时分析脚本（调试产物——不提交）
+tmp-*.mjs

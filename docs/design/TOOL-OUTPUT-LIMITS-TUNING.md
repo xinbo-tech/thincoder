@@ -26,9 +26,9 @@ const TOOL_RESULT_PREVIEW = 64 * 1024 // chars shown inline when offloaded (alig
 ```
 
 - 落盘路径/格式不变：`cleanupOldToolResults`（写时自清理，TMP_RETENTION_MS 3 天）→ `mkdir` → `writeFile` → 返回 `preview + "\n\n[... output too large (N chars total), full content saved to: PATH ...]"`。
-- 失败回退截断 `text.slice(0, TOOL_RESULT_OFFLOAD_LIMIT)` 自动跟随新阈值（无需单独改）。
+- 失败回退截断 `text.slice(0, TOOL_RESULT_OFFLOAD_LIMIT)` 自动跟随新阈值（无需单独改）——**supersede 注（2026-09-04 §5——评审 #3）：回退路径已与 §5 一致改为双端切片——见 T-4.4——本节为旧时点描述。**
 - 主循环上下文成本：preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 compaction 机制兜底（评审 #8，与 advisor 侧 compactMessages 同构）。
-- preview = 阈值：≤64K 不落盘直接全文进上下文；>64K 落盘并内联前 64K——模型在任何情况下都能看到前 64K，与 webview 显示上限一致。
+- preview = 阈值：≤64K 不落盘直接全文进上下文；>64K 落盘并内联前 64K——模型在任何情况下都能看到前 64K，与 webview 显示上限一致。——**supersede 注（2026-09-04 §5）：预览构成已修订为"头 16K+尾 48K"双端切片——见 §5——本节为 2026-08-24 时点描述。**
 
 ### 2.2 advisor 内部截断（P3）
 
@@ -72,3 +72,43 @@ const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, a
 | AC5 | 落盘格式与清理逻辑不变 | 现有 offload 测试（清理/保留/目录缺失）全部通过（输入改 70_000 后） |
 | AC6 | `node --test test/*.test.mjs` 全套通过 | 命令 |
 | AC7 | `src/` 无 `16_000`/`2_000`/`12_000`（工具输出相关）残留 | grep 验证（注意区分其他业务常量；12_000 为 advisor 截断，评审 #3） |
+
+
+## 5. 预览保头保尾修订（2026-09-04 · 用户拍板 A——源码实证 + 用户观察）
+
+> **需求登记互引（round1 评审 #8）**：本需求句（F-4.1）已登记等效表述于 TOOL-OUTPUT-LIMITS-REQUIREMENTS.md（板块需求文档）——本文档为设计层（含需求层概述）——两文档互引。
+
+> 状态：**已实现（2026-09-04——用户"A"——设计评审 0🔴（round1——token 3cf5755e/designId 9710e11f——1🔴+2🟡+5🔵 处置全落——🔴 AGENT-LOOP:70 父侧已修）——用户批准（"直接"）——实现：CLI id:11（clean——L1 1311/0——T-4.1..4.4 全绿）+ VS Code id:12（clean——L1 1056/0——run-helpers.mjs 独立 offload 已同改）——父侧 L2 核销：CLI 1359/1359 + VS Code 1056/1056 全绿（2026-09-04））**。
+
+**问题（P-2.1）**：>64K 工具结果 → 落盘 + **头 64K 预览**——①预览占 64K 上下文仍大；②**结果在尾部的输出（测试统计/错误尾/结论句）被截掉**——模型读不回结果 → read 回全文（炸）或重跑（浪费）；③与同项目"保头+保尾"策略（压缩/蒸馏）不一致。
+
+**需求（F-4.1）**：作为用户，我希望超长工具输出的**预览含尾部**（结果/统计/错误所在）——模型不读回不重跑——从"截断负优化"变"截断正优化"。
+
+- **F-4.2（保头保尾）**：>64K 预览 = **头 16K + 中间省略注 + 尾 48K**（总 64K 不变——AC4 保持——尾部优先——统计/错误/结论天然在尾）；
+- **F-4.3（防读回再炸）**：read 工具读落盘文件……**本批不做**（C 方案——独立后续——read guard 12MB 已有——无第二截断——记 TODO）；
+- **N-4.1（零破坏）**：落盘全文不变（磁盘全量——AC2 保持）；阈值 65536 不变（AC1/AC5 保持）；预览总长 ≤ 65536（AC3 保持——构成变化：头 16K + 注 + 尾 48K）。
+
+**设计（D-4.1）**：`helpers.mjs offloadToolResult` 预览段改双端切片：
+
+```js
+const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024     // head slice preserved
+const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024     // tail slice preserved (results/errors/stats live here)
+// 预算（round1 评审 #2 定死）：head + tail + 省略注 + 分隔符 ≤ 65536——tail 优先（tail = 65536 − head − noteLen——注约 44 chars——tail 实为 65536 − 16384 − 44 ≈ 49100——实现以常量计算非硬编码）
+// preview = head + `\n\n… [middle omitted: ${omitted} chars] …\n\n` + tail（两端均经 safeSliceUTF16——防代理对切开——评审 #5）
+```
+
+- **D-4.2（与既有策略一致）**：context.mjs 压缩/蒸馏 **同款**（keep head + tail——中间省略注）——统一口径；
+- **D-4.3（回显处）**：dispatch.mjs:308 / subagent-async.mjs:920 / pdf.mjs:97 的 offload 调用点不变（函数内部行为改——调用点零改——N-4.1）——**VS Code 端核对结论（2026-09-04 id:11 审计核实）：VS Code 确有独立 offload（run-helpers.mjs:170——buildHeadTailPreview/safeSliceUTF16Tail:81-151——双端实现已同语义随 id:12 落地——本设计问号落定为"有独立 offload 且已同改"）**；
+- **D-4.4（提示语保留）**：`[... output too large (${text.length} chars total), full content saved to: …]` 提示语不变（模型知道全文在盘——需要完整时定向读——但预览已含尾部——多数场景无需读回）。
+
+**受影响文件**：CLI `src/agent/helpers.mjs`（preview 双端切片）+ 测试（id:11 落 `test/agent.test.mjs`——既有 offload 测试同文件）+ 文档本段。**VS Code 端：有独立 offload（run-helpers.mjs——id:12 同改——同语义——两端 lockstep 口径）**。**文档**：TOOL-OUTPUT-LIMITS-TUNING.md（本节）+ TODO（C 方案条目——read 读回防炸）。
+
+**测试（T-4）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-4.1 | N | 65_537 字符（头"AAAA…"+ 尾"ZZZZ…"）→ offload | 预览含 "AAAA" 头段 **与** "ZZZZ" 尾段（双端都在）——中间省略注在——总长 ≤ 65536 + 路径 |
+| T-4.2 | E | 恰好 16K 头后立即超限 | 头段保留——尾段出现——省略注在（双端切片边界） |
+| T-4.3 | E | 65536 字符（不超限） | 原样返回（AC1 回归——不快路径破坏） |
+| T-4.4 | A | 落盘失败 | 回退截断**同用双端切片**（头+省略注+尾——无路径提示——与主路径同口径——round1 评审 #3——既有 catch 路径升级——不再头截断——AC5 回归（清理/保留/目录缺失不变）） |
+
+**验收（AC-4）**：AC-4.1 = T-4.1 绿（预览含头+尾）；AC-4.2 = AC1/AC2/AC3/AC5 回归绿（阈值/落盘/总长（**head+tail+注 ≤ 65536——#2 定稿**）/清理不变）；AC-4.3 = 既有 offload 测试零破坏；AC-4.4 = 提示语/路径格式不变（模型契约稳定——读回依赖不变）。——**round1 评审 #6 范围注**：advisor 截断（MAX_RESULT_CHARS=64K line-aware）头向——不受本批影响——另议/记 TODO（实现批核实其截断方向）。

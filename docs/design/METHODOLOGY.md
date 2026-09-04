@@ -40,7 +40,7 @@
 
 ### 提示词同步（实现批——评审 #1 逐字锚定稿）
 
-- `engineering.md` Mandatory Flow 加**三分句逐字锚**（两端 byte-identical——照抄——评审 #1 补定）：
+- `engineering.md` Mandatory Flow 加**三分句逐字锚**（两端 byte-identical——照抄——评审 #1 补定）：——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 AGENT-LOOP §18.11——本条为历史实现记录（锚文本仍逐字定稿于设计文档——两端照抄——但不再 byte-identical 断言）**
   > 1. **Pool routing**——"ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
   > 2. **Threshold reminder**——"same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
   > 3. **Fast lane**——"the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
@@ -60,7 +60,7 @@
 
 ### 受影响文件
 
-- `docs/design/METHODOLOGY.md`（本节）+ 根模板 `METHODOLOGY.md`（同机制节——英文同构）+ **`src/prompts/methodology-template.md`（模板真身——15 文件对之一——CLI + VS Code 双端同改 byte-identical）** + `docs/TODO.md`（需求池组——初始化）+ 实现批：`src/prompts/engineering.md`（两端）+ 两端测试断言。
+- `docs/design/METHODOLOGY.md`（本节）+ 根模板 `METHODOLOGY.md`（同机制节——英文同构）+ **`src/prompts/methodology-template.md`（模板真身——15 文件对之一——CLI + VS Code 双端同改 byte-identical）**——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——"15 文件对双端同改"为历史记录——模板锚同样以设计文档逐字定稿为准**—— + `docs/TODO.md`（需求池组——初始化）+ 实现批：`src/prompts/engineering.md`（两端）+ 两端测试断言。
 
 
 ## 检查表

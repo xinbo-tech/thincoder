@@ -24,7 +24,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **Zero npm runtime dependencies**: only `node:` standard library (storage via `node:sqlite`, TUI via bare ANSI). For new features, first ask whether the standard library can do it; if not, raise for discussion.
 - No TypeScript, no build/bundling step.
 - Every change must be verified by running it — no "written but never run" code.
-- **镜像提示词约定（2026-09-04 项目文档层声明）**：本仓库（thincoder）与 thincoder-vscode 的 `src/prompts/*.md` **15 对 byte-identical**——改动任一提示词**只写 CLI 侧**，VS Code 副本由同步脚本（`scripts/sync-prompts.mjs`——若存在）/复制保证一致；**不要双端各自改**（两端并行独立实现是 byte-identity 漂移与 agent 镜像纠结的根源）。
+- **镜像提示词约定（2026-09-04 项目文档层声明——[x] 2026-09-04 11:11 修订——§18.11）**：本仓库（thincoder）与 thincoder-vscode 的 `src/prompts/*.md`——**byte-identical 约束已取消（2026-09-04）——设计锚为准**：锚文本在设计文档（AGENT-LOOP.md §18.x 等）逐字定稿——两端各自照抄实现——差异靠设计评审+交付审计发现（非机械比对）；**不再要求"只写 CLI 侧 + 同步脚本"**（`scripts/sync-prompts.mjs` 同步脚本候选已取消——见 docs/TODO.md 8 点批 #1）。注：两端当前文本仍一致（末次维护 2026-09-04）——未来允许漂移/独立演进。
 
 ## Key Conventions
 

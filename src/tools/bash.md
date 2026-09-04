@@ -5,7 +5,7 @@ Execute a shell command and return stdout+stderr. Use for running commands, buil
 - `ls` / `dir` → `ls`
 - `find` / glob search → `glob`
 - `grep` / `rg` → `grep`
-- `echo >` / `sed` / `printf >` / `cat << EOF` → `write` / `edit` / `hashline_edit` / `apply_patch` (enforced: redirection is blocked)
+- `echo >` / `sed` / `printf >` / `cat << EOF` → `write` / `edit` / `hashline_edit` / `apply_patch` (preferred: write tools handle encoding/EOL correctly)
 - `git diff` / `git status` / `git log` → `git` tool
 
 Parameters:

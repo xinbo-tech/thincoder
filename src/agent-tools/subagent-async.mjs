@@ -188,11 +188,15 @@ export async function executeCheckAction(args, ctx) {
  * counter (T-M10). Source of truth = the pool (_asyncSubagents): entries moved
  * to _pendingAsyncResults during a suspension (§17 D-S3 ② — injected at the next
  * run start) are no longer in the pool and are NOT counted as done-waiting.
- * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?, ... } for
- *   that entry; unknown id → error (same wording as check — T12 semantics)
+ * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?,
+ *   touchedFiles?/touchedMore?/touched? ... } for that entry; unknown id → error
+ *   (same wording as check — T12 semantics)
  * - id omitted → { overview: { running: [{id, role, model, elapsedSec, turn,
- *   maxTurns}], queued: [{id, role, position}], done: [{id, role}] } } — live
- *   queue positions (index in _asyncQueue + 1).
+ *   maxTurns, touchedFiles?/touched?}], queued: [{id, role, position, touched?}],
+ *   done: [{id, role}] } } — live queue positions (index in _asyncQueue + 1).
+ * §19.5.6: running 条目带 touched files 摘要（touchedFiles 前 5 + touchedMore 超出
+ * 计数——相对查询方 cwd；0 改动 → touched 占位）；queued 条目带 touched 占位
+ * "—（未启动）"；done/error/取消条目无 touched 字段（round3 #9）。
  * A settled-but-unconsumed entry (settled during a NORMAL turn) reports done
  * with a "not yet consumed" note — check still retrieves it afterwards.
  */
@@ -202,13 +206,44 @@ export async function executeCheckAction(args, ctx) {
  *  ACTUAL start (queued waits don't count), turn/maxTurns mirrored from the
  *  child's ⟦ev⟧turn events at the callbacks-wrap layer (subagent.mjs tracker).
  *  elapsedSec computed at call time from startedAt. */
-function statusFields(entry) {
+/** §19.5.6 D-SF2/N-SF1 摘要形态：status 调用时实时读 entry.childAgent._touchedFiles
+ *  （绝对路径——per-run 记账——§18.12）→ 相对查询方 cwd；cwd 之外保留绝对形态 +
+ *  "../" 前缀；>80 字符截尾（不超行）；前 5 个 + 独立截断字段 touchedMore（超出
+ *  计数——不混入数组——消费方按类型区分）。占位：running 0 改动 → "—（尚无改动）"
+ *  （T-SF2a）；queued 未启动 → "—（未启动）"（T-SF2b）；done/error/取消条目不含
+ *  本摘要（round3 #9 明示——本批只做 running/queued）。 */
+function touchedSummary(entry, cwd) {
+  if (entry.status !== "running") return { touched: "—（未启动）" }
+  const files = entry.childAgent?._touchedFiles ?? []
+  if (files.length === 0) return { touched: "—（尚无改动）" }
+  const shown = files.slice(0, 5).map((f) => shortTouchedPath(f, cwd))
+  const out = { touchedFiles: shown }
+  if (files.length > 5) out.touchedMore = files.length - 5
+  return out
+}
+
+/** N-SF1 单路径显示形态：cwd 内 → 相对路径；cwd 外 → "../" + 绝对路径；>80 截尾。 */
+function shortTouchedPath(f, cwd) {
+  let p = f
+  if (cwd) {
+    const rel = relative(cwd, f)
+    p = rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : `../${f}`
+  }
+  return p.length > 80 ? `${p.slice(0, 79)}…` : p
+}
+
+function statusFields(entry, cwd) {
   const base = { id: String(entry.id), role: entry.role }
   if (entry.status === "running") {
     base.model = entry.model ?? null
     base.elapsedSec = entry.startedAt ? Math.max(0, Math.floor((Date.now() - entry.startedAt) / 1000)) : 0
     base.turn = entry.turn ?? 0
     base.maxTurns = entry.maxTurns ?? 0
+    // §19.5.6：touched files 摘要（T-SF1..4——新字段追加——既有字段零破坏）
+    Object.assign(base, touchedSummary(entry, cwd))
+  } else if (entry.status === "queued") {
+    // §19.5.6 T-SF2b：未启动——确定性占位（不崩；无对象可读）
+    base.touched = "—（未启动）"
   }
   return base
 }
@@ -228,7 +263,7 @@ export function executeStatusAction(args, ctx) {
     if (!entry) {
       return JSON.stringify({ id: key, status: "error", error: `unknown async subagent id: ${key}` })
     }
-    const target = statusFields(entry)
+    const target = statusFields(entry, agent.cwd)
     if (entry.status === "running") return JSON.stringify({ ...target, status: "running" })
     if (entry.status === "queued") {
       // §20 F-SD4/D-SD3b：waiting 语义对模型可见——排队原因（冲突对象/依赖对象）随
@@ -251,11 +286,13 @@ export function executeStatusAction(args, ctx) {
   }
   const overview = { running: [], queued: [], done: [] }
   for (const entry of map.values()) {
-    if (entry.status === "running") overview.running.push(statusFields(entry))
+    if (entry.status === "running") overview.running.push(statusFields(entry, agent.cwd))
     else if (entry.status === "queued") {
-      // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）
+      // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）；
+      // §19.5.6 T-SF2b：未启动占位（确定性——不崩）。
       const blk = describeBlockers(agent, entry)
-      const row = { id: String(entry.id), role: entry.role, position: queuedPosition(String(entry.id)) ?? entry.position }
+      const row = statusFields(entry, agent.cwd)
+      row.position = queuedPosition(String(entry.id)) ?? entry.position
       if (blk.kind !== "slot") {
         row.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
         row.reason = blk.detail

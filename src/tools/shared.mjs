@@ -296,8 +296,8 @@ export function shellSegments(command) {
 
 /**
  * Blank out quoted regions (single/double/backtick) with spaces, preserving length.
- * Lets safety checks ignore shell metacharacters inside quoted script bodies —
- * e.g. `node -e "if (a > b) …"` comparisons are not redirections.
+ * Lets detectDanger ignore shell metacharacters inside quoted script bodies —
+ * e.g. `node -e "if (a > b) …"` comparisons are not danger signals.
  */
 function blankQuoted(command) {
   let out = ""
@@ -308,8 +308,8 @@ function blankQuoted(command) {
       if (ch === "\\" && quote !== "'") { out += " "; i++; out += " "; continue }
       if (ch === quote) { quote = null; out += " "; continue }
       // Backticks are COMMAND SUBSTITUTION — the content executes, so it must
-      // stay visible to the redirection check (echo `cat > /tmp/x` writes a
-      // file). Only ' and " are literal regions.
+      // stay visible to detectDanger (echo `cat > /tmp/x` still runs). Only '
+      // and " are literal regions.
       out += quote === "`" ? ch : " "
     } else if (ch === "'" || ch === '"' || ch === "`") {
       quote = ch
@@ -319,14 +319,6 @@ function blankQuoted(command) {
     }
   }
   return out
-}
-
-/** Detect shell output/input redirection (> >> < followed by filename) outside quoted regions.
- *  Backtick contents count (command substitution executes); fd-prefixed forms
- *  (2> file, 1>> file) count too. */
-export function hasFileRedirection(command) {
-  const bare = blankQuoted(command)
-  return /(^|[\s;&|0-9])>{1,2}\s*\S/.test(bare) || /(^|[\s;&|0-9])<\s*\S/.test(bare)
 }
 
 /**

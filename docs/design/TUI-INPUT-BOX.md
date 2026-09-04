@@ -173,6 +173,8 @@ Ctrl+J 能插入 `\n` 后暴露 `layoutInput` 两个渲染 bug：
 
 ## 7. question 自由文本输入态：光标与编辑键（2026-09-03，用户报告"主输入框有光标但 question 没光标——不方便"）
 
+> 状态：**已实现（2026-09-03/04——D-Q1：layoutAnswer（layout.mjs）+ key-handler 自由文本编辑键 + key-modes.mjs 拆分（D-S4）——T-Q1..Q11 全绿（test/tui.test.mjs）——父侧 L2 1359/1359 核销）**。
+
 ### 7.1 问题
 
 用户实测：主输入框有光标（视觉反显 + 硬件定位双机制），question 自由文本输入框没有——盲输 + 仅回退。explore 一手查证差距链（2026-09-03）：

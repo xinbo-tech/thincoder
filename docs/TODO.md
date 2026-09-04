@@ -34,7 +34,7 @@
 
 ### 轨迹存档 · auto-think 开关残留（2026-09-04，来源：§18.6 fix round1 advisor 🟡——父侧裁决随 R2 实现批）
 
-- [ ] **auto-think.mjs:84 补 logCtx 全字段**（traces/session/cwd/role/depth/kind——当前仅 {stage,turn,child}——traces.enabled:false 时该点仍落盘，违反 D-TR6"关=不落盘"）——父侧裁决：**并入 R2 实现批**（重启后同批实现；同 designId+token 已失效——随 R2 新 token 派发）
+- [x] ~~**auto-think.mjs:84 补 logCtx 全字段**（traces/session/cwd/role/depth/kind——当前仅 {stage,turn,child}——traces.enabled:false 时该点仍落盘，违反 D-TR6"关=不落盘"）——父侧裁决：**并入 R2 实现批**（重启后同批实现；同 designId+token 已失效——随 R2 新 token 派发）~~——**已随 R2 交付（2026-09-04——ENGINEERING-MODE §7 R2 条：auto-think.mjs D-TS12 开关闭环——L2 1330/1330）**
 
 
 
@@ -67,7 +67,7 @@
   3. **`workdir` 参数不解决**（verify.mjs:69 注释明示："workdir only relocates WHERE tests live — changed-file resolution (git diff) stays anchored to the project root"——git cwd 不变）；
   4. **VS Code 端 verify.mjs（109 行）本身无 git-diff 段**（与 CLI 不同构——L27 execute 直接走 node --check/test——无 changedFiles 检测）；
   5. 结果：eng-coder 只能 `npm test` 全量兜底（多次——18:46/18:48 两次全量 + flake 复检全量）——**用户观察"多跑很多遍测试" = 此根因直接后果**。
-  - **修复方向（候选——设计后实现，勿现在改——id:4/id:5 运行中含 verify 工具面）**：①verify git-diff 从 `_touchedFiles`/显式 repo 根推导（不依赖 agent.cwd）；②或 eng-coder spawn 时 cwd 指向任务书工作目录；③VS Code verify.mjs 对齐 CLI 补 git-diff 段——**等当前 §18.8/§18.10 实现批交付后启动**（新设计点——走设计→评审→实现）
+  - **修复方向（设计已落——AGENT-LOOP.md §18.12——2026-09-04 评审 0🔴 批准——token a3e7aa20/designId 1ab6cf3e——待实现（#2/#4/#7 项随 §18.11 批——§18.11 双端已交付））**：①verify git-diff 从 `_touchedFiles`/显式 repo 根推导（不依赖 agent.cwd——**D-VR1 定稿：_touchedFiles ∪ git diff（testCwd→cwd 尝试）**）；②或 eng-coder spawn 时 cwd 指向任务书工作目录——**被 D-VR4 否决**（影响所有子代理基线——风险 > 收益）；③VS Code verify.mjs 对齐 CLI 补 git-diff 段（D-VR2）
 
 
 
@@ -87,11 +87,11 @@
 
 ### §18.8/§18.10 交付后收尾（2026-09-04——id:5 VS Code 交付 clean——父侧核销通过后）
 
-### engineering.md A-裁定同类残留（2026-09-04——id:6/id:7 修正轮上报——待用户裁决/另批）
+### engineering.md A-裁定同类残留（2026-09-04——id:6/id:7 修正轮上报——**用户已拍：1=并入批 / 2=保留 / 3=记录**）
 
-- [ ] **engineering.md:107**——父侧审计描述 "changes outside the approved file list" **缺 "AND not reported" 限定**——与 A 裁定口径偏宽——**F1 同类残留**；engineering.md 是 15 文件对（byte-identical）——改动需两端+评审（新设计点）——**待用户拍板**（id:6 建议：纳入 prompt 同步批——与镜像同步脚本 TODO 同批）
-- [ ] **engineering.md:295**——架构师侧 Hard Rules 旧句 "Do NOT modify any file not listed in the approved design."——**父代理约束**（FR6 方向一致——非矛盾）——**建议保留**（父代理严格边界 + 与 eng-coder A 裁定不同层）；可选：加 "A-裁定仅适用 eng-coder" 指针 + 无旧硬句断言扩至 engineering.md（两端）——**待用户确认**
-- [ ] **A-裁定句三处复制**（engineering-sub.md :9/:19/:34——设计接受）——日后改措辞须三处同步——可选补 "三处逐字一致" 断言（下批）
+- [x] ~~**engineering.md:107**——父侧审计描述 "changes outside the approved file list" **缺 "AND not reported" 限定**——与 A 裁定口径偏宽——**F1 同类残留**——**用户拍板：修——并入 prompt 同步批**~~——**已随 §18.11 批修复（2026-09-04——:107 → "AND not reported in the delivery report"——两端 + T-BI3 断言——见 AGENT-LOOP §18.11 D-BI3）**
+- [ ] **engineering.md:295**——架构师侧 Hard Rules 旧句 "Do NOT modify any file not listed in the approved design."——父代理约束（FR6 方向一致——非矛盾）——**用户拍板：保留**（不作修改——确认非矛盾——阅读混淆风险接受；如日后要加 "as the parent agent" 限定词——随 prompt 同步批顺手）
+- [ ] **A-裁定句三处复制**（engineering-sub.md :9/:19/:34——设计接受）——日后改措辞须三处同步——**用户拍板：记录**（可选补 "三处逐字一致" 断言——并入 prompt 同步批——低优先）——**as-of 注（2026-09-04）：:9/:19 已由 id:6 修正轮同步为 A-裁定句（防回归断言已补）——现行三处均为 A-裁定句——本条仅留"日后措辞三处同步"提醒**
 
 
 ### 铁律生效后观察：修正轮纠结密度（2026-09-04——分析发现——等首批铁律后新任务复核）
@@ -116,14 +116,14 @@
 
 > **定位（用户原则纠正）**：thincoder 是通用 coding agent——** agent 机制层不得锁死本项目关联**——镜像对齐（thincoder ↔ thincoder-vscode 提示词 15 对 byte-identical）是**本仓库开发杂务**,不是 agent 能力。agent 不内置"我知道这两个仓库镜像"——由**项目任务书/设计文档声明**（agent 只执行通用复制/比对）。
 
-- [ ] **镜像同步脚本（仓库内工具——可选）**：`thincoder/scripts/sync-prompts.mjs`（CLI 权威复制 VS Code + 15 对清单 + 镜像报告 + package.json `sync:prompts`）——**仅作为本仓库开发脚本**（像构建脚本一样），不进 agent 设计文档——改动提示词时"任务书提及可运行"；当前漂移已修复（2026-09-04 fix round1——5269/5269 一致）
+- [x] ~~**镜像同步脚本（仓库内工具——可选）**：`thincoder/scripts/sync-prompts.mjs`（CLI 权威复制 VS Code + 15 对清单 + 镜像报告 + package.json `sync:prompts`）——**仅作为本仓库开发脚本**（像构建脚本一样），不进 agent 设计文档——改动提示词时"任务书提及可运行"；当前漂移已修复（2026-09-04 fix round1——5269/5269 一致）~~——**已取消（2026-09-04——§18.11 byte-identical 约束取消——脚本无必要——见 8 点批 #1 进一步裁定）**
 
 ### 8 点纠结点处置批（2026-09-04——**8 点全部已拍**——来源:轨迹分析 8 主题全量统计）
 
 > **批次定位**：8 个纠结主题（对齐镜像 976K / 方案选择 870K / 机制可行 779K / 严重级 769K / 文档状态 729K / 目标范围 632K / 日志残留 630K / 该不该修 510K——纠结字数）逐点处置——用户逐个拍板（此批记为用户裁定）。
 
 **已拍（✅）**：
-1. **对齐镜像**——§18.9 撤销升为仓库工具（通用原则——agent 机制不锁项目）+ 两端 AGENTS.md 声明（2026-09-04）+ 同步脚本 TODO 候选；
+1. **对齐镜像**——§18.9 撤销升为仓库工具（通用原则——agent 机制不锁项目）+ 两端 AGENTS.md 声明（2026-09-04）+ 同步脚本 TODO——**进一步裁定（2026-09-04 11:11——用户："取消二者二进制一致约束"）——改为设计锚为准**：两端提示词**不再强制 byte-identical**——设计文档**逐字定稿镜像锚（保留——权威源不变）**——两端各自照抄实现——差异靠**设计评审+交付审计发现**——不再机械断言字节相同（替代方案 A——用户拍板）；**连带**：①15 文件比对断言（agent.test.mjs:4254 等）改为"各端含设计锚句"内容断言；②同步脚本候选**取消**（字节约束没了脚本无必要）；③两端 AGENTS.md 镜像声明更新；④METHODOLOGY 多实现面条款更新（镜像锚保留逐字定稿——但"逐字一致断言/byte-identical 同步"删）。**现状**：15 对文件当前仍一致（末次维护 2026-09-04）——未来允许漂移、允许各端独立演进——对错以设计锚+评审为准。
 2. **目标范围**——§18.8 对象锚（设计就绪——评审时父侧传 object 参数注入对象声明块）；
 3. **日志残留**——已处理（R2 fix 清注释——剩余两处注释待合批）；
 4. **该不该修/授权边界**——**A 裁定（2026-09-04）**：去掉"文件清单外不可改"硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计"out-of-list"判据改"**改了且未报告=偏差**（静默越权）；已报告=透明可接受；
@@ -172,6 +172,14 @@
 - [x] ~~`[model]` token 解析剥离补自动化测试（agent-turn.mjs 解析 / render-frame.mjs header）~~——2026-08-30 核对销账：已随 §7.2 D4 落地锁定（实现拆分至 subagent-blocks.mjs routeSubToken；header 渲染随窄带退役迁至 render-conversation.mjs）——`test/subagent-blocks.test.mjs` 专项单测（[model] 元数据只记录一次、后续 [model] 开头内容不吞；T2 无 token 降级由 ensureSubTask 默认态 model=undefined 保证）+ `test/agent-turn.test.mjs` 端到端用例多处（T-A/T-E 等）；契约见 TUI.md §10.4D 测试用例表 T1-T3
 
 ### 工具 · checklist 文档完备性（2026-08-27，来源：交付评审）【2026-08-31 销账：§6/§7 用例表已补】
+
+### 工具输出预览保头保尾（2026-09-04——用户"A"——源码实证 + 观察——设计已落 TOOL-OUTPUT-LIMITS-TUNING.md §5）
+
+- [ ] **C 方案：read 读回 offload 文件防炸**——read 工具对 tool-results 落盘文件返回"头+尾"（非全文）——防模型为看尾部读回 1MB 再炸——**独立后续**（A 方案已含尾部预览——多数场景无需读回——C 堵剩余回路——设计 §5 记 TODO）——待 A 方案落地后评估
+- [ ] **advisor 截断方向另议**——`advisor/run.mjs:316-333` line-aware 前缀（头向）截断——同一"尾部结果被切"问题——§5 范围注 #6（本批不碰）——另议
+- [ ] **陈旧旁路文档修正**——ARCHITECTURE.md:254（"超 16k…只见 2k 预览…硬截断"）+ TOOLS.md:58（"预览 2K 字符足够"）仍是 2026-08-24 前描述——随文档修正轮更新（§5 id:11 审计观察）
+
+
 
 - [x] ~~TOOLS.md §6（git 工具扩充）/§7（workdir/scriptFile）测试是散文总结，非用例表（§8/§8.1 已有完整表）——补成 输入/预期 用例表，与 §8 对齐~~——2026-08-31 回补：§6 补 T-g-1..12（add 分文件/push 远端/tag 三态/branch/checkout 快照/stash/reset hard/revert/参数校验/workdir/反向路由/status porcelain），§7 补 T-w-1..2（workdir 子仓库/越界）+ T-e-1..6（scriptFile/nodeArgs --check/越界/缺参/禁 flag/路由描述），格式对齐 §8（输入/预期/对应需求）。
 
@@ -301,7 +309,7 @@
 
 ### 子 agent 任务调度器（2026-09-03——来源：用户提议——"评审好了就 spawn——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队"）
 
-- [ ] **依赖感知调度层**（根治父代理手动调度：冲突检查/并行串行/cancel 重派全靠脑内——id:13/14 同文件并发失误为实证）——机制级设计（§15 池已管并发槽 4 + FIFO 队列——**缺 = 文件域冲突检测 + 依赖序**）——待需求澄清（形态/依赖声明方式/与 §17 挂起关系/范围）——落 AGENT-LOOP §15.x/新机制段
+- [x] ~~**依赖感知调度层**（根治父代理手动调度：冲突检查/并行串行/cancel 重派全靠脑内——id:13/14 同文件并发失误为实证）——机制级设计（§15 池已管并发槽 4 + FIFO 队列——**缺 = 文件域冲突检测 + 依赖序**）~~——**已实现（2026-09-03——AGENT-LOOP.md §20——文件域冲突检测/依赖序/排队——id:3/id:4 排队实证 2026-09-04：spawn 声明 files+dependsOn → 调度器自动排队 position 1/2（域冲突+等待依赖）——依赖完成自动启动——零手动）**—落 AGENT-LOOP §15.x/新机制段
 
 
 ### Ctrl+C processing 态误杀后台（2026-09-03——来源：用户两次实测被坑——"输错半句一 Ctrl+C 把 eng-coder#14 杀了"）
@@ -329,11 +337,11 @@
 
 ### prompts 调度器条款升级（2026-09-03——来源：§20 交付后提示词同步缺口——用户指出）
 
-- [ ] **main.md Delegation 段升级**：L17 旧条款（"Never give parallel subagents tasks that edit the same files"——否定式手动避让）→ 调度器条款（§20 能力：spawn 声明 files 写域 + dependsOn 依赖——冲突/顺序交调度器（自动 queued——冲突清自动启动）——同文件任务可并行派——不用手动预判/串行等待）——engineering.md 并行段同款——两端 15 prompts byte-identical——小设计→评审→eng-coder
+- [x] ~~**main.md Delegation 段升级**：L17 旧条款（"Never give parallel subagents tasks that edit the same files"——否定式手动避让）→ 调度器条款（§20 能力：spawn 声明 files 写域 + dependsOn 依赖——冲突/顺序交调度器（自动 queued——冲突清自动启动）——同文件任务可并行派——不用手动预判/串行等待）——engineering.md 并行段同款——两端~~——**全部落地（2026-09-04——main.md 已升级（T-PS1 绿）；engineering.md 旧句已由 §20.7 修正轮删除——id:5（CLI）交付 clean（删 :212-213 + T-PS2 补断言 + :4014 正→零残留 + 测试标题 🔵 修订——agent.test.mjs 209 pass + L1 1347/1299/0 fail）；id:6（VS Code）镜像交付——父侧核销确认）**
 
 
 
-- [ ] **超 500 行文件合并拆分轮**（§20 交付后实测——2026-09-03 id:2 落）：CLI subagent-async.mjs 947 / subagent-blocks.mjs 625（冻结家族抽 freeze.mjs——re-export 保 API——回落 ~460）/ subagent.mjs 611 / subagent-panel.mjs 超限待测 / agent-turn.mjs 535（挂起驱动段迁出）/ tool-events.mjs 537——**VS Code 登记**：subagent-async.mjs 885 / subagent.mjs 510——先例：cmd-mcp 499→382 / agent-turn 534→174——排独立拆分轮（避免同文件并发）
+- [ ] **超 500 行文件合并拆分轮**（§20 交付后实测——2026-09-03 id:2 落）：CLI subagent-async.mjs 947 / subagent-blocks.mjs 625（冻结家族抽 freeze.mjs——re-export 保 API——回落 ~460）/ subagent.mjs 611 / subagent-panel.mjs 超限待测 / agent-turn.mjs 535（挂起驱动段迁出）/ tool-events.mjs 537——**VS Code 登记**：subagent-async.mjs 885 / subagent.mjs 510——先例：cmd-mcp 499→382 / agent-turn 534→174——排独立拆分轮（避免同文件并发）——**2026-09-04 §18.12 交付新增登记：verify.mjs 332→429（>300 advisory——429 < 500 硬限——随拆分轮处理）**
 
 
 ### §19.6 交付跟进（2026-09-03——id:17 交付）
@@ -351,9 +359,9 @@
 
 - [ ] **doc-sweep 旧名残留**（2026-09-03——§6 交付上报）：FEATURES.md 工具表现列三旧名、ARCHITECTURE.md:378/462、AGENT-LOOP.md:50、ARCHITECTURE-v2.md:115、ENGINEERING-WORKLOOP.md:73、VS Code CAPABILITY_GAP.md:17-18/49——memory 旧裸工具名——独立 doc-sweep（FEATURES/CAPABILITY_GAP 优先）
 - [ ] **子代理 memory search 行为侧注**（2026-09-03——§6 交付上报）：memory 单工具 readonly:false——从只读子代理工具表消失（旧 memory_search readonly:true 在内）——如需 explore/plan/consult 内 search 需 allowed 集动作感知——列后续
-- [ ] **engineering.md 旧手动避让句残留清理**（2026-09-03——advisor #4 交付轮 🟡 + §20.7 实现期已报）：Delegation 段 "Never assign two parallel eng-coders edits to the same file"（§15 前存句——§20.7 设计范围外保留）与调度器条款（同文件 async spawn + files 声明安全——§20.7 D-PS1）矛盾——清理 = 删除或改指向调度条款（小设计轮）
+- [x] ~~**engineering.md 旧手动避让句残留清理**（2026-09-03——advisor #4 交付轮 🟡 + §20.7 实现期已报）：Delegation 段 "Never assign two parallel eng-coders edits to the same file"（§15 前存句——§20.7 设计范围外保留）与调度器条款（同文件 async spawn + files 声明安全——§20.7 D-PS1）矛盾——清理 = 删除或改指向调度条款~~——**已落地（2026-09-04——§20.7 修正轮：id:5（CLI）交付 clean——删 :212-213 + T-PS2 补断言 + :4014 改零残留；id:6（VS Code）镜像交付——父侧核销）**
 - [ ] **setup.mjs:295-298 knife-edge 注记过期**（2026-09-03——id:4 报告——评审 #2 从池移回技术组）："adjusted to 12500" 已过时（T3b 重校准 14000）——随下个 setup 触碰轮
-- [ ] **cancel status 增强候选**（2026-09-03——personal:58 第 5 点——R2 占位撤销——等用户拍是否立项再入池）：status 条目带 touched files 摘要——杀子代理前看得见代价
+- [x] ~~**cancel status 增强**（2026-09-03——personal:58 第 5 点——**2026-09-04 用户"A"立项**）：status 条目带 touched files 摘要——杀子代理前看得见代价~~——**已落地（2026-09-04——设计 §19.5.6 评审 0🔴（token 8578c8cc——6🟡+3🔵 建议项全处置）——实现：CLI id:7（clean——L1 1353/1305/0）+ VS Code id:8（clean——L1 1047/1047——out-of-list setup.mjs/subagent.mjs 已报告补登）——父侧 L2 核销：CLI 1353/1353·0 fail + VS Code 1047/1047·0 fail）**
 
 
 ---
@@ -381,9 +389,9 @@
 **重启后待办（技术组——重启不变）**：
 - [ ] **engineering.md:107/:295 A-裁定同类残留**（id:6/id:7 上报——:107 审计描述缺 "AND not reported"（建议修——prompt 同步批）；:295 父代理 Hard Rules 旧句（建议保留——非矛盾）——**待用户裁决**（见「engineering.md A-裁定同类残留」段）
 - [ ] **verify L0 失效根因修复**（cwd 错位——已记根因——新设计点——设计→评审→实现）
-- [ ] **AC-OA4 统计脚本**（仓库工具可选——scripts/——供 after 样本复核）
+- [ ] **审计范围引导（2026-09-04——用户观察"审计 explore 跑非常久"——量化结论：无现有数据可答（观测缺口）——用户裁定"别补可观测——调试完成就删"——只修引导）**——设计已落 AGENT-LOOP §18.13（quick 档 + 机械预算句——10 轮/超时报 PROBLEM）——**待评审→实现**——**登记于 TODO 而非需求池（技术 backlog——审计协议部——非用户需求点）**
 - [ ] **§18.8/§18.10 复核**（AC-OA4——after 样本 = T 后首次干净外部评审——密度 ≤0.70×1.86=1.30 达成——未达呈报）
-- [ ] 既有 TODO 不变：read_pdf/AppendMessage name/question 光标/500 行拆分/VS Code 4 项/thincoder-desktop 第三副本/镜像同步脚本
+- [x] 既有 TODO **question 光标**——**已实现（2026-09-03/04——代码 layoutAnswer/key-modes.mjs + T-Q1..Q11 全绿 + T-C1/C2/C5 wizard format 步——D-Q1/D-C1/D-C2/D-S4 全部落地——本行从清单拿掉）**；其余既有 TODO 不变：read_pdf/AppendMessage name/500 行拆分/VS Code 4 项/thincoder-desktop 第三副本/镜像同步脚本
 
 **重启生效范围**：designToken（b7db45cd——本批已消费完——无需重评审）；工作区 30+ 文件未 commit（本批 + R2 前批——交接记录已覆盖）。
 
@@ -393,4 +401,7 @@
 - [x] **R1**（2026-09-03 · 工程模式耗时优化——需求池攒批机制本身——用户裁定 C+E）——机制设计已落三 METHODOLOGY 载体（项目版/根模板/methodology-template 双端）——**评审三轮收敛 0🔴 通过（round3）+ token eb58941f 签发——实现批完成 2026-09-03：engineering.md 三分句逐字锚 + T-R1 断言 + ENGINEERING-MODE 变更段已落**——板块：方法论（实现记录 = ENGINEERING-MODE.md §7 2026-09-03 R1 条）
 
 - [x] ~~**R2**（2026-09-04 · 工程模式验证链收口——用户裁定：①机械测试 = **D·父侧收口**；②LLM 验证 = **A·修正轮收紧**（3 次/链）；③修正轮粒度 = **L0**（相关测试秒级）；④审计 explore 效率 = **A1/A2/A3**（并入 R2）；⑤advisor code review = **B1 批并行（执行层）+ B2 范围收缩（提示词）**——B3 预算暂不动（20 轮保持，实测后再议）——用户批准 2026-09-04——双端实现 + fix round1 核销（CLI L2 1330/1330 + VS Code 1031/1031——实现记录见 ENGINEERING-MODE.md §7 2026-09-04 R2 条））~~
+
+- [x] ~~**R3'**~~（2026-09-04 · bash 工具重定向护栏**删除**——用户裁定方向变更——**已实现（子代理 id:13 clean——L1 1360/1312/0 fail——设计 TOOLS.md §13——round2 复审 0🔴 token d6f6bd3a——父侧 L2 核销 2026-09-04 1360/1360）**）
+
 

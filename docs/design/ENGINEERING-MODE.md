@@ -23,7 +23,7 @@
 | FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现+修复建议、用户逐条拍板；**交付 code review 流程节点自动**（2026-09-02 §18 起默认由 eng-coder 内部协议承担——in-child advisor 复评自动运行、不问用户；父侧复核保留可选——stalled/存疑才复核）；失败停止重试（2026-08-24 决策，见头部） |
 | FR6 | 范围约束 | **A 裁定（2026-09-04——用户拍板）**：去掉"文件清单外不可改"硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计"out-of-list"判据改"**改了且未报告=偏差**（静默越权）"；已报告=透明可接受——**（supersede 旧"不得修改清单外任何文件"口径——见 §18.10 D-10.2 ② + AGENT-LOOP §18 D-E2 ① 注）**；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
 | FR7 | 待办管理 | 技术待办统一在 `docs/TODO.md`，不落入设计文档（避免触发重新 doc review） |
-| FR8 | 多任务并行 | 相互独立的设计可**并行推进**（设计/评审/实现/审计/交付评审各环节），上限 ≤4 并发（2026-09-02 用户拍板 3→4——AGENT-LOOP.md §15 D-A4 同步点；**提示词纪律——与文件集交集检查同级，无机械门禁，评审 round3 #2 补记**）。**前置检查（流程强制——提示词纪律，无机械门禁，评审 #6 措辞对齐）**：两任务"受影响文件"集无交集才可并行 spawn eng-coder（engineering.md Delegation 节「并行多 eng-coder 不得编辑同一文件」条款的形式化——评审 #3 具名锚点）；任务间有依赖链 → 串行。用户澄清/批准逐个进行（但可一次连发多个评审/批准）。token 按 designId 隔离（FR3）——各 eng-coder 携自己设计的 designId+token，互不覆盖。**发起权不变**：设计评审仍仅由用户发起（FR5），并行不改变这一点。 |
+| FR8 | 多任务并行 | 相互独立的设计可**并行推进**（设计/评审/实现/审计/交付评审各环节），上限 ≤4 并发（2026-09-02 用户拍板 3→4——AGENT-LOOP.md §15 D-A4 同步点；**提示词纪律——无机械门禁，评审 round3 #2 补记**）。**调度器条款（2026-09-04 §20.7 口径——supersede 旧"文件集无交集才可并行"手动预判——见 AGENT-LOOP §20.7 D-PS2 + ENGINEERING-MODE §2.2 step8 R3 注（本表 T18 同步改写））**：eng-coder spawn 时**声明 `files`（写域）+ `dependsOn`（依赖）**——冲突/顺序**交调度器**（重叠域自动 queued——冲突清自动启动——依赖链自动顺序）——**不再手动预判/手动串行**（"overlapping domains are queued by the scheduler, never hand-serialized"——§20.7 锚句）；**未声明 files 的任务不参与冲突检测**（D-PS1——声明缺失 = 调度器无法排序——须声明）。用户澄清/批准逐个进行（但可一次连发多个评审/批准）。token 按 designId 隔离（FR3）——各 eng-coder 携自己设计的 designId+token，互不覆盖。**发起权不变**：设计评审仍仅由用户发起（FR5），并行不改变这一点。 |
 
 ### 1.3 非功能性需求（技术标准）
 
@@ -64,6 +64,8 @@
 8. 父代理交付验证（对照验收标准：跑测试/读改动文件）；**父侧复核（explore 审计 / advisor code review）保留可选**——默认信任内部协议（报告自述轮次+终态 clean/stalled）；stalled/存疑才复核（2026-09-02 §18 反转原自动审计节点）
    （2026-08-01 裁定"eng-coder 子代理环境无法真实调用 LLM advisor"随 §18 反转——见 FR4；评审范围仍显式化，不遍历 git diff）
    **R2（2026-09-04）·父侧核销新口径**：信任 eng-coder 内部 L1/L0 结果（§18 内部协议已保真），**父侧 = L2 全量 `test:full` 1 次（每链终态）——不再复跑 L1**；**L2 失败处置（D-TS11）**：test:full 有 fail → 该链终态 non-clean → 报告用户（未达验收——不静默放行）→ 可转 fix round（同 designId+token）或用户决定。
+   **R3（2026-09-04）·FR8 调度器口径**：FR8 旧"受影响文件集无交集才可并行 spawn + 有依赖串行"手动预判——与 §20.7 D-PS2（"overlapping domains are queued by the scheduler, never hand-serialized"）**机制级矛盾（评审 🔴 判定——2026-09-04 FR8 矛盾核查实锤）**——FR8 重写为调度器条款（声明 files + dependsOn——冲突交调度器——未声明 files 不参与检测）；旧工程模式 engineering.md 锚句（"并行多 eng-coder 不得编辑同一文件"）随 §20.7 修正轮删除（两端）——FR8 具名锚点同步更新。
+
 9. 父代理 verify（对照验收标准）
 10. 完成：验收标准勾销到设计文档
 ```
@@ -82,7 +84,7 @@
 
 ### 2.4 评审范围（Review Scope）——评审对象由任务定义，不由遍历决定
 
-- **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + METHODOLOGY + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（现机制按 diff 找文档——范围大、不准、与任务无关；上轮误审 VERIFY-DOCONLY.md 的教训）。显式传路径同时解决 untracked 新文档 diff 不可见问题（advisor 直接 read）。
+- **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + METHODOLOGY + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（现机制按 diff 找文档——范围大、不准、与任务无关；上轮误审 VERIFY-DOCONLY.md 的教训）。显式传路径同时解决 untracked 新文档 diff 不可见问题（advisor 直接 read）。——**2026-09-04 增补（评审对象锚——纠结评估 #1 修复——§18.8 对象锚机制已实现但父侧未用——6 次评审全部漏传——评审模型被迫从文档反推目标——"我该评哪个"拉锯之源）**：**评审必传 object 参数**（`{type, target, status, reason, exclude?}`——评审对象由任务定义——§18.8 机制——与 documents 同批传入——**漏传 = 评审目标模糊 = 评审质量下降——与 documents 漏传同级错误**）——对象声明块由 advisor 消息层机械注入（§18.8 T-OA）——评审模型无需反推。code review 同理（object 声明交付文件/验收目标）。
 - **code review**：评审范围 = task 的 Docs involved（设计文档）+ 交付文件清单/验收标准（显式化）；不遍历 git diff 找评审对象——2026-09-02 §18 起默认由 eng-coder 内部协议承担（in-child advisor 复评 documents 同此范围），父侧复核可选。
 - 父代理负责收集涉及文档，在设计评审（documents 参数）与 spawn（Docs involved）两处传入。
 
@@ -114,11 +116,11 @@
 | `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignToken（存入 _engDesignTokens Map——评审 2026-09-02 #3 修正；_engDesignReviewed 为 spawn 时子代理侧标志，非此处）；**2026-09-01**：评审调用生成随机 designId，**通过结果携带 designId 回显给父代理**（评审 #1——多设计首 spawn 的定向依据），通过时 token 存入 `_engDesignTokens` Map（多设计并存）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL） |
 | `src/advisor/messages.mjs` | MODIFY | design 分支按 documents 清单构建评审输入（替代 git diff 收集） |
 | `src/agent-tools/subagent.mjs` | MODIFY | mergeChildMutations（已有）；**2026-09-01**：spawn eng-coder 增 `designId` 参数（schema，可选），token 校验改按 `_engDesignTokens` 槽定位——单设计省略 designId 取唯一槽、多设计缺 designId 拒并要求指定、给定 designId 无匹配槽明确报错；修正轮 spawn 回传 designId |
-| 两端 `src/agent-tools/advisor.mjs` + `subagent.mjs` + `src/prompts/engineering.md` + 测试 | **VS Code 端镜像同步（评审 #5）**——engineering.md byte-identical 硬约束 + `_engDesignTokens` 两端同构；VS Code 测试同步加 designId/隔离断言；**VS Code 端 `advisor.mjs` paths 描述同步 CLI（"never inspects diffs"——2026-08-25 documents 改造时 VS Code 漏改，审计 #4 补记）** |
+| 两端 `src/agent-tools/advisor.mjs` + `subagent.mjs` + `src/prompts/engineering.md` + 测试 | **VS Code 端镜像同步（评审 #5）**——engineering.md byte-identical 硬约束 + `_engDesignTokens` 两端同构；VS Code 测试同步加 designId/隔离断言；**VS Code 端 `advisor.mjs` paths 描述同步 CLI（"never inspects diffs"——2026-08-25 documents 改造时 VS Code 漏改，审计 #4 补记）**——**指针（2026-09-04 §18.11）：byte-identical 约束已取消（见 §18.11）——"镜像同步"行指历史批行为——当前一致性 = 设计锚 + 评审/审计** |
 | 两端 `run-helpers.mjs`（VS Code `agentState()`）/ `session.mjs`（CLI slot 持久化）/ `panel-session.mjs`（VS Code 往返） | **多槽序列化（2026-09-01 审计 #1 修复）**——`_engDesignTokens` Map 随 slot 持久化（VS Code 跨轮 agent 重建场景的必要补齐）；§2.6 持久化边界同步。序列化格式 `{ [designId]: token }`（JSON 安全），恢复 `new Map(Object.entries)`；旧 slot 无字段 → 不设 Map（fail-closed TTL 兜底过期 token）。**修复轮补记实际触点**：VS Code 恢复链 `panel-chat.mjs`（engState 携带）→ `setup.mjs`（恢复 Map）；清理对称（**审计修复 #2**）——两端 `agent-tools/eng.mjs`（exit + off→on）+ CLI `tui/cmd-eng.mjs` + `session.mjs` `resetSessionState` 同步 `_engDesignTokens = new Map()`，resolveDesignSlot 的"有 Map 无镜像"防护降级为防御冗余 |
 | 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）+ `run-helpers.mjs`（VS Code `loadEngineeringPrompt`，评审 2026-09-02 #3 补全）/ METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复（CLI 端已实现 2026-09-02，D-AC 勾销见 §7 状态行；VS Code 端并行任务进行中） |
 | 两端 `CHANGELOG.md` | 变更记录（下一版本号——0.12.54/0.8.9 已发布，评审 #3 补记） |
-| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：交付验证 + 可选的父侧复核（原"主代理发起 code review"随 §18 反转——2026-09-02，见变更记录）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录——§18 起由子代理内部协议承担，父侧复核可选）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态；**2026-09-02 §18**：async 交付叙述 + 内部协议口径（防双重审计/误用）；**2026-09-03 R1**：Mandatory Flow step 1 完成点注入需求池三规则（Pool routing / Threshold reminder / Fast lane 三分句逐字锚——见 §7 变更记录） |
+| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：交付验证 + 可选的父侧复核（原"主代理发起 code review"随 §18 反转——2026-09-02，见变更记录）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录——§18 起由子代理内部协议承担，父侧复核可选）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态——**as-of 注（2026-09-04）**："文件集交集禁并行"句已随 §20.7 修正轮删除（两端——替代为调度器条款——见 AGENT-LOOP §20.7 D-PS1/D-PS2）——本条为 2026-09-01 时点记录；**2026-09-02 §18**：async 交付叙述 + 内部协议口径（防双重审计/误用）；**2026-09-03 R1**：Mandatory Flow step 1 完成点注入需求池三规则（Pool routing / Threshold reminder / Fast lane 三分句逐字锚——见 §7 变更记录） |
 | `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
 | `src/prompts/discipline.md` | 不动 | 普通模式专属（解耦原则） |
 | `src/prompts/main.md` | 不动 | 普通模式专属（解耦原则） |
@@ -127,7 +129,7 @@
 | `docs/TODO.md` | MODIFY | 待办统一维护（已有） |
 | **§18 工程交付协议（2026-09-02）**：`src/agent-tools/subagent.mjs` + `src/agent/setup.mjs` + `src/agent/spawn-child.mjs` + `src/agent/dispatch.mjs` + `src/prompts/engineering-sub.md` + `test/agent.test.mjs` + `test/suspension.test.mjs` | MODIFY | eng-coder 默认 async + 内部自审计闭环——机制与受影响文件权威源 = AGENT-LOOP.md §18；本文档同批同步 FR4/FR5/§2.1/§2.2/§2.3/§2.4 code review 归属句/§2.5 交付评审时机/AC5/AC6/AC9/用例表（见 §7 变更记录 2026-09-02 条） |
 
-| **§18.8/§18.10 实现批（2026-09-04——对象锚+判定铁律——补登——CLI 交付记录见 AGENT-LOOP §18.10.3）**：`src/agent-tools/advisor.mjs`（+object 参数/schema/解析/透传）、`src/advisor.mjs`（D-OA1 透传——补登）、`src/advisor/messages.mjs`（对象声明块构造/注入——round1+round2+）、`src/advisor/run.mjs`（+第 7 参 object/注入）、`src/prompts/advisor-design/round1/round2/round3.md`（R1-R7 铁律块+一致性句——4 模板字节一致）、`src/prompts/engineering-sub.md`（机制三句 + **:9/:19 旧硬句同步 A-裁定——修正轮**）、`src/prompts/eng-coder.md`（A-裁定句——两端同步）、两端 `test/advisor.test.mjs` + `test/agent.test.mjs`（T-OA/T-10 断言） | MODIFY | 对象锚+判定铁律——两端镜像 byte-identical（除 eng-coder.md 镜像漂移——修正轮同步） |
+| **§18.8/§18.10 实现批（2026-09-04——对象锚+判定铁律——补登——CLI 交付记录见 AGENT-LOOP §18.10.3）**：`src/agent-tools/advisor.mjs`（+object 参数/schema/解析/透传）、`src/advisor.mjs`（D-OA1 透传——补登）、`src/advisor/messages.mjs`（对象声明块构造/注入——round1+round2+）、`src/advisor/run.mjs`（+第 7 参 object/注入）、`src/prompts/advisor-design/round1/round2/round3.md`（R1-R7 铁律块+一致性句——4 模板字节一致）、`src/prompts/engineering-sub.md`（机制三句 + **:9/:19 旧硬句同步 A-裁定——修正轮**）、`src/prompts/eng-coder.md`（A-裁定句——两端同步）、两端 `test/advisor.test.mjs` + `test/agent.test.mjs`（T-OA/T-10 断言） | MODIFY | 对象锚+判定铁律——两端镜像 byte-identical（除 eng-coder.md 镜像漂移——修正轮同步）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 §18.8/§18.10 批时点记录** |
 
 
 ### 2.8 错误与恢复（Error & Recovery）
@@ -178,7 +180,7 @@
 | T15 | 正常：双设计并行 spawn | 两个 design review 分别通过（各自 designId+token，**advisor 结果回显 designId**——评审 #1）→ 并行 spawn eng-coder 各带自己 designId+token | 两者均通过、互不覆盖（单值槽时代后者会拒前者 token） | FR3/FR8 |
 | T16 | 边界：designId 缺失+多设计 | 会话内有两个不同 designId，spawn 只带 designToken 不带 designId | throw 要求指定 designId（不误取任一槽） | FR3 |
 | T17 | 边界：评审失效隔离 | 某 design 的复审失败（含 🔴） | 该次 designId 不入槽；**其他并行设计槽不受波及、token 仍有效**（评审 #2 方案 ②：旧 token 存活至 TTL） | FR8/NFR3 |
-| T18 | 边界：并行文件集交集 | 两任务"受影响文件"有交集时父代理试图并行 spawn | 提示串行/停（提示词纪律——engineering.md 条款；机械层无检查，记为纪律保障） | FR8 |
+| T18 | 边界：并行文件集交集——调度器口径（2026-09-04 R3 改写——supersede 旧“提示串行/停”语义——见 FR8 调度器条款 + §2.2 step8 R3 注） | 两任务“受影响文件”有交集时父代理 spawn（声明 files） | 任务入 queued/waiting-deps 自动排队——冲突清后自动启动（不提示串行/不手动停——调度器语义——与 AGENT-LOOP §20.3 T-SD2/T-SD13 同构）；未声明 files → 无冲突检测（D-PS1 接受 false-negative——已记录）；sync spawn 冲突 → 明确错误（T-SD13） | FR8 |
 | T19 | 正常：内部偏差审计闭环（2026-09-02 §18 下沉原父侧审计节点；**R2 2026-09-04 修订 D-TS2**） | eng-coder 交付前 → 内部 explore 审计（自动，无用户发起）→ dirty 自修（L0）→ advisor 首审 → findings 自修（L0）→ 终审=advisor 复评（LLM#3——验证 fix，不复跑审计）——**修正轮默认不重跑审计/复评**（仅触碰上次未覆盖文件 → 回③重审计）；LLM 验证 = 3 次/链 | 收敛 → 交付（报告含审计/评审轮次 + clean/stalled）；5 轮未收敛或审计节点重试 1 次仍败 → stalled 报告（不静默） | FR4/AC9 |
 
 （FR7 待办管理为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。）

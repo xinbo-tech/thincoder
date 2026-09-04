@@ -11,7 +11,11 @@
  * MAX_ADVISOR_ROUNDS 改 6 而 vscode 停在 5）立即红。锚点选取原则：跨仓库契约
  * （行为必须一致的量），不锁两端各自的私有实现细节。
  *
- * thincoder-vscode 不存在时动态 skip（同 prompts 比对的先例——单独 clone CLI 仓库时）。
+ * thincoder-vscode 不存在时动态 skip（单独 clone CLI 仓库时）。
+ *
+ * 提示词层同精神（§18.11，2026-09-04）：src/prompts/ 的 15 文件 byte-identical 机械比对
+ * 已随 §18.11 取消（设计锚为准——镜像锚在设计文档逐字定稿——两端各自照抄）——本测试的
+ * 语义锚方式即提示词层继承的同一精神：语义锚代替字节锚（差异靠设计评审 + 交付审计发现）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

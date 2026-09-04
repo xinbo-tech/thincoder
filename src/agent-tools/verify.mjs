@@ -1,7 +1,7 @@
 import { isDocFile } from "../advisor/repos.mjs"
 import { execSync, spawn, spawnSync } from "node:child_process"
 import { readFileSync, existsSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 
 /**
  * Source module → test file mapping. Heuristic: the FIRST path component
@@ -27,14 +27,61 @@ const MODULE_TO_TEST = {
 }
 
 /**
- * Extract module name from a source path.
- * "src/tools/bash.mjs" → "tools", "src/agent.mjs" → "agent", "src/agent/helpers.mjs" → "agent"
+ * Extract module name from a source path (src-relative or absolute — §18.12:
+ * changed files are normalized to absolute paths before this runs).
+ * "src/tools/bash.mjs" → "tools", "src/agent.mjs" → "agent",
+ * "D:/proj/src/agent/helpers.mjs" → "agent"
  */
 function moduleName(srcPath) {
-  const rel = srcPath.replace(/^src[/\\]/, "")
+  const norm = srcPath.replace(/\\/g, "/")
+  const srcIdx = norm.lastIndexOf("/src/")
+  const rel = srcIdx === -1 ? norm.replace(/^src\//, "") : norm.slice(srcIdx + 5)
   const firstSlash = rel.search(/[/\\]/)
   if (firstSlash === -1) return rel.replace(/\.mjs$/, "")
   return rel.slice(0, firstSlash)
+}
+
+/**
+ * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
+ * resolved to an absolute path with forward slashes; dedup uses the win32
+ * lowercase comparison key (changedFileKey) so "D:/x/src/a.mjs" and
+ * "d:\x\SRC\a.mjs" count as the same file.
+ */
+function normalizeChangedPath(p, base) {
+  return resolve(base, p).replace(/\\/g, "/")
+}
+
+/** Win32 comparison key: case-insensitive drives/folders (same file). */
+function changedFileKey(p) {
+  return process.platform === "win32" ? p.toLowerCase() : p
+}
+
+/**
+ * Nearest ancestor of an absolute path holding package.json or .git — the
+ * project/repo root (§18.12 F-VR1: the agent cwd may be a workspace root that
+ * is NOT the repo root — related test files must be located against it).
+ * Walk stops at the filesystem root; returns null when no anchor exists.
+ */
+function findProjectRoot(absPath) {
+  let dir = dirname(resolve(absPath))
+  for (;;) {
+    if (existsSync(join(dir, "package.json")) || existsSync(join(dir, ".git"))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
+}
+
+/**
+ * True when the path is under <projectRoot>/src/ (anchored via findProjectRoot —
+ * a parent-path /src/ segment outside the project must not classify a file as
+ * product code). Falls back to the loose /src/ pattern when no anchor exists.
+ */
+function isUnderSrc(absPath) {
+  const root = findProjectRoot(absPath)
+  if (!root) return /(?:^|[\\/])src[\\/]/.test(absPath)
+  const norm = normalizeChangedPath(absPath, root)
+  return norm.startsWith(normalizeChangedPath("src", root) + "/")
 }
 
 /**
@@ -65,29 +112,59 @@ export const verifyTool = {
   outputPanel: true, // stream test output to a panel instead of inline
   async execute(args, ctx) {
     const cwd = ctx.agent.cwd
-    // workdir only relocates WHERE tests (and package.json) live — changed-file
-    // resolution (git diff) stays anchored to the project root.
+    // Changed-file resolution (§18.12 D-VR3): _touchedFiles (per-run bookkeeping,
+    // absolute paths) ∪ git diff fallback — git is tried at testCwd
+    // (workdir-resolved) first, then at ctx.agent.cwd; first success wins.
+    // git-diff paths are repo-root-relative — resolved against the discovered
+    // git root, then normalized (absolute, forward slashes, win32 key).
     const testCwd = args.workdir ? resolve(cwd, args.workdir) : cwd
     const lines = []
     lines.push("=== VERIFICATION REPORT ===")
     lines.push("")
 
-    // 1. Git diff — find changed files
-    let changedFiles = []
-    try {
-      const diff = execSync("git diff --stat", { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 })
-      if (diff.trim()) {
-        lines.push("Changed files (git diff --stat):")
-        lines.push(diff.trim())
-        // extract changed file paths
-        const nameOnly = execSync("git diff --name-only", { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 })
-        changedFiles = nameOnly.trim().split("\n").filter(Boolean)
-      } else {
-        lines.push("Changed files: (none — no uncommitted changes)")
-      }
-    } catch {
+    // 1. Changed files — _touchedFiles ∪ git diff (§18.12 D-VR1)
+    let gitOk = false
+    let gitStat = ""
+    let gitFiles = []
+    for (const gitCwd of new Set([testCwd, cwd])) {
+      try {
+        // Anchor the repo root FIRST (also proves git works here) — diff paths
+        // are repo-root-relative, so both diff calls run at the root.
+        const gitRoot = execSync("git rev-parse --show-toplevel", { cwd: gitCwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim() || gitCwd
+        const diff = execSync("git diff --stat", { cwd: gitRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 })
+        const nameOnly = execSync("git diff --name-only", { cwd: gitRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 })
+        gitOk = true
+        gitStat = diff.trim()
+        gitFiles = nameOnly.trim().split("\n").filter(Boolean).map((p) => normalizeChangedPath(p, gitRoot))
+        break
+      } catch { /* git unavailable here — try the next cwd in the chain */ }
+    }
+    if (gitOk && gitStat) {
+      lines.push("Changed files (git diff --stat):")
+      lines.push(gitStat)
+    } else if (gitOk) {
+      lines.push("Changed files: (none — no uncommitted changes)")
+    } else {
       lines.push("Changed files: (not a git repo or git unavailable)")
     }
+    // _touchedFiles: files written by the tools this run — captured regardless
+    // of git state (§18.12 F-VR1: subagent cwd ≠ git root must still locate).
+    const touchedFiles = (ctx.agent._touchedFiles ?? []).map((p) => normalizeChangedPath(p, cwd))
+    const gitKeys = new Set(gitFiles.map(changedFileKey))
+    const touchedOnly = touchedFiles.filter((p) => !gitKeys.has(changedFileKey(p)))
+    if (touchedOnly.length > 0) {
+      lines.push("")
+      lines.push("Changed files (this run — _touchedFiles):")
+      for (const f of touchedOnly) lines.push(`  ${f}`)
+    }
+    // Union, deduped by comparison key (win32 case-insensitive).
+    const changedKeys = new Set()
+    const changedFiles = [...touchedFiles, ...gitFiles].filter((p) => {
+      const k = changedFileKey(p)
+      if (changedKeys.has(k)) return false
+      changedKeys.add(k)
+      return true
+    })
 
     // 1b. Doc-only fast path: every changed file is documentation (docs/, *.md,
     // LICENSE…) — syntax checks and tests are meaningless for doc changes, and
@@ -97,7 +174,7 @@ export const verifyTool = {
     // code — excluded from the fast path, consistent with isProductCode.
     // Empty list (no changes / git unavailable) intentionally falls through
     // to the normal path below.
-    if (changedFiles.length > 0 && changedFiles.every((f) => !/^src[\\/]/.test(f) && isDocFile(f))) {
+    if (changedFiles.length > 0 && changedFiles.every((f) => !isUnderSrc(f) && isDocFile(f))) {
       lines.push("")
       lines.push("Documentation-only changes — skipping syntax checks and tests.")
       ctx.agent._verifyPassed = true
@@ -111,7 +188,7 @@ export const verifyTool = {
       lines.push("")
       lines.push("Syntax check (node --check):")
       for (const f of jsFiles) {
-        const abs = join(cwd, f)
+        const abs = resolve(cwd, f)
         if (!existsSync(abs)) continue // skip deleted files
         try {
           const result = spawnSync("node", ["--check", abs], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 })
@@ -129,7 +206,7 @@ export const verifyTool = {
     }
 
     // 3. Identify related test files for changed source modules
-    const srcFiles = changedFiles.filter((f) => /^src[/\\].+\.mjs$/i.test(f) && existsSync(join(cwd, f)))
+    const srcFiles = changedFiles.filter((f) => /\.mjs$/i.test(f) && isUnderSrc(f) && existsSync(f))
     const modules = [...new Set(srcFiles.map(moduleName))]
     const relatedTests = [...new Set(modules.map((m) => MODULE_TO_TEST[m]).filter(Boolean))]
 
@@ -160,14 +237,28 @@ export const verifyTool = {
       lines.push("")
       lines.push(`Related tests (${relatedTests.length} file(s) for modules: ${modules.join(", ")}):`)
       let anyTestFailed = false
+      let anyTestMissing = false
       for (const testFile of relatedTests) {
-        const abs = join(cwd, testFile)
-        if (!existsSync(abs)) {
-          lines.push(`  ? ${testFile} — file not found, skipping`)
+        // Lookup: cwd first (existing behavior), then the changed files' project
+        // root (§18.12 F-VR1 — subagent cwd may be a workspace root, not the repo
+        // root; the mapped test file lives at <projectRoot>/test/...).
+        let testAbs = join(cwd, testFile)
+        let testRunCwd = cwd
+        if (!existsSync(testAbs)) {
+          const roots = [...new Set(srcFiles.map(findProjectRoot).filter(Boolean))]
+          const inRoot = roots.map((r) => ({ root: r, p: join(r, testFile) })).find((x) => existsSync(x.p))
+          if (inRoot) {
+            testAbs = inRoot.p
+            testRunCwd = inRoot.root
+          }
+        }
+        if (!existsSync(testAbs)) {
+          anyTestMissing = true
+          lines.push(`  ? ${testFile} — file not found (cwd + changed files' project root), verify did not run it`)
           continue
         }
         try {
-          const result = await runTestFile(cwd, testFile, ctx, args.filter)
+          const result = await runTestFile(testRunCwd, testAbs, ctx, args.filter)
           if (result.passed) {
             lines.push(`  ✓ ${testFile}`)
           } else {
@@ -183,6 +274,10 @@ export const verifyTool = {
       if (anyTestFailed) {
         lines.push("")
         lines.push("✗ Related tests FAILED. Review the output above, fix the issues, then run verify again.")
+        ctx.agent._verifyPassed = false
+      } else if (anyTestMissing) {
+        lines.push("")
+        lines.push("✗ Related test file(s) MISSING — verify did NOT certify this change. Locate the test file or fix MODULE_TO_TEST.")
         ctx.agent._verifyPassed = false
       } else {
         lines.push("  All related tests passed.")

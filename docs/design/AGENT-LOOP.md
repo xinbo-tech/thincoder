@@ -1,6 +1,6 @@
 # Agent 主循环设计（thincoder/src/agent.mjs + agent/）
 
-> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5/§19.6/§20/§17.6——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展/panel 检查））。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
+> 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5/§19.6/§20/§17.6——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展/panel 检查）——**2026-09-04 增量：§18.5-§18.12（子代理零 git/轨迹存档/测试分层/对象锚/铁律/镜像约束取消/verify 定位修复——各节自带状态行）**）。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
 
 ## 1. 模块地图
 
@@ -67,7 +67,7 @@ eng-coder && 未过设计评审 && FILE_MUTATORS → denied "engineering design 
 非只读 && !autoApprove → onPermissionRequest（用户确认）；无 handler → denied
 PreToolUse hooks → 阻断
 ```
-**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果超限落盘 `~/.thincoder/tool-results/`（阈值以 TOOL-OUTPUT-LIMITS-*.md 为权威源 + `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT 常量，round3 #3 去重——此处不再复述取值沿革）+ 2K 预览；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。**console 回显（2026-08-31 工具顺手度，用户批准"你做吧"）**：dispatch 拦截工具 `execute` 期间的 `console.log`/`console.error`（原只到终端、模型看不到），收集后附在工具结果后回显给模型（`[console during <tool>]` 段）；异常路径（工具抛错前的探查输出——调试最有价值）同样回显；嵌套 dispatch（subagent）各自拦截/恢复、捕获分离；bash 工具输出走子进程回显（onOutput）不受影响。
+**Phase 2 执行**（**顺序保序**）：只读工具 + `parallel` 标记的工具可并行（Promise.all 一批），非只读工具**打断批量串行**（先 flush 再单独执行）——保证顺序语义且允许只读并行。执行前副作用工具 `snapshotForUndo`（/undo 回滚基线）；结果超限落盘 `~/.thincoder/tool-results/`（阈值以 TOOL-OUTPUT-LIMITS-*.md 为权威源 + `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT 常量，round3 #3 去重——此处不再复述取值沿革——**预览 64K（2026-08-24——权威源 TOOL-OUTPUT-LIMITS-TUNING.md——2026-09-04 §5 修订：头 16K+尾 48K 双端预览——见 TUNING §5）**）；错误写入 `~/.thincoder/tool-errors/`（模型只见 message + 关键参数，不见 stack trace 防路径泄露）；PostToolUse 钩子 fire-and-forget。**console 回显（2026-08-31 工具顺手度，用户批准"你做吧"）**：dispatch 拦截工具 `execute` 期间的 `console.log`/`console.error`（原只到终端、模型看不到），收集后附在工具结果后回显给模型（`[console during <tool>]` 段）；异常路径（工具抛错前的探查输出——调试最有价值）同样回显；嵌套 dispatch（subagent）各自拦截/恢复、捕获分离；bash 工具输出走子进程回显（onOutput）不受影响。
 
 ## 5. 零工具调用回合（completion.mjs handleCompletion）
 
@@ -304,6 +304,72 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 | T9 折叠保持回归 | turn 切换 | sub-{key} 折叠状态保持（既有断言） |
 
 
+### 7.3 子代理人格定位/职责边界（2026-09-04 · 用户拍板——审计结论——与 §12.1 同主题延伸）
+
+> 状态：**设计（2026-09-04——用户拍板"1"（修 coder + consult-base——两端）——来源：全量扫描审计（CLI + VS Code 15 prompt——VS Code 与 CLI 逐字节相同 7 项子代理）——结论：explore/plan/eng-coder/engineering-sub 有人格（证据纪律/边界/中立性在）；**coder 与 consult-base 缺**（职责最重（写权限/判断）反而人格最薄——与 explore（只读+报告是命门）相反——"职责越重人格越薄"倒挂）——与 §12.1 advisor 修前同构）。触发：用户问"其他子 agent 是否也存在人格问题"——一审发现 2 真实短板。**
+
+**需求层**：
+- **F-SP1（coder 证据纪律）**：作为用户，我希望 coder 子代理一切事实/行为断言"取证或标未验证"——禁止"I'm confident…/Known behavior…"记忆断言——行为疑问=取证题（读源码/测试——向 explore 标准看齐——它是唯一有写权限的执行者——却缺证明句）；
+- **F-SP2（coder 中立性）**：作为用户，我希望 coder 遇到"设计与代码冲突"（接口变更断调用方/引用符号不存在）**停报不静默适配**——父侧决策（你是实现者不是设计者——发现的矛盾上抛——不自行消化）；
+- **F-SP3（consult-base 证据纪律 + 不知就说）**：作为用户，我希望 consult 顾问"取证或标未验证"——"I don't know"是合法答案——自信猜测是噪音（顾问价值=视角——来自事实而非自信；
+- **N-SP1（零破坏）**：两模板其余部分一字不动——锚仅插入开头（角色句后）——既有断言/行为零改。
+
+**设计层（逐字锚——两端照抄——byte-identical 已取消——语义锚）**：
+- **D-SP1（coder.md 锚——角色句"You are a coding subagent…"后插入——英文）**：
+  ```text
+  ## Your role (identity — read before you code)
+
+  You are an IMPLEMENTER with independent judgment — not a typewriter.
+
+  1. **Evidence discipline**: every factual/behavioral assertion you make MUST be
+     verified from the code/docs in front of you (read them, cite file:line) —
+     or explicitly marked `unverified`. NEVER assert "Known behavior…",
+     "I'm confident…", or rely on remembered API semantics when the source is
+     readable — a behavioral question is an EVIDENCE question, not a reasoning
+     question.
+  2. **Neutrality**: you implement the design; you are not the designer. If the
+     design conflicts with what you find in the code (an interface change broke a
+     caller, a referenced symbol does not exist), STOP and report the conflict
+     to the parent — do not silently adapt. The parent decides; you surface.
+  3. **Boundary**: your task = the parent's task brief (files, acceptance
+     criteria). Do not expand it. Findings that touch things outside the brief
+     (other modules, parent-side docs) go in a trailing "out-of-scope note" in
+     your report — no action without the parent's word.
+  ```
+- **D-SP2（consult-base.md 锚——角色句后插入——英文）**：
+  ```text
+  ## Your role (identity — read before you answer)
+
+  1. **Evidence discipline**: you are the perspective the main agent lacks —
+     that value comes from verified facts, not confidence. Any factual or
+     behavioral assertion you make MUST be backed by what you read (or known
+     from the problem brief) — or explicitly marked `unverified`. NEVER assert
+     "Known behavior…", "I'm confident…", or rely on remembered API semantics
+     when the source is readable. Unknown → say so: "I don't know" is a valid
+     consultant answer; a confident guess is noise.
+  2. **Neutrality**: you are one of several consultants — no authority to
+     decide. Recommend and reason; the main agent integrates. Do not write
+     fixes or replacement text in your reply.
+  ```
+- **D-SP3（两端）**：CLI + VS Code 各 2 文件（coder.md + consult-base.md）——同锚——byte-identical 已取消——语义锚（cross-repo-parity 精神——两端各自照抄设计锚——内容断言各端独立）。
+
+**受影响文件（两端）**：
+- CLI `src/prompts/coder.md` + `src/prompts/consult-base.md`（角色句后插锚 D-SP1/D-SP2）；
+- VS Code 同两文件（镜像——各自照抄）；
+- 两端测试（内容断言——T-SP 系——落点：既有模板断言处——CLI/VS Code `test/agent.test.mjs`——与 T-AR/T-10.1 同 file——programmatic verbatim 检查）；
+- 文档：AGENT-LOOP.md（§7.3 本节）、两端 CHANGELOG.md（父侧统一——提示词变更记录）。
+
+**测试（T-SP）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-SP1 | N | 读两模板（两端） | coder.md 含 "IMPLEMENTER with independent judgment" + "Evidence discipline" + "Neutrality" + "Boundary" + "STOP and report" 锚句——fail-when-unchanged |
+| T-SP2 | N | 读 consult-base.md（两端） | 含 "Evidence discipline" + "I don't know is a valid consultant answer" + "recommend and reason" 锚句——fail-when-unchanged |
+| T-SP3 | E | 既有模板断言回归（T-10.1/T-AR/borrowing 等） | 全绿（零破坏——N-SP1——既有断言位置未动） |
+| T-SP4 | A | 锚缺失（模拟回归——删一锚句） | 断言失败（fail-when-unchanged——防回潮） |
+
+**验收（AC-SP）**：AC-SP1 = T-SP1/2 绿（两模板锚句在）；AC-SP2 = T-SP3 绿（零破坏）；AC-SP3 = T-SP4 绿（防回潮）；AC-SP4 = 双端同语义（各自照抄设计锚——父侧核销——cross-repo 精神）。**AC-SP5（可计量——观测非门禁——评审 #4 修正）**：后续 coder/consult 报告轨迹"I'm confident/Known behavior"密度——复用 §18.8 口径——**测量面 = 交付报告正文 + §18.6 轨迹 reasoning**——**基线：无既有样本——"基线不可得——待观察"**（§18.8 的 #530/#593/#636 基线针对 advisor 评审——coder/consult 无对应样本——明示待观察——显著下降（≥30%）作观测达标——样本积累后补基线）。
+
+
 ## 8. advisor 开关语义重构（2026-08-21）
 
 **需求**：`advisor.enabled` 曾是双义开关——既 gate 评审能力（非工程模式 enabled=false 时 advisor 工具直接拒绝 "not enabled"），又 gate guard 推回（`enabled && guard !== false`）。用户拍板：**评审能力恒启用，开关语义收敛为 guard**；guard 默认 OFF（评审自愿调用，打开才强制）。工程模式行为不变（评审恒可用、guard 豁免）。
@@ -412,6 +478,66 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 **受影响文件**：`docs/design/README.md`（两端各新建）、`src/prompts/system.md`、`src/prompts/advisor-design.md`（两端各一份）、CLI `src/advisor.mjs` + `src/advisor/messages.mjs`、VS Code `src/advisor/main.mjs` + `src/advisor/messages.mjs`、两端测试、两端 `CHANGELOG.md`。VS Code 端见其 ARCHITECTURE.md 同步变更段。
 
+
+#### 12.1 advisor 角色定位/职责边界（2026-09-04 · 用户拍板——纠结评估结论落地）
+
+> 状态：**已实现（2026-09-04——设计评审 0🔴（round1——token 3d0299bc/designId 418d5fb6——8 项处置全落）——用户批准——实现：CLI id:9（clean——L1 1356/1308/0）+ VS Code id:10（clean——L1 1051/0——锚逐字 EXACT-match ×4——首审 1🔴 误报已复核——复评 0🔴）——父侧 L2 核销：CLI 1359/1359 + VS Code 1056/1056 全绿（2026-09-04））**。
+
+**需求层**：
+- **F-AR1（角色定位）**：作为用户，我希望 advisor 明确"独立评审者"身份——权威在判定、不在决策——发现/报告/判级但不替设计者写方案（评审模板现状：只教"怎么评"——没教"是谁评的/立场/边界"——评审模型被迫从上下文反推职责）。
+- **F-AR2（证据纪律）**：作为用户，我希望 advisor 一切事实/行为断言"取证或标未验证"——禁止"Known behavior…/I'm confident…"记忆断言——行为疑问=取证题（用只读工具核实——源码/既有测试在清单内可读）——不要推理（今天实证：path.win32.join 记忆断言 vs 同一评审对文档引用却机械核对——两套真相标准）。
+- **F-AR3（边界）**：作为用户，我希望评审目标=声明块+清单——不自行扩大；出界发现→报告尾部"出界注"——不判级（评审对象锚 §18.8 机制已实现——父侧漏传已修——但评审自身缺"边界说明"）。
+- **F-AR4（非作者）**：作为用户，我希望评审不替作者修复——发现即报告（修复权在父侧/用户——评审报告是证据不是改稿）。
+- **N-AR1（零破坏）**：四模板其余部分（评审维度/引文纪律/判定规则 R1-R7/approval signal）一字不动——角色段仅插入开头——既有断言（模板内容断言）不破。
+
+**设计层**：
+- **D-AR1（统一锚——逐字定稿——四模板开头插入——英文）**——插入位置：第一句（身份句）之后、Review Criteria/工作流段之前——每模板同段同文（byte-identical 已取消——两端各自照抄本锚——内容断言守护）：
+  ```text
+  ## Your role (identity — read before the criteria)
+
+  You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.
+
+  1. **Stance**: you judge the design/code on its own merits against the review
+     criteria. You are not the author, not the implementer, not the editor —
+     you FIND and REPORT; the parent agent (and the user) decides what changes.
+      Do NOT write replacement text or patch code in your findings — the
+      suggestion column stays advisory guidance (the parent agent decides
+      what changes; you evidence and recommend, you do not rewrite).
+  2. **Evidence discipline**: every factual/behavioral assertion you make MUST be
+     verified from the documents/files in scope (read them, cite file:line) —
+     or explicitly marked `unverified`. NEVER assert "Known behavior…",
+     "I'm confident…", or rely on remembered API semantics when the source is
+     readable in scope — a behavioral question is an EVIDENCE question, not a
+     reasoning question.
+   3. **Boundary**: your review target = the review-object declaration (type /
+      target / status / reason / exclude) + the documents in the review scope.
+      Do NOT expand it. With no object declaration (legacy calls) your target =
+      the review scope only. Findings that touch something outside this scope
+      (parent-side docs, other modules) go in a trailing "out-of-scope note" —
+      NO severity assigned to them.
+  4. **Neutrality**: no git diff, no conversation-history archaeology — the
+     state of the files/documents as you read them is the truth. Do not guess
+     author intent.
+  ```
+- **D-AR2（两端）**：CLI + VS Code 各四模板（advisor-design/round1/round2/round3）——同锚——byte-identical 已取消——语义锚（cross-repo-parity 精神——内容断言各端独立）——**round1 评审 #2 处置（2026-09-04）**：证据纪律与既有 Citation Discipline 同机制——角色层**重述以强化**（prompt 需重复强调——docs/design 的单源原则不适用于 prompt 内部——此处明示接受重复）。
+- **D-AR3（不动）**：§18.8 对象锚机制/§18.10 铁律块/评审维度/引文纪律——零改——角色段补的是"人格层"——**#2 措辞更新：与"规则层"互补——角色层重述规则层要点（证据/边界）以强化——非新增规则**。
+
+**受影响文件（两端）**：
+- CLI `src/prompts/advisor-design.md` + `advisor-round1.md` + `advisor-round2.md` + `advisor-round3.md`（四模板开头插锚）；
+- VS Code 同四文件（镜像——各自照抄锚——内容断言）；
+- 两端测试（模板内容断言——T-AR1..4——落点：**§18.10 T-10.1 先例：CLI `test/agent.test.mjs` / VS Code 对应（round1 评审 #5——与 T-10.1 同 file——不另立）**）；
+- 文档：AGENT-LOOP.md（§12.1 本节）、两端 CHANGELOG.md（父侧统一——提示词变更记录——§11/§13/§14 先例——round1 #8 补）。
+
+**测试（T-AR）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-AR1 | N | 读四模板（两端） | 各含 "Your role (identity" + "INDEPENDENT REVIEWER" + "Stance" + "Evidence discipline" + "Boundary" + "Neutrality" 六锚句——fail-when-unchanged（round1 #4——断言含 F-AR4 "replacement text" 句——#7 计数更正） |
+| T-AR2 | N | 模板内容 | 角色段含 "NEVER assert \"Known behavior…\""（禁止句在——证据纪律落地——round1 #7 清理：原问句残留删） |
+| T-AR3 | E | 角色段与既有规则冲突 | 无——角色段为独立小节——既有"Citation Discipline"/"Approval Signal"/判定规则位置未动（既有断言绿） |
+| T-AR4 | A | 锚缺失（模拟回归——删除一锚句） | 断言失败（fail-when-unchanged——防回归——round1 #4 补错误路径） |
+
+**验收（AC-AR）**：AC-AR1 = T-AR1 绿（四模板锚句在——fail-when-unchanged）；AC-AR2 = T-AR2 绿（禁止句在——证据纪律落地）；AC-AR3 = 既有模板断言零破坏（既有断言绿——N-AR1）；AC-AR4 = 双端同语义（T-AR1 语义断言——cross-repo 精神）。**AC-AR5（可计量——round1 #6 修订）**：后续评审轨迹“Known behavior/I'm confident”记忆断言计数——复用 §18.8 密度口径（正则命中数/1K reasoning 字数——基线取 §12.1 实现前同型评审样本）——**显著下降（≥30%）作观测达标——非门禁——复核定口：同型样本不足时记“样本不足——待观察”**。
+
 ## 13. 委托策略：广度探索下沉 explore（2026-08-23）
 
 **需求**（用户报告「主 agent 历史被逐步 tool call 淹没、质量差」，选 A+C；A=行为层委托，C=历史卫生见 `CONTEXT-COMPACTION.md`）：
@@ -452,10 +578,10 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 **功能性需求**：
 - **F1 · 并行发起**：独立信息获取/只读工具调用**一次发起多个**（read/grep/glob/search/lsp 等批并行——执行器自动 Promise.all）——把现有"call tools in parallel"条款从被动允许升级为主动引导
 - **F2 · 多文件编辑**：独立文件的多处编辑用 `edits` 数组形态（原子多文件——一次往返）
-- **F3 · 子代理并行**：相互独立的子任务一次 spawn 多个（subagent 并行执行；**同一文件编辑冲突例外**——不并行派发到同一文件的编辑）
-- **F7 · 多项目独立变更并行（用户补充 2026-09-01：monorepo 场景实证——"变更两个子项目时明显应该分两个子 agent，但实际上很少这么做"）**：变更横跨多个**独立子项目**（如 thincoder / thincoder-vscode——不共享待改文件、无交叉依赖）→ **按项目拆分并行子 agent**（每项目一个，各改各的、各自跑自己的测试）——**触发条件（全部满足才拆）**：① 子项目互相独立（不共享待改文件）；② 改动无耦合（A 的输出不是 B 的输入）；③ 各自有独立测试可自验——任一不满足 → 不拆（主 agent 串行协调或单 agent 处理）
+- **F3 · 子代理并行**：相互独立的子任务一次 spawn 多个（subagent 并行执行；**同一文件编辑冲突例外**——不并行派发到同一文件的编辑）——**supersede 注（2026-09-04 §20.7——评审 round1 #4）**：声明 `files` 的同文件 async spawn 可并行派发——调度器排队处理（见 §20.7 D-PS1/D-PS2 + §20.3 T-SD2/T-SD13）；本句为 2026-09-01 需求层记录——写域声明后冲突不再手动避让
+- **F7 · 多项目独立变更并行（用户补充 2026-09-01：monorepo 场景实证——"变更两个子项目时明显应该分两个子 agent，但实际上很少这么做"）**：变更横跨多个**独立子项目**（如 thincoder / thincoder-vscode——不共享待改文件、无交叉依赖）→ **按项目拆分并行子 agent**（每项目一个，各改各的、各自跑自己的测试）——**supersede 注（2026-09-04 §20.7——评审 round1 #4）**：同时声明 files 写域（跨面镜像声明）——调度器按域排队——见 §20.7 D-PS2/FR8——**触发条件（全部满足才拆）**：① 子项目互相独立（不共享待改文件）；② 改动无耦合（A 的输出不是 B 的输入）；③ 各自有独立测试可自验——任一不满足 → 不拆（主 agent 串行协调或单 agent 处理）
 - **F4 · 会诊并行**：consult 多模型独立并行（已有——不动）
-- **F5 · 不并行边界（必须写明，防滥用）**：① 写**同一文件**（冲突）；② **依赖链**（前一步输出是后一步输入——串行必然）；③ **bash/审批敏感命令**（执行器串行 + 并行 = 审批风暴——多个权限弹窗）；④ **同一 git 仓库并发 git 命令**（仓库锁冲突）；⑤ **有状态操作**（session/权限/队列——串行）
+- **F5 · 不并行边界（必须写明，防滥用）**：① 写**同一文件**（冲突）；② **依赖链**（前一步输出是后一步输入——串行必然）；③ **bash/审批敏感命令**（执行器串行 + 并行 = 审批风暴——多个权限弹窗）；④ **同一 git 仓库并发 git 命令**（仓库锁冲突）；⑤ **有状态操作**（session/权限/队列——串行）——**carve-out 注（2026-09-04 §20.7——评审 round1 #4）**：①对**声明 files 的 async spawn 例外**——调度器自动排队（system.md 实际文本含 carve-out 句——见 §20.7 D-PS1；本句为 2026-09-01 需求层记录）
 - **F6 · 收益判断**：并行化**大操作**（用户等待收益可见）；**微操作**（<1s 级）不并行（启动/上下文成本 > 收益）——"尽可能"不等于"无脑全并行"
 
 **非功能性需求**：
@@ -619,7 +745,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ### 16.3 非功能需求（评审 #6 补）
 
 - **NF-B1 契约零破坏**：`onPermissionRequest(toolName, args)` 签名不变；无 `onBatchPermissionRequest` handler 时缺省回退逐项通道（ACP 桥/headless/旧版不误伤不悬挂）
-- **NF-B2 两端 parity**：system.md 批量句两端 byte-identical；edit/apply_patch 描述两端同改（VS Code 对齐）
+- **NF-B2 两端 parity**：system.md 批量句两端 byte-identical；edit/apply_patch 描述两端同改（VS Code 对齐）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——两端一致性 = 设计锚（逐字定稿）+ 评审/审计**
 - **NF-B3 性能**：批询问只发一次（同批 N 个非只读工具 1 次询问，非 N 次）；autoApprove 短路不变
 - **NF-B4 测试**：T-B1..T-B6 映射验收；TUI/webview 合并询问 UI 测试随实现补（评审 #8——dispatch 层断言 + UI 层渲染断言）
 
@@ -1127,7 +1253,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **功能性需求**：
   - F-TS1：作为用户，我希望 eng-coder 交付链测试**分三级粒度**——首次实现后 = **L1 快层** `npm test`（1272 个/15s）；每个修正轮（④⑥）= **L0 = 调用 `verify`（默认模式：语法检查 + 模块相关测试，秒级）**——非手写 node --test；`verify` 对 null 映射模块（mcp/prompts/context/session）的 ACTION REQUIRED 语义**不采用**（不写新测试）→ 显式升 L1；全量不跑（父侧 L2 唯一 1 次）。
   - F-TS2：作为用户，我希望**父侧核销**跑全量 `test:full` **恰好 1 次**（每交付链终态）——全量验证收口父侧（可控时机，与交付核销同点）。
-  - F-TS3：作为用户，我希望该纪律落到协议文字——`engineering-sub.md` ①"run the tests"明确定义快层/全量时机；`engineering.md` 父侧核销"run the tests it claims pass"明确 = 全量 1 次；任务书模板措辞同步（两端 byte-identical 惯例）。
+  - F-TS3：作为用户，我希望该纪律落到协议文字——`engineering-sub.md` ①"run the tests"明确定义快层/全量时机；`engineering.md` 父侧核销"run the tests it claims pass"明确 = 全量 1 次；任务书模板措辞同步（两端 byte-identical 惯例）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 R2 批时点记录**。
   - F-TS4：作为用户，我希望**慢层（slow 真机）不在工程模式交付链默认出现**——全量只包含 slow 的语义保持（`test:full` 才放行），快层天然 skip。
   - F-TS5（2026-09-04 二次裁定——LLM 验证收紧）：作为用户，我希望**修正轮（④⑥）默认不重跑 explore 审计 + advisor 复评**——修正后只跑 **L0**（测试粒度按 F-TS1——原句"只跑快层 npm test"指"不重跑 LLM 验证"，supersede 2026-09-04 round1 评审 #1）；全部修正收敛后做**终审 = advisor 复评**（无第 2 次审计——审计仅例外路径）——LLM 验证次数 = **3 次/链**（①审计 1 + ②advisor 首审 1 + ③advisor 终审 1；审计第 2 次仅例外回③，不计入常态），不随修正轮数线性增长（当前 4+ 次）。
   - F-TS6（2026-09-04 用户"我觉得可以"——审计 explore 效率优化——**并入 R2**）：作为用户，我希望**审计 explore 单次耗时优化**——A1：任务书开头注入**审计指令模板**（四类偏差定义 + 校验清单格式 + 范围限制"只审 _touchedFiles/父任务书确认文件——不重读全文档"）；A2：父任务书逐字全量 → **机械摘要块**（设计文档路径 + 验收标准列表——审计者按需 read 设计文档）；A3：**审计输出报告模板**注入（正常/偏差/问题格式——不让模型自由发挥）——三者改提示词/任务书层，不新建角色、不改审计语义（四类偏差/独立视角保持）。
@@ -1151,10 +1277,10 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 五块并行落地（①②③协议层 / ④审计任务书层 / ⑤B1 执行层 + B2 提示词层）：
 
-- **①②③ 同源**：协议文字修改（`engineering-sub.md` 内部协议 + `engineering.md` 父侧核销）——单处权威文字，两端 byte-identical + 内容断言（三件套惯例）。
+- **①②③ 同源**：协议文字修改（`engineering-sub.md` 内部协议 + `engineering.md` 父侧核销）——单处权威文字，两端 byte-identical + 内容断言（三件套惯例）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 R2 批时点记录**。
 - **④ 同源**：审计任务书机械拼接点（CLI `subagent.mjs` 审计块 / VS Code `subagent-async.mjs` `auditTaskBook`）——模板注入（A1 指令 + A2 摘要 + A3 报告格式）——机械层完成，不依赖模型自悟。
 - **⑤B1 执行层**：`run.mjs` 工具执行段改批并行（Promise.all——与主链路 dispatch 只读并行同语义）——同段两端镜像。
-- **⑤B2 提示词层**：`advisor-round1.md` :7/:13 修订（范围收缩 + 并行语义明示）——两端 byte-identical。
+- **⑤B2 提示词层**：`advisor-round1.md` :7/:13 修订（范围收缩 + 并行语义明示）——两端 byte-identical——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 R2 批时点记录**。
 
 ### D（设计决策）
 
@@ -1169,7 +1295,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **D-TS9（B3 预算不动）**：20 轮保持——B1/B2 生效后看实测轮数再议（记录为 TODO 观察点）。
 - **D-TS11（父侧 L2 失败处置——round1 评审 #8）**：父侧核销 `test:full` 有 fail → 该链终态 **non-clean**——按工程模式 stalled 语义处置：**报告用户（未达验收——不静默放行）**；可转 fix round（同 designId+token——记录未收敛点）或用户决定。
 - **D-TS12（auto-think 并入——round1 评审 #4 对齐 TODO.md:37 用户裁定）**：`src/auto-think.mjs` 的 chat 调用点 logCtx **全字段补传**（traces/session/cwd/role/depth/kind——当前仅 {stage,turn,child}）——D-TR6"关=不落盘"开关闭环（该点残留导致 traces.enabled:false 时仍落盘）。
-- **D-TS10（两端同批）**：所有提示词字节级镜像（engineering-sub.md / engineering.md / advisor-round1.md——两端同一文本）；B1 代码两端同段同语义；测试断言两端各一。
+- **D-TS10（两端同批）**：所有提示词字节级镜像（engineering-sub.md / engineering.md / advisor-round1.md——两端同一文本）；B1 代码两端同段同语义；测试断言两端各一。——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 R2 批时点记录**
 
 ### 受影响文件（两端）
 
@@ -1202,7 +1328,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - AC-R2-2 = 审计任务书模板三件（A1/A2/A3）落地（T-TS4/5/6）；
 - AC-R2-3 = B1 批并行 + 错误隔离 + 保序（T-TS8/9）；
 - AC-R2-4 = B2 范围收缩两句落文（T-TS7）；
-- AC-R2-5 = 两端同批（提示词字节一致——既有断言）+ 全量测试绿（两端各自）；
+- AC-R2-5 = 两端同批（提示词字节一致——既有断言）+ 全量测试绿（两端各自）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 R2 批时点记录**；
 - AC-R2-6 = auto-think 开关闭环（T-TS12）+ 父侧 L2 失败处置（T-TS13）。
 
 > **边界注（round1 评审 #4——已并入本设计，对齐 TODO.md:37 用户裁定）**：auto-think 残留（§18.6 fix round 2 残留项）**包含于本设计**——D-TS12 落 `src/auto-think.mjs` logCtx 全字段（D-TR6 开关闭环）——见受影响文件/T-TS12。
@@ -1215,7 +1341,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | 2 | 已修 | 标准链序列定死（D-TS2：③审计=LLM#1 → ④L0 修 → ⑤advisor 首审=LLM#2 → ⑥L0 修 → 终审=advisor 复评=LLM#3；审计第 2 次仅例外）——F-TS5 括号对齐 |
 | 3 | 已修 | L0 机制统一 = 调用 verify 默认模式（非手写 node --test）；null 映射 → 显式升 L1（不采用 verify 的 ACTION REQUIRED 语义）——D-TS1/N-TS6/F-TS1 同步 |
 | 4 | 已修 | auto-think 并入 R2（D-TS12 + 受影响文件 + T-TS12）——对齐 TODO.md:37 用户裁定 |
-| 5 | 已修 | §18.7 位置移动——从 §19.2 D-M1 表头后移到 §18.6.2 后（§19 前）——消除表格割裂（见 §18.7.2） |
+| 5 | 已修 | §18.7 位置移动——从 §19.2 D-M1 表头后移到 §18.6.2 后（§19 前）——消除表格割裂（**round2 复审 #3：原"见 §18.7.2"为悬空引用——实际无该节——此处指 §18.7 位置说明——已在 §18.7 自带状态行记录——指针修正**） |
 | 6 | 已修 | 受影响文件补两端 CHANGELOG；ENGINEERING-MODE.md 指针改 §7 变更记录 |
 | 7 | 已修 | 标题同步（设计层已落——round1 评审通过——见 18.7.1） |
 | 8 | 已修 | 补 A 类测试（T-TS12/13）+ D-TS11（父侧 L2 失败处置） |
@@ -1269,13 +1395,13 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | T-OA4 | E | object 含排除清单 | 排除项在声明块中（\"不评已批准项\"） |
 | T-OA5 | N | 评审内容 | 对象声明后仍接既有评审内容/引文——不破坏 |
 
-**验收（AC-OA）**：AC-OA1 = 对象声明注入（T-OA1/2/4）；AC-OA2 = 旧调用兼容（T-OA3）；AC-OA3 = 两端同批 + 断言绿（T-OA5 + 既有）；AC-OA4 = **可计量指标**（round2 复审建议定死——不再留逃逸条款）——轨迹存档 stats（§18.6 落盘）中评审轮内"评审对象考古"类信号（正则 = wait/含"是不是评"/"还是 §"句——基线 = 本批实现前同类型前 10 次评审取样）密度环比下降 >30%——**测量方式**：脚本统计轨迹 JSON 的 reasoning 匹配正则命中数/评审轮数——**未达降幅 ≠ 通过**（AC-OA4 为硬验收）。
+**验收（AC-OA）**：AC-OA1 = 对象声明注入（T-OA1/2/4）；AC-OA2 = 旧调用兼容（T-OA3）；AC-OA3 = 两端同批 + 断言绿（T-OA5 + 既有）；AC-OA4 = **可计量指标——交付门缓冲（round3 裁决为准——2026-09-04——supersede 旧“硬验收”措辞——见 §18.10.3 ④ + TODO「§18.8/§18.10 生效复核口径」）**——轨迹存档 stats（§18.6 落盘）中评审轮内“评审对象考古”类信号**密度（= reasoning 正则命中数 / reasoning 字数 × 1000——正则 = wait/hmm/actually/hold on/let me reconsider/on second thought——基线 = 本批实现前同类型评审取样（round1/2/3 三次外部设计评审——#530/#593/#636——实测 ≈1.86/1K——见 TODO 复核口径段））环比下降 >30%**——**测量方式**：脚本统计轨迹 JSON reasoning 命中/字数 ×1000——**判定：>30% 降幅作交付后观测——非交付门禁——未达降幅呈交用户复核**（交付门缓冲——实现批门槛 = 基线采集 + 统计脚本存在）。
 
 **round1 评审（2026-09-04）已发起——1🔴+4🟡+2🔵——全部处置接受（见 §18.10.1——含本节处置）——待用户发起复审（"评审吧"）。**
 
 ### 18.9 镜像对齐优化（2026-09-04 · ~~并入轨迹分析优化批~~——**已撤销，降级为本仓库开发工具**）
 
-> 状态：**已撤销（2026-09-04 用户原则纠正——通用 coding agent 不得在代码/机制层锁死与具体项目的关联）**。**降级说明**：镜像对齐（thincoder ↔ thincoder-vscode 提示词 byte-identical）是**本仓库自身开发杂务**（用 thincoder 开发 thincoder 的项目约定），不是通用 coding agent 能力——**不写入 agent 设计文档**（本节移出 AGENT-LOOP.md 的 agent 机制范畴——相关内容改为本仓库开发工具记录，见 docs/TODO.md「项目仓库脚本」）。**通用原则（用户裁定 2026-09-04）**：thincoder 是通用 coding agent——agent 的代码/提示词不得内置"我知道 thincoder 与 vscode 是镜像"——多关联项目镜像约定由 **用户项目设计文档/任务书声明**（agent 只执行通用文件操作：复制/比对/校验），不是 agent 专属机制。
+> 状态：**已撤销（2026-09-04 用户原则纠正——通用 coding agent 不得在代码/机制层锁死与具体项目的关联）**。**降级说明**：镜像对齐（thincoder ↔ thincoder-vscode 提示词 byte-identical）是**本仓库自身开发杂务**（用 thincoder 开发 thincoder 的项目约定），不是通用 coding agent 能力——**不写入 agent 设计文档**（本节移出 AGENT-LOOP.md 的 agent 机制范畴——相关内容改为本仓库开发工具记录，见 docs/TODO.md「项目仓库脚本」）。**通用原则（用户裁定 2026-09-04）**：thincoder 是通用 coding agent——agent 的代码/提示词不得内置"我知道 thincoder 与 vscode 是镜像"——多关联项目镜像约定由 **用户项目设计文档/任务书声明**（agent 只执行通用文件操作：复制/比对/校验），不是 agent 专属机制。**进一步（2026-09-04 11:11 §18.11）**：byte-identical 约束本身已取消（见 §18.11）——"降级为仓库工具（同步脚本）"的记录随之失效——同步脚本候选已取消（TODO 勾销）——本节仅留原则史。
 
 > **原设计草案（已撤销——保留供参考）**：单源同步脚本（CLI 权威 → 复制 VS Code + 镜像清单报告）——**若做为仓库开发脚本**（thincoder/scripts/sync-prompts.mjs + package.json script）——属仓库内容，非 agent 机制——agent 不内置；任务书可提及（"本仓库有 sync:prompts 脚本"）。
 
@@ -1301,7 +1427,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **范围边界**：不改变 4 步流程/评审 7 维度/🔴🟡🔵 含义（铁律是**辅助判定**不改变语义）；不锁项目（R1-R7 是通用判定规则）；不动代码实现（仅提示词 + 断言）。
 
 - **非功能性需求**：
-  - N-10.1：铁律注入 = 提示词文字（**全部 4 模板**——`advisor-design.md` + `advisor-round1.md` + `advisor-round2.md` + `advisor-round3.md` + `engineering-sub.md` 等——两端 byte-identical——既有断言）——**用户裁定 2026-09-04 方案 B：4 模板都改**（round1 只覆盖首轮——2/3 轮复审/终审无铁律会失效；设计评审走 advisor-design.md——round1 不覆盖）
+  - N-10.1：铁律注入 = 提示词文字（**全部 4 模板**——`advisor-design.md` + `advisor-round1.md` + `advisor-round2.md` + `advisor-round3.md` + `engineering-sub.md` 等——两端 byte-identical——既有断言）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条铁律块锚照常（锚文本在设计文档逐字定稿——两端照抄——不再字节断言）**——**用户裁定 2026-09-04 方案 B：4 模板都改**（round1 只覆盖首轮——2/3 轮复审/终审无铁律会失效；设计评审走 advisor-design.md——round1 不覆盖）
   - N-10.2：铁律来源标注——"样本 7 轮观察固化——非绝对——持续复核"（诚实——不假装权威）；
   - N-10.3：零新增工具/参数（pure prompt 增强）——**但 §18.8 对象锚例外**（新增 object 参数——见 §18.8）。
 
@@ -1325,7 +1451,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **D-10.2（机制三句——注入 `engineering-sub.md`——逐字定稿）**：**同步注（2026-09-04——CLI 交付 stalled F1 处置——docs-FIRST）**：`engineering-sub.md:9`（"Do NOT modify any file not listed in the approved design."）与 `:19`（"zero touches outside the approved file list"）为**旧硬句——与本文件 :34 A-裁定句同文件同机制两相反规定**——按 A 裁定同步为："report every out-of-list change with its reason"（:9/:19 措辞同步——eng-coder.md:27 现句可复制）——**补测试断言"engineering-sub.md 无旧硬句"防回归**——（本批任务书"只追加锚不重排"——故列为父侧闭环项——修正轮执行）；
   ① 测试缝句（同 R6——放 eng-coder 端——实现时遇"接口不可注入"直接加 seam）；
   ② 授权边界句（A 裁定）：`文件清单外改动允许——交付时逐项报告（说明原因）；审计"out-of-list"判据 = 改了且未报告=偏差（静默越权）；已报告=透明可接受`；
-  ③ 镜像并行句：`byte-identical 测试失败 ≠ 你错——可能对端未同步——检测漂移不判对错——交付时说明`。
+  ③ 镜像并行句：`byte-identical 测试失败 ≠ 你错——可能对端未同步——检测漂移不判对错——交付时说明`。**——已取消（2026-09-04 §18.11——byte-identical 约束取消——该句注入**将随 §18.11 实现批删除（待交付——当前两端文件仍含旧句——AGENTS.md 注"末次维护 2026-09-04"）**——见 §18.11——设计记录保留 as-of）**
 
 - **D-10.3（对象锚 §18.8）**：评审调用父侧传 `object` 参数 → 注入对象声明块——**本批评审同批**（§18.8 已完整设计——实现同批）。
 
@@ -1340,7 +1466,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | T-10.1 | N | advisor-design.md / round1 / round2 / round3 各读 | 4 模板各含 R1-R7 判定铁律句（"文档矛盾→🟡"等）——内容断言（4 份） |
 | T-10.2 | N | engineering-sub.md 读 | 含三句（测试缝/授权边界 A 裁定/镜像并行）——内容断言 |
 | T-10.3 | E | 判定铁律中无"锁项目"词 | grep 无 thincoder/vscode 项目名——通用性断言 |
-| T-10.4 | N | 两端文件比对 | byte-identical（既有断言保持） |
+| T-10.4 | N | 两端文件比对 | byte-identical（既有断言保持）——**指针（2026-09-04 §18.11）：15 文件比对断言已取消——见 §18.11——本条为 §18.10 批时点记录** |
 | T-10.5 | E | 铁律标注 | 含"样本 7 轮——持续复核"——来源诚实标注 |
 
 **验收（AC-10）**：AC-10.1 = 铁律+三句落文（T-10.1/2）；AC-10.2 = 通用性（T-10.3——不锁项目——用户原则）；AC-10.3 = 两端一致（T-10.4）；AC-10.4 = 来源标注（T-10.5）；AC-10.5 = 既有评审行为零回归（✅ 不改变语义——铁律辅助判定）。
@@ -1353,7 +1479,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 |---|---|---|---|
 | 1 | 文档归属 | 🔴 | 已修——ENGINEERING-MODE.md FR4/§2.2 step6/T19 同步 D-TS2 口径（修正轮默认不重跑审计/复评——终审=advisor 复评 1 次定案——LLM 3/链）——消除与 AGENT-LOOP §18.7 的矛盾 |
 | 2 | Clarity | 🟡 | 已修——§18.8 状态行/标题改"设计层已落——待评审（与 §18.10 同批）" |
-| 3 | 验收标准 | 🟡 | 已修——AC-OA4 改可计量指标（轨迹 wait 考古信号密度环比下降 >30%） |
+| 3 | 验收标准 | 🟡 | 已修——AC-OA4 改可计量指标（轨迹 wait 考古信号密度环比下降 >30%）——**指针（2026-09-04 复审后——round3 裁决：交付门缓冲——见 §18.8 AC-OA4 修订——本节措辞为 round1 时点记录）** |
 | 4 | 文档归属 | 🟡 | 已修——R1/R7a/R7e 划清两类：状态/数字漂移=🟡/🔵；**机制级两处不同描述（Document ownership）=🔴 不降级**（维持 advisor-design.md 约定） |
 | 5 | 状态 | 🟡 | 已修——R2 状态统一"已实现"：§18.7 状态行改已实现 + :1227/:1352 改实现完成 + TODO:331 勾销 |
 | 6 | Clarity | 🔵 | 已修——ENGINEERING-MODE:304-306 重复状态块删除（merged 为两端均已实现块） |
@@ -1368,7 +1494,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 | 1 | 文档归属 | 🔴 | 已修——A 裁定（清单外允许但报告）与既有旧口径矛盾：ENGINEERING-MODE.md FR6（L24）/T11（L171）/AGENT-LOOP §18 D-E2 ①（L872）+ L876 措辞减轻（A 裁定仅指代码文件——设计文档永远零编辑）——全部同步 A 裁定口径——受影响文件表补 ENGINEERING-MODE/§18 既有行 |
 | 2 | Clarity | 🟡 | 已修——§18.8 悬空引用（§18.8.1 不存在）→ 指针改 §18.10.1（含本节处置）+ 状态行修正 |
 | 3 | Clarity | 🟡 | 已修——§18.8/§18.10 状态行与正文矛盾 → 统一"round1 处置完成 + round2 进行中——处置见 §18.10.1/§18.10.2" |
-| 4 | 验收标准 | 🟡 | 已修——AC-OA4 去逃逸条款：定死正则/基线（前 10 次取样）/测量方式（脚本统计）/硬验收（未达降幅 ≠ 通过） |
+| 4 | 验收标准 | 🟡 | 已修——AC-OA4 去逃逸条款：定死正则/基线（前 10 次取样）/测量方式（脚本统计）/硬验收（未达降幅 ≠ 通过）——**指针（2026-09-04 复审后——round3 裁决：交付门缓冲 supersede 硬验收——见 §18.8 AC-OA4 修订——本节为 round2 时点记录）** |
 | 5 | Clarity | 🟡 | 已修——"可选一致性句"定稿为"全 4 模板加" + §18.8/§18.10 同批合并为一次 prompt 编辑批次（防字节漂移） |
 | 6 | Clarity | 🔵 | 已修——D-OA3 object 示例统一对象形态（与 N-OA1 一致——工具参数为 JSON 对象） |
 | 7 | 卫生 | 🔵 | 已修——TODO:77 标题改"8 点全部已拍" + R1 加 D-10.1 权威句指注（防漂移） |
@@ -1387,7 +1513,144 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 
 
 
-**实现完成（2026-09-04——CLI + VS Code 双端——L2 核销 1330/1330 + 1031/1031——见 ENGINEERING-MODE.md §7 R2 条）。**
+**实现完成（2026-09-04——CLI + VS Code 双端——§18.8/§18.10 批自身核销：CLI 1344 测/1298 pass/0 fail（46 skip 慢测）+ VS Code 1043/1043——见 docs/TODO.md「重启交接 4」；**注：旧行“1330/1330 + 1031/1031”属 R2/§18.7 核销（ENGINEERING-MODE §7 R2 条——2026-09-04 数字漂移已更正）**）。**
+### 18.11 byte-identical 镜像约束取消——设计锚为准（2026-09-04 · 用户裁定——"取消二者二进制一致约束"——替代方案 A 拍板）
+
+> 状态：**设计（2026-09-04 11:11——用户裁定"取消 byte-identical 约束"——替代方案 A（设计锚为准——设计文档逐字定稿镜像锚，两端各自照抄，差异靠设计评审+交付审计发现，不再机械断言字节相同）——用户复"清理不必要的约束"确认清理范围——round1 评审 2026-09-04 0🔴 通过（token a56c7b19…/designId 800f8be4——5🟡+2🔵 建议项——用户裁决"批准"——按建议 B 实现批 task 条款——**本批修订 1/2/3/4/5/6/7 已落（见下）**）——**round2 复审 2026-09-04 1🔴（D-BI6 扫描不完整——byte-identical 残留未清——见 §18.11 处置注）+6🟡/🔵——全部已修（指针 8 处/TODO 勾销/数字更正/悬空修正/残片清）——待 round3 复审**）。**触发：8 点批第 1 点（对齐镜像 976K——最大纠结主题）最终裁定落地——用户指出 byte-identical 约束在并行镜像开发中制造漂移纠缠/协调成本（id:4-7 四轮 byte-identical 红绿循环为实证）——约束收益 < 成本——取消。
+
+**需求层**：
+- **F-BI1（取消）**：作为用户，我希望取消 CLI/VS Code `src/prompts/` 两端 byte-identical 机械约束——两端可各自演进——不再强制字节相同、不再需要同步脚本。
+- **F-BI2（保留锚）**：作为用户，我希望**设计文档镜像锚机制保留**——多实现面派发时锚文本在设计文档逐字定稿（权威源）——实现面照抄——差异靠设计评审+交付审计发现（非机械比对）。
+- **F-BI3（清理）**：作为用户，我希望 byte-identical 相关的不必要约束全部清掉——机械比对断言（15 文件对/4 模板复制/mirror 句断言）删除；内容断言（锚句存在）保留。
+- **F-BI4（并入内容修复）**：engineering.md:107（审计描述缺 "AND not reported"——A 裁定同类残留）——修（用户已拍）；:295（父代理 Hard Rules）——保留不动（用户已拍——非矛盾）。
+- **N-BI1**：单端"防静默降级"字节断言（advisor-design.md 硬加载）、DeepSeek 前缀缓存字节断言（session-compaction/time-injection）、src 语义锚（cross-repo-parity）——**不属"两端镜像"——保留不动**。
+
+**设计层**：
+- **D-BI1（替代机制）**：清晰化——镜像锚仍在设计文档逐字定稿（METHODOLOGY 多实现面条款保留"锚"概念）；两端实现各自照抄（任务书给出锚文本）——**取消** byte-identical 断言与同步脚本——差异暴露 = 设计评审（Document ownership 检查——R1 例外机制级两描述=🔴）+ 交付审计（实现面偏离设计锚=超清单/静默简化类偏差）+ cross-repo-parity 语义锚（src 已用此法——提示词层继承同一精神：语义锚代替字节锚）。
+- **D-BI2（清理清单——测试）**（符号锚——行号为 as-of 注）：
+  1. CLI `test/agent.test.mjs` **“两端 src/prompts/ 15 文件 byte-identical” test**（:4254-4265 as-of）——**删除**（含 assert + skip 逻辑）；
+  2. CLI `test/agent.test.mjs` **“byte-identical（项目铁律）”注释**（:3779 as-of）——**改注释**为“各端内容断言（锚句存在）防漂移”（内容组保留）；
+  3. CLI `test/agent.test.mjs` **“prompts 4 模板: 铁律块+一致性句字节一致” test**（:4129-4134 as-of）——**删除**（内容断言 T-10.1 已覆盖铁律块句存在——字节比对冗余）；
+  4. CLI `test/agent.test.mjs` **mirror 句断言**（:4148-4149 as-of）——**删除**（句子本体删——见 D-BI3）；
+  5. CLI `test/subagent.test.mjs` **T-M12 注释**（:1311 as-of）——“两端 byte-identical 由既有 15 文件比对覆盖”——**改**为“内容断言”（不再引用 15 文件比对）；
+  6. CLI `test/agent.test.mjs` **“byte-identical 三件套前提” 注释**（:5151 as-of）——**改**（cap 短语内容断言保留——注释更新）；
+  7. VS Code `test/agent.test.mjs` **T-10.4 6 文件比对 test**（:1656-1661 as-of）——**删除**；
+  8. VS Code `test/agent.test.mjs` **“byte-identical（项目铁律）” 注释**（:1162 as-of）——**改**；
+  9. VS Code `test/agent.test.mjs` **mirror 句断言**（:1632 as-of）——**删除**；
+  10. VS Code `test/agent.test.mjs` **discipline 内容级断言注释**（:1678/1718 as-of）——**改**；
+  11. **补（round1 #2）**：两端 `test/agent.test.mjs` **§18.10 T-10.2/T-10.2b “engineering-sub.md 含三句” 内容断言**——**改“三句”→“两句（测试缝+授权边界——mirror 句已删）”**——fail-when-unchanged 措辞随改；
+  - **保留**（明确非镜像）：`advisor.test.mjs`（两端）提示词硬加载逐字节（防静默降级）、`agent.test.mjs:1314`（sys1==sys2 缓存前缀）、`session-compaction.test.mjs`/`time-injection.test.mjs`（缓存前缀）、`cross-repo-parity.test.mjs`（src 语义锚——继承引用——加注释“§18.11 提示词层同精神”）。
+- **D-BI3（清理清单——提示词）**：两端 `src/prompts/engineering-sub.md`：**mirror 并行句**（"Mirror-parallel semantics: a byte-identical test failure is NOT your fault…"——§18.10 D-10.2 ③ 注入）——**删除**（byte-identical 测试不再存在——句子无意义——机制三句变两句——测试缝句+授权边界句保留）；`engineering.md`（两端）：`:107`——"changes outside the approved file list" → "**changes outside the approved file list AND not reported in the delivery report**"（A 裁定口径）；":295"——保留（非矛盾——父代理边界）。
+- **D-BI4（清理清单——文档）**：
+  1. 本项目版 `docs/design/METHODOLOGY.md`（L43 等现行句——"两端 byte-identical 照抄"——**改**为"设计锚为准——两端各自照抄——不再 byte-identical 断言"；历史记录按 as-of 保留）；
+  2. 根模板 `D:/teamcode/METHODOLOGY.md`（仓外——多实现面节——镜像锚同为设计文档逐字定稿——byte-identical 句改设计锚句——**非 git——同批实现侧更新**）；
+  3. `src/prompts/methodology-template.md`（两端——15 对之一）——锚文本随根模板更新**本次照抄一次**（锚→副本仍同文——仅"今后不再强制"）——**注意**：本次更新后不再有 byte-identical 断言——但内容仍一致（照抄）；
+  4. 两端 `AGENTS.md`——2026-09-04 镜像约定声明——**改**："byte-identical 约束已取消（2026-09-04）——设计锚为准——差异靠评审/审计"；
+  5. `docs/design/AGENT-LOOP.md`——§18.10 D-10.2 ③（镜像并行句——设计记录原文）——**更新**（"句已取消——见 §18.11"——历史处置记录保留 as-of）；§18.9（同步脚本——已撤销记录）——补注"取消取消——byte-identical 没了脚本无必要"——等等——§18.9 是"撤销（同步脚本降级仓库工具候选）"——现在连候选都取消——TODO 同步脚本行勾销；
+  6. `docs/design/ENGINEERING-MODE.md`——§2.7 受影响文件补登本批 + 变更记录段（2026-09-04 条）+ **现行 “byte-identical 硬约束” 句扫描指注（见 D-BI6）**；
+  7. `docs/TODO.md`——8 点批第 1 点进一步裁定已落（2026-09-04 11:11）；同步脚本候选——**勾销**（取消）；
+  8. **round1 #6 处置**：`scripts/sync-prompts.mjs` 若存在——**删除** + package.json `sync:prompts` 脚本随删；若不存在——**显式确认**“无脚本残留”（实现批任务书明确）。
+- **D-BI5（范围边界——round1 #4 修订）**：**产品提示词（两端 `src/prompts/*`）在范围内**（D-BI3 改）——**“平台层”= agent 框架自身 system prompt（非本仓库 `src/prompts/`）——不动**；不改历史设计记录原文（as-of——仅加“更新见 §18.11”指针句——控制在受影响文件表列出的范围内）；`thincoder-desktop/vendor` 第三副本（第三方快照——不在镜像对——不动——TODO 原条取消/降级）。
+- **D-BI6（悬空引用扫描——round1 #3 处置）**：以下**现行**引用 15 文件比对的句子加指针“**15 文件比对断言已取消——见 §18.11**”（或显式 as-of 声明）：`§19.4 N4`“既有 15 文件比对覆盖”、`§16 NF-B2`、`§20.7 F-PS4`、ENGINEERING-MODE.md `:119`“byte-identical 硬约束”（行号 as-of——round3 #7 更正：实际 :119——原 :117 为 messages.mjs 行）、**`§18.10 T-10.4`**（“两端文件比对 / byte-identical（既有断言保持）”——round1 补点名——该断言行被 D-BI2 删除清单覆盖——同样加“已取消——见 §18.11”指针）——**受影响文件表扩**（AGENT-LOOP 相关现行段——逐处加指针注；历史 as-of 记录保留原文——不重写）。
+- **D-BI7（归属注——round1 #5 处置）**：本节与 §18.9 张力——**归属接受现状**：§18.11 记于 AGENT-LOOP §18（工程模式既有域——随 §18.8/§18.10 同域——用户裁定与实现记录同处）；§18.9“镜像=开发杂务不写 agent 设计文档”原则——本节的“取消”是**机制级裁定**（影响测试/提示词/两端纪律——非纯杂务）——保留在 §18；同步脚本取消记录已在 §18.9 补注 + TODO 勾销——不再提升为独立仓库工具文档。
+
+**受影响文件（两端）**：
+- 测试：CLI `test/agent.test.mjs`（6 处删/改）、`test/subagent.test.mjs`（1 处注释）、VS Code `test/agent.test.mjs`（5 处删/改）；
+- 提示词：两端 `src/prompts/engineering-sub.md`（mirror 句删）、两端 `src/prompts/engineering.md`（:107 修——15 对之一——本次两端各自改——**无 byte-identical 断言后允许各自演进——但本次仍两端同改（内容修复同向）**）、两端 `src/prompts/methodology-template.md`（锚文本照抄根模板——本次同步一次——不再断言）；
+- 文档：`docs/design/AGENT-LOOP.md`（§18.11 本节 + §18.10 D-10.2 ③ 更新 + §18.9 补注）、`docs/design/METHODOLOGY.md`（现行句）、`docs/design/ENGINEERING-MODE.md`（§2.7 + 变更记录）、两端 `AGENTS.md`、`docs/TODO.md`、根模板 `D:/teamcode/METHODOLOGY.md`（仓外——非 git——同批更新）；
+- 不动：`cross-repo-parity.test.mjs`、advisor.test.mjs 硬加载断言、缓存前缀断言（保留——非镜像）、`thincoder-desktop/vendor`、系统提示词。
+
+**测试（T-BI——eng-coder 展开 N/E）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-BI1 | N | 删除后跑 CLI/VS Code 全量 | 全绿（无 byte-identical 断言）——内容断言（锚句）仍绿 |
+| T-BI2 | N | grep 两端 test/ **+ docs/design/ + src/prompts/** “byte-identical/15 文件比对” | 仅保留非镜像断言（advisor 硬加载/缓存前缀/cross-repo 语义锚）——无规范“byte-identical 强制/15 文件比对”措辞残留（现行句——历史 as-of 记录除外——**排除机制（round1 #4 定死）：grep 命中行须带“as-of”标记或命中行号在实现批维护的 allowlist（文件:行——含 §16 NF-B2/§19.4 N4/§20.7 F-PS4/§18.10 T-10.4 的指针注行）——列表附 D-BI6**——否则断言失败） |
+| T-BI3 | N | 读 engineering.md:107（两端） | 含 "AND not reported"——内容断言（如 T 系列有）更新/新增 |
+| T-BI4 | N | 读 engineering-sub.md（两端） | mirror 句零残留——测试缝+授权边界两句在 |
+| T-BI5 | N | 读两端 AGENTS.md + METHODOLOGY 现行句 | 无 "byte-identical 强制" 措辞——设计锚为准措辞在 |
+| T-BI6 | E | 单独 clone CLI（无 VS Code 目录） | 测试不崩（删除了 skip 逻辑——不再有 15 文件比对——内容断言独立） |
+
+**验收（AC-BI）**：AC-BI1 = 两端全量绿（T-BI1）；AC-BI2 = 镜像断言零残留（T-BI2——仅非镜像保留）；AC-BI3 = :107 修 + mirror 句删（T-BI3/4）；AC-BI4 = 文档现行条款无 byte-identical 强制措辞（T-BI5）；AC-BI5 = 单仓场景不崩（T-BI6）。
+### 18.12 verify 改动文件定位修复——cwd 错位 + 双端对齐（2026-09-04 · 用户确认启动——根因已明）
+
+> 状态：**已实现（2026-09-04——round1 评审 0🔴 通过（token a3e7aa20…/designId 1ab6cf3e——5🟡+2🔵 建议项——用户裁决"批准"——按建议 B——本批修订 #3/#5/#6 已落——#4/#2/#7 随 §18.11 批）——实现：CLI id:3（clean——L1 1347/1299/0 fail + tools.test.mjs 140/140——含 T-VR1/2/2b/3/2c + F-VR1 相关测试项目根回退/缺失判负）+ VS Code id:4（clean——L1 1043/0/0——T-VR4——_touchedFiles 同构确认——无降级）——父侧 L2 test:full 核销 2026-09-04：CLI 1347/1347 0 fail 0 skip + VS Code 1043/1043 0 fail 0 skip）。**实现记录见下——偏差（透明）：测试落点 test/tools.test.mjs（非任务书 agent.test.mjs——按设计"核对两文件现状"规则）；T-VR2b/2c 超表（审计/advisor 回归）；F-VR1 补全（D-VR5 级——相关测试项目根回退+缺失判负——见 §18.12 实现注）；verify.mjs 332→429 行（>300 advisory——TODO 行数债候选）。**触发：用户观察"VS Code 端多跑测试"——深挖实锤：eng-coder 子代理 `agent.cwd` 继承父会话 workspace 根（`D:\teamcode`——非 git 根）——verify git-diff 锚定 `ctx.agent.cwd`（`verify.mjs:78` as-of）→ "not a git repo" → changedFiles 空 → L0 失效 → eng-coder 手动全量兜底（多跑）——VS Code verify.mjs（109 行）本身**无 git-diff/changedFiles 段**（L27 execute 直接语法检查+测试——与 CLI 不同构）。**行号注：本节行号（verify.mjs:78/69/70 等）为 as-of 快照——符号锚 = verifyTool/runTestFile/改动文件定位段（实现批按符号定位——行号仅轨迹注）**。
+
+**需求层**：
+- **F-VR1（L0 可靠）**：作为用户，我希望 verify 在"子代理 cwd ≠ git 根"场景仍能定位改动文件——L0（相关测试）不再失效——修正轮不再被迫全量。
+- **F-VR2（双端对齐）**：VS Code verify.mjs 与 CLI 同构——补改动文件定位逻辑。
+- **F-VR3（workdir 语义澄清）**：verify workdir 文档不再误导（"git-diff 锚定项目根"→ 新语义）。
+- **N-VR1**：零行为回归——git diff 路径在正常 cwd（git 根）场景行为不变；L0 超集语义（D-TS1 已接受）保持。
+
+**设计层**：
+- **D-VR1（定位源——并集——超集语义（D-TS1 已接受））**：changedFiles 源 = **① `ctx.agent._touchedFiles`（per-run 记账——绝对路径——顶层+子代理均记账——`agent.mjs:101/427/157`——最可靠）∪ ② git diff 回退**（cwd 尝试链：`testCwd`（workdir 解析后——`verify.mjs:70`）→ `ctx.agent.cwd`——两处均试——任一成功即用）；两者并集（超集——D-TS1 语义——**并集前归一化：所有路径统一为绝对路径 + 正斜杠 + win32 小写比较键（§20.5 先例——files 归一化同法）**——_touchedFiles 本身为绝对路径；git diff 相对路径按对应 git 根 resolve 成绝对再归一化）。**效果**：cwd 错位场景 _touchedFiles 非空 → 定向；正常场景 git diff 不变。
+- **D-VR2（VS Code 对齐——定死——round1 #5 处置）**：`thincoder-vscode/src/agent-tools/verify.mjs` 补同一逻辑（_touchedFiles ∨ git diff（testCwd→ctx.cwd））——与本端 ctx 结构适配——**判定定死**：VS Code 端 runAgent 与 CLI 同构（§15.6 两端对齐——含 `_touchedFiles` per-run 记账——实现批**必须先实测确认**（读 `thincoder-vscode/src/agent.mjs` 或 runAgent 设置点——存在 → 同构同法；不存在 → **补记账**（对齐 CLI `agent.mjs:101/157/427`——VS Code 端 runAgent 同构——属实现批范围）——**不留"缺则仅 git diff 链"降级**（该降级使 AC-VR2 可空转——cwd 错位仍是 VS Code 痛点——TODO 根因链 ④）。
+- **D-VR3（workdir 注释）**：CLI `verify.mjs:68-69` 注释"git-diff stays anchored to the project root"→ **改**为"changed-file resolution = _touchedFiles ∪ git diff（testCwd→cwd 尝试）"；VS Code 对应描述同步（独立——无 byte-identical 约束——§18.11 后两端各自演进——但本次同向对齐）。
+- **D-VR4（不动）**：verify 其余行为（syntax/测试/verdict/D-TS1 L0 语义）不动；根因链（spawn cwd 指向任务书目录——候选 2）——**不采纳**（影响所有子代理基线——风险 > 收益——_touchedFiles 已解决；若有其他场景需要——另行设计）。
+
+**受影响文件（两端）**：
+- CLI `src/agent-tools/verify.mjs`（改动文件定位段——D-VR1/3）；
+- VS Code `src/agent-tools/verify.mjs`（补定位段——D-VR2/3；若 VS Code `agent.mjs` 缺 `_touchedFiles` 记账——按 D-VR2 补）；
+- 测试：CLI `test/agent.test.mjs` **或 `test/verify.test.mjs`**（**定死：核对两文件现状——承载 verify 的单测文件即落点**——新增 T-VR1/2/3）；VS Code 对应测试（T-VR4）；
+- 文档：`docs/design/AGENT-LOOP.md`（§18.12 本节）、`docs/design/TOOLS.md`（**定死：查 TOOLS.md 是否承载 verify 工具描述——承载 → 同批同步 workdir/定位语义；未承载 → 零动作**）、`docs/TODO.md`（根因条勾销指向）、**两端 `CHANGELOG.md`（父代理统一——实现记录）**。
+
+**测试（T-VR——eng-coder 展开 N/E）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-VR1 | N | mock ctx.agent.cwd = 非 git 根（如 D:/workspace）+ agent._touchedFiles 含 src/x.mjs | verify 定向（含 src/x.mjs 语法检查/相关测试）——不因 "not a git repo" 失效——不跑全量 |
+| T-VR2 | N | 正常 cwd（git 根）——git diff 可用 | 行为不变（git diff 链仍生效——_touchedFiles ∪ git diff） |
+| T-VR3 | E | _touchedFiles 空 + git diff 全失败 | 回退现有行为（空列表→正常路径——不崩——D-TS1 null 映射不采用语义） |
+| T-VR4 | N | VS Code verify 同场景 | 与 CLI 同构行为（定位成功） |
+
+**验收（AC-VR）**：AC-VR1 = T-VR1/2/3 绿（CLI——cwd 错位场景定向成功、正常场景不变、空回退不崩）；AC-VR2 = T-VR4 绿（VS Code 对齐）；AC-VR3 = verify 全量回归绿（既有测试）；AC-VR4 = workdir 注释与实现一致（D-VR3）。
+
+### 18.13 审计范围引导：quick 档 + 机械预算句（2026-09-04 · 用户观察——"审计 explore 跑非常久——缺乏范围引导"）
+
+> 状态：**设计（2026-09-04——用户裁定"可以，先量化"→ 量化结论：**无现有数据可答时长**（LOGGING 骨架未含子代理审计时序——子代理上下文不落盘——观测缺口）→ 用户裁决：**"别补可观测了，回头现有的也要去掉的，调试完成了就要删"**——只修引导——不补观测点）**。
+
+**问题（P-A1）**：eng-coder 内部审计 explore 跑非常久——根因三层（实读 §18 D-E3/engineering-sub.md）：
+1. **thoroughness 档错位**：engineering-sub.md 审计指令 = `"medium unless the delivery is large"`——审计=定点核对（对照设计找偏差）——不是广度探索——medium（多探针）天然偏重；大交付还升 thorough——**方向反了**；
+2. **范围纪律纯文本自觉**：审计任务书范围句 1 条（"只审 _touchedFiles 与父任务书确认的文件"——D-TS4）——但 AGENT-LOOP.md（**约 200K/2196 行——as-of——评审 #6**）——"相关节"判定宽 → explore 大段读——**无机械硬锚**（如仅读任务书画线的节——不整读）；
+3. **explore 无"审计档"**：explore.md thoroughness 三档（quick/medium/thorough）——无"审计=最小确认"心智——探索者对审计算法 = 最大探索。
+
+**需求（F-A1）**：作为用户，我希望 eng-coder 审计 explore **不跑那么久**——审计=最小确认（读该读的）——不广度扫描。
+- **F-A2（quick 档默认）**：审计 spawn thoroughness = **quick**（不再 medium/不随交付规模升 thorough——审计范围内已机械确定——无需广度）；
+- **F-A3（机械预算句）**：审计任务书机械段加预算句——"只读 _touchedFiles 实际文件 + 设计文档任务书点名的节（受影响文件表/验收标准/状态行）——不整读文档——预算 ≤10 工具轮——超时报 PROBLEM 下结论"；
+- **N-A1（零破坏）**：四类偏差语义/报告三态/父侧审计链路不变——只缩范围与档。
+
+**设计（D-A1）**：
+- **D-A1.1（engineering-sub.md 审计指令）**：`thoroughness: "medium unless the delivery is large"` → `thoroughness: "quick"`（+ 一句锁定："审计是对照核对——非广度探索——读该读的即止"）；
+- **D-A1.2（审计任务书机械段——subagent.mjs 拼接注入处——D-TS4 拼接处——定序：A1 指令模板 + A2 摘要块之后、A3 报告模板之前——评审 #7**）：加预算句（逐字）：
+  ```text
+  [Audit budget — mechanical]: read ONLY the touched files listed above and
+  the design-doc sections the parent task book names (affected-files table,
+  acceptance criteria, status line). Do NOT read whole documents. Budget =
+  10 tool rounds max — if you cannot conclude within it, report PROBLEM
+  (inconclusive) rather than continuing to explore.
+  ```
+- **D-A1.3（范围句保留）**：既有"只审 _touchedFiles 与父任务书确认的文件；工作区未列改动与..."句不动——预算句是追加（强化——非替换）；
+- **D-A1.4（两端）**：engineering-sub.md 两端同步（语义锚——各自照抄）；审计任务书模板在 subagent.mjs（CLI）+ 对应（VS Code——核对同构）——同批。
+
+**受影响文件（两端）**：
+- CLI `src/prompts/engineering-sub.md`（审计指令 quick）+ `src/agent-tools/subagent.mjs`（审计任务书机械段加预算句——D-TS4 拼接处——**VS Code 对应：`src/agent-tools/subagent-async.mjs` `auditTaskBook`——符号锚（评审 #1——§18.5/§18.7 已立——不用"核实 file 位"**））+ 测试——**T-A1.1 → `test/agent.test.mjs`（engineering-sub.md 内容断言——T-TS1/T-10.1 模式）；T-A1.2 → `test/subagent.test.mjs`（审计任务书模板断言——T-TS4/5/6 模式）——评审 #3**；
+- VS Code 对应（subagent-async.mjs auditTaskBook——同构）；
+- 文档：AGENT-LOOP.md（§18.13 本节 + D-TS4 加指针）、两端 CHANGELOG（父侧）。
+
+**测试（T-A1）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-A1.1 | N | 读 engineering-sub.md（两端） | 审计指令含 `thoroughness: "quick"` + "审计是对照核对"句——fail-when-unchanged |
+| T-A1.2 | N | 读审计任务书机械段（subagent.mjs 拼接） | 含 "Audit budget — mechanical" + "10 tool rounds max" + "report PROBLEM"——fail-when-unchanged |
+| T-A1.3 | E | 既有审计断言回归（D-TS4 范围句/四类偏差/报告三态） | 全绿（零破坏——N-A1——追加不替换） |
+| T-A1.4 | A | 预算句/quick 缺失（模拟回归） | 断言失败（防回潮） |
+
+**验收（AC-A1）**：AC-A1.1 = T-A1.1/2 绿（quick + 预算句在）；AC-A1.2 = T-A1.3 绿（零破坏）；AC-A1.3 = **定性验收（评审 #2——"阅读量"无数据源——与"不补观测"裁定张力——删除该词——判定 = ①交付报告审计轮次数 + ②用户对下次审计时长的主观反馈**（后续若仍报慢——证据链由交付报告轮次支撑——用户裁定"调试完成就删观测"）；AC-A1.4 = 双端同语义。
+
+**范围声明（评审 #5）**：本批范围 = **eng-coder 内部审计**（F-A1 明示）——**父侧可选审计**（§18 D-E6——主会话直接 spawn）**不在本批**——父侧审计若仍报慢——同类问题同理（quick + 预算句）——另行处理时按本设计同法——**明示 out-of-scope**。
+
+**归档（用户裁定——观测清理哲学）**：本段隐含——**不新增观测**——现有 LOGGING/traces 可观测（if any）调试完成后删除——**记 TODO 清理项**（不随本批——另行）。
+
+
+
 
 ## 19. subagent 工具面合并：单工具动作面（**六动作：spawn/check/status/escalate/cancel/panel——评审 #1：标题数随扩展刷新——2026-09-03**）（2026-09-03，用户裁定：工具会爆炸——靠参数做不同的事——escalate 并入 2026-09-03 二次裁定）
 
@@ -1423,7 +1686,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 
 > **supersede 注（2026-09-03 §19.5 实现轮）**：本矩阵 action 面随 §19.5 控制面扩展为**五动作**——cancel 行的门禁分类（控制类豁免）、定向中止语义（cancelled settle/queued 出队/模型可见提醒）与 AC-M1 措辞见 §19.5（D-M6/19.5.2b）——§15 D-A2 先例：本段保留为 as-of 快照，实现以 §19.5 为准。——**域澄清（评审 #2）：AC-M1 五动作 = §19 cancel 批域验收——§19.6 加 panel 后工具面六动作（NF-P 口径）——域不同不冲突——2026-09-03**
 
-**D-M2 status 形态**（§19.5 D-M5 修订：概览条目从 id 数组改**结构化对象数组**——`{ overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}] }, target?: {...} }`）——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或回合尾注入"（措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
+**D-M2 status 形态**（§19.5 D-M5 修订：概览条目从 id 数组改**结构化对象数组**——`{ overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}] }, target?: {...} }`）——**事实源 = 池（_asyncSubagents）**（评审 #2——挂起期 settle 项已移 `_pendingAsyncResults`（§17 D-S3 ②——注入即消）——**不计入 done 待取**——done 条目附注"回合内 settle 未取——check 取回或 digest 消化"（**2026-09-04 round3 #3 修正——原"回合尾注入"已由 §17.5.2 supersede：挂起驱动下 done 留池→挂起会话 sweep→digest 消化——不经回合尾注入；无驱动调用方（headless/直连）保留 turn 尾直注入兜底——见 §17.5.2/§19.5.4——措辞对齐 §17——挂起期项由 digest 自动消化不经 check）；未知 id → `{status:"error", error:"unknown async subagent id"}`（与 check 同——T12 语义）。**免 n 计数**（status 是只读查询不消费——回合内自然限频——模型不会空转循环）。status 后接 check 无 n 冲突（status 不动 _asyncCheckLastN）。
 
 **D-M4 escalate 并入（评审 2026-09-03 用户裁定）**：既有 escalate 执行逻辑（escalate.mjs——resolveChildProvider 选模型/createAgent coder role/runWithContinue/mergeChildMutations/术后报告）搬入 subagent 工具的 `action:"escalate"` 分支——保留全部既有约束：depth-0 only（depth>0 → error）、工程模式禁用（engineering → error——"实现走 eng-coder"）、consultModels 空 → error、模型选择校验、**relay 前缀 `escalate#N/` 保留**（action 名 escalate 与既有前缀同名——TUI 路由/subagent-blocks/tool-events **零改动**——区块显示/活动流不变）。`escalateTool` 退役（escalate.mjs 移除——setup.mjs 注册点删——subagent 工具常驻——escalate action 在 consultModels 空时返回 error——既有错误语义）。触发词条款（提示词——"用户说 飞刀/escalate → 调 subagent action:escalate"）随提示词迁移。**引用面**：174 处——~113 为 escalate.mjs 自身 + escalate.test.mjs（随迁移消解）；外部集成 = setup.mjs 注册（删）+ 提示词条款（改）+ 测试迁移（escalate.test.mjs 直接调 escalateTool → subagent action:"escalate"）——UI/事件/配置零改动。——**评审 #2 补：受影响清单加 docs/design/ESCALATE.md（supersede/指向编辑——工具面退役但机制文档更新调用路径为 action:"escalate"）+ TOOLS.md 工具注册表核验（escalate/subagent_check 名称残留——同批清）**
 
@@ -1465,7 +1728,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 - N1：**描述预算**——五动作单工具描述在既有 schema description 预算内（工具描述重写后模型可解析——T-M12 断言 byte-identical + 内容锚）——**§20 扩展（2026-09-03）：spawn 调度参数 files/dependsOn 两可选参 + 描述调度段——预算复核随 §20 用例（T-M12 锚同 §19.6 NF-P 复核——20.5 交付面）**
 - N2：**语义保证**——check 的消费/删除/n 计数与 status 的零消费/零计数完全隔离（T-M4/M10 断言——action 间不串扰）
 - N3：**零改动面**——TUI/ACP relay 路由零改动（escalate# 前缀保留——T-M16 断言）；配置零改动（consultModels 语义照旧）
-- N4：**两端一致**——subagent 工具 schema/描述与 prompts 两端 byte-identical（T-M12——既有 15 文件比对覆盖）
+- N4：**两端一致**——subagent 工具 schema/描述与 prompts 两端 byte-identical（T-M12——既有 15 文件比对覆盖）——**指针（2026-09-04 §18.11）：15 文件比对断言已取消——见 §18.11——当前描述/提示词两端一致性 = 设计锚 + 评审/审计（不再 byte-identical 断言）**
 
 
 ### 19.5 控制面扩展：status 增强 + cancel + UI 停止 + 嵌套前缀子标（2026-09-03，用户裁定）
@@ -1623,6 +1886,41 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 6. VS Code 声明（CLI-only——webview 键匹配无启发式——不需同步改）
 7. 本节状态同步"设计批准"（即本段——token 已签发——实现排队）
 8. CHANGELOG 记录（round2 #6——本节 CLI 行为变更（面板回收时序）——父代理统一批记录——§19 sweep 惯例——§17.5 同）
+
+
+#### 19.5.6 status 条目补 touched files 摘要（2026-09-04 · 用户拍板立项——来源：9-03 cancel 核实纪律第 5 点·机制化）
+
+> 状态：**已实现（2026-09-04——用户"A"立项——round1 评审输出超限不可恢复；round2/round3 复审 0🔴 通过（token 8578c8cc/designId 590b873e——6🟡+3🔵 建议项——用户裁决"批准"（B）——实现批 task 条款：#1/#2/#9 设计细化已落（D-SF1/D-SF2/T-SF2a/b/done 明示）——实现：CLI id:7（clean——审计 1× LOW（文档文件表误归——父侧已修）+ advisor 首审 0🔴（4 项——#2 工具描述补新字段已修/#4 T-SF5 时序 600→1500ms 已修）+ 复评 0🔴——L1 1353 tests/1305 pass/0 fail——subagent.test.mjs 77 pass/0 fail/1 slow skip——T-SF1..5 六用例全绿）+ VS Code id:8（同批镜像——父侧核销合并）——父侧 L2 核销待 id:8 交付后）。**实现记录（2026-09-04）**：CLI `subagent.mjs`（entry.start() 绑 childAgent 对象引用——D-SF1）+ `subagent-async.mjs`（touchedSummary/shortTouchedPath/statusFields）——超清单：subagent.mjs（设计文件表误归——绑定点物理归属——实现按 D-SF1 正确执行——父侧已修文件表）/T-M8 deepEqual 更新（新字段追加）——行数债：subagent-async 984/subagent.mjs 699（>500 硬限——TODO 拆分轮已登记）。**触发：**今天 §18.12（verify 修复）复用 `_touchedFiles` per-run 记账——证明该数据源已存在且记账成本为零——status 摘要时机变好（零新增采集）——补上"杀前看得见代价"的机制化缺口。
+
+**需求层**：
+- **F-SF1（看得见代价）**：作为用户，我希望 `subagent status` **running** 条目带 **touched files 摘要**——杀子代理前看得见它改了哪些文件（代价可见）——机制化防随意杀（纪律第 1-4 点已靠提示词+记忆——本点补机制；queued 未启动——无 touched 信息——见 N-SF2）。
+- **总体目标（round3 #8 补）**：把“杀子代理前看得见代价”从提示词纪律升为工具机制——status 一个字段——零新增采集——让 cancel 决策有据可依。
+- **F-SF2（复用记账）**：不新增采集——**直接复用 `agent._touchedFiles`**（per-run 记账——§18.12 已确认——顶层+子代理均记账——绝对路径）。
+- **N-SF1（摘要限长）**：条目不刷屏——摘要 = 前 5 个文件路径（**相对查询方（父代理）cwd** 缩短；cwd 之外路径保留绝对形态 + "../" 前缀）+ "… N more"（超出截断）——路径过长（>80 字符）截尾。
+- **N-SF2（零破坏）**：status 条目既有字段（id/role/model/elapsedSec/turn/maxTurns）不变——新字段追加；queued 条目无 touched 信息（未启动）——显示 "touched: —（未启动）" 或省略。
+
+**设计层**：
+- **D-SF1（装配点——round3 #1 定死——2026-09-04 id:7/8 实现补注）**：subagent-async.mjs **status 分支条目标装配点**（spawn 时记 entry.model/startedAt 处——§19.5.2 D-M5 锚点）——**绑定时刻 = `entry.start()`/首拍 `onAgentTurn`（实际启动时——queued 条目 spawn-ack 时刻尚无子代理对象——§20 D-SD3b——须在 start 时绑；VS Code 端对象在 runAgent setup 内异步创建——绑定锚点 = 首拍 onAgentTurn（最早存在时刻——架构约束——语义等价——已实现注释披露））**；**绑定对象 = `entry.childAgent`（子代理**对象**引用——不是 `_touchedFiles` 数组引用——per-run 状态在 prepareRun 重置（§2）——数组引用会陈旧——对象引用才能保证“运行期实时读——杀前一刻最新”）**——status 查询时实时读 `childAgent._touchedFiles`（绝对路径）——queued 条目无对象 → 占位（T-SF2）。**（round3 #1 处置——§19.5.6 评审建议——实现批 task 条款）**
+- **D-SF2（摘要形态——2026-09-04 id:7/8 统一修正——CLI 参考语义为准）**：**占位形态（无改动/queued）**：`touched: "—（尚无改动）"`（running 0 改动）/ `touched: "—（未启动）"`（queued——T-SF2a/2b）；**摘要形态（有改动）**：`touchedFiles: [f1..f5]`（相对路径 + 截断 + 限长——N-SF1）+ `touchedMore: N`（仅 >5 时出现——独立字段——不混入数组）——**done/error/取消条目：本批不含 touched 字段**（round3 #9——AC-SF3 既有字段断言覆盖）——本批只做 running/queued——**（端际统一：CLI 与 VS Code 同形态——原设计 D-SF2 数组写法 vs T-SF2 占位文案矛盾——实现批分叉后统一——以本节为准）**。
+- **D-SF3（两端）**：CLI subagent-async.mjs status 分支 + VS Code 对应（subagent-async.mjs 同构——§15.6 两端对齐——byte-identical 已取消——各自实现同语义——语义锚（cross-repo-parity 精神））。
+- **D-SF4（不动）**：cancel 动作本体/核实纪律提示词（19.5.5 已落——不改）——本批仅 status 字段。
+
+**受影响文件（两端）**：
+- CLI `src/agent-tools/subagent.mjs`（**entry.start() 绑 childAgent 对象引用——D-SF1——物理归属本文件**——statusFields 装配）+ `src/agent-tools/subagent-async.mjs`（status 摘要渲染 + touchedSummary/shortTouchedPath——**实现记录修正 2026-09-04（id:7 交付——设计轮文件表误归——绑定点在 subagent.mjs——实现按 D-SF1 正确执行）**）；
+- VS Code `src/agent-tools/subagent.mjs`（onAgentTurn 绑定 + 工具描述——id:8 实现——**首拍 onAgentTurn 锚点注**）+ `src/agent-tools/subagent-async.mjs`（status 摘要字段/函数——同构）+ `src/agent/setup.mjs`（**stateSink.agent 对象引用——id:8 超清单——机制必需——子代理对象异步创建——唯一透明通道**——设计表补登）；
+- 两端测试（status 条目断言——T-SF1/2）——落点：`test/subagent.test.mjs` 或既有 status 断言文件（核对）——**实现已落 test/subagent.test.mjs（T-SF1..5 六用例——77 pass/0 fail）**；
+- 文档：AGENT-LOOP.md（§19.5.6 本节）、TODO:356 勾销指向。
+
+**测试（T-SF——eng-coder 展开 N/E）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-SF1 | N | 子代理在跑（已触文件）→ status | running 条目含 touchedFiles 摘要（相对路径 + 前 5 + 截断注） |
+| T-SF2a | N | 子代理 running 但 0 改动 | 条目带 "touched: —（尚无改动）"（区分占位——round3 #2） |
+| T-SF2b | N | 子代理 queued（未启动） | 条目带 "touched: —（未启动）"——不崩（确定性占位） |
+| T-SF3 | E | touchedFiles >5 | 限长（前 5 + "… N more"）——N-SF1 |
+| T-SF4 | E | 路径 >80 字符 | 截尾——不超行 |
+
+**验收（AC-SF）**：AC-SF1 = T-SF1/2 绿（运行条目含摘要——未启动不崩）；AC-SF2 = T-SF3/4 绿（限长/截断——N-SF1）；AC-SF3 = 既有 status 字段零破坏（既有断言绿）；AC-SF4 = 双端同语义（T-SF4 语义断言——cross-repo 精神）。
 
 ### 19.6 subagent panel 检查工具（2026-09-03 · 设计——用户裁定：视图 + 干预——**已批准**）
 
@@ -1853,6 +2151,12 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 
 > 状态：**设计批准（2026-09-03 评审 0🔴 通过——token 00fde4f4——实现记录见下——评审 #4 生命周期标记修正）**。来源：TODO 立项（f874a4f）——main.md Delegation 段旧纪律未随 §20 升级。
 
+> **实现遗留补注（2026-09-04——用户观察"总是等 eng-coder 结束再 spawn"——父侧实证）**：实现批遗漏 **engineering.md :212-213 旧句**（"Never assign two parallel eng-coders edits to the same file — conflicts waste everyone's time."——否定式手动避让）——与 :242-248 调度器新条款（"overlapping domains are queued by the scheduler, never hand-serialized"）**同文件矛盾**——T-PS2 断言只覆盖 4 句旧措辞（"share NO file"/"run the tasks serially"/"Dependency chain → serial"/"Pre-check"）——**漏了本句**——故旧句溜过实现。**修复（并入最近批——待 §18.11/18.12 交付后）**：①两端 engineering.md :212-213 删/替为调度器句；②T-PS2 补断言 `!text.includes("Never assign two parallel eng-coders")`（CLI）；③查 :4014 既有反向断言（"same file — conflicts waste"——疑似另处残留——核实归属）；④TODO:330 勾销/更新。token 00fde4f4 已失效——修正轮前需重新评审（拿新 token）。
+
+
+> **round2/round3 复审处置（2026-09-04）**：round2 复审 1🔴（D-BI6 扫描不完整——byte-identical 残留未清）+6🟡/🔵——**全部已修**（8 处指针/状态行 round2 注/TODO 勾销/数字更正/悬空修正/残片清——见 §18.11 状态行/§18.12 处置注）→ round3 复审 2026-09-04 **0🔴 通过**（token 2ed92fcc…/designId 639244b2——5🟡+2🔵 建议项——用户裁决"批准"——按建议 B——实现批 task 条款：#1-5 父侧同批落文档（round2 处置表/状态对齐/§18.12.1 处置表/:1260+:1969 指针/T-VR3 定死）、#6/7 随手——**修正轮 spawn 立即**（删 L213 + T-PS2 补断言——两端——与 §18.12 批文件域冲突由调度器排队）。**
+
+
 ### 20.7.1 需求
 
 **总体需求**：主提示词（main.md Delegation 段 + engineering.md 并行段）从"手动并行避让纪律"升级为"调度器驱动派发"——模型知道 spawn 声明 files/dependsOn——冲突/依赖/排队全交调度器——调度器能力不被闲置（旧条款教模型自己判断"同文件别并行"——否定式自我管理——§20 的正向用法是声明写域让调度器自动排队）。
@@ -1861,7 +2165,7 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 - F-PS1：main.md Delegation 段旧条款（"Never give parallel subagents tasks that edit the same files——conflicts waste everyone's time"）→ 调度器条款（镜像锚逐字定稿——见 20.7.2 D-PS1）
 - F-PS2：engineering.md 并行段（Multi-Task Parallelism——同文件不并行/依赖串行手动纪律）同款升级
 - F-PS3：任务书引导——spawn 声明 files（写域）+ dependsOn（依赖）——调度器自动准入/排队/补位——同文件任务可并行派（自动 queued——冲突清自动启动）
-- F-PS4：两端 byte-identical（15 prompts 铁律）
+- F-PS4：两端 byte-identical（15 prompts 铁律）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——当前两端一致性 = 设计锚（逐字定稿）+ 评审/审计**
 - **F-PS5（复审 #6 补——system.md §14 D1 carve-out）：system.md "Do NOT parallelize" 条款加 carve-out（声明 files 的 async spawn → 调度器排队例外——旧禁令限定未声明/工具级并行写）——T-PS3/AC-PS4 承载**
 
 **非功能性需求**：条款精简短（提示词预算——不喧宾夺主）；模型可操作（读完知道 spawn 时该带什么参数）。
@@ -1885,3 +2189,9 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 - 改动（双端 byte-identical）：main.md Delegation 段旧句 → D-PS1 逐字锚；engineering.md Multi-Task Parallelism 段 → D-PS2 逐字锚（cap 句保留——T9/T-E16 绿）；system.md §14 D1 → carve-out 句。测试：CLI advisor.test.mjs + agent.test.mjs（291/283 绿）+ VS Code agent.test.mjs + unit.test.mjs（182/182 绿）。
 - 验收勾销：AC-PS1..5 全 ✓（锚句在/旧句零残留/cap 在/carve-out 在/byte-identical 双端口查在/全量回归绿）。
 - 父侧注：§14 D1 carve-out 注 + §13 point 4 supersede 注 + §16 D-B4 引用注（同批落）。两端 CHANGELOG 父代理统一。
+
+- **修正轮实现记录（2026-09-04——round3 复审 0🔴（token 2ed92fcc/designId 639244b2——用户"批准"）→ 双端修正轮）**：
+  - CLI（id:5）——clean（审计 CLEAN + advisor 首审 0🔴 + 终审通过——修正轮 1/5）：删除 `engineering.md :212-213` 旧句（"Never assign two parallel eng-coders…"）+ T-PS2 补零残留断言（agent.test.mjs :1965）+ :4014 正向断言（"same file — conflicts waste"）归属核实 = engineering.md T-PS2 域 → 改零残留（:4015）+ 测试标题 "并行互斥" → "并行避让旧句零残留"（advisor 🔵3）——L1 1347 tests/1299 pass/0 fail（48 skip slow）；agent.test.mjs 209 pass/0 fail/5 skip。
+  - VS Code（id:6）——clean（审计 CLEAN + advisor 首审 0🔴（1🟡1🔵 均父侧协调项）+ 终审通过——无修正轮）：删除 `engineering.md :212-213` 旧句 + :1427 正向→零残留（超清单——交付必需——同 CLI :4014 处置）+ :1479 补零残留断言——L1 1043/1043 pass/0 fail；grep 旧句零命中（仅 2 处零残留断言）。
+  - 父侧同步：TODO:332/354 勾销（2026-09-04）；两端差异 = 断言消息措辞（CLI 中文/VS Code 英文——风格级——§18.11 允许独立演进）。
+

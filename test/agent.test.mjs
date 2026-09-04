@@ -1962,6 +1962,7 @@ test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressi
   assert.ok(!text.includes("run the tasks serially (or merge them into one spawn)"), "T-PS2: 旧「串行/合并」手动处置零残留")
   assert.ok(!text.includes("Dependency chain → serial"), "T-PS2: 旧「依赖链串行」零残留")
   assert.ok(!text.includes("Pre-check before parallel spawns"), "T-PS2: 旧「spawn 前人工预检」零残留")
+  assert.ok(!text.includes("Never assign two parallel eng-coders"), "T-PS2: 旧「并行 eng-coder 同文件编辑」手动避让句零残留")
 })
 
 test("prompts/main.md: Delegation 调度器条款（§20.7 D-PS1——T-PS1/T-PS2）", () => {
@@ -2289,7 +2290,7 @@ test("offloadToolResult: 目录不存在时清理静默，offload 正常落盘",
   }
 })
 
-test("offloadToolResult: 恰好 65536 字符不落盘，原样返回（AC1）", async () => {
+test("offloadToolResult: 恰好 65536 字符不落盘，原样返回（AC1·T-4.3）", async () => {
   const exact = "b".repeat(65_536)
   const dir = mkdtempSync(join(tmpdir(), "thincoder-offload-limit-"))
   try {
@@ -2298,6 +2299,25 @@ test("offloadToolResult: 恰好 65536 字符不落盘，原样返回（AC1）", 
     assert.equal(readdirSync(dir).length, 0, "不产生落盘文件")
   } finally {
     rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 落盘失败回退——同用双端切片（T-4.4·评审 #3）", async () => {
+  const text = "A".repeat(16_384) + "M".repeat(70_000 - 16_384 - 20_000) + "Z".repeat(20_000) // 70_000
+  const base = mkdtempSync(join(tmpdir(), "thincoder-offload-fail-"))
+  try {
+    const blocker = join(base, "blocker-file") // 已存在文件 → mkdir(dir) 失败 → 触发回退
+    writeFileSync(blocker, "i am a file, not a directory")
+    const out = await offloadToolResult(text, "call-fail", blocker)
+    const truncatedNote = `\n\n[... truncated: ${text.length} chars total, offload to disk failed]`
+    assert.ok(out.endsWith(truncatedNote), "回退提示语格式不变（AC5 回归）")
+    assert.ok(!out.includes("full content saved to"), "回退无路径提示")
+    assert.ok(out.startsWith("A".repeat(16_384)), "回退预览头 16K 保留")
+    assert.ok(out.includes("ZZZZ"), "回退预览含尾部——不再头截断（评审 #3）")
+    assert.match(out, /\n\n… \[middle omitted: \d+ chars\] …\n\n/, "回退省略注在")
+    assert.ok(out.length - truncatedNote.length <= 65_536, "回退预览 head+note+tail ≤ 65536")
+  } finally {
+    rmSync(base, { recursive: true, force: true })
   }
 })
 
@@ -2317,17 +2337,63 @@ test("offloadToolResult: 65537 字符落盘，preview + 路径，磁盘全量（
   }
 })
 
-test("offloadToolResult: 落盘失败回退截断 64K，阈值内信息不丢（AC8）", async () => {
-  const big = "d".repeat(70_000)
-  const base = mkdtempSync(join(tmpdir(), "thincoder-offload-fail-"))
+test("offloadToolResult: 预览含头+尾+省略注——T-4.1（65_537 头 AAAA 尾 ZZZZ）", async () => {
+  const text = "A".repeat(16_384) + "M".repeat(29_153) + "Z".repeat(20_000) // 65_537
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-offload-dual-"))
   try {
-    const blocker = join(base, "blocker-file") // 已存在文件 → mkdir(dir) 失败 → 触发回退
-    writeFileSync(blocker, "i am a file, not a directory")
-    const out = await offloadToolResult(big, "call-fail", blocker)
-    const fallback = `\n\n[... truncated: ${big.length} chars total, offload to disk failed]`
-    assert.equal(out, big.slice(0, 65_536) + fallback) // 回退截断长度 = 65536
+    const out = await offloadToolResult(text, "call-dual", dir)
+    const m = out.match(/full content saved to: (.+\.log)/)
+    assert.ok(m, "落盘并含路径")
+    assert.equal(readFileSync(m[1], "utf8").length, text.length, "磁盘全量不变（N-4.1）")
+    assert.ok(out.includes("AAAA"), "头部段（头 16K）在预览中")
+    assert.ok(out.includes("ZZZZ"), "尾部段（tail）在预览中——不再头截断")
+    assert.match(out, /\n\n… \[middle omitted: \d+ chars\] …\n\n/, "中间省略注在")
+    const preview = out.slice(0, out.indexOf("[... output too large"))
+    assert.ok(preview.length <= 65_536, "head+note+tail ≤ 65536（预算 #2）")
+    assert.ok(out.length <= 65_536 + 512, "总长 ≤ 64K + 路径开销")
   } finally {
-    rmSync(base, { recursive: true, force: true })
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 头恰 16K 后立即超限——双端边界（T-4.2）", async () => {
+  const text = "H".repeat(16_384) + "M".repeat(49_149) + "Z".repeat(4) // 65_537——头 16K 后立即超限
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-offload-dual-edge-"))
+  try {
+    const out = await offloadToolResult(text, "call-dual-edge", dir)
+    assert.ok(out.startsWith("H".repeat(16_384)), "头 16K 完整保留（边界不截）")
+    assert.ok(out.includes("ZZZZ"), "尾部段出现")
+    assert.match(out, /\n\n… \[middle omitted: \d+ chars\] …\n\n/, "省略注在")
+    const m = out.match(/full content saved to: (.+\.log)/)
+    assert.ok(m && readFileSync(m[1], "utf8").length === text.length)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("offloadToolResult: 预览两端代理对边界安全——无孤立代理（评审 #5）", async () => {
+  // 头边界：代理对横跨 16383/16384（safeSliceUTF16 向前收一个码元）
+  // 尾边界：代理对横跨 20884/20885（tail 起点 20885 落在低代理上——safeSliceUTF16End 前移一个码元）
+  const text = "A".repeat(16_383) + "🔴" + "M".repeat(20_884 - 16_385) + "💥" + "Z".repeat(70_000 - 20_886)
+  assert.equal(text.length, 70_000)
+  function hasLoneSurrogate(s) {
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i)
+      if (c >= 0xd800 && c <= 0xdbff) {
+        const d = s.charCodeAt(i + 1)
+        if (!(d >= 0xdc00 && d <= 0xdfff)) return true
+        i++
+      } else if (c >= 0xdc00 && c <= 0xdfff) return true
+    }
+    return false
+  }
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-offload-surrogate-"))
+  try {
+    const out = await offloadToolResult(text, "call-sur", dir)
+    const preview = out.slice(0, out.indexOf("[... output too large"))
+    assert.ok(!hasLoneSurrogate(preview), "预览（head+note+tail 拼接）无孤立代理对")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
   }
 })
 
@@ -3776,12 +3842,11 @@ test("cache audit (2026-08-16): OS/cwd reminder injected once per process; resum
 })
 
 // ---------------------------------------------------------------- 提示词借鉴增量（kimi-code 对照，2026-08-21）
-// 两端 src/prompts/ 必须保持 byte-identical（项目铁律）；本组测试防内容缺失 + 防漂移回归。
+// 各端内容断言（锚句存在）防漂移（§18.11 起——镜像锚在设计文档逐字定稿——两端各自照抄）；本组测试防内容缺失 + 防漂移回归。
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url))                     // thincoder/test
 const PROMPTS_DIR = join(TEST_DIR, "..", "src", "prompts")                   // thincoder/src/prompts
 const SRC_DIR = join(TEST_DIR, "..", "src")                                  // thincoder/src
-const VSCODE_PROMPTS_DIR = join(TEST_DIR, "..", "..", "thincoder-vscode", "src", "prompts")
 
 test("prompts/explore.md: Thoroughness levels 三档 + 默认档", () => {
   const text = readFileSync(join(PROMPTS_DIR, "explore.md"), "utf8")
@@ -3939,8 +4004,8 @@ test("prompts/methodology-template.md: 需求池攒批用户面向块 = 根模�
 test("需求池三副本不变量断言（评审 #8——阈值 ≥2/≥3 + 边界「池只收用户需求点」跨根模板/项目版/template 对在——防单向漂移）",
   { skip: !existsSync(join(TEST_DIR, "..", "..", "METHODOLOGY.md")) },
   () => {
-    // 三副本：根模板（D:/teamcode/METHODOLOGY.md，非 git 文件级）、项目版（docs/design/METHODOLOGY.md）、template 对（两端 src/prompts/methodology-template.md byte-identical）
-    // 根模板在仓外——单独 clone CLI 仓时缺失，动态 skip（同 15 对 byte-identical 测试惯例）
+    // 三副本：根模板（D:/teamcode/METHODOLOGY.md，非 git 文件级）、项目版（docs/design/METHODOLOGY.md）、template 副本（src/prompts/methodology-template.md——设计锚照抄——不再 byte-identical 断言）
+    // 根模板在仓外——单独 clone CLI 仓时缺失，动态 skip（与既有仓外依赖测试同惯例）
     const root = readFileSync(join(TEST_DIR, "..", "..", "METHODOLOGY.md"), "utf8")
     const project = readFileSync(join(DOCS_DESIGN_DIR, "METHODOLOGY.md"), "utf8")
     const tmpl = readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8")
@@ -4006,13 +4071,13 @@ test("prompts/engineering.md: METHODOLOGY 测试文档是交付评审的一部�
   assert.ok(text.includes("a delivery without\n   its test coverage fails the review"), "无测试覆盖 = 交付评审不通过")
 })
 
-test("prompts/engineering.md: 委托引导（explore/plan 下沉 + 精度例外 + 并行互斥 + escalate 不可用）", () => {
+test("prompts/engineering.md: 委托引导（explore/plan 下沉 + 精度例外 + 并行避让旧句零残留 + escalate 不可用）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   assert.ok(text.includes("goes to an `explore` subagent"), "广度探索 → explore 委托")
   assert.ok(text.includes("quick / medium / thorough"), "彻底度三档")
   assert.ok(text.includes("never enter your history"), "隔离收益点破")
   assert.ok(text.includes("about to edit it immediately"), "精度例外")
-  assert.ok(text.includes("same\n  file — conflicts waste"), "并行子 agent 不编辑同一文件")
+  assert.ok(!text.includes("Never assign two parallel eng-coders"), "并行互斥：旧手动避让句零残留（§20.7 调度器条款接管）")
   assert.ok(text.includes("Do NOT redo the exploration you already delegated"), "不重做已委托的探索")
   assert.ok(text.includes("`escalate` is unavailable in engineering mode"), "escalate 不可用（与 setup.mjs fail-closed 一致）")
   assert.ok(text.includes("`consult` stays available"), "consult 保留可用")
@@ -4126,15 +4191,7 @@ test("prompts 4 模板: Judgment Rules 铁律块（§18.10 D-10.1——T-10.1）
   }
 })
 
-test("prompts 4 模板: 铁律块+一致性句字节一致（TR3 首批定稿——防 4 份漂移）", () => {
-  const blocks = FOUR_ADVISOR_PROMPTS.map((f) => {
-    const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
-    return text.slice(text.indexOf("## Judgment Rules"))
-  })
-  blocks.forEach((b, i) => assert.equal(b, blocks[0], `${FOUR_ADVISOR_PROMPTS[i]} 铁律块与首份字节一致`))
-})
-
-test("prompts/engineering-sub.md: 机制三句（§18.10 D-10.2——T-10.2）——测试缝/授权边界 A 裁定/镜像并行", () => {
+test("prompts/engineering-sub.md: 机制两句（§18.10 D-10.2——T-10.2——§18.11：mirror 句已取消）——测试缝/授权边界 A 裁定", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
   // ① 测试缝句（同 R6——实现遇不可注入直接加 seam）
   assert.ok(text.includes("Test-seam rule: when tests need to mock an internal tool set"), "测试缝句头在")
@@ -4145,9 +4202,8 @@ test("prompts/engineering-sub.md: 机制三句（§18.10 D-10.2——T-10.2）�
   assert.ok(text.includes("Out-of-file-list changes: ALLOWED when required by the delivery"), "清单外改动允许句在")
   assert.ok(text.includes("changed AND not reported (silent overreach)"), "审计判据 = 改了未报告＝偏差")
   assert.ok(text.includes("reported = transparent/acceptable"), "已报告 = 透明可接受")
-  // ③ 镜像并行句（byte-identical 测试失败 ≠ 你错）
-  assert.ok(text.includes("Mirror-parallel semantics: a byte-identical test failure is NOT your fault"), "镜像并行句在")
-  assert.ok(text.includes("it detects drift, not blame"), "检测漂移不判对错")
+  // ③ mirror 句零残留（§18.11——byte-identical 测试已不存在——防复活回归）
+  assert.ok(!text.includes("Mirror-parallel semantics"), "mirror 并行句零残留（§18.11）")
 })
 
 test("prompts/engineering-sub.md: 无旧硬句（F1 收敛——2026-09-04 §18.10 D-10.2 A 裁定同向——防回归）", () => {
@@ -4175,6 +4231,61 @@ test("prompts 4 模板铁律块: 来源标注诚实（§18.10 D-10.4——T-10.5
     assert.ok(text.includes("continuously re-reviewed"), `${f} 持续复核句在`)
   }
 })
+// ─── §12.1 advisor 角色定位/职责边界（AGENT-LOOP.md §12.1——T-AR1..4——与 T-10.1 同 file）───
+const ADVISOR_ROLE_ANCHOR_PHRASES = [
+  ["Your role (identity", "锚段标题（Your role (identity）"],
+  ["You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.", "身份权威句（INDEPENDENT REVIEWER）"],
+  ["**Stance**", "Stance 立场句"],
+  ["**Evidence discipline**", "Evidence discipline 证据纪律句"],
+  ["**Boundary**", "Boundary 边界句"],
+  ["**Neutrality**", "Neutrality 中立句"],
+  ["Do NOT write replacement text", "F-AR4 不代笔句（replacement text）"],
+]
+
+function assertAdvisorRoleAnchor(text, f) {
+  for (const [phrase, label] of ADVISOR_ROLE_ANCHOR_PHRASES) {
+    assert.ok(text.includes(phrase), `${f} §12.1 角色锚缺「${label}」：${JSON.stringify(phrase)}`)
+  }
+  // 落位：角色段先于规则层（Judgment Rules 铁律块）+ 先于评审标准/工作流段（D-AR1）——角色段最先、规则层随后
+  const anchorPos = text.indexOf("## Your role (identity")
+  const rulesPos = text.indexOf("## Judgment Rules (apply directly — do not re-derive)")
+  const criteriaPos = Math.min(
+    ...[text.indexOf("## Review Criteria"), text.indexOf("Review workflow:")].map((i) => (i === -1 ? Infinity : i))
+  )
+  assert.ok(anchorPos !== -1, `${f} 角色锚段在`)
+  assert.ok(rulesPos !== -1, `${f} 铁律块头在`)
+  assert.ok(anchorPos < rulesPos, `${f} 角色段先于铁律块（角色段最先、规则层随后）`)
+  assert.ok(criteriaPos !== Infinity, `${f} 评审标准/工作流段头在`)
+  assert.ok(anchorPos < criteriaPos, `${f} 角色段先于评审标准/工作流段（D-AR1 落位）`)
+}
+
+test("prompts 4 模板: §12.1 角色锚（T-AR1——六锚句 + F-AR4 replacement text 句——fail-when-unchanged）", () => {
+  for (const f of FOUR_ADVISOR_PROMPTS) {
+    assertAdvisorRoleAnchor(readFileSync(join(PROMPTS_DIR, f), "utf8"), f)
+  }
+})
+
+test("prompts 4 模板: §12.1 证据纪律禁止句（T-AR2——NEVER assert Known behavior…）", () => {
+  for (const f of FOUR_ADVISOR_PROMPTS) {
+    const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+    assert.ok(text.includes('NEVER assert "Known behavior…"'), `${f} 禁止句在（证据纪律落地）`)
+    assert.ok(text.includes("\"I'm confident…\""), `${f} confident 禁句在（同句语义）`)
+  }
+})
+
+test("prompts/advisor-design.md: §12.1 锚缺失模拟回归（T-AR4——删除一锚句 → 断言失败）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "advisor-design.md"), "utf8")
+  assertAdvisorRoleAnchor(text, "advisor-design.md") // 正路径先证：全锚在
+  const regressed = text.replace(
+    "You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.",
+    "You serve as a reviewer."
+  )
+  assert.throws(
+    () => assertAdvisorRoleAnchor(regressed, "regressed"),
+    /INDEPENDENT REVIEWER/,
+    "删除身份权威句后角色锚断言必须失败（fail-when-unchanged——防回归）"
+  )
+})
 
 
 
@@ -4185,7 +4296,7 @@ test("prompts/engineering.md: 首次交付偏差审计既有断言随 §18 下�
   assert.ok(text.includes("do not double-audit"), "防双重审计/误用")
   assert.ok(text.includes("`explore` subagent audited the delivered code"), "内部审计走 explore 子 agent")
   assert.ok(text.includes("silent simplifications"), "审计点名静默简化")
-  assert.ok(text.includes("changes outside the approved file list"), "超清单改动点名")
+  assert.ok(text.includes("changes outside the approved file list AND not reported in the delivery report"), "超清单改动点名（含 AND not reported——A 裁定口径）")
   assert.ok(text.includes("capped at 5\n   correction rounds"), "修正轮 ≤5（内部）")
   assert.ok(text.includes("7th audit spawn is\n   refused mechanically"), "第 7 次审计 spawn 机械拒绝")
   assert.ok(text.includes("spawn the fix round with the report's"), "stalled → 修正轮任务 = 未收敛点清单")
@@ -4251,29 +4362,14 @@ test("agent/setup.mjs: METHODOLOGY 缺失警告——模板绝对路径 + 正文
   }
 })
 
-// 两端 15 文件 byte-identical：thincoder-vscode 不存在时动态 skip（如单独 clone CLI 仓库）
-test("两端 src/prompts/ 15 文件 byte-identical（CLI ↔ VS Code）",
-  { skip: !existsSync(VSCODE_PROMPTS_DIR) },
-  () => {
-    const cli = readdirSync(PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
-    const vsc = readdirSync(VSCODE_PROMPTS_DIR).filter((f) => f.endsWith(".md")).sort()
-    assert.deepEqual(cli, vsc, "两端 prompt 文件集合一致")
-    assert.equal(cli.length, 15, "15 个 prompt 文件")
-    for (const f of cli) {
-      assert.ok(
-        readFileSync(join(PROMPTS_DIR, f)).equals(readFileSync(join(VSCODE_PROMPTS_DIR, f))),
-        `${f} 两端 byte-identical`,
-      )
-    }
-  })
 // ---------------------------------------------------------------- workflow/debugging 必须用 task（2026-08-23）
-// discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
+// discipline.md 内容级断言：副本内容未改时必须能失败（§18.11——各端内容断言防漂移）。
 
 test("prompts/discipline.md: Workflow/Debugging 要求用 task（内容级断言）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
   const lines = text.split("\n")
 
-  // 关键短语全文断言（不受两端比对影响——内容一旦回退即失败）
+  // 关键短语全文断言（内容一旦回退即失败）
   assert.ok(/every tier/i.test(text), "全英文短语 every tier 在（文件为 EVERY tier，大小写不敏感）")
   assert.ok(text.includes("one in_progress"), "短语 one in_progress 在")
 
@@ -4302,7 +4398,7 @@ test("prompts/discipline.md: Workflow/Debugging 要求用 task（内容级断言
   assert.ok(debugLine.includes("one in_progress"), "调试句含 one in_progress")
 })
 // ---------------------------------------------------------------- 读/更新文档嵌入 Workflow 箭头序列（2026-08-23）
-// discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
+// discipline.md 内容级断言：副本内容未改时必须能失败（§18.11——各端内容断言防漂移）。
 
 test("prompts/discipline.md: 读/更新文档已嵌入 Workflow 箭头序列（无独立 Documentation 段）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
@@ -5148,7 +5244,7 @@ test("T-E16: schema async 描述 = 角色级默认措辞 + spawn-child 门文案
   const dA3 = loopDoc.split("**async 子代理权限交互（评审 #2 补）**")[1] || ""
   assert.ok(dA3.includes("§18 D-E3"), "§15 D-A3 权限交互条含 §18 D-E3 指向")
   assert.ok(dA3.includes("eng-coder 例外"), "§15 D-A3 权限交互条标注 eng-coder 例外")
-  // ⑥ engineering.md 既有上限短语重断言（§15 T9 不破——byte-identical 三件套前提）
+  // ⑥ engineering.md 既有上限短语重断言（§15 T9 不破——内容断言保留）
   const engMd = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   assert.ok(engMd.includes("Cap: at most 4 concurrent eng-coders"), "§15 T9: cap 短语保留")
   assert.ok(engMd.includes("past 4 the bookkeeping cost"), "§15 T9: past 4 rationale 保留")

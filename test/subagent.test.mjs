@@ -1243,7 +1243,7 @@ test("§19 T-M8: status 省略 id → 全部概览（running/queued/done 三类�
   assert.equal(typeof st.overview.running[0].elapsedSec, "number", "T-M8: running 条目带 elapsedSec")
   assert.equal(st.overview.running[0].turn, 2, "T-M8: running 条目带 turn")
   assert.equal(st.overview.running[0].maxTurns, 10, "T-M8: running 条目带 maxTurns")
-  assert.deepEqual(st.overview.queued, [{ id: "2", role: "explore", position: 1 }], "T-M8: queued 类（含 role + 队列 position）")
+  assert.deepEqual(st.overview.queued, [{ id: "2", role: "explore", position: 1, touched: "—（未启动）" }], "T-M8: queued 类（含 role + 队列 position）——§19.5.6 T-SF2b 占位追加（新字段——既有字段零破坏）")
   assert.deepEqual(st.overview.done, [{ id: "3", role: "coder" }], "T-M8: done 待取类")
   assert.equal(parent._asyncSubagents.size, 3, "T-M8: status 不消费——池原样")
 })
@@ -1308,7 +1308,7 @@ test("§19 T-M11: subagent_check/escalate 工具名消失——depth-0 schema �
   }
 })
 
-test("§19 T-M12: 描述/提示词内容引导——action/status/check 阻塞（两端 byte-identical 由既有 15 文件比对覆盖）", async () => {
+test("§19 T-M12: 描述/提示词内容引导——action/status/check 阻塞（内容断言——§18.11 起镜像锚在设计文档逐字定稿——两端各自照抄）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
   for (const probe of ["action:'check'", "action:'status'", "action:'escalate'", "BLOCKS until the target finishes", "NON-BLOCKING", "consumes nothing"]) {
@@ -1454,6 +1454,145 @@ test("§19.5 T-M18: status 全览含 role/model/elapsedSec/turn/maxTurns（可�
     rmSync(cwd, { recursive: true, force: true })
   }
 })
+
+// ─── §19.5.6 status 条目补 touched files 摘要（T-SF1..5——设计 2026-09-04 round3 0🔴 通过）──────
+
+/** §19.5.6 测试桩：status 条目（T-M8 mock 形态）——running 绑定 childAgent._touchedFiles
+ *  （绝对路径——生产记账形态）；queued 无子代理对象（设计：未启动无对象）。 */
+function sfEntry(id, status, touchedAbs) {
+  const e = {
+    id, role: "coder", status, done: false, report: null, error: null,
+    model: "m", turn: 2, maxTurns: 10,
+    startedAt: status === "running" ? Date.now() : null,
+  }
+  if (status === "running") e.childAgent = { _touchedFiles: touchedAbs ?? [] }
+  return e
+}
+
+test("§19.5.6 T-SF1: running 条目含 touchedFiles 摘要（相对查询方 cwd——前 5——≤5 无截断注）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sf1-"))
+  try {
+    const files = [join(cwd, "src", "a.mjs"), join(cwd, "src", "b.mjs"), join(cwd, "docs", "c.md")]
+    const agent = { cwd, config: { agent: {} }, _asyncSubagents: new Map([["1", sfEntry(1, "running", files)]]), _asyncQueue: [] }
+    // 指定 id
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: "1" }, { agent, callbacks: {}, depth: 0 })))
+    assert.equal(st.status, "running")
+    assert.deepEqual(st.touchedFiles, [join("src", "a.mjs"), join("src", "b.mjs"), join("docs", "c.md")], "T-SF1: 摘要相对查询方（父代理）cwd")
+    assert.equal(st.touchedMore, undefined, "T-SF1: ≤5 无截断注字段")
+    assert.equal(st.touched, undefined, "T-SF1: 有文件时无占位字段（数组形态）")
+    // 概览 running 同带摘要（T-M18 概览等价断言先例）
+    const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, { agent, callbacks: {}, depth: 0 })))
+    assert.deepEqual(ov.overview.running[0].touchedFiles, st.touchedFiles, "T-SF1: 概览 running 同带摘要")
+    // AC-SF3：既有可决策字段零破坏
+    assert.equal(ov.overview.running[0].model, "m")
+    assert.equal(ov.overview.running[0].role, "coder")
+    assert.equal(typeof ov.overview.running[0].elapsedSec, "number")
+    assert.equal(ov.overview.running[0].turn, 2)
+    assert.equal(ov.overview.running[0].maxTurns, 10)
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§19.5.6 T-SF2a: running 但 0 改动 → touched 占位（—（尚无改动）——不崩）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sf2a-"))
+  try {
+    const agent = { cwd, config: { agent: {} }, _asyncSubagents: new Map([["1", sfEntry(1, "running", [])]]), _asyncQueue: [] }
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: "1" }, { agent, callbacks: {}, depth: 0 })))
+    assert.equal(st.touched, "—（尚无改动）", "T-SF2a: 0 改动占位（区分占位——round3 #2）")
+    assert.equal(st.touchedFiles, undefined, "T-SF2a: 无文件时不带数组字段")
+    // 概览同占位
+    const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, { agent, callbacks: {}, depth: 0 })))
+    assert.equal(ov.overview.running[0].touched, "—（尚无改动）", "T-SF2a: 概览 running 同占位")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§19.5.6 T-SF2b: queued（未启动——无子代理对象）→ touched 占位（—（未启动）——确定性不崩）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sf2b-"))
+  try {
+    const entry = sfEntry(1, "queued")
+    const agent = { cwd, config: { agent: {} }, _asyncSubagents: new Map([["1", entry]]), _asyncQueue: [entry] }
+    // 指定 id
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: "1" }, { agent, callbacks: {}, depth: 0 })))
+    assert.equal(st.status, "queued")
+    assert.equal(st.touched, "—（未启动）", "T-SF2b: 指定 id 占位")
+    assert.equal(st.touchedFiles, undefined, "T-SF2b: 未启动不带数组")
+    // 概览 queued 同占位
+    const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, { agent, callbacks: {}, depth: 0 })))
+    assert.equal(ov.overview.queued[0].touched, "—（未启动）", "T-SF2b: 概览 queued 占位")
+    assert.equal(ov.overview.queued[0].position, 1, "T-SF2b: position 既有字段未破坏")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§19.5.6 T-SF3: touchedFiles >5 → 前 5 + 独立 touchedMore（超出计数——不混入数组）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sf3-"))
+  try {
+    const files = Array.from({ length: 7 }, (_, i) => join(cwd, "src", `f${i}.mjs`))
+    const agent = { cwd, config: { agent: {} }, _asyncSubagents: new Map([["1", sfEntry(1, "running", files)]]), _asyncQueue: [] }
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: "1" }, { agent, callbacks: {}, depth: 0 })))
+    assert.deepEqual(st.touchedFiles, Array.from({ length: 5 }, (_, i) => join("src", `f${i}.mjs`)), "T-SF3: 限长前 5（N-SF1）")
+    assert.equal(st.touchedMore, 2, "T-SF3: 独立截断字段（7-5——不混入数组）")
+    assert.equal(st.touched, undefined, "T-SF3: 有文件时无占位字段（数组形态）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§19.5.6 T-SF4: 路径 >80 字符截尾（不超行）；cwd 之外路径保留绝对形态 + ../ 前缀（N-SF1）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sf4-"))
+  try {
+    const longPath = join(cwd, "src", `${"very-long-name-".repeat(10)}tail.mjs`)
+    assert.ok(longPath.length > 80, "前提：路径超 80 字符")
+    const outside = join(tmpdir(), "outside-sf4", "z.mjs")
+    const files = [longPath, outside]
+    const agent = { cwd, config: { agent: {} }, _asyncSubagents: new Map([["1", sfEntry(1, "running", files)]]), _asyncQueue: [] }
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: "1" }, { agent, callbacks: {}, depth: 0 })))
+    assert.ok(st.touchedFiles[0].length <= 80, `T-SF4: 截尾不超行（实际 ${st.touchedFiles[0].length} 字符）`)
+    assert.ok(st.touchedFiles[0].endsWith("…"), "T-SF4: 截尾标记")
+    assert.equal(st.touchedFiles[1], `../${outside}`, "T-SF4: cwd 外 = 绝对形态 + ../ 前缀（N-SF1）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§19.5.6 T-SF5: entry.start() 绑定 childAgent 对象引用——status 运行期实时读；done 不含 touched 字段（round3 #9）", async () => {
+  const { server, port } = await asyncServer([{ content: LONG_REPORT("缓慢活"), delay: 1500 }])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-sf5-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const s = JSON.parse(String(await subagentTool.execute({ task: "活", role: "coder", async: true }, ctx)))
+    const entry = parent._asyncSubagents.get(String(s.id))
+    assert.ok(entry.childAgent, "T-SF5: 启动即绑定子代理对象引用（D-SF1——非 _touchedFiles 数组引用）")
+    assert.ok(Array.isArray(entry.childAgent._touchedFiles), "T-SF5: 绑定对象为运行期子代理（_touchedFiles 实时数组）")
+    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: s.id }, ctx)))
+    assert.equal(st.status, "running")
+    assert.equal(st.touched, "—（尚无改动）", "T-SF2a 集成面：运行中 0 改动占位——不崩")
+    // 运行期写入 → status 再查实时反映（对象引用——数组快照会陈旧——D-SF1 核心）
+    entry.childAgent._touchedFiles.push(join(cwd, "src", "live.mjs"))
+    const st2 = JSON.parse(String(await subagentTool.execute({ action: "status", id: s.id }, ctx)))
+    assert.deepEqual(st2.touchedFiles, [join("src", "live.mjs")], "T-SF5: 实时读——运行期新改动可见")
+    await entry.promise
+    const st3 = JSON.parse(String(await subagentTool.execute({ action: "status", id: s.id }, ctx)))
+    assert.equal(st3.status, "done")
+    assert.equal(st3.touchedFiles, undefined, "round3 #9: done 条目不含 touchedFiles 字段")
+    assert.equal(st3.touched, undefined, "round3 #9: done 条目不含 touched 占位")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 
 test("§19.5 D-M7b ①: async spawn 发 ⟦ev⟧async 标记（实际启动——先于 [model]）；sync spawn 不发", async () => {
   const { server, port } = await asyncServer([
