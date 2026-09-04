@@ -1,5 +1,13 @@
 ## [0.12.59] — 2026-09-04
 
+### Changed (追加——2026-09-04 后半批)
+
+- **advisor 角色定位锚（AGENT-LOOP.md §12.1）**：四模板（advisor-design/round1/round2/round3）开头插入"Your role"段（独立评审者/证据纪律/边界/中立——Known behavior 记忆断言禁止）——修复"评审对象模糊/定级拉锯/行为验证捷径/出界犹豫"人格缺口。
+- **子代理人格锚（AGENT-LOOP.md §7.3）**：coder.md（IMPLEMENTER——证据纪律/设计冲突停报/边界）+ consult-base.md（证据纪律/I-don't-know 合法/无权威）——审计发现"职责越重人格越薄"倒挂。
+- **审计范围引导（AGENT-LOOP.md §18.13）**：eng-coder 内部审计 explore 改 quick 档 + 任务书加机械预算句（只读 touched 文件+点名节——10 轮上限——超时报 PROBLEM）——治理"审计 explore 跑非常久"。
+- **工具输出预览保头保尾（TOOL-OUTPUT-LIMITS-TUNING.md §5）**：超 64K 落盘预览 = 头 16K + 中间省略注 + 尾（tail 优先——测试统计/错误在尾不再被截）——与压缩/蒸馏同口径。
+- **bash 重定向护栏删除（TOOLS.md §13）**：`hasFileRedirection` 整条删除（用户裁定"拦截只误伤正常操作"——零文本拦截与 §5 安全剧场决策彻底对齐）——`2>&1` 误报、测试收窄被拦整链消除。
+
 ### Added
 
 - **完整轨迹存档（AGENT-LOOP.md §18.6）**：`chat()` 出口统一收集——每次模型调用落 JSONL 到 `~/.thincoder/traces/YYYY-MM-DD/`（本地时区分日/seq=当日 max+1/脱敏复用 log.mjs 黑名单+SECRET_FORM/错误路径也落盘/`traces.enabled` 开关默认 on）——覆盖主/子代理/advisor/compress/distill/consult/auto-think 全部调用；续写标记 `isContinuation`。

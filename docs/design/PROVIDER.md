@@ -84,10 +84,18 @@ chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRu
 | 决策 | 理由 |
 |---|---|
 | 规格表驱动一切能力差异 | 新模型只加一行 spec，transport/续写/thinking 全自动适配；未知模型保守 128K + 警告（IK5VGJ） |
+| 厂商前缀剥离（2026-09-04——第三方 token 市场惯例） | 带 `vendor/` 前缀的模型 ID（`zhipu/glm-5.3`、`openai/gpt-4o`——roapi/new-api/one-api 聚合网关在模型名前加厂商前缀）完整名未命中时剥掉首个 `/` 前的 namespace 再按前缀匹配——`ZHIPU/GLM-5.3 → glm-5.3` 命中真实规格而非降级默认（见 §9 下注——`model-specs.mjs:91`） |
 | 实测 usage 优先于估算 | 估算对 CJK 低估 3-4x；实测值锚定压缩判定（D3）与 TPM 记账 |
 | 发送前净化而非改历史 | 历史是模型上下文真相，净化只作用于线上载荷，可逆 |
 | 429 双通道（闸门+退避） | 闸门防患于未然（省一次失败往返），退避兜底（未配置预算也安全） |
 | 流规则 abort 后重试 | 内容合规是硬需求——中断注入提醒让模型自行修正，比事后清洗更可靠 |
+
+> **厂商前缀剥离（2026-09-04 设计注）**：`specForModel`（`src/model-specs.mjs`）现状 = 完整名前缀匹配 `MODEL_SPECS`；未命中 → warn 一次 + 降级 `DEFAULT_SPEC`（128K/32K）。第三方 token 市场（roapi/new-api/one-api/aiproxy 等 OpenAI 兼容聚合网关）惯例：模型名前加厂商前缀（`zhipu/glm-5.3`、`openai/gpt-4o`）——完整名不中且含 `/` 时**剥掉首个 `/` 前的 namespace 再匹配一次**（`ZHIPU/GLM-5.3 → glm-5.3` 命中真实规格）。`kimi/kimi-k3` 显式 alias 行保留为文档锚；warn 仍 once + 保留原始名可诊断；只影响 spec 查询，**不改 `provider.model`**（`provider/core.mjs` 的 `isRouter` 判定不受影响）。
+>
+> 受影响文件（CLI + VS Code **同实现，逐行等价**——CLI 为准）：
+> - CLI：`src/model-specs.mjs`（`specForModel`）+ `test/provider-spec.test.mjs`（2 新测试）
+> - VS Code：`thincoder-vscode/src/config.mjs:91`（`specForModel` — same behavior）+ `thincoder-vscode/test/agent-core.test.mjs`（2 新测试，镜像 CLI）
+
 
 ## 10. Issue 变更段（2026-08-22）
 

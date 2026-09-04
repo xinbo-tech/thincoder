@@ -356,7 +356,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 **受影响文件（两端）**：
 - CLI `src/prompts/coder.md` + `src/prompts/consult-base.md`（角色句后插锚 D-SP1/D-SP2）；
 - VS Code 同两文件（镜像——各自照抄）；
-- 两端测试（内容断言——T-SP 系——落点：既有模板断言处——CLI/VS Code `test/agent.test.mjs`——与 T-AR/T-10.1 同 file——programmatic verbatim 检查）；
+- 两端测试（内容断言——T-SP 系——落点：既有模板断言处——CLI/VS Code `test/prompts.test.mjs`（§18.14 拆分后——原 agent.test.mjs——as-of 注：id:14 实现时在 agent.test.mjs，拆分迁 prompts.test.mjs）——与 T-AR/T-10.1 同 file——programmatic verbatim 检查）；
 - 文档：AGENT-LOOP.md（§7.3 本节）、两端 CHANGELOG.md（父侧统一——提示词变更记录）。
 
 **测试（T-SP）**：
@@ -525,7 +525,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 **受影响文件（两端）**：
 - CLI `src/prompts/advisor-design.md` + `advisor-round1.md` + `advisor-round2.md` + `advisor-round3.md`（四模板开头插锚）；
 - VS Code 同四文件（镜像——各自照抄锚——内容断言）；
-- 两端测试（模板内容断言——T-AR1..4——落点：**§18.10 T-10.1 先例：CLI `test/agent.test.mjs` / VS Code 对应（round1 评审 #5——与 T-10.1 同 file——不另立）**）；
+- 两端测试（模板内容断言——T-AR1..4——落点：**§18.10 T-10.1 先例：CLI `test/prompts.test.mjs` / VS Code 对应（§18.14 拆分后——原 agent.test.mjs——as-of 注：id:12 实现时在 agent.test.mjs，拆分迁 prompts.test.mjs——与 T-10.1 同 file——不另立）**）；
 - 文档：AGENT-LOOP.md（§12.1 本节）、两端 CHANGELOG.md（父侧统一——提示词变更记录——§11/§13/§14 先例——round1 #8 补）。
 
 **测试（T-AR）**：
@@ -1287,7 +1287,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 - **D-TS1（协议——验证粒度）**：`engineering-sub.md` ① 明确定义——**首次实现后 = L1 快层 `npm test`**；**每修正轮（④⑥）= L0 = 调用 `verify` 默认模式**（语法检查 + 模块相关测试——eng-coder 工具集已验证含有 verify 工具——**不手写 node --test**；`verify` 的 null 映射 ACTION REQUIRED 语义**不采用**——映射 null 或触主干文件 → 显式升 L1）；**父侧核销 = L2 全量 `test:full` 1 次**（每链终态——见 `engineering.md`）。**fix round1 修订（2026-09-04——L0 语义缺口处置）**：验证机制实锤 verify 依赖 git-diff 定位改动文件——修正轮未提交工作区会列出**前几轮全部未提交改动**（超集——安全方向，非误报；相关测试超集不伤害验收）——接受该特性为**已知语义**；**定向路径**：当修正仅涉及**测试映射明确**的模块时，可按 `_touchedFiles` 定向 `node --test <file>`（这是 verify 粒度不足时的显式升级——不打"不手写"禁句——"不手写"指不得**跳过** verify 或自写全套；定向 = 与 verify 定位结果一致的收缩）。
 - **D-TS2（协议——LLM 标准链序列——round1 评审 #2 定死）**：**标准链 = ③ 审计=LLM#1**（clean 后进⑤）→ **④ dirty→修(L0,无 LLM)** → **⑤ advisor 首审=LLM#2** → **⑥ findings→修(L0,无 LLM)** → **终审=advisor 复评=LLM#3**（验证 fix——**不复跑审计**）→ ⑦ 交付。**审计第 2 次仅例外**（修正触碰上次审计/评审未覆盖文件 → 回③——协议既有第⑥条文字保留；例外不计入常态 3 次）。修正轮（④⑥）默认不重跑 explore 审计与 advisor 复评（修完后只 L0）；LLM 验证 = 3 次/链。
 - **D-TS3（协议——父侧核销）**：`engineering.md` 父侧核销段——"run the tests it claims pass"明确改为"**信任 eng-coder 内部 L1/L0 结果（§18 内部协议已保真），父侧核销 = L2 全量 1 次（每链终态）——不再复跑 L1**"。
-- **D-TS4（A1 审计指令模板）**：审计任务书机械拼接处注入——审计语义（四类偏差：部分实现/静默简化/文档漂移/超清单）+ 范围限制（"只审 _touchedFiles 与父任务书确认的文件；工作区未列改动与本任务无关——不作超清单依据"——与 §18.5 D-AG3 声明同源不重复）+ 校验清单格式（每偏差项 = 文件:行 + 设计引用 + 严重级 + 证据）。
+- **D-TS4（A1 审计指令模板）**：审计任务书机械拼接处注入——审计语义（四类偏差：部分实现/静默简化/文档漂移/超清单）+ 范围限制（"只审 _touchedFiles 与父任务书确认的文件；工作区未列改动与本任务无关——不作超清单依据"——与 §18.5 D-AG3 声明同源不重复）+ 校验清单格式（每偏差项 = 文件:行 + 设计引用 + 严重级 + 证据）。**→ §18.13（预算句——机械段追加于本模板 + A2 之后、A3 之前——2026-09-04 已实现——见 §18.13）**。
 - **D-TS5（A2 任务书摘要）**：审计任务书中的"Parent spawn task book"从全量 verbatim 改为**机械摘要块**——保留三要素：设计文档路径列表 + 受影响文件清单（逐字——审计范围依据）+ 验收标准（逐字——审计对照依据）；排除冗长上下文/背景（审计者 read 文档本身即可——文档仍在上下文外可用）。独立性不变（不取自 eng-coder 自述——仍由 `_engTaskInput` + `_touchedFiles` 机械生成）。
 - **D-TS6（A3 报告模板）**：审计任务书末尾注入审计报告格式模板（正常/偏差/问题三态——每行字段化：`| 类别 | 文件:行 | 设计引用 | 严重级 | 证据 |`——无偏差时"四类偏差均未发现"）。
 - **D-TS7（B1 批并行——执行层）**：`run.mjs` 工具执行循环改——同一 LLM 回复的多个只读工具调用 `Promise.all` 并行执行；**结果按 `toolCalls` 顺序回填**（Promise.all 保序——tool_call_id 不错配）；每工具超时/错误独立捕获（既有 TOOL_TIMEOUT 保留——不影响其他工具）；只读工具集无副作用——无需排序/串行化；`onTool` 进度行保持逐工具发射（显示顺序无关紧要——仍按 toolCalls 顺序发射进度行）。VS Code `advisor/run.mjs` 同段镜像。**隔离声明（round1 评审 #10）**：B1 仅为**循环内工具并行**——不解决 TODO『平台执行问题·advisor 并行调用实为串行』（docs/TODO.md:186——多 advisor 调用观测之谜——LOGGING 取证项，本设计不涉及）。
@@ -1299,7 +1299,7 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 
 ### 受影响文件（两端）
 
-**CLI**：`src/prompts/engineering-sub.md`（D-TS1/2）、`src/prompts/engineering.md`（D-TS3）、`src/prompts/advisor-round1.md`（D-TS8）、`src/agent-tools/subagent.mjs`（D-TS4/5/6——审计块模板注入）、`src/advisor/run.mjs`（D-TS7）、`src/auto-think.mjs`（D-TS12——logCtx 全字段）、`test/agent.test.mjs`（提示词断言：L1/L0/L2 定义/修正轮不重跑/父侧全量一次/round1 范围收缩+并行句——T-TS1/2/3/7）、`test/subagent.test.mjs`（审计块模板断言——T-TS4/5/6）、`test/advisor.test.mjs`（B1 批并行——T-TS8/9）。
+**CLI**：`src/prompts/engineering-sub.md`（D-TS1/2）、`src/prompts/engineering.md`（D-TS3）、`src/prompts/advisor-round1.md`（D-TS8）、`src/agent-tools/subagent.mjs`（D-TS4/5/6——审计块模板注入）、`src/advisor/run.mjs`（D-TS7）、`src/auto-think.mjs`（D-TS12——logCtx 全字段）、`test/prompts.test.mjs`（提示词断言：L1/L0/L2 定义/修正轮不重跑/父侧全量一次/round1 范围收缩+并行句——T-TS1/2/3/7——§18.14 拆分后落点——原 agent.test.mjs）、`test/subagent-scheduler.test.mjs`（审计块模板断言——T-TS4/5/6）、`test/advisor-parallel.test.mjs`（B1 批并行——T-TS8/9）。
 **VS Code**：`src/prompts/engineering-sub.md`、`src/prompts/engineering.md`、`src/prompts/advisor-round1.md`（字节镜像）、`src/agent-tools/subagent-async.mjs`（auditTaskBook——D-TS4/5/6）、`src/advisor/run.mjs`（D-TS7）、对应测试。
 **文档**：`AGENT-LOOP.md` 本节（本设计层）+ §18.2 协议指注（D-TS1/2/3——措辞修订；**round2 评审 #3 扩列：§18.2 D-E2 ④⑥ supersede 注解、§18.4 N1 成本数注解、§18 T-E6/T-E7 测试语义对齐**）+ ENGINEERING-MODE.md **§7 变更记录**（R2 记录——§2.2 主流程 step6/AC9 口径同步——round1 评审 #6 对齐 R1 先例）；`docs/TODO.md`（需求池 R2 行——实现后勾销；B3 观察点）；**两端 CHANGELOG（父代理统一更新）**。
 **不做**：`verify.mjs` 不改（L0 使用 verify 默认模式——直接调用；（T-TS11 只验证协议句——不实现映射逻辑）；测试用例内容不改；分层机制（slow.mjs 门控）不改。
@@ -1398,6 +1398,38 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 **验收（AC-OA）**：AC-OA1 = 对象声明注入（T-OA1/2/4）；AC-OA2 = 旧调用兼容（T-OA3）；AC-OA3 = 两端同批 + 断言绿（T-OA5 + 既有）；AC-OA4 = **可计量指标——交付门缓冲（round3 裁决为准——2026-09-04——supersede 旧“硬验收”措辞——见 §18.10.3 ④ + TODO「§18.8/§18.10 生效复核口径」）**——轨迹存档 stats（§18.6 落盘）中评审轮内“评审对象考古”类信号**密度（= reasoning 正则命中数 / reasoning 字数 × 1000——正则 = wait/hmm/actually/hold on/let me reconsider/on second thought——基线 = 本批实现前同类型评审取样（round1/2/3 三次外部设计评审——#530/#593/#636——实测 ≈1.86/1K——见 TODO 复核口径段））环比下降 >30%**——**测量方式**：脚本统计轨迹 JSON reasoning 命中/字数 ×1000——**判定：>30% 降幅作交付后观测——非交付门禁——未达降幅呈交用户复核**（交付门缓冲——实现批门槛 = 基线采集 + 统计脚本存在）。
 
 **round1 评审（2026-09-04）已发起——1🔴+4🟡+2🔵——全部处置接受（见 §18.10.1——含本节处置）——待用户发起复审（"评审吧"）。**
+
+### 18.8.1 评审轮序：会话上下文前置轮（2026-09-04 · 用户裁定——"原来的第一轮要有，移到第二轮，以后的轮次顺序往后移动，这几轮的上下文跟原来一样，前面加一轮，这一轮要注入会话上下文，否则他怎么评估呢？"）
+
+> 状态：**需求+设计（2026-09-04——用户指令方向明确——评审待发起）——动机：advisor 评审无会话上下文（§12.1 Neutrality"无 conversation-history archaeology"）——Requirements coverage 只能对照文档内 F 段——审不了"会话里讨论过但文档没记/记偏"的真需求覆盖（真实盲区——非理论）。**
+
+**问题（P-RO1）**：advisor 设计评审(现有轮序)只读 documents 列表——不看会话——用户真需求/裁定/演进(会话自有信息)**对评审不可见**——"设计是否覆盖了真需求"一维实际缺依据——评审者只能"设计是否自洽"(文档内循环)——无法从需求源头检查捕获完整性。
+
+**需求（F-RO1——用户原话）**：**前面加一轮**——这一轮**注入会话上下文**——让评审者先有"来龙去脉"再评。
+- **F-RO1.1（前插轮）**：新第一轮 = **会话上下文轮**——注入需求聚焦会话上下文——评审者**基于"会话背景 + 设计文档"**评估(尤其"真需求覆盖")；
+- **F-RO1.2（原轮顺延）**：原第一轮(7 维全量——advisor-design.md)**移到第二轮**——上下文与原来一样(不变)；原 round2/3+ **往后顺延**——上下文不变；
+- **N-RO1（上下文边界）**：会话注入＝**需求聚焦摘要**（用户原话/裁定/需求演进/优先级——有限 KB——主代理 prepareAdvisorMessages 处提炼——**不是全量历史**——超预算禁止；**来源标注**每条带会话来源可回溯）。
+
+**设计（D-RO1）**：
+- **D-RO1.1（轮序）**：Round 1 = **会话上下文轮**（新提示词 `advisor-context.md`——设计评审 + 会话背景注入——评"真需求覆盖"为首要 + 初扫 7 维）；Round 2 = 原 7 维全量（advisor-design.md——上下文同现在）；Round 3 = 原 round2（验 prior）；Round 4+ = 原 round3+（严格验 prior）——**总上限 5→6**（新轮占 1——每轮都评判——一致性）；
+- **D-RO1.2（注入实现——prepareAdvisorMessages）**：design review 且 Round 1 时——user 消息注入**会话需求聚焦块**（主代理提炼：用户原话摘录/逐条裁定/需求演进/挂起点——≤3KB——来源标注）；Round 2+ 不注入（同现状——fresh + prior 原文）；
+- **D-RO1.3（§12.1 锚/Neutrality 修订）**：Neutrality 条改——**Round 1 会话上下文显式注入（内容受控——来源标注）为评审依据；Round 2+ 仍无会话考古**（anchor 修订——两端）；
+- **D-RO1.4（测试）**：T-RO1 系——Round 1 注入断言（user 消息含会话块）+ 轮序断言（design Round1=context 提示词/Round2=design 提示词）+ cap 6 + §12.1 锚句改断言。
+
+**受影响文件（两端）**：`src/prompts/advisor-context.md`（新——轮 1 提示词——含 §12.1 锚四句 + 7 维 + 会话评估指令）、`src/prompts/advisor-design.md`（原轮 1——轮 2 不变）、`src/advisor/messages.mjs`（prepareAdvisorMessages——Round1 注入会话块）、`src/advisor/run.mjs`（cap 5→6 + 轮序映射）、`src/advisor.mjs`（轮次判定——design Round1 同 code Round1 递减）、测试（prompts.test.mjs + advisor 域文件——拆分后）——AGENT-LOOP.md(§18.8.1 本节)；CHANGELOG(父侧)。
+
+**测试（T-RO1）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-RO1.1 | N | 模拟 design review Round 1 | user 消息含会话需求聚焦块（≤3KB 断言 + 来源标注） |
+| T-RO1.2 | N | design Round 2 | 无会话块——prior 原文 + 7 维提示词（轮序正确） |
+| T-RO1.3 | N | 第 6 次调用 | cap 消息（6 上限断言） |
+| T-RO1.4 | E | §12.1 锚句（Neutrality 修订版） | 在 advisor-context.md/design.md（fail-when-unchanged） |
+| T-RO1.5 | E | 既有 advisor 断言回归（T-AR/T-OA 等） | 全绿（零破坏——其它轮语义不变） |
+
+**验收（AC-RO1）**：AC-RO1.1 = T-RO1.1/1.2 绿（轮序+注入）；AC-RO1.2 = T-RO1.3 绿（cap 6）；AC-RO1.3 = T-RO1.4/1.5 绿（锚+零破坏）；AC-RO1.4 = 双端同语义（上下文轮语义锚）。
+
 
 ### 18.9 镜像对齐优化（2026-09-04 · ~~并入轨迹分析优化批~~——**已撤销，降级为本仓库开发工具**）
 
@@ -1605,7 +1637,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 
 ### 18.13 审计范围引导：quick 档 + 机械预算句（2026-09-04 · 用户观察——"审计 explore 跑非常久——缺乏范围引导"）
 
-> 状态：**设计（2026-09-04——用户裁定"可以，先量化"→ 量化结论：**无现有数据可答时长**（LOGGING 骨架未含子代理审计时序——子代理上下文不落盘——观测缺口）→ 用户裁决：**"别补可观测了，回头现有的也要去掉的，调试完成了就要删"**——只修引导——不补观测点）**。
+> 状态：**已实现（2026-09-04——双端——VS Code id:25 核验 clean（零改动——id:17 取消前落盘 + §18.14 拆分迁移断言——L1 1061/1061——T-A1.1/.2/.4 在 prompts.test.mjs/eng-delivery.test.mjs——审计 1 CLEAN + advisor 首审/复评 0🔴）——CLI 端：**已落盘（2026-09-04 22:12 重派前核查发现——engineering-sub.md:25 quick 锁句 + subagent.mjs:427 预算句逐字同设计——测试 prompts.test.mjs:509（T-A1.1+防回潮）/eng-delivery.test.mjs:878/941（T-A1.2+防回潮）——L2 1416/1416 覆盖——AC-A1.1/1.2 绿——原「id:16 取消——待重派」记录作废——无需重派）**——父侧 L2 核销待全部批次后）**。（历史：用户裁定"可以，先量化"→ 量化结论：无现有数据可答时长（LOGGING 骨架未含子代理审计时序——子代理上下文不落盘——观测缺口）→ 用户裁决："别补可观测了，回头现有的也要去掉的，调试完成了就要删"——只修引导——不补观测点）**
 
 **问题（P-A1）**：eng-coder 内部审计 explore 跑非常久——根因三层（实读 §18 D-E3/engineering-sub.md）：
 1. **thoroughness 档错位**：engineering-sub.md 审计指令 = `"medium unless the delivery is large"`——审计=定点核对（对照设计找偏差）——不是广度探索——medium（多探针）天然偏重；大交付还升 thorough——**方向反了**；
@@ -1631,7 +1663,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 - **D-A1.4（两端）**：engineering-sub.md 两端同步（语义锚——各自照抄）；审计任务书模板在 subagent.mjs（CLI）+ 对应（VS Code——核对同构）——同批。
 
 **受影响文件（两端）**：
-- CLI `src/prompts/engineering-sub.md`（审计指令 quick）+ `src/agent-tools/subagent.mjs`（审计任务书机械段加预算句——D-TS4 拼接处——**VS Code 对应：`src/agent-tools/subagent-async.mjs` `auditTaskBook`——符号锚（评审 #1——§18.5/§18.7 已立——不用"核实 file 位"**））+ 测试——**T-A1.1 → `test/agent.test.mjs`（engineering-sub.md 内容断言——T-TS1/T-10.1 模式）；T-A1.2 → `test/subagent.test.mjs`（审计任务书模板断言——T-TS4/5/6 模式）——评审 #3**；
+- CLI `src/prompts/engineering-sub.md`（审计指令 quick）+ `src/agent-tools/subagent.mjs`（审计任务书机械段加预算句——D-TS4 拼接处——**VS Code 对应：`src/agent-tools/subagent-async.mjs` `auditTaskBook`——符号锚（评审 #1——§18.5/§18.7 已立——不用"核实 file 位"**））+ 测试——**T-A1.1 → `test/prompts.test.mjs`（engineering-sub.md 内容断言——T-TS1/T-10.1 模式——§18.14 拆分后落点）；T-A1.2 → 承载审计任务书模板断言的域文件（CLI 拆分后现状——T-TS4/5/6 模式——评审 #3——**§18.14 D-T1.8：落点随拆分更新——以拆分后实际域文件为准**）**；
 - VS Code 对应（subagent-async.mjs auditTaskBook——同构）；
 - 文档：AGENT-LOOP.md（§18.13 本节 + D-TS4 加指针）、两端 CHANGELOG（父侧）。
 
@@ -1648,6 +1680,46 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 **范围声明（评审 #5）**：本批范围 = **eng-coder 内部审计**（F-A1 明示）——**父侧可选审计**（§18 D-E6——主会话直接 spawn）**不在本批**——父侧审计若仍报慢——同类问题同理（quick + 预算句）——另行处理时按本设计同法——**明示 out-of-scope**。
 
 **归档（用户裁定——观测清理哲学）**：本段隐含——**不新增观测**——现有 LOGGING/traces 可观测（if any）调试完成后删除——**记 TODO 清理项**（不随本批——另行）。
+
+### 18.14 测试文件按域拆分（2026-09-04 · 用户观察——"agent.test.mjs 类测试文件成并发锁——排队"——方案 B 拍板）
+
+> 状态：**已实现（2026-09-04——双端——VS Code id:22 clean（12 域——L1 1061/1061）+ CLI id:21 clean（37 域 + helpers×4 + fixtures + verify.mjs 映射修复（清单外必需——原映射指向已删文件→功能性失效——已修）——L1 1371/1323/0/48skip——机械保真 741/741——cross-repo-parity 绿——审计 2 轮 + advisor 0🔴（评审 🟡#2 D-T1.6 枚举已修）——父侧 D-T1.8 文档引用修正进行中（报告清单 ~30 处——as-of 豁免）——父侧 L2 核销待全部批次后）**。
+
+**需求（F-T1——登记句）**：作为用户，我希望测试文件按域拆分——**不再把一堆测试写在一个大文件里**——并发批次不再因共享测试文件排队——每文件 ≤1500 行主题隔离。
+- **F-T2（域规则）**：拆分按主题（prompt 内容断言 / agent 内核 / advisor / 压缩压缩 / subagent 家族 / 工具域 / TUI / PDF / MCP / memory…）——命名 `<域>.test.mjs`；
+- **F-T3（断言落点惯例）**：今后新 prompt 断言 → `prompts.test.mjs`（不再 agent.test.mjs）——**文档引用同步改**（AGENT-LOOP §18.7/§12.1/§7.3/§18.13 + TOOLS/TUI 的"T-TS1 → test/agent.test.mjs"类引用几十处——拆分另一半 = 引用修正——不修就是新漂移）；
+- **N-T1（零破坏）**：拆分 = 移动不重写——每测试体原样迁移（完整 test 块——memory 教训：锚点必须完整块含收尾 `})`——防孤儿体）——测试语义/名称零改——node --test 全量绿；helper 重复才抽 `test/helpers.mjs`（方案 C 精神——不强求）。
+
+**待办**：①explore 内容分布映射（各文件主题块→子文件映射表——设计输入）；②设计定稿（映射表 + 受影响文件 + 引用修正表 + 测试 T-T1 系）；③等 id:14-17 交付→评审→实现（双端）。
+
+### 18.14.1 设计（映射定稿——2026-09-04 · explore thorough 报告——方案 B）
+
+**关键决策（D-T1）**：
+- **D-T1.1（域名规则）**：按主题拆——`prompts.test.mjs`（prompt 内容断言——**今后新 prompt 断言落点——锁根治**——CLI ≈985 行/VS Code ≈790 行）/`agent-core`/`agent-context`/`compaction`/`guards`/`eng-delivery`/`provider-stream`/`stream-rules`/`dispatch-domain`/`distill`/`eng-reminders`/`subagent-core`/`subagent-async`/`subagent-tool`/`subagent-panel`/`subagent-scheduler`/`suspension-core`/`suspension-digest`/`suspension-interrupt`/`suspension-tui`/`advisor-message`/`advisor-review`/`advisor-eng`/`advisor-parallel`/`file-tools`/`edit-tools`/`git`/`checkpoint`/`bash`/`verify-domain`/`execute`/`checklist`/`skills-distill`/`ops-scope`/`tui-render`/`tui-input`/`tui-panel`/`tui-stream`/`tui-picker`/`pdf-parse`/`pdf-golden`(fixtures)/`vscode-*`——**每文件 ≤1500 行**；
+- **D-T1.2（prompts.test.mjs 为锚）**：CLI agent.test.mjs 两块(1919-1998 80 行 + 3844-4566 723 行 + 内嵌 helper 随迁)+ advisor.test.mjs 1061-1163(103 行) → prompts.test.mjs(≈985 行)；VS Code agent.test.mjs 1199-1932 + 1952-2006(≈790 行) → 同文件——**两端同构不同份**（CLI 平铺/VS Code describe——cross-repo-parity.test.mjs 守护两端一致性——**拆分不破坏其路径引用**——D-T1.3）；
+- **D-T1.4（伪大文件）**：pdf.test.mjs 344-1600 = GOLDEN_B64 数据(1257 行)——迁 `test/fixtures/pdf-golden.mjs`——逻辑留 pdf-parse.test.mjs(≈380 行)；
+- **D-T1.5（混杂带）**：CLI agent.test.mjs 470-870 是唯一人工再切区——按测试名前缀归 agent-core(权限透传/task 提醒)/agent-context(序列化/压缩判定)/provider-stream(流式 provider)三向（报告建议）;
+- **D-T1.6（helper 抽取——方案 C 精神——评审 🟡#2 修正：实际抽 4 个）**：CLI 跨文件重复 helper——按 3+ 重复同体规则抽 `test/helpers/`——**实际 4 个（id:21 实现验证）：freshMemory×3 / mockLLM×10（agent-style 完全同体）/ LONG_REPORT×3 / waitFor×4（5000ms 版）——asyncServer/asyncParent 为 2 变体（subagent 版无 requests 捕获/asyncParent 差异）——按"不强抽——内联原地"保留（×2 者不算 3+ 规则）**——；
+- **D-T1.7（零互引——拆分干净）**：explore 确认大测试文件零互引——拆分只改各新文件自身 import(自带 `node:test`/`./slow.mjs`/`../src/*` 相对路径不变——同 test/ 目录)——**无连锁义务**;
+- **D-T1.8（引用修正——拆分另一半）**：文档测试落点引用同步(AGENT-LOOP §18.7/§12.1/§7.3/§18.13 + TOOLS/TUI 的"T-* → test/agent.test.mjs"类——几十处——改至新文件);
+- **D-T1.9（N-T1 零破坏——拆分机械）**：移动不重写——完整 test 块迁移(含收尾 `})`——memory 孤儿体教训)——测试名/语义零改——全绿。
+- **D-T1.10（既有文件政策——评审 #2）**：**非大文件保留原地且为其主题的权威归所**——大文件块中已有同主题文件的**并入既有文件**（不建同名/同类兄弟文件）——仅 `pdf.test.mjs` → `pdf-parse.test.mjs` 是改名（D-T1.4）；新增域名不得与既有文件同主题（dispatch→并入既有 dispatch.test.mjs——不建 dispatch-domain；compaction→并入既有 session-compaction.test.mjs 域段或独立 compaction.test.mjs 仅当不重——按主题归属定）；
+- **D-T1.11（T-T1.4 限定——评审 #3）**：文档引用**现行引用零残留**——历史 as-of 实现记录（✓ 已实现/cherry 记录）**豁免**（§18.11 D-BI6 先例——历史保留原文）——grep 过滤：仅查现行指令段（§12.1/§7.3/§18.7/§18.13 测试落点句——改新文件名）——as-of 记录标 "（as-of——实现时路径）" 不列入；
+- **D-T1.12（D-T1.5 定稿——评审 #6）**：470-870 混杂带按测试名前缀三向（agent-core/agent-context/provider-stream）**为决策**（非建议）；D-T1.7 注：helper 抽取后的 `./helpers/*` 导入是**唯一预期导入变化**（D-T1.6 附带——其余 import 不变）。
+
+**受影响文件（两端）**：CLI test/ 7 大文件拆 25 域 + 新 helpers/ 模块 + 新 fixtures/；VS Code test/ 3 大文件拆 12 域；文档引用修正（D-T1.8）；cross-repo-parity.test.mjs **不动**（D-T1.3）。
+
+**测试（T-T1）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-T1.1 | N | 拆分后 `npm test`（快层） | 全绿（测试数不变——移动不重写——语义零改） |
+| T-T1.2 | N | 各新文件行数 | ≤1500（硬限——域隔离） |
+| T-T1.3 | N | prompts.test.mjs 存在 + 含 T-AR/T-SP/T-10.1 断言 | 在（断言落点迁移成功） |
+| T-T1.4 | E | 文档引用 grep（T-* → 新文件名） | 零残留旧路径（D-T1.8 完成） |
+| T-T1.5 | A | 孤儿体检查（完整块迁移） | node --check 全绿（无拆散——memory 教训） |
+
+**验收（AC-T1）**：AC-T1.1 = T-T1.1 绿（全量——零语义破坏）；AC-T1.2 = T-T1.2 绿（≤1500）；AC-T1.3 = T-T1.3 绿（prompts.test.mjs 锚落地——今后锁根治）；AC-T1.4 = T-T1.4/5 绿（引用零残留/无孤儿）；AC-T1.5 = 双端同构（cross-repo-parity 绿——D-T1.3）。
+
 
 
 
@@ -2195,3 +2267,175 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
   - VS Code（id:6）——clean（审计 CLEAN + advisor 首审 0🔴（1🟡1🔵 均父侧协调项）+ 终审通过——无修正轮）：删除 `engineering.md :212-213` 旧句 + :1427 正向→零残留（超清单——交付必需——同 CLI :4014 处置）+ :1479 补零残留断言——L1 1043/1043 pass/0 fail；grep 旧句零命中（仅 2 处零残留断言）。
   - 父侧同步：TODO:332/354 勾销（2026-09-04）；两端差异 = 断言消息措辞（CLI 中文/VS Code 英文——风格级——§18.11 允许独立演进）。
 
+
+### 20.8 files 声明协议加固（2026-09-04 · 用户"1+2"——归因：三层——我(主责)/工具描述缺口/调度器静默失效——3 次实证 id:19/20/23/24 目录声明绕过冲突检测）
+
+> 状态：**已实现（2026-09-04——双端——VS Code id:26 clean（L1 1065/1065）+ CLI id:32 clean（L1 1375/0fail——T-F1.1/2/3/4/5 全绿——0🔴 审计+首审+复评——修正轮改注释引用号）——评审 0🔴 token fdc5f843/designId 5589b605——5 项建议全处置：T-F1.5/#2 英文锚/#3 时序修/#4 已知限制/#5 as-of——AC-F1.1..5 全核销（AC-F1.4 双端同语义闭合）——父侧 L2 待全部批次后）**。
+
+**问题（P-F1）**：`normalizeFileList`（subagent-async.mjs:728）把目录声明当成普通路径 normalize——`filesOverlap`（:743）集合交集不判 `test/`(目录) 与 `test/agent.test.mjs`(文件) 重叠——**目录声明静默绕过冲突检测**——承诺"overlapping-file tasks are serialized"但目录声明不排队——主代理(我)3 次用目录声明 spawn——与文件级任务并发改同文件——cancel 3 次。
+
+**需求（F-F1）**：作为用户，我希望 files 声明 **目录形态被拒/明确警告**——不给模型"用目录概括"的静默错误通道。
+- **F-F1.1（提示词+描述）**：main.md §20.7 条款 + subagent 工具描述 files 段补："**文件级明细——每个将修改的文件一条——目录声明不支持**";
+- **F-F1.2（检测器）**：`normalizeFileList` 对目录形态（以 `/` 或 `\` 结尾 / 指向既有目录）→ **抛明确错误**（"files 声明不支持目录——给文件级明细"）——静默失败变显式错误——**fail-closed**（不让它通过再排队——直接拒 spawn）。
+
+**设计（D-F1）**：
+- **D-F1.1（检测器——detector 优先）**：`normalizeFileList` 加目录检测——`f` 以 `/` 或 `\` 结尾 → throw（含路径）；`existsSync(abs)` 且 `statSync(abs).isDirectory()` → throw——**subagent.mjs 调 normalizeFileList 处(execute spawn 入口)转 catch → 返回明确错误文本**(错误即工具结果——模型看到"files 目录不支持——请列文件级明细"——不加静默);
+- **D-F1.2（提示词+描述——两端——评审 #2 英文逐字锚）**：main.md Delegation §20.7 段 + subagent 工具 description files 段 + engineering.md Multi-Task 段补**英文逐字句**（两端照抄——语义锚——byte-identical 已取消）：**"files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error."**——**错误字符串英文定稿（D-F1.1 检测器用——评审 #2）**：**"files must be file-level paths — directory declarations are not supported"**；
+- **D-F1.3（测试）**：T-SD 系扩展——T-F1 系：目录声明→抛错/错误结果(fail-closed——a 目录形态 b 既有目录);文件级声明→normalize 正常;回归——既有 T-SD1..14 全绿(文件级路径未变——零破坏)——**评审 #1 补 T-F1.5**：提示词/描述锚句断言(fail-when-unchanged——main.md/engineering.md/subagent description——落点：prompts.test.mjs(prompt 断言——§18.14 D-T1.3) + subagent 域文件(描述断言——拆分后现状 glob);
+- **D-F1.4（范围）**：不改依赖链/排队逻辑——纯 normalizeFileList 前置校验 + 描述句——检测器一处(CLI)/一处(VS Code 对应——**VS Code 端 subagent-async.mjs 同构——镜像批**)。
+
+**受影响文件（两端）**：CLI `src/agent-tools/subagent-async.mjs`（normalizeFileList 加目录检测）+ `src/agent-tools/subagent.mjs`（description files 段句）+ `src/prompts/main.md`（§20.7 句）+ `src/prompts/engineering.md`（Multi-Task 段）+ `test/subagent.test.mjs`（T-F1 系——**注意：subagent.test.mjs 将被 §18.14 拆分——落点=拆分后承载调度器域断言的域文件（subagent-scheduler.test.mjs 或等价——按启动时现状 glob）**）；VS Code 镜像；文档：AGENT-LOOP.md(本节);CHANGELOG(父侧)。
+
+**测试（T-F1）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-F1.1 | A | files=["test/"] 目录形态(尾斜杠) spawn | 报错/错误结果——文件级明细提示(fail-closed) |
+| T-F1.2 | A | files=["test"] 既有目录 | 同上——被拒 |
+| T-F1.3 | N | files=["test/agent.test.mjs"] 文件级 | normalize 正常——不误伤 |
+| T-F1.4 | E | 既有文件级冲突任务 | 照旧排队(回归——T-SD 全绿) |
+| T-F1.5 | N | 读 main.md/engineering.md/subagent description | 含英文逐字锚句(fail-when-unchanged——评审 #1 补) |
+
+**已知限制（评审 #4——残留 false-negative）**：不存在的目录声明（无尾斜杠 + 目录未创建，如 "src/features"）仍可通过检测（不命 existsSync）——静默绕过冲突检测——与 §20.2 v1 边界同类（声明错误静默绕过已明示）——**本批只闭合已知目录形态（尾斜杠/既有目录）——不存在目录形态暂不处理——明示非静默承诺全覆盖**。
+
+**验收（AC-F1）**：AC-F1.1 = T-F1.1/2 绿(目录被拒——fail-closed);AC-F1.2 = T-F1.3 绿(文件级不误伤);AC-F1.3 = T-F1.4 绿(零破坏——回归);AC-F1.4 = 双端同语义;AC-F1.5 = main.md/engineering.md/description 句在(fail-when-unchanged)。
+
+### 20.9 Module Split Policy（2026-09-04 · 用户裁定——通用拆分方法——AGENTS.md 否决(每项目不同)/system.md 定位(所有 agent 注入——普通+工程)）
+
+> 状态：**已实现（2026-09-04——双端——VS Code id:30 clean（L1 1070/1070）+ CLI id:33 clean（L1 1376/1328/0fail——锚逐字核验 802 字符一致（verbatim:true）——T-P1.1/1.2 绿——审计 clean + advisor 0🔴（无 fix——首审即终审））——评审 0🔴 token d3370478——6 项建议全处置（断言词/计数对账/证据/措辞/插入位置/独特词）——AC-P1.1 核销（AC-P1.2 双端同语义——802 字符逐字证据——父侧 L2 待全部批次后）**。
+
+**需求（F-P1）**：作为用户，我希望大文件拆分有**标准方法**——agent 不再每次自创顺序——**先写后删**（安全——任何时刻代码有副本——反序"先删后写"崩溃即丢——不可逆）。
+- **F-P1.1（先写后删）**：把要拆的段**整段原样写入目标文件**——再在大文件删除该段；
+- **F-P1.2（段零改动）**：拆出段本身零改——只修 import 相对路径（新文件位置）——node:test/slow.mjs 自带；
+- **F-P1.3（接线）**：大文件剩余引用拆出符号 → import；拆出段引用大文件符号 → 一并迁或 export/import 互通；
+- **F-P1.4（验证）**：node --check + 相关测试 + 全量绿（孤儿体/断引用显性暴露）——**同一任务内完成**（不拆两批中间态——不可审计）。
+
+**设计（D-P1）**：
+- **D-P1.1（承载——system.md 层）**：两端 `src/prompts/system.md` 加 **Module Split Policy** 段（4 句逐字——英文——下面锚——语义锚两端——byte-identical 已取消——**评审 #5 插入位置：system.md 的 "How you work — while coding" 段——与 §14 D1 并行条款同段（既有 System.md 断言不依赖位置——定死防两端漂移）**）：
+  > **Module Split Policy**: to split a large file — ① **write-first** — write the moved segment verbatim into the target file, then delete it from the source (code always has a copy; deleting first is irrecoverable on failure); ② logic body unchanged — only imports adjust (relative paths + new imports for referenced source symbols); ③ wiring — the source's remaining references to the moved symbol import it; the moved segment's references to source symbols move along or export/import back; ④ verify — node --check + related tests + the full suite go green, AND the test/assertion count before and after the split must match (broken references and orphan bodies surface explicitly; a silent drop of assertions is a split defect); complete the split inside ONE task (no two-batch intermediate states).
+- **D-P1.2（测试）**：T-P1（fail-when-unchanged——system.md 含 "write-first" + "Module Split Policy"——落点 prompts.test.mjs（§18.14 D-T1.3 拆分后）——**随 §18.13/§20.8 同批**）
+- **D-P1.3（范围）**：提示词层仅 system.md（不散 multi——普通+工程 agent 都注入——**子代理 inherit 已证实（评审 #3——setup.mjs:350-353：`systemPrompt = overlay + "\n\n" + base`——base=主 system.md——子代理以 system.md 为基底——spawn-child 不收编 overlay——证据牢）**）——不改 METHODOLOGY/AGENTS.md（每项目差异）。
+
+**受影响文件（两端）**：`src/prompts/system.md`（Module Split Policy 段）+ 测试（prompts.test.mjs——拆分后）——AGENT-LOOP.md(§20.9 本节)；CHANGELOG(父侧)。
+
+**测试（T-P1）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-P1.1 | N | 读两端 system.md | 含 "Module Split Policy" + "write-first" + "assertion count"（fail-when-unchanged——评审 #6 断言词改独特短语） |
+| T-P1.2 | E | 回归——既有 system.md 断言 | 全绿（零破坏——其他段未动） |
+
+**验收（AC-P1）**：AC-P1.1 = T-P1.1/1.2 绿；AC-P1.2 = 双端同语义（语义锚——各自照抄设计——父侧核销）。
+### 20.10 checklist 多批跟踪强化（2026-09-04 · 用户观察——"普通模式 task 用得多——工程模式似乎没有"——用户"该强化一下"——追问"是否已写进提示词"→ 已存在（engineering.md:295-296 抽象句/METHODOLOGY Checklist/discipline.md:61）——**弱在抽象无触发场景**）
+
+> 状态：**设计（2026-09-04——用户拍板强化——**2026-09-04 用户"放一放，等我想好了再说"——挂起（清单统一制方向未定——唯一制/分界/保持——评审未发起——恢复条件：用户给方向）**——实现随 §18.13/§20.8/§20.9 同批（engineering.md 与 §20.8 共享文件——调度排队）——动机：今天 9 批并行——checklist 未登记——上下文压缩后批状态全靠摘要——违 METHODOLOGY"checklist 常在——不依赖上下文"）**。
+
+**需求（F-C1）**：作为用户，我希望工程模式下**每个批准的设计批 = checklist 一条**——状态实时迁移（in_progress/done）——**多批并行尤其**——不靠对话记忆/摘要。
+- **F-C1.1（触发场景）**：设计立项（评审通过后）即 add；实现 spawn 即 in_progress；L2 核销 + commit 即 done；
+- **F-C1.2（具体化）**：engineering.md:295-296 抽象句扩为带场景锚句——不再只是"Use checklist"。
+
+**设计（D-C1）**：
+- **D-C1.1（engineering.md 锚——两端语义锚——byte-identical 已取消）**——Hard Rules 两条扩为（英文逐字——评审 #2 惯例）：
+  > - Use checklist (persistent) and task (per-session) tools to track progress.
+  >   Every requirement maps to a checklist entry. In engineering mode, every
+  >   approved design batch gets its own checklist entry: add it when the design
+  >   is approved, mark in_progress when its eng-coder spawns, mark done after
+  >   the parent-side L2 verification and commit — never rely on conversation
+  >   summaries to remember batch state (the checklist survives compaction).
+- **D-C1.2（测试）**：T-C1（fail-when-unchanged——engineering.md 含 "every approved design batch" + "checklist survives compaction"——落点 prompts.test.mjs（§18.14 拆分后）——随同批；
+- **D-C1.3（范围）**：仅 engineering.md（工程模式——discipline.md 普通模式已有更细——不动）；METHODOLOGY 不改（其 Checklist 一节已够——工程模式版强化在 prompt）。
+
+**受影响文件（两端）**：`src/prompts/engineering.md`（Hard Rules 锚扩）+ 测试（prompts.test.mjs——拆分后）——AGENT-LOOP.md(§20.10 本节)；CHANGELOG(父侧)。
+
+**测试（T-C1）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-C1.1 | N | 读两端 engineering.md | 含 "every approved design batch" + "checklist survives compaction"（fail-when-unchanged） |
+| T-C1.2 | E | 回归——既有 engineering.md 断言（多任务并行/标题卫生/T19 等） | 全绿（零破坏） |
+
+**验收（AC-C1）**：AC-C1.1 = T-C1.1/1.2 绿；AC-C1.2 = 双端同语义（语义锚）。
+
+
+
+### 21. 普通模式偏差审计（2026-09-04 · 用户需求——"普通模式也应该有文档，不过用户经常会忽视，agent 也会忽视……我希望审计的是：①口头指令落设计文档了吗？②实现和文档和口头指令一致吗？"）
+
+> 状态：**需求+设计（2026-09-04——用户发起——评审待发起——实现随批（main.md/coder.md/discipline.md 提示词——与 §20.9/§14 system.md 同域——排队）——动机：普通模式 coder 交付——主代理验证（§13）只"读声称改动+跑测试"——无偏差检查——口头指令→开发（不落文档）→实现与口头偏离——静默无声）——2026-09-04 22:16 用户裁「先不做这个」——挂起——**2026-09-04 23:53 用户恢复（需求翻转：开发前也落档 + 完成后检查补写——普通模式继承工程模式文档纪律无豁免——F-N1.1 改自动补写 / D-N1.3 删排除转纪律 / F-N1.3 + D-N1.5 新增开发前落档）**——round1 评审 2026-09-04 0🔴 通过（token 87db7936）**，#1/#2 实现前必须处置 + #3/#4/#5 调和（round2 处置 2026-09-05 0:11 用户"都同意" + 0:34 用户"可以"：D-N1.1 锚加自动补写 / D-N1.5 补英文逐字锚（discipline.md 全英文）+ 删"搜索引擎" + 职责归主 agent / T-N1.4 断言改英文 + 新增 T-N1.5 零残留 / F-N1.2 四类偏差调和（超清单改动） + D-N1.5 完工时报告真实文档漂移）——**round2 复审待发起**——恢复条件：用户发起**。
+
+**问题（P-N1）**：普通模式无偏差审计——工程模式的 explore 审计（§18）只覆盖 eng-coder——普通模式 coder 交付：①用户口头指令常未被落文档（用户忽视+agent 忽视）；②实现与口头指令/文档偏离无人对照——静默简化漏——主代理验证只确认"文件改对+测试过"——不查"方向对不对"。
+
+**需求（F-N1——用户原话转录）**：作为用户，我希望普通模式**交付后审计两件事**：
+- **F-N1.1（指令落文档审计）**：审计**用户口头指令是否已落设计文档**——未落 → **自动补写**（完成时对照所属设计文档——未落 → 主动补一段"变更记录/决策说明"——文档地图定位归属——普通模式与工程模式同款纪律：**代码变更都必须落文档，无豁免**）；
+- **F-N1.2（三向一致审计）**：审计**实现 ↔ 文档（若有）↔ 口头指令** 一致——四类偏差**同工程模式口径**（部分实现/静默简化/文档漂移/超清单改动——第四类"超范围"与 §18 的"超清单改动"等价：跨越任务书/设计文档许可的文件与行为——评审 #3 调和）；其中"文档漂移"**复用 §18 定义**（真实文档漂移 = 设计本身需改 → 写入交付报告——文档修订归父侧，见 §18.2 round5 #5），普通模式另含**指令↔文档维度**（指令有但文档无——F-N1.1 捕获；文档有但实现无——方向偏）；
+- **N-N1（成本——零额外 LLM）**：普通模式主代理验证（§13 verify）**本就要读声称改动文件**——将"读"升级为"对照读"（对照任务书指令 + 板块设计文档）——**同一轮读完成审计**——不加 LLM 调用——审计结果并入交付复核报告（普通模式 ≠ 工程模式——不 spawn 独立 explore 审计——主代理顺手核）。
+- **F-N1.3（开发前落档——2026-09-04 用户补需求）**：作为用户，我希望普通模式**开发前也落文档**——不管多小的改动——开发前先定位文档归属（docs/design/README.md 文档地图→所属板块文档），已有 → 写变更段/设计注；无 → 新建文档并登记地图——**然后才动手编码**——无豁免（普通模式与工程模式同款纪律）；
+
+**设计（D-N1）**：
+- **D-N1.1（主代理条款——main.md Delegation 段/§13 验证段扩——评审 #1 英文逐字锚/#4 文档地图/#3 协调**：主代理验证 coder 交付时——对照①本轮用户指令（会话历史——口头）②板块设计文档（**先查 docs/design/README.md 文档地图（§12）定位归属文档——若存在**）——查三向一致 + 指令落文档（F-N1.1/1.2）——结果进交付复核（偏差→报告用户；无偏差→正常）——**零额外 LLM（读是既有动作）**；**英文逐字锚（维护：挂 §13 验证句后）**：
+  > **When verifying a subagent delivery, also check: (a) whether this round's user instruction landed in the board design doc (docs/design/ — locate the owner via the doc map); if not, add a short "变更记录/决策说明" (change record) to the owning doc, locating it via the doc map; (b) whether the implementation matches the design doc (if any) AND the user instruction — deviations (partial implementation / silent simplification / doc drift / out-of-scope) go to the user. Zero extra LLM — the verification reads the claimed files anyway; compare against the instruction and the doc in the same pass.**
+  （**评审 #3 协调**：main.md 同段已有 §20.7 D-PS1 锚（当前 :17——本批挂其后——不替换——实现批任务书注明合并文本 = §20.7 锚 + §21 扩句）；
+- **D-N1.2（coder 自查项——coder.md 交付表扩——评审 #1 英文逐字锚**：coder 交付报告加一致性自查行（非执行——报告可含——主代理复核为准）；**英文逐字锚**：
+  > **- consistency self-check: does the delivery match the task instruction and the board design doc (if any)? Report deviations explicitly.**；
+- **D-N1.3（纪律——评审 #5 明示取舍**✝**，2026-09-04 用户翻转）**：普通模式继承工程模式同款纪律——**代码变更都必须落文档，无豁免**（无"改动太小免文档"通道）——开发前落档（F-N1.3 定位归属）→ 编码 → 完成后检查补写（F-N1.1 自动补写）——**无文档的"日常开发"不存在**（✝ 原"落档行为机制不在本批"已删除——2026-09-04 用户裁定）；
+- **D-N1.4（测试）**：T-N1 系——main.md/coder.md 语句断言（fail-when-unchanged——prompts.test.mjs——拆分后落点）。
+- **D-N1.5（开发前落档条款——discipline.md 强触发——2026-09-04 新）**：
+  - **discipline.md（M/S 级改强触发——英文逐字锚）**：
+    > **- Medium (2-3 steps, refactoring): Read the docs → Plan → Change → update the owning doc — a decision or completed change is recorded there (no gap-spotting trigger; small changes are documented too). No design doc needed. Use `task` tool.**
+    > **- Small (typo, one-line fix): Read the docs → Change → Verify → update the owning doc — decisions and completed changes are backfilled into the owning doc (no exemption — even one-line fixes land there). Use `task` tool. No design doc.**
+  - **main.md/coder.md（开发前落档职责归主 agent——§11 确认流程合流）**：主 agent 在执行本轮任务前定位文档归属（文档地图 → 所属板块文档），已有写变更段、无则新建并登记地图——然后才派发/编码——不用 coder 子代理承担落档（避免扩界）；
+  - **完工时**：主 agent 对照所属文档检查——指令落档没 + 实现与文档一致（F-N1.1/1.2 审计 + F-N1.3 补写）——没落的补写（D-N1.1 锚 "add a short change record"）；**实现与文档不一致（真实文档漂移）→ 报告用户而非擅自改文档**（与 §18 同口径——文档修订归父侧）；
+
+**受影响文件（两端）**：`src/prompts/main.md`（D-N1.1 条款）+ `src/prompts/coder.md`（D-N1.2 自查行）+ `src/prompts/discipline.md`（**D-N1.5 强触发——M/S 级句改英文前档**）+ 测试（prompts.test.mjs——§18.14 拆分后）——AGENT-LOOP.md(§21 本节)；CHANGELOG(父侧)。**不改**：§18（工程模式流程不动）/explore 审计不动（普通模式轻量——主代理顺手——非独立 LLM）。
+
+**测试（T-N1）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-N1.1 | N | 读 main.md | 含英文逐字锚 "instruction not documented/landed in the board design doc" + "add a short change record"（自动补写）+ "deviations (partial implementation / silent simplification / doc drift / out-of-scope)"（fail-when-unchanged——评审 #1 改英文短语——评审 round2 #1 补补写短语） |
+| T-N1.2 | N | 读 coder.md | 含英文逐字锚 "consistency self-check"（fail-when-unchanged——评审 #1 改英文短语） |
+| T-N1.3 | E | 回归——既有 main.md + coder.md 断言（§20.7 D-PS1/§7.3 T-SP 系等） | 全绿（零破坏——评审 #2 补 coder.md） |
+| T-N1.4 | N | 读 discipline.md | 含英文锚 "update the owning doc — a decision or completed change is recorded there" + "small changes are documented too"（D-N1.5 强触发——fail-when-unchanged——评审 round2 #2 改英文断言） |
+| T-N1.5 | E | 读 discipline.md | **不含旧条件句 "if you spotted a gap"**（零残留——旧 M/S 弱触发已替换——评审 round2 #2） |
+
+**验收（AC-N1）**：AC-N1.1 = T-N1.1/1.2 绿；AC-N1.2 = T-N1.3 绿（零破坏——main.md + coder.md）；AC-N1.3 = 审计零额外 LLM（**机制锚点——评审 #6**：不新增工具/不 spawn explore/不改 §13 验证路径——§21 设计即满足——主代理读数时顺手对照——实施后可由实现批在验证中确认）。
+
+
+### 21.1 调度器环形死锁修正（2026-09-04 · 用户"环形死锁的问题你得先处理一下"——两次实证 id:26/27、id:32/33——根因代码级确诊）
+
+> 状态：**已实现（双端——2026-09-04——VS Code id:35 clean（L1 1074/1074）+ CLI id:34 clean（L1 1379/1331/0fail——T-SL1/2/4 绿 + T-SD1..14 回归——审计 clean + advisor 首审/复评 0🔴——修复轮 >=\=/Number()/死导入）——评审 0🔴 token 84b9dae8——AC-SL1/2 核销 + AC-SL3 双端同语义——混合边残留 + 行数债见 TODO——父侧 L2 待全部批次后——**全部批交付完成——待父侧 L2 + 用户重启**）**。
+
+**问题（P-SL1——根因证据）**：`queueRunnable`（subagent-async.mjs:820-835——D-SD4 补位判据）与 `describeBlockers`（:797-806）对域冲突检查：
+
+```js
+if (e.status !== "running" && e.status !== "queued") continue
+if (filesOverlap(myFiles, e._files ?? [])) return false   // 831——queued 也阻断
+```
+
+**queued 也一律 return false → 两个 queued 同文件(如都含 test/prompts.test.mjs)互相阻断 → A 等 B、B 等 A → 环形死锁**——两次实证(id:26/27、id:32/33——用户两次发现"后台调度卡住")。**与注释意图矛盾**（:818-819——"先入者启动后以 running 身份继续挡住后入者；后入者只被先入者阻塞"——**注释写对了——代码缺"先入/后入序"判断**——实现 bug 非设计 bug——D-SD4 设计意图完好）。
+
+**需求（F-SL1——用户原话）**：作为用户，我希望**两个排队任务同文件不互等**——同文件串行 = **先入者先启动、后入者等先入者**——不自锁。
+- **F-SL1.1（序判定）**：域冲突阻断**只适用于"先入者"**（spawn 序早于当前任务的 queued）与 **running**——**后入者（晚于当前任务）不阻断**——用池条目 id（= spawn 序——数字递增——已核实 `:102/:236/:920`）数值比较；
+- **F-SL1.2（队列序保证）**：先入者启动后转 running——**继续挡后入者**（running 永远阻断）——自然串行——无需额外状态；
+- **N-SL1（零破坏）**：单任务/无冲突/依赖序行为零改——仅"两个 queued 同文件"场景从死锁变串行。
+
+**设计（D-SL1）**：
+- **D-SL1.1（queueRunnable 修——3 行）**：:831 return false 前加序判定：
+  ```js
+  if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue // 后入者不阻断——先入者先启动
+  ```
+  （running 照旧阻断——任意序；先入者 queued 也阻断——它先启动——id 形态防御：Number() 归一数字/数字字符串——非数字 → NaN → 比较 false → 不跳过——fail-closed 与旧行为一致——id:35 先例）；
+- **D-SL1.2（describeBlockers 同步——展示一致）**：:804 同样序判定（只列"会真正阻断我的"——后入者不列——避免 status 显示误导"等一个其实等不到的人"）；
+- **D-SL1.3（测试）**：T-SL 系——两 queued 同文件：①小 id(先入)准入允许(不被后入阻断)+ 后入者准入拒绝(被先入 running/queued 阻断)——串行无环；②既有 T-SD1..14 回归零破坏；③无冲突场景不受影响。——**已知限制（评审 #4——2026-09-04 补充）**：先入者 **depc 锁定**（依赖被取消——永不自动启动——§20 NF-SD"滞留有意——显式可清"）时——后入同文件条目**滞留等待先入者**（cancel 先入者即释放——避免误判为新死锁——实现侧注释同义落（queueRunnable——id:34））；
+
+**受影响文件（CLI）**：`src/agent-tools/subagent-async.mjs`（D-SL1.1/1.2）+ `test/subagent-scheduler.test.mjs`（T-SL 系——拆分后域文件）；AGENT-LOOP.md(§21.1 本节)；CHANGELOG(父侧)。**VS Code 镜像**（同构——subagent-async.mjs 同修——同批）。
+
+**测试（T-SL）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-SL1 | N | 两 queued 同文件（先入 id=2/后入 id=3） | 先入可启动（不被后入阻断）；后入等先入（阻断）——不互等 |
+| T-SL2 | N | 单任务无冲突 | 准入正常（零破坏——回归） |
+| T-SL3 | E | 既有 T-SD1..14 | 全绿（零破坏） |
+| T-SL4 | A | 三 queued 同文件链 | 按序逐一启动——无环（先到先得） |
+
+**验收（AC-SL）**：AC-SL1 = T-SL1/T-SL4 绿（无环+串行序）；AC-SL2 = T-SL2/T-SL3 绿（零破坏）；AC-SL3 = 双端同语义（镜像修）。

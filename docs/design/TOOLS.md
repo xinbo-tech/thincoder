@@ -388,3 +388,318 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 
 
+## 14. 工具调用失败回降：三改进（2026-09-04 · 用户"这些先确定"——来源：traces 工具失败统计（2026-09-03/04 全量 234K 调用——12.6% 失败——337 唯一场景——统计判定器已验证））
+
+> 状态：**已实现（双端——CLI id:28 clean（L1 1371/1323/0/48skip——含 edit-batch.mjs 清单外（设计预判条款内））+ VS Code id:29 clean（L1 1070/1070——insert_after 落点 more-file.mjs——清单已补）——T-TF1..5 全绿——评审 0🔴 token db9b3873——父侧 L2 核销待全部批次后）**。
+
+**问题（P-TF——数据）**：①行号敏感工具失败率高（insert_after/hashline_edit/edit——old_string/hash/行号不匹配 ≈ 15,000 次/2 天——**防线正常打回——但模型反复重试浪费**）；②edit old_string not found 是最大单类（≈3,376 次——模型参数来自旧 read——文件不匹配）；③fetch 69.3% 失败（9-03 样本——被墙/403/无 proxy）。
+
+**需求（F-TF）**：作为用户，我希望**工具失败后 agent 更少反复重试**——失败信息本身引导下一次正确调用。
+- **F-TF1（A——行号敏感提示强化）**：`insert_after`/`hashline_edit`/`edit` 工具描述 + system.md 提示句补——**"行号/hash/old_string 必须来自最近一次 read——文件被改过则重读"**——让模型调用前先重读（数据：行号漂移 5,700 次/2 天——防线打回成本）；
+- **F-TF2（B——edit 失败结果增强）**：`edit` old_string not found 错误文本补**自动 grep 建议**（"searched: <片段>——可用 grep 定位实际内容"）——让模型失败后立即定位——不盲目重试（数据：old_string not found ≈3,376 次）；
+- **F-TF3（D——fetch 失败提示）**：`fetch` 网络失败（UND_ERR/403/超时）错误文本补**proxy 参数提示**（"network failure — retry with proxy: 'http://host:port' if the target is blocked"——**不自动路由——遵守 2026-08-31 裁定"proxy 显式传不自动应用"**——数据：fetch 69.3% 失败）；**websearch 处置注（id:28 交付辨认——2026-09-04）**：websearch 网络失败被吞为 `(no results)`（无错误文本分支）——加提示需改成功路径文本/逻辑——违 NF-TF 零破坏——**本批 de-scope——websearch 不落提示**（后续如需区分网络失败/空结果——立项另议）；
+- **NF-TF**：零破坏——既有错误/成功文本非目标部分零改（仅追加提示句）——既有断言全绿。
+
+**设计（D-TF）**：
+- **D-TF1（A——描述+system.md——评审 #1/#2 修正：文件名钉实 + 英文锚逐字）**：`tools/insert_after.md`/`tools/hashline_edit.md`/`tools/edit.md` 描述失败语义补句 + `src/prompts/system.md`「How you work — while coding」加一句（与 §20.9 Module Split 段同域——**同批排队**）——两端语义锚。**逐字锚（两端照抄）**：描述句 = "use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed"；system.md 句 = "Line-number-sensitive tools (insert_after, hashline_edit) and exact-match tools (edit) require the freshest read — re-read the file before calling if it may have changed."；
+- **D-TF2（B——edit 代码——评审 #1/#2 修正）**：CLI `src/tools/file.mjs` 的 old_string not found 错误分支（若在 `edit-batch.mjs`——定位确认后列出——`file.mjs` 是权威——§9 同列）——结果文本追加 grep 建议行（英文逐字）："searched: <fragment> — use grep to locate the actual content"；
+- **D-TF3（D——fetch 代码——评审 #1/#2 修正）**：CLI `src/tools/web.mjs`（fetch/websearch 同域——§1 注册表）网络错误分支——追加 proxy 提示行（英文逐字）："network failure — retry with proxy: 'http://host:port' if the target is blocked"——不自动路由（遵守 2026-08-31 裁定）——零逻辑改；
+- **D-TF4（测试）**：T-TF 系——描述句断言（prompts.test.mjs——§18.14 拆分后）+ edit 失败文本含 grep 建议断言 + fetch 失败含 proxy 提示断言（tools 域测试文件——拆分后）。
+
+**受影响文件（两端）**：CLI `src/prompts/system.md`（A 句——与 §20.9 Module Split 段同域：**同批排队**）+ 工具描述（A——`src/tools/insert_after.md`/`hashline_edit.md`/`edit.md`——文件名按实际——评审 #1）+ `src/tools/file.mjs`（B——old_string 分支）+ `src/tools/web.mjs`（D——fetch/websearch 同域）；**VS Code 镜像**：`src/prompts/system.md`（A——同句）+ `src/tools/file.mjs`（edit/hashline 描述 A + edit 错误分支 B）**+ `src/tools/more-file.mjs`（insert_after 描述 A——id:29 交付补——advisor 🔵#3——工具实际定义处）** + `src/tools/web.mjs`（fetch D——两端独立实现——同语义）+ 测试（prompts.test.mjs——§18.14 拆分后 + tools 域文件——**评审 #3：拆分前落现有 prompts.test.mjs——拆分后随迁**）；AGENT-LOOP.md（本节？——不——TOOLS.md 本节）；CHANGELOG（父侧）。
+
+**测试（T-TF）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-TF1 | N | 读 tools/edit/insert_after/hashline_edit 描述 | 含逐字锚 "use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed"（fail-when-unchanged——评审 #1 修正——以 D-TF1 元） |
+| T-TF2 | N | 读 system.md | 含行号敏感提示句（fail-when-unchanged） |
+| T-TF3 | N | edit old_string not found 实际结果 | 含 grep 建议行 |
+| T-TF4 | N | fetch 网络失败实际结果 | 含 proxy 提示行 |
+| T-TF5 | E | 既有工具断言回归 | 全绿（零破坏——仅追加） |
+
+**验收（AC-TF）**：AC-TF1 = T-TF1/2 绿；AC-TF2 = T-TF3/4 绿；AC-TF3 = T-TF5 绿（零破坏）；AC-TF4 = 双端同语义（A 句）。
+
+## 15. 工具描述与语义对齐——「符合机器直觉」批（2026-09-04 · 用户「设计符合惯性」——来源：edit 6 次误操作实况 + 39 处全量审计）
+
+> 状态：**已实现（2026-09-04——双端交付：CLI id:5 clean + VS Code id:6 clean——父侧 L2 核销：CLI 1402/1402、VS Code 1114/1114 全绿——描述点矩阵 T15.16 实测 86 点）——评审 round1 1🔴+6🟡+6🔵 全处置——round2 复评通过（2026-09-04——0🔴——token e239214c）——复评 4🟡+4🔵 已随本修订处置**。
+
+**问题（P15——实况）**：用户研究 6 次 edit 误操作（同一模式：`edit(old_string=既有行, new_string=新行)`——旧行被**静默覆盖**——第 3/5/6 次明知故犯——惯性压倒知识）。根因（用户结论 + 审计验证）：**edit 语义不符合模型 patch/diff 心智**——模型输入「上下文/结果」——工具执行「纯字面替换」——new 不含 old = 删除旧内容且零报错；**insert_after 描述用例窄化**（只 function/import/block——TODO 条目/文本行映射不到→退回 edit）；全量审计 39 处描述（**注（复评 #5——2026-09-04）：39 处为审计抽样集合——与 D15.4 的 86 点全量走查口径不同（86 点含双端全部描述点）——实现批走查以 86 点为准**）——同类冲突集中 **edit 族**（edit/hashline_edit）——另有 **8 项描述/实现不一致**（timer 三处矛盾 30/180/required 为真不一致）。
+
+**需求（F15——用户故事）**：
+- **F15.1**：As a **coding agent**, I want **edit 按 patch/diff 心智工作**（old=变化区当前内容、new=该区的期望结果——公共行保留、差异行增删）, so that **修改不再依赖逐字构造 old 串——「新增写成替换」误用与 not-found 重试大幅减少**。
+- **F15.2**：As a **coding agent**, I want **old 与 new 零重叠（old 每行都不出现在 new 中）时自动按插入处理**（new 插在 old 末行后）, so that **「新增行»意图永不覆写既有行——数据零丢失**。**——修订指针（§15.2——2026-09-04）：单行×单行唯一匹配形态不落本规则——由 §15.2 分支 0 接管 = 就地替换（见 §15.2）**。
+- **F15.3**：As a **coding agent**, I want **insert_after/hashline_edit/edit 描述说清 old/new 关系与适用场景（含清单条目/文本行/文档行）**, so that **新增操作直接选对工具**。
+- **F15.4**：As a **coding agent**, I want **write/timer/verify/read/task/lsp/checklist 描述与实现一致、参数语义无歧义**, so that **按描述用不踩坑**。
+- **F15.5**：As a **maintainer**, I want **工具描述写作规范（六要素）成文、现有全部工具描述按条款达标**, so that **同类冲突未来零复发**。
+- **范围边界**：不做字符级/语义级 diff（仅行级）；**apply_patch 仅 hunk 头宽容**（裸 `@@` 无坐标——D15.6——hunk 体内 diff 语义不变——审计"不改 apply_patch"误判已由 D15.5 修正）；不重排工具注册表/顺序；不引入工具描述自动生成。
+
+**非功能性（NF15）**：
+- **语义变更声明（用户 2026-09-04 裁定——「都不用考虑跟旧的兼容，以后都是用新的方式调用」）**：本批 edit/verify 行为**有意变更（breaking）**——edit 零重叠由「旧行为=字面替换」改为「新行为=插入」（数据安全侧）；verify `filter` 参数改名为 `testNamePattern`（旧名不再接受）。**既有测试按新语义迁移**（迁移表——见 T15.15——实现批逐条列出新旧预期对照）——不承诺旧行为兼容；
+- 双端行为一致：edit/插入规则/timer/verify/read/task 两端同语义（VS Code task 补别名规范化镜像 CLI）；
+- 描述契约：补强后描述与实现一致（描述断言 fail-when-unchanged——逐字锚）。
+
+**设计（D15）**：
+
+**D15.1 edit 语义升级 C（两端——CLI + VS Code）**：
+- **语义定义**：`old_string` = 变化区**当前内容**（必须精确存在且单次匹配——不变）；`new_string` = 该区的**期望结果**。工具对 old/new 做**行级 diff**（LCS 最长公共子序列——整行相等判定）——公共行保留、old 独有行删除、new 独有行插入——应用结果替换匹配区。
+- **判定序（按优先级——逐一对 old/new 判定）**：
+  1. **零重叠规则（F15.2）**：old 的**每一行**都不出现在 new 的行集中 → **按插入**处理——new 整体插入在 old 最后一行之后（旧内容保留）**——修订指针（§15.2——2026-09-04）：单行×单行唯一匹配不落本判定——分支 0 先行接管 = 就地替换**）；
+  2. **一般 diff**：old 与 new 有公共行（≥1）→ LCS 推导——公共行保留、差异行增删；
+  3. **平凡特例**：new 与 old 行级完全一致 → 原样替换（no-op 语义——仍报成功）。
+- **空 new_string（纯删除意图）——显式错误（不静默）**：new 为空 → 报错 `empty new_string — for deletion, keep the context lines you want to preserve in both old_string and new_string`（删除必须带保留上下文行——与改词同模式——判定 1 对空 new 的真空成立不生效——T15.3a）。
+- **语义说明（关键点——评审必读）**：
+  - **单行修改的模型心智**：改一行时**必须带公共上下文**（old=改行±相邻行、new=改后对应行）→ 走判定 2——**「只给旧行+新行（零重叠）」= 判定 1 = 插入**——**数据不丢**（插入可撤——替换不可逆——安全侧设计）；
+  - **replace_all**：每处 old 段→new 段**字面替换**（不做插入规则——old 多处时"插到哪处"无定义）——**描述注明（并入逐字锚）**；
+  - **edits 数组批量**：每条目独立按判定序（同文件条目串行——沿用现行语义）；批量原子性不变；
+  - **判定/应用全在新模块**——`src/tools/edit-diff.mjs`（CLI 新建）+ VS Code 同名新建——函数 `applyPatchLines(oldText, newText) → { ok, resultText | reason }`（LCS——old/new 行数各上限 1000——超限返回错误「edit region too large — narrow the change」）——**导出面（2026-09-04 实现批定稿——§15.1 上层引用）：核心 `applyPatchLines`；条目入口 `computeEditEntry(content, args, opts)`（匹配校验→判定序→应用——抛错含路径/引导——opts `{ path, absPath, abortPrefix, rich }`——abortPrefix=批量错误前缀（rich:false 批量态）；`validateEditEntry`（空 old / 非字符串 new）；`assertEditArgsExclusive`（edits 互斥）**——**CLI `file.mjs` 的 edit 执行体（单形态 + 前置校验分支）整段迁出至 edit-diff.mjs——file.mjs 只留工具壳与转发**（不"仅改调用"——执行体也在模块内——模块拆分写优先纪律：先迁后删、逻辑体不变、wiring 导入——**同步把 D15.3#9（edits 互斥错误文本）随前置校验分支迁出**）；VS Code `file.mjs` 448 行——edit 单形态/批量调用 edit-diff + 描述重写（+~25 行）≈ 473——安全（VS Code 无独立 edit-batch——迁 edit-diff 后两形态共用）；
+  - **行数风险（评审 #3 修正——重记账）**：CLI `file.mjs` 495 行——执行体迁出（-~68 行）+ 工具壳/转发（+~8 行）+ D15.3#3 read 别名（+2 行）→ 终态 ≈ 437——**安全**（原"≤5 行增量"未计 #3/#9/#10——已修正；若仍 >500——报停走模块拆分——预判条款不静默触限）；VS Code `file.mjs` 448 + 描述重写/调用 ≈ 473——安全；
+  - **VS Code 双通道**：open doc（WorkspaceEdit）+ closed disk——diff 在计算层完成——两通道共用 `applyPatchLines`。
+- **edit.md 描述重写（逐字锚——两端照抄——以 D15.1 语义为准）**：
+  - 首句（CLI edit.md 首句替换 / VS Code file.mjs edit 工具描述段替换——**逐字**）：`Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, new_string is inserted after old_string (old content stays). Whole-line replacement of one line without shared context is treated as insert — for a replacement, include a shared context line. replace_all keeps literal replacement of every occurrence — the insert rule does not apply.`；**（修订注——2026-09-04 §15.2 分支 0：句中「…when no line overlaps, new_string is inserted after old_string (old content stays)」与「Whole-line replacement of one line without shared context is treated as insert — for a replacement, include a shared context line」两句已由 §15.2 NF15.7c 新锚替换（单行×单行唯一匹配 = 就地替换——多行替换带共享上下文/新增用 insert_after）——实现批已落——历史锚文本保留原文）**；
+  - 路由句（原 `One exact-string swap → this tool` 更新）：`Add a line/entry after a known line → insert_after — includes checklist items and doc lines.`;
+
+**D15.2 描述补强（逐字锚——两端照抄——每个锚句作为 fail-when-unchanged 断言目标）**：
+- insert_after 用例句（CLI insert_after.md 工具描述用例句替换 / VS Code more-file.mjs insert_after 工具描述段同句替换——**逐字**）：`Use this instead of edit when you're adding a new line — a checklist item, a doc heading, a line of prose, a function, an import, or a block — no need to fabricate surrounding context for exact matching.`；
+- hashline_edit（CLI hashline_edit.md 追加两句 / VS Code file.mjs hashline 工具描述段——**逐字**）：`Replacement text replaces the lines identified by the hashes — content not present in new_content is deleted. For a new line after a known line, use insert_after. For a single simple string swap, use edit.`；
+- write（CLI write.md 追加一句 / VS Code file.mjs write 工具描述段——**逐字**）：`write replaces the WHOLE file — read it first and confirm you intend to rewrite it entirely; for a small change use edit / insert_after.`；
+
+**D15.3 顺手批（8 项——各表两端落点）**：
+
+| # | 项 | 改动 | CLI 落点 | VS Code 落点 | 风险 |
+|---|---|---|---|---|---|
+| 1 | timer 三处对齐 | **以实现为准（180s——行为不变）**：描述 default 180 + schema `required` 松绑（seconds 可选——缺省 180） | agent-tools/timer.mjs（timer 工具描述段+schema） | agent-tools/timer.mjs（timer 工具描述段+schema） | 无（描述修正——行为已 180） |
+| 2 | verify filter 改名 | `filter` → `testNamePattern`——**旧名不再接受（breaking——用户裁定「都不用考虑跟旧的兼容」）**——描述注「renamed from filter」 | agent-tools/verify.mjs（verify 工具描述段+参数名） | agent-tools/verify.mjs（verify 工具描述段+参数名） | breaking（用户接受的语义变更——NF15 声明） |
+| 3 | read filePath 伪 alias | CLI 实现补 `filePath` 别名（`args.path ?? args.filePath`——2 行）——VS Code 已有——两端一致；CLI read.md 的 "alias: filePath" 声明确认与实现一致（**实现待补**） | tools/file.mjs read 工具执行 + read.md | 无（已有） | 无 |
+| 4 | task 状态别名 | **CLI 保留（实现已接受别名+warning）**——描述改「accepts aliases (completed/finished/…) — normalized with a warning」——**VS Code 补 normalizeStatus 镜像 CLI**（两端行为一致） | agent-tools/task.mjs（task 工具描述段） | agent-tools/task.mjs（task 工具描述段 + 补 normalize（CLI STATUS_ALIASES 镜像）） | 低（VS Code 行为扩展——容错） |
+| 5 | task↔checklist 双向路由 | task.mjs 描述补：`For cross-session / project-level tracking, use checklist`——checklist 已有出口（保留） | agent-tools/task.mjs（task 工具描述段）+ tools/checklist.mjs | agent-tools/task.mjs（task 工具描述段）+ tools/checklist.mjs | 无 |
+| 6 | lsp 路由句 | 补：`Find files with glob / repo_outline — use lsp for definition / references / diagnostics` | tools/lsp.mjs（lsp 工具描述段） | tools/lsp.mjs（lsp 工具描述段） | 无 |
+| 7 | hashline 反向路由 | 已含 D15.2 | — | — | — |
+| 8 | write 补强 | 已含 D15.2 | — | — | — |
+| 9 | edits 互斥错误文本 | `edits array is mutually exclusive` 错误补引导：`use either the edits array or the single-form args, not both — split into two calls`（trace：1,295 次——模型混用） | tools/file.mjs edit 前置校验错误分支（随执行体迁 edit-diff.mjs） | tools/file.mjs（批量/单形态校验点——随执行体迁 edit-diff.mjs） | 无 |
+| 10 | hashline 错误引导 | `Hash sequence not found` 补：`for fresh hashes, re-read the file with hashes=true`（trace：830+ 次——hash 过期——模型重试不重读） | tools/file.mjs hashline 工具错误分支 | tools/file.mjs hashline 工具错误分支 | 无 |
+
+**D15.4 六要素规范条款（TOOLS.md 本节落条款——所有工具描述（现有 + 未来）按此走查——86 个描述点走查在实现批完成并上报差异表——本节结论由实现批回填）**：
+- 六要素（工具描述必含——缺一补一）：**①一句话语义**（能做什么/不能做什么）；**②参数关系**（参数间约束——如 new 与 old 的关系规则）；**③路由**（走我/换谁——双向出口句）；**④破坏性明示**（覆盖/删除/不可逆——+恢复路径）；**⑤阻塞性**（是否等待/多久——如 check vs status）；**⑥结果形态**（返回什么/字段怎么读/失败分支）。
+- **走查范围（现有全部——86 个描述点——实现批全量脚本化走查并逐项上报差异表——脚本含一致性检查项：描述中引用的工具名 ∈ §1 注册表（复评 #4——repomap/code-sync/repo_outline 等名与 §1 核对））**：CLI 25 个 `src/tools/*.md` + 4 处内嵌（repomap.mjs 工具描述段 / memory 的 docs.mjs 工具描述段 ×2 / code-sync.mjs 工具描述段）+ 13 个 `src/agent-tools/*.mjs` 描述段（= CLI 42 点）；VS Code 17 个 `src/tools/*.mjs` 承载 28 点 + 2 处根内嵌（repomap.mjs 工具描述段 / memory-tool.mjs 工具描述段）+ 12 个 `src/agent-tools/*.mjs` 承载 14 点（consult 3 点）（= VS Code 44 点——**2026-09-04 实现批矩阵实测回填：原设计「22 文件 + 2 根 + 15 文件 = 39 点」为文件数与点数混计漂移——矩阵 POINTS 表逐文件列点——T15.16 实测 44**）——**共 86 点**——按条款逐项对照——每点上报：达标 / 缺哪要素（补一句）。
+- **机制注**：CLI 描述 = `.md`（`DESC()` 加载——shared.mjs 描述加载函数）；VS Code 描述 = `.mjs` 内嵌（**无 .md 文件——已验证**）——**两端同一语义改动落点不同源**——设计锚逐字定稿在本节，两端照抄。
+
+**D15.5 trace 核对（2026-09-04 用户指示「写完再核对」——实数据——来源：`C:\Users\liwei\.thincoder\traces\2026-09-04` 4504 个 trace——304,365 条 tool 消息——30,890 失败（10.2%）——只读聚合）**：
+- **edit 族失败率（实测）**：edit 56,235 调用 / 8,214 失败（14.6%——not found 家族 5,190+——old_string matches 2 times 450——单参数/批量混用）；insert_after 11,753 / 3,027 失败（**25.8%**——行号漂移 guard 打回 1,056+：`after_line 在上次写入之后——行号已漂移`）；hashline_edit 16,453 / 3,294 失败（**20.0%**——Hash sequence not found 830+）；**apply_patch 203 / 203 失败（100%——见 D15.6）**；write 5,599 / 0（0%）；bash 90,725 / 9,449（10.4%——其中 4,144 = hasFileRedirection 护栏（**已随 §13 删除**——当日旧版本残留——不计入留存问题）；execute 21,001 / 5,149（24.5%——超时 280/Command failed 498——不属本批）；
+- **核对结论**：①审计候选全部被 trace 证实（edit 族为主战场）；②**审计漏网 1 项 = apply_patch 无坐标 hunk（100% 失败——见 D15.6）**——审计判"apply_patch 无此问题"系**误判**（只看了描述没看 trace——教训：描述审计必须与 trace 交叉验证）；③edits 互斥误用 1,295 次（`edits array is mutually exclusive`——模型同批既传 path/old/new 又传 edits——描述已写明——模型仍犯——错误文本改进见 D15.3#9）；④hashline 失败将 Hash 过期错误文本引导（#10）；⑤insert_after 高失败率=模型重试不重读（guard 已带漂移信息——错误文本已引导——**记录不扩**——深层治理（后向锚）另行立项）。
+**D15.6 apply_patch 无坐标 hunk 宽容（trace 核对新增——2026-09-04）**：
+- **P15.6（数据）**：apply_patch 203/203 全失败——169（83%）= `Malformed patch: bad hunk header "@@" (need @@ -old,count +new,count @@)`——模型提交的 hunk 头用**裸 `@@`**（省略行号坐标——LLM 自然行为：用上下文行定位而非计算坐标——unified diff 坐标对模型是负担）；34 = hunk context not found（旧内容不匹配——正常错误类）。
+- **D15.6.1（语义）**：`@@` 头（无坐标——`@@` 或 `@@\n` 后直接跟 hunk 体）——**接受**——hunk 定位改由**上下文行匹配**推导（hunk 体的空格上下文行作为锚——在文件中唯一匹配则应用；多重匹配/零匹配报错——错误文本含已尝试的锚片段）。标准坐标格式（`@@ -old,count +new,count @@`）不变——两格式并存。**hunk 体内 `-`/`+` 行不变**（diff 心智本身一致——只放宽头）。
+- **D15.6.2（边界）**：**每个无坐标 hunk**都必须含**至少 2 行上下文**才能唯一定位（1 行上下文易歧义——错误提示"add more context lines"——与 D15.6.3 描述锚口径一致）；无坐标 hunk 按**文件顺序串行应用**（与标准格式同序——先定位先应用——后 hunk 基于前 hunk 结果）；**——修订指针（§15.3——2026-09-04）：零上下文/1 上下文含 - 锚形态由 §15.3 放宽（锚序列=上下文行 + - 行连续——唯一匹配即应用——纯 + 无锚仍按本行 ≥2 规则）**；
+- **D15.6.3（描述）**：apply_patch 描述补一句（逐字锚——两端照抄）：`Hunk header "@@" without coordinates is accepted — the hunk is located by its context lines; include at least 2 context lines for a unique match.`（CLI apply_patch.md / VS Code more-file.mjs apply_patch 工具描述段）；
+- **D15.6.4（实现落点）**：CLI `src/tools/patch.mjs`（apply_patch 解析——hunk 头解析分支）；VS Code `src/tools/more-file.mjs`（apply_patch 工具实现——同）；
+- **D15.6.5（用户裁定 2026-09-04「一起都做了，不要分批了」）**：**并入本批实现——不单列**——AC15.8 生效（T15.17-T15.19 绿）。
+
+**受影响文件（双端——按组）**：
+
+*CLI（thincoder/）*：
+- 新增：`src/tools/edit-diff.mjs`（LCS diff + 判定 + 应用——全部新逻辑）；
+- 修改实现：`src/tools/patch.mjs`（D15.6——apply_patch hunk 头宽容分支）；
+- 修改实现：`src/tools/file.mjs`（edit 执行体迁出至 edit-diff.mjs——留工具壳+转发——+D15.3#3 read 别名 2 行——**硬限风控**）、`src/tools/edit-batch.mjs`（批量条目判定+应用调用 edit-diff）——`src/tools/patch.mjs`（D15.6——apply_patch hunk 头宽容分支）；
+- 修改描述（.md）：`edit.md`（重写——D15.1 锚）、`insert_after.md`（D15.2 锚）、`hashline_edit.md`（D15.2 锚）、`write.md`（D15.2 锚）、`lsp.md`（D15.3#6）；
+- 修改 agent-tools 描述/实现：`timer.mjs`（#1）、`verify.mjs`（#2）、`task.mjs`（#4 描述）、`checklist.mjs`?（#5 反向出口在 task——checklist 无改）——**#5 checklist 已达标——不动**；
+- 六要素走查点（42 处——25 个 `src/tools/*.md` + 4 处内嵌（repomap.mjs / memory 的 docs.mjs ×2 / code-sync.mjs）+ 13 个 `src/agent-tools/*.mjs`）——**按 D15.4 条款逐项补缺**；
+- 测试：`test/file-tools.test.mjs`（edit diff 断言——T15 系）、`test/edit-tools.test.mjs`?（现有域——落实际）、`test/prompts.test.mjs`（描述锚断言——§18.14 拆分后随迁）、`test/task.test.mjs`?（别名——落实际）、`test/tools.test.mjs`?（timer/verify/read/lsp——落实际）；
+- 文档：TOOLS.md（本节——作者）、CHANGELOG（父侧）。
+
+*VS Code（thincoder-vscode/）*：
+- 新增：`src/tools/edit-diff.mjs`（镜像）；
+- 修改：`src/tools/file.mjs`（edit 单形态/批量调用 edit-diff + 工具描述段重写 + hashline 工具描述段补句 + write 工具描述段补句——**448+~25≈473——安全**）、`src/tools/more-file.mjs`（insert_after 工具描述段替换锚句 **+ apply_patch D15.6 分支**）、`src/tools/lsp.mjs`（lsp 工具描述段补路由）、`src/agent-tools/timer.mjs`（#1）、`src/agent-tools/verify.mjs`（#2）、`src/agent-tools/task.mjs`（#4——补 normalizeStatus + 描述）；
+- 六要素走查点（44 处——17 文件 28 点 + 2 根 + 12 文件 14 点）——按 D15.4 逐项补缺——实现批矩阵实测（T15.16——2026-09-04）；
+- 测试：`test/vscode-tools.test.mjs` / `test/edit-tools.test.mjs`? / `test/prompts.test.mjs`?（落实际域——设计注「测试文件按实际拆分后域——§18.14 双端同批」）；
+- 文档：CHANGELOG（父侧——VS Code 各自）。
+
+**测试（T15——节选主矩阵——实现批补全）**：
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T15.1 | N（F15.1） | edit(old=两行含公共行, new=公共行+新行) | 公共行保留——新行插入——旧行不丢 |
+| T15.1a | N（复评 #2 补——前置型） | edit(old=[A,B], new=[X,A,B]——new-only 行在首个公共行前) | LCS 序——X 插在 A 前——[X,A,B] |
+| T15.2 | N（F15.2） | edit(old=单行, new=全新行——零重叠) | **按插入**——old 行保留、new 行插其后 |
+| T15.3 | N | edit(old=多行, new=多行无重叠) | 按插入——old 全保留、new 插后 |
+| T15.3a | E | edit(old=单行, new=空——纯删除意图) | 报错「empty new_string — for deletion...」——不写
+| T15.4 | N | edit(old=旧串, new=新串——单行带上下文改词) | diff 应用——改词成功 |
+| T15.5 | N | edit(old=旧段, new=旧段+删一行) | 删除生效 |
+| T15.6 | N | edits 批量（多文件） | 各条目独立判定——原子 |
+| T15.7 | E | old 不匹配 / old 多处非 replace_all | 报错——不写——零改动 |
+| T15.8 | E | old/new 行数超限（>1000） | 报错「region too large」 |
+| T15.9 | E | replace_all + 多匹配 | 每处旧段→新段（字面——非插入） |
+| T15.10 | N | 描述锚句（edit/insert_after/hashline/write——两端） | 含逐字锚（fail-when-unchanged——T15.10a CLI .md / T15.10b VS Code 内嵌） |
+| T15.11 | N | timer 描述+schema | default 180——seconds 可选 |
+| T15.12 | N | verify 参数 | testNamePattern——filter 拒绝（明确错误） |
+| T15.13 | N | read 调 filePath | 成功读（CLI 别名生效） |
+| T15.14 | N | task 状态别名（VS Code 补后） | 接受 completed——warning 归一 |
+| T15.15 | E | 既有全量回归（含 edit/verify 既有用例） | 按新语义**迁移后的迁移表**逐条落实——全部绿（breaking——旧预期改新预期——迁移表随实现批上报） |
+| T15.16 | N | 六要素走查（86 点——CLI 42 + VS Code 44——全量脚本化——实现批生成走查脚本——逐点输出达标/缺项） | 每点达标——缺项补句——差异表上报 |
+| T15.17 | N（D15.6） | apply_patch 裸 `@@` 头 + 2 上下文行 | 接受——上下文唯一定位——应用成功 |
+| T15.18 | E（D15.6） | 裸 `@@` 头 + 0/1 上下文行 | 报错「add more context lines」——不写（**§15.3 修订指针：含 - 锚形态已放宽——本行适用纯 + 无锚形态——实现批已迁移夹具——2026-09-04**） |
+| T15.19 | E（D15.6） | 裸 `@@` 多头——锚多匹配 | 报错（含锚片段提示）——不写 |
+| T15.20 | N（复评 #7 补） | 两个无坐标 hunk 串行（第二个命中第一个应用后的内容） | 按文件顺序先应用第一个——第二个基于结果定位——成功 |
+
+**验收（AC15）**：AC15.1 = T15.1-T15.9 绿（edit 新语义——含插入规则/前置型 T15.1a/空 new 错误）；AC15.2 = T15.10 绿（描述锚——双端逐字）；AC15.3 = T15.11-T15.14 绿（顺手批）；AC15.4 = T15.15 绿（**语义迁移表——既有用例按新语义迁移后全绿**——非零破坏）；AC15.5 = 六要素走查完成（86 点全量脚本化——端内矩阵实测：CLI 42 / VS Code 44）——差异表上报（缺项逐点补句）；AC15.6 = 双端语义一致（edit/timer/verify/read/task——行为对齐）；AC15.7 = 父侧 L2 test:full 核销（双端）；AC15.8 = T15.17-T15.20 绿（apply_patch 无坐标 hunk——并入本批——用户裁定）。
+
+**注（评审 #4 补——空 new 用例）**：T15 矩阵补 **T15.3a**（E）= `edit(old=单行, new=空)` → 报错「empty new_string — for deletion, keep the context lines you want to preserve in both old_string and new_string」——不写（表行插入测试矩阵 T15.3 之后）。
+
+**注（评审 #13 补——F15.4 checklist 达标锚）**：六要素走查预检结论——checklist 工具描述**已含**出口句（in-session 拆分用 task 替代——跨会话/项目级用 checklist）——③路由要素达标——走查表该点备注「已达标——仅核对」。
+
+**交叉引用（评审 out-of-scope——2026-09-04——EOL 权威归属）**：edit/apply_patch/hashline 的**行尾语义权威 = `EDIT-TOOL-EOL-DESIGN.md`**（detectFileEol / joinWithEol / majorityEol / findCandidates / U+FFFD——已实现）。§15 行级 diff 与其互操作：diff/判定在 normalizeEOL 后的 LF 域计算（与既有行为一致）；写回按 EOL 权威的 `joinWithEol(原文)` 恢复原行尾——**§15 不重复 EOL 细节（单一权威源）**——实现批在 edit-diff.mjs 写回路径调用共享 helper（CLI `src/tools/shared.mjs` / VS Code 各自）。
+
+
+### 15.1 ACP 通道编辑语义对齐（2026-09-04 · 方案 1——用户拍板——bridge 行为债）
+
+> 状态：**已评审（2026-09-04——用户发起——0🔴 通过——token f7cc43aa——3🟡+2🔵 用户拍全处置——本修订落实：①§15 导出面补记 ②FIFO 拒绝消费规则 ③T15.32 零重叠行 ④标题/依赖注）——已实现（2026-09-04 22:04——id:7——clean——L2 1416/1416 全绿——acp.test.mjs 64/64——AC15.9/10/11 核销——三处实现差异用户拍已裁——见 D15.7 注/D15.8 修订/关键决策）**。来源：§15 实现批（id:5）eng-coder 报告第 6 节——三个**预存在**行为债（非 §15 引入——修复轮披露未越界——父侧上抛——用户拍「方案 1：完整对齐」）。依赖：§15 批（edit-diff.mjs 导出面）已于 id:5 落地——本批直接引用——无前置等待。
+
+**问题（P15.7）**——`src/acp/bridge.mjs` toolRouter 的 edit 通道与本地 edit 语义三处不一致（ACP = 独立于「双端/双通道」的**第三通道**——§15 批未覆盖）：
+
+1. **数组形态回退本地磁盘**：路由条件仅认单形态（`args.old_string + new_string`）——`edits` 数组 → `handled: false` → 本地 edit 直写磁盘——**绕过 IDE 缓冲**（IDE 内存文档未变；用户未保存修改保存时可能覆盖磁盘编辑——丢失风险；模型 `fs/read_text_file` 读回的仍是旧缓冲——「改了没生效」）；
+2. **单形态判定降级**：桥内 `indexOf` 单替换——① 多匹配（occurrences>1 且无 replace_all）本地报错、桥**静默替换首个**；② `replace_all: true` 也仅替换首个（全部替换语义降级）；
+3. **工具 id 按名覆盖**：`toolIds` Map 以工具名为键——并行同名工具（dispatch B1 已支持并行只读）后写覆盖先写——`tool_call_update` 与 `tool_call` id 错配（ACP 要求 id 唯一；thincoder 模型级 id 跨 turn 不保证唯一）。
+
+**需求 F15.6**：As a coding agent using the IDE through ACP, I want edit 单形态/数组形态/replace_all 与本地 edit-diff 同语义（同样的匹配校验、判定序、错误文本、原子性），so that 三通道（本地磁盘 / VS Code 原生 / ACP 桥）行为一致——**IDE 缓冲永远是权威**（模型看到的 = IDE 显示的）。
+
+**非功能性（NF15.6）**：
+- NF15.6a 原子性：数组（单文件/跨文件）**全判后写**——任一条目失败 → 零写（错误带 abort 前缀——同本地 edit-batch）；
+- NF15.6b 错误文本一致性：not found / occurrences / 空 old / 空 new——与本地**逐字相同**（模型按同一措辞处理）——**范围注（2026-09-04 用户裁定——通道差异已接受）**：逐字相同仅对**四类命名消息 + 非 dirty 分支**成立——桥错误结果无 dispatch 层 `[path=…]` 尾缀（dispatch 通道内包装——桥端补即复制格式——不实现——与 D15.7 absPath 省略同列）；
+- NF15.6c EOL：写回按原文行尾恢复（既有 F1 保持——LF 域判定 / 写回恢复）；
+- NF15.6d id 配对保序：并行工具 call/update 一一对应。
+
+**设计**：
+
+- **D15.7（桥编辑通道完整委派本地判定）**——bridge.mjs edit 分支重写：
+  - 形态识别（与本地工具壳同）：单形态（`path + old_string + new_string`）/ 数组（`Array.isArray(args.edits)`）；互斥校验复用 `assertEditArgsExclusive`；
+  - **判定/应用一律委派 `computeEditEntry`（edit-diff.mjs 导出）**——桥**不重复实现**判定逻辑（单一权威——本次双实现漂移即教训）：
+    - 单形态：读该 path 的 IDE 缓冲（`fs/read_text_file`）→ normalizeEOL → `computeEditEntry(content, args, { path })`（rich 形态——无 abortPrefix——**absPath 不传（2026-09-04 用户裁定——通道差异已接受）**：桥无 cwd/磁盘写史感知——传 absPath 会做误导性 dirty 提示——IDE 缓冲为权威）→ `joinWithEol` 恢复行尾 → `fs/write_text_file` 写回——多匹配报错 / replace_all 全部替换 / 空 old / 空 new 错误文本**自动与本地字面一致**（computeEditEntry 抛错即转错误结果——四类命名消息+dirty 分支范围见 NF15.6b）——**零重叠例外注（2026-09-04 §15.2 分支 0 接管）**：单行×单行唯一匹配形态 = **替换**（非插入——T15.32 单行案例随 §15.2 迁移为多行语境——见 §15.2 迁移注）；
+    - 数组：先读**全部涉及文件**的 IDE 缓冲（同文件去重——一次读）→ 逐条 `computeEditEntry`（`opts.abortPrefix = "edit aborted (atomic — no files written): "`、rich:false——同本地 edit-batch；同文件条目按数组序**串行累积**——第二条基于第一条结果）→ 全部通过 → 逐文件写回（判失败 → 零写；写失败 → 按本地 edit-batch 既有原子语义）；
+    - replace_all：单形态带 `replace_all: true` 走 computeEditEntry 的 replace_all 分支（字面替换全部出现——**修复「首个」降级**；LCS 插入规则不适用——与本地一致）；
+  - 路由条件更新：`base === "edit" && (单形态且有 path || Array.isArray(edits))`——数组条目 path 各自读取；
+- **D15.8（工具 id FIFO 配对）**——`toolIds` Map → **FIFO 队列**：
+  - `onToolCall`：push `{ name, id }`（id 仍 `t${++toolSeq}` 唯一递增不变）；
+  - `onToolResult`：按 **name 匹配的最早未消费项**出队——**拒绝/中断路径（2026-09-04 用户裁定——拍法 A——替代「同步消费」）**：实现披露——dispatch 拒绝发生在 onToolCall **之前**（被拒工具从未入队——无条目可消费）；中断/异常按 T-F5 契约**不回调** onToolResult（桥收不到信号）——故采用桥内「**同名同 toolId 先弹出**」隔离：onToolCall push 前弹出同名同 toolId 陈旧条目（模型级 id 每轮从 `call_0` 重置——孤儿+重复 id 场景精确匹配不命中最旧孤儿）——达成同目标「下个同名结果永不配到旧项」——回归用例证明——原「同步消费/跳过 refused 标记」措辞作废——孤儿**不滞留队列**；
+  - `onPermissionRequest`：peek 同名最早项 id（不消费——result 仍要用）；
+  - 保序依据：dispatch B1 已测——并行工具结果回调顺序 = call 顺序（T-TS8/T-TS9）。
+
+**受影响文件**（仅 CLI 仓——桥在 CLI 仓；VS Code 端不受影响——与 id:6 交付批不重叠）：
+- 修改：`thincoder/src/acp/bridge.mjs`（edit 分支重写 + `toolIds`→FIFO）
+- 修改：`thincoder/test/acp.test.mjs`（M2 describe 扩展——新用例）
+
+**测试（T15.21-T15.32——N 正常 / E 错误）**：
+
+| # | 类别 | 输入 | 预期 |
+|---|---|---|---|
+| T15.21 | N | 数组单文件两条——经桥 | IDE 缓冲终态 = 本地语义结果（两处生效）——写回均经 fs/write_text_file |
+| T15.22 | E | 数组某条 not found | 原子——零写——错误含 abort 前缀 |
+| T15.23 | N | replace_all 单形态 2 处 | 全部替换（非首个） |
+| T15.24 | E | 单形态多匹配（无 replace_all） | 报错——文本同本地（matches N times——非静默首替换） |
+| T15.25 | N | 单形态多匹配 + replace_all | 全部字面替换 |
+| T15.26 | N | 并行两个同名工具 | 两 tool_call id 独立——update 各配各（无覆盖错配） |
+| T15.27 | E | 数组空 / 条目缺 path | 报错——同本地措辞 |
+| T15.28 | N | 数组跨文件两条 | 两文件经桥读写——成功 |
+| T15.29 | N | 数组同文件多条（第二条依赖第一条结果） | 串行累积——第二条基于第一条应用后内容 |
+| T15.30 | E | 单形态未匹配 | 错误含「searched:」——与本地一致 |
+| T15.31 | N | 拒绝路径后 onToolResult | 队列不卡——后续工具 update 配对正确 |
+| T15.32 | N | 单表单形态零重叠——old=[A,B] new=[X] 经桥 | IDE 缓冲 = A、B 保留 + X 插其后（与本地判定 1 同判——非替换——**§15.2 迁移注：单行形态已由分支 0 接管 = 替换——本行按迁移注改多行语境——2026-09-04**） |
+
+**验收（AC15.9）**：AC15.9 = T15.21-T15.32 绿（桥数组 / replace_all / 多匹配 / FIFO——三处债修毕）；AC15.10 = 桥与本地错误文本一致性断言（not found / occurrences / 空 old / 空 new——同字符串）；AC15.11 = CLI 父侧 L2 test:full 全绿核销。
+
+**关键决策**：
+- **委派而非重实现**：`computeEditEntry` = 判定单一权威——桥复用（本地已定稿 2026-09-04）——消除双实现漂移（本批三债的根源）——桥内只留「读 IDE 缓冲 → 写回 IDE 缓冲」；
+- **被否备选：方案 2**（数组/replace_all 桥接显式报错引导单形态）——用户拍方案 1——方案 2 留下「同一工具不同场景行为不同」的新裂口——§15「按惯性调用得正确结果」未闭合；
+- **FIFO 而非 turn 前缀**：前缀需 agent 层配合（turn 号传递）——FIFO 桥内自洽——B1 保序已知成立；
+- 核销：TODO「bridge 两🟡（toolIds 碰撞 / edits 回退本地磁盘）」在 AC15.9 后勾销——标注随本批。
+- **通道差异·已接受（2026-09-04 用户裁定——「都按推荐走」）**：①D15.8「拒绝/中断同步消费」→ 桥内「同名同 toolId 先弹出」替代（理由见 D15.8——机制目标「下个同名结果永不配到旧项」已达成并有回归用例证明——选 A：修订文案接收替代机制——不授权改 dispatch.mjs/T-F5——更动大、影响 TUI 冻结语义）；②单形态不传 absPath（桥无磁盘写史——IDE 缓冲权威——传了误导 dirty 提示）；③桥错误结果无 dispatch 层 `[path=…]` 尾缀（NF15.6b 逐字相同范围收窄至四类命名消息 + 非 dirty 分支）。
+
+### 15.2 edit 单行替换判定修正（2026-09-04 · 用户裁 B——消除「单行换单行」的插入坑）
+
+> 状态：**已实现（2026-09-04——双端交付：CLI id:1 clean + VS Code id:2 clean——父侧 L2 核销：CLI 1427/1427、VS Code 1120/1120 全绿——T15.33-36 双端绿 + 迁移清单全落（T15.32 多行/T15.2 tool 级翻转/描述锚断言/出清单追认 2 项：edit-tools T15.6 迁移 + edit-batch 注释）——取代指针已落 §15 四处（2026-09-04 22:50）——**措辞勘正批已核销（id:5——锚②/参数行双端 byte-identical——2026-09-05）+ 接缝统一批已核销（id:7——VS Code 端 ` — `→`; `——双端描述首句 byte-identical——用户拍 1b——2026-09-05）——L2 终核 CLI 1430/VS Code 1129 全绿**）——评审 0🔴 通过（token a3200842——3🟡+3🔵 用户拍处置）**。来源：2026-09-04 三次实证踩坑（AGENT-LOOP §18.13 状态行 / TODO §18.13 条目 / AGENT-LOOP §21 状态行——edit 改行尾段→新行被插入而非替换——均靠 hashline_edit 收尾）——用户问「工具优化不是落地了吗」→ 澄清：edit「单行换单行=插入」是既有保守设计（edit.md 描述明示——防误删）——用户拍 B：工具级改进。
+
+**问题（P15.8）**：edit 零重叠语义下「old_string 恰单行、new_string 恰单行、old≠new」必然零重叠 → 判**插入**（old 保留 + new 追加）——整行替换须共享上下文或改用 hashline_edit——文档状态行/条目行编辑（行尾段改——最高频形态）反复踩——三次实证均靠 hashline_edit 收尾。
+
+**需求（F15.7）**：作为 agent，我希望 edit 在「old 单行 + new 单行 + old 全文唯一匹配」时**直接替换该行**（行数不变）——不再零重叠插入。
+- 边界：仅单行×单行形态——任一侧多行 → 既有 LCS/零重叠插入语义不动（保守意图保留——不扩围）。
+
+**非功能（NF15.7）**：
+- NF15.7a 语义锁定项（各配回归用例）：多行 LCS 保留公共行 / 多匹配 occurrences 报错 / replace_all 字面替换 / 多行零重叠插入——**全部不动**；
+- NF15.7b 双端同语义（§18.11 设计锚为准——CLI/VS Code edit-diff.mjs 各自照抄同一语义）；
+- NF15.7c 描述同步（**评审 #1——逐字定稿**）：CLI `src/tools/edit.md` 首句锚中**旧两句**——①"when no line overlaps, new_string is inserted after old_string (old content stays)"②"Whole-line replacement of one line without shared context is treated as insert — for a replacement, include a shared context line"——**替换为（逐字——两端照抄——VS Code 对应 file.mjs 内嵌描述同改——改动仅两句——其余首句锚文本不动）**：
+  > ①…— when no line overlaps, new_string is inserted after old_string (old content stays) — **except a unique single-line old_string paired with a single-line new_string: that exact line is replaced in place (line count unchanged)**；②**for a multi-line replacement, include a shared context line — for adding a new line use insert_after: a unique single-line old/new pair replaces the line in place; multi-line zero-overlap pairs still insert per the diff rules above**
+  （fail-when-unchanged 锚句 = 上引号内两段英文——T15.10 系描述锚断言目标随本批迁移——**列入 AC15.13 迁移清单**；描述后段既有路由句 "Add a line/entry after a known line → insert_after" 保留不动）**；措辞勘正（2026-09-04 23:10——用户拍「都修」）：edit.md/file.mjs 参数行「zero overlap → new_string inserted after old_string」同步补例外句「a unique single-line old/new pair replaces the line in place」——与锚②同修复批——锚断言覆盖段一并迁移；锚②尾句已收紧（见上——删「replaces, never adds」绝对化——2026-09-04 23:10）**；
+- NF15.7d 零破坏：既有 edit 域断言除迁移项外全绿。
+
+**设计（D15.9）**：
+- **D15.9.1（判定分支 0——单行精确替换）**：computeEditEntry 判定序前插入——`old 单行 && new 单行 && 全文唯一匹配 && new 非空 → 整行替换`（old 行 → new 行——行数不变——EOL 恢复仍由调用方 joinWithEol）——唯一匹配复用既有检查（不新增错误路径——多匹配仍报既有错误——分支 0 不吞）——**次序（评审 #3）：空 new 显式错误（T15.3a——防删除保护）先于分支 0——空串 new 不满足单行×单行条件（splitLines("")=[]——非 [""]——勘正 2026-09-04 id:1 实证）——经既有空 new 显式错误路径拒——单行替换永不成删除**；
+- **D15.9.2（其他形态不变）**：old/new 任一侧多行 → 既有判定序（零重叠插入/LCS）；单行多匹配 → 既有 occurrences 错误；replace_all → 字面全部（不落分支 0）；
+- **D15.9.3（落点）**：CLI `src/tools/edit-diff.mjs`（computeEditEntry 判定序）+ `src/tools/file.mjs`（editTool 壳——单形态前置校验若在壳则放行）+ `src/tools/edit.md`（描述——NF15.7c 新锚）；VS Code `src/tools/edit-diff.mjs` 镜像同构 + **`src/tools/file.mjs`（edit 工具描述段——评审 #2：VS Code 描述 = .mjs 内嵌——无独立 .md——§15 机制注已证）**。
+
+**测试（T15.33-37）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T15.33 | N | 单行 old 唯一匹配 + 单行 new（A 仅一处——A→X） | **替换**——A 消失 X 在位——行数不变——EOL 保留 |
+| T15.34 | E | 单行 old 多出现（A 两处） | 仍报既有 occurrences 错误（分支 0 不吞） |
+| T15.35 | E | 多行 old 零重叠 new（old=[A,B] new=[X,Y]） | 仍插入（回归——旧语义不动） |
+| T15.36 | E | 多行 LCS（old=[A,B] new=[A,X]） | 仍 LCS（回归） |
+| T15.37 | A | 审计核对（交付走查——评审 #4）：computeEditEntry 判定序含分支 0 + T15.33/34 断言双端镜像 | 走查核对记录——回潮由 T15.33 断言失败暴露（防回潮说明——非独立用例） |
+（落点：CLI edit 语义域测试文件——§18.14 拆分后（edit-tools.test.mjs 或 edit-batch 域——实现批以实际为准）；VS Code 镜像同构。**类别图例（评审 #4）：N=正常路径 / E=错误路径与语义回归 / A=防回潮审计说明**。）
+
+**迁移注（§15.1 T15.32 连带——2026-09-04）**：§15.1 T15.32 单行案例（OLD=[A] new=[X]——预期插入）与分支 0 **语义冲突**——分支 0 落地后单行唯一匹配 = 替换——**T15.32 输入迁移为多行语境**（old=[A,B] new=[X]——零重叠插入回归保留——§15.1「单形态零重叠→插入」在**多行形态仍成立**）——实现批按新输入改 §15.1 断言并列出迁移清单（AC15.9 复测）——桥通道经 computeEditEntry 自动继承分支 0（单一权威——无需桥端额外工作）——**桥级单行替换不补独立用例（评审 #5——2026-09-04 用户拍 b——明示间接覆盖成立：桥只调 computeEditEntry——分支 0 在权威判定链内——T15.33 本地断言 + 迁移后 T15.32 多行桥用例已能暴露委派断链）**。
+
+**验收（AC15.12/13）**：AC15.12 = T15.33-37 绿（双端）；AC15.13 = 既有 edit 域断言全绿（零破坏——**迁移清单（评审 #1）：§15.1 T15.32 单行断言 → 多行输入 + T15.10 系描述锚断言目标句 → NF15.7c 新锚**——T15.32/T15.3a/描述锚均列入复测）。**实现批预核补遗（2026-09-04——父侧 grep 实证）：T15.2 tool 级断言（file-tools.test.mjs:399——"零重叠单行→插入（旧行保留）"）将因分支 0 翻转（单行×单行唯一→替换）——属语义迁移项（非零破坏）——实现批迁移并报告；T15.2 单元断言（file-tools.test.mjs:351——applyPatchLines 直测）层不改（分支 0 在 computeEditEntry 判定层——applyPatchLines 纯 diff 语义不动）**。
+
+**关键决策**：
+- **B 而非 A**（A=agent 纪律改用 hashline_edit——零代码）——用户拍 B：高频形态该由工具直接支持——描述同步后 agent 无需记「单行用 hashline」特例；
+- **分支 0 在判定序内**（computeEditEntry 一处）而非壳外：壳/桥/批量 edits 路径自动继承——单一权威；
+- **行为修正口径**：单行×单行唯一匹配从「插入」改「替换」——登记 CHANGELOG（行为修正——修坑非破坏——§15.1 T15.32 迁移为内部一致性变更）；
+- **取代指针（评审 #6）**：§15 旧语义陈述（F15.2 / 判定序 1 / D15.1 锚句——L431/447/459）与 §15.1 T15.32 表行（L605）为历史快照——保留原文——**实现批落地时同步加「——单行×单行唯一匹配由 §15.2 分支 0 修订（替换）」指针**（§15.1 L576 同款先例——文档同步清单随任务书）。
+
+### 15.3 apply_patch 零上下文 hunk 放宽（2026-09-04 · 用户「能不能把工具改得符合直觉」——fast lane——来源：父侧 apply_patch 七微 hunk 双拒实证）
+
+> 状态：**已实现（2026-09-04——双端主批交付：CLI id:3 clean（L1 1427/1427）+ VS Code id:4 clean（L1 1127/1127）——AC15.14/15 核销——T15.18 夹具迁移（双形态）+ 锚断言 4 拷贝字节一致——取代指针已落 §15 D15.6.2/T15.18——措辞勘正修复批（id:6——NF15.8c 锚句末句按「有无 - 行」重写——用户 2026-09-04 23:10 拍「都修」）**已核销（2026-09-05——4 拷贝 byte-identical——锚断言双端绿——L2 终核 CLI 1430/VS Code 1129 全绿）**——评审 0🔴 通过（token e4498dd8——4🟡+2🔵 用户拍处置）**。来源：2026-09-04 apply_patch 用零上下文微 hunk 改 TOOLS.md §15.2 七处——工具拒绝（"0 context line(s)"——裸 @@ hunk 靠上下文行定位——零上下文=空指纹=拒）→ 第三次改单 hunk 整节替换成功——用户问「能不能把工具改得符合直觉」→ 拍板做：零上下文「-A/+X」的删除/替换行本身就是锚——与 edit §15.2 同一哲学（唯一→做——歧义→报错不猜）。
+
+**问题（P15.9）**：apply_patch 裸 @@ hunk 定位仅认上下文行——「改一行」的最小直觉 patch（`@@\n-旧行\n+新行`）被拒——须手工补上下文或改写整节——与 edit 单行×单行被插同为「机器直觉」断裂（§15/§15.2 批的同一问题面）。
+
+**需求（F15.8）**：作为 agent，我希望 apply_patch 的零上下文 hunk（@@ 后直接 -/+ 行——无空格上下文行）**以 - 行序列为锚直接应用**——不再要求 ≥2 上下文行——唯一匹配即改。
+- 边界：仅放宽「**有 - 锚**」的零上下文 hunk（- 行序列 = 删除/替换锚——位置明确）——**纯 + 行零上下文（无锚——插入位置不明）仍拒绝**（报错引导加锚）；多文件头（---/+++）与 /dev/null 新建形态不受影响（既有语义）。
+
+**非功能（NF15.8）**：
+- NF15.8a 歧义不猜：- 行序列多匹配 → 既有 "matches N locations" 类错误（报错引导加上下文——不静默选一）；
+- NF15.8b 带上下文 hunk 逻辑不动（≥2 上下文照旧——含跨 hunk 串行语义 T15.20 回归）；
+- NF15.8c 描述同步（**评审 #3——逐字定稿**）：apply_patch.md（§15 APPLY_PATCH_D15_ANCHOR 句——"…include at least 2 context lines for a unique match"）与 patch.mjs description（若含同句）——**旧句替换为（逐字——两端照抄——VS Code 对应 more-file.mjs apply_patch 工具描述段同改——改动仅该句——描述其余不动）**：
+  > Hunk header "@@" without coordinates is accepted. Coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies. The anchor-free forms require context: a hunk with no removed (-) lines (pure additions) needs at least 2 context lines for a unique match; a zero/one-context hunk with at least one removed (-) line is located by its anchor sequence (context + removed lines, in order) and applies on a unique match.
+  （fail-when-unchanged 锚句 = 上引号英文段——T15.10 系描述锚断言目标随本批迁移——**列入 AC15.15 迁移清单**——与 §15.2 的描述锚迁移同族——prompts.test.mjs——两批串行——第二批以第一批后的实际断言状态为准）；**措辞勘正（2026-09-04 23:10——用户拍「都修」）：锚句末句按「有无 - 行」重写——删「pure-+ (insert) hunks and multi-line forms need at least 2 context lines」与 T15.39（多行 - 锚零上下文接受）的字面互斥——修复批随本批后**；
+- NF15.8d 双端同语义（§18.11——设计锚为准——CLI/VS Code 各自照抄）+ 零破坏（既有 apply_patch 域断言全绿——edit-tools.test.mjs T15.17/T15.20/matches-locations 等回归）。
+
+**设计（D15.10）**：
+- **D15.10.1（锚判定——评审 #4a 放宽统一）**：patch 解析/定位层——裸 @@ hunk 若**上下文行数 < 2 且含 ≥1 个 - 行** → 定位锚 = **hunk 内匹配行序列（空格上下文行 + - 行——按 hunk 内出现序）连续**——全文唯一序列匹配 → 应用（- 后随 + = 替换；- 后无 + = 删除）——**0 上下文与 1 上下文行同待遇**（消非单调：恰 1 上下文行 + - 锚不再被 ≥2 规则拒绝——规则统一为「定位锚 = 上下文行（若有）+ - 行序列——唯一匹配即应用」）——多匹配 → 报错（既有错误通道——提示调整锚）——无匹配 → 既有 not-found 语义；
+- **D15.10.2（不变量）**：上下文行数 ≥2 的 hunk 完全走既有路径（纯上下文匹配——零改动——T15.17/T15.20 回归）；- 行序列匹配 = 行级连续序列相等（- 行之间夹空格上下文行即并入锚序列——按出现序——与 git patch 语义一致）；EOL/原子性/多文件域既有机制不动；
+- **D15.10.3（落点）**：CLI `src/tools/patch.mjs`（解析/定位）+ `src/tools/apply_patch.md`（描述锚句——NF15.8c）+ 测试 `test/edit-tools.test.mjs`（apply_patch 域段——T15.38 系追加——**实现批以实际域文件为准**——§15.2 同款措辞）；VS Code 镜像同构（patch 工具实现/描述/测试——以 VS Code 仓实际文件为准——实现批定位报告）。
+
+**测试（T15.38-44）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T15.38 | N | 零上下文 `@@\n-旧行\n+新行`——- 行全文唯一 | 替换——旧行→新行（行数不变） |
+| T15.39 | N | 零上下文 `@@\n-行A\n-行B\n+新块`（多行删除锚——唯一连续序列） | 块替换——A、B 消失、新块在位（多行 - 锚支持——patch 的 - 行无语义歧义） |
+| T15.40 | E | ①锚序列（含 - 行）多匹配（两处同序列）②纯 + 零上下文（无 - 锚） | ①报错（matches N locations——引导调整锚——不静默选一）②仍拒（位置不明——报错加锚） |
+| T15.41 | E | 带上下文 hunk（≥2——T15.17/T15.20 形态）回归 | 既有路径全绿（零破坏） |
+| T15.42 | N | **恰 1 上下文行 + - 行**（`@@\n 上下文行\n-旧行\n+新行`——锚序列（上下文行+旧行）全文唯一——评审 #4a 非单调消除） | 应用——上下文行保留、旧行→新行（不再被 ≥2 规则拒） |
+| T15.43 | E | 锚序列零匹配（- 行序列全文不存在——评审 #5a） | 既有 not-found 语义（不写——报错） |
+| T15.44 | N | 两个零上下文 - 锚 hunk 串行（后 hunk 的锚 = 前 hunk 应用后新内容——评审 #5b） | 逐个应用——第二 hunk 基于第一 hunk 结果定位（T15.20 同款语义——零上下文形态） |
+（落点：CLI edit-tools.test.mjs（apply_patch 域段——§18.14 拆分后——实现批以实际为准）；VS Code 镜像。）
+
+**验收（AC15.14/15）**：AC15.14 = T15.38-44 绿（双端）；AC15.15 = 既有 apply_patch 域断言全绿（零破坏——**迁移清单（评审 #1）：①T15.18 夹具核对——若其零上下文夹具含 - 行 → 期望从「报错」迁移为「唯一匹配即应用」（或换夹具为仍拒形态：纯 + / 无 - 锚）——§15.2 迁移注同款——迁移项入报告；②T15.10 系描述锚断言目标句 → NF15.8c 新锚（与 §15.2 描述锚迁移重叠——以先交付批后的实际断言状态为准）**）。
+
+**关键决策**：
+- **放宽仅「有 - 锚」形态**：删除/替换行的位置由 - 行自身表达（patch 格式无语义歧义——与 edit 的 old_string「新增意图」歧义不同——edit §15.2 单行限制不移植）——纯 +（插入）必须由上下文定位——插入无锚不可判；
+- **评审 #4a 裁定——放宽统一至 context<2 含 - 锚**（而非仅 0 上下文）：恰 1 上下文行 + - 行的 hunk 若被 ≥2 规则拒绝、其零上下文同胞却接受 = 非单调接受面（模型删掉唯一上下文行反而通过——再造机器直觉断裂）——统一锚 = 上下文行（若有）+ - 行序列——0/1 上下文同待遇——测试 T15.42 锁定；
+- **与 §15.2 同哲学、不同实现层**：唯一→做/歧义→报错——但改的是 patch 定位层（非 edit-diff 判定链——与在跑 §15.2 批零文件域冲突——§15.2 改 edit-diff.mjs——本批改 patch.mjs）；
+- **描述锚迁移重叠提示**：§15.2（edit 锚）与 §15.3（apply_patch 锚）都触 prompts.test.mjs T15.10a 系——两批串行交付——第二批实现时以第一批后的实际断言状态为准（实现批任务书注明）；
+- **行为修正口径**：接受面扩大（原拒绝→现接受）——登记 CHANGELOG（非破坏——无既有合法输入行为改变）；
+- **取代指针（评审 #2）**：§15 D15.6.2「每个无坐标 hunk 都必须含至少 2 行上下文」（L493）与 T15.18 表行为历史快照——保留原文——**实现批落地时同步加「——零上下文/1 上下文含 - 锚形态由 §15.3 放宽（锚序列唯一匹配即应用）」指针**（§15.2 L656 取代指针同款先例——文档同步清单随任务书）。
+
+
+
+
+
