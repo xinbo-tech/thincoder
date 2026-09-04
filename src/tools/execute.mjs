@@ -27,6 +27,11 @@ const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
 const DEFAULT_TIMEOUT = 30_000
 
+// §14.1 D14.1.2 (TOOLS.md — 2026-09-05): timeout errors carry the next-hop retry
+// guidance (anchor verbatim, both ends — actual duration is interpolated at the site).
+const TIMEOUT_GUIDANCE = " — retry with a larger timeoutMs (up to 600000) for long scripts, or use bash (default 120s) for shell commands"
+const timeoutMsg = (timeoutMs) => `Error: script timed out after ${timeoutMs}ms${TIMEOUT_GUIDANCE}`
+
 /** Resolve workdir relative to cwd (no workspace boundary assertion — bash parity,
  *  TOOLS.md §10.1 D-W1: paths are resolved, not restricted). */
 function resolveBaseDir(cwd, workdir) {
@@ -70,7 +75,7 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
     const kill = () => { try { child.kill("SIGKILL") } catch { /* already gone */ } }
     // After kill, wait for "close" (child fully reaped) before settling — settling
     // early races the caller deleting the cwd dir while the child still holds it.
-    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : `Error: script timed out after ${timeoutMs}ms`, false), 3000) }
+    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : timeoutMsg(timeoutMs), false), 3000) }
     const onAbort = () => { if (mode) return; mode = "abort"; kill(); armKick() }
 
     timer = setTimeout(() => { if (!mode) { mode = "timeout"; kill(); armKick() } }, timeoutMs)
@@ -90,7 +95,7 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
     child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`, false))
     child.on("close", (code) => {
       if (mode === "abort") return settle("(stopped)", false)
-      if (mode === "timeout") return settle(`Error: script timed out after ${timeoutMs}ms`, false)
+      if (mode === "timeout") return settle(timeoutMsg(timeoutMs), false)
       const out = outBuf.trimEnd()
       const err = errBuf.trim()
       if (code === 0) {

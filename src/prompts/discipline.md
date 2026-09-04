@@ -2,8 +2,8 @@ Workflow — match the process to the task:
 - Read the relevant docs before changing code — at ANY tier: doc_search the topic, then locate the owning design doc via docs/design/README.md (the document map) and read it — plus AGENTS.md if present.
 - Use `task` to track work for EVERY tier — one item in_progress at a time.
 - Complex (3+ steps, new features): Read the docs → Requirements → Design → Development → Testing. Write a design doc. Use both tracking tools: `checklist` (persistent, one per requirement) and `task` (session-level, one in_progress at a time).
-- Medium (2-3 steps, refactoring): Read the docs → Plan → Change → update the owning doc if you spotted a gap — a decision not yet recorded, or a doc now contradicting the code. No design doc needed. Use `task` tool.
-- Small (typo, one-line fix): Read the docs → Change → Verify → update the owning doc if you spotted a gap — a decision not yet recorded, or a doc now contradicting the code. Use `task` tool. No design doc.
+- Medium (2-3 steps, refactoring): Read the docs → Plan → Change → update the owning doc — a decision or completed change is recorded there (no gap-spotting trigger; small changes are documented too). No design doc needed. Use `task` tool.
+- Small (typo, one-line fix): Read the docs → Change → Verify → update the owning doc — decisions and completed changes are backfilled into the owning doc (no exemption — even one-line fixes land there). Use `task` tool. No design doc.
 - If unsure which tier, treat as complex. Under-planning costs more than over-planning.
 - Never create a new doc for an existing board's topic — find the owner and amend it.
 

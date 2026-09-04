@@ -256,7 +256,7 @@ const WRITE_ANCHOR =
 // §15.3 NF15.8c —— 描述锚（评审 #3 逐字定稿——fail-when-unchanged——T15.10 系断言目标句随本批迁移——两端照抄）
 const APPLY_PATCH_NF158C_ANCHOR =
   'Hunk header "@@" without coordinates is accepted. Coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies. The anchor-free forms require context: a hunk with no removed (-) lines (pure additions) needs at least 2 context lines for a unique match; a zero/one-context hunk with at least one removed (-) line is located by its anchor sequence (context + removed lines, in order) and applies on a unique match.'
-const MUTEX_HINT_ANCHOR = "use either the edits array or the single-form args, not both — split into two calls"
+const MUTEX_HINT_ANCHOR = "a top-level path is allowed (default for entries without their own path)"
 const HASHLINE_FRESH_HINT = "for fresh hashes, re-read the file with hashes=true"
 const TASK_CHECKLIST_ROUTE = "For cross-session / project-level tracking, use checklist"
 const LSP_ROUTE_ANCHOR = "Find files with glob / repo_outline — use lsp for definition / references / diagnostics"
@@ -291,7 +291,7 @@ describe("T15.10b / D15.6.3 — 描述逐字锚（VS Code 内嵌——fail-when-
     const { applyPatchTool } = await import("../src/tools/more-file.mjs")
     assert.ok(applyPatchTool.description.includes(APPLY_PATCH_NF158C_ANCHOR), "§15.3 NF15.8c apply_patch 锚（运行时 .description——源码 \" 转义不影响运行时文本）")
   })
-  it("D15.3#9: edits 互斥错误引导逐字", () => {
+  it("D15.3#9 修订（2026-09-05 用户裁定）: edits 只与顶层 old/new 互斥——顶层 path 合法化锚逐字", () => {
     const fileSrc = readFileSync(join(SRC_DIR, "tools", "file.mjs"), "utf8")
     assert.ok(fileSrc.includes(MUTEX_HINT_ANCHOR), "D15.3#9 互斥引导锚")
   })
@@ -811,5 +811,81 @@ describe("apply_patch 零上下文 - 锚放宽（§15.3 D15.10.1/NF15.8c——T1
     const r = await applyPatchTool.execute({ patch }, ctx())
     assert.match(r, /Patched f\.txt/)
     assert.equal(readFileSync(join(cwd, "f.txt"), "utf8"), "a\nC\nc\n", "两 hunk 依次生效")
+  })
+
+  // ─── §15.3a 文件头 +++ 容缺（TOOLS.md §15.3a——P15.10——2026-09-05 用户裁定「符合模型直觉」——CLI parity）───
+
+  it("P15.10a: 容缺头——`--- a/` 后直接跟 hunk → 同路径应用（单文件自然形态）", async () => {
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "one\ntwo\n", "utf8")
+    const patch = `--- a/a.txt
+@@
+-one
++ONE
+ two
+`
+    const r = await applyPatchTool.execute({ patch }, ctx())
+    assert.match(r, /Patched a\.txt/, r)
+    assert.equal(readFileSync(join(cwd, "a.txt"), "utf8"), "ONE\ntwo\n", "同路径应用")
+  })
+
+  it("P15.10b: 多文件混合——完整头（+++ 配对）+ 容缺头同补丁", async () => {
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "one\n", "utf8")
+    writeFileSync(join(cwd, "b.txt"), "two\n", "utf8")
+    const patch = `--- a/a.txt
++++ b/a.txt
+@@
+-one
++ONE
+--- b/b.txt
+@@
+-two
++TWO
+`
+    const r = await applyPatchTool.execute({ patch }, ctx())
+    assert.match(r, /Patched a\.txt/, r)
+    assert.match(r, /Patched b\.txt/, r)
+    assert.equal(readFileSync(join(cwd, "a.txt"), "utf8"), "ONE\n", "完整头文件已改")
+    assert.equal(readFileSync(join(cwd, "b.txt"), "utf8"), "TWO\n", "容缺头文件已改")
+  })
+
+  it("P15.10c: `--- /dev/null` 缺 +++ → 特报（新文件名不可推导——信息真缺失仍拒）", async () => {
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    const r = await applyPatchTool.execute({ patch: "--- /dev/null\n@@\n+hello\n" }, ctx())
+    assert.match(r, /Error: "--- \/dev\/null" needs a "\+\+\+ b\/<path>" line naming the new file/, r)
+    assert.ok(!existsSync(join(cwd, "hello")), "未创建任何文件")
+  })
+
+  it("P15.10d: 删行内容 `-- x`（patch 文本 `--- x`）不误断为文件头——裸 @@ 内正常消费（边界锁）", async () => {
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    writeFileSync(join(cwd, "b.txt"), "A\n-- tgt\nC\n", "utf8")
+    const patch = `--- b/b.txt
+@@
+ A
+--- tgt
+ C
+`
+    const r = await applyPatchTool.execute({ patch }, ctx())
+    assert.match(r, /Patched b\.txt/, r)
+    assert.equal(readFileSync(join(cwd, "b.txt"), "utf8"), "A\nC\n", "-- tgt 行被删除（而非被当文件头）")
+  })
+
+  it("P15.10e: 空段头（头后无 hunk）过滤——不虚报、不触发无谓读；纯空段 → No file changes", async () => {
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "one\n", "utf8")
+    const patch = `--- a/a.txt
++++ b/a.txt
+@@
+-one
++ONE
+--- b/b.txt
+`
+    const r = await applyPatchTool.execute({ patch }, ctx())
+    assert.match(r, /Patched a\.txt/, r)
+    assert.equal(readFileSync(join(cwd, "a.txt"), "utf8"), "ONE\n", "真实 hunk 已应用")
+    assert.ok(!existsSync(join(cwd, "b.txt")), "空段文件未创建（不被无谓读取）")
+    const r2 = await applyPatchTool.execute({ patch: "--- a/ghost.txt\n" }, ctx())
+    assert.match(r2, /Error: No file changes found/, r2)
   })
 })

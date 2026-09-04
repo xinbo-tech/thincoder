@@ -10,6 +10,28 @@ import { dirname } from "node:path"
 import { resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, stripBom, lfOffsetToRaw, detectFileEol, joinWithEol, majorityEol, findCandidates, FFFD_WARNING, gitDiffOne, hashLine, refreshMarkdownPreview } from "./shared.mjs"
 import { applyRegion, EMPTY_NEW_REASON } from "./edit-diff.mjs"
 
+/**
+ * F3/§14.1 — similar-lines candidate block for a not-found old_string (§14 F3, extended
+ * to the batch channel by §14.1 D14.1.1 — CLI parity: the CLI's shared computeEditEntry
+ * appends candidates on every not-found, single form and batch alike).
+ * Scoring: LCS line-level, top 3, score ≥ 0.5 (findCandidates); multi-line old_string
+ * scores only its first line (header marks it). Zero candidates → "" (whole block
+ * omitted — the searched:/grep lines stay). Appended AFTER the searched line — the
+ * "Error:"/searched prefixes stay untouched (N-14.1a).
+ */
+function similarLinesBlock(lines, oldString) {
+  const cands = findCandidates(lines, oldString)
+  if (cands.length === 0) return ""
+  const header = oldString.includes("\n")
+    ? `\n  similar lines (old_string line 1: "${oldString.split("\n")[0].slice(0, 80)}"):`
+    : "\n  similar lines:"
+  return header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
+}
+
+// D15.3#9 修订（2026-09-05 用户裁定——CLI edit-diff EDIT_ARGS_MUTEX 同句）：edits 只与顶层
+// old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认）。
+const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry"
+
 export const readTool = {
   name: "read",
   readonly: true,
@@ -117,12 +139,12 @@ export const editTool = {
     "- old_string (required): Current content of the region — must match exactly once in the file; for a change that keeps a line, include the unchanged neighbor line in BOTH old_string and new_string\n" +
     "- new_string (required): Desired result of the region — diffed against old_string (shared lines kept; zero overlap → new_string inserted after old_string — a unique single-line old/new pair replaces the line in place)\n" +
     "- replace_all: Replace every occurrence literally (default false) — the insert rule does not apply\n" +
-    "- edits: 批量形态（CLI parity）——同文件多处修改 → 一次调用原子完成（同文件条目串行应用，各基于前一条结果）；多文件独立修改 → 同一 `edits` 数组多条目（先全量检查，任一失败全不写）——prefer one batched call over N single edits。与 path/old_string/new_string 互斥。\n" +
+    "- edits: 批量形态（CLI parity）——同文件多处修改 → 一次调用原子完成（同文件条目串行应用，各基于前一条结果）；多文件独立修改 → 同一 `edits` 数组多条目（先全量检查，任一失败全不写）——prefer one batched call over N single edits。与顶层 old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认——条目自带 path 优先）。\n" +
     "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed",
   parameters: {
     type: "object",
     properties: {
-      path: { type: "string", description: "File path (alias: filePath)" },
+      path: { type: "string", description: "File path (single form: required; with the edits array: optional top-level default for entries without their own path) (alias: filePath)" },
       filePath: { type: "string", description: "Alias for path" },
       old_string: { type: "string", description: "Exact text to replace" },
       new_string: { type: "string", description: "Replacement text" },
@@ -130,7 +152,7 @@ export const editTool = {
       edits: {
         type: "array",
         description:
-          "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. Mutually exclusive with path/old_string/new_string.",
+          "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path (or filePath) is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string — provide each change's old/new inside its edits entry.",
         items: {
           type: "object",
           properties: {
@@ -139,7 +161,7 @@ export const editTool = {
             new_string: { type: "string" },
             replace_all: { type: "boolean" },
           },
-          required: ["path", "old_string", "new_string"],
+          required: ["old_string", "new_string"],
         },
       },
     },
@@ -150,7 +172,14 @@ export const editTool = {
   // 完全未记入 _touchedFiles（verify 文件清单 / lint "最近修改文件" 全漏）。照 CLI
   // file.mjs:239 实现；filePath 别名一并处理（否则 filePath-only 写入绕过工程门禁）。
   touchedPaths(args) {
-    if (args.edits) return args.edits.map((e) => e.path).filter(Boolean)
+    // 2026-09-05 用户裁定（CLI parity）：顶层 path/filePath = 批默认——仅当有条目缺 path 时
+    // 计入（条目全带 path 时顶层不实际使用——不虚报进 _touchedFiles）
+    if (args.edits) {
+      const out = args.edits.map((e) => e.path).filter(Boolean)
+      const top = args.path || args.filePath
+      if (top && args.edits.some((e) => !e.path)) out.push(top)
+      return out
+    }
     return args.path || args.filePath ? [args.path || args.filePath] : []
   },
   async execute(args, ctx) {
@@ -159,8 +188,8 @@ export const editTool = {
       if (!Array.isArray(args.edits) || args.edits.length === 0) {
         return "Error: edits must be a non-empty array of {path, old_string, new_string}"
       }
-      if (args.path || args.old_string !== undefined || args.new_string !== undefined) {
-        return "Error: edits array is mutually exclusive with path/old_string/new_string — use either the edits array or the single-form args, not both — split into two calls"
+      if (args.old_string !== undefined || args.new_string !== undefined) {
+        return "Error: " + EDIT_MUTEX_TEXT
       }
       // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
       // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑
@@ -172,19 +201,21 @@ export const editTool = {
         // #1（2026-09-02 评审修复）：批量形态类型校验补齐——非字符串 old_string/new_string
         // （含缺省 undefined）之前在 normalizeEOL 抛 TypeError 而非错误消息；逐条返回与
         // 单条路径形态同款的诊断消息（单条形态有 typeof 校验，批量形态缺）。
-        if (!e || typeof e !== "object") return "Error: each edit must be an object with {path, old_string, new_string}"
-        if (!e.path) return "Error: each edit must have a path"
-        if (!e.old_string) return `Error: edit for ${e.path}: old_string must not be empty`
-        if (typeof e.old_string !== "string") return `Error: edit for ${e.path}: old_string must be a string`
-        if (typeof e.new_string !== "string") return `Error: edit for ${e.path}: new_string must be a string`
-        const abs = resolvePath(e.path, ctx.cwd)
+        if (!e || typeof e !== "object") return "Error: each edit must be an object with {old_string, new_string} — path optional (per entry or top-level)"
+        // 2026-09-05 用户裁定（CLI parity）：条目 path 优先；缺省回退顶层 path/filePath
+        const p = e.path || args.path || args.filePath
+        if (!p) return "Error: each edit must have a path — give each entry its own path or pass a top-level path"
+        if (!e.old_string) return `Error: edit for ${p}: old_string must not be empty`
+        if (typeof e.old_string !== "string") return `Error: edit for ${p}: old_string must be a string`
+        if (typeof e.new_string !== "string") return `Error: edit for ${p}: new_string must be a string`
+        const abs = resolvePath(p, ctx.cwd)
         let g = groups.get(abs)
         if (!g) {
           const doc = getOpenDoc(abs)
           const rawText = doc ? doc.getText() : await readFile(abs, "utf8").catch(() => null)
-          if (rawText === null) return `Error: edit aborted (atomic — no files written): cannot read ${e.path}`
-          if (doc?.isDirty) return `Error: edit aborted (atomic — no files written): ${e.path} has unsaved changes in the editor`
-          g = { abs, path: e.path, doc, rawText, fileEol: detectFileEol(rawText), text: normalizeEOL(rawText), edits: [], rawReplaceAll: false }
+          if (rawText === null) return `Error: edit aborted (atomic — no files written): cannot read ${p}`
+          if (doc?.isDirty) return `Error: edit aborted (atomic — no files written): ${p} has unsaved changes in the editor`
+          g = { abs, path: p, doc, rawText, fileEol: detectFileEol(rawText), text: normalizeEOL(rawText), edits: [], rawReplaceAll: false }
           groups.set(abs, g)
         }
         g.edits.push(e)
@@ -196,8 +227,11 @@ export const editTool = {
           const newS = normalizeEOL(e.new_string)
           const count = g.text.split(oldS).length - 1
           if (count === 0) {
+            // §14.1 D14.1.1 (2026-09-05): batch channel mirrors the single-form F3 block —
+            // candidates appended after the searched line, zero candidates → block omitted.
             return `Error: edit aborted (atomic — no files written): old_string not found in ${g.path}\n` +
-              `  searched: "${oldS.slice(0, 100).split("\n")[0]}${oldS.length > 100 ? "…" : ""}" — use grep to locate the actual content`
+              `  searched: "${oldS.slice(0, 100).split("\n")[0]}${oldS.length > 100 ? "…" : ""}" — use grep to locate the actual content` +
+              similarLinesBlock(g.text.split("\n"), oldS)
           }
           if (!e.replace_all && count > 1) {
             return `Error: edit aborted (atomic — no files written): old_string matches ${count} times in ${g.path}; ` +
@@ -308,14 +342,7 @@ export const editTool = {
       // Similarity candidates (LCS, line-level, top 3, score ≥ 0.5) — turns the
       // "not found" black box into a pointer at the most likely intended line.
       // Multi-line old_string: only its first line is scored (marked accordingly). CLI parity.
-      const cands = findCandidates(text.split("\n"), old_string)
-      let candText = ""
-      if (cands.length > 0) {
-        const header = old_string.includes("\n")
-          ? `\n  similar lines (old_string line 1: "${old_string.split("\n")[0].slice(0, 80)}"):`
-          : "\n  similar lines:"
-        candText = header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
-      }
+      const candText = similarLinesBlock(text.split("\n"), old_string)
       // §14 D-TF2（B——2026-09-04）：not found 结果补 grep 定位建议（英文逐字——与 CLI edit-batch/file.mjs 同句）——
       // 模型失败后先 grep 定位实际内容，不盲目重试；candidates/CRLF 分支零改（NF-TF）。
       const preview = old_string.slice(0, 100).split("\n")[0]

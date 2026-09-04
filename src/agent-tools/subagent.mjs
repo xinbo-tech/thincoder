@@ -79,9 +79,16 @@ export function modeRoleField(engineering) {
 /**
  * Effective subagent model override for a role (CLI parity):
  * priority — subagent tool `model` arg > config.agent.subagentModels[role] > config.agent.subagentModel > null (inherit parent).
+ * `default` alias (2026-09-05 — ARCHITECTURE.md L241): a literal "default" at the
+ * ARGUMENT level (matched after toLowerCase — "DEFAULT"/"Default" alike) means
+ * "parameter-level not specified" — equivalent to omitting the parameter or
+ * passing "" — so the default priority chain applies (type-level > global >
+ * inherit parent). Other single-segment values pass through unchanged. Chain
+ * values holding the literal are returned as-is from their chain position here;
+ * resolveChildProvider maps a final literal to the parent provider (chain's end).
  */
 export function effectiveSubagentModel(parent, role, modelArg) {
-  if (modelArg) return modelArg
+  if (modelArg && String(modelArg).toLowerCase() !== "default") return modelArg
   const cfg = parent.config?.agent ?? {}
   return cfg.subagentModels?.[role] ?? cfg.subagentModel ?? null
 }
@@ -93,7 +100,17 @@ export function effectiveSubagentModel(parent, role, modelArg) {
  * Keys come from config.json only (env vars are not a key source).
  */
 export function resolveChildProvider(parent, modelArg) {
-  if (!modelArg) return { ...parent._provider }
+  // `default` alias (2026-09-05 — ARCHITECTURE.md L241): a literal "default"
+  // (case-insensitive) reaching the resolver — the tool arg, or a config chain
+  // value (subagentModels[role] / subagentModel) holding the literal — resolves
+  // to the parent provider (the chain's last level). A literal never becomes a
+  // model name, so specForModel is never called with "default". Deliberate
+  // layering asymmetry: the ARG-level literal falls through the priority chain
+  // (effectiveSubagentModel — type-level > global > inherit parent), but a
+  // CHAIN-LEVEL literal returned as the chain's result ends the chain here —
+  // e.g. subagentModels[role]="default" with a real global model still yields
+  // the parent provider (no fall-through to the global level).
+  if (!modelArg || String(modelArg).toLowerCase() === "default") return { ...parent._provider }
   const providers = parent.config?.providersList ?? []
   const withKey = (p) => (p.apiKey?.trim() ? { ...p, apiKey: p.apiKey.trim() } : { ...p })
   if (modelArg.includes(":")) {
@@ -180,7 +197,7 @@ export const subagentTool = {
       action: { type: "string", enum: ["spawn", "check", "status", "cancel", "escalate"], description: "Which action of the subagent tool family to run (default: spawn). spawn = run a new sub-agent; check = fetch an async result (BLOCKS until the target settles; n = 1-based read counter required, id optional); status = non-blocking progress query (id optional — running entries carry role/model/elapsedSec/turn/maxTurns + the §19.5.6 touched-files summary touchedFiles/touchedMore/touched; queued entries carry touched \"—（未启动）\"); cancel = STOP one background async subagent (id required — targeted abort; queued targets are dequeued); escalate = fly in a stronger model for hard implementation (task required, model optional)." },
       task: { type: "string", description: "Task description (required for spawn and escalate). For spawn: self-contained — the sub-agent has no conversation context. For escalate: goal, constraints, entry files, acceptance criteria." },
       role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role (action:'spawn' only) — see the tool description for the role capability matrix. Exact spelling required." },
-      model: { type: "string", description: "(spawn) Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModel config, then the parent's provider. Useful for offloading heavy work to a cheaper model. (escalate) The consult candidate to fly in as 'provider:model' — default = the first consult model." },
+      model: { type: "string", description: "(spawn) Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModels[role] (type-level), then the agent.subagentModel config, then the parent's provider — pass \"default\" to explicitly inherit the default model — equivalent to omitting the parameter. Useful for offloading heavy work to a cheaper model. (escalate) The consult candidate to fly in as 'provider:model' — default = the first consult model." },
       designToken: { type: "string", description: "Required when role='eng-coder' (spawn): the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder' (spawn): the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
       async: { type: "boolean", description: "(spawn) true = spawn without waiting — returns {id, status} immediately, fetch results later via action:'check' (peek without blocking via action:'status'; stop via action:'cancel'). Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },

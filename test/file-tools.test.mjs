@@ -123,6 +123,16 @@ describe("file tools — batch edits validation + touchedPaths + apply_patch ato
     assert.deepStrictEqual(
       editTool.touchedPaths({ edits: [{ path: "a.txt" }, { path: "b.txt" }, { old_string: "x" }] }),
       ["a.txt", "b.txt"], "edits 数组逐条映射，缺 path 条目过滤")
+    // 2026-09-05 用户裁定：顶层 path = 缺 path 条目的默认——计入 touchedPaths（条目全带 path 时不虚报）
+    assert.deepStrictEqual(
+      editTool.touchedPaths({ path: "top.txt", edits: [{ old_string: "x" }, { path: "b.txt" }] }),
+      ["b.txt", "top.txt"], "有缺 path 条目 → 顶层计入")
+    assert.deepStrictEqual(
+      editTool.touchedPaths({ path: "top.txt", edits: [{ path: "a.txt" }] }),
+      ["a.txt"], "条目全带 path → 顶层不虚报")
+    assert.deepStrictEqual(
+      editTool.touchedPaths({ filePath: "top2.txt", edits: [{ old_string: "x" }] }),
+      ["top2.txt"], "filePath 别名同样作为默认计入")
     const patch = `--- a/a.txt
 +++ b/a.txt
 @@ -1 +1 @@

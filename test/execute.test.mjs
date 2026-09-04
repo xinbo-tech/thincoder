@@ -121,7 +121,23 @@ describe("execute — error handling and limits", () => {
     assert(out.includes("Error"))
   })
 
-  it("caps timeoutMs at 60s", async () => {
+  it("T14.1.4: timeout error carries the retry guidance (larger timeoutMs up to 600000 / bash 120s)", async () => {
+    const out = await run("while (true) {}", { timeoutMs: 200 })
+    assert.ok(out.includes("script timed out after 200ms"), "actual duration preserved: " + out)
+    assert.ok(
+      out.includes("retry with a larger timeoutMs (up to 600000) for long scripts, or use bash (default 120s) for shell commands"),
+      "T14.1.4: guidance sentence appended: " + out,
+    )
+  })
+
+  it("T14.1.5: success / other-error outputs carry no timeout guidance (append-only, zero drift)", async () => {
+    assert.equal(await run('console.log("ok")'), "ok", "success output unchanged")
+    const err = await run('throw new Error("boom")')
+    assert.ok(err.includes("Error: boom"))
+    assert.ok(!err.includes("retry with a larger timeoutMs"), "runtime error unchanged: " + err)
+  })
+
+  it("accepts an oversized timeoutMs (clamped at 600000/600s) without error", async () => {
     const out = await run('console.log("ok")', { timeoutMs: 999_999_999 })
     assert.equal(out, "ok")
   })

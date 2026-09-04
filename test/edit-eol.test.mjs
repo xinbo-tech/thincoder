@@ -247,7 +247,7 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     assert.ok(readFileSync(join(cwd, "a.txt"), "utf8").includes("const A = 1"), "a.txt 未被写（原子回滚）")
   })
 
-  it("与 path/old_string/new_string 互斥", async () => {
+  it("与顶层 old_string/new_string 互斥（2026-09-05 用户裁定：path 放行、old/new 仍互斥）", async () => {
     const { editTool } = await import("../src/tools/file.mjs")
     writeFileSync(join(cwd, "a.txt"), "x\n", "utf8")
     const r = await editTool.execute({
@@ -257,6 +257,47 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
       edits: [{ path: "a.txt", old_string: "x", new_string: "y" }],
     }, { cwd })
     assert.match(r, /mutually exclusive/)
+  })
+
+  it("顶层 path + edits（条目无 path）：顶层为默认——同文件串行生效（2026-09-05 用户裁定）", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "const A = 1\nconst B = 2\n", "utf8")
+    const r = await editTool.execute({
+      path: "a.txt",
+      edits: [
+        { old_string: "const A = 1", new_string: "const A = 10" },
+        { old_string: "const B = 2", new_string: "const B = 20" },
+      ],
+    }, { cwd })
+    assert.equal((r.match(/Replaced 1 occurrence\(s\) in a\.txt/g) || []).length, 2, "两条都回显")
+    assert.ok(readFileSync(join(cwd, "a.txt"), "utf8").includes("const A = 10"), "第一条生效（顶层默认）")
+    assert.ok(readFileSync(join(cwd, "a.txt"), "utf8").includes("const B = 20"), "第二条生效（串行累积）")
+  })
+
+  it("条目自带 path 覆盖顶层 path（2026-09-05 用户裁定）", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "const A = 1\n", "utf8")
+    writeFileSync(join(cwd, "b.txt"), "const B = 2\n", "utf8")
+    const r = await editTool.execute({
+      path: "a.txt",
+      edits: [
+        { path: "b.txt", old_string: "const B = 2", new_string: "const B = 20" },
+        { old_string: "const A = 1", new_string: "const A = 10" },
+      ],
+    }, { cwd })
+    assert.match(r, /Replaced 1 occurrence\(s\) in a\.txt/)
+    assert.match(r, /Replaced 1 occurrence\(s\) in b\.txt/)
+    assert.ok(readFileSync(join(cwd, "a.txt"), "utf8").includes("const A = 10"), "a.txt 已改（顶层）")
+    assert.ok(readFileSync(join(cwd, "b.txt"), "utf8").includes("const B = 20"), "b.txt 已改（条目优先）")
+  })
+
+  it("条目与顶层皆无 path → 路径错误（文本补顶层选项）", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "x\n", "utf8")
+    const r = await editTool.execute({
+      edits: [{ old_string: "x", new_string: "y" }],
+    }, { cwd })
+    assert.match(r, /each edit must have a path — give each entry its own path or pass a top-level path/)
   })
 
   it("同文件多条串行累积（编辑器路径）：第一条变长，第二条仍精确命中（2026-09-01 缺陷修复）", async () => {
@@ -596,6 +637,36 @@ describe("edit tools — EOL semantics + candidates + encoding probe (EDIT-TOOL-
     assert.match(r, /old_string line 1:/)
     const candRows = r.match(/^ {4}L\d+: /gm) || []
     assert.equal(candRows.length, 3, "top 3 cap: " + r)
+  })
+
+  it("T14.1.1: single-line old not-found — searched prefix untouched, similar lines top-3 appended after it (§14.1 D14.1.1)", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "f.mjs"), "const timeout = 5000\nfunction start() {\n}\n")
+    const r = await editTool.execute({ path: "f.mjs", old_string: "const timeout = 6000", new_string: "x" }, ctx())
+    assert.match(r, /old_string not found/)
+    const searched = `  searched: "const timeout = 6000" — use grep to locate the actual content`
+    assert.ok(r.includes(searched), "N-14.1a: searched: prefix (with grep suggestion) unchanged: " + r)
+    const sim = "  similar lines:"
+    const iSearch = r.indexOf(searched)
+    const iSim = r.indexOf(sim)
+    assert.ok(iSearch >= 0 && iSim > iSearch, "similar lines appended AFTER the searched line: " + r)
+    assert.match(r, /\n  similar lines:\n    L1: const timeout = 5000 \(\d+%\)/)
+    // batch channel (§14.1 D14.1.1 — CLI parity: the shared not-found error appends
+    // candidates in batch edits too, single-line entries included)
+    const rb = await editTool.execute({ edits: [{ path: "f.mjs", old_string: "const timeout = 6000", new_string: "x" }] }, ctx())
+    assert.match(rb, /edit aborted \(atomic — no files written\): old_string not found/)
+    const bSearch = rb.indexOf(`  searched: "const timeout = 6000" — use grep to locate the actual content`)
+    const bSim = rb.indexOf("\n  similar lines:\n    L1: const timeout = 5000")
+    assert.ok(bSearch >= 0 && bSim > bSearch, "batch not-found carries searched + similar lines after it: " + rb)
+  })
+
+  it("T14.1.6: single-line old not-found with no near lines — similar lines block omitted, searched/grep lines kept", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "f.txt"), "alpha\nbeta\ngamma\n")
+    const r = await editTool.execute({ path: "f.txt", old_string: "singular far-fetched needle", new_string: "x" }, ctx())
+    assert.match(r, /old_string not found/)
+    assert.ok(!r.includes("similar lines"), "zero candidates → whole block omitted: " + r)
+    assert.ok(r.includes("searched:") && r.includes("— use grep to locate the actual content"), "searched + grep guidance kept: " + r)
   })
 
   it("F4: hashline_edit on file containing U+FFFD warns but still executes", async () => {

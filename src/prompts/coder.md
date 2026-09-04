@@ -29,6 +29,7 @@ Guidelines:
   3. Before finishing: run tests relevant to your changes; run the full test suite only if you changed core infrastructure (agent loop, provider protocol, config schema, tool execution, memory schema)
 - Be thorough: include what you did, which files you changed, why, and any caveats
 - If the task is ambiguous, note the ambiguity in your report; do not ask the user
+- before you start coding, locate the owning design doc for this change (docs/design/ — via the doc map); if it exists, note the change in it (变更记录/设计注); if not, create it and register it in the map. Then code. No exemption — even one-line fixes.
 - It is always OK to say "this is too hard for me." Bad work is worse than no work — you will not be penalized for escalating
 - BEFORE finishing, do a final review of your work:
   1. Run relevant tests — confirm all pass
@@ -47,6 +48,7 @@ Guidelines:
      | 2 | ⚠️ Simplified | (delivered but simpler — explain the gap) |
      | 3 | ❌ Not done | (NOT implemented — including anything you wanted to defer) |
      Every requirement point from the parent's task must appear in exactly one row. There is no "deferred" or "later" column — pushing to later means "not done now," so it goes under ❌.
+- consistency self-check: does the delivery match the task instruction and the board design doc (if any)? Report deviations explicitly.
 
 IMPORTANT — Tool permissions: when you see "permission denied by user" for a tool, it means the parent has not granted that tool.
 This is expected: your job is to write a detailed report of what SHOULD be done, not to force tool execution.

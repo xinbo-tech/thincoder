@@ -96,13 +96,26 @@ export function parsePatch(patch) {
     if (line.startsWith("--- ")) {
       const oldPath = line.slice(4).trim()
       const plus = lines[i + 1]
-      if (!plus?.startsWith("+++ ")) throw new Error(`Malformed patch: expected "+++" after "${line}"`)
-      const newPath = plus.slice(4).trim()
-      if (newPath === "/dev/null") throw new Error("Deleting files via patch is not supported — use the delete tool")
-      cur = { path: stripPrefix(newPath), isNew: oldPath === "/dev/null", hunks: [] }
-      files.push(cur)
-      i += 2
-      continue
+      if (plus?.startsWith("+++ ")) {
+        const newPath = plus.slice(4).trim()
+        if (newPath === "/dev/null") throw new Error("Deleting files via patch is not supported — use the delete tool")
+        cur = { path: stripPrefix(newPath), isNew: oldPath === "/dev/null", hunks: [] }
+        files.push(cur)
+        i += 2
+        continue
+      }
+      // P15.10（2026-09-05 用户裁定——「符合模型直觉」——CLI patch.mjs 同构）：容缺头——
+      // `+++ b/<path>` 配对行省略——`--- a/<path>`（或 b/ 前缀）后直接跟 hunk = 对同路径的修改。
+      if (/^[ab]\//.test(oldPath)) {
+        cur = { path: stripPrefix(oldPath), isNew: false, hunks: [] }
+        files.push(cur)
+        i += 1
+        continue
+      }
+      if (oldPath === "/dev/null") {
+        throw new Error(`"--- /dev/null" needs a "+++ b/<path>" line naming the new file — the --- side does not carry the file name`)
+      }
+      throw new Error(`Malformed patch: expected "+++" line after "${line}"`)
     }
     if (line.startsWith("@@")) {
       if (!cur) throw new Error("Malformed patch: hunk header before any file header")
@@ -120,12 +133,12 @@ export function parsePatch(patch) {
         let contextCount = 0
         while (i < lines.length) {
           const hl = lines[i]
-          // Hunk boundaries: next @@ header, or a next-file "--- " header (its
-          // "+++ " pair is what makes it a header — a removed line whose content
-          // begins with "-- " reads as "--- x" and must NOT break the body).
+          // Hunk boundaries: next @@ header, or a next-file "--- " header.
           // An empty line is the trailing split artifact, never a body line
           // (diff lines always carry a tag char) — stop there too.
-          if (hl === "" || hl.startsWith("@@") || (hl.startsWith("--- ") && lines[i + 1]?.startsWith("+++ "))) break
+          // isFileHeader（P15.10——2026-09-05）：完整头（后随 +++）与容缺头（a//b/ 前缀）
+          // 都断；其他 "--- x" = 普通删行内容（行首标记 - + 内容 "-- x"）——不得误断 hunk 体。
+          if (hl === "" || hl.startsWith("@@") || isFileHeader(hl, lines[i + 1])) break
           if (hl.startsWith("\\")) { i++; continue } // "\ No newline at end of file"
           const tag = hl === "" ? " " : hl[0]
           const text = hl === "" ? "" : hl.slice(1)
@@ -166,8 +179,23 @@ export function parsePatch(patch) {
     }
     i++
   }
-  if (files.length === 0) throw new Error("No file changes found in patch (need --- / +++ headers)")
-  return files
+  // P15.10：空段头（头后无任何 hunk）过滤——不虚报 touchedPaths、不触发无谓读
+  const withHunks = files.filter((f) => f.hunks.length > 0)
+  if (withHunks.length === 0) throw new Error("No file changes found in patch (need --- / +++ headers)")
+  return withHunks
+}
+
+/**
+ * P15.10（2026-09-05 用户裁定——「符合模型直觉」）：文件头判定——
+ * 完整头（`--- x` 后随 `+++ `）任意老路径形态均认（git 规范）；
+ * 容缺头（`+++ b/<path>` 配对行省略——模型单文件补丁自然形态）仅认 a//b/ 前缀——
+ * newPath 推导 = oldPath；`/dev/null` 容缺仍拒（新文件名从 --- 侧不可推导——parsePatch 内特报）；
+ * 其他 `--- x` = 普通删行内容——不是文件头——hunk 体不得误断。
+ */
+function isFileHeader(line, nextLine) {
+  if (!line.startsWith("--- ")) return false
+  if (nextLine?.startsWith("+++ ")) return true
+  return /^[ab]\//.test(line.slice(4).trim())
 }
 
 /** Anchor fragment for coordless-hunk error text (D15.6.1): the first context
@@ -219,7 +247,7 @@ export const applyPatchTool = {
   description:
     "Apply a unified diff to one or more files, atomically: if any hunk fails to apply, nothing is written. Use for multi-file changes. For single-file edits, edit is simpler; for full rewrites, write is simpler.\n" +
     "Parameters:\n" +
-    "- patch (required): Unified diff text — may span multiple files (multiple --- / +++ header pairs, including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks。场景引导：一次新建多个文件 / 整文件替换 / 统一 diff 形态\n" +
+    "- patch (required): Unified diff text — may span multiple files (multiple --- / +++ header pairs, including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks。The +++ b/<path> pair may be omitted for existing files — a lone --- a/<path> (or --- b/<path>) header followed directly by hunks applies to that path (new files still need --- /dev/null + +++ b/<path>)。场景引导：一次新建多个文件 / 整文件替换 / 统一 diff 形态\n" +
     "- Hunk header \"@@\" without coordinates is accepted. Coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies. The anchor-free forms require context: a hunk with no removed (-) lines (pure additions) needs at least 2 context lines for a unique match; a zero/one-context hunk with at least one removed (-) line is located by its anchor sequence (context + removed lines, in order) and applies on a unique match.\n" +
     "Returns `Patched <path> (created|modified)` per file.",
   parameters: {

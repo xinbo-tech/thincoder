@@ -743,17 +743,17 @@ describe("discipline.md: read/update docs embedded in Workflow arrows (no standa
     assert.ok(complex.includes("Read the docs → Requirements → Design → Development → Testing"), "Complex 箭头完整")
     assert.ok(!complex.includes("update the owning doc"), "Complex 层不含 update the owning doc")
 
-    // Medium 层箭头：Read the docs → Plan → Change → update the owning doc if you spotted a gap
+    // Medium 层箭头：Read the docs → Plan → Change → update the owning doc（D-N1.5 强触发——无 gap-spotting 触发词）
     const medium = lines.find((l) => /Medium \(2-3 steps/.test(l.trim()))
     assert.ok(medium, "Medium 层存在")
     assert.ok(medium.includes("Read the docs → Plan → Change"), "Medium 箭头含 Read the docs → Plan → Change")
-    assert.ok(medium.includes("update the owning doc if you spotted a gap"), "Medium 箭头含 update the owning doc if you spotted a gap")
+    assert.ok(medium.includes("update the owning doc — a decision or completed change is recorded there"), "Medium 箭头含 D-N1.5 锚（update the owning doc — a decision or completed change is recorded there）")
 
-    // Small 层箭头：Read the docs → Change → Verify → update the owning doc if you spotted a gap
+    // Small 层箭头：Read the docs → Change → Verify → update the owning doc（D-N1.5 强触发——backfilled 无豁免）
     const small = lines.find((l) => /Small \(typo, one-line fix\)/.test(l.trim()))
     assert.ok(small, "Small 层存在")
     assert.ok(small.includes("Read the docs → Change → Verify"), "Small 箭头含 Read the docs → Change → Verify")
-    assert.ok(small.includes("update the owning doc if you spotted a gap"), "Small 箭头含 update the owning doc if you spotted a gap")
+    assert.ok(small.includes("decisions and completed changes are backfilled"), "Small 箭头含 D-N1.5 锚（decisions and completed changes are backfilled）")
 
     // 归属句（Workflow 段末）：Never create a new doc + find the owner and amend
     const ownLine = lines.find((l) => l.includes("Never create a new doc"))
@@ -761,6 +761,42 @@ describe("discipline.md: read/update docs embedded in Workflow arrows (no standa
     assert.ok(ownLine.includes("find the owner and amend"), "归属句含 find the owner and amend")
   })
 })
+
+// ---------------------------------------------------------------- §21 普通模式偏差审计（2026-09-05——D-N1.1..1.5 锚——fail-when-unchanged）
+
+describe("§21 normal-mode deviation audit anchors (T-N1 — fail-when-unchanged)", () => {
+  it("T-N1.1: main.md 含 D-N1.1 自动补写锚三短语（board design doc / add a short change record / 四类偏差）——fail-when-unchanged", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+    assert.ok(text.includes("landed in the board design doc"), "T-N1.1: main.md 含 landed in the board design doc（D-N1.1 逐字）")
+    assert.ok(text.includes("add a short change record"), "T-N1.1: main.md 含 add a short change record（自动补写）")
+    assert.ok(text.includes("deviations (partial implementation / silent simplification / doc drift / out-of-scope)"), "T-N1.1: main.md 含 deviations (partial implementation / silent simplification / doc drift / out-of-scope)（四类偏差）")
+  })
+
+  it("T-N1.2: coder.md 含 D-N1.2 一致性自查行——fail-when-unchanged", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "coder.md"), "utf8")
+    assert.ok(text.includes("consistency self-check"), "T-N1.2: coder.md 含 consistency self-check（D-N1.2 逐字）")
+  })
+
+  it("T-N1.4: discipline.md 含 D-N1.5 强触发锚（Medium 决策/完工记录 + 小改动也记录）——fail-when-unchanged", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+    assert.ok(text.includes("update the owning doc — a decision or completed change is recorded there"), "T-N1.4: discipline.md 含 update the owning doc — a decision or completed change is recorded there（D-N1.5）")
+    assert.ok(text.includes("small changes are documented too"), "T-N1.4: discipline.md 含 small changes are documented too（D-N1.5 无豁免）")
+  })
+
+  it("T-N1.5: discipline.md 不含旧弱触发 if you spotted a gap——零残留", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+    assert.ok(!text.includes("if you spotted a gap"), "T-N1.5: discipline.md 零残留——if you spotted a gap 已删除")
+  })
+
+  it("T-N1.6: main.md + coder.md 都含 D-N1.5 开发前落档锚（locate the owning design doc / register it in the map）——fail-when-unchanged", () => {
+    for (const name of ["main.md", "coder.md"]) {
+      const text = readFileSync(join(PROMPTS_DIR, name), "utf8")
+      assert.ok(text.includes("before you start coding, locate the owning design doc"), `T-N1.6: ${name} 含 before you start coding, locate the owning design doc（D-N1.5）`)
+      assert.ok(text.includes("register it in the map"), `T-N1.6: ${name} 含 register it in the map（D-N1.5）`)
+    }
+  })
+})
+
 
 describe("Delegate well rewrite + exploration distillation", () => {
 

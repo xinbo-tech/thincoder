@@ -77,6 +77,72 @@ test("effectiveSubagentModel: tool arg > type-level > global > null", async () =
   assert.equal(effectiveSubagentModel(bare, "coder", null), null, "null = inherit parent")
 })
 
+test("subagent model `default` alias: ≡ omitted / empty string at every priority-chain level (case-insensitive)", async () => {
+  const { resolveChildProvider, effectiveSubagentModel } = await import("../src/agent-tools/subagent.mjs")
+  const parent = {
+    _provider: { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+    config: {
+      providersList: [
+        { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+        { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "ds-key" },
+      ],
+      agent: { subagentModel: "global-model", subagentModels: { coder: "type-model" } },
+    },
+  }
+  const bare = { _provider: parent._provider, config: { agent: {} } }
+  for (const v of ["default", "DEFAULT", "Default"]) {
+    // alias = "parameter-level not specified" → the chain still applies (type-level > global)
+    assert.equal(effectiveSubagentModel(parent, "coder", v), "type-model", `type-level wins for "${v}"`)
+    assert.equal(effectiveSubagentModel(parent, "explore", v), "global-model", `global fallback for "${v}"`)
+    assert.equal(effectiveSubagentModel(bare, "coder", v), null, `no config → inherit parent for "${v}"`)
+    assert.equal(effectiveSubagentModel(parent, "coder", v), effectiveSubagentModel(parent, "coder", null), `alias ≡ omitted at arg level for "${v}"`)
+    // empty string ≡ omitted (locked — pre-existing falsy semantics)
+    assert.equal(effectiveSubagentModel(parent, "coder", ""), effectiveSubagentModel(parent, "coder", null), '"" ≡ omitted')
+    // resolver endpoint: alias ≡ null → parent provider, never a literal model name
+    assert.deepEqual(resolveChildProvider(parent, v), parent._provider, `"${v}" → parent provider`)
+    assert.deepEqual(resolveChildProvider(parent, v), resolveChildProvider(parent, null), `"${v}" ≡ null at the resolver`)
+    assert.deepEqual(resolveChildProvider(parent, ""), resolveChildProvider(parent, null), '"" ≡ null at the resolver')
+    assert.notEqual(resolveChildProvider(parent, v).model, "default", `no literal reaches the model field (specForModel guard)`)
+    // composition (the spawn path): tool arg "default" ≡ omitted → identical resolved provider
+    assert.deepEqual(
+      resolveChildProvider(parent, effectiveSubagentModel(parent, "coder", v)),
+      resolveChildProvider(parent, effectiveSubagentModel(parent, "coder", null)),
+      `composition "${v}" ≡ omitted`,
+    )
+  }
+  // a config chain value holding the literal resolves to the parent too (chain's last level)
+  const cfgDefault = { _provider: parent._provider, config: { agent: { subagentModel: "default" } } }
+  assert.equal(effectiveSubagentModel(cfgDefault, "coder", null), "default", "chain value passes through effectiveSubagentModel")
+  assert.deepEqual(resolveChildProvider(cfgDefault, effectiveSubagentModel(cfgDefault, "coder", null)), parent._provider, "config literal default → parent provider (no specForModel hit)")
+  // corner locked (advisor 🔵): TYPE-level literal + real global → parent provider —
+  // the literal ends the chain, no fall-through to the global level
+  const typeLit = { _provider: parent._provider, config: { agent: { subagentModel: "global-model", subagentModels: { coder: "default" } } } }
+  assert.equal(effectiveSubagentModel(typeLit, "coder", null), "default", "type-level literal returned as-is by the chain")
+  assert.deepEqual(resolveChildProvider(typeLit, effectiveSubagentModel(typeLit, "coder", null)), parent._provider, "type-level literal + real global → parent provider (no fall-through)")
+  const typeLitUpper = { _provider: parent._provider, config: { agent: { subagentModel: "global-model", subagentModels: { coder: "DEFAULT" } } } }
+  assert.deepEqual(resolveChildProvider(typeLitUpper, effectiveSubagentModel(typeLitUpper, "coder", null)), parent._provider, "uppercase type-level literal also → parent provider (case-insensitive)")
+})
+
+test("subagent model `default` alias: non-default values keep the existing semantics (negative)", async () => {
+  const { resolveChildProvider, effectiveSubagentModel } = await import("../src/agent-tools/subagent.mjs")
+  const parent = {
+    _provider: { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+    config: { providersList: [], agent: {} },
+  }
+  // non-default unknown single-segment → parent provider with the model swapped (unchanged)
+  const mn = resolveChildProvider(parent, "deepseek-v4-flash")
+  assert.equal(mn.name, "glm", "unknown single-segment keeps the parent provider")
+  assert.equal(mn.model, "deepseek-v4-flash", "...with the model swapped — existing semantics untouched")
+  assert.equal(effectiveSubagentModel(parent, "coder", "deepseek-v4-flash"), "deepseek-v4-flash", "non-default arg passes through unchanged")
+  // provider:model / provider-name paths untouched
+  assert.throws(() => resolveChildProvider(parent, "nope:model"), /unknown provider/)
+  // only the literal "default" (post-toLowerCase) is aliased — near-misses stay swap-model values
+  for (const near of [" default", "default ", "default-model", "defaulted"]) {
+    assert.equal(resolveChildProvider(parent, near).model, near, `"${near}" is not aliased — swap-model semantics`)
+  }
+})
+
+
 /** Fake SSE LLM: the first `walls` calls demand a read tool (loop), then it answers. */
 function wallServer(walls) {
   const calls = { n: 0 }
