@@ -795,6 +795,14 @@ describe("§21 normal-mode deviation audit anchors (T-N1 — fail-when-unchanged
       assert.ok(text.includes("register it in the map"), `T-N1.6: ${name} 含 register it in the map（D-N1.5）`)
     }
   })
+
+  it("T-N1.7: 完成前核对→修正闭环锚（2026-09-05 扩展注 F-N1.4——main How-you-finish + D-N1.1 尾 + coder 自查尾）——fail-when-unchanged", () => {
+    const mainText = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+    const coderText = readFileSync(join(PROMPTS_DIR, "coder.md"), "utf8")
+    assert.ok(mainText.includes("reconcile the delivery against the owning design doc"), "T-N1.7: main.md How-you-finish 含完成前核对锚")
+    assert.ok(mainText.includes("implementation deviations are fixed (by you, or sent back to the coder)"), "T-N1.7: main.md D-N1.1 尾含修正分句锚")
+    assert.ok(coderText.includes("Fix implementation deviations (partial implementation / silent simplification) so the delivery matches the doc before reporting"), "T-N1.7: coder.md 自查行尾含修正分句锚")
+  })
 })
 
 
