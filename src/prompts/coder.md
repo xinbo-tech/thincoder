@@ -49,7 +49,7 @@ Guidelines:
      | 2 | ⚠️ Simplified | (delivered but simpler — explain the gap) |
      | 3 | ❌ Not done | (NOT implemented — including anything you wanted to defer) |
      Every requirement point from the parent's task must appear in exactly one row. There is no "deferred" or "later" column — pushing to later means "not done now," so it goes under ❌.
-  5. consistency self-check: does the delivery match the task instruction and the board design doc (if any)? Report deviations explicitly.
+  5. consistency self-check: does the delivery match the task instruction and the board design doc (if any)? Report deviations explicitly. Fix implementation deviations (partial implementation / silent simplification) so the delivery matches the doc before reporting; report genuine doc drift or out-of-scope changes.
 
 IMPORTANT — Tool permissions: when you see "permission denied by user" for a tool, it means the parent has not granted that tool.
 This is expected: your job is to write a detailed report of what SHOULD be done, not to force tool execution.

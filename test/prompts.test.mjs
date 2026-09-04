@@ -1224,6 +1224,11 @@ test("prompts: §21 普通模式偏差审计锚（T-N1——main/coder/disciplin
   assert.ok(discText.includes("update the owning doc — a decision or completed change is recorded there"), "T-N1.4: discipline.md 含 Medium 强触发锚")
   assert.ok(discText.includes("small changes are documented too"), "T-N1.4: discipline.md 含 small changes are documented too")
   // T-N1.5：旧弱触发零残留
+  // T-N1.7（2026-09-05 扩展注 F-N1.4）：完成前核对→修正闭环锚（main How-you-finish + D-N1.1 尾 + coder 自查尾——fail-when-unchanged）
+  assert.ok(mainText.includes("reconcile the delivery against the owning design doc"), "T-N1.7: main.md How-you-finish 含完成前核对锚")
+  assert.ok(mainText.includes("implementation deviations are fixed (by you, or sent back to the coder)"), "T-N1.7: main.md D-N1.1 尾含修正分句锚")
+  assert.ok(coderText.includes("Fix implementation deviations (partial implementation / silent simplification) so the delivery matches the doc before reporting"), "T-N1.7: coder.md 自查行尾含修正分句锚")
+
   assert.ok(!discText.includes("if you spotted a gap"), "T-N1.5: discipline.md 无旧弱触发 if you spotted a gap（零残留）")
   // T-N1.6：main/coder 双端开发前落档锚（D-N1.5——F-N1.3）
   for (const [name, text] of [["main.md", mainText], ["coder.md", coderText]]) {
