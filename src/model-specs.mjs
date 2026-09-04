@@ -88,7 +88,13 @@ const MODEL_SPECS = [
 ]
 const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000, cacheMode: "none" }
 
-/** Look up spec by model name prefix (case-insensitive), conservative default for unknown models */
+/** Look up spec by model name prefix (case-insensitive), conservative default for unknown models.
+ *
+ * Vendor-namespace prefix stripping (2026-09-04)：第三方 token 市场（roapi/new-api/one-api/
+ * aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、openai/gpt-4o）。完整名未命中
+ * 且含 "/" 时，剥掉第一个 "/" 前的 namespace 再按前缀匹配一次——ZHIPU/GLM-5.3 → glm-5.3 命中
+ * 真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias 行保留为文档锚（发送路径
+ * provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
 const warnedModels = new Set() // warn once per model name — specForModel is a hot path (every request)
 // Pre-sorted once at module scope — specForModel runs on every request (agent, provider core,
 // context, auto-think, TUI rendering); re-sorting per call was wasteful.
@@ -97,6 +103,14 @@ export function specForModel(model) {
   const m = (model ?? "").toLowerCase()
   for (const [prefix, spec] of SORTED_SPECS) {
     if (m.startsWith(prefix.toLowerCase())) return spec
+  }
+  // Vendor-namespace strip: vendor/model — retry the prefix match on the bare model part.
+  const slash = m.indexOf("/")
+  if (slash > 0) {
+    const bare = m.slice(slash + 1)
+    for (const [prefix, spec] of SORTED_SPECS) {
+      if (bare.startsWith(prefix.toLowerCase())) return spec
+    }
   }
   // Unknown model: warn ONCE (not per request) so a typo'd ID or a missing alias surfaces
   // instead of silently degrading to the 128K default (IK5VGJ).

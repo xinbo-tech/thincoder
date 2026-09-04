@@ -13,6 +13,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createAcpServer, ACP_ERRORS } from "../src/acp/transport.mjs"
 import { buildAcpCallbacks, replayHistory } from "../src/acp/bridge.mjs"
+import { computeEditEntry } from "../src/tools/edit-diff.mjs"
 import { createAcpSession } from "../src/acp/session.mjs"
 import { buildAcpHandlers } from "../src/acp.mjs"
 import { saveSession, loadSession, sessionPath, listSlots } from "../src/session.mjs"
@@ -78,16 +79,16 @@ describe("M2 — tools, permissions, fs routing (bridge callbacks)", () => {
       sessionId: "s1", notify: () => {},
       request: async (m, p) => {
         seen.push({ m, p })
-        if (m === "fs/read_text_file") return { text: "hello world" }
+        if (m === "fs/read_text_file") return { text: "hello world\nsun\n" }
         return {}
       },
     })
-    const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "hello", new_string: "goodbye" })
+    const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "hello world\nsun", new_string: "goodbye world\nsun" })
     assert.equal(r.handled, true)
     assert.ok(r.result.includes("edited"), r.result)
     assert.equal(seen[0].m, "fs/read_text_file")
     assert.equal(seen[1].m, "fs/write_text_file")
-    assert.equal(seen[1].p.content, "goodbye world")
+    assert.equal(seen[1].p.content, "goodbye world\nsun\n")
   })
 
   it("toolRouter leaves reads/delete/apply_patch local", async () => {
@@ -103,6 +104,236 @@ describe("M2 — tools, permissions, fs routing (bridge callbacks)", () => {
     const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "nope", new_string: "x" })
     assert.equal(r.handled, true)
     assert.ok(r.result.includes("old_string not found"), r.result)
+  })
+
+  it("edit via IDE negative: empty old_string→明确报错 + CRLF 缓冲写回恢复 CRLF（双通道同语义）", async () => {
+    const calls = []
+    const cb = buildAcpCallbacks({
+      sessionId: "s1", notify: () => {},
+      request: async (m, p) => {
+        calls.push({ m, p })
+        if (m === "fs/read_text_file") return { text: "hello world\r\nsun\r\n" }
+        return {}
+      },
+    })
+    // 空 old_string：与本地通道一致地显式报错（防新内容前插文件头）
+    const rEmpty = await cb.toolRouter("edit", { path: "a.txt", old_string: "", new_string: "x" })
+    assert.equal(rEmpty.handled, true)
+    assert.ok(rEmpty.result.includes("old_string must not be empty"), rEmpty.result)
+    // CRLF 缓冲：LF 域判定，写回按原文首换行恢复 CRLF
+    const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "hello world\nsun", new_string: "goodbye world\nsun" })
+    assert.equal(r.handled, true)
+    const w = calls.find((c) => c.m === "fs/write_text_file")
+    assert.equal(w.p.content, "goodbye world\r\nsun\r\n")
+  })
+
+  // ─── TOOLS.md §15.1（T15.21-T15.32 / AC15.10）────────────────────────────────
+  // 迷你 IDE：read 返回当前缓冲，write 覆盖缓冲（模拟 IDE 端"文件"状态）。
+  const mkVfs = (initial) => {
+    const buf = new Map(Object.entries(initial ?? {}))
+    const calls = []
+    const cb = buildAcpCallbacks({
+      sessionId: "s1",
+      notify: () => {},
+      request: async (m, p) => {
+        calls.push({ m, p })
+        if (m === "fs/read_text_file") return { text: buf.get(p.path) ?? "" }
+        if (m === "fs/write_text_file") { buf.set(p.path, p.content); return {} }
+        return {}
+      },
+    })
+    const reads = () => calls.filter((c) => c.m === "fs/read_text_file")
+    const writes = () => calls.filter((c) => c.m === "fs/write_text_file")
+    return { cb, buf, reads, writes }
+  }
+
+  it("T15.21 array, one file, two entries: both applied through the IDE buffer (one read, one write)", async () => {
+    const { cb, reads, writes } = mkVfs({ "a.txt": "hello\nworld\n" })
+    const r = await cb.toolRouter("edit", { edits: [
+      { path: "a.txt", old_string: "hello\nworld", new_string: "hello\nmoon" },
+      { path: "a.txt", old_string: "moon", new_string: "moon\nstars" },
+    ] })
+    assert.equal(r.handled, true)
+    assert.equal(reads().length, 1, "same-file dedup — one IDE read")
+    assert.equal(writes().length, 1, "one write-back per file")
+    assert.equal(writes()[0].p.content, "hello\nmoon\nstars\n")
+    assert.equal(r.result.split("\n").length, 2, "one result line per entry")
+    assert.ok(r.result.split("\n").every((l) => l.includes("OK: edited a.txt via IDE (1 occurrence(s))")), r.result)
+  })
+
+  it("T15.22 array, an entry not found: atomic — zero writes, error carries the abort prefix", async () => {
+    const { cb, writes } = mkVfs({ "a.txt": "hello\n" })
+    const r = await cb.toolRouter("edit", { edits: [
+      { path: "a.txt", old_string: "nope", new_string: "x" },
+      { path: "a.txt", old_string: "hello", new_string: "hi" },
+    ] })
+    assert.equal(r.handled, true)
+    assert.equal(writes().length, 0, "zero writes — atomic")
+    assert.ok(r.result.startsWith("Error: edit aborted (atomic — no files written): "), r.result)
+    assert.ok(r.result.includes("old_string not found in a.txt"), r.result)
+  })
+
+  it("T15.23 replace_all, single form, 2 occurrences: every occurrence replaced", async () => {
+    const { cb, writes } = mkVfs({ "a.txt": "x\ny\nx\n" })
+    const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "x", new_string: "z", replace_all: true })
+    assert.equal(r.handled, true)
+    assert.ok(r.result.includes("2 occurrence(s)"), r.result)
+    assert.equal(writes()[0].p.content, "z\ny\nz\n")
+  })
+
+  it("T15.24 single form, multiple matches without replace_all: error text identical to local computeEditEntry", async () => {
+    const { cb } = mkVfs({ "a.txt": "x\nx\n" })
+    const args = { path: "a.txt", old_string: "x", new_string: "y" }
+    const r = await cb.toolRouter("edit", args)
+    let local
+    try { computeEditEntry("x\nx\n", args, { path: "a.txt" }) } catch (e) { local = e.message }
+    assert.equal(r.handled, true)
+    assert.equal(r.result, `Error: ${local}`, "AC15.10 — bridge text == local text")
+    assert.ok(r.result.includes("matches 2 times"), r.result)
+  })
+
+  it("T15.25 multi-match + replace_all: literal replacement of every occurrence (insert rule not applied)", async () => {
+    const { cb, writes } = mkVfs({ "a.txt": "a\nb\na\n" })
+    const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "a", new_string: "b", replace_all: true })
+    assert.equal(r.handled, true)
+    assert.equal(writes()[0].p.content, "b\nb\nb\n")
+    assert.ok(r.result.includes("2 occurrence(s)"), r.result)
+  })
+
+  it("T15.26 two parallel same-name tools: independent ids — each update pairs its own call (no name overwrite)", () => {
+    // 真实 dispatch 形态：模型级 toolCall.id 作第 3 参（dispatch.mjs onToolCall/onToolResult 均传）——
+    // 结果可乱序到达：id 精确配对仍各配各的
+    const events = []
+    const cb = buildAcpCallbacks({ sessionId: "s1", notify: (m, p) => events.push(p.update), request: async () => ({}) })
+    cb.onToolCall("read", { path: "a" }, "call_1")
+    cb.onToolCall("read", { path: "b" }, "call_2")
+    cb.onToolResult("read", "B", "call_2") // 乱序返回
+    cb.onToolResult("read", "A", "call_1")
+    const calls = events.filter((u) => u.sessionUpdate === "tool_call")
+    const updates = events.filter((u) => u.sessionUpdate === "tool_call_update")
+    assert.deepEqual(updates.map((u) => u.toolCallId), [calls[1].toolCallId, calls[0].toolCallId], "id 独立——无按名覆盖错配")
+    // 无 id 形态（裸回调）：名称 FIFO 按 call 序配对（dispatch B1 保序）
+    const events2 = []
+    const cb2 = buildAcpCallbacks({ sessionId: "s1", notify: (m, p) => events2.push(p.update), request: async () => ({}) })
+    cb2.onToolCall("grep", { pattern: "x" })
+    cb2.onToolCall("grep", { pattern: "y" })
+    cb2.onToolResult("grep", "hits x")
+    cb2.onToolResult("grep", "hits y")
+    const c2 = events2.filter((u) => u.sessionUpdate === "tool_call")
+    const u2 = events2.filter((u) => u.sessionUpdate === "tool_call_update")
+    assert.deepEqual(u2.map((u) => u.toolCallId), c2.map((c) => c.toolCallId), "FIFO 按 call 序配对")
+  })
+
+  it("T15.27 empty edits array / entry missing path: error texts same as local edit-batch", async () => {
+    const { cb } = mkVfs({ "a.txt": "x\n" })
+    const rEmpty = await cb.toolRouter("edit", { edits: [] })
+    assert.equal(rEmpty.result, "Error: edits must be a non-empty array of {path, old_string, new_string}")
+    const { cb: cb2 } = mkVfs({ "a.txt": "x\n" })
+    const rMissing = await cb2.toolRouter("edit", { edits: [{ old_string: "x", new_string: "y" }] })
+    assert.equal(rMissing.result, "Error: each edit must have a path")
+    // 混用（edits + 单形态参数）：互斥错误——同本地
+    const { cb: cb3 } = mkVfs({ "a.txt": "x\n" })
+    const rMix = await cb3.toolRouter("edit", { path: "a.txt", old_string: "x", new_string: "y", edits: [{ path: "a.txt", old_string: "x", new_string: "y" }] })
+    assert.ok(rMix.result.includes("edits array is mutually exclusive with path/old_string/new_string"), rMix.result)
+  })
+
+  it("T15.28 array, two files: both read and written through the IDE", async () => {
+    const { cb, reads, writes } = mkVfs({ "a.txt": "one\ntwo\n", "b.txt": "three\nfour\n" })
+    const r = await cb.toolRouter("edit", { edits: [
+      { path: "a.txt", old_string: "one\ntwo", new_string: "one\nuno" },
+      { path: "b.txt", old_string: "three\nfour", new_string: "three\ndos" },
+    ] })
+    assert.equal(r.handled, true)
+    assert.deepEqual(reads().map((c) => c.p.path), ["a.txt", "b.txt"])
+    assert.deepEqual(writes().map((c) => c.p.path), ["a.txt", "b.txt"])
+    assert.equal(writes()[0].p.content, "one\nuno\n")
+    assert.equal(writes()[1].p.content, "three\ndos\n")
+  })
+
+  it("T15.29 same-file multiple entries: serial accumulation — entry 2 matches entry 1's applied result", async () => {
+    const { cb, reads, writes } = mkVfs({ "a.txt": "A\nB\nC\n" })
+    const r = await cb.toolRouter("edit", { edits: [
+      { path: "a.txt", old_string: "A\nB", new_string: "A\nX" },
+      { path: "a.txt", old_string: "X\nC", new_string: "X\nY" }, // ← match entry 1's 结果
+    ] })
+    assert.equal(r.handled, true)
+    assert.ok(r.result.includes("edited a.txt"), r.result)
+    assert.equal(reads().length, 1, "one read for the file")
+    assert.equal(writes()[0].p.content, "A\nX\nY\n")
+  })
+
+  it("T15.30 single form not found: error carries searched: and matches the local computeEditEntry text", async () => {
+    const { cb } = mkVfs({ "a.txt": "nothing here\n" })
+    const args = { path: "a.txt", old_string: "nope", new_string: "x" }
+    const r = await cb.toolRouter("edit", args)
+    let local
+    try { computeEditEntry("nothing here\n", args, { path: "a.txt" }) } catch (e) { local = e.message }
+    assert.ok(local.includes("searched:"), "local error carries searched:")
+    assert.equal(r.result, `Error: ${local}`, "AC15.10 — bridge text identical to local")
+  })
+
+  it("T15.31 refusal path: queue never blocks — in-flight tool pairs its own id; next call pairs its own", async () => {
+    const events = []
+    let allowed = true
+    const cb = buildAcpCallbacks({
+      sessionId: "s1",
+      notify: (m, p) => events.push(p.update),
+      request: async () => ({ outcome: { outcome: "selected", optionId: allowed ? "approve_once" : "reject" } }),
+    })
+    // A：先获准（dispatch 在 onToolCall 前批准）→ 在飞条目进入队列
+    assert.equal(await cb.onPermissionRequest("edit", { path: "a" }), true)
+    cb.onToolCall("edit", { path: "a" }, "call_a")
+    // B：被拒——dispatch 在 onToolCall 之前拒绝——从未入队（无孤儿条目可滞）
+    allowed = false
+    assert.equal(await cb.onPermissionRequest("edit", { path: "b" }), false)
+    // A 的结果仍配 A 的 id——拒绝路径不得消费/污染在飞条目
+    cb.onToolResult("edit", "A done", "call_a")
+    // 拒绝路径后：新一轮同名工具正常配对——队列未被卡住
+    cb.onToolCall("edit", { path: "c" }, "call_c")
+    cb.onToolResult("edit", "C done", "call_c")
+    const calls = events.filter((u) => u.sessionUpdate === "tool_call")
+    const updates = events.filter((u) => u.sessionUpdate === "tool_call_update")
+    assert.equal(updates[0].toolCallId, calls[0].toolCallId, "in-flight A pairs its own id — denial did not consume it")
+    assert.equal(updates[1].toolCallId, calls[1].toolCallId, "post-refusal call pairs its own id — queue not blocked")
+  })
+
+  it("T15.32 zero-overlap multi-line form (old=[A,B] new=[X]): insert — A,B retained, X inserted after the region (§15.2 migration — single-line old=[A] new=[X] now replaces in place via branch 0)", async () => {
+    const { cb, writes } = mkVfs({ "a.txt": "A\nB\n" })
+    const r = await cb.toolRouter("edit", { path: "a.txt", old_string: "A\nB", new_string: "X" })
+    assert.equal(r.handled, true)
+    assert.ok(r.result.includes("1 occurrence(s)"), r.result)
+    assert.equal(writes()[0].p.content, "A\nB\nX\n", "A,B survive — X inserted after them (multi-line zero-overlap insert regression retained — bridge delegates computeEditEntry)")
+  })
+
+  it("AC15.10 empty old_string / empty new_string: error text identical to local computeEditEntry", async () => {
+    const { cb } = mkVfs({ "a.txt": "hello\n" })
+    const oldArgs = { path: "a.txt", old_string: "", new_string: "x" }
+    const rOld = await cb.toolRouter("edit", oldArgs)
+    let localOld
+    try { computeEditEntry("hello\n", oldArgs, { path: "a.txt" }) } catch (e) { localOld = e.message }
+    assert.equal(rOld.result, `Error: ${localOld}`)
+    assert.ok(rOld.result.includes("old_string must not be empty"), rOld.result)
+    const newArgs = { path: "a.txt", old_string: "hello", new_string: "" }
+    const rNew = await cb.toolRouter("edit", newArgs)
+    let localNew
+    try { computeEditEntry("hello\n", newArgs, { path: "a.txt" }) } catch (e) { localNew = e.message }
+    assert.equal(rNew.result, `Error: ${localNew}`)
+    assert.ok(rNew.result.includes("empty new_string"), rNew.result)
+  })
+
+  it("D15.8 orphan regression: 中断孤儿 + 下轮同名同 toolId（id 每轮重置）→ 新 call 配自己的 id（旧孤儿不劫持）", () => {
+    const events = []
+    const cb = buildAcpCallbacks({ sessionId: "s1", notify: (m, p) => events.push(p.update), request: async () => ({}) })
+    // 轮 1：call_0 入队但结果永不回调（工具失败/中断——dispatch 失败路径不调 onToolResult——T-F5 契约）
+    cb.onToolCall("read", { path: "a" }, "call_0")
+    // 轮 2：模型级 id 从 call_0 重来（sse.mjs finalizeToolCalls 每轮 seq=0——跨轮可重复）
+    cb.onToolCall("read", { path: "b" }, "call_0")
+    cb.onToolResult("read", "B", "call_0")
+    const calls = events.filter((u) => u.sessionUpdate === "tool_call")
+    const updates = events.filter((u) => u.sessionUpdate === "tool_call_update")
+    assert.equal(calls.length, 2)
+    assert.equal(updates.length, 1)
+    assert.equal(updates[0].toolCallId, calls[1].toolCallId, "更新配到本轮 call——旧孤儿被弹出、不劫持配对")
   })
 })
 

@@ -309,3 +309,127 @@ test("T-C6 显示：/model provider 列表 ctx 标签 + 状态栏 context % 基�
   const lineSpec = strip(renderStatus(st, { ...base, provider: { model: "deepseek-v4-flash" } }, 120, []))
   assert.ok(lineSpec.includes("context 7%"), `spec 窗口 → 7%: ${lineSpec}`)
 })
+
+
+
+
+
+
+// ---------------------------------------------------------------- 模型上下文窗口 / 阈值推导
+
+
+test("config: 上下文窗口映射与压缩阈值推导", async () => {
+  const { specForModel, resolveCompactThreshold } = await import("../src/config.mjs")
+  assert.equal(specForModel("deepseek-v4-pro").context, 1_000_000)
+  assert.equal(specForModel("deepseek-v4-flash").context, 1_000_000)
+  assert.equal(specForModel("DeepSeek-V4-Pro").context, 1_000_000) // 大小写不敏感
+  assert.equal(specForModel("unknown-model-xyz").context, 128_000) // 未知兜底
+
+  // 显式配置优先
+  assert.deepEqual(resolveCompactThreshold(50000, "deepseek-v4-pro"), { value: 50000, auto: false })
+  // 未配置时按模型推导：1M 窗口 × 0.6 = 60万
+  assert.deepEqual(resolveCompactThreshold(null, "deepseek-v4-pro"), { value: 600000, auto: true })
+  // 未知/下线模型 → 128K 兜底 × 0.6 = 76,800
+  assert.deepEqual(resolveCompactThreshold(undefined, "deepseek-chat"), { value: 76800, auto: true })
+})
+
+
+
+test("config: Kimi For Coding 短 ID \"k3\" 命中 kimi-k3 规格（IK5VGJ）", async () => {
+  const { specForModel, PROVIDER_PRESETS } = await import("../src/config.mjs")
+  // k3 别名 → kimi-k3 完整规格：1M 上下文 / 多模态 / 截断续写 / 推理回显
+  const s = specForModel("k3")
+  assert.equal(s.context, 1_000_000, "k3 must get 1M context (not the 128K default)")
+  assert.equal(s.multimodal, true, "k3 supports images — read_image must not be gated off")
+  assert.equal(s.partialMode, true)
+  assert.equal(s.reasoningEcho, "required")
+  // kimi-k3 本身不受影响（前缀匹配长优先）
+  assert.equal(specForModel("kimi-k3").context, 1_000_000)
+  // kimi-code 预设存在且指向正确端点
+  const preset = PROVIDER_PRESETS["kimi-code"]
+  assert.ok(preset, "kimi-code preset must exist")
+  assert.equal(preset.baseURL, "https://api.kimi.com/coding/v1")
+  assert.equal(preset.model, "k3")
+})
+
+
+
+test("config: MiMo 预设与规格（按量付费 + Token Plan）", async () => {
+  const { specForModel, PROVIDER_PRESETS } = await import("../src/config.mjs")
+  // 按量付费（sk- keys）
+  const mimo = PROVIDER_PRESETS.mimo
+  assert.ok(mimo, "mimo preset must exist")
+  assert.equal(mimo.baseURL, "https://api.xiaomimimo.com/v1")
+  assert.equal(mimo.model, "mimo-v2.5-pro")
+  // Token Plan（tp- keys，独立端点，与按量付费密钥不通用）
+  const plan = PROVIDER_PRESETS.mimoplan
+  assert.ok(plan, "mimoplan preset must exist")
+  assert.equal(plan.baseURL, "https://token-plan-cn.xiaomimimo.com/v1")
+  assert.equal(plan.model, "mimo-v2.5-pro")
+  // 规格：1M 上下文 / 128K 输出 / 深度思考（thinking.type 默认开）/ 多轮工具调用必须回显推理内容
+  const s = specForModel("mimo-v2.5-pro")
+  assert.equal(s.context, 1_000_000, "mimo-v2.5-pro must get 1M context (not the 128K default)")
+  assert.equal(s.maxOutput, 128_000)
+  assert.equal(s.thinkApi, "type")
+  assert.equal(s.reasoningEcho, "required", "MiMo 多轮回传 reasoning_content 缺失会 400")
+  assert.equal(specForModel("mimo-v2.5").multimodal, true, "mimo-v2.5 is the multimodal variant")
+})
+
+
+
+test("config: GLM-5.3-Flash 规格（1M 上下文 / 128K 输出 / 多模态）", async () => {
+  const { specForModel, PROVIDER_PRESETS } = await import("../src/config.mjs")
+  const s = specForModel("glm-5.3-flash")
+  assert.equal(s.context, 1_000_000)
+  assert.equal(s.maxOutput, 128_000)
+  assert.equal(s.multimodal, true, "glm-5.3-flash is multimodal — read_image must not be gated off")
+  assert.deepEqual(s.reasoningEffortEnum, ["low", "high", "max"])
+  assert.equal(s.noUsageStream, true)
+  assert.equal(s.thinkApi, "type", "thinking 始终开（thinking.type，不可关闭）")
+  // 默认预设未动（方案 A：只加可用性，不惊动存量用户默认）
+  assert.equal(PROVIDER_PRESETS.glm.model, "glm-5.2")
+  assert.equal(PROVIDER_PRESETS["glm-code"].model, "glm-5.2")
+})
+
+
+
+
+test("config: 未知模型名警告一次（不静默降级，防刷屏）", async () => {
+  const { specForModel } = await import("../src/config.mjs")
+  const warns = []
+  const orig = console.warn
+  console.warn = (...a) => warns.push(a.join(" "))
+  try {
+    const name = `no-such-model-${Date.now()}`
+    assert.equal(specForModel(name).context, 128_000) // 降级仍发生
+    assert.equal(specForModel(name).context, 128_000) // 第二次不再警告
+    assert.equal(warns.length, 1, "warn exactly once per model name")
+    assert.ok(warns[0].includes(name))
+  } finally {
+    console.warn = orig
+  }
+})
+
+
+test("specForModel：厂商前缀剥离（zhipu/glm-5.3 → glm-5.3）——第三方 token 市场惯例 (2026-09-04)", () => {
+  // 完整名未命中 → 剥 vendor/ 前缀再匹配，命中真实规格而非 128K 默认
+  assert.equal(specForModel("ZHIPU/GLM-5.3").context, 1_000_000, "zhipu/ 前缀剥除 → glm-5.3 命中 1M")
+  assert.equal(specForModel("zhipu/glm-5.3").thinking, true, "能力字段一并生效")
+  assert.equal(specForModel("openai/gpt-4o").context, 128_000, "任何 vendor/ 前缀均可剥（含厂商自身）")
+  assert.equal(specForModel("vendor/qwen3.8-max-preview").context, 1_000_000, "多级能力 spec 同前缀命中")
+})
+
+test("specForModel：厂商前缀剥离不破坏未知模型降级 warn (2026-09-04)", () => {
+  const warns = []
+  const orig = console.warn
+  console.warn = (...a) => warns.push(a.join(" "))
+  try {
+    const name = `vendor/${Date.now()}`
+    assert.equal(specForModel(name).context, 128_000, "未知 vendor/model 仍降级默认 spec")
+    assert.equal(warns.length, 1, "warn once（保留原始 model 名）")
+    assert.ok(warns[0].includes(name), "warn 中保留原始 vendor/model 名可诊断")
+  } finally {
+    console.warn = orig
+  }
+})
+

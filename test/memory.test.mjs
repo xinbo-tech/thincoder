@@ -13,13 +13,15 @@ import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 
 import { createMemory, put, search, list, remove, putMarkdown, syncDir, deleteByUid, fetchEntry, segmentCJK, memoryTools } from "../src/memory.mjs"
-import { serializeEntry } from "../src/markdown.mjs"
-
-// ---------------------------------------------------------------- helpers
+import { serializeEntry, parseEntry, slugify, entryFilename } from "../src/markdown.mjs"
 
 function freshMemory() {
   return createMemory({ dbPath: ":memory:" })
 }
+
+// ---------------------------------------------------------------- helpers
+
+
 
 /** Initialize a minimal git repo in dir so codeSync/docSync can operate. */
 function initGitRepo(dir) {
@@ -1042,5 +1044,33 @@ test("S6-6: 回归 — search scope 过滤 + 空 action 报错 + put 非法 scop
   await assert.rejects(() => tool.execute({ action: "bogus" }), /unknown action "bogus"/)
   await assert.rejects(() => tool.execute({ action: "search", scope: "team2" }), /invalid scope/)
   await assert.rejects(() => tool.execute({ action: "put", scope: "bogus", type: "rule", title: "t", content: "c" }), /invalid scope "bogus"/)
+})
+
+
+
+
+test("markdown: serialize → parse 往返一致", () => {
+  const meta = { type: "rule", title: "错误处理规范", tags: ["golang", "error"], author: "liwei" }
+  const md = serializeEntry(meta, "所有错误必须 wrap 上下文。\n\n第二段。")
+  const { meta: parsed, content } = parseEntry(md)
+  assert.equal(parsed.type, "rule")
+  assert.equal(parsed.title, "错误处理规范")
+  assert.deepEqual(parsed.tags, ["golang", "error"])
+  assert.equal(parsed.author, "liwei")
+  assert.equal(content, "所有错误必须 wrap 上下文。\n\n第二段。")
+})
+
+
+
+test("markdown: 缺 frontmatter / 非法 type 抛错", () => {
+  assert.throws(() => parseEntry("没有 frontmatter"))
+  assert.throws(() => parseEntry("---\ntype: bogus\ntitle: x\n---\n内容"))
+})
+
+
+
+test("markdown: slugify 与文件名", () => {
+  assert.equal(slugify("Go 错误处理! 规范"), "go-错误处理-规范")
+  assert.match(entryFilename("测试"), /^\d{8}-测试-[a-z0-9]{4}\.md$/)
 })
 

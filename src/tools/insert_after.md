@@ -8,7 +8,8 @@ Parameters:
 
 Notes:
 - Either after_line or after_regex is required; if both are given, after_line wins.
-- Use this instead of `edit` when you're adding a new function, import, or block — no need to fabricate surrounding context for exact matching.
+- Use this instead of edit when you're adding a new line — a checklist item, a doc heading, a line of prose, a function, an import, or a block — no need to fabricate surrounding context for exact matching.
 - The inserted content becomes its own line; it's equivalent to `lines.splice(targetLine, 0, content)`.
 - Returns a diff of the change.
 - **Read-before-insert guard**: if the file was modified by any write tool (write/edit/insert_after/hashline_edit/apply_patch/delete) since your last `read`, this tool REFUSES with an error — line numbers may be stale. Read the file again, then retry. This prevents after_line from silently landing at a drifted position.
+- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed

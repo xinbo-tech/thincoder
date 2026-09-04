@@ -1,17 +1,14 @@
 /**
- * test/advisor.test.mjs — tests for the advisor convergence protocol.
- * Covers: extractAgentResponseTable, buildAdvisorSystemPrompt,
- * buildAdvisorUserMessage, and the round-aware guard logic (MAX_ADVISOR_ROUNDS).
+ * advisor-message.test.mjs — tests extracted per AGENT-LOOP.md §18.14 (test files split by domain).
+ * Source(s): advisor.test.mjs.
  */
 import { test } from "node:test"
-import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { execSync } from "node:child_process"
 import { tmpdir } from "node:os"
-import { fileURLToPath } from "node:url"
-
+import { slow } from "./slow.mjs"
 import {
   extractAgentResponseTable,
   buildAdvisorSystemPrompt,
@@ -21,12 +18,7 @@ import {
   prepareAdvisorMessages,
   buildObjectDeclarationBlock,
 } from "../src/advisor.mjs"
-import { MAX_RESULT_CHARS } from "../src/advisor/run.mjs"
-
-
-// ────────────────────────────────────────
-// extractAgentResponseTable
-// ────────────────────────────────────────
+import { appendCitationReport } from "../src/advisor/run.mjs"
 
 test("extractAgentResponseTable: returns null when no response after advisor", () => {
   const history = [
@@ -35,6 +27,8 @@ test("extractAgentResponseTable: returns null when no response after advisor", (
   assert.equal(extractAgentResponseTable(history, 0), null)
 })
 
+
+
 test("extractAgentResponseTable: returns null when assistant message has no response table", () => {
   const history = [
     { role: "tool", tool_call_id: "a1", content: "issue table" },
@@ -42,6 +36,8 @@ test("extractAgentResponseTable: returns null when assistant message has no resp
   ]
   assert.equal(extractAgentResponseTable(history, 0), null)
 })
+
+
 
 test("extractAgentResponseTable: extracts response table from assistant message", () => {
   const responseTable = `| # | Action | Detail |
@@ -59,6 +55,8 @@ test("extractAgentResponseTable: extracts response table from assistant message"
   assert.ok(result.includes("❌ Not an issue"))
 })
 
+
+
 test("extractAgentResponseTable: only looks after sinceIdx", () => {
   const history = [
     { role: "assistant", content: "| # | Action | Detail |\n| 1 | ✅ Fixed | done |" },
@@ -67,6 +65,8 @@ test("extractAgentResponseTable: only looks after sinceIdx", () => {
   ]
   assert.equal(extractAgentResponseTable(history, 1), null)
 })
+
+
 
 test("extractAgentResponseTable: finds response after advisor when both present", () => {
   const responseTable = "| # | Action | Detail |\n| 1 | ✅ Fixed | done |"
@@ -79,9 +79,11 @@ test("extractAgentResponseTable: finds response after advisor when both present"
   assert.ok(result.includes("✅ Fixed"))
 })
 
+
 // ────────────────────────────────────────
 // buildAdvisorSystemPrompt — routing tests
 // ────────────────────────────────────────
+
 
 test("buildAdvisorSystemPrompt: returns round 1 file when no prior table", () => {
   const agent = { history: [], _advisorRound: 0, cwd: tmpdir() }
@@ -92,6 +94,8 @@ test("buildAdvisorSystemPrompt: returns round 1 file when no prior table", () =>
   assert.ok(!prompt.includes("Strictly verify"))
 })
 
+
+
 test("buildAdvisorSystemPrompt: returns round 1 file when last review was all clear", () => {
   const agent = {
     history: [{ role: "tool", tool_call_id: "a1", content: "No 🔴 issues found. Review passed." }],
@@ -100,6 +104,8 @@ test("buildAdvisorSystemPrompt: returns round 1 file when last review was all cl
   const prompt = buildAdvisorSystemPrompt(agent)
   assert.ok(prompt.includes("full-scope review"))
 })
+
+
 
 test("buildAdvisorSystemPrompt: returns round 2 file when prior table and _advisorRound=1", () => {
   const issueTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | x.js | 🔴 | bug | fix |"
@@ -112,6 +118,8 @@ test("buildAdvisorSystemPrompt: returns round 2 file when prior table and _advis
   assert.ok(prompt.includes("Verify the prior review output"))
   assert.ok(!prompt.includes("DO NOT look for new issues"))
 })
+
+
 
 test("buildAdvisorSystemPrompt: returns round 3+ file when _advisorRound>=2", () => {
   const issueTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | x.js | 🔴 | bug | fix |"
@@ -129,6 +137,8 @@ test("buildAdvisorSystemPrompt: returns round 3+ file when _advisorRound>=2", ()
   assert.ok(prompt.includes("Do NOT look for new issues"))
 })
 
+
+
 test("buildAdvisorSystemPrompt: returns same static content regardless of issue table content", () => {
   const agent1 = {
     history: [{ role: "tool", tool_call_id: "a1", content: "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug A | fix A |" }],
@@ -141,6 +151,8 @@ test("buildAdvisorSystemPrompt: returns same static content regardless of issue 
   assert.equal(buildAdvisorSystemPrompt(agent1), buildAdvisorSystemPrompt(agent2))
 })
 
+
+
 test("buildAdvisorSystemPrompt: reviewType=design returns design prompt", () => {
   const agent = { history: [], _advisorRound: 0, cwd: tmpdir() }
   const result = buildAdvisorSystemPrompt(agent, null, "design")
@@ -149,6 +161,8 @@ test("buildAdvisorSystemPrompt: reviewType=design returns design prompt", () => 
   // 防误路由断言改为 round1 身份句（code review advisor 身份 = 代码评审提示词）
   assert.ok(!result.includes("You are a code review advisor."), "不应误路由到代码评审提示词（round1 身份句）")
 })
+
+
 
 test("buildAdvisorSystemPrompt: design round 1 uses design prompt; rounds 2+ converge like code", () => {
   const base = { history: [], cwd: tmpdir() }
@@ -165,6 +179,8 @@ test("buildAdvisorSystemPrompt: design round 1 uses design prompt; rounds 2+ con
 })
 
 
+
+
 test("buildAdvisorUserMessage: reviewType=design includes design review header", () => {
   const agent = {
     history: [{ role: "user", content: "design a feature" }],
@@ -175,6 +191,8 @@ test("buildAdvisorUserMessage: reviewType=design includes design review header",
   assert.ok(!result.includes("## Code Review"), "不应包含代码审查标题")
   assert.ok(!result.includes("git status"), "不应包含 git 指令")
 })
+
+
 
 test("buildAdvisorUserMessage: design review with token injects Approval Signal", () => {
   const agent = {
@@ -187,6 +205,8 @@ test("buildAdvisorUserMessage: design review with token injects Approval Signal"
   assert.ok(result.includes(`[DESIGN-TOKEN:${token}]`), "应包含令牌值")
 })
 
+
+
 test("buildAdvisorUserMessage: design review without token has no Approval Signal", () => {
   const agent = {
     history: [{ role: "user", content: "design a feature" }],
@@ -195,6 +215,8 @@ test("buildAdvisorUserMessage: design review without token has no Approval Signa
   const result = buildAdvisorUserMessage(agent, null, "design")
   assert.ok(!result.includes("Approval Signal"), "无令牌时不应有 Approval Signal")
 })
+
+
 
 test("advisorTool: schema declares documents parameter for design review", async () => {
   const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
@@ -205,6 +227,8 @@ test("advisorTool: schema declares documents parameter for design review", async
    assert.ok(documents.description.includes("design"), "描述覆盖 design/code review 用途")
   assert.ok(documents.description.includes("reviews ONLY these"), "描述声明只评审清单内文档")
 })
+
+
 
 slow("buildAdvisorUserMessage: design review with documents reviews ONLY the listed docs", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
@@ -232,6 +256,8 @@ slow("buildAdvisorUserMessage: design review with documents reviews ONLY the lis
   }
 })
 
+
+
 test("buildAdvisorUserMessage: design review without documents keeps git-diff scope (backward compatible)", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
   try {
@@ -252,6 +278,8 @@ test("buildAdvisorUserMessage: design review without documents keeps git-diff sc
   }
 })
 
+
+
 test("prepareAdvisorMessages: design review passes documents through to the user message", () => {
   const agent = {
     history: [], _advisorRound: 0, cwd: tmpdir(), config: {},
@@ -262,6 +290,8 @@ test("prepareAdvisorMessages: design review passes documents through to the user
   assert.ok(msgs[1].content.includes("docs/design/A.md"), "documents 透传到 user message")
   assert.ok(msgs[1].content.includes("Read this file in full"), "documents 模式带 Read this file in full")
 })
+
+
 
 
 test("prepareAdvisorMessages: reviewType=design returns fresh session", () => {
@@ -275,6 +305,8 @@ test("prepareAdvisorMessages: reviewType=design returns fresh session", () => {
   assert.equal(msgs[1].role, "user")
 })
 
+
+
 test("buildAdvisorSystemPrompt: _advisorRound===0 forces full review despite stale history", () => {
   const issueTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | old.js | 🔴 | old bug | fix |"
   const agent = {
@@ -285,6 +317,7 @@ test("buildAdvisorSystemPrompt: _advisorRound===0 forces full review despite sta
   assert.ok(prompt.includes("full-scope review"))
   assert.ok(!prompt.includes("Verify the prior review output"))
 })
+
 
 // ────────────────────────────────────────
 // buildAdvisorUserMessage — review scope + convergence
@@ -297,6 +330,7 @@ function createGitRepo(testDir) {
   writeFileSync(join(testDir, "dummy.js"), "// test")
   execSync("git add -A && git commit -m init", { cwd: testDir, stdio: "ignore" })
 }
+
 
 test("buildAdvisorUserMessage: scope lists paths when provided", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
@@ -317,12 +351,16 @@ test("buildAdvisorUserMessage: scope lists paths when provided", () => {
   }
 })
 
+
+
 test("buildAdvisorUserMessage: round 1 does not include convergence data", () => {
   const agent = { _touchedFiles: [], cwd: tmpdir(), history: [], _advisorRound: 0 }
   const msg = buildAdvisorUserMessage(agent)
   assert.ok(!msg.includes("## Prior Review Output"))
   assert.ok(!msg.includes("## Agent Response"))
 })
+
+
 
 test("buildAdvisorUserMessage: round 2 includes convergence data (fix claims, no prior table)", () => {
   const issueTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | x.js | 🔴 | bug | fix |"
@@ -340,6 +378,8 @@ test("buildAdvisorUserMessage: round 2 includes convergence data (fix claims, no
   assert.ok(msg.includes("## Review Scope"))
 })
 
+
+
 test("buildAdvisorUserMessage: round 3+ uses strict verification header", () => {
   const issueTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | x.js | 🔴 | bug | fix |"
   const agent = {
@@ -356,6 +396,8 @@ test("buildAdvisorUserMessage: round 3+ uses strict verification header", () => 
   assert.ok(msg.includes("## Round 3 — Strict Verification"), "strict verification header present (project guide now precedes it)")
 })
 
+
+
 test("buildAdvisorUserMessage: _advisorRound===0 skips convergence data", () => {
   const issueTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | old.js | 🔴 | old bug | fix |"
   const agent = {
@@ -368,6 +410,8 @@ test("buildAdvisorUserMessage: _advisorRound===0 skips convergence data", () => 
   assert.ok(!msg.includes("## Review Scope"), "no empty Review Scope heading without paths/documents (decision: suppress empty sections)")
   assert.ok(msg.includes("## Instructions"))
 })
+
+
 
 test("buildAdvisorUserMessage: includes recent conversation background", () => {
   const agent = {
@@ -385,6 +429,8 @@ test("buildAdvisorUserMessage: includes recent conversation background", () => {
   assert.ok(msg.includes("crashes on empty input"), "earlier turn included for context")
   assert.ok(msg.includes("Let me look at the parser"), "assistant reply included")
 })
+
+
 
 test("buildAdvisorUserMessage: 注入 Project Guide (AGENTS.md) 且位于 Conversation Background 之前", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-guide-"))
@@ -407,6 +453,8 @@ test("buildAdvisorUserMessage: 注入 Project Guide (AGENTS.md) 且位于 Conver
   }
 })
 
+
+
 test("buildAdvisorUserMessage: 无 AGENTS.md 时诚实降级（明说以对话背景为准）", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-guide-"))
   try {
@@ -418,6 +466,8 @@ test("buildAdvisorUserMessage: 无 AGENTS.md 时诚实降级（明说以对话�
     rmSync(tmp, { recursive: true, force: true })
   }
 })
+
+
 
 test("buildAdvisorUserMessage: 超预算截断——小窗口模型 5% 上限生效且带截断注记", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-guide-"))
@@ -437,6 +487,8 @@ test("buildAdvisorUserMessage: 超预算截断——小窗口模型 5% 上限生
   }
 })
 
+
+
 test("buildAdvisorUserMessage: 1M 窗口模型 5% = 50K cap——长指南不截断", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-guide-"))
   try {
@@ -453,72 +505,9 @@ test("buildAdvisorUserMessage: 1M 窗口模型 5% = 50K cap——长指南不截
 
 
 // ────────────────────────────────────────
-// MAX_ADVISOR_ROUNDS guard logic (agent.mjs)
-// ────────────────────────────────────────
-
-test("agent: _advisorRound initialized to 0 in runAgent", () => {
-  let _advisorRound = 0
-  let _mutatedThisRun = true
-  let _calledAdvisorThisRun = false
-
-  // Guard triggers when mutated but not yet called
-  assert.equal(_mutatedThisRun && !_calledAdvisorThisRun, true)
-
-  // After calling advisor, guard stops pushing
-  _calledAdvisorThisRun = true
-  assert.equal(_mutatedThisRun && !_calledAdvisorThisRun, false)
-})
-
-test("escapeLiteralEscapes: v5 double 策略 + 奇数 run + 真毒形态（程序化构造避免转义层混乱）", async () => {
-  const { escapeLiteralEscapes } = await import("../src/advisor.mjs")
-  const BS = String.fromCharCode(0x5c) // 单反斜杠
-  const cases = [
-    // [输入, 期望]
-    [BS + "xzz", BS + BS + "xzz"], // 真毒：\x5Cx+非hex → double
-    [BS + "x41", BS + "x41"], // 合法 \x5Cx41 → 放行
-    [BS + "u12中文", BS + BS + "u12中文"], // 真毒：\x5Cu+不足4hex → double
-    [BS + "u0041", BS + "u0041"], // 合法 \x5Cu0041 → 放行
-    [BS + BS + "u12中文", BS + BS + "u12中文"], // 2 反斜杠偶数已配对 → 放行
-    [BS + BS + BS + "xzz", BS + BS + BS + BS + "xzz"], // 3 反斜杠奇数尾部裸露 → double 为 4
-    ["C:" + BS + "users" + BS + "temp", "C:" + BS + BS + "users" + BS + "temp"], // Windows 路径：\\x5Cu+sers 不足4hex 是真毒 → double；\\t 合法转义放行
-    ["hello", "hello"],
-    [null, ""],
-    [undefined, ""],
-  ]
-  for (const [input, expected] of cases) {
-    assert.equal(escapeLiteralEscapes(input), expected, JSON.stringify(input))
-  }
-})
-
-test("agent: _advisorRound increments on every advisor call (code AND design)", () => {
-  // Mirrors agent.mjs: design reviews share the convergence budget with code
-  // reviews — both advance _advisorRound toward MAX_ADVISOR_ROUNDS=5.
-  let _advisorRound = 0
-  const toolCalls = [
-    { name: "write", ok: true, arguments: "{}" },
-    { name: "advisor", ok: true, arguments: "{}" },
-    { name: "advisor", ok: true, arguments: JSON.stringify({ type: "design" }) },
-    { name: "edit", ok: true, arguments: "{}" },
-    { name: "advisor", ok: true, arguments: "{}" },
-  ]
-
-  for (const tc of toolCalls) {
-    if (tc.name === "advisor") {
-      try {
-        JSON.parse(tc.arguments || "{}")
-      } catch {
-        /* unparseable — still counts as a review attempt */
-      }
-      _advisorRound++
-    }
-  }
-
-  assert.equal(_advisorRound, 3) // code + design + code — all count
-})
-
-// ────────────────────────────────────────
 // Session memory — prepareAdvisorMessages / buildAdvisorFollowUp
 // ────────────────────────────────────────
+
 
 test("prepareAdvisorMessages: first call creates a fresh [system, user] session", () => {
   const agent = { history: [], _advisorRound: 0, _advisorSession: null, cwd: tmpdir(), _touchedFiles: [] }
@@ -527,6 +516,8 @@ test("prepareAdvisorMessages: first call creates a fresh [system, user] session"
   assert.equal(session[0].role, "system")
   assert.equal(session[1].role, "user")
 })
+
+
 
 
 test("prepareAdvisorMessages: design round 2+ is a FRESH session with prior-table follow-up", () => {
@@ -561,6 +552,8 @@ test("prepareAdvisorMessages: design round 2+ is a FRESH session with prior-tabl
   assert.ok(fourth[0].content.includes("Strictly verify only the prior review output"), "design round 3+ system prompt is ROUND3")
 })
 
+
+
 test("prepareAdvisorMessages: convergence rounds are FRESH sessions with prior-table follow-up", () => {
   const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug | fix |"
   const agent = { history: [{ role: "tool", tool_call_id: "a1", content: priorTable }], _advisorRound: 1, _advisorSession: null, cwd: tmpdir(), _touchedFiles: [], _lastAdvisorOutput: priorTable }
@@ -580,6 +573,8 @@ test("prepareAdvisorMessages: convergence rounds are FRESH sessions with prior-t
   assert.ok(third[0].content.includes("Do NOT look for new issues"))
 })
 
+
+
 test("buildAdvisorFollowUp: includes agent response table when present", () => {
   const agent = {
     _advisorRound: 1,
@@ -595,6 +590,8 @@ test("buildAdvisorFollowUp: includes agent response table when present", () => {
   assert.ok(msg.includes("added null check"), "response table extracted from history")
 })
 
+
+
 test("buildAdvisorFollowUp: tolerates missing response table", () => {
   const agent = {
     _advisorRound: 1,
@@ -606,6 +603,8 @@ test("buildAdvisorFollowUp: tolerates missing response table", () => {
   const msg = buildAdvisorFollowUp(agent)
   assert.ok(msg.includes("did not provide a response table"))
 })
+
+
 
 test("buildAdvisorFollowUp: injects NO git information (read-only verification by design)", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
@@ -629,6 +628,8 @@ test("buildAdvisorFollowUp: injects NO git information (read-only verification b
   }
 })
 
+
+
 test("extractConversationBackground: skips reminders/tool messages and caps turns", () => {
   const history = [
     { role: "user", content: "turn one" },
@@ -647,100 +648,14 @@ test("extractConversationBackground: skips reminders/tool messages and caps turn
   assert.ok(!bg.includes("tool result noise"), "tool messages filtered")
 })
 
+
+
 test("extractConversationBackground: returns null on empty/noise-only history", () => {
   assert.equal(extractConversationBackground([]), null)
   assert.equal(extractConversationBackground([{ role: "user", content: "[System reminder: x]" }]), null)
 })
 
-slow("runAdvisorReview: no doc-only auto-skip — review runs (or fails explicitly), never silently passes", async () => {
-  // Doc-only fast path was removed — scope is now explicit via paths/documents.
-  // With a broken provider the review must surface an explicit failure
-  // ("Advisor: review failed …"), never a pass marker. (fetch on the fake
-  // provider's undefined baseURL throws immediately — no slow network wait.)
-  const { runAdvisorReview } = await import("../src/advisor/run.mjs")
-  const agent = {
-    config: {},
-    provider: { name: "p", model: "m" },
-    history: [{ role: "user", content: "update the readme" }],
-    _touchedFiles: [],
-    _advisorRound: 0,
-    cwd: tmpdir(),
-  }
-  const result = await runAdvisorReview(agent, "code", {})
-  assert.ok(result.startsWith("Advisor:"), "explicit failure/notice, not a silent pass")
-  assert.ok(!result.includes("not enabled"), "enabled gate removed (2026-08-21): no advisor config must still run the review, got: " + result)
-  assert.ok(!result.includes("CODE_REVIEW_PASSED"), "CODE_REVIEW_PASSED should no longer appear")
-})
 
-test("runAdvisorReview: convergence cap blocks a 6th review call", async () => {
-  const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
-  const agent = {
-    config: {},
-    provider: { name: "p", model: "m" },
-    history: [],
-    _touchedFiles: ["x.js"],
-    _advisorRound: MAX_ADVISOR_ROUNDS, // cap already reached — 5 reviews completed
-    _advisorSession: [],
-    cwd: tmpdir(),
-  }
-  const result = await runAdvisorReview(agent, "code", {})
-  assert.ok(result.includes("convergence cap reached"), `cap message expected, got: ${result}`)
-  assert.ok(result.includes(String(MAX_ADVISOR_ROUNDS)), "cap message names the round limit")
-})
-
-
-test("advisorToolsFor: ZERO git tools; read-only set (code_search replaces execute)", async () => {
-  const mod = await import("../src/advisor/run.mjs")
-  const withMemory = mod._advisorToolsFor({ memory: { db: null } })
-  assert.ok(!withMemory.byName.has("git"), "no git tool — advisor never touches git")
-  assert.ok(!withMemory.byName.has("execute"), "no execute tool — CodeMode can write files, violates the read-only mandate")
-  assert.ok(withMemory.byName.has("code_search"), "semantic code_search included when memory exists")
-  for (const t of ["read", "grep", "lsp", "glob", "ls"]) {
-    assert.ok(withMemory.byName.has(t), `tool set keeps ${t}`)
-  }
-  const withoutMemory = mod._advisorToolsFor({})
-  assert.ok(!withoutMemory.byName.has("code_search"), "no memory → code_search omitted (5 tools)")
-  assert.equal(withoutMemory.schemas.length, 5)
-})
-
-test("verifyCitations: matches real file content, flags stale/missing citations", async () => {
-  const { extractCitations, verifyCitations, appendCitationReport } = await import("../src/advisor/run.mjs")
-  const dir = mkdtempSync(join(tmpdir(), "cit-"))
-  const { writeFileSync } = await import("node:fs")
-  writeFileSync(join(dir, "a.mjs"), "line one\nconst x = 42\nline three\n", "utf8")
-  const text = [
-    "| 1 | a.mjs | 🔴 | bug | Unfixed |",
-    "Evidence: `a.mjs:2: const x = 42` — still present.",
-    "Stale claim: `a.mjs:2: const y = 99` — from the prior table.",
-    "Missing file: `nope.mjs:1: anything`.",
-  ].join("\n")
-  const citations = extractCitations(text)
-  assert.equal(citations.length, 3, "all file:line: content references extracted")
-  const { total, matched, failed } = verifyCitations(text, dir)
-  assert.equal(total, 3)
-  assert.equal(matched.length, 1, "only the real line matches")
-  assert.equal(failed.length, 2, "stale content and missing file fail")
-  const report = appendCitationReport(text, dir)
-  assert.ok(report.includes("[host-verified] 1/3 citations match current file state"), "report header")
-  assert.ok(report.includes("nope.mjs:1"), "missing file listed")
-})
-
-test("verifyCitations: path traversal citation is rejected (never reads outside cwd)", async () => {
-  const { verifyCitations } = await import("../src/advisor/run.mjs")
-  const dir = mkdtempSync(join(tmpdir(), "cit-sec-"))
-  const secret = join(dir, "..", "cit-sec-secret.json")
-  writeFileSync(secret, '{"apiKey":"super-secret-value"}\n', "utf8")
-  try {
-    const text = '| 1 | a.mjs | 🔴 | bug | Unfixed |\nEvidence: `../cit-sec-secret.json:1: {"apiKey":"super-secret-value"}`'
-    const { total, matched, failed } = verifyCitations(text, dir)
-    assert.equal(total, 1)
-    assert.equal(matched.length, 0, "no match — traversal path must not be read")
-    assert.equal(failed[0].reason, "path traversal", "flagged as traversal")
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-    rmSync(secret, { force: true })
-  }
-})
 
 
 test("prepareAdvisorMessages: run with code mutations PRESERVES the round on prior loss", () => {
@@ -754,6 +669,8 @@ test("prepareAdvisorMessages: run with code mutations PRESERVES the round on pri
   assert.ok(session[1].content.includes("fresh full review"), "fresh-review user message")
 })
 
+
+
 test("prepareAdvisorMessages: run without mutations resets the round (no push-back risk)", () => {
   const agent = { _mutatedThisRun: false, history: [{ role: "tool", tool_call_id: "a1", content: "Advisor: review failed (timeout)" }], _advisorRound: 3, _advisorSession: null, cwd: tmpdir(), _touchedFiles: [] }
   const session = prepareAdvisorMessages(agent)
@@ -761,11 +678,15 @@ test("prepareAdvisorMessages: run without mutations resets the round (no push-ba
   assert.ok(session[0].content.includes("code review advisor"), "ROUND1 prompt")
 })
 
+
+
 test("appendCitationReport: no citations → text unchanged", async () => {
   const { appendCitationReport } = await import("../src/advisor/run.mjs")
   const t = "Everything is fine."
   assert.equal(appendCitationReport(t, process.cwd()), t)
 })
+
+
 
 test("prepareAdvisorMessages: all-clear review resets the round — prompt and tool set agree", () => {
   // Prior review passed (all-clear → no prior table) but _advisorRound > 0:
@@ -776,6 +697,8 @@ test("prepareAdvisorMessages: all-clear review resets the round — prompt and t
   assert.equal(agent._advisorRound, 0, "round reset — new review cycle")
   assert.ok(session[0].content.includes("code review advisor"), "ROUND1 prompt (full scope)")
 })
+
+
 
 test("prepareAdvisorMessages: _advisorRound=0 with stale prior table → fresh round 1 (no verify-prior follow-up)", () => {
   // History persists across runAgent calls: a prior table can exist while the
@@ -791,6 +714,8 @@ test("prepareAdvisorMessages: _advisorRound=0 with stale prior table → fresh r
   assert.equal(agent._advisorRound, 0, "round stays 0")
 })
 
+
+
 test("prepareAdvisorMessages: failed-retry with prior table PRESERVES the round", () => {
   const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug | fix |"
   const agent = { history: [{ role: "tool", tool_call_id: "a1", content: priorTable }], _advisorRound: 2, _advisorSession: null, cwd: tmpdir(), _touchedFiles: [], _lastAdvisorOutput: priorTable }
@@ -799,88 +724,7 @@ test("prepareAdvisorMessages: failed-retry with prior table PRESERVES the round"
   assert.ok(session[0].content.includes("Strictly verify only the prior review output"), "ROUND3 prompt — convergence continues")
 })
 
-test("runAdvisorReview: cap blocks design reviews too after 5 rounds (bounded loop)", async () => {
-  const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
-  const agent = {
-    config: {},
-    provider: { name: "p", model: "m" },
-    history: [],
-    _touchedFiles: [],
-    _advisorRound: MAX_ADVISOR_ROUNDS + 5,
-    _advisorSession: null,
-    cwd: tmpdir(),
-  }
-  // Cap reached — design reviews share the 5-round budget with code reviews.
-  // No network call happens: the cap returns the termination message directly.
-  const result = await runAdvisorReview(agent, "design", { signal: { aborted: true } })
-  assert.ok(result.includes("convergence cap reached"), `design review must hit the cap, got: ${result}`)
-  assert.ok(result.includes(String(MAX_ADVISOR_ROUNDS)), "cap message names the round limit")
-})
 
-test("runAdvisorReview: design review below cap reaches the tool loop", async () => {
-  const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
-  const agent = {
-    config: {},
-    provider: { name: "p", model: "m" },
-    history: [],
-    _touchedFiles: [],
-    _advisorRound: MAX_ADVISOR_ROUNDS - 1, // 5th review still allowed
-    _advisorSession: null,
-    cwd: tmpdir(),
-  }
-  // Pre-aborted signal: the tool loop returns "interrupted" immediately — no
-  // network call. Proves the guard let the review through before the cap.
-  const result = await runAdvisorReview(agent, "design", { signal: { aborted: true } })
-  assert.ok(!result.includes("convergence cap reached"), `design review must pass the cap guard, got: ${result}`)
-  assert.ok(result.includes("interrupted"), `design review must reach the tool loop, got: ${result}`)
-})
-
-slow("runAdvisorReview: code changes do NOT hit the doc-only fast path", async () => {
-  let tmp
-  try {
-    tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
-    createGitRepo(tmp)
-    writeFileSync(join(tmp, "app.js"), "console.log(1)\n")
-    execSync("git add -A", { cwd: tmp, stdio: "ignore" })
-    // verify isDocOnlyChange indirectly: with a .js change the review must proceed.
-    // We can't run the LLM here, so assert the fast path is NOT taken by checking
-    // that prepareAdvisorMessages builds a round-1 session for this agent.
-    const agent = {
-      config: {},
-      provider: { name: "p", model: "m" },
-      history: [{ role: "user", content: "change app code" }],
-      _touchedFiles: [join(tmp, "app.js")],
-      _advisorRound: 0,
-      _advisorSession: null,
-      cwd: tmp,
-    }
-    const session = prepareAdvisorMessages(agent, undefined, null, null, ["app.js"])
-    assert.equal(session[0].role, "system")
-    assert.ok(session[1].content.includes("app.js") || session[1].content.includes("diff"), "code change goes to full review")
-  } finally {
-    if (tmp) rmSync(tmp, { recursive: true, force: true })
-  }
-})
-
-test("_renderTimeline: interleaves thinking/tool/final in emission order (persisted-record gap)", async () => {
-  const { _renderTimeline } = await import("../src/advisor/run.mjs")
-  assert.equal(_renderTimeline([]), "", "empty timeline")
-  assert.equal(_renderTimeline([], "tail only"), "tail only", "tail alone when timeline empty")
-  const timeline = [
-    { kind: "think", text: "先读文件" },
-    { kind: "tool", text: "\n→ read src/a.mjs\n" },
-    { kind: "think", text: "看到问题了" },
-    { kind: "text", text: "\n| # | 问题 |\n| 1 | x |" },
-  ]
-  const out = _renderTimeline(timeline)
-  assert.ok(out.includes("→ read src/a.mjs"), "tool call present")
-  assert.ok(out.indexOf("先读文件") < out.indexOf("→ read src/a.mjs"), "think before its tool call")
-  assert.ok(out.indexOf("→ read src/a.mjs") < out.indexOf("看到问题了"), "tool call before the next think")
-  assert.ok(out.indexOf("看到问题了") < out.indexOf("| 1 | x |"), "final text last")
-  // placeholder strip
-  const withPlaceholder = _renderTimeline([{ kind: "think", text: "a\n[thinking…]\nb" }])
-  assert.ok(!withPlaceholder.includes("[thinking…]"), "placeholder stripped")
-})
 
 test("buildAdvisorUserMessage: 多项目工作区——评审范围在子目录时注入该子项目的 AGENTS.md", () => {
   const ws = mkdtempSync(join(tmpdir(), "advisor-ws-"))
@@ -904,6 +748,8 @@ test("buildAdvisorUserMessage: 多项目工作区——评审范围在子目录�
   }
 })
 
+
+
 test("buildAdvisorUserMessage: 混合分隔符绝对路径（正斜杠输入）仍定位子项目地图", () => {
   const ws = mkdtempSync(join(tmpdir(), "advisor-mixsep-"))
   try {
@@ -925,6 +771,8 @@ test("buildAdvisorUserMessage: 混合分隔符绝对路径（正斜杠输入）�
 })
 
 
+
+
 test("buildAdvisorUserMessage: cwd 有 AGENTS.md 但评审在子项目 → 子项目地图胜出（工作区级地图不遮蔽）", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-root-"))
   try {
@@ -940,6 +788,8 @@ test("buildAdvisorUserMessage: cwd 有 AGENTS.md 但评审在子项目 → 子�
   }
 })
 
+
+
 test("buildAdvisorUserMessage: 单项目（cwd 有 AGENTS.md、子目录没有）→ cwd 地图", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-single-"))
   try {
@@ -952,6 +802,8 @@ test("buildAdvisorUserMessage: 单项目（cwd 有 AGENTS.md、子目录没有�
     rmSync(tmp, { recursive: true, force: true })
   }
 })
+
+
 
 test("buildAdvisorUserMessage: 工作区与评审目录均无 AGENTS.md → 诚实降级", () => {
   const ws = mkdtempSync(join(tmpdir(), "advisor-noguide-"))
@@ -966,9 +818,11 @@ test("buildAdvisorUserMessage: 工作区与评审目录均无 AGENTS.md → 诚�
   }
 })
 
+
 // ────────────────────────────────────────
 // decision 2026-08-08: prior review output injected verbatim, no hard parsing
 // ────────────────────────────────────────
+
 
 test("buildAdvisorFollowUp: injects the FULL prior review output verbatim (model understands it — no table parsing)", () => {
   const reviewOutput = "Prior review: some narrative explanation...\n\n| # | File | Severity | Issue | Suggestion |\n|---|------|----------|-------|------------|\n| 1 | a.mjs | 🔴 | bug A | fix A |\nNo new issues."
@@ -977,6 +831,8 @@ test("buildAdvisorFollowUp: injects the FULL prior review output verbatim (model
   assert.ok(msg.includes(reviewOutput), "完整原文注入（含叙述）")
   assert.ok(msg.includes("## Prior Review Output"), "段标题")
 })
+
+
 
 test("buildAdvisorFollowUp: no stored output → fresh-review fallback (no prior parsing from history)", () => {
   // History contains a perfectly-formatted prior table — but with the
@@ -990,11 +846,15 @@ test("buildAdvisorFollowUp: no stored output → fresh-review fallback (no prior
   assert.ok(msg.includes("System reminder: convergence follow-up requested without a prior review"), "诚实降级")
 })
 
+
+
 test("buildAdvisorFollowUp: round 1 guard still enforced", () => {
   const agent = { history: [], _advisorRound: 0, _lastAdvisorOutput: "some review", cwd: tmpdir() }
   const msg = buildAdvisorFollowUp(agent)
   assert.ok(msg.includes("convergence follow-up requested at round 1"), "round 1 无验证语义")
 })
+
+
 
 test("prepareAdvisorMessages: round 2+ requires BOTH _advisorRound>0 and stored output (no history parsing)", () => {
   const mk = (over = {}) => ({
@@ -1014,6 +874,8 @@ test("prepareAdvisorMessages: round 2+ requires BOTH _advisorRound>0 and stored 
   assert.ok(s2[1].content.includes("bug | fix |"), "评审表内容在")
 })
 
+
+
 test("buildAdvisorSystemPrompt: round decision is deterministic (_advisorRound + stored output)", () => {
   const mk = (r, out) => ({ history: [], _advisorRound: r, _lastAdvisorOutput: out, cwd: tmpdir() })
   assert.ok(buildAdvisorSystemPrompt(mk(0, null)).includes("full-scope review"), "round 0 → ROUND1")
@@ -1022,10 +884,14 @@ test("buildAdvisorSystemPrompt: round decision is deterministic (_advisorRound +
   assert.ok(buildAdvisorSystemPrompt(mk(2, "review text")).includes("Strictly verify only the prior review output"), "round 3+ → ROUND3")
 })
 
+
+
 test("buildAdvisorSystemPrompt: prior param overrides stored output (direct caller compat)", () => {
   const agent = { history: [], _advisorRound: 1, _lastAdvisorOutput: null, cwd: tmpdir() }
   assert.ok(buildAdvisorSystemPrompt(agent, "direct prior").includes("Verify the prior review output"), "显式 prior 参数")
 })
+
+
 
 test("extractAgentResponseTable: no sinceIdx → most recent response table (backward scan)", () => {
   const history = [
@@ -1037,6 +903,8 @@ test("extractAgentResponseTable: no sinceIdx → most recent response table (bac
   assert.ok(result.includes("new |"), "最近响应表优先")
   assert.ok(!result.includes("old |"), "不取旧的")
 })
+
+
 
 test("buildAdvisorUserMessage: legacy convergence path injects verbatim output, not parsed table", () => {
   const agent = {
@@ -1050,462 +918,11 @@ test("buildAdvisorUserMessage: legacy convergence path injects verbatim output, 
 })
 
 
-// ────────────────────────────────────────
-// 文档归属纪律 + advisor 设计评审增强（2026-08-21，AGENT-LOOP.md §12）
-// ────────────────────────────────────────
-
-const TEST_DIR_ABS = dirname(fileURLToPath(import.meta.url)) // thincoder/test
-const SRC_DIR_ABS = join(TEST_DIR_ABS, "..", "src")
-const PROMPTS_DIR_ABS = join(SRC_DIR_ABS, "prompts")
-
-test("prompts/advisor-design.md: Document ownership 维度 + 🔴/🟡 分级 + 引用纪律 + Approval Signal 保留", () => {
-  const text = readFileSync(join(PROMPTS_DIR_ABS, "advisor-design.md"), "utf8")
-  assert.ok(text.includes("Document ownership"), "第 7 维 Document ownership 存在")
-  assert.match(text, /CONTRADICTS[^\n]*🔴/, "与现有文档矛盾 → 🔴 分级句")
-  assert.match(text, /duplicating[^\n]*🟡/, "该并入却新建/重复描述 → 🟡 分级句")
-  assert.ok(text.includes("file:line"), "引用纪律：精确 file:line 格式")
-  assert.ok(text.includes("unverified"), "引用纪律：未核实内容标注 unverified")
-  assert.ok(text.includes("## Approval Signal"), "Approval Signal 段保留")
-  assert.ok(text.includes("[DESIGN-TOKEN:...]"), "DESIGN-TOKEN 回显规则保留（防 fallback 删除后丢失）")
-})
-
-test("prompts/system.md: 文档归属纪律条款（doc map / update instead of creating）", () => {
-  const text = readFileSync(join(PROMPTS_DIR_ABS, "system.md"), "utf8")
-  assert.ok(text.includes("Document ownership"), "条款存在")
-  assert.ok(text.includes("docs/design/README.md"), "doc map 定位句")
-  assert.match(text, /update it; never create a new file/, "找到就改、不得新建（update instead of creating）")
-  assert.match(text, /exactly ONE place/, "单一权威源语义")
-})
-
-test("prompts/system.md: 操作并行化纪律条款（Parallelize aggressively + F7 触发条件 + 不并行边界 + 调度器 carve-out）", () => {
-  const text = readFileSync(join(PROMPTS_DIR_ABS, "system.md"), "utf8")
-  assert.match(text, /Parallelize aggressively/, "主动并行引导句存在")
-  assert.match(text, /splitting changes across independent sub-projects/, "F7 多项目拆分语义")
-  assert.match(text, /share no files, have no cross-dependencies, and each has its own tests/, "F7 触发条件（全部满足才拆）")
-  assert.match(text, /Do NOT parallelize/, "不并行边界引导")
-  assert.match(text, /approval storms/, "审批风暴边界（bash/审批敏感命令）")
-  assert.match(text, /micro-parallelism/, "微操作不并行（收益判断）")
-  // §20.7 T-PS3：D1 条款 carve-out——声明 files 的 async spawn → 调度器排队（旧禁令限定未声明/工具级并行写）
-  assert.match(text, /writes to the same file \(except async spawns with `files` declared/, "carve-out：声明 files 的 async spawn 例外在（T-PS3）")
-  assert.match(text, /scheduler queues overlapping ones until clear/, "carve-out 术语与 D-PS1/D-PS2 一致（scheduler/queued）")
-})
-
-test("docs/design/README.md: 文档地图存在且含板块映射表 + 待合并标注", () => {
-  const text = readFileSync(join(SRC_DIR_ABS, "..", "docs", "design", "README.md"), "utf8")
-  assert.ok(text.includes("板块 → 文档映射"), "映射表存在")
-  assert.match(text, /\| 架构 \|/, "架构板块行")
-  assert.match(text, /\| 工具系统 \|/, "工具板块行")
-  assert.ok(text.includes("待合并（TODO）"), "存量碎片待合并标注")
-})
-
-test("advisor.mjs: design 提示词硬加载——无 ADVISOR_DESIGN_FALLBACK 残留，内容与文件逐字节一致", () => {
-  const src = readFileSync(join(SRC_DIR_ABS, "advisor.mjs"), "utf8")
-  assert.ok(!src.includes("ADVISOR_DESIGN_FALLBACK"), "ADVISOR_DESIGN_FALLBACK 常量已删除")
-  assert.ok(src.includes('loadPrompt("advisor-design.md"'), "design 提示词走 loadPrompt 硬加载（缺失即抛错，与 round1/2/3 同待遇）")
-  const prompt = buildAdvisorSystemPrompt({ history: [], _advisorRound: 0, cwd: tmpdir() }, null, "design")
-  const file = readFileSync(join(PROMPTS_DIR_ABS, "advisor-design.md"), "utf8")
-  assert.equal(prompt, file, "设计审查系统提示词与 advisor-design.md 逐字节一致（无静默降级）")
-})
-
-test("advisor: MAX_RESULT_CHARS = 64 * 1024（65536，与主链路落盘阈值一致）", () => {
-  assert.equal(MAX_RESULT_CHARS, 64 * 1024, "advisor 工具结果截断上限 = 64K（旧 12K，line-aware 截断逻辑不变）")
-})
-
-
-test("buildAdvisorUserMessage: design 分支 Instructions 补 Methodology compliance 维度", () => {
-  const agent = { history: [], _advisorRound: 0, cwd: tmpdir(), config: {} }
-  const msg = buildAdvisorUserMessage(agent, null, "design")
-  assert.ok(msg.includes("methodology compliance (does it follow the project's METHODOLOGY.md?)"), "Instructions 第 2 条含 Methodology 维度")
-})
-
-test("buildAdvisorUserMessage: 存在 docs/design/README.md 时 design 分支注入 Document Map 段", () => {
-  const tmp = mkdtempSync(join(tmpdir(), "advisor-docmap-"))
-  try {
-    mkdirSync(join(tmp, "docs", "design"), { recursive: true })
-    writeFileSync(join(tmp, "docs", "design", "README.md"), "# 文档地图\n\n| 板块 | 文档 |\n| 架构 | ARCHITECTURE.md |\n")
-    const agent = { history: [], _advisorRound: 0, cwd: tmp, config: {} }
-    const msg = buildAdvisorUserMessage(agent, null, "design")
-    assert.ok(msg.includes("## Document Map"), "Document Map 段注入")
-    assert.ok(msg.includes("| 架构 | ARCHITECTURE.md |"), "地图文件内容注入")
-    const mapIdx = msg.indexOf("## Document Map")
-    const instrIdx = msg.indexOf("## Instructions")
-    assert.ok(mapIdx !== -1 && instrIdx !== -1 && mapIdx < instrIdx, "Document Map 位于 Instructions 之前")
-  } finally {
-    rmSync(tmp, { recursive: true, force: true })
-  }
-})
-
-test("buildAdvisorUserMessage: 无 docs/design/README.md 时 design 分支正常跳过 Document Map 段", () => {
-  const tmp = mkdtempSync(join(tmpdir(), "advisor-docmap-"))
-  try {
-    const agent = { history: [], _advisorRound: 0, cwd: tmp, config: {} }
-    const msg = buildAdvisorUserMessage(agent, null, "design")
-    assert.ok(!msg.includes("## Document Map"), "无地图时不注入")
-    assert.ok(msg.includes("## Design Review"), "设计审查消息本体正常")
-  } finally {
-    rmSync(tmp, { recursive: true, force: true })
-  }
-})
-
-test("buildAdvisorUserMessage: 子项目有 AGENTS.md + 文档地图 → 注入子项目地图（guideRoot 发现逻辑）", () => {
-  const tmp = mkdtempSync(join(tmpdir(), "advisor-docmap-"))
-  try {
-    mkdirSync(join(tmp, "sub", "docs", "design"), { recursive: true })
-    writeFileSync(join(tmp, "sub", "AGENTS.md"), "# 子项目指南\n")
-    writeFileSync(join(tmp, "sub", "docs", "design", "README.md"), "# 子地图\n\n| 板块 | 文档 |\n| x | y.md |\n")
-    const agent = { history: [], _advisorRound: 0, cwd: tmp, config: {} }
-    const msg = buildAdvisorUserMessage(agent, null, "design", null, ["sub/docs/design/d.md"])
-    assert.ok(msg.includes("## Document Map"), "Document Map 段注入")
-    assert.ok(msg.includes("# 子地图"), "子项目文档地图内容注入")
-  } finally {
-    rmSync(tmp, { recursive: true, force: true })
-  }
-})
-// ---------------------------------------------------------------- advisor review timeout（agent.advisor.timeoutMs 配置化）
-
-/** 本地 mock LLM server：每轮请求都返回同一个 tool-call SSE 响应（永不产生最终文本），让 advisor 工具循环持续迭代 */
-function mockToolLoopServer() {
-  return import("node:http").then(({ createServer }) => {
-    const hits = { count: 0 }
-    const server = createServer((req, res) => {
-      req.on("data", () => {})
-      req.on("end", () => {
-        hits.count++
-        const frames =
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: `call_${hits.count}`, function: { name: "no_such_tool", arguments: "{}" } }] } }] })}\n\n` +
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
-          `data: [DONE]\n\n`
-        res.writeHead(200, { "Content-Type": "text/event-stream" })
-        res.end(frames)
-      })
-    })
-    return new Promise((resolve) => {
-      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, hits }))
-    })
-  })
-}
-
-/**
- * Run an advisor review until the wall-clock timeout returns (no real waiting).
- * llm: { server, port, hits } from mockToolLoopServer(). mock.timers with apis:["Date"]
- * freezes Date.now() at 0 and setTime() advances it
- * (real timers and real I/O keep working — core.mjs's chat path has no clock deps).
- * The loop captures startTime under the fake clock; once the first chat request hits
- * the mock server we advance the clock past the budget, so the next loop iteration
- * returns the timeout message. configTimeoutMs === undefined means "not configured"
- * (falls back to the default).
- */
-async function reviewUntilTimeout(llm, agent, { configTimeoutMs, fakeElapsedMs }) {
-  const { mock } = await import("node:test")
-  const { runAdvisorReview } = await import("../src/advisor/run.mjs")
-  mock.timers.enable({ apis: ["Date"] })
-  try {
-    if (configTimeoutMs !== undefined) agent.config = { advisor: { timeoutMs: configTimeoutMs } }
-    const pending = runAdvisorReview(agent, "code", {})
-    let settledEarly = false
-    pending.then(() => { settledEarly = true })
-    // Wait for the first chat request to reach the mock server (real I/O; bounded poll)
-    for (let i = 0; i < 200 && llm.hits.count === 0; i++) {
-      await new Promise((r) => setTimeout(r, 5))
-    }
-    assert.ok(llm.hits.count >= 1, "mock LLM server must receive the advisor's first chat request")
-    assert.equal(settledEarly, false, "review must NOT resolve before the timeout elapses")
-    mock.timers.setTime(fakeElapsedMs)
-    return await pending
-  } finally {
-    mock.timers.reset()
-  }
-}
-
-function timeoutAgent(port) {
-  return {
-    config: {},
-    provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
-    history: [{ role: "user", content: "review the change" }],
-    _touchedFiles: ["x.js"],
-    _advisorRound: 0,
-    cwd: tmpdir(),
-  }
-}
-
-test("advisor timeout: configured agent.advisor.timeoutMs=100 truncates at ~100ms with the timeout message", async () => {
-  const mock = await mockToolLoopServer()
-  try {
-    const result = await reviewUntilTimeout(mock, timeoutAgent(mock.port), { configTimeoutMs: 100, fakeElapsedMs: 101 })
-    assert.match(result, /Advisor: review timeout after \d+s\. Partial results may be available\./)
-    assert.ok(!result.includes("after 600s"), "configured 100ms must win over the 600s default, got: " + result)
-    assert.ok(mock.hits.count <= 100, "review must stop well before the 100-turn cap — timeout fired first (hits=" + mock.hits.count + ")")
-  } finally {
-    mock.server.close()
-  }
-})
-
-test("advisor timeout: no timeoutMs config falls back to the 600s default (message \"after 600s\")", async () => {
-  const mock = await mockToolLoopServer()
-  try {
-    const result = await reviewUntilTimeout(mock, timeoutAgent(mock.port), { fakeElapsedMs: 600_001 })
-    assert.match(result, /Advisor: review timeout after 600s\./)
-  } finally {
-    mock.server.close()
-  }
-})
-
-test("advisor timeout: invalid timeoutMs (0 / -100 / \"abc\") falls back to the 600s default — no immediate truncation", async () => {
-  for (const bad of [0, -100, "abc"]) {
-    const mock = await mockToolLoopServer()
-    try {
-      const result = await reviewUntilTimeout(mock, timeoutAgent(mock.port), { configTimeoutMs: bad, fakeElapsedMs: 600_001 })
-      assert.match(result, /Advisor: review timeout after 600s\./, `invalid value ${JSON.stringify(bad)} must fall back to the default, got: ${result}`)
-    } finally {
-      mock.server.close()
-    }
-  }
-})
-
-// ─── §18.7 B1 批并行（AGENT-LOOP.md §18.7 D-TS7——T-TS8/T-TS9）──────────────
-
-/** B1 mock LLM：请求 1 = 一次回复两个只读工具调用；请求 2 = 最终文本。 */
-function b1LoopServer() {
-  return import("node:http").then(({ createServer }) => {
-    const requests = []
-    const server = createServer((req, res) => {
-      let bodyText = ""
-      req.on("data", (c) => (bodyText += c))
-      req.on("end", () => {
-        requests.push(JSON.parse(bodyText))
-        res.writeHead(200, { "Content-Type": "text/event-stream" })
-        if (requests.length === 1) {
-          res.end(
-            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [
-              { index: 0, id: "call_tool1", function: { name: "read", arguments: "{}" } },
-              { index: 1, id: "call_tool2", function: { name: "grep", arguments: "{}" } },
-            ] } }] })}\n\n` +
-            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
-            `data: [DONE]\n\n`,
-          )
-        } else {
-          res.end(
-            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "review complete" } }] })}\n\n` +
-            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
-            `data: [DONE]\n\n`,
-          )
-        }
-      })
-    })
-    return new Promise((resolve) => {
-      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, requests }))
-    })
-  })
-}
-
-test("B1 (T-TS8): 同一回复多个只读工具调用并行执行——两工具都在任一完成前启动（确定性事件序——弃墙钟）", async () => {
-  const { _runAdvisorToolLoop } = await import("../src/advisor/run.mjs")
-  const log = []
-  const mkSlow = (name) => ({
-    name,
-    execute: async () => {
-      log.push(`${name}-start`) // 同步段——Promise.all 启动序确定性
-      await new Promise((r) => setTimeout(r, 100))
-      log.push(`${name}-end`)
-      return `${name}-result`
-    },
-  })
-  const tools = { schemas: [], byName: new Map([["read", mkSlow("read")], ["grep", mkSlow("grep")]]) }
-  const { server, port } = await b1LoopServer()
-  try {
-    const messages = []
-    const out = await _runAdvisorToolLoop(
-      { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
-      messages, null, null, { cwd: tmpdir() }, tmpdir(), tools,
-    )
-    assert.ok(out.includes("review complete"), "B1: 工具循环正常收敛到最终文本")
-    // 并行确定性断言：两工具都先启动、后完成（串行实现会得到 start→end→start→end——必挂）
-    assert.equal(log[0], "read-start", "B1: read 先启动（Promise.all 输入序）")
-    assert.equal(log[1], "grep-start", "B1: grep 启动于 read 启动后、任一完成前")
-    assert.ok(log.indexOf("read-end") >= 2 && log.indexOf("grep-end") >= 2, "B1: 两个 end 都在两个 start 之后（并发——互不等待）")
-    // 结果按 toolCalls 顺序回填（tool_call_id 不错配）
-    const t1 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool1")
-    const t2 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool2")
-    assert.equal(t1.content, "read-result", "B1: 工具 1 结果回填（id 匹配）")
-    assert.equal(t2.content, "grep-result", "B1: 工具 2 结果回填（id 匹配）")
-    assert.ok(messages.indexOf(t1) < messages.indexOf(t2), "B1: 结果按 toolCalls 顺序入列")
-  } finally {
-    server.close()
-  }
-})
-
-test("B1 (T-TS9): 错误隔离——一工具抛错另一工具成功——两结果回填 + 顺序保序 + 无未处理拒绝", async () => {
-  const { _runAdvisorToolLoop } = await import("../src/advisor/run.mjs")
-  const tools = {
-    schemas: [],
-    byName: new Map([
-      ["read", { name: "read", execute: async () => { throw new Error("boom") } }],
-      ["grep", { name: "grep", execute: async () => "grep-result" }],
-    ]),
-  }
-  const { server, port } = await b1LoopServer()
-  try {
-    const messages = []
-    const out = await _runAdvisorToolLoop(
-      { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
-      messages, null, null, { cwd: tmpdir() }, tmpdir(), tools,
-    )
-    // 抛错的工具独立捕获——不阻断另一工具，也不终止循环；无未处理拒绝（测试完成即证明）
-    assert.ok(out.includes("review complete"), "T-TS9: 一工具抛错不终止评审循环")
-    const t1 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool1")
-    const t2 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool2")
-    assert.equal(t1.content, "Error (execution_error): boom", "T-TS9: 抛错工具的结果 = 错误字符串（独立捕获）")
-    assert.equal(t2.content, "grep-result", "T-TS9: 另一工具照常成功回填")
-    assert.ok(messages.indexOf(t1) < messages.indexOf(t2), "T-TS9: 顺序按 toolCalls 保序")
-  } finally {
-    server.close()
-  }
-})
-
-
-
-// ─── v2 token hardening (2026-08-25): TTL 7d configurable + fail-closed + revoke narrowing ───
-test("validateDesignToken: fail-closed on malformed strings (two legacy backdoors gone)", async () => {
-  const { validateDesignToken } = await import("../src/agent-tools/advisor.mjs")
-  // "abc:notanumber:x" passed the isNaN backdoor; 4-part strings passed the parts backdoor
-  assert.equal(validateDesignToken("abc:notanumber:x"), false, "NaN expiry must be rejected (was fail-open)")
-  assert.equal(validateDesignToken("a:b:c:d"), false, "4-part string must be rejected")
-  assert.equal(validateDesignToken(""), false)
-  assert.equal(validateDesignToken("uuid:abc:sig"), false, "non-numeric expiry rejected")
-})
-
-test("validateDesignToken: TTL ceiling — valid inside, rejected past expiry", async () => {
-  const { validateDesignToken } = await import("../src/agent-tools/advisor.mjs")
-  const { createHmac } = await import("node:crypto")
-  const mk = (expiresAt) => {
-    const uuid = "11111111-2222-3333-4444-555555555555"
-    const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-    return `${uuid}:${expiresAt}:${sig}`
-  }
-  // AC1 (original pain point): past 1h / 3d, inside 7d → still valid
-  assert.equal(validateDesignToken(mk(Date.now() + 3 * 24 * 3600 * 1000)), true, "3 days in → valid")
-  assert.equal(validateDesignToken(mk(Date.now() + 3600 * 1000)), true, "1h in → valid")
-  // AC2: past 7d → rejected
-  assert.equal(validateDesignToken(mk(Date.now() - 1000)), false, "expired → rejected")
-})
-
-test("effectiveTokenTtlMs: invalid config falls back to 7d default (AC4)", async () => {
-  // Not exported — verify via generateDesignToken behavior is covered by TTL tests above;
-  // direct unit: re-import with a stub agent (function is module-private, assert via token expiry delta)
-  const { validateDesignToken } = await import("../src/agent-tools/advisor.mjs")
-  const { createHmac } = await import("node:crypto")
-  // A token minted with the default TTL must remain valid at 6d23h (inside default ceiling)
-  const uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-  const exp = Date.now() + 7 * 24 * 3600 * 1000 - 3600 * 1000
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${exp}`).digest("hex").slice(0, 16)
-  assert.equal(validateDesignToken(`${uuid}:${exp}:${sig}`), true, "6d23h → valid under 7d default")
-})
-
-test("revoke narrowing: error reply must not revoke a standing token (AC5)", async () => {
-  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
-  // Stub runAdvisorReview? It is imported statically — instead drive the tool with an error-producing
-  // scenario: no review scope for code review produces an "Advisor:"-prefixed error return.
-  // Design path with valid docs but a failing runner is heavyweight; the unit that matters is
-  // the isCompletedReview guard, asserted via a design review that errors early (invalid doc path).
-  const agent = { config: { agent: { engineering: true } }, _engDesignToken: "standing", _advisorRound: 0, _advisorSession: null, cwd: process.cwd(), _touchedFiles: [] }
-  const out = await advisorTool.execute({ type: "design", documents: ["src/definitely-not-a-doc.mjs"] }, { agent })
-  assert.match(out, /must be in docs/, "invalid docs → early Advisor error return")
-  assert.equal(agent._engDesignToken, "standing", "error reply must NOT revoke the standing token (v2)")
-})
-
-test("eng(enter) idempotent: already-on does not clear the token (AC6)", async () => {
-  const { engTool } = await import("../src/agent-tools/eng.mjs")
-  const agent = { config: { agent: { engineering: true } }, _engDesignToken: "keepme", _pendingReminders: [] }
-  const out = await engTool.execute({ action: "enter" }, { agent })
-  assert.match(out, /already active/)
-  assert.equal(agent._engDesignToken, "keepme", "redundant enter keeps the standing token")
-})
-
-// ─── designId 多槽 token（ENGINEERING-MODE.md 2026-09-01：AC8/T15/T17；评审 #1 回显） ───
-
-/** Mock advisor LLM：pass=true echoes the injected [DESIGN-TOKEN:…] (review passes);
- *  pass=false returns a findings table without any token (COMPLETED review, not passed). */
-function mockDesignReviewServer(pass) {
-  return import("node:http").then(({ createServer }) => {
-    const bodies = []
-    const server = createServer((req, res) => {
-      let text = ""
-      req.on("data", (c) => (text += c))
-      req.on("end", () => {
-        const body = JSON.parse(text)
-        bodies.push(body)
-        const m = JSON.stringify(body.messages).match(/([0-9a-f-]+:\d+:[0-9a-f]{16})/)
-        const token = m ? m[1] : "no-token-found"
-        const content = pass
-          ? `## Review\n\n设计通过，未发现问题。\n\n[DESIGN-TOKEN:${token}]`
-          : "## Review\n\n| # | Category | Severity | Issue | Suggestion |\n|---|---------|----------|------|------------|\n| 1 | correctness | 🔴 | spec gap | fix the spec |"
-        const frames =
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content } }] })}\n\n` +
-          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
-          `data: [DONE]\n\n`
-        res.writeHead(200, { "Content-Type": "text/event-stream" })
-        res.end(frames)
-      })
-    })
-    return new Promise((resolve) => {
-      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, bodies }))
-    })
-  })
-}
-
-test("designId 多槽：通过 → designId 回显 + token 入 _engDesignTokens 槽 + 单槽镜像保留（评审 #1）", async () => {
-  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
-  const { server, port } = await mockDesignReviewServer(true)
-  try {
-    const agent = {
-      config: { agent: { engineering: true } },
-      provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
-      history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpdir(),
-    }
-    const out1 = await advisorTool.execute({ type: "design", documents: ["docs/design/A.md"] }, { agent })
-    assert.match(out1, /Approved\. Pass this exact token/, "第一次评审通过")
-    assert.match(out1, /designId: [0-9a-f-]{36}/, "通过结果回显 designId（评审 #1——多设计首 spawn 定向依据）")
-    const out2 = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"] }, { agent })
-    assert.match(out2, /Approved\. Pass this exact token/, "第二次评审通过")
-    const map = agent._engDesignTokens
-    assert.ok(map instanceof Map && map.size === 2, "两槽并存——后签发不覆盖前签发（AC8）")
-    const idOf = (out) => out.match(/designId: ([0-9a-f-]{36})/)[1]
-    assert.notEqual(map.get(idOf(out1)), map.get(idOf(out2)), "两个 designId 各持自己的 token")
-    assert.equal(typeof agent._engDesignToken, "string", "单槽兼容镜像保留（关键决策 ②）")
-    assert.equal(agent._engDesignToken, map.get(idOf(out2)), "镜像 = 最近签发的 token（既有布尔判定语义）")
-    // 回显的 designId 确实能在槽集合中取回对应 token（首 spawn 定向可用）
-    assert.ok(map.has(idOf(out1)) && map.has(idOf(out2)), "回显 designId ↔ 槽一一对应")
-  } finally {
-    server.close()
-  }
-})
-
-test("designId 隔离：复审完成但未通过（无 token 回显）→ 该次 designId 不入槽、既有槽全保留（方案 ②）", async () => {
-  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
-  const { server, port } = await mockDesignReviewServer(false)
-  try {
-    const agent = {
-      config: { agent: { engineering: true } },
-      provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
-      history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpdir(),
-      _engDesignTokens: new Map([["slot-a", "tok-a"], ["slot-b", "tok-b"]]),
-      _engDesignToken: "tok-a",
-    }
-    const out = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"] }, { agent })
-    assert.doesNotMatch(out, /Approved\./, "复审未通过（无 token 回显）")
-    assert.equal(agent._engDesignTokens.size, 2, "失败不清任何既有槽（2026-08-30 隔离逻辑扩至多槽）")
-    assert.equal(agent._engDesignTokens.get("slot-a"), "tok-a", "槽 a 原样（T17）")
-    assert.equal(agent._engDesignTokens.get("slot-b"), "tok-b", "槽 b 原样（T17）")
-    assert.equal(agent._engDesignToken, "tok-a", "单槽镜像同样不被清——旧 token 存活至 TTL（评审 #2 方案 ②）")
-  } finally {
-    server.close()
-  }
-})
-
 
 // ─── §18.8 评审对象锚（AGENT-LOOP.md §18.8——T-OA1..5）──────────────
 
 const OA_OBJECT = { type: "design", target: "§18.7", status: "待评审", reason: "用户发起", exclude: "已批准项" }
+
 
 test("buildObjectDeclarationBlock: 声明块格式（§18.8 D-OA2 英文锚）", () => {
   const block = buildObjectDeclarationBlock(OA_OBJECT)
@@ -1521,6 +938,8 @@ test("buildObjectDeclarationBlock: 声明块格式（§18.8 D-OA2 英文锚）",
   assert.ok(listBlock.includes("Excluded (not in this review): 已批准 A, 已实现 B"), "exclude 列表 join")
 })
 
+
+
 test("buildAdvisorUserMessage: object 注入声明块——位于评审内容之前（§18.8 T-OA1/T-OA4/T-OA5）", () => {
   const agent = { history: [{ role: "user", content: "design a feature" }], _advisorRound: 0, cwd: tmpdir(), config: {} }
   const msg = buildAdvisorUserMessage(agent, null, "design", null, null, null, OA_OBJECT)
@@ -1532,12 +951,16 @@ test("buildAdvisorUserMessage: object 注入声明块——位于评审内容之
   assert.ok(msg.includes("## Design Review"), "既有评审内容保留（T-OA5——不破坏）")
 })
 
+
+
 test("buildAdvisorUserMessage: 无 object 参数——不注入、不崩（§18.8 T-OA3 旧调用兼容）", () => {
   const agent = { history: [], _advisorRound: 0, cwd: tmpdir(), config: {} }
   const msg = buildAdvisorUserMessage(agent, null, "design")
   assert.ok(!msg.includes("## Review-object declaration"), "无声明块")
   assert.ok(msg.includes("## Design Review"), "消息本体正常构建（降级现状）")
 })
+
+
 
 test("buildAdvisorFollowUp: object 声明块前置——round 2+ 每轮锚定（§18.8 T-OA2）", () => {
   const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.mjs | 🔴 | bug | fix |"
@@ -1553,6 +976,8 @@ test("buildAdvisorFollowUp: object 声明块前置——round 2+ 每轮锚定（
   assert.ok(!msg2.includes("## Review-object declaration"), "无 object 不注入（降级兼容）")
 })
 
+
+
 test("prepareAdvisorMessages: round 2+ 复评——对象声明仍注入（§18.8 T-OA2 每轮锚定）", () => {
   const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug | fix |"
   const agent = {
@@ -1567,6 +992,8 @@ test("prepareAdvisorMessages: round 2+ 复评——对象声明仍注入（§18.
   assert.ok(msgs[1].content.includes("## Prior Review Output"), "复评正文保留")
 })
 
+
+
 test("buildAdvisorUserMessage: legacy round 2 路径——对象声明仍在（每轮锚定——T-OA2）", () => {
   const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug | fix |"
   const agent = {
@@ -1576,6 +1003,8 @@ test("buildAdvisorUserMessage: legacy round 2 路径——对象声明仍在（�
   const msg = buildAdvisorUserMessage(agent, null, "code", null, null, null, OA_OBJECT)
   assert.ok(msg.includes("## Review-object declaration"), "legacy 收敛路径同样注入（T-OA2）")
 })
+
+
 
 test("advisorTool: schema 声明 object 参数（§18.8 D-OA3）", async () => {
   const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
@@ -1587,6 +1016,8 @@ test("advisorTool: schema 声明 object 参数（§18.8 D-OA3）", async () => {
   }
 })
 
+
+
 test("advisorTool.execute: object 非法形态（字符串/数组）降级——不崩（T-OA3）", async () => {
   const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
   const agent = { config: { agent: { engineering: true } }, _engDesignToken: "standing", _advisorRound: 0, _advisorSession: null, cwd: process.cwd(), _touchedFiles: [] }
@@ -1596,3 +1027,5 @@ test("advisorTool.execute: object 非法形态（字符串/数组）降级——
   const out2 = await advisorTool.execute({ type: "design", documents: ["src/not-a-doc.mjs"], object: ["a", "b"] }, { agent })
   assert.match(out2, /must be in docs/, "数组形态同样降级")
 })
+
+

@@ -171,7 +171,7 @@ export const subagentTool = {
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
       async: { type: "boolean", description: "true = spawn without waiting — returns {id, status:\"running\"} immediately, fetch results later via action:'check'. Default is role-level: role='eng-coder' → true (async; its internal delivery protocol runs in the background — pass async:false to force the blocking spawn when you must process the report before continuing); all other roles → false (blocking)." },
-      files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares (cwd-relative or absolute paths). Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:\"queued\", position, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
+      files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares (cwd-relative or absolute paths). files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error. Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:\"queued\", position, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
       dependsOn: { type: "array", items: { type: "string" }, description: "action:'spawn' only: ids from prior async spawn returns whose outcome this task needs — the task queues ({id, status:\"queued\", position, reason}) until every dependency settles, then starts automatically. Ids consumed by action:'check' count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
       id: { type: "string", description: "action:'check'/'status'/'cancel': the subagent id from the async spawn return. check: omit = the next completed child (arrival order); status: omit = overview of the whole pool; cancel: REQUIRED (never omit — a blanket cancel is unsupported)." },
       n: { type: "number", description: "action:'check' (required): 1-based read counter — 1 for the first check of the turn, incrementing with each subsequent check (loop detector — consecutive checks must be distinct tool calls)." },
@@ -267,7 +267,16 @@ export const subagentTool = {
     // 命中阻塞 → 明确错误——不队列化 sync——sync 语义零变更（round2 #7——T-SD13）**。
     const filesRaw = args.files
     const dependsRaw = args.dependsOn
-    const files = filesRaw !== undefined && filesRaw !== null ? normalizeFileList(filesRaw, parent.cwd) : []
+    // §20.8 D-F1.1：目录声明 fail-closed——检测器 throw → catch → 错误即工具结果
+    // （模型可见"文件级明细"提示——不加静默——目录绕过冲突检测的通道闭合）。
+    let files = []
+    if (filesRaw !== undefined && filesRaw !== null) {
+      try {
+        files = normalizeFileList(filesRaw, parent.cwd)
+      } catch (e) {
+        return JSON.stringify({ status: "error", error: e.message })
+      }
+    }
     if (filesRaw !== undefined && filesRaw !== null && !Array.isArray(filesRaw)) {
       throw new Error("subagent files must be an array of file paths (the write domain this task declares)")
     }
@@ -412,6 +421,10 @@ export const subagentTool = {
         "Zero-git scope authority (AGENT-LOOP.md §18.5 D-AG3): this audit task receives NO git context — nothing is injected. " +
         "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
         "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
+        // §18.13 D-A1.2：审计预算句——A1 指令模板 + A2 摘要块之后、A3 报告模板之前（定序——评审 #7）。
+        // 逐字设计锚（D-A1.2 代码块）：只读该读的——10 轮机械预算——超时报 PROBLEM 下结论。
+        // 前导 \n 与 A3 同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
+        `\n[Audit budget — mechanical]: read ONLY the touched files listed above and the design-doc sections the parent task book names (affected-files table, acceptance criteria, status line). Do NOT read whole documents. Budget = 10 tool rounds max — if you cannot conclude within it, report PROBLEM (inconclusive) rather than continuing to explore.\n` +
         // §18.7 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
         `\n[Audit report format — mechanical template (AGENT-LOOP.md §18.7 D-TS6 A3):]\n` +
         `Report EXACTLY one of three states:\n` +

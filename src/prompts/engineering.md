@@ -244,6 +244,7 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
   queued); dependency chains auto-order. Mirror tasks across independent trees
   spawn as parallel eng-coders, each declaring its own file domain —
   overlapping domains are queued by the scheduler, never hand-serialized.
+  files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
   **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 —
   phrase preserved, T9/T-E16 assertions stay green).** Cancelling a running
   eng-coder is a last resort — its in-flight delivery dies unmerged and

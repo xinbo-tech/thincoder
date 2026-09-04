@@ -8,6 +8,7 @@
  * runChildPipeline + maybeRefillAsync + injectAsyncResult + buildChildRunOpts + mergeChildMutations。
  */
 import { isAbsolute, relative, resolve } from "node:path"
+import { existsSync, statSync } from "node:fs"
 import {
   runAgent, createAgent, escapeXml, CODER_OVERLAY,
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
@@ -724,12 +725,22 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** 文件域归一化（round1 #5——路径归一化再交集）：相对 cwd 解析为绝对路径 + 去重；
- *  非字符串/空项静默跳过（声明错误 = false-negative 明示风险——v1 边界）。 */
+ *  非字符串/空项静默跳过（声明错误 = false-negative 明示风险——v1 边界）。
+ *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
+ *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
+ *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
+ *  已知限制（§20.8 未编号段——评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。 */
 export function normalizeFileList(files, cwd) {
   const out = []
   for (const f of Array.isArray(files) ? files : []) {
     if (typeof f !== "string" || !f.trim()) continue
+    if (f.endsWith("/") || f.endsWith("\\")) {
+      throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
+    }
     const abs = resolve(cwd ?? process.cwd(), f)
+    if (existsSync(abs) && statSync(abs).isDirectory()) {
+      throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
+    }
     if (!out.includes(abs)) out.push(abs)
   }
   return out
@@ -801,6 +812,10 @@ export function describeBlockers(parent, entry) {
       if (e.status !== "running" && e.status !== "queued") continue
       const hit = filesOverlap(myFiles, e._files ?? [])
       if (!hit) continue
+      // §21.1 D-SL1.2（环形死锁修正——与 queueRunnable 同界——展示一致）：后入
+      // 者（spawn 序晚于我——数字 id 比较）不列——只列"会真正阻断我的"（running
+      // 任意序 + 先入 queued）；列后入者 = 误导"等一个其实等不到的人"。
+      if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
       wait.push(`${e.role}#${e.id}（域冲突 ${showFile(parent, hit)}）`)
     }
   }
@@ -814,9 +829,12 @@ export function describeBlockers(parent, entry) {
   return { kind: "slot", detail: "" }
 }
 
-/** §20 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running ∪ queued——
- *  队列序保证同文件串行：先入者启动后以 running 身份继续挡住后入者；后入者只被先入
- *  者阻塞——self 除外）。 */
+/** §20 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running 任意序 +
+ *  queued 先入者——§21.1 D-SL1.1 序判定：同文件串行 = 先入者先启动、后入者等先入者
+ *  ——不自锁；先入者启动后以 running 身份继续挡住后入者——self 除外）。
+ *  已知限制（§21.1 评审 #4——与 §20 NF-SD 同语义——滞留有意义不静默）：先入者被
+ *  depc 锁定时（依赖取消/失败且非 AUTO——永不自动启动），后入者滞留等它——cancel
+ *  先入者即释放（父显式可清；AUTO 档 depc 视为可启动——不滞留）。 */
 export function queueRunnable(parent, entry) {
   for (const depId of entry._dependsOn ?? []) {
     const state = depInfo(parent, String(depId)).state
@@ -828,7 +846,14 @@ export function queueRunnable(parent, entry) {
     for (const e of parent._asyncSubagents?.values() ?? []) {
       if (e === entry) continue
       if (e.status !== "running" && e.status !== "queued") continue
-      if (filesOverlap(myFiles, e._files ?? [])) return false
+      if (!filesOverlap(myFiles, e._files ?? [])) continue
+      // §21.1 D-SL1.1 序判定：queued 仅"先入者"（spawn 序早于我——数字 id 比较）阻断；
+      // 后入者不阻断——先入者先启动——两个 queued 同文件不再互等（环形死锁修正）。
+      // 防御（评审 #3——id 形态）：池条目 id 为数字递增（_subAgentCounter——已核实）；
+      // 异常形态 Number() 得 NaN → 比较 false → 不跳过 → 保守阻断（宁可多等——
+      // 不冒险并发——防 NaN 误放行）。
+      if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue // 后入者不阻断——先入者先启动
+      return false
     }
   }
   return true

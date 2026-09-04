@@ -10,3 +10,4 @@ Notes:
 - Untracked or non-git files are deleted immediately
 - Tracked files require force=true (user must confirm separately)
 - Directories must be removed with bash (rm -rf)
+- Returns `Deleted <path>` (or `Error: ...` on failure/tracked refusal).

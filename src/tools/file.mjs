@@ -10,10 +10,10 @@ import {
   detectFileEol,
   joinWithEol,
   majorityEol,
-  findCandidates,
   FFFD_WARNING,
 } from "./shared.mjs";
 import { applyEditBatch } from "./edit-batch.mjs";
+import { runSingleEdit } from "./edit-diff.mjs";
 import { specForModel } from "../config.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile, unlink } from "node:fs/promises";
@@ -73,6 +73,7 @@ export const readTool = {
     type: "object",
     properties: {
       path: { type: "string", description: "File path (relative to cwd or absolute)" },
+      filePath: { type: "string", description: "Alias for path (supported for API compatibility)" },
       offset: { type: "number", description: "1-based line number to start from" },
       limit: { type: "number", description: `Max lines to return (default ${MAX_READ_LINES})` },
       allowExternal: { type: "boolean", description: "No-op retained for API compatibility — path resolution no longer asserts a working-directory boundary (all paths resolve relative to cwd)." },
@@ -82,7 +83,8 @@ export const readTool = {
   },
   readonly: true,
   async execute(args, ctx) {
-    const abs = args.allowExternal ? resolveExternal(ctx, args.path) : resolveInCwd(ctx, args.path)
+    const p = args.path ?? args.filePath
+    const abs = args.allowExternal ? resolveExternal(ctx, p) : resolveInCwd(ctx, p)
     // Large file guard: check size first, reject reading entire file if >10MB (offset/limit only affect the returned slice, not buffering)
     const st = await stat(abs).catch(() => null)
     if (st && st.size > MAX_FILE_READ_BYTES) throw new Error(`File too large (${Math.round(st.size / 1_000_000)}MB > 10MB limit). Use bash with head/tail or grep for targeted extraction.`)
@@ -245,67 +247,9 @@ export const editTool = {
     // （应用逻辑在 edit-batch.mjs——2026-09-01 拆出，500 行硬限，先例 git-ext.mjs）
     if (args.edits) return applyEditBatch(args, ctx)
 
-    // 单文件（现状路径）
-    const abs = resolveInCwd(ctx, args.path)
-    if (!args.old_string) {
-      throw new Error("old_string must not be empty (empty string matches everywhere and would corrupt the file)")
-    }
-    // #5（2026-09-01 交付评审尾巴）：new_string 非字符串（含 undefined）在写盘前拒绝——
-    // 原缺陷：replace 回调返回 undefined 被字符串化成 "undefined" 写入盘，随后
-    // args.new_string.split 才 TypeError——文件已损坏 + 错误信息不知所云。
-    if (typeof args.new_string !== "string") {
-      throw new Error(
-        `new_string must be a string${args.new_string === undefined ? " (missing)" : ` (got ${typeof args.new_string})`} — nothing written`,
-      )
-    }
-    const raw = await readFile(abs, "utf8")
-    const content = normalizeEOL(raw)
-    const occurrences = content.split(args.old_string).length - 1
-    if (occurrences === 0) {
-      // Give clues to help the model locate: first-line preview + common causes
-      const preview = args.old_string.slice(0, 100).split("\n")[0]
-      // Similarity candidates (LCS, line-level, top 3, score ≥ 0.5) — turns the
-      // "not found" black box into a pointer at the most likely intended line.
-      // Multi-line old_string: only its first line is scored (marked accordingly).
-      const cands = findCandidates(content.split("\n"), args.old_string)
-      let candText = ""
-      if (cands.length > 0) {
-        const header = args.old_string.includes("\n")
-          ? `  similar lines (old_string line 1: "${args.old_string.split("\n")[0].slice(0, 80)}"):`
-          : "  similar lines:"
-        candText = "\n" + header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
-      }
-      throw new Error(
-        `old_string not found in ${args.path}\n` +
-        `  searched: "${preview}${args.old_string.length > 100 ? "…" : ""}"\n` +
-        (lastWriteOf(abs)?.type === "write"
-          ? `  hints: this file was modified since your last read (write 全文重写后内容全变) — re-read it to refresh your copy of the content, then retry\n`
-          : isDirty(abs)
-            ? `  hints: this file was modified since your last read (a prior write marked it dirty) — re-read it to refresh your copy of the content, then retry\n`
-            : `  hints: whitespace mismatch? file already changed? try reading the file first\n`) +
-        candText
-      )
-    }
-    if (occurrences > 1 && !args.replace_all) {
-      throw new Error(`old_string matches ${occurrences} times in ${args.path}; provide more context or set replace_all`)
-    }
-    const updated = args.replace_all
-      ? content.split(args.old_string).join(args.new_string)
-      // Functional replacement: avoid $-substitution patterns in new_string (match string / backreference) being expanded
-      : content.replace(args.old_string, () => args.new_string)
-    // Write back in the file's ORIGINAL EOL style (first-newline rule) — a CRLF
-    // file must not come back as LF (that rewrites every line in the diff).
-    // normalizeEOL first: new_string may carry \r\n (e.g. pasted from a raw CRLF
-    // read); without normalizing, split leaves stray \r and CRLF join makes \r\r\n.
-    await writeFile(abs, joinWithEol(normalizeEOL(updated).split("\n"), raw), "utf8")
-    // 2026-08-31 工具顺手度：记录受影响区（替换首行 + 行数差）——insert_after 精确判定
-    const matchIdx = content.indexOf(args.old_string)
-    const editStartLine = matchIdx >= 0 ? content.slice(0, matchIdx).split("\n").length : 1
-    const lineShift = args.new_string.split("\n").length - args.old_string.split("\n").length
-    recordWrite(abs, { type: "edit", startLine: editStartLine, shift: lineShift })
-    const diff = gitDiffOne(ctx.cwd, abs)
-    const baseResult = `Edited ${args.path}: replaced ${args.replace_all ? occurrences : 1} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
-    return await appendWriteContext(abs, editStartLine, baseResult)
+    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（TOOLS.md §15 D15.1——
+    // 行级 LCS 判定：零重叠→插入 / 一般 diff→LCS / 空 new→显式报错）
+    return runSingleEdit(args, ctx)
   },
 }
 
@@ -453,7 +397,7 @@ export const hashlineEditTool = {
       const hashDump = fileHashes.slice(0, maxShow).map((h, i) => `${h}  L${i + 1}: ${lines[i].slice(0, 80)}`).join("\n")
       const preview = target.join(" ")
       throw new Error(
-        `Hash sequence not found in ${args.path}: ${preview}\n` +
+        `Hash sequence not found in ${args.path}: ${preview} — for fresh hashes, re-read the file with hashes=true\n` +
         `The file may have been modified since you last read it. Current hashes (first ${maxShow} lines):\n${hashDump}` +
         (corrupted ? `\n${FFFD_WARNING}` : "")
       )

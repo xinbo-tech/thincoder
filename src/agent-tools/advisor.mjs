@@ -80,7 +80,8 @@ export const advisorTool = {
     "If advisor says all clear, call verify. " +
     "Optionally pass object={type,target,status,reason,exclude} to anchor the review target " +
     "(AGENT-LOOP.md §18.8 — the review-object declaration is mechanically injected into the review message); " +
-    "absent → legacy behavior (no injection).",
+    "absent → legacy behavior (no injection). " +
+    "Returns the review report — the advisor's findings verdict: all-clear (call verify) or a findings list to fix.",
   parameters: {
     type: "object",
     properties: {

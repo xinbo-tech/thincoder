@@ -8,11 +8,12 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
+import { slow } from "./slow.mjs"
 
 import { validateProvider } from "../src/cli/make-agent.mjs"
 import { applySession } from "../src/session.mjs"
@@ -265,3 +266,332 @@ console.log("loadConfig empty OK")
     rmSync(home, { recursive: true, force: true })
   }
 })
+
+
+
+
+// ---------------------------------------------------------------- 会话持久化
+
+
+slow("session: 保存/恢复/新建 往返（基于槽位）", async () => {
+  const { saveSession, loadSession, newSession, activePath, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-session-test-" + Date.now())
+  const agent = {
+    cwd,
+    provider: { name: "test", model: "test-model" },
+    history: [
+      { role: "user", content: "你好" },
+      { role: "assistant", content: "在", tool_calls: [{ id: "c1", type: "function", function: { name: "ls", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "c1", content: "src/" },
+    ],
+    tasks: [{ title: "t", status: "done" }],
+    _pendingReminders: ["[System reminder: plan mode is now ON. ...]"],
+    _sessionStart: "2026-01-01T00:00:00.000Z",
+  }
+  agent.history.push({ role: "user", content: "[System reminder: working directory snapshot:\nsrc/]", transient: true })
+  // 无会话时 null
+  assert.equal(loadSession(cwd), null)
+  saveSession(agent)
+  // saveSession 直接写入活动槽位
+  assert.ok(existsSync(activePath(cwd)))
+  const restored = loadSession(cwd)
+  assert.equal(restored.history.length, 3)
+  assert.equal(restored.history[1].tool_calls[0].function.name, "ls")
+  assert.equal(restored.tasks[0].status, "done")
+  assert.deepEqual(restored.pendingReminders, ["[System reminder: plan mode is now ON. ...]"])
+  assert.equal(restored.sessionStart, "2026-01-01T00:00:00.000Z")
+  // display 已废弃：saveSession 不再写入 WYSIWYG 快照（TUI 恢复走 history 懒加载）
+  assert.equal(restored.display, undefined)
+  // 原子写不残留临时文件——直接探测本槽位的 .tmp 路径（O(1) existsSync）。
+  // 不得扫描 ~/.thincoder/sessions/ 全目录：用户机上可达 3 万+文件（含数十 MB 大会话），
+  // readdirSync 实测 18s（Defender 干扰放大，2026-08-31 本条 TODO 的真正慢因——不是 saveSession 本身）
+  assert.ok(!existsSync(sessionPath(cwd) + ".tmp"), "原子写不残留 .tmp")
+  // /new：分配新槽位，切换到空会话
+  const newSlot = newSession(cwd)
+  assert.ok(newSlot >= 1)
+  const afterNew = loadSession(cwd)
+  assert.equal(afterNew.history.length, 0)
+  // 旧槽位文件仍然存在（内容未丢失）
+  assert.ok(existsSync(sessionPath(cwd) + ".1"))
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+})
+
+
+
+test("session: 旧存档的前缀型临时上下文在加载时清理，cwd 不匹配拒绝恢复", async () => {
+  const { loadSession, activePath, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-session-legacy-" + Date.now())
+  const p = activePath(cwd)
+  mkdirSync(dirname(p), { recursive: true })
+  writeFileSync(p, JSON.stringify({
+    version: 2,
+    cwd,
+    history: [
+      { role: "user", content: "[System reminder: working directory snapshot:\nsrc/" },
+      { role: "user", content: "真正的需求" },
+    ],
+    tasks: [],
+  }), "utf8")
+  const restored = loadSession(cwd)
+  assert.equal(restored.history.length, 1)
+  assert.equal(restored.history[0].content, "真正的需求")
+  // cwd 不匹配 — 写到活动槽位
+  writeFileSync(p, JSON.stringify({ version: 2, cwd: "D:\\other-project", history: [], tasks: [] }), "utf8")
+  assert.equal(loadSession(cwd), null)
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  try { unlinkSync(p) } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+})
+
+
+
+test("session: 畸形 display 不影响启动（display 已废弃，loadSession 不再读取）", async () => {
+  const { loadSession, activePath, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-session-display-" + Date.now())
+  const p = activePath(cwd)
+  mkdirSync(dirname(p), { recursive: true })
+  // 旧文件里的畸形 display 值：不再被读取/净化，恢复照常
+  writeFileSync(p, JSON.stringify({ version: 2, cwd, history: [{ role: "user", content: "hi" }], tasks: [], display: "not-an-array" }), "utf8")
+  const restored = loadSession(cwd)
+  assert.equal(restored.history.length, 1)
+  // display 不再被净化（透传），但恢复完全不依赖它
+  assert.equal(restored.display, "not-an-array")
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  try { unlinkSync(p) } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+})
+
+
+
+
+
+test("session: newSession 分配槽位并记录元数据", async () => {
+  const { saveSession, newSession, listSlots, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-new-session-" + Date.now())
+  const agent = {
+    cwd,
+    activeProvider: "kimi",
+    provider: { name: "kimi", model: "kimi-k3" },
+    history: [
+      { role: "user", content: "帮我写一个登录页面" },
+      { role: "assistant", content: "好的，这是一段 HTML..." },
+      { role: "user", content: "加个暗色主题" },
+      { role: "assistant", content: "已添加" },
+    ],
+    tasks: [],
+    _pendingReminders: [],
+  }
+  saveSession(agent, [{ text: "line1", color: "dim" }])
+  // 此时已有槽位 1（由 saveSession 创建）
+  const slots1 = listSlots(cwd)
+  assert.equal(slots1.length, 1)
+  assert.equal(slots1[0].turnCount, 2)
+  assert.equal(slots1[0].firstMessage, "帮我写一个登录页面")
+  // /new 创建槽位 2
+  const slot2 = newSession(cwd)
+  assert.equal(slot2, 2)
+  const slots2 = listSlots(cwd)
+  assert.equal(slots2.length, 2)
+  // 槽位 2 是活跃的，槽位 1 仍在
+  const active = slots2.find((s) => s.isActive)
+  assert.equal(active.slot, 2)
+  const old = slots2.find((s) => s.slot === 1)
+  assert.equal(old.turnCount, 2)
+  // manifest 里有 active 指针
+  const manifest = JSON.parse(readFileSync(sessionPath(cwd) + ".manifest", "utf8"))
+  assert.equal(manifest.active, 2)
+  assert.equal(typeof manifest.slots["1"], "object")
+  assert.equal(manifest.slots["1"].turnCount, 2)
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+})
+
+
+
+test("session: renameSlot 改标题（槽位文件 + manifest 同步，VS Code 共享）", async () => {
+  const { saveSession, renameSlot, listSlots, loadSession, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-rename-slot-" + Date.now())
+  const agent = {
+    cwd,
+    activeProvider: "kimi",
+    provider: { name: "kimi", model: "kimi-k3" },
+    history: [{ role: "user", content: "帮我写周报" }],
+    tasks: [],
+    _pendingReminders: [],
+    title: "旧标题",
+  }
+  saveSession(agent, [])
+
+  assert.equal(renameSlot(cwd, 1, "新标题"), true)
+  // 槽位文件里的 title 更新
+  const data = loadSession(cwd)
+  assert.equal(data.title, "新标题")
+  // listSlots 的元数据同步更新
+  const slots = listSlots(cwd)
+  assert.equal(slots[0].title, "新标题")
+  // 无效槽位返回 false
+  assert.equal(renameSlot(cwd, 99, "不存在"), false)
+
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+})
+
+
+
+
+test("session: listSlots 向后兼容旧格式 manifest（数字时间戳）", async () => {
+  const { listSlots, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-old-manifest-" + Date.now())
+  // 手工写一个槽位文件和旧格式 manifest
+  const { writeFileSync: wfs, mkdirSync: ms, unlinkSync } = await import("node:fs")
+  ms(dirname(sessionPath(cwd)), { recursive: true })
+  const slotFile = sessionPath(cwd) + ".1"
+  wfs(slotFile, JSON.stringify({
+    version: 2, cwd,
+    activeProvider: "claude",
+    history: [
+      { role: "user", content: "重构 session 模块" },
+      { role: "assistant", content: "分析中..." },
+      { role: "user", content: "加个测试" },
+      { role: "assistant", content: "已添加" },
+    ],
+    tasks: [],
+  }), "utf8")
+  // 旧格式：slots 值是数字时间戳
+  const oldManifest = { slots: { "1": Date.now() } }
+  wfs(sessionPath(cwd) + ".manifest", JSON.stringify(oldManifest), "utf8")
+  // listSlots 应能从旧格式 manifest + 槽位文件中提取元数据
+  const slots = listSlots(cwd)
+  assert.equal(slots.length, 1)
+  assert.equal(slots[0].slot, 1)
+  assert.equal(slots[0].turnCount, 2)
+  assert.equal(slots[0].messageCount, 4)
+  assert.equal(slots[0].firstMessage, "重构 session 模块")
+  assert.equal(slots[0].activeProvider, "claude")
+  // 清理
+  unlinkSync(sessionPath(cwd) + ".manifest")
+  unlinkSync(slotFile)
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+})
+
+
+
+test("session: switchToSlot 指针切换（无文件拷贝）", async () => {
+  const { saveSession, newSession, switchToSlot, sessionPath } = await import("../src/session.mjs")
+  const cwd = join(tmpdir(), "thincoder-switch-digest-" + Date.now())
+  // 创建会话 A（自动进入槽位 1）
+  const agentA = {
+    cwd,
+    activeProvider: "deepseek",
+    provider: { name: "deepseek", model: "deepseek-v4" },
+    history: [
+      { role: "user", content: "会话A第一条" },
+      { role: "assistant", content: "回答A" },
+    ],
+    tasks: [],
+    _pendingReminders: [],
+  }
+  saveSession(agentA, [{ text: "A", color: "dim" }])
+  // /new 创建会话 B（槽位 2）
+  newSession(cwd)
+  const agentB = {
+    cwd,
+    activeProvider: "kimi",
+    provider: { name: "kimi", model: "kimi-k3" },
+    history: [
+      { role: "user", content: "会话B第一条" },
+      { role: "assistant", content: "回答B" },
+    ],
+    tasks: [],
+    _pendingReminders: [],
+  }
+  saveSession(agentB, [{ text: "B", color: "dim" }])
+  // 切回槽位 1 — 没有文件拷贝，只改 manifest.active
+  const restored = switchToSlot(cwd, 1)
+  assert.notEqual(restored, null)
+  assert.equal(restored.history.length, 2)
+  assert.equal(restored.history[0].content, "会话A第一条")
+  // 清理
+  const { unlinkSync } = await import("node:fs")
+  for (let i = 1; i <= 5; i++) {
+    try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
+  }
+  try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd)) } catch {}
+})
+
+
+
+test("session: applySession 恢复状态并按名切回 provider", async () => {
+  const { applySession } = await import("../src/session.mjs")
+  const agent = {
+    activeProvider: "deepseek",
+    provider: { name: "deepseek", model: "deepseek-v4-pro" },
+    providers: [
+      { name: "deepseek", model: "deepseek-v4-pro" },
+      { name: "kimi", model: "kimi-k3" },
+    ],
+    history: [],
+    tasks: [],
+  }
+  const data = {
+    history: [{ role: "user", content: "hi" }],
+    tasks: [{ title: "t", status: "in_progress" }],
+    planMode: true,
+    autoApprove: true,
+    goal: { objective: "g" },
+    activeProvider: "kimi",
+  }
+  const switched = applySession(agent, data)
+  assert.equal(switched, true)
+  assert.equal(agent.provider.model, "kimi-k3") // 切回上次使用的 provider
+  assert.equal(agent.activeProvider, "kimi")
+  assert.equal(agent.history.length, 1)
+  assert.equal(agent.tasks[0].status, "in_progress")
+  assert.equal(agent.planMode, true)
+  assert.equal(agent.autoApprove, true) // AUTO 模式随会话恢复，与 history 账本里的 ON 提醒一致
+  assert.equal(agent.goal.objective, "g")
+})
+
+
+
+test("session: applySession 未知 provider 名不回切", async () => {
+  const { applySession } = await import("../src/session.mjs")
+  const agent = {
+    activeProvider: "deepseek",
+    provider: { name: "deepseek", model: "deepseek-v4-pro" },
+    providers: [{ name: "deepseek", model: "deepseek-v4-pro" }],
+    history: [],
+    tasks: [],
+  }
+  const switched = applySession(agent, { history: [], activeProvider: "已被删除的provider" })
+  assert.equal(switched, false)
+  assert.equal(agent.provider.model, "deepseek-v4-pro") // 保持当前配置
+})
+

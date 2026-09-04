@@ -11,3 +11,4 @@ Notes:
 - Capped at 200 entries.
 - Directories end with `/`; tree-drawing uses `├──`/`└──`/`│`.
 - Use depth for a shallow overview; use `ls` for one directory, `glob` for a specific file pattern.
+- Returns the directory text tree — directories first (`dir/`), files after, both sorted, capped at 200 entries.

@@ -9,12 +9,16 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { existsSync, readFileSync, mkdtempSync, rmSync, writeFileSync, readdirSync, mkdirSync, utimesSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { resolveEnableThinking, isBailianHost, specForModel } from "../src/config.mjs"
 import { handleThinkCommand } from "../src/tui/cmd-think.mjs"
+import { tmpdir } from "node:os"
+import { slow } from "./slow.mjs"
+import { createServer } from "node:http"
+import { mockLLM } from "./helpers/mock-llm.mjs"
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url))
 const VS_CONFIG = join(TEST_DIR, "..", "..", "thincoder-vscode", "src", "config.mjs")
@@ -243,3 +247,86 @@ test("双端 parity: resolveEnableThinking / isBailianHost 函数体与 thincode
     assert.equal(norm(extract(fn.name)), norm(fn.toString()), `${fn.name} 两端实现漂移`)
   }
 })
+
+
+
+
+
+
+
+test("auto-think: buildClassifierInput 短消息带上一轮上下文，提醒/中断消息不计入", async () => {
+  const { buildClassifierInput } = await import("../src/auto-think.mjs")
+  // 长消息：直接用（截断到 2000），不拼上下文
+  const long = "x".repeat(3000)
+  assert.equal(buildClassifierInput([{ role: "user", content: long }]), long.slice(0, 2000))
+  // 短消息（如"继续"）：带上一条真实用户消息做上下文；reminder/interrupt 不算用户消息
+  const out = buildClassifierInput([
+    { role: "user", content: "实现一个登录功能" },
+    { role: "assistant", content: "done" },
+    { role: "user", content: "[System reminder: goal state]" },
+    { role: "user", content: "[User interrupt: stop]" },
+    { role: "user", content: "继续" },
+  ])
+  assert.ok(out.includes("实现一个登录功能"), "短消息应带上一轮请求做上下文")
+  assert.ok(out.includes("Latest message:\n继续"))
+  assert.ok(!out.includes("System reminder") && !out.includes("User interrupt"), "注入消息不参与分类输入")
+  // 无真实用户消息 → null（调用方静默降级）
+  assert.equal(buildClassifierInput([{ role: "assistant", content: "hi" }]), null)
+})
+
+
+
+test("auto-think: T-TS12 D-TS12 开关闭环——auto-think 调用点 traces.enabled:false 不落盘（修后），默认开启落盘", async () => {
+  const { classifyAndApply } = await import("../src/auto-think.mjs")
+  const { localDateStr } = await import("../src/traces/trace-store.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "cli-autothink-traces-"))
+  process.env.THINCODER_TRACES_DIR = join(dir, "traces")
+  const countTraces = () => {
+    const day = join(process.env.THINCODER_TRACES_DIR, localDateStr())
+    if (!existsSync(day)) return 0
+    return readdirSync(day).filter((f) => f.endsWith(".jsonl")).length
+  }
+  const { server, port } = await mockLLM([{ content: "low" }])
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  try {
+    // 关（traces.enabled:false）——分类调用照常执行（证明调用点被命中），但零落盘
+    const closed = {
+      config: { agent: { autoThink: true }, traces: { enabled: false } },
+      provider: { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-flash" },
+      history: [{ role: "user", content: "改个错别字" }],
+      cwd: tmpdir(),
+    }
+    const level = await classifyAndApply(closed, 0)
+    assert.equal(level, "low", "分类调用必须命中（证明测试观测的是 auto-think 调用点）")
+    await sleep(150) // 异步写盘 fire-and-forget——若残留点存在，落盘会在该窗口内发生
+    assert.equal(countTraces(), 0, "T-TS12: traces.enabled:false → auto-think 调用点不落盘（修前残留点仍落盘）")
+    // 开（缺省）——同调用点落盘且带 autothink 元数据（证明字段补传）
+    const open = {
+      config: { agent: { autoThink: true } },
+      provider: { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-flash" },
+      history: [{ role: "user", content: "改个错别字" }],
+      cwd: tmpdir(),
+    }
+    const level2 = await classifyAndApply(open, 0)
+    assert.equal(level2, "low", "开侧分类同样命中")
+    // 等记录落定（写盘异步 + appendFile 先建文件后写内容——解析兜底）
+    let rec = null
+    for (let i = 0; i < 100 && !rec; i++) {
+      await sleep(10)
+      const day = join(process.env.THINCODER_TRACES_DIR, localDateStr())
+      const files = existsSync(day) ? readdirSync(day).filter((f) => f.endsWith(".jsonl")) : []
+      if (files.length === 0) continue
+      try { rec = JSON.parse(readFileSync(join(day, files[0]), "utf8")) } catch { /* 写盘在途 */ }
+    }
+    assert.ok(rec, "T-TS12: 缺省开启 → auto-think 调用点落盘（有记录）")
+    assert.equal(rec.stage, "autothink", "T-TS12: 落盘记录 stage=autothink")
+    assert.equal(rec.kind, "autothink", "T-TS12: 落盘记录 kind=autothink")
+    assert.equal(rec.role, null, "T-TS12: role 字段补传（顶层无 role）")
+    assert.equal(rec.depth, 0, "T-TS12: depth 字段补传（顶层 0）")
+  } finally {
+    delete process.env.THINCODER_TRACES_DIR
+    server.close()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+

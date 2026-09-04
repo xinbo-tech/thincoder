@@ -313,7 +313,7 @@ export function codeSearchTool(memory) {
   return {
     name: "code_search",
     description:
-      "Search the project's source code for relevant code. Use this to find functions, classes, or code patterns across the codebase. Supports natural language queries and code snippets. Returns matching code chunks with file paths and line numbers.",
+      "Search the project's source code for relevant code. Use this to find functions, classes, or code patterns across the codebase. Supports natural language queries and code snippets. Returns matching code chunks with file paths and line numbers. Prefer doc_search for the intended design (design docs, conventions); code_search for the implementation as written.",
     parameters: {
       type: "object",
       properties: {

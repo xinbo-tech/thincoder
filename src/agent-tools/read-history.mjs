@@ -89,7 +89,8 @@ export const readHistoryTool = {
     "tool (tool result messages by name AND the assistant messages that declared the call — pair with tool_call_id / ts for timing) / " +
     "since-until (epoch ms time window; only messages with ts can match) / limit (default 50, clamped to 200) / direction (which end of the matches to take). " +
     "Returns a JSON array in chronological order: [{ts, role, name?, tool_call_id?, content (≈500 chars, truncated marker), tool_calls (names only)}]. " +
-    "Messages without ts return ts:null. Content is truncated — the full text is in the session file.",
+    "Messages without ts return ts:null. Content is truncated — the full text is in the session file. " +
+    "For file-level changes this run (not messages), use recent_changes.",
   parameters: {
     type: "object",
     properties: {

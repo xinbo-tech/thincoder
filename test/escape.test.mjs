@@ -93,3 +93,29 @@ test("escapeMessageContent leaves well-formed escapes untouched", () => {
   assert.equal(out[0].tool_calls[0].function.arguments, '{"a":"\\u4e2d"}')
   assert.equal(out[0].reasoning_content, "fine \\u4e2d")
 })
+
+
+
+
+
+test("escapeLiteralEscapes: v5 double 策略 + 奇数 run + 真毒形态（程序化构造避免转义层混乱）", async () => {
+  const { escapeLiteralEscapes } = await import("../src/advisor.mjs")
+  const BS = String.fromCharCode(0x5c) // 单反斜杠
+  const cases = [
+    // [输入, 期望]
+    [BS + "xzz", BS + BS + "xzz"], // 真毒：\x5Cx+非hex → double
+    [BS + "x41", BS + "x41"], // 合法 \x5Cx41 → 放行
+    [BS + "u12中文", BS + BS + "u12中文"], // 真毒：\x5Cu+不足4hex → double
+    [BS + "u0041", BS + "u0041"], // 合法 \x5Cu0041 → 放行
+    [BS + BS + "u12中文", BS + BS + "u12中文"], // 2 反斜杠偶数已配对 → 放行
+    [BS + BS + BS + "xzz", BS + BS + BS + BS + "xzz"], // 3 反斜杠奇数尾部裸露 → double 为 4
+    ["C:" + BS + "users" + BS + "temp", "C:" + BS + BS + "users" + BS + "temp"], // Windows 路径：\\x5Cu+sers 不足4hex 是真毒 → double；\\t 合法转义放行
+    ["hello", "hello"],
+    [null, ""],
+    [undefined, ""],
+  ]
+  for (const [input, expected] of cases) {
+    assert.equal(escapeLiteralEscapes(input), expected, JSON.stringify(input))
+  }
+})
+

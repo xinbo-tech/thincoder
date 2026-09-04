@@ -4,6 +4,8 @@ import { proxyFetch } from "../proxy.mjs";
 
 export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 const FETCH_TIMEOUT = 15_000
+// §14 D-TF3：网络失败错误文本追加 proxy 提示——纯文本提示，不自动路由（2026-08-31 裁定：proxy 显式传不自动应用）
+const PROXY_HINT = "network failure — retry with proxy: 'http://host:port' if the target is blocked"
 
 // ── Web search (Bing; direct by default, through proxy when configured and web toggle on) ──
 
@@ -204,19 +206,19 @@ export const fetchTool = {
             const r = resolveRedirectTarget(loc, args.url)
             if (r.error) throw new Error(`fetch failed: ${r.error}`)
             const r2 = await proxyFetch(r.target, { headers: { "User-Agent": UA } }, proxyUri)
-            if (!r2.ok) throw new Error(`fetch failed: HTTP ${r2.status}`)
+            if (!r2.ok) throw new Error(`fetch failed: HTTP ${r2.status}\n${PROXY_HINT}`)
             const ct2 = headerOf(r2, "content-type") ?? ""
             const b2 = await r2.text()
             if (ct2.includes("text/html")) { const t = htmlToText(b2); return truncate(t + detectSparseHtml(b2, t)) }
             return truncate(b2)
           }
         }
-        throw new Error(`fetch failed: HTTP ${response.status}`)
+        throw new Error(`fetch failed: HTTP ${response.status}\n${PROXY_HINT}`)
       }
       const ct = headerOf(response, "content-type") ?? ""
       const body = await response.text()
       if (ct.includes("text/html")) { const t = htmlToText(body); return truncate(t + detectSparseHtml(body, t)) }
       return truncate(body)
-    } catch (e) { throw new Error(`fetch failed: ${e.cause?.code ?? e.message}`, { cause: e }) }
+    } catch (e) { throw new Error(`fetch failed: ${e.cause?.code ?? e.message}\n${PROXY_HINT}`, { cause: e }) }
   },
 }

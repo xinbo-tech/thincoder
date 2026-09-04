@@ -9,6 +9,7 @@ import assert from "node:assert/strict"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
 import { editTool } from "../src/tools/file.mjs"
 import { applyPatchTool } from "../src/tools/patch.mjs"
+import { tmpdir } from "node:os"
 
 /** Mock subagent-like tool（§7.2.3）：blocking execute 成功路径在 ctx 上留
  *  _subagentKey（真实 subagent.mjs 行为）——verify dispatch 把它作 onToolResult
@@ -226,3 +227,265 @@ test("§7.2.3 T-F5（dispatch 层）: Phase-1 拒绝（planMode 非只读 / 用�
   assert.ok(String(r2[0].result).includes("permission denied"))
   assert.equal(onResultCalls2, 0, "用户拒绝不调 onToolResult（Phase-1 拒绝走错误块——round1 #1）")
 })
+
+
+
+
+// ────────────────────────────────────────
+// dispatch: engineering parent gate (design before code)
+// ────────────────────────────────────────
+
+function gateMakeWriteTool() {
+  return {
+    name: "write", readonly: false,
+    touchedPaths: (args) => [args.path],
+    async execute(args) { return `wrote ${args.path}` },
+  }
+}
+
+
+test("dispatch: engineering parent gate blocks code writes before design review", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: undefined, // parent
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "src/app.mjs", content: "x" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("design review required"), results[0].result)
+  assert.ok(results[0].result.includes("docs/"), "hint points at the design doc")
+})
+
+
+
+test("dispatch: engineering parent gate allows design docs in docs/", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "docs/design/PLAN.md", content: "# design" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, true, results[0].result)
+})
+
+
+
+test("dispatch: engineering parent gate allows root-level doc files (METHODOLOGY.md)", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "METHODOLOGY.md", content: "# methodology" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, true, results[0].result)
+})
+
+
+
+test("dispatch: engineering parent gate blocks src/prompts/*.md (product code) before design review", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "src/prompts/x.md", content: "# prompt" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("design review required"), results[0].result)
+  assert.ok(results[0].result.includes("docs/"), "hint points at the design doc")
+})
+
+
+
+test("dispatch: engineering parent gate lifts after design review passed", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: "tok-123", // design review approved
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "src/app.mjs", content: "x" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, true, results[0].result)
+})
+
+
+
+test("dispatch: eng-coder without design review is blocked from writing", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: "eng-coder",
+    _engDesignReviewed: false,
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "src/app.mjs", content: "x" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("design review required"), results[0].result)
+})
+
+
+
+test("dispatch: normal mode has no design gate", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: false } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "src/app.mjs", content: "x" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, true, results[0].result)
+})
+
+
+
+test("dispatch: engineering parent gate treats missing/unknown path as code (conservative block)", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: true } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: null,
+  }
+  // 工具无 touchedPaths 且参数缺 path → paths = [undefined] → 未知路径按代码保守拦截
+  const noPathTool = {
+    name: "write", readonly: false,
+    async execute(args) { return `wrote ${JSON.stringify(args)}` },
+  }
+  const results = await executeToolCalls(agent, new Map([["write", noPathTool]]), [
+    { name: "write", arguments: JSON.stringify({ content: "x" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("design review required"), results[0].result)
+})
+
+
+
+test("dispatch: normal mode has no design gate", async () => {
+  const agent = {
+    cwd: tmpdir(),
+    config: { agent: { engineering: false } },
+    planMode: false, autoApprove: true,
+    _role: undefined,
+    _engDesignToken: null,
+  }
+  const results = await executeToolCalls(agent, new Map([["write", gateMakeWriteTool()]]), [
+    { name: "write", arguments: JSON.stringify({ path: "src/app.mjs", content: "x" }) },
+  ], {}, 0)
+  assert.equal(results[0].ok, true, results[0].result)
+})
+
+
+
+test("dispatch: aborted signal propagates tool errors (user interrupt is not swallowed)", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const bombTool = {
+    name: "bomb",
+    readonly: true,
+    async execute() { throw new DOMException("Aborted", "AbortError") },
+  }
+  const ctrl = new AbortController()
+  ctrl.abort()
+  // When the user aborted (Ctrl+C), a tool error inside the batch must REJECT
+  // executeToolCalls — swallowing it into a tool result would let the agent
+  // loop continue while the user asked to stop.
+  await assert.rejects(
+    executeToolCalls(agent, new Map([["bomb", bombTool]]), [{ name: "bomb", arguments: "{}" }], {}, 0, ctrl.signal),
+    /Aborted/,
+  )
+})
+
+
+
+test("dispatch: plain tool error is returned as a result even when signal is live", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const failTool = {
+    name: "fail",
+    readonly: true,
+    async execute() { throw new Error("disk full") },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["fail", failTool]]), [{ name: "fail", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("disk full"), "normal tool errors stay as model-visible results")
+})
+
+
+
+test("dispatch: 工具执行期间的 console.log/console.error 回显到结果（2026-08-31 工具顺手度）", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const noisyTool = {
+    name: "noisy",
+    readonly: true,
+    async execute() {
+      console.log("probe line 1")
+      console.error("warn line 2")
+      return "ok result"
+    },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["noisy", noisyTool]]), [{ name: "noisy", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, true)
+  assert.ok(results[0].result.includes("ok result"), "原结果保留")
+  assert.ok(results[0].result.includes("[console during noisy]"), "console 回显头")
+  assert.ok(results[0].result.includes("probe line 1"), "console.log 捕获")
+  assert.ok(results[0].result.includes("[err] warn line 2"), "console.error 捕获")
+})
+
+
+
+test("dispatch: 工具抛错前的 console 输出也回显（异常路径——调试场景最有价值）", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const failNoisyTool = {
+    name: "failnoisy",
+    readonly: true,
+    async execute() {
+      console.log("probe before crash")
+      throw new Error("boom")
+    },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["failnoisy", failNoisyTool]]), [{ name: "failnoisy", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, false)
+  assert.ok(results[0].result.includes("boom"), "错误消息保留")
+  assert.ok(results[0].result.includes("probe before crash"), "异常前 console 回显")
+})
+
+
+
+test("dispatch: 无 console 输出的工具结果不变（不拦截时不影响）", async () => {
+  const agent = { planMode: false, config: {}, history: [], _touchedFiles: [], cwd: tmpdir(), _role: null }
+  const quietTool = {
+    name: "quiet",
+    readonly: true,
+    async execute() { return "quiet result" },
+  }
+  const ctrl = new AbortController()
+  const results = await executeToolCalls(agent, new Map([["quiet", quietTool]]), [{ name: "quiet", arguments: "{}" }], {}, 0, ctrl.signal)
+  assert.equal(results[0].ok, true)
+  assert.equal(results[0].result, "quiet result", "无 console → 结果原样（无附加段）")
+})
+

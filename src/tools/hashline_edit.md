@@ -10,3 +10,5 @@ Notes:
 - Hashes are position-independent: they identify lines by content, not by line number (which changes after edits)
 - If the hash sequence isn't found, the error will include the current file's hashes so you can retry with corrected values
 - Prefer this over edit when: 1) the file may have mixed whitespace/encoding, 2) you want to edit a block of lines with a single call
+- Replacement text replaces the lines identified by the hashes — content not present in new_content is deleted. For a new line after a known line, use insert_after. For a single simple string swap, use edit.
+- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed

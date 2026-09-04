@@ -15,7 +15,9 @@ import { relative, dirname } from "node:path";
 /**
  * Parse a unified diff: returns [{ path, isNew, hunks: [{ ops: [{type:" "|"-"|"+", text}] }] }]
  * Consume hunk lines by the line counts in the @@ header — LLMs often strip context blank lines to pure empty lines,
- * so we use counts rather than first characters to determine hunk boundaries
+ * so we use counts rather than first characters to determine hunk boundaries.
+ * D15.6: a bare "@@" header (no coordinates) is accepted — the hunk body runs until the next hunk/file header
+ * ("@@" / "--- " / "+++ " / "diff " / "index "), purely located by its ops.
  */
 function parsePatch(patch) {
   // Patch text often comes from CRLF terminals/model output; trailing \r mixed into hunk content breaks context matching, strip uniformly
@@ -40,7 +42,46 @@ function parsePatch(patch) {
     if (line.startsWith("@@")) {
       if (!cur) throw new Error("Malformed patch: hunk header before any file header")
       const m = line.match(/^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/)
-      if (!m) throw new Error(`Malformed patch: bad hunk header "${line}" (need @@ -old,count +new,count @@)`)
+      if (!m) {
+        // D15.6 (TOOLS.md §15)：坐标裸 "@@" 头——hunk 完全靠操作行定位。
+        // 无行数可用：操作行以 " " / "-" / "+" 开头（空行宽容为上下文行），
+        // 直到下一个 hunk 头 / 文件头 "@@"/"--- "/"+++ "/"diff "/"index " 为止。
+        if (!/^@@(?: @@)?\s*$/.test(line)) {
+          throw new Error(`Malformed patch: bad hunk header "${line}" (need @@ -old,count +new,count @@ or bare @@)`)
+        }
+        const hunk = { ops: [] }
+        i++
+        while (i < lines.length) {
+          const hl = lines[i]
+          if (hl.startsWith("@") || hl.startsWith("--- ") || hl.startsWith("+++ ") || hl.startsWith("diff ") || hl.startsWith("index ")) break
+          if (hl.startsWith("\\")) { i++; continue } // "\ No newline at end of file"
+          // 宽容空行=上下文行——但 patch 文本末尾（或 hunk 之间/文件头之前）的 "" 是
+          // 分隔产物而非内容：仅当后继仍是操作行时才当作上下文消费。
+          // 复评 #1（2026-09-04）：文件头 "--- "/"+++ " 以 -/+ 开头会被 op 前缀判定误收——
+          // 文件头前的分隔空行不得吞成幽灵上下文行（会把 - 锚序列尾部拼上 ""——跨文件
+          // 零上下文 hunk 因此误报 not-found）。
+          const next = lines[i + 1]
+          if (hl === "" && (next == null || !/^[ +\-\\]/.test(next) || /^(?:---|\+\+\+) /.test(next))) break
+          const tag = hl === "" ? " " : hl[0]
+          if (tag !== " " && tag !== "-" && tag !== "+") break // metadata / file section end
+          hunk.ops.push({ type: tag, text: hl === "" ? "" : hl.slice(1) })
+          i++
+        }
+        if (hunk.ops.length === 0) throw new Error(`Malformed patch: empty coordinate-less hunk "${line.trim()}"`)
+        const ctxCount = hunk.ops.filter((o) => o.type === " ").length
+        // §15.3 (TOOLS.md D15.10.1——2026-09-04)：context<2 且含 ≥1 个 - 行 → 接受——定位锚 = hunk 内
+        // 匹配行序列（空格上下文行 + - 行——按出现序）连续——唯一匹配即应用（applyHunks 既有锚匹配域——
+        // 多匹配 / not-found 语义不变）。0 上下文与 1 上下文同待遇（评审 #4a）。
+        // 纯 +（无 - 锚）且 context<2 仍拒——插入位置不可判——报错引导加锚（NF15.8c）。
+        const removedCount = hunk.ops.filter((o) => o.type === "-").length
+        if (ctxCount < 2 && removedCount === 0) {
+          throw new Error(
+            `Coordinate-less hunk ${cur.hunks.length + 1} in ${cur.path} has ${ctxCount} context line(s) — add more context lines`,
+          )
+        }
+        cur.hunks.push(hunk)
+        continue
+      }
       let oldNeed = m[1] == null ? 1 : Number(m[1])
       let newNeed = m[2] == null ? 1 : Number(m[2])
       const hunk = { ops: [] }
@@ -84,7 +125,10 @@ function applyHunks(fileLines, hunks, eol, path) {
       const preview = oldSeq.slice(0, 3).join(" ⏎ ")
       throw new Error(`Hunk ${h + 1} in ${path} does not apply — context not found: "${preview}${oldSeq.length > 3 ? "…" : ""}". Read the file first and regenerate the patch from actual content.`)
     }
-    if (matches.length > 1) throw new Error(`Hunk ${h + 1} in ${path} matches ${matches.length} locations — add more context lines to make it unique`)
+    if (matches.length > 1) {
+      const preview = oldSeq.slice(0, 3).join(" ⏎ ")
+      throw new Error(`Hunk ${h + 1} in ${path} matches ${matches.length} locations — add more context lines to make it unique. Anchor: "${preview}${oldSeq.length > 3 ? "…" : ""}"`)
+    }
     const pos = matches[0]
     const out = []
     let src = pos
@@ -103,7 +147,7 @@ export const applyPatchTool = {
   parameters: {
     type: "object",
     properties: {
-      patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks." },
+      patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks (a bare @@ header is also accepted — coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies; a zero/one-context hunk is accepted only when it removes (-) at least one line and that anchor sequence is unique, while anchor-free pure-+ (insert) hunks need at least 2 context lines)." },
     },
     required: ["patch"],
   },

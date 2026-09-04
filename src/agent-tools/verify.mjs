@@ -4,26 +4,39 @@ import { readFileSync, existsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 
 /**
- * Source module → test file mapping. Heuristic: the FIRST path component
- * after src/ determines the module. Map it to the test file that imports from it.
- * Modules without dedicated tests map to null.
+ * Source module → test file mapping (AGENT-LOOP §18.14: test files are split by domain —
+ * one module maps to the list of domain files that cover it). Heuristic: the FIRST
+ * path component after src/ determines the module. Modules without dedicated tests map to null.
  */
 const MODULE_TO_TEST = {
-  tools: "test/tools.test.mjs",
-  "agent-tools": "test/tools.test.mjs",
-  agent: "test/agent.test.mjs",
-  memory: "test/memory.test.mjs",
-  tui: "test/tui.test.mjs",
-  provider: "test/integration-provider.mjs",
-  config: "test/integration-provider.mjs",
-  skills: "test/tools.test.mjs",
-  distill: "test/tools.test.mjs",
-  markdown: "test/agent.test.mjs",
-  advisor: "test/advisor.test.mjs",
+  tools: [
+    "test/file-tools.test.mjs", "test/edit-tools.test.mjs", "test/git.test.mjs",
+    "test/checkpoint.test.mjs", "test/bash.test.mjs", "test/ops-scope.test.mjs",
+    "test/execute.test.mjs", "test/checklist.test.mjs", "test/skills-distill.test.mjs",
+    "test/verify-domain.test.mjs", "test/pdf-parse.test.mjs",
+  ],
+  "agent-tools": [
+    "test/subagent-core.test.mjs", "test/subagent-async.test.mjs", "test/subagent-tool.test.mjs",
+    "test/subagent-panel.test.mjs", "test/subagent-scheduler.test.mjs", "test/verify-domain.test.mjs",
+  ],
+  agent: [
+    "test/agent-core.test.mjs", "test/agent-context.test.mjs", "test/guards.test.mjs",
+    "test/eng-delivery.test.mjs", "test/eng-reminders.test.mjs", "test/provider-stream.test.mjs",
+    "test/stream-rules.test.mjs", "test/session-compaction.test.mjs",
+    "test/skills-distill.test.mjs", "test/verify-domain.test.mjs", "test/dispatch.test.mjs",
+  ],
+  memory: ["test/memory.test.mjs"],
+  tui: ["test/tui-render.test.mjs", "test/tui-input.test.mjs", "test/tui-panel.test.mjs", "test/tui-stream.test.mjs", "test/tui-picker.test.mjs", "test/subagent-blocks.test.mjs"],
+  provider: ["test/integration-provider.mjs"],
+  config: ["test/integration-provider.mjs"],
+  skills: ["test/skills-distill.test.mjs"],
+  distill: ["test/skills-distill.test.mjs"],
+  markdown: ["test/memory.test.mjs"],
+  advisor: ["test/advisor-message.test.mjs", "test/advisor-review.test.mjs", "test/advisor-eng.test.mjs", "test/advisor-parallel.test.mjs"],
+  prompts: ["test/prompts.test.mjs"],
+  context: ["test/agent-context.test.mjs", "test/session-compaction.test.mjs"],
+  session: ["test/session.test.mjs", "test/session-compaction.test.mjs", "test/session-eng-advisor.test.mjs", "test/session-migration.test.mjs", "test/session-safety.test.mjs", "test/acp.test.mjs"],
   mcp: null,
-  prompts: null,
-  context: null,
-  session: null,
 }
 
 /**
@@ -99,18 +112,22 @@ function isUnderSrc(absPath) {
 export const verifyTool = {
   name: "verify",
   description:
-    "Run a pre-completion self-check. By default runs syntax checks on changed files AND any test files related to the changed modules, shows git diff and task list, and displays a self-review checklist. Set full=true to run the project's full test suite (npm test) instead of just related tests. Call this BEFORE declaring any coding task complete — do not say 'done' until verify passes.",
+    "Run a pre-completion self-check. By default runs syntax checks on changed files AND any test files related to the changed modules, shows git diff and task list, and displays a self-review checklist. Set full=true to run the project's full test suite (npm test) instead of just related tests. testNamePattern limits the run to matching test names (renamed from filter — the old name is rejected with an error). Call this BEFORE declaring any coding task complete — do not say 'done' until verify passes. " +
+    "Returns the check report — syntax results, related-test outcomes, task list; verify failure blocks the completion claim.",
   parameters: {
     type: "object",
     properties: {
       full: { type: "boolean", description: "Run the full test suite (npm test) instead of just related tests. Default false — use sparingly, per the testing discipline rules." },
       workdir: { type: "string", description: "Optional: run verify in this subdirectory (relative to cwd or absolute) — for monorepos" },
-      filter: { type: "string", description: "Optional: limit the test run to matching test names (node --test-name-pattern / npm test -- --test-name-pattern)" },
+      testNamePattern: { type: "string", description: "Optional: limit the test run to matching test names (node --test-name-pattern / npm test -- --test-name-pattern). Renamed from filter — the old name is rejected with an error." },
     },
   },
   readonly: true,
   outputPanel: true, // stream test output to a panel instead of inline
   async execute(args, ctx) {
+    if ("filter" in args) {
+      throw new Error("filter was renamed to testNamePattern — use testNamePattern; the old name is rejected")
+    }
     const cwd = ctx.agent.cwd
     // Changed-file resolution (§18.12 D-VR3): _touchedFiles (per-run bookkeeping,
     // absolute paths) ∪ git diff fallback — git is tried at testCwd
@@ -208,7 +225,7 @@ export const verifyTool = {
     // 3. Identify related test files for changed source modules
     const srcFiles = changedFiles.filter((f) => /\.mjs$/i.test(f) && isUnderSrc(f) && existsSync(f))
     const modules = [...new Set(srcFiles.map(moduleName))]
-    const relatedTests = [...new Set(modules.map((m) => MODULE_TO_TEST[m]).filter(Boolean))]
+    const relatedTests = [...new Set(modules.flatMap((m) => MODULE_TO_TEST[m] ?? []).filter(Boolean))]
 
     // 4. Run tests
     const pkgPath = join(testCwd, "package.json")
@@ -219,7 +236,7 @@ export const verifyTool = {
       if (hasTestScript) {
         lines.push("")
         lines.push("Tests (full suite):")
-        const result = await runTestSuite(testCwd, ctx, args.filter)
+        const result = await runTestSuite(testCwd, ctx, args.testNamePattern)
         if (result.passed) {
           lines.push("✓ All tests passed.")
           ctx.agent._verifyPassed = !syntaxFailed
@@ -258,7 +275,7 @@ export const verifyTool = {
           continue
         }
         try {
-          const result = await runTestFile(testRunCwd, testAbs, ctx, args.filter)
+          const result = await runTestFile(testRunCwd, testAbs, ctx, args.testNamePattern)
           if (result.passed) {
             lines.push(`  ✓ ${testFile}`)
           } else {
@@ -285,7 +302,7 @@ export const verifyTool = {
       }
     } else {
       // No related tests found for the changed modules
-      const uncovered = modules.filter((m) => MODULE_TO_TEST[m] === null)
+      const uncovered = modules.filter((m) => !MODULE_TO_TEST[m] || (Array.isArray(MODULE_TO_TEST[m]) && MODULE_TO_TEST[m].length === 0))
       const untested = modules.filter((m) => !(m in MODULE_TO_TEST))
       lines.push("")
       if (uncovered.length > 0) {

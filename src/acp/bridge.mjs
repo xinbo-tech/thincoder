@@ -19,8 +19,8 @@
  * End-of-turn is NOT a notification: `session/prompt` resolves with
  * `{ stopReason: "end_turn" }` (kimi session.ts parity).
  */
-import { join } from "node:path"
-import { detectDanger } from "../tools/shared.mjs"
+import { detectDanger, normalizeEOL, joinWithEol } from "../tools/shared.mjs"
+import { computeEditEntry, validateEditEntry, assertEditArgsExclusive } from "../tools/edit-diff.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {
@@ -56,13 +56,109 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
   const update = (sessionUpdate, extra = {}) =>
     notify("session/update", { sessionId, update: { sessionUpdate, ...extra } })
   let toolSeq = 0
-  const toolIds = new Map() // active tool name → current ACP toolCallId (defined before the literal — no expando)
+  // D15.8（TOOLS.md §15.1）：tool id FIFO 队列——并行同名工具按 call 序配对（dispatch B1
+  // 已测：并行结果回调顺序 = call 顺序——T-TS8/T-TS9）。取代旧 Map 按名覆盖（后写覆盖先写
+  // → tool_call_update 与 tool_call id 错配）。条目 { name, id, toolId }——toolId = 模型级
+  // toolCall.id（dispatch 在 onToolCall/onToolResult 均传第 3 参——同一 item 恒相同）。
+  // 拒绝/中断路径：dispatch 在 onToolCall 之前拒绝（被拒工具从未入队——无孤儿可滞）；
+  // 中断/异常路径（onToolResult 永不回调——dispatch.mjs catch 分支——T-F5 契约）留下的
+  // 孤儿靠 onToolCall 的「同名同 toolId 先弹出」隔离（见 onToolCall）——模型级 id 跨轮
+  // 可重复（sse.mjs 每轮从 call_0 重置）——弹出保证精确配对恒命中最新条目。
+  const toolQueue = [] // FIFO of pending { name, id, toolId }
 
   const toolCallId = () => `t${++toolSeq}`
+  /** D15.8：peek 同名最早项 id——权限面板展示用——不消费（result 仍要与自己的条目配对）。 */
+  const peekToolId = (name) => {
+    for (const e of toolQueue) if (e.name === name) return e.id
+    return null
+  }
+  /** D15.8：消费——①模型级 toolId 精确配对（中断孤儿隔离）②无 id/未命中 → 名称 FIFO 回退
+   *  （B1 保序）③均未命中 → null（调用方回退新 id——防御）。 */
+  const takeToolId = (name, toolId) => {
+    if (toolId != null) {
+      const i = toolQueue.findIndex((e) => e.name === name && e.toolId === toolId)
+      if (i >= 0) return toolQueue.splice(i, 1)[0].id
+    }
+    for (let i = 0; i < toolQueue.length; i++) {
+      if (toolQueue[i].name === name) return toolQueue.splice(i, 1)[0].id
+    }
+    return null
+  }
+
   const contentBlock = (text) => ({ type: "content", content: { type: "text", text } })
   const pathOf = (args) => {
     const p = args?.path ?? args?.filePath
     return typeof p === "string" && p ? p : null
+  }
+
+  // §15.1（TOOLS.md）D15.7 委派：edit 判定/应用单一权威 = 本地 computeEditEntry
+  // （edit-diff.mjs——校验→判定序→应用：行级 LCS、零重叠→插入、replace_all 字面替换全部）。
+  // 桥只留「读 IDE 缓冲 → computeEditEntry → 写回 IDE 缓冲」——错误文本经抛错原样透传
+  // ——与本地通道逐字一致（NF15.6b / AC15.10：not found / occurrences / 空 old / 空 new）。
+  const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
+
+  const readBuffer = async (p) => {
+    try {
+      const read = await request("fs/read_text_file", { sessionId, path: p }, { timeoutMs: 30000 })
+      return read?.text ?? read?.content ?? ""
+    } catch (e) {
+      throw new Error(`fs/read_text_file failed: ${e.message}`)
+    }
+  }
+  const writeBuffer = async (p, content) => {
+    try {
+      await request("fs/write_text_file", { sessionId, path: p, content }, { timeoutMs: 30000 })
+    } catch (e) {
+      throw new Error(`fs/write_text_file failed: ${e.message}`)
+    }
+  }
+  /** 单形态：读 IDE 缓冲 → computeEditEntry（rich——无 abortPrefix——同本地 runSingleEdit）
+   *  → 写回。EOL 权威（F1）：判定/应用在 normalizeEOL 后的 LF 域；写回 joinWithEol 按原文
+   *  首换行恢复（LF 域判定——CRLF 域写回——与本地 edit 工具同判同恢复）。 */
+  const editSingle = async (p, args) => {
+    const raw = await readBuffer(p)
+    const content = normalizeEOL(raw)
+    const out = computeEditEntry(content, args, { path: p })
+    await writeBuffer(p, joinWithEol(normalizeEOL(out.updated).split("\n"), raw))
+    return `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))`
+  }
+  /** 数组形态（D15.7）：条目校验（path/validateEditEntry/互斥——同本地 edit-batch 措辞）→
+   *  读全部涉及文件缓冲（同文件去重——一次读）→ 逐条 computeEditEntry（abortPrefix——批量
+   *  原子前缀；同文件条目按数组序串行累积——第二条基于第一条结果）→ 全部通过 → 逐文件写回
+   *  一次（判失败 → 零写；写失败 → 同本地 edit-batch 既有原子语义）。 */
+  const editBatch = async (args) => {
+    const edits = args.edits
+    if (!Array.isArray(edits) || edits.length === 0) {
+      throw new Error("edits must be a non-empty array of {path, old_string, new_string}")
+    }
+    assertEditArgsExclusive(args)
+    const groups = new Map() // path → { path, raw, content, edits }
+    for (const e of edits) {
+      if (!e.path) throw new Error("each edit must have a path")
+      validateEditEntry(e, { label: `edit for ${e.path}: `, rich: false })
+      let g = groups.get(e.path)
+      if (!g) {
+        g = { path: e.path, raw: "", content: "", edits: [] }
+        groups.set(e.path, g)
+      }
+      g.edits.push(e)
+    }
+    for (const g of groups.values()) {
+      g.raw = await readBuffer(g.path)
+      g.content = normalizeEOL(g.raw)
+    }
+    const outcomes = []
+    for (const g of groups.values()) {
+      for (const e of g.edits) {
+        const out = computeEditEntry(g.content, e, { path: g.path, abortPrefix: EDIT_ABORT_PREFIX })
+        outcomes.push({ g, out })
+        g.content = out.updated // 同文件串行累积
+      }
+    }
+    for (const g of groups.values()) {
+      await writeBuffer(g.path, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw))
+    }
+    return outcomes.map((o) => `OK: edited ${o.g.path} via IDE (${o.out.occurrences} occurrence(s))`).join("\n")
   }
 
   const callbacks = {
@@ -85,9 +181,19 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     onWait: ({ phase, seconds }) => log(`[rate-limit] ${phase} waiting ~${seconds}s`),
     onCompress: () => log("[context] auto-compacted"),
 
-    onToolCall: (name, args) => {
+    onToolCall: (name, args, toolId) => {
       const id = toolCallId()
-      toolIds.set(name, id)
+      // D15.8（advisor 🔴#1 修复）：模型级 id 每轮重置（sse.mjs finalizeToolCalls 内
+      // seq=0——call_0 call_1… 跨轮/跨消息可重复——设计自注「跨 turn 不保证唯一」）。
+      // 因此 push 前若队列已有同名同 toolId 条目，它必是结果永不回调的陈旧孤儿
+      // （dispatch 失败/中断路径不调 onToolResult——T-F5 契约）——先弹出再入队——
+      // 精确配对恒命中最新——"下个同名结果永不配到旧项"（设计目标，无需动 dispatch）。
+      if (toolId != null) {
+        for (let i = toolQueue.length - 1; i >= 0; i--) {
+          if (toolQueue[i].name === name && toolQueue[i].toolId === toolId) toolQueue.splice(i, 1)
+        }
+      }
+      toolQueue.push({ name, id, toolId: toolId ?? null })
       update("tool_call", {
         toolCallId: id,
         title: name,
@@ -98,9 +204,8 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       })
     },
 
-    onToolResult: (name, result) => {
-      const id = toolIds.get(name) ?? toolCallId()
-      toolIds.delete(name)
+    onToolResult: (name, result, toolId) => {
+      const id = takeToolId(name, toolId) ?? toolCallId()
       update("tool_call_update", {
         toolCallId: id,
         status: "completed",
@@ -120,7 +225,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       if (danger) content.push(contentBlock(`⚠️ Dangerous: ${danger}`))
       content.push(contentBlock(JSON.stringify(args ?? {})))
       const toolCall = {
-        toolCallId: toolIds.get(name) ?? toolCallId(),
+        toolCallId: peekToolId(name) ?? toolCallId(), // D15.8：peek 不消费——result 仍要与自己的条目配对
         title: name,
         content,
       }
@@ -140,7 +245,8 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     /**
      * fs reverse-RPC router (dispatch.mjs toolRouter, M2):
      * - write            → fs/write_text_file (full content, no read-back)
-     * - edit              → fs/read_text_file → local single-replacement → fs/write_text_file
+     * - edit              → fs/read_text_file → computeEditEntry（本地权威——单/数组形态）→ fs/write_text_file
+     *                      （§15.1 D15.7 委派——双通道同语义；数组=原子批量——逐条目串行累积）
      * - apply_patch       → local (unified-diff application is not routed in M2)
      * - delete, reads     → local
      */
@@ -159,19 +265,12 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
           return { handled: true, result: `Error: fs/write_text_file failed: ${e.message}` }
         }
       }
-      if (base === "edit" && path && typeof args?.old_string === "string" && typeof args?.new_string === "string") {
+      if (base === "edit" && (Array.isArray(args?.edits) || (path && typeof args?.old_string === "string" && typeof args?.new_string === "string"))) {
         try {
-          const read = await request("fs/read_text_file", { sessionId, path }, { timeoutMs: 30000 })
-          const current = read?.text ?? read?.content ?? ""
-          const idx = current.indexOf(args.old_string)
-          if (idx === -1) {
-            return { handled: true, result: `Error: old_string not found in ${path} (read via IDE buffer)` }
-          }
-          const next = current.slice(0, idx) + args.new_string + current.slice(idx + args.old_string.length)
-          await request("fs/write_text_file", { sessionId, path, content: next }, { timeoutMs: 30000 })
-          return { handled: true, result: `OK: edited ${path} via IDE (1 replacement)` }
+          const text = Array.isArray(args?.edits) ? await editBatch(args) : await editSingle(path, args)
+          return { handled: true, result: text }
         } catch (e) {
-          return { handled: true, result: `Error: edit via IDE failed: ${e.message}` }
+          return { handled: true, result: `Error: ${e.message}` }
         }
       }
       return { handled: false } // read-only tools, delete, apply_patch stay local

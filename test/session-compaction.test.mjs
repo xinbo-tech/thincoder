@@ -17,6 +17,8 @@ import { join } from "node:path"
 import { compressFallback, compressIfNeeded, estimateTokens, pushReal, SUMMARIZE_PROMPT } from "../src/context.mjs"
 import { estimateText } from "../src/provider/rate.mjs"
 import { saveSession, loadSession, applySession, sessionPath } from "../src/session.mjs"
+import { slow } from "./slow.mjs"
+import { mockLLM } from "./helpers/mock-llm.mjs"
 
 /** Build a long, splittable history (alternating user/assistant so splitHistory finds a middle). */
 function makeHistory(exchanges) {
@@ -370,3 +372,264 @@ test("T-DT7: 600K 工具密集压缩的摘要调用输入 ≤ 0.6×ctx − tail 
     server.close()
   }
 })
+
+
+
+
+
+
+
+test("runAgent: 工具链末尾（last=tool）也是压缩安全点", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const bigNoop = {
+    name: "noop",
+    description: "noop",
+    parameters: { type: "object", properties: {} },
+    readonly: true,
+    execute: async () => "x".repeat(400), // 100 token，增量推过阈值
+  }
+  // 主循环第 1 次调用 → 工具（带实测 usage 19950）；工具结果落尾（last=tool）→ 下一轮
+  // 实测基线 19950 + 增量 100 = 20050 > 阈值 20000 → 触发压缩（第 2 次调用是摘要）；压缩后
+  // 基线失效回到纯估算（历史 ~250 + system/tools 开销），低于 20000 → 第 3 次返回最终答案。
+  // 阈值 20000（而非旧 8000）：纯估算含 systemPrompt+tools 开销（内部动态值——2026-08-31
+  // discipline.md 路由总表 8KB 后开销 ~8-9K，旧 8000 阈值会在 turn 0 误触发压缩），留 11K
+  // 余量使测试对 prompt 增长稳健；实测分支用 19950 保持"增量推过阈值"的比值不破。
+  const script = [
+    { toolCall: { name: "noop" }, usage: { prompt_tokens: 19950 } },
+    { content: "这是摘要" },
+    { content: "done" },
+  ]
+  const { server, port, requests } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-tool-"))
+    const agent = createAgent({ provider, tools: [bigNoop], config: { agent: { compactThreshold: 20000 } }, cwd })
+    // 预填 12 条小消息：turn 0 纯估算（~150 + system/tools 开销）低于 20000，不提前压缩
+    agent.history = Array.from({ length: 12 }, (_, i) => ({ role: "user", content: `消息 ${i} ` + "x".repeat(32) }))
+    let compressed = 0
+    const out = await runAgent(agent, "继续", { onCompress: () => compressed++ })
+    assert.equal(out, "done")
+    assert.equal(compressed, 1)
+    assert.equal(requests.length, 3) // 主调用 + 摘要调用 + 主调用
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+
+
+test("runAgent: 上下文压缩时触发 onCompress 回调", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  // 第 1 个请求是压缩摘要调用，第 2 个是主循环调用
+  const script = [{ content: "摘要" }, { content: "done" }]
+  const { server, port } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-test-"))
+    const agent = createAgent({ provider, tools: [], config: { agent: { compactThreshold: 10 } }, cwd })
+    agent.history = Array.from({ length: 14 }, (_, i) => ({ role: "user", content: `历史消息 ${i} ` + "x".repeat(50) }))
+    let compressed = 0
+    const out = await runAgent(agent, "继续", { onCompress: () => compressed++ })
+    assert.equal(out, "done")
+    assert.equal(compressed, 1)
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+
+// ---------------------------------------------------------------- 压缩可见性（CONTEXT-COMPACTION §7）
+
+/** 压缩可见性测试共用的历史：12 条 × ~505 token，加上 system+tools 估算开销 ~9059
+ *  → 首轮检查 ~15179 token（> threshold 10000 触发）；fallback 后 ~9248 回落不复发。
+ *  模型 "m" → DEFAULT_SPEC 128K → keepTail = min(max(10,38), 40% 上限)。 */
+function compressTestHistory() {
+  return Array.from({ length: 12 }, (_, i) => ({ role: "user", content: `历史消息 ${i} ` + "x".repeat(2000) }))
+}
+
+/** 压缩面板接线测试的 TUI state 夹具（buildToolCallbacks 数据层所需字段）。 */
+function mkCompressTuiState() {
+  return {
+    lines: [], subTasks: {}, tasks: [],
+    tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 },
+    reasoning: "", streaming: "", _advisorBlocks: [],
+    currentTool: null, status: "", _lineIdCounter: 0,
+  }
+}
+
+/** 用真实 tool-events 接线装配压缩回调（onCompressStart/onCompressFail/onCompress → 面板）。
+ *  buildToolCallbacks 为动态 import（测试文件顶部不引 TUI 模块），经 _tuiWire 缓存。 */
+let _tuiWire = null
+async function wireCompressTui(agent, state) {
+  _tuiWire ??= await import("../src/tui/tool-events.mjs")
+  return _tuiWire.buildToolCallbacks({
+    agent, state,
+    pushLine: (text, color) => state.lines.push({ text, color }),
+    render: () => {}, scheduleRender: () => {},
+    ensureAssistantLabel: () => {},
+    askPermission: async () => true, askQuestion: async () => null,
+    saveSessionImpl: () => {},
+  }).callbacks
+}
+
+
+test("T1 runAgent: 压缩开始时 onCompressStart 先于 onCompress 触发（摘要条数/释放 token/耗时）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  // 第 1 个请求是压缩摘要调用（触发 onCompressStart→onCompress），第 2 个是主循环调用
+  const script = [{ content: "摘要" }, { content: "done" }]
+  const { server, port } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-vis-"))
+    const agent = createAgent({ provider, tools: [], config: { agent: { compactThreshold: 10000 } }, cwd })
+    agent.history = compressTestHistory()
+    const events = []
+    const out = await runAgent(agent, "继续", {
+      onCompressStart: (info) => events.push(["start", info]),
+      onCompress: (info) => events.push(["compress", info]),
+    })
+    assert.equal(out, "done")
+    assert.equal(events.length, 2, "start + compress 各一次（压缩后不再复发）")
+    assert.equal(events[0][0], "start", "onCompressStart 先于 onCompress")
+    assert.ok(events[0][1].messages >= 5, `summarizing N messages（N=${events[0][1].messages}）`)
+    assert.equal(events[1][0], "compress")
+    assert.equal(events[1][1].mode, "summary")
+    assert.ok(events[1][1].tokensFreed > 0, `压缩释放 token 数 > 0（实际 ${events[1][1].tokensFreed}）`)
+    assert.ok(events[1][1].elapsedMs >= 0, "耗时毫秒数存在")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+
+
+test("T2 TUI 接线: 压缩面板 进行中→完成冻结（Compressed: N tokens freed → summary (Xs)，可折叠载体）", async () => {
+  const agent = { history: [], tasks: [], planMode: false }
+  const state = mkCompressTuiState()
+  const callbacks = await wireCompressTui(agent, state)
+  // 开始态：面板区块出现（头部 Compressing… + summarizing N messages + 耗时基座）
+  callbacks.onCompressStart({ messages: 9 })
+  const running = Object.values(state.subTasks).find((s) => s.role === "compress")
+  assert.ok(running, "压缩面板区块出现")
+  const text = () => running.blocks.map((b) => b.text).join("")
+  assert.match(text(), /Compressing context…/)
+  assert.match(text(), /summarizing 9 messages/)
+  assert.ok(Number.isFinite(running.started), "耗时 ticker 基座（started）")
+  assert.equal(running.done, false)
+  // 完成态：更新 + 冻结 + 释放 live 条目
+  callbacks.onCompress({ mode: "summary", tokensFreed: 1234, elapsedMs: 12_345 })
+  assert.equal(running.done, true)
+  assert.match(text(), /Compressed: 1234 tokens freed → summary \(12s\)/)
+  assert.equal(state.subTasks[running.key], undefined, "live 条目释放（冻结后不悬空）")
+  const frozen = state.lines.find((l) => l._frozenSubTask?.role === "compress")
+  assert.ok(frozen, "完成态冻结进会话流（可折叠保留，同子 agent 完成形态）")
+  assert.ok(state._frozenSubKeys.has(running.key), "冻结 tombstone 防复活")
+})
+
+
+
+test("T3 runAgent: 压缩失败 onCompressFail 携带错误（单次失败不降级，计数 +1）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  // 第 1 个请求是压缩摘要调用（400），第 2 个是主循环调用
+  const script = [{ fail: 400 }, { content: "done" }]
+  const { server, port } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-fail-"))
+    const agent = createAgent({ provider, tools: [], config: { agent: { compactThreshold: 10000 } }, cwd })
+    agent.history = compressTestHistory()
+    const fails = []
+    let compressCalls = 0
+    const out = await runAgent(agent, "继续", {
+      onCompressFail: (e) => fails.push(e),
+      onCompress: () => compressCalls++,
+    })
+    assert.equal(out, "done")
+    assert.equal(fails.length, 1, "onCompressFail 触发一次")
+    assert.match(fails[0].message, /400/, "错误文本可见（API error: HTTP 400）")
+    assert.equal(compressCalls, 0, "未达阈值 → 不触发 onCompress（无降级）")
+    assert.equal(agent._compressFailures, 1, "失败计数 +1 未达阈值")
+    assert.ok(!agent.history[0].content.includes("truncated after repeated summarization failures"), "无降级说明")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+
+
+test("T3b runAgent: 连续 3 次失败 → compressFallback 实际运行（面板 进行中→失败→重试→降级说明）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const noop = {
+    name: "noop", description: "noop", parameters: { type: "object", properties: {} },
+    readonly: true, execute: async () => "ok",
+  }
+  // 每轮：压缩摘要 400 → 主循环调 noop（保下一轮仍超阈值）→ 第 3 次失败后 fallback → 主循环收尾
+  // 阈值档位：fallback 后检查必须低于阈值（不复发），首轮检查必须高于阈值——压缩 fixture 对
+  // 工具 schema 变化天生敏感（纯估算路径含 depth-0 全工具 schema——context.mjs extras.tools——
+  // setup.mjs 注记同源）。沿革：11000 →（read_history schema 入 depth-0 工具集 +~470 token
+  // 越过刀锋，余量耗尽）→ 12500 →（2026-09-03 §19.5.5 D-CL1 cancel 描述尾句 +~330 字符
+  // ≈ +85 token 再越 12500 刀锋——fallback 后档位实测已漂至 ≈12600）→ 14000 重校准
+  // （fallback 后 ≈12600、首轮 ≈15-17K——双面余量 ~1.1-2.4K）。
+  // 阈值曾为 11000（fallback 后 ~10910，余 90 token）时 read_history schema 抬升 ~470 token
+  // 即越线——任何 tool schema 文本增删都要重跑本测试。
+  const script = [
+    { fail: 400 }, { toolCall: { name: "noop" } },
+    { fail: 400 }, { toolCall: { name: "noop" } },
+    { fail: 400 }, { toolCall: { name: "noop" } },
+    { content: "done" },
+  ]
+  const { server, port } = await mockLLM(script)
+  const origError = console.error
+  const errLogs = []
+  console.error = (...a) => errLogs.push(a.join(" "))
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-fallback-"))
+    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 14000 } }, cwd })
+    agent.history = compressTestHistory()
+    const state = mkCompressTuiState()
+    const callbacks = await wireCompressTui(agent, state)
+    const out = await runAgent(agent, "继续", callbacks)
+    assert.equal(out, "done")
+    assert.equal(agent._compressFailures, 0, "达阈值后计数重置")
+    assert.ok(agent.history[0].content.includes("truncated after repeated summarization failures"), "compressFallback 实际运行（FALLBACK_NOTE 在历史首条）")
+    // 面板最终态：3× 进行中 + 3× 失败（仅错误，无降级）+ 1× 降级说明
+    const frozen = state.lines.find((l) => l._frozenSubTask?.role === "compress")
+    assert.ok(frozen, "面板冻结进会话流")
+    const text = frozen._frozenSubTask.blocks.map((b) => b.text).join("")
+    assert.equal((text.match(/Compressing context…/g) ?? []).length, 3, "每次 onCompressStart 回到进行中")
+    assert.equal((text.match(/Compression failed: [^\n]*400/g) ?? []).length, 3, "3 次失败错误文本可见（不含降级说明）")
+    assert.ok(!text.includes("tokens freed"), "失败路径无 LLM 摘要完成态")
+    assert.match(text, /Compression failed — fallback: truncated to \d+ messages/, "第 3 次失败后降级说明出现")
+    assert.equal(errLogs.filter((l) => l.includes("compression failed") && l.includes("400")).length, 3, "console.error 同步落（诊断可追踪）")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    console.error = origError
+    server.close()
+  }
+})
+
+
+
+test("T4 runAgent: 无 callbacks 环境压缩不崩（回调缺省 no-op）", async () => {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const script = [{ content: "摘要" }, { content: "done" }]
+  const { server, port } = await mockLLM(script)
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-nocb-"))
+    const agent = createAgent({ provider, tools: [], config: { agent: { compactThreshold: 10000 } }, cwd })
+    agent.history = compressTestHistory()
+    const out = await runAgent(agent, "继续") // 无 callbacks —— onCompressStart/onCompressFail/onCompress 全缺省
+    assert.equal(out, "done")
+    assert.ok(agent.history[0].content.includes("[Context was automatically compacted"), "压缩照常完成（headless 安全）")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+

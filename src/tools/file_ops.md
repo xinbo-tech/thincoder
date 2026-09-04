@@ -14,3 +14,4 @@ Notes:
 - Paths resolve relative to cwd — no directory restriction (same boundary as bash; the approval gate is the guard).
 - `dest` is overwritten if it already exists. `copy` is recursive for directories.
 - To create a directory, use `write` (creates parent dirs) or `bash mkdir`.
+- Returns `Moved|Copied|Renamed <source> -> <dest>` or `Error: ...` (same-path and missing-path errors).

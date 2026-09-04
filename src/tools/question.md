@@ -7,5 +7,6 @@ Parameters:
 Notes:
 - The agent loop pauses until the user answers
 - The answer is injected as the next user message
+- Returns the user's answer — the chosen option or free text — as the next message; the loop resumes when it arrives.
 - Use sparingly — prefer making reasonable decisions when possible
 - After receiving an answer about a design convention, tool preference, or recurring pattern: save it with the memory tool (action: put). This prevents asking the same question in future sessions — the user shouldn't have to repeat their preferences.
