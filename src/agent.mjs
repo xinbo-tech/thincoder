@@ -186,6 +186,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   const compactionOverhead = {
     systemPrompt,
     tools: toolSchemas,
+    // §18.6 D-TR4：compress 轨迹 depth 元数据（runAgent 的 depth 在此作用域——
+    // context.mjs compressIfNeeded 经 extras 透出到 logCtx）
+    traceDepth: depth,
   }
 
   let thrownError = null
@@ -270,7 +273,19 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         firedPatterns: streamRuleFired,
         // LOGGING（LOGGING.md）：llm:* 事件的语义上下文（stage=turn 主循环回合——含
         // digest 消化轮 auto=true；child=子代理 id（spawn 时 stamp 于 child._logId））
-        logCtx: { stage: "turn", turn: turn + 1, auto: autoTurn, child: agent._logId },
+        // §18.6 D-TR4：轨迹元数据增补（role/depth/kind/session/cwd——trace-store 只读
+        // logCtx，签名不变）；kind：depth>0 = subagent（consult 孩子 = consult）——子代理
+        // 对回靠 role+depth+child id（children 无 _sessionStart——不经 depth-0 设置——
+        // session 字段对子代理轨迹为 null——见 trace-store/agent.mjs 注释）。
+        logCtx: {
+          stage: "turn", turn: turn + 1, auto: autoTurn, child: agent._logId,
+          role: agent._role ?? null,
+          depth,
+          kind: depth > 0 ? (agent._role === "consult" ? "consult" : "subagent") : "turn",
+          session: agent._sessionStart ?? null,
+          cwd: agent.cwd,
+          traces: agent.config?.traces?.enabled !== false,
+        },
       })
     } catch (e) {
       // User interrupt (Ctrl+I): controller.abort({ interrupt: true, message }).
@@ -367,7 +382,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         // End-of-run exploration distillation (CONTEXT-COMPACTION §5 + SEND-STALL-DISTILL
         // §2.1): async — the promise hangs on _pendingDistill, settling at the next run's
         // start or the TUI exit flush. Silent (N3): failure never blocks return/history.
-        const distill = summarizeRunExplorations(agent, callbacks, signal).catch(() => {})
+        // §18.6 D-TR4：depth 透传（distill 轨迹元数据——与 compress 同通道）
+        const distill = summarizeRunExplorations(agent, callbacks, signal, depth).catch(() => {})
         agent._pendingDistill = distill
       }
       return cr.content

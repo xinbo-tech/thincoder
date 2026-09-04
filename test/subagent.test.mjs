@@ -91,7 +91,8 @@ test("buildChildRunOpts: no parent signal → null (child runs unbounded by inte
 
 // ─── turn-cap continue (TURN-CAP-CONTINUE.md): every wall prompts, unlimited ───
 
-import { mkdtempSync, rmSync, readFileSync } from "node:fs"
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs"
+import { slow } from "./slow.mjs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createServer } from "node:http"
@@ -330,7 +331,7 @@ test("subagent tool description exposes the role capability matrix (no dev-comme
     "- plan",
     "- coder",
     "- eng-coder",
-    "git context auto-injected",
+    "No git context injected",
     "delivery transparency table",
     "Mode filtering",
   ]) {
@@ -341,6 +342,206 @@ test("subagent tool description exposes the role capability matrix (no dev-comme
   const roleDesc = subagentTool.parameters.properties.role.description
   assert.ok(!roleDesc.includes("OVERRIDDEN"), "role description leaks dev comment")
 })
+
+// ─── §18.5 子代理零 git（AGENT-LOOP.md §18.5——T-AG1/2/5/6/9）─────────────────
+// 用户裁定（2026-09-04）：审计与普通探索均不注入 git 上下文——"注入了又会误导"。
+// 子代理证据链 = 任务书 ∪ 磁盘当前状态（read/glob/grep）∪（审计时）_touchedFiles。
+
+test("§18.5 T-AG5: 工具描述零 git——旧 Receives-git-context 措辞删除 + 零 git 语义", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const d = subagentTool.description
+  assert.ok(!d.includes("Receives git context auto-injected"), "T-AG5: git-injection promise 措辞删除（描述与实现一致）")
+  assert.ok(!d.includes("receives git context"), "T-AG5: git-injection promise 残留（大小写）清空")
+  assert.ok(d.includes("No git context injected—evidence from read/glob/grep and the task book"), "T-AG5: 零 git 语义措辞（镜像锚——VS Code 同款逐字）")
+  const roleDesc = subagentTool.parameters.properties.role.description
+  assert.ok(!roleDesc.includes("git"), "T-AG5: role 参数描述无 git 残留")
+})
+
+test("§18.5 T-AG9: collectGitContext 死进口清理（escapeXml 保留——取消系统提醒路径仍在用）", async () => {
+  const src = readFileSync(new URL("../src/agent-tools/subagent.mjs", import.meta.url), "utf8")
+  assert.ok(!src.includes("collectGitContext"), "T-AG9: subagent.mjs 不再 import/引用 collectGitContext")
+  assert.ok(src.includes("escapeXml"), "T-AG9: escapeXml 保留（cancelled 系统提醒注入路径在用）")
+})
+
+/** 单响应 capture server：记录每次请求体（子代理 input 检查用）。 */
+function captureServer(reportText) {
+  const requests = []
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      requests.push(JSON.parse(body))
+      const frames =
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: reportText } }] })}\n\n` +
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+        `data: [DONE]\n\n`
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end(frames)
+    })
+  })
+  return new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, requests }))
+  })
+}
+
+// 真 git 仓库 cwd：若注入分支仍在（旧实现），explore/plan spawn 会命中并把
+// <untrusted_git_context> 前置进 childInput——零 git 后必须完全消失。
+slow("§18.5 T-AG1/T-AG2/T-AG6: 子代理零 git——explore/plan 无注入；审计任务书含零 git 范围权威声明", async () => {
+  const { execSync } = await import("node:child_process")
+  const { createAgent } = await import("../src/agent.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-zerogit-"))
+  const { server, port, requests } = await captureServer("explore report " + "x".repeat(220))
+  try {
+    const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd, stdio: "ignore" })
+    git("init", "-q")
+    git("config", "user.name", "t")
+    git("config", "user.email", "t@t.dev")
+    writeFileSync(join(cwd, "x.js"), "1\n")
+    git("add", ".")
+    git("commit", "-qm", "初始提交abc")
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      tools: [noopRead],
+      config: { agent: {} },
+      cwd,
+    })
+    // T-AG1: explore spawn —— childInput（子代理首个 LLM 请求）不含 git context
+    const r1 = String(await subagentTool.execute({ task: "看看仓库结构", role: "explore" }, { agent: parent, cwd, callbacks: {}, depth: 0 }))
+    assert.ok(r1.includes("explore report"), "explore 子代理正常完成")
+    const child1 = JSON.stringify(requests[0].messages)
+    assert.ok(!child1.includes("<untrusted_git_context>"), "T-AG1: explore childInput 无 git context 注入")
+    assert.ok(!child1.includes("Git context") && !child1.includes("git context"), "T-AG1: explore childInput 无 Git context 声明")
+    assert.ok(!child1.includes("git log") && !child1.includes("git diff"), "T-AG1: explore 提示词无 git 命令承诺")
+    assert.ok(!child1.includes("初始提交abc"), "T-AG1: 注入的提交快照不存在（真 git 仓库 cwd 下）")
+    // T-AG2: plan spawn
+    const r2 = String(await subagentTool.execute({ task: "设计缓存层", role: "plan" }, { agent: parent, cwd, callbacks: {}, depth: 0 }))
+    assert.ok(r2.includes("explore report"), "plan 子代理正常完成")
+    const child2 = JSON.stringify(requests[1].messages)
+    assert.ok(!child2.includes("<untrusted_git_context>"), "T-AG2: plan childInput 无 git context 注入")
+    assert.ok(!child2.includes("git log") && !child2.includes("git diff"), "T-AG2: plan 提示词无 git 命令承诺")
+    // T-AG6: eng-coder 审计 spawn（depth>0 + _role=eng-coder）——任务书含零 git 范围权威声明
+    const engParent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      tools: [noopRead],
+      config: { agent: { engineering: true } },
+      cwd,
+    })
+    engParent._role = "eng-coder"
+    engParent._engTaskInput = "Docs involved: docs/design/X.md / File list: a.mjs / Acceptance: AC1"
+    engParent._touchedFiles = ["src/a.mjs", "src/b.mjs"]
+    const r3 = String(await subagentTool.execute({ task: "偏差审计", role: "explore" }, { agent: engParent, cwd, callbacks: {}, depth: 1 }))
+    assert.ok(r3.includes("explore report"), "审计 explore 正常完成")
+    const audit = JSON.stringify(requests[2].messages)
+    assert.ok(audit.includes("[Audit scope"), "T-AG6: 审计任务书含 Audit scope 块（D-AG3 拼装保留）")
+    assert.ok(audit.includes("Zero-git scope authority"), "T-AG6: 审计任务书含零 git 范围权威声明")
+    assert.ok(audit.includes("_touchedFiles is the audit scope") || audit.includes("_touchedFiles"), "T-AG6: _touchedFiles 入审计任务书")
+    assert.ok(audit.includes("src/a.mjs") && audit.includes("src/b.mjs"), "T-AG6: _touchedFiles 机械并集列出")
+    assert.ok(!audit.includes("<untrusted_git_context>"), "T-AG6: 审计输入无 git 上下文注入")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+// ─── §18.7 审计任务书模板三件（AGENT-LOOP.md §18.7 D-TS4/5/6——T-TS4/5/6）───
+
+test("§18.7 T-TS4/T-TS5/T-TS6: 审计 spawn 任务书含 A1 指令模板 + A2 机械摘要块 + A3 报告格式模板", async () => {
+  const { createAgent } = await import("../src/agent.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-audit-tpl-"))
+  const { server, port, requests } = await captureServer("audit report " + "x".repeat(220))
+  try {
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      tools: [noopRead],
+      config: { agent: { engineering: true } },
+      cwd,
+    })
+    parent._role = "eng-coder"
+    // A2 输入：结构化任务书（## 分节 + 冗长背景段——背景必须被摘要块排除）
+    parent._engTaskInput = [
+      "## Docs involved",
+      "docs/design/AGENT-LOOP.md",
+      "docs/design/ENGINEERING-MODE.md",
+      "## 任务背景(verbose)",
+      "这是一段冗长的对话背景与上下文……" + "y".repeat(500),
+      "## 文件清单",
+      "src/prompts/engineering-sub.md",
+      "src/advisor/run.mjs",
+      "### 修改",
+      "（子节——随后才是验收标准——摘要边界不得截断文件清单）",
+      "## 验收标准",
+      "AC-R2-1 = 协议三块落文",
+      "AC-R2-2 = 审计任务书模板三件",
+    ].join("\n")
+    parent._touchedFiles = ["src/a.mjs", "src/b.mjs"]
+    const r = String(await subagentTool.execute({ task: "偏差审计", role: "explore" }, { agent: parent, cwd, callbacks: {}, depth: 1 }))
+    assert.ok(r.includes("audit report"), "审计 explore 正常完成")
+    const audit = JSON.stringify(requests[0].messages)
+    // T-TS4 A1：四类偏差 + 范围限制 + 校验清单格式
+    assert.ok(audit.includes("[Audit instructions — mechanical template (AGENT-LOOP.md §18.7 D-TS4 A1):]"), "T-TS4: A1 指令模板注入")
+    assert.ok(audit.includes("PARTIAL: an acceptance criterion implemented partially or not at all;"), "T-TS4: 四类偏差点名——部分实现")
+    assert.ok(audit.includes("SILENT-SIMPLIFICATION"), "T-TS4: 四类偏差点名——静默简化")
+    assert.ok(audit.includes("DOC-DRIFT"), "T-TS4: 四类偏差点名——文档漂移")
+    assert.ok(audit.includes("OUT-OF-LIST"), "T-TS4: 四类偏差点名——超清单")
+    assert.ok(audit.includes("Audit scope = _touchedFiles above UNION the files confirmed by the parent task book"), "T-TS4: 范围限制（只审 _touchedFiles + 父任务书确认文件）")
+    assert.ok(audit.includes("NOT grounds for an out-of-list finding"), "T-TS4: 工作区未列改动不作超清单依据")
+    assert.ok(audit.includes("do NOT re-read whole documents"), "T-TS4: 范围限制含不重读全文档子句（F-TS6 A1）")
+    assert.ok(audit.includes("Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence"), "T-TS4: 偏差项清单格式（文件:行+设计引用+严重级+证据）")
+    // T-TS5 A2：三要素逐字 + 排除冗长上下文；独立性（_engTaskInput 机械生成）
+    assert.ok(audit.includes("[Parent spawn task book — mechanical summary (AGENT-LOOP.md §18.7 D-TS5 A2)"), "T-TS5: A2 机械摘要块注入")
+    assert.ok(audit.includes("docs/design/AGENT-LOOP.md") && audit.includes("docs/design/ENGINEERING-MODE.md"), "T-TS5: 设计文档路径列表逐字")
+    assert.ok(audit.includes("src/prompts/engineering-sub.md") && audit.includes("src/advisor/run.mjs"), "T-TS5: 受影响文件清单逐字（含 ### 子节后仍完整）")
+    assert.ok(audit.includes("AC-R2-1 = 协议三块落文") && audit.includes("AC-R2-2 = 审计任务书模板三件"), "T-TS5: 验收标准逐字")
+    assert.ok(!audit.includes("y".repeat(500)), "T-TS5: 冗长上下文/背景被排除（摘要块不含冗长背景）")
+    // T-TS6 A3：报告格式模板（三态 + 四类偏差均未发现）
+    assert.ok(audit.includes("[Audit report format — mechanical template (AGENT-LOOP.md §18.7 D-TS6 A3):]"), "T-TS6: A3 报告模板注入")
+    assert.ok(audit.includes("Four deviation categories: none found.") && audit.includes("四类偏差均未发现"), "T-TS6: 无偏差句（四类偏差均未发现——正文子串，不依赖 JSON 转义形态）")
+    assert.ok(audit.includes("| category | file:line | design reference | severity | evidence |"), "T-TS6: 偏差行字段化格式")
+    assert.ok(audit.includes("PROBLEM — the audit itself could not run"), "T-TS6: 三态——问题态")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§18.7 T-TS5 变体: 「涉及文件」表头的任务书摘要归属受影响文件清单（marker 回归——2026-09-04 advisor 首审 #2 修正）", async () => {
+  const { createAgent } = await import("../src/agent.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-audit-tpl2-"))
+  const { server, port, requests } = await captureServer("audit report " + "x".repeat(220))
+  try {
+    const parent = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      tools: [noopRead],
+      config: { agent: { engineering: true } },
+      cwd,
+    })
+    parent._role = "eng-coder"
+    parent._engTaskInput = [
+      "## Docs involved",
+      "docs/design/AGENT-LOOP.md",
+      "## 任务背景(verbose)",
+      "冗长背景……" + "z".repeat(400),
+      "## 涉及文件",
+      "src/a.mjs",
+      "## 验收标准",
+      "AC1",
+    ].join("\n")
+    parent._touchedFiles = ["src/a.mjs"]
+    const r = String(await subagentTool.execute({ task: "偏差审计", role: "explore" }, { agent: parent, cwd, callbacks: {}, depth: 1 }))
+    assert.ok(r.includes("audit report"), "变体审计 explore 正常完成")
+    const audit = JSON.stringify(requests[0].messages)
+    // 「涉及文件」必须归属 Affected-file list 节——不得报 not found（旧归属会把文件清单塞进设计文档节）
+    assert.ok(!audit.includes("Affected-file list: (not found in the parent task book)"), "T-TS5 变体: Affected-file list 节不报 not found（涉及文件 marker 归属正确）")
+    assert.ok(audit.includes("src/a.mjs") && audit.includes("docs/design/AGENT-LOOP.md") && audit.includes("AC1"), "T-TS5 变体: 三要素仍逐字在摘要块")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 
 // ─── §15 async subagent（AGENT-LOOP.md §15，T1-T14）────────────────────────
 

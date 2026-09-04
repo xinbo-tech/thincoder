@@ -14,6 +14,9 @@
 | Round 2 | `advisor-round2.md` | 以验证 prior 表为主 | ⚠️ 仅限明显可见且导致 crashes / data loss / logic errors 的新问题 |
 | Round 3–5 | `advisor-round3.md` | 严格只验证 prior 表 | ❌ 禁止（Do NOT look for new issues） |
 
+> **指注（2026-09-04——§18.10 铁律固化）**：`AGENT-LOOP.md §18.10` 的判定铁律（R1-R7——注入 `advisor-round1/2/3.md` + `advisor-design.md` 尾部的"Judgment Rules"块）与本文档的轮换/预算机制**正交**——本文件管"轮次衰减/收敛上限"（表上 3 轮行为），铁律管"判定严重级怎么定"（各轮内容辅助）——两者不冲突：铁律不改变轮换行为（Round 2/3 的新问题权限不变），只给判定提供一致标准。实现时若铁律文本与轮次提示词冲突，以本文件轮换表为准（轮次行为是收敛机制，铁律是判定内容）。
+
+
 轮次映射（`buildAdvisorSystemPrompt`）：`_advisorRound` 在每次 advisor 工具调用成功后 +1（`agent.mjs`），调用时 `_advisorRound=0 → ROUND1`，`=1 → ROUND2`，`≥2 → ROUND3`。注意 `_advisorRound` 是**已完成的** advisor 调用次数，`buildAdvisorSystemPrompt` 用 `_advisorRound + 1` 推导即将进行的轮次号——两者相差 1，勿混淆。
 
 > **设计评审（`reviewType="design"`）与代码评审共用同一收敛协议**（2026-08-04 决策变更）：round 1 用 `advisor-design.md`（设计评审标准 + Approval Signal），round 2/3+ 用 `advisor-round*.md` 收敛提示词（验证 prior 表、证据强制）。设计文档多次修改的评审循环因此与代码评审同构：第 2 轮可报新问题，第 3+ 轮严格只查已知问题，5 轮封顶后不再打回。

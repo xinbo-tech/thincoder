@@ -76,6 +76,15 @@ Has this goal been achieved? Answer ONLY "YES" or "NO" followed by a one-sentenc
             }],
             tools: [],
             signal: AbortSignal.timeout(10_000),
+            // §18.6 D-TR4/D-TR6（2026-09-04 fix round1）：goal 独立评审调用经 chat()
+            // 唯一采集点——补轨迹元数据 + traces 开关透传（agent.config.traces.enabled
+            // ——关=不落盘必须全覆盖——与 agent.mjs/context.mjs 同模式）
+            logCtx: {
+              stage: "goal", kind: "goal",
+              role: agent._role ?? null, depth: ctx.depth,
+              session: agent._sessionStart ?? null, cwd: agent.cwd,
+              traces: agent.config?.traces?.enabled !== false,
+            },
           })
           const verdict = (judgeRes.content ?? "").trim()
           if (verdict.toUpperCase().startsWith("NO")) {

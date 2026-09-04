@@ -8,6 +8,7 @@ import { providerSpec, resolveEnableThinking } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
 import { logEvent, errText, classifyErr, headText } from "../log.mjs"
+import { recordChatTrace } from "../traces/trace-store.mjs"
 import { readSSE } from "./sse.mjs"
 export { readSSE } from "./sse.mjs"
 import {
@@ -78,6 +79,9 @@ export async function chat(provider, opts = {}) {
   // 格式分派（anthropic/google/responses）在内部——单点覆盖即 llm:* 全覆盖。
   // 续写/重试各自为独立 HTTP 请求——续写递归（下方 chatImpl 内）会再包一层（嵌套
   // llm:start/done 对——每请求一事件）；重试在 requestWithRetry 内部不可见。
+  // §18.6 完整轨迹存档（AGENT-LOOP.md §18.6 N-TR2——权威句 D-TR1）：采集点唯一=
+  // 本函数出口——所有 chat 调用（主回合/消化轮/compress/distill/advisor/子代理/
+  // auto-think/consult）都经本函数；续写/重试在出口已合并——reasoning 全量才完整。
   const logCtx = opts.logCtx ?? {}
   const t0 = Date.now()
   const pname = provider?.name ?? provider?.model ?? "unknown"
@@ -93,6 +97,8 @@ export async function chat(provider, opts = {}) {
       finish: result?.finishReason ?? null,
       tools: Array.isArray(result?.toolCalls) ? result.toolCalls.length : 0,
     })
+    // §18.6 D-TR1/D-TR5：出口收集——成功路径轨迹（含 content/reasoning 全文/toolCalls）
+    recordChatTrace(provider, opts, result, null)
     return result
   } catch (e) {
     logEvent("llm:error", {
@@ -102,12 +108,14 @@ export async function chat(provider, opts = {}) {
       err: errText(e, 200),
       kind: classifyErr(e, opts.signal),
     })
+    // §18.6 D-TR5：失败路径也落盘——error（errText 截断 + 类别）+ finishReason:null
+    recordChatTrace(provider, opts, null, e)
     throw e
   }
 }
 
 /** chat 本体（LOG(LLM) 事件包装之外——见上方 chat 包装器）。 */
-async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls }) {
+async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls, logCtx }) {
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
   // providerSpec: spec with the provider-level context override (PROVIDER.md §15) — the
@@ -252,6 +260,11 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
         onReasoning,
         onWait,
         signal,
+        // §18.6：续写是同一逻辑调用的子请求——logCtx 原样透传（元数据与门控
+        // traces.enabled 对续写调用同样生效，不在出口静默越过开关）
+        // fix round1（D-TR1）：续写子请求标记 isContinuation:true（T-TR14——true =
+        // 该调用是续写链的一环；外层新调用 false）——分析"纠结"时区分续写/重试链。
+        logCtx: { ...logCtx, isContinuation: true },
       })
     } catch (error) {
       // §14.3 失败可见性：续写失败注入 _warnings（agent 机读线可见）不整轮飞出；AbortError 用户中断透传

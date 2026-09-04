@@ -45,12 +45,13 @@ import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { extractAgentResponseTable } from "./advisor/history.mjs"
-import { buildAdvisorUserMessage, resolveScopeFiles } from "./advisor/messages.mjs"
+import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock } from "./advisor/messages.mjs"
 import { buildConvergenceBody } from "./advisor/convergence.mjs"
 import { escapeLiteralEscapes } from "./escape.mjs"
 // Re-export for run.mjs and tests (keeps their imports from "../advisor.mjs" stable)
 export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "./advisor/history.mjs"
 export { buildAdvisorUserMessage } from "./advisor/messages.mjs"
+export { buildObjectDeclarationBlock } from "./advisor/messages.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -135,13 +136,15 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
  * @param {Object} agent — the parent agent (history used for the response table)
  * @param {Object|null} prior — prior issue table (extracted from history when null)
  * @param {string[]|null} [scopeFiles] — review surface for the no-response fallback (cwd-relative)
+ * @param {Object|null} [object] — review-object declaration (§18.8): mechanically
+ *   prepended to the round-2+ follow-up so every round stays anchored (T-OA2).
  * @returns {string} the follow-up user message — or a plain "System reminder: …"
  *   fresh-review fallback (NO brackets — some OpenAI-compatible servers parse
  *   '['-prefixed content as structured data / expand escapes) when no prior
  *   review exists at all (caller misuse; the response-table extraction would
  *   otherwise scan history from index 0 and could match an unrelated stale table)
  */
-export function buildAdvisorFollowUp(agent, prior, scopeFiles = null) {
+export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, object = null) {
   // Convergence follow-up REQUIRES a prior review record — the full output of
   // the last review, injected VERBATIM (decision 2026-08-08: the model
   // understands the review output; no table/header/phrase parsing). The caller
@@ -164,7 +167,9 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null) {
     : "(Agent did not provide a response table — perform a fresh full review; the review surface is unknown, ask the user for the file list)"
   const response = extractAgentResponseTable(agent.history) || noResponseFallback
   const round = (agent._advisorRound || 0) + 1
-  return buildConvergenceBody(p, response, round, scopeFiles)
+  // Review-object declaration FIRST (T-OA2 — round 2+ stays anchored, no re-archaeology).
+  const declaration = buildObjectDeclarationBlock(object)
+  return (declaration ? declaration + "\n" : "") + buildConvergenceBody(p, response, round, scopeFiles)
 }
 
 /**
@@ -187,8 +192,11 @@ export { escapeLiteralEscapes }
  * @param {string|null} [designToken] — design-review approval token (design only)
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review (passed through to buildAdvisorUserMessage)
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review
+ * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1): passed through
+ *   to the user-message builders; mechanically injected at the start of every review
+ *   round (round 1 design/code + round 2+ follow-up). Absent → legacy behavior.
  */
-export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null) {
+export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, object = null) {
   // Deterministic convergence state (decision 2026-08-08): round 2+ requires
   // _advisorRound > 0 AND a stored prior review output. No history parsing.
   // priorParam (direct callers) wins over the stored output — same derivation
@@ -201,7 +209,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
-      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths)) },
+      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object)) },
     ]
   }
 
@@ -226,7 +234,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
       agent._advisorRound = 0
     }
     // Mutations exist → KEEP the round (cap keeps advancing through retries).
-    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths)
+    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object)
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
       {
@@ -257,6 +265,6 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   const scopeFiles = resolveScopeFiles(agent, paths)
   return [
     { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
-    { role: "user", content: escapeLiteralEscapes(buildAdvisorFollowUp(agent, prior, scopeFiles)) },
+    { role: "user", content: escapeLiteralEscapes(buildAdvisorFollowUp(agent, prior, scopeFiles, object)) },
   ]
 }

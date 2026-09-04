@@ -77,11 +77,25 @@ export const advisorTool = {
     "For design review: single-pass review against methodology and requirements. " +
     "Review criteria come from .thincoder/advisor.md (if present) or sensible defaults. " +
     "After the review, you MUST produce a response table (see discipline rules for format). " +
-    "If advisor says all clear, call verify.",
+    "If advisor says all clear, call verify. " +
+    "Optionally pass object={type,target,status,reason,exclude} to anchor the review target " +
+    "(AGENT-LOOP.md §18.8 — the review-object declaration is mechanically injected into the review message); " +
+    "absent → legacy behavior (no injection).",
   parameters: {
     type: "object",
     properties: {
       type: { type: "string", enum: ["code", "design"], description: "Review type: 'design' for design doc review, 'code' for code review (default)" },
+      object: {
+        type: "object",
+        properties: {
+          type: { type: "string", description: "Review type as declared by the caller (design/code)" },
+          target: { type: "string", description: "Review target — document + section, or file(s)" },
+          status: { type: "string", description: "Object state: 待评审 / 已批准 / 已实现 (pending-review / approved / implemented)" },
+          reason: { type: "string", description: "Why this review runs: user-initiated / delivery verification" },
+          exclude: { type: "string", description: "Explicit exclusion list — approved/implemented items NOT in this review" },
+        },
+        description: "Review-object declaration (§18.8): mechanically injected at the start of the review user message so the advisor does not re-derive the review target. Absent → no injection (legacy behavior).",
+      },
       paths: {
         type: "array",
         items: { type: "string" },
@@ -101,6 +115,13 @@ export const advisorTool = {
     const agent = ctx.agent
     const reviewType = args.type || "code"
     const documents = args.documents || null
+    // Review-object declaration (§18.8 D-OA3): the PARENT constructs it and the
+    // advisor tool passes it through — mechanical anchoring, not model inference.
+    // Any non-object value (string/array/primitive, possibly from a malformed
+    // tool call) degrades to null = no injection (legacy calls unchanged).
+    const reviewObject = args.object && typeof args.object === "object" && !Array.isArray(args.object)
+      ? args.object
+      : null
     // Scope fallback: the runtime mutation record (zero git) covers guard-triggered
     // reviews where the model did not pass explicit paths.
     const paths = args.paths || (agent._touchedFiles?.length ? [...agent._touchedFiles] : null)
@@ -139,7 +160,7 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
-    }, designToken, documents, paths)
+    }, designToken, documents, paths, reviewObject)
 
     if (reviewType === "design") {
       // Whitespace-tolerant match (LLM may add spaces or wrap in fences).

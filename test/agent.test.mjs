@@ -1996,7 +1996,10 @@ test("prompts/system.md: 批量形态引导句（§16 D-B4，并入 §14 D1 并�
 })
 
 
-slow("runAgent: explore 子 agent 注入 git 上下文", async () => {
+// §18.5（2026-09-04 用户裁定——子代理零 git，AGENT-LOOP.md §18.5 D-AG1）：反向断言
+// ——explore 子代理 childInput 不得含 git 上下文注入（真 git 仓库 cwd 下——旧实现
+// 会命中注入分支）。顶层主 agent 的 git 注入保留（setup.mjs depth===0——§3——D-AG7）。
+slow("T-AG1: runAgent —— explore 子 agent 零 git（真 git 仓库 cwd 下无注入）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const { execSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-gitctx-"))
@@ -2018,9 +2021,14 @@ slow("runAgent: explore 子 agent 注入 git 上下文", async () => {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const agent = createAgent({ provider, tools: [], config: {}, cwd: dir })
     await runAgent(agent, "探索一下", { onPermissionRequest: async () => true })
-    const childInput = requests[1].messages.find((m) => m.role === "user" && typeof m.content === "string" && m.content.includes("Git context"))
-    assert.ok(childInput)
-    assert.match(childInput.content, /初始提交abc/) // 最近提交注入
+    const childText = JSON.stringify(requests[1].messages)
+    assert.ok(!childText.includes("<untrusted_git_context>"), "T-AG1: 子代理输入不含 git context 注入块")
+    assert.ok(!childText.includes("Git context") && !childText.includes("git context"), "T-AG1: 子代理输入无 Git context 声明（注入句子已删）")
+    assert.ok(!childText.includes("git log") && !childText.includes("git diff"), "T-AG1: explore 提示词无 git 命令承诺")
+    assert.ok(!childText.includes("初始提交abc"), "T-AG1: 注入的 git 提交快照不存在——零 git（真仓库 cwd 下）")
+    // 顶层主 agent git 注入保留（第 0 请求——§3 prepareRun depth===0——D-AG7 回归）
+    const parentText = JSON.stringify(requests[0].messages)
+    assert.ok(parentText.includes("git context") && parentText.includes("初始提交abc"), "T-AG7 回归: 顶层主 agent 仍注入 git context（setup.mjs depth===0——范围边界 D-AG7）")
     rmSync(dir, { recursive: true, force: true })
   } finally {
     server.close()
@@ -3267,6 +3275,61 @@ test("auto-think: buildClassifierInput 短消息带上一轮上下文，提醒/�
   assert.equal(buildClassifierInput([{ role: "assistant", content: "hi" }]), null)
 })
 
+test("auto-think: T-TS12 D-TS12 开关闭环——auto-think 调用点 traces.enabled:false 不落盘（修后），默认开启落盘", async () => {
+  const { classifyAndApply } = await import("../src/auto-think.mjs")
+  const { localDateStr } = await import("../src/traces/trace-store.mjs")
+  const dir = mkdtempSync(join(tmpdir(), "cli-autothink-traces-"))
+  process.env.THINCODER_TRACES_DIR = join(dir, "traces")
+  const countTraces = () => {
+    const day = join(process.env.THINCODER_TRACES_DIR, localDateStr())
+    if (!existsSync(day)) return 0
+    return readdirSync(day).filter((f) => f.endsWith(".jsonl")).length
+  }
+  const { server, port } = await mockLLM([{ content: "low" }])
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  try {
+    // 关（traces.enabled:false）——分类调用照常执行（证明调用点被命中），但零落盘
+    const closed = {
+      config: { agent: { autoThink: true }, traces: { enabled: false } },
+      provider: { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-flash" },
+      history: [{ role: "user", content: "改个错别字" }],
+      cwd: tmpdir(),
+    }
+    const level = await classifyAndApply(closed, 0)
+    assert.equal(level, "low", "分类调用必须命中（证明测试观测的是 auto-think 调用点）")
+    await sleep(150) // 异步写盘 fire-and-forget——若残留点存在，落盘会在该窗口内发生
+    assert.equal(countTraces(), 0, "T-TS12: traces.enabled:false → auto-think 调用点不落盘（修前残留点仍落盘）")
+    // 开（缺省）——同调用点落盘且带 autothink 元数据（证明字段补传）
+    const open = {
+      config: { agent: { autoThink: true } },
+      provider: { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "deepseek-v4-flash" },
+      history: [{ role: "user", content: "改个错别字" }],
+      cwd: tmpdir(),
+    }
+    const level2 = await classifyAndApply(open, 0)
+    assert.equal(level2, "low", "开侧分类同样命中")
+    // 等记录落定（写盘异步 + appendFile 先建文件后写内容——解析兜底）
+    let rec = null
+    for (let i = 0; i < 100 && !rec; i++) {
+      await sleep(10)
+      const day = join(process.env.THINCODER_TRACES_DIR, localDateStr())
+      const files = existsSync(day) ? readdirSync(day).filter((f) => f.endsWith(".jsonl")) : []
+      if (files.length === 0) continue
+      try { rec = JSON.parse(readFileSync(join(day, files[0]), "utf8")) } catch { /* 写盘在途 */ }
+    }
+    assert.ok(rec, "T-TS12: 缺省开启 → auto-think 调用点落盘（有记录）")
+    assert.equal(rec.stage, "autothink", "T-TS12: 落盘记录 stage=autothink")
+    assert.equal(rec.kind, "autothink", "T-TS12: 落盘记录 kind=autothink")
+    assert.equal(rec.role, null, "T-TS12: role 字段补传（顶层无 role）")
+    assert.equal(rec.depth, 0, "T-TS12: depth 字段补传（顶层 0）")
+  } finally {
+    delete process.env.THINCODER_TRACES_DIR
+    server.close()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
 // ---------------------------------------------------------------- rules discovery
 
 test("rules: discoverRules parses .md files with frontmatter", async () => {
@@ -3733,6 +3796,27 @@ test("prompts/explore.md: Thoroughness levels 三档 + 默认档", () => {
   assert.ok(/NOT find/i.test(thorough), `thorough 要求报告没找到什么: ${thorough}`)
 })
 
+// §18.5 T-AG4（2026-09-04）：explore.md 零 git——无注入声明、无 git 命令承诺。
+// 评审 #10 实现前补充：同时 grep 全部 src/prompts/*.md 确认无其他 git 注入/命令承诺
+// 残留（advisor-design/round2/3 的 "Do NOT run git diff"/"NO git tool" 为负面禁令或
+// advisor 历史注记——非注入声明亦非命令承诺——按"已确认"处置保留；system.md/
+// discipline.md 的 git 提及为顶层工具纪律示例——非子代理注入面）。
+test("prompts/explore.md: 零 git（T-AG4）——无 git log/git diff 命令承诺、无 Git context 注入声明", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "explore.md"), "utf8")
+  assert.ok(!text.includes("git log"), "T-AG4: explore.md 无 git log 命令承诺")
+  assert.ok(!text.includes("git diff"), "T-AG4: explore.md 无 git diff 命令承诺")
+  assert.ok(!text.includes("Git context is injected"), "T-AG4: explore.md 无 Git context 注入声明")
+  assert.ok(!text.includes("untrusted_git_context"), "T-AG4: explore.md 无 git 上下文注入标记")
+  assert.ok(!text.includes("receive git"), "T-AG4: explore.md 无注入承诺残留（receive git）")
+  // 评审 #10 补充：全 prompts 面排查——git 上下文注入标记必须全空
+  const names = readdirSync(PROMPTS_DIR).filter((f) => f.endsWith(".md"))
+  for (const f of names) {
+    const t = readFileSync(join(PROMPTS_DIR, f), "utf8")
+    assert.ok(!t.includes("untrusted_git_context"), `T-AG4: ${f} 无 git 上下文注入标记`)
+    assert.ok(!t.includes("Git context is injected"), `T-AG4: ${f} 无 Git context 注入声明`)
+  }
+})
+
 test("prompts/main.md: Delegate well 含委派 explore 时指定彻底度的指引", () => {
   const text = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
   assert.ok(text.includes("quick / medium / thorough"), "三档文案在 main.md 中")
@@ -3960,6 +4044,139 @@ test("prompts/engineering-sub.md: 内部交付协议——审计/自修/复评/�
   assert.ok(text.includes("fails twice in a row → same stalled report"), "节点失败重试 1 次仍败 → stalled")
   assert.ok(text.includes("7th audit spawn is refused mechanically"), "第 7 次审计 spawn 机械拒绝 = stalled 信号")
 })
+
+// ─── §18.7 测试分层收口 R2（AGENT-LOOP.md §18.7——T-TS1/2/3/7/10/11）───
+test("prompts/engineering-sub.md: 三级测试粒度 L1/L0/L2 定义句（§18.7 D-TS1——T-TS1/T-TS11）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+  // T-TS1：首次实现 = L1 快层 npm test
+  assert.ok(text.includes("**L1 = the fast layer `npm test`**"), "L1 = 快层 npm test 定义句")
+  assert.ok(text.includes("AFTER the FIRST implementation only"), "L1 时机 = 首次实现后（每链仅一次）")
+  // T-TS1：修正轮 = L0 = 调用 verify 默认模式（不手写 node --test）
+  assert.ok(text.includes("**L0 = call `verify` in its default mode**"), "L0 = 调用 verify 默认模式")
+  assert.ok(text.includes("syntax check + module-related tests"), "L0 = 语法检查 + 模块相关测试")
+  assert.ok(text.includes("Do NOT hand-write `node --test`"), "L0 不手写 node --test")
+  // T-TS11：verify null 映射 ACTION REQUIRED 不采用 → 显式升 L1
+  assert.ok(text.includes("null-mapping ACTION REQUIRED semantics is NOT adopted"), "verify null 映射 ACTION REQUIRED 语义不采用")
+  assert.ok(text.includes("escalate explicitly to L1"), "null 映射/触主干 → 显式升 L1")
+  // T-TS1 扩展（D-TS1 fix round1——L0 语义缺口处置）：git-diff 超集已知语义 + 定向路径
+  assert.ok(text.includes("Known semantics (D-TS1 fix round1"), "L0 已知语义注（D-TS1 fix round1）在")
+  assert.ok(text.includes("locates changed files via git diff"), "L0 已知语义注：verify 依赖 git-diff 定位改动文件")
+  assert.ok(text.includes("a SUPERSET (safe direction, not a false positive"), "L0 已知语义注：超集 = 安全方向（非误报）")
+  assert.ok(text.includes("cannot hurt acceptance"), "L0 已知语义注：相关测试超集不伤验收——接受")
+  assert.ok(text.includes("target `node --test <file>` per `_touchedFiles`"), "L0 定向路径：按 _touchedFiles 定向 node --test <file>")
+  assert.ok(text.includes("an explicit narrowing"), "L0 定向 = verify 粒度不足时的显式收缩")
+  assert.ok(text.includes("never skip `verify`"), "L0 不手写 = 不得跳过 verify/自写全套——定向不违反")
+  // T-TS1：全量 = 父侧 L2（每链终态 1 次——链内不跑）
+  assert.ok(text.includes("**L2 = `test:full` full suite**"), "L2 = 全量 test:full 定义句")
+  assert.ok(text.includes("runs ONCE at the parent's verification"), "L2 时机 = 父侧核销 1 次")
+  assert.ok(text.includes("never run in this chain"), "链内不跑全量")
+})
+
+test("prompts/engineering-sub.md: 修正轮默认不重跑审计/复评 + LLM 3 次/链（§18.7 D-TS2——T-TS2/T-TS10）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+  // T-TS2：④ 修正轮默认不重跑审计（例外：触碰未覆盖文件回③）
+  assert.ok(text.includes("Correction rounds default to NOT re-running the explore audit"), "④ 修正轮默认不重跑 explore 审计")
+  // T-TS10：例外路径生效——触碰上次审计/评审未覆盖文件 → 回③重审计
+  assert.ok(text.includes("touched files the last audit did not cover"), "例外：触碰上次审计未覆盖文件")
+  assert.ok(text.includes("back to ③ (re-audit, the exception path)"), "例外 → 回③重审计")
+  // T-TS2：⑥ 修正轮默认 advisor 不重跑；终态前一次终审（复评）
+  assert.ok(text.includes("default is NO advisor re-review"), "⑥ 修正轮默认不重跑 advisor 复评")
+  assert.ok(text.includes("the final review = the advisor re-review"), "终态前一次终审 = advisor 复评")
+  assert.ok(text.includes("NO second explore audit"), "终审不复跑审计")
+  assert.ok(text.includes("LLM verification per chain = 3"), "LLM 验证 = 3 次/链（有界——不随修正轮增长）")
+})
+
+test("prompts/engineering.md: 父侧核销 = L2 全量 test:full 1 次——不复跑 L1（§18.7 D-TS3——T-TS3）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  // 三处父侧核销文字（step 8 / Work Loop Delivery review 行 / eng-coder delivery 行）
+  const occurrences = text.split("parent-side verification = L2 full `test:full` once per chain terminal").length - 1
+  assert.ok(occurrences >= 3, `父侧核销 L2 全量 1 次句三处全改（step8 + WorkLoop + delivery 行）——实见 ${occurrences} 处`)
+  assert.ok(text.includes("parent-side verification = L2 full `test:full` once per chain terminal"), "父侧核销 = L2 全量 1 次（每链终态）")
+  assert.ok(text.includes("no L1 re-run"), "不复跑 L1")
+  assert.ok(!text.includes("run the tests it claims pass"), "旧措辞零残留（N-TS4 承诺-实现一致）")
+})
+
+test("prompts/advisor-round1.md: B2 范围收缩句 + 批并行句（§18.7 D-TS8——T-TS7）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "advisor-round1.md"), "utf8")
+  // :7 范围收缩——聚焦评审对象（交付清单）；设计文档只读相关节（不读全文档）；不读无关模块
+  assert.ok(text.includes("**focus on the review scope**"), ":7 聚焦评审范围")
+  assert.ok(text.includes("read the review-target files (the delivery list) FIRST"), ":7 优先读评审对象文件")
+  assert.ok(text.includes("do NOT read whole documents in full"), ":7 设计文档不读全文档")
+  assert.ok(text.includes("do not read unrelated modules just to understand the implementation"), ":7 不读无关模块")
+  // :13 批量并行——同一批 read 的多个文件并发执行
+  assert.ok(text.includes("multiple files read in one batch execute in PARALLEL (concurrent — do not wait serially)"), ":13 批量 read 并行执行句")
+  // 预算 20 轮保持（B3——实测后再议）
+  assert.ok(text.includes("budget of 20 tool rounds"), ":4 预算 20 轮保持")
+})
+
+// ─── §18.10 判定铁律 + §18.8 对象锚（AGENT-LOOP.md §18.10/§18.8——T-10.1..5）───
+const FOUR_ADVISOR_PROMPTS = ["advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"]
+
+test("prompts 4 模板: Judgment Rules 铁律块（§18.10 D-10.1——T-10.1）——R1-R7e + 类型指引句 + 对象声明一致性句", () => {
+  for (const f of FOUR_ADVISOR_PROMPTS) {
+    const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+    assert.ok(text.includes("## Judgment Rules (apply directly — do not re-derive)"), `${f} 铁律块头在`)
+    assert.ok(text.includes("Apply each rule to the extent it matches the review type"), `${f} 按评审类型取适用指引句在`)
+    for (const tag of ["R1", "R2", "R3", "R4", "R5", "R6", "R7a", "R7b", "R7c", "R7d", "R7e"]) {
+      assert.ok(text.includes(tag), `${f} 含 ${tag}（R1-R7e 铁律）`)
+    }
+    // §18.8 对象声明一致性句（round2 定稿：全 4 模板加——与铁律同批一次落）
+    assert.ok(text.includes("You have received the review-object declaration above"), `${f} 对象声明一致性句在`)
+    assert.ok(text.includes("no need to infer the review target from the documents"), `${f} 一致性句语义在`)
+  }
+})
+
+test("prompts 4 模板: 铁律块+一致性句字节一致（TR3 首批定稿——防 4 份漂移）", () => {
+  const blocks = FOUR_ADVISOR_PROMPTS.map((f) => {
+    const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+    return text.slice(text.indexOf("## Judgment Rules"))
+  })
+  blocks.forEach((b, i) => assert.equal(b, blocks[0], `${FOUR_ADVISOR_PROMPTS[i]} 铁律块与首份字节一致`))
+})
+
+test("prompts/engineering-sub.md: 机制三句（§18.10 D-10.2——T-10.2）——测试缝/授权边界 A 裁定/镜像并行", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+  // ① 测试缝句（同 R6——实现遇不可注入直接加 seam）
+  assert.ok(text.includes("Test-seam rule: when tests need to mock an internal tool set"), "测试缝句头在")
+  assert.ok(text.includes("add a test seam (setter or parameter override with `??` default fallback"), "测试缝 = setter/override + ?? 兜底")
+  assert.ok(text.includes("default null keeps production behavior unchanged"), "默认 null 生产零变化")
+  assert.ok(text.includes("restore in finally"), "finally 恢复")
+  // ② 授权边界句（A 裁定：允许但逐项报告）
+  assert.ok(text.includes("Out-of-file-list changes: ALLOWED when required by the delivery"), "清单外改动允许句在")
+  assert.ok(text.includes("changed AND not reported (silent overreach)"), "审计判据 = 改了未报告＝偏差")
+  assert.ok(text.includes("reported = transparent/acceptable"), "已报告 = 透明可接受")
+  // ③ 镜像并行句（byte-identical 测试失败 ≠ 你错）
+  assert.ok(text.includes("Mirror-parallel semantics: a byte-identical test failure is NOT your fault"), "镜像并行句在")
+  assert.ok(text.includes("it detects drift, not blame"), "检测漂移不判对错")
+})
+
+test("prompts/engineering-sub.md: 无旧硬句（F1 收敛——2026-09-04 §18.10 D-10.2 A 裁定同向——防回归）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+  assert.ok(!text.includes("Do NOT modify any file not listed"), "旧硬句 1 零残留（'Do NOT modify any file not listed'）")
+  assert.ok(!text.includes("zero touches outside the approved file list"), "旧硬句 2 零残留（'zero touches outside the approved file list'）")
+})
+
+test("prompts 4 模板铁律块: 通用性（§18.10 D-10.1/T-10.3 扩）——无项目名/符号/CLI|VS Code 形态", () => {
+  for (const f of FOUR_ADVISOR_PROMPTS) {
+    const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+    const start = text.indexOf("## Judgment Rules")
+    assert.ok(start !== -1, `${f} 铁律块头在`)
+    const block = text.slice(start).toLowerCase()
+    for (const bad of ["thincoder", "vscode", "vs code", "cli ", "_runadvisortoolloop", "_setadvisortoolsetfortest"]) {
+      assert.ok(!block.includes(bad), `${f} 铁律块无“${bad}”（通用性——不锁项目）`)
+    }
+  }
+})
+
+test("prompts 4 模板铁律块: 来源标注诚实（§18.10 D-10.4——T-10.5）", () => {
+  for (const f of FOUR_ADVISOR_PROMPTS) {
+    const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+    assert.ok(text.includes("Source: 7-round sample"), `${f} 来源标注句在（样本 7 轮）`)
+    assert.ok(text.includes("continuously re-reviewed"), `${f} 持续复核句在`)
+  }
+})
+
+
 
 test("prompts/engineering.md: 首次交付偏差审计既有断言随 §18 下沉更新（2026-09-02）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")

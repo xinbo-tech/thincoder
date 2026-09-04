@@ -106,6 +106,30 @@ function injectProjectGuide(agent, parts, scopeFiles = []) {
 }
 
 /**
+ * Build the mechanical review-object declaration block (AGENT-LOOP.md §18.8
+ * D-OA2 — English anchored form). Injected at the START of the review user
+ * message every round: round 1 (design + code), the legacy convergence path,
+ * and the round-2+ follow-up (see buildAdvisorFollowUp) — the reviewer must
+ * not re-derive "who is being reviewed / why" from the documents (T-OA2:
+ * every round stays anchored). Absent object → "" (legacy calls degrade to
+ * the current behavior — T-OA3).
+ * @param {Object|null} [object] — { type, target, status, reason, exclude }
+ *   (strings; `exclude` may also be a list — joined with ", ")
+ * @returns {string} the declaration block (empty when no object)
+ */
+export function buildObjectDeclarationBlock(object = null) {
+  if (!object || typeof object !== "object" || Array.isArray(object)) return ""
+  const field = (v) => (Array.isArray(v) ? v.join(", ") : v == null ? "" : String(v))
+  return [
+    "## Review-object declaration (mechanical — do not infer)",
+    `Review type: ${field(object.type)} | Target: ${field(object.target)} | Object state: ${field(object.status)} | Trigger: ${field(object.reason)}`,
+    `Excluded (not in this review): ${field(object.exclude)}`,
+    "Follow this declaration — do not infer the review target from the documents.",
+    "",
+  ].join("\n")
+}
+
+/**
  * Build the user message for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior issue table
@@ -115,15 +139,24 @@ function injectProjectGuide(agent, parts, scopeFiles = []) {
  *   When set, the review input is built from this list ONLY — no git-diff change-set collection.
  *   When absent, the legacy git-diff-based scope is kept (backward compatible).
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review (deduped; shown under Review Scope)
+ * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3):
+ *   { type, target, status, reason, exclude } — mechanically injected at the
+ *   start of the user message; absent → no injection (legacy calls unchanged).
  * @returns {string} the user message
  */
-export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null) {
+export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.
   const p = prior ?? ((agent._advisorRound || 0) > 0 ? agent._lastAdvisorOutput : null)
 
   const parts = []
+  // Review-object declaration FIRST — D-OA1: at the start of the user message
+  // (after the system prompt, before the review content). Covers round 1
+  // design/code and the legacy convergence path; the round-2+ normal path
+  // prepends it in buildAdvisorFollowUp (T-OA2 — every round stays anchored).
+  const declaration = buildObjectDeclarationBlock(object)
+  if (declaration) parts.push(declaration)
   const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
   const pathList = Array.isArray(paths) ? [...new Set(paths.filter((p) => typeof p === "string" && p.trim()))] : []
 

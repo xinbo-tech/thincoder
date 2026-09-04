@@ -1,4 +1,14 @@
-## [0.12.58] — 2026-09-02
+## [0.12.59] — 2026-09-04
+
+### Added
+
+- **完整轨迹存档（AGENT-LOOP.md §18.6）**：`chat()` 出口统一收集——每次模型调用落 JSONL 到 `~/.thincoder/traces/YYYY-MM-DD/`（本地时区分日/seq=当日 max+1/脱敏复用 log.mjs 黑名单+SECRET_FORM/错误路径也落盘/`traces.enabled` 开关默认 on）——覆盖主/子代理/advisor/compress/distill/consult/auto-think 全部调用；续写标记 `isContinuation`。
+
+### Changed
+
+- **子代理零 git（§18.5）**：explore/plan spawn 不再注入 `<untrusted_git_context>`（全角色零 git——审计证据=设计文档+磁盘状态+_touchedFiles 并集；审计任务书附零 git 范围权威声明；explore.md 删除 git 注入声明/命令承诺，描述改为“No git context injected”）；顶层主 agent git 上下文不变（§3）。
+- **审计任务书零 git 声明**（D-AG3）：`_touchedFiles` 为审计范围——工作区未列改动不作超清单依据。
+
 
 ### Changed
 

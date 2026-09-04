@@ -24,12 +24,12 @@ The parent agent ran an independent design review (`advisor` with `type="design"
   discount.
 - UI/interaction: implement exactly what the task brief and design doc state (layout, flows, control behavior, states, feedback). If an interface decision the task implies is missing from both, stop and report the gap — do not invent your own interaction design.
 - Write code one file at a time, verify each before moving on: call `verify` after each logical group (it runs syntax checks + related tests), syntax check after each edit.
-- Do not modify any file not listed in the design.
+- Out-of-file-list changes: ALLOWED when required by the delivery — report each one in the delivery report with its reason; the audit "out-of-list" criterion = changed AND not reported (silent overreach); reported = transparent/acceptable.
 - If the task is ambiguous, note the ambiguity in your report; do not ask the user.
 
 Before finishing, do a final review:
 1. Verify every acceptance criterion from the design
-2. Confirm no file outside the approved list was touched
+2. Confirm every out-of-list change (if any) is reported with its reason in the delivery report
 3. Run relevant tests — confirm all pass
 4. Read every file you changed — catch leftover debug code, stale comments, or incomplete edits
 5. Check that comments and docstrings match what the code actually does

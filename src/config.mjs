@@ -73,6 +73,9 @@ export const DEFAULTS = {
     provider: "tavily",  // structured search API; empty apiKey → fall back to Bing HTML scraping
     apiKey: "",          // Tavily key (tvly-...) — optional
   },
+  traces: {
+    enabled: true,  // §18.6 D-TR6：完整轨迹存档开关——默认 on（"现阶段"=随会话生效——AGENT-LOOP.md §18.6）；关 = chat() 出口不落盘
+  },
 }
 
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
@@ -195,6 +198,7 @@ export function loadConfig() {
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
+    traces: { ...DEFAULTS.traces, ...config.traces },
   }
 
   // providers[].context (K units, PROVIDER.md §15 D-C1): positive integer only — invalid

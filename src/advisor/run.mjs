@@ -120,6 +120,9 @@ function renderTimeline(timeline, tail = "") {
 }
 // Test seam (mirrors _advisorToolsFor).
 export { renderTimeline as _renderTimeline }
+// Test seam (T-TS8/9): the tool loop itself — toolsOverride injects a mock tool
+// set with controllable timing/errors (the real set comes from advisorToolsFor).
+export { runAdvisorToolLoop as _runAdvisorToolLoop }
 
 /**
  * Run the advisor's tool loop: chat → execute tools → repeat.
@@ -129,7 +132,7 @@ export { renderTimeline as _renderTimeline }
  * the panel keeps moving while the advisor explores — otherwise the panel sits
  * frozen through every tool-call phase and the review appears to have stalled.
  */
-async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd) {
+async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd, toolsOverride = null) {
   // Kind-tagged wrappers: the TUI panel colors reasoning / answer / tool progress differently.
   // Every chunk is ALSO recorded into an ordered timeline — the persisted record
   // must show the review process (thinking ↔ tool progress ↔ final text) at its
@@ -145,7 +148,9 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   const onThink = emit("think")
   const onText = emit("text")
   const onTool = emit("tool")
-  const { schemas: toolSchemas, byName: toolByName } = advisorToolsFor(agent)
+  // toolsOverride = test seam (T-TS8/9): the real advisor tool set, or a mock
+  // set with controllable timing/errors.
+  const { schemas: toolSchemas, byName: toolByName } = toolsOverride ?? advisorToolsFor(agent)
   let turns = 0
   const startTime = Date.now()
   
@@ -198,7 +203,18 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       signal: signal ?? null,
       onToken: onText,
       onReasoning: onThink,
-      logCtx: { stage: "advisor" }, // LOGGING（vscode advisor/run.mjs parity——按 stage 可 grep）
+      // LOGGING（vscode advisor/run.mjs parity——按 stage 可 grep）
+      // §18.6 D-TR4：轨迹元数据增补——kind=advisor（评审独立于子代理——T-TR2）；role
+      // 透出调用方角色（eng-coder 内嵌评审时为 "eng-coder"）；session/cwd 供轨迹对回；
+      // traces 开关沿 agent.config（D-TR6）。
+      logCtx: {
+        stage: "advisor",
+        role: agent?._role ?? null,
+        kind: "advisor",
+        session: agent?._sessionStart ?? null,
+        cwd,
+        traces: agent?.config?.traces?.enabled !== false,
+      },
     })
 
     // No tool calls — this is the final review text. The final answer was
@@ -227,8 +243,19 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         : {}),
     })
 
-    // Execute each tool call
-    for (const tc of response.toolCalls) {
+    // B1 (AGENT-LOOP.md §18.7 D-TS7): the SAME LLM reply's multiple read-only
+    // tool calls run in PARALLEL (Promise.all) — results are backfilled in
+    // toolCalls order (Promise.all preserves the input order → tool_call_id
+    // never mismatches); each tool's timeout/error is captured independently
+    // (the existing TOOL_TIMEOUT stays — one failing tool does not block the
+    // others); progress lines are emitted in toolCalls order. The read-only
+    // tool set has no side effects — no sequencing/serialization needed.
+    // Scope note (round1 review #10): B1 is ONLY in-loop tool parallelism — it
+    // does NOT solve the TODO "platform execution: advisor parallel calls are
+    // actually serial" mystery (docs/TODO.md — LOGGING evidence item), which
+    // concerns multiple advisor CALLS observed as serial, not one reply's
+    // tool calls.
+    const parsed = response.toolCalls.map((tc) => {
       const tool = toolByName.get(tc.name)
       let args = {}
       let parseError = null
@@ -237,63 +264,69 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       } catch (e) {
         parseError = `Error: invalid JSON in tool arguments: ${e.message}\nRaw arguments: ${(tc.arguments || "").slice(0, 200)}`
       }
-      
-      // If parse failed, return error to model immediately
-      if (parseError) {
-        messages.push({ role: "tool", tool_call_id: tc.id, content: parseError })
-        continue
-      }
-      
-      const argsLine = describeToolArgs(tc.name, args)
-      onTool(`\n→ ${tc.name}${argsLine ? " " + argsLine : ""}\n`)
-      let result
-      if (!tool) {
-        result = `Error: unknown tool "${tc.name}". Available: ${[...toolByName.keys()].join(", ")}`
-      } else {
-        // Execute with timeout (clear the timer when the tool wins the race —
-        // otherwise up to MAX_ADVISOR_TURNS dangling timers accumulate)
+      return { tc, tool, args, parseError }
+    })
+    // Progress lines first, in toolCalls order (emitted before the parallel
+    // run — display order is independent of completion order).
+    for (const p of parsed) {
+      if (p.parseError) continue // parse-error tools get no progress line (legacy behavior)
+      const argsLine = describeToolArgs(p.tc.name, p.args)
+      onTool(`\n→ ${p.tc.name}${argsLine ? " " + argsLine : ""}\n`)
+    }
+    // Every tool runs CONCURRENTLY; each result/error lands in its own slot —
+    // Promise.all preserves input order, so index i always matches parsed[i].
+    const executed = await Promise.all(parsed.map(async (p) => {
+      // Parse failure → error to model immediately (no execution)
+      if (p.parseError) return p.parseError
+      if (!p.tool) return `Error: unknown tool "${p.tc.name}". Available: ${[...toolByName.keys()].join(", ")}`
+      // Execute with timeout (clear the timer when the tool wins the race —
+      // otherwise up to MAX_ADVISOR_TURNS dangling timers accumulate)
+      try {
+        let timeoutId
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(`tool timeout after ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS)
+        })
+        let toolPromise
         try {
-          let timeoutId
-          const timeoutPromise = new Promise((_, reject) => {
-            timeoutId = setTimeout(() => reject(new Error(`tool timeout after ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS)
-          })
-          let toolPromise
-          try {
-            toolPromise = tool.execute(args, { cwd, agent, onOutput, signal })
-            result = await Promise.race([toolPromise, timeoutPromise])
-          } finally {
-            clearTimeout(timeoutId)
-            // Timeout won → toolPromise is still pending; a later rejection
-            // would surface as an unhandled rejection. The race already
-            // consumed the result/error in the normal path, so this no-op
-            // catch only fires for the abandoned-tool case.
-            toolPromise?.catch(() => {})
-          }
-        } catch (e) {
-          const errorType = e.message.includes("timeout") ? "timeout"
-            : e.message.includes("ENOENT") ? "file_not_found"
-            : e.message.includes("permission") ? "permission_denied"
-            : "execution_error"
-          result = `Error (${errorType}): ${e.message}`
+          toolPromise = p.tool.execute(p.args, { cwd, agent, onOutput, signal })
+          return await Promise.race([toolPromise, timeoutPromise])
+        } finally {
+          clearTimeout(timeoutId)
+          // Timeout won → toolPromise is still pending; a later rejection
+          // would surface as an unhandled rejection. The race already
+          // consumed the result/error in the normal path, so this no-op
+          // catch only fires for the abandoned-tool case.
+          toolPromise?.catch(() => {})
         }
+      } catch (e) {
+        const errorType = e.message.includes("timeout") ? "timeout"
+          : e.message.includes("ENOENT") ? "file_not_found"
+          : e.message.includes("permission") ? "permission_denied"
+          : "execution_error"
+        return `Error (${errorType}): ${e.message}`
       }
+    }))
+
+    // Backfill in toolCalls order (executed[i] ↔ parsed[i]); per-result
+    // non-string serialization + line-aware truncation stay per-tool.
+    for (let i = 0; i < parsed.length; i++) {
+      let result = executed[i]
       if (typeof result !== "string") result = JSON.stringify(result)
-      
-      // Line-aware truncation: preserve line integrity
+
       if (result.length > MAX_RESULT_CHARS) {
         const lines = result.split("\n")
         let truncated = ""
         let charCount = 0
         let keptLines = 0
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
+
+        for (let j = 0; j < lines.length; j++) {
+          const line = lines[j]
           if (charCount + line.length + 1 > MAX_RESULT_CHARS) break
           truncated += line + "\n"
           charCount += line.length + 1
           keptLines++
         }
-        
+
         const remainingLines = lines.length - keptLines
         result = (
           truncated +
@@ -301,8 +334,8 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
           `To see more content, use: read(path, offset=${keptLines + 1}, limit=200)`
         )
       }
-      
-      messages.push({ role: "tool", tool_call_id: tc.id, content: result })
+
+      messages.push({ role: "tool", tool_call_id: parsed[i].tc.id, content: result })
     }
   }
 }
@@ -360,8 +393,12 @@ function extractUnfixedIssues(priorText) {
  * Run an advisor review. reviewType: "code" (default) or "design". Returns review text or null when skipped.
  * @param {string|null} [designToken] — injected into the design-review prompt; the advisor echoes it only on approval.
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
+ * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review.
+ * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3):
+ *   { type, target, status, reason, exclude }; mechanically injected at the
+ *   start of every review round's user message. Absent → legacy behavior (no injection).
  */
-export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null) {
+export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null) {
   const onOutput = callbacks?.onOutput
   const signal = callbacks?.signal
   const startTime = Date.now()
@@ -396,7 +433,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // Advisor always works in the agent's cwd — scope is defined by paths/documents.
   const advisorCwd = agent.cwd
 
-  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths)
+  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, object)
 
   try {
     const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd)

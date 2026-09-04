@@ -174,6 +174,15 @@ Return ONLY the JSON object:`,
         }],
         tools: [],
         signal: AbortSignal.timeout(15_000),
+        // §18.6 D-TR4/D-TR6（2026-09-04 fix round1）：/mcp ai 生成调用经 chat() 唯一
+        // 采集点——补轨迹元数据 + traces 开关透传（agent.config.traces.enabled——
+        // 关=不落盘必须全覆盖——与 agent.mjs/context.mjs 同模式）
+        logCtx: {
+          stage: "mcp", kind: "mcp",
+          role: agent?._role ?? null,
+          session: agent?._sessionStart ?? null, cwd: agent?.cwd ?? process.cwd(),
+          traces: agent?.config?.traces?.enabled !== false,
+        },
       })
       const jsonMatch = (res.content ?? "").match(/\{[\s\S]*\}/)
       if (!jsonMatch) { pushLine("[mcp] AI response not valid JSON", C.error); return }

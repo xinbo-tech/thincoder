@@ -19,6 +19,7 @@ import {
   extractConversationBackground,
   buildAdvisorFollowUp,
   prepareAdvisorMessages,
+  buildObjectDeclarationBlock,
 } from "../src/advisor.mjs"
 import { MAX_RESULT_CHARS } from "../src/advisor/run.mjs"
 
@@ -144,7 +145,9 @@ test("buildAdvisorSystemPrompt: reviewType=design returns design prompt", () => 
   const agent = { history: [], _advisorRound: 0, cwd: tmpdir() }
   const result = buildAdvisorSystemPrompt(agent, null, "design")
   assert.ok(result.includes("design reviewer"), "应包含设计审查内容")
-  assert.ok(!result.includes("code review"), "不应包含代码审查内容")
+  // 2026-09-04 §18.10：铁律块按评审类型指引句合法含 "code review" 词——
+  // 防误路由断言改为 round1 身份句（code review advisor 身份 = 代码评审提示词）
+  assert.ok(!result.includes("You are a code review advisor."), "不应误路由到代码评审提示词（round1 身份句）")
 })
 
 test("buildAdvisorSystemPrompt: design round 1 uses design prompt; rounds 2+ converge like code", () => {
@@ -1259,6 +1262,107 @@ test("advisor timeout: invalid timeoutMs (0 / -100 / \"abc\") falls back to the 
   }
 })
 
+// ─── §18.7 B1 批并行（AGENT-LOOP.md §18.7 D-TS7——T-TS8/T-TS9）──────────────
+
+/** B1 mock LLM：请求 1 = 一次回复两个只读工具调用；请求 2 = 最终文本。 */
+function b1LoopServer() {
+  return import("node:http").then(({ createServer }) => {
+    const requests = []
+    const server = createServer((req, res) => {
+      let bodyText = ""
+      req.on("data", (c) => (bodyText += c))
+      req.on("end", () => {
+        requests.push(JSON.parse(bodyText))
+        res.writeHead(200, { "Content-Type": "text/event-stream" })
+        if (requests.length === 1) {
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [
+              { index: 0, id: "call_tool1", function: { name: "read", arguments: "{}" } },
+              { index: 1, id: "call_tool2", function: { name: "grep", arguments: "{}" } },
+            ] } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n` +
+            `data: [DONE]\n\n`,
+          )
+        } else {
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "review complete" } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            `data: [DONE]\n\n`,
+          )
+        }
+      })
+    })
+    return new Promise((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, requests }))
+    })
+  })
+}
+
+test("B1 (T-TS8): 同一回复多个只读工具调用并行执行——两工具都在任一完成前启动（确定性事件序——弃墙钟）", async () => {
+  const { _runAdvisorToolLoop } = await import("../src/advisor/run.mjs")
+  const log = []
+  const mkSlow = (name) => ({
+    name,
+    execute: async () => {
+      log.push(`${name}-start`) // 同步段——Promise.all 启动序确定性
+      await new Promise((r) => setTimeout(r, 100))
+      log.push(`${name}-end`)
+      return `${name}-result`
+    },
+  })
+  const tools = { schemas: [], byName: new Map([["read", mkSlow("read")], ["grep", mkSlow("grep")]]) }
+  const { server, port } = await b1LoopServer()
+  try {
+    const messages = []
+    const out = await _runAdvisorToolLoop(
+      { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      messages, null, null, { cwd: tmpdir() }, tmpdir(), tools,
+    )
+    assert.ok(out.includes("review complete"), "B1: 工具循环正常收敛到最终文本")
+    // 并行确定性断言：两工具都先启动、后完成（串行实现会得到 start→end→start→end——必挂）
+    assert.equal(log[0], "read-start", "B1: read 先启动（Promise.all 输入序）")
+    assert.equal(log[1], "grep-start", "B1: grep 启动于 read 启动后、任一完成前")
+    assert.ok(log.indexOf("read-end") >= 2 && log.indexOf("grep-end") >= 2, "B1: 两个 end 都在两个 start 之后（并发——互不等待）")
+    // 结果按 toolCalls 顺序回填（tool_call_id 不错配）
+    const t1 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool1")
+    const t2 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool2")
+    assert.equal(t1.content, "read-result", "B1: 工具 1 结果回填（id 匹配）")
+    assert.equal(t2.content, "grep-result", "B1: 工具 2 结果回填（id 匹配）")
+    assert.ok(messages.indexOf(t1) < messages.indexOf(t2), "B1: 结果按 toolCalls 顺序入列")
+  } finally {
+    server.close()
+  }
+})
+
+test("B1 (T-TS9): 错误隔离——一工具抛错另一工具成功——两结果回填 + 顺序保序 + 无未处理拒绝", async () => {
+  const { _runAdvisorToolLoop } = await import("../src/advisor/run.mjs")
+  const tools = {
+    schemas: [],
+    byName: new Map([
+      ["read", { name: "read", execute: async () => { throw new Error("boom") } }],
+      ["grep", { name: "grep", execute: async () => "grep-result" }],
+    ]),
+  }
+  const { server, port } = await b1LoopServer()
+  try {
+    const messages = []
+    const out = await _runAdvisorToolLoop(
+      { name: "mock", baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
+      messages, null, null, { cwd: tmpdir() }, tmpdir(), tools,
+    )
+    // 抛错的工具独立捕获——不阻断另一工具，也不终止循环；无未处理拒绝（测试完成即证明）
+    assert.ok(out.includes("review complete"), "T-TS9: 一工具抛错不终止评审循环")
+    const t1 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool1")
+    const t2 = messages.find((m) => m.role === "tool" && m.tool_call_id === "call_tool2")
+    assert.equal(t1.content, "Error (execution_error): boom", "T-TS9: 抛错工具的结果 = 错误字符串（独立捕获）")
+    assert.equal(t2.content, "grep-result", "T-TS9: 另一工具照常成功回填")
+    assert.ok(messages.indexOf(t1) < messages.indexOf(t2), "T-TS9: 顺序按 toolCalls 保序")
+  } finally {
+    server.close()
+  }
+})
+
+
 
 // ─── v2 token hardening (2026-08-25): TTL 7d configurable + fail-closed + revoke narrowing ───
 test("validateDesignToken: fail-closed on malformed strings (two legacy backdoors gone)", async () => {
@@ -1396,4 +1500,99 @@ test("designId 隔离：复审完成但未通过（无 token 回显）→ 该次
   } finally {
     server.close()
   }
+})
+
+
+// ─── §18.8 评审对象锚（AGENT-LOOP.md §18.8——T-OA1..5）──────────────
+
+const OA_OBJECT = { type: "design", target: "§18.7", status: "待评审", reason: "用户发起", exclude: "已批准项" }
+
+test("buildObjectDeclarationBlock: 声明块格式（§18.8 D-OA2 英文锚）", () => {
+  const block = buildObjectDeclarationBlock(OA_OBJECT)
+  assert.ok(block.startsWith("## Review-object declaration (mechanical — do not infer)"), "块头在")
+  assert.ok(block.includes("Review type: design | Target: §18.7 | Object state: 待评审 | Trigger: 用户发起"), "类型/目标/状态/原因行在")
+  assert.ok(block.includes("Excluded (not in this review): 已批准项"), "排除清单行在")
+  assert.ok(block.includes("Follow this declaration — do not infer the review target from the documents."), "按声明执行句在")
+  assert.equal(buildObjectDeclarationBlock(null), "", "无 object → 空串")
+  assert.equal(buildObjectDeclarationBlock("bad"), "", "非对象 → 空串")
+  assert.equal(buildObjectDeclarationBlock(["a", "b"]), "", "数组 → 空串（与 agent-tools 侧防护一致）")
+  // exclude 为列表时 join 逗号
+  const listBlock = buildObjectDeclarationBlock({ type: "code", target: "t", exclude: ["已批准 A", "已实现 B"] })
+  assert.ok(listBlock.includes("Excluded (not in this review): 已批准 A, 已实现 B"), "exclude 列表 join")
+})
+
+test("buildAdvisorUserMessage: object 注入声明块——位于评审内容之前（§18.8 T-OA1/T-OA4/T-OA5）", () => {
+  const agent = { history: [{ role: "user", content: "design a feature" }], _advisorRound: 0, cwd: tmpdir(), config: {} }
+  const msg = buildAdvisorUserMessage(agent, null, "design", null, null, null, OA_OBJECT)
+  assert.ok(msg.includes("## Review-object declaration"), "声明块注入")
+  assert.ok(msg.includes("Excluded (not in this review): 已批准项"), "排除项在声明块中（T-OA4）")
+  const declIdx = msg.indexOf("## Review-object declaration")
+  const contentIdx = msg.indexOf("## Design Review")
+  assert.ok(declIdx !== -1 && contentIdx !== -1 && declIdx < contentIdx, "声明块位于评审内容之前（T-OA5）")
+  assert.ok(msg.includes("## Design Review"), "既有评审内容保留（T-OA5——不破坏）")
+})
+
+test("buildAdvisorUserMessage: 无 object 参数——不注入、不崩（§18.8 T-OA3 旧调用兼容）", () => {
+  const agent = { history: [], _advisorRound: 0, cwd: tmpdir(), config: {} }
+  const msg = buildAdvisorUserMessage(agent, null, "design")
+  assert.ok(!msg.includes("## Review-object declaration"), "无声明块")
+  assert.ok(msg.includes("## Design Review"), "消息本体正常构建（降级现状）")
+})
+
+test("buildAdvisorFollowUp: object 声明块前置——round 2+ 每轮锚定（§18.8 T-OA2）", () => {
+  const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.mjs | 🔴 | bug | fix |"
+  const agent = {
+    _advisorRound: 1, cwd: tmpdir(), _touchedFiles: [],
+    _lastAdvisorOutput: priorTable,
+    history: [{ role: "tool", tool_call_id: "tc1", content: priorTable }],
+  }
+  const msg = buildAdvisorFollowUp(agent, null, null, OA_OBJECT)
+  assert.ok(msg.startsWith("## Review-object declaration"), "声明块位于复评消息开头（T-OA2）")
+  assert.ok(msg.includes("## Prior Review Output"), "复评正文保留")
+  const msg2 = buildAdvisorFollowUp(agent)
+  assert.ok(!msg2.includes("## Review-object declaration"), "无 object 不注入（降级兼容）")
+})
+
+test("prepareAdvisorMessages: round 2+ 复评——对象声明仍注入（§18.8 T-OA2 每轮锚定）", () => {
+  const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug | fix |"
+  const agent = {
+    history: [{ role: "tool", tool_call_id: "a1", content: priorTable }],
+    _advisorRound: 1, _advisorSession: null, cwd: tmpdir(), _touchedFiles: [],
+    _lastAdvisorOutput: priorTable,
+  }
+  const object = { type: "code", target: "src/a.js", status: "已实现", reason: "交付核销", exclude: "" }
+  const msgs = prepareAdvisorMessages(agent, "code", null, null, null, null, object)
+  assert.ok(msgs[1].content.includes("## Review-object declaration"), "round 2 复评消息含声明块")
+  assert.ok(msgs[1].content.includes("Target: src/a.js"), "声明块目标在")
+  assert.ok(msgs[1].content.includes("## Prior Review Output"), "复评正文保留")
+})
+
+test("buildAdvisorUserMessage: legacy round 2 路径——对象声明仍在（每轮锚定——T-OA2）", () => {
+  const priorTable = "| # | File | Severity | Issue | Suggestion |\n| 1 | a.js | 🔴 | bug | fix |"
+  const agent = {
+    _touchedFiles: [], cwd: tmpdir(), history: [], _advisorRound: 1,
+    _lastAdvisorOutput: priorTable, config: {}, provider: { model: "m" },
+  }
+  const msg = buildAdvisorUserMessage(agent, null, "code", null, null, null, OA_OBJECT)
+  assert.ok(msg.includes("## Review-object declaration"), "legacy 收敛路径同样注入（T-OA2）")
+})
+
+test("advisorTool: schema 声明 object 参数（§18.8 D-OA3）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const object = advisorTool.parameters.properties.object
+  assert.ok(object, "object 参数在 schema")
+  assert.equal(object.type, "object", "object 为对象形态（与 N-OA1 一致）")
+  for (const k of ["type", "target", "status", "reason", "exclude"]) {
+    assert.ok(object.properties[k], `object.properties.${k} 在`)
+  }
+})
+
+test("advisorTool.execute: object 非法形态（字符串/数组）降级——不崩（T-OA3）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const agent = { config: { agent: { engineering: true } }, _engDesignToken: "standing", _advisorRound: 0, _advisorSession: null, cwd: process.cwd(), _touchedFiles: [] }
+  // 早错路径（documents 非 doc 文件）——object 解析在任何崩溃点之前；两种非法形态都不崩
+  const out = await advisorTool.execute({ type: "design", documents: ["src/not-a-doc.mjs"], object: "bad-string" }, { agent })
+  assert.match(out, /must be in docs/, "字符串形态降级——不破坏早错路径")
+  const out2 = await advisorTool.execute({ type: "design", documents: ["src/not-a-doc.mjs"], object: ["a", "b"] }, { agent })
+  assert.match(out2, /must be in docs/, "数组形态同样降级")
 })

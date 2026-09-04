@@ -81,7 +81,20 @@ export async function classifyAndApply(agent, turn) {
       ],
       tools: [],
       signal: AbortSignal.timeout(5_000),
-      logCtx: { stage: "autothink", turn, child: agent._logId },
+      // D-TS12 (AGENT-LOOP.md §18.7): full logCtx field set at the chat call
+      // point — traces/session/cwd/role/depth/kind (this call point carried
+      // only {stage,turn,child}). The traces field closes the D-TR6 "off = no
+      // persist" switch: without it the tracer treated the auto-think call as
+      // enabled and persisted even when agent.config.traces.enabled was false.
+      logCtx: {
+        stage: "autothink", turn, child: agent._logId,
+        traces: agent.config?.traces?.enabled !== false,
+        session: agent._sessionStart ?? null,
+        cwd: agent.cwd,
+        role: agent._role ?? null,
+        depth: agent._depth ?? 0, // agent state carries no depth stamp (the call site passes none) — 0 for the top-level agent
+        kind: "autothink",
+      },
     })
     const word = (response.content ?? "").trim().toLowerCase()
     if (word.startsWith("low")) level = "low"

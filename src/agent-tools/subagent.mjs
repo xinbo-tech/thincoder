@@ -1,6 +1,6 @@
 import {
   createAgent,
-  readonlyToolNames, collectGitContext, escapeXml,
+  readonlyToolNames, escapeXml,
   EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY,
 } from "../agent.mjs"
 import { makeRelay, wrapChildCallbacks, gateEngCoderSpawn, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
@@ -24,6 +24,57 @@ import {
 // 2026-09-03 §19 合体轮: subagent_check/escalate 工具退役——check/status/escalate
 // 动作执行器并入 ./subagent-async.mjs，本文件只承载工具面（action schema）与
 // spawn 路径 + 动作分流。
+
+/**
+ * §18.7 D-TS5 (A2): mechanically summarize the parent spawn task book for the
+ * audit spawn — the three audit-relevant elements VERBATIM (design doc paths /
+ * affected-file list / acceptance criteria); verbose context/background is
+ * dropped (the auditor can read the design docs themselves — they stay
+ * available outside this input). Independence preserved: the input is
+ * _engTaskInput (mechanically kept by the parent spawn) — never the
+ * eng-coder's self-report. Sections are located by header marker, prioritizing
+ * header lines (structured task books: "## 文件清单 …") and falling back to
+ * inline markers (flat one-line task books); a section runs to the next header
+ * of the SAME OR HIGHER level ("## 文件清单" survives a "### 修改" sub-header).
+ * Marker not found → the section is reported as missing (never fabricate).
+ */
+function summarizeEngTaskBook(taskInput) {
+  if (!taskInput) return "(unavailable)"
+  const SECTIONS = [
+    { name: "Design docs involved", markers: [/Docs? involved/i, /涉及文档/] },
+    { name: "Affected-file list", markers: [/Files? (?:list|to (?:modify|change)|modified)/i, /受影响文件/, /文件清单/, /涉及文件/] },
+    { name: "Acceptance criteria", markers: [/Acceptance(?: criteria)?/i, /验收标准/] },
+  ]
+  const lines = taskInput.split("\n")
+  const headerLevel = (l) => {
+    const m = l.match(/^\s*(#{1,6})\s/)
+    return m ? m[1].length : 0
+  }
+  const headerIdx = lines.map((l, i) => (headerLevel(l) > 0 ? i : -1)).filter((i) => i >= 0)
+  const boundsFor = (from, level) => {
+    for (const j of headerIdx) {
+      if (j > from && (level === 0 || headerLevel(lines[j]) <= level)) return j
+    }
+    return lines.length
+  }
+  const out = []
+  for (const { name, markers } of SECTIONS) {
+    let from = -1
+    let level = 0
+    for (const i of headerIdx) {
+      if (markers.some((m) => m.test(lines[i]))) { from = i; level = headerLevel(lines[i]); break }
+    }
+    if (from === -1) {
+      for (let i = 0; i < lines.length; i++) {
+        if (markers.some((m) => m.test(lines[i]))) { from = i; level = 0; break }
+      }
+    }
+    if (from === -1) { out.push(`${name}: (not found in the parent task book)`); continue }
+    const body = lines.slice(from, boundsFor(from, level)).join("\n").trim()
+    out.push(body || `${name}: (empty section)`)
+  }
+  return out.join("\n\n")
+}
 
 /**
  * subagent tool — ONE tool, SIX actions (AGENT-LOOP.md §19/§19.5/§19.6): spawn
@@ -95,7 +146,7 @@ export const subagentTool = {
     "- action:'panel': DIAGNOSE + fix the subagent panel — the collapsible blocks under the conversation the user sees (CLI TUI panel mirror; headless/VS Code degrade to a 'no panel' pool view). view (default — call it with no params or view:true): returns the live panel blocks [{key, role, status: running|done|awaitingDigest} — running entries also carry elapsedSec; awaitingDigest entries whose report is ALREADY digested carry digested:true (stuck blocks — the freezable ones — explain odd panel states here)] exactly as the user sees them. freeze: pass the block key of a digested-stuck block ({action:'panel', freeze:'role#N'}) to reclaim it into the conversation — the freeze ONLY passes for awaitingDigest blocks with no live pool entry and no pending report (gated); freezing a block whose report is still pending would break the digestion order and is refused with a clear error.\n\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
     "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
-    "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). Receives git context auto-injected (branch, recent commits, working-tree state) when the project is a git repo. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
+    "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). No git context injected—evidence from read/glob/grep and the task book. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
     "- plan — read-only implementation planning. Same read/search toolset; NEVER edits files. Returns a step-by-step plan for the parent to execute.\n" +
     "- coder — full implementation. The parent's complete read/write/execute toolset plus verify and advisor for self-review. Its final report must include a delivery transparency table with one row per task requirement (Done / Simplified / Not done — no deferred column).\n" +
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round.\n" +
@@ -321,25 +372,56 @@ export const subagentTool = {
       child._engDesignToken = issuedToken
     }
 
-    // explore/plan: inject git context (branch/recent commits/working tree state) — exploration and planning both relate to current repo state (inspired by kimi-code's promptPrefix)
+    // §18.5 子代理零 git（D-AG1——2026-09-04 用户裁定）：explore/plan 一律不注入
+    // git 上下文——子代理证据链 = 任务书 ∪ 磁盘当前状态（read/glob/grep）∪（审计时）
+    // _touchedFiles，无一项来自 git；注入的全工作区脏状态快照与任务域无关，会误导
+    // 审计/探索（"status 里这个文件算不算超清单？"）。注入分支整体删除（B 方案
+    // git 只读变体亦随裁定废弃——D-AG5）。顶层主 agent 注入保留（§3 prepareRun——
+    // setup.mjs depth===0——D-AG7 范围边界）。
     let input = args.context ? `Context:\n${args.context}\n\nTask:\n${args.task}` : args.task
-    if (role === "explore" || role === "plan") {
-      const gitCtx = collectGitContext(parent.cwd)
-      if (gitCtx) input = `<untrusted_git_context>\n${escapeXml(gitCtx)}\n</untrusted_git_context>\n\n${input}`
-    }
     // §18 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
-    // the eng-coder's OWN spawn task (docs involved / acceptance criteria / file
-    // list — mechanically kept as _engTaskInput by the parent spawn) ∪ the
-    // mechanically tracked _touchedFiles — NEVER the eng-coder's self-written list:
-    // a self-report could omit exactly the out-of-scope file the audit must catch.
+    // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
+    // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /
+    // affected-file list / acceptance criteria verbatim, verbose context dropped)
+    // — ∪ the mechanically tracked _touchedFiles — NEVER the eng-coder's
+    // self-written list: a self-report could omit exactly the out-of-scope file
+    // the audit must catch.
     if (engAuditAttempt !== null) {
       const touched = (ctx.agent._touchedFiles ?? []).map((f) => `- ${f}`).join("\n") || "- (none yet)"
       input += `\n\n[Audit scope — mechanical context, independent of the eng-coder's self-report:]\n` +
-        `Parent spawn task book (Docs involved / file list / acceptance criteria — the eng-coder's own task, verbatim):\n${ctx.agent._engTaskInput ?? "(unavailable)"}\n` +
-        `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}`
+        // §18.7 D-TS4 A1：审计指令模板（四类偏差 + 范围限制 + 校验清单格式）——审计语义
+        // 不再靠模型自悟；范围限制是 §18.5 D-AG3 声明（下方 Zero-git scope authority）
+        // 的同源一句指注，不重复声明。
+        `[Audit instructions — mechanical template (AGENT-LOOP.md §18.7 D-TS4 A1):]\n` +
+        `You are auditing an eng-coder delivery against its approved design — audit for EXACTLY these four deviation categories:\n` +
+        `- PARTIAL: an acceptance criterion implemented partially or not at all;\n` +
+        `- SILENT-SIMPLIFICATION: a "simpler approximation" of a specified behavior substituted for the spec;\n` +
+        `- DOC-DRIFT: code changed without the owning design-doc section (module map / affected-files table) updated in the same delivery;\n` +
+        `- OUT-OF-LIST: changes outside the approved file list.\n` +
+        `Audit scope = _touchedFiles above UNION the files confirmed by the parent task book (single source — the Zero-git scope authority note below, AGENT-LOOP.md §18.5 D-AG3; NOT a second copy): ` +
+        `workspace changes not listed there are unrelated to this delivery and are NOT grounds for an out-of-list finding.\n` +
+        `Scope discipline (F-TS6 A1): read ONLY the audited files and the design-doc sections relevant to this delivery — do NOT re-read whole documents.\n` +
+        `Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence (quoted code or doc text).\n` +
+        // §18.7 D-TS5 A2：任务书从全量 verbatim 改机械摘要块（三要素逐字——排除冗长上下文）。
+        `[Parent spawn task book — mechanical summary (AGENT-LOOP.md §18.7 D-TS5 A2): design docs + affected-file list + acceptance criteria verbatim; verbose context/background dropped — the design docs are still available for reading outside this input:]\n` +
+        `${summarizeEngTaskBook(ctx.agent._engTaskInput)}\n` +
+        `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}\n` +
+        // §18.5 D-AG3（2026-09-04）：审计零 git 范围权威声明——本审计任务零 git（不注入
+        // git 上下文——§18.5 全角色零 git）；_touchedFiles 为审计范围；工作区未列于
+        // _touchedFiles 的改动与本任务无关，不作超清单依据（VS Code auditTaskBook 同款措辞）。
+        "Zero-git scope authority (AGENT-LOOP.md §18.5 D-AG3): this audit task receives NO git context — nothing is injected. " +
+        "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
+        "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
+        // §18.7 D-TS6 A3：审计输出报告格式模板（三态——字段化行——不让模型自由发挥）。
+        `\n[Audit report format — mechanical template (AGENT-LOOP.md §18.7 D-TS6 A3):]\n` +
+        `Report EXACTLY one of three states:\n` +
+        `- CLEAN — no deviation across the four categories: reply the line "Four deviation categories: none found." (四类偏差均未发现);\n` +
+        `- DEVIATIONS — one row per deviation, every row fieldized: | category | file:line | design reference | severity | evidence |;\n` +
+        `- PROBLEM — the audit itself could not run / inconclusive: state what blocked it.\n`
     }
     // The child's own task input rides the child object: an eng-coder's audit
-    // spawns reuse it verbatim as the audit task book (see above).
+    // spawns reuse it as the task-book SOURCE — injected as the D-TS5 A2
+    // mechanical summary, not verbatim (see above).
     if (role === "eng-coder") child._engTaskInput = input
 
     // Relay content/reasoning/tool/output to the parent TUI via the unified spawn-child

@@ -294,7 +294,14 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   const summary = await chat({ ...agent.provider, thinking: null, reasoningEffort: null }, {
     messages: [{ role: "user", content: SUMMARIZE_PROMPT + serialized }],
     signal,
-    logCtx: { stage: "compress", child: agent._logId },
+    // §18.6 D-TR4：轨迹元数据增补——kind=compress（上下文构建面——agent 元数据透出；
+    // depth 经 extras.traceDepth——agent.mjs 主作用域传入——compress 调用点补齐）
+    logCtx: {
+      stage: "compress", child: agent._logId, kind: "compress",
+      role: agent._role ?? null, depth: extras?.traceDepth ?? null,
+      session: agent._sessionStart ?? null, cwd: agent.cwd,
+      traces: agent.config?.traces?.enabled !== false,
+    },
   })
 
   applyCompression(agent, split.headEnd, split.tailStart, COMPACTION_PREFIX + summary.content)
@@ -449,7 +456,7 @@ function serializeExplorationMessages(messages) {
  * or null when there is nothing to shrink (<3 exploration results / LLM failure). Pairing-safe:
  * whole assistant→tool blocks are removed, so no orphan tool_calls/tool can survive.
  */
-async function distillExplorations(history, start, provider, signal, logChild) {
+async function distillExplorations(history, start, provider, signal, agent, depth) {
   if (!Array.isArray(history) || history.length - start < 2) return null
   const blocks = findExplorationBlocks(history, start)
   const resultCount = blocks.reduce((n, b) => n + b.toolCount, 0)
@@ -464,7 +471,14 @@ async function distillExplorations(history, start, provider, signal, logChild) {
     const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
       messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
       signal,
-      logCtx: { stage: "distill", child: logChild },
+      // §18.6 D-TR4：轨迹元数据增补——kind=distill（探索蒸馏面——agent 元数据透出；
+      // depth 经 summarizeRunExplorations 参数透传——agent.mjs 主作用域传入）
+      logCtx: {
+        stage: "distill", child: agent?._logId ?? null, kind: "distill",
+        role: agent?._role ?? null, depth: depth ?? null,
+        session: agent?._sessionStart ?? null, cwd: agent?.cwd ?? process.cwd(),
+        traces: agent?.config?.traces?.enabled !== false,
+      },
     })
     summary = resp?.content
   } catch {
@@ -495,8 +509,8 @@ async function distillExplorations(history, start, provider, signal, logChild) {
  * ONLY after the replacement actually lands (never on no-op/failure) — callers persist the
  * compressed session (SEND-STALL-DISTILL §2.3).
  */
-export async function summarizeRunExplorations(agent, callbacks, signal) {
-  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent._logId)
+export async function summarizeRunExplorations(agent, callbacks, signal, depth = 0) {
+  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent, depth)
   if (!next) return
   agent.history = next
   // The machine line changed shape — the measured token baseline was for the pre-shrink context.
