@@ -7,6 +7,7 @@ import { resolveProviders, findProvider } from "../config-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { prepareAdvisorMessages } from "./main.mjs"
+import { injectObjectDeclaration } from "./messages.mjs"
 import { appendCitationReport } from "./citations.mjs"
 
 const MAX_ADVISOR_TURNS = 100
@@ -98,6 +99,16 @@ function advisorToolsFor(_agent) {
 // Test seam: the tool set is pure (agent.memory → code_search inclusion).
 export { advisorToolsFor as _advisorToolsFor }
 
+// Test seam (AGENT-LOOP.md §18.7 D-TS7, T-TS8/9): the B1 batch-parallelism
+// tests mock two slow read-only tools in one LLM reply. Production path is
+// unchanged — the override only replaces the RESOLVED set when set.
+let _advisorToolSetOverride = null
+export function _setAdvisorToolSetForTest(tools) {
+  _advisorToolSetOverride = Array.isArray(tools)
+    ? { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
+    : null
+}
+
 /** Compact one-line summary of tool args for panel progress lines.
  *  Picks the most identifying field; falls back to truncated JSON. */
 function summarizeToolArgs(args) {
@@ -149,7 +160,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   const onThink = emit("think")
   const onText = emit("text")
   const onTool = emit("tool")
-  const { schemas: toolSchemas, byName: toolByName } = advisorToolsFor(agent)
+  const { schemas: toolSchemas, byName: toolByName } = _advisorToolSetOverride ?? advisorToolsFor(agent)
   let turns = 0
   const startTime = Date.now()
   
@@ -230,23 +241,26 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         : {}),
     })
 
-    // Execute each tool call
-    for (const tc of response.toolCalls) {
+    // Execute each tool call — B1 batch parallelism (AGENT-LOOP.md §18.7 D-TS7):
+    // the read-only tool calls of ONE LLM reply run CONCURRENTLY (Promise.all —
+    // same semantics as the main loop's read-only batch dispatch). Results are
+    // filled back in toolCalls order (Promise.all preserves order — tool_call_id
+    // can never mismatch); every tool's error/timeout is caught independently
+    // (the TOOL_TIMEOUT race stays per-tool — one failure never affects the
+    // others); `onTool` progress lines are emitted in toolCalls order (the
+    // display order is irrelevant — they are produced before any tool settles).
+    // Scope note: this is IN-TURN tool parallelism only — it does NOT address
+    // the "multiple advisor calls arrive serial" observation (docs/TODO.md
+    // LOGGING evidence item; D-TS7 isolation statement).
+    const toolResults = await Promise.all(response.toolCalls.map(async (tc) => {
       const tool = toolByName.get(tc.name)
       let args = {}
-      let parseError = null
       try {
         args = JSON.parse(tc.arguments || "{}")
       } catch (e) {
-        parseError = `Error: invalid JSON in tool arguments: ${e.message}\nRaw arguments: ${(tc.arguments || "").slice(0, 200)}`
+        return `Error: invalid JSON in tool arguments: ${e.message}\nRaw arguments: ${(tc.arguments || "").slice(0, 200)}`
       }
-      
-      // If parse failed, return error to model immediately
-      if (parseError) {
-        messages.push({ role: "tool", tool_call_id: tc.id, content: parseError })
-        continue
-      }
-      
+
       onTool(`\n→ ${tc.name} ${summarizeToolArgs(args)}\n`)
       let result
       if (!tool) {
@@ -280,14 +294,14 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         }
       }
       if (typeof result !== "string") result = JSON.stringify(result)
-      
+
       // Line-aware truncation: preserve line integrity
       if (result.length > MAX_RESULT_CHARS) {
         const lines = result.split("\n")
         let truncated = ""
         let charCount = 0
         let keptLines = 0
-        
+
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i]
           if (charCount + line.length + 1 > MAX_RESULT_CHARS) break
@@ -295,7 +309,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
           charCount += line.length + 1
           keptLines++
         }
-        
+
         const remainingLines = lines.length - keptLines
         result = (
           truncated +
@@ -303,9 +317,14 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
           `To see more content, use: read(path, offset=${keptLines + 1}, limit=200)`
         )
       }
-      
-      messages.push({ role: "tool", tool_call_id: tc.id, content: result })
-    }
+
+      return result
+    }))
+    // Backfill in toolCalls order — one message per call, each carrying the id
+    // the model issued for it (the batch order is never swapped).
+    response.toolCalls.forEach((tc, i) => {
+      messages.push({ role: "tool", tool_call_id: tc.id, content: toolResults[i] })
+    })
   }
 }
 
@@ -366,8 +385,12 @@ function extractUnfixedIssues(priorText) {
  * Run an advisor review. reviewType: "code" (default) or "design". Returns review text or null when skipped.
  * @param {string|null} [designToken] — injected into the design-review prompt; the advisor echoes it only on approval.
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
+ * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review; passed through to the message builder.
+ * @param {Object|null} [object] — review-object declaration {type, target, status, reason, exclude}
+ *   (AGENT-LOOP.md §18.8 D-OA3): injected at the head of the review user message, every round.
+ *   Legacy callers omit it — no declaration injected, behavior unchanged (AC-OA2).
  */
-export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null) {
+export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null) {
   const onOutput = callbacks?.onOutput
   const signal = callbacks?.signal
   const startTime = Date.now()
@@ -403,6 +426,17 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   const advisorCwd = agent.cwd
 
   const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths)
+
+  // Review-object declaration (AGENT-LOOP.md §18.8 D-OA1): injected AFTER the
+  // message build so ONE mechanical point covers all rounds — design r1
+  // (buildAdvisorUserMessage design branch) AND code r1 AND convergence
+  // rounds 2+ (buildAdvisorFollowUp) — the re-review stays anchored to the
+  // same object (F-OA2, T-OA2). The declaration lands at the head of the
+  // user message, before the Document Map / review content (D-OA1 order).
+  const userIdx = messages.findIndex((m) => m.role === "user")
+  if (userIdx !== -1) {
+    messages[userIdx] = { ...messages[userIdx], content: injectObjectDeclaration(messages[userIdx].content, object) }
+  }
 
   try {
     const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd)

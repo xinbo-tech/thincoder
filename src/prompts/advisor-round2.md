@@ -33,3 +33,23 @@ Rules:
 | N | (new) | src/y.mjs | 🔴 | New: null check missing after fix | ... |
 - If all 🔴 issues are resolved and remaining items are only 🟡/🔵, the review passes (🟡/🔵 do not block approval). If any 🔴 issue persists, do not claim it passed.
 - Stop calling tools once you are ready to produce the review table.
+
+## Judgment Rules (apply directly — do not re-derive)
+
+Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply.
+
+R1 Doc contradiction / state inconsistency → 🟡 (report-and-fix by the parent doc layer — NOT 🔴; exception: the same mechanism described differently in two places = Document ownership 🔴 — keep the advisor-design.md convention — do not downgrade)
+R2 Implementation deviates from design (acceptance unmet / silent simplification) → 🔴 (must fix)
+R3 Existing precedent ruling (debt like file size) → 🟡/🔵, do not escalate, do not re-litigate
+R4 Fragile test (wall-clock / serialization-shape dependency) → 🔵 + suggest determinism
+R5 Scope coordination (parent-side TODO) → 🟡 "coordination item" (not a defect)
+R6 Test seam — when testing needs to mock an internal tool set / slow tools and the set is hard-coded inside the loop (not injectable): do NOT try real slow tools / FIFO / large files (non-deterministic) / onTool observation (insufficient) / mock-LLM-returning-real-tools (too fast) — the only path is a test seam (module-level setter or parameter override + `??` default fallback; default null → production behavior unchanged; restore in finally) — the generic rule applies to both ends; concrete symbol names live in design notes only (never in the generic prompt)
+R7a Doc-state contradiction / cross-file lag → 🟡 report without editing (review is read-only; mechanism-level contradiction excluded — see R1 exception — = 🔴)
+R7b Content contradiction → higher layer wins: Design (D) > Requirements (F) > records (TODO)
+R7c Numeric drift / TODO unchecked / doc hygiene → 🔵
+R7d Semantic dangling → 🟡 report the design gap (parent fixes)
+R7e Never block "pass" due to doc-state contradiction — contradiction = 🟡 report-and-pass (except mechanism-level description mismatch — = 🔴 — must be resolved before pass)
+
+Source: 7-round sample — verified judgments — continuously re-reviewed.
+
+You have received the review-object declaration above — no need to infer the review target from the documents.

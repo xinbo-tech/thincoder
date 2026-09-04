@@ -73,6 +73,35 @@ export function gateEngCoderSpawn(parent, depth, role, asyncArg) {
 }
 
 /**
+ * A2 helper (AGENT-LOOP.md §18.7 D-TS5): mechanical summary of the parent spawn
+ * task book — keep ONLY the audit-relevant sections (docs involved / affected
+ * file list / acceptance criteria), each VERBATIM, and drop the verbose
+ * background/context sections (the auditor reads the design documents itself —
+ * they remain reachable via read/glob/grep). Sections are delimited by the
+ * `## ` headings of the METHODOLOGY Implementation Handoff structure
+ * (涉及文档 / 文件清单 / 验收标准 or their English equivalents). Conservative
+ * fallback: when the section markers do not resolve, return the task book
+ * VERBATIM — never lose information an auditor may need. Independence is
+ * unchanged: still built from _engTaskInput (not the eng-coder's self-report).
+ */
+function summarizeEngTaskInput(taskInput) {
+  if (!taskInput) return "(unavailable)"
+  const headingRe = /^##[ \t]+(.+)$/gm
+  const keepRe = /涉及文档|Docs involved|文件清单|file list|受影响文件|验收标准|acceptance/i
+  const heads = [...taskInput.matchAll(headingRe)]
+  if (heads.length === 0) return taskInput
+  const kept = []
+  for (let i = 0; i < heads.length; i++) {
+    const start = heads[i].index
+    const end = i + 1 < heads.length ? heads[i + 1].index : taskInput.length
+    if (keepRe.test(heads[i][1])) kept.push(taskInput.slice(start, end))
+  }
+  // <2 kept sections → a wrong summary is worse than the verbatim task book.
+  if (kept.length < 2) return taskInput
+  return kept.join("\n").trim()
+}
+
+/**
  * §18 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
  * appended MECHANICALLY — the eng-coder's OWN spawn task (docs involved /
  * acceptance criteria / file list, kept verbatim as agent._engTaskInput by its
@@ -80,14 +109,47 @@ export function gateEngCoderSpawn(parent, depth, role, asyncArg) {
  * list (a self-report could omit exactly the out-of-scope file the audit must
  * catch). Caller: subagent.mjs execute — builds the child input of an eng-coder
  * audit (explore) spawn; plain `task` outside an audit context (attempt === null).
+ * §18.5 D-AG3 (2026-09-04): the audit block also carries the ZERO-GIT scope
+ * authority declaration — _touchedFiles is the audit scope, this task receives
+ * no git context, and workspace changes outside _touchedFiles are unrelated
+ * (never an out-of-file-list ground).
+ * §18.7 R2 (2026-09-04) — audit task book templates, D-TS4/5/6:
+ *   A1 — audit instruction template at the TOP of the block (the four
+ *     divergence categories, scope restriction — same-source with the zero-git
+ *     authority below, not duplicated — and the finding-row checklist format).
+ *   A2 — the parent task book is a mechanical SUMMARY (summarizeEngTaskInput
+ *     above) instead of the full verbatim dump: doc-paths + file list +
+ *     acceptance criteria verbatim; verbose context dropped.
+ *   A3 — audit report format template at the END (three states; the clean
+ *     state is the verbatim phrase "四类偏差均未发现"; divergent rows are
+ *     fieldized: | 类别 | 文件:行 | 设计引用 | 严重级 | 证据 |).
  */
 export function auditTaskBook(task, agent, engAuditAttempt) {
   let childInput = task
   if (engAuditAttempt !== null) {
     const touched = (agent._touchedFiles ?? []).map((f) => `- ${f}`).join("\n") || "- (none yet)"
+    const summary = summarizeEngTaskInput(agent._engTaskInput)
     childInput += "\n\n[Audit scope — mechanical context, independent of the eng-coder's self-report:]\n" +
-      `Parent spawn task book (Docs involved / file list / acceptance criteria — the eng-coder's own task, verbatim):\n${agent._engTaskInput ?? "(unavailable)"}\n` +
-      `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}`
+      // A1 — audit instruction template (D-TS4).
+      "AUDIT INSTRUCTIONS (AGENT-LOOP.md §18.7 D-TS4) — check the delivery for EXACTLY these four divergence categories:\n" +
+      "  1. Partial implementation — an acceptance criterion implemented partially or not at all.\n" +
+      "  2. Silent simplification — a 'simpler approximation' of a behavior the design specifies IS a deviation.\n" +
+      "  3. Doc drift — a diff that adds/renames/deletes files must update the design doc's module map / affected-files table (the delivery itself NEVER edits design docs — real drift goes into the delivery report).\n" +
+      "  4. Out-of-file-list changes — any file touched outside the approved file list below.\n" +
+      "SCOPE RESTRICTION: audit ONLY the files confirmed by the parent task book (below) and the _touchedFiles mechanical union — workspace changes NOT listed there are unrelated to this delivery and are NOT grounds for an out-of-file-list finding (zero-git authority below — D-AG3, same source).\n" +
+      "EVERY finding row MUST carry: file:line + design reference + severity + evidence (quote exactly what read/glob/grep returned from the CURRENT disk state).\n" +
+      // A2 — parent spawn task book, mechanical summary (D-TS5).
+      `Parent spawn task book — mechanical summary (docs involved / file list / acceptance criteria, verbatim):\n${summary}\n` +
+      `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}\n` +
+      // §18.5 D-AG3 → the scope authority declaration (also A1's pointer).
+      "Zero-git scope authority (§18.5 D-AG3): this audit task receives NO git context — nothing is injected. " +
+      "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
+      "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
+      // A3 — audit report format template (D-TS6).
+      "\n\nAUDIT REPORT FORMAT (AGENT-LOOP.md §18.7 D-TS6) — end your report with EXACTLY one of these states:\n" +
+      "- CLEAN: no divergence found — state it verbatim: '四类偏差均未发现'.\n" +
+      "- DIVERGENT: findings table, one row per finding: | 类别 | 文件:行 | 设计引用 | 严重级 | 证据 | (类别 = partial implementation / silent simplification / doc drift / out-of-file-list; 严重级 = 🔴 / 🟡 / 🔵; 证据 quotes file:line: content from the current disk state).\n" +
+      "- QUESTION: items needing the parent's judgment that are NOT divergence — list them separately."
   }
   return childInput
 }

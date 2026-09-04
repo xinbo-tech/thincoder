@@ -12,6 +12,8 @@ Design docs in `docs/design/`. Independent product — no dependency on thincode
 - ESM (`.mjs`) throughout — `package.json` declares `"type": "module"`.
 - LLM calls go through native `fetch` with SSE streaming, same as thincoder core.
 - Tool implementations are adapted for VS Code context (workspace root = cwd; no directory restriction on tools since 2026-09-02 — paths resolve relative to cwd, approval gate is the guard).
+- **镜像提示词约定（2026-09-04 项目文档层声明）**：本仓库（thincoder-vscode）与 thincoder CLI 的 `src/prompts/*.md` **15 对 byte-identical**——改动任一提示词**只写 CLI 侧**，本端副本由同步脚本（`thincoder/scripts/sync-prompts.mjs`——若存在）/复制保证一致；**不要本端单独改**（双端各自改是 byte-identity 漂移与 agent 镜像纠结的根源）。
+
 
 ## Key Conventions
 

@@ -93,6 +93,18 @@ export const advisorTool = {
         items: { type: "string" },
         description: "Explicit list of doc paths to review (design docs, requirements docs, referenced docs). The advisor reviews ONLY these — it does NOT scan git diff. Use for both design review and code review to pass the task's Docs involved list.",
       },
+      object: {
+        type: "object",
+        description:
+          "Review-object declaration (mechanical — do not infer; AGENT-LOOP.md §18.8). Pass {type, target, status, reason, exclude}: review type, review target (docs + section, or files), object state (pending review / approved / implemented), why it is reviewed (user-initiated / delivery verification), and the exclude list (approved/implemented items — explicitly NOT in this review). Injected verbatim at the head of the review user message every round. Optional — legacy calls without it behave unchanged.",
+        properties: {
+          type: { type: "string", enum: ["code", "design"], description: "Review type (mirrors the top-level type)" },
+          target: { type: "string", description: "Review target: docs + section, or files/directories" },
+          status: { type: "string", description: "Object state: pending review / approved / implemented" },
+          reason: { type: "string", description: "Why this review: user-initiated / delivery verification" },
+          exclude: { type: "array", items: { type: "string" }, description: "Excluded items — approved/implemented, NOT in this review" },
+        },
+      },
     },
   },
   readonly: true,
@@ -101,6 +113,14 @@ export const advisorTool = {
     const agent = ctx.agent
     const reviewType = args.type || "code"
     const documents = args.documents || null
+    // Review-object declaration (AGENT-LOOP.md §18.8 N-OA1): the parameter is a
+    // JSON object; a string form (LLM serialization) is normalized defensively.
+    // Non-object / unparseable → null → legacy degradation (AC-OA2).
+    let object = args.object ?? null
+    if (typeof object === "string") {
+      try { object = JSON.parse(object) } catch { object = null }
+    }
+    if (object !== null && (typeof object !== "object" || Array.isArray(object))) object = null
     // Scope fallback: the runtime mutation record (zero git) covers guard-triggered
     // reviews where the model did not pass explicit paths (CLI parity).
     const paths = args.paths || (agent._touchedFiles?.length ? [...agent._touchedFiles] : null)
@@ -143,7 +163,7 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: (chunk) => ctx.callbacks?.onToolPanel?.("advisor", chunk),
       signal: ctx.signal,
-    }, designToken, documents, paths)
+    }, designToken, documents, paths, object)
 
     if (reviewType === "design") {
       const tokenPattern = makeDesignTokenRegex(designToken)

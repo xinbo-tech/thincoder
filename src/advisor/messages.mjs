@@ -10,6 +10,43 @@ import { buildConvergenceBody, buildConvergenceInstructions } from "./convergenc
 import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "./history.mjs"
 
 /**
+ * Build the review-object declaration block (AGENT-LOOP.md §18.8 D-OA2 — ANCHOR-4).
+ * MECHANICAL: every value comes verbatim from the caller's `object` parameter
+ * {type, target, status, reason, exclude} — nothing is inferred here (F-OA3).
+ * Returns null when no object was passed — legacy callers degrade to the
+ * pre-declaration behavior unchanged (N-OA3, AC-OA2).
+ * @param {Object|null} object — {type, target, status, reason, exclude}
+ * @returns {string|null} the declaration block, or null when object is absent
+ */
+export function buildReviewObjectDeclaration(object) {
+  if (!object || typeof object !== "object" || Array.isArray(object)) return null
+  const field = (v) => (Array.isArray(v) ? v.join(", ") : String(v ?? ""))
+  return [
+    "## Review-object declaration (mechanical — do not infer)",
+    `Review type: ${field(object.type)} | Target: ${field(object.target)} | Object state: ${field(object.status)} | Trigger: ${field(object.reason)}`,
+    `Excluded (not in this review): ${field(object.exclude)}`,
+    "Follow this declaration — do not infer the review target from the documents.",
+  ].join("\n")
+}
+
+/**
+ * Prepend the review-object declaration to a built user message. The injection
+ * site is run.mjs AFTER prepareAdvisorMessages — ONE mechanical point that
+ * covers every round (design r1 / code r1 / convergence rounds 2+), so a
+ * re-review stays anchored to the same object (F-OA2: injection every round).
+ * Order: declaration → (Document Map) → review content (D-OA1). No object →
+ * content returned untouched (legacy degradation, AC-OA2).
+ * @param {string} content — the built user-message content
+ * @param {Object|null} object — review-object declaration data
+ * @returns {string} content with the declaration prepended (or unchanged)
+ */
+export function injectObjectDeclaration(content, object) {
+  const block = buildReviewObjectDeclaration(object)
+  if (!block) return content
+  return block + "\n\n" + content
+}
+
+/**
  * Build the user message for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior issue table

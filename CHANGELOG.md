@@ -2,7 +2,11 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
-## [0.8.10] — 2026-09-01
+## [0.8.11] — 2026-09-04
+
+### Changed
+
+- **子代理零 git（AGENT-LOOP.md §18.5）**：VS Code 端与 CLI 对齐——explore/plan 描述“Receives git context auto-injected”删除，改为“No git context injected—evidence from read/glob/grep and the task book”（本端实现从未注入，现与承诺一致）；explore.md 删除 git 注入声明/命令承诺；审计任务书（auditTaskBook）追加零 git 范围权威声明（`_touchedFiles` 为审计范围——工作区未列改动不作超清单依据）。
 
 ### Added
 

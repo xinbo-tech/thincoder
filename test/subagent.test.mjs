@@ -405,7 +405,7 @@ test("subagent tool description exposes the role capability matrix (no dev-comme
     "- plan",
     "- coder",
     "- eng-coder",
-    "git context auto-injected",
+    "No git context injected",
     "delivery transparency table",
     "Mode filtering",
   ]) {
@@ -413,9 +413,68 @@ test("subagent tool description exposes the role capability matrix (no dev-comme
   }
   assert.ok(!d.includes("OVERRIDDEN"), "dev-comment leak: OVERRIDDEN in description")
   assert.ok(!d.includes("SETUP.MJS"), "internal impl path leaked into description")
+  // §18.5 T-AG5 (2026-09-04): zero-git promise — the old "Receives git context
+  // auto-injected" wording is DESCRIBING a capability the implementation never
+  // had (the explore toolset has no git tool and no git context is injected) —
+  // the description must not promise it.
+  assert.ok(!d.includes("Receives git context auto-injected"), "stale git-context-injection promise must be gone")
+  assert.ok(!d.includes("receives git context"), "git-injection promise residues must be gone")
   const roleDesc = subagentTool.parameters.properties.role.description
   assert.ok(!roleDesc.includes("OVERRIDDEN"), "role description leaks dev comment")
 })
+test("§18.5 T-AG3: plain explore/plan spawn input carries NO git context (lock the maintained no-injection)", async () => {
+  // 现状维持 + 断言锁定：VS Code 的 childInput = task 原样（subagent.mjs runAgent
+  // 传递点），无 collectGitContext/untrusted_git_context——本测试把"无注入"钉死，
+  // 未来任何"补实现"都必须显式修改本断言（与设计 T-AG3 对应）。
+  const bodies = []
+  const server = createServer((req, res) => {
+    let body = ""
+    req.on("data", (c) => (body += c))
+    req.on("end", () => {
+      bodies.push(body)
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end(
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "child done" } }] })}\n\n` +
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+        "data: [DONE]\n\n",
+      )
+    })
+  })
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-ag3-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = {
+      _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
+      config: {
+        providersList: [{ name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" }],
+        agent: { engineering: false },
+      },
+      _subIdCounter: 0,
+    }
+    for (const role of ["explore", "plan"]) {
+      const r = String(await subagentTool.execute({ task: "inspect the module for issues", role }, { agent: parent, cwd, callbacks: {} }))
+      assert.ok(r.includes(`Subagent (${role}) completed`), `${role} spawn completed`)
+    }
+    assert.equal(bodies.length, 2, "both child requests captured")
+    for (const b of bodies) {
+      const req = JSON.parse(b)
+      const userText = (req.messages ?? [])
+        .filter((m) => m.role === "user")
+        .map((m) => (typeof m.content === "string" ? m.content : Array.isArray(m.content) ? m.content.map((p) => p?.text ?? "").join(" ") : ""))
+        .join("\n")
+      assert.ok(userText.includes("inspect the module for issues"), "child input is the task verbatim (no augmentation)")
+      assert.ok(!userText.includes("untrusted_git_context"), "no CLI-style git context wrapper in child input")
+      assert.ok(!userText.includes("Git context") && !userText.includes("git context"), "no git context text in child input")
+      assert.ok(!userText.includes("git log") && !userText.includes("git diff"), "no git command promise in child input")
+    }
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 test("modeRoleField role description stays in sync with the matrix-pointer text (both modes)", async () => {
   const { modeRoleField } = await import("../src/agent-tools/subagent.mjs")
   for (const engineering of [false, true]) {
@@ -1249,10 +1308,76 @@ test("T-E3: eng-coder 内部 spawn explore 成功——审计节点同步返回�
     assert.ok(auditBody, "审计子代理请求携带机械任务书块")
     assert.ok(auditBody.includes(brief), "父 spawn 任务书 verbatim 注入")
     assert.ok(auditBody.includes(touched.replace(/\\/g, "\\\\")), "实际触碰文件（机械并集）注入")
+    // §18.5 T-AG6 (2026-09-04): 审计任务书零 git 范围权威声明——_touchedFiles 为审计范围；
+    // 本任务零 git（无 git 上下文注入）；工作区未列于 _touchedFiles 的改动与本任务无关，
+    // 不作超清单依据（D-AG3）。
+    assert.ok(auditBody.includes("Zero-git scope authority"), "审计任务书含零 git 范围权威声明（D-AG3）")
+    assert.ok(auditBody.includes("NOT listed in _touchedFiles"), "非 _touchedFiles 改动不作超清单依据")
+    assert.ok(!auditBody.includes("untrusted_git_context"), "审计输入无 git 上下文注入")
+    // §18.7 R2 (T-TS4/T-TS6): A1 审计指令模板 + A3 报告格式模板已注入 spawn 输入
+    assert.ok(auditBody.includes("AUDIT INSTRUCTIONS (AGENT-LOOP.md §18.7 D-TS4)"), "审计 spawn 输入含 A1 指令模板（T-TS4）")
+    assert.ok(auditBody.includes("AUDIT REPORT FORMAT (AGENT-LOOP.md §18.7 D-TS6)"), "审计 spawn 输入含 A3 报告格式模板（T-TS6）")
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })
   }
+})
+
+test("T-TS4/5/6: 审计任务书模板三件（A1 指令 / A2 机械摘要 / A3 报告格式）——§18.7 D-TS4/5/6 直接单测", async () => {
+  const { auditTaskBook } = await import("../src/agent-tools/subagent-async.mjs")
+  const taskInput = [
+    "## 涉及文档(先通读再动手——设计为权威规格)",
+    "1. docs/design/X.md §1",
+    "2. docs/design/Y.md",
+    "",
+    "## 任务背景",
+    "这是一段很长的背景上下文——审计者按需 read 设计文档即可，不应进入审计任务书……",
+    "",
+    "## 文件清单(唯一授权范围——清单外零触碰)",
+    "### 修改",
+    "1. src/a.mjs",
+    "2. src/b.mjs",
+    "",
+    "## 验收标准(从设计逐字引用——自验通过再交付)",
+    "AC-TS5-1 = 协议句",
+    "AC-TS5-2 = 模板句",
+    "",
+    "## 交付要求",
+    "按新协议执行——这是冗长交付指引，与审计对照无关……",
+  ].join("\n")
+  const agent = { _touchedFiles: ["src/touched.mjs"], _engTaskInput: taskInput }
+  const out = auditTaskBook("AUDIT: run the divergence audit", agent, 1)
+  // A1（D-TS4）：审计指令模板——四类偏差 + 范围限制 + 校验清单格式
+  assert.ok(out.includes("AUDIT INSTRUCTIONS (AGENT-LOOP.md §18.7 D-TS4)"), "A1 指令模板头在")
+  for (const cat of ["Partial implementation", "Silent simplification", "Doc drift", "Out-of-file-list changes"]) {
+    assert.ok(out.includes(cat), `A1 四类偏差含 ${cat}`)
+  }
+  assert.ok(out.includes("SCOPE RESTRICTION"), "A1 范围限制段在")
+  assert.ok(out.includes("NOT grounds for an out-of-file-list finding"), "A1 范围限制：未列改动不作超清单依据（与 D-AG3 同源）")
+  assert.ok(out.includes("file:line + design reference + severity + evidence"), "A1 校验清单格式：文件:行+设计引用+严重级+证据")
+  // A2（D-TS5）：机械摘要块——三要素逐字 + 冗长上下文排除
+  assert.ok(out.includes("Parent spawn task book — mechanical summary"), "A2 摘要块头在")
+  assert.ok(out.includes("## 涉及文档(先通读再动手——设计为权威规格)"), "A2 设计文档路径列表逐字")
+  assert.ok(out.includes("docs/design/X.md §1"), "A2 设计文档路径逐字")
+  assert.ok(out.includes("## 文件清单(唯一授权范围——清单外零触碰)"), "A2 受影响文件清单逐字")
+  assert.ok(out.includes("src/a.mjs") && out.includes("src/b.mjs"), "A2 文件清单逐字（审计范围依据）")
+  assert.ok(out.includes("## 验收标准(从设计逐字引用——自验通过再交付)"), "A2 验收标准逐字（审计对照依据）")
+  assert.ok(out.includes("AC-TS5-1 = 协议句"), "A2 验收标准逐字")
+  assert.ok(!out.includes("## 任务背景") && !out.includes("很长的背景上下文"), "A2 排除冗长背景")
+  assert.ok(!out.includes("## 交付要求") && !out.includes("冗长交付指引"), "A2 排除交付指引等上下文")
+  // A3（D-TS6）：报告格式模板——三态字段化 + 无偏差语句
+  assert.ok(out.includes("AUDIT REPORT FORMAT (AGENT-LOOP.md §18.7 D-TS6)"), "A3 报告格式模板头在")
+  assert.ok(out.includes("四类偏差均未发现"), "A3 无偏差语句（CLEAN 态 verbatim）")
+  assert.ok(out.includes("| 类别 | 文件:行 | 设计引用 | 严重级 | 证据 |"), "A3 每行字段化格式")
+  assert.ok(out.includes("CLEAN") && out.includes("DIVERGENT") && out.includes("QUESTION"), "A3 正常/偏差/问题三态")
+  // 独立性不变：_touchedFiles 机械并集仍在
+  assert.ok(out.includes("src/touched.mjs"), "_touchedFiles 机械并集保留（D-TS5 独立性）")
+  // 无 section 标记的任务书 → 回退全量 verbatim（不丢信息——D-TS5 保守回退）
+  const flat = auditTaskBook("AUDIT: run the divergence audit", { _touchedFiles: [], _engTaskInput: "Docs involved: [docs/design/X.md] files: [src/a.mjs] acceptance: [AC1]" }, 1)
+  assert.ok(flat.includes("Docs involved: [docs/design/X.md] files: [src/a.mjs] acceptance: [AC1]"), "无标记任务书回退 verbatim（不丢信息）")
+  // 非审计 spawn（attempt === null）——任务书原样，无模板注入
+  const plain = auditTaskBook("plain explore task", { _touchedFiles: [], _engTaskInput: "x" }, null)
+  assert.equal(plain, "plain explore task", "非审计 spawn 不注入审计模板")
 })
 
 test("T-E4: eng-coder 内部 spawn 非 explore role（plan/eng-coder）→ 工具层拒绝", async () => {

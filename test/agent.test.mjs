@@ -1179,6 +1179,16 @@ describe("prompt borrowing increments (kimi-code comparison)", () => {
     assert.ok(/NOT find/i.test(thorough), `thorough requires reporting what was not found: ${thorough}`)
   })
 
+  it("explore.md/plan.md: zero git — no git-context injection claim, no git command promises (§18.5 T-AG4)", () => {
+    for (const name of ["explore.md", "plan.md"]) {
+      const text = readFileSync(join(PROMPTS_DIR, name), "utf8")
+      assert.ok(!text.includes("Git context is injected"), `${name}: git-context injection statement must be gone (D-AG2)`)
+      assert.ok(!text.includes("git log"), `${name}: no git log command promise (D-AG2)`)
+      assert.ok(!text.includes("git diff"), `${name}: no git diff command promise (D-AG2)`)
+    }
+  })
+
+
   it("main.md: Delegate well includes thoroughness guidance for explore delegation", () => {
     const text = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
     assert.ok(text.includes("quick / medium / thorough"), "three levels named in main.md")
@@ -1421,6 +1431,9 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(flat.includes("**Declare spawn scheduling metadata in task briefs**: spawn with `files` (write domain) and `dependsOn` (prior async ids) — the scheduler gates admission: async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order. Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized."), "T-PS1: D-PS2 anchor verbatim (files/dependsOn declaration + admission gate + mirror parallel queue semantics)")
     assert.ok(text.includes("never hand-serialized"), "T-PS1: scheduler owns serialization — no manual hand-serialization")
     assert.ok(text.includes("at most 4 concurrent eng-coders"), "≤4 concurrency cap")
+    // §18 T-E16: 重断言 "Cap: at most 4 concurrent eng-coders"/"past 4"（保 §15 T9 不破——
+    // CLI 侧 test/agent.test.mjs 同款双钉——两端内容断言各一）
+    assert.ok(text.includes("past 4 the bookkeeping cost"), "T-E16: past 4 理由句钉（CLI parity）")
     // §19.5.5 T-CL2: cancel-discipline anchor present (D-CL2 verbatim — post-D-PS2 text — fail-when-unchanged)
     assert.ok(flat.includes("assertions stay green).** Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."), "T-CL2: D-CL2 anchor verbatim after D-PS2 text (last resort + verify-first)")
     assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "parallel spawn call form (each with designId+token)")
@@ -1482,6 +1495,53 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("7th audit spawn is refused mechanically"), "第 7 次审计 spawn 机械拒绝 = stalled 信号")
   })
 
+  it("engineering-sub.md: test layers L0/L1/L2 + correction rounds skip LLM re-verification (§18.7 D-TS1/2 — T-TS1/T-TS2/T-TS10/T-TS11)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+    // T-TS1：L1/L0/L2 定义句（首次=快层 npm test / 修正轮=verify 相关测试 / 全量=父侧 1 次）
+    assert.ok(text.includes('"run the tests" = three tiers'), "测试分层定义段在（D-TS1）")
+    assert.ok(text.includes("**L1 = the fast layer `npm test`**"), "L1 = 快层 npm test（首次实现后）")
+    assert.ok(text.includes("**L0 = call `verify` in its default mode**"), "L0 = 调用 verify 默认模式（修正轮）")
+    assert.ok(text.includes("**L2 = `test:full` full suite**"), "L2 = test:full 全量")
+    assert.ok(text.includes("runs ONCE at the parent's verification, per chain terminal"), "L2 = 父侧核销 1 次（每链终态）")
+    // T-TS2：修正轮默认不重跑审计/复评（例外：触碰未覆盖文件回③）
+    assert.ok(text.includes("Correction rounds default to NOT re-running the explore audit"), "④ 修正轮默认不重跑审计（D-TS2）")
+    assert.ok(text.includes("default is NO advisor re-review"), "⑥ 修正轮默认不重跑复评（D-TS2）")
+    assert.ok(text.includes("the fix touched files the last audit did not cover → back to ③"), "④ 例外路径：触碰未覆盖文件回③")
+    assert.ok(text.includes("Only if a fix touched files the last review did not cover, run ③ again first"), "⑥ 例外路径：触碰未覆盖文件回③")
+    // T-TS10：例外路径生效——协议句（例外 = 触碰上次审计/评审未覆盖文件 → 回③）
+    assert.ok(text.includes("re-audit, the exception path"), "T-TS10：审计第 2 次仅例外（不计入常态）")
+    assert.ok(text.includes("LLM verification is fixed at 3 per chain"), "T-TS10：LLM 验证 3 次/链")
+    // T-TS11：L0 兜底——改动文件映射 null / 触主干 → 显式升 L1
+    assert.ok(text.includes("a null mapping (mcp/prompts/context/session) or a change touching trunk/main files → escalate explicitly to L1 (`npm test`)"), "T-TS11：L0 兜底 → 显式升 L1")
+    assert.ok(text.includes("Do NOT hand-write `node --test`"), "L0 非手写 node --test")
+  })
+
+  it("engineering.md: parent-side closure = L2 full run once per chain — no L1 re-run (§18.7 D-TS3 — T-TS3)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    // D-TS3：父侧核销——信任内部 L1/L0 结果；父侧核销 = L2 全量 1 次；不复跑 L1
+    assert.ok(text.includes("eng-coder's internal L1/L0 results — the §18 internal protocol guarantees"), "step 8：信任 eng-coder 内部 L1/L0 结果")
+    assert.ok(text.includes("parent-side verification = L2 full `test:full` once per chain terminal"), "step 8：父侧核销 = L2 全量 1 次（每链终态）")
+    assert.ok(text.includes("— no L1 re-run"), "step 8：不复跑 L1")
+    // N-TS4：不留旧措辞
+    assert.ok(!text.includes("run the tests it claims pass"), "旧 'run the tests it claims pass' 措辞零残留")
+  })
+
+  it("advisor-round1.md: review-scope focus contraction + batch-read parallelism (§18.7 D-TS8 — T-TS7)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "advisor-round1.md"), "utf8")
+    // B2 :7 —— 聚焦评审范围（优先读评审对象；设计文档只读相关节；不读无关模块）
+    assert.ok(text.includes("focus on the review scope"), ":7 范围收缩句在")
+    assert.ok(text.includes("read the review-target files (the delivery list) FIRST"), ":7 优先读评审对象文件")
+    assert.ok(text.includes("design documents only in the sections relevant to this implementation (do NOT read whole documents in full)"), ":7 设计文档只读相关节（不全量读全文档）")
+    assert.ok(text.includes("do not read unrelated modules just to understand the implementation"), ":7 不读无关模块")
+    assert.ok(!text.includes("Read them in full."), ":7 旧 'Read them in full' 全文读句已移除")
+    // B2 :13 —— 批量 read 并行执行（并发——不要串行等）
+    assert.ok(text.includes("**multiple files read in one batch execute in PARALLEL (concurrent — do not wait serially)**"), ":13 并行执行明示句")
+    assert.ok(text.includes("Batch independent `read` calls in a SINGLE reply"), ":13 批量提示保持")
+    // :4 预算（20 轮）保持
+    assert.ok(text.includes("You have a budget of 20 tool rounds"), ":4 预算 20 轮保持（B3——实测后再议）")
+  })
+
+
   it("engineering.md: no duplicated section headers (2026-09-01 fix #4 hygiene)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     const dupes = [...text.matchAll(/^## .+$/gm)].map((m) => m[0])
@@ -1540,6 +1600,80 @@ describe("pre-work plan confirmation discipline", () => {
     rmSync(dir, { recursive: true, force: true })
   })
 })
+
+// ─── §18.10 判定/边界铁律 + §18.8 对象声明（T-10.1..5 / AC-10.1..5） ───
+
+describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.1..5)", () => {
+  const JUDGMENT_FILES = ["advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"]
+  const BATCH_FILES = [...JUDGMENT_FILES, "engineering-sub.md", "eng-coder.md"]
+  const JUDGMENT_RULES = ["R1 ", "R2 ", "R3 ", "R4 ", "R5 ", "R6 ", "R7a ", "R7b ", "R7c ", "R7d ", "R7e "]
+
+  it("T-10.1: 4 模板各含 R1-R7 判定铁律块（含按评审类型取适用指引句 + 对象声明一致性句）", () => {
+    for (const f of JUDGMENT_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      assert.ok(text.includes("## Judgment Rules (apply directly — do not re-derive)"), `${f}: 铁律块头（直接套用——不自行推导）`)
+      assert.ok(text.includes("Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply."), `${f}: 按评审类型取适用指引句`)
+      for (const r of JUDGMENT_RULES) assert.ok(text.includes(r), `${f}: ${r.trim()} 规则在`)
+      // 语义抽样（fail-when-unchanged——byte-identical 断言不能替代内容断言）
+      assert.ok(text.includes("R2 Implementation deviates from design (acceptance unmet / silent simplification) → 🔴 (must fix)"), `${f}: R2 实现偏离设计=🔴`)
+      assert.ok(text.includes("R6 Test seam"), `${f}: R6 测试缝规则在`)
+      assert.ok(text.includes("R7e Never block \"pass\" due to doc-state contradiction"), `${f}: R7e 不卡通过（报出即过）`)
+      assert.ok(text.includes("You have received the review-object declaration above — no need to infer the review target from the documents."), `${f}: §18.8 对象声明一致性句（4 模板全加）`)
+    }
+  })
+
+  it("T-10.2: engineering-sub.md 含三句（测试缝 / 授权边界 A 裁定 / 镜像并行）", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+    assert.ok(text.includes("Test-seam rule: when tests need to mock an internal tool set / slow tools"), "测试缝句头")
+    assert.ok(text.includes("add a test seam (setter or parameter override with `??` default fallback — default null keeps production behavior unchanged — restore in finally)"), "测试缝句 seam 语义")
+    assert.ok(text.includes("do not waste rounds on non-deterministic workarounds (real slow tools, FIFO, large files, observing onTool, mock-LLM-returning-real-tools)"), "测试缝句禁项")
+    assert.ok(text.includes("Out-of-file-list changes: ALLOWED when required by the delivery"), "授权边界句（A 裁定——允许但报告）")
+    assert.ok(text.includes("the audit \"out-of-list\" criterion = changed AND not reported (silent overreach)"), "审计判据 = 改了且未报告=偏差")
+    assert.ok(text.includes("Mirror-parallel semantics: a byte-identical test failure is NOT your fault"), "镜像并行句")
+  })
+
+  it("T-10.2b: engineering-sub.md / eng-coder.md 无旧硬句（A 裁定同步——防回归）", () => {
+    for (const f of ["engineering-sub.md", "eng-coder.md"]) {
+      const t = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      assert.ok(!t.includes("Do NOT modify any file not listed in the approved design."), `${f}: 无旧硬句-engineering-sub 授权边界`)
+      assert.ok(!t.includes("Do not modify any file not listed in the design."), `${f}: 无旧硬句-eng-coder 清单外禁止`)
+      assert.ok(!t.includes("zero touches outside the approved file list"), `${f}: 无旧硬句-implement 零触碰`)
+      assert.ok(!t.includes("no file outside the approved list was touched"), `${f}: 无旧硬句-终检序号 2`)
+    }
+  })
+
+  it("T-10.3: 铁律块通用性——无 thincoder/vscode 项目名、无具体符号名、无 CLI|VS Code 形态（不锁项目）", () => {
+    for (const f of JUDGMENT_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      assert.ok(!/thincoder/i.test(text), `${f}: 无 thincoder 项目名`)
+      assert.ok(!text.includes("_runAdvisorToolLoop"), `${f}: 无 _runAdvisorToolLoop 符号名（设计注脚——非通用提示词）`)
+      assert.ok(!text.includes("_setAdvisorToolSetForTest"), `${f}: 无 _setAdvisorToolSetForTest 符号名（设计注脚——非通用提示词）`)
+      assert.ok(!text.includes("CLI "), `${f}: 无 'CLI ' 形态`)
+      assert.ok(!text.includes("VS Code"), `${f}: 无 'VS Code' 形态`)
+    }
+  })
+
+  it("T-10.4: 本批 6 文件与 CLI 面 byte-identical（镜像断言——与 CLI 侧 15 对断言同规格）", { skip: !existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder", "src", "prompts")) }, () => {
+    const CLI_PROMPTS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder", "src", "prompts")
+    for (const f of BATCH_FILES) {
+      assert.ok(
+        readFileSync(join(PROMPTS_DIR, f)).equals(readFileSync(join(CLI_PROMPTS_DIR, f))),
+        `${f} 两端 byte-identical`,
+      )
+    }
+  })
+
+  it("T-10.5: 来源诚实标注——'样本 7 轮——持续复核'（不假装权威）", () => {
+    const sourceLine = "Source: 7-round sample — verified judgments — continuously re-reviewed."
+    for (const f of JUDGMENT_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      assert.ok(text.includes("7-round sample"), `${f}: 样本 7 轮标注在`)
+      assert.ok(text.includes("continuously re-reviewed"), `${f}: 持续复核标注在`)
+      assert.ok(text.includes(sourceLine), `${f}: 来源句完整`)
+    }
+  })
+})
+
 // ─── Workflow/Debugging 必须用 task（2026-08-23）───
 // discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
 

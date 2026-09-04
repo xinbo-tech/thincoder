@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url"
 import { extractAgentResponseTable, extractConversationBackground } from "../src/advisor/history.mjs"
 import { buildAdvisorSystemPrompt, prepareAdvisorMessages, escapeLiteralEscapes } from "../src/advisor/main.mjs"
 import { verifyCitations, appendCitationReport, extractCitations } from "../src/advisor/citations.mjs"
-import { buildAdvisorUserMessage } from "../src/advisor/messages.mjs"
+import { buildAdvisorUserMessage, buildReviewObjectDeclaration, injectObjectDeclaration } from "../src/advisor/messages.mjs"
 import { isDocFile } from "../src/advisor/repos.mjs"
 import { validateDesignToken, extractTokenUUID } from "../src/agent-tools/advisor.mjs"
 import { resolveAdvisorProvider, MAX_RESULT_CHARS } from "../src/advisor/run.mjs"
@@ -499,6 +499,119 @@ describe("advisor review timeout (AGENT-PARAMS-TUNING)", () => {
   })
 })
 
+// ─── B1 工具执行批并行（AGENT-LOOP.md §18.7 D-TS7 — T-TS8/T-TS9） ───
+
+describe("B1: 工具执行批并行（T-TS8/T-TS9）", () => {
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms))
+
+  /** Mock LLM server: first request → the tool_calls frame; second → final review text. */
+  function b1Server(toolCallFrame, finalText = "review done") {
+    const server = createServer((req, res) => {
+      req.on("data", () => {}) // drain the request body
+      req.on("end", () => {
+        res.writeHead(200, { "Content-Type": "text/event-stream" })
+        if (toolCallFrame) {
+          const frame = JSON.stringify({ choices: [{ index: 0, finish_reason: "tool_calls", delta: { content: "", tool_calls: toolCallFrame } }] })
+          res.end(`data: ${frame}\n\ndata: [DONE]\n\n`)
+          toolCallFrame = null
+        } else {
+          res.end(
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: finalText } }] })}\n\n` +
+            `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+            "data: [DONE]\n\n",
+          )
+        }
+      })
+    })
+    return server
+  }
+
+  /** Mock read-only tool: records start/end into `events` (parallel witness). */
+  function mockTool(name, events, { delayMs = 0, error = null } = {}) {
+    return {
+      name,
+      description: `mock tool ${name}`,
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        events.push(`start:${name}`)
+        if (delayMs) await delay(delayMs)
+        if (error) throw new Error(error)
+        events.push(`end:${name}`)
+        return `result:${name}`
+      },
+    }
+  }
+
+  async function runB1(toolSet, toolCallFrame, events) {
+    const server = b1Server(toolCallFrame)
+    await new Promise((r) => server.listen(0, "127.0.0.1", r))
+    const port = server.address().port
+    try {
+      const { _runAdvisorToolLoop, _setAdvisorToolSetForTest } = await import("../src/advisor/run.mjs")
+      _setAdvisorToolSetForTest(toolSet)
+      try {
+        const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" }
+        const messages = [{ role: "user", content: "review" }]
+        const result = await _runAdvisorToolLoop(provider, messages, null, null, { config: {} }, tmpDir)
+        return { result, messages, events }
+      } finally {
+        _setAdvisorToolSetForTest(null)
+      }
+    } finally {
+      server.close()
+    }
+  }
+
+  it("T-TS8: 同批两慢工具并行执行——两工具都在任一完成前启动（start 顺序并行确定性断言；墙钟免疫）", async () => {
+    const events = []
+    const toolSet = [mockTool("slowA", events, { delayMs: 100 }), mockTool("slowB", events, { delayMs: 100 })]
+    const frame = [
+      { index: 0, id: "c1", type: "function", function: { name: "slowA", arguments: "{}" } },
+      { index: 1, id: "c2", type: "function", function: { name: "slowB", arguments: "{}" } },
+    ]
+    const { result, messages, events: ev } = await runB1(toolSet, frame, events)
+    assert.ok(result.includes("review done"), "循环正常终态")
+    // onTool 进度行按 toolCalls 顺序发射（显示顺序无关紧要——仍按 toolCalls 顺序）
+    assert.ok(result.indexOf("→ slowA") < result.indexOf("→ slowB"), "onTool 进度行按 toolCalls 顺序")
+    // 并行确定性断言：两工具都在任一完成前启动——串行实现（for...of await）下
+    // start:slowB 必然位于 end:slowA 之后（先完成 A 再启动 B）；并行实现下两个
+    // start 都在任一 end 之前。不依赖墙钟（CI 抖动免疫）。
+    assert.ok(ev.includes("start:slowA") && ev.includes("start:slowB"), "两工具均已启动")
+    assert.ok(ev.indexOf("start:slowB") < ev.indexOf("end:slowA"), "工具B在工具A完成前已启动（并行）")
+    assert.ok(ev.indexOf("start:slowA") < ev.indexOf("end:slowB"), "工具A在工具B完成前已启动（并行）")
+    // Promise.all 核验：结果按 toolCalls 顺序回填——tool_call_id 不错配
+    const toolMsgs = messages.filter((m) => m.role === "tool")
+    assert.equal(toolMsgs.length, 2, "两条工具结果均回填")
+    assert.equal(toolMsgs[0].tool_call_id, "c1", "保序：第一结果对应第一个 tool_call")
+    assert.equal(toolMsgs[0].content, "result:slowA")
+    assert.equal(toolMsgs[1].tool_call_id, "c2", "保序：第二结果对应第二个 tool_call")
+    assert.equal(toolMsgs[1].content, "result:slowB")
+  })
+
+  it("T-TS9: 一工具抛错（ENOENT）另一成功——错误独立捕获、两结果均回填、顺序保序、无未处理拒绝", async () => {
+    const events = []
+    const toolSet = [
+      mockTool("boom", events, { error: "ENOENT: no such file" }),
+      mockTool("okTool", events, { delayMs: 100 }),
+    ]
+    const frame = [
+      { index: 0, id: "c1", type: "function", function: { name: "boom", arguments: "{}" } },
+      { index: 1, id: "c2", type: "function", function: { name: "okTool", arguments: "{}" } },
+    ]
+    const { result, messages, events: ev } = await runB1(toolSet, frame, events)
+    assert.ok(result.includes("review done"), "抛错工具不中断整条循环（无未处理拒绝——测试进程正常完成）")
+    assert.equal(ev[0], "start:boom", "抛错工具已启动")
+    // 错误独立捕获：boom 的 ENOENT 不阻止 okTool 启动/完成
+    assert.ok(ev.includes("start:okTool") && ev.includes("end:okTool"), "成功工具完整执行")
+    const toolMsgs = messages.filter((m) => m.role === "tool")
+    assert.equal(toolMsgs.length, 2, "两结果均回填（错误工具也回填 error 结果）")
+    assert.equal(toolMsgs[0].tool_call_id, "c1")
+    assert.equal(toolMsgs[0].content, "Error (file_not_found): ENOENT: no such file", "ENOENT → file_not_found 类型化错误（既有语义保留）")
+    assert.equal(toolMsgs[1].tool_call_id, "c2")
+    assert.equal(toolMsgs[1].content, "result:okTool", "成功工具结果正常回填")
+  })
+})
+
 // ─── 文档归属纪律 + advisor 设计评审增强（2026-08-21，规格见 CLI AGENT-LOOP.md §12） ───
 
 const VSCODE_SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src")
@@ -710,3 +823,132 @@ it("subagent schema declares the optional designId parameter (CLI parity)", asyn
 })
 
 })
+
+// ─── Review-object declaration（AGENT-LOOP.md §18.8 — T-OA1..5 / AC-OA1..3） ───
+
+/** Mock advisor LLM server: captures the review messages, replies with a
+ *  content-only frame (no tool calls → the review ends immediately). */
+function capturingReviewServer(captured, content = "Review complete. No critical issues.") {
+  return import("node:http").then(({ createServer }) => {
+    const server = createServer((req, res) => {
+      let text = ""
+      req.on("data", (c) => (text += c))
+      req.on("end", () => {
+        const body = JSON.parse(text)
+        captured.messages = body.messages
+        const frames =
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content } }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+          `data: [DONE]\n\n`
+        res.writeHead(200, { "Content-Type": "text/event-stream" })
+        res.end(frames)
+      })
+    })
+    return new Promise((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port }))
+    })
+  })
+}
+
+describe("review-object declaration (§18.8 — T-OA1..5)", () => {
+  // ─── 单元：机械构造与注入 ───
+  it("T-OA1 unit: buildReviewObjectDeclaration emits the mechanical ANCHOR-4 block (type/target/status/reason/exclude)", () => {
+    const block = buildReviewObjectDeclaration({
+      type: "design",
+      target: "docs/design/AGENT-LOOP.md §18.7",
+      status: "pending review",
+      reason: "user-initiated",
+      exclude: ["§18.5", "§18.6"],
+    })
+    assert.ok(block.startsWith("## Review-object declaration (mechanical — do not infer)"), "块头")
+    assert.ok(block.includes("Review type: design | Target: docs/design/AGENT-LOOP.md §18.7 | Object state: pending review | Trigger: user-initiated"), "type|target|status|reason 行")
+    assert.ok(block.includes("Excluded (not in this review): §18.5, §18.6"), "排除清单行（T-OA4：数组连接）")
+    assert.ok(block.includes("Follow this declaration — do not infer the review target from the documents."), "收尾句")
+  })
+
+  it("T-OA3 unit: 无 object / 非对象 → 内容原样（降级现状不注入），有 object → 声明块先于评审内容", () => {
+    const content = "## Design Review\n\nThe documents below are the review scope."
+    const out = injectObjectDeclaration(content, { type: "design", target: "T", status: "S", reason: "R", exclude: [] })
+    assert.ok(out.startsWith("## Review-object declaration"), "声明块在开头")
+    assert.ok(out.indexOf("## Review-object declaration") < out.indexOf("## Design Review"), "声明先于评审内容（顺序：声明 → 评审内容）")
+    assert.equal(injectObjectDeclaration(content, null), content, "null → 原样")
+    assert.equal(injectObjectDeclaration(content, undefined), content, "undefined → 原样")
+    assert.equal(injectObjectDeclaration(content, "garbage"), content, "非对象字符串 → 原样")
+    assert.equal(injectObjectDeclaration(content, ["not-an-object"]), content, "数组 → 原样")
+  })
+
+  // ─── 集成：advisorTool → runAdvisorReview → 消息注入（真实接线） ───
+  async function runToolWithObject(args, agent) {
+    const captured = {}
+    const { server, port } = await capturingReviewServer(captured)
+    try {
+      const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+      const out = await advisorTool.execute(args, {
+        agent: { ...agent, _provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" } },
+      })
+      return { out, captured }
+    } finally {
+      server.close()
+    }
+  }
+
+  it("T-OA1/T-OA4/T-OA5 integration: design r1 评审 user 消息含对象声明块（对象/状态/排除），既有评审内容保留在后", async () => {
+    const agent = {
+      config: { agent: { engineering: true } },
+      history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpDir,
+    }
+    const object = { type: "design", target: "docs/design/AGENT-LOOP.md §18.7", status: "pending review", reason: "user-initiated", exclude: ["§18.5", "§18.6"] }
+    const { captured } = await runToolWithObject({ type: "design", documents: ["docs/design/AGENT-LOOP.md"], object }, agent)
+    const user = captured.messages.find((m) => m.role === "user")?.content || ""
+    assert.ok(user.startsWith("## Review-object declaration"), "声明块位于 user 消息开头")
+    assert.ok(user.includes("Review type: design | Target: docs/design/AGENT-LOOP.md §18.7 | Object state: pending review | Trigger: user-initiated"), "评审对象/状态/原因注入（T-OA1）")
+    assert.ok(user.includes("Excluded (not in this review): §18.5, §18.6"), "排除清单注入（T-OA4）")
+    // T-OA5：对象声明后仍接既有评审内容——不破坏
+    assert.ok(user.includes("## Design Review"), "设计评审内容仍在")
+    assert.ok(user.includes("docs/design/AGENT-LOOP.md — Read this file in full"), "documents 清单仍在")
+    assert.ok(user.indexOf("## Review-object declaration") < user.indexOf("## Design Review"), "声明先于评审内容")
+  })
+
+  it("T-OA2: round 2+ 复评同样注入对象声明（每轮锚定——防复评又考古）", async () => {
+    const agent = {
+      config: { agent: {} },
+      history: [],
+      _touchedFiles: [],
+      _advisorRound: 1,
+      _lastAdvisorOutput: "| # | File | Severity | Issue | Suggestion |\n| 1 | a.mjs | 🔴 | bug | fix |",
+      _mutatedThisRun: true,
+      _advisorSession: null,
+      cwd: tmpDir,
+    }
+    const object = { type: "code", target: "src/a.mjs", status: "implemented", reason: "delivery verification", exclude: [] }
+    const { captured } = await runToolWithObject({ type: "code", paths: ["src/a.mjs"], object }, agent)
+    const user = captured.messages.find((m) => m.role === "user")?.content || ""
+    assert.ok(user.startsWith("## Review-object declaration"), "round2+ 声明块仍在开头")
+    assert.ok(user.includes("Review type: code | Target: src/a.mjs | Object state: implemented | Trigger: delivery verification"), "round2+ 对象数据注入")
+    assert.ok(user.includes("## Round 2"), "round 2 收敛内容保留在其后")
+    assert.ok(user.indexOf("## Review-object declaration") < user.indexOf("## Round 2"), "声明先于收敛内容")
+  })
+
+  it("T-OA3: 无 object 参数 → 不注入声明块、不崩溃（旧调用兼容）", async () => {
+    const agent = {
+      config: { agent: { engineering: true } },
+      history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpDir,
+    }
+    const { captured, out } = await runToolWithObject({ type: "design", documents: ["docs/design/AGENT-LOOP.md"] }, agent)
+    const user = captured.messages.find((m) => m.role === "user")?.content || ""
+    assert.ok(!user.includes("## Review-object declaration"), "无 object → 无声明块")
+    assert.ok(user.startsWith("## Design Review"), "既有 message 形态不变（降级现状）")
+    assert.ok(out.includes("Review complete"), "评审流程不受影响")
+  })
+
+  it("object schema: advisor 工具 schema 声明 object 参数（N-OA1 — 调用参数传入）", async () => {
+    const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+    const object = advisorTool.parameters.properties.object
+    assert.ok(object, "object 参数存在于 advisor 工具 schema")
+    assert.equal(object.type, "object")
+    assert.ok(object.properties?.target, "含 target 子字段")
+    assert.ok(object.properties?.exclude, "含 exclude 子字段")
+    assert.ok(object.properties?.type?.enum?.includes("design"), "type 子字段带 code/design 枚举")
+  })
+})
+

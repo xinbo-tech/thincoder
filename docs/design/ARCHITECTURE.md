@@ -126,6 +126,8 @@ user input
 | 补丁 | `apply_patch` |
 | 代码智能 | `lsp`（VS Code 原生语言服务）, `execute`（纯净 node 子进程 ESM——2026-09-03 §12：无预置全局） |
 | 元工具 | `task`, `recent_changes`, `subagent`, `plan`, `goal`, `skill`, `verify`, `timer`, `advisor`, `eng` |
+- **子代理零 git（2026-09-04——AGENT-LOOP.md §18.5 镜像）**：explore/plan 子代理不注入 git 上下文（本端实现从未注入——childInput = task 原样）；描述/explore.md 承诺与实现一致（"No git context injected"）；审计任务书（auditTaskBook）附零 git 范围权威声明（`_touchedFiles` 为审计范围——工作区未列改动不作超清单依据）。权威源 = AGENT-LOOP.md §18.5（CLI 仓文档）。
+
 
 **lsp（VS Code 原生实现）**：CLI 的 lsp 工具自起 LSP server 进程（JSON-RPC over stdio，需 config.json `lsp.servers` 配置）；VS Code 侧直接用编辑器自己的语言服务（`vscode.executeDefinitionProvider` / `executeReferenceProvider` / `executeHoverProvider` / `executeDocumentSymbolProvider` + `languages.getDiagnostics`），无需配置、无需进程管理，任何装有语言扩展的语言都可用。子命令与 CLI 一致：definition / references / hover / symbols / diagnostics。
 

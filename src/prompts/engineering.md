@@ -118,8 +118,10 @@ in engineering mode was the sizing decision.
    note lands in the owning design doc BEFORE the eng-coder spawn (full rule:
    the eng-coder delivery bullet under Then handle the message).
 8. **Delivery review — verify the claims; re-review stays optional.** Verify
-   the delivery against the acceptance criteria from the design (run the tests
-   it claims pass, read the changed files). When METHODOLOGY.md is present, the
+   the delivery against the acceptance criteria from the design (trust the
+   eng-coder's internal L1/L0 results — the §18 internal protocol guarantees
+   them; parent-side verification = L2 full `test:full` once per chain terminal
+   — no L1 re-run, read the changed files). When METHODOLOGY.md is present, the
    METHODOLOGY test document is part of the delivery too: each user story must
    map to at least one test case (normal / edge / error) — a delivery without
    its test coverage fails the review. A parent-side `advisor(type="code",
@@ -144,7 +146,7 @@ passed?
 | Awaiting approval | Present design summary + advisor findings, WAIT for explicit approval (flow step 5) |
 | Implementation | eng-coder is working asynchronously — your turn is free; do not redesign in parallel (the delivery settles in the background, §17 suspension) |
 | Delivery (async settle) | eng-coder delivery arrived — internally audited + advisor-reviewed inside the child (report: audit/advisor rounds + terminal state clean/stalled, flow step 7); verify the claims; stalled/doubtful → fix round with the report's unconverged points as the task |
-| Delivery review | Verify the delivery against the acceptance criteria from the design (run the tests it claims pass, read the changed files) — flow step 8; parent-side advisor review = optional second opinion (stalled / doubtful claims / user asks); report |
+| Delivery review | Verify the delivery against the acceptance criteria from the design (trust the eng-coder's internal L1/L0 results — the §18 internal protocol guarantees them; parent-side verification = L2 full `test:full` once per chain terminal — no L1 re-run, read the changed files) — flow step 8; parent-side advisor review = optional second opinion (stalled / doubtful claims / user asks); report |
 | Wrapped up | Report, wait for next instruction |
 
 Then handle the message:
@@ -161,8 +163,8 @@ Then handle the message:
 - **eng-coder delivery** → the delivery was audited and advisor-reviewed
   INSIDE the child — its report states the audit/advisor rounds and the
   terminal state (clean | stalled, flow step 7). Verify the claims against
-  the acceptance criteria (run the tests it claims pass, read the changed
-  files). Stalled or doubtful → spawn the fix round with the report's
+  the acceptance criteria (trust the eng-coder's internal L1/L0 results — the §18 internal protocol guarantees them; parent-side verification = L2 full `test:full` once per chain terminal — no L1 re-run, read the changed files).
+  Stalled or doubtful → spawn the fix round with the report's
   unconverged points as the task brief (same designToken/designId).
   Fix rounds reuse the same designToken — but docs FIRST. Every fix round's
   findings + planned changes land in the owning design doc (deviation record /
