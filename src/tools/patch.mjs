@@ -19,6 +19,19 @@ import { relative, dirname } from "node:path";
  * D15.6: a bare "@@" header (no coordinates) is accepted — the hunk body runs until the next hunk/file header
  * ("@@" / "--- " / "+++ " / "diff " / "index "), purely located by its ops.
  */
+/**
+ * P15.10（2026-09-05 用户裁定——「符合模型直觉」）：文件头判定——
+ * 完整头（`--- x` 后随 `+++ `）任意老路径形态均认（git 规范）；
+ * 容缺头（`+++ b/<path>` 配对行省略——模型单文件补丁自然形态）仅认 a//b/ 前缀——
+ * newPath 推导 = oldPath；`/dev/null` 容缺仍拒（新文件名从 --- 侧不可推导——parsePatch 内特报）；
+ * 其他 `--- x` = 普通删行内容（行首标记 - + 内容 `-- x`）——不是文件头——hunk 体不得误断。
+ */
+function isFileHeader(line, nextLine) {
+  if (!line.startsWith("--- ")) return false
+  if (nextLine?.startsWith("+++ ")) return true
+  return /^[ab]\//.test(line.slice(4).trim())
+}
+
 function parsePatch(patch) {
   // Patch text often comes from CRLF terminals/model output; trailing \r mixed into hunk content breaks context matching, strip uniformly
   const lines = patch.replace(/\r(?=\n|$)/g, "").split("\n")
@@ -31,13 +44,25 @@ function parsePatch(patch) {
     if (line.startsWith("--- ")) {
       const oldPath = line.slice(4).trim()
       const plus = lines[i + 1]
-      if (!plus?.startsWith("+++ ")) throw new Error(`Malformed patch: expected "+++" line after "${line}"`)
-      const newPath = plus.slice(4).trim()
-      if (newPath === "/dev/null") throw new Error("Deleting files via patch is not supported — use the delete tool")
-      cur = { path: stripPrefix(newPath), isNew: oldPath === "/dev/null", hunks: [] }
-      files.push(cur)
-      i += 2
-      continue
+      if (plus?.startsWith("+++ ")) {
+        const newPath = plus.slice(4).trim()
+        if (newPath === "/dev/null") throw new Error("Deleting files via patch is not supported — use the delete tool")
+        cur = { path: stripPrefix(newPath), isNew: oldPath === "/dev/null", hunks: [] }
+        files.push(cur)
+        i += 2
+        continue
+      }
+      // P15.10：容缺头——`--- a/<path>`（或 b/ 前缀）后直接跟 hunk = 对同路径的修改。
+      if (/^[ab]\//.test(oldPath)) {
+        cur = { path: stripPrefix(oldPath), isNew: false, hunks: [] }
+        files.push(cur)
+        i += 1
+        continue
+      }
+      if (oldPath === "/dev/null") {
+        throw new Error(`"--- /dev/null" needs a "+++ b/<path>" line naming the new file — the --- side does not carry the file name`)
+      }
+      throw new Error(`Malformed patch: expected "+++" line after "${line}"`)
     }
     if (line.startsWith("@@")) {
       if (!cur) throw new Error("Malformed patch: hunk header before any file header")
@@ -53,7 +78,7 @@ function parsePatch(patch) {
         i++
         while (i < lines.length) {
           const hl = lines[i]
-          if (hl.startsWith("@") || hl.startsWith("--- ") || hl.startsWith("+++ ") || hl.startsWith("diff ") || hl.startsWith("index ")) break
+          if (hl.startsWith("@") || isFileHeader(hl, lines[i + 1]) || hl.startsWith("+++ ") || hl.startsWith("diff ") || hl.startsWith("index ")) break
           if (hl.startsWith("\\")) { i++; continue } // "\ No newline at end of file"
           // 宽容空行=上下文行——但 patch 文本末尾（或 hunk 之间/文件头之前）的 "" 是
           // 分隔产物而非内容：仅当后继仍是操作行时才当作上下文消费。
@@ -61,7 +86,7 @@ function parsePatch(patch) {
           // 文件头前的分隔空行不得吞成幽灵上下文行（会把 - 锚序列尾部拼上 ""——跨文件
           // 零上下文 hunk 因此误报 not-found）。
           const next = lines[i + 1]
-          if (hl === "" && (next == null || !/^[ +\-\\]/.test(next) || /^(?:---|\+\+\+) /.test(next))) break
+          if (hl === "" && (next == null || !/^[ +\-\\]/.test(next) || isFileHeader(next, lines[i + 2]) || next.startsWith("+++ "))) break
           const tag = hl === "" ? " " : hl[0]
           if (tag !== " " && tag !== "-" && tag !== "+") break // metadata / file section end
           hunk.ops.push({ type: tag, text: hl === "" ? "" : hl.slice(1) })
@@ -103,8 +128,10 @@ function parsePatch(patch) {
     }
     i++ // skip diff --git / index / blank lines and other metadata
   }
-  if (files.length === 0) throw new Error("No file changes found in patch (need --- / +++ headers)")
-  return files
+  // P15.10：容缺/完整空段头（头后无任何 hunk）过滤——不虚报 touchedPaths、不触发无谓 read+write
+  const withHunks = files.filter((f) => f.hunks.length > 0)
+  if (withHunks.length === 0) throw new Error("No file changes found in patch (need --- / +++ headers)")
+  return withHunks
 }
 
 /** Apply hunks sequentially onto an in-memory line array; any failure throws (caller guarantees nothing is written to disk). Ignores trailing \r when comparing; context lines retain original bytes */
@@ -147,7 +174,7 @@ export const applyPatchTool = {
   parameters: {
     type: "object",
     properties: {
-      patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks (a bare @@ header is also accepted — coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies; a zero/one-context hunk is accepted only when it removes (-) at least one line and that anchor sequence is unique, while anchor-free pure-+ (insert) hunks need at least 2 context lines)." },
+      patch: { type: "string", description: "Unified diff. May span multiple files (multiple --- / +++ header pairs — including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks (a bare @@ header is also accepted — coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies; a zero/one-context hunk is accepted only when it removes (-) at least one line and that anchor sequence is unique, while anchor-free pure-+ (insert) hunks need at least 2 context lines). The +++ b/<path> pair may be omitted for existing files — a lone --- a/<path> (or --- b/<path>) header followed directly by hunks applies to that path (new files still need --- /dev/null + +++ b/<path>)." },
     },
     required: ["patch"],
   },

@@ -8,7 +8,7 @@ import { test } from "node:test"
 import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { join } from "node:path"
-import { mkdtempSync, rmSync, existsSync, readdirSync } from "node:fs"
+import { mkdtempSync, rmSync, existsSync, readdirSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 
@@ -943,6 +943,38 @@ test("S6-3: action delete 批量 — 无过滤拒/无 confirm 预览拒/0 匹配
     assert.equal(r, "Deleted 1 entries in scope personal")
     assert.equal((await search(m, "不要删我")).length, 0)
     assert.equal((await search(m, "保留知识")).length, 1)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("S6-3a: 孤儿 md（磁盘有、files 索引无）——list 可见 + type 批删一次删光（2026-09-05 磁盘为真相修复）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-delorphan-"))
+  const m = freshMemory()
+  const tool = memoryTools(m, { cwd: dir, projectDir: ".thincoder/memory", author: "t" })[0]
+  const memDir = join(dir, ".thincoder", "memory")
+  try {
+    // 正规条目（经 putMarkdown——files 表有行）
+    const f1 = await putMarkdown(m, { layer: "project", dir: memDir, type: "knowledge", title: "正规知识", content: "索引内", tags: [], author: "t" })
+    // 两个孤儿：手工写盘（模拟外部拷贝 / gitmem pull / 索引失败遗留——不经 putMarkdown → 无 files 行）
+    const o1 = "20260905-orphan-decision-one.md"
+    const o2 = "20260905-orphan-decision-two.md"
+    writeFileSync(join(memDir, o1), serializeEntry({ type: "decision", title: "孤儿决策一", tags: [], author: "t" }, "孤儿内容一"), "utf8")
+    writeFileSync(join(memDir, o2), serializeEntry({ type: "decision", title: "孤儿决策二", tags: [], author: "t" }, "孤儿内容二"), "utf8")
+    const indexed = m.db.prepare(`SELECT COUNT(*) AS n FROM files WHERE layer='project' AND origin=?`).get(memDir).n
+    assert.equal(indexed, 1, "前提：孤儿无 files 行（仅正规条目入表）")
+
+    // list（磁盘为真相）能看到孤儿——旧实现 files 表查询漏显
+    const all = await tool.execute({ action: "list", scope: "project" })
+    assert.ok(all.includes("孤儿决策一") && all.includes("孤儿决策二") && all.includes("正规知识"), `list 显示孤儿: ${all}`)
+
+    // type=decision 批删一次删光两个孤儿——旧实现匹配不到孤儿（需 delete→syncDir 循环多轮才删净）
+    const done = await tool.execute({ action: "delete", scope: "project", type: "decision", confirm: true })
+    assert.equal(done, "Deleted 2 entries in scope project")
+    assert.equal(existsSync(join(memDir, o1)) || existsSync(join(memDir, o2)), false, "孤儿文件已删")
+    assert.equal(existsSync(join(memDir, f1)), true, "非目标文件保留")
+    const after = await tool.execute({ action: "list", scope: "project" })
+    assert.ok(after.includes("正规知识") && !after.includes("孤儿"), `删后 list: ${after}`)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

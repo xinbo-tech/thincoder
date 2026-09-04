@@ -281,13 +281,19 @@ function likePattern(keyword) {
  * Shared row query for the §6 list action and the §6 batch delete (one match surface —
  * rows carry { layer, id, type, title, ts }). Filters:
  *   scope: "personal" | "project" | "team" | null (null = all layers)
- *   type / keyword: optional (keyword matches title OR content, LIKE)
- * File-layer rows are restricted to the dirs this memory context manages (origin = the
- * passed dir — search parity): project rows to projectDir, team rows to teamDir. Rows
- * from other projects'/team repos' origins stay out of list AND batch delete — the tool
- * can only act on files it can locate. Sorted by ts (created/updated, ms) DESC.
+ *   type / keyword: optional (keyword matches title OR content, substring)
+ * Personal rows come from the entries table; project/team rows come from a DISK scan of
+ * the managed dir (2026-09-05 fix — disk is the truth): files present on disk but
+ * missing from the files index (orphans: external copies / gitmem pull / an earlier
+ * index failure) were invisible to list AND immune to batch delete — the old table-only
+ * match surface made a scope wipe need repeated delete rounds (deleteWhere→syncDir
+ * re-indexed the orphans one round later). Scanning disk keeps list and batch delete
+ * consistent with what the user can see and delete. Rows from other projects'/team
+ * repos' dirs stay out (the scan only covers the dirs this memory context manages).
+ * Malformed files are skipped (parseEntry failure — same semantics as syncDir). Sorted
+ * by ts (created/updated, ms) DESC.
  */
-export function matchMemoryRows(memory, { scope = null, type = null, keyword = null, projectDir = null, teamDir = null } = {}) {
+export async function matchMemoryRows(memory, { scope = null, type = null, keyword = null, projectDir = null, teamDir = null } = {}) {
   const rows = []
   const wantLayer = (l) => !scope || scope === l
   if (wantLayer("personal")) {
@@ -303,24 +309,44 @@ export function matchMemoryRows(memory, { scope = null, type = null, keyword = n
     }
   }
   if (wantLayer("project") && projectDir) {
-    for (const r of fileRows(memory, "project", projectDir, type, keyword)) rows.push({ ...r, id: `project:${projectDir}:${r.path}` })
+    for (const r of await diskFileRows(projectDir, type, keyword)) rows.push({ ...r, layer: "project", id: `project:${projectDir}:${r.path}` })
   }
   if (wantLayer("team") && teamDir) {
-    for (const r of fileRows(memory, "team", teamDir, type, keyword)) rows.push({ ...r, id: `team:${teamDir}:${r.path}` })
+    for (const r of await diskFileRows(teamDir, type, keyword)) rows.push({ ...r, layer: "team", id: `team:${teamDir}:${r.path}` })
   }
   rows.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
   return rows
 }
 
-function fileRows(memory, layer, dir, type, keyword) {
-  let sql = `SELECT path, type, title, updated_at AS ts FROM files WHERE layer = ? AND origin = ?`
-  const cond = []
-  const params = [layer, dir]
-  if (type) { cond.push("type = ?"); params.push(type) }
-  if (keyword) { cond.push("(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"); const p = likePattern(keyword); params.push(p, p) }
-  if (cond.length) sql += " AND " + cond.join(" AND ")
-  sql += " ORDER BY updated_at DESC"
-  return memory.db.prepare(sql).all(...params).map((r) => ({ layer, path: r.path, type: r.type, title: r.title, ts: r.ts }))
+/**
+ * Disk-truth file scan for the project/team layer (2026-09-05 fix — see matchMemoryRows):
+ * readdir + parse every .md entry in dir, filter by type equality and keyword substring
+ * on title OR content (case-insensitive — SQLite LIKE parity). ts = file mtime (ms).
+ * Rows come back WITHOUT the layer field — the caller stamps layer and builds the uid.
+ */
+async function diskFileRows(dir, type, keyword) {
+  let names
+  try {
+    names = (await readdir(dir)).filter((n) => n.endsWith(".md"))
+  } catch {
+    return []
+  }
+  const kw = keyword ? keyword.toLowerCase() : null
+  const out = []
+  for (const name of names) {
+    try {
+      const abs = join(dir, name)
+      const { meta, content } = parseEntry(await readFile(abs, "utf8"))
+      if (type && meta.type !== type) continue
+      if (kw && !(meta.title.toLowerCase().includes(kw) || content.toLowerCase().includes(kw))) continue
+      const mtime = Math.floor((await stat(abs)).mtimeMs)
+      out.push({ path: name, type: meta.type, title: meta.title, ts: mtime })
+    } catch (e) {
+      console.error(`[memory] skip ${name}: ${e.message}`)
+    }
+  }
+  out.sort((a, b) => b.ts - a.ts)
+  return out
 }
 
 /**
@@ -328,12 +354,14 @@ function fileRows(memory, layer, dir, type, keyword) {
  * deletes every row matchMemoryRows returns for the scope. Personal rows go straight to the
  * DB (FTS + embedding cleanup via row triggers); project/team rows delete the markdown file
  * (path containment enforced, ENOENT tolerated) then re-sync the layer dir once (index
- * cleanup single source). Team deletion never touches git — a later gitmem pull may
+ * cleanup single source). Match surface = disk scan (2026-09-05 fix — orphans on disk
+ * with no index row are matched and deleted in the same pass; the trailing syncDir
+ * re-indexes the survivors). Team deletion never touches git — a later gitmem pull may
  * resurrect the file while the remote still has it (same semantics as deleteByUid).
  * Returns the number of deleted rows.
  */
 export async function deleteWhere(memory, { scope, type = null, keyword = null } = {}, { dirs = {} } = {}) {
-  const rows = matchMemoryRows(memory, { scope, type, keyword, projectDir: dirs.project ?? null, teamDir: dirs.team ?? null })
+  const rows = await matchMemoryRows(memory, { scope, type, keyword, projectDir: dirs.project ?? null, teamDir: dirs.team ?? null })
   if (rows.length === 0) return 0
   const personalIds = []
   const byDir = new Map() // "layer\x00dir" → { layer, dir, paths: [] }

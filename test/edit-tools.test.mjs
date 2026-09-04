@@ -426,7 +426,54 @@ test("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换�
 
 
 
-test("edit 数组形态：与 path/old_string/new_string 互斥", async () => {
+test("edit 数组形态：顶层 path + 无 path 条目 → 顶层为默认（2026-09-05 用户裁定）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-toppath-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "a.mjs", content: "const A = 1\nconst B = 2\n" }, ctx)
+    await byName.read.execute({ path: "a.mjs" }, ctx)
+    const r = await byName.edit.execute({
+      path: "a.mjs",
+      edits: [
+        { old_string: "const A = 1", new_string: "const A = 10" },
+        { old_string: "const B = 2", new_string: "const B = 20" },
+      ],
+    }, ctx)
+    assert.equal((r.match(/Edited a\.mjs: replaced 1 occurrence\(s\)/g) || []).length, 2, "两条都回显")
+    const final = await byName.read.execute({ path: "a.mjs" }, ctx)
+    assert.ok(final.includes("const A = 10"), "第一条生效（顶层 path 默认）")
+    assert.ok(final.includes("const B = 20"), "第二条生效（同文件串行累积）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组形态：条目自带 path 优先于顶层 path（2026-09-05 用户裁定）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-pathprio-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await byName.write.execute({ path: "a.mjs", content: "const A = 1\n" }, ctx)
+    await byName.write.execute({ path: "b.mjs", content: "const B = 2\n" }, ctx)
+    await byName.read.execute({ path: "a.mjs" }, ctx)
+    await byName.read.execute({ path: "b.mjs" }, ctx)
+    const r = await byName.edit.execute({
+      path: "a.mjs",
+      edits: [
+        { path: "b.mjs", old_string: "const B = 2", new_string: "const B = 20" }, // 条目 path 覆盖顶层
+        { old_string: "const A = 1", new_string: "const A = 10" }, // 无 path → 顶层 a.mjs
+      ],
+    }, ctx)
+    assert.ok(r.includes("Edited a.mjs") && r.includes("Edited b.mjs"), "两文件都改")
+    assert.ok((await byName.read.execute({ path: "a.mjs" }, ctx)).includes("const A = 10"), "a.mjs 已改")
+    assert.ok((await byName.read.execute({ path: "b.mjs" }, ctx)).includes("const B = 20"), "b.mjs 已改")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("edit 数组形态：顶层 old_string/new_string 与 edits 仍互斥——顶层 path 放行后收窄", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-mutex-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -440,7 +487,15 @@ test("edit 数组形态：与 path/old_string/new_string 互斥", async () => {
         edits: [{ path: "a.mjs", old_string: "const A = 1", new_string: "const A = 3" }],
       }, ctx),
       /mutually exclusive/,
-      "数组与单文件参数互斥"
+      "顶层 old/new 与数组仍互斥"
+    )
+    // 条目与顶层皆无 path → 路径错误（文本补顶层选项）
+    await assert.rejects(
+      () => byName.edit.execute({
+        edits: [{ old_string: "const A = 1", new_string: "const A = 9" }],
+      }, ctx),
+      /each edit must have a path — give each entry its own path or pass a top-level path/,
+      "无任何 path（条目与顶层皆缺）→ 路径错误"
     )
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -1282,5 +1337,172 @@ test("T15.44: 两个零上下文 - 锚 hunk 串行——后 hunk 锚 = 前 hunk 
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+// ─── §15.3a apply_patch 文件头 +++ 容缺（TOOLS.md §15.3a——P15.10——2026-09-05 用户裁定「符合模型直觉」）───
+// 来源：父侧 3 连败（18:42:48/18:43:03/18:44:15——`--- a/` 头后直接 hunk 被拒 "expected +++ line after"——
+// 报错文本逐字告知修法仍重试同形——报错引导无效实证——形态合法化而非继续引导）。
+// 边界：`--- /dev/null` 缺 +++ 仍拒（新文件名从 --- 侧不可推导——特报文本）；
+// 删行内容 `-- x`（patch 文本 `--- x`）不是文件头——裸 @@ 内不得误断（非 a/b/ 前缀形态）。
+
+test("P15.10a: 容缺头——`--- a/` 后直接跟 hunk → 同路径应用（单文件自然形态）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1510a-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "a.txt"), "one\ntwo\n", "utf8")
+    const patch = ["--- a/a.txt", "@@", "-one", "+ONE", " two"].join("\n")
+    const r = await byName.apply_patch.execute({ patch }, ctx)
+    assert.match(r, /Applied patch to 1 file\(s\):\n  modified a\.txt/)
+    assert.equal(readFileSync(join(dir, "a.txt"), "utf8"), "ONE\ntwo\n", "同路径应用")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.10b: 多文件混合——完整头（+++ 配对）+ 容缺头同补丁", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1510b-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "a.txt"), "one\n", "utf8")
+    writeFileSync(join(dir, "b.txt"), "two\n", "utf8")
+    const patch = ["--- a/a.txt", "+++ b/a.txt", "@@", "-one", "+ONE", "--- b/b.txt", "@@", "-two", "+TWO"].join("\n")
+    const r = await byName.apply_patch.execute({ patch }, ctx)
+    assert.match(r, /Applied patch to 2 file\(s\)/)
+    assert.equal(readFileSync(join(dir, "a.txt"), "utf8"), "ONE\n", "完整头文件已改")
+    assert.equal(readFileSync(join(dir, "b.txt"), "utf8"), "TWO\n", "容缺头文件已改")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.10c: `--- /dev/null` 缺 +++ → 特报（新文件名不可推导——信息真缺失仍拒）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1510c-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    await assert.rejects(
+      () => byName.apply_patch.execute({ patch: "--- /dev/null\n@@\n+hello\n" }, ctx),
+      /"--- \/dev\/null" needs a "\+\+\+ b\/<path>" line naming the new file/,
+      "dev/null 容缺 → 特报文本"
+    )
+    assert.ok(!existsSync(join(dir, "hello")), "未创建任何文件")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.10d: 删行内容 `-- x`（patch 文本 `--- x`）不误断为文件头——裸 @@ 内正常消费（边界锁）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1510d-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "b.txt"), "A\n-- tgt\nC\n", "utf8")
+    // 裸 @@ 内 `--- tgt` 行 = 删除行（内容 "-- tgt"）——非 a/b/ 前缀不是文件头——不得断 hunk
+    const patch = ["--- b/b.txt", "@@", " A", "--- tgt", " C"].join("\n")
+    await byName.apply_patch.execute({ patch }, ctx)
+    assert.equal(readFileSync(join(dir, "b.txt"), "utf8"), "A\nC\n", "-- tgt 行被删除（而非被当文件头）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.10e: 空段头（头后无 hunk）过滤——不虚报、不触发无谓读；纯空段 → No file changes", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1510e-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "a.txt"), "one\n", "utf8")
+    // 尾部容缺空段头（b.txt 不存在）——若不过滤会触发 File not found——过滤后不碰
+    const patch = ["--- a/a.txt", "+++ b/a.txt", "@@", "-one", "+ONE", "--- b/b.txt"].join("\n")
+    const r = await byName.apply_patch.execute({ patch }, ctx)
+    assert.match(r, /Applied patch to 1 file\(s\)/, "空段头不进统计")
+    assert.equal(readFileSync(join(dir, "a.txt"), "utf8"), "ONE\n", "真实 hunk 已应用")
+    assert.ok(!existsSync(join(dir, "b.txt")), "空段文件未创建")
+    // 纯空段补丁（只有头无 hunk）→ No file changes
+    await assert.rejects(
+      () => byName.apply_patch.execute({ patch: "--- a/ghost.txt\n" }, ctx),
+      /No file changes found/,
+      "纯空段 → No file changes"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
+
+// ─── §14.1 失败反馈带下一跳——edit 单行相似行（TOOLS.md §14.1 D14.1.1）───
+// F3 落点核对（2026-09-05 实现批）：相似行段在 computeEditEntry（edit-diff.mjs）内按
+// old 是否含 \n 分头——评分函数 findCandidates（shared.mjs）对任意 not-found old 无条件
+// 调用（单行 old 已覆盖——本批仅补测试锁定）——单形态/批量/ACP 桥三通道共享同一错误构造。
+// 实测格式字节（单行）："\n\n  similar lines:\n    L<行号>: <截断预览> (<分>%)"——
+// 零候选 → 整段省略（T14.1.6）。
+// 既有测试映射：T14.1.2（多行 F3 输出逐字不变）→ 上方 "edit F3 boundary: multi-line
+// old_string failure scores only line 1, capped at top 3"；T14.1.3（T-TF3 searched+grep
+// 前缀保留）→ 上方 "edit §14: old_string not found 结果含 grep 定位建议（T-TF3…）"。
+
+test("edit §14.1 T14.1.1: 单行 old not-found（文件含近似行）→ searched 前缀保留 + similar lines top3 段（行号/截断内容/分——F3 同款行格式逐字）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-t1411-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    // 4 个同分近似行——锁 top3 上限 + 行号序（同分按行号升序）+ 行格式逐字（4 空格缩进）
+    writeFileSync(join(dir, "f.mjs"), ["const timeout = 1000", "const timeout = 2000", "const timeout = 3000", "const timeout = 4000", "function start() {", "}"].join("\n") + "\n", "utf8")
+    const err = await byName.edit.execute({ path: "f.mjs", old_string: "const timeout = 9999", new_string: "x" }, ctx).then(() => null, (e) => e)
+    assert.ok(err, "edit should fail")
+    assert.ok(err.message.startsWith("old_string not found in f.mjs"), "错误前缀不动: " + err.message)
+    assert.ok(
+      err.message.includes('  searched: "const timeout = 9999" — use grep to locate the actual content'),
+      "T14.1.1: searched 前缀 + grep 引导保留: " + err.message,
+    )
+    assert.ok(
+      err.message.includes("\n\n  similar lines:\n    L1: const timeout = 1000 (80%)\n    L2: const timeout = 2000 (80%)\n    L3: const timeout = 3000 (80%)"),
+      "T14.1.1: similar lines 段逐字（L 行号/截断内容/分——F3 同款行格式）: " + err.message,
+    )
+    assert.ok(!err.message.includes("L4: const timeout = 4000"), "top 3 上限（第 4 候选不出现）: " + err.message)
+
+    // 截断锁：长候选行的行预览限 80 字符（CANDIDATE_PREVIEW_LEN——评分在 500 字符域）
+    const longOld = "zz" + "a".repeat(97) + "Q"
+    const longLine = "zz" + "a".repeat(97) + "q" + "b".repeat(98) // 99/198 = 0.5 恰过分数阈（199 字符行 → 99/199 = 0.497 < 0.5 被分数阈排除——长度比预检 100/199 ≈ 0.503 ≥ 0.5 不会拦它）
+    writeFileSync(join(dir, "long.txt"), longLine + "\n", "utf8")
+    const err2 = await byName.edit.execute({ path: "long.txt", old_string: longOld, new_string: "x" }, ctx).then(() => null, (e) => e)
+    // 截断锁（正则行级——searched: 行合法含完整 old——只锁 similar lines 行预览恰为 80 字符）
+    const row = err2.message.match(/^ {4}L1: (.{80}) \(\d+%\)$/m)
+    assert.ok(row, "T14.1.1: 行格式 = 4 空格 + L1: + 80 字符预览 + 分: " + err2.message)
+    assert.equal(row[1], longOld.slice(0, 80), "T14.1.1: 行预览截断至 CANDIDATE_PREVIEW_LEN(80)——80 字符后内容不出现")
+
+    // 批量通道自动继承（computeEditEntry 单一权威——batch 错误同含 similar lines 段）
+    const err3 = await byName.edit.execute({ edits: [{ path: "f.mjs", old_string: "function nostart", new_string: "x" }] }, ctx).then(() => null, (e) => e)
+    assert.ok(err3.message.startsWith("edit aborted (atomic — no files written): "), "batch 前缀不动: " + err3.message)
+    assert.ok(
+      err3.message.includes("\n\n  similar lines:\n    L5: function start() { (50%)"),
+      "T14.1.1: 批量路径同含 similar lines 段（computeEditEntry 内追加——自动继承）: " + err3.message,
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
+
+test("edit §14.1 T14.1.6: 单行 old not-found 且文件无近似行（零候选）→ 无 similar lines 段——searched 前缀与 grep 引导行保留", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-t1416-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "f.txt"), "alpha\nbeta\ngamma\n", "utf8")
+    const err = await byName.edit.execute({ path: "f.txt", old_string: "xyzzy plugh xyzzard", new_string: "x" }, ctx).then(() => null, (e) => e)
+    assert.ok(err, "edit should fail")
+    assert.ok(
+      err.message.includes('  searched: "xyzzy plugh xyzzard" — use grep to locate the actual content'),
+      "T14.1.6: searched 前缀 + grep 引导保留（零候选省略仅作用于 similar lines 段）: " + err.message,
+    )
+    assert.ok(!err.message.includes("similar lines"), "T14.1.6: 零候选 → 无 similar lines 段（整段省略——不输出空段）: " + err.message)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 
 

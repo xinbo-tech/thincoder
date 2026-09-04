@@ -330,10 +330,10 @@ async function execPut(memory, args, opts, dirs) {
 }
 
 /** action list — new inventory action (read-only): scope/type/keyword filters + limit truncation note. */
-function execList(memory, args, dirs) {
+async function execList(memory, args, dirs) {
   const scope = args.scope ?? null
   if (scope && !MEMORY_SCOPES.includes(String(scope))) throw new Error(`memory list: invalid scope "${scope}"`)
-  const rows = matchMemoryRows(memory, {
+  const rows = await matchMemoryRows(memory, {
     scope: scope ? String(scope) : null,
     type: validateTypeFilter(args.type),
     keyword: args.keyword ? String(args.keyword).trim() : null,
@@ -364,7 +364,7 @@ async function execDelete(memory, args, dirs) {
   if (scope === "project" && !dirs.project) throw new Error("project scope unavailable: no project directory configured")
   if (scope === "team" && !dirs.team) throw new Error("team scope not configured: set memory.team in ~/.thincoder/config.json")
   const filters = { scope: String(scope), type, keyword }
-  const rows = matchMemoryRows(memory, { ...filters, projectDir: dirs.project, teamDir: dirs.team })
+  const rows = await matchMemoryRows(memory, { ...filters, projectDir: dirs.project, teamDir: dirs.team })
   if (rows.length === 0) return "0 条匹配"
   if (args.confirm !== true) {
     const lines = [rows.length > 5 ? `将删 ${rows.length} 条：前 5 条预览` : `将删 ${rows.length} 条`]

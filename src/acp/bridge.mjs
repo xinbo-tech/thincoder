@@ -122,7 +122,8 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     await writeBuffer(p, joinWithEol(normalizeEOL(out.updated).split("\n"), raw))
     return `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))`
   }
-  /** 数组形态（D15.7）：条目校验（path/validateEditEntry/互斥——同本地 edit-batch 措辞）→
+  /** 数组形态（D15.7）：条目校验（path——顶层默认自 args.path ?? args.filePath（pathOf）——
+   *  2026-09-05 用户裁定 CLI parity——/validateEditEntry/互斥（只对顶层 old/new）——同本地 edit-batch 措辞）→
    *  读全部涉及文件缓冲（同文件去重——一次读）→ 逐条 computeEditEntry（abortPrefix——批量
    *  原子前缀；同文件条目按数组序串行累积——第二条基于第一条结果）→ 全部通过 → 逐文件写回
    *  一次（判失败 → 零写；写失败 → 同本地 edit-batch 既有原子语义）。 */
@@ -134,12 +135,15 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     assertEditArgsExclusive(args)
     const groups = new Map() // path → { path, raw, content, edits }
     for (const e of edits) {
-      if (!e.path) throw new Error("each edit must have a path")
-      validateEditEntry(e, { label: `edit for ${e.path}: `, rich: false })
-      let g = groups.get(e.path)
+      // 2026-09-05 用户裁定（CLI parity——本地 edit-batch 同句）：条目自带 path 优先；
+      // 缺省回退顶层 path（pathOf——path/filePath 别名同单形态）
+      const p = e.path ?? pathOf(args)
+      if (!p) throw new Error("each edit must have a path — give each entry its own path or pass a top-level path")
+      validateEditEntry(e, { label: `edit for ${p}: `, rich: false })
+      let g = groups.get(p)
       if (!g) {
-        g = { path: e.path, raw: "", content: "", edits: [] }
-        groups.set(e.path, g)
+        g = { path: p, raw: "", content: "", edits: [] }
+        groups.set(p, g)
       }
       g.edits.push(e)
     }

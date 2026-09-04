@@ -145,3 +145,40 @@ test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--check) + 越�
     rmSync(ext, { recursive: true, force: true })
   }
 })
+
+
+test("execute §14.1 T14.1.4: 超时错误含重试引导句（larger timeoutMs / bash——D14.1.2 锚逐字）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-t1414-"))
+  try {
+    const out = await executeTool.execute({ code: "while (true) {}", timeoutMs: 300 }, { cwd: dir })
+    assert.equal(
+      out,
+      "Error: script timed out after 300ms — retry with a larger timeoutMs (up to 600000) for long scripts, or use bash (default 120s) for shell commands",
+      "T14.1.4: 超时错误 = 既有前缀 + 引导句（实际时长变量化——上限数字 600000 与代码 Math.min(t, 600_000) 一致）",
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+
+
+test("execute §14.1 T14.1.5: 成功路径/其他错误输出不含引导句（零破坏回归——N-14.1）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-t1415-"))
+  try {
+    const ok = await executeTool.execute({ code: 'console.log("fine")' }, { cwd: dir })
+    assert.equal(ok, "fine")
+    assert.ok(!ok.includes("retry with a larger timeoutMs"), "成功输出不含引导句: " + ok)
+    const errOut = await executeTool.execute({ code: "process.exit(3)" }, { cwd: dir })
+    assert.match(errOut, /exit code 3/)
+    assert.ok(
+      !errOut.includes("retry with a larger timeoutMs") && !errOut.includes("up to 600000"),
+      "非超时错误不含引导句: " + errOut,
+    )
+    const ref = await executeTool.execute({ code: 'readFile("x.txt")' }, { cwd: dir })
+    assert.ok(!ref.includes("retry with a larger timeoutMs"), "ReferenceError 路径不含引导句: " + ref)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+

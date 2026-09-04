@@ -230,11 +230,27 @@ describe("M2 — tools, permissions, fs routing (bridge callbacks)", () => {
     assert.equal(rEmpty.result, "Error: edits must be a non-empty array of {path, old_string, new_string}")
     const { cb: cb2 } = mkVfs({ "a.txt": "x\n" })
     const rMissing = await cb2.toolRouter("edit", { edits: [{ old_string: "x", new_string: "y" }] })
-    assert.equal(rMissing.result, "Error: each edit must have a path")
-    // 混用（edits + 单形态参数）：互斥错误——同本地
+    assert.equal(rMissing.result, "Error: each edit must have a path — give each entry its own path or pass a top-level path")
+    // 混用（edits + 顶层 old/new）：互斥错误收窄——同本地（顶层 path 已放行——见 T15.27b）
     const { cb: cb3 } = mkVfs({ "a.txt": "x\n" })
     const rMix = await cb3.toolRouter("edit", { path: "a.txt", old_string: "x", new_string: "y", edits: [{ path: "a.txt", old_string: "x", new_string: "y" }] })
-    assert.ok(rMix.result.includes("edits array is mutually exclusive with path/old_string/new_string"), rMix.result)
+    assert.ok(rMix.result.includes("edits array is mutually exclusive with top-level old_string/new_string"), rMix.result)
+  })
+
+  it("T15.27b top-level path + entries without their own path: bridge defaults to the top-level path (2026-09-05 user ruling)", async () => {
+    const { cb, reads, writes } = mkVfs({ "a.txt": "one\ntwo\n" })
+    const r = await cb.toolRouter("edit", {
+      path: "a.txt",
+      edits: [
+        { old_string: "one", new_string: "ONE" },
+        { old_string: "two", new_string: "TWO" },
+      ],
+    })
+    assert.equal(r.handled, true)
+    assert.deepEqual(reads().map((c) => c.p.path), ["a.txt"], "一次读（同文件去重）")
+    assert.equal(writes().length, 1, "一次写")
+    assert.equal(writes()[0].p.content, "ONE\nTWO\n", "两条都生效（串行累积）")
+    assert.equal((r.result.match(/OK: edited a\.txt via IDE/g) || []).length, 2, r.result)
   })
 
   it("T15.28 array, two files: both read and written through the IDE", async () => {

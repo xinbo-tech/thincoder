@@ -22,7 +22,7 @@
  *   nodeArgs   — (scriptFile) extra node flags before the script (e.g. --test, --check); eval-like flags rejected
  *   workdir    — run in this sub-directory (no directory restriction)
  *   filter     — return only output lines matching this regex (case-insensitive)
- *   timeoutMs  — timeout (default 30s, max 60s)
+ *   timeoutMs  — timeout (default 30s, max 600000ms)
  */
 import { spawn } from "node:child_process"
 import { resolve } from "node:path"
@@ -31,6 +31,13 @@ import { DESC } from "./shared.mjs"
 const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
 const DEFAULT_TIMEOUT = 30_000
+
+/**
+ * 超时错误文本——带重试引导（TOOLS.md §14.1 D14.1.2——"下一跳"）：数字 = 实际生效的
+ * timeoutMs（Math.min(t, 600_000) 或默认 30s）——上限 600000 与 schema/头注/execute.md 一致。
+ */
+const timeoutErrorText = (timeoutMs) =>
+  `Error: script timed out after ${timeoutMs}ms — retry with a larger timeoutMs (up to 600000) for long scripts, or use bash (default 120s) for shell commands`
 
 /** Resolve workdir relative to cwd — no boundary assertion
  *  (§10.1 2026-09-02: workspace confinement removed; the child node process is
@@ -76,7 +83,7 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
     const kill = () => { try { child.kill("SIGKILL") } catch { /* already gone */ } }
     // After kill, wait for "close" (child fully reaped) before settling — settling
     // early races the caller deleting the cwd dir while the child still holds it.
-    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : `Error: script timed out after ${timeoutMs}ms`, false), 3000) }
+    const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : timeoutErrorText(timeoutMs), false), 3000) }
     const onAbort = () => { if (mode) return; mode = "abort"; kill(); armKick() }
 
     timer = setTimeout(() => { if (!mode) { mode = "timeout"; kill(); armKick() } }, timeoutMs)
@@ -96,7 +103,7 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
     child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`, false))
     child.on("close", (code) => {
       if (mode === "abort") return settle("(stopped)", false)
-      if (mode === "timeout") return settle(`Error: script timed out after ${timeoutMs}ms`, false)
+      if (mode === "timeout") return settle(timeoutErrorText(timeoutMs), false)
       const out = outBuf.trimEnd()
       const err = errBuf.trim()
       if (code === 0) {

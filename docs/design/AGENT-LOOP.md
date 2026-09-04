@@ -2360,7 +2360,7 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 
 ### 21. 普通模式偏差审计（2026-09-04 · 用户需求——"普通模式也应该有文档，不过用户经常会忽视，agent 也会忽视……我希望审计的是：①口头指令落设计文档了吗？②实现和文档和口头指令一致吗？"）
 
-> 状态：**需求+设计（2026-09-04——用户发起——评审待发起——实现随批（main.md/coder.md/discipline.md 提示词——与 §20.9/§14 system.md 同域——排队）——动机：普通模式 coder 交付——主代理验证（§13）只"读声称改动+跑测试"——无偏差检查——口头指令→开发（不落文档）→实现与口头偏离——静默无声）——2026-09-04 22:16 用户裁「先不做这个」——挂起——**2026-09-04 23:53 用户恢复（需求翻转：开发前也落档 + 完成后检查补写——普通模式继承工程模式文档纪律无豁免——F-N1.1 改自动补写 / D-N1.3 删排除转纪律 / F-N1.3 + D-N1.5 新增开发前落档）**——round1 评审 2026-09-04 0🔴 通过（token 87db7936）**，#1/#2 实现前必须处置 + #3/#4/#5 调和（round2 处置 2026-09-05 0:11 用户"都同意" + 0:34 用户"可以"：D-N1.1 锚加自动补写 / D-N1.5 补英文逐字锚（discipline.md 全英文）+ 删"搜索引擎" + 职责归主 agent / T-N1.4 断言改英文 + 新增 T-N1.5 零残留 / F-N1.2 四类偏差调和（超清单改动） + D-N1.5 完工时报告真实文档漂移）——**round2 复审待发起**——恢复条件：用户发起**。
+> 状态：**需求+设计（2026-09-04——用户发起——评审待发起——实现随批（main.md/coder.md/discipline.md 提示词——与 §20.9/§14 system.md 同域——排队）——动机：普通模式 coder 交付——主代理验证（§13）只"读声称改动+跑测试"——无偏差检查——口头指令→开发（不落文档）→实现与口头偏离——静默无声）——2026-09-04 22:16 用户裁「先不做这个」——挂起——**2026-09-04 23:53 用户恢复（需求翻转：开发前也落档 + 完成后检查补写——普通模式继承工程模式文档纪律无豁免——F-N1.1 改自动补写 / D-N1.3 删排除转纪律 / F-N1.3 + D-N1.5 新增开发前落档）**——round1 评审 2026-09-04 0🔴 通过（token 87db7936）**，#1/#2 实现前必须处置 + #3/#4/#5 调和（round2 处置 2026-09-05 0:11 用户"都同意" + 0:34 用户"可以"：D-N1.1 锚加自动补写 / D-N1.5 补英文逐字锚（discipline.md 全英文）+ 删"搜索引擎" + 职责归主 agent / T-N1.4 断言改英文 + 新增 T-N1.5 零残留 / F-N1.2 四类偏差调和（超清单改动） + D-N1.5 完工时报告真实文档漂移）——**round2 复审 2026-09-05 0🔴 通过——批准**（token 260ea5fc…/designId 739e3ad6——六项修复声明核对落地——4 项 advisory：#1/#2 🟡 实现前处置（D-N1.1 锚中文内嵌 + 断言短语不逐字；F-N1.3 开发前落档句无断言）+ #3/#4 🔵——**处置待用户裁决**）——round3 处置 2026-09-05 0:51 用户"都修"（advisory #a/#b/#c 已修：D-N1.1 锚改纯英文+`add a short change record` 连续子串 ✓ / F-N1.3 补英文逐字锚 + T-N1.6 新增 + AC-N1.1 补 1/6 ✓ / D-N1.4 范围补 discipline.md ✓ + METHODOLOGY.md 2026-08-23 条 superseded as-of 注 ✓；#d 不修——F-N1.2 已注明等价）——实现待用户批准（依赖：prompts.test.mjs 落点 §18.14 拆分——排队）——恢复条件：用户发起**——**2026-09-05 用户"批准" → 双端 eng-coder 实现完成：CLI id:1 clean（audit CLEAN + advisor 0🔴 + 修正轮 0——L1 69/69）+ VS Code id:2 clean（audit CLEAN + advisor 0🔴 + 修正轮 1/5 位置微调——L1 61/61 + 全量 1134/1134）——父侧 L2 核销：CLI 1439/1391/0fail（48 slow skip）+ VS Code 1140/1140/0fail——T-N1.1/1.2/1.4/1.5/1.6 全绿 + T-N1.3 回归零破坏——双端锚文本逐位在档——AC-N1.1 ✓ AC-N1.2 ✓ AC-N1.3 ✓（零额外 LLM——纯提示词层）——验收全勾销（实现批确认后落档）**。
 
 **问题（P-N1）**：普通模式无偏差审计——工程模式的 explore 审计（§18）只覆盖 eng-coder——普通模式 coder 交付：①用户口头指令常未被落文档（用户忽视+agent 忽视）；②实现与口头指令/文档偏离无人对照——静默简化漏——主代理验证只确认"文件改对+测试过"——不查"方向对不对"。
 
@@ -2372,17 +2372,18 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 
 **设计（D-N1）**：
 - **D-N1.1（主代理条款——main.md Delegation 段/§13 验证段扩——评审 #1 英文逐字锚/#4 文档地图/#3 协调**：主代理验证 coder 交付时——对照①本轮用户指令（会话历史——口头）②板块设计文档（**先查 docs/design/README.md 文档地图（§12）定位归属文档——若存在**）——查三向一致 + 指令落文档（F-N1.1/1.2）——结果进交付复核（偏差→报告用户；无偏差→正常）——**零额外 LLM（读是既有动作）**；**英文逐字锚（维护：挂 §13 验证句后）**：
-  > **When verifying a subagent delivery, also check: (a) whether this round's user instruction landed in the board design doc (docs/design/ — locate the owner via the doc map); if not, add a short "变更记录/决策说明" (change record) to the owning doc, locating it via the doc map; (b) whether the implementation matches the design doc (if any) AND the user instruction — deviations (partial implementation / silent simplification / doc drift / out-of-scope) go to the user. Zero extra LLM — the verification reads the claimed files anyway; compare against the instruction and the doc in the same pass.**
+  > **When verifying a subagent delivery, also check: (a) whether this round's user instruction landed in the board design doc (docs/design/ — locate the owner via the doc map); if not, add a short change record to the owning doc, locating it via the doc map (变更记录/决策说明 appended to that doc); (b) whether the implementation matches the design doc (if any) AND the user instruction — deviations (partial implementation / silent simplification / doc drift / out-of-scope) go to the user. Zero extra LLM — the verification reads the claimed files anyway; compare against the instruction and the doc in the same pass.**
   （**评审 #3 协调**：main.md 同段已有 §20.7 D-PS1 锚（当前 :17——本批挂其后——不替换——实现批任务书注明合并文本 = §20.7 锚 + §21 扩句）；
 - **D-N1.2（coder 自查项——coder.md 交付表扩——评审 #1 英文逐字锚**：coder 交付报告加一致性自查行（非执行——报告可含——主代理复核为准）；**英文逐字锚**：
   > **- consistency self-check: does the delivery match the task instruction and the board design doc (if any)? Report deviations explicitly.**；
 - **D-N1.3（纪律——评审 #5 明示取舍**✝**，2026-09-04 用户翻转）**：普通模式继承工程模式同款纪律——**代码变更都必须落文档，无豁免**（无"改动太小免文档"通道）——开发前落档（F-N1.3 定位归属）→ 编码 → 完成后检查补写（F-N1.1 自动补写）——**无文档的"日常开发"不存在**（✝ 原"落档行为机制不在本批"已删除——2026-09-04 用户裁定）；
-- **D-N1.4（测试）**：T-N1 系——main.md/coder.md 语句断言（fail-when-unchanged——prompts.test.mjs——拆分后落点）。
+- **D-N1.4（测试）**：T-N1 系——main.md/coder.md/discipline.md 语句断言（fail-when-unchanged——prompts.test.mjs——拆分后落点）。
 - **D-N1.5（开发前落档条款——discipline.md 强触发——2026-09-04 新）**：
   - **discipline.md（M/S 级改强触发——英文逐字锚）**：
     > **- Medium (2-3 steps, refactoring): Read the docs → Plan → Change → update the owning doc — a decision or completed change is recorded there (no gap-spotting trigger; small changes are documented too). No design doc needed. Use `task` tool.**
     > **- Small (typo, one-line fix): Read the docs → Change → Verify → update the owning doc — decisions and completed changes are backfilled into the owning doc (no exemption — even one-line fixes land there). Use `task` tool. No design doc.**
-  - **main.md/coder.md（开发前落档职责归主 agent——§11 确认流程合流）**：主 agent 在执行本轮任务前定位文档归属（文档地图 → 所属板块文档），已有写变更段、无则新建并登记地图——然后才派发/编码——不用 coder 子代理承担落档（避免扩界）；
+  - **main.md/coder.md（开发前落档职责归主 agent——§11 确认流程合流——评审 round2 advisory #2 补断言）**：主 agent 在执行本轮任务前定位文档归属（文档地图 → 所属板块文档），已有写变更段、无则新建并登记地图——然后才派发/编码——不用 coder 子代理承担落档（避免扩界）；**英文逐字锚（维护：挂 main.md §11 开工前确认段尾 / coder.md 任务书段）**：
+    > **- before you start coding, locate the owning design doc for this change (docs/design/ — via the doc map); if it exists, note the change in it (变更记录/设计注); if not, create it and register it in the map. Then code. No exemption — even one-line fixes.**；
   - **完工时**：主 agent 对照所属文档检查——指令落档没 + 实现与文档一致（F-N1.1/1.2 审计 + F-N1.3 补写）——没落的补写（D-N1.1 锚 "add a short change record"）；**实现与文档不一致（真实文档漂移）→ 报告用户而非擅自改文档**（与 §18 同口径——文档修订归父侧）；
 
 **受影响文件（两端）**：`src/prompts/main.md`（D-N1.1 条款）+ `src/prompts/coder.md`（D-N1.2 自查行）+ `src/prompts/discipline.md`（**D-N1.5 强触发——M/S 级句改英文前档**）+ 测试（prompts.test.mjs——§18.14 拆分后）——AGENT-LOOP.md(§21 本节)；CHANGELOG(父侧)。**不改**：§18（工程模式流程不动）/explore 审计不动（普通模式轻量——主代理顺手——非独立 LLM）。
@@ -2391,13 +2392,14 @@ code review 0🔴（6 项——2 功能级 🟡 + 1 登记 🟡 + 3 文案/形�
 
 | # | 类别 | 输入 | 预期输出 |
 |---|---|---|---|
-| T-N1.1 | N | 读 main.md | 含英文逐字锚 "instruction not documented/landed in the board design doc" + "add a short change record"（自动补写）+ "deviations (partial implementation / silent simplification / doc drift / out-of-scope)"（fail-when-unchanged——评审 #1 改英文短语——评审 round2 #1 补补写短语） |
+| T-N1.1 | N | 读 main.md | 含英文逐字锚 "landed in the board design doc" + "add a short change record"（自动补写）+ "deviations (partial implementation / silent simplification / doc drift / out-of-scope)"（fail-when-unchanged——评审 #1 改英文短语——评审 round2 #1 补补写短语——advisory #a 改纯英文锚对齐 token） |
 | T-N1.2 | N | 读 coder.md | 含英文逐字锚 "consistency self-check"（fail-when-unchanged——评审 #1 改英文短语） |
 | T-N1.3 | E | 回归——既有 main.md + coder.md 断言（§20.7 D-PS1/§7.3 T-SP 系等） | 全绿（零破坏——评审 #2 补 coder.md） |
 | T-N1.4 | N | 读 discipline.md | 含英文锚 "update the owning doc — a decision or completed change is recorded there" + "small changes are documented too"（D-N1.5 强触发——fail-when-unchanged——评审 round2 #2 改英文断言） |
 | T-N1.5 | E | 读 discipline.md | **不含旧条件句 "if you spotted a gap"**（零残留——旧 M/S 弱触发已替换——评审 round2 #2） |
+| T-N1.6 | N | 读 main.md + coder.md | 含英文锚 "before you start coding, locate the owning design doc" + "register it in the map"（开发前落档——F-N1.3——fail-when-unchanged——advisory #b 补断言） |
 
-**验收（AC-N1）**：AC-N1.1 = T-N1.1/1.2 绿；AC-N1.2 = T-N1.3 绿（零破坏——main.md + coder.md）；AC-N1.3 = 审计零额外 LLM（**机制锚点——评审 #6**：不新增工具/不 spawn explore/不改 §13 验证路径——§21 设计即满足——主代理读数时顺手对照——实施后可由实现批在验证中确认）。
+**验收（AC-N1）**：AC-N1.1 = T-N1.1/1.2/1.6 绿；AC-N1.2 = T-N1.3 绿（零破坏——main.md + coder.md）；AC-N1.3 = 审计零额外 LLM（**机制锚点——评审 #6**：不新增工具/不 spawn explore/不改 §13 验证路径——§21 设计即满足——主代理读数时顺手对照——实施后可由实现批在验证中确认）。
 
 
 ### 21.1 调度器环形死锁修正（2026-09-04 · 用户"环形死锁的问题你得先处理一下"——两次实证 id:26/27、id:32/33——根因代码级确诊）

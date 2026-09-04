@@ -216,13 +216,13 @@ export const editTool = {
   parameters: {
     type: "object",
     properties: {
-      path: { type: "string", description: "File path" },
+      path: { type: "string", description: "File path — single form: required; with the edits array: optional top-level default for entries without their own path" },
       old_string: { type: "string", description: "Exact text to replace" },
       new_string: { type: "string", description: "Replacement text" },
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
       edits: {
         type: "array",
-        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. Mutually exclusive with path/old_string/new_string.",
+        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string — provide each change's old/new inside its edits entry.",
         items: {
           type: "object",
           properties: {
@@ -231,7 +231,7 @@ export const editTool = {
             new_string: { type: "string" },
             replace_all: { type: "boolean" },
           },
-          required: ["path", "old_string", "new_string"],
+          required: ["old_string", "new_string"],
         },
       },
     },
@@ -239,7 +239,13 @@ export const editTool = {
   },
   readonly: false,
   touchedPaths(args) {
-    if (args.edits) return args.edits.map((e) => e.path).filter(Boolean)
+    // 2026-09-05 用户裁定：顶层 path = 批默认——仅当有条目缺 path 时计入（条目全带 path
+    // 时顶层 path 不实际使用——不虚报进 _touchedFiles）
+    if (args.edits) {
+      const out = args.edits.map((e) => e.path).filter(Boolean)
+      if (args.path && args.edits.some((e) => !e.path)) out.push(args.path)
+      return out
+    }
     return args.path ? [args.path] : []
   },
   async execute(args, ctx) {

@@ -29,7 +29,7 @@ import { recordWrite, appendWriteContext, lastWriteOf, isDirty } from "./file.mj
 export const MAX_DIFF_LINES = 1000
 export const REGION_TOO_LARGE = "edit region too large — narrow the change"
 export const EMPTY_NEW_STRING = "empty new_string — for deletion, keep the context lines you want to preserve in both old_string and new_string"
-export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with path/old_string/new_string — use either the edits array or the single-form args, not both — split into two calls"
+export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry"
 
 /** 行切分（尾随换行终止最后一行——非额外空行）："a\nb\n" → ["a","b"]。 */
 function splitLines(text) {
@@ -90,9 +90,13 @@ function lcsMerge(a, b) {
   return merged.reverse()
 }
 
-/** D15.3#9：edits 与单形态参数互斥——错误文本带引导（随前置校验分支迁出至本模块）。 */
+/**
+ * D15.3#9 修订（2026-09-05 用户裁定——顶层 path + edits 并存合法化：顶层 path = 无自带
+ * path 条目的默认——模型直觉形态「顶层 path + 数组条目」不再拒绝；条目自带 path 优先）。
+ * 互斥收窄为只对顶层 old_string/new_string——edits 下它们无批语义可解释——顶层 path 不再触发。
+ */
 export function assertEditArgsExclusive(args) {
-  if (args.path || args.old_string !== undefined || args.new_string !== undefined) {
+  if (args.old_string !== undefined || args.new_string !== undefined) {
     throw new Error(EDIT_ARGS_MUTEX)
   }
 }

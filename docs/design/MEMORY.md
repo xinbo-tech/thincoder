@@ -198,3 +198,10 @@ search(memory, query, { limit })
 - explore/plan/consult 子代理按 **工具级 readonly 过滤**工具集（readonlyToolNames）——合并后 memory 工具（工具级 readonly:false）从这些只读子代理的工具表消失，子代理不再能 memory search（此前 memory_search readonly:true 在内）——动作级只读分类只覆盖 dispatch 门位，不覆盖子代理工具集过滤——**后续项：如需子代理 memory search，改 allowed 集为动作感知**
 - 旧工具名在 as-of 历史文档中保留（见上验收 #4 豁免清单）——活文 doc-sweep 列后续项
 - CLI dispatch Phase-2 批并行：memory search/list 仍按非只读串行执行（此前 memory_search 并批）——正确性无影响，只读并行属优化面，未做动作级并行标记
+
+**修复记录（2026-09-05——list/批量删匹配面改为磁盘为真相——孤儿文件缺陷）**：
+- **P-M1（缺陷）**：§6 list/批量 delete 的 project/team 匹配面 = files 索引表（fileRows——SELECT FROM files）——**磁盘上有、索引无行的 md 文件（孤儿：外部拷贝 / gitmem pull / 早期索引失败遗留）对 list 不可见、对批量删免疫**——而 deleteWhere 每次执行后调 syncDir 会把幸存孤儿重新入表——表现为**清空共享层需多轮循环 delete**（2026-09-05 实测清空：5 轮 162 条——每轮 delete 只删"当时入表且匹配"的文件，孤儿按 type 逐轮浮现）。单条 deleteByUid 早有磁盘兜底（fetchFileEntry 无行 → parseEntry 磁盘重建——L404-409）——批量路径缺失即不对称缺陷；
+- **D-M8（修复——磁盘为真相）**：`matchMemoryRows` 转 async——project/team 分支弃 files 表查询，改 `diskFileRows(dir, type, keyword)`：readdir + parseEntry 逐 .md 过滤（type 相等 / keyword 子串含 title OR content——大小写不敏感，SQLite LIKE parity）+ mtime 排序。list 与批量删预览/执行同一匹配面——**孤儿一轮即删**；deleteWhere 尾部 syncDir 照旧（收尾重索引幸存者 + 清 stale）。损坏文件（parseEntry 失败）跳过（与 syncDir 同语义——非合法条目）。files 表仍服务 search（FTS/向量）与 embedding 后台批次——索引层语义不变（**登记取舍：未入表孤儿在 syncDir 修复前不进 search 结果**）；
+- **测试**：CLI `memory.test.mjs` S6-3a（孤儿 list 可见 + type=decision 批删一次删光 2 孤儿 + 非目标保留 + files 行前提断言）——双端同构（VS Code 镜像待上抛项同步）；既有 S6-1..S6-6 全绿（零破坏——35 tests/31 pass/4 skip）；
+- **调用面**：execList/execDelete 预览 await matchMemoryRows（execList 转 async）；fileRows 函数删除（唯一引用被 diskFileRows 取代——likePattern 仍服务 personal 分支）。
+

@@ -32,11 +32,22 @@ export const MAX_ASYNC_CHECKS = 3
  *   "provider:model"  → the named provider with the named model
  *   "provider"        → the named provider's configured model
  *   "model"           → same provider as the parent, different model
+ *   "default"         → same as null: the parent's provider unchanged (explicit
+ *                       "use the default model" — 2026-09-05 user ruling; matched
+ *                       case-insensitively — parser-layer alias guard)
  * null → parent's provider unchanged.
  * API keys come from config.json only (env vars are not a key source).
  */
 export function resolveChildProvider(parent, modelArg) {
   if (!modelArg) return { ...parent.provider }
+  // "default" alias (2026-09-05 user ruling — ARCHITECTURE.md 子 agent 模型指定):
+  // the literal "default", matched case-insensitively, declares "no override →
+  // inherit the default model" — equivalent to null/omission (parent provider
+  // unchanged). Checked BEFORE the provider-name lookup so the alias is reserved
+  // (≡ omission — providers are not consulted) and never falls through to the
+  // model-name swap branch. Any other single-segment value keeps the legacy
+  // semantics below.
+  if (String(modelArg).toLowerCase() === "default") return { ...parent.provider }
   const providers = parent.config?.providersList ?? []
   const withKey = (p) => (p.apiKey?.trim() ? { ...p, apiKey: p.apiKey.trim() } : { ...p })
   if (modelArg.includes(":")) {

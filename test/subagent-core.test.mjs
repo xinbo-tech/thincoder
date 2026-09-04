@@ -88,6 +88,40 @@ test("resolveChildProvider: provider:model / provider name / model name / null",
   assert.throws(() => resolveChildProvider(parent, "nope:model"), /unknown provider/)
 })
 
+test("resolveChildProvider: \"default\" alias ≡ null — case variants never leak the literal (2026-09-05)", async () => {
+  const { resolveChildProvider } = await import("../src/agent-tools/subagent.mjs")
+  const parent = {
+    provider: { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+    config: {
+      providersList: [
+        { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+        { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "ds-key" },
+      ],
+    },
+  }
+  for (const v of ["default", "DEFAULT", "Default", ""]) {
+    const p = resolveChildProvider(parent, v)
+    assert.deepEqual(p, parent.provider, `literal ${JSON.stringify(v)} ≡ null (inherit parent)`)
+    assert.notEqual(p.model, "default", "provider.model never carries the literal (specForModel 不被以字面 default 调用——效果断言)")
+  }
+  // alias-first: even a provider literally named "default" must not shadow the
+  // alias (≡ omission — providers are not consulted for the alias)
+  const shadowed = {
+    provider: { name: "glm", baseURL: "x", model: "glm-5.2" },
+    config: { providersList: [{ name: "default", baseURL: "y", model: "m", apiKey: "k" }] },
+  }
+  const s = resolveChildProvider(shadowed, "default")
+  assert.equal(s.name, "glm", "alias wins over a provider literally named \"default\"")
+  assert.equal(s.model, "glm-5.2")
+  // negative: a non-default unknown single-segment value still swaps the model on
+  // the parent's provider (legacy semantics untouched — only the literal is an alias)
+  const unk = resolveChildProvider(parent, "totally-unknown-model")
+  assert.equal(unk.name, "glm")
+  assert.equal(unk.model, "totally-unknown-model", "non-default unknown single-segment keeps the model-name swap")
+
+})
+
+
 
 
 test("resolveChildProvider: env keys are NOT picked up (config-only)", async () => {
@@ -125,6 +159,97 @@ test("effectiveSubagentModel: tool arg > type-level > global > null", async () =
   const bare = { config: { agent: {} } }
   assert.equal(effectiveSubagentModel(bare, "coder", null), null, "null = inherit parent")
 })
+
+test("effectiveSubagentModel: \"default\" alias ≡ omission — chain levels + case variants (2026-09-05)", async () => {
+  const { effectiveSubagentModel } = await import("../src/agent-tools/subagent.mjs")
+  const parent = {
+    config: {
+      agent: { subagentModel: "global-model", subagentModels: { coder: "type-model" } },
+    },
+  }
+  const variants = ["default", "DEFAULT", "Default", "", null, undefined]
+  for (const v of variants) {
+    assert.equal(effectiveSubagentModel(parent, "coder", v), "type-model", `type-level wins for ${JSON.stringify(v)}`)
+    assert.equal(effectiveSubagentModel(parent, "explore", v), "global-model", `global fallback for ${JSON.stringify(v)}`)
+  }
+  const bare = { config: { agent: {} } }
+  for (const v of variants) {
+    assert.equal(effectiveSubagentModel(bare, "coder", v), null, `${JSON.stringify(v)} = inherit-parent marker when nothing is configured`)
+  }
+  // non-alias tool args still override; "default-*" model names are NOT the alias
+  assert.equal(effectiveSubagentModel(parent, "coder", "arg-model"), "arg-model", "tool arg wins")
+  assert.equal(effectiveSubagentModel(parent, "coder", "default-model"), "default-model", "\"default-model\" is a model name, not the alias")
+})
+
+test("spawn composition: \"default\" ≡ omission end-to-end — chain stages land on real models (2026-09-05)", async () => {
+  const { effectiveSubagentModel, resolveChildProvider } = await import("../src/agent-tools/subagent.mjs")
+  const base = {
+    provider: { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+    config: {
+      providersList: [
+        { name: "glm", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", apiKey: "glm-key" },
+        { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "ds-key" },
+      ],
+    },
+  }
+  // ① type-level configured（explore → deepseek:deepseek-v4-flash）
+  const typed = { ...base, config: { ...base.config, agent: { subagentModels: { explore: "deepseek:deepseek-v4-flash" } } } }
+  // ② only global configured（无类型级）
+  const glob = { ...base, config: { ...base.config, agent: { subagentModel: "deepseek-v4-pro" } } }
+  const composed = (parent, role, modelArg) => resolveChildProvider(parent, effectiveSubagentModel(parent, role, modelArg))
+  for (const v of ["default", "DEFAULT", "Default", "", null, undefined]) {
+    assert.deepEqual(composed(typed, "explore", v), composed(typed, "explore", null), `① type-level identical to omission for ${JSON.stringify(v)}`)
+    assert.equal(composed(typed, "explore", v).model, "deepseek-v4-flash")
+    assert.deepEqual(composed(glob, "explore", v), composed(glob, "explore", null), `② global identical to omission for ${JSON.stringify(v)}`)
+    assert.equal(composed(glob, "explore", v).model, "deepseek-v4-pro")
+    assert.deepEqual(composed(base, "coder", v), composed(base, "coder", null), `③ inherit-parent identical to omission for ${JSON.stringify(v)}`)
+    assert.equal(composed(base, "coder", v).model, "glm-5.2", "parent model inherited — the literal never becomes provider.model")
+  }
+})
+
+test("spawn model:\"default\" — child LLM request carries the real model; no spec warn for the literal (2026-09-05 trace regression)", async () => {
+  const { createAgent } = await import("../src/agent.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "cli-dflt-"))
+  const warns = []
+  const servers = []
+  const origWarn = console.warn
+  console.warn = (...a) => { warns.push(a.join(" ")) }
+  try {
+    // ① nothing configured → inherit parent provider/model
+    const s1 = await captureServer("child report " + "x".repeat(220))
+    servers.push(s1)
+    const parent1 = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${s1.port}`, apiKey: "x", model: "glm-5.2" },
+      tools: [noopRead],
+      config: { agent: {} },
+      cwd,
+    })
+    const r1 = String(await subagentTool.execute({ task: "quick job", role: "coder", model: "default" }, { agent: parent1, cwd, callbacks: {}, depth: 0 }))
+    assert.ok(r1.includes("child report"), "spawn with model:\"default\" completes normally")
+    assert.equal(s1.requests[0].model, "glm-5.2", "child request model = inherited parent model (pre-fix the literal went out — trace 473/475/487)")
+    // ② type-level configured + case variant → the chain model lands in the request
+    const s2 = await captureServer("child report " + "x".repeat(220))
+    servers.push(s2)
+    const parent2 = createAgent({
+      provider: { baseURL: `http://127.0.0.1:${s2.port}`, apiKey: "x", model: "glm-5.2" },
+      tools: [noopRead],
+      config: { agent: { subagentModels: { coder: "glm-5.3" } } },
+      cwd,
+    })
+    const r2 = String(await subagentTool.execute({ task: "quick job", role: "coder", model: "DEFAULT" }, { agent: parent2, cwd, callbacks: {}, depth: 0 }))
+    assert.ok(r2.includes("child report"))
+    assert.equal(s2.requests[0].model, "glm-5.3", "type-level chain model lands in the request (\"DEFAULT\" case variant)")
+    assert.ok(!warns.some((w) => w.includes('model "default" not found')), "specForModel never warned for the literal \"default\" (effect assertion)")
+  } finally {
+    // 失败路径安全（🔵 round1 #3）：断言失败也关闭两个 capture server——避免 node --test
+    // 因监听句柄不空而悬挂（正是本测试守的回归触发时最需要干净失败）
+    for (const s of servers) { try { s.server.close() } catch { /* already closed */ } }
+    console.warn = origWarn
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 
 
 
@@ -412,6 +537,9 @@ test("subagent tool description exposes the role capability matrix (no dev-comme
   assert.ok(!d.includes("SETUP.MJS"), "internal impl path leaked into description")
   const roleDesc = subagentTool.parameters.properties.role.description
   assert.ok(!roleDesc.includes("OVERRIDDEN"), "role description leaks dev comment")
+  const modelDesc = subagentTool.parameters.properties.model.description
+  assert.ok(modelDesc.includes('pass "default" to explicitly inherit the default model — equivalent to omitting the parameter'), '"default" alias documented verbatim in the model param description (2026-09-05)')
+
 })
 
 

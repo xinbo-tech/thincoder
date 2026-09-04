@@ -10,12 +10,12 @@
 
 | 项 | 指标 |
 |---|---|
-| 工具超时 | bash 120s；execute 子进程超时强杀（默认 30s、上限 60s）；其余工具同步即时返回 |
+| 工具超时 | bash 120s；execute 子进程超时强杀（默认 30s、上限 600s——2026-09-05 §14.1 核对 execute.mjs 修正：旧「上限 60s」记录过时——代码 `Math.min(t, 600_000)`——见 §14.1）；其余工具同步即时返回 |
 | 读/输出上限 | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览） |
 | 网络响应体 | websearch/fetch ≤5MB；HTML 转文本（stripTags/htmlToText） |
 | 路径安全 | ~~`resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算~~——**被 §10.1 取代（2026-09-02）**：边界断言移除——统一为无边界解析（resolveInCwd/resolveExternal 等价：相对路径相对 cwd 解析、绝对路径原样解析）；信任模型 + 权限门禁为唯一防线 |
 | 命令安全 | 破坏性命令 snapshot-then-proceed（审批 + gitGuardSnapshot/checkpoint），文本拦截仅提示不拦截 |
-| execute | 纯净 node ESM 子进程（与 bash 同边界：`import()`/`require()`/`process` 全可用、无阻断、无目录限制）——超时强杀（默认 30s、上限 60s）；**exec-prelude 助手已退役（2026-09-03 §12——不预置任何全局——文件操作走专用工具）** |
+| execute | 纯净 node ESM 子进程（与 bash 同边界：`import()`/`require()`/`process` 全可用、无阻断、无目录限制）——超时强杀（默认 30s、上限 600s——2026-09-05 §14.1 核对 execute.mjs 修正：旧「上限 60s」记录过时——代码 `Math.min(t, 600_000)`——见 §14.1）；**exec-prelude 助手已退役（2026-09-03 §12——不预置任何全局——文件操作走专用工具）** |
 | 返回契约 | `execute` 必须返回字符串（undefined 视为错误，dispatch 显式检查） |
 
 ## 1. 注册与 schema
@@ -36,7 +36,7 @@
 | **lint** | `node --check` fast path + 语言级联（tsc/ruff/cargo/go vet）——~~eslint 级联~~（2026-09-02 §10.2 删除，零依赖） |
 | **lsp** | 按需 spawn LSP server（`process.execPath` 直跑，无 shell），语义级诊断/跳转兜底 |
 
-**execute 工具**（纯净子进程——2026-09-03 §12 更新）：子进程跑 `node --input-type=module --eval`/scriptFile——顶层 await/动态 `import()`/`console`/`fetch`/`process` 全可用（非 vm 沙箱、无 import 阻断、无 require 禁）——与 bash 同边界（无目录限制、无伪沙箱）；超时 SIGKILL 强杀（默认 30s、上限 60s）。**exec-prelude 助手已退役（2026-09-03 §12）**：readFile/writeFile/glob/grep/log/require 预置全局全删——inline code 纯净 node ESM——需要 fs/path 时 `import` node: 模块——文件读取/修改走 read/ls/glob/grep/write/edit 专用工具。
+**execute 工具**（纯净子进程——2026-09-03 §12 更新）：子进程跑 `node --input-type=module --eval`/scriptFile——顶层 await/动态 `import()`/`console`/`fetch`/`process` 全可用（非 vm 沙箱、无 import 阻断、无 require 禁）——与 bash 同边界（无目录限制、无伪沙箱）；超时 SIGKILL 强杀（默认 30s、上限 600s——2026-09-05 §14.1 核对 execute.mjs 修正：旧「上限 60s」记录过时——代码 `Math.min(t, 600_000)`——见 §14.1）。**exec-prelude 助手已退役（2026-09-03 §12）**：readFile/writeFile/glob/grep/log/require 预置全局全删——inline code 纯净 node ESM——需要 fs/path 时 `import` node: 模块——文件读取/修改走 read/ls/glob/grep/write/edit 专用工具。
 
 ## 3. 调度与权限（见 AGENT-LOOP.md §4）
 
@@ -420,6 +420,53 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **验收（AC-TF）**：AC-TF1 = T-TF1/2 绿；AC-TF2 = T-TF3/4 绿；AC-TF3 = T-TF5 绿（零破坏）；AC-TF4 = 双端同语义（A 句）。
 
+### 14.1 失败反馈带下一跳：edit 单行相似行 + execute 超时引导（2026-09-05 · 用户「落设计」——来源：0 点后轨迹失败分析）
+
+> 状态：**已实现（2026-09-05——双端交付：CLI id:1 clean + VS Code id:2 clean——父侧 L2 核销：CLI 1435/1435、VS Code 1138/1138 全绿——T14.1.1-6 双端绿——AC14.1.1-3 核销）——评审 round1 1🔴+2🟡+2🔵（用户「全部按照建议」——🔴 execute 超时上限文档内冲突——已核实代码 `execute.mjs:167 Math.min(t, 600_000)`——600000 真——§0.1/§2 契约行 L13/18/39 同批修正 600s）——round2 复审 2026-09-05 0🔴 通过——批准（token 89cff711——4🔵 处置：T14.1.6 零候选行补/余随任务书）**。**实现批前提勘正（id:1/id:2 核对回填）：P14.1「F3 仅覆盖多行 old」前提不实——`findCandidates`（shared.mjs——LCS 连续子串/阈 0.5/top3）对任意 not-found 无条件调用——单行相似行 HEAD 已覆盖（CLI computeEditEntry + VS Code file.mjs 单形态——自 2026-08-26）——问题实况 = 零候选（阈排除）而非路径缺失 + VS Code 批量 edits-array not-found 原缺候选段（🟡#1——已补 `similarLinesBlock` 单一渲染权威——CLI 批量经 computeEditEntry 自动继承）——实测格式（块式 `similar lines:` + `L&lt;n&gt;: preview (NN%)`）与设计示例内联式不同——按「以实测为准」保留 F3 既有格式——T14.1 系转为锁定既有行为 + 补缺口测试。来源：2026-09-05 00:57-01:00 轨迹分析（12,828 调用窗口——edit 单行 not-found 35 次 + execute 超时 40 次——§14「失败反馈带下一跳」哲学补全）。
+
+**问题（P14.1）**：两个失败形态缺"下一跳"：
+1. edit 单行 old not-found——错误只有 `searched:` + grep 引导——模型需 grep→read 定位实际行再构造 old（两步）——F3（§14 已落地——"failed edit lists similar lines (line number + preview + score)——capped at top 3"）仅覆盖多行 old 失败场景；
+2. execute 超时——错误只有 "script timed out after 30000ms"——无重试方向——子代理验证期跑全量测试普遍 >30s（默认偏短且模型不知 timeoutMs 可调至 600000 / 可换 bash）。
+
+**需求（F14.1）**：作为 agent，我希望编辑失败与超时失败直接给可用的下一跳，不再凭记忆猜或猜超时参数：
+- **F-14.1a**：edit 单行 old not-found → 错误附文件内与 old 最相近 ≤3 行（行号 + 内容截断 + 相似度——F3 同款评分与格式——扩到单行 old 场景）；
+- **F-14.1b**：execute 超时错误 → 附重试引导（larger timeoutMs 上限 600000 / 换 bash 默认 120s）；
+- 边界：F3 多行逻辑零改动（单行路径复用同一候选评分函数——不重复实现）；相似行仅在 not-found 错误后追加（成功路径/其他错误文本零改动——N-14.1 零破坏）。
+
+**非功能（N-14.1）**：
+- N-14.1a 错误文本前缀稳定：既有 `file:` 行与 `searched:` 行逐字不动（追加段在其后——断言不破）；
+- N-14.1b 成本：相似评分仅发生在 not-found 分支（失败路径——非热路径）；
+- N-14.1c 双端同语义（§18.11——设计锚为准——各自照抄）。
+
+**设计（D14.1）**：
+- **D14.1.1（edit 单行相似行——CLI not-found 分支 / VS Code 镜像）**：单行 old not-found 时——复用 F3 既有候选评分函数（findCandidates 类——**F3 权威点（评审 #2）：not-found 错误构造处/评分函数所在文件——§15 后 edit 执行体/错误构造已迁 edit-diff.mjs（computeEditEntry——本地单形态/edit-batch/ACP 桥三通道共享单一权威——若相似行段在 computeEditEntry 内按 `oldLines.length` 分支追加——批量/桥自动继承且多行逐字不变——落点以实现批核实为准——**若函数不存在或实测格式与示例不符 → 以实测格式为准并如实上报**）——eng-coder 实现时核对：F3 多行路径用的评分是否已对单行 old 调用——**若未覆盖**：扩调用条件 `oldLines.length === 1` 也附 top3；**若已覆盖**：仅补测试锁定——差异如实报告；**零候选行为（评审 #4）：继承 F3 多行路径（无候选则整段省略）——实现批核对确认——若 F3 无此语义则补零候选用例锁定**）——错误追加段（格式逐字——行号 + 截断内容 + 分——**实现批首步实录 F3 多行输出字节作参照后定稿单行段**）：
+  > similar lines (top 3, score): L12 "…内容截断…" (0.81) — L40 "…" (0.75) — L3 "…" (0.60)
+- **D14.1.2（execute 超时引导——CLI execute.mjs 超时分支 / VS Code 镜像）**：超时错误文本追加（逐字）：
+  > script timed out after 30000ms — retry with a larger timeoutMs (up to 600000) for long scripts, or use bash (default 120s) for shell commands
+  超时机制零改动（仅消息拼接——实际时长变量化——**上限已核实（评审 #1 闭合）：execute.mjs:167 `Math.min(t, 600_000)`——600000 为真——锚句数字与代码一致——§0.1/§2 契约行（L13/18/39）已同批修正为 600s**）；成功路径零改动。
+- **受影响文件（双端）（评审 #3 补——全清单）**：
+  - CLI：edit not-found 错误构造处（实现批核实：computeEditEntry（edit-diff.mjs）或壳——**单一权威点——若在 computeEditEntry 内按 `oldLines.length` 分支——批量/ACP 桥自动继承且多行逐字不变**）+ execute.mjs（超时错误消息 + 头注 L25 旧「max 60s」同步 600000——实现批改）+ execute.md（若含超时上限句——实现批核对）+ test/file-tools.test.mjs（T14.1.1-3）+ test/execute.test.mjs（T14.1.4-5）+ CHANGELOG（父侧）；
+  - VS Code：镜像对应（edit-diff.mjs/file.mjs/execute 对应实现与描述/测试——实现批以实际为准——落点与 CLI 同构）；
+  - TOOLS.md §0.1/§2 契约行（L13/18/39）——父侧已同批修正（本批 doc-sync——D-E4「文档编辑与代码同批落」先例）。
+- **D14.1.3（测试——T14.1 系）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T14.1.1 | N | edit 单行 old not-found（文件含近似行） | 错误含 `searched:` 前缀（不动）+ `similar lines (top 3, score): L` 段——行号/截断/分 |
+| T14.1.2 | E | 多行 old 失败（F3 既有用例） | F3 输出逐字不变（回归——单行扩不破坏多行） |
+| T14.1.3 | E | 既有 not-found 前缀断言（T-TF3 grep 建议行） | 全绿（searched + grep 行保留——追加段在后） |
+| T14.1.4 | N | execute 慢脚本超时（mock 短 timeoutMs） | 错误含重试引导句（larger timeoutMs / bash） |
+| T14.1.5 | E | execute 成功/其他错误路径回归 | 零改动（成功输出不含引导句） |
+| T14.1.6 | E | 单行 old not-found 且文件无近似行（零候选——评审 round2 🔵#2 补） | 无 `similar lines` 段——`searched:` 前缀与 grep 引导行保留（零候选省略——与 F3 语义一致） |
+（落点：CLI test/file-tools.test.mjs（edit 域——T-TF3 同文件）+ test/execute.test.mjs；VS Code 镜像同构——实现批以实际为准。）
+
+**验收（AC14.1）**：AC14.1.1 = T14.1 系双端绿；AC14.1.2 = 既有失败文本前缀断言全绿（零破坏——T-TF3/T-TF5 回归）；**AC14.1.3（评审 #5 补）** = 父侧 L2 test:full 核销（双端）+ §0.1/§2 契约行与引导数字一致断言（600s——fail-when-unchanged——实现批核对 execute.mjs 头注/execute.md 上限句同步后绿）。
+
+**关键决策**：
+- **复用 F3 评分而非新造**：相似行机制 §14 已实现（多行场景）——单行只是扩调用条件——单一实现（不重复评分逻辑——与 §15 系"单一权威"同哲学）；
+- **execute 只改消息不改机制**：超时本身语义正确（30s 默认 + 可调参数已存在——上限 600000 已核实）——缺的是失败时的方向引导（模型不知道可调）——错误文本是"下一跳"的最小载体；
+- **契约行同步（评审 #1 处置）**：§0.1/§2 三处「上限 60s」记录经核实为过时（代码 `execute.mjs:167` = 600000）——本批同批修正为 600s（D-E4「文档编辑与代码同批落」先例）——execute.mjs 头注 L25 与 execute.md（若含上限句）由实现批同步——AC14.1.3 锁定。
+
+
 ## 15. 工具描述与语义对齐——「符合机器直觉」批（2026-09-04 · 用户「设计符合惯性」——来源：edit 6 次误操作实况 + 39 处全量审计）
 
 > 状态：**已实现（2026-09-04——双端交付：CLI id:5 clean + VS Code id:6 clean——父侧 L2 核销：CLI 1402/1402、VS Code 1114/1114 全绿——描述点矩阵 T15.16 实测 86 点）——评审 round1 1🔴+6🟡+6🔵 全处置——round2 复评通过（2026-09-04——0🔴——token e239214c）——复评 4🟡+4🔵 已随本修订处置**。
@@ -452,7 +499,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
   - **单行修改的模型心智**：改一行时**必须带公共上下文**（old=改行±相邻行、new=改后对应行）→ 走判定 2——**「只给旧行+新行（零重叠）」= 判定 1 = 插入**——**数据不丢**（插入可撤——替换不可逆——安全侧设计）；
   - **replace_all**：每处 old 段→new 段**字面替换**（不做插入规则——old 多处时"插到哪处"无定义）——**描述注明（并入逐字锚）**；
   - **edits 数组批量**：每条目独立按判定序（同文件条目串行——沿用现行语义）；批量原子性不变；
-  - **判定/应用全在新模块**——`src/tools/edit-diff.mjs`（CLI 新建）+ VS Code 同名新建——函数 `applyPatchLines(oldText, newText) → { ok, resultText | reason }`（LCS——old/new 行数各上限 1000——超限返回错误「edit region too large — narrow the change」）——**导出面（2026-09-04 实现批定稿——§15.1 上层引用）：核心 `applyPatchLines`；条目入口 `computeEditEntry(content, args, opts)`（匹配校验→判定序→应用——抛错含路径/引导——opts `{ path, absPath, abortPrefix, rich }`——abortPrefix=批量错误前缀（rich:false 批量态）；`validateEditEntry`（空 old / 非字符串 new）；`assertEditArgsExclusive`（edits 互斥）**——**CLI `file.mjs` 的 edit 执行体（单形态 + 前置校验分支）整段迁出至 edit-diff.mjs——file.mjs 只留工具壳与转发**（不"仅改调用"——执行体也在模块内——模块拆分写优先纪律：先迁后删、逻辑体不变、wiring 导入——**同步把 D15.3#9（edits 互斥错误文本）随前置校验分支迁出**）；VS Code `file.mjs` 448 行——edit 单形态/批量调用 edit-diff + 描述重写（+~25 行）≈ 473——安全（VS Code 无独立 edit-batch——迁 edit-diff 后两形态共用）；
+  - **判定/应用全在新模块**——`src/tools/edit-diff.mjs`（CLI 新建）+ VS Code 同名新建——函数 `applyPatchLines(oldText, newText) → { ok, resultText | reason }`（LCS——old/new 行数各上限 1000——超限返回错误「edit region too large — narrow the change」）——**导出面（2026-09-04 实现批定稿——§15.1 上层引用）：核心 `applyPatchLines`；条目入口 `computeEditEntry(content, args, opts)`（匹配校验→判定序→应用——抛错含路径/引导——opts `{ path, absPath, abortPrefix, rich }`——abortPrefix=批量错误前缀（rich:false 批量态）；`validateEditEntry`（空 old / 非字符串 new）；`assertEditArgsExclusive`（edits 与顶层 old/new 互斥——顶层 path 放行——2026-09-05 用户裁定——见 D15.3#9 修订注）**——**CLI `file.mjs` 的 edit 执行体（单形态 + 前置校验分支）整段迁出至 edit-diff.mjs——file.mjs 只留工具壳与转发**（不"仅改调用"——执行体也在模块内——模块拆分写优先纪律：先迁后删、逻辑体不变、wiring 导入——**同步把 D15.3#9（edits 互斥错误文本）随前置校验分支迁出**）；VS Code `file.mjs` 448 行——edit 单形态/批量调用 edit-diff + 描述重写（+~25 行）≈ 473——安全（VS Code 无独立 edit-batch——迁 edit-diff 后两形态共用）；
   - **行数风险（评审 #3 修正——重记账）**：CLI `file.mjs` 495 行——执行体迁出（-~68 行）+ 工具壳/转发（+~8 行）+ D15.3#3 read 别名（+2 行）→ 终态 ≈ 437——**安全**（原"≤5 行增量"未计 #3/#9/#10——已修正；若仍 >500——报停走模块拆分——预判条款不静默触限）；VS Code `file.mjs` 448 + 描述重写/调用 ≈ 473——安全；
   - **VS Code 双通道**：open doc（WorkspaceEdit）+ closed disk——diff 在计算层完成——两通道共用 `applyPatchLines`。
 - **edit.md 描述重写（逐字锚——两端照抄——以 D15.1 语义为准）**：
@@ -476,8 +523,13 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 | 6 | lsp 路由句 | 补：`Find files with glob / repo_outline — use lsp for definition / references / diagnostics` | tools/lsp.mjs（lsp 工具描述段） | tools/lsp.mjs（lsp 工具描述段） | 无 |
 | 7 | hashline 反向路由 | 已含 D15.2 | — | — | — |
 | 8 | write 补强 | 已含 D15.2 | — | — | — |
-| 9 | edits 互斥错误文本 | `edits array is mutually exclusive` 错误补引导：`use either the edits array or the single-form args, not both — split into two calls`（trace：1,295 次——模型混用） | tools/file.mjs edit 前置校验错误分支（随执行体迁 edit-diff.mjs） | tools/file.mjs（批量/单形态校验点——随执行体迁 edit-diff.mjs） | 无 |
+| 9 | edits 互斥错误文本——**2026-09-05 修订：顶层 path 并存合法化**（见行下 D15.3#9 修订注——取代「仅补引导」方案） | `edits array is mutually exclusive` 错误补引导：`use either the edits array or the single-form args, not both — split into two calls`（trace：1,295 次——模型混用） | tools/file.mjs edit 前置校验错误分支（随执行体迁 edit-diff.mjs） | tools/file.mjs（批量/单形态校验点——随执行体迁 edit-diff.mjs） | 无 |
 | 10 | hashline 错误引导 | `Hash sequence not found` 补：`for fresh hashes, re-read the file with hashes=true`（trace：830+ 次——hash 过期——模型重试不重读） | tools/file.mjs hashline 工具错误分支 | tools/file.mjs hashline 工具错误分支 | 无 |
+
+**D15.3#9 修订注（2026-09-05 用户裁定——顶层 path + edits 并存合法化——取代「错误文本补引导」方案）**：模型直觉形态「顶层 path + edits 数组」从「互斥拒绝」改为**合法**——顶层 path = 无自带 path 条目的**默认路径**（条目自带 path 优先——覆盖顶层）；`edits` 与**顶层 old_string/new_string** 仍互斥（错误文本收窄为只提 old/new——逐字锚两端照抄：`edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry`）；条目与顶层皆无 path → `each edit must have a path — give each entry its own path or pass a top-level path`。
+- **落点**：CLI `edit-diff.mjs`（EDIT_ARGS_MUTEX 文本 + assertEditArgsExclusive 只查 old/new）、`edit-batch.mjs`（条目 path 解析 `e.path || args.path`）、`file.mjs`（schema items.required 去 path + path/edits 描述 + touchedPaths 计顶层——仅当有条目缺 path）、`edit.md`（参数描述）；ACP `bridge.mjs` editBatch（`e.path ?? pathOf(args)`——第三通道 parity）；VS Code `file.mjs`（同语义——互斥检查只查 old/new、条目回退 `e.path || args.path || args.filePath`、描述/schema/touchedPaths 同步）；
+- **测试**：CLI `edit-tools.test.mjs`（顶层默认 / 条目优先 / 互斥收窄 + 缺 path 错误三新用例）、`acp.test.mjs`（T15.27 断言语义更新 + T15.27b 桥默认顶层正例）；VS Code `edit-eol.test.mjs`（四新用例）、`edit-semantics.test.mjs`（D15.3#9 锚更新为新句）、`file-tools.test.mjs`（touchedPaths 计顶层/不虚报/filePath 别名三断言）；
+- **AC**：三通道（本地磁盘 / VS Code 原生 / ACP 桥）`{ path, edits: [无自带 path 条目] }` 成功且同文件串行累积；`{ path, old_string, new_string, edits }` 仍互斥报错；`{ edits: [条目无 path] }`（无顶层）→ 路径错误新文本。
 
 **D15.4 六要素规范条款（TOOLS.md 本节落条款——所有工具描述（现有 + 未来）按此走查——86 个描述点走查在实现批完成并上报差异表——本节结论由实现批回填）**：
 - 六要素（工具描述必含——缺一补一）：**①一句话语义**（能做什么/不能做什么）；**②参数关系**（参数间约束——如 new 与 old 的关系规则）；**③路由**（走我/换谁——双向出口句）；**④破坏性明示**（覆盖/删除/不可逆——+恢复路径）；**⑤阻塞性**（是否等待/多久——如 check vs status）；**⑥结果形态**（返回什么/字段怎么读/失败分支）。
@@ -486,7 +538,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 
 **D15.5 trace 核对（2026-09-04 用户指示「写完再核对」——实数据——来源：`C:\Users\liwei\.thincoder\traces\2026-09-04` 4504 个 trace——304,365 条 tool 消息——30,890 失败（10.2%）——只读聚合）**：
 - **edit 族失败率（实测）**：edit 56,235 调用 / 8,214 失败（14.6%——not found 家族 5,190+——old_string matches 2 times 450——单参数/批量混用）；insert_after 11,753 / 3,027 失败（**25.8%**——行号漂移 guard 打回 1,056+：`after_line 在上次写入之后——行号已漂移`）；hashline_edit 16,453 / 3,294 失败（**20.0%**——Hash sequence not found 830+）；**apply_patch 203 / 203 失败（100%——见 D15.6）**；write 5,599 / 0（0%）；bash 90,725 / 9,449（10.4%——其中 4,144 = hasFileRedirection 护栏（**已随 §13 删除**——当日旧版本残留——不计入留存问题）；execute 21,001 / 5,149（24.5%——超时 280/Command failed 498——不属本批）；
-- **核对结论**：①审计候选全部被 trace 证实（edit 族为主战场）；②**审计漏网 1 项 = apply_patch 无坐标 hunk（100% 失败——见 D15.6）**——审计判"apply_patch 无此问题"系**误判**（只看了描述没看 trace——教训：描述审计必须与 trace 交叉验证）；③edits 互斥误用 1,295 次（`edits array is mutually exclusive`——模型同批既传 path/old/new 又传 edits——描述已写明——模型仍犯——错误文本改进见 D15.3#9）；④hashline 失败将 Hash 过期错误文本引导（#10）；⑤insert_after 高失败率=模型重试不重读（guard 已带漂移信息——错误文本已引导——**记录不扩**——深层治理（后向锚）另行立项）。
+- **核对结论**：①审计候选全部被 trace 证实（edit 族为主战场）；②**审计漏网 1 项 = apply_patch 无坐标 hunk（100% 失败——见 D15.6）**——审计判"apply_patch 无此问题"系**误判**（只看了描述没看 trace——教训：描述审计必须与 trace 交叉验证）；③edits 互斥误用 1,295 次（`edits array is mutually exclusive`——模型同批既传 path/old/new 又传 edits——描述已写明——模型仍犯——错误文本改进见 D15.3#9）——**已修订（2026-09-05 用户裁定：顶层 path 合法化为批默认——「仅补引导」方案作废——见 D15.3#9 修订注）**；④hashline 失败将 Hash 过期错误文本引导（#10）；⑤insert_after 高失败率=模型重试不重读（guard 已带漂移信息——错误文本已引导——**记录不扩**——深层治理（后向锚）另行立项）。
 **D15.6 apply_patch 无坐标 hunk 宽容（trace 核对新增——2026-09-04）**：
 - **P15.6（数据）**：apply_patch 203/203 全失败——169（83%）= `Malformed patch: bad hunk header "@@" (need @@ -old,count +new,count @@)`——模型提交的 hunk 头用**裸 `@@`**（省略行号坐标——LLM 自然行为：用上下文行定位而非计算坐标——unified diff 坐标对模型是负担）；34 = hunk context not found（旧内容不匹配——正常错误类）。
 - **D15.6.1（语义）**：`@@` 头（无坐标——`@@` 或 `@@\n` 后直接跟 hunk 体）——**接受**——hunk 定位改由**上下文行匹配**推导（hunk 体的空格上下文行作为锚——在文件中唯一匹配则应用；多重匹配/零匹配报错——错误文本含已尝试的锚片段）。标准坐标格式（`@@ -old,count +new,count @@`）不变——两格式并存。**hunk 体内 `-`/`+` 行不变**（diff 心智本身一致——只放宽头）。
@@ -698,6 +750,43 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **描述锚迁移重叠提示**：§15.2（edit 锚）与 §15.3（apply_patch 锚）都触 prompts.test.mjs T15.10a 系——两批串行交付——第二批实现时以第一批后的实际断言状态为准（实现批任务书注明）；
 - **行为修正口径**：接受面扩大（原拒绝→现接受）——登记 CHANGELOG（非破坏——无既有合法输入行为改变）；
 - **取代指针（评审 #2）**：§15 D15.6.2「每个无坐标 hunk 都必须含至少 2 行上下文」（L493）与 T15.18 表行为历史快照——保留原文——**实现批落地时同步加「——零上下文/1 上下文含 - 锚形态由 §15.3 放宽（锚序列唯一匹配即应用）」指针**（§15.2 L656 取代指针同款先例——文档同步清单随任务书）。
+
+### 15.3a apply_patch 文件头 `+++` 容缺（2026-09-05 · 用户「我的原则很简单用符合模型直觉的方式解决这个问题」——来源：父侧 apply_patch 3 连败实证——报错引导无效——与 §15.3 同哲学（接受面扩大——「唯一→做/歧义→报错」）、层不同（§15.3 改 hunk 定位层——本批改文件头解析层——同为 patch.mjs/more-file.mjs））
+
+> 状态：**已实现（2026-09-05——直接实施——CLI edit-tools 60/60（P15.10a-e 新增 5 例 + T15.38-44 回归）+ file-tools/prompts 99/99 零破坏；VS Code edit-semantics 58/58（5 例镜像）+ file-tools 10/10——双端同语义）**。来源：父侧 18:42:48/18:43:03/18:44:15 三次 apply_patch 失败——全部同形：单文件补丁 `--- a/<path>` 头后直接 hunk（缺 `+++ b/<path>` 配对行）→ `Malformed patch: expected "+++" line after "--- a/..."`——**报错文本逐字告知修法（加 +++ 行）仍三连重试同形**——含拆小重试、换目标文件重试、归因「解析器对这些文件报错」（错误归因——工具 100% 正确）——报错引导对 LLM 生成缺陷无效的又一次实证（§14/§15 已记录同族：hashline 830+ 次）——用户裁定「符合模型直觉」：形态合法化而非继续引导。
+
+**问题（P15.10）**：apply_patch 单文件补丁要求 `--- a/<path>` 与 `+++ b/<path>` 成对出现——模型自然输出常省略 +++ 行（从零重写单文件补丁时「精简」冲动——本会话 CLI 4 个补丁成对、VS Code 3 个单文件补丁全缺——跨仓库切换时头部模板退化）——严格拒绝制造无效失败且引导无效。
+
+**需求（F15.9）**：作为 agent，我希望 `--- a/<path>`（或 `--- b/<path>`）头后**直接跟 hunk** 时按同路径修改接受——不再要求 `+++ b/<path>` 配对行——文件名信息完整（oldPath 即目标）——唯一匹配即应用。
+
+**边界（B15.10——同 §15.3 「信息真缺失仍拒」哲学）**：
+- `--- /dev/null` 缺 `+++ b/<path>` → **仍拒——特报**：`"--- /dev/null" needs a "+++ b/<path>" line naming the new file — the --- side does not carry the file name`（新文件名从 --- 侧不可推导——信息真缺失——与纯 + 零上下文 hunk 拒同族）；
+- **删行内容 `-- x` 不误断**：patch 文本 `--- x`（行首 - 标记 + 内容 `-- x`——非 a//b/ 前缀形态）是普通删除行——不是文件头——hunk 体正常消费（顺带修复 CLI 旧行为：裸 @@ 边界对任何 `--- ` 无条件断——`-- x` 内容删行被误判文件头）；
+- 完整头（后随 `+++ `）任意老路径形态均认（git 规范不变）；多文件补丁内完整/容缺可混合。
+
+**设计（D15.11）**：
+- **D15.11.1（判定）**：`isFileHeader(line, nextLine)`——`--- ` 开头 &&（next 是 `+++ ` → 完整头；否则 oldPath ∈ a//b/ 前缀 → 容缺头；否则非头）。头处理三分支：完整（i+=2）/ 容缺（i+=1——newPath 推导 = oldPath——isNew=false）/ 特报（/dev/null）/ 原错保留（未知形态——仍可能是把删行误放文件位）；
+- **D15.11.2（hunk 边界同步）**：裸 @@ 体消费遇文件头（完整或容缺）即断——CLI L56 判据与 VS Code L128 统一为 isFileHeader（CLI 旧判据无条件断 `--- ` → 误伤删行内容——修齐；空行判据（复评 #1 幽灵上下文防护）同步收紧为 isFileHeader——`--- x` 删行内容不再被空行判据误断）；坐标 hunk 计数消费不受影响；
+- **D15.11.3（空段过滤）**：解析后过滤 hunk 数为 0 的文件段——不虚报 touchedPaths/摘要、不触发对不存在文件的整文件读取（旧行为：多文件补丁尾部空段头 → File not found 原子失败）；全空 → 既有 `No file changes found`；
+- **D15.11.4（描述同步——不触 NF15.8c 锚句）**：CLI apply_patch.md L6 + patch.mjs 参数 description L150 + VS Code 顶层描述 patch 行——补容缺说明句（new files still need `--- /dev/null` + `+++ b/<path>`）——NF15.8c 句（md L9 / VS Code L223）逐字不动（4 拷贝字节一致锚不回退）。
+
+**测试（P15.10a-e——双端）**：
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| P15.10a | N | 容缺头 `--- a/a.txt` + 裸 @@ hunk（无 +++ 行） | 应用——同路径修改成功（单文件自然形态） |
+| P15.10b | N | 多文件混合——a 完整头（+++ 配对）+ b 容缺头 | 两文件都应用（`Applied patch to 2 file(s)` / 双 Patched） |
+| P15.10c | E | `--- /dev/null` 缺 +++ | 特报（naming the new file——不写文件） |
+| P15.10d | E | 裸 @@ 内删行内容 `-- tgt`（patch 文本 `--- tgt`） | 不误断为文件头——正常删除（边界锁——旧 CLI 行为静默漏删） |
+| P15.10e | E | ①多文件补丁尾部容缺空段头（目标不存在）②纯空段补丁 | ①空段过滤——不虚报不无谓读——真实 hunk 应用 ②`No file changes found` |
+
+**验收（AC15.16）**：P15.10a-e 双端绿 + 既有 apply_patch 域断言全绿（T15.17-20/T15.38-44/原子性/多文件——零破坏——双端相关文件实测：CLI edit-tools 60 + file-tools/prompts 99；VS Code edit-semantics 58 + file-tools 10）。
+
+**关键决策**：
+- **形态合法化而非继续引导**（与 §15.3 用户「能不能把工具改得符合直觉」同一裁决——§9「顺手的护栏 ≠ 没护栏」：容的是形态——文件名字段信息完整时无护栏需求——`/dev/null` 信息真缺失仍拒）；
+- **报错文本保留给真正未知形态**（`--- x` 非 a/b/ 前缀非 /dev/null 且无 +++——如把删行误放文件段位——引导仍在）；
+- **CLI 空行判据收紧是顺带修复**（复评 #1 幽灵上下文防护的判据从「任何 `--- `」收窄到「文件头形态」——原判据会误断 `-- x` 内容删行——T15.38a 跨文件回归保留）；
+- **行为修正口径**：接受面扩大（原拒绝→现接受）+ 空段副作用消除——登记 CHANGELOG（非破坏——无既有合法输入行为改变）；CLI 侧一处隐性 bug 修复（`-- x` 删行静默漏删——本批测试锁定）。
+
 
 
 

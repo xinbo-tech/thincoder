@@ -111,6 +111,8 @@
 
 ### 2026-08-23：改码前读文档 + 中/小改后更新文档（嵌入 Workflow 箭头序列，已落地）
 
+> **⚠️ 已被 §21（AGENT-LOOP.md）取代（2026-09-05）**：本条目第 4 点的 `update the owning doc if you spotted a gap`（弱点触发——发现缺口才更新）已被普通模式文档纪律升级替换为**无条件补写**（决策落档 + 完成检查补写，无豁免——小修改也落档，含开发前落档）。当前权威：AGENT-LOOP.md §21 D-N1.3/D-N1.5 + discipline.md M/S 级英文逐字锚（`update the owning doc — a decision or completed change is recorded there` + `small changes are documented too`）。本条 as-of 快照保留历史。
+
 **需求**（用户拍板）：标准模式中，① 改代码前（不论大/中/小）都要求先读一些文档；② 中/小任务改完后、发现文档缺口时更新文档。
 
 **设计**（修订——读/更新文档**嵌入 Workflow 箭头序列**，而非独立段落；两端 byte-identical）：

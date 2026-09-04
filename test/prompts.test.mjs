@@ -989,17 +989,17 @@ test("prompts/discipline.md: 读/更新文档已嵌入 Workflow 箭头序列（�
   assert.ok(complex.includes("Read the docs → Requirements → Design → Development → Testing"), "Complex 箭头完整")
   assert.ok(!complex.includes("update the owning doc"), "Complex 层不含 update the owning doc")
 
-  // Medium 层箭头：Read the docs → Plan → Change → update the owning doc if you spotted a gap
+  // Medium 层箭头：Read the docs → Plan → Change → update the owning doc 强触发（D-N1.5——无 gap-spotting 触发）
   const medium = lines.find((l) => /Medium \(2-3 steps/.test(l.trim()))
   assert.ok(medium, "Medium 层存在")
   assert.ok(medium.includes("Read the docs → Plan → Change"), "Medium 箭头含 Read the docs → Plan → Change")
-  assert.ok(medium.includes("update the owning doc if you spotted a gap"), "Medium 箭头含 update the owning doc if you spotted a gap")
+  assert.ok(medium.includes("update the owning doc — a decision or completed change is recorded there"), "Medium 箭头含 update the owning doc 强触发（D-N1.5——无 gap-spotting 触发）")
 
-  // Small 层箭头：Read the docs → Change → Verify → update the owning doc if you spotted a gap
+  // Small 层箭头：Read the docs → Change → Verify → update the owning doc 强触发（D-N1.5——无豁免）
   const small = lines.find((l) => /Small \(typo, one-line fix\)/.test(l.trim()))
   assert.ok(small, "Small 层存在")
   assert.ok(small.includes("Read the docs → Change → Verify"), "Small 箭头含 Read the docs → Change → Verify")
-  assert.ok(small.includes("update the owning doc if you spotted a gap"), "Small 箭头含 update the owning doc if you spotted a gap")
+  assert.ok(small.includes("decisions and completed changes are backfilled"), "Small 箭头含 backfilled 强触发（D-N1.5——无豁免）")
 
   // 归属句（Workflow 段末）：Never create a new doc + find the owner and amend
   const ownLine = lines.find((l) => l.includes("Never create a new doc"))
@@ -1208,4 +1208,26 @@ test("prompts/system.md: Module Split Policy 段含 write-first / assertion coun
   assert.ok(text.includes("Module Split Policy"), "T-P1.1: system.md 含「Module Split Policy」——fail-when-unchanged（段被删即失败）")
   assert.ok(text.includes("write-first"), "T-P1.1: system.md 含「write-first」——fail-when-unchanged")
   assert.ok(text.includes("assertion count"), "T-P1.1: system.md 含「assertion count」——fail-when-unchanged（评审 #6 独特断言词）")
+})
+
+test("prompts: §21 普通模式偏差审计锚（T-N1——main/coder/discipline——fail-when-unchanged）", () => {
+  const mainText = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+  const coderText = readFileSync(join(PROMPTS_DIR, "coder.md"), "utf8")
+  const discText = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+  // T-N1.1：main.md D-N1.1 验证锚（自动补写 + 四类偏差——fail-when-unchanged）
+  assert.ok(mainText.includes("landed in the board design doc"), "T-N1.1: main.md 含 D-N1.1 锚 landed in the board design doc")
+  assert.ok(mainText.includes("add a short change record"), "T-N1.1: main.md 含自动补写锚 add a short change record")
+  assert.ok(mainText.includes("deviations (partial implementation / silent simplification / doc drift / out-of-scope)"), "T-N1.1: main.md 含四类偏差锚")
+  // T-N1.2：coder.md D-N1.2 一致性自查行
+  assert.ok(coderText.includes("consistency self-check"), "T-N1.2: coder.md 含一致性自查行 consistency self-check")
+  // T-N1.4：discipline.md D-N1.5 强触发（M/S 无 gap-spotting 触发）
+  assert.ok(discText.includes("update the owning doc — a decision or completed change is recorded there"), "T-N1.4: discipline.md 含 Medium 强触发锚")
+  assert.ok(discText.includes("small changes are documented too"), "T-N1.4: discipline.md 含 small changes are documented too")
+  // T-N1.5：旧弱触发零残留
+  assert.ok(!discText.includes("if you spotted a gap"), "T-N1.5: discipline.md 无旧弱触发 if you spotted a gap（零残留）")
+  // T-N1.6：main/coder 双端开发前落档锚（D-N1.5——F-N1.3）
+  for (const [name, text] of [["main.md", mainText], ["coder.md", coderText]]) {
+    assert.ok(text.includes("before you start coding, locate the owning design doc"), `T-N1.6: ${name} 含开发前落档锚`)
+    assert.ok(text.includes("register it in the map"), `T-N1.6: ${name} 含 register it in the map`)
+  }
 })

@@ -6,7 +6,8 @@
  * 语义：同一 path 的多条编辑按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的
  * 累积内容做匹配与替换；跨 path 条目互不影响（并行原子语义）；任一条失败 →
  * 全不写（原子性保留）。每条目独立按判定序（§15.2 分支 0 单行替换 / 零重叠→插入 / LCS /
- * 空 new 显式报错）。
+ * 空 new 显式报错）。顶层 path（args.path）为无自带 path 条目的默认（2026-09-05 用户裁定
+ * ——条目自带 path 优先——见 TOOLS.md D15.3#9 修订注）。
  */
 import { readFile, writeFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
@@ -33,14 +34,17 @@ export async function applyEditBatch(args, ctx) {
   // 除最后一条外全部静默丢失）；跨 path 条目互不影响（并行原子语义不变）。
   const groups = new Map() // abs → 每文件一条流水线
   for (const e of args.edits) {
-    if (!e.path) throw new Error("each edit must have a path")
+    // 2026-09-05 用户裁定：顶层 path + edits 并存合法化——`e.path || args.path`（条目优先；
+    // 缺省入口仅在此兜底）；两者皆无 → 原错误文本（措辞补顶层选项）。
+    const p = e.path || args.path
+    if (!p) throw new Error("each edit must have a path — give each entry its own path or pass a top-level path")
     // 前置校验（空 old / 非字符串 new——文本同 edit-diff 批量形态；读盘前校验）
-    validateEditEntry(e, { label: `edit for ${e.path}: `, rich: false })
-    const abs = resolveInCwd(ctx, e.path)
+    validateEditEntry(e, { label: `edit for ${p}: `, rich: false })
+    const abs = resolveInCwd(ctx, p)
     let g = groups.get(abs)
     if (!g) {
       const raw = await readFile(abs, "utf8")
-      g = { abs, path: e.path, raw, content: normalizeEOL(raw), edits: [] }
+      g = { abs, path: p, raw, content: normalizeEOL(raw), edits: [] }
       groups.set(abs, g)
     }
     g.edits.push(e)

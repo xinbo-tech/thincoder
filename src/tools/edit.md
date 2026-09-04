@@ -7,14 +7,14 @@ Edit a file as a patch. old_string is the current content of the region to chang
 - Rewrite an entire file → `write`
 - Rename a symbol project-wide → `lsp` or `grep` first to map every caller
 
-**Batch multiple edits into ONE call via the `edits` array** (preferred over N single edit calls): multiple changes to the SAME file go into one `edits` array (entries are applied serially, each based on the previous one's result); independent changes across MULTIPLE files also go into the same `edits` array — one call, atomic (any failure writes nothing). A batched call is one permission ask, one undo unit, and one turn instead of N.
+**Batch multiple edits into ONE call via the `edits` array** (preferred over N single edit calls): multiple changes to the SAME file go into one `edits` array (entries are applied serially, each based on the previous one's result); independent changes across MULTIPLE files also go into the same `edits` array — one call, atomic (any failure writes nothing). A batched call is one permission ask, one undo unit, and one turn instead of N. A top-level path may accompany the array — entries without their own path inherit it (entry paths override).
 
 Parameters:
-- path (required): File path
+- path: File path (single form: required; with the edits array: optional — the default for entries without their own path)
 - old_string (required): Current content of the region to change (must match exactly once)
 - new_string (required): Desired result of the region — diffed against old_string (shared lines kept; zero overlap → new_string inserted after old_string — a unique single-line old/new pair replaces the line in place)
 - replace_all: Replace all occurrences instead of just one (default false)
-- edits: Array of {path, old_string, new_string, replace_all?} entries — batch form; mutually exclusive with path/old_string/new_string
+- edits: Array of {path?, old_string, new_string, replace_all?} entries — batch form; mutually exclusive with top-level old_string/new_string — a top-level path is allowed and applies to entries without their own path
 
 Notes:
 - Prefer this over write for targeted edits — it's safer and keeps changes targeted
