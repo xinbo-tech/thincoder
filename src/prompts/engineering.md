@@ -104,7 +104,7 @@ in engineering mode was the sizing decision.
    DIVERGENCE — acceptance criteria implemented partially or not at all;
    silent simplifications (a "simpler approximation" of a specified behavior IS
    a deviation); doc-code drift (module map / affected-files table not updated
-   by the delivery); changes outside the approved file list — and an internal
+   by the delivery); changes outside the approved file list AND not reported in the delivery report — and an internal
    `advisor(type="code")` review followed (documents = design docs + the
    delivery file list). Dirty findings were fixed inside the child, capped at 5
    correction rounds; when the loop cannot converge the report ends `stalled`
@@ -209,8 +209,6 @@ right tool for breadth-first investigation:
 - Read a file yourself ONLY when you are about to edit it immediately (the
   precision exception — not a token-saving trick). As the architect you still
   read design-relevant code directly whenever judgment requires it.
-- Never assign two parallel eng-coders edits to the same
-  file — conflicts waste everyone's time.
 - Do NOT redo the exploration you already delegated: verifying an eng-coder
   delivery = read the files it claims to have changed + run the tests.
 - `escalate` is unavailable in engineering mode — `subagent` `action:'escalate'`

@@ -25,8 +25,11 @@
 
 ```js
 export const MAX_TOOL_RESULT = 64 * 1024 // chars — large results saved to disk instead of truncated (aligns with CLI)
-export const TOOL_RESULT_PREVIEW = 64 * 1024 // chars shown inline when offloaded (aligns with CLI)
+export const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // head slice preserved (2026-09-04 §5 双端预览)
+export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // nominal tail bound — actual tail = 65536 − head − noteLen
 ```
+
+> **supersede 注（2026-09-04 §5）**：旧单常量 `TOOL_RESULT_PREVIEW` 已随 §5 双端预览实现删除（run-helpers.mjs —— `buildHeadTailPreview`/`safeSliceUTF16Tail`）——预览构成 = 头 16K + 中间省略注 + 尾（总 ≤ 65536）；回退路径同用双端切片（T-4.4——CLI/VS Code 两端同步）。
 
 - 落盘路径/格式不变：`<cwd>/.thincoder/tmp/` 写时自清理（TMP_RETENTION_MS 3 天）→ `tool-<id>.txt` → 返回 `[Large output saved. ...] + preview`。
 - 失败回退截断 `text.slice(0, MAX_TOOL_RESULT)` 自动跟随新阈值。

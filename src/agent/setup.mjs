@@ -244,7 +244,14 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
 
   // Live state channel for the parent (eng-coder mutation merge) — the caller gets a
   // reference to the same array, so it stays current as the child touches files.
-  if (opts.stateSink) opts.stateSink.touchedFiles = agent._touchedFiles
+  if (opts.stateSink) {
+    opts.stateSink.touchedFiles = agent._touchedFiles
+    // §19.5.6 D-SF1 (AGENT-LOOP.md): the agent OBJECT reference (not the array) — the
+    // pool entry's status summary re-reads childAgent._touchedFiles live; a bare array
+    // reference goes stale when a resume re-runs setup (new per-run agent). Each
+    // runAgent re-assigns it, so entry.childAgent always points at the CURRENT run.
+    opts.stateSink.agent = agent
+  }
   // Session persistence channel for the eng tool (2026-08-29): `engPersist: { cwd, slot }`
   // rides opts → agent; eng(enter/exit) persists the flipped flag into the session slot
   // (slot authority) in addition to the config.json mirror. Top level only — subagents

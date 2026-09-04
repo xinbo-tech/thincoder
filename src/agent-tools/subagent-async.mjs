@@ -30,6 +30,10 @@
  * D-M5 status decision fields (model/elapsedSec/turn/maxTurns on pool entries and
  * status output), the cancelled-settle branch (no pending transfer, no collect
  * injection — stopped-freeze notification only).
+ * §19.5.6 (AGENT-LOOP.md §19.5.6, 2026-09-04): status touched-files summary — running
+ * entries carry touchedFiles (≤5 相对路径 + touchedMore 超出计数) / touched 占位
+ * （0 改动）; queued → touched "—（未启动）"; done/error/取消无摘要。数据源 =
+ * entry.childAgent._touchedFiles（对象引用——D-SF1——非数组引用——resume 重建不陈旧）。
  * mergeChildMutations lives here (subagent.mjs re-exports it — no consumer
  * changed) — shared by the eng-coder spawn merge and the escalate engine.
  */
@@ -200,6 +204,10 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     maxTurns: parent.config?.agent?.subagentTurns ?? 100,
     turn: 0,
     startedAt: null, // entry.start 时记（实际启动时刻——elapsedSec = 运行时长，队列等待不计入）
+    // §19.5.6 D-SF1：子代理**对象**引用（非 _touchedFiles 数组引用——per-run 数组在
+    // resume 重跑时重建——数组引用会陈旧）；对象在 runAgent setup 后经 onAgentTurn
+    // 绑定（subagent.mjs——绑定时刻等价 entry.start 后的第一拍——queued 无对象=未启动）。
+    childAgent: null,
     // §19.5 D-M6: 条目级 AbortController + cancelled 标记 + 停止冻结通知器。
     cancelled: false,
     controller: null,
@@ -764,12 +772,17 @@ function queuePosition(map, target) {
  * （(now - entry.startedAt)/1000——startedAt 记于实际启动时刻）；queued 条目补 role；
  * done 条目 { id, role }。单查（id）形态不变 + running 同字段。
  * 返回形态（JSON 字符串——工具结果契约）：
- * - 不带 id → { overview: { running: [{id, role, model, elapsedSec, turn, maxTurns}],
- *   queued: [{id, role, position}], done: [{id, role}] } }
- * - 带 id   → { id, role, status: "running"|"queued"|"done", position?/note?, model?/elapsedSec?/turn?/maxTurns? }
+ * - 不带 id → { overview: { running: [{id, role, model, elapsedSec, turn, maxTurns, touchedFiles?/touched?}],
+ *   queued: [{id, role, position, touched}], done: [{id, role}] } }
+ * - 带 id   → { id, role, status: "running"|"queued"|"done", position?/note?, model?/elapsedSec?/turn?/maxTurns?, touchedFiles?/touchedMore?/touched? }
  * - 未知 id → { id, status: "error", error: "unknown async subagent id: <id>" }（与 check 同）
+ * §19.5.6 D-SF2 (T-SF——CLI 同语义参考): running 条目带 touched files 摘要——有改动 =
+ * touchedFiles（前 5 相对路径）+ touchedMore（仅 >5 时——超出计数）；0 改动 =
+ * touched:"—（尚无改动）"（T-SF2a 区分占位）；queued = touched:"—（未启动）"（T-SF2b）；
+ * done/error/取消不含摘要（D-SF2 明示本批只做 running/queued）。数据源 =
+ * entry.childAgent._touchedFiles（对象引用实时读——D-SF1——绝对路径，查询方 cwd 相对化）。
  */
-function statusEntryFields(entry, map, parent) {
+function statusEntryFields(entry, map, parent, cwd) {
   // §17.5: a driven turn end leaves the entry pooled → the suspension digest consumes it
   if (entry.done) return { id: entry.id, role: entry.role, status: "done", note: "settled this turn — unconsumed; fetch with action:'check' or the suspension digest injects it" }
   if (entry.status === "queued") {
@@ -781,15 +794,39 @@ function statusEntryFields(entry, map, parent) {
       out.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
       out.reason = blk.detail
     }
+    // §19.5.6 T-SF2b：未启动——确定性占位（不崩；无对象可读）。
+    out.touched = "—（未启动）"
     return out
   }
-  return {
+  const out = {
     id: entry.id, role: entry.role, status: "running",
     model: entry.model ?? null,
     elapsedSec: entry.startedAt ? Math.max(0, Math.round((Date.now() - entry.startedAt) / 1000)) : null,
     turn: entry.turn ?? 0,
     maxTurns: entry.maxTurns ?? 100,
   }
+  Object.assign(out, summarizeTouched(entry.childAgent, cwd))
+  return out
+}
+
+/** §19.5.6 N-SF1/D-SF2 touched-files 摘要（CLI touchedSummary 同语义）：running 0 改动 →
+ *  touched "—（尚无改动）"（T-SF2a）；有改动 → touchedFiles 前 5 个（相对查询方 cwd
+ *  缩短——cwd 之外保留绝对形态 + "../" 前缀）+ touchedMore（仅 >5 时——超出计数——
+ *  不混入数组）；单路径 >80 字符截尾（79 + … = 80 总长——不超行）。数据源 =
+ *  child._touchedFiles（绝对路径——对象引用实时读——D-SF1——queued/未绑对象 = 空）。 */
+function summarizeTouched(child, cwd) {
+  const touched = child?._touchedFiles ?? []
+  if (touched.length === 0) return { touched: "—（尚无改动）" }
+  const out = { touchedFiles: touched.slice(0, 5).map((f) => shortTouchedPath(f, cwd)) }
+  if (touched.length > 5) out.touchedMore = touched.length - 5
+  return out
+}
+
+/** N-SF1 单路径显示形态：cwd 内 → 相对路径；cwd 外 → "../" + 绝对路径；>80 截尾（79+…）。 */
+function shortTouchedPath(f, cwd) {
+  const r = relative(cwd ?? process.cwd(), f)
+  const p = r && !r.startsWith("..") && !isAbsolute(r) ? r : "../" + f
+  return p.length > 80 ? `${p.slice(0, 79)}…` : p
 }
 export function subagentStatus({ id }, ctx) {
   const map = ctx.agent._asyncSubagents
@@ -798,7 +835,7 @@ export function subagentStatus({ id }, ctx) {
     if (!map || !map.has(idNum)) {
       return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
     }
-    return JSON.stringify(statusEntryFields(map.get(idNum), map, ctx.agent))
+    return JSON.stringify(statusEntryFields(map.get(idNum), map, ctx.agent, ctx.cwd))
   }
   const overview = { running: [], queued: [], done: [] }
   for (const entry of map?.values() ?? []) {
@@ -807,14 +844,14 @@ export function subagentStatus({ id }, ctx) {
       // §20：概览 queued 行保既有形态 {id, role, position}（无 status 字段——与 CLI
       // 概览同形）+ 等待态 waiting/reason（纯槽满等位不带——position 已足够）。
       const blk = describeBlockers(ctx.agent, entry, entry._auto?.() ?? false)
-      const row = { id: entry.id, role: entry.role, position: queuePosition(map, entry) }
+      const row = { id: entry.id, role: entry.role, position: queuePosition(map, entry), touched: "—（未启动）" }
       if (blk.kind !== "slot") {
         row.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
         row.reason = blk.detail
       }
       overview.queued.push(row)
     }
-    else overview.running.push(statusEntryFields(entry, map, ctx.agent))
+    else overview.running.push(statusEntryFields(entry, map, ctx.agent, ctx.cwd))
   }
   return JSON.stringify({ overview })
 }

@@ -972,6 +972,38 @@ describe("tool edge cases", () => {
   })
 })
 
+// ─── §18.12 verify 改动文件定位（T-VR4——VS Code 对齐） ────────────
+
+describe("§18.12 verify 改动文件定位（T-VR4——VS Code 对齐）", () => {
+  it("cwd 非 git 根——_touchedFiles 定向（不因 not a git repo 失效，不跑全量）", async () => {
+    const { verifyTool } = await import("../src/agent-tools/verify.mjs")
+    const cwd = setupTempDir()
+    try {
+      // 空 .git 标记：保证 git 失败路径确定（防 tmpdir 恰在父 git 仓库内——CLI T-VR1 同法）
+      mkdirSync(join(cwd, ".git"))
+      mkdirSync(join(cwd, "src", "agent-tools"), { recursive: true })
+      const changed = join(cwd, "src", "agent-tools", "x.mjs")
+      writeFileSync(changed, "export const v = 1\n")
+      // 子代理场景：cwd 非 git 根（git diff 必然失败）——定位只能靠 _touchedFiles
+      const ctx = {
+        cwd,
+        signal: new AbortController().signal,
+        agent: { _touchedFiles: [changed] },
+      }
+      const result = await verifyTool.execute({}, ctx)
+      assert.ok(!result.includes("no files modified"), "不因 git 失败而空转")
+      assert.ok(result.includes("src/agent-tools/x.mjs"), "touched 文件进入定位（绝对路径归一化后）")
+      assert.ok(result.includes("git unavailable"), "git 回退路径信息仍在")
+      assert.ok(result.includes("syntax OK"), "语法检查运行")
+      assert.ok(!result.includes("=== Test suite ==="), "不跑全量")
+      assert.strictEqual(ctx.agent._verifyPassed, true)
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+
 describe("pending-task pushback fires at most once (CLI parity)", () => {
   it("one reminder per task-list state, then the model finishes", async () => {
     const http = await import("node:http")
@@ -1159,8 +1191,7 @@ describe("advisor guard loop pushback (2026-08-21 semantic refactor)", () => {
 })
 
 // ─── Prompt borrowing increments (kimi-code comparison, 2026-08-21) ───
-// 两端 src/prompts/ 必须 byte-identical（项目铁律）；①—③ 在本端断言内容，
-// 两端 15 文件比对断言在 CLI 侧（thincoder/test/agent.test.mjs）。
+// 各端内容断言（锚句存在）防漂移——跨端字节比对已取消（§18.11）。
 
 const PROMPTS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "prompts")
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src")
@@ -1323,7 +1354,7 @@ describe("pre-work plan confirmation discipline", () => {
     { skip: !existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "METHODOLOGY.md")) || !existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder", "docs", "design", "METHODOLOGY.md")) },
     () => {
       // 三副本：根模板（D:/teamcode/METHODOLOGY.md，非 git 文件级）、项目版（thincoder/docs/design/METHODOLOGY.md）、template 对
-      // 根模板与兄弟仓均在仓外——单独 clone 时缺失，动态 skip（同 CLI 侧 15 对 byte-identical 测试惯例）
+      // 根模板与兄弟仓均在仓外——单独 clone 时缺失，动态 skip（内容断言——跨仓副本缺失时跳过）
       const vscDir = dirname(fileURLToPath(import.meta.url))
       const copies = {
         根模板: readFileSync(join(vscDir, "..", "..", "METHODOLOGY.md"), "utf8"),
@@ -1393,7 +1424,7 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("quick / medium / thorough"), "thoroughness levels stated")
     assert.ok(text.includes("never enter your history"), "isolated-context benefit stated")
     assert.ok(text.includes("about to edit it immediately"), "precision exception present")
-    assert.ok(text.includes("same\n  file — conflicts waste"), "no same-file parallel edits")
+    assert.ok(!text.includes("Never assign two parallel eng-coders"), "T-PS2: old manual-avoidance sentence zero residue (delegation section)")
     assert.ok(text.includes("Do NOT redo the exploration you already delegated"), "no redoing delegated exploration")
     assert.ok(text.includes("`escalate` is unavailable in engineering mode"), "escalate unavailable (matches setup.mjs fail-closed)")
     assert.ok(text.includes("`consult` stays available"), "consult remains available")
@@ -1406,7 +1437,7 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("do not double-audit"), "防双重审计/误用")
     assert.ok(text.includes("`explore` subagent audited the delivered code"), "内部审计走 explore 子 agent")
     assert.ok(text.includes("silent simplifications"), "审计点名静默简化")
-    assert.ok(text.includes("changes outside the approved file list"), "超清单改动点名")
+    assert.ok(text.includes("changes outside the approved file list AND not reported in the delivery report"), "超清单改动点名（含未报告=偏差——A 裁定）")
     assert.match(text, /capped at 5\s+correction rounds/, "修正轮 ≤5（内部）")
     assert.match(text, /7th audit spawn is\s+refused mechanically/, "第 7 次审计 spawn 机械拒绝")
     assert.ok(text.includes("spawn the fix round with the report's"), "stalled → 修正轮任务 = 未收敛点清单")
@@ -1445,6 +1476,7 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(!text.includes("run the tasks serially (or merge them into one spawn)"), "T-PS2: old serialize/merge fallback zero residue")
     assert.ok(!text.includes("Dependency chain → serial"), "T-PS2: old serial-dependency discipline zero residue")
     assert.ok(!text.includes("Pre-check before parallel spawns"), "T-PS2: old manual pre-check zero residue")
+    assert.ok(!text.includes("Never assign two parallel eng-coders"), "T-PS2: old manual-avoidance sentence zero residue (§20.7 leftover fix)")
   })
 
   it("engineering.md: §18 async delivery + internal-protocol narrative; fix round reuses the same designId+token (2026-09-01 T19 / 2026-09-02 §18)", () => {
@@ -1601,11 +1633,10 @@ describe("pre-work plan confirmation discipline", () => {
   })
 })
 
-// ─── §18.10 判定/边界铁律 + §18.8 对象声明（T-10.1..5 / AC-10.1..5） ───
+// ─── §18.10 判定/边界铁律 + §18.8 对象声明（T-10.1..5——T-10.4 byte-identical 镜像断言已删——§18.11） ───
 
 describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.1..5)", () => {
   const JUDGMENT_FILES = ["advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"]
-  const BATCH_FILES = [...JUDGMENT_FILES, "engineering-sub.md", "eng-coder.md"]
   const JUDGMENT_RULES = ["R1 ", "R2 ", "R3 ", "R4 ", "R5 ", "R6 ", "R7a ", "R7b ", "R7c ", "R7d ", "R7e "]
 
   it("T-10.1: 4 模板各含 R1-R7 判定铁律块（含按评审类型取适用指引句 + 对象声明一致性句）", () => {
@@ -1614,7 +1645,7 @@ describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.
       assert.ok(text.includes("## Judgment Rules (apply directly — do not re-derive)"), `${f}: 铁律块头（直接套用——不自行推导）`)
       assert.ok(text.includes("Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply."), `${f}: 按评审类型取适用指引句`)
       for (const r of JUDGMENT_RULES) assert.ok(text.includes(r), `${f}: ${r.trim()} 规则在`)
-      // 语义抽样（fail-when-unchanged——byte-identical 断言不能替代内容断言）
+      // 语义抽样（fail-when-unchanged——各端内容断言独立防漂移）
       assert.ok(text.includes("R2 Implementation deviates from design (acceptance unmet / silent simplification) → 🔴 (must fix)"), `${f}: R2 实现偏离设计=🔴`)
       assert.ok(text.includes("R6 Test seam"), `${f}: R6 测试缝规则在`)
       assert.ok(text.includes("R7e Never block \"pass\" due to doc-state contradiction"), `${f}: R7e 不卡通过（报出即过）`)
@@ -1622,23 +1653,23 @@ describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.
     }
   })
 
-  it("T-10.2: engineering-sub.md 含三句（测试缝 / 授权边界 A 裁定 / 镜像并行）", () => {
+  it("T-10.2: engineering-sub.md 含两句（测试缝 / 授权边界 A 裁定——mirror 句已删）", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
     assert.ok(text.includes("Test-seam rule: when tests need to mock an internal tool set / slow tools"), "测试缝句头")
     assert.ok(text.includes("add a test seam (setter or parameter override with `??` default fallback — default null keeps production behavior unchanged — restore in finally)"), "测试缝句 seam 语义")
     assert.ok(text.includes("do not waste rounds on non-deterministic workarounds (real slow tools, FIFO, large files, observing onTool, mock-LLM-returning-real-tools)"), "测试缝句禁项")
     assert.ok(text.includes("Out-of-file-list changes: ALLOWED when required by the delivery"), "授权边界句（A 裁定——允许但报告）")
     assert.ok(text.includes("the audit \"out-of-list\" criterion = changed AND not reported (silent overreach)"), "审计判据 = 改了且未报告=偏差")
-    assert.ok(text.includes("Mirror-parallel semantics: a byte-identical test failure is NOT your fault"), "镜像并行句")
   })
 
-  it("T-10.2b: engineering-sub.md / eng-coder.md 无旧硬句（A 裁定同步——防回归）", () => {
+  it("T-10.2b: engineering-sub.md / eng-coder.md 无旧硬句 + 无 mirror 并行句（A 裁定同步——防回归）", () => {
     for (const f of ["engineering-sub.md", "eng-coder.md"]) {
       const t = readFileSync(join(PROMPTS_DIR, f), "utf8")
       assert.ok(!t.includes("Do NOT modify any file not listed in the approved design."), `${f}: 无旧硬句-engineering-sub 授权边界`)
       assert.ok(!t.includes("Do not modify any file not listed in the design."), `${f}: 无旧硬句-eng-coder 清单外禁止`)
       assert.ok(!t.includes("zero touches outside the approved file list"), `${f}: 无旧硬句-implement 零触碰`)
       assert.ok(!t.includes("no file outside the approved list was touched"), `${f}: 无旧硬句-终检序号 2`)
+      assert.ok(!t.includes("Mirror-parallel semantics"), `${f}: 无 mirror 并行句（§18.11 已删——防回归）`)
     }
   })
 
@@ -1653,16 +1684,6 @@ describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.
     }
   })
 
-  it("T-10.4: 本批 6 文件与 CLI 面 byte-identical（镜像断言——与 CLI 侧 15 对断言同规格）", { skip: !existsSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder", "src", "prompts")) }, () => {
-    const CLI_PROMPTS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "thincoder", "src", "prompts")
-    for (const f of BATCH_FILES) {
-      assert.ok(
-        readFileSync(join(PROMPTS_DIR, f)).equals(readFileSync(join(CLI_PROMPTS_DIR, f))),
-        `${f} 两端 byte-identical`,
-      )
-    }
-  })
-
   it("T-10.5: 来源诚实标注——'样本 7 轮——持续复核'（不假装权威）", () => {
     const sourceLine = "Source: 7-round sample — verified judgments — continuously re-reviewed."
     for (const f of JUDGMENT_FILES) {
@@ -1674,8 +1695,78 @@ describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.
   })
 })
 
+// ─── §12.1 advisor 角色定位/职责边界（T-AR1..4——四模板开头插锚——各端内容断言防漂移） ───
+
+describe("advisor role identity anchor (§12.1 — T-AR1..4)", () => {
+  const ROLE_FILES = ["advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"]
+  const ROLE_ANCHOR = `## Your role (identity — read before the criteria)
+
+You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.
+
+1. **Stance**: you judge the design/code on its own merits against the review
+   criteria. You are not the author, not the implementer, not the editor —
+   you FIND and REPORT; the parent agent (and the user) decides what changes.
+    Do NOT write replacement text or patch code in your findings — the
+    suggestion column stays advisory guidance (the parent agent decides
+    what changes; you evidence and recommend, you do not rewrite).
+2. **Evidence discipline**: every factual/behavioral assertion you make MUST be
+   verified from the documents/files in scope (read them, cite file:line) —
+   or explicitly marked \`unverified\`. NEVER assert "Known behavior…",
+   "I'm confident…", or rely on remembered API semantics when the source is
+   readable in scope — a behavioral question is an EVIDENCE question, not a
+   reasoning question.
+ 3. **Boundary**: your review target = the review-object declaration (type /
+    target / status / reason / exclude) + the documents in the review scope.
+    Do NOT expand it. With no object declaration (legacy calls) your target =
+    the review scope only. Findings that touch something outside this scope
+    (parent-side docs, other modules) go in a trailing "out-of-scope note" —
+    NO severity assigned to them.
+4. **Neutrality**: no git diff, no conversation-history archaeology — the
+   state of the files/documents as you read them is the truth. Do not guess
+   author intent.`
+
+  it("T-AR1: 4 模板各含六锚句（Your role / INDEPENDENT REVIEWER / Stance / Evidence discipline / Boundary / Neutrality）+ F-AR4 非作者句——fail-when-unchanged", () => {
+    for (const f of ROLE_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      for (const p of ["Your role (identity", "INDEPENDENT REVIEWER", "Stance", "Evidence discipline", "Boundary", "Neutrality"]) {
+        assert.ok(text.includes(p), `${f}: 锚句 "${p}" 在（fail-when-unchanged）`)
+      }
+      assert.ok(text.includes("Do NOT write replacement text or patch code in your findings"), `${f}: F-AR4 非作者句在（发现即报告——不替作者修复）`)
+    }
+  })
+
+  it("T-AR2: 角色段含证据纪律禁止句——NEVER assert \"Known behavior…\"（记忆断言禁止落地）", () => {
+    for (const f of ROLE_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      assert.ok(text.includes('NEVER assert "Known behavior…"'), `${f}: 禁止句在（取证或标 unverified）`)
+      assert.ok(text.includes('"I\'m confident…"'), `${f}: 自信断言同步禁止`)
+    }
+  })
+
+  it("T-AR3: 角色段位置——身份句（模板首行）之后、既有小节（Review Criteria / Review workflow: / Judgment Rules）之前——既有内容零位移", () => {
+    for (const f of ROLE_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      const roleIdx = text.indexOf("## Your role (identity")
+      assert.ok(roleIdx > 0, `${f}: 角色段头在且非首行`)
+      const identityEnd = text.indexOf("\n")
+      assert.ok(roleIdx > identityEnd, `${f}: 角色段位于身份句之后`)
+      for (const later of ["## Review Criteria", "Review workflow:", "## Judgment Rules", "## Citation Discipline", "## Approval Signal"]) {
+        const idx = text.indexOf(later)
+        if (idx >= 0) assert.ok(roleIdx < idx, `${f}: 角色段位于 "${later}" 之前（既有小节未动）`)
+      }
+    }
+  })
+
+  it("T-AR4: 锚整块逐字存在（四模板同段同文）——删/改任一锚句即失败（防回归）", () => {
+    for (const f of ROLE_FILES) {
+      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
+      assert.ok(text.includes(ROLE_ANCHOR), `${f}: 锚整块逐字在（任一锚句删除/改词即失败）`)
+    }
+  })
+})
+
 // ─── Workflow/Debugging 必须用 task（2026-08-23）───
-// discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
+// discipline.md 内容级断言：副本内容未改时必须能失败（各端内容断言防漂移）。
 
 describe("discipline.md: workflow/debugging require `task` (content-level)", () => {
   it("Workflow 总规 + 各层追踪工具断言", () => {
@@ -1715,7 +1806,7 @@ describe("discipline.md: workflow/debugging require `task` (content-level)", () 
   })
 })
 // ─── 读/更新文档嵌入 Workflow 箭头序列（2026-08-23）───
-// discipline.md 内容级断言：不能只靠「两端 byte-identical」漂绿——副本内容未改时必须能失败。
+// discipline.md 内容级断言：副本内容未改时必须能失败（各端内容断言防漂移）。
 
 describe("discipline.md: read/update docs embedded in Workflow arrows (no standalone Documentation section)", () => {
   it("无独立 Documentation 段 + 读文档总规句 + 各层箭头 + 归属句", () => {

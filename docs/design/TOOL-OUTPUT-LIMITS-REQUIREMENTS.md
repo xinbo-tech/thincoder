@@ -14,7 +14,7 @@
 | # | 用户故事 | 验收语义 |
 |---|---|---|
 | FR1 | 作为用户，我希望工具输出在 64K 以内**不落盘**，直接进上下文；超过 64K 才落盘并返回 64K preview + 文件路径 | `offloadToolResult` 阈值 16000 → 65536；≤65536 原样返回，>65536 落盘 |
-| FR2 | 作为用户，我希望落盘时的内联 preview 也放大到 64K | `TOOL_RESULT_PREVIEW` 2000 → 65536 |
+| FR2 | 作为用户，我希望落盘时的内联 preview 也放大到 64K | `TOOL_RESULT_PREVIEW` 2000 → 65536——**2026-09-04 §5：预览构成为头 16K+尾 48K 双端（FR5 增量）——见 TUNING.md §5** |
 | FR3 | 作为用户，我希望 advisor 评审循环里读到的工具结果同样放宽到 64K | advisor `MAX_RESULT_CHARS` 12_000 → 65536 |
 | FR4 | 作为用户，我希望面板上实时看到的工具结果不被 20K 截断，与上下文一致到 64K | `panel-chat.mjs` onToolResult `slice(0, 20000)` → `slice(0, 65536)` |
 | FR5 | 作为用户，我希望回看历史时工具卡内容不被 2K 截断 | `panel-session.mjs` `sendHistoryPage` 工具卡 `slice(0, 2000)` → `slice(0, 65536)` |

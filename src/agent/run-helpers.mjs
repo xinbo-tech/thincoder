@@ -78,7 +78,13 @@ export function hasCodeMutations(agent) {
   return files.some((p) => /(?:^|[\\/])src[\\/]/.test(p) || !isDocFile(p))
 }
 export const MAX_TOOL_RESULT = 64 * 1024 // chars — large results saved to disk instead of truncated (aligns with CLI)
-export const TOOL_RESULT_PREVIEW = 64 * 1024 // chars shown inline when offloaded (aligns with CLI)
+export const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // §5 D-4.1 head slice preserved (preview 保头保尾)
+export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // §5 D-4.1 nominal tail — actual budget = MAX_TOOL_RESULT − head − noteLen (tail 优先)
+// §5 省略注格式（设计逐字定稿——CLI 同文案）；noteLen 含 omitted 位数（1~8 位十进制，初值 6）——预算按初始最大位数
+// 预留后按真实位数释放给 tail（round1 评审 #2：head + note + tail ≤ 65536——tail 优先）。
+const PREVIEW_NOTE_PREFIX = "\n\n… [middle omitted: "
+const PREVIEW_NOTE_SUFFIX = " chars] …\n\n"
+const PREVIEW_NOTE_MAX_DIGITS = 6 // 初始预留位数（>64K 文本 omitted 常见 1~8 位——迭代按真实位数收敛，此值只是起点）
 /** Offload-dir write-time self-cleanup retention window (CLI parity 2026-08-21): files older than 3 days are deleted on the next offload. */
 export const TMP_RETENTION_MS = 3 * 24 * 3600 * 1000
 export const MAX_PARALLEL_SUBAGENTS = 4
@@ -96,6 +102,52 @@ export function safeSliceUTF16(text, max) {
   const cp = text.charCodeAt(max - 1)
   if (cp >= 0xd800 && cp <= 0xdbff) return text.slice(0, max - 1)
   return text.slice(0, max)
+}
+
+/**
+ * UTF-16-safe TAIL slice (§5 D-4.1 — safeSliceUTF16 的对称面): from the end, keep the last
+ * `max` code units. Two cut points must both land safely:
+ *  - START: a lone LOW surrogate (U+DC00-DFFF) means the pair was cut — advance one code
+ *    unit (drop the whole pair from the tail's viewpoint);
+ *  - END (= the text's end): a lone HIGH surrogate (U+D800-DBFF) at the very end is dropped
+ *    so the tail never ADDS a lone surrogate the head-slice rule would also avoid.
+ * Boundary rule mirrors thincoder CLI helpers.mjs safeSliceUTF16End (two ends, independent
+ * implementations); the trailing-lone-high-surrogate drop is a VS Code-side strengthening —
+ * the CLI end-slice leaves a pre-existing orphan at the text end to the escape layer.
+ */
+export function safeSliceUTF16Tail(text, max) {
+  if (text.length <= max) return text
+  let start = text.length - max
+  const first = text.charCodeAt(start)
+  if (first >= 0xdc00 && first <= 0xdfff) start += 1 // 起点落低代理 → 丢弃代理对整体（向前一码元）
+  let tail = text.slice(start)
+  const last = tail.charCodeAt(tail.length - 1)
+  if (last >= 0xd800 && last <= 0xdbff) tail = tail.slice(0, -1) // 终点孤立高代理 → 去掉（截断边界安全）
+  return tail
+}
+
+/**
+ * §5 D-4.1 双端预览（保头保尾）：head(16K) + 省略注 + tail——总长 ≤ MAX_TOOL_RESULT（AC3/AC4 保持）。
+ * 预算（round1 评审 #2 定死）：tail 优先——tail 预算 = MAX_TOOL_RESULT − head − noteLen；noteLen 含
+ * omitted 位数（先按 PREVIEW_NOTE_MAX_DIGITS 预留，再按真实位数把差额释放给 tail——位数只减不增，
+ * 迭代收敛）。两端均经 UTF-16 安全切片（评审 #5：防代理对切开）。
+ */
+export function buildHeadTailPreview(text) {
+  if (text.length <= MAX_TOOL_RESULT) return text // 短文本无需切片（T-4.3 快路径守卫——防御性：offload 调用点已在阈值后）
+  const head = safeSliceUTF16(text, TOOL_RESULT_PREVIEW_HEAD)
+  let digits = PREVIEW_NOTE_MAX_DIGITS
+  let tail = ""
+  let omitted = 0
+  for (let pass = 0; pass < 3; pass++) {
+    const noteLen = PREVIEW_NOTE_PREFIX.length + digits + PREVIEW_NOTE_SUFFIX.length
+    const tailBudget = Math.max(0, MAX_TOOL_RESULT - head.length - noteLen)
+    tail = safeSliceUTF16Tail(text, tailBudget)
+    omitted = Math.max(0, text.length - head.length - tail.length)
+    if (String(omitted).length === digits) break // 位数稳定——预算分配收敛
+    digits = String(omitted).length
+  }
+  const note = `${PREVIEW_NOTE_PREFIX}${omitted}${PREVIEW_NOTE_SUFFIX}`
+  return head + note + tail
 }
 
 /** Run async tasks with a concurrency limit */
@@ -139,10 +191,12 @@ export function offloadToolResult(cwd, text) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
     const path = join(dir, `tool-${id}.txt`)
     writeFileSync(path, text, "utf8")
-    return `[Large output saved. Read the full result with the read tool: ${path}]\n\n${safeSliceUTF16(text, TOOL_RESULT_PREVIEW)}...`
+    return `[Large output saved. Read the full result with the read tool: ${path}]\n\n${buildHeadTailPreview(text)}`
   } catch {
-    // If saving fails (disk full, permissions), fall back to truncation
-    return safeSliceUTF16(text, MAX_TOOL_RESULT) + `\n... (truncated ${text.length - MAX_TOOL_RESULT} chars)`
+    // If saving fails (disk full, permissions), fall back to truncation — T-4.4: 与主路径同口径
+    //（双端切片 head+省略注+tail——不再纯头截断）——无路径提示；标注报原文总长 + 落盘失败原因
+    //（评审 #1：原"truncated text.length−MAX"数字在双端切片下已非实际弃置数——与省略注矛盾——改报总量）。
+    return buildHeadTailPreview(text) + `\n... (truncated ${text.length} chars total — offload to disk failed)`
   }
 }
 

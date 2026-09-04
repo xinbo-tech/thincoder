@@ -32,4 +32,3 @@ Your delivery is the FINAL audited delivery — the parent spawns you asynchrono
 
 Test-seam rule: when tests need to mock an internal tool set / slow tools and the set is hard-coded inside the loop (not injectable), add a test seam (setter or parameter override with `??` default fallback — default null keeps production behavior unchanged — restore in finally); do not waste rounds on non-deterministic workarounds (real slow tools, FIFO, large files, observing onTool, mock-LLM-returning-real-tools).
 Out-of-file-list changes: ALLOWED when required by the delivery — report each one in the delivery report with its reason; the audit "out-of-list" criterion = changed AND not reported (silent overreach); reported = transparent/acceptable.
-Mirror-parallel semantics: a byte-identical test failure is NOT your fault — the peer copy may not be synced yet; it detects drift, not blame — note it in the delivery report.

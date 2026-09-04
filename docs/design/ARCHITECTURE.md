@@ -387,7 +387,7 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 需求与设计见 CLI `docs/design/PROVIDER.md` §14（14.7 对齐清单，单一权威源，本文件不复制）。本仓库改动点：
 
 - `src/escape.mjs`：**v5 升级**——`sanitizeLoneSurrogates`（孤立高/低代理 → U+FFFD）+ `sanitizeText` 总入口 + `escapeLiteralEscapes` odd-run 修复 + `escapeMessageContent` 覆盖 `tool_calls[].arguments` / `reasoning_content`
-- **UTF-16 安全截断 5 处**（截断点落高代理向前收一码元）：`src/context.mjs`（doc 注入预览 ×2）、`src/tools/code.mjs`（doc_search 预览）、`src/agent/run-helpers.mjs`（`offloadToolResult` 预览/兜底截断 ×2）、`src/compact.mjs`（摘要/蒸馏序列化 ×2）——`safeSliceUTF16` 定义于 run-helpers（CLI helpers.mjs/setup.mjs 同语义，两处独立实现）
+- **UTF-16 安全截断 5 处 + 1 处新增尾切片**（截断点落高代理向前收一码元；2026-09-04 §5 新增 `safeSliceUTF16Tail`——尾切片对称面）：`src/context.mjs`（doc 注入预览 ×2）、`src/tools/code.mjs`（doc_search 预览）、`src/agent/run-helpers.mjs`（`offloadToolResult` 预览/兜底截断 ×2）、`src/compact.mjs`（摘要/蒸馏序列化 ×2）——`safeSliceUTF16` 定义于 run-helpers（CLI helpers.mjs/setup.mjs 同语义，两处独立实现）
 - `src/provider.mjs`：**续写构造对齐**——`buildContinuationMessages`（prefix 分支过滤 tool/assistant(tool_calls)、保留 system + ≤8 文本、末条 `prefix:true` + `reasoning_content` 回传；partial 分支全量历史不变）；删除"reasoning 时跳过续写"早退；续写调用 try/catch 注入 `_warnings`（失败不静默；AbortError 透传）
 
 测试：`test/escape.test.mjs`（v5 断言 5 项）、`test/run-helpers.test.mjs`（safeSliceUTF16 + offload/compact 序列化无孤立代理）、`test/provider.test.mjs`（T1-T4：prefix 精简 / reasoning 回传 / partial 不受影响 / 400 可见性）。

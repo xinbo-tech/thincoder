@@ -74,7 +74,7 @@ test("effectiveSubagentModel: tool arg > type-level > global > null", async () =
 
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, relative } from "node:path"
 import { createServer } from "node:http"
 
 /** Fake SSE LLM: the first `walls` calls demand a read tool (loop), then it answers. */
@@ -2125,7 +2125,7 @@ test("advisor#2: status queued position 实时计算——腾槽补位后不再�
     assert.equal(st6.status, "queued")
     assert.equal(st6.position, 1, "补位后 position 实时更新为 1（非陈旧快照 2）")
     const ov = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview
-    assert.deepEqual(ov.queued, [{ id: sixth.id, role: "coder", position: 1 }], "概览 queued 同样实时（§19.5 D-M5——带 role）")
+    assert.deepEqual(ov.queued, [{ id: sixth.id, role: "coder", position: 1, touched: "—（未启动）" }], "概览 queued 同样实时（§19.5 D-M5——带 role + §19.5.6 T-SF2b 未启动占位）")
     await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.settled))
   } finally {
     server.close()
@@ -3025,6 +3025,128 @@ test("§20 advisor 处置（code review 🟡——CLI 同款）: check 对 depc 
   assert.equal(pend.length, 0, "消费时反向清除 pending——防 digest 下轮重复注入（双送达守卫）")
   assert.equal(agent3.history._asyncTombstones.get(7)?.status, "consumed", "墓碑照记 consumed")
 })
+
+// ─── §19.5.6 status touched-files 摘要（AGENT-LOOP.md §19.5.6——VS Code 镜像——D-SF1/D-SF2/N-SF1）───
+// 用例映射（任务：T-SF1/2a/2b/3/4 展开 N/E）：T-SF1 运行条目带摘要（相对查询方 cwd 缩短 +
+// 前 5 + touchedMore）/ T-SF2a running 0 改动 = touched 字符串占位（"—（尚无改动）"——
+// 区分 queued）/ T-SF2b queued 条目带 touched（"—（未启动）"——未启动——确定性占位——
+// 不崩——无 touchedFiles 字段）/ T-SF3 >5 限长（前 5 + "… N more" 计数）/
+// T-SF4 路径 >80 字符截尾（不超行）。数据源 = entry.childAgent._touchedFiles（对象引用实时读
+// ——D-SF1——测试直推真实记账数组 = 等价"子代理写文件"的机械记账）。
+
+test("T-SF1/T-SF2a: status running 条目带 touched files 摘要（相对查询方 cwd；cwd 外 ../ 前缀）；0 改动 = touched 占位字符串（区分 queued）", async () => {
+  const { server } = await asyncChildServer(1500)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-sf1-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    const spawned = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctx))
+    const entry = parent._asyncSubagents.get(spawned.id)
+    await waitFor(() => entry.childAgent, 3000)
+    assert.ok(entry.childAgent._touchedFiles instanceof Array, "childAgent 对象引用已绑（非数组引用）")
+    // T-SF2a：running 但 0 改动 → touched 占位字符串（区分占位——queued 是另一文案——T-SF2b）
+    let st = JSON.parse(await subagentTool.execute({ action: "status", id: spawned.id }, ctx))
+    assert.equal(st.status, "running")
+    assert.equal(st.touched, "—（尚无改动）", "running 0 改动 = 占位字符串（T-SF2a）")
+    assert.ok(!("touchedFiles" in st), "0 改动无 touchedFiles 数组")
+    // T-SF1：1 个 cwd 内 + 1 个 cwd 外（绝对形态 + "../" 前缀）——运行期实时读
+    const inside = join(cwd, "src", "x.mjs")
+    const outside = join(cwd, "..", "sf-outside", "y.mjs") // 相对化后以 .. 开头（cwd 外）
+    entry.childAgent._touchedFiles.push(inside, outside)
+    st = JSON.parse(await subagentTool.execute({ action: "status", id: spawned.id }, ctx))
+    assert.deepEqual(st.touchedFiles, [join("src", "x.mjs"), "../" + outside], "摘要相对化（cwd 内相对——cwd 外 ../ 前缀）")
+    assert.ok(!("touched" in st), "有改动时无 touched 占位字符串（数组形态替代）")
+    assert.ok(!("touchedMore" in st), "≤5 个无 touchedMore（仅超出时出现）")
+    // 全览 running 条目同字段（N-SF2 追加——既有字段零破坏）
+    const item = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview.running.find((x) => x.id === spawned.id)
+    assert.deepEqual(item.touchedFiles, [join("src", "x.mjs"), "../" + outside])
+    // 收尾（status 不消费——子代理照常 settle）
+    await entry.settled
+    assert.equal(entry.done, true)
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-SF2b: status queued 条目（spawn-ack 未启动——无子代理对象）带 touched 占位——确定性不崩", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = process.cwd()
+  const q = {
+    id: 1, role: "coder", status: "queued", position: 0,
+    report: null, error: null, done: false, cancelled: false,
+    _files: [], _dependsOn: [], _auto: () => false,
+    childAgent: null,
+    settled: new Promise(() => {}),
+  }
+  const agent = asyncParent(0, { _asyncSubagents: new Map([[1, q]]) })
+  const ctx = asyncCtx(agent, cwd)
+  // 单查
+  const st = JSON.parse(await subagentTool.execute({ action: "status", id: 1 }, ctx))
+  assert.equal(st.status, "queued")
+  assert.equal(st.touched, "—（未启动）", "queued 未启动占位（T-SF2b）")
+  assert.ok(!("touchedFiles" in st), "queued 无 touchedFiles 字段（区别于 running 数组/占位）")
+  // 概览
+  const row = JSON.parse(await subagentTool.execute({ action: "status" }, ctx)).overview.queued[0]
+  assert.equal(row.id, 1)
+  assert.equal(row.touched, "—（未启动）", "概览 queued 行同样带未启动占位")
+})
+
+test("T-SF3: touchedFiles >5 → 限长（前 5 + touchedMore 超出计数——N-SF1）", async () => {
+  const { server } = await asyncChildServer(1500)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-sf3-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    const spawned = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctx))
+    const entry = parent._asyncSubagents.get(spawned.id)
+    await waitFor(() => entry.childAgent, 3000)
+    const seven = Array.from({ length: 7 }, (_, i) => join(cwd, "src", `f${i}.mjs`))
+    entry.childAgent._touchedFiles.push(...seven)
+    const st = JSON.parse(await subagentTool.execute({ action: "status", id: spawned.id }, ctx))
+    assert.equal(st.touchedFiles.length, 5, "前 5 个")
+    assert.deepEqual(st.touchedFiles, seven.slice(0, 5).map((p) => relative(cwd, p)), "前 5 相对路径")
+    assert.equal(st.touchedMore, 2, "超出计数 = 7 - 5（「… 2 more」）")
+    assert.ok(!("touched" in st), "有改动无占位字符串")
+    await entry.settled
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-SF4: 路径 >80 字符 → 截尾（+…）——不超行（N-SF1）", async () => {
+  const { server } = await asyncChildServer(1500)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-sf4-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    const spawned = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctx))
+    const entry = parent._asyncSubagents.get(spawned.id)
+    await waitFor(() => entry.childAgent, 3000)
+    const deep = join(cwd, "a".repeat(50), "b".repeat(40), "c.mjs") // 相对化后 97 字符 > 80
+    assert.ok(relative(cwd, deep).length > 80, "夹具确认：相对路径确实超 80")
+    entry.childAgent._touchedFiles.push(deep)
+    const st = JSON.parse(await subagentTool.execute({ action: "status", id: spawned.id }, ctx))
+    assert.equal(st.touchedFiles.length, 1)
+    assert.equal(st.touchedFiles[0].length, 80, "截尾后 80 字符（79 + …）——不超行")
+    assert.ok(st.touchedFiles[0].endsWith("…"), "截尾以 … 标记")
+    await entry.settled
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
 
 
 
