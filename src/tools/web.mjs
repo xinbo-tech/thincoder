@@ -8,6 +8,8 @@
 import { proxyFetch } from "../proxy.mjs"
 import { isPrivateHost } from "./shared.mjs"
 import { URL } from "node:url"
+// §14 D-TF3（2026-09-04）：网络失败错误文本追加 proxy 提示——纯文本提示行，不自动路由（2026-08-31 裁定：proxy 显式传不自动应用）
+const PROXY_HINT = "network failure — retry with proxy: 'http://host:port' if the target is blocked"
 
 /** True when the URL resolves to a private/internal host (SSRF guard). */
 function isPrivateUrl(urlStr) {
@@ -47,7 +49,7 @@ export const websearchTool = {
     "- query (required): Search query\n" +
     "- limit: Max results (default 8)\n" +
     "- proxy: http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); Bing/foreign sites usually need a proxy, domestic targets don't\n" +
-    "Notes: Bing's index is noisy for technical queries — if a first search returns irrelevant results, DO NOT retry the same query. Configure a search MCP tool (e.g. glm-websearch) for technical lookups; websearch is the fallback. Call the memory tool (action: search) first — the answer may already be in a previous session.",
+    "Notes: Bing's index is noisy for technical queries — if a first search returns irrelevant results, DO NOT retry the same query. Configure a search MCP tool (e.g. glm-websearch) for technical lookups; websearch is the fallback. Call the memory tool (action: search) first — the answer may already be in a previous session. Follow up with fetch to read full pages from the results.",
   parameters: {
     type: "object",
     properties: {
@@ -93,7 +95,7 @@ export const fetchTool = {
   readonly: true,
   name: "fetch",
   description:
-    "Fetch a URL and return its content as text.\n" +
+    "Fetch a URL and return its content as text. Use after websearch to read full documents. Timeout: 20 seconds.\n" +
     "Parameters:\n" +
     "- url (required): http/https URL\n" +
     "- proxy: http://host:port explicit proxy (optional) — use ONLY when passed; no proxy = direct. config.json proxy is NOT auto-applied (2026-08-31 ruling); pick per target",
@@ -137,7 +139,7 @@ export const fetchTool = {
         : ""
       return stripped.slice(0, 20000) + hint
     } catch (e) {
-      return `fetch error: ${e.message}`
+      return `fetch error: ${e.message}\n${PROXY_HINT}`
     }
   },
 }

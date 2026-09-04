@@ -12,21 +12,21 @@ export const timerTool = {
     "adding debug logs. Use this to enforce a thinking budget: you get " +
     "N seconds to reason, then the timer reminds you to act.\n" +
     "Parameters:\n" +
-    "- seconds (required): thinking budget in seconds (longer for complex reasoning, shorter for simple tasks)\n" +
+    "- seconds: thinking budget in seconds (default 180 — longer for complex reasoning, shorter for simple tasks)\n" +
     "- message: custom reminder message to show when time is up (default: a suggestion to add debug logs or run the code)",
   parameters: {
     type: "object",
     properties: {
       seconds: {
         type: "number",
-        description: "Thinking budget in seconds (default 30). Longer for complex reasoning, shorter for simple tasks.",
+        description: "Thinking budget in seconds (default 180). Longer for complex reasoning, shorter for simple tasks.",
       },
       message: {
         type: "string",
         description: "Custom reminder message to show when time is up. Default: a suggestion to add debug logs or run the code.",
       },
     },
-    required: ["seconds"],
+    required: [],
   },
   readonly: true,
   sideEffectExempt: true,

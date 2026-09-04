@@ -175,6 +175,7 @@ export const bashTool = {
   name: "bash",
   description:
     "Execute a shell command and return stdout+stderr.\n" +
+    "Route to a dedicated tool instead of bash: file reads → read; directory listings → ls; path patterns → glob; content search → grep; file writes → write / edit / insert_after / apply_patch; git → git. Never shell out for reads; never use bash to write or modify files (echo/sed/printf > file, cat << EOF) — the write tools handle encoding and EOL correctly. Do NOT run destructive commands (rm -rf, force-push, drop table) without explicit user confirmation.\n" +
     (isWin ? SHELL_NOTES + "\n" : SHELL_NOTES + "\n") +
     "Parameters:\n" +
     "- command (required): Shell command to execute\n" +

@@ -8,6 +8,7 @@ import { readFile, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { dirname } from "node:path"
 import { resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, stripBom, lfOffsetToRaw, detectFileEol, joinWithEol, majorityEol, findCandidates, FFFD_WARNING, gitDiffOne, hashLine, refreshMarkdownPreview } from "./shared.mjs"
+import { applyRegion, EMPTY_NEW_REASON } from "./edit-diff.mjs"
 
 export const readTool = {
   name: "read",
@@ -56,7 +57,9 @@ export const readTool = {
 export const writeTool = {
   name: "write",
   description:
-    "Write content to a file. Creates parent directories; overwrites existing file.\n" +
+    "Write content to a file. Creates parent directories; overwrites existing file. " +
+    "write replaces the WHOLE file — read it first and confirm you intend to rewrite it entirely; for a small change use edit / insert_after. " +
+    "The file is atomic: it either writes completely or fails. Returns `Wrote <n> chars to <path>`.\n" +
     "Parameters:\n" +
     "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
     "- content (required): Full content to write",
@@ -107,13 +110,15 @@ export const writeTool = {
 export const editTool = {
   name: "edit",
   description:
-    "Edit a file by exact string replacement. old_string must match exactly once unless replace_all is set.\n" +
+    "Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, new_string is inserted after old_string (old content stays) — except a unique single-line old_string paired with a single-line new_string: that exact line is replaced in place (line count unchanged); for a multi-line replacement, include a shared context line — for adding a new line use insert_after: a unique single-line old/new pair replaces the line in place; multi-line zero-overlap pairs still insert per the diff rules above. replace_all keeps literal replacement of every occurrence — the insert rule does not apply.\n" +
+    "Add a line/entry after a known line → insert_after — includes checklist items and doc lines.\n" +
     "Parameters:\n" +
     "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
-    "- old_string (required): Exact text to find and replace\n" +
-    "- new_string (required): Replacement text\n" +
-    "- replace_all: Replace all occurrences instead of just one (default false)\n" +
-    "- edits: 批量形态（CLI parity）——同文件多处修改 → 一次调用原子完成（同文件条目串行应用，各基于前一条结果）；多文件独立修改 → 同一 `edits` 数组多条目（先全量检查，任一失败全不写）——prefer one batched call over N single edits。与 path/old_string/new_string 互斥。",
+    "- old_string (required): Current content of the region — must match exactly once in the file; for a change that keeps a line, include the unchanged neighbor line in BOTH old_string and new_string\n" +
+    "- new_string (required): Desired result of the region — diffed against old_string (shared lines kept; zero overlap → new_string inserted after old_string — a unique single-line old/new pair replaces the line in place)\n" +
+    "- replace_all: Replace every occurrence literally (default false) — the insert rule does not apply\n" +
+    "- edits: 批量形态（CLI parity）——同文件多处修改 → 一次调用原子完成（同文件条目串行应用，各基于前一条结果）；多文件独立修改 → 同一 `edits` 数组多条目（先全量检查，任一失败全不写）——prefer one batched call over N single edits。与 path/old_string/new_string 互斥。\n" +
+    "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed",
   parameters: {
     type: "object",
     properties: {
@@ -155,7 +160,7 @@ export const editTool = {
         return "Error: edits must be a non-empty array of {path, old_string, new_string}"
       }
       if (args.path || args.old_string !== undefined || args.new_string !== undefined) {
-        return "Error: edits array is mutually exclusive with path/old_string/new_string"
+        return "Error: edits array is mutually exclusive with path/old_string/new_string — use either the edits array or the single-form args, not both — split into two calls"
       }
       // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
       // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑
@@ -192,11 +197,22 @@ export const editTool = {
           const count = g.text.split(oldS).length - 1
           if (count === 0) {
             return `Error: edit aborted (atomic — no files written): old_string not found in ${g.path}\n` +
-              `  searched: "${oldS.slice(0, 100).split("\n")[0]}${oldS.length > 100 ? "…" : ""}"`
+              `  searched: "${oldS.slice(0, 100).split("\n")[0]}${oldS.length > 100 ? "…" : ""}" — use grep to locate the actual content`
           }
           if (!e.replace_all && count > 1) {
             return `Error: edit aborted (atomic — no files written): old_string matches ${count} times in ${g.path}; ` +
               `provide more context or set replace_all`
+          }
+          // §15 D15.1 + §15.2 分支 0: empty new_string (pure deletion intent) — explicit
+          // error; each batch entry runs the region judgment in edit-diff.mjs
+          // (applyRegion = §15.2 分支 0 single-line in-place replace + applyPatchLines
+          // LCS diff — replace_all keeps literal per-occurrence swap, never branch 0).
+          if (newS === "") return `Error: edit aborted (atomic — no files written): ${EMPTY_NEW_REASON}`
+          let newApplied = newS
+          if (!e.replace_all) {
+            const patch = applyRegion(oldS, newS)
+            if (!patch.ok) return `Error: edit aborted (atomic — no files written): ${patch.reason}`
+            newApplied = patch.resultText
           }
           const idx = g.text.indexOf(oldS)
           // #1（2026-09-01 交付评审尾巴）：raw 镜像只支持"单处替换"的精确拼接。
@@ -213,15 +229,20 @@ export const editTool = {
             : null
           prepared.push({
             g, midText: g.text, oldS, newS, count, replaceAll: !!e.replace_all,
+            // D15.1/§15.2: newApplied = applyRegion 判定结果（分支 0 单行×单行就地替换 ===
+            // newS；LCS 替换 === newS；零重叠插入情形 = oldS+newS）——写入路径必须用
+            // newApplied，否则 batch 里的零重叠条目会退化成纯替换（模拟域 g.text 与真实
+            // 写入漂移）。
+            newApplied,
             // doc range edit 的位置映射基于本条应用前的 raw 域快照——串行累积，不漂移
             range,
           })
-          g.text = e.replace_all ? g.text.split(oldS).join(newS) : g.text.replace(oldS, () => newS)
+          g.text = e.replace_all ? g.text.split(oldS).join(newApplied) : g.text.replace(oldS, () => newApplied)
           if (range) {
-            // 精确镜像（本条替换区 LF→raw 逐段拼接）：CRLF 文件里 newS 带 LF 时
+            // 精确镜像（本条替换区 LF→raw 逐段拼接）：CRLF 文件里 newApplied 带 LF 时
             // normalize-rebuild 会把混合 EOL 片段全转 CRLF——后续条目的 raw 坐标随之漂移
             g.rawText = g.rawText.slice(0, range.start) +
-              (g.fileEol === "\r\n" ? newS.replace(/\n/g, "\r\n") : newS) +
+              (g.fileEol === "\r\n" ? newApplied.replace(/\n/g, "\r\n") : newApplied) +
               g.rawText.slice(range.end)
           } else if (g.doc) {
             g.rawReplaceAll = true // raw 镜像从 replace_all 条目起失效——后续条目不再定位
@@ -236,18 +257,18 @@ export const editTool = {
           // 其余（replace_all / 镜像失效后的条目，range=null）统一走 applyEditorEdit
           // 全量语义——midText 为该条应用前的串行累积内容，替换后即为目标状态。
           if (p.range) {
-            const newText = p.g.fileEol === "\r\n" ? normalizeEOL(p.newS).replace(/\n/g, "\r\n") : normalizeEOL(p.newS)
+            const newText = p.g.fileEol === "\r\n" ? normalizeEOL(p.newApplied).replace(/\n/g, "\r\n") : normalizeEOL(p.newApplied)
             const pos = p.g.doc.positionAt(p.range.start)
             const endPos = p.g.doc.positionAt(p.range.end)
             await applyEditorRangeEdit(p.g.doc, pos.line, pos.character, endPos.line, endPos.character, newText)
           } else {
-            const replaced = p.replaceAll ? p.midText.replaceAll(p.oldS, () => p.newS) : p.midText.replace(p.oldS, () => p.newS)
+            const replaced = p.replaceAll ? p.midText.replaceAll(p.oldS, () => p.newS) : p.midText.replace(p.oldS, () => p.newApplied)
             const out = p.g.fileEol === "\r\n" ? normalizeEOL(replaced).replace(/\n/g, "\r\n") : replaced
             await applyEditorEdit(p.g.doc, out)
           }
           results.push(`Replaced ${p.replaceAll ? p.count : 1} occurrence(s) in ${p.g.path} (via editor)`)
         } else {
-          const replaced = p.replaceAll ? p.midText.replaceAll(p.oldS, () => p.newS) : p.midText.replace(p.oldS, () => p.newS)
+          const replaced = p.replaceAll ? p.midText.replaceAll(p.oldS, () => p.newS) : p.midText.replace(p.oldS, () => p.newApplied)
           const out = p.g.fileEol === "\r\n" ? normalizeEOL(replaced).replace(/\n/g, "\r\n") : replaced
           await writeFile(p.g.abs, out, "utf8")
           refreshMarkdownPreview(p.g.abs)
@@ -295,10 +316,26 @@ export const editTool = {
           : "\n  similar lines:"
         candText = header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
       }
-      return `Error: old_string not found in ${path}${candText}`
+      // §14 D-TF2（B——2026-09-04）：not found 结果补 grep 定位建议（英文逐字——与 CLI edit-batch/file.mjs 同句）——
+      // 模型失败后先 grep 定位实际内容，不盲目重试；candidates/CRLF 分支零改（NF-TF）。
+      const preview = old_string.slice(0, 100).split("\n")[0]
+      const searched = `  searched: "${preview}${old_string.length > 100 ? "…" : ""}" — use grep to locate the actual content`
+      return `Error: old_string not found in ${path}\n${searched}${candText}`
     }
     if (!replace_all && count > 1) {
       return `Error: old_string matches ${count} times in ${path} — set replace_all=true or add more context to make it unique`
+    }
+    // §15 D15.1 + §15.2 分支 0: empty new_string (pure deletion intent) is an explicit
+    // error — deletion keeps the context lines in BOTH old and new (never silent); the
+    // region judgment lives in edit-diff.mjs (applyRegion = §15.2 分支 0 single-line
+    // in-place replace + applyPatchLines LCS diff — replace_all = literal per-occurrence
+    // swap, never branch 0 — the insert rule does not apply).
+    if (new_string === "") return `Error: ${EMPTY_NEW_REASON}`
+    let region = new_string
+    if (!replace_all) {
+      const patch = applyRegion(old_string, new_string)
+      if (!patch.ok) return `Error: ${patch.reason}`
+      region = patch.resultText
     }
 
     if (doc) {
@@ -320,7 +357,7 @@ export const editTool = {
         if (idx === -1) return `Error: old_string not found in ${path}`
         const start = lfOffsetToRaw(rawText, idx)
         const end = lfOffsetToRaw(rawText, idx + old_string.length)
-        const newText = fileEol === "\r\n" ? normalizeEOL(new_string).replace(/\n/g, "\r\n") : normalizeEOL(new_string)
+        const newText = fileEol === "\r\n" ? normalizeEOL(region).replace(/\n/g, "\r\n") : normalizeEOL(region)
         const pos = doc.positionAt(start)
         const endPos = doc.positionAt(end)
         await applyEditorRangeEdit(doc, pos.line, pos.character, endPos.line, endPos.character, newText)
@@ -329,7 +366,7 @@ export const editTool = {
     }
 
     // Not open — write to disk. Restore the file's original EOL style.
-    const replaced = replace_all ? text.replaceAll(old_string, () => new_string) : text.replace(old_string, () => new_string)
+    const replaced = replace_all ? text.replaceAll(old_string, () => new_string) : text.replace(old_string, () => region)
     // normalizeEOL(replaced) first: new_string may carry \r\n (pasted from a raw CRLF read);
     // without it the \n→\r\n conversion doubles the \r into \r\r\n (review R9#1).
     const out = fileEol === "\r\n" ? normalizeEOL(replaced).replace(/\n/g, "\r\n") : replaced
@@ -352,7 +389,9 @@ export const hashlineEditTool = {
     "- The hash of each line is computed as SHA256(line_content).slice(0, 12) — the same algorithm used by read(hashes=true)\n" +
     "- Hashes are position-independent: they identify lines by content, not by line number (which changes after edits)\n" +
     "- If the hash sequence isn't found, the error will include the current file's hashes so you can retry with corrected values\n" +
-    "- Prefer this over edit when: 1) the file may have mixed whitespace/encoding, 2) you want to edit a block of lines with a single call",
+    "- Prefer this over edit when: 1) the file may have mixed whitespace/encoding, 2) you want to edit a block of lines with a single call\n" +
+    "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed\n" +
+    "Replacement text replaces the lines identified by the hashes — content not present in new_content is deleted. For a new line after a known line, use insert_after. For a single simple string swap, use edit.",
   parameters: {
     type: "object",
     properties: {
@@ -396,6 +435,7 @@ export const hashlineEditTool = {
       throw new Error(
         `Hash sequence not found in ${path}: ${preview}\n` +
         `The file may have been modified since you last read it. Current hashes (first ${maxShow} lines):\n${hashDump}` +
+        `\nfor fresh hashes, re-read the file with hashes=true` +
         (corrupted ? `\n${FFFD_WARNING}` : "")
       )
     }

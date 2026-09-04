@@ -9,7 +9,7 @@ export const skillTool = {
   name: "skill",
   readonly: true,
   description:
-    "Load a project skill from .thincoder/skills/. Skills contain reusable instructions.\n" +
+    "Load a project skill from .thincoder/skills/. Skills contain reusable instructions; use memory (put) to persist conventions and preferences across sessions.\n" +
     "Parameters:\n" +
     "- action: list (show available) | load (activate one by name)\n" +
     "- name: Skill name (for load)",

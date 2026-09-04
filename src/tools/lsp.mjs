@@ -47,7 +47,9 @@ export const lspTool = {
   name: "lsp",
   description:
     "LSP code intelligence: go to definition, find references, hover info, document symbols, diagnostics. " +
-    "Uses VS Code's language services directly — works for any language with an installed extension.\n" +
+    "Uses VS Code's language services directly — works for any language with an installed extension. " +
+    "Find files with glob / repo_outline — use lsp for definition / references / diagnostics. " +
+    "Returns the definitions, references, hover info, or diagnostics for the queried symbol.\n" +
     "Parameters:\n" +
     "- subcommand (required): definition | references | hover | symbols | diagnostics\n" +
     "- uri (required): Target file path (relative to project root)\n" +

@@ -8,7 +8,7 @@ export const questionTool = {
   name: "question",
   readonly: true,
   description:
-    "Ask the user a question and wait for their response.\n" +
+    "Ask the user a question and wait for their response. Use when the task is ambiguous, you need a design decision, or you're stuck and need human judgment. The answer is injected as the next user message.\n" +
     "Parameters:\n" +
     "- question (required): The question to ask\n" +
     "- options: Array of single-choice options (optional). MUST be plain strings, e.g. [\"A\", \"B\", \"C\"] — never objects.",

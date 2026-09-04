@@ -18,6 +18,7 @@ export const lintTool = {
     "Without 'full', runs a fast node --check (JS/TS syntax only, catches parse errors in milliseconds).\n" +
     "With 'full', runs the language-aware cascade: tsc --noEmit (TS/TSX); ruff (Python); cargo check (Rust); go vet (Go); JS/JSX falls back to node --check (eslint removed 2026-09-02 — zero-dependency).\n" +
     "Use the fast default after every write/edit; use 'full' before declaring a task complete.\n" +
+    "Returns: `Syntax OK: <path>` / `Syntax error in <path>: <message>` (or `✗ <checker>: <output>` for the language cascade).\n" +
     "Parameters:\n" +
     "- path: file to check (default: most recently modified file)\n" +
     "- full: run the full language-aware cascade instead of just node --check (default false)",

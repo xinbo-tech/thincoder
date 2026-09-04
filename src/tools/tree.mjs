@@ -15,7 +15,8 @@ const BINARY_EXTS = new Set([".exe", ".dll", ".png", ".jpg", ".jpeg", ".gif", ".
 export const treeTool = {
   name: "tree",
   description:
-    "Generate a directory tree of the codebase (default depth 3). Skips dotfiles, .git/node_modules/dist/build/bin/obj and other build/vendor dirs, and binary files.\n" +
+    "Generate a directory tree of the codebase (default depth 3). Skips dotfiles, .git/node_modules/dist/build/bin/obj and other build/vendor dirs, and binary files. " +
+    "Returns the directory tree as text (capped at 200 entries).\n" +
     "Route to tree instead of bash: `tree`/`find .`/`dir /s`.\n" +
     "Parameters:\n" +
     "- path: Root directory (default workspace root)\n" +

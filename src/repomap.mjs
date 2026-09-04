@@ -124,7 +124,8 @@ export const repoOutlineTool = {
   description:
     "Show the project's file dependency outline: which files import/export from which, and what symbols they export. " +
     "Use when you need to understand the project structure, find where a function is defined, or see what files depend on a module. " +
-    "Pass a path to focus on a single file's relationships.",
+    "Pass a path to focus on a single file's relationships. " +
+    "For symbol-level lookups use code_search or lsp.",
   parameters: {
     type: "object",
     properties: {

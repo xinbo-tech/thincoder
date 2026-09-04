@@ -6,7 +6,7 @@ export const goalTool = {
   name: "goal",
   readonly: true,
   description:
-    "Manage a long-running autonomous goal. action=set: create a goal with a verifiable criterion. " +
+    "Manage a long-running autonomous goal. For tracking a list of tasks in the current session use task. action=set: create a goal with a verifiable criterion. " +
     "action=complete: mark achieved. action=cancel: abandon.\n" +
     "Parameters:\n" +
     "- action (required): set | complete | cancel\n" +

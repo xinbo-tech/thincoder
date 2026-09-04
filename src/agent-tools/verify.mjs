@@ -64,20 +64,25 @@ export const verifyTool = {
   name: "verify",
   readonly: true,
   description:
-    "Run a pre-completion self-check. Runs syntax checks and reads editor diagnostics on changed files.\n" +
+    "Run a pre-completion self-check. Runs syntax checks and reads editor diagnostics on changed files. For a single-file syntax check use lint.\n" +
     "Parameters:\n" +
     "- full: Also run the full test suite (default false)\n" +
     "- workdir: Optional — run verify in this subdirectory (relative to cwd or absolute); tests and changed-file resolution (_touchedFiles ∪ git diff) anchor here first (for monorepos)\n" +
-    "- filter: Optional — limit the test run to matching test names (node --test-name-pattern)",
+    "- testNamePattern: Optional — limit the test run to matching test names (node --test-name-pattern; renamed from filter — the old name is rejected)",
   parameters: {
     type: "object",
     properties: {
       full: { type: "boolean", description: "Run full test suite" },
       workdir: { type: "string", description: "Optional — run verify in this subdirectory (relative to cwd or absolute); tests and changed-file resolution (_touchedFiles ∪ git diff) anchor here first (for monorepos)" },
-      filter: { type: "string", description: "Optional — limit the test run to matching test names (node --test-name-pattern)" },
+      testNamePattern: { type: "string", description: "Optional — limit the test run to matching test names (node --test-name-pattern; renamed from filter)" },
     },
   },
-  async execute({ full, workdir, filter }, ctx) {
+  async execute(args, ctx) {
+    const { full, workdir, testNamePattern } = args
+    const filter = args.filter
+    if (filter !== undefined) {
+      return 'Error: "filter" was renamed to "testNamePattern" — use testNamePattern instead (old name rejected — breaking rename per user ruling)'
+    }
     const testCwd = workdir ? resolvePath(workdir, ctx.cwd) : ctx.cwd
     // Changed-file resolution (§18.12 D-VR3): _touchedFiles (per-run bookkeeping,
     // absolute paths) ∪ git diff fallback — git is tried at testCwd
@@ -154,7 +159,7 @@ export const verifyTool = {
         // same pattern as linter's NPX_CLI). execSync froze the host event loop and a
         // Stop click could not even be DELIVERED until the command finished.
         const npmCli = join(process.execPath.replace(/[\\/][^\\/]+$/, ""), "node_modules", "npm", "bin", "npm-cli.js")
-        const testResult = await runInterruptible(process.execPath, [npmCli, "test", ...(filter ? ["--", `--test-name-pattern=${filter}`] : [])], { cwd: testCwd, timeout: 60000, signal: ctx.signal })
+        const testResult = await runInterruptible(process.execPath, [npmCli, "test", ...(testNamePattern ? ["--", `--test-name-pattern=${testNamePattern}`] : [])], { cwd: testCwd, timeout: 60000, signal: ctx.signal })
         results.push(`\n=== Test suite ===\n${testResult.slice(0, 3000)}`)
       } catch (e) {
         if (e.name === "AbortError") throw e  // propagate Stop

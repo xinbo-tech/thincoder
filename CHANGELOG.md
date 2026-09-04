@@ -4,6 +4,13 @@ All notable changes to ThinCoder VS Code are documented here.
 
 ## [0.8.11] — 2026-09-04
 
+### Changed (追加——2026-09-04 后半批)
+
+- **advisor 角色定位锚（AGENT-LOOP.md §12.1 镜像）**：四模板插"Your role"段（独立评审者/证据纪律/边界/中立——与 CLI 同锚）。
+- **子代理人格锚（AGENT-LOOP.md §7.3 镜像）**：coder.md（IMPLEMENTER）+ consult-base.md（证据纪律）——与 CLI 同锚。
+- **审计范围引导（AGENT-LOOP.md §18.13 镜像）**：auditTaskBook 加机械预算句 + engineering-sub.md 审计 quick 档。
+- **工具输出预览保头保尾（CLI §5 镜像）**：run-helpers.mjs buildHeadTailPreview——与 CLI 同语义。
+
 ### Changed
 
 - **子代理零 git（AGENT-LOOP.md §18.5）**：VS Code 端与 CLI 对齐——explore/plan 描述“Receives git context auto-injected”删除，改为“No git context injected—evidence from read/glob/grep and the task book”（本端实现从未注入，现与承诺一致）；explore.md 删除 git 注入声明/命令承诺；审计任务书（auditTaskBook）追加零 git 范围权威声明（`_touchedFiles` 为审计范围——工作区未列改动不作超清单依据）。

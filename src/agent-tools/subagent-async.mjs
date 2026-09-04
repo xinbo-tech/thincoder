@@ -9,7 +9,9 @@
  * §18 (AGENT-LOOP.md D-E1..E3): eng-coder audit spawns — gateEngCoderSpawn (explore-only +
  * sync-only + the 7th-spawn audit-budget backstop; budget carried on history._engAuditSpawns
  * so it survives runAgent resume), auditTaskBook (D-E2 ③ — the audit child's task book is the
- * eng-coder's OWN spawn task ∪ mechanically tracked touched files, never a self-written list),
+ * eng-coder's OWN spawn task ∪ mechanically tracked touched files, never a self-written list;
+ * §18.13 D-A1.2 — it also carries the mechanical audit budget: A1/A2 之后 A3 之前追加——quick 档 +
+ * ≤10 tool rounds + read only _touchedFiles/task-book-named design sections),
  * shouldAutoResume (D-A3 exception — an engineering && AUTO async child auto-resumes at the
  * turn cap: the §18 D-E2 cap fallback for the default-async eng-coder delivery).
  *
@@ -39,6 +41,7 @@
  */
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent, errText } from "../log.mjs"
+import { existsSync, statSync } from "node:fs"
 import { resolve, relative, isAbsolute } from "node:path"
 
 /**
@@ -149,6 +152,13 @@ export function auditTaskBook(task, agent, engAuditAttempt) {
       "Zero-git scope authority (§18.5 D-AG3): this audit task receives NO git context — nothing is injected. " +
       "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
       "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
+      // D-A1.2 (AGENT-LOOP.md §18.13) — audit budget, mechanical scope anchor: appended AFTER the
+      // A1/A2 blocks, BEFORE the A3 report template; D-A1.3 keeps the existing scope sentence above untouched.
+      "\n[Audit budget — mechanical]: read ONLY the touched files listed above and\n" +
+      "the design-doc sections the parent task book names (affected-files table,\n" +
+      "acceptance criteria, status line). Do NOT read whole documents. Budget =\n" +
+      "10 tool rounds max — if you cannot conclude within it, report PROBLEM\n" +
+      "(inconclusive) rather than continuing to explore." +
       // A3 — audit report format template (D-TS6).
       "\n\nAUDIT REPORT FORMAT (AGENT-LOOP.md §18.7 D-TS6) — end your report with EXACTLY one of these states:\n" +
       "- CLEAN: no divergence found — state it verbatim: '四类偏差均未发现'.\n" +
@@ -391,12 +401,22 @@ function writeTombstone(parent, id, status, role) {
   writeTombstoneTo(parent.history ?? parent, id, status, role)
 }
 
-/** 文件域归一化（round1 #5——相对 cwd 解析绝对 + 去重——冲突比较键 win32 小写）。 */
+/** 文件域归一化（round1 #5——相对 cwd 解析绝对 + 去重——冲突比较键 win32 小写）。
+ *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
+ *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
+ *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
+ *  已知限制（D-F1.4 附注）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。 */
 export function normalizeFileList(files, cwd) {
   const out = []
   for (const f of Array.isArray(files) ? files : []) {
     if (typeof f !== "string" || !f.trim()) continue
+    if (f.endsWith("/") || f.endsWith("\\")) {
+      throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
+    }
     const abs = resolve(cwd ?? process.cwd(), f)
+    if (existsSync(abs) && statSync(abs).isDirectory()) {
+      throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
+    }
     if (!out.includes(abs)) out.push(abs)
   }
   return out
@@ -460,6 +480,10 @@ export function describeBlockers(parent, entry, auto = false) {
     for (const e of poolMap(parent).values()) {
       if (e === entry) continue
       if (e.status !== "running" && e.status !== "queued") continue
+      // §21.1 D-SL1.2（展示一致——与 queueRunnable 同序判定）：只列会**真正阻断我**的
+      // 条目——后入者（queued 且 id 晚于当前任务）不列——避免 status/waiting 误导"等
+      // 一个其实等不到的人"（旧代码两个 queued 同文件互列——环形死锁的展示面）。
+      if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
       const hit = filesOverlap(myFiles, e._files ?? [])
       if (!hit) continue
       wait.push(`${e.role}#${e.id}（域冲突 ${showFile(parent, hit)}）`)
@@ -475,7 +499,11 @@ export function describeBlockers(parent, entry, auto = false) {
 }
 
 /** §20 D-SD4 补位判据：依赖全满足（AUTO depc 放行）+ 域无冲突（running ∪ queued
- *  self-excl——队列序保同文件串行：先入者启动后以 running 身份继续挡后入者）。 */
+ *  self-excl——队列序保同文件串行：先入者启动后以 running 身份继续挡后入者）。
+ *  §21.1 D-SL1.1（2026-09-04——环形死锁修正）：queued 域冲突阻断只适用于**先入者**
+ *  （spawn 序早——池条目 id 数字递增）——后入者不阻断——否则两个 queued 同文件互相
+ *  阻断 → 环形死锁（两次实证 id:26/27、id:32/33）；running 照旧阻断（任意序——先入
+ *  者启动后以 running 身份继续挡后入者——F-SL1.2 自然串行）。 */
 export function queueRunnable(parent, entry, auto = false) {
   for (const depId of entry._dependsOn ?? []) {
     const state = depInfo(parent, depId).state
@@ -487,6 +515,11 @@ export function queueRunnable(parent, entry, auto = false) {
     for (const e of poolMap(parent).values()) {
       if (e === entry) continue
       if (e.status !== "running" && e.status !== "queued") continue
+      // §21.1 D-SL1.1：后入者（queued 且 id 晚于当前任务）不阻断——先入者先启动。
+      // id 形态防御：Number() 归一数字/数字字符串（advisor fix #3 先例——模型回传可能
+      // 字符串化）；非数字 → NaN → 比较 false → 不跳过（fail-closed——保守按"先入者"
+      // 阻断语义——与旧行为一致，不放开任何阻断）。
+      if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
       if (filesOverlap(myFiles, e._files ?? [])) return false
     }
   }

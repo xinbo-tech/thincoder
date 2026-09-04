@@ -39,7 +39,7 @@ export const codeSearchTool = {
   description:
     "Search the project's source code. Uses vector semantic search when available, falling back to keyword-based regex matching. " +
     "Use natural language queries for vector search; use short specific terms (function names, class names) for keyword search. " +
-    "Returns matching code chunks with file paths and line numbers.",
+    "Returns matching code chunks with file paths and line numbers. When you need the intended design rather than the implemented code, use doc_search.",
   parameters: {
     type: "object",
     properties: {
@@ -106,7 +106,8 @@ export const docSearchTool = {
   description:
     "Search the project's documentation (README, design docs, guides, markdown files). Uses vector semantic search when available, falling back to keyword-based regex matching. " +
     "Use natural language queries for vector search; use specific terms for keyword search. " +
-    "Prefer this over code_search when you need to understand the project's intended design rather than existing implementation.",
+    "Prefer this over code_search when you need to understand the project's intended design rather than existing implementation. " +
+    "Returns matching document sections with their file paths.",
   parameters: {
     type: "object",
     properties: {

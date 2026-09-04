@@ -189,7 +189,8 @@ export const checklistTool = {
     "- index: 1-based item index (fallback for mark, only when id is absent)\n" +
     "- status: 'pending' | 'in_progress' | 'done' (required for mark)\n" +
     "- parent: parent task ID for tree-structured tasks (e.g. 'T1')\n" +
-    "Note: marking a parent 'done' requires all its children already done — otherwise rejected (complete children first).",
+    "Note: marking a parent 'done' requires all its children already done — otherwise rejected (complete children first). " +
+    "For in-session subtask breakdown of a single checklist item, use the task tool instead.",
   parameters: {
     type: "object",
     properties: {

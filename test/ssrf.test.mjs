@@ -57,4 +57,15 @@ describe("fetchTool — SSRF + redirect guard", () => {
     const out = await fetchTool.execute({ url: "file:///etc/passwd" }, {})
     assert.match(out, /http:\/\/ or https/)
   })
+
+  it("T-TF4: fetch 网络失败（代理连接拒绝）错误含 proxy 提示行（D-TF3 逐字——不自动路由）", async () => {
+    // 目标 = 公网域名（过 SSRF 检查）；代理 = localhost 关闭端口（127.0.0.1:1）→ 连接拒绝快速失败（无超时等待）
+    // 语义同时验证：失败即建议显式传 proxy 重试（2026-08-31 裁定——不自动路由）
+    const out = await fetchTool.execute({ url: "http://example.invalid/", proxy: "http://127.0.0.1:1" }, {})
+    assert.match(out, /fetch error/)
+    assert.ok(
+      out.includes("network failure — retry with proxy: 'http://host:port' if the target is blocked"),
+      "T-TF4: 网络失败错误含 proxy 提示行（D-TF3 逐字）",
+    )
+  })
 })

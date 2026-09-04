@@ -32,7 +32,7 @@ const MEMORY_TOOL_DESCRIPTION =
   "- delete — SINGLE: {id, scope} deletes one entry by the id shown in put/search/list output. BATCH: {scope + type and/or keyword} deletes every matching entry in that scope — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); scope-wide wipes without filters are refused on every layer\n" +
   "- clear — {scope: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing scope or a project/team scope is refused (use delete batch filters on shared layers)\n" +
   "Deleting project/team (CLI) entries removes the local markdown file and its index row — team deletion is local only and a later team sync may resurrect the file while the remote still has it.\n" +
-  "Save bugs, conventions, and preferences here — they persist across sessions."
+  "Save bugs, conventions, and preferences here — they persist across sessions. For project-level task tracking use checklist; for reusable project instructions use skill."
 
 /** Date display for list/preview rows: frontmatter created date; unknown → "?" */
 function rowDate(created) {

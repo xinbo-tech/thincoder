@@ -6,7 +6,7 @@ export const planTool = {
   readonly: true,
   name: "plan",
   description:
-    "Enter or exit plan mode. In plan mode, only read-only tools are allowed — useful for exploring code before committing changes.\n" +
+    "Enter or exit plan mode. In plan mode, only read-only tools are allowed. Use before complex multi-step work — explore the codebase and present a plan; exit plan mode to implement (the user approves first).\n" +
     "Parameters:\n" +
     "- action (required): enter | exit",
   parameters: {

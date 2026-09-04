@@ -184,7 +184,7 @@ export const subagentTool = {
       designToken: { type: "string", description: "Required when role='eng-coder' (spawn): the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder' (spawn): the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
       async: { type: "boolean", description: "(spawn) true = spawn without waiting — returns {id, status} immediately, fetch results later via action:'check' (peek without blocking via action:'status'; stop via action:'cancel'). Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },
-      files: { type: "array", items: { type: "string" }, description: "(spawn) the file write-domain this task declares (cwd-relative or absolute paths — AGENT-LOOP.md §20). Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:'queued', position, waiting, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
+      files: { type: "array", items: { type: "string" }, description: "(spawn) the file write-domain this task declares (cwd-relative or absolute paths — AGENT-LOOP.md §20). files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error. Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:'queued', position, waiting, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
       dependsOn: { type: "array", items: { type: "string" }, description: "(spawn) ids from prior async spawn returns whose outcome this task needs (AGENT-LOOP.md §20) — the task queues until every dependency settles, then starts automatically. Ids consumed by action:'check' count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
       id: { type: "number", description: "(check/status/cancel) The subagent id to address, as returned by an async spawn. For check: waits for that specific subagent (including still-queued ones); omit to fetch the next completed one (arrival order). For status: returns that subagent's status without waiting or consuming; omit for the full overview. For cancel: REQUIRED — the target to stop (omitting it errors; a mistaken all-stop is impossible)." },
       n: { type: "number", description: "(check — required) 1-based read counter — must increment by 1 on every check call (n=1 for the first check of the turn); out-of-order/duplicate n is rejected. Not used by status." },
@@ -240,7 +240,16 @@ export const subagentTool = {
     // 明确错误——不队列化 sync——sync 语义零变更（T-SD13）**。
     const filesArg = args.files
     const dependsRaw = args.dependsOn
-    const files = filesArg !== undefined && filesArg !== null ? normalizeFileList(filesArg, cwd) : []
+    // §20.8 D-F1.1：目录声明 fail-closed——检测器 throw → catch → 错误即工具结果
+    // （模型可见"文件级明细"提示——不加静默——目录绕过冲突检测的通道闭合）。
+    let files = []
+    if (filesArg !== undefined && filesArg !== null) {
+      try {
+        files = normalizeFileList(filesArg, cwd)
+      } catch (e) {
+        return JSON.stringify({ status: "error", error: e.message })
+      }
+    }
     if (filesArg !== undefined && filesArg !== null && !Array.isArray(filesArg)) {
       throw new Error("subagent files must be an array of file paths (the write domain this task declares)")
     }

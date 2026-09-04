@@ -15,7 +15,7 @@ export const globTool = {
   name: "glob",
   readonly: true,
   description:
-    "Find files by glob pattern. Returns matching paths. Supports ** for recursive matching.\n" +
+    "Find files by glob pattern. Returns matching paths. Supports ** for recursive matching. Use this to discover file structure; use grep to search file contents.\n" +
     "Parameters:\n" +
     "- pattern (required): Glob pattern\n" +
     "- path: Directory to search in (default workspace root)",
@@ -49,7 +49,8 @@ export const grepTool = {
     "- path: Directory or file to search (default workspace root)\n" +
     "- glob: Only search files matching this glob\n" +
     "- ignoreCase: Case-insensitive match (default false)\n" +
-    "- literal: Literal string match — no regex interpretation (default false)",
+    "- literal: Literal string match — no regex interpretation (default false)\n" +
+    "Use this to find usages, definitions, patterns; use glob to find files by name.",
   parameters: {
     type: "object",
     properties: {

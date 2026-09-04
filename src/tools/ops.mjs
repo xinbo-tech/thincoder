@@ -12,6 +12,7 @@ export const fileOpsTool = {
   name: "file_ops",
   description:
     "Move, copy, or rename a file/directory.\n" +
+    "Returns `Copied|Moved|Renamed <source> → <dest>`.\n" +
     "Route to file_ops instead of bash: `mv`→move, `cp`→copy, `ren`→rename.\n" +
     "Parameters:\n" +
     "- action (required): move | copy | rename\n" +
@@ -111,7 +112,7 @@ async function listPosix(signal) {
 export const getCurrentTimeTool = {
   name: "get_current_time",
   description:
-    "Get the current date, time, weekday, and timezone. Use when a task depends on the current time/date. Route to this instead of bash `date`/`time`.",
+    "Get the current date, time, weekday, and timezone. Use when a task depends on the current time/date. Route to this instead of bash `date`/`time`. Returns the date, time, weekday, and timezone.",
   parameters: { type: "object", properties: {} },
   readonly: true,
   async execute() {

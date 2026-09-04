@@ -12,11 +12,14 @@ export const insertAfterTool = {
   name: "insert_after",
   description:
     "Insert a line of text after a specific line in a file.\n" +
+    "Use this instead of edit when you're adding a new line — a checklist item, a doc heading, a line of prose, a function, an import, or a block — no need to fabricate surrounding context for exact matching.\n" +
     "Parameters:\n" +
     "- path (required): File path\n" +
     "- content (required): Text to insert as a new line\n" +
     "- after_line: Line number to insert after (1-based), takes priority over after_regex\n" +
-    "- after_regex: JavaScript regex to find the line to insert after",
+    "- after_regex: JavaScript regex to find the line to insert after\n" +
+    "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed\n" +
+    "Returns `Inserted after line N in <path>`.",
   parameters: {
     type: "object",
     properties: {
@@ -104,7 +107,44 @@ export function parsePatch(patch) {
     if (line.startsWith("@@")) {
       if (!cur) throw new Error("Malformed patch: hunk header before any file header")
       const m = line.match(/^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/)
-      if (!m) throw new Error(`Malformed patch: bad hunk header "${line}"`)
+      if (!m) {
+        // §15 D15.6: bare "@@" without coordinates — the hunk is located by its
+        // matching-line sequence（空格上下文行 + - 行——applyHunks 锚匹配域——唯一匹配即应用）。
+        // ——零上下文/1 上下文含 - 锚形态由 §15.3 放宽（TOOLS.md D15.10.1——锚序列唯一匹配即应用——
+        // context<2 且无 - 锚仍拒——纯 + 插入位置不可判——NF15.8c——与 CLI patch.mjs 同语义）。
+        // hunk.ops keeps the standard shape so applyHunks works unchanged; coordless is marked
+        // for anchor reporting.
+        if (!/^@@\s*$/.test(line)) throw new Error(`Malformed patch: bad hunk header "${line}"`)
+        const hunk = { ops: [], coordless: true }
+        i++
+        let contextCount = 0
+        while (i < lines.length) {
+          const hl = lines[i]
+          // Hunk boundaries: next @@ header, or a next-file "--- " header (its
+          // "+++ " pair is what makes it a header — a removed line whose content
+          // begins with "-- " reads as "--- x" and must NOT break the body).
+          // An empty line is the trailing split artifact, never a body line
+          // (diff lines always carry a tag char) — stop there too.
+          if (hl === "" || hl.startsWith("@@") || (hl.startsWith("--- ") && lines[i + 1]?.startsWith("+++ "))) break
+          if (hl.startsWith("\\")) { i++; continue } // "\ No newline at end of file"
+          const tag = hl === "" ? " " : hl[0]
+          const text = hl === "" ? "" : hl.slice(1)
+          if (tag === " ") { hunk.ops.push({ type: " ", text }); contextCount++ }
+          else if (tag === "-") hunk.ops.push({ type: "-", text })
+          else if (tag === "+") hunk.ops.push({ type: "+", text })
+          else throw new Error(`Malformed patch: unexpected line "${hl.slice(0, 60)}" inside hunk`)
+          i++
+        }
+        // §15.3 (D15.10.1——2026-09-04)：context<2 且含 ≥1 个 - 行 → 接受——定位锚 = hunk 内
+        // 匹配行序列（空格上下文行 + - 行——按出现序）连续——唯一匹配即应用（applyHunks 既有锚
+        // 匹配域——多匹配 / not-found 语义不变）。0 上下文与 1 上下文同待遇（评审 #4a）。
+        const removedCount = hunk.ops.filter((o) => o.type === "-").length
+        if (contextCount < 2 && removedCount === 0) {
+          throw new Error(`Malformed patch: hunk "@@" without coordinates needs at least 2 context lines — add more context lines`)
+        }
+        cur.hunks.push(hunk)
+        continue
+      }
       let oldNeed = m[1] == null ? 1 : Number(m[1])
       let newNeed = m[2] == null ? 1 : Number(m[2])
       const hunk = { ops: [] }
@@ -130,6 +170,14 @@ export function parsePatch(patch) {
   return files
 }
 
+/** Anchor fragment for coordless-hunk error text (D15.6.1): the first context
+ *  lines that were tried, truncated to 60 chars each, so the model sees what
+ *  the hunk was anchored on. */
+function hunkAnchor(oldSeq) {
+  const first = oldSeq.slice(0, 3).map((l) => l.slice(0, 60))
+  return first.join("\n") + (oldSeq.length > 3 ? `\n… ${oldSeq.length} lines` : "")
+}
+
 /** Apply hunks sequentially onto a line array, re-scanning each hunk's context
  *  against the ALREADY-mutated lines — earlier hunks shifting line numbers can
  *  never misalign later hunks (the bug the line-number approach had). */
@@ -146,8 +194,14 @@ export function applyHunks(fileLines, hunks, eol, path) {
       }
       if (ok) matches.push(pos)
     }
-    if (matches.length === 0) throw new Error(`Hunk ${h + 1} in ${path} does not apply — context not found. Read the file first and regenerate the patch.`)
-    if (matches.length > 1) throw new Error(`Hunk ${h + 1} in ${path} matches ${matches.length} locations — add more context lines to make it unique`)
+    if (matches.length === 0) {
+      const err = `Hunk ${h + 1} in ${path} does not apply — context not found. Read the file first and regenerate the patch.`
+      throw new Error(hunks[h].coordless ? `${err}\n  anchor: "${hunkAnchor(oldSeq)}"` : err)
+    }
+    if (matches.length > 1) {
+      const err = `Hunk ${h + 1} in ${path} matches ${matches.length} locations — add more context lines to make it unique`
+      throw new Error(hunks[h].coordless ? `${err}\n  anchor: "${hunkAnchor(oldSeq)}"` : err)
+    }
     const pos = matches[0]
     const out = []
     let src = pos
@@ -163,9 +217,11 @@ export function applyHunks(fileLines, hunks, eol, path) {
 export const applyPatchTool = {
   name: "apply_patch",
   description:
-    "Apply a unified diff to one or more files. Use for multi-file changes.\n" +
+    "Apply a unified diff to one or more files, atomically: if any hunk fails to apply, nothing is written. Use for multi-file changes. For single-file edits, edit is simpler; for full rewrites, write is simpler.\n" +
     "Parameters:\n" +
-    "- patch (required): Unified diff text — may span multiple files (multiple --- / +++ header pairs, including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks。场景引导：一次新建多个文件 / 整文件替换 / 统一 diff 形态",
+    "- patch (required): Unified diff text — may span multiple files (multiple --- / +++ header pairs, including creating MULTIPLE new files via --- /dev/null); --- / +++ headers per file, @@ -old,count +new,count @@ hunks。场景引导：一次新建多个文件 / 整文件替换 / 统一 diff 形态\n" +
+    "- Hunk header \"@@\" without coordinates is accepted. Coordinate-less hunks are located by their anchor lines: context lines plus the removed (-) lines, matched as a contiguous sequence — a unique match applies. The anchor-free forms require context: a hunk with no removed (-) lines (pure additions) needs at least 2 context lines for a unique match; a zero/one-context hunk with at least one removed (-) line is located by its anchor sequence (context + removed lines, in order) and applies on a unique match.\n" +
+    "Returns `Patched <path> (created|modified)` per file.",
   parameters: {
     type: "object",
     properties: {
@@ -247,7 +303,7 @@ export const lsTool = {
   name: "ls",
   readonly: true,
   description:
-    "List directory contents with type and size.\n" +
+    "List directory contents with type and size. Use this for a quick overview; use glob when you have a specific file pattern in mind.\n" +
     "Route to ls instead of bash: `dir /b` / `ls` / `dir` → ls. Listing a directory is a read — never shell out for it.\n" +
     "Parameters:\n" +
     "- path: Directory path (default workspace root)\n" +
@@ -292,7 +348,7 @@ function wildcardToRegex(pattern) {
 export const deleteTool = {
   name: "delete",
   description:
-    "Delete a file. Refuses to delete git-tracked files as a safety measure.\n" +
+    "Delete a file. Use when the agent created a temporary or junk file that should be cleaned up, or when the user explicitly asks to delete something. Refuses to delete git-tracked files as a safety measure.\n" +
     "Route to delete instead of bash: `del file` / `rm file` → delete (single files). Use bash `rm -rf` only for directories.\n" +
     "Parameters:\n" +
     "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +

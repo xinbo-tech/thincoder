@@ -10,7 +10,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import * as vscode from "vscode"
@@ -94,7 +94,7 @@ describe("F5 — CRLF offset drift + same-family hazards (EDIT-TOOL-EOL)", () =>
     const doc = makeDoc(raw, "d:\\proj\\crlf-range.txt")
     vscode.workspace.textDocuments.push(doc)
 
-    const r = await editTool.execute({ path: "crlf-range.txt", old_string: "line 55 content", new_string: "line 55 CHANGED" }, { cwd: "d:\\proj" })
+    const r = await editTool.execute({ path: "crlf-range.txt", old_string: "line 54 content\nline 55 content", new_string: "line 54 content\nline 55 CHANGED" }, { cwd: "d:\\proj" })
     assert.match(r, /Replaced 1 occurrence/)
     const out = doc.getText()
     assert.ok(out.includes("line 55 CHANGED\r\n"), "target line changed")
@@ -122,9 +122,9 @@ describe("F5 — CRLF offset drift + same-family hazards (EDIT-TOOL-EOL)", () =>
     const doc = makeDoc(raw, "d:\\proj\\mixed.txt")
     vscode.workspace.textDocuments.push(doc)
 
-    await editTool.execute({ path: "mixed.txt", old_string: "head2", new_string: "HEAD2" }, { cwd: "d:\\proj" })
+    await editTool.execute({ path: "mixed.txt", old_string: "head1\nhead2", new_string: "head1\nHEAD2" }, { cwd: "d:\\proj" })
     assert.equal(doc.getText(), "head1\r\nHEAD2\r\nislandA\nislandB\r\ntail\r\n")
-    await editTool.execute({ path: "mixed.txt", old_string: "islandB", new_string: "ISLANDB" }, { cwd: "d:\\proj" })
+    await editTool.execute({ path: "mixed.txt", old_string: "islandB\ntail", new_string: "ISLANDB\ntail" }, { cwd: "d:\\proj" })
     assert.equal(doc.getText(), "head1\r\nHEAD2\r\nislandA\nISLANDB\r\ntail\r\n")
   })
 
@@ -223,8 +223,8 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     writeFileSync(join(cwd, "b.txt"), "const B = 2\n", "utf8")
     const r = await editTool.execute({
       edits: [
-        { path: "a.txt", old_string: "const A = 1", new_string: "const A = 10" },
-        { path: "b.txt", old_string: "const B = 2", new_string: "const B = 20" },
+        { path: "a.txt", old_string: "const A = 1", new_string: "const A = 10", replace_all: true },
+        { path: "b.txt", old_string: "const B = 2", new_string: "const B = 20", replace_all: true },
       ],
     }, { cwd })
     assert.match(r, /Replaced 1 occurrence\(s\) in a\.txt/)
@@ -239,7 +239,7 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     writeFileSync(join(cwd, "b.txt"), "const B = 2\n", "utf8")
     const r = await editTool.execute({
       edits: [
-        { path: "a.txt", old_string: "const A = 1", new_string: "const A = 100" },
+        { path: "a.txt", old_string: "const A = 1", new_string: "const A = 100", replace_all: true },
         { path: "b.txt", old_string: "NOT FOUND", new_string: "x" },
       ],
     }, { cwd })
@@ -266,8 +266,8 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     vscode.workspace.textDocuments.push(doc)
     const r = await editTool.execute({
       edits: [
-        { path: "same-doc.txt", old_string: "const A = 1", new_string: "const A = 10 // lengthened" },
-        { path: "same-doc.txt", old_string: "const B = 2", new_string: "const B = 20" },
+        { path: "same-doc.txt", old_string: "const A = 1\nconst B = 2", new_string: "const A = 10 // lengthened\nconst B = 2" },
+        { path: "same-doc.txt", old_string: "const A = 10 // lengthened\nconst B = 2", new_string: "const A = 10 // lengthened\nconst B = 20" },
       ],
     }, { cwd: "d:\\proj" })
     assert.equal((r.match(/Replaced 1 occurrence\(s\) in same-doc\.txt/g) || []).length, 2, "两条都回显")
@@ -280,8 +280,8 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     vscode.workspace.textDocuments.push(doc)
     const r = await editTool.execute({
       edits: [
-        { path: "same-crlf.txt", old_string: "const A = 1", new_string: "const A = 10 // lengthened" },
-        { path: "same-crlf.txt", old_string: "const C = 3", new_string: "const C = 30" },
+        { path: "same-crlf.txt", old_string: "const A = 1\nconst B = 2", new_string: "const A = 10 // lengthened\nconst B = 2" },
+        { path: "same-crlf.txt", old_string: "const B = 2\nconst C = 3", new_string: "const B = 2\nconst C = 30" },
       ],
     }, { cwd: "d:\\proj" })
     assert.equal(doc.getText(), "const A = 10 // lengthened\r\nconst B = 2\r\nconst C = 30\r\n", "CRLF 保持原样，第二条精确命中")
@@ -293,8 +293,8 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     writeFileSync(join(cwd, "same-disk.txt"), "const A = 1\nconst B = 2\nconst C = 3\n", "utf8")
     const r = await editTool.execute({
       edits: [
-        { path: "same-disk.txt", old_string: "const A = 1", new_string: "const A = 10\nconst A2 = 12" },
-        { path: "same-disk.txt", old_string: "const B = 2", new_string: "const B = 20" },
+        { path: "same-disk.txt", old_string: "const A = 1\nconst B = 2", new_string: "const A = 10\nconst A2 = 12\nconst B = 2" },
+        { path: "same-disk.txt", old_string: "const B = 2\nconst C = 3", new_string: "const B = 20\nconst C = 3" },
       ],
     }, { cwd })
     assert.equal((r.match(/Replaced 1 occurrence\(s\) in same-disk\.txt/g) || []).length, 2, "两条都回显")
@@ -328,7 +328,7 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     const r = await editTool.execute({
       edits: [
         { path: "ra-crlf.txt", old_string: "alpha", new_string: "A", replace_all: true },
-        { path: "ra-crlf.txt", old_string: "gamma", new_string: "GAMMA" },
+        { path: "ra-crlf.txt", old_string: "A\ngamma", new_string: "A\nGAMMA" },
       ],
     }, { cwd: "d:\\proj" })
     assert.match(r, /Replaced 2 occurrence/)
@@ -343,7 +343,7 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
     const r = await editTool.execute({
       edits: [
         { path: "ra-lf.txt", old_string: "alpha", new_string: "A", replace_all: true },
-        { path: "ra-lf.txt", old_string: "gamma", new_string: "GAMMA" },
+        { path: "ra-lf.txt", old_string: "A\ngamma", new_string: "A\nGAMMA" },
       ],
     }, { cwd: "d:\\proj" })
     assert.match(r, /Replaced 2 occurrence/)
@@ -352,3 +352,308 @@ describe("edit 数组形态（2026-08-31 工具顺手度，CLI ebd70eb parity）
 
 })
 
+// §18.14 split (from test/tools.test.mjs): edit-tool domain — literal contract / hashline / EOL semantics / tool-description batch guidance
+
+describe("edit — literal replacement contract (no $-interpolation)", () => {
+  beforeEach(setup)
+  afterEach(cleanup)
+
+  it("new_string with $& is inserted LITERALLY (regression: string replace corrupted files)", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "a.mjs")
+    writeFileSync(f, "const x = 1\n")
+    const marker = "const re = s.replace(/a/g, " + String.fromCharCode(34, 36, 38, 34) + ")"
+    const r = await editTool.execute({ path: "a.mjs", old_string: "const x = 1", new_string: marker, replace_all: true }, ctx())
+    assert.match(r, /Replaced 1 occurrence/)
+    assert.equal(readFileSync(f, "utf8"), marker + "\n")
+  })
+
+  it("replace_all with $-patterns replaces every occurrence literally", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "b.mjs")
+    writeFileSync(f, "a\na\n")
+    const marker = ["$", "&", "$", "1"].join("")
+    const r = await editTool.execute({ path: "b.mjs", old_string: "a", new_string: marker, replace_all: true }, ctx())
+    assert.match(r, /Replaced 2 occurrence/)
+    assert.equal(readFileSync(f, "utf8"), marker + "\n" + marker + "\n")
+  })
+})
+
+describe("hashline_edit — content-hash addressing (ported from CLI)", () => {
+  beforeEach(setup)
+  afterEach(cleanup)
+
+  it("replaces a single line by hash", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const { hashLine } = await import("../src/tools/shared.mjs")
+    const f = join(cwd, "a.txt")
+    writeFileSync(f, "line one\nline two\nline three\n")
+    const h = hashLine("line two")
+    const r = await hashlineEditTool.execute({ path: "a.txt", old_hashes: [h], new_content: "replaced" }, ctx())
+    assert.match(r, /replaced 1 line\(s\) at L2/)
+    assert.equal(readFileSync(f, "utf8"), "line one\nreplaced\nline three\n")
+  })
+
+  it("replaces a contiguous block by hash sequence", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const { hashLine } = await import("../src/tools/shared.mjs")
+    const f = join(cwd, "b.txt")
+    writeFileSync(f, "a\nb\nc\nd\n")
+    const r = await hashlineEditTool.execute({
+      path: "b.txt",
+      old_hashes: [hashLine("b"), hashLine("c")],
+      new_content: "x\ny",
+    }, ctx())
+    assert.match(r, /replaced 2 line\(s\) at L2 with 2 line\(s\)/)
+    assert.equal(readFileSync(f, "utf8"), "a\nx\ny\nd\n")
+  })
+
+  it("reports missing hash sequence with current hashes", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "c.txt")
+    writeFileSync(f, "only\n")
+    await assert.rejects(
+      () => hashlineEditTool.execute({ path: "c.txt", old_hashes: ["deadbeef00aa"], new_content: "x" }, ctx()),
+      /Hash sequence not found/,
+    )
+  })
+
+  it("rejects ambiguous matches with position details", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const { hashLine } = await import("../src/tools/shared.mjs")
+    const f = join(cwd, "d.txt")
+    writeFileSync(f, "same\nsame\nsame\n")
+    await assert.rejects(
+      () => hashlineEditTool.execute({ path: "d.txt", old_hashes: [hashLine("same")], new_content: "x" }, ctx()),
+      /matches 3 positions/,
+    )
+  })
+})
+
+describe("工具描述 — 批量引导句（§16 D-B2/D-B3，T-B3）", () => {
+  it("editTool/applyPatchTool description 含批量引导语义句", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    const d = editTool.description
+    assert.ok(d.includes("edits` 数组"), "edit 描述提及 edits 数组批量形态")
+    assert.ok(d.includes("原子"), "edit 描述含原子语义")
+    assert.ok(d.includes("多文件"), "edit 描述含多文件同批语义")
+    const editsParam = editTool.parameters.properties.edits.description
+    assert.ok(editsParam.includes("prefer one batched call over N single edits"), "edits 参数含批量引导句")
+    assert.ok(editsParam.includes("same file"), "edits 参数含同文件多处修改引导")
+    const p = applyPatchTool.description
+    assert.ok(p.includes("MULTIPLE new files"), "apply_patch 描述含新建多文件语义")
+    assert.ok(p.includes("/dev/null"), "apply_patch 描述含 --- /dev/null 新建形态")
+  })
+})
+
+describe("edit — EOL normalization (CRLF files, LF old_string)", () => {
+  beforeEach(setup)
+  afterEach(cleanup)
+
+  it("edit on a CRLF file with LF old_string succeeds (EOL normalization regression)", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "crlf.txt")
+    writeFileSync(f, "alpha\r\nbeta\r\ngamma\r\n")
+    // Model writes LF — before the fix this failed with "old_string not found"
+    const r = await editTool.execute({ path: "crlf.txt", old_string: "beta\ngamma", new_string: "beta\nGAMMA" }, ctx())
+    assert.match(r, /Replaced 1 occurrence/)
+    const out = readFileSync(f, "utf8")
+    assert.ok(out.includes("beta\r\nGAMMA\r\n"), "replacement applied with the file's CRLF style preserved: " + JSON.stringify(out))
+    assert.ok(!out.includes("gamma"), "old word gone")
+    assert.ok(!out.includes("alpha\n"), "no whole-file EOL rewrite")
+  })
+
+  it("a genuinely absent old_string still reports not found", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "lf.txt")
+    writeFileSync(f, "one\ntwo\n")
+    const r = await editTool.execute({ path: "lf.txt", old_string: "not-there-at-all", new_string: "x" }, ctx())
+    assert.match(r, /old_string not found/)
+  })
+})
+
+describe("edit tools — EOL semantics + candidates + encoding probe (EDIT-TOOL-EOL, CLI parity)", () => {
+  beforeEach(setup)
+  afterEach(cleanup)
+
+  it("F1: edit on pure CRLF file writes back all CRLF, no bare LF", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "a\r\nb\r\nc\r\n")
+    const r = await editTool.execute({ path: "f.txt", old_string: "a\nb", new_string: "a\nB" }, ctx())
+    assert.match(r, /Replaced 1 occurrence/)
+    const out = readFileSync(f, "utf8")
+    assert.equal(out, "a\r\nB\r\nc\r\n")
+    assert.ok(!/(?<!\r)\n/.test(out), "no bare LF")
+  })
+
+  it("F1 regression: edit on LF file keeps LF", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "a\nb\n")
+    await editTool.execute({ path: "f.txt", old_string: "a\nb", new_string: "a\nB" }, ctx())
+    assert.equal(readFileSync(f, "utf8"), "a\nB\n")
+  })
+
+  it("F1: apply_patch on CRLF file writes back all CRLF", async () => {
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "one\r\ntwo\r\nthree\r\n")
+    const patch = `--- a/f.txt
++++ b/f.txt
+@@ -1,3 +1,3 @@
+ one
+-two
++TWO
+ three
+`
+    const r = await applyPatchTool.execute({ patch }, ctx())
+    assert.match(r, /Patched f\.txt/)
+    assert.equal(readFileSync(f, "utf8"), "one\r\nTWO\r\nthree\r\n")
+  })
+
+  it("F1: hashline_edit on CRLF file writes back all CRLF", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const { hashLine } = await import("../src/tools/shared.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "x\r\ny\r\nz\r\n")
+    const r = await hashlineEditTool.execute({ path: "f.txt", old_hashes: [hashLine("y")], new_content: "Y" }, ctx())
+    assert.match(r, /replaced 1 line\(s\)/)
+    assert.equal(readFileSync(f, "utf8"), "x\r\nY\r\nz\r\n")
+  })
+
+  it("F2: new file in CRLF-majority directory follows CRLF (write + apply_patch)", async () => {
+    const { writeTool } = await import("../src/tools/file.mjs")
+    const { applyPatchTool } = await import("../src/tools/more-file.mjs")
+    writeFileSync(join(cwd, "existing.txt"), "e1\r\ne2\r\n")
+    await writeTool.execute({ path: "w.txt", content: "l1\nl2\n" }, ctx())
+    assert.equal(readFileSync(join(cwd, "w.txt"), "utf8"), "l1\r\nl2\r\n")
+    const patch = `--- /dev/null
++++ b/p.txt
+@@ -0,0 +1,2 @@
++n1
++n2
+`
+    const r = await applyPatchTool.execute({ patch }, ctx())
+    assert.match(r, /Patched p\.txt/)
+    assert.equal(readFileSync(join(cwd, "p.txt"), "utf8"), "n1\r\nn2\r\n")
+  })
+
+  it("F2: new file in LF-majority / empty directory stays LF", async () => {
+    const { writeTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "existing.txt"), "e1\ne2\n")
+    await writeTool.execute({ path: "w.txt", content: "l1\nl2\n" }, ctx())
+    assert.equal(readFileSync(join(cwd, "w.txt"), "utf8"), "l1\nl2\n")
+    mkdirSync(join(cwd, "empty"))
+    await writeTool.execute({ path: "empty/f.txt", content: "x\ny\n" }, ctx())
+    assert.equal(readFileSync(join(cwd, "empty", "f.txt"), "utf8"), "x\ny\n")
+  })
+
+  it("F2/F1: write overwriting an existing CRLF file restores CRLF", async () => {
+    const { writeTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "old1\r\nold2\r\n")
+    await writeTool.execute({ path: "f.txt", content: "new1\nnew2\n" }, ctx())
+    assert.equal(readFileSync(f, "utf8"), "new1\r\nnew2\r\n")
+  })
+
+  it("boundary: mixed-EOL file (first line LF, later CRLF) restores by first-line LF", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "first\nsecond\r\nthird\r\n")
+    await editTool.execute({ path: "f.txt", old_string: "first\nsecond", new_string: "FIRST\nsecond" }, ctx())
+    // First-newline rule: whole file written back in the first line's style (LF).
+    assert.equal(readFileSync(f, "utf8"), "FIRST\nsecond\nthird\n")
+  })
+
+  it("F3: failed edit lists similar lines (line number + preview + score)", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "f.mjs"), "const timeout = 5000\nfunction start() {\n}\n")
+    const r = await editTool.execute({ path: "f.mjs", old_string: "const timeout = 6000", new_string: "x" }, ctx())
+    assert.match(r, /old_string not found/)
+    assert.match(r, /similar lines/)
+    assert.match(r, /L1: const timeout = 5000 \(\d+%\)/)
+  })
+
+  it("F3: no candidates when every line is below the 0.5 threshold (noise guard)", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "f.txt"), "alpha\nbeta\ngamma\n")
+    const r = await editTool.execute({ path: "f.txt", old_string: "xyzzy plugh xyzzard", new_string: "x" }, ctx())
+    assert.match(r, /old_string not found/)
+    assert.ok(!r.includes("similar lines"), "no candidate block below threshold: " + r)
+  })
+
+  it("F3 boundary: multi-line old_string failure scores only line 1, capped at top 3", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    const body = ["wrong first line a", "wrong first line b", "wrong first line c", "wrong first line d", "wrong first line e"].join("\n") + "\n"
+    writeFileSync(join(cwd, "f.txt"), body)
+    const r = await editTool.execute({
+      path: "f.txt",
+      old_string: "wrong first line X\nsecond line content\nthird line content",
+      new_string: "x",
+    }, ctx())
+    assert.match(r, /old_string line 1:/)
+    const candRows = r.match(/^ {4}L\d+: /gm) || []
+    assert.equal(candRows.length, 3, "top 3 cap: " + r)
+  })
+
+  it("F4: hashline_edit on file containing U+FFFD warns but still executes", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const { hashLine } = await import("../src/tools/shared.mjs")
+    const f = join(cwd, "f.txt")
+    writeFileSync(f, "good line\nbad \uFFFD line\n")
+    const r = await hashlineEditTool.execute({ path: "f.txt", old_hashes: [hashLine("good line")], new_content: "replaced line" }, ctx())
+    assert.match(r, /replaced 1 line\(s\)/)
+    assert.match(r, /U\+FFFD/)
+    assert.match(r, /encoding may be corrupted/)
+    assert.equal(readFileSync(f, "utf8"), "replaced line\nbad \uFFFD line\n")
+  })
+
+  it("F4 regression: clean UTF-8 file produces no warning", async () => {
+    const { hashlineEditTool } = await import("../src/tools/file.mjs")
+    const { hashLine } = await import("../src/tools/shared.mjs")
+    writeFileSync(join(cwd, "f.txt"), "clean\n")
+    const r = await hashlineEditTool.execute({ path: "f.txt", old_hashes: [hashLine("clean")], new_content: "done" }, ctx())
+    assert.ok(!r.includes("U+FFFD"), "no warning on clean file: " + r)
+  })
+
+  it("detectFileEol / joinWithEol / majorityEol / findCandidates — first-newline rule + majority + ranking", async () => {
+    const { detectFileEol, joinWithEol, majorityEol, findCandidates } = await import("../src/tools/shared.mjs")
+    assert.equal(detectFileEol("a\r\nb\n"), "\r\n")
+    assert.equal(detectFileEol("a\nb\r\n"), "\n")
+    assert.equal(detectFileEol("no newline"), "\n")
+    assert.equal(detectFileEol(""), "\n")
+    assert.equal(joinWithEol(["a", "b"], "x\r\ny"), "a\r\nb")
+    assert.equal(majorityEol(cwd), "\n") // empty dir → LF
+    writeFileSync(join(cwd, "a.txt"), "x\r\n")
+    writeFileSync(join(cwd, "b.txt"), "y\r\n")
+    writeFileSync(join(cwd, "c.txt"), "z\n")
+    assert.equal(majorityEol(cwd), "\r\n")
+    const cands = findCandidates(["const timeout = 5000", "unrelated"], "const timeout = 6000")
+    assert.equal(cands.length, 1)
+    assert.equal(cands[0].line, 1)
+    assert.ok(cands[0].score >= 0.5)
+    assert.equal(findCandidates(["short"], "a much longer needle that shares nothing").length, 0)
+  })
+
+  it("edit §14: old_string not found 结果含 grep 定位建议（T-TF3——D-TF2——单文件 + batch 双路径）", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "f.mjs"), "const a = 1\n", "utf8")
+    // 单文件路径
+    const r = await editTool.execute({ path: "f.mjs", old_string: "const a = 999", new_string: "x" }, ctx())
+    assert.match(r, /old_string not found/)
+    assert.match(r, /searched: "const a = 999"/)
+    assert.ok(
+      r.includes(" — use grep to locate the actual content"),
+      "T-TF3: 单文件路径错误含 grep 建议（searched: <fragment> — use grep to locate the actual content）",
+    )
+    // batch 路径（edits 数组——edit 工具批量形态——同错误族同建议）
+    const r2 = await editTool.execute({ edits: [{ path: "f.mjs", old_string: "no-such-content", new_string: "x" }] }, ctx())
+    assert.match(r2, /old_string not found/)
+    assert.ok(
+      r2.includes(" — use grep to locate the actual content"),
+      "T-TF3: batch 路径错误同含 grep 建议",
+    )
+  })
+})
