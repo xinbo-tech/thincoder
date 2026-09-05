@@ -30,31 +30,16 @@ import { traceStop } from "./stop-trace.mjs"
 import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
+import { toolPanelPayload } from "./panel-toolpanel.mjs" // 2026-09-05 module-split（512 > 500 硬限）
 import { suspensionSession, poolLive } from "./suspension.mjs"
 import { logEvent, errText } from "../log.mjs"
 
-/**
- * Build the `toolPanel` postMessage payload (pure — directly testable without a
- * webview; ARCHITECTURE.md「子agent/advisor 模型显示」交付评审 #1). String chunks
- * are the legacy text form; object chunks carry kind/text/round/model. All display
- * fields the chunk carries must ride along — the bridge must not silently drop
- * fields (NF1).
- */
-export function toolPanelPayload(name, chunk) {
-  const kind = typeof chunk === "string" ? "text" : (chunk?.kind ?? "text")
-  const text = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
-  // §19.5 D-M8: `sub`（嵌套子代理段标——runChild forward 附加，如 "explore#1"）随桥
-  // 透传——webview 在子代理块内渲染行首 dim 子标 span。白名单字段（NF1——不静默丢字段）。
-  return { type: "toolPanel", name, kind, text, round: chunk?.round, model: chunk?.model, sub: typeof chunk === "string" ? undefined : chunk?.sub }
-}
-
-/**
- * §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
+/** §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
  * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
  * controller 的 children 仍在跑。每次重建都登记进 panel._turnControllers：会话入口快照为
  * susp.abortControllers，Stop 统一 abort——否则会话中止句柄只取最后一个 controller，旧
- * children 逃逸中止（跑完整个 turn 预算 + mergeChildMutations 写父 guard 标记被下轮重置
- * 清掉——用户以为全停但磁盘仍被改、advisor/verify 门被绕过）。
+ * children 逃逸中止（跑完整个 turn 预算 + mergeChildMutations 写入 guard 标记被下次重建
+ * 清掉——用户以为全停但磁盘仍被改写、advisor/verify 门被绕过）。
  */
 function newTurnController(panel) {
   const c = new AbortController()
@@ -510,3 +495,8 @@ async function runPanelChatImpl(panel, opts = {}) {
     }
   }
 }
+
+// toolPanelPayload 2026-09-05 迁入 panel-toolpanel.mjs（panel-chat 512 > 500 硬限）——
+// re-export 保 import 面（chat-panel.test.mjs 从本文件 import）
+export { toolPanelPayload } from "./panel-toolpanel.mjs"
+

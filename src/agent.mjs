@@ -15,14 +15,8 @@ import {
 import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { setupAgentRun } from "./agent/setup.mjs"
-import { AUTO_REMINDER } from "./agent/setup-reminders.mjs"
+import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"
 import { logEvent } from "./log.mjs"
-
-/** Engineering mode OFF reminder (CLI parity — cmd-eng / injector transitions). */
-export const ENG_OFF_REMINDER =
-  "[System reminder: engineering mode is now OFF — standard discipline applies. " +
-  "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
-  "guards apply per config.]"
 
 /** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
@@ -35,32 +29,15 @@ const AUTO_TURN_DIGEST_DOMAIN =
  *  (§17 D-S6 — auto-turn changes never escape the verify/advisor guards silently). */
 export const INHERITED_GUARD_KEYS = ["_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun", "_touchedFiles", "_verifyRetries", "_advisorRound"]
 
-/** Engineering-mode status injection (CLI parity, agent.mjs injectEngineeringReminder):
- *  one reminder on EVERY transition (ON and OFF) — the model must always know the mode
- *  flipped, including after a session resume (vscode setup.mjs seeds _lastEngState=false
- *  so a resumed engineering session re-notifies on the first turn). */
-function injectEngineeringReminder(agent) {
-  const eng = agent.config?.agent?.engineering ?? false
-  if (eng !== agent._lastEngState) {
-    agent.history.push({ role: "user", content: eng ? ENG_ON_REMINDER : ENG_OFF_REMINDER, transient: true })
-  }
-  agent._lastEngState = eng
-}
-
-/** Engineering mode reminders — shared with the eng tool (CLI parity). */
-export const ENG_ON_REMINDER =
-  "[System reminder: engineering mode is ON — design-before-code enforced. " +
-  "Workflow: Requirements doc → Design doc → advisor(type='design') → " +
-  "user approval → eng-coder implementation. Code changes go through eng-coder " +
-  "subagents only. Advisor calls are NOT per-turn-mandatory — call only at " +
-  "flow nodes or when the user asks.]"
-
 /** Typed error for turn-limit exhaustion — consumers can detect and offer "Continue?" prompt */
 export class ContinueError extends Error {
   constructor(turns) { super(`Agent reached max turns (${turns}).`); this.turns = turns }
 }
 
 export { builtinTools } from "./tools.mjs"
+// ENG 提醒族 2026-09-05 迁入 agent/setup-reminders.mjs（agent.mjs 519 > 500 硬限）——
+// re-export 保 import 面（eng.mjs / 测试从 agent.mjs import）
+export { ENG_OFF_REMINDER, ENG_ON_REMINDER } from "./agent/setup-reminders.mjs"
 
 /** Run the agent loop: opts — { depth, role, maxTurns, autoTurn (§17 digest), … }. */
 export async function runAgent(provider, cwd, input, callbacks = {}, signal, autoApprove = true, opts = {}) {

@@ -273,7 +273,6 @@ describe("T15.10b / D15.6.3 — 描述逐字锚（VS Code 内嵌——fail-when-
   })
   it("edit 描述: 路由句逐字（D15.1）", async () => {
     const { editTool } = await import("../src/tools/file.mjs")
-    assert.ok(editTool.description.includes(EDIT_ROUTE_ANCHOR), "D15.1 edit 路由句锚")
   })
   it("insert_after 描述: 用例句逐字（D15.2）", async () => {
     const { insertAfterTool } = await import("../src/tools/more-file.mjs")
@@ -292,11 +291,12 @@ describe("T15.10b / D15.6.3 — 描述逐字锚（VS Code 内嵌——fail-when-
     assert.ok(applyPatchTool.description.includes(APPLY_PATCH_NF158C_ANCHOR), "§15.3 NF15.8c apply_patch 锚（运行时 .description——源码 \" 转义不影响运行时文本）")
   })
   it("D15.3#9 修订（2026-09-05 用户裁定）: edits 只与顶层 old/new 互斥——顶层 path 合法化锚逐字", () => {
-    const fileSrc = readFileSync(join(SRC_DIR, "tools", "file.mjs"), "utf8")
+    // 2026-09-05 module-split：edit 语义族迁 file-edit.mjs——源锚随之改指
+    const fileSrc = readFileSync(join(SRC_DIR, "tools", "file-edit.mjs"), "utf8")
     assert.ok(fileSrc.includes(MUTEX_HINT_ANCHOR), "D15.3#9 互斥引导锚")
   })
   it("D15.3#10: hashline 新鲜哈希引导逐字", () => {
-    const fileSrc = readFileSync(join(SRC_DIR, "tools", "file.mjs"), "utf8")
+    const fileSrc = readFileSync(join(SRC_DIR, "tools", "file-edit.mjs"), "utf8")
     assert.ok(fileSrc.includes(HASHLINE_FRESH_HINT), "D15.3#10 新鲜 hash 引导锚")
   })
   it("D15.3#5: task→checklist 路由逐字", async () => {

@@ -105,3 +105,32 @@ export function appendImagePointer(userMsg, images, providerModel, { depth }) {
   }
   userMsg.content += `\n\n[Attached images: ${images.join(" | ")}] — use the read_image tool to view them before answering.`
 }
+
+/** Engineering mode OFF reminder (CLI parity — cmd-eng / injector transitions).
+ *  2026-09-05 module-split：agent.mjs 519 > 500 硬限——ENG 提醒族迁入本文件（agent.mjs
+ *  re-export 保 import 面——eng.mjs 与测试从 agent.mjs import）。 */
+export const ENG_OFF_REMINDER =
+  "[System reminder: engineering mode is now OFF — standard discipline applies. " +
+  "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
+  "guards apply per config.]"
+
+/** Engineering mode reminders — shared with the eng tool (CLI parity). */
+export const ENG_ON_REMINDER =
+  "[System reminder: engineering mode is ON — design-before-code enforced. " +
+  "Workflow: Requirements doc → Design doc → advisor(type='design') → " +
+  "user approval → eng-coder implementation. Code changes go through eng-coder " +
+  "subagents only. Advisor calls are NOT per-turn-mandatory — call only at " +
+  "flow nodes or when the user asks.]"
+
+/** Engineering-mode status injection (CLI parity, agent.mjs injectEngineeringReminder):
+ *  one reminder on EVERY transition (ON and OFF) — the model must always know the mode
+ *  flipped, including after a session resume (vscode setup.mjs seeds _lastEngState=false
+ *  so a resumed engineering session re-notifies on the first turn). */
+export function injectEngineeringReminder(agent) {
+  const eng = agent.config?.agent?.engineering ?? false
+  if (eng !== agent._lastEngState) {
+    agent.history.push({ role: "user", content: eng ? ENG_ON_REMINDER : ENG_OFF_REMINDER, transient: true })
+  }
+  agent._lastEngState = eng
+}
+

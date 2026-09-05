@@ -891,10 +891,11 @@ describe("Delegate well rewrite + exploration distillation", () => {
 const TOOLS_A_DESC_ANCHOR = "use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed"
 
 describe("§14 tool-failure fallback — A 锚（D-TF1 逐字）", () => {
-  it("tools 描述（file.mjs edit/hashline + more-file.mjs insert_after）: A 锚句（T-TF1）", () => {
-    const fileSrc = readFileSync(join(SRC_DIR, "tools", "file.mjs"), "utf8")
+  it("tools 描述（file-edit.mjs edit/hashline + more-file.mjs insert_after）: A 锚句（T-TF1）", () => {
+    // 2026-09-05 module-split：edit/hashline 描述迁 file-edit.mjs——源锚改指
+    const editSrc = readFileSync(join(SRC_DIR, "tools", "file-edit.mjs"), "utf8")
     const moreSrc = readFileSync(join(SRC_DIR, "tools", "more-file.mjs"), "utf8")
-    assert.equal(fileSrc.split(TOOLS_A_DESC_ANCHOR).length - 1, 2, "T-TF1: file.mjs 的 edit + hashline 两个描述各含一次 A 锚句（D-TF1 逐字）")
+    assert.equal(editSrc.split(TOOLS_A_DESC_ANCHOR).length - 1, 2, "T-TF1: file-edit.mjs 的 edit + hashline 两个描述各含一次 A 锚句（D-TF1 逐字）")
     assert.equal(moreSrc.split(TOOLS_A_DESC_ANCHOR).length - 1, 1, "T-TF1: more-file.mjs 的 insert_after 描述含 A 锚句（D-TF1 逐字）")
   })
 
