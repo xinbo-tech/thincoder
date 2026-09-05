@@ -100,3 +100,16 @@ export const S = {
   _suspended: false,
   _suspCounts: null, // { running, queued, pending } — rendered into the status line
 }
+
+/**
+ * 异步子代理池活跃判定（2026-09-05 走查缺陷修复——"子代理执行中主会话可继续使用"）：
+ * 有 running/started/queued 条目 = 后台池活跃——此时父回合即使仍在跑（模型可能还
+ * 在 status/check 轮询），主输入框也应放开（send 排队不打断——与 CLI 挂起语义对位：
+ * CLI 池 live = 输入可用 + Enter 排队）。done/error/cancelled 后 map 条目进入清理期
+ * （panels.js linger）——按 status 判定活跃，不依赖条目存在期。
+ */
+export function poolActive() {
+  return Object.values(S._subagentMap ?? {}).some((s) =>
+    s.status === "running" || s.status === "started" || s.status === "queued")
+}
+

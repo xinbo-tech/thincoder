@@ -7,6 +7,7 @@ import { t } from "./i18n.js"
 import { addUser } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { clearPanels } from "./panels.js"
+import { poolActive } from "./state.js"
 
 export function send() {
   const text = ctx.inputEl.value.trim()
@@ -14,7 +15,9 @@ export function send() {
   // runs does not break it (F3: the background never touches the input box); the host
   // queues the message and auto-continues after the digest. isRunning is only a gate
   // in the normal (non-suspended) mode.
-  if (!text || (ctx.isRunning && !S._suspended)) return
+  // 2026-09-05 走查缺陷修复：后台池活跃（异步子代理执行中）同样放行——发送的消息
+  // 由 extension 排队（不 abort 父回合/不杀子代理——CLI 挂起语义对位）。
+  if (!text || (ctx.isRunning && !S._suspended && !poolActive())) return
   const h = ctx._inputHistory
   if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
   ctx._historyIdx = -1

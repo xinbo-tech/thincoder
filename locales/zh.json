@@ -25,6 +25,7 @@
   "welcome.heading": "欢迎使用 ThinCoder",
   "welcome.text": "选择一个 provider 并填入 API key，即可开始使用。",
   "welcome.shortcutsHtml": "输入 <code>@</code> 引用文件 · <code>Enter</code> 发送 · <code>Shift+Enter</code> 换行",
+  "msg.queued": "消息已排队——后台子代理仍在运行，完成后将处理你的消息。",
   "msg.user": "你",
   "msg.assistant": "ThinCoder",
   "msg.copy": "复制",

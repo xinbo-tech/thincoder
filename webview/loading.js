@@ -7,6 +7,7 @@
  * the bridge dependency into every ui.js importer.
  */
 import { S } from "./state.js"
+import { poolActive } from "./state.js"
 
 /**
  * Loading state: send/abort button swap + input lock.
@@ -18,9 +19,12 @@ import { S } from "./state.js"
  */
 export function setLoading(ctx, on) {
   const susp = S._suspended
-  ctx.sendBtn.style.display = (!on || susp) ? "flex" : "none"
+  // 2026-09-05 走查缺陷修复：异步子代理执行中（后台池活跃）主输入框同样放开——
+  // 与挂起会话同语义（send 排队不打断——CLI 对位）；池空后回到原锁定逻辑。
+  const subActive = poolActive()
+  ctx.sendBtn.style.display = (!on || susp || subActive) ? "flex" : "none"
   ctx.abortBtn.style.display = (on || susp) ? "flex" : "none"
-  ctx.inputEl.disabled = on && !susp
+  ctx.inputEl.disabled = on && !susp && !subActive
   if (!on) ctx.inputEl.focus()
   ctx.isRunning = on
 }
