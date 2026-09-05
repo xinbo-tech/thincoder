@@ -47,6 +47,16 @@ test("§19.5.5 T-CL1: cancel 动作描述含核实纪律锚——last resort + v
 })
 
 
+test("§19.7 D-A2: async 收尾引导锚句逐字存在——fail-when-unchanged（AGENT-LOOP §19.7 D-A2 镜像锚——CLI 权威源）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const anchor = "After an async spawn the turn winds down normally — nothing expects you to wait for it. Unchecked results reach you automatically — injected before your next turn, or digested in the suspension session while background subagents are still running — so follow-up status/check polling is only needed when your next step genuinely depends on the result."
+  const d = subagentTool.description
+  assert.ok(d.includes(anchor), "§19.7 D-A2: async 收尾引导锚句逐字存在（与设计文档逐字一致——禁止自行解释）")
+  assert.equal(d.split(anchor).length - 1, 1, "§19.7 D-A2: 锚句在描述中只出现一次")
+})
+
+
+
 
 test("§19 T-M17: action 门控——planMode status/check/cancel 放行 vs spawn/escalate 拒绝；混合批次批审批按 action 分组", async () => {
   const { executeToolCalls } = await import("../src/agent/dispatch.mjs")

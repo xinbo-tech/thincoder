@@ -31,7 +31,7 @@
 |---|---|---|
 | NFR1 | 性能 | token 校验在 spawn 时同步完成（<10ms，无网络依赖——**设计目标，非机械测试**，评审 2026-09-02 #7 标注）；design review 每轮一次 LLM 调用 |
 | NFR2 | 收敛性 | code review 最多 5 轮（MAX_ADVISOR_ROUNDS），第 6 次调用被机械拒绝；design 评审不消耗该预算 |
-| NFR3 | 安全 | token 机械匹配（正则锚定 + HMAC/TTL fail-closed）+ designId 定位槽；design 评审失败**不波及其他设计的槽**（2026-08-30 隔离逻辑扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL——已知取舍）；token 随 slot 持久化跨进程（TTL 7 天 fail-closed，重进 TTL 内恢复、过期重新评审——评审 2026-09-02 #1） |
+| NFR3 | 安全 | token 机械匹配（正则 + TTL fail-closed）+ designId 定位槽；design 评审失败**不波及其他设计的槽**（2026-08-30 隔离逻辑扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL——已知取舍）；token 随 slot 持久化跨进程（TTL 7 天 fail-closed，重进 TTL 内恢复、过期重新评审——评审 2026-09-02 #1）——**2026-09-06**：防伪层删除——token 为无签名流程凭证（uuid:expiresAt——见 2026-09-06 段） |
 | NFR4 | 兼容 | 两种模式互斥：工程模式禁用 `coder` 角色，普通模式禁用 `eng-coder`；行为不互相污染（提示词两套独立） |
 | NFR5 | 可维护 | 判定逻辑单一来源：`isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（相对路径语义）；对存绝对路径的 `_touchedFiles` 使用组件级匹配 `/(?:^|[\\/])src[\\/]/`（2026-08-01 实现修正，已接受）——统一用于门禁/guard/doc-only 判定 |
 | NFR6 | 可恢复 | eng-coder 失败/中断可重新 spawn（同 token）；advisor 工具失败不重试，向用户报告 |
@@ -76,7 +76,7 @@
 
 | 闸 | 类型 | 机制 | 位置 |
 |---|---|---|---|
-| **Design gate — token** | 拦截 | spawn 按 designId 定位 `parent._engDesignTokens.get(designId)`，校验 `args.designToken === 槽值` + `validateDesignToken`（HMAC/TTL 不变），不符即拒；会话内仅一个设计时 designId 可省略（取唯一槽），多个设计时缺 designId → 拒并要求指定 | subagent.mjs |
+| **Design gate — token** | 拦截 | spawn 按 designId 定位 `parent._engDesignTokens.get(designId)`，校验 `args.designToken === 槽值` + `validateDesignToken`（格式 + TTL fail-closed——HMAC 已删，见 NFR3），不符即拒；会话内仅一个设计时 designId 可省略（取唯一槽），多个设计时缺 designId → 拒并要求指定 | subagent.mjs |
 | **Design gate — 产品代码变更** | 拦截 | eng-coder `!_engDesignReviewed` → 写/删/改产品代码被拒；父代理 `!_engDesignToken` → 产品代码写/删/改被拒（豁免仅设计产出物；评审 2026-09-02 #8：门禁覆盖全部变更形态，非仅写） | dispatch.mjs |
 | **Code review** | 流程驱动 | **eng-coder 内部协议默认承担（2026-09-02 §18 反转）**：子代理内部 advisor(type="code") 复评（documents = 设计文档 + 交付文件清单——实际文件为对象，非自述）→ findings 自修 → 收敛 ≤5 修正轮；in-child advisor 不消耗父侧 NFR2 预算（AGENT-LOOP.md §18 round4 #5）。父侧复核保留可选（stalled/存疑/用户要求——见 AGENT-LOOP.md §18 D-E6）；mergeChildMutations 合并改动供父侧复核使用 | engineering.md；eng-coder.md |
 | **偏差审计** | 流程驱动 | **eng-coder 内部协议默认承担（2026-09-02 §18 下沉）**：子代理内部 explore 审计（对照设计查验收覆盖/静默简化/文档漂移/超清单改动；审计任务书 = 父 spawn 任务书 ∪ _touchedFiles 机械并集）；dirty → 自修 → 再审计；审计 ≤6 次、第 7 次机械拒绝（stalled 信号）。父侧复核保留可选（2026-08-30 裁定"父代理自动"随之反转——见 AGENT-LOOP.md §18） | engineering.md |
@@ -106,6 +106,7 @@
   - token 跨任务存活可复用——低风险接受（需模型故意提取历史 token）。
   - ~~多设计并行为单值 token，后签发覆盖前签发~~ → **2026-09-01 已解决**（designId 多槽集合；触发场景：同会话 memory_delete + §14 并行 spawn，单值覆盖致 §14 首 spawn 失败重跑）。
   - 复审失败后旧 token 存活至 TTL（2026-09-01 用户拍板方案 ②）——与取舍 #2 同窗口接受；主防线为提示词纪律（打回即修订复审，spawn 过时设计需模型主动绕过整条流程）。
+  - **2026-09-06 防伪层删除（存量 token 一次性失效）**：该变更落地后，所有在槽旧 3 段签名 token（含 TTL 内的）因格式校验立即判错 → 需重新评审（触发是格式而非过期——2026-09-01 as-of 不迁移惯例）；已批准未实现的设计需重评一次——作为已接受的迁移代价（评审 🔵4——见 2026-09-06 段）。
 
 ### 2.7 受影响文件
 
@@ -113,7 +114,7 @@
 |---|---|---|
 | `src/agent/setup.mjs` | MODIFY | 提示词独立组装（工程模式不注入 main/discipline）；METHODOLOGY 缺失降级为工程模板+警告 |
 | `src/agent/dispatch.mjs` | MODIFY | 父代理门禁（isProductCode）；未知路径保守拦截——已实现（「语义一致化 4 项」已闭环） |
-| `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignToken（存入 _engDesignTokens Map——评审 2026-09-02 #3 修正；_engDesignReviewed 为 spawn 时子代理侧标志，非此处）；**2026-09-01**：评审调用生成随机 designId，**通过结果携带 designId 回显给父代理**（评审 #1——多设计首 spawn 的定向依据），通过时 token 存入 `_engDesignTokens` Map（多设计并存）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL） |
+| `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignToken（存入 _engDesignTokens Map——评审 2026-09-02 #3 修正；_engDesignReviewed 为 spawn 时子代理侧标志，非此处）；**2026-09-01**：评审调用生成随机 designId，**通过结果携带 designId 回显给父代理**（评审 #1——多设计首 spawn 的定向依据），通过时 token 存入 `_engDesignTokens` Map（多设计并存）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL）；**2026-09-06**：防伪层删除同步——HMAC 签名/验签/默认密钥/启动警告全部移除（token 为无签名流程凭证——见 2026-09-06 段） |
 | `src/advisor/messages.mjs` | MODIFY | design 分支按 documents 清单构建评审输入（替代 git diff 收集） |
 | `src/agent-tools/subagent.mjs` | MODIFY | mergeChildMutations（已有）；**2026-09-01**：spawn eng-coder 增 `designId` 参数（schema，可选），token 校验改按 `_engDesignTokens` 槽定位——单设计省略 designId 取唯一槽、多设计缺 designId 拒并要求指定、给定 designId 无匹配槽明确报错；修正轮 spawn 回传 designId |
 | 两端 `src/agent-tools/advisor.mjs` + `subagent.mjs` + `src/prompts/engineering.md` + 测试 | **VS Code 端镜像同步（评审 #5）**——engineering.md byte-identical 硬约束 + `_engDesignTokens` 两端同构；VS Code 测试同步加 designId/隔离断言；**VS Code 端 `advisor.mjs` paths 描述同步 CLI（"never inspects diffs"——2026-08-25 documents 改造时 VS Code 漏改，审计 #4 补记）**——**指针（2026-09-04 §18.11）：byte-identical 约束已取消（见 §18.11）——"镜像同步"行指历史批行为——当前一致性 = 设计锚 + 评审/审计** |
@@ -417,3 +418,58 @@
 **实现记录（2026-09-04）**：CLI 侧——终态 clean（审计=LLM#1 → 首审=LLM#2 → 复评=LLM#3——三条链闭合；修正轮 1/5）；L1 快层 1284 pass / 0 fail / 46 skip（终态复跑——VS Code 落地后 byte-identical 断言绿）；**父侧 L2 全量核销 1330/1330, 0 fail, 0 skip**（2026-09-04——核销通过）；交付内容 = engineering-sub.md(①三级粒度) + engineering.md(父侧 L2 新口径——三处) + advisor-round1.md(B2) + subagent.mjs(A1/A2/A3) + advisor/run.mjs(B1) + auto-think.mjs(D-TS12 开关闭环) + 断言(T-TS1..12)。**VS Code 侧**：镜像(byte-identical) + auditTaskBook(A1/A2/A3) + run.mjs(B1)——见对应交付记录。
 
 **待办跟踪**：L0 语义缺口（verify git-diff 定位——修正轮未提交语义稀释——docs/TODO.md「R2 · L0 语义缺口」——待 R2 交付后 fix 处理）；subagent.mjs 690 行（>500——挂债既有——TODO 619→690 已更新）；auto-think depth 恒 0（子代理启用时补传——TODO）。
+
+### 2026-09-06：design token 防伪层删除——安全剧场（用户裁定——"过度工程给我删了"）
+
+> 状态：**已批准（2026-09-06 评审 0🔴——token 4cf75a54…/designId 3396a020…——round1 2🔴
+> 处置后 round2 通过；6 建议项随实现批吸收（#1 文件名核实为首条——#2 AC-TO6 已落——
+> #3-6 本题吸收）——用户批准 2026-09-06）**
+
+**触发**：启动提示 "engineering token secret is the public default — set THINCODER_TOKEN_SECRET
+to make design tokens unforgeable"——用户质问："哪个傻逼会干这个？他关了工程模式想怎么改怎么改！
+你他妈的是用什么脑子想出来的这个？过度工程给我删了。" 裁定：**HMAC 防伪 = 安全剧场**——门禁
+可经工程模式开关（普通模式无门禁）绕过；防"伪造 token 绕过评审"的攻击者先关工程模式即可——
+防伪无实际安全边界。删除防伪层，保留流程凭证层。
+
+**需求**：删防伪机制（公开默认密钥 + 警告 + HMAC 签名/验签）；token 保留为**流程凭证**
+（评审通过签发、TTL 7 天、designId 槽位匹配——授权链 FR3 不变）。
+
+**设计（两端同改）**：
+1. `src/agent-tools/advisor.mjs`：删 `DEFAULT_TOKEN_SECRET` / `USING_DEFAULT_SECRET` /
+   `TOKEN_SECRET` / `warnIfDefaultSecret` + `console.warn` 提示；`generateDesignToken` 与
+   `validateDesignToken` 删 `createHmac` 签名与验签段、删 `createHmac` import——token 改为
+   **无签名凭证**（格式 `uuid:expiresAt`——TTL 检查保留 fail-closed；槽位匹配
+   `_engDesignTokens.get(designId) === token` 不变）；
+2. 测试：两端 `test/advisor.test.mjs`（或对应域名测试）删防伪断言；**保留** TTL 过期拒绝 /
+   格式错误拒绝 / 槽位不匹配拒绝 / 授权链（T1/T2/T8/T14/T15）用例——这些是流程凭证层检查；
+   **新增用例（评审 🟡5——AC-TO5 可判定）**：2 段格式解析（uuid:expiresAt 通过）、旧 3 段
+   token（uuid:expiresAt:HMAC——TTL 内）判格式错拒绝、错槽 token 拒绝；
+3. 存量 token（评审 🔵6）：**不迁移**——slot 内旧 3 段 token 新格式校验判格式错 → fail-closed
+   拒绝 → 重新设计评审（TTL 7 天语义兜底——过期/格式错重评——2026-09-01 记录 as-of 不迁移
+   惯例）；
+4. 文档：本段 + NFR3 安全行措辞改（"token 机械匹配（正则 + TTL fail-closed）+ designId
+   定位槽"——删 "HMAC" 字样）+ **§2.3「Design gate — token」行同步**（评审 🔴——"validateDesignToken
+   （HMAC/TTL 不变）" → "validateDesignToken（格式 + TTL fail-closed——HMAC 已删，见 NFR3）"）+
+   既有受影响文件表（advisor.mjs 行）同步注；两端 CHANGELOG。
+
+**验收**：
+- AC-TO1 = 警告零出现（两端 `src/` 代码 grep 无 "THINCODER_TOKEN_SECRET"/"unforgeable"——
+  设计文档引文排除）；
+- AC-TO2 = 无 HMAC 残留（两端 advisor.mjs 无 createHmac/TOKEN_SECRET）；
+- AC-TO3 = TTL/格式/槽位用例绿（过期拒、格式误拒（含旧 3 段 token）、错槽拒——fail-closed 保留）；
+- AC-TO4 = 授权链回归：评审通过 → token 签发 → spawn 解锁写（T1/T14/T15 绿）；
+- AC-TO5 = 两端全量绿（断言数不降——删防伪断言数 ≤ 新格式/存量断言增——用例见设计第 2 点）；
+- AC-TO6 = **文档落地**（评审 🟡2——仿 AC-H4 先例）：NFR3（:34）/§2.3（:79）机制段 grep 无
+  "HMAC" 残留（变更记录/历史 as-of 行除外）+ 两端 CHANGELOG 已记。
+
+**验收回指**：AC-TO1/2 → NFR3；AC-TO3/4 → FR3；AC-TO5/6 → FR3（回归）+ 文档一致性。
+
+**存量 token 一次性失效（评审 🔵4——`2026-09-01 记录 as-of 不迁移惯例` 表述补明）**：本次变更落地
+后，**所有**在槽旧 3 段 token（含 TTL 内的）因格式校验立即判错 → 需重新评审——与 TTL 无关
+（触发是格式而非过期）；已批准未实现的设计需重评一次——作为已接受的迁移代价在 §2.6 存活段
+同步注一句。
+
+**关键决策**：token 语义回归"流程凭证"（防误用而非防伪造——与 `_engDesignReviewed` 标志、
+工程模式开关同信任级）；NFR3 安全层不再声称"unforgeable"；声明式原则——不给"门禁可绕过"
+的层加防御假设。
+

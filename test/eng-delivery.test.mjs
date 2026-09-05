@@ -64,10 +64,11 @@ function captureServer(reportText) {
 test("runAgent: eng-coder design token is NOT consumed — second spawn with same token succeeds", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   // 同一 token 两次 spawn：第一次实现，第二次（修复循环）重入——token 不消费
-  // Real signed token, minted at runtime (v2 fail-closed): the original hardcoded
-  // fixture carried a fixed expiry (2026-08-31) and started failing the day it
-  // expired — TTL'd tokens must be generated fresh, never baked into the file.
-  const realToken = await signedToken("8048bebc-a2a6-4b50-b198-74f37da606ab", Date.now() + 24 * 3600 * 1000)
+  // Real token, minted at runtime (v2 fail-closed): the original hardcoded fixture
+  // carried a fixed expiry (2026-08-31) and started failing the day it expired —
+  // TTL'd tokens must be generated fresh, never baked into the file. 2026-09-06:
+  // unsigned flow credential (uuid:expiresAt——HMAC 已删).
+  const realToken = await mintToken("8048bebc-a2a6-4b50-b198-74f37da606ab", Date.now() + 24 * 3600 * 1000)
   const script = [
     { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现", role: "eng-coder", designToken: realToken, async: false }) } },
     { content: "实现完成，报告见上。".repeat(30) },        // 子代理 1 交付
@@ -84,7 +85,7 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
       config: { agent: { engineering: true }, advisor: {} },
       cwd,
     })
-    agent._engDesignToken = realToken // 设计评审已签发（真签名 token）
+    agent._engDesignToken = realToken // 设计评审已签发（无签名流程凭证——2026-09-06）
     const out = await runAgent(agent, "派两个实现任务", { onPermissionRequest: async () => true })
     assert.equal(out, "全部完成")
     assert.equal(agent._engDesignToken, realToken, "token survives both spawns — not consumed")
@@ -97,19 +98,18 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
 
 // ─── T15/T16/T17：designId 多槽（ENGINEERING-MODE.md 2026-09-01，AC8） ───
 
-/** Real signed token with a fixed uuid+expiry (matches the v2 HMAC scheme). */
-async function signedToken(uuid, expiresAt) {
-  const { createHmac } = await import("node:crypto")
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-  return `${uuid}:${expiresAt}:${sig}`
+/** Real unsigned token with a fixed uuid+expiry (2026-09-06: flow credential —
+ *  uuid:expiresAt——HMAC 防伪层已删——见 ENGINEERING-MODE.md 2026-09-06 段). */
+async function mintToken(uuid, expiresAt) {
+  return `${uuid}:${expiresAt}`
 }
 
 
 test("T15: 双设计并行 spawn 各带 designId+token 互不覆盖（后 spawn 不拒先 spawn）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await signedToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
-  const tokenB = await signedToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
   const idA = "11111111-1111-4111-8111-aaaaaaaaaaaa"
   const idB = "22222222-2222-4222-8222-bbbbbbbbbbbb"
   const script = [
@@ -153,8 +153,8 @@ test("T15: 双设计并行 spawn 各带 designId+token 互不覆盖（后 spawn 
 test("T16: 多设计缺 designId → throw 要求指定（不误取任一槽）", async () => {
   const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
   const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await signedToken("cccccccc-1111-4111-8111-00000000000a", exp)
-  const tokenB = await signedToken("cccccccc-2222-4222-8222-00000000000b", exp)
+  const tokenA = await mintToken("cccccccc-1111-4111-8111-00000000000a", exp)
+  const tokenB = await mintToken("cccccccc-2222-4222-8222-00000000000b", exp)
   const parent = {
     config: { agent: { engineering: true } },
     _engDesignTokens: new Map([["id-x", tokenA], ["id-y", tokenB]]),
@@ -182,12 +182,31 @@ test("T16: 多设计缺 designId → throw 要求指定（不误取任一槽）"
   assert.equal(legacy.token, tokenA)
 })
 
+test("T16b: 错槽 token 拒绝——designId 槽持 tokenA、spawn 传 tokenB → spawn 拒绝（AC-TO3——2026-09-06 无签名格式）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designId: "id-x", designToken: tokenB }, { agent: parent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
+    /Invalid or missing design token/,
+    "错槽 token（槽值 ≠ 传入）→ spawn 拒绝——slot 精确匹配不变（无签名层不改变门禁）",
+  )
+})
+
+
 
 
 test("T17: 复审失败不波及其他槽——旧 token 存活，其他设计 spawn 仍通过（方案 ②）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await signedToken("dddddddd-1111-4111-8111-00000000000a", exp)
+  const tokenA = await mintToken("dddddddd-1111-4111-8111-00000000000a", exp)
   const idA = "33333333-3333-4333-8333-aaaaaaaaaaaa"
   const idB = "44444444-4444-4444-8444-bbbbbbbbbbbb"
   const script = [
@@ -212,7 +231,7 @@ test("T17: 复审失败不波及其他槽——旧 token 存活，其他设计 s
       cwd,
     })
     agent.activeProvider = { name: "mock-advisor-provider" }
-    agent._engDesignTokens = new Map([[idA, tokenA], [idB, await signedToken("dddddddd-2222-4222-8222-00000000000b", exp)]])
+    agent._engDesignTokens = new Map([[idA, tokenA], [idB, await mintToken("dddddddd-2222-4222-8222-00000000000b", exp)]])
     agent._engDesignToken = tokenA
     const out = await runAgent(agent, "复审B然后实现A", { onPermissionRequest: async () => true })
     assert.equal(out, "完成——B 复审失败未影响 A")
@@ -290,9 +309,9 @@ const DOCS_DESIGN_DIR = join(TEST_DIR, "..", "docs", "design")
 const { sep } = await import("node:path")
 /** 子代理报告 ≥ MIN_REPORT_CHARS 的便捷构造（防止打回扩写重试吃掉 script 步）。 */
 
-/** 造一个已批准设计的会话（真签名 token 入槽 + 单值镜像）。返回 token。 */
+/** 造一个已批准设计的会话（TTL 内 token 入槽 + 单值镜像）。返回 token。 */
 async function issueDesign(agent, uuid) {
-  const token = await signedToken(uuid, Date.now() + 24 * 3600 * 1000)
+  const token = await mintToken(uuid, Date.now() + 24 * 3600 * 1000)
   agent._engDesignTokens = new Map([[uuid, token]])
   agent._engDesignToken = token
   return token

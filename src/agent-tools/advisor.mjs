@@ -3,25 +3,11 @@
  * The agent calls this explicitly to get an independent review.
  * type="design" for design doc review, type="code" for code review (default).
  */
-import { randomUUID, createHmac } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import { runAdvisorReview } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 
 const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides
-// The design token is signed with an HMAC secret. If THINCODER_TOKEN_SECRET is unset we
-// fall back to a well-known constant so engineering mode works out of the box — but that
-// secret is public, so anyone can forge a "design approved" token and bypass the
-// eng-coder gate. We keep the fallback (B) to not break zero-config runs, and warn once.
-const DEFAULT_TOKEN_SECRET = "thincoder-default-secret"
-const USING_DEFAULT_SECRET = !process.env.THINCODER_TOKEN_SECRET
-const TOKEN_SECRET = process.env.THINCODER_TOKEN_SECRET || DEFAULT_TOKEN_SECRET
-let _warnedDefaultSecret = false
-function warnIfDefaultSecret() {
-  if (USING_DEFAULT_SECRET && !_warnedDefaultSecret) {
-    _warnedDefaultSecret = true
-    console.warn("[thincoder] engineering token secret is the public default — set THINCODER_TOKEN_SECRET to make design tokens unforgeable")
-  }
-}
 
 /** Effective token TTL: config override with runtime validation (advisor timeoutMs precedent —
  *  invalid values fall back to the default, never silently disable the ceiling). */
@@ -30,47 +16,44 @@ function effectiveTokenTtlMs(agent) {
   return (Number.isFinite(cfg) && cfg > 0) ? cfg : TOKEN_TTL_DEFAULT_MS
 }
 
-/** Generate a signed design token with expiration */
+/** Generate an unsigned design token with expiration (2026-09-06: the HMAC anti-forgery
+ *  layer was removed — security-theater ruling — the token is a FLOW credential:
+ *  format uuid:expiresAt, exact slot match + TTL are its only guarantees). */
 function generateDesignToken(agent) {
-  warnIfDefaultSecret()
   const uuid = randomUUID()
   const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
-  const payload = `${uuid}:${expiresAt}`
-  const signature = createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex").slice(0, 16)
-  return `${payload}:${signature}`
+  return `${uuid}:${expiresAt}`
 }
 
-/** Validate design token: format, expiration, signature — ALL fail-closed (v2 2026-08-25).
- *  The two legacy fail-open branches (parts!=3 → true, NaN expiry → true) were pass-through
- *  backdoors: any malformed string bypassed validation. Only exact signed tokens pass now.
- *  Format must be exactly uuid:expiresAt:hmacSig. */
+/** Validate design token: format, expiration — ALL fail-closed (v2 2026-08-25;
+ *  2026-09-06: the signature layer was removed — old 3-part tokens (uuid:expiresAt:hmac)
+ *  are now FORMAT errors and are rejected (存量 token 不迁移——2026-09-01 as-of 惯例).
+ *  Format must be exactly uuid:expiresAt. */
 export function validateDesignToken(token) {
   if (!token || typeof token !== "string") return false
 
-  // New format: uuid:expiresAt:signature (3 parts separated by ':')
+  // Format: uuid:expiresAt (2 parts separated by ':')
   const parts = token.split(":")
-  if (parts.length !== 3) return false // fail-closed (was: return true)
+  if (parts.length !== 2) return false // fail-closed — legacy 3-part signed tokens no longer match
 
-  const [uuid, expiresAt, signature] = parts
+  const [uuid, expiresAt] = parts
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) return false
+  if (!/^\d+$/.test(expiresAt)) return false // fail-closed — expiry must be pure digits (format = uuid:expiresAt)
   const expTime = parseInt(expiresAt, 10)
-  if (isNaN(expTime)) return false // fail-closed (was: return true)
+  if (isNaN(expTime)) return false // fail-closed
 
   // Check expiration
   if (Date.now() > expTime) return false
-  
-  // Check signature
-  const payload = `${uuid}:${expiresAt}`
-  const expectedSig = createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex").slice(0, 16)
-  return signature === expectedSig
+  return true
 }
 
 /** Build a [DESIGN-TOKEN:...] regex; escapes special chars as a safety net.
- *  Matches the FULL token (uuid:expiresAt:signature) — prompt tells advisor
- *  to echo the complete token verbatim, not just the UUID segment.
+ *  Matches the FULL token (uuid:expiresAt) — prompt tells advisor to echo the
+ *  complete token verbatim, not just the UUID segment.
  *  Flexible matching: allows token to be on its own line, in a code block,
  *  or surrounded by whitespace. */
 const makeDesignTokenRegex = (token, flags = "") => {
-  // Escape the entire token, not just UUID — advisor echoes [DESIGN-TOKEN:uuid:expiresAt:signature]
+  // Escape the entire token, not just UUID — advisor echoes [DESIGN-TOKEN:uuid:expiresAt]
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return new RegExp(
     `(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}\\s*\\](?:\\s|$|\`|\\*)`,

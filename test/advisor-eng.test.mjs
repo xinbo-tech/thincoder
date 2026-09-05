@@ -173,18 +173,17 @@ test("validateDesignToken: fail-closed on malformed strings (two legacy backdoor
   assert.equal(validateDesignToken("a:b:c:d"), false, "4-part string must be rejected")
   assert.equal(validateDesignToken(""), false)
   assert.equal(validateDesignToken("uuid:abc:sig"), false, "non-numeric expiry rejected")
+  // 2026-09-06 无签名格式（uuid:expiresAt——防伪层已删——AC-TO3）：旧 3 段签名 token（TTL 内）判格式错
+  assert.equal(validateDesignToken("11111111-2222-3333-4444-555555555555:9999999999999:deadbeefdeadbeef"), false, "旧 3 段 token（uuid:expiresAt:hmac——TTL 内）判格式错——存量不迁移 fail-closed")
+  assert.equal(validateDesignToken("not-a-uuid:1234567890"), false, "2 段但首段非 uuid → 格式错（格式 = uuid:expiresAt）")
+  assert.equal(validateDesignToken("11111111-2222-3333-4444-555555555555:9999999999999abc"), false, "expiresAt 带尾随非数字 → 格式错（纯数字——格式从严）")
 })
 
 
 
-test("validateDesignToken: TTL ceiling — valid inside, rejected past expiry", async () => {
+test("validateDesignToken: TTL ceiling — 2 段无签名 token 有效期内通过、过期拒绝（2026-09-06 格式）", async () => {
   const { validateDesignToken } = await import("../src/agent-tools/advisor.mjs")
-  const { createHmac } = await import("node:crypto")
-  const mk = (expiresAt) => {
-    const uuid = "11111111-2222-3333-4444-555555555555"
-    const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-    return `${uuid}:${expiresAt}:${sig}`
-  }
+  const mk = (expiresAt) => `11111111-2222-3333-4444-555555555555:${expiresAt}`
   // AC1 (original pain point): past 1h / 3d, inside 7d → still valid
   assert.equal(validateDesignToken(mk(Date.now() + 3 * 24 * 3600 * 1000)), true, "3 days in → valid")
   assert.equal(validateDesignToken(mk(Date.now() + 3600 * 1000)), true, "1h in → valid")
@@ -198,12 +197,10 @@ test("effectiveTokenTtlMs: invalid config falls back to 7d default (AC4)", async
   // Not exported — verify via generateDesignToken behavior is covered by TTL tests above;
   // direct unit: re-import with a stub agent (function is module-private, assert via token expiry delta)
   const { validateDesignToken } = await import("../src/agent-tools/advisor.mjs")
-  const { createHmac } = await import("node:crypto")
   // A token minted with the default TTL must remain valid at 6d23h (inside default ceiling)
   const uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
   const exp = Date.now() + 7 * 24 * 3600 * 1000 - 3600 * 1000
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${exp}`).digest("hex").slice(0, 16)
-  assert.equal(validateDesignToken(`${uuid}:${exp}:${sig}`), true, "6d23h → valid under 7d default")
+  assert.equal(validateDesignToken(`${uuid}:${exp}`), true, "6d23h → valid under 7d default")
 })
 
 
@@ -244,7 +241,7 @@ function mockDesignReviewServer(pass) {
       req.on("end", () => {
         const body = JSON.parse(text)
         bodies.push(body)
-        const m = JSON.stringify(body.messages).match(/([0-9a-f-]+:\d+:[0-9a-f]{16})/)
+        const m = JSON.stringify(body.messages).match(/\[DESIGN-TOKEN:([0-9a-f-]+:\d+)\]/)
         const token = m ? m[1] : "no-token-found"
         const content = pass
           ? `## Review\n\n设计通过，未发现问题。\n\n[DESIGN-TOKEN:${token}]`

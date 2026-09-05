@@ -2058,6 +2058,89 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 9. 状态行同步（顶部刷新枚举含 §19.6）
 
 
+
+#### 19.7 async 描述两端对齐 + 收尾引导（2026-09-06 · 需求 + 设计——用户裁定"完全正确修法"——**已批准**）
+
+> 状态：**已批准（2026-09-06 评审 0🔴——token 4cf75a54…/designId 3396a020…——round1 2🔴
+> 处置后 round2 通过；6 建议项随实现批吸收（#1 文件名核实首条——#2 AC-TO6/落点→
+> subagent.test.mjs——#3-7 本题吸收）——用户批准 2026-09-06）**
+
+> **触发**：VS Code 走查（2026-09-05）实测——async 子代理 spawn 后模型自发 status→check 轮询
+> 阻塞到子代理完成，父回合拖长 → 挂起态（D-S9）晚进入 → 用户消息排队等子代理跑完；
+> 与 CLI 实践（spawn 后回合收尾 → 挂起态 → 输入可用、新消息立即开回合并行）不一致。
+
+##### 19.7.1 需求（用户故事）
+
+- **F-A1**：作为用户（VS Code），在 async 子代理执行期间主代理会话可继续使用（新消息立即开
+  新回合、与子代理并行）——与 CLI 实践一致的交互（AC-S1 "回合尾不阻塞"）；
+- **F-A2**：作为模型，async spawn 后获得明确引导——回合自然收尾、unchecked 结果自动到达
+  （下轮注入/挂起态自动消化）、无需自发 status/check 轮询等待；
+- **F-A3**：作为维护者，两端 subagent 工具描述不漂移（非有意差异消失、有意差异记录在案——
+  防再发：文档逐字锚句 + 两端内容断言 + 交付审计/设计评审——与 §18.11/§19.4 N4 政策一致）。
+
+**范围边界（明确不做）**：不改挂起会话机制（D-S9 行表两端已同构交付 2026-09-02 + 偏差修复轮）；
+不改 panel action 结构差异（§19.6 AC-P4：VS Code 有意无 panel action——保留）。
+
+##### 19.7.2 设计（D-A1..A4）
+
+**D-A1 权威源**：CLI `src/agent-tools/subagent.mjs` 现行 `subagentTool.description`（2026-09-05
+批次演进后的完整版——含 §15/§18 Async spawn 段、§20 调度、cap 4、§19.5.6 touched-files）
+为唯一权威（锚跟代码走——走向：CLI 侧已先落地新版措辞，VS 镜像滞后导致分叉）。
+
+**D-A2 新引导句（逐字定稿——实现面照抄，禁止自行解释）**：
+
+> After an async spawn the turn winds down normally — nothing expects you to wait for it. Unchecked results reach you automatically — injected before your next turn, or digested in the suspension session while background subagents are still running — so follow-up status/check polling is only needed when your next step genuinely depends on the result.
+
+（措辞与 §17.5.2/§17.5.4 #2 机制一致（评审 🔴 修订）：驱动路径 = 挂起 digest 注入；undriven
+调用方 = **回合尾 collectSettledAsync 直注入兜底**（§17.5.4 #2——headless/直连不丢结果）；
+锚句 "injected before your next turn" 覆盖两条路径——不再引用"回合尾直注入"旧口径。
+**实现前核实（评审 🔵7）**：D-A1 前提（CLI description 已是 2026-09-05 批次完整版 / VS 滞后）
+由 AC-A2 交付审计核对——若与假设不符，先纠正前提再定权威源。
+**D-A3 文件核实（评审 🟡3）**：`subagent-spec.mjs` 未见于既有实现记录（§19.5.4 提到 VS Code
+文件为 subagent.mjs 等）——实现前核实实际文件名；若是 subagent.mjs 则受影响文件表随改。）
+
+**D-A3 VS 重写**：`thincoder-vscode/src/agent-tools/subagent-spec.mjs` description 以权威源逐段
+对齐（含 Async spawn 段 = 权威版 §15/§18 段逐字），**仅删除 panel action 相关段**（AC-P4
+有意差异——注解保留）；其余一律采用权威版措辞。
+
+**D-A4 防再发（2026-09-04 政策——§18.11/§19.4 N4：一致靠设计锚 + 评审/审计，不做跨仓机械比对）**：
+1. **逐字锚句**（D-A2）定稿于本节——两端实现面照抄，不自行解释（镜像锚——各端照抄）；
+2. **两端各自内容断言**：每端 `test/subagent.test.mjs` 断言 D-A2 句在该端 description 中逐字存在
+   （fail-when-unchanged——description 断言家族（§7.1 两端各一 / §18.5 D-AG4 / §19.5.5 T-CL1）
+   既有落点——单端作用域，无跨仓读依赖——单仓克隆不崩——T-BI6 先例）；
+3. **交付审计 + 设计评审**发现残余差异（explore 审计 doc-code drift 条款 + 走查复验——本次漂移
+   即走查实证——机制有效）。
+
+##### 19.7.3 受影响文件
+
+- CLI：`src/agent-tools/subagent.mjs`（description 插入 D-A2 句）、`test/subagent-tool.test.mjs`
+  （D-A2 逐字存在断言——description 断言家族既有落点（§18.14 域拆分——原 subagent.test.mjs
+  的描述断言族所在）——fail-when-unchanged）；
+- VS Code：`src/agent-tools/subagent-spec.mjs`（**文件名实现前核实**——§19.5.4 先例为
+  subagent.mjs——D-A2 句 + D-A3 权威版逐段对齐——panel 段除外）、`test/subagent.test.mjs`
+  （D-A2 逐字存在断言——五动作结构保留）；
+- 文档：本段（§19.7）+ 两端 `CHANGELOG.md`（父代理统一条）（行为面向描述变更——
+  §19.5/§18.5 惯例）+ VS Code `docs/design/ARCHITECTURE.md` 引用段（desc 差异记录——固定更新）；
+- 测试：两端全量绿（断言数不降）。
+
+##### 19.7.4 验收
+
+- AC-A1 = D-A2 句在两端 description 中逐字存在（两端各自内容断言锁定——fail-when-unchanged）；
+- AC-A2 = VS description = 权威版（panel 段剔除）逐字一致——**交付审计核对**（explore 审计
+  doc-code drift：VS spec 与 §19.7 锚 + 权威版 panel 剔除对照——核对记录在交付报告）；
+- AC-A3 = 两端全量绿（CLI/VS 断言数 ≥ 基线）；
+- AC-A4 = 真机复验（VS Code）：async spawn → 回合收尾 → 挂起态（后台 N 子代理）→ 输入可用
+  → 新消息立即开新回合并行；子代理结果照常消化注入（AC-S1/AC-S2 行为复核）；
+- AC-A5 = CLI 同场景回归（现有 T-S 全绿 + 行为不退化）。
+
+##### 19.7.5 关键决策
+
+- 权威源 = CLI 版（已含全部机制演进后的措辞；VS 反向回滚会丢失 §20/§19.5.6 引导）；
+- 有意差异（panel action）不强行归一（§19.6 AC-P4 双端结构差异是设计决定——2026-09-03）；
+- 防再发 = 逐字锚 + 两端内容断言 + 审计/评审——**不做跨仓机械比对**（§18.11/§19.4 N4
+  政策——2026-09-04 用户裁定取消 byte-identical/机械断言——本节保持一致，不违背）。
+
+
 ## 20. 子 agent 任务调度器（2026-09-03 · 需求 + 设计——方案 1 用户确认——**已批准**）
 
 > 状态：设计批准（2026-09-03 round1 1🔴 + round2 0🔴 通过——advisory 处置注见 20.4——designToken 已签发）+ **已实现（2026-09-03——实现记录见 20.5——偏差落文——CLI npm test 1286/1241 全绿（45 slow 豁免）——VS Code 1017/1017——镜像同步交付）**。触发：用户提议——"前端评审好了就 spawn 出去——实际执行由调度器安排——能并发则并发、该等则等、按依赖顺序排队跑"。实证痛点：父代理手动调度（冲突检查/并行串行/cancel 重派全靠脑内——2026-09-03 id:13/14 同文件并发失误 = 调度缺失的直接代价）；已批任务排队（§19.5/§19.6 等让位）无机制。用户选方案 1（spawn 带调度元数据 + 调度器自动准入排队）。

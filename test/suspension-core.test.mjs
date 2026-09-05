@@ -813,17 +813,16 @@ test("偏差#1 TUI：释放窗口（_suspPending，suspended 未置位）Enter �
 //   T-E11 交付报告 digest 消化：手动档 digest 总结注入（审计/评审记录可见——D-E4）
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** 真签名 token（agent.test.mjs signedToken 同款——TTL 令牌不能烘焙固定过期）。 */
-async function signedToken(uuid, expiresAt) {
-  const { createHmac } = await import("node:crypto")
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-  return `${uuid}:${expiresAt}:${sig}`
+/** 真 token（agent.test.mjs mintToken 同款——TTL 令牌不能烘焙固定过期；
+ *  2026-09-06：无签名流程凭证——uuid:expiresAt——HMAC 已删）。 */
+async function mintToken(uuid, expiresAt) {
+  return `${uuid}:${expiresAt}`
 }
 
 
 test("T-E9: eng-coder 缺省 async 双通道——后台运行中用户输入照常开新回合；交付 settle 后下轮注入（§18 F5/§15 回归）", async () => {
   const { createServer } = await import("node:http")
-  const token = await signedToken("e9e9e9e9-9999-4999-8999-0000000000e9", Date.now() + 24 * 3600 * 1000)
+  const token = await mintToken("e9e9e9e9-9999-4999-8999-0000000000e9", Date.now() + 24 * 3600 * 1000)
   const server = createServer((req, res) => {
     let bodyText = ""
     req.on("data", (c) => (bodyText += c))
@@ -900,7 +899,7 @@ test("T-E10: digest 禁 spawn 分档回归——手动档 digest 连默认 async
   try {
     const { createAgent } = await import("../src/agent.mjs")
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const token = await signedToken("e1e0e1e0-1010-4101-8101-0000000000e0", Date.now() + 24 * 3600 * 1000)
+    const token = await mintToken("e1e0e1e0-1010-4101-8101-0000000000e0", Date.now() + 24 * 3600 * 1000)
     const parent = createAgent({
       provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
       tools: [], config: { agent: { engineering: true }, advisor: {} }, cwd,

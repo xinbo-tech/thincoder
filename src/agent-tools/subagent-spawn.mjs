@@ -93,7 +93,8 @@ export function effectiveSubagentModel(parent, role, modelArg) {
  * - designId omitted → exactly ONE slot must exist (single-design compatibility); with
  *   multiple slots we refuse rather than pick one (T16: never silently aim the wrong design)
  * Returns { token } on success; throws with a parent-actionable message otherwise.
- * The HMAC/TTL check itself stays in validateDesignToken (unchanged).
+ * The format/TTL check itself stays in validateDesignToken (2026-09-06: HMAC 防伪层已删——
+ * token 为无签名流程凭证——见 ENGINEERING-MODE.md 2026-09-06 段）。
  */
 export function resolveDesignSlot(parent, designIdArg) {
   const slots = parent._engDesignTokens
@@ -178,7 +179,8 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // eng-coder token gate: the design review must have passed and the caller must
   // present the exact token advisor issued — otherwise the child is not authorized to code.
   // 2026-09-01: multi-design slots — the token is located by designId (exact slot,
-  // single-slot fallthrough); HMAC/TTL validation itself is unchanged.
+  // single-slot fallthrough); token validation itself is unchanged (2026-09-06:
+  // HMAC removed — validateDesignToken now checks format + TTL only).
   let issuedToken
   if (role === "eng-coder") {
     issuedToken = resolveDesignSlot(parent, args.designId).token
