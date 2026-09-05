@@ -16,7 +16,10 @@ const zh = JSON.parse(readFileSync(join(root, "locales", "zh.json"), "utf8"))
 
 // Keys constructed dynamically (t("reasoning." + level)) — their full set lives
 // under the prefix; static scan can't see them.
-const DYNAMIC_PREFIXES = ["reasoning."]
+// "welcome."（2026-09-05）：欢迎条文案两态经运行时键选择（ctx._keyOk ?
+// "welcome.textConfigured" : "welcome.text" + data-i18n 属性通道）——静态扫描不可见——
+// 欢迎域键少（heading/text/textConfigured/shortcutsHtml——前者仍静态引用受检）。
+const DYNAMIC_PREFIXES = ["reasoning.", "welcome."]
 
 function usedKeys() {
   const keys = new Set()

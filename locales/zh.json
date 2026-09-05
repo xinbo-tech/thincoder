@@ -21,6 +21,7 @@
   "toolbar.advisor": "Advisor 评审——改动代码后要求评审",
   "toolbar.engineering": "工程模式（先设计后编码）",
   "toolbar.settings": "设置",
+  "welcome.textConfigured": "就此工作区提问——agent 可以读取文件、运行命令、修改代码。",
   "welcome.heading": "欢迎使用 ThinCoder",
   "welcome.text": "选择一个 provider 并填入 API key，即可开始使用。",
   "welcome.shortcutsHtml": "输入 <code>@</code> 引用文件 · <code>Enter</code> 发送 · <code>Shift+Enter</code> 换行",

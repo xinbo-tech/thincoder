@@ -21,6 +21,7 @@
   "toolbar.advisor": "Advisor review — require a review after code changes",
   "toolbar.engineering": "Engineering mode (design-before-code)",
   "toolbar.settings": "Settings",
+  "welcome.textConfigured": "Ask about this workspace — the agent can read files, run commands, and edit code.",
   "welcome.heading": "Welcome to ThinCoder",
   "welcome.text": "Choose a provider and enter its API key to get started.",
   "welcome.shortcutsHtml": "Type <code>@</code> for file references · <code>Enter</code> to send · <code>Shift+Enter</code> for newline",

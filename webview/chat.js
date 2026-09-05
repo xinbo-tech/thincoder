@@ -5,7 +5,7 @@
  */
 import { ctx, vscode, S } from "./state.js"
 import {
-  showWelcome, showBanner, addUser, addAssistantHistory,
+  showWelcome, updateWelcomeStatus, showBanner, addUser, addAssistantHistory,
   addTool, addToolHistory, finishTool, showError, maybeScrollDown, escHtml,
 } from "./ui.js"
 import { setLoading } from "./loading.js"
@@ -198,8 +198,10 @@ window.addEventListener("message", (e) => {
     case "providerStatus":
       S._lastProviderStatus = m.status || {}
       updateProviderStatus(S._lastProviderStatus)
-      showBanner(ctx, m.keyOk ? t("banner.configured") : t("banner.notConfigured"), m.keyOk)
+      ctx._keyOk = m.keyOk === true
+      showBanner(ctx, ctx._keyOk ? t("banner.configured") : t("banner.notConfigured"), ctx._keyOk)
       maybeShowWelcome(S._lastProviderStatus, m.keyOk)
+      updateWelcomeStatus(ctx) // keyOk 到达可能晚于 showWelcome（初始渲染）——刷新欢迎条文案态
       break
     case "providerError":
       showSettingsError(m.text)

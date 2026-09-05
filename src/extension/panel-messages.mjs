@@ -312,8 +312,12 @@ export async function handlePanelMessage(panel, msg) {
       // resolveWebviewView pushed i18n right after setting webview.html, which
       // races the async load and is DROPPED on Reload Window (labels showed raw
       // keys like "msg.user"). Re-push here, plus the settings the toolbar needs.
+      // providerStatus rides along (2026-09-05 真机走查：它同样经 async status()
+      // 推送——Reload Window 竞态会丢——欢迎条两态文案/配置横幅随之失配——
+      // webviewReady 是唯一可靠握手点——i18n 同机制）。
       panel._panel?.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
+      panel._pushStatus()
       break
     }
     case "setAdvisorGuard": {

@@ -28,6 +28,7 @@ export const ctx = {
   isRunning: false, hadToolResult: false,
   _toolRefs: {}, // tool id → ref, for O(1) finishTool lookup
   _models: [],
+  _keyOk: null, // provider 配置态（providerStatus 消息置位——欢迎条文案两态：welcome.text/textConfigured）
   selectedModel: "", selectedProvider: "", selectedReasoning: "max",
   _sessions: [], activeSession: 0,
   _pastedImages: [],

@@ -98,10 +98,21 @@ export function showWelcome(ctx) {
   // data-i18n/data-i18n-html：动态内容在 i18n 消息到达前渲染（脚本加载即 showWelcome）——
   // t() 此时返回键名——i18n-dom applyI18nToDOM 到达后按属性覆盖（2026-09-05 真机走查修复：
   // 此前只刷 .welcome h2，两个 p 键名残留）。shortcutsHtml 含 <code>——innerHTML 语义。
+  // 首行文案按 provider 配置态两态（ctx._keyOk——providerStatus 消息置位；updateWelcomeStatus
+  // 在 keyOk 晚到时刷新；键写入 data-i18n 属性——i18n-dom 刷新按当前态键取值）。
+  const textKey = ctx._keyOk === true ? "welcome.textConfigured" : "welcome.text"
   el.innerHTML = `<h2 data-i18n="welcome.heading">${t("welcome.heading")}</h2>
-    <p data-i18n="welcome.text">${t("welcome.text")}</p>
+    <p data-i18n="${textKey}">${t(textKey)}</p>
     <p data-i18n-html="welcome.shortcutsHtml" style="margin-top:8px;opacity:0.7">${t("welcome.shortcutsHtml")}</p>`
   ctx.messagesEl.appendChild(el)
+}
+
+/** keyOk 状态晚到时刷新欢迎条首行文案（providerStatus 消息——初始渲染常早于它）。 */
+export function updateWelcomeStatus(ctx) {
+  const p = ctx.messagesEl.querySelector(".welcome p[data-i18n]")
+  if (!p) return
+  p.dataset.i18n = ctx._keyOk === true ? "welcome.textConfigured" : "welcome.text"
+  p.textContent = t(p.dataset.i18n)
 }
 
 export function showBanner(ctx, text, keyOk) {
