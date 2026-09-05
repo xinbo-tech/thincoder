@@ -3,7 +3,7 @@
  * LLM ↔ tool-call loop, until the task is done.
  */
 import { chat } from "./provider/index.mjs"
-import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT, pushReal, summarizeRunExplorations } from "./context.mjs"
+import { pushReal, summarizeRunExplorations } from "./context.mjs"
 import { specForModel } from "./config.mjs"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
@@ -14,15 +14,15 @@ import { FILE_MUTATORS } from "./agent/helpers.mjs"
 import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
-import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
-import { logEvent } from "./log.mjs"
+// 主循环阶段函数（压缩检查/注入组/回合收尾）2026-09-05 实践轮迁 agent/run-stages.mjs
+import { runCompactionCheck, injectTurnReminders, finalizeAgentTurn, injectResponseReminders } from "./agent/run-stages.mjs"
 import {
-  escapeXml, repairHistory, listWorkDir, ensureAutoReminder,
+  escapeXml, repairHistory, listWorkDir,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
   ContinueError,
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
-  AUTO_TURN_DIGEST_DOMAIN, ENG_ON_REMINDER, ENG_OFF_REMINDER, injectEngineeringReminder,
+  AUTO_TURN_DIGEST_DOMAIN,
 } from "./agent/helpers.mjs"
 // ENG 提醒族 + auto-turn domain 2026-09-05 迁 agent/helpers.mjs（agent.mjs 530 > 500 硬限）
 // overlay 载荷（explore/coder/plan/eng-coder/consult）迁 prompt-overlays.mjs——re-export 保面
@@ -171,52 +171,13 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
 
     const lastRole = agent.history.at(-1)?.role
     if (lastRole === "user" || lastRole === "tool") {
-      try {
-        if (await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)) {
-          agent._compressFailures = 0
-          agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
-          recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
-          // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode, tokensFreed, elapsedMs } —
-          // the TUI panel renders it; callers that ignore the arg keep prior onCompress semantics.
-          callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-          ensureAutoReminder(agent)
-        }
-      } catch (compressError) {
-        // AbortError must not be swallowed: user cancellation must propagate
-        if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
-        agent._compressFailures = (agent._compressFailures ?? 0) + 1
-        // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
-        // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
-        callbacks?.onCompressFail?.(compressError)
-        if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
-          agent._compressFailures = 0
-          if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-        }
-      }
+      // 2026-09-05 实践轮：压缩检查/降级计数提为 runCompactionCheck（agent/run-stages.mjs——
+      // CLI 对位 VS run-stages）——循环骨架此处只剩检查调用（recentCallSigs 对象引用回流）。
+      await runCompactionCheck(agent, { threshold, callbacks, compactionOverhead, signal, recentCallSigs })
     }
 
-    // Plan-mode reminder cadence: re-inject constraint reminders while plan mode is active
-    // (sparse every 2 turns, full every 5 / on new user message) so the restriction never fades.
-    if (agent.planMode) {
-      const lastMsg = agent.history.at(-1)
-      const realUserMsg = lastMsg?.role === "user"
-        && typeof lastMsg.content === "string"
-        && !lastMsg.content.startsWith("[System reminder:")
-        && !lastMsg.content.startsWith("[User interrupt:")
-      const newUserSince = realUserMsg && agent.history.length > (agent._planReminderAtLen ?? 0)
-      const { planReminderForTurn } = await import("./agent-tools/plan.mjs")
-      const reminder = planReminderForTurn(agent, newUserSince)
-      if (reminder) {
-        agent._planReminderAtLen = agent.history.length + 1
-        agent.history.push({ role: "user", content: reminder, transient: true })
-      }
-    }
-
-    // Engineering-mode status injection on every new user message (design-before-code
-    // vs standard discipline) — see injectEngineeringReminder.
-    if (depth === 0) {
-      injectEngineeringReminder(agent)
-    }
+    // 2026-09-05 实践轮：plan cadence + eng 状态注入提为 injectTurnReminders（run-stages）
+    await injectTurnReminders(agent, { depth })
 
     const messages = [{ role: "system", content: systemPrompt }, ...agent.history]
     let response
@@ -292,15 +253,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       continue
     }
 
-    // Stream rule warnings (action: "warn"): stream completed; inject de-duplicated
-    // warnings so the model sees them before its next response.
-    if (response._warnings?.length) {
-      const deDuplicated = [...new Map(response._warnings.map(w => [w.name || w.pattern, w])).values()]
-      agent.history.push({
-        role: "user",
-        content: `[System reminder — stream rule warnings from your last response:\n${deDuplicated.map(w => `- ${w.name || w.pattern}: ${w.message}`).join("\n")}]`,
-      })
-    }
+    // Stream rule warnings / finish-reason 警告（2026-09-05 实践轮——提为
+    // injectResponseReminders，agent/run-stages.mjs——verbatim，语义零变）
+    injectResponseReminders(agent, response)
 
     // User interrupted mid-generation (Ctrl+I): commit partial output + inject the
     // message, then signal the outer loop to recreate the controller and resume.
@@ -324,18 +279,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     }
 
     // Warn on abnormal finish reasons — the response may be incomplete/truncated.
-    if (response.finishReason && response.finishReason !== "stop" && response.finishReason !== "tool_calls") {
-      const reasonMap = {
-        length: "output token limit reached after exhausting continuations",
-        insufficient_system_resource: "provider inference resources exhausted — consider retrying or switching models",
-        content_filter: "response blocked by provider content filtering",
-      }
-      const detail = reasonMap[response.finishReason] || `unknown reason "${response.finishReason}"`
-      agent.history.push({
-        role: "user",
-        content: `[System reminder: the previous turn ended abnormally — ${detail}. The assistant response that follows may be incomplete.]`,
-      })
-    }
+    // 2026-09-05 实践轮：finish-reason 注入随流规则警告提为 injectResponseReminders。
 
     if (response.toolCalls.length === 0) {
       const cr = handleCompletion(agent, response, depth, turn, guardPushbacks, honestReminderInjected, advisorPushbacks, callbacks)
@@ -422,73 +366,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     thrownError = e
     throw e
   } finally {
-    // Turn-end cleanup: abort any leftover consultation children (consult_start spawns
-    // fire-and-forget runners; a completed turn must not let them keep burning tokens).
-    cleanupConsultSessions(agent)
-    // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1). Lifecycle:
-    // - Ctrl+C (plain abort): children were aborted with the parent signal — clear
-    //   WITHOUT injecting stale errors (user explicitly stopped). Ctrl+I (interrupt)
-    //   keeps the pool: the turn resumes with the interrupt message, children stay
-    //   tracked (in a suspension session children hold agent._sessionSignal and a
-    //   digest's own Ctrl+I must not orphan them).
-    // - ContinueError (turn cap): no wait, no injection — children keep running and
-    //   the RESUME run's turn-end collection takes over.
-    // - anything else: inject the SETTLED entries only; running/queued stay in the
-    //   pool for the suspension session (D-S1 — no allSettled turn-end wait).
-    if (signal?.aborted && !signal?.reason?.interrupt) {
-      if (agent._asyncSubagents?.size > 0) {
-        logEvent("ev:stopped", { poolN: agent._asyncSubagents?.size ?? 0, where: "turn-end-abort" })
-      }
-      agent._asyncSubagents?.clear()
-      agent._asyncQueue = []
-      agent._asyncCheckLastN = 0
-    } else if (thrownError instanceof ContinueError) {
-      // keep _asyncSubagents + the check counter — the resumed run continues them
-    } else {
-      await collectSettledAsync(agent, { suspDriven })
-      agent._asyncCheckLastN = 0
-    }
-    agent._inAutoTurn = false
-    // §17 D-S6: auto-turn guard marks survive into the next USER run (restored at its
-    // !resume reset above). Normal ends only — abort discards; ContinueError lets the
-    // auto-resumed run snapshot at its own end.
-    if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
-      agent._inheritedGuard = {
-        _mutatedThisRun: agent._mutatedThisRun, _verifiedThisRun: agent._verifiedThisRun,
-        _verifyPassed: agent._verifyPassed, _calledAdvisorThisRun: agent._calledAdvisorThisRun,
-        _touchedFiles: agent._touchedFiles, _verifyRetries: agent._verifyRetries,
-        _advisorRound: agent._advisorRound,
-      }
-    }
-  }
-}
-
-/**
- * Turn-end async subagent collection (AGENT-LOOP.md §17 D-S1 + §17.5 supersede):
- * two modes, selected by the caller's driver context (17.5.2/17.5.4 #2):
- * - suspDriven=false (fallback — headless/direct runAgent callers without a
- *   suspension driver): inject every entry that SETTLED during this run
- *   (XML-escaped report/error — child reports may carry file/webpage content;
- *   >64K offloaded with preview + path) and remove it from the pool. Running/
- *   queued STAY — no allSettled wait. Results never lost without a session.
- * - suspDriven=true (the interaction layer runs suspensionSession after this
- *   run): NO direct inject — settled entries STAY pooled (settled not consumed)
- *   for the session's first sweepSettledToPending → digest turn (§17.5 — done
- *   条目留池等消化轮注入；check/status 在 sweep 前仍从池读——17.5.2 不变面)。
- * maybeRefillAsync runs in both modes (starts queued heads whose slot freed).
- * Single ownership: entries settled inside a suspension session were moved to
- * _pendingAsyncResults by the settle callback, so this only sees user-turn
- * settles (no double inject — D-S3 points ①/②). The ⟦ev⟧done freeze is NOT
- * emitted here — each settle callback emits it (§15 D-A3). */
-async function collectSettledAsync(agent, { suspDriven = false } = {}) {
-  const map = agent._asyncSubagents
-  if (!map || map.size === 0) return
-  const { maybeRefillAsync, injectAsyncResult } = await import("./agent-tools/subagent.mjs")
-  maybeRefillAsync(agent) // start queued heads now that slots may have freed — no waiting
-  if (suspDriven) return // §17.5: settled stays pooled — the suspension session digests it
-  for (const e of [...map.values()]) {
-    if (!e.done) continue // still running — stays in the pool (D-S1)
-    await injectAsyncResult(agent, e)
-    map.delete(String(e.id))
+    // 2026-09-05 实践轮：回合收尾（consult 清理/async 池分流/guard 继承——原 425-462
+    // 段 + collectSettledAsync 466-494 整体迁 agent/run-stages.mjs finalizeAgentTurn——
+    // CLI 对位 VS run-stages——finally 只剩一行调用 + 骨架注释）。
+    await finalizeAgentTurn(agent, { signal, autoTurn, suspDriven, thrownError })
   }
 }
