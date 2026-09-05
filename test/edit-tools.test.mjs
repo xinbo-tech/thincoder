@@ -1506,3 +1506,80 @@ test("edit §14.1 T14.1.6: 单行 old not-found 且文件无近似行（零候�
 
 
 
+
+// ─── §14.2 edit 空白差异自动落点（TOOLS.md §14.2——P15.11——2026-09-05 用户裁定）───
+// 来源：edit 连续失败分析（12 条记录中 8 条 = 前导/尾随空白差异——模型从 read 记忆拷贝
+// old_string 时丢/加空格——引导无效实证——内容零差异自动落点 + 结果明示）。
+// 边界：多窗口（两处 trim 同内容）→ 歧义不猜仍报错；实质差异（≥1 字符不同）仍报错。
+
+test("P15.11a: 单行前导空白差异（唯一窗口）→ 自动落点应用 + 结果附 note", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1511a-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "cfg.txt"), "traces: {\n    enabled: false,\n}\n", "utf8")
+    const r = await byName.edit.execute({
+      path: "cfg.txt",
+      old_string: "     enabled: false,", // 5 空格 vs 文件 4 空格——仅空白差异（逗号保留）
+      new_string: "    enabled: true,",
+    }, ctx)
+    assert.ok(r.includes("whitespace-only match"), "note 明示: " + r.slice(0, 160))
+    assert.equal(readFileSync(join(dir, "cfg.txt"), "utf8"), "traces: {\n    enabled: true,\n}\n", "内容已替换（new 自带 4 空格）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.11b: 多行窗口空白差异（唯一）→ 自动落点；批量通道自动继承（computeEditEntry 单一权威）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1511b-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "a.txt"), "const A = 1\n  const B = 2\nconst C = 3\n", "utf8")
+    const r = await byName.edit.execute({
+      path: "a.txt",
+      edits: [{
+        old_string: "const A = 1\n const B = 2", // B 行文件 2 空格 vs old 1 空格
+        new_string: "const A = 1\nconst B = 20", // 保留公共行 A（LCS 替换——零重叠插入语义不干扰 variant 验证）
+      }],
+    }, ctx)
+    assert.ok(r.includes("whitespace-only match"), "批量路径 note: " + r.slice(0, 160))
+    assert.equal(readFileSync(join(dir, "a.txt"), "utf8"), "const A = 1\nconst B = 20\nconst C = 3\n", "批量已应用（B 行替换——A 公共行保留）")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.11c: 歧义——两窗口 trim 同内容不同空白 → 仍报 not found（不猜）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1511c-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "a.txt"), "  const X = 1\n    const X = 1\n", "utf8")
+    // old 前导 6 空格 > 两行前导（2/4）→ 逐字 occurrences=0；trim 窗口却匹配两处 → 歧义不猜
+    await assert.rejects(
+      () => byName.edit.execute({ path: "a.txt", old_string: "      const X = 1", new_string: "      const Y = 1" }, ctx),
+      /old_string not found/,
+      "两处空白变体 → 歧义不猜"
+    )
+    assert.equal(readFileSync(join(dir, "a.txt"), "utf8"), "  const X = 1\n    const X = 1\n", "未改动")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("P15.11d: 实质差异（内容不同）→ 仍报 not found + similar lines（回归——不吞既有引导）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-p1511d-"))
+  const ctx = { cwd: dir }
+  const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
+  try {
+    writeFileSync(join(dir, "a.txt"), "const timeout = 1000\n", "utf8")
+    await assert.rejects(
+      () => byName.edit.execute({ path: "a.txt", old_string: "const timeout = 2000", new_string: "x" }, ctx),
+      /old_string not found/,
+      "内容实质差异 → 仍报错"
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

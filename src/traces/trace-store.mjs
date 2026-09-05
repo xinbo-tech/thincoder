@@ -29,7 +29,7 @@
  *   记录不输出 round 字段（全设计无 round 定义——删——不发明无来源字段）。
  */
 import { readdirSync, existsSync } from "node:fs"
-import { appendFile, mkdir } from "node:fs/promises"
+import { appendFile, mkdir, readdir, stat, unlink, rmdir } from "node:fs/promises"
 import { join } from "node:path"
 import { createHash } from "node:crypto"
 import { configDir } from "../config.mjs"
@@ -194,4 +194,31 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
       // F-TR3：落盘失败静默降级——不抛错、不阻塞 chat() 返回
     }
   })()
+}
+
+/**
+ * D-TR10（2026-09-05 用户裁定——发布隐私 + 磁盘卫生）：启动清理——删除 traces 根下
+ * mtime 超过保留期的轨迹文件（保留期 = config.traces.retentionHours，默认 24h）；
+ * 删空的日期目录（YYYY-MM-DD）。目录里非 .jsonl 文件不碰。CLI 启动点 fire-and-forget
+ * 调用（不 await——不阻塞启动——失败静默——与轨迹写盘同纪律）。返回删除文件数。
+ */
+export async function cleanupTraces({ dir = tracesRoot(), retentionHours = 24 } = {}) {
+  const cutoff = Date.now() - retentionHours * 3_600_000
+  let days
+  try { days = await readdir(dir) } catch { return 0 } // 目录不存在/不可读 → 无事可做
+  let removed = 0
+  for (const day of days) {
+    const dayDir = join(dir, day)
+    try { if (!(await stat(dayDir)).isDirectory()) continue } catch { continue }
+    let names
+    try { names = await readdir(dayDir) } catch { continue }
+    for (const n of names) {
+      if (!n.endsWith(".jsonl")) continue
+      try {
+        if ((await stat(join(dayDir, n))).mtimeMs < cutoff) { await unlink(join(dayDir, n)); removed++ }
+      } catch { /* 单个文件失败不影响其余 */ }
+    }
+    try { if ((await readdir(dayDir)).length === 0) await rmdir(dayDir) } catch {}
+  }
+  return removed
 }

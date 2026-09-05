@@ -63,6 +63,12 @@ function isSubagentReadonlyAction(toolName, args) {
     const action = args?.action
     return action === "search" || action === "list"
   }
+  // SETTINGS-TOOL.md（2026-09-05）：settings list/get 是只读动作（memory search/list 同分类——
+  // planMode 放行/免审批）；set 保持侧效门。
+  if (toolName === "settings") {
+    const action = args?.action
+    return action === "list" || action === "get"
+  }
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
   if (action === "check" || action === "status") return true

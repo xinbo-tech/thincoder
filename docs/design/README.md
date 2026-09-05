@@ -26,7 +26,7 @@
 | Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留——机制自成一体 |
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md 提示词）同板块保留——历史决策记录 |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
-| 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）同板块独立保留——均为已实现专题 |
+| 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）、`SETTINGS-TOOL.md`（settings 工具——agent 配置调整——2026-09-05 立项）同板块独立保留——均为已实现专题 |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 + commit 清理（2026-09-01 定稿） |
 | 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志（回合/LLM/工具/子代理/挂起——按天轮转保留 1 天——根治临时插桩循环——2026-09-03 设计） |
 | 编辑工具可靠性 | `EDIT-TOOL-EOL-REQUIREMENTS.md`、`EDIT-TOOL-EOL-DESIGN.md` | edit/apply_patch/hashline_edit/write 行尾语义 + edit 候选提示 + 编码探测（2026-08-26，走查痛点实证；两端实现） |
@@ -58,3 +58,4 @@
 - 2026-09-01：新增板块「Checkpoint 事故恢复」（CHECKPOINT.md，需求+设计+测试三层定稿）
 - 2026-09-02：CLI Lint 板块（CLI-LINT-*）标记**被 TOOLS.md §10.2 取代**——ESLint 全套删除，改零依赖 check-syntax（node --check）
 - 2026-09-03：新增板块「诊断事件日志」（LOGGING.md，需求+设计+测试三层定稿 + 评审 0🔴 + 两端实现交付——T-L1..L10/镜像用例全绿）
+- 2026-09-05：新增板块专题「settings 工具」（SETTINGS-TOOL.md——工具系统板块独立保留——agent 配置调整 list/get/set——全量 config.json + 敏感遮罩——三项用户裁定）

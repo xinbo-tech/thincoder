@@ -7,20 +7,33 @@
 
 ## 1. 发布前检查
 
+- [ ] `npm view thincoder version` 记录 registry 最高已发号（版本号规则核对见 §1.5——待发号必须 = 最高 + 1）
 - [ ] `npm test` 快层全绿(30 个 slow 测试自动 skip;`test/slow.mjs` 门控,2026-08-30)
 - [ ] `npm run test:full` 全量全绿(slow 全放行;发版必跑,快层 skip 不代表通过)
 - [ ] `THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs` 真实端点 smoke 通过(花真钱,双层之外,发版前人工跑;2026-08-30 起 env 门控)
 - [ ] `npm run lint` 0 error(warning 允许)
 - [ ] `CHANGELOG.md` 已更新新版本条目(Keep a Changelog 格式,中文,Added/Changed/Fixed/Removed 分节)
-- [ ] `package.json` version 已 bump
+- [ ] `package.json` version 已 bump（**发布时才 bump——开发期不预占——见 §1.5**）
+
+### 1.5 版本号连续性规则（2026-09-05 用户裁定——“不要跳号，npm/marketplace 对外编号连续不跳空”）
+
+**根因（2026-09-05 实证）**：CHANGELOG 开发期预占版本号（写段即占号——[0.12.55/56/57] 段在开发期开出）而发布动作没跟上 → 发布时直接发 package.json 当前号 → **npm 实发 0.12.54 → 0.12.58（55/56/57 永缺）**。tag 只在发布时打（缺号处无 tag——一致）。
+
+**规则**：
+1. **号在发布时定，开发期不预占**——开发批 CHANGELOG 记录挂 `[Unreleased]` 段（不编号）；发布 = 唯一定号动作（bump → Unreleased 段头改新号）；
+2. **待发号 = registry 已发最高号 + 1**——发布前 `npm view thincoder version` 查最高；package.json ≠ 期望号 → 先纠正再走流程（禁止一次跳多号）；
+3. **缺口不补**：npm 0.12.55/56/57 缺口已成（registry 历史不可回溯重写——对应批次内容已并入 58）——**不补发**——规则从下一发起保证零新缺口（用户 2026-09-05 确认）；
+4. 编号体系：§4.6 CalVer（2026 年内 0.12.x 连续递增 → 2027-01-01 起 1.1.0）。
+
+**当前状态**：registry 最高 = **0.12.58**（package.json 已同步）——下次发布 = **0.12.59**（把 CHANGELOG `[Unreleased]` 段改 `[0.12.59]`）。
 
 ## 2. 发布
 
 ```bash
 cd thincoder
 
-# bump(patch/minor 自行判断;本次改动含新功能用 minor,纯修复用 patch)
-# 手动改 package.json 的 version 字段
+# bump:规则号 = registry 最高 + 1(§1.5——本次 = 0.12.59;禁止跳号/预占)
+# 手动改 package.json 的 version 字段 + CHANGELOG [Unreleased] 段头改新号
 
 git add package.json CHANGELOG.md
 git commit -m "release: vX.Y.Z"      # 历史惯例:release commit 消息格式 "release: v0.12.43"

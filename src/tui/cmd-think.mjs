@@ -76,7 +76,7 @@ export async function handleThinkCommand(ctx, args = []) {
     if (e.action === "auto") {
       const newAuto = agent.config?.agent?.autoThink === true
       pushLine(`Auto-think: ${newAuto ? "ON" : "OFF"}`, C.tool)
-      return // exit loop — no useful actions remain when auto mode just changed
+      return // exit loop — no useful actions remain when auto mode just changed (T8b 锁定——toggle 即退是已批准语义——2026-09-05 曾误改 OFF 回菜单——测试抓回归——已撤销)
     } else if (e.action === "effort") {
       pushLine(`Reasoning effort: ${e.level}`, C.tool)
     } else {

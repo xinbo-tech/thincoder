@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { createAgent } from "../agent.mjs"
 import { loadConfig, configDir } from "../config.mjs"
 import { createMemory, memoryTools, syncDir, codeSearchTool, docSearchTool } from "../memory.mjs"
+import { settingsTool } from "../agent-tools/settings.mjs"
 import { repoOutlineTool } from "../tools/repomap.mjs"
 import { builtinTools } from "../tools/index.mjs"
 import { discoverRules } from "../rules.mjs"
@@ -48,7 +49,7 @@ export async function assembleAgent() {
     await ensureClone(team)
     await syncDir(memory, { layer: "team", dir: team.dir })
   }
-  const baseTools = [...builtinTools, ...memoryTools(memory, { cwd, projectDir: config.memory.projectDir, author: gitAuthor(), team }), codeSearchTool(memory), docSearchTool(memory), repoOutlineTool(memory.db, cwd)]
+  const baseTools = [...builtinTools, ...memoryTools(memory, { cwd, projectDir: config.memory.projectDir, author: gitAuthor(), team }), codeSearchTool(memory), docSearchTool(memory), repoOutlineTool(memory.db, cwd), settingsTool()]
 
   // MCP servers: connect in parallel (a dead server won't block startup), collect failures as warnings (stderr invisible in TUI, passed via agent object)
   const mcpServers = config.mcp?.servers ?? []

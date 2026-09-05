@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { runAgent } from "../src/agent.mjs"
 import { loadConfig, configPath } from "../src/config.mjs"
+import { cleanupTraces } from "../src/traces/trace-store.mjs"
 import { createMemory, syncDir } from "../src/memory.mjs"
 import { assembleAgent, teamConfig, gitAuthor, validateProvider } from "../src/cli/make-agent.mjs"
 import { memoryCommand } from "../src/cli/memory-command.mjs"
@@ -67,6 +68,13 @@ function noKeyMessage() {
 function exitSoon(code) {
   setTimeout(() => process.exit(code), 100)
 }
+
+// D-TR9（2026-09-05）：启动轨迹清理——删除超过 traces.retentionHours（默认 24h）的
+// 轨迹文件（fire-and-forget——不阻塞启动——失败静默——与轨迹写盘同纪律）。
+try {
+  const startupCfg = loadConfig()
+  cleanupTraces({ retentionHours: startupCfg.traces?.retentionHours ?? 24 }).catch(() => {})
+} catch { /* 配置缺失/损坏 → 跳过清理（零风险） */ }
 
 switch (command) {
   case "chat": {

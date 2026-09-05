@@ -64,6 +64,7 @@ export async function applyEditBatch(args, ctx) {
         editStartLine: out.editStartLine, // 基于累积内容计算——已天然计入前面条目的行偏移，不再累加
         lineShift: out.lineShift,
         occurrences: out.occurrences,
+        note: out.note ?? null, // P15.11——空白差异自动落点标记（成功消息追加）
       })
       g.content = out.updated // 串行累积：下一条基于本条应用后的内容
       g.netShift += out.lineShift
@@ -84,7 +85,7 @@ export async function applyEditBatch(args, ctx) {
     // #4（2026-09-01 交付评审尾巴）：与单文件路径对齐——每条结果附 git diff +
     // autoSyntaxCheck（同文件多条会重复 diff/检查，换取格式一致、实现零分支）
     const diff = gitDiffOne(ctx.cwd, p.g.abs)
-    const base = `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
+    const base = `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${p.note ? ` — ${p.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
     results.push(await appendWriteContext(p.g.abs, p.editStartLine, base))
   }
   return results.join("\n")

@@ -186,6 +186,7 @@ slow("runAdvisorReview: code changes do NOT hit the doc-only fast path", async (
       _advisorSession: null,
       cwd: tmp,
     }
+    const { prepareAdvisorMessages } = await import("../src/advisor.mjs")
     const session = prepareAdvisorMessages(agent, undefined, null, null, ["app.js"])
     assert.equal(session[0].role, "system")
     assert.ok(session[1].content.includes("app.js") || session[1].content.includes("diff"), "code change goes to full review")

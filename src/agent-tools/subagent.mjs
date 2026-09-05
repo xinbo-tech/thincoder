@@ -9,14 +9,15 @@ import { pushReal } from "../context.mjs"
 import { logEvent, errText } from "../log.mjs"
 import {
   runChildPipeline, resolveChildProvider, ASYNC_SUBAGENT_LIMIT,
-  buildChildRunOpts, maybeRefillAsync,
-  executeCheckAction, executeStatusAction, executeEscalateAction, executeCancelAction,
-  executePanelAction,
-  // §20 调度器（AGENT-LOOP.md §20——D-SD1..SD5）：文件域归一化/等待态派生/环防御/
-  // 排队态面板刷新/依赖者标注。
-  normalizeFileList, describeBlockers, queueRunnable, refreshQueuedTokens,
-  assertNoDepCycle, depInfo, dependentLabels,
+  buildChildRunOpts, executeCheckAction, executeCancelAction,
 } from "./subagent-async.mjs"
+import { executeStatusAction, executeEscalateAction, executePanelAction } from "./subagent-actions.mjs"
+import {
+  // §20 调度器（AGENT-LOOP.md §20——D-SD1..SD5）：文件域归一化/等待态派生/环防御/
+  // 排队态面板刷新/依赖者标注/补位——2026-09-05 拆分轮后独立模块。
+  normalizeFileList, describeBlockers, queueRunnable, refreshQueuedTokens,
+  assertNoDepCycle, depInfo, dependentLabels, maybeRefillAsync,
+} from "./subagent-scheduler.mjs"
 
 // 2026-09-03 拆分轮: subagent.mjs 超 500 硬顶——async 常量、共享 post-spawn 管线
 //（runChildPipeline）与队列/注入/并账机械迁至 ./subagent-async.mjs。execute
@@ -24,6 +25,10 @@ import {
 // 2026-09-03 §19 合体轮: subagent_check/escalate 工具退役——check/status/escalate
 // 动作执行器并入 ./subagent-async.mjs，本文件只承载工具面（action schema）与
 // spawn 路径 + 动作分流。
+// 2026-09-05 拆分轮: status/escalate/panel 动作执行器 → ./subagent-actions.mjs；§20
+// 调度器全套（normalizeFileList/describeBlockers/queueRunnable/refreshQueuedTokens/
+// assertNoDepCycle/depInfo/dependentLabels/maybeRefillAsync）→ ./subagent-scheduler.mjs
+// ——本文件 import 源随之改写；check/cancel 与机械/管线仍来自 ./subagent-async.mjs。
 
 /**
  * §18.7 D-TS5 (A2): mechanically summarize the parent spawn task book for the
@@ -708,12 +713,14 @@ export const subagentTool = {
 // ./subagent-async.mjs——保留本文件导出面，消费点（agent.mjs / agent-turn.mjs /
 // consult.mjs / 测试）导入路径零改动。execute 仍直接使用 ASYNC_SUBAGENT_LIMIT /
 // maybeRefillAsync / buildChildRunOpts / runChildPipeline（文件头部 import）。
+// 2026-09-05 拆分轮: maybeRefillAsync 随 §20 调度器独立（./subagent-scheduler.mjs）——
+// 再导出源改写，消费面（agent.mjs 动态 import 等）不变。
 export {
   ASYNC_SUBAGENT_LIMIT,
   MAX_ASYNC_CHECKS,
   resolveChildProvider,
-  maybeRefillAsync,
   injectAsyncResult,
   buildChildRunOpts,
   mergeChildMutations,
 } from "./subagent-async.mjs"
+export { maybeRefillAsync } from "./subagent-scheduler.mjs"

@@ -1,4 +1,27 @@
-## [0.12.59] — 2026-09-04
+## [0.12.59] — 2026-09-05
+
+> 0.12.58 → 0.12.59（§1.5 连续号——发布时定号）
+
+### Added
+
+- **settings 工具（SETTINGS-TOOL.md——2026-09-05 用户三项裁定）**：agent 配置调整通道——list/get/set（全量 config.json 任意键点分路径）；set = 写盘 + 热应用（运行中即生效）；敏感键（apiKey/token/secret/password 段）回显永遮罩；已知键类型校验（DEFAULTS 自动派生）；list/get 只读动作（planMode 放行）；set 审批门。测试 T-S1.1-11（CLI 11 + VS Code 6）。
+- **subagent-async 模块拆分（§20.9 Module Split Policy——2026-09-05 F-N1.5 两段式首批）**：CLI subagent-async.mjs 1020 → 405 行（subagent-scheduler.mjs 231——§20 调度组 + 文件域组 / subagent-actions.mjs 416——status/panel/escalate 动作执行器组）——纯迁移零行为变化（测试零改动 + 断言计数前后对拍一致）。
+- **P-SL2 停滞机械检测（AGENT-LOOP §21.1 扩展注 P-SL2——2026-09-05）**：混合边环形等待停滞 → check/status 守卫明确报错列阻塞链（cancel 破环引导）——防御性（自然流不可达——人工注入可构造）。测试 T-SL2 ①-⑤（scheduler 22 → 27 用例）。
+
+### Changed
+
+- **轨迹存档隐私默认翻转 + 启动清理（AGENT-LOOP.md §18.6 D-TR6/D-TR10——2026-09-05 用户"不希望用户那边也采集"）**：`traces.enabled` 默认 **on → off**（发布后新用户零采集——本地分析可显式开）；新增 `traces.retentionHours`（默认 24h——保留期可配置）；CLI 启动时删除超过保留期的轨迹文件（`cleanupTraces`——D-TR10——fire-and-forget 不阻塞启动——空日期目录一并清除）；`/config` 菜单新增 traces.enabled（开关）与 traces.retentionHours（保留期）两项。测试 T-TR15。
+- **edit 空白差异自动落点（TOOLS.md §14.2——P15.11——2026-09-05 用户裁定）**：edit not-found 且文件存在**唯一内容相同仅空白不同**窗口 → 自动落点应用 + 结果附 note（`whitespace-only match`——双端同句）；歧义（多窗口）/实质差异仍 not-found（不猜）。测试 P15.11a-d 双端。
+- **编辑纪律三条固化进 discipline.md（AGENT-LOOP.md §21 扩展注 2——2026-09-05 记忆清空实验）**：① 新鲜读来源（never reconstruct from memory）；② hash 来源（never invent one）；③ 重试上限（never retry the identical input a third time）。测试 T-N1.8 双端。
+- **普通模式两段式（AGENT-LOOP.md §21 F-N1.5——2026-09-05 用户"把 coder 用起来……解决自查问题"）**：规模实现批次默认委托 coder 子代理（async——设计书为 task book）——执行/检查心智分离（隔离上下文破自查盲区）；小改动/探索留内联；复核走 F-N1.4（偏差退回 coder ≤2 轮）。测试 T-N1.9 双端。
+- **委托操作标准（AGENT-LOOP.md §21 扩展注 4——F-N1.6——2026-09-05 用户"spawn coder 干活现在并没有明确的标准是吗"）**：规模判据可操作化（≥2 文件/单文件 >30 行逻辑/模块边界/双端镜像 → 委托；≤30 行/文档同步/探索 → 内联）；任务书七字段标准（目标/已知事实/设计+禁止/约束/硬验收/报告格式/调度元数据——缺字段=委托缺陷）；委托模式判据（async 默认/sync 仅依赖链/并行仅文件域互斥）；通用验收基线。测试 T-N1.10 双端。
+- **/config 交互修复（2026-09-05）**：改配置项保存后回主菜单（不再退到输入框）——每轮刷新 ac/tc 配置引用（reloadConfig 换对象后显示新值）；view 浏览态同回菜单。
+- **版本号连续性规则（RELEASE.md §1.5——2026-09-05 用户裁定"不要跳号"）**：号在发布时定、开发期不预占（CHANGELOG 挂 [Unreleased]）；待发号 = registry 最高 + 1；缺口不补。
+
+### Fixed
+
+- **§18.14 域拆分 import 残留两处（2026-09-05 发版 test:full 门禁抓出——slow 门控测试快层永不执行致漏网）**：session.test.mjs 缺 existsSync + advisor-review.test.mjs 缺 prepareAdvisorMessages。
+- **压缩 fixture 阈值重校准 14000 → 15500（T3b——2026-09-05）**：提示词批（F-N1.4/1.5/1.6 main.md 委托句 + discipline 三条纪律 ≈550 token）抬升 systemPrompt 估算越刀锋——沿革惯例 +1500 档。
 
 ### Changed (追加——2026-09-04 后半批)
 

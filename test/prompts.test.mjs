@@ -1228,6 +1228,16 @@ test("prompts: §21 普通模式偏差审计锚（T-N1——main/coder/disciplin
   assert.ok(mainText.includes("reconcile the delivery against the owning design doc"), "T-N1.7: main.md How-you-finish 含完成前核对锚")
   assert.ok(mainText.includes("implementation deviations are fixed (by you, or sent back to the coder)"), "T-N1.7: main.md D-N1.1 尾含修正分句锚")
   assert.ok(coderText.includes("Fix implementation deviations (partial implementation / silent simplification) so the delivery matches the doc before reporting"), "T-N1.7: coder.md 自查行尾含修正分句锚")
+  // T-N1.8（2026-09-05 记忆清空实验——纪律固化）：discipline.md 三条编辑纪律锚（新鲜读来源/hash 来源/重试上限——fail-when-unchanged）
+  assert.ok(discText.includes("copy them from that read, never reconstruct from memory"), "T-N1.8: discipline.md 含新鲜读来源纪律（never reconstruct from memory）")
+  assert.ok(discText.includes("never invent one"), "T-N1.8: discipline.md 含 hash 来源纪律（never invent one）")
+  assert.ok(discText.includes("never retry the identical input a third time"), "T-N1.8: discipline.md 含重试上限纪律（never retry the identical input a third time）")
+  // T-N1.9（2026-09-05 F-N1.5 两段式）：main.md 规模批次默认委托 coder 锚（执行/检查分离——fail-when-unchanged）
+  assert.ok(mainText.includes("implemented by a coder subagent BY DEFAULT"), "T-N1.9: main.md 含规模批次默认委托锚")
+  assert.ok(mainText.includes("spawn async with the design as the task book"), "T-N1.9: main.md 含 async 委托锚（设计书为 task book）")
+  // T-N1.10（2026-09-05 F-N1.6 委托操作标准）：main.md 任务书字段锚（缺字段=委托缺陷——fail-when-unchanged）
+  assert.ok(mainText.includes("Sized delegation without these fields is a defect"), "T-N1.10: main.md 含任务书字段锚")
+  assert.ok(mainText.includes("machine-verifiable: commands, thresholds, assertion counts"), "T-N1.10: main.md 含机器可核验验收锚")
 
   assert.ok(!discText.includes("if you spotted a gap"), "T-N1.5: discipline.md 无旧弱触发 if you spotted a gap（零残留）")
   // T-N1.6：main/coder 双端开发前落档锚（D-N1.5——F-N1.3）

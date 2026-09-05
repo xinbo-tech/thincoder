@@ -74,7 +74,8 @@ export const DEFAULTS = {
     apiKey: "",          // Tavily key (tvly-...) — optional
   },
   traces: {
-    enabled: true,  // §18.6 D-TR6：完整轨迹存档开关——默认 on（"现阶段"=随会话生效——AGENT-LOOP.md §18.6）；关 = chat() 出口不落盘
+    enabled: false,  // §18.6 D-TR6 修订（2026-09-05 用户裁定——发布隐私："不希望用户那边也采集"）：轨迹存档默认 OFF——新用户零采集；本地调试分析可显式开（~/.thincoder/config.json traces.enabled:true）
+    retentionHours: 24, // D-TR10：轨迹文件保留小时数——CLI 启动时删除超过该时长的文件（默认 24h）
   },
 }
 

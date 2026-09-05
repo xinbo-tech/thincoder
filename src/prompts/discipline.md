@@ -21,6 +21,11 @@ UI & interface design:
 - Free-text is correct ONLY when the input is genuinely open-ended (a name, a path, a message).
 - **用户约定执行纪律（2026-08-31，两次违约教训）**：用户对交互/行为的约定以用户原话为准——实现时逐字对照，不得用"等效实现"替换约定本身（已发生：滚动→点击翻窗、滚动到头自动加载→PgUp 键触发）。已确认约定的简化/降级必须提前上报，不得包装成"升级路径"交付。注释里的 parity with X / 对齐 X 只描述来源，不代表 X 就是正确语义——以用户约定为唯一判据，实现后真机验证用户原话的每个承诺点。
 
+Edit & write discipline (2026-09-05 — memory-wipe lessons — the rules below used to live only in agent memory and vanished when memory was cleared; prompts cover everyone, memory covers one machine):
+- old_string / line numbers / hashes come ONLY from the freshest read of the target file — copy them from that read, never reconstruct from memory; re-read after the file changed or after your own prior write.
+- hashline_edit old_hashes come only from read(hashes=true) of that file; on "Hash sequence not found" copy a real hash from the error's current-hashes list — never invent one.
+- A tool error stating its fix is the fix: apply it on the first retry. A second same-shape failure means re-read the file or the tool implementation — never retry the identical input a third time.
+
 Tool routing — use the dedicated tool, not bash:
 - **git operations** → `git` tool (action=status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote/clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv; `workdir` for sub-repos). Never run git via bash.
 - **JavaScript** → `execute` (inline code; or `scriptFile`+`nodeArgs` for `node <file>` / `node --test` / `node --check`). Never `bash node -e`.

@@ -8,7 +8,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs"
+import { mkdtempSync, rmSync, readFileSync, readdirSync, writeFileSync, existsSync, utimesSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createServer } from "node:http"
@@ -442,3 +442,38 @@ test("T-TR1/T-TR11 集成: 真实 chat() 出口——成功 + 失败路径均落
       errServer.close()
     }
   }))
+
+test("T-TR15: cleanupTraces——超期文件删除（默认 24h）+ 空日期目录清 + 非 jsonl 不碰 + 保留期可配（D-TR10 2026-09-05）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "cli-trc-"))
+  try {
+    const { cleanupTraces } = await loadTraceStore()
+    const root = join(dir, "traces")
+    mkdirSync(join(root, "day-old"), { recursive: true })
+    mkdirSync(join(root, "day-new"), { recursive: true })
+    const oldF = join(root, "day-old", "abc123-1.jsonl")
+    const newF = join(root, "day-new", "abc123-2.jsonl")
+    const mdF = join(root, "day-new", "notes.md")
+    writeFileSync(oldF, "{}")
+    writeFileSync(newF, "{}")
+    writeFileSync(mdF, "# n")
+    const oldT = new Date(Date.now() - 25 * 3_600_000)
+    utimesSync(oldF, oldT, oldT) // 25h 前——超 24h 保留期
+    const removed = await cleanupTraces({ dir: root, retentionHours: 24 })
+    assert.equal(removed, 1, "只删 1 个超期 jsonl")
+    assert.equal(existsSync(oldF), false, "超期文件已删")
+    assert.equal(existsSync(join(root, "day-old")), false, "空日期目录已清")
+    assert.equal(existsSync(newF), true, "保留期内文件不删")
+    assert.equal(existsSync(mdF), true, "非 jsonl 不碰")
+    // 保留期可配置：retentionHours=1 → 2h 前文件删除（1h 内仍留）
+    const midF = join(root, "day-new", "abc123-3.jsonl")
+    writeFileSync(midF, "{}")
+    const midT = new Date(Date.now() - 2 * 3_600_000)
+    utimesSync(midF, midT, midT)
+    const removed2 = await cleanupTraces({ dir: root, retentionHours: 1 })
+    assert.equal(removed2, 1, "retentionHours=1 → 2h 前文件删除")
+    assert.equal(existsSync(midF), false)
+    assert.equal(existsSync(newF), true, "1h 内文件仍留")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

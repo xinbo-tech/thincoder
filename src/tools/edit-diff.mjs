@@ -143,9 +143,52 @@ function isSingleLineReplace(entry) {
  * 返回 { updated, editStartLine, lineShift, occurrences }；失败抛错（含路径/引导）。
  * opts: { path, abortPrefix（批量 "edit aborted (atomic — no files written): "） }
  */
+/**
+ * P15.11（2026-09-05 用户裁定——edit 连续失败分析）：old_string 逐字 not-found 时——
+ * 若文件中存在**唯一**窗口：行数与 old 相同、逐行 trim() 相等（内容零差异——差异仅前导/
+ * 尾随空白——EOL 已在 normalize 域消除）→ 返回 { actual }（actual = 文件窗口原文）；
+ * 多窗口（两处 trim 同内容不同空白）→ null（歧义不猜——报错引导）；old 含尾换行 → null
+ * （终止符语义边界——不做窗口猜测）。模型从 read 记忆拷贝 old_string 时丢/加前导空格是
+ * 纯机械损耗（本轮 12 次 edit 失败中 8 次空白差异）——内容零差异时自动落点 + 结果明示。
+ */
+function findWhitespaceVariant(content, old) {
+  if (old.endsWith("\n")) return null
+  const oldLines = old.split("\n")
+  const fileLines = content.split("\n")
+  const m = oldLines.length
+  if (m === 0 || fileLines.length < m) return null
+  const trimmed = oldLines.map((l) => l.trim())
+  let hit = null
+  for (let i = 0; i + m <= fileLines.length; i++) {
+    let same = true
+    for (let j = 0; j < m; j++) {
+      if (fileLines[i + j].trim() !== trimmed[j]) { same = false; break }
+    }
+    if (!same) continue
+    const actual = fileLines.slice(i, i + m).join("\n")
+    if (actual === old) continue // 逐字已匹配——occurrences=0 前提下不会发生
+    if (hit) return null // 多窗口空白差异 → 歧义 → 不猜
+    hit = { actual }
+  }
+  return hit
+}
+
+/**
+ * P15.11 note 文案（各端成功消息追加——双端同句）
+ */
+export const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (content identical, leading/trailing whitespace differs from your old_string)"
+
 export function computeEditEntry(content, entry, opts = {}) {
   validateEditEntry(entry, { ...opts, rich: !opts.abortPrefix })
-  const occurrences = content.split(entry.old_string).length - 1
+  // P15.11：not-found 时先查唯一空白差异窗口——命中则以其原文为实际 old 继续（内容零差异
+  // ——自动落点 + note 明示）；实质差异/歧义仍走下方 not-found 报错（不猜内容）。
+  let old = entry.old_string
+  let occurrences = content.split(old).length - 1
+  let note = null
+  if (occurrences === 0) {
+    const variant = findWhitespaceVariant(content, old)
+    if (variant) { old = variant.actual; occurrences = 1; note = WHITESPACE_VARIANT_NOTE }
+  }
   if (occurrences === 0) {
     const preview = entry.old_string.slice(0, 100).split("\n")[0]
     const cands = findCandidates(content.split("\n"), entry.old_string)
@@ -172,13 +215,13 @@ export function computeEditEntry(content, entry, opts = {}) {
       `${opts.abortPrefix ?? ""}old_string matches ${occurrences} times in ${opts.path ?? "file"}; provide more context or set replace_all`
     )
   }
-  const matchIdx = content.indexOf(entry.old_string)
+  const matchIdx = content.indexOf(old)
   const editStartLine = matchIdx >= 0 ? content.slice(0, matchIdx).split("\n").length : 1
   let updated
   let resultForShift
   if (entry.replace_all) {
     // 字面替换——不做插入规则（old 多处时"插到哪处"无定义）——不落分支 0（§15.2 D15.9.2）
-    updated = content.split(entry.old_string).join(entry.new_string)
+    updated = content.split(old).join(entry.new_string)
     resultForShift = entry.new_string
   } else if (isSingleLineReplace(entry)) {
     // 分支 0（§15.2 D15.9.1——单行精确替换）：old 单行 && new 单行 && old 唯一匹配
@@ -189,19 +232,19 @@ export function computeEditEntry(content, entry, opts = {}) {
     // 行内容空串（如 new="\n"——置空行意图）时，常规带终止换行的行变空行（行数不变）；
     // 唯一例外是**无终止换行的末行**被置空——该行随文件结束自然消失（行数 −1——文件格式
     // 固有边界——空行无法表达）——不落 EMPTY_NEW_STRING 错误路径（new 本身非空串）。
-    const oldLine = splitLines(entry.old_string)[0]
+    const oldLine = splitLines(old)[0]
     const newLine = splitLines(entry.new_string)[0]
     updated = content.slice(0, matchIdx) + newLine + content.slice(matchIdx + oldLine.length)
     resultForShift = newLine
   } else {
-    const r = applyPatchLines(entry.old_string, entry.new_string)
+    const r = applyPatchLines(old, entry.new_string)
     if (!r.ok) throw new Error(r.reason)
-    updated = content.slice(0, matchIdx) + r.resultText + content.slice(matchIdx + entry.old_string.length)
+    updated = content.slice(0, matchIdx) + r.resultText + content.slice(matchIdx + old.length)
     resultForShift = r.resultText
   }
   // 行数差 = 应用后区域行数 − 旧区域行数（分支 0 单行替换：0；插入：new 行数；LCS：new−old）
-  const lineShift = splitLines(resultForShift).length - splitLines(entry.old_string).length
-  return { updated, editStartLine, lineShift, occurrences: entry.replace_all ? occurrences : 1 }
+  const lineShift = splitLines(resultForShift).length - splitLines(old).length
+  return { updated, editStartLine, lineShift, occurrences: entry.replace_all ? occurrences : 1, note }
 }
 
 /**
@@ -217,6 +260,6 @@ export async function runSingleEdit(args, ctx) {
   await writeFile(abs, joinWithEol(normalizeEOL(out.updated).split("\n"), raw), "utf8")
   recordWrite(abs, { type: "edit", startLine: out.editStartLine, shift: out.lineShift })
   const diff = gitDiffOne(ctx.cwd, abs)
-  const baseResult = `Edited ${args.path}: replaced ${out.occurrences} occurrence(s)${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
+  const baseResult = `Edited ${args.path}: replaced ${out.occurrences} occurrence(s)${out.note ? ` — ${out.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(abs)}`
   return await appendWriteContext(abs, out.editStartLine, baseResult)
 }

@@ -1,25 +1,24 @@
 /**
- * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + §19/§19.5/§19.6 合体动作执行器
+ * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + check/cancel 动作执行器
  * （AGENT-LOOP.md §19：subagent 单工具六动作 spawn/check/status/escalate/cancel/panel——
- * check/escalate 动作执行器并入本模块；subagent.mjs 只承载 spawn 路径与工具面）。
- * 内容：resolveChildProvider / async 常量 / executeCheckAction / executeStatusAction
- * （§19.5 D-M5 可决策字段）/ executeCancelAction + cancelAsyncSubagent（§19.5 D-M6——
- * 工具与 TUI ⏹ 共用）/ executePanelAction（§19.6——面板镜像 view + 门控 freeze）/ executeEscalateAction /
- * runChildPipeline + maybeRefillAsync + injectAsyncResult + buildChildRunOpts + mergeChildMutations。
+ * spawn 路径与工具面在 subagent.mjs；check/cancel 动作执行器与机械、管线在本模块）。
+ * 内容：resolveChildProvider / async 常量（ASYNC_SUBAGENT_LIMIT/MAX_ASYNC_CHECKS）/
+ * executeCheckAction / executeCancelAction + cancelAsyncSubagent（§19.5 D-M6——工具与
+ * TUI ⏹ 共用）/ runChildPipeline / injectAsyncResult / buildChildRunOpts / mergeChildMutations。
+ * 拆分（2026-09-05——Module Split Policy §20.9——纯迁移零行为变化）：§20 调度器 + 文件域
+ * 组 → ./subagent-scheduler.mjs（尾部 re-export 保测试动态 import 面——queueRunnable/
+ * describeBlockers）；status/panel/escalate 动作执行器 → ./subagent-actions.mjs。
  */
-import { isAbsolute, relative, resolve } from "node:path"
-import { existsSync, statSync } from "node:fs"
 import {
-  runAgent, createAgent, escapeXml, CODER_OVERLAY,
+  runAgent, escapeXml,
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 } from "../agent.mjs"
-import {
-  runWithContinue, TURN_CAP_MARK, makeRelay, wrapChildCallbacks,
-  ensureChildApiKey, clampEffort,
-} from "../agent/spawn-child.mjs"
+import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
-import { logEvent, errText } from "../log.mjs"
+import {
+  describeBlockers, dependentLabels, detectStall, maybeRefillAsync, refreshQueuedTokens, STALL_NOTE,
+} from "./subagent-scheduler.mjs"
 
 // Async subagent limits (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
 // background spawns + the per-turn check budget (consult-style loop guard).
@@ -138,7 +137,18 @@ export async function executeCheckAction(args, ctx) {
           const qi = (agent._asyncQueue ?? []).indexOf(target)
           const out = { id: String(target.id), status: "queued", position: qi >= 0 ? qi + 1 : undefined }
           if (blk.detail) out.reason = blk.detail
-          out.note = "check would block indefinitely — this queued task cannot start while the pool has no running task (starts are settle-driven); cancel it (action:'cancel') or make pool progress (AUTO session starts it on the next settle/refill)"
+          // §21.1 P-SL2（D-SL2）：停滞机械检测——目标处于不可自行解除的等待闭包（无
+          // running + 每 queued 的 blocker 均闭包内 + 无 depc）→ 明确报错列本任务
+          // 阻塞链 + 引导 cancel 破环重派（F-SL2——非静默）；不满足停滞判据的形态
+          // （单 queued/depc 滞留/外逃 blocker）维持下方原守卫文本——零行为变化。
+          const stall = detectStall(agent)
+          if (stall) {
+            const chain = stall.chains.find((c) => c.task === target)?.text ?? stall.chains[0]?.text
+            out.stall = true
+            out.note = `scheduler stall — the queued tasks block each other in a closed wait loop that can never settle on its own:\n${chain}\n${STALL_NOTE}`
+          } else {
+            out.note = "check would block indefinitely — this queued task cannot start while the pool has no running task (starts are settle-driven); cancel it (action:'cancel') or make pool progress (AUTO session starts it on the next settle/refill)"
+          }
           return JSON.stringify(out)
         }
       }
@@ -155,6 +165,16 @@ export async function executeCheckAction(args, ctx) {
     // 守卫 ②（arrival-order）：池内无 running（completed 已空 → 无 done）且仍有条目 →
     // 全为 queued 且永不启动 → 立即返回明确错误（防无界悬挂——补 cancel 引导）。
     if (![...map.values()].some((e) => e.status === "running")) {
+      // §21.1 P-SL2（D-SL2）：停滞机械检测——全 queued 且每 blocker 闭包内（无 depc 等
+      // 外部可解形态）→ 明确错误逐条列阻塞链（F-SL2——列链 + 引导 cancel 破环重派）；
+      // 不满足停滞判据的形态（单 queued/depc 滞留/外逃 blocker）维持原守卫文本——零变化。
+      const stall = detectStall(agent)
+      if (stall) {
+        return JSON.stringify({
+          status: "error",
+          error: `scheduler stall — the pool holds only queued tasks that block each other in closed wait loops; nothing can ever settle on its own:\n${stall.chains.map((c) => c.text).join("\n")}\n${STALL_NOTE}`,
+        })
+      }
       const stuck = [...map.values()]
         .map((e) => `${e.role}#${e.id}（${describeBlockers(agent, e).kind === "depc" ? "dependency-cancelled" : "blocked"}）`)
         .join(", ")
@@ -192,128 +212,6 @@ export async function executeCheckAction(args, ctx) {
   tombstones.set(String(target.id), { status: target.error ? "failed" : "consumed", role: target.role })
   if (target.error) return JSON.stringify({ id: String(target.id), status: "error", error: target.error })
   return JSON.stringify({ id: String(target.id), role: target.role, status: "done", report: target.report ?? "" })
-}
-
-/**
- * subagent action:"status" (§19 D-M2, new): NON-BLOCKING async-pool query —
- * returns immediately, never consumes a result and never touches the check read
- * counter (T-M10). Source of truth = the pool (_asyncSubagents): entries moved
- * to _pendingAsyncResults during a suspension (§17 D-S3 ② — injected at the next
- * run start) are no longer in the pool and are NOT counted as done-waiting.
- * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?,
- *   touchedFiles?/touchedMore?/touched? ... } for that entry; unknown id → error
- *   (same wording as check — T12 semantics)
- * - id omitted → { overview: { running: [{id, role, model, elapsedSec, turn,
- *   maxTurns, touchedFiles?/touched?}], queued: [{id, role, position, touched?}],
- *   done: [{id, role}] } } — live queue positions (index in _asyncQueue + 1).
- * §19.5.6: running 条目带 touched files 摘要（touchedFiles 前 5 + touchedMore 超出
- * 计数——相对查询方 cwd；0 改动 → touched 占位）；queued 条目带 touched 占位
- * "—（未启动）"；done/error/取消条目无 touched 字段（round3 #9）。
- * A settled-but-unconsumed entry (settled during a NORMAL turn) reports done
- * with a "not yet consumed" note — check still retrieves it afterwards.
- */
-/** §19.5 D-M5 decision-field assembly (F9): running entries report
- *  {id, role, model, elapsedSec, turn, maxTurns} — the data needed to decide
- *  WHO to cancel. Model is recorded at spawn (childProvider), startedAt at
- *  ACTUAL start (queued waits don't count), turn/maxTurns mirrored from the
- *  child's ⟦ev⟧turn events at the callbacks-wrap layer (subagent.mjs tracker).
- *  elapsedSec computed at call time from startedAt. */
-/** §19.5.6 D-SF2/N-SF1 摘要形态：status 调用时实时读 entry.childAgent._touchedFiles
- *  （绝对路径——per-run 记账——§18.12）→ 相对查询方 cwd；cwd 之外保留绝对形态 +
- *  "../" 前缀；>80 字符截尾（不超行）；前 5 个 + 独立截断字段 touchedMore（超出
- *  计数——不混入数组——消费方按类型区分）。占位：running 0 改动 → "—（尚无改动）"
- *  （T-SF2a）；queued 未启动 → "—（未启动）"（T-SF2b）；done/error/取消条目不含
- *  本摘要（round3 #9 明示——本批只做 running/queued）。 */
-function touchedSummary(entry, cwd) {
-  if (entry.status !== "running") return { touched: "—（未启动）" }
-  const files = entry.childAgent?._touchedFiles ?? []
-  if (files.length === 0) return { touched: "—（尚无改动）" }
-  const shown = files.slice(0, 5).map((f) => shortTouchedPath(f, cwd))
-  const out = { touchedFiles: shown }
-  if (files.length > 5) out.touchedMore = files.length - 5
-  return out
-}
-
-/** N-SF1 单路径显示形态：cwd 内 → 相对路径；cwd 外 → "../" + 绝对路径；>80 截尾。 */
-function shortTouchedPath(f, cwd) {
-  let p = f
-  if (cwd) {
-    const rel = relative(cwd, f)
-    p = rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : `../${f}`
-  }
-  return p.length > 80 ? `${p.slice(0, 79)}…` : p
-}
-
-function statusFields(entry, cwd) {
-  const base = { id: String(entry.id), role: entry.role }
-  if (entry.status === "running") {
-    base.model = entry.model ?? null
-    base.elapsedSec = entry.startedAt ? Math.max(0, Math.floor((Date.now() - entry.startedAt) / 1000)) : 0
-    base.turn = entry.turn ?? 0
-    base.maxTurns = entry.maxTurns ?? 0
-    // §19.5.6：touched files 摘要（T-SF1..4——新字段追加——既有字段零破坏）
-    Object.assign(base, touchedSummary(entry, cwd))
-  } else if (entry.status === "queued") {
-    // §19.5.6 T-SF2b：未启动——确定性占位（不崩；无对象可读）
-    base.touched = "—（未启动）"
-  }
-  return base
-}
-
-export function executeStatusAction(args, ctx) {
-  const agent = ctx.agent
-  const map = agent._asyncSubagents ?? new Map()
-  const queue = agent._asyncQueue ?? []
-  const queuedPosition = (id) => {
-    const i = queue.findIndex((e) => String(e.id) === id)
-    return i >= 0 ? i + 1 : undefined
-  }
-  const { id } = args ?? {}
-  if (id !== undefined && id !== null && String(id) !== "") {
-    const key = String(id)
-    const entry = map.get(key)
-    if (!entry) {
-      return JSON.stringify({ id: key, status: "error", error: `unknown async subagent id: ${key}` })
-    }
-    const target = statusFields(entry, agent.cwd)
-    if (entry.status === "running") return JSON.stringify({ ...target, status: "running" })
-    if (entry.status === "queued") {
-      // §20 F-SD4/D-SD3b：waiting 语义对模型可见——排队原因（冲突对象/依赖对象）随
-      // status 返回；纯槽满等位（kind slot）无 waiting 字段（position 已足够）。
-      const blk = describeBlockers(agent, entry)
-      const out = { ...target, status: "queued", position: queuedPosition(key) ?? entry.position }
-      if (blk.kind !== "slot") {
-        out.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
-        out.reason = blk.detail
-      }
-      return JSON.stringify(out)
-    }
-    // done = settled during this turn and not yet consumed — check still retrieves it
-    // (§17.5: at a driven turn end it stays pooled → the suspension digest consumes it).
-    target.status = "done"
-    target.done = true
-    if (entry.error) target.error = entry.error
-    target.note = "settled, not yet consumed — retrieve via check or the suspension digest injects it"
-    return JSON.stringify(target)
-  }
-  const overview = { running: [], queued: [], done: [] }
-  for (const entry of map.values()) {
-    if (entry.status === "running") overview.running.push(statusFields(entry, agent.cwd))
-    else if (entry.status === "queued") {
-      // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）；
-      // §19.5.6 T-SF2b：未启动占位（确定性——不崩）。
-      const blk = describeBlockers(agent, entry)
-      const row = statusFields(entry, agent.cwd)
-      row.position = queuedPosition(String(entry.id)) ?? entry.position
-      if (blk.kind !== "slot") {
-        row.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
-        row.reason = blk.detail
-      }
-      overview.queued.push(row)
-    }
-    else if (entry.done) overview.done.push({ id: String(entry.id), role: entry.role })
-  }
-  return JSON.stringify({ overview })
 }
 
 /**
@@ -403,281 +301,6 @@ export function executeCancelAction(args, ctx) {
   return JSON.stringify(result)
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// §19.6 subagent panel 检查工具（AGENT-LOOP.md §19.6——F-P1..P3/D-P1..P4）
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** 面板块 key（role#N）在池（Map——条目值）/pending（数组）中的归属判定。 */
-function blockKeyIn(container, key) {
-  const entries = container instanceof Map ? [...container.values()] : (container ?? [])
-  return entries.some((e) => `${e.role}#${e.id}` === key)
-}
-
-/**
- * §19.6 D-P3 冻结门控（安全）：仅允许冻结 awaitingDigest 且池（_asyncSubagents）
- * 无对应运行条目 + pending（_pendingAsyncResults）无对应条目的块（= 已消化驻留块
- * ——报告已入模型上下文——pending 已消费——状态滞后——补发冻结不破坏任何顺序）。
- * - pending 仍有对应（报告未达模型）→ 拒绝（提前回收破坏消化顺序——T-P3）
- * - 不存在的 key / 仍 running / done 的块 → 拒绝（T-P4——running 块 settle 时自冻）
- * - 无镜像 → 拒绝（headless/VS Code——freeze 不可用——T-P5）
- * 错误信息明确（模型可解释 + 自助修正）。返回 { ok:true } 或 { err }。
- */
-function panelFreezeGate(agent, key) {
-  const snap = agent._panelSnapshot
-  if (!Array.isArray(snap)) {
-    return { err: "panel unavailable — no CLI TUI panel mirror in this session (headless / VS Code / subagent contexts — freeze unavailable; panel is CLI-TUI-only, AC-P4)" }
-  }
-  const block = snap.find((b) => b.key === key)
-  if (!block) {
-    const live = snap.map((b) => `${b.key}(${b.status})`).join(", ")
-    return { err: `unknown panel block key: ${key} — the live panel holds: ${live || "(no blocks)"}` }
-  }
-  if (block.status !== "awaitingDigest") {
-    if (block.status === "done") {
-      return { err: `block ${key} is already done — nothing to freeze; it was (or is about to be) reclaimed into the conversation by the freeze sweep at the turn end / settle (only digested-stuck awaitingDigest blocks need a manual freeze)` }
-    }
-    if (block.status === "running") {
-      return { err: `block ${key} is still running — freeze only reclaims awaitingDigest blocks whose report is already digested; a running block freezes on its own settle (or stop it with action:'cancel' if it is a background async child)` }
-    }
-    return { err: `block ${key} is in state ${block.status} — freeze only reclaims awaitingDigest blocks whose report is already digested` }
-  }
-  if (blockKeyIn(agent._asyncSubagents, key)) {
-    return { err: `block ${key} still has a live pool entry — it is NOT a digested-stuck block (freeze refused; status action shows the pool)` }
-  }
-  if (blockKeyIn(agent._pendingAsyncResults, key)) {
-    return { err: `block ${key} is still genuinely awaiting digestion — its report is still in _pendingAsyncResults and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically — §17.5.5)` }
-  }
-  return { ok: true }
-}
-
-/**
- * §19.6 subagent action:"panel"（D-P2——readonly 视图面 + 门控干预面——单动作双参，
- * freeze 优先）：
- * - view（缺省——返回镜像区块列表）：agent._panelSnapshot = TUI 面板镜像（块级
- *   状态变更点由 subagent-blocks syncPanelSnapshot 同步刷新——与用户所见一致——
- *   index.mjs 装配 state._agent）。awaitingDigest 条目**读时交叉**
- *   _pendingAsyncResults/_asyncSubagents 标注 digested（round1 #3——digested:true
- *   = 报告已消化但块仍驻留——异常块——freeze 候选；模型可定位解释 UI 怪相）。
- * - freeze:key（D-P3 门控通过 → 发 key + "/" + ⟦ev⟧done 哨兵字面 token——
- *   onToken——TUI routeSubToken 冻结回收——落位复用 sub._freezeAt settle 锚点
- *   splice，无锚点尾推兜底——§17.5.5 同口径——round1 #2）。
- * 无镜像（headless/VS Code——D-P2 round1 #1：webview 无 state.subTasks 对应物——
- * 7.2.3.2 #8 先例）→ view 恒降级池视图（_asyncSubagents + _pendingAsyncResults
- * 合成）+ no panel 注；freeze 报不可用。CLI-only 完整能力（AC-P4）。
- */
-export function executePanelAction(args, ctx) {
-  const agent = ctx.agent
-  const freezeKey = (args?.freeze !== undefined && args?.freeze !== null && String(args.freeze) !== "")
-    ? String(args.freeze)
-    : null
-  // ── freeze 面（优先——D-P2 单动作双参互斥）──
-  if (freezeKey) {
-    if ((ctx.depth ?? 0) > 0) {
-      return JSON.stringify({ status: "error", error: "panel freeze is only available at depth 0 — a child agent has no panel of its own (AGENT-LOOP.md §19.6 D-P2)" })
-    }
-    const gate = panelFreezeGate(agent, freezeKey)
-    if (gate.err) return JSON.stringify({ status: "error", error: gate.err })
-    if (!ctx.callbacks?.onToken) {
-      return JSON.stringify({ status: "error", error: `panel mirror present but no token relay in this context — the freeze of ${freezeKey} cannot reach the TUI` })
-    }
-    // 门控通过 → 发 done 冻结事件（settle 同机制字面格式——TUI routeSubToken done
-    // 分支冻结回收——落位 _freezeAt settle 锚点 splice；无锚点（旧会话残留）时
-    // freezeSubTaskLines 尾推兜底——注明两种落位，模型不被误导（advisor 🟡1）。
-    ctx.callbacks.onToken(`${freezeKey}/⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
-    return JSON.stringify({
-      key: freezeKey,
-      status: "frozen",
-      note: "done freeze event issued — the TUI reclaimed the block into the conversation (spliced at its settle anchor when one is recorded, else appended at the current stream end — §17.5.5 same-rule position)",
-    })
-  }
-  // ── view 面（缺省——readonly）──
-  // 双参互斥（D-P2）：freeze 优先；显式 view:false 且无 freeze = 无请求可执行——报错。
-  if (args?.view === false) {
-    return JSON.stringify({ status: "error", error: "panel has nothing to do — view:false with no freeze key; pass freeze:'role#N' to reclaim a digested-stuck block, or omit view (defaults to true)" })
-  }
-  const snap = agent._panelSnapshot
-  if (!Array.isArray(snap)) {
-    // F-P3 降级：无镜像（headless/VS Code/子代理上下文——CLI TUI-only 完整能力）→
-    // 池视图（_asyncSubagents 运行/排队条目 + _pendingAsyncResults 待消化条目）
-    const blocks = []
-    const queue = agent._asyncQueue ?? []
-    for (const e of [...(agent._asyncSubagents?.values() ?? [])]) {
-      const b = { key: `${e.role}#${e.id}`, role: e.role }
-      if (e.status === "running") {
-        b.status = "running"
-        b.elapsedSec = e.startedAt ? Math.max(0, Math.floor((Date.now() - e.startedAt) / 1000)) : 0
-      } else if (e.status === "queued") {
-        b.status = "queued"
-        const qi = queue.indexOf(e)
-        b.position = qi >= 0 ? qi + 1 : (e.position ?? null)
-      } else {
-        b.status = "done" // 回合内 settle 未取——status action 可查/check 可取回
-      }
-      blocks.push(b)
-    }
-    for (const e of agent._pendingAsyncResults ?? []) {
-      blocks.push({ key: `${e.role}#${e.id}`, role: e.role, status: "awaitingDigest", note: "report pending — injected at the next run start (§17)" })
-    }
-    return JSON.stringify({
-      degraded: true,
-      note: "no panel — this session has no CLI TUI panel mirror (headless / VS Code / subagent context — panel view is CLI-TUI-only, AC-P4); pool-derived view below; action:'status' shows the full pool",
-      panel: blocks,
-    })
-  }
-  const panel = snap.map((b) => {
-    const out = { key: b.key, role: b.role, status: b.status }
-    if (b.status === "running") {
-      out.elapsedSec = b.startedAt ? Math.max(0, Math.floor((Date.now() - b.startedAt) / 1000)) : 0
-    } else if (b.status === "awaitingDigest") {
-      // 读时交叉（round1 #3）：pending/池均无对应 = 报告已消化（注入即从两者移除）——
-      // 块驻留 = 状态滞后——digested:true（freeze 候选——模型可定位异常块）。
-      out.digested = !blockKeyIn(agent._pendingAsyncResults, b.key) && !blockKeyIn(agent._asyncSubagents, b.key)
-    }
-    return out
-  })
-  return JSON.stringify({ panel })
-}
-
-/**
- * subagent action:"escalate"（§19 D-M4——退役 escalate 工具语义原样，ESCALATE.md）：
- * 飞刀——交给 consultModels 池里更强模型（WRITE + 术后报告）。约束全保留：depth-0
- * only / 工程模式拒 / consultModels 空拒 / relay 前缀 `escalate#N/`（与既有前缀同名
- * ——TUI 路由零改动）/ 无 permQueue（continue 直达用户）/ mutations merge 回父。
- */
-export async function executeEscalateAction(args, ctx) {
-  const parent = ctx.agent
-  if ((ctx.depth ?? 0) > 0) return "Error: escalate is only available at depth 0 (an escalate's work cannot be delegated again)"
-  if (parent?.config?.agent?.engineering) {
-    return "Error: engineering mode is ON — escalate is unavailable (it spawns a coder sub-agent, which engineering mode forbids). Use subagent with role='eng-coder' and a designToken from advisor(type='design') instead."
-  }
-  const pool = parent?.config?.agent?.consultModels ?? []
-  if (pool.length === 0) return "Error: no escalate candidates — configure at least one consult model (agent.consultModels)"
-
-  const { task, model } = args ?? {}
-  // task 机械必填（多动作 schema 的 required 只是建议——缺 task 会以晦涩 child-run 错浮现）
-  if (typeof task !== "string" || !task.trim()) {
-    return "Error: escalate requires a task — the task description with goal, constraints, entry files and acceptance criteria"
-  }
-  const label = (m) => `${m.provider}:${m.model}`
-  const wanted = typeof model === "string" ? model.replace(/\s+\([^)]*\)\s*$/, "").trim() : model
-  const pick = wanted ? pool.find((m) => label(m) === wanted) : pool[0]
-  if (!pick) {
-    return `Error: "${model}" is not a consult candidate. Available: ${pool.map(label).join(", ")}`
-  }
-
-  let provider
-  try {
-    provider = resolveChildProvider(parent, `${pick.provider}:${pick.model}`)
-  } catch (e) {
-    return `Error: ${e.message}`
-  }
-  if (!ensureChildApiKey(provider)) {
-    return `Error: provider "${pick.provider}" has no API key — set it in config.json before flying it in`
-  }
-  let effortNote = ""
-  if (pick.effort && !clampEffort(provider, pick.model, pick.effort)) {
-    // enum 外 effort 丢弃（preset 默认也可能对 override model 是 enum 外值）
-    effortNote = ` (effort "${pick.effort}" unsupported by ${pick.model}, dropped)`
-  }
-
-  const tag = label(pick)
-  const relayPrefix = makeRelay(parent, "escalate", ctx.callbacks?.onToken, provider.model ?? tag)
-
-  // 无墙钟 watchdog——turn cap 即成本预算（2026-08-16 rationale：固定墙钟会误杀正常慢速
-  // 手术；挂起防护 = FETCH_TIMEOUT_MS + 父 signal 直传）
-
-  // 不自建 onToken（consult P2）：wrapChildCallbacks 已承担前缀 relay + D7 哨兵剥除，
-  // runWithContinue 拥有 capture（stripEventTokensForCapture）——手写副本会双剥+双缓冲
-  const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})
-
-  // try 外声明：catch 也能在部分失败时 merge mutations
-  let child = null
-  let escErr = null // LOGGING outcome（string 形态返回 vs 异常——见下方事件点）
-  const escId = relayPrefix.slice(0, -1)
-  let escT0 = Date.now()
-  try {
-    // 全写路径（role "coder"）：权限经父 onPermissionRequest，mutations merge 回父
-    child = createAgent({
-      provider,
-      tools: parent.tools,
-      config: parent.config,
-      cwd: parent.cwd,
-      memory: parent.memory,
-      overlay: CODER_OVERLAY,
-      role: "coder",
-    })
-    child._logId = escId // LOGGING：子内事件归属（escalate#N）
-    escT0 = Date.now()
-    logEvent("child:spawn", { role: "escalate", id: escId, kind: "escalate" })
-    const runner = ctx.runAgent ?? runAgent
-    const runOpts = {
-      depth: 1,
-      maxTurns: parent.config?.agent?.subagentTurns ?? DEFAULT_SUBAGENT_TURNS, // review #7: constant, not literal (single source with subagent)
-      signal: ctx.signal ?? null,
-    }
-    // Continue 经 runWithContinue（§7.2 D3，主会话同等 y/n 面板）：resume:true 不重注入
-    // task 文本（setup 跳 input）且保留 child history + mutation 记账，刷新 turn 预算；
-    // 无权限 handler（headless）或拒绝 → 部分工作返回；continue 次数无限（每轮可拒）。
-    const report = await runWithContinue(
-      async (childAgent, input, cbs, opts) => {
-        // Merge mid-run mutations even when the run throws — the outer catch keeps
-        // handling createAgent failures; AbortError still propagates (user Stop).
-        try {
-          return await runner(childAgent, input, cbs, opts)
-        } catch (e) {
-          mergeChildMutations(parent, childAgent)
-          throw e
-        }
-      },
-      child, task, { ...childCallbacks, onPermissionRequest: parent.autoApprove ? async () => true : (ctx.onPermissionRequest ?? null) },
-      runOpts,
-      {
-        // escalate has NO permQueue: prompts go straight to the user (T-L spec).
-        askContinue: (e) => (ctx.onPermissionRequest
-          ? ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
-          : Promise.resolve(false)),
-        onDeclined: (e, output) => `escalate (${tag}) ${TURN_CAP_MARK} (${e.turn} turns) — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${output.slice(0, 2000)}`,
-      },
-    ).catch((e) => {
-      // 非 ContinueError 运行失败：错误文本 + partial 输出（mutations 已在 runner 包装层 merge）
-      if (ctx.signal?.aborted || e?.name === "AbortError") throw e
-      escErr = { err: e?.message ?? String(e) } // LOGGING：错误路径（返回形态——不抛）
-      return `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${(child._capturedOutput ?? "").slice(0, 2000)}`
-    })
-    // Escalate mutations are the parent's mutations: verify/advisor guards must see them
-    mergeChildMutations(parent, child)
-    if (escErr) logEvent("child:error", { role: "escalate", id: escId, ms: Date.now() - escT0, err: errText(escErr.err, 200) })
-    else logEvent("child:done", { role: "escalate", id: escId, ms: Date.now() - escT0, kind: String(report).includes(TURN_CAP_MARK) ? "partial" : "ok" })
-    // §7.2.3（round1 #2）：escalate 与 spawn 同享 ctx._subagentKey——同步完成精确冻
-    // （relayPrefix 去尾 = `escalate#N`）。仅成功路径（escErr = 运行中途失败——不设
-    // key——TUI 回落 escalate 角色启发式：escalate 串行 + 角色限定，天然精确——legacy
-    // 行为不变——错误路径不触发冻结 round1 #1）。
-    if (!escErr) ctx._subagentKey = escId
-    return `escalate (${tag})${effortNote} post-op report:\n${report || (child._capturedOutput ?? "").slice(0, 4000)}${touchedFilesNote(child, parent.cwd)}`
-  } catch (e) {
-    // 仅 createAgent 失败/continue 询问抛出才到这（运行失败已在上面 catch 处理）
-    if (child) {
-      mergeChildMutations(parent, child)
-      if (!escErr && !(ctx.signal?.aborted) && e?.name !== "AbortError") {
-        logEvent("child:error", { role: "escalate", id: escId, ms: Date.now() - escT0, err: errText(e, 200) })
-      }
-    }
-    if (ctx.signal?.aborted || e?.name === "AbortError") throw e
-    return `escalate (${tag}) error: ${e?.message ?? String(e)}`
-  }
-}
-
-/** Relative touched-file list appended to every escalate return (child paths are absolute). */
-function touchedFilesNote(child, cwd) {
-  const touched = child?._touchedFiles ?? []
-  if (touched.length === 0) return ""
-  const shown = touched.map((f) => {
-    const r = relative(cwd ?? process.cwd(), f)
-    return r && !r.startsWith("..") && !isAbsolute(r) ? r : f
-  })
-  return `\nTouched files: ${shown.join(", ")}`
-}
-
 /**
  * 共享 post-spawn 管线（阻塞与 async 同一条——§15 D-A1 "全不变"）：turn-cap continue
  * 循环 → 拒绝降级 partial 返回 → MIN_REPORT_CHARS 扩写 → eng-coder mutation merge →
@@ -723,225 +346,6 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
   }
 
   return report
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// §20 子 agent 任务调度器（AGENT-LOOP.md §20——D-SD1..SD5 + 20.4 处置注）
-// 池条目域元数据（D-SD2：entry._files/_dependsOn——running ∪ queued 全带）、准入
-// （D-SD3：域冲突/依赖未满足 → queued 等位）、补位扫描（D-SD4：最早可启动——
-// 依赖全满足 + 域无冲突——waiting 越行不阻塞 slot 位）、释放规则（D-SD5——round2
-// #3 锁定默认：依赖取消/失败 → 依赖者留 queued 标 dependency cancelled——仅父显式
-// 处置或 AUTO 自动启动）、终态墓碑（round1 #8/T-SD14：check/注入消费与取消写墓碑——
-// consumed 视为满足；非 consumed unknown id 才拒）。状态全部派生不存储（单点事实）。
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** 文件域归一化（round1 #5——路径归一化再交集）：相对 cwd 解析为绝对路径 + 去重；
- *  非字符串/空项静默跳过（声明错误 = false-negative 明示风险——v1 边界）。
- *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
- *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
- *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
- *  已知限制（§20.8 未编号段——评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。 */
-export function normalizeFileList(files, cwd) {
-  const out = []
-  for (const f of Array.isArray(files) ? files : []) {
-    if (typeof f !== "string" || !f.trim()) continue
-    if (f.endsWith("/") || f.endsWith("\\")) {
-      throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
-    }
-    const abs = resolve(cwd ?? process.cwd(), f)
-    if (existsSync(abs) && statSync(abs).isDirectory()) {
-      throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
-    }
-    if (!out.includes(abs)) out.push(abs)
-  }
-  return out
-}
-
-/** 文件域相等比较键：Windows 大小写不敏感（vs Uri.fsPath 小写盘符差异同族——
- *  normalizeCwd 先例）——src/x vs ./src/X 在 win32 是同一文件。 */
-const fileKey = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-
-/** 两文件域首个共同文件（比较键）——无交集 null。 */
-export function filesOverlap(a, b) {
-  if (!a?.length || !b?.length) return null
-  const keys = new Set(b.map(fileKey))
-  const hit = a.map(fileKey).find((k) => keys.has(k))
-  return hit ?? null
-}
-
-/** 冲突文件的显示形态（优先相对 cwd——面板/返回文本可读）。 */
-function showFile(parent, key) {
-  const cwd = parent.cwd ?? process.cwd()
-  const rel = relative(cwd, key)
-  return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : key
-}
-
-/**
- * §20 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
- * 终态墓碑（check/注入消费——consumed；取消/失败——D-SD5 分支））：
- * - ok      = settle 成功（报告已产出）/ consumed（check/注入消费——T-SD14 视为满足）
- * - pending = running/queued 未终态（等启动/等完成）
- * - failed / cancelled = 终态但非成功——依赖者走 dependency cancelled 分支（round2 #3）
- * - unknown = 从未存在（spawn 时明确错误——非 consumed 的 unknown 拒——T-SD10）
- */
-export function depInfo(parent, id) {
-  const key = String(id)
-  const e = parent._asyncSubagents?.get(key)
-  if (e) {
-    if (e.cancelled) return { state: "cancelled", role: e.role }
-    if (e.done) return e.error != null ? { state: "failed", role: e.role } : { state: "ok", role: e.role }
-    return { state: "pending", role: e.role }
-  }
-  const pend = (parent._pendingAsyncResults ?? []).find((x) => String(x.id) === key)
-  if (pend) return pend.error != null ? { state: "failed", role: pend.role } : { state: "ok", role: pend.role }
-  const t = parent._asyncTombstones?.get(key)
-  if (t) return { state: t.status === "cancelled" || t.status === "failed" ? t.status : "ok", role: t.role }
-  return { state: "unknown", role: null }
-}
-
-/** §20 等待态派生（无存储——refill/status/面板/spawn 返回同一事实源）。kind：
- *  - slot = 无阻塞（依赖全满足 + 域无冲突）——纯槽满等位（可启动——等 slot）
- *  - wait = 依赖未完成 / 域冲突（running ∪ queued——D-SD3 同界——self 除外）
- *  - depc = 依赖取消/失败（round2 #3——非 AUTO 锁住——需父显式处置；AUTO 视为可启动）
- *  detail 为状态行共享文本（面板 waiting for 标注 / status reason / spawn reason）。 */
-export function describeBlockers(parent, entry) {
-  const wait = []
-  const depc = []
-  for (const depId of entry._dependsOn ?? []) {
-    const info = depInfo(parent, String(depId))
-    if (info.state === "pending" || info.state === "unknown") {
-      wait.push(`${info.role ?? "sub"}#${depId}（依赖未完成）`)
-    } else if (info.state === "cancelled" || info.state === "failed") {
-      if (parent.autoApprove) continue // AUTO 档自动启动（D-SD5——父不在场由 digest 决策）
-      depc.push(`${info.role ?? "sub"}#${depId}`)
-    }
-  }
-  const myFiles = entry._files ?? []
-  if (myFiles.length > 0) {
-    for (const e of parent._asyncSubagents?.values() ?? []) {
-      if (e === entry) continue
-      if (e.status !== "running" && e.status !== "queued") continue
-      const hit = filesOverlap(myFiles, e._files ?? [])
-      if (!hit) continue
-      // §21.1 D-SL1.2（环形死锁修正——与 queueRunnable 同界——展示一致）：后入
-      // 者（spawn 序晚于我——数字 id 比较）不列——只列"会真正阻断我的"（running
-      // 任意序 + 先入 queued）；列后入者 = 误导"等一个其实等不到的人"。
-      if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
-      wait.push(`${e.role}#${e.id}（域冲突 ${showFile(parent, hit)}）`)
-    }
-  }
-  // 长列表裁剪（块头宽度预算——细节 status 可查全量）
-  const cut = (arr) => (arr.length > 3 ? [...arr.slice(0, 3), `…（共 ${arr.length} 项）`] : arr)
-  if (depc.length > 0) {
-    const body = cut(depc).join("、")
-    return { kind: "depc", detail: wait.length > 0 ? `dependency cancelled: ${body}；${cut(wait).join("、")}` : `dependency cancelled: ${body} — waiting for your decision (cancel this task to release, or AUTO starts it)` }
-  }
-  if (wait.length > 0) return { kind: "wait", detail: `waiting for: ${cut(wait).join("、")}` }
-  return { kind: "slot", detail: "" }
-}
-
-/** §20 D-SD4 补位判据：依赖全满足（AUTO 下 depc 放行）+ 域无冲突（running 任意序 +
- *  queued 先入者——§21.1 D-SL1.1 序判定：同文件串行 = 先入者先启动、后入者等先入者
- *  ——不自锁；先入者启动后以 running 身份继续挡住后入者——self 除外）。
- *  已知限制（§21.1 评审 #4——与 §20 NF-SD 同语义——滞留有意义不静默）：先入者被
- *  depc 锁定时（依赖取消/失败且非 AUTO——永不自动启动），后入者滞留等它——cancel
- *  先入者即释放（父显式可清；AUTO 档 depc 视为可启动——不滞留）。 */
-export function queueRunnable(parent, entry) {
-  for (const depId of entry._dependsOn ?? []) {
-    const state = depInfo(parent, String(depId)).state
-    if (state === "pending" || state === "unknown") return false
-    if ((state === "cancelled" || state === "failed") && !parent.autoApprove) return false
-  }
-  const myFiles = entry._files ?? []
-  if (myFiles.length > 0) {
-    for (const e of parent._asyncSubagents?.values() ?? []) {
-      if (e === entry) continue
-      if (e.status !== "running" && e.status !== "queued") continue
-      if (!filesOverlap(myFiles, e._files ?? [])) continue
-      // §21.1 D-SL1.1 序判定：queued 仅"先入者"（spawn 序早于我——数字 id 比较）阻断；
-      // 后入者不阻断——先入者先启动——两个 queued 同文件不再互等（环形死锁修正）。
-      // 防御（评审 #3——id 形态）：池条目 id 为数字递增（_subAgentCounter——已核实）；
-      // 异常形态 Number() 得 NaN → 比较 false → 不跳过 → 保守阻断（宁可多等——
-      // 不冒险并发——防 NaN 误放行）。
-      if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue // 后入者不阻断——先入者先启动
-      return false
-    }
-  }
-  return true
-}
-
-/** §20 D-SD5 环防御（round2 #5——自然流程不可达：unknown id 拒 + spawn 序天然无环——
- *  仅人工向池注入可构造——防御断言定位）：从新 spawn 的依赖集出发沿池内条目
- *  _dependsOn 边做路径 DFS——路径上重复访问（可达环）→ 拒绝（A→B→A 永不自启——
- *  错误明确——T-SD5）。运行/排队条目皆可成环节点；池小（≤4 槽 + 有限队列）深度有限。 */
-export function assertNoDepCycle(parent, dependsOn) {
-  const edges = new Map()
-  for (const e of parent._asyncSubagents?.values() ?? []) {
-    if (e.status === "running" || e.status === "queued") {
-      edges.set(String(e.id), (e._dependsOn ?? []).map(String))
-    }
-  }
-  const onPath = new Set()
-  const visit = (id) => {
-    if (onPath.has(id)) {
-      throw new Error(`subagent dependsOn cycle detected: ${[...onPath, id].join(" → ")} — entries in a dependency loop can never start; cancel the dependents and restructure the chain (AGENT-LOOP.md §20 D-SD5)`)
-    }
-    onPath.add(id)
-    for (const dep of edges.get(id) ?? []) visit(dep)
-    onPath.delete(id)
-  }
-  for (const d of dependsOn) visit(String(d))
-}
-
-/** 依赖某 id 的 queued 条目显示标签（D-SD5 提醒/标注——依赖者列表）。 */
-export function dependentLabels(parent, depId) {
-  const key = String(depId)
-  const out = []
-  for (const e of parent._asyncQueue ?? []) {
-    if ((e._dependsOn ?? []).some((d) => String(d) === key)) out.push(`${e.role}#${e.id}`)
-  }
-  return out
-}
-
-/** §20 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
- *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
- *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
- *  出队 / check 消费）。position = 队列序（D-A1 既有——cancel 前移同源）。 */
-export function refreshQueuedTokens(parent, onToken) {
-  if (typeof onToken !== "function") return
-  const queue = parent._asyncQueue ?? []
-  for (let i = 0; i < queue.length; i++) {
-    const e = queue[i]
-    const blk = describeBlockers(parent, e)
-    const sig = `${blk.kind}\x1e${i + 1}\x1e${blk.detail}`
-    if (e._lastQueuedSig === sig) continue
-    e._lastQueuedSig = sig
-    try {
-      onToken(`${e.relayPrefix}⟦ev⟧queued\x1e${blk.kind}\x1e${i + 1}\x1equeued\x1e${blk.detail}`)
-    } catch { /* relay 失败不影响池状态 */ }
-  }
-}
-
-/**
- * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4): start queue heads
- * while a running slot is free — called from every settle (completion frees a slot)
- * and from the turn-end collection's refill loop. §20：队列现可混合 waiting-deps 与
- * slot-queued——扫描选"依赖全满足 + 域无冲突"的最早条目启动（waiting 越行不阻塞
- * 槽位；多任务同时解除按 queued 序逐个启动到槽满——上限 4 不变）。纯 slot 队列的
- * 行为与旧 shift 完全一致（全部条目可启动 → 最早 == 队首）。
- */
-export function maybeRefillAsync(parent) {
-  const queue = parent._asyncQueue ?? []
-  for (;;) {
-    const running = [...(parent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length
-    if (running >= ASYNC_SUBAGENT_LIMIT) return
-    let pick = -1
-    for (let i = 0; i < queue.length; i++) {
-      if (queueRunnable(parent, queue[i])) { pick = i; break }
-    }
-    if (pick < 0) return
-    queue.splice(pick, 1)[0].start()
-  }
 }
 
 /**
@@ -1017,3 +421,7 @@ export function mergeChildMutations(parent, child) {
   parent._advisorSession = null
   return true
 }
+
+// Re-export shim (2026-09-05 拆分轮): §20 调度符号迁至 ./subagent-scheduler.mjs——本面
+// 保留供 test/subagent-scheduler.test.mjs 动态 import（测试零改动——freeze.mjs 同款转发链）。
+export { queueRunnable, describeBlockers } from "./subagent-scheduler.mjs"

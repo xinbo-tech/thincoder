@@ -467,6 +467,30 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **契约行同步（评审 #1 处置）**：§0.1/§2 三处「上限 60s」记录经核实为过时（代码 `execute.mjs:167` = 600000）——本批同批修正为 600s（D-E4「文档编辑与代码同批落」先例）——execute.mjs 头注 L25 与 execute.md（若含上限句）由实现批同步——AC14.1.3 锁定。
 
 
+### 14.2 edit 空白差异自动落点（P15.11——2026-09-05 用户裁定——「找符合模型直觉的方案」——来源：edit 连续失败分析 12 条记录中 8 条 = 前导/尾随空白差异）
+
+> 状态：**已实现（2026-09-05——双端：CLI edit-tools 64/64（P15.11a-d 新增）+ VS Code edit-eol 53/53（镜像 4 例）——三通道（本地单/批量 + ACP 桥经 computeEditEntry 单一权威自动继承））**。
+
+**问题（P15.11）**：edit not-found 失败中最大单一成因 = **模型从 read 记忆拷贝 old_string 时丢/加前导空格**（2026-09-05 实证：单轮 12 条 edit 失败 8 条空白差异——5 vs 4 空格、前缀空格、行首空格——工具报错 + similar lines 提示（95-99%）**仍重试同形**——「引导无效」第 4 次实证（§14.1/§15 D15.3#10/insert_after 漂移引导后）——模型拷贝时空白丢失是**机械损耗**（内容意图零歧义）——引导解决不了——形态支持。
+
+**需求（F15.11）**：作为 agent，我希望 old_string 与文件**内容逐字相同、仅前导/尾随空白不同**时 edit 自动落点应用（不必手工修正空白重试）。
+
+**设计（D15.11a——命名避撞已用 D15.11 于 §15.3a——本节内部编号以 P15.11 为准）**：
+- **匹配语义**：old_string 逐字 occurrences=0 时——在 normalize(LF) 域按行扫描**唯一窗口**：窗口行数与 old 相同、逐行 trim() 相等（内容零差异）→ 以窗口原文为实际 old 继续既有判定序（分支 0/LCS/插入不变——**只救 not-found，不改变命中后语义**）——结果消息附 note：`applied to the unique whitespace-only match (content identical, leading/trailing whitespace differs from your old_string)`（双端同句）；
+- **边界（不猜）**：多窗口（两处 trim 同内容不同空白）→ 歧义 → 仍 not-found 报错（不静默选一——§15.3 同哲学）；实质差异（≥1 字符不同——含丢逗号/换词）→ 仍 not-found + searched/similar lines 引导原样（不吞既有诊断）；old 含尾换行 → 不做窗口猜测；
+- **实现层**：CLI `computeEditEntry`（edit-diff.mjs——单/批量/ACP 桥三通道单一权威——`findWhitespaceVariant` 前置 + note 返回）；VS Code file.mjs 单形态与批量各自 not-found 分支同构注入（无共享 computeEditEntry——两分支镜像）；
+- **消息**：note 只附加于成功路径（`Edited <path>: replaced N occurrence(s) — <note>` / `Replaced N occurrence(s) in <path> — <note>` / ACP `OK: edited ... — <note>`）——失败路径文本零改动（既有断言零破坏）。
+
+**测试（P15.11a-d——双端）**：
+| # | 输入 | 预期 |
+|---|---|---|
+| P15.11a | 单行前导空格差异（唯一） | 自动落点 + note；内容替换正确 |
+| P15.11b | 多行窗口差异（批量通道） | 自动落点 + note（公共行 LCS 语义不干扰） |
+| P15.11c | 两窗口 trim 同内容（歧义） | 仍 not-found（不猜——文件零改动） |
+| P15.11d | 实质差异 | 仍 not-found + similar lines（回归——不吞引导） |
+
+**验收（AC15.17）**：P15.11a-d 双端绿 + 既有 edit 域断言全绿（not-found 文本/引导/similar lines 逐字零破坏——CLI edit-tools 64 全量 + VS Code edit-eol 53 全量实测）。
+
 ## 15. 工具描述与语义对齐——「符合机器直觉」批（2026-09-04 · 用户「设计符合惯性」——来源：edit 6 次误操作实况 + 39 处全量审计）
 
 > 状态：**已实现（2026-09-04——双端交付：CLI id:5 clean + VS Code id:6 clean——父侧 L2 核销：CLI 1402/1402、VS Code 1114/1114 全绿——描述点矩阵 T15.16 实测 86 点）——评审 round1 1🔴+6🟡+6🔵 全处置——round2 复评通过（2026-09-04——0🔴——token e239214c）——复评 4🟡+4🔵 已随本修订处置**。

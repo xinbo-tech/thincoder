@@ -971,6 +971,199 @@ test("§21.1 T-SL4: 三 queued 同文件链——按序逐一启动——无环�
   }
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
+// §21.1 扩展注 P-SL2（AGENT-LOOP.md §21.1——D-SL2——混合边环形等待停滞机械检测）
+// T-SL2 ①-⑤：① 混合环 → check 报错含逐条阻塞链 + status 停滞标记；② 正常依赖链
+// （running 锚点）不报；③ dep-cancelled 滞留不报；④ 合法文件串行不报；⑤ 单 queued
+// 不报。⑥（回归零破坏）= 上面既有 T-SD/T-SL 全绿——随文件运行覆盖（同 T-SL3 约定）。
+// 池均为人工注入构造（自然 spawn 序 wait 边恒指向先入者——环不可自然达——D-SD5
+// 同族防御断言——状态成环即机械可检——不依赖可达性论证）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("§21.1 P-SL2（D-SL2）停滞检测①: 混合环 A(files X, dep C)+B(files X)+C(dep B)——全 queued 无 running → check 明确报错含逐条阻塞链 + status 停滞标记", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const cwd = process.cwd()
+  const fx = [join(cwd, "src", "x.mjs")]
+  const mk = (id, files, deps) => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status: "queued", position: id,
+    _files: files ?? [], _dependsOn: deps ?? [], report: null, error: null, done: false, cancelled: false,
+    startedAt: null, turn: 0, maxTurns: 0, controller: null, promise: null, _settle: null, _settleSeq: 0,
+  })
+  // A(files X, dep C)=1 + B(files X)=2 + C(dep B)=3：B 等 A（文件——A 先入占 X）、
+  // A 等 C（依赖）、C 等 B（依赖）——单边检查各无违例——组合即停滞（§21.1 扩展注）。
+  const a = mk(1, fx, ["3"])
+  const b = mk(2, fx)
+  const c = mk(3, [], ["2"])
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["1", a], ["2", b], ["3", c]]),
+    _asyncQueue: [a, b, c],
+    _asyncTombstones: new Map(),
+    _asyncCheckLastN: 0,
+  }
+  const ctx = { agent, cwd, depth: 0, callbacks: {} }
+  // ①-单元：机械检测判定停滞 + 每 queued 一条链（闭环可读）
+  const stall = detectStall(agent)
+  assert.ok(stall, "T-SL2-①: 混合环（无 running、全 queued、闭包无外逃）→ 停滞判定成立")
+  assert.equal(stall.chains.length, 3, "T-SL2-①: 每 queued 条目一条阻塞链")
+  // ①-check（arrival-order 守卫扩展）：明确错误 + 逐条阻塞链 + cancel 引导
+  const r = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1 }, ctx)))
+  assert.equal(r.status, "error", "T-SL2-①: check 明确报错（不静默不悬挂）")
+  assert.ok(r.error.includes("scheduler stall"), `T-SL2-①: 错误标注停滞（实际: ${r.error?.slice(0, 80)}）`)
+  assert.ok(
+    /coder#2（files [^）]*x\.mjs——先入者） → coder#1（dependsOn 3） → coder#3（dependsOn 2） → coder#2/.test(r.error),
+    `T-SL2-①: 错误含 B→A→C→B 阻塞链逐条（files 边 + 依赖边理由——实际: ${r.error?.slice(0, 300)}）`,
+  )
+  assert.ok(r.error.includes("cancel one task in the loop"), "T-SL2-①: 引导 cancel 破环重派")
+  // ①-check（target 级守卫扩展）：目标带 stall 标记 + 自身链 + 引导
+  const r2 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 2, id: String(b.id) }, ctx)))
+  assert.equal(r2.status, "queued")
+  assert.equal(r2.stall, true, "T-SL2-①: target 级守卫停滞标记")
+  assert.ok(r2.note.includes("coder#2（files") && r2.note.includes("x.mjs") && r2.note.includes("cancel one task in the loop"), `T-SL2-①: note 含目标阻塞链与引导（实际: ${r2.note?.slice(0, 200)}）`)
+  // ①-status：overview 停滞标记（chains 逐条）+ 单条目停滞链
+  const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, ctx)))
+  assert.equal(ov.overview.stall.chains.length, 3, "T-SL2-①: status overview 停滞标记含逐条链")
+  assert.ok(ov.overview.stall.note.includes("cancel one task in the loop"), "overview 注记含破环引导")
+  const st2 = JSON.parse(String(await subagentTool.execute({ action: "status", id: b.id }, ctx)))
+  assert.equal(st2.waiting, "waiting-deps", "既有 waiting 语义保留（reason 照旧）")
+  assert.ok(st2.stall.chain.includes("coder#2（files") && st2.stall.chain.includes("x.mjs"), `T-SL2-①: 单条目 status 带所在闭环链（实际: ${st2.stall?.chain?.slice(0, 160)}）`)
+})
+
+test("§21.1 P-SL2（D-SL2）停滞检测②: 正常依赖链（running 锚点）不报（零误报）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const cwd = process.cwd()
+  const mk = (id, deps, status = "queued") => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status, position: id,
+    _files: [], _dependsOn: deps ?? [], report: null, error: null, done: false, cancelled: false,
+    startedAt: status === "running" ? Date.now() : null, turn: 0, maxTurns: 0,
+    controller: null, promise: null, _settle: null, _settleSeq: 0,
+  })
+  // running 锚点 + 依赖链排队（Q1 等 R、Q2 等 Q1）——正常等待——不报
+  const r = mk(9, [], "running")
+  const q1 = mk(10, ["9"])
+  const q2 = mk(11, ["10"])
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["9", r], ["10", q1], ["11", q2]]),
+    _asyncQueue: [q1, q2],
+    _asyncCheckLastN: 0,
+  }
+  assert.equal(detectStall(agent), null, "T-SL2-②: running 锚点存在（依赖链正常排队）→ 不报")
+  const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, { agent, cwd, depth: 0, callbacks: {} })))
+  assert.equal(ov.overview.stall, undefined, "T-SL2-②: status overview 无停滞标记（正常路径零字段变化）")
+  assert.equal(ov.overview.running.length, 1, "running 视图照旧")
+  assert.equal(ov.overview.queued.length, 2, "queued 视图照旧")
+})
+
+test("§21.1 P-SL2（D-SL2）停滞检测③: dep-cancelled 滞留（先入 depc 锁 + 后入同文件等位）不报——守卫维持原文本", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const cwd = process.cwd()
+  const fx = [join(cwd, "src", "x.mjs")]
+  const mk = (id, files, deps) => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status: "queued", position: id,
+    _files: files ?? [], _dependsOn: deps ?? [], report: null, error: null, done: false, cancelled: false,
+    startedAt: null, turn: 0, maxTurns: 0, controller: null, promise: null, _settle: null, _settleSeq: 0,
+  })
+  // §21.1 评审 #4 已知限制形态：先入者(#4) depc 锁定（依赖 99 已取消——永不自动启动）
+  // + 后入同文件(#5) 滞留等它——外部决策可解（cancel #4 即释放）——不误判为新死锁
+  const locked = mk(4, fx, ["99"])
+  const waiter = mk(5, fx)
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["4", locked], ["5", waiter]]),
+    _asyncQueue: [locked, waiter],
+    _asyncTombstones: new Map([["99", { status: "cancelled", role: "eng-coder" }]]),
+    _asyncCheckLastN: 0,
+  }
+  const ctx = { agent, cwd, depth: 0, callbacks: {} }
+  assert.equal(detectStall(agent), null, "T-SL2-③: dep-cancelled 滞留 → 不报（外部决策可解——cancel 先入者即释放）")
+  const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, ctx)))
+  assert.equal(ov.overview.stall, undefined, "T-SL2-③: status 无停滞标记")
+  // target 级守卫（等位者 #5）：维持原守卫文本（queued + 原 note——零变化）
+  const r1 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1, id: "5" }, ctx)))
+  assert.equal(r1.status, "queued")
+  assert.ok(r1.reason.includes("coder#4"), `reason 照旧列真正阻断者（实际: ${r1.reason}）`)
+  assert.ok(r1.note.includes("check would block indefinitely"), "T-SL2-③: 原守卫注记维持（零变化）")
+  assert.ok(!r1.note.includes("stall") && r1.stall === undefined, "T-SL2-③: 无停滞标注（不误报）")
+  // arrival-order 守卫：维持原错误文本（nothing will settle——列 stuck 条目）
+  const r2 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 2 }, ctx)))
+  assert.equal(r2.status, "error")
+  assert.ok(r2.error.includes("nothing will settle"), "T-SL2-③: 原守卫错误文本维持（零变化）")
+  assert.ok(r2.error.includes("dependency-cancelled") && r2.error.includes("blocked"), "原错误列 stuck 条目标注照旧")
+  assert.ok(!r2.error.includes("scheduler stall"), "T-SL2-③: 无停滞错误（不误报）")
+})
+
+test("§21.1 P-SL2（D-SL2）停滞检测④: 合法文件串行不报——blocker 含 running；无 running 纯文件链（首者可启动）也不报", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const cwd = process.cwd()
+  const fx = [join(cwd, "src", "x.mjs")]
+  const mk = (id, files, status) => ({
+    id, role: "coder", relayPrefix: `coder#${id}/`, status, position: id,
+    _files: files ?? [], _dependsOn: [], report: null, error: null, done: false, cancelled: false,
+    startedAt: status === "running" ? Date.now() : null, turn: 0, maxTurns: 0,
+    controller: null, promise: null, _settle: null, _settleSeq: 0,
+  })
+  // ① blocker 含 running：同文件后入排队（等 running 域持有者 settle——正常串行）
+  const holder = mk(8, fx, "running")
+  const q2 = mk(6, fx, "queued")
+  const q3 = mk(7, fx, "queued")
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["8", holder], ["6", q2], ["7", q3]]),
+    _asyncQueue: [q2, q3],
+    _asyncCheckLastN: 0,
+  }
+  assert.equal(detectStall(agent), null, "T-SL2-④: 合法文件串行（blocker 含 running）→ 不报")
+  const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, { agent, cwd, depth: 0, callbacks: {} })))
+  assert.equal(ov.overview.stall, undefined, "T-SL2-④: status 无停滞标记")
+  // ② 无 running 的纯文件链（两个 queued 同文件）：链首无 blocker = 可启动——refill
+  // 事件驱动会启动——非停滞闭包（人为构造——真实流中 running 归零时 refill 已启动链首）
+  const p1 = mk(1, fx, "queued")
+  const p2 = mk(2, fx, "queued")
+  const agent2 = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["1", p1], ["2", p2]]),
+    _asyncQueue: [p1, p2],
+    _asyncCheckLastN: 0,
+  }
+  assert.equal(detectStall(agent2), null, "T-SL2-④: 纯文件链无 running——首者可启动（D-SL1.1 后入不阻断先入）→ 不报")
+})
+
+test("§21.1 P-SL2（D-SL2）停滞检测⑤: 单 queued 不报——check 守卫维持原错误/注记文本", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const cwd = process.cwd()
+  const solo = {
+    id: 1, role: "coder", relayPrefix: "coder#1/", status: "queued", position: 1,
+    _files: [], _dependsOn: [], report: null, error: null, done: false, cancelled: false,
+    startedAt: null, turn: 0, maxTurns: 0, controller: null, promise: null, _settle: null, _settleSeq: 0,
+  }
+  const agent = {
+    config: { agent: {} }, cwd, autoApprove: false,
+    _asyncSubagents: new Map([["1", solo]]),
+    _asyncQueue: [solo],
+    _asyncTombstones: new Map(),
+    _asyncCheckLastN: 0,
+  }
+  const ctx = { agent, cwd, depth: 0, callbacks: {} }
+  assert.equal(detectStall(agent), null, "T-SL2-⑤: 单 queued → 不报（停滞需 queued ≥ 2——闭包无从谈起）")
+  // target 级守卫（指定该 queued）：维持原守卫注记（check would block indefinitely）
+  const r1 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 1, id: "1" }, ctx)))
+  assert.equal(r1.status, "queued")
+  assert.ok(r1.note.includes("check would block indefinitely"), "T-SL2-⑤: 原守卫注记维持（零变化）")
+  assert.ok(!r1.note.includes("stall") && r1.stall === undefined, "T-SL2-⑤: 无停滞标注")
+  // arrival-order 守卫：维持原错误文本
+  const r2 = JSON.parse(String(await subagentTool.execute({ action: "check", n: 2 }, ctx)))
+  assert.equal(r2.status, "error")
+  assert.ok(r2.error.includes("nothing will settle"), "T-SL2-⑤: 原守卫错误文本维持（零变化）")
+  assert.ok(!r2.error.includes("scheduler stall"), "T-SL2-⑤: 无停滞错误（不误报）")
+})
+
+
 
 
 

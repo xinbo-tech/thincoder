@@ -17,8 +17,9 @@ export function embeddingPatch(raw, embKey, defaults) {
 export async function handleConfigCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
   const { configPath, DEFAULTS } = await import("../config.mjs")
-  const ac = agent.config?.agent ?? {}
-  const ec = agent.config?.embedding ?? {}
+  let ac = agent.config?.agent ?? {}
+  let ec = agent.config?.embedding ?? {}
+  let tc = agent.config?.traces ?? {}
 
   // agent.config.proxy 已被 loadConfig 归一化为 { uri, web, model } | undefined
   function proxySummary() {
@@ -232,13 +233,19 @@ export async function handleConfigCommand(ctx, args = []) {
   let running = true
   let mainIdx = 0 // 记住上次选中位置，改完一项回主菜单时恢复
   while (running) {
+    // 每轮刷新——保存分支经 reloadConfig 替换了 agent.config 对象——回菜单显示新值
+    ac = agent.config?.agent ?? {}
+    ec = agent.config?.embedding ?? {}
+    tc = agent.config?.traces ?? {}
     const consultCount = (ac.consultModels ?? []).length
     const mainEntries = [
-      { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 200} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"}` },
+      { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 200} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"} | traces=${tc.enabled === false ? "off" : "on"}` },
       { type: "item", text: `agent.maxTurns = ${ac.maxTurns ?? 200}`, action: "agent.maxTurns" },
       { type: "item", text: `agent.subagentTurns = ${ac.subagentTurns ?? 100}`, action: "agent.subagentTurns" },
       { type: "item", text: `agent.compactThreshold = ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, action: "agent.compactThreshold" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
+      { type: "item", text: `traces.enabled = ${tc.enabled === false ? "off" : "on"}（轨迹存档——发布默认关——隐私）`, action: "traces.enabled" },
+      { type: "item", text: `traces.retentionHours = ${tc.retentionHours ?? 24} h（超期文件启动时清理）`, action: "traces.retentionHours" },
       { type: "item", text: `agent.consultModels = ${consultCount} model(s)${consultCount ? ` (${(ac.consultModels ?? []).map((m) => m.provider + ":" + m.model).join(", ")})` : ""}`, action: "consult" },
       { type: "item", text: `agent.consultTurns = ${ac.consultTurns ?? 40}`, action: "agent.consultTurns" },
       { type: "item", text: `agent.consultTimeoutMs = ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, action: "agent.consultTimeoutMs" },
@@ -259,14 +266,15 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLine(`agent.subagentTurns: ${ac.subagentTurns ?? 100}`, C.dim)
       pushLine(`agent.compactThreshold: ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, C.dim)
       pushLine(`agent.verifyGuard: ${ac.verifyGuard === true ? "on" : "off"}`, C.dim)
+      pushLine(`traces.enabled: ${tc.enabled === false ? "off" : "on"}（默认 off——发布隐私——本地分析可开）`, C.dim)
+      pushLine(`traces.retentionHours: ${tc.retentionHours ?? 24}（超期文件启动清理——D-TR10）`, C.dim)
       pushLine(`agent.consultModels: ${(ac.consultModels ?? []).map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ") || "(none)"}`, C.dim)
       pushLine(`agent.consultTurns: ${ac.consultTurns ?? 40}`, C.dim)
       pushLine(`agent.consultTimeoutMs: ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, C.dim)
       pushLine(`embedding: ${agent.memory?.embedder ? `enabled (${ec.model ?? ""})` : "disabled (FTS only)"}`, C.dim)
       pushLine(`proxy: ${proxySummary()}`, C.dim)
       pushLine(`Config file: ${configPath}`, C.dim)
-      running = false
-      continue
+      continue // 回主菜单（Esc 退出）
     }
 
     if (choice.action === "proxy") {
@@ -280,7 +288,7 @@ export async function handleConfigCommand(ctx, args = []) {
     }
 
     if (choice.action === "embedkey") {
-      if (await setEmbedKey()) running = false
+      await setEmbedKey() // 保存成功/取消都回主菜单（Esc 退出）
       continue
     }
 
@@ -293,9 +301,20 @@ export async function handleConfigCommand(ctx, args = []) {
         })
         pushLabel("❯ Config", ansi.bold + C.tool)
         pushLine(`agent.verifyGuard = ${newVal ? "on" : "off"}`, C.tool)
-        running = false
       } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
-      continue
+      continue // 回主菜单（Esc 退出）
+    }
+
+    if (choice.action === "traces.enabled") {
+      const newVal = tc.enabled === false // 显式写布尔（默认 off——DEFAULTS 合并后必有值）
+      try {
+        await saveProxy((raw) => {
+          raw.traces = { ...(raw.traces ?? {}), enabled: newVal }
+        })
+        pushLabel("❯ Config", ansi.bold + C.tool)
+        pushLine(`traces.enabled = ${newVal ? "on" : "off"}${newVal ? "（轨迹落盘 ~/.thincoder/traces/——保留 " + (tc.retentionHours ?? 24) + "h）" : ""}`, C.tool)
+      } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
+      continue // 回主菜单（Esc 退出）
     }
 
     // Embedding model is fixed (BAAI/bge-m3, SiliconFlow) — no picker; it's over-engineering
@@ -308,6 +327,7 @@ export async function handleConfigCommand(ctx, args = []) {
       : label === "agent.subagentTurns" ? (ac.subagentTurns ?? 100)
       : label === "agent.compactThreshold" ? (ac.compactThreshold ?? 100000)
       : label === "agent.consultTurns" ? (ac.consultTurns ?? 40)
+      : label === "traces.retentionHours" ? (tc.retentionHours ?? 24)
       : isTimeout ? Math.round((ac.consultTimeoutMs ?? 600000) / 60000)
       : ""
     const val = await askQuestion(`${label} (current: ${current}${isTimeout ? " min" : ""}):`)
@@ -325,7 +345,7 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLabel("❯ Config", ansi.bold + C.tool)
       pushLine(`${label} = ${isTimeout ? `${val} min (${stored} ms)` : val}`, C.tool)
       pushLine("(restart to apply)", C.dim)
-      running = false
     } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
+    // 回主菜单（Esc 退出）——数值输入 Enter 空值也已 continue 于此
   }
 }

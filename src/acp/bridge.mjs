@@ -120,7 +120,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     const content = normalizeEOL(raw)
     const out = computeEditEntry(content, args, { path: p })
     await writeBuffer(p, joinWithEol(normalizeEOL(out.updated).split("\n"), raw))
-    return `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))`
+    return `OK: edited ${p} via IDE (${out.occurrences} occurrence(s))${out.note ? ` — ${out.note}` : ""}`
   }
   /** 数组形态（D15.7）：条目校验（path——顶层默认自 args.path ?? args.filePath（pathOf）——
    *  2026-09-05 用户裁定 CLI parity——/validateEditEntry/互斥（只对顶层 old/new）——同本地 edit-batch 措辞）→
@@ -162,7 +162,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
     for (const g of groups.values()) {
       await writeBuffer(g.path, joinWithEol(normalizeEOL(g.content).split("\n"), g.raw))
     }
-    return outcomes.map((o) => `OK: edited ${o.g.path} via IDE (${o.out.occurrences} occurrence(s))`).join("\n")
+    return outcomes.map((o) => `OK: edited ${o.g.path} via IDE (${o.out.occurrences} occurrence(s))${o.out.note ? ` — ${o.out.note}` : ""}`).join("\n")
   }
 
   const callbacks = {
