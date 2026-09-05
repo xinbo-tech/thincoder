@@ -1201,3 +1201,108 @@ test("T-SF4: 路径 >80 字符 → 截尾（+…）——不超行（N-SF1）", 
     rmSync(cwd, { recursive: true, force: true })
   }
 })
+
+test("T-F1b (2026-09-05, 复审 🟡#2): check 等待期 ctx.signal 中止（Ctrl+I/Stop）→ 返回 {done,stopped} 不悬挂（CLI 同款出口）", async () => {
+  const { server } = await asyncChildServer(900) // 子代理远慢于中止——验证 check 先出
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-f1b-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctrl = new AbortController()
+    const ctx = asyncCtx(parent, cwd, { signal: ctrl.signal })
+    const a = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctx))
+    assert.equal(a.status, "running")
+    const checkP = subagentTool.execute({ action: "check", n: 1, id: a.id }, ctx) // 等待 running 条目
+    await new Promise((r) => setTimeout(r, 50))
+    ctrl.abort({ interrupt: true, message: "interrupt while checking" })
+    const out = JSON.parse(await Promise.race([
+      checkP,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("check hung — signal abort 出口缺失")), 3000)),
+    ]))
+    assert.equal(out.done, true)
+    assert.equal(out.stopped, true)
+    assert.ok(parent._asyncSubagents.has(a.id), "中止不消费条目——子代理继续后台跑（F2 语义）")
+    await parent._asyncSubagents.get(a.id).settled
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-F1 (2026-09-05): check(id) 在途等待期依赖被取消 → 唤醒重判返回 dependency-cancelled（不悬挂——CLI waiters 镜像）", async () => {
+
+  const { server } = await asyncChildServer(800) // slow dep——给取消留窗口
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-f1-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = asyncParent(port)
+    const ctx = asyncCtx(parent, cwd)
+    const dep = spawnJson(await subagentTool.execute({ task: "slow dep", role: "coder", async: true }, ctx))
+    assert.equal(dep.status, "running")
+    const child = spawnJson(await subagentTool.execute({ task: "dep-child", role: "coder", async: true, dependsOn: [String(dep.id)] }, ctx))
+    assert.equal(child.status, "queued", "依赖未完成 → 排队")
+    const entry = parent._asyncSubagents.get(child.id)
+    assert.equal(entry._dependsOn[0], String(dep.id))
+    // 在途 check：调用时刻守卫通过（依赖 running——池非死端）→ 阻塞等待
+    const checkP = subagentTool.execute({ action: "check", id: child.id, n: 1 }, ctx)
+    // 等待期间依赖被取消（running → abort → cancelled settle → 墓碑 → refill → E depc）
+    const cancelled = spawnJson(await subagentTool.execute({ action: "cancel", id: dep.id }, ctx))
+    assert.equal(cancelled.status, "cancelled")
+    const out = JSON.parse(await Promise.race([
+      checkP,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("check hung — F1 regression: depc 死端无唤醒")), 5000)),
+    ]))
+    assert.equal(out.status, "queued", "唤醒后重判 → depc 死端返回 queued（不悬挂不消费）")
+    assert.equal(out.waiting, "dependency-cancelled")
+    assert.ok(parent._asyncSubagents.has(child.id), "未被消费——模型可 cancel 处置")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-F2 (2026-09-05): Ctrl+I（interrupt）不中止池内子代理——全停（plain abort）才传播（keeps-the-pool 对齐）", async () => {
+  const { server } = await asyncChildServer(600)
+  await new Promise((r) => server.listen(0, "127.0.0.1", r))
+  const port = server.address().port
+  const cwd = mkdtempSync(join(tmpdir(), "tc-f2-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    // 场景 1：interrupt 形态中止 spawn 信号 → 条目 controller 不传播 → 子代理照常完成
+    const parent1 = asyncParent(port)
+    const ctrlI = new AbortController()
+    const ctxI = asyncCtx(parent1, cwd, { signal: ctrlI.signal })
+    const a = spawnJson(await subagentTool.execute({ task: "slow task", role: "coder", async: true }, ctxI))
+    const entryA = parent1._asyncSubagents.get(a.id)
+    assert.equal(entryA.controller.signal.aborted, false)
+    ctrlI.abort({ interrupt: true, message: "test interrupt" })
+    assert.equal(entryA.controller.signal.aborted, false, "interrupt 不传播到条目 controller——子代理继续跑")
+    await entryA.settled
+    assert.ok(entryA.done && entryA.report?.includes("slow result"), "interrupt 后子代理正常完成落报告")
+    // 复审 🟡#1：interrupt 形态 settle 不得静默出池（丢弃分支豁免）——留池 done 供注入/消化
+    assert.equal(parent1._asyncSubagents.has(a.id), true, "interrupt 后 settle 的条目留池（不再静默丢弃——check 可取回）")
+    const ctxConsume = asyncCtx(parent1, cwd) // 无 abort signal 的新 ctx——消费不受已中止 signal 影响
+    const got = JSON.parse(await subagentTool.execute({ action: "check", n: 1, id: a.id }, ctxConsume))
+    assert.equal(got.status, "done", "报告经 check 正常取回")
+    assert.ok(got.report?.includes("slow result"))
+    // 场景 2：plain abort（全停形态）→ 传播 → 条目中止出池
+    const parent2 = asyncParent(port)
+    const ctrlS = new AbortController()
+    const ctxS = asyncCtx(parent2, cwd, { signal: ctrlS.signal })
+    const b = spawnJson(await subagentTool.execute({ task: "slow task 2", role: "coder", async: true }, ctxS))
+    const entryB = parent2._asyncSubagents.get(b.id)
+    assert.equal(entryB.controller.signal.aborted, false)
+    ctrlS.abort()
+    assert.equal(entryB.controller.signal.aborted, true, "全停（plain abort）传播到条目 controller")
+    await entryB.settled
+    assert.equal(parent2._asyncSubagents.has(b.id), false, "中止条目出池（settle aborted 分支清理）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+

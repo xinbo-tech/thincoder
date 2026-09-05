@@ -225,8 +225,15 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
   // Per-entry controller chained to the shared child signal（D-M6 round2 #2 定稿——
   // session/回合 abort 逐链传播保 Ctrl+C 全停；cancel 只 abort 本条目的 controller）。
   entry.controller = new AbortController()
-  if (childSignal?.aborted) entry.controller.abort()
-  else childSignal?.addEventListener?.("abort", () => entry.controller.abort(), { once: true })
+  if (childSignal?.aborted && !childSignal?.reason?.interrupt) entry.controller.abort()
+  else childSignal?.addEventListener?.("abort", () => {
+    // F2（2026-09-05——agent.mjs finally "Ctrl+I keeps the pool" 意图对齐）：interrupt
+    // （Ctrl+I——中断消息注入后同回合续跑）不是全停——不逐链中止池内子代理（否则静默丢
+    // 报告 + webview 行滞留 running——agent.mjs :487 只对非 interrupt 中止清池）。只有
+    // 全停（Stop/会话中止——无 interrupt reason）才沿链传播。
+    if (childSignal?.reason?.interrupt) return
+    entry.controller.abort()
+  }, { once: true })
   // 停止冻结通知：cancelled settle（或 queued 取消）时发给 spawn 上下文（webview 行 +
   // 区块 stopped 冻结相位——不经当前调用者——挂起期 UI ⏹ 直连路径同样靠它渲染）。
   // §20：was:"queued" 由调用点传（queued 取消 = 移除行；running 取消 = stopped 冻结）。
@@ -324,7 +331,11 @@ function settleAsyncEntry(parent, entry, report, error, notifySettle) {
     parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
     writeTombstone(parent, entry.id, "cancelled", entry.role)
     entry._onCancelled?.()
-  } else if (entry.signal?.aborted) {
+  } else if (entry.signal?.aborted && !entry.signal?.reason?.interrupt) {
+    // 2026-09-05 复审 🟡#1：interrupt（Ctrl+I）下按 F2 豁免存活的子代理 settle 时不得走此
+    // 丢弃分支——否则报告仍被静默丢弃（F2 目标落空——agent.mjs:487 同构豁免：interrupt
+    // 不是全停）——interrupt 形态落默认分支留池 done（挂起期由 suspended 分支移交 pending）
+    // 供 collect/digest 注入；plain abort/会话中止仍走此分支。
     parent.history?._asyncSubagents?.delete(entry.id)
     parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
   } else if (parent.history?._suspended === true) {
@@ -341,6 +352,11 @@ function settleAsyncEntry(parent, entry, report, error, notifySettle) {
   refillPool(parent, (e) => e._auto?.() ?? false)
   refreshQueuedRows(parent)
   notifySettle?.()
+  // F1（2026-09-05——CLI waiters 循环镜像）：池 settle = check 等待循环的唯一推进事件
+  // （refill 只由 settle/cancel/spawn 驱动）——唤醒全部等待者（重判守卫——depc/死端即
+  // 返回不悬挂）。等待者注册在 history 载体（跨 runAgent 存活——同池的载体纪律）。
+  const carrier = parent.history ?? parent
+  for (const w of carrier._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
 }
 
 // ─── Async subagent machinery（AGENT-LOOP.md §15 + §17，CLI D-A1/D-A2/D-A4/D-S3 同规格）───

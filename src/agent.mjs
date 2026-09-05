@@ -111,9 +111,11 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   }
 
   // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的 map 沿共享 history
-  // 数组跨 runAgent 调用存活（agent 对象 per-run 重建）。n 读数非 resume 重置。
+  // 数组跨 runAgent 调用存活。n 读数 resume 携带（2026-09-05 复审 #5）：续跑从
+  // history._asyncCheckN 播种——模型上下文连续，check 的 n 序列不被打断。
   agent._asyncSubagents = (depth === 0 && history._asyncSubagents instanceof Map) ? history._asyncSubagents : new Map()
-  if (!opts.resume) agent._asyncCheckN = 0
+  if (opts.resume && typeof history._asyncCheckN === "number") agent._asyncCheckN = history._asyncCheckN
+  else if (!opts.resume) agent._asyncCheckN = 0
 
   // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): setupAgentRun has already
   // pushed the user input + injections, so everything appended from here is "this run's" work.
@@ -495,6 +497,13 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     // The pool rides the shared depth-0 history array across runAgent calls (the agent
     // object itself is per-run) — attach while entries remain, drop when drained.
     if (depth === 0) history._asyncSubagents = (asyncMap && asyncMap.size > 0) ? asyncMap : undefined
+    // _asyncCheckN 随续跑/池持久化（2026-09-05 复审 #5）：续跑（Ctrl+I/ContinueError——
+    // 模型上下文连续须续号，即使池已空）或池仍有时写下读数；普通终局丢弃（新上下文重置 0）。
+    if (depth === 0) {
+      const willContinue = (thrownError instanceof ContinueError) || (signal?.aborted && !!signal?.reason?.interrupt)
+      if (willContinue || (asyncMap && asyncMap.size > 0)) history._asyncCheckN = agent._asyncCheckN ?? 0
+      else history._asyncCheckN = undefined
+    }
     agent._inAutoTurn = false
     // §17 D-S6: an auto-turn's end-state guard marks carry into the next USER run via
     // opts.guardCarry (restored at its start above). Normal ends only — Stop discards

@@ -18,6 +18,31 @@ import { describeBlockers, detectStall, dependentLabels, queuePosition, refillPo
 /** action:'check' 单回合最多读取次数（consult_check 同款防循环，评审 #1 补定义）。 */
 export const MAX_ASYNC_CHECKS = 3
 
+/** F1（2026-09-05——CLI wakeOnAsyncSettle 同构）：池等待者——注册在 history 载体（跨
+ *  runAgent 存活——同 _asyncSubagents 载体纪律）；settleAsyncEntry 终态与 queued-cancel
+ *  落点唤醒（subagent-async.mjs settle 尾 / 本文件 cancelSubagent queued 段）——每次唤醒
+ *  后重判守卫（depc/停滞/无 running 即返回）——防 queued 目标等待期依赖死亡后无 settle
+ *  事件可期而永不 resolve。signal 中止（Stop/Ctrl+I——CLI 同款出口）→ resolve "aborted"——
+ *  check 返回 {done,stopped}（复审 🟡#2：F2 后 interrupt 不再杀被等子代理，check 若无此
+ *  出口会被钉到被等条目自然结束——中断消息注入点只在批次正常返回后可达）。 */
+function wakeOnAsyncSettle(parent, signal) {
+  return new Promise((resolve) => {
+    const carrier = parent.history ?? parent
+    const cleanup = () => {
+      const i = (carrier._asyncWaiters ?? []).indexOf(w)
+      if (i >= 0) carrier._asyncWaiters.splice(i, 1)
+      signal?.removeEventListener("abort", onAbort)
+    }
+    const w = () => { cleanup(); resolve("settled") }
+    const onAbort = () => { cleanup(); resolve("aborted") }
+    ;(carrier._asyncWaiters ??= []).push(w)
+    if (signal) {
+      if (signal.aborted) { onAbort(); return }
+      signal.addEventListener("abort", onAbort, { once: true })
+    }
+  })
+}
+
 /**
  * §19 action:'check' handler — the retired subagent_check semantics VERBATIM
  * (AGENT-LOOP.md §19 F3/T-M2..M4: arrival order / specified id / n counting /
@@ -53,10 +78,17 @@ export async function subagentCheck({ id, n }, ctx) {
   if (idNum != null) {
     const entry = map.get(idNum)
     if (!entry) return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
-    // §20 depc 锁守卫（advisor code review 🟡——CLI 同款）：queued 且不可启动（depc
-    // 锁定，或池内无 running = 无未来 settle/refill 事件 = 永不启动）→ 不阻塞（check
-    // 同步工具调用——防模型回合无界悬挂）——立即返回 queued+原因（cancel 处置引导）。
-    if (!entry.cancelled && entry.status === "queued") {
+    // §20 死端守卫（depc 锁 / §21.1 P-SL2 停滞 / 无 running——advisor code review 🟡——CLI
+    // 同款文本）：queued 且不可启动 → 不阻塞（check 同步工具调用——防模型回合无界悬挂）——
+    // 立即返回 queued+原因（cancel 处置引导）。调用时刻跑一次；F1 循环每次唤醒后重判。
+    // F1（2026-09-05——CLI executeCheckAction waiters 循环镜像——CLI subagent-async.mjs
+    // :122-188）：调用时刻守卫只覆盖"当时已死端"——目标 queued 等待期其依赖（running）
+    // 失败/cancel → refill 将目标置 depc 且池内无 running → 此后无任何 settle 事件 → 单次
+    // await entry.settled 永不 resolve → 同步工具调用把模型回合钉死（仅 Stop 可解）。修复：
+    // 注册池等待者（settle/queued-cancel 终态落点唤醒），每次唤醒重判守卫——死端即返回
+    // （文本与调用时刻逐字一致——F1 修复轮新行为，正常路径输出不变）。
+    const deadEnd = () => {
+      if (entry.cancelled || entry.status !== "queued") return null
       const blk = describeBlockers(parent, entry, entry._auto?.() ?? false)
       if (blk.kind === "depc") {
         return JSON.stringify({
@@ -66,8 +98,7 @@ export async function subagentCheck({ id, n }, ctx) {
       }
       // §21.1 P-SL2 停滞守卫（2026-09-05——CLI 镜像）：混合边环形等待（依赖边 × 文件域边
       // 成环——无 running、阻塞闭包无外逃）→ 机械检测明确报错（列阻塞链 + cancel 破环引导——
-      // F-SL2 非静默）——替换本会落下的既有 no-running 泛化等待提示（新停滞路径——正常路径
-      // 输出逐字不变）；检测自身含 running 锚点/depc/单 queued/不可达态收窄——零误报。
+      // F-SL2 非静默）——检测自身含 running 锚点/depc/单 queued/不可达态收窄——零误报。
       const stall = detectStall(parent)
       if (stall) {
         return JSON.stringify({ id, status: "error", error: stallErrorText(stall.chains) })
@@ -78,8 +109,28 @@ export async function subagentCheck({ id, n }, ctx) {
         out.note = "check would block indefinitely — this queued task cannot start while the pool has no running task (starts are settle-driven); cancel it (action:'cancel') or make pool progress (AUTO session starts it on the next settle/refill)"
         return JSON.stringify(out)
       }
+      return null
     }
-    await entry.settled
+    const atCall = deadEnd()
+    if (atCall) return atCall
+    for (;;) {
+      if (entry.done || entry.cancelled) break // 终态（含 queued 取消——cancelSubagent resolve + 唤醒）
+      if (entry.status === "queued") {
+        const again = deadEnd() // 唤醒后重判（depc/停滞/无 running——死端即返回不悬挂）
+        if (again) return again
+      }
+      // 双等待（修复轮 #2——T-SD ⑥ 对照回归 + 热旋）：entry.settled 快路径（真实 settle 的
+      // _resolve、queued-cancel 的 _resolve、测试预置已 resolve 句柄）∪ 池唤醒（依赖死亡
+      // 等无 self-settle 的死端场景——T-F1）。self 到达 = 消费点（真实 settle 先置终态再
+      // resolve——mock 预置已 resolve 亦同语义——直接 break，防 mock/状态不变条目热旋）；
+      // 池唤醒则重判守卫。
+      const winner = await Promise.race([
+        entry.settled ? entry.settled.then(() => "self") : new Promise(() => {}),
+        wakeOnAsyncSettle(parent, ctx.signal),
+      ])
+      if (winner === "self") break
+      if (winner === "aborted") return JSON.stringify({ done: true, stopped: true }) // CLI 同款出口（复审 🟡#2）
+    }
     map.delete(idNum)
     // §20（advisor code review 🟡——CLI 同款）：check 消费与挂起期 settle 竞态——消费时
     // 若条目已被挂起分支移交 pending，反向清除（两消费点互斥——防 digest 下轮重复注入）。
@@ -296,6 +347,10 @@ export function cancelSubagent(parent, id) {
     entry._onCancelled?.(true)
     refillPool(parent, (e) => e._auto?.() ?? false)
     refreshQueuedRows(parent)
+    // F1（2026-09-05）：queued 取消是池状态推进事件——唤醒 check 等待者（entry._resolve
+    // 已释放本目标的等待者；其他等待者经池唤醒重判——防漏唤醒悬挂）
+    const carrier = parent.history ?? parent
+    for (const w of carrier._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
     const out = { id, status: "cancelled", was: "queued" }
     if (hadDependents) {
       // refill 后重算——AUTO 下已自动启动的依赖者不再列（文案与实况一致——code review 🔵）

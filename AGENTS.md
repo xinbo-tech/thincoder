@@ -37,7 +37,9 @@ Design docs in `docs/design/`. Independent product — no dependency on thincode
 extension.mjs        Extension entry + ChatPanel class (session CRUD, settings, LLM title generation, CSP injection)
 src/agent.mjs         Agent main loop — parallel tool batching, multimodal image injection, context compaction, subagent spawning, reasoningEcho
 src/agent-tools.mjs   Re-export shim → src/agent-tools/ (task, subagent, plan, goal, skill, verify, read_history)
-src/agent-tools/subagent-async.mjs  async subagent machinery (settleAsyncEntry/collectSettledAsync/subagentCheck/audit-task-book/auto-resume — 500-line split from subagent.mjs, §18 batch)
+src/agent-tools/subagent-actions.mjs  check/status/cancel action executors + MAX_ASYNC_CHECKS + F1 pool-waiter loop（2026-09-05 module split）
+src/agent-tools/subagent-async.mjs  async/audit machinery (gateEngCoderSpawn/auditTaskBook/shouldAutoResume/spawnAsyncSubagent/settleAsyncEntry/injectAsyncResult/collectSettledAsync/mergeChildMutations + F2 interrupt chain filter + interrupt-settle 豁免（2026-09-05 module split——行数随维护漂移不记档）
+src/agent-tools/subagent-scheduler.mjs  §20 scheduler + file-domain machinery (pool/tombstone/conflict/dep/refill/stall/queueRunnable — 2026-09-05 module split)
 src/tools.mjs         Re-export shim → src/tools/ (file ops, bash, glob, grep, git, web, checkpoint, read_image)
 src/tools/checkpoint.mjs  Checkpoint 快照全量副本（CLI src/git/checkpoint.mjs 镜像，CHECKPOINT.md F5 存储统一）
 src/tools/git-ext.mjs / git-checkpoint.mjs  git 工具 F7 扩展 action（clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv）+ checkpoint 子系统（500 行拆分，CLI 镜像）

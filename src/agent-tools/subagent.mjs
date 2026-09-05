@@ -1,5 +1,6 @@
 /**
- * subagent.mjs — subagentTool (single tool, four actions — AGENT-LOOP.md §19)
+ * subagent.mjs — subagentTool (single tool, five actions — AGENT-LOOP.md §19/§19.5:
+ * spawn/check/status/cancel/escalate; no panel action in VS Code — §19.6 AC-P4)
  * Spawn a sub-agent for an independent subtask.
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
  * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
@@ -7,24 +8,14 @@
  * §18 (AGENT-LOOP.md D-E1..E3): role-level async default (eng-coder → async),
  * internal delivery protocol; eng-coder children may only spawn synchronous explore
  * audit children (gateEngCoderSpawn — mechanical, incl. the 7th-spawn backstop).
- * §19 (AGENT-LOOP.md §19, 2026-09-03): the subagent family merged into ONE tool —
- * action:"spawn" (default) / action:"check" (retired subagent_check — blocking fetch,
- * consume) / action:"status" (new — non-blocking progress query, never consumes) /
- * action:"escalate" (retired escalate.mjs — 飞刀; constraints and the `sub:escalate`
- * relay prefix unchanged). The action HANDLERS (check/status/cancel) live in
- * subagent-actions.mjs; the §20 scheduler + file-domain machinery lives in
- * subagent-scheduler.mjs; the async/audit machinery — gateEngCoderSpawn,
- * auditTaskBook, shouldAutoResume, spawnAsyncSubagent, settleAsyncEntry,
- * MAX_ASYNC_CHECKS, injectAsyncResult, collectSettledAsync, mergeChildMutations —
- * lives in subagent-async.mjs (2026-09-05 模块拆分轮——超 500 行硬限——三模块均回落限内；
- * public names re-exported below). This
- * file keeps the tool entry (description/schema/execute dispatch), the blocking
- * spawn path and the mode helpers.
- * §19.5 (AGENT-LOOP.md §19.5, 2026-09-03): control surface — action:"cancel" (fifth
- * action; control-class gate exemption — isControlAction), status decision fields
- * (D-M5), per-entry AbortController + cancelled settle + model-visible reminder
- * (D-M6 — machinery in subagent-actions.mjs/subagent-async.mjs), runChild(entry) binding (entry signal +
- * onAgentTurn turn sync), nested sub-attribution forwarding (D-M8 webview 子标)。
+ * §19/§19.5 (AGENT-LOOP.md, 2026-09-03): ONE tool, five actions — spawn/check/status/
+ * cancel/escalate; action:"cancel" = control-class gate exemption (isControlAction),
+ * status decision fields (D-M5), per-entry AbortController + cancelled settle +
+ * model-visible reminder (D-M6), runChild(entry) binding, nested sub-attribution
+ * forwarding (D-M8 webview 子标)。description/schema 载荷 verbatim 在 subagent-spec.mjs
+ * （2026-09-05 round 2）；动作执行器/§20 调度器/async-audit 在 actions/scheduler/
+ * async.mjs（public names re-exported below——500 行纪律拆分轮 2026-09-03/05）；本
+ * 文件保留工具入口（dispatch/execute）+ 阻塞 spawn 路径 + 模式助手。
  */
 import { validateDesignToken } from "./advisor.mjs"
 import { logEvent, errText } from "../log.mjs"
@@ -32,6 +23,7 @@ import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent,
 import { subagentCheck, subagentStatus, cancelSubagentAction } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出）
 import { normalizeFileList, depInfo, describeBlockers, assertNoDepCycle } from "./subagent-scheduler.mjs" // §20 调度器（2026-09-05 拆分轮迁出）
 import { escalateAction } from "./subagent-escalate.mjs" // §19 escalate 引擎（2026-09-03 拆出——500 行纪律——verbatim 迁移）
+import { subagentSpec } from "./subagent-spec.mjs" // description/schema 载荷（2026-09-05 module-split round 2——546 > 500 拆出）
 // Re-export shim (2026-09-03 split/merge + 2026-09-05 模块拆分轮): the machinery + §19 action
 // handlers live outside subagent.mjs — subagent-async.mjs (主体) / subagent-actions.mjs /
 // subagent-scheduler.mjs — their public names stay importable from subagent.mjs so no
@@ -163,44 +155,8 @@ export const subagentTool = {
   isControlAction(args) {
     return args?.action === "cancel"
   },
-  description:
-    "Spawn a sub-agent to handle an independent subtask in an isolated context. The sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
-    "One tool, FIVE actions — the action parameter picks (default: \"spawn\" — omit action to spawn):\n" +
-    "- spawn — run a sub-agent (task + role required; optionally model, designToken/designId for eng-coder, async). Blocking by default — returns the final report; with async:true it returns {id, role, status} immediately (see Async mode below).\n" +
-    "- check — fetch the result of a previously spawned ASYNC subagent: pass n = a 1-based read counter that must increment by 1 on every call (first check of the turn: n=1); without an id it returns the NEXT completed one in arrival order (fastest first); with an id it waits for that specific subagent (including still-queued ones). Returns {done:true} once everything is consumed; unchecked results are auto-injected at turn end. WARNING: check BLOCKS until the target finishes — to look at progress without blocking use action:'status'.\n" +
-    "- status — NON-BLOCKING progress query: without an id returns {overview:{running, queued, done}} over the async pool (running entries carry role/model/elapsedSec/turn/maxTurns — enough to decide what to stop; plus the §19.5.6 touched-files summary: touchedFiles (first 5, relative to your cwd), touchedMore (count beyond 5), or the placeholder touched (\"—（尚无改动）\") until something is touched — see what a running child has changed BEFORE deciding to cancel it; queued entries carry the placeholder touched (\"—（未启动）\")); with an id returns that subagent's status immediately. Never waits and never consumes — a finished entry stays fetchable by action:'check'. Query progress with status; only fetch with check.\n" +
-    "- cancel — STOP one background async subagent (id REQUIRED — never omitted, so a mistaken all-stop is impossible; Ctrl+C / the Stop button stop everything): a targeted abort of that single subagent — every other subagent and the session keep running. A running target aborts (its partial changes are NOT merged/audited — a reminder is injected); a queued target is dequeued ({status:'cancelled', was:'queued'} — later positions shift). The stopped child settles with a freeze notification. Also available in plan mode, in digest turns, and from the ⏹ on its activity block — the UI stop never needs this turn. Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives. Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first; prefer scoped recovery (restore a single affected file) over killing the child — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited.\n" +
-    "- escalate — fly in a stronger model for hard implementation (task required; optional model = 'provider:model' from the consult models pool, default the first): the expert gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification) that you review and relay. Terminology: escalate is the ONLY name — the action and the expert role are both 'escalate'; 飞刀 is the Chinese alias. When the user says 飞刀 / escalate / 'fly in <model>', call action:'escalate' directly — never via a script importing the module. Not available in engineering mode (implementation goes through eng-coder subagents). For parallel READ-ONLY opinions use consult_start instead.\n\n" +
-    "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
-    "Async mode (async: true): spawn WITHOUT waiting — the tool returns {id, role, status} immediately and you can keep working (checking files, running other tools). Fetch results later with action:'check' (arrival order — fastest first); to check progress WITHOUT blocking your turn use action:'status' — action:'check' blocks until the target finishes; stop a runaway with action:'cancel' (its id); unchecked results are auto-injected into the session at turn end, so nothing is lost. Role-based default (§18): role='eng-coder' spawns ASYNC by default — its internal delivery protocol (implementation → explore divergence audit → self-fix → advisor re-review → converged delivery) runs fully inside the child and settles in the background; pass async:false to force the blocking spawn when you must handle the report in this same turn. Every other role defaults to the blocking spawn. Use async when the main session must keep moving in parallel; use the default blocking spawn when you need the report before continuing.\n\n" +
-    "Task scheduling (AGENT-LOOP.md §20): declare the scheduling metadata to let the SCHEDULER order your spawns — files: the file paths this task will modify, dependsOn: ids from prior async spawn returns whose outcome this task needs. Overlapping-file tasks are serialized and dependent tasks are started in order automatically: a spawn that would conflict, or whose dependencies have not settled, queues instead of running ({id, status:'queued', position, waiting, reason} — the waiting task auto-starts when the conflict clears / its dependency settles; cancel a queued task to drop it). A spawn whose dependency was cancelled or failed stays queued and marked \"dependency cancelled\" until you decide (cancel it) — in an AUTO session it starts by itself. Referencing an unknown id errors; an id already consumed by check counts as satisfied. Omit both parameters for the plain immediate spawn (no scheduler involvement).\n\n" +
-    "Available roles (which roles are exposed depends on the active mode — see Mode filtering below):\n" +
-    "- explore — read-only search & analysis. Toolset: the read/search family (grep, read, glob, code_search, doc_search, repo_outline, lsp, tree...). No git context injected—evidence from read/glob/grep and the task book. Its report must list what it searched and what it did NOT find. Fast — specify thoroughness in the task: quick / medium / thorough (default medium).\n" +
-    "- plan — read-only implementation planning. Same read/search toolset; NEVER edits files. Returns a step-by-step plan for the parent to execute.\n" +
-    "- coder — full implementation. The parent's complete read/write/execute toolset plus verify and advisor for self-review. Its final report must include a delivery transparency table with one row per task requirement (Done / Simplified / Not done — no deferred column).\n" +
-    "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round.\n" +
-    "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-coder. The schema enum reflects the active mode.\n\n" +
-    "Writing the prompt:\n" +
-    "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
-    "- Put exact paths and commands in the prompt when you know them. The sub-agent should not search for things you already know.\n" +
-    "- Do not delegate understanding: if the task hinges on a file path or line number, find it yourself first and write it into the prompt.\n" +
-    "- Once a sub-agent is running, leave that scope to it: don't redo its searches in parallel, and don't abandon it midway to finish manually.",
-  parameters: {
-    type: "object",
-    properties: {
-      action: { type: "string", enum: ["spawn", "check", "status", "cancel", "escalate"], description: "Which action of the subagent tool family to run (default: spawn). spawn = run a new sub-agent; check = fetch an async result (BLOCKS until the target settles; n = 1-based read counter required, id optional); status = non-blocking progress query (id optional — running entries carry role/model/elapsedSec/turn/maxTurns + the §19.5.6 touched-files summary touchedFiles/touchedMore/touched; queued entries carry touched \"—（未启动）\"); cancel = STOP one background async subagent (id required — targeted abort; queued targets are dequeued); escalate = fly in a stronger model for hard implementation (task required, model optional)." },
-      task: { type: "string", description: "Task description (required for spawn and escalate). For spawn: self-contained — the sub-agent has no conversation context. For escalate: goal, constraints, entry files, acceptance criteria." },
-      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role (action:'spawn' only) — see the tool description for the role capability matrix. Exact spelling required." },
-      model: { type: "string", description: "(spawn) Provider/model override for this sub-agent: 'provider:model', a provider name from config, or a model name on the parent's provider. Defaults to the agent.subagentModels[role] (type-level), then the agent.subagentModel config, then the parent's provider — pass \"default\" to explicitly inherit the default model — equivalent to omitting the parameter. Useful for offloading heavy work to a cheaper model. (escalate) The consult candidate to fly in as 'provider:model' — default = the first consult model." },
-      designToken: { type: "string", description: "Required when role='eng-coder' (spawn): the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
-      designId: { type: "string", description: "Optional when role='eng-coder' (spawn): the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
-      async: { type: "boolean", description: "(spawn) true = spawn without waiting — returns {id, status} immediately, fetch results later via action:'check' (peek without blocking via action:'status'; stop via action:'cancel'). Default is role-level: role='eng-coder' → true (async — its internal delivery protocol runs in the background; pass async:false to force the blocking spawn when you must process the report before continuing); every other role → false (blocking)." },
-      files: { type: "array", items: { type: "string" }, description: "(spawn) the file write-domain this task declares (cwd-relative or absolute paths — AGENT-LOOP.md §20). files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error. Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:'queued', position, waiting, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
-      dependsOn: { type: "array", items: { type: "string" }, description: "(spawn) ids from prior async spawn returns whose outcome this task needs (AGENT-LOOP.md §20) — the task queues until every dependency settles, then starts automatically. Ids consumed by action:'check' count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
-      id: { type: "number", description: "(check/status/cancel) The subagent id to address, as returned by an async spawn. For check: waits for that specific subagent (including still-queued ones); omit to fetch the next completed one (arrival order). For status: returns that subagent's status without waiting or consuming; omit for the full overview. For cancel: REQUIRED — the target to stop (omitting it errors; a mistaken all-stop is impossible)." },
-      n: { type: "number", description: "(check — required) 1-based read counter — must increment by 1 on every check call (n=1 for the first check of the turn); out-of-order/duplicate n is rejected. Not used by status." },
-    },
-  },
+  description: subagentSpec.description, // description/schema 载荷 verbatim 在 subagent-spec.mjs（2026-09-05 module-split round 2——546 > 500 拆出）
+  parameters: subagentSpec.parameters,
   async execute(args, ctx) {
     // §19 action dispatch（AGENT-LOOP.md §19 D-M1）：缺省 spawn——既有调用零迁移。
     const action = args?.action ?? "spawn"
@@ -345,8 +301,10 @@ export const subagentTool = {
     const subId = nextSubagentId(parent)
 
     // §18 D-E2 ③: the audit spawn's task book is appended MECHANICALLY — the eng-coder's
-    // OWN spawn task (verbatim _engTaskInput) ∪ mechanically tracked _touchedFiles, never a
-    // self-written list (mechanism lives in subagent-async.mjs auditTaskBook).
+    // OWN spawn task (mechanical SUMMARY of _engTaskInput — auditTaskBook keeps the
+    // docs-involved / file-list / acceptance sections VERBATIM via summarizeEngTaskInput;
+    // full verbatim only when the task book lacks section headings — never a self-written
+    // list) ∪ mechanically tracked _touchedFiles (mechanism lives in subagent-async.mjs).
     const childInput = auditTaskBook(task, ctx.agent, engAuditAttempt)
 
     // Subagent runs without MAIN-CONVERSATION callbacks — results are captured.
