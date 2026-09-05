@@ -563,7 +563,10 @@ test("§18.5 T-AG5: 工具描述零 git——旧 Receives-git-context 措辞删�
 test("§18.5 T-AG9: collectGitContext 死进口清理（escapeXml 保留——取消系统提醒路径仍在用）", async () => {
   const src = readFileSync(new URL("../src/agent-tools/subagent.mjs", import.meta.url), "utf8")
   assert.ok(!src.includes("collectGitContext"), "T-AG9: subagent.mjs 不再 import/引用 collectGitContext")
-  assert.ok(src.includes("escapeXml"), "T-AG9: escapeXml 保留（cancelled 系统提醒注入路径在用）")
+  // 2026-09-05 module-split：cancel 分支（escapeXml 消费点——取消系统提醒）随
+  // executeAsyncSpawn 迁 subagent-run.mjs——escapeXml 断言改指实际载体
+  const runSrc = readFileSync(new URL("../src/agent-tools/subagent-run.mjs", import.meta.url), "utf8")
+  assert.ok(runSrc.includes("escapeXml"), "T-AG9: escapeXml 保留（cancelled 系统提醒注入路径在用——subagent-run.mjs）")
 })
 
 
