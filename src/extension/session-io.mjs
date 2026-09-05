@@ -13,11 +13,13 @@ import { readFileSync, unlinkSync, renameSync, existsSync, statSync } from "node
 import {
   slotPath, manifestPath, loadManifest, saveManifest, writeFile,
   isProcessAlive, getSessionId, activeSlot, slotOccupancy, sessionsDir,
+  readEndMarker, writeEndMarker,
 } from "./session-slots.mjs"
 
 export {
   getSessionId, normalizeCwd, slotPath, manifestPath, loadManifest, saveManifest,
   activeSlot, slotOccupancy, sessionsDir, _setSessionsDirForTest, _resetSessionsDirForTest,
+  END, endMarkerPath, readEndMarker, writeEndMarker, claimSlot, allocateFresh, resumeSlot,
 } from "./session-slots.mjs"
 
 // ─── Slot read/write ────────────────────────────────────────
@@ -31,7 +33,7 @@ export {
 // ─── Legacy transient prefix cleanup (CLI parity, 2026-09-01 会诊 glm/kimi 🔴) ──
 
 /** 老 CLI 写入的机器注入前缀消息（人工线残留）——CLI loadSlotFile/saveSession 双点过滤
- *  （session.mjs:95/102/205），VS Code 此前不过滤 → 旧注入在 VS Code 端进 UI、进播种
+ *  （CLI saveSession 人读线过滤 + loadSlotFile 读时过滤——符号锚），VS Code 此前不过滤 → 旧注入在 VS Code 端进 UI、进播种
  *  机器线、且保存时永久回写（CLI 的清污被 VS Code 重新污染）。 */
 const LEGACY_TRANSIENT_PREFIXES = [
   "[System reminder: working directory snapshot:",
@@ -80,7 +82,7 @@ export function loadSlot(cwd, n) {
         return null
       }
       // 2026-09-01 会诊 glm/kimi 🔴：读时过滤 legacy transient 注入（CLI loadSlotFile
-      // session.mjs:205 同款）——旧 CLI 写入的机器注入残留不得进面板/播种机器线。
+      // CLI loadSlotFile 读时过滤同款——符号锚）——旧 CLI 写入的机器注入残留不得进面板/播种机器线。
       if (data.history.some(isLegacyTransient)) {
         data.history = data.history.filter((m) => !isLegacyTransient(m))
       }
@@ -237,6 +239,8 @@ export function switchToSlot(cwd, slot) {
     m.slotSessions[slot] = getSessionId()
   }
   saveManifest(cwd, m, null, { setActive: true })
+  // 2026-09-05 §10 D-4：面板"打开历史会话"（pick）跟随"最后查看的槽"（成功才写）
+  writeEndMarker(cwd, slot)
   return data
 }
 
@@ -285,6 +289,8 @@ export function newSlot(cwd) {
       }
     : null
   saveManifest(cwd, m, deletions, { setActive: true })
+  // 2026-09-05 §10 D-4：newSlot（面板新建）落点写本端记录
+  writeEndMarker(cwd, slot)
   return slot
 }
 
@@ -442,6 +448,9 @@ export function deleteSlotAndUpdate(cwd, slot) {
   if (m.slotSessions) delete m.slotSessions[slot]
   if (m.active === slot) delete m.active
   saveManifest(cwd, m, { slots: [slot], slotSessions: [slot] }, { setActive: true })
+  // 2026-09-05 §10 D-4/F4：删到本端记录槽 → 记录显式置空（文件保留 + slot:null——下次
+  // 启动全新起步：不继承他人遗留、不复活被删会话——T-M4/T-M8）
+  if (readEndMarker(cwd)?.slot === slot) writeEndMarker(cwd, null)
   return m.active ?? null
 }
 

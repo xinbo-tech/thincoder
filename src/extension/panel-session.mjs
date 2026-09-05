@@ -3,7 +3,7 @@
  * chat-panel.mjs). Every function takes the ChatPanel instance as `panel` and
  * mutates panel._slot / panel._autoApprove exactly like the former methods did.
  */
-import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, activeSlot, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs } from "./session-io.mjs"
+import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs, resumeSlot, readEndMarker, writeEndMarker } from "./session-io.mjs"
 import { fullStatus } from "./settings.mjs"
 import { migrateLegacySettings } from "./migrate-settings.mjs"
 import { stripEditorInjection } from "./editor-context.mjs"
@@ -12,13 +12,14 @@ import { _cwd } from "./panel-messages.mjs"
 import * as vscode from "vscode"
 
   /**
-   * The slot number this panel is bound to. On first use, resolve it once from the
-   * persisted active pointer (or create a slot), then keep it fixed for the panel's life.
+   * The slot number this panel is bound to. On first use, resolve it once via the
+   * end-marker resume decision (SESSION.md §10 D-2 — 本端记录/一次性继承/全新分配，
+   * 与 CLI TUI 启动同构), then keep it fixed for the panel's life.
    */
 export function ensureSlot(panel) {
     if (panel._slot == null) {
       const cwd = _cwd()
-      panel._slot = activeSlot(cwd)
+      panel._slot = resumeSlot(cwd).slot
     }
     return panel._slot
   }
@@ -183,7 +184,14 @@ export async function deleteSession(panel, slot) {
     // If we deleted the slot this panel was bound to, rebind to the survivor.
     // 2026-09-01 CLI 同步：deleteSlotAndUpdate 置空 active（不替面板选"最小剩余号"——
     // 可能指向另一活进程的槽）；_slot = null → 下次保存经 ensureSlot 重新认领。
-    if (slot === panel._slot) panel._slot = newActive
+    if (slot === panel._slot) {
+      panel._slot = newActive
+      // 2026-09-05 §10（review 🟡#1）：删本端记录槽后若面板立即重绑幸存槽继续使用——
+      // 重绑 = 一个"落点"：写本端记录 = 幸存槽（与 ACP"删后 newSession 重钉"、switchToSlot
+      // "打开历史会话写 marker"同语义——marker = 端内最后使用槽位 D-1/D-8）；newActive 为
+      // null 时保持置空（F4），下次 ensureSlot 经 resumeSlot 认领新槽并写记录。
+      if (newActive != null) writeEndMarker(_cwd(), newActive)
+    }
     loadSession(panel)
   }
 
@@ -211,15 +219,23 @@ export async function generateTitle(panel, slotOverride) {
 
 export function pushSessions(panel) {
     const cwd = _cwd()
+    const listed = listSlots(cwd)
+    // 2026-09-05 §10 D-5：会话列表本端高亮按端记录（● = 记录槽 ∈ 列表 ? 记录槽 :
+    // manifest active 回退——含"记录槽已被对端删除"的守卫）；listSlots 的 manifest
+    // active 语义不变（跨端回退高亮 + 旧版/ACP）
+    const rec = readEndMarker(cwd)
+    const highlight = (rec?.slot != null && listed.some((s) => s.slot === rec.slot))
+      ? rec.slot
+      : (listed.find((s) => s.isActive)?.slot ?? null)
     // Same label fallback chain as CLI /session: title → firstMessage quote → "(empty)"
     const truncate = (s, n) => s.length <= n ? s : s.slice(0, n - 1) + "…"
-    const sessions = listSlots(cwd).map((s) => ({
+    const sessions = listed.map((s) => ({
       slot: s.slot,
       title: s.title || (s.firstMessage ? `"${truncate(s.firstMessage, 40)}"` : "(empty)"),
       count: s.messageCount,
       updated: s.updatedAt,
       provider: s.activeProvider ?? null,
-      active: s.isActive,
+      active: s.slot === highlight,
     }))
     panel._panel?.webview.postMessage({ type: "sessions", sessions, active: ensureSlot(panel) })
   }
@@ -227,9 +243,9 @@ export function pushSessions(panel) {
 export async function status(panel) {
     // Ensure at least one session slot exists (shared format with the CLI)
     const cwd = _cwd()
-    const slots = listSlots(cwd)
-    // Resolve this panel's slot once: reuse the persisted active session, or create the first one.
-    panel._slot = slots.length === 0 ? newSlot(cwd) : activeSlot(cwd)
+    // 2026-09-05 §10 D-2：恢复决策改 resumeSlot（本端记录/一次性继承/全新分配——与
+    // ensureSlot/onProjectChanged 同点）；全新目录下 claim 先行——文件在首保存时落盘
+    panel._slot = resumeSlot(cwd).slot
     panel._pushProject()
     pushSessions(panel)
     loadSession(panel)

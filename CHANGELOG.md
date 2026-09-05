@@ -2,7 +2,21 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
-## [0.8.11] — 2026-09-04
+## [Unreleased]
+
+> 开发批记录段（2026-09-05 起惯例——版本号发布时才定——见 RELEASE.md：9 月首发 = 0.9.1 时本段改头）
+
+### Changed
+
+- **会话"当前槽位"按端分离（R4——2026-09-05——SESSION.md §10 引用，CLI 同批）**：本端 end marker `{manifest}.vscode`——面板恢复决策改 resumeSlot（本端记录/一次性继承/全新分配——ensureSlot/status/onProjectChanged 同点）；会话列表高亮按本端记录（D-5）；newSlot/switchToSlot/pick/delete 维护 marker（删记录槽置空、重绑幸存槽写回）。行为差异：无 CLI legacy 单文件兜底；全新目录首用不预写空会话文件（claim 先行、首保存落盘）。L2 1196/1196。
+- **edit 空白差异自动落点镜像 + 编辑纪律三条（2026-09-05——CLI TOOLS.md §14.2 P15.11 + AGENT-LOOP §21 扩展注 2 镜像）**：edit not-found 唯一空白差异窗口自动落点 + note；discipline.md 三条纪律（新鲜读/hash 来源/重试上限）。测试 P15.11a-d + T-N1.8。
+- **git 工具 add/rm/commit 多路径（2026-09-05——CLI parity）**：`path` 空格分隔多路径（git add a b c）——git.mjs 三分支 split(/\s+/) + path 描述尾注（保原子串断言）；镜像测试用例（add/rm/commit 多路径覆盖——git.test 21/21）。
+
+### Changed
+
+- **settings 工具镜像（2026-09-05——CLI SETTINGS-TOOL.md 双端同批）**：settings list/get/set——共享 ~/.thincoder/config.json 写盘 + 热应用；敏感遮罩；类型表自动派生（config-io 收拢 AGENT_DEFAULTS/TRACES_DEFAULTS 单一来源——loadAgentSettings 去内联默认——方案 A）；isReadonlyAction 动作分类。测试 T-S1.*v 6 例 + config-io 48/48。
+- **P-SL2 停滞机械检测镜像（2026-09-05——CLI AGENT-LOOP §21.1 扩展注 P-SL2 双端同批）**：subagent-scheduler.mjs `detectStall`/`stallErrorText`——混合边环形等待停滞（无 running + queued blocker 闭包无外逃）→ check/status 守卫明确报错列阻塞链（cancel 破环引导）；判据收窄零误报（queued ≥2 + 每 queued ≥1 blocker + depc 排除）；正常路径输出逐字不变。测试 T-SL2 ①-⑥ 追加（scheduler 19/19 + 全量 1135/1135）。
+- **普通模式两段式镜像（2026-09-05——CLI AGENT-LOOP §21 F-N1.5/F-N1.6）**：main.md 规模批次默认委托 coder 锚（T-N1.9）+ 任务书七字段标准锚（T-N1.10）。
 
 ### Changed (追加——2026-09-04 后半批)
 

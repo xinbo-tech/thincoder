@@ -4,7 +4,7 @@
  */
 import * as vscode from "vscode"
 import { t } from "../i18n.mjs"
-import { listSlots, newSlot, activeSlot } from "./session-io.mjs"
+import { resumeSlot } from "./session-io.mjs"
 import { _cwd, setProjectFolder } from "./panel-messages.mjs"
 import { loadSession } from "./panel-session.mjs"
 import { pushIndexStatus, maybePromptIndex } from "./panel-index.mjs"
@@ -40,8 +40,9 @@ export async function applyProjectSwitch(panel, fsPath) {
 export async function onProjectChanged(panel) {
     panel._slot = null
     const cwd = _cwd()
-    const slots = listSlots(cwd)
-    panel._slot = slots.length === 0 ? newSlot(cwd) : activeSlot(cwd)
+    // 2026-09-05 §10 D-2：认领点改 resumeSlot（本端记录/一次性继承/全新分配——与
+    // panel-session 的 ensureSlot/status 同点）；全新项目 claim 先行，文件首保存落盘
+    panel._slot = resumeSlot(cwd).slot
     pushProject(panel)
     loadSession(panel)   // clearMessages + new project's history + sessions + autoApprove/planMode
     pushIndexStatus(panel)

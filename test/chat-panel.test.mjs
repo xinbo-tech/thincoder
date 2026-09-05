@@ -7,11 +7,12 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import * as vscode from "vscode"
-import { loadSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { loadSlot, newSlot, switchToSlot, slotPath, loadManifest, saveManifest, writeEndMarker, readEndMarker, endMarkerPath, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { ensureSlot } from "../src/extension/panel-session.mjs"
 
 let tmp
 beforeEach(() => {
@@ -645,4 +646,108 @@ describe("session switch race guards (GitHub #2/#5 — 2026-08-28)", () => {
       server.close()
     }
   })
+})
+
+// ─── SESSION.md §10（R4）——面板层 end marker 流（T-M9：面板 resolve/新建/删除）────────
+
+describe("panel end-marker flows（SESSION.md §10 R4——T-M9）", () => {
+  const makePanel = async () => new (await import("../src/extension/chat-panel.mjs")).ChatPanel({
+    globalStorageUri: { fsPath: tmp },
+    workspaceState: { get: () => undefined, update: async () => {} },
+    subscriptions: [],
+  })
+
+  it("面板打开（ensureSlot）按本端记录回自己的槽——CLI 活于他槽不抢", async () => {
+    const dir = join(tmp, "sessions")
+    mkdirSync(dir, { recursive: true })
+    const DEAD = "99999999-dead"
+    const session = (title, content) => JSON.stringify({
+      version: 2, cwd: tmp, title, updatedAt: Date.now(),
+      history: [{ role: "user", content }], contextHistory: [], tasks: [],
+      sessionStart: "2026-09-01T00:00:00.000Z",
+    })
+    writeFileSync(slotPath(tmp, 1), session("panel session", "panel msg"))
+    writeFileSync(slotPath(tmp, 2), session("cli session", "cli msg"))
+    saveManifest(tmp, {
+      slots: { 1: { ts: 1 }, 2: { ts: 2 } },
+      slotSessions: { 1: DEAD, 2: `${process.pid}-foreign` },
+      active: 2,
+    }, null, { setActive: true })
+    writeEndMarker(tmp, 1) // 本端（面板）记录 = 槽 1
+
+    const panel = await makePanel()
+    assert.equal(panel._slot, null)
+    assert.equal(ensureSlot(panel), 1, "面板 resolve 回本端记录槽")
+    assert.equal(readEndMarker(tmp).slot, 1)
+    const m = loadManifest(tmp)
+    assert.equal(m.slotSessions[2], `${process.pid}-foreign`, "CLI 活槽属主未被抢")
+    assert.equal(ensureSlot(panel), 1, "粘性")
+  })
+
+  it("newSession → marker 跟随新槽；删记录槽（deleteSlotAndUpdate）→ 置空", async () => {
+    const dir = join(tmp, "sessions")
+    mkdirSync(dir, { recursive: true })
+    const DEAD = "99999999-dead"
+    writeFileSync(slotPath(tmp, 1), JSON.stringify({
+      version: 2, cwd: tmp, title: "old", updatedAt: Date.now(),
+      history: [{ role: "user", content: "old msg" }], contextHistory: [], tasks: [],
+      sessionStart: "2026-09-01T00:00:00.000Z",
+    }))
+    saveManifest(tmp, { slots: { 1: { ts: 1 } }, slotSessions: { 1: DEAD }, active: 1 }, null, { setActive: true })
+    writeEndMarker(tmp, 1)
+
+    const panel = await makePanel()
+    // 首开：回本端记录槽 1
+    assert.equal(ensureSlot(panel), 1)
+    assert.equal(readEndMarker(tmp).slot, 1)
+    // 面板新建 → 槽 2 + marker=2（槽 1 有条目/文件——不复用）
+    await panel._newSession()
+    const s2 = panel._slot
+    assert.equal(s2, 2, "新建会话绑定新槽")
+    assert.equal(readEndMarker(tmp).slot, 2, "marker 跟随新槽")
+    // 删本端记录槽 → 记录显式置空 + 文件保留（deleteSlotAndUpdate——deleteSession 内部同点）
+    const { deleteSlotAndUpdate } = await import("../src/extension/session-io.mjs")
+    deleteSlotAndUpdate(tmp, s2)
+    assert.ok(existsSync(endMarkerPath(tmp)), "marker 文件保留")
+    assert.equal(readEndMarker(tmp).slot, null, "记录置空——下次启动全新起步")
+  })
+
+  it("面板打开历史会话（pick）→ marker 跟随所选槽", async () => {
+    const panel = await makePanel()
+    ensureSlot(panel) // 槽 1 + marker=1
+    const s2 = newSlot(tmp) // 另一"会话"
+    // pick 历史会话：panel-messages switchSession 路径 = switchToSlot + 绑槽
+    const data = switchToSlot(tmp, s2)
+    assert.ok(data, "切换成功")
+    panel._slot = s2
+    assert.equal(readEndMarker(tmp).slot, s2, "pick 后 marker = 所选槽")
+  })
+
+  it("删除本端记录槽后面板自动重绑幸存槽 → marker 跟随幸存槽（重绑 = 落点，review 🟡#1）", async () => {
+    const dir = join(tmp, "sessions")
+    mkdirSync(dir, { recursive: true })
+    const DEAD = "99999999-dead"
+    // 槽 1 = 本端记录（当前面板槽）；槽 2 = 幸存会话（manifest active 指向它，死主可认领）
+    for (const [slot, title, content] of [[1, "mine", "my msg"], [2, "survivor", "survivor msg"]]) {
+      writeFileSync(slotPath(tmp, slot), JSON.stringify({
+        version: 2, cwd: tmp, title, updatedAt: Date.now(),
+        history: [{ role: "user", content }], contextHistory: [], tasks: [],
+        sessionStart: "2026-09-01T00:00:00.000Z",
+      }))
+    }
+    saveManifest(tmp, {
+      slots: { 1: { ts: 1 }, 2: { ts: 2 } },
+      slotSessions: { 1: DEAD, 2: DEAD },
+      active: 2,
+    }, null, { setActive: true })
+    writeEndMarker(tmp, 1)
+    const panel = await makePanel()
+    panel._slot = 1
+    assert.equal(ensureSlot(panel), 1, "面板在槽 1")
+    // 删除面板当前槽（= 本端记录槽）：deleteSlotAndUpdate 置空记录，但面板重绑幸存槽继续
+    await panel._deleteSession(1)
+    assert.equal(panel._slot, 2, "面板重绑幸存槽")
+    assert.equal(readEndMarker(tmp).slot, 2, "重绑 = 落点 → marker 跟随幸存槽（重启回幸存槽而非全新）")
+  })
+
 })
