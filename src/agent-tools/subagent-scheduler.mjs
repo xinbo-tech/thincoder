@@ -18,7 +18,7 @@ import { ASYNC_SUBAGENT_LIMIT } from "./subagent-async.mjs"
 // （D-SD3：域冲突/依赖未满足 → queued 等位）、补位扫描（D-SD4：最早可启动——
 // 依赖全满足 + 域无冲突——waiting 越行不阻塞 slot 位）、释放规则（D-SD5——round2
 // #3 锁定默认：依赖取消/失败 → 依赖者留 queued 标 dependency cancelled——仅父显式
-// 处置或 AUTO 自动启动）、终态墓碑（round1 #8/T-SD14：check/注入消费与取消写墓碑——
+// 处置或 AUTO 自动启动）、终态墓碑（round1 #8/T-SD14：自动通道注入消费与取消写墓碑——
 // consumed 视为满足；非 consumed unknown id 才拒）。状态全部派生不存储（单点事实）。
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -65,8 +65,8 @@ function showFile(parent, key) {
 
 /**
  * §20 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
- * 终态墓碑（check/注入消费——consumed；取消/失败——D-SD5 分支））：
- * - ok      = settle 成功（报告已产出）/ consumed（check/注入消费——T-SD14 视为满足）
+ * 终态墓碑（自动通道注入消费——consumed；取消/失败——D-SD5 分支））：
+ * - ok      = settle 成功（报告已产出）/ consumed（自动通道注入消费——T-SD14 视为满足）
  * - pending = running/queued 未终态（等启动/等完成）
  * - failed / cancelled = 终态但非成功——依赖者走 dependency cancelled 分支（round2 #3）
  * - unknown = 从未存在（spawn 时明确错误——非 consumed 的 unknown 拒——T-SD10）
@@ -141,8 +141,8 @@ export function describeBlockers(parent, entry) {
  * 会启动——非停滞）。自然流程中 wait 边恒指向先入者（依赖必须先前 spawn——unknown 拒 +
  * 文件冲突只阻断后入者——id 序）——混合环仅人工注入可构造（T-SD5 同族防御断言）——
  * 但状态既可能成环即机械可检——不依赖可达性论证。maybeRefillAsync 空转处不调用：refill
- * 嵌在 settle/cancel 链上无模型可见输出通道（抛错即破坏池操作）——check 守卫（async
- * 模块）+ status 视图（actions 模块）即 F-SL2 的报错落点。 */
+ * 嵌在 settle/cancel 链上无模型可见输出通道（抛错即破坏池操作）——status 视图（actions
+ * 模块）即 F-SL2 的报错/标记落点（§19.8：check 守卫随 check 删除）。 */
 export const STALL_NOTE = "cancel one task in the loop (action:'cancel') to break the cycle, then re-spawn it (AGENT-LOOP.md §21.1 P-SL2)"
 
 export function detectStall(parent) {
@@ -280,7 +280,7 @@ export function dependentLabels(parent, depId) {
 /** §20 D-SD3b 排队态面板刷新（⟦ev⟧queued 事件族——TUI routeSubToken 消费）：对全部
  *  queued 条目重算等待态并发射变化（去重 sig——kind/position/detail 全变才发）——
  *  调用点 = 一切队列突变与等待态变迁（spawn 入队 / settle 后补位与依赖转移 / cancel
- *  出队 / check 消费）。position = 队列序（D-A1 既有——cancel 前移同源）。 */
+ *  出队 / 自动通道消费）。position = 队列序（D-A1 既有——cancel 前移同源）。 */
 export function refreshQueuedTokens(parent, onToken) {
   if (typeof onToken !== "function") return
   const queue = parent._asyncQueue ?? []

@@ -117,61 +117,6 @@ test("§15 T1/T2: async spawn 立即返回、主会话可继续（不被阻塞�
 
 
 
-test("§15 T3: 多 async 按完成顺序消费（先完成先返回，arrival order）", async () => {
-  const { server, port } = await asyncServer([
-    { content: LONG_REPORT("fast") },
-    { content: LONG_REPORT("slow"), delay: 300 },
-  ])
-  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
-  try {
-    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-    const fast = await spawnAsync(parent, cwd, "快活")
-    const slow = await spawnAsync(parent, cwd, "慢活")
-    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const ctx = { agent: parent }
-    const c1 = JSON.parse(await subagentTool.execute({ action: "check", n: 1 }, ctx))
-    assert.equal(c1.id, fast.id, "第一次 check 返回先完成的快子代理")
-    assert.equal(c1.status, "done")
-    assert.ok(c1.report.includes("fast report"), "快子代理报告")
-    const c2 = JSON.parse(await subagentTool.execute({ action: "check", n: 2 }, ctx))
-    assert.equal(c2.id, slow.id, "第二次 check 返回慢子代理")
-    assert.ok(c2.report.includes("slow report"))
-    const c3 = JSON.parse(await subagentTool.execute({ action: "check", n: 3 }, ctx))
-    assert.deepEqual(c3, { done: true }, "全部消费后 done:true")
-    assert.equal(parent._asyncSubagents.size, 0, "消费后从 Map 删除")
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
-test("§15 T4: 带 id check 阻塞到该子代理完成", async () => {
-  const { server, port } = await asyncServer([
-    { content: LONG_REPORT("B"), delay: 400 },
-  ])
-  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
-  try {
-    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-    const b = await spawnAsync(parent, cwd, "任务B")
-    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const t0 = Date.now()
-    const r = JSON.parse(await subagentTool.execute({ action: "check", id: b.id, n: 1 }, { agent: parent }))
-    const elapsed = Date.now() - t0
-    assert.equal(r.id, b.id, "带 id 等特定子代理")
-    assert.ok(r.report.includes("B report"), "返回其报告")
-    assert.ok(elapsed >= 350, `阻塞到其完成（elapsed=${elapsed}ms）`)
-    // 消费后从 Map 删除（与 T3 同语义——本测试只 spawn 一个 b）
-    assert.equal(parent._asyncSubagents.size, 0)
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
 test("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 async 收已完成直注入 + 清空（collectSettledAsync 语义）", async () => {
   // §17 D-S1：回合尾不再 allSettled 等待——collectSettledAsync 只注入"回合内已 settle"
   // 项（① 直注入，形态同 §15）并移出池；未完成项移交挂起会话（agent-turn.mjs
@@ -249,8 +194,7 @@ test("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 
     const conclusionIdx = tokens.findIndex((t) => t.includes("主会话收尾"))
     assert.ok(doneIdx >= 0 && conclusionIdx > doneIdx,
       `done 先于结论（done@${doneIdx} < conclusion@${conclusionIdx}）——完成即冻结，块不在结论之后`)
-    // n 计数器 turn-end 清空 → 下轮首调重置 1
-    assert.equal(parent._asyncCheckLastN, 0)
+    // n 计数器随 check 动作一并删除（§19.8）——不再有回合尾重置
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })
@@ -473,80 +417,6 @@ test("§15 T8: 中断——async 运行中 Ctrl+C → abort 传播、_asyncSubag
 
 
 
-test("§15 T12: check 错误路径——未知/已消费 id", async () => {
-  const { server, port } = await asyncServer([{ content: LONG_REPORT("one") }])
-  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
-  try {
-    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const ctx = { agent: parent }
-    const unknown = JSON.parse(await subagentTool.execute({ action: "check", id: "999", n: 1 }, ctx))
-    assert.equal(unknown.status, "error")
-    assert.equal(unknown.error, "unknown async subagent id: 999")
-    // 已消费 id
-    const one = await spawnAsync(parent, cwd, "活1")
-    const c1 = JSON.parse(await subagentTool.execute({ action: "check", n: 2 }, ctx))
-    assert.equal(c1.id, one.id)
-    const consumed = JSON.parse(await subagentTool.execute({ action: "check", id: one.id, n: 3 }, ctx))
-    assert.equal(consumed.status, "error")
-    assert.ok(consumed.error.includes("unknown async subagent id"), "已消费 id 与未知 id 同款错误")
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
-test("§15 T13: n 超限（第 4 次 check > MAX_ASYNC_CHECKS=3）", async () => {
-  const { server, port } = await asyncServer([{ content: LONG_REPORT("one") }])
-  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
-  try {
-    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const ctx = { agent: parent }
-    const one = await spawnAsync(parent, cwd, "活1")
-    const c1 = JSON.parse(await subagentTool.execute({ action: "check", n: 1 }, ctx))
-    assert.equal(c1.id, one.id)
-    assert.deepEqual(JSON.parse(await subagentTool.execute({ action: "check", n: 2 }, ctx)), { done: true })
-    assert.deepEqual(JSON.parse(await subagentTool.execute({ action: "check", n: 3 }, ctx)), { done: true })
-    const over = JSON.parse(await subagentTool.execute({ action: "check", n: 4 }, ctx))
-    assert.equal(over.status, "error")
-    assert.equal(over.error, "check limit exceeded — use turn-end auto-wait for the rest")
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
-test("§15 T14: 乱序/重复 n → invalid read counter，不消费结果", async () => {
-  const { server, port } = await asyncServer([{ content: LONG_REPORT("A") }, { content: LONG_REPORT("B") }])
-  const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
-  try {
-    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const ctx = { agent: parent }
-    const a = await spawnAsync(parent, cwd, "活A")
-    await spawnAsync(parent, cwd, "活B")
-    const c1 = JSON.parse(await subagentTool.execute({ action: "check", n: 1 }, ctx))
-    assert.equal(c1.id, a.id, "第一次 n=1 正常消费")
-    const dup = JSON.parse(await subagentTool.execute({ action: "check", n: 1 }, ctx))
-    assert.equal(dup.status, "error")
-    assert.equal(dup.error, "invalid read counter — pass n = lastN+1")
-    assert.equal(parent._asyncSubagents.size, 1, "T14: 错误调用不消费结果")
-    // 正确续读仍可用（n=2 取第二个）
-    const c2 = JSON.parse(await subagentTool.execute({ action: "check", n: 2 }, ctx))
-    assert.ok(c2.report.includes("B report"), "续读正常")
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
 test("§15: async 仅 depth-0 有效（depth>0 报错拒绝）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const parent = await asyncParent({ baseURL: "http://127.0.0.1:1", apiKey: "x", model: "m" }, process.cwd())
@@ -590,8 +460,9 @@ test("§15: 后台子代理撞 turn-cap 自动拒绝继续（不弹 continue 面
 
 
 // ─── §19 subagent 工具面合并（AGENT-LOOP.md §19，T-M1..M17）─────────────────
-// T-M2..M4 = 上方既有 §15 用例经 action:"check" 迁移（arrival order / 指定 id 阻塞 /
-// n 计数与超限 / 消费删除——21 用例零改断言全绿，见 §19 验收 AC-M1）。
+// T-M2..M4 原为上方既有 §15 用例经 action:"check" 迁移（arrival order / 指定 id 阻塞 /
+// n 计数与超限 / 消费删除）——§19.8 check 动作删除后随删（见交付报告 N 条清单）；保留
+// 用例 = T-M1/T-M5..M9/T-M11 等（非 check 域断言零删除）。
 
 
 test("§19 T-M1: action 缺省 = spawn——显式 action:'spawn' 与缺省零差异（async 立即返回）", async () => {
@@ -668,7 +539,7 @@ test("§19 T-M6: status 指定 queued id → 返回 position（槽位满时）",
 
 
 
-test("§19 T-M7: status 指定 done 未取 id → done + 未取注记，不消费（随后 check 仍可取回）", async () => {
+test("§19 T-M7: status 指定 done 未取 id → done + 未取注记，不消费（自动通道仍送达）", async () => {
   const { server, port } = await asyncServer([{ content: LONG_REPORT("快完成") }])
   const cwd = mkdtempSync(join(tmpdir(), "cli-m7-"))
   try {
@@ -681,7 +552,7 @@ test("§19 T-M7: status 指定 done 未取 id → done + 未取注记，不消�
     const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: s.id }, ctx)))
     assert.equal(st.status, "done", "T-M7: status 返回 done")
     assert.equal(st.done, true)
-    assert.ok(String(st.note ?? "").includes("not yet consumed"), "T-M7: 未取注记（回合内 settle 未取——check 取回或回合尾注入）")
+    assert.ok(String(st.note ?? "").includes("not yet consumed"), "T-M7: 未取注记（回合内 settle 未取——自动通道送达）")
     assert.ok(parent._asyncSubagents.has(String(s.id)), "T-M7: 不消费——条目仍在池")
     // 挂起期 settle 项已移 _pendingAsyncResults（D-M2 范围）——不在池 → 与未知 id 同语义
     parent._suspended = true
@@ -691,7 +562,7 @@ test("§19 T-M7: status 指定 done 未取 id → done + 未取注记，不消�
     assert.ok(!parent._asyncSubagents.has(String(s2.id)), "挂起态 settle → 条目移出池（转 pending 注入）")
     const st2 = JSON.parse(String(await subagentTool.execute({ action: "status", id: s2.id }, ctx)))
     assert.equal(st2.status, "error", "挂起期项已移 pending——不计入 done 待取（事实源 = 池）")
-    assert.ok(st2.error.includes("unknown async subagent id"), "与 check 同款错误语义")
+    assert.ok(st2.error.includes("unknown async subagent id"), "与池未知 id 同款错误语义")
     parent._suspended = false
     parent._pendingAsyncResults = []
   } finally {
@@ -736,32 +607,7 @@ test("§19 T-M9: status 未知 id → error（不消费）", async () => {
   assert.equal(st.error, "unknown async subagent id: 999")
 })
 
-
-
-test("§19 T-M10: status 后接 check——n 计数不受 status 影响（动作间零串扰）", async () => {
-  const { server, port } = await asyncServer([{ content: LONG_REPORT("活") }])
-  const cwd = mkdtempSync(join(tmpdir(), "cli-m10-"))
-  try {
-    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
-    const s = JSON.parse(String(await subagentTool.execute({ task: "活", role: "coder", async: true }, ctx)))
-    const entry = parent._asyncSubagents.get(String(s.id))
-    await entry.promise
-    const st = JSON.parse(String(await subagentTool.execute({ action: "status", id: s.id }, ctx)))
-    assert.equal(st.status, "done")
-    assert.equal(parent._asyncCheckLastN ?? 0, 0, "T-M10: status 不推进 check 读数")
-    const c1 = JSON.parse(String(await subagentTool.execute({ action: "check", id: s.id, n: 1 }, ctx)))
-    assert.ok(c1.report.includes("活 report"), "T-M10: status 后 check 从 n=1 正常取回")
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
-test("§19 T-M11: subagent_check/escalate 工具名消失——depth-0 schema 无此二工具；subagent 带 action 六动作参数 + 池装饰", async () => {
+test("§19 T-M11: subagent_check/escalate 工具名消失——depth-0 schema 无此二工具；subagent 带 action 五动作参数 + 池装饰", async () => {
   const { createAgent } = await import("../src/agent.mjs")
   const { prepareRun } = await import("../src/agent/setup.mjs")
   const cwd = mkdtempSync(join(tmpdir(), "cli-m11-"))
@@ -778,15 +624,14 @@ test("§19 T-M11: subagent_check/escalate 工具名消失——depth-0 schema �
     assert.ok(!fns.includes("escalate"), "T-M11: escalate 工具名消失（并入 action）")
     const sub = toolSchemas.find((s) => s.function.name === "subagent").function
     const actionProp = sub.parameters.properties.action
-    assert.deepEqual(actionProp.enum, ["spawn", "check", "status", "escalate", "cancel", "panel"], "T-M11: action 参数六动作（§19.5 + §19.6 panel）")
-    assert.ok(actionProp.description.includes("BLOCKS until the target finishes"), "T-M11: action 描述引导 check 阻塞")
+    assert.deepEqual(actionProp.enum, ["spawn", "status", "escalate", "cancel", "panel"], "T-M11: action 参数五动作（§19.8 check 删除——§19.5 + §19.6 panel）")
     assert.ok(actionProp.description.includes("kimi:kimi-k3"), "T-M11: escalate 候选池装饰（原 withPool 同款）")
-    assert.ok(sub.description.includes("action:'status'") && sub.description.includes("action:'check'"), "T-M11: 工具描述含动作面")
+    assert.ok(sub.description.includes("action:'status'"), "T-M11: 工具描述含动作面")
     assert.ok(sub.description.includes("action:'cancel'"), "T-M11: 工具描述含 cancel 动作（§19.5）")
     assert.ok(sub.description.includes("action:'panel'"), "T-M11: 工具描述含 panel 动作（§19.6）")
     assert.ok(sub.parameters.properties.view, "T-M11: panel view 参数在 schema")
     assert.ok(sub.parameters.properties.freeze, "T-M11: panel freeze 参数在 schema")
-    assert.ok(sub.description.includes("SIX actions"), "T-M11: 单工具六动作")
+    assert.ok(sub.description.includes("FIVE actions"), "T-M11: 单工具五动作")
   } finally {
     rmSync(cwd, { recursive: true, force: true })
   }

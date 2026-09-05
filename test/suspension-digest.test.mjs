@@ -328,7 +328,7 @@ test("T-H2 多条目近邻 settle → 合并一轮消化（N1 成本护栏——
 
 
 
-test("T-H3 check 提前消费 → 池空 → 无多余消化轮（AC-H2——不重复烧）", async () => {
+test("T-H3 自动通道回合尾送达 → 池空 → 无多余消化轮（AC-H2——不重复烧；§19.8 后自动通道为唯一消费方——原 check 提前消费场景不可构造）", async () => {
   const ctx = trackedCtx({
     runAgent: async (_agent, text, cbs, opts) => {
       ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false })
@@ -338,12 +338,12 @@ test("T-H3 check 提前消费 → 池空 → 无多余消化轮（AC-H2——不
           cbs.onToken?.(`${ctx.entryA.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
           mockSettle(_agent, ctx.entryA, LONG_REPORT("A 结果"))
         }, 30)
-        setTimeout(() => {
-          // 模型 action:'check' 消费（取走即从池删除——T3 消费语义）
-          _agent._asyncSubagents.delete(String(ctx.entryA.id))
-        }, 60)
-        await new Promise((r) => setTimeout(r, 100))
-        return "check 已取回"
+        await new Promise((r) => setTimeout(r, 80))
+        // 回合尾自动通道消费（undriven collectSettledAsync 形态——注入 + 出池——§17.5.4 #2）：
+        // §19.8 后自动通道是唯一消费方——送达即从池移除——池空 → 无多余消化轮。
+        _agent.history.push({ role: "user", content: `[System reminder: async subagent #${ctx.entryA.id} finished]\nA 结果 report` })
+        _agent._asyncSubagents.delete(String(ctx.entryA.id))
+        return "收尾"
       }
       return "ok"
     },
@@ -352,8 +352,8 @@ test("T-H3 check 提前消费 → 池空 → 无多余消化轮（AC-H2——不
   const A = fakeEntry(ctx.agent, 1)
   ctx.entryA = A
   await runAgentTurn(ctx, "首回合")
-  assert.deepEqual(ctx.calls.runAgent.map((c) => c.text), ["首回合"], "check 消费后无消化轮（不重复烧）")
-  assert.ok(!ctx.agent.history.some((m) => String(m.content ?? "").includes("finished")), "无收尾注入（check 已消费——结果在工具结果里）")
+  assert.deepEqual(ctx.calls.runAgent.map((c) => c.text), ["首回合"], "回合尾送达后池空——无消化轮（不重复烧）")
+  assert.ok(ctx.agent.history.some((m) => String(m.content ?? "").includes("async subagent #1 finished")), "回合尾自动送达（注入即消费）")
   assert.equal(poolSize(ctx.agent), 0)
   assert.equal(ctx.state.status, "Ready")
 })

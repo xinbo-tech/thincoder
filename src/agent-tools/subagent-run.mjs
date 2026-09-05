@@ -20,7 +20,8 @@ import {
  * The child runs the EXACT blocking pipeline (runChildPipeline — relay /
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
  * but the parent does not await it: the promise is parked in _asyncSubagents and
- * consumed via action:'check' or the turn-end auto-wait. Slot queue: running
+ * consumed by the auto channel (§19.8 — turn-end collection / suspension digest;
+ * the check action is gone). Slot queue: running
  * count < ASYNC_SUBAGENT_LIMIT → start now; ≥ limit → enqueue (status "queued",
  * position = queue index) — never rejected, never requiring the model to batch.
  * @returns {string} JSON ack {id, role, status: running|queued[, position][, waiting][, reason]}

@@ -154,7 +154,7 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
   if (files.length > 0 || dependsOn.length > 0) {
     for (const d of dependsOn) {
       if (depInfo(parent, d).state === "unknown") {
-        throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed by action:'check' (or auto-injected) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
+        throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed (auto-delivered to the model) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
       }
     }
     assertNoDepCycle(parent, dependsOn)

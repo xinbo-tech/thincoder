@@ -40,9 +40,9 @@ function logToolError(toolName, args, error) {
 
 /**
  * §19 action-level classification (AGENT-LOOP.md §19 D-M1): the merged subagent
- * tool expresses spawn (side effect) and check/status (read-only queries) through
+ * tool expresses spawn (side effect) and status (read-only query) through
  * its `action` parameter — the tool-level readonly flag can no longer express both.
- * dispatch Phase-1/Phase-2 classifies per action: check/status behave as readonly
+ * dispatch Phase-1/Phase-2 classifies per action: status behaves as readonly
  * (planMode pass / no permission ask / batchable), spawn keeps its non-readonly
  * gates, escalate runs non-readonly AND serially (the retired escalate tool had no
  * parallel flag — zero behavior change under the merged surface).
@@ -50,13 +50,13 @@ function logToolError(toolName, args, error) {
  * stops, never starts. isSubagentControlAction feeds the SAME two gate sites as
  * readonly (planMode pass / no permission ask — never joins a batch approval
  * group / no handler → not denied — digest 内 cancel 放行).
- * §19.6 panel (round1 #5): view 面归只读类（同 check/status——planMode 放行、免
+ * §19.6 panel (round1 #5): view 面归只读类（同 status——planMode 放行、免
  * 审批、可批并行）；freeze 面归控制类（同 cancel——planMode 放行、免权限审批、
  * 批审批不入组、digest 内放行）。freeze 存在（非空 key）即控制类——否则只读类。
  */
 function isSubagentReadonlyAction(toolName, args) {
   // §6 memory 工具面重构（MEMORY.md §6 D-M5）：memory search/list 是只读动作——与
-  // subagent check/status 同分类（planMode 放行/免审批——Phase-2 批并行只认工具级
+  // subagent status 同分类（planMode 放行/免审批——Phase-2 批并行只认工具级
   // readonly/parallel，memory 无 parallel → 按非只读串行，见 MEMORY.md §6.4 实现注）。
   // 动作级判定——不能按工具名（同一 memory 工具的 put/delete/clear 保持侧效门）。
   if (toolName === "memory") {
@@ -71,7 +71,8 @@ function isSubagentReadonlyAction(toolName, args) {
   }
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
-  if (action === "check" || action === "status") return true
+  // §19.8: check 动作已删除——只读面仅剩 status（planMode 放行/免权限审批/可批并行）
+  if (action === "status") return true
   // §19.6 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
   if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
   return false
@@ -357,7 +358,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
   for (const item of prepared) {
     // escalate action keeps the retired escalate tool's serial placement (no
     // parallel flag): it flushes the batch and runs alone in call order (§19 —
-    // spawn stays parallel; check/status classify as readonly and batch freely).
+    // spawn stays parallel; status classifies as readonly and batch freely).
     if (item.tool && !item.tool.readonly
         && (!item.tool.parallel || isSubagentEscalateAction(item.tool.name, item.args))) {
       await flush()

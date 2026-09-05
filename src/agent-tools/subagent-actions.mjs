@@ -5,7 +5,7 @@
  * shortTouchedPath/statusFields 摘要助手随行）/ executePanelAction（§19.6——面板镜像
  * view + 门控 freeze——panelFreezeGate/blockKeyIn 随行）/ executeEscalateAction（§19
  * D-M4——飞刀——touchedFilesNote 随行）。
- * check/cancel 动作执行器与共享 post-spawn 管线留在 subagent-async.mjs；
+ * §19.8 check 删除后仅 cancel 动作执行器与共享 post-spawn 管线留在 subagent-async.mjs；
  * §20 调度器 + 文件域组在 ./subagent-scheduler.mjs（describeBlockers 由此导入）。
  */
 import { isAbsolute, relative } from "node:path"
@@ -20,13 +20,14 @@ import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
 
 /**
  * subagent action:"status" (§19 D-M2, new): NON-BLOCKING async-pool query —
- * returns immediately, never consumes a result and never touches the check read
- * counter (T-M10). Source of truth = the pool (_asyncSubagents): entries moved
- * to _pendingAsyncResults during a suspension (§17 D-S3 ② — injected at the next
- * run start) are no longer in the pool and are NOT counted as done-waiting.
+ * returns immediately and never consumes a result (results belong to the auto
+ * channel — §19.8: no check action any more). Source of truth = the pool
+ * (_asyncSubagents): entries moved to _pendingAsyncResults during a suspension
+ * (§17 D-S3 ② — injected at the next run start) are no longer in the pool and
+ * are NOT counted as done-waiting.
  * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?,
  *   touchedFiles?/touchedMore?/touched? ... } for that entry; unknown id → error
- *   (same wording as check — T12 semantics)
+ *   (T12 semantics — unknown async-subagent id error, same wording as the pool).
  * - id omitted → { overview: { running: [{id, role, model, elapsedSec, turn,
  *   maxTurns, touchedFiles?/touched?}], queued: [{id, role, position, touched?}],
  *   done: [{id, role}] } } — live queue positions (index in _asyncQueue + 1).
@@ -34,7 +35,8 @@ import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
  * 计数——相对查询方 cwd；0 改动 → touched 占位）；queued 条目带 touched 占位
  * "—（未启动）"；done/error/取消条目无 touched 字段（round3 #9）。
  * A settled-but-unconsumed entry (settled during a NORMAL turn) reports done
- * with a "not yet consumed" note — check still retrieves it afterwards.
+ * with a "not yet consumed" note — the auto channel (turn-end collection / the
+ * suspension digest) still delivers it afterwards (§19.8: sole consumption path).
  */
 /** §19.5 D-M5 decision-field assembly (F9): running entries report
  *  {id, role, model, elapsedSec, turn, maxTurns} — the data needed to decide
@@ -119,12 +121,12 @@ export function executeStatusAction(args, ctx) {
       }
       return JSON.stringify(out)
     }
-    // done = settled during this turn and not yet consumed — check still retrieves it
-    // (§17.5: at a driven turn end it stays pooled → the suspension digest consumes it).
+    // done = settled during this turn and not yet consumed — the auto channel still
+    // delivers it (§19.8: turn-end collection / the suspension digest — no fetch action).
     target.status = "done"
     target.done = true
     if (entry.error) target.error = entry.error
-    target.note = "settled, not yet consumed — retrieve via check or the suspension digest injects it"
+    target.note = "settled, not yet consumed — delivered by the auto channel (turn-end collection or the suspension digest injects it)"
     return JSON.stringify(target)
   }
   const overview = { running: [], queued: [], done: [] }
@@ -264,7 +266,7 @@ export function executePanelAction(args, ctx) {
         const qi = queue.indexOf(e)
         b.position = qi >= 0 ? qi + 1 : (e.position ?? null)
       } else {
-        b.status = "done" // 回合内 settle 未取——status action 可查/check 可取回
+        b.status = "done" // 回合内 settle 未取——自动通道（回合尾 collect/挂起 digest）送达
       }
       blocks.push(b)
     }

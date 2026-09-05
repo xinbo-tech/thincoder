@@ -1,10 +1,11 @@
 /**
- * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + check/cancel 动作执行器
- * （AGENT-LOOP.md §19：subagent 单工具六动作 spawn/check/status/escalate/cancel/panel——
- * spawn 路径与工具面在 subagent.mjs；check/cancel 动作执行器与机械、管线在本模块）。
- * 内容：resolveChildProvider / async 常量（ASYNC_SUBAGENT_LIMIT/MAX_ASYNC_CHECKS）/
- * executeCheckAction / executeCancelAction + cancelAsyncSubagent（§19.5 D-M6——工具与
- * TUI ⏹ 共用）/ runChildPipeline / injectAsyncResult / buildChildRunOpts / mergeChildMutations。
+ * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + cancel 动作执行器
+ * （AGENT-LOOP.md §19：subagent 单工具五动作 spawn/status/escalate/cancel/panel——§19.8
+ * check 删除后工具面只剩五动作；spawn 路径与工具面在 subagent.mjs；cancel 动作执行器
+ * 与机械、管线在本模块——check 执行器随 §19.8 删除）。
+ * 内容：resolveChildProvider / async 常量（ASYNC_SUBAGENT_LIMIT）/ executeCancelAction +
+ * cancelAsyncSubagent（§19.5 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
+ * injectAsyncResult / buildChildRunOpts / mergeChildMutations。
  * 拆分（2026-09-05——Module Split Policy §20.9——纯迁移零行为变化）：§20 调度器 + 文件域
  * 组 → ./subagent-scheduler.mjs（尾部 re-export 保测试动态 import 面——queueRunnable/
  * describeBlockers）；status/panel/escalate 动作执行器 → ./subagent-actions.mjs。
@@ -17,13 +18,13 @@ import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
 import {
-  describeBlockers, dependentLabels, detectStall, maybeRefillAsync, refreshQueuedTokens, STALL_NOTE,
+  dependentLabels, maybeRefillAsync, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
 
-// Async subagent limits (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
-// background spawns + the per-turn check budget (consult-style loop guard).
+// Async subagent limit (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
+// background spawns. The per-turn check budget was deleted with the check action
+// (§19.8 — results arrive only via the auto channel; no loop guard needed).
 export const ASYNC_SUBAGENT_LIMIT = 4
-export const MAX_ASYNC_CHECKS = 3
 
 /**
  * Resolve the sub-agent's provider from a model override string (shared with the
@@ -60,160 +61,6 @@ export function resolveChildProvider(parent, modelArg) {
   return { ...parent.provider, model: modelArg }
 }
 
-/** Wait for an async entry to settle (or the parent signal to abort), parked on
- *  the agent's waiter list — the entry settle finally wakes every waiter (same
- *  pattern as consult_check's session waiters). Returns "aborted" on signal. */
-function wakeOnAsyncSettle(agent, ctx) {
-  return new Promise((resolve) => {
-    const cleanup = () => {
-      const i = (agent._asyncWaiters ?? []).indexOf(w)
-      if (i >= 0) agent._asyncWaiters.splice(i, 1)
-      ctx.signal?.removeEventListener("abort", onAbort)
-    }
-    const w = () => { cleanup(); resolve("settled") }
-    const onAbort = () => { cleanup(); resolve("aborted") }
-    ;(agent._asyncWaiters ??= []).push(w)
-    if (ctx.signal) {
-      if (ctx.signal.aborted) { onAbort(); return }
-      ctx.signal.addEventListener("abort", onAbort, { once: true })
-    }
-  })
-}
-
-/**
- * subagent action:"check" (§19 — the retired subagent_check's semantics verbatim,
- * AGENT-LOOP.md §15 D-A2): fetch async subagent results.
- * - id omitted → the next completed child in ARRIVAL order (first finished first)
- * - id given → block until THAT child finishes (queued items wait for their start)
- * - n (required) → 1-based read counter, strictly incrementing per run (loop
- *   guard); capped at MAX_ASYNC_CHECKS per turn — beyond that, use the turn-end
- *   auto-wait. Errors never consume results.
- * Consumed entries are deleted from the map — a re-check of the same id is the
- * same "unknown async subagent id" error (T12).
- */
-export async function executeCheckAction(args, ctx) {
-  const agent = ctx.agent
-  const map = agent._asyncSubagents ?? new Map()
-  const { id, n } = args ?? {}
-  // Strict 1-based incrementing read counter (D-A2, review #1): out-of-order /
-  // repeated n is rejected WITHOUT consuming a result (T14).
-  const lastN = agent._asyncCheckLastN ?? 0
-  if (!Number.isInteger(n) || n !== lastN + 1) {
-    return JSON.stringify({ status: "error", error: "invalid read counter — pass n = lastN+1" })
-  }
-  if (n > MAX_ASYNC_CHECKS) {
-    return JSON.stringify({ status: "error", error: "check limit exceeded — use turn-end auto-wait for the rest" })
-  }
-  agent._asyncCheckLastN = n
-
-  let target = null
-  if (id !== undefined && id !== null && String(id) !== "") {
-    target = map.get(String(id))
-    // Unknown OR already-consumed ids (consumed entries are deleted) — same error (T12).
-    if (!target) return JSON.stringify({ id: String(id), status: "error", error: `unknown async subagent id: ${id}` })
-  }
-
-  // Block until the target settles (specific id / next completed in arrival order).
-  // §20（advisor code review 🟡 处置）：不可启动的 queued 条目会让阻塞等待永久悬挂
-  // （check 是同步工具调用——模型回合被钉死——仅 Ctrl+C 可解）。补位（refill）只由
-  // settle/cancel/spawn 事件驱动：**池内无 running 条目 = 无未来 settle 事件 = queued
-  // 条目永不启动**（槽满等位的 slot 条目在 running 归零时已被最后一次 settle 的 refill
-  // 启动——此时仍 queued 者必为不可启动：depc 锁定或阻塞源本身不可启动）。
-  for (;;) {
-    if (target) {
-      if (target.done) break
-      // 守卫 ①（target 级）：queued 目标在无 running 池中不可启动 → 立即返回（无论
-      // wait/depc——阻塞源链底为 depc 的 wait 条目同样无 settle 可期）。
-      if (target.status === "queued" && !target.cancelled) {
-        const blk = describeBlockers(agent, target)
-        if (blk.kind === "depc") {
-          return JSON.stringify({
-            id: String(target.id), status: "queued", waiting: "dependency-cancelled",
-            reason: blk.detail,
-            note: "check would block forever — this task is locked by a cancelled/failed dependency and will not start on its own; cancel it (action:'cancel') or run an AUTO session to release it (AGENT-LOOP.md §20 round2 #3)",
-          })
-        }
-        if (![...map.values()].some((e) => e.status === "running")) {
-          const qi = (agent._asyncQueue ?? []).indexOf(target)
-          const out = { id: String(target.id), status: "queued", position: qi >= 0 ? qi + 1 : undefined }
-          if (blk.detail) out.reason = blk.detail
-          // §21.1 P-SL2（D-SL2）：停滞机械检测——目标处于不可自行解除的等待闭包（无
-          // running + 每 queued 的 blocker 均闭包内 + 无 depc）→ 明确报错列本任务
-          // 阻塞链 + 引导 cancel 破环重派（F-SL2——非静默）；不满足停滞判据的形态
-          // （单 queued/depc 滞留/外逃 blocker）维持下方原守卫文本——零行为变化。
-          const stall = detectStall(agent)
-          if (stall) {
-            const chain = stall.chains.find((c) => c.task === target)?.text ?? stall.chains[0]?.text
-            out.stall = true
-            out.note = `scheduler stall — the queued tasks block each other in a closed wait loop that can never settle on its own:\n${chain}\n${STALL_NOTE}`
-          } else {
-            out.note = "check would block indefinitely — this queued task cannot start while the pool has no running task (starts are settle-driven); cancel it (action:'cancel') or make pool progress (AUTO session starts it on the next settle/refill)"
-          }
-          return JSON.stringify(out)
-        }
-      }
-      const woke = await wakeOnAsyncSettle(agent, ctx)
-      if (woke === "aborted") return JSON.stringify({ done: true, stopped: true })
-      continue
-    }
-    const completed = [...map.values()].filter((e) => e.done)
-    if (completed.length > 0) {
-      target = completed.sort((a, b) => (a._settleSeq ?? 0) - (b._settleSeq ?? 0))[0]
-      break
-    }
-    if (map.size === 0) return JSON.stringify({ done: true })
-    // 守卫 ②（arrival-order）：池内无 running（completed 已空 → 无 done）且仍有条目 →
-    // 全为 queued 且永不启动 → 立即返回明确错误（防无界悬挂——补 cancel 引导）。
-    if (![...map.values()].some((e) => e.status === "running")) {
-      // §21.1 P-SL2（D-SL2）：停滞机械检测——全 queued 且每 blocker 闭包内（无 depc 等
-      // 外部可解形态）→ 明确错误逐条列阻塞链（F-SL2——列链 + 引导 cancel 破环重派）；
-      // 不满足停滞判据的形态（单 queued/depc 滞留/外逃 blocker）维持原守卫文本——零变化。
-      const stall = detectStall(agent)
-      if (stall) {
-        return JSON.stringify({
-          status: "error",
-          error: `scheduler stall — the pool holds only queued tasks that block each other in closed wait loops; nothing can ever settle on its own:\n${stall.chains.map((c) => c.text).join("\n")}\n${STALL_NOTE}`,
-        })
-      }
-      const stuck = [...map.values()]
-        .map((e) => `${e.role}#${e.id}（${describeBlockers(agent, e).kind === "depc" ? "dependency-cancelled" : "blocked"}）`)
-        .join(", ")
-      return JSON.stringify({
-        status: "error",
-        error: `nothing will settle — the pool holds only queued task(s) that cannot start without a running task: ${stuck}; cancel them (action:'cancel') or make pool progress (AUTO session starts them on the next settle/refill)`,
-      })
-    }
-    const woke = await wakeOnAsyncSettle(agent, ctx)
-    if (woke === "aborted") return JSON.stringify({ done: true, stopped: true })
-  }
-
-  map.delete(String(target.id))
-  // §20（advisor code review 🟡 处置）：check 消费与挂起期 settle 的竞态——settle 在挂起
-  // 分支先把条目移交 _pendingAsyncResults（本 check 在途等待期间发生——digest 回合）——
-  // 消费时若条目已被移入 pending，反向清除（两消费点互斥——防下轮 prepareRun 重复注入
-  // ——D-S3"只注入一次"不变式——同一报告双送达违例）。
-  const pend = agent._pendingAsyncResults
-  if (Array.isArray(pend)) {
-    const pendIdx = pend.findIndex((x) => String(x.id) === String(target.id))
-    if (pendIdx >= 0) pend.splice(pendIdx, 1)
-  }
-  // §20 D-SD5 终态墓碑（T-SD14）：消费即终态——dependsOn 引用该 id 的条目视其终态
-  // 满足/标注（consumed-ok = 已满足；failed/cancelled = 依赖取消/失败分支）。写于
-  // 观察 cancelled/error 之后——取消/失败条目不被误记 consumed。
-  if (target.cancelled) {
-    const tombstones = (agent._asyncTombstones ??= new Map())
-    tombstones.set(String(target.id), { status: "cancelled", role: target.role })
-    // Cancelled entries are removed from the pool at their cancel — an in-flight
-    // check that held the entry object observes `cancelled` and reports the same
-    // unknown-id error a fresh check gets (nothing to consume; §19.5 T-M27).
-    return JSON.stringify({ id: String(target.id), status: "error", error: `unknown async subagent id: ${target.id}` })
-  }
-  const tombstones = (agent._asyncTombstones ??= new Map())
-  tombstones.set(String(target.id), { status: target.error ? "failed" : "consumed", role: target.role })
-  if (target.error) return JSON.stringify({ id: String(target.id), status: "error", error: target.error })
-  return JSON.stringify({ id: String(target.id), role: target.role, status: "done", report: target.report ?? "" })
-}
-
 /**
  * §19.5 D-M6 cancel 核心（工具路径与 TUI ⏹ 共用）：定向中止单个后台子代理，id 必填。
  * - queued 目标（未启动无 controller）：出队 + 后续 position 前移 + settle waiter
@@ -235,7 +82,7 @@ export function cancelAsyncSubagent(agent, id) {
   }
   if (entry.cancelled) return { id: key, status: "cancelled" } // abort already in flight — idempotent
   if (entry.status === "queued") {
-    // 出队 + position 释放/前移；settle 使在途 check waiter 终止（观察 cancelled）
+    // 出队 + position 释放/前移（§19.5 D-M6——无 abort）
     const queue = agent._asyncQueue ?? []
     const qi = queue.indexOf(entry)
     if (qi >= 0) {
@@ -251,7 +98,6 @@ export function cancelAsyncSubagent(agent, id) {
     const tombstones = (agent._asyncTombstones ??= new Map())
     tombstones.set(key, { status: "cancelled", role: entry.role })
     entry._settle?.()
-    for (const w of agent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
     return { id: key, status: "cancelled", was: "queued" }
   }
   // running：标记 + 条目 abort——settle finally 跑 cancelled 分支（移除 + stopped + 提醒）
@@ -350,10 +196,11 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
 
 /**
  * Inject one settled async entry into the parent history as a user-role reminder
- * (§17 D-S3 — single shared form for BOTH consumption points: turn-end collection
- * (collectSettledAsync, agent.mjs) and the run-start _pendingAsyncResults injection;
- * the message shape is identical to the §15 collector's). Consumed = the caller
- * removes the entry from its container; no double-inject across the two paths.
+ * (§17 D-S3 — the auto channel, sole consumption path since §19.8: turn-end
+ * collection (collectSettledAsync, agent.mjs) and the run-start _pendingAsyncResults
+ * injection; the message shape is identical to the §15 collector's). Consumed =
+ * the caller removes the entry from its container; no double-inject across the
+ * two paths (D-S3 "inject once" invariant).
  */
 export async function injectAsyncResult(agent, entry) {
   const body = entry.error ?? entry.report ?? "(no report)"
@@ -364,8 +211,8 @@ export async function injectAsyncResult(agent, entry) {
   })
   // §20 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
   // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
-  // 后续 spawn 视为已满足（T-SD14 同 check 消费语义；error 条目记 failed——依赖取消/
-  // 失败分支照旧，不误标成功）。
+  // 后续 spawn 视为已满足（T-SD14 消费终态语义——§19.8 后 check 消费路径删除，本自动
+  // 通道为唯一消费方；error 条目记 failed——依赖取消/失败分支照旧，不误标成功）。
   const tombstones = (agent._asyncTombstones ??= new Map())
   tombstones.set(String(entry.id), { status: entry.error != null ? "failed" : "consumed", role: entry.role })
 }

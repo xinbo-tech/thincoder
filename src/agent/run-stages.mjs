@@ -134,12 +134,10 @@ export async function finalizeAgentTurn(agent, ctx) {
     }
     agent._asyncSubagents?.clear()
     agent._asyncQueue = []
-    agent._asyncCheckLastN = 0
   } else if (thrownError instanceof ContinueError) {
-    // keep _asyncSubagents + the check counter — the resumed run continues them
+    // keep _asyncSubagents — the resumed run continues them
   } else {
     await collectSettledAsync(agent, { suspDriven })
-    agent._asyncCheckLastN = 0
   }
   agent._inAutoTurn = false
   // §17 D-S6: auto-turn guard marks survive into the next USER run (restored at its
@@ -166,7 +164,7 @@ export async function finalizeAgentTurn(agent, ctx) {
  * - suspDriven=true (the interaction layer runs suspensionSession after this
  *   run): NO direct inject — settled entries STAY pooled (settled not consumed)
  *   for the session's first sweepSettledToPending → digest turn (§17.5 — done
- *   条目留池等消化轮注入；check/status 在 sweep 前仍从池读——17.5.2 不变面)。
+ *   条目留池等消化轮注入；status 在 sweep 前仍从池读——17.5.2 不变面（§19.8：check 已删——自动通道为唯一消费方）)。
  * maybeRefillAsync runs in both modes (starts queued heads whose slot freed).
  * Single ownership: entries settled inside a suspension session were moved to
  * _pendingAsyncResults by the settle callback, so this only sees user-turn

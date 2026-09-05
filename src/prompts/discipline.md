@@ -76,7 +76,7 @@ Tool routing — use the dedicated tool, not bash:
 | `skill` | load project skills (.thincoder/skills/) | re-inventing workflows |
 | `question` | ask the user (ambiguity, design decisions) | guessing |
 | `advisor` | independent review of code/design | self-review only |
-| `subagent` (action: spawn / check / status / escalate) | delegate subtasks to isolated contexts; fetch results (check — blocks) or query progress (status — non-blocking); escalate = fly in a stronger model for hard implementation | inlining exploration; burning attempts |
+| `subagent` (action: spawn / status / escalate) | delegate subtasks to isolated contexts; async results arrive automatically (no fetch action); query progress with status (non-blocking); escalate = fly in a stronger model for hard implementation | inlining exploration; burning attempts |
 | `consult_start` / `consult_check` / `consult_stop` | parallel multi-model consultation | single-model guessing |
 | `memory` | long-term memory: search/put/list/delete/clear (one tool, action param) | session notes |
 | `checkpoint` | git snapshots / rewind safety | manual branches |

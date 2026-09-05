@@ -10,10 +10,10 @@ import { join } from "node:path"
 
 
 
-test("§19 T-M12: 描述/提示词内容引导——action/status/check 阻塞（内容断言——§18.11 起镜像锚在设计文档逐字定稿——两端各自照抄）", async () => {
+test("§19 T-M12: 描述/提示词内容引导——action/status 面板动作面（内容断言——§18.11 起镜像锚在设计文档逐字定稿——两端各自照抄）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
-  for (const probe of ["action:'check'", "action:'status'", "action:'escalate'", "BLOCKS until the target finishes", "NON-BLOCKING", "consumes nothing"]) {
+  for (const probe of ["action:'status'", "action:'escalate'", "NON-BLOCKING", "consumes nothing"]) {
     assert.ok(d.includes(probe), `subagent 描述缺 "${probe}"`)
   }
   // §19.6 NF-P（round1 #8）：六动作描述预算——panel 面引导（view 视图 + freeze 门控 + 降级注）
@@ -21,17 +21,18 @@ test("§19 T-M12: 描述/提示词内容引导——action/status/check 阻塞�
     assert.ok(d.includes(probe), `§19.6 subagent 描述缺 "${probe}"（六动作预算）`)
   }
   const actionDesc = subagentTool.parameters.properties.action.description
-  assert.ok(actionDesc.includes("BLOCKS until the target finishes"), "action 参数描述含 check 阻塞警告")
+  assert.ok(actionDesc.includes("no fetch action"), "action 参数描述含自动送达口径（§19.8——无 fetch 动作）")
   assert.ok(actionDesc.includes("panel"), "action 参数描述含 panel（§19.6）")
   // 提示词同步面（main.md/engineering.md/discipline.md——退役工具名已换 action 语义）
   const PROMPTS = new URL("../src/prompts/", import.meta.url)
   const mainMd = readFileSync(new URL("main.md", PROMPTS), "utf8")
   const engMd = readFileSync(new URL("engineering.md", PROMPTS), "utf8")
   const discMd = readFileSync(new URL("discipline.md", PROMPTS), "utf8")
-  assert.ok(mainMd.includes("action:'check'") && mainMd.includes("action:'status'") && mainMd.includes("action:'escalate'"), "T-M12: main.md 动作面引用（check/status/escalate）")
+  assert.ok(mainMd.includes("action:'status'") && mainMd.includes("action:'escalate'"), "T-M12: main.md 动作面引用（status/escalate）")
+  assert.ok(mainMd.includes("results reach you automatically, no polling needed"), "T-M12: main.md 引导自动送达（§19.8——无 check 轮询）")
   assert.ok(mainMd.includes("peek at progress without blocking via `action:'status'`"), "T-M12: main.md 引导查进度用 status")
   assert.ok(engMd.includes("`escalate` is unavailable in engineering mode") && engMd.includes("action:'escalate'"), "T-M12: engineering.md escalate 不可用 + 动作名")
-  assert.ok(discMd.includes("action: spawn / check / status / escalate"), "T-M12: discipline.md 工具表四动作")
+  assert.ok(discMd.includes("action: spawn / status / escalate"), "T-M12: discipline.md 工具表三动作（§19.8 check 删除）")
   assert.ok(!mainMd.includes("subagent_check"), "T-M12: main.md 无 subagent_check 名残留")
   assert.ok(!discMd.includes("| `escalate` |"), "T-M12: discipline.md 无独立 escalate 工具行")
 })
@@ -47,18 +48,18 @@ test("§19.5.5 T-CL1: cancel 动作描述含核实纪律锚——last resort + v
 })
 
 
-test("§19.7 D-A2: async 收尾引导锚句逐字存在——fail-when-unchanged（AGENT-LOOP §19.7 D-A2 镜像锚——CLI 权威源）", async () => {
+test("§19.8 D-CH2: async 收尾引导锚句逐字存在——fail-when-unchanged（AGENT-LOOP §19.8 D-CH2 镜像锚——CLI 权威源）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-  const anchor = "After an async spawn the turn winds down normally — nothing expects you to wait for it. Unchecked results reach you automatically — injected before your next turn, or digested in the suspension session while background subagents are still running — so follow-up status/check polling is only needed when your next step genuinely depends on the result."
+  const anchor = "After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result. If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (eng-coder defaults to async; other roles simply omit async)."
   const d = subagentTool.description
-  assert.ok(d.includes(anchor), "§19.7 D-A2: async 收尾引导锚句逐字存在（与设计文档逐字一致——禁止自行解释）")
-  assert.equal(d.split(anchor).length - 1, 1, "§19.7 D-A2: 锚句在描述中只出现一次")
+  assert.ok(d.includes(anchor), "§19.8 D-CH2: async 收尾引导锚句逐字存在（与设计文档逐字一致——禁止自行解释）")
+  assert.equal(d.split(anchor).length - 1, 1, "§19.8 D-CH2: 锚句在描述中只出现一次")
 })
 
 
 
 
-test("§19 T-M17: action 门控——planMode status/check/cancel 放行 vs spawn/escalate 拒绝；混合批次批审批按 action 分组", async () => {
+test("§19 T-M17: action 门控——planMode status/cancel 放行 vs spawn/escalate 拒绝；混合批次批审批按 action 分组", async () => {
   const { executeToolCalls } = await import("../src/agent/dispatch.mjs")
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const noopWrite = { name: "write", readonly: false, execute: async () => "wrote" }
@@ -66,25 +67,22 @@ test("§19 T-M17: action 门控——planMode status/check/cancel 放行 vs spaw
   const cwd = mkdtempSync(join(tmpdir(), "cli-m17-"))
   const mkAgent = (planMode) => ({ cwd, config: { agent: {} }, planMode, autoApprove: false, _touchedFiles: [], _mutatedThisRun: false })
   try {
-    // planMode：status/check/cancel（控制类）放行；spawn/escalate 非只读拒绝
+    // planMode：status/cancel（控制类）放行；spawn/escalate 非只读拒绝
     const res = await executeToolCalls(mkAgent(true), tools, [
       { name: "subagent", arguments: JSON.stringify({ action: "status" }) },
-      { name: "subagent", arguments: JSON.stringify({ action: "check", n: 1 }) },
       { name: "subagent", arguments: JSON.stringify({ action: "cancel", id: "999" }) },
       { name: "subagent", arguments: JSON.stringify({ task: "x", role: "coder" }) }, // spawn（缺省 action）
       { name: "subagent", arguments: JSON.stringify({ action: "escalate", task: "x" }) },
     ], {}, 0)
     assert.equal(res[0].ok, true, "T-M17: planMode 下 status 放行")
     assert.ok(res[0].result.includes('"overview"'), "T-M17: status 返回概览")
-    assert.equal(res[1].ok, true, "T-M17: planMode 下 check 放行")
-    assert.ok(res[1].result.includes('"done"'), "T-M17: 空池 check 返回 done:true")
-    assert.equal(res[2].ok, true, "T-M17: planMode 下 cancel 放行（控制类豁免——只停不启）")
-    assert.ok(res[2].result.includes('"error"'), "T-M17: cancel 已执行（unknown id——证明未被 planMode 门拒）")
+    assert.equal(res[1].ok, true, "T-M17: planMode 下 cancel 放行（控制类豁免——只停不启）")
+    assert.ok(res[1].result.includes('"error"'), "T-M17: cancel 已执行（unknown id——证明未被 planMode 门拒）")
+    assert.equal(res[2].ok, false)
+    assert.ok(res[2].result.includes("plan mode"), "T-M17: planMode 下 spawn（缺省 action）拒绝")
     assert.equal(res[3].ok, false)
-    assert.ok(res[3].result.includes("plan mode"), "T-M17: planMode 下 spawn（缺省 action）拒绝")
-    assert.equal(res[4].ok, false)
-    assert.ok(res[4].result.includes("plan mode"), "T-M17: planMode 下 escalate 拒绝")
-    // 混合 action 批次：check/status/cancel 不入审批组——批询问只含 write（§19 D-M1 + §19.5）
+    assert.ok(res[3].result.includes("plan mode"), "T-M17: planMode 下 escalate 拒绝")
+    // 混合 action 批次：status/cancel 不入审批组——批询问只含 write（§19 D-M1 + §19.5）
     const asks = []
     const res2 = await executeToolCalls(mkAgent(false), tools, [
       { name: "subagent", arguments: JSON.stringify({ action: "status" }) },
@@ -105,10 +103,10 @@ test("§19 T-M17: action 门控——planMode status/check/cancel 放行 vs spaw
 
 
 
-test("§19 受限变体 action 门控——eng-coder 子代理内 escalate/check/status/cancel/panel 工具层拒绝（T-E4/E5 的 action 维度镜像）", async () => {
+test("§19 受限变体 action 门控——eng-coder 子代理内 escalate/status/cancel/panel 工具层拒绝（T-E4/E5 的 action 维度镜像）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = { agent: { _role: "eng-coder", config: { agent: {} } }, depth: 1 }
-  for (const action of ["escalate", "check", "status", "cancel", "panel"]) {
+  for (const action of ["escalate", "status", "cancel", "panel"]) {
     await assert.rejects(
       subagentTool.execute({ action, task: "x" }, ctx),
       /only action:'spawn'/,
