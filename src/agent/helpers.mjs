@@ -288,3 +288,39 @@ export async function loadProjectInstructions(cwd) {
     merged
   )
 }
+
+// Engineering mode reminders + auto-turn digest domain + mode injector
+// （2026-09-05 module-split：自 agent.mjs 迁入——agent.mjs 530 > 500 硬限——agent.mjs
+// re-export 保 import 面：eng.mjs / cmd-eng.mjs / 测试从 agent.mjs import）
+
+/** Engineering mode reminder — shared with eng.mjs tool. */
+export const ENG_ON_REMINDER =
+  "[System reminder: engineering mode is ON — design-before-code enforced. " +
+  "Workflow: Requirements doc → Design doc → advisor(type='design') → " +
+  "user approval → eng-coder implementation. Code changes go through eng-coder " +
+  "subagents only. Advisor calls are NOT per-turn-mandatory — call only at " +
+  "flow nodes or when the user asks.]"
+
+/** Engineering mode OFF reminder — shared with the eng tool and the injector. */
+export const ENG_OFF_REMINDER =
+  "[System reminder: engineering mode is now OFF — standard discipline applies. " +
+  "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
+  "guards apply per config.]"
+
+/** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
+ *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
+ *  mechanically denied (no permission handler + spawn gate); this steers first. */
+export const AUTO_TURN_DIGEST_DOMAIN =
+  "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
+
+/** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
+ *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
+ *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */
+export function injectEngineeringReminder(agent) {
+  const eng = agent.config?.agent?.engineering ?? false
+  if (eng !== agent._lastEngState) {
+    agent.history.push({ role: "user", content: eng ? ENG_ON_REMINDER : ENG_OFF_REMINDER, transient: true })
+  }
+  agent._lastEngState = eng
+}
+

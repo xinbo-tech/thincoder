@@ -22,24 +22,20 @@ import {
   ContinueError,
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
+  AUTO_TURN_DIGEST_DOMAIN, ENG_ON_REMINDER, ENG_OFF_REMINDER, injectEngineeringReminder,
 } from "./agent/helpers.mjs"
+// ENG 提醒族 + auto-turn domain 2026-09-05 迁 agent/helpers.mjs（agent.mjs 530 > 500 硬限）
+// overlay 载荷（explore/coder/plan/eng-coder/consult）迁 prompt-overlays.mjs——re-export 保面
+export {
+  EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY, CONSULT_BASE,
+} from "./prompt-overlays.mjs"
+export { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "./agent/helpers.mjs"
 
 // Prompt files (byte-stable, loaded once)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SYSTEM_PROMPT = readFileSync(join(__dirname, "prompts", "system.md"), "utf8")
 const DISCIPLINE_RULES = readFileSync(join(__dirname, "prompts", "discipline.md"), "utf8")
 const MAIN_OVERLAY = readFileSync(join(__dirname, "prompts", "main.md"), "utf8")
-let _EXPLORE, _CODER, _PLAN, _ENG_CODER, _CONSULT_BASE
-try { _EXPLORE = readFileSync(join(__dirname, "prompts", "explore.md"), "utf8") } catch { _EXPLORE = "" }
-try { _CODER = readFileSync(join(__dirname, "prompts", "coder.md"), "utf8") } catch { _CODER = "" }
-try { _PLAN = readFileSync(join(__dirname, "prompts", "plan.md"), "utf8") } catch { _PLAN = "" }
-try { _ENG_CODER = readFileSync(join(__dirname, "prompts", "eng-coder.md"), "utf8") } catch { _ENG_CODER = "" }
-try { _CONSULT_BASE = readFileSync(join(__dirname, "prompts", "consult-base.md"), "utf8") } catch { _CONSULT_BASE = "" }
-export const EXPLORE_OVERLAY = _EXPLORE
-export const CODER_OVERLAY = _CODER
-export const PLAN_OVERLAY = _PLAN
-export const ENG_CODER_OVERLAY = _ENG_CODER
-export const CONSULT_BASE = _CONSULT_BASE
 
 // exported for consumption by agent-tools.mjs
 export {
@@ -50,39 +46,8 @@ export {
 }
 
 
-// Engineering mode reminder — shared with eng.mjs tool
-export const ENG_ON_REMINDER =
-  "[System reminder: engineering mode is ON — design-before-code enforced. " +
-  "Workflow: Requirements doc → Design doc → advisor(type='design') → " +
-  "user approval → eng-coder implementation. Code changes go through eng-coder " +
-  "subagents only. Advisor calls are NOT per-turn-mandatory — call only at " +
-  "flow nodes or when the user asks.]"
-
 // Re-exported for API compatibility (single source of truth: advisor/repos.mjs)
 export { hasCodeMutations } from "./advisor/repos.mjs"
-
-/** Engineering mode OFF reminder — shared with the eng tool and the injector. */
-export const ENG_OFF_REMINDER =
-  "[System reminder: engineering mode is now OFF — standard discipline applies. " +
-  "Changes go through the normal workflow: you may edit files directly, advisor/verify " +
-  "guards apply per config.]"
-
-/** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
- *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
- *  mechanically denied (no permission handler + spawn gate); this steers first. */
-const AUTO_TURN_DIGEST_DOMAIN =
-  "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
-
-/** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
- *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
- *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */
-function injectEngineeringReminder(agent) {
-  const eng = agent.config?.agent?.engineering ?? false
-  if (eng !== agent._lastEngState) {
-    agent.history.push({ role: "user", content: eng ? ENG_ON_REMINDER : ENG_OFF_REMINDER, transient: true })
-  }
-  agent._lastEngState = eng
-}
 
 /** Create a new agent state object with all fields initialized to defaults */
 export function createAgent({
