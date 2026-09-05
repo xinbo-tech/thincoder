@@ -131,6 +131,27 @@ slow("git: 扩充 action（add/commit 分文件、tag、branch、checkout/restor
     const commitOut = await git.execute({ action: "commit", message: "add b", path: "b.js" }, ctx)
     assert.ok(!/failed/i.test(commitOut))
 
+    // 多路径（空格分隔——2026-09-05 发版痛点：git add 单路径被迫 N 次调用——ref 空格分隔先例同法）
+    writeFileSync(join(dir, "c.js"), "3\n")
+    writeFileSync(join(dir, "d.js"), "4\n")
+    const addMulti = await git.execute({ action: "add", path: "c.js d.js" }, ctx)
+    assert.ok(!/failed/i.test(addMulti))
+    assert.ok(addMulti.includes("c.js d.js"), addMulti)
+    const stagedBoth = g("diff", "--cached", "--name-only").split("\n").filter(Boolean)
+    assert.ok(stagedBoth.includes("c.js") && stagedBoth.includes("d.js"), "两路径均已暂存: " + stagedBoth.join(","))
+    // rm 多路径（untrack 两个）
+    const rmMulti = await git.execute({ action: "rm", path: "c.js d.js" }, ctx)
+    assert.ok(!/failed/i.test(rmMulti))
+    const stillStaged = g("diff", "--cached", "--name-only").split("\n").filter(Boolean)
+    assert.ok(!stillStaged.includes("c.js") && !stillStaged.includes("d.js"), "两路径均已取消暂存: " + stillStaged.join(","))
+    // commit 多路径（两个新文件一次暂存提交）
+    writeFileSync(join(dir, "e.js"), "5\n")
+    writeFileSync(join(dir, "f.js"), "6\n")
+    const commitMulti = await git.execute({ action: "commit", message: "add e+f", path: "e.js f.js" }, ctx)
+    assert.ok(!/failed/i.test(commitMulti))
+    assert.ok(g("log", "--oneline").includes("add e+f"))
+    assert.ok(!g("status", "--porcelain").includes("e.js") && !g("status", "--porcelain").includes("f.js"), "提交后工作树无 e/f 残留")
+
     // tag：create → list → delete
     assert.ok((await git.execute({ action: "tag", tagAction: "create", name: "v0.1" }, ctx)).includes("created"))
     assert.ok((await git.execute({ action: "tag", tagAction: "list" }, ctx)).includes("v0.1"))

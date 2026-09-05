@@ -24,7 +24,7 @@
  *   filter     — return only output lines matching this regex (case-insensitive)
  *   timeoutMs  — timeout (default 30s, max 600000ms)
  */
-import { spawn } from "node:child_process"
+import { spawn, execFileSync } from "node:child_process"
 import { resolve } from "node:path"
 import { DESC } from "./shared.mjs"
 
@@ -58,6 +58,19 @@ function applyFilter(output, filter) {
   }
 }
 
+/** Platform-aware process tree kill — mirror of system.mjs/verify.mjs killProcessTree.
+ *  Timeout/abort must reach grandchildren: a script that spawned children keeps the
+ *  pipes open otherwise — "close" never fires and the tool stalls until the 3s kick
+ *  while the orphan keeps running (2026-09-05 advisor 🟡#4). */
+function killProcessTree(child) {
+  if (process.platform === "win32") {
+    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch {}
+  } else {
+    try { process.kill(-child.pid, "SIGKILL") } catch {}
+    try { child.kill("SIGKILL") } catch {}
+  }
+}
+
 /** Spawn node with the given args, capture stdout/stderr, enforce timeout/abort.
  *  Resolves { text, ok } — ok=false on non-zero exit / timeout / abort. */
 function runNode(childArgs, baseDir, timeoutMs, signal) {
@@ -66,6 +79,13 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
       cwd: baseDir,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
+      // POSIX detached → 子进程为组首——killProcessTree 的 -pid 组杀可达孙进程（win 用
+      // taskkill /T 不需 detached）——2026-09-05 advisor 🟡#4
+      detached: process.platform !== "win32",
+      // 双保险（2026-09-05——裸 spawn 无 signal 教训——system.mjs 同款）：abort 时
+      // Node 自动杀直接子进程（第一道）——onAbort 手动 kill 兜底（SIGKILL 防信号陷阱
+      // 脚本——见 kill 注释）——AbortError 在 error 分支让路（close 必随——走 mode 收尾）
+      ...(signal ? { signal } : {}),
     })
 
     let outBuf = "", errBuf = "", truncated = false, settled = false, mode = null
@@ -79,8 +99,9 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
       if (signal) signal.removeEventListener("abort", onAbort)
       resolvePromise({ text, ok })
     }
-    // SIGKILL (not SIGTERM) so a signal-trapping script can't dodge the watchdog.
-    const kill = () => { try { child.kill("SIGKILL") } catch { /* already gone */ } }
+    // Tree kill（SIGKILL/taskkill /T——signal-trapping 脚本躲不开 watchdog；孙进程持管道
+    // 时直接 kill 不达——close 不触发拖到 kick——2026-09-05 advisor 🟡#4 对齐 bash/verify）
+    const kill = () => { killProcessTree(child) }
     // After kill, wait for "close" (child fully reaped) before settling — settling
     // early races the caller deleting the cwd dir while the child still holds it.
     const armKick = () => { kickTimer = setTimeout(() => settle(mode === "abort" ? "(stopped)" : timeoutErrorText(timeoutMs), false), 3000) }
@@ -100,7 +121,13 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
     }
     child.stdout.on("data", (d) => { outBuf = cap(outBuf, d.toString()) })
     child.stderr.on("data", (d) => { errBuf = cap(errBuf, d.toString()) })
-    child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`, false))
+    child.on("error", (e) => {
+      // signal 双保险（2026-09-05）：abort 时 Node signal option 杀子进程 → 本事件以
+      // AbortError 先触发——让路（close 必随——close 分支 mode==="abort" →
+      // settle("(stopped)")）——不把中止误报为启动失败
+      if (e.name === "AbortError") return
+      settle(`Error: failed to start node: ${e.message}`, false)
+    })
     child.on("close", (code) => {
       if (mode === "abort") return settle("(stopped)", false)
       if (mode === "timeout") return settle(timeoutErrorText(timeoutMs), false)

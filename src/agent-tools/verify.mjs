@@ -1,7 +1,40 @@
 import { isDocFile } from "../advisor/repos.mjs"
-import { execSync, spawn, spawnSync } from "node:child_process"
+import { execSync, execFileSync, spawn, spawnSync } from "node:child_process"
 import { readFileSync, existsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
+
+// npm is a .cmd on Windows — spawn it by its script name so we can pass args as an
+// array (no shell). POSIX needs the bare "npm".
+const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm"
+
+// On Windows, spawning a `.cmd` routes through cmd.exe even with an arg array, so
+// model-controlled values can still be re-parsed by the shell (e.g. `&`, `|`, `;`,
+// `<`, `>`). Instead of depending on that platform behaviour, WHITELIST the filter:
+// a test-name pattern never needs shell metacharacters, so reject anything that a
+// shell could reinterpret. This caps pattern power to plain substrings/regex-minus-
+// metachars, which is exactly what verify's testNamePattern is meant for.
+function assertSafeTestFilter(filter) {
+  if (filter == null) return
+  const s = String(filter)
+  if (!/^[A-Za-z0-9_.\-,\s\[\]()]+$/.test(s)) {
+    throw new Error(`testNamePattern may only contain letters, digits, spaces, and . _ - , [ ] ( ) — rejected to avoid command injection: ${JSON.stringify(s)}`)
+  }
+}
+
+/**
+ * Platform-aware process tree kill — mirror of system.mjs killProcessTree. Reaching
+ * grandchildren matters here because npm test (and a node --test that itself spawns
+ * children) holds the stdout/stderr pipes; killing only the direct child leaves a
+ * grandchild alive on the pipes, so "close" never fires and the verify promise hangs.
+ */
+function killProcessTree(child) {
+  if (process.platform === "win32") {
+    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch {}
+  } else {
+    try { process.kill(-child.pid, "SIGKILL") } catch {}
+    try { child.kill("SIGKILL") } catch {}
+  }
+}
 
 /**
  * Source module → test file mapping (AGENT-LOOP §18.14: test files are split by domain —
@@ -128,6 +161,10 @@ export const verifyTool = {
     if ("filter" in args) {
       throw new Error("filter was renamed to testNamePattern — use testNamePattern; the old name is rejected")
     }
+    // Command-injection guard: reject a shell-hostile pattern before it reaches
+    // npm cmd.exe (advisor #2). The whitelist keeps the pattern safe on Windows
+    // regardless of how Node routes the `.cmd` spawn.
+    assertSafeTestFilter(args.testNamePattern)
     const cwd = ctx.agent.cwd
     // Changed-file resolution (§18.12 D-VR3): _touchedFiles (per-run bookkeeping,
     // absolute paths) ∪ git diff fallback — git is tried at testCwd
@@ -234,6 +271,13 @@ export const verifyTool = {
     if (args.full) {
       // Full mode: run the entire test suite
       if (hasTestScript) {
+        if (ctx.signal?.aborted) {
+          // Advisory #5: a Stop during verify should return promptly, not keep
+          // spawning (each remaining child already carries an aborted signal).
+          lines.push("")
+          lines.push("Verify aborted by user (Stop).")
+          return lines.join("\n")
+        }
         lines.push("")
         lines.push("Tests (full suite):")
         const result = await runTestSuite(testCwd, ctx, args.testNamePattern)
@@ -256,6 +300,13 @@ export const verifyTool = {
       let anyTestFailed = false
       let anyTestMissing = false
       for (const testFile of relatedTests) {
+        if (ctx.signal?.aborted) {
+          // Advisory #5: a Stop during verify must not keep draining remaining
+          // files (each would spawn with an already-aborted signal).
+          lines.push("")
+          lines.push("Verify aborted by user (Stop) — remaining related tests skipped.")
+          return lines.join("\n")
+        }
         // Lookup: cwd first (existing behavior), then the changed files' project
         // root (§18.12 F-VR1 — subagent cwd may be a workspace root, not the repo
         // root; the mapped test file lives at <projectRoot>/test/...).
@@ -360,18 +411,72 @@ export const verifyTool = {
   },
 }
 
+const TEST_TIMEOUT_MS = 120_000
+const KICK_MS = 3_000
+
 /**
- * Run a single test file with node --test, no maxBuffer limit.
- * Returns { passed: boolean, tail: string } — the last few lines of output.
+ * Shared child-process watchdog for verify's test runs. Spawns a command, streams
+ * stdout/stderr, and enforces timeout + signal abort with a SIGKILL + kickTimer
+ * fallback (mirror of tools/execute.mjs runNode):
+ *  - timeout / user abort → killProcessTree (reaches grandchildren so pipes close),
+ *    then arm a 3s kickTimer — settling only on "close" (or the kick) avoids racing
+ *    the caller while the child still holds the cwd, and avoids a hang when a
+ *    grandchild keeps the pipe open.
+ *  - `label` is used only in the timeout error text.
+ *  - AbortError from the `signal` option is let through (close must follow — the
+ *    settle branch reports the abort, not a startup failure).
+ * Returns { passed, tail } — resolved on "close" / rejected on timeout|error|abort.
  */
-function runTestFile(cwd, testPath, ctx, filter) {
+function runWatch({ command, args, cwd, ctx, label }) {
   return new Promise((resolve, reject) => {
-    const child = spawn("node", filter ? ["--test", "--test-name-pattern", filter, testPath] : ["--test", testPath], {
-      cwd, stdio: ["ignore", "pipe", "pipe"],
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, FORCE_COLOR: "0" },
+      // 2026-09-05（advisor 🟡#3）：POSIX detached → 子进程成为组首——killProcessTree 的
+      // -pid 组杀才真实可达孙进程（否则 ESRCH 静默吞——只杀直接子进程——孤儿测试进程持
+      // 管道 → close 不触发 → 拖到 3s kick，且孤儿继续后台运行）
+      detached: process.platform !== "win32",
+      ...(ctx.signal ? { signal: ctx.signal } : {}),
     })
     let stdout = ""
     let stderr = ""
+    let settled = false
+    let mode = null
+    let timer = null
+    let kickTimer = null
+    const done = (value) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      clearTimeout(kickTimer)
+      if (ctx.signal) ctx.signal.removeEventListener("abort", onAbort)
+      value instanceof Error ? reject(value) : resolve(value)
+    }
+    const armKick = () => {
+      kickTimer = setTimeout(() => {
+        if (mode === "abort") {
+          // User Stop — resolve as a failed run, NOT a thrown error (so the tool
+          // returns normally and dispatch's signal.aborted check lets this through).
+          done({ passed: false, tail: "(stopped)" })
+        } else {
+          const err = new Error(`Test ${label} timed out after ${TEST_TIMEOUT_MS}ms`)
+          err.stdout = stdout
+          err.stderr = stderr
+          done(err)
+        }
+      }, KICK_MS)
+    }
+    const killTree = () => { try { killProcessTree(child) } catch { /* already gone */ } }
+    const onAbort = () => { if (mode) return; mode = "abort"; killTree(); armKick() }
+
+    timer = setTimeout(() => { if (!mode) { mode = "timeout"; killTree(); armKick() } }, TEST_TIMEOUT_MS)
+
+    if (ctx.signal) {
+      if (ctx.signal.aborted) onAbort()
+      else ctx.signal.addEventListener("abort", onAbort, { once: true })
+    }
+
     child.stdout.on("data", (d) => {
       const s = d.toString()
       stdout += s
@@ -382,63 +487,45 @@ function runTestFile(cwd, testPath, ctx, filter) {
       stderr += s
       ctx.callbacks?.onToolOutput?.("verify", s)
     })
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL")
-      reject(new Error(`Test ${testPath} timed out after 120s`))
-    }, 120000)
     child.on("error", (e) => {
-      clearTimeout(timer)
-      reject(e)
+      if (e.name === "AbortError") return
+      done(e)
     })
     child.on("close", (code) => {
-      clearTimeout(timer)
+      if (mode === "abort") return done({ passed: false, tail: "(stopped)" })
+      if (mode === "timeout") {
+        const err = new Error(`Test ${label} timed out after ${TEST_TIMEOUT_MS}ms`)
+        err.stdout = stdout
+        err.stderr = stderr
+        return done(err)
+      }
       const output = (stdout + stderr).trim()
       const tail = output.split("\n").slice(-8).join("\n")
-      resolve({ passed: code === 0, tail })
+      done({ passed: code === 0, tail })
     })
   })
 }
 
-/**
- * Run npm test via spawn, no maxBuffer limit.
- * Test output is streamed through ctx.callbacks.onToolOutput (TUI can display progress in real time).
- * Returns { passed: boolean, tail: string }.
- */
+/** Run a single test file with node --test — no shell, no injection (args array). */
+function runTestFile(cwd, testPath, ctx, filter) {
+  return runWatch({
+    command: "node",
+    args: ["--test", ...(filter ? ["--test-name-pattern", filter] : []), testPath],
+    cwd,
+    ctx,
+    label: testPath,
+  })
+}
+
+/** Run the full test suite via npm test. npmCmd (npm.cmd on Windows) + args array —
+ *  NO shell:true, so a model-supplied filter cannot inject a shell command. */
 function runTestSuite(cwd, ctx, filter) {
-  return new Promise((resolve, reject) => {
-    const child = spawn("npm", filter ? ["test", "--", `--test-name-pattern=${filter}`] : ["test"], {
-      cwd, shell: true, stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, FORCE_COLOR: "0" },
-    })
-    let stdout = ""
-    let stderr = ""
-    child.stdout.on("data", (d) => {
-      const s = d.toString()
-      stdout += s
-      ctx.callbacks?.onToolOutput?.("verify", s)
-    })
-    child.stderr.on("data", (d) => {
-      const s = d.toString()
-      stderr += s
-      ctx.callbacks?.onToolOutput?.("verify", s)
-    })
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL")
-      const err = new Error("Tests timed out after 120s")
-      err.stdout = stdout
-      err.stderr = stderr
-      reject(err)
-    }, 120000)
-    child.on("error", (e) => {
-      clearTimeout(timer)
-      reject(e)
-    })
-    child.on("close", (code) => {
-      clearTimeout(timer)
-      const output = (stdout + stderr).trim()
-      const tail = output.split("\n").slice(-8).join("\n")
-      resolve({ passed: code === 0, tail })
-    })
+  return runWatch({
+    command: npmCmd,
+    args: ["test", "--", ...(filter ? ["--test-name-pattern", filter] : [])],
+    cwd,
+    ctx,
+    label: "the full npm test suite",
   })
 }
 

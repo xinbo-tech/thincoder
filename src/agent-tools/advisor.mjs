@@ -8,7 +8,20 @@ import { runAdvisorReview } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 
 const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides
-const TOKEN_SECRET = process.env.THINCODER_TOKEN_SECRET || "thincoder-default-secret"
+// The design token is signed with an HMAC secret. If THINCODER_TOKEN_SECRET is unset we
+// fall back to a well-known constant so engineering mode works out of the box — but that
+// secret is public, so anyone can forge a "design approved" token and bypass the
+// eng-coder gate. We keep the fallback (B) to not break zero-config runs, and warn once.
+const DEFAULT_TOKEN_SECRET = "thincoder-default-secret"
+const USING_DEFAULT_SECRET = !process.env.THINCODER_TOKEN_SECRET
+const TOKEN_SECRET = process.env.THINCODER_TOKEN_SECRET || DEFAULT_TOKEN_SECRET
+let _warnedDefaultSecret = false
+function warnIfDefaultSecret() {
+  if (USING_DEFAULT_SECRET && !_warnedDefaultSecret) {
+    _warnedDefaultSecret = true
+    console.warn("[thincoder] engineering token secret is the public default — set THINCODER_TOKEN_SECRET to make design tokens unforgeable")
+  }
+}
 
 /** Effective token TTL: config override with runtime validation (advisor timeoutMs precedent —
  *  invalid values fall back to the default, never silently disable the ceiling). */
@@ -19,6 +32,7 @@ function effectiveTokenTtlMs(agent) {
 
 /** Generate a signed design token with expiration */
 function generateDesignToken(agent) {
+  warnIfDefaultSecret()
   const uuid = randomUUID()
   const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
   const payload = `${uuid}:${expiresAt}`

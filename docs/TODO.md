@@ -30,6 +30,7 @@
 
 - [ ] **CLI 8 个文件超 500 行硬限**（HEAD 即超限，非本次引入——现有 8 个先例）：subagent.mjs **690**（R2 后——619 记录已过期——CLI 交付披露）/ agent.mjs 530 / context.mjs 524 / core.mjs 555 / subagent-async.mjs **以拆分轮启动时实测为准**（历史快照 946/896/649 混排——不同时点）等——按 AGENTS.md 硬限应拆，需独立技术债批次（模块拆分=新建文件+改导入面），完成时在 §18.6.2 处勾销
 - [ ] VS Code 侧同款：subagent.mjs 512 / subagent-async.mjs **以拆分轮启动时实测为准**（历史快照 896/529/189 混排）——ARCHITECTURE.md:596 已记录并入拆分轮
+- [ ] **verify.mjs 527 行**（2026-09-05 遗留批 advisor 🔴#1——§18.12 登记时 429（<500 advisory），L0 重构批后越 500 硬限——父侧裁决挂债（§18.6.2 先例）——拆分建议：watchdog 族（killProcessTree/runWatch/runTestFile/runTestSuite）抽共享模块——顺带消解与 system.mjs/execute.mjs 的三份 kill-tree 重复）
 
 
 ### 轨迹存档 · auto-think 开关残留（2026-09-04，来源：§18.6 fix round1 advisor 🟡——父侧裁决随 R2 实现批）
@@ -347,7 +348,7 @@
 
 
 
-- [ ] **超 500 行文件合并拆分轮**（§20 交付后实测——2026-09-03 id:2 落）：CLI subagent-async.mjs 947 / subagent-blocks.mjs 625（冻结家族抽 freeze.mjs——re-export 保 API——回落 ~460）/ subagent.mjs 611 / subagent-panel.mjs 超限待测 / agent-turn.mjs 535（挂起驱动段迁出）/ tool-events.mjs 537——**VS Code 登记**：subagent-async.mjs 885 / subagent.mjs 510——先例：cmd-mcp 499→382 / agent-turn 534→174——排独立拆分轮（避免同文件并发）——**2026-09-04 §18.12 交付新增登记：verify.mjs 332→429（>300 advisory——429 < 500 硬限——随拆分轮处理）**
+- [ ] **超 500 行文件合并拆分轮**（§20 交付后实测——2026-09-03 id:2 落）：CLI subagent-async.mjs 947 / subagent-blocks.mjs 625（冻结家族抽 freeze.mjs——re-export 保 API——回落 ~460）/ subagent.mjs 611 / subagent-panel.mjs 超限待测 / agent-turn.mjs 535（挂起驱动段迁出）/ tool-events.mjs 537——**VS Code 登记**：subagent-async.mjs 885 / subagent.mjs 510——先例：cmd-mcp 499→382 / agent-turn 534→174——排独立拆分轮（避免同文件并发）——**2026-09-04 §18.12 交付新增登记：verify.mjs 332→429（>300 advisory——429 < 500 硬限——随拆分轮处理）**——2026-09-05 遗留批 L0 重构后实测 527 行——已越 500 硬限——转「模块拆分轮 · 超 500 行文件」组挂债（advisor 🔴#1——父侧 §18.6.2 先例裁决）
 
 
 ### §19.6 交付跟进（2026-09-03——id:17 交付）

@@ -32,7 +32,7 @@
   },
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
-    "prepublishOnly": "npm run lint && node --test \"test/*.mjs\"",
+    "prepublishOnly": "npm run lint && node --test \"test/*.test.mjs\"",
     "lint": "node scripts/check-syntax.mjs",
     "release:check": "node scripts/release-check.mjs",
     "test:full": "node test/run-full.mjs"

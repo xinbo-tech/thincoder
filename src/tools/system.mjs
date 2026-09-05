@@ -145,6 +145,11 @@ function runBash(command, cwd, { timeout, signal, onOutput, shell }) {
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
       env: buildBashEnv(),
+      // 双保险（2026-09-05——裸 spawn 无 signal 教训：abort 只靠 killTree 手动杀——taskkill
+      // best-effort 可能失败/竞态）——Node signal option = 第一道（abort 时自动杀**直接**子
+      // 进程——cmd——语义保证）；killTree 仍是必需兜底（孙进程握管道使 close 不触发——见
+      // L191 注释——spawn 级 kill 不达孙进程）
+      ...(signal ? { signal } : {}),
     })
 
     const killTree = () => killProcessTree(child)
@@ -181,10 +186,18 @@ function runBash(command, cwd, { timeout, signal, onOutput, shell }) {
       settled = true
       clearTimeout(timer)
       clearTimeout(graceTimer)
+      // 2026-09-05（advisor 🟡#2）：收尾移除 abort 监听器——ctx.signal 为长生命周期对象，
+      // 残留 once 监听器每次 bash 调用累积（闭包持有 child/输出缓冲直到 abort 才释放）
+      if (signal) signal.removeEventListener("abort", killTree)
       resolve(result)
     }
 
     child.on("error", (error) => {
+      // signal 双保险（2026-09-05）：abort 时 Node signal option 杀直接子进程 → 本事件
+      // 以 AbortError 先触发——**跳过 finish**（不 settled）——exit 事件随后必到（实证
+      // 2ms 内）走 L195 分支带已收集输出收尾（user interrupted——不丢 partial）；
+      // 非 abort 的真 spawn 错误（command not found 等）保持原分支
+      if (error.name === "AbortError") return
       finish(truncate(`Command failed: ${error.message}\n[stdout]:\n${outBuf || "(empty)"}`))
     })
 

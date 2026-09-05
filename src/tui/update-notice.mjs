@@ -37,9 +37,13 @@ export function createUpdateNotice(ctx) {
     const { exec } = await import("node:child_process")
     const cp = exec("npm install -g thincoder@latest", { windowsHide: true })
     let stdout = ""
+    let done = false
     cp.stdout?.on("data", (d) => { stdout += d })
     cp.stderr?.on("data", (d) => { stdout += d })
+    cp.on("error", (e) => { if (done) return; done = true; pushLine(`✗ Upgrade failed (${e.message}). Run \`thincoder upgrade\` manually.`, C.error); render() })
     cp.on("close", (code) => {
+      if (done) return
+      done = true
       if (code === 0) {
         pushLine(`✓ Upgraded to ${result.latest}. Restart to apply.`, C.tool)
       } else {
