@@ -42,11 +42,12 @@ const ANCHORS = [
   ["MAX_EMBEDDED_DIFF = 50_000", "advisor/repos.mjs", "advisor/repos.mjs", "MAX_EMBEDDED_DIFF = 50_000"],
   ["收敛轮次上限提示语（round 3+ 严格验证）", "advisor/convergence.mjs", "advisor/convergence.mjs", "Do NOT look for new issues"],
 
-  // ── 探索蒸馏（SEND-STALL-DISTILL / CONTEXT-COMPACTION §5，两端语义一致）──
-  ["EXPLORE_TOOLS 集合（蒸馏判定基准）", "context.mjs", "compact.mjs", "EXPLORE_TOOLS = new Set(["],
-  ["EXPLORE_SUMMARY_PROMPT 前缀（蒸馏提示词）", "context.mjs", "compact.mjs", "You are distilling exploration tool results"],
-  ["蒸馏触发阈值 ≥3 条探索结果", "context.mjs", "compact.mjs", "resultCount < 3"],
-  ["探索结果序列化上限 8000（quality-first, N1）", "context.mjs", "compact.mjs", "const cap = 8000"],
+  // ── 探索蒸馏（SEND-STALL-DISTILL / CONTEXT-COMPACTION §5，两端语义一致；2026-09-05 模块
+  // 拆分轮：context.mjs/compact.mjs 蒸馏段 verbatim 迁至两端同名 explore-distill.mjs——锚改指）──
+  ["EXPLORE_TOOLS 集合（蒸馏判定基准）", "explore-distill.mjs", "explore-distill.mjs", "EXPLORE_TOOLS = new Set(["],
+  ["EXPLORE_SUMMARY_PROMPT 前缀（蒸馏提示词）", "explore-distill.mjs", "explore-distill.mjs", "You are distilling exploration tool results"],
+  ["蒸馏触发阈值 ≥3 条探索结果", "explore-distill.mjs", "explore-distill.mjs", "resultCount < 3"],
+  ["探索结果序列化上限 8000（quality-first, N1）", "explore-distill.mjs", "explore-distill.mjs", "const cap = 8000"],
 
   // ── 工具输出落盘（TOOL-OUTPUT-LIMITS 全链路 64K，lockstep 标注）──
   ["落盘阈值 64 * 1024（CLI helpers / VS run-helpers）", "agent/helpers.mjs", "agent/run-helpers.mjs", "= 64 * 1024"],
