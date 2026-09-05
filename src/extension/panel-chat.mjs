@@ -13,7 +13,6 @@
  */
 import * as vscode from "vscode"
 import { resolveProviders } from "../config-io.mjs"
-import { ctxPercentForModel } from "../config.mjs"
 import { providerNames, getKey, buildProvider } from "./presets.mjs"
 import { saveModelPrefs } from "./session-io.mjs"
 import { ensureSlot } from "./panel-session.mjs"
@@ -23,16 +22,14 @@ import { getMcpServers } from "./settings.mjs"
 import { loadSkills } from "./skills.mjs"
 import { collectEditorInjection } from "./editor-context.mjs"
 import { injectAtRefs } from "./file-refs.mjs"
-import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
-import { notifyCompletionIfUnfocused } from "./notify.mjs"
-import { extractFileLinks } from "./file-links.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
-import { toolPanelPayload } from "./panel-toolpanel.mjs" // 2026-09-05 module-split（512 > 500 硬限）
 import { suspensionSession, poolLive } from "./suspension.mjs"
 import { logEvent, errText } from "../log.mjs"
+// 2026-09-05 实践轮 module-split：回调工厂迁 panel-callbacks.mjs（webview 桥接面独立决策）
+import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
 
 /** §17 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
  * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
@@ -214,117 +211,17 @@ async function runPanelChatImpl(panel, opts = {}) {
   }
   newTurnController(panel)
 
-  // Token stream is forwarded live to the webview; the assistant reply is persisted by runAgent's
-  // pushReal into fullHistory (no separate accumulation needed here).
-  // Accumulate token usage across all LLM calls in this turn (matches CLI)
-  const totalUsage = { prompt_tokens: 0, completion_tokens: 0, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 0 }
-  // Agent state captured at onComplete, reused by the async onDistilled save — agent.mjs calls
-  // onDistilled without args, so the persisted engineering fields ride the closure.
-  let lastAgentState = {}
-  // Ask a question in the panel (persistent in-chat card, never auto-dismisses) — shared
-  // by the `question` tool and the turn-cap "Continue?" prompt. A native notification toast
-  // (showInformationMessage) auto-dismisses after a while and resolves undefined, which can
-  // leave the turn silently stopped with no way to continue or cancel.
-  const askInPanel = (question, options) => new Promise((resolve) => {
-    const entry = { resolve }
-    panel._questionQueue.push(entry)
-    panel._setStatus("waiting")
-    panel._panel?.webview.postMessage({ type: "question", question, options: options ?? null })
-    // Stop must release the waiting turn — an unanswered question would otherwise keep the
-    // loop hung on this promise forever (user presses Stop, UI stays "running").
-    const onAbort = () => {
-      const i = panel._questionQueue.indexOf(entry)
-      if (i >= 0) panel._questionQueue.splice(i, 1)
-      panel._panel?.webview.postMessage({ type: "questionCancelled" })
-      resolve(null)
-    }
-    if (panel._abortController?.signal.aborted) onAbort()
-    else panel._abortController?.signal.addEventListener("abort", onAbort, { once: true })
-  })
-
+  const askInPanel = makeAskInPanel(panel)
   // Callbacks shared by the initial run and the interrupt-resume run (extracted so
-  // they can't drift apart).
-  const buildCallbacks = () => ({
-    onToken: (tok) => { panel._panel?.webview.postMessage({ type: "token", text: tok }) },
-    onReasoning: (r) => { panel._panel?.webview.postMessage({ type: "reasoning", text: r }) },
-    // Machine-only sub-turn boundary (advisor/verify/pending-task guard pushback
-    // + continue): the webview resets its block pointers so the next reasoning/
-    // content starts fresh — covers non-thinking models too (no reasoning stream
-    // to trigger the webview's heuristic).
-    onSubTurnBreak: () => { panel._panel?.webview.postMessage({ type: "turnBreak" }) },
-    onTaskUpdate: (tasks) => {
-      const done = tasks.filter((t) => t.status === "done").length
-      const inProgress = tasks.filter((t) => t.status === "in_progress").length
-      const pending = tasks.filter((t) => t.status === "pending").length
-      panel._panel?.webview.postMessage({ type: "taskProgress", done, inProgress, pending, total: tasks.length, items: tasks })
-    },
-    onPlanMode: (active) => { panel._panel?.webview.postMessage({ type: "planMode", active }); panel._setPlanMode(active).catch(() => {}) },
-    onSubagent: (info) => panel._panel?.webview.postMessage({ type: "subagent", ...info }),
-    // Compression lifecycle visibility (CONTEXT-COMPACTION §7 D-C1/D-C3): the webview
-    // status line shows "Compressing context…" → "Compressed: N tokens freed (Xs)" /
-    // "failed: <error>" / 3-failure degradation note. Only the lifecycle is surfaced —
-    // the summary body never reaches the frontend.
-    onCompressStart: (info) => panel._panel?.webview.postMessage({ type: "compress", status: "start", messages: info?.messages ?? null }),
-    onCompress: (info) => panel._panel?.webview.postMessage({
-      type: "compress",
-      status: info?.mode === "fallback" ? "fallback" : "done",
-      tokensFreed: info?.tokensFreed ?? null,
-      elapsedMs: info?.elapsedMs ?? null,
-      tailMessages: info?.tailMessages ?? null,
-    }),
-    onCompressFail: (err) => panel._panel?.webview.postMessage({ type: "compress", status: "failed", error: err?.message ?? String(err ?? "unknown error") }),
-    onGoal: (info) => panel._panel?.webview.postMessage({ type: "goal", ...info }),
-    onUsage: (u) => {
-      totalUsage.prompt_tokens += u.prompt_tokens ?? 0
-      totalUsage.completion_tokens += u.completion_tokens ?? 0
-      totalUsage.prompt_cache_hit_tokens += u.prompt_cache_hit_tokens ?? 0
-      totalUsage.prompt_cache_miss_tokens += u.prompt_cache_miss_tokens ?? 0
-      const ctxPct = ctxPercentForModel(u.prompt_tokens, p)
-      panel._panel?.webview.postMessage({ type: "usage", usage: { ...totalUsage }, ctxPct })
-    },
-    onToolCall: (n, a, id) => panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id }),
-    onToolResult: (n, r, id) => {
-      const text = (r || "").slice(0, 64 * 1024)
-      // Verified workspace-real paths ride along so the webview can linkify them.
-      const links = extractFileLinks(cwd, text)
-      panel._panel?.webview.postMessage({ type: "toolResult", name: n, text, id, links })
-    },
-    // Live output streaming (bash etc.) — chunks append to the running tool card.
-    onToolOutput: (n, chunk, id) => panel._panel?.webview.postMessage({ type: "toolOutput", name: n, text: chunk, id }),
-    onToolPanel: (name, chunk) => panel._panel?.webview.postMessage(toolPanelPayload(name, chunk)),
-    onComplete: (content, agentState) => {
-      lastAgentState = agentState ?? {}
-      panel._saveLines(fullHistory, history, { activeProvider: providerName, ...agentState }, turnSlot)
-      panel._panel?.webview.postMessage({ type: "complete" })
-      panel._pushSessions()
-      // Native notification when the user is in another window (no-op when focused).
-      // §17: digests are system-driven turns — no completion notification per digest
-      // (the user sees the summarized results when they return).
-      if (!autoTurn) notifyCompletionIfUnfocused()
-    },
-    // Distillation finished and the machine line was REPLACED by the compressed version — the
-    // onComplete save above holds the pre-shrink line, so persist again (FR3/AC5). Slot guard:
-    // a session switch since this turn started means the shrink belongs to the OLD session —
-    // never write it into the new one (AC6). Silent (N3): a save failure must not surface.
-    onDistilled: () => {
-      if (panel._slot !== distillSlot) return
-      try { panel._saveLines(fullHistory, history, { activeProvider: providerName, ...lastAgentState }, distillSlot) }
-      catch (e) { console.error("[chat-panel] distill save failed:", e.message) }
-    },
-    onPermissionRequired: permissionGate(panel),
-    // §16 D-B1: same-response non-readonly tools ask ONCE (approveAll / oneByOne / deny).
-    onBatchPermissionRequest: batchPermissionGate(panel),
-    onQuestion: (question, options) => askInPanel(question, options),
-    // §17: async settle events wake the suspension driver (no-op when it isn't parked —
-    // panel._suspWake is set only while the driver waits for the next settle).
-    onAsyncSettled: () => panel._suspWake?.(),
-  })
+  // they can't drift apart). 2026-09-05 实践轮 module-split：回调工厂（webview 桥接
+  // 面——token/reasoning/tool 流/压缩生命周期/落盘/权限/问答 25 个 onX）verbatim 迁
+  // panel-callbacks.mjs buildPanelCallbacks——总用量累计与 lastAgentState 随工厂闭包。
+  const callbacks = buildPanelCallbacks(panel, { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel })
   // §17 D-S7 (manual tier): digest turns must not pop permission/question UI — an
   // unattended digest may neither hang on a panel prompt nor be interrupted by one.
   // The VS Code dispatch executes un-gated when no handler is present (unlike the CLI's
   // "no handler = denied"), so explicit deny stubs replace the panel prompts — the
   // semantic outcome matches the CLI contract: denied without a panel, no hang.
-  const callbacks = buildCallbacks()
   if (autoTurn && !panel._autoApprove) {
     callbacks.onPermissionRequired = async () => false
     callbacks.onBatchPermissionRequest = async () => "deny"
@@ -334,6 +231,83 @@ async function runPanelChatImpl(panel, opts = {}) {
   // §17 D-S6 guard-carry bookkeeping: auto-turn end-state guard marks (mutations,
   // verify/advisor flags) accumulate on panel._guardCarry and are inherited by the
   // next USER run (runAgent applies opts.inheritedGuard at its start; consumed once).
+  // 2026-09-05 实践轮：主循环（runOpts 构造 + ContinueError/Ctrl+I 续跑 + 错误持久化
+  // 分支）提为 runTurnLoop 模块函数（骨干—细节两层——循环细节下移，此处只剩调用）。
+  const tLog = opts._logOutcome ?? {}
+  tLog.started = true
+  logEvent("turn:start", { kind: autoTurn ? "auto" : "user" })
+  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, engState, autoTurn, susp, turnSlot, tLog, askInPanel })
+  } finally {
+    traceStop("finally: turn complete — UI released", panel._stopClickTs)
+    panel._stopClickTs = null
+    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2）：挂起决策先于任何释放点登记。
+    // finally → generateTitle（可达秒级 LLM 调用）的窗口内用户消息若只走 susp?.active 分流
+    // 会不命中而直接新开回合——新回合从磁盘重载 lines（新 history 数组与池所在数组分离）
+    // + abort 外回合 controller → 池 children 全中止 → 僵尸挂起（aborted settle 不出池 →
+    // poolLive 恒真）或池结果随旧数组静默丢弃（AC-S2 双违）。_suspPending 置位期间 _chat
+    // 把消息入队 panel._suspQueue，由下面回合尾的会话入口消费（带队列进会话 / 无会话则
+    // 普通回合兜底——零丢失）。
+    if (!skipSession && !susp && !panel._susp && panel._panel && poolLive(history)) {
+      panel._suspPending = true
+    }
+    panel._turnActive = false
+    panel._refreshStatus()
+    panel._panel?.webview.postMessage({ type: "loading", loading: false })
+    // Persist on EVERY exit path (CLI agent-turn.mjs finally parity — "Save session after
+    // every turn (survives crashes)"): the ContinueError→Stop `break` above skips the
+    // catch-block save, which stranded the whole turn (user input + N turns of work) in
+    // memory only — lost on session switch/reload.
+    try {
+      if (fullHistory?.length) panel._saveLines(fullHistory, history, { activeProvider: providerName }, turnSlot)
+    } catch (saveErr) {
+      console.error("[chat-panel] save in finally failed:", saveErr.message)
+    }
+  }
+  // Generate session title from first message (after agent completes)
+  if (isFirstMessage) await panel._generateTitle(turnSlot)
+
+  // §17 D-S2 释放窗口接管（2026-09-02 偏差修复 #2）：finally 已登记 panel._suspPending——
+  // generateTitle await 窗口期经 _chat 入队的消息（panel._suspQueue）在这里消费：池仍
+  // live 且会话 controller 未被中止 → 带队列进挂起会话（用户输入优先于 digest，D-S5）；
+  // 池已空 / Stop 已中止 / 面板消失 → 队列消息以普通回合兜底执行——入队消息零丢失（AC-S2）。
+  if (panel._suspPending) {
+    panel._suspPending = false
+    const queued = (panel._suspQueue ?? []).splice(0)
+    const enter = !skipSession && !susp && !panel._susp && panel._panel
+      && poolLive(history) && !panel._abortController?.signal.aborted
+    if (enter) {
+      const cwd = _cwd() || process.cwd()
+      const runTurn = async ({ text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto }) => {
+        await runPanelChat(panel, { text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto === true, susp: panel._susp, skipSession: true })
+      }
+      await suspensionSession(panel, {
+        turnSlot, distillSlot,
+        // lines 双键形：driver 用 lines.history/lines.fullHistory；会话内回合（runPanelChat
+        // susp 路径）按 activeLines 契约读 loadedLines.contextHistory——缺键会让 in-session
+        // 回合的 history=undefined（onComplete 落盘崩 + run-start pending 注入不消费 →
+        // digest 死循环；T-S18 全路径回归实证，2026-09-02 偏差修复轮补正）。
+        lines: { history, fullHistory, contextHistory: history },
+        engState,
+        cwd,
+        runTurn,
+        pendingInput: queued,
+      })
+    } else if (queued.length > 0 && panel._panel) {
+      for (const q of queued) await runPanelChat(panel, { ...q })
+    }
+  }
+}
+
+/**
+ * §17 D-S6 guard-carry 主循环（2026-09-05 实践轮——自 runPanelChatImpl 按骨干—细节
+ * 两层提取，verbatim + 签名化，语义零变）：runOpts 构造（guard 继承/会话句柄/持久化
+ * 载荷）+ ContinueError/Ctrl+I 续跑循环 + 错误/中止持久化分支。回合骨架事件
+ * （turn:start）留在调用点（impl 骨干）；本函数只跑 runAgent 续跑循环。
+ * deps：阶段产物（text/cwd/p/callbacks/lines/engState/autoTurn/susp/turnSlot）+ tLog
+ * 载具（LOGGING 终止原因回传）。
+ */
+async function runTurnLoop(panel, deps) {
+  const { text, cwd, p, callbacks, images, history, fullHistory, engState, autoTurn, susp, turnSlot, tLog, askInPanel } = deps
   let carryTaken = false
   const runOpts = (resume) => {
     const inherited = (!resume && !autoTurn && !carryTaken) ? (panel._guardCarry ?? null) : undefined
@@ -360,10 +334,6 @@ async function runPanelChatImpl(panel, opts = {}) {
   // also folds in the Ctrl+I interrupt resume (same rebuild-controller semantics).
   // (The entry try at the top of this function owns the guard-flag finally; exceptions
   // from the loop propagate through it and up to the message handler.)
-  // LOGGING：turn:start（执行循环前——早退路径无回合事件）
-  const tLog = opts._logOutcome ?? {}
-  tLog.started = true
-  logEvent("turn:start", { kind: autoTurn ? "auto" : "user" })
   for (let resume = false; ; resume = true) {
     try {
       traceStop("runAgent: turn starting (no pending click)", panel._stopClickTs)
@@ -427,74 +397,16 @@ async function runPanelChatImpl(panel, opts = {}) {
         // Friendly surface: first line only, URLs stripped (provider errors leak
         // the baseURL into the message). Full detail + provider/model folds away.
         const rawMsg = e.message || String(e)
-        const text = rawMsg.split("\n")[0].replace(/https?:\/\/[^\s,)"]+/g, "[endpoint]")
+        const errTextLine = rawMsg.split("\n")[0].replace(/https?:\/\/[^\s,)"]+/g, "[endpoint]")
         const techInfo = [rawMsg, `→ Provider: ${p.baseURL}`, `→ Model: ${p.model}`].join("\n")
-        panel._panel?.webview.postMessage({ type: "error", text, techInfo })
+        panel._panel?.webview.postMessage({ type: "error", text: errTextLine, techInfo })
         tLog.result = "error"
       }
       break
     }
   }
-  } finally {
-    traceStop("finally: turn complete — UI released", panel._stopClickTs)
-    panel._stopClickTs = null
-    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2）：挂起决策先于任何释放点登记。
-    // finally → generateTitle（可达秒级 LLM 调用）的窗口内用户消息若只走 susp?.active 分流
-    // 会不命中而直接新开回合——新回合从磁盘重载 lines（新 history 数组与池所在数组分离）
-    // + abort 外回合 controller → 池 children 全中止 → 僵尸挂起（aborted settle 不出池 →
-    // poolLive 恒真）或池结果随旧数组静默丢弃（AC-S2 双违）。_suspPending 置位期间 _chat
-    // 把消息入队 panel._suspQueue，由下面回合尾的会话入口消费（带队列进会话 / 无会话则
-    // 普通回合兜底——零丢失）。
-    if (!skipSession && !susp && !panel._susp && panel._panel && poolLive(history)) {
-      panel._suspPending = true
-    }
-    panel._turnActive = false
-    panel._refreshStatus()
-    panel._panel?.webview.postMessage({ type: "loading", loading: false })
-    // Persist on EVERY exit path (CLI agent-turn.mjs finally parity — "Save session after
-    // every turn (survives crashes)"): the ContinueError→Stop `break` above skips the
-    // catch-block save, which stranded the whole turn (user input + N turns of work) in
-    // memory only — lost on session switch/reload.
-    try {
-      if (fullHistory?.length) panel._saveLines(fullHistory, history, { activeProvider: providerName }, turnSlot)
-    } catch (saveErr) {
-      console.error("[chat-panel] save in finally failed:", saveErr.message)
-    }
-  }
-  // Generate session title from first message (after agent completes)
-  if (isFirstMessage) await panel._generateTitle(turnSlot)
-
-  // §17 D-S2 释放窗口接管（2026-09-02 偏差修复 #2）：finally 已登记 panel._suspPending——
-  // generateTitle await 窗口期经 _chat 入队的消息（panel._suspQueue）在这里消费：池仍
-  // live 且会话 controller 未被中止 → 带队列进挂起会话（用户输入优先于 digest，D-S5）；
-  // 池已空 / Stop 已中止 / 面板消失 → 队列消息以普通回合兜底执行——入队消息零丢失（AC-S2）。
-  if (panel._suspPending) {
-    panel._suspPending = false
-    const queued = (panel._suspQueue ?? []).splice(0)
-    const enter = !skipSession && !susp && !panel._susp && panel._panel
-      && poolLive(history) && !panel._abortController?.signal.aborted
-    if (enter) {
-      const cwd = _cwd() || process.cwd()
-      const runTurn = async ({ text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto }) => {
-        await runPanelChat(panel, { text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto === true, susp: panel._susp, skipSession: true })
-      }
-      await suspensionSession(panel, {
-        turnSlot, distillSlot,
-        // lines 双键形：driver 用 lines.history/lines.fullHistory；会话内回合（runPanelChat
-        // susp 路径）按 activeLines 契约读 loadedLines.contextHistory——缺键会让 in-session
-        // 回合的 history=undefined（onComplete 落盘崩 + run-start pending 注入不消费 →
-        // digest 死循环；T-S18 全路径回归实证，2026-09-02 偏差修复轮补正）。
-        lines: { history, fullHistory, contextHistory: history },
-        engState,
-        cwd,
-        runTurn,
-        pendingInput: queued,
-      })
-    } else if (queued.length > 0 && panel._panel) {
-      for (const q of queued) await runPanelChat(panel, { ...q })
-    }
-  }
 }
+
 
 // toolPanelPayload 2026-09-05 迁 panel-toolpanel.mjs（512 > 500 硬限）——re-export 保面（chat-panel.test.mjs）
 export { toolPanelPayload } from "./panel-toolpanel.mjs"
