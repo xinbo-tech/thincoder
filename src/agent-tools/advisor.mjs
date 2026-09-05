@@ -21,7 +21,7 @@ function effectiveTokenTtlMs(agent) {
  *  format uuid:expiresAt, exact slot match + TTL are its only guarantees). */
 function generateDesignToken(agent) {
   const uuid = randomUUID()
-  const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
+  const expiresAt = Math.floor(Date.now() + effectiveTokenTtlMs(agent)) // integer ms — format uuid:expiresAt requires pure digits
   return `${uuid}:${expiresAt}`
 }
 
