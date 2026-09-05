@@ -240,9 +240,19 @@ export const bashTool = {
         env: SAFE_ENV,
         maxBuffer: 2 * 1024 * 1024,
         ...(shell ? { shell } : {}),
+        // 双保险（2026-09-05——裸 exec 无 signal 教训）：Node signal option = 第一道
+        // （abort 自动杀**直接**子进程——语义保证）；killProcessTree 兜底保留（孙进程
+        // 握管道 → close 不触发 → 下方立即 resolve 路径——见 abort handler 注释）。
+        // ⚠ 时序实证：AbortError 回调先于 onAbort 到达（实验 callback@3501 vs onAbort@
+        // 3502）——两处都带 collectedResult（不丢 partial）——settled 保护先到者赢。
+        ...(ctx.signal ? { signal: ctx.signal } : {}),
       }, (error, stdout, stderr) => {
         if (error && error.name === "AbortError") {
-          finish(`(stopped)`)
+          // signal 双保险回归实证（2026-09-05）：signal option 下 Node 内部 handler 先杀
+          // 进程 → 本回调**先于**下方 onAbort 到达（实验：callback@3501 vs onAbort@3502）
+          // ——必须同带已收集输出（否则 partial 丢——裸 "(stopped)" 回归）——与 onAbort
+          // 的 collectedResult 语义一致；进程已死——outBuf 已含全部已到数据
+          finish(outBuf.trim() || errBuf.trim() ? collectedResult("stopped") : "(stopped)")
           return
         }
         if (error && error.killed) {

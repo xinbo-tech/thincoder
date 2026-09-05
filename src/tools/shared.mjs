@@ -109,6 +109,20 @@ export function formatSize(bytes) {
 
 import { execFileSync, spawn } from "node:child_process"
 
+/** Kill the whole process tree of a spawned child (CLI/system.mjs parity):
+ *  Windows taskkill /T /F reaches grandchildren (npm test's subprocesses);
+ *  POSIX kills the process group. Plain child.kill() only reaps the direct
+ *  child — grandchildren hold the stdout/stderr pipes, so "close" never fires
+ *  and a watchdog would hang. */
+export function killProcessTree(child) {
+  if (process.platform === "win32") {
+    try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" }) } catch { /* already gone */ }
+  } else {
+    try { process.kill(-child.pid, "SIGKILL") } catch { /* */ }
+    try { child.kill("SIGKILL") } catch { /* fallback if group kill fails */ }
+  }
+}
+
 /**
  * Run a child process INTERRUPTIBLY (spawn, not execSync).
  * execSync blocks the extension-host event loop — a Stop click during a long
@@ -124,17 +138,23 @@ export function runInterruptible(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     let child
     try {
-      child = spawn(cmd, args, { cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true })
+      child = spawn(cmd, args, {
+        cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
+        // First-line abort guard: Node kills the direct child on signal abort.
+        ...(signal ? { signal } : {}),
+      })
     } catch (e) {
       reject(e)
       return
     }
-    let stdout = "", stderr = "", settled = false, timer = null
+    let stdout = "", stderr = "", settled = false, timer = null, kickTimer = null, mode = null
 
+    const KICK_MS = 3000
     const finish = (err, out) => {
       if (settled) return
       settled = true
       if (timer) clearTimeout(timer)
+      if (kickTimer) clearTimeout(kickTimer)
       signal?.removeEventListener("abort", onAbort)
       if (err) {
         err.stdout = stdout
@@ -144,27 +164,42 @@ export function runInterruptible(cmd, args, opts = {}) {
         resolve(out)
       }
     }
+    // Kill the whole tree on abort/timeout — grandchildren (npm test's children)
+    // must die too, or they keep the stdout/stderr pipes and "close" never fires.
+    const killTree = () => { try { killProcessTree(child) } catch { /* already gone */ } }
+    // Kick-clockback: settle even if "close" never arrives (a grandchild that
+    // mocks kill signal, or a wedged pipe). Prevents a hang + leaked pipes.
+    const armKick = (err) => {
+      if (kickTimer) return
+      kickTimer = setTimeout(() => finish(err), KICK_MS)
+    }
 
     const onAbort = () => {
-      child.kill()
+      if (mode) return
+      mode = "abort"
       const e = new Error("aborted by user (Stop)")
       e.name = "AbortError"
-      finish(e)
+      killTree()
+      armKick(e)
     }
 
     if (timeout) {
       timer = setTimeout(() => {
-        child.kill()
+        if (mode) return
+        mode = "timeout"
         const e = new Error(`timed out after ${timeout}ms`)
         e.name = "TimeoutError"
-        finish(e)
+        killTree()
+        armKick(e)
       }, timeout)
     }
 
     child.stdout?.on("data", (d) => { stdout += d })
     child.stderr?.on("data", (d) => { stderr += d })
-    child.on("error", (e) => finish(e))
+    child.on("error", (e) => { if (e.name === "AbortError") return; finish(e) })
     child.on("close", (code) => {
+      if (mode === "abort") { const e = new Error("aborted by user (Stop)"); e.name = "AbortError"; return finish(e) }
+      if (mode === "timeout") { const e = new Error(`timed out after ${timeout}ms`); e.name = "TimeoutError"; return finish(e) }
       if (code === 0) finish(null, stdout)
       else {
         const e = new Error(`command failed with exit code ${code}`)

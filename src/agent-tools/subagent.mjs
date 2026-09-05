@@ -11,42 +11,36 @@
  * action:"spawn" (default) / action:"check" (retired subagent_check — blocking fetch,
  * consume) / action:"status" (new — non-blocking progress query, never consumes) /
  * action:"escalate" (retired escalate.mjs — 飞刀; constraints and the `sub:escalate`
- * relay prefix unchanged). The action HANDLERS (check/status/escalate) + the async/
- * audit machinery — gateEngCoderSpawn, auditTaskBook, shouldAutoResume,
- * spawnAsyncSubagent, settleAsyncEntry, ASYNC_SUBAGENT_LIMIT, MAX_ASYNC_CHECKS,
- * injectAsyncResult, collectSettledAsync, mergeChildMutations — live in
- * subagent-async.mjs (split under the 500-line discipline; §20 growth has pushed it
- * past the hard limit — debt recorded in ARCHITECTURE.md; public names re-exported
- * below). This
+ * relay prefix unchanged). The action HANDLERS (check/status/cancel) live in
+ * subagent-actions.mjs; the §20 scheduler + file-domain machinery lives in
+ * subagent-scheduler.mjs; the async/audit machinery — gateEngCoderSpawn,
+ * auditTaskBook, shouldAutoResume, spawnAsyncSubagent, settleAsyncEntry,
+ * MAX_ASYNC_CHECKS, injectAsyncResult, collectSettledAsync, mergeChildMutations —
+ * lives in subagent-async.mjs (2026-09-05 模块拆分轮——超 500 行硬限——三模块均回落限内；
+ * public names re-exported below). This
  * file keeps the tool entry (description/schema/execute dispatch), the blocking
  * spawn path and the mode helpers.
  * §19.5 (AGENT-LOOP.md §19.5, 2026-09-03): control surface — action:"cancel" (fifth
  * action; control-class gate exemption — isControlAction), status decision fields
  * (D-M5), per-entry AbortController + cancelled settle + model-visible reminder
- * (D-M6 — machinery in subagent-async.mjs), runChild(entry) binding (entry signal +
+ * (D-M6 — machinery in subagent-actions.mjs/subagent-async.mjs), runChild(entry) binding (entry signal +
  * onAgentTurn turn sync), nested sub-attribution forwarding (D-M8 webview 子标)。
  */
 import { validateDesignToken } from "./advisor.mjs"
 import { logEvent, errText } from "../log.mjs"
-import {
-  auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent,
-  subagentCheck, subagentStatus, cancelSubagentAction,
-  mergeChildMutations, nextSubagentId, cancelSubagent,
-  // §20 调度器（AGENT-LOOP.md §20——D-SD1..SD5——CLI 同规格镜像）：文件域归一化/依赖态/
-  // 等待态/环防御。
-  normalizeFileList, depInfo, describeBlockers, assertNoDepCycle,
-} from "./subagent-async.mjs"
+import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent, mergeChildMutations, nextSubagentId } from "./subagent-async.mjs"
+import { subagentCheck, subagentStatus, cancelSubagentAction } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出）
+import { normalizeFileList, depInfo, describeBlockers, assertNoDepCycle } from "./subagent-scheduler.mjs" // §20 调度器（2026-09-05 拆分轮迁出）
 import { escalateAction } from "./subagent-escalate.mjs" // §19 escalate 引擎（2026-09-03 拆出——500 行纪律——verbatim 迁移）
-// Re-export shim (2026-09-03 split/merge): the machinery + §19 action handlers moved to
-// subagent-async.mjs — its public names stay importable from subagent.mjs so no
-// consumer (agent.mjs / suspension.mjs / index.mjs / setup.mjs / tests) changed.
-// subagentCheckTool is GONE (§19 T-M11 — the subagent_check tool was retired; its
-// semantics are action:"check"). cancelSubagent joins the shim (§19.5 — the extension's
-// UI ⏹ router reaches the pool-level cancel through it).
-export {
-  ASYNC_SUBAGENT_LIMIT, MAX_ASYNC_CHECKS, ENG_AUDIT_SPAWN_LIMIT, gateEngCoderSpawn,
-  injectAsyncResult, collectSettledAsync, mergeChildMutations, cancelSubagent,
-} from "./subagent-async.mjs"
+// Re-export shim (2026-09-03 split/merge + 2026-09-05 模块拆分轮): the machinery + §19 action
+// handlers live outside subagent.mjs — subagent-async.mjs (主体) / subagent-actions.mjs /
+// subagent-scheduler.mjs — their public names stay importable from subagent.mjs so no
+// consumer (agent.mjs / suspension.mjs / index.mjs / setup.mjs / panel-messages.mjs /
+// tests) changed. subagentCheckTool is GONE (§19 T-M11); cancelSubagent joins the shim
+// (§19.5 — the extension's UI ⏹ router reaches the pool-level cancel through it).
+export { cancelSubagent, MAX_ASYNC_CHECKS } from "./subagent-actions.mjs"
+export { ASYNC_SUBAGENT_LIMIT } from "./subagent-scheduler.mjs"
+export { ENG_AUDIT_SPAWN_LIMIT, gateEngCoderSpawn, injectAsyncResult, collectSettledAsync, mergeChildMutations } from "./subagent-async.mjs"
 
 /**
  * Mode-dependent subagent role schema field (CLI setup.mjs parity). The role enum is

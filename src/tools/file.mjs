@@ -28,6 +28,37 @@ function similarLinesBlock(lines, oldString) {
   return header + "\n" + cands.map((c) => `    L${c.line}: ${c.preview} (${Math.round(c.score * 100)}%)`).join("\n")
 }
 
+/**
+ * P15.11（2026-09-05 用户裁定——CLI edit-diff findWhitespaceVariant 同构镜像）：
+ * old_string 逐字 not-found 时——若文件中存在**唯一**窗口：行数与 old 相同、逐行 trim()
+ * 相等（内容零差异——差异仅前导/尾随空白——EOL 已在 normalize 域消除）→ 返回 actual
+ * （文件窗口原文）；多窗口/old 含尾换行 → null（歧义不猜）。
+ */
+function findWhitespaceVariant(content, old) {
+  if (old.endsWith("\n")) return null
+  const oldLines = old.split("\n")
+  const fileLines = content.split("\n")
+  const m = oldLines.length
+  if (m === 0 || fileLines.length < m) return null
+  const trimmed = oldLines.map((l) => l.trim())
+  let hit = null
+  for (let i = 0; i + m <= fileLines.length; i++) {
+    let same = true
+    for (let j = 0; j < m; j++) {
+      if (fileLines[i + j].trim() !== trimmed[j]) { same = false; break }
+    }
+    if (!same) continue
+    const actual = fileLines.slice(i, i + m).join("\n")
+    if (actual === old) continue
+    if (hit) return null
+    hit = { actual }
+  }
+  return hit
+}
+
+/** P15.11 note 文案（各端成功消息追加——与 CLI edit-diff WHITESPACE_VARIANT_NOTE 同句） */
+const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (content identical, leading/trailing whitespace differs from your old_string)"
+
 // D15.3#9 修订（2026-09-05 用户裁定——CLI edit-diff EDIT_ARGS_MUTEX 同句）：edits 只与顶层
 // old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认）。
 const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry"
@@ -223,9 +254,15 @@ export const editTool = {
       const prepared = [] // 顺序 = args.edits 顺序（回显按条）；midText/range 冻结该条应用前的累积状态
       for (const g of groups.values()) {
         for (const e of g.edits) {
-          const oldS = normalizeEOL(e.old_string)
+          let oldS = normalizeEOL(e.old_string)
           const newS = normalizeEOL(e.new_string)
-          const count = g.text.split(oldS).length - 1
+          let note = null
+          let count = g.text.split(oldS).length - 1
+          if (count === 0) {
+            // P15.11（2026-09-05）：唯一空白差异窗口 → 自动落点（内容零差异）——歧义/实质差异仍报错
+            const variant = findWhitespaceVariant(g.text, oldS)
+            if (variant) { oldS = variant.actual; count = 1; note = WHITESPACE_VARIANT_NOTE }
+          }
           if (count === 0) {
             // §14.1 D14.1.1 (2026-09-05): batch channel mirrors the single-form F3 block —
             // candidates appended after the searched line, zero candidates → block omitted.
@@ -263,6 +300,7 @@ export const editTool = {
             : null
           prepared.push({
             g, midText: g.text, oldS, newS, count, replaceAll: !!e.replace_all,
+            note, // P15.11——空白差异自动落点标记（成功消息追加）
             // D15.1/§15.2: newApplied = applyRegion 判定结果（分支 0 单行×单行就地替换 ===
             // newS；LCS 替换 === newS；零重叠插入情形 = oldS+newS）——写入路径必须用
             // newApplied，否则 batch 里的零重叠条目会退化成纯替换（模拟域 g.text 与真实
@@ -300,13 +338,13 @@ export const editTool = {
             const out = p.g.fileEol === "\r\n" ? normalizeEOL(replaced).replace(/\n/g, "\r\n") : replaced
             await applyEditorEdit(p.g.doc, out)
           }
-          results.push(`Replaced ${p.replaceAll ? p.count : 1} occurrence(s) in ${p.g.path} (via editor)`)
+          results.push(`Replaced ${p.replaceAll ? p.count : 1} occurrence(s) in ${p.g.path} (via editor)${p.note ? ` — ${p.note}` : ""}`)
         } else {
           const replaced = p.replaceAll ? p.midText.replaceAll(p.oldS, () => p.newS) : p.midText.replace(p.oldS, () => p.newApplied)
           const out = p.g.fileEol === "\r\n" ? normalizeEOL(replaced).replace(/\n/g, "\r\n") : replaced
           await writeFile(p.g.abs, out, "utf8")
           refreshMarkdownPreview(p.g.abs)
-          results.push(`Replaced ${p.replaceAll ? p.count : 1} occurrence(s) in ${p.g.path}`)
+          results.push(`Replaced ${p.replaceAll ? p.count : 1} occurrence(s) in ${p.g.path}${p.note ? ` — ${p.note}` : ""}`)
         }
       }
       return results.join("\n")
@@ -334,7 +372,13 @@ export const editTool = {
     // style — never count occurrences (mixed files follow the first line).
     const fileEol = detectFileEol(rawText)
     const text = normalizeEOL(rawText)
-    const count = text.split(old_string).length - 1
+    let note = null // P15.11——空白差异自动落点标记
+    let count = text.split(old_string).length - 1
+    if (count === 0) {
+      // P15.11（2026-09-05）：唯一空白差异窗口 → 自动落点（内容零差异）——歧义/实质差异仍报错
+      const variant = findWhitespaceVariant(text, old_string)
+      if (variant) { old_string = variant.actual; count = 1; note = WHITESPACE_VARIANT_NOTE }
+    }
     if (count === 0) {
       // Helpful diagnosis instead of a bare miss: line ending mismatch vs genuinely absent
       const crlfCount = rawText.split(old_string.replace(/\n/g, "\r\n")).length - 1
@@ -389,7 +433,7 @@ export const editTool = {
         const endPos = doc.positionAt(end)
         await applyEditorRangeEdit(doc, pos.line, pos.character, endPos.line, endPos.character, newText)
       }
-      return `Replaced ${replace_all ? count : 1} occurrence(s) in ${path} (via editor)`
+      return `Replaced ${replace_all ? count : 1} occurrence(s) in ${path} (via editor)${note ? ` — ${note}` : ""}`
     }
 
     // Not open — write to disk. Restore the file's original EOL style.
@@ -399,7 +443,7 @@ export const editTool = {
     const out = fileEol === "\r\n" ? normalizeEOL(replaced).replace(/\n/g, "\r\n") : replaced
     await writeFile(abs, out, "utf8")
     refreshMarkdownPreview(abs)
-    return `Replaced ${replace_all ? count : 1} occurrence(s) in ${path}`
+    return `Replaced ${replace_all ? count : 1} occurrence(s) in ${path}${note ? ` — ${note}` : ""}`
   },
 }
 

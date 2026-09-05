@@ -30,7 +30,11 @@ beforeEach(() => {
 describe("bash child-process incremental capture", () => {
   it("Stop mid-run returns the partial output already collected (not a bare '(stopped)')", async () => {
     const ctrl = new AbortController()
-    setTimeout(() => ctrl.abort(), 200)
+    // abort 阈值 3500ms——实证（2026-09-05）：测试进程内 chcp+cmd+node spawn 冷启动
+    // 输出到达 ~2.7s（热 shell 126ms——spawn 环境差异 20×）——200ms 曾使本测试在
+    // 单跑/全量下稳定挂（abort 时输出未达——实现正确报 (stopped)——测试阈值脱离机器
+    // 现实——放大后：输出先到、abort 验证 partial 保留
+    setTimeout(() => ctrl.abort(), 3500)
     const r = await bashTool.execute(
       { command: "node -e \"console.log('partial-out'); setTimeout(()=>{},60000)\"", timeout: 90000 },
       { cwd: process.cwd(), signal: ctrl.signal },

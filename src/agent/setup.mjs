@@ -13,6 +13,7 @@ import {
   planTool, goalTool, skillTool, verifyTool, timerTool,
   advisorTool, engTool, readHistoryTool, consultStartTool, consultCheckTool, consultStopTool,
 } from "../agent-tools.mjs"
+import { settingsTool } from "../agent-tools/settings.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { injectContext } from "../context.mjs"
@@ -88,7 +89,8 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false, autoTurn = false } = opts
 
   const agentTools = depth === 0
-    ? [taskTool, recentChangesTool, readHistoryTool, // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session" would mix its throwaway lines with the parent record (semantic confusion); readonly → planMode pass / no permission ask (T-S9)
+    ? [taskTool, recentChangesTool, readHistoryTool, settingsTool, // SETTINGS-TOOL.md（2026-09-05）：settings list/get 只读动作（isReadonlyAction）——depth-0 主 agent 面（与 memory 同分类）
+      // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session" would mix its throwaway lines with the parent record (semantic confusion); readonly → planMode pass / no permission ask (T-S9)
       // §19 (2026-09-03): the subagent family is ONE resident tool — subagent_check and
       // the standalone escalate tool retired (check/status/escalate are action params).
       // The escalate action errors when the pool is empty (existing error semantics);

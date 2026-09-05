@@ -679,3 +679,108 @@ test("§21.1 T-SL4 (vscode): 三 queued 同文件链——按序逐一启动—�
   }
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
+// §21.1 P-SL2 停滞机械检测（AGENT-LOOP.md §21.1 扩展注——2026-09-05——VS Code 镜像）
+// T-SL2 ①-⑤：只追加不改既有——⑥ 回归 = 既有 T-SD/T-SL 全量运行（断言计数净增对拍）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("§21.1 P-SL2 T-SL2-① (vscode): 混合边环形等待停滞（A(files X, dep C) + B(files X) + C(dep B)——无 running 全 queued——闭包无外逃）→ check arrival/指定 id 机械报错含逐条阻塞链 + status 概览 stall 字段——cancel 破环脱离判定", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "tc-psl2a-"))
+  try {
+    const fx = [join(cwd, "src", "x.mjs")] // 共享文件域 X
+    // 人工注入构造（T-SD5 先例——自然 spawn 序不可达：B 等 A 需 A 先入、A 等 C 需 C 先入、
+    // C 等 B 需 B 先入——三约束成环）：A#1(files X, dep C#2) / C#2(dep B#3) / B#3(files X——等 A 先入)
+    const mkQ = (id, files, deps) => ({
+      id, role: "coder", status: "queued", position: 0,
+      _files: files, _dependsOn: deps ?? [], report: null, error: null,
+      done: false, cancelled: false, _auto: () => false, settled: new Promise(() => {}),
+    })
+    const parent = asyncParent(0, {
+      _asyncSubagents: new Map([[1, mkQ(1, fx, [2])], [2, mkQ(2, [], [3])], [3, mkQ(3, fx)]]),
+    })
+    const ctx = asyncCtx(parent, cwd)
+    const det = detectStall(parent)
+    assert.ok(det !== null, "T-SL2-①: 混合环 → 机械检测命中（每 queued blocker ⊆ queued——闭包无外逃）")
+    assert.equal(det.chains.length, 3, "逐条阻塞边齐全（A→C 依赖 / C→B 依赖 / B→A 域冲突）")
+    // check arrival-order（无 id）→ 停滞错误含链 + cancel 破环引导（F-SL2 非静默——不悬挂）
+    const r1 = JSON.parse(await subagentTool.execute({ action: "check", n: 1 }, ctx))
+    assert.equal(r1.status, "error", "check（arrival）→ 停滞明确错误")
+    assert.ok(r1.error.includes("pool stalled"), `错误含停滞结论（实际: ${r1.error.slice(0, 140)}）`)
+    assert.ok(
+      r1.error.includes("coder#1 → coder#2（依赖未完成）") && r1.error.includes("coder#2 → coder#3（依赖未完成）"),
+      `错误含依赖边阻塞链逐条（实际: ${r1.error.slice(0, 220)}）`,
+    )
+    assert.ok(
+      r1.error.includes("coder#3 → coder#1（域冲突") && r1.error.includes("x.mjs") && r1.error.includes("先入者"),
+      `错误含文件域边阻塞链（先入者标注——实际: ${r1.error.slice(0, 260)}）`,
+    )
+    assert.ok(r1.error.includes("action:'cancel'") && r1.error.includes("P-SL2"), "错误含 cancel 破环重派引导")
+    // check 指定 id（停滞成员）→ 同停滞错误（不消费——条目留池待 cancel）
+    const r2 = JSON.parse(await subagentTool.execute({ action: "check", n: 2, id: 3 }, ctx))
+    assert.equal(r2.id, 3, "指定 id 回显")
+    assert.equal(r2.status, "error")
+    assert.ok(r2.error.includes("pool stalled"), "check（指定 id）→ 停滞错误（同文案——替换既有泛化 no-running 提示）")
+    assert.equal(parent._asyncSubagents.size, 3, "停滞报错不消费（条目留池——cancel 可解）")
+    // status 概览 → 既有 queued 行保留 + stall 字段（链 + 单点文案）
+    const st = JSON.parse(await subagentTool.execute({ action: "status" }, ctx))
+    assert.equal(st.overview.queued.length, 3, "概览 queued 行保留（不误吞既有行形态）")
+    assert.ok(st.stall, "概览挂 stall 字段（停滞模型可见）")
+    assert.equal(st.stall.chains.length, 3)
+    assert.ok(st.stall.chains[2].includes("coder#3 → coder#1") && st.stall.chains[2].includes("域冲突"), `stall 链含文件边（实际: ${st.stall.chains[2]}）`)
+    assert.ok(st.stall.note.includes("cancel"), "stall note 含 cancel 破环引导")
+    // cancel 破环（取消 B#3——A/C 依赖目标落墓碑 cancelled → depc 锚）→ 脱离停滞判定（不误报）
+    const cb = JSON.parse(await subagentTool.execute({ action: "cancel", id: 3 }, ctx))
+    assert.equal(cb.status, "cancelled")
+    assert.equal(cb.was, "queued")
+    assert.equal(detectStall(parent), null, "cancel 破环 → 检测静默（depc 锚——外部决策可解——无未来机械停滞误报）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§21.1 P-SL2 T-SL2-②③④⑤ (vscode): 不误报——正常依赖链(running 锚)/合法文件串行/单 queued/无 blocker 不可达态/dep-cancelled → 检测全静默 + 既有 check 守卫输出逐字不变", async () => {
+  const { detectStall } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "tc-psl2b-"))
+  try {
+    const fx = [join(cwd, "src", "x.mjs")]
+    const mkQ = (id, files, deps) => ({
+      id, role: "coder", status: "queued", position: 0,
+      _files: files, _dependsOn: deps ?? [], report: null, error: null,
+      done: false, cancelled: false, _auto: () => false, settled: new Promise(() => {}),
+    })
+    const mkR = (id, files = []) => ({
+      id, role: "coder", status: "running", position: 0,
+      _files: files, _dependsOn: [], report: null, error: null,
+      done: false, cancelled: false, _auto: () => false, settled: new Promise(() => {}),
+    })
+    // ② 正常依赖链（running 锚点——settle 驱动未来事件）不报
+    const p1 = asyncParent(0, { _asyncSubagents: new Map([[1, mkR(1)], [2, mkQ(2, [], [1])]]) })
+    assert.equal(detectStall(p1), null, "② 正常依赖链（running 锚点）→ 不报")
+    // ④ 合法文件串行不报（blocker 含 running 持域者——settle 即补位）
+    const p2 = asyncParent(0, { _asyncSubagents: new Map([[6, mkR(6, fx)], [7, mkQ(7, fx)]]) })
+    assert.equal(detectStall(p2), null, "④ 合法文件串行（running 持域）→ 不报")
+    // ⑤ 单 queued 不报
+    const p3 = asyncParent(0, { _asyncSubagents: new Map([[8, mkQ(8, fx)]]) })
+    assert.equal(detectStall(p3), null, "⑤ 单 queued → 不报")
+    // 无 blocker 的 queued（先入者无冲突无依赖——refill 必启的不可达态）→ ∅ ⊆ 空真防误报收窄
+    // （判据补充用例——超出任务书 T-SL2 编号表——零误报收窄）
+    const p4 = asyncParent(0, { _asyncSubagents: new Map([[9, mkQ(9, fx)], [10, mkQ(10, fx)]]) })
+    assert.equal(detectStall(p4), null, "⑥ 无 blocker queued（不可达态）→ 不报（∅ ⊆ 防护——判据收窄）")
+    // ③ dep-cancelled 等待不报（外部决策可解——§20 NF-SD 滞留有意）——unit + 工具级回归
+    const p5 = asyncParent(0, {
+      _asyncSubagents: new Map([[4, mkQ(4, fx, [99])], [5, mkQ(5, fx)]]),
+      history: { _asyncTombstones: new Map([[99, { status: "cancelled", role: "eng-coder" }]]) },
+    })
+    assert.equal(detectStall(p5), null, "③ dep-cancelled 锚 → 不报（外部决策可解）")
+    const r5 = JSON.parse(await subagentTool.execute({ action: "check", n: 1 }, asyncCtx(p5, cwd)))
+    assert.equal(r5.status, "error")
+    assert.ok(r5.error.startsWith("nothing will settle"), "③ 非停滞全 queued 池 → 既有 arrival 守卫错误逐字不变（零破坏）")
+    assert.ok(!r5.error.includes("stalled"), "③ 既有错误不混入停滞文案（停滞检测仅闭包态触发）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+

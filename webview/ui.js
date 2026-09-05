@@ -125,7 +125,7 @@ export function buildUserMessage(ctx, text, timestamp, idx) {
   el.className = "message user"
   const ts = timestamp ? fmtTime(new Date(timestamp)) : fmtTime(new Date())
   if (idx !== undefined) el.dataset.idx = String(idx)
-  el.innerHTML = `<div class="msg-label">❯ ${t("msg.user")}: <span class="msg-time">${ts}</span></div><div class="bubble">${mdInline(esc(text))}</div>`
+  el.innerHTML = `<div class="msg-label">❯ ${t("msg.user")}: <span class="msg-time">${ts}</span></div><div class="bubble">${mdInline(text)}</div>` // mdInline escapes raw text — single escape point
   return el
 }
 

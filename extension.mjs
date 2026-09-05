@@ -36,22 +36,22 @@ export async function activate(context) {
   registerDiffPreviewProvider(context)
 
   // Auto-show sidebar on first activation
-  vscode.commands.executeCommand("workbench.view.extension.thincoder")
+  vscode.commands.executeCommand("workbench.view.extension.thincoder").catch(logFireAndForget)
 
   // Commands
   context.subscriptions.push(
     vscode.commands.registerCommand("thincoder.openChat", () => {
       // Focus the ThinCoder view container (sidebar)
-      vscode.commands.executeCommand("workbench.view.extension.thincoder")
+      vscode.commands.executeCommand("workbench.view.extension.thincoder").catch(logFireAndForget)
     }),
     vscode.commands.registerCommand("thincoder.sendMessage", () => {
-      vscode.commands.executeCommand("workbench.view.extension.thincoder")
+      vscode.commands.executeCommand("workbench.view.extension.thincoder").catch(logFireAndForget)
       vscode.window.showInputBox({ placeHolder: "Ask ThinCoder..." }).then((text) => {
-        if (text) _panel.sendMessage(text)
-      })
+        if (text) return _panel.sendMessage(text) // return so its rejection joins the chain → caught below (advisory #1)
+      }).catch(logFireAndForget)
     }),
     vscode.commands.registerCommand("thincoder.setup", () => {
-      vscode.commands.executeCommand("workbench.view.extension.thincoder")
+      vscode.commands.executeCommand("workbench.view.extension.thincoder").catch(logFireAndForget)
       _panel._pushSettings()
     }),
     vscode.commands.registerCommand("thincoder.askSelection", () => {
@@ -59,13 +59,21 @@ export async function activate(context) {
       if (!editor) return
       const selection = editor.document.getText(editor.selection)
       if (!selection) return
-      vscode.commands.executeCommand("workbench.view.extension.thincoder")
-      _panel.sendMessage(selection)
+      vscode.commands.executeCommand("workbench.view.extension.thincoder").catch(logFireAndForget)
+      _panel.sendMessage(selection).catch(logFireAndForget)
     }),
     // Internal-only: invoked from the settings webview (build index button); intentionally
     // not in contributes.commands — not a user-facing command-palette entry.
-    vscode.commands.registerCommand("thincoder.buildIndex", () => _panel._buildIndex()),
+    vscode.commands.registerCommand("thincoder.buildIndex", () => _panel._buildIndex().catch(logFireAndForget)),
   )
+}
+
+/** Surface a fire-and-forget rejection instead of letting it float as an
+ *  unhandledRejection in the extension host (which the user would only see as a
+ *  generic "ERROR:" browser log). This is diagnostics-only — it does not swallow
+ *  the error, so the host's own reporting still sees it. */
+function logFireAndForget(err) {
+  console.error("[thincoder] async command failed:", err)
 }
 
 export function deactivate() {

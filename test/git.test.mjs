@@ -152,6 +152,26 @@ describe("git — unified tool (CLI parity: action subcommands)", () => {
     assert.doesNotMatch(await gitTool.execute({ action: "add", path: "b.js" }, ctx()), /failed/i)
     assert.doesNotMatch(await gitTool.execute({ action: "commit", message: "add b", path: "b.js" }, ctx()), /failed/i)
 
+    // 多路径（空格分隔——2026-09-05 CLI parity：git add 单路径被迫 N 次调用——ref 先例同法）
+    writeFileSync(join(cwd, "c.js"), "3\n")
+    writeFileSync(join(cwd, "d.js"), "4\n")
+    const addMulti = await gitTool.execute({ action: "add", path: "c.js d.js" }, ctx())
+    assert.doesNotMatch(addMulti, /failed/i)
+    assert.match(addMulti, /c\.js d\.js/)
+    const stagedBoth = g("diff", "--cached", "--name-only").split("\n").filter(Boolean)
+    assert.ok(stagedBoth.includes("c.js") && stagedBoth.includes("d.js"), "两路径均已暂存: " + stagedBoth.join(","))
+    // rm 多路径（untrack 两个）
+    assert.doesNotMatch(await gitTool.execute({ action: "rm", path: "c.js d.js" }, ctx()), /failed/i)
+    const afterRm = g("diff", "--cached", "--name-only").split("\n").filter(Boolean)
+    assert.ok(!afterRm.includes("c.js") && !afterRm.includes("d.js"), "两路径均已取消暂存: " + afterRm.join(","))
+    // commit 多路径（两个新文件一次暂存提交）
+    writeFileSync(join(cwd, "e.js"), "5\n")
+    writeFileSync(join(cwd, "f.js"), "6\n")
+    assert.doesNotMatch(await gitTool.execute({ action: "commit", message: "add e+f", path: "e.js f.js" }, ctx()), /failed/i)
+    assert.match(g("log", "--oneline"), /add e\+f/)
+    const afterCommit = g("status", "--porcelain")
+    assert.ok(!afterCommit.includes("e.js") && !afterCommit.includes("f.js"), "提交后工作树无 e/f 残留")
+
     // tag create/list/delete
     assert.match(await gitTool.execute({ action: "tag", tagAction: "create", name: "v0.1" }, ctx()), /created/)
     assert.match(await gitTool.execute({ action: "tag", tagAction: "list" }, ctx()), /v0\.1/)

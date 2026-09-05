@@ -58,6 +58,9 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
       cwd: baseDir,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
+      // 双保险（2026-09-05——裸 spawn 无 signal 教训——CLI execute.mjs 同款镜像）：abort 时
+      // Node 自动杀直接子进程（第一道）——onAbort 手动 kill 兜底——AbortError 在 error 分支让路
+      ...(signal ? { signal } : {}),
     })
 
     let outBuf = "", errBuf = "", truncated = false, settled = false, mode = null
@@ -92,7 +95,12 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
     }
     child.stdout.on("data", (d) => { outBuf = cap(outBuf, d.toString()) })
     child.stderr.on("data", (d) => { errBuf = cap(errBuf, d.toString()) })
-    child.on("error", (e) => settle(`Error: failed to start node: ${e.message}`, false))
+    child.on("error", (e) => {
+      // signal 双保险（2026-09-05）：abort 时 Node signal option 杀子进程 → AbortError 先触发
+      // ——让路（close 必随——mode==="abort" 收尾——不误报启动失败）
+      if (e.name === "AbortError") return
+      settle(`Error: failed to start node: ${e.message}`, false)
+    })
     child.on("close", (code) => {
       if (mode === "abort") return settle("(stopped)", false)
       if (mode === "timeout") return settle(timeoutMsg(timeoutMs), false)

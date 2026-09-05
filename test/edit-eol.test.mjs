@@ -728,3 +728,55 @@ describe("edit tools — EOL semantics + candidates + encoding probe (EDIT-TOOL-
     )
   })
 })
+
+
+describe("edit 空白差异自动落点（P15.11——2026-09-05 用户裁定——CLI parity）", () => {
+  it("P15.11a: 单行前导空白差异（唯一窗口）→ 自动落点 + note 明示", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "cfg.txt"), "traces: {\n    enabled: false,\n}\n", "utf8")
+    const r = await editTool.execute({
+      path: "cfg.txt",
+      old_string: "     enabled: false,", // 5 空格 vs 文件 4 空格——仅空白差异（逗号保留）
+      new_string: "    enabled: true,",
+    }, { cwd })
+    assert.ok(r.includes("whitespace-only match"), "note 明示: " + r.slice(0, 180))
+    assert.equal(readFileSync(join(cwd, "cfg.txt"), "utf8"), "traces: {\n    enabled: true,\n}\n", "内容已替换")
+  })
+
+  it("P15.11b: 批量通道自动继承——多行窗口空白差异 → 落点应用 + note", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "const A = 1\n  const B = 2\nconst C = 3\n", "utf8")
+    const r = await editTool.execute({
+      path: "a.txt",
+      edits: [{
+        old_string: "const A = 1\n const B = 2", // B 行文件 2 空格 vs old 1 空格
+        new_string: "const A = 1\nconst B = 20", // 公共行 A 保留（LCS 替换语义）
+      }],
+    }, { cwd })
+    assert.ok(r.includes("whitespace-only match"), "批量 note: " + r.slice(0, 180))
+    assert.equal(readFileSync(join(cwd, "a.txt"), "utf8"), "const A = 1\nconst B = 20\nconst C = 3\n", "批量已应用")
+  })
+
+  it("P15.11c: 歧义——两窗口 trim 同内容不同空白 → 仍报 not found（不猜）", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "  const X = 1\n    const X = 1\n", "utf8")
+    const r = await editTool.execute({
+      path: "a.txt",
+      old_string: "      const X = 1", // 6 空格 > 两行前导（2/4）——逐字 0 次、trim 两窗口
+      new_string: "      const Y = 1",
+    }, { cwd })
+    assert.match(r, /old_string not found/, "两处空白变体 → 歧义不猜")
+    assert.equal(readFileSync(join(cwd, "a.txt"), "utf8"), "  const X = 1\n    const X = 1\n", "未改动")
+  })
+
+  it("P15.11d: 实质差异（内容不同）→ 仍报 not found（回归——不吞既有引导）", async () => {
+    const { editTool } = await import("../src/tools/file.mjs")
+    writeFileSync(join(cwd, "a.txt"), "const timeout = 1000\n", "utf8")
+    const r = await editTool.execute({
+      path: "a.txt",
+      old_string: "const timeout = 2000",
+      new_string: "x",
+    }, { cwd })
+    assert.match(r, /old_string not found/, "实质差异仍报错")
+  })
+})

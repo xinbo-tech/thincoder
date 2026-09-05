@@ -93,7 +93,9 @@ const warnedModels = new Set()
  * Vendor-namespace prefix stripping (2026-09-04)：第三方 token 市场（roapi/new-api/one-api/
  * aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、openai/gpt-4o）。完整名未命中且含
  * "/" 时，剥掉第一个 "/" 前的 namespace 再按前缀匹配一次——ZHIPU/GLM-5.3 → glm-5.3 命中真实
- * 规格，不再降级 128K 默认。与 CLI src/model-specs.mjs 逐行等价（两端同实现）。 */
+ * 规格，不再降级 128K 默认。与 CLI src/model-specs.mjs 的查找语义对齐，但非逐行等价：本端
+ * MODEL_SPECS 每行多一个 reasoningEffortDefault 字段（推理强度下拉的默认档——CLI 无此字段），
+ * 且每次调用临时 .sort()（CLI 在模块级预排序 SORTED_SPECS——语义等价、调用更少）。改动规格两端需同步。 */
 export function specForModel(model) {
   const m = (model ?? "").toLowerCase()
   for (const [prefix, spec] of [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)) {

@@ -61,7 +61,7 @@ export const gitTool = {
     properties: {
       action: { type: "string", enum: ["diff", "status", "log", "show", "checkpoint", "add", "rm", "commit", "push", "tag", "branch", "checkout", "restore", "stash", "fetch", "pull", "reset", "revert", "merge", "cherry-pick", "ls-remote", "clone", "init", "rebase", "remote", "clean", "switch", "apply", "worktree", "archive", "blame", "mv"], description: "diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv — clean/rebase 操作前自动快照，checkpointAction=rewind 恢复" },
       staged: { type: "boolean", description: "(diff) Show staged changes instead of working tree; (restore) restore the staged copy" },
-      path: { type: "string", description: "(diff/log/add/commit/checkout/restore/checkpoint:cat/versions/rewind/rm/apply/archive/blame/mv) File or directory to scope to / stage / restore（checkout/restore 操作前自动快照，checkpointAction=rewind 恢复）" },
+      path: { type: "string", description: "(diff/log/add/commit/checkout/restore/checkpoint:cat/versions/rewind/rm/apply/archive/blame/mv) File or directory to scope to / stage / restore（checkout/restore 操作前自动快照，checkpointAction=rewind 恢复）— add/rm/commit: space-separated for multiple（git add a b c——2026-09-05 CLI parity）" },
       ref: { type: "string", description: "(diff/show/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create/rebase/worktree:add/archive) Commit/branch/ref; (push/pull/fetch) the branch or tag (space-separated for multiple)" },
       count: { type: "number", description: "(log) Number of commits (default 10)" },
       oneline: { type: "boolean", description: "(log) One-line-per-commit format" },
@@ -193,13 +193,16 @@ export const gitTool = {
       }
       case "rm": {
         if (!args.path) return "Error: rm requires path (file to remove from tracking)"
-        const r = runGitStrict(ctx.cwd, ["rm", "--cached", "-r", "--", args.path])
-        return r.ok ? `Removed from tracking: ${args.path} (file kept on disk)` : `git rm failed: ${r.err || r.out}`
+        const paths = args.path.split(/\s+/).filter(Boolean)
+        const r = runGitStrict(ctx.cwd, ["rm", "--cached", "-r", "--", ...paths])
+        return r.ok ? `Removed from tracking: ${paths.join(" ")} (file kept on disk)` : `git rm failed: ${r.err || r.out}`
       }
       case "commit": {
         if (!args.message) return "Error: commit requires message"
         // Granular staging when path given (only stage these); otherwise stage all (add -A).
-        const add = runGitStrict(ctx.cwd, args.path ? ["add", "--", args.path] : ["add", "-A"])
+        // 多路径：空格分隔（ref 先例——2026-09-05 CLI parity）
+        const staged = args.path ? args.path.split(/\s+/).filter(Boolean) : null
+        const add = runGitStrict(ctx.cwd, staged?.length ? ["add", "--", ...staged] : ["add", "-A"])
         if (!add.ok) return `git add failed: ${add.err || add.out || "(no output)"}`
         const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
         if (!commit.ok) return `git commit failed: ${commit.err || "(no output)"}`
@@ -234,9 +237,11 @@ export const gitTool = {
       }
       case "add": {
         // Granular staging: stage `path` when given, else all changes (add -A).
-        const cmdArgs = args.path ? ["add", "--", args.path] : ["add", "-A"]
+        // 多路径：空格分隔（ref 先例——2026-09-05 CLI parity——git add 单路径被迫 N 次调用）
+        const paths = args.path ? args.path.split(/\s+/).filter(Boolean) : null
+        const cmdArgs = paths?.length ? ["add", "--", ...paths] : ["add", "-A"]
         const r = runGitStrict(ctx.cwd, cmdArgs)
-        return r.ok ? (r.out || `Staged ${args.path || "all changes"}`) : `git add failed: ${r.err || r.out}`
+        return r.ok ? (r.out || `Staged ${paths?.join(" ") || "all changes"}`) : `git add failed: ${r.err || r.out}`
       }
       case "tag": {
         const sub = args.tagAction

@@ -63,7 +63,7 @@ npx @vscode/vsce login xinbo-tech
 - [ ] `npm test` 全绿
 - [ ] `npm run lint` 无错误
 - [ ] `CHANGELOG.md` 已更新(市场页 Changelog 标签内容来源)
-- [ ] 版本号已递增 —— 同一版本号**不可重复发布**
+- [ ] 版本号已递增 —— 同一版本号**不可重复发布**；**连续性核对见 §5.2 执行注（月切换——9 月首发 = `0.9.1`）**
 - [ ] 扩展改动已实际跑过(项目纪律:没有「写了没跑」的代码)
 - [ ] **双源发布已计划**(2026-08-29 漏发事故):`vsce publish` 只进微软 Marketplace,**Cursor/VSCodium/Windsurf 用户连的是 Open VSX**——每次发版必须两个 registry 都发(见 §3 与 §5b),缺一即未完成
 
@@ -128,6 +128,14 @@ code --install-extension thincoder-vscode-0.1.0.vsix   # 本地安装验证
 **硬约束**:版本号必须单调递增,任何切换都不得低于已发布版本(vsce/ovsx 均拒绝倒退)。切换前先 `npx vsce show xinbo-tech.thincoder-vscode --json` 确认当前号。
 
 **判据对照**(本端现状):`0.1.52` = 年份段 0(2026)、月份段 1(乱号)、计数段 52(历史累计)——**下个版本直接改为 `0.8.1`**(0.1→0.8 前进,合法),之后严格走规范。
+
+**执行注（2026-09-05 用户裁定——“对外编号连续不跳空，不要跳号”）**：
+1. **号在发布时定，开发期不预占**——开发批 CHANGELOG 记录挂 `[Unreleased]` 段（不编号）；发布 = 唯一定号动作（bump → Unreleased 段头改新号）；
+2. **月切换硬规则**：新月份第一次发布 = `0.<当月>.1`（月内续发 +1——计数每月重置，CalVer 语义）——发布前先查当前月；
+3. **缺口/越月号不补**：0.8.11 系 9 月预占的越月号作废（9 月内容归 `0.9.1`——2026-09-05 实证：CHANGELOG 预占 [0.8.11] 段于 9-04 开出——违反月切换——作废为 Unreleased）；双源（Marketplace/Open VSX）同一 vsix 版本天然一致——不另列；
+4. 发布前核对：查双源当前最高版 + 当前月 → 期望号 = `0.<月>.<月内序号>`；package.json ≠ 期望号 → 先纠正再 `publish:all`。
+
+**当前状态**：双源最高 = **0.8.10**（package.json 已同步）——下次发布 = **0.9.1**（把 CHANGELOG `[Unreleased]` 段改 `[0.9.1]`——段头再不带日期乱号）。
 
 ## 5b. Open VSX 发布(Cursor / VSCodium / Windsurf 用户可见)
 

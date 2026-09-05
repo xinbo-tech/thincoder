@@ -727,7 +727,7 @@ test("advisor#3: check/status 容错字符串 id——模型原样回传工具�
 })
 
 test("advisor#2: status queued position 实时计算——腾槽补位后不再报陈旧位置", async () => {
-  const { server } = await asyncChildServer(150)
+  const { server } = await asyncChildServer(800) // 800ms 慢任务——断言窗口（fifth running 期间查 sixth queued）需盖过全量并行 CPU 负载下 status 调用耗时——150ms 曾两次全量 flake（L753 expected queued got running——fifth 在 status 调用窗口内 settle 触发 sixth 补位）
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
   const cwd = mkdtempSync(join(tmpdir(), "tc-pos-"))

@@ -123,6 +123,34 @@
 .content strong { font-weight: 700; }
 .content em { font-style: italic; }
 
+.content h5 { font-size: 0.95em; margin: 5px 0 2px; font-weight: 600; }
+.content h6 { font-size: 0.9em; margin: 4px 0 2px; font-weight: 600; color: var(--textSecondary, var(--fg)); opacity: 0.8; }
+
+.content ol { margin: 4px 0 6px; padding-left: 20px; list-style: decimal; }
+.content ul ul, .content ol ul { margin: 0 0 2px; }
+.content ul ol, .content ol ol { margin: 0 0 2px; }
+.content li > ul, .content li > ol { margin: 2px 0 0; }
+
+.content blockquote {
+  margin: 6px 0;
+  padding: 6px 12px;
+  border-left: 3px solid var(--border);
+  color: var(--textSecondary, var(--fg));
+  background: var(--hover-bg-strong);
+  border-radius: 0 4px 4px 0;
+}
+
+.content s { text-decoration: line-through; opacity: 0.7; }
+
+.content .task-check {
+  margin-right: 6px;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.content .task-check[disabled] { opacity: 0.85; }
+
+
 .content table {
   border-collapse: collapse;
   margin: 8px 0;

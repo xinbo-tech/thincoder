@@ -803,6 +803,25 @@ describe("§21 normal-mode deviation audit anchors (T-N1 — fail-when-unchanged
     assert.ok(mainText.includes("implementation deviations are fixed (by you, or sent back to the coder)"), "T-N1.7: main.md D-N1.1 尾含修正分句锚")
     assert.ok(coderText.includes("Fix implementation deviations (partial implementation / silent simplification) so the delivery matches the doc before reporting"), "T-N1.7: coder.md 自查行尾含修正分句锚")
   })
+
+  it("T-N1.9: main.md 规模批次默认委托 coder 锚（F-N1.5 两段式——执行/检查分离——2026-09-05）——fail-when-unchanged", () => {
+    const mainText = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+    assert.ok(mainText.includes("implemented by a coder subagent BY DEFAULT"), "T-N1.9: main.md 含规模批次默认委托锚")
+    assert.ok(mainText.includes("spawn async with the design as the task book"), "T-N1.9: main.md 含 async 委托锚")
+  })
+
+  it("T-N1.10: main.md 任务书标准字段锚（F-N1.6 委托操作标准——2026-09-05）——fail-when-unchanged", () => {
+    const mainText = readFileSync(join(PROMPTS_DIR, "main.md"), "utf8")
+    assert.ok(mainText.includes("Sized delegation without these fields is a defect"), "T-N1.10: main.md 含任务书字段锚")
+    assert.ok(mainText.includes("machine-verifiable: commands, thresholds, assertion counts"), "T-N1.10: main.md 含机器可核验验收锚")
+  })
+
+  it("T-N1.8: discipline.md 三条编辑纪律锚（记忆清空实验固化——2026-09-05）——fail-when-unchanged", () => {
+    const discText = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
+    assert.ok(discText.includes("copy them from that read, never reconstruct from memory"), "T-N1.8: 新鲜读来源纪律")
+    assert.ok(discText.includes("never invent one"), "T-N1.8: hash 来源纪律")
+    assert.ok(discText.includes("never retry the identical input a third time"), "T-N1.8: 重试上限纪律")
+  })
 })
 
 

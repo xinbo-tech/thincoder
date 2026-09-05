@@ -208,21 +208,53 @@ export function providerNamesInConfig() {
   }
 }
 
-/** Agent runtime settings from config.json (CLI agent.* defaults: maxTurns 200, subagentTurns 100). */
+/**
+ * Agent runtime settings defaults — SINGLE source for VS Code (2026-09-05 — SETTINGS-TOOL
+ * 方案 A：收拢内联默认——对齐 CLI config.mjs DEFAULTS.agent 键集/类型——防双端漂移
+ * （settings 工具类型校验表从此自动派生；加键 = CLI DEFAULTS + 本对象各一处）。
+ * compactThreshold null = auto（panel 空串清除键 → 读取侧 null → 消费方 auto 推断——
+ * 与 CLI 的 compactThresholdAuto 标志等价语义）；autoThink CLI parity（VS Code 面板不管理——
+ * settings 工具可跨端调）；engineering VS Code 侧工程模式标志。
+ */
+export const AGENT_DEFAULTS = {
+  maxTurns: 200,
+  subagentTurns: 100,
+  subagentModel: null, // string | null（默认子代理模型 override——CLI parity）
+  subagentModels: {}, // per-role overrides: explore/plan/coder/eng-coder（CLI parity）
+  compactThreshold: null, // null = auto（从 model context）
+  verifyGuard: false,
+  autoThink: false, // CLI parity（CLI DEFAULTS.agent.autoThink——回合自动思考开关）
+  engineering: false, // engineering mode flag（VS Code: config-level；eng tool 持久化于此）
+  consultTurns: 40,
+  consultTimeoutMs: 600000,
+  advisor: { guard: false }, // timeoutMs 面板直传；运行默认 600_000（advisor/run.mjs）
+  consultModels: [], // {provider, model, effort?}[]——≤5
+}
+
+/** Trace 段默认（对齐 CLI DEFAULTS.traces——2026-09-05 隐私裁定 enabled:false）——
+ *  类型派生用（VS Code 无 trace 机制（D-TR7 CLI-only）——键由 CLI 消费——settings 工具跨端调） */
+export const TRACES_DEFAULTS = {
+  enabled: false,
+  retentionHours: 24,
+}
+
+/** Agent runtime settings from config.json（默认值单一来源 AGENT_DEFAULTS——2026-09-05） */
 export function loadAgentSettings() {
   const a = loadRaw().agent
+  const d = AGENT_DEFAULTS
   return {
-    maxTurns: a?.maxTurns ?? 200,
-    subagentTurns: a?.subagentTurns ?? 100,
-    subagentModel: a?.subagentModel ?? null, // default subagent model override (CLI parity)
-    subagentModels: a?.subagentModels ?? {}, // per-type overrides: explore/plan/coder/eng-coder (CLI parity)
-    compactThreshold: a?.compactThreshold ?? null, // null = auto (from model context)
-    verifyGuard: a?.verifyGuard ?? false,
-    engineering: a?.engineering ?? false, // engineering mode flag (VS Code: config-level; the eng tool persists here)
-    consultTurns: a?.consultTurns ?? 40, // consultation turn budget (was 100, then 15 was too tight)
-    consultTimeoutMs: a?.consultTimeoutMs ?? 600000, // wall-clock watchdog per consultant (10 min)
-    advisor: a?.advisor ?? { guard: false }, // timeoutMs passes through panel saves; runtime default 600_000 (advisor/run.mjs)
-    consultModels: Array.isArray(a?.consultModels) ? a.consultModels : [],
+    maxTurns: a?.maxTurns ?? d.maxTurns,
+    subagentTurns: a?.subagentTurns ?? d.subagentTurns,
+    subagentModel: a?.subagentModel ?? d.subagentModel, // default subagent model override (CLI parity)
+    subagentModels: a?.subagentModels ?? d.subagentModels, // per-type overrides: explore/plan/coder/eng-coder (CLI parity)
+    compactThreshold: a?.compactThreshold ?? d.compactThreshold, // null = auto (from model context)
+    verifyGuard: a?.verifyGuard ?? d.verifyGuard,
+    autoThink: a?.autoThink ?? d.autoThink, // CLI parity（VS Code 面板不管理——CLI 回合读取）
+    engineering: a?.engineering ?? d.engineering, // engineering mode flag (VS Code: config-level; the eng tool persists here)
+    consultTurns: a?.consultTurns ?? d.consultTurns, // consultation turn budget (was 100, then 15 was too tight)
+    consultTimeoutMs: a?.consultTimeoutMs ?? d.consultTimeoutMs, // wall-clock watchdog per consultant (10 min)
+    advisor: a?.advisor ?? d.advisor, // timeoutMs passes through panel saves; runtime default 600_000 (advisor/run.mjs)
+    consultModels: Array.isArray(a?.consultModels) ? a.consultModels : d.consultModels,
   }
 }
 

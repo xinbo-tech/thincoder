@@ -249,7 +249,9 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           if (e?.name === "AbortError" || signal?.aborted) throw e
           toolErrored = true
           logEvent("tool:error", { tool: toolName, ms: Date.now() - toolT0, err: errText(e, 200) })
-          result = `Error: ${e.message}`
+          // A tool may reject with a non-Error value (string/null) — .message would be
+          // undefined and the model would see "Error: undefined", losing the cause.
+          result = `Error: ${e instanceof Error ? e.message : String(e)}`
         }
         if (!toolErrored) logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(result, 200) })
       }
