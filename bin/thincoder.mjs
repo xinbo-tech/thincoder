@@ -239,10 +239,12 @@ switch (command) {
     if (agent._providerInvalid) agent.provider = null
     const config = loadConfig()
     // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
-    const { loadSession, applySession } = await import("../src/session.mjs")
-    const restored = loadSession(process.cwd())
-    if (restored) {
-      const switched = applySession(agent, restored)
+    // 2026-09-05 §10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
+    // 只作"无记录端"的一次性继承源，不再作本端恢复第一依据（D-6）。
+    const { resumeSlot, applySession } = await import("../src/session.mjs")
+    const { slot, data } = resumeSlot(process.cwd())
+    if (data) {
+      const switched = applySession(agent, data)
       if (switched && agent.config?.agent?.compactThresholdAuto) {
         // 压缩阈值跟模型走（与 TUI 切换 provider 时的处理一致）；传 provider 对象——
         // providers[].context 覆盖生效（PROVIDER.md §15 T-C2）
@@ -250,6 +252,10 @@ switch (command) {
         agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
       }
     }
+    // D-3 钉槽：applySession 清 _slot 后立即钉回恢复槽——首保存必落恢复槽（消除
+    // "load → 首回合保存"窗口内并发方翻 active 导致的静默迁移）；/new 经 resetSessionState
+    // 清 _slot（newSession 已认领 + 写记录，语义保留）
+    agent._slot = slot
     // D-S3 优先级补全：applySession 可能已用会话中的有效 provider 修复（config 无效 + 会话有效）——
     // 修复后复验清除标记，仅当两者都无效才弹重选（validateProvider 幂等）
     if (agent._providerInvalid) validateProvider(agent)
@@ -268,7 +274,7 @@ switch (command) {
         projectDir: config.memory.projectDir ? join(process.cwd(), config.memory.projectDir) : null,
         team: teamConfig(config),
         author: gitAuthor(),
-        restored,
+        restored: data,
       })
     } catch (error) {
       console.error(`[error] ${error.message}`)

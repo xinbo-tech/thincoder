@@ -45,7 +45,7 @@ function makeAgent(cwd, history = [], extra = {}) {
 /** Remove every file this cwd's session may have created (known paths only — no directory scan). */
 function cleanup(cwd) {
   const base = sessionPath(cwd)
-  for (const s of ["", ".manifest", ".1", ".2", ".3", ".4", ".5", ".6", ".tmp", ".corrupted", ".unreadable"]) {
+  for (const s of ["", ".manifest", ".manifest.cli", ".manifest.cli.tmp", ".tmp", ".corrupted", ".unreadable", ".1.corrupted", ".1.unreadable", ".1", ".2", ".3", ".4", ".5", ".6"]) {
     try { unlinkSync(base + s) } catch {}
   }
 }

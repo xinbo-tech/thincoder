@@ -5,7 +5,7 @@
 ## 1. 核心模型
 
 - **按 cwd 隔离**：会话目录 `~/.thincoder/sessions/{sha1}.json.*`——cwd 的 **40 位完整 sha1**（非截断；Windows 盘符大写归一化，保证 CLI `process.cwd()` 与 VS Code `uri.fsPath` 算出同一 hash）。
-- **槽位制，无"当前文件"**：`{hash}.json.N` 是第 N 个槽位的完整会话；`{hash}.json.manifest` 存槽位元数据 + active 指针 + 进程认领表。**active 槽位就是当前会话**——没有独立 current 文件。
+- **槽位制，无"当前文件"**：`{hash}.json.N` 是第 N 个槽位的完整会话；`{hash}.json.manifest` 存槽位元数据 + active 指针 + 进程认领表。**active = 共享当前指针**（2026-09-05 §10 D-6 修订）：旧版端/ACP 的恢复依据 + 无记录端的一次性继承源 + 列表回退高亮——**本端恢复依据 = §10 的 end marker**（`{manifest}.cli|.vscode`，各端单写者），不再以 active 为第一依据；setActive 纪律（认领/新建/切换/删除）原样保留。
 - **文件无上限**：槽位按需递增（`/session` 查看/切换，`/new` 开新槽）。
 - **旧格式迁移**：12 位短 hash 文件一次性重命名为 40 位（幂等）；legacy `{hash}.json`（v1 单会话）读取时迁移进槽位。
 
@@ -93,6 +93,7 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 | 双线落盘 | `history` + `contextHistory` | `saveMessages(msgDir, name, messages, contextHistory)` 同字段 |
 | 旧格式回退 | 无 contextHistory → 从 history 播种 | 同（`contextHistory: null` → 播种） |
 | transient 过滤 | 人读线过滤 `!m.transient`，机读线保留（前缀缓存逐字节依据） | 同（`_saveLines` 落盘过滤，2026-08 修复） |
+| 本端记录（end marker，§10） | `{manifest}.cli`：`{"slot": <number|null>, "updatedAt": <epoch ms>}`；本端单写者；读侧损坏按缺失降级（不 rename/unlink）；`slot:null` = 删过本端记录槽（显式置空——绝不继承） | `{manifest}.vscode` 同形同语义（2026-09-05 双端同批） |
 
 **2026-09-01 会诊 4 模型（glm/deepseek/kimi/qwen）共识——跨端共享会话契约增补**：
 
@@ -302,4 +303,128 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 7. **措辞收窄**：AC-S1 = 双线真实消息（pushReal）+ 压缩注入带 ts——机读（[System reminder:）/瞬态消息无 ts 属设计（D-S3 容忍）
 8. **multimodal content 数组**：keyword 匹配文本 part（数组串化摘要）——截断按文本——补 multimodal 用例
 9. **UI 显示**：ts 仅 read_history 输出/会话 JSON 可见——TUI/VS Code 显示不在本 scope——后续立项（用户确认中）
+
+## 10. 端分离恢复——本端 marker 记录最后使用槽位（2026-09-05 · 需求层 + 设计层 · 需求池 R4）
+
+> 状态：**已评审（2026-09-05 round1——0🔴 通过）——用户裁决 A（5 项建议全部采纳修订）——已批准——**已实现（2026-09-05 双端同批——CLI+VS L2 全绿——核销见 §10.6）**。来源：用户实测报告（双端同开场景）：CLI 与 VS Code 面板同时打开同一项目时，共享 manifest 的 `active` 指针两端互写；退出 CLI 重开，恢复进"另一个不是退出前"的会话（空白新槽，或对方端遗留的空面板会话）——恢复决策只读共享 active + 属主生死，**没有"本端最后用的槽"记忆**，另一端最后一次翻指针即决定本端重启落点。用户裁定：①**A 完全各记各的**（CLI 重启回 CLI 自己最后的会话；面板回面板自己的——取消跨端自动接续，`/session` 手动切换保留）；②**A 迁移一次性继承**（无本端记录时继承共享 active 的死主槽一次——否则升级后第一次打开就恢复不了现有会话——记录写下后永久分离）。
+
+### 10.1 需求
+
+**总体需求**：同一项目下 CLI 与 VS Code 并存时，任一端退出重进都回到**本端**上次的会话；两端对"当前会话"的记录不再互相覆盖、互不干扰。
+
+**功能性需求**：
+- F1：CLI TUI 重启（同项目 VS Code 面板同时开着/刚开过）→ 恢复 CLI 自己退出前的会话；不因另一端翻动共享指针而进入空白新槽或对方会话。恢复依据 = CLI 本端持久记录。
+- F2：迁移一次性继承——本端从无记录（升级 / 该项目首用）时：共享 active 指向的槽若属主已死/无属主且文件存在 → 认领继承**一次**并写下本端记录；属主为活进程 → 绝不继承（全新槽起步）。此后本端记录恒在，不再读共享指针。
+- F3：VS Code 面板同构（F1/F2 镜像）：面板重启回面板自己最后的会话（CLI 开着也不抢）。
+- F4：用户显式选择跟随本端记录：`/new`、`/session N`、面板"打开历史会话" → 更新本端记录；删除本端记录指向的槽 → 记录**显式置空**，下次启动全新起步（不继承他人遗留、不复活被删会话）。
+
+**范围边界**：
+- ACP 会话（session/load|resume|new|delete——显式钉槽 + 同进程守卫）：行为不变、**不读本端记录**（恢复决策不经 marker；经共享 newSession/deleteSlot 调用点的 marker 写属预期副作用——D-8"端内最后认领者"语义——无行为回归）；其 manifest active 写入对新型恢复逻辑无影响（继承仅在"本端无记录"窗口读一次 active，且活属主一律拒绝）。
+- 混合版本：旧版另一端仍按共享指针认领（无 marker 概念）——新版端行为局部退化（10.2 D-7 矩阵），**数据安全不变**；完整效果需两端同步升级。
+- 手动跨端接续保留：`/session` 与面板会话列表列出全部槽位，任一端可手动打开另一端留下的会话（活槽占用提示不变）。
+- 数据零丢失：本变更只改"恢复目标选择"；槽文件内容与 F2 sessionStart 轮转、.bak/.corrupted/.unreadable 防护全部不变。
+
+**非功能性需求**：
+- NF1 不新增跨端共享可变字段——本端记录是本端**单写者**文件（manifest 条目级合并只认识已知字段、旧版整对象写会丢未知字段——记录进 manifest = 重开跨端丢失更新窗口）。
+- NF2 记录写入原子（.tmp+rename）且失败容忍：写失败 → 本次启动按无记录路径降级，不影响会话数据。
+- NF3 启动成本不增：恢复决策的存活探测次数与现状 ensureActive 同量级。
+- NF4 跨端并发语义不回归：活槽绝不双写（认领/继承先过属主生死；F1 槽粘性不变）。
+
+### 10.2 设计
+
+**D-1 记录形态（end marker 独立文件）**：
+- 路径：`{manifest}.cli`（CLI）/ `{manifest}.vscode`（VS Code），即 `~/.thincoder/sessions/{hash}.json.manifest.cli|.vscode`——manifest 旁的独立小文件，**非 manifest 内嵌字段**（NF1）。
+- 内容：`{"slot": <number|null>, "updatedAt": <epoch ms>}`。**文件缺失 = 从未记录**（迁移窗口）；**`slot: null` = 显式置空**（删过本端槽）——两者必须区分（D-2）。**读侧降级**：文件缺失或 JSON 解析失败（损坏）一律按"缺失"处理——不 rename 不 unlink（幂等、不误伤），可能触发一次继承（数据安全——T-M13）；`slot: null`（显式置空）除外——绝不继承。
+- 写者：仅本端（CLI 只写 .cli，VS Code 只写 .vscode）——零跨端写竞争；旧版端不认识、永不触碰该文件（版本安全）。
+- 端常量：CLI 仓 `END = "cli"`；VS Code 仓 `END = "vscode"`。
+
+**D-2 恢复决策**（新导出 `resumeSlot(cwd) → {slot, data}`；CLI session-slots.mjs + VS Code 同构镜像）：
+
+```
+m = loadManifest(cwd)
+1. 本端记录可用？slot ≠ null 且 slot ∈ m.slots 且槽文件在盘 且属主 空/死/本进程
+   → 认领（claimSlot：slotSessions[slot]=本进程 + saveManifest setActive）→ loadSlotFile 读槽
+2. 本端记录缺失（文件不存在——从未记录 = 迁移窗口）→ 一次性继承：
+   m.active 在且 ∈ m.slots 且文件在盘 且属主 空/死 → claimSlot(active) + 写记录 = active → 读槽
+3. 其余一切（slot:null / 槽已被删 / 属主为活外人 / 继承失败）→ 全新分配
+   （allocateFresh——ensureActive 分支 2/3 语义抽取：先回收"文件缺失+空闲"的 manifest 槽号，
+   否则 max+1 起跳过活认领号/现存文件号）→ 写记录 = 新槽 → data = null
+每次落点都写本端记录；**claim 后读槽失败（解析失败/.unreadable——既有改名保全语义）→ 保持已 claim 槽 + data:null——不回滚认领、不改 marker——下次保存原地重建该槽，旧现场以 .corrupted/.unreadable 保留（T-M15）**；legacy 单文件兜底与现状 loadSession 平移（仅 data 层——不改变 claim 落点）
+```
+
+- 实现形态：session-slots.mjs 抽取 `claimSlot`（现 ensureActive 分支 1 主体）与 `allocateFresh`（现分支 2/3 主体）；`ensureActive`/`activeSlot` **保留**给无记录进程路径（ACP、cmd-eng/cmd-advisor 内嵌调用——分支 1"active 空闲即取"行为不变，ACP 语义零变化）；`resumeSlot` 供 TUI 启动与面板 resolve 使用。
+- **missing → 继承、null → 全新**的区分理由：删槽后置 null（文件保留）使"删过"可辨认——用户删除自己会话后重开 = 全新起步，不继承对方遗留、不复活被删会话（T-M4/T-M5）。
+
+**D-3 启动钉 _slot（闭合首保存迁移窗口）**：bin/thincoder.mjs TUI 启动改 `const { slot, data } = resumeSlot(process.cwd())` → `applySession` 之后 `agent._slot = slot`。理由：现实现 loadSession 认领后 applySession 清 `_slot`，若 VS Code 面板在首回合前翻 active，**首次保存**会经 ensureActive 分支 3 静默迁移到新槽（F1 只治了重复保存，首保存窗口仍在）——恢复确定性要求首保存必落恢复槽。`/new` 后 resetSessionState 清 `_slot` 语义保留（newSession 已认领 + 写记录）；headless `thincoder chat` 不恢复（现状不变）。
+
+**D-4 marker 维护点**（每次落点原子写，失败容忍 NF2）：
+- CLI：`resumeSlot`（D-2 每步）；`saveSession` 首认领（`agent._slot` 为 null 时的 `??= activeSlot` 之后——覆盖"/session 切换后首保存"与"查看对方活槽 → 保存 fork 新槽"的落盘槽跟随）；`newSession` 成功后；`switchToSlot` 成功后（跟随"最后查看的槽"）；`deleteSlot` 删到本端记录槽 → `writeEndMarker(cwd, null)`（文件保留、slot 置空——不 unlink）。
+- VS Code：ensureSlot/status 恢复决策（D-2 镜像）；newSlot 后；面板"打开历史会话"后；deleteSlotAndUpdate 删到本端记录槽 → 置 null。
+- 非维护点：日常保存（F1 粘性 `_slot` 已定，不写 marker——保存永不参与竞争）。
+
+**D-5 listSlots 高亮按端**：`listSlots(cwd)` 保持 manifest active 语义（ACP session/list 零变化）；TUI `/session` 与面板会话列表的本端高亮改以本端记录槽为准（isActive = 记录槽 ∈ 列表 ? 记录槽 : m.active——含"记录槽已被对端删除"的守卫（T-M5 同款）——调用侧最小侵入）。manifest active 保留为跨端回退高亮。
+
+**D-6 manifest.active 定位修订**：认领/新建/切换/删除的 setActive 纪律**原样保留**（旧版端互操作 + ACP + 继承读取 + 列表回退）；仅新型恢复决策不再以它为第一依据。§1"active 槽位就是当前会话"修订为：active = 共享当前指针——旧版端/ACP 的恢复依据 + 无记录端的一次性继承源；本端恢复依据 = 本节 end marker。§6 契约对齐表补 marker 行（路径/内容/写者/置空语义双端一致）。
+
+**D-7 混合版本矩阵**：
+
+| 组合 | 行为 |
+|---|---|
+| 新版 CLI + 新版 VS Code | 完整分离（目标态） |
+| 新版 CLI + 旧版 VS Code | 旧版仍翻 active/抢死槽；CLI 重启时若 marker 槽被旧版活占 → 全新起步（退化为现状形态，数据安全）；旧版退出后可取回。建议同步升级 |
+| 旧版 CLI + 新版 VS Code | 对称 |
+| 旧版 + 旧版 | 现状 |
+
+> **升级过渡首日**：双端同批升级后均无 marker——仅先启动端能继承共享 active 死槽（另一端遇活属主拒 → 全新槽），且先启动端可能继承的是**对端**旧槽并永久写入本端 marker——数据不丢（列表 /session 可手动找回）——用户裁定 ②A 一次性继承的固有代价，过渡后不再发生。
+
+**D-8 已知限制**：同端多活进程（两个 CLI 终端 / VS Code 多窗口同项目）时 marker 为"端内最后认领者"语义——活进程各自粘性写自己槽（F1），后启动者覆盖 marker；交错重启时先者的会话需 `/session` 手动找回（与现状同量级，且不再跨端互扰）。ACP 不经 marker（显式钉槽不变）。
+
+**被否方案**：① manifest 内嵌 `cliLast/vscodeLast` 字段——双端写同一文件（正是本 bug 类）+ 合并/旧版写会丢未知字段；② 恢复目标 = updatedAt 最新槽——列表字段、跨端每次保存互触、语义不符；③ 取消一次性继承（无迁移通道）——升级后第一次打开即触发本 bug，违反用户裁定 ②A；④ 只修 CLI 不修 VS Code——面板 resolve 仍翻 active/抢死槽，CLI marker 槽被"活外人"占用后回到 bug（F3 必须双端同批）。
+
+### 10.3 测试（用例表）
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-M1 | 双端同开 CLI 重进 | slot1=CLI 死主 + slot2=活外人（active=2）+ CLI marker=1 | resumeSlot → 认领 slot1 恢复（不进 slot2/新槽） | F1 |
+| T-M2 | 迁移继承一次 | 无 marker + active=死主槽 | 继承认领 + marker=active；再次 resumeSlot（模拟重启）仍回该槽 | F2 |
+| T-M3 | 继承拒绝活槽 | 无 marker + active=活外属主 | 全新槽 + marker=新；绝不写活槽 | F2/NF4 |
+| T-M4 | 删过本端槽 | marker 文件在、slot:null + active=死主槽 | 全新槽（不继承） | F4 |
+| T-M5 | 记录指向的槽被删 | marker=2 但槽 2 无文件 | 全新槽（不复活） | 边界 |
+| T-M6 | 全新目录首用 | 无 manifest | 槽 1 起步 + marker=1；第二端无 marker → active=1 活属主拒 → 新槽 | F3 |
+| T-M7 | 首保存钉槽回归 | resume 后模拟并发方翻 active | 首保存仍在恢复槽（不迁移新槽） | D-3 |
+| T-M8 | 显式切换跟随 | /new、/session N、删 marker 槽 | marker 分别 = 新槽 / N / null（文件在） | F4 |
+| T-M9 | VS Code 镜像 | 面板 resolve（CLI 活于他槽）/ newSlot / pick / delete | 恢复面板槽；marker 维护逐点一致 | F3 |
+| T-M10 | legacy 兜底回归 | 无槽 + v1 单文件 | 恢复不变 | 回归 |
+| T-M11 | 既有套件零回归 | loadSession 兼容包装 | session 相关测试全绿 | AC5 |
+| T-M12 | parity 镜像断言 | CLI↔VS Code 新导出 | cross-repo-parity / session-io-parity 绿 | AC5 |
+| T-M13 | marker 损坏 | marker JSON 解析失败（存在 active 死主槽） | 按缺失降级不崩（可走继承/全新路径）；损坏文件不 rename/unlink；数据不受影响 | NF2/边界 |
+| T-M14 | marker 写失败 | 模拟 .tmp+rename 失败 | 按无记录路径降级启动；会话数据不受影响 | NF2 |
+| T-M15 | claim 后读槽失败 | marker 槽文件损坏（.corrupted 改名） | 保持已 claim 槽 + data:null；下次保存原地重建；.corrupted 保现场 | D-2 |
+
+**验收**：AC1 = T-M1/T-M2/T-M3/T-M6（恢复目标端分离 + 迁移继承）；AC2 = 面板镜像（T-M9）；AC3 = 删除/置空语义（T-M4/T-M5）；AC4 = marker 跟随 + 首保存钉槽（T-M7/T-M8）；AC5 = 双端既有 L2 全绿 + parity 绿 + lint（T-M10/T-M11/T-M12 回归 + 新增降级用例 T-M13/T-M14/T-M15）；AC6 = 无数据丢失回归（sessionStart 轮转等既有防护测试零回归）。
+
+### 10.4 受影响文件
+
+| 端 | 文件 |
+|---|---|
+| CLI | `src/session-slots.mjs`（marker primitives + `resumeSlot` + `claimSlot`/`allocateFresh` 抽取 + `deleteSlot` marker 维护 + END="cli"）、`src/session.mjs`（`loadSession` 平移为 resumeSlot 数据包装（签名不变——测试兼容）；`saveSession` 首认领写 marker；`newSession`/`switchToSlot` 写 marker；re-export 新增导出）、`bin/thincoder.mjs`（resumeSlot + applySession 后钉 `_slot`）、`src/tui/cmd-session.mjs`（列表高亮按本端记录）——cmd-eng/cmd-advisor/ACP 零改动；新增 `test/session-endmarker.test.mjs`（T-M 表主场景）+ `test/cross-repo-parity.test.mjs`（镜像断言更新） |
+| VS Code | `src/extension/session-slots.mjs`（同构镜像——END="vscode"）、`src/extension/panel-session.mjs`（ensureSlot/status 恢复决策 + 列表高亮 + delete 置空）、`src/extension/session-io.mjs`（newSlot/pick 写 marker）、`src/extension/panel-project.mjs`（认领点改 resumeSlot）——`test/chat-panel.test.mjs` + `test/session-io-parity.test.mjs` 补 T-M9 类用例 |
+| 文档 | SESSION.md 本节（权威）+ §1 active 定义修订 + §6 契约表补 marker 行；VS Code `docs/design/ARCHITECTURE.md` 变更段（引用不复制）；两端 AGENTS.md 模块表（session-slots 描述）；CHANGELOG.md（交付时父侧统一） |
+
+### 10.5 评审处置（2026-09-05 · round1——0🔴 通过——designId 37c94f13-6349-4fd8-aca7-dc12ea254e1f——token cd891714）
+
+advisor 判定 0🔴 通过并签发 token；5 项 🟡/🔵 澄清建议按用户裁决 A **全部采纳修订**（本节已落）：① ACP 边界句——不读 marker、共享调用点写入属预期副作用；② marker 读侧损坏 = 按缺失降级（T-M13）+ 写失败降级用例（T-M14）；③ claim 后读槽失败目标态（T-M15）；④ D-5 高亮加记录槽 ∈ 列表守卫；⑤ D-7 补升级过渡首日说明。机制未变——修订不触发重评。
+
+### 10.6 实现核销（2026-09-05 · eng-coder id:2 clean——修正轮 2/5——分歧审计 1 轮 CLEAN——advisor code review 2 轮 0🔴）
+
+**验收勾销**：AC1 ✔（T-M1/T-M2/T-M3/T-M6——CLI test/session-endmarker.test.mjs + VS 镜像用例）、AC2 ✔（T-M9——session-io-parity end-marker describe + chat-panel flows，含面板 delete 重绑幸存槽写 marker：review 🟡#1 修复）、AC3 ✔（T-M4/T-M5）、AC4 ✔（T-M7/T-M8）、AC5 ✔（双端 L2：CLI 1485 tests/1437 pass/48 slow-skip/0 fail + lint 264 文件 OK；VS Code 1196/1196/0 fail + lint 219 文件 OK；parity 双绿——父侧独立 L2 复跑同数）、AC6 ✔（sessionStart 轮转/.bak/.corrupted/.unreadable 既有防护测试零回归）。
+
+**实现偏差记录（出清单改动——交付报告逐项申报、父侧核销接受）**：
+1. 5 个既有测试文件（session.test/session-safety/session-compaction/session-eng-advisor/slash-commands）的 teardown 清理后缀表补 `.manifest.cli`（个别补 `.manifest.cli.tmp`/槽位损坏名）——saveSession/newSession 现在会写 marker，不补则每次测试运行在真实 ~/.thincoder/sessions 留下永久垃圾；改动止于清理行、零断言改动。教训：受影响文件表应含"会写新文件的既有测试清理面"。
+2. resumeSlot 的 data 层读经 session-slots ↔ session.mjs（VS：session-slots ↔ session-io）单点静态环 import——500 行硬限约束下 loadSlotFile/loadSlot 不迁移；函数声明期环安全（仅函数体内运行时使用），代码头注释 + ARCHITECTURE.md 变更段声明。
+3. CLI session-slots.mjs 恰 500 行零余量（review 🔵 接受为已知债——D-1 区后续扩写需拆文件）。
+4. 清理补丁前的两轮测试运行在真实 ~/.thincoder/sessions 残留少量孤儿 `{tmp-cwd}.json.manifest.cli`（几十字节/个、tmp 目录已删、无害）——日后随手清理即可，无需专项。
+
+**遗留**：CHANGELOG 双端已记（父侧）；git 提交未做（父侧——待用户确认分批）。
+
 

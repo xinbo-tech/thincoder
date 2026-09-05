@@ -319,6 +319,7 @@ slow("session: 保存/恢复/新建 往返（基于槽位）", async () => {
     try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
   }
   try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   try { unlinkSync(sessionPath(cwd)) } catch {}
 })
 
@@ -349,6 +350,7 @@ test("session: 旧存档的前缀型临时上下文在加载时清理，cwd 不�
   try { unlinkSync(p) } catch {}
   try { unlinkSync(sessionPath(cwd)) } catch {}
   try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   for (let i = 1; i <= 5; i++) {
     try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
   }
@@ -372,6 +374,7 @@ test("session: 畸形 display 不影响启动（display 已废弃，loadSession 
   try { unlinkSync(p) } catch {}
   try { unlinkSync(sessionPath(cwd)) } catch {}
   try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   for (let i = 1; i <= 5; i++) {
     try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
   }
@@ -424,6 +427,7 @@ test("session: newSession 分配槽位并记录元数据", async () => {
     try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
   }
   try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   try { unlinkSync(sessionPath(cwd)) } catch {}
 })
 
@@ -459,6 +463,7 @@ test("session: renameSlot 改标题（槽位文件 + manifest 同步，VS Code �
     try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
   }
   try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   try { unlinkSync(sessionPath(cwd)) } catch {}
 })
 
@@ -496,6 +501,7 @@ test("session: listSlots 向后兼容旧格式 manifest（数字时间戳）", a
   assert.equal(slots[0].activeProvider, "claude")
   // 清理
   unlinkSync(sessionPath(cwd) + ".manifest")
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   unlinkSync(slotFile)
   try { unlinkSync(sessionPath(cwd)) } catch {}
 })
@@ -543,6 +549,7 @@ test("session: switchToSlot 指针切换（无文件拷贝）", async () => {
     try { unlinkSync(sessionPath(cwd) + "." + i) } catch {}
   }
   try { unlinkSync(sessionPath(cwd) + ".manifest") } catch {}
+  try { unlinkSync(sessionPath(cwd) + ".manifest.cli") } catch {}
   try { unlinkSync(sessionPath(cwd)) } catch {}
 })
 

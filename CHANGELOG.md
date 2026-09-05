@@ -1,3 +1,13 @@
+## [Unreleased]
+
+> 开发批记录段（0.12.59 已发——下次发布 = 0.12.60 时本段改头——RELEASE.md §1.5）
+
+### Changed
+
+- **会话"当前槽位"按端分离（R4——2026-09-05——SESSION.md §10）**：CLI 与 VS Code 各自 end marker（`{manifest}.cli|.vscode`，本端单写者）记录"本端最后使用的槽位"——恢复决策 resumeSlot（本端记录 → 无记录一次性继承 active 死主槽 → 全新分配）替代共享 manifest.active 作为恢复依据——双端同开时退出 CLI 重进不再进错会话/空白新槽；启动即钉 _slot 闭合"load→首保存"迁移窗口；/session 列表高亮按本端记录（含被删守卫）。双端同批镜像（L2：CLI 1485/1437+48skip/0 + VS Code 1196/1196 全绿）。
+- **git 工具 add/rm/commit 多路径（2026-09-05 发版后——git add 单路径被迫 N 次调用）**：`path` 空格分隔多路径（`git add a b c`——ref 多值先例同法——split(/\s+/)）；path 描述尾追加注（保既有原子串断言）；双端同改（CLI git.test + VS Code git.test 镜像用例——add/rm/commit 三动作多路径覆盖）。
+- **release:check 一键发版门禁（scripts/release-check.mjs——2026-09-05 0.12.59 发版教训）**：lint + test:full 合并一键；全量输出捕获不刷屏（只打摘要）；失败自动提取 failing tests 详情段（此前为看错误详情跑 3 次全量）；RELEASE.md §1 检查单合并 + 修复迭代局部重跑纪律 + prepublishOnly 双保险注。
+
 ## [0.12.59] — 2026-09-05
 
 > 0.12.58 → 0.12.59（§1.5 连续号——发布时定号）

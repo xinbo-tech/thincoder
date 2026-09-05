@@ -1,8 +1,10 @@
 /**
  * session.mjs — session persistence (slot-based model)
  * Each project (keyed by cwd hash) keeps unlimited session slots.
- * Every session lives in a numbered slot; the manifest tracks which slot is active.
- * There is no separate "current" file — the active slot IS the current session.
+ * Every session lives in a numbered slot; the manifest tracks the SHARED active pointer
+ * (2026-09-05 §10 D-6 修订：active = 旧版端/ACP 的恢复依据 + 无记录端的一次性继承源 +
+ * 列表回退高亮——本端恢复依据 = end marker `{manifest}.cli`，见 session-slots.mjs
+ * resumeSlot/readEndMarker，SESSION.md §1/§10）。
  *
  * File layout: {hash}.json.N (slots), {hash}.json.manifest (slot metadata + active pointer).
  * Legacy {hash}.json is migrated to a slot on first access.
@@ -15,14 +17,16 @@ import { readFileSync, renameSync, existsSync, statSync } from "node:fs"
 import { basename } from "node:path"
 import {
   slotPath, writeSessionFile, loadManifest, saveManifest, slotDigest,
-  activeSlot, sessionPath, getSessionId, isProcessAlive,
+  activeSlot, getSessionId, isProcessAlive,
+  writeEndMarker, resumeSlot,
 } from "./session-slots.mjs"
 
 // re-export slot 管理（保持既有 import session.mjs 的调用点不变）
 export {
   getSessionId, normalizeCwd, sessionPath, slotPath, manifestPath, activePath,
   writeSessionFile, slotDigest, loadManifest, saveManifest, activeSlot, listSlots,
-  deleteSlot, renameSlot, isProcessAlive,
+  deleteSlot, renameSlot, isProcessAlive, END, endMarkerPath,
+  readEndMarker, writeEndMarker, claimSlot, allocateFresh, resumeSlot,
 } from "./session-slots.mjs"
 
 // ========== legacy transient prefix cleanup ==========
@@ -127,7 +131,12 @@ export function saveSession(agent) {
     pendingReminders: agent._pendingReminders ?? [],
     sessionStart: agent._sessionStart ?? null,
   }
+  // 2026-09-05 §10 D-4：首认领（_slot 为 null——如 /session 切换后首保存、"查看对方活槽 →
+  // 保存 fork 新槽"的落盘槽跟随）写本端记录——marker = 端内最后认领者；粘性 _slot 期间
+  // 的日常保存不写（F1：保存永不参与竞争）
+  const claimedNow = agent._slot == null
   const slot = agent._slot ??= activeSlot(agent.cwd)
+  if (claimedNow) writeEndMarker(agent.cwd, slot)
   const p = slotPath(agent.cwd, slot)
   // 2026-08-31 会诊 F2 🔴：写前校验磁盘文件的 sessionStart——与本进程会话不符（另一
   // 进程/会话的现场）→ 先轮转 .bak 保留再写（11311 条历史被新进程覆盖的实锤场景）。
@@ -245,36 +254,12 @@ export function loadSlotFile(cwd, slot) {
   return null
 }
 
-/** Load session data from the active slot; returns null if missing, corrupted, or version mismatch */
+/** Load session data for this cwd — 2026-09-05 §10 D-2：平移为 resumeSlot 的数据包装
+ *  （签名不变——测试兼容；读槽校验/.tmp 回退/legacy 兜底语义原样保留在 resumeSlot 的
+ *  data 层）。恢复目标选择按本端记录（end marker）——manifest active 仅作无记录端的
+ *  一次性继承源（D-6），不再作本端恢复第一依据。 */
 export function loadSession(cwd) {
-  // Try the active slot first (post-migration, legacy file may be stale)
-  const slot = activeSlot(cwd)
-  let result = loadSlotFile(cwd, slot)
-  if (result) return result
-
-  // Fallback: try the legacy current file (pre-migration, or migration failed to clean up)
-  const legacy = sessionPath(cwd)
-  try {
-    if (existsSync(legacy)) {
-      const data = JSON.parse(readFileSync(legacy, "utf8"))
-      // cwd 不匹配是别人的文件——与 loadSlotFile 一致直接 return null 不改名
-      // （"别人的文件不动"原则，2026-08-31 advisor round2 🟡）
-      if (data.cwd && data.cwd.toLowerCase() !== cwd.toLowerCase()) return null
-      if ((data?.version === 1 || data?.version === 2) && Array.isArray(data.history)) {
-        data.history = data.history.filter((m) => !isLegacyTransient(m))
-        return data
-      }
-      // 结构不匹配：保留现场（version>2 的新版文件不动）
-      if (!(typeof data?.version === "number" && data.version > 2)) {
-        try { renameSync(legacy, `${legacy}.unreadable`) } catch {}
-        console.error(`[session] legacy file ${legacy}: invalid structure — preserved as ${basename(legacy)}.unreadable`)
-      }
-    }
-  } catch (e) {
-    console.error(`[session] failed to load legacy ${legacy}: ${e.message}`)
-    try { renameSync(legacy, `${legacy}.corrupted`) } catch {}
-  }
-  return null
+  return resumeSlot(cwd).data
 }
 
 /** slimForDisplay 截断的 arguments 以 U+2026（…）结尾——不是合法 JSON 的完整值。
@@ -429,6 +414,8 @@ export function newSession(cwd) {
       }
     : null
   saveManifest(cwd, m, deletions, { setActive: true })
+  // 2026-09-05 §10 D-4：/new 落点写本端记录（显式切换跟随——T-M8）
+  writeEndMarker(cwd, slot)
   return slot
 }
 
@@ -479,6 +466,8 @@ export function switchToSlot(cwd, slot) {
     m.slotSessions[slot] = getSessionId()
   }
   saveManifest(cwd, m, null, { setActive: true })
+  // 2026-09-05 §10 D-4：/session N 跟随"最后查看的槽"（成功切换才写）
+  writeEndMarker(cwd, slot)
   return data
 }
 

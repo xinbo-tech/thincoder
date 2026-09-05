@@ -51,7 +51,32 @@ const ANCHORS = [
   // ── 工具输出落盘（TOOL-OUTPUT-LIMITS 全链路 64K，lockstep 标注）──
   ["落盘阈值 64 * 1024（CLI helpers / VS run-helpers）", "agent/helpers.mjs", "agent/run-helpers.mjs", "= 64 * 1024"],
   ["落盘保留期 3 天（TMP_RETENTION_MS）", "agent/helpers.mjs", "agent/run-helpers.mjs", "TMP_RETENTION_MS = 3 * 24 * 3600 * 1000"],
+
+  // ── 端分离恢复 end marker（SESSION.md §10 D-1/D-2——两端同构镜像，2026-09-05）──
+  ["marker 路径 = {manifest}.{END}（manifest 旁独立小文件——NF1）", "session-slots.mjs", "extension/session-slots.mjs", "export function endMarkerPath(cwd) { return `"],
+  ["readEndMarker 读侧三态（缺失/损坏→null、置空 slot:null）", "session-slots.mjs", "extension/session-slots.mjs", "export function readEndMarker(cwd) {"],
+  ["marker 写形态 {slot, updatedAt}（原子写 + 失败容忍 NF2）", "session-slots.mjs", "extension/session-slots.mjs", "{ slot, updatedAt: Date.now() }"],
+  ["D-1 缺失 vs 置空必须区分（置空绝不继承）", "session-slots.mjs", "extension/session-slots.mjs", "slot: null` = 显式置空"],
+  ["D-1 损坏读侧按缺失降级——不 rename 不 unlink", "session-slots.mjs", "extension/session-slots.mjs", "不 rename 不 unlink"],
+  ["claimSlot（认领 + setActive + deadParam 过滤）", "session-slots.mjs", "extension/session-slots.mjs", "export function claimSlot(cwd, slot, m = loadManifest(cwd), deadParam = null) {"],
+  ["allocateFresh（ensureActive 分支 2/3 抽取——全新分配复用）", "session-slots.mjs", "extension/session-slots.mjs", "export function allocateFresh(cwd, m, deadParam = null) {"],
+  ["resumeSlot 恢复决策入口（D-2 ①②③）", "session-slots.mjs", "extension/session-slots.mjs", "export function resumeSlot(cwd) {"],
+  ["resumeSlot 每次落点都写本端记录", "session-slots.mjs", "extension/session-slots.mjs", "每次落点都写本端记录"],
+  ["② 一次性继承拒绝活属主（全新槽起步 T-M3）", "session-slots.mjs", "extension/session-slots.mjs", "②b 一次性继承"],
+  ["删除记录槽 → 置空（CLI deleteSlot / VS deleteSlotAndUpdate）", "session-slots.mjs", "extension/session-io.mjs", "writeEndMarker(cwd, null)"],
 ]
+
+test("end marker 端常量分离——CLI 写 .cli、VS Code 写 .vscode（单写者互不触碰）",
+  { skip: !VS_PRESENT },
+  () => {
+    const cli = read(CLI_SRC, "session-slots.mjs")
+    const vs = read(VS_SRC, "extension/session-slots.mjs")
+    assert.ok(cli.includes('END = "cli"'), "CLI 端常量 .cli")
+    assert.ok(vs.includes('END = "vscode"'), "VS Code 端常量 .vscode")
+    assert.ok(!cli.includes('END = "vscode"'), "CLI 不写 .vscode 记录")
+    assert.ok(!vs.includes('END = "cli"'), "VS Code 不写 .cli 记录")
+  },
+)
 
 test(
   "两端同构模块语义锚点一致（CLI ↔ VS Code，src 不能 byte-identical 但契约必须锁）",

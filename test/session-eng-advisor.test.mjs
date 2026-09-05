@@ -23,7 +23,7 @@ function slotBase(cwd) {
 
 function cleanup(cwd) {
   const base = slotBase(cwd)
-  for (const suffix of ["", ".manifest", ".1", ".2", ".tmp"]) {
+  for (const suffix of ["", ".manifest", ".manifest.cli", ".1", ".2", ".tmp"]) {
     try { rmSync(base + suffix, { force: true }) } catch {}
   }
 }

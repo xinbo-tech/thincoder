@@ -344,6 +344,7 @@ test("handleSlash: /new 选 yes 确认后清空会话", async () => {
     const sp = sessionPath(ctx.agent.cwd)
     try { rmSync(sp, { force: true }) } catch {}
     try { rmSync(sp + ".manifest", { force: true }) } catch {}
+    try { rmSync(sp + ".manifest.cli", { force: true }) } catch {}
     for (let i = 1; i <= 5; i++) {
       try { rmSync(sp + "." + i, { force: true }) } catch {}
     }

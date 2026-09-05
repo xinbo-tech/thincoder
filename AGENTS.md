@@ -60,6 +60,8 @@ src/tui/             bare-ANSI terminal UI
 src/memory/          three-layer FTS5 + vector memory
 src/context.mjs      context compaction
 src/config.mjs       config + provider presets
+src/session-slots.mjs  slot/manifest 管理 + end marker 端分离恢复（SESSION.md §10——END="cli"，resumeSlot/claimSlot/allocateFresh）
+src/session.mjs        session 持久化（双线读写/saveSession/applySession/loadSession=resumeSlot 数据包装）
 src/mcp/             MCP client (stdio/http/ws transports)
 src/log.mjs          diagnostic event log (LOGGING.md — logEvent/rotation/blacklist; shared ~/.thincoder/logs/)
 test/                test suite

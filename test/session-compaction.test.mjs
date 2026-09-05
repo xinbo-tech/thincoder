@@ -50,7 +50,7 @@ function makeAgent(cwd, history) {
 /** Remove every file this cwd's session may have created (slots + manifest + legacy). */
 function cleanup(cwd) {
   const base = sessionPath(cwd)
-  for (const suffix of ["", ".manifest", ".1", ".2", ".3", ".tmp", ".corrupted"]) {
+  for (const suffix of ["", ".manifest", ".manifest.cli", ".tmp", ".corrupted", ".1", ".2", ".3"]) {
     try { if (existsSync(base + suffix)) unlinkSync(base + suffix) } catch {}
   }
 }

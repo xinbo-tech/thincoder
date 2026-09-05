@@ -1,4 +1,4 @@
-import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy } from "../session.mjs"
+import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
 import { stringWidth, sliceByWidth } from "./render.mjs"
@@ -37,6 +37,13 @@ export async function handleSessionCommand(ctx) {
     pushLine("No sessions (use /new to start a new session)", C.dim)
     return
   }
+  // 2026-09-05 §10 D-5：本端高亮按端记录（● = 记录槽 ∈ 列表 ? 记录槽 : manifest active
+  // 回退——含"记录槽已被对端删除"的守卫）；listSlots 的 manifest active 语义不变
+  // （ACP session/list 零变化——manifest active 保留为列表回退高亮）
+  const rec = readEndMarker(agent.cwd)
+  const highlightSlot = (rec?.slot != null && slots.some((s) => s.slot === rec.slot))
+    ? rec.slot
+    : (slots.find((s) => s.isActive)?.slot ?? null)
   const shortDate = (d) => {
     const dt = new Date(d)
     return `${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
@@ -53,7 +60,7 @@ export async function handleSessionCommand(ctx) {
       const turns = s.turnCount > 0 ? `${s.turnCount} turns` : "0 turns"
       const when = shortDate(s.updatedAt)
       const model = s.activeProvider ? ` — ${s.activeProvider}` : ""
-      const marker = s.isActive ? " ●" : ""
+      const marker = s.slot === highlightSlot ? " ●" : ""
       return {
         type: "item",
         text: `Slot ${s.slot} │ ${turns} │ ${when} │ ${label}${model}${marker}`,
