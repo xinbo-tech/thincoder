@@ -10,9 +10,10 @@
  *  - 其余                 : usage 累计、等待提示、task 面板、回合末增量落盘
  *
  * flushStream 同时返回给调用方（回合循环 / onTurnEnd 共用）。纯回调装配，无终端副作用
- * （除经 deps 注入的 pushLine/render）。§19: subagent_check/escalate 工具退役后，
- * subagent 家族全部调用以工具名 "subagent" + action 到达——完成路由按 onToolCall 时
- * 记录的 action 分流（spawn 区块 / escalate 区块 / check·status 普通工具块）。
+ * （除经 deps 注入的 pushLine/render）。§19: subagent_check/escalate 工具退役后
+ * （§19.8——check 动作已删、五动作面），subagent 家族全部调用以工具名 "subagent" +
+ * action 到达——完成路由按 onToolCall 时记录的 action 分流（spawn 区块 / escalate
+ * 区块 / status 普通工具块）。
  */
 import { C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
