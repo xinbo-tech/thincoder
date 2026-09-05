@@ -48,6 +48,49 @@ Always maintain a checklist tracking what's planned, in progress, and done. This
 
 If reading code isn't helping, run it. Write a test, add a log, bisect. Action beats staring.
 
+## Code Structure — Comprehension-Cost Layering（2026-09-05 · user ruling + practice-validated）
+
+> 2026-09-05 practice round validated this on three 300+ monoliths (turn drivers / agent
+> loops) — backbone extraction with full regression, assertion counts unchanged. Layering
+> exists so the next developer AND the agent itself (which reads files whole into context)
+> understand a module from its skeleton, drilling into details only as needed.
+
+**Motivation**: comprehension cost is state, not line count — reading a 400-line monolith
+holds dozens of variables in mind at once; layering cuts the state domain per unit.
+Rules without the why degrade into gaming the metric (padding lines, squeezing comments,
+splitting by execution step) — the quantified scale below is a fallback, not a goal.
+
+**Function-body scale (the primary yardstick):**
+
+| Lines | Verdict |
+|---|---|
+| ≤50 | good — read in one pass |
+| 50–100 | normal — still understandable whole |
+| ≥100 | review: extract named sub-functions if the body has nameable stages |
+| ≥300 | must split: the function keeps only its backbone (named stage calls + data flow), details go into sub-functions |
+
+**File caps (fallback):** >300 advisory review; >500 hard limit. Functions before files:
+a file ≤500 containing an unsplit ≥300-line monolith is not done — splitting files without
+splitting monoliths is self-deception.
+
+**Principles:**
+1. One function = one concept — a hard-to-name function has the wrong scope.
+2. Backbone–detail: long drivers (turn/loop/state machines) may be long ONLY in the
+   backbone — removing every sub-function body must leave a skeleton that still tells
+   the story. Even a turn loop is stages (dispatch / prepare / run / finalize), never
+   hundreds of stacked steps.
+3. Layer WHILE writing, not after: extract as a function approaches ~100 lines; a
+   ≥300-line function is debt, not a step.
+4. Module boundaries enclose decisions (Parnas): cut by what changes independently and
+   what is independently testable — not by execution steps, not by line counts.
+5. Localized control flow: guard clauses / early returns; nesting ≤3; never pair control
+   flow hundreds of lines apart.
+6. State machines explicit: transitions in one place, events grouped by state.
+7. Comments ride their decisions — extraction moves comments with the code; never delete
+   or compress comments to shorten a file.
+8. Every extracted block must be a verbatim move or closure-parameterized — behavior
+   unchanged, verified by full regression with no assertion-count drop.
+
 ---
 
 ## This Document's Checklist
@@ -56,3 +99,4 @@ If reading code isn't helping, run it. Write a test, add a log, bisect. Action b
 - [ ] Checklist: tasks tracked at project level
 - [ ] Problem-solving: logs → docs → binary search
 - [ ] Action over staring: run code, don't just read
+- [ ] Code structure: function scale ≤50/100/300 — ≥300 splits into backbone + details

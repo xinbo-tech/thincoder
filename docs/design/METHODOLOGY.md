@@ -67,7 +67,7 @@
 
 ## 代码结构：理解成本分层（2026-09-05 · 学习 + 用户裁定——量化尺度定稿）
 
-> **状态：方法论正文已落（本文件）。模板同步（`methodology-template.md` 英文节）待实践成功后再提炼——实践轮目标：runPanelChatImpl/两端 runAgent/buildToolCallbacks 按本节拆出骨干后，回填模板条目。**
+> **状态：方法论正文已落（本文件）。模板同步（`methodology-template.md` 英文节）已于实践轮成功后回填（2026-09-05——三单体 runPanelChatImpl/两端 runAgent 拆出骨干且全量回归断言数不减——实践验证完成——见变更记录末条）。**
 
 **来源**：Dijkstra 结构化程序设计（局部推理——每段能作为单入口单出口黑盒独立理解）→ Parnas 模块分解（信息隐藏/决策边界——“模块是工作分配单元，不是子程序”）→ 认知复杂度研究（主要敌人是嵌套深度与分支密度，不是行数）→ 本项目实践教训（500 行只是红线，到 500 行说明已经很难理解——真正的判据在函数尺度）。
 
@@ -233,3 +233,20 @@
 **测试**：内容级——注入体与 docs 同文（实战教训表四行 + 时机句）；discipline 两端含 Code structure 段（含 structure before size 锚句）；全量回归不降（纯文档）。
 
 **受影响文件**：如上——CLI + VS Code 双端。
+
+### 2026-09-05：实践轮完成——三单体拆骨干 + 模板回填（方法论闭环）
+
+**需求**（用户拍板："现在可以开工了"）——按新尺度把三大 ≥300 单体拆出骨干，实践成功后回填模板。
+
+**设计**（骨干—细节两层——每函数仅留阶段调用序列，细节进具名函数；verbatim 或闭包参数化，语义零变）：
+1. **VS `runPanelChatImpl` 420→221**（55144be）：回调工厂（webview 桥——25 onX）→ `panel-callbacks.mjs`；主循环（guard-carry/ContinueError/Ctrl+I/错误持久化）→ `runTurnLoop` 模块函数。
+2. **VS `runAgent` 427→~190**（1133491）：压缩检查 / 蒸馏发射 / 回合收尾 / guard 推回组 → `agent/run-stages.mjs`（VS）；import 面清理。
+3. **CLI `runAgent` 383→293**（c3afa53）：压缩检查 / 注入组 / 响应提醒 / 回合收尾 + collectSettledAsync → `agent/run-stages.mjs`（CLI——双端对位同构，parity 锚跟进）。
+4. 审视档评估：`buildToolCallbacks`（232）与 `verifyTool.execute`（280）为命名回调集/注释阶段序——骨架形态已达"去掉细节仍讲清做什么"——判定无需强拆（一次调用无复用——提取是负收益）。
+5. **模板回填**（本批）：`methodology-template.md`（两端）加 Code Structure 英文节——档位句（≤50/100/≥300 拆骨干）+ 骨干判定句 + 八原则 + 实践验证注；docs 状态注更新。
+6. 过程中方法论自证：三处"零重叠插入"编辑事故（新增内容重复/旧块未删）——均当场核对修复——反例档案再添一条：**编辑后必须核对 diff 上下文——零重叠插入语义（新块追加旧块保留）是本次三连事故根源**。
+
+**测试**：VS 全量 1199/1199 + lint 225；CLI 全量 1485/1437+48skip/0 + lint 274；三拆分各自定向测试全绿——断言数未减（vs 拆分前基线）。
+
+**受影响文件**：VS `extension/panel-chat.mjs`/`panel-callbacks.mjs`（新）/`agent.mjs`/`agent/run-stages.mjs`（新）；CLI `agent.mjs`/`agent/run-stages.mjs`（新）；`methodology-template.md`（两端）。
+
