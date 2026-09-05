@@ -315,7 +315,7 @@
 
 /* Scrolling content region — the FULL review streams here, never truncated. */
 .advisor-content {
-  max-height: 320px;
+  max-height: 100px;
   overflow-y: auto;
   padding: 6px 10px;
   white-space: pre-wrap;
@@ -447,9 +447,10 @@
 .sub-item .consult-reply summary { cursor: pointer; opacity: 0.7; user-select: none; }
 .sub-item .consult-reply pre { max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: var(--input-bg, rgba(127,127,127,.08)); border-radius: 6px; padding: 8px; margin: 6px 0 0; }
 
-/* Subagent/consultation activity blocks (consult-UI review 2026-08-15): shorter content
-   height than advisor reviews, dimmer title — collapsible, reopenable, height 0 when closed. */
-.advisor-block.sub-block .advisor-content { max-height: 180px; }
+/* Subagent/consultation activity blocks — same content height as advisor reviews
+   (2026-09-05 用户设定：advisor/subagent 均 100px——内容完整、内部滚动), dimmer title —
+   collapsible, reopenable, height 0 when closed. */
+.advisor-block.sub-block .advisor-content { max-height: 100px; }
 .advisor-block.sub-block > summary { opacity: 0.75; }
 
 /* 性能（webview 输入卡顿修复）：离屏消息/工具卡跳过 layout/paint，
