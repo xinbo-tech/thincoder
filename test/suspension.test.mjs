@@ -1056,10 +1056,12 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
     const { ctx, S, setLoading, send } = chatModules
     const { _subagentMap } = S
     S._subagentMap = {}
-    // 普通运行态基线：输入锁 + send 隐藏（digest 之外的既有语义不变）
+    // 普通运行态基线（2026-09-05 人机并行对齐——CLI state.queue 语义）：processing 期间
+    // 输入可用 + send 常显（发送=排队不打断）；abort 仅运行中显。旧语义（锁输入）已
+    // 按 CLI 实践验证模式修正——普通回合中 Enter 同排队。
     setLoading(ctx, true)
-    assert.equal(ctx.inputEl.disabled, true, "普通处理中输入锁定")
-    assert.equal(ctx.sendBtn.style.display, "none")
+    assert.equal(ctx.inputEl.disabled, false, "普通处理中输入可用（CLI 排队语义）")
+    assert.equal(ctx.sendBtn.style.display, "flex")
     assert.equal(ctx.abortBtn.style.display, "flex")
     // 挂起激活（digest 处理中 Enter 需要输入可用——F7）
     post({ type: "suspension", active: true, running: 1, queued: 0, pending: 0 })
@@ -1077,10 +1079,10 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
     post({ type: "suspension", active: true, running: 0, queued: 0, pending: 1 })
     post({ type: "subagent", id: 22, role: "coder", status: "settled" })
     assert.equal(ctx.inputEl.value, "输入到一半的草稿…", "后台事件零干扰（不清空/不改写）")
-    // 退出挂起 → 恢复普通运行态锁定
+    // 退出挂起 → 普通运行态（processing 中仍可用——CLI 排队语义；isRunning 不再锁）
     post({ type: "suspension", active: false, freeze: true })
     setLoading(ctx, true)
-    assert.equal(ctx.inputEl.disabled, true, "退出挂起后普通锁定恢复")
+    assert.equal(ctx.inputEl.disabled, false, "退出挂起后 processing 中仍可输入（CLI 排队语义）")
     S._subagentMap = _subagentMap
   })
 })

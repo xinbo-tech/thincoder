@@ -12,7 +12,6 @@ import { selectProviderModel, loadRaw, loadMcpServers } from "../config-io.mjs"
 import { openDiffPreview } from "./diff-preview.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { savePastedImages } from "./image-handler.mjs"
-import { poolLive } from "./suspension.mjs" // 2026-09-05：userMessage 排队判定（后台池 live）
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
@@ -53,12 +52,12 @@ export async function handlePanelMessage(panel, msg) {
       const images = Array.isArray(msg.images) && msg.images.length > 0
         ? savePastedImages(msg.images, _cwd())
         : undefined
-      // 2026-09-05 走查缺陷修复：异步子代理执行中主会话可继续使用（用户裁定）——
-      // 父回合运行中 + 后台池 live → 消息排队（不 abort 父回合、不杀子代理——CLI
-      // 挂起语义对位）；父回合尾挂起会话消费（panel-chat impl 尾 _suspQueue 消费——
-      // 池空兜底转普通回合——零丢失）。载荷字段与 impl 挂起消费端同构。
-      const live = panel._liveLines?.history
-      if (panel._turnActive && live && poolLive(live)) {
+      // 2026-09-05 人机并行对齐（CLI state.queue 语义——实践验证模式）：父回合运行中
+      // （_turnActive）的消息一律排队——不 abort 父回合、不杀子代理、不并发新回合
+      // （并发会从磁盘重载 lines 孤儿化后台池——AC-S2 同款竞态）；回合尾顺序消费
+      // （impl 尾 while——对位 CLI agent-turn 尾 state.queue 消费）。挂起活跃期由
+      // panel._chat 上游分流（susp.active → pendingInput——D-S5）。
+      if (panel._turnActive) {
         panel._suspQueue ??= []
         panel._suspQueue.push({ text, modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images })
         panel._panel?.webview.postMessage({ type: "messageQueued" })

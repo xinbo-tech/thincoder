@@ -296,6 +296,17 @@ async function runPanelChatImpl(panel, opts = {}) {
       for (const q of queued) await runPanelChat(panel, { ...q })
     }
   }
+
+  // 2026-09-05 人机并行对齐（CLI agent-turn 尾 state.queue 消费——实践验证模式）：
+  // processing 期间排队的消息（panel-messages userMessage → _suspQueue——任何回合中
+  // 都可输入排队）在此回合尾顺序消费；池 live 时上方挂起入口已领走队列（pendingInput
+  // 由挂起会话调度——D-S5 用户输入优先），此处兜底池空/无会话路径——零滞留零丢失。
+  // 与 _suspPending 块互斥（上方挂起块消费后队列已空；释放窗口期 _chat 排队项也在
+  // 上方 queued splice 中——本循环只接消费后新增/未处理项）。
+  while ((panel._suspQueue?.length ?? 0) > 0 && !panel._turnActive && !panel._suspPending) {
+    const q = panel._suspQueue.shift()
+    await runPanelChat(panel, { ...q })
+  }
 }
 
 /**
