@@ -4,19 +4,18 @@
  */
 import { chat } from "./provider.mjs"
 import { specForModel } from "./specs.mjs"
-import { compactHistory, truncateFallback, COMPRESS_FAILURE_LIMIT, summarizeRunExplorations } from "./compact.mjs"
-import { cleanupConsultSessions } from "./agent-tools/consult.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import {
   MAX_ADVISOR_PUSHBACKS, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, MAX_EMPTY_RETRIES,
   configuredMaxTurns, hasCodeMutations,
-  pushReal, agentState, reinjectAfterCompaction,
+  pushReal, agentState,
 } from "./agent/run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
 import { setupAgentRun } from "./agent/setup.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"
-import { logEvent } from "./log.mjs"
+// 主循环阶段函数（压缩检查/蒸馏发射/回合收尾）2026-09-05 实践轮迁 agent/run-stages.mjs
+import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, maybeGuardPushbacks } from "./agent/run-stages.mjs"
 
 /** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
@@ -114,70 +113,11 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
 
     // Context compaction check — only at safe points: history ends with a complete
     // exchange (user input or tool result), never mid-assistant (CLI parity D1).
+    // 2026-09-05 实践轮：压缩判定/重建/降级计数提为 checkAndCompact 模块函数
+    // （骨干—细节两层——循环骨架此处只剩检查调用）。
     const lastRole = history.at(-1)?.role
     if (lastRole === "user" || lastRole === "tool") {
-      try {
-        // Measured baseline path (CLI parity D3): the last response's prompt_tokens is the
-        // true full-context cost; messages appended since are estimated as increments.
-        // tools schemas ride along for the pure-estimation overhead; the signal cancels
-        // the in-flight summary request on Stop (CLI parity).
-        const compacted = await compactHistory(history, systemPrompt, provider, cfgCompactThreshold, {
-          lastPromptTokens: agent._lastPromptTokens,
-          usageAtLen: agent._usageAtLen,
-        }, toolSchemas, signal, callbacks, agent)
-        if (compacted) {
-          // Only reset the end-of-run distillation boundary when the machine line was REBUILT —
-          // a rebuild inserts a summary note + "Understood" placeholder and collapses the middle,
-          // so the array SHRINKS; the shrink path (shrinkOversized) keeps the SAME length (it only
-          // truncates bodies in place), so a same-length result means the boundary is still valid
-          // and must NOT be reset. Reset to 2 = the verbatim tail start ([head(empty), note,
-          // "Understood", ...tail] → tail begins after the two inserted messages).
-          const rebuilt = compacted.length !== history.length
-          history.length = 0
-          history.push(...compacted)
-          if (rebuilt) agent._runStartHistoryLen = 2
-          // Measured baseline is invalidated along with old history — fall back to estimation
-          agent._lastPromptTokens = null
-          agent._usageAtLen = null
-          agent._compressFailures = 0
-          reinjectAfterCompaction(history, agent, getAuto)
-          // Completion info (CONTEXT-COMPACTION §7 D-C1): { mode: "summary", tokensFreed,
-          // elapsedMs } from compactHistory — the webview renders "Compressed: N tokens
-          // freed (Xs)". Existing callers that ignore onCompress keep the old semantics.
-          callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-        }
-      } catch (e) {
-        // AbortError must not be swallowed: user cancellation must propagate
-        if (e?.name === "AbortError" || signal?.aborted) throw e
-        // Q3 visibility (CONTEXT-COMPACTION §7 D-C1): a failed compression is no longer silent —
-        // console.error + onCompressFail let the webview render the error text. Failure
-        // STRATEGY is unchanged: COMPRESS_FAILURE_LIMIT consecutive failures still degrade
-        // to truncateFallback — this only adds observability.
-        console.error("[context] compression failed:", e)
-        callbacks?.onCompressFail?.(e)
-        // Summary LLM failed — count consecutive failures; after the limit degrade to
-        // deterministic truncation (no network) so the task can continue (CLI parity D6).
-        agent._compressFailures = (agent._compressFailures ?? 0) + 1
-        if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
-          agent._compressFailures = 0
-          const truncated = truncateFallback(history, provider)
-          if (truncated) {
-            history.length = 0
-            history.push(...truncated)
-            // Same boundary reset as the compacted path: truncateFallback returns the same
-            // [head(empty), note, "Understood", ...verbatim tail] shape — tail starts at index 2.
-            agent._runStartHistoryLen = 2
-            agent._lastPromptTokens = null
-            agent._usageAtLen = null
-            reinjectAfterCompaction(history, agent, getAuto)
-            // Fallback completion info (D-C2/D-C3): mode marks the deterministic-truncation
-            // path — the status line shows the degradation note ("truncated to N messages")
-            // ONLY after 3 consecutive failures (the caller reached this branch).
-            agent._lastCompressInfo = { mode: "fallback", tailMessages: Math.max(0, truncated.length - 2) }
-            callbacks.onCompress?.(agent._lastCompressInfo)
-          }
-        }
-      }
+      await checkAndCompact(agent, { history, provider, systemPrompt, toolSchemas, cfgCompactThreshold, signal, callbacks, getAuto })
     }
 
     // Live AUTO reminder (CLI parity, agent.mjs:158): approve-all / the AUTO button can
@@ -275,85 +215,15 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         }
       }
 
-      // Pending tasks check (top-level only). Pushed back AT MOST ONCE per task-list
-      // state (CLI parity): an unbounded loop stranded the model when a pending item
-      // could not be resolved. Updating the list via the task tool resets the budget.
+      // Pending tasks / verify guard / advisor guard pushbacks（2026-09-05 实践轮——
+      // 提为 maybeGuardPushbacks 模块函数，run-stages.mjs——此处只剩调用；push=true
+      // 时已注入提醒并 continue 本回合）。
       if (depth === 0) {
-        const pending = agent._tasks?.filter((t) => t.status === "pending")
-        if (pending?.length && (agent._taskPushbacks ?? 0) < 1) {
-          agent._taskPushbacks = (agent._taskPushbacks ?? 0) + 1
-          pushReal(history, fullHistory, { role: "assistant", content: response.content })
-          history.push({
-            role: "user",
-            content: `[System reminder: you still have pending tasks: ${pending.map((t) => t.title).join(", ")}. Update their status before finishing — if done, mark done; if not applicable, remove them. (This is your only reminder — if you choose not to, finish anyway.)]`,
-          })
-          callbacks.onSubTurnBreak?.()
-          continue
-        }
-
-        // Verify guard — OPT-IN (config agent.verifyGuard === true, CLI parity). When off
-        // the agent is not pushed back to verify before finishing.
-        if (cfgVerifyGuard && agent._touchedFiles.length > 0 && !agent._verifiedThisRun && guardPushbacks < MAX_VERIFY_PUSHBACKS) {
-          guardPushbacks++
-          pushReal(history, fullHistory, { role: "assistant", content: response.content })
-          history.push({
-            role: "user",
-            content: "[System reminder: you modified files in this run but have not verified the changes. Before finishing: call the verify tool to run syntax checks and tests. If verify reports failures, fix them and run verify again. If verification is genuinely impossible here, say so explicitly in your reply.]",
-          })
-          callbacks.onSubTurnBreak?.()
-          continue
-        }
-        if (agent._verifiedThisRun && agent._verifyPassed === false) {
-          const retries = (agent._verifyRetries ?? 0) + 1
-          agent._verifyRetries = retries
-          if (retries < MAX_VERIFY_RETRIES) {
-            agent._verifyPassed = undefined // reset for next attempt
-            pushReal(history, fullHistory, { role: "assistant", content: response.content })
-            history.push({
-              role: "user",
-              content: `[System reminder: verify reported failures (retry ${retries}/${MAX_VERIFY_RETRIES}). Review the failures, fix the issues, then run verify again. If you cannot fix after ${MAX_VERIFY_RETRIES} attempts, explain honestly what's blocking you.]`,
-            })
-            callbacks.onSubTurnBreak?.()
-            continue
-          }
-          // Exhausted retries — inject honest-declaration reminder
-          if (!agent._honestReminderInjected) {
-            agent._honestReminderInjected = true
-            pushReal(history, fullHistory, { role: "assistant", content: response.content })
-            const consultHint = agent?.config?.agent?.consultModels?.length
-              ? " If you suspect the root-cause hypothesis itself may be wrong, consider consult_start for independent diagnoses before more retries."
-              : ""
-            history.push({
-              role: "user",
-              content: `[System reminder: ${MAX_VERIFY_RETRIES} verify attempts exhausted and tests are still failing. In your response to the user, you MUST state explicitly: (1) what tests are still failing, (2) what you tried, (3) what you believe the root cause is. Do not present this as complete — the user needs to know the work is unfinished.${consultHint}]`,
-            })
-            callbacks.onSubTurnBreak?.()
-            continue
-          }
-        }
-
-        // Advisor guard (CLI completion.mjs parity): OPT-IN ONLY
-        // (advisor.guard === true, default OFF — 2026-08-21 semantic
-        // refactor), NEVER in engineering mode (engineering has its own
-        // mandatory gates). The advisor tool itself is always available.
-        // Cap sync (CLI b74e413): beyond MAX_ADVISOR_ROUNDS the advisor tool
-        // refuses reviews (run.mjs convergence cap) — pushing back further
-        // would loop forever (fix → pushback → cap-refused call → fix …).
-        const advisorCfg = agent.config?.advisor
-        const advisorReview = advisorCfg?.guard === true
-        if (advisorReview && !agent.config?.agent?.engineering
-            && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
-            && advisorPushbacks < MAX_ADVISOR_PUSHBACKS
-            && (agent._advisorRound || 0) < MAX_ADVISOR_ROUNDS) {
-          advisorPushbacks++
-          pushReal(history, fullHistory, { role: "assistant", content: response.content })
-          history.push({
-            role: "user",
-            content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format).]`,
-          })
-          callbacks.onSubTurnBreak?.()
-          continue
-        }
+        const pb = { guardPushbacks, advisorPushbacks }
+        const pushed = await maybeGuardPushbacks(agent, { response, history, fullHistory, callbacks, cfgVerifyGuard, pb })
+        guardPushbacks = pb.guardPushbacks
+        advisorPushbacks = pb.advisorPushbacks
+        if (pushed) continue
       }
 
       pushReal(history, fullHistory, { role: "assistant", content: response.content })
@@ -365,25 +235,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
         // the summary is always in place before the next LLM call. Silent (N3): failure must
         // never block the return or lose history.
         callbacks.onComplete?.(response.content, agentState(agent))   // UI 立即释放
-        // depth 守卫（评审 #2）：仅顶层轮末触发蒸馏；子轮（depth>0）不得创建——
-        // 否则先创建的蒸馏晚 resolve 会 clobber 历史（N1 竞态）。
-        // 专用 distillSignal（评审 #1）：与运行 signal 分离——新消息/下一轮 abort 运行
-        // controller 时蒸馏继续完成；用户 Stop（abort 运行 signal）同样不影响蒸馏。
-        // panel dispose / 会话切换时 abort distillSignal。
-        const distill = summarizeRunExplorations(history, agent._runStartHistoryLen ?? 0, provider, opts.distillSignal ?? signal)
-          .then((shrunk) => {
-            if (shrunk) {
-              history.length = 0
-              history.push(...shrunk)
-              // The machine line changed shape — the measured token baseline was for the pre-shrink
-              // context, so invalidate it (next compaction check falls back to re-estimation).
-              agent._lastPromptTokens = null
-              agent._usageAtLen = null
-              callbacks.onDistilled?.()   // 压缩已落位 → 调用方应持久化（评审 #5）
-            }
-            return shrunk
-          })
-          .catch(() => null)
+        // 2026-09-05 实践轮：蒸馏发射（深度守卫/distillSignal 分离/落位回写）提为
+        // fireEndOfRunDistill 模块函数——此处只剩 UI 释放 + 发射调用。
+        const distill = fireEndOfRunDistill(agent, history, provider, opts.distillSignal ?? signal, callbacks)
         if (opts.distillState) opts.distillState.pending = distill
       }
       return response.content
@@ -447,50 +301,13 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     thrownError = e
     throw e
   } finally {
-    // Turn-bound cleanup (CONSULTATION.md): abort any leftover consultation sessions
-    // started during this turn — no orphan sub-agents past the turn's end.
-    cleanupConsultSessions(agent)
-    // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1 + §17.5
-    // supersede; the collector lives in agent-tools/subagent-async.mjs with the async
-    // machinery — 500-line split):
-    // Stop (plain abort) → clear WITHOUT injecting stale errors (Ctrl+I keeps the pool);
-    // ContinueError → no wait/no injection; else → collect SETTLED entries (D-S3 ①) —
-    // running/queued STAY (no allSettled wait) — the suspension session digests them (D-S2).
-    // §17.5: a suspension-driven run (opts.suspDriven — the panel-chat layer runs
-    // suspensionSession after this run) NO LONGER drains settled entries at turn end —
-    // they stay pooled (settled not consumed) so the session's first sweep → digest
-    // turn digests them (17.5.2 方案 B). Undriven callers keep the direct turn-end
-    // injection (17.5.4 #2 兜底 — results never lost without a session).
-    const asyncMap = agent._asyncSubagents
-    if (asyncMap && asyncMap.size > 0) {
-      if (signal?.aborted && !signal?.reason?.interrupt) {
-        logEvent("ev:stopped", { poolN: asyncMap.size, where: "turn-end-abort" })
-        asyncMap.clear()
-      } else if (!(thrownError instanceof ContinueError)) {
-        const { collectSettledAsync } = await import("./agent-tools/subagent.mjs")
-        await collectSettledAsync(agent, { history, fullHistory, cwd, suspDriven: opts.suspDriven === true })
-      }
-    }
-    // The pool rides the shared depth-0 history array across runAgent calls (the agent
-    // object itself is per-run) — attach while entries remain, drop when drained.
-    if (depth === 0) history._asyncSubagents = (asyncMap && asyncMap.size > 0) ? asyncMap : undefined
-    // _asyncCheckN 随续跑/池持久化（2026-09-05 复审 #5）：续跑（Ctrl+I/ContinueError——
-    // 模型上下文连续须续号，即使池已空）或池仍有时写下读数；普通终局丢弃（新上下文重置 0）。
-    if (depth === 0) {
-      const willContinue = (thrownError instanceof ContinueError) || (signal?.aborted && !!signal?.reason?.interrupt)
-      if (willContinue || (asyncMap && asyncMap.size > 0)) history._asyncCheckN = agent._asyncCheckN ?? 0
-      else history._asyncCheckN = undefined
-    }
-    agent._inAutoTurn = false
-    // §17 D-S6: an auto-turn's end-state guard marks carry into the next USER run via
-    // opts.guardCarry (restored at its start above). Normal ends only — Stop discards
-    // (user cancelled the work); ContinueError lets the auto-resumed run snapshot at
-    // its own end (CLI parity).
-    if (autoTurn && !(signal?.aborted && !signal?.reason?.interrupt) && !(thrownError instanceof ContinueError)) {
-      const carry = opts.guardCarry
-      if (carry) {
-        for (const k of INHERITED_GUARD_KEYS) carry[k] = agent[k]
-      }
-    }
+    // 2026-09-05 实践轮：回合收尾（consult 清理/async 池收集/checkN 持久/guardCarry
+    // 继承）提为 finalizeAgentTurn 模块函数——finally 只剩一行调用 + 骨架注释。
+    await finalizeAgentTurn(agent, { signal, history, fullHistory, cwd, depth, thrownError, autoTurn, guardCarry: opts.guardCarry, suspDriven: opts.suspDriven === true })
   }
 }
+
+// runAgent 主循环阶段函数（checkAndCompact/fireEndOfRunDistill/finalizeAgentTurn）
+// 2026-09-05 实践轮迁 agent/run-stages.mjs（runAgent ≥300 单体分层后文件总量超限——
+// 阶段函数族独立成文件——import 面见文件头）
+
