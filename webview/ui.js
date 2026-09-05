@@ -95,9 +95,12 @@ export function appendAdvisorChunk(block, kind, text, sub) {
 export function showWelcome(ctx) {
   const el = document.createElement("div")
   el.className = "welcome"
-  el.innerHTML = `<h2>${t("welcome.heading")}</h2>
-    <p>${t("welcome.text")}</p>
-    <p style="margin-top:8px;opacity:0.7">${t("welcome.shortcutsHtml")}</p>`
+  // data-i18n/data-i18n-html：动态内容在 i18n 消息到达前渲染（脚本加载即 showWelcome）——
+  // t() 此时返回键名——i18n-dom applyI18nToDOM 到达后按属性覆盖（2026-09-05 真机走查修复：
+  // 此前只刷 .welcome h2，两个 p 键名残留）。shortcutsHtml 含 <code>——innerHTML 语义。
+  el.innerHTML = `<h2 data-i18n="welcome.heading">${t("welcome.heading")}</h2>
+    <p data-i18n="welcome.text">${t("welcome.text")}</p>
+    <p data-i18n-html="welcome.shortcutsHtml" style="margin-top:8px;opacity:0.7">${t("welcome.shortcutsHtml")}</p>`
   ctx.messagesEl.appendChild(el)
 }
 
@@ -112,6 +115,9 @@ export function showBanner(ctx, text, keyOk) {
   banner.innerHTML = ""
   banner.className = keyOk ? "provider-banner ok" : "provider-banner warn"
   const label = document.createElement("span")
+  // data-banner-key：横幅可能创建于 i18n 消息到达前（t() 返回键名——2026-09-05
+  // 真机走查：banner.configured 键名残留同族）——i18n-dom 按此属性兜底刷新。
+  label.dataset.bannerKey = keyOk ? "banner.configured" : "banner.notConfigured"
   label.textContent = text
   banner.appendChild(label)
 }

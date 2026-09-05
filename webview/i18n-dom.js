@@ -38,7 +38,18 @@ export function applyI18nToDOM() {
   const settingsTitle = document.querySelector("#settings-panel h3")
   if (settingsTitle) settingsTitle.textContent = t("settings.title")
 
-  // welcome page
+  // Dynamic content rendered BEFORE the i18n message arrived (chat.js renders the welcome
+  // strip on load — its t() calls return raw keys until setStrings ran; ui.js showWelcome
+  // carries data-i18n / data-i18n-html attrs for this refresh — 2026-09-05 真机走查修复：
+  // 此前只刷 .welcome h2，两个 p 键名残留）。data-i18n = textContent；data-i18n-html =
+  // innerHTML（值可含 <code> 等标签）。
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n) })
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml) })
+  // provider status banner（同上时序——showBanner 可能先于 i18n 消息；键随 keyOk 状态）
+  document.querySelectorAll("[data-banner-key]").forEach((el) => { el.textContent = t(el.dataset.bannerKey) })
+
+  // welcome page (legacy static path — superseded by data-i18n above, kept for the
+  // static #welcome-panel h2 which onboarding.js fills at display time)
   const welcome = document.querySelector(".welcome h2")
   if (welcome) welcome.textContent = t("welcome.heading")
 }
