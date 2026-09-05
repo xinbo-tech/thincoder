@@ -498,4 +498,3 @@ async function runPanelChatImpl(panel, opts = {}) {
 
 // toolPanelPayload 2026-09-05 迁 panel-toolpanel.mjs（512 > 500 硬限）——re-export 保面（chat-panel.test.mjs）
 export { toolPanelPayload } from "./panel-toolpanel.mjs"
-
