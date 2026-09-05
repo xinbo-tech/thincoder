@@ -353,11 +353,11 @@ function streamServer(walls) {
   return { server, calls }
 }
 
-// v2: real signed token — minted at runtime (the hardcoded fixture expired 2026-08-31
+// v2: real token — minted at runtime (the hardcoded fixture expired 2026-08-31
 // and started failing that day; TTL'd tokens must never be baked into test files).
-// The single minting helper lives below (signedToken, §18 code review #4 dedupe);
+// The single minting helper lives below (unsignedToken, §18 code review #4 dedupe);
 // this module-level token serves the eng-coder spawn tests that need a standing slot.
-const realToken = await signedToken("c8721152-df45-4f7b-96f2-db877500f9ba", Date.now() + 24 * 3600 * 1000)
+const realToken = await unsignedToken("c8721152-df45-4f7b-96f2-db877500f9ba", Date.now() + 24 * 3600 * 1000)
 
 test("activity stream: panel channel name carries #subId (one block per invocation)", async () => {
   const { server } = streamServer(0)
@@ -542,19 +542,18 @@ test("modeRoleField role description stays in sync with the matrix-pointer text 
   }
 })
 
-/** Real signed token with a fixed uuid+expiry (v2 HMAC scheme), minted at runtime —
+/** Real unsigned token with a fixed uuid+expiry (2026-09-06 设计 B — token = 无签名流程凭证
+ *  uuid:expiresAt; HMAC 防伪层已删——测试辅助随签名路径一并退役), minted at runtime —
  *  TTL'd tokens must never be baked into test files (expired-fixture lesson 2026-08-31). */
-async function signedToken(uuid, expiresAt) {
-  const { createHmac } = await import("node:crypto")
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-  return `${uuid}:${expiresAt}:${sig}`
+async function unsignedToken(uuid, expiresAt) {
+  return `${uuid}:${expiresAt}`
 }
 
 test("T15 (vscode mirror): 双设计并行 spawn 各带 designId+token 互不覆盖", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await signedToken("eeeeeeee-1111-4111-8111-00000000000a", exp)
-  const tokenB = await signedToken("eeeeeeee-2222-4222-8222-00000000000b", exp)
+  const tokenA = await unsignedToken("eeeeeeee-1111-4111-8111-00000000000a", exp)
+  const tokenB = await unsignedToken("eeeeeeee-2222-4222-8222-00000000000b", exp)
   const { server } = streamServer(0)
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
@@ -591,8 +590,8 @@ test("T15 (vscode mirror): 双设计并行 spawn 各带 designId+token 互不覆
 test("T16 (vscode mirror): 多设计缺 designId → throw 要求指定；镜像被清 + 槽残留 → 不复活", async () => {
   const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
   const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await signedToken("ffffffff-1111-4111-8111-00000000000a", exp)
-  const tokenB = await signedToken("ffffffff-2222-4222-8222-00000000000b", exp)
+  const tokenA = await unsignedToken("ffffffff-1111-4111-8111-00000000000a", exp)
+  const tokenB = await unsignedToken("ffffffff-2222-4222-8222-00000000000b", exp)
   const parent = {
     config: { agent: { engineering: true } },
     _engDesignTokens: new Map([["id-x", tokenA], ["id-y", tokenB]]),
@@ -656,7 +655,7 @@ function oneShotServer(text) {
   return { server }
 }
 
-/** 工程模式父会话 fake（eng-coder spawn 需槽位 + 真实签名 token；async 池字段齐备）。 */
+/** 工程模式父会话 fake（eng-coder spawn 需槽位 + 无签名 token——2026-09-06 设计 B：uuid:expiresAt；async 池字段齐备）。 */
 function engParent(port, token, extra = {}) {
   return {
     _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
@@ -698,7 +697,7 @@ test("T-E16 (schema): subagent async 描述 = 角色级默认措辞；eng-coder 
   assert.ok(d.includes("Default is role-level"), `async 描述含角色级默认: ${d}`)
   assert.ok(d.includes("role='eng-coder' → true"), `async 描述点名 eng-coder 默认 async: ${d}`)
   assert.ok(d.includes("async:false"), "async:false 显式覆盖路径在描述中")
-  assert.ok(subagentTool.description.includes("Role-based default (§18)"), "工具描述 Async mode 段注明角色级默认")
+  assert.ok(subagentTool.description.includes("The DEFAULT is role-level"), "工具描述 Async spawn 段注明角色级默认（§19.7 权威版措辞）")
 
   // 受限审计变体 wiring：depth>0 role=eng-coder 的 LLM 请求 schema（eng-coder 唯一 spawn 通道）
   const bodies = []
@@ -793,16 +792,27 @@ test("T-M12: 描述引导——五动作 + 查进度用 status（check 会阻塞
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
   assert.ok(d.includes("FIVE actions"), "五动作总述（§19.5——cancel 并入）")
-  assert.ok(/action parameter picks/.test(d), "action 参数引导")
-  assert.ok(d.includes("check BLOCKS until the target finishes"), "check 阻塞显式警告（防 §19 触发场景重演）")
+  assert.ok(d.includes("pick by what you need"), "action 参数引导（§19.7 权威版措辞）")
+  assert.ok(d.includes("BLOCKS until the target finishes — this is the explicit consuming fetch"), "check 阻塞显式警告（防 §19 触发场景重演——权威版措辞）")
   assert.ok(d.includes("NON-BLOCKING progress query"), "status 非阻塞定位")
   assert.ok(d.includes("action:'check' blocks until the target finishes"), "async 段重复阻塞警告（查进度用 status）")
-  assert.ok(d.includes("cancel — STOP one background async subagent"), "cancel 动作定位（定向中止——不经模型也可从 UI ⏹）")
-  assert.ok(d.includes("id REQUIRED"), "cancel id 必填警告（防误全停）")
-  assert.ok(d.includes("action:'cancel' (its id)"), "async 段 cancel 引导（停失控子代理）")
+  assert.ok(d.includes("action:'cancel': STOP one background subagent"), "cancel 动作定位（定向中止——权威版措辞）")
+  assert.ok(d.includes("REQUIRED — omitting it errors"), "cancel id 必填警告（防误全停——权威版措辞）")
+  assert.ok(d.includes("going the wrong way"), "cancel 引导（停失控子代理——权威版措辞）")
   assert.ok(d.includes("飞刀"), "escalate 中文别名在描述中（触发词条款）")
-  assert.ok(d.includes("action:'escalate' directly"), "触发词 → 直接调 action:'escalate'")
+  assert.ok(d.includes("escalate EARLY"), "escalate 时机引导（强手早用——权威版措辞）")
   assert.ok(d.includes("Not available in engineering mode"), "escalate 工程模式禁用提示保留")
+})
+
+test("D-A2 (AGENT-LOOP.md §19.7): 工具描述含 async 收尾引导锚句——逐字存在（fail-when-unchanged——两端各自内容断言——防再发）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const d = subagentTool.description
+  assert.ok(
+    d.includes("After an async spawn the turn winds down normally — nothing expects you to wait for it. Unchecked results reach you automatically — injected before your next turn, or digested in the suspension session while background subagents are still running — so follow-up status/check polling is only needed when your next step genuinely depends on the result."),
+    "D-A2: async 收尾引导锚句逐字存在于工具描述（AGENT-LOOP.md §19.7——fail-when-unchanged）",
+  )
+  assert.ok(d.includes("Async spawn (AGENT-LOOP.md §15/§18)"), "Async spawn 段 = 权威版段（§19.7 D-A3——VS 旧 Async mode 段已替换）")
+  assert.ok(d.includes("capped at 4 concurrent"), "cap 4 引导（权威版——§19.7 D-A1）")
 })
 
 test("T-CL1: cancel description carries the cancel-verification anchor (last resort + verify alarming signals — fail-when-unchanged)", async () => {
@@ -917,7 +927,7 @@ test("T-M25-engine（审计 F4）: runChild forward 引擎级——eng-coder 内
   // 真实链路：主会话 spawn eng-coder（sync）→ eng-coder runAgent 内部 spawn explore
   // （受限审计变体）→ 内层 explore 文本经双层转发到主会话 onToolPanel：
   // 频道 sub:eng-coder#1 + chunk.sub === "explore#1"（D-M8 webview 子标渲染输入）。
-  const token = await signedToken("f4f4f4f4-1111-4111-8111-0000000000f4", Date.now() + 24 * 3600 * 1000)
+  const token = await unsignedToken("f4f4f4f4-1111-4111-8111-0000000000f4", Date.now() + 24 * 3600 * 1000)
   const server = createServer((req, res) => {
     let body = ""
     req.on("data", (c) => (body += c))

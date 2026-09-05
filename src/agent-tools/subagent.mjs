@@ -112,10 +112,9 @@ export function resolveChildProvider(parent, modelArg) {
 
 /**
  * Resolve the design-token slot for an eng-coder spawn (2026-09-01 multi-design, FR3,
- * CLI parity): designId given → exact slot; omitted → exactly ONE slot must exist
- * (multiple slots refuse rather than guess — T16). The HMAC/TTL check itself stays in
- * validateDesignToken (unchanged). Mirror-cleared + slots present = engineering mode
- * re-entered (eng.mjs reset) → stale slots must not resurrect tokens.
+ * CLI parity): designId → exact slot; omitted → exactly ONE slot must exist (T16).
+ * Format+TTL fail-closed check (uuid:expiresAt — 2026-09-06: HMAC anti-forgery gone)
+ * stays in validateDesignToken. Mirror-cleared + slots present → stale slots must not resurrect.
  */
 export function resolveDesignSlot(parent, designIdArg) {
   const slots = parent._engDesignTokens
@@ -284,8 +283,8 @@ export const subagentTool = {
 
     // eng-coder token gate: the design review must have passed and the caller must
     // present the exact token advisor issued — otherwise the child is not authorized to code.
-    // 2026-09-01: multi-design slots — the token is located by designId (exact slot,
-    // single-slot fallthrough); HMAC/TTL validation itself is unchanged (CLI parity).
+    // 2026-09-01: multi-design slots — designId 定位槽（exact slot / 单槽 fallthrough）；
+    // format+TTL fail-closed 校验不变（2026-09-06 设计 B: HMAC 防伪层已删——无签名 uuid:expiresAt）。
     let issuedToken
     if (role === "eng-coder") {
       issuedToken = resolveDesignSlot(parent, designId).token

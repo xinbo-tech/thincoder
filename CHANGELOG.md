@@ -8,6 +8,9 @@ All notable changes to ThinCoder VS Code are documented here.
 
 ### Changed
 
+- **subagent 工具描述两端对齐 + async 收尾引导（2026-09-06——AGENT-LOOP.md §19.7 D-A1..A4）**：VS 侧 description 以 CLI 权威版（§19.7 D-A1——CLI 2026-09-05 完整版）逐段对齐——统一 "ONE tool, FIVE actions" 头部（动作行/Async spawn 段/§20 调度段/§19.5.6 touched-files 措辞照权威版逐字）；仅保留有意差异：无 panel action（§19.6 AC-P4——保持五动作）；Async spawn 段尾部插入 D-A2 逐字锚句（回合自然收尾、unchecked 结果自动到达——防模型自发 status/check 轮询挂起——D-A4 防再发：两端各自内容断言）。测试：subagent-tool.test.mjs T-M12/T-E16 措辞同步权威版 + 新增 D-A2 锚句逐字断言（fail-when-unchanged）+ edit-semantics.test.mjs 两处描述锚更新。
+- **design token 防伪层删除（2026-09-06——ENGINEERING-MODE.md 2026-09-06 段，用户裁定"安全剧场"）**：advisor.mjs 删 createHmac/TOKEN_SECRET（HMAC 签名/验签/默认密钥）——token 改无签名流程凭证 `uuid:expiresAt`（TTL fail-closed 保留、槽位匹配 `_engDesignTokens.get(designId) === token` 不变、持久化零变更——存储语义不动）；存量 3 段签名 token 一次性失效（格式错拒绝→需重新评审——已接受迁移代价）。测试：advisor.test.mjs 删防伪断言（2 段格式通过/旧 3 段格式错拒绝/错槽 token 拒绝/TTL 窗口 2 段构造/回显正则 2 段）；subagent-tool/subagent-async/eng-delivery 测试辅助 signedToken → unsignedToken；AC-TO1/2 零残留；授权链（评审→签发→spawn 解锁写）回归绿。
+
 - **会话"当前槽位"按端分离（R4——2026-09-05——SESSION.md §10 引用，CLI 同批）**：本端 end marker `{manifest}.vscode`——面板恢复决策改 resumeSlot（本端记录/一次性继承/全新分配——ensureSlot/status/onProjectChanged 同点）；会话列表高亮按本端记录（D-5）；newSlot/switchToSlot/pick/delete 维护 marker（删记录槽置空、重绑幸存槽写回）。行为差异：无 CLI legacy 单文件兜底；全新目录首用不预写空会话文件（claim 先行、首保存落盘）。L2 1196/1196。
 - **edit 空白差异自动落点镜像 + 编辑纪律三条（2026-09-05——CLI TOOLS.md §14.2 P15.11 + AGENT-LOOP §21 扩展注 2 镜像）**：edit not-found 唯一空白差异窗口自动落点 + note；discipline.md 三条纪律（新鲜读/hash 来源/重试上限）。测试 P15.11a-d + T-N1.8。
 - **git 工具 add/rm/commit 多路径（2026-09-05——CLI parity）**：`path` 空格分隔多路径（git add a b c）——git.mjs 三分支 split(/\s+/) + path 描述尾注（保原子串断言）；镜像测试用例（add/rm/commit 多路径覆盖——git.test 21/21）。

@@ -131,37 +131,40 @@ describe("design token", () => {
     assert.equal(extractTokenUUID("plain"), "plain")
   })
 
-  it("a freshly signed token validates", async () => {
-    // Regenerate a token via the same crypto path the tool uses
-    const { createHmac, randomUUID } = await import("node:crypto")
+  it("a freshly minted 2-part token (uuid:expiresAt) validates — 无签名流程凭证（2026-09-06 设计 B）", async () => {
+    // 设计 B: token 无 HMAC——2 段格式 + TTL fail-closed（签名路径已删）
+    const { randomUUID } = await import("node:crypto")
     const uuid = randomUUID()
     const expiresAt = Date.now() + 3600000
-    const payload = `${uuid}:${expiresAt}`
-    const sig = createHmac("sha256", process.env.THINCODER_TOKEN_SECRET || "thincoder-default-secret").update(payload).digest("hex").slice(0, 16)
-    assert.equal(validateDesignToken(`${payload}:${sig}`), true)
+    assert.equal(validateDesignToken(`${uuid}:${expiresAt}`), true)
   })
 
-  it("an expired signed token is rejected", async () => {
-    const { createHmac, randomUUID } = await import("node:crypto")
+  it("a legacy 3-part signed token (uuid:expiresAt:HMAC — TTL 内) is a FORMAT error — 存量 token 一次性失效（2026-09-06 设计 B, 评审 🟡5）", async () => {
+    const { randomUUID } = await import("node:crypto")
     const uuid = randomUUID()
+    const expiresAt = Date.now() + 3600000 // TTL 内——格式错而不因过期拒绝
+    const legacy = `${uuid}:${expiresAt}:aabbccdd00112233`
+    assert.equal(validateDesignToken(legacy), false, "3 段（旧签名格式）→ 格式错拒绝（不因 TTL 内而放行）")
+  })
+
+  it("an expired token is rejected (TTL fail-closed 保留)", () => {
+    const uuid = "11111111-2222-3333-4444-555555555555"
     const expiresAt = Date.now() - 1000 // already expired
-    const payload = `${uuid}:${expiresAt}`
-    const sig = createHmac("sha256", process.env.THINCODER_TOKEN_SECRET || "thincoder-default-secret").update(payload).digest("hex").slice(0, 16)
-    assert.equal(validateDesignToken(`${payload}:${sig}`), false)
+    assert.equal(validateDesignToken(`${uuid}:${expiresAt}`), false)
   })
 
-  it("the advisor-echo regex matches the FULL signed token (uuid:expiry:sig), not just the uuid", async () => {
+  it("the advisor-echo regex matches the FULL token (uuid:expiresAt), not just the uuid", async () => {
     // Regression 2026-08-14: the regex was built from the uuid segment only, but the
-    // advisor echoes the full signed token — approval never registered and the
-    // eng-coder gate rejected valid tokens.
-    const { randomUUID, createHmac } = await import("node:crypto")
+    // advisor echoes the full token — approval never registered and the
+    // eng-coder gate rejected valid tokens. (2026-09-06 设计 B: token = 2 段无签名段)
+    const { randomUUID } = await import("node:crypto")
     const uuid = randomUUID()
     const expiresAt = Date.now() + 3600000
-    const token = `${uuid}:${expiresAt}:${createHmac("sha256", process.env.THINCODER_TOKEN_SECRET || "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)}`
+    const token = `${uuid}:${expiresAt}`
     const echoed = `Review complete. No critical issues.\n\n[DESIGN-TOKEN:${token}]`
     const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     const re = new RegExp(`(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}\\s*\\](?:\\s|$|\`|\\*)`, "ms")
-    assert.equal(re.test(echoed), true, "full signed token echo matches")
+    assert.equal(re.test(echoed), true, "full token echo matches")
     // and the uuid-only variant must NOT match (that's the bug shape)
     const escUuid = uuid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     const reUuid = new RegExp(`(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escUuid}\\s*\\](?:\\s|$|\`|\\*)`, "ms")
@@ -709,14 +712,9 @@ it("validateDesignToken: fail-closed on malformed strings (two legacy backdoors 
   assert.equal(validateDesignToken("uuid:abc:sig"), false)
 })
 
-it("validateDesignToken: 7d TTL window (AC1/AC2)", async () => {
+it("validateDesignToken: 7d TTL window (AC1/AC2 —— 2026-09-06 设计 B: 2 段无签名构造)", async () => {
   const { validateDesignToken } = await import("../src/agent-tools/advisor.mjs")
-  const { createHmac } = await import("node:crypto")
-  const mk = (expiresAt) => {
-    const uuid = "11111111-2222-3333-4444-555555555555"
-    const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-    return `${uuid}:${expiresAt}:${sig}`
-  }
+  const mk = (expiresAt) => "11111111-2222-3333-4444-555555555555" + ":" + expiresAt
   assert.equal(validateDesignToken(mk(Date.now() + 3 * 24 * 3600 * 1000)), true, "3d in → valid")
   assert.equal(validateDesignToken(mk(Date.now() - 1000)), false, "expired → rejected")
 })
@@ -748,7 +746,7 @@ function mockDesignReviewServer(pass) {
       req.on("data", (c) => (text += c))
       req.on("end", () => {
         const body = JSON.parse(text)
-        const m = JSON.stringify(body.messages).match(/([0-9a-f-]+:\d+:[0-9a-f]{16})/)
+        const m = JSON.stringify(body.messages).match(/([0-9a-f-]{36}:\d{13})/)
         const token = m ? m[1] : "no-token-found"
         const content = pass
           ? `## Review\n\n设计通过，未发现问题。\n\n[DESIGN-TOKEN:${token}]`
@@ -812,6 +810,24 @@ it("designId isolation: completed review that does not pass → its designId not
   } finally {
     server.close()
   }
+})
+
+it("错槽 token 拒绝：designId 槽存在但 token 不匹配 → spawn 门禁拒绝（AC-TO3——2026-09-06 设计 B 新增）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = `aaaaaaaa-1111-4111-8111-00000000000a:${exp}`
+  const tokenB = `bbbbbbbb-2222-4222-8222-00000000000b:${exp}`
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-a", tokenA]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designId: "id-a", designToken: tokenB }, { agent: parent, cwd: process.cwd(), callbacks: {} }),
+    /Invalid or missing design token/,
+    "错槽 token（槽 id-a 持 tokenA，却传 tokenB）→ 拒绝——槽位匹配不变" ,
+  )
 })
 
 it("subagent schema declares the optional designId parameter (CLI parity)", async () => {

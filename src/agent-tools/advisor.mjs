@@ -3,12 +3,11 @@
  * The agent calls this explicitly to get an independent review.
  * type="design" for design doc review, type="code" for code review (default).
  */
-import { randomUUID, createHmac } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 
-const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides
-const TOKEN_SECRET = process.env.THINCODER_TOKEN_SECRET || "thincoder-default-secret"
+const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides. 2026-09-06 设计 B: HMAC 防伪层删除——token = 无签名流程凭证 uuid:expiresAt（public-default-secret 警告一并移除——安全剧场——见 ENGINEERING-MODE.md 2026-09-06 段）
 
 /** Effective token TTL: config override with runtime validation (advisor timeoutMs precedent —
  *  invalid values fall back to the default, never silently disable the ceiling). */
@@ -17,46 +16,47 @@ function effectiveTokenTtlMs(agent) {
   return (Number.isFinite(cfg) && cfg > 0) ? cfg : TOKEN_TTL_DEFAULT_MS
 }
 
-/** Generate a signed design token with expiration */
+/** Generate an unsigned design token with expiration (2026-09-06 设计 B — the HMAC
+ *  signature layer is gone: token = uuid:expiresAt process credential — format + TTL
+ *  fail-closed; slot matching _engDesignTokens.get(designId) === token unchanged). */
 function generateDesignToken(agent) {
   const uuid = randomUUID()
   const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
-  const payload = `${uuid}:${expiresAt}`
-  const signature = createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex").slice(0, 16)
-  return `${payload}:${signature}`
+  return `${uuid}:${expiresAt}`
 }
 
-/** Validate design token: check format, expiration, and signature.
- *  ALL fail-closed (v2 2026-08-25): the two legacy fail-open branches (parts!=3, NaN expiry)
- *  were pass-through backdoors — any malformed string bypassed validation. */
+/** Validate design token: check format (uuid:expiresAt — exactly 2 parts) and expiration.
+ *  ALL fail-closed (v2 2026-08-25: the two legacy fail-open branches (parts!=3, NaN expiry)
+ *  were pass-through backdoors — any malformed string bypassed validation; 2026-09-06 设计 B:
+ *  legacy 3-part signed tokens (uuid:expiresAt:HMAC) are FORMAT errors now — the HMAC layer
+ *  is deleted, the format check rejects them (存量 3 段 token 一次性失效——需重新评审). */
 export function validateDesignToken(token) {
   if (!token || typeof token !== "string") return false
 
   const parts = token.split(":")
-  if (parts.length !== 3) return false // fail-closed (was: return true, v2 2026-08-25)
+  if (parts.length !== 2) return false // 1-part / 3-part (legacy signed) / 4+ all reject — fail-closed
 
-  const [uuid, expiresAt, signature] = parts
+  const [uuid, expiresAt] = parts
+  if (!uuid) return false
   const expTime = parseInt(expiresAt, 10)
 
   if (isNaN(expTime)) return false // fail-closed (was: return true, v2 2026-08-25)
 
   if (Date.now() > expTime) return false
 
-  const payload = `${uuid}:${expiresAt}`
-  const expectedSig = createHmac("sha256", TOKEN_SECRET).update(payload).digest("hex").slice(0, 16)
-  return signature === expectedSig
+  return true
 }
 
-/** Extract UUID from signed token for regex matching */
+/** Extract UUID from token for regex matching */
 export function extractTokenUUID(token) {
   const parts = token.split(":")
   return parts.length >= 1 ? parts[0] : token
 }
 
 /** Build a [DESIGN-TOKEN:...] regex (CLI parity — flexible surrounding context).
- *  Escape the ENTIRE token (uuid:expiresAt:signature) — the advisor echoes the
- *  full signed token, so matching only the UUID segment can never match and the
- *  approval never registers (eng-coder gate then rejects a valid token). */
+ *  Escape the ENTIRE token (uuid:expiresAt — 2026-09-06 设计 B: the HMAC segment is gone;
+ *  the advisor echoes the full token, so matching only the UUID segment can never match and
+ *  the approval never registers (eng-coder gate then rejects a valid token). */
 const makeDesignTokenRegex = (token, flags = "") => {
   const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return new RegExp(

@@ -605,6 +605,15 @@ GitHub thincoder-vscode#2 / thincoder#5 同根修复（CHANGELOG 0.8.3）。根�
 
 需求/设计/测试见 CLI `docs/design/SESSION.md` §10（F1-F4/D-1~D-8/T-M1~T-M15/验收 AC1-AC6——单一权威源，本文件不复制——含 §1 active 定义修订 + §6 契约表 marker 行）。本仓库改动点（同批镜像）：`src/extension/session-slots.mjs`（END="vscode" + marker primitives `endMarkerPath/readEndMarker/writeEndMarker` + `cleanDeadOwners` 抽取 + `allocateFresh`/`claimSlot` 抽取 + `resumeSlot`——data 层读 loadSlot 经 session-slots ↔ session-io 单点静态环，同 CLI 镜像）、`src/extension/session-io.mjs`（re-export 补新增；`newSlot`/`switchToSlot` 写 marker；`deleteSlotAndUpdate` 删本端记录槽 → 置空）、`src/extension/panel-session.mjs`（`ensureSlot`/`status` 恢复决策改 resumeSlot；`pushSessions` 列表高亮按端记录——D-5）、`src/extension/panel-project.mjs`（`onProjectChanged` 认领点改 resumeSlot）、测试（`test/session-io-parity.test.mjs` end-marker describe——T-M9 类 + T-M13/T-M14/T-M15 镜像；`test/chat-panel.test.mjs` panel end-marker flows）。**行为差异（VS Code 侧）**：无 CLI 的 legacy 单文件兜底（VS Code 无该历史格式——resumeSlot data 层 = loadSlot 直读）；面板全新目录首用不再预写空会话文件（resumeSlot claim 先行——文件在首保存落盘，与 CLI 语义对齐）。**验收**：VS Code `npm test` 1195/1195 绿 + `npm run lint` 219 文件 OK。
 
+### §19.7 async 描述两端对齐 + 收尾引导（2026-09-06 · 引用，AGENT-LOOP.md §19.7）
+
+需求/设计/验收见 CLI `docs/design/AGENT-LOOP.md` §19.7（D-A1..A4/AC-A1..A5——单一权威源，本文件不复制）。本端改动点：`src/agent-tools/subagent-spec.mjs`（subagentSpec.description = CLI 权威版（D-A1）逐段对齐——"ONE tool, FIVE actions (AGENT-LOOP.md §19/§19.5)" 头部 + 动作行/Async spawn 段/§20 调度段/§19.5.6 touched-files 措辞照权威版逐字——**有意差异仅两项**：① panel action 段剔除（§19.6 AC-P4——VS Code 无 panel action——保持五动作；权威版 "SIX actions…§19/§19.5/§19.6" 对应改 "FIVE actions…§19/§19.5"）；② Async spawn 段尾部插入 D-A2 逐字锚句（回合自然收尾/unchecked 结果自动到达——"injected before your next turn, or digested in the suspension session" 覆盖 §17.5.2 驱动路径 + §17.5.4 #2 回合尾 collectSettledAsync 直注入兜底——防模型自发 status/check 轮询挂起——D-A4 防再发：两端各自内容断言）、测试（`test/subagent-tool.test.mjs` T-M12/T-E16 措辞同步权威版 + 新增 D-A2 锚句逐字断言；`test/edit-semantics.test.mjs` 两处描述锚更新——"n = a 1-based"/"Blocking by default" 旧锚退役）。**存储语义零变更**（description 载荷非逻辑——spawn/check/status/cancel/escalate 执行路径未动）。
+
+### design token 防伪层删除（2026-09-06 · 引用，ENGINEERING-MODE.md 2026-09-06 段）
+
+需求/设计/验收见 CLI `docs/design/ENGINEERING-MODE.md` 2026-09-06 段（设计 1-4 点/AC-TO1..6——单一权威源，本文件不复制——用户裁定"安全剧场"：防伪造攻击者先关工程模式即可——防伪无实际安全边界）。本端改动点：`src/agent-tools/advisor.mjs`（删 `createHmac` import/`TOKEN_SECRET`——`generateDesignToken`/`validateDesignToken` 删签名与验签段——token 改无签名流程凭证 `uuid:expiresAt`——TTL fail-closed 保留、槽位匹配 `_engDesignTokens.get(designId) === token` 不变）；测试（`test/advisor.test.mjs` 删防伪断言——2 段格式通过/旧 3 段（uuid:expiresAt:HMAC——TTL 内）判格式错拒绝/错槽 token 拒绝/TTL 窗口 2 段构造/回显正则 2 段；`test/subagent-tool.test.mjs`/`test/subagent-async.test.mjs`/`test/eng-delivery.test.mjs` 测试辅助 `signedToken` → `unsignedToken` —— 3 段 token 在新格式校验下必失败——机械连锁）。**存储语义零变更**：`_engDesignTokens` Map/TTL/持久化（run-helpers.mjs/panel-session.mjs 序列化）未动——token 对存储层是不透明字符串；存量 3 段 token 一次性失效（格式错拒绝→需重新评审——已接受迁移代价）。**结构差异（VS Code 侧）**：CLI 侧清单中的 `DEFAULT_TOKEN_SECRET`/`USING_DEFAULT_SECRET`/`warnIfDefaultSecret`/console.warn 启动警告在本端从未存在（VS Code 端只有 `TOKEN_SECRET` 常量——无启动警告代码）——本端实际删除 = TOKEN_SECRET + createHmac + 签名/验签段。
+
+
 
 
 

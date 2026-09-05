@@ -38,12 +38,11 @@ async function runChild(parent, walls, onQuestion) {
   return r
 }
 
-/** Real signed token with a fixed uuid+expiry (v2 HMAC scheme), minted at runtime —
+/** Real unsigned token with a fixed uuid+expiry (2026-09-06 设计 B — token = 无签名流程凭证
+ *  uuid:expiresAt; HMAC 防伪层已删——测试辅助随签名路径一并退役), minted at runtime —
  *  TTL'd tokens must never be baked into test files (expired-fixture lesson 2026-08-31). */
-async function signedToken(uuid, expiresAt) {
-  const { createHmac } = await import("node:crypto")
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-  return `${uuid}:${expiresAt}:${sig}`
+async function unsignedToken(uuid, expiresAt) {
+  return `${uuid}:${expiresAt}`
 }
 
 /** 按任务文本响应的 async 子代理 mock：fast 立即完成；slow/queued-* 延迟完成；其他 "child done"。 */
@@ -464,7 +463,7 @@ test("T8 (vscode): 中断——signal aborted → 注册表立即清空、不注
   }
 })
 
-/** 工程模式父会话 fake（eng-coder spawn 需槽位 + 真实签名 token；async 池字段齐备）。 */
+/** 工程模式父会话 fake（eng-coder spawn 需槽位 + 无签名 token——2026-09-06 设计 B：uuid:expiresAt；async 池字段齐备）。 */
 function engParent(port, token, extra = {}) {
   return {
     _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
@@ -995,7 +994,7 @@ test("T-M27: queued 取消（round2 #1）——出队移除 + position 前移 + 
 })
 
 test("T-M19c（advisor round 2 #4）: eng-coder cancel——partial 磁盘写入不 merge 父 guard（not merged/audited 文案与实现一致）", async () => {
-  const token = await signedToken("f9f9f9f9-1111-4111-8111-0000000000f9", Date.now() + 24 * 3600 * 1000)
+  const token = await unsignedToken("f9f9f9f9-1111-4111-8111-0000000000f9", Date.now() + 24 * 3600 * 1000)
   const bodies = []
   const server = createServer((req, res) => {
     let body = ""

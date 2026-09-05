@@ -38,12 +38,11 @@ async function runChild(parent, walls, onQuestion) {
   return r
 }
 
-/** Real signed token with a fixed uuid+expiry (v2 HMAC scheme), minted at runtime —
+/** Real unsigned token with a fixed uuid+expiry (2026-09-06 设计 B — token = 无签名流程凭证
+ *  uuid:expiresAt; HMAC 防伪层已删——测试辅助随签名路径一并退役), minted at runtime —
  *  TTL'd tokens must never be baked into test files (expired-fixture lesson 2026-08-31). */
-async function signedToken(uuid, expiresAt) {
-  const { createHmac } = await import("node:crypto")
-  const sig = createHmac("sha256", "thincoder-default-secret").update(`${uuid}:${expiresAt}`).digest("hex").slice(0, 16)
-  return `${uuid}:${expiresAt}:${sig}`
+async function unsignedToken(uuid, expiresAt) {
+  return `${uuid}:${expiresAt}`
 }
 
 function asyncParent(port, extra = {}) {
@@ -86,7 +85,7 @@ function oneShotServer(text) {
   return { server }
 }
 
-/** 工程模式父会话 fake（eng-coder spawn 需槽位 + 真实签名 token；async 池字段齐备）。 */
+/** 工程模式父会话 fake（eng-coder spawn 需槽位 + 无签名 token——2026-09-06 设计 B：uuid:expiresAt；async 池字段齐备）。 */
 function engParent(port, token, extra = {}) {
   return {
     _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
@@ -129,7 +128,7 @@ test("T-E1: eng-coder 缺省 async（§18 D-E1）——spawn 立即返回 runnin
   const cwd = mkdtempSync(join(tmpdir(), "tc-e1-"))
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const token = await signedToken("e1e1e1e1-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
+    const token = await unsignedToken("e1e1e1e1-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
     const parent = engParent(port, token)
     const ctx = { agent: parent, cwd, callbacks: {} }
     // 不带 async 参数 → eng-coder 角色级缺省 async
@@ -161,7 +160,7 @@ test("T-E2: async:false 显式覆盖——eng-coder 同步阻塞返回（不进 
   const cwd = mkdtempSync(join(tmpdir(), "tc-e2-"))
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const token = await signedToken("e2e2e2e2-2222-4222-8222-0000000000e2", Date.now() + 24 * 3600 * 1000)
+    const token = await unsignedToken("e2e2e2e2-2222-4222-8222-0000000000e2", Date.now() + 24 * 3600 * 1000)
     const parent = engParent(port, token)
     const ctx = { agent: parent, cwd, callbacks: {} }
     const r = String(await subagentTool.execute({ task: "implement per design", role: "eng-coder", designId: "eng", designToken: token, async: false }, ctx))
@@ -197,7 +196,7 @@ test("T-E17 (vscode mirror): AUTO+工程 async eng-coder 撞 turn-cap → 自动
   const cwd = mkdtempSync(join(tmpdir(), "tc-e17-"))
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const token = await signedToken("e1e7e1e7-1717-4171-8171-0000000000e7", Date.now() + 24 * 3600 * 1000)
+    const token = await unsignedToken("e1e7e1e7-1717-4171-8171-0000000000e7", Date.now() + 24 * 3600 * 1000)
     const parent = {
       _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
       config: {
@@ -242,7 +241,7 @@ test("T-E17-manual (vscode mirror): 工程开 + AUTO 关 async eng-coder 撞 tur
   const cwd = mkdtempSync(join(tmpdir(), "tc-e17m-"))
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const token = await signedToken("e17m0000-1717-4171-8171-0000000000e7", Date.now() + 24 * 3600 * 1000)
+    const token = await unsignedToken("e17m0000-1717-4171-8171-0000000000e7", Date.now() + 24 * 3600 * 1000)
     const parent = {
       _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
       config: {
@@ -282,7 +281,7 @@ test("T-E17-manual (vscode mirror): 工程开 + AUTO 关 async eng-coder 撞 tur
 })
 
 test("T-E1-loop (§18 code review #1/#3): 真实 agent 循环中 eng-coder 缺省 async 的 spawn 工具结果 = JSON 字符串（模型可见 {id,role,status}——非 [object Object]）", async () => {
-  const token = await signedToken("e1loop-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
+  const token = await unsignedToken("e1loop-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
   const bodies = []
   const parentCalls = { n: 0 }
   const server = createServer((req, res) => {
@@ -540,7 +539,7 @@ test("T-E12: 域内写授权——autoApprove=false 会话 spawn eng-coder → �
   const cwd = mkdtempSync(join(tmpdir(), "tc-e12-"))
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-    const token = await signedToken("e12e12e1-1111-4111-8111-000000000012", Date.now() + 24 * 3600 * 1000)
+    const token = await unsignedToken("e12e12e1-1111-4111-8111-000000000012", Date.now() + 24 * 3600 * 1000)
     const parent = engParent(port, token)
     let asked = 0
     const ctx = { agent: parent, cwd, callbacks: { onPermissionRequired: async () => { asked++; return true } }, getAuto: () => false }
@@ -719,7 +718,7 @@ test("T-E18 (可见性补齐 2026-09-03): eng-coder 子代理内 advisor 长文�
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
     writeFileSync(join(cwd, "impl-x.mjs"), "export const x = 1\n")
-    const token = await signedToken("e18e18e1-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
+    const token = await unsignedToken("e18e18e1-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
     const parent = engParent(port, token)
     const panels = []
     const ctx = { agent: parent, cwd, callbacks: { onToolPanel: (name, chunk) => panels.push({ name, chunk }) } }

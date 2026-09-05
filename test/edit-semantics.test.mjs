@@ -470,7 +470,7 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["task", /replaces the entire list/],
     ["goal", /How completion is PROVEN/],
     ["consult_check", /Call it ALONE in a turn|do NOT batch it/i],
-    ["subagent", /BLOCKING ONLY|async:true|n = a 1-based read counter/],
+    ["subagent", /async:true|n = 1 on the first check/],
     ["process", /to kill a process use bash/i],
     ["git", /auto-snapshot first/],
     ["execute", /Eval-like flags.*rejected|rejected/i],
@@ -518,7 +518,7 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["execute", /Timeout in milliseconds/],
     ["timer", /When the timer fires/],
     ["consult_check", /Blocks until a reply arrives/],
-    ["subagent", /Blocking by default|BLOCKING ONLY/],
+    ["subagent", /BLOCKS until the target finishes/],
     ["plan", /the user approves first/],
   ])
   // ⑥ 结果形态：描述须说明返回/展示内容或失败分支（自然措辞——含锚句工具的语义承诺）。
