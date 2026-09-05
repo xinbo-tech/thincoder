@@ -8,12 +8,13 @@
 ## 1. 发布前检查
 
 - [ ] `npm view thincoder version` 记录 registry 最高已发号（版本号规则核对见 §1.5——待发号必须 = 最高 + 1）
-- [ ] `npm test` 快层全绿(30 个 slow 测试自动 skip;`test/slow.mjs` 门控,2026-08-30)
-- [ ] `npm run test:full` 全量全绿(slow 全放行;发版必跑,快层 skip 不代表通过)
+- [ ] `npm run release:check` 一键通过（2026-09-05 起 = lint + test:full 合并——全量输出只打印摘要行，失败自动提取 failing tests 详情段打印——0.12.59 发版实测痛点：详情被管道吞、为看错误跑 3 次全量）
 - [ ] `THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs` 真实端点 smoke 通过(花真钱,双层之外,发版前人工跑;2026-08-30 起 env 门控)
-- [ ] `npm run lint` 0 error(warning 允许)
 - [ ] `CHANGELOG.md` 已更新新版本条目(Keep a Changelog 格式,中文,Added/Changed/Fixed/Removed 分节)
 - [ ] `package.json` version 已 bump（**发布时才 bump——开发期不预占——见 §1.5**）
+
+> **修复迭代纪律（2026-09-05——0.12.59 发版 3 轮全量教训）**：`release:check` 失败 → 修复 → **局部重跑**（`node --test --test-name-pattern "<失败名>" <失败文件>`——秒级）确认修复 → **release:check 终跑一次**收口。禁止每轮修复都全量重跑（85s/轮）。
+> **prepublishOnly 双保险注**：`npm publish` 会再跑 lint + 快层（§4.4 有意设计）——release:check 的全量是发版门槛，publish 的快层是最后防线——不重复省略，接受 ~2 分钟总开销。
 
 ### 1.5 版本号连续性规则（2026-09-05 用户裁定——“不要跳号，npm/marketplace 对外编号连续不跳空”）
 
@@ -25,7 +26,7 @@
 3. **缺口不补**：npm 0.12.55/56/57 缺口已成（registry 历史不可回溯重写——对应批次内容已并入 58）——**不补发**——规则从下一发起保证零新缺口（用户 2026-09-05 确认）；
 4. 编号体系：§4.6 CalVer（2026 年内 0.12.x 连续递增 → 2027-01-01 起 1.1.0）。
 
-**当前状态**：registry 最高 = **0.12.58**（package.json 已同步）——下次发布 = **0.12.59**（把 CHANGELOG `[Unreleased]` 段改 `[0.12.59]`）。
+**当前状态**：registry 最高 = **0.12.59**（package.json 已同步）——下次发布 = **0.12.60**（把 CHANGELOG `[Unreleased]` 段改 `[0.12.60]`）。
 
 ## 2. 发布
 
