@@ -2105,9 +2105,15 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 
 **D-A4 防再发（2026-09-04 政策——§18.11/§19.4 N4：一致靠设计锚 + 评审/审计，不做跨仓机械比对）**：
 1. **逐字锚句**（D-A2）定稿于本节——两端实现面照抄，不自行解释（镜像锚——各端照抄）；
-2. **两端各自内容断言**：每端 `test/subagent.test.mjs` 断言 D-A2 句在该端 description 中逐字存在
+2. **两端各自内容断言**：每端 description 所在测试文件（CLI = `test/subagent-tool.test.mjs`——
+   §18.14 域拆分后既有落点；VS Code = 对应域测试——**实现批核实后随实改**）断言 D-A2 句在该端
+   description 中逐字存在
    （fail-when-unchanged——description 断言家族（§7.1 两端各一 / §18.5 D-AG4 / §19.5.5 T-CL1）
    既有落点——单端作用域，无跨仓读依赖——单仓克隆不崩——T-BI6 先例）；
+2. **两端各自内容断言**：每端 description 域测试（两端均为 `test/subagent-tool.test.mjs`——
+   §18.14 域拆分后既有落点——实现批已核实）（fail-when-unchanged——description 断言家族
+   （§7.1 两端各一 / §18.5 D-AG4 / §19.5.5 T-CL1）既有落点——单端作用域，无跨仓读依赖——
+   单仓克隆不崩——T-BI6 先例）；
 3. **交付审计 + 设计评审**发现残余差异（explore 审计 doc-code drift 条款 + 走查复验——本次漂移
    即走查实证——机制有效）。
 
