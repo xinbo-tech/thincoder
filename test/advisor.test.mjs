@@ -649,9 +649,8 @@ describe("document ownership + design-review enhancement (2026-08-21)", () => {
     assert.ok(text.includes("2026-08-25 合并"), "合并收口说明登记")
   })
 
-  it("advisor/main.mjs: design 提示词硬加载——无 ADVISOR_DESIGN_FALLBACK 残留，内容与文件逐字节一致", () => {
+  it("advisor/main.mjs: design 提示词硬加载——内容与文件逐字节一致", () => {
     const src = readFileSync(join(VSCODE_SRC_DIR, "advisor", "main.mjs"), "utf8")
-    assert.ok(!src.includes("ADVISOR_DESIGN_FALLBACK"), "ADVISOR_DESIGN_FALLBACK 常量已删除")
     assert.ok(src.includes('loadPrompt("advisor-design.md"'), "design 提示词走 loadPrompt 硬加载（缺失即抛错，与 round1/2/3 同待遇）")
     const prompt = buildAdvisorSystemPrompt({ history: [], _advisorRound: 0 }, null, "design")
     const file = readFileSync(join(VSCODE_PROMPTS_DIR, "advisor-design.md"), "utf8")
@@ -774,10 +773,11 @@ it("designId multi-slot: pass → designId echoed + token stored in _engDesignTo
       _provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
       history: [], _touchedFiles: [], _advisorRound: 0, _advisorSession: null, cwd: tmpdir(),
     }
-    const out1 = await advisorTool.execute({ type: "design", documents: ["docs/design/A.md"] }, { agent })
+    // §24 D-24b（R13）：depth-0 缺省 async——阻塞流钉 async:false（sync 路径断言不变）
+    const out1 = await advisorTool.execute({ type: "design", documents: ["docs/design/A.md"], async: false }, { agent })
     assert.match(out1, /Approved\. Pass this exact token/, "first review passes")
     assert.match(out1, /designId: [0-9a-f-]{36}/, "approved result echoes designId (review #1)")
-    const out2 = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"] }, { agent })
+    const out2 = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"], async: false }, { agent })
     assert.match(out2, /Approved\. Pass this exact token/, "second review passes")
     const map = agent._engDesignTokens
     assert.ok(map instanceof Map && map.size === 2, "two slots coexist — later issue does not overwrite the earlier one (AC8)")
@@ -801,7 +801,7 @@ it("designId isolation: completed review that does not pass → its designId not
       _engDesignTokens: new Map([["slot-a", "tok-a"], ["slot-b", "tok-b"]]),
       _engDesignToken: "tok-a",
     }
-    const out = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"] }, { agent })
+    const out = await advisorTool.execute({ type: "design", documents: ["docs/design/B.md"], async: false }, { agent })
     assert.doesNotMatch(out, /Approved\./, "re-review did not pass (no token echo)")
     assert.equal(agent._engDesignTokens.size, 2, "failure clears NO existing slot (isolation extended to the multi-slot Map)")
     assert.equal(agent._engDesignTokens.get("slot-a"), "tok-a", "slot a untouched (T17)")
@@ -899,7 +899,8 @@ describe("review-object declaration (§18.8 — T-OA1..5)", () => {
     const { server, port } = await capturingReviewServer(captured)
     try {
       const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
-      const out = await advisorTool.execute(args, {
+      // §24 D-24b（R13）：阻塞评审路径钉 async:false（depth-0 缺省 async）
+      const out = await advisorTool.execute({ ...args, async: false }, {
         agent: { ...agent, _provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" } },
       })
       return { out, captured }

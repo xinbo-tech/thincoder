@@ -5,7 +5,7 @@
  */
 
 import { PROVIDER_PRESETS, presetToEntry } from "./config-presets.mjs"
-import { loadRaw, saveRaw } from "./config-io.mjs"
+import { loadRaw, saveRaw, conflictError } from "./config-io.mjs"
 
 const EMBEDDING_DEFAULTS = { baseURL: "https://api.siliconflow.cn/v1", model: "BAAI/bge-m3" }
 
@@ -80,7 +80,11 @@ export async function migrateCore(deps) {
   // Legacy MCP servers were removed together with the `thincoder.mcpServers`
   // setting itself (pre-release, no migration — see package.json history).
 
-  saveRaw(raw)
+  // F5b（R10——MULTI-INSTANCE-COLLAB.md D-F5b）：迁移是读-改-写链（读后多 await 异步
+  // 窗口）——saveRaw 写前 mtime 门控冲突（{ok:false, reason:"mtime-conflict"}）→ 放弃
+  // 本次迁移：legacy 存储不清理、flags 不置位——下次启动自动重试（绝不能清了 legacy
+  // 又丢了 config 写——密钥才会真正丢失）。
+  if (conflictError(saveRaw(raw))) return
 
   // Clean up legacy stores so nothing reads them again
   for (const name of legacyNames) {

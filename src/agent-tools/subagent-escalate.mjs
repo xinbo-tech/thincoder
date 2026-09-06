@@ -1,5 +1,5 @@
 /**
- * subagent-escalate.mjs — the §19 action:"escalate" engine (飞刀).
+ * subagent-escalate.mjs — the §19 action:"escalate" engine (飞刀) + §25 R17 async 缺省.
  * Split out of subagent-async.mjs (2026-09-03 advisor round — the 500-line hard cap:
  * subagent-async.mjs grew past it with the §19 escalate merge + §19.5 control
  * surface; the escalate engine is the self-contained unit moved out VERBATIM —
@@ -11,9 +11,16 @@
  * validation / the `sub:escalate <label> #N` relay prefix unchanged (block routing
  * zero-change). Called from subagent.mjs execute's action dispatch (action:"escalate").
  *
+ * §25 R17 (AGENT-LOOP.md §25 D-R17b——飞刀 async——2026-09-06): escalate 缺省 async
+ * （async:false 显式同步保留——向后兼容）——async 分支经 subagent-async.mjs
+ * spawnAsyncSubagent 入 other 池（§24 D-24a 分域——与 explore/plan 共享槽位）——引擎
+ * 与 settle 三分类（done merge-all + 重叠警告 / error partial merge 决策 / cancelled
+ * D-M6）实现在 subagent-escalate-async.mjs（动态 import——防模块环）。同步路径 verbatim
+ * 保留（测试/脚本零行为变化）。
+ *
  * Module-graph hygiene: imports one-way from subagent-async.mjs
  * (mergeChildMutations + nextSubagentId — shared pool/id machinery); subagent-async
- * never imports this module (no cycle).
+ * never imports this module (no cycle). The async sibling module is dynamic-imported.
  */
 import { isAbsolute, relative } from "node:path"
 import { buildProvider } from "../extension/presets.mjs"
@@ -23,50 +30,18 @@ import { logEvent, errText } from "../log.mjs"
 
 // ─── §19 escalate 动作（AGENT-LOOP.md §19 D-M4/F7——escalate.mjs 退役，执行逻辑 verbatim 并入）───
 
-const escalateLabel = (m) => `${m.provider}:${m.model}`
+export const escalateLabel = (m) => `${m.provider}:${m.model}`
 
-/**
- * §19 action:'escalate' handler — the retired escalate.mjs execution VERBATIM
- * (飞刀——consultModels 池选强模型 + WRITE 干活 + 术后报告；约束全保留：depth-0 only /
- * 工程模式禁用 / 池空 error / 模型选择校验 / relay 前缀 `sub:escalate <label> #N` 不变
- * ——TUI 区块路由零改动）。调用面：subagent.mjs execute 的 action 分流。
- */
-export async function escalateAction({ task, model }, ctx) {
-  const parent = ctx.agent
-  if (!task || typeof task !== "string") {
-    return "Error: escalate requires a task description with acceptance criteria"
-  }
-  // Depth guard: an escalate must not fly in another escalate (ESCALATE.md §1.3 US-F5)
-  if ((ctx.depth ?? 0) > 0) return "Error: escalate is only available at depth 0 (an escalate's work cannot be delegated again)"
-  // Engineering-mode backdoor guard (three-way review 2026-08-16): an escalate IS a
-  // coder sub-agent — subagent.mjs forbids role='coder' in engineering mode, and an
-  // unconditional coder escalate would bypass the design-token discipline. Fail closed
-  // and point at the engineering path, same as subagent does.
-  if (parent?.config?.agent?.engineering) {
-    return "Error: engineering mode is ON — escalate is unavailable (it spawns a coder sub-agent, which engineering mode forbids). Use subagent with role='eng-coder' and a designToken from advisor(type='design') instead."
-  }
-  // All consult models are escalate candidates (decision 2026-08-16: the 飞刀 hook checkbox
-  // was removed — every configured consultant can fly in; fewer knobs, less mental load).
-  const pool = parent?.config?.agent?.consultModels ?? []
-  if (pool.length === 0) return "Error: no escalate candidates — configure at least one consult model (agent.consultModels)"
-
-  // Model-pick tolerance: withPool lists candidates as "provider:model (effort)" —
-  // a model that copies the listing verbatim must still match (strip the suffix).
-  const wanted = typeof model === "string" ? model.replace(/\s+\([^)]*\)\s*$/, "").trim() : model
-  const pick = wanted
-    ? pool.find((m) => escalateLabel(m) === wanted)
-    : pool[0]
-  if (!pick) {
-    return `Error: "${model}" is not a consult candidate. Available: ${pool.map(escalateLabel).join(", ")}`
-  }
-
+/** 异步引擎/async settle 共用：provider 构建 + apiKey 预检 + effort 钳制（自同步引擎
+ *  verbatim 提取——行为零变化）。返回 { error } 或 { provider, withEffort, effortNote }。 */
+export async function prepareEscalateProvider(pick, ctx) {
   const build = ctx.buildProvider ?? buildProvider // test-injectable (consult.mjs parity)
   const provider = await build(pick.provider)
-  if (!provider) return `Error: provider "${pick.provider}" not configured`
+  if (!provider) return { error: `Error: provider "${pick.provider}" not configured` }
   // Key precheck: fail BEFORE the child spawns, not at its first chat call — an
   // auth failure there would surface as an escalate crash, misdiagnosing the cause.
   if (!provider.apiKey?.trim()) {
-    return `Error: provider "${pick.provider}" has no API key — set it in Settings before flying it in`
+    return { error: `Error: provider "${pick.provider}" has no API key — set it in Settings before flying it in` }
   }
   let effortNote = ""
   const withEffort = pick.effort
@@ -84,6 +59,60 @@ export async function escalateAction({ task, model }, ctx) {
         return { ...provider, reasoningEffort: pick.effort }
       })()
     : provider
+  return { provider, withEffort, effortNote }
+}
+
+/**
+ * §19 action:'escalate' handler — the retired escalate.mjs execution VERBATIM for the
+ * sync path (async:false); §25 R17: escalate 缺省 async（飞刀后台跑——ack 返回——报告
+ * digest 自动注入——mutations 自动 merge）——async 分支在 subagent-escalate-async.mjs
+ * （入 other 池）。约束全保留：depth-0 only / 工程模式禁用 / 池空 error / 模型选择校验 /
+ * relay 前缀 `sub:escalate <label> #N` 不变。调用面：subagent.mjs execute 的 action 分流。
+ */
+export async function escalateAction({ task, model, async: asyncArg }, ctx) {
+  const parent = ctx.agent
+  if (!task || typeof task !== "string") {
+    return "Error: escalate requires a task description with acceptance criteria"
+  }
+  // Depth guard: an escalate must not fly in another escalate (ESCALATE.md §1.3 US-F5)
+  if ((ctx.depth ?? 0) > 0) return "Error: escalate is only available at depth 0 (an escalate's work cannot be delegated again)"
+  // Engineering-mode backdoor guard (three-way review 2026-08-16): an escalate IS a
+  // coder sub-agent — subagent.mjs forbids role='coder' in engineering mode, and an
+  // unconditional coder escalate would bypass the design-token discipline. Fail closed
+  // and point at the engineering path, same as subagent does.
+  if (parent?.config?.agent?.engineering) {
+    return "Error: engineering mode is ON — escalate is unavailable (it spawns a coder sub-agent, which engineering mode forbids). Use subagent with role='eng-coder' and a designToken from advisor(type='design') instead."
+  }
+  // §17 D-S6 spawn gate parity（escalate = spawn 族——手动档 digest 不启动飞刀）：
+  // escalate 的写面 = coder 子代理——手动档 auto-turn 禁写禁 spawn（T-S8 同规则）。
+  if (parent?._inAutoTurn && !(ctx.getAuto?.() ?? false)) {
+    return JSON.stringify({ status: "error", error: "cannot escalate from a manual auto-turn — wait for user input" })
+  }
+  // All consult models are escalate candidates (decision 2026-08-16: the 飞刀 hook checkbox
+  // was removed — every configured consultant can fly in; fewer knobs, less mental load).
+  const pool = parent?.config?.agent?.consultModels ?? []
+  if (pool.length === 0) return "Error: no escalate candidates — configure at least one consult model (agent.consultModels)"
+
+  // Model-pick tolerance: withPool lists candidates as "provider:model (effort)" —
+  // a model that copies the listing verbatim must still match (strip the suffix).
+  const wanted = typeof model === "string" ? model.replace(/\s+\([^)]*\)\s*$/, "").trim() : model
+  const pick = wanted
+    ? pool.find((m) => escalateLabel(m) === wanted)
+    : pool[0]
+  if (!pick) {
+    return `Error: "${model}" is not a consult candidate. Available: ${pool.map(escalateLabel).join(", ")}`
+  }
+
+  // §25 D-R17b（决策点 ③）：async 缺省（escalate 本就 depth-0 only——顶层缺省 = async）；
+  // async:false 显式同步保留（向后兼容——脚本/需同步结果的场景——同步路径 verbatim）。
+  if ((asyncArg ?? true) === true) {
+    const { launchEscalateAsync } = await import("./subagent-escalate-async.mjs")
+    return launchEscalateAsync({ parent, ctx, task, pick })
+  }
+
+  const prep = await prepareEscalateProvider(pick, ctx)
+  if (prep.error) return prep.error
+  const { withEffort, effortNote } = prep
   const agentMod = await import("../agent.mjs")
   const runner = ctx.runAgent ?? agentMod.runAgent
 
@@ -176,8 +205,9 @@ export async function escalateAction({ task, model }, ctx) {
   }
 }
 
-/** Relative touched-file list appended to every escalate return (sink paths are absolute). */
-function touchedFilesNote(sink, cwd) {
+/** Relative touched-file list appended to every escalate return (sink paths are absolute).
+ *  §25 R17：async settle 共用（merge 注记尾随）——导出。 */
+export function touchedFilesNote(sink, cwd) {
   const touched = sink?.touchedFiles ?? []
   if (touched.length === 0) return ""
   const shown = touched.map((f) => {

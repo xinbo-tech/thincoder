@@ -37,7 +37,7 @@ Design docs in `docs/design/`. Independent product — no dependency on thincode
 extension.mjs        Extension entry + ChatPanel class (session CRUD, settings, LLM title generation, CSP injection)
 src/agent.mjs         Agent main loop — parallel tool batching, multimodal image injection, context compaction, subagent spawning, reasoningEcho
 src/agent-tools.mjs   Re-export shim → src/agent-tools/ (task, subagent, plan, goal, skill, verify, read_history)
-src/agent-tools/subagent-actions.mjs  check/status/cancel action executors + MAX_ASYNC_CHECKS + F1 pool-waiter loop（2026-09-05 module split）
+src/agent-tools/subagent-actions.mjs  status/cancel action executors（§19.8 2026-09-06：action:'check' 删除——subagentCheck/MAX_ASYNC_CHECKS/F1 pool-waiter loop 退役——结果仅自动通道；2026-09-05 module split）
 src/agent-tools/subagent-async.mjs  async/audit machinery (gateEngCoderSpawn/auditTaskBook/shouldAutoResume/spawnAsyncSubagent/settleAsyncEntry/injectAsyncResult/collectSettledAsync/mergeChildMutations + F2 interrupt chain filter + interrupt-settle 豁免（2026-09-05 module split——行数随维护漂移不记档）
 src/agent-tools/subagent-scheduler.mjs  §20 scheduler + file-domain machinery (pool/tombstone/conflict/dep/refill/stall/queueRunnable — 2026-09-05 module split)
 src/tools.mjs         Re-export shim → src/tools/ (file ops, bash, glob, grep, git, web, checkpoint, read_image)
@@ -55,6 +55,7 @@ src/specs.mjs         Re-export from config.mjs (backward compat)
 src/extension/        Extracted ChatPanel modules: presets, session-io, session-slots, settings
 src/prompts/          System prompts: system.md, discipline.md, main.md, explore/coder/plan.md
 webview/chat.js      Frontend orchestration: message handling, model selector, session history
+webview/activity.js   R22 子 agent 底部活动面板: live 活动块 (create/header/⏹/elapsed ticker) + 终态冻结入流 (#messages 身份头 + report preview) — leaf module (state/ui/i18n only)
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout

@@ -143,6 +143,10 @@
   "sub.cancelled": "已取消",
   "sub.stopped": "已停止",
   "sub.stopBtn": "停止该子代理",
+  "sub.async": "异步",
+  "sub.sync": "同步",
+  "sub.done": "完成",
+  "sub.error": "错误",
   "settings.submodelSection": "子代理模型",
   "settings.submodelGlobal": "全局默认",
   "settings.shellSection": "Shell（bash 工具）",
@@ -227,5 +231,9 @@
   "sub.awaitingDigest": "完成 · 待消化",
   "susp.running": "${n} 个子代理后台运行中",
   "susp.digesting": "${n} 份报告待消化",
-  "susp.winding": "后台子代理收尾…"
+  "susp.winding": "后台子代理收尾…",
+  "settings.poolEng": "Eng-coder 并发池",
+  "settings.poolEngHelp": "eng-coder 子代理并行上限（按角色域分池的 async 池）。",
+  "settings.poolOther": "其他角色并发池",
+  "settings.poolOtherHelp": "explore/plan/coder 子代理并行上限（按角色域分池的 async 池）。"
 }

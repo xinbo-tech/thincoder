@@ -13,14 +13,32 @@ import { readFileSync, unlinkSync, renameSync, existsSync, statSync } from "node
 import {
   slotPath, manifestPath, loadManifest, saveManifest, writeFile,
   isProcessAlive, getSessionId, activeSlot, slotOccupancy, sessionsDir,
-  readEndMarker, writeEndMarker,
+  readEndMarker, writeEndMarker, resumeSlot as slotsResumeSlot,
 } from "./session-slots.mjs"
+import { scheduleSessionGC } from "./session-gc.mjs"
 
 export {
   getSessionId, normalizeCwd, slotPath, manifestPath, loadManifest, saveManifest,
   activeSlot, slotOccupancy, sessionsDir, _setSessionsDirForTest, _resetSessionsDirForTest,
-  END, endMarkerPath, readEndMarker, writeEndMarker, claimSlot, allocateFresh, resumeSlot,
+  END, endMarkerPath, readEndMarker, writeEndMarker, claimSlot, allocateFresh,
 } from "./session-slots.mjs"
+
+/** 恢复决策包装（SESSION.md §12 启动钩子，2026-09-06）：面板恢复入口触发一次残留 GC——
+ *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞激活路径（N4）。 */
+export function resumeSlot(cwd) {
+  scheduleSessionGC(cwd)
+  return slotsResumeSlot(cwd)
+}
+
+// Session metadata flag write path (Parnas boundary — split out of this file on 2026-09-06 to
+// keep it under the >500-line hard limit). Re-exported so callers keep the "./session-io.mjs"
+// import path; newSlotData is also used locally below (newSlot).
+import {
+  newSlotData, setSlotAutoApprove, setSlotPlanMode, setSlotEngineering, setSlotAdvisorGuard, setSlotEngDesignTokens,
+} from "./session-slot-write.mjs"
+export {
+  newSlotData, setSlotAutoApprove, setSlotPlanMode, setSlotEngineering, setSlotAdvisorGuard, setSlotEngDesignTokens,
+} from "./session-slot-write.mjs"
 
 // ─── Slot read/write ────────────────────────────────────────
 
@@ -271,11 +289,7 @@ export function newSlot(cwd) {
   }
   let slot = 1
   while (m.slots[slot] || existsSync(slotPath(cwd, slot)) || liveClaimed(slot)) slot++
-  const data = {
-    version: 2, cwd, title: "", updatedAt: Date.now(),
-    history: [], contextHistory: [], tasks: [],
-    planMode: false, goal: null, autoApprove: false, advisor: null, pendingReminders: [], sessionStart: null,
-  }
+  const data = newSlotData(cwd)
   saveSlot(cwd, slot, data)
   m.slotSessions ??= {}
   m.slotSessions[slot] = mySessionId
@@ -351,50 +365,6 @@ export function saveSessionToSlot(cwd, slot, data) {
   return rotated
 }
 
-/**
- * Flip the session's autoApprove flag (CLI parity: session-level slot field, NOT a
- * VS Code setting). Returns false when the slot cannot be loaded.
- */
-export function setSlotAutoApprove(cwd, slot, value) {
-  const data = loadSlot(cwd, slot)
-  if (!data) return false
-  data.autoApprove = value
-  saveSessionToSlot(cwd, slot, data)
-  return true
-}
-
-/** Set the active slot's plan-mode flag (session-level, like autoApprove). */
-export function setSlotPlanMode(cwd, slot, value) {
-  const data = loadSlot(cwd, slot)
-  if (!data) return false
-  data.planMode = value
-  saveSessionToSlot(cwd, slot, data)
-  return true
-}
-
-/**
- * Set the slot's engineering flag — the SLOT is the source of truth for the VS Code
- * session (2026-08-29: engineering was global config.json `agent.engineering`, which the
- * CLI's /eng also writes, so the two ends flipped each other's mode). config.json keeps a
- * CLI-compat mirror; reads fall back to config only when the slot has no field yet.
- */
-export function setSlotEngineering(cwd, slot, value) {
-  const data = loadSlot(cwd, slot)
-  if (!data) return false
-  data.engineering = value
-  saveSessionToSlot(cwd, slot, data)
-  return true
-}
-
-/** Set the slot's advisor guard flag (`advisor: { guard }` — null upgrades to an object). */
-export function setSlotAdvisorGuard(cwd, slot, value) {
-  const data = loadSlot(cwd, slot)
-  if (!data) return false
-  data.advisor = { ...(typeof data.advisor === "object" && data.advisor !== null ? data.advisor : {}), guard: value }
-  saveSessionToSlot(cwd, slot, data)
-  return true
-}
-
 /** Page size for lazy history loading (initial paint + scroll-back pages). CLI parity. */
 export const HISTORY_PAGE_SIZE = 20
 
@@ -456,27 +426,33 @@ export function deleteSlotAndUpdate(cwd, slot) {
 
 /** Update the title of a slot (in both the slot file and the manifest).
  *  2026-09-01 CLI 同步（advisor 🟡）：写回前按 mtime 门控——读→改→整文件写回窗口内
- *  并发方的最新保存会被旧数据覆盖（丢消息）；mtime 变了即放弃本次重命名（下次重试）。 */
-export function setSlotTitle(cwd, slot, title) {
-  const p = slotPath(cwd, slot)
-  if (!existsSync(p)) return
+ *  并发方的最新保存会被旧数据覆盖（丢消息）；mtime 变了即放弃本次重命名（下次重试）。
+ *  2026-09-06 §12.2.5：契约 undefined → { ok, reason? }（file-missing/parse-failure/
+ *  mtime-conflict/invalid-slot——与 CLI renameSlot 同枚举，F3 失败可见）；_stat =
+ *  mtime-conflict 测试缝（默认 statSync，生产行为不变）。 */
+export function setSlotTitle(cwd, slot, title, _stat = statSync) {
+  const n = Number(slot)
+  if (!Number.isInteger(n) || n < 1) return { ok: false, reason: "invalid-slot" }
+  const p = slotPath(cwd, n)
+  if (!existsSync(p)) return { ok: false, reason: "file-missing" }
   let data
   try {
     data = JSON.parse(readFileSync(p, "utf8"))
   } catch {
-    return
+    return { ok: false, reason: "parse-failure" }
   }
-  const t0 = statSync(p).mtimeMs
+  const t0 = _stat(p).mtimeMs
   data.title = title
-  if (statSync(p).mtimeMs !== t0) return // 读与写之间被并发方改过 → 放弃
-  saveSlot(cwd, slot, data)
+  if (_stat(p).mtimeMs !== t0) return { ok: false, reason: "mtime-conflict" } // 读与写之间被并发方改过 → 放弃
+  saveSlot(cwd, n, data)
   const m = loadManifest(cwd)
-  if (m.slots[slot]) {
-    const meta = typeof m.slots[slot] === "object" ? m.slots[slot] : { ts: 0 }
+  if (m.slots[n]) {
+    const meta = typeof m.slots[n] === "object" ? m.slots[n] : { ts: 0 }
     meta.title = title
-    m.slots[slot] = meta
+    m.slots[n] = meta
     saveManifest(cwd, m)
   }
+  return { ok: true }
 }
 
 // ─── Model prefs (workspaceState, unrelated to session files) ──

@@ -6,8 +6,38 @@
  * stays as a CLI-compat mirror. Top-level runs carry _engPersist; subagents never do.
  */
 import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
-import { persistRaw } from "../config-io.mjs"
+import { persistRaw, conflictError, CONFIG_CONFLICT_HINT } from "../config-io.mjs"
 import { setSlotEngineering } from "../extension/session-io.mjs"
+import { isExpiredDesignToken } from "./advisor.mjs"
+
+/**
+ * R16 (2026-09-06 — ENG-TOKEN-BINDING-TUNING.md §5): a design token is a session-bound,
+ * TTL-bound REVIEW-PASSED credential — it survives mode toggles. Only TTL expiry clears
+ * it, at exactly three timings: restore filter (setup.mjs), eng(enter) sweep (below) and
+ * the spawn gate (subagent.mjs). Returns how many expired slots were dropped.
+ */
+function sweepExpiredDesignTokens(agent) {
+  const slots = agent._engDesignTokens
+  const mirror = agent._engDesignToken
+  const mirrorInSlots = slots instanceof Map && mirror != null && [...slots.values()].includes(mirror)
+  let cleared = 0
+  if (slots instanceof Map && slots.size > 0) {
+    for (const [id, tok] of [...slots]) {
+      if (isExpiredDesignToken(tok)) {
+        slots.delete(id)
+        cleared++
+      }
+    }
+  }
+  if (mirror != null && isExpiredDesignToken(mirror)) {
+    if (!mirrorInSlots) cleared++ // legacy mirror-only state (no map slot) counts itself
+    // 镜像同步（与 spawn 门禁删除同型）: repoint to a surviving slot when valid siblings
+    // remain — a null mirror with live slots would trip resolveDesignSlot's torn-state
+    // guard on the next spawn. Null only when nothing remains.
+    agent._engDesignToken = slots instanceof Map && slots.size > 0 ? [...slots.values()][0] : null
+  }
+  return cleared
+}
 
 export const engTool = {
   name: "eng",
@@ -25,8 +55,10 @@ export const engTool = {
     ctx.agent.config.agent ??= {}
     if (args.action === "exit") {
       ctx.agent.config.agent.engineering = false
-      ctx.agent._engDesignToken = null   // stale token from prior design review invalidated
-      ctx.agent._engDesignTokens = new Map() // multi-design slots die with the mode (2026-09-01 fix #2)
+      // R16 (2026-09-06 — F-R16a): tokens SURVIVE ON→OFF — no clearing here. Previously
+      // _engDesignToken/_engDesignTokens were wiped ("token invalidated"); the approved
+      // design review is a session credential that a mode toggle must not burn — only
+      // TTL expiry clears it (restore filter / enter sweep / spawn gate — D-R16b).
       ctx.agent._engDesignReviewed = false // reset gate state
       ctx.agent._advisorRound = 0          // reset convergence budget
       ctx.agent._touchedFiles = []         // clear mutation tracking
@@ -34,23 +66,25 @@ export const engTool = {
       ctx.agent._lastEngState = false
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_OFF_REMINDER)
-      persistEngineering(ctx.agent, false)
-      return "Engineering mode exited. Standard discipline now applies. You may edit files directly."
+      const conflicted = persistEngineering(ctx.agent, false)
+      return `Engineering mode exited. Standard discipline now applies. You may edit files directly.${conflicted ? ` ${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : ""}`
     }
     if (args.action === "enter") {
-      // Idempotent enter (v2 2026-08-25): already on → no-op (standing tokens survive a
-      // redundant defensive eng(enter)); only a real off→on requires a fresh review.
+      // Idempotent enter (v2 2026-08-25): already on → pure no-op (standing tokens survive
+      // a redundant defensive eng(enter) — no sweep on the no-op branch, D-R16c ②).
       if (ctx.agent.config.agent.engineering) {
         return "Engineering mode already active. Existing design tokens stay valid."
       }
       ctx.agent.config.agent.engineering = true
-      ctx.agent._engDesignToken = null   // off→on transition requires a fresh design review
-      ctx.agent._engDesignTokens = new Map() // multi-design slots die with the mode (2026-09-01 fix #2)
+      // R16 (F-R16a/F-R16b ②): the REAL off→on conversion must NOT burn valid tokens
+      // ("OFF→ON 不重评"); the user's "打开工程模式时清理" ruling lands here as an
+      // EXPIRED-only sweep (valid tokens stay usable without a fresh review).
+      const cleared = sweepExpiredDesignTokens(ctx.agent)
       ctx.agent._lastEngState = true
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_ON_REMINDER)
-      persistEngineering(ctx.agent, true)
-      return "Engineering mode activated. Design-before-code enforced: write a design document in docs/, run advisor with type='design', get user approval, then implement via eng-coder subagents."
+      const conflicted = persistEngineering(ctx.agent, true)
+      return `Engineering mode activated. Design-before-code enforced: write a design document in docs/, run advisor with type='design', get user approval, then implement via eng-coder subagents.${cleared > 0 ? ` Cleared ${cleared} expired design token${cleared === 1 ? "" : "s"} (TTL cleanup — valid tokens stay valid across mode switches).` : ""}${conflicted ? ` ${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : ""}`
     }
     return "Invalid action: expected 'enter' or 'exit'"
   },
@@ -60,6 +94,8 @@ export const engTool = {
  * Dual persistence (2026-08-29): slot first (session authority), config.json mirror second
  * (CLI compat). A slot write failure must not break the config write — and vice versa the
  * in-memory flag (already flipped by execute) always holds for the rest of this run.
+ * Returns true when the config mirror write hit an F5b mtime conflict (abandoned — caller
+ * surfaces the retry hint).
  */
 function persistEngineering(agent, enabled) {
   try {
@@ -67,9 +103,11 @@ function persistEngineering(agent, enabled) {
     if (p) setSlotEngineering(p.cwd, p.slot, enabled)
   } catch { /* slot unwritable — config mirror still written */ }
   try {
-    persistRaw((raw) => {
+    const r = persistRaw((raw) => {
       raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
       raw.agent.engineering = enabled
     })
+    return !!conflictError(r) // F5b：config 并发被改 → 放弃镜像写（slot 权威仍持态）
   } catch { /* config unreadable — in-memory state still holds for this run */ }
+  return false
 }

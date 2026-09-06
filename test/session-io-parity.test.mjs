@@ -5,12 +5,16 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readFileSync, unlinkSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readFileSync, unlinkSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import * as vscode from "vscode"
-import { newSlot, loadSlot, saveSessionToSlot, activeSlot, slotPath, manifestPath, saveManifest, loadManifest, deleteSlotAndUpdate, switchToSlot, endMarkerPath, readEndMarker, writeEndMarker, resumeSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { newSlot, loadSlot, saveSessionToSlot, activeSlot, slotPath, manifestPath, saveManifest, loadManifest, deleteSlotAndUpdate, switchToSlot, endMarkerPath, readEndMarker, writeEndMarker, resumeSlot, getSessionId, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 import { activeLines, saveLines, ensureSlot, pushSessions } from "../src/extension/panel-session.mjs"
+import { peerInstances, peerInstancesTool, _setAliveProbeForTest, _setCmdlineProbeForTest, _resetPeerInstancesForTest } from "../src/extension/peer-instances.mjs"
+import { peersDir, registerDomains, flushDomains, peerDomains, _resetPeerDomainsForTest } from "../src/extension/peer-domains.mjs"
+import { pushPeerReminder } from "../src/agent/setup-reminders.mjs"
+import { _setConfigPathForTest, loadRaw, saveRaw } from "../src/config-io.mjs"
 
 let tmp
 beforeEach(() => {
@@ -368,6 +372,233 @@ describe("end marker / resumeSlot（SESSION.md §10 R4——T-M9 类 + 镜像降
     const msg2 = posted2.find((m) => m.type === "sessions")
     const activeSlots = msg2.sessions.filter((s) => s.active).map((s) => s.slot)
     assert.deepEqual(activeSlots, [2], "记录槽不在列表 → 回退 manifest active（guard，D-5）")
+  })
+})
+
+// ─── R10 多实例协作（MULTI-INSTANCE-COLLAB.md——VS Code 镜像，2026-09-06）─────────
+// 伪属主范式：seedFile 直写模拟对端 + 探针注入（alive/cmdline）——无真 spawn。
+// 顶层 beforeEach 已注入 tmp sessions 沙箱；peers 默认目录跟随（tmp/peers）——测试零污染。
+
+/** seedFile：向当前沙箱 cwd 写 manifest（模拟对端/本端认领）。entries = { slot: sessionId } */
+function seedManifest(entries) {
+  mkdirSync(join(tmp, "sessions"), { recursive: true })
+  writeFileSync(manifestPath(tmp), JSON.stringify({ slots: {}, active: null, sessionId: null, slotSessions: entries }))
+}
+
+/** seedFile：向 peers 目录写对端实例登记文件 */
+function seedPeerFile(sid, { pid, end = "cli", domains = [], updatedAt = Date.now() }) {
+  mkdirSync(peersDir(), { recursive: true })
+  writeFileSync(join(peersDir(), `${sid}.json`), JSON.stringify({ sessionId: sid, pid, end, cwd: tmp, domains, updatedAt }))
+}
+
+const ALL_ALIVE = (pids) => new Set(pids)
+const NO_CMDLINE = () => new Map()
+
+// ─── F5b config 门控镜像 ───────────────────────────────────
+
+describe("R10 — F5b saveRaw mtime 门控镜像（D-F5c/d）", () => {
+  let cfg
+  beforeEach(() => {
+    cfg = join(tmp, "config.json")
+    _setConfigPathForTest(cfg)
+  })
+  afterEach(() => {
+    _setConfigPathForTest(null)
+    _resetPeerInstancesForTest()
+    _resetPeerDomainsForTest()
+  })
+
+  it("T-F5c: A 读基线 → seedFile 写 V2（模拟 B 改）→ A 保存 → mtime-conflict + .bak 落盘 + V2 未被抹", () => {
+    writeFileSync(cfg, JSON.stringify({ providers: [{ name: "a", apiKey: "k1" }], activeProvider: "a" }, null, 2) + "\n")
+    loadRaw() // A 读链基线 V1
+    const v2 = { providers: [{ name: "a", apiKey: "k1" }, { name: "b", apiKey: "k2" }], activeProvider: "b", fromB: true }
+    writeFileSync(cfg, JSON.stringify(v2, null, 2) + "\n") // seedFile——B 的并发写
+    const r = saveRaw({ providers: [{ name: "a", apiKey: "k1" }], activeProvider: "a", staleA: true })
+    assert.deepEqual(r, { ok: false, reason: "mtime-conflict" }, "放弃 + 冲突枚举返回（决策① A）")
+    const text = readFileSync(cfg, "utf8")
+    assert.ok(text.includes("fromB"), "V2（B 的改动）未被抹——文件内容 = V2")
+    assert.ok(!text.includes("staleA"), "A 的旧内容未写入")
+    const baks = readdirSync(tmp).filter((f) => f.startsWith("config.json.bak-"))
+    assert.equal(baks.length, 1, ".bak-{ts} 轮转保现场（仅冲突时）")
+    assert.ok(readFileSync(join(tmp, baks[0]), "utf8").includes("fromB"), ".bak 持有并发方现场")
+  })
+
+  it("T-F5d: 无并发 → saveRaw 照常（零回归）", () => {
+    writeFileSync(cfg, JSON.stringify({ providers: [{ name: "a", apiKey: "k1" }] }, null, 2) + "\n")
+    loadRaw()
+    const r = saveRaw({ providers: [{ name: "a", apiKey: "k1" }], activeProvider: "a" })
+    assert.equal(r, undefined, "无冲突 → 无冲突标记（既有调用方零变化）")
+    const parsed = JSON.parse(readFileSync(cfg, "utf8"))
+    assert.equal(parsed.activeProvider, "a", "保存生效")
+    assert.equal(parsed.$schema, "https://thincoder.dev/schemas/config.json", "$schema 注入照常")
+    assert.equal(readdirSync(tmp).filter((f) => f.startsWith("config.json.bak-")).length, 0, "无并发 → 不轮转")
+  })
+})
+
+// ─── L1/L2 感知镜像 ───────────────────────────────────────
+
+describe("R10 — L1/L2 peer 感知镜像（D-L1a/D-L2a/b）", () => {
+  afterEach(() => {
+    _resetPeerInstancesForTest()
+    _resetPeerDomainsForTest()
+    _setConfigPathForTest(null)
+  })
+
+  it("T-L1a: 两活同伴（cli + vscode 各一——vscode 同伴 cmdline 含 thincoder 路径仍判 vscode）→ 注入含 N 个同伴（transient）", () => {
+    _setAliveProbeForTest(ALL_ALIVE)
+    _setCmdlineProbeForTest((pids) => new Map([
+      [1111, { name: "node.exe", cmdline: "node C:\\bin\\thincoder.cjs" }],
+      // 回归锚（advisor 修正）：dev/F5 扩展宿主 cmdline 的 --extensionDevelopmentPath 含
+      // "thincoder" 子串——必须仍判 vscode（端判别先查扩展宿主标记，不先命中 cli）
+      [2222, { name: "Code.exe", cmdline: "\"C:\\VS Code\\Code.exe\" --type=extensionHost --extensionDevelopmentPath=D:\\dev\\thincoder-vscode" }],
+    ]))
+    seedManifest({ 1: "1111-peer-cli", 2: "2222-peer-vsc", 3: getSessionId() })
+    const history = []
+    const injected = pushPeerReminder(history, tmp)
+    assert.equal(injected, true, "有同伴 → 注入")
+    assert.equal(history.length, 1)
+    assert.equal(history[0].transient, true, "transient 标记（注入纪律同 env-state）")
+    assert.match(history[0].content, /2 个活跃 thincoder/, "N 个同伴")
+    assert.ok(history[0].content.includes("(cli pid=1111)") && history[0].content.includes("(vscode pid=2222)"), "端字段（决策③ cmdline 探测）")
+    assert.ok(history[0].content.includes("文件操作注意避让"), "文案（设计 D-L1a）")
+  })
+
+  it("T-L1a 接线面: setupAgentRun——注入位置在 env-state 之后、time reminder 之前", async () => {
+    _setConfigPathForTest(join(tmp, "config.json"))
+    _setAliveProbeForTest(ALL_ALIVE)
+    _setCmdlineProbeForTest((pids) => new Map([[1111, { name: "node.exe", cmdline: "node thincoder.cjs" }]]))
+    seedManifest({ 1: "1111-peer-cli", 2: getSessionId() })
+    const { setupAgentRun } = await import("../src/agent/setup.mjs")
+    const provider = { name: "t", baseURL: "http://127.0.0.1:1", apiKey: "k", model: "m" }
+    const opts = { mcpServers: [], skills: [], engState: {}, history: [], fullHistory: [] }
+    await setupAgentRun({ provider, cwd: tmp, input: "hi", opts, depth: 0, role: undefined, getAuto: () => false })
+    const h = opts.history
+    const idxEnv = h.findIndex((m) => typeof m.content === "string" && m.content.startsWith("[System reminder: env:"))
+    const idxPeer = h.findIndex((m) => typeof m.content === "string" && m.content.includes("活跃 thincoder"))
+    const idxTime = h.findIndex((m) => typeof m.content === "string" && m.content.includes("current time is"))
+    assert.ok(idxEnv >= 0 && idxPeer > idxEnv && idxTime > idxPeer, `位置：env(${idxEnv}) < peer(${idxPeer}) < time(${idxTime})`)
+    assert.equal(h[idxPeer].transient, true)
+  })
+
+  it("T-L1b: 无同伴（仅 self）→ 不注入（零开销——无 push）", () => {
+    _setAliveProbeForTest(ALL_ALIVE)
+    seedManifest({ 1: getSessionId() })
+    const history = []
+    assert.equal(pushPeerReminder(history, tmp), false, "无同伴 → 不注入")
+    assert.equal(history.length, 0)
+  })
+
+  it("T-L1c: 惰性缓存——manifest mtime 未变 → 二次调用不重查；变了才重查", () => {
+    let aliveCalls = 0
+    _setAliveProbeForTest((pids) => { aliveCalls++; return new Set(pids) })
+    _setCmdlineProbeForTest(NO_CMDLINE)
+    seedManifest({ 1: `${process.pid}-a`, 2: `${process.pid}-b` })
+    assert.equal(peerInstances(tmp).length, 2)
+    assert.equal(aliveCalls, 1, "首次查询 = 一次批量判活")
+    assert.equal(peerInstances(tmp).length, 2, "缓存命中——数据一致")
+    assert.equal(aliveCalls, 1, "mtime 未变 → 不重查（惰性）")
+    writeFileSync(manifestPath(tmp), JSON.stringify({ slotSessions: { 1: `${process.pid}-a` } }))
+    assert.equal(peerInstances(tmp).length, 1)
+    assert.equal(aliveCalls, 2, "manifest 变了 → 重查")
+  })
+
+  it("T-L2a: peer_instances 字段白名单 {pid,end,sessionId,slots} 精确 + 去 self（vscode 同伴 cmdline 含 thincoder 仍判 vscode）", () => {
+    _setAliveProbeForTest(ALL_ALIVE)
+    _setCmdlineProbeForTest((pids) => new Map([
+      [1111, { name: "node.exe", cmdline: "node thincoder.cjs" }],
+      [2222, { name: "Code.exe", cmdline: "--extensionDevelopmentPath=D:\\dev\\thincoder-vscode" }],
+    ]))
+    seedManifest({ 1: "1111-peer-cli", 2: "2222-peer-vsc", 3: getSessionId() })
+    const out = peerInstancesTool.execute({}, { cwd: tmp })
+    assert.ok(!out.includes(getSessionId()), "never includes self（schema 锚语义）")
+    const lines = out.split("\n")
+    assert.equal(lines.length, 2, "两个同伴")
+    for (const line of lines) {
+      const e = JSON.parse(line)
+      assert.deepEqual(Object.keys(e).sort(), ["end", "pid", "sessionId", "slots"], "字段白名单精确——无 self/无任何其他键（N4）")
+    }
+    const vsc = lines.map((l) => JSON.parse(l)).find((e) => e.pid === 2222)
+    assert.equal(vsc.end, "vscode", "扩展宿主标记先于 thincoder 子串判定（回归锚——cmdline 含 thincoder 路径不误标 cli）")
+    assert.equal(JSON.parse(lines[0]).pid === 1111 ? JSON.parse(lines[0]).end : JSON.parse(lines[1]).end, "cli", "真实 CLI 仍判 cli")
+  })
+
+  it("T-L2b: 死主条目（DEAD pid）不出现", () => {
+    _setAliveProbeForTest((pids) => new Set(pids.filter((p) => p === process.pid)))
+    _setCmdlineProbeForTest(NO_CMDLINE)
+    seedManifest({ 1: "99999999-dead", 2: `${process.pid}-live` })
+    const peers = peerInstances(tmp)
+    assert.equal(peers.length, 1, "死条目过滤")
+    assert.equal(peers[0].pid, process.pid)
+    assert.ok(!JSON.stringify(peers).includes("99999999"))
+  })
+
+  it("T-N3/N4: peer_instances 查询 + L1 注入路径只读——fs 写点零（不写 manifest/peers）", () => {
+    _setAliveProbeForTest(ALL_ALIVE)
+    _setCmdlineProbeForTest(NO_CMDLINE)
+    seedManifest({ 1: `${process.pid}-x`, 2: getSessionId() })
+    const sessDir = join(tmp, "sessions")
+    const before = readdirSync(sessDir).sort()
+    const history = []
+    pushPeerReminder(history, tmp)
+    peerInstancesTool.execute({}, { cwd: tmp })
+    assert.deepEqual(readdirSync(sessDir).sort(), before, "sessions 目录无写")
+    assert.equal(existsSync(peersDir()), false, "peers 目录未创建（零 fs 写）")
+    assert.equal(readdirSync(tmp).filter((f) => f.endsWith(".json")).length, 0, "无任何登记文件")
+  })
+})
+
+// ─── L3 域登记/冲突镜像 ───────────────────────────────────
+
+describe("R10 — L3 文件域登记 + 冲突检测镜像（D-L3a/b/c）", () => {
+  afterEach(() => {
+    _resetPeerInstancesForTest()
+    _resetPeerDomainsForTest()
+  })
+
+  it("T-L3a: A 写 x → flush 登记含 x；seedFile B 同域 → conflicts 命中（软提示数据——不阻止）", () => {
+    _setAliveProbeForTest(ALL_ALIVE)
+    const x = join(tmp, "src", "x.mjs")
+    registerDomains([x])
+    flushDomains(tmp)
+    const myFile = join(peersDir(), `${getSessionId()}.json`)
+    assert.ok(existsSync(myFile), "flush 落盘本实例登记")
+    assert.ok(JSON.parse(readFileSync(myFile, "utf8")).domains.includes(x), "登记含 x（写后登记——决策⑤）")
+    // B（活 pid、不同 sessionId）也登记了 x
+    seedPeerFile(`${process.pid}-B`, { pid: process.pid, end: "cli", domains: [x] })
+    const hits = peerDomains(tmp).conflicts([x])
+    assert.equal(hits.length, 1, "命中他实例 hot 域")
+    assert.equal(hits[0].file, x)
+    assert.equal(hits[0].pid, process.pid)
+    assert.equal(hits[0].end, "cli")
+    // 软提示语义：conflicts 只返回数据不抛错不写（写工具主流程永不阻塞——决策⑥）
+    assert.deepEqual(readdirSync(peersDir()).filter((f) => !f.includes(getSessionId())).sort(), [`${process.pid}-B.json`], "查询不产生任何 fs 写")
+  })
+
+  it("T-L3b: B 登记死 pid → 聚合时惰性清理（文件消失 + 不命中）", () => {
+    _setAliveProbeForTest((pids) => new Set(pids.filter((p) => p === process.pid)))
+    seedPeerFile("99999999-dead", { pid: 99999999, domains: [join(tmp, "y.mjs")] })
+    const hits = peerDomains(tmp).conflicts([join(tmp, "y.mjs")])
+    assert.deepEqual(hits, [], "死登记不命中")
+    assert.ok(!existsSync(join(peersDir(), "99999999-dead.json")), "死登记文件被惰性清理（D-L3a）")
+  })
+
+  it("T-L3c: 无冲突 → 零提示；冷登记（hot 窗口外）不提示", () => {
+    _setAliveProbeForTest(ALL_ALIVE)
+    const x = join(tmp, "x.mjs")
+    const y = join(tmp, "y.mjs")
+    seedPeerFile(`${process.pid}-hot`, { pid: process.pid, domains: [y] })
+    seedPeerFile(`${process.pid}-cold`, { pid: process.pid, domains: [x], updatedAt: Date.now() - 10 * 60 * 1000 })
+    const hits = peerDomains(tmp).conflicts([x])
+    assert.deepEqual(hits, [], "同文件但冷登记（5 分钟外）→ 不提示（hot 窗口——决策⑤）")
+    assert.deepEqual(peerDomains(tmp).conflicts([y]).map((h) => h.file), [y], "他端 hot 域命中")
+  })
+
+  it("T-L3d: peers 文件损坏 → 按缺失降级（不崩、文件保留）", () => {
+    seedPeerFile("broken", { pid: 99999999, domains: ["x"] })
+    writeFileSync(join(peersDir(), "broken.json"), "{ corrupt json!!")
+    const hits = peerDomains(tmp).conflicts([join(tmp, "x.mjs")])
+    assert.deepEqual(hits, [], "损坏按缺失降级——不命中不抛（NF2/end marker 同型）")
+    assert.ok(existsSync(join(peersDir(), "broken.json")), "损坏文件保留（不删——幂等降级）")
   })
 })
 

@@ -1,7 +1,7 @@
 /**
  * streaming.js — token/reasoning stream rendering (rAF-throttled), turn finish,
- * code-block copy buttons, and the in-conversation advisor/subagent activity
- * blocks.
+ * code-block copy buttons, and the in-conversation advisor review block.
+ * (R22: subagent activity blocks moved to the bottom panel — activity.js.)
  */
 import { ctx, S } from "./state.js"
 import { md } from "./md.js"
@@ -12,9 +12,10 @@ import {
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
-// §19.5 D-M7: subagent block stop controls (⏹ add-on-create when running) — no cycle:
-// panels.js never imports streaming.js.
-import { subBlockTarget, updateBlockStopButtons } from "./panels.js"
+// R22: subagent activity blocks live in the bottom panel (activity.js) —
+// lifecycle (create/header/freeze/ticker/⏹) moved there; panels.js never
+// imports streaming.js and activity.js imports neither (no cycles).
+import { ensureBlock, noteChunk, resetActivity } from "./activity.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
 // markdown + innerHTML on EVERY chunk is O(n²) and floods the main thread — the backlog
@@ -52,6 +53,7 @@ function scheduleStreamRender() {
     }
     if (_advisorScrollDirty) {
       for (const block of [S._advisorBlock, ...S._subBlocks.values()]) {
+        if (block?._subMeta?.frozen) continue // frozen blocks are static (in #messages)
         const c = block?.querySelector(".advisor-content")
         if (c) c.scrollTop = c.scrollHeight
       }
@@ -173,7 +175,7 @@ export function finish(aborted) {
   // session is live — background children's blocks must stay addressable across
   // digest turns (their settle/freeze notifications collapse them); a turn end
   // inside a session is not the end of the children's life.
-  if (!S._suspended) { S._advisorBlock = null; S._subBlocks.clear() } // turn over — blocks reset with the turn
+  if (!S._suspended) { S._advisorBlock = null; resetActivity() } // turn over — live blocks reset with the turn (frozen blocks stay in #messages)
   setLoading(ctx, false)
   renderStatusBar()
 }
@@ -221,32 +223,22 @@ export function advisorChunk(m) {
 }
 
 
-/** Subagent/consultant activity stream — same in-conversation details block as the
- *  advisor, one block per subagent label ("sub:explore", "sub:consult glm:glm-5.2" ...).
- *  Collapses when done so a busy turn with several children stays readable.
- *  §19.5 D-M7/D-M8: 块创建时按面板行状态装 ⏹（仅 running——T-M23；终态由
- *  handleSubagentMessage 移除）；chunk 携带的 `sub`（嵌套内层 spawn 段标——如
- *  "explore#1"）随 appendAdvisorChunk 渲染为行首 dim 子标 span。 */
+/** Subagent/consultant/escalate activity stream — R22: blocks live in the bottom
+ *  activity panel (#subagent-activity — own scroll layer, independent of the
+ *  conversation flow), one block per channel ("sub:explore#1",
+ *  "sub:consult glm:glm-5.2 #4" …). Terminal states REMOVE the block from the
+ *  panel and FREEZE it into the #messages tail (activity.freezeBlock — identity
+ *  header + expandable content + report preview; §17 settled stays parked with
+ *  the awaiting-digestion header until the digest done / session-exit freeze).
+ *  The summary header carries [▶ key · sync/async · model · elapsed · turn]
+ *  + current tool/state word + folded tail-3 dim (D-R22b). §19.5 D-M7/D-M8:
+ *  ⏹ mounts only on running pool entries; nested `sub` labels render via
+ *  appendAdvisorChunk. */
 export function subagentChunk(m) {
-  let block = S._subBlocks.get(m.name)
-  if (!block) {
-    block = buildAdvisorBlock(m.name.slice(4)) // strip "sub:" — the label IS the header
-    block.classList.add("sub-block") // shorter content height + dimmer title (consult-UI review)
-    block.open = true
-    if (ctx.currentBlock) ctx.currentBlock.appendChild(block)
-    else ctx.messagesEl.appendChild(block)
-    S._subBlocks.set(m.name, block)
-    const target = subBlockTarget(m.name)
-    // §19.5 D-M7: ⏹ 仅池条目（async spawn——行态 started + pool 标记）——同步 spawn
-    // 块不挂（cancel 路由只认池——审计 F1）。
-    if (target) {
-      const row = S._subagentMap[target.id]
-      if (row?.status === "started" && row.pool) {
-        updateBlockStopButtons(target.role, target.id, true)
-      }
-    }
-  }
+  const name = String(m.name ?? "")
+  const block = ensureBlock(name) // created in the panel; same element freezes into #messages later
   appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
+  noteChunk(block, m.kind ?? "tool", m.text)
   _advisorScrollDirty = true
   scheduleStreamRender()
 }

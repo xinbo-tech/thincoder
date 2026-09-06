@@ -1,0 +1,83 @@
+/**
+ * files.mjs — 测试清单单一来源（npm test 快层与 test:full 全量共用）。
+ *
+ * 为什么是显式清单而非 CLI 的 test/*.test.mjs glob（VS Code 侧适配——机制语义
+ * 向 CLI 看齐，测试脚本组织沿用本仓既有形态）：本仓套件含 smoke-settings.mjs
+ * （非 .test.mjs 命名，glob 会漏），且 queue-user-message.test.mjs 历史未入清单
+ * （glob 会多收）——显式清单保持套件范围与既有 npm test 逐字一致，零漂移。
+ * 新增测试文件：在此登记（快层/全量同时生效）。
+ * 在途备忘（2026-09-06）：test/file-search.test.mjs 为另一批在途交付的未跟踪文件——
+ * 该交付落地时必须在此登记，否则 npm test / test:full 静默永不运行它。
+ */
+export default [
+  "test/unit.test.mjs",
+  "test/dual-history.test.mjs",
+  "test/agent-core.test.mjs",
+  "test/checklist.test.mjs",
+  "test/compaction.test.mjs",
+  "test/config-io.test.mjs",
+  "test/settings-panel.test.mjs",
+  "test/advisor.test.mjs",
+  "test/advisor-webview.test.mjs",
+  "test/advisor-async.test.mjs", // §24 D-24b（R13——2026-09-06）
+  "test/async-pool-domains.test.mjs", // §24 D-24a（R14——2026-09-06）
+  "test/distill.test.mjs",
+  "test/eng-delivery.test.mjs",
+  "test/execute.test.mjs",
+  "test/file-tools.test.mjs",
+  "test/git.test.mjs",
+  "test/provider-panel.test.mjs",
+  "test/proxy.test.mjs",
+  "test/prompts.test.mjs",
+  "test/mcp.test.mjs",
+  "test/provider.test.mjs",
+  "test/subagent-async.test.mjs",
+  "test/subagent-scheduler.test.mjs",
+  "test/subagent-tool.test.mjs",
+  "test/suspension.test.mjs",
+  "test/run-helpers.test.mjs",
+  "test/permission.test.mjs",
+  "test/auto-approve.test.mjs",
+  "test/history-window.test.mjs",
+  "test/question.test.mjs",
+  "test/diff.test.mjs",
+  "test/injections.test.mjs",
+  "test/interruptible.test.mjs",
+  "test/abort-e2e.test.mjs",
+  "test/webview-lib.test.mjs",
+  "test/ui.test.mjs",
+  "test/settings.test.mjs",
+  "test/chat-panel.test.mjs",
+  "test/welcome.test.mjs",
+  "test/project-switcher.test.mjs",
+  "test/ssrf.test.mjs",
+  "test/websearch.test.mjs",
+  "test/search.test.mjs",
+  "test/editor-edit.test.mjs",
+  "test/edit-semantics.test.mjs",
+  "test/edit-eol.test.mjs",
+  "test/terminal-bash.test.mjs",
+  "test/session-draft.test.mjs",
+  "test/i18n.test.mjs",
+  "test/file-links.test.mjs",
+  "test/autocomplete.test.mjs",
+  "test/image-paste.test.mjs",
+  "test/consult.test.mjs",
+  "test/escalate.test.mjs",
+  "test/md.test.mjs",
+  "test/tool-pairing.test.mjs",
+  "test/time-injection.test.mjs",
+  "test/consult-stop.test.mjs",
+  "test/continue-on-turn-cap.test.mjs",
+  "test/log.test.mjs",
+  "test/smoke-settings.mjs",
+  "test/eng-session.test.mjs",
+  "test/read-history.test.mjs",
+  "test/vscode-tools.test.mjs",
+  "test/escape.test.mjs",
+  "test/model-menu.test.mjs",
+  "test/session-io-parity.test.mjs",
+  "test/slow-gate.test.mjs",
+  "test/wait-for.test.mjs",
+  "test/glob-dialect.test.mjs",
+]

@@ -536,6 +536,29 @@ describe("agent settings", () => {
     assert.equal(loadAgentSettings().engineering, false)
   })
 
+  // §24 D-24a（R14——2026-09-06）：并发池分域容量——面板/设置工具写同一键 agent.poolLimits。
+  it("poolLimits default + panel save round-trip（AGENT-LOOP §24 T-24a3/T-24a4 配置面）", () => {
+    const d = loadAgentSettings()
+    assert.deepEqual(d.poolLimits, { engCoder: 4, other: 4 }, "默认 4/4（用户裁定 eng-coder 四路 + 其他四路）")
+    saveAgentSettingsFromPanel({ poolLimits: { engCoder: 2, other: 6 } })
+    assert.deepEqual(loadRaw().agent.poolLimits, { engCoder: 2, other: 6 }, "面板写盘")
+    assert.deepEqual(loadAgentSettings().poolLimits, { engCoder: 2, other: 6 })
+    // 非法键丢弃（0/负数/字符串/非整数）——payload-wins：空对象/全非法 → 删整键（运行期回退默认 4/4）
+    saveAgentSettingsFromPanel({ poolLimits: { engCoder: 0, other: -1, extra: 9 } })
+    assert.ok(!("poolLimits" in (loadRaw().agent ?? {})), "全非法 → 删整键")
+    saveAgentSettingsFromPanel({ poolLimits: { engCoder: 2, other: 6 } })
+    saveAgentSettingsFromPanel({ poolLimits: { engCoder: 0 } })
+    assert.ok(!("poolLimits" in (loadRaw().agent ?? {})), "单键非法且无其他合法键 → 删整键")
+    saveAgentSettingsFromPanel({ poolLimits: { engCoder: 2, other: 6 } })
+    saveAgentSettingsFromPanel({ poolLimits: { other: 6 } }) // webview 恒发双键；部分 payload = 替换语义（同 subagentModels 先例）
+    assert.deepEqual(loadRaw().agent.poolLimits, { other: 6 })
+    saveAgentSettingsFromPanel({ poolLimits: {} })
+    assert.ok(!("poolLimits" in (loadRaw().agent ?? {})), "空 payload → 删整键")
+    assert.deepEqual(loadAgentSettings().poolLimits, { engCoder: 4, other: 4 }, "删除后读回默认")
+    saveAgentSettings({ poolLimits: { engCoder: 3, other: 3 } })
+    assert.deepEqual(loadAgentSettings().poolLimits, { engCoder: 3, other: 3 })
+  })
+
   it("panel save preserves a handwritten advisor.timeoutMs (AGENT-PARAMS-TUNING AC6)", () => {
     saveAgentSettings({ advisor: { guard: false, timeoutMs: 123456 } })
     saveAgentSettingsFromPanel({ advisor: { guard: true } })

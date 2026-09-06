@@ -7,6 +7,7 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
+import { randomUUID } from "node:crypto"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
@@ -224,41 +225,132 @@ describe("agentState → ChatPanel._saveLines — slot persistence", () => {
   })
 })
 
-// ─── 多槽 token 序列化往返（2026-09-01 审计 #1 修复） ────────────
+// ─── 多槽 design token：R16 生命周期 + 序列化往返（2026-09-06）──────
 
-describe("multi-slot token serialization — agentState → saveLines → setup restore (audit #1)", () => {
-  it("eng(exit) clears _engDesignTokens along with the single mirror (fix #2)", async () => {
+describe("multi-slot design tokens — R16 lifecycle + agentState → saveLines → setup restore", () => {
+  // Runtime-minted unsigned tokens (2026-09-06 设计 B — uuid:expiresAt, no signature
+  // segment). TTL'd tokens must never be baked into test files (expired-fixture lesson
+  // 2026-08-31). Token TTL is 7 days by default — restore/enter sweeps classify a token
+  // by its expiresAt against Date.now(), so past/future fixtures control the outcome.
+  const mkTok = (expiresAt) => `${randomUUID()}:${expiresAt}`
+  const TTL = Date.now() + 7 * 24 * 3600 * 1000
+
+  it("eng(exit) KEEPS _engDesignTokens and the single mirror (R16 F-R16a — ON→OFF 不清)", async () => {
+    const { _setConfigPathForTest } = await import("../src/config-io.mjs")
+    _setConfigPathForTest(cfgPath)
+    writeFileSync(cfgPath, JSON.stringify({ agent: { engineering: true } }), "utf8")
     const { engTool } = await import("../src/agent-tools/eng.mjs")
+    const tokA = mkTok(TTL)
+    const tokB = mkTok(TTL)
     const agent = {
       config: { agent: { engineering: true } },
-      _engDesignToken: "tok", _engDesignTokens: new Map([["id-a", "tok-a"], ["id-b", "tok-b"]]),
+      _engDesignToken: tokB, _engDesignTokens: new Map([["id-a", tokA], ["id-b", tokB]]),
       _pendingReminders: [],
     }
     const out = await engTool.execute({ action: "exit" }, { agent })
     assert.match(out, /exited/i)
-    assert.equal(agent._engDesignToken, null)
-    assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
-      "multi-design slots die with the mode — no stale slot set survives eng(exit)")
+    assert.equal(agent._engDesignToken, tokB, "single mirror survives ON→OFF (approved review not burned)")
+    assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 2,
+      "multi-design slots survive ON→OFF — mode toggle is not a token clear (R16)")
   })
 
-  it("off→on enter clears the slots; idempotent enter keeps them (fix #2, AC6 parity)", async () => {
+  it("off→on enter clears ONLY expired tokens; valid slots + mirror survive (T-R16c)", async () => {
+    const { _setConfigPathForTest } = await import("../src/config-io.mjs")
+    _setConfigPathForTest(cfgPath)
+    writeFileSync(cfgPath, JSON.stringify({ agent: { engineering: false } }), "utf8")
     const { engTool } = await import("../src/agent-tools/eng.mjs")
+    const expired = mkTok(Date.now() - 1000)
+    const valid = mkTok(TTL)
     const agent = {
       config: { agent: { engineering: false } },
-      _engDesignToken: "stale", _engDesignTokens: new Map([["stale-id", "stale"]]),
+      _engDesignToken: valid, _engDesignTokens: new Map([["expired-id", expired], ["valid-id", valid]]),
       _pendingReminders: [],
     }
-    await engTool.execute({ action: "enter" }, { agent })
-    assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
-      "off→on transition kills stale multi-design slots")
+    const out = await engTool.execute({ action: "enter" }, { agent })
+    assert.match(out, /activated/i)
+    assert.ok(agent._engDesignTokens instanceof Map)
+    assert.equal(agent._engDesignTokens.size, 1, "the expired slot is swept on the REAL off→on conversion")
+    assert.equal(agent._engDesignTokens.get("valid-id"), valid, "TTL-valid slot survives OFF→ON (F-R16a — no re-review)")
+    assert.equal(agent._engDesignToken, valid, "valid mirror survives OFF→ON")
+    assert.match(out, /Cleared 1 expired design token/, "enter message reports the expiry sweep")
+    // already-on enter is a PURE no-op — no sweep on the idempotent branch (AC6/D-R16c ②)
     const standing = {
       config: { agent: { engineering: true } },
-      _engDesignToken: "keepme", _engDesignTokens: new Map([["id-a", "tok-a"]]),
+      _engDesignToken: valid, _engDesignTokens: new Map([["expired-id", expired], ["valid-id", valid]]),
       _pendingReminders: [],
     }
-    const out = await engTool.execute({ action: "enter" }, { agent: standing })
-    assert.match(out, /already active/)
-    assert.equal(standing._engDesignTokens.size, 1, "redundant enter keeps the slots")
+    const out2 = await engTool.execute({ action: "enter" }, { agent: standing })
+    assert.match(out2, /already active/)
+    assert.ok(standing._engDesignTokens instanceof Map && standing._engDesignTokens.size === 2,
+      "already-on branch is a pure no-op — expired entries untouched")
+    assert.equal(standing._engDesignToken, valid)
+    // expired MIRROR with a surviving sibling: mirror repoints to the live slot (null
+    // mirror + residual slots would trip resolveDesignSlot's torn-state guard)
+    const mixed = {
+      config: { agent: { engineering: false } },
+      _engDesignToken: expired, _engDesignTokens: new Map([["expired-id", expired], ["valid-id", valid]]),
+      _pendingReminders: [],
+    }
+    const out3 = await engTool.execute({ action: "enter" }, { agent: mixed })
+    assert.match(out3, /Cleared 1 expired design token/)
+    assert.equal(mixed._engDesignTokens.size, 1, "expired slot swept")
+    assert.equal(mixed._engDesignToken, valid, "mirror repointed to the surviving slot — spawns stay usable")
+  })
+
+  it("valid token survives the full OFF→ON chain and stays spawn-usable (T-R16a)", async () => {
+    const { _setConfigPathForTest } = await import("../src/config-io.mjs")
+    _setConfigPathForTest(cfgPath)
+    writeFileSync(cfgPath, JSON.stringify({ agent: { engineering: true } }), "utf8")
+    const { engTool } = await import("../src/agent-tools/eng.mjs")
+    const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+    const tok = mkTok(TTL)
+    const agent = {
+      config: { agent: { engineering: true } },
+      _engDesignToken: tok, _engDesignTokens: new Map([["d1", tok]]),
+      _pendingReminders: [],
+    }
+    await engTool.execute({ action: "exit" }, { agent })
+    assert.equal(agent.config.agent.engineering, false)
+    assert.equal(agent._engDesignTokens.size, 1, "token survives OFF")
+    const out = await engTool.execute({ action: "enter" }, { agent })
+    assert.match(out, /activated/i)
+    assert.equal(agent._engDesignTokens.size, 1, "token survives the OFF→ON round trip")
+    assert.equal(resolveDesignSlot(agent, "d1").token, tok, "spawn gate still resolves the slot — no re-review needed")
+  })
+
+  it("exit→save→load round-trip: token survives and restore rebuilds it (AC7 inversion)", async () => {
+    const { ChatPanel } = await import("../src/extension/chat-panel.mjs")
+    const { agentState } = await import("../src/agent/run-helpers.mjs")
+    const { _setConfigPathForTest } = await import("../src/config-io.mjs")
+    _setConfigPathForTest(cfgPath)
+    writeFileSync(cfgPath, JSON.stringify({ agent: { engineering: true } }), "utf8")
+    const { engTool } = await import("../src/agent-tools/eng.mjs")
+    const panel = new ChatPanel({
+      globalStorageUri: { fsPath: tmp },
+      workspaceState: { get: () => undefined, update: async () => {} },
+      subscriptions: [],
+    })
+    const tok = mkTok(TTL)
+    const agent = {
+      config: { agent: { engineering: true }, advisor: { guard: false } },
+      _engDesignToken: tok, _engDesignTokens: new Map([["d1", tok]]),
+      _pendingReminders: [],
+    }
+    await engTool.execute({ action: "exit" }, { agent })
+    const lines = []
+    panel._saveLines(lines, lines, { activeProvider: "deepseek", ...agentState(agent) }, 1)
+    const data = loadSlot(tmp, 1)
+    assert.equal(data.engDesignToken, tok, "exit-then-save carries the LIVE token (no null wipe on OFF)")
+    assert.deepEqual(data.engDesignTokens, { d1: tok }, "multi-slot object survives the exit save")
+    const { setupAgentRun } = await import("../src/agent/setup.mjs")
+    const { agent: restored } = await setupAgentRun({
+      provider: { name: "t", model: "deepseek-v4-pro" },
+      cwd: tmp, input: "hi",
+      opts: { engState: { enabled: false, advisorGuard: false, engDesignToken: data.engDesignToken, engDesignTokens: data.engDesignTokens } },
+      depth: 0, role: null, getAuto: () => true,
+    })
+    assert.equal(restored._engDesignToken, tok, "load rebuilds the mirror — token alive within TTL (old AC7 asserted null here)")
+    assert.equal(restored._engDesignTokens.get("d1"), tok, "load rebuilds the slot")
   })
 
   it("agentState → saveLines → loadSlot round-trips the {designId: token} object (fix #1 acceptance 1)", async () => {
@@ -294,6 +386,64 @@ describe("multi-slot token serialization — agentState → saveLines → setup 
       "restore rebuilds the Map")
     assert.equal(restored._engDesignTokens.get("id-a"), "tok-a")
     assert.equal(restored._engDesignTokens.get("id-b"), "tok-b")
+  })
+
+  it("setup restore drops EXPIRED tokens per slot; valid + malformed entries load (T-R16b)", async () => {
+    const { setupAgentRun } = await import("../src/agent/setup.mjs")
+    const expired = mkTok(Date.now() - 1000)
+    const valid = mkTok(TTL)
+    const malformed = "no-colon"
+    const { agent } = await setupAgentRun({
+      provider: { name: "t", model: "deepseek-v4-pro" },
+      cwd: tmp, input: "hi",
+      opts: {
+        engState: {
+          enabled: true, advisorGuard: false,
+          engDesignToken: expired, // expired mirror → NOT read back
+          engDesignTokens: { "expired-id": expired, "valid-id": valid, "weird-id": malformed },
+        },
+      },
+      depth: 0, role: null, getAuto: () => true,
+    })
+    assert.equal(agent._engDesignToken, valid, "expired mirror REPOINTS to the first surviving slot (mirror ⊆ live slots — same invariant as enter sweep / gate deletion)")
+    assert.ok(agent._engDesignTokens instanceof Map)
+    assert.equal(agent._engDesignTokens.size, 2,
+      "expired entry dropped; valid AND malformed entries read back — only expiry is dropped (D-R16c ①)")
+    assert.equal(agent._engDesignTokens.get("valid-id"), valid)
+    assert.equal(agent._engDesignTokens.get("weird-id"), malformed, "malformed is not 'expired' — the spawn gate rejects it")
+    // observable outcome of the shape (🟡#3/#4): the surviving slot is spawn-resolvable —
+    // no torn-state refusal, no re-review needed for a valid sibling
+    const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+    assert.equal(resolveDesignSlot(agent, "valid-id").token, valid, "valid sibling resolvable after the expired-mirror restore")
+  })
+
+  it("setup restore drops an expired mirror when NO slot survives (T-R16b — mirror-only expiry)", async () => {
+    const { setupAgentRun } = await import("../src/agent/setup.mjs")
+    const expired = mkTok(Date.now() - 1000)
+    const { agent } = await setupAgentRun({
+      provider: { name: "t", model: "deepseek-v4-pro" },
+      cwd: tmp, input: "hi",
+      opts: { engState: { enabled: true, advisorGuard: false, engDesignToken: expired, engDesignTokens: { "expired-id": expired } } },
+      depth: 0, role: null, getAuto: () => true,
+    })
+    assert.equal(agent._engDesignToken, null, "nothing survives → mirror null")
+    assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 0,
+      "all-expired map loads empty (Map(0) — agentState serializes it as null on the next save)")
+  })
+
+  it("setup restore keeps the live mirror when only a sibling map entry expired (T-R16b — per-slot filtering)", async () => {
+    const { setupAgentRun } = await import("../src/agent/setup.mjs")
+    const expired = mkTok(Date.now() - 1000)
+    const valid = mkTok(TTL)
+    const { agent } = await setupAgentRun({
+      provider: { name: "t", model: "deepseek-v4-pro" },
+      cwd: tmp, input: "hi",
+      opts: { engState: { enabled: true, advisorGuard: false, engDesignToken: valid, engDesignTokens: { "expired-id": expired, "valid-id": valid } } },
+      depth: 0, role: null, getAuto: () => true,
+    })
+    assert.equal(agent._engDesignToken, valid, "live mirror unaffected by a sibling slot's expiry")
+    assert.ok(agent._engDesignTokens instanceof Map && agent._engDesignTokens.size === 1)
+    assert.equal(agent._engDesignTokens.get("valid-id"), valid)
   })
 
   it("save without slots pins engDesignTokens null → setup restore sets NO Map (legacy compat lock)", async () => {

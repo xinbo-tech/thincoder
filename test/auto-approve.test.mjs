@@ -12,7 +12,7 @@ import { tmpdir } from "node:os"
 
 import { reinjectAfterCompaction } from "../src/agent/run-helpers.mjs"
 import { executeToolBatches } from "../src/agent/execute-tools.mjs"
-import { setSlotAutoApprove, newSlot, loadSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { setSlotAutoApprove, newSlot, loadSlot, resumeSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 
 // ─── Session-level persistence ─────────────────────────────────
 
@@ -36,6 +36,17 @@ describe("session-io — autoApprove slot field (CLI parity, no VS Code setting)
 
   it("setSlotAutoApprove returns false for an unknown slot", () => {
     assert.equal(setSlotAutoApprove(cwd, 99, true), false)
+  })
+
+  it("resumeSlot-then-setSlotAutoApprove persists the AUTO flag (missing-file regression)", () => {
+    // Real panel path: user clicks the AUTO button BEFORE any message. ensureSlot →
+    // resumeSlot claims/allocates a slot for a fresh cwd, writing only the manifest. Prior
+    // to the fix, resumeSlot never created the slot data file, so setSlotAutoApprove hit
+    // `if (!data) return false` and silently dropped AUTO — the next turn read
+    // `undefined ?? false` and tools still asked.
+    const { slot } = resumeSlot(cwd)
+    assert.equal(setSlotAutoApprove(cwd, slot, true), true, "setSlotAutoApprove must persist after a resumeSlot allocation")
+    assert.equal(loadSlot(cwd, slot).autoApprove, true)
   })
 })
 

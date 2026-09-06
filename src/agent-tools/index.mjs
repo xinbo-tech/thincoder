@@ -12,4 +12,4 @@ export { timerTool } from "./timer.mjs"
 export { advisorTool } from "./advisor.mjs"
 export { engTool } from "./eng.mjs"
 export { readHistoryTool } from "./read-history.mjs"
-export { consultStartTool, consultCheckTool, consultStopTool } from "./consult.mjs"
+export { consultStartTool, consultStopTool } from "./consult.mjs" // §25 R17: consult_check 退役（自动 digest 后无消费对象）

@@ -6,6 +6,7 @@
  */
 
 import { describe, it, beforeEach, afterEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, mkdirSync, symlinkSync } from "node:fs"
 import { join } from "node:path"
@@ -52,7 +53,7 @@ describe("git — unified tool (CLI parity: action subcommands)", () => {
     assert.ok(names.includes("hashline_edit"))
   })
 
-  it("diff/status/log run against a real repo", async () => {
+  slow("diff/status/log run against a real repo", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -74,7 +75,7 @@ describe("git — unified tool (CLI parity: action subcommands)", () => {
     assert.match(r, /Unknown action 'nope'/)
   })
 
-  it("show returns commit stat; rm untracks; commit+push work", async () => {
+  slow("show returns commit stat; rm untracks; commit+push work", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -104,7 +105,7 @@ describe("git — unified tool (CLI parity: action subcommands)", () => {
     assert.match(lg, /add c/)
   })
 
-  it("filter keeps only matching lines on read-only actions", async () => {
+  slow("filter keeps only matching lines on read-only actions", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -136,7 +137,7 @@ describe("git — unified tool (CLI parity: action subcommands)", () => {
     assert.ok(!gitTool.isReadonlyAction({ action: "nope" }))
   })
 
-  it("扩充 action：add/commit 分文件、tag、branch、checkout/restore、stash、reset、revert、merge、cherry-pick、参数校验", async () => {
+  slow("扩充 action：add/commit 分文件、tag、branch、checkout/restore、stash、reset、revert、merge、cherry-pick、参数校验", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync, execFileSync } = await import("node:child_process")
     const g = (...a) => execFileSync("git", a, { cwd, encoding: "utf8" })
@@ -221,7 +222,7 @@ describe("git — unified tool (CLI parity: action subcommands)", () => {
     assert.match(await gitTool.execute({ action: "merge" }, ctx()), /requires ref/)
   })
 
-  it("workdir 在 workspace 子目录的 git 仓库运行；越界不再拒绝（TOOLS.md §10.1 T-w-2：git 本身不限目录）", async () => {
+  slow("workdir 在 workspace 子目录的 git 仓库运行；越界不再拒绝（TOOLS.md §10.1 T-w-2：git 本身不限目录）", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execFileSync } = await import("node:child_process")
     const { mkdirSync } = await import("node:fs")
@@ -257,7 +258,7 @@ describe("bash — git destructive-command protection (CLI parity)", () => {
   beforeEach(setup)
   afterEach(async () => { await cleanupCheckpoints(cwd); cleanup() })
 
-  it("T7d guard 对齐：checkout -- . 触发全量副本快照 + rewind 指引，无 stash（CHECKPOINT.md D4）", async () => {
+  slow("T7d guard 对齐：checkout -- . 触发全量副本快照 + rewind 指引，无 stash（CHECKPOINT.md D4）", async () => {
     const { bashTool } = await import("../src/tools/shell.mjs")
     const { execSync } = await import("node:child_process")
     const { rm } = await import("node:fs/promises")
@@ -287,7 +288,7 @@ describe("bash — git destructive-command protection (CLI parity)", () => {
     await rm(join(await vsCheckpointRoot(cwd), id), { recursive: true, force: true })
   })
 
-  it("T7d 变体 `git checkout HEAD -- .` 同样触发全量副本快照，untracked 可恢复", async () => {
+  slow("T7d 变体 `git checkout HEAD -- .` 同样触发全量副本快照，untracked 可恢复", async () => {
     const { bashTool } = await import("../src/tools/shell.mjs")
     const { execSync } = await import("node:child_process")
     const { rm } = await import("node:fs/promises")
@@ -314,7 +315,7 @@ describe("bash — git destructive-command protection (CLI parity)", () => {
     await rm(join(await vsCheckpointRoot(cwd), id), { recursive: true, force: true })
   })
 
-  it("non-destructive git commands are untouched; non-repo is silent", async () => {
+  slow("non-destructive git commands are untouched; non-repo is silent", async () => {
     const { bashTool } = await import("../src/tools/shell.mjs")
     const { execSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -339,7 +340,7 @@ describe("checkpoint — 全量副本镜像（CHECKPOINT.md F5 存储统一，CL
   beforeEach(setup)
   afterEach(async () => { await cleanupCheckpoints(cwd); cleanup() })
 
-  it("git 工具 checkpoint：create/list/rewind/cat/versions 走镜像（同存储同格式）", async () => {
+  slow("git 工具 checkpoint：create/list/rewind/cat/versions 走镜像（同存储同格式）", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync, execFileSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -379,7 +380,7 @@ describe("checkpoint — 全量副本镜像（CHECKPOINT.md F5 存储统一，CL
     rmSync(g2, { recursive: true, force: true })
   })
 
-  it("T7b F6：commit 成功后 checkpointRoot(cwd) 目录删除（返回附清理行）", async () => {
+  slow("T7b F6：commit 成功后 checkpointRoot(cwd) 目录删除（返回附清理行）", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -396,7 +397,7 @@ describe("checkpoint — 全量副本镜像（CHECKPOINT.md F5 存储统一，CL
     assert.ok(!existsSync(root), "checkpointRoot(cwd) 目录已删除")
   })
 
-  it("T7c F5：存量 stash 快照隔离——工具操作只涉及全量副本，stash 不动", async () => {
+  slow("T7c F5：存量 stash 快照隔离——工具操作只涉及全量副本，stash 不动", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync } = await import("node:child_process")
     execSync("git init -q", { cwd })
@@ -477,7 +478,7 @@ describe("checkpoint — 全量副本镜像（CHECKPOINT.md F5 存储统一，CL
     }
   })
 
-  it("T8b F7：新增 11 个 action 可用；clean/rebase 执行前输出 snapshot 行", async () => {
+  slow("T8b F7：新增 11 个 action 可用；clean/rebase 执行前输出 snapshot 行", async () => {
     const { gitTool } = await import("../src/tools/git.mjs")
     const { execSync, execFileSync } = await import("node:child_process")
     const g = (...a) => execFileSync("git", a, { cwd, encoding: "utf8" })
@@ -524,7 +525,7 @@ describe("checkpoint — 全量副本镜像（CHECKPOINT.md F5 存储统一，CL
     assert.match(await gitTool.execute({ action: "mv", path: "a.js", dest: "a2.js" }, ctx()), /Moved/)
   })
 
-  it("T6b NF6：创建 101 个快照 → 最旧被淘汰（上限 100，镜像 CLI T6）", async () => {
+  slow("T6b NF6：创建 101 个快照 → 最旧被淘汰（上限 100，镜像 CLI T6）", async () => {
     const { execFileSync } = await import("node:child_process")
     const { createCheckpoint, listCheckpoints } = await import("../src/tools/checkpoint.mjs")
     const dir = mkdtempSync(join(tmpdir(), "thincoder-vscode-cp-t6-"))
@@ -556,7 +557,7 @@ describe("bash — background process does not hang (CLI parity)", () => {
   beforeEach(setup)
   afterEach(cleanup)
 
-  it("returns after grace when a background child holds the output pipe", async () => {
+  slow("returns after grace when a background child holds the output pipe", async () => {
     const { bashTool } = await import("../src/tools/shell.mjs")
     // 独立目录：后台子进程 cwd 占用，不能动共享 cwd（describe 级 cleanup）
     const bgDir = mkdtempSync(join(tmpdir(), "thincoder-vscode-bg-"))

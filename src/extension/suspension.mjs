@@ -15,39 +15,137 @@
  * 装配真实实现，测试注入 mock——CLI agent-turn ctx.runAgent 同款手法）。
  */
 import { injectAsyncResult } from "../agent-tools/subagent.mjs"
+import { cleanupConsultSessions } from "../agent-tools/consult.mjs" // §25 R17：会诊会话中止清理（挂起活度见 poolLive 内联读）
 import { logEvent } from "../log.mjs"
 
-/** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity） */
+// ═══════════════════════════════════════════════════════════════════════════
+// §24 D-24c（AGENT-LOOP.md §24——R15 排队用户指令合并——2026-09-06）
+// ═══════════════════════════════════════════════════════════════════════════
+// 常量逐字一致（双端同值——§22 D-Q3 先例）：单批 ≤8 条且合并注入 ≤2000 字符。
+export const MAX_MERGE_ITEMS = 8 // 单批合并上限（条）
+export const MAX_MERGE_CHARS = 2000 // 合并注入上限（字符——超限截批先行）
+
+/** 队列消息形态：{ text, modelOverride, reasoning, providerName, images }（panel 排队项）。
+ *  可合批判据：text 非空 ≤2000 字符且无图片附件（图片属于单条消息——合并会丢附件边界
+ *  ——逐条直发；/cmd 即时命令本端不存在（webview 命令走 msg.type 按钮路由，text 队列零
+ *  命令项）——无需排除类）。 */
+function mergeable(q) {
+  const t = q?.text
+  return typeof t === "string" && t.length > 0 && t.length <= MAX_MERGE_CHARS
+    && !(Array.isArray(q.images) && q.images.length > 0)
+}
+
+/**
+ * §24 D-24c 合并注入文案（模型可见——编号列出逐条——形态同 T-S11 先例的编号列表）：
+ *  "你排队了 N 条消息：1. … 2. …——一次处理" 的英文对应。单批数量/字符受上方常量约束。
+ */
+export function buildMergedMessage(items) {
+  const n = items.length
+  const body = items.map((q, i) => `${i + 1}. ${q.text}`).join("\n")
+  return `[System reminder: you queued ${n} messages — handle them all in this one turn:\n${body}]`
+}
+
+/**
+ * §24 D-24c 消费取数（纯函数——driver 与 panel-chat 兜底循环共用）：FIFO 队列取下一回合
+ *  载荷。规则：
+ *  - 队首不可合批（超长/带图/空）→ 直发单条（shift 返回 { item }）——保序；
+ *  - 否则取**队首连续可合批段**：段长 ≥2 且合并注入 ≤2000 字符且 ≤8 条 → 合并
+ *    （返回 { items }——调用方 shift 前 n 条后以合并文案开回合；余下留待下批——
+ *    不丢不截断单条）；段长 1 → 直发单条；
+ *  - 合并注入超 2000 → 截批到最长前缀（保序）；空队 → null。
+ *  合并回合的传输参数（model/reasoning/provider）取段内最后一条（最近发送意图——
+ *  面板输入框状态即最新）。
+ */
+export function popQueuedTurn(queue) {
+  if (!Array.isArray(queue) || queue.length === 0) return null
+  const head = queue[0]
+  if (!mergeable(head)) {
+    queue.shift()
+    return { item: head }
+  }
+  // 连续可合批段（遇不可合批即断段——保序：断点之后的不越前合并）
+  const run = [head]
+  for (let i = 1; i < queue.length; i++) {
+    if (!mergeable(queue[i])) break
+    run.push(queue[i])
+    if (run.length >= MAX_MERGE_ITEMS) break // 8 条封顶——超出留待下批（截批先行）
+  }
+  if (run.length < 2) {
+    queue.shift()
+    return { item: head }
+  }
+  // 字符上限：取最长前缀（含标题/编号开销）≤2000——超限截批（余下留待下批）
+  let take = run.length
+  for (;;) {
+    const merged = buildMergedMessage(run.slice(0, take))
+    if (merged.length <= MAX_MERGE_CHARS || take <= 1) break
+    take--
+  }
+  const items = run.slice(0, take)
+  queue.splice(0, items.length)
+  if (items.length === 1) return { item: items[0] }
+  return { items }
+}
+
+/** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity；
+ *  §24 D-24b：两池合计——advisor 独立池同口径；§25 R17：会诊/飞刀独立 pending 流同计入） */
 function poolCounts(history) {
-  const map = history?._asyncSubagents
+  const maps = [history?._asyncSubagents, history?._asyncAdvisors].filter((m) => m instanceof Map)
+  const consultSessions = history?._consultSessions instanceof Map ? history._consultSessions.size : 0
   return {
-    poolN: map?.size ?? 0,
-    pendingN: history?._pendingAsyncResults?.length ?? 0,
-    runningN: map ? [...map.values()].filter((e) => e.status === "running").length : 0,
+    poolN: maps.reduce((n, m) => n + m.size, 0) + consultSessions,
+    pendingN: (history?._pendingAsyncResults?.length ?? 0) + (history?._pendingAdvisorResults?.length ?? 0)
+      + (history?._pendingEscalateResults?.length ?? 0) + (history?._pendingConsultResults?.length ?? 0),
+    runningN: maps.reduce((n, m) => n + [...m.values()].filter((e) => e.status === "running").length, 0) + consultSessions,
   }
 }
 
-/** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理，或已 settle 未注入结果
- *  （_pendingAsyncResults 非空 = D-S3 "未注入"）。回合尾与每次轮末都用它评估退出。 */
+/** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理/评审，或已 settle 未注入结果
+ *  （_pendingAsyncResults/_pendingAdvisorResults 非空 = D-S3 "未注入"——§24 D-24b：
+ *  async advisor 独立池同口径）。回合尾与每次轮末都用它评估退出。
+ *  §25 R17（2026-09-06）：会诊/飞刀完全异步化——① running 会诊会话纳入挂起活度
+ *  （history._consultSessions——会话跨 run 存活——会诊启动回合尾即入挂起态）；② 会诊/飞刀
+ *  独立 pending 流同口径（_pendingEscalateResults/_pendingConsultResults——T-R17j 空闲
+ *  settle 也触发消化轮——任一 pending 族非空即活）。 */
 export function poolLive(history) {
-  const map = history?._asyncSubagents
-  return (map && map.size > 0) || (history?._pendingAsyncResults?.length ?? 0) > 0
+  const sub = history?._asyncSubagents
+  const adv = history?._asyncAdvisors
+  const consultSessions = history?._consultSessions
+  return (sub && sub.size > 0) || (adv && adv.size > 0)
+    || (consultSessions && consultSessions.size > 0)
+    || (history?._pendingAsyncResults?.length ?? 0) > 0
+    || (history?._pendingAdvisorResults?.length ?? 0) > 0
+    || (history?._pendingEscalateResults?.length ?? 0) > 0
+    || (history?._pendingConsultResults?.length ?? 0) > 0
 }
 
 /** D-S3 ③ 记账清扫：回合边界竞态落下的已 settle 项（settle 回调未及移交——发生在
  *  回合刚结束、_suspended 尚未置位的窗口，或 ContinueError 停止的回合）补入 pending。
- *  幂等：回调已移交的条目已从 map 删除并带 _inPending 标记，不会重复入列。 */
+ *  幂等：回调已移交的条目已从 map 删除并带 _inPending 标记，不会重复入列。
+ *  §24 D-24b：advisor 池同扫（独立 pending 容器——同机制角色无关）。 */
 export function sweepSettledToPending(history) {
-  const map = history?._asyncSubagents
-  if (!map || map.size === 0) return
-  const pend = (history._pendingAsyncResults ??= [])
-  for (const e of [...map.values()]) {
-    if (e.done && !e._inPending) {
-      e._inPending = true
-      pend.push(e)
-      map.delete(e.id) // map keys are the spawn-time id (number)
+  for (const [key, pendKey] of [["_asyncSubagents", "_pendingAsyncResults"], ["_asyncAdvisors", "_pendingAdvisorResults"]]) {
+    const map = history?.[key]
+    if (!map || map.size === 0) continue
+    const pend = (history[pendKey] ??= [])
+    for (const e of [...map.values()]) {
+      if (e.done && !e._inPending) {
+        e._inPending = true
+        pend.push(e)
+        map.delete(e.id) // map keys are the spawn-time id (number)
+      }
     }
   }
+}
+
+/** 消化轮快照（§17.5.5 回收判据——本 run 消费了谁）：有 webview 池行的 pending 条目
+ *  （subagent/advisor/escalate 池行——会诊 per-model 行由活动流承载无会话级行——不进）。 */
+function pendingRowSnapshot(history) {
+  return [
+    ...(history._pendingAsyncResults ?? []),
+    ...(history._pendingAdvisorResults ?? []),
+    ...(history._pendingEscalateResults ?? []),
+  ]
 }
 
 /** §17.5.5 消化完成逐条冻结回收（2026-09-03 实测修订——CLI freezeReclaimDigestedBlocks
@@ -57,25 +155,39 @@ export function sweepSettledToPending(history) {
  *  池空解耦；会话退出 freeze 仅兜底未消化残项）。归属：快照 = run 开跑时 pending——
  *  run 消费后不在 pending 者即本 run 消化者（settle 回调挂起分流先入 pending 再被注入，
  *  无重复）。已知边界：run 首行注入前数毫秒窗口内 settle 的条目（入 pending 后即被本
- *  run 消费、却不在快照内）由会话退出 freeze 兜底折叠——极窄窗口、可接受。 */
+ *  run 消费、却不在快照内）由会话退出 freeze 兜底折叠——极窄窗口、可接受。
+ *  §24 D-24b：两 pending 容器同快照回收（advisor 行同型——role=advisor 伪角色）。
+ *  §25 R17：飞刀 park 条目（_pendingEscalateResults——role=escalate 池行）同快照回收；
+ *  会诊条目（_pendingConsultResults）无 webview 行（per-model consult 行由活动流承载）
+ *  ——不进快照不回收。 */
 function reclaimDigestedBlocks(panel, history, before) {
-  const pend = history._pendingAsyncResults ?? []
+  const pendA = history._pendingAsyncResults ?? []
+  const pendB = history._pendingAdvisorResults ?? []
+  const pendE = history._pendingEscalateResults ?? []
   for (const e of before) {
-    if (pend.includes(e)) continue // 未消费——留驻等下轮消化
+    if (pendA.includes(e) || pendB.includes(e) || pendE.includes(e)) continue // 未消费——留驻等下轮消化
     panel._panel?.webview.postMessage({ type: "subagent", id: e.id, role: e.role, status: "done" })
   }
 }
 
 /** 后台模式状态行数据（D-S8；17.5.4 #6 顺手对齐）：{ running, queued, pending, done }
  *  —— webview 端按 locale 组合文案。"done" = §17.5 回合尾留池的 settled 未消费项
- *  （挂起会话首轮 sweep 前的可见窗口——纯 settled 池进挂起时首帧不误报 0）。 */
+ *  （挂起会话首轮 sweep 前的可见窗口——纯 settled 池进挂起时首帧不误报 0）。
+ *  §24 D-24b：advisor 池条目同列（role=advisor 行——计数含两池）。
+ *  §25 R17：会诊/飞刀独立 pending 流计入 pending；running 会诊会话计入 running
+ *  （会话级计数——per-model 行已由 consult 活动流承载）。 */
 export function backgroundStatus(history) {
-  const map = history?._asyncSubagents
-  const entries = map ? [...map.values()] : []
+  const entries = []
+  for (const key of ["_asyncSubagents", "_asyncAdvisors"]) {
+    const map = history?.[key]
+    if (map instanceof Map) entries.push(...map.values())
+  }
+  const consultLive = history?._consultSessions instanceof Map ? [...history._consultSessions.values()] : []
   return {
-    running: entries.filter((e) => e.status === "running").length,
+    running: entries.filter((e) => e.status === "running").length + consultLive.length,
     queued: entries.filter((e) => e.status === "queued").length,
-    pending: history?._pendingAsyncResults?.length ?? 0,
+    pending: (history?._pendingAsyncResults?.length ?? 0) + (history?._pendingAdvisorResults?.length ?? 0)
+      + (history?._pendingEscalateResults?.length ?? 0) + (history?._pendingConsultResults?.length ?? 0),
     done: entries.filter((e) => e.done).length, // §17.5 留池未消费（sweep 前窗口）
   }
 }
@@ -156,11 +268,20 @@ export async function suspensionSession(panel, entry) {
   try {
     while (!susp.aborted && !susp.abort.signal.aborted) {
       sweepSettledToPending(history)
-      // 1. 用户输入优先（D-S5）：pendingInput 队列（digest 运行中排队的消息）
+      // 1. 用户输入优先（D-S5）：pendingInput 队列（digest 运行中排队的消息）。
+      // §24 D-24c（R15——2026-09-06）：消费点攒批合并——长度 ≥2 的可合批段合成一条
+      // 注入（编号列出逐条——模型单回合处理全部）；超长/带图单条直发保序；截批余量
+      // 留队由下轮接走（不丢不截断单条）。
       if (susp.pendingInput.length > 0) {
-        const q = susp.pendingInput.shift()
-        // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）
-        const before = [...(history._pendingAsyncResults ?? [])]
+        const next = popQueuedTurn(susp.pendingInput)
+        const q = next.items
+          ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) }
+          : next.item
+        // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）。
+        // §24 D-24b：两容器同快照（_pendingAdvisorResults——用户回合同样消费注入——
+        // 漏快照会让 advisor 行的 digest-done 回收延迟到会话退出冻结——review fix）
+        // §25 R17：飞刀 park 条目（role=escalate 池行）同快照；会诊条目无 webview 行——不进。
+        const before = pendingRowSnapshot(history)
         history._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
         try {
           await entry.runTurn(q)
@@ -172,13 +293,20 @@ export async function suspensionSession(panel, entry) {
         postSuspension(panel, susp)
         continue
       }
-      // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）
-      if ((history._pendingAsyncResults?.length ?? 0) > 0) {
-        const before = [...history._pendingAsyncResults]
+      // 2. pending 非空 → 合并消化轮（注入由 runAgent 首行统一完成——D-S3 单注入点）。
+      // §24 D-24b：advisor settle 结果同容器机制（_pendingAdvisorResults——消化轮注入）
+      // §25 R17：消费驱动判据推广——任一 pending 族非空即触发消化轮（会诊/飞刀同——
+      // T-R17j——空闲 settle 不悬置到用户下次输入）。
+      const pendingN = (history._pendingAsyncResults?.length ?? 0) + (history._pendingAdvisorResults?.length ?? 0)
+        + (history._pendingEscalateResults?.length ?? 0) + (history._pendingConsultResults?.length ?? 0)
+      if (pendingN > 0) {
+        const before = pendingRowSnapshot(history)
         const d0 = Date.now()
-        logEvent("digest:start", { pendingN: history._pendingAsyncResults.length })
+        logEvent("digest:start", { pendingN })
         await entry.runTurn({ autoTurn: true, text: "" })
-        logEvent("digest:end", { pendingN: history._pendingAsyncResults?.length ?? 0, ms: Date.now() - d0 })
+        const left = (history._pendingAsyncResults?.length ?? 0) + (history._pendingAdvisorResults?.length ?? 0)
+          + (history._pendingEscalateResults?.length ?? 0) + (history._pendingConsultResults?.length ?? 0)
+        logEvent("digest:end", { pendingN: left, ms: Date.now() - d0 })
         // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 对该轮
         // 已消化条目逐条补发 done（webview 折叠回收——不等池空；块回收与池空解耦——
         // CLI freezeReclaimDigestedBlocks parity——池空 freeze 仅兜底未消化残项）
@@ -199,15 +327,46 @@ export async function suspensionSession(panel, entry) {
     if (aborted) {
       // §15 abort 语义：清池不注入（用户显式停——不注入陈旧错误）。
       // 排队中的用户消息不是池产物——由下方兜底以普通回合消费（不静默丢，
-      // 2026-09-02 code review round2 #2-VS Code 偏差修复）。
+      // 2026-09-02 code review round2 #2-VS Code 偏差修复）。§24 D-24b：评审池同清。
+      // §25 R17：会诊会话同清（abort 子代理——停 = 弃——T-R17c 取消语义）；会诊/飞刀
+      // park 容器同清（中止清池不注入陈旧结果——两族同池语义）。
       history._asyncSubagents?.clear()
+      history._asyncAdvisors?.clear()
+      cleanupConsultSessions({ history })
       history._pendingAsyncResults = []
+      history._pendingAdvisorResults = []
+      history._pendingEscalateResults = []
+      history._pendingConsultResults = []
     } else {
       // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2）
+      // §24 D-24b：advisor 残余同兜底（角色无关同机制）
+      // §25 R17：飞刀/会诊 park 容器残余同兜底（会诊 digest 注入器 consult.mjs——
+      // 飞刀 digest 注入器 subagent-escalate-async.mjs——独立流文案各自注入）
       const residual = history._pendingAsyncResults
       if (residual?.length) {
         for (const e of residual.splice(0)) {
           await injectAsyncResult(e, { history, fullHistory: lines.fullHistory, cwd: entry.cwd })
+        }
+      }
+      const residualAdv = history._pendingAdvisorResults
+      if (residualAdv?.length) {
+        const { injectAdvisorResult } = await import("../agent-tools/advisor-async.mjs")
+        for (const e of residualAdv.splice(0)) {
+          await injectAdvisorResult(e, { history, fullHistory: lines.fullHistory, cwd: entry.cwd })
+        }
+      }
+      const residualEsc = history._pendingEscalateResults
+      if (residualEsc?.length) {
+        const { injectEscalateResult } = await import("../agent-tools/subagent-escalate-async.mjs")
+        for (const e of residualEsc.splice(0)) {
+          await injectEscalateResult(e, { history, fullHistory: lines.fullHistory, cwd: entry.cwd })
+        }
+      }
+      const residualConsult = history._pendingConsultResults
+      if (residualConsult?.length) {
+        const { injectConsultResult } = await import("../agent-tools/consult.mjs")
+        for (const s of residualConsult.splice(0)) {
+          await injectConsultResult(s, { history, fullHistory: lines.fullHistory, cwd: entry.cwd })
         }
       }
       // 残余注入落盘（在-memory 双线已改——防会话文件缺最后几条 reminder）
@@ -230,11 +389,25 @@ export async function suspensionSession(panel, entry) {
     // 面板已死（dispose）→ 无渲染目标，消息随会话终止。
     if (panel._panel) {
       while (susp.pendingInput.length > 0) {
-        const q = susp.pendingInput.shift()
+        const next = popQueuedTurn(susp.pendingInput)
+        const q = next.items
+          ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) }
+          : next.item
         try { await entry.runTurn(q) } catch { /* surfaced by the turn runner */ }
       }
     }
   }
+}
+
+/** 合并回合的传输参数（模型/推理档/provider）取段内最后一条（最近发送意图）。
+ *  导出——panel-chat 兜底循环同用（driver 与普通回合间消费点共享）。 */
+export function mergeTransportFor(items) {
+  const last = items[items.length - 1] ?? {}
+  const out = {}
+  for (const k of ["modelOverride", "reasoning", "providerName"]) {
+    if (last[k] !== undefined && last[k] !== null && last[k] !== "") out[k] = last[k]
+  }
+  return out
 }
 
 /** 挂起态通知（状态行文本由 webview 按 locale 组合——host 只发计数）。 */

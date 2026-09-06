@@ -130,7 +130,8 @@ export async function handlePanelMessage(panel, msg) {
         validateInput: (v) => (v.length > 60 ? t("session.renameTooLong") : null),
       })
       if (!title || !title.trim()) break
-      setSlotTitle(_cwd(), msg.slot, title.trim())
+      const r = setSlotTitle(_cwd(), msg.slot, title.trim())
+      if (!r.ok) vscode.window.showWarningMessage(`ThinCoder: session rename failed (${r.reason})`) // §12 F3：标题写失败可见
       panel._pushSessions()
       break
     }
@@ -174,14 +175,21 @@ export async function handlePanelMessage(panel, msg) {
     // 条目级 abort（cancelSubagent——与工具 action:'cancel' 同实现路径——D-M6）。
     // live lines 锚点 = panel._liveLines（runPanelChat 每回合登记——挂起期与
     // susp.lines 同一数组）。未知 id（陈旧按钮/池已清）→ no-op（无虚构状态）。
+    // §24 D-24b（R13）：role="advisor" 伪角色条目在独立评审池（_asyncAdvisors）——
+    // ⏹ 路由到 cancelAdvisorReview（②-6b——controller abort——取消不入 pending/不签发 token）。
     case "cancelSubagent": {
       const lines = panel._liveLines ?? panel._susp?.lines
       const id = Number(msg.id)
-      const entry = lines?.history?._asyncSubagents?.get(id)
+      const entry = lines?.history?._asyncSubagents?.get(id) ?? lines?.history?._asyncAdvisors?.get(id)
       // advisor round 2 #6：role 交叉校验——陈旧按钮命中同 id 异 role 的极端情况防御
       // （webview ⏹ 携带 block 的 role——消息契约不设死参数）
       if (!lines || !entry || entry.role !== msg.role) {
         console.warn(`[chat-panel] cancelSubagent: no live pool entry for id ${msg.id} role ${msg.role}`)
+        break
+      }
+      if (entry.role === "advisor") {
+        const { cancelAdvisorReview } = await import("../agent-tools/advisor-async.mjs")
+        cancelAdvisorReview({ _asyncAdvisors: lines.history._asyncAdvisors, history: lines.history }, id)
         break
       }
       const { cancelSubagent } = await import("../agent-tools/subagent.mjs")

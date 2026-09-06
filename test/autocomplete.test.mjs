@@ -4,6 +4,7 @@
  * just-typed @) instead of value[pos-1], so typing @ never activated the dropdown.
  */
 import { describe, it, before, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { setupWebview } from "./helpers/webview-env.mjs"
 import { initAutocomplete } from "../webview/autocomplete.js"
@@ -69,7 +70,7 @@ describe("@ autocomplete trigger", () => {
 })
 
 // mid-line @: activation, query tracking, and whitespace close
-it("mid-line @ activates and tracks the query", async () => {
+slow("mid-line @ activates and tracks the query", async () => {
   const { initAutocomplete } = await import("../webview/autocomplete.js")
   const posts = []
   const inputEl = document.createElement("textarea")

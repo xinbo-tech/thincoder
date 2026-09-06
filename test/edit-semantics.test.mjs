@@ -364,7 +364,7 @@ const REGISTRY = new Set([
   "get_current_time", "tree",
   "task", "recent_changes", "subagent", "plan", "goal", "skill", "verify",
   "timer", "advisor", "eng", "read_history",
-  "consult_start", "consult_check", "consult_stop",
+  "consult_start", "consult_stop", // §25 R17: consult_check 退役
 ])
 
 /**
@@ -416,7 +416,7 @@ const POINTS = [
   ["../src/agent-tools/advisor.mjs", ["advisorTool"]],
   ["../src/agent-tools/eng.mjs", ["engTool"]],
   ["../src/agent-tools/read-history.mjs", ["readHistoryTool"]],
-  ["../src/agent-tools/consult.mjs", ["consultStartTool", "consultCheckTool", "consultStopTool"]],
+  ["../src/agent-tools/consult.mjs", ["consultStartTool", "consultStopTool"]], // §25 R17: consult_check 退役
 ]
 
 describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 注册表一致性 + 逐点要素矩阵）", () => {
@@ -470,7 +470,7 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["task", /replaces the entire list/],
     ["goal", /How completion is PROVEN/],
     ["consult_check", /Call it ALONE in a turn|do NOT batch it/i],
-    ["subagent", /async:true|n = 1 on the first check/],
+    ["subagent", /async:true/],
     ["process", /to kill a process use bash/i],
     ["git", /auto-snapshot first/],
     ["execute", /Eval-like flags.*rejected|rejected/i],
@@ -483,9 +483,9 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["plan", "无同行——模式开关"],
     ["advisor", "无同行——独立评审"],
     ["eng", "无同行——模式开关"],
-    ["read_history", "无同行——会话历史唯一入口"],
+    // read_history 自 R19（SESSION.md §13）起有同行（recent_changes/memory/doc_search/code_search——
+    // 族表总纲在描述尾段）——移出 ROUTE_NA，路由句由族表逐字段承接（→ read_history 等）。
     ["consult_start", "无同行——会诊发起"],
-    ["consult_check", "无同行——会诊读取"],
     ["consult_stop", "无同行——会诊终止"],
     ["subagent", "无同行——子代理通道"],
     ["lint", "被 verify 路由指向——自身无出口同行（execute 手跑即替代）"],
@@ -506,7 +506,7 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["get_current_time", "只读"], ["timer", "无数据写入"], ["verify", "无数据写入"],
     ["recent_changes", "只读"], ["read_history", "只读"], ["advisor", "只读子代理"],
     ["plan", "模式开关——无数据变更"], ["eng", "模式开关——无数据变更"],
-    ["skill", "加载只读指令"], ["consult_start", "会诊发起——无文件变更"], ["consult_check", "会诊读取"], ["consult_stop", "会诊终止"],
+    ["skill", "加载只读指令"], ["consult_start", "会诊发起——无文件变更"], ["consult_stop", "会诊终止——abort 子代理"],
     ["subagent", "只读 spawn"],
   ])
   const DESTRUCT_RE = /replaces the WHOLE file|content not present in new_content is deleted|dest is overwritten|Refuses to delete git-tracked|nothing is written|auto-archived|replaces the entire list|auto-snapshot first|confirm:true is refused|Do NOT run destructive|action=cancel: abandon|changes files|old content stays|of the region to change/i
@@ -517,8 +517,7 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["fetch", /Timeout: 20 seconds/],
     ["execute", /Timeout in milliseconds/],
     ["timer", /When the timer fires/],
-    ["consult_check", /Blocks until a reply arrives/],
-    ["subagent", /BLOCKS until the target finishes/],
+    ["subagent", /use a synchronous spawn instead|pass async:false/],
     ["plan", /the user approves first/],
   ])
   // ⑥ 结果形态：描述须说明返回/展示内容或失败分支（自然措辞——含锚句工具的语义承诺）。
@@ -536,8 +535,7 @@ describe("T15.16 — 六要素走查（VS Code 44 点全量脚本化：清单 + 
     ["goal", /mark achieved|abandon/],
     ["skill", /show available|activate one by name/],
     ["advisor", /response table/],
-    ["consult_check", /When done is true|reply arrives/],
-    ["consult_stop", /Already-answered replies stay available/],
+    ["consult_stop", /Returns|stopped|cancelled/], // §25 R17: check 退役——stop = cancel（结果形态）
     ["repo_outline", /file dependency outline|which files import\/export/],
     ["question", /answer is injected|wait for their response/],
     ["subagent", /returns only its final report|returns \{id, role, status\}/],

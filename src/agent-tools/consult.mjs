@@ -1,17 +1,23 @@
 /**
- * consult.mjs — multi-model consultation ("会诊", docs/design/CONSULTATION.md).
+ * consult.mjs — multi-model consultation ("会诊", AGENT-LOOP.md §25 R17; docs/
+ * design/CONSULTATION.md 为历史机制文档——工具面现为 TWO tools: consult_start
+ * (non-blocking spawn) / consult_stop (cancel) — consult_check 退役 (§25 决策点 ①:
+ * digest 自动注入后无消费对象). Replies arrive AUTOMATICALLY: when every model
+ * has settled (all replies/failures in — partial settle never early-injects), the
+ * session moves to the pending stream (history._pendingConsultResults) and the
+ * next run's first-line injection delivers the full digest ("[System reminder:
+ * consultation #id finished — N replies: ...]", per-model verbatim). The main
+ * agent judges in the digestion turn — the mechanism does ZERO judging.
  *
- * Three tools: consult_start (non-blocking spawn) / consult_check (read the next
- * reply as it arrives) / consult_stop (abort the rest). The mechanism does ZERO
- * judging — the main agent reads replies and verifies with its own tools.
- *
- * Sessions live on the agent object (agent._consultSessions) — runAgent creates a
- * fresh agent per turn, so sessions are naturally turn-bound; runAgent's finally
- * aborts leftovers.
+ * Sessions survive the spawning turn (cross-run carrier = history._consultSessions
+ * at depth 0, mirroring the _asyncSubagents pool pattern): the suspension driver
+ * counts live sessions, a full settle parks into the pending stream while the
+ * user is idle (digest auto-turn), consult_stop/abort discards without parking.
  */
 import { buildProvider } from "../extension/presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { logEvent, errText } from "../log.mjs"
+import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 
 /** Read-only tool injected into consultation children (via runAgent opts.extraTools).
  *  Lets the consultant pull the main agent's conversation history on demand —
@@ -69,6 +75,62 @@ function consultLabel(m) {
   return `${m.provider}:${m.model}`
 }
 
+// ─── §25 R17 会话跨 run 容器（AGENT-LOOP.md §25 D-R17a——VS Code 镜像）───
+// 会话沿共享 depth-0 history 数组存活（_asyncSubagents 池同款载体）：agent 对象
+// per-run 重建，而会诊子代理在发起回合结束后仍可能在跑——会话 Map 必须挂在跨 run
+// 的载体上。直接 execute ctx（测试/无 history）回落 agent 字段。
+
+/** 会话 Map（history 载体优先——跨 runAgent 存活）。 */
+export function consultSessionsMap(parent) {
+  if (parent?.history?._consultSessions instanceof Map) return parent.history._consultSessions
+  return parent?._consultSessions instanceof Map ? parent._consultSessions : null
+}
+
+/** 会话 Map（create=true——history 载体优先——会话创建/清理同读）。 */
+function consultSessionsHolder(parent, create = false) {
+  const holder = parent?.history ?? parent
+  if (!holder || !(holder._consultSessions instanceof Map)) {
+    if (!create || !holder) return { holder: null, map: null }
+    holder._consultSessions = new Map()
+  }
+  return { holder, map: holder._consultSessions }
+}
+
+/** 跨 run 单调会话 id（agent._consultIdCounter per-run 重建——map 内最大 key 续号，
+ *  同型 nextSubagentId——防会话跨 run 后 id 复用覆盖）。 */
+function nextConsultId(parent) {
+  const map = consultSessionsMap(parent)
+  let max = 0
+  for (const k of map?.keys() ?? []) {
+    const n = Number.parseInt(String(k), 10)
+    if (Number.isFinite(n) && n > max) max = n
+  }
+  const id = String(Math.max(parent?._consultIdCounter ?? 0, max) + 1)
+  if (parent) parent._consultIdCounter = Number(id)
+  return id
+}
+
+/** 会诊 settle 注入（§25 D-R17a——全 settle 一次注入：N replies 全文逐条 + per-model
+ *  状态标注（failed 带标）；超长走 offloadToolResult（N1 护栏——T-R17l）。注入即消费
+ *  （调用方从容器移除——run-start 单注入点 + 挂起退出残留兜底两消费点共用）。 */
+export function injectConsultResult(session, { history, fullHistory, cwd }) {
+  const n = session?.replies?.length ?? 0
+  const failed = session.failed ?? 0
+  const total = session.total ?? n
+  const parts = (session?.replies ?? []).map((r, i) => {
+    const label = r.model ?? `model ${i + 1}`
+    const mark = r.failed === true ? " (failed)" : ""
+    return `--- ${label}${mark} ---\n${String(r.reply ?? "")}`
+  })
+  const body =
+    `[System reminder: consultation #${session?.id} finished — ${n} replies received (${failed} failed / ${total} models):\n` +
+    `${parts.join("\n\n")}]`
+  pushReal(history, fullHistory, {
+    role: "user",
+    content: escapeXml(offloadToolResult(cwd ?? process.cwd(), body)),
+  })
+}
+
 /** Narrow the configured consultModels pool to a requested subset.
  *  Each selector is "provider:model", a bare provider name, or a bare model name
  *  (case-insensitive). Returns { models, error } — error set when a selector matches
@@ -99,10 +161,25 @@ function selectConsultModels(pool, selectors) {
   return { models: selected, error: null }
 }
 
-/** Wake every parked consult_check waiter. */
-function wakeWaiters(session) {
-  const w = session.waiters.splice(0)
-  for (const resolve of w) { try { resolve(false) } catch { /* noop */ } }
+/**
+ * §25 D-R17a session settle: the LAST child of a session settling (pending → 0)
+ * parks the WHOLE session into the pending stream (history._pendingConsultResults)
+ * — injected at the next run start (full digest, one-shot). Cancelled (stopped /
+ * session abort) sessions are DISCARDED — nothing parks, replies stay unreachable
+ * (T-R17c). The parked session leaves the live sessions map (map = running only).
+ */
+function sessionSettled(ctx, session) {
+  // Remove from the live map first (map holds running/pending>0 sessions only).
+  const map = consultSessionsMap(ctx?.agent)
+  map?.delete(session.id)
+  if (session.stopped) return // consult_stop / abort — discard, no digest (T-R17c)
+  const holder = ctx?.agent?.history ?? ctx?.agent
+  if (!holder) return
+  const pend = (holder._pendingConsultResults ??= [])
+  if (!pend.includes(session)) pend.push(session)
+  // Wake a parked suspension driver — a settle during idle must trigger the digest
+  // round (T-R17j — 消费驱动判据推广：任一 pending 族非空即消化).
+  ctx?.callbacks?.onAsyncSettled?.()
 }
 
 function settleChild(ctx, session, id, label, ok, payload) {
@@ -115,7 +192,7 @@ function settleChild(ctx, session, id, label, ok, payload) {
   } else if (session.stopped) {
     // consult_stop already ran: an aborted child settles as TERMINATED — counted, never
     // enqueued (a "(consultation failed: Aborted)" note after an intentional stop is pure
-    // noise the main agent would have to drain; consult_check done still fires via pending--).
+    // noise the main agent would have to drain; pending-- below still fires the session end).
     session.terminated = (session.terminated ?? 0) + 1
     ctx.callbacks?.onSubagent?.({ id: `consult-${id}-${label}`, role: "consult", model: label, sessionId: id, status: "terminated", error: payload })
   } else {
@@ -124,12 +201,12 @@ function settleChild(ctx, session, id, label, ok, payload) {
     ctx.callbacks?.onSubagent?.({ id: `consult-${id}-${label}`, role: "consult", model: label, sessionId: id, status: "failed", error: payload })
   }
   session.pending--
-  wakeWaiters(session)
+  if (session.pending <= 0) sessionSettled(ctx, session) // §25: 全 settle 一次注入（部分 settle 不提前——T-R17k）
 }
 
 async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   // Wall-clock ceiling: turn limits count LLM responses, not wall time — a child stuck in
-  // a slow tool/provider must not hold consult_check for hours (design review D2).
+  // a slow tool/provider must not hold the session open for hours (design review D2).
   const timeoutMs = ctx.agent?.config?.agent?.consultTimeoutMs ?? 600_000
   let timedOut = false // watchdog kills settle as TIMEOUT, not a provider failure (review D-GLM)
   const armWatchdog = () => {
@@ -215,7 +292,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       } catch (e) {
         if (e instanceof agentMod.ContinueError) {
           let go = null
-          if (ctx.callbacks?.onQuestion) {
+          // §25 R17：挂起期（后台）consult 撞 turn 帽不再弹继续卡——无人在面板前值守，
+          // 自动降级 partial（消化轮处置）；前台回合内（发起回合仍在跑）保留继续询问。
+          if (ctx.callbacks?.onQuestion && ctx.agent?.history?._suspended !== true) {
             const ask = () => ctx.callbacks.onQuestion(
               `consult ${label} reached ${e.turns} turns (limit). Continue from here?`,
               ["Continue", "Stop"],
@@ -245,18 +324,19 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   }
 }
 
-/** Turn-end cleanup (called from runAgent's finally): abort every leftover
- *  consultation controller, wake parked waiters, clear the session map. */
+/** Abort-and-clear（只在全停语义下调用——run-stages 回合收尾 plain-abort 分支 / 挂起
+ *  会话中止分支）：标记 stopped（子代理 settle 为 TERMINATED 而非 FAILED——用户停不是
+ *  崩溃）+ abort 全部子代理 controller + 清会话 Map（停 = 弃——不入 pending——T-R17c）。
+ *  §25 R17：普通回合收尾不再调用（会话跨 run 存活——挂起会话消化）——会话 Map 沿
+ *  history._consultSessions 载体（跨 runAgent 存活——_asyncSubagents 同型）。 */
 export function cleanupConsultSessions(agent) {
-  for (const s of agent._consultSessions?.values() ?? []) {
-    // User Stop (panel abort) is an INTENTIONAL stop, not a child failure — mark stopped
-    // BEFORE aborting so the children settle as TERMINATED (clean grey card) instead of
-    // FAILED (red error). Without this the user reads "failed" as "it didn't stop".
+  const map = consultSessionsMap(agent)
+  if (!map) return
+  for (const s of map.values()) {
     s.stopped = true
     for (const c of s.controllers ?? []) { try { c.abort() } catch { /* already settled */ } }
-    for (const w of s.waiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
   }
-  agent._consultSessions?.clear()
+  map.clear()
 }
 
 export const consultStartTool = {
@@ -267,8 +347,13 @@ export const consultStartTool = {
     "Start a parallel multi-model consultation (会诊) for a hard problem you are stuck on (repeated failures, no headway). " +
     "Call it directly when the user asks for 会诊 / consult — an explicit user request applies even if you are not 'stuck'. " +
     "Several configured models (agent.consultModels) analyze the same problem INDEPENDENTLY and in parallel. " +
-    "Non-blocking: returns immediately with a consult id. Then call consult_check(id) to read each reply as it " +
-    "arrives, judge/verify it yourself with your own tools, and call consult_stop(id) once a reply is good enough.\n" +
+    "Non-blocking: returns immediately with a consult id. The replies come back AUTOMATICALLY — when every model has " +
+    "settled (replies and failures alike), a digest of all replies is injected into your next turn (or digested in the " +
+    "suspension session while the user is idle) — you judge each reply then, with your own tools. Do NOT poll for " +
+    "replies and do NOT wait in the turn: consult_stop(id) cancels a running consultation you no longer need (its " +
+    "replies are then discarded — no digest). If a reply arrives and you need to stop the rest before all models " +
+    "finish, call consult_stop — already-finished replies are included in the digest only if the session runs to " +
+    "completion. \n" +
     "Parameters:\n" +
     "- problem (required): a brief — the symptom, what you already tried (failure trail), and entry-point files. " +
     "Do NOT paste raw error logs; consultants pull the main session history themselves via their main_history tool.\n" +
@@ -285,6 +370,13 @@ export const consultStartTool = {
     if (typeof problem !== "string" || !problem.trim()) return "Error: problem is required and must be a non-empty string"
     const agent = ctx.agent
     if (!agent) return "Error: consult requires an agent context"
+    // §17 N3/D-S6 spawn gate（manual tier——会诊 = 另起 N 个并行子代理——与 subagent
+    // spawn 同义——digest 动作域零例外 T-R17p——review 修复轮 #1）：手动档 auto-turn
+    // digest 禁启会诊；AUTO tier（ctx.getAuto）豁免（推进型）。机械拒绝——digest 不链
+    // 后台活。consult_stop 保留放行（控制类——cancel 同型）。
+    if (agent._inAutoTurn && !(ctx.getAuto?.() ?? false)) {
+      return JSON.stringify({ status: "error", error: "cannot start consultations from a manual auto-turn — wait for user input" })
+    }
     const pool = agent.config?.agent?.consultModels ?? []
     if (!Array.isArray(pool) || pool.length === 0)
       return "Consultation is not configured — add agent.consultModels ([{ provider, model }], up to 5) to ~/.thincoder/config.json"
@@ -295,83 +387,40 @@ export const consultStartTool = {
     if (picked.error) return picked.error
     const run = picked.models
 
-    agent._consultSessions ??= new Map()
-    const id = String((agent._consultIdCounter = (agent._consultIdCounter ?? 0) + 1))
+    // §25 R17：会话 Map 挂跨 run 载体（history 优先——会诊跨回合存活；直接 execute ctx
+    // 回落 agent 字段）。id 跨 run 单调（map 内最大 key 续号——防跨 run 复用覆盖）。
+    const { map } = consultSessionsHolder(agent, true)
+    const id = nextConsultId(agent)
     const session = {
-      id, controllers: [], replies: [], pending: 0, waiters: [],
+      id, controllers: [], replies: [], pending: 0,
       failed: 0, terminated: 0, stopped: false, received: 0, total: run.length,
       models: run.map(consultLabel),
     }
-    agent._consultSessions.set(id, session)
+    map.set(id, session)
 
+    // §15 同款信号选择：挂起会话内的回合（digest/用户回合）子代理持会话 signal
+    // （ctx.sessionSignal）——会话 Stop 逐链中止；回合级 ctx.signal 兜底。
+    const childSignal = ctx.sessionSignal ?? ctx.signal ?? null
     for (const m of run) {
       session.pending++
       const ctrl = new AbortController()
       session.controllers.push(ctrl)
-      if (ctx.signal) {
-        if (ctx.signal.aborted) ctrl.abort()
-        else ctx.signal.addEventListener("abort", () => ctrl.abort(), { once: true })
+      if (childSignal) {
+        // F2 同款豁免（subagent-async.mjs 同型——review 修复轮 #2）：interrupt（Ctrl+I——
+        // 停回合续跑）不是全停——不逐链中止在飞会诊子代理（否则意见丢为失败注记 + 噪音
+        // digest）；仅全停（Stop/会话中止——无 interrupt reason）沿链传播。
+        if (childSignal.aborted && !childSignal.reason?.interrupt) ctrl.abort()
+        else childSignal.addEventListener?.("abort", () => {
+          if (childSignal.reason?.interrupt) return
+          ctrl.abort()
+        }, { once: true })
       }
       const label = consultLabel(m)
       ctx.callbacks?.onSubagent?.({ id: `consult-${id}-${label}`, role: "consult", model: label, sessionId: id, status: "started", startedAt: Date.now() })
-      // Fire and forget — each child settles itself into the session queue.
+      // Fire and forget — each child settles into the session bookkeeping (full-settle → pending stream).
       runConsultChild(ctx, session, id, m, problem, ctrl)
     }
     return JSON.stringify({ id, models: session.models })
-  },
-}
-
-export const consultCheckTool = {
-  name: "consult_check",
-  readonly: true,
-  description:
-    "Read the NEXT consultation reply (whichever model answered first). Blocks until a reply arrives or all models " +
-    "have settled. The reply is raw and unjudged — verify/adopt it with your own tools. When done is true, no more " +
-    "replies are coming.\n" +
-    "Call it ALONE in a turn — do NOT batch it with calls that depend on its reply (readonly tools run in parallel).\n" +
-    "Parameters:\n" +
-    "- id (required): the consult id from consult_start",
-  parameters: {
-    type: "object",
-    properties: { id: { type: "string", description: "Consult id" } },
-    required: ["id"],
-  },
-  async execute({ id }, ctx) {
-    const s = ctx.agent?._consultSessions?.get(String(id))
-    if (!s) return JSON.stringify({ error: "unknown consult id" })
-    const abortAll = () => { for (const c of s.controllers) { try { c.abort() } catch { /* noop */ } } }
-    if (ctx.signal?.aborted) abortAll()
-
-    for (;;) {
-      if (s.replies.length > 0) {
-        const r = s.replies.shift()
-        return JSON.stringify({
-          reply: r.reply, model: r.model, failedReply: r.failed === true,
-          received: s.received,
-      failed: s.failed,
-      terminated: s.terminated ?? 0, total: s.total,
-          done: s.replies.length === 0 && s.pending === 0,
-        })
-      }
-      if (s.pending === 0) {
-        return JSON.stringify({ done: true, received: s.received, failed: s.failed, total: s.total })
-      }
-      const stopped = await new Promise((resolve) => {
-        function cleanup() {
-          const i = s.waiters.indexOf(w)
-          if (i >= 0) s.waiters.splice(i, 1)
-          ctx.signal?.removeEventListener("abort", onAbort)
-        }
-        function w() { cleanup(); resolve(false) }
-        function onAbort() { cleanup(); abortAll(); resolve(true) }
-        s.waiters.push(w)
-        if (ctx.signal) {
-          if (ctx.signal.aborted) { onAbort(); return }
-          ctx.signal.addEventListener("abort", onAbort, { once: true })
-        }
-      })
-      if (stopped) return JSON.stringify({ done: true, stopped: true, received: s.received, failed: s.failed, total: s.total })
-    }
   },
 }
 
@@ -380,8 +429,12 @@ export const consultStopTool = {
   readonly: false,
   sideEffectExempt: true,
   description:
-    "Terminate the still-running consultations of a session once a reply is good enough — saves tokens and time. " +
-    "Already-answered replies stay available for consult_check.\n" +
+    "Cancel a still-running consultation (会诊) you no longer need — aborts its running models and saves tokens. " +
+    "Cancellation discards the session: its replies are NOT digested (already-finished replies become unreachable — " +
+    "they were never read individually). Use it when the consultation outlived its purpose (user cancelled it, the " +
+    "problem changed, you solved it yourself). The full-set digest arrives automatically otherwise — do not stop a " +
+    "consultation to 'collect' partial replies.\n" +
+    "Returns JSON: { stopped: <number of running models aborted>, cancelled: true }.\n" +
     "Parameters:\n" +
     "- id (required): the consult id from consult_start",
   parameters: {
@@ -390,11 +443,11 @@ export const consultStopTool = {
     required: ["id"],
   },
   async execute({ id }, ctx) {
-    const s = ctx.agent?._consultSessions?.get(String(id))
+    const s = consultSessionsMap(ctx.agent)?.get(String(id))
     if (!s) return JSON.stringify({ error: "unknown consult id" })
     const n = s.pending
     s.stopped = true
     for (const c of s.controllers) { try { c.abort() } catch { /* already settled */ } }
-    return JSON.stringify({ stopped: n })
+    return JSON.stringify({ stopped: n, cancelled: true })
   },
 }

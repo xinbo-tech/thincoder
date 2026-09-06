@@ -26,7 +26,7 @@ import { traceStop } from "./stop-trace.mjs"
 import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
-import { suspensionSession, poolLive } from "./suspension.mjs"
+import { suspensionSession, poolLive, popQueuedTurn, buildMergedMessage, mergeTransportFor } from "./suspension.mjs"
 import { logEvent, errText } from "../log.mjs"
 // 2026-09-05 实践轮 module-split：回调工厂迁 panel-callbacks.mjs（webview 桥接面独立决策）
 import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
@@ -293,7 +293,12 @@ async function runPanelChatImpl(panel, opts = {}) {
         pendingInput: queued,
       })
     } else if (queued.length > 0 && panel._panel) {
-      for (const q of queued) await runPanelChat(panel, { ...q })
+      // §24 D-24c（R15）：释放窗口队列兜底同样攒批合并（回合空闲——≥2 可合批段合成一条）
+      while (queued.length > 0 && !panel._susp && panel._panel) {
+        const next = popQueuedTurn(queued)
+        const q = next.items ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) } : next.item
+        await runPanelChat(panel, { ...q })
+      }
     }
   }
 
@@ -304,7 +309,8 @@ async function runPanelChatImpl(panel, opts = {}) {
   // 与 _suspPending 块互斥（上方挂起块消费后队列已空；释放窗口期 _chat 排队项也在
   // 上方 queued splice 中——本循环只接消费后新增/未处理项）。
   while ((panel._suspQueue?.length ?? 0) > 0 && !panel._turnActive && !panel._suspPending) {
-    const q = panel._suspQueue.shift()
+    const next = popQueuedTurn(panel._suspQueue)
+    const q = next.items ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) } : next.item
     await runPanelChat(panel, { ...q })
   }
 }

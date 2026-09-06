@@ -9,11 +9,11 @@
  * D-SD5 提醒）、环防御（assertNoDepCycle）、停滞机械检测（detectStall/stallErrorText——
  * §21.1 P-SL2 扩展注）、池并发上限 ASYNC_SUBAGENT_LIMIT 与队列位置
  * 查询（queuePosition——Map 插入序 = FIFO）。叶子模块——只 import node:fs/node:path——
- * 被 subagent-async.mjs（spawn/settle/注入侧）与 subagent-actions.mjs（check/status/cancel
+ * 被 subagent-async.mjs（spawn/settle/注入侧）与 subagent-actions.mjs（status/cancel
  * 动作侧）单向依赖——模块图无环。
  */
 import { existsSync, statSync } from "node:fs"
-import { resolve, relative, isAbsolute } from "node:path"
+import { resolve, relative, isAbsolute, basename } from "node:path"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §20 子 agent 任务调度器（AGENT-LOOP.md §20 D-SD1..SD5 + 20.4——CLI 同规格镜像）
@@ -57,9 +57,14 @@ export function writeTombstone(parent, id, status, role) {
  *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
  *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
  *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
- *  已知限制（D-F1.4 附注）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。 */
+ *  已知限制（D-F1.4 附注）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。
+ *  §28 R26 F-R26b（2026-09-07）：父侧维护文件黑名单——归一化后 basename 全名匹配 +
+ *  大小写不敏感（todo.md/changelog.md/checklist.md 精确 + checklist* 前缀家族——路径任意
+ *  层含 docs/、根、.thincoder/）——命中 → throw（fail-closed——先于调度器准入——无排队
+ *  残留——错误即工具结果）；提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP.md §28）。 */
 export function normalizeFileList(files, cwd) {
   const out = []
+  const violations = [] // §28 R26 F-R26b：父侧维护文件命中（保留声明原样——提示可读）
   for (const f of Array.isArray(files) ? files : []) {
     if (typeof f !== "string" || !f.trim()) continue
     if (f.endsWith("/") || f.endsWith("\\")) {
@@ -69,7 +74,16 @@ export function normalizeFileList(files, cwd) {
     if (existsSync(abs) && statSync(abs).isDirectory()) {
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
+    // 黑名单 basename 推导前做分隔符归一（\ → /——反斜杠变体跨平台同拒——
+    // win32 resolve 本就兼容双分隔符——POSIX 需显式归一——advisor 🔵2 处置）
+    const base = basename(resolve(cwd ?? process.cwd(), f.replace(/\\/g, "/"))).toLowerCase()
+    if (base === "todo.md" || base === "changelog.md" || base.startsWith("checklist")) violations.push(f)
     if (!out.includes(abs)) out.push(abs)
+  }
+  if (violations.length > 0) {
+    throw new Error(violations
+      .map((f) => `Parent-side maintained file ${f} must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc`)
+      .join("\n"))
   }
   return out
 }
@@ -94,7 +108,7 @@ const idNum = (id) => (typeof id === "string" && /^\d+$/.test(id) ? Number(id) :
 
 /**
  * §20 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
- * 终态墓碑（check/注入消费——consumed；取消/失败——D-SD5 分支））：
+ * 终态墓碑（自动送达消费——consumed；取消/失败——D-SD5 分支））：
  * ok（settle 成功/consumed——T-SD14 视为满足）/ pending（等启动/完成）/
  * failed|cancelled（依赖取消失败——depc 分支）/ unknown（从未存在——spawn 明确错误）。
  */
@@ -188,7 +202,7 @@ export function queueRunnable(parent, entry, auto = false) {
  *  §20 NF-SD 滞留有意）&& 每 queued 至少 1 blocker（无 blocker 的 queued = refill 必启的
  *  不可达态——∅ ⊆ 空真判定防误报——收窄）。返回 { chains: 逐条阻塞边 } 或 null——保守不误报
  *  （running 锚点/单 queued/depc/不可达态均 null——宁漏报不误打断——部分形态停滞漏报接受）。
- *  调用点 = check/status 观察守卫（VS Code 无 CLI maybeRefillAsync 等价空转环——refillPool
+ *  调用点 = status 观察守卫（VS Code 无 CLI maybeRefillAsync 等价空转环——refillPool
  *  同步 settle/cancel 驱动——停滞态无未来事件——检测只挂观察面——结构差异——见 actions 侧）。
  */
 export function detectStall(parent) {
@@ -232,24 +246,28 @@ export function detectStall(parent) {
   return { chains: lines }
 }
 
-/** §21.1 P-SL2 停滞错误文案（check error / status stall 字段共用——单点事实——含链 + cancel
+/** §21.1 P-SL2 停滞错误文案（status stall 字段用——单点事实——含链 + cancel
  *  破环重派引导——英文定稿——§21.1 D-SL1 报错风格对齐）。 */
 export function stallErrorText(chains) {
   return `async subagent pool stalled — no running task and every queued task's blockers sit inside the queued set (mixed dependsOn × files-domain wait cycle — nothing will settle on its own). Blocking chains: ${chains.join("; ")}. Cancel one task in a chain (action:'cancel') to break the deadlock, then re-dispatch the rest (AGENT-LOOP.md §21.1 P-SL2)`
 }
 
 
-/** 补位扫描（settle/cancel 释放点共用）：最早可启动（依赖全满足 + 域无冲突）→ 启动到
- *  槽满 ≤4——纯 slot 队列与旧队首语义等价（全部可启动 → 最早 == 队首）。条目留池
- *  （status → running——queued 过滤自然出列）；autoFor：条目级 AUTO 活读器。 */
+/** 补位扫描（settle/cancel 释放点共用）：最早可启动（依赖全满足 + 域无冲突 + **该条目的
+ *  角色域有槽**）→ 启动到该域槽满（§24 D-24a——分池语义：扫描跳过域已满的 queued——
+ *  他域腾槽不得启动本域条目——跨域不互等不互占）。纯 slot 队列与旧队首语义等价（单域
+ *  视图下全部可启动 → 最早 == 队首）。条目留池（status → running——queued 过滤自然出列）；
+ *  autoFor：条目级 AUTO 活读器。 */
 export function refillPool(parent, autoFor = null) {
   const map = poolMap(parent)
+  const { limits } = effectivePoolLimits(parent)
   for (;;) {
-    const running = [...map.values()].filter((x) => x.status === "running").length
-    if (running >= ASYNC_SUBAGENT_LIMIT) return
+    const runningBy = runningByDomain(map)
     let pick = null
     for (const e of map.values()) {
       if (e.status !== "queued") continue
+      const dom = entryDomain(e)
+      if (runningBy[dom] >= limits[dom]) continue // 本域槽满——跳（他域释放不启动本域条目）
       if (queueRunnable(parent, e, autoFor?.(e) ?? false)) { pick = e; break }
     }
     if (!pick) return
@@ -257,9 +275,63 @@ export function refillPool(parent, autoFor = null) {
   }
 }
 
+/**
+ * §24 D-24a（AGENT-LOOP.md §24——R14 角色分池——2026-09-06）：角色域映射单一事实源。
+ * role ∈ {eng-coder} → "engCoder" 池；其余（explore/plan/coder + 本端无 "sub" 角色——
+ * 未知角色防御）→ "other" 池。池容量默认 ASYNC_POOL_LIMITS（engCoder 4 + other 4——
+ * 用户裁定"eng-coder 四路，其他 4 路"）。VS Code 角色枚举 = explore/plan/coder/eng-coder
+ * （modeRoleField——subagent.mjs）；consult/escalate 非池角色不经过此面。
+ */
+export function entryDomain(entry) {
+  return entry?._poolDomain ?? (entry?.role === "eng-coder" ? "engCoder" : "other")
+}
+
+/** 运行中计数按域分别记（running 判定按域过滤——§24 D-24a）。 */
+export function runningByDomain(map) {
+  const out = { engCoder: 0, other: 0 }
+  for (const e of map?.values() ?? []) {
+    if (e.status !== "running") continue
+    out[entryDomain(e)]++
+  }
+  return out
+}
+
+/** 池容量默认（§24 D-24a——单常量 ASYNC_SUBAGENT_LIMIT 改为按角色域配置；常量保留
+ *  re-export 兼容（tests/prompts import 面——值 4 = 单域默认）。 */
+export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
+
+/**
+ * §24 D-24a 配置读取（运行期读——每次入池判定时调用——变更即生效下个 spawn）：
+ * config.agent.poolLimits = { engCoder, other }——单对象配置键（②-1 A）。校验：每键
+ * 正整数 ≥1（timeoutMs 先例）；非法/缺失/形状错 → 该键回退默认 4（全非法 → 4/4）。
+ * 返回 { limits, warnings }——warnings 携带非法键文案（spawn 结果注记——T-24a4 文案面；
+ * 引擎内部消费只取 limits）。
+ */
+export function effectivePoolLimits(parent) {
+  const raw = parent?.config?.agent?.poolLimits
+  const warn = []
+  const out = { engCoder: ASYNC_POOL_LIMITS.engCoder, other: ASYNC_POOL_LIMITS.other }
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    for (const key of ["engCoder", "other"]) {
+      const v = raw[key]
+      if (v !== undefined && v !== null) {
+        if (Number.isInteger(v) && v >= 1) out[key] = v
+        else warn.push(`agent.poolLimits.${key}=${JSON.stringify(v)} invalid (positive integer ≥1 required) — falling back to ${ASYNC_POOL_LIMITS[key]}`)
+      }
+    }
+  } else if (raw !== undefined && raw !== null) {
+    warn.push(`agent.poolLimits=${JSON.stringify(raw)} invalid (object { engCoder, other } required) — falling back to defaults 4/4`)
+  }
+  return { limits: out, warnings: warn }
+}
+
+/** 机械并发上限（§24 D-24a 前语义——单域全局上限 4——历史断言/导入面兼容：
+ *  subagent-async.mjs/spawn 判定已改按域；本常量保留为单域默认值语义）。 */
+export const ASYNC_SUBAGENT_LIMIT = ASYNC_POOL_LIMITS.engCoder
+
 /** §20 D-SD3b 排队行刷新（webview 行通道——CLI ⟦ev⟧queued 等价）：全 queued 条目重算
  *  等待态 + 位置（Map 序——cancel 出列自然前移）——sig 变化才发（去重）。调用点 = 一切
- *  队列突变与等待态变迁（入队/settle 后补位与依赖转移/cancel 出队/check 消费）。 */
+ *  队列突变与等待态变迁（入队/settle 后补位与依赖转移/cancel 出队/自动送达消费）。 */
 export function refreshQueuedRows(parent) {
   const map = poolMap(parent)
   let pos = 0
@@ -277,6 +349,29 @@ export function refreshQueuedRows(parent) {
     }
     e._queueNotify?.(payload)
   }
+}
+
+/**
+ * 分配下一子代理 id——跨 runAgent 单调（advisor fix #1，2026-09-03）：agent 对象
+ * （_subIdCounter）per-run 重建，async 池沿 history._asyncSubagents 存活——无池内
+ * 最大 id 续号则后续 run 会复用仍在跑的条目 id（map.set 覆盖旧条目：静默丢报告 +
+ * status/cancel 错址）。spawn 路径（subagent.mjs）、escalate action、async-advisor 池
+ * （advisor-async.mjs——§24 D-24b）共用——LIVES HERE（2026-09-06）：自 subagent-async
+ * 迁入叶子模块——advisor-async 无环单向取号。
+ * §24 D-24b：续号同时跨 subagent 池与 advisor 池（两池条目共用 webview 行 map 的 id
+ * 命名空间——全局唯一防行覆盖）。 */
+export function nextSubagentId(parent) {
+  let poolMax = 0
+  for (const pool of [parent._asyncSubagents, parent._asyncAdvisors]) {
+    if (!pool || pool.size === 0) continue
+    for (const k of pool.keys()) {
+      const n = typeof k === "number" ? k : Number.parseInt(k, 10)
+      if (Number.isFinite(n) && n > poolMax) poolMax = n
+    }
+  }
+  const next = Math.max(parent._subIdCounter ?? 0, poolMax) + 1
+  parent._subIdCounter = next
+  return next
 }
 
 /** 依赖某 id 的 queued 条目标签（D-SD5 提醒/工具结果注记——依赖者列表）。 */
@@ -311,9 +406,6 @@ export function assertNoDepCycle(parent, dependsOn) {
   }
   for (const d of dependsOn) visit(String(idNum(d)))
 }
-
-/** 机械并发上限：running 数 <4 时新 async spawn 立即启动，≥4 入队等待（用户 2026-09-02 拍板）。 */
-export const ASYNC_SUBAGENT_LIMIT = 4
 
 /** Current 1-based queue position of a queued entry (map insertion order == FIFO queue order). */
 export function queuePosition(map, target) {

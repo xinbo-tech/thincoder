@@ -60,42 +60,44 @@ npx @vscode/vsce login xinbo-tech
 
 ## 2. 发布前检查
 
-- [ ] `npm test` 全绿
-- [ ] `npm run lint` 无错误
 - [ ] `CHANGELOG.md` 已更新(市场页 Changelog 标签内容来源)
 - [ ] 版本号已递增 —— 同一版本号**不可重复发布**；**连续性核对见 §5.2 执行注（月切换——9 月首发 = `0.9.1`）**
 - [ ] 扩展改动已实际跑过(项目纪律:没有「写了没跑」的代码)
 - [ ] **双源发布已计划**(2026-08-29 漏发事故):`vsce publish` 只进微软 Marketplace,**Cursor/VSCodium/Windsurf 用户连的是 Open VSX**——每次发版必须两个 registry 都发(见 §3 与 §5b),缺一即未完成
+
+> **测试门禁(2026-09-06 R7 单轮制——发布 = 唯一门禁;勘误落档见 §3)**：无独立预跑步——`vscode:prepublish` = `npm run lint && npm run test:full` 全量(~72s),在 `vsce package` / 无参 `vsce publish` 时自动执行,失败详情直通终端。失败 → 修复 → **局部重跑**确认 → 终跑发布一次收口;双源发同一 .vsix → 全量只测一次。
 
 ## 3. 发布
 
 ```bash
 cd thincoder-vscode
 
+# ⚠️ 以下为单源命令(只发微软 Marketplace)——双源发布一律 `npm run publish:all`(见下);版本号按 §5.2 CalVer 手动 bump,语义化递增 `publish patch/minor/major` 已废(2026-09-06 R7 勘误)。
+
 # 交互终端(已 vsce login):
 npm run publish
 
-# 非交互/CI(无需 login,直接带 PAT;也可设 VSCE_PAT 环境变量代替 --pat):
+# 非交互/CI(无需 login,直接带 PAT;也可设 VSCE_PAT 环境变量代替 --pat;单源/补源也可带 .vsix 文件发,见 §5b 第二式):
 npx @vscode/vsce publish --pat <你的PAT>
-
-# 之后按语义化递增(同样可加 --pat):
-npx @vscode/vsce publish patch   # 0.1.0 → 0.1.1
-npx @vscode/vsce publish minor   # 0.1.1 → 0.2.0
-npx @vscode/vsce publish major   # 0.2.0 → 1.0.0
 ```
 
-`vsce publish` 自动执行:`vscode:prepublish`(lint + test，check-syntax)→ 打包 → 上传。
+`vsce publish`(无参)自动执行:`vscode:prepublish` = **lint + test:full 全量(~72s——2026-09-06 R7 起;此前 lint + npm test)** → 打包 → 上传;`vsce publish -i <vsix>` 发已打包文件,**不再触发测试**。
 首次发布会经过市场验证扫描(通常几分钟),通过后即可搜索 "ThinCoder",安装 ID 为 `xinbo-tech.thincoder-vscode`。
-**发完这里只是完成了一半**——必须继续 §5b 的 `ovsx publish`(同一 vsix),两个 registry 都成功才算发布完成(2026-08-29 0.8.4 漏发 Open VSX,Cursor 用户滞留旧版)。
+**双源必须走 `publish:all` 一条命令**(2026-08-29 0.8.4 漏发 Open VSX 教训——`vsce publish` 只进微软 Marketplace,Cursor/VSCodium/Windsurf 用户连的是 Open VSX——缺一即未完成;2026-09-06 R7 单轮制:全量门禁打包时只跑一次——补源/单源请带 .vsix 文件发(§5b 第二式),无参 `ovsx publish` 会再打包、再触发一次全量)。
 
-**推荐方式(2026-08-29 机械化,1be4bcf)**:`npm run publish:all` —— 一条命令完成双源发布（不含轮询确认——完成判定见下裁定）；`--skip-marketplace` / `--skip-openvsx` 可显式跳过单源(两个都跳则中止)。凭据走 env:`VSCE_PAT` + `OVSX_PAT`。
+**推荐方式(2026-08-29 机械化,1be4bcf;2026-09-06 R7 单轮制)**:`npm run publish:all` —— 一条命令完成双源发布,**全量只测一次**:先 `vsce package` 打包一次(`vscode:prepublish` 全量门禁仅此 1 跑)→ 双源发同一 .vsix(`vsce publish -i <vsix>` + `ovsx publish <vsix>`——发已打包文件不再触发测试)。已打包过可直接 `npm run publish:all -- <vsix>` 跳过打包段。`--skip-marketplace` / `--skip-openvsx` 可显式跳过单源(两个都跳则中止)。凭据走 env:`VSCE_PAT` + `OVSX_PAT`(发布前 verify-pat,见 §1.2b/§5b)。
 
 > **2026-08-31 用户裁定——轮询确认已废止**：Marketplace 与 Open VSX 的新版本都要经审核/病毒扫描队列，上线天然滞后数分钟到更久，**不值得在线等**。发布完成的判定 = **publish 命令本身正确返回**（exit 0、`DONE Published`）；审核队列是平台侧事务，随时间自然消化，无需当场确认。`publish:all` 的 LIVE 轮询随之退役——直接分别跑 `vsce publish` 与 `ovsx publish` 即可，两个都正确返回 = 发布完成。历史教训保留价值：open-vsx 报 "already published" 时先查 API——上一条命令可能**已成功**（本版 0.8.7 实例：60s 超时的 publish 实际已把包发上去，重复 publish 报 already published，API 查询确认 0.8.7 已生效）。
+
+> **2026-09-06 R7 发布单轮制——勘误落档（需求池 R7——双端实施；设计权威源 = thincoder `docs/design/RELEASE.md` §1 R7 段；publish-all.mjs 头注释同载本落档）**：
+> - **F-R7e 裁定句（2026-08-31 裁定 + 2026-09-06 重申"只要发布没报错就行了"——勿再问）**：发布完成判定 = **publish 命令 exit 0 即可——不轮询、不检查上线版本**——双市场审核/病毒扫描队列上线滞后是市场的业务。
+> - **边界句（勿把 "exit 0 = 完成" 误推广到发布前校验）**："零检查"只针对市场审核/病毒扫描的**激活滞后**——发布前的**调用级前置仍有效**：显式 `--pat` / 设 `VSCE_PAT`+`OVSX_PAT`（§1.2b verify-pat）、ovsx 无 TTY 静默 exit 0 陷阱（§5.1——其失败模式 = exit 0 但什么都没发）——发布前 PAT 校验照做，拿不准就显式传。
+> - **门禁单轮**：`vscode:prepublish` = lint + test:full 全量（~72s，失败详情直通终端）——`vsce package` / 无参 `vsce publish` 时跑；双源发同一 .vsix → 全量只测一次。发布 = 唯一门禁——无独立预跑步、无二次测试。
 
 ## 4. 本地验证(不发布)
 
 ```bash
-npm run package            # 产物 thincoder-vscode-<version>.vsix
+npm run package            # 产物 thincoder-vscode-<version>.vsix（2026-09-06 R7 起 = 全量门禁跑——vscode:prepublish lint + test:full ~72s——本地打包即门禁）
 code --install-extension thincoder-vscode-0.1.0.vsix   # 本地安装验证
 ```
 
@@ -111,7 +113,7 @@ code --install-extension thincoder-vscode-0.1.0.vsix   # 本地安装验证
 - **Marketplace 延迟(已知,每次发布都会遇到)**:`vsce publish` 报 `already exists` 但 `vsce show` 仍显示旧版本 —— **通常是发布其实已成功、市场查询索引有缓存延迟**,不是失败。先 `vsce show xinbo-tech.thincoder-vscode --json` 确认新版本是否在 `versions` 列表里(往往过几分钟就刷出);真失败会报 `Invalid access token` 或明确错误,而不是 `already exists`。
 - **PAT 在环境变量里(会忘)**:发布用的 PAT 常存于环境变量(`VSCE_PAT` / `OVSX_PAT`),但无 TTY 环境(如 agent 子进程)下环境变量可能没继承或 CLI 静默 exit 0 假装成功。**发布前先验证**:`npx @vscode/vsce ls-publishers`(marketplace)、`npx ovsx verify-pat xinbo-tech --pat $env:OVSX_PAT`(open-vsx);拿不准就显式 `--pat` 传。
 - **版本 bump 别用 PowerShell `Set-Content -Encoding UTF8`**:Windows PowerShell 5.1 的 `-Encoding UTF8` 会给文件写入 BOM(`EF BB BF`),导致 JSON 解析失败、`prepublish` 测试崩。改 `package.json` 用 JSON.parse→改字段→JSON.stringify(无 BOM),或用 `-Encoding utf8NoBOM`。
-- **两端门禁要对称**:`vscode:prepublish` 是最后一道门,必须同时跑 `lint && test`(历史上一端只 lint、一端只 test,导致对方缺的那道门漏拦)。已统一为 `npm run lint && npm test`。
+- **两端门禁要对称**:`vscode:prepublish` 是最后一道门,必须同时跑 `lint && test`(历史上一端只 lint、一端只 test,导致对方缺的那道门漏拦)。已统一为 `npm run lint && npm run test:full`(2026-09-06 R7 起——全量门禁)。
 
 ### 5.2 版本号规范(CalVer,2026-08-27 用户拍板)
 
@@ -159,7 +161,7 @@ npx ovsx verify-pat xinbo-tech --pat %OVSX_PAT%
 # 成功输出:🚀 PAT valid to publish at xinbo-tech
 
 # 发布(ovsx 已加入 devDependencies):
-npx ovsx publish --pat %OVSX_PAT%          # 现场打包并发布当前版本
+npx ovsx publish --pat %OVSX_PAT%          # 现场打包并发布当前版本(单源场景;无参会经 vsce 再打包 = prepublish 全量第二次执行——双源场景勿用,走 §3 publish:all——2026-09-06 R7)
 npx ovsx publish thincoder-vscode-0.1.0.vsix --pat %OVSX_PAT%   # 直接发已有 vsix
 ```
 

@@ -1,15 +1,16 @@
 /**
- * subagent.mjs — subagentTool (single tool, five actions — AGENT-LOOP.md §19/§19.5:
- * spawn/check/status/cancel/escalate; no panel action in VS Code — §19.6 AC-P4)
+ * subagent.mjs — subagentTool (single tool, four actions — AGENT-LOOP.md §19/§19.5:
+ * spawn/status/cancel/escalate; no panel action in VS Code — §19.6 AC-P4; §19.8 2026-09-06: action:'check' 删除——结果仅自动通道)
  * Spawn a sub-agent for an independent subtask.
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
  * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
  * history._pendingAsyncResults), manual-tier auto-turn spawn gate, shared injector.
- * §18 (AGENT-LOOP.md D-E1..E3): role-level async default (eng-coder → async),
+ * §18 (AGENT-LOOP.md D-E1..E3 + D-E1a R12 2026-09-06): depth-gated async default
+ * (depth-0 → async, every role; depth>0 → sync — D-E1 role-level 缺省已 supersede),
  * internal delivery protocol; eng-coder children may only spawn synchronous explore
  * audit children (gateEngCoderSpawn — mechanical, incl. the 7th-spawn backstop).
- * §19/§19.5 (AGENT-LOOP.md, 2026-09-03): ONE tool, five actions — spawn/check/status/
- * cancel/escalate; action:"cancel" = control-class gate exemption (isControlAction),
+ * §19/§19.5 (AGENT-LOOP.md, 2026-09-03): ONE tool, four actions — spawn/status/
+ * cancel/escalate（§19.8 2026-09-06：action:'check' 删除——结果仅自动通道）; action:"cancel" = control-class gate exemption (isControlAction),
  * status decision fields (D-M5), per-entry AbortController + cancelled settle +
  * model-visible reminder (D-M6), runChild(entry) binding, nested sub-attribution
  * forwarding (D-M8 webview 子标)。description/schema 载荷 verbatim 在 subagent-spec.mjs
@@ -17,10 +18,15 @@
  * async.mjs（public names re-exported below——500 行纪律拆分轮 2026-09-03/05）；本
  * 文件保留工具入口（dispatch/execute）+ 阻塞 spawn 路径 + 模式助手。
  */
-import { validateDesignToken } from "./advisor.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent, mergeChildMutations, nextSubagentId } from "./subagent-async.mjs"
-import { subagentCheck, subagentStatus, cancelSubagentAction } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出）
+import { subagentStatus, cancelSubagentAction } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出；§19.8 删 check——subagentCheck 退役）
+// Eng-coder spawn design-token gate — resolveDesignSlot / dropExpiredTokenSlot /
+// authorizeEngCoderDesignToken moved to subagent-spawn-gate.mjs on 2026-09-06 (module
+// split: this file crossed the >500-line hard cap). resolveDesignSlot re-exported below
+// for the existing test import paths.
+import { authorizeEngCoderDesignToken } from "./subagent-spawn-gate.mjs"
+export { resolveDesignSlot } from "./subagent-spawn-gate.mjs"
 import { normalizeFileList, depInfo, describeBlockers, assertNoDepCycle } from "./subagent-scheduler.mjs" // §20 调度器（2026-09-05 拆分轮迁出）
 import { escalateAction } from "./subagent-escalate.mjs" // §19 escalate 引擎（2026-09-03 拆出——500 行纪律——verbatim 迁移）
 import { subagentSpec } from "./subagent-spec.mjs" // description/schema 载荷（2026-09-05 module-split round 2——546 > 500 拆出）
@@ -30,7 +36,7 @@ import { subagentSpec } from "./subagent-spec.mjs" // description/schema 载荷�
 // consumer (agent.mjs / suspension.mjs / index.mjs / setup.mjs / panel-messages.mjs /
 // tests) changed. subagentCheckTool is GONE (§19 T-M11); cancelSubagent joins the shim
 // (§19.5 — the extension's UI ⏹ router reaches the pool-level cancel through it).
-export { cancelSubagent, MAX_ASYNC_CHECKS } from "./subagent-actions.mjs"
+export { cancelSubagent } from "./subagent-actions.mjs"
 export { ASYNC_SUBAGENT_LIMIT } from "./subagent-scheduler.mjs"
 export { ENG_AUDIT_SPAWN_LIMIT, gateEngCoderSpawn, injectAsyncResult, collectSettledAsync, mergeChildMutations } from "./subagent-async.mjs"
 
@@ -110,43 +116,17 @@ export function resolveChildProvider(parent, modelArg) {
   return { ...parent._provider, model: modelArg }
 }
 
-/**
- * Resolve the design-token slot for an eng-coder spawn (2026-09-01 multi-design, FR3,
- * CLI parity): designId → exact slot; omitted → exactly ONE slot must exist (T16).
- * Format+TTL fail-closed check (uuid:expiresAt — 2026-09-06: HMAC anti-forgery gone)
- * stays in validateDesignToken. Mirror-cleared + slots present → stale slots must not resurrect.
- */
-export function resolveDesignSlot(parent, designIdArg) {
-  const slots = parent._engDesignTokens
-  const hasSlots = slots instanceof Map && slots.size > 0
-  const legacy = parent._engDesignToken
-  if (!legacy && hasSlots) {
-    throw new Error("Design tokens were reset (engineering mode was re-entered) — run advisor with type='design' again and spawn with the fresh designId+token pair.")
-  }
-  if (designIdArg) {
-    if (!hasSlots || !slots.has(designIdArg)) {
-      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${hasSlots ? slots.size : 0} approved design slot(s))`)
-    }
-    return { token: slots.get(designIdArg) }
-  }
-  if (hasSlots && slots.size > 1) {
-    throw new Error(`Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to.`)
-  }
-  if (hasSlots && slots.size === 1) return { token: [...slots.values()][0] }
-  if (legacy) return { token: legacy } // single-slot mirror fallback (pre-multi-slot sessions)
-  throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
-}
-
 export const subagentTool = {
   name: "subagent",
   sideEffectExempt: true, // subagent mutations are tracked by the child, not the parent
-  // §19 (2026-09-03): action-level readonly classification — check/status are readonly
-  // actions (plan mode passes them, no approval, readonly-parallel batches — §15 D-A2
-  // readonly:true heritage); spawn (the default) and escalate are side-effecting.
+  // §19 (2026-09-03): action-level readonly classification — status is the readonly
+  // query action (plan mode passes it, no approval, readonly-parallel batches — §15
+  // D-A2 readonly:true heritage); spawn (the default) and escalate are side-effecting.
+  // §19.8 (2026-09-06): action:'check' deleted — no polling/blocking action remains.
   // Used by execute-tools.mjs preGateBlocked / batch grouping / permission stage.
   isReadonlyAction(args) {
     const action = args?.action
-    return action === "check" || action === "status"
+    return action === "status"
   },
   // §19.5 (AGENT-LOOP.md §19.5 D-M6 round2 #4): cancel = 控制类豁免动作——只停不启
   // （无新副作用）——planMode 放行、免权限审批、批审批分组不入组、手动档 digest 放行。
@@ -160,17 +140,16 @@ export const subagentTool = {
     // §19 action dispatch（AGENT-LOOP.md §19 D-M1）：缺省 spawn——既有调用零迁移。
     const action = args?.action ?? "spawn"
     const parent = ctx.agent
-    if (!["spawn", "check", "status", "cancel", "escalate"].includes(action)) {
-      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), check, status, cancel, escalate.`)
+    if (!["spawn", "status", "cancel", "escalate"].includes(action)) {
+      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), status, cancel, escalate.`)
     }
     // §19 round2 #3 restricted-variant action gate（机械层——schema 层提示在 setup.mjs
     // engAuditSubagentTool）：eng-coder 子代理的受限通道仅 spawn（sync explore 审计）——
-    // escalate 会内部 spawn coder+WRITE（违 explore-only 意图）；check/status 无意义
+    // escalate 会内部 spawn coder+WRITE（违 explore-only 意图）；status 无意义
     // （子代理上下文无 async 池）。镜像 T-E4/E5 的 action 维度。
     if ((ctx.depth ?? 0) > 0 && parent?._role === "eng-coder" && action !== "spawn") {
       throw new Error(`action:'${action}' is unavailable inside an eng-coder subagent — the restricted subagent channel is spawn-only (sync role='explore' audits, AGENT-LOOP.md §18 D-E3)`)
     }
-    if (action === "check") return await subagentCheck(args, ctx)
     if (action === "status") return subagentStatus(args, ctx)
     if (action === "cancel") return cancelSubagentAction(args, ctx)
     if (action === "escalate") return await escalateAction(args, ctx)
@@ -184,10 +163,11 @@ export const subagentTool = {
     }
     const { runAgent } = await import("../agent.mjs")
     const cwd = ctx.cwd
-    // §18 F1/D-E1 role-level async default (AGENT-LOOP.md §18 D-E1): an eng-coder
-    // spawn is ASYNC unless the caller explicitly passes async:false — its internal
-    // delivery protocol settles in the background; every other role stays blocking.
-    const asyncFlag = asyncArg ?? role === "eng-coder"
+    // §18 D-E1a depth-gated async default (2026-09-06 需求池 R12——CLI parity):
+    // depth-0 spawns default to async for EVERY role (the old role-level default —
+    // eng-coder only — is superseded); depth>0 spawns default to sync (子代理内部
+    // 强制同步现状保留——下方深度门仍拒 async:true).
+    const asyncFlag = asyncArg ?? ((ctx.depth ?? 0) === 0)
 
     // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async
     // OR blocking — the digest must stay organize-only. AUTO tier (ctx.getAuto) is
@@ -233,7 +213,7 @@ export const subagentTool = {
       const auto = ctx.getAuto?.() ?? false
       for (const d of dependsOn) {
         if (depInfo(parent, d).state === "unknown") {
-          throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already consumed by action:'check' (or auto-injected) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
+          throw new Error(`subagent dependsOn: unknown async subagent id: ${d} — dependsOn references ids from prior async spawn returns; an id already delivered automatically (auto-injected at turn end or consumed by the suspension digest) counts as satisfied, anything else is a mistake (AGENT-LOOP.md §20 D-SD5)`)
         }
       }
       assertNoDepCycle(parent, dependsOn)
@@ -282,15 +262,12 @@ export const subagentTool = {
     const provider = resolveChildProvider(parent, effectiveSubagentModel(parent, role, model))
 
     // eng-coder token gate: the design review must have passed and the caller must
-    // present the exact token advisor issued — otherwise the child is not authorized to code.
-    // 2026-09-01: multi-design slots — designId 定位槽（exact slot / 单槽 fallthrough）；
-    // format+TTL fail-closed 校验不变（2026-09-06 设计 B: HMAC 防伪层已删——无签名 uuid:expiresAt）。
-    let issuedToken
+    // present the exact token advisor issued — lives in subagent-spawn-gate.mjs
+    // (authorizeEngCoderDesignToken — module split 2026-09-06): resolves the slot,
+    // format+TTL fail-closed validates, and on an EXPIRED presentation deletes the dead
+    // slot (R16 ③ — mirror synced); mismatch / malformed reject without deletion.
     if (role === "eng-coder") {
-      issuedToken = resolveDesignSlot(parent, designId).token
-      if (!issuedToken || designToken !== issuedToken || !validateDesignToken(designToken)) {
-        throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
-      }
+      authorizeEngCoderDesignToken(parent, designId, designToken)
     }
 
     // Turn cap from shared config (CLI parity)
@@ -420,7 +397,14 @@ export const subagentTool = {
 
           mergeChildMutations(parent, sink)
 
-          ctx.callbacks?.onSubagent?.({ id: subId, role, status: terminalStatus() })
+          // R22 (D-R22b 降级口径 — 实测: 现有 onSubagent/状态事件不携 turn): 池条目
+          // (entry) 的终态通知顺带 final turn/maxTurns 快照 — webview 冻结身份头
+          // "[✓ key · … · done Ns · turn n/max]" 用它; 逐轮跳动需新通道 — 不建 (见
+          // ARCHITECTURE.md R22 节实现记录)。同步 spawn (无 entry) 不带 → 无 turn 段。
+          ctx.callbacks?.onSubagent?.({
+            id: subId, role, status: terminalStatus(),
+            ...(entry ? { turn: entry.turn ?? 0, maxTurns: entry.maxTurns ?? 0 } : {}),
+          })
           // designId rides the delivery report (2026-09-01, CLI parity): the audit fix
           // round re-spawns with the SAME designId+token — the parent copies it from here.
           const designIdNote = role === "eng-coder"

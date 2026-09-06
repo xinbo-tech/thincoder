@@ -1,5 +1,5 @@
 /**
- * prompts.test.mjs — prompt content assertions — the future home for NEW prompt assertions (§18.14 D-T1.2; T-AR1..4 / T-SP1..4 / T-10.1..5 anchors).
+ * prompts.test.mjs — prompt content assertions — the future home for NEW prompt assertions (§18.14 D-T1.2; T-AR3..4 / T-SP1..2 / T-10.1..5 anchors).
  *
  * Split from test/agent.test.mjs (AGENT-LOOP.md §18.14/§18.14.1 D-T1.1 domain rule —
  * blocks moved verbatim; test names/semantics unchanged).
@@ -196,6 +196,30 @@ describe("pre-work plan confirmation discipline", () => {
       }
     })
 
+  it("root METHODOLOGY.md: 拆分判据修辞防博弈加固锚（2026-09-06 · T-S1 镜像——fail-when-unchanged）", () => {
+    // 本仓根注入体 = 设计 D-S1..D-S4/D-S3b 落点——逐字锚断言（旧修辞零残留 = AC-S1）
+    const text = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "METHODOLOGY.md"), "utf8")
+    assert.ok(text.includes("| >500 | **必须拆**——硬限，无例外、无相对比较通道 |"), "文件档判定表「必须拆」行 present")
+    assert.ok(text.includes("**相对大小永远不是豁免**——\"我才 500+ 行、没 X 行大\"对某个 X 总成立；判据只有档位表。"), "D-S3 封口句 present")
+    assert.ok(text.includes("| 引用\"才 500+ 行、没 X 行大\"拒绝拆分（2026-09-06 实测） |"), "D-S4 反例档案新行锚 present")
+    assert.ok(text.includes("函数档是早期预警线，文件档是不可协商底线"), "D-S1 来源尾句 present")
+    assert.ok(text.includes("**封口（2026-09-06）**：行数不是目标，但档位表是不可协商的判据"), "D-S3b 动机封口句 present")
+    // 旧修辞零残留
+    assert.ok(!text.includes("兜底红线"), "old「兜底红线」定性 zero residue")
+    assert.ok(!text.includes("真正的判据在函数尺度"), "old「真正的判据在函数尺度」尾句 zero residue")
+  })
+
+  it("methodology-template.md: split-criterion anti-gaming hardening anchors (2026-09-06 · T-S2 mirror — fail-when-unchanged)", () => {
+    // D-S5 英文镜像锚 + 旧句退役零残留（评审 #2 负向断言）
+    const text = readFileSync(join(PROMPTS_DIR, "methodology-template.md"), "utf8")
+    assert.ok(text.includes("| >500 | must split — hard limit, no exceptions, no relative-size defense |"), "file-scale table「must split」row present")
+    assert.ok(text.includes("**Relative size is never an exemption**"), "relative-size seal sentence present")
+    assert.ok(text.includes("the quantified scale below is the yardstick — the motivation above explains the why, never a license to discount it"), "D-S5 yardstick sentence present")
+    assert.ok(text.includes("**Function-body scale (the early-warning line):**"), "early-warning-line header present")
+    assert.ok(!text.includes("File caps (fallback)"), "old「File caps (fallback)」 zero residue")
+    assert.ok(!text.includes("the primary yardstick"), "old「the primary yardstick」 zero residue")
+  })
+
   it("engineering.md: UI/interaction decisions must land in the design doc AND the eng-coder task (2026-08-29)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     // 设计文档要素扩项：UI 决策必须落档，未定标 open、绝不静默发明
@@ -251,7 +275,6 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("quick / medium / thorough"), "thoroughness levels stated")
     assert.ok(text.includes("never enter your history"), "isolated-context benefit stated")
     assert.ok(text.includes("about to edit it immediately"), "precision exception present")
-    assert.ok(!text.includes("Never assign two parallel eng-coders"), "T-PS2: old manual-avoidance sentence zero residue (delegation section)")
     assert.ok(text.includes("Do NOT redo the exploration you already delegated"), "no redoing delegated exploration")
     assert.ok(text.includes("`escalate` is unavailable in engineering mode"), "escalate unavailable (matches setup.mjs fail-closed)")
     assert.ok(text.includes("`consult` stays available"), "consult remains available")
@@ -269,10 +292,7 @@ describe("pre-work plan confirmation discipline", () => {
     assert.match(text, /7th audit spawn is\s+refused mechanically/, "第 7 次审计 spawn 机械拒绝")
     assert.ok(text.includes("spawn the fix round with the report's"), "stalled → 修正轮任务 = 未收敛点清单")
     assert.ok(text.includes("unconverged points as the task brief"), "任务书 = 未收敛点清单（不发明新内容）")
-    assert.ok(!text.includes("SECOND time with the\n     divergence list as the task brief"), "2026-08-30 父侧二次 spawn 句式已随 §18 移除")
-    assert.ok(!text.includes("verify the\n     divergence list point by point"), "父侧逐点核销句式已随 §18 移除")
     assert.ok(text.includes("Delivery (async settle)"), "work-loop 状态表含 async settle 态（替代 First delivery audit）")
-    assert.ok(!text.includes("First delivery audit"), "First delivery audit 父侧审计态已移除")
     assert.ok(text.includes("Automatic either way"), "自动节点语义保留（内部协议默认承担）")
   })
 
@@ -298,12 +318,6 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token isolation semantics")
     assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "initiation rights unchanged")
     assert.ok(text.includes("plus its designId parameter"), "work-loop approval line mentions designId")
-    // §20.7 T-PS2: old manual-avoidance wording zero residue in engineering.md (pre-grep confirmed present before the swap)
-    assert.ok(!text.includes("share NO file"), "T-PS2: old disjoint-fileset pre-check zero residue")
-    assert.ok(!text.includes("run the tasks serially (or merge them into one spawn)"), "T-PS2: old serialize/merge fallback zero residue")
-    assert.ok(!text.includes("Dependency chain → serial"), "T-PS2: old serial-dependency discipline zero residue")
-    assert.ok(!text.includes("Pre-check before parallel spawns"), "T-PS2: old manual pre-check zero residue")
-    assert.ok(!text.includes("Never assign two parallel eng-coders"), "T-PS2: old manual-avoidance sentence zero residue (§20.7 leftover fix)")
   })
 
   it("§20.8 T-F1.5: main.md/engineering.md carry the files file-level anchor sentence (fail-when-unchanged——目录声明不支持)", () => {
@@ -313,6 +327,31 @@ describe("pre-work plan confirmation discipline", () => {
       assert.ok(text.includes(anchor), `T-F1.5: ${name} missing the §20.8 files file-level anchor sentence`)
     }
   })
+
+
+  // ─── §28 R26（AGENT-LOOP.md §28——F-R26a）：files 父侧文件排除条款逐字锚——CLI 同锚照抄——
+  // 载体 = engineering.md Multi-Task D-PS2 锚句所在段落（紧邻锚句后——T-R26a.2 结构断言）
+  const R26_FILES_CLAUSE =
+    "**files declarations list only the implementer's write domain** (source, test, and design-doc files) — parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family) must not be listed; reconciliation notes and CHANGELOG entries are the parent's duty, landed after the eng-coder delivers."
+
+  it("§28 T-R26a.1: engineering.md carries the files parent-side exclusion clause (F-R26a verbatim anchor — fail-when-unchanged)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    const flat = text.replace(/\n[ \t]+/g, " ")
+    assert.ok(flat.includes(R26_FILES_CLAUSE), "T-R26a.1: F-R26a English clause verbatim (parent-side maintained files stay out of files declarations)")
+  })
+
+  it("§28 T-R26a.2: F-R26a placement structure assertion — directly after the D-PS2 anchor sentence (same paragraph — not a naive text scan)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    const flat = text.replace(/\n[ \t]+/g, " ")
+    const anchorTail = "overlapping domains are queued by the scheduler, never hand-serialized."
+    const pos = flat.indexOf(anchorTail)
+    assert.ok(pos >= 0, "T-R26a.2: D-PS2 anchor sentence present")
+    assert.ok(
+      flat.slice(pos + anchorTail.length).trimStart().startsWith(R26_FILES_CLAUSE),
+      "T-R26a.2: clause sits right after the D-PS2 anchor sentence — moving/rewriting it fails this structural anchor",
+    )
+  })
+
 
   it("engineering.md: §18 async delivery + internal-protocol narrative; fix round reuses the same designId+token (2026-09-01 T19 / 2026-09-02 §18)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
@@ -383,13 +422,23 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("Do NOT hand-write `node --test`"), "L0 非手写 node --test")
   })
 
+  it("engineering-sub.md: 首次实现降为 L0+ 锚 + 父侧 L2 唯一全量点义务句（TESTING.md §1 D-T3 — T-T4 镜像——fail-when-unchanged）", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
+    // D-T3：首次实现 L1 → L0+（语法检查 + 定向相关测试——锚句与 CLI 端逐字一致，照抄不自行解释）
+    assert.ok(text.includes('First implementation: verify with L0+ (syntax check + targeted related tests via verify) — do NOT run the full suite; the parent\'s L2 full run at chain terminal is the only full-suite point.'), "T-T4：L0+ 首次实现锚逐字在（fail-when-unchanged）")
+    assert.ok(text.includes('State in the delivery report: "not full-suite verified — the parent-side L2 run is the only full-suite point."'), "T-T4：交付报告义务句逐字在（父侧 L2 为唯一全量点）")
+    // 旧"首次实现跑 L1"句零残留（D-T3 supersede——防回潮负向断言）
+    assert.ok(!text.includes("AFTER the FIRST implementation only"), "旧 L1 首次实现句零残留")
+    // 修正轮 L0 + 父侧 L2 每链终态 1 次不变（R2 收口精神延续）
+    assert.ok(text.includes("**L0 = call `verify` in its default mode**"), "修正轮 L0 维持不变")
+    assert.ok(text.includes("runs ONCE at the parent's verification, per chain terminal"), "父侧 L2 每链终态恰 1 次不变")
+  })
+
   it("engineering-sub.md: audit spawn thoroughness = quick + 审计是对照核对（§18.13 D-A1.1 — T-A1.1/T-A1.4）", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering-sub.md"), "utf8")
     // D-A1.1：审计档位 "medium unless the delivery is large" → quick（审计=对照核对——非广度探索）
     assert.ok(text.includes('thoroughness: "quick"'), "审计指令 = quick（不再 medium/不随交付规模升 thorough）")
     assert.ok(text.includes("审计是对照核对——非广度探索——读该读的即止"), "quick 锁定句在（审计=最小确认——读该读的即止）")
-    // T-A1.4 防回潮：旧档位措辞零残留
-    assert.ok(!text.includes("medium unless the delivery is large"), "旧 medium 档位措辞零残留（防回潮）")
   })
 
   it("engineering.md: parent-side closure = L2 full run once per chain — no L1 re-run (§18.7 D-TS3 — T-TS3)", () => {
@@ -398,8 +447,6 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("eng-coder's internal L1/L0 results — the §18 internal protocol guarantees"), "step 8：信任 eng-coder 内部 L1/L0 结果")
     assert.ok(text.includes("parent-side verification = L2 full `test:full` once per chain terminal"), "step 8：父侧核销 = L2 全量 1 次（每链终态）")
     assert.ok(text.includes("— no L1 re-run"), "step 8：不复跑 L1")
-    // N-TS4：不留旧措辞
-    assert.ok(!text.includes("run the tests it claims pass"), "旧 'run the tests it claims pass' 措辞零残留")
   })
 
   it("advisor-round1.md: review-scope focus contraction + batch-read parallelism (§18.7 D-TS8 — T-TS7)", () => {
@@ -409,7 +456,6 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("read the review-target files (the delivery list) FIRST"), ":7 优先读评审对象文件")
     assert.ok(text.includes("design documents only in the sections relevant to this implementation (do NOT read whole documents in full)"), ":7 设计文档只读相关节（不全量读全文档）")
     assert.ok(text.includes("do not read unrelated modules just to understand the implementation"), ":7 不读无关模块")
-    assert.ok(!text.includes("Read them in full."), ":7 旧 'Read them in full' 全文读句已移除")
     // B2 :13 —— 批量 read 并行执行（并发——不要串行等）
     assert.ok(text.includes("**multiple files read in one batch execute in PARALLEL (concurrent — do not wait serially)**"), ":13 并行执行明示句")
     assert.ok(text.includes("Batch independent `read` calls in a SINGLE reply"), ":13 批量提示保持")
@@ -537,7 +583,7 @@ describe("judgment rules + review-object declaration (§18.10 / §18.8 — T-10.
   })
 })
 
-describe("advisor role identity anchor (§12.1 — T-AR1..4)", () => {
+describe("advisor role identity anchor (§12.1 — T-AR3..4)", () => {
   const ROLE_FILES = ["advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md"]
   const ROLE_ANCHOR = `## Your role (identity — read before the criteria)
 
@@ -565,24 +611,6 @@ You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.
    state of the files/documents as you read them is the truth. Do not guess
    author intent.`
 
-  it("T-AR1: 4 模板各含六锚句（Your role / INDEPENDENT REVIEWER / Stance / Evidence discipline / Boundary / Neutrality）+ F-AR4 非作者句——fail-when-unchanged", () => {
-    for (const f of ROLE_FILES) {
-      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
-      for (const p of ["Your role (identity", "INDEPENDENT REVIEWER", "Stance", "Evidence discipline", "Boundary", "Neutrality"]) {
-        assert.ok(text.includes(p), `${f}: 锚句 "${p}" 在（fail-when-unchanged）`)
-      }
-      assert.ok(text.includes("Do NOT write replacement text or patch code in your findings"), `${f}: F-AR4 非作者句在（发现即报告——不替作者修复）`)
-    }
-  })
-
-  it("T-AR2: 角色段含证据纪律禁止句——NEVER assert \"Known behavior…\"（记忆断言禁止落地）", () => {
-    for (const f of ROLE_FILES) {
-      const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
-      assert.ok(text.includes('NEVER assert "Known behavior…"'), `${f}: 禁止句在（取证或标 unverified）`)
-      assert.ok(text.includes('"I\'m confident…"'), `${f}: 自信断言同步禁止`)
-    }
-  })
-
   it("T-AR3: 角色段位置——身份句（模板首行）之后、既有小节（Review Criteria / Review workflow: / Judgment Rules）之前——既有内容零位移", () => {
     for (const f of ROLE_FILES) {
       const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
@@ -605,7 +633,7 @@ You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.
   })
 })
 
-describe("subagent persona anchor (§7.3 — T-SP1..4)", () => {
+describe("subagent persona anchor (§7.3 — T-SP1..2)", () => {
   const CODER_ANCHOR = `## Your role (identity — read before you code)
 
 You are an IMPLEMENTER with independent judgment — not a typewriter.
@@ -641,8 +669,6 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
   /** Whitespace-normalized view: file line wraps must not break phrase matching. */
   const norm = (t) => t.replace(/\s+/g, " ")
 
-  // Positive checks shared with the T-SP4 regression drill — a removed anchor
-  // phrase throws, same assertion logic both ways.
   const checkCoderAnchor = (text) => {
     assert.ok(text.includes("IMPLEMENTER with independent judgment"), "D-SP1: implementer identity headline")
     assert.ok(text.includes("Evidence discipline"), "D-SP1: Evidence discipline phrase")
@@ -668,15 +694,6 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
   it("T-SP2: consult-base.md 含 D-SP2 锚（Evidence discipline / I don't know 合法答案 / Recommend and reason + 整块逐字）——fail-when-unchanged", () => {
     const text = readFileSync(join(PROMPTS_DIR, "consult-base.md"), "utf8")
     checkConsultAnchor(text)
-  })
-
-  it("T-SP4: 锚缺失模拟——删任一锚句即断言失败（防回潮）", () => {
-    const coderText = readFileSync(join(PROMPTS_DIR, "coder.md"), "utf8")
-    assert.throws(() => checkCoderAnchor(coderText.replace(/IMPLEMENTER with independent judgment/, "implementer")), "删除 coder 身份句 → 检查失败")
-    assert.throws(() => checkCoderAnchor(coderText.replace(/STOP and report/, "report")), "删除 STOP and report → 检查失败")
-    const consultText = readFileSync(join(PROMPTS_DIR, "consult-base.md"), "utf8")
-    assert.throws(() => checkConsultAnchor(consultText.replace(/"I don't know" is a valid\s+consultant answer/, "consultant answer")), "删除 I don't know 合法答案句 → 检查失败")
-    assert.throws(() => checkConsultAnchor(consultText.replace(/Recommend and reason/, "recommend")), "删除 Recommend and reason → 检查失败")
   })
 })
 
@@ -783,11 +800,6 @@ describe("§21 normal-mode deviation audit anchors (T-N1 — fail-when-unchanged
     assert.ok(text.includes("small changes are documented too"), "T-N1.4: discipline.md 含 small changes are documented too（D-N1.5 无豁免）")
   })
 
-  it("T-N1.5: discipline.md 不含旧弱触发 if you spotted a gap——零残留", () => {
-    const text = readFileSync(join(PROMPTS_DIR, "discipline.md"), "utf8")
-    assert.ok(!text.includes("if you spotted a gap"), "T-N1.5: discipline.md 零残留——if you spotted a gap 已删除")
-  })
-
   it("T-N1.6: main.md + coder.md 都含 D-N1.5 开发前落档锚（locate the owning design doc / register it in the map）——fail-when-unchanged", () => {
     for (const name of ["main.md", "coder.md"]) {
       const text = readFileSync(join(PROMPTS_DIR, name), "utf8")
@@ -839,7 +851,6 @@ describe("Delegate well rewrite + exploration distillation", () => {
     assert.match(text, /do NOT redo the whole exploration/, "不重做已委托的整段探索")
     assert.match(text, /Declare spawn scheduling metadata/, "T-PS1: scheduler clause present (D-PS1 anchor)")
     assert.match(text, /Same-file async spawns are safe to fire with files declared/, "T-PS1: same-file async spawns safe — the queue handles contention")
-    assert.ok(!text.includes("Never give parallel subagents tasks that edit the same files"), "T-PS2: old manual-avoidance sentence zero residue")
     assert.match(text, /When multiple subagent reports conflict, read the relevant code yourself/, "冲突仲裁条款保留")
   })
 
@@ -916,6 +927,64 @@ describe("§20.9 module split policy", () => {
     assert.ok(text.includes("Module Split Policy"), "T-P1.1: system.md 含「Module Split Policy」——fail-when-unchanged（段被删即失败）")
     assert.ok(text.includes("write-first"), "T-P1.1: system.md 含「write-first」——fail-when-unchanged")
     assert.ok(text.includes("assertion count"), "T-P1.1: system.md 含「assertion count」——fail-when-unchanged（评审 #6 独特断言词）")
+    // TESTING.md §1 D-T5（2026-09-06）：红线收窄为拆分轮专用——收窄句逐字锚
+    assert.ok(text.includes("Assertion-count parity binds splits only — inventory cleanup rounds delete per an explicit itemized list (count delta = list)."), "T-P1.1: system.md 收窄句逐字在（拆分轮专用 + 清理轮清单制——fail-when-unchanged）")
+  })
+})
+
+// ---------------------------------------------------------------- TESTING.md §1 Phase 3（2026-09-06——D-T4 镜像分层 + D-T5 红线收窄——fail-when-unchanged）
+
+describe("TESTING.md §1 Phase 3: 镜像归册 + 红线收窄（T-T4b/T-T5）", () => {
+  it("T-T5: system.md + METHODOLOGY.md 收窄表述锚（拆分轮专用 + 清理轮清单制——fail-when-unchanged）", () => {
+    const sys = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+    assert.ok(sys.includes("Assertion-count parity binds splits only — inventory cleanup rounds delete per an explicit itemized list (count delta = list)."), "T-T5: system.md Module Split Policy 收窄句逐字在")
+    const meth = readFileSync(join(PROMPTS_DIR, "..", "..", "METHODOLOGY.md"), "utf8")
+    assert.ok(meth.includes("断言数不减 = 拆分轮专用红线；存量清理轮 = 删除清单制，差额 = 清单数——2026-09-06 收窄"), "T-T5: METHODOLOGY.md 拆后两验收窄注逐字在")
+  })
+
+  it("T-T4b: 指定镜像用例（T-SD/T-E 式）均在 slow 门内 + 端差异面用例仍在快层", () => {
+    const TEST_DIR = join(PROMPTS_DIR, "..", "..", "test")
+    const read = (f) => readFileSync(join(TEST_DIR, f), "utf8")
+    // 镜像面（行为类同语义双端各一套——CLI 为权威端）→ VS Code 端全归册 slow 门
+    // （slow 注册表 = 各测试文件 slow() 标记——D-T6 恒等式口径：快层 test:pass ⇔ 未归册）
+    const sched = read("subagent-scheduler.test.mjs")
+    assert.ok(!/^(?:test|it)\("§20 T-SD/m.test(sched) && !/^(?:test|it)\("§21\.1 (T-SL|P-SL2)/m.test(sched) && !/^(?:test|it)\("§20\.8 T-F1/m.test(sched), "T-T4b: scheduler T-SD/T-SL/T-F1 镜像全归册（无裸 test(/it( 残留）")
+    const engdel = read("eng-delivery.test.mjs")
+    assert.ok(!/^(?:test|it)\("T-E\d/m.test(engdel), "T-T4b: eng-delivery T-E 系镜像全归册（无裸 test(/it( 残留）")
+    const asyncSrc = read("subagent-async.test.mjs")
+    for (const name of ['slow("T5 (vscode', 'slow("T5b (vscode', 'slow("T-M5:', 'slow("T-M18:']) {
+      assert.ok(asyncSrc.includes(name), `T-T4b: subagent-async 镜像 ${name} 归册 slow 门`)
+    }
+    assert.ok(read("subagent-tool.test.mjs").includes('slow("explore sub-agent uses the full subagentTurns budget'), "T-T4b: subagent-tool 慢用例归册 slow 门")
+    const exec = read("execute.test.mjs")
+    for (const name of ['slow("enforces timeout"', 'slow("T14.1.4:', 'slow("T14.1.5:']) {
+      assert.ok(exec.includes(name), `T-T4b: execute 镜像 ${name} 归册 slow 门`)
+    }
+    // 端差异面（webview/面板/suspension——VS Code 独有面）留快层不转
+    const ui = read("ui.test.mjs")
+    assert.ok(ui.includes('it("T-SD11 (vscode)') && ui.includes('it("T-SD12 (vscode)') && !ui.includes('slow("T-SD11') && !ui.includes('slow("T-SD12'), "T-T4b: ui 端差异面 T-SD11/T-SD12 留快层")
+    const susp = read("suspension.test.mjs")
+    assert.ok(susp.includes('test("T-H7 (vscode') && !susp.includes('slow("T-H7'), "T-T4b: suspension 端差异面 T-H7 留快层")
+  })
+})
+
+// ---------------------------------------------------------------- AGENT-LOOP.md §26 长测试输出落盘纪律（2026-09-06 · R18——D-R18 镜像锚逐字稿——各端独立断言——fail-when-unchanged）
+
+describe("§26 long-output disk discipline (T-R18 — AGENT-LOOP.md §26 D-R18)", () => {
+  // D-R18 条款逐字稿（AGENT-LOOP.md §26.2 ——唯一源——本端照抄一字不改；§26 注：byte-identical
+  // 已取消（§18.11）——各端独立断言，无跨端 diff 测试）
+  const R18_CLAUSE =
+    "**长输出命令先落盘**：全量/长测试（≥60s）与可能截断的长命令输出——先重定向到日志文件再查（`node --test … > log 2>&1` 形态或工具内 fs 落盘），汇总从日志尾部读、失败详情从日志 grep——不要用输出过滤管道直接跑长命令（过滤丢失败详情 + 管道缓冲截断）——一次跑完信息完整，失败不重跑。"
+
+  it("T-R18.1: system.md 含 D-R18 条款逐字稿（fail-when-unchanged）", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+    assert.ok(text.includes(R18_CLAUSE), "T-R18.1: system.md 工具纪律区含长输出落盘条款逐字（删/改任一字符即失败）")
+  })
+
+  it("T-R18.2: 执行注同在纪律区且条款仍逐字一次（评审 #7——位置注不改条款逐字文）", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "system.md"), "utf8")
+    assert.equal(text.split(R18_CLAUSE).length - 1, 1, "条款恰好一次（无重复无漂移）")
+    assert.ok(text.includes("日志放 OS 临时目录或 `~/.thincoder/` 类非工作区位置——查毕删除（防 git 工作区 untracked 污染）"), "T-R18.2: 日志位置/清理执行注在（§26 评审 #7）")
   })
 })
 

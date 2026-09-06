@@ -143,6 +143,10 @@
   "sub.cancelled": "cancelled",
   "sub.stopped": "stopped",
   "sub.stopBtn": "Stop this subagent",
+  "sub.async": "async",
+  "sub.sync": "sync",
+  "sub.done": "done",
+  "sub.error": "error",
   "settings.submodelSection": "Subagent models",
   "settings.submodelGlobal": "Global default",
   "settings.shellSection": "Shell (bash tool)",
@@ -227,5 +231,9 @@
   "sub.awaitingDigest": "done · awaiting digestion",
   "susp.running": "${n} background subagent(s) running",
   "susp.digesting": "${n} awaiting digestion",
-  "susp.winding": "background subagents finishing…"
+  "susp.winding": "background subagents finishing…",
+  "settings.poolEng": "Eng-coder Pool",
+  "settings.poolEngHelp": "Max concurrent eng-coder subagents (async pool, per role domain).",
+  "settings.poolOther": "Other Roles Pool",
+  "settings.poolOtherHelp": "Max concurrent explore/plan/coder subagents (async pool, per role domain)."
 }

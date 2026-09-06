@@ -6,6 +6,7 @@
  */
 
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -33,7 +34,7 @@ async function runChild(parent, walls, onQuestion) {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const cwd = mkdtempSync(join(tmpdir(), "tc-sub-"))
   const ctx = { agent: parent, cwd, callbacks: { onQuestion } }
-  const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, ctx))
+  const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder", async: false }, ctx)) // R12 (§18 D-E1a): depth-0 缺省 async——阻塞流钉 async:false
   rmSync(cwd, { recursive: true, force: true })
   return r
 }
@@ -55,7 +56,6 @@ function asyncParent(port, extra = {}) {
     _subIdCounter: 0,
     _touchedFiles: [],
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
   }
   return { ...base, ...extra }
 }
@@ -98,7 +98,6 @@ function engParent(port, token, extra = {}) {
     _engDesignTokens: new Map([["eng", token]]),
     _engDesignToken: token,
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
     ...extra,
   }
 }
@@ -115,13 +114,12 @@ function engChildCtx(port, cwd, extra = {}) {
     _subIdCounter: 0,
     _touchedFiles: [],
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
     ...extra,
   }
   return { agent, cwd, callbacks: {}, depth: 1 }
 }
 
-test("T-E1: eng-coder 缺省 async（§18 D-E1）——spawn 立即返回 running、交付后台 settle 带 designId；explore 缺省阻塞（回归）", async () => {
+slow("T-E1: eng-coder 缺省 async（§18 D-E1）——spawn 立即返回 running、交付后台 settle 带 designId；explore async:false 显式同步（阻塞回归——R12 后缺省已翻 async）", async () => {
   const { server } = oneShotServer("eng-coder delivery done")
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
@@ -142,18 +140,19 @@ test("T-E1: eng-coder 缺省 async（§18 D-E1）——spawn 立即返回 runnin
     assert.ok(entry.done, "后台 settle 落报告")
     assert.ok(entry.report.includes("Subagent (eng-coder) completed"), "交付报告成型")
     assert.ok(entry.report.includes("designId: eng"), "报告回传 designId（父侧可选修正轮复用同槽）")
-    // 回归：非 eng-coder 角色缺省阻塞（§15 F4 不变——§18 仅 eng-coder 例外）
+    // R12 (§18 D-E1a) supersede：explore 缺省已翻 async——原"explore 缺省阻塞（回归）"
+    // 断言同批修订为 async:false 显式同步（阻塞路径回归保留）
     const parent2 = asyncParent(port)
-    const r2 = String(await subagentTool.execute({ task: "explore job", role: "explore" }, asyncCtx(parent2, cwd)))
-    assert.ok(r2.includes("Subagent (explore) completed"), "explore 缺省阻塞返回报告字符串")
-    assert.equal(parent2._asyncSubagents.size, 0, "explore 未进 async 池")
+    const r2 = String(await subagentTool.execute({ task: "explore job", role: "explore", async: false }, asyncCtx(parent2, cwd)))
+    assert.ok(r2.includes("Subagent (explore) completed"), "explore async:false → 阻塞返回报告字符串")
+    assert.equal(parent2._asyncSubagents.size, 0, "explore 同步 spawn 未进 async 池")
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })
   }
 })
 
-test("T-E2: async:false 显式覆盖——eng-coder 同步阻塞返回（不进 async 池）", async () => {
+slow("T-E2: async:false 显式覆盖——eng-coder 同步阻塞返回（不进 async 池）", async () => {
   const { server } = oneShotServer("eng-coder delivery done")
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
@@ -172,7 +171,7 @@ test("T-E2: async:false 显式覆盖——eng-coder 同步阻塞返回（不进 
   }
 })
 
-test("T-E17 (vscode mirror): AUTO+工程 async eng-coder 撞 turn-cap → 自动续跑完整交付、无 partial 截断标记（§15 D-A3 例外——§18 默认 async 交付的 cap 兜底）", async () => {
+slow("T-E17 (vscode mirror): AUTO+工程 async eng-coder 撞 turn-cap → 自动续跑完整交付、无 partial 截断标记（§15 D-A3 例外——§18 默认 async 交付的 cap 兜底）", async () => {
   // 子代理 turn 上限 = 3（parent.config.agent.subagentTurns）：3 个 read 工具回合后撞
   // cap。手动档 = auto-decline（反例锁 = 下方 T-E17-manual）；AUTO+工程 = 自动 resume（2026-09-02 统一
   // 规则——CLI askContinue: Promise.resolve(Boolean(engineering && autoApprove))；VS Code
@@ -208,7 +207,6 @@ test("T-E17 (vscode mirror): AUTO+工程 async eng-coder 撞 turn-cap → 自动
       _engDesignTokens: new Map([["eng", token]]),
       _engDesignToken: token,
       _asyncSubagents: new Map(),
-      _asyncCheckN: 0,
     }
     // AUTO 档（无人值守授权——2026-09-02 统一规则前提）：ctx.getAuto = live AUTO 读法
     // （execute-tools 把 runAgent 的 autoApprove getter 注入每个工具 ctx）
@@ -231,7 +229,7 @@ test("T-E17 (vscode mirror): AUTO+工程 async eng-coder 撞 turn-cap → 自动
   }
 })
 
-test("T-E17-manual (vscode mirror): 工程开 + AUTO 关 async eng-coder 撞 turn-cap → auto-decline partial、零续跑零面板（§15 D-A3 基线——T-E17 AUTO 例外的反例锁）", async () => {
+slow("T-E17-manual (vscode mirror): 工程开 + AUTO 关 async eng-coder 撞 turn-cap → auto-decline partial、零续跑零面板（§15 D-A3 基线——T-E17 AUTO 例外的反例锁）", async () => {
   // 与 T-E17 同构的对照用例：同一 role/token/cap 配置，仅 AUTO 关（getAuto → false）。
   // wallServer(3) 前 3 个请求是 read 墙、第 4 个才应答——若 AUTO 例外误触发续跑，
   // 会发出第 4 个请求（calls.n = 4）；auto-decline 则停在 3（partial 报告）。
@@ -253,7 +251,6 @@ test("T-E17-manual (vscode mirror): 工程开 + AUTO 关 async eng-coder 撞 tur
       _engDesignTokens: new Map([["eng", token]]),
       _engDesignToken: token,
       _asyncSubagents: new Map(),
-      _asyncCheckN: 0,
     }
     let asks = 0
     // 手动档：AUTO 关。异步子代理绝不弹面板（onQuestion 不得被调）、不续跑、直接 partial
@@ -280,7 +277,7 @@ test("T-E17-manual (vscode mirror): 工程开 + AUTO 关 async eng-coder 撞 tur
   }
 })
 
-test("T-E1-loop (§18 code review #1/#3): 真实 agent 循环中 eng-coder 缺省 async 的 spawn 工具结果 = JSON 字符串（模型可见 {id,role,status}——非 [object Object]）", async () => {
+slow("T-E1-loop (§18 code review #1/#3): 真实 agent 循环中 eng-coder 缺省 async 的 spawn 工具结果 = JSON 字符串（模型可见 {id,role,status}——非 [object Object]）", async () => {
   const token = await unsignedToken("e1loop-1111-4111-8111-0000000000e1", Date.now() + 24 * 3600 * 1000)
   const bodies = []
   const parentCalls = { n: 0 }
@@ -329,7 +326,7 @@ test("T-E1-loop (§18 code review #1/#3): 真实 agent 循环中 eng-coder 缺�
     const toolMsg = history.find((m) => m.role === "tool" && String(m.content ?? "").includes('"role":"eng-coder"'))
     assert.ok(toolMsg, "spawn 工具结果进入历史（agent 循环路径）")
     assert.ok(String(toolMsg.content).includes('"status":"running"'), "模型可见 JSON {id,role,status:running}（非 [object Object]）")
-    assert.ok(String(toolMsg.content).includes('"id":1'), "id 可读（check/status 动作按 id 寻址依赖它——§19）")
+    assert.ok(String(toolMsg.content).includes('"id":1'), "id 可读（status 动作按 id 寻址依赖它——§19）")
     assert.ok(!String(toolMsg.content).includes("[object Object]"), "String(raw) 序列化契约成立")
   } finally {
     server.close()
@@ -337,7 +334,7 @@ test("T-E1-loop (§18 code review #1/#3): 真实 agent 循环中 eng-coder 缺�
   }
 })
 
-test("T-E7-resume (§18 code review #2): 审计预算跨 runAgent 段存活（history 载体——同次交付不因 ContinueError 续跑重置机械后备）", async () => {
+slow("T-E7-resume (§18 code review #2): 审计预算跨 runAgent 段存活（history 载体——同次交付不因 ContinueError 续跑重置机械后备）", async () => {
   const { subagentTool, ENG_AUDIT_SPAWN_LIMIT } = await import("../src/agent-tools/subagent.mjs")
   // 模拟已续跑过一次的 eng-coder 上下文：agent.history 数组承载预算（sink.history 跨 resume 复用）
   const history = []
@@ -350,7 +347,7 @@ test("T-E7-resume (§18 code review #2): 审计预算跨 runAgent 段存活（hi
   )
 })
 
-test("T-E3: eng-coder 内部 spawn explore 成功——审计节点同步返回报告；任务书机械追加（父任务书 ∪ 实际触碰文件）", async () => {
+slow("T-E3: eng-coder 内部 spawn explore 成功——审计节点同步返回报告；任务书机械追加（父任务书 ∪ 实际触碰文件）", async () => {
   const bodies = []
   const server = createServer((req, res) => {
     let body = ""
@@ -474,7 +471,7 @@ test("T-A1.2/T-A1.4: 审计预算句（§18.13 D-A1.2——A1/A2 后 A3 前追�
   assert.ok(out.includes("NOT grounds for an out-of-file-list finding"), "既有范围句保留（D-AG3 同源）")
 })
 
-test("T-E4: eng-coder 内部 spawn 非 explore role（plan/eng-coder）→ 工具层拒绝", async () => {
+slow("T-E4: eng-coder 内部 spawn 非 explore role（plan/eng-coder）→ 工具层拒绝", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = engChildCtx(1, process.cwd())
   for (const role of ["plan", "eng-coder", "coder"]) {
@@ -493,7 +490,7 @@ test("T-E4: eng-coder 内部 spawn 非 explore role（plan/eng-coder）→ 工�
   )
 })
 
-test("T-E5: eng-coder 内部 spawn explore 带 async:true → 拒绝（同步强制——回合等审计报告再决策）", async () => {
+slow("T-E5: eng-coder 内部 spawn explore 带 async:true → 拒绝（同步强制——回合等审计报告再决策）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = engChildCtx(1, process.cwd())
   await assert.rejects(
@@ -504,7 +501,7 @@ test("T-E5: eng-coder 内部 spawn explore 带 async:true → 拒绝（同步强
   assert.equal(ctx.agent._engAuditSpawns, undefined, "拒绝的 spawn 不计入审计尝试数")
 })
 
-test("T-E7: 收敛上限机械后备——第 7 次审计 spawn 拒绝（5 轮纪律失效时不静默——错误即 stalled 信号）", async () => {
+slow("T-E7: 收敛上限机械后备——第 7 次审计 spawn 拒绝（5 轮纪律失效时不静默——错误即 stalled 信号）", async () => {
   const { subagentTool, ENG_AUDIT_SPAWN_LIMIT } = await import("../src/agent-tools/subagent.mjs")
   assert.equal(ENG_AUDIT_SPAWN_LIMIT, 6, "预算 = 首审 1 + 修正轮 ≤5 的再审")
   const ctx = engChildCtx(1, process.cwd(), { _engAuditSpawns: ENG_AUDIT_SPAWN_LIMIT })
@@ -515,7 +512,7 @@ test("T-E7: 收敛上限机械后备——第 7 次审计 spawn 拒绝（5 轮�
   )
 })
 
-test("T-E12: 域内写授权——autoApprove=false 会话 spawn eng-coder → 任务域写文件成功、零权限询问（spawn 即授权）", async () => {
+slow("T-E12: 域内写授权——autoApprove=false 会话 spawn eng-coder → 任务域写文件成功、零权限询问（spawn 即授权）", async () => {
   const calls = { n: 0 }
   const server = createServer((req, res) => {
     let body = ""
@@ -554,7 +551,7 @@ test("T-E12: 域内写授权——autoApprove=false 会话 spawn eng-coder → �
   }
 })
 
-test("T-E14: 授权粒度——design-token / planMode 前置门在授权后仍生效（豁免仅限 onPermissionRequest 阶段）", async () => {
+slow("T-E14: 授权粒度——design-token / planMode 前置门在授权后仍生效（豁免仅限 onPermissionRequest 阶段）", async () => {
   const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
   const executed = []
   const writeTool = { name: "write", readonly: false, execute: async () => { executed.push(true); return "ok" } }
@@ -586,7 +583,7 @@ test("T-E14: 授权粒度——design-token / planMode 前置门在授权后仍�
   assert.equal(executed.length, 1, "评审通过后写放行（仅 onPermissionRequest 阶段被豁免）")
 })
 
-test("T-E6: 内部协议闭环 wiring——脚本化 eng-coder runAgent：audit dirty → 自修 → re-audit clean → advisor clean → 报告含轮次与终态", async () => {
+slow("T-E6: 内部协议闭环 wiring——脚本化 eng-coder runAgent：audit dirty → 自修 → re-audit clean → advisor clean → 报告含轮次与终态", async () => {
   const script = [
     { name: "subagent", arguments: { task: "AUDIT-TASK run the divergence audit", role: "explore" } },
     { name: "write", arguments: { path: "impl-x.mjs", content: "v2 fixed" } },
@@ -663,7 +660,7 @@ test("T-E6: 内部协议闭环 wiring——脚本化 eng-coder runAgent：audit 
   }
 })
 
-test("T-E18 (可见性补齐 2026-09-03): eng-coder 子代理内 advisor 长文流转发——runChild onToolPanel 接线 → 顶层 sub:eng-coder#N 频道（kind 原样、无逐 chunk 换行）", async () => {
+slow("T-E18 (可见性补齐 2026-09-03): eng-coder 子代理内 advisor 长文流转发——runChild onToolPanel 接线 → 顶层 sub:eng-coder#N 频道（kind 原样、无逐 chunk 换行）", async () => {
   // 真实 run wiring 测试：eng-coder 子代理执行**真实** code review——advisor.mjs 经
   // ctx.callbacks.onToolPanel("advisor", chunk) 发射（该 callbacks = runChild 传给
   // runAgent 的参数对象——修复前无 onToolPanel 键 → 静默丢弃）。评审尾部标记

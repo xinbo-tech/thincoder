@@ -96,13 +96,17 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
       // when the run didn't speak (abort/finally saves) — hard-writing `false` here would pin
       // the session off and kill the config.json fallback (compat contract, see tests).
       engineering: extra.engineering !== undefined ? extra.engineering : existing.engineering,
-      // Key-presence write (v2 2026-08-25): ?? treated an explicit null (eng(exit) cleared the
-      // token) as "missing" and revived the stale slot value on the next save — a revived token
-      // re-opened the parent write gate. An explicit key always wins; absent key keeps the slot.
+      // Key-presence write (v2 2026-08-25 mechanism, kept under R16 2026-09-06): ?? treated
+      // an explicit null as "missing" and revived the stale slot value on the next save.
+      // R16 clears tokens only by TTL expiry — an expired slot's tokens are dropped at
+      // restore, so the next turn-end agentState carries explicit null and MUST pin that
+      // over the stale slot value (清盘闭环: the slot field is cleaned, not revived until
+      // the next restore-drop cycle). An explicit key always wins; absent key keeps the slot.
       engDesignToken: "engDesignToken" in extra ? extra.engDesignToken : (existing.engDesignToken ?? null),
       // Key-presence write (same v2 semantics as engDesignToken): a save carrying no
-      // engDesignTokens (abort/finally) keeps the slot value; an explicit null (eng exit/re-enter
-      // cleared the Map, or the run had no slots) pins the field null — restore sets NO Map.
+      // engDesignTokens (abort/finally) keeps the slot value; an explicit null (memory-empty
+      // run — fresh session or expired tokens dropped at restore) pins the field null —
+      // restore sets NO Map.
       engDesignTokens: "engDesignTokens" in extra ? extra.engDesignTokens : (existing.engDesignTokens ?? null),
       pendingReminders: existing.pendingReminders ?? [], sessionStart: existing.sessionStart ?? new Date().toISOString(),
       // 2026-09-01 会诊 kimi/qwen 🔴：sessionStart 是 F2 覆盖防护的会话身份——VS Code
@@ -209,8 +213,9 @@ export async function generateTitle(panel, slotOverride) {
       // not the message (runAgent never stamps provider/model onto history entries).
       const title = await generateSessionTitle(firstUser.content, data.activeProvider || undefined)
       if (title) {
-        setSlotTitle(cwd, slot, title)
-        pushSessions(panel)
+        const r = setSlotTitle(cwd, slot, title)
+        if (r.ok) pushSessions(panel)
+        else console.error(`[chat-panel] setSlotTitle failed (${r.reason})`) // §12 F3：自动标题写失败不再静默
       }
     } catch (e) {
       console.error("[chat-panel] generateTitle failed:", e.message)

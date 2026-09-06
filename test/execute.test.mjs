@@ -3,6 +3,7 @@
  * Run: node --test test/execute.test.mjs
  */
 import { describe, it, before, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs"
 import { join } from "node:path"
@@ -116,12 +117,12 @@ describe("execute — error handling and limits", () => {
     assert(out.includes("Error: boom"))
   })
 
-  it("enforces timeout", async () => {
+  slow("enforces timeout", async () => {
     const out = await run("while (true) {}", { timeoutMs: 200 })
     assert(out.includes("Error"))
   })
 
-  it("T14.1.4: timeout error carries the retry guidance (larger timeoutMs up to 600000 / bash 120s)", async () => {
+  slow("T14.1.4: timeout error carries the retry guidance (larger timeoutMs up to 600000 / bash 120s)", async () => {
     const out = await run("while (true) {}", { timeoutMs: 200 })
     assert.ok(out.includes("script timed out after 200ms"), "actual duration preserved: " + out)
     assert.ok(
@@ -130,7 +131,7 @@ describe("execute — error handling and limits", () => {
     )
   })
 
-  it("T14.1.5: success / other-error outputs carry no timeout guidance (append-only, zero drift)", async () => {
+  slow("T14.1.5: success / other-error outputs carry no timeout guidance (append-only, zero drift)", async () => {
     assert.equal(await run('console.log("ok")'), "ok", "success output unchanged")
     const err = await run('throw new Error("boom")')
     assert.ok(err.includes("Error: boom"))

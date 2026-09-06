@@ -91,6 +91,8 @@ const ADVISOR_DESIGN = loadPrompt("advisor-design.md", "advisor-design.md")
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior review output (full text; decision 2026-08-08)
  * @param {string} [reviewType] — "design" for design review, undefined/"code" for code review
+ * @param {Object|null} [rv] — §24 D-24b per-review instance context { round, priorOutput }
+ *   （async advisor——2026-09-06）：优先于全局 _advisorRound/_lastAdvisorOutput（多评审并行隔离）
  * @returns {string} the system prompt
  */
 export /** Append local time so the reviewer knows "now" (same grounding as the agent loop). */
@@ -100,25 +102,37 @@ function withTime(prompt) {
   return prompt + `\n\nCurrent time: ${now.toLocaleString("sv-SE")} (${timeZone}).`
 }
 
-export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
+/** §24 D-24b：本次评审调用的轮次（conv round——同步路径 = 全局已完成数 + 1；
+ *  async 实例 = rv.round 即实例已完轮数 + 1——launch 时解析）。 */
+function convRound(agent, rv) {
+  return rv?.round ?? ((agent._advisorRound || 0) + 1)
+}
+
+/** §24 D-24b：评审实例 prior 读数（rv.priorOutput 显式优先——次回落到存储输出）。 */
+function rvPrior(agent, rv) {
+  if (rv?.priorOutput !== undefined && rv?.priorOutput !== null) return rv.priorOutput
+  return ((agent._advisorRound || 0) > 0 ? agent._lastAdvisorOutput : null)
+}
+
+export function buildAdvisorSystemPrompt(agent, prior, reviewType, rv = null) {
   // Round decision is DETERMINISTIC (decision 2026-08-08): _advisorRound > 0
   // with a stored review output means convergence (round 2+); 0 means round 1.
   // No prior-table parsing, no all-clear phrase matching — the round counter
   // and the stored output are the only inputs. A restarted process has
   // _advisorRound 0 → conservative full re-review.
-  const hasPrior = (agent._advisorRound || 0) > 0 && (prior ?? agent._lastAdvisorOutput)
+  // §24 D-24b：async 实例经 rv 显式携带（并发隔离——不读全局）；rv.round =
+  // 本次调用轮次（实例已完轮数 + 1——launch 解析）；rv.priorOutput 仅 2+ 轮携带。
+  const round = convRound(agent, rv)
+  const effectivePrior = prior ?? rvPrior(agent, rv)
+  const hasPrior = round >= 2 && !!effectivePrior
   // Design review: round 1 uses the dedicated design-review prompt (full scope +
   // approval token); rounds 2+ converge like code reviews (verify agent fix claims).
   if (reviewType === "design") {
-    if (!hasPrior) {
-      return ADVISOR_DESIGN
-    }
-    const round = (agent._advisorRound || 0) + 1
+    if (!hasPrior) return ADVISOR_DESIGN
     if (round === 2) return ADVISOR_ROUND2
     return ADVISOR_ROUND3
   }
   if (!hasPrior) return ADVISOR_ROUND1
-  const round = (agent._advisorRound || 0) + 1
   if (round === 2) return ADVISOR_ROUND2
   return ADVISOR_ROUND3
 }
@@ -145,12 +159,10 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
  *   review exists at all (caller misuse; the response-table extraction would
  *   otherwise scan history from index 0 and could match an unrelated stale table)
  */
-export function buildAdvisorFollowUp(agent, prior, scopeFiles = null) {
-  // Convergence follow-up REQUIRES a prior review record — the full output of
-  // the last review, injected VERBATIM (decision 2026-08-08: the model
-  // understands the review output; no table/header/phrase parsing). The caller
-  // usually passes it; fall back to the stored agent._lastAdvisorOutput.
-  const p = prior ?? agent._lastAdvisorOutput
+export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, rv = null) {
+  // §24 D-24b：async 实例经 rv 显式携带（并发隔离——不读全局）；轮次 = 本次调用轮次。
+  const round = convRound(agent, rv)
+  const p = prior ?? rvPrior(agent, rv)
   if (!p) {
     // Plain "System reminder:" prefix (no brackets) — same convention as the
     // round-1 path (some OpenAI-compatible servers parse '['-prefixed content
@@ -160,14 +172,13 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null) {
   // Convergence semantics require round >= 2 (round 1 is the full review, not
   // verification). A direct caller with _advisorRound 0 would otherwise get a
   // meaningless "Round 1 — Strict Verification".
-  if ((agent._advisorRound || 0) < 1) {
+  if (round < 2) {
     return "System reminder: convergence follow-up requested at round 1 — a full review is already in progress; no prior verification exists yet."
   }
   const noResponseFallback = scopeFiles?.length
     ? "(Agent did not provide a response table — perform a fresh review of: " + scopeFiles.slice(0, 10).join(", ") + ")"
     : "(Agent did not provide a response table — perform a fresh full review; the review surface is unknown, ask the user for the file list)"
   const response = extractAgentResponseTable(agent.history) || noResponseFallback
-  const round = (agent._advisorRound || 0) + 1
   return buildConvergenceBody(p, response, round, scopeFiles)
 }
 
@@ -198,21 +209,28 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null) {
  * @param {string|null} [designToken] — design-review approval token (design only)
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review (passed through to buildAdvisorUserMessage)
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review
+ * @param {string|null} [priorParam] — sync 路径的 prior 显式覆盖（direct callers）
+ * @param {Object|null} [rv] — §24 D-24b 实例上下文 { round, priorOutput }（async advisor——
+ *   2026-09-06——并发隔离：round = 本次调用轮次 = 实例已完轮数 + 1；rv 给定 → 轮次/prior
+ *   全从 rv 解析（不读全局 _advisorRound/_lastAdvisorOutput、不跑 _mutatedThisRun 重置）
  */
-export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null) {
+export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, rv = null) {
   // Deterministic convergence state (decision 2026-08-08): round 2+ requires
   // _advisorRound > 0 AND a stored prior review output. No history parsing.
   // priorParam (direct callers) wins over the stored output — same derivation
   // as buildAdvisorSystemPrompt (single source of truth for round semantics).
-  const prior = (agent._advisorRound || 0) > 0 ? (priorParam ?? agent._lastAdvisorOutput) : null
+  const prior = rv
+    ? (rv.round >= 2 ? rv.priorOutput : null)
+    : (agent._advisorRound || 0) > 0 ? (priorParam ?? agent._lastAdvisorOutput) : null
+  const isRound1 = rv ? rv.round <= 1 : (agent._advisorRound || 0) === 0
 
   // Design review round 1: the dedicated full-scope review with the approval
   // token (an independent gate — it runs even when a prior table exists, e.g.
   // after a failed design review). Fresh session.
-  if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
+  if (reviewType === "design" && isRound1) {
     return [
-      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
-      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths)) },
+      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
+      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, rv)) },
     ]
   }
 
@@ -237,16 +255,17 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // model output (phrases/table headers drift; three rounds of false reports
   // proved it). Either way the message is a fresh full review (no issue list
   // exists without a prior table) — only the round counter differs.
-  if (!prior || (agent._advisorRound || 0) === 0) {
-    if (!(agent._mutatedThisRun ?? false)) {
+  // §24 D-24b：async（rv 给定）不经此重置段——实例轮次由 _advisorRuns 记录管理。
+  if (!prior || isRound1) {
+    if (!rv && !(agent._mutatedThisRun ?? false)) {
       // New review cycle (first review, all-clear, or no code changes): reset
       // the round so the cycle gets its own 5-round budget.
       agent._advisorRound = 0
     }
     // Mutations exist → KEEP the round (cap keeps advancing through retries).
-    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths)
+    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, rv)
     return [
-      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
+      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
       {
         role: "user",
         // NOTE (2026-08-06): the leading prefix is a PLAIN "System reminder:",
@@ -274,7 +293,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // review surface.
   const scopeFiles = resolveScopeFiles(agent, paths)
   return [
-    { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
-    { role: "user", content: escapeLiteralEscapes(buildAdvisorFollowUp(agent, prior, scopeFiles)) },
+    { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
+    { role: "user", content: escapeLiteralEscapes(buildAdvisorFollowUp(agent, prior, scopeFiles, rv)) },
   ]
 }

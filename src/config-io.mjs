@@ -6,12 +6,13 @@
  *
  * Pure Node — no `vscode` import — so unit tests can run outside the extension host.
  * Split for the 500-line limit: preset table → config-presets.mjs (zero deps),
- * legacy migration core → config-migrate.mjs. Both are re-exported here so existing
- * `from "../config-io.mjs"` import sites keep working.
+ * legacy migration core → config-migrate.mjs, MCP servers → config-mcp.mjs.
+ * All three are re-exported here so existing `from "../config-io.mjs"` import sites
+ * keep working.
  * The VS Code-specific one-time migration glue lives in extension/migrate-settings.mjs.
  */
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
@@ -29,11 +30,27 @@ export function _setConfigPathForTest(p) { _pathOverride = p }
 export function _configPath() { return _pathOverride ?? configPath }
 
 // ─── Raw read / write (CLI persistRaw / saveConfig semantics) ───
+// R10 F5b（MULTI-INSTANCE-COLLAB.md D-F5b）：loadRaw 读盘时按路径记 stat 元组
+// （mtimeMs + size 双键——同 tick 快写 mtime 实测可同，size 兜底）作链基线；saveRaw
+// 写前重 stat 不符 → 放弃 {ok:false, reason:"mtime-conflict"} + .bak-{ts} 轮转保现场
+// （副本——磁盘保留他端内容；调用方提示重试——决策① A 不自动合并）。
+const readMtimes = new Map() // path → { mtimeMs, size } | null（缺失）
+
+/** F5b 冲突提示文案（D-F5b 同型——调用方展示/抛出） */
+export const CONFIG_CONFLICT_HINT = "config changed on disk concurrently — retry"
+
+function statTupleOf(path) {
+  try {
+    const s = statSync(path)
+    return { mtimeMs: s.mtimeMs, size: s.size }
+  } catch { return null }
+}
 
 /** Read the raw config object ({} when missing). Throws on invalid JSON — same as CLI loadConfig. */
 export function loadRaw() {
   const path = _configPath()
-  if (!existsSync(path)) return {}
+  if (!existsSync(path)) { readMtimes.set(path, null); return {} }
+  readMtimes.set(path, statTupleOf(path)) // stat-then-read 记基线（失败方向安全——防漏判）
   let raw
   try {
     raw = JSON.parse(readFileSync(path, "utf8"))
@@ -44,20 +61,37 @@ export function loadRaw() {
   return raw
 }
 
-/** Write the raw config object. Injects $schema, 0600 perms, trailing newline — same as CLI saveConfig. */
+/** Write the raw config object ($schema + 0600 + trailing newline). F5b 门控：磁盘与本链
+ *  读盘基线不符（他端改过/读时缺失现已存在）→ 放弃 + 冲突枚举 + .bak 轮转；读时在→现已
+ *  缺失 = 他端显式删除 → 写回重建不算覆盖。无并发照常写（undefined——调用方零变化）。 */
 export function saveRaw(raw) {
   const path = _configPath()
   mkdirSync(dirname(path), { recursive: true })
+  if (readMtimes.has(path)) {
+    const t0 = readMtimes.get(path)
+    const now = statTupleOf(path)
+    const same = (t0 === null && now === null) || (t0 !== null && now !== null && t0.mtimeMs === now.mtimeMs && t0.size === now.size)
+    if (!same && !(t0 !== null && now === null)) {
+      try { if (now !== null) copyFileSync(path, `${path}.bak-${Date.now()}`) } catch { /* best-effort 轮转 */ }
+      return { ok: false, reason: "mtime-conflict" }
+    }
+  }
   raw.$schema = "https://thincoder.dev/schemas/config.json"
   writeFileSync(path, JSON.stringify(raw, null, 2) + "\n", { encoding: "utf8", mode: 0o600 })
   try { chmodSync(path, 0o600) } catch { /* best-effort on Windows */ }
+  readMtimes.set(path, statTupleOf(path)) // 自写后刷新基线（防自写误判）
 }
 
-/** Read → mutate → write (mirrors CLI tui persistRaw). */
+/** Read → mutate → write（CLI tui persistRaw 镜像）。saveRaw 结果透传（冲突 → 提示）。 */
 export function persistRaw(mutate) {
   const raw = loadRaw()
   mutate(raw)
-  saveRaw(raw)
+  return saveRaw(raw)
+}
+
+/** 冲突判定收口：persistRaw 结果 → CONFIG_CONFLICT_HINT（同型提示串）或 null。 */
+export function conflictError(result) {
+  return result?.reason === "mtime-conflict" ? CONFIG_CONFLICT_HINT : null
 }
 
 // ─── Providers resolution (CLI loadConfig subset) ───
@@ -163,30 +197,31 @@ export function providerFromConfig(name) {
   return provider
 }
 
-/** Set a provider's key in config.json (CLI setProviderKey semantics — whole providers[] rewritten). */
+/** Set a provider's key in config.json (CLI setProviderKey semantics — whole providers[] rewritten).
+ *  F5b：冲突时返回 CONFIG_CONFLICT_HINT（调用方提示重试）；成功 null。 */
 export function setProviderKey(name, key) {
-  persistRaw((raw) => {
+  const r = persistRaw((raw) => {
     raw.providers = Array.isArray(raw.providers) ? raw.providers : []
     const entry = raw.providers.find((p) => p?.name === name)
     if (entry) entry.apiKey = key
   })
+  return conflictError(r)
 }
 
-/** Remove a provider's key (keep the provider entry). */
+/** Remove a provider's key (keep the provider entry). F5b 冲突提示同 setProviderKey。 */
 export function removeProviderKeyFromConfig(name) {
-  persistRaw((raw) => {
+  const r = persistRaw((raw) => {
     const entry = Array.isArray(raw.providers) ? raw.providers.find((p) => p?.name === name) : null
     if (entry) delete entry.apiKey
   })
+  return conflictError(r)
 }
 
-/**
- * Persist a model selection (CLI selectModel semantics): provider.model becomes the selected
- * model; activeModel records the override only when it differs from the provider default
- * (null → omit, so the CLI resume sees the same pointer).
- */
+/** Persist a model selection (CLI selectModel semantics): provider.model becomes the selected
+ *  model; activeModel records the override only when it differs from the provider default
+ *  (null → omit, so the CLI resume sees the same pointer). F5b 冲突提示同 setProviderKey。 */
 export function selectProviderModel(name, model) {
-  persistRaw((raw) => {
+  const r = persistRaw((raw) => {
     raw.providers = Array.isArray(raw.providers) ? raw.providers : []
     const entry = raw.providers.find((p) => p?.name === name)
     if (!entry) return
@@ -197,6 +232,7 @@ export function selectProviderModel(name, model) {
     entry.model = model
     raw.activeProvider = name
   })
+  return conflictError(r)
 }
 
 /** List provider names present in config.json ([] when none). */
@@ -229,6 +265,10 @@ export const AGENT_DEFAULTS = {
   consultTimeoutMs: 600000,
   advisor: { guard: false }, // timeoutMs 面板直传；运行默认 600_000（advisor/run.mjs）
   consultModels: [], // {provider, model, effort?}[]——≤5
+  // §24 D-24a（R14——2026-09-06）：async 池按角色域容量——agent.poolLimits =
+  // { engCoder, other }——默认 eng-coder 四路、其他四路（用户裁定）；运行期每次入池
+  // 判定时读（scheduler.effectivePoolLimits——非法回退默认 4/4）。
+  poolLimits: { engCoder: 4, other: 4 },
 }
 
 /** Trace 段默认（对齐 CLI DEFAULTS.traces——2026-09-05 隐私裁定 enabled:false）——
@@ -255,13 +295,14 @@ export function loadAgentSettings() {
     consultTimeoutMs: a?.consultTimeoutMs ?? d.consultTimeoutMs, // wall-clock watchdog per consultant (10 min)
     advisor: a?.advisor ?? d.advisor, // timeoutMs passes through panel saves; runtime default 600_000 (advisor/run.mjs)
     consultModels: Array.isArray(a?.consultModels) ? a.consultModels : d.consultModels,
+    poolLimits: a?.poolLimits ?? d.poolLimits, // §24 D-24a: async pool limits per role domain（校验在运行期读点）
   }
 }
 
 /** Persist agent.* settings (merge; undefined/empty deletes the key — compactThreshold '' = auto).
- *  Empty subagentModels object deletes the whole key (no leftover "subagentModels": {} in config). */
+ *  Empty subagentModels object deletes the whole key. F5b 冲突提示同 setProviderKey。 */
 export function saveAgentSettings(patch) {
-  persistRaw((raw) => {
+  const r = persistRaw((raw) => {
     raw.agent = raw.agent && typeof raw.agent === "object" ? raw.agent : {}
     for (const [k, v] of Object.entries(patch ?? {})) {
       if (v === undefined || v === null || v === "") delete raw.agent[k]
@@ -269,6 +310,7 @@ export function saveAgentSettings(patch) {
       else raw.agent[k] = v
     }
   })
+  return conflictError(r)
 }
 
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
@@ -306,6 +348,16 @@ export function saveAgentSettingsFromPanel(payload) {
         ...(typeof m.effort === "string" && m.effort.trim() ? { effort: m.effort.trim() } : { effort: null }),
       }))
     patch.consultModels = clean.length > 0 ? clean : undefined
+  }
+  // §24 D-24a（R14）：并发池分域容量（面板写同一键）。逐键正整数 ≥1；非法键丢弃
+  // （空对象/全非法 → 删整键——运行期回退默认 4/4 + 文案）。
+  if ("poolLimits" in payload) {
+    const pl = {}
+    for (const key of ["engCoder", "other"]) {
+      const v = payload.poolLimits?.[key]
+      if (Number.isInteger(v) && v >= 1) pl[key] = v
+    }
+    patch.poolLimits = Object.keys(pl).length > 0 ? pl : undefined
   }
   if (payload.advisor !== undefined) {
     // Merge semantics (GitHub #3, 2026-08-29): the panel payload only carries the fields
@@ -389,78 +441,21 @@ export function shellCandidates() {
   return _shellCandidatesCache
 }
 
-/** Persist shell setting from the panel. value: string path/command, '' or null = system default. */
+/** Persist shell setting from the panel. value: string path/command, '' or null = system default.
+ *  F5b 冲突提示同 setProviderKey。 */
 export function saveShellSettingsFromPanel(value) {
   const v = typeof value === "string" ? value.trim() : ""
-  persistRaw((raw) => {
+  const r = persistRaw((raw) => {
     if (!v) delete raw.shell
     else raw.shell = v
   })
+  return conflictError(r)
 }
 
 // ─── MCP servers (shared config.json mcp.servers[] — CLI parity) ───
-
-/** Load MCP server configs: array of { name, command?, args?, env?, url?, wsUrl?, headers? }. */
-export function loadMcpServers() {
-  const raw = loadRaw()
-  const servers = raw.mcp?.servers
-  return Array.isArray(servers) ? servers.filter((s) => s && typeof s === "object" && s.name) : []
-}
-
-/** Add an MCP server entry. Rejects duplicates (CLI /mcp parity). Returns error string or null. */
-export function addMcpServer(name, config) {
-  const servers = loadMcpServers()
-  if (servers.some((s) => s.name === name)) return `MCP server "${name}" already exists`
-  const entry = { name }
-  if (config.url) { entry.url = config.url; if (config.token) entry.token = config.token; if (config.headers) entry.headers = config.headers }
-  else if (config.wsUrl) { entry.wsUrl = config.wsUrl; if (config.token) entry.token = config.token; if (config.headers) entry.headers = config.headers }
-  else { entry.command = config.command; if (config.args) entry.args = config.args; if (config.env) entry.env = config.env }
-  persistRaw((raw) => {
-    raw.mcp = raw.mcp && typeof raw.mcp === "object" ? raw.mcp : {}
-    raw.mcp.servers = Array.isArray(raw.mcp.servers) ? raw.mcp.servers : []
-    raw.mcp.servers.push(entry)
-  })
-  return null
-}
-
-/** Update an MCP server entry in place (F5/MCP.md §4 面板 [Edit]——CLI /mcp edit parity).
- *  Replaces the entry at its index (array order preserved); name is the immutable key.
- *  Returns error string or null. */
-export function updateMcpServer(name, config) {
-  const servers = loadMcpServers()
-  const idx = servers.findIndex((s) => s.name === name)
-  if (idx === -1) return `No MCP server named "${name}"`
-  // F3 空输入保留旧值（面板惯例适配）：transport 字段被清空时回落到既有条目的类型
-  // 与值——编辑表单只改 headers/token 时不得产出退化的 { name } 条目。
-  const prev = servers[idx]
-  const cfg = { ...config }
-  if (!cfg.url && !cfg.wsUrl && !cfg.command) {
-    if (prev.wsUrl) cfg.wsUrl = prev.wsUrl
-    else if (prev.url) cfg.url = prev.url
-    else cfg.command = prev.command
-  }
-  const entry = { name }
-  if (cfg.url) { entry.url = cfg.url; if (cfg.token) entry.token = cfg.token; if (cfg.headers) entry.headers = cfg.headers }
-  else if (cfg.wsUrl) { entry.wsUrl = cfg.wsUrl; if (cfg.token) entry.token = cfg.token; if (cfg.headers) entry.headers = cfg.headers }
-  else { entry.command = cfg.command; if (cfg.args) entry.args = cfg.args; if (cfg.env) entry.env = cfg.env }
-  persistRaw((raw) => {
-    raw.mcp = raw.mcp && typeof raw.mcp === "object" ? raw.mcp : {}
-    raw.mcp.servers = Array.isArray(raw.mcp.servers) ? raw.mcp.servers : []
-    raw.mcp.servers[idx] = entry
-  })
-  return null
-}
-
-/** Remove an MCP server entry by name. Returns error string or null. */
-export function removeMcpServer(name) {
-  const servers = loadMcpServers()
-  if (!servers.some((s) => s.name === name)) return `No MCP server named "${name}"`
-  persistRaw((raw) => {
-    raw.mcp = raw.mcp && typeof raw.mcp === "object" ? raw.mcp : {}
-    raw.mcp.servers = (raw.mcp.servers ?? []).filter((s) => s?.name !== name)
-  })
-  return null
-}
+// 2026-09-06 500 行硬限拆分：MCP 段迁 config-mcp.mjs（config-presets/config-migrate 同款
+// hub 模式——import 面不变）；F5b 冲突提示经 conflictError 透传（调用方同型提示）。
+export { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "./config-mcp.mjs"
 
 /** Embedding config from config.json (CLI: config.embedding { baseURL, model, apiKey }). */
 export function loadEmbeddingConfig() {
@@ -468,9 +463,9 @@ export function loadEmbeddingConfig() {
   return emb && typeof emb === "object" ? emb : null
 }
 
-/** Persist embedding fields into config.json (merge, drop empties). */
+/** Persist embedding fields into config.json (merge, drop empties). F5b 冲突提示同 setProviderKey。 */
 export function saveEmbeddingConfig(patch) {
-  persistRaw((raw) => {
+  const r = persistRaw((raw) => {
     const emb = raw.embedding && typeof raw.embedding === "object" ? raw.embedding : {}
     for (const [k, v] of Object.entries(patch || {})) {
       if (v == null || v === "") delete emb[k]
@@ -479,4 +474,5 @@ export function saveEmbeddingConfig(patch) {
     if (Object.keys(emb).length) raw.embedding = emb
     else delete raw.embedding
   })
+  return conflictError(r)
 }

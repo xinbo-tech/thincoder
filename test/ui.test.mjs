@@ -199,12 +199,12 @@ describe("buildHistoryMessage (lazy-load dispatch)", () => {
   })
 })
 
-// ─── subagentChunk: one activity block per #subId channel (ARCHITECTURE.md 2026-08-22) ───
-// Loads the real index.html body + chat.js (search/session-draft harness): subagentChunk
-// keys its blocks by the toolPanel message NAME — "sub:eng-coder#1" and "sub:eng-coder#2"
-// must each open their own block (the old "sub:eng-coder" shared name collapsed every
-// invocation into the first block).
-describe("subagent activity stream — one block per #subId channel", () => {
+// ─── subagentChunk: one activity block per #subId channel (R22 — blocks live in
+// the BOTTOM activity panel #subagent-activity, not the message flow) ───
+// Loads the real index.html body + chat.js: subagentChunk keys its blocks by the
+// toolPanel message NAME — "sub:eng-coder#1" and "sub:eng-coder#2" must each open
+// their own block in the panel.
+describe("subagent activity stream — one block per #subId channel (R22 bottom panel)", () => {
   before(async () => {
     const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
     const body = html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? ""
@@ -213,38 +213,47 @@ describe("subagent activity stream — one block per #subId channel", () => {
     // module top — stub it so the module initializes with the real body in place.
     globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
     await import("../webview/chat.js")
+    const { setActivityTickDisabled } = await import("../webview/activity.js")
+    setActivityTickDisabled(true) // deterministic DOM tests — ticks driven via activityTick()
   })
 
   const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
 
-  it("sub:eng-coder#1 and sub:eng-coder#2 each get their own block, titled by label", () => {
+  it("sub:eng-coder#1 and sub:eng-coder#2 each get their own panel block, titled by label", () => {
     post({ type: "toolPanel", name: "sub:eng-coder#1", kind: "text", text: "child one says hi" })
     post({ type: "toolPanel", name: "sub:eng-coder#2", kind: "text", text: "child two says yo" })
-    const blocks = document.querySelectorAll("#messages .sub-block")
+    const panel = document.getElementById("subagent-activity")
+    const blocks = panel.querySelectorAll(".sub-block")
     assert.equal(blocks.length, 2, "two independent blocks (one per #subId channel)")
+    assert.equal(panel.style.display, "block", "有活动块 → 面板显示")
+    assert.equal(document.querySelectorAll("#messages .sub-block").length, 0, "活动块不在 #messages（R22a——活动区与消息流分离）")
+    const names = [...blocks].map((b) => b.dataset.subname)
+    assert.deepEqual(names, ["sub:eng-coder#1", "sub:eng-coder#2"], "块键 = 频道名")
     const titles = [...blocks].map((b) => b.querySelector("summary").textContent)
-    assert.deepEqual(titles, ["eng-coder#1", "eng-coder#2"], "titles show the per-call label")
-    assert.match(blocks[0].textContent, /child one says hi/, "chunk landed in block #1")
-    assert.match(blocks[1].textContent, /child two says yo/, "chunk landed in block #2")
+    assert.ok(titles[0].includes("eng-coder#1"), "块头含 per-call label（title: " + titles[0] + "）")
+    assert.ok(titles[1].includes("eng-coder#2"), "块头含 per-call label")
+    assert.match(blocks[0].querySelector(".advisor-content").textContent, /child one says hi/, "chunk landed in block #1")
+    assert.match(blocks[1].querySelector(".advisor-content").textContent, /child two says yo/, "chunk landed in block #2")
   })
 
   it("later chunks reuse their own block — no third block, content stays separate", () => {
     post({ type: "toolPanel", name: "sub:eng-coder#1", kind: "tool", text: "read x" })
-    const blocks = document.querySelectorAll("#messages .sub-block")
+    const blocks = document.getElementById("subagent-activity").querySelectorAll(".sub-block")
     assert.equal(blocks.length, 2, "#1 reuse does not create a new block (_subBlocks keyed by name)")
-    assert.match(blocks[0].textContent, /read x/, "#1's chunk lands in block #1")
-    assert.doesNotMatch(blocks[1].textContent, /read x/, "#2's block untouched")
+    assert.match(blocks[0].querySelector(".advisor-content").textContent, /read x/, "#1's chunk lands in block #1")
+    assert.doesNotMatch(blocks[1].querySelector(".advisor-content").textContent, /read x/, "#2's block untouched")
   })
 })
 
-// ─── handleSubagentMessage: 完成态即折叠活动区块（2026-09-02 修复轮，CLI ⟦ev⟧done 对齐）───
-// async 子代理 settle 即发 onSubagent({status:"done"})（subagent.mjs runChild）——webview
-// 收到 done/error 即折叠对应活动区块（保留可展开、不移除；此前只有 consult 区块在终态
-// 折叠，subagent 区块会保持"运行中"外观直到回合结束）。全量跑时复用上一 describe 已加载
-// 的 index.html body + chat.js（模块缓存，不重复执行；不重置 body——state.js 的
+// ─── handleSubagentMessage: 终态即冻结入流（R22——块从活动面板移除、以冻结折叠块
+// 插入 #messages 尾：身份头 [✓ key · … · done Ns] + 内容保留可展开 + preview ≤8 行；
+// escalate 无 preview）───
+// async 子代理 settle 即发 onSubagent({status:"done"})（subagent.mjs runChild）——
+// webview 收到 done/error 即冻结对应活动块。全量跑时复用上一 describe 已加载的
+// index.html body + chat.js（模块缓存，不重复执行；不重置 body——state.js 的
 // ctx.messagesEl 是导入时捕获的旧元素引用）；name-pattern 单独跑时本 describe 自备
 // body + bridge stub（2026-09-03 补强——见 before 内守卫）。
-describe("subagent 完成态 — done/error 通知即折叠活动区块", () => {
+describe("subagent 终态 — done/error 通知即冻结入流（R22：面板移除 → #messages 尾冻结块）", () => {
   before(async () => {
     // Self-sufficient under --test-name-pattern (2026-09-03 retrofit — same guard as the
     // advisor-stream describe below): chat.js's state.js calls acquireVsCodeApi() at module
@@ -256,40 +265,65 @@ describe("subagent 完成态 — done/error 通知即折叠活动区块", () => 
       globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
     }
     await import("../webview/chat.js") // module cache — no re-init, no body reset
+    const { setActivityTickDisabled } = await import("../webview/activity.js")
+    setActivityTickDisabled(true)
   })
 
   const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
-  const findBlock = (label) =>
-    [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent === label)
+  // 活动块在面板、冻结块在 #messages —— 同一元素跨容器移动（data-subname 键不变）
+  const findBlock = (subname) =>
+    [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]
+      .find((b) => b.dataset.subname === subname)
 
-  it("done 通知 → 该子代理活动区块折叠（保留可展开，不移除）", () => {
-    post({ type: "toolPanel", name: "sub:eng-coder#3", kind: "text", text: "working…" })
-    const block = findBlock("eng-coder#3")
+  it("done 通知 → 活动面板移除该块 + 冻结块插入 #messages 尾（✓ 身份头——保留可展开——非移除）", () => {
+    post({ type: "subagent", id: 3, role: "eng-coder", status: "started", startedAt: Date.now() - 2000, model: "glm-5.3", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#3", kind: "text", text: "working…\nfinal report line" })
+    let block = findBlock("sub:eng-coder#3")
     assert.ok(block, "活动区块已创建")
+    assert.equal(block.parentElement?.id, "subagent-activity", "运行中块在活动面板")
     assert.equal(block.open, true, "运行中区块展开")
-    post({ type: "subagent", id: 3, role: "eng-coder", status: "done" })
-    assert.equal(block.open, false, "done 即折叠（完成即冻结）")
-    assert.ok(findBlock("eng-coder#3"), "区块保留在会话流（可重新展开——非移除）")
+    post({ type: "subagent", id: 3, role: "eng-coder", status: "done", turn: 2, maxTurns: 100 })
+    assert.equal(block.open, false, "done 即折叠（冻结形态）")
+    assert.equal(block.parentElement?.id, "messages", "冻结块已移入消息流")
+    const msgChildren = [...block.parentElement.children]
+    assert.equal(msgChildren[msgChildren.length - 1], block.nextElementSibling, "冻结块 + 其 preview 位于 #messages 尾")
+    assert.equal(msgChildren[msgChildren.length - 2], block, "冻结块本身在尾部倒数第二（preview 紧随）")
+    assert.ok(block.classList.contains("sub-frozen"), "冻结相位 class")
+    assert.match(block.querySelector(".sub-hdr").textContent, /✓ eng-coder#3 · async · glm-5.3 · done \d+s · turn 2\/100/, "冻结身份头 [✓ key · async · model · done Ns · turn n/m]（hdr: " + block.querySelector(".sub-hdr").textContent + "）")
+    assert.match(block.querySelector(".advisor-content").textContent, /final report line/, "内容保留可展开")
+    assert.equal(document.getElementById("subagent-activity").querySelectorAll('.sub-block[data-subname="sub:eng-coder#3"]').length, 0, "该块已从活动面板移除（腾给新任务）")
+    const preview = block.nextElementSibling
+    assert.ok(preview?.classList.contains("sub-report-preview"), "冻结块后落 report preview（dim ≤8 行）")
+    assert.ok(block.textContent.length > 0, "块仍在 DOM（非移除——可重开阅读）")
+    // 残留的下一测试隔离：块已在 #messages——作为历史保留（既有语义——不删）
   })
 
-  it("error 终态同样折叠；started 不折叠", () => {
+  it("error 终态同样冻结；started 不冻结", () => {
+    post({ type: "subagent", id: 4, role: "eng-coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
     post({ type: "toolPanel", name: "sub:eng-coder#4", kind: "text", text: "risky…" })
-    const errBlock = findBlock("eng-coder#4")
+    const errBlock = findBlock("sub:eng-coder#4")
     post({ type: "subagent", id: 4, role: "eng-coder", status: "error", error: "boom" })
+    assert.equal(errBlock.parentElement?.id, "messages", "error 终态冻结入流")
     assert.equal(errBlock.open, false, "error 终态折叠")
+    assert.match(errBlock.querySelector(".sub-hdr").textContent, /error/, "错误终态头部标注 error")
 
+    post({ type: "subagent", id: 5, role: "eng-coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
     post({ type: "toolPanel", name: "sub:eng-coder#5", kind: "text", text: "live…" })
-    const liveBlock = findBlock("eng-coder#5")
-    post({ type: "subagent", id: 5, role: "eng-coder", status: "started" })
+    const liveBlock = findBlock("sub:eng-coder#5")
+    post({ type: "subagent", id: 5, role: "eng-coder", status: "started" }) // 重复 started 不终态
     assert.equal(liveBlock.open, true, "started 不折叠")
+    assert.equal(liveBlock.parentElement?.id, "subagent-activity", "started 块留在活动面板")
   })
 
-  it("escalate done（区块键含 model tag）→ 同款折叠", () => {
+  it("escalate done（块键含 model tag）→ 同款冻结——无 preview（CLI parity——评审 #4 锁）", () => {
+    post({ type: "subagent", id: 6, role: "escalate", status: "started", startedAt: Date.now(), model: "glm-5.2" })
     post({ type: "toolPanel", name: "sub:escalate glm-5.2 #6", kind: "text", text: "surgery…" })
-    const block = [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent === "escalate glm-5.2 #6")
+    const block = findBlock("sub:escalate glm-5.2 #6")
     assert.ok(block, "escalate 区块已创建")
     post({ type: "subagent", id: 6, role: "escalate", status: "done", model: "glm-5.2" })
-    assert.equal(block.open, false, "escalate 终态同款折叠（键含 model tag）")
+    assert.equal(block.parentElement?.id, "messages", "escalate 终态冻结入流（键含 model tag）")
+    assert.equal(block.open, false, "escalate 终态同款折叠")
+    assert.ok(block.nextElementSibling?.classList?.contains("sub-report-preview") !== true, "escalate 冻结块无 preview（legacy surface）")
   })
 })
 
@@ -313,8 +347,9 @@ describe("eng-coder 子代理内 advisor 流渲染", () => {
   })
 
   const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
-  const findBlock = (label) =>
-    [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent === label)
+  const findBlock = (subname) =>
+    [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]
+      .find((b) => b.dataset.subname === subname)
 
   it("advisor 形态流进入子代理块——start 空文本 no-op、同 kind text 合并、tool 行独立、长文完整", () => {
     const name = "sub:eng-coder#7"
@@ -323,9 +358,9 @@ describe("eng-coder 子代理内 advisor 流渲染", () => {
     post({ type: "toolPanel", name, kind: "text", text: "ADVISOR REVIEW round one — " })
     post({ type: "toolPanel", name, kind: "text", text: "long form conclusion VERDICT-MARKER-x7k2" })
     post({ type: "toolPanel", name, kind: "tool", text: "→ read impl-x.mjs" })
-    const block = findBlock("eng-coder#7")
+    const block = findBlock(name)
     assert.ok(block, "start chunk 即建子代理块（无空 start 元素）")
-    assert.equal(block.querySelector("summary").textContent, "eng-coder#7", "标题 = label（去 sub: 前缀）")
+    assert.ok(block.querySelector("summary").textContent.includes("eng-coder#7"), "块头含 label（去 sub: 前缀）")
     const content = block.querySelector(".advisor-content")
     const texts = [...content.querySelectorAll(".advisor-text")].map((el) => el.textContent)
     assert.deepEqual(texts, [
@@ -341,9 +376,9 @@ describe("eng-coder 子代理内 advisor 流渲染", () => {
 
 
 // ─── §19.5 控制面 UI：⏹ 仅 running + ⏹ 点击 cancel 消息 + ⟦ev⟧stopped 冻结 + 嵌套子标 ───
-// （AGENT-LOOP.md §19.5 D-M7/D-M8——T-M22/T-M23/T-M24/T-M25 webview 断言。置于文件尾：
-// chat.js 已由前序 describe 导入——window._vscode 即其捕获的 bridge 对象——直接 patch 其
-// postMessage 捕获 ⏹ 点击消息（不经自己 import——无首序/残留时序问题）。
+// （AGENT-LOOP.md §19.5 D-M7/D-M8——T-M22/T-M23/T-M24/T-M25 webview 断言 + R22 冻结
+// 入流形态。置于文件尾：chat.js 已由前序 describe 导入——window._vscode 即其捕获的
+// bridge 对象——直接 patch 其 postMessage 捕获 ⏹ 点击消息。
 describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻结 + 嵌套子标）", () => {
   before(() => {
     // 前序 describe 已确保 body + chat.js 就位——window._vscode 即 state.js 持有的 bridge
@@ -356,7 +391,8 @@ describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻�
   const posts = []
   const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
   const blockById = (id) =>
-    [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent.includes(`#${id}`))
+    [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]
+      .find((b) => b.dataset.subid === String(id))
 
   it("T-M23: ⏹ 仅 running 且仅池条目（async spawn——pool 标记）——started 后块标题行出现 ⏹；done/error/settled 冻结后消失（不留残）", () => {
     // 同步（阻塞）spawn 形态的 started（无 pool）→ 块不带 ⏹（cancel 路由只认池——无效
@@ -364,38 +400,43 @@ describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻�
     post({ type: "subagent", id: 30, role: "explore", status: "started", model: "m" })
     post({ type: "toolPanel", name: "sub:explore#30", kind: "text", text: "sync child…" })
     const syncBlock = blockById(30)
-    assert.ok(syncBlock, "同步 spawn 活动块照常创建")
+    assert.ok(syncBlock, "同步 spawn 活动块照常创建（首 chunk）")
     assert.ok(!syncBlock.querySelector(".sub-stop-btn"), "同步 spawn 块不挂 ⏹（非池条目——点击无处可达）")
-    // async（池条目）started → ⏹ 装上（行态 started = running）
+    // async（池条目）started → 块即建 + ⏹ 装上（行态 started = running——D-M7）
     post({ type: "subagent", id: 31, role: "eng-coder", status: "started", model: "m", pool: true })
-    post({ type: "toolPanel", name: "sub:eng-coder#31", kind: "text", text: "working…" })
     const live = blockById(31)
-    assert.ok(live, "活动块已创建")
+    assert.ok(live, "池条目 started 即建活动块（无需等待首 chunk）")
+    post({ type: "toolPanel", name: "sub:eng-coder#31", kind: "text", text: "working…" })
     assert.ok(live.querySelector(".sub-stop-btn"), "池条目 running 态块标题行显示 ⏹")
-    assert.equal(live.querySelector("summary").textContent, "eng-coder#31", "⏹ 不落入 summary 文本（label 匹配/折叠语义零干扰）")
+    assert.ok(!live.querySelector("summary").textContent.includes("⏹"), "⏹ 不落入 summary 文本（label/折叠语义零干扰——块级 overlay）")
+    assert.ok(live.querySelector("summary").textContent.includes("eng-coder#31"), "头行含块键")
     assert.equal(live.open, true, "running 块展开")
-    // done → 折叠 + ⏹ 消失（T-M23——done/冻结后不留残）
+    // done → 冻结入流 + ⏹ 消失（T-M23——done/冻结后不留残）
     post({ type: "subagent", id: 31, role: "eng-coder", status: "done" })
-    assert.equal(live.open, false, "done 折叠（既有语义回归）")
+    assert.equal(live.open, false, "done 折叠（冻结入流）")
     assert.ok(!live.querySelector(".sub-stop-btn"), "done 后 ⏹ 消失")
-    // error 终态 → 折叠 + ⏹ 消失（F6——error 与 done 同走终态分支）
+    assert.equal(live.parentElement?.id, "messages", "done 块已冻结入 #messages（R22）")
+    // error 终态 → 冻结 + ⏹ 消失（F6——error 与 done 同走终态分支）
     post({ type: "subagent", id: 37, role: "coder", status: "started", model: "m", pool: true })
     post({ type: "toolPanel", name: "sub:coder#37", kind: "text", text: "risky…" })
     const errBlock = blockById(37)
     assert.ok(errBlock.querySelector(".sub-stop-btn"), "started → ⏹ 在")
     post({ type: "subagent", id: 37, role: "coder", status: "error", error: "boom" })
-    assert.equal(errBlock.open, false, "error 折叠")
+    assert.equal(errBlock.open, false, "error 折叠（冻结）")
     assert.ok(!errBlock.querySelector(".sub-stop-btn"), "error 后 ⏹ 消失")
-    // settled（挂起中间态——不折叠）→ ⏹ 同样消失（子代理已完成——无可停）
+    // settled（挂起中间态——不冻结）→ ⏹ 同样消失（子代理已完成——无可停）
     post({ type: "subagent", id: 32, role: "coder", status: "started", model: "m", pool: true })
     post({ type: "toolPanel", name: "sub:coder#32", kind: "text", text: "bg…" })
     const settledBlock = blockById(32)
     assert.ok(settledBlock.querySelector(".sub-stop-btn"), "started → ⏹ 在")
     post({ type: "suspension", active: true, running: 1, queued: 0, pending: 0 })
     post({ type: "subagent", id: 32, role: "coder", status: "settled" })
-    assert.equal(settledBlock.open, true, "settled 不折叠（§17 D-S8——驻留等消化）")
+    assert.equal(settledBlock.open, true, "settled 不冻结（§17 D-S8——驻留面板等消化）")
+    assert.equal(settledBlock.parentElement?.id, "subagent-activity", "settled 块驻留活动面板")
     assert.ok(!settledBlock.querySelector(".sub-stop-btn"), "settled 后 ⏹ 消失（已完成——冻结前不留停止控件）")
+    assert.ok(settledBlock.querySelector("summary").textContent.includes("awaiting digestion"), "settled 头部 awaiting digestion（驻留形态）")
     post({ type: "suspension", active: false, freeze: true })
+    assert.equal(settledBlock.parentElement?.id, "messages", "会话退出 freeze → settled 块冻结入流")
     post({ type: "suspension", active: false, freeze: false })
   })
 
@@ -410,7 +451,7 @@ describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻�
     posts.length = 0
     btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }))
     const cancelMsg = posts.find((m) => m.type === "cancelSubagent")
-    assert.ok(cancelMsg, "⏹ 点击发出 cancelSubagent 消息")
+    assert.ok(cancelMsg, "⏹ 点击发出 cancelSubagent 消息（活动面板内块——chat.js 面板委托）")
     assert.deepEqual({ id: cancelMsg.id, role: cancelMsg.role }, { id: 33, role: "coder" }, "定向目标（id + role）随消息")
     assert.equal(block.open, true, "⏹ 命中区不触发折叠翻转（与 CLI 命中列级区分同规则）")
     // 收尾：取消 → 冻结（下一用例详测）——本用例只锁定点击消息面
@@ -425,10 +466,12 @@ describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻�
     assert.ok(block.querySelector(".sub-stop-btn"), "运行中 ⏹ 在")
     post({ type: "subagent", id: 34, role: "eng-coder", status: "cancelled" })
     assert.equal(block.open, false, "cancelled 即折叠（interrupted 冻结语义）")
-    const tag = block.querySelector(".sub-stopped")
-    assert.ok(tag, "标题行带 stopped 标记")
-    assert.equal(tag.textContent.trim(), "· stopped", "stopped 标记文本（CLI 冻结标题 parity——en locale）")
-    assert.ok(block.querySelector("summary").textContent.includes("stopped"), "stopped 随标题渲染")
+    assert.equal(block.parentElement?.id, "messages", "cancelled 冻结入流（stopped 冻结形态——R22c）")
+    const hdr = block.querySelector(".sub-hdr")
+    assert.ok(hdr, "冻结头存在")
+    assert.ok(hdr.classList.contains("sub-stopped"), "stopped 标记 class（dim）")
+    assert.match(hdr.textContent, /⏹ eng-coder#34/, "stopped 冻结头 [⏹ key …]（hdr: " + hdr.textContent + "）")
+    assert.ok(hdr.textContent.includes("stopped"), "stopped 词随标题渲染（en locale）")
     assert.ok(!block.querySelector(".sub-stop-btn"), "⏹ 随冻结移除")
     block.open = true // 用户重开阅读
     assert.ok(!block.querySelector(".sub-stop-btn"), "冻结块重开后 ⏹ 不复活（T-M23——仅 running 显示）")
@@ -462,14 +505,20 @@ describe("§19.5 控制面 UI（⏹ running-only + 点击 cancel + stopped 冻�
     assert.equal(plain.querySelectorAll(".advisor-sub").length, 0, "无嵌套 chunk 不带子标——单层兼容回归（T-M24）")
   })
   after(async () => {
-    // 跨 describe 隔离：本 describe 独占 id 31-36 的会话块/面板行清出
+    // 跨 describe 隔离：本 describe 独占 id 30-37 的活动块（含冻结入流块）与面板行清出
     const { S } = await import("../webview/state.js")
-    S._subBlocks.clear()
     S._subagentMap = {}
     S._advisorBlock = null
-    for (const el of [...document.querySelectorAll("#messages .sub-block")]) {
-      const label = el.querySelector("summary")?.textContent ?? ""
-      if (/#(3[0-7])$/.test(label)) el.remove()
+    for (const el of [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]) {
+      if (/^3[0-7]$/.test(el.dataset.subid ?? "")) el.remove()
+    }
+    for (const el of [...document.querySelectorAll(".sub-report-preview")]) {
+      if (/^3[0-7]$/.test(el.previousElementSibling?.dataset?.subid ?? "")) el.remove()
+    }
+    // 残留 live 块（如有）从 map 清出（同 S._subBlocks.clear() 语义——终态测试已冻结
+    // 或停留在面板的块不再被后续用例寻址）
+    for (const [k, b] of [...S._subBlocks]) {
+      if (/^3[0-7]$/.test(b.dataset.subid ?? "")) S._subBlocks.delete(k)
     }
   })
 })
@@ -547,4 +596,254 @@ describe("§20 waiting 行（排队 spawn 即见——queued→running→移除�
     post({ type: "suspension", active: false, freeze: true })
     assert.ok(!rowTexts().join("\n").includes("queued"), "会话退出移除 queued 残留行（池已清——CLI freezeAll 兜底清场镜像）")
   })
+  after(async () => {
+    // 隔离：id 50-53 的活动块（started pool 建块/冻结入流）清出——行已由 before 重置
+    const { S } = await import("../webview/state.js")
+    S._subagentMap = {}
+    for (const el of [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]) {
+      if (/^5[0-3]$/.test(el.dataset.subid ?? "")) el.remove()
+    }
+    for (const el of [...document.querySelectorAll(".sub-report-preview")]) {
+      if (/^5[0-3]$/.test(el.previousElementSibling?.dataset?.subid ?? "")) el.remove()
+    }
+    for (const [k, b] of [...S._subBlocks]) {
+      if (/^5[0-3]$/.test(b.dataset.subid ?? "")) S._subBlocks.delete(k)
+    }
+  })
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// R22 测试组（ARCHITECTURE.md R22 节 T-R22a..d——底部活动面板 + 冻结入流）。
+// 测试间隔离：独占 id 60-67；先禁用真实 1s ticker（deterministic——假时钟经
+// Date.now 补丁 + activityTick 驱动 elapsed 跳动），after 恢复。
+// ═══════════════════════════════════════════════════════════════════════════
+describe("R22 底部活动面板（T-R22a.1-3 / b.1-2 / c.1 / c.2a / d.1）", () => {
+  let activity
+  before(async () => {
+    if (!globalThis.acquireVsCodeApi) {
+      const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
+      document.body.innerHTML = (html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? "").replace(/<script[\s\S]*?<\/script>/g, "")
+      globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
+    }
+    await import("../webview/chat.js")
+    activity = await import("../webview/activity.js")
+    activity.setActivityTickDisabled(true) // 假定时器：真实 interval 不跑——activityTick() 驱动
+    activity.resetActivity() // 隔离：清前序 describe 的残留 live 面板块/map（#messages 冻结块不动）
+    const { S } = await import("../webview/state.js")
+    S._subagentMap = {}
+  })
+  after(async () => {
+    const { S } = await import("../webview/state.js")
+    S._subagentMap = {}
+    for (const el of [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]) {
+      if (/^6[0-7]$/.test(el.dataset.subid ?? "")) el.remove()
+    }
+    for (const el of [...document.querySelectorAll(".sub-report-preview")]) {
+      if (/^6[0-7]$/.test(el.previousElementSibling?.dataset?.subid ?? "")) el.remove()
+    }
+    for (const [k, b] of [...S._subBlocks]) {
+      if (/^6[0-7]$/.test(b.dataset.subid ?? "")) S._subBlocks.delete(k)
+    }
+    activity.setActivityTickDisabled(false)
+  })
+
+  const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
+  const panel = () => document.getElementById("subagent-activity")
+  const findBlock = (subname) =>
+    [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]
+      .find((b) => b.dataset.subname === subname)
+  const summary = (block) => block.querySelector("summary")?.textContent ?? ""
+
+  it("parseChannel 契约——consult/escalate 键字段不换位（评审 #1 锁：id=数字、model=标签段）", () => {
+    const pc = activity.parseChannel
+    assert.deepEqual(
+      pc("sub:consult glm-5.3 #99"),
+      { channel: "sub:consult glm-5.3 #99", label: "consult glm-5.3 #99", role: "consult", id: 99, model: "glm-5.3" },
+      "consult 键解析 {role, id 数字, model 标签}",
+    )
+    assert.deepEqual(
+      pc("sub:escalate glm-5.2 #6"),
+      { channel: "sub:escalate glm-5.2 #6", label: "escalate glm-5.2 #6", role: "escalate", id: 6, model: "glm-5.2" },
+      "escalate 键解析同契约",
+    )
+    assert.deepEqual(
+      pc("sub:eng-coder#3"),
+      { channel: "sub:eng-coder#3", label: "eng-coder#3", role: "eng-coder", id: 3, model: null },
+      "family 键（#id 后缀）不变",
+    )
+  })
+
+
+  it("T-R22a.1: 活动面板独立——活动块在 #subagent-activity（非 #messages）；消息流滚动不动面板", () => {
+    post({ type: "toolPanel", name: "sub:coder#60", kind: "text", text: "panel work…" })
+    const block = findBlock("sub:coder#60")
+    assert.ok(block, "活动块已创建")
+    assert.equal(block.parentElement?.id, "subagent-activity", "活动块在底部活动面板")
+    assert.equal(panel().style.display, "block", "有活动块 → 面板可见")
+    assert.equal(document.querySelectorAll("#messages .sub-block.sub-live").length, 0, "#messages 无活动块（冻结块例外——R22c 入流）")
+    // 消息流滚动/追加不动面板（pinBottom 语义限定 #messages 内）
+    const msgEl = document.getElementById("messages")
+    msgEl.appendChild(document.createElement("div"))
+    msgEl.scrollTop = 9999
+    assert.equal(block.parentElement?.id, "subagent-activity", "消息流滚动后活动块仍在面板（容器隔离）")
+    // 收尾：冻结 #60——面板清空（后续用例面板断言独立）
+    post({ type: "subagent", id: 60, role: "coder", status: "done" })
+    assert.equal(panel().querySelectorAll(".sub-block").length, 0, "a.1 收尾后活动面板清空")
+  })
+
+  it("T-R22a.2: 布局四层垂直序——header / #messages / #panels / #subagent-activity / 输入区（活动面板在 #toolbar 之上——消息区 1fr 让位）", () => {
+    const container = document.getElementById("chat-container")
+    const ids = [...container.children].map((el) => el.id)
+    const order = ["session-bar", "messages", "panels", "subagent-activity", "toolbar"]
+    for (const id of order) {
+      assert.ok(ids.includes(id), `#${id} 存在（四层垂直序: ${ids.join(" → ")}）`)
+    }
+    const mIdx = ids.indexOf("messages")
+    const aIdx = ids.indexOf("subagent-activity")
+    const tIdx = ids.indexOf("toolbar")
+    assert.ok(mIdx < aIdx && aIdx < tIdx, "活动面板位于 #messages 与输入区(#toolbar) 之间（grid auto 行——高度让位）")
+  })
+
+  it("T-R22a.3: 面板内部自滚——多块在面板内堆叠；每块内容区自带滚动域；消息区不受影响", () => {
+    post({ type: "toolPanel", name: "sub:coder#61", kind: "text", text: "multi one…" })
+    post({ type: "toolPanel", name: "sub:coder#61", kind: "tool", text: "→ write a.mjs" })
+    post({ type: "toolPanel", name: "sub:consult glm-5.3 #62", kind: "text", text: "consult one…" })
+    const blocks = panel().querySelectorAll(".sub-block")
+    assert.ok(blocks.length >= 2, "多活动块同面板堆叠（面板自身滚动容器）")
+    for (const b of blocks) {
+      assert.ok(b.querySelector(".advisor-content"), "块内容区为独立滚动域（overflow-y）")
+      assert.notEqual(b.parentElement?.id, "messages", "活动块不在消息流")
+    }
+    assert.equal(panel().style.display, "block", "面板保持可见")
+    // 收尾：本用例的两块终态冻结——面板清空腾位（后续用例面板断言独立）
+    post({ type: "subagent", id: 61, role: "coder", status: "done" })
+    post({ type: "subagent", id: "consult-62-glm-5.3", role: "consult", model: "glm-5.3", sessionId: 62, status: "answered", replyPreview: "answer" })
+    assert.equal(panel().querySelectorAll(".sub-block").length, 0, "全部终态后活动面板清空")
+    assert.equal(panel().style.display, "none", "无活动块 → 面板隐藏（不占高——grid auto 行收起）")
+  })
+
+  it("T-R22b.1: 块头字段——[▶ key · async · model · 跳动 elapsed · turn n/m] 状态词 + tail 3 dim（假定时器驱动）", () => {
+    const realNow = Date.now
+    const t0 = realNow()
+    try {
+      // 假时钟：startedAt 落在 t0-3s——块创建即 3s；推进 3s 后 tick → 6s
+      Date.now = () => t0
+      post({ type: "subagent", id: 63, role: "explore", status: "started", startedAt: t0 - 3000, model: "glm-5.3", pool: true, turn: 1, maxTurns: 100 })
+      const block = findBlock("sub:explore#63")
+      assert.ok(block, "池条目 started 即建块")
+      const hdr1 = block.querySelector(".sub-hdr").textContent
+      assert.match(hdr1, /\[▶ explore#63 · async · glm-5.3 · 3s · turn 1\/100\]/, "头行 = [▶ key · async · model · elapsed · turn]（got: " + hdr1 + "）")
+      assert.ok(hdr1.includes("Thinking…"), "无工具时状态词 = thinking…")
+      // think → 状态词 thinking；tool → 工具行尾句入状态词
+      post({ type: "toolPanel", name: "sub:explore#63", kind: "think", text: "scanning" })
+      post({ type: "toolPanel", name: "sub:explore#63", kind: "tool", text: "read impl-x.mjs" })
+      const hdr2 = block.querySelector(".sub-hdr").textContent
+      assert.ok(hdr2.includes("read impl-x.mjs"), "工具行尾句入状态词（hdr: " + hdr2 + "）")
+      // text 不覆盖工具词（CLI currentTool parity）
+      post({ type: "toolPanel", name: "sub:explore#63", kind: "text", text: "findings… " })
+      post({ type: "toolPanel", name: "sub:explore#63", kind: "text", text: "more" })
+      assert.ok(block.querySelector(".sub-hdr").textContent.includes("read impl-x.mjs"), "text 不改状态词")
+      // tail-3 dim：折叠后 summary 尾随最近 3 行内容（dim）
+      block.open = false
+      block.dispatchEvent(new window.Event("toggle"))
+      const tail = block.querySelector(".sub-tail")
+      assert.ok(tail, "折叠态块头含 tail-3（dim 上下文行）")
+      const tailText = tail.textContent
+      const lines = tailText.split("\n").filter((l) => l.trim())
+      assert.ok(lines.length >= 1 && lines.length <= 3, "tail ≤3 行（got " + lines.length + "）")
+      assert.ok(lines[lines.length - 1].includes("more"), "tail 含最近内容行（tail: " + tailText + "）")
+      // 假定时器推进 3s → tick → elapsed 跳动 3s → 6s
+      Date.now = () => t0 + 3000
+      activity.activityTick()
+      const hdr3 = block.querySelector(".sub-hdr").textContent
+      assert.match(hdr3, /· 6s · turn 1\/100/, "tick 后 elapsed 跳动至 6s（hdr: " + hdr3 + "）")
+    } finally {
+      Date.now = realNow
+    }
+    // 收尾：冻结（后续面板断言独立）
+    post({ type: "subagent", id: 63, role: "explore", status: "done" })
+    assert.equal(findBlock("sub:explore#63").parentElement?.id, "messages", "b.1 块冻结入流")
+  })
+
+  it("T-R22b.2: ⏹ 在折叠头——running 块折叠后 ⏹ 仍可见可点（cancel 路由）", async () => {
+    const { vscode } = await import("../webview/state.js")
+    const posts = []
+    const origPost = vscode.postMessage.bind(vscode)
+    vscode.postMessage = (m) => posts.push(m)
+    try {
+      post({ type: "subagent", id: 64, role: "coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
+      const block = findBlock("sub:coder#64")
+      const btn = block.querySelector(".sub-stop-btn")
+      assert.ok(btn, "running 块 ⏹ 在")
+      block.open = false // 折叠
+      btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }))
+      const cancelMsg = posts.find((m) => m.type === "cancelSubagent")
+      assert.ok(cancelMsg, "折叠态 ⏹ 点击仍发 cancelSubagent")
+      assert.deepEqual({ id: cancelMsg.id, role: cancelMsg.role }, { id: 64, role: "coder" })
+    } finally {
+      vscode.postMessage = origPost
+    }
+    // 收尾：取消 → stopped 冻结（面板清空——后续面板断言独立）
+    post({ type: "subagent", id: 64, role: "coder", status: "cancelled" })
+    assert.equal(panel().querySelectorAll(".sub-block").length, 0, "b.2 收尾后活动面板清空")
+  })
+
+  it("T-R22c.1: 完成冻结入流——面板清空；冻结块在 #messages 尾 [✓ key · model · done Ns]；preview ≤8 行（超 8 带 more 注记）", () => {
+    const report = Array.from({ length: 12 }, (_, i) => `report line ${i + 1}`).join("\n")
+    post({ type: "subagent", id: 65, role: "eng-coder", status: "started", startedAt: Date.now() - 1500, model: "glm-5.3", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#65", kind: "text", text: report })
+    const block = findBlock("sub:eng-coder#65")
+    assert.ok(block, "运行块在面板")
+    post({ type: "subagent", id: 65, role: "eng-coder", status: "done" })
+    assert.equal(block.parentElement?.id, "messages", "冻结块入 #messages")
+    const msgChildren = [...block.parentElement.children]
+    assert.equal(msgChildren[msgChildren.length - 1], block.nextElementSibling, "冻结块 + 其 preview 位于 #messages 尾")
+    assert.equal(msgChildren[msgChildren.length - 2], block, "冻结块在尾部倒数第二")
+    assert.equal(block.open, false, "冻结折叠")
+    assert.match(block.querySelector(".sub-hdr").textContent, /\[✓ eng-coder#65 · async · glm-5.3 · done \d+s\]/, "冻结身份头 [✓ key · async · model · done Ns]")
+    // 展开后内容完整保留
+    block.open = true
+    assert.ok(block.querySelector(".advisor-content").textContent.includes("report line 12"), "内容完整保留可展开")
+    block.open = false
+    // preview ≤8 行 dim 落流（紧随冻结块）
+    const preview = block.nextElementSibling
+    assert.ok(preview?.classList.contains("sub-report-preview"), "preview 落流")
+    const plines = preview.textContent.split("\n")
+    const shown = plines.filter((l) => !/more lines/.test(l))
+    assert.ok(shown.length <= 8, "preview ≤8 行（got " + shown.length + "）")
+    assert.ok(plines.some((l) => l.includes("(4 more lines)")), "截断注记 (N more lines)")
+    assert.equal(panel().querySelectorAll(".sub-block").length, 0, "活动面板清空（残留: " + [...panel().querySelectorAll(".sub-block")].map((b) => b.dataset.subname).join(",") + "）")
+    assert.equal(panel().style.display, "none", "无活动块 → 面板隐藏（不占高）")
+  })
+
+  it("T-R22c.2a: stopped 冻结——cancel → ⏹ stopped 形态冻结入流（无 preview——interrupted）", () => {
+    post({ type: "subagent", id: 66, role: "eng-coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#66", kind: "text", text: "partial output…" })
+    const block = findBlock("sub:eng-coder#66")
+    post({ type: "subagent", id: 66, role: "eng-coder", status: "cancelled" })
+    assert.equal(block.parentElement?.id, "messages", "cancelled → 冻结入流")
+    assert.match(block.querySelector(".sub-hdr").textContent, /\[⏹ eng-coder#66 · async · m · stopped \d+s\]/, "stopped 冻结身份头 [⏹ key · … · stopped Ns]")
+    assert.ok(!block.nextElementSibling?.classList?.contains("sub-report-preview"), "stopped 冻结无 report preview（interrupted 语义）")
+  })
+
+  it("T-R22d.1: 角色全同通道——advisor async / consult / escalate 同面板同冻结（仅块键差异）", () => {
+    // advisor async（role=advisor 伪角色——池条目）
+    post({ type: "subagent", id: 67, role: "advisor", status: "started", startedAt: Date.now(), model: "deepseek-v4", pool: true })
+    post({ type: "toolPanel", name: "sub:advisor#67", kind: "text", text: "review notes…" })
+    const adv = findBlock("sub:advisor#67")
+    assert.ok(adv && adv.parentElement?.id === "subagent-activity", "advisor async 块在活动面板")
+    post({ type: "subagent", id: 67, role: "advisor", status: "done" })
+    assert.equal(adv.parentElement?.id, "messages", "advisor done → 冻结入流")
+    // consult（键 = sub:consult <model> #<sessionId>——answered 终态冻结 + preview）
+    post({ type: "subagent", id: "consult-99-glm-5.3", role: "consult", model: "glm-5.3", sessionId: 99, status: "started", startedAt: Date.now() })
+    post({ type: "toolPanel", name: "sub:consult glm-5.3 #99", kind: "text", text: "consultation note…" })
+    const cBlock = findBlock("sub:consult glm-5.3 #99")
+    assert.ok(cBlock && cBlock.parentElement?.id === "subagent-activity", "consult 块在活动面板")
+    post({ type: "subagent", id: "consult-99-glm-5.3", role: "consult", model: "glm-5.3", sessionId: 99, status: "answered", replyPreview: "answer" })
+    assert.equal(cBlock.parentElement?.id, "messages", "consult answered → 冻结入流")
+    assert.ok(cBlock.nextElementSibling?.classList?.contains("sub-report-preview"), "consult 冻结带 preview")
+    // escalate 已由「escalate done 无 preview」用例覆盖（键含 model tag——同通道）
+  })
+})
+
+

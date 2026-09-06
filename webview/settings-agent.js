@@ -15,6 +15,10 @@ export function agentCardHtml() {
   html += `<section class="settings-card"><h4 class="settings-card-title">${t("settings.agentSection")}</h4><div class="settings-card-body">`
   html += `<div class="key-field"><label title="${t("settings.maxTurnsHelp")}">${t("settings.maxTurns")}</label><input id="ag-maxturns" type="number" min="1" value="${as.maxTurns ?? 200}"></div>`
   html += `<div class="key-field"><label title="${t("settings.subagentTurnsHelp")}">${t("settings.subagentTurns")}</label><input id="ag-subturns" type="number" min="1" value="${as.subagentTurns ?? 100}"></div>`
+  // §24 D-24a（R14）：并发池分域容量（eng-coder 池 / 其他角色池——默认 4/4）
+  const pool = as.poolLimits || {}
+  html += `<div class="key-field"><label title="${t("settings.poolEngHelp")}">${t("settings.poolEng")}</label><input id="ag-pool-engcoder" type="number" min="1" value="${pool.engCoder ?? 4}"></div>`
+  html += `<div class="key-field"><label title="${t("settings.poolOtherHelp")}">${t("settings.poolOther")}</label><input id="ag-pool-other" type="number" min="1" value="${pool.other ?? 4}"></div>`
   html += `<div class="key-field"><label title="${t("settings.compactThresholdHelp")}">${t("settings.compactThreshold")}</label><input id="ag-compact" type="number" min="0" placeholder="auto" value="${as.compactThreshold ?? ""}"></div>`
   html += `<label class="switch" title="${t("settings.verifyGuardHelp")}"><input type="checkbox" id="ag-verifyguard" ${as.verifyGuard ? "checked" : ""}> ${t("settings.verifyGuard")}</label>`
   html += `<div class="settings-subtitle">${t("settings.submodelSection")}</div>`
@@ -83,6 +87,18 @@ export function bindAgentControls() {
       settings: {
         maxTurns: get("ag-maxturns") || undefined,
         subagentTurns: get("ag-subturns") || undefined,
+        // §24 D-24a（R14）：并发池分域容量——null（未填/清空）→ 删键（回退默认 4/4）
+        poolLimits: (() => {
+          const eng = get("ag-pool-engcoder")
+          const other = get("ag-pool-other")
+          const pl = {}
+          const n = (v) => { const x = Number(v); return Number.isInteger(x) && x >= 1 ? x : null }
+          const en = n(eng)
+          const ot = n(other)
+          if (en !== null) pl.engCoder = en
+          if (ot !== null) pl.other = ot
+          return Object.keys(pl).length > 0 ? pl : null
+        })(),
         // null (not undefined): postMessage JSON-serializes and DROPS undefined keys — a
         // cleared value must reach the extension as an explicit null to delete it. Same
         // rule for the advisor slots below: config-io now BACKFILLS missing advisor keys

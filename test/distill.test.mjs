@@ -6,6 +6,7 @@
  */
 
 import { describe, it, before, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync, existsSync, readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
@@ -244,7 +245,7 @@ describe("end-of-run distillation is async (SEND-STALL-DISTILL)", () => {
   }
   const noteIdx = (msgs) => msgs.findIndex((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]"))
 
-  it("AC1/AC2/AC3 — onComplete fires before a slow distill; the next run awaits it and starts from the compressed line", async () => {
+  slow("AC1/AC2/AC3 — onComplete fires before a slow distill; the next run awaits it and starts from the compressed line", async () => {
     const cwd = setupTempDir()
     mkFiles(cwd)
     const { server, port, requests } = await scriptedLLMServer(async (i, body) => {

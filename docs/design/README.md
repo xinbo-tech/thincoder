@@ -38,3 +38,6 @@
 - 2026-08-21：初版（文档归属纪律，规格见 CLI `docs/design/AGENT-LOOP.md` §12 及本仓库 `ARCHITECTURE.md` 同步段）
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增板块「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）与「覆盖率缺口修复」（COVERAGE-GAPS-*）
+- 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 src/config-presets.mjs PROVIDER_PRESETS 对齐）；文档质量审查其余观察项（Qwen3.7 措辞、工具数量口径）见会话记录，未入库
+- 2026-09-06：会话目录残留 GC + 标题写显性化——双端机制权威设计在 CLI `SESSION.md` §12（会话存储契约板块），VS Code 端实现侧变更随 eng-coder 交付（引用，不复制）；会话相关设计仍以 CLI SESSION.md 为权威源
+- 2026-09-06：§12 VS Code 端交付（eng-coder）——`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+ `test/session-gc.test.mjs`

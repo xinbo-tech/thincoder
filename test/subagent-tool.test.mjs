@@ -6,6 +6,7 @@
  */
 
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -164,7 +165,7 @@ async function runChild(parent, walls, onQuestion) {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const cwd = mkdtempSync(join(tmpdir(), "tc-sub-"))
   const ctx = { agent: parent, cwd, callbacks: { onQuestion } }
-  const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, ctx))
+  const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder", async: false }, ctx)) // R12 (§18 D-E1a): depth-0 缺省 async——阻塞流钉 async:false
   rmSync(cwd, { recursive: true, force: true })
   return r
 }
@@ -216,7 +217,7 @@ test("subagent tool: user Stop at the wall → partial-work return, no resume", 
   }
 })
 
-test("explore sub-agent uses the full subagentTurns budget — no 30-round cap (AC3)", async () => {
+slow("explore sub-agent uses the full subagentTurns budget — no 30-round cap (AC3)", async () => {
   const { server, calls } = wallServer(999)
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
@@ -232,7 +233,7 @@ test("explore sub-agent uses the full subagentTurns budget — no 30-round cap (
       _subIdCounter: 0,
     }
     const ctx = { agent: parent, cwd, callbacks: {} }
-    const r = String(await subagentTool.execute({ task: "loop", role: "explore" }, ctx))
+    const r = String(await subagentTool.execute({ task: "loop", role: "explore", async: false }, ctx)) // R12: 阻塞流钉 async:false
     assert.equal(calls.n, 42, "explore runs the full 42-turn budget (old Math.min(30, …) would stop at 30)")
     assert.ok(r.includes("turn cap reached (42 turns)"), "cap message names the configured budget")
   } finally {
@@ -412,7 +413,7 @@ test("activity stream: onToken → panel kind=text and accumulates; onReasoning 
         onQuestion: async () => "Stop",
       },
     }
-    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, ctx))
+    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder", async: false }, ctx)) // R12: 阻塞流钉 async:false
     assert.equal(calls.n, 3, "three looped calls hit the cap — stopped without resume")
     const thinks = panels.filter((p) => p.chunk.kind === "think")
     assert.equal(thinks.length, 3, "every reasoning chunk streams as kind=think")
@@ -511,7 +512,7 @@ test("§18.5 T-AG3: plain explore/plan spawn input carries NO git context (lock 
       _subIdCounter: 0,
     }
     for (const role of ["explore", "plan"]) {
-      const r = String(await subagentTool.execute({ task: "inspect the module for issues", role }, { agent: parent, cwd, callbacks: {} }))
+      const r = String(await subagentTool.execute({ task: "inspect the module for issues", role, async: false }, { agent: parent, cwd, callbacks: {} })) // R12: 阻塞流钉 async:false
       assert.ok(r.includes(`Subagent (${role}) completed`), `${role} spawn completed`)
     }
     assert.equal(bodies.length, 2, "both child requests captured")
@@ -608,12 +609,65 @@ test("T16 (vscode mirror): 多设计缺 designId → throw 要求指定；镜像
   assert.throws(
     () => resolveDesignSlot({ _engDesignTokens: new Map([["k", "v"]]), _engDesignToken: null }, undefined),
     /Design tokens were reset/,
-    "镜像被 eng(exit/enter) 清空而 Map 残留 → 不复活过期 token",
+    "torn state（mirror 缺失/过期而 Map 残留）→ 拒绝经 Map 复活（R16：镜像只随过期清）",
   )
   const single = resolveDesignSlot({ _engDesignTokens: new Map([["only", tokenA]]), _engDesignToken: tokenA }, undefined)
   assert.equal(single.token, tokenA, "单槽省略 designId → 取唯一槽")
   const legacy = resolveDesignSlot({ _engDesignToken: tokenA }, undefined)
   assert.equal(legacy.token, tokenA, "无 Map（旧会话）→ 单值镜像兜底")
+})
+
+test("T-R16d (R16 ③): spawn gate — expired token rejected AND its slot deleted; mismatch rejects without deletion", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const expiredTok = await unsignedToken("dddddddd-1111-4111-8111-00000000000e", Date.now() - 1000)
+  const goodExp = Date.now() + 24 * 3600 * 1000
+  const validTok = await unsignedToken("dddddddd-2222-4222-8222-00000000000v", goodExp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["exp", expiredTok], ["ok", validTok]]),
+    _engDesignToken: expiredTok, // mirror = the expired token（镜像同步断言点）
+    _touchedFiles: [],
+  }
+  await assert.rejects(
+    subagentTool.execute(
+      { task: "x", role: "eng-coder", designId: "exp", designToken: expiredTok },
+      { agent: parent, cwd: process.cwd(), callbacks: {} },
+    ),
+    /Invalid or missing design token/,
+    "expired token rejected at the gate (TTL fail-closed 不变)",
+  )
+  assert.ok(!parent._engDesignTokens.has("exp"), "过期拒 → 该 designId 槽删除（长跑不重启也清）")
+  assert.equal(parent._engDesignToken, validTok, "单槽镜像同步——指向被删槽时改指存活槽（null 镜像 + 残留槽会触发 torn-state 拒）")
+  assert.equal(parent._engDesignTokens.get("ok"), validTok, "sibling valid slot untouched — and spawnable")
+  // 删除后 sibling 仍可正常 spawn（镜像存活——torn-state guard 不误伤）
+  const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  assert.equal(resolveDesignSlot(parent, "ok").token, validTok, "sibling slot still resolvable after the sibling expired-slot deletion")
+  // mismatch（有效槽 + 错 token）→ 拒但不删——防误删有效槽（D-R16c ③）
+  const wrongTok = await unsignedToken("dddddddd-3333-4333-8333-00000000000w", goodExp)
+  await assert.rejects(
+    subagentTool.execute(
+      { task: "x", role: "eng-coder", designId: "ok", designToken: wrongTok },
+      { agent: parent, cwd: process.cwd(), callbacks: {} },
+    ),
+    /Invalid or missing design token/,
+  )
+  assert.equal(parent._engDesignTokens.get("ok"), validTok, "mismatch rejection leaves the valid slot untouched")
+  // 单槽省略 designId 的过期拒也删（唯一槽）
+  const singleParent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["only", expiredTok]]),
+    _engDesignToken: expiredTok,
+    _touchedFiles: [],
+  }
+  await assert.rejects(
+    subagentTool.execute(
+      { task: "x", role: "eng-coder", designToken: expiredTok },
+      { agent: singleParent, cwd: process.cwd(), callbacks: {} },
+    ),
+    /Invalid or missing design token/,
+  )
+  assert.ok(singleParent._engDesignTokens.size === 0, "无 designId 单槽路径同样删槽")
+  assert.equal(singleParent._engDesignToken, null, "无存活槽 → 镜像清空")
 })
 
 function asyncParent(port, extra = {}) {
@@ -626,7 +680,6 @@ function asyncParent(port, extra = {}) {
     _subIdCounter: 0,
     _touchedFiles: [],
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
   }
   return { ...base, ...extra }
 }
@@ -668,7 +721,6 @@ function engParent(port, token, extra = {}) {
     _engDesignTokens: new Map([["eng", token]]),
     _engDesignToken: token,
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
     ...extra,
   }
 }
@@ -685,19 +737,19 @@ function engChildCtx(port, cwd, extra = {}) {
     _subIdCounter: 0,
     _touchedFiles: [],
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
     ...extra,
   }
   return { agent, cwd, callbacks: {}, depth: 1 }
 }
 
-test("T-E16 (schema): subagent async 描述 = 角色级默认措辞；eng-coder 子代理的 subagent schema = 受限审计变体（role 仅 explore、无 async）", async () => {
+test("T-E16 (schema): subagent async 描述 = 深度门控默认措辞（2026-09-06 §18 D-E1a/R12 supersede 角色级默认）；eng-coder 子代理的 subagent schema = 受限审计变体（role 仅 explore、无 async）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.parameters.properties.async.description
-  assert.ok(d.includes("Default is role-level"), `async 描述含角色级默认: ${d}`)
-  assert.ok(d.includes("role='eng-coder' → true"), `async 描述点名 eng-coder 默认 async: ${d}`)
+  assert.ok(d.includes("Default: depth-0 → true (async"), `async 描述含 depth-0 缺省 async: ${d}`)
+  assert.ok(d.includes("depth>0 → sync (forced)"), `async 描述点名 depth>0 强制 sync: ${d}`)
   assert.ok(d.includes("async:false"), "async:false 显式覆盖路径在描述中")
-  assert.ok(subagentTool.description.includes("The DEFAULT is role-level"), "工具描述 Async spawn 段注明角色级默认（§19.7 权威版措辞）")
+  assert.ok(!d.includes("Default is role-level"), "角色级默认措辞零残留（R12 supersede）")
+  assert.ok(subagentTool.description.includes("The DEFAULT is depth-gated"), "工具描述 Async spawn 段注明深度门控默认（§18 D-E1a）")
 
   // 受限审计变体 wiring：depth>0 role=eng-coder 的 LLM 请求 schema（eng-coder 唯一 spawn 通道）
   const bodies = []
@@ -745,7 +797,7 @@ test("T-E16 (schema): subagent async 描述 = 角色级默认措辞；eng-coder 
   }
 })
 
-test("T-M1: action 缺省 = spawn——不带 action 的既有 spawn 调用零迁移（阻塞 explore 回归）", async () => {
+test("T-M1: action 缺省 = spawn——不带 action 的既有 spawn 调用零迁移（阻塞 explore 回归——R12 (§18 D-E1a)：depth-0 缺省已翻 async，阻塞语义钉 async:false）", async () => {
   const { server } = oneShotServer("explore report")
   await new Promise((r) => server.listen(0, "127.0.0.1", r))
   const port = server.address().port
@@ -753,7 +805,7 @@ test("T-M1: action 缺省 = spawn——不带 action 的既有 spawn 调用零�
   try {
     const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
     const parent = asyncParent(port)
-    const r = String(await subagentTool.execute({ task: "explore job", role: "explore" }, asyncCtx(parent, cwd)))
+    const r = String(await subagentTool.execute({ task: "explore job", role: "explore", async: false }, asyncCtx(parent, cwd)))
     assert.ok(r.includes("Subagent (explore) completed"), "缺省 action 走 spawn——报告返回")
     assert.equal(parent._asyncSubagents.size, 0, "未进 async 池")
   } finally {
@@ -762,19 +814,17 @@ test("T-M1: action 缺省 = spawn——不带 action 的既有 spawn 调用零�
   }
 })
 
-test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent 五动作 schema（T-M11 + §19.5）", async () => {
+test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent 四动作 schema（T-M11 + §19.5 + §19.8）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const mod = await import("../src/agent-tools/subagent.mjs")
   assert.equal(mod.subagentCheckTool, undefined, "subagentCheckTool 导出消失")
   assert.equal((await import("../src/agent-tools/index.mjs")).escalateTool, undefined, "escalateTool 导出消失")
   const actionProp = subagentTool.parameters.properties.action
   assert.ok(actionProp, "schema 含 action 参数")
-  assert.deepEqual(actionProp.enum, ["spawn", "check", "status", "cancel", "escalate"], "五动作枚举（§19.5 cancel 并入）")
-  assert.equal(subagentTool.parameters.required, undefined, "required 移出 schema——按动作在 execute 内校验（spawn 需 task+role / check 需 n / escalate 需 task / cancel 需 id）")
-  assert.ok(subagentTool.parameters.properties.n.description.includes("(check — required)"), "n 的专属语义在参数描述中（check 必填）")
-  assert.ok(subagentTool.parameters.properties.id.description.includes("(check/status/cancel)"), "id 的 check/status/cancel 语义在参数描述中")
+  assert.deepEqual(actionProp.enum, ["spawn", "status", "cancel", "escalate"], "四动作枚举（§19.5 cancel 并入；§19.8 check 删除）")
+  assert.equal(subagentTool.parameters.required, undefined, "required 移出 schema——按动作在 execute 内校验（spawn 需 task+role / escalate 需 task / cancel 需 id）")
+  assert.ok(subagentTool.parameters.properties.id.description.includes("(status/cancel)"), "id 的 status/cancel 语义在参数描述中")
   assert.equal(typeof subagentTool.isReadonlyAction, "function", "action 级只读分类钩子存在")
-  assert.equal(subagentTool.isReadonlyAction({ action: "check" }), true)
   assert.equal(subagentTool.isReadonlyAction({ action: "status" }), true)
   assert.equal(subagentTool.isReadonlyAction({ action: "spawn" }), false, "spawn 非只读")
   assert.equal(subagentTool.isReadonlyAction({ action: "escalate" }), false, "escalate 非只读")
@@ -783,19 +833,16 @@ test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent �
   assert.equal(typeof subagentTool.isControlAction, "function", "action 级控制类分类钩子存在（§19.5 round2 #4）")
   assert.equal(subagentTool.isControlAction({ action: "cancel" }), true)
   assert.equal(subagentTool.isControlAction({ action: "status" }), false)
-  assert.equal(subagentTool.isControlAction({ action: "check" }), false)
   assert.equal(subagentTool.isControlAction({ action: "spawn" }), false)
   assert.equal(subagentTool.isControlAction({}), false)
 })
 
-test("T-M12: 描述引导——五动作 + 查进度用 status（check 会阻塞）防误用 + cancel 定位", async () => {
+test("T-M12: 描述引导——四动作 + status 非阻塞定位 + cancel 定位（§19.8：check 已删——无阻塞动作）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
-  assert.ok(d.includes("FIVE actions"), "五动作总述（§19.5——cancel 并入）")
+  assert.ok(d.includes("FOUR actions"), "四动作总述（§19.5 cancel 并入；§19.8 check 删除）")
   assert.ok(d.includes("pick by what you need"), "action 参数引导（§19.7 权威版措辞）")
-  assert.ok(d.includes("BLOCKS until the target finishes — this is the explicit consuming fetch"), "check 阻塞显式警告（防 §19 触发场景重演——权威版措辞）")
   assert.ok(d.includes("NON-BLOCKING progress query"), "status 非阻塞定位")
-  assert.ok(d.includes("action:'check' blocks until the target finishes"), "async 段重复阻塞警告（查进度用 status）")
   assert.ok(d.includes("action:'cancel': STOP one background subagent"), "cancel 动作定位（定向中止——权威版措辞）")
   assert.ok(d.includes("REQUIRED — omitting it errors"), "cancel id 必填警告（防误全停——权威版措辞）")
   assert.ok(d.includes("going the wrong way"), "cancel 引导（停失控子代理——权威版措辞）")
@@ -804,14 +851,15 @@ test("T-M12: 描述引导——五动作 + 查进度用 status（check 会阻塞
   assert.ok(d.includes("Not available in engineering mode"), "escalate 工程模式禁用提示保留")
 })
 
-test("D-A2 (AGENT-LOOP.md §19.7): 工具描述含 async 收尾引导锚句——逐字存在（fail-when-unchanged——两端各自内容断言——防再发）", async () => {
+test("D-CH2 (AGENT-LOOP.md §19.8): 工具描述含 async 收尾引导锚句——逐字存在 + D-A2 旧锚句零残留（fail-when-unchanged——两端各自内容断言——防再发）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
   assert.ok(
-    d.includes("After an async spawn the turn winds down normally — nothing expects you to wait for it. Unchecked results reach you automatically — injected before your next turn, or digested in the suspension session while background subagents are still running — so follow-up status/check polling is only needed when your next step genuinely depends on the result."),
-    "D-A2: async 收尾引导锚句逐字存在于工具描述（AGENT-LOOP.md §19.7——fail-when-unchanged）",
+    d.includes("After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result. If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (at depth 0 every role defaults to async — async:false is the only way to block; depth>0 is always sync)."),
+    "D-CH2: async 收尾引导锚句逐字存在于工具描述（AGENT-LOOP.md §19.8——fail-when-unchanged——替换 D-A2；尾部括号 2026-09-06 §18 D-E1a/R12 同批修订——depth-0 全角色缺省 async）",
   )
-  assert.ok(d.includes("Async spawn (AGENT-LOOP.md §15/§18)"), "Async spawn 段 = 权威版段（§19.7 D-A3——VS 旧 Async mode 段已替换）")
+  assert.ok(!d.includes("so follow-up status/check polling"), "D-CH2: D-A2 旧锚句零残留（替换不是并列——防双锚并存）")
+  assert.ok(d.includes("Async spawn (AGENT-LOOP.md §15/§18/§25)"), "Async spawn 段 = 权威版段（§19.7 D-A3 + §25 D-R17b escalate async——VS 旧 Async mode 段已替换）")
   assert.ok(d.includes("capped at 4 concurrent"), "cap 4 引导（权威版——§19.7 D-A1）")
 })
 
@@ -823,7 +871,7 @@ test("T-CL1: cancel description carries the cancel-verification anchor (last res
   assert.ok(d.includes("a running child's in-flight work dies with it, partial changes stay unmerged and unaudited"), "T-CL1: in-flight dies with the child (§18 partial-never-merged)")
 })
 
-test("T-M17a: action 级门控——planMode 下 status/check/cancel 放行（readonly/控制类）vs spawn/escalate 拒绝", async () => {
+test("T-M17a: action 级门控——planMode 下 status/cancel 放行（readonly/控制类）vs spawn/escalate 拒绝", async () => {
   const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const executed = []
@@ -839,7 +887,6 @@ test("T-M17a: action 级门控——planMode 下 status/check/cancel 放行（re
   const toolByName = new Map([["write", writeTool], ["subagent", subagentTool], ["read", { name: "read", readonly: true, execute: async () => { executed.push("read"); return "ok" } }]])
   const calls = [
     { id: "1", name: "subagent", arguments: JSON.stringify({ action: "status" }) }, // 放行（只读）
-    { id: "2", name: "subagent", arguments: JSON.stringify({ action: "check", n: 1 }) }, // 放行（只读）
     { id: "3", name: "subagent", arguments: JSON.stringify({ action: "cancel", id: 9 }) }, // 放行（控制类豁免——§19.5 round2 #4——planMode 允许取消既有子代理）
     { id: "4", name: "subagent", arguments: JSON.stringify({ action: "spawn", task: "x", role: "explore" }) }, // 拒绝
     { id: "5", name: "subagent", arguments: JSON.stringify({ action: "escalate", task: "x" }) }, // 拒绝
@@ -851,13 +898,12 @@ test("T-M17a: action 级门控——planMode 下 status/check/cancel 放行（re
   })
   const contents = history.filter((m) => m.role === "tool").map((m) => m.content)
   const blocked = contents.filter((c) => c.includes("plan mode active"))
-  assert.equal(blocked.length, 3, "spawn/escalate/write 被 planMode 拦（status/check/cancel 不计入）")
+  assert.equal(blocked.length, 3, "spawn/escalate/write 被 planMode 拦（status/cancel 不计入）")
   assert.ok(contents.some((c) => c.includes('"overview"')), "status 放行并返回概览")
-  assert.ok(contents.some((c) => c.includes('"done":true')), "check（空池）放行并返回 done:true")
   assert.ok(contents.some((c) => c.includes("unknown async subagent id: 9")), "cancel 放行（控制类豁免——空池未知 id error 而非 planMode 拒绝）")
 })
 
-test("T-M17b: 混合 action 批次批审批按 action 分组——check/status 不入审批组（免询问）", async () => {
+test("T-M17b: 混合 action 批次批审批按 action 分组——status 不入审批组（免询问）", async () => {
   const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const executed = []
@@ -878,7 +924,6 @@ test("T-M17b: 混合 action 批次批审批按 action 分组——check/status �
   const calls = [
     { id: "1", name: "subagent", arguments: JSON.stringify({ action: "status" }) },
     { id: "2", name: "write", arguments: JSON.stringify({ path: "x.mjs", content: "x" }) },
-    { id: "3", name: "subagent", arguments: JSON.stringify({ action: "check", n: 1 }) },
   ]
   await executeToolBatches(agent, {
     response: { toolCalls: calls }, history, fullHistory: [],
@@ -889,22 +934,20 @@ test("T-M17b: 混合 action 批次批审批按 action 分组——check/status �
     },
     signal: undefined, cwd: process.cwd(), recentSigs: [],
   })
-  // 单件 write 到达权限询问阶段 → 批聚合需 ≥2 项，走逐项通道；status/check 只读动作
+  // 单件 write 到达权限询问阶段 → 批聚合需 ≥2 项，走逐项通道；status 只读动作
   // 全程不入任何询问（T-M17 按 action 分组断言）
   assert.deepEqual(batchAsks, [], "不足 2 项不发起批询问")
-  assert.deepEqual(singleAsks, ["single"], "仅 write 逐项询问一次——status/check 零询问")
+  assert.deepEqual(singleAsks, ["single"], "仅 write 逐项询问一次——status 零询问")
   const contents = history.filter((m) => m.role === "tool").map((m) => m.content)
   assert.ok(contents.some((c) => c.includes('"overview"')), "status 执行")
-  assert.ok(contents.some((c) => c.includes('"done":true')), "check 执行")
   assert.equal(executed.join(","), "write", "write 执行")
 })
 
-test("受限变体 action 门（round2 #3 + §19.5）：eng-coder 子代理内 escalate/check/status/cancel 动作工具层拒绝（镜像 T-E4/E5 的 action 维度）", async () => {
+test("受限变体 action 门（round2 #3 + §19.5）：eng-coder 子代理内 escalate/status/cancel 动作工具层拒绝（镜像 T-E4/E5 的 action 维度）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = engChildCtx(1, process.cwd())
   for (const args of [
     { action: "escalate", task: "x" },
-    { action: "check", n: 1 },
     { action: "status" },
     { action: "cancel", id: 1 }, // §19.5: cancel 同属 spawn-only 受限通道外动作——子代理上下文无 cancel 意义
   ]) {
@@ -915,8 +958,7 @@ test("受限变体 action 门（round2 #3 + §19.5）：eng-coder 子代理内 e
     )
   }
   assert.equal(ctx.agent._engAuditSpawns, undefined, "拒绝的动作不计入审计尝试数")
-  assert.equal(ctx.agent._asyncCheckN, 0, "check 未执行——n 读数保持初始值未被触碰")
-  assert.equal(ctx.agent._asyncSubagents.size, 0, "check/status 未消费/查询任何池项")
+  assert.equal(ctx.agent._asyncSubagents.size, 0, "status 未查询任何池项")
   // 非 eng-coder 深度上下文不受限：escalate 动作照常到达 handler（既有 depth 守卫错误字符串而非受限门错误）
   const coderChild = { _role: "coder", config: { agent: { engineering: false, consultModels: [] } }, _touchedFiles: [], _subIdCounter: 0 }
   const r = String(await subagentTool.execute({ action: "escalate", task: "x" }, { agent: coderChild, cwd: process.cwd(), depth: 1, callbacks: {} }))

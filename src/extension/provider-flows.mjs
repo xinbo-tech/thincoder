@@ -11,7 +11,7 @@
  */
 
 import * as vscode from "vscode"
-import { PROVIDER_PRESETS, presetToEntry, resolveProviders, persistRaw, setProviderKey } from "../config-io.mjs"
+import { PROVIDER_PRESETS, presetToEntry, resolveProviders, persistRaw, conflictError, setProviderKey } from "../config-io.mjs"
 
 const FORMATS = ["openai", "anthropic", "google"]
 
@@ -48,7 +48,9 @@ export function addProviderEntry({ preset, custom, key } = {}) {
     return "Add provider needs a preset or a custom config"
   }
 
-  persistRaw((raw) => { (raw.providers ??= []).push(entry) })
+  const r = persistRaw((raw) => { (raw.providers ??= []).push(entry) })
+  const err = conflictError(r)
+  if (err) return err // F5b：config 被并发方改过——放弃 + 提示重试（决策① A）
   const k = (key || "").trim()
   if (k) setProviderKey(entry.name, k)
   return null
@@ -64,8 +66,8 @@ export function removeProviderEntry(name) {
   }
   if (!providers.some((p) => p.name === name)) return `No provider named "${name}"`
   if (name === activeProvider) return "The active provider cannot be removed — switch active first"
-  persistRaw((raw) => { raw.providers = (raw.providers ?? []).filter((p) => p?.name !== name) })
-  return null
+  const r = persistRaw((raw) => { raw.providers = (raw.providers ?? []).filter((p) => p?.name !== name) })
+  return conflictError(r) // F5b：冲突 → 错误串提示（调用方 providerError 通道展示）
 }
 
 // ─── QuickPick flows (model dropdown shortcuts) ───
@@ -118,7 +120,10 @@ export async function addProviderFlow(refresh) {
     const err = addProviderEntry({ custom: { name, baseURL, model, format: format.label } })
     if (err) { vscode.window.showErrorMessage(err); return }
     const key = await vscode.window.showInputBox({ prompt: `API key for ${name} (leave empty to skip)`, password: true })
-    if (key?.trim()) setProviderKey(name, key.trim())
+    if (key?.trim()) {
+      const kerr = setProviderKey(name, key.trim())
+      if (kerr) { vscode.window.showErrorMessage(kerr); return } // F5b：config 并发被改——放弃 + 提示重试
+    }
     await refresh?.()
     return
   }
@@ -127,7 +132,10 @@ export async function addProviderFlow(refresh) {
   const err = addProviderEntry({ preset: sel.name })
   if (err) { vscode.window.showErrorMessage(err); return }
   const key = await vscode.window.showInputBox({ prompt: `API key for ${sel.name} (leave empty to skip)`, password: true })
-  if (key?.trim()) setProviderKey(sel.name, key.trim())
+  if (key?.trim()) {
+    const kerr = setProviderKey(sel.name, key.trim())
+    if (kerr) { vscode.window.showErrorMessage(kerr); return } // F5b：冲突放弃提示重试
+  }
   await refresh?.()
 }
 
@@ -172,7 +180,8 @@ export async function setKeyFlow(refresh) {
   if (!sel) return
   const key = await vscode.window.showInputBox({ prompt: `API key for ${sel.label}`, password: true })
   if (key?.trim()) {
-    setProviderKey(sel.label, key.trim())
+    const kerr = setProviderKey(sel.label, key.trim())
+    if (kerr) { vscode.window.showErrorMessage(kerr); return } // F5b：config 并发被改——放弃 + 提示重试
     await refresh?.()
   }
 }

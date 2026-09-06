@@ -20,7 +20,9 @@ import { memoryTool } from "../memory-tool.mjs"
 import { contextTool } from "./context.mjs"
 import { focusTool } from "./focus.mjs"
 import { fileOpsTool, processTool, getCurrentTimeTool } from "./ops.mjs"
+import { waitForTool } from "./wait_for.mjs"
 import { treeTool } from "./tree.mjs"
+import { peerInstancesTool } from "../extension/peer-instances.mjs" // R10 L2（MULTI-INSTANCE-COLLAB D-L2b）只读工具
 
 export { readTool, writeTool, editTool, hashlineEditTool }
 export { globTool, grepTool }
@@ -39,6 +41,7 @@ export { codeSearchTool, docSearchTool }
 export { contextTool } from "./context.mjs"
 export { focusTool } from "./focus.mjs"
 export { fileOpsTool, processTool, getCurrentTimeTool } from "./ops.mjs"
+export { waitForTool } from "./wait_for.mjs"
 export { treeTool } from "./tree.mjs"
 
 export { BASH_TIMEOUT_MS, resolvePath, formatSize } from "./shared.mjs"
@@ -55,7 +58,9 @@ export const builtinTools = [
   memoryTool,
   contextTool, focusTool,
   fileOpsTool, processTool, getCurrentTimeTool,
+  waitForTool,
   treeTool,
+  peerInstancesTool, // R10 L2——只读（纯查询——不认领不写）
 ]
 
 /** Convert a tool definition to OpenAI function schema */

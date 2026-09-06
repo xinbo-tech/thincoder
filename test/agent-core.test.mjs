@@ -279,6 +279,67 @@ describe("§18.12 verify 改动文件定位（T-VR4——VS Code 对齐）", () 
   })
 })
 
+describe("R-bug join→resolve 记账双前缀（AGENT-LOOP.md §24 尾修复注——VS Code 镜像——记账循环 = execute-tools.mjs FILE_MUTATORS 分支）", () => {
+  // 记账点修复语义：p 为绝对路径时 join(cwd, p) 双前缀（node path.join 遇绝对段不重置——
+  // resolve 才重置）→ _touchedFiles/_fileMutEvents 记错路径（verify 关联 / advisor 陈旧
+  // 扫描——§24 D-24b mutation-log 面）。前提：cwd 恒绝对（评审 #5 明示）。
+  // cwd = 临时绝对目录（非仓库 cwd——仓库 cwd 有活会话 manifest → execute-tools L3
+  // peerDomains 冲突扫描读真实 ~/.thincoder/peers——并发负载下拖到秒级——D-T6 拦截）。
+  let tCwd
+  before(async () => {
+    // execute-tools 模块图首次加载 ~500ms+（并发/负载下可达秒级）——钩子内预热
+    // （钩子耗时不计入用例——D-T6 slow-gate 按用例测时）。
+    await import("../src/agent/execute-tools.mjs")
+    tCwd = mkdtempSync(join(tmpdir(), "tc-rbug-"))
+  })
+  after(() => {
+    rmSync(tCwd, { recursive: true, force: true })
+  })
+
+  function batchAgent() {
+    return {
+      _planMode: false, _role: null, _engDesignToken: null, _engDesignReviewed: false,
+      _touchedFiles: [], _mutatedThisRun: false, _calledAdvisorThisRun: false,
+      _verifiedThisRun: false, _verifyPassed: undefined, _advisorRound: 0,
+      config: { agent: { engineering: false } },
+      history: [], // setup.mjs parity: agent.history = the run history (recordFileMutation holder)
+    }
+  }
+
+  const writeTool = { name: "write", readonly: false, execute: async () => "ok" }
+
+  async function runWrite(agent, p) {
+    const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
+    await executeToolBatches(agent, {
+      response: { toolCalls: [{ id: "1", name: "write", arguments: JSON.stringify({ path: p, content: "x" }) }] },
+      history: agent.history, fullHistory: [],
+      toolByName: new Map([["write", writeTool]]),
+      getAuto: () => true, // AUTO——跳过权限询问——直击记账点
+      callbacks: {}, signal: undefined, cwd: tCwd, recentSigs: [], depth: 0,
+    })
+  }
+
+  it("① 绝对 path → _touchedFiles 记 resolve 语义绝对路径（无双前缀）——修复前该用例必须失败", async () => {
+    const p = join(tmpdir(), "tc-rbug-abs.mjs") // 绝对路径（cwd 外）——join(cwd, p) 双前缀现场
+    const agent = batchAgent()
+    await runWrite(agent, p)
+    assert.deepEqual(agent._touchedFiles, [p], "_touchedFiles 记 resolve 语义绝对路径（非 join 双前缀）")
+  })
+
+  it("①b 绝对 path → _fileMutEvents 同源记账（§24 D-24b mutation-log 面——与 _touchedFiles 同 abs）", async () => {
+    const p = join(tmpdir(), "tc-rbug-abs-evt.mjs")
+    const agent = batchAgent()
+    await runWrite(agent, p)
+    assert.deepEqual(agent.history._fileMutEvents, [p], "文件变更事件记 resolve 语义绝对路径")
+  })
+
+  it("② 相对 path 回归不变（绝对 cwd 下构造）——join 语义与 resolve 等同", async () => {
+    const agent = batchAgent()
+    await runWrite(agent, "src/rbug-rel.mjs")
+    assert.deepEqual(agent._touchedFiles, [join(tCwd, "src", "rbug-rel.mjs")], "相对 path 记账不变")
+  })
+})
+
 describe("pending-task pushback fires at most once (CLI parity)", () => {
   it("one reminder per task-list state, then the model finishes", async () => {
     const http = await import("node:http")

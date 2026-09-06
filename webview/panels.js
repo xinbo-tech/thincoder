@@ -2,12 +2,16 @@
  * panels.js — side panels: task progress, subagents/consultants, goal.
  * Owns the auto-clean interval and the taskProgress / subagent / goal /
  * suspension message handlers.
+ * R22: activity-BLOCK lifecycle (create/header/freeze/⏹/ticker) moved to
+ * activity.js — this module keeps the ROW panel (#subagent-panel rows) and
+ * calls activity.* for block-side effects (one-way import, no cycle).
  */
 import { ctx, S } from "./state.js"
 import { t } from "./i18n.js"
 import { escHtml } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
+import { applySubagentStatus, freezeSettledBlocks } from "./activity.js"
 
 export function renderTaskPanel() {
   const panel = document.getElementById("task-panel")
@@ -102,6 +106,8 @@ export function renderGoalPanel() {
 }
 
 export function clearPanels() {
+  // R22: activity blocks are NOT reset here (send/queue-time — live children of
+  // the running turn must keep their blocks; finish()/clearMessages reset them).
   S._subagentMap = {}
   S._goalInfo = null
   S._taskProgress = null
@@ -146,77 +152,18 @@ export function handleTaskProgress(m) {
   renderStatusBar()
 }
 
-/** Collapse one subagent/escalate activity block (by role + id). Block keys:
- *  subagents `sub:${role}#${id}`, escalate `sub:escalate ${tag} #${id}` (tag = model)
- *  — match by role prefix + `#${id}` suffix (ids are unique per turn via
- *  _subIdCounter). Kept in the conversation (expandable) — never removed. */
-function collapseSubBlocks(role, id) {
-  for (const [name, block] of S._subBlocks) {
-    if (name.startsWith(`sub:${role}`) && name.endsWith(`#${id}`)) {
-      block.open = false
-    }
-  }
-}
+// ─── R22: 活动块 DOM 生命周期（create/header/freeze/⏹/elapsed ticker/冻结 preview）
+// 整体迁 activity.js（ensureBlock/applySubagentStatus/freezeBlock/freezeSettledBlocks/
+// resetActivity）——行面板与活动块解耦：本文件只管 #subagent-panel 行 + 桥消息路由。
 
-// ─── §19.5 D-M7 子块 ⏹ 停止控件 + ⟦ev⟧stopped 冻结相位（AGENT-LOOP.md §19.5 D-M7/D-M8）───
-// ⏹ 只在运行中子代理块标题行显示（T-M23）；点击 = postMessage cancelSubagent →
-// extension 层定向 abort（不经模型回合——失控子代理时模型可能不可靠——chat.js 委托）。
-// 块键 = async spawn 频道 `sub:role#id`（explore/plan/coder/eng-coder——池条目）；
-// escalate/consult 块键含 model tag 且非池条目——无 ⏹。
-
-/** 可取消块键解析：`sub:eng-coder#1` → { role, id }（CANCELABLE_BLOCK 匹配；其余 null）。 */
-export function subBlockTarget(name) {
-  const m = /^sub:(explore|plan|coder|eng-coder)#(\d+)$/.exec(String(name ?? ""))
-  return m ? { role: m[1], id: Number(m[2]) } : null
-}
-
-/** 按 role+id 遍历匹配块（subagent 块键 = `sub:${role}#${id}` 后缀匹配——与
- *  collapseSubBlocks 同规则；escalate/consult 键不命中——无 ⏹）。 */
-function eachSubBlock(role, id, fn) {
-  for (const [name, block] of S._subBlocks) {
-    if (name.startsWith(`sub:${role}`) && name.endsWith(`#${id}`)) fn(block)
-  }
-}
-
-/** ⏹ 显示/移除（仅 running 态显示——done/error/settled/cancelled 后消失——T-M23）。
- *  按钮为块级 overlay（absolute 定位于标题行右缘——不落入 summary 文本——块键
- *  label 的 textContent 匹配与既有折叠测试零干扰；点击不触发 details 折叠翻转）。 */
-export function updateBlockStopButtons(role, id, running) {
-  eachSubBlock(role, id, (block) => {
-    const btn = block.querySelector(".sub-stop-btn")
-    if (running && !btn) {
-      const b = document.createElement("button")
-      b.className = "sub-stop-btn"
-      b.type = "button"
-      b.dataset.subId = String(id)
-      b.dataset.subRole = role
-      b.textContent = "⏹"
-      b.title = t("sub.stopBtn") || "Stop this subagent"
-      block.appendChild(b)
-    } else if (!running && btn) {
-      btn.remove()
-    }
-  })
-}
-
-/** ⟦ev⟧stopped 冻结相位（D-M6 cancelled settle → webview 端）：折叠 + ⏹ 移除 +
- *  标题行 stopped 标记（CLI 冻结标题 parity——区块保留可展开）。 */
-export function freezeStoppedBlocks(role, id) {
-  eachSubBlock(role, id, (block) => {
-    block.open = false
-    block.querySelector(".sub-stop-btn")?.remove()
-    const summary = block.querySelector("summary")
-    if (summary && !summary.querySelector(".sub-stopped")) {
-      const tag = document.createElement("span")
-      tag.className = "sub-stopped"
-      tag.textContent = " · " + (t("sub.stopped") || "stopped")
-      summary.appendChild(tag)
-    }
-  })
-}
-
-/** subagent message: track lifecycle; collapse activity blocks on terminal state. */
+/** subagent message: track lifecycle (rows); block-side effects delegate to
+ *  activity.applySubagentStatus (R22 — blocks live in the bottom panel and
+ *  freeze into #messages on terminal states; §17 settled parks in the panel
+ *  with the awaiting-digestion header until digest done / session-exit freeze). */
 export function handleSubagentMessage(m) {
+  // Block-side effects FIRST (independent of the row bookkeeping below — a
+  // chunk-only block without a row still freezes correctly).
+  applySubagentStatus(m)
   if (m.status === "queued") {
     // §20 D-SD3b：排队 spawn 行（spawn 返回即见——waiting 标注/等位——CLI waiting 块
     // 的 webview 行等价）。重复 queued 消息（位置/等待态刷新——cancel 前移/依赖终态
@@ -238,48 +185,18 @@ export function handleSubagentMessage(m) {
     return
   }
   if (m.status === "started") {
-    S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), tool: null, model: m.model ?? null, pool: !!m.pool }
-    // §19.5 D-M7: 仅池条目（async spawn——m.pool——cancel 路由可达）的块挂 ⏹；同步
-    // spawn 的 started 无 pool 标记——不挂（无效 ⏹——审计 F1）。块创建时也已按行态装过
-    // （streaming.js）——此处覆盖消息乱序/历史场景。
-    if (m.pool) updateBlockStopButtons(m.role, m.id, true)
-  } else {
-    const s = S._subagentMap[m.id]
-    if (s) { s.status = m.status; s.doneAt = Date.now(); if (m.error) s.error = m.error; if (m.replyPreview) s.replyPreview = m.replyPreview }
-    // §19.5: ⏹ 在任何非 running 终态/冻结态消失（T-M23——done/冻结后不残留）。
-    if (m.role !== "consult") updateBlockStopButtons(m.role, m.id, false)
-    // Consult terminal state → collapse its activity block (consult-UI review 2026-08-15;
-    // the "collapses when done" comment was a promise the code never kept).
-    if (m.role === "consult" && m.model && m.status !== "started") {
-      const block = S._subBlocks.get(`sub:consult ${m.model} #${m.sessionId}`)
-      if (block) block.open = false
-    }
-    // Subagent/escalate terminal state → collapse the activity block too
-    // (2026-09-02 fix round: the subagent block had no completion state — it
-    // stayed "live" until the turn ended. CLI parity with the ⟦ev⟧done freeze:
-    // done = collapsed, kept in the conversation, expandable — not removed.
-    // The done notification fires at child settle (subagent.mjs runChild), so
-    // this collapses the moment the child completes — no turn-end wait.)
-    // §17 D-S8: a "settled" notification (child finished while the suspension
-    // session is active) does NOT collapse — the block stays live with the
-    // "done · awaiting digestion" intermediate state (panel row); the session-exit
-    // freeze (handleSuspensionMessage active:false + freeze) collapses it.
-    // done AND error are terminal — both collapse immediately (regression guard:
-    // ui.test.mjs "error 终态同样折叠").
-    if (m.role !== "consult" && (m.status === "done" || m.status === "error")) {
-      collapseSubBlocks(m.role, m.id)
-    }
-    // §19.5 ⟦ev⟧stopped（D-M6 cancelled settle → 冻结相位）：区块以 interrupted 语义
-    // 冻结——折叠 + 标题 stopped 标记（T-M22/T-M23 webview 断言）。
-    // §20 D-SD3b：cancelled 带 was:"queued" = queued 取消（从未启动——无活动块可冻结）
-    // → 行移除（不留 stopped 残行——CLI waiting 块移除同语义）。
-    if (m.role !== "consult" && m.status === "cancelled") {
-      if (m.was === "queued") {
-        delete S._subagentMap[m.id]
-      } else {
-        freezeStoppedBlocks(m.role, m.id)
-      }
-    }
+    S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), tool: null, model: m.model ?? null, pool: !!m.pool, sessionId: m.sessionId ?? null }
+    // §19.5 D-M7: ⏹/块由 activity（applySubagentStatus——池条目建块 + refresh 装 ⏹）
+    renderSubagentPanel()
+    renderStatusBar()
+    return
+  }
+  const s = S._subagentMap[m.id]
+  if (s) { s.status = m.status; s.doneAt = Date.now(); if (m.error) s.error = m.error; if (m.replyPreview) s.replyPreview = m.replyPreview }
+  // §20 D-SD3b：cancelled 带 was:"queued" = queued 取消（从未启动——无活动块可冻结）
+  // → 行移除（不留 stopped 残行——CLI waiting 块移除同语义）。
+  if (m.status === "cancelled" && m.was === "queued") {
+    delete S._subagentMap[m.id]
   }
   renderSubagentPanel()
   renderStatusBar()
@@ -297,11 +214,13 @@ export function handleSuspensionMessage(m) {
   } else {
     S._suspCounts = null
     if (m.freeze) {
+      // R22/§17.5.5 兜底：驻留面板的 settled 活动块先冻结入流（done 形态——✓ 身份头 +
+      // preview），行随之翻 done（freezeSettledBlocks 按 settled 行定位块——顺序先行）。
+      freezeSettledBlocks()
       for (const [id, s] of Object.entries(S._subagentMap)) {
         if (s.status !== "settled") continue
         s.status = "done"
         s.doneAt = Date.now()
-        collapseSubBlocks(s.role, id)
       }
     }
     // §20 D-SD3b：会话退出（含 Stop 全停——池被清空）时移除残留 waiting 行（queued——

@@ -4,16 +4,21 @@
  * compaction-injection ts, send-layer ts strip, tool filters/limits/windows, depth-0-only
  * registration with the human line attached to the agent.
  */
-import { describe, it, beforeEach } from "node:test"
+import { describe, it, beforeEach, after } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { createHash } from "node:crypto"
 
 import { pushReal } from "../src/agent/run-helpers.mjs"
 import { stripLocalMessageFields } from "../src/escape.mjs"
 import { truncateFallback } from "../src/compact.mjs"
 import { readHistoryTool } from "../src/agent-tools/read-history.mjs"
+import { recentChangesTool } from "../src/agent-tools/recent_changes.mjs"
+import { memoryTool } from "../src/memory-tool.mjs"
+import { codeSearchTool, docSearchTool } from "../src/tools/code.mjs"
+import { _setSessionsDirForTest, _resetSessionsDirForTest, normalizeCwd } from "../src/extension/session-io.mjs"
 
 let tmp = null
 let cfgPath = null
@@ -335,6 +340,157 @@ describe("send layer + plan-mode governance (CLI T-S3/T-S9 mirrors)", () => {
       assert.deepEqual(parsed, [{ ts: 1, role: "user", content: "p" }], "history queryable inside plan mode")
     } finally {
       rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+// ---------------------------------------------------------------- SESSION.md §13 R19（跨会话历史检索 + 消歧互指——VS Code 镜像）
+// D-R19b 族表总纲逐字稿（SESSION.md §13——唯一源——两端照抄——fail-when-unchanged）
+const FAMILY_TABLE =
+  "检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识/约定**（memory）→ memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。"
+
+function cwdHash(c) {
+  return createHash("sha1").update(normalizeCwd(c)).digest("hex")
+}
+
+function writeSessionFile(sdir, cwd, slot, data) {
+  writeFileSync(join(sdir, `${cwdHash(cwd)}.json.${slot}`), JSON.stringify(data), "utf8")
+}
+
+function sessionData(overrides) {
+  return { version: 2, cwd: "D:\\proj", title: "t", updatedAt: Date.now(), history: [], ...overrides }
+}
+
+describe("R19 cross-session + cwd discovery (SESSION.md §13 D-R19a — VS Code mirror)", () => {
+  let sdir = null
+  let cwdDir = null
+  beforeEach(() => {
+    sdir = mkdtempSync(join(tmpdir(), "vsc-rh19-sess-"))
+    cwdDir = mkdtempSync(join(tmpdir(), "vsc-rh19-cwd-"))
+    _setSessionsDirForTest(sdir)
+  })
+  after(() => {
+    _resetSessionsDirForTest()
+    try { rmSync(sdir, { recursive: true, force: true }) } catch {}
+    try { rmSync(cwdDir, { recursive: true, force: true }) } catch {}
+  })
+
+  it("T-R19.1: no path → THIS session only — session files on disk are never touched (zero change)", () => {
+    writeSessionFile(sdir, cwdDir, 1, sessionData({ history: [{ role: "user", content: "磁盘旧会话里的裁定 X", ts: 1 }] }))
+    const live = [{ role: "user", content: "本会话消息", ts: 9 }]
+    const out = query(live, {})
+    assert.equal(out.length, 1)
+    assert.equal(out[0].content, "本会话消息")
+    const kw = query(live, { keyword: "磁盘旧会话" })
+    assert.deepEqual(kw, [], "keyword never leaks into disk sessions")
+    assert.ok(String(readHistoryTool.execute({ path: null }, { agent: { _fullHistory: live } })).includes("本会话消息"), "null path behaves like no path")
+  })
+
+  it("T-R19.2: cross-session single slot — full file path + same filter surface (incl. ts window)", () => {
+    const filePath = join(sdir, `${cwdHash(cwdDir)}.json.3`)
+    const data = sessionData({
+      cwd: cwdDir, title: "旧会话", updatedAt: 555,
+      history: [
+        { role: "user", content: "上次讨论的方案", ts: 100 },
+        { role: "assistant", content: "", ts: 200, tool_calls: [{ id: "c1", type: "function", function: { name: "read", arguments: "{}" } }] },
+        { role: "tool", tool_call_id: "c1", name: "read", content: "决定用 A 方案", ts: 300 },
+        { role: "user", content: "无 ts 的旧消息" },
+      ],
+    })
+    writeFileSync(filePath, JSON.stringify(data), "utf8")
+    const kw = query([], { path: filePath, keyword: "A 方案" })
+    assert.equal(kw.length, 1, "keyword hits the old session message")
+    assert.equal(kw[0].role, "tool")
+    assert.equal(kw[0].ts, 300, "hit carries its stored ts")
+    const byTool = query([], { path: filePath, tool: "read" })
+    assert.deepEqual(byTool.map((m) => m.role), ["assistant", "tool"], "declaration + result across sessions too")
+    const windowed = query([], { path: filePath, since: 200, until: 300 })
+    assert.equal(windowed.length, 2, "time window applies; no-ts message excluded")
+    const oldest = query([], { path: filePath, limit: 2, direction: "oldest" })
+    assert.deepEqual(oldest.map((m) => m.role), ["user", "assistant"], "limit/direction shared")
+  })
+
+  it("T-R19.3: cwd discovery — slot number + FULL file path + title/messages/updatedAt, newest first, other cwds excluded", () => {
+    writeSessionFile(sdir, cwdDir, 2, sessionData({ cwd: cwdDir, title: "会话 B", updatedAt: 2000, history: [1, 2, 3, 4, 5].map((i) => ({ role: "user", content: `b${i}` })) }))
+    writeSessionFile(sdir, cwdDir, 1, sessionData({ cwd: cwdDir, title: "会话 A", updatedAt: 1000, history: [1, 2, 3].map((i) => ({ role: "user", content: `a${i}` })) }))
+    // 历史短哈希命名（迁移落地后从未再访问的旧 cwd——advisor 修复：发现面只读覆盖 legacy 候选名，不触发改名迁移）
+    writeFileSync(join(sdir, `${cwdHash(cwdDir).slice(0, 12)}.json.4`), JSON.stringify(sessionData({ cwd: cwdDir, title: "legacy 会话", updatedAt: 3000, history: [{ role: "user", content: "旧格式裁定" }] })), "utf8")
+    const other = mkdtempSync(join(tmpdir(), "vsc-rh19-other-"))
+    try {
+      writeSessionFile(sdir, other, 7, sessionData({ cwd: other, title: "别的项目", updatedAt: 9999, history: [{ role: "user", content: "x" }] }))
+      const out = String(readHistoryTool.execute({ path: `cwd:${cwdDir}` }, { agent: {} }))
+      const idxB = out.indexOf("slot 2:")
+      const idxA = out.indexOf("slot 1:")
+      assert.ok(idxB >= 0 && idxA >= 0, `both slots listed: ${out}`)
+      assert.ok(out.indexOf("slot 4:") < idxB, "legacy short-hash slot 4 newest (updatedAt 3000) — listed first")
+      const legacyPath = join(sdir, `${cwdHash(cwdDir).slice(0, 12)}.json.4`)
+      assert.ok(out.includes(legacyPath), "legacy file FULL path present — follow-up path= query works on any listed name")
+      assert.ok(out.includes("legacy 会话") && out.includes("updatedAt: 3000"), "legacy row carries title + updatedAt")
+      assert.ok(out.includes("会话 B") && out.includes("会话 A"), "titles present")
+      assert.match(out, /messages: 5/)
+      assert.match(out, /updatedAt: 2000/)
+      assert.ok(out.includes("Re-call read_history with path="), "two-step hint present")
+      assert.ok(!out.includes("别的项目"), "other cwd's sessions excluded")
+      assert.ok(!out.includes(`${cwdHash(other)}.json.7`), "other hash files excluded")
+    } finally {
+      try { rmSync(other, { recursive: true, force: true }) } catch {}
+    }
+  })
+
+  it("T-R19.3b/3c: unknown cwd errors; existing cwd with no sessions → empty list + hint", () => {
+    const missing = join(cwdDir, "no-such-dir")
+    const err = String(readHistoryTool.execute({ path: `cwd:${missing}` }, { agent: {} }))
+    assert.ok(err.startsWith("Error: no sessions for cwd"), err)
+    assert.match(err, /directory not found/, "明确文案——无该 cwd 会话目录")
+    const empty = String(readHistoryTool.execute({ path: `cwd:${cwdDir}` }, { agent: {} }))
+    assert.match(empty, /no sessions for cwd/, "空结果 + 无会话提示")
+    const emptyErr = String(readHistoryTool.execute({ path: "cwd:" }, { agent: {} }))
+    assert.match(emptyErr, /invalid path "cwd:"/)
+  })
+
+  it("T-R19.3d: missing/corrupt/non-file targets error — never crash, never rename", () => {
+    const gone = join(sdir, `${cwdHash(cwdDir)}.json.9`)
+    assert.match(String(readHistoryTool.execute({ path: gone }, { agent: {} })), /Error: session file not found/)
+    const corrupt = join(sdir, `${cwdHash(cwdDir)}.json.1`)
+    writeFileSync(corrupt, "{not json!!!", "utf8")
+    assert.match(String(readHistoryTool.execute({ path: corrupt }, { agent: {} })), /Error: cannot parse session file/)
+    assert.ok(!corrupt.endsWith(".corrupted") && !corrupt.endsWith(".unreadable"), "read-only — target untouched (no rename)")
+    assert.match(String(readHistoryTool.execute({ path: cwdDir }, { agent: {} })), /Error: cannot read session file/, "a directory is not a session file")
+    const notSession = join(sdir, `${cwdHash(cwdDir)}.json.2`)
+    writeFileSync(notSession, JSON.stringify({ version: 2, history: "nope" }), "utf8")
+    assert.match(String(readHistoryTool.execute({ path: notSession }, { agent: {} })), /Error: not a session history file/)
+  })
+
+  it("T-R19.7: >200,000-line file → size error before full parse (design-finalized message)", () => {
+    const huge = join(sdir, `${cwdHash(cwdDir)}.json.4`)
+    writeFileSync(huge, "x\n".repeat(200_001), "utf8")
+    assert.equal(
+      String(readHistoryTool.execute({ path: huge }, { agent: {} })),
+      JSON.stringify({ error: "session too large — refine keyword or since/until" }),
+      "超限文案逐字（评审 #3 定稿）——错误在解析前返回"
+    )
+    // 边界下多行合法 JSON 仍可查（行扫不误伤常规多行文件）
+    const pretty = join(sdir, `${cwdHash(cwdDir)}.json.5`)
+    writeFileSync(pretty, JSON.stringify(sessionData({ cwd: cwdDir, history: [{ role: "user", content: "多行文件里的裁定", ts: 42 }] }), null, 2), "utf8")
+    const hit = query([], { path: pretty, keyword: "多行文件" })
+    assert.equal(hit.length, 1)
+    assert.equal(hit[0].ts, 42)
+  })
+})
+
+describe("R19 description anchors — 消歧总纲与互指（SESSION.md §13 D-R19b）", () => {
+  it("T-R19.5: read_history description carries the family table verbatim (fail-when-unchanged)", () => {
+    assert.ok(readHistoryTool.description.includes(FAMILY_TABLE), "D-R19b 族表总纲逐字在 read_history 描述尾段")
+    assert.ok(readHistoryTool.description.includes("path="), "path 参数说明在描述中")
+    assert.ok(readHistoryTool.description.includes("cwd:"), "cwd: 前缀说明在描述中")
+    assert.ok(String(readHistoryTool.parameters.properties.path.description).includes("cwd:"), "path 参数 schema 说明含 cwd:")
+  })
+
+  it("T-R19.6: recent_changes / memory / doc_search / code_search descriptions carry the inter-ref tails", () => {
+    assert.ok(recentChangesTool.description.includes("会话级历史用 read_history"), "recent_changes 互指尾句")
+    assert.ok(memoryTool.description.includes("会话消息历史不在 memory——用 read_history"), "memory search 段互指句")
+    for (const t of [codeSearchTool, docSearchTool]) {
+      assert.ok(t.description.includes("查设计决策用 doc_search——查实现用 code_search——查会话用 read_history"), `${t.name} 互指句含 read_history 引用`)
     }
   })
 })

@@ -2,11 +2,13 @@
  * subagent-async.mjs — async/audit machinery of the subagent tool family（2026-09-05 模块
  * 拆分轮——超 500 行硬限（AGENTS.md）——§20 调度组 + 文件域组 verbatim 迁至
  * subagent-scheduler.mjs（池/墓碑/文件域归一化与冲突/依赖态/补位判据/行刷新/环防御/
- * ASYNC_SUBAGENT_LIMIT/queuePosition）；§19/§19.5 check/status/cancel 动作执行器组 verbatim
- * 迁至 subagent-actions.mjs（subagentCheck/subagentStatus/cancelSubagent/
- * cancelSubagentAction）——纯模块迁移零行为变化——本模块 import subagent-scheduler.mjs
- * 单向取调度符号——模块图无环）。subagent.mjs re-exports the public names, so no consumer
+ * ASYNC_SUBAGENT_LIMIT/queuePosition）；§19/§19.5 status/cancel 动作执行器组 verbatim
+ * 迁至 subagent-actions.mjs（subagentStatus/cancelSubagent/cancelSubagentAction）——纯
+ * 模块迁移零行为变化——本模块 import subagent-scheduler.mjs 单向取调度符号——模块图无环）。
+ * subagent.mjs re-exports the public names, so no consumer
  * (agent.mjs, suspension.mjs, index.mjs, setup.mjs, panel-messages.mjs, tests) changed.
+ * §19.8（2026-09-06）：action:'check' 删除——check 等待者池唤醒循环（F1）随之退役——
+ * 结果仅自动通道（collectSettledAsync 回合尾注入 / 挂起 digest）。
  *
  * 本模块保留：§18 审计机械（ENG_AUDIT_SPAWN_LIMIT/gateEngCoderSpawn/summarizeEngTaskInput/
  * auditTaskBook——audit 子代理任务书机械追加）、shouldAutoResume（§15 D-A3——工程 AUTO
@@ -19,10 +21,11 @@
  */
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent, errText } from "../log.mjs"
-import { ASYNC_SUBAGENT_LIMIT, describeBlockers, refreshQueuedRows, refillPool, writeTombstone, writeTombstoneTo } from "./subagent-scheduler.mjs"
+import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, refillPool, runningByDomain, writeTombstone, writeTombstoneTo } from "./subagent-scheduler.mjs"
+import { recordFileMutation } from "./advisor-async.mjs"
 // 测试 import 面（test/subagent-scheduler.test.mjs——测试文件零改动约束）：§20 调度符号经
 // 本模块 re-export 保持可导入——src 侧消费者（subagent.mjs）已改指 subagent-scheduler.mjs 直连。
-export { describeBlockers, queueRunnable } from "./subagent-scheduler.mjs"
+export { describeBlockers, queueRunnable, nextSubagentId } from "./subagent-scheduler.mjs"
 
 /**
  * §18 D-E3 eng-coder internal-spawn mechanical gate (AGENT-LOOP.md §18 D-E2 round5 #2
@@ -178,7 +181,7 @@ export function shouldAutoResume(asyncFlag, parent, ctx) {
  * 队列等待不计入运行时长）；entry._onCancelled = 停止冻结通知（onSubagent
  * status:"cancelled"——spawn 上下文绑定——webview ⟦ev⟧stopped 冻结相位）。
  */
-export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild, files, dependsOn }) {
+export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild, files, dependsOn, settle }) {
   parent._asyncSubagents = parent._asyncSubagents ?? new Map()
   const id = subId
   const entry = {
@@ -248,23 +251,29 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     // pool: true —— 异步池条目标记：webview 只有池条目（async spawn）的块挂 ⏹——
     // 同步 spawn 同样发 started 但无池条目（cancel 路由定位不到——防无效 ⏹，审计 F1）
     ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "started", startedAt: entry.startedAt, model: provider.model ?? null, pool: true })
+    // §25 R17（飞刀 async——subagent-escalate-async.mjs 自定义 settle）：settle 参数
+    // 缺省 = settleAsyncEntry（spawn 既有语义零变化）；飞刀传 settleEscalateEntry——
+    // 三分类 + merge 决策 + 独立 pending 流（_pendingEscalateResults——D-R17c）。
+    const settleFn = settle ?? settleAsyncEntry
     runChild(entry).then(
-      (report) => settleAsyncEntry(parent, entry, report, null, ctx.callbacks?.onAsyncSettled),
-      (err) => settleAsyncEntry(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
+      (report) => settleFn(parent, entry, report, null, ctx.callbacks?.onAsyncSettled),
+      (err) => settleFn(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
     )
   }
   parent._asyncSubagents.set(id, entry)
-  const runningCount = [...parent._asyncSubagents.values()].filter((x) => x.status === "running").length
-  // §18 code review #1: the spawn result must be a JSON STRING — the agent loop
-  // serializes every tool result with String(raw) (execute-tools.mjs), so a plain
-  // object would reach the model as "[object Object]" and the id/status/position
-  // contract of the tool description and engineering.md step 6 would be lost (CLI
-  // parity — the CLI stringifies the same shapes).
-  if (entry._waitKind == null && runningCount < ASYNC_SUBAGENT_LIMIT) {
+  // §24 D-24a（R14——角色分池）：条目带池域字段（_poolDomain——域判定单一事实源在
+  // scheduler.entryDomain——缺省/未知角色归 other）；上限判定按域 running 数 vs
+  // 该域配置容量（effectivePoolLimits——每次入池判定时读——变更即生效下个 spawn）。
+  entry._poolDomain = entryDomain(entry)
+  const { limits, warnings } = effectivePoolLimits(parent)
+  const runningBy = runningByDomain(parent._asyncSubagents)
+  if (entry._waitKind == null && runningBy[entry._poolDomain] < limits[entry._poolDomain]) {
     entry.start()
     // LOGGING（LOGGING.md——CLI parity）：child:spawn async（立即启动）
-    logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: "running" })
-    return JSON.stringify({ id, role, status: "running" })
+    logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: "running", pool: entry._poolDomain })
+    const out = { id, role, status: "running" }
+    if (warnings.length > 0) out.warning = warnings.join("; ")
+    return JSON.stringify(out)
   }
   // 队列序 = Map 插入序（queued 过滤计数——queuePosition 先例）；等待态条目即使槽空
   // 也在此排队（_waitKind 非空——启动权交补位扫描）。
@@ -273,8 +282,9 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
   // 位置/等待态后续变化经 refreshQueuedRows 刷新（去重 sig）。
   refreshQueuedRows(parent)
   // LOGGING（LOGGING.md——CLI parity）：child:spawn async（排队——启动由补位触发）
-  logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: "queued" })
+  logEvent("child:spawn", { role, id: `${role}#${id}`, kind: "async", status: "queued", pool: entry._poolDomain })
   const out = { id, role, status: "queued", position: entry.position }
+  if (warnings.length > 0) out.warning = warnings.join("; ")
   if (entry._waitKind != null) {
     out.waiting = entry._waitKind === "depc" ? "dependency-cancelled" : "waiting-deps"
     out.reason = entry._waitReason
@@ -283,8 +293,8 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
 }
 
 /**
- * §15 D-A1 settle：落 report/error + 解析该 entry 自己的 settled（arrival-order 唤醒
- * action:'check' / 回合收尾）→ 腾槽补位（running settle 一个即启动队列头部——完成即补位，
+ * §15 D-A1 settle：落 report/error + 解析该 entry 自己的 settled（自动通道——回合尾收集/
+ * 挂起 digest）→ 腾槽补位（running settle 一个即启动队列头部——完成即补位，
  * 不消费才补；失败/abort 同样腾槽）。entry.start 绑定创建它的 execute 调用上下文，
  * 因此补位启动的子代理跑的是它自己的 pipeline。
  * §17 D-S3 ②/D-S8（VS Code 对齐）：settle 时若处于挂起态（parent.history._suspended——
@@ -352,11 +362,6 @@ function settleAsyncEntry(parent, entry, report, error, notifySettle) {
   refillPool(parent, (e) => e._auto?.() ?? false)
   refreshQueuedRows(parent)
   notifySettle?.()
-  // F1（2026-09-05——CLI waiters 循环镜像）：池 settle = check 等待循环的唯一推进事件
-  // （refill 只由 settle/cancel/spawn 驱动）——唤醒全部等待者（重判守卫——depc/死端即
-  // 返回不悬挂）。等待者注册在 history 载体（跨 runAgent 存活——同池的载体纪律）。
-  const carrier = parent.history ?? parent
-  for (const w of carrier._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
 }
 
 // ─── Async subagent machinery（AGENT-LOOP.md §15 + §17，CLI D-A1/D-A2/D-A4/D-S3 同规格）───
@@ -378,8 +383,8 @@ export async function injectAsyncResult(entry, { history, fullHistory, cwd }) {
     content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n\n${body}`,
   })
   // §20 D-SD5 终态墓碑：注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
-  // 后续 spawn 视为已满足（T-SD14 同 check 消费语义；error 条目记 failed——依赖取消/
-  // 失败分支照旧，不误标成功）。墓碑沿 history 载体（跨 runAgent 存活）。
+  // 后续 spawn 视为已满足（自动通道注入即终态——T-SD14 consumed 语义；error 条目记 failed——
+  // 依赖取消/失败分支照旧，不误标成功）。墓碑沿 history 载体（跨 runAgent 存活）。
   writeTombstoneTo(history, entry.id, entry.error != null ? "failed" : "consumed", entry.role)
 }
 
@@ -412,29 +417,6 @@ export async function collectSettledAsync(agent, { history, fullHistory, cwd, su
 }
 
 /**
- * Allocate the next subagent id — monotonic ACROSS runAgent calls (advisor fix #1,
- * 2026-09-03): the agent object (and its _subIdCounter) is rebuilt per run, while the
- * async pool survives on history._asyncSubagents. Without the pool-max seed a later
- * run would REUSE a still-running entry's id — spawnAsyncSubagent's map.set(id, entry)
- * would overwrite the old entry: silent report loss (the replaced entry is never
- * collected by collectSettledAsync) and mis-addressed action:'check'/'status'.
- * Shared by the spawn path (subagent.mjs) and the escalate action (this module).
- */
-export function nextSubagentId(parent) {
-  let poolMax = 0
-  const pool = parent._asyncSubagents
-  if (pool && pool.size > 0) {
-    for (const k of pool.keys()) {
-      const n = typeof k === "number" ? k : Number.parseInt(k, 10)
-      if (Number.isFinite(n) && n > poolMax) poolMax = n
-    }
-  }
-  const next = Math.max(parent._subIdCounter ?? 0, poolMax) + 1
-  parent._subIdCounter = next
-  return next
-}
-
-/**
  * Merge a child's mutations into the parent's bookkeeping
  * (CLI mergeChildMutations parity): the parent's advisor/verify guards must see
  * delegated file changes. Fresh code → fresh convergence budget: a verify/advisor
@@ -447,6 +429,8 @@ export function nextSubagentId(parent) {
  * §19.5 (AGENT-LOOP.md D-M6 round2 #3): the CANCEL path never reaches this
  * function — runChild checks entry.cancelled BEFORE merging (partial changes are
  * NOT merged into the parent guards; the cancel reminder says so).
+ * §24 D-24b（2026-09-06）：子代理磁盘写入同时记入文件变更事件（跨 run 载体——
+ * history._fileMutEvents）——async 评审飞行中子代理落盘 → settle 陈旧判定命中。
  */
 export function mergeChildMutations(parent, sink) {
   const touched = sink?.touchedFiles ?? []
@@ -454,6 +438,7 @@ export function mergeChildMutations(parent, sink) {
   parent._mutatedThisRun = true
   for (const abs of touched) {
     if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
+    recordFileMutation(parent, abs)
   }
   if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false
   if (parent._verifiedThisRun) {

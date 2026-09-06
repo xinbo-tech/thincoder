@@ -5,13 +5,46 @@
  * and tracks mutations / advisor-verify bookkeeping / stall detection.
  */
 import { readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { resolve } from "node:path"
 import {
   FILE_MUTATORS, STALL_WINDOW, STALL_THRESHOLD, MAX_PARALLEL_SUBAGENTS,
   offloadToolResult, pushReal, runWithLimit,
 } from "./run-helpers.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 import { logEvent, errText, headText } from "../log.mjs"
+import { manifestPath } from "../extension/session-slots.mjs"
+import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
+// §24 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
+import { recordFileMutation } from "../agent-tools/advisor-async.mjs"
+
+// R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a/b——VS Code 接线面）：结构化写工具集 =
+// FILE_MUTATORS ∪ file_ops（bash 大通道不可拦——诚实边界：L3 覆盖结构化写工具足迹）。
+const L3_WRITE_TOOLS = new Set([...FILE_MUTATORS, "file_ops"])
+
+/** L3 触达路径（绝对）：FILE_MUTATORS 走 tool.touchedPaths（既有收口）；file_ops 按动作
+ *  取源/目标（move/rename 动两端；copy 只写目标——源仅读取不算写域）。 */
+function l3TouchedPaths(toolName, tool, args, cwd) {
+  let rel = []
+  if (toolName === "file_ops") {
+    rel = args?.action === "copy" ? [args?.dest] : [args?.source, args?.dest]
+  } else {
+    rel = tool?.touchedPaths ? tool.touchedPaths(args ?? {}) : [args?.path]
+  }
+  return rel.filter((p) => typeof p === "string" && p).map((p) => resolve(cwd, p))
+}
+
+/** L3 冲突软提示文案（决策⑥ A——工具结果附注，不阻止） */
+function peerConflictNote(hits) {
+  const seen = new Set()
+  const parts = []
+  for (const h of hits) {
+    const k = `${h.file}|${h.pid}`
+    if (seen.has(k)) continue
+    seen.add(k)
+    parts.push(`${h.file} (pid=${h.pid}${h.end ? `, ${h.end}` : ""})`)
+  }
+  return `[peer conflict notice] another live ThinCoder instance recently wrote the same file(s): ${parts.join("; ")} — coordinate to avoid overlapping edits (soft notice — the write was not blocked).`
+}
 
 /**
  * 前置门禁（planMode / 工程设计闸）——单点判定，批扫描与逐项执行共用（§16 D-B1：
@@ -20,7 +53,7 @@ import { logEvent, errText, headText } from "../log.mjs"
 function preGateBlocked(agent, { tool, toolName, args, depth }) {
   // Plan mode guard — §19 round2 #2 (AGENT-LOOP.md): readonly classification is
   // ACTION-LEVEL. A tool may declare action-level readonly-ness (isReadonlyAction —
-  // e.g. subagent action:'check'/'status'): those pass plan mode like readonly tools,
+  // e.g. subagent action:'status'): those pass plan mode like readonly tools,
   // while the same tool's side-effecting actions (subagent spawn/escalate) stay denied.
   // §19.5 D-M6 round2 #4: control actions (isControlAction — subagent action:'cancel')
   // are a separate exemption class: 只停不启（无新副作用）——planMode 放行（取消既有
@@ -97,7 +130,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
   // consecutive subagent calls also run in parallel (each has its own agent).
   // sideEffectExempt tools (like subagent) don't block readonly merging.
   // §19 round2 #2: action-level readonly classification joins the grouping — subagent
-  // action:'check'/'status' calls merge into the readonly parallel batch like the
+  // action:'status' calls merge into the readonly parallel batch like the
   // retired readonly subagent_check tool did; spawn/escalate keep the subagent path.
   const batches = []
   let pendingReadonly = []
@@ -171,7 +204,10 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           let diffInfo = null
           if (toolName !== "bash" && args.path) {
             try {
-              const abs = join(cwd, args.path)
+              // R-bug join→resolve 同族（AGENT-LOOP.md §24 尾修复注——2026-09-06）：预览读
+              // 用绝对 args.path 时 join(cwd, ·) 同样双前缀 → 读错位路径、展示错误 diff——
+              // resolve 相对/绝对均正（与记账点/ l3TouchedPaths 同语义）。
+              const abs = resolve(cwd, args.path)
               const oldContent = existsSync(abs) ? readFileSync(abs, "utf8") : ""
               let newContent = ""
               if (toolName === "write") {
@@ -209,6 +245,18 @@ export async function executeToolBatches(agent, { response, history, fullHistory
 
       callbacks.onToolCall?.(toolName, args, tc.id) // subagents forward to the activity stream (depth guard removed)
 
+      // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3b）：结构化写工具执行前查冲突（软提示数据源——
+      // 纯读 + 缓存命中零扫描——N3）。门控：本 cwd 无会话 manifest（无头测试/未绑定面板的
+      // 回合）不参与 L3——测试卫生（不向真实 ~/.thincoder/peers 写任何东西）。
+      let l3Paths = []
+      let l3Hits = []
+      if (L3_WRITE_TOOLS.has(toolName)) {
+        l3Paths = l3TouchedPaths(toolName, tool, args, cwd)
+        if (l3Paths.length > 0 && existsSync(manifestPath(cwd))) {
+          try { l3Hits = peerDomains(cwd).conflicts(l3Paths) } catch { l3Hits = [] }
+        }
+      }
+
       let result
       let toolErrored = false // LOGGING：catch 记 tool:error 后不再落 tool:done（CLI dispatch parity——单事件）
       if (!tool) {
@@ -231,6 +279,21 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             onOutput: (chunk) => callbacks.onToolOutput?.(toolName, chunk, tc.id),
           })
           result = String(raw)
+
+          // R10 L3（D-L3a 累积 + 决策⑥ 软提示——D-L3b 工具结果附注，不阻止）：
+          // 写成功（无 Error 返回）→ 记入本回合域集合（回合末 flushDomains 整写——
+          // run-stages finalizeAgentTurn）；写前查到的他实例 hot 域命中 → 结果附提示。
+          if (l3Paths.length > 0 && !result.startsWith("Error")) {
+            registerDomains(l3Paths)
+            if (l3Hits.length > 0) result += "\n\n" + peerConflictNote(l3Hits)
+          }
+          // §29 fix A（AGENT-LOOP.md §29——2026-09-07——唯一记账点）：FILE_MUTATORS
+          // 执行成功即刻记文件变更事件——取代批后提交循环的 recordFileMutation（不双计）——
+          // 同批 launch 前的写在 eventsAtLaunch 之前落地 → async 评审 settle 不误判陈旧；
+          // 中断批（commit 循环被跳过）不再丢事件（中断分支不另行记账——seq 单计）。
+          if (FILE_MUTATORS.has(toolName) && !result.startsWith("Error:") && l3Paths.length > 0) {
+            for (const abs of l3Paths) recordFileMutation(agent, abs)
+          }
 
           // Multimodal tools
           if (tool.multimodal) {
@@ -293,6 +356,8 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           // verify are stale: a review that ran before the edit no longer
           // covers the current file state (user decision 2026-08-08: the review
           // is triggered by CODE MUTATIONS only).
+          // §29 fix A（2026-09-07）：文件变更事件（recordFileMutation）已移到 runOne 执行
+          // 成功即刻（唯一记账点）——此处仅剩 guard 标志 + touchedFiles（不双计）。
           agent._mutatedThisRun = true
           agent._calledAdvisorThisRun = false
           agent._verifiedThisRun = false
@@ -300,7 +365,10 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args?.path]
           for (const p of paths) {
             if (typeof p !== "string") continue
-            const abs = join(cwd, p)
+            // R-bug join→resolve 双前缀（AGENT-LOOP.md §24 尾修复注——2026-09-06——CLI 同修）：
+            // p 为绝对路径时 join(cwd, p) 双前缀（node path.join 遇绝对段不重置——resolve
+            // 才重置）→ _touchedFiles 记错路径（verify 关联面）。
+            const abs = resolve(cwd, p)
             if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
           }
         } else if (tool && !tool.readonly && !tool.sideEffectExempt) {
@@ -315,7 +383,11 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           }
         }
         if (toolName === "verify") agent._verifiedThisRun = true
-        if (toolName === "advisor") {
+        // §24 D-24b（R13——2026-09-06）：async advisor 工具返回 = ack（评审后台跑）——
+        // 不在工具结果时点记账（settle 时点统一执行——token/guard 标记/实例轮次）；
+        // sync（async:false / depth>0 缺省）走既有记账。
+        const advisorAsync = toolName === "advisor" && (args.async ?? depth === 0)
+        if (toolName === "advisor" && !advisorAsync) {
           agent._calledAdvisorThisRun = true
           // Design reviews are a separate gate with no convergence protocol —
           // they must not consume code-review rounds. A failed/interrupted review
@@ -328,10 +400,9 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         }
       }
 
-      // Stall detection (stable serialization). consult_check is exempt: a check loop
-      // parked on replies is the DESIGNED consult usage, not a stall (design review D4).
+      // Stall detection (stable serialization). §25 R17: consult_check 退役——免检分支
+      // 随删（自动 digest 后无 check 循环——无设计用法需豁免）。
       try {
-        if (toolName === "consult_check") { recentSigs.length = 0 } else {
         const sig = `${toolName}:${meta?.args ? JSON.stringify(meta.args, Object.keys(meta.args).sort()) : ""}`
         recentSigs.push(sig)
         if (recentSigs.length > STALL_WINDOW) recentSigs.shift()
@@ -347,7 +418,6 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             })
             recentSigs.length = 0
           }
-        }
         }
       } catch { /* */ }
     }

@@ -6,6 +6,7 @@
  * message added in VS Code (user report: "TUI shows far fewer messages").
  */
 import { describe, it, beforeEach, afterEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
@@ -203,7 +204,7 @@ describe("async distillation — panel save + slot guard + rapid-fire (SEND-STAL
   }
   const noteIn = (ctx) => ctx.some((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]"))
 
-  it("AC5 — onDistilled re-saves: the session file ends with the compressed machine line", async () => {
+  slow("AC5 — onDistilled re-saves: the session file ends with the compressed machine line", async () => {
     const { server, port } = await scriptedLLMServer(async (i, body) => {
       if (isDistillReq(body)) {
         await new Promise((r) => setTimeout(r, 2000))
@@ -228,7 +229,7 @@ describe("async distillation — panel save + slot guard + rapid-fire (SEND-STAL
     }
   })
 
-  it("AC6 — slot switch while distill in flight: compressed history is NOT written into the new session", async () => {
+  slow("AC6 — slot switch while distill in flight: compressed history is NOT written into the new session", async () => {
     const { server, port } = await scriptedLLMServer(async (i, body) => {
       if (isDistillReq(body)) {
         await new Promise((r) => setTimeout(r, 2000))
@@ -259,7 +260,7 @@ describe("async distillation — panel save + slot guard + rapid-fire (SEND-STAL
     }
   })
 
-  it("AC6a — rapid second message does not abort the distill; run 2 starts from the compressed line", async () => {
+  slow("AC6a — rapid second message does not abort the distill; run 2 starts from the compressed line", async () => {
     const { server, port, requests } = await scriptedLLMServer(async (i, body) => {
       if (isDistillReq(body)) {
         await new Promise((r) => setTimeout(r, 2000))
@@ -316,7 +317,7 @@ describe("async distillation — panel save + slot guard + rapid-fire (SEND-STAL
     }
   })
 
-  it("AC5 — onToolResult truncates the live tool result at 64K (old 20K cap lifted)", async () => {
+  slow("AC5 — onToolResult truncates the live tool result at 64K (old 20K cap lifted)", async () => {
     // read 方式（评审 #6，2026-08-25）：mkFiles 基础上额外建 70_000 字符 big.txt，第一轮发 read 调用
     // — 零额外工具注入。read 工具不截断（tools/file.mjs 无默认 limit）；>64K 结果经 offloadToolResult
     // 落盘为「提示 + 64K 预览 + ...」，onToolResult 再 slice(0, 64K) → 长度恰为 65536（评审 #7 精确断言）。
@@ -340,17 +341,23 @@ describe("async distillation — panel save + slot guard + rapid-fire (SEND-STAL
 })
 
 
-// ─── v2 revival regression (2026-08-25): cleared token must not resurrect via ?? ───
-describe("v2 token revival regression (2026-08-25)", () => {
-it("eng(exit) → saveSession → loadSession: cleared token stays null (AC7)", async () => {
+// ─── Revival regression (2026-08-25 v2 mechanism — R16 2026-09-06 清盘 pin) ───
+// The v2 ??-revival mechanism is still load-bearing under R16: tokens are now cleared
+// ONLY by TTL expiry — restore drops the expired token from memory, so the next turn-end
+// agentState carries an explicit null. The key-presence merge MUST pin that null over the
+// stale slot value (an ?? fallback would resurrect the expired token and re-open the write
+// gate until its next restore-drop — the 清盘闭环 breaks).
+describe("token revival regression (explicit null pins the slot — R16 expiry 清盘)", () => {
+it("expired-token slot + save carrying explicit null → field pinned null, no revival (v2 ?? fix)", async () => {
   const { _setConfigPathForTest } = await import("../src/config-io.mjs")
   _setConfigPathForTest(join(tmp, "config.json"))
   const { saveLines } = await import("../src/extension/panel-session.mjs")
   const { saveSessionToSlot } = await import("../src/extension/session-io.mjs")
-  // Seed the slot with a stale token, then save with an explicitly-cleared (null) extra
-  saveSessionToSlot(tmp, 1, { version: 2, cwd: tmp, updatedAt: Date.now(), history: [], contextHistory: [], display: [], tasks: [], planMode: false, autoApprove: false, engineering: false, engDesignToken: "stale:123:sig" })
+  // Seed the slot with an EXPIRED token (restore would drop it → memory empty → the next
+  // save carries explicit null), then save with the explicitly-null extra
+  saveSessionToSlot(tmp, 1, { version: 2, cwd: tmp, updatedAt: Date.now(), history: [], contextHistory: [], display: [], tasks: [], planMode: false, autoApprove: false, engineering: false, engDesignToken: `00000000-0000-4000-8000-000000000000:${Date.now() - 1000}` })
   const panel = { _slot: 1, _panel: { webview: { postMessage: async () => {} } } }
-  saveLines(panel, [], [], { activeProvider: "t", engDesignToken: null }) // exit-clear path
+  saveLines(panel, [], [], { activeProvider: "t", engDesignToken: null }) // post-expiry-drop agentState path
   const data = loadSlot(tmp, 1)
   assert.equal(data.engDesignToken, null, "explicit null must NOT revive the stale slot value (v2 ?? fix)")
 })
@@ -384,7 +391,8 @@ describe("toolPanel bridge — model passthrough (advisor/subagent model display
   }
 
   it("T1 — advisor start chunk: toolPanel payload carries the advisor's resolved model (F1/NF1)", async () => {
-    const advisorCall = [{ index: 0, id: "c0", type: "function", function: { name: "advisor", arguments: JSON.stringify({ type: "code", paths: ["a.mjs"] }) } }]
+    // §24 D-24b（R13）：depth-0 缺省 async——本测试按阻塞时序断言 start chunk，钉 async:false
+    const advisorCall = [{ index: 0, id: "c0", type: "function", function: { name: "advisor", arguments: JSON.stringify({ type: "code", paths: ["a.mjs"], async: false }) } }]
     const { server, port } = await scriptedLLMServer(async (i) => {
       if (i === 1) return sseTools(advisorCall)                 // main run requests a code review
       if (i === 2) return sseTurn("All clear — no issues.")     // the advisor's own single-burst reply
@@ -405,7 +413,7 @@ describe("toolPanel bridge — model passthrough (advisor/subagent model display
   })
 
   it("T2+T3 — subagent: onSubagent spread keeps model; model-less text chunks post model === undefined", async () => {
-    const exploreCall = [{ index: 0, id: "c0", type: "function", function: { name: "subagent", arguments: JSON.stringify({ task: "inspect a.mjs", role: "explore" }) } }]
+    const exploreCall = [{ index: 0, id: "c0", type: "function", function: { name: "subagent", arguments: JSON.stringify({ task: "inspect a.mjs", role: "explore", async: false }) } }] // R12 (§18 D-E1a): depth-0 缺省 async——本测试按阻塞时序断言，钉 async:false
     const { server, port } = await scriptedLLMServer(async (i) => {
       if (i === 1) return sseTools(exploreCall)
       if (i === 2) return sseTurn("explore findings")           // child token stream → toolPanel text chunks
@@ -430,6 +438,14 @@ describe("toolPanel bridge — model passthrough (advisor/subagent model display
       assert.ok(textChunk, "child token stream crossed the bridge as text chunks")
       assert.ok(textChunk.text.includes("explore findings"), "chunk text arrived intact")
       assert.equal(textChunk.model, undefined, "model-less chunk → payload.model === undefined (T3, 评审 #1 断言语义)")
+
+      // R22 (D-R22b 降级口径桥锁): 同步 spawn（无池条目）的 done 通知**不带**
+      // turn/maxTurns（无 entry 快照——webview 冻结头无 turn 段）——防字段误膨胀；
+      // async 池条目终态带字段由 subagent-async.test.mjs D-A3 发射端锁定。
+      const done = posted.find((m) => m.type === "subagent" && m.status === "done")
+      assert.ok(done, "sync spawn done 事件跨桥（终态通知）")
+      assert.equal(done.turn, undefined, "sync spawn done 无 turn（degraded 口径——entry 不存在）")
+      assert.equal(done.maxTurns, undefined, "sync spawn done 无 maxTurns")
     } finally {
       server.close()
     }
@@ -496,7 +512,7 @@ describe("toolPanel bridge — model passthrough (advisor/subagent model display
 })
 
 describe("session switch race guards (GitHub #2/#5 — 2026-08-28)", () => {
-  it("switchSession while a turn is running is REJECTED: slot unchanged, turn untouched, content lands in the ORIGINAL slot (GitHub #2/#5)", async () => {
+  slow("switchSession while a turn is running is REJECTED: slot unchanged, turn untouched, content lands in the ORIGINAL slot (GitHub #2/#5)", async () => {
     // Slow first response so the turn is genuinely in flight when the switch arrives.
     const { server, port } = await scriptedLLMServer(async (i) => {
       if (i === 1) { await new Promise((r) => setTimeout(r, 1500)); return sseTurn("slow reply for session 1") }
@@ -532,7 +548,7 @@ describe("session switch race guards (GitHub #2/#5 — 2026-08-28)", () => {
     }
   })
 
-  it("newSession while a turn is running is REJECTED (no fresh slot bound)", async () => {
+  slow("newSession while a turn is running is REJECTED (no fresh slot bound)", async () => {
     const { server, port } = await scriptedLLMServer(async (i) => {
       if (i === 1) { await new Promise((r) => setTimeout(r, 1500)); return sseTurn("slow") }
       return sseTurn("done")
@@ -575,7 +591,7 @@ describe("session switch race guards (GitHub #2/#5 — 2026-08-28)", () => {
     assert.ok(!slot1 || slot1.history.length === 0, "current slot untouched when override given")
   })
 
-  it("deleteSession while a turn is running is REJECTED — target slot file intact (交付评审 #2)", async () => {
+  slow("deleteSession while a turn is running is REJECTED — target slot file intact (交付评审 #2)", async () => {
     const { server, port } = await scriptedLLMServer(async (i) => {
       if (i === 1) { await new Promise((r) => setTimeout(r, 1500)); return sseTurn("slow") }
       return sseTurn("done")

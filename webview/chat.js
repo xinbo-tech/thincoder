@@ -17,6 +17,7 @@ import { closeModelMenu } from "./model-menu.js"
 import { applyI18nToDOM } from "./i18n-dom.js"
 import { send } from "./send.js"
 import { onToken, onReasoning, onTurnBreak, finish, attachCopyButtons, advisorChunk, subagentChunk } from "./streaming.js"
+import { resetActivity } from "./activity.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
 import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage } from "./panels.js"
 import { updateSessionTitle, handleProjectMessage } from "./session-bar.js"
@@ -75,14 +76,17 @@ ctx.messagesEl.addEventListener("keydown", (e) => {
 // §19.5 D-M7 UI 停止（VS Code）：子代理块标题行 ⏹ 点击 → postMessage cancelSubagent →
 // extension 层定向 abort——不经模型回合（失控子代理时模型可能不可靠——直连路径）。
 // preventDefault + stopPropagation：⏹ 命中区不触发 details 折叠翻转（T-M22 断言——
-// 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。
-ctx.messagesEl.addEventListener("click", (e) => {
+// 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。R22：running 块在底部活动面板
+// （#subagent-activity）——同一委托同时绑消息区（冻结块无 ⏹——仅保险）与活动面板。
+const onStopClick = (e) => {
   const btn = e.target.closest(".sub-stop-btn")
   if (!btn) return
   e.preventDefault()
   e.stopPropagation()
   vscode.postMessage({ type: "cancelSubagent", id: Number(btn.dataset.subId), role: btn.dataset.subRole })
-})
+}
+ctx.messagesEl.addEventListener("click", onStopClick)
+document.getElementById("subagent-activity")?.addEventListener("click", onStopClick)
 
 // Close all dropdowns on Escape
 document.addEventListener("keydown", (e) => {
@@ -178,7 +182,7 @@ window.addEventListener("message", (e) => {
     case "clearMessages":
       ctx.messagesEl.replaceChildren()
       ctx.currentBubble = null; ctx.currentBlock = null; ctx.currentTools = []; ctx.currentRaw = ""; ctx.currentReasoning = null; ctx.currentReasoningRaw = ""
-      S._advisorBlock = null; S._subBlocks.clear()
+      S._advisorBlock = null; resetActivity()
       ctx._hasOlder = false
       ctx._nextIdx = 0
       S._loadingOlder = false

@@ -11,15 +11,16 @@ import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 import {
   taskTool, recentChangesTool, subagentTool,
   planTool, goalTool, skillTool, verifyTool, timerTool,
-  advisorTool, engTool, readHistoryTool, consultStartTool, consultCheckTool, consultStopTool,
+  advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
 } from "../agent-tools.mjs"
 import { settingsTool } from "../agent-tools/settings.mjs"
+import { isExpiredDesignToken } from "../agent-tools/advisor.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { injectContext } from "../context.mjs"
 import { loadRaw, normalizeProxy, resolveProviders } from "../config-io.mjs"
 import { loadEngineeringPrompt, pushReal } from "./run-helpers.mjs"
-import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer } from "./setup-reminders.mjs"
+import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SYSTEM_PROMPT = readFileSync(join(__dirname, "..", "prompts", "system.md"), "utf8")
@@ -61,8 +62,8 @@ function withPool(tool) {
  * §18 D-E3 (AGENT-LOOP.md): the eng-coder child's restricted subagent channel —
  * built when an eng-coder child (depth>0) toolset is assembled. Schema level:
  * role enum is explore-only, the async parameter is REMOVED (sync only), and the
- * action parameter is REMOVED (spawn-only — §19 round2 #3: escalate/check/status
- * are refused in-child) — the model-facing filters; the mechanical enforcement
+ * action parameter is REMOVED (spawn-only — §19 round2 #3: escalate/status are
+ * refused in-child; §19.8 check 已删) — the model-facing filters; the mechanical enforcement
  * lives in subagent.mjs execute → gateEngCoderSpawn (role/async) + the §19
  * restricted-variant action gate (schema enums are advisory, providers don't
  * enforce them).
@@ -70,7 +71,7 @@ function withPool(tool) {
 function engAuditSubagentTool() {
   const props = { ...subagentTool.parameters.properties }
   delete props.async // sync only — the eng-coder blocks on the audit report
-  delete props.action // spawn-only — the audit channel has no check/status/escalate
+  delete props.action // spawn-only — the audit channel has no status/escalate（§19.8 check 已删）
   props.role = {
     type: "string",
     enum: ["explore"],
@@ -80,7 +81,7 @@ function engAuditSubagentTool() {
     ...subagentTool,
     name: "subagent",
     description:
-      "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only (no action:'check'/'status'/'escalate', no async): the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+      "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only (no action:'status'/'escalate', no async): the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
     parameters: { ...subagentTool.parameters, properties: props },
   }
 }
@@ -92,7 +93,8 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     ? [taskTool, recentChangesTool, readHistoryTool, settingsTool, // SETTINGS-TOOL.md（2026-09-05）：settings list/get 只读动作（isReadonlyAction）——depth-0 主 agent 面（与 memory 同分类）
       // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session" would mix its throwaway lines with the parent record (semantic confusion); readonly → planMode pass / no permission ask (T-S9)
       // §19 (2026-09-03): the subagent family is ONE resident tool — subagent_check and
-      // the standalone escalate tool retired (check/status/escalate are action params).
+      // the standalone escalate tool retired (status/escalate are action params;
+      // §19.8 check 已删——四动作).
       // The escalate action errors when the pool is empty (existing error semantics);
       // with a pool configured the tool description lists the current candidates
       // (withPool — escalate picks 'provider:model' from it), same as consult_start.
@@ -101,7 +103,7 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
       // consult tools registered only when configured — an unconfigured model would otherwise
       // see the tool, call it, and eat an error turn (prompt-system review 2026-08-15).
       ...(loadRaw().agent?.consultModels?.length
-        ? [withPool(consultStartTool), consultCheckTool, consultStopTool]
+        ? [withPool(consultStartTool), consultStopTool] // §25 R17: consult_check 退役——结果经自动 digest 通道
         : [])]
     : role === "eng-coder"
       ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool,
@@ -159,6 +161,8 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   let cfgConsultModels = []
   let cfgConsultTurns = 40
   let cfgConsultTimeoutMs = 600_000
+  let cfgPoolLimits = null // §24 D-24a（R14）：async 池角色域容量——每次入池判定时读（effectivePoolLimits 校验）
+  let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §16 — CLI parity); undefined → tool default 30s
   let cfgProviders = []
   let cfgWebsearch = { provider: "tavily", apiKey: "" } // structured search; empty key → Bing fallback
   try {
@@ -176,6 +180,8 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     cfgConsultModels = raw.agent?.consultModels ?? [] // consultation model list (CONSULTATION.md)
     cfgConsultTurns = raw.agent?.consultTurns ?? 40 // consultation turn budget (panel-exposed)
     cfgConsultTimeoutMs = raw.agent?.consultTimeoutMs ?? 600_000 // consultation wall-clock watchdog (panel-exposed)
+    cfgPoolLimits = raw.agent?.poolLimits ?? null // §24 D-24a: async pool per-domain limits（校验在 scheduler 读点）
+    cfgWaitForTimeoutMs = raw.agent?.waitForTimeoutMs ?? undefined // wait_for timeout override — tool applies its own default/cap when absent
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { provider: "tavily", apiKey: "" }
   } catch { /* config unreadable — defaults */ }
@@ -209,6 +215,27 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     return toOpenAISchema(t)
   })
 
+  // R16 (2026-09-06 — F-R16b ① restore filter): tokens are read back from the session
+  // slot within their TTL (slot = persistent authority, D-R16a); EXPIRED tokens are not
+  // restored — dropped, and the next save's explicit-null agentState cleans the slot
+  // field (清盘闭环). Malformed strings are NOT expired — they read back and the spawn
+  // gate rejects them (never proactively deleted, D-R16c ①). Mirror-sync invariant kept
+  // symmetric with the enter sweep and the spawn-gate deletion: an expired mirror is NOT
+  // dropped to null while live slots survive — it repoints to a surviving slot (a null
+  // mirror + slots-present would trip resolveDesignSlot's torn-state guard on every
+  // eng-coder spawn until a re-review — advisor round 2026-09-06 🟡#3).
+  const restoredEngTokens = (engState?.engDesignTokens && typeof engState.engDesignTokens === "object")
+    ? new Map(Object.entries(engState.engDesignTokens).filter(([, tok]) => !isExpiredDesignToken(tok)))
+    : null
+  const restoredEngMirror = (() => {
+    const t = engState?.engDesignToken
+    if (t == null) return null
+    if (!isExpiredDesignToken(t)) return t
+    return restoredEngTokens instanceof Map && restoredEngTokens.size > 0
+      ? [...restoredEngTokens.values()][0]
+      : null
+  })()
+
   const agent = {
     _tasks: [], _touchedFiles: [], _planMode: planMode,
     _goal: null, _provider: provider,
@@ -226,19 +253,18 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     // task book its internal explore-audit spawns get (subagent.mjs augmentation).
     _engTaskInput: opts.engTaskInput ?? null,
     _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
-    _engDesignToken: engState?.engDesignToken ?? null,
     // Multi-design slots restored from the slot's {designId: token} object (2026-09-01 audit #1);
     // null/absent → no Map (fresh state — never resurrect slots the writer did not have).
-    _engDesignTokens: (engState?.engDesignTokens && typeof engState.engDesignTokens === "object")
-      ? new Map(Object.entries(engState.engDesignTokens))
-      : null,
+    // Per-slot TTL filter (above) applies to every entry.
+    _engDesignToken: restoredEngMirror,
+    _engDesignTokens: restoredEngTokens,
     _engDesignReviewed: engDesignReviewed === true, // eng-coder children arrive pre-authorized
     _calledAdvisorThisRun: false, _mutatedThisRun: false,
     _lastEngState: false, // seeded false: a resumed engineering session re-notifies on turn 1 (CLI parity)
     _pendingReminders: [],
     config: {
       advisor: advisorCfg,
-      agent: { engineering, subagentModel: cfgSubagentModel, subagentModels: cfgSubagentModels, subagentTurns: cfgSubagentTurns, maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold, consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs },
+      agent: { engineering, subagentModel: cfgSubagentModel, subagentModels: cfgSubagentModels, subagentTurns: cfgSubagentTurns, maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold, consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs, waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits },
       proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders,
       websearch: cfgWebsearch,
     },
@@ -314,6 +340,10 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   const freshMachineLine = history.length === 0
   pushModeReminders(history, { depth, freshMachineLine, getAuto, role, engPromptActive, engResult })
 
+  // Git context (SESSION.md §11.1 T-E6——CLI setup.mjs 富注入同款补齐：branch/
+  // commits/uncommitted，非 clean|dirty 摘要）：顶层用户回合每回合注入当前状态。
+  if (depth === 0 && !resume && !autoTurn) pushGitContext(history, cwd)
+
   // resume (interrupt continuation): the input is already in history — pushing it
   // again would duplicate the user message (CLI setup.mjs resume parity).
   // §17 D-S6 autoTurn (digest): system-driven turn with NO user input — same
@@ -327,6 +357,19 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     userMsg = { role: "user", content: input }
     pushReal(history, fullHistory, userMsg)
   }
+
+  // SESSION.md §11.1：统一 env-state reminder（每回合、depth-0）+ R5 重启感知
+  // （CLI setup.mjs L116 同款补齐——恢复会话的首个进程内回合注入 process restarted，
+  // env-state 同回合 resumed: yes；detectRestoredSession 一次性闸——见 setup-reminders）。
+  const resumedSession = detectRestoredSession({ depth, resume, autoTurn, fullHistory })
+  if (resumedSession) {
+    history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
+  }
+  if (depth === 0) pushEnvStateReminder(history, { engineering, provider, resumed: resumedSession })
+
+  // R10 L1（MULTI-INSTANCE-COLLAB.md D-L1a——决策④ 每回合）：同伴实例提醒——env-state
+  // 之后、time reminder 之前（transient；有同伴才注入——peerInstances 惰性 mtime 缓存）。
+  if (depth === 0) pushPeerReminder(history, cwd)
 
   pushTimeReminder(history)
 

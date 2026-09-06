@@ -18,33 +18,45 @@ function effectiveTokenTtlMs(agent) {
 
 /** Generate an unsigned design token with expiration (2026-09-06 设计 B — the HMAC
  *  signature layer is gone: token = uuid:expiresAt process credential — format + TTL
- *  fail-closed; slot matching _engDesignTokens.get(designId) === token unchanged). */
-function generateDesignToken(agent) {
+ *  fail-closed; slot matching _engDesignTokens.get(designId) === token unchanged).
+ *  Export——advisor-async（§24 D-24b）续跑轮现铸同用。 */
+export function generateDesignToken(agent) {
   const uuid = randomUUID()
   const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
   return `${uuid}:${expiresAt}`
 }
 
-/** Validate design token: check format (uuid:expiresAt — exactly 2 parts) and expiration.
- *  ALL fail-closed (v2 2026-08-25: the two legacy fail-open branches (parts!=3, NaN expiry)
- *  were pass-through backdoors — any malformed string bypassed validation; 2026-09-06 设计 B:
- *  legacy 3-part signed tokens (uuid:expiresAt:HMAC) are FORMAT errors now — the HMAC layer
- *  is deleted, the format check rejects them (存量 3 段 token 一次性失效——需重新评审). */
-export function validateDesignToken(token) {
-  if (!token || typeof token !== "string") return false
-
+/** Parse a design token's numeric expiry — null unless the token is format-valid
+ *  (uuid:expiresAt — exactly 2 parts with a numeric expiry). ALL other shapes return
+ *  null (v2 2026-08-25: the two legacy fail-open branches (parts!=3, NaN expiry) were
+ *  pass-through backdoors — any malformed string bypassed validation; 2026-09-06 设计 B:
+ *  legacy 3-part signed tokens (uuid:expiresAt:HMAC) are FORMAT errors now — the HMAC
+ *  layer is deleted, the format check rejects them (存量 3 段 token 一次性失效——需重新评审)).
+ *  Single parse source shared by validateDesignToken and isExpiredDesignToken. */
+function tokenExpiry(token) {
+  if (!token || typeof token !== "string") return null
   const parts = token.split(":")
-  if (parts.length !== 2) return false // 1-part / 3-part (legacy signed) / 4+ all reject — fail-closed
-
+  if (parts.length !== 2) return null // 1-part / 3-part (legacy signed) / 4+ all reject — fail-closed
   const [uuid, expiresAt] = parts
-  if (!uuid) return false
+  if (!uuid) return null
   const expTime = parseInt(expiresAt, 10)
+  if (isNaN(expTime)) return null // fail-closed (was: return true, v2 2026-08-25)
+  return expTime
+}
 
-  if (isNaN(expTime)) return false // fail-closed (was: return true, v2 2026-08-25)
+/** Expired classification — TRUE only for a FORMAT-VALID token whose TTL has passed.
+ *  Malformed strings are NOT "expired" (they classify as invalid at the gates). R16
+ *  cleanup timings (restore filter / eng(enter) sweep / spawn-gate slot deletion —
+ *  ENG-TOKEN-BINDING-TUNING.md §5.1 D-R16c) drop ONLY expired tokens; malformed ones
+ *  read back and the gates reject them — never proactively deleted. */
+export function isExpiredDesignToken(token) {
+  const exp = tokenExpiry(token)
+  return exp !== null && Date.now() > exp
+}
 
-  if (Date.now() > expTime) return false
-
-  return true
+/** Validate design token: check format (uuid:expiresAt) AND expiration — all fail-closed. */
+export function validateDesignToken(token) {
+  return tokenExpiry(token) !== null && !isExpiredDesignToken(token)
 }
 
 /** Extract UUID from token for regex matching */
@@ -56,8 +68,9 @@ export function extractTokenUUID(token) {
 /** Build a [DESIGN-TOKEN:...] regex (CLI parity — flexible surrounding context).
  *  Escape the ENTIRE token (uuid:expiresAt — 2026-09-06 设计 B: the HMAC segment is gone;
  *  the advisor echoes the full token, so matching only the UUID segment can never match and
- *  the approval never registers (eng-coder gate then rejects a valid token). */
-const makeDesignTokenRegex = (token, flags = "") => {
+ *  the approval never registers (eng-coder gate then rejects a valid token).
+ *  Export——advisor-async（§24 D-24b）通过判定同用。 */
+export const makeDesignTokenRegex = (token, flags = "") => {
   const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return new RegExp(
     `(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}\\s*\\](?:\\s|$|\`|\\*)`,
@@ -105,6 +118,10 @@ export const advisorTool = {
           exclude: { type: "array", items: { type: "string" }, description: "Excluded items — approved/implemented, NOT in this review" },
         },
       },
+      async: {
+        type: "boolean",
+        description: "Launch the review in the BACKGROUND (AGENT-LOOP.md §24 D-24b): the tool returns an ack immediately, the turn ends naturally, and the report arrives automatically (settle → digest) — the review never blocks the turn. Default: true at the top level (depth-0 — §24 R12 depth-0 async default precedent), always sync inside subagents (passing async:true there is refused). Pass async:false for a blocking review whose result you need before continuing.",
+      },
     },
   },
   readonly: true,
@@ -113,6 +130,12 @@ export const advisorTool = {
     const agent = ctx.agent
     const reviewType = args.type || "code"
     const documents = args.documents || null
+    // §24 D-24b（R13——2026-09-06）：async 缺省 = depth-0（R12 先例——②-3 A + 修正 #3：
+    // depth>0 显式 async 拒 / 缺省恒同步——eng-coder 内部自审不翻转）。
+    const asyncFlag = args.async ?? ((ctx.depth ?? 0) === 0)
+    if (asyncFlag && (ctx.depth ?? 0) > 0) {
+      return "Advisor: async reviews are only available at the top level (depth 0 — AGENT-LOOP.md §24 D-24b ②-3) — inside a subagent the advisor runs synchronously; drop the async flag or pass async:false"
+    }
     // Review-object declaration (AGENT-LOOP.md §18.8 N-OA1): the parameter is a
     // JSON object; a string form (LLM serialization) is normalized defensively.
     // Non-object / unparseable → null → legacy degradation (AC-OA2).
@@ -139,6 +162,17 @@ export const advisorTool = {
       if (invalidDocs.length > 0) {
         return `Advisor: design review documents must be in docs/ directory or be recognized doc files. Invalid: ${invalidDocs.join(", ")}`
       }
+    }
+
+    // §24 D-24b async 分支：后台启动（ack 即回——回合自然收尾）——容量/实例 cap 在
+    // runner（launchAsyncAdvisor——{ error } 转返回文案——不排队）。settle 记账/消化
+    // 全部走 advisor-async 机制（token 槽/guard 标记/cap/陈旧判定——见该模块头注）。
+    if (asyncFlag) {
+      const { launchAsyncAdvisor } = await import("./advisor-async.mjs")
+      const r = launchAsyncAdvisor({ parent: agent, ctx, reviewType, documents, paths, object })
+      if (r.error) return r.error
+      const e = r.entry
+      return `Advisor ${reviewType} review started in the background (review #${e.id}, round ${e.round}) — the report arrives automatically when it finishes (settle → digest). Continue your turn; the review does not block.`
     }
 
     // Design review: NO round reset — design reviews share the 5-round convergence

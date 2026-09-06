@@ -19,7 +19,7 @@ Like the CLI, it's pure `.mjs`, zero npm dependencies, and connects directly to 
 - **Multi-session** — save and switch between conversation sessions with session bar; LLM auto-generates titles
 - **Image input** — paste or drag images into chat, or use `read_image` tool; supported on vision models (Kimi K3, Qwen3.7, MiniMax M3)
 - **Reasoning display** — collapsible "Thinking..." block shows the model's reasoning process in real-time
-- **17 provider presets** — DeepSeek, Kimi, GLM, Qwen, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, SiliconFlow, OpenRouter, Groq + custom OpenAI-compatible endpoint
+- **20 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, SiliconFlow, OpenRouter, Groq + custom OpenAI-compatible endpoint
 - **Vector search** — semantic code search with BAAI/bge-m3 embeddings via SiliconFlow (configurable in Settings)
 - **Model selection** — choose from all available models per provider, with reasoning effort control
 - **Permission control** — session-level AUTO mode (off by default): every file-modifying tool prompts for approval until you click the AUTO toolbar button or "Approve All"; the flip takes effect immediately, even mid-turn
@@ -79,8 +79,11 @@ No key (or a bad key) → the tool silently falls back to Bing, so agents never 
 | Kimi (Moonshot) | `kimi-k3` | `https://api.moonshot.cn/v1` |
 | Kimi For Coding | `k3` | `https://api.kimi.com/coding/v1` — separate platform, `sk-kimi-` keys are NOT interchangeable with Moonshot |
 | GLM (Zhipu) | `glm-5.2` | `https://open.bigmodel.cn/api/paas/v4` |
+| GLM Coding Plan (智谱 Coding) | `glm-5.2` | `https://open.bigmodel.cn/api/coding/paas/v4` |
 | Qwen (Alibaba) | `qwen3.7-max` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | Qwen Token Plan | `qwen3.7-max` | `https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1` |
+| MiMo (小米) | `mimo-v2.5-pro` | `https://api.xiaomimimo.com/v1` |
+| MiMo Token Plan (小米套餐) | `mimo-v2.5-pro` | `https://token-plan-cn.xiaomimimo.com/v1` |
 | MiniMax | `MiniMax-M3` | `https://api.minimaxi.com/v1` |
 | OpenAI | `gpt-4o` | `https://api.openai.com/v1` |
 | Claude (Anthropic) | `claude-sonnet-4` | `https://api.anthropic.com/v1` |

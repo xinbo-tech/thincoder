@@ -56,20 +56,26 @@ export function injectObjectDeclaration(content, object) {
  *   When set, the review input is built from this list ONLY — no git-diff change-set collection.
  *   When absent, the legacy git-diff-based scope is kept (backward compatible).
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review (deduped; shown under Review Scope)
+ * @param {Object|null} [rv] — §24 D-24b 实例上下文（async——round = 本次调用轮次）
  * @returns {string} the user message
  */
-export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null) {
+export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, rv = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.
-  const p = prior ?? ((agent._advisorRound || 0) > 0 ? agent._lastAdvisorOutput : null)
+  // §24 D-24b：async 实例经 rv 解析（round = 本次调用轮次——1 = 首轮无 prior）。
+  const p = prior ?? (rv
+    ? (rv.round >= 2 ? rv.priorOutput : null)
+    : (agent._advisorRound || 0) > 0 ? agent._lastAdvisorOutput : null)
+  const round = rv ? rv.round : (agent._advisorRound || 0) + 1
+  const isRound1 = rv ? rv.round <= 1 : (agent._advisorRound || 0) === 0
 
   const parts = []
   const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
   const pathList = Array.isArray(paths) ? [...new Set(paths.filter((p) => typeof p === "string" && p.trim()))] : []
 
   // Design review: simplified message — focus on the design doc, not code
-  if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
+  if (reviewType === "design" && isRound1) {
     const repos = findReviewRepos(agent)
     parts.push("## Design Review")
     if (docList.length > 0) {
@@ -158,13 +164,12 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
   // breaking those. Same rule as buildAdvisorFollowUp: the FULL prior review
   // output is injected verbatim (decision 2026-08-08 — the model understands it;
   // no table/header/phrase parsing).
-  if (p && (agent._advisorRound || 0) > 0) {
+  if (p && !isRound1) {
     const scopeFiles = resolveScopeFiles(agent, paths)
     const response = extractAgentResponseTable(agent.history)
       || (scopeFiles?.length
         ? "(Agent did not provide a response table — perform a fresh review of: " + scopeFiles.slice(0, 10).join(", ") + ")"
         : "(Agent did not provide a response table — perform a fresh review of the files named in the system prompt context)")
-    const round = (agent._advisorRound || 0) + 1
     parts.push(buildConvergenceBody(p, response, round, scopeFiles))
     parts.push("")
     parts.push("---")
@@ -219,11 +224,10 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
   }
 
   // Instructions — round-aware: re-reviews skip convention discovery entirely
-  const isReReview = p && (agent._advisorRound || 0) > 0
+  const isReReview = p && !isRound1
   parts.push("## Instructions")
   parts.push("1. IMPORTANT: the review scope lists the files under review — always verify current file state with `read` before judging. Never decide based on earlier snapshots alone.")
   if (isReReview) {
-    const round = (agent._advisorRound || 0) + 1
     parts.push(...buildConvergenceInstructions(round, pathList))
   } else {
     parts.push("2. Read `AGENTS.md` / design docs only if they exist (check once; do not re-probe with multiple patterns).")

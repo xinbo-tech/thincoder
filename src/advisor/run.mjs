@@ -389,8 +389,11 @@ function extractUnfixedIssues(priorText) {
  * @param {Object|null} [object] — review-object declaration {type, target, status, reason, exclude}
  *   (AGENT-LOOP.md §18.8 D-OA3): injected at the head of the review user message, every round.
  *   Legacy callers omit it — no declaration injected, behavior unchanged (AC-OA2).
+ * @param {Object|null} [rv] — §24 D-24b per-review instance context { round, priorOutput }
+ *   （async advisor——2026-09-06）：给定 → 轮次/prior 从实例解析、cap 判定在 runner
+ *   （launch 时按实例 ≤5 轮拒）、完成不写全局 _lastAdvisorOutput（并发隔离）。
  */
-export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null) {
+export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null, rv = null) {
   const onOutput = callbacks?.onOutput
   const signal = callbacks?.signal
   const startTime = Date.now()
@@ -404,7 +407,9 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // agent after each one — code AND design reviews alike), so >= MAX_ADVISOR_ROUNDS
   // blocks the next call. 5 rounds max; after that the review is never pushed back
   // (the caller decides: accept, manual re-check, or /new to reset).
-  if ((agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
+  // §24 D-24b：async 实例（rv 给定）的 cap 在 runner launch 时按实例判定（每评审 ≤5 轮——
+  // 修正 #4）——此处只拦 sync 全局轮次。
+  if (!rv && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
     // Summarize unresolved items from the last review output for guidance
     // (line-level status-word scan — no table-header parsing, decision 2026-08-08).
     const prior = agent._lastAdvisorOutput
@@ -425,7 +430,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // Advisor always works in the agent's cwd — scope is defined by paths/documents.
   const advisorCwd = agent.cwd
 
-  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths)
+  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, rv)
 
   // Review-object declaration (AGENT-LOOP.md §18.8 D-OA1): injected AFTER the
   // message build so ONE mechanical point covers all rounds — design r1
@@ -459,7 +464,9 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
       // of round 2+.
       const trimmed = final.trim()
       const looksLikeReview = /\|.*\|.*\|/.test(trimmed) || trimmed.length >= 200
-      if (looksLikeReview) {
+      // §24 D-24b：async 实例完成不写全局 _lastAdvisorOutput（并发隔离——实例 prior
+      // 由 runner 记入 _advisorRuns 记录——多评审并行互不污染）。
+      if (looksLikeReview && !rv) {
         agent._lastAdvisorOutput = final
       }
     }

@@ -20,9 +20,11 @@ import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, maybeGuardPush
 /** Manual-tier auto-turn digest domain (AGENT-LOOP.md §17 D-S6): organize-only.
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
  *  mechanically denied (deny-stub permission/question handlers + the spawn gate in
- *  subagent.mjs); this reminder steers the model before it hits those denials. */
+ *  subagent.mjs); this reminder steers the model before it hits those denials.
+ *  §24 D-24b（R13——2026-09-06）：async advisor review 报告同此消化通道——呈递发现与
+ *  修复建议（不擅自动手——修正轮由用户裁决后发起）。 */
 const AUTO_TURN_DIGEST_DOMAIN =
-  "[System reminder: auto-turn — background async subagents finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later; 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
+  "[System reminder: auto-turn — background async subagents / consultations / escalate reports / advisor reviews finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later (async advisor review reports: present the findings and suggested fixes verbatim — do not apply them; consultation reports: present each reply verbatim with your per-reply adoption judgment as text — do not apply anything; escalate reports: summarize the merged post-op work — further changes need a user message); 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
 
 /** Guard bookkeeping keys an auto-turn's end state inherits into the next USER run
  *  (§17 D-S6 — auto-turn changes never escape the verify/advisor guards silently). */
@@ -61,12 +63,41 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // §17 D-S3 ② run-start injection: suspension-settled entries parked on
   // history._pendingAsyncResults are consumed BEFORE setupAgentRun pushes this run's
   // input (spliced = consumed — single injection point; turn-end pool entries are ①).
+  // §24 D-24b（R13）：async advisor settle 同样挂起移交 history._pendingAdvisorResults——
+  // 同点注入（digest 处置轮呈递——报告/designId 注记——角色无关同机制）。
+  // §25 R17（2026-09-06）：会诊 settle（_pendingConsultResults——全 settle 一次注入）与
+  // 飞刀 settle（_pendingEscalateResults——done/error 报告）同点注入——消费驱动判据推广
+  // （任一 pending 族非空即触发消化轮——T-R17j）。splice 即 consumed——单注入点——注入一次。
   if (depth === 0 && Array.isArray(opts.history?._pendingAsyncResults)) {
     const hist = opts.history
     const pend = hist._pendingAsyncResults
     if (pend.length > 0) {
       const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
       for (const e of pend.splice(0)) await injectAsyncResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
+    }
+  }
+  if (depth === 0 && Array.isArray(opts.history?._pendingAdvisorResults)) {
+    const hist = opts.history
+    const pend = hist._pendingAdvisorResults
+    if (pend.length > 0) {
+      const { injectAdvisorResult } = await import("./agent-tools/advisor-async.mjs")
+      for (const e of pend.splice(0)) await injectAdvisorResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
+    }
+  }
+  if (depth === 0 && Array.isArray(opts.history?._pendingEscalateResults)) {
+    const hist = opts.history
+    const pend = hist._pendingEscalateResults
+    if (pend.length > 0) {
+      const { injectEscalateResult } = await import("./agent-tools/subagent-escalate-async.mjs")
+      for (const e of pend.splice(0)) await injectEscalateResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
+    }
+  }
+  if (depth === 0 && Array.isArray(opts.history?._pendingConsultResults)) {
+    const hist = opts.history
+    const pend = hist._pendingConsultResults
+    if (pend.length > 0) {
+      const { injectConsultResult } = await import("./agent-tools/consult.mjs")
+      for (const s of pend.splice(0)) await injectConsultResult(s, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
     }
   }
 
@@ -87,11 +118,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   }
 
   // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的 map 沿共享 history
-  // 数组跨 runAgent 调用存活。n 读数 resume 携带（2026-09-05 复审 #5）：续跑从
-  // history._asyncCheckN 播种——模型上下文连续，check 的 n 序列不被打断。
+  // 数组跨 runAgent 调用存活。
   agent._asyncSubagents = (depth === 0 && history._asyncSubagents instanceof Map) ? history._asyncSubagents : new Map()
-  if (opts.resume && typeof history._asyncCheckN === "number") agent._asyncCheckN = history._asyncCheckN
-  else if (!opts.resume) agent._asyncCheckN = 0
+  // §24 D-24b（R13）：async advisor 池同款载体（独立池——角色无关消费机制）。
+  agent._asyncAdvisors = (depth === 0 && history._asyncAdvisors instanceof Map) ? history._asyncAdvisors : new Map()
 
   // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): setupAgentRun has already
   // pushed the user input + injections, so everything appended from here is "this run's" work.
@@ -301,8 +331,8 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     thrownError = e
     throw e
   } finally {
-    // 2026-09-05 实践轮：回合收尾（consult 清理/async 池收集/checkN 持久/guardCarry
-    // 继承）提为 finalizeAgentTurn 模块函数——finally 只剩一行调用 + 骨架注释。
+    // 2026-09-05 实践轮：回合收尾（consult 清理/async 池收集/guardCarry 继承）为 finalizeAgentTurn 模块函数——finally 只剩一行调用 + 骨架注释。
+    // §19.8（2026-09-06）：checkN 持久步骤随 action:'check' 删除退役。
     await finalizeAgentTurn(agent, { signal, history, fullHistory, cwd, depth, thrownError, autoTurn, guardCarry: opts.guardCarry, suspDriven: opts.suspDriven === true })
   }
 }

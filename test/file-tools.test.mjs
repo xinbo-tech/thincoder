@@ -6,6 +6,7 @@
  */
 
 import { describe, it, beforeEach, afterEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, mkdirSync, symlinkSync } from "node:fs"
 import { join } from "node:path"
@@ -40,7 +41,7 @@ describe("scope removal — 外部路径/symlink 正常解析执行（TOOLS.md �
     }
   })
 
-  it("T-W1: write 外部路径正常写（与 bash 一致——路径解析，不做目录限制）", async () => {
+  slow("T-W1: write 外部路径正常写（与 bash 一致——路径解析，不做目录限制）", async () => {
     const { writeTool } = await import("../src/tools/file.mjs")
     const outside = join(tmpdir(), "scope-outside-write.txt")
     try {

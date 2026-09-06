@@ -10,7 +10,7 @@ import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, mkdirSync, symlinkSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { checklistTool, pendingItems } from "../src/tools/checklist.mjs"
+import { checklistTool, pendingItems, parse, write } from "../src/tools/checklist.mjs"
 import { lintTool } from "../src/tools/linter.mjs"
 import { timerTool } from "../src/agent-tools/timer.mjs"
 
@@ -237,6 +237,92 @@ describe("checklist — persistent tree checklist (ported from CLI)", () => {
     assert.match(content, /T10: 十/)
     assert.match(content, /T12: 无id条目/)          // 跳过 done 文件的 T11
     assert.doesNotMatch(content, /T11: 无id条目/)   // 不撞归档 ID
+  })
+})
+
+// ─── R10 F4（MULTI-INSTANCE-COLLAB.md D-F4a/b——并发写防护镜像）───────────────
+// 伪并发范式：parse/write 模块级直编 读→seedFile（直写模拟对端）→写 链——工具层无法在
+// parse 与 write 之间注入 seed。checklist.md = cp、checklist-done.md = dp。
+
+describe("R10 F4 — checklist 并发写防护（mtime 门控 + ID union 合并）", () => {
+  beforeEach(setup)
+  afterEach(cleanup)
+
+  function cpPath() { return join(cwd, ".thincoder", "checklist.md") }
+  function dpPath() { return join(cwd, ".thincoder", "checklist-done.md") }
+
+  it("T-F4a: 并发 add——磁盘在他端读后加了项 → 写前门控合并，双方新增都保留（merged 语义）", () => {
+    mkdirSync(join(cwd, ".thincoder"), { recursive: true })
+    writeFileSync(cpPath(), "- [ ] T1: root\n  - [ ] T1.1: child\n- [ ] T2: two\n")
+    const items = parse(cpPath()) // A 读链基线 M0
+    // seedFile：B 在 A 读后给共同父项 T1 加了子项 T1.2（写盘——B 的足迹）
+    writeFileSync(cpPath(), "- [ ] T1: root\n  - [ ] T1.1: child\n  - [ ] T1.2: B-child\n- [ ] T2: two\n")
+    // A add 根项 T3
+    items.push({ id: "T3", index: 0, depth: 0, status: "pending", text: "A-added", children: [] })
+    const res = write(cpPath(), items)
+    assert.equal(res.merged, true, "磁盘 mtime ≠ 链基线 → merged")
+    const content = readFileSync(cpPath(), "utf8")
+    assert.match(content, /T3: A-added/, "A 新项保留（不丢）")
+    assert.match(content, /T1\.2: B-child/, "B 新项保留（不丢）——children 递归 union")
+    assert.match(content, /T1\.1: child/, "既有项保留")
+  })
+
+  it("T-F4b: 并发 add 同 ID——盘上保留原 ID、本端重分配 max+1（合并后无重复 ID）", () => {
+    mkdirSync(join(cwd, ".thincoder"), { recursive: true })
+    writeFileSync(cpPath(), "- [ ] T1: one\n- [ ] T2: two\n")
+    const items = parse(cpPath()) // A 基线 max = T2 → A 将分配 T3
+    // seedFile：B 从同基线并发 add 也得了 T3
+    writeFileSync(cpPath(), "- [ ] T1: one\n- [ ] T2: two\n- [ ] T3: B-added\n")
+    items.push({ id: "T3", index: 0, depth: 0, status: "pending", text: "A-added", children: [] })
+    const res = write(cpPath(), items)
+    assert.equal(res.merged, true)
+    const content = readFileSync(cpPath(), "utf8")
+    assert.match(content, /T3: B-added/, "B 项盘上保留（不重分配）")
+    assert.match(content, /T4: A-added/, "A 项重分配 max+1 续分配")
+    const after = parse(cpPath())
+    const ids = after.map((i) => i.id)
+    assert.equal(new Set(ids).size, ids.length, "合并后无重复 ID")
+    assert.equal(ids.length, 4, "T1/T2 + 双方新增都在")
+  })
+
+  it("T-F4c: 无并发零行为变化——parse 规范化写回 → add 链自写不误触发 merged/重分配", () => {
+    mkdirSync(join(cwd, ".thincoder"), { recursive: true })
+    writeFileSync(cpPath(), "- [ ] 无id一\n- [ ] 无id二\n")
+    checklistTool.execute({ action: "list" }, ctx()) // parse → assign → 规范化写回（自写）
+    const afterFirst = readFileSync(cpPath(), "utf8")
+    assert.match(afterFirst, /T1: 无id一/, "规范化写回照常")
+    assert.match(afterFirst, /T2: 无id二/)
+    // add 链：自写后基线已刷新 → 无并发 → 不 merged、无重分配（评审修正 #6）
+    const r1 = checklistTool.execute({ action: "add", item: "新一" }, ctx())
+    assert.match(r1, /Added: \[ \] T3: 新一/)
+    const r2 = checklistTool.execute({ action: "add", item: "新二" }, ctx())
+    assert.match(r2, /Added: \[ \] T4: 新二/)
+    const content = readFileSync(cpPath(), "utf8")
+    assert.match(content, /T1: 无id一/)
+    assert.match(content, /T2: 无id二/)
+    assert.match(content, /T3: 新一/)
+    assert.match(content, /T4: 新二/, "ID 连续——自写链无误触发")
+  })
+
+  it("T-F4d: mark 双写路径同防护——并发 mark 双方归档都保留（done union），双方移除都不复活", () => {
+    mkdirSync(join(cwd, ".thincoder"), { recursive: true })
+    writeFileSync(cpPath(), "- [ ] T1: one\n- [ ] T2: two\n")
+    const items = parse(cpPath()) // A 读链基线（dp 尚不存在 → 基线 null）
+    const doneItems = parse(dpPath())
+    // seedFile：B 并发 mark T2 done——dp 写归档 + cp 移除 T2
+    writeFileSync(dpPath(), "- [x] T2: two\n")
+    writeFileSync(cpPath(), "- [ ] T1: one\n")
+    // A mark T1 done——双写：dp 先（门控合并 B 的归档）→ cp 后（done 过滤防复活）
+    doneItems.push({ id: "T1", index: 0, depth: 0, status: "done", text: "one", children: [] })
+    write(dpPath(), doneItems)
+    items.splice(items.findIndex((i) => i.id === "T1"), 1)
+    write(cpPath(), items)
+    const doneContent = readFileSync(dpPath(), "utf8")
+    assert.match(doneContent, /- \[x\] T1: one/, "A 归档保留")
+    assert.match(doneContent, /- \[x\] T2: two/, "B 归档保留——done union（不互覆）")
+    const cpContent = readFileSync(cpPath(), "utf8")
+    assert.doesNotMatch(cpContent, /T1:/, "A 的移除生效（不复活自己刚归档的）")
+    assert.doesNotMatch(cpContent, /T2:/, "B 的移除生效（done 过滤——不复活他端归档的）")
   })
 })
 

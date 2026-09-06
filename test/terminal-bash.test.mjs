@@ -3,6 +3,7 @@
  * Uses the vscode mock: tests stub window.activeTerminal / createTerminal.
  */
 import { describe, it, beforeEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import * as vscode from "vscode"
 import { bashTool } from "../src/tools/shell.mjs"
@@ -28,7 +29,7 @@ beforeEach(() => {
 })
 
 describe("bash child-process incremental capture", () => {
-  it("Stop mid-run returns the partial output already collected (not a bare '(stopped)')", async () => {
+  slow("Stop mid-run returns the partial output already collected (not a bare '(stopped)')", async () => {
     const ctrl = new AbortController()
     // abort 阈值 3500ms——实证（2026-09-05）：测试进程内 chcp+cmd+node spawn 冷启动
     // 输出到达 ~2.7s（热 shell 126ms——spawn 环境差异 20×）——200ms 曾使本测试在
@@ -110,7 +111,7 @@ describe("bash terminal modes", () => {
     assert.deepEqual(term.sent, [["\x03", undefined]], "Ctrl+C sent to interrupt the foreground process")
   })
 
-  it("visible falls back to the child process when shell integration is unavailable", async () => {
+  slow("visible falls back to the child process when shell integration is unavailable", async () => {
     vscode.window.activeTerminal = undefined
     vscode.window.createTerminal = () => fakeTerminal({ withSI: false })
     const r = await bashTool.execute({ command: "node -e \"console.log('fallback-ok')\"", terminal: "visible" }, { cwd: process.cwd() })

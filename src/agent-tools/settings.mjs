@@ -6,9 +6,7 @@
  * the CLI's auto-derived table for the stable agent/traces key set — add new known
  * keys on both ends together (dual-end parity discipline).
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { dirname } from "node:path"
-import { _configPath, AGENT_DEFAULTS, TRACES_DEFAULTS } from "../config-io.mjs"
+import { persistRaw, conflictError, CONFIG_CONFLICT_HINT, AGENT_DEFAULTS, TRACES_DEFAULTS } from "../config-io.mjs"
 
 /** 敏感键段判定（CLI settings.mjs 同正则——段级 apiKey/key/token/secret/password） */
 const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password)($|[._-])/i
@@ -137,14 +135,10 @@ export const settingsTool = {
         throw new Error(`settings set: "${args.key}" expects ${want} — got ${got} (${JSON.stringify(args.value)})`)
       }
     }
-    // 写盘（共享 config.json——磁盘真相最小化）+ 热应用（内存对象）
-    const cfgPath = _configPath()
-    let text
-    try { text = readFileSync(cfgPath, "utf8") } catch { text = null }
-    const disk = text === null ? {} : JSON.parse(text) // 不存在 → 空；损坏 JSON 让 parse 抛（拒写）
-    setKeyPath(disk, args.key, value)
-    mkdirSync(dirname(cfgPath), { recursive: true })
-    writeFileSync(cfgPath, JSON.stringify(disk, null, 2) + "\n", { encoding: "utf8", mode: 0o600 })
+    // 写盘（共享 config.json——磁盘真相最小化——R10 F5b：走 persistRaw 收口——
+    // loadRaw 新鲜读 + saveRaw 写前 mtime 门控）→ 冲突时放弃并提示重试（决策① A）
+    const r = persistRaw((raw) => { setKeyPath(raw, args.key, value) })
+    if (conflictError(r)) throw new Error(CONFIG_CONFLICT_HINT)
     setKeyPath(config, args.key, value)
     const shown = isSensitiveKey(String(args.key)) ? MASKED : value
     return `settings set: ${args.key} = ${shown} (${Array.isArray(value) ? "array" : typeof value})${isSensitiveKey(String(args.key)) ? " — stored（值不回显）" : " — persisted + hot-applied（运行中已生效）"}`

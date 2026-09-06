@@ -3,7 +3,8 @@
  * runAgent ≥300 单体按骨干—细节两层提取后，三阶段函数先同文件后移、又因文件总量
  * 超 500 硬限迁入本文件——verbatim，语义零变）：压缩检查（checkAndCompact——回合
  * 循环内安全点压缩）、回合末蒸馏发射（fireEndOfRunDistill）、回合收尾
- * （finalizeAgentTurn——consult 清理/async 池收集/checkN 持久/guardCarry 继承）。
+ * （finalizeAgentTurn——consult 清理/async 池收集/guardCarry 继承——§19.8 2026-09-06：
+ * checkN 持久已随 action:'check' 删除退役——步骤枚举同步）。
  * 注：ContinueError 自 ../agent.mjs import 构成函数级静态环（模块求值期无顶层调用——
  * 运行期 instanceof 时 agent.mjs 已完成求值——环安全，session-slots ↔ session.mjs
  * 同款先例）。
@@ -13,9 +14,10 @@ import { compactHistory, truncateFallback, COMPRESS_FAILURE_LIMIT, summarizeRunE
 import { pushReal, reinjectAfterCompaction, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, hasCodeMutations } from "./run-helpers.mjs"
 import { MAX_ADVISOR_PUSHBACKS } from "./run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
-import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
+import { advisorReviewInFlight } from "../agent-tools/advisor-async.mjs"
 import { logEvent } from "../log.mjs"
 import { ContinueError, INHERITED_GUARD_KEYS } from "../agent.mjs"
+import { flushDomains } from "../extension/peer-domains.mjs"
 // 2026-09-05 实践轮：maybeGuardPushbacks——收尾前 guard 推回组（自 runAgent 无工具分支）
 
 /**
@@ -91,17 +93,23 @@ export async function maybeGuardPushbacks(agent, st) {
   // Cap sync (CLI b74e413): beyond MAX_ADVISOR_ROUNDS the advisor tool
   // refuses reviews (run.mjs convergence cap) — pushing back further
   // would loop forever (fix → pushback → cap-refused call → fix …).
+  // §24 D-24b（R13——④）：async 评审未决（在池 running/queued）不算未评审——不推回
+  // （等 settle——settle 后无有效评审/陈旧才推回——陈旧 settle 不置 _calledAdvisorThisRun
+  // ——天然落到下一条推回）。
   const advisorCfg = agent.config?.advisor
   const advisorReview = advisorCfg?.guard === true
   if (advisorReview && !agent.config?.agent?.engineering
       && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
+      && !advisorReviewInFlight(agent)
       && pb.advisorPushbacks < MAX_ADVISOR_PUSHBACKS
       && (agent._advisorRound || 0) < MAX_ADVISOR_ROUNDS) {
     pb.advisorPushbacks++
     pushReal(history, fullHistory, { role: "assistant", content: response.content })
     history.push({
       role: "user",
-      content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format).]`,
+      // §24 D-24b（R13）：depth-0 缺省 async——提醒补注后台语义（评审 settle → digest 自动
+      // 回来——模型无需阻塞等待；未决评审期间本提醒不再推回——等 settle 判定）
+      content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. At the top level the advisor launches the review in the BACKGROUND by default — the call returns an ack, the report arrives automatically when it settles (digest), and the review never blocks your turn; pass async:false only when you must read the result before continuing. After the review, produce a response table for every issue found (see discipline rules for format).]`,
     })
     callbacks.onSubTurnBreak?.()
     return true
@@ -209,13 +217,26 @@ export function fireEndOfRunDistill(agent, history, provider, signal, callbacks)
  * consult 清理（无孤儿子代理）→ async 池回合尾处理（Stop 清池不注入陈旧错误 /
  * ContinueError 不等待不注入 / 其余收集 settled——running/queued 留池由挂起会话消化；
  * suspDriven 不排干——17.5.2 方案 B）→ 池挂 history 数组跨 runAgent 存活 →
- * _asyncCheckN 随续跑/池持久化 → _inAutoTurn 复位 → auto-turn guard 标记继承。
+ * _inAutoTurn 复位 → auto-turn guard 标记继承。
  */
 export async function finalizeAgentTurn(agent, ctx) {
   const { signal, history, fullHistory, cwd, depth, thrownError, autoTurn, guardCarry, suspDriven } = ctx
-  // Turn-bound cleanup (CONSULTATION.md): abort any leftover consultation sessions
-  // started during this turn — no orphan sub-agents past the turn's end.
-  cleanupConsultSessions(agent)
+  // §25 R17（2026-09-06——会诊/飞刀完全异步化）：consult 会话不再 turn-bound——普通收尾
+  // 不清不 abort（会话沿 history._consultSessions 跨 run 存活——挂起会话驱动消化——
+  // 与 async 池同语义）；**全停（plain abort）**才清理：abort 会话子代理 + 清会话 Map +
+  // 清会诊/飞刀 park 容器（停 = 弃——不注入陈旧结果——子代理池同款）。ContinueError →
+  // 全保留（自动续跑的 run-start 注入容器）。
+  if (signal?.aborted && !signal?.reason?.interrupt) {
+    // Turn-bound abort (CONSULTATION.md semantics kept for STOP only): mark stopped
+    // (children settle as TERMINATED — grey card) + abort all leftover session
+    // controllers + clear the session map — no orphan consultants past an abort.
+    const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
+    cleanupConsultSessions(agent)
+    if (history) {
+      history._pendingConsultResults = []
+      history._pendingEscalateResults = []
+    }
+  }
   // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1 + §17.5
   // supersede; the collector lives in agent-tools/subagent-async.mjs with the async
   // machinery — 500-line split):
@@ -237,16 +258,22 @@ export async function finalizeAgentTurn(agent, ctx) {
       await collectSettledAsync(agent, { history, fullHistory, cwd, suspDriven: suspDriven === true })
     }
   }
+  // §24 D-24b（R13——2026-09-06）：async advisor 池同款回合尾处理（独立池——
+  // 停/ContinueError 不注入陈旧结果；settled 留池由挂起会话 sweep → digest 消化）。
+  const advMap = agent._asyncAdvisors
+  if (advMap && advMap.size > 0) {
+    if (signal?.aborted && !signal?.reason?.interrupt) {
+      logEvent("ev:stopped", { poolN: advMap.size, where: "turn-end-abort-advisor" })
+      advMap.clear()
+    } else if (!(thrownError instanceof ContinueError)) {
+      const { collectSettledAdvisors } = await import("../agent-tools/advisor-async.mjs")
+      await collectSettledAdvisors(agent, { history, fullHistory, cwd, suspDriven: suspDriven === true })
+    }
+  }
   // The pool rides the shared depth-0 history array across runAgent calls (the agent
   // object itself is per-run) — attach while entries remain, drop when drained.
   if (depth === 0) history._asyncSubagents = (asyncMap && asyncMap.size > 0) ? asyncMap : undefined
-  // _asyncCheckN 随续跑/池持久化（2026-09-05 复审 #5）：续跑（Ctrl+I/ContinueError——
-  // 模型上下文连续须续号，即使池已空）或池仍有时写下读数；普通终局丢弃（新上下文重置 0）。
-  if (depth === 0) {
-    const willContinue = (thrownError instanceof ContinueError) || (signal?.aborted && !!signal?.reason?.interrupt)
-    if (willContinue || (asyncMap && asyncMap.size > 0)) history._asyncCheckN = agent._asyncCheckN ?? 0
-    else history._asyncCheckN = undefined
-  }
+  if (depth === 0) history._asyncAdvisors = (advMap && advMap.size > 0) ? advMap : undefined
   agent._inAutoTurn = false
   // §17 D-S6: an auto-turn's end-state guard marks carry into the next USER run via
   // opts.guardCarry (restored at its start above). Normal ends only — Stop discards
@@ -256,5 +283,11 @@ export async function finalizeAgentTurn(agent, ctx) {
     if (guardCarry) {
       for (const k of INHERITED_GUARD_KEYS) guardCarry[k] = agent[k]
     }
+  }
+  // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a——VS Code 回合收尾）：回合级登记 flush——
+  // 顶层回合末整写一次本实例 peers 文件（无写入回合跳过——hot 窗口自然老化；子代理写入
+  // 累积在本回合集合内一并落盘；失败容忍 NF2——不影响回合主流程）。
+  if (depth === 0) {
+    try { flushDomains(cwd) } catch { /* NF2：登记失败不影响回合 */ }
   }
 }

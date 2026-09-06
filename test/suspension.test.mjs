@@ -21,7 +21,15 @@
  *               D-S9 状态机行表（settle→pending→合并消化轮；pendingInput 优先；池空退出）
  *   webview 级 — happy-dom + 真实 index.html + chat.js 消息循环——中间态渲染与输入态断言
  */
+
+// ─── §24 R15（2026-09-06）测试：T-24c1..c4（合并注入 + 上限截批 + 单条直发 + driver 合并）───
+
+import { popQueuedTurn, buildMergedMessage, mergeTransportFor, MAX_MERGE_ITEMS, MAX_MERGE_CHARS } from "../src/extension/suspension.mjs"
+
+const MSG = (n) => ({ text: `msg ${n}`, modelOverride: null, reasoning: null, providerName: null, images: null })
+
 import { test, describe, it, before, after } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -90,7 +98,6 @@ function fakeParent(port, extra = {}) {
     _subIdCounter: 0,
     _touchedFiles: [],
     _asyncSubagents: new Map(),
-    _asyncCheckN: 0,
     _inAutoTurn: false,
     history: [],
     ...extra,
@@ -169,7 +176,7 @@ function driverCtx(cwd) {
 // agent 级：T-S1 / T-S2 / T-S2b / T-S4（真实 async 子代理 + runAgent）
 // ═══════════════════════════════════════════════════════════════════════════
 
-test("T-S1 回合尾不阻塞 + T-S2 注入不丢（§17 D-S1/D-S3 ①：收已完成直注入 + 未完成留池）", async () => {
+slow("T-S1 回合尾不阻塞 + T-S2 注入不丢（§17 D-S1/D-S3 ①：收已完成直注入 + 未完成留池）", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "tc-susp-"))
   let parentCalls = 0
   const server = createServer((req, res) => {
@@ -264,7 +271,7 @@ test("T-S2b 挂起期 settle → pending → 下回合 prepareRun 前注入（D-
   }
 })
 
-test("T-S4 叠加并发：跨批次 async 池累积 + 完成未消费项保留（上限 4 全局由 subagent.test.mjs T6/T10/T11 覆盖）", async () => {
+test("T-S4 叠加并发：跨批次 async 池累积 + 完成未消费项保留（上限按角色域（§24 D-24a——同域仍 4、跨域总量 8）由 subagent-async.test.mjs T6/T10/T11 + async-pool-domains.test.mjs T-24a1..4 覆盖）", async () => {
   const { server, port } = await routeServer([
     { when: (b) => b.includes('"content":"活A"'), frames: textFrames(LONG_REPORT("A")) },
     { when: (b) => b.includes('"content":"活B"'), frames: textFrames(LONG_REPORT("B")) },
@@ -281,7 +288,7 @@ test("T-S4 叠加并发：跨批次 async 池累积 + 完成未消费项保留�
     assert.equal(b.status, "running")
     assert.ok(a.id !== b.id, "id 独立")
     assert.equal(parent._asyncSubagents.size, 2, "同批叠加")
-    // 完成但未消费（非挂起）→ 保留在池（下回合收尾/check 才消费）——跨轮累积语义
+    // 完成但未消费（非挂起）→ 保留在池（回合尾收尾自动通道消费——§19.8——跨轮累积语义）
     await Promise.all([...parent._asyncSubagents.values()].map((e) => e.settled))
     assert.equal(parent._asyncSubagents.size, 2, "settle 后未消费项保留池（F6 池累积）")
     assert.ok([...parent._asyncSubagents.values()].every((e) => e.done && e.report))
@@ -312,7 +319,7 @@ test("T-S7 手动档消化：autoTurn 注入 pending + 消化动作域模板，�
     const injected = history.find((m) => String(m.content ?? "").includes("async subagent #1 (coder) finished"))
     assert.ok(injected, "pending 在 auto-turn 开跑前注入")
     assert.equal(history._pendingAsyncResults.length, 0, "注入即消费")
-    const domain = history.find((m) => String(m.content ?? "").includes("auto-turn — background async subagents finished"))
+    const domain = history.find((m) => String(m.content ?? "").includes("auto-turn — background async subagents / consultations / escalate reports / advisor reviews finished"))
     assert.ok(domain, "手动档（无 AUTO）注入消化动作域模板（D-S6 organize-only）")
   } finally {
     server.close()
@@ -729,7 +736,7 @@ test("17.5.4 #6 (vscode): backgroundStatus 计入留池 settled 未消费项（d
 //           （2026-09-02 code review round2 #2-VS Code——中止静默丢弃 pendingInput 偏差）
 // ═══════════════════════════════════════════════════════════════════════════
 
-test("T-S18 释放窗口：generateTitle await 期 _chat 入队 → 会话接管——不并发开回合、池不丢（全路径真实回合）", async () => {
+slow("T-S18 释放窗口：generateTitle await 期 _chat 入队 → 会话接管——不并发开回合、池不丢（全路径真实回合）", async () => {
   // 真实 ChatPanel + 真实 runPanelChat/runAgent：首回合 spawn async 子代理（慢活）→ 回合尾
   // 池 live → finally 登记 _suspPending → _generateTitle 被 gate 挂起（释放窗口）→ 窗口期
   // panel._chat("second message") 必须入队（panel._suspQueue）而非开并发新回合；gate 释放后
@@ -964,18 +971,17 @@ test("T-S21 中止排队不丢（2026-09-02 code review round2 #2-VS Code 回归
     const endPost = D.posts.find((p) => p.type === "suspension" && p.active === false)
     assert.ok(endPost && endPost.freeze === true, "中止退出同样冻结")
     // 排队消息不静默丢：中止后以普通回合执行（修复前：!aborted 门控 → 消息永久消失——
-    // calls 只到 digest 即红；执行序 = 入队序）
+    // calls 只到 digest 即红；执行序 = 入队序）。§24 D-24c（R15——2026-09-06）：中止兜底
+    // 同属"回合空闲普通回合间"消费点——两条排队消息合并为一条编号注入（零丢失语义不变）。
     assert.deepEqual(
       D.calls.map((c) => ({ text: c.text, autoTurn: c.autoTurn })),
       [
         { text: "", autoTurn: true }, // digest（mock 内自然结束——真实路径由 abort 中断）
-        { text: "中止前排队消息", autoTurn: false },
-        { text: "中止前排队消息 2", autoTurn: false },
+        { text: "[System reminder: you queued 2 messages — handle them all in this one turn:\n1. 中止前排队消息\n2. 中止前排队消息 2]", autoTurn: false },
       ],
-      "digest 先、排队消息中止后以普通回合顺序执行（零丢失）",
+      "digest 先、排队消息中止后以普通回合执行——R15 合并（两条 → 单回合编号注入，零丢失）",
     )
     assert.equal(D.calls[1].suspended, false, "排队消息执行期 _suspended=false（普通回合语义）")
-    assert.equal(D.calls[2].suspended, false)
     assert.equal(pendingQ.length, 0, "队列消费干净")
     assert.equal(D.consumed.n, 1, "digest 消费 pending（中止不注入）")
   } finally {
@@ -1010,17 +1016,20 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
   after(() => env?.cleanup())
 
   const post = (msg) => window.dispatchEvent(new window.MessageEvent("message", { data: msg }))
-  const findBlock = (label) =>
-    [...document.querySelectorAll("#messages .sub-block")].find((b) => b.querySelector("summary")?.textContent === label)
+  // R22: 活动块在 #subagent-activity（live）——终态冻结块在 #messages——data-subname 定位
+  const findBlock = (subname) =>
+    [...document.querySelectorAll("#messages .sub-block, #subagent-activity .sub-block")]
+      .find((b) => b.dataset.subname === subname)
 
-  it("T-S14 settled 中间态 + §17.5.5 逐条回收：'done · awaiting digestion' 驻留不折叠；digest 消化完成逐条 done 折叠（不等池空）；退出 freeze 仅兜底残项", async () => {
+  it("T-S14 settled 中间态 + §17.5.5 逐条回收：'done · awaiting digestion' 驻留不折叠；digest 消化完成逐条 done 冻结（不等池空）；退出 freeze 仅兜底残项", async () => {
     const { ctx, S } = chatModules
     S._subagentMap = {} // 测试间隔离（面板行/折叠互不串扰）
-    post({ type: "subagent", id: 21, role: "coder", status: "started", startedAt: Date.now(), model: "m" })
+    post({ type: "subagent", id: 21, role: "coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
     post({ type: "toolPanel", name: "sub:coder#21", kind: "text", text: "working…" })
-    const block = findBlock("coder#21")
+    const block = findBlock("sub:coder#21")
     assert.ok(block && block.open, "活动区块已创建且展开")
-    // 挂起激活 + 子代理完成（settled 通知——非 done，不折叠）
+    assert.equal(block.parentElement?.id, "subagent-activity", "活动块驻留底部活动面板（R22）")
+    // 挂起激活 + 子代理完成（settled 通知——非 done，不冻结）
     post({ type: "suspension", active: true, running: 1, queued: 0, pending: 0 })
     post({ type: "subagent", id: 21, role: "coder", status: "settled" })
     const statusLine = document.getElementById("status-line").textContent
@@ -1030,27 +1039,89 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
     assert.ok(row, "面板行驻留")
     assert.match(row.textContent, /done · awaiting digestion/, "✓-pending 中间态（§7.2.1 挂起例外）")
     assert.equal(block.open, true, "settled 不折叠——驻留面板等消化")
+    assert.equal(block.parentElement?.id, "subagent-activity", "settled 块驻留活动面板（不冻结入流）")
+    assert.ok(block.querySelector("summary").textContent.includes("awaiting digestion"), "settled 块头 awaiting digestion（R22 驻留形态）")
     // 17.5.4 #6：回合尾留池 settled 未消费项（done 计数）进状态行——不误报 winding/0
     post({ type: "suspension", active: true, running: 0, queued: 0, pending: 0, done: 1 })
     assert.match(document.getElementById("status-line").textContent, /awaiting digestion/, "留池未消费项显示完成待消化计数（done→digesting）")
     // §17.5.5：digest 消化完成 → host reclaimDigestedBlocks 对该条目逐条补发 done——
-    // 立即折叠回收（不等池空；同池其他子代理仍运行）
+    // 立即冻结回收（不等池空；同池其他子代理仍运行）。R22 修复注（T-R22c.2c 顺序
+    // 断言扩展）：reclaim 紧随 digest run——报告先渲染入流、done 后补发——冻结块须
+    // 落在 settle 锚点（settle 时刻 #messages 尾）= 合并报告之前（旧 T-S14 只断
+    // parentElement——此处补位置断言——旧断言线保留在其下）
+    post({ type: "token", text: "digest 总览：child 21 结果已注入" })
+    post({ type: "complete" })
+    const report = ctx.messagesEl.lastElementChild
+    assert.ok(report && report !== block, "digest 报告块已渲染入流（补发 done 之前）")
     post({ type: "subagent", id: 21, role: "coder", status: "done" })
-    assert.equal(block.open, false, "digest 完成逐条 done → 折叠回收（保留可展开——17.5.5/T-H7）")
+    assert.equal(block.open, false, "digest 完成逐条 done → 冻结折叠（保留可展开——17.5.5/T-H7）")
+    assert.equal(block.parentElement?.id, "messages", "digest done → 块移入 #messages（R22c——冻结入流）")
+    assert.ok([...ctx.messagesEl.children].indexOf(block) < [...ctx.messagesEl.children].indexOf(report),
+      "冻结块位于 digest 报告之前（settle 锚点落位——非报告后尾插——T-R22c.2c）")
     assert.equal(S._subagentMap[21].status, "done", "settled → done（消化回收）")
-    // 残项（未消化——仍驻留）：另一子代理 settled 后会话退出 → 退出 freeze 兜底折叠
-    post({ type: "subagent", id: 22, role: "coder", status: "started", startedAt: Date.now(), model: "m" })
+    // 残项（未消化——仍驻留）：另一子代理 settled 后会话退出 → 退出 freeze 兜底冻结
+    post({ type: "subagent", id: 22, role: "coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
     post({ type: "toolPanel", name: "sub:coder#22", kind: "text", text: "working…" })
-    const block22 = findBlock("coder#22")
+    const block22 = findBlock("sub:coder#22")
     post({ type: "subagent", id: 22, role: "coder", status: "settled" })
     assert.equal(block22.open, true, "未消化残项驻留（等待下轮 digest 或退出 freeze）")
+    assert.equal(block22.parentElement?.id, "subagent-activity", "残项仍在活动面板")
     post({ type: "suspension", active: false, freeze: true })
     assert.equal(block22.open, false, "退出 freeze 兜底折叠残项（17.5.5——仅兜底未消化）")
+    assert.equal(block22.parentElement?.id, "messages", "退出 freeze → 残项冻结入流（R22c）")
     assert.equal(S._subagentMap[22].status, "done", "残项 settled → done")
     assert.ok(!document.getElementById("status-line").textContent.includes("background subagent"), "退出后状态行恢复")
     // 视图复位
     post({ type: "suspension", active: false, freeze: false })
   })
+
+  it("T-R22c.2d 同锚多块：同一合并消化回收 ≥2 块——各冻结块按完成序排列且全部位于合并报告前（R22 修复注——链式落位断言定死）", () => {
+    const { ctx, S } = chatModules
+    S._subagentMap = {} // 测试间隔离（行/块互不串扰——先前测试的冻结块留在 #messages 作历史）
+    post({ type: "suspension", active: true, running: 2, queued: 0, pending: 0 })
+    // 挂起期两子代理先后启动/完成——settle 之间无任何 #messages 渲染（chunk 走活动面板）
+    // → 两者共享同一 settle 锚点元素（合并消化回收同锚场景）
+    post({ type: "subagent", id: 31, role: "coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:coder#31", kind: "text", text: "31 working…\n31 final report" })
+    post({ type: "subagent", id: 32, role: "coder", status: "started", startedAt: Date.now(), model: "m", pool: true })
+    post({ type: "toolPanel", name: "sub:coder#32", kind: "text", text: "32 working…\n32 final report" })
+    const b31 = findBlock("sub:coder#31")
+    const b32 = findBlock("sub:coder#32")
+    assert.ok(b31 && b32, "两活动块均已创建")
+    const tailAtSettle = ctx.messagesEl.lastElementChild
+    post({ type: "subagent", id: 31, role: "coder", status: "settled" }) // 31 先完成（完成序 31 < 32）
+    post({ type: "subagent", id: 32, role: "coder", status: "settled" })
+    assert.equal(b31._subMeta.freezeAnchor, tailAtSettle, "31 settle 锚点 = settle 时刻 #messages 尾")
+    assert.equal(b32._subMeta.freezeAnchor, tailAtSettle, "32 同锚（settle 间零渲染——同一合并消化共享锚点元素）")
+    assert.equal(b31.parentElement?.id, "subagent-activity", "31 驻留面板（awaiting digestion）")
+    assert.equal(b32.parentElement?.id, "subagent-activity", "32 驻留面板（awaiting digestion）")
+    // 合并 digest：报告先渲染入流（reclaim 前）→ 消化完成逐条补发 done（reclaim FIFO =
+    // settle 序——host reclaimDigestedBlocks 按 pending 快照序逐条 post）
+    post({ type: "token", text: "合并 digest 总览：31 + 32 结果均已注入" })
+    post({ type: "complete" })
+    const report = ctx.messagesEl.lastElementChild
+    assert.ok(report && report !== b31 && report !== b32, "合并报告块已渲染入流")
+    post({ type: "subagent", id: 31, role: "coder", status: "done" })
+    post({ type: "subagent", id: 32, role: "coder", status: "done" })
+    assert.equal(b31.open, false, "31 冻结折叠")
+    assert.equal(b32.open, false, "32 冻结折叠")
+    assert.equal(b31.parentElement?.id, "messages", "31 冻结入流")
+    assert.equal(b32.parentElement?.id, "messages", "32 冻结入流")
+    const kids = [...ctx.messagesEl.children]
+    const i31 = kids.indexOf(b31)
+    const i32 = kids.indexOf(b32)
+    const ir = kids.indexOf(report)
+    assert.ok(i31 >= 0 && i32 >= 0 && ir >= 0, "冻结块与报告均为 #messages 顶层子元素")
+    assert.ok(i31 < ir && i32 < ir, "两冻结块全部位于合并报告之前（同锚多块位置断言）")
+    assert.ok(i31 < i32, "同锚链式——按完成序排列（31 先 settle 先冻结 → 靠锚近）")
+    assert.ok(kids[i31 + 1]?.classList?.contains("sub-report-preview") && kids[i31 + 2] === b32,
+      "链式插入越过前一冻结块的 report preview（31 → preview → 32 相邻——preview 不被插散）")
+    assert.equal(S._subagentMap[31].status, "done", "31 settled → done（消化回收）")
+    assert.equal(S._subagentMap[32].status, "done", "32 settled → done（消化回收）")
+    // 视图复位（保后续测试状态行断言干净）
+    post({ type: "suspension", active: false, freeze: false })
+  })
+
 
   it("T-S15 双模式输入：挂起/消化中 Enter 不被吞（send 可用 + 输入框不锁）；后台事件零干扰（F3）", () => {
     const { ctx, S, setLoading, send } = chatModules
@@ -1086,3 +1157,243 @@ describe("§17 webview 态（T-S14 中间态渲染 + T-S15 双模式输入）", 
     S._subagentMap = _subagentMap
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §24 D-24c（AGENT-LOOP.md §24——R15 排队用户指令合并——2026-09-06）T-24c1..c4
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("T-24c1 (vscode): 输入合并——≥2 条排队合成一条编号注入（driver 消费点——T-S9 同点）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-susp-"))
+  const D = driverCtx(cwd)
+  const A = runningEntry(D.history, 1)
+  try {
+    const { suspensionSession } = await import("../src/extension/suspension.mjs")
+    const sessionP = suspensionSession(D.panel, D.entry)
+    await waitFor(() => D.panel._suspWake)
+    // 挂起等待期连发 3 条（真实路径 = chat-panel._chat 挂起分流入队 + 唤醒；driver 级直接入队）
+    D.panel._susp.pendingInput.push(MSG("第一问"), MSG("第二问"), MSG("第三问"))
+    D.panel._suspWake?.()
+    await waitFor(() => D.calls.length >= 1)
+    assert.equal(D.calls.length, 1, "3 条消息 → 单回合（一次处理）")
+    assert.equal(D.calls[0].autoTurn, false, "合并回合 = 普通用户回合（非 digest）")
+    assert.equal(D.calls[0].suspended, false, "用户回合执行期 _suspended=false")
+    const text = D.calls[0].text
+    assert.match(text, /you queued 3 messages/, "合并注入计数")
+    assert.ok(text.includes("1. msg 第一问"), "编号 1")
+    assert.ok(text.includes("2. msg 第二问"), "编号 2")
+    assert.ok(text.includes("3. msg 第三问"), "编号 3——逐条列出")
+    assert.ok(text.indexOf("1. ") < text.indexOf("2. ") && text.indexOf("2. ") < text.indexOf("3. "), "队列序保持")
+    assert.equal(D.panel._susp.pendingInput.length, 0, "合并即消费（不残留）")
+    // 池仍 live → 继续挂起；A settle → 消化 → 自然退出
+    await waitFor(() => D.panel._suspWake)
+    settleToPending(D.panel, D.history, A, LONG_REPORT("A 结果"))
+    await sessionP
+    assert.deepEqual(D.calls.map((c) => c.text), [text, ""], "合并回合先、消化轮后")
+    assert.equal(D.panel._susp, null, "池空自然退出")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-24c3 (vscode): 合并上限数值化——12 条截批前 8（余 4 留待下批）；单条 >2000 直发不进批", () => {
+  const queue = []
+  for (let i = 1; i <= 12; i++) queue.push(MSG(i))
+  const first = popQueuedTurn(queue)
+  assert.ok(first.items, "首批合并")
+  assert.equal(first.items.length, MAX_MERGE_ITEMS, `单批 ≤${MAX_MERGE_ITEMS} 条——前 8 条合并`)
+  const merged = buildMergedMessage(first.items)
+  assert.ok(merged.length <= MAX_MERGE_CHARS, `合并注入 ≤${MAX_MERGE_CHARS} 字符`)
+  assert.ok(merged.includes("1. msg 1") && merged.includes("8. msg 8"), "编号 1-8")
+  assert.ok(!merged.includes("msg 9"), "余 4 不进首批")
+  assert.equal(queue.length, 4, "余 4 留待下批（不丢）")
+  const second = popQueuedTurn(queue)
+  assert.equal(second.items.length, 4, "余 4 下批合并")
+  assert.equal(queue.length, 0, "下批消费清队")
+  // 单条超长（>2000）→ 不进批——逐条直发（队首即长条 → 直发单条）
+  const longQueue = [{ text: "x".repeat(2001), modelOverride: null, reasoning: null, providerName: null, images: null }, MSG("a"), MSG("b")]
+  const single = popQueuedTurn(longQueue)
+  assert.ok(single.item && single.item.text.length === 2001, "超长单条直发（不进批）")
+  assert.equal(longQueue.length, 2, "其余留队")
+  const rest = popQueuedTurn(longQueue)
+  assert.equal(rest.items.length, 2, "长条后连续短条仍可合并")
+  // 带图条目不进批（图片附件边界——逐条直发保序——断段）
+  const imgQueue = [MSG("a"), { text: "带图消息", modelOverride: null, reasoning: null, providerName: null, images: ["/tmp/x.png"] }, MSG("b")]
+  const r1 = popQueuedTurn(imgQueue)
+  assert.ok(r1.item && r1.item.text === "msg a", "队首与带图条相邻不越前合并（断段——单条直发）")
+  const r2 = popQueuedTurn(imgQueue)
+  assert.ok(r2.item && r2.item.images?.[0] === "/tmp/x.png", "带图条直发（附件边界不丢）")
+  const r3 = popQueuedTurn(imgQueue)
+  assert.ok(r3.item && r3.item.text === "msg b", "断点后归队再评（单条直发——无 ≥2 段）")
+  // 空队 / 单条
+  assert.equal(popQueuedTurn([]), null, "空队 → null")
+  const solo = popQueuedTurn([MSG("solo")])
+  assert.ok(solo.item && solo.item.text === "msg solo", "单条直发（不等待凑批——无延迟窗口）")
+})
+
+test("T-24c2 (vscode): /cmd 保序——本端无斜杠命令队列（命令走 msg.type 按钮路由）——text 队列零命令项", () => {
+  // VS Code 装配实况：/status 等即时命令在 CLI 由终端输入解析；本端 webview 命令
+  // （newSession/switchSession/cancelSubagent/…）经 msg.type 消息路由，永不经 pendingInput
+  // text 队列——"/" 前缀文本是普通消息（与任何文本同等合批判据——零排除类）。断言：
+  // popQueuedTurn 无 cmd 排除分支（注释锚）+ 文本保序（列表位置不变）。
+  const q = [MSG("first"), { text: "/status", modelOverride: null, reasoning: null, providerName: null, images: null }, MSG("third")]
+  const r = popQueuedTurn(q)
+  assert.equal(r.items.length, 3, "本端 /-前缀文本参与合并（无命令语义——零排除类）")
+  assert.ok(buildMergedMessage(r.items).includes("2. /status"), "保序（列表内位置不变）")
+})
+
+test("T-24c4 (vscode): 回归 + 传输参数——digest 消化合并（T-S11 语义）不受用户合并影响；mergeTransportFor 取最后一条", () => {
+  // digest 合并消化（settle 报告多份一次消化）分支（driver branch 2）未触碰——T-S6/T-S9
+  // 既有用例同文件同轮回归。此处纯函数回归：空值参数不携带；字符超限截批不截断单条。
+  const queue = [
+    { text: "a", modelOverride: "m1", reasoning: "high", providerName: "p1", images: null },
+    { text: "b", modelOverride: "m2", reasoning: null, providerName: null, images: null },
+  ]
+  const r = popQueuedTurn(queue)
+  assert.equal(r.items.length, 2)
+  const transport = mergeTransportFor(r.items)
+  assert.equal(transport.modelOverride, "m2", "传输参数取最后一条（最近发送意图）")
+  assert.ok(!("reasoning" in transport) && !("providerName" in transport), "空值不携带")
+  assert.deepEqual(mergeTransportFor([MSG("x"), MSG("y")]), {}, "无传输参数 → 空对象（面板默认）")
+  const big = [{ text: "A".repeat(1200), modelOverride: null, reasoning: null, providerName: null, images: null }, { text: "B".repeat(1200), modelOverride: null, reasoning: null, providerName: null, images: null }]
+  const bigR = popQueuedTurn(big)
+  assert.ok(!(bigR.items && buildMergedMessage(bigR.items).length > MAX_MERGE_CHARS), "合并注入恒 ≤2000（超限截批——不截断单条）")
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §25 R17（2026-09-06——会诊/飞刀完全异步化）驱动面镜像：会诊/飞刀独立 pending 流
+// （_pendingConsultResults/_pendingEscalateResults）——挂起活度（poolLive）、消化驱动
+// 判据推广（任一 pending 族非空即消化——T-R17j）、run-start 单点注入一次（T-R17o）、
+// 手动档 digest 动作域零例外（T-R17p）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** R17 驱动 harness：runTurn 镜像 run-start 注入（消费全部四族 pending 容器）。 */
+function driverR17(cwd) {
+  const { panel, posts } = driverPanel()
+  const history = []
+  const fullHistory = []
+  const consumed = { consult: 0, escalate: 0, sub: 0, advisor: 0 }
+  const calls = []
+  const entry = {
+    turnSlot: 1, distillSlot: 1,
+    lines: { history, fullHistory },
+    engState: {},
+    cwd,
+    runTurn: async ({ text = "", autoTurn = false } = {}) => {
+      calls.push({ text, autoTurn, suspended: history._suspended })
+      const c1 = history._pendingConsultResults
+      if (Array.isArray(c1) && c1.length) { consumed.consult += c1.length; history._pendingConsultResults = [] }
+      const c2 = history._pendingEscalateResults
+      if (Array.isArray(c2) && c2.length) { consumed.escalate += c2.length; history._pendingEscalateResults = [] }
+      const c3 = history._pendingAdvisorResults
+      if (Array.isArray(c3) && c3.length) { consumed.advisor += c3.length; history._pendingAdvisorResults = [] }
+      const c4 = history._pendingAsyncResults
+      if (Array.isArray(c4) && c4.length) { consumed.sub += c4.length; history._pendingAsyncResults = [] }
+    },
+  }
+  return { history, fullHistory, consumed, calls, panel, posts, entry }
+}
+
+test("T-R17j (vscode): 空闲期会诊 settle → 消费驱动判据推广——消化轮自动触发（不悬置到用户下次输入）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-susp-"))
+  const D = driverR17(cwd)
+  try {
+    const { suspensionSession } = await import("../src/extension/suspension.mjs")
+    // 会诊会话 live（挂起活度——会话跨 run 存活）
+    const session = { id: "1", replies: [], pending: 1, failed: 0, received: 0, total: 2, stopped: false }
+    D.history._consultSessions = new Map([["1", session]])
+    const sessionP = suspensionSession(D.panel, D.entry)
+    await waitFor(() => D.panel._suspWake) // 会诊 running → 挂起 wait（用户空闲）
+    assert.ok(D.panel._susp?.active, "会诊会话纳入挂起活度——启动回合尾即入挂起态")
+    // 空闲期 settle：1/2 回复 → 不 park 不 wake（部分 settle——T-R17k）
+    session.replies.push({ model: "deepseek:m-a", reply: "partial" })
+    session.received = 1
+    session.pending = 1
+    assert.equal(D.calls.length, 0, "部分 settle 不触发消化")
+    // 全 settle → park 进 pending 流 + wake（settleChild 语义镜像）
+    session.replies.push({ model: "openai:m-b", reply: "full" })
+    session.received = 2
+    session.pending = 0
+    D.history._pendingConsultResults = [session]
+    D.history._consultSessions.delete("1")
+    D.panel._suspWake?.()
+    await sessionP
+    assert.ok(D.calls.some((c) => c.autoTurn === true), "空闲 settle → 消化轮触发（驱动判据推广——任一 pending 族非空）")
+    assert.equal(D.consumed.consult, 1, "会诊结果被消化轮消费")
+    assert.equal(D.history._suspended, false, "消化后池空自然退出")
+    assert.equal(D.panel._susp, null)
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-R17o (vscode): run-start 单点注入一次——会诊/飞刀 pending 同点消费（splice 即 consumed）", async () => {
+  const { server, port } = await routeServer([
+    { when: (b) => b.includes("consultation #7 finished"), frames: textFrames("digest 收尾") },
+    { when: () => true, frames: textFrames("普通收尾") },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "tc-susp-"))
+  try {
+    const { runAgent } = await import("../src/agent.mjs")
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" }
+    const history = []
+    const fullHistory = []
+    // 会诊 + 飞刀双族 pending（settle 已落）
+    const consultSession = { id: "7", replies: [{ model: "deepseek:m-a", reply: "会诊意见" }], failed: 0, received: 1, total: 1 }
+    history._pendingConsultResults = [consultSession]
+    history._pendingEscalateResults = [{ id: 9, role: "escalate", tag: "kimi:kimi-k3", outcome: "done", injectBody: "飞刀报告" }]
+    const out = await runAgent(provider, cwd, "干活", {}, undefined, true, { history, fullHistory })
+    assert.equal(out, "digest 收尾")
+    const consultMsg = history.find((m) => String(m.content ?? "").includes("consultation #7 finished"))
+    assert.ok(consultMsg, "会诊 digest 在回合首行注入")
+    assert.ok(String(consultMsg.content).includes("会诊意见"), "全文逐条")
+    const escMsg = history.find((m) => String(m.content ?? "").includes("async escalate #9"))
+    assert.ok(escMsg, "飞刀 digest 同点注入")
+    assert.equal(history._pendingConsultResults.length, 0, "注入即消费（容器排空）")
+    assert.equal(history._pendingEscalateResults.length, 0, "escalate 容器同排空")
+    // 二次 runAgent——无重复注入（单注入点）
+    const server2 = await routeServer([{ when: () => true, frames: textFrames("again") }])
+    try {
+      const out2 = await runAgent({ ...provider, baseURL: `http://127.0.0.1:${server2.port}` }, cwd, "再来", {}, undefined, true, { history, fullHistory })
+      assert.equal(out2, "again")
+      assert.equal(history.filter((m) => String(m.content ?? "").includes("consultation #7 finished")).length, 1, "只注入一次")
+    } finally { server2.server.close() }
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-R17p (vscode): 手动档 digest 动作域零容忍——会诊/飞刀 settle 消化轮不写不 spawn（域模板 + 机械拒绝）", async () => {
+  const { server, port } = await routeServer([
+    // 首轮模型被注入会诊 digest 后尝试 write（手动档 deny stub 必须拒绝且不悬挂）——
+    // 之后（含 denial 结果回喂的后续请求）文本收尾——防 digest 常驻正文反复命中写帧
+    { when: (_b, calls) => calls.length === 1, frames: toolCallFrames("write", { path: "r17p.txt", content: "x" }) },
+    { when: () => true, frames: textFrames("digest 收尾") },
+  ])
+  const cwd = mkdtempSync(join(tmpdir(), "tc-susp-"))
+  try {
+    const { runAgent } = await import("../src/agent.mjs")
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" }
+    const history = []
+    const fullHistory = []
+    history._pendingConsultResults = [{ id: "3", replies: [{ model: "deepseek:m-a", reply: "会诊意见" }], failed: 0, received: 1, total: 1 }]
+    // 手动档装配契约（D-S7 同款 deny stub——panel-chat 手动档 digest 实装）
+    const callbacks = {
+      onPermissionRequired: async () => false,
+      onBatchPermissionRequest: async () => "deny",
+      onQuestion: async () => null,
+    }
+    const out = await runAgent(provider, cwd, "", callbacks, undefined, false, { history, fullHistory, autoTurn: true })
+    assert.equal(out, "digest 收尾", "拒绝不悬挂——回合正常完成")
+    const consultMsg = history.find((m) => String(m.content ?? "").includes("consultation #3 finished"))
+    assert.ok(consultMsg, "会诊 digest 注入消化轮")
+    const domain = history.find((m) => String(m.content ?? "").includes("auto-turn — background async subagents / consultations / escalate reports / advisor reviews finished"))
+    assert.ok(domain, "手动档注入消化动作域模板（consult/escalate 无例外——三族一致禁写）")
+    assert.ok(String(domain.content).includes("consultation reports"), "会诊族消化指令语义（逐条呈现 + 采纳判断——不执行）")
+    assert.ok(!existsSync(join(cwd, "r17p.txt")), "手动档 digest 写被拒（零容忍——不写）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+

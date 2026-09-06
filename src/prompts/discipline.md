@@ -38,7 +38,8 @@ Tool routing — use the dedicated tool, not bash:
 - **JavaScript** → `execute` (inline code; or `scriptFile`+`nodeArgs` for `node <file>` / `node --test` / `node --check`). Never `bash node -e`.
 - **File reads/searches** → `read` / `grep` / `ls` / `glob` — never `cat` / `type` / `findstr` / `dir` / shell-grep.
 - **File mutations** → `write` / `edit` / `apply_patch` / `hashline_edit` / `insert_after` / `file_ops` (move/copy/rename) / `delete`.
-- **Process / time / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash); waiting (e.g. `sleep`/`timeout`) is fine via bash when truly needed.
+- **Process / time / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash).
+- **Waiting** → `wait_for` (condition waiting — returns when the condition holds or the timeout passes); bash inline waiting (`sleep`/`timeout`) is only the fallback for ad-hoc waits no `wait_for` condition expresses.
 - Each tool's description carries a "Route to X instead of bash" mapping.
 - **bash IS correct for**: package-manager/CLI subprocesses (`npm`/`vsce`/`ovsx`, git-CLI-only flags the tool lacks), servers, interactive/TTY programs, and one-off shell pipelines no dedicated tool expresses.
 
@@ -67,17 +68,18 @@ Tool routing — use the dedicated tool, not bash:
 | `git` | ALL git ops (status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote/clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv) | `git` in bash |
 | `process` | list running processes | `tasklist`, `ps`, `wmic` |
 | `get_current_time` | current date/time | `date` |
-| `timer` | thinking budget / wait reminder | `sleep`, `timeout` (for real waits) |
+| `wait_for` | condition wait — returns when the condition holds or the timeout passes (advisor settled / subagent id:N done / consult done / file exists:path / port open:N) | `sleep`/`timeout`/ping hacks; waiting after synchronous tools |
+| `timer` | thinking budget / wait reminder | `sleep`, `timeout` (real waits → `wait_for`) |
 | `lint` | lint / syntax check after edits (full=true for cascade) | ad-hoc node --check runs |
 | `verify` | pre-completion self-check (syntax/tests/diff/checklist) | manual diff/test runs |
 | `task` / `checklist` | session-level tasks / persistent requirements tracking | README-style todo lists |
 | `goal` | long-running autonomous goal (machine-checkable criteria) | prose promises |
 | `plan` / `eng` | plan mode / engineering mode entry-exit | none (mode transitions only here) |
 | `skill` | load project skills (.thincoder/skills/) | re-inventing workflows |
-| `question` | ask the user (ambiguity, design decisions) | guessing |
+| `question` | ask the user (ambiguity, design decisions) | guessing; routine confirm-gates (those go in your plain reply text) |
 | `advisor` | independent review of code/design | self-review only |
-| `subagent` (action: spawn / check / status / escalate) | delegate subtasks to isolated contexts; fetch results (check — blocks) or query progress (status — non-blocking); escalate = fly in a stronger model for hard implementation | inlining exploration; burning attempts |
-| `consult_start` / `consult_check` / `consult_stop` | parallel multi-model consultation | single-model guessing |
+| `subagent` (action: spawn / status / cancel / escalate) | delegate subtasks to isolated contexts; query progress (status — non-blocking), stop one (cancel); escalate = fly in a stronger model for hard implementation (background by default — async:false waits) | inlining exploration; burning attempts |
+| `consult_start` / `consult_stop` | parallel multi-model consultation (replies auto-delivered as one digest at full settle; stop cancels) | single-model guessing |
 | `memory` | long-term memory: search/put/list/delete/clear (one tool, action param) | session notes |
 | `checkpoint` | git snapshots / rewind safety | manual branches |
 | `fetch` | fetch a URL (explicit proxy per target; config proxy NOT auto-applied) | `curl` |

@@ -220,15 +220,20 @@ export function pushReal(history, fullHistory, msg) {
 /** Extract the persisted engineering/advisor state for the session file (CLI session.mjs fields).
  *  The design token AND the mode flags are session-scoped (2026-08-29): engineering and
  *  advisor.guard persist into the slot (slot authority, config.json is the CLI mirror);
- *  the advisor convergence budget still resets per run (CLI parity). */
+ *  the advisor convergence budget still resets per run (CLI parity).
+ *  R16 (2026-09-06): tokens are NOT cleared on mode toggles anymore — agentState carries
+ *  the LIVE token state; null/empty here = the memory genuinely has none (fresh session,
+ *  or expired tokens dropped at restore). The explicit null write is the 清盘闭环: the
+ *  panel's key-presence merge pins it over a stale slot value, so a slot whose tokens
+ *  expired is cleaned on the next save (never resurrected by a ?? fallback). */
 export function agentState(agent) {
   return {
     engineering: agent.config?.agent?.engineering ?? false,
     advisorGuard: agent.config?.advisor?.guard === true,
     engDesignToken: agent._engDesignToken ?? null,
     // Multi-design slots ride the same round-trip (2026-09-01 audit #1): Map → {designId: token}
-    // (JSON-safe). null = no slots / cleared — saveLines writes the key explicitly so the slot
-    // never resurrects Map entries from a previous save (engDesignToken v2 semantics).
+    // (JSON-safe). null = no live slots — saveLines writes the key explicitly (key-presence)
+    // so the slot never resurrects Map entries from a previous save (engDesignToken v2 semantics).
     engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
       ? Object.fromEntries(agent._engDesignTokens)
       : null,

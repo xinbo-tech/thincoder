@@ -26,7 +26,7 @@ import {
 const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear"]
 const MEMORY_TOOL_DESCRIPTION =
   "Manage long-term memory in ONE tool — the action parameter picks the operation:\n" +
-  "- search — find knowledge saved in previous sessions (query, optional scope/limit); results include every entry's id\n" +
+  "- search — find knowledge saved in previous sessions (query, optional scope/limit); results include every entry's id — 会话消息历史不在 memory——用 read_history\n" +
   "- put — save a piece of knowledge for future sessions (type: rule = coding standards, knowledge = project facts, decision = architecture decisions, pattern = debugging/workflow patterns; title/content/tags/scope)\n" +
   "- list — inventory what memory holds: optional scope/type/keyword filters, limit default 50; one row per entry: id [type] title (date); a truncated list notes the full count\n" +
   "- delete — SINGLE: {id, scope} deletes one entry by the id shown in put/search/list output. BATCH: {scope + type and/or keyword} deletes every matching entry in that scope — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); scope-wide wipes without filters are refused on every layer\n" +

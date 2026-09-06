@@ -351,6 +351,39 @@
 /* ⟦ev⟧stopped 冻结标记（标题行 " · stopped"——dim） */
 .sub-stopped { opacity: 0.55; font-style: italic; }
 
+/* ─── R22 活动面板块头（D-R22b 信息密度——[▶ key · async · model · Ns · turn] 状态词
+   + 折叠 tail-3 dim——多行 summary 经 pre-line 呈现，⏹ overlay 右缘不压头行）─── */
+.advisor-block.sub-block > summary {
+  white-space: pre-line;
+  padding-right: 22px; /* 头行留出 ⏹ overlay 区域 */
+}
+.advisor-block.sub-block .sub-hdr { white-space: normal; }
+.advisor-block.sub-block .sub-tail {
+  opacity: 0.6;
+  font-size: 11px;
+  font-family: var(--mono, monospace);
+  white-space: pre-line;
+}
+/* 冻结入流块（#messages 尾）：与运行态同卡面——折叠默认、可展开；头行含
+   done/stopped 时长。 */
+.advisor-block.sub-block.sub-frozen { opacity: 1; }
+/* 冻结块后的报告 preview（≤8 行 dim 落流——CLI tool-events parity；escalate 无） */
+.sub-report-preview {
+  color: var(--fg);
+  opacity: 0.55;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0 10px 8px;
+  margin-top: -3px;
+  max-width: 100%;
+}
+/* 活动面板内块间距（面板自带滚动——块间紧凑） */
+#subagent-activity .advisor-block { margin: 4px 0; }
+#subagent-activity .advisor-block:first-child { margin-top: 2px; }
+
 .error-text { flex: 1; }
 .error-retry-btn {
   margin-top: 6px;

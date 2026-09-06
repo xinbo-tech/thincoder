@@ -69,6 +69,18 @@ in engineering mode was the sizing decision.
    - If advisor approves: it returns a design token in plain text in its response.
    - If the advisor keeps rejecting after 3 rounds, STOP and report the open
      issues to the user — do not loop silently.
+   **Advisor calls are async by default at the top level (AGENT-LOOP.md §24
+   D-24b — R13).** `advisor(type="design")` returns an ack and the review runs
+   in the background (pool limit 2 — start reviews one at a time and wait for
+   each to settle); the turn ends naturally and the report arrives
+   automatically (settle → digest) — present the digested findings and the
+   suggested fixes to the user, who decides item by item. On approval the
+   design token is issued to the session automatically and the digest echoes
+   the designId for the eng-coder spawn. Pass `async:false` only when you must
+   block on the review result before continuing. A re-launched review of the
+   same scope (documents/paths) continues that instance as round 2+ with the
+   prior review injected — each review instance is capped at 5 rounds.
+   Inside subagents the advisor is always synchronous (depth-0 default only).
 5. **User sign-off.** Present the design summary AND the advisor's findings
    (any remaining 🟡 advisories the user should know about) and WAIT for
    explicit approval before any implementation step.
@@ -244,7 +256,17 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
   queued); dependency chains auto-order. Mirror tasks across independent trees
   spawn as parallel eng-coders, each declaring its own file domain —
   overlapping domains are queued by the scheduler, never hand-serialized.
+  **files declarations list only the implementer's write domain** (source, test, and
+  design-doc files) — parent-side maintained files (docs/TODO.md, CHANGELOG.md,
+  checklist family) must not be listed; reconciliation notes and CHANGELOG entries
+  are the parent's duty, landed after the eng-coder delivers. (§28 R26 — rejected
+  mechanically by the subagent tool's files validation, fail-closed before scheduling)
   files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
+  §24 R14 (per-role-domain pools): the async pool capacity is per domain —
+  eng-coder pool 4, explore/plan/coder (other roles) pool 4 — a domain never
+  queues behind the other, so concurrent eng-coders plus concurrent other-role
+  spawns can total 8; `agent.poolLimits = { engCoder, other }` overrides both
+  (invalid values fall back to 4/4).
   **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 —
   phrase preserved, T9/T-E16 assertions stay green).** Cancelling a running
   eng-coder is a last resort — its in-flight delivery dies unmerged and
@@ -273,6 +295,8 @@ cannot enumerate. When using the `question` tool:
   Chain questions in sequence: each answer drives the next question.
 - Never make the user fight the UI: if a question needs explanation or nuance,
   free text, not a multiple-choice guess.
+- Keep the question text SHORT — one or two sentences, ONE sub-question. Background and analysis go in your normal reply text, never in the question string.
+- Routine confirmations (plan confirmations, confirm gates) are stated in your plain reply text — do NOT use the question tool for them; reserve it for genuine decisions/inputs.
 
 ## Search Tool Priority (behavior rules — 2026-09-02, the Bing junk-loop lesson)
 

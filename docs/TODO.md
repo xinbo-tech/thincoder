@@ -2,6 +2,15 @@
 
 > 设计遗留 / 评审发现 / 用户指示的后续项。完成即勾销。按板块/来源分组。
 
+## 工具 glob 方言缺口 · brace/扩展/排除静默漏匹配（2026-09-06，来源：file-search 测试发现——与 CLI 同款 globToRegex）
+
+- [ ] **技术待办候选**：globToRegex（VS Code search.mjs，自 CLI shared.mjs 同源移植）不支持常见 glob 方言且**静默漏匹配不报错**：
+  - `{a,b}` brace 展开：`**/*.{js,txt}` 被字面转义 → 匹配不到任何文件（本应命中 .js/.txt）
+  - `!` 排除前缀：无排除语义 → 作为字面量使整个模式失配
+  - `?(x)`/`@(a|b)`/`+(x)` 扩展 glob：被转义 → 错配
+- [ ] 影响：模型按常见 glob 习惯（brace 多扩展名最典型）发模式时静默拿不到结果，误判"无匹配"，不自知模式没被支持。
+- [ ] 方向（待设计）：最低成本 = `{a,b}` brace 展开（最常用）；`!` 排除需改调用侧语义。与 CLI 端同源修复（lockstep）。设计启动权在用户。
+
 ## 工程模式防盗用（2026-08-21 分析，来源：非工程模式盗用 eng-coder 事件）
 
 - [ ] `eng(enter)` 加用户同意门（当前模型可自主翻转并把 `agent.engineering=true` 持久化进共享 config.json；exit 可保持自主）。CLI 侧同样存在。
@@ -52,3 +61,5 @@
 
 - [x] 非光栅图片静默丢失无反馈——**2026-08-29 完成**：autocomplete 收图改为光栅白名单（paste/file 两入口），非光栅 `image/*` 当场 toast 提示（`paste.unsupportedFormat` locale 键 en/zh）；不再产生"chip 显示但发送即消失"的静默路径
 - [x] `src/agent/setup.mjs` 超 300 建议线——**2026-08-29 完成**：运行期 user reminder 组装（AUTO/permission、时间注入、编辑器注入、图片指针）抽到 `src/agent/setup-reminders.mjs`，setup.mjs 337→264 行
+
+- [ ] **快层 slow-gate 未归册清理批（2026-09-07 R22 交付上报——18 用例散布 13 文件——exit 1 硬红——R12/§19.8 等早批遗留）**：auto-approve 2×10s/chat-panel 2×10.6s/image-paste 11s/dual-history/vscode-tools/compaction/suspension T-S2b/T-R17o 等——机械 test(→slow( 标注（test:full 照跑不受影响）——R22 自有用例全为假定时器 ms 级（零 R22 引入）——单独归册清理批候选

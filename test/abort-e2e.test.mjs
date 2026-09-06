@@ -5,6 +5,7 @@
  * sse.mjs does, VS Code transports did not) — a Stop mid-stream did nothing.
  */
 import test from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
 
@@ -30,7 +31,7 @@ function slowSSEServer(totalChunks, intervalMs) {
   })
 }
 
-test("mid-stream Stop halts the agent fast (real server, real fetch)", async () => {
+slow("mid-stream Stop halts the agent fast (real server, real fetch)", async () => {
   const { server, port } = await slowSSEServer(100, 150)
   try {
     const { runAgent } = await import("../src/agent.mjs")
@@ -54,7 +55,7 @@ test("mid-stream Stop halts the agent fast (real server, real fetch)", async () 
   }
 })
 
-test("Stop interrupts a SILENT stream (no chunks — undici may not reject the body)", async () => {
+slow("Stop interrupts a SILENT stream (no chunks — undici may not reject the body)", async () => {
   // A server that responds with headers but never sends data — the read loop
   // hangs in for-await. The abort race must break it out.
   const server = createServer((req, res) => {

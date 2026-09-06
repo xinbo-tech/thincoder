@@ -4,7 +4,7 @@
  * Manages a tree-structured checklist; done items auto-archive to checklist-done.md.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "node:fs"
 import { join, dirname } from "node:path"
 
 const CHECKLIST = "checklist.md"
@@ -13,14 +13,31 @@ const DONE = "checklist-done.md"
 function checklistPath(cwd) { return join(cwd, ".thincoder", CHECKLIST) }
 function donePath(cwd) { return join(cwd, ".thincoder", DONE) }
 
+// ─── R10 F4（MULTI-INSTANCE-COLLAB.md D-F4a）：并发写防护——写前 mtime 门控 ─────
+// 每路径基线 = 本读-改-写链内最近一次 stat 的 mtime（parse 读时记录、write 自写后刷新
+// ——评审修正 #6：parse 规范化写回 → add 链的自写不误触发 merged/重分配）。
+// 按绝对路径记录：不同 cwd 的 checklist 文件互不干扰；测试每例用独立 tmp 目录无残留。
+const baselines = new Map() // filePath → { mtimeMs, size } | null（null = 读时文件缺失）
+
+/** stat 元组（mtimeMs + size——同 tick 快写 mtime 可能相同（实测 NTFS 亚毫秒窗）——
+ *  size 兜底：内容变长/变短必然 size 差；等长同刻替换才漏——与会话层 mtime 门控同量级 */
+function statTuple(filePath) {
+  try {
+    const s = statSync(filePath)
+    return { mtimeMs: s.mtimeMs, size: s.size }
+  } catch { return null }
+}
+
 /**
  * Parse checklist file into tree-structured items.
  * Indentation (2 spaces per level) determines parent-child relationships.
  * Each item: { id, index, depth, status, text, children[] }
  * "index" is the 1-based position in the flat markdown list.
+ * 纯读 + 内存补 ID——无磁盘副作用（write-back 由 parse 决定；merge 重读用它防递归写）。
+ * 返回 { items, assigned }——assigned = 本次补了缺失 ID（调用方决定是否 write-back）。
  */
-function parse(filePath) {
-  if (!existsSync(filePath)) return []
+function readItems(filePath) {
+  if (!existsSync(filePath)) return { items: [], assigned: false }
   const lines = readFileSync(filePath, "utf-8").split("\n")
   const items = []
   let flatIdx = 0
@@ -71,8 +88,23 @@ function parse(filePath) {
   // path's double-file scan), so auto-assigned IDs never collide with them.
   const doneRoots = readDoneRoots(join(dirname(filePath), DONE))
   assignIds(items, null)
-  if (assigned) write(filePath, items)
+  return { items, assigned }
+}
 
+/**
+ * Parse checklist file（读链入口——R10 F4）：stat-then-read 记基线 → 纯读 → 补 ID 落盘
+ * （规范化写回——有并发写时门控合并）。合并发生时返回合并后 items（调用方以合并结果
+ * 为准——评审修正 #6：自写刷新基线 → 链内后续写不误判并发）。
+ * export：单元测试直接编排 读→seedFile→写 链（R10 F4 伪并发用例——工具层无法在
+ * parse 与 write 之间注入 seed）。
+ */
+export function parse(filePath) {
+  baselines.set(filePath, statTuple(filePath))
+  const { items, assigned } = readItems(filePath)
+  if (assigned) {
+    const res = write(filePath, items)
+    if (res.merged) return res.items
+  }
   return items
 }
 
@@ -109,24 +141,136 @@ function nextChildId(parentId, children) {
   return `${prefix}${max + 1}`
 }
 
-/** Write items back to file, preserving tree structure */
-function write(filePath, items, _depth = 0) {
-  if (_depth === 0) mkdirSync(dirname(filePath), { recursive: true })
-  const lines = []
-  const indent = "  ".repeat(_depth)
-  for (const item of items) {
+/** Status join（R10 F4 done union——"done 集合 union"格子：done > in_progress > pending，
+ *  匹配项双方状态取并（任一方 done → done；否则任一方 in_progress → in_progress）。 */
+const STATUS_LEVEL = { pending: 0, in_progress: 1, done: 2 }
+function joinStatus(a, b) {
+  return (STATUS_LEVEL[a] ?? 0) >= (STATUS_LEVEL[b] ?? 0) ? a : b
+}
+
+/** 重分配 ID（R10 F4 T-F4b：并发 add 同号——盘上保留原 ID、本端项 max+1 续分配）。
+ *  候选 = 本端全部项 ∪ 盘上同层项 ∪（根层）done 文件归档根号——绝不复用任何一方占用号
+ *  （含本链 parse 刚给后续行分配的号——遍历全部 ourItems 而非仅已合并前缀）。 */
+function allocId(ourItems, disk, doneIds, parentId) {
+  const ids = [...ourItems.map((i) => i.id), ...disk.map((d) => d.id)]
+  if (!parentId && doneIds) ids.push(...doneIds)
+  if (parentId) {
+    const prefix = `${parentId}.`
+    let max = 0
+    for (const id of ids) {
+      if (typeof id === "string" && id.startsWith(prefix) && /^\d+$/.test(id.slice(prefix.length))) {
+        max = Math.max(max, parseInt(id.slice(prefix.length)))
+      }
+    }
+    return `${prefix}${max + 1}`
+  }
+  let max = 0
+  for (const id of ids) {
+    const m = typeof id === "string" ? id.match(/^T(\d+)$/) : null
+    if (m) max = Math.max(max, parseInt(m[1]))
+  }
+  return `T${max + 1}`
+}
+
+/** 重分配后子树子 ID 前缀改写（T5.1 → T7.1——父号 T5 → T7） */
+function rePrefixChildren(nodes, fromId, toId) {
+  const prefix = `${fromId}.`
+  for (const n of nodes) {
+    if (typeof n.id === "string" && n.id.startsWith(prefix)) n.id = `${toId}${n.id.slice(fromId.length)}`
+    if (n.children?.length) rePrefixChildren(n.children, fromId, toId)
+  }
+}
+
+/**
+ * R10 F4（MULTI-INSTANCE-COLLAB.md D-F4a）双方 items union by ID：
+ *   - 基线 = 本端（内存）结构；匹配项按 ID 对齐——同 ID 同文本：保留本端 + 状态 join +
+ *     子树递归合并（他端同父下新增子项追加）；同 ID 不同文本（并发 add 同号）：盘上保留
+ *     原 ID（整体并入结果末尾）、本端项重分配 max+1（子树不并入对方——防子项双份）。
+ *   - 盘上独有项（他端新增）追加到同级末尾——不丢项。
+ *   - done 文件过滤（仅 checklist.md 根层；checklist-done.md 是纯追加文件不适用）：
+ *     归档过的 ID（本链刚 archive 的 + 他端并发 archive 的——done 文件是合并后最新态）
+ *     不复活——双向：本端已移除项不被盘复活；他端已移除项（本端内存还有）从基线剔除。
+ *     无此过滤时并发 mark 会让归档项以 pending 状态复活回 checklist（与 done 文件双份）。
+ *   - children 归并递归（过滤仅根层——归档总是整子树随根走，子层无需过滤）。
+ */
+function mergeTrees(ourItems, diskItems, doneIds, parentId = null) {
+  const diskById = new Map(diskItems.map((d) => [d.id, d]))
+  const result = []
+  const present = new Set()
+  for (const item of ourItems) {
+    if (item.id == null) continue // readItems 已补 ID——防御性跳过
+    if (doneIds && doneIds.has(item.id)) continue // 他端已归档移除——本端内存残留不复活
+    const d = diskById.get(item.id)
+    if (d) {
+      if (d.text === item.text) {
+        if (item.status !== d.status) item.status = joinStatus(item.status, d.status)
+        if (item.children?.length || d.children?.length) {
+          item.children = mergeTrees(item.children ?? [], d.children ?? [], null, item.id)
+        }
+      } else {
+        // 同 ID 不同内容——盘上保留原 ID，本端项重分配（max+1 续分配——T-F4b）
+        const prevId = item.id
+        item.id = allocId(ourItems, diskItems, doneIds, parentId)
+        if (item.id !== prevId && item.children?.length) {
+          // 父号变了——子树子 ID 前缀跟随（防与盘上同号项（保留原号整棵并入）撞子号）
+          rePrefixChildren(item.children, prevId, item.id)
+        }
+      }
+    }
+    present.add(item.id)
+    result.push(item)
+  }
+  for (const d of diskItems) {
+    if (d.id == null || present.has(d.id)) continue
+    if (doneIds && doneIds.has(d.id)) continue // 本链已归档移除——不复活
+    present.add(d.id)
+    result.push(d)
+  }
+  return result
+}
+
+/** 行级纯渲染（原 write 递归组装的等价抽取——输出字节不变） */
+function assemble(nodes, depth, lines) {
+  const indent = "  ".repeat(depth)
+  for (const item of nodes) {
     const mark = item.status === "done" ? "x" : item.status === "in_progress" ? "~" : " "
     const label = item.id ? `${item.id}: ${item.text}` : item.text
     lines.push(`${indent}- [${mark}] ${label}`)
-    if (item.children?.length) {
-      lines.push(...write(filePath, item.children, _depth + 1).split("\n").filter(Boolean))
+    if (item.children?.length) assemble(item.children, depth + 1, lines)
+  }
+}
+
+/**
+ * Write items back to file, preserving tree structure.
+ * R10 F4（D-F4a）写前 mtime 门控：磁盘 mtime ≠ 本链基线（并发方改过）→ 重读磁盘 +
+ * ID union 合并（见 mergeTrees）→ 重写。返回 { merged, items }——merged 标记本次走了
+ * 合并（调用方/parse 以合并后 items 为准——add/mark 的返回串在 write 之后取 node.id，
+ * 重分配结果自然反映）。自写后刷新基线（评审修正 #6——防自写误判并发）。
+ * export：单元测试直接编排 读→seedFile→写 链（R10 F4 伪并发用例）。
+ */
+export function write(filePath, items) {
+  mkdirSync(dirname(filePath), { recursive: true })
+  let merged = false
+  if (baselines.has(filePath)) {
+    const base = baselines.get(filePath)
+    const now = statTuple(filePath)
+    const same = (base === null && now === null)
+      || (base !== null && now !== null && base.mtimeMs === now.mtimeMs && base.size === now.size)
+    if (!same) {
+      // 磁盘被并发方改过——重读磁盘 + 合并（checklist-done.md 纯追加不套 done 过滤）
+      const { items: diskItems } = readItems(filePath)
+      const doneIds = filePath.endsWith(`/${CHECKLIST}`) || filePath.endsWith(`\\${CHECKLIST}`)
+        ? new Set(readDoneRoots(join(dirname(filePath), DONE)).map((r) => r.id))
+        : null
+      items = mergeTrees(items, diskItems, doneIds)
+      merged = true
     }
   }
-  if (_depth === 0) {
-    writeFileSync(filePath, lines.join("\n") + "\n")
-    return ""
-  }
-  return lines.join("\n")
+  const lines = []
+  assemble(items, 0, lines)
+  writeFileSync(filePath, lines.join("\n") + "\n")
+  baselines.set(filePath, statTuple(filePath)) // 自写后刷新基线
+  return { merged, items }
 }
 
 /** Find a node by ID in the tree */
@@ -243,7 +387,9 @@ export const checklistTool = {
         const node = { id, index: 0, depth: parentId ? 1 : 0, status: "pending", text: args.item, children: [] }
         target.push(node)
         write(checklistPath(ctx.cwd), items)
-        return `Added: [ ] ${id}: ${args.item}${parentId ? ` (under ${parentId})` : ""}`
+        // 返回串在 write 之后取 node.id——并发合并重分配后以合并结果为准（D-F4a：
+        // add/mark 的结果以合并后为准；无并发时与预分配 id 相同——零行为变化）
+        return `Added: [ ] ${node.id}: ${node.text}${parentId ? ` (under ${parentId})` : ""}`
       }
       case "mark": {
         if (args.id == null && args.index == null) return "Error: 'id' or 'index' is required for mark"
