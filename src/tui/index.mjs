@@ -27,7 +27,7 @@ import { createRenderLoop } from "./render-loop.mjs"
 import { makeDimsState } from "./dims.mjs"
 import { SLASH_COMMANDS, SLASH_ALIASES, createSlashCommands } from "./slash-commands.mjs"
 import { createWizard } from "./wizard.mjs"
-import { writeStartupSequence, createExitCleanup } from "./tui-lifecycle.mjs"
+import { writeStartupSequence, setTuiActive, createExitCleanup } from "./tui-lifecycle.mjs"
 import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
 import { createInteraction } from "./interaction.mjs"
@@ -106,7 +106,7 @@ export async function startTUI(agent, opts = {}) {
     reasoning: "", // thinking stream buffer (dimmed display)
     completion: null, // Tab completion state { candidates, index }
 
-    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（§17 挂起中间态）, _freezeAt（冻结锚点） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer
+    subTasks: {}, // sub-agent activity blocks (§7.2 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（§17 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（§27 R23 嵌套子代理子块载体——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（R23：子块计入外层同配额——树级 trim）
     currentTool: null, // currently executing tool name (shown in status bar)
     processingStarted: 0, // current turn start time (status bar timer)
     status: "Ready",
@@ -147,6 +147,7 @@ export async function startTUI(agent, opts = {}) {
   // modifyOtherKeys lvl 2 (\x1b[>4;2m): Shift+Enter → \x1b[27;2;13~ (mintty / Git Bash)
   // translateShiftEnter (stdin layer) maps both to \x1b\r → meta+return → multiline branch.
   writeStartupSequence()
+  setTuiActive(true) // R25（F-R25a）：终端接管完成——置 TUI 活动态（崩溃钩子恢复判定源）
 
   const utf8Decoder = new TextDecoder("utf-8", { fatal: false })
 

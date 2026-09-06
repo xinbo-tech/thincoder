@@ -300,22 +300,24 @@ export function createPickers(ctx) {
     const target = agent.providers.find((pp) => pp.name === item.provider)
     if (!target) return
     const providerDefault = target.model
+    const nextActiveModel = item.model !== providerDefault ? item.model : null // default model → clear activeModel
+    // D-F5a（selectModel——清单外同型写回补正）先盘后存：磁盘 fresh raw 单操作（model + active 指针）——冲突放弃不留 ghost
+    await persistRaw((raw) => {
+      raw.providers ??= []
+      const t = raw.providers.find((p) => p?.name === item.provider)
+      if (t) t.model = item.model
+      raw.activeProvider = item.provider
+      raw.activeModel = nextActiveModel || undefined  // null → omit from config
+    })
     target.model = item.model
     agent.activeProvider = item.provider
-    // If selecting the provider's default model, clear activeModel; otherwise set it
-    agent.activeModel = item.model !== providerDefault ? item.model : null
+    agent.activeModel = nextActiveModel
     agent.provider = { ...target }
     if (agent.config?.agent?.compactThresholdAuto) {
       const { resolveCompactThreshold } = await import("../config.mjs")
       // provider 对象（非 model 字符串）——阈值跟随 providers[].context 覆盖（PROVIDER.md §15 T-C2）
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, target).value
     }
-    await persistRaw((raw) => {
-      // 落盘前剥离运行时注入的 proxyUri（由 loadConfig + injectProxy 在加载时重建）
-      raw.providers = agent.providers.map(({ proxyUri: _, ...p }) => p)
-      raw.activeProvider = item.provider
-      raw.activeModel = agent.activeModel || undefined  // null → omit from config
-    })
     agent.config.activeProvider = item.provider
     agent.config.activeModel = agent.activeModel
     if (!agent.provider.apiKey) {
@@ -354,8 +356,8 @@ export function createPickers(ctx) {
       const cfg = { name, baseURL, model }
       if (format.name === "anthropic" || format.name === "google") cfg.format = format.name
       else if (format.name !== "openai") return // 防御：未知格式（理论不可达——picker 枚举）
+      await persistRaw((raw) => { raw.providers ??= []; raw.providers.push(cfg) }) // D-F5a（#3）先盘后存
       agent.providers.push(cfg)
-      await persistRaw((raw) => { raw.providers = agent.providers })
       const key = await askQuestion(`Enter API key for ${name} (skip if none):`)
       if (key) await setProviderKey(name, key)
       return
@@ -368,8 +370,8 @@ export function createPickers(ctx) {
     if (preset.maxTokens) cfg.maxTokens = preset.maxTokens
     if (preset.chatPath) cfg.chatPath = preset.chatPath
     if (preset.format) cfg.format = preset.format
+    await persistRaw((raw) => { raw.providers ??= []; raw.providers.push(cfg) }) // D-F5a（#2）先盘后存
     agent.providers.push(cfg)
-    await persistRaw((raw) => { raw.providers = agent.providers })
     const key = await askQuestion(`Enter API key for ${se.name} (skip if none):`)
     if (key) await setProviderKey(se.name, key)
   }
@@ -382,8 +384,13 @@ export function createPickers(ctx) {
       ...candidates.map((p) => ({ type: "item", text: `${p.name} (${p.model})`, name: p.name })),
     ])
     if (!se) return
+    // D-F5a（#4）先盘后存：磁盘 fresh raw 上 splice；冲突放弃不留下内存 ghost
+    await persistRaw((raw) => {
+      raw.providers ??= []
+      const idx = raw.providers.findIndex((p) => p?.name === se.name)
+      if (idx !== -1) raw.providers.splice(idx, 1)
+    })
     agent.providers.splice(agent.providers.findIndex((p) => p.name === se.name), 1)
-    await persistRaw((raw) => { raw.providers = agent.providers })
   }
 
   async function setKeyFlow() {
@@ -399,14 +406,18 @@ export function createPickers(ctx) {
   async function setProviderKey(name, key) {
     const target = agent.providers.find((p) => p.name === name)
     if (!target) return
+    // D-F5a（#5）先盘后存：磁盘 fresh raw 上改目标项 apiKey；冲突放弃不留下内存 ghost
+    await persistRaw((raw) => {
+      raw.providers ??= []
+      const t = raw.providers.find((p) => p?.name === name)
+      if (t) t.apiKey = key
+    })
     target.apiKey = key
     if (name === agent.activeProvider) agent.provider.apiKey = key
-    await persistRaw((raw) => { raw.providers = agent.providers })
   }
 
-  /** /model provider 管理：context 窗口字段（K 单位，PROVIDER.md §15 D-C4/D-C5）——
-   *  picker 选 provider + 表单输入（复用 syncProviderField 的落盘模式：改 agent.providers 目标项
-   *  → persistRaw 全量写盘）；空输入清空（回 spec 值）；非法输入报错不落盘（D-C1 语义同 loadConfig）。 */
+  /** /model provider 管理：context 窗口字段（K 单位，PROVIDER.md §15 D-C4/D-C5）——picker 选
+   *  provider + 表单输入；空清空/非法不落盘（D-C1）；落盘 = D-F5a（#6）fresh 单字段补丁——先盘后存。 */
   async function setContextFlow() {
     const se = await showPicker("Set Context Window", [
       { type: "header", text: "Select provider" },
@@ -423,26 +434,33 @@ export function createPickers(ctx) {
     const val = (await askQuestion(
       `Context window for ${se.name} in K units (current: ${current ? `${current}K` : "spec default"} — e.g. 128 = 128K; empty to clear):`
     ))?.trim() ?? ""
-    if (val === "") {
-      delete target.context
-    } else {
+    let newCtx // undefined = 清空（回 spec 值）
+    if (val !== "") {
       const n = Number(val)
       if (!Number.isInteger(n) || n <= 0) {
         pushLine(`Invalid context: "${val}" — must be a positive integer in K units (e.g. 128 = 128K)`, C.error)
         return
       }
-      target.context = n
+      newCtx = n
     }
+    await persistRaw((raw) => {
+      raw.providers ??= []
+      const t = raw.providers.find((p) => p?.name === se.name)
+      if (!t) return
+      if (newCtx === undefined) delete t.context
+      else t.context = newCtx
+    })
+    if (newCtx === undefined) delete target.context
+    else target.context = newCtx
     if (se.name === agent.activeProvider) {
       // 运行时 provider 同步（同 setProviderKey 先例：只补 context，不重建对象以免丢 activeModel 覆盖）
-      if (target.context === undefined) delete agent.provider.context
-      else agent.provider.context = target.context
+      if (newCtx === undefined) delete agent.provider.context
+      else agent.provider.context = newCtx
       if (agent.config?.agent?.compactThresholdAuto) {
         const { resolveCompactThreshold } = await import("../config.mjs")
         agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
       }
     }
-    await persistRaw((raw) => { raw.providers = agent.providers })
     pushLine(target.context !== undefined
       ? `ctx = ${target.context}K (${target.context * 1024} tokens)`
       : `context cleared — using model spec (${fmtContextK(providerSpec(target).context)})`, C.tool)

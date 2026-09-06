@@ -7,6 +7,8 @@ import {
   IGNORED_DIRS,
   resolveInCwd,
   globToRegex,
+  splitGlobPatterns,
+  compileGlobMatchers,
   normalizeEOL,
 } from "./shared.mjs";
 import { spawn, execFileSync } from "node:child_process";
@@ -287,7 +289,7 @@ export const globTool = {
   parameters: {
     type: "object",
     properties: {
-      pattern: { type: "string", description: "Glob pattern" },
+      pattern: { type: "string", description: "Glob pattern — supports **, *, ?, [..], {a,b} braces, and space-separated exclusion (\"**/*.js !test/**\")" },
       path: { type: "string", description: "Directory to search in (default cwd)" },
     },
     required: ["pattern"],
@@ -295,10 +297,19 @@ export const globTool = {
   readonly: true,
   async execute(args, ctx) {
     const base = resolveInCwd(ctx, args.path ?? ".")
-    const regex = globToRegex(args.pattern)
+    // §17 调用侧拆分（评审 #5 职责分层）：空格分隔 include !exclude 多模式在这里拆；
+    // globToRegex 只收单个模式（数组由 compileGlobMatchers 收）。
+    let match
+    try {
+      const parts = splitGlobPatterns(args.pattern)
+      if (parts.length === 0) return "Error: pattern is required"
+      match = compileGlobMatchers(parts).test
+    } catch (e) {
+      return `glob error: invalid pattern "${args.pattern}": ${e.message}`
+    }
     const results = []
     for await (const relPath of walkFiles(base)) {
-      if (regex.test(relPath)) {
+      if (match(relPath)) {
         results.push(relPath)
         if (results.length >= 1000) break
       }
@@ -341,7 +352,7 @@ export const grepTool = {
     properties: {
       pattern: { type: "string", description: "Regular expression, or a literal string when literal=true" },
       path: { type: "string", description: "Directory or file to search (default cwd)" },
-      glob: { type: "string", description: "Only search files matching this glob (e.g. '*.mjs')" },
+      glob: { type: "string", description: "Only search files matching this glob — supports **, *, ?, [..], {a,b} braces and space-separated exclusion (\"**/*.js !test/**\")" },
       ignoreCase: { type: "boolean", description: "Case-insensitive match (default false)" },
       literal: { type: "boolean", description: "Literal string match — no regex interpretation (default false)" },
       before: { type: "integer", description: "Lines of context to show before each match (grep -B). Default 0" },
@@ -359,7 +370,16 @@ export const grepTool = {
     } catch (e) {
       throw new Error(`grep pattern /${args.pattern}/ is not a valid regex: ${e.message}`, { cause: e })
     }
-    const fileFilter = args.glob ? globToRegex(args.glob) : null
+    // §17 调用侧拆分：glob 参数支持空格分隔 include !exclude 多模式（include/exclude 求交）。
+    let fileTest = null
+    if (args.glob) {
+      try {
+        const parts = splitGlobPatterns(args.glob)
+        if (parts.length > 0) fileTest = compileGlobMatchers(parts).test
+      } catch (e) {
+        throw new Error(`grep glob /${args.glob}/ is invalid: ${e.message}`, { cause: e })
+      }
+    }
     const before = Math.max(0, Math.floor(args.before ?? 0))
     const after = Math.max(0, Math.floor(args.after ?? 0))
     const wantCtx = before > 0 || after > 0
@@ -386,13 +406,15 @@ export const grepTool = {
       }
     }
 
-    async function walk(target) {
+    async function walk(target, rel) {
       if (hits.length >= 200) return
       // Use lstat to avoid following symlinks — prevents ./evil → /etc from making grep scan the entire system
       let s
       try { s = await lstat(target) } catch { return }
       if (!s.isDirectory()) {
-        if (!fileFilter || fileFilter.test(target.split(/[\\/]/).pop())) await search(target)
+        // rel 为相对搜索基的路径（排除前缀如 !test/** 必须按目录路径作用——不能用裸文件名）；
+        // 单文件目标（path 指向文件）时 rel 为空 → 退化为按文件名过滤（既有语义）。
+        if (!fileTest || fileTest(rel || target.split(/[\\/]/).pop())) await search(target)
         return
       }
       let entries
@@ -403,11 +425,11 @@ export const grepTool = {
       }
       for (const e of entries) {
         if (e.isDirectory() && IGNORED_DIRS.has(e.name)) continue
-        await walk(join(target, e.name))
+        await walk(join(target, e.name), rel ? `${rel}/${e.name}` : e.name)
       }
     }
 
-    await walk(base)
+    await walk(base, "")
     if (hits.length === 0) return "(no matches)"
 
     // No context: keep original path:line: content format

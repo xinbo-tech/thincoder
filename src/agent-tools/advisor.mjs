@@ -2,64 +2,23 @@
  * agent-tools/advisor.mjs — advisor tool wrapper.
  * The agent calls this explicitly to get an independent review.
  * type="design" for design doc review, type="code" for code review (default).
+ * §24 D-24b (R13 — async advisor): at depth 0 the review launches into the
+ * background pool by DEFAULT (async:true / omitted; async:false forces the
+ * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
-import { randomUUID } from "node:crypto"
-import { runAdvisorReview } from "../advisor/run.mjs"
+import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
+import {
+  generateDesignToken,
+  settleDesignReview,
+  resolveAdvisorLaunch,
+  launchAsyncAdvisor,
+} from "./advisor-async.mjs"
 
-const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides
-
-/** Effective token TTL: config override with runtime validation (advisor timeoutMs precedent —
- *  invalid values fall back to the default, never silently disable the ceiling). */
-function effectiveTokenTtlMs(agent) {
-  const cfg = agent?.config?.agent?.engTokenTtlMs
-  return (Number.isFinite(cfg) && cfg > 0) ? cfg : TOKEN_TTL_DEFAULT_MS
-}
-
-/** Generate an unsigned design token with expiration (2026-09-06: the HMAC anti-forgery
- *  layer was removed — security-theater ruling — the token is a FLOW credential:
- *  format uuid:expiresAt, exact slot match + TTL are its only guarantees). */
-function generateDesignToken(agent) {
-  const uuid = randomUUID()
-  const expiresAt = Math.floor(Date.now() + effectiveTokenTtlMs(agent)) // integer ms — format uuid:expiresAt requires pure digits
-  return `${uuid}:${expiresAt}`
-}
-
-/** Validate design token: format, expiration — ALL fail-closed (v2 2026-08-25;
- *  2026-09-06: the signature layer was removed — old 3-part tokens (uuid:expiresAt:hmac)
- *  are now FORMAT errors and are rejected (存量 token 不迁移——2026-09-01 as-of 惯例).
- *  Format must be exactly uuid:expiresAt. */
-export function validateDesignToken(token) {
-  if (!token || typeof token !== "string") return false
-
-  // Format: uuid:expiresAt (2 parts separated by ':')
-  const parts = token.split(":")
-  if (parts.length !== 2) return false // fail-closed — legacy 3-part signed tokens no longer match
-
-  const [uuid, expiresAt] = parts
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) return false
-  if (!/^\d+$/.test(expiresAt)) return false // fail-closed — expiry must be pure digits (format = uuid:expiresAt)
-  const expTime = parseInt(expiresAt, 10)
-  if (isNaN(expTime)) return false // fail-closed
-
-  // Check expiration
-  if (Date.now() > expTime) return false
-  return true
-}
-
-/** Build a [DESIGN-TOKEN:...] regex; escapes special chars as a safety net.
- *  Matches the FULL token (uuid:expiresAt) — prompt tells advisor to echo the
- *  complete token verbatim, not just the UUID segment.
- *  Flexible matching: allows token to be on its own line, in a code block,
- *  or surrounded by whitespace. */
-const makeDesignTokenRegex = (token, flags = "") => {
-  // Escape the entire token, not just UUID — advisor echoes [DESIGN-TOKEN:uuid:expiresAt]
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  return new RegExp(
-    `(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}\\s*\\](?:\\s|$|\`|\\*)`,
-    flags + "ms"
-  )
-}
+// Design-token utilities moved to advisor-async.mjs (the async settle shares
+// them — no wrapper↔runner module cycle); validateDesignToken stays exported
+// here for the tests' import surface (implementation re-exported).
+export { validateDesignToken } from "./advisor-async.mjs"
 
 export const advisorTool = {
   name: "advisor",
@@ -78,11 +37,21 @@ export const advisorTool = {
     "Optionally pass object={type,target,status,reason,exclude} to anchor the review target " +
     "(AGENT-LOOP.md §18.8 — the review-object declaration is mechanically injected into the review message); " +
     "absent → legacy behavior (no injection). " +
+    "ASYNC (AGENT-LOOP.md §24 D-24b): at depth 0 the review runs in the BACKGROUND by default " +
+    "(async:true or omitted) — the call returns an ack immediately, the turn ends, and the report " +
+    "arrives automatically in a digest turn when the review finishes; at most 2 reviews run in " +
+    "parallel (excess launches are refused — launch one at a time). Pass async:false to force the " +
+    "blocking review (result returned inline). Inside a child (depth>0 — eng-coder self-review) " +
+    "reviews are always synchronous; async:true is rejected there. " +
     "Returns the review report — the advisor's findings verdict: all-clear (call verify) or a findings list to fix.",
   parameters: {
     type: "object",
     properties: {
       type: { type: "string", enum: ["code", "design"], description: "Review type: 'design' for design doc review, 'code' for code review (default)" },
+      async: {
+        type: "boolean",
+        description: "Background review: default at depth 0 = true (async — ack now, report via digest); async:false forces the blocking review. depth>0 → always sync (async:true rejected).",
+      },
       object: {
         type: "object",
         properties: {
@@ -141,65 +110,84 @@ export const advisorTool = {
       }
     }
 
-    // Design review: NO round reset — design reviews share the 5-round convergence
-    // budget with code reviews (round advances in agent.mjs; cap in run.mjs).
-    // Session reset also removed: design rounds 2+ continue the advisor session
-    // like code reviews (fix claims + round-aware prompts).
+    // §24 D-24b (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
+    // background pool; depth>0 (eng-coder internal self-review) is ALWAYS sync —
+    // an explicit async:true there is rejected, the default never flips.
+    const depth = ctx?.depth
+    if (args.async === true && depth !== 0) {
+      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP.md §24 D-24b); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
+    }
+    const isAsync = args.async === true || (depth === 0 && args.async !== false)
+    // (ctx.depth undefined = direct callers/tests without a dispatch context —
+    // legacy sync semantics.)
 
-    // Generate the design token BEFORE the review and inject it into the advisor's prompt.
-    // The advisor (LLM) decides pass/fail itself and echoes the token only on approval —
-    // the gate is a mechanical string match, not fragile semantics parsing.
-    // A random designId is minted for EVERY design-review call (2026-09-01 multi-design
-    // slots): on pass the token is stored in parent._engDesignTokens keyed by this id and
-    // the id is echoed to the parent; on failure the id is dropped — never stored, so it
-    // cannot clobber any other design's slot. Not a document anchor (rejected 2026-08-31).
+    // Per-review instance resolution (§24 D-24b ③ — ruling ②-5 A): fix rounds
+    // continue the same reviewId (design = the doc-set instance's designId —
+    // slot/spawn continuity; code = the newest OPEN instance). The resolution
+    // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
+    // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
+    const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
+    // Design token minted for EVERY design round — the reviewer echoes it only on
+    // a clean pass; on pass it is slotted under the instance's designId at settle
+    // (sync: right here; async: the settle callback — fix #2). A NEW instance
+    // gets a fresh designId; a continued fix round keeps the original one.
     const designToken = reviewType === "design" ? generateDesignToken(agent) : null
-    const designId = reviewType === "design" ? randomUUID() : null
+    const designId = reviewType === "design" ? resolved.reviewId : null
+
+    // Cap pre-check (T-24b11 — per-review ≤5 rounds): a 6th launch of a capped
+    // instance is refused synchronously — the review never starts (sync and
+    // async alike; runAdvisorReview's own cap check stays for legacy direct
+    // callers). The refusal marks no called/round state (guard keeps pushing
+    // only while a review can still run — at the cap the round check stops it).
+    if (resolved.run.round >= MAX_ADVISOR_ROUNDS) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+      return buildCapMessage(agent)
+    }
+
+    if (isAsync) {
+      const ack = launchAsyncAdvisor(agent, ctx, {
+        reviewType, documents, paths, object: reviewObject,
+        designToken, designId, run: resolved.run,
+      })
+      if (ack.error) {
+        // Pool-full refusal (②-6a — no queueing): the review did NOT launch — the
+        // model must not count it as "advisor called" (the guard keeps pushing).
+        if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+        return ack.error
+      }
+      // Async-ack marker: recordToolResults must NOT do the launch-time
+      // accounting (called/round) for this call — the settle owns it.
+      if (ctx._toolCallId !== undefined) {
+        (agent._advisorAsyncAcks ??= new Set()).add(ctx._toolCallId)
+      }
+      return JSON.stringify({
+        id: ack.id, kind: "advisor", status: "running",
+        reviewId: resolved.reviewId,
+        note: "评审已后台启动——完成自动回来 (review started in the background — the report arrives in a digest turn automatically; pass this id to cancel if needed)",
+      })
+    }
+
+    // Sync path (depth>0 / explicit async:false / direct callers without depth):
+    // legacy blocking review. The design token/echo handling runs below; the
+    // instance accounting (round++ per completed attempt) lands in
+    // recordToolResults, marker-keyed by this tool call's id.
+    if (ctx._toolCallId !== undefined) {
+      (agent._advisorSyncCalls ??= new Map()).set(ctx._toolCallId, resolved.reviewId)
+    }
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
     }, designToken, documents, paths, reviewObject)
 
     if (reviewType === "design") {
-      // Whitespace-tolerant match (LLM may add spaces or wrap in fences).
-      // The token IS the verdict — the advisor echoes it only on approval (prompt-enforced);
+      // Design pass/fail settlement — token echo IS the verdict (prompt-enforced);
       // no findings-table heuristics: a design with issues never carries the token.
-      const tokenPattern = makeDesignTokenRegex(designToken)
-      if (designToken && result && tokenPattern.test(result)) {
-        // Advisor echoed the token → review passed. Issue it to the parent for eng-coder.
-        // (session cleanup for design reviews is owned by runAdvisorReview)
-        // Multi-design slots (2026-09-01): store under this review's designId; the single
-        // `_engDesignToken` mirror stays for the legacy boolean gates (dispatch "has token",
-        // session persistence) — key decision ② of ENGINEERING-MODE.md §7 2026-09-01.
-        agent._engDesignTokens ??= new Map()
-        agent._engDesignTokens.set(designId, designToken)
-        agent._engDesignToken = designToken
-        // Unlock the dispatch design gate (dispatch.mjs) for eng-coder SELF-review:
-        // an eng-coder whose own design review passed may write files without the
-        // parent spawn-time authorization. NOTE: unreachable today — eng-coder.md
-        // tells the child not to re-run the design review, and spawn already sets
-        // _engDesignReviewed (subagent.mjs). Kept as defense-in-depth for a future
-        // eng-coder autonomous design-revision entry. Parent agents (role undefined)
-        // don't use this flag — their runAgent resets it anyway; they are trusted
-        // via the engineering prompt.
-        if (agent._role === "eng-coder") agent._engDesignReviewed = true
-        // Strip the bracketed token so only ONE unambiguous format (plain UUID) reaches the main agent
-        const cleanResult = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-        // designId rides the Approved block (review #1): the parent needs it to aim the FIRST
-        // eng-coder spawn when several designs live in the same session.
-        return `${cleanResult}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${designId} (pass as the designId parameter when spawning eng-coder; optional while this session holds a single design)`
-      }
-      // Review failed (or advisor chose not to pass) → do NOT touch ANY slot (方案 ②, review #2:
-      // a failed RE-review leaves the previously approved token alive until TTL; the failed call's
-      // own designId was never stored, so there is nothing to clear). Isolation (2026-08-30,
-      // extended to the multi-slot Map 2026-09-01): a network glitch must not clear / other
-      // designs' slots must not be affected — only a COMPLETED non-passing review lands here,
-      // and it revokes nothing.
-      // Strip every dead token occurrence from the raw output so the main agent can't grab an invalid one
-      if (result) {
-        const stripped = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-        return stripped || "Advisor: design review did not pass."
-      }
+      // (session cleanup for design reviews is owned by runAdvisorReview)
+      // Multi-design slots (2026-09-01): store under this review's designId; the single
+      // `_engDesignToken` mirror stays for the legacy boolean gates (dispatch "has token",
+      // session persistence) — key decision ② of ENGINEERING-MODE.md §7 2026-09-01.
+      // Slotting moved into settleDesignReview (shared with the async settle — fix #2).
+      return settleDesignReview(agent, resolved.run, designToken, result).output
     }
     return result
   },

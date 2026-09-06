@@ -6,7 +6,7 @@ import { chat } from "./provider/index.mjs"
 import { pushReal, summarizeRunExplorations } from "./context.mjs"
 import { specForModel } from "./config.mjs"
 import { readFileSync } from "node:fs"
-import { join, dirname } from "node:path"
+import { join, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"
@@ -64,6 +64,8 @@ export function createAgent({
     _engDesignReviewed: false, // eng-coder: design review gate passed (hard gate in dispatch.mjs)
     _engDesignToken: null, // issued by advisor(type="design"); required to spawn eng-coder
     _touchedFiles: [], _verifyRetries: 0, _advisorRound: 0, _advisorSession: null,
+    _advisorRuns: new Map(), // §24 D-24b: per-review convergence instances (rounds/prior/designId)
+    _mutationSeq: 0, _mutLog: [], // §24 D-24b: mutation log (in-flight review staleness scan)
     _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
     _lastEngState: false,
     _pendingReminders: [],
@@ -94,6 +96,23 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   if (pendingAsync?.length) {
     const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
     for (const e of pendingAsync.splice(0)) await injectAsyncResult(agent, e)
+  }
+  // §25 D-R17a: the consult family stream (independent per-family bookkeeping —
+  // decision ④). A fully-settled consultation session lands here and injects its
+  // full verdict text at this same run-start point (user runs AND digest
+  // auto-turns — the model judges/adopts in the digestion round).
+  const pendingConsult = agent._pendingConsultResults
+  if (pendingConsult?.length) {
+    const { injectConsultResult } = await import("./agent-tools/consult.mjs")
+    for (const e of pendingConsult.splice(0)) await injectConsultResult(agent, e)
+  }
+  // §25 D-R17b: the escalate family stream — a settled async escalate moved here
+  // by its settle callback (mutations already merged, report composed) — shares
+  // injectAsyncResult's role-branched injection (subagent/advisor/escalate).
+  const pendingEscalate = agent._pendingEscalateResults
+  if (pendingEscalate?.length) {
+    const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
+    for (const e of pendingEscalate.splice(0)) await injectAsyncResult(agent, e)
   }
   agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3)
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(
@@ -320,6 +339,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
       // 中断变更记账（2026-08-31 评审 #4）：此分支的工具已全部执行完成（磁盘已变，execute 已完成），
       // 真实结果按语义不进历史（placeholder 替代）——但变更必须记账：否则 guard 看到
       // "本轮未改代码" 放行，评审/verify 门禁被绕过（文件改了却没评审）。
+      // §29 fix A（2026-09-07）：mutation-seq 记账已收敛到 dispatch runOne 执行成功即刻
+      // （唯一记账点——本分支不再 noteMutations——不双计——中断+同批 launch seq 单计
+      // 回归断言见 §29 T-A1i）；此处仅剩 guard 标志 + touchedFiles 记账。
       for (const { toolCall, ok } of results) {
         const tool = toolByName.get(toolCall.name)
         if (!ok || !tool || !FILE_MUTATORS.has(toolCall.name)) continue
@@ -331,7 +353,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
           const args = JSON.parse(toolCall.arguments)
           const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
           for (const p of paths) {
-            const abs = join(agent.cwd, p)
+            const abs = resolve(agent.cwd, p)
             if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
           }
         } catch { /* 畸形 args 不影响记账（touchedFiles 尽力而为） */ }

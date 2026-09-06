@@ -39,6 +39,7 @@ Evaluate the design against these dimensions:
 5. **Acceptance criteria** — Are they verifiable? Do they cover normal paths, edge cases, and error conditions?
 6. **Scope** — Is the scope appropriate? Are there opportunities to simplify? Is there scope creep?
 7. **Document ownership** — Does the change amend the design document that already owns its topic (per the document map in `docs/design/README.md`), or does it fragment by creating a new file for an existing section? Does the wording duplicate or contradict existing documents?
+8. **Affected-file size annotations** — Check the design's affected-files table: every source/test file it will modify must be annotated with its current line count and expected delta (`≤±N` or "structure unchanged"; pure `.md` documents are exempt). Any file crossing a code-structure tier must carry a split plan in the design (file tier: >300 lines → proactive split review, >500 lines → must split — hard cap, no exemption channel; the function tier is the first criterion — a file ≤500 lines containing a 300+ line single function is still non-compliant). Spot-check the annotated numbers. Tier authority: the code-structure section of the project's METHODOLOGY.md.
 
 ## Output Format
 

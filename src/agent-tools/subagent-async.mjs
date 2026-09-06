@@ -3,7 +3,8 @@
  * （AGENT-LOOP.md §19：subagent 单工具五动作 spawn/status/escalate/cancel/panel——§19.8
  * check 删除后工具面只剩五动作；spawn 路径与工具面在 subagent.mjs；cancel 动作执行器
  * 与机械、管线在本模块——check 执行器随 §19.8 删除）。
- * 内容：resolveChildProvider / async 常量（ASYNC_SUBAGENT_LIMIT）/ executeCancelAction +
+ * 内容：resolveChildProvider / async 池常量与域助手（ASYNC_POOL_LIMITS/poolDomainOf/
+ * resolvePoolLimits/poolLimitsFor/runningPoolCount——§24 D-24a）/ executeCancelAction +
  * cancelAsyncSubagent（§19.5 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
  * injectAsyncResult / buildChildRunOpts / mergeChildMutations。
  * 拆分（2026-09-05——Module Split Policy §20.9——纯迁移零行为变化）：§20 调度器 + 文件域
@@ -20,11 +21,89 @@ import { offloadToolResult } from "../agent/helpers.mjs"
 import {
   dependentLabels, maybeRefillAsync, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
+// §24 D-24b (R13): advisor-pool cancel fallback + mutation logging for merged
+// code (cycle-free: advisor-async imports no agent-tools module).
+import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
 
-// Async subagent limit (AGENT-LOOP.md §15 D-A4): mechanical concurrency cap for
-// background spawns. The per-turn check budget was deleted with the check action
-// (§19.8 — results arrive only via the auto channel; no loop guard needed).
-export const ASYNC_SUBAGENT_LIMIT = 4
+// Async pool limits per role domain (AGENT-LOOP.md §24 D-24a — R14, 2026-09-06):
+// the old single cap (ASYNC_SUBAGENT_LIMIT = 4, §15 D-A4) evolved into two
+// independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
+// 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa
+// (same-domain cap still 4, cross-domain total up to 8). The per-turn check
+// budget was deleted with the check action (§19.8 — results arrive only via the
+// auto channel; no loop guard needed).
+// ⚠ 与 config.mjs DEFAULTS.agent.poolLimits 逐键同值（loadConfig/settings 默认源）——
+// 耦合锚 T-24a4 断言锁住——勿单侧改默认。
+export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
+
+/**
+ * Role → pool domain (single source of truth — §24 D-24a 修正 #8): the CLI role
+ * enum/assembly table is subagent.mjs's ROLES = { explore, plan, coder, eng-coder }
+ * (mode-filtered: normal → explore/plan/coder, engineering → explore/plan/eng-coder).
+ * eng-coder → engCoder pool; every other role (including unknown roles — fail-safe)
+ * → other pool. escalate spawns its expert internally (role "coder" — other pool).
+ */
+export function poolDomainOf(role) {
+  return role === "eng-coder" ? "engCoder" : "other"
+}
+
+/**
+ * Per-domain limit validation (T-24a4): each key must be a positive integer ≥1 —
+ * invalid (0 / -1 / "abc") or absent keys fall back to that domain's default (4),
+ * independent per key (a partial config — e.g. settings set
+ * agent.poolLimits.engCoder — takes effect with the untouched domain at default).
+ * Non-object raw (missing / string / number / array) → both domains at default.
+ */
+export function resolvePoolLimits(raw) {
+  const limits = { ...ASYNC_POOL_LIMITS }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return limits
+  for (const key of Object.keys(ASYNC_POOL_LIMITS)) {
+    const v = raw[key]
+    if (Number.isInteger(v) && v >= 1) limits[key] = v
+  }
+  return limits
+}
+
+/** One-time fallback warn dedupe (warnedModels / warnedContextProviders precedent). */
+const warnedPoolConfigs = new Set()
+
+/**
+ * Effective per-domain limits — read at EVERY pool admission (D-24a 生效语义:
+ * 不缓存常驻——配置变更即生效下个 spawn; /config 与 settings 保存经 reloadConfig /
+ * 热应用替换 agent.config——本函数每次读最新值). Invalid present values emit ONE
+ * warning per value shape, then fall back (timeoutMs precedent).
+ */
+export function poolLimitsFor(agent) {
+  const raw = agent?.config?.agent?.poolLimits
+  const limits = resolvePoolLimits(raw)
+  if (raw !== undefined && raw !== null && (typeof raw !== "object" || Array.isArray(raw))) {
+    warnPoolFallback(`poolLimits has invalid shape (${JSON.stringify(raw)})`, "shape:" + JSON.stringify(raw))
+    return limits
+  }
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    for (const key of Object.keys(ASYNC_POOL_LIMITS)) {
+      const v = raw[key]
+      if (v !== undefined && !(Number.isInteger(v) && v >= 1)) {
+        warnPoolFallback(`poolLimits.${key} = ${JSON.stringify(v)}`, `${key}:` + JSON.stringify(v))
+      }
+    }
+  }
+  return limits
+}
+
+function warnPoolFallback(what, sig) {
+  if (warnedPoolConfigs.has(sig)) return
+  warnedPoolConfigs.add(sig)
+  console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)} (AGENT-LOOP.md §24 D-24a)`)
+}
+
+/** Running count within ONE pool domain (口径同 §15 D-A1/T6: queued 与已完成不计入；
+ *  条目带 _pool 域字段——spawn 时 poolDomainOf(role) 落位；缺字段（手工/旧条目）按
+ *  other——既有 coder 域测试语义不变)。 */
+export function runningPoolCount(parent, pool) {
+  return [...(parent?._asyncSubagents?.values() ?? [])]
+    .filter((e) => e.status === "running" && (e._pool ?? "other") === pool).length
+}
 
 /**
  * Resolve the sub-agent's provider from a model override string (shared with the
@@ -122,6 +201,12 @@ export function executeCancelAction(args, ctx) {
   const key = String(id)
   const agent = ctx.agent
   const entry = agent._asyncSubagents?.get(key)
+  // §24 D-24b (②-6b): an id that names no async SUBAGENT falls through to the
+  // async ADVISOR pool (the background reviews share the cancel surface — ⏹ on
+  // an advisor block / action:'cancel' with an advisor id abort that review).
+  if (!entry && agent?._asyncAdvisors?.has(key)) {
+    return JSON.stringify(cancelAsyncAdvisor(agent, key))
+  }
   const wasQueued = entry?.status === "queued"
   // 依赖者快照（出队前——用于 AUTO 分支判定"是否有依赖者被本次取消波及"；note 组装在
   // refill 后按**仍 queued** 的实况重算——防 AUTO 已自动启动后文案称 "stay queued"）
@@ -205,9 +290,26 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
 export async function injectAsyncResult(agent, entry) {
   const body = entry.error ?? entry.report ?? "(no report)"
   const preview = await offloadToolResult(String(body), `async-subagent-${entry.id}`)
+  // §24 D-24b: advisor entries label themselves (role "advisor") — the digest
+  // reminder says "async advisor review #N finished" (T-24b2 shape); subagent
+  // entries keep the legacy wording verbatim.
+  // §25 D-R17b (R17): escalate entries (role "escalate" — async 飞刀) label
+  // themselves the same way — the entry report body carries the merge/overlap
+  // notes composed at settle (done/error classification — digest 指令语义 = 已
+  // merge 报告可继续处置——动作域仍按消费回合档位——无族例外).
+  let label
+  if (entry.role === "advisor") {
+    label = `[System reminder: async advisor review #${entry.id} finished]\n${escapeXml(preview)}`
+  } else if (entry.role === "escalate") {
+    label = entry.error != null
+      ? `[System reminder: async escalate #${entry.id} ended with an error]\n${escapeXml(preview)}`
+      : `[System reminder: async escalate #${entry.id} finished — post-op report (mutations merged)]\n${escapeXml(preview)}`
+  } else {
+    label = `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n${escapeXml(preview)}`
+  }
   pushReal(agent, {
     role: "user",
-    content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n${escapeXml(preview)}`,
+    content: label,
   })
   // §20 D-SD5 终态墓碑：本函数是全部自动注入路径的共享形态（回合尾 collect + 挂起
   // digest 首行注入）——注入即消费（调用方随即从容器移除）——dependsOn 引用该 id 的
@@ -256,9 +358,14 @@ export function mergeChildMutations(parent, child) {
   // to the parent's guard state.
   if (!child._mutatedThisRun || !(child._touchedFiles?.length)) return false
   parent._mutatedThisRun = true
+  const merged = []
   for (const abs of child._touchedFiles ?? []) {
     if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
+    merged.push(abs)
   }
+  // §24 D-24b: merged code mutates the parent's state — log it for the stale
+  // scan of in-flight reviews (a review whose code changed under it is stale).
+  noteMutations(parent, merged)
   if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false
   if (parent._verifiedThisRun) {
     parent._verifiedThisRun = false

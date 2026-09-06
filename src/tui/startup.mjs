@@ -187,6 +187,10 @@ export function showStartup(ctx) {
   }
   pushLine(`Tools: ${agent.tools.map((t) => t.name).join(", ")}`, C.dim)
 
+  // R25（F-R25c）：上次运行异常终止提示——bin 入口扫描 crash-reports（24h 窗）经
+  // startTUI opts.crashNotice 传入——无匹配为 undefined → 不提示（负例）
+  if (opts.crashNotice) pushLine(opts.crashNotice, C.warn)
+
   // Recover previous session: rebuild from history (lazy — display snapshot is
   // deprecated; it drifted out of sync with history on VS Code writes).
   if (opts.restored?.history?.length) {

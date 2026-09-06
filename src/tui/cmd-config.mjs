@@ -1,4 +1,3 @@
-import { existsSync, readFileSync } from "node:fs"
 import { ansi, C } from "./ansi.mjs"
 /** Merge an embedding-key save into the raw config, backfilling baseURL/model from defaults.
  *  Keeps existing custom values (Ollama/local embedding); defaults are the single source
@@ -31,9 +30,10 @@ export async function handleConfigCommand(ctx, args = []) {
   async function setEmbedKey() {
     const embKey = await askQuestion("Enter embedding API key (default: SiliconFlow bge-m3):")
     if (!embKey) return false
+    // D-F5b 语义先盘后存（embeddingPatch 在磁盘 fresh raw 上合并——冲突放弃不留 ghost）
+    await persistRaw((raw) => { raw.embedding = embeddingPatch(raw, embKey, DEFAULTS.embedding) })
     agent.config.embedding ??= {}
     agent.config.embedding.apiKey = embKey
-    await persistRaw((raw) => { raw.embedding = embeddingPatch(raw, embKey, DEFAULTS.embedding) })
     if (agent.memory) {
       const { createEmbedder } = await import("../embedding.mjs")
       agent.memory.embedder = createEmbedder(agent.config.embedding)
@@ -78,13 +78,15 @@ export async function handleConfigCommand(ctx, args = []) {
     }
   }
 
-  /** 保存 config（mutate 改 raw）→ reloadConfig（provider 代理无需重启即生效） */
+  /** 保存 config（mutate 改 raw）→ reloadConfig（provider 代理无需重启即生效）。
+   *  D-F5b：磁盘新鲜读 → mutate → 写前 mtime 门控（writeConfigAtomic——冲突放弃 +
+   *  .bak 留现场）；冲突时先 reloadConfig 采纳磁盘新值再 throw——调用方 try/catch
+   *  统一展示 "Save failed: config changed on disk concurrently — retry"。 */
   async function saveProxy(mutate) {
-    const raw = existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : {}
-    mutate(raw)
-    const { saveConfig } = await import("../config.mjs")
-    saveConfig(raw)
+    const { writeConfigAtomic, configPath } = await import("../config.mjs")
+    const r = writeConfigAtomic(configPath, mutate)
     await reloadConfig()
+    if (!r.ok) throw new Error("config changed on disk concurrently — retry")
   }
 
   // ── Proxy sub-menu loop：每轮重建 entries 显示最新状态，defaultIndex 记住上次位置 ──
@@ -229,6 +231,36 @@ export async function handleConfigCommand(ctx, args = []) {
     }
   }
 
+  // ── 并发池子菜单（§24 D-24a/R14——agent.poolLimits——读/改两域；保存经 saveProxy
+  // 落盘 + reloadConfig 热应用——下个 spawn 生效）──
+  async function poolMenu() {
+    let poolIdx = 0
+    for (;;) {
+      const pl = agent.config?.agent?.poolLimits ?? {}
+      // 显示回退与默认同源（DEFAULTS.agent.poolLimits——配置 DEFAULTS 与运行时回退常量
+      // ASYNC_POOL_LIMITS 的耦合由 T-24a4 锚定断言锁住——防默认值单侧漂移）
+      const cur = (k) => (Number.isInteger(pl[k]) && pl[k] >= 1 ? pl[k] : DEFAULTS.agent.poolLimits[k])
+      const entries = [
+        { type: "header", text: `Async pools: eng-coder ${cur("engCoder")} / other ${cur("other")}（默认 4/4——分域互不阻塞——超限排队）` },
+        { type: "item", text: `eng-coder 池上限 = ${cur("engCoder")}`, action: "engCoder" },
+        { type: "item", text: `其他角色池上限 = ${cur("other")}`, action: "other" },
+      ]
+      const c = await showPicker("并发池（agent.poolLimits）", entries, { defaultIndex: poolIdx })
+      if (!c) return // Esc 返回主菜单
+      poolIdx = Math.max(0, entries.filter((e) => e.type === "item").indexOf(c))
+      const val = await askQuestion(`${c.action} pool limit (current: ${cur(c.action)} — positive integer ≥1):`)
+      if (!val) continue // 空输入不改动
+      const num = Number(val)
+      if (!Number.isInteger(num) || num < 1) { pushLine("Pool limit must be a positive integer (≥1)", C.error); continue }
+      const next = { engCoder: cur("engCoder"), other: cur("other"), [c.action]: num }
+      try {
+        await saveProxy((raw) => { raw.agent ??= {}; raw.agent.poolLimits = { engCoder: next.engCoder, other: next.other } })
+        pushLabel("❯ Config", ansi.bold + C.tool)
+        pushLine(`agent.poolLimits = { engCoder: ${next.engCoder}, other: ${next.other} }（下个 spawn 生效——分域互不阻塞）`, C.tool)
+      } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
+    }
+  }
+
   // ── Main config loop ──
   let running = true
   let mainIdx = 0 // 记住上次选中位置，改完一项回主菜单时恢复
@@ -238,10 +270,13 @@ export async function handleConfigCommand(ctx, args = []) {
     ec = agent.config?.embedding ?? {}
     tc = agent.config?.traces ?? {}
     const consultCount = (ac.consultModels ?? []).length
+    const pl = ac.poolLimits ?? {}
+    const cur = (k) => (Number.isInteger(pl[k]) && pl[k] >= 1 ? pl[k] : DEFAULTS.agent.poolLimits[k])
     const mainEntries = [
       { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 200} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"} | traces=${tc.enabled === false ? "off" : "on"}` },
       { type: "item", text: `agent.maxTurns = ${ac.maxTurns ?? 200}`, action: "agent.maxTurns" },
       { type: "item", text: `agent.subagentTurns = ${ac.subagentTurns ?? 100}`, action: "agent.subagentTurns" },
+      { type: "item", text: `并发池 agent.poolLimits = engCoder ${cur("engCoder")} / other ${cur("other")}（async 分域上限）`, action: "pool" },
       { type: "item", text: `agent.compactThreshold = ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, action: "agent.compactThreshold" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
       { type: "item", text: `traces.enabled = ${tc.enabled === false ? "off" : "on"}（轨迹存档——发布默认关——隐私）`, action: "traces.enabled" },
@@ -269,6 +304,7 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLine(`traces.enabled: ${tc.enabled === false ? "off" : "on"}（默认 off——发布隐私——本地分析可开）`, C.dim)
       pushLine(`traces.retentionHours: ${tc.retentionHours ?? 24}（超期文件启动清理——D-TR10）`, C.dim)
       pushLine(`agent.consultModels: ${(ac.consultModels ?? []).map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ") || "(none)"}`, C.dim)
+      pushLine(`agent.poolLimits: { engCoder: ${cur("engCoder")}, other: ${cur("other")} }（async 分域上限——默认 4/4——agent.poolLimits 可配）`, C.dim)
       pushLine(`agent.consultTurns: ${ac.consultTurns ?? 40}`, C.dim)
       pushLine(`agent.consultTimeoutMs: ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, C.dim)
       pushLine(`embedding: ${agent.memory?.embedder ? `enabled (${ec.model ?? ""})` : "disabled (FTS only)"}`, C.dim)
@@ -284,6 +320,11 @@ export async function handleConfigCommand(ctx, args = []) {
 
     if (choice.action === "consult") {
       await consultMenu()
+      continue
+    }
+
+    if (choice.action === "pool") {
+      await poolMenu()
       continue
     }
 

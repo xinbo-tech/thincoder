@@ -258,7 +258,7 @@ slow("buildAdvisorUserMessage: design review with documents reviews ONLY the lis
 
 
 
-test("buildAdvisorUserMessage: design review without documents keeps git-diff scope (backward compatible)", () => {
+slow("buildAdvisorUserMessage: design review without documents keeps git-diff scope (backward compatible)", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
   try {
     createGitRepo(tmp)
@@ -606,7 +606,7 @@ test("buildAdvisorFollowUp: tolerates missing response table", () => {
 
 
 
-test("buildAdvisorFollowUp: injects NO git information (read-only verification by design)", () => {
+slow("buildAdvisorFollowUp: injects NO git information (read-only verification by design)", () => {
   const tmp = mkdtempSync(join(tmpdir(), "advisor-test-"))
   try {
     createGitRepo(tmp)

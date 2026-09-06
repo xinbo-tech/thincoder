@@ -7,6 +7,8 @@ import { settingsTool } from "../agent-tools/settings.mjs"
 import { repoOutlineTool } from "../tools/repomap.mjs"
 import { builtinTools } from "../tools/index.mjs"
 import { discoverRules } from "../rules.mjs"
+// R10 L2（MULTI-INSTANCE-COLLAB §2a.4 D-L2b）：peer_instances 只读工具——挂感知模块导出
+import { peerInstancesTool } from "../peer-instances.mjs"
 
 /** Assemble an agent with memory, MCP tools, and code/doc indices attached (sync all layers, then return) */
 export async function assembleAgent() {
@@ -49,7 +51,7 @@ export async function assembleAgent() {
     await ensureClone(team)
     await syncDir(memory, { layer: "team", dir: team.dir })
   }
-  const baseTools = [...builtinTools, ...memoryTools(memory, { cwd, projectDir: config.memory.projectDir, author: gitAuthor(), team }), codeSearchTool(memory), docSearchTool(memory), repoOutlineTool(memory.db, cwd), settingsTool()]
+  const baseTools = [...builtinTools, ...memoryTools(memory, { cwd, projectDir: config.memory.projectDir, author: gitAuthor(), team }), codeSearchTool(memory), docSearchTool(memory), repoOutlineTool(memory.db, cwd), settingsTool(), peerInstancesTool]
 
   // MCP servers: connect in parallel (a dead server won't block startup), collect failures as warnings (stderr invisible in TUI, passed via agent object)
   const mcpServers = config.mcp?.servers ?? []

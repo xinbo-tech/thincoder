@@ -17,7 +17,7 @@
  * → ./subagent-run.mjs——execute 只保留动作分流 + 装配调用 + 阻塞路径。
  */
 
-import { gateEngCoderSpawn, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { gateEngCoderSpawn, TURN_CAP_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
 import { logEvent, errText } from "../log.mjs"
 import {
   runChildPipeline, executeCancelAction,
@@ -48,7 +48,7 @@ export const subagentTool = {
     "ONE tool, FIVE actions (AGENT-LOOP.md §19/§19.5/§19.6/§19.8) — pick by what you need:\n" +
     "- action:'spawn' (DEFAULT): spawn a sub-agent to handle an independent subtask in an isolated context; the sub-agent returns only its final report. Spawn MULTIPLE subagents in the SAME response for parallel work—they run concurrently.\n" +
     "- action:'status': NON-BLOCKING progress query — returns immediately and consumes nothing. Give the spawn's id for one child ({id, role, status: running|queued|done, model, elapsedSec, turn, maxTurns, position?), or omit it for an overview of the whole pool ({overview: {running: [{id, role, model, elapsedSec, turn, maxTurns}], queued: [{id, role, position}], done: [{id, role}]}}). §19.5.6 touched-files summary: running entries also carry touchedFiles (first 5, relative to your cwd), touchedMore (count beyond 5) and, when nothing was touched yet, the placeholder touched (\"—（尚无改动）\"); queued (not yet started) entries carry the placeholder touched (\"—（未启动）\") — see what a running child has changed BEFORE deciding to cancel it. Use THIS to see progress — it never blocks and never consumes a result (async results are delivered to you automatically).\n" +
-    "- action:'escalate' (飞刀 — a flown-in expert): hand an implementation task to a STRONGER model from your consult models (agent.consultModels). It gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification). Use it when YOU judge the task calls for stronger hands (complex multi-file refactoring, an intractable bug, intricate algorithm work — or work beyond your comfortable ability); escalate EARLY, not after burning attempts. model: pick a candidate as 'provider:model' (default = the first consult model). Not available in engineering mode (implementation goes through eng-coder spawns there).\n" +
+    "- action:'escalate' (飞刀 — a flown-in expert): hand an implementation task to a STRONGER model from your consult models (agent.consultModels). It gets WRITE access and does the work itself — reads, edits, runs tests — then returns a post-op report (what changed, why, verification). Use it when YOU judge the task calls for stronger hands (complex multi-file refactoring, an intractable bug, intricate algorithm work — or work beyond your comfortable ability); escalate EARLY, not after burning attempts. model: pick a candidate as 'provider:model' (default = the first consult model). Not available in engineering mode (implementation goes through eng-coder spawns there). DEFAULT-ASYNC at depth 0 (AGENT-LOOP.md §25 D-R17b): the launch returns an ack {id, role:'escalate', status:'running'} and the flight runs in the background (pooled with the other role-domain spawns) — its post-op report is delivered to you automatically with its mutations merged into your bookkeeping; pass async:false to run it synchronously.\n" +
     "- action:'cancel': STOP one background subagent — pass the id from the async spawn return (REQUIRED — omitting it errors; a blanket cancel is unsupported, Ctrl+C stops everything). Running target aborts immediately ({id, status:'cancelled'}); a queued target is removed from the queue ({id, status:'cancelled', was:'queued'} and later queue positions shift forward). Other children and the session keep running — cancellation is targeted. Use it when a background child is going the wrong way (e.g. burning turns) and you must stop it before its report arrives. Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first; prefer scoped recovery (restore a single affected file) over killing the child — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited.\n" +
     "- action:'panel': DIAGNOSE + fix the subagent panel — the collapsible blocks under the conversation the user sees (CLI TUI panel mirror; headless/VS Code degrade to a 'no panel' pool view). view (default — call it with no params or view:true): returns the live panel blocks [{key, role, status: running|done|awaitingDigest} — running entries also carry elapsedSec; awaitingDigest entries whose report is ALREADY digested carry digested:true (stuck blocks — the freezable ones — explain odd panel states here)] exactly as the user sees them. freeze: pass the block key of a digested-stuck block ({action:'panel', freeze:'role#N'}) to reclaim it into the conversation — the freeze ONLY passes for awaitingDigest blocks with no live pool entry and no pending report (gated); freezing a block whose report is still pending would break the digestion order and is refused with a clear error.\n\n" +
     "Why delegate? A sub-agent runs in its own isolated context — its reads, searches, tool calls and edits never enter your history or pollute your window; only its final report comes back. Delegation keeps your working context lean (you see the whole session, not the child's noise) and the child single-mindedly focused on one task. Parallel children run concurrently, saving wall-clock time. Every coder/eng-coder child carries its own verify + advisor self-review discipline — handed-off work is already verified before you read a word of it.\n\n" +
@@ -58,7 +58,7 @@ export const subagentTool = {
     "- coder — full implementation. The parent's complete read/write/execute toolset plus verify and advisor for self-review. Its final report must include a delivery transparency table with one row per task requirement (Done / Simplified / Not done — no deferred column).\n" +
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round.\n" +
     "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-coder. The schema enum reflects the active mode.\n\n" +
-    "Async spawn (AGENT-LOOP.md §15/§18): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. The child's report is delivered to you automatically — there is no fetch action; use action:'status' only to see progress, never to wait for the result. The DEFAULT is role-level: role='eng-coder' spawns async (its delivery protocol runs fully inside the child — implementation → audit → self-fix → advisor re-review → converged delivery; pass async:false only when you must handle the report synchronously); every other role defaults to blocking. Use async when your own turn must keep moving; use a blocking spawn when you must see the report before continuing. Async spawns are capped at 4 concurrent (further spawns queue with a position), and top-level only. After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result. If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (eng-coder defaults to async; other roles simply omit async).\n\n" +
+    "Async spawn (AGENT-LOOP.md §15/§18/§24): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. The child's report is delivered to you automatically — there is no fetch action; use action:'status' only to see progress, never to wait for the result. The DEFAULT is depth-gated (AGENT-LOOP.md §18 D-E1a): at the top level (depth 0) EVERY role spawns async by default — eng-coder's delivery protocol runs fully inside the child (implementation → audit → self-fix → advisor re-review → converged delivery); depth>0 spawns are always synchronous. Pass async:false only when you must handle the report synchronously. Use a blocking spawn when you must see the report before continuing. Async spawns are pooled per role domain (AGENT-LOOP.md §24): at most 4 concurrent eng-coders and 4 concurrent other-role spawns by default (agent.poolLimits overrides both) — a full domain queues further spawns with a position while the other domain keeps starting (domains never block each other), and top-level only. After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result. If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (at depth 0 every role defaults to async — async:false is the only way to block; depth>0 is always sync).\n\n" +
     "Task scheduling (AGENT-LOOP.md §20): declare the scheduling metadata to let the SCHEDULER order your spawns — files: the file paths this task will modify, dependsOn: ids from prior async spawn returns whose outcome this task needs. Overlapping-file tasks are serialized and dependent tasks are started in order automatically: a spawn that would conflict, or whose dependencies have not settled, queues instead of running ({id, status:\"queued\", position, reason} — the waiting task auto-starts when the conflict clears / its dependency settles; cancel a queued task to drop it). A spawn whose dependency was cancelled or failed stays queued and marked \"dependency cancelled\" until you decide (cancel it) — in an AUTO session it starts by itself. Referencing an unknown id errors; an id already consumed (auto-delivered by the auto channel) counts as satisfied. Omit both parameters for the plain immediate spawn (no scheduler involvement).\n\n" +
     "Writing the prompt:\n" +
     "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
@@ -77,7 +77,7 @@ export const subagentTool = {
       model: { type: "string", description: "action:'spawn': provider/model override for this sub-agent ('provider:model', a provider name, or a model name on the parent's provider — defaults to config.agent.subagentModels[role], then config.agent.subagentModel, then the parent's provider). pass \"default\" to explicitly inherit the default model — equivalent to omitting the parameter. action:'escalate': pick a consult candidate as 'provider:model' (default = the first consult model)." },
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design." },
-      async: { type: "boolean", description: "true = spawn without waiting — returns {id, status:\"running\"} immediately; the report is delivered to you automatically (there is no fetch action). Default is role-level: role='eng-coder' → true (async; its internal delivery protocol runs in the background — pass async:false to force the blocking spawn when you must process the report before continuing); all other roles → false (blocking)." },
+      async: { type: "boolean", description: "action:'spawn': true = spawn without waiting — returns {id, status:\"running\"} immediately; the report is delivered to you automatically (there is no fetch action). Default: depth-0 → true (async — every role, AGENT-LOOP.md §18 D-E1a); depth>0 → sync (forced). Pass async:false to force the blocking spawn when you must process the report before continuing. action:'escalate': same semantics (AGENT-LOOP.md §25 D-R17b) — default async at depth 0; async:false keeps the legacy synchronous flight." },
       files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares (cwd-relative or absolute paths). files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error. Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:\"queued\", position, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
       dependsOn: { type: "array", items: { type: "string" }, description: "action:'spawn' only: ids from prior async spawn returns whose outcome this task needs — the task queues ({id, status:\"queued\", position, reason}) until every dependency settles, then starts automatically. Ids already consumed (auto-delivered to the model) count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
       id: { type: "string", description: "action:'status'/'cancel': the subagent id from the async spawn return. status: omit = overview of the whole pool; cancel: REQUIRED (never omit — a blanket cancel is unsupported)." },
@@ -127,9 +127,12 @@ export const subagentTool = {
     if (typeof args.task !== "string" || !args.task.trim()) {
       throw new Error("subagent action:'spawn' requires a task (the self-contained task brief).")
     }
-    // §18 F1/D-E1 role-level async default: eng-coder spawns async unless the
-    // caller explicitly passes async:false; every other role stays blocking.
-    const wantAsync = args.async ?? role === "eng-coder"
+    // §18 D-E1a depth-gated async default (2026-09-06 需求池 R12): depth-0 spawns
+    // default to async for EVERY role (the old role-level default — eng-coder only —
+    // is superseded); depth>0 spawns default to sync (子代理内部强制同步现状保留).
+    // async:false remains the explicit escape hatch; async:true at depth>0 is
+    // refused downstream (executeAsyncSpawn top-level gate).
+    const wantAsync = args.async ?? ((ctx.depth ?? 0) === 0)
 
     // Role normalization + whitelist (2026-08-25, coder-leak fix): exact-string gates let
     // variant roles ("Coder", " coder") bypass BOTH mode gates and fall through to
@@ -204,6 +207,11 @@ export const subagentTool = {
         parent, role, args,
         askContinue: askSubagentContinue,
       })
+      // §27 R23 D-R23c1（评审 #1 🅰——生成侧补发射）：sync spawn 同步收尾——若本 spawn
+      // 处于嵌套上下文（ctx.callbacks 已是嵌套 wrapper——eng-coder 内 explore 审计）→
+      // 发内层 ⟦ev⟧done（完整嵌套前缀——wrapper 链自动补外层）→ 主 TUI 路由子块定格
+      // （T-R23c.1）。非嵌套（depth-0）零变化——冻结仍由 dispatch subKey 精确冻承接。
+      emitNestedChildEvent(ctx, relayPrefix, "done")
       logEvent("child:done", { role, id: child._logId, ms: Date.now() - blockT0, kind: String(pipelineReport).includes(TURN_CAP_MARK) ? "partial" : "ok" })
       // §7.2.3 sync spawn 完成精确冻结（方案 e）：execute 返回前 ctx 留子代理 key
       // （relayPrefix 去尾 = `role#N`）——dispatch runOne 读它作 onToolResult 第 4 参 →
@@ -214,21 +222,32 @@ export const subagentTool = {
       ctx._subagentKey = relayPrefix.slice(0, -1)
       return pipelineReport
     } catch (e) {
-      if (ctx.signal?.aborted || e?.name === "AbortError") throw e // 用户停——不落错误事件
+      if (ctx.signal?.aborted || e?.name === "AbortError") {
+        // §27 R23：外层 abort 传播的中断——内层开块随之外层冻结前先收尾定格
+        // （D-R23c1 stopped——T-R23c.2a 生成侧路径；TUI 冻结兜底仍在 freezeSubTaskLines）
+        emitNestedChildEvent(ctx, relayPrefix, "stopped")
+        throw e // 用户停——不落错误事件
+      }
+      // §27 R23 error-run 映射（实现批补一行）：run 错误（非 abort）→ 同样发 stopped
+      // ——内层子块定格不悬空（T-R23a.3——工具错/运行错误路径）。
+      emitNestedChildEvent(ctx, relayPrefix, "stopped")
       logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(e, 200) })
       throw e
     }
   },
 }
 
-// Re-export shim (2026-09-03 拆分轮 + §19 合体轮): 机械与合体动作执行器迁至
-// ./subagent-async.mjs——保留本文件导出面，消费点（agent.mjs / agent-turn.mjs /
-// consult.mjs / 测试）导入路径零改动。execute 仍直接使用 ASYNC_SUBAGENT_LIMIT /
-// maybeRefillAsync / buildChildRunOpts / runChildPipeline（文件头部 import）。
+// Re-export shim (2026-09-03 拆分轮 + §19 合体轮 + 2026-09-05 拆分轮): 机械与动作
+// 执行器迁至 ./subagent-async.mjs、./subagent-actions.mjs、./subagent-scheduler.mjs
+// ——本文件保留导出面，消费点（agent.mjs / agent-turn.mjs / consult.mjs / 测试）导入
+// 路径零改动；池逻辑/准入见 subagent-run.mjs（executeAsyncSpawn）与 subagent-scheduler.mjs
+// （maybeRefillAsync——execute 不再直接使用池常量）。
 // 2026-09-05 拆分轮: maybeRefillAsync 随 §20 调度器独立（./subagent-scheduler.mjs）——
 // 再导出源改写，消费面（agent.mjs 动态 import 等）不变。
+// 2026-09-06 §24 拆分轮: ASYNC_SUBAGENT_LIMIT 导出 → ASYNC_POOL_LIMITS（分域常量——
+// 定义在 subagent-async.mjs——re-export 面同步）。
 export {
-  ASYNC_SUBAGENT_LIMIT,
+  ASYNC_POOL_LIMITS,
   resolveChildProvider,
   injectAsyncResult,
   buildChildRunOpts,

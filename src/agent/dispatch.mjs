@@ -6,9 +6,17 @@ import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../tui/cmd-undo.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
+// R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b)：写工具钩子——peerCollabNote（执行前冲突
+// 检测——软提示不阻止）+ recordPeerWrites（成功后累积本回合写足迹——回合末 flush）。
+import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites } from "../peer-domains.mjs"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { homedir } from "node:os"
+// §29 fix A（AGENT-LOOP.md §29——2026-09-07）：FILE_MUTATORS 的 mutation-seq 记账从
+// 批后提交（record-results noteMutations）移到执行成功即刻——唯一记账点（取代批后段
+// + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
+// 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（§29 症状根因）。
+import { noteMutations } from "../agent-tools/advisor-async.mjs"
 
 const ERRORS_DIR = join(homedir(), ".thincoder", "tool-errors")
 
@@ -86,6 +94,23 @@ function isSubagentControlAction(toolName, args) {
 }
 function isSubagentEscalateAction(toolName, args) {
   return toolName === "subagent" && args?.action === "escalate"
+}
+
+/**
+ * §29 fix A — 唯一记账点：FILE_MUTATORS 工具执行成功即刻记 mutation seq（abs 路径）。
+ * 取代 record-results 批后段 + agent.mjs 中断分支的 noteMutations（不双计——中断+同批
+ * launch 场景 seq 单计，AGENT-LOOP.md §29 T-A1i）。调用时机 = 写执行成功（非 Error 前缀
+ * 结果——recordPeerWrites 同款门）；routed（M2 ACP 客户端执行）成功同样记账。
+ */
+function noteExecutedMutation(agent, tool, args) { 
+  let paths
+  try {
+    paths = tool.touchedPaths ? tool.touchedPaths(args ?? {}) : [args?.path]
+  } catch { return }
+  const abs = (paths ?? [])
+    .filter((p) => typeof p === "string" && p)
+    .map((p) => resolve(agent.cwd, p))
+  if (abs.length > 0) noteMutations(agent, abs)
 }
 
 /**
@@ -268,6 +293,11 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     const toolName = item.toolCall.name
     logEvent("tool:call", { tool: toolName, child: agent?._logId })
     try {
+      // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b)：结构化写工具执行前查 conflicts
+      // （命中他实例 hot 域 → 结果附软提示——决策⑥ A 不阻止；一次目录 stat——N3 度量）；
+      // 足迹累积（D-L3a——"检测+记录一次完成"）延后到执行成功（实际写过的文件）。
+      const isPeerWriteTool = PEER_WRITE_TOOLS.has(toolName)
+      const peerNote = isPeerWriteTool ? peerCollabNote(agent.cwd, item.tool, item.args) : null
       // Snapshot for undo before side-effect tools (setupOutputPanel already fired in Phase 1)
       if (!item.tool?.readonly && item.args) {
         snapshotForUndo(agent, item.toolCall.name, item.args, agent.cwd)
@@ -277,9 +307,14 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       if (callbacks.toolRouter) {
         const routed = await callbacks.toolRouter(item.toolCall.name, item.args)
         if (routed?.handled) {
-          callbacks.onToolResult?.(item.toolCall.name, routed.result, item.toolCall.id)
-          logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(routed.result, 200), child: agent?._logId })
-          return { ...item, result: routed.result, ok: true }
+          const routedOk = !String(routed.result).startsWith("Error:")
+          const routedResult = peerNote && routedOk ? `${routed.result}\n${peerNote}` : routed.result
+          if (isPeerWriteTool && routedOk) recordPeerWrites(agent, item.tool, item.args)
+          // §29 fix A：routed 写成功（客户端执行）同样执行期即刻记账（唯一记账点）
+          if (routedOk && FILE_MUTATORS.has(toolName)) noteExecutedMutation(agent, item.tool, item.args)
+          callbacks.onToolResult?.(item.toolCall.name, routedResult, item.toolCall.id)
+          logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(routedResult, 200), child: agent?._logId })
+          return { ...item, result: routedResult, ok: true }
         }
       }
       const origConsoleLog = console.log
@@ -297,6 +332,9 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         depth,
         signal,
         callbacks,
+        // §24 D-24b: per-call id — the advisor tool marker-keys its launch so
+        // recordToolResults can split async-ack accounting from sync settles.
+        _toolCallId: item.toolCall.id,
         onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),
         onQuestion: callbacks.onQuestion,
         onPermissionRequest: callbacks.onPermissionRequest,
@@ -309,6 +347,16 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       }
       if (rawResult === undefined) throw new Error(`Tool "${item.toolCall.name}" returned undefined — all tools must return a string value`)
       const raw = String(rawResult)
+      // 写成功（非 "Error:" 字符串结果）→ 足迹计入本回合集合（flush 在 finalizeAgentTurn）
+      if (isPeerWriteTool && !raw.startsWith("Error:")) {
+        recordPeerWrites(agent, item.tool, item.args)
+      }
+      // §29 fix A：FILE_MUTATORS 执行成功即刻记账（唯一记账点——取代 record-results 批后
+      // 段 + agent.mjs 中断分支——不双计）——同批 launch 前的写在 launchSeq 之前落地 →
+      // async advisor settle 不误判 stale（同批 launch 后写仍保守 stale——T-A2/T-24b9）。
+      if (FILE_MUTATORS.has(toolName) && !raw.startsWith("Error:")) {
+        noteExecutedMutation(agent, item.tool, item.args)
+      }
       // Multimodal tools keep the raw result (base64 images ride the multimodal
     // channel); everything else offloads oversized text to disk. Flag-driven, not
     // name-driven (consult P3, 2026-08-30).
@@ -317,11 +365,15 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       const resultWithConsole = capturedConsole.length > 0
         ? `${result}\n[console during ${item.toolCall.name}]\n${capturedConsole.join("\n")}`
         : result
-      callbacks.onToolResult?.(item.toolCall.name, resultWithConsole, item.toolCall.id, toolCtx._subagentKey)
+      // R10 L3：冲突软提示附在工具结果末尾（模型可见——不阻止写）
+      const resultForModel = peerNote && !raw.startsWith("Error:")
+        ? `${resultWithConsole}\n${peerNote}`
+        : resultWithConsole
+      callbacks.onToolResult?.(item.toolCall.name, resultForModel, item.toolCall.id, toolCtx._subagentKey)
       // PostToolUse hooks: fire-and-forget (result not awaited on hook failure)
       runHooks("PostToolUse", { agent, toolName: item.toolCall.name, toolArgs: item.args, result: raw }).catch(() => {})
-      logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(resultWithConsole, 200), child: agent?._logId })
-      return { ...item, result: resultWithConsole, ok: true }
+      logEvent("tool:done", { tool: toolName, ms: Date.now() - toolT0, head: headText(resultForModel, 200), child: agent?._logId })
+      return { ...item, result: resultForModel, ok: true }
     } catch (error) {
       // Persist to ~/.thincoder/tool-errors/ for post-mortem; only pass message to the model (stack traces confuse LLMs and may leak paths)
       logToolError(item.toolCall.name, item.args, error)

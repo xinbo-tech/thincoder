@@ -1,9 +1,13 @@
 /**
- * agent-tools/read-history.mjs — read_history tool (SESSION.md §9).
+ * agent-tools/read-history.mjs — read_history tool (SESSION.md §9 + §13 R19 cross-session).
  *
- * Query THIS session's message history — the full human-readable record
- * (agent._fullHistory — NEVER compacted, audit-complete). Use to recall what
- * was said or done earlier: design decisions, tool-call timing, past rulings.
+ * Query message history — THIS session by default, any session on disk with `path`
+ * (SESSION.md §13 R19): an explicit session file path deep-queries that file's
+ * history line; "cwd:<dir>" discovers the sessions stored for that directory.
+ *
+ * Default (no path) — THIS session's full human-readable record (agent._fullHistory
+ * — NEVER compacted, audit-complete). Use to recall what was said or done earlier:
+ * design decisions, tool-call timing, past rulings.
  *
  * Filters AND together: role / keyword (message text) / tool (tool messages by
  * name + assistant messages that declared the call) / since-until (epoch ms
@@ -17,16 +21,37 @@
  * session file. assistant tool_calls are summarized to a name list (arguments
  * never expanded).
  *
+ * Cross-session (SESSION.md §13 D-R19a): path = a session file path (absolute, or
+ * relative to the project cwd) → read that file's history line and apply the SAME
+ * filter surface; path = "cwd:<dir>" → list every slot stored for that directory
+ * (slot number + full file path + title/message count/updatedAt — no dead-slot
+ * filtering, v1 decision). Single-file retrieval is guarded by a line-scan cap
+ * (READ_HISTORY_SCAN_MAX) — an oversized file is refused before it is read whole.
+ *
  * readonly: true — planMode pass / no permission ask. Registered depth-0 only:
  * subagents get their own throwaway history, so querying "the session" from a
- * child would be semantically confusing (SESSION.md §9.5 refinement 1).
+ * child would be semantically confusing (SESSION.md §9.5 refinement 1 + §13 T-R19.4).
  * Mirrored 1:1 in thincoder-vscode/src/agent-tools/read-history.mjs.
  */
+
+import { openSync, readSync, closeSync, readFileSync, existsSync, statSync } from "node:fs"
+import { isAbsolute, resolve } from "node:path"
+import { listSlots, slotPath } from "../session-slots.mjs"
 
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 200
 const CONTENT_CAP = 500
 const VALID_ROLES = new Set(["user", "assistant", "tool"])
+
+/** 单槽检索行扫护栏（SESSION.md §13 D-R19a——评审 #3 定稿：超限不再读全文，返回定稿错误文案）。 */
+export const READ_HISTORY_SCAN_MAX = 200_000
+
+/** 超限错误文案（SESSION.md §13——逐字定稿——T-R19.7 断言）。 */
+const TOO_LARGE_ERROR = JSON.stringify({ error: "session too large — refine keyword or since/until" })
+
+/** 检索/记忆族消歧总纲（SESSION.md §13 D-R19b——逐字定稿——read_history 描述尾段——T-R19.5 锚）。 */
+const SEARCH_FAMILY_GUIDE =
+  "检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识/约定**（memory）→ memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。"
 
 /** Message text for keyword matching + output: strings pass through; multimodal content arrays → text parts joined (never crashes, empty parts skipped, images ignored). */
 function messageText(m) {
@@ -80,17 +105,125 @@ function toEntry(m) {
   return entry
 }
 
+/** AND-filter one history message (role/keyword/tool/since-until) — shared by the in-memory
+ *  default and the cross-session file query (SESSION.md §13 D-R19a: 同 filter 面应用). */
+function matches(m, { role, kwRe, tool, since, until }) {
+  if (!m || typeof m !== "object") return false
+  if (role !== undefined && m.role !== role) return false
+  if (kwRe) {
+    const text = messageText(m)
+    if (!kwRe.test(text)) return false
+  }
+  if (tool) {
+    const byName = m.role === "tool" && m.name === tool
+    const byDeclaration = m.role === "assistant" && Array.isArray(m.tool_calls) && m.tool_calls.some((tc) => toolCallName(tc) === tool)
+    if (!byName && !byDeclaration) return false
+  }
+  const ts = m.ts
+  if (since !== null || until !== null) {
+    if (typeof ts !== "number") return false // no ts → no time-window match
+    if (since !== null && ts < since) return false
+    if (until !== null && ts > until) return false
+  }
+  return true
+}
+
+/** Direction picks the END of the matched set; output stays chronological either way. */
+function formatMatches(matched, direction, limit) {
+  const windowed = direction === "oldest" ? matched.slice(0, limit) : matched.slice(-limit)
+  return JSON.stringify(windowed.map(toEntry))
+}
+
+/** Line-scan guard: stream-count physical newlines, bailing the moment the cap is crossed —
+ *  an oversized file is refused BEFORE it is read whole ("不再读全文"——SESSION.md §13 D-R19a). */
+function exceedsScanMax(file) {
+  const CHUNK = 64 * 1024
+  let fd = null
+  try {
+    fd = openSync(file, "r")
+    const buf = Buffer.alloc(CHUNK)
+    let newlines = 0
+    for (;;) {
+      const n = readSync(fd, buf, 0, CHUNK, null)
+      if (n <= 0) break
+      for (let i = 0; i < n; i++) {
+        if (buf[i] === 0x0a) newlines++
+      }
+      if (newlines > READ_HISTORY_SCAN_MAX) return true
+    }
+    return false
+  } catch {
+    return false // 行扫失败 → 交由后续读取/解析路径给出真实错误
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd) } catch { /* ignore */ }
+    }
+  }
+}
+
+/** Cross-session deep query: one session file, same filter surface (§13 D-R19a). */
+function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, limit }, baseCwd) {
+  const file = isAbsolute(pathArg) ? pathArg : resolve(baseCwd ?? process.cwd(), pathArg)
+  if (!existsSync(file)) return `Error: session file not found: ${file}`
+  if (exceedsScanMax(file)) return TOO_LARGE_ERROR
+  let text
+  try {
+    text = readFileSync(file, "utf8")
+  } catch (e) {
+    return `Error: failed to read session file ${file}: ${e.message}`
+  }
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch (e) {
+    return `Error: ${file} is not a valid session file (corrupt JSON: ${e.message})`
+  }
+  if (!data || typeof data !== "object" || !Array.isArray(data.history)) {
+    return `Error: ${file} is not a valid session file (no history array)`
+  }
+  const matched = data.history.filter((m) => matches(m, { role, kwRe, tool, since, until }))
+  return formatMatches(matched, direction, limit)
+}
+
+/** Discovery surface (path = "cwd:<dir>"): list every slot stored for that directory, one line
+ *  per slot — slot number + FULL session file path + title/message count/updatedAt（§13 D-R19a
+ *  ——评审 #2：摘要必须含寻址字段——模型第二步深查 = 复制行内文件路径重调 path=）。 */
+function discoverCwd(raw, baseCwd) {
+  const dir = resolve(baseCwd ?? process.cwd(), raw)
+  let st = null
+  try {
+    st = statSync(dir)
+  } catch { /* fallthrough to the explicit error below */ }
+  if (st === null || !st.isDirectory()) {
+    return `Error: unknown cwd "${raw}" — no session directory for this cwd (directory not found: ${dir})`
+  }
+  const slots = listSlots(dir) // 时间序（updatedAt 降序）——含 manifest 记录的全部槽（v1 不做死槽过滤）
+  if (slots.length === 0) {
+    return `(no session slots found for cwd: ${dir} — no sessions started there yet)`
+  }
+  const lines = slots.map((s) => {
+    const title = s.title ? `"${s.title}"` : "(untitled)"
+    return `slot ${s.slot}: ${slotPath(dir, s.slot)} — title: ${title}, messages: ${s.messageCount}, updatedAt: ${s.updatedAt}`
+  })
+  return `Session slots for cwd: ${dir} (newest first):\n${lines.join("\n")}`
+}
+
 export const readHistoryTool = {
   name: "read_history",
   description:
-    "Query THIS session's message history (the full record — never compacted, audit-complete). " +
-    "Use when you need to recall what was said or done earlier: design decisions, tool-call timing, past rulings. " +
+    "Query message history — THIS session by default, any session on disk with `path`. " +
+    "Default (no path): THIS session's full record (never compacted, audit-complete) — recall what " +
+    "was said or done earlier: design decisions, tool-call timing, past rulings. " +
     "Filters combine with AND: role / keyword (case-insensitive substring of message text) / " +
     "tool (tool result messages by name AND the assistant messages that declared the call — pair with tool_call_id / ts for timing) / " +
     "since-until (epoch ms time window; only messages with ts can match) / limit (default 50, clamped to 200) / direction (which end of the matches to take). " +
     "Returns a JSON array in chronological order: [{ts, role, name?, tool_call_id?, content (≈500 chars, truncated marker), tool_calls (names only)}]. " +
     "Messages without ts return ts:null. Content is truncated — the full text is in the session file. " +
-    "For file-level changes this run (not messages), use recent_changes.",
+    "Cross-session (path, optional): a session file path deep-queries THAT session's history with the same filters " +
+    "(relative paths resolve against the project cwd); \"cwd:<dir>\" lists every session slot stored for that directory — " +
+    "one line per slot: slot number + full session file path + title + message count + updatedAt; copy a listed file path into path= to deep-query it. " +
+    "A session file over 200,000 lines is refused (\"session too large\") instead of being read whole.\n" +
+    SEARCH_FAMILY_GUIDE,
   parameters: {
     type: "object",
     properties: {
@@ -101,11 +234,15 @@ export const readHistoryTool = {
       until: { type: "integer", description: "Latest ts to match, epoch ms, INCLUSIVE. since > until yields an empty result." },
       limit: { type: "integer", description: "Maximum messages to return (default 50; larger values are clamped to 200)." },
       direction: { type: "string", enum: ["oldest", "newest"], description: "Take the limit window from the oldest or newest end of the matched set (default newest)." },
+      path: { type: "string", description: "Optional — query another session instead of this one: a session file path (as listed by a \"cwd:<dir>\" call) deep-queries that session; \"cwd:<dir>\" lists that directory's session slots (slot number + full file path + title + message count + updatedAt)." },
     },
   },
   readonly: true,
   execute(args, ctx) {
     const a = args ?? {}
+    if (a.path !== undefined && (typeof a.path !== "string" || a.path.trim().length === 0)) {
+      return `Error: invalid path "${a.path}" — must be a session file path or "cwd:<dir>"`
+    }
     const role = a.role
     if (role !== undefined && (typeof role !== "string" || !VALID_ROLES.has(role))) {
       return `Error: invalid role "${role}" — valid roles: user, assistant, tool`
@@ -131,30 +268,17 @@ export const readHistoryTool = {
     // keyword stays a literal substring).
     const kwRe = keyword ? new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null
     const tool = typeof a.tool === "string" && a.tool.length > 0 ? a.tool : null
+    const baseCwd = ctx.agent?.cwd ?? process.cwd()
+
+    const pathArg = typeof a.path === "string" && a.path.trim().length > 0 ? a.path.trim() : null
+    if (pathArg !== null) {
+      return pathArg.startsWith("cwd:")
+        ? discoverCwd(pathArg.slice("cwd:".length), baseCwd)
+        : querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, limit }, baseCwd)
+    }
 
     const history = Array.isArray(ctx.agent?._fullHistory) ? ctx.agent._fullHistory : []
-    const matched = history.filter((m) => {
-      if (!m || typeof m !== "object") return false
-      if (role !== undefined && m.role !== role) return false
-      if (kwRe) {
-        const text = messageText(m)
-        if (!kwRe.test(text)) return false
-      }
-      if (tool) {
-        const byName = m.role === "tool" && m.name === tool
-        const byDeclaration = m.role === "assistant" && Array.isArray(m.tool_calls) && m.tool_calls.some((tc) => toolCallName(tc) === tool)
-        if (!byName && !byDeclaration) return false
-      }
-      const ts = m.ts
-      if (since !== null || until !== null) {
-        if (typeof ts !== "number") return false // no ts → no time-window match
-        if (since !== null && ts < since) return false
-        if (until !== null && ts > until) return false
-      }
-      return true
-    })
-    // Direction picks the END of the matched set; output stays chronological either way.
-    const windowed = direction === "oldest" ? matched.slice(0, limit) : matched.slice(-limit)
-    return JSON.stringify(windowed.map(toEntry))
+    const matched = history.filter((m) => matches(m, { role, kwRe, tool, since, until }))
+    return formatMatches(matched, direction, limit)
   },
 }

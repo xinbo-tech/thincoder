@@ -44,7 +44,7 @@ test("T-L3: 无 eslint 引用残留（package.json + scripts/ + src/**，评审 
   assert.deepEqual(hits, [], "src/** + test/** 无 eslint 引用残留")
 })
 
-test("T-L4: check-syntax 失败路径——坏文件非零退出 + 错误文件出现在清单", async () => {
+slow("T-L4: check-syntax 失败路径——坏文件非零退出 + 错误文件出现在清单", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-lint-"))
   try {
     const good = join(dir, "good.mjs")

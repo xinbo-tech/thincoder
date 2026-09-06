@@ -140,7 +140,7 @@ test("/restore: 非 git 目录提示不可用（既有行为保持）", async ()
   }
 })
 
-test("/restore: 无快照提示（既有行为保持）", async () => {
+slow("/restore: 无快照提示（既有行为保持）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-restore-nocp-"))
   try {
     const git = initRepo(dir)

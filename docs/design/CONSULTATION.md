@@ -1,7 +1,7 @@
 # 会诊机制（Consultation）— 需求与设计（CLI）
 
 > 状态：**已实施**（2026-08-16，commit 596a69f；0.12.30 随版发布）。与 VS Code 插件同源设计（`thincoder-vscode/docs/design/CONSULTATION.md`），本文件记录 CLI 端的实现差异与接线。
-> 一句话：可配置多模型并行会诊，主 agent 逐个读回复、自行判断与验证，觉得够了就早停其余。
+> 一句话：可配置多模型并行会诊，主 agent 收到全量意见 digest 后自行判断与验证（**R17 修订——2026-09-06——权威规格：AGENT-LOOP.md §25 D-R17a——本节下文除标注外为考古机制记录**）。
 
 ---
 
@@ -9,12 +9,15 @@
 
 遇到疑难杂症（反复失败、卡住、无头绪）时，让多个**不同模型**并行分析同一问题。主 agent **逐个读取先返回的回复，自己判断、自己验证**（用已有的工具：bash / verify / read / 推理），一旦认定某份回复足够好，立即终止其余仍在执行的会诊。工具只负责**编排与收集**，判定权完整归主 agent。
 
-- **三个工具**：`consult_start`（非阻塞发起）→ `consult_check`（读下一个先到的回复）→ `consult_stop`（早停其余）。
+- **两个工具**（R17：`consult_check` 已退役——digest 自动注入是唯一消费通道）：`consult_start`（非阻塞发起）→ `consult_stop`（取消仍在跑的会诊——不产生 digest）。
 - **会诊子 agent 只读**，`main_history` 按需拉取主会话失败轨迹。
-- **生命周期绑定 turn**：turn 结束（runAgent finally）清理残留会诊。
+- **生命周期跨 turn**（R17：consultation sessions 是跨回合后台工作——回合尾不再清理——仅 Ctrl+C/会话中止时 abort——与 async 子代理同规则）。
 - **候选池**：`agent.consultModels`（`{ provider, model, effort? }`，≤5），缺省空 = 未启用。
 
-**范围边界（不做）**：工具内置自动验证、模型间交叉通信、会诊子 agent 改文件、批量收齐再返回。
+**范围边界（不做）**：工具内置自动验证、模型间交叉通信、会诊子 agent 改文件、部分 settle 提前注入（全 settle 才入 digest 流）。
+
+> **R17 修订段（2026-09-06——权威规格 AGENT-LOOP.md §25 D-R17a——CLI 已实现）**：§1 需求与 §2 设计的 **check 轮询消费模型整体退役**——全 settle（pending=0）后会话移入 `_pendingConsultResults`（独立族流——决策点 ④）→ 下一回合（用户回合或 digest auto-turn）run 首行注入 `[System reminder: consultation #id finished — N of M models replied (F failed)]` + 逐条全文（失败按 per-model 标注——部分/全失败同规则）→ 消化轮逐条判断处置（会诊 = 建议非门禁——动作域按消费回合档位——手动档 digest 整理禁写——无"consult 可写"例外）。`consult_check` 工具删除（描述零残留）；`consult_stop` 保留为**取消**语义（`{abandoned, cancelled:true}`——已答部分丢弃——不入 pending）；running 会诊会话入挂起活度判据（poolLive——空闲 settle 也触发消化轮——T-R17j）；每个 consultant 的活动块在 **child settle 即冻结**（⟦ev⟧done——per-child key——不再经 check 消费冻结）；wait_for "consult done" 条件保留（会话 settle 即移出 map）。本节以下内容（§2.3/2.3.1 接口契约与结算小节）保留为考古记录——实现以 AGENT-LOOP §25 与 consult.mjs 现状为准。
+
 
 ---
 

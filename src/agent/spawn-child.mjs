@@ -106,23 +106,43 @@ export function stripEventTokensForCapture(text) {
  * - onToolOutput 带**已加前缀**的 name 走父 onToolOutput（name 形如
  *   "coder#1/bash"，消费端剥前缀路由进对应区块；chunk 对象/裸串原样透传）。
  * 父回调缺省时不包装（headless 嵌入）。
+ * §27 R23 D-R23c1：包装产物在 onToken 上留 `_relayPrefix` 标记——同步收尾段据此
+ * 判定"ctx.callbacks 已是嵌套 wrapper"（本 spawn 处于更深一层——eng-coder 内
+ * explore）→ emitNestedChildEvent 补发射内层完成事件（T-R23c.2b 断言源）。
  */
 export function wrapChildCallbacks(relayPrefix, parentCallbacks = {}) {
+  const mark = (fn) => { fn._relayPrefix = relayPrefix; return fn }
   const wrapped = {
     onToken: parentCallbacks.onToken
-      ? (t) => parentCallbacks.onToken(relayPrefix + stripEventToken(String(t)))
+      ? mark((t) => parentCallbacks.onToken(relayPrefix + stripEventToken(String(t))))
       : null,
     onReasoning: parentCallbacks.onReasoning
-      ? (t) => parentCallbacks.onReasoning(relayPrefix + t)
+      ? mark((t) => parentCallbacks.onReasoning(relayPrefix + t))
       : null,
     onToolCall: parentCallbacks.onToolCall
-      ? (name, args) => parentCallbacks.onToolCall(relayPrefix + name, args)
+      ? mark((name, args) => parentCallbacks.onToolCall(relayPrefix + name, args))
       : null,
     onToolOutput: parentCallbacks.onToolOutput
-      ? (name, chunk) => parentCallbacks.onToolOutput(relayPrefix + name, chunk)
+      ? mark((name, chunk) => parentCallbacks.onToolOutput(relayPrefix + name, chunk))
       : null,
   }
   return wrapped
+}
+
+/**
+ * §27 R23 D-R23c1（生成侧补发射——评审 #1 🅰）：sync spawn 同步收尾时若父回调已是
+ * 嵌套 wrapper（onToken 带 `_relayPrefix` 标记——即本 spawn 的父本身是子代理，如
+ * eng-coder 内 explore 审计）→ 发内层 done/stopped 事件（带完整嵌套前缀——wrapper
+ * 链自动补外层前缀）→ 主 TUI routeSubToken 路由到子块定格。非嵌套（depth-0 直连主
+ * 回调——无标记）不发——完成冻结仍走既有 onToolResult/subKey 路径（零行为变化）。
+ * @returns {boolean} true = 已发射（嵌套上下文）
+ */
+export function emitNestedChildEvent(ctx, relayPrefix, kind) {
+  const onToken = ctx?.callbacks?.onToken
+  if (typeof onToken?._relayPrefix !== "string" || !onToken._relayPrefix) return false
+  if (kind !== "done" && kind !== "stopped") return false
+  onToken(`${relayPrefix}⟦ev⟧${kind}\x1e0\x1e0\x1e${kind}\x1e`)
+  return true
 }
 
 /**
@@ -173,6 +193,11 @@ export async function runWithContinue(runner, child, input, callbacks, runOpts, 
   const capture = callbacks?.onToken
     ? (t) => { output += stripEventTokensForCapture(String(t)); child._capturedOutput = output; callbacks.onToken(t) }
     : (t) => { output += stripEventTokensForCapture(String(t)); child._capturedOutput = output }
+  // §27 R23 D-R23c1（评审 🔴 修复——2026-09-07）：capture 是子代理 runAgent/dispatch ctx
+  // 实际收到的 onToken——嵌套 wrapper 标记（wrapChildCallbacks `_relayPrefix`）必须随
+  // capture 透传，否则 eng-coder 内 explore 同步收尾的 emitNestedChildEvent 判定恒 false
+  // （生成侧补发射结构性不可达——T-R23c.2b 真实路径回归）。
+  if (callbacks?.onToken?._relayPrefix) capture._relayPrefix = callbacks.onToken._relayPrefix
   for (let resume = false; ; resume = true) {
     try {
       return await runner(child, input, { ...callbacks, onToken: capture }, { ...runOpts, resume })

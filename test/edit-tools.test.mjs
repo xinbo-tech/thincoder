@@ -3,6 +3,7 @@
  * Source(s): tools.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -343,7 +344,7 @@ test("insert_after: fresh file (never written this session) works without a prio
 
 
 
-test("insert_after 精确判定（2026-08-31 工具顺手度）：edit 后未受影响区允许、受影响区拒绝", async () => {
+slow("insert_after 精确判定（2026-08-31 工具顺手度）：edit 后未受影响区允许、受影响区拒绝", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-insert-precise-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -387,7 +388,7 @@ test("insert_after 精确判定：write 全文重写后任何 after_line 拒绝�
 
 
 
-test("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换——任一失败全不写", async () => {
+slow("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换——任一失败全不写", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -426,7 +427,7 @@ test("edit 数组形态（2026-08-31 工具顺手度）：多文件原子替换�
 
 
 
-test("edit 数组形态：顶层 path + 无 path 条目 → 顶层为默认（2026-09-05 用户裁定）", async () => {
+slow("edit 数组形态：顶层 path + 无 path 条目 → 顶层为默认（2026-09-05 用户裁定）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-toppath-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -449,7 +450,7 @@ test("edit 数组形态：顶层 path + 无 path 条目 → 顶层为默认（20
   }
 })
 
-test("edit 数组形态：条目自带 path 优先于顶层 path（2026-09-05 用户裁定）", async () => {
+slow("edit 数组形态：条目自带 path 优先于顶层 path（2026-09-05 用户裁定）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-pathprio-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -504,7 +505,7 @@ test("edit 数组形态：顶层 old_string/new_string 与 edits 仍互斥——
 
 
 
-test("edit 数组：同文件多条串行累积（2026-09-01 缺陷修复——后者不再静默覆盖前者）", async () => {
+slow("edit 数组：同文件多条串行累积（2026-09-01 缺陷修复——后者不再静默覆盖前者）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-samefile-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -570,7 +571,7 @@ test("edit 数组：同文件多条串行累积（2026-09-01 缺陷修复——�
 
 
 
-test("edit 数组：合并快照 startLine 取组内最靠上行（#2——逆序条目护栏无缺口）", async () => {
+slow("edit 数组：合并快照 startLine 取组内最靠上行（#2——逆序条目护栏无缺口）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-reverse-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -601,7 +602,7 @@ test("edit 数组：合并快照 startLine 取组内最靠上行（#2——逆�
 
 
 
-test("edit 数组：.mjs 引入语法错误时结果含语法检查输出（#4——与单文件路径格式对齐）", async () => {
+slow("edit 数组：.mjs 引入语法错误时结果含语法检查输出（#4——与单文件路径格式对齐）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-syntax-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -658,7 +659,7 @@ test("edit：new_string 非字符串在写盘前友好报错（#5——不再先
 
 
 
-test("edit 数组：跨文件条目行为不变（回归——同文件修复不影响多文件原子语义）", async () => {
+slow("edit 数组：跨文件条目行为不变（回归——同文件修复不影响多文件原子语义）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-edit-batch-cross-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
@@ -686,7 +687,7 @@ test("edit 数组：跨文件条目行为不变（回归——同文件修复不
 
 
 
-test("写入工具返回带上下文窗口（2026-08-31 工具顺手度——模型拿到行号锚点的语义自检）", async () => {
+slow("写入工具返回带上下文窗口（2026-08-31 工具顺手度——模型拿到行号锚点的语义自检）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-write-ctx-"))
   const ctx = { cwd: dir }
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))

@@ -165,7 +165,8 @@ export function docSearchTool(memory) {
     name: "doc_search",
     description:
       "Search the project's documentation (README, design docs, guides, markdown files) for relevant information. Use this to find design decisions, coding conventions, architecture docs, or project rules. Prefer this over code_search when you need to understand the project's intended design rather than existing implementation. " +
-      "Returns matching doc chunks: path, heading, line range, relevance score, content excerpt.",
+      "Returns matching doc chunks: path, heading, line range, relevance score, content excerpt. " +
+      "For what was said in sessions (conversation/chat history — decisions, rulings), use read_history.",
     parameters: {
       type: "object",
       properties: {
@@ -200,7 +201,8 @@ const MEMORY_TOOL_DESCRIPTION =
   "- delete — SINGLE: {id, scope} deletes one entry by the id shown in put/search/list output. BATCH: {scope + type and/or keyword} deletes every matching entry in that scope — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); scope-wide wipes without filters are refused on every layer\n" +
   "- clear — {scope: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing scope or a project/team scope is refused (use delete batch filters on shared layers)\n" +
   "Deleting project/team (CLI) entries removes the local markdown file and its index row — team deletion is local only and a later team sync may resurrect the file while the remote still has it.\n" +
-  "Save bugs, conventions, and preferences here — they persist across sessions."
+  "Save bugs, conventions, and preferences here — they persist across sessions.\n" +
+  "Session message history (what was said in this or past sessions) is NOT in memory — search session messages with read_history."
 
 function validateTypeFilter(type) {
   if (type === undefined || type === null || type === "") return null

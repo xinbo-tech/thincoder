@@ -9,7 +9,7 @@
  */
 
 import { createHash } from "node:crypto"
-import { mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, existsSync, statSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, existsSync } from "node:fs"
 import { join, dirname, basename } from "node:path"
 import { execSync } from "node:child_process"
 import { configDir } from "./config.mjs"
@@ -400,33 +400,8 @@ export function deleteSlot(cwd, slot) {
   return true
 }
 
-/** Rename a slot: update the slot file's title + the manifest metadata (shared with VS Code).
- *  2026-09-01 会诊 glm 🟡：写回前按 mtime 门控重读——原实现读全量→改 title→整文件写回，
- *  窗口内并发方的最新保存会被旧数据覆盖（丢消息）；mtime 变了即放弃本次重命名。 */
-export function renameSlot(cwd, slot, title) {
-  const n = Number(slot)
-  if (!Number.isInteger(n) || n < 1) return false
-  const p = slotPath(cwd, n)
-  if (!existsSync(p)) return false
-  let data
-  try {
-    data = JSON.parse(readFileSync(p, "utf8"))
-  } catch {
-    return false
-  }
-  const t0 = statSync(p).mtimeMs
-  data.title = title
-  // 读与写之间文件被并发方改过 → 放弃（保留并发内容，重命名下次重试）
-  if (statSync(p).mtimeMs !== t0) return false
-  writeSessionFile(p, data)
-  const m = loadManifest(cwd)
-  if (m.slots[n]) {
-    m.slots[n] = slotDigest(data)
-    saveManifest(cwd, m)
-  }
-  return true
-}
-
+// renameSlot 已拆至 session-rename.mjs（2026-09-06 §12.2.5 契约改使本文件超 500 行硬限，
+// §12.3 授权拆分）；session.mjs re-export 保持调用点不变。
 
 // ========== resumeSlot（SESSION.md §10 D-2——端分离恢复决策）==========
 

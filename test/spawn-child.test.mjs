@@ -103,6 +103,62 @@ test("wrapChildCallbacks: 父回调缺省 → null（headless 不包装）", () 
   assert.equal(wrapped.onToolOutput, null)
 })
 
+test("§27 R23 T-R23c.2b 真实路径: runWithContinue capture 透传 _relayPrefix——子代理 runAgent ctx 收到的 onToken 保持嵌套标记（评审 🔴 修复回归）", async () => {
+  // 管线同构（subagent-async runChildPipeline → runWithContinue——callbacks.onToken 带
+  // wrapChildCallbacks 标记）→ runner 收到 { ...callbacks, onToken: capture }——该对象
+  // 即子代理 dispatch ctx.callbacks（agent.mjs runAgent → executeToolCalls 透传）——
+  // emitNestedChildEvent 的嵌套判定读的就是它（评审 🔴：此前 capture 无标记 → 生成侧
+  // 补发射真实路径恒 false——T-R23c.1/AC-3 不成立）。
+  const { runWithContinue } = await import("../src/agent/spawn-child.mjs")
+  const parentWrapped = wrapChildCallbacks("eng-coder#2/", { onToken: () => {} })
+  let ctxOnToken = null
+  const runner = async (child, input, cbs) => { ctxOnToken = cbs.onToken; return "ok" }
+  await runWithContinue(runner, {}, "task", { onToken: parentWrapped.onToken }, {}, {
+    askContinue: async () => false,
+    onDeclined: () => "x",
+  })
+  assert.equal(typeof ctxOnToken, "function")
+  assert.equal(ctxOnToken._relayPrefix, "eng-coder#2/", "capture 透传嵌套标记——真实链发射判据成立")
+  // 非嵌套（depth-0 直连主回调——无标记）→ capture 零标记（行为零变化）
+  let plainToken = null
+  const runner2 = async (child, input, cbs) => { plainToken = cbs.onToken; return "ok" }
+  await runWithContinue(runner2, {}, "task", { onToken: () => {} }, {}, {
+    askContinue: async () => false,
+    onDeclined: () => "x",
+  })
+  assert.equal(plainToken._relayPrefix, undefined, "非嵌套 capture 零标记")
+})
+
+// ─── §27 R23 生成侧补发射（D-R23c1——T-R23c.2b）───────────────────────────────
+
+test("§27 R23 T-R23c.2b: wrapChildCallbacks 产物带 _relayPrefix 标记（嵌套 wrapper 判定源）", () => {
+  const wrapped = wrapChildCallbacks("eng-coder#2/", { onToken: () => {} })
+  assert.equal(wrapped.onToken._relayPrefix, "eng-coder#2/", "onToken 标记嵌套前缀")
+  const bare = wrapChildCallbacks("coder#1/", {})
+  assert.equal(bare.onToken, null, "headless 无包装无标记")
+})
+
+test("§27 R23 T-R23c.2b: emitNestedChildEvent——嵌套 ctx 发内层 done/stopped（完整嵌套前缀）；非嵌套零发射", async () => {
+  const { emitNestedChildEvent } = await import("../src/agent/spawn-child.mjs")
+  // ① 嵌套（ctx.callbacks 已是嵌套 wrapper——eng-coder 内 explore）：done/stopped
+  // 带完整嵌套前缀（wrapper 链自动补外层前缀——主 TUI routeSubToken 路由子块定格）
+  const seen = []
+  const engWrapper = wrapChildCallbacks("eng-coder#2/", { onToken: (t) => seen.push(t) })
+  const ctx = { callbacks: { onToken: engWrapper.onToken } }
+  assert.equal(emitNestedChildEvent(ctx, "explore#1/", "done"), true, "嵌套 ctx → 发射")
+  assert.deepEqual(seen, ["eng-coder#2/explore#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e"], "done 带完整嵌套前缀")
+  assert.equal(emitNestedChildEvent(ctx, "explore#1/", "stopped"), true)
+  assert.deepEqual(seen[1], "eng-coder#2/explore#1/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e", "stopped 同通道")
+  // ② 非嵌套（depth-0 直连主回调——无标记）→ 零发射（false——冻结仍走 onToolResult/subKey）
+  const mainSeen = []
+  assert.equal(emitNestedChildEvent({ callbacks: { onToken: (t) => mainSeen.push(t) } }, "explore#1/", "done"), false, "非嵌套零发射")
+  assert.deepEqual(mainSeen, [], "无 token 落主通道（深度 0 行为零变化）")
+  // ③ 缺省/无 callbacks → false 不崩；kind 白名单外拒绝
+  assert.equal(emitNestedChildEvent({}, "explore#1/", "done"), false)
+  assert.equal(emitNestedChildEvent(ctx, "explore#1/", "bogus"), false)
+  assert.equal(seen.length, 2, "bogus kind 零发射")
+})
+
 // ─── runWithContinue ────────────────────────────────────────────────────────
 
 test("runWithContinue: ContinueError → askContinue true → resume:true 续跑成功", async () => {

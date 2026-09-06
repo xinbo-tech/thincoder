@@ -40,7 +40,9 @@
 | 飞刀 | `ESCALATE.md` | |
 | 评估 | `EVALUATION.md` | 权威源。`COMPETITIVE-CLI-2026.md`（2026-08-04 时点竞评快照）归档保留，不合并 |
 | 路线图 | `ROADMAP-0.9.0.md` | |
+| 测试基建 | `TESTING.md` | slow 门/测试分层纪律/库存治理（拆分轮/清理轮）——2026-09-06 立项（由 AGENT-LOOP.md §23 迁出——用户裁定文档归属） |
 | 参考项目分析 | `KIMI-CODE-PROMPT-ANALYSIS.md`、`TTSR-ANALYSIS.md` | 各自独立主题（不同参考项目），不合并 |
+| 多实例协作感知 | `MULTI-INSTANCE-COLLAB.md` | 同 cwd 多 thincoder 副本的 agent 层协作感知（L1 注入/L2 查询/L3 文件域）——2026-09-06 立项（独立处理——难度高；需求池 R10） |
 
 ## 规则
 
@@ -59,3 +61,9 @@
 - 2026-09-02：CLI Lint 板块（CLI-LINT-*）标记**被 TOOLS.md §10.2 取代**——ESLint 全套删除，改零依赖 check-syntax（node --check）
 - 2026-09-03：新增板块「诊断事件日志」（LOGGING.md，需求+设计+测试三层定稿 + 评审 0🔴 + 两端实现交付——T-L1..L10/镜像用例全绿）
 - 2026-09-05：新增板块专题「settings 工具」（SETTINGS-TOOL.md——工具系统板块独立保留——agent 配置调整 list/get/set——全量 config.json + 敏感遮罩——三项用户裁定）
+- 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 src/config.mjs PROVIDER_PRESETS 对齐）；文档质量审查其余观察项（工具集归约式列举、Qwen3.7 措辞）见会话记录，未入库
+- 2026-09-06：新增板块「测试基建」（TESTING.md——slow 门/分层纪律/库存治理——首个设计由 AGENT-LOOP.md §23 迁出——用户裁定归属）
+- 2026-09-06：designToken 设计语义强化（ENG-TOKEN-BINDING-TUNING.md §0 + REQUIREMENTS 头部——用户裁定：流程凭证非密码学安全边界/内存级随会话死亡/不得持久化双源——防 agent 自我发挥瞎改）
+- 2026-09-06：**R16 token 生命周期语义修订**（ENG-TOKEN-BINDING-TUNING.md §5/§5.1——用户裁定：token 跨模式存活（ON→OFF 不清/OFF→ON 不重评）+ TTL 过期三时机清理（恢复过滤/enter 清过期/spawn 拒删槽）——§0 铁律 2/3 supersede 注 + REQUIREMENTS 头部/FR5 同步——评审 round1 1🔴 处置全采纳——已批准待实现）
+- 2026-09-06：新增板块「多实例协作感知」（MULTI-INSTANCE-COLLAB.md——同 cwd 多副本 agent 层协作感知 L1/L2/L3——需求池 R10——独立立项）
+- 2026-09-06：SESSION.md 新增 §12「会话目录残留 GC + 标题写显性化」（双端——残留按 mtime 保留期 GC（session-gc.mjs）+ `thincoder session gc` 冷 cwd 手动清理 + renameSlot/setSlotTitle `{ok, reason}` 契约——板块归位「会话」，地图无新增）

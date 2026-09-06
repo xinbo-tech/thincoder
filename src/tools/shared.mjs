@@ -363,19 +363,20 @@ export function detectDanger(command) {
 }
 
 
-/** Convert glob pattern to regex */
-export function globToRegex(pattern) {
-  // Sentinel chars: \u0001/\u0002 never appear in real glob patterns (they
-  // come from model output or the filesystem) — safe as **/ and ** placeholders.
-  const DS = "\u0001", DP = "\u0002"
-  const escaped = pattern
-    .replace(/\*\*\//g, DS).replace(/\*\*/g, DP)
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, "[^/]*").replace(/\?/g, "[^/]")
-    .replace(new RegExp(DS, "g"), "(?:.+/)?")
-    .replace(new RegExp(DP, "g"), ".*")
-  return new RegExp(`^${escaped}$`)
-}
+/** Glob dialect (TOOLS.md §17) lives in glob-dialect.mjs — single authority for
+ *  brace expansion / exclusion / explicit syntax errors (extracted 2026-09-06 —
+ *  advisor #5: shared.mjs exceeded 500 lines). Re-exported so existing importers
+ *  (system.mjs tools, ls filter, tests) keep their import paths unchanged. */
+export {
+  globToRegex,
+  splitGlobPatterns,
+  compileGlobMatchers,
+  GLOB_EXTGLOB_ERROR,
+  GLOB_EMPTY_BRACE_ERROR,
+  GLOB_UNCLOSED_BRACE_ERROR,
+  GLOB_NESTED_BRACE_ERROR,
+} from "./glob-dialect.mjs"
+
 
 /** Decode a numeric HTML entity to its code point — invalid/out-of-range
  *  values (e.g. &#999999999999;) must not throw RangeError; keep the source

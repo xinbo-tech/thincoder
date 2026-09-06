@@ -3,6 +3,7 @@
  * 不依赖网络与真实 home 目录；端口一律 0 随机分配；saveProxy 流程在隔离 HOME 的子进程里跑。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { createServer } from "node:net"
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs"
@@ -126,7 +127,7 @@ async function fakeProxy() {
   }
 }
 
-test("websearch: proxy 参数显式传才走代理；不传（即使 config 配了 web:true）也直连——2026-08-31 裁定", async () => {
+slow("websearch: proxy 参数显式传才走代理；不传（即使 config 配了 web:true）也直连——2026-08-31 裁定", async () => {
   const proxy = await fakeProxy()
   try {
     // 显式参数：走代理，失败时优雅降级为 no results
@@ -218,7 +219,7 @@ test("cmd-config proxy: 未设 URI 时 toggle 提示先设 URI，不落盘", asy
 // cmd-config saveProxy 流程（隔离 HOME 子进程，不碰真实 ~/.thincoder）
 // ====================================================================
 
-test("cmd-config proxy: toggle model 后 saveConfig→loadConfig→injectProxy 全链路生效", () => {
+test("cmd-config proxy: toggle model 后 writeConfigAtomic（D-F5b 门控）→loadConfig→injectProxy 全链路生效", () => {
   const home = mkdtempSync(join(tmpdir(), "thincoder-test-"))
   mkdirSync(join(home, ".thincoder"), { recursive: true })
   writeFileSync(join(home, ".thincoder", "config.json"), JSON.stringify({
@@ -521,7 +522,14 @@ test("selectModel: persistRaw 落盘的 providers 不含运行时 proxyUri", asy
   const { selectModel } = createPickers({
     agent, state, render: () => {}, ansi: { bold: "" },
     C: { tool: "", text: "", dim: "", error: "" },
-    pushLine: () => {}, persistRaw: async (fn) => { const raw = {}; await fn(raw); saved.push(raw) },
+    pushLine: () => {},
+    // D-F5a 后 closures 在「磁盘 fresh raw」上做单操作——fake 须以磁盘形态（无运行时注入
+    // proxyUri）seed providers；断言目标不变：落盘内容永不含 proxyUri
+    persistRaw: async (fn) => {
+      const raw = { providers: [{ name: "a", baseURL: "https://a", model: "m1", apiKey: "k" }] }
+      await fn(raw)
+      saved.push(raw)
+    },
     askQuestion: async () => "", maskKey: () => "***",
   })
   await selectModel({ provider: "a", model: "m1" })

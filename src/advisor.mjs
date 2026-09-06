@@ -45,13 +45,13 @@ import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { extractAgentResponseTable } from "./advisor/history.mjs"
-import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock } from "./advisor/messages.mjs"
+import { buildAdvisorUserMessage, resolveScopeFiles, buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
 import { buildConvergenceBody } from "./advisor/convergence.mjs"
 import { escapeLiteralEscapes } from "./escape.mjs"
 // Re-export for run.mjs and tests (keeps their imports from "../advisor.mjs" stable)
 export { ADVISOR_MD_PATH, extractAgentResponseTable, extractConversationBackground } from "./advisor/history.mjs"
 export { buildAdvisorUserMessage } from "./advisor/messages.mjs"
-export { buildObjectDeclarationBlock } from "./advisor/messages.mjs"
+export { buildObjectDeclarationBlock, buildDesignApprovalBlock } from "./advisor/messages.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -263,8 +263,25 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // scopeFiles gives the fallback (agent gave no response table) a concrete
   // review surface.
   const scopeFiles = resolveScopeFiles(agent, paths)
+  const followUp = buildAdvisorFollowUp(agent, prior, scopeFiles, object)
+  // §24 D-24b (design round 2+ — async fix-round continuations must be able to
+  // re-approve): re-anchor the review scope (the convergence follow-up carries no
+  // document list) and inject the round's design token with the approval signal.
+  if (reviewType === "design") {
+    const docList = Array.isArray(documents)
+      ? documents.filter((d) => typeof d === "string" && d.trim())
+      : []
+    const scopeBlock = docList.length > 0
+      ? `\n\n## Documents to Review\nThe documents below are the review scope. Review ONLY these files — do not scan git diff or read any other files.\n${docList.map((d) => `- ${d} — Read this file in full`).join("\n")}`
+      : ""
+    const tokenBlock = designToken ? `\n\n${buildDesignApprovalBlock(designToken)}` : ""
+    return [
+      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
+      { role: "user", content: escapeLiteralEscapes(followUp + scopeBlock + tokenBlock) },
+    ]
+  }
   return [
     { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
-    { role: "user", content: escapeLiteralEscapes(buildAdvisorFollowUp(agent, prior, scopeFiles, object)) },
+    { role: "user", content: escapeLiteralEscapes(followUp) },
   ]
 }

@@ -6,6 +6,7 @@ import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ansi, C } from "./ansi.mjs"
 import { activeSlot, slotPath } from "../session.mjs"
+import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 
 const templateDir = join(fileURLToPath(import.meta.url), "..", "..", "prompts")
 import { ENG_OFF_REMINDER } from "../agent.mjs"
@@ -47,20 +48,29 @@ export async function handleEngCommand(ctx) {
   }
 
   agent.config.agent.engineering = !agent.config.agent.engineering
+  // §24 D-24b: per-review instances die with the mode (fresh convergence cycles
+  // on the next toggle).
+  agent._advisorRuns = new Map()
   if (!agent.config.agent.engineering) {
-    agent._engDesignToken = null // invalidate stale token
-    agent._engDesignTokens = new Map() // multi-design slots die with the mode (2026-09-01 fix #2)
+    // R16 (2026-09-06 F-R16a): OFF 不清 token——有效 token 跨模式存活（仅 TTL 过期
+    // 在三清理时机删：恢复过滤 / 开模式清过期 / spawn 门禁拒时删槽）。
     // OFF must reach the model too (2026-08-25): /auto pushes a reminder on toggle — the
     // mode flip is invisible to the agent otherwise. (ON needs none here: the injector
     // in agent.mjs already announces ON transitions on the next turn.)
     agent._pendingReminders = agent._pendingReminders ?? []
     agent._pendingReminders.push(ENG_OFF_REMINDER)
   }
+  // 开工程模式（真实 OFF→ON 转换）→ 清过期 token（有效保留——用户裁定"打开工程
+  // 模式时应该清理"——F-R16b ②——与 eng tool enter 同语义）。
+  const clearedExpired = agent.config.agent.engineering ? purgeExpiredDesignTokens(agent) : 0
   await persistEngineering(ctx, agent)
   pushLabel("❯ Eng", ansi.bold + C.tool)
   pushLine(`Engineering mode: ${agent.config.agent.engineering ? "ON" : "OFF"} (session)`, C.tool)
   if (agent.config.agent.engineering) {
     pushLine(`  → strictly following ${methodologyPath}`, C.dim)
+    if (clearedExpired > 0) {
+      pushLine(`  → cleared ${clearedExpired} expired design token${clearedExpired === 1 ? "" : "s"}; valid tokens from prior reviews stay usable`, C.dim)
+    }
   }
 }
 

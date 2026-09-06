@@ -4,9 +4,9 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, dirname, resolve } from "node:path"
+import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { execSync, spawn } from "node:child_process"
 import { slow } from "./slow.mjs"
@@ -96,156 +96,14 @@ test("runAgent: eng-coder design token is NOT consumed — second spawn with sam
 })
 
 
-// ─── T15/T16/T17：designId 多槽（ENGINEERING-MODE.md 2026-09-01，AC8） ───
+// mintToken/issueDesign/makeMutationTool 助手在下方按需保留（token 门禁族 T15/T16/
+// T16b/T17/T-R16a/T-R16d 已按域拆至 eng-token-gate.test.mjs——2026-09-06 advisor 修正轮）
 
 /** Real unsigned token with a fixed uuid+expiry (2026-09-06: flow credential —
  *  uuid:expiresAt——HMAC 防伪层已删——见 ENGINEERING-MODE.md 2026-09-06 段). */
 async function mintToken(uuid, expiresAt) {
   return `${uuid}:${expiresAt}`
 }
-
-
-test("T15: 双设计并行 spawn 各带 designId+token 互不覆盖（后 spawn 不拒先 spawn）", async () => {
-  const { createAgent, runAgent } = await import("../src/agent.mjs")
-  const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
-  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
-  const idA = "11111111-1111-4111-8111-aaaaaaaaaaaa"
-  const idB = "22222222-2222-4222-8222-bbbbbbbbbbbb"
-  const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现A", role: "eng-coder", designId: idA, designToken: tokenA, async: false }) } },
-    { content: "A 完成，报告见上。".repeat(30) },          // 子代理 A 交付（单 toolCall 简单路径）
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现B", role: "eng-coder", designId: idB, designToken: tokenB, async: false }) } },
-    { content: "B 完成，报告见上。".repeat(30) },          // 子代理 B 交付
-    { content: "双设计完成" },
-  ]
-  const { server, port, requests } = await mockLLM(script)
-  try {
-    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
-    const cwd = mkdtempSync(join(tmpdir(), "thincoder-t15-"))
-    const agent = createAgent({
-      provider, tools: [makeMutationTool()],
-      config: { agent: { engineering: true }, advisor: {} },
-      cwd,
-    })
-    // 两次评审通过、两槽并存（advisor.test.mjs 验证入槽本身；此处验证 spawn 消费端）
-    agent._engDesignTokens = new Map([[idA, tokenA], [idB, tokenB]])
-    agent._engDesignToken = tokenB // 后签发覆盖单值镜像（既有语义：布尔判定用）
-    const out = await runAgent(agent, "双设计并行", { onPermissionRequest: async () => true })
-    assert.equal(out, "双设计完成")
-    assert.equal(agent._engDesignTokens.size, 2, "两槽并存——后 spawn 未覆盖前 spawn 的槽")
-    // 两次子代理调用都成功（任一失败 dispatch 会把 Error 结果回喂模型，最终文本仍完成——
-    // 因此直接校验子代理输入确实收到了各自 token：A 的 spawn 请求在 B 之前发生）
-    const childTasks = requests.filter((r) => (r.messages ?? []).some((m) => m.role === "user" && /实现[AB]/.test(m.content)))
-    assert.ok(childTasks.length >= 2, `two child spawns reached the LLM, got ${childTasks.length}`)
-    // 交付报告回传 designId（修正轮复用）
-    const toolResults = agent.history.filter((m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("designId:"))
-    assert.ok(toolResults.some((m) => m.content.includes(`designId: ${idA}`)), "A 交付报告回传 designId A")
-    assert.ok(toolResults.some((m) => m.content.includes(`designId: ${idB}`)), "B 交付报告回传 designId B")
-    rmSync(cwd, { recursive: true, force: true })
-  } finally {
-    server.close()
-  }
-})
-
-
-
-test("T16: 多设计缺 designId → throw 要求指定（不误取任一槽）", async () => {
-  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
-  const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await mintToken("cccccccc-1111-4111-8111-00000000000a", exp)
-  const tokenB = await mintToken("cccccccc-2222-4222-8222-00000000000b", exp)
-  const parent = {
-    config: { agent: { engineering: true } },
-    _engDesignTokens: new Map([["id-x", tokenA], ["id-y", tokenB]]),
-    _engDesignToken: tokenB,
-    _touchedFiles: [],
-  }
-  await assert.rejects(
-    subagentTool.execute({ task: "x", role: "eng-coder", designToken: tokenA }, { agent: parent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
-    /Multiple approved designs[\s\S]*designId/,
-    "多槽缺 designId → throw 要求指定",
-  )
-  // 单元口径同断言
-  assert.throws(() => resolveDesignSlot(parent, undefined), /Multiple approved designs/)
-  assert.throws(() => resolveDesignSlot(parent, "no-such-id"), /designId not found/, "给定 designId 无匹配槽 → 明确报错")
-  assert.throws(
-    () => resolveDesignSlot({ _engDesignTokens: new Map([["k", "v"]]), _engDesignToken: null }, undefined),
-    /Design tokens were reset/,
-    "镜像被 eng(exit/enter) 清空而 Map 残留 → 不复活过期 token，要求重新评审",
-  )
-  // 正常路径：单槽省略 designId → 取唯一槽
-  const single = resolveDesignSlot({ _engDesignTokens: new Map([["only", tokenA]]), _engDesignToken: tokenA }, undefined)
-  assert.equal(single.token, tokenA)
-  // 兼容镜像：无 Map（旧会话）→ 单值镜像兜底
-  const legacy = resolveDesignSlot({ _engDesignToken: tokenA }, undefined)
-  assert.equal(legacy.token, tokenA)
-})
-
-test("T16b: 错槽 token 拒绝——designId 槽持 tokenA、spawn 传 tokenB → spawn 拒绝（AC-TO3——2026-09-06 无签名格式）", async () => {
-  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-  const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
-  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
-  const parent = {
-    config: { agent: { engineering: true } },
-    _engDesignTokens: new Map([["id-x", tokenA]]),
-    _engDesignToken: tokenA,
-    _touchedFiles: [],
-  }
-  await assert.rejects(
-    subagentTool.execute({ task: "x", role: "eng-coder", designId: "id-x", designToken: tokenB }, { agent: parent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
-    /Invalid or missing design token/,
-    "错槽 token（槽值 ≠ 传入）→ spawn 拒绝——slot 精确匹配不变（无签名层不改变门禁）",
-  )
-})
-
-
-
-
-test("T17: 复审失败不波及其他槽——旧 token 存活，其他设计 spawn 仍通过（方案 ②）", async () => {
-  const { createAgent, runAgent } = await import("../src/agent.mjs")
-  const exp = Date.now() + 24 * 3600 * 1000
-  const tokenA = await mintToken("dddddddd-1111-4111-8111-00000000000a", exp)
-  const idA = "33333333-3333-4333-8333-aaaaaaaaaaaa"
-  const idB = "44444444-4444-4444-8444-bbbbbbbbbbbb"
-  const script = [
-    // turn 1：模型先复审设计 B（无 token 回显——评审未通过，完整评审文本）
-    { toolCall: { name: "advisor", arguments: JSON.stringify({ type: "design", documents: ["docs/design/B.md"] }) } },
-    { content: "| # | Category | Severity | Issue | Suggestion |\n|---|---------|----------|------|------------|\n| 1 | correctness | 🔴 | spec gap | fix the spec |\n\n已复审，发现问题。" },
-    // turn 2：随后 spawn 设计 A 的 eng-coder（tokenA 必须仍有效）
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "实现A", role: "eng-coder", designId: idA, designToken: tokenA, async: false }) } },
-    { content: "A 完成，报告见上。".repeat(30) },
-    { content: "完成——B 复审失败未影响 A" },
-  ]
-  const { server, port } = await mockLLM(script)
-  try {
-    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
-    const cwd = mkdtempSync(join(tmpdir(), "thincoder-t17-"))
-    try { execSync("git init -q", { cwd, stdio: "ignore" }) } catch {}
-    mkdirSync(join(cwd, "docs", "design"), { recursive: true })
-    writeFileSync(join(cwd, "docs", "design", "B.md"), "# Design B\n")
-    const agent = createAgent({
-      provider, tools: [makeMutationTool()],
-      config: { agent: { engineering: true }, advisor: { provider: "mock-advisor-provider" } },
-      cwd,
-    })
-    agent.activeProvider = { name: "mock-advisor-provider" }
-    agent._engDesignTokens = new Map([[idA, tokenA], [idB, await mintToken("dddddddd-2222-4222-8222-00000000000b", exp)]])
-    agent._engDesignToken = tokenA
-    const out = await runAgent(agent, "复审B然后实现A", { onPermissionRequest: async () => true })
-    assert.equal(out, "完成——B 复审失败未影响 A")
-    // 断言 1：A 的槽原样保留；槽集合仍为 2（失败的复审既没清 A 也没动 B）
-    assert.equal(agent._engDesignTokens.get(idA), tokenA, "其他设计的槽不受波及——tokenA 原样")
-    assert.equal(agent._engDesignTokens.size, 2, "复审失败不清任何既有槽（方案 ②：旧 token 存活至 TTL）")
-    // 断言 2：A 的 eng-coder spawn 真的到达了子代理 LLM（未被 token 门禁拒绝）
-    const childUserMsgs = agent.history.filter((m) => m.role === "user" && typeof m.content === "string" && m.content.includes("实现A"))
-    assert.ok(childUserMsgs.length >= 1, "A 的子代理 spawn 已执行（token 未被复审失败波及）")
-    rmSync(cwd, { recursive: true, force: true })
-  } finally {
-    server.close()
-  }
-})
 
 
 
@@ -753,11 +611,13 @@ test("T-E14b: 授权标志同批权限路径同样只豁免询问——批/逐�
 
 
 test("T-E16: schema async 描述 = 角色级默认措辞 + spawn-child 门文案 + setup 受限装配 + AGENT-LOOP 指向（AC-E7 文档断言）", () => {
-  // ① subagent schema async 描述：角色级默认（eng-coder → true；其余 → false）
+  // ① subagent schema async 描述：深度门控默认（2026-09-06 §18 D-E1a/R12——depth-0
+  //    全角色缺省 async，depth>0 强制 sync；角色级默认措辞同批 supersede）
   const subagentSrc = readFileSync(join(SRC_DIR, "agent-tools", "subagent.mjs"), "utf8")
-  assert.ok(subagentSrc.includes("Default is role-level: role='eng-coder' → true"), "schema async 描述 = 角色级默认（eng-coder → true）")
-  assert.ok(subagentSrc.includes("all other roles → false (blocking)"), "schema async 描述 = 其余角色默认阻塞")
-  assert.ok(subagentSrc.includes("pass async:false to force the blocking spawn"), "显式覆盖提示在")
+  assert.ok(subagentSrc.includes("Default: depth-0 → true (async"), "schema async 描述 = depth-0 缺省 async（D-E1a）")
+  assert.ok(subagentSrc.includes("depth>0 → sync (forced)"), "schema async 描述 = depth>0 强制 sync")
+  assert.ok(!subagentSrc.includes("Default is role-level"), "角色级默认措辞零残留（R12 supersede）")
+  assert.ok(subagentSrc.includes("async:false to force the blocking spawn"), "显式覆盖提示在")
   // ② spawn-child 机械门 + 上限常量（round5 #2 文案）
   const spawnChildSrc = readFileSync(join(SRC_DIR, "agent", "spawn-child.mjs"), "utf8")
   assert.ok(spawnChildSrc.includes("ENG_AUDIT_SPAWN_LIMIT = 6"), "审计 spawn 上限常量 = 6（第 7 次拒绝）")
@@ -890,9 +750,9 @@ test("§18.7 T-TS5 变体: 「涉及文件」表头的任务书摘要归属受�
 })
 
 
-// ─── §18.13 审计范围引导：机械预算句（AGENT-LOOP.md §18.13 D-A1.2——T-A1.2/4）───
+// ─── §18.13 审计范围引导：机械预算句（AGENT-LOOP.md §18.13 D-A1.2——T-A1.2）───
 
-/** §18.13 审计预算句断言（正路径与模拟回归共用——防断言逻辑分叉——fail-when-unchanged）。 */
+/** §18.13 审计预算句断言（fail-when-unchanged）。 */
 function assertAuditBudget(audit, tag) {
   assert.ok(audit.includes("[Audit budget — mechanical]"), `${tag}: 预算句头（Audit budget — mechanical）在`)
   assert.ok(audit.includes("read ONLY the touched files listed above"), `${tag}: 只读 touched files 句在`)
@@ -930,39 +790,6 @@ test("§18.13 T-A1.2: 审计任务书机械段含预算句（A1+A2 之后、A3 �
     assert.ok(a1 !== -1 && a2 !== -1 && budget !== -1 && a3 !== -1, "T-A1.2: 预算句与 A1/A2/A3 同框（审计任务书注入）")
     assert.ok(budget > a1 && budget > a2, "T-A1.2: 预算句在 A1 指令模板 + A2 摘要块之后（定序——评审 #7）")
     assert.ok(budget < a3, "T-A1.2: 预算句在 A3 报告模板之前（定序——评审 #7）")
-  } finally {
-    server.close()
-    rmSync(cwd, { recursive: true, force: true })
-  }
-})
-
-
-
-test("§18.13 T-A1.4: 预算句缺失模拟回归（删除预算句 → 断言失败——防回潮）", async () => {
-  const { createAgent } = await import("../src/agent.mjs")
-  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-  const cwd = mkdtempSync(join(tmpdir(), "cli-audit-budget2-"))
-  const { server, port, requests } = await captureServer("audit report " + "x".repeat(220))
-  try {
-    const parent = createAgent({
-      provider: { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" },
-      tools: [noopRead],
-      config: { agent: { engineering: true } },
-      cwd,
-    })
-    parent._role = "eng-coder"
-    parent._engTaskInput = "Docs involved: docs/design/AGENT-LOOP.md / File list: a.mjs / Acceptance: AC1"
-    parent._touchedFiles = ["a.mjs"]
-    const r = String(await subagentTool.execute({ task: "偏差审计", role: "explore" }, { agent: parent, cwd, callbacks: {}, depth: 1 }))
-    assert.ok(r.includes("audit report"), "T-A1.4: 审计 explore 正常完成")
-    const audit = JSON.stringify(requests[0].messages)
-    assertAuditBudget(audit, "T-A1.4") // 正路径先证：预算句在
-    const regressed = audit.replace("[Audit budget — mechanical]", "[Audit budget — soft guidance]")
-    assert.throws(
-      () => assertAuditBudget(regressed, "regressed-budget"),
-      /预算句头（Audit budget — mechanical）/,
-      "删除预算句头后断言必须失败（fail-when-unchanged——防回潮）"
-    )
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })

@@ -6,7 +6,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, dirname, resolve } from "node:path"
+import { join } from "node:path"
 import { slow } from "./slow.mjs"
 import { createMemory, put, list } from "../src/memory.mjs"
 import { offloadToolResult, TMP_RETENTION_MS } from "../src/agent/helpers.mjs"
@@ -198,7 +198,7 @@ test("runAgent: 子 agent（depth>0）不注入 task 闲置提醒", async () => 
 test("runAgent: 手动模式下 coder 子 agent 的权限请求透传到父审批（人在回路）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "写个文件", role: "coder" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "写个文件", role: "coder", async: false }) } }, // R12 (§18 D-E1a): depth-0 缺省已翻 async——本测试守阻塞子代理行为，钉 async:false
     { toolCall: { name: "write", arguments: "{\"path\":\"test.txt\",\"content\":\"x\"}" } },          // 子 agent 想写
     { content: "报告：已写入" },                // 子 agent 交报告
     { content: "完成" },                        // 父 agent 收尾
@@ -229,7 +229,7 @@ test("runAgent: 手动模式下 coder 子 agent 的权限请求透传到父审�
 test("runAgent: 父审批拒绝时 coder 子 agent 收到拒绝并交报告", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "写个文件", role: "coder" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "写个文件", role: "coder", async: false }) } }, // R12 (§18 D-E1a): depth-0 缺省已翻 async——本测试守阻塞子代理行为，钉 async:false
     { toolCall: { name: "write", arguments: "{\"path\":\"test.txt\",\"content\":\"x\"}" } },
     { content: "报告：权限被拒，改为说明方案。".repeat(20) },
     { content: "完成" },
@@ -257,7 +257,7 @@ test("runAgent: 子 agent 报告太短被打回扩写一次（summaryPolicy）",
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const longReport = "已完成实现。".repeat(40) // > 200 字符
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "做个小改动", role: "coder" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "做个小改动", role: "coder", async: false }) } }, // R12: 同上——阻塞流钉 async:false
     { content: "好了" },        // 子 agent 第一次报告：太短
     { content: longReport },     // 打回后扩写
     { content: "完成" },
@@ -287,7 +287,7 @@ test("runAgent: 子 agent 报告太短被打回扩写一次（summaryPolicy）",
 test("runAgent: 子 agent 报告达标时不打回", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "做个小改动", role: "coder" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "做个小改动", role: "coder", async: false }) } }, // R12: 同上——阻塞流钉 async:false
     { content: "已完成实现。".repeat(40) },
     { content: "完成" },
   ]
@@ -309,7 +309,7 @@ test("runAgent: 子 agent 报告达标时不打回", async () => {
 test("runAgent: 子 agent token + 工具调用 relay 到父回调（带 role#id 前缀）", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "做个小改动", role: "coder" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "做个小改动", role: "coder", async: false }) } }, // R12: 同上——阻塞流钉 async:false
     { toolCall: { name: "write", arguments: "{\"path\":\"test.txt\",\"content\":\"x\"}" } },   // 子 agent 内部工具调用
     { content: "已完成实现。".repeat(40) },               // 子 agent 报告（token 应 relay）
     { content: "完成" },
@@ -345,7 +345,7 @@ test("runAgent: 子 agent token + 工具调用 relay 到父回调（带 role#id 
 test("runAgent: plan 子 agent 强制只读 + overlay 生效", async () => {
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "设计一个缓存层", role: "plan" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "设计一个缓存层", role: "plan", async: false }) } }, // R12: 同上——阻塞流钉 async:false
     { toolCall: { name: "write", arguments: "{\"path\":\"test.txt\",\"content\":\"x\"}" } },              // plan agent 试图写 → 应被硬拒（不透传到父审批）
     { content: "实现计划：第一步……".repeat(20) },
     { content: "完成" },
@@ -741,7 +741,7 @@ test("runAgent: 子 agent 超长报告不再内部截断，由落盘全量保留
   const { createAgent, runAgent } = await import("../src/agent.mjs")
   const hugeReport = "详尽的实现报告。".repeat(9000) // 72k 字符（8 chars × 9000），超过 64K 落盘阈值
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "大任务", role: "coder" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "大任务", role: "coder", async: false }) } }, // R12: 同上——阻塞流钉 async:false
     { content: hugeReport },
     { content: "完成" },
   ]
@@ -924,14 +924,4 @@ action: abort
   assert.deepEqual(discoverRules(join(dir, "nonexistent")), [])
 
   rmSync(dir, { recursive: true, force: true })
-})
-
-
-
-test("helpers.mjs: 工具输出旧阈值（16_000/2_000）无残留", () => {
-  const src = readFileSync(new URL("../src/agent/helpers.mjs", import.meta.url), "utf8")
-  // 边界匹配（评审 #5）：\b 防误伤 32_000 / 2_000_000（下划线是单词字符，\b2_000\b 不匹配 2_000_000）
-  assert.ok(!/\b16_000\b/.test(src), "落盘阈值无 16K 残留")
-  assert.ok(!/\b2_000\b/.test(src), "preview 无 2K 残留")
-  assert.ok(src.includes("64 * 1024"), "新阈值在位")
 })

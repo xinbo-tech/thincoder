@@ -97,16 +97,16 @@ async function applyThink(e, agent, syncProviderField, spec, isEffortOnly, isCus
       // 开 auto = 要思考：清显式 off 标记（thinking:null，NF1 约定；交付评审 #1）——残留 null
       // 会让 auto 每轮写入的 reasoning_effort 与 enable_thinking:false 矛盾同发（F2 违约）。
       // 仅清 null：thinking-type 模型的 {type:"disabled"} 不在评审 #1 范围，保持既有语义。
-      if (cur.thinking === null) { delete cur.thinking; await syncProviderField("thinking", undefined) }
+      if (cur.thinking === null) { delete cur.thinking; await syncProviderField(agent.activeProvider, "thinking", undefined) }
       delete cur.reasoningEffort
-      await syncProviderField("reasoningEffort", undefined)
+      await syncProviderField(agent.activeProvider, "reasoningEffort", undefined)
     }
   } else if (e.action === "effort") {
     // 选档位 = 要思考：清显式 off 标记（thinking:null，NF1 约定；交付评审 #1）——残留 null 会让
     // enable_thinking:false 与 reasoning_effort 矛盾同发（F2 违约）。仅清 null（同上注释）。
-    if (cur.thinking === null) { delete cur.thinking; await syncProviderField("thinking", undefined) }
+    if (cur.thinking === null) { delete cur.thinking; await syncProviderField(agent.activeProvider, "thinking", undefined) }
     cur.reasoningEffort = e.level
-    await syncProviderField("reasoningEffort", e.level)
+    await syncProviderField(agent.activeProvider, "reasoningEffort", e.level)
   } else {
     const enable = e.action === "on"
     if (isEffortOnly) {
@@ -116,9 +116,9 @@ async function applyThink(e, agent, syncProviderField, spec, isEffortOnly, isCus
       // "on" 默认 effort 取 spec 枚举首值（交付评审 #2）：硬编码 "high" 对 qwen3.8-max
       // （enum xhigh/medium/low）无效，会被 core.mjs 枚举校验 throw（400 前置）
       else { delete cur.thinking; if (!cur.reasoningEffort) cur.reasoningEffort = spec.reasoningEffortEnum?.[0] ?? "high" }
-      await syncProviderField("thinking", cur.thinking)
-      if (!enable) await syncProviderField("reasoningEffort", undefined)
-      else await syncProviderField("reasoningEffort", cur.reasoningEffort)
+      await syncProviderField(agent.activeProvider, "thinking", cur.thinking)
+      if (!enable) await syncProviderField(agent.activeProvider, "reasoningEffort", undefined)
+      else await syncProviderField(agent.activeProvider, "reasoningEffort", cur.reasoningEffort)
     } else {
       if (enable) {
         cur.thinking = { type: thinkOnValue }
@@ -127,11 +127,11 @@ async function applyThink(e, agent, syncProviderField, spec, isEffortOnly, isCus
         cur.thinking = isCustomThink ? undefined : { type: "disabled" }
         delete cur.reasoningEffort
       }
-      await syncProviderField("thinking", cur.thinking)
+      await syncProviderField(agent.activeProvider, "thinking", cur.thinking)
       if (enable) {
-        await syncProviderField("reasoningEffort", cur.reasoningEffort)
+        await syncProviderField(agent.activeProvider, "reasoningEffort", cur.reasoningEffort)
       } else {
-        await syncProviderField("reasoningEffort", undefined)
+        await syncProviderField(agent.activeProvider, "reasoningEffort", undefined)
       }
     }
   }

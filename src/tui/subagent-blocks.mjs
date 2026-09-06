@@ -3,17 +3,25 @@
  * state.subTasks[key] = { key, role, model, async（§19.5 D-M7b——⟦ev⟧async 标记——
  * undefined = sync）, started, done, doneAt, blocks:
  * [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError,
- * dropped, blockEpoch, awaitingDigest（§17）, _freezeAt（冻结锚点）, stopped（§19.5）}。
- * 职责：前缀路由（parseRelayPath 嵌套段→子标）、事件 token 解析、kind 合并、
- * N2 环形上限、N1 渲染节流、完成冻结（freezeSubTaskLines 家族——锚点 splice）。
+ * dropped, blockEpoch, awaitingDigest（§17）, _freezeAt（冻结锚点）, stopped（§19.5）,
+ * children: []（R23——嵌套子代理子块载体——见 subagent-children.mjs）}。
+ * 职责：前缀路由（parseRelayPath——**R23：嵌套段不再子标渲染——建子块载体归属**）、
+ * 事件 token 解析（**R23：内层 ⟦ev⟧done/stopped 生成侧补发射（D-R23c1）路由到子块
+ * 定格**）、kind 合并、N2 树级环形上限（R23 NFR——子块计入外层配额）、N1 渲染节流、
+ * 完成冻结（freezeSubTaskLines 家族——锚点 splice）。
  */
 
 import { C } from "./ansi.mjs"
 import { describeToolArgs } from "./tool-args.mjs"
+import {
+  SUB_BLOCK_LINE_LIMIT, appendSubBlock, appendSubChild, ensureSubChild, descendSubChild,
+  closeSubChild,
+} from "./subagent-children.mjs"
+export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
 // 2026-09-05 module-split：finish/freeze 族 + §19.6 面板镜像迁 subagent-freeze.mjs——
 // routeSub*/compression panel 内部用本地 import；re-export 保外部 import 面（index.mjs 等）
-import { freezeSubTaskLines, syncPanelSnapshot, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, finishSubTaskByModel, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors } from "./subagent-freeze.mjs"
-export { syncPanelSnapshot, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, finishSubTaskByModel, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
+import { freezeSubTaskLines, syncPanelSnapshot, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors } from "./subagent-freeze.mjs"
+export { syncPanelSnapshot, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
 
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */
 export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
@@ -30,8 +38,9 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
-/** §19.5 D-M8 嵌套 relay 前缀通用解析（循环解析任意深度）：
- *  `eng-coder#2/explore#1/read` → { head（块路由）, inner[], label（子标）, rest }。
+/** §19.5 D-M8 嵌套 relay 前缀通用解析（循环解析任意深度——R23 保持为路由源）：
+ *  `eng-coder#2/explore#1/read` → { head（块路由）, inner[], label（inner 链——R23：
+ *  子块折叠键/外层 currentTool 全路径用）, rest }。
  *  单层 = inner[]/label ""——与既有单段匹配语义零改；无前缀 → null。 */
 export function parseRelayPath(text) {
   const segments = []
@@ -51,17 +60,6 @@ export function parseRelayPath(text) {
   }
 }
 
-/** §19.5 D-M8 子标行首变换（文本/think）：parseRelayPath 已消费完整前缀段——此处只
- *  判行首（块首或上一内容以 \n 收尾——chunk 边界碎片在前缀段消费后自然无声剥除，
- *  防 explore#1/ 字样泄漏）；行首 → 前置字面子标 `explore#1 · `（渲染端套 dim）。 */
-export function sublabelLine(sub, text, label) {
-  if (!label) return String(text)
-  const last = sub.blocks.at(-1)
-  const atLineHead = !last || String(last.text).endsWith("\n")
-  return atLineHead ? `${label} · ${text}` : String(text)
-}
-/** N2: per-child display-line ring buffer cap — oldest lines drop with a marker. */
-export const SUB_BLOCK_LINE_LIMIT = 500
 /** N1: render-layer throttle for child tool-output appends (generation relays verbatim). */
 export const SUB_RELAY_THROTTLE_MS = 250
 /** Roles a subagent tool child can take (finishSubTask matches the block's role). */
@@ -101,6 +99,7 @@ export function ensureSubTaskKey(state, key, role) {
       blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0, approval: null,
       lastError: null, dropped: 0,
       stopped: false, // §19.5: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
+      children: [], // R23: 嵌套子代理子块载体（subagent-children.mjs——D-R23a）
     }
     // §19.5 D-M7b ①（处置 #4 兜底——2026-09-03）：缺失 key 的 ⟦ev⟧async 事件已缓冲
     // pending 标志（routeSubToken——async 先于块创建到达：排队条目补位启动的时序窗口）
@@ -115,53 +114,9 @@ export function ensureSubTask(state, subMatch) {
   return ensureSubTaskKey(state, `${subMatch[1]}#${subMatch[2]}`, subMatch[1])
 }
 
-const countBlockLines = (text) => text.split("\n").length
-
-/** Append（kind 合并追加）+ N2 环形上限；fresh=true 强制新块（每工具调用）。 */
-export function appendSubBlock(sub, kind, text, { fresh = false } = {}) {
-  if (!text) return
-  const last = sub.blocks.at(-1)
-  if (!fresh && last && last.kind === kind) {
-    // 合并只算净增行数（逐 chunk 全量 split 会把单行碎片虚计成 2 段——P1, 2026-08-30）
-    const before = countBlockLines(last.text)
-    last.text += text
-    sub._lineCount = (sub._lineCount ?? 0) + countBlockLines(last.text) - before
-  } else {
-    sub.blocks.push({ kind, text })
-    sub._lineCount = (sub._lineCount ?? 0) + countBlockLines(text)
-  }
-  sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
-  trimSubBlocks(sub)
-}
-
-/** N2：超限丢最旧行 + 留一条累计省略标记行（done 块同受约束）。 */
-export function trimSubBlocks(sub) {
-  // 增量行记账（P1）：appendSubBlock 维护 _lineCount——旧实现每 chunk 全量 reduce
-  sub._lineCount = (sub._lineCount ?? 0)
-  let over = sub._lineCount - SUB_BLOCK_LINE_LIMIT
-  if (over <= 0) return
-  let droppedNow = 0
-  while (over > 0 && sub.blocks.length > 0) {
-    const first = sub.blocks[0]
-    const lines = countBlockLines(first.text)
-    const take = Math.min(lines, over)
-    if (take >= lines) {
-      sub.blocks.shift()
-      droppedNow += lines
-    } else {
-      first.text = first.text.split("\n").slice(take).join("\n")
-      droppedNow += take
-    }
-    over -= take
-  }
-  sub._lineCount -= droppedNow
-  sub.dropped += droppedNow
-  const marker = `…（已省略 ${sub.dropped} 行）`
-  const first = sub.blocks[0]
-  if (first && first.kind === "meta") first.text = marker
-  else { sub.blocks.unshift({ kind: "meta", text: marker }); sub._lineCount += 1 }
-}
-
+/** Append（kind 合并追加）+ N2 树级环形上限；fresh=true 强制新块（每工具调用）。
+ *  R23（2026-09-07）：appendSubBlock/trimSubBlocks 实现迁 subagent-children.mjs（树级
+ *  配额——子块计入外层 500 行环）——本文件 import + re-export 保 import 面（压缩面板等）。 */
 /** 事件 token → 区块头部（turn/approval 更新 turn n/max + 等待态）。事件永不进
  *  blocks/主流——仅头部。@returns {boolean} 良构事件（已消费） */
 export function applySubEvent(sub, payload) {
@@ -181,8 +136,10 @@ export function applySubEvent(sub, payload) {
 
 // ─── Prefix routing（agent-turn callbacks 委派）：true = 带前缀已消费；false = 主路径
 
-/** onToken 分支：子文本 / [model] 元数据 / ⟦ev⟧ 事件。§19.5 D-M8 嵌套：head 段路由块，
- *  内层内容走子标行首变换，内层 ⟦ev⟧/[model] 剥除不路由（防外层块头污染——round1 #4）。 */
+/** onToken 分支：子文本 / [model] 元数据 / ⟦ev⟧ 事件。§27 R23（supersede §19.5 D-M8
+ *  子标方案）：head 段路由块——inner 段**建子块载体归属内容**（D-R23a——subagent-children.mjs）；
+ *  内层 [model] 记子块模型；内层 ⟦ev⟧ 除 done/stopped（生成侧补发射——D-R23c1——路由
+ *  子块定格）外剥除不路由（防 explore 进度污染外层块头——round1 #4）。 */
 export function routeSubToken(state, t, scheduleRender) {
   const path = parseRelayPath(t)
   if (!path) return false
@@ -238,7 +195,20 @@ export function routeSubToken(state, t, scheduleRender) {
   // queued（§20 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
   // 更新 sub.queued——块不可展开（无活动流）；启动后 async 事件清标转 running）。
   if (payload.startsWith("⟦ev⟧")) {
-    if (nested) return true // 内层事件剥除不路由（防 explore 进度污染外层块头）
+    // R23（supersede D-M8"内层事件剥除不路由"——评审 #1 🅰）：done/stopped 完成信号 =
+    // 生成侧补发射（D-R23c1——sync 同步收尾段带完整嵌套前缀）→ 路由到子块定格
+    // （D-R23c2——closeSubChild——不冻结外层、不落 preview）；缺失子块（迟到事件/
+    // 从未开块）→ 不建幻影（no-op）。其余内层事件（turn/approval/queued/settled/
+    // async/cancelled）剥除不路由（防 explore 进度污染外层块头——round1 #4）。
+    if (nested) {
+      const innerEv = payload.match(SUB_EVENT_RE)
+      if (innerEv && (innerEv[1] === "done" || innerEv[1] === "stopped")) {
+        const leaf = descendSubChild(sub, path.inner, { create: false })
+        if (leaf) closeSubChild(sub, leaf, innerEv[1] === "stopped", path.label)
+        scheduleRender()
+      }
+      return true
+    }
     const ev = payload.match(SUB_EVENT_RE)
     if (ev?.[1] === "queued") {
       // 防御：已启动块（async 标记已置）收到迟到的 queued 刷新 → 丢弃（事件序保证
@@ -304,35 +274,46 @@ export function routeSubToken(state, t, scheduleRender) {
   // parent's) — shown in the block header, NOT appended to its content stream.
   // Only treat as metadata when the model isn't set yet (it's always the FIRST token);
   // a child content token that happens to start with "[model]" must not be swallowed.
+  // R23：内层 [model] 记到子块（D-R23a 子块状态字段——不再剥除丢弃）；单层规则不变。
   if (payload.startsWith("[model]") && (nested || sub.model === undefined)) {
-    if (!nested) {
+    if (nested) {
+      const leaf = descendSubChild(sub, path.inner)
+      if (leaf.model === undefined) {
+        leaf.model = payload.slice(7)
+        scheduleRender()
+      }
+    } else if (sub.model === undefined) {
       sub.model = payload.slice(7)
       scheduleRender()
-    } // 内层 [model] 剥除不路由（防嵌套块头污染）——单层 model 已设时 [model] 开头视为内容
+    }
     return true
   }
-  // Child LLM text → text block (N2 cap inside appendSubBlock).
-  appendSubBlock(sub, "text", nested ? sublabelLine(sub, payload, path.label) : payload)
+  // Child LLM text → text block (N2 cap inside appendSubBlock). R23：内层文本归属子块
+  // （D-R23b——子块行——不再混外层 blocks/子标）。
+  if (nested) appendSubChild(sub, descendSubChild(sub, path.inner), "text", payload)
+  else appendSubBlock(sub, "text", payload)
   scheduleRender()
   return true
 }
 
 /** Child reasoning token → think block (F2: same treatment as main reasoning).
- *  §19.5 D-M8 nested think: 同文本行规则——行首 dim 子标后接思考行。 */
+ *  §27 R23 nested think：归属内层子块（supersede D-M8 子标渲染——D-R23a/b）。 */
 export function routeSubReasoning(state, t, scheduleRender) {
   const path = parseRelayPath(t)
   if (!path) return false
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
   const nested = path.inner.length > 0
-  appendSubBlock(sub, "think", nested ? sublabelLine(sub, path.rest, path.label) : path.rest)
+  if (nested) appendSubChild(sub, descendSubChild(sub, path.inner), "think", path.rest)
+  else appendSubBlock(sub, "think", path.rest)
   scheduleRender()
   return true
 }
 
-/** Child tool call → fresh tool block + header currentTool。§19.5 D-M8 嵌套：
- *  `explore#1/read` → dim 子标 + 既有工具行形态；currentTool 存全路径
- *  （`explore#1/read`——输出归属判别 + 折叠头可辨嵌套）。 */
+/** Child tool call → fresh tool block + header currentTool。§27 R23 嵌套（supersede
+ *  D-M8 子标工具行）：工具行归属内层子块（子块内 `❯ tool`）；currentTool 外层存全路径
+ *  （`explore#1/read`——评审 #8：外层块头状态区现状保持不缩改）+ 子块存工具名（子块内
+ *  输出归属判别）。 */
 export function routeSubToolCall(state, name, args, scheduleRender) {
   const path = parseRelayPath(name)
   if (!path) return false
@@ -343,23 +324,39 @@ export function routeSubToolCall(state, name, args, scheduleRender) {
   sub.toolArgs = args
   sub.approval = null
   const argsDesc = describeToolArgs(path.rest, args)
-  appendSubBlock(sub, "tool", `${nested ? `${path.label} · ` : ""}❯ ${path.rest}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
+  if (nested) {
+    const leaf = descendSubChild(sub, path.inner)
+    leaf.currentTool = path.rest
+    leaf.toolArgs = args
+    leaf.approval = null
+    appendSubChild(sub, leaf, "tool", `❯ ${path.rest}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
+  } else {
+    appendSubBlock(sub, "tool", `❯ ${path.rest}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
+  }
   scheduleRender()
   return true
 }
 
 /** Child tool output（D1 前缀 name relay）→ 追加当前 tool block。RAW 拼接（2026-09-03
  *  修复轮——relay chunk 是任意字节边界碎片，逐 chunk 补 \n 会把词拦腰断行 + 烧 N2
- *  配额；emit 端自带换行结构无损还原）。§19.5 D-M8 嵌套：输出跟随最近工具行（不重复
- *  前缀——块内顺序天然归属）；fresh 判别用全路径——防内外同名工具串块。 */
+ *  配额；emit 端自带换行结构无损还原）。§27 R23 嵌套：输出归属内层子块（T-R23a.2——
+ *  输出全在子块——外层流无混入）；fresh 判别在子块层（子块 currentTool=工具名）——
+ *  内外/同层同名工具互不串块。 */
 export function routeSubToolOutput(state, name, part, scheduleRender) {
   const path = parseRelayPath(name)
   if (!path) return false
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
-  const toolName = path.inner.length > 0 ? `${path.label}/${path.rest}` : path.rest
-  appendSubBlock(sub, "tool", part.text, { fresh: sub.currentTool !== toolName })
-  if (sub.currentTool !== toolName) sub.currentTool = toolName
+  if (path.inner.length > 0) {
+    const leaf = descendSubChild(sub, path.inner)
+    const leafTool = path.rest
+    appendSubChild(sub, leaf, "tool", part.text, { fresh: leaf.currentTool !== leafTool })
+    if (leaf.currentTool !== leafTool) leaf.currentTool = leafTool
+  } else {
+    const toolName = path.rest
+    appendSubBlock(sub, "tool", part.text, { fresh: sub.currentTool !== toolName })
+    if (sub.currentTool !== toolName) sub.currentTool = toolName
+  }
   throttleSubRender(scheduleRender)
   return true
 }

@@ -14,6 +14,7 @@
  * 的旧保存通道已不存在）。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -36,7 +37,7 @@ const configFor = (countFile) => ({
   env: { MCP_COUNT_FILE: countFile },
 })
 
-test("stdio transport onDead fires on unexpected exit, not on deliberate close (P5)", async () => {
+slow("stdio transport onDead fires on unexpected exit, not on deliberate close (P5)", async () => {
   const { stdioTransport } = await import("../src/mcp/transport-stdio.mjs")
   // 自杀进程：150ms 后退出（无 MCP_COUNT_FILE → n 恒 0，每次都会死）
   const countFile = makeCountFile()

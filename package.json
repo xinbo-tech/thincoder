@@ -31,8 +31,8 @@
     "url": "git+https://github.com/xinbo-tech/thincoder.git"
   },
   "scripts": {
-    "test": "node --test \"test/*.test.mjs\"",
-    "prepublishOnly": "npm run lint && node --test \"test/*.test.mjs\"",
+    "test": "node test/run-fast.mjs",
+    "prepublishOnly": "npm run release:check",
     "lint": "node scripts/check-syntax.mjs",
     "release:check": "node scripts/release-check.mjs",
     "test:full": "node test/run-full.mjs"

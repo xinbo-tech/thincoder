@@ -18,6 +18,7 @@ import { computeLayout, subagentLineIndex } from "./layout.mjs"
 import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 import { cancelAsyncSubagent } from "../agent-tools/subagent-async.mjs"
+import { cancelAsyncAdvisor } from "../agent-tools/advisor-async.mjs"
 import { C } from "./ansi.mjs"
 
 /** 2026-08-31 滚轮事件分派（用户需求"展开块能滚动阅读全文"）：坐标命中展开块内容行 →
@@ -184,7 +185,12 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
   const cancelSubagent = (key) => {
     try {
       const id = key.slice(key.lastIndexOf("#") + 1)
-      const r = cancelAsyncSubagent(agent, id)
+      const isAdvisorBlock = key.startsWith("advisor#")
+      // §24 D-24b (②-6b): ⏹ on an advisor block cancels the background review
+      // (directed abort → cancelled settle: no pending entry / no token).
+      const r = isAdvisorBlock
+        ? cancelAsyncAdvisor(agent, id)
+        : cancelAsyncSubagent(agent, id)
       if (r?.status === "error") {
         // 池内无此条目但区块仍 live（!done）→ 阻塞型（sync）spawn 中——无池条目可定向
         // 中止（§19.5 cancel 只针对 async 后台子代理）；给出可操作指引而非神秘 unknown id

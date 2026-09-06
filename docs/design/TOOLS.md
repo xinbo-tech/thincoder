@@ -1,4 +1,4 @@
-# 工具系统设计（thincoder/src/tools/ + src/agent-tools/ + src/mcp/）
+﻿# 工具系统设计（thincoder/src/tools/ + src/agent-tools/ + src/mcp/）
 
 > 状态：2026-08 回补。25 个内置工具 + MCP 客户端 + 元工具（agent-tools），统一 schema（OpenAI function calling）、统一上下文（cwd/agent/callbacks/signal）、统一安全边界（路径/命令/网络/沙箱）。
 
@@ -10,7 +10,7 @@
 
 | 项 | 指标 |
 |---|---|
-| 工具超时 | bash 120s；execute 子进程超时强杀（默认 30s、上限 600s——2026-09-05 §14.1 核对 execute.mjs 修正：旧「上限 60s」记录过时——代码 `Math.min(t, 600_000)`——见 §14.1）；其余工具同步即时返回 |
+| 工具超时 | bash 120s；execute 子进程超时强杀（默认 30s、上限 600s——2026-09-05 §14.1 核对 execute.mjs 修正：旧「上限 60s」记录过时——代码 `Math.min(t, 600_000)`——见 §14.1）；其余工具同步即时返回；**wait_for 阻塞 ≤ timeout_ms（默认 30s、上限 600s——config.json agent.waitForTimeoutMs 可覆盖默认——唯一非即时返回工具——2026-09-06 §16）** |
 | 读/输出上限 | `MAX_READ_LINES=2000`、`MAX_OUTPUT_CHARS=200_000`（超限落盘，模型见预览） |
 | 网络响应体 | websearch/fetch ≤5MB；HTML 转文本（stripTags/htmlToText） |
 | 路径安全 | ~~`resolveInCwd` 防 `../` 逃逸 + `assertInside` + `realpathNearest` 符号链接解算~~——**被 §10.1 取代（2026-09-02）**：边界断言移除——统一为无边界解析（resolveInCwd/resolveExternal 等价：相对路径相对 cwd 解析、绝对路径原样解析）；信任模型 + 权限门禁为唯一防线 |
@@ -20,7 +20,7 @@
 
 ## 1. 注册与 schema
 
-- **注册表**（tools/index.mjs）：`builtinTools` 数组（25 个）——file 7（read/write/edit/insert_after/hashline_edit/read_image/read_pdf）、patch 2（apply_patch/delete）、system 4（bash/glob/grep/ls）、web 2（websearch/fetch）、git 2（git/question）、checklist、lint、lsp、codemode、tree、ops 3（file_ops/process/get_current_time）。
+- **注册表**（tools/index.mjs）：`builtinTools` 数组（25 个）——file 6（read/write/edit/insert_after/hashline_edit/read_image）、patch 2（apply_patch/delete）、system 4（bash/glob/grep/ls）、web 2（websearch/fetch）、git 2（git/question）、checklist、lint、lsp、codemode、tree、ops 4（file_ops/process/get_current_time/wait_for）。question 工具使用抑制（描述约束锚 + execute 长度/条数机械上限 + 确认门形式 + VS Code 卡片渲染）见 `AGENT-LOOP.md` §22（2026-09-06——权威源，本文不复制）。
 - **schema 生成**：`toOpenAISchema(tool)`（shared.mjs）——name/description/parameters 转 OpenAI function 格式；description 来自 `tools/*.md`（`DESC(name)` 机制：md 文件即描述源，带参数说明，模型看到的是完整使用手册而非一行字符串）。
 - **工具契约**：`{ name, description, parameters, readonly?, sideEffectExempt?, parallel?, multimodal?, execute(args, ctx) → string }`；`ctx = { cwd, agent, depth, signal, callbacks, onOutput, onQuestion, onPermissionRequest }`。**execute 必须返回字符串**（undefined 视为错误，dispatch 显式检查）。
 - **元工具**（agent-tools.mjs）：task / plan / goal / verify / subagent / skill / recent_changes / advisor / eng / timer / **read_history**——`readonly` 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）。**read_history**（SESSION.md §9 权威）：查本会话人读线（`_fullHistory`——永不压缩、审计完整）——role/keyword/tool/since-until（epoch ms 时间窗）/limit/direction 筛选，返回 JSON 数组（内容截断 ~500 带标记、tool_calls 只列名）；**depth-0 only**（子代理各自上下文——语义混淆）；readonly → planMode 放行/免审批。
@@ -267,7 +267,12 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **否决**：a) 保留 eslint 挪全局（仍依赖、违零依赖）；b) 只移除部分工具限制（"不少工具有限制"——全部移除，bash 一致性）；c) 作用域限制改"警告不阻断"（仍空耗 token——用户裁定干脆去掉）
 
 
-## 11. read_pdf：文本型 PDF 提取（2026-09-03 · 设计——评审通过——决策点定稿）
+## 11. read_pdf：文本型 PDF 提取（2026-09-03 · 设计——评审通过——决策点定稿）【**2026-09-06 已裁定移除——R21——评审 0🔴 通过——已实现（2026-09-06 eng-coder 交付）——考古保留**】
+
+
+> **R21 移除记录（2026-09-06 用户裁定——"我觉得没必要存在，应该去掉，真要读pdf agent自己会想办法，而且pdf场景过于复杂，实现也覆盖不好"）**：实证支持 = 5301 会话文件 **0 调用**（立项 2026-09-03 后从未使用）+ 高维护面（xref 499/text 497 双核 + 17 用例 391 行——PDF Tier 2 复杂度（XRef 流/ObjStm/PNG 预测器/Type0 CMap/多栏布局）覆盖永远不完整——与"场景复杂覆盖不好"裁定一致）。**替代路径**：agent 遇 PDF 自想办法（bash pdftotext / python pypdf 等外部链——read.md 的 read_pdf 路由句删除后，read 对 .pdf 输出乱码会自然引导 agent 换路径——不再有 read_pdf 专用引导）。**可找回**：git 历史完整（75cc2c9 引入提交在——代码未删 commit——将来若真实场景重现可 git 找回或重写）。**移除面**：①src/tools/pdf.mjs ②pdf-parse-xref.mjs ③pdf-parse-text.mjs ④read_pdf.md ⑤test/pdf-parse.test.mjs（17 用例——全量 1605→1588 对账）⑥index.mjs 装配 3 处（import L5 + builtinTools + export——评审核实）⑦read.md 路由句 ⑧**discipline.md 工具总表行（L65——评审 #1 补——CLI prompt 指引删）**⑨**ARCHITECTURE.md 模块树注释（L74-76——评审 #1 补）**⑩**FEATURES.md 特性行（L18——评审 #1 补）**⑪TOOLS.md 全文件计数 26→25（**L3 头部 + §1 注册表两处——评审 #5**）⑫本节考古注。**明确保留**：read_image（多模态不同面）；VS Code 零改动（v1 CLI-only 明示——11.4 #5 原注印证）；CHANGELOG 历史条。本节以下全文为考古（11.1-11.4 设计/评审记录——不删除——历史完整）。
+
+**AC（评审 #4 补——§13 T-B1' 先例）**：AC-1 = 删后 grep 零残留（src/tools + src/prompts + docs 无 read_pdf/readPdf/pdf-parse 引用——考古注与 CHANGELOG 历史条豁免）；AC-2 = index.mjs 装配三处全删（import/builtinTools/export——node --check 绿）；AC-3 = L2 全量 test:full = **1588**（-17 对账）+ 工具计数断言 25；AC-4 = read.md 无 .pdf 路由句；AC-5 = 75cc2c9 提交存在性核验（可找回承诺）。
 
 > 老 TODO（2026-08-27 立项——误标 done 恢复——docs/TODO.md 条目待本设计批准后补回）。现状缺口：read 对 .pdf 直接 utf8 解码出乱码——无拦截无引导。约束：纯 Node ≥24、ESM、零 npm 依赖（node:zlib 内置——全仓首个 zlib 用户）。
 
@@ -558,6 +563,7 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 **D15.4 六要素规范条款（TOOLS.md 本节落条款——所有工具描述（现有 + 未来）按此走查——86 个描述点走查在实现批完成并上报差异表——本节结论由实现批回填）**：
 - 六要素（工具描述必含——缺一补一）：**①一句话语义**（能做什么/不能做什么）；**②参数关系**（参数间约束——如 new 与 old 的关系规则）；**③路由**（走我/换谁——双向出口句）；**④破坏性明示**（覆盖/删除/不可逆——+恢复路径）；**⑤阻塞性**（是否等待/多久——如 check vs status）；**⑥结果形态**（返回什么/字段怎么读/失败分支）。
 - **走查范围（现有全部——86 个描述点——实现批全量脚本化走查并逐项上报差异表——脚本含一致性检查项：描述中引用的工具名 ∈ §1 注册表（复评 #4——repomap/code-sync/repo_outline 等名与 §1 核对））**：CLI 25 个 `src/tools/*.md` + 4 处内嵌（repomap.mjs 工具描述段 / memory 的 docs.mjs 工具描述段 ×2 / code-sync.mjs 工具描述段）+ 13 个 `src/agent-tools/*.mjs` 描述段（= CLI 42 点）；VS Code 17 个 `src/tools/*.mjs` 承载 28 点 + 2 处根内嵌（repomap.mjs 工具描述段 / memory-tool.mjs 工具描述段）+ 12 个 `src/agent-tools/*.mjs` 承载 14 点（consult 3 点）（= VS Code 44 点——**2026-09-04 实现批矩阵实测回填：原设计「22 文件 + 2 根 + 15 文件 = 39 点」为文件数与点数混计漂移——矩阵 POINTS 表逐文件列点——T15.16 实测 44**）——**共 86 点**——按条款逐项对照——每点上报：达标 / 缺哪要素（补一句）。
+> **R17 描述点变更注（2026-09-06——consult_check 退役——CLI 已实现）**：consult 家族描述点 3→2（consult_start/consult_stop——consult.mjs 内嵌段；setup.mjs 注册点同删——T-R17b 描述零残留断言绿——R21 移除先例同型核销：FEATURES.md/README.md/discipline.md 行同步清——wait_for §16 "consult done" 条件保留）。
 - **机制注**：CLI 描述 = `.md`（`DESC()` 加载——shared.mjs 描述加载函数）；VS Code 描述 = `.mjs` 内嵌（**无 .md 文件——已验证**）——**两端同一语义改动落点不同源**——设计锚逐字定稿在本节，两端照抄。
 
 **D15.5 trace 核对（2026-09-04 用户指示「写完再核对」——实数据——来源：`C:\Users\liwei\.thincoder\traces\2026-09-04` 4504 个 trace——304,365 条 tool 消息——30,890 失败（10.2%）——只读聚合）**：
@@ -810,6 +816,130 @@ MCP 机制统一规范见 **MCP.md**（权威源，已实现）——核心：MC
 - **报错文本保留给真正未知形态**（`--- x` 非 a/b/ 前缀非 /dev/null 且无 +++——如把删行误放文件段位——引导仍在）；
 - **CLI 空行判据收紧是顺带修复**（复评 #1 幽灵上下文防护的判据从「任何 `--- `」收窄到「文件头形态」——原判据会误断 `-- x` 内容删行——T15.38a 跨文件回归保留）；
 - **行为修正口径**：接受面扩大（原拒绝→现接受）+ 空段副作用消除——登记 CHANGELOG（非破坏——无既有合法输入行为改变）；CLI 侧一处隐性 bug 修复（`-- x` 删行静默漏删——本批测试锁定）。
+
+## 16. sleep/等待工具恢复（2026-09-06 · 需求池 R6 · **已实现**）
+
+> 状态：**已实现**（2026-09-06，eng-coder 交付 clean——audit ×2 + advisor pass 无🔴——双端 L1/L2 各绿；核销见 §16.2）。
+
+**需求句**：sleep 工具删除（2026-08-25，SLEEP-REMOVAL-*）后，模型遇真实等待需求时借 `ping 127.0.0.1` 之类 shell 命令**空转 hack** 实现等待——网络命令语义混乱（模型被迫造假网络操作）、跨平台行为不一致（Windows `ping -n` / Linux `ping -c`）、输出噪音大、还可能因网卡/DNS 行为异常失效。需求 = **按新语义恢复真实等待能力**，消除 ping hack。
+
+**来源**：2026-09-06 人机并行作业实测（用户观察到 CLI 端频繁 `ping 127.0.0.1`，初看困惑，后意识到是借 shell 空转等待——触发 SLEEP-REMOVAL-REQUIREMENTS.md N2 预留钩子："若未来引入真异步工具再按新语义重新设计"）。
+
+**范畴**：通用能力（CLI + VS Code 双端——lockstep，见 SLEEP-REMOVAL-REQUIREMENTS ⚠️ 两端同步约束）。
+
+### 16.1 设计——wait_for 条件等待（形态裁决 A——2026-09-06 用户拍板）
+
+**核心设计决策**：**wait_for（条件等待）而非 sleep（裸延时）**——原删除动机是"同步工具后空等"（advisor/subagent 返回即完成，sleep 空耗 10-300 秒）；wait_for 只在**条件未满足**时等，直接治本。
+
+**设计**：
+
+1. **工具形态**：`wait_for` 工具——接收**条件谓词 + 轮询间隔 + 上限**，在条件未满足时阻塞轮询，满足或超上限返回。
+   - schema：`{ condition: string, interval_ms?: number, timeout_ms?: number }`
+   - `condition`：条件表达式（如 `"advisor settled"` / `"subagent id:5 done"` / `"file exists: path"`）——**语义化条件，非裸命令**（消除 ping hack 的语义混乱）
+   - `interval_ms`：轮询间隔（默认 1000ms——防密集轮询）
+   - `timeout_ms`：上限（默认 30000ms——防 10-300 秒空耗；可配置）
+
+2. **条件来源（实现关键）**：条件谓词引用**agent 内部状态**（不是外部命令）——
+   - `advisor settled` → 检查 advisor 会话是否完成（advisor 池状态）
+   - `subagent id:N done` → 检查 async 子代理 id N 是否 settle（`_asyncSubagents` 池）
+   - `consult done` → 检查 consult 会话是否全部完成
+   - `file exists: path` / `file size > N` / `port open: N` → 外部资源条件（fs/port 检查——覆盖真异步等待场景）
+   - 未来扩展：MCP 资源状态、HTTP 端点可达
+
+3. **避免复现原删除动机**：
+   - **不叫 `sleep`**（旧名带误用记忆）——`wait_for` 名字明确"条件等待"
+   - **说明文本明确"仅真异步等待可用"**——"仅用于等待外部资源/异步任务完成；同步工具（advisor/subagent 返回即完成）后**不需要**等待"
+   - **内置上限**（timeout_ms 默认 30s）——防滥用
+
+4. **discipline.md 路由规则同步**："waiting via bash 内联允许"保留为**兜底**（wait_for 覆盖不了的临时场景）；wait_for 说明文本与路由规则方向一致。
+
+**受影响文件**：
+| 文件 | 端 | 动作 | 内容 |
+|---|---|---|---|
+| `src/tools/ops.mjs` | CLI | MODIFY | 新增 waitForTool 定义 + 注册（3 处——import/re-export/builtinTools） |
+| `src/tools/wait_for.md` | CLI | **ADD** | 工具说明（语义 + "仅真异步等待" 方向性 + 条件语法示例） |
+| `src/tools/index.mjs` | CLI | MODIFY | waitForTool 注册（import/re-export/builtinTools 数组） |
+| `src/prompts/discipline.md` | CLI | MODIFY | 路由规则补 wait_for（"waiting → wait_for 工具（条件等待）；bash 内联为兜底"） |
+
+| `src/extension/...`（VS Code 同构） | VS Code | MODIFY/ADD | waitForTool 同构实现 + 注册 + 说明 |
+| `test/wait-for.test.mjs` | 双端 | **ADD** | wait_for 测试（条件满足/超时/间隔/取消） |
+
+**测试**：
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| T-W1 | 条件立即满足 | condition 已 true | 立即返回，不轮询 |
+| T-W2 | 条件轮询后满足 | condition 初始 false、N 秒后 true | 轮询后返回成功 |
+| T-W3 | 超时未满足 | condition 恒 false + timeout 1s | 超上限返回（不空耗） |
+| T-W4 | 轮询间隔生效 | interval_ms=100 | 间隔正确 |
+| T-W5 | advisor/subagent 条件 | advisor settled / subagent done | 条件正确解析 |
+| T-W6 | 外部资源条件 | file exists / port open | 条件正确解析 |
+| T-W7 | 取消/中断 | 等待中用户中断 | 安全退出 |
+| T-W8 | 双端注册一致性 | CLI + VS Code 工具表 | wait_for 均注册 |
+| T-W9 | 双端零回归 | 全量套件 | 无破坏 |
+
+## 17. glob 方言扩展（2026-09-06 · 技术待办 → 设计 · brace/扩展/排除 · **已实现**）
+
+> 状态：**已实现**（2026-09-06，eng-coder 交付 clean——audit ×2 + advisor pass 无🔴——双端 L1/L2 各绿；核销见 §17.2）。
+
+**需求句**：globToRegex（CLI shared.mjs / VS Code search.mjs，两端同源）不支持常见 glob 方言且**静默漏匹配不报错**：`{a,b}` brace 展开（`**/*.{js,txt}` 被字面转义为 `\.\{js,txt\}` → 匹配不到任何文件）、`!` 排除前缀（无排除语义 → 整个模式失配）、`?(x)`/`@(a|b)` 扩展 glob（被转义 → 错配）。模型按常见 glob 习惯发模式时静默拿不到结果，误判"无匹配"，不自知模式没被支持。需求 = **globToRegex 补齐常见方言**，消除静默漏匹配。
+
+**来源**：2026-09-06 file-search 测试发现（CLI + VS Code 同款 globToRegex——两端 lockstep 修复）。
+
+### 17.1 设计
+
+**候选方案**：
+| 方案 | 判定 |
+|---|---|
+| A. `{a,b}` brace 展开（正则层预展开或扩展 globToRegex） | **采纳**——最常用（模型发多扩展名模式是常态） |
+| B. `!` 排除前缀（改调用侧语义——多模式求交） | **采纳**——`**/*.js !test/**` 是常见模式；调用侧解析多模式、正则求交 |
+| C. `?(x)`/`@(a|b)`/`+(x)` 扩展 glob | **暂缓**——使用率低、正则复杂度高；v1 先不做，留扩展点 |
+
+**设计**：
+
+1. **`{a,b}` brace 展开**：globToRegex 预扫描——若 pattern 含 `{...}`，把 `{a,b,c}` 展开为多分支非捕获组 `(?:a|b|c)`（在现有 sentinel/转义流程**之前**处理，避免被字面转义）。例：`**/*.{js,txt}` → `^(?:.+/)?[^/]*\.(?:js|txt)$`。
+
+2. **`!` 排除前缀**：调用侧（globTool/grepTool 的 glob 参数）解析空格分隔的**多模式**——`include !exclude` 形式；`!` 前缀的模式从结果中剔除。例：`**/*.js !test/**` → 匹配 `**/*.js` 且剔除 `test/**`。
+   - 实现：globToRegex 支持多模式（传入数组 [include..., exclude...]，先匹配 include 再剔除 exclude——exclude 同样走 brace 展开）。
+
+3. **静默漏匹配消除**：**不静默**——若 pattern 含未支持的扩展语法（`?(x)`/`@(a|b)`/`+(x)`），返回**明确错误**（"glob 语法不支持：?(x)/@(a|b)/+(x)——用 {a,b} 或 ! 替代"），而非静默漏匹配。
+
+**受影响文件**：
+| 文件 | 端 | 动作 | 内容 |
+|---|---|---|---|
+| `src/tools/shared.mjs` | CLI | MODIFY | globToRegex 补 brace 展开 + 多模式支持 + 未支持语法显式报错 |
+| `src/tools/search.mjs` | VS Code | MODIFY | globToRegex 同构补齐（与 CLI 同源） |
+| `test/glob-dialect.test.mjs` | 双端 | **ADD** | brace/排除/未支持语法测试 |
+
+**测试**：
+| # | 用例 | 输入 | 预期 |
+|---|---|---|---|
+| T-G1 | brace 单扩展 | `**/*.{js}` | 匹配 .js |
+| T-G2 | brace 多扩展 | `**/*.{js,txt}` | 匹配 .js + .txt |
+| T-G3 | brace 嵌套/路径 | `src/**/*.{mjs,md}` | 匹配 src 下 .mjs/.md |
+| T-G4 | 排除前缀 | `**/*.js !test/**` | 匹配 .js 但剔除 test/** |
+| T-G5 | brace + 排除组合 | `**/*.{js,md} !docs/**` | 组合正确 |
+| T-G6 | 未支持语法显式报错 | `*.?(js\|txt)` | 明确错误（非静默漏匹配） |
+| T-G7 | 空 brace | `*.{}` | 明确错误 |
+| T-G8 | 未闭合 brace | `*.{js` | 明确错误 |
+| T-G9 | 双端零回归（现有 glob 用例） | glob/grep 现有测试 | 无破坏 |
+
+### 16.2 + 17.2 实现核销（2026-09-06 · eng-coder id:1 clean——audit ×2 + advisor pass 无🔴——修正轮 3/5）
+
+**验收勾销（wait_for §16 T-W1-W10/AC-W + glob §17 T-G1-G10/AC-G）**：双端新套件 28/28 通过（T-W1-W10 + T-G1-G10 + 集成用例 + 回归）。**L1**：CLI 1543/1433/0 fail + VS Code 1232/1147/0 fail；**L2 父侧终端**：CLI 1543/1433/0 fail + VS Code 1262/1175/0 fail（首跑 2 fail = interruptible.test 负载抖动——重跑 0 fail——非回归）。
+
+**实现要点确认**：
+- §17：brace 展开在 sentinel/转义前（占位符防字面转义）；空/未闭合/嵌套 brace + extglob 全显式英文报错（不再静默漏匹配）；排除前缀调用侧拆分（splitGlobPatterns 只在「下一非空 token 以 ! 开头」断——单模式/段内字面空格保持完整）+ compileGlobMatchers 编译
+- §16：wait_for readonly:true；条件六形态（advisor settled/subagent id:N done/consult done/file exists/port open）；未知条件显式报错；timeout 默认 30s（config agent.waitForTimeoutMs 覆盖 cap 600s）；interval 默认 1s 下限 100ms；条件求值器注入缝 setWaitForConditionSource（默认 null 生产不变）；ctx.agent 可达性核实（dispatch toolCtx 含 agent——_asyncSubagents/_consultSessions 可达——无架构改动）；轮询 await setTimeout 不阻塞
+
+**出清单变更申报（父侧核销接受）**：
+- `grep.md`（CLI——grep glob 参数描述 DESC 源同步——不更新即漂移）
+- `test/files.mjs`（VS Code——npm test/test:full 显式清单登记新测试）
+- `src/agent/setup.mjs`（VS Code——waitForTimeoutMs 白名单接线——advisor #2 修复）
+- `src/tools/glob-dialect.mjs`（CLI 新模块——shared.mjs 545→447 行 500 硬限修复）
+- VS Code `wait_for.md`/`glob.md` **未创建**（该仓无 per-tool .md 机制——描述内嵌 .mjs——六要素等价内嵌交付）
+
+**移交父侧待办**（非阻塞）：
+- system.mjs 505 行（>500）——legacy 单文件 bash/grep/glob/ls 聚集体，本批仅 +22 行接线——拆分会动整个工具组——建议独立清理批（advisor 🟡#6 披露延后）——记 TODO。
 
 
 

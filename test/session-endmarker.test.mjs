@@ -8,6 +8,7 @@
  *  "另一活进程"（isProcessAlive(本进程 PID)=true）；不存在的大 PID（9999xxxx）= 死主。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -63,7 +64,7 @@ function seedDeadActiveSlot(cwd, title = "dead-active", contents = ["hello"]) {
 
 // ─── T-M1：双端同开，CLI 重进回本端槽（不进对端活槽/新槽）────────────────────────────
 
-test("T-M1: 双端同开 CLI 重进 → resumeSlot 认领本端记录槽，不碰对端活槽", () => {
+slow("T-M1: 双端同开 CLI 重进 → resumeSlot 认领本端记录槽，不碰对端活槽", () => {
   const cwd = cwdFor("t1")
   try {
     // slot1 = CLI 上次的会话（属主已死）；slot2 = VS Code 活外人（active=2）；CLI marker=1

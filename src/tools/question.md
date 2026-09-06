@@ -9,4 +9,7 @@ Notes:
 - The answer is injected as the next user message
 - Returns the user's answer — the chosen option or free text — as the next message; the loop resumes when it arrives.
 - Use sparingly — prefer making reasonable decisions when possible
+- Ask ONE question per call — never bundle multiple sub-questions into one question string; ask the next one after the answer arrives.
+- Keep the question text short — one or two sentences. Background, context, and analysis belong in your normal reply text, NOT in the question.
+- Routine confirmations (confirm gates) belong in your plain reply text — the user answers in their next message. Use this tool ONLY when you need the user's decision or input to proceed.
 - After receiving an answer about a design convention, tool preference, or recurring pattern: save it with the memory tool (action: put). This prevents asking the same question in future sessions — the user shouldn't have to repeat their preferences.

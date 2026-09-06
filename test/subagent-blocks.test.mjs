@@ -7,7 +7,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 
 import {
-  SUB_BLOCK_LINE_LIMIT, finishSubTask, finishSubTaskKey, finishSubTasksByRole, finishSubTaskByModel, applySubEvent,
+  SUB_BLOCK_LINE_LIMIT, finishSubTask, finishSubTaskKey, finishSubTasksByRole, applySubEvent,
   parseRelayPath,
   routeSubToken, routeSubReasoning, routeSubToolCall, routeSubToolOutput,
   freezeDoneSubTasks, freezeAllSubTasks, shiftFreezeAnchors, freezeReclaimDigestedBlocks,
@@ -165,9 +165,9 @@ test("N2: 环形上限经路由同样生效（跨回调类型）", () => {
 })
 
 
-// -------------------------------------------- §19.5 嵌套前缀子标（T-M24/M25 数据层）+ stopped
+// -------------------------------------------- §27 R23 嵌套子代理子块（T-R23a..e——supersede §19.5 T-M24/M25 子标方案）
 
-test("§19.5 T-M24: parseRelayPath——单层兼容（inner 空）+ 嵌套多层循环解析", () => {
+test("§19.5 T-M24: parseRelayPath——单层兼容（inner 空）+ 嵌套多层循环解析（R23 保持——head/inner 路由源）", () => {
   assert.equal(parseRelayPath("无前缀"), null)
   const single = parseRelayPath("coder#1/hello")
   assert.deepEqual({ ...single }, { head: "coder#1", inner: [], label: "", rest: "hello" })
@@ -181,7 +181,7 @@ test("§19.5 T-M24: parseRelayPath——单层兼容（inner 空）+ 嵌套多�
   assert.equal(deep.rest, "x")
 })
 
-test("§19.5 T-M25 数据层: 嵌套文本/think/工具/输出三形态子标渲染 + 事件 token 剥除不路由", () => {
+test("§27 R23 T-R23e.1/T-M25 随迁 + T-R23a.1/a.2 数据层: 嵌套文本/think/工具/输出归属子块——外层流零混入", () => {
   const s = state()
   // 单层（无内层段）内容零变化——回归基线
   assert.equal(routeSubToken(s, "coder#1/hello", noop), true)
@@ -190,40 +190,140 @@ test("§19.5 T-M25 数据层: 嵌套文本/think/工具/输出三形态子标渲
   assert.equal(routeSubToken(s, "eng-coder#2/hello\n", noop), true)
   const outer = s.subTasks["eng-coder#2"]
   assert.ok(outer.blocks.some((b) => b.kind === "text" && b.text === "hello\n"), "单层文本零变化")
-  // 内层文本：行首（块首或上一内容以 \n 收尾）→ 字面子标 `explore#1 · `；行中 → 前缀静默剥除
+  // 内层文本/think → 归属子块（不在外层 blocks——无子标字面）
   assert.equal(routeSubToken(s, "eng-coder#2/explore#1/报告摘要\n", noop), true)
-  assert.ok(outer.blocks.some((b) => b.kind === "text" && String(b.text).endsWith("explore#1 · 报告摘要\n")), "文本行行首子标（块首——同 kind 块合并追加）")
   assert.equal(routeSubToken(s, "eng-coder#2/explore#1/续行", noop), true)
-  assert.ok(outer.blocks.some((b) => b.kind === "text" && String(b.text).endsWith("explore#1 · 续行")), "换行后新行首也带子标")
-  assert.equal(routeSubToken(s, "eng-coder#2/explore#1/继续", noop), true)
-  assert.ok(outer.blocks.some((b) => b.kind === "text" && String(b.text).endsWith("继续")), "行中前缀静默剥除——内容续接")
-  assert.ok(!outer.blocks.some((b) => String(b.text).includes("explore#1/")), "内层前缀不再字面泄漏（只剩 · 子标形态）")
-  // 工具行：子标 + 既有工具行形态；currentTool = 全路径（归属判别）
+  assert.ok(outer.children.length === 1 && outer.children[0].key === "explore#1", "首内层事件建子块载体（外层 children[0]）")
+  const ch = outer.children[0]
+  assert.ok(ch.blocks.some((b) => b.kind === "text" && b.text === "报告摘要\n续行"), "内层文本合并进子块（原始归属——无子标前缀）")
+  assert.equal(ch.role, "explore", "子块 role 从段标解析")
+  assert.equal(ch.started <= Date.now(), true)
+  assert.ok(!outer.blocks.some((b) => String(b.text).includes("报告摘要")), "T-R23a.1: 外层流无混入（内层文本不进外层 blocks）")
+  assert.ok(!outer.blocks.some((b) => String(b.text).includes("explore#1")), "子标字面不再存在（R23——子块归属替换）")
+  // 内层 [model] → 子块 model（D-R23a 子块状态字段）
+  routeSubToken(s, "eng-coder#2/explore#1/[model]inner-model", noop)
+  assert.equal(ch.model, "inner-model", "内层 [model] 记子块模型")
+  assert.equal(outer.model, undefined, "内层 [model] 不污染外层")
+  // 工具行 → 子块内工具行；外层 currentTool = 全路径（评审 #8 现状保持）
   assert.equal(routeSubToolCall(s, "eng-coder#2/explore#1/read", { path: "x" }, noop), true)
-  const tools = outer.blocks.filter((b) => b.kind === "tool")
-  assert.ok(tools.some((b) => b.text.includes("explore#1 · ❯ read")), "工具行 = 子标 + 既有形态")
-  assert.equal(outer.currentTool, "explore#1/read", "currentTool 全路径")
-  // 工具输出：跟随最近工具行归属——raw 追加、不重复前缀（块以 \n 收尾）
-  assert.equal(routeSubToolOutput(s, "eng-coder#2/explore#1/read", { kind: "text", text: "file content\n" }, noop), true)
-  const toolBlock = tools.at(-1)
-  assert.ok(toolBlock.text.includes("file content"), "输出进对应工具块")
-  // 内层 think：同文本规则（行首——上一块以 \n 收尾）
+  assert.ok(ch.blocks.some((b) => b.kind === "tool" && b.text.includes("❯ read")), "工具行在子块（无子标前缀）")
+  assert.equal(ch.currentTool, "read", "子块 currentTool = 工具名（子块内归属判别）")
+  assert.equal(outer.currentTool, "explore#1/read", "外层 currentTool 全路径（评审 #8——现状不缩改）")
+  // 工具输出大段 → 全在子块（T-R23a.2——输出归属——外层流无混入）
+  const big = Array.from({ length: 40 }, (_, i) => `file line ${i}`).join("\n") + "\n"
+  assert.equal(routeSubToolOutput(s, "eng-coder#2/explore#1/read", { kind: "text", text: big }, noop), true)
+  const toolBlock = ch.blocks.filter((b) => b.kind === "tool").at(-1)
+  assert.ok(toolBlock.text.includes("file line 39"), "输出进子块工具块")
+  assert.ok(!outer.blocks.some((b) => String(b.text).includes("file line")), "T-R23a.2: 工具输出全在子块——外层流无混入")
+  // 内层 think：归属子块
   assert.equal(routeSubReasoning(s, "eng-coder#2/explore#1/思考行", noop), true)
-  const thinks = outer.blocks.filter((b) => b.kind === "think")
-  assert.ok(thinks.some((b) => b.text === "explore#1 · 思考行"), "think 行行首子标")
-  assert.equal(routeSubReasoning(s, "eng-coder#2/explore#1/续想", noop), true)
-  assert.ok(thinks.some((b) => String(b.text).endsWith("续想")), "think 行中前缀同样剥除")
-  assert.ok(!outer.blocks.some((b) => String(b.text).includes("explore#1/续")), "think 无前缀泄漏")
-  // 内层事件类 token：剥除不路由（不更新外层块头 turn/maxTurns——round1 #4）
+  assert.ok(ch.blocks.some((b) => b.kind === "think" && b.text === "思考行"), "think 归属子块")
+  assert.ok(!outer.blocks.some((b) => String(b.text).includes("思考行")), "外层无 think 混入")
+  // 内层进度事件（turn）：剥除不路由（防 explore 进度污染外层块头——round1 #4 保持）
   routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧turn\x1e5\x1e100\x1ellm\x1e", noop)
   assert.equal(outer.turn, 0, "内层 ⟦ev⟧turn 不污染外层块头")
   assert.equal(outer.maxTurns, 0)
-  routeSubToken(s, "eng-coder#2/explore#1/[model]inner-model", noop)
-  assert.equal(outer.model, undefined, "内层 [model] 不污染外层 model")
+  assert.equal(ch.done, false, "进度事件不关子块")
   // 外层自身单层事件照常（eng-coder 进度驱动自身块头）
   routeSubToken(s, "eng-coder#2/⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e", noop)
   assert.equal(outer.turn, 3, "单层 ⟦ev⟧turn 照常路由")
   assert.equal(outer.maxTurns, 100)
+})
+
+test("§27 R23 T-R23c.1: 内层 ⟦ev⟧done（生成侧补发射）→ 子块尾定格 done——外层不冻结、无 preview 行", () => {
+  const s = freezeState()
+  routeSubToken(s, "eng-coder#2/[model]glm-5.3", noop)
+  routeSubToken(s, "eng-coder#2/explore#1/[model]inner-m", noop)
+  routeSubToken(s, "eng-coder#2/explore#1/搜索中", noop)
+  routeSubToolCall(s, "eng-coder#2/explore#1/read", { path: "x" }, noop) // 外层 currentTool 指入子块
+  const outer = s.subTasks["eng-coder#2"]
+  const ch = outer.children[0]
+  assert.equal(outer.currentTool, "explore#1/read")
+  const before = Date.now()
+  assert.equal(routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop), true, "内层 done 事件消费")
+  assert.equal(ch.done, true, "子块 done 定格")
+  assert.equal(ch.stopped, false, "done 非 stopped")
+  assert.ok(ch.doneAt >= before && ch.doneAt <= Date.now(), "doneAt 落位")
+  assert.equal(ch.currentTool, null, "子块 currentTool 清空")
+  assert.equal(outer.currentTool, null, "外层 currentTool 指向该子块 → 完成清空（不再显示 stale 工具）")
+  assert.equal(outer.done, false, "外层不冻结（子块定格不等同外层完成）")
+  assert.ok(s.subTasks["eng-coder#2"], "外层条目保留（live）")
+  assert.equal(s.lines.length, 0, "无 preview 行落会话（F-R23c）")
+  // 重复 done（迟到）→ no-op 幂等
+  routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
+  assert.equal(ch.done, true)
+  // done 后晚到内容仍归属子块（子块已定格——数据层不拒绝；外层仍 live）
+  routeSubToken(s, "eng-coder#2/explore#1/晚到文本", noop)
+  assert.ok(ch.blocks.some((b) => b.text.includes("晚到文本")), "定格后内容仍归属子块（渲染端以 done 头示定格）")
+})
+
+test("§27 R23 T-R23a.3/c.2a: 内层 ⟦ev⟧stopped 定格 stopped；外层冻结时开子块随冻结定格 stopped（收尾语义）", () => {
+  // ① 内层 stopped 事件（外层 abort 传播/错误收尾——生成侧发射）→ 子块 stopped 定格
+  const s = state()
+  routeSubToken(s, "eng-coder#2/explore#1/搜索中", noop)
+  const ch = s.subTasks["eng-coder#2"].children[0]
+  routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e", noop)
+  assert.equal(ch.done, true)
+  assert.equal(ch.stopped, true, "stopped 标记（子块头定格动词 stopped）")
+  assert.equal(s.subTasks["eng-coder#2"].done, false, "外层仍 live")
+  // ② T-R23c.2a：外层冻结而内层未收尾（开子块）→ 子块随外层冻结定格 stopped（不悬空）
+  const s2 = freezeState()
+  routeSubToken(s2, "eng-coder#3/外层文本", noop)
+  routeSubToken(s2, "eng-coder#3/explore#1/审计中（未完成）", noop)
+  const ch2 = s2.subTasks["eng-coder#3"].children[0]
+  assert.equal(ch2.done, false, "开子块（无完成事件）")
+  freezeAllSubTasks(s2)
+  const frozen = s2.lines.find((l) => l._frozenSubTask?.key === "eng-coder#3")
+  assert.ok(frozen, "外层冻结载体入流")
+  const frozenCh = frozen._frozenSubTask.children[0]
+  assert.equal(frozenCh.done, true, "子块随外层冻结收尾")
+  assert.equal(frozenCh.stopped, true, "T-R23c.2a: 开子块随外层冻结定格 stopped")
+  // ③ 已定格子块（done）不被打回 stopped
+  const s3 = freezeState()
+  routeSubToken(s3, "eng-coder#4/explore#1/完成内容", noop)
+  routeSubToken(s3, "eng-coder#4/explore#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
+  freezeAllSubTasks(s3)
+  const fch = s3.lines[0]._frozenSubTask.children[0]
+  assert.equal(fch.done, true)
+  assert.equal(fch.stopped, false, "done 定格保持（冻结收尾只关未收尾者）")
+})
+
+test("§27 R23 T-R23d.1 数据层: 任意深度同路径——两层链每层一子块（孙块载体递归）；深层完成事件只关深层", () => {
+  const s = state()
+  routeSubToken(s, "eng-coder#2/explore#1/[model]m1", noop)
+  routeSubToken(s, "eng-coder#2/explore#1/plan#2/[model]m2", noop)
+  routeSubToken(s, "eng-coder#2/explore#1/plan#2/规划中", noop)
+  const outer = s.subTasks["eng-coder#2"]
+  const lvl1 = outer.children[0]
+  assert.equal(lvl1.key, "explore#1")
+  assert.equal(lvl1.model, "m1")
+  const lvl2 = lvl1.children[0]
+  assert.equal(lvl2.key, "plan#2", "深层每层一子块（孙块载体）")
+  assert.equal(lvl2.model, "m2")
+  assert.ok(lvl2.blocks.some((b) => b.text.includes("规划中")), "深层内容归属孙块")
+  assert.ok(!lvl1.blocks.some((b) => b.text.includes("规划中")), "父层无混入")
+  // 深层 done → 只关深层孙块
+  routeSubToken(s, "eng-coder#2/explore#1/plan#2/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
+  assert.equal(lvl2.done, true, "深层孙块定格")
+  assert.equal(lvl1.done, false, "中层子块不受影响")
+  assert.equal(outer.done, false, "外层不受影响")
+})
+
+test("§27 R23 NFR 数据层: 子块行数计入外层 N2 配额——树级 trim（子块大段输出不独立扩容）", () => {
+  const s = state()
+  routeSubToken(s, "eng-coder#2/外层开头行\n", noop)
+  const outer = s.subTasks["eng-coder#2"]
+  // 子块灌 600 行 → 树总行数 ≤ 501（500 + 标记行）——外层旧行被 trim 优先丢弃
+  for (let i = 1; i <= 600; i++) routeSubToolOutput(s, "eng-coder#2/explore#1/read", { kind: "text", text: `row ${i}\n` }, noop)
+  const ch = outer.children[0]
+  const treeTotal = (outer._lineCount ?? 0) + (ch._lineCount ?? 0)
+  // 树级 trim：行 ≤ 500 + 每 trim 载体一条标记（外层 1 + 子块 1 = ≤ 502）
+  assert.ok(treeTotal <= SUB_BLOCK_LINE_LIMIT + 2, `树总行数 ≤ 502（子块计入外层配额——不独立扩容），实际 ${treeTotal}`)
+  assert.ok(ch.blocks.some((b) => b.kind === "meta" && b.text.includes("省略")), "省略标记在 trim 载体上")
+  assert.ok(ch._lineCount <= SUB_BLOCK_LINE_LIMIT + 1, "子块自身 ≤ 501（同配额——含标记行）")
+  // 外层后写行不受早期 trim 影响（仍可归属外层）
+  routeSubToken(s, "eng-coder#2/外层收尾\n", noop)
+  assert.ok(outer.blocks.some((b) => String(b.text).includes("外层收尾")), "外层自身后续内容照常")
 })
 
 test("§19.5 T-M19 数据层: ⟦ev⟧stopped → interrupted 语义冻结（stopped 标记 + 面板释放 + 冻结载体）", () => {
@@ -504,7 +604,8 @@ test("§19.6 T-P6 扩展: routeSubToken done/stopped 分支 + freezeReclaimDiges
   routeSubToken(b.s, "eng-coder#2/hello", noop)
   routeSubToken(b.s, "eng-coder#2/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e", noop)
   assert.deepEqual(mirror(b.agent), [], "⟦ev⟧stopped 冻结删除 → 刷镜")
-  // finishSubTask / finishSubTasksByRole / finishSubTaskByModel 同刷（done 状态入镜）
+  // finishSubTask / finishSubTasksByRole 同刷（done 状态入镜）——finishSubTaskByModel
+  // 已随 R17 consult_check 退役删除（§25 D-R17a——settle 事件按 relay key 精确冻结）
   const c = mounted()
   routeSubToken(c.s, "coder#1/hello", noop)
   finishSubTask(c.s, ["coder"], null)
@@ -513,10 +614,6 @@ test("§19.6 T-P6 扩展: routeSubToken done/stopped 分支 + freezeReclaimDiges
   routeSubToken(d.s, "consult#1/hello", noop)
   finishSubTasksByRole(d.s, ["consult"], null)
   assert.deepEqual(mirror(d.agent).map((b) => b.status), ["done"], "finishSubTasksByRole done 刷镜")
-  const e = mounted()
-  routeSubToken(e.s, "consult#1/[model]kimi-k3", noop)
-  finishSubTaskByModel(e.s, "consult", "kimi-k3")
-  assert.deepEqual(mirror(e.agent).map((b) => b.status), ["done"], "finishSubTaskByModel done 刷镜")
   // freezeReclaimDigestedBlocks（§17.5.5 逐条回收）→ 刷镜
   const f = mounted()
   routeSubToken(f.s, "eng-coder#9/hello", noop)

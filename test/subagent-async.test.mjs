@@ -3,6 +3,7 @@
  * Source(s): subagent.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -90,7 +91,7 @@ function asyncParent(provider, cwd) {
 }
 
 
-test("§15 T1/T2: async spawn 立即返回、主会话可继续（不被阻塞）", async () => {
+slow("§15 T1/T2: async spawn 立即返回、主会话可继续（不被阻塞）", async () => {
   const { server, port } = await asyncServer([{ content: LONG_REPORT("slow"), delay: 400 }])
   const cwd = mkdtempSync(join(tmpdir(), "cli-async-"))
   try {
@@ -117,7 +118,7 @@ test("§15 T1/T2: async spawn 立即返回、主会话可继续（不被阻塞�
 
 
 
-test("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 async 收已完成直注入 + 清空（collectSettledAsync 语义）", async () => {
+slow("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 async 收已完成直注入 + 清空（collectSettledAsync 语义）", async () => {
   // §17 D-S1：回合尾不再 allSettled 等待——collectSettledAsync 只注入"回合内已 settle"
   // 项（① 直注入，形态同 §15）并移出池；未完成项移交挂起会话（agent-turn.mjs
   // suspensionSession——见 test/suspension.test.mjs T-S1）。本用例子代理在回合内完成
@@ -203,7 +204,7 @@ test("§15 T5 (§17 D-S1 superseded): 回合收尾——回合内已 settle 的 
 
 
 
-test("§17.5 T5b（agent 级——collectSettledAsync suspDriven 驱动分支）: 驱动回合尾不再直注入——settled 留池 → sweep → 消化轮 run 首行注入（round1 #2：无驱动兜底 = T5 直注入——本用例显式传 suspDriven 验驱动分支）", async () => {
+slow("§17.5 T5b（agent 级——collectSettledAsync suspDriven 驱动分支）: 驱动回合尾不再直注入——settled 留池 → sweep → 消化轮 run 首行注入（round1 #2：无驱动兜底 = T5 直注入——本用例显式传 suspDriven 验驱动分支）", async () => {
   // 17.5.2/17.5.4 #2：suspDriven=true（agent-turn 驱动层传）→ collectSettledAsync 回合尾
   // 不直注入排空——done 条目留池（settled not consumed）→ 挂起会话首轮 sweep → 消化轮
   // （auto-turn）run 首行统一注入（D-S3 单注入点）。T5（无 suspDriven）= 兜底直注入对照。
@@ -287,7 +288,7 @@ test("§17.5 T5b（agent 级——collectSettledAsync suspDriven 驱动分支）
 
 
 
-test("§15 D-A3 修复: 回合中先完成的 async 子代理——settle 即发 ⟦ev⟧done，冻结位置在结论之前", async () => {
+slow("§15 D-A3 修复: 回合中先完成的 async 子代理——settle 即发 ⟦ev⟧done，冻结位置在结论之前", async () => {
   // Content-aware server（同 T5）：父回合 1 → subagent(async) 工具调用；
   // 子代理 300ms 后完成；父回合 2 的"结论"500ms 后才到——done 事件（settle 即发）
   // 必先于结论 token（完成即冻结：块冻结在完成时刻的流位置，不在结论之后）。
@@ -488,7 +489,7 @@ test("§19 T-M1: action 缺省 = spawn——显式 action:'spawn' 与缺省零�
 
 
 
-test("§19 T-M5: status 指定 running id → 立即返回（不阻塞——§19 触发场景：查状态不挂主回合）", async () => {
+slow("§19 T-M5: status 指定 running id → 立即返回（不阻塞——§19 触发场景：查状态不挂主回合）", async () => {
   const { server, port } = await asyncServer([{ content: LONG_REPORT("慢完成"), delay: 500 }])
   const cwd = mkdtempSync(join(tmpdir(), "cli-m5-"))
   try {
@@ -513,7 +514,7 @@ test("§19 T-M5: status 指定 running id → 立即返回（不阻塞——§19
 
 
 
-test("§19 T-M6: status 指定 queued id → 返回 position（槽位满时）", async () => {
+slow("§19 T-M6: status 指定 queued id → 返回 position（槽位满时）", async () => {
   const { server, port } = await asyncServer(Array.from({ length: 5 }, () => ({ content: LONG_REPORT("占槽"), delay: 500 })))
   const cwd = mkdtempSync(join(tmpdir(), "cli-m6-"))
   try {
@@ -650,7 +651,7 @@ function tokenCtx(parent, cwd, tokens) {
 }
 
 
-test("§19.5 T-M18: status 全览含 role/model/elapsedSec/turn/maxTurns（可决策字段——正确性断言非仅存在性）", async () => {
+slow("§19.5 T-M18: status 全览含 role/model/elapsedSec/turn/maxTurns（可决策字段——正确性断言非仅存在性）", async () => {
   const { server, port } = await asyncServer([{ content: LONG_REPORT("慢活"), delay: 1500 }])
   const cwd = mkdtempSync(join(tmpdir(), "cli-m18-"))
   try {
@@ -810,7 +811,7 @@ test("§19.5.6 T-SF4: 路径 >80 字符截尾（不超行）；cwd 之外路径�
 
 
 
-test("§19.5.6 T-SF5: entry.start() 绑定 childAgent 对象引用——status 运行期实时读；done 不含 touched 字段（round3 #9）", async () => {
+slow("§19.5.6 T-SF5: entry.start() 绑定 childAgent 对象引用——status 运行期实时读；done 不含 touched 字段（round3 #9）", async () => {
   const { server, port } = await asyncServer([{ content: LONG_REPORT("缓慢活"), delay: 1500 }])
   const cwd = mkdtempSync(join(tmpdir(), "cli-sf5-"))
   try {
@@ -865,7 +866,7 @@ test("§19.5 D-M7b ①: async spawn 发 ⟦ev⟧async 标记（实际启动—�
     // sync 分支：同一 parent（counter 续号）——阻塞完成，零 async 标记
     const sTokens = []
     const sCtx = tokenCtx(parent, cwd, sTokens)
-    const s = String(await subagentTool.execute({ task: "同步活", role: "coder" }, sCtx))
+    const s = String(await subagentTool.execute({ task: "同步活", role: "coder", async: false }, sCtx)) // R12 (§18 D-E1a): depth-0 缺省 async——sync 分支钉 async:false
     assert.ok(s.includes("同步活 report"), "sync spawn 阻塞返回报告")
     assert.ok(!sTokens.some((t) => t.includes("⟦ev⟧async")), "sync spawn 不发 async 标记（sync 区块 = 无标记 = sync 头标）")
     assert.ok(sTokens.some((t) => t.includes("/[model]")), "sync spawn [model] token 照常（makeRelay——区块仍建）")

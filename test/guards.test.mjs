@@ -365,3 +365,83 @@ test("runAgent: 工具执行完成后的中断也记账（评审 #4——文件�
     server.close()
   }
 })
+
+// ---------------------------------------------------------------- 记账语义（AGENT-LOOP.md §24 尾 join→resolve 双前缀修复注——2026-09-06 R-bug）
+// 修复注测试（评审 #1 点名）：① 绝对 p → _touchedFiles 记 resolve 语义绝对路径（修复前必须失败——join 双前缀）
+// ② 相对 p 回归不变（绝对 cwd 下构造）③ agent.mjs 中断记账分支（第三修复位）同 resolve 语义。
+// 落点：记账域（record-results 断言所在——§18.14 域——既有中断记账用例 L333 同文件同 harness）。
+
+function makePathRecordTool() {
+  return {
+    name: "write",
+    description: "test mutation (path recording)",
+    parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } } },
+    readonly: false,
+    touchedPaths: (a) => [a.path ?? ""],
+    execute: async () => "ok", // 模拟已改盘（记账与磁盘无关）
+  }
+}
+
+// 跑一次 FILE_MUTATOR 提交（interrupt=true 走 agent.mjs 中断记账分支；否则正常 recordToolResults 提交）。
+// 返回 { agent }——cwd 已清理（记账断言只用字符串路径）。
+async function runRecordCommit(p, { interrupt = false } = {}) {
+  const { createAgent, runAgent } = await import("../src/agent.mjs")
+  const script = [
+    { toolCall: { name: "write", arguments: JSON.stringify({ path: p, content: "x" }) }, usage: { prompt_tokens: 100 } },
+    ...(interrupt ? [] : [{ content: "done" }]),
+  ]
+  const { server, port } = await mockLLM(script)
+  const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+  const cwd = mkdtempSync(join(tmpdir(), "thincoder-record-cwd-"))
+  const agent = createAgent({ provider, tools: [makePathRecordTool()], config: { verifyGuard: false }, cwd })
+  agent.autoApprove = true
+  try {
+    if (interrupt) {
+      const ac = new AbortController()
+      await assert.rejects(
+        runAgent(agent, "改文件", { onToolResult: () => ac.abort({ interrupt: true, message: "停" }) }, { signal: ac.signal }),
+        (e) => e.name === "AbortError" || e.name === "User interrupted",
+      )
+    } else {
+      const out = await runAgent(agent, "改点东西", { onPermissionRequest: async () => true })
+      assert.equal(out, "done")
+    }
+    return { agent }
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+}
+
+test("记账: 绝对 p 正常提交 → _touchedFiles 记 resolve 语义绝对路径（无双前缀——修复注 ①——修复前必失败）", async () => {
+  const outDir = mkdtempSync(join(tmpdir(), "thincoder-record-out-"))
+  try {
+    const abs = join(outDir, "abs.txt") // 与 agent.cwd 不同根目录——join 双前缀会记 cwd\abs 错路径
+    const { agent } = await runRecordCommit(abs)
+    assert.equal(agent._touchedFiles.length, 1)
+    assert.equal(agent._touchedFiles[0], abs, "绝对 p 必须原样入账（resolve 语义）——不得带 cwd 前缀")
+    assert.ok(agent._touchedFiles[0].startsWith(outDir), "记录的必须是真实绝对路径（落入 outDir）")
+    assert.deepEqual(agent._mutLog.at(-1).paths, [abs], "mutation-log 面（dispatch runOne 执行期唯一记账点——§29 fix A——noteMutations）同样 resolve 语义——修复注 ① 影响面覆盖")
+  } finally {
+    rmSync(outDir, { recursive: true, force: true })
+  }
+})
+
+test("记账: 相对 p 正常提交 → _touchedFiles 不变（绝对 cwd 下构造——修复注 ② 零回归）", async () => {
+  const { agent } = await runRecordCommit("sub/rel.txt")
+  assert.equal(agent._touchedFiles.length, 1)
+  assert.equal(agent._touchedFiles[0], join(agent.cwd, "sub", "rel.txt"))
+})
+
+test("记账: 绝对 p 中断记账 → _touchedFiles 记 resolve 语义绝对路径（agent.mjs 中断分支——修复注 ③）", async () => {
+  const outDir = mkdtempSync(join(tmpdir(), "thincoder-record-out-"))
+  try {
+    const abs = join(outDir, "intr.txt")
+    const { agent } = await runRecordCommit(abs, { interrupt: true })
+    assert.equal(agent._touchedFiles.length, 1)
+    assert.equal(agent._touchedFiles[0], abs, "中断记账分支同样 resolve 语义（第三修复位）")
+    assert.deepEqual(agent._mutLog.at(-1).paths, [abs], "中断路径 mutation-log 单条（dispatch runOne 执行期已记——中断分支不再单独 noteMutations——§29 唯一记账点 seq 单计）同样 resolve 语义")
+  } finally {
+    rmSync(outDir, { recursive: true, force: true })
+  }
+})

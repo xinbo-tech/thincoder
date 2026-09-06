@@ -215,6 +215,57 @@ describe("multi-slot token serialization — saveSession/applySession round-trip
   })
 })
 
+// ─── 3c. R16 token 生命周期（2026-09-06——跨模式存活 + 恢复 TTL 过滤） ────
+
+test("R16: exit 不清 token——exit → save → load → apply 往返仍有效（TTL 内——OFF→重启路径，评审 #4 反转）", async () => {
+  const { engTool } = await import("../src/agent-tools/eng.mjs")
+  const cwd = mkdtempSync(join(tmpdir(), "tc-r16-exit-"))
+  try {
+    const token = `11111111-2222-3333-4444-555555555555:${Date.now() + 24 * 3600 * 1000}`
+    const agent = makeAgent(cwd)
+    agent.config.agent.engineering = true
+    agent._engDesignToken = token
+    agent._engDesignTokens = new Map([["id-r16", token]])
+    // eng(exit)——R16：有效 token 保留（原 "exit clears → save→load → token null" 语义废弃）
+    await engTool.execute({ action: "exit" }, { agent })
+    assert.equal(agent.config.agent.engineering, false)
+    assert.equal(agent._engDesignToken, token, "exit 后镜像保留")
+    assert.equal(agent._engDesignTokens.size, 1, "exit 后槽保留")
+    saveSession(agent) // exit → persist → 退出 路径的落盘
+    const fresh = makeAgent(cwd)
+    applySession(fresh, loadSession(cwd))
+    assert.equal(fresh._engDesignToken, token, "重启恢复读回有效 token（TTL 内——不重评）")
+    assert.equal(fresh._engDesignTokens?.get("id-r16"), token, "槽位恢复")
+  } finally { cleanup(cwd) }
+})
+
+test("T-R16b: 恢复过滤——过期 token 不读回（过期镜像 + 过期槽丢弃；有效/畸形读回）", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-r16b-"))
+  try {
+    const valid = `11111111-2222-3333-4444-555555555555:${Date.now() + 24 * 3600 * 1000}`
+    const expired = `aaaaaaaa-1111-4111-8111-00000000000a:${Date.now() - 3600 * 1000}`
+    const malformed = "tok-garbage" // 畸形串不在此丢弃——读回后由门禁格式拒
+    const agent = makeAgent(cwd)
+    agent._engDesignToken = expired
+    agent._engDesignTokens = new Map([["exp-a", expired], ["val-b", valid], ["bad-c", malformed]])
+    saveSession(agent)
+    const raw = JSON.parse(readFileSync(`${slotBase(cwd)}.${activeSlot(cwd)}`, "utf8"))
+    assert.equal(raw.engDesignToken, expired, "save 原样写（过滤在恢复侧——过期字段随下次 save 自然清）")
+    const fresh = makeAgent(cwd)
+    applySession(fresh, loadSession(cwd))
+    assert.equal(fresh._engDesignToken, null, "过期镜像不读回")
+    assert.ok(fresh._engDesignTokens instanceof Map, "restored as a Map")
+    assert.equal(fresh._engDesignTokens.size, 2, "过期槽丢弃——有效 + 畸形读回")
+    assert.equal(fresh._engDesignTokens.get("val-b"), valid, "有效槽读回")
+    assert.equal(fresh._engDesignTokens.get("bad-c"), malformed, "畸形串读回（不主动删——F-R16b ①）")
+    // 丢弃后下次 save 自然清字段（清盘闭环）
+    saveSession(fresh)
+    const after = JSON.parse(readFileSync(`${slotBase(cwd)}.${activeSlot(cwd)}`, "utf8"))
+    assert.equal(after.engDesignTokens["exp-a"], undefined, "过期槽字段随下次 save 消失")
+    assert.equal(after.engDesignTokens["val-b"], valid, "有效槽字段保留")
+  } finally { cleanup(cwd) }
+})
+
 // ─── 4. /advisor guard toggle dual-writes the slot ──────────────
 
 describe("cmd-advisor — guard toggle dual-writes the session slot and the config mirror", () => {

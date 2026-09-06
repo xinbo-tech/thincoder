@@ -21,7 +21,7 @@ import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 import {
   SUB_PREFIX_RE, SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
-  routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, finishSubTaskByModel, freezeDoneSubTasks,
+  routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "./subagent-blocks.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
@@ -194,38 +194,29 @@ export function buildToolCallbacks(deps) {
         // 飞刀 post-op report landed under the subagent tool name — freeze the
         // escalate#N activity block (no preview; legacy surface).
         settleToolBlock(state, name, toolId, "completed")
-        // §7.2.3（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
-        // 失败/老回调无 subKey → escalate 角色启发式兜底（escalate 串行 + 角色限定——
-        // 既有行为）。
-        const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null
-        if (subKey !== undefined && subKey !== null && subKey !== "") {
-          finishSubTaskKey(state, String(subKey), lastError)
-        } else {
-          finishSubTask(state, ["escalate"], lastError)
+        // §25 D-R17b (R17): async escalate ack ({id, role:"escalate", status:
+        // running|queued}) — the child KEEPS running — skip the freeze like the
+        // async spawn path (the block freezes on the ⟦ev⟧done/stopped settle
+        // event at flight end). Sync results (async:false) freeze below.
+        if (!isAsyncSpawnResult(result)) {
+          // §7.2.3（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
+          // 失败/老回调无 subKey → escalate 角色启发式兜底（escalate 串行 + 角色限定——
+          // 既有行为）。
+          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null
+          if (subKey !== undefined && subKey !== null && subKey !== "") {
+            finishSubTaskKey(state, String(subKey), lastError)
+          } else {
+            finishSubTask(state, ["escalate"], lastError)
+          }
+          freezeDoneSubTasks(state)
         }
-        freezeDoneSubTasks(state)
-      } else if (name === "consult_check" || name === "consult_stop") {
-        // Consult session-level settle (2026-08-30 consult review): a session spawns
-        // N parallel children, so completion must settle ALL of them (single-shot
-        // finishSubTask froze only the earliest — N-1 stayed "running" then got
-        // mislabeled "interrupted").
-        //   - individual reply (done:false): settle precisely by r.model.
-        //   - done:true / stopped: settle every remaining consult block.
-        try {
-          const r = JSON.parse(result)
-          if (r?.done || r?.stopped !== undefined) {
-            finishSubTasksByRole(state, ["consult"], null)
-            freezeDoneSubTasks(state)
-          } else if (r?.model) {
-            finishSubTaskByModel(state, "consult", r.model)
-            freezeDoneSubTasks(state)
-          }
-        } catch {
-          if (name === "consult_stop") {
-            finishSubTasksByRole(state, ["consult"], null)
-            freezeDoneSubTasks(state)
-          }
-        } /* non-JSON result — leave blocks as-is */
+      } else if (name === "consult_stop") {
+        // R17（§25 D-R17a——check 已删）：consult_stop = 取消指定会诊会话。被 abort 的
+        // children 各自 settle（settleChild）时发 ⟦ev⟧done 冻结自己的卡——此处**不做按
+        // 角色整组清扫**（会诊会话可并发——按角色会误冻其他仍在运行的会话的卡，冻结即
+        // 截断其活动流——tool-events advisor 复评 🟡1 修正）；取消的即时可见性由 abort
+        // settle 事件承担（abort 解绕通常在同回合内完成——卡片在其 child settle 即冻结）。
+        // 仅结果本身落本工具调用自己的载体块（下方通用分支）。
       }
       if (!isSubagent && !isEscalate && name !== "advisor") {
         // Result lands INSIDE the block (restore parity — the restored carrier

@@ -21,6 +21,8 @@
 
 > **设计评审（`reviewType="design"`）与代码评审共用同一收敛协议**（2026-08-04 决策变更）：round 1 用 `advisor-design.md`（设计评审标准 + Approval Signal），round 2/3+ 用 `advisor-round*.md` 收敛提示词（验证 prior 表、证据强制）。设计文档多次修改的评审循环因此与代码评审同构：第 2 轮可报新问题，第 3+ 轮严格只查已知问题，5 轮封顶后不再打回。
 
+> **Supersede 注（2026-09-06——AGENT-LOOP §24 R13 实现落）**：async advisor 化后**轮次/prior/cap 随 review 实例计**（`_advisorRuns: Map<reviewId, {round, priorOutput}>`——reviewId = designId/随机——每评审 ≤5 轮第 6 次启动拒）——上表及"共用同一收敛协议"条款中的**全局 `_advisorRound` 共享预算语义**（本文件工程模式集成节"轮次共享：design/code 共用 `_advisorRound`"）对 **async 评审路径 supersede**（同步评审路径不变——`_advisorRound` 仍用于同步调用）。实例轮次上下文经 `rv` threading（advisor/main.mjs——实例完成不写全局 `_lastAdvisorOutput`）——并发多评审 round/prior 互不污染。文档层：AGENT-LOOP §24 D-24b/②-5 为权威设计——本文件机制表在 async 路径上以 §24 为准。
+
 ## 关键机制
 
 ### 1. system prompt 按轮次替换（核心修复）
@@ -142,6 +144,12 @@ if (agent._mutatedThisRun        // ① 本 run 改过代码
 - **已知边界**：conversation background 只取最近 3 轮——**2026-08-08 决策：需求文档成为 (b) 的主参照**——评审 user 消息注入 `## Project Guide (AGENTS.md)`（项目文档地图，预算 = max(8KB, 评审模型上下文 × 5%)，1M 模型 ≈ 50K），评审者第一步必须读它并按指引读需求文档——"用户需求在文档里，对话背景只是补充"；无 AGENTS.md 时诚实降级（明说以对话背景为准）。这消除了旧边界"需求在文档中但 advisor 不知道去哪读"的盲区。
 - **项目根定位（2026-08-08 追加）**：项目根是**工作目录下的子目录**（用户明确否定"向上查找"）——发现顺序：cwd 自身有 AGENTS.md → cwd 即项目根（单项目）；否则从评审范围第一个文件所在目录**在 cwd 边界内**向上找最近 AGENTS.md（多项目工作区/monorepo：被评审文件归属的子项目就是项目根）；都找不到 → 诚实降级。注入段标注 `<!-- Project root: <相对路径> -->` 让评审者知道地图归属。
 
+### 7. 受影响文件行数标注核查——设计评审标准维度补条（2026-09-07 · R24）
+
+设计侧结构规则执行挂钩（权威：`docs/design/METHODOLOGY.md`「设计侧结构规则执行挂钩」节 F-R24b——纯文档纪律批——代码零改动）。advisor design review（实现提示词 `src/prompts/advisor-design.md` Review Criteria）标准维度补一条——与 §6 同构：维度变更以本文件（评审机制设计文档）与 METHODOLOGY R24 节为设计权威，提示词为执行实现：
+
+- **受影响文件行数标注核查**：设计文档「受影响文件」表行数标注是否齐全（每个将修改的源/测试文件标注 `当前行数 + 预计增量`——预计 ≤±N 或"结构不变"）+ 超档拆分规划是否在——标注数值抽查——含 ≥300 单体函数触及抽查（函数档为第一判据——文件 ≤500 而内含 300+ 单体 = 仍未达标——文件档 >300 主动审视 / >500 必须拆——封口语义——无豁免通道）。
+
 ## 配置
 
 `.thincoder/advisor.md` 提供评审准则覆盖；`config.json` 中 `advisor.provider` / `advisor.model` 可选覆盖主 agent 的 provider。
@@ -174,3 +182,17 @@ if (agent._mutatedThisRun        // ① 本 run 改过代码
 ## 验证
 
 `test/advisor.test.mjs` 覆盖：system prompt 轮次替换、cap 阻断第 6 次调用、design 豁免、design 不递增轮次、follow-up 原文注入、确定性 round 判定（`_advisorRound > 0 && _lastAdvisorOutput`）、项目根发现（子项目地图/单项目/降级）；`test/agent.test.mjs` 覆盖 `mergeChildMutations` 合并/去重/标记失效、runAgent 级 guard 推回（bash 后不重触发、未评审代码写必推回）。全套测试 `node --test test\*.test.mjs`。
+
+## R13 · advisor 异步化需求登记（2026-09-06 · 需求池 R13——用户需求：主代理跑 advisor 不阻塞前端）
+
+> 状态：**需求登记（2026-09-06——澄清：核心形态用户确认——细节（并发/排队/取消/范围）标注待设计定稿）——设计启动权在用户**。
+
+**需求句（用户原话）**："我希望主代理里跑 advisor 也能是异步的，不要阻塞前端。"
+
+**澄清产物**：
+- **症状**：设计评审（0.5-2min+）/父侧 code 复核在主会话回合内同步执行——用户发起评审后前端一直 processing 阻塞，期间无法与 agent 交互。
+- **目标形态（用户确认"对"）**：评审**后台跑**——用户发起评审后回合正常结束、可继续交互；评审完成自动回来（settle 注入消化轮——§17 async 基建同族）→ agent 处置（响应表/修正建议/逐项呈报）→ 用户拍板。
+- **范围（默认——待设计定稿）**：主代理侧 advisor 调用全异步化：①设计评审（用户发起）②父侧 code 复核（自动节点——现主回合内同步跑）。**eng-coder 内部子代理自审不动**（那是子代理自己回合内流程——§18 链已在子内）。
+- **开放决策点（待设计）**：a) 并发规则——不同设计评审可并行（多槽）还是单槽串行？修正轮天然依赖前轮处置（agent 处置完才能发起 round2——不构成并发）；b) 取消语义——后台评审可 cancel（放弃该轮——token 不签发）；c) UI——advisor 活动块后台流式显示（同 async 子代理面板——可查 status）；d) 复用 §17 挂起/消化/注入基建 vs 独立通道。
+
+**板块**：评审机制（AGENT-LOOP §18 评审收敛协议 + 本文件 ADVISOR-CONVERGENCE——async 基建 §15/§17 同族）。

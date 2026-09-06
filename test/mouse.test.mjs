@@ -4,7 +4,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { parseMouseClicks, convGlobalIndex, handleMouseClick, handleWheel } from "../src/tui/mouse.mjs"
-import { computeLayout, subagentVisibleLines } from "../src/tui/layout.mjs"
+import { computeLayout, subagentVisibleLines, subagentLineIndex } from "../src/tui/layout.mjs"
 
 /** Minimal TUI state satisfying computeLayout + buildConvLines accessors. */
 function mockState(extra = {}) {
@@ -529,6 +529,42 @@ describe("§7.2.1 固定子agent 面板 — 点击/滚轮命中映射（T5/T6/T7
       assert.ok(hit2 > 0, `▼ 控制行命中（row ${hit2}）`)
       assert.ok(!state.expandedBlocks.has("sub-coder#1"), "点击 ▼ 控制 → 收起")
       assert.ok(rendered > 0, "点击触发重渲染")
+    })
+  })
+
+  it("§27 R23 T-R23e.2: 子块头行点击 → 子块折叠/展开（fold-block 通用通道命中——无 mouse 扩展）", () => {
+    const state = mockState({
+      subTasks: {
+        "eng-coder#2": {
+          key: "eng-coder#2", role: "eng-coder", async: true, started: Date.now(), done: false, doneAt: null,
+          blocks: [{ kind: "text", text: "外层叙述" }], currentTool: "explore#1/read", toolArgs: null,
+          turn: 1, maxTurns: 100, approval: null, lastError: null, dropped: 0, blockEpoch: 1,
+          children: [{
+            key: "explore#1", role: "explore", model: "deepseek-chat", started: Date.now(), done: false, doneAt: null, stopped: false,
+            blocks: [{ kind: "tool", text: "❯ read\n审计内容行\n" }], currentTool: "read", toolArgs: null,
+            approval: null, lastError: null, dropped: 0, blockEpoch: 1, children: [],
+          }],
+        },
+      },
+    })
+    const ctx = { state, render: () => {}, showPicker: async () => null, popPicker: () => {} }
+    const CHILD_KEY = "sub-eng-coder#2/explore#1"
+    stubDims(() => {
+      // 扫描定位子块头行（面板内——_foldToggle = 子块折叠键）
+      let row = -1
+      scanClick(2, 23, (r) => {
+        const layout = computeLayout(state, { cols: 80, rows: 24 })
+        const idx = subagentLineIndex(layout.subagentLines, layout.panels.subagent.h, r - layout.panels.subagent.y - 1)
+        if (idx >= 0 && layout.subagentLines[idx]?._foldToggle === CHILD_KEY) { row = r; return true }
+        return false
+      })
+      assert.ok(row > 0, `子块头行可命中（row ${row}）`)
+      assert.equal(handleMouseClick(ctx, 10, row), true, "子块头行点击被消费")
+      assert.ok(state.expandedBlocks?.has(CHILD_KEY), "点击子块头 → 子块展开（fold-block 通用通道——命中映射工作）")
+      assert.ok(!state.expandedBlocks.has("sub-eng-coder#2"), "子块 toggle 不影响外层折叠态")
+      // 再点 → 收起
+      assert.equal(handleMouseClick(ctx, 10, row), true)
+      assert.ok(!state.expandedBlocks.has(CHILD_KEY), "再点 → 子块收起")
     })
   })
 

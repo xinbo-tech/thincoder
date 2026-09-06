@@ -1,6 +1,7 @@
 # Design Token 硬化 — 需求（CLI）
 
 > 状态：待实施（2026-08-25，v2 范围收窄）
+> **设计语义（2026-09-06 用户裁定——见 TUNING.md §0）**：designToken 是**流程凭证**（防 agent 跳过评审步骤），**非密码学安全边界**（HMAC/加密因子是 security theater——已删除）；**内存级、随会话/模式死亡**（重启/eng 切换就丢——不得持久化到 slot 造成双源不一致）——**R16 修订（2026-09-06）：持久化 = 跨重启/跨模式恢复的有意载体——token 跨模式存活、仅 TTL 过期清——见 TUNING.md §5/§5.1**。
 > **Superseded 考古**：本文件 v1 是"内容绑定"方案（token 有效性绑定设计文档 hash + 7 天 TTL + 映射化），经三轮会诊打磨后被用户实况否决——工程模式每轮开发都有文档缺口要补正，批次间文档必然变更，内容绑定会把"偶尔重评"变成"每批必重评"（收益反转）。v1 全文及三轮会诊记录见 git 历史。v2 只保留与文档变更无关的安全修复 + TTL 放宽。
 
 ## 1. 总体目标
@@ -15,7 +16,7 @@
 | FR2 | 畸形/伪造 token 一律拒绝 | 删两个 fail-open 后门（parts.length!==3 放行、isNaN(expiresAt) 放行）——四分支 fail-closed：段数不等于 3 / NaN expiry / 签名不符 / 过期 |
 | FR3 | eng(exit) 清空后持久化不复活旧 token（vscode） | panel-session.mjs:73 的 extra.x ?? existing.x 改键存在性判断 |
 | FR4 | token 在评审通过后才生成 | 生成调用从评审前（advisor.mjs:133）挪进 pass 分支 |
-| FR5 | 工程 mode 重进不误杀有效 token | eng(enter) 幂等化：仅 off→on 迁移清 token |
+| FR5 | 工程 mode 重进不误杀有效 token | **R16 修订（2026-09-06）：token 跨模式存活——eng(enter/exit)/OFF 均不清有效 token；仅 TTL 过期清（恢复过滤/enter 清过期/spawn 拒删槽）** |
 | FR6 | 评审错误/中断不连坐作废 | 作废仅在"完整评审结束且未通过"触发（error 回包/abort/轮次耗尽豁免；result===null 守卫保留） |
 
 ## 3. 非功能

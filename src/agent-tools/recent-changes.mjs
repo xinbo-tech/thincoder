@@ -8,7 +8,8 @@ export const recentChangesTool = {
   description:
     "Show files modified in this agent run (write/edit/insert_after/delete). " +
     "Use when you need to remember which files you've already touched — during long multi-file tasks, " +
-    "it's easy to lose track. This is scoped to the current run, unlike git status which shows all uncommitted changes.",
+    "it's easy to lose track. This is scoped to the current run, unlike git status which shows all uncommitted changes. " +
+    "For session-level history (what was said in a session), use read_history.",
   parameters: {
     type: "object",
     properties: {},

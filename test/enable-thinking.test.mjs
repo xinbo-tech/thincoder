@@ -75,7 +75,7 @@ function thinkCtx(agent, picker) {
   const ctx = {
     agent,
     showPicker: picker ?? (async () => null),
-    syncProviderField: async (field, value) => { synced.push([field, value]) },
+    syncProviderField: async (name, field, value) => { synced.push([field, value]) },
     pushLine: () => {},
     pushLabel: () => {},
   }

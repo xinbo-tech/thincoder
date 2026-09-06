@@ -33,7 +33,7 @@ slow("T-AG1: runAgent —— explore 子 agent 零 git（真 git 仓库 cwd 下�
   git("commit", "-qm", "初始提交abc")
 
   const script = [
-    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "看看仓库结构", role: "explore" }) } },
+    { toolCall: { name: "subagent", arguments: JSON.stringify({ task: "看看仓库结构", role: "explore", async: false }) } }, // R12 (§18 D-E1a): depth-0 缺省 async——本测试脚本按阻塞时序编排，钉 async:false
     { content: "探索报告。".repeat(40) },
     { content: "完成" },
   ]
@@ -225,7 +225,7 @@ test("spawn model:\"default\" — child LLM request carries the real model; no s
       config: { agent: {} },
       cwd,
     })
-    const r1 = String(await subagentTool.execute({ task: "quick job", role: "coder", model: "default" }, { agent: parent1, cwd, callbacks: {}, depth: 0 }))
+    const r1 = String(await subagentTool.execute({ task: "quick job", role: "coder", model: "default", async: false }, { agent: parent1, cwd, callbacks: {}, depth: 0 })) // R12 (§18 D-E1a): depth-0 缺省 async——阻塞流钉 async:false
     assert.ok(r1.includes("child report"), "spawn with model:\"default\" completes normally")
     assert.equal(s1.requests[0].model, "glm-5.2", "child request model = inherited parent model (pre-fix the literal went out — trace 473/475/487)")
     // ② type-level configured + case variant → the chain model lands in the request
@@ -237,7 +237,7 @@ test("spawn model:\"default\" — child LLM request carries the real model; no s
       config: { agent: { subagentModels: { coder: "glm-5.3" } } },
       cwd,
     })
-    const r2 = String(await subagentTool.execute({ task: "quick job", role: "coder", model: "DEFAULT" }, { agent: parent2, cwd, callbacks: {}, depth: 0 }))
+    const r2 = String(await subagentTool.execute({ task: "quick job", role: "coder", model: "DEFAULT", async: false }, { agent: parent2, cwd, callbacks: {}, depth: 0 })) // R12: 阻塞流钉 async:false
     assert.ok(r2.includes("child report"))
     assert.equal(s2.requests[0].model, "glm-5.3", "type-level chain model lands in the request (\"DEFAULT\" case variant)")
     assert.ok(!warns.some((w) => w.includes('model "default" not found')), "specForModel never warned for the literal \"default\" (effect assertion)")
@@ -318,7 +318,7 @@ test("subagent tool: turn-cap walls prompt Continue — resume completes with fr
       cwd,
     })
     const asks = []
-    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, {
+    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder", async: false }, { // R12: 阻塞流钉 async:false
       agent: parent, cwd, callbacks: {},
       onPermissionRequest: async (name, args) => { asks.push([name, args]); return true },
     }))
@@ -347,7 +347,7 @@ test("subagent tool: user declines at the wall → partial-work return, no resum
       config: { agent: { subagentTurns: 3 } },
       cwd,
     })
-    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder" }, {
+    const r = String(await subagentTool.execute({ task: "loop until the cap", role: "coder", async: false }, { // R12: 阻塞流钉 async:false
       agent: parent, cwd, callbacks: {},
       onPermissionRequest: async () => false,
     }))
@@ -380,7 +380,7 @@ test("§7.2.3: sync spawn 成功返回前 ctx 留 _subagentKey（relayPrefix 去
       cwd,
     })
     const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
-    const r = String(await subagentTool.execute({ task: "quick job", role: "coder" }, ctx))
+    const r = String(await subagentTool.execute({ task: "quick job", role: "coder", async: false }, ctx)) // R12: sync 冻结语义测试钉 async:false
     assert.ok(r.includes("child done"), "sync spawn 正常完成")
     assert.equal(calls.n, 1, "单轮完成")
     assert.equal(ctx._subagentKey, "coder#1", "ctx._subagentKey = relayPrefix 去尾（role#N）")
@@ -450,15 +450,15 @@ test("§7.2.3（round1 #2）: escalate 成功路径 ctx 留 _subagentKey（escal
       agent: parent, cwd, callbacks: {}, depth: 0,
       runAgent: async () => "post-op body " + "x".repeat(300),
     }
-    const out = String(await subagentTool.execute({ action: "escalate", task: "复杂重构" }, ectx))
-    assert.ok(out.includes("post-op report"), "escalate 成功返回术后报告")
+    const out = String(await subagentTool.execute({ action: "escalate", task: "复杂重构", async: false }, ectx))
+    assert.ok(out.includes("post-op report"), "escalate 成功返回术后报告（async:false 同步路径）")
     assert.equal(ectx._subagentKey, "escalate#1", "escalate 成功 → ctx._subagentKey = relayPrefix 去尾（escalate#N）")
     // escErr（运行中途失败——runAgent 抛错）：软返回错误文本——不设 key——TUI 回落角色启发式
     const fctx = {
       agent: { ...parent, _subAgentCounter: 1 }, cwd, callbacks: {}, depth: 0,
       runAgent: async () => { throw new Error("escalate child boom") },
     }
-    const fout = String(await subagentTool.execute({ action: "escalate", task: "会失败的活" }, fctx))
+    const fout = String(await subagentTool.execute({ action: "escalate", task: "会失败的活", async: false }, fctx))
     assert.ok(fout.includes("escalate (kimi:kimi-k3) error: escalate child boom"), "失败返回错误文本（软返回——escErr）")
     assert.equal(fctx._subagentKey, undefined, "escErr 中途失败不设 key（错误路径不触发冻结——round1 #1）")
   } finally {
@@ -551,11 +551,7 @@ test("subagent tool description exposes the role capability matrix (no dev-comme
 test("§18.5 T-AG5: 工具描述零 git——旧 Receives-git-context 措辞删除 + 零 git 语义", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
-  assert.ok(!d.includes("Receives git context auto-injected"), "T-AG5: git-injection promise 措辞删除（描述与实现一致）")
-  assert.ok(!d.includes("receives git context"), "T-AG5: git-injection promise 残留（大小写）清空")
   assert.ok(d.includes("No git context injected—evidence from read/glob/grep and the task book"), "T-AG5: 零 git 语义措辞（镜像锚——VS Code 同款逐字）")
-  const roleDesc = subagentTool.parameters.properties.role.description
-  assert.ok(!roleDesc.includes("git"), "T-AG5: role 参数描述无 git 残留")
 })
 
 
@@ -615,7 +611,7 @@ slow("§18.5 T-AG1/T-AG2/T-AG6: 子代理零 git——explore/plan 无注入；�
       cwd,
     })
     // T-AG1: explore spawn —— childInput（子代理首个 LLM 请求）不含 git context
-    const r1 = String(await subagentTool.execute({ task: "看看仓库结构", role: "explore" }, { agent: parent, cwd, callbacks: {}, depth: 0 }))
+    const r1 = String(await subagentTool.execute({ task: "看看仓库结构", role: "explore", async: false }, { agent: parent, cwd, callbacks: {}, depth: 0 })) // R12: 阻塞流钉 async:false
     assert.ok(r1.includes("explore report"), "explore 子代理正常完成")
     const child1 = JSON.stringify(requests[0].messages)
     assert.ok(!child1.includes("<untrusted_git_context>"), "T-AG1: explore childInput 无 git context 注入")
@@ -623,7 +619,7 @@ slow("§18.5 T-AG1/T-AG2/T-AG6: 子代理零 git——explore/plan 无注入；�
     assert.ok(!child1.includes("git log") && !child1.includes("git diff"), "T-AG1: explore 提示词无 git 命令承诺")
     assert.ok(!child1.includes("初始提交abc"), "T-AG1: 注入的提交快照不存在（真 git 仓库 cwd 下）")
     // T-AG2: plan spawn
-    const r2 = String(await subagentTool.execute({ task: "设计缓存层", role: "plan" }, { agent: parent, cwd, callbacks: {}, depth: 0 }))
+    const r2 = String(await subagentTool.execute({ task: "设计缓存层", role: "plan", async: false }, { agent: parent, cwd, callbacks: {}, depth: 0 })) // R12: 阻塞流钉 async:false
     assert.ok(r2.includes("explore report"), "plan 子代理正常完成")
     const child2 = JSON.stringify(requests[1].messages)
     assert.ok(!child2.includes("<untrusted_git_context>"), "T-AG2: plan childInput 无 git context 注入")

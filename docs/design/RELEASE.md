@@ -8,13 +8,33 @@
 ## 1. 发布前检查
 
 - [ ] `npm view thincoder version` 记录 registry 最高已发号（版本号规则核对见 §1.5——待发号必须 = 最高 + 1）
-- [ ] `npm run release:check` 一键通过（2026-09-05 起 = lint + test:full 合并——全量输出只打印摘要行，失败自动提取 failing tests 详情段打印——0.12.59 发版实测痛点：详情被管道吞、为看错误跑 3 次全量）
-- [ ] `THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs` 真实端点 smoke 通过(花真钱,双层之外,发版前人工跑;2026-08-30 起 env 门控)
+- [ ] `THINCODER_SMOKE=1 node --test test/smoke-qwen-thinking.mjs` 真实端点 smoke 通过(花真钱,publish 自动门禁之外,发版前人工跑;2026-08-30 起 env 门控)
 - [ ] `CHANGELOG.md` 已更新新版本条目(Keep a Changelog 格式,中文,Added/Changed/Fixed/Removed 分节)
 - [ ] `package.json` version 已 bump（**发布时才 bump——开发期不预占——见 §1.5**）
 
-> **修复迭代纪律（2026-09-05——0.12.59 发版 3 轮全量教训）**：`release:check` 失败 → 修复 → **局部重跑**（`node --test --test-name-pattern "<失败名>" <失败文件>`——秒级）确认修复 → **release:check 终跑一次**收口。禁止每轮修复都全量重跑（85s/轮）。
-> **prepublishOnly 双保险注**：`npm publish` 会再跑 lint + 快层（§4.4 有意设计）——release:check 的全量是发版门槛，publish 的快层是最后防线——不重复省略，接受 ~2 分钟总开销。
+> **修复迭代纪律（2026-09-05——0.12.59 发版 3 轮全量教训；2026-09-06 R7 起跑在 publish 上）**：`npm publish` 失败 → 修复 → **局部重跑**（`node --test --test-name-pattern "<失败名>" <失败文件>`——秒级）确认修复 → **`npm publish` 终跑一次**收口。禁止每次失败都全量重跑（release-check 一轮 ~90s）。
+> **发布 = 唯一门禁（2026-09-06 R7 发布单轮制——设计与记录见下方 R7 段）**：`npm publish` 的 `prepublishOnly` **自动跑 release-check 全量单轮**（lint + test:full 合并，~90s——失败详情自动提取）——门禁由 publish 自动执行，不再有独立 check 步，故上方清单不再列手动 `release:check` 行（全量只在发布时跑一次）。
+> **需求登记（2026-09-06——入需求池 R7（原登记笔误 R5——2026-09-06 修正）——设计见下）**：**发布单轮制**——用户质疑"发布时有必要分几轮测吗？一次不够吗？"澄清定案：prepublishOnly 双保险（§4.4——check 全量 + publish 快层两遍）是快层 ~15s 时代的遗留——全量 ~90s 后不值。方向：prepublishOnly 改 lint + test:full（经 release-check 复用失败详情提取——或直接调 release-check），流程改为直接 `npm publish`（发布点 = 唯一门禁，无单独 check 步）；失败迭代纪律（局部重跑 → 终跑一次）保留。同步消解 TESTING §1 Phase 1 待决策项①（口径分裂）。VS Code 端（VSIX 发布）流程对照随设计批处理。
+
+> **R7 发布单轮制设计（2026-09-06 · 需求池 R7——设计层）**：
+>
+> **状态：已批准（2026-09-06——评审 0🔴 通过（token 8fcffc12…/designId d5ac21a0）——4🟡+1🔵 处置表用户全采纳——修正已落本节（评审修正注））**。
+>
+> **需求（F-R7）**：
+> - **F-R7a**：发布点 = 唯一门禁——`npm publish` 自动跑 **lint + test:full 全量单轮**（prepublishOnly 改调 release-check——失败详情提取既有）。
+> - **F-R7b**：废"check 再 publish"双保险——发布前检查清单删手动 `release:check` 行（publish 自动执行）。
+> - **F-R7c**：失败迭代纪律保留——`publish` 失败 → 局部重跑确认修复（test-name-pattern 秒级）→ `publish` 终跑一次收口。
+> - **F-R7d**：VS Code 端对照（VSIX 双源发布）——`vscode:prepublish` 改 lint + test:full 全量（用户裁定定稿：双源一起发、全量只测一次——见 D-R7d）。
+> - **F-R7e（裁定固化——勿再问）**：发布完成判定 = **publish 命令 exit 0 即可——不轮询、不检查上线版本**（VS Code 双市场审核/病毒扫描队列上线滞后是市场的业务——2026-08-31 裁定 + 2026-09-06 重申"只要发布没报错就行了"）。CLI npm 无审核队列 publish 即见，`npm view` 核验保留（即时可见非轮询）。
+>
+> **设计（D-R7）**：
+> - **D-R7a（CLI package.json）**：`prepublishOnly: "npm run release:check"`（release-check.mjs = lint + test:full 合并 + 摘要/失败详情提取——2026-09-05 已建，直接复用——不再双写脚本）。现 `lint && node --test "test/*.test.mjs"` 退役（直 glob 中量口径——run-full 统一入口为准）。
+> - **D-R7b（本文件 §1/§2/§4.4）**：§1 检查清单删 release:check 行（注：由 publish 自动跑——清单留 npm view/CHANGELOG/smoke/version 四行）；**§1 L17「prepublishOnly 双保险注」整段改写**（评审修正 #1——原"publish 快层是最后防线/接受 ~2 分钟总开销"随双保险一并废除——新句："publish = 唯一门禁——prepublishOnly 自动跑 release-check 全量单轮——不再有独立 check 步"）；§2 发布命令注释更新（**含版本号刷新："本次 = 0.12.59" → 0.12.60——评审修正 #5**——与 §1.5 现态对齐）；§1 修复迭代纪律句改"publish 失败 → 局部重跑 → publish 终跑"；§4.4 prepublishOnly 双保险注改写为单轮制（发布 = 唯一门禁——全量 ~90s 时代两遍不值——**含 F-R7e 裁定句落点**）。
+> - **D-R7b2（AC 残留扫描词扩——评审修正 #1）**：实现后全文扫"先 check 再 publish / 双保险 / 快层是最后防线 / 两遍"——零残留（不只扫单一措辞）。
+> - **D-R7c（TESTING.md 口径）**：§1 无 release 口径残留（2026-09-06 复核——已随 Phase 1/release:check 合并消解）——实现时再复核一次，若有残留顺带清理（报告即可）。
+> - **D-R7d（VS Code 端——用户裁定定稿 2026-09-06）**：①`vscode:prepublish` 改 `npm run lint && npm run test:full`（全量门禁 ~72s——测试在打包/首发时跑）；②**双源只测一次**（"双源都是一起发的，不必测两次"）——publish-all 流程 = 先 `vsce package` 一次（prepublish 全量仅此 1 次）→ 双源发同一 .vsix（vsce publish -i + ovsx publish <vsix>——已打包文件不再触发第二次测试）；③**发布后零检查**（exit 0 = 完成——不等不查不轮询——publish-all.mjs 头注释已载 2026-08-31 裁定——**裁定落档点（评审修正 #4）：CLI 落本文件改写后的 §4.4 注 + §2 发布命令注释；VS Code 落 thincoder-vscode/docs/design/RELEASE.md §2/§4 勘误 + publish-all.mjs 头注**——不再每次问）；④失败详情可见性：实现批本地 `vsce package` 实测（stdio 直通则无需机制；若详情被吞——VS Code RELEASE.md 加"失败时本地 npm run test:full 复跑"提示行，**不引入新脚本**）；⑤**边界句（评审修正 #2）**："零检查"只针对市场审核/病毒扫描**激活滞后**——§4.3 调用级前置（显式 --pat/发布前 verify-pat）与 ovsx 静默 exit 0 陷阱仍有效（其失败模式 = exit 0 但什么都没发）——勘误落档处一并写明，防后续读者把"exit 0 = 完成"误推广到跳过 PAT 校验。
+>
+> **验收（AC-R7）**：AC-R7a = ①**值断言（评审修正 #3）**：`scripts.prepublishOnly === "npm run release:check"` 且旧串 `lint && node --test "test/*.test.mjs"` 零残留（交付报告 diff 行）②绿跑：`npm run release:check` 全量通过（门禁内容证明）；AC-R7b = §1 清单/§1 双保险注/L17/§2/§4.4 文案同步（零残留扫描：先 check 再 publish/双保险/快层是最后防线/两遍 + F-R7e 裁定句在位——CLI §4.4 注 + VS Code RELEASE.md §2/§4 双落点）；AC-R7c = 双端全量回归绿 + VS Code 端对照落地（prepublish 全量 + 双源一测 + vsce package 实测报告 + §4.3 边界句在勘误记录）。
 
 ### 1.5 版本号连续性规则（2026-09-05 用户裁定——“不要跳号，npm/marketplace 对外编号连续不跳空”）
 
@@ -33,7 +53,7 @@
 ```bash
 cd thincoder
 
-# bump:规则号 = registry 最高 + 1(§1.5——本次 = 0.12.59;禁止跳号/预占)
+# bump:规则号 = registry 最高 + 1(§1.5——本次 = 0.12.60;禁止跳号/预占)
 # 手动改 package.json 的 version 字段 + CHANGELOG [Unreleased] 段头改新号
 
 git add package.json CHANGELOG.md
@@ -47,7 +67,7 @@ git push origin vX.Y.Z
 git -c http.proxy=http://10.2.2.112:3128 push github main
 git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
 
-npm publish                          # prepublishOnly 自动跑全套测试
+npm publish                          # prepublishOnly 自动跑 release-check 全量单轮(lint + test:full)——exit 0 = 发布完成(F-R7e:不轮询不查上线;npm view 核验保留,见 §3)
 ```
 
 ## 3. 验证
@@ -74,9 +94,11 @@ ovsx publish 返回 `🚀 Published` 后,**版本处于"已发布未激活"状�
 `ovsx verify-pat` / `publish` 在无 TTY 环境下**输出被吞且 exit 0**——看起来成功实则什么都没做(与 vsce 的 `'y'` PAT 读取坑同源,见 vscode RELEASE.md §1.2b)。
 **规则:ovsx 操作必须显式传 `--pat`**(真实 token 从环境变量 `OVSX_PAT` 读,不是 `OVSX_TOKEN`),并用 `execute`(node 直调 ovsx 内部 API)或事后 API 查询确认结果,不信任 CLI 的静默 exit 0。
 
-### 4.4 npm prepublishOnly 是最后一道门
+### 4.4 prepublishOnly = 发布唯一门禁（单轮全量制——2026-09-06 R7）
 
-`npm publish` 自动执行 `prepublishOnly`——**现为 `lint && test` 双门禁**(2026-08-27 起;此前只跑 test,lint 错误漏拦),两者不过发布中止,这是有意设计,不要绕过。
+`npm publish` 自动执行 `prepublishOnly`——**现为 `npm run release:check`**（release-check = lint + test:full 合并一键，~90s，摘要输出 + 失败详情自动提取——2026-09-05 建；R7 起作为发布自动门禁，不再双写脚本）。门禁不过发布中止，这是有意设计，不要绕过——**发布 = 唯一门禁**：全量只在 `npm publish` 自动跑一次（prepublishOnly 单轮），不再有独立 check 步、发布前不再手动分轮跑。publish 失败 → 局部重跑（test-name-pattern，秒级）确认修复 → publish 终跑一次收口（纪律见 §1 修复迭代句）。
+
+**发布完成判定（F-R7e 裁定固化——勿再问）**：publish 命令 **exit 0 = 发布完成**——不轮询、不查上线版本。CLI npm 无审核队列 publish 即见；`npm view` 核验保留（即时可见，非轮询——见 §3）。此判定只针对 npm 发布本身——ovsx/vsce 的无 TTY 静默 exit 0 陷阱见 §4.3（其失败模式 = exit 0 但什么都没发——PAT 校验不能省，勿把 "exit 0 = 完成" 推广到 ovsx/vsce）。
 
 ### 4.5 版本 bump 别用 PowerShell Set-Content -Encoding UTF8(2026-08-27)
 

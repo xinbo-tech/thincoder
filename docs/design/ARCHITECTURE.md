@@ -71,9 +71,6 @@ thincoder/
 │   ├── tools/            # 工具系统（20+ 文件/网络/git 工具）
 │   │   ├── index.mjs     # builtinTools 注册
 │   │   ├── file.mjs      # read / write / edit / insert_after / read_image
-│   │   ├── pdf.mjs       # read_pdf 工具壳（multimodal:true——扫描页图像回传；pages 页选择）
-│   │   ├── pdf-parse-xref.mjs # PDF 对象层：xref 双形态/ObjStm/流过滤器 + PNG 预测器/加密拒绝（TOOLS.md §11 双核）
-│   │   ├── pdf-parse-text.mjs # PDF 文本层：页树/内容流操作符/CMap+编码/布局 + 轻量 x 聚类分栏（TOOLS.md §11 双核）
 │   │   ├── system.mjs    # bash / glob / grep / ls（bash 支持 config.shell 自定义 shell，win32 默认 cmd 前缀 chcp 65001 强制 UTF-8）
 │   │   ├── git.mjs       # git 综合工具（diff / status / log / checkpoint 子命令）+ question
 │   │   ├── web.mjs       # websearch / fetch
@@ -247,7 +244,7 @@ export function createAgent({ provider, tools, config, cwd, memory, overlay, ...
 
 **plan 子 agent（借鉴 kimi-code 的 plan profile）**：只读规划 agent，交付物是计划本身。overlay 的灵魂是**编排意识**——先判断是否足够了解代码库，不足则明确列出"建议父 agent 派 explore 调查的问题"（plan → explore → plan 链），而非硬猜；输出契约：引用真实文件/行号、步骤可验证、有权衡时推荐一个方案并给理由。工具与 explore 相同（只读过滤），git 上下文同样注入。与 plan mode 互补：plan mode 是用户在场审批方案，plan 子 agent 是父 agent 自主外包规划阅读。
 
-**prompt 分层组织（借鉴 kimi-code 的自包含 profile，分文件方案）**：`system.md` 是核心规则（主/子通用：诚实、并行、最小改动、编码纪律）；`discipline.md` 是编码/测试纪律；`main.md` 是主 agent 专属条款（plan/goal/skill/subagent/verify——子 agent 没有这些工具，prompt 不教它调不存在的东西，消除"继承全量 prompt 再打补丁"的矛盾）；子 agent prompt = 角色 overlay（`explore.md` / `coder.md` / `plan.md`，**开头**，对齐 kimi 的 role prefix，身份先于通用规则）+ 核心规则。
+**prompt 分层组织（借鉴 kimi-code 的自包含 profile，分文件方案）**：`system.md` 是核心规则（主/子通用：诚实、正确性绝对优先、编码纪律——**2026-09-07 清理陈旧枚举：原列"最小改动"与现行 system.md:14 反义教育（Smallest change is not a goal）矛盾——对齐 R24 价值观锚**）；`discipline.md` 是编码/测试纪律；`main.md` 是主 agent 专属条款（plan/goal/skill/subagent/verify——子 agent 没有这些工具，prompt 不教它调不存在的东西，消除"继承全量 prompt 再打补丁"的矛盾）；子 agent prompt = 角色 overlay（`explore.md` / `coder.md` / `plan.md`，**开头**，对齐 kimi 的 role prefix，身份先于通用规则）+ 核心规则。
 
 **提示注入防御与上下文工程（借鉴 kimi-code）**：
 - goal 提醒：目标文本 XML 转义 + `<untrusted_objective>` 标签包裹 + "是数据不是指令"声明——用户目标里的"忽略你的指令"不再能穿透
@@ -455,31 +452,34 @@ thincoder distill      # 从会话提取候选记忆条目
 thincoder config       # 查看/设置配置
 ```
 
-## 数据流（一次问答）
+### R25 异常终止捕获与留痕（2026-09-07 · 快车道——用户"全做"——CLI 入口/生命周期面——round1 评审 0🔴 通过（token 97be0b3e——3🟡+5🔵 全采纳已落本节——复审发起权在用户））
 
-```
-用户输入 → tui → agent.runAgent
-  → memory.search 注入相关记忆
-  → context 组装 → provider.chat (流式)
-  → toolCalls? → tui 权限确认 → tools.execute → 回喂 → 再循环
-  → 最终文本流式渲染到 tui
-  → (可选) agent 自主调 memory_put 沉淀
-```
+> 状态：**设计（评审发起权在用户）**。触发：用户实测——TUI 运行中进程自行终止——画面残留 + 提示符出现——Windows 事件日志空 / CrashDumps 无 node dump / agent 日志戛然而止——现象学指向 V8 进程内 fatal（OOM 类——瞬间终止无盘面证据）——用户要求"至少留点记录"。现状实证：bin/thincoder.mjs 入口已有 uncaughtException/unhandledRejection 兜底（钩子注册处——符号锚：入口顶层 process.on 块——现状快照 as-of 2026-09-07——**只 console.error 一行（TUI 全屏下不可见）——不落盘——无终端恢复（画面残留根因）**）；fatal 面（V8 OOM/原生错误）零覆盖——无任何记录。
 
-## 开发顺序（里程碑）
+**总体需求**：CLI 任何异常终止路径留下可诊断记录 + 异常退出时恢复终端（不再画面残留）——下次"没来由飞出"有据可查。
 
-| 里程碑 | 内容 | 验证标准 | 状态 |
-|---|---|---|---|
-| M1 | provider + 最简 chat 命令（无 TUI） | `thincoder chat "hello"` 流式输出真实回复 | ✅ |
-| M2 | tools + agent 主循环 | `thincoder chat "读一下 package.json 总结它"` 能调工具完成 | ✅ |
-| M3 | TUI | 交互式对话跑通，流式渲染、权限确认可用 | ✅ |
-| M4 | context 压缩 | 构造超长对话，压缩后任务不断片 | ✅ |
-| M5 | memory | agent 能自主存取记忆，跨会话生效 | ✅ |
+**功能点**：
+- **F-R25a（JS 异常钩子升级——留痕 + 恢复）**：uncaughtException/unhandledRejection 钩子升级——① 落盘诊断记录（`~/.thincoder/crash-reports/`——文件名 `crash-{ts}-{pid}.json`（ts = epoch ms UTC + pid——跨进程同 ms 防覆盖——复审 #3）——内容：时间/类型/错误消息+堆栈/uptime/argv/cwd/内存（process.memoryUsage）/node+版本——权限 0600 同 config 先例）② TUI 终端恢复（若 TUI 活动态——**复用 tui-lifecycle.mjs writeCleanupSequence（符号锚——terminal reset 序列——评审 #2 锚定）**——或 exit handler 面（cmd-exit 注记：清理经 process.on("exit") 注册——index.mjs 面）——**TUI 活动态判定源定死（复审 #1）：TUI 启动处设模块级活动标志（tui-lifecycle 或 index.mjs 导出 setter——默认 null/未启动——入口钩子读同一标志——chat 模式 stdout 管道不得收 ANSI——误判即污染输出）——测试缝同源（T-R25a.2 注入 mock）**——实现批首事核验该接缝可复用性——**若不可复用/不存在 → 停下报告（评审 #2 门）**）③ exit 非 0。console.error 行保留（非 TUI 模式可见）。**执行序列定死（评审 #5 + 复审 #2）**：一次性 guard（防再入递归）→ 同步写 crash 文件 → 终端恢复 → console.error（恢复后打印才可见）→ exit 非 0——**各步独立 try/catch（复审 #2——写失败/恢复失败不阻断后续步——exit 非 0 恒达）**。
+- **F-R25b（fatal 面——process.report——评审 #1 主案定死）**：**代码内启用（shebang 入口无法携带启动参数——env 单参数限制 + execArgv 仅子进程——评审 #1）**：入口最前（一切重活前——缩编程期窗口）`mkdirSync(recursive)` 预建 `~/.thincoder/crash-reports/` + `process.report.reportOnFatalError = true; process.report.directory = <crash-reports>`——V8 OOM/原生 fatal 自动写诊断报告——**实现批先验证 Node"目录缺失时 fatal report 行为"（评审 #1 unverified 面——mkdir 预建为零成本保险）**——零依赖 Node 内置。
+- **F-R25c（启动提示上次异常）**：启动时检查 crash-reports 最近记录——**两类文件模式定死（评审 #8）**：`crash-*.json`（自写）+ `report.*.json`（Node fatal——默认命名含日期/pid——实现批实测格式）——mtime 24h 窗内有任一类 → TUI 启动显示一行提示"上次运行异常终止（记录：~/.thincoder/crash-reports/…）"——非交互/chat 模式写 stderr 一行——**无匹配不提示（负例）**。
 
-全部里程碑已完成（2026-08）。v1 额外提前交付：checkpoint、子 agent、MCP、advisor 评审、工程模式、团队记忆三层体系。
+**边界**：外部终止（taskkill/系统）不可捕获（尽力面——F-R25b report 仅进程内 fatal）——不覆盖 VS Code 端（扩展宿主环境不同——VS Code 有自己的异常面——另评）——不改正常退出路径。**crash-reports 保留策略（评审 #6）**：写时自清理（>30 天淘汰——tool-results 先例『落盘目录写时自清理（2026-08-21）』段同动机——**短语锚非行号——复审 #5**——Windows 磁盘清理不覆盖 ~/.thincoder）——清理搭车点 = F-R25a 写 + **F-R25b 入口 mkdir + F-R25c 启动扫描（复审 #4——纯 fatal 序列也触发清理）**——实现批落。
 
-## 明确排除（防范围蔓延）
+**测试（评审 #3——落点 + slow 归册）**：
+| # | 用例 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-R25a.1 | uncaught 落盘 | 抛未捕获异常（env 门测试钩子——如 THINCODER_TEST_CRASH=1 子进程） | crash-*.json 在（含堆栈/内存）——exit 非 0 | F-R25a |
+| T-R25a.2 | TUI 恢复 | TUI 态异常（mock writeCleanupSequence——env 门注入） | 恢复序列被调——无画面残留 | F-R25a |
+| T-R25b.1 | fatal report | OOM 模拟（--max-old-space-size 小堆子进程——slow 归册） | report.*.json 在 crash-reports/ | F-R25b |
+| T-R25c.1 | 启动提示 | crash-reports 有 24h 内记录（mtime 控制） | 启动提示行在 | F-R25c |
+| T-R25c.2 | 无记录不提示 | crash-reports 空/旧 | 无提示（零回归） | F-R25c |
+**落点**：bin 入口系测试文件（test/ 下入口相关——实现批按现有 bin 测试归属命名——若新文件列入受影响清单）+ T-R25a.1/a.2/b.1 子进程类按 slow 门归册（防超阈硬红——测试纪律）——AC-1 以归册后快层绿为准（评审 #3）。
 
-- TypeScript / 任何构建步骤 / 任何 npm 运行时依赖
-- GUI 桌面客户端 / 工作流引擎
-- Windows 特殊处理以外的平台适配（win32 控制台 quirks 遇到再修）
+**验收**：AC-1 = T-R25a..c 全绿（归册后 npm test 相关绿——既有测试零回归——正常退出零 crash 记录）；AC-2 = 真实 OOM 子进程手工验证 report 落盘（真实栈/配置——与 T-R25b.1 自动化小堆分工——评审 #4）；AC-3 = 正常退出路径零变化（chat/acp/TUI 正常退出不产生 crash 记录）。
+
+**受影响文件（评审 #3 补测试落点）**：thincoder：bin/thincoder.mjs（钩子升级 + report 启用 + mkdir 最前 + 启动检查——评审 #1）· src/tui/tui-lifecycle.mjs（writeCleanupSequence 复用/导出核验——评审 #2——不可复用即停下报告）· src/cli/（非交互提示面——若需）· 新目录 ~/.thincoder/crash-reports/（运行时——非仓内——写时自清理——评审 #6）· test/ 入口系（T-R25a..c——新用例按实际归属落——bin 入口测试文件）· docs/design/ARCHITECTURE.md（本节勾销）· CHANGELOG.md。VS Code 端零改动（另评注）。
+
+### 变更记录
+- 2026-09-07：R25 立项（用户实测异常飞出 + 三面取证空——要求"能捕获异常至少留点记录"——方案三件呈递——用户"可以，全做"）——设计落本节。
+- 2026-09-07：round1 评审 0🔴 通过（token 97be0b3e）——8 项全采纳已落本节（①F-R25b 代码内启用 + mkdir 最前预建（shebang 参数不可行）②writeCleanupSequence 符号锚定 + 不可复用停下报告门 ③测试落点 + slow 归册声明 ④T-R25b.1/AC-2 分工 ⑤钩子执行序列定死（guard→同步写→恢复→打印→exit）⑥crash-reports 写时自清理（>30 天——tool-results 先例）+ 权限 0600 ⑦行号锚 → 符号锚（现状快照 as-of）⑧文件模式定死 crash-*.json + report.*.json + mtime 24h）——round2 复审 0🔴 通过（token 0036b195——2🟡+3🔵 全采纳已落本节——复审 #1 TUI 活动态标志定死 + 测试缝 #2 各步失败隔离 #3 crash 文件名 ts+pid #4 清理搭车点扩 F-R25b/c #5 短语锚）——复审发起权在用户。
+

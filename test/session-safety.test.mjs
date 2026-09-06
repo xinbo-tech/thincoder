@@ -12,6 +12,7 @@
  * 卡数十秒——测试一律按已知路径读写，绝不枚举目录。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, existsSync, unlinkSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -485,7 +486,7 @@ test("F3c: saveSession rotates a newer-version file (v3) to .bak regardless of s
   }
 })
 
-test("F4: ensureActive never hijacks a slot that holds a session file", () => {
+slow("F4: ensureActive never hijacks a slot that holds a session file", () => {
   const cwd = mkdtempSync(join(tmpdir(), "sess-f4-"))
   try {
     // 构造：slot 1 被"活进程"占用（当前测试进程的 PID），slot 2 有旧会话文件
@@ -516,7 +517,7 @@ test("F4: ensureActive never hijacks a slot that holds a session file", () => {
   }
 })
 
-test("F4: ensureActive DOES reclaim a slot whose file is missing (never held a session)", () => {
+slow("F4: ensureActive DOES reclaim a slot whose file is missing (never held a session)", () => {
   const cwd = mkdtempSync(join(tmpdir(), "sess-f4b-"))
   try {
     const holder = makeAgent(cwd, [{ role: "user", content: "hi" }])

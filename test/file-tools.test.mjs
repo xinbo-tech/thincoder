@@ -3,6 +3,7 @@
  * Source(s): tools.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -203,7 +204,7 @@ test("ls: 目录列表（目录在前，含大小时间）", async () => {
 // ---------------------------------------------------------------- delete / git 工具
 
 
-test("delete: 未跟踪文件可删，跟踪文件拒绝，force 可删跟踪文件", async () => {
+slow("delete: 未跟踪文件可删，跟踪文件拒绝，force 可删跟踪文件", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-del-"))
   try {

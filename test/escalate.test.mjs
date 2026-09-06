@@ -2,6 +2,9 @@
  * escalate.test.mjs — 飞刀 (ESCALATE.md), CLI edition — §19 merged surface:
  * the escalate tool is retired; its semantics run as subagent action:"escalate"
  * (AGENT-LOOP.md §19 D-M4 — T-M14..M16 migration regression).
+ * §25 D-R17b (R17): escalate is DEFAULT-ASYNC at depth 0 — the sync surface is
+ * covered via explicit async:false (决策点 ③ 同步保留); the async family surface
+ * (ack/池/排队/settle 三分类/digest) has its own block below.
  * The child runner signature is CLI's runAgent(childAgent, input, callbacks, opts).
  * Mutations merge via the child AGENT object (not a state sink).
  */
@@ -16,9 +19,9 @@ const CONSULTS = [
 ]
 
 /** §19: escalate 语义经 subagent action:"escalate" 调用（既有 escalate 直接调用
- *  用例迁移——约束/前缀/术后报告全保留）。 */
+ *  用例迁移——约束/前缀/术后报告全保留）。R17: 同步语义显式 async:false（缺省 async）。 */
 function escalateExecute(args, ctx) {
-  return subagentTool.execute({ action: "escalate", ...args }, ctx)
+  return subagentTool.execute({ action: "escalate", async: false, ...args }, ctx)
 }
 
 function makeAgent(models) {
@@ -33,6 +36,7 @@ function makeAgent(models) {
     provider: { name: "kimi", model: "default", apiKey: "k-kimi" },
     tools: [{ name: "read", readonly: true }, { name: "write", readonly: false }],
     cwd: process.cwd(),
+    history: [], // R17 async settle reminders pushReal into history
     _touchedFiles: [],
     _subIdCounter: 0,
   }
@@ -278,6 +282,210 @@ describe("escalate (飞刀, CLI)", () => {
     const runnerAuto = async (childAgent) => { seen.push(childAgent); return "done" }
     await escalateExecute({ task: "x" }, makeCtx(agent, runnerAuto))
     assert.equal(seen.length, 1, "AUTO 档 digest 放行 escalate（推进链授权）")
+  })
+
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §25 D-R17b (R17) — async 飞刀面：缺省 async ack / other 池共享槽位排队 /
+// settle 三分类（done=merge-all+重叠警告 / error=partial merge 决策 / cancelled 不入
+// pending）/ _pendingEscalateResults 独立流移交 / digest 注入形态
+// ═══════════════════════════════════════════════════════════════════════════
+
+function makeAsyncAgent(models, extra = {}) {
+  const agent = makeAgent(models)
+  return Object.assign(agent, {
+    _asyncSubagents: new Map(),
+    _asyncQueue: [],
+    _asyncWaiters: [],
+    _asyncTombstones: new Map(),
+    _mutationSeq: 0,
+    _mutLog: [],
+    ...extra,
+  })
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function settleEntry(agent, id, timeoutMs = 3000) {
+  const entry = agent._asyncSubagents.get(String(id))
+  if (!entry) throw new Error(`no async entry #${id}`)
+  const t0 = Date.now()
+  while (!entry.done) {
+    if (Date.now() - t0 > timeoutMs) throw new Error(`entry #${id} did not settle`)
+    await sleep(5)
+  }
+  return entry
+}
+
+const absFile = (rel) => join(process.cwd(), rel)
+
+describe("escalate async (§25 D-R17b)", () => {
+  it("T-R17d default async: ack {id, role, running} — turn ends without the report", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    const runner = async () => { await sleep(200); return "post-op report" }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "hard refactor" }, makeCtx(agent, runner))))
+    assert.equal(r.role, "escalate")
+    assert.equal(r.status, "running")
+    assert.ok(r.id, "ack carries the id")
+    assert.ok(agent._asyncSubagents.has(String(r.id)), "entry pooled (other domain)")
+    assert.equal(agent._asyncSubagents.get(String(r.id))._pool, "other", "escalate shares the other domain")
+    await settleEntry(agent, r.id)
+  })
+
+  it("T-R17f explicit sync retained (async:false) — regression covered by the sync block above", async () => {
+    const agent = makeAgent(CONSULTS)
+    const runner = async () => "post-op report"
+    const r = String(await subagentTool.execute({ action: "escalate", task: "x", async: false }, makeCtx(agent, runner)))
+    assert.ok(r.includes("post-op report"), "async:false → synchronous post-op report")
+  })
+
+  it("T-R17e suspended settle: mutations merged at settle + entry moves to _pendingEscalateResults + digest body composed", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    const runner = async (childAgent) => {
+      childAgent._mutatedThisRun = true
+      childAgent._touchedFiles = [absFile("src/x.mjs")]
+      return "post-op body"
+    }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    const entry = await settleEntry(agent, r.id)
+    assert.equal(agent._asyncSubagents.has(String(r.id)), false, "settled entry left the pool")
+    assert.equal(agent._pendingEscalateResults.length, 1, "independent family stream")
+    assert.equal(agent._pendingEscalateResults[0], entry, "same entry object")
+    assert.ok(agent._touchedFiles.some((f) => f.endsWith("x.mjs")), "mutations merged at settle (done = merge-all)")
+    assert.ok(String(entry.report).includes("escalate (kimi:kimi-k3) post-op report"), "post-op body")
+  })
+
+  it("T-R17e (round2 #4): done settle with parent-side overlap — merge-all STILL happens + report-level warning", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    const runner = async (childAgent) => {
+      childAgent._mutatedThisRun = true
+      childAgent._touchedFiles = [absFile("src/ov.mjs")]
+      return "post-op body"
+    }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    // parent mutates the same file while the flight runs (mutation log after the launch seq)
+    agent._mutationSeq = 1
+    agent._mutLog.push({ seq: 1, paths: [absFile("src/ov.mjs")] })
+    const entry = await settleEntry(agent, r.id)
+    assert.ok(agent._touchedFiles.some((f) => f.endsWith("ov.mjs")), "done branch merges ALL mutations regardless of overlap")
+    assert.ok(String(entry.report).includes("Overlapping writes"), "overlap warning rides the report (report-level — not a gate)")
+  })
+
+  it("T-R17m error settle (child crash): partial mutations merged without parent overlap + error digest body", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    const runner = async (childAgent) => {
+      childAgent._mutatedThisRun = true
+      childAgent._touchedFiles = [absFile("src/y.mjs")]
+      throw new Error("mid-surgery crash")
+    }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    const entry = await settleEntry(agent, r.id)
+    assert.equal(agent._pendingEscalateResults.length, 1)
+    assert.ok(agent._touchedFiles.some((f) => f.endsWith("y.mjs")), "error without overlap → partial merge")
+    assert.ok(String(entry.error).includes("mid-surgery crash"), "error text composed")
+    assert.ok(String(entry.error).includes("Partial changes merged into the parent's bookkeeping"), "merge decision noted")
+  })
+
+  it("T-R17m error settle WITH parent overlap: no merge + differences listed (decision stays with the model)", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    const runner = async (childAgent) => {
+      childAgent._mutatedThisRun = true
+      childAgent._touchedFiles = [absFile("src/z.mjs")]
+      throw new Error("mid-surgery crash")
+    }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    agent._mutationSeq = 1
+    agent._mutLog.push({ seq: 1, paths: [absFile("src/z.mjs")] })
+    const entry = await settleEntry(agent, r.id)
+    assert.ok(!agent._touchedFiles.some((f) => f.endsWith("z.mjs")), "overlap → NO merge")
+    assert.ok(String(entry.error).includes("Partial changes NOT merged"), "decision noted")
+    assert.ok(String(entry.error).includes("z.mjs"), "differences listed (relative display)")
+  })
+
+  it("T-R17i cancel: running escalate → cancelled settle — not in pending, stopped reminder, entry removed", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    const tokens = []
+    const runner = async (childAgent, input, callbacks, opts) => {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, 60000)
+        opts.signal?.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("Aborted", "AbortError")) }, { once: true })
+      })
+      return "never"
+    }
+    const ctx = makeCtx(agent, runner)
+    ctx.callbacks = { onToken: (t) => tokens.push(String(t)) }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, ctx)))
+    const { cancelAsyncSubagent } = await import("../src/agent-tools/subagent-async.mjs")
+    const c = cancelAsyncSubagent(agent, r.id)
+    assert.equal(c.status, "cancelled")
+    const entry = await settleEntry(agent, r.id)
+    assert.equal(entry.cancelled, true)
+    assert.equal(agent._pendingEscalateResults?.length ?? 0, 0, "cancelled → 不入 pending (D-M6)")
+    assert.equal(agent._asyncSubagents.has(String(r.id)), false, "entry removed")
+    assert.ok(agent.history.some((m) => String(m.content).includes("cancelled by user")), "stopped reminder in history")
+    assert.ok(tokens.some((t) => t.includes("⟦ev⟧stopped")), "⟦ev⟧stopped freeze event")
+  })
+
+  it("T-R17g pool capacity: other-domain full → queued with position; explore and escalate queue fairly; slot free → FIFO start", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    // occupy all 4 other-domain slots with fake running entries
+    for (let i = 1; i <= 4; i++) {
+      const fake = {
+        id: `f${i}`, role: "explore", relayPrefix: `explore#f${i}/`, _pool: "other",
+        status: "running", report: null, error: null, done: false, cancelled: false,
+        promise: new Promise(() => {}), controller: null, _files: [], _dependsOn: [],
+        start() {},
+      }
+      agent._asyncSubagents.set(`f${i}`, fake)
+    }
+    const runner = async () => "post-op report"
+    const escAck = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    assert.equal(escAck.status, "queued", "other pool full → escalate queues (not refused)")
+    assert.equal(escAck.position, 1)
+    // explore spawn queues behind it (same domain — fair FIFO)
+    const { executeAsyncSpawn } = await import("../src/agent-tools/subagent-run.mjs")
+    // free one slot → refill starts the QUEUED ESCALATE first
+    const freed = agent._asyncSubagents.get("f1")
+    freed.done = true
+    agent._asyncSubagents.delete("f1")
+    const { maybeRefillAsync } = await import("../src/agent-tools/subagent-scheduler.mjs")
+    maybeRefillAsync(agent)
+    const esc = agent._asyncSubagents.get(escAck.id)
+    assert.ok(esc && esc.status === "running", "slot free → queued escalate auto-starts")
+    await settleEntry(agent, escAck.id)
+    void executeAsyncSpawn
+  })
+
+  it("T-R17n family isolation: an escalate settle does not pollute the consult pending stream (and vice versa)", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    agent._pendingConsultResults = [{ id: "c9", role: "consult", report: "consult digest body" }]
+    const runner = async () => "post-op body"
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    const entry = await settleEntry(agent, r.id)
+    assert.equal(agent._pendingEscalateResults.length, 1, "escalate entry in its own stream")
+    assert.equal(agent._pendingConsultResults.length, 1, "consult entry untouched")
+    assert.equal(agent._pendingConsultResults[0].report, "consult digest body")
+    assert.ok(String(entry.report).startsWith("escalate ("), "escalate body composed independently")
+  })
+
+  it("turn-cap partial classifies as the ERROR branch (auto-declined — no continue panel in background)", async () => {
+    const agent = makeAsyncAgent(CONSULTS)
+    agent._suspended = true
+    const { ContinueError } = await import("../src/agent.mjs")
+    let calls = 0
+    const runner = async () => { calls++; throw new ContinueError(100) }
+    const r = JSON.parse(String(await subagentTool.execute({ action: "escalate", task: "x" }, makeCtx(agent, runner))))
+    const entry = await settleEntry(agent, r.id)
+    assert.equal(calls, 1, "no continue prompt in background → no resume")
+    assert.ok(entry.error.includes("stopped: turn cap reached"), "cap partial rides the error body")
+    assert.equal(agent._pendingEscalateResults.length, 1, "error entry still digests")
   })
 
 })

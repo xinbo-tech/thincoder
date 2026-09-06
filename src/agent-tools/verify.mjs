@@ -34,7 +34,7 @@ const MODULE_TO_TEST = {
     "test/file-tools.test.mjs", "test/edit-tools.test.mjs", "test/git.test.mjs",
     "test/checkpoint.test.mjs", "test/bash.test.mjs", "test/ops-scope.test.mjs",
     "test/execute.test.mjs", "test/checklist.test.mjs", "test/skills-distill.test.mjs",
-    "test/verify-domain.test.mjs", "test/pdf-parse.test.mjs",
+    "test/verify-domain.test.mjs",
   ],
   "agent-tools": [
     "test/subagent-core.test.mjs", "test/subagent-async.test.mjs", "test/subagent-tool.test.mjs",

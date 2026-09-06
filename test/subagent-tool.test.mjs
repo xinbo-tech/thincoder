@@ -48,9 +48,9 @@ test("§19.5.5 T-CL1: cancel 动作描述含核实纪律锚——last resort + v
 })
 
 
-test("§19.8 D-CH2: async 收尾引导锚句逐字存在——fail-when-unchanged（AGENT-LOOP §19.8 D-CH2 镜像锚——CLI 权威源）", async () => {
+test("§19.8 D-CH2: async 收尾引导锚句逐字存在——fail-when-unchanged（AGENT-LOOP §19.8 D-CH2 镜像锚——CLI 权威源；尾部括号 2026-09-06 §18 D-E1a/R12 同批修订——depth-0 全角色缺省 async）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
-  const anchor = "After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result. If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (eng-coder defaults to async; other roles simply omit async)."
+  const anchor = "After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result. If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (at depth 0 every role defaults to async — async:false is the only way to block; depth>0 is always sync)."
   const d = subagentTool.description
   assert.ok(d.includes(anchor), "§19.8 D-CH2: async 收尾引导锚句逐字存在（与设计文档逐字一致——禁止自行解释）")
   assert.equal(d.split(anchor).length - 1, 1, "§19.8 D-CH2: 锚句在描述中只出现一次")

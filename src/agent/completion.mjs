@@ -7,6 +7,7 @@
 import { hasCodeMutations } from "../advisor/repos.mjs"
 import { pushReal } from "../context.mjs"
 import { MAX_ADVISOR_ROUNDS } from "../advisor/run.mjs"
+import { advisorReviewPending, effectiveAdvisorRound } from "../agent-tools/advisor-async.mjs"
 
 const MAX_VERIFY_PUSHBACKS = 2
 const MAX_VERIFY_RETRIES = 3
@@ -117,18 +118,21 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
   const cfg = agent.config?.advisor
   const advisorReview = cfg?.guard === true
   if (depth === 0 && advisorReview && !agent.config?.agent?.engineering) {
-    // Cap sync: beyond MAX_ADVISOR_ROUNDS the advisor tool refuses to review
-    // (run.mjs convergence cap) — pushing back further would loop forever
-    // (fix → pushback → cap-refused call → fix …). The cap message from the
-    // last accepted review stands; the user decides manually.
-    if (agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
+    // §24 D-24b (T-24b4 — guard timing): an async review that is still in flight
+    // (or queued in the advisor pool) means the review was launched — the guard
+    // does NOT push back while it is pending (未决不算未评审); once it settles
+    // non-stale it marks _calledAdvisorThisRun, and a STALE settle leaves the
+    // mark unset so the guard pushes back here again (fix #2 — no silent skip).
+    const pending = advisorReviewPending(agent)
+    const rounds = effectiveAdvisorRound(agent)
+    if (!pending && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
         && advisorPushbacks < MAX_ADVISOR_PUSHBACKS
-        && (agent._advisorRound || 0) < MAX_ADVISOR_ROUNDS) {
+        && rounds < MAX_ADVISOR_ROUNDS) {
       advisorPushbacks++
       pushReal(agent, { role: "assistant", content: response.content })
       agent.history.push({
         role: "user",
-        content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format).]`,
+        content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${rounds + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format).]`,
       })
       callbacks.onTurnEnd?.(agent, turn)
       return { action: "continue", guardPushbacks, honestReminderInjected, advisorPushbacks }

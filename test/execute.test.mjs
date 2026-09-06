@@ -3,6 +3,7 @@
  * Source(s): tools.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -15,7 +16,7 @@ import { executeTool } from "../src/tools/execute.mjs"
 
 
 
-test("execute: timeout 生效——无限循环脚本在限定时间内返回错误而不是挂死", async () => {
+slow("execute: timeout 生效——无限循环脚本在限定时间内返回错误而不是挂死", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-"))
   try {
     const out = await executeTool.execute({ code: "while (true) {}", timeoutMs: 300 }, { cwd: dir })
@@ -114,7 +115,7 @@ test("execute: 顶层 await + import() 项目 ESM + console + filter", async () 
 
 
 
-test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--check) + 越界（外部文件）正常执行（§10.1 T-e-3 语义改）", async () => {
+slow("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--check) + 越界（外部文件）正常执行（§10.1 T-e-3 语义改）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-sf-"))
   const ext = mkdtempSync(join(tmpdir(), "thincoder-exec-ext-"))
   try {
@@ -147,7 +148,7 @@ test("execute: scriptFile 跑 workspace 脚本文件 + nodeArgs(--check) + 越�
 })
 
 
-test("execute §14.1 T14.1.4: 超时错误含重试引导句（larger timeoutMs / bash——D14.1.2 锚逐字）", async () => {
+slow("execute §14.1 T14.1.4: 超时错误含重试引导句（larger timeoutMs / bash——D14.1.2 锚逐字）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-t1414-"))
   try {
     const out = await executeTool.execute({ code: "while (true) {}", timeoutMs: 300 }, { cwd: dir })
@@ -163,7 +164,7 @@ test("execute §14.1 T14.1.4: 超时错误含重试引导句（larger timeoutMs 
 
 
 
-test("execute §14.1 T14.1.5: 成功路径/其他错误输出不含引导句（零破坏回归——N-14.1）", async () => {
+slow("execute §14.1 T14.1.5: 成功路径/其他错误输出不含引导句（零破坏回归——N-14.1）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-exec-t1415-"))
   try {
     const ok = await executeTool.execute({ code: 'console.log("fine")' }, { cwd: dir })

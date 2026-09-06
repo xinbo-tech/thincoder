@@ -18,16 +18,27 @@ import { basename } from "node:path"
 import {
   slotPath, writeSessionFile, loadManifest, saveManifest, slotDigest,
   activeSlot, getSessionId, isProcessAlive,
-  writeEndMarker, resumeSlot,
+  writeEndMarker, resumeSlot as slotsResumeSlot,
 } from "./session-slots.mjs"
+import { scheduleSessionGC } from "./session-gc.mjs"
+import { engTokenSlotFields, restoreEngTokens } from "./token-ttl.mjs"
 
-// re-export slot 管理（保持既有 import session.mjs 的调用点不变）
+// re-export slot 管理（保持既有 import session.mjs 的调用点不变；resumeSlot 下方本地包装导出）
 export {
   getSessionId, normalizeCwd, sessionPath, slotPath, manifestPath, activePath,
   writeSessionFile, slotDigest, loadManifest, saveManifest, activeSlot, listSlots,
-  deleteSlot, renameSlot, isProcessAlive, END, endMarkerPath,
-  readEndMarker, writeEndMarker, claimSlot, allocateFresh, resumeSlot,
+  deleteSlot, isProcessAlive, END, endMarkerPath,
+  readEndMarker, writeEndMarker, claimSlot, allocateFresh,
 } from "./session-slots.mjs"
+// §12.2.5 契约改使 session-slots.mjs 超 500 行硬限 → renameSlot 拆至 session-rename.mjs（§12.3 授权）
+export { renameSlot } from "./session-rename.mjs"
+
+/** 恢复决策包装（SESSION.md §12 启动钩子，2026-09-06）：本端恢复入口触发一次残留 GC——
+ *  scheduleSessionGC 内部 setImmediate 空闲执行 + 每进程每前缀去重，不阻塞启动路径（N4）。 */
+export function resumeSlot(cwd) {
+  scheduleSessionGC(cwd)
+  return slotsResumeSlot(cwd)
+}
 
 // ========== legacy transient prefix cleanup ==========
 
@@ -119,13 +130,7 @@ export function saveSession(agent) {
     planMode: agent.planMode ?? false,
     autoApprove: agent.autoApprove ?? false,
     engineering: agent.config?.agent?.engineering ?? false,
-    engDesignToken: agent._engDesignToken ?? null,
-    // Multi-design slots ride the same round-trip (2026-09-01 audit #1): Map → {designId: token}
-    // (JSON-safe). Empty/absent Map → undefined → the key is dropped by JSON.stringify, so a
-    // cleared session writes NO field instead of resurrecting slots from the previous save.
-    engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
-      ? Object.fromEntries(agent._engDesignTokens)
-      : undefined,
+    ...engTokenSlotFields(agent),
     goal: agent.goal ?? null,
     advisor: agent.config?.advisor ?? null,
     pendingReminders: agent._pendingReminders ?? [],
@@ -305,15 +310,8 @@ export function applySession(agent, data) {
   agent.goal = data.goal ?? null
   agent._pendingReminders = data.pendingReminders ?? []
   agent._sessionStart = data.sessionStart ?? null
-  agent._engDesignToken = data.engDesignToken ?? null
-  // Multi-design slots restore from the {designId: token} object (2026-09-01 audit #1). A legacy
-  // slot without the field restores NO Map (fresh state) — never resurrect slots the writer did
-  // not have. Expired tokens are rejected downstream by validateDesignToken (fail-closed, TTL).
-  if (data.engDesignTokens && typeof data.engDesignTokens === "object" && !Array.isArray(data.engDesignTokens)) {
-    agent._engDesignTokens = new Map(Object.entries(data.engDesignTokens))
-  } else {
-    delete agent._engDesignTokens
-  }
+  // R16 token 字段恢复（过期过滤——见 token-ttl.mjs restoreEngTokens）
+  restoreEngTokens(agent, data)
   // engineering is session-level (2026-08-29): the slot value is the CLI session's authority
   // — config.json is only the initial default / cross-end mirror. A legacy slot without the
   // field keeps whatever config.json seeded (unchanged behavior).

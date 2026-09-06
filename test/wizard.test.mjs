@@ -8,6 +8,8 @@ import assert from "node:assert/strict"
 
 import { createWizard } from "../src/tui/wizard.mjs"
 
+const sleep0 = () => new Promise((r) => setTimeout(r, 0)) // finishWizard 续体（disk-first 镜像）冲刷
+
 function wizardCtx(overrides = {}) {
   const agent = {
     providers: [], activeProvider: "", activeModel: null, provider: {},
@@ -47,7 +49,7 @@ function walkToFormat(state, w) {
   return state.wizard
 }
 
-test("T-C3 wizard Custom 流程含 format 步（endpoint 后 key 前——空 Enter = 默认 openai 直过）", () => {
+test("T-C3 wizard Custom 流程含 format 步（endpoint 后 key 前——空 Enter = 默认 openai 直过）", async () => {
   const { ctx, agent, state, saved } = wizardCtx()
   const w = createWizard(ctx)
   walkToFormat(state, w)
@@ -59,13 +61,14 @@ test("T-C3 wizard Custom 流程含 format 步（endpoint 后 key 前——空 En
   submit(state, w, "sk-1")
   assert.equal(state.wizard.step, "embedkey")
   submit(state, w, "")
+  await sleep0() // finishWizard 续体（写盘成功后镜像内存）
   assert.equal(state.wizard, null, "finish——向导关闭")
   assert.equal(agent.providers.length, 1)
   assert.equal(agent.providers[0].format, undefined, "openai = 默认省略（与 D-C1 picker 同构）")
   assert.equal(saved.raw.providers[0].format, undefined, "落盘无 format")
 })
 
-test("wizard Custom format 步：选 anthropic 生效落盘（两入口行为一致——D-C2）", () => {
+test("wizard Custom format 步：选 anthropic 生效落盘（两入口行为一致——D-C2）", async () => {
   const { ctx, agent, state, saved } = wizardCtx()
   const w = createWizard(ctx)
   walkToFormat(state, w)
@@ -74,6 +77,7 @@ test("wizard Custom format 步：选 anthropic 生效落盘（两入口行为一
   assert.equal(state.wizard.step, "key")
   submit(state, w, "sk-an")
   submit(state, w, "")
+  await sleep0() // finishWizard 续体（写盘成功后镜像内存）
   assert.equal(agent.providers[0].format, "anthropic", "finish 落盘 format")
   assert.equal(saved.raw.providers[0].format, "anthropic")
 })
@@ -98,7 +102,7 @@ test("wizard format 步 Esc = 沿用 wizard 跳过语义（cancelWizard——无
   assert.ok(lines.some((l) => l.includes("Skipped initial setup")), "跳过提示")
 })
 
-test("T-C4 wizard preset 路径不受影响（无 format 步——直接 key）", () => {
+test("T-C4 wizard preset 路径不受影响（无 format 步——直接 key）", async () => {
   const { ctx, agent, state, saved } = wizardCtx()
   const w = createWizard(ctx)
   w.startWizard()
@@ -108,12 +112,13 @@ test("T-C4 wizard preset 路径不受影响（无 format 步——直接 key）"
   submit(state, w, "sk-p")
   assert.equal(state.wizard.step, "embedkey")
   submit(state, w, "")
+  await sleep0() // finishWizard 续体（写盘成功后镜像内存）
   assert.equal(agent.providers[0].name, "openai")
   assert.equal(agent.providers[0].format, undefined, "preset 路径无 format 步（T-C4）")
   assert.equal(saved.raw.providers[0].format, undefined)
 })
 
-test("wizard preset 带扩展字段（claude：format=anthropic/maxTokens/thinking）直达落盘——与 pickers preset 路径同构（code review 🟡）", () => {
+test("wizard preset 带扩展字段（claude：format=anthropic/maxTokens/thinking）直达落盘——与 pickers preset 路径同构（code review 🟡）", async () => {
   const { ctx, agent, state, saved } = wizardCtx()
   const w = createWizard(ctx)
   w.startWizard()
@@ -125,6 +130,7 @@ test("wizard preset 带扩展字段（claude：format=anthropic/maxTokens/thinki
   assert.equal(state.wizard.fields.format, "anthropic", "preset 声明的 format 带进 fields")
   submit(state, w, "sk-claude")
   submit(state, w, "")
+  await sleep0() // finishWizard 续体（写盘成功后镜像内存）
   assert.equal(agent.providers[0].format, "anthropic", "落盘不丢 format——wizard 不再静默错配（claude 按 anthropic 格式请求）")
   assert.equal(agent.providers[0].maxTokens, 8192)
   assert.deepEqual(agent.providers[0].thinking, { type: "enabled" })

@@ -82,9 +82,15 @@ export async function handleMcpCommand(ctx, args = []) {
   }
 
   async function removeServer(name) {
+    // D-F5a（#7）先盘后存：磁盘 fresh raw.mcp.servers 上只删目标条目——不整节写回内存
+    // agent.config.mcp.servers（内存含 reloadMcpFromDisk 的 keptConnected 尾巴——
+    // 整节写回会把对端磁盘上其他 server 的新改动一起抹掉）；冲突放弃不留内存 ghost
+    await persistRaw((raw) => {
+      raw.mcp ??= { servers: [] }
+      if (!Array.isArray(raw.mcp.servers)) return
+      raw.mcp.servers = raw.mcp.servers.filter((s) => s?.name !== name)
+    })
     agent.config.mcp.servers = getServers().filter((s) => s.name !== name)
-    // 评审 #1：磁盘无 mcp 段时（T23 场景——mcp 段被整体删除而连接保留）raw.mcp 为 undefined → 先建段再写
-    await persistRaw((raw) => { raw.mcp ??= { servers: [] }; raw.mcp.servers = agent.config.mcp.servers })
     // Remove from tool list
     const { removeMcpTools } = await import("../mcp.mjs")
     removeMcpTools(agent, name)

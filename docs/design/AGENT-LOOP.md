@@ -1,4 +1,4 @@
-# Agent 主循环设计（thincoder/src/agent.mjs + agent/）
+﻿# Agent 主循环设计（thincoder/src/agent.mjs + agent/）
 
 > 状态：2026-08 回补 + 2026-09 增量（挂起回合 §17/工程交付协议 §18/工具面合并 §19——各节自带状态——2026-09-03 刷新（§7.2.3/§17.5/§17.5.5/§19.5/§19.6/§20/§17.6——sync spawn 精确冻结/settle 完成队列/实测修订/控制面扩展/panel 检查）——**2026-09-04 增量：§18.5-§18.12（子代理零 git/轨迹存档/测试分层/对象锚/铁律/镜像约束取消/verify 定位修复——各节自带状态行）**）。LLM ↔ 工具调用循环：回合驱动、guard 体系（pending tasks / verify / advisor / 诚实声明）、中断语义、子代理、压缩/用量锚点、停滞检测、goal 预算。
 
@@ -627,6 +627,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 
 ## 15. subagent 异步化：真后台并行（2026-09-02，用户问题：并行化缺陷评估）
+> **R14 登记注（2026-09-06——需求池 R14——槽位角色分池 + 可配置——待设计）**：现全局并发槽 4 共享所有 async 角色——eng-coder 长任务（10-30min）占满后 explore（只读、秒-分钟级）排队干等（实况 2026-09-06：#8 explore 排 position 2 等 eng-coder——用户"eng-coder阻塞了explore很费时"）。**用户扩展裁定（同日）**：分池 + **槽位可配置**——默认 eng-coder 池 4 + 其他角色池 4（总 8 各池独立）；配置入口 = CLI /config 菜单 + VS Code 设置面板（键形态设计定——两个独立键 vs 单对象）。设计方向（待细化）：角色分池（explore 只读快任务不阻塞）+ 配置热应用；约束：既有 T9/T-E16 断言语义（上限 4 表述）需随默认值演化同步、配置值校验（非法回退默认——timeoutMs 先例）。同步考量：R13（advisor 异步化）若入池则角色更多——池模型一并设计。
 
 > **状态：已实现（2026-09-02，两端落地 + 测试全绿）**。用户实证两缺陷：① 主会话 spawn 子代理后被阻塞——"检查 xxx"类动作做不了（或只能等 spawn 返回后做旧状态检查）；② 同批并行 spawn 的子代理快的早完成，主会话必须等最慢的（先完成结果不能立即处理）。**用户裁定**（2026-09-02 逐项确认）：A 真后台并行（consult 范式：非阻塞 spawn + 轮询 check）；A 显式开启（默认阻塞不变）；A 回合收尾自动等待全部完成；A CLI 强制并发上限（3 → 4）。
 
@@ -634,7 +635,7 @@ layout.mjs（outputPanelsH 计算、panels.output 槽）、render-frame.mjs（re
 
 - **F-1 阻塞**：`subagent` 工具内部 `await runWithContinue(...)`（src/agent-tools/subagent.mjs 的 `runWithContinue` 调用点）——调用后主会话停等子代理完成，无法在后台运行期间推进自己的回合（检查/读文件/其他工具）
 - **F-2 批尾效应**：同一响应多个 spawn 并行跑（平台并发），但**全部完成后统一返回**——快的子代理报告不能先到先处理
-- consult 已有异步范式（`consult_start` 非阻塞 + `consult_check` 轮询）可借鉴——subagent 缺同款能力
+- consult 已有异步范式（`consult_start` 非阻塞 + `consult_check` 轮询）可借鉴——subagent 缺同款能力（**§25 supersede（R17——2026-09-06）：consult_check 已退役——会诊/飞刀完全异步化（digest 自动注入 + escalate 池化）见 §25——本条保留为考古先例注**）
 
 ### 15.2 需求
 
@@ -769,6 +770,7 @@ VS Code 端 subagent 机制完整对齐（`thincoder-vscode/src/agent-tools/suba
 ---
 
 ## 17. 挂起回合：会话级后台双通道（2026-09-02，用户方案：async 子代理运行中主会话可继续对话）
+> **R15 登记注（2026-09-06——需求池 R15——排队用户指令合并——待设计）**：processing/挂起期间连发的用户消息进 pendingInput 排队（T-S9 排队续发）→ **逐条开新回合**（N 条 = N 回合——每回合系统开销+等待——用户"现在queue里排队的用户指令希望合并一次发出去"）。设计方向（待细化）：空闲消费时**合并注入**——pendingInput 攒批成一条消息（编号列出逐条——模型一次处理全部——T-S11 消化合并对用户输入的同型——N1 成本护栏）；边界：合并时机（回合空闲/挂起消化后）、大消息长度上限（超限回落逐条）、/命令类指令是否逐条保序执行（命令 ≠ 对话输入——/cmd 语义即时性）。
 
 > **状态：已实现（2026-09-02，V2 完整版 + 推进型——用户拍板：AUTO 模式下 auto-turn 可推进（写/spawn 全开放），手动模式维持消化型；CLI 端落地 + 测试全绿：§15 T5 断言随 collectSettled 语义更新（subagent.test.mjs）+ test/suspension.test.mjs T-S1..S17 全绿 + 全量 1041 pass 0 fail）**。
 > 权威源补充：本节是 §15（subagent 异步化）的语义演进——**F3"回合收尾自动等待"被本节挂起语义取代**（见 17.3 评估①）。**§15.4 T5/AC3 断言随本节修订（评审 #1）**：T5 原期望"finally await 全部 + _asyncSubagents 清空"（`thincoder/test/subagent.test.mjs`）改为 `collectSettledAsync` 语义（收已完成注入 + 未完成移交池——函数名统一 collectSettledAsync，round2 #6）；AC3"回合结束未取结果不丢"语义保留（结果经 D-S3 下轮注入/auto-turn 消化）但实现断言同步改。
@@ -991,6 +993,49 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 ### 18.2 设计
 
 **D-E1 eng-coder 默认 async（§15 F4 修订）**：`subagent` schema 的 `async` 布尔——**缺省按 role 解析**：`role === "eng-coder" ? true : false`（schema description 注明）；`async: false` 显式覆盖。调用方（架构师）派 eng-coder 默认 async → spawn 返回 `{id, running}` → 主回合结束进挂起（§17）→ 交付 settle → digest 注入消化。**子代理内（depth>0）spawn 规则不变**（§15 顶层限制——async 仍仅 depth-0；eng-coder 内部 spawn 见 D-E3——同步受限）。
+
+**D-E1a 主代理 spawn 默认 async（§18 D-E1 二次修订 · 2026-09-06 · 需求池 R12——**已实现**）**
+
+> 状态：**已实现**（2026-09-06，eng-coder 交付 clean——修正轮 1/5——审计 1 轮 + advisor 2 轮 0🔴——双端测试绿；实现核销见 SESSION.md §11.2）。
+
+**需求句**：主代理（depth 0）spawn **explore/plan/coder 缺省改为 async**（现缺省 false——D-E1 的 `role === "eng-coder" ? true : false` 仅 eng-coder 异步）。异步把**"等待决策权"还给 agent**——需要等结果时 agent 自己选（结束回合等送达），而非被同步强制挂起（用户体验差——主代理干等）。**子代理内部（depth>0）spawn 保持强制同步**（现 §15 顶层限制：depth>0 async 已被拒——subagent.mjs 的 depth gate——现状正确，R12 不改变）。
+
+**来源**：2026-09-06 用户裁定——"主代理中应该尽可能异步化，同步的时间太久用户体验真的差；需要等结果他自己会等，而不是像同步那样被强制着必须等，这种感觉是完全不同的"。
+
+**设计**：
+
+1. **缺省规则改**（schema 默认值——subagent-spec.mjs `async` 参数 description + subagent.mjs `asyncFlag` 计算）：
+   - 现行：`asyncFlag = asyncArg ?? role === "eng-coder"`（缺省仅 eng-coder async）
+   - 改为：`asyncFlag = asyncArg ?? (depth === 0)`——**depth-0 缺省 async（全角色 explore/plan/coder/eng-coder 同型）；depth>0 缺省 sync**（子代理内部强制同步——现状保留，公式深度门控）。`async: false` 显式覆盖保留（结果明确必要时的逃逸口）。
+   - schema description 同步改（把 "Default is role-level: role='eng-coder' → true; every other role → false" 改为 "Default: depth-0 → true (async); depth>0 → sync; async:false 强制同步覆盖"）。
+
+2. **送达机制（现状引用，零新增）**：异步子代理完成 → settle → §17 挂起/auto-turn digest 注入消化（§17 挂起回合 + auto-turn digest——现状机制，R12 不新建）。主代理 spawn 缺省 async 后，spawn 即返回 `{id, running}`，主回合正常结束 → 子代理 settle → digest 注入后主代理被拉回继续——**"等结果他自己会等"**（agent 选择结束回合等送达，或继续当前工作）。
+
+3. **子代理内部不变**：depth>0 spawn async 仍被拒（subagent.mjs L277——eng-coder 内部 explore 强制同步——R12 不改动）。
+
+4. **工程模式兼容**：manual-tier digest spawn gate（subagent.mjs L196——`_inAutoTurn && !getAuto()` 拒 spawn）**不影响主代理 spawn**（该 gate 只限 auto-turn digest，主代理 spawn 是 user-turn——R12 的缺省翻转在 user-turn 生效，与 gate 无关）。
+
+**否决/修订对照**：推翻 D-E1 的"explore/plan/coder 缺省 false"（原动机 = 提示词/流程零波及——§15 F4），改为"depth-0 全角色缺省 async"；保留 depth>0 强制 sync；保留 `async: false` 逃逸口。
+
+**成本注记（review 补）**：depth-0 缺省 async 后，每个后台 spawn 的 settle 触发一次 §17.5 digest auto-turn（额外模型回合）——用户裁定接受此代价（"需要等结果他自己会等"vs 同步强制等——体验优先）；§17.5 合并消化缓解（近邻 settle 合并）。
+
+**受影响文件**（R12 部分）：
+- `src/agent-tools/subagent-spec.mjs`（schema async description——双端）
+- `src/agent-tools/subagent.mjs`（`asyncFlag` 计算——双端）
+- `src/prompts/main.md`（异步指导语——"own turn must keep moving → async" 改 "depth-0 默认 async"——双端）
+- `src/prompts/system.md`（**R12 连带——§15 D-A5 遗留的"默认阻塞"指导语更新**——见下）
+
+**§15 T7/AC5 supersede（review 补齐）**：§15.4 T7（"不带 async 缺省阻塞"）+ AC5（"T7 适用其余角色"）与 D-E1a T-A1（缺省 async）直接冲突——**同批修订**（T7 改为"depth-0 缺省 async"，AC5 supersede 注记）；subagent.test.mjs 的默认阻塞断言同批更新。
+
+**测试（R12 部分）**：
+| # | 用例 | 预期 |
+|---|---|---|
+| T-A1 | depth-0 spawn explore 缺省（不传 async）→ 返回 `{id, running}` 不阻塞 | 缺省 async 生效 |
+| T-A2 | depth-0 spawn explore + `async: false` → 同步阻塞 | 逃逸口保留 |
+| T-A3 | eng-coder 缺省 async（回归——现状已 async）→ 不阻塞 | 无回归 |
+| T-A4 | 子代理内部（depth>0）spawn async → 拒绝 | 强制 sync 不变 |
+| T-A4b | 子代理内部（depth>0）spawn 缺省（不传 async）→ 同步执行、不拒绝 | 深度门控正确（公式 `asyncArg ?? (depth === 0)`——eng-coder 内部 explore 审计 spawn 不破坏） |
+| T-A5 | 主代理 spawn async 后 settle → digest 注入 → 主代理拉回继续（§17 挂起回归） | 送达机制兼容 |
 
 **D-E2 eng-coder 内部交付协议（本轮核心——替代跨 digest 链状态机）**：eng-coder 子代理的任务书（父 agent spawn 时生成——架构师按既有结构化任务书 + 本协议附录）与提示词（engineering-sub.md 扩展——byte-identical 三件套）共同驱动内部闭环：
 
@@ -1246,6 +1291,8 @@ finishSubTask（subagent-blocks.mjs）无 id——按"最早 started"启发式�
 ### 18.7 测试分层收口：全量测试父侧收口（2026-09-04 · 用户裁定——需求登记——设计层已落——round1 评审 0🟡通过——处置见 18.7.1）
 
 > 状态：**已实现（2026-09-04——设计批准：round1 0🟡通过——round2 复审 0🟡通过——7🟡+3🔵+4🟡+3🔵 处置见 18.7.1——designToken d57b0fa0——用户批准 2026-09-04——CLI + VS Code 双端实现——L2 核销 1330/1330 通过——实现记录见 ENGINEERING-MODE.md §7 2026-09-04 R2 条；fix round1（L0 语义缺口处置）亦已核销）**。触发：用户实测工程模式测试耗时
+
+> **§18.7 D-TS1 supersede（2026-09-06——TESTING.md §1 D-T3——用户裁定"全做吧"）**：eng-coder 首次实现验证粒度从全量 L1 快层降为 **L0+**（语法检查 + 定向相关测试——秒级）；修正轮维持 L0 不变；父侧 L2 `test:full` 每链终态恰 1 次/端不变（R2 收口精神延续）；交付报告义务句「本交付未经全量——父侧 L2 为唯一全量点」。协议文字（双端 `engineering-sub.md`）与锚断言（T-T4——fail-when-unchanged）随 TESTING.md §1 Phase 2 落地——本节 D-TS1/F-TS1/N-TS6 的"首次实现 = L1"口径保留为 as-of 快照。
 
 **需求层（用户裁定 D·父侧收口）**：
 
@@ -1753,7 +1800,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 | spawn（缺省） | task/role/async/designToken/designId（既有全集）+ **files?/dependsOn?（§20——写域声明/显式依赖——仅 async 参与调度；sync 命中等待 → 明确错误）** | `{id, role, status:"running"/"queued", position?, waiting?, reason?}`——queued 等待态带 waiting（"waiting-deps"/"dependency-cancelled"）+ reason（**§20 D-SD3b——实现记录 20.5**） | 同步 role 等完成；async 立即返回 |
 | check | id?（省 = 下一完成）/ n（必填） | 报告（arrival order/指定 id——消费） | **阻塞**（等目标 settle——显式取回语义） |（§19.8 supersede：本行随 check 动作删除——保留为 as-of 快照——见 §19.8） |
 | status | id?（省 = 全部概览） | `{id, role, status:"running"/"queued"/"done", position?, done?, error?, ...}`——不消费（§19.5：running 带 model/elapsedSec/turn/maxTurns；queued 带 position——**§20：queued 等待态带 waiting/reason**——20.5） | **不阻塞**（立即） |
-| escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义） |
+| escalate | task/model?（consultModels 池——"provider:model"——缺省池首） | 术后报告（专家实现完成——WRITE 干活） | 同步（等专家完成——既有语义）（**§25 supersede（R17——2026-09-06）：缺省翻转 async——ack {id, status:"running"} + other 池后台飞行 + settle 三分类（done=merge-all+重叠警告 / error=partial merge 决策 / cancelled 不入 pending）→ digest——`async: false` 保留同步——见 §25 D-R17b**） |
 | panel（§19.6 新增——评审 #1 补行：view=readonly 类/freeze=控制类（门禁分类见 19.6.2——digest 放行/受限变体拒） | {view?, freeze?}（互斥——view 默认） | 镜像快照/冻结回收确认 | 同步（工具调用即返回——镜像/冻结动作即时完成） |
 | cancel（§19.5 新增——评审 #1 拆行修正：原行与 panel 行融合损坏） | id（必填——防误全停） | `{id, status:"cancelled"}`/`{id, status:"cancelled", was:"queued"}`/`{id, status:"error", error}` | 立即（定向 abort——异步生效——同 §19.5.2b 行逐字） |
 
@@ -1793,7 +1840,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 - **单工具 action 分流而非多工具**（用户裁定——"工具会爆炸——靠参数做不同的事"）：subagent 家族同生命周期（spawn 产 id → check/status 消费/查询）——天然一体——硬拆（subagent_status 新工具）违背收敛方向
 - **check/status 独立动作**（用户裁定——"独立动作会更好吧"）：语义分离——check = 显式取回（消费 + 可阻塞——取回本来就要等）；status = 只读查询（不消费不阻塞）——不合并成 wait 布尔（动作面清晰）——**§19.8 supersede：check 独立动作已删除（删 API 即根治阻塞路径——用户裁定 2026-09-06——见 §19.8）；status 独立保留**
 - **action 缺省 = spawn**：既有 spawn 调用面（提示词/流程/测试）零迁移——破坏面只限 subagent_check 调用点（17 处——一次性迁移）
-- **范围 = subagent + escalate（2026-09-03 用户裁定扩展）**：escalate 与 subagent 同为调用级单 spawn 机制（当初收编共享 runChildPipeline）——并入为 action:"escalate"——约束/前缀/语义全保留——工具面 subagent/escalate → 单 subagent；**consult 维持独立**（用户裁定"会诊先独立"——多模型会话级生命周期——start/check 循环/stop/N child 一会话——与单 spawn 调用级不兼容——硬并参数爆炸——维持三个独立工具）
+- **范围 = subagent + escalate（2026-09-03 用户裁定扩展）**：escalate 与 subagent 同为调用级单 spawn 机制（当初收编共享 runChildPipeline）——并入为 action:"escalate"——约束/前缀/语义全保留——工具面 subagent/escalate → 单 subagent；**consult 维持独立**（用户裁定"会诊先独立"——多模型会话级生命周期——start/check 循环/stop/N child 一会话——与单 spawn 调用级不兼容——硬并参数爆炸——维持三个独立工具）（**§25 supersede（R17——2026-09-06）：consult_check 随 digest 自动注入退役（§19.8 subagent check 同型先例）——consult 家族剩 2 工具（consult_start 非阻塞发起 / consult_stop 取消）——全 settle 意见自动注入消化轮——见 §25 D-R17a**）
 - **否决**：a) status 并入 check 加 wait:false（动作含混——check 的"消费/计数"语义与查询纠缠）；b) 新独立工具 subagent_status（工具面继续膨胀——违裁定方向）；c) 提示词层规避不改工具（用户问进度时模型无信息可答——根治需要 status）
 
 ### 19.4 非功能需求（round2 #8 补）
@@ -1836,6 +1883,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 **D-M7b async 标记 + sync/async 显式标识 + ⏹ 门控（2026-09-03 用户裁定——实现后补充）**：**① 事件通道**：async spawn 分支（makeRelay 后）emit `⟦ev⟧async\x1e` 事件 token（与 ⟦ev⟧turn 同族——sync 不发）→ routeSubToken 解析设 `sub.async = true`（makeRelay emit 在**实际启动时**（评审 #4——slot-queued/waiting-deps spawn 无 relay 流——spawn 返回前 emit 会在块存在前丢——排队条目启动时 emit → waiting 块已在（D-SD3b）→ sub.async 设置成功——routeSubToken 对缺失 key 的 async 事件缓冲 pending 标志（兜底）——补 queued→running ⏹ 可见性测试）。**② 标题行显式标识（用户裁定 B 形态——sync/async 都标）**：`[▶ eng-coder#2 · async · glm-5.3 · running …]` / `[▶ explore#1 · sync · glm-5.3 · …]`——`async`/`sync` 文字（dim 色——与模型名并列——running 态显示）——不靠"没标推断"。**③ ⏹ 门控**：⏹ 只对 async 区块（running && SUBAGENT_ROLES && sub.async——sync 区块无 ⏹——杜绝"可见但不可中止"误导——id:9 交付曾以"可操作指引"过渡）。渲染纯读 state ✓（纯函数设计不破坏）。测试：async 区块 async 标识 + ⏹ 显示可中止；sync 区块 sync 标识 + 无 ⏹；async 事件解析。
 
 **D-M8 嵌套 relay 前缀子标（方案 A）**：`parseRelayPath(text)` 通用解析——`eng-coder#N/explore#M/read` → 首段（块路由——现状逻辑零改——兼容单层）+ 剩余段渲染规则：
+> **R23 supersede（2026-09-07——见 §27 R23）**：本方案被用户 🅱 拍板推翻——嵌套子代理改**子块载体**（`❯ explore#N · model · elapsed` 工具式块头 + 独立折叠键——D-R23a/b/e）——子标行/“无生命周期事件”前提均随 R23 生成侧补发射（D-R23c1——内层 done/stopped 事件）作废；本段保留为 as-of 快照（实现记录 §19.5.4 #5 同注）。ACP 桥多段剥除正则（bridge.mjs）仍有效（显示语义无关）。
 - 文本行（onToken）：内层段前缀（如 `explore#1/`）替换为块内行首 dim 子标 `explore#1 · `（内容跟随）
 - 工具行（onToolCall）：`explore#1/read` → 行首子标 + 工具名（dim `explore#1 · ` + 既有工具行形态）
 - 工具输出：跟随最近子标归属（不重复前缀——输出行接在对应工具行后——现状块内顺序天然如此）
@@ -1868,7 +1916,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 
 - **UI 停止不经模型**（关键属性）：失控子代理时模型可能不可靠/回合已结束——UI 停止直连 TUI/extension 层 abort 路径（不经模型回合）——与工具 cancel（模型可用时）并存
 - **cancel 单 id 必填**：防误全停（明确目标）——全停仍走 Ctrl+C（既有）——不加 cancel-all（模型循环逐 id 明确性优先）
-- **嵌套前缀子标而非块中块**（方案 A——用户确认）：explore 同步 spawn 无生命周期——纯活动行——子标（dim 行首标记）足够归属可辨——块中块（D 方案）为无生命周期实体建层级 UI 过度
+- **嵌套前缀子标而非块中块**（方案 A——用户确认）：explore 同步 spawn 无生命周期——纯活动行——子标（dim 行首标记）足够归属可辨——块中块（D 方案）为无生命周期实体建层级 UI 过度。**——R23 supersede（2026-09-07——§27 R23）：用户 🅱 拍板推翻——嵌套子代理按工具式块呈现（子块载体——生成侧补发射生命周期事件）——“子标方案 A 裁定”与“块中块过度”决策注全部随迁 §27（D-R23a..e）**
 - **动作域（round1 #6）**：cancel/status 在手动档 auto-turn（digest）动作域内**放行**（控制类动作——同 task/checklist 自省类——D-S7 分类补 cancel/status——digest 期间模型可中止失控子代理）；UI ⏹ 命中区与折叠头点击**列级区分**（⏹ 区点击 = cancel——不触发折叠翻转——T-M22 断言）
 - **否决**：a) pause/resume（子代理独立回合进程——真暂停需冻结/解冻上下文——复杂易错——cancel + 同 token 重 spawn（§2.8）覆盖）；b) cancel-all 参数（误触风险——Ctrl+C 已覆盖）；c) 嵌套块中块（过度——见上）；d) 剥掉内层前缀（行不可辨——explore 审计过程与 eng-coder 自身活动混淆）
 
@@ -1881,7 +1929,7 @@ round3 复审结果：**0🔴——批准**（designToken `b7db45cd-9f39-4aba-82
 2. **cancel 动作**（F10/D-M6）：`subagent-async.mjs` cancelAsyncSubagent——工具路径（executeCancelAction——depth-0 only + id 必填）与 TUI ⏹（`mouse.mjs` createMouseDispatch cancelSubagent——key 尾段取 id）共用核心；running 目标条目级 controller abort（`subagent.mjs` async 分支 entry.controller——链 `_sessionSignal ?? ctx.signal`——Ctrl+C 全停逐链传播语义不变）→ settle finally **cancelled 分支**（不入 `_pendingAsyncResults`/不参与 collect 直注入 + ⟦ev⟧stopped 冻结 + user-role 提醒 XML 转义——round2 #3）；queued 目标出队 + position 前移 + `was:"queued"` 确认（T-M27）；未知/已完成/省略 id → error（T-M20）；cancel 后 maybeRefillAsync 补位（T-M21）
 3. **UI ⏹**（F11/D-M7/D-M7b）：CLI 面板折叠头右缘 ⏹（`subagent-panel.mjs` renderSubagentPanel——_stopSub/_stopCol 元数据——glyph 内收一列——code review 🟡#1）+ 列级点击命中（`mouse.mjs` handleMouseClick——⏹ 区 cancel 不触发折叠翻转——T-M22）；**门控 = running && SUBAGENT_ROLES && sub.async**（sync 区块无 ⏹——D-M7b ③——T-M23/mouse D-M7b ③ 回归）；头标 sync/async 显式文字（dim——与模型名并列——渲染端 subagent-panel.mjs/render-segments.mjs——B 形态——冻结后保留）
 4. **⟦ev⟧async 标记**（D-M7b ① + 处置 #4）：`subagent.mjs` entry.start() 发射（**实际启动时**——queued 入队不 paint 不发——补位启动先发 async 后发 [model]——sync 不发）；`subagent-blocks.mjs` routeSubToken 解析设 `sub.async`；**缺失 key 缓冲 pending 标志（处置 #4 兜底——本对齐轮补——CLI）：async 事件在块创建（ensureSubTaskKey）之前到达 → 缓冲 state._pendingAsyncKeys → 块创建时应用——async 事件先于块存在到达不丢——queued→running ⏹ 可见性保真**（补测试：subagent-blocks 数据层缓冲用例 + tui.test 面板层 queued→running ⏹ 可见性用例）
-5. **嵌套前缀子标**（F12/D-M8）：`subagent-blocks.mjs` parseRelayPath 循环解析（任意深度）——首段路由 + 剩余段行首 dim 子标（sublabelLine + `subagent-panel.mjs` styleSubLabelRow）——内层 ⟦ev⟧/[model] 剥除不路由（防 explore 进度污染 eng-coder 块头）；ACP 桥剥除正则扩展多段（`acp/bridge.mjs`——acp.test.mjs 嵌套前缀用例）
+5. **嵌套前缀子标**（F12/D-M8）：`subagent-blocks.mjs` parseRelayPath 循环解析（任意深度）——首段路由 + 剩余段行首 dim 子标（sublabelLine + `subagent-panel.mjs` styleSubLabelRow）——内层 ⟦ev⟧/[model] 剥除不路由（防 explore 进度污染 eng-coder 块头）；ACP 桥剥除正则扩展多段（`acp/bridge.mjs`——acp.test.mjs 嵌套前缀用例）。**——R23 supersede（2026-09-07——§27 R23）：本条实现随 R23 批次重写为子块载体（嵌套段建子块归属——sublabelLine/styleSubLabelRow 退役；内层 done/stopped 生成侧补发射路由子块定格）——实现记录见 §27 R23 验收/受影响文件（T-M25 随迁断言 T-R23e.1）**
 6. **门禁分类**（19.5.2b round2 #4）：`agent/dispatch.mjs` isSubagentControlAction（cancel + panel freeze）——planMode 放行/免权限审批/批审批不入组/无 handler 不拒；手动档 digest 内放行（subagent.mjs cancel/panel 动作分支 + 测试）；受限变体 spawn-only（subagent.mjs execute 分流——depth>0 eng-coder 上下文拒绝非 spawn 动作）
 
 **VS Code 结构差异**（ARCHITECTURE.md §19.5 引用段）：CLI 的文本事件通道（⟦ev⟧async/turn/stopped + routeSubToken）→ 本端 `callbacks.onSubagent` 消息族（started **带 `pool:true`** = ⏹ 门控源——恒于 entry.start 实际启动时发——同步 spawn 的 started 无 pool 标记——审计 F1）+ onAgentTurn 钩子同步 entry.turn + cancelled 冻结相位（webview stopped）；嵌套子标经 chunk.sub 透传（toolPanelPayload 白名单——`String.prototype.sub` 陷阱规避）。
@@ -2662,3 +2710,450 @@ if (filesOverlap(myFiles, e._files ?? [])) return false   // 831——queued 也
 > **测试（T-SL2）**：① 混合环构造 → 停滞报错含链；② 正常依赖链（running 锚点）不报；③ dep-cancelled 等待不报；④ 合法文件串行不报；⑤ 既有 T-SD/T-SL 回归零破坏。**验收（AC-SL2）**：T-SL2 全绿 + 零误报用例全绿——**已实现双端（2026-09-05——CLI scheduler 27/27（22 既有 + 5 新增）+ VS Code scheduler 19/19（17+2）——全仓 0 fail（CLI 1469/VS Code 1135）——断言净增对拍（CLI +5 用例/VS Code +27 断言）——实现注见下（CLI 批）+ VS Code 批记录于 VS Code 仓 CHANGELOG Unreleased——可达性分析注：D-SL1 序判定后自然 spawn 流 wait 边恒指更小 id——混合环仅人工注入可构造——检测为防御性（T-SD5 同族）**。
 >
 > **实现注（2026-09-05——CLI 批 P-SL2——双端同批中本仓侧）**：落点 `src/agent-tools/subagent-scheduler.mjs`——新增 `detectStall(parent)`（判定 = running 0 && queued ≥2 && 无 depc 标记条目 && 每 queued 的 blocker ⊆ queued 集且非空——blocker 计算与 describeBlockers/queueRunnable 同界同序判定——复用 filesOverlap/depInfo/showFile——链 = 沿每 queued 的首个 blocker 走到首个重复节点闭环——每节点自带"等谁+为何等"注（`coder#2（files x.mjs——先入者） → coder#1（dependsOn 3） → …`——信息同 D-SL2 示例——注位自源节点——读取无歧义））+ `STALL_NOTE` 引导常量。调用点（侵入最小组合——maybeRefillAsync 空转处不调用：refill 嵌 settle/cancel 链无模型可见输出通道且抛错有副作用风险）：subagent-async.mjs check 守卫 ①（target 级——停滞时返回 stall:true + 本任务链 + 引导注记）与 ②（arrival-order——停滞时错误列逐条阻塞链 + cancel 引导）——不满足停滞判据的形态维持原文本逐字（T-SL2-③/⑤ 断言零变化）；subagent-actions.mjs status 视图——overview 级 `stall.chains` 标记 + 单条目 `stall.chain`（仅停滞池出现——正常路径字段零变化）。——**§19.8（2026-09-06）supersede：check 守卫①②随 check 动作删除——停滞检测调用点现为 status 视图（overview/单条目标记）——T-SL2 ①③⑤ 已适配（status 路径断言保留——F-SL2 非静默语义面不变）**测试追加 test/subagent-scheduler.test.mjs（T-SL2 ①-⑤ 五用例——只追加零修改——断言对拍：该文件 pass 22 → 27 净增 = 新用例数——全仓 1469 tests 0 fail）——混合环仅人工注入可构造（spawn 序 wait 边恒指向先入者——T-SD5 同族防御）——判据按状态不依赖可达性论证。链注位与 D-SL2 示例手写形态的差异（示例中间跳注位不一致——实现取每跳自源节点注）为展示细节——AC-SL2 语义全对齐。
+
+---
+
+## 22. question 工具使用抑制 + VS Code 卡片渲染修复（2026-09-06 · 用户需求——快车道单点批）
+
+> 状态：**已评审待批准（2026-09-06——快车道单点全流程——round1 评审 0🔴 通过（token a39ff512…/designId 36fadf9e——2🟡+4🔵）——用户裁决：#1-5 建议全接受已落 §22/TOOLS.md 指针、#6 随 thincoder-desktop 退出作废、机械上限裁定 100 字符/4 条已落 D-Q3/T-Q3..Q5——待用户批准）**。**CLI 侧已实现（2026-09-06 eng-coder 交付——D-Q1/D-Q2/D-Q3 落位：question.md 三锚 + engineering.md/system.md/discipline.md 提示词锚 + git.mjs questionTool execute 前置校验；T-Q1/T-Q3/T-Q4/T-Q5/T-Q6/T-Q7 绿 + 全量 npm test 1437 pass 0 fail——VS Code 侧由并行兄弟任务负责）**。
+
+**背景**（用户实测 VS Code 端）："过于偏爱使用 question 工具，而且在 question 里塞大段文字，还一次提 N 个问题，很不方便阅读"。调查（explore 报告 2026-09-06）四层根因：①**工具描述两端漂移**——CLI `src/tools/question.md` 有 "Use sparingly"，VS Code `src/tools/question.mjs` 内联描述**没有**（更短更弱——用户抱怨的端恰好是全链路最弱端）；②**提示词层**——普通模式零引导（main.md 全文无 question 引导；discipline.md 工具表 question 行（as-of :77）反模式列 = "guessing"——变相鼓励"别猜、去问"），工程模式 Questioning Style 段（engineering.md——as-of :262-275）有"一次只问一个"但**无单条长度/结构约束**（N 个子问题塞进一个 question 字符串不违反字面要求）；system.md 确认门段三条纪律（as-of :15-18）只说 "WAIT for confirmation" 不限定形式——**模型用 question 工具履行例行确认门是"过度偏爱"最可能的间接推手**；③**机械限制为零**——两端 execute 原样透传，无长度/条数校验（先例形态存在：interaction.mjs 并发第二问守卫（as-of :106）、helpers.mjs auto-turn 机械禁问（as-of :314））；④**VS Code 卡片渲染折叠换行**——webview/question.js showQuestion 的 escHtml 直出（as-of :18）+ base.css `.question-text` 规则（as-of :262-266）无 `white-space: pre-wrap`——换行被 HTML 折叠成一坨连排；CLI TUI 逐行 pushLine 保形（interaction.mjs askQuestion——as-of :113/124）——**同一段多子问题文本 VS Code 端可读性差一倍**，"不便阅读"被 UI 放大。
+
+**用户裁定（2026-09-06）**：①确认门类例行确认用**普通文本回复**履行（用户直接回"可以"）——question 工具仅保留给真正需要用户做选择/输入的场景；②**接受机械硬限制**（超限拒绝回模型）。
+
+### 22.1 需求
+
+**总体需求**：抑制 question 工具的过度使用与不当形态（过度提问 / 大段文字 / 一条多问），并修复 VS Code 端卡片渲染的可读性缺陷——用户少被打断；被打断时读得快、答得快。
+
+**功能性需求**：
+
+- **F-Q1（确认门形式）**：As a user, I want routine confirmations (confirm gates) delivered as plain reply text, so that I can answer "可以" in the normal input flow instead of being interrupted by a question card.
+- **F-Q2（单问简短）**：As a user, I want each question tool call to carry ONE short question — no bundled sub-questions, no background dumps — so that I can read and answer in seconds.（背景/分析放正文回复，question 文本只装问题本身。）
+- **F-Q3（机械兜底）**：As a user, I want oversized questions / over-many options mechanically rejected back to the model, so that soft guidance cannot be silently ignored.
+- **F-Q4（描述两端对齐）**：As a maintainer, I want the CLI/VS Code question tool descriptions aligned (both carry the full restraint guidance), so that behavior doesn't drift by end.
+- **F-Q5（卡片可读性）**：As a VS Code user, I want question cards to preserve line breaks and stay bounded in height, so that multi-line questions render legibly.
+
+**非功能性需求**：
+
+- **NF-Q1（镜像锚）**：双端共享约束句逐字一致——测试 fail-when-unchanged。
+- **NF-Q2（零回归）**：合规 question 调用（短文本 / 少量 options）路径不变；机械拒绝仅作用于超限输入，错误串自解释（引导模型改写后重发）。
+- **NF-Q3（先例形态）**：拒绝 = 返回错误字符串（不弹卡、不调 onQuestion）——与 interaction.mjs 并发守卫 / helpers.mjs auto-turn 禁问同形态，不引入新机制种类。
+
+### 22.2 设计
+
+- **D-Q1（工具描述层——两端对齐 + 补约束）**：CLI `src/tools/question.md` Notes 补三条逐字锚（镜像锚——VS Code 同文照抄）：
+  > - Ask ONE question per call — never bundle multiple sub-questions into one question string; ask the next one after the answer arrives.
+  > - Keep the question text short — one or two sentences. Background, context, and analysis belong in your normal reply text, NOT in the question.
+  > - Routine confirmations (confirm gates) belong in your plain reply text — the user answers in their next message. Use this tool ONLY when you need the user's decision or input to proceed.
+
+  VS Code `src/tools/question.mjs` 内联描述重写为与 CLI 全量对齐（既有 "Use sparingly" + memory 提示 + 上述三锚——消除两端漂移）。
+- **D-Q2（提示词层——两端镜像文件同改）**：
+  - `src/prompts/engineering.md` Questioning Style 段补两条逐字锚：
+    > - Keep the question text SHORT — one or two sentences, ONE sub-question. Background and analysis go in your normal reply text, never in the question string.
+    > - Routine confirmations (plan confirmations, confirm gates) are stated in your plain reply text — do NOT use the question tool for them; reserve it for genuine decisions/inputs.
+  - `src/prompts/system.md` 确认门段补一句逐字锚：
+    > These confirmations are delivered in your plain reply text — the user answers in their next message; do NOT use the `question` tool for routine confirm gates.
+  - `src/prompts/discipline.md` 工具表 question 行反模式列扩展：`guessing; routine confirm-gates (those go in your plain reply text)`。
+- **D-Q3（机械限制层——execute 前置校验，两端同语义）**：CLI `src/tools/git.mjs` questionTool.execute 与 VS Code `src/tools/question.mjs` execute 入口（调 onQuestion / 原生 UI **之前**）：
+  - question 长度上限 **100 字符**（2026-09-06 用户裁定——"我只接受100字/4个选项最多"——500/8 建议值否决）：超限 → 返回错误串 `(error: question too long (>100 chars) — ask ONE short question; background belongs in your normal reply text)`——不弹卡、不调 onQuestion；
+  - options 条数上限 **4 条**：超限 → 返回错误串 `(error: too many options (>4) — offer at most 4 plain-string options)`；**guard 仅在 `Array.isArray(options) && options.length > 4` 时触发**——非数组/缺省 options 原样透传（评审 #4——2026-09-06 用户裁决接受）；
+  - 常量值两端逐字一致；
+  - 既有 options 对象误传防御（question.mjs 取 label 兜底——as-of :38-39）保留不动；
+  - questionTool 定义寄生于 `git.mjs`（`// ---- question ----` 段——历史归并所致，非本批搬迁对象——本批原位加校验——评审 #2 注）。
+- **D-Q4（UI 渲染层——VS Code webview）**：`webview/base.css` `.question-text` 加 `white-space: pre-wrap`（换行保形——对齐 TUI 逐行显示可读性）+ `max-height: 40vh; overflow-y: auto`（长文本卡内滚动，不撑爆面板）。
+- **被否决的备选**：
+  - 问题文本改走 `md()` 渲染——注入面放大、短句无收益（escHtml 直出保留）；
+  - 机械拦截"确认型"question 调用——无法机械区分"例行确认"与"真实决策"，误伤大——确认门形式靠描述 + 提示词引导（D-Q1/D-Q2），机械层只管长度/条数；
+  - CLI TUI 渲染改动——TUI 已逐行保形，无需动。
+
+### 22.3 测试（T-Q 系）
+
+| # | 类别 | 输入 | 预期输出 |
+|---|---|---|---|
+| T-Q1 | N | 读 CLI `question.md` | 含三条逐字锚（"Ask ONE question per call" / "Keep the question text short" / "Routine confirmations"——fail-when-unchanged） |
+| T-Q2 | N | 读 VS Code `question.mjs` 描述 | 镜像锚逐字一致（同三句 + 既有 "Use sparingly" 补齐） |
+| T-Q3 | N | execute 传 101 字 question | 返回错误串（含 "question too long"），onQuestion **未被调用**（两端） |
+| T-Q4 | N | execute 传 5 条 options | 返回错误串（含 "too many options"），onQuestion 未被调用（两端） |
+| T-Q5 | E | 边界：100 字 question / 4 条 options | 正常透传（onQuestion 被调用——两端） |
+| T-Q6 | N | 读 `engineering.md` | 含两条新锚（"Keep the question text SHORT" / "reserve it for genuine decisions"——fail-when-unchanged） |
+| T-Q7 | N | 读 `system.md` + `discipline.md` | 含确认门形式锚 + 工具表反模式扩展（fail-when-unchanged） |
+| T-Q8 | N | 读 `base.css` | `.question-text` 含 `pre-wrap` + `max-height`（VS Code 端——随既有 CSS 断言形态） |
+| T-Q9 | E | 既有 question / prompts 测试全量 | 全绿零破坏（两端） |
+
+### 22.4 受影响文件（两端）
+
+- **CLI**：`src/tools/question.md`（D-Q1）、`src/tools/git.mjs`（D-Q3 execute 校验——questionTool 寄生段）、`src/prompts/engineering.md` + `src/prompts/system.md` + `src/prompts/discipline.md`（D-Q2）、`test/prompts.test.mjs`（T-Q1/6/7 锚断言）+ `test/git.test.mjs`（T-Q3/4/5——questionTool 寄生同文件——评审 #2 定名）、`docs/design/AGENT-LOOP.md`（本节）、CHANGELOG（父侧交付时）。
+- **VS Code**：`src/tools/question.mjs`（D-Q1/D-Q3）、`src/prompts/engineering.md` + `src/prompts/system.md` + `src/prompts/discipline.md`（镜像同改）、`webview/base.css`（D-Q4）、test 对应断言文件（T-Q2/3/4/5/8 镜像子集）、`docs/design/ARCHITECTURE.md`（变更段——引用本节）、CHANGELOG（父侧交付时）。
+- ~~**第三副本**：`thincoder-desktop/vendor` engineering.md~~——**2026-09-06 用户裁定：thincoder-desktop 不纳入考虑（用户删除该目录——"干扰判断了"）——第三副本同步待办随目录删除勾销，本批无第三实现面**。
+
+### 22.5 验收（AC-Q）
+
+- **AC-Q1** = T-Q1/T-Q2/T-Q6/T-Q7 绿（软引导层锚全部落位、两端逐字一致——回指 F-Q1/F-Q2/F-Q4）。
+- **AC-Q2** = T-Q3/T-Q4/T-Q5 绿（机械层：超限拒绝 + 边界透传 + 不弹卡——回指 F-Q2/F-Q3）。
+- **AC-Q3** = T-Q8 绿（渲染层：pre-wrap + 高度兜底——回指 F-Q5）。
+- **AC-Q4** = T-Q9 绿（既有全量零回归）。
+
+---
+
+## 23.（迁出）测试分层与精简 → `TESTING.md` §1
+
+> 2026-09-06 用户裁定文档归属（"文档是不是落的地方不对呀"——五杠杆批只有 L4 属 Agent 循环，测试基建此前无板块）：本节设计全文迁至 `TESTING.md` §1（测试基建板块新文档——已登记文档地图）。与本文档的接口：TESTING §1 D-T3 届时对 §18.7 D-TS1 首次实现粒度做原位 supersede 注（Phase 2）。
+
+## 24. 回合外事件后台化统一模型（2026-09-06 · 需求池 R13+R14+R15 合批——用户"并入"——后台池 + 排队合并）
+
+> 状态：**已批准（2026-09-06——评审 0🔴 通过（token ce8779b7…/designId 66a3d6f7）——处置 10 项全采纳 + 决策点 ②-1..6 全 🅰（②-6 取消语义评审补入）——修正已落本节——待实现）——**已实现（2026-09-06——大合验双端绿——T-24a/b/c 全绿——CLI 落地：advisor-async.mjs/subagent-async 分域池/suspension-drive 合并注入）**（R17 登记注见 L2891——考古——不再更新）**。
+
+### 24.1 需求（三合一——用户原话见各登记）
+
+| # | 需求 | 用户原话 | 板块登记 |
+|---|---|---|---|
+| F-24a (R13) | advisor（设计评审/父侧复核）后台跑不阻塞回合 | "主代理里跑 advisor 也能是异步的，不要阻塞前端" | ADVISOR-CONVERGENCE R13 条 |
+| F-24b (R14) | 子代理槽位角色分池 + 可配置 | "eng-coder槽和explore槽应该分开…槽位数都改成可配置的，默认是eng-coder四路，其他4路" | AGENT-LOOP §15 R14 登记注 |
+| F-24c (R15) | 排队用户指令合并一次发出 | "queue里排队的用户指令希望合并一次发出去" | AGENT-LOOP §17 R15 登记注 |
+
+**NF-24**：既有 async 池上限 4 语义（T9/T-E16 断言）随默认值演化为"eng-coder 池 4 + 其他池 4"（断言同步改——**影响面枚举见 D-24a 注：T6/T-S4/T-SD4 等逐条核对**——评审修正 #7）；配置非法回退默认（timeoutMs 先例）；digest 手动档动作域（禁写/禁 spawn）语义不变；eng-coder 内部自审不动（**async 仅 depth-0 门——评审修正 #3**）；**评审 cap 随 review 实例计（每评审 ≤5 轮——评审修正 #4——ADVISOR-CONVERGENCE 轮次共享条款随之 supersede）**。
+
+### 24.2 机制现状锚（探索实证——2026-09-06）
+
+- 阻塞根：advisor 是回合内被 await 的工具（agent.mjs:315 → dispatch.mjs:316 → advisor.mjs:158 → run.mjs:439 chat 循环 0.5-2min+）；runAgent 单输入回合模型——回合内工具调用无"后台续跑"出口。
+- §17 池机制（pending 移交/run 首行注入/消化轮/冻结回收）消费点角色无关——可复用；`entry.start()`/relay 输出/角色表硬编码子代理管线。
+- 机械判定绑定"工具返回 = 完成"：token 签发（advisor.mjs:168-190）、`_calledAdvisorThisRun`（record-results.mjs:93-102）、guard 推回（completion.mjs:113-136）、cap（run.mjs:415）。
+- round/prior：agent 单槽 + per-run 重置（agent.mjs:121-127）——与并发多评审、digest 跨 run 冲突。
+- 输入排队：pendingInput（T-S9 逐条续发）——N 条 = N 回合。
+- UI：advisor 活流 = per-turn 缓冲 + 单实例 key（render-conversation.mjs:305-334）；async 子代理面板 = 跨回合 live 先例。
+
+### 24.3 设计
+
+**D-24a（R14——角色分池 + 可配置——池模型统一）**：
+- 池容量从单常量改**按角色域配置**：`ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }`（默认——用户裁定"eng-coder 四路，其他 4 路"）；角色域判定 = role ∈ {eng-coder} → engCoder 池；{explore/plan/coder/sub} → other 池（VS Code 无 coder 角色——按装配实况）。
+- 运行中计数按域分别记（`_asyncSubagents` 条目带 pool 域字段——running 判定按域过滤）；队列补位 maybeRefillAsync 按域腾槽补位。
+- **断言影响面（评审修正 #7）**：实现批逐条核对 §15 T6/T11（第 5 个入队——同域语义不变）、§17 T-S4（"上限 4 全局"——改"各域上限"表述）、§20 T-SD4（槽满 ≤4——按域）+ prompts 上限句（T9/T-E16 措辞）——同域仍 4、跨域总量 8 的行为差异声明。
+- **角色域单一事实源（评审修正 #8）**：域映射 = role 枚举/装配表（modeRoleField/filteredSubagent）；"sub" 角色名与 "VS Code 无 coder" 以两端实际装配为准——实现前核实两端角色清单，未知角色归 other 池。
+- **配置键（决策点②-1——已裁定 🅰）**：单对象 `agent.poolLimits = { engCoder, other }`。运行期读（同 engTokenTtlMs 先例）+ 校验（正整数 ≥1，非法回退默认 4/4）+ 变更下回合生效。
+- 配置入口：CLI /config 菜单加两入口（或子菜单"并发池"）；VS Code 设置面板同（settings 通道）。
+- 生效：校验值在每次入池判定时读（不缓存常驻——变更即生效下个 spawn）。
+
+**D-24b（R13——async advisor——独立后台评审池）**：
+- **池形态与容量（决策点②-2 已裁定 🅰 + ②-6 补——评审修正 #1）**：独立 `_asyncAdvisors`（复用同一套 pending/digest/注入/冻结消费机制——机制角色无关；新 runner 包装 runAdvisorReview——不碰 subagent 管线）。**容量/排队（②-6a）**：ADVISOR_POOL_LIMIT = 2（并行评审上限——设计评审并发常态 ≤2）；超限 → 新评审发起即返回错误文案（"另有一评审在跑——逐个发起"——不排队——评审间有依赖语义：修正轮依赖前轮处置——排队无意义）。**取消语义（②-6b）**：对齐 §19.5 D-M6 cancelled 分支——⏹/cancel 定向中止 running 评审（controller abort——run.mjs signal 链）→ cancelled settle：不入 pending、不入 token 槽、digest 提示"评审已取消——token 未签发"。
+- 工具语义：`advisor` 工具加 `async: true` 参数；**缺省（决策点②-3 已裁定 🅰——评审修正 #3）**：缺省 async（R12 depth-0 缺省先例）——**仅 depth-0 主会话**（depth>0 显式 async 拒 / 缺省恒同步——eng-coder 内部自审不翻转——§15 先例）。发起返回 ack（"评审已后台启动——完成自动回来"）→ 回合自然收尾 → 挂起态（输入可用）→ settle → digest。
+- runner：`entry.start()` 等值 = `runAdvisorReview` promise（onOutput → relay 映射——kind {think/text/tool} → **UI 通道（决策点②-4 已裁定 🅰）**：subagent 面板 + role="advisor" 伪角色（块/⏹/冻结全复用——cancel 走 ②-6b）。
+- **settle 记账（token/guard/cap 改绑——探索结论③ + 评审修正 #2/#4）**：评审 settle 时（消化链首行注入前）执行：①**陈旧判定（评审修正 #2）**：评审 launch 后发生 FILE_MUTATORS（代码面——设计评审按对象文档面）→ 评审基于旧状态 → **不置 `_calledAdvisorThisRun`、代码评审不签发 token**——guard 仍推回发起新评审（防静默漏审）——**记账时序修订见 §29（2026-09-07——noteMutations 移执行期唯一记账点）**；②通过 → token 入槽 `_engDesignTokens.set(designId, token)` + 单槽镜像（从 execute 后移至此）③`_advisorRound` 改按 review 实例记（`_advisorRuns`——评审修正 #4：**cap 随 review 实例**——每评审 ≤5 轮、第 6 次启动/settle 拒——ADVISOR-CONVERGENCE §2/工程模式"轮次共享"条款 supersede 注届时落）④guard 推回判定看"后台评审是否已 settle 且非陈旧"（`_asyncAdvisors` 无未决项 + 无陈旧标记才算未评审）。
+- **收敛状态 per-review 化（决策点②-5 已裁定 🅰）**：`_advisorRuns: Map<reviewId, {round, priorOutput, stale}>`——reviewId = designId（设计评审）/随机 id（code 复核）；digest 处置轮注入该实例 prior；多评审并行隔离。token 槽 designId 先例作载体。
+- digest 处置轮：报告注入（同 injectAsyncResult 形态——"[System reminder: async advisor review #id finished]…"）→ 模型消化——**呈递发现 + 修复建议（不擅自动手——手动档 digest 禁写域恰好自洽）→ 用户逐项拍板**（下一用户消息——现成双通道）。
+- 修正轮发起：用户裁决后 agent 回合内发起 round 2（async 再启——round/prior 从 `_advisorRuns` 取——per-review 实例续跑）。
+- **父侧 code 复核形态（评审修正 #5）**：guard 推回发起 async code review（reviewId 随机——无 token 面——guard 标记面）→ settle → digest 处置 → 修复 → 再评审轮次续跑（prior 正确）。
+
+**D-24c（R15——排队用户指令合并）**：
+- pendingInput 消费改**攒批合并**：回合空闲（挂起消化后/普通回合间）pendingInput 长度 ≥2 → 合成一条注入：编号列出逐条（"你排队了 N 条消息：1. … 2. …——一次处理"）——模型单回合处理全部——T-S11 N1 成本护栏同型（**措辞注——评审修正 #9**：T-S11 合并的是子代理 settle 报告——用户输入合并是本设计新机制——走同一 pending 消费点 T-S9——形态同 T-S11 先例）。
+- 边界：**合并上限（评审修正 #6——数值锚）**：单批 ≤8 条且合并注入 ≤2000 字符（常量 `MAX_MERGE_ITEMS = 8` / `MAX_MERGE_CHARS = 2000`——双端逐字一致——§22 D-Q3 常量先例）；超限 → 截批先行（前 8 条合并——余下留待下批——不丢不截断单条）；**单条超长**（>2000 字符——不进批——逐条直发）；**/命令类**（/cmd 语义即时——不进合并缓冲——逐条保序执行）；到达时间窗（合并窗口——空闲即合——不设延迟等待——有新消息到就并进下一回合）。
+- 与挂起消化共存：digest 轮 pendingInput 消费点同一（T-S9）——子代理报告合并（T-S11）与用户指令合并（本设计）共用消费点不互扰。
+
+### 24.4 测试
+
+| # | 场景 | 输入 | 预期 |
+|---|---|---|---|
+| T-24a1 | 分池默认 | 2 eng-coder + 3 explore async spawn | eng-coder 域 running 2、other 域 running 3——互不排队 |
+| T-24a2 | 分池满员 | 5 eng-coder（4 running + 1 queued）+ explore spawn | explore 立即启动（other 池空——不排 eng 队） |
+| T-24a3 | 配置生效 | poolLimits {engCoder:2, other:6} | 第 3 个 eng-coder queued；第 7 个 explore queued |
+| T-24a4 | 配置校验 | 0/-1/"abc"/缺失 | 回退默认 4/4（+ 文案） |
+| T-24a5 | /config + 面板入口 | 菜单路径 | 两入口可见可改、落盘热应用 |
+| T-24b1 | advisor async 发起 | 设计评审 async（depth-0） | 工具返回 ack + 回合自然收尾（processing 解除）+ 挂起态输入可用 |
+| T-24b2 | settle 注入 | 评审完成（mock 慢评审） | digest 轮注入报告 + 模型处置呈递（不擅动） |
+| T-24b3 | token settle 签发 | 后台评审通过 | digest 后 token 入槽（designId 匹配）+ spawn 可用 |
+| T-24b4 | guard 时点 | guard on + async 评审未决 | 不推回（未决不算未评审）；settle 后仍无评审 → 推回 |
+| T-24b5 | 多评审并行隔离 | 两 design 评审并发 | round/prior 各归各 reviewId——不互污染（_advisorRuns） |
+| T-24b6 | 修正轮续跑 | 处置后发起 round2 | prior = 该 reviewId 前轮输出（非其他评审） |
+| T-24b7（评审修正 #1） | 取消语义 | ⏹ cancel running 评审 | cancelled settle：不入 pending/不入 token 槽 + digest 提示"评审已取消——token 未签发" |
+| T-24b8（评审修正 #1） | 池容量/排队 | 第 3 个评审发起（2 在跑） | 返回错误文案"另有一评审在跑——逐个发起"（不排队） |
+| T-24b9（评审修正 #2） | 陈旧评审 | 评审飞行中 FILE_MUTATORS → settle | 不置 _calledAdvisorThisRun/不签发 token——guard 仍推回 |
+| T-24b10（评审修正 #3） | depth 门控 | depth>0 显式 async / 缺省 | 显式拒 / 缺省恒同步（eng-coder 内部自审不翻转） |
+| T-24b11（评审修正 #4） | cap 随实例 | 单 review 第 6 次发起 | 拒（该实例 ≤5 轮）——他实例不受影响 |
+| T-24b12（评审修正 #5） | code 复核 async | guard 推回 → async code review（reviewId 随机）→ settle → 修复 → round2 | digest 处置 + prior 正确 + 无 token 面 |
+| T-24c1 | 输入合并 | 挂起期连发 3 条消息 | 下一回合单条注入（编号 1-3）——模型一次处理 |
+| T-24c2 | /cmd 保序 | 排队含 /status + 文本 | /cmd 逐条即时执行——文本进合并（**端差异注：CLI-only——VS Code 无命令队列——webview 命令走 msg.type 按钮通道——零排除类——2026-09-06 VS Code 面交付按装配实况落实**） |
+| T-24c3 | 合并上限数值化 | 12 条排队（>8） | 截批前 8 条合并——余 4 留待下批；单条 >2000 字符直发不进批 |
+| T-24c4 | 回归 | 消化合并（T-S11）既有语义 | 零回归 |
+
+### 24.5 决策点裁定记录（2026-09-06 评审后用户全采纳——全 🅰）
+
+②-1 配置键：**A 单对象 poolLimits** ②-2 池形态：**A 独立 _asyncAdvisors（复用消费机制）** ②-3 async 缺省：**A 缺省 async + depth-0 门** ②-4 UI 通道：**A subagent 面板 role=advisor** ②-5 收敛状态：**A per-review 化 _advisorRuns** ②-6（评审补入）：**A 容量 ADVISOR_POOL_LIMIT=2 超限拒（不排队）+ 取消对齐 D-M6 cancelled 分支（token 不签发）**
+
+### 24.6 受影响文件（初步）
+
+AGENT-LOOP 池面（subagent-async/subagent-run/scheduler 分域计数）、advisor.mjs（async 参数 + settle 记账迁移）、新 advisor-async runner、ADVISOR-CONVERGENCE（round/prior per-review 语义）、setup-reminders（评审引导锚句）、render/事件（UI 通道 ②-4）、config 面（/config + 面板 + 校验）、pendingInput 消费点（agent-turn/suspension-drive）、相关测试（双端镜像）。详细清单随决策点定稿。
+
+### 24.7 验收
+
+- AC-24a：T-24a1..5 绿——分池互不阻塞 + 配置生效/校验 + 入口两处（断言面 T6/T-S4/T-SD4 逐条核对——修正 #7）
+- AC-24b：T-24b1..12 绿——后台评审全链（发起不阻塞 → settle → digest 处置呈递 → token 可用 → 陈旧判定 → depth 门 → cap 随实例 → code 复核形态 → 取消 → 容量 → 多评审隔离 → 修正轮续跑）
+- AC-24c：T-24c1..4 绿——合并注入 + /cmd 保序 + 上限截批数值化 + 零回归
+- AC-24d：双端全量回归绿（镜像断言随默认值演化同步——T9/T-E16 上限表述改）
+
+> **R17 登记注（2026-09-06——需求池 R17——会诊/飞刀完全异步化——**设计已落 §25——本节注为考古**）**：用户裁定"这两都得完全异步化"（会诊 consult + 飞刀 escalate——查证现状：consult_start 发起已非阻塞但 **check 回合内阻塞轮询 + 无自动注入闭环**；escalate **全同步回合内等**（无 async/无池化——depth-0 only + 工程模式拒）——两者都还是"结果消费绑死在回合内"旧模型）。**澄清裁定**：Q1 🅰 = 会诊 digest 自动注入（R13 同型——完成注入全文——模型消化轮逐条判断处置——check 工具退役或降级——判断性消费保留在消化轮）；Q2 🅰 = escalate 入 **other 池**（非 eng-coder——与 explore/plan 共用 4 槽——§24 D-24a 分域）。边界待设计细查：digest 处置轮动作域（会诊 = 意见呈递不擅动？飞刀 = 报告后处置可改？——§17 手动档禁写域适用面）、escalate 工程模式拒保持（现 L313——若 async 化后仍拒则 async 飞刀只在普通模式有意义？）、cancel/容量/注入形态（复用 §24 基建）。状态：需求登记待设计。**（round2 #8——设计已落 §25 并经两轮评审——批准 token c10cd501——本节注为考古——状态句不再更新）**
+> **join→resolve 双前缀修复注（2026-09-06 · R-bug——网友报 thinworker 同源——thincoder 实证——快车道——round1 评审 0🔴 通过——5 项建议已落本节）**：**修复位符号锚（评审 #3——行号仅 as-of：record-results.mjs:89/146 + agent.mjs:339——agent.mjs 正被 R17 改——行号已漂移风险——实现按 grep `join(agent.cwd` 定位）**——p 为绝对路径时双前缀（实证 join('D:\thincoder','D:\other\\x') = 'D:\thincoder\D:\other\\x'——node path.join 遇绝对段不重置——resolve 才重置）——touchedPaths/args.path 含绝对 → _touchedFiles/noteMutations 记错路径（verify 关联/advisor 陈旧扫描/索引降级——§24 D-24b mutation-log 面——_touchedFiles 绝对路径不变式恢复——§18.12 D-VR1）。**修复**：三处 join → `resolve(agent.cwd, p)`（相对/绝对均正——node 语义——**前提：agent.cwd 恒绝对——评审 #5 明示**）——**双端同修——VS Code 端实现前实测同款站点（评审 #2——§18.12 D-VR2 同型——存在同修、缺则按端结构对齐报告——不静默跳过）**——**审计（评审 #4）：双端 grep `join(agent.cwd` 确认恰三处——更多则同批评估/明示排除——顺带核验符号名与代码一致**。**测试（评审 #1 点名）**：记账域测试文件（record-results 断言所在——§18.14 域）——①绝对 p → touchedFiles 记 resolve 语义绝对路径（**修复前该用例必须失败**）②相对 p 回归不变（绝对 cwd 下构造）③双端各一——断言数对拍。**AC**：双端 L2 绿 + 既有记账测试零回归（断言数基线对拍）+ 两端 CHANGELOG——设计评审发起权在用户。
+> **评审处置注（2026-09-06）**：round1 0🔴——10 项 🟡/🔵 全采纳（修正 #1-10 已落本节）——ADVISOR-CONVERGENCE §2/工程模式轮次共享条款 supersede 注 + §24.2 符号锚 as-of 化（修正 #10——行号引用已集中标注探索日）随实现批落。
+
+## 25. 会诊/飞刀完全异步化（2026-09-06 · R17——需求池单点批——R13 基建复用面）
+
+> 状态：**已批准（2026-09-06——三评审收敛——round1 token 92938605 + round2 复审 0🔴（token c10cd501——批准定稿）——决策点 ①-④ 全 🅰（批准即裁定——见 §25.4）——CLI 已实现（2026-09-06 R17 CLI 交付——T-R17a..p 全绿 + 既有家族零回归——VS Code 镜像面独立实现）**。
+
+
+### 25.1 需求
+
+**F-R17a（会诊 digest 自动注入）**：As a user, I want 会诊完成后主 agent 自动收到全部意见（无需回合内阻塞 check 轮询），so that 发完会诊即可继续交互——判断性消费保留在消化轮。现状：consult_start 非阻塞但 check 回合内阻塞 + 无自动注入闭环。
+
+**F-R17b（飞刀 async）**：As a user, I want 飞刀后台跑（发起 ack——回合收尾——完成报告 digest 自动注入——mutations 自动 merge），so that 10-30min 飞刀不再锁死前端。现状：escalate 全同步回合内等。
+
+**NF-R17**：R13 基建复用（§24 `_asyncAdvisors` 已批准机制——pending/消化/注入/冻结消费同型）；会诊多模型意见全量注入有界（容量注——超长截断/落盘）；escalate 工程模式拒保持（engineering.md 拒 escalate 条款——2026-09-06 语义——eng 模式走 eng-coder——普通模式工具）；**digest 处置轮动作域 = 消费回合档位（§17 D-S6/D-S7 既有规则——三族一致——无动作域例外——见 D-R17a/b 修正句）**；双端同规格。
+
+### 25.2 设计
+
+**D-R17a（会诊 digest——Q1 🅰）**：
+- **settle 判定**：`_consultSessions` 某 id pending=0（全部模型回复/失败 settle）→ 该会话移入 **`_pendingConsultResults`**（独立流——§24 `_asyncAdvisors` settle 记账/消费机制同型——实现锚 = §24 已批准机制——非新符号）→ 下回合 run 首行注入（"[System reminder: consultation #id finished — N replies: …]" 全文逐条）→ **消化轮逐条判断处置（评审 #1 修正——动作域无例外）**：会诊 = 建议非门禁——消化指令语义 = "逐条判断采纳与否并处置"——但**动作域按消费回合档位走 §17 D-S6/D-S7 既有规则**：用户回合/AUTO 档 = 正常决策域（**写按档放行——手动档审批弹窗/AUTO autoApprove——round2 #5 措辞**）；手动档 auto-turn = 整理禁写（同 advisor digest——三族一致——实现不得另建"consult 可写"例外）；族差异只在消化指令语义（advisor = 呈递待拍板 / consult = 逐条处置 / escalate = 已 merge 报告可继续——见 D-R17b）不在动作域
+
+- **消费驱动（评审 #2）**：digest auto-turn 驱动判据（§17 D-S2/D-S9——现 keyed `_asyncSubagents`）**推广到所有 pending 族**（`_pendingConsultResults`/`_pendingEscalateResults`/advisor 池——统一"任一 pending 族非空"判据）——consult settle 在用户空闲时也触发消化轮（与 escalate/advisor 对称——补空闲 settle 用例 T-R17j）——**实现钩子（round2 #2 补明）：running consult 会话纳入挂起活度判据（willSuspend/poolLive 扩展——与 escalate/advisor 对称——consult 启动回合尾即入挂起态）——或等价 consult-settle 唤醒源——二选一实现批定——驱动文件点随 25.5**
+- **check 退役（决策点 ①）**：消化注入后 check 无消费对象——**工具删除**（§19.8 subagent check 退役先例——同动作面清理——**删后 consult 家族剩 2 工具——§19.3"三工具"句 supersede**）；**stop 保留**（取消语义——cancel 后不入 pending——settle 提示"会诊已取消"）；**需显式同步等 → wait_for "consult done" 条件（TOOLS.md §16 既有——有界）或直接进消化轮判断——防自发空转（评审 #9）**
+
+- UI：consult 活动卡（既有——settle 后块消化同 async 子代理面板——空闲时由消费驱动判据推广触发消化轮（评审 #2——round2 #1：单条——原短行已并）——不再悬置到用户下次输入）
+- **注入容量（决策点 ②）**：全 settle 后一次注入（意见全貌才可判断——**部分 settle 不提前注入**——负例 T-R17k）；单次注入超长 → 既有 digest 截断/落盘机制（N1 成本护栏同型——容量用例 T-R17l）
+
+
+- **消化轮动作域钉死（round2 #3——T-R17p）**：consult/escalate settle 在手动档 → digest auto-turn 不写不 spawn（整理禁写——T-S7 同规则——"consult/escalate 可写例外"零容忍断言）
+
+**D-R17b（escalate async——Q2 🅰）**：
+- `escalate`（subagent action）加 async 语义——**入 other 池**（§24 D-24a——escalate 角色非 eng-coder——与 explore/plan 共享 4 槽——自然容量）；发起返回 ack（{id, status:"running"}）→ 回合自然收尾 → 挂起态 → settle
+- **settle 三分类（评审 #4）**：done → merge mutations 回父（同 async 子代理 merge 机制——§19.5/§17 settle 记账——**merge 前检测与父侧重叠写文件——round2 #4 钉死：done 分支 = merge-all + 重叠警告入报告（报告级提示——不 gate——决策句）**（评审 #3——async 后双飞刀/父并发写面——同文件域约束先不做——报告级提示））→ 报告全文入 `_pendingEscalateResults` → digest 注入；**error（child 失败/撞 turn cap）→ 已产出 partial mutations 视父侧是否已改重叠文件决定 merge（有重叠 → 不 merge + 报告列差异；无重叠 → merge）+ 错误报告注入**；**cancelled → 不入 pending——settle cancelled 提示（D-M6）**
+- **动作域（评审 #1 修正——round2 #5 措辞同步）**：飞刀报告 digest = 已 merge 的完成报告——处置 = 消费回合档位内正常继续（用户回合/AUTO = 可改——**写按档放行——手动档审批弹窗/AUTO autoApprove**；手动档 auto-turn = 禁写整理——§17 D-S6 同规则——三族一致——无"飞刀可写"例外）——**族差异 = 消化指令语义**（escalate = "报告已 merge——可继续改进"——非动作域例外）
+- **同步保留（决策点 ③）**：`async: false` 显式同步保留（向后兼容——脚本/需同步结果的场景——缺省 async depth-0——escalate 本就 depth-0 only）
+- **工程模式拒保持**（engineering.md 拒 escalate 条款——2026-09-06 语义——符号锚非行号——escalate 是普通模式工具——eng 模式走 eng-coder——不改）
+- **取消/容量**：池满 → other 池排队（既有 maybeRefillAsync——非拒——escalate 与 explore 同池公平排队）；cancel 定向中止（controller abort——D-M6 分支——settle cancelled 提示）
+- UI：escalate 块（既有面板形态——async 后跨回合 live 同 async 子代理）
+
+**D-R17c（基建——决策点 ④）**：独立流（`_pendingConsultResults`/`_pendingEscalateResults`——§24 `_asyncAdvisors` 机制同型——每族独立记账）vs 合一流（pending 条目带 kind——单管线）。**推荐独立流**（每族容量/取消/注入文案独立——避免相互干扰——§24 已批准设计形态——注：§24 状态 = 已批准待实现——R17 实现依赖 §24 D-24a 分域池先行或同批——评审 #6）。
+
+### 25.3 测试
+
+| # | 场景 | 输入 | 预期 |
+|---|---|---|---|
+| T-R17a | 会诊 settle 注入 | 2 模型会诊完成（mock 慢） | digest 注入全文（N=2）——模型消化处置 |
+| T-R17b | check 退役 | 调 consult_check | 工具不存在（删）——描述零残留 |
+| T-R17c | 会诊取消 | stop 中途 | 不入 pending——提示已取消 |
+| T-R17d | escalate async | async 缺省发起 | ack 返回 + 回合收尾（processing 解除） |
+| T-R17e | escalate settle merge | 飞刀改文件完成 | mutations merge 回父 + digest 报告注入 |
+| T-R17f | escalate sync 保留 | async:false | 同步等结果（既有语义零回归） |
+| T-R17g | 容量/排队 | 池满 escalate + explore | 公平排队（other 池）——补位自动 |
+| T-R17h | eng 拒保持 | eng on + escalate | 拒（文案不变） |
+
+| # | 场景 | 输入 | 预期 |
+
+| T-R17i | 取消 | ⏹/cancel running escalate | D-M6 分支——settle cancelled——不入 pending |
+| T-R17j | 空闲 settle 消化（评审 #2） | 空闲期 consult settle | 驱动判据推广——auto-turn 消化轮触发（不悬置） |
+| T-R17k | 部分 settle 不注入（评审 #5） | 1/2 模型回复 | 不入 pending——等全 settle |
+| T-R17l | 超长注入（评审 #5） | 意见全文超长 | 截断/落盘——N1 护栏 |
+| T-R17m | escalate error 路径（评审 #4） | child 失败/撞 cap | partial merge 决策 + 错误报告注入 |
+| T-R17n | 双族隔离（评审 #5） | consult pending + escalate settle 并存 | 互不污染——各注各流 |
+| T-R17o | 注入一次竞态（评审 #5） | 回合边界 settle | D-S3 模式——只注入一次 |
+| T-R17p | 动作域零容忍（round2 #3） | 手动档 consult/escalate settle | digest auto-turn 不写不 spawn（T-S7 同规则） |
+| T-R17q | 手动档 consult_start 机械闸（评审修复轮——VS 实现新增回填） | 手动档回合内 consult_start | 拒（_inAutoTurn && !getAuto——同 subagent spawn 闸——T-R17p 零例外机械面） |
+| T-R17r | Ctrl+I 中断豁免（评审修复轮——VS 实现新增回填） | Ctrl+I 中断 + 会诊子代理在飞 | 不逐链误杀（F2 同型豁免） |
+
+**验收**：AC-1 = T-R17a..p 绿（双端镜像——VS Code consult/escalate 同构）；AC-2 = 既有零回归（consult/escalate/subagent 家族）；AC-3 = 手工演示（会诊发起后继续交互——完成自动到——空闲也触发；飞刀后台跑前端可用——报告自动回）；AC-4 = §24 D-24a 分域池先行/同批依赖声明（评审 #6——**已满足：§24 三合一已实现（大合验双端全绿）**——D-24a 落地确认）。
+
+### 25.4 决策点（评审拍板）
+
+> **裁定记录（2026-09-06——批准即裁定——用户全 🅰）**：① **删**（consult_check 退役——CLI 已删——描述零残留——T-R17b 绿）② **全 settle 一次注入**（部分 settle 不提前注入——负例 T-R17k）③ **async:false 同步保留**（escalate 缺省 async——显式同步零回归）④ **独立流**（`_pendingConsultResults`/`_pendingEscalateResults`——每族独立记账——T-R17n 隔离用例绿）。
+
+| # | 决策点 | 倾向 |
+|---|---|---|
+| ① | check 退役：删工具 vs 描述改"已自动注入" | 🅰 删（§19.8 先例——无消费对象） |
+| ② | 注入时机：全 settle 一次 vs 首批到就注 | 🅰 全 settle（意见全貌才可判断） |
+| ③ | escalate 同步保留：async:false 保留 vs 纯 async | 🅰 保留（向后兼容） |
+| ④ | 基建流：独立流 vs 合一流带 kind | 🅰 独立流（§24 已批准形态——非"已验证"——依赖 §24 先行） |
+
+### 25.5 受影响文件（初步）
+
+consult.mjs（settle → _pendingConsultResults + check 删 + stop 保留）、subagent-actions.mjs（escalate async + 池 + settle 三分类）、新 consult-async/escalate-async runner（或并入既有——随 ④ 裁定）、agent.mjs/run-stages（pending 注入面扩展 + **digest 驱动判据推广——D-S2/D-S9 keyed `_asyncSubagents` → 任一 pending 族非空**）、UI（panel 块跨回合——escalate 既有形态）、**supersede 目标（评审 #7）：§19.2 D-M1 escalate 行（"同步等专家完成"——缺省翻转 async）、§19.3 "consult 三工具"句（check 删后剩 2）、§15 consult_check 轮询先例注、main.md/engineering.md 描述面（escalate 同步语义/触发词）、TOOLS.md（注册表/描述点计数核验——R21 移除先例 ⑪）、CONSULTATION.md（会诊三工具生命周期）、ESCALATE.md（飞刀机制——§19 D-M4 先例）**、双端测试镜像 + 文档（AGENT-LOOP 本节 + ARCHITECTURE VS 引用段 + 描述面——R17 消歧段：consult/escalate/subagent/advisor 互指）。
+
+### 变更记录
+
+- 2026-09-06：R17 立项（用户"这两都得完全异步化"——查证现状：consult_start 非阻塞但 check 回合内阻塞 + escalate 全同步）——澄清裁定 Q1 🅰/Q2 🅰——设计落本节。
+- 2026-09-06：R17 CLI 实现交付（eng-coder——本节验收 AC-1..4 CLI 侧核销）——实现批裁定记录：**挂起活度钩子 = willSuspend/poolLive 扩展**（consultRunningChildren——running 会诊会话入活度判据——T-R17j）+ settle 唤醒（sessionSettled wake `_asyncWaiters`）——驱动文件 suspension-drive.mjs；escalate 池形态 = **共享 other 池**（条目入 `_asyncSubagents`——role escalate——排队/补位/status/cancel 全复用既有机械——settle 三分类在 escalate-async.mjs）；consult 跨回合存活（回合尾不再清理——仅 Ctrl+C abort 分支清理）；per-child TUI 块在 child settle 即冻结（⟦ev⟧done——不再悬置）。受影响实现面：consult.mjs（settle→`_pendingConsultResults` + check 删 + stop 保留取消语义）、escalate-async.mjs（新——async 飞刀 runner + settle 三分类）、subagent-actions.mjs（escalate 缺省 async 分支）、subagent-async.mjs（injectAsyncResult escalate 分支）、agent.mjs（run 首行三族注入）、run-stages.mjs（abort 分支 consult 清理 + pending 族清空）、suspension-drive.mjs（poolLive/poolCounts/backgroundStatusText/sweep 角色分流/digest 触发判据推广/freeze 比对面合成）、tool-events.mjs（escalate ack 冻结跳过 + consult_stop 新分支）、setup.mjs（consultTools 注册 2 工具）、描述面（subagent.mjs/main.md/discipline.md）、supersede 目标（§19.2/§19.3/§15 注——本节其余文档目标见 25.5）。
+
+> **评审处置注（2026-09-06 round1）**：1🔴 + 6🟡 + 2🔵 全采纳（修正已落本节）——①动作域档位制改写（NF/D-R17a/D-R17b——三族一致无例外——消化指令语义区分族）②消费驱动判据推广（D-S2/D-S9 → 任一 pending 族——T-R17j）③async escalate 并发写面（settle 重叠检测 + 报告级提示）④settle 三分类（done/error/cancelled——T-R17m）⑤测试补负例（T-R17k/l/n/o）⑥符号锚 §24 + 依赖声明（AC-4——§24 D-24a 先行/同批——"已验证"措辞删）⑦supersede 面补齐（§19.2/§19.3/§15/描述面/TOOLS.md/CONSULTATION.md/ESCALATE.md）⑧L313 行号 → 符号锚 ⑨wait_for "consult done" 保留路径注。
+
+> **评审处置注（2026-09-06 round2——复审 0🔴 通过——token c10cd501——批准定稿）**：九项修正收敛验证 ✓——8 项新建议 3🟡+5🔵 全采纳（已落本节）：#1 UI 行去重 #2 consult 挂起活度钩子补明（willSuspend/poolLive 扩展 or 唤醒源——二选一实现批定） #3 T-R17p 动作域零容忍测试 #4 done 分支 merge-all + 重叠警告钉死 #5 "写按档审批"→"写按档放行（手动档审批/AUTO autoApprove）"两处 #6 第二测试表表头补 #7 会诊部分/全失败边缘定义（随实现批——per-model 状态标注） #8 §24 R17 登记注考古指针。**AC-4 依赖已满足（§24 三合一已实现）——R17 可入实现**。**实现发起权在用户**。
+
+
+## 26. 长测试输出落盘纪律（2026-09-06 · R18——快车道合批——用户裁定 🅰 system.md 条款）
+
+> 状态：**设计（2026-09-06——用户批评"为啥不一开始就落盘"——memory 只覆盖本机——裁定"在提示词或者方法论层面解决才有普适性"→ 落点 🅰 system.md 工具纪律条款（所有会话/角色普适）——设计落本节——评审发起权在用户）**。
+
+### 26.1 需求
+
+**F-R18**：As an agent, I want 长测试/长命令验证先落盘再查的纪律写进 system.md，so that 任何会话/角色（含子代理）跑长验证都不再犯管道过滤丢详情/child-holds-pipe 截断/失败重跑全量的错。教训源（2026-09-06 大合验）：VS test:full 首跑 findstr 管道过滤丢 1 fail 详情 + 输出截断——115s×2 重复全量。
+
+### 26.2 设计
+
+**D-R18（system.md 工具纪律区条款——镜像锚逐字稿）**——逐字定稿条款（评审 #1——byte-identical 已取消（§18.11）——镜像锚形态：本稿为双端唯一源——两端各端照抄——锚测试各端独立断言——无跨端机械比对）：
+
+> **长输出命令先落盘**：全量/长测试（≥60s）与可能截断的长命令输出——先重定向到日志文件再查（`node --test … > log 2>&1` 形态或工具内 fs 落盘），汇总从日志尾部读、失败详情从日志 grep——不要用输出过滤管道直接跑长命令（过滤丢失败详情 + 管道缓冲截断）——一次跑完信息完整，失败不重跑。
+
+**双端同步**：CLI `thincoder/src/prompts/system.md` + VS Code `thincoder-vscode/src/prompts/system.md`——**各端照抄本节条款逐字稿**（镜像锚——§22/§12.1 习语——不再承诺 byte-identical 约束——差异靠评审/审计发现）；锚测试各端独立（fail-when-unchanged——内容断言——不做跨端 diff）。**日志位置/清理（评审 #7）**：条款只管"落盘再查"——实现批在两端工具描述/纪律区执行注：日志放 OS 临时目录或 `~/.thincoder/` 类非工作区位置——查毕删除（防 git 工作区 untracked 污染）——条款逐字文不改（用户已拍条款语义——位置注为执行细则）。
+
+### 26.3 测试
+
+| # | 场景 | 预期 | 映射 |
+|---|---|---|---|
+
+
+| T-R18.1 | system.md 含条款 | 锚断言句命中（各端独立——fail-when-unchanged） | F-R18 |
+| T-R18.2 | 双端各端断言 | 双端各自断言条款在（无跨端 diff 测试——评审 #1） | F-R18 |
+
+**验收**：AC-1 = 双端 system.md 各自含条款逐字稿（各端锚测试绿——fail-when-unchanged——无跨端 diff 要求）；AC-2 = 既有零回归（prompts 锚族）。
+
+### 受影响文件
+CLI + VS Code `src/prompts/system.md`（各端照抄条款——镜像锚）+ **锚测试（评审 #6 点名——CLI `test/prompts.test.mjs`（§22.4/§12.1 先例）+ VS Code 对应描述锚测试文件）** + **双端 CHANGELOG.md** + AGENT-LOOP 本节 + 变更记录。
+
+### 变更记录
+- 2026-09-06：R18 立项（用户批评 + 裁定普适化——memory 本机不足）——落点 🅰 system.md——设计落本节。
+
+> **评审处置注（2026-09-06 round1）**：1🔴 + 6🟡 + 3🔵 全采纳——#1 镜像锚改写（byte-identical 措辞/跨端 diff 测试/AC 逐字一致 → §18.11 习语——各端独立断言）已落本节；#6 测试文件点名 + CHANGELOG；#7 日志位置/清理执行注（条款逐字文不改）；#9/#10 结构已修（§26 移文件尾 + SESSION §13 移 §12 后——早前修复）。**复审发起权在用户**。
+
+
+## 27. R23 CLI 嵌套子代理显示统一（2026-09-07 · 需求池 R23——用户拍 🅱🅱 + round1 评审 🔴 🅰 全采纳——关联 §7.2.1/§19 显示面——**supersede §19.5.2 D-M8/§19.5.3 决策注（评审 #2——子标方案 A 裁定被 R23 用户 🅱 拍板推翻——见变更记录）**）
+
+> 板块：CLI TUI 显示面（嵌套子代理路由/渲染）。探索 #27 实证（三形态对照：A 主回合 spawn 独立面板块 / B eng-coder 内 explore 无载体混流行 / C 常规工具块）。设计评审发起权在用户。
+
+**总体需求**：子代理（eng-coder 等）内部调用 explore/plan 子代理时，其显示与子代理内其它工具不一致——现为无载体扁平混流（子标仅盖文本/思考/工具行首行——工具输出 raw 无归属——无完成边界——外层块头状态区被全路径 currentTool 占用）——用户裁定统一：嵌套子代理按**工具式块形态**呈现（🅱），与子代理内 read/edit 等工具同构。
+
+**功能性需求**：
+- **F-R23a（嵌套块载体）**：As a user, I want eng-coder 内 explore 调用显示为独立块（含输出归属 + 完成定格），so that 能区分 explore 输出与 eng-coder 自身输出。验收：explore 起止有独立块边界——输出行全归属块内。
+- **F-R23b（块头身份字段——Q1 🅱）**：块头 = `❯ explore#N · model · elapsed`（工具式头 + 子代理身份——role/编号/模型可见——与主回合 A 面板头呼应——非裸 `❯ subagent`）。验收：头含 role#N + model + elapsed。
+- **F-R23c（完成定格——Q2 🅰——评审 #1 🅰 生成侧补发射）**：完成 = 工具式定格（块尾 done + elapsed——内容可折叠展开——**不另落报告 preview**——与 C 同态）。**嵌套 sync 子代理完成/终止信号 = 生成侧补发射（评审 #1 🅰——子块 = 状态实体——D-M8“无生命周期事件”前提被推翻——sync 完成路径发射内层 done 事件——外层 abort/中断收尾发射 stopped——源见 D-R23c1）**。验收：嵌套 explore 完成后块定格（无 preview 行落会话）——stopped 定格可达（外层 abort 路径）。
+- **F-R23d（任意深度同规则）**：嵌套链（eng-coder#N/explore#M/…）任意深度同形态（parseRelayPath 已支持多层——规则通用）。验收：两层链显示正确。
+
+**边界（明确不做）**：主回合 A 形态面板块机制零改动（冻结头/preview/⏹ 保持——A 形态 sync explore 的 8 行 preview 语义仅主回合保持）；嵌套 explore 不做独立面板块（🅱 定为工具式）；**currentTool 全路径现状保持（评审 #8 定稿——外层块头状态区显示 explore#1/read 不缩改——注记：实现后若观感差另批评估）**；VS Code 端同构另批评估（本批 CLI——R22 后镜像评估——**R23 嵌套子块形态与 VS Code 现子标形态端差异 = 已声明双端差异（VS 侧 R22/R23 镜像批统一）**）。
+
+**设计（D-R23a..e——CLI 独有——渲染链实证锚符号引用（评审 #4——符号锚纪律：无行号））**：
+- **D-R23a 嵌套建块（路由层）**：嵌套子代理首事件（内层文本/工具行——inner 段非空且 head 已有块）→ 在外层块内建**子块载体**（新渲染元素——sub-block——带独立折叠键（命名见 D-R23e——评审 #7）——输出归属子块）——路由点：ensureSubTaskKey/appendSubBlock 按 full path 而非 head 分派（保持 head→外层块的既有映射——inner 段建子块）——子块状态字段（role/model/startTs——model 从嵌套 [model] token 取——现剥除——改为嵌套层记录）
+- **D-R23b 块头**：子块头 = `❯ explore#N · model · elapsed`（工具块样式衍生——dim ❯ + role#N 亮 + model/elapsed dim——与 C 工具头同排式）——内层文本/工具行现有子标（`explore#1 · `）**替换为子块归属**（行进子块——不再混外层 blocks——T-M25 数据层断言随迁改写——评审 #3 盘点散布）
+- **D-R23c1 生成侧补发射（评审 #1 🅰——新）**：spawn-child/subagent 同步完成路径——子代理 run 结束（done/stopped——含外层 abort 传播的中断）→ 若 ctx.callbacks 已是嵌套 wrapper（inner 段非空）→ **发内层 done/stopped 事件**（带完整嵌套前缀）→ 主 TUI 路由到子块定格——发射点 = spawn-child wrapChildCallbacks 同步收尾段（符号锚：finishChildRun/settleChild 同步路径——实现批按实际符号落）——**stopped 语义 = 外层 abort 时内层开块收尾定格（T-R23c.2a）**——生成侧测试补（发射断言 T-R23c.2b）
+- **D-R23c2 定格（TUI 侧）**：子块收内层 done/stopped → 子块尾定格 done Ns/stopped——可折叠——不落 preview——**外层块先冻结而内层未收尾**（外层 abort）→ 内层子块随外层冻结时定格 stopped（收尾语义——评审 #3 补用例）
+- **D-R23d 通用**：任意 inner 深度同路径（parseRelayPath inner[] 遍历——每层一子块——深度 = inner.length）
+- **D-R23e 折叠/交互闭环（评审 #7）**：子块折叠键命名 = sub-{outerKey}/{innerPath}（与既有 sub-{key} 约定同族——mouse 命中映射复用 fold-block 通用通道——实现批核实命中路径——若需 mouse.mjs 扩展则列入文件（先实测）——AC 补交互用例）
+
+**NFR（评审 #6 补）**：子块内容计入**外层 N2 配额**（500 行/块环形上限——子块与外层同配额——不独立扩容——避免面板无限增长）；面板高度自适应沿用 §7.2.1 现状；elapsed ticker 事件驱动不壁钟空转（同 R22）。
+
+**测试（T-R23a..e——评审 #3/5 补）**：
+| # | 用例 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-R23a.1 | 嵌套建块 | eng-coder#2/explore#1 文本/工具流 | 子块在外层块内——输出归属子块 | F-R23a |
+| T-R23a.2 | 输出归属 | explore 工具输出大段 | 输出全在子块——外层流无混入 | F-R23a |
+| T-R23a.3 | 内层错误终态（评审 #3） | explore 工具错/门拒 | 子块定格 stopped/error 形态——不悬空 | F-R23a |
+| T-R23b.1 | 块头字段 | 嵌套流（含 [model]） | 子块头 `❯ explore#1 · model · elapsed` | F-R23b |
+| T-R23c.1 | 完成定格（生成侧发射） | explore sync 完成 | 内层 done 事件发射——子块尾 done Ns——无 preview 行 | F-R23c |
+| T-R23c.2a | 外层 abort 收尾（评审 #1/3） | 外层 eng-coder abort（内层开块） | 内层 stopped 定格随外层冻结 | F-R23c |
+| T-R23c.2b | 生成侧发射断言 | 嵌套 sync 完成路径 | done/stopped 带完整嵌套前缀发射（mock） | F-R23c |
+| T-R23d.1 | 两层链冻结 | eng-coder#2/explore#1 完成→冻结 | 冻结载体含子块——展开渲染正确（评审 #3） | F-R23d |
+| T-R23e.1 | T-M25 随迁 | 既有嵌套数据层用例（散布文件盘点——评审 #3） | 断言改写后全绿（子标→子块语义） | — |
+| T-R23e.2 | 子块折叠交互（评审 #7） | 展开态点子块折叠 | 折叠/展开正确——命中映射工作 | F-R23b |
+
+**验收**：AC-1 = T-R23a..e 全绿（含 T-M25 随迁改写——数据层子标语义变更后既有断言按新归属规则更新——**散布文件全量盘点**）；AC-2 = CLI 全量 L2 零回归（渲染链 tui-panel/mouse/fold-block 既有单层用例不动——新交互用例补）；AC-3 = 子代理内嵌套 explore 实跑冒烟（eng-coder 内 explore 显示为块 + done 定格）。VS Code 镜像评估注（本批不做——R22 后——端差异已声明）。
+
+**受影响文件（评审 #1/2 补——生成侧 + 文档侧）**：thincoder：src/tui/subagent-blocks.mjs（嵌套建块 + inner 路由 + 子块状态）· src/tui/subagent-panel.mjs（子块头/定格渲染）· src/tui/render-segments.mjs（冻结后子块渲染——**宿主核实：frozen 段主宿主 render-conversation.mjs——实现批先实测两文件角色——按实际落（评审 #8）**）· src/tui/tool-events.mjs（内层事件路由/定格触发）· src/tui/fold-block.mjs（子块折叠键）+ mouse.mjs（若命中扩展——先实测）· **spawn-child.mjs（生成侧嵌套完成/终止发射——评审 #1 🅰——新列）** · test/subagent-blocks.test.mjs（T-M24/M25 随迁）+ test/tui-panel.test.mjs（子块渲染）+ spawn-child 系测试（发射断言）· **文档 supersede（评审 #2）**：AGENT-LOOP §19.5.2 D-M8/§19.5.3 决策注（supersede 指针——R23 推翻子标方案 A 裁定）+ §19.5.4 #5 实现记录 + docs/design/TUI.md（模块地图 + 子标渲染描述——doc 断言随迁）· CHANGELOG.md。VS Code 零改动（本批 CLI——端差异声明）。
+
+### 变更记录
+- 2026-09-07：R23 立项（用户“子代理中调用 explore 的显示方式跟其他工具不一致——希望能统一”）——探索 #27 三形态实证 + 四根因——澄清裁定：方向 🅱 对齐工具块 + Q1 🅱（`❯ explore#N · model · elapsed` 头）+ Q2 🅰（工具式定格——无 preview）——设计落本节。
+- 2026-09-07：round1 评审 1🔴 + 7 项（用户拍 🅰 全采纳）——🔴 #1 = 定格事件源未定义且与 D-M8“sync 嵌套无生命周期事件”冲突——裁定 🅰 生成侧补发射（sync 完成路径发内层 done/stopped——子块 = 状态实体——**supersede：D-M8“无生命周期事件/块中块过度”（§19.5.2/19.5.3 决策注）被 R23 用户 🅱 拍板推翻——落 supersede 指针**）；#2 D-M8/TUI.md supersede 随迁登记；#3 错误/边界用例补（T-R23a.3/c.2a/冻结序列化/T-M25 散布盘点）；#4 符号锚纪律（去行号）；#5 测试表标题 T-R23a..e；#6 NFR 配额注（子块计入外层 N2）；#7 折叠交互闭环（D-R23e + T-R23e.2）；#8 currentTool 定稿保持 + 冻结宿主核实注——全部已落本节。
+
+
+> **eng-coder files 声明纪律注（2026-09-07——用户批评——TODO.md 冲突检测全局串行）**：**父侧维护文件（docs/TODO.md、CHANGELOG.md、checklist 等——核销/记录义务归架构师即时更新）不入 eng-coder 的 files 写域声明**——eng-coder 交付报告后父侧统一落核销注/CHANGELOG 条——否则每任务声明 TODO/CHANGELOG → 文件级冲突检测使所有并行任务全局串行（R22/R23/R24 实证——todo.md 成串行点）——files 声明只列实现写域（源/测试/设计文档归属面）。 —— **R26 机制化（黑名单机械校验 + 条款——见 §28——2026-09-07）**
+
+## 28. R26 files 声明父侧文件拦截（2026-09-07 · 快车道——用户拍 🅲=A+B——§20 派发面防复发——round1 评审 0🔴 通过（token e6b1cdea——4🟡+3🔵 全采纳已落本节——复审发起权在用户））
+
+> 状态：**已批准——实现批完成（2026-09-07 eng-coder id:13 clean——双端黑名单 + 条款同文 + T 全绿——AC-4 行数实测落表——L2 父侧合跑待 §29 完）**。触发：用户批评"为啥把 todo.md 列入冲突检测？如果这个也算，那就没有不冲突的情况了"——实证：R22/R23/R24 派发时我把 docs/TODO.md 列入 eng-coder files 声明——文件级冲突检测使三任务全局串行（todo.md = 全局串行点）——根因 = 父侧维护文件（TODO/CHANGELOG 核销义务归架构师）被误当实现写域——纪律注已落 §27 尾（软——靠自觉）——用户拍 🅲 = A（提示词条款）+ B（机械校验）机制化防复发。
+
+**总体需求**：files 声明只列实现写域——父侧维护文件（docs/TODO.md、CHANGELOG.md、checklist）不得列入——用条款 + 机械校验双保险防复发（不靠自觉）。
+
+**功能点**：
+- **F-R26a（提示词条款——A——评审 #2 英文逐字锚）**：engineering.md 派发段（**载体 = §20.7 D-PS2 锚句所在段落——紧邻插入（评审 #3 指认）**）补条款（**英文逐字定稿——评审 #2——工程提示词锚英文惯例（D-C1.1/D-PS2/D-F1.2 先例）——中文语义稿如下供翻译基准，锚文本实现批按英文落 + 锚测试**）：files 声明只列实现写域（源/测试/设计文档归属面）——父侧维护文件（docs/TODO.md、CHANGELOG.md、checklist 等——核销/记录义务归架构师）不得列入——eng-coder 交付后父侧统一落核销注/CHANGELOG 条——锚测试（fail-when-unchanged——双端 prompts.test.mjs）。
+- **F-R26b（机械校验——B——评审 #1 宿主锚定）**：subagent 工具 files 参数校验点（**符号锚：normalizeFileList 调用前/execute spawn 入口——实现批按拆分后布局定位：CLI normalizeFileList 在 subagent-scheduler.mjs（§20.9 拆分实现记录——subagent-scheduler.mjs 承载 normalizeFileList）——VS Code 在 subagent-async.mjs（§20.8 D-F1.4 镜像记录）——校验实现于 spawn 入口共享单点——受影响文件按实际宿主补全（评审 #1）**）加**父侧文件黑名单**：归一化后 basename 全名匹配 + 大小写不敏感（评审 #6）——黑名单 = 精确 basename：TODO.md、CHANGELOG.md、checklist.md + 前缀形态：checklist*（checklist 家族——T-R26b.7 补前缀用例）（路径任意——含 docs/、根、.thincoder/ 各层）——声明含任一 → **拒绝 + 提示（英文定稿——评审 #2——列出全部违规条目——评审 #6——"Parent-side maintained file X must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc"）**——**校验先于调度器（fail-closed——无排队残留）**——**双端同构**。
+- **F-R26c（豁免）**：黑名单只拦父侧文件——**设计文档（docs/design/*.md 等）仍可声明**（eng-coder 落 supersede/实现记录是常态）——不误伤——**剩余串行面明示（评审 #7）：同批并行 eng-coder 各自声明同一设计文档仍文件级串行（已接受粒度——观察项——如需根治另批评估）**。
+
+**边界**：不拦截其它 docs（设计文档正常写域）；黑名单精确匹配文件类型（非目录级——basename 全名——归一化后）；改清单需评审（防绕过）；普通模式 main.md 不加同句（机械层双端全模式已拦——触发场景为工程批派发——评审观察）。
+
+**测试（评审 #3——T-R26a.2 载体锚定）**：
+| # | 用例 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-R26a.1 | 条款锚 | prompts 文本 | 英文逐字条款在（fail-when-unchanged——双端） | F-R26a |
+| T-R26a.2 | 条款落点 | engineering.md D-PS2 锚句段落 | 条款紧邻 D-PS2 锚句（结构断言——非朴素文本扫描——评审 #3） | F-R26a |
+| T-R26b.1 | TODO.md 拒 | files 含 docs/TODO.md | 拒绝 + 英文提示（父侧文件不入声明） | F-R26b |
+| T-R26b.2 | CHANGELOG 拒 | files 含 CHANGELOG.md | 拒绝 + 提示 | F-R26b |
+| T-R26b.3 | checklist 拒 | files 含 .thincoder/checklist.md | 拒绝 + 提示 | F-R26b |
+| T-R26b.4 | 设计文档过 | files 含 docs/design/AGENT-LOOP.md | 通过（不误伤） | F-R26c |
+| T-R26b.5 | 合法域过 | files 含 src/agent.mjs | 通过（零回归） | F-R26b |
+| T-R26b.6 | 变体（评审 #6） | 大小写 TODO.MD / 反斜杠 docs\TODO.md / 混合清单 | 归一化后仍拒——提示列全部违规条目 | F-R26b |
+| T-R26b.7 | checklist 前缀（复审 #5） | files 含 checklist-notes.md / checklist-eng.md | 拒绝 + 提示 | F-R26b |
+
+**验收**：AC-1 = T-R26a..b 全绿（双端 L1——CLI/VS 各相关测试）；AC-2 = 既有调度器/冲突测试零回归（files 正常声明不受影响）；AC-3 = 提示词锚双端在（镜像断言）。**AC-4 = R24a 行数标注（评审 #4）**：受影响文件落表（下表）标注当前行数 + 预计增量——subagent.mjs 历史 ~609 行超 500 债在册（§20.9 拆分未涉及——实现批实测当前行数——触碰即并入拆分轮——docs/TODO.md 债条目）。
+
+**受影响文件（评审 #4 落表 + 行数标注——.md 豁免外源/测试全标）**：
+| 文件 | 变更 | 当前行数 | 预计增量 |
+|---|---|---|---|
+| thincoder src/agent-tools/subagent-scheduler.mjs（实测宿主——评审 #1） | 黑名单校验（F-R26b——分隔符归一修正轮补） | 338（<500 不拆） | +15 实落 |
+| thincoder-vscode src/agent-tools/subagent-scheduler.mjs（实测宿主——评审 #1） | 同构校验 | 420（<500 不拆） | +15 实落 |
+| thincoder test/subagent-scheduler.test.mjs（subagent-tool 域） | T-R26b.1..7（6 用例块） | 1302 | +6 块实落 |
+| thincoder-vscode test/subagent-scheduler.test.mjs | 镜像（6 块——slow 惯例） | 782 | +6 块实落 |
+| thincoder src/prompts/engineering.md（.md 豁免标注） | F-R26a 英文条款（D-PS2 段旁——实际交付文本录回 §28 复核锚） | 350 | +5-8 行实落 |
+| thincoder-vscode src/prompts/engineering.md（.md 豁免） | 镜像条款 | 367 | +5-8 行实落 |
+| thincoder test/prompts.test.mjs | T-R26a.1/a.2 锚断言 | 1319 | +2 实落 |
+| thincoder-vscode test/prompts.test.mjs | 镜像 | 993 | +2 实落 |
+| CHANGELOG 双端（父侧落） | R26 条 | — | — |
+
+### 变更记录
+- 2026-09-07：R26 立项（用户批评 TODO.md 冲突检测全局串行——纪律注先落 §27 尾（软）——用户拍 🅲 A+B 机制化）——设计落本节。
+- 2026-09-07：round1 评审 0🔴 通过（token e6b1cdea——4🟡+3🔵 全采纳已落本节：①校验宿主按 §20.9 拆分后布局锚定（normalizeFileList——CLI scheduler/VS async——受影响文件按实际补全）②条款+提示英文逐字锚（D-C1.1/D-PS2/D-F1.2 惯例——中文稿降为翻译基准）③条款载体指认 D-PS2 段 + T-R26a.2 结构断言非文本扫描④受影响文件落表 + R24a 行数标注（AC-4）⑤§27 尾软注 supersede 指针⑥匹配语义（basename 全名 + 大小写不敏感 + 全违规列出 + T-R26b.6 变体）⑦F-R26c 剩余串行面明示观察——已接受粒度）——复审发起权在用户。
+
+
+
+## 29. async advisor stale 误判修复（2026-09-07 · 平台 bug——VS Code 实证——explore #15 定位——快车道——round1 评审 0🔴 通过（token de3102c9——5🟡+2🔵 全采纳已落本节——复审发起权在用户））
+
+> 状态：**已批准——实现批完成（2026-09-07 eng-coder id:18 clean——A 唯一记账点三处收敛（dispatch runOne/record-results/agent.mjs 中断）+ B 双端清洗——CLI §29 5/5 + 家族 19/19 + 域 252/252——VS 镜像 5/5 + 家族 127/127——L2 合跑父侧核销待跑）**——round1 修正后终态。**修订对象：§24 D-24b async advisor settle 记账/陈旧判定（评审 #1——supersede 指针已加 §24 D-24b① 侧注）**。
+
+**症状**：async advisor 评审 digest 含 [DESIGN-TOKEN:...] 文本 + designId——spawn eng-coder 报 0 approved slots（subagent-spawn.mjs resolveDesignSlot——符号锚评审 #3）。
+
+**根因（探索 #15——文件:行 as-of 证据）**：launchSeq 捕获于工具执行期（advisor-async.mjs launchAsyncAdvisor 内 mutationSeqOf(parent)——符号锚评审 #3）——mutation seq 记账延后到整批工具提交后（record-results.mjs noteMutations——executeToolCalls 批后）——**同消息 [写设计文档 + 发 async advisor]（dispatch Phase-2 保序——write 先）launch 前写已完成但 mutation seq（S+1）恒 > launchSeq（S）**——settle 误判 stale（advisor-async.mjs reviewIsStale——docAbs 命中即 stale）→ if(!stale) 门跳过 settleDesignReview → 不注册槽位——digest 注入未清洗原始报告（settleAdvisorRun 返回值丢弃——entry.report 保持原文含评审员回显 [DESIGN-TOKEN...]——digest 注入点原样进 digest）——模型据此 spawn → 0 slots。sync 路径无 stale 扫描故不受影响（与现象吻合）。
+
+**修复 A（根因——推荐）**：FILE_MUTATORS 的 noteMutations 从批后移到**执行成功即刻**（dispatch runOne 写工具成功后调用——中断分支先例已在执行期记账——**唯一记账点声明（评审 #4）：runOne 成功钩子取代批后 FILE_MUTATORS 段 + 中断分支记账收敛到同一调用——不双计——中断+同批 launch 场景 seq 单计回归断言入测试**）——launch 前完成写 → seq ≤ launchSeq → 不 stale 槽位正常签发——launch 后同批写仍保守 stale。
+
+**修复 B（防御——随 A——评审 #5 分支形态钉死）**：settleAdvisorRun 返回值写回 entry.report——**逐分支输出形态**：通过 → 清洗输出（**剥方括号 [DESIGN-TOKEN:...] 原文 + 附随 designId 后缀——sync 参照形态同构**——digest 载体仍含 designId/reminder id——spawn 指引不丢）；stale → **同样先剥 token 回显** + 前置"评审目标已变更——token 未签发"提示——**不变式：digest 永不展示未注册 token（两分支都清洗——评审 #5）**。
+
+**C（评审 #6 取舍）**：原可选 stale 结构化说明——**被 B stale 分支吸收（文本提示即说明）——C 删除——不保留独立通道**。
+
+**真 stale 语义（T-24b9——mid-flight 变更）不变**——spawn 侧 0 slots 报错文案改善 = 观察项（评审 #7——归 C 族——本轮不做）。
+
+**测试（评审 #2 落域 + 评审 #4/5 扩展）**：
+| # | 用例 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-A1 | 同批注册 | 同消息 [写文档 + async advisor] settle | 槽位在（settleDesignReview 被调） | 修复 A |
+| T-A1i | 中断+launch 单计（评审 #4） | 写工具后中断分支 + 同批 advisor launch | seq 单计——不 stale——槽位在 | 修复 A |
+| T-A2 | 批后写仍 stale | 消息 2 写文档（launch 后）→ settle | stale——不注册（T-24b9 语义保持） | 修复 A 回归 |
+| T-B1 | digest 清洗 | 通过 settle | 清洗输出——全文无方括号原文 token——designId/reminder id 在 | 修复 B |
+| T-B2 | stale digest 形态 | stale settle | 全文无方括号 token + "未签发"提示在 | 修复 B |
+
+**验收**：AC-1 = T-A1/A1i/A2/B1/B2 全绿（双端 L1——按端落域）；AC-2 = 既有 advisor-async/subagent 家族零回归（记账时序移动——verify/guard 批内失效链行为不变——家族回归门）；AC-3 = 受影响表行数实测记录。
+
+**受影响文件（评审 #2——按端落表 + R24a 行数标注——当前行数实现批实测）**：
+| 端 | 文件 | 变更 | 当前行数 | 预计增量 |
+|---|---|---|---|---|
+| CLI | src/agent/dispatch.mjs | runOne 记账点（唯一记账点——取代 record-results 批后段 + 中断分支收敛） | 实测 | ≤+8 |
+| CLI | src/agent/record-results.mjs | 批后 FILE_MUTATORS 段删除/收敛 | 实测 | -5± |
+| CLI | src/agent-tools/advisor-async.mjs | settleAdvisorRun 返回写回 entry.report（B） | 实测 | ≤+10 |
+| CLI | src/agent-tools/subagent-async.mjs | digest 注入形态（B 输出——原样进 digest 段） | 实测 | 0-5 |
+| VS Code | （镜像同名宿主——实现批按 §24/§25 双端落地记录定位——失配停下报告） | A+B 同构 | 实测 | — |
+| 双端 | test/ advisor 域 + subagent 域测试文件 | T-A 系 + T-B 系 | 实测 | +5-6 用例 |
+| 双端 | CHANGELOG（父侧落） | 修复条 | — | — |
+
+### 变更记录
+- 2026-09-07：修复立项（VS Code 实证 0 slots——explore #15 定位 stale 时钟错位）——设计落 AGENT-LOOP 尾注。
+- 2026-09-07：round1 评审 0🔴 通过（token de3102c9——5🟡+2🔵 全采纳已落本节：①孤儿尾注升格 §29 + §24 D-24b supersede 指针 ②受影响文件表 + R24a 标注 + 按端限定 ③符号锚化（裸行号降 as-of）④唯一记账点声明 + T-A1i 中断单计用例 ⑤B 分支形态钉死（两分支都清洗——T-B1/B2 断言扩展——designId 指引不丢）⑥C 被 B 吸收——删除 ⑦spawn 0 slots 文案观察项——本轮不做）——复审发起权在用户。

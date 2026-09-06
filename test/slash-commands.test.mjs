@@ -47,7 +47,7 @@ function mockCtx(overrides = {}) {
     askQuestion: async () => "",
     askPermission: async () => true,
     persistRaw: async (fn) => fn({}),
-    syncProviderField: async (k, v) => { (ctx.calls.synced ??= []).push([k, v]) },
+    syncProviderField: async (name, field, value) => { (ctx.calls.synced ??= []).push([name, field, value]) },
     maskKey: () => "***",
     openModelPicker: async () => { ctx.calls.modelPicker = true },
     selectModel: async (item) => { ctx.calls.selectModel = item },
@@ -140,7 +140,7 @@ test("handleSlash: /think effort <level> validates against current model enum", 
   // deepseek enum is ["high", "max"]
   await handleSlash("/think effort max")
   assert.equal(ctx.agent.provider.reasoningEffort, "max")
-  assert.deepEqual(ctx.calls.synced, [["reasoningEffort", "max"]])
+  assert.deepEqual(ctx.calls.synced, [["deepseek", "reasoningEffort", "max"]])
   // invalid level → explicit hint, state unchanged
   await handleSlash("/think effort low")
   assert.match(texts(ctx), /Usage: \/think effort <high\|max>/)

@@ -271,7 +271,8 @@ test("T-C5 Add Provider Custom：选 anthropic 生效落盘（cfg.format = anthr
   const { ctx, state } = pickersCtx({
     agent,
     askQuestion: async () => queue.shift() ?? "",
-    persistRaw: async (mutate) => { saved.raw = {}; mutate(saved.raw) },
+    // D-F5a 后 closures 在「磁盘 fresh raw」上单操作——fake 以内存 providers 的磁盘形态 seed
+    persistRaw: async (mutate) => { saved.raw = { providers: agent.providers.map((p) => ({ ...p })) }; mutate(saved.raw) },
   })
   const { flow, popPicker } = await driveToFormatPicker(ctx, state, queue)
   try {

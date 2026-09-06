@@ -161,6 +161,16 @@ export function createWizard(ctx) {
     for (const k of ["thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
       if (f[k]) providerRec[k] = f[k]
     }
+    // D-F5a（wizard finishWizard——清单外同型写回补正）先盘后存：磁盘 fresh raw 单操作
+    // （upsert 目标项 + active 指针）——冲突放弃不留下内存 ghost（F5 约定）
+    await persistRaw((raw) => {
+      raw.providers ??= []
+      const existing = raw.providers.find((p) => p?.name === f.name)
+      if (existing) Object.assign(existing, providerRec)
+      else raw.providers.push(providerRec)
+      raw.activeProvider = f.name
+      raw.activeModel = undefined  // reset to default model
+    })
     const existing = agent.providers.find((p) => p.name === f.name)
     if (existing) Object.assign(existing, providerRec)
     else agent.providers.push(providerRec)
@@ -171,20 +181,16 @@ export function createWizard(ctx) {
       const { resolveCompactThreshold } = await import("../config.mjs")
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, f.model).value
     }
-    await persistRaw((raw) => {
-      raw.providers = agent.providers
-      raw.activeProvider = f.name
-      raw.activeModel = undefined  // reset to default model
-    })
     agent.config.activeProvider = f.name
     agent.config.activeModel = null
     pushLabel(`❯ Setup`, ansi.bold + C.tool)
     pushLine(`Setup complete: ${f.name} / ${f.model} (saved to config)`, C.tool)
     // embedding key: if provided, enable vector search; if not, show how to enable later
     if (f.embedkey) {
+      // D-F5b 语义先盘后存（embedding 单键补丁——冲突放弃不留 ghost）
+      await persistRaw((raw) => { raw.embedding = { ...(raw.embedding ?? {}), apiKey: f.embedkey } })
       agent.config.embedding ??= {}
       agent.config.embedding.apiKey = f.embedkey
-      await persistRaw((raw) => { raw.embedding = { ...(raw.embedding ?? {}), apiKey: f.embedkey } })
       if (agent.memory && !agent.memory.embedder) {
         const { createEmbedder } = await import("../embedding.mjs")
         agent.memory.embedder = createEmbedder(agent.config.embedding)

@@ -244,6 +244,11 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
   queued); dependency chains auto-order. Mirror tasks across independent trees
   spawn as parallel eng-coders, each declaring its own file domain —
   overlapping domains are queued by the scheduler, never hand-serialized.
+  **files declarations list only the implementer's write domain** (source, test, and
+  design-doc files) — parent-side maintained files (docs/TODO.md, CHANGELOG.md,
+  checklist family) must not be listed; reconciliation notes and CHANGELOG entries
+  are the parent's duty, landed after the eng-coder delivers. (§28 R26 — rejected
+  mechanically by the subagent tool's files validation, fail-closed before scheduling)
   files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
   **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 —
   phrase preserved, T9/T-E16 assertions stay green).** Cancelling a running
@@ -273,6 +278,8 @@ cannot enumerate. When using the `question` tool:
   Chain questions in sequence: each answer drives the next question.
 - Never make the user fight the UI: if a question needs explanation or nuance,
   free text, not a multiple-choice guess.
+- Keep the question text SHORT — one or two sentences, ONE sub-question. Background and analysis go in your normal reply text, never in the question string.
+- Routine confirmations (plan confirmations, confirm gates) are stated in your plain reply text — do NOT use the question tool for them; reserve it for genuine decisions/inputs.
 
 ## Search Tool Priority (behavior rules — 2026-09-02, the Bing junk-loop lesson)
 

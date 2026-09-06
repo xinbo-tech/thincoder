@@ -1,4 +1,4 @@
-# Session 持久化设计（thincoder/src/session.mjs）
+﻿# Session 持久化设计（thincoder/src/session.mjs）
 
 > 状态：2026-08 回补。**CLI 与 VS Code 共享同一存储契约**——文件格式、槽位认领、双线字段全部一致（VS Code 侧实现见 thincoder-vscode/src/extension/session-io.mjs，同一契约的镜像）。
 
@@ -304,6 +304,9 @@ _slot/_slotMtime 清空（2026-08-31 advisor：切换后保存重新认领 manif
 8. **multimodal content 数组**：keyword 匹配文本 part（数组串化摘要）——截断按文本——补 multimodal 用例
 9. **UI 显示**：ts 仅 read_history 输出/会话 JSON 可见——TUI/VS Code 显示不在本 scope——后续立项（用户确认中）
 
+
+> **R19 登记注（2026-09-06——需求池 R19——跨会话历史检索——§13 设计已落——本注为需求阶段考古）**：用户确认 read_history 仅本会话后裁定"跨会话也希望有"。需求 = 模型工具面 readonly 检索**任意会话**历史（按 cwd/slot——role/keyword/tool/时间窗/limit/direction——read_history 参数面同型扩展——本会话 = 默认域）。关联：session-state 诊断 TODO（2026-09-06——AUTO 排查手工扫 7383 slot 文件——同族动机：会话状态/历史无机器可读视图）。**裁定（🅰）已落 §13.2：read_history 加 path 参数（本会话 = 默认）——消歧总纲并入**。状态：已设计待评审。
+
 ## 10. 端分离恢复——本端 marker 记录最后使用槽位（2026-09-05 · 需求层 + 设计层 · 需求池 R4）
 
 > 状态：**已评审（2026-09-05 round1——0🔴 通过）——用户裁决 A（5 项建议全部采纳修订）——已批准——**已实现（2026-09-05 双端同批——CLI+VS L2 全绿——核销见 §10.6）**。来源：用户实测报告（双端同开场景）：CLI 与 VS Code 面板同时打开同一项目时，共享 manifest 的 `active` 指针两端互写；退出 CLI 重开，恢复进"另一个不是退出前"的会话（空白新槽，或对方端遗留的空面板会话）——恢复决策只读共享 active + 属主生死，**没有"本端最后用的槽"记忆**，另一端最后一次翻指针即决定本端重启落点。用户裁定：①**A 完全各记各的**（CLI 重启回 CLI 自己最后的会话；面板回面板自己的——取消跨端自动接续，`/session` 手动切换保留）；②**A 迁移一次性继承**（无本端记录时继承共享 active 的死主槽一次——否则升级后第一次打开就恢复不了现有会话——记录写下后永久分离）。
@@ -428,3 +431,369 @@ advisor 判定 0🔴 通过并签发 token；5 项 🟡/🔵 澄清建议按用�
 **遗留**：CHANGELOG 双端已记（父侧）；git 提交未做（父侧——待用户确认分批）。
 
 
+## 11. agent 运行环境自我感知（2026-09-06 · 需求落档 · 需求池 R5/R8/R9/R11 家族）
+
+> 状态：**待设计**（池 R5/R8/R9/R11——2026-09-06 登记，设计启动权在用户，阈值触发提醒）。
+> 家族构成：R5（进程重启感知）+ R8（运行身份感知）+ R9（工程模式自感知）+ R11（模型自感知）——同一主题"agent 对自己运行环境的自我认知"，合并设计。
+
+### 已注入基线（2026-09-06 盘点——agent 已感知的，家族设计不得重复）
+
+| 感知项 | CLI | VS Code | 机制 |
+|---|---|---|---|
+| OS/工作目录/会话开始 | ✅ | ✅ | history push / systemPrompt |
+| 当前时间 | ✅ | ✅ | time reminder（回合注入，避 prefix 缓存） |
+| AUTO/权限模式 | ✅ | ✅ | AUTO_REMINDER |
+| 工程模式 ON/OFF | ✅ | ✅ | ENG_ON/OFF_REMINDER |
+| plan mode | ✅ | ✅ | `agent._planMode` 注入 |
+| git context | ✅ | ❌ **缺** | CLI history push（VS Code 无） |
+| **进程重启** | ✅ | ❌ **缺** | CLI `process restarted at...`（L116）——VS Code 无 |
+| repo outline | ✅ | ✅ | OUTLINE_INJECT |
+
+**盘点结论**：CLI 的"进程重启注入"（setup.mjs L116）是 R5 的**现成参考实现**——家族设计时 VS Code 侧补同款即可（git context 同理）。VS Code 缺 git context + process restarted = **两端不一致缺口**（R5 的 VS Code 侧具体落点）。
+
+### R5 — agent 进程重启感知
+
+**需求句**：agent 会话经 slot 持久化可跨进程重启恢复（改代码 → 重启 CLI/扩展 → 会话历史还在），但 agent **不知道自己刚经历了一次进程重启**——感知不到"进程是新启动的、运行时内存态已清空、自我修改已生效"。需求 = agent 能感知"本会话是恢复的 / 进程是新起的"，并在行为上体现（如恢复时核对依赖内存态的状态：design token / async 注册表 / guard 标记等）。
+
+**来源**：2026-09-06 人机并行作业实测（用户改 VS Code 扩展代码后重启，agent 无感续跑——暴露"无重启感知"缺口）。
+
+**VS Code 侧现状缺口（盘点核实）**：CLI 已有 `process restarted at...` 注入（setup.mjs L116），**VS Code 无**——重启感知在 CLI 已部分实现、VS Code 是空白。家族设计参考 CLI 现成实现补 VS Code 同款（连同缺失的 git context 注入一并补）。
+
+**验收方向（待设计细化）**：本端恢复会话时注入/携带"本会话为恢复会话（进程新起）"的信号，agent 可据此核对运行时内存态（如 designToken 等进程级状态已随旧进程消失，不应假设仍在）。
+
+### R8 — agent 运行身份感知
+
+**需求句**：agent **不知道自己跑在哪个环境**——CLI 还是 VS Code。现状：两端 system.md 逐字相同（"You are ThinCoder, a coding agent"），**无身份注入**。需求 = agent 知道自己运行在 CLI / VS Code（用于**行为适配**：环境特有工具集、UI 通道、扩展 API 可用性的正确推断）。
+
+**来源**：2026-09-06 人机并行作业实测（用户发现 agent 不清楚自己身份，影响其对环境特有行为的判断）。
+
+**验收方向（待设计细化）**：系统提示/注入携带运行身份（如 "Running in: ThinCoder VS Code extension" 或 "ThinCoder CLI"），agent 可据此推断环境差异（如 VS Code 的 vscode API、面板通道；CLI 的 TUI/bash 通道）。
+
+### R9 — agent 工程模式自感知
+
+**需求句**：agent **不能随时自感知当前是否工程模式**。现状：有 `ENG_ON_REMINDER`/`ENG_OFF_REMINDER` 注入（setup-reminders.mjs），但只在**特定时机**注入（回合首轮/模式切换，resumed session re-notifies on turn 1）——agent 无法主动查询/随时确认当前模式，用户实测"要靠他告诉我"。需求 = agent 能自感知当前工程模式状态（及模式历史），不依赖用户口头告知。
+
+**来源**：2026-09-06 人机并行作业实测（用户指出 agent 对 eng-coder 开关/工程模式状态不自知）。
+
+**验收方向（待设计细化）**：模式状态可自查询（agent 侧只读状态获取），或在每回合可靠注入；agent 对"当前是否工程模式"的回答不依赖用户。
+
+### R11 — agent 模型自感知
+
+**需求句**：agent **不知道自己当前跑在哪个模型上、模型何时被切换**。现状：`activeModel` 跨会话持久且恢复时应用（session.mjs L114/L338），但**无注入**——提示/历史不含"你当前运行在 model X"，agent 无法感知模型、更无法感知切换。需求 = agent 自知当前模型名并感知切换（用于**行为适配**：如切到弱模型时自觉降低任务复杂度/减少并行，切到强模型时可承担更复杂任务）。
+
+**来源**：2026-09-06 人机并行作业实测（用户指出"切换模型，agent 也是不知道的"）。
+
+**验收方向（待设计细化）**：注入/携带当前模型名（回合或切换时）；agent 对"我现在用哪个模型"的回答不依赖猜测；模型切换时 agent 自知并可调整行为。
+
+### §11.1 设计——每回合统一环境状态 reminder（2026-09-06 · 需求池 R5/R8/R9/R11 合并设计 · **已实现**）
+
+> 状态：**已实现**（2026-09-06，eng-coder 交付 clean——修正轮 1/5——审计 1 轮 + advisor 2 轮 0🔴——双端测试绿；实现核销见 §11.2）。
+
+**设计骨架（用户裁定）**：每回合注入**一个统一的"环境状态" transient reminder**（与 AUTO/时间 reminder 同通道、同可变形态）——一次注入覆盖家族四项；变更在下回合自然感知（不需要"变更时专门注入"）。
+
+**设计**：
+
+1. **注入形态与内容**：
+   - 每回合注入一行 `env-state` transient reminder（现状 setup-reminders 的 transient user reminder 通道——避 prefix 缓存），内容：
+     ```
+     [System reminder: env: {cli|vscode}, mode: {eng|normal}, model: {model-id}, resumed: {yes|no}]
+     ```
+   - 字段映射：
+     - `env` → R8 身份（§10 D-1 END 常量先例——CLI 仓 END="cli" / VS Code 仓 END="vscode"——静态常量，不做 cmdline 判别）
+     - `mode` → R9 工程模式（`agent.config?.agent?.engineering` 现状字段）
+     - `model` → R11 模型（`agent.activeModel ?? provider.model`）
+     - `resumed` → R5 重启感知（会话是 slot 恢复 = resumed: yes；CLI 已有 `process restarted` 注入 L116——VS Code 补同款）
+     - **git 不入 env-state 行**（audit Q1 消歧——CLI 已有富 git context 注入 branch/commits/uncommitted，env-state 行不重复 clean|dirty 摘要；VS Code 补同款富注入）
+
+2. **变更感知机制**：变更（模式切/模型切/重启）不专门注入——**每回合注入当前状态**，下回合 reminder 反映变更。R5 重启 = resumed: yes 仅在恢复后的**首个回合**注入一次（不重复——CLI 同款 `transient` 注入）。
+
+3. **R5 VS Code 补齐**：VS Code 侧补 `process restarted at...` 注入（CLI setup.mjs L116 同款——会话恢复时注入，仅首回合）。
+
+4. **R8 身份补齐**：两端 system.md 逐字相同——**不改 system.md**（避免两端漂移），改为 env-state reminder 的 `env` 字段携带身份（注入比改 system.md 低侵入）。
+
+5. **R9 模式自感知**：`mode` 字段 = 每回合工程模式状态（覆盖"特定时机注入"的缺口——现状只在回合首轮注入 ENG_ON_REMINDER；env-state 每回合注入当前 mode，变更下回合感知）。
+
+**受影响文件（家族部分）**：
+| 文件 | 端 | 动作 | 内容 |
+|---|---|---|---|
+| `src/agent/setup-reminders.mjs` | 双端 | MODIFY | 新增 env-state transient reminder（每回合注入——含 env/mode/model/resumed/git 字段） |
+| `src/agent/setup.mjs` | 双端 | MODIFY | env-state 注入接线（R5 VS Code 补 process restarted；git context VS Code 补富注入同款） |
+| `src/prompts/system.md` | 双端 | MODIFY | env-state reminder 说明（字段含义 + **resumed=yes 消费指导：进程级内存态已随旧进程消失——designToken 等不假设仍在**——**不改 system.md 身份文本**） |
+| `src/prompts/system.md` | 双端 | MODIFY | R12 连带——async 指导语更新（"默认阻塞"→"depth-0 默认 async"——§15 D-A5 遗留，见 D-E1a #6） |
+
+**测试（家族部分）**：
+| # | 用例 | 预期 |
+|---|---|---|
+| T-E1 | env-state reminder 每回合注入（含 6 字段） | 注入成功，字段完整 |
+| T-E2 | env=cli（CLI 进程）/ env=vscode（扩展宿主） | 身份正确 |
+| T-E3 | mode=eng（工程模式开）/ mode=normal（关） | 状态正确 |
+| T-E4 | model 字段 = activeModel ?? provider.model | 模型名正确 |
+| T-E5 | 恢复会话首回合 resumed=yes；后续回合 resumed=no | 重启感知仅首回合 |
+| T-E6 | git context 注入（CLI + VS Code 双端） | 两端一致 |
+| T-E7 | peers = 同 cwd 活实例数（多实例同开时 >0） | 同伴计数正确 |
+| T-E8 | 模式切换后下回合 mode 反映变更 | 变更感知 |
+| T-E9 | 模型切换后下回合 model 反映变更 | 变更感知 |
+| T-E10 | 双端零回归（全量套件） | 无破坏 |
+| T-E11 | 错误：git 不可用/非 git 仓库 | git 字段安全降级（空/静默跳过，不报错） |
+| T-E12 | 错误：activeModel 为 null | model 字段回退 provider.model |
+| T-E13 | 错误：slotSessions 不可读（R10 peers 场景——本批 peers 已移除，仅 git/session 数据源需健壮） | 注入不崩，字段降级 |
+
+**验收标准聚合（review 补齐）**：
+
+| AC | 验收 | 回指 |
+|---|---|---|
+| AC1 | env-state reminder 每回合注入，字段完整（env/mode/model/resumed——git 不入行，富注入承载） | T-E1 |
+| AC2 | env 身份正确（cli/vscode 各自端） | R8 → T-E2 |
+| AC3 | mode/model/resumed 状态正确 | R5/R9/R11 → T-E3/T-E4/T-E5 |
+| AC4 | git context 双端一致（富注入） | T-E6 |
+| AC5 | 变更感知（模式/模型切换下回合反映） | T-E8/T-E9 |
+| AC6 | 错误路径安全降级（git/model/slot 不可读不崩） | T-E11/T-E12/T-E13 |
+| AC7 | 双端零回归 | T-E10 |
+
+### §11.2 实现核销（2026-09-06 · eng-coder id:2 clean——修正轮 1/5——审计 1 轮 + advisor 2 轮 0🔴）
+
+**验收勾销**：AC1 ✔（env-state 每回合注入，env/mode/model/resumed 字段完整——git 不入行，富注入承载）、AC2 ✔（env=cli/vscode——END 静态常量）、AC3 ✔（mode/model/resumed 状态正确）、AC4 ✔（git context 双端富注入——branch/commits/uncommitted）、AC5 ✔（变更感知下回合反映）、AC6 ✔（错误路径安全降级）、AC7 ✔（双端零回归——CLI 1511/1401/0 fail + VS Code 1234/1149/0 fail）。
+
+**R12（AGENT-LOOP.md §18 D-E1a）同步实现**：双端 `asyncFlag = asyncArg ?? ((ctx.depth ?? 0) === 0)`——depth-0 全角色缺省 async、depth>0 缺省 sync、async:false 逃逸口、depth>0 async:true 拒绝；schema description + main.md 指导语双端改深度门控；§15 T7/AC5 supersede（旧措辞零残留）。
+
+**实现偏差记录（出清单改动——交付报告申报、父侧核销接受）**：
+1. CLI 无独立 subagent-spec.mjs（schema 内联于 subagent.mjs）——清单该项落在 subagent.mjs，已覆盖（VS Code 有独立 subagent-spec.mjs）。
+2. VS Code detectRestoredSession 进程级一次性闸——主路径（进程重启直接恢复）两端正确；中途切换会话拿不到 resumed:yes（按会话跟踪语义完善——记 TODO，见下）。
+3. VS Code git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）——CLI 同款先例，接受（CLI parity）+ 记 TODO（异步优化——非本批）。
+
+**移交父侧裁决项**（实现时上报，未动代码/文档）：
+- 🔵 VS Code `src/prompts/discipline.md:79` 仍含 `action:'check'` 引用（CLI 端已删）——属 §19.8 并行批次镜像面遗漏，不在本批清单，未触碰。
+
+**父侧裁决记录（2026-09-06）**：见会话记录（detectRestoredSession 闸语义完善 + git 富注入异步优化——均记 TODO；discipline.md check 引用——并行批次镜像面，非本批）。
+
+**范围注记**：R9 的"模式历史"（需求句附带）**本批不做**——设计只覆盖"当前模式"注入（满足验收方向"或每回合可靠注入"分支）；模式历史记录留给后续。
+
+### 家族设计关联
+
+三者同属"agent 自我认知"——共享注入通道（setup-reminders/inject*），设计时统一考虑：注入时机、可查询性、跨端一致性（CLI/VS Code 双端）。与 §10（end marker 端分离）相邻：§10 是存储层"哪个槽"，§11 家族是认知层"agent 自知处境"。
+
+## 12. 会话目录残留 GC + 标题写显性化（2026-09-06 · 需求 + 设计层 · 双端）
+
+> 状态：**已实现**（2026-09-06，eng-coder 交付 clean——修正轮 2/5——审计 1 轮 + advisor 2 轮 0🔴——双端 L1/L2 各绿；实现核销见 §12.6）。
+> 范围：CLI（thincoder）+ VS Code（thincoder-vscode）双端——共享 `~/.thincoder/sessions/` 目录，机制必须双端同步（lockstep）。
+> 需求池关联：非池内（技术债/审计发现升级——用户直接批准处理）；T-M TODO 组已挂（CLI TODO.md 会话目录残留 GC 组）。
+
+### 12.1 需求（Requirements）
+
+**总体目标**：治理会话目录的长期残留累积（损坏现场/备份/端 marker/manifest 只增不减）与会话元数据写失败的静默性——让目录可长期使用而不膨胀到不可维护，让元数据写失败可见。
+
+| # | 功能需求（用户故事） | 验收语义 |
+|---|---|---|
+| F1 | 作为长期用户，我希望 `.corrupted`/`.bak-*`/`.unreadable` 残留不无限累积 | 按保留期自动清理过期残留；活跃/近期残留保留 |
+| F2 | 作为长期用户，我希望停止使用的 cwd 的 manifest + end marker 不永久占用 | 冷 cwd（长期无活动）可清理；近期/活跃 cwd 保留 |
+| F3 | 作为用户，我希望会话标题写失败不再静默 | renameSlot/setSlotTitle 返回可观测结果（成功/失败原因） |
+
+**非功能需求**：
+
+| # | 维度 | 标准 |
+|---|---|---|
+| N1 | 安全性 | **自动**清理只碰**确认的残留**（后缀匹配 + 非活跃槽 + 保留期外）；自动路径绝不碰活跃会话的数据文件/manifest 主文件。手动 `session gc --confirm`（冷 cwd 整前缀清空）为**例外**——经 dry-run + 二次确认 + 重校验冷态后放行（见 12.2.4） |
+| N2 | 可逆性 | 清理前可预览（dry-run）；首版保守（长保留期） |
+| N3 | 双端一致 | CLI/VS Code 清理语义同源；不双写冲突（任一端触发即可，另一端不重复） |
+| N4 | 性能 | 清理触发不阻塞主流程；目录扫描有界（不过度全量） |
+
+### 12.2 设计（Design）
+
+**12.2.1 方案选型**
+
+| 候选 | 方案 | 判定 |
+|---|---|---|
+| A 残留 GC | 触发点：进程启动时（ensureSlot/resumeSlot 前）对当前 cwd 的 sessions 目录做一次轻量扫描清理 | 采纳——复用项目既有"按 mtime 保留期清理"先例（log.mjs 1 天轮转 / run-helpers TMP_RETENTION_MS） |
+| B 冷 cwd | 不自动删 manifest（保守——无法判断 cwd 是否"永久弃用"）；提供 dry-run 手动命令 | 采纳——自动清理 manifest 风险高（可能误删用户想留的历史）；手动/半自动 |
+| C 标题写 | renameSlot/setSlotTitle 文件缺失时：CLI/VS Code 统一 `{ok, reason}` 契约（四种失败原因可区分——file-missing/parse-failure/mtime-conflict/invalid-slot） | 采纳——统一双端契约（§12.2.5 裁决 B：扩展返回原因），调用方适配 |
+
+**12.2.2 残留分类与保留期（A）**
+
+| 残留类型 | 后缀 | 保留期（建议） | 理由 |
+|---|---|---|---|
+| 损坏现场 | `.corrupted` / `.unreadable` | 30 天 | 供排查近期损坏；太旧无价值 |
+| manifest 损坏现场 | `.manifest.corrupted`（manifest 主文件损坏时改名保留，见 §2） | 30 天 | 同上——与槽文件损坏现场同类处理（后缀匹配自然覆盖，此处显式分类） |
+| 并发轮转备份 | `.bak-*` | 30 天 | 同上（保留被覆盖的对方现场） |
+| 孤儿 .tmp | `.json.*.tmp`（无对应主文件） | 7 天 | 崩溃现场恢复窗口 |
+
+**12.2.3 清理触发与范围（A/D）**
+
+- 触发：CLI 启动 / VS Code 激活时（对当前 cwd hash 的目录做清理）+ 可选手动命令（`thincoder session gc --dry-run`）
+- 范围：`sessionsDir()` 下**当前 cwd 的 hash 前缀**文件（`.corrupted`/`.bak-*`/`.unreadable`/孤儿 `.tmp`）——不跨 cwd 扫描（性能 + 安全）
+- 排除：活跃槽对应文件的任何现场后缀保留；manifest 主文件 / end marker 主文件不自动删（N2）
+
+**12.2.4 冷 cwd（D——review 补齐：判定 + 报告 + 删除三步，v1 手动确认）**
+
+F2 的机制分三步，全部经手动命令（不自动删 manifest——保守：无法判断 cwd 是否"永久弃用"，自动删除风险高）：
+
+1. **判定标准（冷 cwd）**：某 cwd hash 下**无任何活跃数据文件**（`.json.N` 主文件不存在 或 全部属死主进程）**且** manifest mtime 距今 > **90 天** → 候选冷 cwd。（90 天保守——正常开发会频繁触碰；端 marker `.manifest.cli/.vscode` 写 null 后文件保留是 §10 设计，单独看 marker mtime 无意义，以 manifest mtime 为准。）
+2. **报告（dry-run）**：`session gc --dry-run` 枚举 **sessionsDir 全目录**（跨 cwd——报告面不受 12.2.3 删除面限制），列出候选冷 cwd 的 hash/路径/manifest mtime/数据文件数，**不删除**。
+3. **删除（确认）**：`session gc --confirm <hash>`（或 `--all`）显式删除**指定冷 cwd hash 前缀下的全部文件**：manifest + end marker + 该前缀的 `.json.N` 槽数据文件（死主）+ 裸 v1 文件（`{hash}.json`——历史遗留，eng-coder 移交裁决 **纳入**）+ 残留（.corrupted/.bak/.unreadable/.tmp）——整个前缀清空。
+   - 为何含数据文件：冷 cwd 判定允许"数据文件全部属死主"（12.2.2 F2 判据 b）——若只删 manifest 而留数据文件，会制造**孤儿数据**（无 manifest 引用、listSlots/resumeSlot 不可达、却仍占盘）——正是本节的累积问题本身。整前缀清空才真正释放空间。
+   - **删除前警告**（N2 可逆）：confirm 输出将删的文件清单 + "此操作永久删除该 cwd 的全部会话历史"确认提示；`--all` 同型逐 cwd 警告。
+   - 删除前**重校验冷态**（TOCTOU 防护，T12）：confirm 执行时重跑冷 cwd 判定——若期间该 cwd 变活跃（有新属主/数据文件），拒绝。
+
+> 12.2.3 的"不跨 cwd 扫描"约束仅适用于**自动触发**的残留 GC（防启动阻塞——N4）；手动命令的**报告面**跨 cwd 枚举是必要的（冷 cwd 无从"当前 cwd"发现），二者不矛盾。
+
+**VS Code 侧 F2 执行面**（review #7 决策）：VS Code 扩展无 shell 子命令通道——冷 cwd 的报告/删除（F2）由 **CLI `thincoder session gc` 统一提供**（共享同一 `~/.thincoder/sessions/` 目录，CLI 可清 VS Code 弃用的 cwd）；VS Code 端只实现自动残留 GC（F1）与标题契约（F3），不做 F2 手动面。N3 双端一致不受影响——清理语义同源（session-gc.mjs 双端同构），F2 仅执行入口在 CLI。
+
+**12.2.5 标题写契约统一（C——review 裁决 B：扩展返回原因）**
+
+- 双端 renameSlot/setSlotTitle 返回契约从裸 boolean 改为 **`{ ok: true }` / `{ ok: false, reason: "file-missing" | "parse-failure" | "mtime-conflict" | "invalid-slot" }`**——调用方可知失败原因（F3 验收语义"成功/失败原因"落实）。
+- CLI `renameSlot`：当前返回 boolean（false = 文件缺失/解析失败/mtime 冲突）→ 改 `{ok, reason}`，区分四种失败原因（含 invalid-slot）。调用方 `src/tui/cmd-session.mjs` 同步适配。
+- VS Code `setSlotTitle`：`undefined` → `{ok, reason}` 同构。调用方 `panel-messages`/`panel-session` 同步适配。
+- reason 枚举与既有内部判定一一对应（文件缺失/解析失败/mtime 冲突/槽号非法），不含用户文本——文本渲染由调用方决定。
+- 兼容注：返回形态改变是显式契约升级——受影响文件表含全部调用方；无外部 API 消费者（内部工具）。
+
+### 12.3 受影响文件（Affected Files）
+
+> **拆分规划（review #1 采纳）**：残留 GC 是独立决策（"何时清何种残留"），不塞进 session-slots.mjs——CLI 该文件已在 500 行硬限零余量（实测 501 行），加逻辑必超限。GC 逻辑入**新模块 `session-gc.mjs`**（CLI `src/` + VS Code `src/extension/`，双端同构），从 session-slots/io import 原语，启动钩子只加一行调用。
+> **注意**：CLI `session-slots.mjs` 的 renameSlot 契约改（boolean → {ok,reason}）也在该 501 行文件内——若改动使其进一步超限，实现时须**一并拆出** renameSlot（或整体维持 ≤500 的行内替换——契约改是行内 return 变化，优先行内不增行；eng-coder 实现时若 >500 则按 §10.6 偏差 3 先例拆文件）。
+
+| 文件 | 端 | 动作 | 内容 |
+|---|---|---|---|
+| `src/session-gc.mjs` | CLI | **ADD** | 残留 GC + 冷 cwd 报告/删除（12.2.3/12.2.4）+ dry-run 模式 |
+| `src/extension/session-gc.mjs` | VS Code | **ADD** | 同上（与 CLI 同源移植） |
+| `src/session.mjs` | CLI | MODIFY | 启动钩子触发 GC（一次调用，不膨胀） |
+| `src/extension/session-io.mjs` | VS Code | MODIFY | setSlotTitle 契约改 `{ok, reason}`（12.2.5）；启动钩子触发 GC（一次调用） |
+| `src/session-slots.mjs` | CLI | MODIFY | renameSlot 契约改 `{ok, reason}`（12.2.5）；GC 用内部原语零暴露或最小（slotPath/sessionsDir 已导出） |
+| `src/extension/session-slots.mjs` | VS Code | MODIFY | 同 CLI——零改动或最小暴露 |
+| `src/tui/cmd-session.mjs` | CLI | MODIFY | renameSlot 调用方适配 `{ok, reason}`（TUI `/session` 改标题路径） |
+| `bin/thincoder.mjs` | CLI | MODIFY | 新增 `case "session"` 子命令分发：`thincoder session gc --dry-run` / `--confirm <hash>`（接线到 session-gc.mjs） |
+| `src/extension/panel-messages.mjs` / `panel-session.mjs` | VS Code | MODIFY | setSlotTitle 调用方适配 `{ok, reason}` |
+| `docs/design/README.md` | 双端 | MODIFY | 变更记录（SESSION.md §12 归位，地图无需新增板块） |
+| `test/session-gc.test.mjs` | CLI | **ADD** | GC + 标题契约测试（T1-T12，见 12.4） |
+| `test/session-gc.test.mjs` | VS Code | **ADD** | 同上（双端镜像，VS Code test/ 平铺目录） |
+
+### 12.4 测试（Testing）
+
+| # | 用例 | 输入 | 预期输出 | 对应需求 |
+|---|---|---|---|---|
+| T1 | 正常：清理过期 .corrupted | 目录含 31 天前 .corrupted + 今天 .corrupted | 旧的删、新的留 | F1/N1 |
+| T2 | 边界：保留期内的 .bak 不清 | 29 天前 .bak | 保留 | F1 |
+| T3 | 错误：活跃槽的现场后缀不清 | 活跃槽 1 有 .corrupted | 保留（N1 安全） | N1 |
+| T4 | 正常：孤儿 .tmp 清理 | 超过 7 天（如 8 天前）的孤儿 .tmp | 删（mtime < now−7d） | F1 |
+| T5 | dry-run 不真删 | 手动命令 --dry-run | 只列不删 | N2 |
+| T6 | 标题契约：双端 setSlotTitle/renameSlot 文件缺失 | 不存在槽 | 返回 `{ ok: false, reason: "file-missing" }`（原 undefined/false） | F3 |
+| T7 | 标题成功 | 存在槽 | 返回 `{ ok: true }` + 标题落盘 | F3 |
+| T7a | 标题失败原因区分 | mtime 冲突 / 解析失败 文件 | `reason: "mtime-conflict"` / `"parse-failure"` 各自区分 | F3 |
+| T7b | 标题失败原因：槽号非法 | 槽号 0 / 负数 / 非整数 | `{ ok: false, reason: "invalid-slot" }` | F3 |
+| T8 | 双端回归 | 清理后会话正常保存/恢复 | 零回归（全量套件） | N3/N4 |
+| T9 | F2 正常：dry-run 列冷 cwd | 冷 cwd A（无活跃数据文件 + manifest 91 天前）+ 活跃 cwd B | 报告列 A 不列 B；零删除 | F2 |
+| T10 | F2 边界：近期 cwd 不列 | 冷 cwd 候选 manifest 30 天前 | 不列入（<90 天阈值） | F2/N1 |
+| T11 | F2 删除：confirm 清空指定冷 cwd | `gc --confirm <hash-A>` | A 前缀全部文件删（manifest+marker+.json.N 数据+残留）；活跃 cwd 不动 | F2/N1 |
+| T12 | F2 安全：删活跃 cwd 被拒 | `gc --confirm <活跃hash>` | 拒绝（有活跃数据文件/属主活） | N1 |
+
+**活跃槽判定（T3/T12 的操作定义）**：某 slot 的 `.json.N` 主文件存在 且 其 manifest `slotSessions[N]` 属主进程存活（`isProcessAlive`）→ 活跃，其现场后缀（.corrupted/.bak/.unreadable）与目录一律保留。属主死/无记录 → 非活跃，残留可按保留期清理。
+
+**验收标准聚合（review #6 补齐）**：
+
+| AC | 验收 | 回指 |
+|---|---|---|
+| AC1 | 过期残留（.corrupted/.unreadable/.bak-*/孤儿 .tmp）按保留期清理，活跃/近期保留 | F1 → T1-T4 |
+| AC2 | 冷 cwd 可经 `session gc --dry-run` 报告、`--confirm` 删除；活跃 cwd 拒绝 | F2 → T9-T12 |
+| AC3 | 标题写返回 `{ok, reason}`，四种失败原因可区分（file-missing / parse-failure / mtime-conflict / invalid-slot） | F3 → T6/T7/T7a/T7b |
+| AC4 | 双端实现后零回归（全量套件 CLI + VS Code 各绿） | N3/N4 → T8 |
+
+**保留期边界语义（review #7 补齐）**：判定用 **mtime < now − retention** 即删（`older-than`），恰好等于保留期的文件**保留**（`>=` 边界不清，故 T4 输入用"超过 7 天如 8 天前"而非"7 天前"）。测试用 mtime 回拨（`utimesSync`）造老化文件——测试 seam 明确。`.unreadable` 与 `.corrupted` 同保留期（30 天），T1 覆盖 .corrupted、同逻辑适用于 .unreadable（补一断言）；`.manifest.corrupted` 同 30 天（补一断言）。
+
+**启动性能（review #8 采纳）**：自动触发 GC **延后到进程启动完成后**（async 空闲时/首轮后）执行，不阻塞启动路径（N4）；扫描先按后缀预过滤（只 stat `.corrupted/.bak*/.unreadable/.tmp` 候选），再对候选做活跃槽判定——避免全量 listing 开销。sessionsDir 只扫当前 cwd hash 前缀（12.2.3）；冷 cwd 枚举仅手动命令触发。
+
+### 12.6 实现核销（2026-09-06 · eng-coder id:1 clean——修正轮 2/5——审计 1 轮 + advisor 2 轮 0🔴）
+
+**验收勾销**：AC1 ✔（T1-T4——双端过期残留按 older-than 清理、活跃保留）、AC2 ✔（T9-T12 + T11b——CLI 命令面冒烟实测：dry-run 报告 / confirm 警告+整前缀删除 / 活跃拒绝）、AC3 ✔（T6/T7/T7a/T7b——双端四原因可区分、调用方适配）、AC4 ✔（L1：CLI 1400/0 fail + VS Code 1119/0 fail；L2 父侧终端：CLI 1511/1401/0 fail + VS Code 1234/1149/0 fail——双端零回归）、N4 ✔（setImmediate 空闲 + 后缀预过滤）。
+
+**实现偏差记录（出清单改动——交付报告申报、父侧核销接受）**：
+1. `src/session-rename.mjs`（CLI 新建）——renameSlot 自 session-slots.mjs 拆入（501 行超限，§12.3 注意句预授权拆分）；session-slots.mjs 降至 475 行 ✓。
+2. `src/extension/session-slot-write.mjs`（VS Code 新建——**非本批**：接手时已有，属 AUTO bug 修复任务拆分；与 §12 交集仅是使 session-io.mjs 保持 469 行 ≤500——归属 AUTO bug 修复，非本批交付）。
+
+**移交父侧裁决项**（实现时上报，未动代码/文档）：
+- 🟡 legacy `{hash}.json` 裸 v1 文件盲区——冷 cwd 整前缀删除不含它（`startsWith(prefix + ".")`）；设计"整前缀清空防孤儿"理由有张力，但 §12.2.4 删除枚举未含它——**父侧裁决**（见下）。
+- 🔵 `session gc` shell completion 子层（gc/--dry-run/--confirm 不可补全）——设计未要求，不做。
+
+**父侧裁决记录（2026-09-06）**：legacy `{hash}.json` 裸 v1 文件**纳入**冷 cwd 删除集（用户裁决——v1 是历史遗留死数据，整前缀清空的意图就是释放空间，留 v1 矛盾——实现时 eng-coder 按此扩展删除集）。见会话记录。
+
+
+### 12.7 变更记录：legacy v1 扩展删除集代码同步（2026-09-06 · CLI 端实现）
+
+> 状态：**已实现（2026-09-06——eng-coder id:1 clean——审计 1 轮 CLEAN + advisor 1 轮 0🔴 零修正轮——模块测试 18/18（既有 14 + T-V1a..d 4）——父侧 L2 核销见 §12.8）**。评审 2026-09-06 0🔴 通过（token edc95d61…/designId 458d596b）——用户批准 2026-09-06。
+
+**gap 实证**（读码 2026-09-06）：`session-gc.mjs` `deleteColdCwd` 区域的冷 cwd 整前缀文件集 filter = `entries.filter(e => e.startsWith(prefix + "."))`——裸 `{hash}.json`（v1 死数据）**不在集合**；文档（§12.2.4 步骤 3 + §12.6 裁决）已含——文档-代码漂移，代码未跟裁决。
+
+**需求（F-V1）**：
+
+- **F-V1**：冷 cwd `--confirm <hash>` / `--all` 删除集 = 既有全集 + **裸 `{hash}.json`**（v1 死数据）——整前缀清空语义完整兑现（§12.2.4 意图：释放空间，留 v1 矛盾）。
+- **NF-V1**：dry-run 报告同样列出裸 v1（用户确认前可见）；删除前警告清单含之；TOCTOU 重校验语义不变（v1 存在不改变"冷态"判定——判定看 .json.N 活跃与 manifest mtime）。
+- **NF-V2**：范围 = **CLI 端**——F2 手动执行面仅 CLI（§12.2.4 下注：VS Code 不做 F2），v1 清理随 CLI 统一覆盖共享 sessions 目录。
+
+- **D-V1（`src/session-gc.mjs`）**：冷 cwd 删除集扩展——`deleteColdCwd` 与 dry-run 报告共用的文件集合 filter 补 `|| e === prefix`（裸 `${hash}.json`）；`files`/报告/警告三处同源（共用集合变量——不各写各的）。`classifyResidue`（残留 GC 面）**不动**——v1 属冷 cwd 手动删除面，自动残留 GC 不碰 manifest/v1（§12.2.3 排除语义不变）。
+
+- **D-V2（`test/session-gc.test.mjs` CLI）**：补 T-V1 系列——构造冷 cwd（manifest >90 天 + 无活跃 + **裸 v1 文件在位**）→ dry-run 列出含 v1 → confirm 删除后 v1 消失 + 整前缀清空；--all 同型；活跃 cwd（裸 v1 在位但 .json.N 活跃）→ confirm 拒绝（TOCTOU 不回归）。
+- **D-V3（文档）**：本记录 + §12.2.4 步骤 3 已含（不重复）——CHANGELOG 父侧交付时落。
+
+**验收（AC-V1）**：AC-V1 = T-V1 全绿（dry-run 报告含 v1 / confirm 删除 v1 / `--all` 同型 / 活跃 cwd 拒绝——D-V2 四场景全映射）；AC-V2 = 既有 session-gc 全量用例零回归（T1-T12 语义不变——残留 GC 面零触碰）。
+
+**受影响文件**：CLI `src/session-gc.mjs` + `test/session-gc.test.mjs` + 本文件（已落）——VS Code 端零改动（F2 面仅在 CLI）。
+
+### 12.8 实现核销（2026-09-06 · eng-coder id:1 clean——审计 1 轮 CLEAN + advisor 1 轮 0🔴 零修正轮）
+
+**验收勾销**：AC-V1 ✔（T-V1a..d 四场景——模块测试 18/18 绿：dry-run 含 v1 / confirm 删 v1 + 整前缀清空 / --all 同型 / 活跃拒绝 TOCTOU 不回归）；AC-V2 ✔（既有 T1-T12/T9-T11b 语义零触碰——18/18 全含）。
+
+**父侧 L2**：CLI test:full **1543/1543** 全绿（215.8s——含批 2 wait_for 双端产物同批回归）。
+
+**真实目录核查（评审 🔵#3）**：`session gc --dry-run` 对真实 sessions 目录（14731 项）→ 0 冷候选/0 残留候选；形态扫描——裸 40 位 hash v1 0 个、12 位孤儿 0 个、仅裸 v1 无 manifest 0 个——**无候选集外孤儿类——范围问题零上报**。fixture 形态（旧 manifest + 裸 v1）为命名体系一致性下的可达形态，活数据当前无实例可实证（记录在案——机制就绪，待真实数据出现时生效）。
+
+**CHANGELOG**：已落（父侧）。
+
+## 13. 跨会话历史检索 + 检索族消歧（2026-09-06 · R19——快车道合批——用户裁定 🅰 read_history 加参数 + 消歧总纲）
+
+> 状态：**设计（2026-09-06——澄清裁定：🅰 = read_history 加 cwd/slot 参数（本会话 = 默认域——单工具扩展——非新工具）——设计落本节——评审发起权在用户）**。
+
+### 13.1 需求
+
+**F-R19a（跨会话检索）**：As an agent, I want 检索任意会话（本 cwd 或指定目录）的消息历史，so that 跨会话找回裁定/决策/过去讨论（read_history 本会话外延）。现状：read_history 仅本会话（§9——depth-0 only）——跨会话无工具——AUTO 排查曾手工扫 7383 个 slot 文件（session-state 诊断 TODO 同源）。
+
+**F-R19b（检索族消歧）**：As an agent, I want 检索/记忆族工具描述互指消歧（何时用哪个），so that "查历史"不命中 5 个工具选错。现状：27 工具仅 6 个有 Use when 引导——read_history/recent_changes/memory/doc_search/code_search 无互指总纲。
+
+**NF-R19**：readonly；depth-0 only（同 read_history——子代理查"本会话"无意义域外）；会话文件为只读检索对象（不写不改）；性能 = v1 逐文件流式读（无索引——会话文件行读 + keyword 预筛）；隐私 = 本机会话文件（同 read_history 无额外门禁）。
+
+### 13.2 设计
+
+**D-R19a（read_history 参数扩展——🅰）**：
+- 新参数 `path`（可选——默认本会话）：目标会话文件路径（显式）或 `cwd:` 前缀指定目录（自动发现该 cwd 的会话槽——manifest/slotSessions 结构既有）；跨会话查询 = path 指定 → 读目标文件 history 线 → 同 filter 面（role/keyword/tool/since/until/limit/direction）应用
+- 本会话缺省 = 零行为变化（向后兼容——既有调用全不传 path）
+- 发现面（path = cwd:xxx——**评审 #2 修正：v1 决策定死 = 列全部槽 + 时间序——不做死槽过滤**）：列该 cwd 的槽（manifest/slotSessions 结构既有）——每槽摘要行 = **槽号 + 完整文件路径 + title/消息数/updatedAt**（**评审 #2——摘要必须含寻址字段：模型无法自行算 sha1(cwd) 拼文件名——第二步深查 = path=<摘要行的完整文件路径> 重调**——两步交互与 memory search 同型）
+- 检索护栏（**评审 #3——N1 标签删——具体化**）：单槽检索设行扫上限 **READ_HISTORY_SCAN_MAX = 200,000 行**——超限返回 `{error: "session too large — refine keyword or since/until"}`（超限提示文案定稿——不再读全文——行扫 + keyword 预筛在前——T-R19.7 断言该文案）；返回条数沿用 §9.5 #5 limit clamp（>200 → 200）
+
+**D-R19b（消歧总纲——read_history 描述尾段逐字定稿）**：
+> 检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识/约定**（memory）→ memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。
+
+消歧段补进各工具描述（互指尾句——最小改动）：read-history.mjs（尾段——含 cwd 参数说明 + 族表）、recent-changes.mjs（尾句"会话级历史用 read_history"）、memory 工具描述（search 段补"会话消息历史不在 memory——用 read_history"——memory 在 agent-tools？查归属——若 CLI 工具描述独立文件——同批）、doc_search/code_search（"查设计决策用 doc_search——查实现用 code_search——查会话用 read_history"——doc/code 描述已有互指——补 read_history 引用）。
+
+### 13.3 测试
+
+| # | 场景 | 输入 | 预期 | 映射 |
+|---|---|---|---|---|
+| T-R19.1 | 缺省 = 本会话 | 不传 path | 既有行为零变化（回归） | F-R19a |
+| T-R19.2 | 跨会话单槽 | path = 指定会话文件 + keyword | 命中旧会话消息（含 ts） | F-R19a |
+
+| T-R19.3 | cwd 发现 | path = "cwd:xxx" | 槽摘要列表（**槽号 + 完整文件路径** + title/消息数/时间） | F-R19a |
+| T-R19.3b | 错误：未知 cwd | path = "cwd:nonexistent" | 错误返回（明确文案——无该 cwd 会话目录） | F-R19a |
+| T-R19.3c | 边界：cwd 无槽 | path = "cwd:空目录" | 空列表 + 提示（无会话） | F-R19a |
+| T-R19.3d | 错误：目标文件缺失/损坏 | path = 不存在的 .json.N / 损坏文件 | 错误返回（不崩——§9 错误处理同型） | F-R19a |
+| T-R19.4 | 子代理拒 | depth>0 | 拒（同 read_history） | NF |
+| T-R19.5 | 消歧描述锚 | read_history 描述 | 含族表尾段（锚断言） | F-R19b |
+| T-R19.6 | 消歧补句 | recent_changes/memory 等描述 | 互指尾句在（锚断言） | F-R19b |
+| T-R19.7 | 大会话护栏 | 超大文件（>200,000 行） | 错误提示文案（不读全文——评审 #3 定稿文案） | NF |
+
+**验收**：AC-1 = T-R19.1..7 绿（双端镜像——CLI + VS Code read-history 同构）；AC-2 = 零回归（read_history 既有调用全绿——缺省不变）；AC-3 = 描述锚测试绿（消歧段双端一致）。
+
+
+
+### 受影响文件（评审 #5——从"初步"定稿）
+CLI + VS Code：`agent-tools/read-history.mjs`（path 参数 + 描述尾段族表 + 护栏——实现面主文件）、`agent-tools/recent-changes.mjs`（互指尾句——描述区改）、检索族描述面（`doc_search`/`code_search`/`memory` 工具描述补互指句——**实现批逐个点名验证实际描述文件位置（tools/*.md 或 .mjs 内联——含 read.md 类路由句若存）——清单外新增以报告为准**）、双端测试镜像（read-history 家族测试——含新错误用例）、SESSION 本节 + 双端 CHANGELOG。**checkpoint "versions" 核验（评审 #8）**：总纲句的 "checkpoint cat/versions"——实现批先核验 git 工具动作面是否含 versions——不含则总纲句改 "checkpoint（cat/list——按实际动作面）" 再定稿。
+
+### 变更记录
+- 2026-09-06：R19 立项（用户"跨会话也希望有"——工具族评估发现消歧缺口——并入消歧总纲）——澄清裁定 🅰（read_history 加参数）——设计落本节。
+
+> **评审处置注（2026-09-06 round1）**：1🔴 + 6🟡 + 3🔵 全采纳——#1（§26 byte-identical）落 AGENT-LOOP §26；#2 寻址缺口修（摘要含槽号+完整文件路径——v1 死槽过滤决策定死列全部）；#3 护栏具体化（READ_HISTORY_SCAN_MAX 200,000 行 + 提示文案定稿——N1 悬空标签删）；#4 错误路径用例（T-R19.3b/c/d）；#5 受影响文件定稿（实现批点名验证描述位置）；#8 checkpoint versions 实现前核验注。**复审发起权在用户**。

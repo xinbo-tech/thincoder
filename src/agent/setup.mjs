@@ -15,6 +15,7 @@ import {
   collectGitContext, loadProjectInstructions, OUTLINE_INJECT_PREFIX,
   DEFAULT_MAX_TURNS, ensureAutoReminder,
 } from "./helpers.mjs"
+import { pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -113,6 +114,9 @@ export async function prepareRun(agent, input, callbacks, {
       }
       if (wasRestored && !agent._restartReminderInjected) {
         agent._restartReminderInjected = true
+        // SESSION.md §11.1 R5: the per-turn env-state reminder carries resumed:yes
+        // on THIS first turn after the restore (consumed by pushEnvStateReminder).
+        agent._envResumed = true
         agent.history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
       }
       if (agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
@@ -167,6 +171,16 @@ export async function prepareRun(agent, input, callbacks, {
     }
     pushReal(agent, { role: "user", content: input })
   }
+  // SESSION.md §11.1: unified per-turn env-state transient reminder (env/mode/
+  // model/resumed — R5/R8/R9/R11 one-shot coverage; changes surface next turn).
+  // R10 L1 (MULTI-INSTANCE-COLLAB §2a.4 D-L1a): peer-instance reminder right after
+  // env-state, BEFORE the time reminder — the time reminder stays LAST (prefix-cache
+  // contract). Both depth-0 only (describe the MAIN agent / its workspace peers).
+  if (depth === 0) {
+    pushEnvStateReminder(agent)
+    pushPeerReminder(agent)
+  }
+
   // Time grounding for EVERY agent depth AND every resume, pushed LAST (after the user
   // input): transient on the HUMAN line — dropped on persist; on the MACHINE line — kept
   // (byte-identical resume for the provider prefix cache, 2026-08-16), fresh at every run start
@@ -188,7 +202,7 @@ export async function prepareRun(agent, input, callbacks, {
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
   const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool } = await import("../agent-tools.mjs")
-  const { consultStartTool, consultCheckTool, consultStopTool } = await import("../agent-tools/consult.mjs")
+  const { consultStartTool, consultStopTool } = await import("../agent-tools/consult.mjs")
   const { CONSULT_BASE } = await import("../agent.mjs")
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
@@ -275,9 +289,11 @@ export async function prepareRun(agent, input, callbacks, {
   // consult 工具仅在配置时注册（consultModels 空池时注册会让模型调用后吃一个错误回合）——
   // §19: escalate 已并入常驻 subagent 的 action:"escalate"（无空池注册问题——动作在
   // 池空时返回既有错误语义，工程模式 fail-closed 在 execute 内拒绝）。
+  // §25 D-R17a: consult_check 已退役（digest 自动注入是唯一消费通道）——consult 家族
+  // 只剩 2 工具（consult_start/consult_stop——setup 注册点与描述面同步清零）。
   const consultModels = agent.config?.agent?.consultModels ?? []
   const consultTools = consultModels.length
-    ? [withPool(consultStartTool), consultCheckTool, consultStopTool]
+    ? [withPool(consultStartTool), consultStopTool]
     : []
   const depthOnly = depth === 0 ? [filteredSubagent, skillTool, goalTool, engTool, verifyTool, recentChangesTool, readHistoryTool, advisorTool, ...consultTools]
     // SESSION.md §9 D-S2: read_history is depth-0 ONLY — a subagent querying "the session"

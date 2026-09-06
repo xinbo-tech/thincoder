@@ -4,7 +4,7 @@
 
 ---
 
-## 一、文件工具（8 个）
+## 一、文件工具（7 个）
 
 | 工具 | 说明 |
 |------|------|
@@ -15,7 +15,6 @@
 | `hashline_edit` | 基于内容哈希的行编辑，免疫空格编码问题 |
 | `apply_patch` | 统一 diff 多文件原子应用，任意 hunk 失败全回滚 |
 | `delete` | 删除文件，git 跟踪文件需 force |
-| `read_pdf` | PDF 文本提取（9 段管线：xref 双形态/ObjStm/CMap/布局分栏），pages 页选择；扫描页 multimodal 回传，加密拒绝 |
 
 ## 二、代码质量（2 个）
 
@@ -70,8 +69,8 @@
 | `verify` | 完成验证守卫 |
 | `question` | 向用户提问，暂停等待回复 |
 | `timer` | 思考时间预算，超时提醒去动手而非空想 |
-| `consult_start` / `consult_check` / `consult_stop` | 多模型并行会诊（只读顾问，需配置 `agent.consultModels`） |
-| `escalate` | 飞刀：把实现交给更强的模型亲自操刀（有写权限，候选池同 `consultModels`） |
+| `consult_start` / `consult_stop` | 多模型并行会诊（只读顾问，需配置 `agent.consultModels`；全 settle 后意见 digest 自动注入——R17） |
+| `escalate` | 飞刀：把实现交给更强的模型亲自操刀（有写权限，候选池同 `consultModels`；缺省 async 后台飞行 + digest 报告——R17） |
 
 ## 八、版本控制（4 个）
 

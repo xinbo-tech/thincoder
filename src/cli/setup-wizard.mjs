@@ -1,6 +1,5 @@
-import { existsSync, readFileSync } from "node:fs"
 import { createInterface } from "node:readline"
-import { configPath, saveConfig, PROVIDER_PRESETS } from "../config.mjs"
+import { configPath, writeConfigAtomic, PROVIDER_PRESETS } from "../config.mjs"
 
 /** First-time setup (TTY chat / distill): ask a few questions to configure a provider, save to disk, return runtime provider. Cancel returns null. */
 export async function setupWizard() {
@@ -52,16 +51,22 @@ export async function setupWizard() {
       return null
     }
     const embedKey = (await ask("Optional: embedding API key (SiliconFlow, for vector search; press Enter to skip): ")).trim()
-    const raw = existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : {}
-    const providers = raw.providers?.length ? raw.providers : []
-    const existing = providers.find((p) => p.name === name)
-    if (existing) Object.assign(existing, { baseURL, model, apiKey })
-    else providers.push({ name, baseURL, model, apiKey })
-    raw.providers = providers
-    raw.activeProvider = name
-    delete raw.activeModel  // reset to default model
-    if (embedKey) raw.embedding = { ...(raw.embedding ?? {}), apiKey: embedKey }
-    saveConfig(raw)
+    // D-F5b：磁盘新鲜读 → mutate → mtime 门控写（writeConfigAtomic 收口）；冲突 = 放弃
+    // + 提示重试（首配场景另有实例同时写盘——极低概率；不自动合并——决策点① A）
+    const r = writeConfigAtomic(configPath, (raw) => {
+      const providers = raw.providers?.length ? raw.providers : []
+      const existing = providers.find((p) => p.name === name)
+      if (existing) Object.assign(existing, { baseURL, model, apiKey })
+      else providers.push({ name, baseURL, model, apiKey })
+      raw.providers = providers
+      raw.activeProvider = name
+      delete raw.activeModel  // reset to default model
+      if (embedKey) raw.embedding = { ...(raw.embedding ?? {}), apiKey: embedKey }
+    })
+    if (!r.ok) {
+      console.error("config changed on disk concurrently — retry")
+      return null
+    }
     console.error(`Configured: ${name} / ${model} (saved to ${configPath})`)
     console.error(embedKey ? "Vector search enabled\n" : "(No embedding key configured: memory search will use text-only FTS. Add embedding.apiKey to config.json to enable vector search later.)\n")
     return { name, baseURL, model, apiKey }

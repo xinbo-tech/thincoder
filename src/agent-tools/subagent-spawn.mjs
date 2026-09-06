@@ -13,6 +13,7 @@ import {
 } from "../agent.mjs"
 import { makeRelay, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
+import { tokenExpired, removeDesignTokenSlot } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts } from "./subagent-async.mjs"
 import {
   normalizeFileList, describeBlockers, assertNoDepCycle, depInfo,
@@ -93,6 +94,11 @@ export function effectiveSubagentModel(parent, role, modelArg) {
  * - designId omitted → exactly ONE slot must exist (single-design compatibility); with
  *   multiple slots we refuse rather than pick one (T16: never silently aim the wrong design)
  * Returns { token } on success; throws with a parent-actionable message otherwise.
+ * R16 (2026-09-06): the slot Map is the authority — a null single mirror with slots
+ * present is a LEGITIMATE state (the mirror's own token expired and was cleaned at
+ * restore / enter / spawn-gate rejection while other slots stay valid — D-R16a/D-R16c),
+ * so it never refuses remaining valid slots ("mirror cleared = mode re-entered →
+ * re-review" was the abolished off→on-requires-fresh-review semantics — F-R16a).
  * The format/TTL check itself stays in validateDesignToken (2026-09-06: HMAC 防伪层已删——
  * token 为无签名流程凭证——见 ENGINEERING-MODE.md 2026-09-06 段）。
  */
@@ -100,12 +106,6 @@ export function resolveDesignSlot(parent, designIdArg) {
   const slots = parent._engDesignTokens
   const hasSlots = slots instanceof Map && slots.size > 0
   const legacy = parent._engDesignToken
-  // eng(exit/enter) resets the single mirror to force a fresh review (eng.mjs) —
-  // a non-empty slot map surviving that reset must NOT resurrect stale tokens:
-  // mirror cleared + slots present = re-entered engineering mode → re-review.
-  if (!legacy && hasSlots) {
-    throw new Error("Design tokens were reset (engineering mode was re-entered) — run advisor with type='design' again and spawn with the fresh designId+token pair.")
-  }
   if (designIdArg) {
     if (!hasSlots || !slots.has(designIdArg)) {
       throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${hasSlots ? slots.size : 0} approved design slot(s))`)
@@ -184,7 +184,14 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   let issuedToken
   if (role === "eng-coder") {
     issuedToken = resolveDesignSlot(parent, args.designId).token
+    // R16 D-R16c ③ — spawn-gate cleanup: only an EXPIRY rejection removes the slot
+    // (the caller passed the slot's own token and it is past TTL — 长跑不重启也清);
+    // mismatch / format rejections never delete — the slot's own token may still be
+    // valid and a caller error must not destroy it (T-R16d). 单槽镜像同步由
+    // removeDesignTokenSlot 一并处理。
+    const expiredReject = !!issuedToken && args.designToken === issuedToken && tokenExpired(issuedToken)
     if (!issuedToken || args.designToken !== issuedToken || !validateDesignToken(args.designToken)) {
+      if (expiredReject) removeDesignTokenSlot(parent, args.designId, issuedToken)
       throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
     }
   }

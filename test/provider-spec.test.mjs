@@ -206,7 +206,8 @@ test("T-C5 配置界面：setContextFlow 设 context=128 → 落盘 providers[].
   const { ctx, state, lines } = pickersCtx({
     agent,
     askQuestion: async () => "128",
-    persistRaw: async (mutate) => { saved.raw = {}; mutate(saved.raw) },
+    // D-F5a 后 closures 在「磁盘 fresh raw」上做单操作——fake 以内存 provider 的磁盘形态 seed
+    persistRaw: async (mutate) => { saved.raw = { providers: agent.providers.map((p) => ({ ...p })) }; mutate(saved.raw) },
   })
   const { setContextFlow, popPicker } = createPickers(ctx)
   const flow = setContextFlow()
@@ -252,7 +253,7 @@ test("T-C5b 非法输入不落盘（报错）；空输入清空（回 spec 值�
   const { ctx: ctx2, lines: lines2 } = pickersCtx({
     agent: agent2,
     askQuestion: async () => "",
-    persistRaw: async (mutate) => { saved2.raw = {}; mutate(saved2.raw) },
+    persistRaw: async (mutate) => { saved2.raw = { providers: agent2.providers.map((p) => ({ ...p })) }; mutate(saved2.raw) },
   })
   const { setContextFlow: set2, popPicker: pop2 } = createPickers(ctx2)
   const flow2 = set2()

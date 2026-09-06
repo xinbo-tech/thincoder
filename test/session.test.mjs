@@ -178,7 +178,7 @@ test("T3 无可用 provider（providers 空）→ invalid 标记（TUI 弹 Add p
 // T4 — headless（thincoder chat + 无效 provider）
 // ====================================================================
 
-test("T4 headless：thincoder chat + 无效 provider → 可读错误 + 退出码 1，无 UI（F4/D-S4）", () => {
+slow("T4 headless：thincoder chat + 无效 provider → 可读错误 + 退出码 1，无 UI（F4/D-S4）", () => {
   // cwd 用临时目录（非项目根）：子进程 assembleAgent 不做项目内存索引/规则发现/MCP——
   // 避免全量 suite 并行时给时序敏感的 agent.test.mjs 压缩测试制造负载（实测 T3b 被压翻）
   const home = fakeHomeWithConfig({ providers: [{ ...DEEPSEEK }], activeProvider: "ghost" })
@@ -206,7 +206,7 @@ test("T4 headless：thincoder chat + 无效 provider → 可读错误 + 退出�
   }
 })
 
-test("T4 --auto 场景同：thincoder chat --auto + 无效 provider → 退出码 1", () => {
+slow("T4 --auto 场景同：thincoder chat --auto + 无效 provider → 退出码 1", () => {
   const home = fakeHomeWithConfig({ providers: [{ ...DEEPSEEK }], activeProvider: "ghost" })
   try {
     let status = 0
@@ -447,15 +447,15 @@ test("session: renameSlot 改标题（槽位文件 + manifest 同步，VS Code �
   }
   saveSession(agent, [])
 
-  assert.equal(renameSlot(cwd, 1, "新标题"), true)
+  assert.deepEqual(renameSlot(cwd, 1, "新标题"), { ok: true })
   // 槽位文件里的 title 更新
   const data = loadSession(cwd)
   assert.equal(data.title, "新标题")
   // listSlots 的元数据同步更新
   const slots = listSlots(cwd)
   assert.equal(slots[0].title, "新标题")
-  // 无效槽位返回 false
-  assert.equal(renameSlot(cwd, 99, "不存在"), false)
+  // 不存在槽位 → §12.2.5 契约 { ok: false, reason: "file-missing" }
+  assert.deepEqual(renameSlot(cwd, 99, "不存在"), { ok: false, reason: "file-missing" })
 
   // 清理
   const { unlinkSync } = await import("node:fs")

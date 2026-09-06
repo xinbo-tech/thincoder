@@ -456,3 +456,182 @@ test("T-H7 digest 完成即逐条冻结回收——池内其他子代理运行�
   assert.equal(ctx.state.suspended, false)
   assert.equal(ctx.state.status, "Ready")
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §25 D-R17 (R17) — consult/escalate 族驱动：挂起活度（running consult 会话）、
+// 空闲 settle 消化轮（T-R17j——消费驱动判据推广）、多族合并消化（T-R17n/o）、
+// 手动档 digest 动作域（T-R17p——三族同一档位规则）
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("T-R17j 空闲 consult settle → 消化轮：running 会诊挂起活度 + settle 唤醒 + digest 消费（不悬置）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, cbs, opts) => {
+      ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false, suspended: agent._suspended })
+      // 模拟 consult 会话在挂起等待期全 settle：会话离场 → 族条目入列 + 唤醒 driver
+      if (text === "首回合") {
+        setTimeout(() => {
+          agent._consultSessions?.delete("c1")
+          agent._pendingConsultResults ??= []
+          agent._pendingConsultResults.push({ id: "c1", role: "consult", report: "[System reminder: consultation #c1 finished — 2 of 2 models replied (0 failed)]\n- [deepseek:m-a]: 甲建议" })
+          for (const w of (agent._asyncWaiters ?? []).splice(0)) { try { w() } catch { /* noop */ } }
+        }, 60)
+        return "发起了会诊"
+      }
+      // 消化轮消费族条目（真实路径 = agent.mjs run 首行注入 + pushReal）
+      const pend = agent._pendingConsultResults
+      if (pend?.length) {
+        for (const e of pend.splice(0)) agent.history.push({ role: "user", content: e.report })
+      }
+      return "ok"
+    },
+  })
+  const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
+  // running consult session → poolLive（挂起活度钩子——回合尾入挂起态）
+  ctx.agent._consultSessions = new Map([["c1", { id: "c1", pending: 2, stopped: false, controllers: [], replies: [] }]])
+  await runAgentTurn(ctx, "首回合")
+  assert.deepEqual(ctx.calls.runAgent.map((c) => c.text), ["首回合", ""], "用户回合 + 空闲 settle 触发的消化轮")
+  assert.equal(ctx.calls.runAgent[1].autoTurn, true, "消化轮是 autoTurn（不悬置到用户下次输入——T-R17j）")
+  assert.ok(ctx.agent.history.some((m) => String(m.content).includes("consultation #c1 finished")), "consult digest 注入模型上下文")
+  assert.equal(ctx.agent._pendingConsultResults?.length ?? 0, 0, "注入即消费")
+  assert.equal(ctx.agent._suspended, false, "退出后 _suspended 清除")
+  assert.equal(ctx.state.suspended, false, "池空自然退出")
+  assert.equal(ctx.state.status, "Ready")
+  assert.equal(ctx.agent._sessionAbort, null)
+})
+
+test("T-R17n/o escalate digest 与 consult pending 并存：一次合并消化轮各注各流（互不污染、注入一次）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, cbs, opts) => {
+      ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false, suspended: agent._suspended })
+      // 消化轮统一消费三族（真实路径 = agent.mjs run 首行三族注入）
+      const pend = agent._pendingAsyncResults
+      if (pend?.length) {
+        for (const e of pend.splice(0)) {
+          agent.history.push({ role: "user", content: `[System reminder: async subagent #${e.id} finished]\n${e.report}` })
+        }
+      }
+      const pendEsc = agent._pendingEscalateResults
+      if (pendEsc?.length) {
+        for (const e of pendEsc.splice(0)) {
+          agent.history.push({ role: "user", content: `[System reminder: async escalate #${e.id} finished — post-op report (mutations merged)]\n${e.report}` })
+        }
+      }
+      const pendCons = agent._pendingConsultResults
+      if (pendCons?.length) {
+        for (const e of pendCons.splice(0)) {
+          agent.history.push({ role: "user", content: e.report })
+        }
+      }
+      return "ok"
+    },
+  })
+  const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
+  // 挂起等待期：consult + escalate 双族 settle 到达（真实形态——settle 回调移交各流 + wake）
+  ctx.agent._consultSessions = new Map([["c1", { id: "c1", pending: 1, stopped: false }]])
+  ctx.agent._asyncSubagents = new Map()
+  const esc = {
+    id: "e1", role: "escalate", relayPrefix: "escalate#e1/", _pool: "other", status: "running",
+    report: null, error: null, done: false, cancelled: false, model: "kimi-k3",
+    promise: new Promise(() => {}), controller: null,
+  }
+  ctx.agent._asyncSubagents.set("e1", esc)
+  setTimeout(() => {
+    // consult session 全 settle → 独立流 + 会话离场
+    ctx.agent._consultSessions.delete("c1")
+    ctx.agent._pendingConsultResults ??= []
+    ctx.agent._pendingConsultResults.push({ id: "c1", role: "consult", report: "[System reminder: consultation #c1 finished — 1 of 1 models replied (0 failed)]\n- [openai:m-b]: 乙建议" })
+    // escalate settle（挂起分流形态：done 留池由 sweep 接管）
+    esc.status = "done"
+    esc.done = true
+    esc.report = "escalate (kimi:kimi-k3) post-op report:\n完成重构"
+    for (const w of (ctx.agent._asyncWaiters ?? []).splice(0)) { try { w() } catch { /* noop */ } }
+  }, 50)
+  await runAgentTurn(ctx, "首回合")
+  const autos = ctx.calls.runAgent.filter((c) => c.autoTurn)
+  assert.equal(autos.length, 1, "双族并存 → 一轮合并消化（N1——不逐族烧轮）")
+  assert.ok(ctx.agent.history.some((m) => String(m.content).includes("consultation #c1 finished")), "consult 条目注入")
+  assert.ok(ctx.agent.history.some((m) => String(m.content).includes("async escalate #e1 finished")), "escalate 条目注入（escalate 措辞——族隔离）")
+  assert.ok(ctx.agent.history.some((m) => String(m.content).includes("escalate (kimi:kimi-k3) post-op report")), "escalate 正文独立")
+  assert.equal(ctx.agent._pendingConsultResults?.length ?? 0, 0, "consult 流消费")
+  assert.equal(ctx.agent._pendingEscalateResults?.length ?? 0, 0, "escalate 流消费")
+  // 注入一次（T-R17o）：消化后池空自然退出——不重复烧轮
+  assert.equal(ctx.state.suspended, false)
+  assert.equal(ctx.state.status, "Ready")
+})
+
+test("T-R17p 手动档消化动作域：consult/escalate 族 digest = autoTurn 且无权限 handler（整理禁写——T-S7 同规则，无族例外）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, cbs, opts) => {
+      ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false })
+      // 记录 digest 回调装配（手动档 digestCtx 应剥掉权限/问答 handler——D-S7 装配契约）
+      if (opts?.autoTurn) {
+        ctx.calls.digestHasPermission = ctx.calls.digestHasPermission ?? []
+        ctx.calls.digestHasPermission.push({
+          onPermissionRequest: typeof cbs?.onPermissionRequest,
+          onQuestion: typeof cbs?.onQuestion,
+          hasBatch: typeof cbs?.onBatchPermissionRequest,
+        })
+      }
+      const pendCons = agent._pendingConsultResults
+      if (pendCons?.length) {
+        for (const e of pendCons.splice(0)) agent.history.push({ role: "user", content: e.report })
+      }
+      return "ok"
+    },
+  })
+  const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
+  // 挂起等待期 consult settle（模拟真实会话在挂起期完成）
+  ctx.agent._consultSessions = new Map([["c1", { id: "c1", pending: 1, stopped: false }]])
+  setTimeout(() => {
+    ctx.agent._consultSessions.delete("c1")
+    ctx.agent._pendingConsultResults ??= []
+    ctx.agent._pendingConsultResults.push({ id: "c1", role: "consult", report: "[System reminder: consultation #c1 finished]\n- [deepseek:m-a]: 建议" })
+    for (const w of (ctx.agent._asyncWaiters ?? []).splice(0)) { try { w() } catch { /* noop */ } }
+  }, 50)
+  await runAgentTurn(ctx, "首回合")
+  const digest = ctx.calls.digestHasPermission?.[0]
+  assert.ok(digest, "消化轮开跑")
+  assert.equal(ctx.calls.runAgent.filter((c) => c.autoTurn).length, 1, "consult settle → 手动档 digest")
+  // 手动档（无 autoApprove）：权限/问答 handler 全部剥除——撞权限门 denied 不悬挂
+  assert.equal(digest.onPermissionRequest, "undefined", "手动档 digest 无权限 handler（写拒绝不弹面板——D-S7）")
+  assert.equal(digest.onQuestion, "undefined", "无问答 handler")
+  assert.equal(digest.hasBatch, "undefined", "无批审批 handler")
+  assert.equal(ctx.state.suspended, false, "消化完自然退出")
+})
+
+test("escalate 挂起期 settle（_suspended）→ 独立流移交 + 消化轮 + 退出（escalate 面板驻留块同步回收）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, cbs, opts) => {
+      ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false })
+      const pendEsc = agent._pendingEscalateResults
+      if (pendEsc?.length) {
+        for (const e of pendEsc.splice(0)) agent.history.push({ role: "user", content: e.report })
+      }
+      return "ok"
+    },
+  })
+  const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
+  ctx.agent._asyncSubagents = new Map()
+  ctx.agent._asyncQueue = []
+  const esc = {
+    id: "3", role: "escalate", relayPrefix: "escalate#3/", _pool: "other", status: "running",
+    report: null, error: null, done: false, cancelled: false, model: "kimi-k3",
+    promise: new Promise(() => {}), controller: null,
+  }
+  ctx.agent._asyncSubagents.set("3", esc)
+  // 回合尾池 live（escalate running）→ 挂起会话；50ms 后 escalate settle（真实形态：
+  // done 留池 → driver sweep 按角色分流 _pendingEscalateResults——独立流）
+  setTimeout(() => {
+    esc.status = "done"
+    esc.done = true
+    esc.report = "escalate (kimi:kimi-k3) post-op report:\n重构完成"
+    for (const w of (ctx.agent._asyncWaiters ?? []).splice(0)) { try { w() } catch { /* noop */ } }
+  }, 50)
+  await runAgentTurn(ctx, "首回合")
+  assert.equal(ctx.calls.runAgent.filter((c) => c.autoTurn).length, 1, "escalate settle → 消化轮")
+  assert.ok(ctx.agent.history.some((m) => String(m.content).includes("escalate (kimi:kimi-k3) post-op report")), "escalate digest 注入（独立流——不混入子代理措辞）")
+  assert.equal(ctx.agent._pendingEscalateResults?.length ?? 0, 0, "消费即清")
+  assert.equal(ctx.state.suspended, false, "消化完自然退出")
+  assert.equal(ctx.state.status, "Ready")
+})
+

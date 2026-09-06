@@ -130,6 +130,20 @@ export function buildObjectDeclarationBlock(object = null) {
 }
 
 /**
+ * Approval-signal block for design reviews (round 1 and round 2+ — §24 D-24b:
+ * an async fix-round continuation must be able to re-approve, so the token is
+ * injected into EVERY design round; the reviewer echoes it only on a clean pass).
+ * Text shape = the round-1 block in buildAdvisorUserMessage (verbatim anchor).
+ */
+export function buildDesignApprovalBlock(designToken) {
+  return [
+    "## Approval Signal",
+    `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`,
+    "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If there are any 🔴 issues, do NOT include the token.",
+  ].join("\n")
+}
+
+/**
  * Build the user message for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior issue table
@@ -246,9 +260,7 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
     parts.push("5. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
     if (designToken) {
       parts.push("")
-      parts.push("## Approval Signal")
-      parts.push(`If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`)
-      parts.push("🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If there are any 🔴 issues, do NOT include the token.")
+      parts.push(buildDesignApprovalBlock(designToken))
     }
     return parts.join("\n")
   }

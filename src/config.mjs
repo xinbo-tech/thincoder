@@ -5,9 +5,9 @@
  * API key can fall back to environment variables (when not configured in providers).
  */
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 
 export const configDir = join(homedir(), ".thincoder")
 export const configPath = join(configDir, "config.json")
@@ -55,6 +55,14 @@ export const DEFAULTS = {
     advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
     engineering: false,   // strict methodology enforcement — read METHODOLOGY.md, design-before-code
+    // Async subagent pool limits per role domain (AGENT-LOOP.md §24 D-24a/R14):
+    // { engCoder, other } — eng-coder pool / other-role pool, defaults 4/4 (user
+    // ruling "eng-coder 四路，其他 4 路"). Runtime-validated at every pool admission
+    // (positive integer ≥1, invalid/absent keys fall back to 4 — settings tool and
+    // the /config 并发池 menu write this key; change applies to the next spawn).
+    // ⚠ 与 subagent-async.mjs ASYNC_POOL_LIMITS 逐键同值（运行时回退常量）——耦合锚
+    // T-24a4 断言锁住——勿单侧改默认。
+    poolLimits: { engCoder: 4, other: 4 },
   },
   memory: {
     dbPath: join(configDir, "memory.db"),
@@ -368,12 +376,52 @@ function mcpFingerprint(s) {
 }
 
 /**
- * Save configuration. Preserves providers list structure and activeProvider pointer.
- * providers[i].apiKey is only written when explicitly passed in (does not overwrite env-var-fallback keys).
+ * R10 F5（D-F5b，2026-09-06）——config.json 写前 mtime 门控收口函数（session-rename
+ * mtime-conflict 先例同型——MULTI-INSTANCE-COLLAB.md §2a.2）。所有 config.json 写点
+ * （config-helpers persistRaw / cmd-config saveProxy / cli setup-wizard / settings
+ * writeDisk）都经它落盘。
+ *
+ * 本函数持有整条「新鲜读 → mutate 单操作 → 写前重 stat → 写」链：
+ * - t0 = 写前重 stat 的比对基线，取在**新鲜读之前**（stat→read 序）：若对端在本端
+ *   stat 与 read 之间的微窗口写入，只会造成假冲突（放弃重试），绝不会带着旧内容覆盖
+ *   对端新值——read→stat 序存在漏检窗口（stat 已反映对端新 mtime → 门控放行旧内容）。
+ * - 写前重 stat ≠ t0 → **放弃**本次写（D-F5a 后各流已是 fresh 单操作语义，磁盘上对端
+ *   的新值保持在线不抹）；先 copy `.bak-{ts}` 留现场（仅冲突时——config 低频写不膨胀；
+ *   copy 而非 rename：冲突即放弃、本体不动，"保现场"是额外副本，非轮转腾位）。
+ * - 返回 { ok:false, reason:"mtime-conflict" }，调用方提示 "config changed on disk
+ *   concurrently — retry"——不自动合并（config 是用户显式操作——重试比猜测合并安全，
+ *   决策点① A）。
+ * - 文件缺失（首写）→ t0 = null；对端在本端读后创建 → null ≠ 新 mtime → 冲突放弃。
+ * - 畸形文件拒写（throw，绝不静默覆盖）；写后 chmod 0600 尽力而为（saveConfig 旧语义）。
+ *
+ * @param path config.json 路径（生产默认 configPath；测试注入 tmp 路径）
+ * @param mutate 在磁盘新鲜 raw 上执行单操作的同步回调（如 push/splice/单字段补丁）
+ * @returns { ok: true } | { ok: false, reason: "mtime-conflict" }
  */
-export function saveConfig(config) {
-  mkdirSync(configDir, { recursive: true })
+export function writeConfigAtomic(path, mutate) {
+  const mtimeOf = (p) => {
+    try { return statSync(p).mtimeMs } catch { return null } // 缺失 → null（t0 比对基线）
+  }
+  const t0 = mtimeOf(path) // stat 先于 read（安全方向——见头注释）
+  const text = existsSync(path) ? readFileSync(path, "utf8") : null
+  let raw = {}
+  if (text !== null) {
+    try {
+      raw = JSON.parse(text)
+    } catch (error) {
+      throw new Error(`config file not parseable — refusing to overwrite: ${path} — ${error.message}`, { cause: error })
+    }
+  }
+  mutate(raw)
+  const t1 = mtimeOf(path)
+  if (t0 !== t1) {
+    // 对端在我们新鲜读后改过磁盘 → 放弃本次写（对端内容保持在线）；.bak 副本留现场
+    try { if (existsSync(path)) copyFileSync(path, `${path}.bak-${Date.now()}`) } catch { /* 现场保留失败不阻断冲突报告 */ }
+    return { ok: false, reason: "mtime-conflict" }
+  }
+  mkdirSync(dirname(path), { recursive: true })
   // 0600: config.json contains API keys, must not be world-readable (POSIX; chmod is best-effort on Windows)
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", { encoding: "utf8", mode: 0o600 })
-  try { chmodSync(configPath, 0o600) } catch { /* may fail on Windows, ignore */ }
+  writeFileSync(path, JSON.stringify(raw, null, 2) + "\n", { encoding: "utf8", mode: 0o600 })
+  try { chmodSync(path, 0o600) } catch { /* may fail on Windows, ignore */ }
+  return { ok: true }
 }

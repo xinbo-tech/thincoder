@@ -58,9 +58,9 @@ If reading code isn't helping, run it. Write a test, add a log, bisect. Action b
 **Motivation**: comprehension cost is state, not line count — reading a 400-line monolith
 holds dozens of variables in mind at once; layering cuts the state domain per unit.
 Rules without the why degrade into gaming the metric (padding lines, squeezing comments,
-splitting by execution step) — the quantified scale below is a fallback, not a goal.
+splitting by execution step) — the quantified scale below is the yardstick — the motivation above explains the why, never a license to discount it.
 
-**Function-body scale (the primary yardstick):**
+**Function-body scale (the early-warning line):**
 
 | Lines | Verdict |
 |---|---|
@@ -69,9 +69,13 @@ splitting by execution step) — the quantified scale below is a fallback, not a
 | ≥100 | review: extract named sub-functions if the body has nameable stages |
 | ≥300 | must split: the function keeps only its backbone (named stage calls + data flow), details go into sub-functions |
 
-**File caps (fallback):** >300 advisory review; >500 hard limit. Functions before files:
-a file ≤500 containing an unsplit ≥300-line monolith is not done — splitting files without
-splitting monoliths is self-deception.
+| Lines | Verdict |
+|---|---|
+| ≤300 | normal |
+| >300 | review: extract modules if nameable units exist |
+| >500 | must split — hard limit, no exceptions, no relative-size defense |
+
+Functions before files: the function scale is the early-warning line; the file cap is the non-negotiable floor. **Relative size is never an exemption** — "only 500+, not as big as X" holds for some X at any size; the scale table is the only verdict. A file ≤500 containing an unsplit ≥300-line monolith is not done — splitting files without splitting monoliths is self-deception.
 
 **Principles:**
 1. One function = one concept — a hard-to-name function has the wrong scope.

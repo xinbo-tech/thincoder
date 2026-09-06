@@ -140,7 +140,7 @@ slow("verify: quick 模式下语法失败不能算通过（_verifyPassed=false�
 
 
 
-test("verify: doc-only 改动走快路径（不跑语法检查/测试/任务列表/自检清单）", async () => {
+slow("verify: doc-only 改动走快路径（不跑语法检查/测试/任务列表/自检清单）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-verify-doc-"))
   const { execSync } = await import("node:child_process")
   const git = (...a) => execSync(`git ${a.join(" ")}`, { cwd: dir, stdio: "ignore" })
@@ -203,7 +203,7 @@ slow("verify: mixed 改动（文档+代码）不走快路径，语法检查照�
 // ---------------------------------------------------------------- verify 定位（§18.12 T-VR —— _touchedFiles ∪ git diff）
 
 
-test("§18.12 T-VR1: cwd 非 git 根（workspace 根）——_touchedFiles 定向 + 相关测试按项目根解析（F-VR1 真实形态）", async () => {
+slow("§18.12 T-VR1: cwd 非 git 根（workspace 根）——_touchedFiles 定向 + 相关测试按项目根解析（F-VR1 真实形态）", async () => {
   const ws = mkdtempSync(join(tmpdir(), "thincoder-verify-vr1-"))
   try {
     const proj = join(ws, "proj")

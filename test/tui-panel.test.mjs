@@ -415,17 +415,65 @@ test("panel functions (§19.5 D-M7b 处置 #4——评审 #4, superseded by §20
 
 
 
-test("panel functions (§19.5 T-M25 渲染): 嵌套子标行 dim 样式——行首子标 gray、内容恢复 kind 色", async () => {
-  const { styleSubLabelRow } = await import("../src/tui/subagent-panel.mjs")
+test("panel functions (§27 R23 T-R23b.1/c.2 渲染): 嵌套子块——工具式头 `❯ explore#1 · model · elapsed` + tail/展开 + done 定格动词", async () => {
   const { ansi, C: CC } = await import("../src/tui/ansi.mjs")
-  // 行首子标行（renderBlockTimeline 形态——gutter + 字面子标 + 内容）
-  const toolRow = styleSubLabelRow({ text: "│ explore#1 · ❯ read — x", color: CC.tool })
-  assert.ok(toolRow.text.includes(`${ansi.gray}explore#1 · ${ansi.fg(6)}❯ read`), "工具行：子标 gray + 内容恢复 cyan（ANSI 注入）")
-  const textRow = styleSubLabelRow({ text: "│ explore#1 · 摘要", color: CC.text })
-  assert.ok(textRow.text.includes(`${ansi.gray}explore#1 · ${ansi.fg(7)}摘要`), "文本行同规则（恢复白）")
-  // 无子标行原样
-  const plain = styleSubLabelRow({ text: "│ 普通内容", color: CC.tool })
-  assert.equal(plain.text, "│ 普通内容")
+  const now = Date.now()
+  const mkChild = (over = {}) => ({
+    key: "explore#1", role: "explore", model: "deepseek-chat", started: now - 12000, done: false, doneAt: null, stopped: false,
+    blocks: [{ kind: "tool", text: "❯ read\nfile content\n" }, { kind: "text", text: "搜索结论" }],
+    currentTool: "read", toolArgs: null, approval: null, lastError: null, dropped: 0, blockEpoch: 1, children: [],
+    ...over,
+  })
+  const mkState = (child, expanded = new Set()) => tuiState({
+    subTasks: { "eng-coder#2": { key: "eng-coder#2", role: "eng-coder", async: true, model: "glm-5.3", blocks: [], done: false, started: now - 30000, currentTool: "explore#1/read", toolArgs: null, turn: 1, maxTurns: 100, approval: null, lastError: null, children: [child] } },
+    expandedBlocks: expanded,
+  })
+  // 折叠态（子块默认折叠）：头行 = `❯ explore#1 · model · Ns`（dim ❯/suffix 注入）+ tail 2
+  const folded = renderSubagentPanel(mkState(mkChild()), 100)
+  const head = folded.find((l) => l._foldToggle === "sub-eng-coder#2/explore#1")
+  assert.ok(head, "子块头行存在——折叠键 sub-{outerKey}/{innerPath}（D-R23e）")
+  const plain = String(head.text).replace(/\x1b\[[0-9;]*m/g, "")
+  assert.match(plain, /^❯ explore#1 · deepseek-chat · \d+s$/, `块头字段 role#N · model · elapsed（实际: ${plain}）`)
+  assert.ok(String(head.text).includes(`${ansi.gray}❯${ansi.fg(6)} explore#1`), "dim ❯ + role#N 亮（restore 行基色）")
+  assert.ok(String(head.text).includes(`${ansi.gray} · deepseek-chat · `), "model/elapsed dim（与 C 工具头同排式）")
+  const tailCount = folded.filter((l) => l.text?.includes("file content") || l.text?.includes("搜索结论")).length
+  assert.ok(tailCount > 0 && tailCount <= 2, `折叠态子块 tail ≤ 2（实际 ${tailCount}）`)
+  // 子块展开 → 全量内容可见（fold key toggle——fold-block 通用通道）
+  const expanded = renderSubagentPanel(mkState(mkChild(), new Set(["sub-eng-coder#2/explore#1"])), 100)
+  const joined = expanded.map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(joined.includes("file content") && joined.includes("搜索结论"), "展开显示子块全量内容")
+  // done 定格动词（子块尾定格 done Ns——F-R23c）；stopped 定格
+  const doneState = mkState(mkChild({ done: true, doneAt: now, stopped: false, currentTool: null }))
+  const doneHead = renderSubagentPanel(doneState, 100).find((l) => l._foldToggle === "sub-eng-coder#2/explore#1")
+  assert.match(String(doneHead.text).replace(/\x1b\[[0-9;]*m/g, ""), /❯ explore#1 · deepseek-chat · done \d+s/, "done 定格（done Ns——块尾动词）")
+  const stopState = mkState(mkChild({ done: true, doneAt: now, stopped: true, currentTool: null }))
+  const stopHead = renderSubagentPanel(stopState, 100).find((l) => l._foldToggle === "sub-eng-coder#2/explore#1")
+  assert.match(String(stopHead.text).replace(/\x1b\[[0-9;]*m/g, ""), /· stopped \d+s/, "stopped 定格")
+})
+
+test("panel functions (§27 R23 T-R23d.1 渲染): 冻结载体含子块——展开渲染正确 + 子块内容不落外层流", async () => {
+  const now = Date.now()
+  const child = {
+    key: "explore#1", role: "explore", model: "deepseek-chat", started: now - 8000, done: true, doneAt: now, stopped: false,
+    blocks: [{ kind: "tool", text: "❯ read\naudit result line\n" }], currentTool: null, toolArgs: null,
+    approval: null, lastError: null, dropped: 0, blockEpoch: 1, children: [],
+  }
+  const state = tuiState({
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { key: "eng-coder#2", role: "eng-coder", async: true, model: "glm-5.3", blocks: [{ kind: "text", text: "外层叙述" }], done: true, doneAt: now, started: now - 30000, stopped: false, currentTool: null, turn: 1, maxTurns: 100, approval: null, lastError: null, children: [child] } }],
+    expandedBlocks: new Set(["sub-eng-coder#2", "sub-eng-coder#2/explore#1"]),
+  })
+  const out = buildConvLines(state, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.match(out, /❯ explore#1 · deepseek-chat · done \d+s/, "冻结载体含子块头（done 定格）")
+  assert.ok(out.includes("audit result line"), "子块展开内容渲染（冻结载体含子块——T-R23d.1）")
+  assert.ok(out.includes("外层叙述"), "外层自身内容同在")
+  // 折叠态（外层不展开）：冻结 ✓ 头 + 子块头仍可见（子块折叠键独立于外层）
+  const state2 = tuiState({
+    lines: [{ text: "carrier", color: C.dim, _frozenSubTask: { ...state.lines[0]._frozenSubTask, blocks: [{ kind: "text", text: "外层叙述2" }] } }],
+    expandedBlocks: new Set(["sub-eng-coder#2/explore#1"]),
+  })
+  const out2 = buildConvLines(state2, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(out2.includes("[✓ eng-coder#2 · async · glm-5.3 · done 30s"), "冻结外层折叠头 ✓ + 定格")
+  assert.ok(out2.includes("audit result line"), "外层折叠态子块展开仍可见（独立折叠键）")
 })
 
 
@@ -457,6 +505,48 @@ test("panel functions (§7.2.1 T-H 修订): 窄带特有断言保留 — subPane
   }), { cols: 80, rows: 24 })
   assert.ok(running.panels.subagent, "运行中区块 → 面板槽恢复（§7.2.1 D1）")
 })
+
+
+test("panel functions (§27 R23 AC-3 mock 链): 生成侧发射 → TUI 路由 → 子块定格 → 面板渲染——嵌套 explore 全链（实跑冒烟的无网等价）", async () => {
+  // 组成 R23 全链：嵌套 wrapper（eng-coder 内 explore 的 ctx）→ emitNestedChildEvent
+  // （sync 完成补发射）→ routeSubToken（子块定格）→ renderSubagentPanel（工具式头
+  // done 定格）——除真实 provider 外与 eng-coder 实跑路径同构（AC-3 冒烟的无网等价）。
+  const { emitNestedChildEvent, wrapChildCallbacks } = await import("../src/agent/spawn-child.mjs")
+  const { routeSubToken, routeSubToolCall } = await import("../src/tui/subagent-blocks.mjs")
+  const state = tuiState()
+  const noop = () => {}
+  // eng-coder 启动（主会话 receive 路径——路由 callbacks 即 buildToolCallbacks 同构）
+  routeSubToken(state, "eng-coder#2/[model]glm-5.3", noop)
+  routeSubToken(state, "eng-coder#2/开始实现\n", noop)
+  // eng-coder 内 explore（audit）：relay 前缀经双层 wrapper 到达（主会话所见 = 全嵌套前缀）
+  const seen = []
+  const engWrapper = wrapChildCallbacks("eng-coder#2/", { onToken: (t) => routeSubToken(state, t, noop) })
+  const exploreCtx = { callbacks: { onToken: engWrapper.onToken } }
+  engWrapper.onToken("explore#1/[model]deepseek-chat")
+  engWrapper.onToken("explore#1/审计中")
+  routeSubToolCall(state, "eng-coder#2/explore#1/read", { path: "src/x.mjs" }, noop)
+  engWrapper.onToken("explore#1/文件内容行")
+  const outer = state.subTasks["eng-coder#2"]
+  const ch = outer.children[0]
+  assert.ok(ch && ch.key === "explore#1", "子块载体建在外层内")
+  // 面板渲染：子块头可见（running——elapsed 无动词）
+  const runningText = renderSubagentPanel(state, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(runningText.includes("❯ explore#1 · deepseek-chat ·"), "运行中子块头（模型可见——D-R23b）")
+  // explore 完成：生成侧补发射（完整嵌套前缀——AC-3 断言发射）→ 子块定格 done
+  assert.equal(emitNestedChildEvent(exploreCtx, "explore#1/", "done"), true)
+  assert.equal(ch.done, true, "内层 done → 子块定格（不悬空）")
+  assert.equal(outer.done, false, "外层 eng-coder 仍在跑")
+  const doneText = renderSubagentPanel(state, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(doneText.includes("❯ explore#1 · deepseek-chat · done 0s") || /❯ explore#1 · deepseek-chat · done \d+s/.test(doneText),
+    "子块头 done 定格（AC-3：explore 显示为块 + done 定格——实际: " + doneText.split("\n").find((l) => l.includes("explore#1")) + "）")
+  // 外层 abort 冻结 → 冻结载体含已定格子块（完整链收尾）
+  state.subTasks["eng-coder#2"].done = true
+  const { freezeDoneSubTasks } = await import("../src/tui/subagent-blocks.mjs")
+  freezeDoneSubTasks(state)
+  const frozenOut = buildConvLines(state, 100).map((l) => l.text.replace(/\x1b\[[0-9;]*m/g, "")).join("\n")
+  assert.ok(frozenOut.includes("❯ explore#1 · deepseek-chat · done"), "冻结载体含 done 子块头")
+})
+
 
 
 

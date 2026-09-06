@@ -579,6 +579,9 @@ test("T3b runAgent: 连续 3 次失败 → compressFallback 实际运行（面�
   // 2026-09-05 重校准 14000 → 15500：F-N1.4/1.5/1.6 提示词批（main.md 委托句 + discipline
   // 三条纪律 +~2K 字符 ≈ +550 token systemPrompt 估算——越 14000 刀锋——同族敏感（提示词
   // 文本增删 = schema 同效应）——沿革同惯例 +1500 档。
+  // 2026-09-06 重校准 15500 → 17000：R18+R19 批（system.md 长输出条款 + read_history path/
+  // cwd 参数与族表尾段 + recent_changes/memory/doc_search/code_search 互指句 ≈ +1.1K 字符
+  // ≈ +280 token schema 估算——首轮越线时机前移——同惯例 +1500 档）
   const script = [
     { fail: 400 }, { toolCall: { name: "noop" } },
     { fail: 400 }, { toolCall: { name: "noop" } },
@@ -592,7 +595,7 @@ test("T3b runAgent: 连续 3 次失败 → compressFallback 实际运行（面�
   try {
     const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
     const cwd = mkdtempSync(join(tmpdir(), "thincoder-compress-fallback-"))
-    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 15500 } }, cwd })
+    const agent = createAgent({ provider, tools: [noop], config: { agent: { compactThreshold: 17000 } }, cwd })
     agent.history = compressTestHistory()
     const state = mkCompressTuiState()
     const callbacks = await wireCompressTui(agent, state)

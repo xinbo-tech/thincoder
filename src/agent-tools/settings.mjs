@@ -7,9 +7,7 @@
  * （••••（masked）——防密钥泄漏进会话历史/trace）；已知键类型校验（类型表自动派生自
  * config.mjs DEFAULTS——不手写防漂移）；set 侧效走审批门（dispatch 动作级分类）。
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
-import { DEFAULTS, configPath } from "../config.mjs"
+import { DEFAULTS, configPath, writeConfigAtomic } from "../config.mjs"
 
 /** 敏感键段判定（完整点分路径的段级匹配——apiKey/api_key/api-key/token/secret/password 形态） */
 const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password)($|[._-])/i
@@ -91,16 +89,6 @@ function parseValue(raw) {
 export function settingsTool(opts = {}) {
   const cfgPath = opts.configPath ?? configPath // 测试注入 tmp 文件；默认全局 configPath
 
-  async function readDisk() {
-    let text
-    try { text = readFileSync(cfgPath, "utf8") } catch { return {} } // 不存在 → 空对象（写盘最小化——默认不固化）
-    try { return JSON.parse(text) } catch { throw new Error(`settings: config file not parseable — refusing to overwrite: ${cfgPath}`) }
-  }
-  async function writeDisk(disk) {
-    mkdirSync(join(cfgPath, ".."), { recursive: true })
-    writeFileSync(cfgPath, JSON.stringify(disk, null, 2) + "\n", { encoding: "utf8", mode: 0o600 })
-  }
-
   return {
     name: "settings",
     description:
@@ -150,10 +138,12 @@ export function settingsTool(opts = {}) {
           throw new Error(`settings set: "${args.key}" expects ${want} — got ${got} (${JSON.stringify(args.value)})`)
         }
       }
-      // 写盘（磁盘真相最小化：只改被设键——默认不固化）+ 热应用（内存对象）
-      const disk = await readDisk()
-      setKeyPath(disk, args.key, value)
-      await writeDisk(disk)
+      // 写盘（D-F5b：磁盘真相最小化——writeConfigAtomic 磁盘新鲜读 + 只改被设键 + mtime
+      // 门控——默认不固化；冲突/畸形抛错，内存不热应用（零虚假成功））+ 热应用（内存对象）
+      const r = await writeConfigAtomic(cfgPath, (disk) => {
+        setKeyPath(disk, args.key, value)
+      })
+      if (!r.ok) throw new Error("config changed on disk concurrently — retry (settings set not applied)")
       setKeyPath(config, args.key, value)
       const shown = isSensitiveKey(String(args.key)) ? MASKED : value
       return `settings set: ${args.key} = ${shown} (${Array.isArray(value) ? "array" : typeof value})${isSensitiveKey(String(args.key)) ? " — stored（值不回显）" : " — persisted + hot-applied（运行中已生效）"}`

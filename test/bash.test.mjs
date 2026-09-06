@@ -225,7 +225,7 @@ test("bash: cmd.exe 下 POSIX 痕迹提示（不拦截，仅前置警告）", as
 
 
 
-test("T-W2: bash 与文件工具对外部路径行为一致（同路径均可达）", async () => {
+slow("T-W2: bash 与文件工具对外部路径行为一致（同路径均可达）", async () => {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-scope2-"))
   try {
     const ws = join(dir, "ws")

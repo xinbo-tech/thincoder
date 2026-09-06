@@ -3,6 +3,7 @@
  * Source(s): subagent.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -68,7 +69,7 @@ const noopRead = { name: "read", description: "read a file", parameters: { type:
 
 
 
-test("§15 T6/T10/T11: 槽位队列——超限入队不拒绝 + 腾槽自动补位 + 位置递增", async () => {
+slow("§15 T6/T10/T11: 槽位队列——超限入队不拒绝 + 腾槽自动补位 + 位置递增", async () => {
   // s1 快（触发第一次腾槽补位）；s2/s3/s4 慢（保持 4 槽占满）；s5 也慢（补位后
   // 短暂窗口内 s6/s7 必须观察到 running=4 而入队）；s6/s7 快（补位后跑完收尾）。
   const { server, port } = await asyncServer([
@@ -197,7 +198,7 @@ test("§19.5 T-M27: queued 取消——出队移除 + position 前移 + 无 abor
 // ═══════════════════════════════════════════════════════════════════════════
 
 
-test("§20 T-SD1/T-SD8: 无调度参数 spawn → 立即启动（既有语义回归——零 queued 事件）；文件域不相交 → 并行（不误排）", async () => {
+slow("§20 T-SD1/T-SD8: 无调度参数 spawn → 立即启动（既有语义回归——零 queued 事件）；文件域不相交 → 并行（不误排）", async () => {
   const { server, port } = await asyncServer([
     { content: LONG_REPORT("占槽"), delay: 1500 },
     { content: LONG_REPORT("a 域"), delay: 1500 },
@@ -233,7 +234,7 @@ test("§20 T-SD1/T-SD8: 无调度参数 spawn → 立即启动（既有语义回
 
 
 
-test("§20 T-SD2/T-SD7: 同文件域冲突 spawn → waiting-deps（不入 running——status 显示原因——路径归一化）→ 域持有者 settle 自动补位启动", async () => {
+slow("§20 T-SD2/T-SD7: 同文件域冲突 spawn → waiting-deps（不入 running——status 显示原因——路径归一化）→ 域持有者 settle 自动补位启动", async () => {
   const { server, port } = await asyncServer([
     { content: LONG_REPORT("持域"), delay: 1200 },
     { content: LONG_REPORT("冲突者"), delay: 1200 },
@@ -277,7 +278,7 @@ test("§20 T-SD2/T-SD7: 同文件域冲突 spawn → waiting-deps（不入 runni
 
 
 
-test("§20 T-SD3: dependsOn 未满足 → queued（依赖原因）；依赖 settle → 自动补位启动", async () => {
+slow("§20 T-SD3: dependsOn 未满足 → queued（依赖原因）；依赖 settle → 自动补位启动", async () => {
   const { server, port } = await asyncServer([
     { content: LONG_REPORT("依赖目标"), delay: 1200 },
     { content: LONG_REPORT("依赖者"), delay: 900 },
@@ -305,7 +306,7 @@ test("§20 T-SD3: dependsOn 未满足 → queued（依赖原因）；依赖 sett
 
 
 
-test("§20 T-SD4: 多任务同依赖 → 释放后逐个启动到槽满（上限 4——D-SD4）", async () => {
+slow("§20 T-SD4: 多任务同依赖 → 释放后逐个启动到槽满（各域上限 4——按域计数——D-SD4）", async () => {
   const { server, port } = await asyncServer([
     { content: LONG_REPORT("被依赖"), delay: 1500 },
     { content: LONG_REPORT("依赖者1"), delay: 900 },
@@ -330,7 +331,7 @@ test("§20 T-SD4: 多任务同依赖 → 释放后逐个启动到槽满（上限
     assert.equal(
       [...parent._asyncSubagents.values()].filter((e) => e.status === "running").length,
       4,
-      "T-SD4: 一批依赖者同时解除 → 逐个启动到槽满（≤4）",
+      "T-SD4: 一批依赖者同时解除 → 逐个启动到槽满（≤4——各域上限——按域计数）",
     )
     await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
   } finally {
@@ -574,14 +575,14 @@ test("§20 T-SD13: sync spawn 带调度参数命中冲突 → 明确错误（不
     }
     const conflictParent = { config: { agent: {} }, _asyncSubagents: new Map([["1", holder]]), _asyncQueue: [], cwd }
     await assert.rejects(
-      subagentTool.execute({ task: "x", role: "coder", files: ["src/shared.mjs"] }, { agent: conflictParent, cwd, callbacks: {}, depth: 0 }),
+      subagentTool.execute({ task: "x", role: "coder", files: ["src/shared.mjs"], async: false }, { agent: conflictParent, cwd, callbacks: {}, depth: 0 }), // R12: sync 冲突错误测试钉 async:false（缺省已翻 async）
       /sync spawn \(async:false\) cannot queue/,
       "T-SD13: sync 冲突 → 明确错误（错误文本含处置建议）",
     )
     // ② 依赖未满足同拒（sync 不队列化）
     const depParent = { config: { agent: {} }, _asyncSubagents: new Map(), _asyncQueue: [], _asyncTombstones: new Map([["7", { status: "cancelled", role: "eng-coder" }]]), cwd }
     await assert.rejects(
-      subagentTool.execute({ task: "x", role: "coder", dependsOn: ["7"] }, { agent: depParent, cwd, callbacks: {}, depth: 0 }),
+      subagentTool.execute({ task: "x", role: "coder", dependsOn: ["7"], async: false }, { agent: depParent, cwd, callbacks: {}, depth: 0 }), // R12: 同上
       /sync spawn \(async:false\) cannot queue/,
       "T-SD13b: sync dependsOn 已取消依赖 → 同拒（不队列化）",
     )
@@ -589,7 +590,7 @@ test("§20 T-SD13: sync spawn 带调度参数命中冲突 → 明确错误（不
     const { server, port } = await asyncServer([{ content: LONG_REPORT("sync 无冲突") }])
     try {
       const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
-      const r = String(await subagentTool.execute({ task: "x", role: "coder", files: ["unrelated.mjs"] }, {
+      const r = String(await subagentTool.execute({ task: "x", role: "coder", files: ["unrelated.mjs"], async: false }, { // R12: 阻塞返回断言钉 async:false
         agent: parent, cwd, callbacks: {}, depth: 0,
       }))
       assert.ok(r.includes("sync 无冲突 report"), "sync spawn（带 files 无冲突）正常阻塞返回报告——语义零变更")
@@ -678,12 +679,121 @@ test("§20.8 T-F1.3 (cli): 文件级声明不误伤——spawn 正常进入运�
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
+// §28 R26：files 父侧文件拦截（AGENT-LOOP.md §28——F-R26b 黑名单机械校验——双端同构）
+// 校验宿主 = normalizeFileList（subagent-scheduler.mjs——spawn 入口共享单点——校验先于
+// 调度器准入 fail-closed——调用方 catch → 错误即工具结果——T-R26b.1..7）
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** §28 R26 F-R26b：黑名单命中提示模板（英文逐字定稿——X = 声明原样——违规全列）。 */
+const parentSideMsg = (f) =>
+  `Parent-side maintained file ${f} must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc`
+
+test("§28 T-R26b.1 (cli): files 含 docs/TODO.md → 拒绝 + 英文提示（父侧维护文件不入声明——fail-closed）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "cli-r26b1-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = { config: { agent: {} }, _asyncSubagents: new Map(), cwd }
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const r = JSON.parse(String(await subagentTool.execute({ task: "t", role: "coder", async: true, files: ["docs/TODO.md"] }, ctx)))
+    assert.equal(r.status, "error", "T-R26b.1: 结构化错误结果——错误即工具结果")
+    assert.ok(r.error.includes(parentSideMsg("docs/TODO.md")), "T-R26b.1: 英文提示逐字模板在（含被拒声明原样）")
+    assert.equal(parent._asyncSubagents.size, 0, "T-R26b.1: 校验先于调度器——无池条目/无排队残留")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§28 T-R26b.2 (cli): files 含 CHANGELOG.md → 拒绝 + 英文提示", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "cli-r26b2-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = { config: { agent: {} }, _asyncSubagents: new Map(), cwd }
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const r = JSON.parse(String(await subagentTool.execute({ task: "t", role: "coder", async: true, files: ["CHANGELOG.md"] }, ctx)))
+    assert.equal(r.status, "error", "T-R26b.2: 结构化错误结果")
+    assert.ok(r.error.includes(parentSideMsg("CHANGELOG.md")), "T-R26b.2: 英文提示逐字模板在（含被拒声明）")
+    assert.equal(parent._asyncSubagents.size, 0, "T-R26b.2: 无池条目残留")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§28 T-R26b.3 (cli): files 含 .thincoder/checklist.md → 拒绝 + 英文提示（点目录层也拦）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "cli-r26b3-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = { config: { agent: {} }, _asyncSubagents: new Map(), cwd }
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const r = JSON.parse(String(await subagentTool.execute({ task: "t", role: "coder", async: true, files: [".thincoder/checklist.md"] }, ctx)))
+    assert.equal(r.status, "error", "T-R26b.3: 结构化错误结果")
+    assert.ok(r.error.includes(parentSideMsg(".thincoder/checklist.md")), "T-R26b.3: 英文提示逐字模板在（checklist.md 精确拒）")
+    assert.equal(parent._asyncSubagents.size, 0, "T-R26b.3: 无池条目残留")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§28 T-R26b.7 (cli): files 含 checklist 前缀家族（checklist-notes.md/checklist-eng.md）→ 拒绝 + 全列", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "cli-r26b7-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = { config: { agent: {} }, _asyncSubagents: new Map(), cwd }
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const r = JSON.parse(String(await subagentTool.execute({ task: "t", role: "coder", async: true, files: ["checklist-notes.md", "checklist-eng.md"] }, ctx)))
+    assert.equal(r.status, "error", "T-R26b.7: 结构化错误结果")
+    assert.ok(r.error.includes(parentSideMsg("checklist-notes.md")), "T-R26b.7: 前缀家族条目 1 在提示内")
+    assert.ok(r.error.includes(parentSideMsg("checklist-eng.md")), "T-R26b.7: 前缀家族条目 2 在提示内")
+    assert.equal(r.error.split("\n").length, 2, "T-R26b.7: 提示列全部违规条目——不多不少")
+    assert.equal(parent._asyncSubagents.size, 0, "T-R26b.7: 无池条目残留")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§28 T-R26b.6 (cli): 变体——大小写 TODO.MD / 反斜杠 docs\\TODO.md / 混合清单 → 归一化后仍拒 + 提示列全部违规条目", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "cli-r26b6-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = { config: { agent: {} }, _asyncSubagents: new Map(), cwd }
+    const ctx = { agent: parent, cwd, callbacks: {}, depth: 0 }
+    const mixed = ["src/agent.mjs", "todo.MD", "docs\\TODO.md", "changelog.MD"]
+    const r = JSON.parse(String(await subagentTool.execute({ task: "t", role: "coder", async: true, files: mixed }, ctx)))
+    assert.equal(r.status, "error", "T-R26b.6: 混合清单含黑名单 → 拒绝（fail-closed）")
+    for (const f of ["todo.MD", "docs\\TODO.md", "changelog.MD"]) {
+      assert.ok(r.error.includes(parentSideMsg(f)), `T-R26b.6: 变体 ${f} 归一化后仍拒——提示含该声明原样`)
+    }
+    assert.ok(!r.error.includes("src/agent.mjs"), "T-R26b.6: 合法条目不在违规提示内（不误伤）")
+    assert.equal(r.error.split("\n").length, 3, "T-R26b.6: 提示列全部违规条目——不多不少")
+    assert.equal(parent._asyncSubagents.size, 0, "T-R26b.6: 无池条目残留")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§28 T-R26b.4/T-R26b.5 (cli): 设计文档（docs/design/AGENT-LOOP.md）+ 合法源文件（src/agent.mjs）声明 → 通过——不误伤（spawn 正常进入运行时）", async () => {
+  const { server, port } = await asyncServer([{ content: LONG_REPORT("r26 域子代理") }])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-r26bp-"))
+  try {
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const ctx = tokenCtx(parent, cwd, [])
+    const ok = JSON.parse(String(await subagentTool.execute({ task: "r26 域子代理", role: "coder", async: true, files: ["docs/design/AGENT-LOOP.md", "src/agent.mjs"] }, ctx)))
+    assert.equal(ok.status, "running", "T-R26b.4/5: 设计文档 + 合法源文件声明 → 正常启动（黑名单不误伤——零回归）")
+    await Promise.allSettled([...parent._asyncSubagents.values()].map((e) => e.promise))
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 // §21.1 调度器环形死锁修正（AGENT-LOOP.md §21.1——D-SL1.1/1.2——T-SL 系）
 // T-SL3（零破坏回归）= 本文件上面既有 §20 T-SD1..14 全绿——随文件运行覆盖（无需
 // 独立用例——同一套断言）；T-SL1/T-SL2/T-SL4 独立用例见下。
 // ═══════════════════════════════════════════════════════════════════════════
 
-test("§21.1 T-SL1: 两 queued 同文件——先入可启动/后入阻塞——不互等（展示断言：status/面板只列真正阻断者——后入者不列）", async () => {
+slow("§21.1 T-SL1: 两 queued 同文件——先入可启动/后入阻塞——不互等（展示断言：status/面板只列真正阻断者——后入者不列）", async () => {
   // 4 槽占满（长延迟）→ q1/q2 同文件均 queued——旧代码：两 queued 互等（环形死锁——
   // 先入被后入阻断 return false——永不启动）；新代码：先入不被后入阻断。
   // route 模式（正文路由——cancel 中止请求不达 server 端不产生索引错位——确定性）；
@@ -783,7 +893,7 @@ test("§21.1 T-SL2: 单任务无冲突——准入正常（零破坏回归）", 
   }
 })
 
-test("§21.1 T-SL4: 三 queued 同文件链——按序逐一启动——无环（先到先得）", async () => {
+slow("§21.1 T-SL4: 三 queued 同文件链——按序逐一启动——无环（先到先得）", async () => {
   // route 模式：占槽慢（6s——恒占槽）、链任务中速（800ms——running 窗口内断言
   // "后链接仍排队"）；正文路由——cancel 中止请求不达 server 端不产生索引错位。
   const { server, port } = await asyncServer([], (parsed, bodyText) => {
@@ -999,6 +1109,186 @@ test("§21.1 P-SL2（D-SL2）停滞检测⑤: 单 queued 不报——status 无�
   assert.equal(detectStall(agent), null, "T-SL2-⑤: 单 queued → 不报（停滞需 queued ≥ 2——闭包无从谈起）")
   const ov = JSON.parse(String(await subagentTool.execute({ action: "status" }, ctx)))
   assert.equal(ov.overview.stall, undefined, "T-SL2-⑤: status 无停滞标记（不误报）")
+})
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §24 D-24a/R14 角色分池 + 可配置（2026-09-06——T-24a1..4；T-24a5 /config 入口在
+// cmd-config.test.mjs）。断言面（修正 #7）：§15 T6/T11、§17 T-S4、§20 T-SD4 同域
+// 语义不变——本文件既有用例（单域填充——other 池）即回归面；跨域差异（互不排队、
+// 总量 8）由 T-24a1/a2 实证。域映射单一事实源 = poolDomainOf（subagent.mjs ROLES
+// 枚举装配：explore/plan/coder/eng-coder——未知角色归 other）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** eng-coder spawn 需 token 槽位（T-E9 mintToken 同款——uuid:expiresAt 无签名凭证）
+ *  + 父会话 engineering 模式（subagent.mjs 模式互斥门——eng-coder 仅工程模式）。 */
+async function spawnEngAsync(parent, cwd, task) {
+  parent.config ??= {}
+  parent.config.agent ??= {}
+  parent.config.agent.engineering = true
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const seed = crypto.randomUUID()
+  const designToken = `${seed}:${Date.now() + 24 * 3600 * 1000}`
+  parent._engDesignTokens ??= new Map()
+  parent._engDesignTokens.set(seed, designToken)
+  parent._engDesignToken = designToken
+  const r = String(await subagentTool.execute(
+    { task, role: "eng-coder", async: true, designId: seed, designToken },
+    { agent: parent, cwd, callbacks: {}, depth: 0 },
+  ))
+  return JSON.parse(r)
+}
+
+/** 其他域 spawn（explore——只读角色——other 池）。 */
+async function spawnExploreAsync(parent, cwd, task) {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const r = String(await subagentTool.execute({ task, role: "explore", async: true }, { agent: parent, cwd, callbacks: {}, depth: 0 }))
+  return JSON.parse(r)
+}
+
+slow("§24 T-24a1: 分池默认——2 eng-coder + 3 explore async spawn——各域独立计数互不排队", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 8 }, () => ({ content: LONG_REPORT("占槽"), delay: 6000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-24a1-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const eng1 = await spawnEngAsync(parent, cwd, "eng1")
+    const eng2 = await spawnEngAsync(parent, cwd, "eng2")
+    assert.equal(eng1.status, "running")
+    assert.equal(eng2.status, "running")
+    for (let n = 1; n <= 3; n++) {
+      const ex = await spawnExploreAsync(parent, cwd, `ex${n}`)
+      assert.equal(ex.status, "running", `T-24a1: explore #${n} 立即启动——other 池不排 eng 队（即使 eng 域已占 2）`)
+    }
+    assert.equal(parent._asyncQueue.length, 0, "T-24a1: 无排队条目（全启动）")
+    const running = [...parent._asyncSubagents.values()].filter((e) => e.status === "running")
+    assert.equal(running.length, 5, "T-24a1: 5 全 running")
+    assert.equal(running.filter((e) => e._pool === "engCoder").length, 2, "eng-coder 域 running 2")
+    assert.equal(running.filter((e) => e._pool === "other").length, 3, "other 域 running 3")
+    assert.ok(running.every((e) => e._pool === (e.role === "eng-coder" ? "engCoder" : "other")), "条目 _pool 字段 = poolDomainOf(role)")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+slow("§24 T-24a2: 分池满员——eng 域 4 running + 1 queued 时 explore spawn 立即启动（other 池空——不排 eng 队）", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 10 }, () => ({ content: LONG_REPORT("占槽"), delay: 6000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-24a2-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    const fillers = []
+    for (let n = 1; n <= 4; n++) {
+      const f = await spawnEngAsync(parent, cwd, `占槽${n}`)
+      assert.equal(f.status, "running", `前置：第 ${n} 个 eng 启动`)
+      fillers.push(f)
+    }
+    const e5 = await spawnEngAsync(parent, cwd, "第5个eng")
+    assert.equal(e5.status, "queued", "T-24a2: 第 5 个 eng-coder 入队（eng 域 4/4——同域语义不变——T6）")
+    assert.equal(e5.position, 1, "T-24a2: position 1")
+    const ex = await spawnExploreAsync(parent, cwd, "explore 探路")
+    assert.equal(ex.status, "running", "T-24a2: explore 立即启动——other 池空——不排 eng 队（修正 #7 跨域差异）")
+    assert.equal(parent._asyncQueue.length, 1, "队列仅剩 eng 排队项")
+    assert.equal([...parent._asyncSubagents.values()].filter((e) => e.status === "running").length, 5, "running = 4 eng + 1 explore（跨域总量 5——各域上限内）")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+slow("§24 T-24a3: 配置生效——poolLimits {engCoder:2, other:6}——第 3 个 eng queued；第 7 个 explore queued（运行期读——变更即生效下个 spawn）", async () => {
+  const { server, port } = await asyncServer(Array.from({ length: 12 }, () => ({ content: LONG_REPORT("占槽"), delay: 6000 })))
+  const cwd = mkdtempSync(join(tmpdir(), "cli-24a3-"))
+  try {
+    const parent = await asyncParent({ baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }, cwd)
+    parent.config.agent.poolLimits = { engCoder: 2, other: 6 } // 运行期配置（/config·settings 同键）
+    const e1 = await spawnEngAsync(parent, cwd, "e1")
+    const e2 = await spawnEngAsync(parent, cwd, "e2")
+    assert.equal(e1.status, "running")
+    assert.equal(e2.status, "running")
+    const e3 = await spawnEngAsync(parent, cwd, "e3")
+    assert.equal(e3.status, "queued", "T-24a3: 第 3 个 eng-coder queued（配置 2 生效）")
+    assert.equal(e3.position, 1)
+    const others = []
+    for (let n = 1; n <= 7; n++) others.push(await spawnExploreAsync(parent, cwd, `x${n}`))
+    for (let n = 0; n < 6; n++) assert.equal(others[n].status, "running", `T-24a3: explore #${n + 1} running（other 上限 6）`)
+    assert.equal(others[6].status, "queued", "T-24a3: 第 7 个 explore queued")
+    assert.equal(others[6].position, 2, "队列 [e3, x7]——position 2")
+    // 变更即时生效（下个 spawn 读新值）：eng 域调到 4 → e4 立即启动；已排队条目
+    // （e3/x7）在下次 settle 触发补位时才启动（补位 = settle/cancel 驱动——D-SD4）
+    parent.config.agent.poolLimits = { engCoder: 4, other: 6 }
+    const e4 = await spawnEngAsync(parent, cwd, "e4")
+    assert.equal(e4.status, "running", "T-24a3: 配置变更后下个 spawn 即生效（不缓存）")
+    assert.equal(parent._asyncQueue.length, 2, "队列 [e3, x7] 仍排队（无 settle——补位未触发）")
+    assert.equal(parent._asyncQueue[0].id, Number(e3.id), "e3 仍在队首")
+    assert.equal(parent._asyncQueue[1].id, Number(others[6].id), "x7 仍在其后")
+    // 补位按域：cancel 一个 running eng → 腾出 eng 槽 → 队首 e3 自动启动（x7 仍排——
+    // other 池 6/6 满——域感知补位：只启动有槽的域的队首可运行条目）
+    const c = JSON.parse(String(await (await import("../src/agent-tools/subagent.mjs")).subagentTool.execute(
+      { action: "cancel", id: e1.id }, { agent: parent, cwd, callbacks: {}, depth: 0 },
+    )))
+    assert.equal(c.status, "cancelled")
+    await waitFor(() => parent._asyncSubagents.get(String(e3.id))?.status === "running", 6000)
+    assert.equal(parent._asyncSubagents.get(String(others[6].id))?.status, "queued", "x7 仍排队（other 池满——域感知补位）")
+    assert.equal(parent._asyncQueue.length, 1, "队列仅剩 x7")
+    // 释放 other 槽（cancel x6）→ x7 补位启动
+    JSON.parse(String(await (await import("../src/agent-tools/subagent.mjs")).subagentTool.execute(
+      { action: "cancel", id: others[5].id }, { agent: parent, cwd, callbacks: {}, depth: 0 },
+    )))
+    await waitFor(() => parent._asyncSubagents.get(String(others[6].id))?.status === "running", 6000)
+    assert.equal(parent._asyncQueue.length, 0, "x7 启动——队列空")
+    parent._asyncSubagents.clear()
+    parent._asyncQueue = []
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§24 T-24a4: 配置校验——0/-1/\"abc\"/缺失/畸形形态 → 回退默认 4/4（每键独立 + 文案）", async () => {
+  const { resolvePoolLimits, poolLimitsFor } = await import("../src/agent-tools/subagent-async.mjs")
+  // 默认值耦合锚（review round1 🔵 #2）：config DEFAULTS（settings 类型表 / loadConfig
+  // 合并源）与运行时回退常量 ASYNC_POOL_LIMITS 逐键相等——单侧漂移立即红
+  const { DEFAULTS } = await import("../src/config.mjs")
+  assert.deepEqual(DEFAULTS.agent.poolLimits, { engCoder: 4, other: 4 }, "config DEFAULTS 默认 4/4（用户裁定）")
+  const { ASYNC_POOL_LIMITS } = await import("../src/agent-tools/subagent-async.mjs")
+  assert.deepEqual(DEFAULTS.agent.poolLimits, ASYNC_POOL_LIMITS, "DEFAULTS 与运行时回退常量同源（防单侧漂移）")
+  // 纯校验：缺失/非对象/畸形 → 4/4
+  assert.deepEqual(resolvePoolLimits(undefined), { engCoder: 4, other: 4 })
+  assert.deepEqual(resolvePoolLimits(null), { engCoder: 4, other: 4 })
+  assert.deepEqual(resolvePoolLimits("abc"), { engCoder: 4, other: 4 })
+  assert.deepEqual(resolvePoolLimits(0), { engCoder: 4, other: 4 })
+  assert.deepEqual(resolvePoolLimits([2, 3]), { engCoder: 4, other: 4 }, "数组畸形 → 回退")
+  // 逐键独立：非法键回退本域、合法键保留；部分配置自然生效
+  assert.deepEqual(resolvePoolLimits({}), { engCoder: 4, other: 4 }, "空对象 → 默认")
+  assert.deepEqual(resolvePoolLimits({ engCoder: 0, other: -1 }), { engCoder: 4, other: 4 }, "0/-1 → 4/4")
+  assert.deepEqual(resolvePoolLimits({ engCoder: "abc", other: 6 }), { engCoder: 4, other: 6 }, "\"abc\" 键回退、other 保留")
+  assert.deepEqual(resolvePoolLimits({ engCoder: 2 }), { engCoder: 2, other: 4 }, "部分配置（settings 逐键写）——未设键默认")
+  assert.deepEqual(resolvePoolLimits({ engCoder: 2.5, other: 2 }), { engCoder: 4, other: 2 }, "非整数回退")
+  assert.deepEqual(resolvePoolLimits({ engCoder: 2, other: 6 }), { engCoder: 2, other: 6 }, "合法值原样")
+  // poolLimitsFor：运行期读 + 一次性回退文案（console.warn——warnedModels 先例）
+  const warns = []
+  const origWarn = console.warn
+  console.warn = (m) => warns.push(String(m))
+  try {
+    assert.deepEqual(poolLimitsFor({ config: { agent: { poolLimits: { engCoder: 0, other: 6 } } } }), { engCoder: 4, other: 6 })
+    assert.deepEqual(poolLimitsFor({ config: { agent: { poolLimits: "abc" } } }), { engCoder: 4, other: 4 })
+    assert.deepEqual(poolLimitsFor({ config: { agent: {} } }), { engCoder: 4, other: 4 }, "键缺失 → 默认无文案")
+  } finally {
+    console.warn = origWarn
+  }
+  assert.ok(warns.length >= 2, "T-24a4: 非法值回退带文案（poolLimits.engCoder / shape）")
+  assert.ok(warns.some((w) => w.includes("agent.poolLimits") && w.includes("falling back to default")), "文案含回退语义")
+  // 去重：同形态重复读不再刷屏
+  const warns2 = []
+  console.warn = (m) => warns2.push(String(m))
+  try { poolLimitsFor({ config: { agent: { poolLimits: { engCoder: 0 } } } }) } finally { console.warn = origWarn }
+  assert.equal(warns2.length, 0, "同形态非法值一次性警告（不刷屏）")
+  // 无配置 agent（undefined config）→ 默认（不崩）
+  assert.deepEqual(poolLimitsFor({}), { engCoder: 4, other: 4 })
 })
 
 

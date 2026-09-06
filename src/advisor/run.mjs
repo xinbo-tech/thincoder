@@ -10,11 +10,11 @@ import { appendCitationReport } from "./citations.mjs"
 import { describeToolArgs } from "../tui/tool-args.mjs"
 
 const MAX_ADVISOR_TURNS = 100
-// Mechanical convergence cap: the protocol assumes up to 5 rounds suffice
-// (full review, verify+fix cycles, strict verification). A 6th call means the
-// model is looping — refuse it instead of burning tokens on a review that cannot
-// converge. Code AND design reviews share the 5-round budget (each advances
-// _advisorRound in agent.mjs; the cap no longer exempts design).
+// Mechanical convergence cap: up to 5 rounds suffice (full review, verify+fix
+// cycles, strict verification); a 6th call means the model is looping — refuse it
+// instead of burning tokens. §24 D-24b (2026-09-06): PER REVIEW INSTANCE — the
+// launch path scopes agent._advisorRound to the current instance (agent._advisorRuns —
+// advisor-async.mjs); design/code no longer share one run-global budget (§2 superseded).
 export const MAX_ADVISOR_ROUNDS = 5
 
 // NOTE: prompts/advisor-round{1,2,3}.md encourage the model to finish within
@@ -221,7 +221,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     // already streamed into the timeline via onText; fall back to
     // response.content only if nothing was recorded.
     if (!response.toolCalls?.length) {
-      if (!response.content?.trim()) return renderTimeline(timeline) || "Advisor: (empty response — review was inconclusive)"
+      if (!response.content?.trim()) return renderTimeline(timeline) || "Advisor: empty response — review was inconclusive"
       return renderTimeline(timeline) || response.content.trim()
     }
 
@@ -388,15 +388,31 @@ function extractUnfixedIssues(priorText) {
     .filter(Boolean)
     .slice(0, MAX_UNFIXED_DISPLAY)
 }
+/** Review-looking guard (async settle parity): a markdown table row or ≥200 chars of prose counts as a prior. */
+export function looksLikeReviewOutput(text) {
+  const trimmed = String(text ?? "").trim()
+  return /\|.*\|.*\|/.test(trimmed) || trimmed.length >= 200
+}
+/** Cap message (shared by runAdvisorReview and the async pre-check — per-review refusal). */
+export function buildCapMessage(agent) {
+  const prior = agent._lastAdvisorOutput
+  const unfixed = prior ? extractUnfixedIssues(prior) : []
+  let message = `Advisor: convergence cap reached after ${MAX_ADVISOR_ROUNDS} rounds.\n`
+  if (unfixed.length > 0) {
+    message += `\nUnresolved issues from prior rounds:\n${unfixed.map((i) => `- ${i}`).join("\n")}\n`
+  } else {
+    message += "\nAll prior issues appear resolved.\n"
+  }
+  message += "\nOptions:\n1. Accept current state and proceed\n2. Manually review specific concerns with read/grep\n3. Start a new session (/new) to reset the advisor"
+  return message
+}
 
 /**
  * Run an advisor review. reviewType: "code" (default) or "design". Returns review text or null when skipped.
  * @param {string|null} [designToken] — injected into the design-review prompt; the advisor echoes it only on approval.
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review.
- * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3):
- *   { type, target, status, reason, exclude }; mechanically injected at the
- *   start of every review round's user message. Absent → legacy behavior (no injection).
+ * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3): { type, target, status, reason, exclude }; absent → legacy behavior (no injection).
  */
 export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null) {
   const onOutput = callbacks?.onOutput
@@ -408,25 +424,13 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // switch; only the guard (completion pushback) is opt-in via advisor.guard.
 
   // Mechanical convergence cap — refuse further reviews once the protocol has run
-  // its rounds. _advisorRound counts completed advisor calls (incremented by the
-  // agent after each one — code AND design reviews alike), so >= MAX_ADVISOR_ROUNDS
-  // blocks the next call. 5 rounds max; after that the review is never pushed back
+  // its rounds. The launch path scopes agent._advisorRound to the current review
+  // instance (§24 D-24b ③ — per-review rounds; legacy direct callers keep the
+  // run-global counter), so >= MAX_ADVISOR_ROUNDS blocks the next call of THIS
+  // instance. 5 rounds max; after that the review is never pushed back
   // (the caller decides: accept, manual re-check, or /new to reset).
   if ((agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
-    // Summarize unresolved items from the last review output for guidance
-    // (line-level status-word scan — no table-header parsing, decision 2026-08-08).
-    const prior = agent._lastAdvisorOutput
-    const unfixed = prior ? extractUnfixedIssues(prior) : []
-    
-    let message = `Advisor: convergence cap reached after ${MAX_ADVISOR_ROUNDS} rounds.\n`
-    if (unfixed.length > 0) {
-      message += `\nUnresolved issues from prior rounds:\n${unfixed.map((i) => `- ${i}`).join("\n")}\n`
-    } else {
-      message += "\nAll prior issues appear resolved.\n"
-    }
-    message += "\nOptions:\n1. Accept current state and proceed\n2. Manually review specific concerns with read/grep\n3. Start a new session (/new) to reset the advisor"
-    
-    return message
+    return buildCapMessage(agent)
   }
 
   const provider = resolveAdvisorProvider(agent)
@@ -454,8 +458,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
       // table row (`| a | b | c |`) or substantial prose (>200 chars). An
       // empty or tool-progress-only reply must not become the "prior review"
       // of round 2+.
-      const trimmed = final.trim()
-      const looksLikeReview = /\|.*\|.*\|/.test(trimmed) || trimmed.length >= 200
+      const looksLikeReview = looksLikeReviewOutput(final)
       if (looksLikeReview) {
         agent._lastAdvisorOutput = final
       }

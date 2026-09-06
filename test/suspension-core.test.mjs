@@ -3,6 +3,7 @@
  * Source(s): suspension.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -116,7 +117,7 @@ function driverCtx(overrides = {}) {
 }
 const cleanups = []
 
-test("T-S1 回合尾不阻塞 + T-S2 注入不丢（§17 D-S1/D-S3）", async () => {
+slow("T-S1 回合尾不阻塞 + T-S2 注入不丢（§17 D-S1/D-S3）", async () => {
   const { createServer } = await import("node:http")
   // 内容分流：子代理请求带任务文本（"后台慢活"）；父回合请求只含工具参数（转义）。
   const server = createServer((req, res) => {
@@ -172,7 +173,7 @@ test("T-S1 回合尾不阻塞 + T-S2 注入不丢（§17 D-S1/D-S3）", async ()
 
 
 
-test("T-S2b 挂起期 settle → pending → 下回合 prepareRun 前注入（D-S3 ② 单注入点）", async () => {
+slow("T-S2b 挂起期 settle → pending → 下回合 prepareRun 前注入（D-S3 ② 单注入点）", async () => {
   const { server, port } = await asyncServer([
     { content: LONG_REPORT("挂起完成"), delay: 200 }, // 子代理（第 1 请求，延迟保证 settle 晚于 _suspended 置位）
     { content: "回合2回复" },             // 父回合 2
@@ -209,7 +210,7 @@ await waitFor(() => (parent._pendingAsyncResults?.length ?? 0) === 1)
 
 
 
-test("T-S4 叠加并发：跨回合 async 池累积（agent 级，上限 4 全局）", async () => {
+test("T-S4 叠加并发：跨回合 async 池累积（agent 级，各域上限 4——§24 D-24a 修正 #7：同域仍 4、跨域独立）", async () => {
   const { server, port } = await asyncServer([
     { content: LONG_REPORT("A") },
     { content: LONG_REPORT("B") },
@@ -820,7 +821,7 @@ async function mintToken(uuid, expiresAt) {
 }
 
 
-test("T-E9: eng-coder 缺省 async 双通道——后台运行中用户输入照常开新回合；交付 settle 后下轮注入（§18 F5/§15 回归）", async () => {
+slow("T-E9: eng-coder 缺省 async 双通道——后台运行中用户输入照常开新回合；交付 settle 后下轮注入（§18 F5/§15 回归）", async () => {
   const { createServer } = await import("node:http")
   const token = await mintToken("e9e9e9e9-9999-4999-8999-0000000000e9", Date.now() + 24 * 3600 * 1000)
   const server = createServer((req, res) => {
@@ -960,3 +961,104 @@ test("T-E11: 交付报告 digest 消化——手动档 auto-turn 注入报告（
     rmSync(cwd, { recursive: true, force: true })
   }
 })
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §24 D-24c/R15 排队用户指令合并（2026-09-06——T-24c1..3；T-24c4 零回归 =
+// 本文件既有 T-S9/T-S17/T-S11 系列全绿——单条消息路径行为不变即回归断言）。
+// 常量锚：MAX_MERGE_ITEMS=8 / MAX_MERGE_CHARS=2000（双端逐字一致）；消费点 =
+// 挂起消化后（suspension-drive 输入优先步）与普通回合间（agent-turn 队列循环）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+test("§24 T-24c1: 输入合并——digest 运行中连发 3 条消息 → 下一回合单条合并注入（编号 1-3——模型一次处理）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, _cbs, opts) => {
+      ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false })
+      if (opts?.autoTurn) {
+        // digest 模拟：消化中（150ms）用户连发 3 条（40/60/80ms 入队 pendingInput）
+        setTimeout(() => { ctx.state.pendingInput.push("第一条消息") }, 40)
+        setTimeout(() => { ctx.state.pendingInput.push("第二条消息") }, 60)
+        setTimeout(() => { ctx.state.pendingInput.push("第三条消息") }, 80)
+        await new Promise((r) => setTimeout(r, 150))
+      }
+      const pend = agent._pendingAsyncResults
+      if (pend?.length) {
+        for (const e of pend.splice(0)) agent.history.push({ role: "user", content: `[reminder ${e.id}]` })
+      }
+      return "ok"
+    },
+  })
+  const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
+  const A = fakeEntry(ctx.agent, 1)
+  setTimeout(() => mockSettle(ctx.agent, A, "A 结果"), 50)
+  await runAgentTurn(ctx, "首回合")
+  const texts = ctx.calls.runAgent.map((c) => c.text)
+  assert.deepEqual(texts.slice(0, 2), ["首回合", ""], "首回合 + digest 轮")
+  assert.equal(ctx.calls.runAgent[1].autoTurn, true)
+  assert.equal(texts.length, 3, "3 条排队消息 → 单回合（非 3 回合）")
+  const merged = texts[2]
+  assert.equal(ctx.calls.runAgent[2].autoTurn, false, "合并轮 = 用户回合")
+  assert.ok(merged.includes("你排队了 3 条消息"), "T-24c1: 合并注入头部（N=3）")
+  assert.ok(merged.includes("1. 第一条消息") && merged.includes("2. 第二条消息") && merged.includes("3. 第三条消息"), "T-24c1: 编号 1-3 逐条列出")
+  assert.ok(merged.includes("一次处理"), "合并注入引导语")
+  assert.equal(ctx.state.pendingInput.length, 0, "pendingInput 全部消费（不丢）")
+  assert.equal(ctx.state.queue.length, 0)
+})
+
+test("§24 T-24c2: /cmd 保序——排队含 /status + 文本 → /cmd 逐条即时执行、文本进合并（普通回合间——释放窗口兜底路径）", async () => {
+  const ctx = trackedCtx({
+    runAgent: async (agent, text, _cbs, opts) => {
+      ctx.calls.runAgent.push({ text, autoTurn: opts?.autoTurn ?? false })
+      return "ok"
+    },
+  })
+  const { runAgentTurn } = await import("../src/tui/agent-turn.mjs")
+  // 释放窗口（池空兜底）：pendingInput → state.queue {text} → 队列循环消费
+  // （普通回合间消费点——agent-turn.mjs 尾部 while）——含一条 slash 两条文本
+  ctx.state.pendingInput.push("/status")
+  ctx.state.pendingInput.push("文本一")
+  ctx.state.pendingInput.push("文本二")
+  await runAgentTurn(ctx, "首回合")
+  assert.deepEqual(ctx.calls.slash, ["/status"], "T-24c2: /cmd 即时执行（不经合并）")
+  const texts = ctx.calls.runAgent.map((c) => c.text)
+  assert.equal(texts.length, 2, "/cmd 无模型回合 + 文本一次合并 = 1 回合")
+  const merged = texts[1]
+  assert.ok(merged.includes("你排队了 2 条消息"), "T-24c2: 文本进合并（编号 2 条）")
+  assert.ok(merged.includes("1. 文本一") && merged.includes("2. 文本二"), "T-24c2: 文本按排队序编号")
+  assert.equal(ctx.state.queue.length, 0, "队列清空")
+  assert.equal(ctx.state.pendingInput.length, 0)
+})
+
+test("§24 T-24c3: 合并上限数值化——12 条排队 → 截批前 8 条（余 4 下批）；单条 >2000 字符直发不进批", async () => {
+  const { planQueuedInput, formatMergedMessages, MAX_MERGE_ITEMS, MAX_MERGE_CHARS } = await import("../src/tui/suspension-drive.mjs")
+  assert.equal(MAX_MERGE_ITEMS, 8, "常量锚 MAX_MERGE_ITEMS = 8（双端逐字一致）")
+  assert.equal(MAX_MERGE_CHARS, 2000, "常量锚 MAX_MERGE_CHARS = 2000（双端逐字一致）")
+  // 12 条短消息 → 两批（8 + 4）——不丢不截
+  const twelve = Array.from({ length: 12 }, (_, i) => `m${i + 1}`)
+  const p1 = planQueuedInput(twelve)
+  assert.equal(p1.length, 2)
+  assert.deepEqual(p1.map((a) => a.count), [8, 4], "T-24c3: 截批先行——前 8 条合并、余 4 留待下批")
+  assert.equal(p1[0].merged, true)
+  assert.ok(p1[0].text.includes("1. m1") && p1[0].text.includes("8. m8"), "批 1 编号 1-8")
+  assert.ok(p1[1].text.includes("你排队了 4 条消息"), "批 2 = 4 条（余 4——不丢）")
+  assert.ok(p1[1].text.includes("1. m9") && p1[1].text.includes("4. m12"), "批 2 自身编号 1-4（m9..m12 保序）")
+  // 单条超长（>2000 字符）→ 直发不进批（不进编号合并）——前后短文本仍可互并
+  const big = "x".repeat(2001)
+  const p2 = planQueuedInput(["短一", big, "短二", "短三"])
+  assert.equal(p2.length, 3)
+  assert.deepEqual(p2.map((a) => ({ count: a.count, merged: a.merged, len: a.text.length })), [
+    { count: 1, merged: false, len: 2 },
+    { count: 1, merged: false, len: 2001 },
+    { count: 2, merged: true, len: formatMergedMessages(["短二", "短三"]).length },
+  ], "T-24c3: 超长单条直发（原文不截断）——前后文本照常合并（保序）")
+  assert.equal(p2[1].text, big, "直发原文 = 原消息（零截断）")
+  // 合并注入 ≤2000 字符（格式化总长算——批头/编号计入）
+  const fit = ["a".repeat(900), "b".repeat(900), "c".repeat(900)] // 两两合 1800+开销；三合超限
+  const p3 = planQueuedInput(fit)
+  assert.deepEqual(p3.map((a) => a.count), [2, 1], "T-24c3: 字符上限截批（合并注入 ≤2000——格式化总长）")
+  assert.ok(formatMergedMessages(fit.slice(0, 2)).length <= MAX_MERGE_CHARS)
+  assert.ok(formatMergedMessages(fit).length > MAX_MERGE_CHARS, "三合超出上限（截批依据）")
+  // 合并形态字符串确定性（供 T-24c1/c2 断言格式）
+  assert.equal(formatMergedMessages(["A"]).includes("1. A"), true)
+})
+

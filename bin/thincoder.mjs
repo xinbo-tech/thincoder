@@ -7,6 +7,7 @@
  *   thincoder memory <sub>    Memory management: list / search / put / remove
  *   thincoder upgrade         Update to the latest version from npm
  *   thincoder completion <sh> Shell completion: bash / zsh / fish
+ *   thincoder session gc    Session dir GC: --dry-run report / --confirm delete cold projects (SESSION.md §12)
  *   thincoder acp             Agent Client Protocol server (stdio, for Zed/JetBrains/Paseo)
  *   thincoder -v              Print version
  *   thincoder --help          Print help
@@ -23,19 +24,56 @@ import { memoryCommand } from "../src/cli/memory-command.mjs"
 import { setupWizard } from "../src/cli/setup-wizard.mjs"
 import { summarize, askPermission } from "../src/cli/permission.mjs"
 import { distillCommand } from "../src/cli/distill-command.mjs"
+import { prepareCrashReporting, recentCrashHint, writeCrashRecord } from "../src/crash-reports.mjs"
+import { setTuiActive, restoreTerminalAfterCrash } from "../src/tui/tui-lifecycle.mjs"
 
 const [command, ...args] = process.argv.slice(2)
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
+// R25（F-R25b）：crash-reports 预建 + process.report 启用——入口最前（一切重活前——缩编程
+// 期窗口）——V8 OOM/原生 fatal 自动写 report.*.json（实现批实测：目录缺失时 Node 静默不写
+// ——预建为必要动作）。失败不阻断启动（尽力面）。
+prepareCrashReporting()
+
+// R25（F-R25a）异常钩子升级：原"只 console.error 一行（TUI 全屏下不可见）"→ ① 落盘
+// crash-{ts}-{pid}.json ② TUI 活动态终端恢复 ③ console.error（恢复后打印才可见）
+// ④ exit 非 0。执行序列定死（评审 #5 + 复审 #2）：一次性 guard（防再入递归）→ 同步写 →
+// 终端恢复 → console.error → exit 非 0——各步独立 try/catch（写失败/恢复失败不阻断后续步）。
+let crashHandled = false
+function handleFatal(type, error) {
+  if (crashHandled) {
+    // 再入（本序列内又抛异常）→ 直接退出，不再递归
+    process.exit(1)
+  }
+  crashHandled = true
+  try {
+    // ① 同步写诊断记录（设计字段集：时间/类型/消息+堆栈/uptime/argv/cwd/内存/node+版本）
+    writeCrashRecord({ type, error })
+  } catch { /* 写失败不阻断后续步 */ }
+  try {
+    // ② TUI 终端恢复：仅 TUI 活动态执行（writeCleanupSequence 同源——chat 模式 stdout
+    // 管道不得收 ANSI——误判即污染输出）
+    restoreTerminalAfterCrash()
+  } catch { /* 恢复失败不阻断后续步 */ }
+  try {
+    // ③ 原 console.error 行保留（非 TUI 模式可见——恢复后打印才可见）
+    console.error(`[error] ${error?.message ?? error}`)
+  } catch { /* 打印失败不阻断 exit */ }
+  // ④ exit 非 0 恒达（exitSoon——Windows/Node 24 上 fetch 后立即 exit 触发 libuv 断言先例）
+  exitSoon(1)
+}
+
 // Top-level safety net: print one-line error and exit cleanly, no stack traces to the user
-process.on("uncaughtException", (error) => {
-  console.error(`[error] ${error.message}`)
-  exitSoon(1)
-})
-process.on("unhandledRejection", (error) => {
-  console.error(`[error] ${error?.message ?? error}`)
-  exitSoon(1)
-})
+process.on("uncaughtException", (error) => handleFatal("uncaughtException", error))
+process.on("unhandledRejection", (error) => handleFatal("unhandledRejection", error))
+
+// R25 测试门（T-R25a.1/a.2——子进程 env 注入——生产零路径）：THINCODER_TEST_CRASH=1 抛
+// 未捕获异常走完整崩溃序列；THINCODER_TEST_TUI_ACTIVE=1 模拟 TUI 活动态（同一 setter——
+// 测试缝同源）；THINCODER_TEST_CLEANUP_OUT 指向文件时恢复序列写入该文件（tui-lifecycle 读）。
+if (process.env.THINCODER_TEST_CRASH === "1") {
+  if (process.env.THINCODER_TEST_TUI_ACTIVE === "1") setTuiActive(true)
+  throw new Error("R25 test crash (THINCODER_TEST_CRASH)")
+}
 
 const USAGE = `thincoder - thin coding agent
 
@@ -52,6 +90,8 @@ Usage:
   thincoder distill <file> [--yes] [--scope=<s>]
                             Extract knowledge candidates from a session
                             transcript file; confirm each before saving
+  thincoder session gc --dry-run | --confirm <hash|--all>
+                            Session dir GC: report/delete cold project data (cold = manifest idle >90d, no live slots)
   thincoder upgrade         Update to the latest version from npm
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version
@@ -85,6 +125,10 @@ switch (command) {
       exitSoon(1)
       break
     }
+
+    // R25（F-R25c）：非交互/chat 模式——上次异常终止提示写 stderr 一行（无匹配不提示）
+    const crashNotice = recentCrashHint()
+    if (crashNotice) console.error(crashNotice)
 
     const agent = await assembleAgent()
     // SESSION.md §8 D-S4（F4）：headless 无 TUI —— 可读错误 + 退出码 1，不弹 UI、不崩溃
@@ -275,6 +319,8 @@ switch (command) {
         team: teamConfig(config),
         author: gitAuthor(),
         restored: data,
+        // R25（F-R25c）：TUI 启动显示一行"上次运行异常终止"提示（showStartup 渲染——无匹配不传）
+        crashNotice: recentCrashHint() ?? undefined,
       })
     } catch (error) {
       console.error(`[error] ${error.message}`)
@@ -307,7 +353,7 @@ switch (command) {
     distill) COMPREPLY=( \\$(compgen -W "--yes --scope=" -- "\\$cur") ) ;;
     completion) COMPREPLY=( \\$(compgen -W "bash zsh fish" -- "\\$cur") ) ;;
     *)
-      COMPREPLY=( \\$(compgen -W "chat acp memory sync reindex distill upgrade completion -v --version -h --help" -- "\\$cur") ) ;;
+      COMPREPLY=( \\$(compgen -W "chat acp memory sync reindex distill upgrade completion session -v --version -h --help" -- "\\$cur") ) ;;
   esac
 }
 complete -F _thincoder thincoder
@@ -332,7 +378,8 @@ _thincoder() {
         'reindex[Rebuild local index from markdown]' \\
         'distill[Extract knowledge from session transcript]' \\
         'upgrade[Update to latest version from npm]' \\
-        'completion[Generate shell completion script]'
+        'completion[Generate shell completion script]' \\
+        'session[Session dir GC: session gc --dry-run|--confirm]'
       ;;
     args)
       case "\\$words[1]" in
@@ -361,6 +408,7 @@ complete -c thincoder -a reindex  -d 'Rebuild local index from markdown'
 complete -c thincoder -a distill  -d 'Extract knowledge from session'
 complete -c thincoder -a upgrade  -d 'Update to latest version'
 complete -c thincoder -a completion -d 'Shell completion'
+complete -c thincoder -a session -d 'Session dir GC (session gc --dry-run|--confirm)'
 complete -c thincoder -a acp -d 'Agent Client Protocol server for IDEs'
 
 # Flags
@@ -422,6 +470,13 @@ complete -c thincoder -n '__fish_seen_subcommand_from completion' -a fish -d 'Fi
   case "acp": {
     const { runAcpServer } = await import("../src/acp.mjs")
     await runAcpServer()
+    break
+  }
+
+  case "session": {
+    // SESSION.md §12：会话目录 GC 手动面（F2 冷 cwd 报告/删除——VS Code 端无 shell 通道，仅 CLI）
+    const { runSessionGc } = await import("../src/session-gc.mjs")
+    process.exitCode = runSessionGc(args)
     break
   }
 

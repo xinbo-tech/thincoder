@@ -19,8 +19,16 @@ export async function handleRenameCommand(ctx, args) {
     pushLine(`Title too long (max 80 chars)`, C.error)
     return
   }
-  if (!renameSlot(agent.cwd, slot, title)) {
-    pushLine(`Rename failed — active session (slot ${slot}) not found`, C.error)
+  // §12.2.5：renameSlot 契约 { ok, reason }——失败原因对用户可见（F3）
+  const r = renameSlot(agent.cwd, slot, title)
+  if (!r.ok) {
+    const why = {
+      "file-missing": `active session (slot ${slot}) not found`,
+      "parse-failure": `session file (slot ${slot}) is corrupted`,
+      "mtime-conflict": "session changed on disk concurrently — retry",
+      "invalid-slot": `invalid slot ${slot}`,
+    }[r.reason] ?? r.reason
+    pushLine(`Rename failed — ${why}`, C.error)
     return
   }
   agent.title = title

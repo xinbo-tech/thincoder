@@ -3,6 +3,7 @@
  * Source(s): tools.test.mjs.
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -386,7 +387,7 @@ test("T-W5: workspace 内符号链接指向外部文件 → read 正常解析执
 
 
 
-test("get_current_time / process: basic behavior", async () => {
+slow("get_current_time / process: basic behavior", async () => {
   const byName = Object.fromEntries(builtinTools.map((t) => [t.name, t]))
   assert.equal(byName.sleep, undefined, "sleep tool removed from builtinTools")
 

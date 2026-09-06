@@ -10,7 +10,7 @@ import { formatTables, sanitizeDisplay, sliceByWidth, wrapText } from "./render.
 import {
   foldTailLines, isExpanded, renderBlockTimeline, renderExpandedBlock, renderFoldedHead, renderMathAndMarkdown,
 } from "./fold-block.mjs"
-import { styleSubLabelRow } from "./subagent-panel.mjs"
+import { renderSubChildSections, subChildFoldKey } from "./subagent-panel.mjs"
 import { SUBAGENT_ROLES } from "./subagent-blocks.mjs"
 
 const _toolSegCache = new WeakMap()
@@ -70,7 +70,8 @@ export function toolSeg(state, l, i, cols, maxRows) {
 
 /** 冻结子agent 活动块渲染（§7.2 D4）：state.lines 载体 {_frozenSubTask: sub}（subagent-blocks.mjs
  *  freezeSubTaskLines 推入）。折叠 = 身份头 + tail 3；展开 = 共享组件（60% 屏幕封顶 + 底部可达
- *  折叠控制）。折叠键 `sub-${key}`——与运行中面板区块同键，折叠态跨冻结边界无缝延续。 */
+ *  折叠控制）。折叠键 `sub-${key}`——与运行中面板区块同键，折叠态跨冻结边界无缝延续。
+ *  §27 R23：子块段（renderSubChildSections）随冻结载体渲染（冻结含子块——T-R23d.1）。 */
 function frozenSubTaskLines(state, sub, cols, maxRows) {
   const foldKey = `sub-${sub.key}`
   const elapsed = Math.floor(((sub.doneAt ?? Date.now()) - sub.started) / 1000)
@@ -92,7 +93,7 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   if (isExpanded(state, foldKey)) {
     // Expanded: shared component renders blank + ▼ control + full timeline,
     // capped at 60% of the screen with a bottom collapse control.
-    const body = renderBlockTimeline(sub.blocks, cols).map(styleSubLabelRow)
+    const body = renderBlockTimeline(sub.blocks, cols)
     out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: "subagent activity" }))
   } else {
     // Folded: the header line itself is the control (▶ affordance), then tail 3.
@@ -105,22 +106,38 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
       out.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim, _skipDimFold: true })
     }
   }
+  // §27 R23：子块段随冻结载体（折叠/展开两态都渲染——子块自身折叠键独立控制）。
+  out.push(...renderSubChildSections(state, sub, cols, maxRows))
   return out
 }
 
-/** 冻结子agent 段入口（2026-08-31 段缓存：冻结后内容不变——签名含 sub.key + blocks 计数；
- *  注：foldKey 由位置键升级为 sub.key（loadOlder unshift 后不重绑——sub 自身携带 key）。 */
+/** 冻结子agent 段入口（2026-08-31 段缓存：冻结后内容不变——签名含 sub.key + blocks 计数 +
+ *  子块树签名（R23——children 折叠态/滚动/行数参与——toggle 子块/翻窗必须失效）；注：
+ *  foldKey 由位置键升级为 sub.key（loadOlder unshift 后不重绑——sub 自身携带 key）。 */
 export function frozenSubSeg(state, l, i, cols, maxRows) {
   const fKey = `sub-${l._frozenSubTask.key}`
+  // §27 R23：子块树渲染输入签名（key/done/stopped/blocks 数/折叠态/窗口偏移——递归）
+  const sub = l._frozenSubTask
+  let childSig = ""
+  const walk = (carrier, path) => {
+    for (const c of carrier.children ?? []) {
+      const innerPath = path ? `${path}/${c.key}` : c.key
+      const fk = subChildFoldKey(sub.key, innerPath)
+      childSig += `${innerPath}:${c.done ? 1 : 0}:${c.stopped ? 1 : 0}:${c.blocks?.length ?? 0}:${state.expandedBlocks?.has(fk) ? 1 : 0}:${state._foldScroll?.get(fk) ?? 0};`
+      walk(c, innerPath)
+    }
+  }
+  walk(sub, "")
   const fSig = [
-    cols, maxRows ?? 0, l._frozenSubTask.key, l._frozenSubTask.blocks?.length ?? 0,
-    l._frozenSubTask.done ? 1 : 0, state.foldEnabled === false ? 0 : 1,
+    cols, maxRows ?? 0, sub.key, sub.blocks?.length ?? 0,
+    sub.done ? 1 : 0, state.foldEnabled === false ? 0 : 1,
     state.expandedBlocks?.has(fKey) ? 1 : 0, state._foldScroll?.get(fKey) ?? 0,
+    childSig,
   ].join("|")
   const hit = _frozenSubCache.get(l)
-  if (hit && hit.textRef === l._frozenSubTask && hit.sig === fSig) return hit.rows
-  const rows = frozenSubTaskLines(state, l._frozenSubTask, cols, maxRows)
-  _frozenSubCache.set(l, { textRef: l._frozenSubTask, sig: fSig, rows })
+  if (hit && hit.textRef === sub && hit.sig === fSig) return hit.rows
+  const rows = frozenSubTaskLines(state, sub, cols, maxRows)
+  _frozenSubCache.set(l, { textRef: sub, sig: fSig, rows })
   return rows
 }
 

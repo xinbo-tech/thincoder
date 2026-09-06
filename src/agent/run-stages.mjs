@@ -11,6 +11,9 @@ import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../c
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./helpers.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent } from "../log.mjs"
+// R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
+// 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
+import { flushPeerDomains } from "../peer-domains.mjs"
 
 /**
  * 响应后置提醒注入（2026-09-05 实践轮——自 runAgent 响应处理链提取，verbatim）：
@@ -115,29 +118,56 @@ export async function injectTurnReminders(agent, ctx) {
  */
 export async function finalizeAgentTurn(agent, ctx) {
   const { signal, autoTurn, suspDriven, thrownError } = ctx
-  // Turn-end cleanup: abort any leftover consultation children (consult_start spawns
-  // fire-and-forget runners; a completed turn must not let them keep burning tokens).
-  cleanupConsultSessions(agent)
+  // R10 L3（MULTI-INSTANCE-COLLAB §2a.5 D-L3a）：回合末登记 flush——本回合写足迹整写
+  // 一次（首行执行：收尾链后续任何异常都不吞登记）；无写入 → 跳过（hot 窗口自然衰减）。
+  flushPeerDomains(agent)
+  // R17（AGENT-LOOP.md §25 D-R17a）: consultation sessions are cross-turn
+  // background work now — NO unconditional turn-end cleanup (the old rule aborted
+  // leftover consult children at every turn end because check-loop consumption was
+  // turn-scoped). Sessions stay alive across normal turn ends (and ContinueError
+  // resumes); the Ctrl+C abort branch below is the only path that aborts them
+  // (cleanupConsultSessions — marked stopped → no digest), and the suspension
+  // driver aborts them on its own abort unwind.
   // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1). Lifecycle:
   // - Ctrl+C (plain abort): children were aborted with the parent signal — clear
-  //   WITHOUT injecting stale errors (user explicitly stopped). Ctrl+I (interrupt)
-  //   keeps the pool: the turn resumes with the interrupt message, children stay
-  //   tracked (in a suspension session children hold agent._sessionSignal and a
-  //   digest's own Ctrl+I must not orphan them).
+  //   WITHOUT injecting stale errors (user explicitly stopped); consultation
+  //   sessions are cross-turn background work since R17 — the abort branch is the
+  //   ONLY normal-path place that aborts them (cleanupConsultSessions marks
+  //   stopped → their settles never reach the digest stream).
+  // - Ctrl+I (interrupt): keeps the pool AND the consult sessions: the turn
+  //   resumes with the interrupt message, children stay tracked (in a suspension
+  //   session children hold agent._sessionSignal and a digest's own Ctrl+I must
+  //   not orphan them).
   // - ContinueError (turn cap): no wait, no injection — children keep running and
   //   the RESUME run's turn-end collection takes over.
   // - anything else: inject the SETTLED entries only; running/queued stay in the
   //   pool for the suspension session (D-S1 — no allSettled turn-end wait).
   if (signal?.aborted && !signal?.reason?.interrupt) {
-    if (agent._asyncSubagents?.size > 0) {
-      logEvent("ev:stopped", { poolN: agent._asyncSubagents?.size ?? 0, where: "turn-end-abort" })
+    if (agent._asyncSubagents?.size > 0 || agent._asyncAdvisors?.size > 0) {
+      logEvent("ev:stopped", { poolN: (agent._asyncSubagents?.size ?? 0) + (agent._asyncAdvisors?.size ?? 0), where: "turn-end-abort" })
     }
     agent._asyncSubagents?.clear()
+    agent._asyncAdvisors?.clear()
     agent._asyncQueue = []
+    // R17: the consult family dies with the user stop (marked stopped — no digest).
+    cleanupConsultSessions(agent)
+    agent._pendingConsultResults = []
+    agent._pendingEscalateResults = []
   } else if (thrownError instanceof ContinueError) {
-    // keep _asyncSubagents — the resumed run continues them
+    // keep _asyncSubagents/_asyncAdvisors/_consultSessions — the resumed run continues them
   } else {
-    await collectSettledAsync(agent, { suspDriven })
+    const injectedAdvisor = await collectSettledAsync(agent, { suspDriven })
+    // §24 D-24b: a normally-ended USER run with no review/child activity closes
+    // the OPEN code instances — the converged/abandoned thread must not burn the
+    // 5-round cap of a later task (the next code review starts a fresh round 1).
+    // Digest auto-turns are exempt (their disposition precedes the fix round).
+    // A run whose turn-end collection just INJECTED a settled review report
+    // (headless, suspDriven=false) must NOT close: the model has not digested
+    // the findings yet — the fix round that follows still continues the thread.
+    if (!autoTurn && !injectedAdvisor) {
+      const { closeOpenCodeAdvisorRuns } = await import("../agent-tools/advisor-async.mjs")
+      closeOpenCodeAdvisorRuns(agent)
+    }
   }
   agent._inAutoTurn = false
   // §17 D-S6: auto-turn guard marks survive into the next USER run (restored at its
@@ -173,14 +203,19 @@ export async function finalizeAgentTurn(agent, ctx) {
  * 2026-09-05 实践轮：自 agent.mjs 迁入（agent.mjs 内仅 finalize 引用——随收尾同迁）。
  */
 async function collectSettledAsync(agent, { suspDriven = false } = {}) {
-  const map = agent._asyncSubagents
-  if (!map || map.size === 0) return
+  const maps = [agent._asyncSubagents, agent._asyncAdvisors].filter((m) => m instanceof Map && m.size > 0)
+  if (maps.length === 0) return false
   const { maybeRefillAsync, injectAsyncResult } = await import("../agent-tools/subagent.mjs")
   maybeRefillAsync(agent) // start queued heads now that slots may have freed — no waiting
-  if (suspDriven) return // §17.5: settled stays pooled — the suspension session digests it
-  for (const e of [...map.values()]) {
-    if (!e.done) continue // still running — stays in the pool (D-S1)
-    await injectAsyncResult(agent, e)
-    map.delete(String(e.id))
+  if (suspDriven) return false // §17.5: settled stays pooled — the suspension session digests it
+  let injectedAdvisor = false
+  for (const map of maps) {
+    for (const e of [...map.values()]) {
+      if (!e.done) continue // still running — stays in the pool (D-S1)
+      await injectAsyncResult(agent, e)
+      if (e.role === "advisor") injectedAdvisor = true
+      map.delete(String(e.id))
+    }
   }
+  return injectedAdvisor
 }

@@ -5,7 +5,7 @@
  * 用（只此一处）；§20 补位/排队刷新仍来自 subagent-scheduler.mjs。
  */
 
-import { ASYNC_SUBAGENT_LIMIT } from "./subagent-async.mjs"
+import { ASYNC_POOL_LIMITS, poolDomainOf, poolLimitsFor, runningPoolCount } from "./subagent-async.mjs"
 import { runChildPipeline } from "./subagent-async.mjs"
 import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { logEvent, errText } from "../log.mjs"
@@ -21,9 +21,11 @@ import {
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
  * but the parent does not await it: the promise is parked in _asyncSubagents and
  * consumed by the auto channel (§19.8 — turn-end collection / suspension digest;
- * the check action is gone). Slot queue: running
- * count < ASYNC_SUBAGENT_LIMIT → start now; ≥ limit → enqueue (status "queued",
- * position = queue index) — never rejected, never requiring the model to batch.
+ * the check action is gone). Slot queue (§24 D-24a/R14 — 分域): the entry carries a
+ * pool domain (_pool = poolDomainOf(role)); running count < limit[its domain]
+ * (agent.poolLimits — default engCoder 4 / other 4) → start now; ≥ → enqueue
+ * (status "queued", position = queue index) — never rejected, never requiring the
+ * model to batch. Domains never block each other (engCoder pool full ≠ explore queued).
  * @returns {string} JSON ack {id, role, status: running|queued[, position][, waiting][, reason]}
  */
 export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOpts, childRunOpts, relayPrefix, childProvider, files, dependsOn) {
@@ -32,10 +34,12 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   }
   parent._asyncSubagents ??= new Map()
   parent._asyncQueue ??= []
-  const running = [...parent._asyncSubagents.values()].filter((e) => e.status === "running").length
   const id = parent._subAgentCounter
   const entry = {
     id, role, relayPrefix,
+    // §24 D-24a/R14：池域字段（域判定单一事实源——poolDomainOf——role 枚举见
+    // subagent.mjs ROLES；未知角色归 other）——running 计数/补位按域过滤。
+    _pool: poolDomainOf(role),
     status: "queued", // 下面按等待态/槽位重定（避免两处判断漂移）
     position: undefined,
     report: null, error: null, done: false, cancelled: false,
@@ -57,11 +61,13 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     _lastQueuedSig: null, // ⟦ev⟧queued 去重 sig（refreshQueuedTokens）
   }
   // §20 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
-  // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ queued（等位）；否则立即启动。
-  // 派生实时计算（describeBlockers——池状态在 spawn 同步段内不变——与前面准入一致）。
+  // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§24 D-24a：
+  // runningIn(domain) < limit(domain)——跨域互不阻塞——每次入池判定时读配置）。
   const blockers = describeBlockers(parent, entry)
   if (blockers.kind === "slot") {
-    entry.status = running >= ASYNC_SUBAGENT_LIMIT ? "queued" : "running"
+    const limits = poolLimitsFor(parent) // 运行期读 + 校验（非法键回退默认——T-24a4）
+    entry.status = runningPoolCount(parent, entry._pool) >= (limits[entry._pool] ?? ASYNC_POOL_LIMITS[entry._pool])
+      ? "queued" : "running"
   } else {
     entry.status = "queued" // waiting-deps / dependency-cancelled——slot 空也不启动
   }
@@ -89,6 +95,10 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
       }
       return parentOnToken(t)
     }
+    // §27 R23 D-R23c1：嵌套 wrapper 标记随镜像层透传（wrapChildCallbacks 产物带
+    // _relayPrefix——本层重包后丢失会让异步子代理（默认 async——depth-0）内嵌 spawn
+    // 的生成侧补发射失效（emitNestedChildEvent 判据）——同步复制标记保语义）。
+    trackOpts.onToken._relayPrefix = parentOnToken._relayPrefix ?? null
   }
   entry.start = () => {
     entry.status = "running"

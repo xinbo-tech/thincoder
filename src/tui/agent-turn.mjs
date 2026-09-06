@@ -21,7 +21,7 @@ import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 §17 段迁 suspension-drive.mjs
 import { ensureSessionTitle } from "../generate-title.mjs"
 import { logEvent, errText } from "../log.mjs"
-import { suspensionSession, poolLive } from "./suspension-drive.mjs"
+import { suspensionSession, poolLive, planQueuedInput } from "./suspension-drive.mjs"
 
 /** Exit-flush bound for the async end-of-run distillation (SEND-STALL-DISTILL §2.5):
  *  wait at most this long for the in-flight distill before the final session save —
@@ -290,17 +290,20 @@ async function runAgentTurnInner(ctx, text, opts) {
     state.queue.push(...state.pendingInput.splice(0).map((t) => ({ text: String(t) })))
   }
 
-  // Queued messages: auto-process next one
+  // Queued messages: auto-process next one（§24 D-24c/R15：攒批合并——合并仅限
+  // 连续文本——/cmd 逐条保序即时——单条超长直发；每条 runAgentTurn 回合后余项
+  // 由递归层的本循环续取——边界幂等不丢）
   while (state.queue.length > 0 && !state.processing) {
-    const next = state.queue.shift()
-    // Queued slash commands execute directly — check every item, not just the first
-    if (next.text.startsWith("/")) {
-      await handleSlash(next.text)
+    const head = planQueuedInput(state.queue.map((q) => q.text))[0]
+    state.queue.splice(0, head.count)
+    // Queued slash commands execute directly — order-preserved, never merged
+    if (head.kind === "slash") {
+      await handleSlash(head.text)
       render()
       continue
     }
     pushLabel(`❯ You: (from queue)`, ansi.bold + C.user)
-    await runAgentTurn(ctx, next.text)
+    await runAgentTurn(ctx, head.text)
     return
   }
 

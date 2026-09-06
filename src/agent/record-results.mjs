@@ -22,7 +22,9 @@
 import { pushReal } from "../context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS } from "./helpers.mjs"
-import { join } from "node:path"
+import { resolve } from "node:path"
+import { advisorRuns } from "../agent-tools/advisor-async.mjs"
+import { looksLikeReviewOutput } from "../advisor/run.mjs"
 
 let _reindexFile = null
 
@@ -72,6 +74,9 @@ export async function recordToolResults(agent, toolByName, results) {
         // Direct file edit — code was changed. The prior advisor review and
         // verify are stale: a review that ran before the edit no longer
         // covers the current file state.
+        // §29 fix A（AGENT-LOOP.md §29——2026-09-07）：mutation-seq 记账已移到 dispatch
+        // runOne 执行成功即刻（唯一记账点——取代本批后段 + agent.mjs 中断分支——不双计）——
+        // 此处仅剩 guard 标志失效（顺序语义：批内同消息的 sync advisor 提交仍在其后置位）。
         agent._mutatedThisRun = true
         agent._calledAdvisorThisRun = false
         agent._verifiedThisRun = false
@@ -91,20 +96,46 @@ export async function recordToolResults(agent, toolByName, results) {
       }
       if (toolCall.name === "verify") agent._verifiedThisRun = true
       if (toolCall.name === "advisor") {
-        agent._calledAdvisorThisRun = true
-        // All advisor calls (code and design) share the 5-round convergence
-        // budget — each advances _advisorRound toward MAX_ADVISOR_ROUNDS.
-        // Always advance the round — the convergence protocol cares about
-        // how many reviews have run (round 1→2→3→4→5), not how many succeeded.
-        // A failed/interrupted review is still a review attempt and should use
-        // the next round's prompt on retry.
-        agent._advisorRound++
+        // §24 D-24b (settle accounting split — fix #2): an ASYNC launch returns an
+        // ack and settles later — the settle callback owns its called/round/token
+        // accounting. Only the SYNC path (depth>0 / explicit async:false) accounts
+        // here — per-review instance round++ (marker-keyed by tool call id) + the
+        // legacy mirror._advisorRound_ counter stays for display/back-compat.
+        // REFUSED launches (pool full / per-review cap) count as neither a call
+        // nor a completion: no called-mark (the guard must keep pushing until a
+        // review really runs), no round advance.
+        const refused = agent._advisorRefusals?.has(toolCall.id)
+        const asyncAck = agent._advisorAsyncAcks?.has(toolCall.id)
+        if (refused) {
+          agent._advisorRefusals.delete(toolCall.id)
+        } else if (asyncAck) {
+          agent._advisorAsyncAcks.delete(toolCall.id)
+        } else {
+          agent._calledAdvisorThisRun = true
+          const reviewId = agent._advisorSyncCalls?.get(toolCall.id)
+          if (reviewId !== undefined) {
+            const run = advisorRuns(agent).get(reviewId)
+            if (run) {
+              run.round++
+              agent._advisorRound = run.round
+              // Prior of round 2+ = the last REVIEW-LOOKING output (run.mjs parity).
+              if (looksLikeReviewOutput(result)) run.priorOutput = result
+            } else {
+              agent._advisorRound++
+            }
+            agent._advisorSyncCalls.delete(toolCall.id)
+          } else {
+            // Direct/legacy callers without a resolution marker — plain mirror
+            // increment (the per-review registry never saw this call).
+            agent._advisorRound++
+          }
+        }
       }
       if (FILE_MUTATORS.has(toolCall.name)) {
         const args = JSON.parse(toolCall.arguments)
         const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
         for (const p of paths) {
-          const abs = join(agent.cwd, p)
+          const abs = resolve(agent.cwd, p)
           if (!agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
           if (agent.memory) {
             // Fire-and-forget: don't block the agent loop on indexing.

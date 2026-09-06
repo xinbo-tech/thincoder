@@ -65,7 +65,7 @@ test("T8 F1：破坏性 action 的 schema 描述含自动快照 + rewind 字样"
 
 
 
-test("git_diff / git_status / git_log: 只读 git 工具", async () => {
+slow("git_diff / git_status / git_log: 只读 git 工具", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-git-"))
   try {
@@ -217,7 +217,7 @@ slow("git: 扩充 action（add/commit 分文件、tag、branch、checkout/restor
 
 
 
-test("git: workdir 在 workspace 子目录的 git 仓库运行；越界（外部仓库）正常执行（§10.1 T-w-2 语义改）", async () => {
+slow("git: workdir 在 workspace 子目录的 git 仓库运行；越界（外部仓库）正常执行（§10.1 T-w-2 语义改）", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-git-wd-"))
   const ext = mkdtempSync(join(tmpdir(), "thincoder-git-ext-")) // 独立仓库，位于 workspace 之外
@@ -258,7 +258,7 @@ test("git: workdir 在 workspace 子目录的 git 仓库运行；越界（外部
 // ---------------------------------------------------------------- 2026-08-31 工具体验评审新增
 
 
-test("git: ls-remote 返回远端 ref（本地 bare remote，无需网络）", async () => {
+slow("git: ls-remote 返回远端 ref（本地 bare remote，无需网络）", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-git-lsr-"))
   const bare = mkdtempSync(join(tmpdir(), "thincoder-git-bare-"))
@@ -294,4 +294,39 @@ test("git: 非法 config 参数拒绝（非数组 / 含换行）", async () => {
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+
+// ---------------------------------------------------------------- §22 D-Q3 question 机械限制（2026-09-06——T-Q3/Q4/Q5——100 字符 / 4 条为用户裁定值）
+
+test("§22 T-Q3: question >100 字符 → 返回错误串且不调 onQuestion（不弹卡）", async () => {
+  const q = builtinTools.find((t) => t.name === "question")
+  let called = false
+  const out = await q.execute({ question: "x".repeat(101) }, { onQuestion: () => { called = true; return "ans" } })
+  assert.ok(out.includes("question too long"), `错误串含 question too long: ${out}`)
+  assert.equal(called, false, "超限不调 onQuestion")
+})
+
+test("§22 T-Q4: options >4 条 → 返回错误串且不调 onQuestion（不弹卡）", async () => {
+  const q = builtinTools.find((t) => t.name === "question")
+  let called = false
+  const out = await q.execute({ question: "ok?", options: ["A", "B", "C", "D", "E"] }, { onQuestion: () => { called = true; return "ans" } })
+  assert.ok(out.includes("too many options"), `错误串含 too many options: ${out}`)
+  assert.equal(called, false, "超限不调 onQuestion")
+})
+
+test("§22 T-Q5: 边界 100 字符 / 4 条 options → 正常透传（onQuestion 被调用）", async () => {
+  const q = builtinTools.find((t) => t.name === "question")
+  const seen = []
+  const out = await q.execute(
+    { question: "x".repeat(100), options: ["A", "B", "C", "D"] },
+    { onQuestion: (qq, opts) => { seen.push([qq, opts]); return "ans" } },
+  )
+  assert.equal(out, "ans", "onQuestion 返回值原样透传")
+  assert.equal(seen.length, 1, "边界值正常调 onQuestion")
+  assert.deepEqual(seen[0][1], ["A", "B", "C", "D"], "options 原样透传")
+  // 非数组 options 原样透传（guard 仅在 Array.isArray && length > 4 触发——评审 #4）
+  seen.length = 0
+  await q.execute({ question: "ok?", options: "A,B" }, { onQuestion: (qq, opts) => { seen.push([qq, opts]); return "ans" } })
+  assert.equal(seen.length, 1, "非数组 options 不触发 guard")
 })

@@ -528,7 +528,7 @@ test("T4b NF1：schema 描述追加段每处 ≤ 60 字符（F1 描述精简）"
 
 
 
-test("T5 F2：checkpoint list 空输出不变（(no checkpoints yet)）", async () => {
+slow("T5 F2：checkpoint list 空输出不变（(no checkpoints yet)）", async () => {
   const { execFileSync } = await import("node:child_process")
   const dir = mkdtempSync(join(tmpdir(), "thincoder-cp-t5-"))
   const git = (...args) => execFileSync("git", args, { cwd: dir, encoding: "utf8" })

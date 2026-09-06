@@ -38,7 +38,8 @@ Tool routing — use the dedicated tool, not bash:
 - **JavaScript** → `execute` (inline code; or `scriptFile`+`nodeArgs` for `node <file>` / `node --test` / `node --check`). Never `bash node -e`.
 - **File reads/searches** → `read` / `grep` / `ls` / `glob` — never `cat` / `type` / `findstr` / `dir` / shell-grep.
 - **File mutations** → `write` / `edit` / `apply_patch` / `hashline_edit` / `insert_after` / `file_ops` (move/copy/rename) / `delete`.
-- **Process / time / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash); waiting (e.g. `sleep`/`timeout`) is fine via bash when truly needed.
+- **Process / time / tree** → the dedicated tools (never `tasklist`/`ps`/`date`/`tree` via bash).
+- **Waiting** → `wait_for` (condition waiting — returns when the condition holds or the timeout passes); bash inline waiting (`sleep`/`timeout`) is only the fallback for ad-hoc waits no `wait_for` condition expresses.
 - Each tool's description carries a "Route to X instead of bash" mapping.
 - **bash IS correct for**: package-manager/CLI subprocesses (`npm`/`vsce`/`ovsx`, git-CLI-only flags the tool lacks), servers, interactive/TTY programs, and one-off shell pipelines no dedicated tool expresses.
 
@@ -61,23 +62,23 @@ Tool routing — use the dedicated tool, not bash:
 | `code_search` | natural-language code search | grep gymnastics |
 | `doc_search` | search project docs (design/AGENTS) | `findstr` in docs |
 | `read_image` | view an image (vision models) | external viewers |
-| `read_pdf` | extract text from PDF files (pages param; scanned pages → multimodal channel) | `pdftotext`, pdf libraries |
 | `execute` | run JS inline / scriptFile (+ nodeArgs for `node --test`/`--check`) | `bash node -e`, `node <script>` via bash |
 | `bash` | npm/vsce/CLI subprocess, servers, TTY programs, one-off pipelines no tool expresses | always; see allowed list above |
 | `git` | ALL git ops (status/diff/log/show/add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick/ls-remote/clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv) | `git` in bash |
 | `process` | list running processes | `tasklist`, `ps`, `wmic` |
 | `get_current_time` | current date/time | `date` |
-| `timer` | thinking budget / wait reminder | `sleep`, `timeout` (for real waits) |
+| `wait_for` | condition wait — returns when the condition holds or the timeout passes (advisor settled / subagent id:N done / consult done / file exists:path / port open:N) | `sleep`/`timeout`/ping hacks; waiting after synchronous tools |
+| `timer` | thinking budget / wait reminder | `sleep`, `timeout` (real waits → `wait_for`) |
 | `lint` | lint / syntax check after edits (full=true for cascade) | ad-hoc node --check runs |
 | `verify` | pre-completion self-check (syntax/tests/diff/checklist) | manual diff/test runs |
 | `task` / `checklist` | session-level tasks / persistent requirements tracking | README-style todo lists |
 | `goal` | long-running autonomous goal (machine-checkable criteria) | prose promises |
 | `plan` / `eng` | plan mode / engineering mode entry-exit | none (mode transitions only here) |
 | `skill` | load project skills (.thincoder/skills/) | re-inventing workflows |
-| `question` | ask the user (ambiguity, design decisions) | guessing |
+| `question` | ask the user (ambiguity, design decisions) | guessing; routine confirm-gates (those go in your plain reply text) |
 | `advisor` | independent review of code/design | self-review only |
 | `subagent` (action: spawn / status / escalate) | delegate subtasks to isolated contexts; async results arrive automatically (no fetch action); query progress with status (non-blocking); escalate = fly in a stronger model for hard implementation | inlining exploration; burning attempts |
-| `consult_start` / `consult_check` / `consult_stop` | parallel multi-model consultation | single-model guessing |
+| `consult_start` / `consult_stop` | parallel multi-model consultation (verdict digest delivered automatically when all models settle; stop cancels) | single-model guessing |
 | `memory` | long-term memory: search/put/list/delete/clear (one tool, action param) | session notes |
 | `checkpoint` | git snapshots / rewind safety | manual branches |
 | `fetch` | fetch a URL (explicit proxy per target; config proxy NOT auto-applied) | `curl` |

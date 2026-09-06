@@ -4,6 +4,7 @@
  * createCheckpoint 对非 git 的临时 cwd 直接返回 null（只读检查）。
  */
 import { test } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -460,7 +461,7 @@ test("P1: interrupt 分支合成占位 tool 结果（配对完整，2026-08-30 �
 })
 
 
-test("consult 残留终结: done:true 全量冻结 N 块 + 墓碑防复活（2026-08-30 会诊 4/4 共识）", async () => {
+test("R17 consult settle: 每个 child settle 自冻其块（⟦ev⟧done）——无 check 消费 + 墓碑防复活", async () => {
   const { ctx, callbacks } = await captureCallbacks()
   // 4 模型会诊：4 个子代理块
   callbacks.onToken("consult#1/[model]kimi-k3")
@@ -469,10 +470,13 @@ test("consult 残留终结: done:true 全量冻结 N 块 + 墓碑防复活（202
   callbacks.onToken("consult#4/[model]qwen3.8-max")
   callbacks.onToken("consult#1/kimi 的诊断...")
   callbacks.onToken("consult#2/deepseek 的诊断...")
-  // 最后一次 check：done:true → 全量收尾
-  ctx.runAgent = async (_a, _t, cbs) => {
-    cbs.onToolResult("consult_check", JSON.stringify({ done: true, received: 4, total: 4 }))
-  }
+  // R17（§25 D-R17a——consult_check 已删）：children 各自 settle 即发 ⟦ev⟧done 冻结
+  // （settle 即冻结——活动卡各自收尾——无 in-turn check 消费路径）
+  callbacks.onToken("consult#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  callbacks.onToken("consult#2/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  callbacks.onToken("consult#3/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  callbacks.onToken("consult#4/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  ctx.runAgent = async () => "done"
   await runAgentTurn(ctx, "task")
   assert.equal(Object.keys(ctx.state.subTasks).length, 0, "全部冻结释放（无 running 幽灵）")
   const frozen = ctx.state.lines.filter((l) => l._frozenSubTask)
@@ -484,24 +488,23 @@ test("consult 残留终结: done:true 全量冻结 N 块 + 墓碑防复活（202
   assert.ok(!ctx.state.lines.some((l) => l._frozenSubTask?.key === "consult#3" && l._frozenSubTask.done === false), "consult#3 保持冻结态")
 })
 
-test("consult 精确收尾: 单条 reply 按 model 定位（不再冻结错块）", async () => {
+test("R17 consult settle 精确收尾: 各 child 按自身 relay key 冻结（settle 事件带 key——不冻错块）", async () => {
   const { ctx, callbacks } = await captureCallbacks()
-  // PRODUCTION formats (2026-08-30 follow-up consult): the [model] token is the
-  // BARE name (resolveChildProvider), consult_check's r.model is
-  // consultLabel = "provider:model". A test using bare names on both sides
-  // passed while production never matched — the green was fake.
+  // consult#1 先完成（其 ⟦ev⟧done 只冻结 consult#1——consult#2 仍在跑）
   callbacks.onToken("consult#1/[model]kimi-k3")
   callbacks.onToken("consult#2/[model]deepseek-v4-pro")
-  ctx.runAgent = async (_a, _t, cbs) => {
-    // deepseek 先答完（乱序）：r.model 带 provider 前缀，应按尾段精确匹配 consult#2
-    cbs.onToolResult("consult_check", JSON.stringify({ reply: "ds 诊断", model: "deepseek:deepseek-v4-pro", done: false }))
-  }
+  callbacks.onToken("consult#2/deepseek 的诊断...")
+  callbacks.onToken("consult#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  const frozen1 = ctx.state.lines.filter((l) => l._frozenSubTask?.key === "consult#1")
+  assert.ok(frozen1.length === 1, "consult#1 完成即冻结（settle 事件）")
+  assert.equal(frozen1[0]._frozenSubTask.done, true, "done 语义正确")
+  assert.ok(ctx.state.subTasks["consult#2"], "consult#2 仍 live（不误冻）")
+  // consult#2 随后 settle → 自身冻结
+  callbacks.onToken("consult#2/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")
+  const frozen2 = ctx.state.lines.filter((l) => l._frozenSubTask?.key === "consult#2")
+  assert.ok(frozen2.length === 1, "consult#2 完成即冻结")
   await runAgentTurn(ctx, "task")
-  // 回合结束后 freezeAllSubTasks 会收尸所有块（含未答完的 #1）——TUI 设计如此。
-  // 本用例只验 model 精确定位：deepseek 的 reply 冻结的是 consult#2（不是最早启动的 consult#1）。
-  const dsFrozen = ctx.state.lines.find((l) => l._frozenSubTask?.key === "consult#2")
-  assert.ok(dsFrozen, "deepseek 块精确收尾并冻结（model 定位，非最早启发式）")
-  assert.equal(dsFrozen._frozenSubTask.done, true, "done 语义正确")
+  assert.equal(Object.keys(ctx.state.subTasks).length, 0, "回合尾无残留")
 })
 
 test("runAgentTurn: 中断回合清扫工具块（P0-2：Ctrl+C 后无 running 残留，2026-08-30 会诊）", async () => {
@@ -547,7 +550,7 @@ test("runAgentTurn: 并行同名工具按 tool_call_id 精确路由（P0-3：输
   assert.ok(typeof a.elapsed === "number" && typeof b.elapsed === "number", "各自有耗时（id 级 tick）")
 })
 
-test("§7.2.1 走秒 ticker 条件（评审 #6）：processing 或 subRunning 时周期 render，两者皆假静默", async () => {
+slow("§7.2.1 走秒 ticker 条件（评审 #6）：processing 或 subRunning 时周期 render，两者皆假静默", async () => {
   // 回归：面板头部 elapsed 走秒由 1s ticker 驱动（agent-turn.mjs:56-58
   // `if (state.processing || subRunning()) render()`）——tui.test.mjs 只有纯函数
   // 级断言（renderSubagentPanel 输出随时间变化），ticker 条件本身若回归（如删掉

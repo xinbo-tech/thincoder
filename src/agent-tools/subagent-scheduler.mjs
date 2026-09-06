@@ -5,12 +5,12 @@
  * 内容：normalizeFileList / filesOverlap / depInfo / describeBlockers / detectStall（§21.1
  * P-SL2 停滞机械检测）/ queueRunnable / assertNoDepCycle / dependentLabels /
  * refreshQueuedTokens / maybeRefillAsync。
- * ASYNC_SUBAGENT_LIMIT 常量回引自 subagent-async.mjs（主体保有——仅调用期使用——
- * 与主体对此处调度符号的回引构成惰性环——无求值期依赖）。
+ * ASYNC_POOL_LIMITS/poolLimitsFor/runningPoolCount 回引自 subagent-async.mjs（主体保有——
+ * 仅调用期使用——与主体对此处调度符号的回引构成惰性环——无求值期依赖）。
  */
-import { isAbsolute, relative, resolve } from "node:path"
+import { basename, isAbsolute, relative, resolve } from "node:path"
 import { existsSync, statSync } from "node:fs"
-import { ASYNC_SUBAGENT_LIMIT } from "./subagent-async.mjs"
+import { poolLimitsFor, runningPoolCount, ASYNC_POOL_LIMITS } from "./subagent-async.mjs"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §20 子 agent 任务调度器（AGENT-LOOP.md §20——D-SD1..SD5 + 20.4 处置注）
@@ -27,9 +27,14 @@ import { ASYNC_SUBAGENT_LIMIT } from "./subagent-async.mjs"
  *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
  *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
  *  调用方（subagent.mjs spawn 入口）catch → 错误即工具结果（模型可见——无静默）。
- *  已知限制（§20.8 未编号段——评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。 */
+ *  已知限制（§20.8 未编号段——评审 #4）：不存在的目录声明（无尾斜杠 + 目录未创建）仍通过——不处理。
+ *  §28 R26 F-R26b（2026-09-07）：父侧维护文件黑名单——归一化后 basename 全名匹配 +
+ *  大小写不敏感（todo.md/changelog.md/checklist.md 精确 + checklist* 前缀家族——路径任意
+ *  层含 docs/、根、.thincoder/）——命中 → throw（fail-closed——先于调度器准入——无排队
+ *  残留——错误即工具结果）；提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP.md §28）。 */
 export function normalizeFileList(files, cwd) {
   const out = []
+  const violations = [] // §28 R26 F-R26b：父侧维护文件命中（保留声明原样——提示可读）
   for (const f of Array.isArray(files) ? files : []) {
     if (typeof f !== "string" || !f.trim()) continue
     if (f.endsWith("/") || f.endsWith("\\")) {
@@ -39,7 +44,16 @@ export function normalizeFileList(files, cwd) {
     if (existsSync(abs) && statSync(abs).isDirectory()) {
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
+    // 黑名单 basename 推导前做分隔符归一（\ → /——反斜杠变体跨平台同拒——
+    // win32 resolve 本就兼容双分隔符——POSIX 需显式归一——advisor 🔵2 处置）
+    const base = basename(resolve(cwd ?? process.cwd(), f.replace(/\\/g, "/"))).toLowerCase()
+    if (base === "todo.md" || base === "changelog.md" || base.startsWith("checklist")) violations.push(f)
     if (!out.includes(abs)) out.push(abs)
+  }
+  if (violations.length > 0) {
+    throw new Error(violations
+      .map((f) => `Parent-side maintained file ${f} must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc`)
+      .join("\n"))
   }
   return out
 }
@@ -297,21 +311,26 @@ export function refreshQueuedTokens(parent, onToken) {
 }
 
 /**
- * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4): start queue heads
- * while a running slot is free — called from every settle (completion frees a slot)
- * and from the turn-end collection's refill loop. §20：队列现可混合 waiting-deps 与
- * slot-queued——扫描选"依赖全满足 + 域无冲突"的最早条目启动（waiting 越行不阻塞
- * 槽位；多任务同时解除按 queued 序逐个启动到槽满——上限 4 不变）。纯 slot 队列的
- * 行为与旧 shift 完全一致（全部条目可启动 → 最早 == 队首）。
+ * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4 + §24 D-24a/R14 分域):
+ * start queue heads while a running slot is free — called from every settle
+ * (completion frees a slot) and from the turn-end collection's refill loop. §20：
+ * 队列现可混合 waiting-deps 与 slot-queued——扫描选"依赖全满足 + 域无冲突"的最早
+ * 条目启动（waiting 越行不阻塞槽位；多任务同时解除按 queued 序逐个启动）。
+ * §24 D-24a（R14）：槽位判定按域——条目 _pool 域内 running 数 < 该域上限才启动
+ * （同域仍 4——纯单域队列行为与旧 shift 完全一致；跨域总量 8——各域独立腾槽，
+ * 互不阻塞）。配置每次补位时读（poolLimitsFor——变更即生效下个补位）。
  */
 export function maybeRefillAsync(parent) {
   const queue = parent._asyncQueue ?? []
   for (;;) {
-    const running = [...(parent._asyncSubagents?.values() ?? [])].filter((e) => e.status === "running").length
-    if (running >= ASYNC_SUBAGENT_LIMIT) return
     let pick = -1
     for (let i = 0; i < queue.length; i++) {
-      if (queueRunnable(parent, queue[i])) { pick = i; break }
+      const e = queue[i]
+      if (!queueRunnable(parent, e)) continue
+      const pool = e._pool ?? "other" // 缺域字段（手工/旧条目）按 other——既有测试语义不变
+      if (runningPoolCount(parent, pool) >= (poolLimitsFor(parent)[pool] ?? ASYNC_POOL_LIMITS[pool])) continue
+      pick = i
+      break
     }
     if (pick < 0) return
     queue.splice(pick, 1)[0].start()

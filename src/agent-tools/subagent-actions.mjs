@@ -17,6 +17,7 @@ import {
 import { logEvent, errText } from "../log.mjs"
 import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.mjs"
 import { resolveChildProvider, mergeChildMutations } from "./subagent-async.mjs"
+import { launchEscalateAsync } from "./escalate-async.mjs"
 
 /**
  * subagent action:"status" (§19 D-M2, new): NON-BLOCKING async-pool query —
@@ -89,6 +90,7 @@ function statusFields(entry, cwd) {
 export function executeStatusAction(args, ctx) {
   const agent = ctx.agent
   const map = agent._asyncSubagents ?? new Map()
+  const advisors = agent._asyncAdvisors ?? new Map()
   const queue = agent._asyncQueue ?? []
   const queuedPosition = (id) => {
     const i = queue.findIndex((e) => String(e.id) === id)
@@ -97,8 +99,13 @@ export function executeStatusAction(args, ctx) {
   const { id } = args ?? {}
   if (id !== undefined && id !== null && String(id) !== "") {
     const key = String(id)
-    const entry = map.get(key)
+    // §24 D-24b: by-id queries fall through to the advisor pool (shared counter —
+    // ids are unique across both pools; role identifies the kind).
+    const entry = map.get(key) ?? advisors.get(key)
     if (!entry) {
+      // Wording kept exact — locked by subagent-async/tool tests (unknown-id error
+      // semantics); an unknown id simply names neither pool (the pools share the
+      // id counter, so the message stays unambiguous).
       return JSON.stringify({ id: key, status: "error", error: `unknown async subagent id: ${key}` })
     }
     const target = statusFields(entry, agent.cwd)
@@ -130,7 +137,8 @@ export function executeStatusAction(args, ctx) {
     return JSON.stringify(target)
   }
   const overview = { running: [], queued: [], done: [] }
-  for (const entry of map.values()) {
+  const mapEntries = [...map.values(), ...advisors.values()]
+  for (const entry of mapEntries) {
     if (entry.status === "running") overview.running.push(statusFields(entry, agent.cwd))
     else if (entry.status === "queued") {
       // §20：queued 条目补 waiting/reason（F-SD4——依赖/冲突原因模型可见）；
@@ -196,11 +204,13 @@ function panelFreezeGate(agent, key) {
     }
     return { err: `block ${key} is in state ${block.status} — freeze only reclaims awaitingDigest blocks whose report is already digested` }
   }
-  if (blockKeyIn(agent._asyncSubagents, key)) {
+  if (blockKeyIn(agent._asyncSubagents, key) || blockKeyIn(agent._asyncAdvisors, key)) {
     return { err: `block ${key} still has a live pool entry — it is NOT a digested-stuck block (freeze refused; status action shows the pool)` }
   }
-  if (blockKeyIn(agent._pendingAsyncResults, key)) {
-    return { err: `block ${key} is still genuinely awaiting digestion — its report is still in _pendingAsyncResults and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically — §17.5.5)` }
+  // R17: escalate entries pin under the independent _pendingEscalateResults family
+  // (decision ④ — separate per-family bookkeeping); consult sessions settle whole.
+  if (blockKeyIn(agent._pendingAsyncResults, key) || blockKeyIn(agent._pendingEscalateResults, key) || blockKeyIn(agent._pendingConsultResults, key)) {
+    return { err: `block ${key} is still genuinely awaiting digestion — its report is still pending and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically — §17.5.5)` }
   }
   return { ok: true }
 }
@@ -256,7 +266,7 @@ export function executePanelAction(args, ctx) {
     // 池视图（_asyncSubagents 运行/排队条目 + _pendingAsyncResults 待消化条目）
     const blocks = []
     const queue = agent._asyncQueue ?? []
-    for (const e of [...(agent._asyncSubagents?.values() ?? [])]) {
+    for (const e of [...(agent._asyncSubagents?.values() ?? []), ...(agent._asyncAdvisors?.values() ?? [])]) {
       const b = { key: `${e.role}#${e.id}`, role: e.role }
       if (e.status === "running") {
         b.status = "running"
@@ -273,6 +283,13 @@ export function executePanelAction(args, ctx) {
     for (const e of agent._pendingAsyncResults ?? []) {
       blocks.push({ key: `${e.role}#${e.id}`, role: e.role, status: "awaitingDigest", note: "report pending — injected at the next run start (§17)" })
     }
+    // R17: escalate/consult 独立族条目同样入降级池视图（决策点 ④——每族独立记账）
+    for (const e of agent._pendingEscalateResults ?? []) {
+      blocks.push({ key: `${e.role}#${e.id}`, role: e.role, status: "awaitingDigest", note: "report pending — injected at the next run start (§25 D-R17b)" })
+    }
+    for (const e of agent._pendingConsultResults ?? []) {
+      blocks.push({ key: `${e.role}#${e.id}`, role: e.role, status: "awaitingDigest", note: "consultation digest pending — injected at the next run start (§25 D-R17a)" })
+    }
     return JSON.stringify({
       degraded: true,
       note: "no panel — this session has no CLI TUI panel mirror (headless / VS Code / subagent context — panel view is CLI-TUI-only, AC-P4); pool-derived view below; action:'status' shows the full pool",
@@ -285,8 +302,10 @@ export function executePanelAction(args, ctx) {
       out.elapsedSec = b.startedAt ? Math.max(0, Math.floor((Date.now() - b.startedAt) / 1000)) : 0
     } else if (b.status === "awaitingDigest") {
       // 读时交叉（round1 #3）：pending/池均无对应 = 报告已消化（注入即从两者移除）——
-      // 块驻留 = 状态滞后——digested:true（freeze 候选——模型可定位异常块）。
+      // 块驻留 = 状态滞后——digested:true（freeze 候选——模型可定位异常块）。R17：
+      // escalate/consult 独立族 pending 流同样参与比对。
       out.digested = !blockKeyIn(agent._pendingAsyncResults, b.key) && !blockKeyIn(agent._asyncSubagents, b.key)
+        && !blockKeyIn(agent._pendingEscalateResults, b.key) && !blockKeyIn(agent._pendingConsultResults, b.key)
     }
     return out
   })
@@ -294,10 +313,11 @@ export function executePanelAction(args, ctx) {
 }
 
 /**
- * subagent action:"escalate"（§19 D-M4——退役 escalate 工具语义原样，ESCALATE.md）：
- * 飞刀——交给 consultModels 池里更强模型（WRITE + 术后报告）。约束全保留：depth-0
- * only / 工程模式拒 / consultModels 空拒 / relay 前缀 `escalate#N/`（与既有前缀同名
- * ——TUI 路由零改动）/ 无 permQueue（continue 直达用户）/ mutations merge 回父。
+ * subagent action:"escalate"（§19 D-M4——退役 escalate 工具语义原样，ESCALATE.md；
+ * §25 D-R17b——R17：缺省 async——后台飞刀 + settle 三分类 digest——async:false 保
+ * 同步旧路径）。飞刀——交给 consultModels 池里更强模型（WRITE + 术后报告）。约束全
+ * 保留：depth-0 only / 工程模式拒 / consultModels 空拒 / relay 前缀 `escalate#N/`
+ * （与既有前缀同名——TUI 路由零改动）/ mutations merge 回父（async 路径在 settle 分类）。
  */
 export async function executeEscalateAction(args, ctx) {
   const parent = ctx.agent
@@ -336,6 +356,15 @@ export async function executeEscalateAction(args, ctx) {
   }
 
   const tag = label(pick)
+
+  // §25 D-R17b (R17 — 决策点 ③): escalate 缺省 async — the launch returns an ack
+  // {id, role:"escalate", status:"running"|"queued"} and the flight runs in the
+  // background (shared other pool; settle 三分类 → _pendingEscalateResults digest)。
+  // `async: false` keeps the legacy synchronous flight below (backward compat).
+  if (args?.async !== false) {
+    return launchEscalateAsync(parent, ctx, { task: String(task), provider, tag, effortNote })
+  }
+
   const relayPrefix = makeRelay(parent, "escalate", ctx.callbacks?.onToken, provider.model ?? tag)
 
   // 无墙钟 watchdog——turn cap 即成本预算（2026-08-16 rationale：固定墙钟会误杀正常慢速

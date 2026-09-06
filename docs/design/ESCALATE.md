@@ -1,4 +1,6 @@
 > **§19 修订标注（2026-09-03）**：`escalate` 工具已并入 `subagent` 工具 `action:"escalate"`（工具面收敛——语义/约束/relay 前缀 escalate#N 全保留——见 AGENT-LOOP.md §19）——本文件机制描述仍有效（飞刀语义/模型池/术后报告），工具注册/调用表述以 §19 为准。
+>
+> **§25 修订标注（R17——2026-09-06——权威规格 AGENT-LOOP.md §25 D-R17b——CLI 已实现）**：escalate **缺省 async**（depth-0——唯一允许深度）——发起返回 ack `{id, role:"escalate", status:"running"|"queued"}` → 后台 other 池飞行（与 explore/plan/coder 共享 4 槽——池满公平排队）→ settle **三分类**：done = mutations merge-all 回父 + 重叠警告入报告（报告级提示——不 gate）/ error（child 失败/撞 turn cap）= partial mutations 视父侧重叠决定 merge / cancelled（⏹/action cancel）= 不入 pending——术后报告经 `_pendingEscalateResults` digest 自动注入（"报告已 merge——可继续处置"——动作域仍按消费回合档位——手动档 digest 禁写——无族例外）。**`async: false` 保留同步旧路径**（向后兼容）。本文件其余表述（同步等待/撞墙 continue 弹面板等）适用于显式同步路径。
 
 # 飞刀（Escalate）— 需求与设计（CLI）
 
@@ -30,7 +32,7 @@
 | 权限 | 只读 | **可写**（走正常权限门） |
 | 场景 | 判断不清，要多视角 | 确认干不动，要人代干 |
 | 候选 | `consultModels` 全体 | `consultModels` 全体 |
-| 形态 | 三工具（start/check/stop），异步 | 单工具，同步等待 |
+| 形态 | 两工具（start/stop），后台 digest | 单动作，**缺省 async（R17）——async:false 同步** |
 | 产物 | 各家分析意见 | 改动清单 + 理由 + 验证结果（术后病历） |
 
 ### 1.3 边界哲学（用户拍板：不设硬边界）

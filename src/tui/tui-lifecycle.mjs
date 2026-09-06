@@ -3,6 +3,7 @@
  * 超 500 行硬限拆分——启动序列、退出清理序列与退出闭包从 index.mjs 移入本模块）。
  */
 
+import { appendFileSync } from "node:fs"
 import { ansi } from "./ansi.mjs"
 
 /** TUI 启动序列：alt buffer + 隐藏光标 + 鼠标/粘贴/键盘增强 + 禁环绕。
@@ -17,6 +18,33 @@ export function writeStartupSequence(write = (s) => process.stdout.write(s)) {
 /** TUI 清理序列：清屏 + 关闭鼠标/粘贴/键盘增强 + 退出 alt buffer + 显示光标 + 恢复环绕。 */
 export function writeCleanupSequence(write = (s) => process.stdout.write(s)) {
   write(ansi.clearScreen + ansi.mouseOff + ansi.bracketedPasteOff + ansi.keyboardPop + ansi.modifyOtherKeysOff + ansi.mainBuffer + ansi.showCursor + ansi.reset + ansi.wrapOn)
+}
+
+// R25（ARCHITECTURE.md §R25 F-R25a——复审 #1）：TUI 活动态标志——index.mjs 在终端接管
+// 处（writeStartupSequence 之后）经 setTuiActive(true) 置位，createExitCleanup 清理后清
+// false；bin/thincoder.mjs 崩溃钩子经 restoreTerminalAfterCrash 读同一标志——chat 模式
+// stdout 管道不得收 ANSI（误判即污染输出）。默认 false = 未启动（生产零变化——测试缝同源：
+// T-R25a.2 注入 mock 走同一 setter）。
+let tuiActive = false
+
+/** 置/清 TUI 活动态（TUI 启动接管处与退出清理处调用；测试 env 门注入同走此 setter）。 */
+export function setTuiActive(active) {
+  tuiActive = active === true
+}
+
+/** R25 崩溃恢复：仅 TUI 活动态执行 writeCleanupSequence（复用本模块清理序列——符号锚）。
+ *  测试缝（T-R25a.2——env 门注入）：THINCODER_TEST_CLEANUP_OUT 指向文件时序列写入该文件
+ *  （观察恢复被调 + stdout 管道零 ANSI）——生产不设该 env → 恒 stdout（零变化）。
+ *  @returns {boolean} 是否执行了恢复（false = TUI 未启动——调用方无需处理） */
+export function restoreTerminalAfterCrash() {
+  if (!tuiActive) return false
+  const seamOut = process.env.THINCODER_TEST_CLEANUP_OUT
+  if (seamOut) {
+    writeCleanupSequence((s) => appendFileSync(seamOut, s, "utf8"))
+  } else {
+    writeCleanupSequence()
+  }
+  return true
 }
 
 /** 退出清理闭包：保存会话（同步）+ 关闭 MCP 子进程 + 恢复终端。幂等（cleanedUp 守卫）。 */
@@ -41,5 +69,6 @@ export function createExitCleanup({ agent, saveSession, closeAllMcp }) {
     }
     process.stdin.setRawMode(false)
     writeCleanupSequence()
+    setTuiActive(false) // R25：清理完成即清活动态（崩溃钩子不再收到误判）
   }
 }

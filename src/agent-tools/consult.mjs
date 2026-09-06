@@ -1,18 +1,30 @@
 /**
  * consult.mjs — multi-model consultation ("会诊", docs/design/CONSULTATION.md). CLI port.
  *
- * Three tools: consult_start (non-blocking spawn) / consult_check (read the next
- * reply as it arrives) / consult_stop (abort the rest). The mechanism does ZERO
- * judging — the main agent reads replies and verifies with its own tools.
+ * Two tools (AGENT-LOOP.md §25 D-R17a — R17, 2026-09-06): consult_start
+ * (non-blocking spawn) / consult_stop (cancel a running session). consult_check
+ * was RETIRED with the digest auto-injection: the mechanism does ZERO judging —
+ * when every model of a session settles (pending 0), the session moves to the
+ * agent's _pendingConsultResults family stream and the NEXT run start (user turn
+ * or digest auto-turn) injects the full verdict text ("[System reminder:
+ * consultation #id finished — N replies …]" — per-model status annotations on
+ * partial/full failures) for the main agent to judge and act on in the digestion
+ * round. A cancelled session (consult_stop) never reaches the stream.
  *
  * CLI adaptation (vs the VS Code plugin): the child runner is CLI's runAgent
  * (runAgent(child, input, callbacks, opts) — an agent object, not provider+cwd);
  * children are built with createAgent({ role: "consult", readonly tools,
  * CONSULT_BASE overlay }); activity streams to the parent TUI via the relay
- * prefix `consult#<id>/` (same channel subagent uses), not onSubagent/onToolPanel.
+ * prefix `consult#<childRelayN>/` (one per consultant child — the shared subagent
+ * relay channel; the child relay number is NOT the session id — sessions key
+ * their own `_consultIdCounter`), not onSubagent/onToolPanel.
+ * Each child settles its own TUI block with a ⟦ev⟧done event at settle (R17 —
+ * the old in-turn check consumption is gone).
  */
 import { createAgent, runAgent, readonlyToolNames } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
+import { pushReal } from "../context.mjs"
+import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 
@@ -112,13 +124,59 @@ export function makeMainHistoryTool(parentAgent) {
   }
 }
 
-/** Wake every parked consult_check waiter. */
-function wakeWaiters(session) {
-  const w = session.waiters.splice(0)
-  for (const resolve of w) { try { resolve(false) } catch { /* noop */ } }
+/**
+ * Full-session settle routing (R17 — AGENT-LOOP.md §25 D-R17a): a session whose
+ * pending count reached 0 has no more replies coming — the session leaves
+ * `_consultSessions` and, unless it was cancelled (consult_stop / turn-end
+ * abort), moves into the `_pendingConsultResults` family stream as ONE entry
+ * whose report carries the full per-model verdict text (composed here — all
+ * settle states are known, partial/full failures annotated per model). The
+ * entry is injected at the next run start (user turn or digest auto-turn —
+ * agent.mjs); the suspension driver is woken (settle-event parity with the
+ * async pools) so an idle settle still triggers the digestion round (T-R17j).
+ * Cancelled sessions produce no digest (T-R17c).
+ */
+function sessionSettled(agent, session) {
+  agent?._consultSessions?.delete(String(session.id))
+  if (session.stopped) return // cancelled — no digest (T-R17c)
+  agent._pendingConsultResults ??= []
+  agent._pendingConsultResults.push({
+    id: String(session.id),
+    role: "consult",
+    report: composeConsultDigest(session),
+  })
+  for (const w of (agent._asyncWaiters ?? []).splice(0)) { try { w() } catch { /* noop */ } }
 }
 
-function settleChild(session, id, label, ok, payload) {
+/** Digest body for a fully-settled session — title + one annotated line per
+ *  reply (failed replies marked per-model — round2 #7; full text is injected
+ *  verbatim and may be >64K → offloaded with a preview at injection). */
+export function composeConsultDigest(session) {
+  const replies = session.replies ?? []
+  const parts = replies.map((r) =>
+    r.failed
+      ? `- [${r.model}] (failed): ${r.reply}`
+      : `- [${r.model}]: ${r.reply}`)
+  const counts = `${replies.length} of ${session.total} models replied (${session.failed} failed)`
+  return `[System reminder: consultation #${session.id} finished — ${counts}]\n${parts.join("\n")}`
+}
+
+/**
+ * Inject one settled consult family entry into the parent history as a
+ * user-role reminder (run-start injection — agent.mjs; same shape rules as
+ * injectAsyncResult: XML-escaped, >64K offloaded with preview + path). Consumed
+ * = the caller splices the entry out of _pendingConsultResults.
+ */
+export async function injectConsultResult(agent, entry) {
+  const body = entry?.report ?? "(no consultation result)"
+  const preview = await offloadToolResult(String(body), `consult-${entry.id ?? "session"}`)
+  pushReal(agent, {
+    role: "user",
+    content: escapeXml(preview),
+  })
+}
+
+function settleChild(agent, session, id, label, ok, payload, emitDone) {
   if (ok) {
     session.received++
     session.replies.push({ model: label, reply: payload })
@@ -129,7 +187,8 @@ function settleChild(session, id, label, ok, payload) {
     session.replies.push({ model: label, reply: `(consultation failed: ${payload})`, failed: true })
   }
   session.pending--
-  wakeWaiters(session)
+  emitDone?.() // per-child TUI block freeze at settle (R17 — child's activity card is done)
+  if (session.pending === 0) sessionSettled(agent, session)
 }
 
 async function runConsultChild(ctx, session, id, m, problem, ctrl) {
@@ -161,6 +220,12 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     if (kind === "ok" || kind === "partial") logEvent("child:done", { ...base, kind })
     else logEvent("child:error", { ...base, err: errText(payload, 200) })
   }
+  // R17: relay prefix assigned before the child runner arms — the per-child TUI
+  // block freeze emits only when a block actually exists (relay established).
+  let relayPrefix = null
+  const settle = (ok, payload) => settleChild(agent, session, id, label, ok, payload, relayPrefix
+    ? () => ctx.callbacks?.onToken?.(`${relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
+    : null)
   try {
     // Provider resolution: consultModels entries are { provider, model, effort? } — resolve
     // via the subagent's provider resolver ("provider:model" handles cross-provider picks).
@@ -199,7 +264,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // Activity relay via the unified spawn-child pipeline (§7.2 D3): `consult#<subId>/`
     // prefix (same channel subagent uses — parallel consultants stay independent) +
     // onToolOutput passthrough so the consultant's tool output lands in its TUI block.
-    const relayPrefix = makeRelay(agent, "consult", ctx.callbacks?.onToken, provider.model ?? "")
+    relayPrefix = makeRelay(agent, "consult", ctx.callbacks?.onToken, provider.model ?? "")
     // LOGGING：arm（spawn 事件——relay 建立后；子内事件归属 _logId）
     childLogId = relayPrefix.slice(0, -1)
     child._logId = childLogId
@@ -238,7 +303,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
           },
           onDeclined: (e) => {
             declined = true
-            settleChild(session, id, label, false, `turn cap reached (${e.turn} turns) — stopped, diagnosis may be partial`)
+            settle(false, `turn cap reached (${e.turn} turns) — stopped, diagnosis may be partial`)
             logSettle("partial", null)
             return undefined
           },
@@ -246,44 +311,42 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
       )
       // Review #1 fix: onDeclined already settled this child as a failed reply —
       // settling again here would push a phantom empty success reply and decrement
-      // `pending` twice (negative pending → consult_check's two exits both
-      // unreachable → permanent block until user abort).
+      // `pending` twice (negative pending would re-enter the settle routing).
       if (!declined) {
-        settleChild(session, id, label, true, String(result ?? ""))
+        settle(true, String(result ?? ""))
         logSettle("ok", null)
       }
     } catch (e) {
       // Runner errors (incl. the watchdog's abort) settle as a failed reply — the
       // continue/declined paths are already handled inside runWithContinue.
       const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
-      settleChild(session, id, label, false, note)
+      settle(false, note)
       logSettle("error", note)
     }
   } catch (e) {
     // Errors BEFORE the runner (provider resolution, createAgent) or a throwing
     // continue-prompt settle as failed replies — the runner's own errors are already
-    // handled inside the loop above.
-    settleChild(session, id, label, false, e?.message ?? String(e))
+    // handled inside the loop above. relayPrefix is null on these paths — no TUI
+    // block was ever opened, so no freeze event is emitted.
+    settle(false, e?.message ?? String(e))
     logSettle("error", e?.message ?? String(e))
   } finally {
     clearTimeout(watchdog)
   }
 }
 
-/** Turn-end cleanup (called from runAgent's finally): abort every leftover
- *  consultation controller, wake parked waiters, clear the session map. */
+/** Turn-end / session-end abort cleanup (R17 — call sites: the Ctrl+C abort
+ *  branches of finalizeAgentTurn and the suspension driver). Consultation
+ *  sessions are now cross-turn background work (like async subagents): a NORMAL
+ *  turn end keeps them alive — this runs only when the user stops everything:
+ *  every leftover session is marked stopped (its settles never reach the digest
+ *  stream — T-R17c) and its controllers aborted. */
 export function cleanupConsultSessions(agent) {
   for (const s of agent._consultSessions?.values() ?? []) {
     s.stopped = true
     for (const c of s.controllers ?? []) { try { c.abort() } catch { /* already settled */ } }
-    for (const w of s.waiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
   }
   agent._consultSessions?.clear()
-  // NOTE: deliberately void (consult P3, 2026-08-30). The { stopped: true } marker
-  // only reaches the TUI via the consult_stop TOOL return (onToolResult freezes
-  // blocks on tool calls) — cleanup runs from the turn finally, where the block
-  // freeze is owned by freezeAllSubTasks + sweepToolBlocks, so a return here is
-  // dead weight. Blocks still get frozen on interrupt via that sweep.
 }
 
 export const consultStartTool = {
@@ -294,8 +357,11 @@ export const consultStartTool = {
     "Start a parallel multi-model consultation (会诊) for a hard problem you are stuck on (repeated failures, no headway). " +
     "Call it directly when the user asks for 会诊 / consult — an explicit user request applies even if you are not 'stuck'. " +
     "Several configured models (agent.consultModels) analyze the same problem INDEPENDENTLY and in parallel. " +
-    "Non-blocking: returns immediately with a consult id. Then call consult_check(id) to read each reply as it " +
-    "arrives, judge/verify it yourself with your own tools, and call consult_stop(id) once a reply is good enough.\n" +
+    "Non-blocking: returns immediately with a consult id; the consultants keep running in the background across turns. " +
+    "When EVERY model has replied (or failed), the full verdict text is delivered to you automatically — as a system " +
+    "reminder at the next run start, or digested on its own while the session is idle — judge and adopt each opinion " +
+    "yourself with your own tools (opinions are suggestions, not gates). To stop a session early (user changed their " +
+    "mind / wants the tokens back), call consult_stop(id) — a stopped session delivers no digest.\n" +
     "Parameters:\n" +
     "- problem (required): a brief — the symptom, what you already tried (failure trail), and entry-point files. " +
     "Do NOT paste raw error logs; consultants pull the main session history themselves via their main_history tool.\n" +
@@ -325,7 +391,7 @@ export const consultStartTool = {
     agent._consultSessions ??= new Map()
     const id = String((agent._consultIdCounter = (agent._consultIdCounter ?? 0) + 1))
     const session = {
-      id, controllers: [], replies: [], pending: 0, waiters: [],
+      id, controllers: [], replies: [], pending: 0,
       failed: 0, terminated: 0, stopped: false, received: 0, total: run.length,
       models: run.map(consultLabel),
     }
@@ -339,70 +405,11 @@ export const consultStartTool = {
         if (ctx.signal.aborted) ctrl.abort()
         else ctx.signal.addEventListener("abort", () => ctrl.abort(), { once: true })
       }
-      // Fire and forget — each child settles itself into the session queue.
+      // Fire and forget — each child settles itself into the session; the session
+      // routes to _pendingConsultResults when every child has settled (R17).
       runConsultChild(ctx, session, id, m, problem, ctrl)
     }
     return JSON.stringify({ id, models: session.models })
-  },
-}
-
-export const consultCheckTool = {
-  name: "consult_check",
-  readonly: true,
-  description:
-    "Read the NEXT consultation reply (whichever model answered first). Blocks until a reply arrives or all models " +
-    "have settled. The reply is raw and unjudged — verify/adopt it with your own tools. When done is true, no more " +
-    "replies are coming.\n" +
-    "Call it ALONE in a turn — do NOT batch it with calls that depend on its reply (readonly tools run in parallel).\n" +
-    "Replies arrive in arrival order: call it repeatedly (n = 1, 2, 3, …) until done is true.\n" +
-    "Returns JSON: {reply, model, failedReply, received, failed, terminated, total, done} for a reply — or {done: true, received, failed, total} when none are left.\n" +
-    "Parameters:\n" +
-    "- id (required): the consult id from consult_start\n" +
-    "- n (required): the 1-based read number for this consult — pass 1 on the first check, 2 on the next, and so on. It exists so consecutive checks are distinct tool calls (loop detectors) and the transcript reads as a sequence.",
-  parameters: {
-    type: "object",
-    properties: {
-      id: { type: "string", description: "Consult id" },
-      n: { type: "number", description: "1-based read number: 1 for the first check, incrementing with each subsequent check of the same consult" },
-    },
-    required: ["id", "n"],
-  },
-  async execute({ id, n: _n }, ctx) {
-    const s = ctx.agent?._consultSessions?.get(String(id))
-    if (!s) return JSON.stringify({ error: "unknown consult id" })
-    const abortAll = () => { for (const c of s.controllers) { try { c.abort() } catch { /* noop */ } } }
-    if (ctx.signal?.aborted) abortAll()
-
-    for (;;) {
-      if (s.replies.length > 0) {
-        const r = s.replies.shift()
-        return JSON.stringify({
-          reply: r.reply, model: r.model, failedReply: r.failed === true,
-          received: s.received,
-          failed: s.failed,
-          terminated: s.terminated ?? 0, total: s.total,
-          done: s.replies.length === 0 && s.pending === 0,
-        })
-      }
-      if (s.pending === 0) {
-        return JSON.stringify({ done: true, received: s.received, failed: s.failed, total: s.total })
-      }
-      const stopped = await new Promise((resolve) => {
-        function cleanup() {
-          const i = s.waiters.indexOf(w)
-          if (i >= 0) s.waiters.splice(i, 1)
-          ctx.signal?.removeEventListener("abort", onAbort)
-        }
-        function w() { cleanup(); resolve(false) }
-        function onAbort() { cleanup(); abortAll(); resolve(true) }
-        s.waiters.push(w)
-        if (ctx.signal) {
-          if (ctx.signal.aborted) { onAbort(); return }
-          ctx.signal.addEventListener("abort", onAbort, { once: true })
-        }
-      })
-      if (stopped) return JSON.stringify({ done: true, stopped: true, received: s.received, failed: s.failed, total: s.total })
-    }
   },
 }
 
@@ -411,26 +418,25 @@ export const consultStopTool = {
   readonly: false,
   sideEffectExempt: true,
   description:
-    "Terminate the still-running consultations of a session once a reply is good enough — saves tokens and time. " +
-    "Already-answered replies stay available for consult_check. " +
-    "Returns JSON {stopped: <n>, abandoned: <pending count>} — or {error: \"unknown consult id\"}.\n" +
+    "Cancel a still-running consultation session (会诊) — the user changed their mind, the problem resolved, or you want the tokens back. " +
+    "Aborts every consultant that is still running; a stopped session delivers NO digest (R17 — its already-collected partial replies are dropped). " +
+    "Sessions that finished on their own are no longer cancellable — their verdict text is delivered automatically.\n" +
+    "Returns JSON {abandoned: <pending count>, cancelled: true} — or {error: \"unknown consult id\"} (already finished/cancelled).\n" +
     "Parameters:\n" +
-    "- id (required): the consult id from consult_start\n" +
-    "- n (required): incrementing call number for this consult (next value after the last consult_check/consult_stop) — keeps repeated calls distinct.",
+    "- id (required): the consult id from consult_start",
   parameters: {
     type: "object",
     properties: {
       id: { type: "string", description: "Consult id" },
-      n: { type: "number", description: "Incrementing call number for this consult (see consult_check)" },
     },
-    required: ["id", "n"],
+    required: ["id"],
   },
-  async execute({ id, n }, ctx) {
+  async execute({ id }, ctx) {
     const s = ctx.agent?._consultSessions?.get(String(id))
     if (!s) return JSON.stringify({ error: "unknown consult id" })
     const abandoned = s.pending
     s.stopped = true
     for (const c of s.controllers) { try { c.abort() } catch { /* already settled */ } }
-    return JSON.stringify({ stopped: n, abandoned })
+    return JSON.stringify({ abandoned, cancelled: true })
   },
 }

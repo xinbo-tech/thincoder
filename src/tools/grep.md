@@ -5,7 +5,7 @@ Search file contents with a regex. Returns matching lines as path:line: content.
 Parameters:
 - pattern (required): JavaScript regular expression, or a literal string when literal=true
 - path: Directory or file to search (default cwd)
-- glob: Only search files matching this glob (e.g. '*.mjs')
+- glob: Only search files matching this glob — supports `**`, `*`, `?`, `[..]`, `{a,b}` braces and space-separated exclusion (`"**/*.js !test/**"` = .js files outside test/); e.g. '*.mjs'
 - ignoreCase: Case-insensitive match (default false)
 - literal: Literal string match — no regex interpretation (default false; use for strings with `. \` etc.)
 - before: Lines of context to show before each match (grep -B). Default 0

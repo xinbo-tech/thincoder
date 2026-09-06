@@ -10,6 +10,12 @@
  * 同文件改名 + 同名导出门控让快层与全量永远共用一套断言，零漂移。
  * 阈值依据：全量日志 >500ms 的测试 ~32 个（CPU 合计 ~60s，全量 62.8s 的 95%）；
  * 437 个 <5ms 的测试（55%）合计仅 376ms——数量不是成本，重 IO 才是。
+ *
+ * 防漏拦截（TESTING.md §1 D-T6，2026-09-06）：快层 npm test = test/run-fast.mjs，
+ * 挂 slow-gate.mjs reporter——跑完机械检查「未标 slow 而超过拦截阈值」的用例，
+ * 发现即非零退出（硬红防腐化漂移）。拦截阈值默认 800ms > 归册阈值 500ms
+ * （阈值缓冲：负载抖动不触红；env THINCODER_SLOW_GATE_MS 覆盖，供机制自验）。
+ * 拦截无需注册表比对：快层里 slow() 用例全 skip，「test:pass 且超阈」⇔ 未归册。
  */
 import test from "node:test"
 

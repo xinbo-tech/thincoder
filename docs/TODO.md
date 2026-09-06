@@ -1,6 +1,26 @@
 ﻿# 项目待办（Project TODO）
 
 > 项目级统一待办清单：所有来源的待办（设计遗留、评审发现、用户指示）汇总于此，不散落在设计文档中。
+
+## 会话目录残留 GC + 标题写显性化（2026-09-06，来源：会话管理审计——用户拍板"有问题就处理掉"——设计见 SESSION.md §12，状态：**已实现**（2026-09-06，eng-coder 交付 clean——核销见 SESSION.md §12.6））
+
+- [x] **A. 残留 GC**：.corrupted/.bak/.unreadable 只产生不回收（实测 404 .corrupted + 大量 .bak 累积）——设计按 mtime 保留期清理（复用 log.mjs/run-helpers 先例）——**已实现（2026-09-06）**
+- [x] **D. manifest + end marker 永不删除**：每 cwd 一套，实测 4560 manifest + 688 .manifest.cli 累积——保留策略设计（冷 cwd 归档/清理）——**已实现（2026-09-06）**
+- [x] **C. setSlotTitle/renameSlot 文件缺失静默失败**：标题写丢无人知——改显性（返回可观测结果）——**已实现（2026-09-06，{ok,reason} 契约）**
+- [ ] **技术待办：session.mjs 预拆**（2026-09-06，来源：eng-coder 移交——session.mjs 494 行近 500 硬限零余量——下次变更前预拆，避免临时凑行数搬迁）
+
+### 环境感知层遗留（2026-09-06，来源：批 1 eng-coder 交付移交——非阻塞）
+
+- [ ] **VS Code detectRestoredSession 闸语义完善**（按会话跟踪 vs 进程级一次性闸——中途切换会话拿不到 resumed:yes；主路径正确，语义完善项）
+
+### designToken 验证收尾（2026-09-06，来源：批 2 spawn 三连败诊断——**勾销——失步假象，机制正常**）
+
+- [x] ~~**designToken 持久化双源不一致**：~~`_engDesignTokens` 是内存级（resetSessionState/eng 切换清空），但 `saveSession` 又持久化到 slot 文件（session.mjs L134-136）+ 恢复时从 slot 读回（L321）——**内存/文件双源不同步**（实况：内存 2 个 / slot 3 个；批 2 designId 写入后又被覆盖/清掉）~~**2026-09-06 17:11 用户撤回待验证**（怀疑实测为前台未重载旧代码的假象/跨端共享 slot 互相覆盖）——**2026-09-06 17:16 重启验证完成：重评审（d78711ff）→ 立即 spawn 成功——机制正常（advisor 批准写内存 Map → spawn 查内存 Map——同对象）——**失步假象确认**（后台动态加载新逻辑、前台旧代码——重启后一致）——双源设计保留（slot 持久化是跨重启会话恢复设计意图——配合"重启后 token 失效需重评审"语义，无 bug）~~——**勾销**
+- [x] ~~**designToken 生命周期文档已强化**~~（ENG-TOKEN-BINDING-TUNING.md §0 + REQUIREMENTS 头部——2026-09-06 用户裁定：流程凭证非密码学安全边界/内存级随会话死亡/不得持久化双源）——**代码待同步**（session.mjs 持久化逻辑与文档矛盾）——**2026-09-06 17:11 用户澄清：持久化本身无 bug（配合失步验证结论）——文档语义三铁律保留（防 agent 自我发挥加 HMAC/误持久化）——session.mjs 逻辑与文档 §0 铁律 2/3 的张力留待 R10 config 原子性批或会话批统一裁决——条目转为观察项**~~——**文档已强化，代码待观察批**
+- [ ] **VS Code git 富注入异步优化**（3×execSync 每回合同步——最坏 ~15s 阻塞事件循环；CLI 同款先例接受，异步优化项）
+- [ ] **VS Code subagent.mjs 预拆**（500 行 cap 边界——下次改动前按 Module Split Policy 拆）
+- [ ] **VS Code discipline.md:79 `action:'check'` 引用**（CLI 端已删——§19.8 并行批次镜像面遗漏，非本批——待并行批次处理或单独修）
+- [ ] **system.mjs 505 行超 500 硬限**（2026-09-06，来源：批 2 交付 advisor 🟡#6 披露延后——legacy 单文件 bash/grep/glob/ls 聚集体，批 2 仅 +22 行接线——拆分会动整个工具组——建议独立清理批）
 > 设计文档只承载设计本身——待办变更不应触发设计文档变更（避免不必要的 doc review）。
 > 维护：工程模式下由架构师（agent）在对话中即时更新；用户在需要时增删。
 
@@ -12,6 +32,21 @@
 - [x] ~~VS Code 压缩可见性（CONTEXT-COMPACTION.md §7 D-C3：回调 + webview 状态行）~~——VS Code 落地
 
 ## 待办（Open）
+
+### 工具 glob 方言缺口 · brace/扩展/排除静默漏匹配（2026-09-06，来源：file-search 测试发现——CLI + VS Code 同款 globToRegex）——**已实现（2026-09-06，TOOLS.md §17——eng-coder clean——核销见 §17.2）**
+
+- [x] ~~**技术待办候选**：globToRegex（CLI shared.mjs / VS Code search.mjs，两端同源）不支持常见 glob 方言，且**静默漏匹配不报错**：~~
+  - ~~`{a,b}` brace 展开：`**/*.{js,txt}` 被字面转义为 `\.\{js,txt\}` → 匹配不到任何文件（本应命中 .js/.txt）~~
+  - ~~`!` 排除前缀：`**/*.js !test/**` 无排除语义 → 作为字面量使整个模式失配~~
+  - ~~`?(x)`/`@(a|b)`/`+(x)` 扩展 glob：被转义 → 错配~~
+- [x] ~~影响：模型按常见 glob 习惯（brace 多扩展名最典型）发模式时静默拿不到结果，误判"无匹配"，不自知模式没被支持。~~
+- [x] ~~方向（待设计）：最低成本 = `{a,b}` brace 展开（最常用，正则层面预展开或扩展 globToRegex 支持 `{...}` → 非捕获组）；`!` 排除需改调用侧语义（多模式求交）。设计启动权在用户——攒批或快车道。~~——**2026-09-06 已实现：brace 展开（占位符防转义）+ 调用侧排除拆分（splitGlobPatterns）+ extglob/空/未闭合/嵌套 brace 全显式英文报错（不再静默）**
+
+### 会话状态诊断工具 · session-state（2026-09-06，来源：人机并行实测——AUTO bug 排查手工扫 7383 个 slot 文件）
+
+- [ ] **技术待办候选**：一条只读诊断命令/工具，dump 当前 cwd 的会话槽全貌——manifest.active、slotSessions 归属（活/死进程）、end marker（本端记录）、每槽 autoApprove / planMode / engineering / advisorGuard / title / 消息数 / sessionStart。
+- [ ] 动机：agent 排查会话状态问题（本次 AUTO 落档失败即一例）需手工写脚本扫 `~/.thincoder/sessions/` 数千文件才能拼全貌——session 列表逻辑散在 ACP session.mjs / TUI agent-turn.mjs / session-slots.mjs 多处，无单点 dump。设计时先查现有可能（/session 切换列表、acp session list 是否有元数据级输出），避免重复造轮子。
+- [ ] 性质：技术待办（agent 自诊断能力），非用户需求点——不进需求池。
 
 ### 工程模式 · 模式感知 + 自切换（2026-08-01）
 
@@ -31,6 +66,7 @@
 - [ ] **CLI 8 个文件超 500 行硬限**（HEAD 即超限，非本次引入——现有 8 个先例）：subagent.mjs **690**（R2 后——619 记录已过期——CLI 交付披露）/ agent.mjs 530 / context.mjs 524 / core.mjs 555 / subagent-async.mjs **以拆分轮启动时实测为准**（历史快照 946/896/649 混排——不同时点）等——按 AGENTS.md 硬限应拆，需独立技术债批次（模块拆分=新建文件+改导入面），完成时在 §18.6.2 处勾销
 - [ ] VS Code 侧同款：subagent.mjs 512 / subagent-async.mjs **以拆分轮启动时实测为准**（历史快照 896/529/189 混排）——ARCHITECTURE.md:596 已记录并入拆分轮
 - [ ] **verify.mjs 527 行**（2026-09-05 遗留批 advisor 🔴#1——§18.12 登记时 429（<500 advisory），L0 重构批后越 500 硬限——父侧裁决挂债（§18.6.2 先例）——拆分建议：watchdog 族（killProcessTree/runWatch/runTestFile/runTestSuite）抽共享模块——顺带消解与 system.mjs/execute.mjs 的三份 kill-tree 重复）
+- [ ] **测试文件 >500 存量债（2026-09-06——F-S5 用户裁定"不允许豁免"后测试文件同判——实测清单）**：CLI 26 个：edit-tools 1585 / prompts 1319 / mcp 1163 / memory 1108 / acp 1033 / advisor-message 1031 / subagent-scheduler 1009 / subagent-async 973 / eng-delivery 970 / suspension-core 962 / agent-core 937 / tui-render 841 / agent-turn 810 / checkpoint 795 / mouse 736 / subagent-core 653 / tui-input 640 / session-compaction 638 / subagent-blocks 621 / proxy 608 / session 604 / tui-panel 599 / session-safety 586 / provider-stream 510 / log 507 / slash-commands 506；VS Code 17 个：subagent-async 1115 / suspension 1087 / subagent-tool 1037 / provider 1024 / advisor 970 / prompts 946 / edit-semantics 891 / unit 843 / edit-eol 782 / chat-panel 753 / compaction 741 / eng-delivery 741 / subagent-scheduler 673 / git 597 / ui 550 / config-io 548 / agent-core 509——排独立测试拆分轮（按域再分——§18.14 先例），与源码拆分轮分开（测试拆分无导入面风险但有用例数对拍纪律——§20.9 断言数不减）
 
 
 ### 轨迹存档 · auto-think 开关残留（2026-09-04，来源：§18.6 fix round1 advisor 🟡——父侧裁决随 R2 实现批）
@@ -449,16 +485,74 @@
 
 - [x] ~~**R3'**~~（2026-09-04 · bash 工具重定向护栏**删除**——用户裁定方向变更——**已实现（子代理 id:13 clean——L1 1360/1312/0 fail——设计 TOOLS.md §13——round2 复审 0🔴 token d6f6bd3a——父侧 L2 核销 2026-09-04 1360/1360）**）
 
-- [ ] **R4**（2026-09-05 · 会话"当前槽位"按端分离——CLI 与 VS Code 各自持久记录本端最后使用的槽位（end marker），不再以共享 manifest.active 作为任一端恢复依据——用户实测：双端同开时退出 CLI 重进恢复错会话——用户裁定 ①A 完全各记各的（取消跨端自动接续）②A 迁移一次性继承（无本端记录时继承共享 active 死主槽一次））——**已批准（评审 2026-09-05 0🔴——token cd891714——用户裁决 A 五项修订已落）——实现中（2026-09-05 签批 spawn eng-coder id:2——双仓合并——脏基座风险用户已接受——验证另批）**——**已实现（2026-09-05 eng-coder id:2 clean——核销 SESSION.md §10.6——父侧 L2：CLI 1485/1437+48skip/0 + VS 1196/1196——**已提交 bd13a17**）**——板块：会话存储契约（权威文档 SESSION.md §10 + VS Code ARCHITECTURE.md 变更段 + 双端实现）
+- [x] ~~**R4**（2026-09-05 · 会话"当前槽位"按端分离~~（…全文见行内…）~~）~~——**已实现（2026-09-05 eng-coder id:2 clean——核销 SESSION.md §10.6——父侧 L2：CLI 1485/1437+48skip/0 + VS 1196/1196——**已提交 bd13a17**——2026-09-06 父侧勾销（行滞后）**）**——板块：会话存储契约（权威文档 SESSION.md §10 + VS Code ARCHITECTURE.md 变更段 + 双端实现）
+
+- [x] ~~**R5**~~（2026-09-06 · agent 进程重启感知——…家族合并 SESSION.md §11）——**已实现核销（2026-09-06——SESSION.md §11.2——eng-coder id:2 clean——2026-09-06 父侧勾销（行滞后）**
+
+- [x] ~~**R6**~~（2026-09-06 · sleep/等待工具恢复——…双端 lockstep）——**已实现核销（2026-09-06 批 2——wait_for 双端交付——CLI 全量 1543 含 T-W1..10 实证——板块 TOOLS.md §16——2026-09-06 父侧勾销）**
+- [x] ~~**R7**~~（2026-09-06 · 发布单轮制——…VS Code VSIX 流程对照随批）——板块：发布流程（RELEASE.md 需求登记 + R7 设计段已落）——**状态：已批准实现中（2026-09-06——评审 0🔴 token 8fcffc12——CLI #2 + VS Code #3 在跑——交付后父侧勾销**）
+
+- [x] ~~**R8**~~（2026-09-06 · agent 运行身份感知——…家族合并 SESSION.md §11）——**已实现核销（2026-09-06——SESSION.md §11.2——父侧勾销（行滞后）**
+
+- [x] ~~**R9**~~（2026-09-06 · agent 工程模式自感知——…家族合并 SESSION.md §11）——**已实现核销（2026-09-06——SESSION.md §11.2——父侧勾销（行滞后）**
+
+
+- [x] ~~**R12**（2026-09-06 · subagent spawn 默认策略翻转——用户裁定：主代理（depth 0）spawn explore/plan/coder **默认改为 async**（现默认 sync——§15 F4/§18 F1 需修订）——需求 = 异步把"等待决策权"还给 agent（"需要等结果他自己会等"vs 同步强制等——用户体验差）——子代理内部 spawn **保持强制 sync**（depth>0 async 已被拒——subagent.mjs L277——现状正确）——通用能力（CLI + VS Code 双端）——板块：AGENT-LOOP（§15/§18 修订））~~——**已实现勾销（2026-09-06——AGENT-LOOP.md §18 D-E1a 已落（设计 + T-A1..A5 + supersede）——代码实证双端：CLI subagent.mjs depth-gated async default（§18 D-E1a 注）+ VS Code subagent.mjs L192 `asyncArg ?? (depth === 0)`——与 env-state 批同次交付（核销引用见 D-E1a 状态行）——TODO 行滞后勾销**
+- [x] ~~**R11**~~（2026-09-06 · agent 模型自感知——…家族合并 SESSION.md §11）——**已实现核销（2026-09-06——SESSION.md §11.2——父侧勾销（行滞后）**
+
+- [ ] **R10**（2026-09-06 · 多实例协作感知——…全量设计已批准——实现中（CLI #5/#6 + VS Code #7 在跑））
+- [ ] **R13**（2026-09-06 · advisor 异步化——用户需求："主代理里跑 advisor 也能是异步的，不要阻塞前端"——**与 R14 合批（用户"合并"——后台池模型统一设计——AGENT-LOOP §24）**——**已批准实现中（2026-09-06——§24 评审 0🔴 token ce8779b7——CLI 面 B #10 在跑——交付后勾销）**）
+- [ ] **R15**（2026-09-06 · 排队用户指令合并处理——用户需求："现在queue里排队的用户指令希望合并一次发出去"——**与 R13/R14 合批（AGENT-LOOP §24——D-24c）**——**已批准实现中（2026-09-06——CLI 面 A #9 在跑——交付后勾销）**）
+- [ ] **R14**（2026-09-06 · 子代理槽位按角色分池 + 可配置——用户需求：①"eng-coder槽和explore槽应该分开，否则eng-coder阻塞了explore很费时"②"槽位数都改成可配置的，默认是eng-coder四路，其他4路"——**与 R13 合批（用户"合并"——AGENT-LOOP §24——D-24a）**——**已批准实现中（2026-09-06——CLI 面 A #9 在跑——交付后勾销）**）
+- [ ] **R16**（2026-09-06 · token 生命周期语义修订——用户裁定：①"ON->OFF不需要清，OFF->ON,上次评审过的不需要重复评审"——token = 评审通过凭证（跨模式存活——现 off→on 必清重评语义废弃）②"TTL到期以后…至少重新启动程序或者打开工程模式的时候应该清理"——清理时机：重启恢复 TTL 过滤（过期不读回）+ 开模式清过期 + spawn 门禁拒时删槽——测试反转（eng(exit) clears/T-AC7 等）——板块：ENG-TOKEN-BINDING（§5 登记已落——§0 铁律 2/3 supersede）——状态：需求登记待设计）
+- [x] ~~**R17**~~ - [ ] **R17**（2026-09-06 · 会诊/飞刀完全异步化——用户裁定："这两都得完全异步化"——查证：consult_start 非阻塞但 check 回合内阻塞 + 无自动注入；escalate 全同步无 async 无池化——澄清裁定：Q1 🅰 会诊 digest 自动注入（R13 同型——完成注入全文——check 退役或降级）/ Q2 🅰 escalate 入 other 池——边界待细查（digest 动作域/escalate 工程模式拒保持/cancel/容量）——板块：AGENT-LOOP（async 面——AGENT-LOOP.md §25——设计已批准（2026-09-06 三评审收敛——token 92938605/c10cd501——决策点 ①-④ 全 🅰））——**状态：双端已实现 + L2 核销（2026-09-06/07 eng-coder #9 CLI + #10 VS 交付 clean——VS L2 1301/1301 全绿 150.5s（含 T-R17q/r 回填 §25）——CLI L2 待 R-bug 修复批后合跑——核销后勾销）**——**L2 全核销勾销（2026-09-07：VS 1301/1301 + CLI 大合验 1626/1626 265.8s——双端全量覆盖 R17/R18/R19 实现）**
+- [x] ~~**R18**~~ - [ ] **R18**（2026-09-06 · 长测试验证先落盘纪律——用户批评"为啥不一开始就落盘"后裁定：memory 只覆盖本机——"这个问题是普遍的，需要在提示词或者方法论层面解决才有普适性"——背景：大合验 VS test:full 首跑 findstr 管道过滤丢失败详情 + child-holds-pipe 截断——115s×2 重复全量跑——**落点待拍**：🅰 system.md 工具纪律条款（双端 prompts——所有会话/角色普适）/ 🅱 METHODOLOGY.md 测试纪律（项目方法论）/ 🅲 TESTING.md §1 执行纪律（测试基建细则）——可选附带：test:full 自动落盘日志（产品层——工具保证 > 纪律）——板块：prompts/测试基建——状态：需求登记待澄清）——**状态：CLI 已实现（2026-09-06 eng-coder 交付——system.md 条款逐字 + 锚测试——待父侧 L2 核销后勾销——VS Code 侧并行镜像）**——**L2 全核销勾销（2026-09-07：VS 1301/1301 + CLI 大合验 1626/1626 265.8s——双端全量覆盖 R17/R18/R19 实现）**
+- [x] ~~**R19**~~ - [ ] **R19**（2026-09-06 · 跨会话历史检索 + 检索族消歧总纲——用户"跨会话也希望有"后裁定 + "跟R19并一起吧"（工具族评估发现：历史/记忆/检索族 8 成员即将 +1——"查历史"一次命中 5 工具——read_history/recent_changes/memory/doc_search/code_search 无互指总纲——27 工具仅 6 个有 Use when 引导）——**两件一批评审**：①模型工具面 readonly 跨会话检索（按 cwd/slot——role/keyword/tool/时间窗/limit/direction——read_history 参数面同型——本会话 = 默认域）②检索族互指消歧总纲（族内每工具描述补"何时用它/何时用族内其它"——read_history→recent_changes 互指先例形态——R19 新工具描述强制含消歧段）——关联：session-state 诊断 TODO（同族动机）——形态待澄清（read_history 加参数 vs 新工具；检索面边界；隐私；性能——索引 vs 逐文件扫）——板块：SESSION（§9 read_history 家族）+ 工具描述面——状态：需求登记待设计）——**状态：CLI 已实现（2026-09-06 eng-coder 交付——read_history path/cwd + 护栏 + 描述族表——待父侧 L2 核销后勾销——VS Code 侧并行镜像）**——**L2 全核销勾销（2026-09-07：VS 1301/1301 + CLI 大合验 1626/1626 265.8s——双端全量覆盖 R17/R18/R19 实现）**
+- [x] ~~**R22**~~ （2026-09-07 · VS Code 子 agent 显示趋同 CLI——用户拍 🅰：活动块从 #messages 挪独立固定活动区（不随流滚动）+ 块头补全状态/model/elapsed/turn——探索 #23 已出双端差异对照（14 维度——机制层两端一一对应——差异全在渲染端空间分配与头部信息密度——根因：VS #subagent-panel 只放状态行、活动内容全 append 进 #messages 滚动流 streaming.js:230-252）——板块：thincoder-vscode UI（ARCHITECTURE.md）——**已实现（2026-09-07 VS eng-coder 交付——ARCHITECTURE.md R22 节实现记录——AC-1/3 自验绿 + 报告裁定在案——待父侧 L2 核销后勾销）**）——**L2 核销勾销（2026-09-07：实现全完成（重启中断点 = 01:23 test:full）——续作审计零缺口——VS test:full 1313/1313 全绿 151.8s——150 裁裁定在案（冻结块计入无豁免）——i18n 清零——slow-gate 链债单独登记）**
+- [x] ~~**R23**~~ （2026-09-07 · CLI 子代理内嵌套子代理显示统一（用户拍 🅱——对齐工具块形态）——探索 #27 实证：eng-coder 内 explore 现为无载体混流行（子标仅文本/工具行首——输出体 raw 无标——无完成边界——外层头状态区被全路径 explore#1/read 占用——根因 = 路由只认 head 段 ensureSubTaskKey + 内层事件全剥除）——🅱 = 子代理内嵌套 explore 显示为 `❯ explore` 工具式块（身份可见 + 输出归属 + 完成定格——与子代理内 read/edit 等工具同形态——主回合 A 形态面板块保持）——板块：AGENT-LOOP（TUI 显示面 §7.2.1/§19）——登记中：块头形态/嵌套深度/完成定格细节待澄清——设计未启动）——**已实现核销（2026-09-07 eng-coder id:5 clean——subagent-children.mjs 子块载体（blocks 破 500 外置）+ 生成侧补发射（评审 🔴 capture 透传修复）+ 文档 supersede 三处/TUI.md 随迁——AC-1 T-R23a..e 全绿 + AC-2 test:full 1641/1641 自验 283s——AC-3 无网 mock 全链等价（如实报告）——L2 合跑父侧核销待 R26 完）**
+- [x] ~~**R24**~~ （2026-09-07 · 设计侧结构规则执行挂钩 + 价值观矛盾清理——用户裁定：清矛盾必须 + 拆分按方法论既有规则（不写禁令）——实证：PHILOSOPHY.md:145 工具描述价值观仍列"最小改动"（同文 :75/:109 正确性优先——自相矛盾）——设计流程不执行 METHODOLOGY 代码结构节档位（R22 chat.css 496 行实现才炸）——方案：① PHILOSOPHY:145 价值观清理（删"最小改动"）② METHODOLOGY「Design Documents」规范补受影响文件行数标注条款（引用代码结构节——超档即拆规划——无新禁令句）③ advisor design 评审维度补行数核查——板块：METHODOLOGY/PHILOSOPHY——快车道（用户拍板）——设计未落）——**已实现核销（2026-09-07 eng-coder id:7 clean——PHILOSOPHY 双端逐字锚（最小改动→正确性绝对优先）+ 根注入体双端同文 + ADVISOR-CONVERGENCE §7 维度句——AC-1 挂起随首涉源/测试文件批次——🟡 执行层补入（advisor-design.md/workspace advisor.md）另派）**
+- [x] ~~**R25**~~ （2026-09-07 · CLI 异常终止捕获与留痕（快车道——用户"全做"——现象：TUI 画面残留 + 提示符——无日志无 WER 无 dump——V8 fatal 疑似）——三件：① 全局 uncaughtException/unhandledRejection 钩子升级（现 bin/thincoder.mjs:31-39 只 console.error 一行——不落盘 + 无 TUI 恢复）→ 落盘 ~/.thincoder/crash-reports/ + TUI 终端恢复（防画面残留）+ exit 非 0 ② --report-on-fatalerror（process.report——OOM/原生 fatal 自动诊断报告）③ 启动检查上次异常退出记录 → 提示——板块：CLI 入口/生命周期（ARCHITECTURE.md）——快车道——设计未落）——**已实现核销（2026-09-07 eng-coder id:14 clean——crash-reports.mjs 机制模块（外置——bin 458+120 必破 500——正确规避）+ TUI 活动标志/恢复 + report 启用 + 启动提示——AC-1 crash 系 6/6 + AC-2 实测（目录缺失静默不写——预建必要实证；report 命名格式验证）+ AC-3 正常退出零记录——L2 全量父侧核销待跑）**
+- [x] ~~**R26**~~ （2026-09-07 · files 声明父侧文件拦截（防 TODO.md 全局串行复发——用户批评后拍 🅲=A+B）——实证：R22/R23/R24 全因 TODO.md 入 files 声明排队串行——纪律注已落 AGENT-LOOP 尾（软）——机制化：① 提示词条款（engineering.md 派发段——files 声明只列实现写域——父侧文件 TODO.md/CHANGELOG.md/checklist 不得列入）② 机械校验（subagent 工具 files 黑名单——含父侧文件 → 拒绝+提示——双端）——板块：AGENT-LOOP §20 调度器派发面 + prompts——快车道——设计未落）——**已实现核销（2026-09-07 eng-coder id:13 clean——双端 normalizeFileList 黑名单（修正轮分隔符归一）+ engineering.md 条款同文 + T-R26a/b 双端全绿（CLI 35/35 + 79/79 / VS 24/24 + 70/70）——AC-4 实测落表——L2 合跑待 §29 完）**
+
+- [x] **R21**（2026-09-06 · read_pdf 工具移除——用户裁定"我觉得没必要存在，应该去掉，真要读pdf agent自己会想办法，而且pdf场景过于复杂，实现也覆盖不好"——实证支持：5301 会话文件 **0 调用**（立项后从未使用）+ 双核解析器高维护面——移除面：4 源文件 + read_pdf.md 删 + index.mjs 装配 **3 处**（import/builtinTools/export——评审核实）+ read.md 路由句 + **discipline.md 工具总表行 + ARCHITECTURE.md 模块树 + FEATURES.md 特性行（评审 #1 补）** + TOOLS.md 全文件计数 26→25 + test/pdf-parse.test.mjs（17 用例——L2 1605→1588 对账）——CLI 独有（VS Code 零镜像）——**评审 0🔴 通过（token 236569fb——六项全采纳已落 TOOLS.md §11——AC-1..5 已补）——状态：已实现（2026-09-06 eng-coder 交付——12 移除面全执行——AC-1/2/4/5 已验——AC-3 已核销（2026-09-06 父侧 L2 test:full = 1588/1588 全绿——231.5s——对账精确——R21 全 AC 勾销）——AC-5 75cc2c9 在）**）
+- [ ] **R19 评审 #13 遗留（2026-09-06——round2 复审非阻塞 🔵——发现面无上限）**：read_history cwd: 发现面"列全部槽"无 top-N 上限——7383 槽 cwd 现实下摘要列表可打输出上限——建议 top-N cap + overflow 提示（R19 实现批不做——设计内未定义——此处登记待后续评估）
+- [ ] **R18+R19 VS Code 交付跟进（2026-09-06 #8 报告——Deferred 4 项）**：① read-history.mjs 349 行（>300 advisory <500 硬限）——拆分须与 CLI 并行端同构协调——双端同批 ② read-history.test.mjs 抵 500 硬限边界——下批预拆 ③ ROUTE_NA 移除后路由元素断言可加固（T-R19.5 逐字锚已覆盖——防漂移后续）④ 发现面损坏槽静默跳过语义（audit 🔵——已实现——注记）
+- [ ] **R19 护栏语义缺口（2026-09-06 #7 交付上报——🟡 advisor Deferred——需设计层裁定）**：READ_HISTORY_SCAN_MAX 按物理 `\n` 行计数——自产会话槽文件紧凑单行 JSON（session-slots.mjs JSON.stringify 无缩进）——真实超大会话换行 ≈0——护栏永不触发——"行读预筛"假定落空（全读全解析才过滤）——T-R19.7 绿但机制 vs 文件现实失配——修复需 SESSION §13 裁定"单行巨型文件字节/消息预算语义与数值"（双端镜像同值）
+- [ ] **join(cwd, p) 双前缀 bug（2026-09-06 网友报——thinworker 同源——thincoder 实证确认）**：record-results.mjs:89/146 + agent.mjs:339 三处 `join(agent.cwd, p)`——p 为绝对路径时双前缀（实证：join('D:\thincoder', 'D:\other\\x') = 'D:\thincoder\D:\other\\x'——resolve 语义正确）——touchedPaths/args.path 若含绝对（模型发绝对/工具返回绝对）→ _touchedFiles/noteMutations 记错路径（verify 关联/advisor 陈旧扫描/索引降级）——修复 = join → resolve（三处）——域冲突：agent.mjs 被 R17 #9 在改——等 R17 批收尾后快修或随批——**状态：CLI 已修复（2026-09-06 R-bug 快车道 eng-coder 交付——三处 join→resolve + 记账域测试三用例（修复前先验失败实拍——双前缀现场复现）——L1 1511 pass/0 fail——待父侧 L2 核销后勾销——VS Code 侧并行独立面）**
+
+
+
+
 
 
 
 ### 2026-09-06 走查批 · 观察项（来源：走查 + 本批交付）
+- [ ] time-injection 适配遗留两项（2026-09-06 大合验——适配记录见 thincoder-vscode ARCHITECTURE.md）：① process-restarted reminder 含 ISO ts 位于 time 前——per-process 首 run 缓存 miss 一次（SESSION §11——若求全命中移 time 后——待 SESSION §11 评估）② time-injection 测试会话目录未沙箱（restart marker 读真实 sessions——#7 卫生注记同类——归册/沙箱随测试卫生批）
+
+- [ ] R10 批测试 slow 归册债（2026-09-06 R7 #2 交付上报——快层 D-T6 拦截 52 个 >800ms 未归册用例：acp/session/guards/peer-collab 等——R10 三面收敛后统一归册——随 R10 核销处理）
+- [ ] AGENTS.md release flow 顺序与 RELEASE.md §2 分歧（2026-09-06 R7 #2 out-of-scope note——bump→publish→commit/tag→push vs §2——先于 R7 存在——doc 层择机对齐——顺手修）
+- [ ] R7 AC 记录补"残留扫描只约束活体文案"豁免注（2026-09-06 R7 #2 advisor 🔵 未采纳——留父侧——随 R7 核销记录一并落）
 
 - [ ] CLI `tui-panel.test.mjs` §19.5 D-M7b 时序敏感 flake（首轮全量偶发 1 败——单跑/复跑绿——跨文件测试污染型——与交付无关——排查）
-- [ ] VS Code `T5/T5b` 时序敏感测试（400ms 断言——单文件跑偶发失败——基线既有——排查/加固）
+- [ ] VS Code `T5/T5b` 时序敏感测试（400ms 断言——单文件跑偶发失败——基线既有——排查/加固）——**2026-09-06 Phase 1 交付补充：全量层间歇失败扩大至 suspension T-S1（HEAD 对照实验证实存量，非 Phase 1 回归）——合并治理**
+- [ ] VS Code `queue-user-message.test.mjs` 孤儿（2026-09-06 Phase 1 交付上报——替换 send-queue 后两端从未入 npm test 清单——单跑 2/2 通过——决定入册或删除）
+- [ ] engineering-sub.md L1 行 "~15s" 数字漂移（2026-09-06 Phase 2 交付 advisor 🔵——实测 18.5-19.7s——src/prompts 属产品代码需走批——随下个提示词批顺手修）
+- [ ] VS Code 快层 D-T6 门负载抖动触红存量用例（2026-09-06 Phase 3 交付上报——session-io-parity F4 / compaction / dual-history / mcp 等 800-2100ms 浮动、逐跑名单不定、基线即红——处置：滚动归册或拦截阈值复议——随下轮测试基建批）
+- [ ] VS Code 根 METHODOLOGY.md 头注悬空指针（指向本仓不存在的 docs/design/METHODOLOGY.md——2026-09-06 Phase 3 上报——存量，顺手修）
 - [ ] VS Code subagent 工具**参数 schema 与 CLI 既有差异**（id 类型 number vs string、五动作枚举（VS 无 panel——AC-P4 有意）、无 context 参数）——D-A3 范围 = description——schema 差异是否随镜像统一：**待用户裁定**（本批未动）
 - [ ] ARCHITECTURE.md:596 §20 记录残留 `test/subagent.test.mjs` 引用（历史 as-of——非本批引入——方便时修）
 - [ ] ARCHITECTURE.md §19.6 引用段缺口（历史批遗漏——本批已补 §19.7/design B 引用段——§19.6 缺口另补）
 
 
+
+- [ ] **cmd-undo.mjs:23/71 join 同型残留（2026-09-07 R-bug #21 交付上报——audit + advisor 双书面注——登记后续小修）**：`join(cwd, ...split("/"))` 对模型绝对路径静默失效——预存在、非记账面——后续小修 + VS Code 镜像同查（R-bug 修复批 #21 完成——三处记账点已 resolve——此残留独立登记）
+- [ ] **TUI 异常终止无痕诊断观察项（2026-09-07——用户实测：TUI 画面残留 + 提示符出现 + 未清屏——进程自行终止——Windows 事件日志空/CrashDumps 无 node dump/agent 日志戛然而止——现象学指向 V8 进程内 fatal（OOM 类——瞬间终止无盘面证据）——多实例 + 并发 eng-coder 内存压力诱因面——产品面建议：① process 全局 uncaughtException/unhandledRejection 钩子 + TUI finally 终端恢复（异常退出至少清屏回 shell——画面残留即诊断信号）② --heapsnapshot-on-oom 复现期取证——纯技术待办（平台稳健性）——未立项）
+- [ ] **VS 侧 R24 执行层镜像（2026-09-07 id:11 交付附带观察——VS advisor-design.md 缺第 8 维 Affected-file size annotations——VS 端评审弱执行）**：thincoder-vscode/src/prompts/advisor-design.md Review Criteria 补第 8 维（镜像 CLI 端 id:11 已落文本——按 §18.11 镜像约定 VS 侧自同步——小派单候选）
+- [ ] **bin/thincoder.mjs 贴 500 硬限余量（2026-09-07 R25 交付 advisor 🟡——恰 500 行）**：下批将 R25 残留块迁 crash-reports.mjs（registerCrashHandlers() 单一导出——钩子/测试门迁移——恢复余量）——R25 本批不动（设计锚在 bin 入口——迁移另批）；ARCHITECTURE.md R25 节勾销 + CHANGELOG + TODO 父侧核销。
+- [ ] **平台缺口：async advisor digest token 未注册父会话 approved slots（2026-09-07 VS Code 实例实证——"session holds 0 approved design slot(s)"——R-bug #19 同族（async 评审缺 token/未注册））**：async advisor 评审完成时 token/designId 在 advisor 自身会话签发——父会话 digest 只收文本——未写入父会话 approved design slots——spawn eng-coder 校验拒（带 designId 报 not found——只带 token 报 invalid）——解法 = 同步重评（async:false——同 scope 自动 round2——通过时注册）——平台修复候选：digest 消费时注册 slots 或 spawn 校验接受 digest 文本 token——thincoder 产品面 bug（非工作流）
+- [x] ~~**§29 async advisor stale 误判修复**~~ ：launchSeq 工具执行期捕获（advisor-async.mjs:373）vs mutation seq 整批提交后记账（record-results.mjs:84-91）——同消息[写设计文档+发 async advisor] settle 恒误判 stale（:238-250）→ if(!stale) 门跳过 settleDesignReview（:313-317）→ 0 slots——digest 却注入未清洗原始报告含评审员回显 [DESIGN-TOKEN...]（:416 返回值丢弃）——修复 A（根因：noteMutations 移到执行成功即刻——dispatch runOne——agent.mjs:344-363 中断分支先例——不双计）+ B（防御：settleAdvisorRun 返回写回 entry.report——清洗输出/stale 提示——digest 永不展示未注册 token）——C 可选（stale digest 附说明）——设计落 AGENT-LOOP 尾注——未评审——**已实现核销（2026-09-07 id:18 clean 双端——CLI L2 1656 全绿核销完成——VS L2 1327 全绿含镜像）**
+- [x] ~~**VS 冻结块插入位置修复**~~ ——CLI 2026-09-03 已修（settle 锚点 splice——digest 总览前——subagent-blocks.mjs:236 + freeze.mjs:78-89）——VS 移植丢锚点机制（activity.js:15 自称 parity 只移时机）——测试没拦（T-S14 无顺序断言 + ui.test:289 尾插固化）+ 设计文档句缺陷（VS ARCHITECTURE.md D-R22c:706/T-R22c.1:717 写"插入末尾"——未吸收 CLI round1 #1 裁定）——修复 A（CLI parity：settle 锚点 = messagesEl.lastElementChild——afterend 插入——锚点被 150 裁移除回退 append——同锚多块链式/降序对齐 CLI）——C 否决（移 reclaim 时机违 §17.5.5 契约）——设计未落——**已实现核销（2026-09-07 id:20 clean——锚点链式落位——T-S14 顺序断言 + T-R22c.2d——VS L2 1327/1327 含）**
+- [ ] **CLI slow-gate 归册债（2026-09-07 §29 交付上报——npm test L1 exit 1 = 49 例未归册超阈——acp/session-compaction 等 85s/86s 老用例——非任何本批引入——与 VS 18 例同族——单独归册清理批候选）**：机械 test(→slow( 标注
+- [ ] **观察项（2026-09-07 §29 交付——候选——未登记立项）**：CLI settle 门 ctx.signal.aborted（launch 回合 Ctrl+I 后会话绑评审 settle 跳过记账）vs VS controller-only 门 + F2 interrupt 豁免不对称——§29 范围外既有行为——评估候选
+- [x] **CLI L2 合跑核销（2026-09-07——R23+R25+R26+§29 四批终态——test:full 1656 pass / 0 fail / 253s——链终端绿——四批 TODO 行核销完成）**
+- [x] **VS L2 合跑核销（2026-09-07——R22+R-bug+R26 VS+§29 VS+冻结修复五批终态——test:full 1327 pass / 0 fail / 114s——链终端绿——R22 冻结修复 TODO 行核销完成）**

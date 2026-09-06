@@ -6,6 +6,7 @@
  */
 
 import { C } from "./ansi.mjs"
+import { closeOpenSubChildren } from "./subagent-children.mjs"
 
 // ─── §19.6 D-P1 面板镜像（subagent panel 检查工具）───
 // TUI 装配处（index.mjs startTUI）state._agent = agent——块级状态变更点经
@@ -69,11 +70,14 @@ export function finishSubTaskKey(state, key, lastError = null) {
 
 /** 冻结完成/中断区块进 state.lines（§7.2 D4——_frozenSubTask 载体行，渲染端
  *  render-conversation 识别；折叠交互 key = sub-${key} 与运行面板同源跨冻结延续）。
+ *  §27 R23 D-R23c2 收尾语义（T-R23c.2a）：外层先冻结而内层子块未收尾（外层 abort/
+ *  中断）→ 子块随外层冻结定格 stopped（closeOpenSubChildren——不悬空）。
  *  锚点插入（2026-09-03 修复轮）：settled 块带 _freezeAt（settle 时刻流位置）——
  *  splice 落位使挂起期补发冻结块位于其 digest 总览文本之前；无锚点尾推不变；
  *  多锚点批量冻结按降序（绝对位置 splice——先插小锚点会移走大锚点目标）。 */
 export function freezeSubTaskLines(state, sub) {
   if (!sub) return
+  closeOpenSubChildren(sub) // R23 D-R23c2——开子块随外层冻结定格 stopped
   state._frozenSubKeys ??= new Set()
   state._frozenSubKeys.add(sub.key)
   sub.done = true
@@ -122,28 +126,6 @@ export function finishSubTasksByRole(state, roles, lastError = null) {
     }
   }
   syncPanelSnapshot(state) // §19.6 D-P1: done 状态变更刷镜
-}
-
-/** 按 [model] 记录的 model 精确 settle（consult_check 返回 provider:model——
- *  乱序 settle 时最早启发式冻错块）。比对尾段（bare ↔ provider:model）。 */
-export function finishSubTaskByModel(state, role, model, lastError = null) {
-  state.subTasks ??= {}
-  const want = String(model ?? "").includes(":") ? String(model).split(":").pop() : String(model ?? "")
-  for (const sub of Object.values(state.subTasks)) {
-    const have = String(sub.model ?? "")
-    const haveTail = have.includes(":") ? have.split(":").pop() : have
-    if (!sub.done && sub.role === role && haveTail === want) {
-      sub.done = true
-      sub.doneAt = Date.now()
-      sub.currentTool = null
-      sub.approval = null
-      if (lastError) sub.lastError = lastError
-      sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
-      syncPanelSnapshot(state) // §19.6 D-P1: done 状态变更刷镜
-      return sub
-    }
-  }
-  return null
 }
 
 /** 回合尾/挂起退出清扫（runAgentTurn finally / suspensionSession finally）：冻结全部

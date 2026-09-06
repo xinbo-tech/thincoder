@@ -555,7 +555,7 @@ test("codeSearch: 空查询 / 无结果返回空", async () => {
   assert.deepEqual(r, [])
 })
 
-test("code_search 工具注册与执行", async () => {
+slow("code_search 工具注册与执行", async () => {
   const { codeSync, codeSearchTool } = await import("../src/memory.mjs")
   const { writeFile, mkdir } = await import("node:fs/promises")
   const m = freshMemory()
@@ -583,7 +583,7 @@ export function calculateTotal(items) { return items.reduce((a, b) => a + b, 0) 
 
 // ========== 文档索引 ==========
 
-test("docSync: 索引 markdown 文档 → 按 ## 标题分块 → 检索 → 增量变更", async () => {
+slow("docSync: 索引 markdown 文档 → 按 ## 标题分块 → 检索 → 增量变更", async () => {
   const { docSync, docSearch } = await import("../src/memory.mjs")
   const { writeFile, unlink, mkdir } = await import("node:fs/promises")
   const m = freshMemory()
@@ -711,7 +711,7 @@ export const { x, y } = { x: 1, y: 2 }
 
 // ========== 增量索引 ==========
 
-test("reindexFile: write 后单文件增量索引", async () => {
+slow("reindexFile: write 后单文件增量索引", async () => {
   const { codeSync, codeSearch, reindexFile } = await import("../src/memory.mjs")
   const { writeFile, unlink, mkdir } = await import("node:fs/promises")
   const m = freshMemory()
@@ -805,7 +805,7 @@ test("gitSync: 非 git 仓库返回 null", async () => {
   }
 })
 
-test("doc_search 工具注册与执行", async () => {
+slow("doc_search 工具注册与执行", async () => {
   const { docSync, docSearchTool } = await import("../src/memory.mjs")
   const { writeFile } = await import("node:fs/promises")
   const m = freshMemory()

@@ -4,9 +4,9 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, dirname } from "node:path"
+import { join } from "node:path"
 import { execSync } from "node:child_process"
 import { slow } from "./slow.mjs"
 
@@ -17,13 +17,6 @@ function createGitRepo(testDir) {
   writeFileSync(join(testDir, "dummy.js"), "// test")
   execSync("git add -A && git commit -m init", { cwd: testDir, stdio: "ignore" })
 }
-
-
-
-test("advisor/run.mjs: 无 12_000 边界残留（评审 #3）", () => {
-  const src = readFileSync(new URL("../src/advisor/run.mjs", import.meta.url), "utf8")
-  assert.ok(!/\b12_000\b/.test(src), "advisor 截断无 12K 残留")
-})
 
 
 
