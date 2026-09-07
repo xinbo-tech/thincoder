@@ -18,6 +18,7 @@
   - **CLI 26 个**（2/3）：eng-delivery 970 / suspension-core 962 / agent-core 937 / tui-render 841 / agent-turn 810 / checkpoint 795 / mouse 736 / subagent-core 653
   - **CLI 26 个**（3/3）：tui-input 640 / session-compaction 638 / subagent-blocks 621 / proxy 608 / session 604 / tui-panel 599 / session-safety 586 / provider-stream 510 / log 507 / slash-commands 506
   - **VS Code 17 个**：subagent-async 1115 / suspension 1087 / subagent-tool 1037 / provider 1024 / advisor 970 / prompts 946 / edit-semantics 891 / unit 843 / edit-eol 782 / chat-panel 753 / compaction 741 / eng-delivery 741 / subagent-scheduler 673 / git 597 / ui 550 / config-io 548 / agent-core 509
+- [x] ~~**测试文件 >500 存量债**~~（2026-09-06 登记——**2026-09-08 已勾销**：用户裁定测试全删（VSC 全删 + CLI 清理 312b943），双端现各剩 1 个 test 文件、均 <500 行——本条不再适用）
 - [ ] **subagent-async.mjs / subagent.mjs 超 500 硬限**（CLI 703 / VS Code 531——2026-09-04 id:26/id:31 交付 🟡——既有债务，ARCHITECTURE.md:588 历史已漂移）——建议随 §20.9 Module Split 轮：subagent-async.mjs 365-577 行 §20 调度段拆独立模块（test/subagent-scheduler.test.mjs 天然落点）
 - [ ] **模块拆分轮超限登记补全**：§20 交付后实测——CLI subagent-async.mjs 947 / subagent-blocks.mjs 625（冻结家族抽 freeze.mjs，re-export 保 API 回落 ~460）/ subagent.mjs 611 / subagent-panel.mjs 待测 / agent-turn.mjs 535 / tool-events.mjs 537；VS Code subagent-async.mjs 885 / subagent.mjs 510——排独立拆分轮（避免同文件并发）
 - [ ] **run.mjs 495 行挂债**（VS Code——>300 advisory 既有——R3 挂债不重复——模块拆分轮候选项）
