@@ -124,8 +124,8 @@ PreToolUse hooks → 阻断
 
 工具级 readonly 标志无法同时表达 spawn（副作用）/status（只读查询）/cancel（控制）——dispatch 预审按 **action 参数**分类：
 
-- **readonly 面**：`status`（只读查询——planMode 放行、免审批、可批并行）。
-- **控制类豁免**（`isSubagentControlAction`——cancel + panel freeze）：免权限审批（只停不启——无新副作用）、planMode 允许、批审批不入组、手动档 digest 内放行。
+- **readonly 面**：`status`、`observe`（只读查询——planMode 放行、免审批、可批并行——SUBAGENT-OBSERVE-SEND：observe 摘要查询无副作用）。
+- **控制类豁免**（`isSubagentControlAction`——cancel + panel freeze + **send**）：免权限审批（send 写子注入队列属父对子轻量引导——非产品代码写——父回合内显式调用即授权）、planMode 允许、批审批不入组、手动档 digest 内放行。
 - **spawn / escalate**：按非只读处理（planMode deny、串行、门禁照常）。
 
 ### 4.2 approval 批确认（防点击疲劳）
@@ -140,7 +140,7 @@ Phase 1 收集同批（同一 toolCalls 数组）所有**通过前置门禁、�
 - **apply_patch**（新建多个文件 `--- /dev/null` / 整文件替换 / 统一 diff 形态）——与 edits 场景互补（逐条精确 vs 整块/新建）。
 - **提示词并行化条款**（system.md "How you work — while coding" 段——含 carve-out：并行禁令对声明 `files` 的 async spawn 例外——调度器自动排队，§10）。
 
-**变更记录**：2026-08 回补两段调度；2026-08-31 console 回显；2026-09-02 approval 批确认 + 批量形态引导（§4.2/§4.3）；2026-09-03 action 级门控 + carve-out（§4.1/§10）。调度权威出口见 TOOLS.md（工具注册/ctx/hooks/undo）——本文档只述调度决策语义。
+**变更记录**：2026-08 回补两段调度；2026-08-31 console 回显；2026-09-02 approval 批确认 + 批量形态引导（§4.2/§4.3）；2026-09-03 action 级门控 + carve-out（§4.1/§10）；2026-09-08 observe（readonly）/send（控制豁免）并入分类（SUBAGENT-OBSERVE-SEND）。调度权威出口见 TOOLS.md（工具注册/ctx/hooks/undo）——本文档只述调度决策语义。
 
 ## 5. 零工具调用回合（completion.mjs handleCompletion）
 
@@ -192,25 +192,35 @@ Phase 1 收集同批（同一 toolCalls 数组）所有**通过前置门禁、�
 
 **变更记录**：2026-08-21 role 描述能力矩阵 + explore thoroughness；2026-08-23 委托策略（广度探索下沉 explore）；2026-09-04 coder/consult 人格锚（§7.6）。
 
-### 7.2 单工具动作面（subagent 工具——五动作）
+### 7.2 单工具动作面（subagent 工具——七动作）
 
-subagent 家族合并为**单工具 + action 参数分流**（"工具会爆炸——靠参数做不同的事"）：**spawn / status / escalate / cancel / panel**——`check` 已删除（§7.5——2026-09-06）。consult 家族维持独立（会诊多模型会话级生命周期——不并入）。escalate 并入为 `action:"escalate"`（工具面收敛——普通模式工具，工程模式拒——走 eng-coder）。
+subagent 家族合并为**单工具 + action 参数分流**（"工具会爆炸——靠参数做不同的事"）：**spawn / status / observe / send / escalate / cancel / panel**——`check` 已删除（§7.5——2026-09-06）。
+**observe + send**（SUBAGENT-OBSERVE-SEND——2026-09-08）给父对运行中异步子代理的**运行时观测与轻量引导**：observe 查进度（摘要，隔离不破坏——N2）、send 注入引导（子回合边界作普通指令消费——非打断）。
+consult 家族维持独立（会诊多模型会话级生命周期——不并入）。escalate 并入为 `action:"escalate"`（工具面收敛——普通模式工具，工程模式拒——走 eng-coder）。
 
 | action | 参数 | 返回 | 阻塞 |
 |---|---|---|---|
 | spawn（缺省） | task/role/designToken/designId + **files?/dependsOn?**（§10——仅 async 参与调度；sync 命中冲突 → 明确错误） | `{id, role, status:"running"/"queued", position?, waiting?, reason?}` | 同步 role 等完成；async 立即返回 |
 | status | id?（省 = 全部概览） | 结构化对象数组 `{running/queued/done}`——running 带 model/elapsedSec/turn/maxTurns/touched 摘要；queued 带 position/waiting/reason；不消费 | 不阻塞（立即） |
+| observe | id（必填）+ recent?（摘要条数上限，默认 5） | `{id, role, status, turn, maxTurns, touched…, currentTool? (数组——在跑工具名), recentTurns:[…], done?}`——running 带最近 N 条回合摘要 + in-flight 当前工具（读 dispatch 状态非仅 history——卡死检测）+ touched；queued 占位；done 可查（终报走自动通道） | 不阻塞（立即） |
+| send | id（必填）+ message（必填） | `{id, status:"delivered", queued}`——消息入队待子回合边界消费；error（settled/cancel/unknown/queued/sync） | 立即（入队） |
 | escalate | task/model?（consultModels 池——缺省池首） | 术后报告（专家 WRITE 干活）——缺省 async（other 池后台 + settle 三分类 → digest） | 缺省 async；`async:false` 同步 |
 | cancel | id（必填——防误全停） | `{id, status:"cancelled"}` / `{was:"queued"}` / error | 立即（定向 abort） |
 | panel | {view?, freeze?}（互斥，view 默认） | 镜像快照 / 冻结回收确认 | 同步 |
 
-**action 缺省 = spawn**——既有 subagent 调用（无 action）零迁移。**eng-coder role 覆盖**（role 参数照旧——工程协议零影响）。dispatch 按 action 分类（§4.1）——`status` readonly、`cancel`/`panel freeze` 控制类豁免、`spawn`/`escalate` 非只读。
+**action 缺省 = spawn**——既有 subagent 调用（无 action）零迁移。**eng-coder role 覆盖**（role 参数照旧——工程协议零影响）。dispatch 按 action 分类（§4.1）——`status`/`observe` readonly、`cancel`/`send`/`panel freeze` 控制类豁免、`spawn`/`escalate` 非只读。
+
+**observe 契约**（readonly——N2 摘要不灌全量）：目标 = 父自身 spawn 的异步子代理池条目（_asyncSubagents——非 advisor/escalate）；父回合内可见的 running/queued/done 均可查。数据源 = entry.childAgent（_fullHistory 最近 N 条回合摘要 + _touchedFiles + dispatch in-flight `_inflightTools` 当前工具 + turn/maxTurns）。凭证纪律不变（observe/send 不读写 token/designId——AC4）。
+
+
+**send 契约**（控制类豁免——父回合内显式调用即授权）：仅**运行中异步子代理**可注入——消息 push 进 `entry._injected`，子回合边界（agent.mjs 回合循环头 consumeInjected 回调）消费 → pushReal 成 user 回合进子历史 → 子代理按**普通用户指令**处理（注入不等同偏离豁免——子收敛/审计纪律不变）。
+sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id → 明确错误。**send→settle 竞态**：入队后子代理在下一回合边界前 settle → 消息未投递——settle 收尾附报告"undelivered"提示（防父误以为引导已落地）。
 
 **cancel 判断纪律**（subagent.mjs cancel 描述尾句——逐字锚——§7.2 cancel 描述）：
 "Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first; prefer scoped recovery (restore a single affected file) over killing the child — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited."
-`action:"status"` running 条目带 **touched files 摘要**（复用 `_touchedFiles`——杀前看得见代价——前 5 + 截断）。
+`action:"status"` running 条目带 **touched files 摘要**（复用 `_touchedFiles`——杀前看得见代价——前 5 + 截断）。`action:"observe"` running 条目同样带 touched 摘要 + recentTurns + currentTool。
 
-**变更记录**：2026-09-03 五动作（含 escalate 并入/status/cancel/panel）→ 2026-09-06 check 删除（§7.5）——工具面六动作 → 五动作。
+**变更记录**：2026-09-03 五动作（含 escalate 并入/status/cancel/panel）→ 2026-09-06 check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 observe/send（SUBAGENT-OBSERVE-SEND）——五 → 七动作。
 
 ### 7.3 async 子代理（后台并行）
 

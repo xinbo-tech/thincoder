@@ -1,8 +1,8 @@
 /**
  * subagent-async.mjs — async subagent 机械 + 共享 post-spawn 管线 + cancel 动作执行器
- * （AGENT-LOOP.md §19：subagent 单工具五动作 spawn/status/escalate/cancel/panel——§19.8
- * check 删除后工具面只剩五动作；spawn 路径与工具面在 subagent.mjs；cancel 动作执行器
- * 与机械、管线在本模块——check 执行器随 §19.8 删除）。
+ * （AGENT-LOOP.md §19：subagent 单工具多动作——spawn/status/escalate/cancel/panel/
+ * consume-design + observe/send（SUBAGENT-OBSERVE-SEND）——§19.8 check 已删；spawn 路径与
+ * 工具面在 subagent.mjs；cancel 动作执行器与机械、管线在本模块——check 执行器随 §19.8 删除）。
  * 内容：resolveChildProvider / async 池常量与域助手（ASYNC_POOL_LIMITS/poolDomainOf/
  * resolvePoolLimits/poolLimitsFor/runningPoolCount——§24 D-24a）/ executeCancelAction +
  * cancelAsyncSubagent（§19.5 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /

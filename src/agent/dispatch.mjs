@@ -82,6 +82,8 @@ function isSubagentReadonlyAction(toolName, args) {
   const action = args.action
   // §19.8: check 动作已删除——只读面仅剩 status（planMode 放行/免权限审批/可批并行）
   if (action === "status") return true
+  // SUBAGENT-OBSERVE-SEND：observe = readonly 查询（同 status——digest/planMode 放行）
+  if (action === "observe") return true
   // §19.6 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
   if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
   return false
@@ -89,6 +91,9 @@ function isSubagentReadonlyAction(toolName, args) {
 function isSubagentControlAction(toolName, args) {
   if (toolName !== "subagent") return false
   if (args?.action === "cancel") return true
+  // SUBAGENT-OBSERVE-SEND：send = 控制类豁免（同 cancel——父回合内显式调用即授权——
+  // 写子输入队列属父对子轻量引导，非产品代码写——免审批、planMode 放行、digest 内放行）
+  if (args?.action === "send") return true
   // §19.6 panel freeze 面（D-P3 门控在 executor——只读/控制分类在此）
   if (args?.action === "panel" && args.freeze !== undefined && args.freeze !== null && String(args.freeze) !== "") return true
   return false
@@ -355,7 +360,17 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         onPermissionRequest: callbacks.onPermissionRequest,
       }
       try {
-        rawResult = await item.tool.execute(item.args, toolCtx)
+        // SUBAGENT-OBSERVE-SEND D1（评审 #1）：in-flight 当前工具记账——工具执行期间在
+        // agent 上留 _inflightTools Set（子代理 observe 从 dispatch 状态读——卡在长工具
+        // 调用时 history 无新回合、恰需此信号）；finally 清除。批并行工具同入 Set（observe
+        // 如实返回多个在跑工具）。主会话同样记账——无害（无人读）。
+        const inflight = agent._inflightTools ?? (agent._inflightTools = new Set())
+        inflight.add(toolName)
+        try {
+          rawResult = await item.tool.execute(item.args, toolCtx)
+        } finally {
+          inflight.delete(toolName)
+        }
       } finally {
         console.log = origConsoleLog
         console.error = origConsoleErr

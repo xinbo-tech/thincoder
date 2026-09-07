@@ -167,6 +167,144 @@ export function executeStatusAction(args, ctx) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SUBAGENT-OBSERVE-SEND（docs/design/SUBAGENT-OBSERVE-SEND.md——CLI 端）
+// observe（D1——readonly 查询）+ send（D2——控制类豁免注入引导）——动作执行器。
+// 目标 = 父自身 spawn 的异步子代理池条目（_asyncSubagents——非 advisor/escalate——
+// 后者共享 id 计数但非"读写子代理"，错误路径明示）。
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** D1/N2 摘要形态：从子代理 _fullHistory（real 消息——pushReal 累积）倒序收最近 N 个
+ *  assistant 回合的一行描述（newest-first；assistant 消息 = 一回合——带 tool_calls =
+ *  工具轮、独立 content = 回复首行）。返回纯摘要非全量（N2 隔离——不把子代理噪音灌父）。 */
+function recentTurnLines(child, limit) {
+  const hist = child?._fullHistory
+  if (!Array.isArray(hist)) return []
+  const out = []
+  for (let i = hist.length - 1; i >= 0 && out.length < limit; i--) {
+    const m = hist[i]
+    if (m?.role !== "assistant") continue
+    const tcs = Array.isArray(m.tool_calls)
+      ? m.tool_calls.filter((t) => typeof t?.function?.name === "string")
+      : []
+    if (tcs.length) out.push(`tools: ${tcs.map((t) => t.function.name).join(", ")}`)
+    else if (typeof m.content === "string" && m.content.trim()) {
+      const first = m.content.trim().split(/\r?\n/).find((l) => l.trim())
+      out.push((first ?? m.content.trim()).slice(0, 120))
+    } else out.push("(assistant — no content)")
+  }
+  return out
+}
+
+function queuedPositionOf(agent, key) {
+  const i = (agent?._asyncQueue ?? []).findIndex((e) => String(e.id) === key)
+  return i >= 0 ? i + 1 : undefined
+}
+
+/** recent 参数钳制（默认 ~5 条摘要——可参数；钳到 1..20 防超长 N2 失控）。 */
+function clampRecent(n) {
+  const v = Number.parseInt(n, 10)
+  if (!Number.isFinite(v)) return 5
+  return Math.max(1, Math.min(20, v))
+}
+
+/**
+ * subagent action:"observe"（D1——READONLY 查询，父回合内）：按 id 拉运行中异步子代理的
+ * 最近活动快照——从 entry.childAgent（subagent-run.mjs start() 绑定）读**已落回合**摘要
+ * （_fullHistory 最近 N 条）+ _touchedFiles + turn/maxTurns + status + **in-flight 当前
+ * 工具**（评审 #1——从 dispatch runOne 维护的 child._inflightTools 读——非只读已落
+ * history：卡在长工具调用时 history 无新回合、恰是 observe 要检测的卡死态）。返摘要非
+ * 全量（N2）。observe = readonly——running/queued/done 均可查（done 终报 / queued 占位）。
+ */
+export function executeObserveAction(args, ctx) {
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "observe is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §7.2)" })
+  }
+  const agent = ctx.agent
+  const id = args?.id
+  if (id === undefined || id === null || String(id) === "") {
+    return JSON.stringify({ status: "error", error: "observe requires the id of the async subagent to inspect (from the async spawn return) — pass the id; omitting it observes nothing (SUBAGENT-OBSERVE-SEND)" })
+  }
+  const key = String(id)
+  const entry = agent._asyncSubagents?.get(key)
+  if (!entry) {
+    if (agent?._asyncAdvisors?.has(key)) {
+      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — observe is for async subagents (read/edit children); track an advisor with action:'status' or wait for its auto-delivered report` })
+    }
+    return JSON.stringify({ status: "error", error: `unknown async subagent id: ${key}` })
+  }
+  const child = entry.childAgent
+  const out = { id: key, role: entry.role, status: entry.status }
+  if (entry.status === "running") {
+    out.turn = entry.turn ?? 0
+    out.maxTurns = entry.maxTurns ?? 0
+    Object.assign(out, touchedSummary(entry, agent.cwd))
+    // in-flight 当前工具（评审 #1）：child._inflightTools Set——dispatch runOne 在工具
+    // 执行前后维护——LLM 生成/工具间空隙为空；子代理 await 长工具调用时父回合可见它。
+    const inflight = child?._inflightTools
+    if (inflight instanceof Set && inflight.size > 0) out.currentTool = [...inflight]
+    const n = clampRecent(args?.recent)
+    out.recentTurns = recentTurnLines(child, n)
+    out.note = `observing running ${entry.role}#${key} — recentTurns newest-first (cap ${n}); currentTool shown only while a tool is executing (stuck detection); sent directions consume at the next turn boundary`
+  } else if (entry.status === "queued") {
+    out.position = queuedPositionOf(agent, key) ?? entry.position ?? null
+    out.note = "queued — not started yet; no activity to observe (starts when the slot frees / dependencies clear; action:'send' targets running only)"
+  } else {
+    // done = settled this turn, not yet consumed — final report rides the auto channel.
+    out.done = true
+    out.turn = entry.turn ?? 0
+    out.maxTurns = entry.maxTurns ?? 0
+    out.recentTurns = child ? recentTurnLines(child, clampRecent(args?.recent)) : []
+    out.note = "settled — the final report is delivered by the auto channel (turn-end collection or the suspension digest); observe returns the activity summary, not the full report (N2)"
+  }
+  return JSON.stringify(out)
+}
+
+/**
+ * subagent action:"send"（D2——控制类豁免，同 cancel/panel-freeze——父回合内显式调用即
+ * 授权）：按 id 向运行中异步子代理注入一条引导消息——push 进 entry._injected（仅 running
+ * 异步可 send）；子回合边界经 consumeInjected 回调消费 → pushReal 成 user 回合进子历史
+ * → 当作普通指令处理（注入不等同偏离豁免——子收敛/审计纪律不变）。settle/cancel/unknown
+ * /queued → 明确错误。send→settle 竞态：入队后子未及下回合边界即 settle → 消息未投递
+ * → settle 收尾附报告提示（不在此报错——send 返回时无法预知）。
+ */
+export function executeSendAction(args, ctx) {
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "send is only available at depth 0 — a child agent has no async pool of its own (AGENT-LOOP.md §7.2)" })
+  }
+  const agent = ctx.agent
+  const id = args?.id
+  if (id === undefined || id === null || String(id) === "") {
+    return JSON.stringify({ status: "error", error: "send requires the id of the running async subagent to direct (from the async spawn return) — omitting it means an unspecified target (SUBAGENT-OBSERVE-SEND)" })
+  }
+  const message = args?.message
+  if (typeof message !== "string" || !message.trim()) {
+    return JSON.stringify({ status: "error", error: "send requires the message to inject — the direction the running subagent should treat as an ordinary user instruction at its next turn boundary" })
+  }
+  const key = String(id)
+  const entry = agent._asyncSubagents?.get(key)
+  if (!entry) {
+    if (agent?._asyncAdvisors?.has(key)) {
+      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review (AGENT-LOOP.md §7.2)` })
+    }
+    return JSON.stringify({ status: "error", error: `unknown async subagent id: ${key}` })
+  }
+  if (entry.done || entry.cancelled) {
+    return JSON.stringify({ status: "error", error: `async subagent #${key} has ${entry.cancelled ? "been cancelled" : "already settled"} — nothing to send (you cannot inject into a finished subagent; re-spawn with the direction instead)` })
+  }
+  if (entry.status !== "running") {
+    return JSON.stringify({ status: "error", error: `async subagent #${key} is ${entry.status} (not running) — send only targets a RUNNING async subagent; a queued one has not started its turn loop yet` })
+  }
+  entry._injected ??= []
+  entry._injected.push(String(message).trim())
+  return JSON.stringify({
+    id: key,
+    status: "delivered",
+    queued: entry._injected.length,
+    note: `message queued for ${entry.role}#${key} — consumed as an ordinary user instruction at its next turn boundary (after its current tool finishes — non-interrupting). If it settles first, its report carries an "undelivered" note.`,
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // §19.6 subagent panel 检查工具（AGENT-LOOP.md §19.6——F-P1..P3/D-P1..P4）
 // ═══════════════════════════════════════════════════════════════════════════
 

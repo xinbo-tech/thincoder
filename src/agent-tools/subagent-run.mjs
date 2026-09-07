@@ -16,6 +16,21 @@ import {
 } from "./subagent-scheduler.mjs"
 
 /**
+ * SUBAGENT-OBSERVE-SEND D2：注入队列回合边界消费核心——把 entry._injected 全部消息按普通
+ * user 回合推入子代理历史（pushReal → 下轮 chat 即含该指令）并清空队列。独立导出供测试
+ * 直接锁该接缝（AC2——"子下回合边界收到并作普通 user 指令"的历史落点）。consumeInjected
+ * 闭包即调用本函数。N2：不打断在跑工具——本函数只在回合边界（agent.mjs 循环头）被调。
+ * @returns {number} 本次投递条数（空队列 0）
+ */
+export function drainInjectedQueue(entry, agent) {
+  const q = entry?._injected
+  if (!Array.isArray(q) || q.length === 0) return 0
+  const msgs = q.splice(0)
+  for (const m of msgs) pushReal(agent, { role: "user", content: String(m) })
+  return msgs.length
+}
+
+/**
  * Async branch (AGENT-LOOP.md §15 D-A1/D-A6): spawn without waiting.
  * The child runs the EXACT blocking pipeline (runChildPipeline — relay /
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
@@ -59,6 +74,10 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     _files: files,
     _dependsOn: dependsOn,
     _lastQueuedSig: null, // ⟦ev⟧queued 去重 sig（refreshQueuedTokens）
+    // SUBAGENT-OBSERVE-SEND D2：父侧 send 注入队列——父 action:'send' push 消息，子
+    // 回合边界经 consumeInjected 回调消费（drain + pushReal 成 user 回合）；settle 收尾
+    // 时仍残留 = 未投递（消息入队后子在下一回合边界前 settle）→ 附 settle 报告提示。
+    _injected: [],
   }
   // §20 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
   // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§24 D-24a：
@@ -109,6 +128,13 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     // 对象（不是 _touchedFiles 数组引用——per-run 记账在 prepareRun 重置——数组
     // 引用会陈旧——对象引用保证 status 查询时实时读——杀前一刻最新）。
     entry.childAgent = child
+    // SUBAGENT-OBSERVE-SEND D2：子侧输入源贯通（设计"硬缺口"闭合）——把"注入队列消费
+    // 回调"经 childRunOpts 塞进 runAgent opts（runChildPipeline → runWithContinue →
+    // runAgent），子回合边界（agent.mjs 每轮开头的 consumeInjected?.() 点）消费
+    // entry._injected → pushReal 成 user 回合进子历史——当作普通用户指令处理。回调闭包
+    // 持 entry + child；空队列 no-op（每轮尝试——零开销）。N2：不打断在跑工具——入队
+    // 消息只在下一回合边界（当前工具完成后的下轮 chat 前）进上下文。
+    const consumeInjected = (ag) => { drainInjectedQueue(entry, ag ?? child) }
     // §19.5 D-M7b ①: async 标记事件——零字段 ⟦ev⟧async token（sync 不发）。
     // 锚点 = 实际启动（与 [model] 同步——queued 入队不 paint，补位启动才发）；
     // 先于 [model] 发出——区块创建即知 sub.async（routeSubToken 解析——
@@ -124,7 +150,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     // and the partial-work report carries the cap reason. §18 D-E2 relies on
     // this exception as the turn-cap fallback for the default-async eng-coder
     // delivery (the internal protocol does not raise the 100-turn cap).
-    runChildPipeline(child, input, trackOpts, { ...childRunOpts, signal: entry.controller.signal }, {
+    runChildPipeline(child, input, trackOpts, { ...childRunOpts, signal: entry.controller.signal, consumeInjected }, {
       parent, role, args,
       askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
     })
@@ -133,6 +159,16 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
       .finally(() => {
         entry.status = "done" // running 数口径（D-A1/D-A2/T6）：已完成未消费不计入
         entry.done = true
+        // SUBAGENT-OBSERVE-SEND D3（send→settle 竞态）：settle 收尾时 _injected 仍残留
+        // = 消息入队后子代理在下一回合边界前 settle——未投递——附 settle 报告/错误提示
+        // （防父误以为引导已落地）。error 路径附 error；报告路径附 report 尾。
+        const undelivered = Array.isArray(entry._injected) ? entry._injected.length : 0
+        if (undelivered > 0) {
+          const note = `\n[note: ${undelivered} message(s) queued via subagent action:'send' were NOT delivered — the subagent settled before its next turn boundary; re-spawn with the direction if it still applies.]`
+          if (entry.error != null) entry.error += note
+          else entry.report = `${entry.report ?? ""}${note}`
+          entry._injected = [] // 子已 settle——消费面终——清空防重复提示（提示已随报告携带）
+        }
         // LOGGING（LOGGING.md）：settle 分流事件——child:done/child:error（结果）+
         // ev:cancelled/ev:settled（settle 回调分流——取消/挂起移交；正常回合内 settle
         // 由 child:done 覆盖不另发 ev——ev:stopped 见中止清池点）

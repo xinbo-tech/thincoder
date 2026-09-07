@@ -83,7 +83,7 @@ export function createAgent({
 }
 
 /** Run the agent loop: LLM ↔ tool-call cycle until task completion or turn limit. Returns final text content. */
-export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false } = {}) {
+export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal, maxTurns: overrideTurns, resume = false, autoTurn = false, suspDriven = false, consumeInjected = null } = {}) {
   // Previous run's async exploration distillation must settle before this run pushes
   // input (SEND-STALL-DISTILL §2.2 N1) — await first, or its history replace wipes it.
   if (agent._pendingDistill) {
@@ -189,6 +189,12 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     if (depth > 0 && callbacks.onToken) {
       callbacks.onToken(`⟦ev⟧turn\x1e${turn + 1}\x1e${maxTurns}\x1ellm\x1e`)
     }
+
+    // SUBAGENT-OBSERVE-SEND D2: 子代理回合边界消费点——每轮开头把父侧经 subagent
+    // action:'send' 注入队列（entry._injected）的消息按普通 user 回合推入子历史
+    // （pushReal → 下一轮 chat 即含该指令）。由 executeAsyncSpawn 经 childRunOpts 贯通的
+    // consumeInjected 回调承载（异步子代理专属——缺省 null：主会话/阻塞子代理零开销）。
+    consumeInjected?.(agent)
 
     const lastRole = agent.history.at(-1)?.role
     if (lastRole === "user" || lastRole === "tool") {

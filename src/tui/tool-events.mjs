@@ -11,9 +11,9 @@
  *
  * flushStream 同时返回给调用方（回合循环 / onTurnEnd 共用）。纯回调装配，无终端副作用
  * （除经 deps 注入的 pushLine/render）。§19: subagent_check/escalate 工具退役后
- * （§19.8——check 动作已删、五动作面），subagent 家族全部调用以工具名 "subagent" +
+ * （§19.8——check 动作已删），subagent 家族全部调用以工具名 "subagent" +
  * action 到达——完成路由按 onToolCall 时记录的 action 分流（spawn 区块 / escalate
- * 区块 / status 普通工具块）。
+ * 区块 / status/observe/send 普通工具块——observe/send 不建子代理区块）。
  */
 import { C } from "./ansi.mjs"
 import { formatToolSummary } from "./tool-summaries.mjs"
@@ -151,7 +151,7 @@ export function buildToolCallbacks(deps) {
           : _subActionQ.shift() ?? null
         if (toolId !== undefined && toolId !== null) _subActions.delete(toolId)
       }
-      const isSubagent = name === "subagent" && subAction !== "status" && subAction !== "escalate" && subAction !== "cancel" && subAction !== "panel"
+      const isSubagent = name === "subagent" && subAction !== "status" && subAction !== "escalate" && subAction !== "cancel" && subAction !== "panel" && subAction !== "observe" && subAction !== "send"
       const isEscalate = name === "subagent" && subAction === "escalate"
       // Subagent complete: mark the earliest running child as done — the block
       // persists (✓ frozen elapsed header, expandable) as the ONLY carrier of the
