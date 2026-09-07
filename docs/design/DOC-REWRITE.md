@@ -58,7 +58,7 @@
 
 注：AGENT-LOOP 大小实测 314KB（scan 曾报 537KB 为早期过时值——以实测为准）。
 
-**待 eng-coder（VSC）**——`docs/design/` + `docs/`（按 STRUCTURE-DEBT §7 V1-V5）：
+**待 eng-coder（VSC）**——`docs/design/` + `docs/`（按 STRUCTURE-DEBT §7 V1-V5；**2026-09-08 已被 `DOC-REWRITE-VSC.md` supersede**——归档裁定 + 批次细分 + webview-input-lag 归档见该文档，本条 V 枚举仅历史参考勿执行）：
 - V1 `README.md`/`ARCHITECTURE.md`（96KB 整 1 行最极端）/`RELEASE.md`/`REQUIREMENTS.md`
 - V2 `PHILOSOPHY.md`/`PROJECT-SWITCHER.md`/`TURN-CAP-CONTINUE.md`/`SETTINGS.md`
 - V3 已完成专题对（AGENT-PARAMS/COVERAGE-GAPS/ENG-TOKEN-BINDING/SEND-STALL/SLEEP-REMOVAL/TOOL-OUTPUT-LIMITS）+ SETTINGS-PANEL/REORG/SUBMODEL/MODEL-PICKER-UNIFY/RESPONSES-TRANSPORT/webview-input-lag

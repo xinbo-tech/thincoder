@@ -13,6 +13,8 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 
 - **归档 `_archive/`**（用户裁定①同意）：Settings 历史 6 件 + COVERAGE-GAPS/SLEEP-REMOVAL 对（CLI 端同源已归档，对齐）：
   `SETTINGS-PANEL.md`/`SETTINGS-PANEL-2.md`/`SETTINGS-PANEL-PROXY-ROW.md`/`SETTINGS-REORG.md`/`SETTINGS-SUBMODEL-SHELL.md`/`MODEL-PICKER-UNIFY.md` + `COVERAGE-GAPS-{REQUIREMENTS,TUNING}.md` + `SLEEP-REMOVAL-{REQUIREMENTS,TUNING}.md` = **10 文件**。
+- **归档 `_archive/`**（用户裁定①同意 + 评审 #1 补 webview-input-lag）：Settings 历史 6 件 + COVERAGE-GAPS/SLEEP-REMOVAL 对（CLI 同源已归档对齐）+ `webview-input-lag.md`（纯历史修复记录，已实施）：
+  `SETTINGS-PANEL.md`/`SETTINGS-PANEL-2.md`/`SETTINGS-PANEL-PROXY-ROW.md`/`SETTINGS-REORG.md`/`SETTINGS-SUBMODEL-SHELL.md`/`MODEL-PICKER-UNIFY.md` + `COVERAGE-GAPS-{REQUIREMENTS,TUNING}.md` + `SLEEP-REMOVAL-{REQUIREMENTS,TUNING}.md` + `webview-input-lag.md` = **11 文件**。
 - **保留 + 重写为可读**（用户裁定②）：`CONSULTATION.md`/`ESCALATE.md`（镜像 CLI——作为已完成专题记录保留重写，不归档；现行机制在 ARCHITECTURE）——**含漂移更新**（从头注 as-of 快照改为现行 ARCHITECTURE 机制状态）。
 - **保留 + 重写为可读**：所有当前生效文档（README 地图 / ARCHITECTURE / RELEASE / REQUIREMENTS / PHILOSOPHY / PROJECT-SWITCHER / TURN-CAP / SETTINGS / RESPONSES-TRANSPORT / 专题对 AGENT-PARAMS/ENG-TOKEN-BINDING/SEND-STALL-DISTILL/TOOL-OUTPUT-LIMITS / COMPETITIVE_ANALYSIS / docs/TODO.md）。
 
@@ -22,9 +24,9 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 2. **建立 `docs/design/_archive/`** 目录 + 登记豁免（CLI 同款）。
 3. 归档 10 件物理移入 `_archive/`（git mv）+ VSC README 地图登记归档路径。
 
-## 4. 重写批次与文件域（eng-coder 分派依据——一次全 spawn）
+## 4. 重写批次与文件域（eng-coder 分派依据——一次全 spawn，调度器自排队 ≤4 并发）
 
-探索实测校验后分组（每 eng-coder 1-3 文件，files 绝对路径 + 独立文件域不冲突）。**VSC 端无 CLI 的共享 scripts/check-doc-width——重写后用移植脚本自验**。
+探索实测校验后分组（每 eng-coder 1-3 文件，files 绝对路径 + 独立文件域不冲突；ARCHITECTURE 两 eng-coder 见 §5——非并行同文件，是两阶段依赖序列）。**VSC 端无 CLI 的共享 scripts/check-doc-width——重写后用移植脚本自验**。
 
 | 批 | 文件 | 形态 | eng-coder 数 | 备注 |
 |---|---|---|---|---|
@@ -40,12 +42,13 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 
 **归档动作**（§3 前置，非 eng-coder 重写）——架构师 git mv 10 件 + 脚本移植 + README 登记。
 
-## 5. ARCHITECTURE.md 特殊拆法（152KB 最重——不可整文件一次重写）
+## 5. ARCHITECTURE.md 特殊拆法（152KB 最重——不可整文件一次重写；两阶段，非并行同文件）
 
-1. **先派 explore 出分主题大纲**（未产出前 eng-coder 不启动 ARCHITECTURE）：模块架构面/provider 面/context 压缩面/webview 面/subagent 面 + supersede 末端锚句清单 + 历史累积段（2026-08~09 引用段/实现批）标注。
-2. eng-coder 按大纲主题**逐块迁移重建**到新文件草稿（write-first + 逐字对拍，参照 Module Split Policy：先写后删、逻辑零变），历史流水折叠为"变更记录"一行注。
-3. 单一权威锚纪律：现行机制正文 = ARCHITECTURE（活）；历史实现批折叠；引用段简化成指路行（不复制 CLI 权威源正文——只留指针）。
-4. 漂移：module 计数/PROVIDER_PRESETS 16→20/design-token 无签名——以代码现状为准。
+1. **先派 explore 出分主题大纲**（已产出——分主题 A-F 六块 + 块0 demux；含 supersede 末端锚句清单 + 漂移清单 + 历史段标注）。
+2. **块0 demux（单物理行 → 多行，字节级内容不变，仅插换行）**——无此步任何按主题读都不可行。由 eng-coder 执行（需写能力）。
+3. demux 后**块 A-F（或 A-E + F1/F2）由各 eng-coder 处理，各写独立 draft 文件（不直接写 ARCHITECTURE.md）**，每 eng-coder 一个 draft，块边界清晰无重叠。
+4. **装配步骤**：draft 齐后由单一步骤合并成最终 ARCHITECTURE.md（或架构师指定一个 eng-coder 装配）。
+5. 单一权威锚纪律 + 漂移修正（module 计数/PROVIDER_PRESETS 16→20/路径安全已废/HMAC 删除）以代码现状为准。
 
 ## 6. 逐字契约保真（引用 CLI DOC-REWRITE §4——同规则）
 
@@ -61,8 +64,9 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 
 ## 8. 验收
 
-AC1 = VSC 全部待重写文档无 >300 字符单行（移植的 check-doc-width.mjs 扫）；AC2 = markdown 结构正确；AC3 = 逐字契约句 compare 未改动（compare 源 = 原文档 + explore 大纲标记句；mismatch 以现行语义为准并在交付报告声明）；AC4 = 历史折叠为变更记录；AC5 = 归档清单完整（10 件全入 `_archive/` + README 登记）。
+AC1 = VSC 全部待重写文档无 >300 字符单行（移植的 check-doc-width.mjs 扫）；AC2 = markdown 结构正确；AC3 = 逐字契约句 compare 未改动（compare 源 = 原文档 + explore 大纲标记句；mismatch 以现行语义为准并在交付报告声明）；AC4 = 历史折叠为变更记录；AC5 = 归档清单完整（**11 件**全入 `_archive/` + README 登记）。
 
 ## 变更记录
 
-- 2026-09-08：立项。基于 CLI DOC-REWRITE.md §6 V1-V5 + VSC docs explore 实测扫描写本执行设计。用户裁定：归档 10 件 + CONSULTATION/ESCALATE 保留重写 + 一次全 spawn 执行模型。
+- 2026-09-08：立项。基于 CLI DOC-REWRITE.md §6 V1-V5 + VSC docs explore 实测扫描写本执行设计。用户裁定：归档 + CONSULTATION/ESCALATE 保留重写 + 一次全 spawn 执行模型。
+- 2026-09-08 评审：签发 token。采纳：①CLI DOC-REWRITE §6 标注 supersede（已更新）；②webview-input-lag 补入归档（11 件）；③ARCHITECTURE 两阶段 + 块0 demux + 各 eng-coder 独立 draft + 装配步骤（§5 重写）；④≤4 并发 cap 自排队注。
