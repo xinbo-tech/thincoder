@@ -42,6 +42,8 @@
 
 - **现状**：dispatch 写门（`dispatch.mjs:184`）读 `_engDesignToken` 镜像；settle/restore/consume/TTL/new 双写双清镜像（多处同步成本）。
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。镜像字段读时一次性迁移进 Map，settle/restore/consume/TTL/new 不再维护镜像。
+- **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。**存量兼容：旧会话 slot 文件里可能残留镜像字段值——恢复时一次性读取迁移进 Map（唯一迁移读点，此后不再写镜像、不再读）**。settle/restore/consume/TTL/new 不再维护镜像。
+  - 迁移读点：`token-ttl.mjs` restoreEngTokens——若 slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（标 legacy），随后 saveSession 不再写镜像字段。
 - 落点：`src/agent/dispatch.mjs` + `src/agent-tools/advisor-async.mjs` + `src/token-ttl.mjs` + `src/session.mjs`（resetSessionState）。
 
 ### D4 同机制语义对齐（与 VSC 一致）
@@ -55,7 +57,18 @@ settle 即落盘（D1）、门禁读权威 miss 回读（D2）、镜像退役（
 
 ## 5. 验收
 
-AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → spawn eng-coder 通过（token 已落盘）；AC2 = settle 落盘后 spawn 门禁从槽读到 token（缓存 miss 回读）；AC3 = `_engDesignToken` 镜像全仓退役（grep 零运行时读写）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）。
+AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → spawn eng-coder 通过（token 已落盘）；AC2 = settle 落盘后 spawn 门禁从槽读到 token（缓存 miss 回读）；AC3 = `_engDesignToken` 镜像退役（**零写 + 仅一次性迁移读**——唯一读点在 token-ttl restoreEngTokens，其余运行时读写 grep 零命中）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）。
+
+### 测试用例表
+
+| 用例 | 输入/场景 | 预期输出 | 对应 |
+|---|---|---|---|
+| 正常：settle→重启→resume→spawn | async 评审 settle（token 已当场落盘）→ 进程 kill（不等回合尾）→ resume → spawn eng-coder | 门禁从槽读到 token，通过（不再 designId not found） | AC1 |
+| 正常：缓存 miss 回读 | settle 落盘后、新回合 Map 未回填时 spawn | resolveDesignSlot 内存 miss → 回读槽文件 → 命中通过 | AC2 |
+| 边界：过期 token 槽 | slot 有已过期 TTL 的 designId | restore/门禁 TTL 过滤——过期拒，不误当活槽 | AC1/AC2 |
+| 边界：残留镜像一次性迁移 | 旧会话 slot 文件有 engDesignToken 残留且 Map 空 | restoreEngTokens 一次性迁入 Map（legacy 标）；saveSession 后不再写镜像 | AC3 |
+| 错误：settle 落盘失败 | settle 当场写槽抛错 | settle 失败可重评（不静默丢 token）；不产生"内存有盘上无"态 | AC1 |
+| 错误：dispatch 写门无活槽 | 工程模式 + 无任一活槽（全过期/无）→ 改产品代码文件 | 拦（无资格）；有任一活槽 → 放行 | AC4 |
 
 ## 变更记录
 
