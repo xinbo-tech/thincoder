@@ -58,3 +58,5 @@
 
 - [ ] **快层 slow-gate 未归册清理批（18 用例散布 13 文件——exit 1 硬红——R12/§19.8 等早批遗留）**：auto-approve 2×10s / chat-panel 2×10.6s / image-paste 11s / dual-history / vscode-tools / compaction / suspension T-S2b/T-R17o 等——机械 test(→slow( 标注（test:full 照跑不受影响）——单独归册清理批候选
 - [ ] **ui.test.mjs 拆分债（962 行超 500）**：T-QUI 系并入后 962 行——既有债（§18.14 域拆分后整合文件）——后续触碰批落拆分规划
+- [ ] **test/files.mjs 引用 9 个缺失测试文件（2026-09-08 V3b 交付上报——repo 测试清理并行状态）**：agent-core / config-io / execute / git / provider / chat-panel / edit-eol / edit-semantics / verify-redesign 的 .test.mjs 均不在磁盘——npm test 清单悬空，需核对当前测试入口状态（入册修复或清清单）
+
