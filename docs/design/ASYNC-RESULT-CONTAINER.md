@@ -50,7 +50,7 @@
   - 日志三连（ev:cancelled/child:done|error/ev:settled）
   - cancelled 分支（delete + tombstone + ⟦ev⟧stopped + pushReal 提醒）
   - 挂起分流（pending push + 池 delete + ⟦ev⟧settled/done——统一守卫 `!parentAborted`）
-- 族特有 hook：`onAccounting`（advisor 调 settleAdvisorRun 记账——D1 落盘保留；escalate 调 classifyEscalateSettle/maybeRefillAsync）。
+- 族特有 hook：`onAccounting`（advisor 调 settleAdvisorRun 记账——D1 落盘保留；escalate 调 classifyEscalateSettle——**maybeRefillAsync 从 onAccounting 移出——改公共尾部恒补（交付偏差 2026-09-08：design 把 refill 归入 onAccounting 仅 settled 分支——running 取消的 cancelled 分支将不再补位（挂起会话队列停滞）——修正为公共尾部恒补（subagent/escalate 族；advisor/consult 豁免——同 VSC `refill !== false` 语义——代码内附偏差注 + 回归锁定测试）**）。
 - 调用点改：subagent-run/advisor-async/escalate-async/consult settle 回调改调 `settleAsyncEntry`。
 
 ### D4 守卫统一
@@ -89,3 +89,4 @@ AC1 = settle 记账单点（4 族 settle 回调改调 `settleAsyncEntry`，无�
 
 ## 变更记录
 - 2026-09-08：立项。Top-8 #2 async 结果容器统一（STRUCTURE-DEBT 批 E+批 C）——explore CLI 一手核实（settle 4 处重复/pending 3 族/done-in-pool 3 表示/信号兜底抄 3 处+consult 无兜底）+ 用户裁定 4 决策（池 accessor/pending 单容器+role/守卫统一 !parentAborted/consult 补信号兜底）。
+- 2026-09-08：交付偏差记录——D3 maybeRefillAsync 从 onAccounting hook 移出改公共尾部恒补（design 归入 onAccounting 仅 settled 分支——running 取消的 cancelled 分支不再补位致挂起会话队列停滞——修正为公共尾部恒补，subagent/escalate 族；advisor/consult 豁免——同 VSC `refill !== false` 语义）；受影响文件表补 subagent-panel.mjs（§19.6 面板段拆分目标）/test/async-settle.test.mjs/ops.mjs 池访问点未改（不在受影响文件表——D1 正文提及——待下轮）；scheduler describeBlockers/detectStall/queueRunnable 直读池（域专属扫描，advisor 判定 🔵 非缺陷）
