@@ -269,3 +269,180 @@ slow("T17: 复审失败不波及其他槽——旧 token 存活，其他设计 s
     server.close()
   }
 })
+
+// ─── 2026-09-07 token 链终消费制（ENGINEERING-MODE.md §2.6——T1/T2/T3/T4/T7/T8/T9） ───
+
+test("T1/T3: consume-design 后同 designId spawn 机械拒（not found）+ slot/镜像兼容值清理", async () => {
+  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const idA = "55555555-5555-4555-8555-aaaaaaaaaaaa"
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([[idA, tokenA]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  // 消费前 slot 在位（fix round 前提）
+  assert.equal(resolveDesignSlot(parent, idA).token, tokenA)
+  // 父侧核销：consume-design（调用形态定死——读槽值 → removeDesignTokenSlot）
+  const out = String(await executeConsumeDesignAction({ designId: idA }, { agent: parent, callbacks: {} }))
+  assert.match(out, /design slot consumed/)
+  // T3：slot 移除 + 单槽镜像/兼容值条件清（指向被消费 token 才清——token-ttl.mjs 条件清）
+  assert.equal(parent._engDesignTokens.has(idA), false, "消费后 slot 移除")
+  assert.equal(parent._engDesignToken, null, "镜像指向被消费 token → 条件清")
+  // T1：同 designId 再 spawn → resolveDesignSlot not found 机械拒（复用洞闭合）
+  assert.throws(() => resolveDesignSlot(parent, idA), /designId not found/)
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designId: idA, designToken: tokenA }, { agent: parent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
+    /designId not found/,
+    "消费后同 designId spawn → not found（机械拒）",
+  )
+})
+
+test("T2: 链中 fix round（未消费）spawn → 通过（slot 未消费——仅链终核销才消费）", async () => {
+  const { createAgent } = await import("../src/agent.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const uuid = "8048bebc-a2a6-4b50-b198-74f37da606ab"
+  const token = await mintToken(uuid, Date.now() + 24 * 3600 * 1000)
+  const { server, port } = await mockLLM([{ content: LONG_REPORT("T2 链中交付") }])
+  const cwd = mkdtempSync(join(tmpdir(), "thincoder-cd-t2-"))
+  try {
+    const provider = { baseURL: `http://127.0.0.1:${port}`, apiKey: "x", model: "m" }
+    const agent = createAgent({
+      provider, tools: [], config: { agent: { engineering: true }, advisor: {} }, cwd,
+    })
+    agent._engDesignTokens = new Map([[uuid, token]])
+    agent._engDesignToken = token // 设计评审已签发（模拟）
+    const report = String(await subagentTool.execute(
+      { task: "实现 T2", role: "eng-coder", designId: uuid, designToken: token, async: false },
+      { agent, cwd, callbacks: {}, depth: 0 },
+    ))
+    assert.ok(report.includes("T2 链中交付 report"), "链中未消费 → fix round spawn 通过")
+    assert.equal(agent._engDesignTokens.has(uuid), true, "spawn 不消费 slot（消费点仅在父侧核销）")
+    rmSync(cwd, { recursive: true, force: true })
+  } finally {
+    server.close()
+  }
+})
+
+test("T4: consume-design 幂等 + 未知 designId no-op（不报错）+ 多槽缺 id 拒 + 工程模式限定 + legacy 镜像", async () => {
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+  }
+  const first = String(await executeConsumeDesignAction({ designId: "id-x" }, { agent: parent }))
+  assert.match(first, /design slot consumed/)
+  // 重复消费 → 同款 no-op 提示（幂等——不报错——评审 #3 定死）
+  const again = String(await executeConsumeDesignAction({ designId: "id-x" }, { agent: parent }))
+  assert.match(again, /no live slot for designId id-x/)
+  // 未知 designId → 同款 no-op（不报错）
+  const unknown = String(await executeConsumeDesignAction({ designId: "no-such" }, { agent: parent }))
+  assert.match(unknown, /no live slot for designId no-such/)
+  // 多槽缺 designId → 拒（spawn 同款语义——不误消费任一槽）
+  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const multi = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-a", tokenA], ["id-b", tokenB]]),
+    _engDesignToken: tokenA,
+  }
+  await assert.throws(() => executeConsumeDesignAction({}, { agent: multi }), /Multiple approved designs/)
+  assert.equal(multi._engDesignTokens.size, 2, "拒绝不误消费任一槽")
+  // 工程模式限定（与 spawn 同门）
+  const normal = {
+    config: { agent: { engineering: false } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+  }
+  await assert.throws(() => executeConsumeDesignAction({ designId: "id-x" }, { agent: normal }), /Engineering mode is not active/)
+  // legacy 单值镜像（无 Map）——缺省 designId 消费镜像（兼容值清）
+  const legacy = { config: { agent: { engineering: true } }, _engDesignToken: tokenA }
+  const lout = String(await executeConsumeDesignAction({}, { agent: legacy }))
+  assert.match(lout, /design slot consumed/)
+  assert.equal(legacy._engDesignToken, null, "legacy 镜像消费后清")
+})
+
+test("T7: 多槽隔离——消费 A 不动 B（B 仍 spawn 通过；镜像条件清仅同值）", async () => {
+  const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-a", tokenA], ["id-b", tokenB]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  const out = String(await executeConsumeDesignAction({ designId: "id-a" }, { agent: parent }))
+  assert.match(out, /design slot consumed/)
+  assert.equal(parent._engDesignTokens.has("id-a"), false, "A 槽消费")
+  assert.equal(parent._engDesignTokens.get("id-b"), tokenB, "B 槽不受波及（多槽隔离）")
+  assert.equal(parent._engDesignToken, null, "镜像指向 A 的 token → 条件清（CLI 槽即权威——null 镜像 + 槽在位 = 合法态）")
+  // B 仍 spawn 通过
+  assert.equal(resolveDesignSlot(parent, "id-b").token, tokenB, "消费 A 后 B 仍可 spawn（隔离）")
+})
+
+test("T8: 错配拒不消费——stalled/未核销槽保留（未消费可 fix round）", async () => {
+  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await mintToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await mintToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  // 错配 spawn 拒（stalled 场景噪声）→ 槽保留（只有显式 consume-design 才消费）
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designId: "id-x", designToken: tokenB }, { agent: parent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
+    /Invalid or missing design token/,
+    "错配拒（既有门禁不变）",
+  )
+  assert.equal(parent._engDesignTokens.get("id-x"), tokenA, "错配拒不消费槽")
+  assert.equal(parent._engDesignToken, tokenA, "镜像保留")
+  // 未核销 → fix round 仍可 spawn
+  assert.equal(resolveDesignSlot(parent, "id-x").token, tokenA, "stalled/未核销槽保留——未消费可 fix round")
+})
+
+test("T9: 跨会话恢复后消费生效——恢复的持久化槽同受消费管理（直到验收消费）", async () => {
+  const { restoreEngTokens } = await import("../src/token-ttl.mjs")
+  const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn.mjs")
+  const uuid = "8048bebc-a2a6-4b50-b198-74f37da606ab"
+  const token = await mintToken(uuid, Date.now() + 24 * 3600 * 1000)
+  const agent = { config: { agent: { engineering: true } } }
+  // 会话恢复面（saveSession engTokenSlotFields 落盘的字段形态）
+  restoreEngTokens(agent, { engDesignToken: token, engDesignTokens: { [uuid]: token } })
+  assert.equal(resolveDesignSlot(agent, uuid).token, token, "恢复后槽在位（TTL 内）")
+  const out = String(await executeConsumeDesignAction({ designId: uuid }, { agent }))
+  assert.match(out, /design slot consumed/)
+  assert.equal(agent._engDesignTokens.has(uuid), false, "恢复后的持久化槽可被链终消费")
+  assert.throws(() => resolveDesignSlot(agent, uuid), /designId not found/, "消费后恢复槽再 spawn → not found")
+})
+
+// ─── §29.1 F2d（2026-09-07）：门侧自愈——错误两分支附持有 id 列表 ───
+
+test("T4 (F2d): 门错误两分支均附持有 designId 列表——恢复后无 digest 的发现途径（id 非凭证）", async () => {
+  const { resolveDesignSlot } = await import("../src/agent-tools/subagent-spawn.mjs")
+  const parent = {
+    _engDesignTokens: new Map([["id-a", "tok-a"], ["id-b", "tok-b"]]),
+    _engDesignToken: "tok-a",
+  }
+  assert.throws(
+    () => resolveDesignSlot(parent, "no-such"),
+    (e) => /designId not found/.test(e.message) && e.message.includes("held design ids: id-a, id-b"),
+    "F2d: not-found 分支附持有 id 列表",
+  )
+  assert.throws(
+    () => resolveDesignSlot(parent, undefined),
+    (e) => /Multiple approved designs/.test(e.message) && e.message.includes("design ids: id-a, id-b"),
+    "F2d: 多槽歧义分支附持有 id 列表",
+  )
+})

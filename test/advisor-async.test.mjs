@@ -509,6 +509,61 @@ test("T-24b11: 单 review 第 6 次发起拒（该实例 ≤5 轮）——他实
   }
 })
 
+// ─── §8 (2026-09-07): design 评审 cap 豁免——code-only cap ──────────
+
+test("§8: design 实例 round≥5 第 6 次发起不被拒（cap 豁免——async 面正向断言）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const steps = Array.from({ length: 6 }, () => ({ text: FINDINGS }))
+  const { server, port } = await reviewServer(steps)
+  const { agent, cwd } = await makeAgent(port)
+  try {
+    agent._suspended = true // settle 即移交 pending（不碍轮次记账）
+    let reviewId = null
+    for (let n = 1; n <= 5; n++) {
+      const out = JSON.parse(String(await advisorTool.execute(
+        { type: "design", documents: ["docs/design/A.md"] },
+        execCtx(agent, { toolCallId: `d8-${n}` }),
+      )))
+      reviewId = out.reviewId
+      await awaitSettle(agent, out.id)
+    }
+    const run = agent._advisorRuns.get(reviewId)
+    assert.equal(run.round, 5, "§8: 5 轮完成（design 轮次继续递增）")
+    assert.equal(run.open, true, "§8: 未通过不关闭——实例保持")
+    // 第 6 次同 doc-set 发起 → 不被 cap 拒（正向断言：ack 即 running）
+    const sixth = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "d8-6" }),
+    )))
+    assert.equal(sixth.status, "running", "§8: design 第 6 次启动不被拒（cap 豁免）")
+    assert.equal(sixth.reviewId, reviewId, "§8: 同 doc-set 续同一实例（designId 不变）")
+    assert.ok(agent._asyncAdvisors.get(String(sixth.id)), "§8: 池条目在")
+    await awaitSettle(agent, sixth.id)
+    assert.equal(agent._advisorRuns.get(reviewId).round, 6, "§8: settle 后轮次 6（继续递增）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("§8 F2: effectiveAdvisorRound 只认 open code 实例——design 轮次不挡 code guard（AC-3）", async () => {
+  const { effectiveAdvisorRound } = await import("../src/agent-tools/advisor-async.mjs")
+  // 无 open code 实例 + mirror 持 design 轮次 ≥5 → 0（guard 仍推回 code 评审）
+  const designMirror = {
+    _advisorRound: 5,
+    _advisorRuns: new Map([["d1", { reviewType: "design", open: true, round: 5 }]]),
+  }
+  assert.equal(effectiveAdvisorRound(designMirror), 0, "design round≥5 不挡 code guard 推回（fallback 收紧）")
+  // open code 实例存在 → 该实例轮次（mirror 不读）
+  const codeOpen = {
+    _advisorRound: 5,
+    _advisorRuns: new Map([["c1", { reviewType: "code", open: true, round: 3 }]]),
+  }
+  assert.equal(effectiveAdvisorRound(codeOpen), 3, "open code 实例轮次优先")
+  // 空态 → 0
+  assert.equal(effectiveAdvisorRound({ _advisorRound: 0 }), 0, "无实例无 mirror → 0")
+})
+
 // ─── T-24b12: 父侧 code 复核 async 形态（guard 推回 → async → digest → 修复 → round2 prior 正确）──
 
 slow("T-24b12: code 复核 async——guard 推回发起（reviewId 随机无 token 面）→ settle → 修复 → round2 prior 正确", async () => {
@@ -880,6 +935,243 @@ slow("T-B2: stale settle digest 形态——无方括号 token + '未签发'提�
     const text = String(injected.content)
     assert.ok(!text.includes("[DESIGN-TOKEN:"), "T-B2: digest 全文无方括号 token（不变式：永不展示未注册 token）")
     assert.ok(text.includes("评审目标已变更——token 未签发"), "T-B2: 未签发提示在 digest")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §29.1（2026-09-07——designId/token 凭证机制——AGENT-LOOP.md §29.1）：
+// T1 注入契约（两值同段——修前必红）——T2 单槽省略指引（保 id + 可省略注记——断言
+// 反转）——T3 prior 无原生 token 泄漏（只断言 token 两形态——designId 同实例恒定留
+// prior 无害）——T5/T7 尾部同源锁（async/sync）——T9 端到端复现锁（正文回显两值 →
+// settle → 用正文回显 id spawn → 过）——T14 同 scope 复审旧 token 拒——T15 round2+
+// 注入（两值同段——修前必红）。
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("T1: 注入契约——round1 Approval Signal 同段注入 token + designId 两值（Copy BOTH values verbatim——修前必红）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { server, port, requests } = await reviewServer([{ pass: true, text: "设计通过" }])
+  const { agent, cwd } = await makeAgent(port, { engineering: true })
+  try {
+    const out = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "f1" }),
+    )))
+    agent._suspended = true
+    await awaitSettle(agent, out.id)
+    const joined = JSON.stringify(requests[0].messages)
+    const m = joined.match(/\[DESIGN-TOKEN:([0-9a-f-]+:\d+)\] and this exact designId: ([0-9a-f-]{36})\. Copy BOTH values verbatim/)
+    assert.ok(m, "T1: Approval Signal 同段注入两值 + Copy BOTH values verbatim 锚句（修前无 designId）")
+    assert.equal(m[2], out.reviewId, "T1: 注入的 designId = 该评审实例 id（回显即真值——无正文自编竞争）")
+    assert.equal(agent._engDesignTokens?.get(out.reviewId), m[1], "T1: 回显 token 与槽一致")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T2+T5: settle 通过报告——id 回显保留 + 单槽省略指引 + 槽数时点注记（断言反转）+ 尾部同源锁", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { buildApprovedSuffix } = await import("../src/agent-tools/advisor-async.mjs")
+  const { server, port } = await reviewServer([{ pass: true, text: "设计通过" }])
+  const { agent, cwd } = await makeAgent(port, { engineering: true })
+  try {
+    const out = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "f2" }),
+    )))
+    agent._suspended = true
+    await awaitSettle(agent, out.id)
+    const entry = agent._pendingAsyncResults[0]
+    const report = String(entry.report)
+    // T2：单槽也保留 id 回显（不写"无 id 回显"——单→多迁移历史可查）+ 省略指引 + 时点注记
+    assert.ok(report.includes(`designId: ${out.reviewId} (pass as the designId parameter`), "T2: id 回显保留（单槽不吞 id）")
+    assert.ok(report.includes("optional while this session holds a single design"), "T2: spawn 可省略 designId 指引")
+    assert.ok(report.includes("1 approved design slot(s) held as of this approval"), "T2: settle 时点槽数快照")
+    assert.ok(report.includes("the count may have changed since"), "T2: spawn 时槽况可能已变注记（F2d 兑底）")
+    // T5：尾部同源锁——settle 报告尾部 = 引擎拼接的确定性串（buildApprovedSuffix 同源）
+    assert.ok(report.endsWith(buildApprovedSuffix(entry.designToken, entry.designId, 1)), "T5: 尾部 = 引擎拼接（同源锁）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T7: sync 通过输出尾部同源锁 + sync prior 清洗（F2e sync 面）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { buildApprovedSuffix } = await import("../src/agent-tools/advisor-async.mjs")
+  const { server, port } = await reviewServer([{ pass: true, text: "设计通过" }])
+  const { agent, cwd } = await makeAgent(port, { engineering: true })
+  try {
+    const out = String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"], async: false },
+      execCtx(agent, { toolCallId: "f7" }),
+    ))
+    const token = out.match(/Approved\. Pass this exact token to eng-coder \(designToken parameter\): ([0-9a-f-]+:\d+)/)?.[1]
+    const id = out.match(/designId: ([0-9a-f-]{36})/)?.[1]
+    assert.ok(token && id, "T7: sync 输出含 token + designId")
+    assert.ok(out.endsWith(buildApprovedSuffix(token, id, 1)), "T7: sync 尾部 = 引擎拼接（sync 面同源锁）")
+    const prior = String(agent._lastAdvisorOutput ?? "")
+    assert.ok(prior && !prior.includes("[DESIGN-TOKEN:") && !prior.includes(token), "T7: sync prior 已清洗（无方括号回显、无引擎后缀原生 token——F2e）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T3: prior 无原生 token 泄漏——token 两形态均不落 async 实例 prior（designId 留 prior 无害）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { server, port } = await reviewServer([{ pass: true, text: "设计通过" }])
+  const { agent, cwd } = await makeAgent(port, { engineering: true })
+  try {
+    const out = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "f3" }),
+    )))
+    agent._suspended = true
+    await awaitSettle(agent, out.id)
+    const token = agent._engDesignTokens?.get(out.reviewId)
+    assert.ok(token, "T3: 槽在")
+    const prior = String(agent._advisorRuns.get(out.reviewId).priorOutput ?? "")
+    assert.ok(!prior.includes(`[DESIGN-TOKEN:${token}]`), "T3: 方括号形态不落 prior")
+    assert.ok(!prior.includes(token), "T3: 原生 token 不落 prior（引擎后缀已精确截断——F2e）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("advisor 拒发不记账：depth>0 async:true 拒 → record-results 不置 called/不耗轮次（评审发现 #1）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { recordToolResults } = await import("../src/agent/record-results.mjs")
+  const { server, port } = await reviewServer([{ text: FINDINGS }])
+  const { agent, cwd } = await makeAgent(port)
+  try {
+    const out = String(await advisorTool.execute(
+      { type: "code", paths: ["a.mjs"], async: true },
+      execCtx(agent, { depth: 1, toolCallId: "ref1" }),
+    ))
+    assert.ok(out.includes("only available at depth 0"), "拒发文案")
+    await recordToolResults(agent, new Map([["advisor", advisorTool]]), [
+      { toolCall: { name: "advisor", id: "ref1", arguments: "{}" }, result: out, ok: true },
+    ])
+    assert.equal(agent._calledAdvisorThisRun, false, "拒发不置 called（guard 仍推回——拒发不得静默满足 guard）")
+    assert.equal(agent._advisorRound ?? 0, 0, "拒发不耗轮次")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-24b13b: error settle（rejection 路径——report=null 带 error）→ code 评审不置 called（复评补边）", async () => {
+  const { settleAdvisorRun } = await import("../src/agent-tools/advisor-async.mjs")
+  const agent = { _advisorRuns: new Map(), _calledAdvisorThisRun: false, _mutLog: [] }
+  const run = { reviewId: "r1", reviewType: "code", designId: null, round: 0, priorOutput: null, stale: false, open: true, docSetKey: null }
+  agent._advisorRuns.set("r1", run)
+  const entry = { cancelled: false, run, report: null, error: "transport boom", reviewType: "code", designToken: null, docAbs: [], launchSeq: 0 }
+  const settled = settleAdvisorRun(agent, entry)
+  assert.equal(agent._calledAdvisorThisRun, false, "error settle 不置 called（无评审判定——guard 仍推回）")
+  assert.equal(run.round, 1, "尝试仍耗轮次（cap 有界）")
+  assert.equal(settled.passed, false, "无通过判定")
+})
+
+test("T15: design round2+ 注入段携带 token + designId 两值（Copy BOTH——修前必红）", async () => {
+  const { prepareAdvisorMessages } = await import("../src/advisor.mjs")
+  const priorTable = "| # | Category | Severity | Issue | Suggestion |\n| 1 | Clarity | 🔴 | gap | fix |"
+  const agent = {
+    history: [], _advisorRound: 1, _advisorSession: null, cwd: tmpdir(),
+    _touchedFiles: [], _lastAdvisorOutput: priorTable, config: {},
+  }
+  const msgs = prepareAdvisorMessages(agent, "design", "T2-TOKEN", ["docs/design/A.md"], null, null, null, "D-ONE")
+  const content = msgs[1].content
+  assert.ok(content.includes("[DESIGN-TOKEN:T2-TOKEN]"), "T15: round2+ 注入新 token（可 re-approve）")
+  assert.ok(content.includes("this exact designId: D-ONE"), "T15: round2+ 同段注入 designId（修前仅 token）")
+  assert.ok(content.includes("Copy BOTH values verbatim"), "T15: 锚句在")
+  assert.ok(content.includes("## Documents to Review") && content.includes("docs/design/A.md"), "T15: 重锚文档范围")
+})
+
+slow("T9: 端到端复现锁——评审员正文回显注入两值 → settle → 用正文回显 id spawn → 过（三次实测真回归）", async () => {
+  // 独立 mock：正文照抄注入的 designId（F2a 注入前评审员只能自编 id——正文 id ≠ 槽 id
+  // → spawn 撞 designId not found——三次实测真现场）
+  const bodies = []
+  const server = createServer((req, res) => {
+    let text = ""
+    req.on("data", (c) => (text += c))
+    req.on("end", () => {
+      const body = JSON.parse(text)
+      bodies.push(body)
+      const joined = JSON.stringify(body.messages)
+      const token = joined.match(/\[DESIGN-TOKEN:([0-9a-f-]+:\d+)\]/)?.[1] ?? "no-token"
+      const id = joined.match(/and this exact designId: ([0-9a-f-]{36})/)?.[1] ?? "no-id"
+      const content = `## Review\n\n设计通过。评审对象 designId: ${id}（正文回显——模型照抄注入值）。\n\n[DESIGN-TOKEN:${token}]`
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end(
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content } }] })}\n\n` +
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+        `data: [DONE]\n\n`
+      )
+    })
+  })
+  const port = await new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server.address().port)))
+  let cwd = null
+  try {
+    const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+    const made = await makeAgent(port, { engineering: true })
+    const agent = made.agent
+    cwd = made.cwd
+    const out = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "f9" }),
+    )))
+    agent._suspended = true
+    await awaitSettle(agent, out.id)
+    const entry = agent._pendingAsyncResults[0]
+    const echoedId = String(entry.report).match(/designId: ([0-9a-f-]{36})（正文回显/)?.[1]
+    assert.ok(echoedId, "T9: 评审员正文回显了注入的 designId（照抄真值）")
+    assert.equal(echoedId, entry.designId, "T9: 正文回显 id = 尾部引擎拼接 id（注入消竞争值）")
+    // 用正文回显的 id spawn → 过（pre-fix：正文自编 id ≠ 槽 id → designId not found）
+    const { resolveDesignSlot } = await import("../src/agent-tools/subagent-spawn.mjs")
+    const slot = resolveDesignSlot(agent, echoedId)
+    assert.equal(slot.token, entry.designToken, "T9: 正文回显 id 可直接 spawn（端到端复现锁）")
+  } finally {
+    server.close()
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+slow("T14: 同 scope 复审通过 → 槽覆写同 designId → 旧 token spawn 拒（F2h——旧槽 TTL 前不残留）", async () => {
+  const { advisorTool } = await import("../src/agent-tools/advisor.mjs")
+  const { server, port } = await reviewServer([{ pass: true, text: "R1 通过" }, { pass: true, text: "R2 通过" }])
+  const { agent, cwd } = await makeAgent(port, { engineering: true })
+  try {
+    const out1 = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "f14a" }),
+    )))
+    agent._suspended = true
+    await awaitSettle(agent, out1.id)
+    const token1 = agent._engDesignTokens?.get(out1.reviewId)
+    assert.ok(token1, "T14: 首评通过入槽")
+    // 复审（通过后新实例——F2h 复用同 designId——不再开新槽）
+    const out2 = JSON.parse(String(await advisorTool.execute(
+      { type: "design", documents: ["docs/design/A.md"] },
+      execCtx(agent, { toolCallId: "f14b" }),
+    )))
+    await awaitSettle(agent, out2.id)
+    const token2 = agent._engDesignTokens?.get(out1.reviewId)
+    assert.ok(token2 && token2 !== token1, "T14: 复审签发新 token 覆写同 id 槽")
+    assert.equal(agent._engDesignTokens.size, 1, "T14: 同 scope 复审无新槽（F2h——旧槽覆写非残留）")
+    // 旧 token spawn → 拒（槽已覆写）
+    const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+    await assert.rejects(
+      subagentTool.execute({ task: "x", role: "eng-coder", designId: out1.reviewId, designToken: token1 }, { agent, cwd: process.cwd(), callbacks: {}, depth: 0 }),
+      /Invalid or missing design token/,
+      "T14: 旧 token 拒（同 scope 复审后旧 token 失效）",
+    )
+    const { resolveDesignSlot } = await import("../src/agent-tools/subagent-spawn.mjs")
+    assert.equal(resolveDesignSlot(agent, out1.reviewId).token, token2, "T14: 同 designId 新 token 在槽")
   } finally {
     server.close()
     rmSync(cwd, { recursive: true, force: true })

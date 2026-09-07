@@ -7,7 +7,7 @@
  * children: []（R23——嵌套子代理子块载体——见 subagent-children.mjs）}。
  * 职责：前缀路由（parseRelayPath——**R23：嵌套段不再子标渲染——建子块载体归属**）、
  * 事件 token 解析（**R23：内层 ⟦ev⟧done/stopped 生成侧补发射（D-R23c1）路由到子块
- * 定格**）、kind 合并、N2 树级环形上限（R23 NFR——子块计入外层配额）、N1 渲染节流、
+ * 定格；§27.1 F2：done 后完全定格——迟到 chunk 丢弃**）、kind 合并、N2 树级环形上限（R23 NFR——子块计入外层配额）、N1 渲染节流、
  * 完成冻结（freezeSubTaskLines 家族——锚点 splice）。
  */
 
@@ -204,7 +204,9 @@ export function routeSubToken(state, t, scheduleRender) {
       const innerEv = payload.match(SUB_EVENT_RE)
       if (innerEv && (innerEv[1] === "done" || innerEv[1] === "stopped")) {
         const leaf = descendSubChild(sub, path.inner, { create: false })
-        if (leaf) closeSubChild(sub, leaf, innerEv[1] === "stopped", path.label)
+        // §27.1 F2: done 子块完全定格——迟到 done/stopped 丢弃（重复 done 不重放
+        // 定格；stopped 不打回 done 定格块）
+        if (leaf && !leaf.done) closeSubChild(sub, leaf, innerEv[1] === "stopped", path.label)
         scheduleRender()
       }
       return true
@@ -278,7 +280,8 @@ export function routeSubToken(state, t, scheduleRender) {
   if (payload.startsWith("[model]") && (nested || sub.model === undefined)) {
     if (nested) {
       const leaf = descendSubChild(sub, path.inner)
-      if (leaf.model === undefined) {
+      // §27.1 F2: done 子块完全定格——迟到 [model] 不写定格块头
+      if (!leaf.done && leaf.model === undefined) {
         leaf.model = payload.slice(7)
         scheduleRender()
       }
@@ -289,9 +292,13 @@ export function routeSubToken(state, t, scheduleRender) {
     return true
   }
   // Child LLM text → text block (N2 cap inside appendSubBlock). R23：内层文本归属子块
-  // （D-R23b——子块行——不再混外层 blocks/子标）。
-  if (nested) appendSubChild(sub, descendSubChild(sub, path.inner), "text", payload)
-  else appendSubBlock(sub, "text", payload)
+  // （D-R23b——子块行——不再混外层 blocks/子标）。§27.1 F2：done 子块完全定格——
+  // 迟到 chunk 丢弃（与 appendSubChild 数据层守卫同义——此处免无谓 render）。
+  if (nested) {
+    const leaf = descendSubChild(sub, path.inner)
+    if (leaf.done) return true
+    appendSubChild(sub, leaf, "text", payload)
+  } else appendSubBlock(sub, "text", payload)
   scheduleRender()
   return true
 }
@@ -304,8 +311,11 @@ export function routeSubReasoning(state, t, scheduleRender) {
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
   const nested = path.inner.length > 0
-  if (nested) appendSubChild(sub, descendSubChild(sub, path.inner), "think", path.rest)
-  else appendSubBlock(sub, "think", path.rest)
+  if (nested) {
+    const leaf = descendSubChild(sub, path.inner)
+    if (leaf.done) return true // §27.1 F2: done 子块完全定格——迟到 think 丢弃
+    appendSubChild(sub, leaf, "think", path.rest)
+  } else appendSubBlock(sub, "think", path.rest)
   scheduleRender()
   return true
 }
@@ -320,12 +330,14 @@ export function routeSubToolCall(state, name, args, scheduleRender) {
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
   const nested = path.inner.length > 0
+  // §27.1 F2: done 子块完全定格——迟到 tool call 丢弃（不复活外层 currentTool/子块状态）
+  const leaf = nested ? descendSubChild(sub, path.inner) : null
+  if (leaf?.done) return true
   sub.currentTool = nested ? `${path.label}/${path.rest}` : path.rest
   sub.toolArgs = args
   sub.approval = null
   const argsDesc = describeToolArgs(path.rest, args)
   if (nested) {
-    const leaf = descendSubChild(sub, path.inner)
     leaf.currentTool = path.rest
     leaf.toolArgs = args
     leaf.approval = null
@@ -349,6 +361,7 @@ export function routeSubToolOutput(state, name, part, scheduleRender) {
   if (!sub) return true // frozen tombstone — drop late token
   if (path.inner.length > 0) {
     const leaf = descendSubChild(sub, path.inner)
+    if (leaf.done) return true // §27.1 F2: done 子块完全定格——迟到输出丢弃（不复活 currentTool）
     const leafTool = path.rest
     appendSubChild(sub, leaf, "tool", part.text, { fresh: leaf.currentTool !== leafTool })
     if (leaf.currentTool !== leafTool) leaf.currentTool = leafTool

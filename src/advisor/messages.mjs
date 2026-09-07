@@ -133,12 +133,17 @@ export function buildObjectDeclarationBlock(object = null) {
  * Approval-signal block for design reviews (round 1 and round 2+ — §24 D-24b:
  * an async fix-round continuation must be able to re-approve, so the token is
  * injected into EVERY design round; the reviewer echoes it only on a clean pass).
- * Text shape = the round-1 block in buildAdvisorUserMessage (verbatim anchor).
+ * §29.1 F2a (2026-09-07): BOTH values are injected — the token AND the designId
+ * (anchor sentence verbatim — Copy BOTH values). designId null (legacy direct
+ * callers without a resolved instance) degrades to the token-only form.
  */
-export function buildDesignApprovalBlock(designToken) {
+export function buildDesignApprovalBlock(designToken, designId) {
+  const echo = designId
+    ? `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}] and this exact designId: ${designId}. Copy BOTH values verbatim.`
+    : `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`
   return [
     "## Approval Signal",
-    `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`,
+    echo,
     "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If there are any 🔴 issues, do NOT include the token.",
   ].join("\n")
 }
@@ -156,9 +161,12 @@ export function buildDesignApprovalBlock(designToken) {
  * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3):
  *   { type, target, status, reason, exclude } — mechanically injected at the
  *   start of the user message; absent → no injection (legacy calls unchanged).
+ * @param {string|null} [designId] — §29.1 F2a: injected next to the token in the
+ *   Approval Signal (both values — the reviewer copies both verbatim); null →
+ *   token-only degradation (legacy direct callers).
  * @returns {string} the user message
  */
-export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null) {
+export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null, designId = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.
@@ -260,7 +268,7 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
     parts.push("5. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
     if (designToken) {
       parts.push("")
-      parts.push(buildDesignApprovalBlock(designToken))
+      parts.push(buildDesignApprovalBlock(designToken, designId))
     }
     return parts.join("\n")
   }

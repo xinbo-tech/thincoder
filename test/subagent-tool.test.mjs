@@ -103,10 +103,10 @@ test("§19 T-M17: action 门控——planMode status/cancel 放行 vs spawn/esca
 
 
 
-test("§19 受限变体 action 门控——eng-coder 子代理内 escalate/status/cancel/panel 工具层拒绝（T-E4/E5 的 action 维度镜像）", async () => {
+test("§19 受限变体 action 门控——eng-coder 子代理内 escalate/status/cancel/panel/consume-design 工具层拒绝（T-E4/E5 的 action 维度镜像）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = { agent: { _role: "eng-coder", config: { agent: {} } }, depth: 1 }
-  for (const action of ["escalate", "status", "cancel", "panel"]) {
+  for (const action of ["escalate", "status", "cancel", "panel", "consume-design"]) {
     await assert.rejects(
       subagentTool.execute({ action, task: "x" }, ctx),
       /only action:'spawn'/,
@@ -143,4 +143,47 @@ test("§20.8 T-F1.5 (cli): subagent files 参数描述含文件级锚句（fail-
     d.includes("files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error."),
     `T-F1.5: files 描述缺 §20.8 锚句——actual: ${d.slice(0, 160)}`
   )
+})
+
+
+
+test("§2.6 consume-design 动作面——schema enum/描述 + planMode 拒绝 + 免审直行（不入批审批分组——评审 #7d）", async () => {
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const { executeToolCalls } = await import("../src/agent/dispatch.mjs")
+  const enumList = subagentTool.parameters.properties.action.enum
+  assert.ok(enumList.includes("consume-design"), "consume-design 入 action 枚举（六动作）")
+  assert.ok(subagentTool.description.includes("action:'consume-design'"), "描述含 consume-design 动作面")
+  assert.ok(subagentTool.description.includes("chain-terminal token consumption"), "描述含链终消费定位")
+  assert.ok(subagentTool.parameters.properties.designId.description.includes("consume-design"), "designId 参数描述含 consume-design 面")
+  const noopWrite = { name: "write", readonly: false, execute: async () => "wrote" }
+  const tools = new Map([["subagent", subagentTool], ["write", noopWrite]])
+  const cwd = mkdtempSync(join(tmpdir(), "cli-cd-"))
+  const mkAgent = (planMode) => ({
+    cwd, config: { agent: { engineering: true } }, planMode, autoApprove: false,
+    _touchedFiles: [], _mutatedThisRun: false,
+    _engDesignTokens: new Map([["id-cd", "tok-cd"]]), _engDesignToken: "tok-cd",
+  })
+  try {
+    // planMode 拒绝（评审 #7d——非只读控制动作——与 spawn 同门；非 readonly/control 豁免）
+    const res = await executeToolCalls(mkAgent(true), tools, [
+      { name: "subagent", arguments: JSON.stringify({ action: "consume-design", designId: "id-cd" }) },
+    ], {}, 0)
+    assert.equal(res[0].ok, false)
+    assert.ok(res[0].result.includes("plan mode"), "planMode 下 consume-design 拒绝")
+    // 免审直行 + 不入批审批分组：消费零权限询问；同批双 write 单独组批（批内无 consume-design）
+    const asks = []
+    const res2 = await executeToolCalls(mkAgent(false), tools, [
+      { name: "subagent", arguments: JSON.stringify({ action: "consume-design", designId: "id-cd" }) },
+      { name: "write", arguments: JSON.stringify({ path: "a.mjs", content: "1" }) },
+      { name: "write", arguments: JSON.stringify({ path: "b.mjs", content: "2" }) },
+    ], {
+      onBatchPermissionRequest: async (req) => { asks.push(req); return "approveAll" },
+    }, 0)
+    assert.equal(res2.every((r) => r.ok), true, "consume-design 免审直行（控制类——无文件写）")
+    assert.ok(res2[0].result.includes("design slot consumed"), "消费动作真实执行（slot 被消费）")
+    assert.equal(asks.length, 1, "双 write 走一次批询问")
+    assert.deepEqual(asks[0].tools.map((t) => t.name), ["write", "write"], "consume-design 不入批审批分组")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
 })

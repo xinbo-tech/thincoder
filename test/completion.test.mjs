@@ -128,13 +128,16 @@ test("handleCompletion: advisor guard pushes back BELOW the convergence cap", ()
     _mutatedThisRun: true,
     _touchedFiles: ["src/a.mjs"],
     _calledAdvisorThisRun: false,
+    // §8 F2 (2026-09-07): the guard reads the OPEN CODE instance's round
+    // (effectiveAdvisorRound) — the mirror alone no longer counts.
+    _advisorRuns: new Map([["c1", { reviewType: "code", open: true, round: 2 }]]),
     _advisorRound: 2,
   })
   const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
   assert.equal(cr.action, "continue", "mutations without a review → reminder injected")
   const last = agent.history.at(-1)
   assert.ok(last.content.startsWith("[System reminder: you changed code"), last.content)
-  assert.ok(last.content.includes("round 3"), "round number = _advisorRound + 1")
+  assert.ok(last.content.includes("round 3"), "round number = effective round + 1")
 })
 
 test("handleCompletion: advisor guard does NOT push back at/after the convergence cap", () => {
@@ -147,12 +150,30 @@ test("handleCompletion: advisor guard does NOT push back at/after the convergenc
     _mutatedThisRun: true,
     _touchedFiles: ["src/a.mjs"],
     _calledAdvisorThisRun: false,
+    // §8 F2 (2026-09-07): the cap stop reads the OPEN CODE instance's round —
+    // round 5 code instance → no more pushback (design rounds never count).
+    _advisorRuns: new Map([["c1", { reviewType: "code", open: true, round: 5 }]]),
     _advisorRound: 5, // MAX_ADVISOR_ROUNDS
   })
   const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
   assert.equal(cr.action, "done", "cap reached → no more pushback")
   const last = agent.history.at(-1)
   assert.ok(!last.content.startsWith("[System reminder: you changed code"), "no advisor reminder after cap")
+})
+
+test("handleCompletion: §8 F2 — design round ≥5 in the mirror does NOT stop the code guard (AC-3)", () => {
+  // The legacy mirror is written by design settles too; with no OPEN CODE
+  // instance the effective round is 0 — a design round ≥5 must not gate the
+  // code-review push-back (the cap is code-only).
+  const agent = baseAgent({
+    config: { agent: {}, advisor: { guard: true } },
+    _mutatedThisRun: true,
+    _touchedFiles: ["src/a.mjs"],
+    _calledAdvisorThisRun: false,
+    _advisorRound: 5, // design settle wrote the mirror — no code instance
+  })
+  const cr = handleCompletion(agent, baseResponse, 0, 0, 0, false, 0, {})
+  assert.equal(cr.action, "continue", "design round must not stop the code guard — pushback stands")
 })
 
 test("handleCompletion: advisor guard default OFF — no config pushes nothing back (2026-08-21)", () => {

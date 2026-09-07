@@ -10,11 +10,10 @@ import { appendCitationReport } from "./citations.mjs"
 import { describeToolArgs } from "../tui/tool-args.mjs"
 
 const MAX_ADVISOR_TURNS = 100
-// Mechanical convergence cap: up to 5 rounds suffice (full review, verify+fix
-// cycles, strict verification); a 6th call means the model is looping — refuse it
-// instead of burning tokens. §24 D-24b (2026-09-06): PER REVIEW INSTANCE — the
-// launch path scopes agent._advisorRound to the current instance (agent._advisorRuns —
-// advisor-async.mjs); design/code no longer share one run-global budget (§2 superseded).
+// Mechanical convergence cap: up to 5 rounds suffice; a 6th call means the model
+// is looping — refuse it instead of burning tokens. §24 D-24b (2026-09-06): PER
+// REVIEW INSTANCE (agent._advisorRuns); CODE REVIEWS ONLY (2026-09-07 §8 ruling)
+// — design reviews are EXEMPT: their rounds keep advancing, the cap never refuses.
 export const MAX_ADVISOR_ROUNDS = 5
 
 // NOTE: prompts/advisor-round{1,2,3}.md encourage the model to finish within
@@ -413,8 +412,10 @@ export function buildCapMessage(agent) {
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review.
  * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1/D-OA3): { type, target, status, reason, exclude }; absent → legacy behavior (no injection).
+ * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
+ *   the Approval Signal (passed through to the message builders).
  */
-export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null) {
+export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null, designId = null) {
   const onOutput = callbacks?.onOutput
   const signal = callbacks?.signal
   const startTime = Date.now()
@@ -423,13 +424,11 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // former advisor.enabled gate is removed — review capability has no off
   // switch; only the guard (completion pushback) is opt-in via advisor.guard.
 
-  // Mechanical convergence cap — refuse further reviews once the protocol has run
-  // its rounds. The launch path scopes agent._advisorRound to the current review
-  // instance (§24 D-24b ③ — per-review rounds; legacy direct callers keep the
-  // run-global counter), so >= MAX_ADVISOR_ROUNDS blocks the next call of THIS
-  // instance. 5 rounds max; after that the review is never pushed back
-  // (the caller decides: accept, manual re-check, or /new to reset).
-  if ((agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
+  // Mechanical convergence cap — CODE REVIEWS ONLY (2026-09-07 §8 ruling: design
+  // reviews are exempt). _advisorRound is scoped to the current review instance
+  // (§24 D-24b ③), so >= MAX_ADVISOR_ROUNDS blocks the next call of THIS instance.
+  // 5 rounds max; after that the review is never pushed back.
+  if (reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
     return buildCapMessage(agent)
   }
 
@@ -437,7 +436,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // Advisor always works in the agent's cwd — scope is defined by paths/documents.
   const advisorCwd = agent.cwd
 
-  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, object)
+  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, object, designId)
 
   try {
     const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd)

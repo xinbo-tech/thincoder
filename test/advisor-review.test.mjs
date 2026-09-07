@@ -120,22 +120,44 @@ test("verifyCitations: path traversal citation is rejected (never reads outside 
 
 
 
-test("runAdvisorReview: cap blocks design reviews too after 5 rounds (bounded loop)", async () => {
+test("runAdvisorReview: design reviews are EXEMPT from the convergence cap — round ≥5 still reaches the LLM (cap is code-only)", async () => {
   const { runAdvisorReview, MAX_ADVISOR_ROUNDS } = await import("../src/advisor/run.mjs")
-  const agent = {
-    config: {},
-    provider: { name: "p", model: "m" },
-    history: [],
-    _touchedFiles: [],
-    _advisorRound: MAX_ADVISOR_ROUNDS + 5,
-    _advisorSession: null,
-    cwd: tmpdir(),
+  const { createServer } = await import("node:http")
+  // LLM probe: the mock counts every chat request it receives. If the cap
+  // wrongly refused the design review, the probe would never be touched.
+  const hits = { count: 0 }
+  const server = createServer((req, res) => {
+    req.on("data", () => {})
+    req.on("end", () => {
+      hits.count++
+      const frames =
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "Design review completed — no critical issues." } }] })}\n\n` +
+        `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n` +
+        `data: [DONE]\n\n`
+      res.writeHead(200, { "Content-Type": "text/event-stream" })
+      res.end(frames)
+    })
+  })
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const port = server.address().port
+  try {
+    const agent = {
+      config: {},
+      provider: { name: "p", model: "m", baseURL: `http://127.0.0.1:${port}`, apiKey: "x" },
+      history: [],
+      _touchedFiles: [],
+      _advisorRound: MAX_ADVISOR_ROUNDS + 5, // design rounds ≥ cap — the old shared budget refused here
+      _advisorSession: null,
+      cwd: tmpdir(),
+    }
+    // 2026-09-07 §8: design reviews bypass the cap (code-only cap) — the review
+    // runs for real (LLM probe touched) and never returns the cap message.
+    const result = await runAdvisorReview(agent, "design", {}, null, ["docs/design/A.md"])
+    assert.ok(!result.includes("convergence cap reached"), `design review must bypass the cap, got: ${result}`)
+    assert.ok(hits.count >= 1, `LLM probe must be touched — the design review actually ran (hits=${hits.count})`)
+  } finally {
+    server.close()
   }
-  // Cap reached — design reviews share the 5-round budget with code reviews.
-  // No network call happens: the cap returns the termination message directly.
-  const result = await runAdvisorReview(agent, "design", { signal: { aborted: true } })
-  assert.ok(result.includes("convergence cap reached"), `design review must hit the cap, got: ${result}`)
-  assert.ok(result.includes(String(MAX_ADVISOR_ROUNDS)), "cap message names the round limit")
 })
 
 
@@ -147,12 +169,13 @@ test("runAdvisorReview: design review below cap reaches the tool loop", async ()
     provider: { name: "p", model: "m" },
     history: [],
     _touchedFiles: [],
-    _advisorRound: MAX_ADVISOR_ROUNDS - 1, // 5th review still allowed
+    _advisorRound: MAX_ADVISOR_ROUNDS - 1, // design rounds are never refused by the cap (§8) — below-cap probe stays as the baseline
     _advisorSession: null,
     cwd: tmpdir(),
   }
   // Pre-aborted signal: the tool loop returns "interrupted" immediately — no
-  // network call. Proves the guard let the review through before the cap.
+  // network call. Proves the guard let the review through (any round — design
+  // is cap-exempt; the ≥cap case is covered by the positive LLM-probe test above).
   const result = await runAdvisorReview(agent, "design", { signal: { aborted: true } })
   assert.ok(!result.includes("convergence cap reached"), `design review must pass the cap guard, got: ${result}`)
   assert.ok(result.includes("interrupted"), `design review must reach the tool loop, got: ${result}`)

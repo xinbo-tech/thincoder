@@ -27,33 +27,10 @@ test("agent: _advisorRound initialized to 0 in runAgent", () => {
   assert.equal(_mutatedThisRun && !_calledAdvisorThisRun, false)
 })
 
-
-
-test("agent: _advisorRound increments on every advisor call (code AND design)", () => {
-  // Mirrors agent.mjs: design reviews share the convergence budget with code
-  // reviews — both advance _advisorRound toward MAX_ADVISOR_ROUNDS=5.
-  let _advisorRound = 0
-  const toolCalls = [
-    { name: "write", ok: true, arguments: "{}" },
-    { name: "advisor", ok: true, arguments: "{}" },
-    { name: "advisor", ok: true, arguments: JSON.stringify({ type: "design" }) },
-    { name: "edit", ok: true, arguments: "{}" },
-    { name: "advisor", ok: true, arguments: "{}" },
-  ]
-
-  for (const tc of toolCalls) {
-    if (tc.name === "advisor") {
-      try {
-        JSON.parse(tc.arguments || "{}")
-      } catch {
-        /* unparseable — still counts as a review attempt */
-      }
-      _advisorRound++
-    }
-  }
-
-  assert.equal(_advisorRound, 3) // code + design + code — all count
-})
+// (2026-09-07 §8: the former "code AND design share one budget" fake-loop
+// narrative test was removed — the cap is code-only now; the design exemption
+// is asserted by real tests: advisor-review.test.mjs (sync positive LLM probe)
+// and advisor-async.test.mjs (async 6th-launch exemption).)
 
 // ---------------------------------------------------------------- advisor review timeout（agent.advisor.timeoutMs 配置化）
 

@@ -23,7 +23,7 @@ import { pushReal } from "../context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS } from "./helpers.mjs"
 import { resolve } from "node:path"
-import { advisorRuns } from "../agent-tools/advisor-async.mjs"
+import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
 import { looksLikeReviewOutput } from "../advisor/run.mjs"
 
 let _reindexFile = null
@@ -119,7 +119,12 @@ export async function recordToolResults(agent, toolByName, results) {
               run.round++
               agent._advisorRound = run.round
               // Prior of round 2+ = the last REVIEW-LOOKING output (run.mjs parity).
-              if (looksLikeReviewOutput(result)) run.priorOutput = result
+              // F2e (§29.1): the sync settle's engine-approved suffix (stored on the
+              // run by settleDesignReview) is stripped with exact truncation — the
+              // prior never carries the raw token / designId.
+              if (looksLikeReviewOutput(result)) {
+                run.priorOutput = stripApprovedSuffix(result, run.approvedSuffix)
+              }
             } else {
               agent._advisorRound++
             }

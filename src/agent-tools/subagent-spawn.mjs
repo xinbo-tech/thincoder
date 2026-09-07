@@ -4,6 +4,8 @@
  * resolveDesignSlot）+ §20 调度参数准入（prepareScheduling）+ child 装配
  * （buildSpawnChild）verbatim 迁入（仅闭包变量参数化），语义零变；executeAsyncSpawn
  * 另在 subagent-run.mjs。subagent.mjs execute 经本文件 import 调用。
+ * 2026-09-07：executeConsumeDesignAction 消费执行器（token 链终消费制——与 spawn 侧
+ * slot 族同域——ENGINEERING-MODE.md §2.6 F1——removeDesignTokenSlot 自 token-ttl.mjs）。
  */
 
 import {
@@ -106,18 +108,57 @@ export function resolveDesignSlot(parent, designIdArg) {
   const slots = parent._engDesignTokens
   const hasSlots = slots instanceof Map && slots.size > 0
   const legacy = parent._engDesignToken
+  // F2d (§29.1): both refusal branches carry the HELD id list — after a
+  // persistence restore the parent has no digest to look the id up in; the error
+  // list is the only discovery path (ids are not credentials — the token is).
+  const heldIds = hasSlots ? [...slots.keys()].join(", ") : "(none)"
   if (designIdArg) {
     if (!hasSlots || !slots.has(designIdArg)) {
-      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${hasSlots ? slots.size : 0} approved design slot(s))`)
+      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${hasSlots ? slots.size : 0} approved design slot(s); held design ids: ${heldIds})`)
     }
     return { token: slots.get(designIdArg) }
   }
   if (hasSlots && slots.size > 1) {
-    throw new Error(`Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to.`)
+    throw new Error(`Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to. Held design ids: ${heldIds}`)
   }
   if (hasSlots && slots.size === 1) return { token: [...slots.values()][0] }
   if (legacy) return { token: legacy } // single-slot mirror fallback (pre-multi-slot sessions)
   throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
+}
+
+/**
+ * consume-design 动作执行器（2026-09-07 token 链终消费制——ENGINEERING-MODE.md §2.6 F1）：
+ * 父侧验收核销时显式调用——读槽值 → removeDesignTokenSlot（token-ttl.mjs——移除该
+ * designId 槽 + 单槽镜像条件清 + _engDesignToken 兼容值清）→ 消费后同 designId 再
+ * spawn = resolveDesignSlot not found 机械拒。调用形态定死（评审 #3）：参数 designId
+ * （单设计会话可省略——FR3 spawn 同款语义）；未知 designId 与重复消费同款 no-op 提示
+ * （幂等——不报错）。dispatch 分类（评审 #7d）：非只读控制动作——depth-0 + 工程模式
+ * 限定（受限变体门在 subagent.mjs 分流处；本器自持工程模式门）——planMode 拒绝
+ * （dispatch 不豁免）——不入批审批分组（dispatch 免审直行——无文件写）。
+ */
+export function executeConsumeDesignAction(args, ctx) {
+  const parent = ctx.agent
+  if (!parent?.config?.agent?.engineering) {
+    throw new Error("Engineering mode is not active — consume-design applies only to engineering-mode design tokens (spawn 同门).")
+  }
+  const designId = args?.designId ? String(args.designId) : undefined
+  const slots = parent?._engDesignTokens
+  const hasSlots = slots instanceof Map && slots.size > 0
+  // 多槽缺 designId → 拒（spawn 同款语义——不误消费任一槽）
+  if (!designId && hasSlots && slots.size > 1) {
+    throw new Error(`consume-design: Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design to close out.`)
+  }
+  // 读槽值：给定 designId → 精确槽（未知/已消费 → undefined）；缺省 → 唯一槽；无 Map → 单值镜像兜底
+  let token = null
+  if (designId && hasSlots) token = slots.get(designId) ?? null
+  else if (!designId && hasSlots) token = [...slots.values()][0]
+  else if (!designId && !hasSlots && typeof parent?._engDesignToken === "string" && parent._engDesignToken) token = parent._engDesignToken
+  // 未知 designId / 已消费 / 无任何槽 → 幂等 no-op 提示（不报错——评审 #3 定死）
+  if (!token) {
+    return `consume-design: no live slot${designId ? ` for designId ${designId}` : ""} (already consumed or never issued) — idempotent no-op, nothing changed.`
+  }
+  removeDesignTokenSlot(parent, designId, token)
+  return `design slot consumed — designId ${designId ?? "(single-design session)"} is closed out; a further eng-coder spawn for this design is mechanically rejected, and any new work (including deviation fixes) requires a fresh advisor(type='design') review and token.`
 }
 
 // ── §20 spawn 调度参数准入（AGENT-LOOP.md §20 D-SD1/D-SD3 + 20.4 round2 #5/#7）──

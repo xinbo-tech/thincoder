@@ -92,6 +92,16 @@ function isSubagentControlAction(toolName, args) {
   if (args?.action === "panel" && args.freeze !== undefined && args.freeze !== null && String(args.freeze) !== "") return true
   return false
 }
+/**
+ * §2.6 token 链终消费制（2026-09-07——评审 #7d dispatch 分类）：consume-design =
+ * 非只读控制动作——planMode 拒绝（不入 readonly/control 豁免——与其他非只读动作同门）、
+ * 免权限审批、不入批审批分组（无文件写——控制类直行——只停既有状态不起新副作用）。
+ * 与 cancel 的不同：cancel 是控制类豁免（planMode 放行），consume-design 按设计
+ * planMode 拒绝——故不并入 isSubagentControlAction，单独谓词只接权限豁免位。
+ */
+function isSubagentConsumeDesignAction(toolName, args) {
+  return toolName === "subagent" && args?.action === "consume-design"
+}
 function isSubagentEscalateAction(toolName, args) {
   return toolName === "subagent" && args?.action === "escalate"
 }
@@ -197,7 +207,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // — the exemption never widens what reaches this stage (round4 #3, T-E14).
     // PreToolUse hooks still run below. Non-eng-coder children keep the manual
     // parent ask (human in the loop).
-    if (tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || isSubagentControlAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
+    if (tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || isSubagentControlAction(toolCall.name, args) || isSubagentConsumeDesignAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
       if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
         prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
         continue

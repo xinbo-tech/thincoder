@@ -4,7 +4,8 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, utimesSync, lstatSync } from "node:fs"
+import { slow } from "./slow.mjs"
 import { tmpdir } from "node:os"
 import { join, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -13,6 +14,10 @@ import {
   buildAdvisorSystemPrompt,
   buildAdvisorUserMessage,
 } from "../src/advisor.mjs"
+
+// §18.14a F1 折行断言归一法（2026-09-07）：双侧 \s+ 折叠为单空格后 includes——折行漂移免疫
+// （历批折叠重排不红——工程.md 等历批折行漂移的收口机制）；短语缺失/回归仍红——负守卫同法
+const foldedIncludes = (text, phrase) => text.replace(/\s+/g, " ").includes(phrase.replace(/\s+/g, " "))
 
 
 
@@ -27,10 +32,10 @@ test("T19: 内部协议口径断言（engineering.md step 6-8 + Work Loop 状态
   assert.ok(text.includes("Delivery arrives already audited — do not double-audit"), "父侧不双重审计（step 7 标题）")
   assert.ok(text.includes("terminal state `clean` | `stalled`"), "终态 clean/stalled")
   assert.ok(text.includes("same `designToken` and `designId` parameters"), "修正轮复用同 designId+token（内部收敛外的父侧处理）")
-  assert.ok(text.includes("invent nothing\n   new"), "不发明新需求")
+  assert.ok(foldedIncludes(text, "invent nothing\n   new"), "不发明新需求")
   // step 8：父侧复核保留可选（默认内部协议承担）
   assert.ok(text.includes("OPTIONAL second opinion"), "父侧 advisor = 可选第二意见")
-  assert.ok(text.includes("no user\n   initiation needed (2026-08-24 decision)"), "自动节点语义保留")
+  assert.ok(foldedIncludes(text, "no user\n   initiation needed (2026-08-24 decision)"), "自动节点语义保留")
   // Work Loop：旧 First delivery audit 父侧审计态已由内部协议态取代
   assert.ok(!text.includes("First delivery audit"), "父侧 First delivery audit 态已移除（§18 下沉）")
   assert.ok(text.includes("Delivery (async settle)"), "Work Loop 含 async settle 态")
@@ -42,9 +47,9 @@ test("T19: 内部协议口径断言（engineering.md step 6-8 + Work Loop 状态
 test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressively + designId 并行形态，2026-09-01）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   assert.ok(text.includes("## Multi-Task Parallelism"), "工程模式顶层含并行化纪律章节")
-  assert.ok(text.includes("Parallelize aggressively: send multiple\nindependent tool calls in one response"), "§14 D1 条款在工程模式单独出现")
-  assert.ok(text.includes("splitting changes across independent\nsub-projects"), "F7 子项目拆分触发条件")
-  assert.ok(text.includes("Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "五类不并行边界")
+  assert.ok(foldedIncludes(text, "Parallelize aggressively: send multiple\nindependent tool calls in one response"), "§14 D1 条款在工程模式单独出现")
+  assert.ok(foldedIncludes(text, "splitting changes across independent\nsub-projects"), "F7 子项目拆分触发条件")
+  assert.ok(foldedIncludes(text, "Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "五类不并行边界")
   assert.ok(text.includes("approval storms"), "审批风暴点名")
   assert.ok(text.includes("skip micro-parallelism (<1s ops)"), "微操作不并行")
   // §20.7 T-PS1：调度器条款替换旧手动避让纪律（D-PS2 逐字锚——AGENT-LOOP.md §20.7.2）
@@ -53,9 +58,9 @@ test("prompts/engineering.md: 多任务并行纪律注入（Parallelize aggressi
   assert.ok(text.includes("never hand-serialized"), "T-PS1: 调度器接管——不手动串行")
   // §19.5.5 T-CL2：cancel 核实纪律锚（D-CL2 逐字——post-D-PS2 文本——fail-when-unchanged——AGENT-LOOP §19.5.5 D-CL2）
   assert.ok(flat.includes("assertions stay green).** Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."), "T-CL2: D-CL2 锚逐字在 D-PS2 文本后（cancel = last resort + 核实优先）")
-  assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "并行 spawn 调用形态（各带 designId+token）")
-  assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token 隔离语义（不互相覆盖）")
-  assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "发起权不变：设计评审仍仅用户发起")
+  assert.ok(foldedIncludes(text, 'designId=<id-A>,\n  designToken=<token-A>'), "并行 spawn 调用形态（各带 designId+token）")
+  assert.ok(foldedIncludes(text, "each parallel\n   design keeps its own designId+token pair"), "token 隔离语义（不互相覆盖）")
+  assert.ok(foldedIncludes(text, "the DESIGN review is still only fired when\n  the user asks"), "发起权不变：设计评审仍仅用户发起")
   assert.ok(text.includes("plus its designId parameter"), "Work Loop 批准行提 designId")
 })
 
@@ -318,10 +323,10 @@ test("prompts/engineering.md: 写文档前计划确认条款（无豁免）", ()
 test("prompts/engineering.md: 任务大小零裁量声明（2026-09-03——工程模式不分大小全流程）", () => {
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   assert.ok(text.includes("Task sizing is NOT your call"), "零裁量声明句在（Mandatory Flow 标题下）")
-  assert.ok(text.includes("every user request in this mode runs the full\nMandatory Flow regardless of size"), "不分大小全流程")
+  assert.ok(foldedIncludes(text, "every user request in this mode runs the full\nMandatory Flow regardless of size"), "不分大小全流程")
   assert.ok(text.includes('"The task is too small / it is just a tweak"'), "小任务借口句点名")
-  assert.ok(text.includes("no change is exempt from\nbeing recorded in the design docs"), "无豁免落档语义在")
-  assert.ok(text.includes("the user's decision to be\nin engineering mode was the sizing decision"), "进入工程模式即完成尺寸裁定")
+  assert.ok(foldedIncludes(text, "no change is exempt from\nbeing recorded in the design docs"), "无豁免落档语义在")
+  assert.ok(foldedIncludes(text, "the user's decision to be\nin engineering mode was the sizing decision"), "进入工程模式即完成尺寸裁定")
 })
 
 
@@ -333,6 +338,19 @@ test("prompts/engineering.md: 修正轮 docs FIRST 条款（2026-09-03——同�
   assert.ok(text.includes("is a NEW task needing its own flow and a fresh token"), "token 复用边界：超清单 = 新任务新 token")
   assert.ok(text.includes("BEFORE the eng-coder spawn"), "落档先于 spawn 的命令句在")
   assert.ok(text.includes("Fix-round re-spawns are docs FIRST too"), "step 7 修正轮句 docs FIRST 指针在")
+})
+
+
+
+test("prompts/engineering.md: token 链终消费制双逐字锚（2026-09-07——fail-when-unchanged——ENGINEERING-MODE §2.6 F3）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  const anchor1 = "**Chain-terminal token consumption**: after the delivery is verified and the chain closes out, call `subagent` with `action:'consume-design'` for this designId — the slot is consumed; a further spawn for the same designId is mechanically rejected, and any new work (including new deviation fixes) requires a fresh design review and token. Leaving a consumed-out token in the slot is the reuse hole."
+  const anchor2 = "Fix rounds reuse the same designToken — but docs FIRST, and only while the chain is open (same designId, before parent-side close-out); once the chain terminal state is reached, every further spawn — including deviation fixes — goes through a fresh design review and token."
+  assert.ok(text.includes(anchor1), "链终消费锚句逐字在（Mandatory Flow step 8 Delivery review 行后）")
+  assert.equal(text.split(anchor1).length - 1, 1, "链终消费锚句唯一出现")
+  assert.ok(text.includes(anchor2), "修正轮句收紧锚逐字在（docs FIRST 钩合并保留——评审复审 #11）")
+  assert.equal(text.split(anchor2).length - 1, 1, "收紧锚唯一出现")
+  assert.ok(text.includes("Fix rounds reuse the same designToken — but docs FIRST"), "docs FIRST 钩保留（既有断言串保持通过——合并裁定）")
 })
 
 
@@ -431,7 +449,7 @@ test("prompts/engineering.md: UI/交互决策必须落设计文档且必须进 e
   assert.ok(text.includes("marked open, never silently invented"), "未定部分标 open、不自行发明")
   // 任务书传递强制：eng-coder 无对话上下文
   assert.ok(
-    text.includes("MUST restate the agreed\n   UI/interaction decisions"),
+    foldedIncludes(text, "MUST restate the agreed\n   UI/interaction decisions"),
     "任务书必须复述 UI/交互决策",
   )
   assert.ok(
@@ -473,7 +491,7 @@ test("prompts/engineering.md: METHODOLOGY 测试文档是交付评审的一部�
   const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
   assert.ok(text.includes("METHODOLOGY test document is part of the delivery"), "交付评审要求测试文档")
   assert.ok(text.includes("normal / edge / error"), "覆盖三态点名")
-  assert.ok(text.includes("a delivery without\n   its test coverage fails the review"), "无测试覆盖 = 交付评审不通过")
+  assert.ok(foldedIncludes(text, "a delivery without\n   its test coverage fails the review"), "无测试覆盖 = 交付评审不通过")
 })
 
 
@@ -809,12 +827,12 @@ test("prompts/engineering.md: 首次交付偏差审计既有断言随 §18 下�
   assert.ok(text.includes("`explore` subagent audited the delivered code"), "内部审计走 explore 子 agent")
   assert.ok(text.includes("silent simplifications"), "审计点名静默简化")
   assert.ok(text.includes("changes outside the approved file list AND not reported in the delivery report"), "超清单改动点名（含 AND not reported——A 裁定口径）")
-  assert.ok(text.includes("capped at 5\n   correction rounds"), "修正轮 ≤5（内部）")
-  assert.ok(text.includes("7th audit spawn is\n   refused mechanically"), "第 7 次审计 spawn 机械拒绝")
+  assert.ok(foldedIncludes(text, "capped at 5\n   correction rounds"), "修正轮 ≤5（内部）")
+  assert.ok(foldedIncludes(text, "7th audit spawn is\n   refused mechanically"), "第 7 次审计 spawn 机械拒绝")
   assert.ok(text.includes("spawn the fix round with the report's"), "stalled → 修正轮任务 = 未收敛点清单")
   assert.ok(text.includes("unconverged points as the task brief"), "任务书 = 未收敛点清单（不发明新内容）")
-  assert.ok(!text.includes("SECOND time with the\n     divergence list as the task brief"), "2026-08-30 父侧二次 spawn 句式已随 §18 移除")
-  assert.ok(!text.includes("verify the\n     divergence list point by point"), "父侧逐点核销句式已随 §18 移除")
+  assert.ok(!foldedIncludes(text, "SECOND time with the\n     divergence list as the task brief"), "2026-08-30 父侧二次 spawn 句式已随 §18 移除（双侧归一后保持否定——旧句以任意折行回归即红）")
+  assert.ok(!foldedIncludes(text, "verify the\n     divergence list point by point"), "父侧逐点核销句式已随 §18 移除（双侧归一后保持否定——旧句以任意折行回归即红）")
   assert.ok(text.includes("Delivery (async settle)"), "工作循环状态表含 async settle 态（替代 First delivery audit）")
   assert.ok(!text.includes("First delivery audit"), "First delivery audit 父侧审计态已移除")
   assert.ok(text.includes("Automatic either way"), "自动节点语义保留（内部协议默认承担）")
@@ -826,9 +844,9 @@ test("prompts/eng-coder.md: 实现保真——不许静默降级（2026-08-30）
   const text = readFileSync(join(PROMPTS_DIR, "eng-coder.md"), "utf8")
   assert.ok(text.includes("Implement to the full design — no silent degradation"), "正面禁止句在")
   assert.ok(text.includes("implement it anyway and note the cost"), "贵也要实现+报告成本")
-  assert.ok(text.includes("A \"simpler\n  approximation\" of a specified behavior IS a deviation"), "近似实现 = 偏离")
-  assert.ok(text.includes("BEFORE coding —\n  never ship a reduced version and disclose it afterwards"), "先停下呈报，不许事后披露降级交付")
-  assert.ok(text.includes("the parent approved the design, not your\n  discount"), "点破：批准的是设计不是折扣")
+  assert.ok(foldedIncludes(text, "A \"simpler\n  approximation\" of a specified behavior IS a deviation"), "近似实现 = 偏离")
+  assert.ok(foldedIncludes(text, "BEFORE coding —\n  never ship a reduced version and disclose it afterwards"), "先停下呈报，不许事后披露降级交付")
+  assert.ok(foldedIncludes(text, "the parent approved the design, not your\n  discount"), "点破：批准的是设计不是折扣")
 })
 
 
@@ -1043,7 +1061,8 @@ test("prompts/advisor-design.md: Document ownership 维度 + 🔴/🟡 分级 + 
   assert.ok(text.includes("file:line"), "引用纪律：精确 file:line 格式")
   assert.ok(text.includes("unverified"), "引用纪律：未核实内容标注 unverified")
   assert.ok(text.includes("## Approval Signal"), "Approval Signal 段保留")
-  assert.ok(text.includes("[DESIGN-TOKEN:...]"), "DESIGN-TOKEN 回显规则保留（防 fallback 删除后丢失）")
+  assert.ok(text.includes("[DESIGN-TOKEN:<token>] and this exact designId: <designId>"), "DESIGN-TOKEN + designId 双值回显规则保留（§29.1 F2a 锚——防回退）")
+  assert.ok(text.includes("Copy BOTH values verbatim"), "双值照抄锚句保留（§29.1 F2a）")
 })
 
 test("prompts/advisor-design.md: 受影响文件行数标注核查维度（R24 F-R24b 执行层——T-FR24b——fail-when-unchanged）", () => {
@@ -1314,4 +1333,25 @@ test("T-R18.2: 设计稿 AGENT-LOOP §26 D-R18 条款仍在（锚源在位——
   const anchor = "**D-R18（system.md 工具纪律区条款——镜像锚逐字稿）**"
   assert.ok(text.includes(anchor), "T-R18.2: AGENT-LOOP §26 锚源段头在")
   assert.ok(text.includes("长输出命令先落盘"), "T-R18.2: §26 条款逐字稿在（锚源——无跨端 diff 测试）")
+})
+
+// ---------------------------------------------------------------- §2.6a 凭证不落文档（2026-09-07——ENGINEERING-MODE §2.6a F1/T1/T2）
+// T2 值形态正则钉死（评审 #4）：uuid 形 hex + 可选冒号 epoch 后缀——参数名不匹配——防误伤；放慢层 + slow-gate 归册（评审 #5）——AC-1 以 test:full 执行为准。
+
+const CRED_ANCHOR = "**Credential values stay out of documents**: never write token or designId VALUES into design docs, change records, or status lines — credentials are runtime state. A review passing is recorded as \"review passed\"; nothing else. No values, no placeholders."
+const CRED_VALUE_RE = /(token|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i
+const walkMd = (dir, acc = []) => (readdirSync(dir).forEach((e) => (lstatSync(join(dir, e)).isDirectory() ? walkMd(join(dir, e), acc) : e.endsWith(".md") && acc.push(join(dir, e)))), acc)
+
+test("§2.6a T1: engineering.md Hard Rules 凭证不落文档逐字锚（fail-when-unchanged）", () => {
+  const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+  assert.ok(text.includes(CRED_ANCHOR), "T1: Hard Rules 含逐字锚（删/改任一字符即失败）")
+  assert.ok(text.indexOf(CRED_ANCHOR) > text.indexOf("## Hard Rules"), "T1: 锚位于 Hard Rules 段内")
+})
+
+slow("§2.6a T2: 全仓凭证巡检——docs + src/prompts + 根级变更记录零值形态（正则钉死——放慢层——AC 以 test:full 为准）", () => {
+  const root = join(TEST_DIR, "..") // thincoder/
+  const files = [...walkMd(join(root, "docs")), ...walkMd(join(root, "src", "prompts")), ...["CHANGELOG.md", "README.md", "AGENTS.md"].map((f) => join(root, f)).filter(existsSync)]
+  const v = []
+  for (const f of files) readFileSync(f, "utf8").split("\n").forEach((line, i) => CRED_VALUE_RE.test(line) && v.push(`${f}:${i + 1}: ${line.trim().slice(0, 80)}`))
+  assert.deepEqual(v, [], `token/designId 值形态残留 ${v.length} 处（零值零占位）：\n${v.join("\n")}`)
 })

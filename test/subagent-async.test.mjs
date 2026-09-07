@@ -625,14 +625,14 @@ test("§19 T-M11: subagent_check/escalate 工具名消失——depth-0 schema �
     assert.ok(!fns.includes("escalate"), "T-M11: escalate 工具名消失（并入 action）")
     const sub = toolSchemas.find((s) => s.function.name === "subagent").function
     const actionProp = sub.parameters.properties.action
-    assert.deepEqual(actionProp.enum, ["spawn", "status", "escalate", "cancel", "panel"], "T-M11: action 参数五动作（§19.8 check 删除——§19.5 + §19.6 panel）")
+    assert.deepEqual(actionProp.enum, ["spawn", "status", "escalate", "cancel", "panel", "consume-design"], "T-M11: action 参数六动作（§19.8 check 删除——§19.5 + §19.6 panel + §2.6 consume-design——2026-09-07 token 链终消费制）")
     assert.ok(actionProp.description.includes("kimi:kimi-k3"), "T-M11: escalate 候选池装饰（原 withPool 同款）")
     assert.ok(sub.description.includes("action:'status'"), "T-M11: 工具描述含动作面")
     assert.ok(sub.description.includes("action:'cancel'"), "T-M11: 工具描述含 cancel 动作（§19.5）")
     assert.ok(sub.description.includes("action:'panel'"), "T-M11: 工具描述含 panel 动作（§19.6）")
     assert.ok(sub.parameters.properties.view, "T-M11: panel view 参数在 schema")
     assert.ok(sub.parameters.properties.freeze, "T-M11: panel freeze 参数在 schema")
-    assert.ok(sub.description.includes("FIVE actions"), "T-M11: 单工具五动作")
+    assert.ok(sub.description.includes("SIX actions"), "T-M11: 单工具六动作（+§2.6 consume-design——2026-09-07）")
   } finally {
     rmSync(cwd, { recursive: true, force: true })
   }

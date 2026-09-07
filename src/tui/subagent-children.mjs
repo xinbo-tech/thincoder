@@ -52,13 +52,18 @@ function dropCarrierLines(carrier, want) {
 /** R23 NFR：树级配额 trim——总行（根 + 子块树）超限 → 丢行。丢序 = **子树递归先于
  *  根载体**（后序：叶子/子块先、根最后）——子块承载批量输出（explore 工具流），外层
  *  叙述行（折叠头 tail/状态区的展示源）保留优先；每载体内部仍最旧行先行（dropCarrierLines
- *  逐块 FIFO）。单载体（无子块）情形与既有 trimSubBlocks 行为逐字同效。 */
+ *  逐块 FIFO）。单载体（无子块）情形与既有 trimSubBlocks 行为逐字同效。
+ *  §27.1 F1（2026-09-07 三缺陷修复批——缺陷③主修）：丢行遍历**跳过 done 子块**——
+ *  done = 定格快照——配额压力不再蚕食已定格子块行，丢行落点移到外层自身行（live
+ *  块「已省略 N 行」增长语义正确）。边界（评审 #6）：live 行耗尽（全树皆 done）→
+ *  允许超限（定格快照优先于配额——N2 上限对 done 存量 best-effort）。 */
 export function trimSubTree(root) {
   let over = carrierTreeLines(root) - SUB_BLOCK_LINE_LIMIT
   if (over <= 0) return
   const walk = (carrier) => {
     for (const c of carrier.children ?? []) {
       if (over <= 0) return
+      if (c.done) continue // §27.1 F1: done 子块 = 定格快照——丢行遍历跳过（豁免）
       walk(c)
     }
     if (over <= 0) return
@@ -90,9 +95,12 @@ export function appendSubBlock(sub, kind, text, { fresh = false } = {}) {
   trimSubTree(sub)
 }
 
-/** R23：追加到子块载体——行数计入根（外层）树配额（NFR——同配额不独立扩容）。 */
+/** R23：追加到子块载体——行数计入根（外层）树配额（NFR——同配额不独立扩容）。
+ *  §27.1 F2（2026-09-07）：child.done 守卫——done 后完全定格，迟到 chunk 丢弃
+ *  （与 §7.2 D4 完成态冻结语义统一——数据层 tombstone 拒绝）。 */
 export function appendSubChild(root, child, kind, text, { fresh = false } = {}) {
   if (!text) return
+  if (child.done) return
   pushBlock(child, kind, text, fresh)
   root.blockEpoch = (root.blockEpoch ?? 0) + 1
   trimSubTree(root)

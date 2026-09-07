@@ -195,8 +195,10 @@ export { escapeLiteralEscapes }
  * @param {Object|null} [object] — review-object declaration (§18.8 D-OA1): passed through
  *   to the user-message builders; mechanically injected at the start of every review
  *   round (round 1 design/code + round 2+ follow-up). Absent → legacy behavior.
+ * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
+ *   the Approval Signal (round 1 + round 2+ — both values, verbatim anchor).
  */
-export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, object = null) {
+export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, object = null, designId = null) {
   // Deterministic convergence state (decision 2026-08-08): round 2+ requires
   // _advisorRound > 0 AND a stored prior review output. No history parsing.
   // priorParam (direct callers) wins over the stored output — same derivation
@@ -209,7 +211,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
-      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object)) },
+      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object, designId)) },
     ]
   }
 
@@ -234,7 +236,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
       agent._advisorRound = 0
     }
     // Mutations exist → KEEP the round (cap keeps advancing through retries).
-    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object)
+    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, object, designId)
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
       {
@@ -274,7 +276,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
     const scopeBlock = docList.length > 0
       ? `\n\n## Documents to Review\nThe documents below are the review scope. Review ONLY these files — do not scan git diff or read any other files.\n${docList.map((d) => `- ${d} — Read this file in full`).join("\n")}`
       : ""
-    const tokenBlock = designToken ? `\n\n${buildDesignApprovalBlock(designToken)}` : ""
+    const tokenBlock = designToken ? `\n\n${buildDesignApprovalBlock(designToken, designId)}` : ""
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType)) },
       { role: "user", content: escapeLiteralEscapes(followUp + scopeBlock + tokenBlock) },

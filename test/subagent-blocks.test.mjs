@@ -13,6 +13,7 @@ import {
   freezeDoneSubTasks, freezeAllSubTasks, shiftFreezeAnchors, freezeReclaimDigestedBlocks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "../src/tui/subagent-blocks.mjs"
+import { trimSubTree } from "../src/tui/subagent-children.mjs"
 
 const noop = () => {}
 const state = () => ({ subTasks: {} })
@@ -249,12 +250,25 @@ test("§27 R23 T-R23c.1: 内层 ⟦ev⟧done（生成侧补发射）→ 子块�
   assert.equal(outer.done, false, "外层不冻结（子块定格不等同外层完成）")
   assert.ok(s.subTasks["eng-coder#2"], "外层条目保留（live）")
   assert.equal(s.lines.length, 0, "无 preview 行落会话（F-R23c）")
-  // 重复 done（迟到）→ no-op 幂等
+  // 重复 done（迟到）→ 丢弃（F2——不重放定格/epoch）
   routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
   assert.equal(ch.done, true)
-  // done 后晚到内容仍归属子块（子块已定格——数据层不拒绝；外层仍 live）
+  // §27.1 F2（T2——断言反转）：done 后完全定格——迟到 chunk 丢弃（与冻结丢弃链统一）
   routeSubToken(s, "eng-coder#2/explore#1/晚到文本", noop)
-  assert.ok(ch.blocks.some((b) => b.text.includes("晚到文本")), "定格后内容仍归属子块（渲染端以 done 头示定格）")
+  assert.ok(!ch.blocks.some((b) => b.text.includes("晚到文本")), "F2: done 后迟到 chunk 丢弃（数据层拒绝——不再归属子块）")
+  // 迟到 tool call / 输出 / think 同丢弃（不复活 currentTool——外层头不清而复指）
+  routeSubToolCall(s, "eng-coder#2/explore#1/read", { path: "y" }, noop)
+  assert.equal(ch.currentTool, null, "迟到 tool call 不复活子块 currentTool")
+  assert.equal(outer.currentTool, null, "迟到 tool call 不复活外层 currentTool")
+  assert.ok(!ch.blocks.some((b) => b.kind === "tool" && b.text.includes("y")), "迟到 tool call 行不追加（无 y 参数行）")
+  routeSubToolOutput(s, "eng-coder#2/explore#1/read", { kind: "text", text: "迟到输出" }, noop)
+  assert.ok(!ch.blocks.some((b) => String(b.text).includes("迟到输出")), "迟到 tool 输出丢弃")
+  assert.equal(ch.currentTool, null, "迟到输出不复活 currentTool")
+  routeSubReasoning(s, "eng-coder#2/explore#1/迟到思考", noop)
+  assert.ok(!ch.blocks.some((b) => b.kind === "think" && b.text.includes("迟到思考")), "迟到 think 丢弃")
+  // 迟到 stopped 不打回 done 定格块（定格快照保持 done 形态）
+  routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e", noop)
+  assert.equal(ch.stopped, false, "done 定格块不被迟到 stopped 打回")
 })
 
 test("§27 R23 T-R23a.3/c.2a: 内层 ⟦ev⟧stopped 定格 stopped；外层冻结时开子块随冻结定格 stopped（收尾语义）", () => {
@@ -324,6 +338,40 @@ test("§27 R23 NFR 数据层: 子块行数计入外层 N2 配额——树级 tri
   // 外层后写行不受早期 trim 影响（仍可归属外层）
   routeSubToken(s, "eng-coder#2/外层收尾\n", noop)
   assert.ok(outer.blocks.some((b) => String(b.text).includes("外层收尾")), "外层自身后续内容照常")
+})
+
+test("§27.1 F1/T1（缺陷③主修）: 外层 live + 子块 done 后继续 append 外层 → done 子块快照不被蚕食——丢行落外层自身", () => {
+  const s = state()
+  // 子块先有内容再 done 定格（done = 定格快照）
+  routeSubToken(s, "eng-coder#2/explore#1/审计行1\n", noop)
+  routeSubToken(s, "eng-coder#2/explore#1/审计行2\n", noop)
+  routeSubToken(s, "eng-coder#2/explore#1/⟦ev⟧done\x1e0\x1e0\x1edone\x1e", noop)
+  const outer = s.subTasks["eng-coder#2"]
+  const ch = outer.children[0]
+  assert.equal(ch.done, true)
+  const chLineCount = ch._lineCount
+  const chDropped = ch.dropped
+  const chBlocks = JSON.parse(JSON.stringify(ch.blocks))
+  // 外层继续流（13 分钟修正/测试流场景）→ 树配额压力 → trim
+  for (let i = 1; i <= 600; i++) routeSubToolOutput(s, "eng-coder#2/bash", { kind: "text", text: `row ${i}\n` }, noop)
+  // done 子块快照不被蚕食（行数/内容/dropped 计数全部不变）
+  assert.equal(ch._lineCount, chLineCount, "done 子块行数不变（trim 丢行遍历跳过 done）")
+  assert.equal(ch.dropped, chDropped, "done 子块 dropped 不增长")
+  assert.deepEqual(ch.blocks, chBlocks, "done 子块内容定格（快照不被裁剪）")
+  // 丢行落点 = 外层自身（live 块「已省略 N 行」增长）
+  assert.ok(outer.dropped > 0, "外层自身行被丢（配额压力由 live 外层承担）")
+  assert.ok(outer.blocks.some((b) => b.kind === "meta" && b.text.includes("省略")), "外层省略标记在")
+  // live 行耗尽边界（评审 #6）：全树皆 done（外层无行可丢）→ 允许超限（best-effort——不崩、不丢 done 快照）
+  const doneTree = {
+    key: "eng-coder#9", role: "eng-coder", done: false, dropped: 0, _lineCount: 0, blocks: [],
+    children: [{
+      key: "explore#1", role: "explore", done: true, stopped: false, dropped: 0,
+      blocks: [{ kind: "text", text: "x\n".repeat(600).trimEnd() }], _lineCount: 600, children: [],
+    }],
+  }
+  trimSubTree(doneTree)
+  assert.equal(doneTree.children[0]._lineCount, 600, "done 快照不被裁（live 行耗尽 → 允许超限——best-effort）")
+  assert.equal(doneTree.dropped, 0, "外层空载体无行可丢（超限允许）")
 })
 
 test("§19.5 T-M19 数据层: ⟦ev⟧stopped → interrupted 语义冻结（stopped 标记 + 面板释放 + 冻结载体）", () => {

@@ -13,6 +13,7 @@ import {
   settleDesignReview,
   resolveAdvisorLaunch,
   launchAsyncAdvisor,
+  stripApprovedSuffix,
 } from "./advisor-async.mjs"
 
 // Design-token utilities moved to advisor-async.mjs (the async settle shares
@@ -95,6 +96,7 @@ export const advisorTool = {
 
     // Code review must have a scope — no implicit fallback.
     if (reviewType !== "design" && !paths && !documents) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
       return "Advisor: no review scope specified. Provide paths (files/directories to review) or documents (acceptance criteria context)."
     }
 
@@ -106,6 +108,7 @@ export const advisorTool = {
         return !isDocFile(doc)
       })
       if (invalidDocs.length > 0) {
+        if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
         return `Advisor: design review documents must be in docs/ directory or be recognized doc files. Invalid: ${invalidDocs.join(", ")}`
       }
     }
@@ -115,6 +118,9 @@ export const advisorTool = {
     // an explicit async:true there is rejected, the default never flips.
     const depth = ctx?.depth
     if (args.async === true && depth !== 0) {
+      // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
+      // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
       return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP.md §24 D-24b); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
     }
     const isAsync = args.async === true || (depth === 0 && args.async !== false)
@@ -130,16 +136,20 @@ export const advisorTool = {
     // Design token minted for EVERY design round — the reviewer echoes it only on
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance
-    // gets a fresh designId; a continued fix round keeps the original one.
+    // gets a fresh designId; a continued fix round keeps the original one — and a
+    // same-scope re-review after a pass REUSES the session's id (F2h §29.1).
     const designToken = reviewType === "design" ? generateDesignToken(agent) : null
-    const designId = reviewType === "design" ? resolved.reviewId : null
+    const designId = reviewType === "design" ? resolved.designId : null
 
-    // Cap pre-check (T-24b11 — per-review ≤5 rounds): a 6th launch of a capped
-    // instance is refused synchronously — the review never starts (sync and
-    // async alike; runAdvisorReview's own cap check stays for legacy direct
-    // callers). The refusal marks no called/round state (guard keeps pushing
-    // only while a review can still run — at the cap the round check stops it).
-    if (resolved.run.round >= MAX_ADVISOR_ROUNDS) {
+    // Cap pre-check (T-24b11 — per-review ≤5 rounds, CODE REVIEWS ONLY): a 6th
+    // launch of a capped CODE instance is refused synchronously — the review
+    // never starts (sync and async alike; runAdvisorReview's own cap check stays
+    // for legacy direct callers). DESIGN reviews are EXEMPT (2026-09-07 §8
+    // ruling): their rounds keep advancing (ROUND2/3 convergence prompts + TUI
+    // round display) but the cap never refuses them. The refusal marks no
+    // called/round state (guard keeps pushing only while a review can still run
+    // — at the cap the round check stops it).
+    if (resolved.run.reviewType !== "design" && resolved.run.round >= MAX_ADVISOR_ROUNDS) {
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
       return buildCapMessage(agent)
     }
@@ -177,7 +187,7 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
-    }, designToken, documents, paths, reviewObject)
+    }, designToken, documents, paths, reviewObject, designId)
 
     if (reviewType === "design") {
       // Design pass/fail settlement — token echo IS the verdict (prompt-enforced);
@@ -187,7 +197,13 @@ export const advisorTool = {
       // `_engDesignToken` mirror stays for the legacy boolean gates (dispatch "has token",
       // session persistence) — key decision ② of ENGINEERING-MODE.md §7 2026-09-01.
       // Slotting moved into settleDesignReview (shared with the async settle — fix #2).
-      return settleDesignReview(agent, resolved.run, designToken, result).output
+      const settled = settleDesignReview(agent, resolved.run, designToken, result)
+      // F2e (§29.1): the sync prior mirror must not carry the raw echo the runner
+      // stored — overwrite with the clean settled form (exact-suffix truncation).
+      if (settled.passed) {
+        agent._lastAdvisorOutput = stripApprovedSuffix(settled.output, resolved.run.approvedSuffix)
+      }
+      return settled.output
     }
     return result
   },

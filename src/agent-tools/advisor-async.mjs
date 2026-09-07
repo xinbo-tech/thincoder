@@ -41,6 +41,25 @@ import { pushReal } from "../context.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
 
+/**
+ * F2c/F2e (§29.1 2026-09-07): the engine-generated Approved suffix — ONE builder
+ * shared by the sync settle and the async settle (and the prior stores, which
+ * strip it with stripApprovedSuffix — exact-suffix truncation, never a regex
+ * guess, zero collateral). The slot count is a point-in-time snapshot taken at
+ * settle time — the situation at spawn time may differ (F2d backs that up).
+ */
+export function buildApprovedSuffix(designToken, designId, slotCount) {
+  return `Approved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${designId} (pass as the designId parameter when spawning eng-coder — optional while this session holds a single design; ${slotCount} approved design slot(s) held as of this approval, and the count may have changed since — with several designs the spawn gate refuses a missing designId and lists the held ids)`
+}
+
+/** F2e (§29.1): strip the engine-generated Approved suffix from a report before
+ *  it becomes a prior — the suffix is deterministic (buildApprovedSuffix), so the
+ *  truncation is exact; a text not ending in it passes through untouched. */
+export function stripApprovedSuffix(text, suffix) {
+  if (typeof text !== "string" || !suffix) return text
+  return text.endsWith(suffix) ? text.slice(0, text.length - suffix.length).trim() : text
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Design-token utilities (moved here from agent-tools/advisor.mjs so the sync
 // wrapper and the async settle share one implementation — no module cycle:
@@ -109,9 +128,12 @@ export function settleDesignReview(agent, run, designToken, rawResult) {
   if (agent._role === "eng-coder") agent._engDesignReviewed = true
   run.open = false // approval closes this doc-set instance — next review is fresh
   const clean = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
+  // F2c (§29.1): id echo + omission guidance + point-in-time slot snapshot — the
+  // same suffix the F2e prior stores strip with (stored for the exact truncation).
+  run.approvedSuffix = buildApprovedSuffix(designToken, run.designId, agent._engDesignTokens.size)
   return {
     passed: true,
-    output: `${clean}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${run.designId} (pass as the designId parameter when spawning eng-coder; optional while this session holds a single design)`,
+    output: `${clean}\n\n${run.approvedSuffix}`,
   }
 }
 
@@ -174,8 +196,14 @@ export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {
     run = openDesignRun(agent, key)
     if (!run) {
       const reviewId = randomUUID()
+      // F2h (§29.1 2026-09-07): a same-scope re-review reuses the session's
+      // designId for this doc-set (any prior instance of the scope — open OR
+      // closed — the newest wins). A passed re-review overwrites the slot under
+      // the same id (no slot residue — T14: the old token is then rejected at
+      // the gate); old slots die at TTL only, kept as the fail-safe fallback.
+      const prior = [...runs.values()].reverse().find((r) => r.reviewType === "design" && r.docSetKey === key)
       run = {
-        reviewId, reviewType, designId: reviewId,
+        reviewId, reviewType, designId: prior?.designId ?? reviewId,
         round: 0, priorOutput: null, stale: false, open: true, docSetKey: key,
       }
       runs.set(reviewId, run)
@@ -197,10 +225,10 @@ export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {
   return { run, isNew: run.round === 0 && !run.priorOutput, reviewId: run.reviewId, designId: run.designId }
 }
 
-/** Effective round for guard displays/decisions — open code run first, legacy fallback. */
+/** Guard round — the OPEN CODE instance only (2026-09-07 §8 F2): the design-written
+ *  mirror never gates the code guard — no open code instance → 0. */
 export function effectiveAdvisorRound(agent) {
-  const run = openCodeRun(agent)
-  return run ? run.round : (agent._advisorRound || 0)
+  return openCodeRun(agent)?.round ?? 0
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -327,9 +355,15 @@ export function settleAdvisorRun(agent, entry) {
     // the guard silently — the digest shows the failure and the guard pushes
     // back for a retry (fix #2 anti-silent-skip intent; attempts still consume
     // the per-review round budget, so repeated failures stay bounded by the
-    // cap). Design reviews keep the mark on any completed verdict (parity with
-    // the sync recordToolResults mark — they have no code face to cover).
-    if (run.reviewType === "design" || !ADVISOR_FAILURE_TEXT.test(String(report ?? ""))) {
+    // cap). An error settle (rejection path — report null with an error) has no
+    // verdict either — same exclusion (advisor 复评补边). Design reviews keep
+    // the mark on any completed verdict (parity with the sync recordToolResults
+    // mark — they have no code face to cover).
+    const failureVerdict = run.reviewType !== "design" && (
+      ADVISOR_FAILURE_TEXT.test(String(report ?? "")) ||
+      (result == null && entry.error != null)
+    )
+    if (!failureVerdict) {
       agent._calledAdvisorThisRun = true
     }
   } else if (run.reviewType === "design" && entry.designToken && result != null) {
@@ -341,7 +375,11 @@ export function settleAdvisorRun(agent, entry) {
     report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
   }
   // Prior of round 2+ = the last REVIEW-LOOKING output (mirror of run.mjs's guard).
-  if (report && looksLikeReviewOutput(report)) run.priorOutput = report
+  // F2e (§29.1): strip the engine-approved suffix FIRST — the prior must never
+  // carry the raw token / designId (exact truncation — zero collateral).
+  if (report && looksLikeReviewOutput(report)) {
+    run.priorOutput = stripApprovedSuffix(report, run.approvedSuffix)
+  }
   return { cancelled: false, stale, passed, report }
 }
 
@@ -413,7 +451,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     runAdvisorReview(parent, reviewType, {
       onOutput: (chunk) => relayAdvisorOutput(ctx?.callbacks, entry.relayPrefix, chunk),
       signal: entry.controller.signal,
-    }, designToken, documents, paths, object)
+    }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
       .catch((err) => { entry.error = err?.message ?? String(err) })
       .finally(() => {
