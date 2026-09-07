@@ -61,16 +61,11 @@
 ## 异步 / 挂起 / 调度残留（AGENT-LOOP 后续轮）
 - [ ] **async 结果容器统一（2026-09-08 需求点——**在途**（双端 ASYNC-RESULT-CONTAINER 设计已批准 + eng-coder 实现中——CLI id=2 + VSC id=1 跑着）——交付后核销勾销）**：async settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复** + pending 分叉 + `_sessionSignal` 别名抄 4 次
   ——统一单载体（池 accessor+pending 单容器+role+共享 settle helper+buildChildSignal）——最深状态债（涵盖并行 check 双消费/挂起期 check 双投/settle 队列改造/4 explore 等散项）
-  ——最深状态债（涵盖并行 check 双消费/挂起期 check 双投/settle 队列改造/4 explore 等散项）
-- [ ] **同回合两个 async 子代理——第二个完成后主 agent 长期卡住**（用户两次 Ctrl+C 均因此）——诊断插桩已撤——根因大幅被自动注入通道取代，残余需确认——**观察项，待用户确认是否仍复现**
 - [ ] **sync spawn 完成精确冻结**（finishSubTask"最早 started"启发式误冻——方案 e：subagent 留 _subagentKey → 精确冻）——设计落 AGENT-LOOP §7.2
 - [ ] **processing 态 Ctrl+C 武装化 + 回合 abort 与池解耦**（回合 abort 无条件清池连坐杀后台）——首按=interrupt 不清池 + 3s 二按=清池
 - [ ] **混合边环形等待残留**（dependsOn 边 + 文件域边混合链）——建议 §21.2 候选（停滞检测）
 - [ ] **§21 普通模式偏差审计 + §18.8.1 会话上下文轮——挂起**（用户"先挂一下"——重新决定：评审/修改/放弃）
 
-## 观察项 / 候选（等样本/用户决定）
-- [ ] **CLI ⏹ cancel 按钮"没出现"**——**待用户样本**（下次见子代理在跑时截图/描述——async 字样/⏹ 位置/界面）→ 按判据定位
-- [ ] **TUI 异常终止无痕诊断**（画面残留+进程自终止——V8 fatal 疑似）——产品面建议：uncaughtException 钩子 + TUI finally 恢复 + heapsnapshot——纯观察未立项
 - [ ] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随——A 已落地，B 待工具集真变再动）
 - [x] ~~**CLI ⏹ / 面板行数增长缺陷**~~（trimSubTree done 子块无豁免）——**2026-09-08 核查已修**：§27.1 F1（2026-09-07 三缺陷修复批 b06bca7）trimSubTree 已跳过 done 子块（subagent-children.mjs:66 `if (c.done) continue`）+ done 定格守卫——原待办作废
 
