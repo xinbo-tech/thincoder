@@ -22,29 +22,31 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 ## 2. 设计（VSC 端落地）
 
 ### 现状
-- VSC edit 工具实现：`src/tools/edit-batch.mjs`（批量 edits）+ `src/tools/edit-diff.mjs`（diff 形态）+ 文档 `src/tools/edit.md`/`hashline_edit.md`（与 CLI 同构——双端同机制）。
-- edit 参数：path/old_string/new_string/edits/replace_all——old_string 精确匹配 + LCS 保留旧行。
+- VSC edit 工具实现：`src/tools/file-edit.mjs`（456 行——editTool 对象 + schema 定义）+ `src/tools/edit-diff.mjs`（159 行——diff 形态）。**与 CLI 不同构**（CLI 是 edit-batch.mjs + edit-diff.mjs，VSC 是 file-edit.mjs + edit-diff.mjs——评审 🔴#1 实测）。
+- edit 参数：path/old_string/new_string/edits/replace_all——old_string 精确匹配 + 零重叠→插入保留旧行（edit-diff.mjs:9）。
+- edit 工具描述/schema：在 `file-edit.mjs` 内（editTool 对象）+ `src/prompts/coder.md`（提示词引用）。
 
 ### D1 按行号改（F1）
 - edit 加参数：`line`/`startLine`/`endLine`（1-based 行号/行范围）——与 old_string/new_string 互斥。
 - 实现：读文件 → 按行号定位 → 替换 → 写回（原子）。
-- 落点：`src/tools/edit-batch.mjs` + 工具描述/schema。
+- 落点：`src/tools/file-edit.mjs`（editTool 对象加 line/startLine/endLine 参数处理）+ schema 定义（file-edit.mjs 内）。
 
 ### D2 模糊匹配（F2）
-- old_string 匹配算法改：normalize 后比较（去首尾空白/统一缩进/统一引号/去行尾空格）+ fuzzy match（相似度阈值）。
-- 落点：`src/tools/edit-batch.mjs` + 工具描述。
+- old_string 匹配算法改：normalize 后比较（去首尾空白/统一缩进/统一引号/去行尾空格）+ fuzzy match（行级 normalize 后逐行相等比例 ≥90%）。
+- 落点：`src/tools/file-edit.mjs`（old_string 匹配算法改 normalize + fuzzy）。
 
 ### D3 替换即删（F3）
-- 替换后旧行自动删：old_string 匹配到的行被 new_string 替换后，旧行从文件消失（LCS 不保留旧行）。
-- 落点：`src/tools/edit-diff.mjs` 或 `edit-batch.mjs`。
+- 替换后旧行自动删：old_string 匹配到的行被 new_string 替换后，旧行从文件消失（零重叠→插入分支改替换即删——edit-diff.mjs:9 现语义保留旧行）。
+- 落点：`src/tools/edit-diff.mjs`（零重叠→插入分支改替换即删；LCS 分支本身删差异行，无需改）。**TOOLS.md §15 D15.1 语义段同步修正**（评审 #4——零重叠→插入保留旧行 → 替换即删，机制文档与代码 1:1）。
 
 ### D4 工具描述/schema 更新
 - edit.md 加参数说明 + 工具 schema 加参数。
 
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/tools/edit-batch.mjs`（~400 行，加 line/startLine/endLine + 模糊匹配 + 替换即删——delta ~+80）、`src/tools/edit-diff.mjs`（~300 行，LCS 算法改替换即删——delta ~-20）、`src/tools/edit.md`（工具描述加参数说明——delta ~+30）
-- 文档：本设计 + README 地图登记 + TOOLS.md §15
+- 修改：`src/tools/file-edit.mjs`（**456 行**——评审 🔴#1 实测修正，editTool 对象加 line/startLine/endLine 参数 + old_string 模糊匹配——delta ~+80→~536 行，**跨 500 硬帽——拆分到 edit-line-params.mjs 子模块（按行号改逻辑独立）**）、`src/tools/edit-diff.mjs`（**159 行**——评审 🔴#1 实测修正，零重叠→插入分支改替换即删——delta ~-10）、`src/prompts/coder.md`（edit 工具引用说明加参数——delta ~+10）
+- 新增：`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——预估 ~150 行）
+- 文档：本设计 + README 地图登记 + TOOLS.md §15 D15.1（零重叠→插入语义改替换即删——评审 #4）
 
 ## 4. 验收
 
