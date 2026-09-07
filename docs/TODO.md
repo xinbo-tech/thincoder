@@ -71,7 +71,7 @@
 - [ ] **CLI ⏹ cancel 按钮"没出现"**——**待用户样本**（下次见子代理在跑时截图/描述——async 字样/⏹ 位置/界面）→ 按判据定位
 - [ ] **TUI 异常终止无痕诊断**（画面残留+进程自终止——V8 fatal 疑似）——产品面建议：uncaughtException 钩子 + TUI finally 恢复 + heapsnapshot——纯观察未立项
 - [ ] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随——A 已落地，B 待工具集真变再动）
-- [ ] **CLI ⏹ / 面板行数增长缺陷**（trimSubTree done 子块无豁免——1s ticker 放大）——**待用户定修不修**
+- [x] ~~**CLI ⏹ / 面板行数增长缺陷**~~（trimSubTree done 子块无豁免）——**2026-09-08 核查已修**：§27.1 F1（2026-09-07 三缺陷修复批 b06bca7）trimSubTree 已跳过 done 子块（subagent-children.mjs:66 `if (c.done) continue`）+ done 定格守卫——原待办作废
 
 ## 需求池 / 在途实现（状态随批推进更新）
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
