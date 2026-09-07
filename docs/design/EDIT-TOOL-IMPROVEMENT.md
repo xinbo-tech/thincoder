@@ -11,11 +11,11 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 
 ### 功能性需求
 - **F1（按行号改）**：edit 加 `line`/`startLine`/`endLine` 参数——知道行号就能改（单行替换 `line: N`、行范围替换 `startLine: N, endLine: M`），不用猜 old_string。与 old_string/new_string 互斥（二选一）。
-- **F2（模糊匹配）**：old_string 放宽匹配——细微差异（空白/缩进/引号不同/行尾空格）也能匹配。匹配算法：normalize 后比较（去首尾空白/统一缩进/统一引号）或 fuzzy match（相似度阈值）。
-- **F3（替换即删）**：替换后旧行自动删（不留残留）——当前 edit 的 LCS 保留旧行（替换后旧行还在），改为替换即删（old_string 匹配到的行被 new_string 替换后，旧行从文件消失）。
+- **F2（模糊匹配）**：old_string 放宽匹配——细微差异（空白/缩进/引号不同/行尾空格）也能匹配。**相似度算法定稿（评审 #4）**：行级 normalize 后逐行相等比例（≥90% 行相等即匹配——normalize = 去首尾空白/统一缩进/统一引号/去行尾空格）。
+- **F3（替换即删）**：替换后旧行自动删（不留残留）——当前 edit 的**零重叠→插入分支**保留旧行（edit-diff.mjs:9——旧内容保留，数据零丢失），改为替换即删（old_string 匹配到的行被 new_string 替换后，旧行从文件消失）。**落点定死（评审 #2）**：`src/tools/edit-diff.mjs`（LCS 算法改——零重叠插入分支改替换即删；LCS 分支本身删差异行，无需改）。
 
 ### 非功能性需求
-- N1（向后兼容）——现有 old_string/new_string 精确匹配保持可用（按行号改是新增，不替代）。
+- N1（向后兼容——**接口兼容**）——现有 old_string/new_string 参数接口保持可用（按行号改是新增，不替代）；**语义兼容限定（评审 #3）**：D3 替换即删是对现有 old_string 路径语义的 breaking 变更（edit-diff.mjs:4 已声明该语义为 breaking 裁定）——接口兼容但语义结果变（旧行不再保留）。
 - N2（原子性）——edit 保持原子（全改或全不改——按行号改/模糊匹配/替换即删都保持原子）。
 - N3（双端一致）——CLI/VSC 同机制语义各自实现。
 
@@ -46,7 +46,8 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 
 ## 3. 受影响文件（CLI，thincoder）
 
-- 修改：`src/tools/edit-batch.mjs`（~400 行，加 line/startLine/endLine 参数 + old_string 模糊匹配 + 替换即删——delta ~+80）、`src/tools/edit-diff.mjs`（~300 行，LCS 算法改替换即删——delta ~-20）、`src/tools/edit.md`（工具描述加参数说明——delta ~+30）
+- 修改：`src/tools/edit-batch.mjs`（**92 行**——评审 #1 实测修正，加 line/startLine/endLine 参数 + old_string 模糊匹配 + 替换即删——delta ~+80→~172 行，远低于 300 行触发线，无 split plan 需求）、`src/tools/edit-diff.mjs`（**~266 行**——评审 #1 实测修正，LCS 算法改替换即删——delta ~-20）、`src/tools/edit.md`（工具描述加参数说明——delta ~+30）
+- 新增：`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——预估 ~150 行）
 - 文档：本设计 + README 地图登记 + TOOLS.md §15（edit 语义升级记录）
 
 ## 4. 验收
