@@ -50,14 +50,12 @@
 
 ## 3. 受影响文件（CLI，thincoder）
 
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作）、`src/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`src/agent.mjs`（子回合边界消费注入点）
-- 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理 §（动作表加 observe/send）
 - 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作 + §4.1 分类）、`src/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`src/agent.mjs`（子回合边界消费注入点）
 - 文档：本设计（CLI 细节/机制）+ README 地图登记 + **AGENT-LOOP.md §7.2 动作表加 observe/send（含两动作分类 + 契约——单一权威源，本设计不复述契约措辞——评审 #6 防双源漂移）**
 
 ## 4. 验收
 
-AC1 = observe 对 running 异步子代理返回其最近 N 条回合摘要 + 当前工具 + turn/touched（非全量——隔离保持）；AC2 = send 对 running 异步子代理入队，子代理下回合边界收到并作普通用户指令处理（回合历史出现该 user 消息 + 子代理后续动作响应）；AC3 = observe/send 对 sync 子代理 / settled / 未知 id 返回明确错误（不可达）；AC4 = 凭证纪律不变（不读写 token/designId）；AC5 = 双端语义一致。
+AC1 = observe 对 running 异步子代理返回其最近 N 条回合摘要 + 当前工具 + turn/touched（非全量——隔离保持）；AC2 = send 对 running 异步子代理入队，子代理下回合边界收到并作普通用户指令处理（回合历史出现该 user 消息 + 子代理后续动作响应）；AC3 = **send** 对 sync 子代理 / settled / 未知 id 返回明确错误（不可达）；**observe 对 running/queued/done 均可查**（done 终报 / queued 占位）；AC4 = 凭证纪律不变（不读写 token/designId）；AC5 = 双端语义一致。
 
 ## 测试用例表
 
