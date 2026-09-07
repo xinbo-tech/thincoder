@@ -37,10 +37,12 @@
 | `ADVISOR-CONVERGENCE.md` | §9 评审收敛 | 评审收敛/铁律 R1-R7 |
 | `MCP.md` | §13 MCP 行 | MCP 机制 |
 | `CHECKPOINT.md` | §13 Checkpoint 行 | 快照/回滚 |
-| `WEBVIEW.md` | §11 + §12 | **VSC 独有**：webview 布局 + **消息协议（§12）** + 活动面板（消息协议并入此——用户裁定④） |
 
-### 3.3 已等位保持（不动）
+**VSC 独有档（不与 CLI 对齐——评审 #3 单列）**：`WEBVIEW.md` = §11 + §12（webview 布局 + **消息协议** + 活动面板——消息协议并入，用户裁定④）。
+
+### 3.3 结构位置保持（文件不移动/不改名；机制内容照旧）
 `REQUIREMENTS` / `PHILOSOPHY` / `RELEASE` / `README` / `CONSULTATION` / `ESCALATE` / `TURN-CAP-CONTINUE` / `SETTINGS`（VSC 独有面板）/ `PROJECT-SWITCHER`（VSC 独有）+ 4 专题对 REQ/TUN。
+> 注：README 地图内容会被修改（§5/AC5——增登记新档），此处"保持"指文件位置/命名不动，非内容冻结（评审 #2 澄清）。
 
 ### 3.4 结果规模
 VSC 19 → 约 28-30 档（净增 ~10 机制档 + WEBVIEW，RESPONSES 并入减 1）。ARCHITECTURE 886 行 → 薄枢纽。
@@ -61,7 +63,7 @@ VSC 19 → 约 28-30 档（净增 ~10 机制档 + WEBVIEW，RESPONSES 并入减 
 
 ## 6. 逐字契约保真 + 漂移（引用 CLI DOC-REWRITE §3/§4/§8 判据）
 
-同批判据：无 >300 行 / markdown 正确 / 逐字锚句保留（从 ARCHITECTURE 迁出的锚句 byte-exact 移到对应新档）/ 漂移更新 / 历史折叠随正文迁。**迁出是移动非改写**——ARCHITECTURE 正文块原样移入新档（各档再按需重组当前态），从 ARCHITECTURE 删块防双份。**模块 Split Policy**：先在新档写入移动段（verbatim），再从 ARCHITECTURE 删对应节——任何时刻正文有且仅一份。
+同批判据：无 >300 行 / markdown 正确 / 逐字锚句保留 / 漂移更新 / 历史折叠随正文迁。**迁出是移动非改写**——ARCHITECTURE 正文块原样移入新档（各档再按需重组当前态），从 ARCHITECTURE 删块防双份。**模块 Split Policy**：先在新档写入移动段（verbatim），再从 ARCHITECTURE 删对应节——任何时刻正文有且仅一份。**AC3 compare 快照（评审 #5）**：byte-exact 对比以**迁移前 ARCHITECTURE 原始状态**为源（先打快照再迁，防删后无法 compare）——各新档重组非锚句正文可改，但锚句须 byte-exact。
 
 ## 7. 执行模型
 
@@ -72,8 +74,9 @@ VSC 19 → 约 28-30 档（净增 ~10 机制档 + WEBVIEW，RESPONSES 并入减 
 
 ## 8. 验收
 
-AC1 = 拆分后各文件无 >300 行（check-doc-width.mjs）；AC2 = markdown 正确；AC3 = 迁出锚句 byte-exact 未改（compare 源 = 原 ARCHITECTURE 章节）；AC4 = ARCHITECTURE 瘦身为薄枢纽（§4-§13 机制节迁出，无残留双份）；AC5 = README 地图登记全部新档 + 板块归属对齐 CLI；AC6 = 每 VSC 机制档独立完整（含本端实现接线，非指针空壳）。
+AC1 = 拆分后各文件无 >300 行（check-doc-width.mjs；薄 ARCHITECTURE 若 §14 差异表使总量逼近限制则先瘦表——评审 #4）；AC2 = markdown 正确；AC3 = 迁出锚句 byte-exact 未改（compare 源 = 迁移前 ARCHITECTURE 章节快照）；AC4 = ARCHITECTURE 瘦身为薄枢纽（§4-§13 机制节迁出，无残留双份）；AC5 = README 地图登记全部新档 + 板块归属对齐 CLI；AC6 = 每 VSC 机制档含 ≥1 条本端实现接线描述（非指针空壳——评审 #1：grep 有 VSC 特有符号 / 非"仅见 CLI §x 指针"）。
 
 ## 变更记录
 
 - 2026-09-08：立项。基于 explore 双端对照报告 + 用户裁定写本执行设计。用户裁定固化：①两端独立盒子不做指针镜像 ②无跨端契约档各自独立 ③RESPONSES-TRANSPORT 并入 PROVIDER ④消息协议并入 WEBVIEW ⑤独有板块正常不对齐。
+- 2026-09-08 评审：签发 token。采纳：AC6 定义代理（含 ≥1 本端接线）+ §3.3 "保持"措辞澄清（位置非内容）+ WEBVIEW 移出同名表单列 + ARCHITECTURE 规模防限注 + AC3 用迁移前快照为源。
