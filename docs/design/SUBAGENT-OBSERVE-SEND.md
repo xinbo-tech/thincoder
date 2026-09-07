@@ -29,14 +29,17 @@
 - **VSC 有 stateSink 模式先例**（runChild 已把 onAgentTurn/输出回调注入子 runAgent）——send 的输入源贯通可顺延该模式，比 CLI 顺。
 
 ### D1 observe 从 sink 拉摘要
-- `subagent-actions.mjs` 加 `observe`：按 id 定位池条目 → 从 `entry.childAgent`/`sink.agent` 或其 history 取最近 N 条回合摘要 + 当前工具 + turn/touched + status。
+- `subagent-actions.mjs` 加 `observe`：按 id 定位池条目 → 从 `entry.childAgent`/`sink.agent` 或其 history 取最近 **5 条**回合摘要（评审 #1——统一 N=5；摘要来源 = 从 sink.history 尾部 assistant/tool 消息**截断抽取**（每回合取消息首行/工具名），非返回原始消息体——N2）+ 当前工具 + turn/touched + status。
+- **当前工具捕获（评审 #2）**：onToolCall 回调里记最后工具名+args 单字段进 entry/sink（现有 subagent.mjs:366 流式回调处顺手记），observe 读它——VSC 现无此状态，需加。
 - 返回摘要（非全量）——N2。
-- 落点：`subagent-actions.mjs` + subagent 工具 schema 描述加 observe。
+- 落点：`subagent-actions.mjs` + **`subagent-spec.mjs`**（工具 schema 描述加 observe + isReadonlyAction/isControlAction 分类——observe=readonly/send=control——评审 #4）+ `subagent.mjs`（onToolCall 记当前工具）。
 
 ### D2 send 写注入队列 + 子回合边界消费
 - 池条目加 `entry._injected = []`；`send` 动作 push（仅 running 异步可 send）。
 - 子侧输入源贯通：仿现有 stateSink——把"注入队列消费回调"作为新回调传给子 runAgent（runChild childOpts），子 turn 循环头消费 `_injected` → pushReal 成 user 回合进子历史 → 子作普通指令。
 - 落点：`subagent-actions.mjs`（observe+send）、`subagent.mjs` runChild（stateSink 扩注入）、子 runAgent 回合边界。
+- 落点：`subagent-actions.mjs`（observe+send）、`subagent.mjs` runChild（stateSink 扩注入）、**`subagent-spec.mjs`**（send 分类——评审 #4）、子 runAgent 回合边界。
+- **注入延迟语义（评审 #3）**：send 落子代理正在跑的 generation 时（mid-LLM-await）→ 入队，待当前工具/回合返回后才于下个回合头消费——F2 即此意（非立即生效），注明避免实现期误当即时。
 
 ### D3 父子回合错位
 - observe/send 父回合内调；目标父回合内可见未 settle 异步子代理。父空闲等子时不可达（同 cancel 时序）。不引入子代理主动推送/后台定时。
@@ -46,7 +49,7 @@
 
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、subagent 工具描述/schema、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口）、子 runAgent 回合边界消费
+- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、子 runAgent 回合边界消费
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理 §
 
 ## 4. 验收
