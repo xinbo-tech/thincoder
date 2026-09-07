@@ -94,5 +94,5 @@ AC1 = T-V1..V11 全绿（test:full）；AC2 = verify.mjs 不含 `MODULE_TO_TEST`
 ## 变更记录
 
 - 2026-09-07：立项（用户裁定 verify 改造走工程模式——通用 agent 不 hardcode 项目测试逻辑——需求澄清三轮：①定位=通用门禁；②项目 AGENTS.md 自然语言声明验证方式；③机械检查判定，模型自决执行）。设计落本文档。
-- 2026-09-07 相 1：设计同步评审签发（designId 170a3438…）+ 双 eng-coder（CLI+VS Code）交付 clean——工具本体重构 + T-V1..V6b。
+- 2026-09-07 相 1：设计同步评审签发 + 双 eng-coder（CLI+VS Code）交付 clean——工具本体重构 + T-V1..V6b。
 - 2026-09-07 相 2：explore 审计确认 verify 机制整链另三面未跟上（guard 强制端文案/提示词引导/双端一致 G1-G14），设计收口相 2 缺口（D-V9..V11 + T-V8..V11）。
