@@ -36,6 +36,9 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 - **问题**：会话内回合 `onComplete` 用陈旧空态 `agentState` 键存在性覆盖 slot，把 settle 已落盘的 token 钉 null。
 - **改**：保存时**不得用内存空态覆盖槽里已由 settle 写好的 token**——区分"内存真无 token"（agent 从未有//new 清）vs"token 由 async settle 已落盘"（内存空但槽有值）。槽有值而内存空 → **保留槽值，不钉 null**。空态不能当"清空指令"。
 - 落点：`src/extension/panel-callbacks.mjs` onComplete + `src/extension/panel-session.mjs` saveLines 合并语义。
+- **改**：保存时**不得用内存空态覆盖槽里已由 settle 写好的 token**——区分"内存真无 token"（agent 从未有//new 清）vs"token 由 async settle 已落盘"（内存空但槽有值）。槽有值而内存空 → **保留槽值，不钉 null**。
+- **槽失效触发（评审 #3——空态≠清空，但槽须有明确清理路径）**：①**consume-design 后清**（链终消费显式 delete 该槽）；②**/new 会话重置清**（resetSessionState 对在跑池 abort + 清该会话账本）；③**TTL 过期清**（restore/门禁拒时删过期槽）。三触发之外，空态 agentState 保存**不触发清理**（只防误清 settle 已落盘 token）。
+- 落点：`src/extension/panel-callbacks.mjs` onComplete + `src/extension/panel-session.mjs` saveLines 合并语义 + consume//new/TTL 清理点。
 
 ### D3 修读侧空快照（断点②）
 
@@ -54,6 +57,9 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 - **现状**：dispatch 写门（`execute-tools.mjs:75`）读 `_engDesignToken` 镜像拦产品代码写；spawn 读 Map——两套真相。
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽**"任一活槽存在"**（查内存 Map 或槽文件任一未过期 designId）——有任一活槽即有资格写产品代码。镜像字段读时一次性迁移进 Map，不再双写。
 - 落点：`src/agent/execute-tools.mjs` + settle 不再写镜像 + setup 不再恢复镜像 + consume/TTL/new 不再清镜像。
+- **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽**"任一活槽存在"**（查内存 Map 或槽文件任一未过期 designId）——有任一活槽即有资格写产品代码。**存量兼容：旧 slot 文件可能残留镜像值——setup 水合 engState 时一次性读迁进 Map（唯一迁移读点，此后零读零写）**，settle 不再写镜像、setup 不再恢复镜像、consume/TTL/new 不再清镜像。
+- **迁移读点（评审 #1）**：setup 水合处——slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（legacy 标），随后不再写镜像；AC3 的 grep 清扫**排除此单点**（其余镜像读写零命中）。
+- 落点：`src/agent/execute-tools.mjs` + settle 不再写镜像 + setup 不再恢复镜像（改唯一迁移读）+ consume/TTL/new 不再清镜像。
 
 ## 4. 受影响文件（VSC，thincoder-vscode）
 
