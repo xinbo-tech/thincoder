@@ -87,9 +87,15 @@ CLI/VSC normalize 统一一实现。统一基准：trim + 去行尾空白 / tab�
 
 ### 8.3 描述修复（VSC）
 
-- `file-edit.mjs` 描述：**重复块**（line 与 startLine/endLine bullet 原样两遍 :87-90）+ **中英混杂**（:92 edits 条目整段中文）→ 去重 + 英文统一。
-- 空串语义段按 8.1 裁定统一措辞（现 :82 "empty new_string deletes them" 与 CLI 描述相反——改）。
-- 路由段：行号新鲜 → edit(line:)，漂移/杂 → hashline，删行 → 行号删行形态，加行 → insert_after。
+### 8.3 描述修复（VSC——逐处改前/改后，2026-09-08 用户确认；CLI 对应具体改写见 CLI EDIT.md §8.3）
+
+`file-edit.mjs` editTool 描述 4 处（模型可见文本——行号引 file-edit.mjs 当前）：
+  1. **重复块**（:87-90——line 与 startLine/endLine bullet 原样两遍，仅后者多 "; replace_all does not apply"）→ 删第二遍（:89-90），合并保留 "; replace_all does not apply"
+  2. **中英混杂**（:92 edits 条目整段中文"批量形态（CLI parity）——同文件多处修改…"）→ 改英文（同 CLI edit.md edits 段措辞——
+     "Batch form — multiple edits in ONE call, atomic; entries without their own path inherit the top-level path (entry paths override). Mutually exclusive with top-level old_string/new_string"）
+  3. **空串矛盾**（:82 "empty new_string deletes them"）→ 与 CLI ② 同义：行号形态 **省略 new_string** 才删（删行形态——8.1）；给空串=给了 new_string 键 → 空串语义统一（内容形态拒、行号形态显式删）
+  4. **normalize 措辞**（:80 "inner whitespace collapsed"）→ 移除折叠后改 "tab→space indent + quote normalization"（与 CLI 8.2 统一基准一致）
+  5. 路由段（新——现缺）：行号新鲜 → `line` 形态；漂移/内容杂 → `hashline_edit`；删行 → 省略 new_string；加行 → `insert_after`（镜像 CLI ①）
 
 ### 8.4 批量行号补 VSC（分歧 c）
 
