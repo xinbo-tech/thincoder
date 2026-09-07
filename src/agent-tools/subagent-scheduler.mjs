@@ -31,6 +31,40 @@ export function poolMap(parent) {
     : (parent._asyncSubagents ?? new Map())
 }
 
+// ─── D1 池 accessor（ASYNC-RESULT-CONTAINER.md，2026-09-08——async 结果容器统一）───
+// 消费端统一经 accessor 访问池——吸收 VSC 双查询（history?._X ?? agent._X）差异
+// （VS Code agent 对象 per-run 重建——池挂共享 depth-0 history 数组 + per-run agent
+// 字段 alias，两端可能并存同一 Map 引用）。叶子模块承载（本模块本就来池载体访问——
+// async-settle.mjs 与各族模块单向 import，模块图无环）。
+
+/** 族 → 池键：subagent/escalate 同池（_asyncSubagents——escalate 入 other 域 §24 D-24a）；
+ *  advisor 独立池（_asyncAdvisors）；consult 会话池（_consultSessions）。 */
+export const ASYNC_POOL_KEYS = {
+  subagent: "_asyncSubagents",
+  escalate: "_asyncSubagents",
+  advisor: "_asyncAdvisors",
+  consult: "_consultSessions",
+}
+
+/** D1 池 accessor：getAsyncPool(parent, role)——history 载体优先，回落 agent 字段；
+ *  无池返回 null（调用方按空池处理）。create=true 时无池则在 history 优先载体上建池。 */
+export function getAsyncPool(parent, role, create = false) {
+  const key = ASYNC_POOL_KEYS[role] ?? "_asyncSubagents"
+  if (parent?.history?.[key] instanceof Map) return parent.history[key]
+  if (parent?.[key] instanceof Map) return parent[key]
+  if (!create || !parent) return null
+  const holder = parent.history ?? parent
+  holder[key] = new Map()
+  return holder[key]
+}
+
+/** 池条目移除（双载体同删——settle 出池清理保留既有 history+agent 双 delete 语义）。 */
+export function removeFromAsyncPools(parent, role, id) {
+  const key = ASYNC_POOL_KEYS[role] ?? "_asyncSubagents"
+  parent?.history?.[key]?.delete?.(id)
+  parent?.[key]?.delete?.(id)
+}
+
 /** 终态墓碑 Map（round1 #8/T-SD14——consumed 视为满足；cancelled/failed 走 D-SD5 分支）。 */
 function tombMap(parent, create = false) {
   const holder = parent.history ?? parent

@@ -63,41 +63,16 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // §17 D-S3 ② run-start injection: suspension-settled entries parked on
   // history._pendingAsyncResults are consumed BEFORE setupAgentRun pushes this run's
   // input (spliced = consumed — single injection point; turn-end pool entries are ①).
-  // §24 D-24b（R13）：async advisor settle 同样挂起移交 history._pendingAdvisorResults——
-  // 同点注入（digest 处置轮呈递——报告/designId 注记——角色无关同机制）。
-  // §25 R17（2026-09-06）：会诊 settle（_pendingConsultResults——全 settle 一次注入）与
-  // 飞刀 settle（_pendingEscalateResults——done/error 报告）同点注入——消费驱动判据推广
-  // （任一 pending 族非空即触发消化轮——T-R17j）。splice 即 consumed——单注入点——注入一次。
+  // ASYNC-RESULT-CONTAINER.md D2（2026-09-08）：pending 单容器 +role——四族（subagent/
+  // advisor/escalate/consult）统一停靠同一容器（_pendingAdvisorResults/
+  // _pendingEscalateResults/_pendingConsultResults 独立族废弃），注入器按 role 分发
+  // （injectPendingAsync——async-settle.mjs）。splice 即 consumed——单注入点——注入一次。
   if (depth === 0 && Array.isArray(opts.history?._pendingAsyncResults)) {
     const hist = opts.history
     const pend = hist._pendingAsyncResults
     if (pend.length > 0) {
-      const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
-      for (const e of pend.splice(0)) await injectAsyncResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
-    }
-  }
-  if (depth === 0 && Array.isArray(opts.history?._pendingAdvisorResults)) {
-    const hist = opts.history
-    const pend = hist._pendingAdvisorResults
-    if (pend.length > 0) {
-      const { injectAdvisorResult } = await import("./agent-tools/advisor-async.mjs")
-      for (const e of pend.splice(0)) await injectAdvisorResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
-    }
-  }
-  if (depth === 0 && Array.isArray(opts.history?._pendingEscalateResults)) {
-    const hist = opts.history
-    const pend = hist._pendingEscalateResults
-    if (pend.length > 0) {
-      const { injectEscalateResult } = await import("./agent-tools/subagent-escalate-async.mjs")
-      for (const e of pend.splice(0)) await injectEscalateResult(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
-    }
-  }
-  if (depth === 0 && Array.isArray(opts.history?._pendingConsultResults)) {
-    const hist = opts.history
-    const pend = hist._pendingConsultResults
-    if (pend.length > 0) {
-      const { injectConsultResult } = await import("./agent-tools/consult.mjs")
-      for (const s of pend.splice(0)) await injectConsultResult(s, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
+      const { injectPendingAsync } = await import("./agent-tools/async-settle.mjs")
+      for (const e of pend.splice(0)) await injectPendingAsync(e, { history: hist, fullHistory: opts.fullHistory ?? hist, cwd })
     }
   }
 

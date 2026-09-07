@@ -14,7 +14,7 @@
  */
 import { escapeXml } from "../agent/run-helpers.mjs"
 import { relative, isAbsolute } from "node:path"
-import { describeBlockers, detectStall, dependentLabels, queuePosition, refillPool, refreshQueuedRows, stallErrorText, writeTombstone } from "./subagent-scheduler.mjs"
+import { describeBlockers, detectStall, dependentLabels, getAsyncPool, queuePosition, refillPool, refreshQueuedRows, stallErrorText, writeTombstone } from "./subagent-scheduler.mjs"
 
 /**
  * §19 action:'status' handler — NON-BLOCKING pool query（AGENT-LOOP.md §19 D-M2：
@@ -87,7 +87,7 @@ function shortTouchedPath(f, cwd) {
   return p.length > 80 ? `${p.slice(0, 79)}…` : p
 }
 export function subagentStatus({ id }, ctx) {
-  const map = ctx.agent._asyncSubagents
+  const map = getAsyncPool(ctx.agent, "subagent") // D1 accessor——history 载体优先双查询吸收
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // 容错归一（纯数字字符串 id——advisor fix #3）
   if (idNum != null) {
     if (!map || !map.has(idNum)) {
@@ -156,7 +156,7 @@ function injectCancelReminder(parent, entry, wasQueued) {
  * UI ⏹ 路由（panel-messages.mjs——以 live lines 的池 map + history 构造 parent）。
  */
 export function cancelSubagent(parent, id) {
-  const map = parent._asyncSubagents
+  const map = getAsyncPool(parent, "subagent") // D1 accessor
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // advisor fix #3（同 status）
   if (idNum == null) {
     return JSON.stringify({ status: "error", error: "cancel requires an id — pass the target subagent's id (no id = no-op; Ctrl+C / the Stop button stop everything)" })
@@ -264,7 +264,7 @@ export function subagentObserve({ id }, ctx) {
     return JSON.stringify({ status: "error", error: "observe is only available at the top level — subagent contexts have no async pool (SUBAGENT-OBSERVE-SEND.md D1)" })
   }
   const parent = ctx.agent
-  const map = parent._asyncSubagents
+  const map = getAsyncPool(parent, "subagent") // D1 accessor
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // 同 status 容错归一
   if (idNum == null) {
     return JSON.stringify({ status: "error", error: "observe requires an id — pass the target subagent's id (from an async spawn return) to see its recent activity" })
@@ -305,7 +305,7 @@ export function subagentSend({ id, message }, ctx) {
     return JSON.stringify({ status: "error", error: "send is only available at the top level — subagent contexts have no async pool (SUBAGENT-OBSERVE-SEND.md D2)" })
   }
   const parent = ctx.agent
-  const map = parent._asyncSubagents
+  const map = getAsyncPool(parent, "subagent") // D1 accessor
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id
   if (idNum == null) {
     return JSON.stringify({ status: "error", error: "send requires an id — pass the target subagent's id (from an async spawn return)" })

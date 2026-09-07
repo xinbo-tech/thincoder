@@ -3,8 +3,8 @@
  * 镜像——2026-09-06）。sync 路径（async:false）在 subagent-escalate.mjs verbatim 保留；
  * 本模块 = async 面：入 **other 池**（§24 D-24a——与 explore/plan 共享槽位——自然容量；
  * 池满经 spawnAsyncSubagent 排队——escalate 与 explore 同池公平排队）+ 回合自然收尾 +
- * settle 三分类 + 独立 pending 流（D-R17c——_pendingEscalateResults——与 subagent/advisor
- * 互不干扰）+ 飞刀专属 digest 注入文案。
+ * settle 三分类（onAccounting hook——ASYNC-RESULT-CONTAINER.md D3 共享 helper）+ pending
+ * 单容器流（history._pendingAsyncResults +role——D2）+ 飞刀专属 digest 注入文案。
  *
  * Settle 三分类（D-R17b——评审 #4/round2 #4 钉死）：
  * - done → merge-all（mergeChildMutations——同 async 子代理 merge 机制）+ 与父侧并发写
@@ -15,19 +15,21 @@
  *   cancel 时注入机读线）——出池 + 停止冻结通知；
  * - aborted（会话/全停——controller 链中止）→ 出池丢弃（中止清池不注入——陈旧错误零注入）。
  *
- * done/error 报告 park-ALWAYS 进 history._pendingEscalateResults（settle 即出池——
- * 状态/取消/补位共享池机制在 settle 前照常）——消费点 = 下回合 run-start 注入（digest/
- * 用户回合统一单点）+ 挂起退出残留兜底。手动档 digest 动作域零例外（禁写禁 spawn——
+ * done/error 报告 park-ALWAYS 进 history._pendingAsyncResults（pending 单容器 +role——
+ * ASYNC-RESULT-CONTAINER.md D2——settle 即出池——状态/取消/补位共享池机制在 settle 前
+ * 照常）——消费点 = 下回合 run-start 注入（digest/用户回合统一单点）+ 挂起退出残留
+ * 兜底。手动档 digest 动作域零例外（禁写禁 spawn——
  * T-R17p——消化轮域由 §17 D-S6 既有机制机械强制）。
  *
  * 模块图：单向 import subagent-escalate.mjs（helpers）+ subagent-async.mjs
- * （spawnAsyncSubagent/mergeChildMutations）+ subagent-scheduler.mjs（nextSubagentId/
- * refill/refresh/writeTombstone）；subagent-escalate.mjs 动态 import 本模块（防环）。
+ * （spawnAsyncSubagent/mergeChildMutations）+ subagent-scheduler.mjs（nextSubagentId）
+ * + async-settle.mjs（settleAsyncEntry/buildChildSignal——D3/D6 共享 helper）；
+ * subagent-escalate.mjs 动态 import 本模块（防环）。
  */
-import { logEvent, errText } from "../log.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { spawnAsyncSubagent, mergeChildMutations } from "./subagent-async.mjs"
-import { nextSubagentId, refillPool, refreshQueuedRows, writeTombstone } from "./subagent-scheduler.mjs"
+import { nextSubagentId } from "./subagent-scheduler.mjs"
+import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 import { escalateLabel, prepareEscalateProvider, touchedFilesNote } from "./subagent-escalate.mjs"
 
 /** 飞刀 async 发起（§25 D-R17b——escalateAction async 分支调用）：入 other 池——
@@ -40,7 +42,8 @@ export async function launchEscalateAsync({ parent, ctx, task, pick }) {
   const { withEffort, effortNote } = prep
   const tag = escalateLabel(pick)
   const subId = nextSubagentId(parent)
-  const childSignal = ctx.sessionSignal ?? ctx.signal ?? null
+  // D6 buildChildSignal 单点（sessionSignal ?? agent._sessionSignal ?? ctx.signal）
+  const childSignal = buildChildSignal(ctx)
   // launchEvents 快照：settle 重叠判定 = 发起后父侧文件变更事件（_fileMutEvents——child
   // 自身的写不入父事件流——settle merge 时才记账）——同 advisor eventsAtLaunch 判据。
   const launchEvents = ((parent.history ?? parent)._fileMutEvents?.length) ?? 0
@@ -127,37 +130,34 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
 }
 
 /** 飞刀 async settle（§25 D-R17b settle 三分类 + round2 #4 merge 决策钉死）。
- *  池簿记镜像 settleAsyncEntry（取消/中止出池/腾槽补位/resolve/notify）——差异 = 飞刀
- *  族 merge 决策 + 独立 pending 流（_pendingEscalateResults——D-R17c）。 */
+ *  ASYNC-RESULT-CONTAINER.md D3：公共收尾（落 done/status、日志三连、cancelled/
+ *  parentAborted 出池、pending 单容器移交、_resolve 唤醒、腾槽补位、notifySettle）
+ *  统一走 settleAsyncEntry 共享 helper（四族同守卫 !parentAborted 严格版）；本函数 =
+ *  族包装——outcome 翻译（kind → report/error/cancelled/强制 aborted）+ onAccounting
+ *  hook（三分类 merge 决策 + injectBody 装配）。park-ALWAYS：done/error 报告全量入
+ *  pending 单容器（history._pendingAsyncResults +role——D2——settle 即出池）→ digest 注入。 */
 function settleEscalateEntry(parent, entry, outcome, error, notifySettle) {
-  entry.done = true
-  entry.status = "done"
   const res = outcome ?? { kind: error != null ? "error" : "done", text: error ?? "", sink: null, tag: entry.tag ?? null, launchEvents: 0 }
-  // LOGGING（LOGGING.md——CLI parity）：settle 分流——child:done/child:error + ev:cancelled
-  const childLogId = `escalate#${entry.id}`
-  const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
-  if (res.kind === "cancelled") {
-    logEvent("ev:cancelled", { id: childLogId })
-  } else if (!entry.signal?.aborted && !entry.controller?.signal?.aborted) {
-    if (res.kind === "error") logEvent("child:error", { role: "escalate", id: childLogId, ms: childMs, err: errText(res.text, 200) })
-    else logEvent("child:done", { role: "escalate", id: childLogId, ms: childMs, kind: "ok" })
-    if (parent.history?._suspended === true) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
-  }
-  const drop = () => {
-    parent.history?._asyncSubagents?.delete(entry.id)
-    parent._asyncSubagents?.delete(entry.id)
-  }
-  if (res.kind === "cancelled") {
-    // D-M6：不入 pending/不 merge——出池 + 墓碑 + 停止冻结通知（_onCancelled——webview）
-    drop()
-    writeTombstone(parent, entry.id, "cancelled", "escalate")
-    entry._onCancelled?.()
-  } else if (res.kind === "aborted" || (entry.signal?.aborted && !entry.signal?.reason?.interrupt)
-      || (entry.controller?.signal?.aborted && !entry.cancelled)) {
-    // 会话/全停链中止——出池丢弃（无注入——中止不注入陈旧错误）
-    drop()
-  } else {
-    // ── done/error 三分类 merge 决策（round2 #4 钉死）──
+  if (res.kind === "cancelled") entry.cancelled = true // D-M6 取消终态（cancelSubagent/UI ⏹）
+  settleAsyncEntry(parent, entry, {
+    pool: "escalate",
+    report: res.kind === "done" ? res.text : null,
+    error: res.kind === "error" ? res.text : null,
+    notifySettle,
+    aborted: res.kind === "aborted" || undefined, // 引擎 AbortError 分类 → 强制中止分流
+    park: "always", // D-R17c：报告 park-ALWAYS（settle 即出池——digest 单点消费）
+    tombstonePark: true, // 终态墓碑（dependsOn 语义——settled escalate 视为完成/失败）
+    tombstoneCancel: true, // 终态墓碑（dependsOn 语义——cancelled）
+    onAccounting: (p, e, { phase }) => {
+      if (phase !== "settled") return
+      escalateSettleAccounting(p, e, res)
+    },
+  })
+}
+
+/** 飞刀 settle 三分类 merge 决策 + 报告装配（round2 #4 钉死——onAccounting hook，
+ *  仅非 cancelled/非中止的 settled 相位执行；ASYNC-RESULT-CONTAINER.md D3 族 hook）。 */
+function escalateSettleAccounting(parent, entry, res) {
     const sink = res.sink ?? {}
     const touched = Array.isArray(sink.touchedFiles) ? sink.touchedFiles : []
     const events = Array.isArray((parent.history ?? parent)._fileMutEvents)
@@ -196,19 +196,8 @@ function settleEscalateEntry(parent, entry, outcome, error, notifySettle) {
     if ((entry._injected?.length ?? 0) > 0) {
       entry.injectBody += `\n[Note: ${entry._injected.length} message(s) sent to subagent #${entry.id} before it settled were NOT delivered (the child finished before its next turn boundary) — resend the guidance in a new escalate/spawn if it still matters]`
     }
-    // park-ALWAYS：报告全文入 _pendingEscalateResults（独立流——D-R17c）→ digest 注入
-    const holder = parent.history ?? parent
-    const pend = (holder._pendingEscalateResults ??= [])
-    if (!pend.includes(entry)) pend.push(entry)
-    drop()
-    // 终态墓碑（dependsOn 语义——settled escalate 视为完成/失败）
-    writeTombstone(parent, entry.id, isDone ? "consumed" : "failed", "escalate")
-  }
-  entry._resolve?.(entry)
-  // §20 D-SD4 释放点：腾槽补位（飞刀与 explore/plan 同池公平排队——T-R17g）+ 行刷新
-  refillPool(parent, (e) => e._auto?.() ?? false)
-  refreshQueuedRows(parent)
-  notifySettle?.()
+    // park-ALWAYS（pending 单容器 +role——D2）+ 出池 + 终态墓碑（consumed/failed）+
+    // _resolve/腾槽补位/notifySettle——helper 公共段（park:"always" + tombstoneCancel）
 }
 
 /** 飞刀 digest 注入（独立流文案——与 subagent/advisor 族区分——D-R17c）：done = 已

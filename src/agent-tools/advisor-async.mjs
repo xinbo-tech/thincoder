@@ -28,7 +28,8 @@ import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
 import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
-import { nextSubagentId } from "./subagent-scheduler.mjs"
+import { nextSubagentId, getAsyncPool } from "./subagent-scheduler.mjs"
+import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 
 /** §24 D-24b（②-6a）：并行评审上限 2——超限拒（不排队——评审间有依赖语义——修正轮依赖
@@ -54,11 +55,9 @@ export function advisorRunsMap(parent, create = false) {
   return holder._advisorRuns
 }
 
-/** 评审池 Map（history 载体优先——settle 回调/驱动同读）。 */
+/** 评审池 Map（D1 accessor——history 载体优先双查询吸收——settle 回调/驱动同读）。 */
 export function advisorPoolMap(parent) {
-  return parent.history?._asyncAdvisors instanceof Map
-    ? parent.history._asyncAdvisors
-    : (parent._asyncAdvisors ?? null)
+  return getAsyncPool(parent, "advisor")
 }
 
 /** 记录一次文件变更事件（abs 路径）。execute-tools FILE_MUTATORS 分支与
@@ -156,6 +155,10 @@ function resolveReviewInstance(parent, reviewType, paths, documents, scopeKey) {
  * 返回 { entry }（已启动入池）或 { error }（容量满/实例 cap/深度门——工具层转返回文案）。
  */
 export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, object }) {
+  // 写侧经 agent 字段建池——安全前提 = run 起始绑定不变式（agent.mjs 在 run 起始把
+  // agent._asyncAdvisors 绑定到 history 同一 Map 或新 Map，回合尾回写 history——读侧
+  // D1 accessor（advisorPoolMap/getAsyncPool）history 优先与之一致；direct-execute ctx
+  // 回落 agent 字段同一载体）。
   const pool = (parent._asyncAdvisors ??= new Map())
   const running = [...pool.values()].filter((e) => e.status === "running").length
   if (running >= ADVISOR_POOL_LIMIT) {
@@ -198,7 +201,8 @@ export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, 
   entry.settled = new Promise((res) => { entry._resolve = res })
   try { entry.model = resolveAdvisorProvider(parent).model } catch { /* model tag optional */ }
   // 条目级 controller 链到共享 child signal（会话中止/全停逐链传播——cancel 只 abort 本条目）
-  const childSignal = ctx.sessionSignal ?? ctx.signal ?? null
+  // D6 buildChildSignal 单点（sessionSignal ?? agent._sessionSignal ?? ctx.signal）
+  const childSignal = buildChildSignal(ctx)
   if (childSignal) {
     if (childSignal.aborted && !childSignal.reason?.interrupt) entry.controller.abort()
     else childSignal.addEventListener?.("abort", () => {
@@ -250,37 +254,40 @@ function designReviewPassed(entry, result) {
  *   展示未注册 token（两分支都清洗）；
  * ⑤ cancelled settle：不入 pending/不入 token 槽（取消提醒已在 cancel 时注入机读线——
  *   "评审已取消——token 未签发"语义）；会话中止（controller aborted 非 cancel）→ 出池清理；
- *   挂起期 settle → 移交 history._pendingAdvisorResults（digest 轮注入——D-S3 ② 同机制）。
+ *   挂起期 settle → 移交 history._pendingAsyncResults（pending 单容器 +role——
+ *   ASYNC-RESULT-CONTAINER.md D2——digest 轮注入——D-S3 ② 同机制）。
+ *
+ * ASYNC-RESULT-CONTAINER.md D3（2026-09-08）：公共收尾（落 report/error/done/status、
+ * 日志三连、cancelled/parentAborted/挂起分流、_resolve 唤醒、notifySettle）统一走
+ * settleAsyncEntry 共享 helper（async-settle.mjs——四族同守卫 !parentAborted 严格版
+ * 同日志同分流）；本函数 = 族包装——①-④ 记账段作 onAccounting hook 注入（D1 落盘
+ * 保留——settle 当场同步写槽权威台账，写失败即 settle 失败）。
  */
 export function settleAdvisorReview(parent, entry, result, error, notifySettle) {
-  entry.report = result
-  entry.error = error
-  entry.done = true
-  entry.status = "done"
-  const childLogId = `${entry.reviewType}#${entry.id}`
-  const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
   const runs = advisorRunsMap(parent)
   const record = runs.get(entry.reviewId)
-  const aborted = entry.controller.signal?.aborted === true
-  // 中止守卫（同 subagent settle 语义）：定向 cancel / 会话中止不发 done/error 事件
-  if (entry.cancelled) {
-    logEvent("ev:cancelled", { id: childLogId })
-  } else if (!aborted) {
-    if (error != null) logEvent("advisor:error", { id: childLogId, ms: childMs, err: String(error).slice(0, 200) })
-    else logEvent("advisor:done", { id: childLogId, ms: childMs, round: entry.round })
-  }
-  if (entry.cancelled) {
-    parent._asyncAdvisors?.delete(entry.id)
-    parent.history?._asyncAdvisors?.delete(entry.id)
-    if (record) record.state = "cancelled"
-    entry._onCancelled?.()
-  } else if (aborted) {
-    // 会话/回合全停——出池清理（中途停——无结果注入）
-    parent._asyncAdvisors?.delete(entry.id)
-    parent.history?._asyncAdvisors?.delete(entry.id)
-    if (record) record.state = "cancelled"
-  } else {
-    // ── settle 记账（①②③）──
+  settleAsyncEntry(parent, entry, {
+    pool: "advisor",
+    report: result, error, notifySettle,
+    logId: `${entry.reviewType}#${entry.id}`, // 日志契约：design#N/code#N（LOGGING.md）
+    refill: false, // 独立池（ADVISOR_POOL_LIMIT——不占 subagent 槽位，无补位）
+    onAccounting: (p, e, { phase }) => {
+      if (phase === "cancelled" || phase === "aborted") {
+        // 定向 cancel / 会话中止——取消轮不计轮次（record 不匹配续跑）
+        if (record) record.state = "cancelled"
+        return
+      }
+      advisorSettleAccounting(p, e, record)
+    },
+  })
+}
+
+/** §24 D-24b settle 记账（①-④——onAccounting hook，仅非 cancelled/非中止的 settled
+ *  相位执行；ASYNC-RESULT-CONTAINER.md D3 族 hook——D1 落盘保留）。 */
+function advisorSettleAccounting(parent, entry, record) {
+  const result = entry.report
+  const childLogId = `${entry.reviewType}#${entry.id}`
+  {
     const stale = advisorStale(parent, entry)
     let passed = false
     let issued = false // 持久化成功才算"签发"（D1：写失败即 settle 失败）
@@ -359,20 +366,10 @@ export function settleAdvisorReview(parent, entry, result, error, notifySettle) 
       }
       record.state = "settled"
     }
-    // 挂起期 settle → 移交 pending（digest 轮注入——与 subagent D-S3 ② 同机制）；
-    // 正常回合 settle → 留池（回合尾 collectSettledAdvisors / 挂起会话 sweep）
-    const suspended = parent.history?._suspended === true
-    entry._onTerminal?.(suspended)
-    if (suspended) {
-      const hist = parent.history
-      const pend = (hist._pendingAdvisorResults ??= [])
-      if (!pend.includes(entry)) pend.push(entry)
-      hist._asyncAdvisors?.delete(entry.id)
-      parent._asyncAdvisors?.delete(entry.id)
-    }
+    // 挂起分流/pending 移交/出池/_onTerminal/_resolve/notifySettle——helper 公共段
+    // （pending 单容器 history._pendingAsyncResults +role——D2；正常回合留池 done:true——
+    // done-in-pool 统一表示——回合尾 collectSettledAdvisors / 挂起会话 sweep）
   }
-  entry._resolve?.(entry)
-  notifySettle?.()
 }
 
 /** §24 D-24b 取消（②-6b——UI ⏹ 路由 + 共用核心——镜像 cancelSubagent）：
@@ -380,7 +377,7 @@ export function settleAdvisorReview(parent, entry, result, error, notifySettle) 
  *  机读线提醒（cancelled settle 不入 pending/不入 token 槽——"评审已取消——token 未签发"
  *  由提醒表达——digest 提示语义）。 */
 export function cancelAdvisorReview(parent, id) {
-  const map = parent._asyncAdvisors ?? parent.history?._asyncAdvisors
+  const map = advisorPoolMap(parent) // D1 accessor——history 载体优先双查询吸收
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id
   if (idNum == null || !map || !map.has(idNum)) {
     return JSON.stringify({ id, status: "error", error: `unknown async advisor review id: ${id}` })

@@ -21,6 +21,7 @@
  */
 import { logEvent, errText } from "../log.mjs"
 import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent, mergeChildMutations, nextSubagentId } from "./subagent-async.mjs"
+import { buildChildSignal } from "./async-settle.mjs"
 import { subagentStatus, cancelSubagentAction, subagentObserve, subagentSend } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出；§19.8 删 check——subagentCheck 退役；2026-09-08 SUBAGENT-OBSERVE-SEND：+observe/send 执行器）
 // Eng-coder spawn design-token gate — resolveDesignSlot / dropExpiredTokenSlot /
 // authorizeEngCoderDesignToken moved to subagent-spawn-gate.mjs on 2026-09-06 (module
@@ -234,10 +235,11 @@ export const subagentTool = {
       }
     }
     // §17 D-S9: during a suspension session children share the SESSION signal
-    // (ctx.sessionSignal) — a digest's own Stop/interrupt must not abort the pool;
-    // the session abort controller stops everything. Outside a session children ride
-    // the spawning turn's controller (existing semantics).
-    const childSignal = ctx.sessionSignal ?? ctx.signal ?? null
+    // (ctx.sessionSignal ?? agent._sessionSignal) — a digest's own Stop/interrupt must not
+    // abort the pool; the session abort controller stops everything. Outside a session
+    // children ride the spawning turn's controller (existing semantics).
+    // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md——4 处兜底抄统一）。
+    const childSignal = buildChildSignal(ctx)
 
     // Role normalization + whitelist (2026-08-25, coder-leak fix): the runtime gates below
     // used exact string comparison — a variant role ("Coder", " coder") bypassed BOTH gates

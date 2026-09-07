@@ -12,7 +12,7 @@
  *
  * 本模块保留：§18 审计机械（ENG_AUDIT_SPAWN_LIMIT/gateEngCoderSpawn/summarizeEngTaskInput/
  * auditTaskBook——audit 子代理任务书机械追加）、shouldAutoResume（§15 D-A3——工程 AUTO
- * 回合帽自动续跑例外）、spawnAsyncSubagent/settleAsyncEntry（§15 槽位队列 + §17 挂起移交 +
+  * 回合帽自动续跑例外）、spawnAsyncSubagent/settleSubagentEntry（§15 槽位队列 + §17 挂起移交 +
  * §19.5 条目级控制字段装配 + cancelled settle 分支 + 墓碑写点）、
  * injectAsyncResult（§17 D-S3 共享注入器——XML 转义 + >64K offload + consumed 墓碑）、
  * collectSettledAsync（§17.5 回合尾收集——suspDriven 留池由挂起会话 digest）、nextSubagentId
@@ -20,8 +20,9 @@
  * mergeChildMutations（eng-coder spawn merge 与 escalate 引擎共享——重开会话清理）。
  */
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
-import { logEvent, errText } from "../log.mjs"
-import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, refillPool, runningByDomain, writeTombstone, writeTombstoneTo } from "./subagent-scheduler.mjs"
+import { logEvent } from "../log.mjs"
+import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, runningByDomain, writeTombstoneTo } from "./subagent-scheduler.mjs"
+import { settleAsyncEntry } from "./async-settle.mjs"
 import { recordFileMutation } from "./advisor-async.mjs"
 // 测试 import 面（test/subagent-scheduler.test.mjs——测试文件零改动约束）：§20 调度符号经
 // 本模块 re-export 保持可导入——src 侧消费者（subagent.mjs）已改指 subagent-scheduler.mjs 直连。
@@ -182,6 +183,9 @@ export function shouldAutoResume(asyncFlag, parent, ctx) {
  * status:"cancelled"——spawn 上下文绑定——webview ⟦ev⟧stopped 冻结相位）。
  */
 export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild, files, dependsOn, settle }) {
+  // 写侧经 agent 字段建池——安全前提 = run 起始绑定不变式（agent.mjs 在 run 起始把
+  // agent._asyncSubagents 绑定到 history 同一 Map 或新 Map，回合尾回写 history——读侧
+  // D1 accessor（poolMap/getAsyncPool）history 优先与之一致）。
   parent._asyncSubagents = parent._asyncSubagents ?? new Map()
   const id = subId
   const entry = {
@@ -256,9 +260,10 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     // 同步 spawn 同样发 started 但无池条目（cancel 路由定位不到——防无效 ⏹，审计 F1）
     ctx.callbacks?.onSubagent?.({ id: entry.id, role: entry.role, status: "started", startedAt: entry.startedAt, model: provider.model ?? null, pool: true })
     // §25 R17（飞刀 async——subagent-escalate-async.mjs 自定义 settle）：settle 参数
-    // 缺省 = settleAsyncEntry（spawn 既有语义零变化）；飞刀传 settleEscalateEntry——
-    // 三分类 + merge 决策 + 独立 pending 流（_pendingEscalateResults——D-R17c）。
-    const settleFn = settle ?? settleAsyncEntry
+    // 缺省 = settleSubagentEntry（族包装——公共收尾 settleAsyncEntry 共享 helper，spawn
+    // 既有语义零变化）；飞刀传 settleEscalateEntry——
+    // 三分类 + merge 决策经 onAccounting hook + park-ALWAYS（D-R17c）。
+    const settleFn = settle ?? settleSubagentEntry
     runChild(entry).then(
       (report) => settleFn(parent, entry, report, null, ctx.callbacks?.onAsyncSettled),
       (err) => settleFn(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
@@ -297,81 +302,28 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
 }
 
 /**
- * §15 D-A1 settle：落 report/error + 解析该 entry 自己的 settled（自动通道——回合尾收集/
- * 挂起 digest）→ 腾槽补位（running settle 一个即启动队列头部——完成即补位，
- * 不消费才补；失败/abort 同样腾槽）。entry.start 绑定创建它的 execute 调用上下文，
- * 因此补位启动的子代理跑的是它自己的 pipeline。
- * §17 D-S3 ②/D-S8（VS Code 对齐）：settle 时若处于挂起态（parent.history._suspended——
- * 共享数组，跨 runAgent 调用存活；读取时刻为准，确定性）→ 延迟冻结：条目移交
- * history._pendingAsyncResults（由下个回合 prepareRun 前注入，D-S3 ② 记账点）并从池
- * 移除；正常回合内 settle 行为不变（留池，回合尾 collectSettledAsync 直注入 ①）。
- * §19.5 D-M6 cancelled settle（第一分支）：entry.cancelled（cancel 定向中止）→ 不入
- * pending、不参与 collect 直注入（无错误报告——陈旧结果零注入）——出池清理 + 停止冻结
- * 通知（_onCancelled——webview stopped 相位）——腾槽补位照常。
- * 会话中止（entry.signal aborted）跳过移交并**出池清理**（2026-09-02 偏差修复 #2）——
- * abort 清池不注入陈旧错误，且 done 僵尸条目不得留在池里让 poolLive 恒真。
+ * §15 D-A1 settle：族包装（ASYNC-RESULT-CONTAINER.md D3——公共收尾单点 settleAsyncEntry，
+ * async-settle.mjs）——本函数只保留 subagent 族特有段：send→settle 竞态的"未投递"注记
+ * （SUBAGENT-OBSERVE-SEND.md D2——settle 收尾未消费 _injected → 报告附注记；cancel/纯
+ * 中止分支不入报告）。公共语义（落 report/error/done/status、日志三连、cancelled 出池 +
+ * cancelled 墓碑 + 停止冻结通知、parentAborted 出池丢弃（interrupt 豁免——F2）、挂起
+ * 分流移交 pending 单容器、_resolve 唤醒、腾槽补位、notifySettle）全部在 helper——
+ * 与 advisor/escalate/consult 同守卫（!parentAborted 严格版）同日志同分流。
+ * §17 D-S3 ②/D-S8：挂起态 settle → 条目移交 history._pendingAsyncResults（pending 单
+ * 容器 +role——D2）并从池移除；正常回合内 settle 留池 done:true（done-in-pool 统一表示）。
  */
-function settleAsyncEntry(parent, entry, report, error, notifySettle) {
-  entry.report = report
-  entry.error = error
-  entry.done = true
-  // §20（CLI parity——D-A1 上限口径 "running 数 = 已完成未消费不计入"）：settle 即翻
-  // status（既有代码只置 done——status 滞留 running 会把补位/准入的 running 计数与
-  // 域冲突集算错——settle 后该条目不再占槽、不再持文件域）。
-  entry.status = "done"
-  // LOGGING（LOGGING.md——CLI parity）：settle 分流事件——child:done/child:error（结果）+
-  // ev:cancelled/ev:settled（settle 回调分流；正常回合内 settle 由 child:done 覆盖——
-  // ev:stopped 见中止清池点）
-  const childLogId = `${entry.role}#${entry.id}`
-  const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
-  // 中止守卫（2026-09-03 code review #6）：Ctrl+C/会话中止时子代理以 error 形态 settle——
-  // 不落 child:error/done/ev:settled（ev:stopped 已在中止清池点表达；同端阻塞路径同款
-  // 抑制——"用户停——不落错误事件"）。定向 cancel 走 ev:cancelled。
-  if (entry.cancelled) {
-    logEvent("ev:cancelled", { id: childLogId })
-  } else if (!entry.signal?.aborted && !entry.controller?.signal?.aborted) {
-    if (error != null) logEvent("child:error", { role: entry.role, id: childLogId, ms: childMs, err: errText(error, 200) })
-    else logEvent("child:done", { role: entry.role, id: childLogId, ms: childMs, kind: String(report ?? "").includes("turn cap reached") ? "partial" : "ok" })
-    if (parent.history?._suspended === true) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
-  }
+function settleSubagentEntry(parent, entry, report, error, notifySettle) {
   // SUBAGENT-OBSERVE-SEND.md D2 send→settle 竞态：settle 收尾未消费 _injected（父 send 落子
   // 代理正在跑的最后 generation——子还没到下回合头就终了）→ 报告附"未投递"注记（报告照常
   // 注入——guidance 未生效需新 spawn 重发）。cancel/纯中止分支不入报告（无注入）。
   if ((entry._injected?.length ?? 0) > 0 && !entry.cancelled && !(entry.signal?.aborted && !entry.signal?.reason?.interrupt)) {
-    entry.report = `${String(entry.report ?? "")}\n[Note: ${entry._injected.length} message(s) sent to subagent #${entry.id} before it settled were NOT delivered (the child finished before its next turn boundary) — resend the guidance in a new spawn if it still matters]`
+    report = `${String(report ?? "")}\n[Note: ${entry._injected.length} message(s) sent to subagent #${entry.id} before it settled were NOT delivered (the child finished before its next turn boundary) — resend the guidance in a new spawn if it still matters]`
   }
-  // §19.5 D-M6 cancelled settle（round1 #1 + round2 #2 定稿）：entry.cancelled（cancel
-  // 动作 / UI ⏹）→ **不入 _pendingAsyncResults、不参与 collectSettledAsync 直注入**
-  // （无错误报告——陈旧结果零注入）——出池清理同 Ctrl+C 全停但只清该条目 + 停止冻结
-  // 事件（entry._onCancelled——webview ⟦ev⟧stopped 冻结——"stopped"）。
-  // §20 D-SD5：running 依赖取消的 settle 终态点——写终态墓碑（cancelled——依赖者经
-  // 它查得取消分支）；依赖者标注/行刷新在 refillPool 段（depc 锁——非 AUTO 不自动启动）。
-  if (entry.cancelled) {
-    parent.history?._asyncSubagents?.delete(entry.id)
-    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
-    writeTombstone(parent, entry.id, "cancelled", entry.role)
-    entry._onCancelled?.()
-  } else if (entry.signal?.aborted && !entry.signal?.reason?.interrupt) {
-    // 2026-09-05 复审 🟡#1：interrupt（Ctrl+I）下按 F2 豁免存活的子代理 settle 时不得走此
-    // 丢弃分支——否则报告仍被静默丢弃（F2 目标落空——agent.mjs:487 同构豁免：interrupt
-    // 不是全停）——interrupt 形态落默认分支留池 done（挂起期由 suspended 分支移交 pending）
-    // 供 collect/digest 注入；plain abort/会话中止仍走此分支。
-    parent.history?._asyncSubagents?.delete(entry.id)
-    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
-  } else if (parent.history?._suspended === true) {
-    const hist = parent.history
-    const pend = (hist._pendingAsyncResults ??= [])
-    if (!pend.includes(entry)) pend.push(entry)
-    hist._asyncSubagents?.delete(entry.id)
-    parent._asyncSubagents?.delete(entry.id) // map keys are the spawn-time id (number)
-  }
-  entry._resolve?.(entry)
-  // §20 D-SD4 释放点：settle（任何终态——成功/取消/失败）腾槽 + 依赖终态转移 → 最早
-  // 可启动补位（waiting 越行不阻塞槽位；多任务同解除按队列序启动到槽满 ≤4）→ 排队行
-  // 刷新（等待态标注随依赖终态更新——depc/位置前移）。AUTO 活读按条目 spawn 上下文。
-  refillPool(parent, (e) => e._auto?.() ?? false)
-  refreshQueuedRows(parent)
-  notifySettle?.()
+  settleAsyncEntry(parent, entry, {
+    pool: entry.role,
+    report, error, notifySettle,
+    tombstoneCancel: true, // §20 D-SD5：cancelled 终态墓碑（dependsOn 查询）
+  })
 }
 
 // ─── Async subagent machinery（AGENT-LOOP.md §15 + §17，CLI D-A1/D-A2/D-A4/D-S3 同规格）───

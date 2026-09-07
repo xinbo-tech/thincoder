@@ -4,7 +4,8 @@
  * (non-blocking spawn) / consult_stop (cancel) — consult_check 退役 (§25 决策点 ①:
  * digest 自动注入后无消费对象). Replies arrive AUTOMATICALLY: when every model
  * has settled (all replies/failures in — partial settle never early-injects), the
- * session moves to the pending stream (history._pendingConsultResults) and the
+ * session moves to the pending single-container (history._pendingAsyncResults
+ * +role——ASYNC-RESULT-CONTAINER.md D2，2026-09-08——_pendingConsultResults 独立族废弃) and the
  * next run's first-line injection delivers the full digest ("[System reminder:
  * consultation #id finished — N replies: ...]", per-model verbatim). The main
  * agent judges in the digestion turn — the mechanism does ZERO judging.
@@ -18,6 +19,8 @@ import { buildProvider } from "../extension/presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
+import { getAsyncPool, removeFromAsyncPools } from "./subagent-scheduler.mjs"
+import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 
 /** Read-only tool injected into consultation children (via runAgent opts.extraTools).
  *  Lets the consultant pull the main agent's conversation history on demand —
@@ -80,10 +83,9 @@ function consultLabel(m) {
 // per-run 重建，而会诊子代理在发起回合结束后仍可能在跑——会话 Map 必须挂在跨 run
 // 的载体上。直接 execute ctx（测试/无 history）回落 agent 字段。
 
-/** 会话 Map（history 载体优先——跨 runAgent 存活）。 */
+/** 会话 Map（D1 accessor——history 载体优先双查询吸收——跨 runAgent 存活）。 */
 export function consultSessionsMap(parent) {
-  if (parent?.history?._consultSessions instanceof Map) return parent.history._consultSessions
-  return parent?._consultSessions instanceof Map ? parent._consultSessions : null
+  return getAsyncPool(parent, "consult")
 }
 
 /** 会话 Map（create=true——history 载体优先——会话创建/清理同读）。 */
@@ -163,23 +165,32 @@ function selectConsultModels(pool, selectors) {
 
 /**
  * §25 D-R17a session settle: the LAST child of a session settling (pending → 0)
- * parks the WHOLE session into the pending stream (history._pendingConsultResults)
+ * parks the WHOLE session into the pending single-container (history._pendingAsyncResults
+ * +role——ASYNC-RESULT-CONTAINER.md D2，2026-09-08——_pendingConsultResults 独立族废弃)
  * — injected at the next run start (full digest, one-shot). Cancelled (stopped /
  * session abort) sessions are DISCARDED — nothing parks, replies stay unreachable
  * (T-R17c). The parked session leaves the live sessions map (map = running only).
+ * D3：公共收尾统一走 settleAsyncEntry 共享 helper（四族同机制）——consult 族参数：
+ * log:null（per-model 日志已在子代理 settle 记录）/ refill:false（会话池不占 subagent
+ * 槽位）/ park:"always"（全 settle 即停靠——挂起与否同一流）。会话升格完整 entry
+ * （role/done/report/error 字段——D2——注入器按 role 分发 injectConsultResult）。
  */
 function sessionSettled(ctx, session) {
-  // Remove from the live map first (map holds running/pending>0 sessions only).
-  const map = consultSessionsMap(ctx?.agent)
-  map?.delete(session.id)
-  if (session.stopped) return // consult_stop / abort — discard, no digest (T-R17c)
-  const holder = ctx?.agent?.history ?? ctx?.agent
-  if (!holder) return
-  const pend = (holder._pendingConsultResults ??= [])
-  if (!pend.includes(session)) pend.push(session)
-  // Wake a parked suspension driver — a settle during idle must trigger the digest
-  // round (T-R17j — 消费驱动判据推广：任一 pending 族非空即消化).
-  ctx?.callbacks?.onAsyncSettled?.()
+  const parent = ctx?.agent
+  if (session.stopped) {
+    // consult_stop / abort — discard, no digest (T-R17c)；出池（map = running only）
+    removeFromAsyncPools(parent, "consult", session.id)
+    return
+  }
+  settleAsyncEntry(parent, session, {
+    pool: "consult",
+    log: null, // per-model child:done/child:error 已在 consSettle 记录——会话级不重复
+    refill: false, // 会诊会话池独立（不占 subagent 槽位——无补位）
+    park: "always", // §25：全 settle 一次停靠（部分 settle 不提前——T-R17k）
+    // Wake a parked suspension driver — a settle during idle must trigger the digest
+    // round (T-R17j — 消费驱动判据推广：pending 单容器非空即消化).
+    notifySettle: () => ctx?.callbacks?.onAsyncSettled?.(),
+  })
 }
 
 function settleChild(ctx, session, id, label, ok, payload) {
@@ -395,12 +406,16 @@ export const consultStartTool = {
       id, controllers: [], replies: [], pending: 0,
       failed: 0, terminated: 0, stopped: false, received: 0, total: run.length,
       models: run.map(consultLabel),
+      // D2 升格完整 entry 形态（同 subagent/advisor/escalate——pending 单容器条目带
+      // role；注入器按 role 分发）。settle 时 helper 置 done/report/error。
+      role: "consult", done: false, report: null, error: null,
     }
     map.set(id, session)
 
-    // §15 同款信号选择：挂起会话内的回合（digest/用户回合）子代理持会话 signal
-    // （ctx.sessionSignal）——会话 Stop 逐链中止；回合级 ctx.signal 兜底。
-    const childSignal = ctx.sessionSignal ?? ctx.signal ?? null
+    // §15 同款信号选择（D6 buildChildSignal 单点——D5 consult 补 _sessionSignal 兜底）：
+    // 挂起会话内的回合（digest/用户回合）子代理持会话 signal（ctx.sessionSignal ??
+    // agent._sessionSignal）——会话 Stop 逐链中止；回合级 ctx.signal 兜底。
+    const childSignal = buildChildSignal(ctx)
     for (const m of run) {
       session.pending++
       const ctrl = new AbortController()

@@ -232,9 +232,12 @@ export async function finalizeAgentTurn(agent, ctx) {
     // controllers + clear the session map — no orphan consultants past an abort.
     const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
     cleanupConsultSessions(agent)
-    if (history) {
-      history._pendingConsultResults = []
-      history._pendingEscalateResults = []
+    // pending 单容器（D2）——中止清理会诊/飞刀停靠条目（停 = 弃——不注入陈旧结果——
+    // 子代理池同款）；subagent/advisor 条目保留（turn-end abort 无挂起会话兜底——保留下个
+    // run-start 注入，原 _pendingAsyncResults 同口径；会话内 abort 由 suspension 全清——
+    // 用户显式全停全弃——两处口径差异即此理由）。
+    if (history && Array.isArray(history._pendingAsyncResults)) {
+      history._pendingAsyncResults = history._pendingAsyncResults.filter((e) => e?.role !== "consult" && e?.role !== "escalate")
     }
   }
   // Async subagent turn-end handling (AGENT-LOOP.md §15 D-A3 + §17 D-S1 + §17.5

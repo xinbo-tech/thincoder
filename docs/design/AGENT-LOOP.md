@@ -48,6 +48,8 @@
 | `src/agent-tools/subagent.mjs` | subagent 单工具动作面 + spawn 门 + 引擎（审计受限通道、token 门接点）；observe/send dispatch + readonly/control 分类 + runChild onToolCall 记当前工具 / turnInput 注入消费回调（SUBAGENT-OBSERVE-SEND） |
 | `src/agent-tools/subagent-async.mjs` | async 池/collectSettledAsync/mergeChildMutations/gateEngCoderSpawn |
 | `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：filesOverlap/depInfo/queueRunnable/assertNoDepCycle/refillPool/nextSubagentId/停滞检测 |
+| `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：filesOverlap/depInfo/queueRunnable/assertNoDepCycle/refillPool/nextSubagentId/停滞检测 + D1 池 accessor（getAsyncPool/removeFromAsyncPools——ASYNC-RESULT-CONTAINER） |
+| `src/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ pending 单容器（parkAsyncPending/injectPendingAsync role 分发）/ parentAborted 守卫 / buildChildSignal |
 | `src/agent-tools/subagent-actions.mjs` | status/cancel/escalate/consume-design/observe/send 动作执行器（observe/send——SUBAGENT-OBSERVE-SEND 2026-09-08） |
 | `src/agent-tools/subagent-spawn-gate.mjs` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
 | `src/agent-tools/subagent-spec.mjs` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
@@ -84,15 +86,15 @@ runAgent(provider, cwd, input, callbacks, signal, autoApprove, opts)
   `runAgent(..., signal, () => panel._autoApprove, runOpts(resume))`。
 - **per-run vs 跨 run**：agent 对象 per-run 重建；跨 runAgent 存活状态挂在**共享的
   depth-0 history 数组**上（`_asyncSubagents`/`_asyncAdvisors`/`_asyncTombstones`/
-  `_pendingAsyncResults`/`_pendingAdvisorResults`/`_pendingEscalateResults`/
-  `_pendingConsultResults`/`_consultSessions`/`_engDesignTokens`/`_suspended`——JSON
+  `_pendingAsyncResults`（pending 单容器 +role——四族统一停靠，见 §5）/
+  `_consultSessions`/`_engDesignTokens`/`_suspended`——JSON
   序列化只走数组下标，附加属性不污染会话文件）。
 
 **run-start 注入（先于 setupAgentRun 推入本 run 用户输入）**：前一轮异步蒸馏
 （`opts.distillState.pending`）必须**先落地**（N1——压缩机行是本 run 起始上下文）；
-挂起期 settle 停靠的 `history._pendingAsyncResults`/`_pendingAdvisorResults`/
-`_pendingEscalateResults`/`_pendingConsultResults` 四族在此 splice 即消费
-（单注入点——防重复注入；digest 处置轮据此触发）。
+挂起期 settle 停靠的 `history._pendingAsyncResults` pending 单容器在此 splice 即消费
+（单注入点——防重复注入；条目带 role——注入器按 role 分发四族文案；digest 处置轮
+据此触发）。
 
 **回合收尾（finalizeAgentTurn，run-stages.mjs）**：consult 清理 / async 池收集 /
 guardCarry 继承，finally 单点执行。collectSettledAsync 在回合尾收集 settle 结果
@@ -227,6 +229,20 @@ session — so end the turn; do not poll or wait for the result."（本体在 sp
 - **终态**：settle 即翻 done + 墓碑（`history._asyncTombstones`）；报告自动送达——
   回合尾 collectSettledAsync 直注入或挂起期 digest 注入（§7）——arrival order
   多结果按完成序注入；cancel 的 cancelled settle 不入 pending、不直注入、停止冻结通知。
+- **settle 统一机制（ASYNC-RESULT-CONTAINER.md D1-D6，2026-09-08）**：四族（subagent/
+  advisor/escalate/consult）settle 公共收尾单点 = `settleAsyncEntry`
+  （`agent-tools/async-settle.mjs`——落 report/error/done/status、日志三连
+  （ev:cancelled / {child|advisor}:done|:error + ev:settled）、cancelled/parentAborted/
+  挂起分流、`_resolve` 唤醒 waiter、腾槽补位、notifySettle）；守卫统一
+  `!parentAborted`（严格版——signal aborted 非 interrupt 或 controller aborted 非
+  cancel）；族特有段作 `onAccounting` hook（advisor 陈旧判定/token D1 落盘；escalate
+  三分类 merge 决策）。**pending 单容器** `_pendingAsyncResults` +role（五族分叉废弃
+  ——`_pendingAdvisorResults`/`_pendingEscalateResults`/`_pendingConsultResults`
+  退役）；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending`
+  标记保留（settle/sweep 同一表示防重复移交）。**池 accessor** `getAsyncPool(parent,
+  role)`（subagent-scheduler.mjs——吸收 `history?._X ?? agent._X` 双查询）。
+  **buildChildSignal**（async-settle.mjs——`sessionSignal ?? agent._sessionSignal ??
+  ctx.signal ?? null` 单点，consult 补 _sessionSignal 兜底）。
 - **任务调度器**（§6）：`files`/`dependsOn`；重叠串行化、依赖链自动启动、环拒
   （assertNoDepCycle）、sync spawn 冲突拒；依赖被取消/失败 → 条目驻留标记
   "dependency cancelled" 由模型决定（AUTO 会话自动启动）；SLA waiting 行渲染 + 停滞检测。
@@ -300,19 +316,22 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 
 - **consult**：工具面 = consult_start/consult_stop（**consult_check 退役**——结果自动
   digest 注入后无消费对象）；会话容器 = `history._consultSessions`（跨 run 存活）；
-  settle 判定 = 会话 pending==0（全 settle 一次注入）→ park 进 `history._pendingConsultResults`
+  settle 判定 = 会话 pending==0（全 settle 一次注入）→ park 进 pending 单容器
+  `history._pendingAsyncResults`（role=consult——会话升格完整 entry）
   → 下回合 run-start/digest 注入；stop/abort 弃（不入 pending）；子代理信号 =
-  sessionSignal ?? turn signal；挂起期撞 turn cap 自动降级 partial（不弹继续卡——无人在
+  buildChildSignal（sessionSignal ?? agent._sessionSignal ?? turn signal——D5/D6）；挂起期撞 turn cap 自动降级 partial（不弹继续卡——无人在
   面板前）。consult children 的 onToken 例外保留——其 OUTPUT 流入会诊面板。
 - **escalate**：sync 路径（async:false）verbatim 保留；缺省 async 入 **other 池**（与
   explore/plan 共享 4 槽——池满公平排队）；settle 三分类：done → merge-all + 重叠警告入
   报告；error → partial merge 决策（父 `_fileMutEvents` 重叠 → 不 merge + 报告列差异；
   无重叠 → merge）；cancelled → 不入 pending。settle 即出池（status 查为 unknown——报告
-  经 digest 自动到达）。escalate 经 opts.streamOutput 选入 onToken（长手术不静默）。
+  park-ALWAYS 入 pending 单容器（role=escalate）经 digest 自动到达）。escalate 经 opts.streamOutput 选入 onToken（长手术不静默）。
 - **async advisor**：`advisor-async.mjs`——`_asyncAdvisors` 独立池（ADVISOR_POOL_LIMIT=2
   超限拒）+ launchAsyncAdvisor（design reviewId=designId / 续跑轮现铸 token / rv 实例
   上下文）；settle 记账（陈旧判定跨 run、token 入槽 + engPersist slot 直写、round/prior
   ≤5、cancel 不入 pending 不入槽）→ digest 注入 + guard 未决不推回 + cancelAdvisorReview。
+  ≤5、cancel 不入 pending 不入槽）→ 挂起期 settle 移交 pending 单容器（role=advisor）
+  digest 注入 + guard 未决不推回 + cancelAdvisorReview。
   工具 async 参数：depth-0 缺省后台（非阻塞默认——顶层评审不卡回合）；depth>0 拒/恒同步
   （eng-coder 内自审不翻转）。UI：panel-messages cancelSubagent 路由 role=advisor +
   webview subBlockTarget 加 advisor（⏹/冻结复用）。
