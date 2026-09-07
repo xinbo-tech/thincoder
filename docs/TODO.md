@@ -80,6 +80,8 @@
 - [ ] **designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**：设计工作从主会话剥离给专门 designer 子代理——主会话只澄清需求+派 designer+评审设计+批准（不再自己写设计，哪怕小改动也派 designer）。designer 只写设计文档（主会话给澄清后需求+上下文，它产出设计文档到 docs/design/，不参与澄清）；直接写盘（产出即定稿）；一次性（每设计任务 spawn 一个，用完即弃）
   ——需：新 designer 角色（子代理工具加 designer role）+ designer 提示词（固化 METHODOLOGY 三层结构/文档归属/验收标准格式/文档地图检查/受影响文件表格式）+ 主会话提示词改（工程模式 Mandatory Flow 改设计由 designer 做）+ designer 工具集（写 docs/design/ 权限+读代码/文档）——双端（CLI/VSC）同机制
 - [ ] **edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**：edit 成功率低（old_string 精确匹配太严格 + LCS 保留旧行 + 无按行号改）——改进：①**按行号改**（line/startLine/endLine 参数——知道行号就能改，不用猜 old_string）②**模糊匹配**（old_string 放宽——细微差异/空白/缩进/引号不同也能匹配）③**替换即删**（替换后旧行自动删——不留残留）——归属 TOOLS.md §15 edit 语义升级——双端（CLI/VSC）同机制
+- [ ] **memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**：memory search/list 能找到记忆（跨 scope 搜），但 delete 找不到（限定 scope 找不到——scope 不一致）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到
+  ——需：统一 search/list/delete 的 scope 解析（delete 也该跨 scope 找，或 search/list 显示记忆实际 scope）——归属 MEMORY.md 工具语义——双端（CLI/VSC）同机制
 
 ## 会话/存储/恢复后续
 - [ ] **R19 护栏语义缺口**（见"代码正确性"节——需 SESSION §13 裁定字节/消息预算）
