@@ -105,7 +105,9 @@
 
 ## 7. 逐工具契约
 
-- **git**：action 集 32（add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick + F7 的 clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv）。破坏性动作（reset --hard / checkout 丢改动 / rm / clean / rebase 有未提交时）**先快照再执行 + 确认**，从不拦截（gitGuardSnapshot）；快照为全量副本（CHECKPOINT.md 权威）。status 用 runGitRaw 保行前导空格（防 porcelain 误分类）。反向路由：git.md 含 "Route to git instead of bash" + discipline.md Tool routing。
+- **git**：action 集 32（add/commit/push/tag/branch/checkout/restore/stash/fetch/pull/reset/revert/merge/cherry-pick + F7 的 clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv）。
+  - 破坏性动作（reset --hard / checkout 丢改动 / rm / clean / rebase 有未提交时）**先快照再执行 + 确认**，从不拦截（gitGuardSnapshot）；快照为全量副本（CHECKPOINT.md 权威）。
+  - status 用 runGitRaw 保行前导空格（防 porcelain 误分类）。反向路由：git.md 含 "Route to git instead of bash" + discipline.md Tool routing。
 - **checklist**：mark 支持 `id` 优先于 index（index 降级 fallback）；无显式 ID 历史条目 parse 时一次性分配落盘；nextRootId 扫 checklist.md + checklist-done.md（归档 ID 恒占位不复用）；前缀归一剥所有连续 `T[\d.]+:`；父 done 须子树全 done，递归归档整棵子树。
 - **execute**：`code`（inline ESM）与 `scriptFile` 二选一必填；nodeArgs 禁 `--eval`/`--inspect` 类；scriptFile 可指向 workspace 外；超时默认 30s / 上限 600s，超时错误含重试引导。
 - **glob**：`{a,b}` brace 展开为 `(?:a|b)`；`!` 排除前缀（多模式 include !exclude）；不支持语法（`?(x)`/`@(a|b)`/`+(x)`/空/未闭合 brace）显式英文报错（不静默漏匹配）。

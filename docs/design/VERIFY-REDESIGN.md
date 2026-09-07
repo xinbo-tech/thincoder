@@ -61,7 +61,8 @@ verify 是**语言无关、框架无关、项目无关**的通用编程 agent �
   - 失败重试（CLI:92 / VS Code:68）："verify was not passed — either your verification declared failed, was skipped without a reason, or was not declared. Fix or complete your verification, then call verify again declaring the outcome."
   - 耗尽诚实声明（CLI:107 / VS Code:82）："You have not passed verification. Either state explicitly that your verification could not be completed, or run verify again once it is."
   三句皆不称"test failures"/"tests failing"（`_verifyPassed=false` ≠ 测试失败，可能是 failed/skipped 无理由/未声明）。
-- **D-V10 提示词同步（G5-G9）**：两端 src/prompts/ 5 文件仍写 verify 跑测试旧语义——eng-coder.md:7 / engineering-sub.md:7（最大：L0/L1/L2 分级建在旧 verify 自动跑测试上）/ system.md:42 / discipline.md:61-62（tool 表）/ main.md:32。改写为声明式语义。**engineering-sub.md 新分级语义注（评审 #3）**：测试执行职责从 verify 挪回模型——L0 = 模型对改动做即时验证（语法/冒烟）+ 经 verify 声明 passed 或 skipped+理由；L1 = 模型自跑项目快测试（npm test 快层）；L2 = 模型自跑全量（full suite）。verify 三层都只收声明（declares passed/skipped），不代跑。模型从项目 AGENTS.md 读该项目的测试方法决定跑哪层。
+- **D-V10 提示词同步（G5-G9）**：两端 src/prompts/ 5 文件仍写 verify 跑测试旧语义——eng-coder.md:7 / engineering-sub.md:7（最大：L0/L1/L2 分级建在旧 verify 自动跑测试上）/ system.md:42 / discipline.md:61-62（tool 表）/ main.md:32。改写为声明式语义。
+  **engineering-sub.md 新分级语义注（评审 #3）**：测试执行职责从 verify 挪回模型——L0 = 模型对改动做即时验证（语法/冒烟）+ 经 verify 声明 passed 或 skipped+理由；L1 = 模型自跑项目快测试（npm test 快层）；L2 = 模型自跑全量（full suite）。verify 三层都只收声明（declares passed/skipped），不代跑。模型从项目 AGENTS.md 读该项目的测试方法决定跑哪层。
 - **D-V11 双端一致修正（G10-G13，违反 D-V6/T-V7）**：
   - G10 doc-only/空改动 + 显式 failed：CLI 无条件放行 vs VS Code 打回——统一为尊重显式 failed 打回（VS Code 行为为对，改 CLI）；
   - G11 VS Code rejectionReport 打回分支补 node --check 语法提示（对齐 CLI）；

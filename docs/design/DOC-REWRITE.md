@@ -76,7 +76,8 @@
 
 ## 8. 验收
 
-AC1 = 双端全部待重写文档无 >300 字符单行（脚本扫）；AC2 = markdown 结构正确；AC3 = 逐字契约句经 compare 未改动——**compare 源 = 原文档 + explore 大纲标记的契约句**；compare mismatch（评审 #3）：eng-coder 交付时发现原文档契约句本身已漂移（如 byte-identical 已取消处）→ 以 explore 大纲标注的现行语义为准并在交付报告声明；交付后发现 mismatch → advisor 审计 gating（打回修正）。AC4 = 历史折叠为变更记录注；AC5 = 归档清单完整（无遗漏应归档文件）。
+AC1 = 双端全部待重写文档无 >300 字符单行（脚本扫）；AC2 = markdown 结构正确；AC3 = 逐字契约句经 compare 未改动——**compare 源 = 原文档 + explore 大纲标记的契约句**；compare mismatch（评审 #3）：eng-coder 交付时发现原文档契约句本身已漂移（如 byte-identical 已取消处）→ 以 explore 大纲标注的现行语义为准并在交付报告声明；交付后发现 mismatch → advisor 审计 gating（打回修正）。
+AC4 = 历史折叠为变更记录注；AC5 = 归档清单完整（无遗漏应归档文件）。
 
 ## 变更记录
 
