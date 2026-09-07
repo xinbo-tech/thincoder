@@ -43,8 +43,6 @@
 ### D3 废旧单值镜像（R2）
 
 - **现状**：dispatch 写门（`dispatch.mjs:184`）读 `_engDesignToken` 镜像；settle/restore/consume/TTL/new 双写双清镜像（多处同步成本）。
-- **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。镜像字段读时一次性迁移进 Map，settle/restore/consume/TTL/new 不再维护镜像。
-- **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。**存量兼容：旧会话 slot 文件里可能残留镜像字段值——恢复时一次性读取迁移进 Map（唯一迁移读点，此后不再写镜像、不再读）**。settle/restore/consume/TTL/new 不再维护镜像。
 - **改（评审 #3 采纳——单条权威版）**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。**存量兼容：旧会话 slot 文件里可能残留镜像字段值——恢复时一次性读取迁移进 Map（唯一迁移读点，此后不再写镜像、不再读）**。settle/restore/consume/TTL/new 不再维护镜像。
   - 迁移读点：`token-ttl.mjs` restoreEngTokens——若 slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（标 legacy），随后 saveSession 不再写镜像字段。
 - 落点：`src/agent/dispatch.mjs` + `src/agent-tools/advisor-async.mjs` + `src/token-ttl.mjs` + `src/session.mjs`（resetSessionState）。
@@ -55,14 +53,13 @@ settle 即落盘（D1）、门禁读权威 miss 回读（D2）、镜像退役（
 
 ## 4. 受影响文件（CLI，thincoder）
 
-- 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3）、`src/agent/dispatch.mjs`（写门问槽 D3）、`src/token-ttl.mjs`（落盘函数 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）
-- 文档：本设计 + README 地图登记
 - 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、`src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`src/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
+- 文档：本设计 + README 地图登记
 - 新增：`src/agent-tools/design-token.mjs`（token 工具组拆分——advisor-async 577→487 行硬限内）、`src/session-guard.mjs`（轮转守卫拆分——session-slots 525→485 行）、`test/design-token-settlement.test.mjs`（AC 测试 7 用例 + consume 补充 1）
 
 ## 5. 验收
 
-AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → spawn eng-coder 通过（token 已落盘）；AC2 = settle 落盘后 spawn 门禁从槽读到 token（缓存 miss 回读）；AC3 = `_engDesignToken` 镜像退役（**零写 + 仅一次性迁移读**——唯一读点在 token-ttl restoreEngTokens，其余运行时读写 grep 零命中）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）。
+AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → spawn eng-coder 通过（token 已落盘）；AC2 = settle 落盘后 spawn 门禁从槽读到 token（缓存 miss 回读）；AC3 = `_engDesignToken` 镜像退役（**零写 + 仅一次性迁移读**——唯一读点在 token-ttl restoreEngTokens，其余运行时读写 grep 零命中）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）；**AC7 = consume 当场落盘删——重启后已消费 token 不从盘复活（consume-design 落盘对称——交付 🔴 复活洞修复）**。
 
 ### 测试用例表
 
@@ -70,6 +67,7 @@ AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → 
 |---|---|---|---|
 | 正常：settle→重启→resume→spawn | async 评审 settle（token 已当场落盘）→ 进程 kill（不等回合尾）→ resume → spawn eng-coder | 门禁从槽读到 token，通过（不再 designId not found） | AC1 |
 | 正常：缓存 miss 回读 | settle 落盘后、新回合 Map 未回填时 spawn | resolveDesignSlot 内存 miss → 回读槽文件 → 命中通过 | AC2 |
+| **consume 落盘对称** | consume-design 删内存槽 → 进程 kill（不等回合尾 save）→ restart → 同 designId 再 spawn | 门禁 miss 回读盘 → **不复活**（旧台账已删——consume 落盘写空槽） | AC7 |
 | 边界：过期 token 槽 | slot 有已过期 TTL 的 designId | restore/门禁 TTL 过滤——过期拒，不误当活槽 | AC1/AC2 |
 | 边界：残留镜像一次性迁移 | 旧会话 slot 文件有 engDesignToken 残留且 Map 空 | restoreEngTokens 一次性迁入 Map（legacy 标）；saveSession 后不再写镜像 | AC3 |
 | 错误：settle 落盘失败 | settle 当场写槽抛错 | settle 失败可重评（不静默丢 token）；不产生"内存有盘上无"态 | AC1 |
@@ -78,3 +76,4 @@ AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → 
 ## 变更记录
 
 - 2026-09-08：立项。基于会诊 4 模型收敛（槽文件权威台账 + settle 同步落盘 + 门禁读权威）+ explore CLI 一手核实（常驻对象无死对象/清零 bug；唯一隐患 = 重启序列化窗口）+ 用户裁定（B：连镜像一起废；双端一起做；各一份文档）。
+- 2026-09-08：consume 落盘对称扩展（交付 🔴 复活洞修复——D1 settle 落盘+D2 门禁回读叠加后，消费→回合尾 save 窗口内 spawn 会从盘上复活已消费 token——consume-design 删内存槽后当场同步落盘删除）+ 受影响文件表补录实际改动文件 + AC7 + 变更记录
