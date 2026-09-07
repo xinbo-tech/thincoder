@@ -1,57 +1,164 @@
-# 飞刀（Escalate）— 需求与设计 > 状态：**已实施**（2026-08-15，commit 9ac8322；0.1.22 随版发布）。**2026-08-16 简化**：飞刀钩勾选机制删除——所有会诊模型都是飞刀候选（用户拍板：减少心智负担），条件注册改为与会诊同条件（consultModels 非空即注册）。**2026-08-16 三家会诊修复批**：① mergeMutations 对齐 subagent 的 mergeChildMutations（子 agent 改动重置父级 verify/advisor 收敛预算——此前飞刀可绕过父级门直接收尾），抽为公共函数两处复用；② 工程模式禁飞刀（与 subagent 禁 coder 同理，指向 eng-coder）；③ 用户 Stop 的 AbortError 向上传播不再吞掉；④ 补墙钟看门狗（consultTimeoutMs，超时按 timeout 结算而非崩溃）；⑤ model 参数容忍 withPool 描述里的 " (effort)" 后缀；⑥ provider 无 API key 提前报错；⑦ 面板 surgeon 行显示模型名 + 思考/输出流式进面板；⑧ 返回附 Touched files 清单，ContinueError（撞 turn 上限）单独话术与真崩溃区分。**2026-08-16 CLI 对齐批（0.12.32 parity）**：⑨ **删墙钟看门狗**（④ 撤销）——固定墙钟误杀正常但慢的手术（实测两个 max-effort 顾问读文件即撞 10min 墙），改为完全依赖 turn 帽 + FETCH_TIMEOUT + 用户 Stop 直传；⑩ **撞墙可继续**——ContinueError 时经 onQuestion 通道弹"继续?"（主 agent 同款问题卡），用户选 Continue 则以 resume:true + 子 agent 自身 history（agent.mjs 新增子 agent history 传入/回传支持）续跑，预算重置，上限 2 次；⑪ **effort 枚举钳制**——池 effort 越界回退预设并标注（此前该候选每次 chat 必抛错，"起飞即死"）。
-> 关联：`CONSULTATION.md`（会诊——飞刀的候选池来源与互补机制）、`MODEL-PICKER-UNIFY.md` §3.3（effort 配置语义） --- ## 0. 术语表（归并后：两个名字） > **2026-08-16 归并**：surgeon 已从代码中移除——工具名与角色名统一为 **escalate**。历史上 surgeon 曾作为子 agent 的角色名（role: "surgeon"）与工具名 escalate 并存，导致模型混淆（找 "surgeon 工具" 落空、把 escalate 当模块写脚本）。用词越少越一致，模型出错越少（用户拍板）。 | 名字 | 是什么 |
+# 飞刀（Escalate）
+
+> 板块：飞刀。状态：**已实施 + 已异步化**（R17——2026-09-06，escalate 缺省 async）。本文件为
+> **已完成专题的当前态记录**——记录飞刀机制在 VS Code 端的现行实现与接线。
+> 权威源（现行语义/用例/验收）：VSC `docs/design/ARCHITECTURE.md`「会诊/飞刀完全异步化」引用段
+> （R17 VS Code 镜像）+ CLI `AGENT-LOOP.md` §19（escalate 并入 `subagent` 工具 `action:"escalate"`）+
+> §25 D-R17b（缺省 async + settle 三分类）。
+> 与 CLI 端同源（`thincoder/docs/design/ESCALATE.md`）；与会诊（consult）互补，见 `CONSULTATION.md`。
+> 本文件已由 as-of 快照流水重写为当前态记录（历史 surgeon 时代/整改/简化流水见文末「变更记录」）。
+
+## 0. 术语表
+
+| 名字 | 是什么 |
 |---|---|
-| **`escalate`** | **唯一的技术名**——工具名 = 它召唤的子 agent 角色名（role: "escalate"） |
-| **飞刀** | escalate 的中文别名（用户面向） | 红线：看到 escalate.mjs 的源码不等于"要写脚本调它"——escalate 是主 agent 工具表里的工具，直接调用。本文档历史章节里的 "surgeon" 均指今天的 escalate 角色（不再逐行改写历史叙述）。 ## 1. 需求 ### 1.1 一句话 主模型遇到**自己干不动**的复杂实现任务时，请能力更强的模型**亲自操刀**——像医院请外院专家飞刀：专家到场、亲自手术、术后交回病历、离场。 ### 1.2 与会诊的分工（互补，不重叠） | | 会诊 consult | 飞刀 escalate |
+| **`escalate`** | **唯一的技术名**——`subagent` 工具的动作名，召唤的子 agent 走 `role: "coder"`（写路径复用） |
+| **飞刀** | escalate 的中文别名（用户面向） |
+
+红线：`escalate` 是主 agent 工具表里的动作，**直接调用**（`subagent` 的 `action:"escalate"`）——
+看到 escalate 相关源码不等于"要写脚本调它"。历史上的角色名 **surgeon** 已从代码移除——不留别名。
+
+## 1. 需求
+
+### 1.1 一句话
+
+主模型遇到**自己干不动**的复杂实现任务时，请能力更强的模型**亲自操刀**——像医院请外院
+专家飞刀：专家到场、亲自手术、术后交回病历、离场。
+
+### 1.2 与会诊的分工（互补，不重叠）
+
+| | 会诊 consult | 飞刀 escalate |
 |---|---|---|
 | 本质 | 多模型**并行给意见** | 一个强模型**亲自执行** |
 | 权限 | 只读 | **可写**（走正常权限门） |
-| 类比 | 多科室会诊 | 外院专家飞刀手术 |
 | 场景 | 判断不清，要多视角 | 确认干不动，要人代干 |
-| 候选 | `consultModels` 全体 | `consultModels` 中**带钩**的模型 |
-| 形态 | 三工具（start/check/stop），异步 | 单工具，同步等待 |
-| 产物 | 各家分析意见 | 改动清单 + 理由 + 验证结果（术后病历） | ### 1.3 用户故事 - **US-F1（钩选）**：会诊列表每个模型带一个"飞刀"勾；勾上的模型成为飞刀候选。零勾 = 飞刀不可用
-- **US-F2（操刀）**：主 agent 调 `escalate(task)` → 飞刀子 agent 用钩选模型读码、改码、跑测试，活动流实时进对话面板（与 subagent 同款可见性）
-- **US-F3（病历）**：子 agent 交回结构化报告：改了什么、为什么、怎么验证的；主 agent 复核后向用户汇报
-- **US-F4（指定医生）**：`escalate(task, model)` 可指定候选中的某一位；不带 model 用第一个勾选的
-- **US-F5（安全线）**：写操作走正常权限门（非 AUTO 时弹审批卡）；depth=1 封顶（飞刀不能再飞刀）；改动走 recent-changes/git 追踪，可回滚 ### 1.4 边界哲学（用户拍板：不设硬边界） 会诊的边界（首次失败不用、简单错误不用）**不照搬**到飞刀：那是给 N 倍成本机制设的闸。飞刀成本 ≈ 主 agent 自跑一轮，硬边界只会让模型该出手时不出手。条款只描述"什么样的任务适合"和"与会诊的区别"，**何时出手完全交给模型判断**。机制化挂钩（verify 耗尽/stall）保留——那是给撞墙时刻的入口提示，不是限制。 --- ## 1.5 不做清单 - ❌ 飞刀再飞刀（深度封顶）
-- ❌ 多模型并行操刀（一个手术台只能站一位主刀）
-- ❌ 飞刀专用的独立模型配置（候选池就是会诊列表 + 钩）
-- ❌ 主 agent 无自主权的全自动升级（触发权在主 agent 判断 + 用户，工具只提供能力） --- ## 2. 设计 ### 2.1 配置（2026-08-16 简化：无钩选） `agent.consultModels` 全部条目都是飞刀候选，**无 `surgeon` 字段**： ```jsonc
-"agent": { "consultModels": [ { "provider": "kimi", "model": "kimi-k3", "effort": "max" }, { "provider": "deepseek", "model": "deepseek-v4-pro", "effort": "high" }, { "provider": "zhipu-plan", "model": "glm-5.2", "effort": "high" } ]
+| 候选 | `consultModels` 全体 | `consultModels` 全体 |
+| 形态 | 两工具（start/stop），后台 digest | 单动作，**缺省 async（R17）——`async:false` 显式同步** |
+| 产物 | 各家分析意见 | 改动清单 + 理由 + 验证结果（术后报告） |
+
+### 1.3 边界哲学（用户拍板：不设硬边界）
+
+飞刀成本 ≈ 主 agent 自跑一轮，硬边界只会让模型该出手时不出手。条款只描述"什么样的任务
+适合"和"与会诊的区别"，**何时出手交给模型判断**——机制化挂钩（verify 耗尽/stall）不用于飞刀
+（那是事后撞墙信号；判断缺口已挂会诊）。
+
+### 1.4 不做清单
+
+- ❌ 飞刀再飞刀（depth 封顶，拒绝 depth>0）
+- ❌ 多模型并行操刀（一个手术台只站一位主刀）
+- ❌ 飞刀专用独立模型配置（候选池就是会诊列表）
+- ❌ 全自动升级（触发权在主 agent 判断 + 用户）
+
+## 2. 设计
+
+### 2.1 配置
+
+`agent.consultModels` 全部条目都是飞刀候选，无额外字段：
+
+```jsonc
+"agent": {
+  "consultModels": [
+    { "provider": "kimi", "model": "kimi-k3", "effort": "max" },
+    { "provider": "deepseek", "model": "deepseek-v4-pro", "effort": "high" }
+  ]
 }
-``` - 候选池 = 全部 `consultModels`（无字段、无勾选）
-- 工具注册（agent.mjs）：`consultModels` 非空即注册 `escalateTool`（与会诊同条件——未配置会诊时模型根本看不到工具） ### 2.2 工具契约 ```
-escalate - task (required): 交给飞刀模型的任务描述——目标、约束、入口文件、验收标准 - model (optional): 指定候选池中的模型（provider:model 格式）；缺省 = 候选池第一个
-→ 同步执行：spawn 可写子 agent（钩选模型 + 该候选配置的 effort）
-→ 返回子 agent 的最终报告（术后病历：改动清单 / 理由 / 验证结果）
-→ 子 agent 活动流通过 toolPanel 通道实时可见（sub:<label>，与 subagent/consult 同款）
-``` 实现挂点：`src/agent-tools/escalate.mjs`（新文件），结构对齐 `subagent.mjs`： - `role: "coder"` 复用现有 coder 子 agent 路径（写权限、权限门、recent-changes 追踪全部现成）
-- provider 构建：`buildProvider(m.provider)` + `reasoningEffort: m.effort`（与会诊子任务同款注入）
-- `maxTurns: agent.subagentTurns`（写任务的复杂度对齐 coder 子 agent，不套 consultTurns）
-- `depth: 1` 由 runAgent 强制；execute 层拒绝 depth>0 的 escalate 调用（护栏写进工具 execute 开头） ### 2.3 触发方式（两通道，2026-08-15 定稿：撤掉机制化挂钩） 1. **主 agent 自主判断（唯一主通道）**——main.md 飞刀条款（边界不设硬性限制，模型自由裁量；2026-08-15 用户拍板）： > **Escalate to a stronger model (飞刀)** — when YOU judge the task calls for a stronger model's hands (a complex multi-file refactor, an intractable bug, intricate algorithm work — or simply work you assess as beyond your comfortable ability), hand the implementation to it via `escalate(task)`. It gets WRITE access and does the work itself; you review its report (read the changed files, run the tests). You are free to escalate early or late — your judgment; the cost is one expert model run, comparable to doing it yourself. Contrast with `consult_start` (parallel READ-ONLY opinions for judgment calls). 设计理由：会诊是 N 模型并行（贵，边界要紧）；飞刀是单模型（成本与主 agent 自跑一轮相当），省着用的理由弱——裁量权交给模型（§1.4）。
-2. **用户手动**——"飞刀 glm" / "escalate 给 kimi" → 主 agent 带 `model` 参数调用。 **为什么不挂 verify 耗尽 / stall 检测**（2026-08-15 用户点破，撤回原设计）： - 飞刀是**事前能力评估**——接任务时掂量"这活超出我的舒适区"就该直接交出去；verify 耗尽/stall 都是**事后撞墙信号**，此时升级是收拾残局，不是飞刀
-- verify 耗尽的瞬间主 agent 不知道自己缺的是判断（→ 会诊）还是手艺（→ 飞刀）——而两机制的分工恰恰建立在这个区分上；该场景已挂会诊（判断缺口对症），维持不变
-- 飞刀模型在三次失败后接手，继承的是被污染的上下文和可能改乱的工作区——上台时手术区是乱的 ### 2.4 面板 **无飞刀勾选框**（2026-08-16 删除——所有会诊模型自动成为飞刀候选，面板零新增控件）。会诊行保持：模型选择 + effort 下拉 + ✕ 删除。 ### 2.5 受影响文件 | 文件 | 动作 |
+```
+
+depth-0 装配 `subagentTool` 常驻；`consultModels` 非空时 withPool 装饰（escalate 动作列出候选池）。
+池空时 escalate 动作运行时返回既有错误语义——**空池不注册/不可用**：模型看不到不存在的功能就不会误调。
+
+### 2.2 工具契约
+
+escalate 是 `subagent` 工具的动作（`action:"escalate"`）——退役的独立 `escalateTool` 执行逻辑
+verbatim 并入（约束/前缀/术后报告全保留）：
+
+```
+subagent(action:"escalate")
+  - task (required): 交给飞刀模型的任务描述——目标、约束、入口文件、验收标准
+  - model (optional): 指定候选池中的模型（provider:model 格式）；缺省 = 候选池第一个
+  - 可写子 agent（role "coder" + 候选 effort）——走正常权限门
+  - 子 agent 活动流经 `sub:escalate <label> #N` relay 前缀进面板
+  → 术后报告：改动清单 / 理由 / 验证结果 + Touched files
+```
+
+**工具描述语义**：把实现任务交给更强的模型（`agent.consultModels`），它**可写并亲自干活**——
+读、改、跑测试——然后返回术后报告。用于你判断任务需要更强的手（复杂多文件重构、棘手的 bug、
+精密的算法活、或超出你舒适区的工作）；**early escalate，别烧完尝试才出手**。
+工程模式不可用（实现走 eng-coder spawn）。
+
+### 2.3 async 现行机制（R17——缺省后台飞刀）
+
+R17（2026-09-06）把 escalate 改为**缺省 async**（escalate depth-0 only → 顶层缺省 = async）：
+
+- **发起返回 ack**：`{ id, role: "escalate", status: "running" | "queued" }` → 后台 **other 池**飞行
+  （与 explore/plan 共享槽位——池满公平排队——补位自动——cancel/⏹/status 共享池机制）。
+- **settle 三分类**：
+  - **done**：mutations **merge-all 回父** + 与父侧并发写重叠 → **报告级警告**（不 gate）；
+  - **error**（child 失败 / 撞 turn cap——async 永不弹继续面板）：已产出 partial mutations 视父侧
+    重叠决定 merge（父侧 launch 后无重叠则 merge；有重叠则不 merge + 报告列差异）；
+  - **cancelled**（⏹ / cancel 定向中止）：不入 pending（D-M6）——什么都不 merge。
+  - aborted（会话/全停——controller 链中止）→ 出池丢弃（中止清池不注入）。
+- **术后报告经 `history._pendingEscalateResults` digest 自动注入**（done = 已 merge 报告可继续 /
+  error = 错误报告）——**动作域仍按消费回合档位**——手动档 digest 禁写禁 spawn——无族例外
+  （T-R17p 零例外）。
+- **条目 settle 即出池**（status 查询在 settle 后为 unknown——报告经 digest 自动到达）。
+- **`async:false` 保留同步旧路径**（向后兼容——既有同步语义零回归）。
+
+消化轮动作域（消费驱动 / 档位制）与 consult/advisor 族规则同源，权威 = `AGENT-LOOP.md` §17 D-S6/D-S7 + §25。
+
+### 2.4 端级实现接线
+
+| 环节 | VS Code |
 |---|---|
-| `src/agent-tools/escalate.mjs` | 新增：escalateTool |
-| `src/agent-tools/index.mjs` | 导出 |
-| `src/agent.mjs` | 候选池非空注册；工具表装配 |
-| `src/config-io.mjs` | consultModels 校验加 surgeon 字段；loadAgentSettings 透传 |
-| `src/extension/settings.mjs` | 快照透传 surgeon |
-| `webview/settings.js` | 会诊行加钩选框 + 状态行 |
-| `src/prompts/main.md` | 飞刀条款 |
-| `locales/en.json` + `zh.json` | surgeon.* 文案 |
-| `test/escalate.test.mjs` | 新增测试 | ### 2.6 关键决策记录 - **候选池复用会诊列表**：不新增配置章节；钩是布尔字段，勾选零成本（用户拍板"每个模型有个钩"）
-- **同步单工具而非异步三件套**：飞刀是"交给它干完"，主 agent 等待病历天经地义；不需要早停/逐个读
-- **复用 coder role**：写权限/权限门/追踪全部现成，零新机制
-- **工具名 escalate 而非 surgeon**：英文语境 "escalate to an expert" 模型一见即懂；中文 UI 叫"飞刀"（用户确认）
-- **空池不注册**：与会诊同款纪律——模型看不到不存在的功能就不会误调 ## 3. 测试 | 用例 | 断言 |
-|---|---|
-| 空池不注册 | consultModels 无 surgeon:true → 工具表无 escalate |
-| 钩选注册 | ≥1 surgeon:true → escalateTool 在 depth 0 工具表 |
-| 操刀契约 | fake runner 收到钩选模型 + 配置 effort + role coder + depth 1 |
-| model 指定 | escalate(task, "glm:glm-5.2") → 用 glm；不在候选池 → 报错列出候选 |
-| 深度护栏 | depth>0 调 escalate → 拒绝并说明（飞刀不能套飞刀） |
-| 配置往返 | 面板勾选 → config.json 落盘 surgeon:true；去钩 → 字段删除 |
-| 活动流 | 子 agent 工具调用以 sub: 前缀流到面板 |
+| 引擎 | `subagent-escalate.mjs`（sync 路径 verbatim——`escalateAction`）+ `subagent-escalate-async.mjs`（async——入池 + settle 三分类 + 飞刀 digest 注入文案） |
+| 子 agent 构建 | `prepareEscalateProvider`（buildProvider + effort 钳制 + apiKey 预检——缺 key 提前报错不裸 401） |
+| 子任务 runner | 同步：`runAgent(child, task, …)`；异步：经 `spawnAsyncSubagent` 入 other 池 |
+| 改动合并 | `mergeChildMutations(parent, child)`（重置父级 verify/advisor 收敛预算——飞刀不能绕过父级门） |
+| 活动流上屏 | relay 前缀 `sub:escalate <label> #N` → 面板（R22 冻结入流同 subagent/consult） |
+| 深度护栏 | depth>0 拒绝（飞刀不能再飞刀） |
+| 工程模式 | eng 模式禁飞刀（fail-closed——实现走 eng-coder spawn） |
+| 配置入口 | Settings 面板（候选池 = `consultModels`） |
+| 测试 | escalate 家族（async ack / settle merge / error partial-merge / 取消 / sync 保留 / 深度护栏 / 工程模式 / 撞墙——用例清单权威 = AGENT-LOOP §25） |
+
+### 2.5 实现要点
+
+- **复用 coder role**：写权限、权限门（`onPermissionRequest` 转发）、recent-changes 追踪全部现成，
+  零新机制。
+- **改动并入父级守卫**：`mergeChildMutations` 重置父级收敛预算——飞刀改动照常受父级 verify/advisor 门检。
+- **无墙钟看门狗（飞刀专属，consult 保留）**：固定墙钟会误杀正常但慢的手术（实测 max-effort 顾问
+  读文件即撞 10min 墙）——改为完全依赖 turn 上限 + FETCH_TIMEOUT（单 LLM 调用）+ 用户 Stop 直传。
+- **撞墙后用户可选继续（同步路径）**：撞 turn 上限（ContinueError）经 question 通道弹"继续?"——选
+  Continue 则以 `resume:true` 续跑（history/mutations 保留、预算重置）；async 路径永不弹继续面板。
+- **effort 越界钳制**：池 effort 越出该模型 `reasoningEffortEnum` → 整字段丢弃（此前候选每次 chat
+  必抛错——"起飞即死"）。
+
+### 2.6 关键决策记录
+
+- **候选池复用会诊列表**：不新增配置章节，零额外字段（早期"每个模型带飞刀勾"的钩选机制 2026-08-16
+  删除——用户拍板减少心智负担：所有会诊模型自动是飞刀候选）。
+- **escalate 并入 `subagent` 动作（§19）**：工具面收敛——一个工具多动作，模型不会为找飞刀而混淆；
+  escalate 退役逻辑 verbatim 并入，约束/前缀/报告零变化。
+- **缺省 async（R17）**：长飞刀不再锁死交互——发起 ack → 回合收尾 → 完成报告 digest 自动注入 +
+  mutations 自动 merge；`async:false` 显式同步零回归。
+- **复用 coder role**：写权限/权限门/追踪全部现成。
+- **空池不注册**：模型看不到不存在的功能就不会误调。
+- **术语归并**：surgeon 曾作为角色名与工具名并存导致模型混淆，现统一为 escalate（动作名 = 角色语义，
+  role "coder"）。
+
+## 3. 测试
+
+escalate 测试用例清单的权威 = **AGENT-LOOP.md §25**（T-R17d..r：async ack 返回 + 回合收尾 / settle
+三分类 merge / sync `async:false` 零回归 / 容量排队 / eng 拒保持 / 取消不入 pending / error
+partial-merge 决策 / 空闲 settle 消化等——VS Code 镜像）。
+
+**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + escalate/subagent 家族既有零回归。
+
+## 变更记录
+
+- 2026-08-16：立项实施（独立 escalate 工具 + 同步执行 + 术后报告；0.1.22 随版发布）；术语归并
+  surgeon → escalate；钩选机制删除（所有会诊模型 = 飞刀候选）；飞刀合并入父级守卫、工程模式禁飞刀、
+  墙钟看门狗删除、撞墙继续、effort 钳制等整改批合入上文现行语义。
+- 2026-09-03：escalate 并入 `subagent` 工具 `action:"escalate"`（独立 `escalateTool` 退役 verbatim 并入）。
+- 2026-09-06：**R17 缺省 async**——后台 other 池 + settle 三分类 + digest 自动注入；`async:false`
+  保留同步路径；机制正文收敛为本文件 §2 当前态。
+- 2026-09-08：DOC-REWRITE-VSC 批 V4——从 as-of 快照流水重写为当前态记录（多行 markdown，历史折叠本段）。
