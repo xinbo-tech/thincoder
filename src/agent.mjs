@@ -152,9 +152,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   if (autoTurn && !agent.autoApprove) {
     agent.history.push({ role: "user", content: AUTO_TURN_DIGEST_DOMAIN, transient: true })
   }
-  // eng-coder authorization is set by subagent.mjs AFTER token validation but BEFORE
-  // runAgent — only reset for the top-level agent (depth 0); child runs keep theirs
-  if (depth === 0) agent._engDesignReviewed = false
+  // eng-coder authorization (_engDesignReviewed) is eng-coder-only: set by subagent-spawn.mjs
+  // (spawn gate) / design-token.mjs (design review pass) BEFORE the child runAgent — the
+  // depth-0 parent never reads or writes it (the parent gate reads anyLiveDesignSlot; the
+  // depth-0 per-turn reset was removed 2026-09-08, ENG-SESSION-PROVIDER-CLEANUP D1.3).
   // Design slots (_engDesignTokens Map) survive across turns (design review → approval →
   // eng-coder spawn) — persisted to the session slot at settle time (DESIGN-TOKEN-
   // SETTLEMENT D1); lifecycle: issued on a passing review, consumed by consume-design / TTL.

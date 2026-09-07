@@ -1,7 +1,10 @@
 /**
  * eng tool: enter/exit engineering mode.
  * In engineering mode the agent follows design-before-code methodology.
- * Toggled here at session level; persisted by /eng.
+ * Toggled here at session level (in-memory flag; the session slot is the sole authority —
+ * saveSession round-trips it at turn end; /eng writes the slot directly). The old ctx
+ * state-persist hook was removed 2026-09-08 (ENG-SESSION-PROVIDER-CLEANUP D1.2): no
+ * provider existed and its legacy payload keys were never read by applySession.
  * R16 (2026-09-06): design tokens are session-level flow credentials — mode toggles
  * do NOT clear them (ON→OFF keeps, OFF→ON does not require a fresh review); only TTL
  * expiry cleans tokens, at three points: restore filtering (session.mjs applySession) /
@@ -30,23 +33,12 @@ export const engTool = {
       ctx.agent.config.agent.engineering = false
       // R16 (F-R16a): OFF 不清 token——有效 token 跨模式存活（设计评审过的产物不因
       // 开关重复烧）。过期清理跑在另外三处（恢复过滤 / 开模式 / spawn 门禁拒）。
-      ctx.agent._engDesignReviewed = false // reset gate state
       ctx.agent._advisorRound = 0          // reset convergence budget
       ctx.agent._advisorRuns = new Map()   // §24 D-24b: per-review instances die with the mode (fresh cycles)
       ctx.agent._touchedFiles = []         // clear mutation tracking
       ctx.agent._lastEngState = false
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_OFF_REMINDER)
-      // 持久化工程模式状态到会话（token 字段不在此 payload 显式置 null——评审 #4：
-      // exit→persist→退出→重启不得丢有效 token——否则正好砸 OFF→重启路径）
-      if (ctx.persistState) {
-        await ctx.persistState({
-          engineering: false,
-          engDesignReviewed: false,
-          advisorRound: 0,
-          touchedFiles: []
-        })
-      }
       return "Engineering mode exited. Standard discipline now applies. You may edit files directly."
     }
     if (args.action === "enter") {
@@ -64,15 +56,6 @@ export const engTool = {
       ctx.agent._lastEngState = true
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_ON_REMINDER)
-      // 持久化工程模式状态到会话（token 字段不在此 payload 显式置 null——评审 #4）
-      if (ctx.persistState) {
-        await ctx.persistState({
-          engineering: true,
-          engDesignReviewed: false,
-          advisorRound: 0,
-          touchedFiles: []
-        })
-      }
       let msg = "Engineering mode activated. Design-before-code enforced: write a design document in docs/, run advisor with type='design', get user approval, then implement via eng-coder subagents."
       if (cleared > 0) {
         msg += ` Cleared ${cleared} expired design token${cleared === 1 ? "" : "s"} — 清 ${cleared} 个过期 token，有效 token 保留（TTL 内不重评）。`

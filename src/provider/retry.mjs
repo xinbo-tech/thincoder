@@ -6,49 +6,11 @@
  * 本模块提供与 core 等价的退避链：2^(n-1)s 指数退避、429 Retry-After（秒/HTTP-date、
  * 300s 上限）、RETRYABLE_STATUS、AbortError 透传、cause 解包。
  * 测试钩子走 rate.mjs 的 _rateHooks.sleep（与 core 同一替换点）。 */
-import { RETRYABLE_STATUS, MAX_RETRIES, RATE_LIMIT_BACKOFF_MS, _rateHooks } from "./rate.mjs"
-
-/** 计费/配额类 429 特征（与 core.mjs isNonRetryableError 同源——round3 #4：
- *  余额/配额耗尽时立即抛错，不按限流干等 15/30/60s 后报泛化错误）。 */
-function isQuotaExhausted(text) {
-  return /余额不足|充值|insufficient_quota|quota exhausted|billing|1113|1114/i.test(text ?? "")
-}
-
-/** Parse Retry-After: 秒数 or HTTP-date；上限 300s（与 core.mjs parseRetryAfter 同语义，
- *  无 core 依赖复制于此——anthropic/google 引入 core 会造成循环依赖）。 */
-export function parseRetryAfter(header, rateLimitHits = 0) {
-  const fallback = RATE_LIMIT_BACKOFF_MS[Math.min(rateLimitHits, RATE_LIMIT_BACKOFF_MS.length - 1)]
-  if (header == null) return fallback
-  let waitMs = 0
-  const numeric = Number(header.trim())
-  if (Number.isFinite(numeric) && numeric >= 0) waitMs = numeric * 1000
-  else {
-    const date = Date.parse(header.trim())
-    if (Number.isFinite(date)) waitMs = Math.max(0, date - Date.now())
-  }
-  if (waitMs <= 0) return fallback
-  return Math.min(waitMs, 300_000)
-}
-
-/** 可中断 sleep（与 core.mjs sleepInterruptible 同语义）。 */
-export async function sleepInterruptible(ms, signal) {
-  if (!signal) return _rateHooks.sleep(ms)
-  if (signal.aborted) throw abortDOM(signal)
-  return new Promise((resolve, reject) => {
-    const onAbort = () => { signal.removeEventListener("abort", onAbort); reject(abortDOM(signal)) }
-    signal.addEventListener("abort", onAbort, { once: true })
-    _rateHooks.sleep(ms).then(
-      () => { signal.removeEventListener("abort", onAbort); resolve() },
-      (e) => { signal.removeEventListener("abort", onAbort); reject(e) },
-    )
-  })
-}
-
-function abortDOM(signal) {
-  const e = new DOMException("The operation was aborted", "AbortError")
-  e.reason = signal.reason
-  return e
-}
+import { RETRYABLE_STATUS, MAX_RETRIES } from "./rate.mjs"
+// 2026-09-08 ENG-SESSION-PROVIDER-CLEANUP D2.2/D2.3：parseRetryAfter/sleepInterruptible
+// 去重为单实现——errors.mjs/core.mjs 保留，本模块单向导入（无循环依赖：core 不依赖 retry）。
+import { parseRetryAfter, isNonRetryableError } from "./errors.mjs"
+import { sleepInterruptible } from "./core.mjs"
 
 /**
  * 通用退避重试链。request() 每次尝试建连（返回 Response）；buildMessage(status, text)
@@ -92,8 +54,9 @@ export async function requestWithRetry(request, {
 
     if (response.status === 429) {
       // 计费/配额类 429（余额不足/充值、insufficient_quota 等）不是限流：重试只会干等
-      // 后报泛化错误——与 core.mjs 的 isNonRetryableError 同语义，立即抛错（round3 #4）
-      if (isQuotaExhausted(text)) {
+      // 后报泛化错误——统一走 errors.mjs isNonRetryableError 双判版（文本+JSON err.code
+      // 1113/1114 结构判），立即抛错（round3 #4；2026-09-08 D2.4 去重——单实现）。
+      if (isNonRetryableError(429, text)) {
         onWait?.({ phase: "quota", message: `quota exhausted: ${text.slice(0, 200)}` })
         const e = new Error(message); e.status = 429; throw e
       }

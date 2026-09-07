@@ -2,8 +2,9 @@
  * provider/errors.mjs — 错误分类与流规则编译族（2026-09-05 module-split：core.mjs
  * 557 > 500 硬限——parseRetryAfter/isNonRetryableError/betaBaseURL/compileStreamRules
  * verbatim 迁入，语义零变；core.mjs import 回（chat/listModels 调用点零改）。
- * 注：anthropic/google 通道的 retry.mjs 持 parseRetryAfter 复制（2026-08-31 循环依赖
- * 回避——本文件供 OpenAI 格式 core 路径）。
+ * 注：retry.mjs（anthropic/google/responses 通道）自 2026-09-08 起导入本文件的
+ * parseRetryAfter/isNonRetryableError（ENG-SESSION-PROVIDER-CLEANUP D2.2/D2.4 去重——
+ * 单实现；早先的"循环依赖回避"复制已随依赖方向实测消解）。
  */
 
 import { RETRYABLE_STATUS, RATE_LIMIT_BACKOFF_MS } from "./rate.mjs"

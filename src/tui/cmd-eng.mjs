@@ -1,6 +1,6 @@
 /** /eng command: toggle engineering mode.
  *  Requires METHODOLOGY.md in project root. Offers to create one if missing.
- *  ctx: { agent, pushLine, pushLabel, persistRaw, showPicker } */
+ *  ctx: { agent, pushLine, pushLabel, showPicker } */
 import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -26,7 +26,7 @@ export function writeSessionFile(p, data) {
 }
 
 export async function handleEngCommand(ctx) {
-  const { agent, pushLine, pushLabel, persistRaw, showPicker } = ctx
+  const { agent, pushLine, pushLabel, showPicker } = ctx
   agent.config.agent ??= {}
   const methodologyPath = join(agent.cwd, "METHODOLOGY.md")
 
@@ -63,7 +63,7 @@ export async function handleEngCommand(ctx) {
   // 开工程模式（真实 OFF→ON 转换）→ 清过期 token（有效保留——用户裁定"打开工程
   // 模式时应该清理"——F-R16b ②——与 eng tool enter 同语义）。
   const clearedExpired = agent.config.agent.engineering ? purgeExpiredDesignTokens(agent) : 0
-  await persistEngineering(ctx, agent)
+  await persistEngineering(agent)
   pushLabel("❯ Eng", ansi.bold + C.tool)
   pushLine(`Engineering mode: ${agent.config.agent.engineering ? "ON" : "OFF"} (session)`, C.tool)
   if (agent.config.agent.engineering) {
@@ -75,13 +75,13 @@ export async function handleEngCommand(ctx) {
 }
 
 /**
- * Dual persistence (2026-08-29 — engineering is session-level): write the flipped flag into
- * the CURRENT session slot first (slot authority — shared with VS Code, per-session), then
- * the config.json mirror (CLI visibility/compat; no longer the cross-session source of truth).
+ * Slot-only persistence (2026-09-08 — ENG-SESSION-PROVIDER-CLEANUP D1.1): the flipped flag
+ * goes into the CURRENT session slot only — the slot is the sole authority (shared with
+ * VS Code, per-session; config.json is just the initial default, no mirror write).
  * The in-memory agent.config.agent.engineering (already flipped) stays the live authority for
  * this process; saveSession also round-trips it on every turn-end write.
  */
-async function persistEngineering(ctx, agent) {
+async function persistEngineering(agent) {
   const slot = activeSlot(agent.cwd)
   try {
     const p = slotPath(agent.cwd, slot)
@@ -90,11 +90,5 @@ async function persistEngineering(ctx, agent) {
       data.engineering = agent.config.agent.engineering
       writeSessionFile(p, data)
     }
-  } catch { /* slot missing/unreadable — config mirror still written */ }
-  if (ctx.persistRaw) {
-    await ctx.persistRaw((raw) => {
-      raw.agent ??= {}
-      raw.agent.engineering = agent.config.agent.engineering
-    })
-  }
+  } catch { /* slot missing/unreadable — in-memory flag already flipped; saveSession persists at turn end */ }
 }

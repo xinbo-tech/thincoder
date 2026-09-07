@@ -30,7 +30,8 @@ function abortDOM(signal) {
   return e
 }
 
-async function sleepInterruptible(ms, signal) {
+/** 可中断 sleep（会诊 #5）——retry.mjs 同用（2026-09-08 ENG-SESSION-PROVIDER-CLEANUP D2.3 去重——单实现，retry.mjs 导入）。 */
+export async function sleepInterruptible(ms, signal) {
   if (!signal) return _rateHooks.sleep(ms)
   if (signal.aborted) throw abortDOM(signal)
   return new Promise((resolve, reject) => {
