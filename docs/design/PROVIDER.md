@@ -55,6 +55,12 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`，
 9. 返回结果（§14.3：续写失败注入 `_warnings`，不整轮飞出）。
 
 ## 3. 重试、超时与错误分类
+### 重试辅助函数去重（2026-09-08 ENG-SESSION-PROVIDER-CLEANUP）
+
+- **parseRetryAfter**：唯一实现在 errors.mjs，retry.mjs 导入（删重复实现——原 retry.mjs 复制版逐字节相同）。
+- **sleepInterruptible**：唯一实现在 core.mjs（export），retry.mjs 导入。
+- **429 配额判定**：统一为 errors.mjs `isNonRetryableError`（文本+JSON 双判版），retry.mjs `isQuotaExhausted`（纯正则版）删——规则漂移消（errors 版多 JSON err.code 1113/1114 结构判，retry 版有 "billing/quota exhausted" 字面正则——统一为双判版）。
+- **依赖方向**：errors.mjs 和 retry.mjs 都独立（互不依赖，均 import rate.mjs），core.mjs 依赖 errors.mjs——无循环依赖（retry.mjs 注释说的"循环依赖回避"是历史遗留，现已无循环——单向导入）。
 
 **重试常量**（rate.mjs / core.mjs）：`MAX_RETRIES = 3`；`RATE_LIMIT_BACKOFF_MS = [15_000, 30_000, 60_000]`；`RETRYABLE_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}`。
 
