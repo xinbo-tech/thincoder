@@ -106,18 +106,16 @@
 - **格式校验 fail-closed**：`validateDesignToken` = `uuid:expiresAt` 恰好 2 段 + 数值
   时间未过期；**存量旧 3 段（含 HMAC）token 一次性格式错误失效**，需重新评审；
   畸形/NaN 一律判错（旧 fail-open 后门已封）。
-- **多槽 Map + 单值镜像**：通过后存 `agent._engDesignTokens.set(designId, token)`（多
-  设计并行互不覆盖）+ `agent._engDesignToken` 单值镜像（legacy 布尔门兼容）。复审失败
+- **多槽 Map + 槽文件权威台账（D5 2026-09-08——单值镜像已退役）**：通过后写 `agent._engDesignTokens.set(designId, token)`（多设计并行互不覆盖）+ **settle 当场同步写槽权威台账**（DESIGN-TOKEN-SETTLEMENT.md D1）。复审失败
   不碰任何槽（旧 token 存活至 TTL）；同 scope 复审沿用会话内同 designId
-  （`designIdForScope`——sync/async 同构于 scope 记录）。
+  （`designIdForScope`——sync/async 同构于 scope 记录）。旧 slot 残留单值镜像值由 `setup.mjs` **一次性迁移读**进 Map（legacy 兼容），此后零写。
 - **R16 清理只删过期、三时机**：过期 token（格式有效且 TTL 已过）在
-  (a) restore filter（`setup.mjs`——过期不入 Map/镜像）、(b) `eng(enter)` sweep
+  (a) restore filter（`setup.mjs`——过期不入 Map/槽）、(b) `eng(enter)` sweep
   （`eng.mjs` `sweepExpiredDesignTokens`）、(c) spawn-gate slot 删除
   （`subagent-spawn-gate.mjs` `dropExpiredTokenSlot`）被删；畸形/不匹配只拒不删。
   token **跨模式开关存活**（OFF→ON/OFF 不清有效 token——mode toggle 不烧凭证）。
-- **持久化**：多槽表随 `agentState()`（`engDesignTokens` 键）写槽 + async settle 经
-  `_engPersist` 直写 `setSlotEngDesignTokens`；`setup.mjs` restore filter 按 TTL 过滤读
-  回 → 跨进程（重进/挂起后）TTL 内恢复。
+- **持久化**：多槽表随 `agentState()`（`engDesignTokens` 键）写槽 + async settle **当场同步 await 写槽**（D1——失败即 settle 失败，不 fire-and-forget）；`setup.mjs` restore filter 按 TTL 过滤读
+  回 → 跨进程（重进/挂起后）TTL 内恢复。**会话内回合从槽新读 engState**（D3——弃入场快照）；spawn 门禁 miss 时回读槽 reconcile（D4）。
 
 ## 5. eng-coder spawn 门禁 + 链终消费
 
@@ -134,7 +132,7 @@
   `Engineering mode: use role='eng-coder' for implementation tasks.`
 - **链终消费（2026-09-07）**：`subagent action:'consume-design'`（`executeConsumeDesign
   Action`，`subagent-spawn-gate.mjs`）——父侧验收核销时显式调用，消费该 designId 槽 +
-  镜像同步（mirror ∈ live slots 不变量）；消费后再 spawn 同 designId = 机械拒；幂等
+  镜像同步（mirror ∈ live slots 不变量已随 D5 退役——单值镜像删除，槽为唯一权威）；消费后再 spawn 同 designId = 机械拒；幂等
   （未知/已消费 = no-op 提示）。修正轮复用同槽（docs FIRST——落档再 spawn）；链未闭
   合（stalled/L2 非 clean/fix round 在途）不消费。
 
@@ -145,7 +143,7 @@
 - **eng-coder child 门禁**：`agent._role === "eng-coder" && engineering &&
   !agent._engDesignReviewed && FILE_MUTATORS` → 拦，文案：
   `Error: engineering design gate — call advisor with type='design' to review the design document before any file modification. If the review found issues, report them to the parent agent.`
-- **父代理门禁**：`engineering && depth === 0 && !agent._engDesignToken &&
+- **父代理门禁**：`engineering && depth === 0 && !agentHasLiveEngSlot(agent) &&
   FILE_MUTATORS` → 用 `tool.touchedPaths` 收集路径，任一触碰代码
   （`/^src[\\/]/` 或 `!isDocFile(p)`——未知/缺路径保守视为代码）→ 拦，文案：
   `Error: engineering design gate — write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.`

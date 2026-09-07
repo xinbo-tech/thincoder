@@ -1,6 +1,6 @@
 # async 设计评审 token 结算根治（VSC 端）
 
-> 板块：设计评审凭证结算（async settlement）。状态：**设计（待评审）**——2026-09-08 用户裁定：不再打补丁，按合理结构根治 + 废旧单值镜像 + 双端一起做（CLI/VSC 各自独立文档，同机制语义）。
+> 板块：设计评审凭证结算（async settlement）。状态：**已批准 + 已实现**（2026-09-08 eng-coder clean 交付——D1-D5 全落地 + eng-settlement.test.mjs 11 用例 npm test 26/0）。用户裁定：不再打补丁，按合理结构根治 + 废旧单值镜像 + 双端一起做（CLI/VSC 各自独立文档，同机制语义）。
 > 背景：VSC 端 async 设计评审通过后 token/designId 反复丢失（`designId not found`）——explore 一手核实（2026-09-08）定位根因在 VSC extension 层双源设计。
 
 ## 1. 问题与根因（explore 一手核实）
