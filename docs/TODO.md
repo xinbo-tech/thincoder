@@ -85,7 +85,7 @@
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
 
 ## 其他在途/待核销（勾销即移出本节）
-- [ ] **VS 端面板两缺陷**：① webview 冻结门丢失 ② 扩展端 id 计数器跨 resume 丢失——诊断确认 ②——修复 A/B 待批
+- [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
 - [ ] **链终 token 消费待执行**：consume-design 各已核销 designId（验收核销已完成，消费为收尾动作——重启后执行）
 - [ ] **TUI 开放项**：① picker item.note 渲染丢弃 ② question/wizard 并行 UI 统一——架构决策待定（TUI.md §11 承载）
 - [ ] **平台缺口：async advisor digest token 未注册父会话 approved slots**——解法待定（digest 注册 vs spawn 接受 digest 文本）——与 token 结算根治关联
