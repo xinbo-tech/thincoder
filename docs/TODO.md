@@ -137,7 +137,7 @@
 - [ ] **R14 子代理槽位按角色分池 + 可配置**（① eng-coder/explore 槽分开 ② 槽位数可配置，默认 eng-coder 四路 + 其他四路）——**与 R13 合批（D-24a）**——已批准——**在途**（CLI 面 A #9）——交付后勾销
 - [ ] **R16 token 生命周期语义修订**（用户裁定：ON→OFF 不清 / OFF→ON 上次评审不重复；TTL 到期+重启/开模式时清理过期）——需求已登记（ENG-TOKEN-BINDING §5）——**待设计**
 - [ ] **env-state 补当前会话 slot**（2026-09-08 用户需求点——agent 不知道当前会话的 slot，环境感知要补上）——SESSION §11 env-state 行（现 env/mode/model/resumed）补 `slot: {N}` 字段，agent 自知当前会话槽号（诊断/跨会话/多实例协作语境需要）——板块 SESSION §11（双端：CLI setup-reminders + VS Code）——登记于 SESSION.md §11 未决，设计启动权在用户
-- [ ] **async 评审凭证结算根治（2026-09-08 用户裁定落地——不再打补丁，按合理结构重构）**：designToken/designId 结算从"写评审运行时 agent 内存槽"改为"会话槽文件 designId 键控持久台账 + settle 同步直写 + 门禁读时合并 + 弃单值镜像"（会诊 4 模型收敛方案——STRUCTURE-DEBT 批 E 方向）——板块 SESSION/ENGINEERING-MODE 横切——已 explore 一手诊断 + consult 会诊，设计待写
+- [ ] **async 评审凭证结算根治（2026-09-08 用户裁定落地——不再打补丁，按合理结构重构；VSC 优先——用户确认复发在 VSC）**：designToken/designId 结算从"写评审运行时 agent 内存槽"改为**会话槽文件 designId 键控持久台账 + settle 同步直写 + 门禁读槽**（会诊 4 模型收敛）；**VSC explore 一手核实新增根因——②b 写侧清零：会话内 digest/用户回合 onComplete 用空态 agentState 键存在性覆盖，把 settle 刚落盘的 token 钉 null（settle→digest 时序必杀）+ ②挂起会话 engState 入场快照永不刷新 + ③F2g fire-and-forget 不 await**——核心病根全在 VSC extension 层（panel-session/panel-callbacks/suspension/advisor-async），非 agent 结算机制——板块 VSC（thincoder-vscode）——设计待写（双修：写侧不覆盖 settle 已落盘 token + 读侧会话内回合从槽新读）
 
 ## 会话/存储/恢复后续
 
