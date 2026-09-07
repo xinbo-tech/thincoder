@@ -77,10 +77,13 @@ edit 加**显式命名删行形态**：`{path, startLine: N, endLine: M}` / `{pa
 - **VSC 现状差异要修**：现 edit-line-params.mjs 空 new_string = `[]` = 删行（edit-line-params.mjs:78 + 描述 :82 "empty new_string deletes them"）——**改为显式删行形态**（省略 new_string 才删；给空串但给了 new_string 键 → 语义统一——见裁定）。VSC 内部两形态矛盾（内容形态拒空串/行号形态空串删行）由此消除。
 - **schema**：行号形态 new_string optional；批量条目（8.4 补行号后）同。
 - **返回**：`Deleted lines N-M of <path>` / `Deleted line N of <path>`。
+- **空串 vs 省略矩阵（评审 #1 采纳——显式裁定，同 CLI）**：行号形态省略 new_string = 删（有界意图）；行号形态**显式空串 `""` = 显式错误**（防误删——与内容形态拒空串一致；提示"省略 new_string 以删行"）；现 edit-line-params.mjs 空串=`[]`=删的语义废除（:78）——仅省略才删。
+- **批量条目删行**（评审 #4 界定——8.4 补行号后）：条目含行号 + 省略 new_string = 删行（同顶层）；required 放宽同。
+- **测试**：删单行/删范围/显式空串拒/批量条目删行/越界。
 
 ### 8.2 normalize 统一（裁定——同 CLI 5 条基准）
 
-CLI/VSC normalize 统一一实现。统一基准：trim + 去行尾空白 / tab→2 空格 / ASCII 单→双引号 / 弯引号反引号→直引号 / **移除 VSC 行内 `\s+` 折叠**（评估修正——折叠吞缩进/对齐可能误匹配结构不同行）。
+CLI/VSC normalize 统一一实现。统一基准：trim + 去行尾空白 / tab→2 空格 / ASCII 单→双引号 / **弯引号反引号→直双引号 `"`（评审 #2 定稿：`‘’`/`“”`/反引号单遍映射到 `"`——与 ASCII 单→双合并为单遍逐字符映射，无顺序依赖——防两端分叉）** / **移除 VSC 行内 `\s+` 折叠**（评估修正——折叠吞缩进/对齐可能误匹配结构不同行）。
 
 - 实现：VSC normalizeLineFuzzy（edit-fuzzy-match.mjs）改同 CLI 基准（移除折叠、补 tab→2 空格）；CLI normalizeEditLine 补弯引号归一。两端逐字同算法。
 - 测试：弯引号差异行两端同命中 / 结构不同文字相似行两端同不命中。
