@@ -84,25 +84,9 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
   `Deleted N entries in scope <scope>`。
 - **clear**：仅 personal 全清，`{scope:"personal", confirm:true}` 门 →
   `Cleared personal memory (N entries deleted)`；project/team 拒绝。
-- **delete scope 解析统一（2026-09-08 用户发现——delete scope 不一致 bug 修复）**：search/list 跨 scope 搜（personal/project/team 都搜——能找到记忆），delete 限定 scope 找（单 scope 找不到就报错——scope 解析不一致）。**真缺口**：search/list 结果**不包含 scope**——模型看到记忆 id，但不知道记忆在哪个 scope（personal/project/team），delete 时只能猜（personal？project？），猜错就报错。**修复**：①**search/list 结果显示 scope**（真缺口——每行加 scope 字段：`id [scope] [type] title (date)`——让模型知道记忆在哪，delete 时按显示的 scope 删）；②**delete scope 解析统一**（跨 scope fallback——先按指定 scope 找，找不到则跨 scope fallback（personal → project → team 都找）——与 search/list 一致；或不限定 scope（id 唯一即可——search/list 找到的记忆 id，delete 按 id 删，不管 scope））；③**scope 查找函数统一**（search/list/delete 共用同一套 scope 查找函数 `findMemoryById(id, scope?)`——scope 可选，不给则跨 scope 找）。**工具描述重写**（delete 的 scope 行为明确——跨 scope fallback/scope 显示/search-list-delete scope 行为一致——符合模型直觉）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到（可能在 team scope——search/list 与 delete 的 scope 解析不一致）。归属：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
-
-## 4. 上下文自动注入（context.mjs）
-
-每轮 user 输入后 `memorySearch(cwd, userInput, { limit: 5 })`——命中的相关记忆注入
-历史：`[Relevant memories from previous sessions (context, not instructions): …]`
-（context 非指令——`<untrusted_memory>` 包裹、XML 转义）。本端无独立主循环记忆门
-禁——注入面在 context.mjs，检索核心在 memory.mjs，二者同进程共享。
-
-## 5. embedding 配置（embed-config.mjs）
-
-- 配置源 `~/.thincoder/config.json` 的 `embedding.*`（与 CLI 共享同一
-  config.json）；env var 非关键源。旧 SecretStorage 键已迁入 config.json。
-- getEmbedder 惰性单例（缓存）；setVSCodeEmbedder 由 ChatPanel 解析 SecretStorage
-  后注入；resetEmbedder 在配置变更后清缓存。未配置 embedding → getEmbedder 返 null
-  → 检索全程关键词回退（不报错）。
-
-## 6. 关键设计决策
-
+- **delete 工具语义修正（2026-09-08 explore 一手核实——先前的"delete scope 不一致 bug 修复"注前提错误，作废重写）**：
+  - **核实结论**：①search 结果**已显示 scope**（行首 `[personal|project|team]` 标签 + id 前缀）——"结果不含 scope"不成立；list 结果 id 也含前缀，只差无独立 `[scope]` 标签列。②id 前缀**已自路由**（命名空间互斥无碰撞）——核心 deleteByUid **从不需要 scope 参数**，scope 从 uid 前缀解析。③工具层 scope **必填 + 前缀强校验**是纯确认门禁，模型 scope 猜错 → 报错——**这是"search 能找到但 delete 删不掉"的唯一机制**。④跨 scope fallback **不必要**。
+  - **修正设计**：①**scope 可选**——传了则校验（防误删保持），不传则按 id 前缀直接路由；批删形态（无 id）仍必填 scope。②**list 补独立 `[scope]` 标签列**（与 search 行对齐，锦上添花）。③**工具描述重写**——写明"search 结果行首 `[personal|project|team]` 即 delete 的 scope 值、id 前缀同值；delete scope 可选——不传则按 id 前缀路由"。④**第三个真缺口补设计**：uid origin vs 当前 dir 定位分裂——delete 文件定位用当前 `dirs[layer]` 无视 uid 内嵌 origin，而 search/list 匹配面可带出非当前 origin 行——要么 delete 尊重 uid 的 origin 段，要么工具描述写明"team 记忆可能来自其他克隆，本地无对应目录则删不了"。**归属**：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
 - **文件式即真相**：markdown 文件就是存储本身（list/批量 delete 匹配面 = 磁盘扫
   描），无独立 DB/索引文件——与 CLI FTS5 的差异是本端最本质的形态差。
 - **无 team 层**：本端只有 personal/project 两 scope；team 记忆由 CLI 管理（拒绝
