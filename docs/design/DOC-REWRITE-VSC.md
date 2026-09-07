@@ -11,8 +11,6 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 
 ## 2. 处置分类（用户裁定 2026-09-08）
 
-- **归档 `_archive/`**（用户裁定①同意）：Settings 历史 6 件 + COVERAGE-GAPS/SLEEP-REMOVAL 对（CLI 端同源已归档，对齐）：
-  `SETTINGS-PANEL.md`/`SETTINGS-PANEL-2.md`/`SETTINGS-PANEL-PROXY-ROW.md`/`SETTINGS-REORG.md`/`SETTINGS-SUBMODEL-SHELL.md`/`MODEL-PICKER-UNIFY.md` + `COVERAGE-GAPS-{REQUIREMENTS,TUNING}.md` + `SLEEP-REMOVAL-{REQUIREMENTS,TUNING}.md` = **10 文件**。
 - **归档 `_archive/`**（用户裁定①同意 + 评审 #1 补 webview-input-lag）：Settings 历史 6 件 + COVERAGE-GAPS/SLEEP-REMOVAL 对（CLI 同源已归档对齐）+ `webview-input-lag.md`（纯历史修复记录，已实施）：
   `SETTINGS-PANEL.md`/`SETTINGS-PANEL-2.md`/`SETTINGS-PANEL-PROXY-ROW.md`/`SETTINGS-REORG.md`/`SETTINGS-SUBMODEL-SHELL.md`/`MODEL-PICKER-UNIFY.md` + `COVERAGE-GAPS-{REQUIREMENTS,TUNING}.md` + `SLEEP-REMOVAL-{REQUIREMENTS,TUNING}.md` + `webview-input-lag.md` = **11 文件**。
 - **保留 + 重写为可读**（用户裁定②）：`CONSULTATION.md`/`ESCALATE.md`（镜像 CLI——作为已完成专题记录保留重写，不归档；现行机制在 ARCHITECTURE）——**含漂移更新**（从头注 as-of 快照改为现行 ARCHITECTURE 机制状态）。
@@ -22,7 +20,7 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 
 1. **移植判据脚本** `scripts/check-doc-width.mjs` 从 CLI 仓复制进 VSC 仓（含 `_archive/` 豁免逻辑）——VSC 现无此脚本，验收依赖它。
 2. **建立 `docs/design/_archive/`** 目录 + 登记豁免（CLI 同款）。
-3. 归档 10 件物理移入 `_archive/`（git mv）+ VSC README 地图登记归档路径。
+3. 归档 11 件物理移入 `_archive/`（git mv）+ VSC README 地图登记归档路径。
 
 ## 4. 重写批次与文件域（eng-coder 分派依据——一次全 spawn，调度器自排队 ≤4 并发）
 
@@ -40,7 +38,7 @@ VSC 端 `thincoder-vscode/docs/` 有 ~30 份设计文档坏格式——与 CLI �
 | V4a | `docs/COMPETITIVE_ANALYSIS.md` | 表单行 | 1 | 活增量文档 |
 | V5 | `docs/TODO.md` | 行1 巨型 | 1 | 活 backlog（同 CLI TODO 整理法） |
 
-**归档动作**（§3 前置，非 eng-coder 重写）——架构师 git mv 10 件 + 脚本移植 + README 登记。
+**归档动作**（§3 前置，非 eng-coder 重写）——架构师 git mv 11 件 + 脚本移植 + README 登记。
 
 ## 5. ARCHITECTURE.md 特殊拆法（152KB 最重——不可整文件一次重写；两阶段，非并行同文件）
 
