@@ -92,7 +92,8 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
   - **修正设计**：
     ①**layer 可选**（裁定统一成 layer）——传了则校验（防误删保持），**不传则按 id 前缀直接路由**（与 search/list 找到的 id 直接对接）；批删形态（无 id）仍必填 layer（参数改名）。
     ②**list 补独立 `[layer]` 标签列**（与 search 行对齐，成本低）。
-    ③**第三个真缺口补设计**：uid origin vs 当前 dir 定位分裂——delete 文件定位用当前 `dirs[layer]` 无视 uid 内嵌 origin，而 search/list 匹配面可带出非当前 origin 行——要么 delete 尊重 uid 的 origin 段，要么工具描述写明"team 记忆可能来自其他克隆，本地无对应目录则删不了"。
+    ③**第三个真缺口补设计（评审 #2 采纳——定 delete 尊重 uid origin 段）**：delete 文件定位改尊重 uid 内嵌 origin（非当前 dirs[layer]）——否则 search 带出的非当前 origin 行"能看到但碰不到"（违背"id 直接可删"承诺）。落点：deleteByUid 按 uid origin 解析（dirs[layer] 兜底——本地无对应目录 → ENOENT 容错 + syncDir 清索引）。
+  - **输出/错误串同步（评审 #1 采纳——scope→layer 延伸至模型可见输出）**：输出契约 + 错误串的 `scope` 词同步改 `layer`（`Deleted N entries in layer X`/`与 layer project 不匹配`/`not found in layer <layer>`）+ byte 断言测试同步——模型看到的所有文本全是 layer 无 scope 残留；CLI 人类命令面 --scope 随动改 --layer；§6 残留 scope 描述批准后同步更新。
   - **工具描述具体化（2026-09-08 用户要求——工具描述是模型唯一看到的，须完善）**：工具层 scope 参数全改名 layer（search/put/list/delete/clear 的 args.scope → args.layer + schema scope 字段 → layer + 描述内 scope 词 → layer——用户裁定统一成 layer）。重写后描述要点：
     - **search/list**："layer 可选（personal/project/team——缺省搜全部层）；结果每行含 `[layer]` 标签 + id（id 前缀即 layer）"
     - **delete**："单删 {id, layer}——**layer 可选**：传了则校验（id 前缀须与 layer 匹配防误删），不传则按 id 前缀直接路由；批删（无 id）必填 layer + type/keyword + confirm:true"
