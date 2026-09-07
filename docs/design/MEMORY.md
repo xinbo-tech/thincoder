@@ -84,6 +84,7 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
   `Deleted N entries in scope <scope>`。
 - **clear**：仅 personal 全清，`{scope:"personal", confirm:true}` 门 →
   `Cleared personal memory (N entries deleted)`；project/team 拒绝。
+- **delete scope 解析统一（2026-09-08 用户发现——delete scope 不一致 bug 修复）**：search/list 跨 scope 搜（personal/project/team 都搜——能找到记忆），delete 限定 scope 找（单 scope 找不到就报错——scope 解析不一致）。**真缺口**：search/list 结果**不包含 scope**——模型看到记忆 id，但不知道记忆在哪个 scope（personal/project/team），delete 时只能猜（personal？project？），猜错就报错。**修复**：①**search/list 结果显示 scope**（真缺口——每行加 scope 字段：`id [scope] [type] title (date)`——让模型知道记忆在哪，delete 时按显示的 scope 删）；②**delete scope 解析统一**（跨 scope fallback——先按指定 scope 找，找不到则跨 scope fallback（personal → project → team 都找）——与 search/list 一致；或不限定 scope（id 唯一即可——search/list 找到的记忆 id，delete 按 id 删，不管 scope））；③**scope 查找函数统一**（search/list/delete 共用同一套 scope 查找函数 `findMemoryById(id, scope?)`——scope 可选，不给则跨 scope 找）。**工具描述重写**（delete 的 scope 行为明确——跨 scope fallback/scope 显示/search-list-delete scope 行为一致——符合模型直觉）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到（可能在 team scope——search/list 与 delete 的 scope 解析不一致）。归属：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
 
 ## 4. 上下文自动注入（context.mjs）
 
