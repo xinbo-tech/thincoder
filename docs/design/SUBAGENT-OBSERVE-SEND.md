@@ -10,7 +10,7 @@
 给父 agent 对运行中异步子代理的**运行时观测与轻量引导**——治"父看不到中间瞎猜 + 无法中途引导"，不改变子代理隔离模型。
 
 ### 功能性需求
-- **F1（observe）**：父 agent 按 id 查 running 异步子代理的 recent-activity 快照（最近 N 条回合摘要 + 当前工具 + turn/touched），判断是否推进 vs 卡死。
+- **F1（observe）**：父 agent 按 id 查 running 异步子代理的 recent-activity 快照（最近 **5 条**回合摘要 + 当前工具 + turn/touched），判断是否推进 vs 卡死。
 - **F2（send）**：父 agent 向 running 异步子代理发消息，子代理下回合边界作普通 user 输入消费——给纠结/跑偏的子代理引导方向。
 - **边界**：只对异步池中未 settle 子代理；sync/已 settle/cancel 不可 send；observe 可查 running/queued/done。注入 = 普通用户回合，不等同偏离豁免，子内部收敛纪律不变。
 
@@ -60,6 +60,9 @@ AC1 = observe 对 running 异步子代理返回最近 N 条回合摘要+当前�
 | 正常 observe | running async 上查 id | 摘要+当前工具+turn/touched | AC1 |
 | 正常 send | running async 上 send | 入队确认；子下回合收到并响应 | AC2 |
 | 边界 observe done/queued | settled/queued 查 | 可查（done 终报/queued 占位） | AC1 |
+| 边界 父非回合中调 observe/send | 父空闲等子（非回合内） | 不可达/明确行为（父回合外无法执行工具） | N1 |
+| 凭证纪律 | send 触达子代理全程 | 不读写 token/designId（DESIGN-TOKEN-SETTLEMENT 语义保持） | AC4/N3 |
+| 双端一致 | CLI/VSC 对照 | 同机制语义各自实现，契约措辞单源 | AC5/N4 |
 | 边界 send settled/cancel | settled send | 明确错误 | AC3 |
 | 边界 send sync | sync send | 明确错误 | AC3 |
 | 错误 send 未知 id | 不存在 | 明确错误 | AC3 |
