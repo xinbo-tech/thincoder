@@ -31,7 +31,7 @@
 | 子代理观测/注入 | `SUBAGENT-OBSERVE-SEND.md` | 父侧 observe(查进度)+send(注入引导) 运行中子代理；VSC 同名对应——同机制各自独立 |
 | async 结果容器统一 | `ASYNC-RESULT-CONTAINER.md` | settle 共享 helper/pending 单容器+role/池 accessor/buildChildSignal；VSC 同名对应——同机制各自独立 |
 | eng 会话态/provider 清理 | `ENG-SESSION-PROVIDER-CLEANUP.md` | Top-8 #5/#6/#8 攒批——eng 会话态统一（双归属/死代码/命名漂移）+ provider 防御三件套去重；两实现线文件零冲突可并行 |
-| edit 工具改进 | `EDIT-TOOL-IMPROVEMENT.md` | 按行号改+模糊匹配+替换即删（符合模型直觉）；VSC 同名对应——同机制各自独立 |
+| 编辑工具（板块） | `EDIT.md`、`HASHLINE-EDIT.md`、`INSERT-AFTER.md`、`APPLY-PATCH.md`、`WRITE.md` + `EDIT-HELPERS.md`（共享 helper） | 每工具一档（2026-09-08 重组——TOOLS.md §6 退地图）。edit：按行号改+模糊匹配+替换即删；原 EDIT-TOOL-IMPROVEMENT/EOL-REQUIREMENTS/EOL-DESIGN 已并档归档。VSC 同名对应——同机制各自独立 |
 | memory 工具完善 | `MEMORY.md` §6.2（delete 工具语义修正/layer 统一段——2026-09-08 并入所属板块文档，原 MEMORY-TOOL-SCOPE-FIX.md 作废删除） | scope 参数改名 layer + delete layer 可选 + 工具描述重写；VSC 同名对应——同机制各自独立 |
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md）已移 `_archive/` |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
@@ -39,7 +39,6 @@
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志 |
-| 编辑工具可靠性 | `EDIT-TOOL-EOL-REQUIREMENTS.md`、`EDIT-TOOL-EOL-DESIGN.md` | 编辑工具行尾语义 |
 | TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md` 同板块独立保留 |
 | 记忆 | `MEMORY.md` | |
 | Provider | `PROVIDER.md` | |
