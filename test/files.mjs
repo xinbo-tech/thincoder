@@ -14,6 +14,7 @@ export default [
   "test/chat-panel.test.mjs",
   "test/edit-eol.test.mjs",
   "test/edit-semantics.test.mjs",
+  "test/eng-settlement.test.mjs",
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",
 ]

@@ -179,18 +179,18 @@ async function runPanelChatImpl(panel, opts = {}) {
   // Restore the session-scoped design token AND the session-level mode flags: engineering
   // and advisor.guard are SLOT-authoritative (2026-08-29 refactor) — config.json is only a
   // CLI-compat mirror and the setup fallback. `null` = the session never set the flag,
-  // setup falls back to config (legacy slots). Suspension turns reuse the session's capture
-  // (the session was entered from this slot; switching is blocked while it is active).
-  if (!susp) {
-    const sessionData = panel._activeData(turnSlot) ?? {}
-    engState = {
-      enabled: sessionData.engineering ?? null,
-      advisorGuard: sessionData.advisor?.guard ?? null,
-      engDesignToken: sessionData.engDesignToken ?? null,
-      engDesignTokens: sessionData.engDesignTokens ?? null,
-    }
-  } else {
-    engState = susp.engState
+  // setup falls back to config (legacy slots).
+  // DESIGN-TOKEN-SETTLEMENT D3 (2026-09-08): 会话内回合（digest/挂起用户回合）也从槽新读
+  // engState（不再复用入场快照 susp.engState）——async settle（D1）把 token 同步落盘后，
+  // digest 从槽读到刚落盘的 token → spawn 不再 designId not found。会话绑定 turnSlot 固定、
+  // 切换被禁，重读安全。engDesignToken 字段读取仅保留作 setup 一次性迁移读（legacy 会话——
+  // 镜像字段已退役 D5，不再写）。
+  const sessionData = panel._activeData(turnSlot) ?? {}
+  engState = {
+    enabled: sessionData.engineering ?? null,
+    advisorGuard: sessionData.advisor?.guard ?? null,
+    engDesignToken: sessionData.engDesignToken ?? null,
+    engDesignTokens: sessionData.engDesignTokens ?? null,
   }
 
   // Persist model selection
@@ -287,7 +287,8 @@ async function runPanelChatImpl(panel, opts = {}) {
         // 回合的 history=undefined（onComplete 落盘崩 + run-start pending 注入不消费 →
         // digest 死循环；T-S18 全路径回归实证，2026-09-02 偏差修复轮补正）。
         lines: { history, fullHistory, contextHistory: history },
-        engState,
+        // D3 (2026-09-08): 不再把入场 engState 快照传入挂起会话——会话内回合每轮从槽新读
+        //（settle 落盘后 digest 可见）。suspension.mjs 不再存 susp.engState。
         cwd,
         runTurn,
         pendingInput: queued,

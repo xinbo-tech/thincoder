@@ -9,7 +9,7 @@
  * - settle 记账（探索结论③ + 修正 #2/#4——settle 时执行）：① 陈旧判定（launch 后 FILE
  *   MUTATORS——code 评审任意文件面 / design 评审按对象文档面）→ 不置 _calledAdvisorThisRun、
  *   设计评审不签发 token（guard 仍推回——防静默漏审）；② 通过 → token 入槽
- *   _engDesignTokens.set(designId, token) + 单槽镜像（_engPersist 存在时同步 slot 落盘）；
+ *   _engDesignTokens.set(designId, token) + 当场同步落盘 slot 权威台账（D1——无镜像，D5）；
  *   ③ 轮次按 review 实例记（history._advisorRuns——cap 随实例——每评审 ≤5 轮——修正 #4，
  *   第 6 次启动拒）；④ guard 推回判定 = 无未决 + 无陈旧标记才算未评审（run-stages 消费
  *   advisorReviewInFlight）。
@@ -29,6 +29,7 @@ import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripAp
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
+import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 
 /** §24 D-24b（②-6a）：并行评审上限 2——超限拒（不排队——评审间有依赖语义——修正轮依赖
  *  前轮处置——排队无意义）。 */
@@ -240,7 +241,7 @@ function designReviewPassed(entry, result) {
 /**
  * §24 D-24b settle（记账点——修正 #2/#4——在 pending 移交/消化注入之前执行）：
  * ① 陈旧判定（advisorStale）→ 不置 _calledAdvisorThisRun、设计不签发 token（guard 仍推回）；
- * ② 非陈旧 + 设计通过 → token 入槽（designId 键 + 单槽镜像 + _engPersist slot 落盘）；
+ * ② 非陈旧 + 设计通过 → token 入槽（designId 键 + D1 同步落盘权威 slot——镜像已退役 D5）；
  *   非陈旧任意完成 → _calledAdvisorThisRun = true（sync 路径 execute 后记账的镜像）；
  * ③ 实例轮次/prior/stale 落 _advisorRuns 记录（cap 已由 launch 侧按实例拒）；
  * ④ §29 fix B——分支输出形态写回 entry.report（digest 注入点原样进 digest）：通过 =
@@ -282,26 +283,40 @@ export function settleAdvisorReview(parent, entry, result, error, notifySettle) 
     // ── settle 记账（①②③）──
     const stale = advisorStale(parent, entry)
     let passed = false
+    let issued = false // 持久化成功才算"签发"（D1：写失败即 settle 失败）
     if (!stale) {
       passed = entry.reviewType === "design" && designReviewPassed(entry, result)
       if (passed) {
-        parent._engDesignTokens ??= new Map()
-        parent._engDesignTokens.set(entry.designId, entry.designToken)
-        parent._engDesignToken = entry.designToken
-        // F2c（§29.1）：Approved 后缀单一 builder（id 回显 + 省略指引 + 槽数时点注记——
-        // 与 sync 同源）；F2e 的 prior 存储用同一串精确截断。
-        entry.approvedSuffix = buildApprovedSuffix(entry.designToken, entry.designId, parent._engDesignTokens.size)
-        // _engPersist = 顶层面板会话（eng tool 先例）——token 直接落 slot（跨 run 恢复——
-        // settle 常发生在挂起期——无 onComplete agentState 通道）
+        // D1（DESIGN-TOKEN-SETTLEMENT.md，2026-09-08）：settle 当场同步写槽文件权威台账——
+        // designId 键控持久，token 随会话 slot 跨进程/重启存活。_engPersist = 顶层面板会话
+        // （eng tool 先例）。改同步 setSlotEngDesignTokens（去 F2g fire-and-forget）——**写失败
+        // 即 settle 失败**（可重评，不静默吞错）：不注册 token/Approved 后缀，digest 报未持久化
+        // 并引导重评。用含新 token 的快照先落盘，成功才登记内存槽——失败不产生部分状态。单值
+        // 镜像已随 D5 退役——只写多槽表，不写镜像字段。
         const persist = parent._engPersist
-        if (persist?.cwd && persist?.slot && parent._engDesignTokens.size > 0) {
-          // 动态 import（fire-and-forget）——settle 是同步记账点；slot 写失败非致命
-          // （内存槽仍持态——下个 onComplete agentState 兜底）
-          import("../extension/session-slot-write.mjs").then((m) => {
-            // F2g（§29.1）：镜像与多槽表同写——挂起期 settle 后进程死亡 → resume 不再撞
-            // torn-state guard（镜像缺失 + 槽在 = 拒所有 spawn 的恢复洞）。
-            m.setSlotEngDesignTokens(persist.cwd, persist.slot, Object.fromEntries(parent._engDesignTokens), parent._engDesignToken ?? null)
-          }).catch(() => { /* slot 不可写——内存槽仍持态 */ })
+        let durable = !persist?.cwd || !persist?.slot // 无会话槽绑定 → 仅内存登记（非面板场景）
+        if (!durable) {
+          const snapshot = new Map(parent._engDesignTokens ?? [])
+          snapshot.set(entry.designId, entry.designToken)
+          try {
+            durable = setSlotEngDesignTokens(persist.cwd, persist.slot, Object.fromEntries(snapshot)) === true
+          } catch (e) {
+            durable = false
+            console.error(`[eng-settle] slot persist threw: ${e?.message ?? e}`)
+            logEvent("advisor:error", { id: childLogId, err: `engDesignTokens slot persist threw: ${e?.message ?? String(e)}` })
+          }
+          if (!durable) {
+            console.error(`[eng-settle] slot ${persist.slot} persist failed — design token NOT durably issued; settle failed (re-review)`)
+            logEvent("advisor:error", { id: childLogId, err: "engDesignTokens slot persist failed — settle failed (re-review)" })
+          }
+        }
+        issued = durable
+        if (issued) {
+          parent._engDesignTokens ??= new Map()
+          parent._engDesignTokens.set(entry.designId, entry.designToken)
+          // F2c（§29.1）：Approved 后缀单一 builder（id 回显 + 省略指引 + 槽数时点注记——
+          // 与 sync 同源）；F2e 的 prior 存储用同一串精确截断。
+          entry.approvedSuffix = buildApprovedSuffix(entry.designToken, entry.designId, parent._engDesignTokens.size)
         }
       }
       // 机械失败 settle（run.mjs resolve 失败文本——评审未产出判定）不置 called——CLI
@@ -323,8 +338,12 @@ export function settleAdvisorReview(parent, entry, result, error, notifySettle) 
       if (stale) {
         const stripped = strip(result)
         entry.report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
-      } else if (passed) {
+      } else if (issued) {
         entry.report = `${strip(result)}\n\n${entry.approvedSuffix}`
+      } else if (passed) {
+        // D1: 评审通过但权威台账写失败 = settle 失败（可重评）——不附 Approved 后缀，digest
+        // 明确告知未持久化签发，无 eng-coder spawn 授权。
+        entry.report = `${strip(result)}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评).`
       } else {
         entry.report = strip(result) || "Advisor: design review did not pass."
       }

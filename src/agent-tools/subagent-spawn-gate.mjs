@@ -3,44 +3,75 @@
  * subagent.mjs on 2026-09-06 fix round: that file crossed the >500-line hard cap — the
  * gate family resolveDesignSlot / dropExpiredTokenSlot / authorizeEngCoderDesignToken
  * moved here, bodies verbatim; subagent.mjs re-exports resolveDesignSlot and calls the
- * gate). Design authority: ENG-TOKEN-BINDING-TUNING.md §5.1 (R16) — the CLI counterpart
- * of this code lives in agent-tools/subagent-spawn.mjs; mirror discipline = design doc
- * only, no cross-alignment.
+ * gate). Design authority: ENG-TOKEN-BINDING-TUNING.md §5.1 (R16) + DESIGN-TOKEN-SETTLEMENT.md
+ * (D4/D5 — 2026-09-08) — the CLI counterpart lives in agent-tools/subagent-spawn.mjs;
+ * mirror discipline = design doc only, no cross-alignment.
  */
 import { validateDesignToken, isExpiredDesignToken } from "./advisor.mjs"
+import { setSlotEngDesignTokens, readSlotEngDesignTokens, clearSlotEngDesignToken } from "../extension/session-slot-write.mjs"
+
+/**
+ * DESIGN-TOKEN-SETTLEMENT D4 (2026-09-08): 权威回读 —— 从 _engPersist 绑定的槽文件读权威
+ * 台账 engDesignTokens，只把未过期项 reconcile 进内存 Map（expired 永不授权 —— fail-closed）；
+ * 槽内过期项即从权威台账清理（D2 触发③ TTL 过期清 gate-time）。无 _engPersist（非会话绑定的
+ * 子代理父）→ 内存即唯一真相。单值镜像 `_engDesignToken` 已随 D5 退役 —— 此处只读 engDesignTokens。
+ */
+function authorityTokens(parent) {
+  const p = parent?._engPersist
+  if (!p?.cwd || !p?.slot) return null
+  try { return readSlotEngDesignTokens(p.cwd, p.slot) } catch { return null }
+}
+
+function reconcileFromAuthority(parent) {
+  const slots = parent._engDesignTokens
+  const read = authorityTokens(parent)
+  const obj = read?.engDesignTokens
+  if (!obj || typeof obj !== "object") return slots ?? null
+  const live = new Map()
+  const expiredIds = []
+  for (const [id, tok] of Object.entries(obj)) {
+    if (typeof tok === "string" && !isExpiredDesignToken(tok)) live.set(id, tok)
+    else if (isExpiredDesignToken(tok)) expiredIds.push(id)
+  }
+  if (expiredIds.length > 0) {
+    const p = parent?._engPersist
+    try { setSlotEngDesignTokens(p.cwd, p.slot, Object.fromEntries(live)) } catch { /* 槽清理非致命 */ }
+  }
+  if (live.size === 0) return slots ?? new Map()
+  const merged = slots instanceof Map ? slots : new Map()
+  for (const [id, tok] of live) merged.set(id, tok)
+  parent._engDesignTokens = merged
+  return merged
+}
 
 /**
  * Resolve the design-token slot for an eng-coder spawn (2026-09-01 multi-design, FR3,
  * CLI parity): designId → exact slot; omitted → exactly ONE slot must exist (T16).
  * Format+TTL fail-closed check (uuid:expiresAt — 2026-09-06: HMAC anti-forgery gone)
- * stays in validateDesignToken. Torn state (mirror missing while slots present) must not
- * resurrect via the map alone.
+ * stays in validateDesignToken. D4 (2026-09-08): 内存 Map miss 时回读权威槽文件 reconcile +
+ * 判定（会话内回合/进程重启后也能从槽读到 settle 刚落盘的 token）——不再是"只读当前 run
+ * 内存空快照 → 误拒"。
  */
 export function resolveDesignSlot(parent, designIdArg) {
-  const slots = parent._engDesignTokens
+  let slots = parent._engDesignTokens
   const hasSlots = slots instanceof Map && slots.size > 0
-  const legacy = parent._engDesignToken
-  // F2d（§29.1）：not-found 与多槽歧义两分支错误均附持有 id 列表——持久化恢复后父代理
-  // 无 digest 可查 id——错误列表是唯一发现途径（designId 非凭证——token 才是）。
-  const heldIds = hasSlots ? [...slots.keys()].join(", ") : "(none)"
-  // Torn-state guard (R16 — 2026-09-06): mode toggles no longer clear the mirror, so
-  // this fires only on abnormal slot shapes (mirror missing while slots remain — e.g. a
-  // slot carrying engDesignTokens without its mirror). Refuse rather than resurrect via
-  // the map alone — re-review is the safe recovery.
-  if (!legacy && hasSlots) {
-    throw new Error("Design tokens were reset (the single-token mirror is missing while approved-design slots are present — torn session state) — run advisor with type='design' again and spawn with the fresh designId+token pair.")
+  // 内存 miss（指定 designId 不在 或 空 Map）→ 权威回读 reconcile（D4）
+  if (designIdArg ? !(hasSlots && slots.has(designIdArg)) : !hasSlots) {
+    const rec = reconcileFromAuthority(parent)
+    if (rec && rec !== slots) slots = rec
   }
+  const size = slots instanceof Map ? slots.size : 0
+  const heldIds = size > 0 ? [...slots.keys()].join(", ") : "(none)"
   if (designIdArg) {
-    if (!hasSlots || !slots.has(designIdArg)) {
-      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${hasSlots ? slots.size : 0} approved design slot(s); held design ids: ${heldIds})`)
+    if (!(slots instanceof Map) || !slots.has(designIdArg)) {
+      throw new Error(`designId not found — no approved design review holds this id. Run advisor with type='design' again and pass the designId echoed with the token. (session holds ${size} approved design slot(s); held design ids: ${heldIds})`)
     }
     return { token: slots.get(designIdArg) }
   }
-  if (hasSlots && slots.size > 1) {
-    throw new Error(`Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to. Held design ids: ${heldIds}`)
+  if (size > 1) {
+    throw new Error(`Multiple approved designs in this session (${size}) — pass the designId parameter (echoed with each token) to choose which design this eng-coder spawn belongs to. Held design ids: ${heldIds}`)
   }
-  if (hasSlots && slots.size === 1) return { token: [...slots.values()][0] }
-  if (legacy) return { token: legacy } // single-slot mirror fallback (pre-multi-slot sessions)
+  if (size === 1) return { token: [...slots.values()][0] }
   throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")
 }
 
@@ -49,8 +80,8 @@ export function resolveDesignSlot(parent, designIdArg) {
  * EXPIRED token's designId slot so long-running sessions purge dead slots at the spawn
  * gate. Only expiry deletions land here — the caller invokes this solely when the presented
  * token EQUALS the slot token AND classifies as format-valid-expired (mismatch/malformed
- * reject without deletion). The single mirror is synced when it pointed at the removed
- * token (keeps the mirror ⊆ slots invariant the resolver relies on).
+ * reject without deletion). D5 (2026-09-08): 单值镜像已退役 —— 无镜像同步；同删权威槽
+ * （D2 触发③）。
  */
 function dropExpiredTokenSlot(parent, designId) {
   const slots = parent._engDesignTokens
@@ -59,15 +90,9 @@ function dropExpiredTokenSlot(parent, designId) {
     ? designId
     : (!designId && slots.size === 1 ? [...slots.keys()][0] : null)
   if (key === null) return
-  const removed = slots.get(key)
   slots.delete(key)
-  if (parent._engDesignToken === removed) {
-    // 单槽镜像同步（D-R16c ③）: keep the mirror ∈ live-slots invariant. Repoint to a
-    // surviving slot when siblings remain — nulling it here would leave mirror-null +
-    // slots-present, which resolveDesignSlot's torn-state guard treats as reset state and
-    // refuses (killing the sibling spawns). Null only when nothing remains.
-    parent._engDesignToken = slots.size > 0 ? [...slots.values()][0] : null
-  }
+  const p = parent?._engPersist
+  if (p?.cwd && p?.slot) { try { clearSlotEngDesignToken(p.cwd, p.slot, key) } catch { /* 幂等清理 */ } }
 }
 
 /**
@@ -94,14 +119,13 @@ export function authorizeEngCoderDesignToken(parent, designId, designToken) {
 /**
  * consume-design 动作执行器（2026-09-07 token 链终消费制——ENGINEERING-MODE.md §2.6 F1
  * ——CLI 同构面；CLI 执行器在 agent-tools/subagent-spawn.mjs，本端 slot 族居所 =
- * 本文件）。父侧验收核销时显式调用——读槽值 → 移除该 designId 槽 + 镜像同步（VS 不变
- * 量：mirror ∈ live slots——指向被消费 token 时剩槽重指、无槽置 null——torn-state
- * guard 依赖）；消费后同 designId 再 spawn = resolveDesignSlot not found 机械拒。调用
- * 形态定死（评审 #3）：参数 designId（单设计会话可省略——FR3 spawn 同款语义）；未知
- * designId 与重复消费同款 no-op 提示（幂等——不报错）。dispatch 分类（评审 #7d）：
- * 非只读控制动作——depth-0 + 工程模式限定（受限变体门在 subagent.mjs；本器自持工程
- * 模式门）——planMode 拒绝（execute-tools 不豁免）——不入批审批分组（execute-tools
- * 免审直行——无文件写）。
+ * 本文件）。父侧验收核销时显式调用——读槽值 → 移除该 designId 槽 + 清权威台账（D2 触发①：
+ * consume-design 后显式 delete 该槽——不再依赖 agentState 空态回写，见 DESIGN-TOKEN-SETTLEMENT.md）。
+ * 消费后同 designId 再 spawn = resolveDesignSlot not found 机械拒。调用形态定死（评审 #3）：
+ * 参数 designId（单设计会话可省略——FR3 spawn 同款语义）；未知 designId 与重复消费同款
+ * no-op 提示（幂等——不报错）。dispatch 分类（评审 #7d）：非只读控制动作——depth-0 + 工程
+ * 模式限定（受限变体门在 subagent.mjs；本器自持工程模式门）——planMode 拒绝（execute-tools
+ * 不豁免）——不入批审批分组（execute-tools 免审直行——无文件写）。
  */
 export function executeConsumeDesignAction(args, ctx) {
   const parent = ctx.agent
@@ -115,11 +139,17 @@ export function executeConsumeDesignAction(args, ctx) {
   if (!designId && hasSlots && slots.size > 1) {
     throw new Error(`consume-design: Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design to close out.`)
   }
-  // 读槽值：给定 designId → 精确槽（未知/已消费 → no-op）；缺省 → 唯一槽；无 Map → 单值镜像兜底
+  // 读槽值：内存 Map 精确/单槽；settle 刚落盘而本回合内存未持有 → 权威槽兜底（单槽）。
   let token = null
   if (designId && hasSlots && slots.has(designId)) token = slots.get(designId)
   else if (!designId && hasSlots) token = [...slots.values()][0]
-  else if (!designId && !hasSlots && typeof parent?._engDesignToken === "string" && parent._engDesignToken) token = parent._engDesignToken
+  if (!token) {
+    const obj = authorityTokens(parent)?.engDesignTokens
+    if (obj && typeof obj === "object") {
+      if (designId && obj[designId]) token = obj[designId]
+      else if (!designId && Object.keys(obj).length === 1) token = obj[Object.keys(obj)[0]]
+    }
+  }
   // 未知 designId / 已消费 / 无任何槽 → 幂等 no-op 提示（不报错——评审 #3 定死）
   if (!token) {
     return `consume-design: no live slot${designId ? ` for designId ${designId}` : ""} (already consumed or never issued) — idempotent no-op, nothing changed.`
@@ -131,10 +161,8 @@ export function executeConsumeDesignAction(args, ctx) {
       for (const [k, t] of slots) if (t === token) { slots.delete(k); break }
     }
   }
-  // 镜像同步（dropExpiredTokenSlot 同款不变量）：指向被消费 token → 剩槽重指（null 镜像
-  // + 残槽会触发 resolveDesignSlot 的 torn-state guard——T7 隔离依赖）/ 无槽置 null
-  if (parent._engDesignToken === token) {
-    parent._engDesignToken = hasSlots && slots.size > 0 ? [...slots.values()][0] : null
-  }
+  // 清权威槽（D2 触发①）：designId → 该槽；单设计会话缺省 → 整账本
+  const p = parent?._engPersist
+  if (p?.cwd && p?.slot) { try { clearSlotEngDesignToken(p.cwd, p.slot, designId) } catch { /* 幂等 */ } }
   return `design slot consumed — designId ${designId ?? "(single-design session)"} is closed out; a further eng-coder spawn for this design is mechanically rejected, and any new work (including deviation fixes) requires a fresh advisor(type='design') review and token.`
 }

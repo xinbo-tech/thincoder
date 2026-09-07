@@ -229,13 +229,15 @@ function waitForSettleOrWake(panel, susp) {
  * _suspended 翻转：会话期 true（settle 回调据此延迟冻结 + 移交 pending）；会话内
  * 用户回合执行期翻 false（普通回合语义：① 直注入 + settle 即冻结）。
  *
- * entry = { turnSlot, distillSlot, lines: { history, fullHistory }, engState, runTurn,
+ * entry = { turnSlot, distillSlot, lines: { history, fullHistory }, runTurn,
  *           pendingInput? }。runTurn({ text, modelOverride, reasoning, providerName, images,
  * autoTurn }) 执行一个回合（digest: autoTurn=true 且 text=""）。susp.abort = 进入回合的
  * turn controller——池 children 持其 signal（pre-suspension spawn 同款）；会话内各回合用
  * 自己的 controller。susp.abortControllers = 进入回合期间全部 controller 的快照（取自
  * panel._turnControllers，2026-09-02 偏差修复 #3——Stop 统一 abort）；susp.pendingInput
  * 起始装载释放窗口入队消息（偏差修复 #2，见 runPanelChat 回合尾）。
+ * D3 (2026-09-08): 本驱动不再捕获/复用入场 engState 快照——会话内回合每轮从槽新读
+ * （suspension.mjs 存过的 susp.engState 已删——settle 落盘后 digest 才能看到 token）。
  */
 export async function suspensionSession(panel, entry) {
   const { lines } = entry
@@ -245,7 +247,6 @@ export async function suspensionSession(panel, entry) {
     turnSlot: entry.turnSlot,
     distillSlot: entry.distillSlot,
     lines,
-    engState: entry.engState,
     abort: panel._abortController ?? new AbortController(),
     // entry.pendingInput = 释放窗口入队的消息（panel-chat 回合尾移交——2026-09-02 偏差修复 #2：
     // finally → generateTitle await 窗口期用户消息经 panel._suspQueue 排队，会话入口在这里接管；

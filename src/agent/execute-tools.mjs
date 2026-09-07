@@ -11,8 +11,10 @@ import {
   offloadToolResult, pushReal, runWithLimit,
 } from "./run-helpers.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
+import { validateDesignToken } from "../agent-tools/advisor.mjs"
 import { logEvent, errText, headText } from "../log.mjs"
 import { manifestPath } from "../extension/session-slots.mjs"
+import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
 // §24 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
 import { recordFileMutation } from "../agent-tools/advisor-async.mjs"
@@ -47,6 +49,33 @@ function peerConflictNote(hits) {
 }
 
 /**
+ * DESIGN-TOKEN-SETTLEMENT AC4 (2026-09-08): 父代理写门资格判据 = 权威台账"任一活槽存在"。
+ * 先问内存 Map（本 run 水合 + 会话内 settle）；miss 回读 _engPersist 槽（与 spawn-gate D4
+ * 同源 reconcile），把未过期格式有效 token reconcile 进内存并判定。单值镜像 _engDesignToken
+ * 已退役（D5）——门禁不再读镜像。fail-closed：畸形/过期 token 不构成"活槽"（不授权产品代码写）。
+ */
+function agentHasLiveEngSlot(agent) {
+  const m = agent._engDesignTokens
+  if (m instanceof Map) {
+    for (const t of m.values()) {
+      if (typeof t === "string" && validateDesignToken(t)) return true
+    }
+  }
+  const p = agent._engPersist
+  if (!p?.cwd || !p?.slot) return false
+  let obj = null
+  try { obj = readSlotEngDesignTokens(p.cwd, p.slot)?.engDesignTokens ?? null } catch { obj = null }
+  const live = (obj && typeof obj === "object")
+    ? Object.entries(obj).filter(([, t]) => typeof t === "string" && validateDesignToken(t))
+    : []
+  if (live.length === 0) return false
+  const merged = m instanceof Map ? m : new Map()
+  for (const [id, tok] of live) merged.set(id, tok)
+  agent._engDesignTokens = merged
+  return true
+}
+
+/**
  * 前置门禁（planMode / 工程设计闸）——单点判定，批扫描与逐项执行共用（§16 D-B1：
  * 被前置门禁拦下的工具不计入批询问）。返回 { blocked, content }。
  */
@@ -71,13 +100,13 @@ function preGateBlocked(agent, { tool, toolName, args, depth }) {
   }
   // Engineering mode PARENT gate: no code-file writes before the design review passed.
   // Docs/** and root-level docs are exempt (writing them IS the design step); everything
-  // under src/ (incl. src/prompts/*.md) is product code and needs a design token.
-  if (agent.config?.agent?.engineering && depth === 0 && !agent._engDesignToken
-      && FILE_MUTATORS.has(toolName)) {
+  // under src/ (incl. src/prompts/*.md) is product code and needs a live design slot.
+  // AC4: 判定资格 = "任一活槽存在"（内存 Map / 权威槽回读）——单值镜像已退役（D5）。
+  if (agent.config?.agent?.engineering && depth === 0 && FILE_MUTATORS.has(toolName)) {
     const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
     // Unknown/missing paths are treated as code — block conservatively.
     const touchesCode = paths.some((p) => typeof p !== "string" || /^src[\\/]/.test(p) || !isDocFile(p))
-    if (touchesCode) {
+    if (touchesCode && !agentHasLiveEngSlot(agent)) {
       return { blocked: true, content: "Error: engineering design gate — write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents." }
     }
   }

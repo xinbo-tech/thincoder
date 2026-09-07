@@ -14,12 +14,11 @@ import { isExpiredDesignToken } from "./advisor.mjs"
  * R16 (2026-09-06 — ENG-TOKEN-BINDING-TUNING.md §5): a design token is a session-bound,
  * TTL-bound REVIEW-PASSED credential — it survives mode toggles. Only TTL expiry clears
  * it, at exactly three timings: restore filter (setup.mjs), eng(enter) sweep (below) and
- * the spawn gate (subagent.mjs). Returns how many expired slots were dropped.
+ * the spawn gate (subagent.mjs). D5 (2026-09-08): 单值镜像 _engDesignToken 已退役——只扫
+ * 多槽 Map（镜像字段不再维护）。Returns how many expired slots were dropped.
  */
 function sweepExpiredDesignTokens(agent) {
   const slots = agent._engDesignTokens
-  const mirror = agent._engDesignToken
-  const mirrorInSlots = slots instanceof Map && mirror != null && [...slots.values()].includes(mirror)
   let cleared = 0
   if (slots instanceof Map && slots.size > 0) {
     for (const [id, tok] of [...slots]) {
@@ -28,13 +27,6 @@ function sweepExpiredDesignTokens(agent) {
         cleared++
       }
     }
-  }
-  if (mirror != null && isExpiredDesignToken(mirror)) {
-    if (!mirrorInSlots) cleared++ // legacy mirror-only state (no map slot) counts itself
-    // 镜像同步（与 spawn 门禁删除同型）: repoint to a surviving slot when valid siblings
-    // remain — a null mirror with live slots would trip resolveDesignSlot's torn-state
-    // guard on the next spawn. Null only when nothing remains.
-    agent._engDesignToken = slots instanceof Map && slots.size > 0 ? [...slots.values()][0] : null
   }
   return cleared
 }

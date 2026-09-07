@@ -334,7 +334,9 @@ export const subagentTool = {
       const baseOpts = {
         depth: 1, role, maxTurns,
         streamOutput: true, // exempt from the agent.mjs onToken depth gate (escalate parity)
-        engState: { enabled: parent.config?.agent?.engineering ?? false, engDesignToken: parent._engDesignToken },
+        // D5 (2026-09-08): 单值镜像 _engDesignToken 已退役——child 只带 engineering 模式标志
+        //（eng-coder child 已由 engDesignReviewed 预授权；其自身不签发/spawn eng-coder——无需 token）。
+        engState: { enabled: parent.config?.agent?.engineering ?? false },
         // §18 D-E3 task-domain authorization (spawn-time): the design token was
         // verified above — approved design + spawn task = authorization for the
         // child's writes. The exemption granularity is ONLY the permission/approval

@@ -14,7 +14,8 @@ import {
   advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
 } from "../agent-tools.mjs"
 import { settingsTool } from "../agent-tools/settings.mjs"
-import { isExpiredDesignToken } from "../agent-tools/advisor.mjs"
+import { isExpiredDesignToken, extractTokenUUID } from "../agent-tools/advisor.mjs"
+import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { injectContext } from "../context.mjs"
@@ -215,25 +216,37 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     return toOpenAISchema(t)
   })
 
-  // R16 (2026-09-06 — F-R16b ① restore filter): tokens are read back from the session
-  // slot within their TTL (slot = persistent authority, D-R16a); EXPIRED tokens are not
-  // restored — dropped, and the next save's explicit-null agentState cleans the slot
-  // field (清盘闭环). Malformed strings are NOT expired — they read back and the spawn
-  // gate rejects them (never proactively deleted, D-R16c ①). Mirror-sync invariant kept
-  // symmetric with the enter sweep and the spawn-gate deletion: an expired mirror is NOT
-  // dropped to null while live slots survive — it repoints to a surviving slot (a null
-  // mirror + slots-present would trip resolveDesignSlot's torn-state guard on every
-  // eng-coder spawn until a re-review — advisor round 2026-09-06 🟡#3).
-  const restoredEngTokens = (engState?.engDesignTokens && typeof engState.engDesignTokens === "object")
-    ? new Map(Object.entries(engState.engDesignTokens).filter(([, tok]) => !isExpiredDesignToken(tok)))
-    : null
-  const restoredEngMirror = (() => {
-    const t = engState?.engDesignToken
-    if (t == null) return null
-    if (!isExpiredDesignToken(t)) return t
-    return restoredEngTokens instanceof Map && restoredEngTokens.size > 0
-      ? [...restoredEngTokens.values()][0]
-      : null
+  // DESIGN-TOKEN-SETTLEMENT D5 (2026-09-08): slot 的 engDesignTokens 多槽表 = 权威结算台账。
+  // 水合时 TTL 过滤（expired 从不入 Map —— 不授权）；单值镜像 `engDesignToken` 已退役 —— 仅
+  // 作**一次性迁移读**：旧 slot 残留镜像值且 Map 空（legacy 镜像-only 会话）→ 迁入 Map
+  // （AC3 排除的唯一迁移读点——此后运行时零镜像读零镜像写）。发现槽内过期项即回写清理
+  // （D2 触发③ TTL 过期清 restore 时——经 opts.engPersist；幂等——过期只在 TTL 刚过后出现）。
+  const restoredEngTokens = (() => {
+    const src = engState?.engDesignTokens
+    const hasMap = src && typeof src === "object" && !Array.isArray(src)
+    let map = hasMap ? new Map() : null
+    let droppedExpired = false
+    if (map) {
+      for (const [id, tok] of Object.entries(src)) {
+        if (isExpiredDesignToken(tok)) { droppedExpired = true; continue }
+        map.set(id, tok)
+      }
+    }
+    // 迁移读（AC3 唯一镜像读点）：Map 空且镜像为有效（格式有效未过期）token → 一次性迁入 Map
+    if (!(map instanceof Map) || map.size === 0) {
+      const legacy = engState?.engDesignToken
+      if (typeof legacy === "string" && !isExpiredDesignToken(legacy)) {
+        if (!map) map = new Map()
+        map.set(extractTokenUUID(legacy), legacy)
+      }
+    }
+    // D2 触发③：restore 发现槽内过期项 → 回写权威台账清 expired（幂等；map 可能已含迁移项）
+    if (droppedExpired && map && opts.engPersist?.cwd && opts.engPersist?.slot) {
+      try {
+        setSlotEngDesignTokens(opts.engPersist.cwd, opts.engPersist.slot, map.size > 0 ? Object.fromEntries(map) : null)
+      } catch { /* 槽清理非致命——expired 从不授权 */ }
+    }
+    return map
   })()
 
   const agent = {
@@ -255,8 +268,8 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
     // Multi-design slots restored from the slot's {designId: token} object (2026-09-01 audit #1);
     // null/absent → no Map (fresh state — never resurrect slots the writer did not have).
-    // Per-slot TTL filter (above) applies to every entry.
-    _engDesignToken: restoredEngMirror,
+    // Per-slot TTL filter (above) applies to every entry. D5: 单值镜像字段 _engDesignToken
+    // 已整体退役——agent 不再持该属性（门禁/门禁全问多槽 Map + 权威槽回读）。
     _engDesignTokens: restoredEngTokens,
     _engDesignReviewed: engDesignReviewed === true, // eng-coder children arrive pre-authorized
     _calledAdvisorThisRun: false, _mutatedThisRun: false,

@@ -261,11 +261,11 @@ export const advisorTool = {
       const tokenPattern = makeDesignTokenRegex(designToken)
       if (designToken && result && tokenPattern.test(result)) {
         // Advisor echoed the token → review passed. Issue it to the parent for eng-coder.
-        // Multi-design slots (2026-09-01, CLI parity): store under this review's designId;
-        // the single `_engDesignToken` mirror stays for the legacy boolean gates.
+        // Multi-design slots (2026-09-01, CLI parity): store under this review's designId.
+        // D5 (2026-09-08): 单值镜像 _engDesignToken 已退役——只写多槽 Map（agentState 随
+        // onComplete 落盘权威槽 engDesignTokens；async 经 D1 settle 同步落盘）。
         agent._engDesignTokens ??= new Map()
         agent._engDesignTokens.set(designId, designToken)
-        agent._engDesignToken = designToken
         if (agent._role === "eng-coder") agent._engDesignReviewed = true
         const cleanResult = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
         // designId rides the Approved block (review #1): the parent needs it to aim the

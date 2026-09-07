@@ -4,6 +4,7 @@
  * mutates panel._slot / panel._autoApprove exactly like the former methods did.
  */
 import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs, resumeSlot, readEndMarker, writeEndMarker } from "./session-io.mjs"
+import { engTokensMergeForSave } from "./session-slot-write.mjs"
 import { fullStatus } from "./settings.mjs"
 import { migrateLegacySettings } from "./migrate-settings.mjs"
 import { stripEditorInjection } from "./editor-context.mjs"
@@ -96,18 +97,13 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
       // when the run didn't speak (abort/finally saves) — hard-writing `false` here would pin
       // the session off and kill the config.json fallback (compat contract, see tests).
       engineering: extra.engineering !== undefined ? extra.engineering : existing.engineering,
-      // Key-presence write (v2 2026-08-25 mechanism, kept under R16 2026-09-06): ?? treated
-      // an explicit null as "missing" and revived the stale slot value on the next save.
-      // R16 clears tokens only by TTL expiry — an expired slot's tokens are dropped at
-      // restore, so the next turn-end agentState carries explicit null and MUST pin that
-      // over the stale slot value (清盘闭环: the slot field is cleaned, not revived until
-      // the next restore-drop cycle). An explicit key always wins; absent key keeps the slot.
-      engDesignToken: "engDesignToken" in extra ? extra.engDesignToken : (existing.engDesignToken ?? null),
-      // Key-presence write (same v2 semantics as engDesignToken): a save carrying no
-      // engDesignTokens (abort/finally) keeps the slot value; an explicit null (memory-empty
-      // run — fresh session or expired tokens dropped at restore) pins the field null —
-      // restore sets NO Map.
-      engDesignTokens: "engDesignTokens" in extra ? extra.engDesignTokens : (existing.engDesignTokens ?? null),
+      // DESIGN-TOKEN-SETTLEMENT D2/D5 (2026-09-08): 单值镜像字段 engDesignToken 已退役——
+      // agentState 不再携带（agentState 去镜像），此处不再写该字段（旧槽残留经 ...existing
+      // spread 原样往返保留，仅供 setup 一次性迁移读——AC3 运行时零镜像写）。
+      // 多槽表 engDesignTokens 合并语义 = D2（engTokensMergeForSave 纯函数）：空态 agentState
+      // 保存**不触发清理**。内存空但槽有值（settle 已同步落盘而本回合内存未持有）→ 保留槽值，
+      // 不钉 null（AC2）。槽清理只经三触发（consume-design 显式清 /new 空槽 /TTL 过期清）。
+      engDesignTokens: engTokensMergeForSave("engDesignTokens" in extra ? extra.engDesignTokens : undefined, existing.engDesignTokens),
       pendingReminders: existing.pendingReminders ?? [], sessionStart: existing.sessionStart ?? new Date().toISOString(),
       // 2026-09-01 会诊 kimi/qwen 🔴：sessionStart 是 F2 覆盖防护的会话身份——VS Code
       // 此前从不赋值（恒 null）→ diskStart 恒 null → F2 轮转条件永不触发（纯 VS Code

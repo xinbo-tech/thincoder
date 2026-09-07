@@ -96,20 +96,73 @@ export function setSlotAdvisorGuard(cwd, slot, value) {
   return true
 }
 
-/** §24 D-24b（R13——2026-09-06）：写 slot 的 engDesignTokens 多槽表（{designId: token}
- *  JSON 形态——与 agentState/panel-session 往返同构）。async 设计评审 settle 常发生在挂起期
- *  （无 onComplete agentState 通道）——settle 记账经 _engPersist 直写 slot——下个 run 的
- *  setup 从 slot 恢复（T-24b3：digest 后 token 入槽 + spawn 可用）。空表写 null（清键）。
- *  §29.1 F2g（2026-09-07）：mirror 参（可选）与多槽表同写——挂起期 settle 后进程死亡 →
- *  resume 不再撞 torn-state guard（镜像缺失 + 槽在 = 拒所有 spawn 的恢复洞）。
- *  mirror 缺省（undefined）→ 镜像字段不动（既有调用面零变）。 */
-export function setSlotEngDesignTokens(cwd, slot, tokensObj, mirror) {
+/**
+ * DESIGN-TOKEN-SETTLEMENT（2026-09-08）：slot 文件的 engDesignTokens 多槽表 = 权威结算台账。
+ * - 写侧唯一权威写点：settle（advisor-async D1）——同步直写（去 fire-and-forget）——
+ *   与 agentState 往返同构（{designId: token} JSON 形态）。空/无参写 null（清键）。
+ * - 单值镜像 `engDesignToken`（持久化槽字段）已随 D5 退役——settle/agentState/consume/TTL
+ *   一律不再写镜像字段（AC3——运行时零镜像写）；setup 水合处保留唯一一次性迁移读。
+ * - 槽清理只经三触发（D2 评审 #3）：consume-design 显式清（clearSlotEngDesignTokens）/
+ *   /new 分配全新空槽（天然无账本）/TTL 过期清（setup restore 过滤后回写）。空态
+ *   agentState 保存（saveLines）不触发清理（只防误清 settle 刚落盘的 token）。 */
+export function setSlotEngDesignTokens(cwd, slot, tokensObj) {
   const data = loadSlotForWrite(cwd, slot)
   if (!data) return false
   const t = tokensObj && typeof tokensObj === "object" && Object.keys(tokensObj).length > 0 ? tokensObj : null
   if (t === null) delete data.engDesignTokens
   else data.engDesignTokens = t
-  if (mirror !== undefined) data.engDesignToken = mirror ?? null
   saveSessionToSlot(cwd, slot, data)
   return true
 }
+
+/** 读 slot 权威结算台账（engDesignTokens 多槽表）。返回 { engDesignTokens? }（未过期判定由
+ *  读侧 setup/spawn-gate/write-gate 各自负责——I/O 层不过滤）或 null（槽不可读）。
+ *  单值镜像 engDesignToken 字段已退役——此处不读（AC3——运行时零镜像读；唯一镜像迁移读在
+ *  setup 水合处经 engState，不走本读取面）。D4/D5 门禁与 spawn-gate 的 miss 回读共用。 */
+export function readSlotEngDesignTokens(cwd, slot) {
+  try {
+    const data = loadSlot(cwd, slot)
+    if (!data) return null
+    const out = {}
+    if (data.engDesignTokens !== undefined) out.engDesignTokens = data.engDesignTokens
+    return out
+  } catch {
+    return null
+  }
+}
+
+/** D2 槽清理触发① consume-design 后清（2026-09-08）：从权威台账移除一个 designId 槽（或
+ *  无 designId 时清空整账本——单设计会话链终核销）。只动 engDesignTokens 字段——镜像字段已
+ *  退役不清（D5）。返回是否移除（未命中/已清 = false——consume 幂等 no-op）。 */
+export function clearSlotEngDesignToken(cwd, slot, designId) {
+  const data = loadSlotForWrite(cwd, slot)
+  if (!data) return false
+  const obj = data.engDesignTokens
+  if (!obj || typeof obj !== "object") return false
+  if (designId) {
+    if (!(designId in obj)) return false // 未命中/已清 = 幂等 no-op
+    delete obj[designId]
+    if (Object.keys(obj).length === 0) delete data.engDesignTokens
+  } else {
+    delete data.engDesignTokens // 单设计会话整账本清
+  }
+  saveSessionToSlot(cwd, slot, data)
+  return true
+}
+
+/** D2 纯合并语义（2026-09-08，panel-session saveLines 用——可单测）：计算 engDesignTokens
+ *  字段应写入槽的值。
+ *  - incoming = extra.engDesignTokens（agentState 携带：undefined = 未携带 abort/finally 保存）;
+ *  - existing = 槽既有值（loadSlot 的 existing.engDesignTokens）。
+ *  规则（AC2）：内存真持非空表（incoming 非空对象）→ 写 incoming（覆盖槽，会话内新评审落盘）；
+ *  内存空但槽有值（settle 已同步落盘而本回合内存未持有）→ 保留槽值（不钉 null——空态保存不触发
+ *  清理，槽清理只经 consume//new/TTL 三触发）；都空 → null；未携带 → 保留槽。 */
+export function engTokensMergeForSave(incoming, existing) {
+  if (incoming === undefined) return existing ?? null
+  const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
+  if (hasNew) return incoming
+  const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0
+  if (slotHas) return existing
+  return null
+}
+
