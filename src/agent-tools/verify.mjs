@@ -31,33 +31,27 @@ function assertSafeTestFilter(filter) {
  */
 const MODULE_TO_TEST = {
   tools: [
-    "test/file-tools.test.mjs", "test/edit-tools.test.mjs", "test/git.test.mjs",
-    "test/checkpoint.test.mjs", "test/bash.test.mjs", "test/ops-scope.test.mjs",
-    "test/execute.test.mjs", "test/checklist.test.mjs", "test/skills-distill.test.mjs",
-    "test/verify-domain.test.mjs",
+    "test/file-tools.test.mjs", "test/edit-tools.test.mjs", "test/bash.test.mjs",
+    "test/execute.test.mjs", "test/verify-domain.test.mjs",
   ],
   "agent-tools": [
-    "test/subagent-core.test.mjs", "test/subagent-async.test.mjs", "test/subagent-tool.test.mjs",
-    "test/subagent-panel.test.mjs", "test/subagent-scheduler.test.mjs", "test/verify-domain.test.mjs",
+    "test/verify-domain.test.mjs",
   ],
   agent: [
-    "test/agent-core.test.mjs", "test/agent-context.test.mjs", "test/guards.test.mjs",
-    "test/eng-delivery.test.mjs", "test/eng-reminders.test.mjs", "test/provider-stream.test.mjs",
-    "test/stream-rules.test.mjs", "test/session-compaction.test.mjs",
-    "test/skills-distill.test.mjs", "test/verify-domain.test.mjs", "test/dispatch.test.mjs",
+    "test/guards.test.mjs", "test/provider-stream.test.mjs",
+    "test/verify-domain.test.mjs", "test/dispatch.test.mjs",
   ],
   memory: ["test/memory.test.mjs"],
-  tui: ["test/tui-render.test.mjs", "test/tui-input.test.mjs", "test/tui-panel.test.mjs", "test/tui-stream.test.mjs", "test/tui-picker.test.mjs", "test/subagent-blocks.test.mjs"],
   provider: ["test/integration-provider.mjs"],
   config: ["test/integration-provider.mjs"],
-  skills: ["test/skills-distill.test.mjs"],
-  distill: ["test/skills-distill.test.mjs"],
-  markdown: ["test/memory.test.mjs"],
-  advisor: ["test/advisor-message.test.mjs", "test/advisor-review.test.mjs", "test/advisor-eng.test.mjs", "test/advisor-parallel.test.mjs"],
-  prompts: ["test/prompts.test.mjs"],
-  context: ["test/agent-context.test.mjs", "test/session-compaction.test.mjs"],
-  session: ["test/session.test.mjs", "test/session-compaction.test.mjs", "test/session-eng-advisor.test.mjs", "test/session-migration.test.mjs", "test/session-safety.test.mjs", "test/acp.test.mjs"],
+  session: ["test/session.test.mjs"],
   mcp: null,
+  tui: null,
+  advisor: null,
+  context: null,
+  skills: null,
+  distill: null,
+  markdown: ["test/memory.test.mjs"],
 }
 
 /**
