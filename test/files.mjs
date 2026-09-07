@@ -15,6 +15,7 @@ export default [
   "test/edit-eol.test.mjs",
   "test/edit-semantics.test.mjs",
   "test/edit-tool-improvement.test.mjs",
+  "test/memory-tool.test.mjs",
   "test/eng-settlement.test.mjs",
   "test/subagent-observe-send.test.mjs",
   "test/smoke-settings.mjs",

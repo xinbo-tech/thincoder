@@ -1,0 +1,72 @@
+# edit 工具权威语义（EDIT）
+
+> 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（editTool 壳/schema/描述内嵌）+ `src/tools/edit-line-params.mjs`（D1 子模块）+ `src/tools/edit-fuzzy-match.mjs`（D2 子模块）+ `src/tools/edit-diff.mjs`（diff 内核/判定序）。本文档是 **edit 工具语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
+> 双端：VSC（本文档）与 CLI（thincoder `docs/design/EDIT.md`）同机制各自独立实现——镜像锚：两端工具描述逐字一致（评审逐字对齐），语义正文各自落地。**VSC 差异**：无 CLI 的 DESC() md 描述机制——描述内嵌 `.mjs`（file-edit.mjs editTool 对象）；编辑器路径（doc 已打开）走 WorkspaceEdit + range 偏移映射。
+> 状态：**已实现**（D1-D3 落地 2026-09-08）。历史设计见文末「变更记录」。
+
+## 1. 定位
+
+edit = **按精确区域替换文件内容**——主编辑工具。两种定位形态（互斥）+ 三级匹配 + 判定序 4 分支（见 §4）。面向场景：知道要改哪一行/哪一段、或能给出当前内容——精确改。
+
+**不是**：插入新行（→ insert_after）、按内容哈希行定位（→ hashline_edit）、整块 diff 多文件（→ apply_patch）、整文件重写（→ write）。路由在模型可见描述（file-edit.mjs editTool.description）的 Routing 段。
+
+## 2. 参数与 schema
+
+editTool（`file-edit.mjs`）：
+
+- `path`（必须）——目标文件。
+- **形态二选一**：
+  - **行号形态（D1）**：`line: N`（单行——1-based）/ `startLine: N, endLine: M`（行范围——1-based 闭区间）——替换该行/范围为 new_string，**不需 old_string**。
+  - **内容形态**：`old_string`（必须）——变化区当前内容；`new_string`——该区期望结果。
+- `new_string`（两种形态都须给——见 §5 空串约束）。
+- `replace_all`——字面替换每处（内容形态 only；行号形态不适用）。
+- `edits`（数组批量）——条目 **不含行号参数**（VSC schema items：path/old_string/new_string/replace_all——D1 批量形态 **VSC 未支持**，阶段 2 补——EDIT-TOOLS-REVIEW.md 分歧 c）。
+
+schema 与描述：模型可见文本在 `file-edit.mjs` editTool 对象（正文 + schema 参数描述）——与本文档语义一致，改语义须同改。
+
+## 3. 匹配档位（D2——内容形态）
+
+old_string 匹配三级档序（宽容——模型差异容忍）：
+
+1. **逐字**——精确字符串匹配。
+2. **唯一空白差异窗口**——逐字 occurrences=0 时 trim 等价的唯一窗口自动应用（P15.11）；多窗口歧义仍 not-found（不猜）。
+3. **模糊匹配**——唯一窗口：行级 normalize 后逐行相等比例 ≥90% 即匹配（附 note 明示）；**歧义规则（评审 #2）**：唯一模糊命中才应用，**多命中报错附候选块**（fuzzy matches N regions——沿用 similarLinesBlock 机制）；不足阈值 not-found。
+
+> 注：normalize 精确规则（VSC 现状：trim + `\s+`→单空格折叠 + 弯引号/反引号→直引号；CLI 现状：tab→2 空格 / ASCII 单→双引号）双端**算法不一**——阶段 2 功能统一（EDIT-TOOLS-REVIEW.md）裁定合并两端规则为一实现，落点见该变更段。
+
+## 4. 判定序
+
+内容形态替换后行级 diff 判定（`edit-diff.mjs`——分支 0 + 零重叠替换即删 + LCS + 平凡）：
+
+1. **分支 0（就地替换）**：old 恰单行 ∧ new 恰单行 ∧ 全文唯一匹配 ∧ new 非空 → 就地整行替换（行数不变）。
+2. **零重叠**（old 每行都不在 new）：**替换即删**（D3——old 行整体删除、new 取而代之——旧行不再保留；原"插入保留旧行"语义废止；新增行用 insert_after）。
+3. **一般 LCS diff**：公共行保留、old 独有删、new 独有插。
+4. **平凡**：new 与 old 行级全等 → 原样替换（no-op 成功）。
+
+**行号形态**（不经判定序——edit-line-params.mjs computeLineEdit）：定位行/范围 → 直接替换（行数 = 范围行数 → new 行数）。越界/互斥见 §5。
+
+## 5. 约束
+
+- **空 new_string**：内容形态 → 显式错误（防删除保护先于分支 0）；**行号形态 → VSC 现"空串 = 删除该行/范围"**（edit-line-params.mjs——与 CLI 按行号形态"空串报错"矛盾 + VSC 内部两形态互相矛盾——阶段 2 裁定统一，EDIT-TOOLS-REVIEW.md 分歧 a）。**命名删行形态（阶段 2）**：edit 加显式行删（行号 + 空/省略 new_string = 删除）——评审裁定 A 已定，阶段 2 实现后更新本节。
+- **互斥**：行号形态与 old_string；line 与 startLine/endLine；edits 与顶层形态——均显式报错（execute 期兜底）。
+- **行号校验**：line/startLine/endLine 正整数；startLine ≤ endLine；endLine ≤ 文件行数（越界报错）。
+- **replace_all**：字面替换每处；多匹配无 replace_all → occurrences 错误。
+- **edits 数组**：同文件串行累积、跨 path 并行、原子；条目内 old_string/new_string（required——无行号条目）。
+- **not-found 引导**：错误含 similarLinesBlock（top 3 相似行——LCS 连续子串 / 阈 0.5）。
+- **编辑器路径**：doc 已打开 → WorkspaceEdit range 替换（定位偏移与 doc.positionAt 同坐标系——lfOffsetToRaw 把 LF 域偏移映射回 CRLF 原文偏移——见 EDIT-HELPERS.md / VSC 编辑器路径差异）；读文件路径 → 本地写盘。
+- **数据新鲜度**：old_string/行号只来自最新 read——改前 re-read。
+
+## 6. 实现单一权威
+
+VSC `src/tools/edit-diff.mjs`（applyRegion/applyPatchLines/lcsReplace——判定序）+ `src/tools/edit-line-params.mjs`（D1：computeLineEdit/executeLineEdit——含编辑器 WorkspaceEdit 路径）+ `src/tools/edit-fuzzy-match.mjs`（D2：findFuzzyMatch + 歧义候选块）+ `file-edit.mjs`（壳/schema/批量/单形态——同 execute 内双路径）；CLI 镜像 edit-diff.mjs。
+
+EOL 写回与失败候选——**共享 helper 权威见 `EDIT-HELPERS.md`**（VSC 另有 `lfOffsetToRaw`——编辑器路径专属），此处不复制。
+
+## 7. 测试
+
+`test/edit-tool-improvement.test.mjs`（13 用例）+ `test/files.mjs` 登记。用例表历史见「变更记录」引用档。
+
+## 变更记录
+
+- 2026-09-08：文档重组——edit 工具语义从 VSC TOOLS.md §9 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md §9 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。
+- 阶段 2 预告（EDIT-TOOLS-REVIEW.md 变更段）：删行形态（裁定 A）+ normalize 统一（裁定合并两端规则）+ 批量行号补 VSC（分歧 c）+ hashline 定位重写——实现后更新本文档对应节。

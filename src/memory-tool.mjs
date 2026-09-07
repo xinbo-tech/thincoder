@@ -1,37 +1,44 @@
 /**
- * memory-tool.mjs — the merged `memory` agent tool (MEMORY.md §6, five actions).
+ * memory-tool.mjs — the merged `memory` agent tool (MEMORY.md §3, five actions).
  * Split out of memory.mjs (500-line hard limit) — core storage/search stays in
  * memory.mjs; this module only builds the tool surface + its action executors.
+ *
+ * layer terminology (2026-09-08 — 用户裁定统一成 layer): the MODEL-VISIBLE surface
+ * (args param `layer`, schema field, tool description, result rows, output/error
+ * strings) speaks one word — layer. The storage helpers imported from memory.mjs
+ * (VALID_SCOPES / scopeDir / readAllScopeEntries / the search option) keep their
+ * internal legacy "scope" vocabulary — they are implementation internals the model
+ * never sees; the mapping point is only this module's args → storage boundary.
  */
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs"
+import { readFileSync, existsSync, writeFileSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
 import { getEmbedder } from "./embed-config.mjs"
 import { loadIndexManifest, searchIndex } from "./indexer.mjs"
 import {
-  VALID_TYPES, VALID_SCOPES, scopeDir, readAllEntries, readAllScopeEntries,
+  VALID_TYPES, VALID_SCOPES, memoryDir, scopeDir, readAllEntries, readAllScopeEntries,
   entryFilename, serializeEntry, parseEntry, search, ensureDir,
 } from "./memory.mjs"
 
 // ─── tools ────────────────────────────────────────────────────
 
 
-/** §6 merged memory tool — action enum / parameter shapes / description byte-identical with
- *  thincoder/src/memory/docs.mjs memoryTools (MEMORY.md §6 D-M1/F-M6); scope VALUES per end:
- *  this extension has no team layer and rejects team with CLI guidance.
- *  search/list are read-only actions (isReadonlyAction — execute-tools.mjs: plan mode passes,
- *  no permission ask, readonly-parallel batches); put/delete/clear keep their side-effect
- *  gates — confirm:true is the batch-delete/clear tool-level gate (direct-delete ruling:
+/** §3 merged memory tool — five actions on the personal/project layers (this extension has
+ *  no team layer and rejects team with CLI guidance). The tool surface speaks `layer`
+ *  end-to-end (param/schema/description/rows/outputs); search/list are read-only actions
+ *  (isReadonlyAction — execute-tools.mjs: plan mode passes, no permission ask,
+ *  readonly-parallel batches); put/delete/clear keep their side-effect gates —
+ *  confirm:true is the batch-delete/clear tool-level gate (direct-delete ruling:
  *  the confirm parameter IS the gate, no second human step). */
 const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear"]
 const MEMORY_TOOL_DESCRIPTION =
   "Manage long-term memory in ONE tool — the action parameter picks the operation:\n" +
-  "- search — find knowledge saved in previous sessions (query, optional scope/limit); results include every entry's id — 会话消息历史不在 memory——用 read_history\n" +
-  "- put — save a piece of knowledge for future sessions (type: rule = coding standards, knowledge = project facts, decision = architecture decisions, pattern = debugging/workflow patterns; title/content/tags/scope)\n" +
-  "- list — inventory what memory holds: optional scope/type/keyword filters, limit default 50; one row per entry: id [type] title (date); a truncated list notes the full count\n" +
-  "- delete — SINGLE: {id, scope} deletes one entry by the id shown in put/search/list output. BATCH: {scope + type and/or keyword} deletes every matching entry in that scope — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); scope-wide wipes without filters are refused on every layer\n" +
-  "- clear — {scope: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing scope or a project/team scope is refused (use delete batch filters on shared layers)\n" +
-  "Deleting project/team (CLI) entries removes the local markdown file and its index row — team deletion is local only and a later team sync may resurrect the file while the remote still has it.\n" +
+  "- search — find knowledge saved in previous sessions (query, optional layer/limit); every result row starts with a [layer] tag and carries the entry id — 会话消息历史不在 memory——用 read_history\n" +
+  "- put — save a piece of knowledge for future sessions (type: rule = coding standards, knowledge = project facts, decision = architecture decisions, pattern = debugging/workflow patterns; title/content/tags; layer defaults to personal)\n" +
+  "- list — inventory what memory holds: optional layer/type/keyword filters, limit default 50; one row per entry: [layer] id [type] title (date); a truncated list notes the full count\n" +
+  "- delete — SINGLE: {id, layer} deletes one entry by the id shown in search/list output — layer is OPTIONAL: pass it to verify the entry really lives in that layer (a mismatch is refused — protection against deleting the wrong entry); omit it to route by where the id actually lives. BATCH (no id): {layer + type and/or keyword} deletes every matching entry in that layer — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); a layer-wide wipe without filters is refused on every layer\n" +
+  "- clear — {layer: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing layer or a project layer is refused (use delete batch filters on shared layers)\n" +
+  "layer = the memory tier an entry lives in: personal (private) or project (shared via this repo's .thincoder/memory/). The [layer] tag on search/list result rows and delete's layer parameter are the same concept — pass a result row's [layer] into delete, or omit layer and delete auto-routes by the id's actual location.\n" +
   "Save bugs, conventions, and preferences here — they persist across sessions. For project-level task tracking use checklist; for reusable project instructions use skill."
 
 /** Date display for list/preview rows: frontmatter created date; unknown → "?" */
@@ -39,9 +46,19 @@ function rowDate(created) {
   return created ? String(created).slice(0, 10) : "?"
 }
 
-/** Compact row shared by list and batch-delete preview (id = entry filename). */
+/** The [layer] tag of an entry row: its physical storage layer (personal/project).
+ *  Legacy entries physically at the memory root have no layer (_scope "root") → null
+ *  (no tag — they predate layers and cannot be addressed by a layer parameter). */
+function layerTag(entry) {
+  const s = entry?._scope
+  return s && VALID_SCOPES.has(s) ? `[${s}]` : null
+}
+
+/** Compact row shared by list and batch-delete preview (id = entry filename), with the
+ *  standalone [layer] tag column at the front (aligned with search result rows). */
 function listRow(entry) {
-  return `${entry._file} [${entry.type}] ${entry.title}（${rowDate(entry.created)}）`
+  const tag = layerTag(entry)
+  return `${tag ? tag + " " : ""}${entry._file} [${entry.type}] ${entry.title}（${rowDate(entry.created)}）`
 }
 
 function normalizeLimit(limit, dflt) {
@@ -56,6 +73,23 @@ function invalidType(type) {
   return VALID_TYPES.has(t) ? null : `Error: Invalid memory type "${t}"; expected one of: ${[...VALID_TYPES].join(", ")}`
 }
 
+/** Layer from a searchIndex result's relative file path (.thincoder/memory/<layer>/…),
+ *  or null for legacy files at the memory root. */
+function layerOfFile(file) {
+  const m = String(file).replaceAll("\\", "/").match(/\/memory\/([^/]+)\//)
+  return m && VALID_SCOPES.has(m[1]) ? m[1] : null
+}
+
+/** Drop vector-hit rows whose memory file no longer exists on disk — the stale-index guard
+ *  (deleted/cleared entries must never re-surface through the vector path, which is rebuilt
+ *  wholesale on the panel's next needsRebuild check). Exported for deterministic tests
+ *  (pure, no embedder needed). */
+export function filterAliveFiles(cwd, rows) {
+  return rows.filter((r) => {
+    try { return existsSync(join(cwd, r.file)) } catch { return false }
+  })
+}
+
 export const memoryTool = {
   name: "memory",
   description: MEMORY_TOOL_DESCRIPTION,
@@ -63,7 +97,7 @@ export const memoryTool = {
     type: "object",
     properties: {
       action: { type: "string", enum: MEMORY_ACTIONS, description: "Operation to run (required)" },
-      scope: { type: "string", enum: [...VALID_SCOPES], description: "Where the memory lives: personal (private), project (shared via this repo's .thincoder/memory/), team (CLI only). put defaults to personal; search/list search every layer when omitted; delete/clear require it" },
+      layer: { type: "string", enum: [...VALID_SCOPES], description: "Which layer the entry lives in: personal (private) or project (shared via this repo's .thincoder/memory/); team is managed by the CLI. put defaults to personal; search/list cover every layer when omitted; delete single: optional (omitted = auto-route by where the id actually lives); delete batch & clear: required (clear accepts only personal)" },
       type: { type: "string", enum: [...VALID_TYPES], description: "Entry type: put = what to save; list/delete batch = filter by type" },
       title: { type: "string", description: "put: short title" },
       content: { type: "string", description: "put: full content to remember" },
@@ -77,7 +111,7 @@ export const memoryTool = {
     required: ["action"],
   },
   readonly: false,
-  // §6 action-level classification (execute-tools.mjs reads this): search/list are read-only
+  // §3 action-level classification (execute-tools.mjs reads this): search/list are read-only
   isReadonlyAction(args) {
     const action = args?.action
     return action === "search" || action === "list"
@@ -97,17 +131,17 @@ export const memoryTool = {
   },
 }
 
-/** action search — the retired search tool surface (read-only; scope filter added, same output contract). */
+/** action search — read-only; optional layer filter, same output contract. */
 function execSearch(args, ctx) {
-  const scope = args.scope ?? null
-  if (scope && !VALID_SCOPES.has(scope)) {
-    if (scope === "team") return "Error: memory search: VS Code memory has no team layer — team memory is managed by the CLI"
-    return `Error: memory search: invalid scope "${scope}" — scopes: ${[...VALID_SCOPES].join("/")}`
+  const layer = args.layer ?? null
+  if (layer && !VALID_SCOPES.has(layer)) {
+    if (layer === "team") return "Error: memory search: VS Code memory has no team layer — team memory is managed by the CLI"
+    return `Error: memory search: invalid layer "${layer}" — layers: ${[...VALID_SCOPES].join("/")}`
   }
   const query = String(args.query ?? "").trim()
   if (!query) return "No matching memories found." // 空 query 短路——两端同语义（评审 code review #4）
   const limit = normalizeLimit(args.limit, 5)
-  // Vector search first if embedder + index available (scope-restricted results only)
+  // Vector search first if embedder + index available (layer-restricted results only)
   try {
     const embedder = getEmbedder()
     const manifest = embedder ? loadIndexManifest(ctx.cwd) : null
@@ -115,46 +149,52 @@ function execSearch(args, ctx) {
       return (async () => {
         try {
           const vecResults = await searchIndex(ctx.cwd, embedder, query, { kind: "memory", limit: limit || 5 })
-          const scoped = scope
-            ? vecResults.filter((r) => String(r.file).replaceAll("\\", "/").includes(`/${scope}/`))
+          const scoped = layer
+            ? vecResults.filter((r) => String(r.file).replaceAll("\\", "/").includes(`/${layer}/`))
             : vecResults
-          if (scoped.length > 0) {
-            return scoped.map((r) =>
-              `${r.file}:${r.startLine}-${r.endLine} (id=${r.file.split("/").pop()}, score:${r.score.toFixed(3)})\n${r.snippet}`
-            ).join("\n\n")
+          // stale-index guard: the semantic index is whole-rebuild (needsRebuild detects a removed
+          // memory file on the panel's next check), so rows whose file is already gone (deleted /
+          // cleared since the last build) must never be re-surfaced here — VSC delete keeps the
+          // disk as truth and this read guard is the observable cleanup boundary.
+          const alive = filterAliveFiles(ctx.cwd, scoped)
+          if (alive.length > 0) {
+            return alive.map((r) => {
+              const tag = layerOfFile(r.file)
+              return `${tag ? tag + " " : ""}${r.file}:${r.startLine}-${r.endLine} (id=${r.file.split("/").pop()}, score:${r.score.toFixed(3)})\n${r.snippet}`
+            }).join("\n\n")
           }
         } catch {}
-        const results = search(ctx.cwd, query, { limit, scope })
+        const results = search(ctx.cwd, query, { limit, scope: layer }) // memory.mjs 内部 option 保留 scope 名——工具面已统一 layer
         if (results.length === 0) return "No matching memories found."
         return formatResults(results)
       })()
     }
   } catch {}
-  const results = search(ctx.cwd, query, { limit, scope })
+  const results = search(ctx.cwd, query, { limit, scope: layer })
   if (results.length === 0) return "No matching memories found."
   return formatResults(results)
 }
 
-/** action put — the retired put tool surface (side-effect gate, unchanged semantics + scope validation). */
+/** action put — side-effect gate, unchanged semantics; layer defaults to personal. */
 function execPut(args, ctx) {
-  const scope = String(args.scope ?? "personal")
-  if (!VALID_SCOPES.has(scope)) {
-    if (scope === "team") return "Error: memory put: VS Code memory has no team layer — team memory is managed by the CLI"
-    return `Error: memory put: invalid scope "${scope}" — must be one of: ${[...VALID_SCOPES].join(", ")}`
+  const layer = String(args.layer ?? "personal")
+  if (!VALID_SCOPES.has(layer)) {
+    if (layer === "team") return "Error: memory put: VS Code memory has no team layer — team memory is managed by the CLI"
+    return `Error: memory put: invalid layer "${layer}" — must be one of: ${[...VALID_SCOPES].join(", ")}`
   }
   const { type, title, content, tags } = args
   if (!VALID_TYPES.has(type)) {
     return `Error: invalid type "${type}". Must be one of: ${[...VALID_TYPES].join(", ")}`
   }
   if (!title || !content) return "Error: memory entry requires title and content"
-  const dir = scopeDir(ctx.cwd, scope)
+  const dir = scopeDir(ctx.cwd, layer)
   ensureDir(dir)
 
   const filename = entryFilename(title)
   const filePath = join(dir, filename)
   const markdown = serializeEntry({ type, title: title.trim(), content: content.trim(), tags })
   writeFileSync(filePath, markdown, "utf8")
-  return `Saved memory entry "${title.trim()}" (type: ${type}, scope: ${scope}, id=${filename})`
+  return `Saved memory entry "${title.trim()}" (type: ${type}, layer: ${layer}, id=${filename})`
 }
 
 function formatResults(entries) {
@@ -164,22 +204,25 @@ function formatResults(entries) {
     const tags = e.tags ? ` [${e.tags}]` : ""
     const content = (e.content || "").slice(0, 200)
     const truncated = e.content && e.content.length > 200 ? "..." : ""
-    return `[${type}]${tags} ${title} (id=${e._file})\n  ${content}${truncated}`
+    const tag = layerTag(e)
+    return `${tag ? tag + " " : ""}[${type}]${tags} ${title} (id=${e._file})\n  ${content}${truncated}`
   }).join("\n\n")
 }
 
-/** action list — new inventory action (read-only): scope/type/keyword filters + truncation note. */
+/** action list — read-only inventory action: layer/type/keyword filters + truncation note. */
 function execList(args, ctx) {
-  const scope = args.scope ?? null
-  if (scope && !VALID_SCOPES.has(scope)) {
-    if (scope === "team") return "Error: memory list: VS Code memory has no team layer — team memory is managed by the CLI"
-    return `Error: memory list: invalid scope "${scope}" — scopes: ${[...VALID_SCOPES].join("/")}`
+  const layer = args.layer ?? null
+  if (layer && !VALID_SCOPES.has(layer)) {
+    if (layer === "team") return "Error: memory list: VS Code memory has no team layer — team memory is managed by the CLI"
+    return `Error: memory list: invalid layer "${layer}" — layers: ${[...VALID_SCOPES].join("/")}`
   }
   const typeErr = invalidType(args.type)
   if (typeErr) return typeErr
   const typeCheck = args.type ? String(args.type) : null
   const keyword = args.keyword ? String(args.keyword).trim().toLowerCase() : null
-  let entries = scope ? readAllEntries(scopeDir(ctx.cwd, scope)) : readAllScopeEntries(ctx.cwd)
+  let entries = layer
+    ? readAllEntries(scopeDir(ctx.cwd, layer)).map((e) => ({ ...e, _scope: layer }))
+    : readAllScopeEntries(ctx.cwd)
   entries = entries.filter((e) =>
     (!typeCheck || e.type === typeCheck) &&
     (!keyword || String(e.title ?? "").toLowerCase().includes(keyword) || String(e.content ?? "").toLowerCase().includes(keyword))
@@ -193,26 +236,27 @@ function execList(args, ctx) {
   return lines.join("\n")
 }
 
-/** action delete — single ({ id, scope } — §0.1-era delete semantics) + batch (scope + type/keyword + confirm). */
+/** action delete — single ({ id, layer? } — layer optional: validate when given, else route by
+ *  the id's physical location) + batch (layer + type/keyword + confirm:true). */
 function execDelete(args, ctx) {
   const hasId = args.id !== undefined && args.id !== null && String(args.id) !== ""
   if (hasId) return execDeleteSingle(args, ctx)
   // batch form
-  const scope = args.scope
-  if (!scope) return "Error: batch delete requires scope plus type and/or keyword filter"
-  if (!VALID_SCOPES.has(scope)) {
-    if (scope === "team") return "Error: memory delete: VS Code memory has no team layer — team memory is managed by the CLI"
-    return `Error: memory delete: invalid scope "${scope}" — must be one of: ${[...VALID_SCOPES].join(", ")}`
+  const layer = args.layer
+  if (!layer) return "Error: batch delete requires layer + type/keyword filter + confirm:true"
+  if (!VALID_SCOPES.has(layer)) {
+    if (layer === "team") return "Error: memory delete: VS Code memory has no team layer — team memory is managed by the CLI"
+    return `Error: memory delete: invalid layer "${layer}" — must be one of: ${[...VALID_SCOPES].join(", ")}`
   }
   const typeErr = invalidType(args.type)
   if (typeErr) return typeErr
   const typeCheck = args.type ? String(args.type) : null
   const keyword = args.keyword ? String(args.keyword).trim().toLowerCase() : null
   if (!typeCheck && !keyword) {
-    return "Error: batch delete requires type and/or keyword filter — a scope-wide wipe without filters is refused (personal full wipe is the clear action)"
+    return "Error: batch delete requires type and/or keyword filter — a layer-wide wipe without filters is refused (personal full wipe is the clear action)"
   }
-  const dir = scopeDir(ctx.cwd, scope)
-  let rows = readAllEntries(dir)
+  const dir = scopeDir(ctx.cwd, layer)
+  let rows = readAllEntries(dir).map((e) => ({ ...e, _scope: layer }))
   rows = rows.filter((e) =>
     (!typeCheck || e.type === typeCheck) &&
     (!keyword || String(e.title ?? "").toLowerCase().includes(keyword) || String(e.content ?? "").toLowerCase().includes(keyword))
@@ -229,46 +273,109 @@ function execDelete(args, ctx) {
   for (const e of rows) {
     try { unlinkSync(join(dir, e._file)) } catch { /* best effort per file — count reflects matched rows */ }
   }
-  return `Deleted ${rows.length} entries in scope ${scope}`
+  return `Deleted ${rows.length} entries in layer ${layer}`
 }
 
 /**
- * Single-entry delete — id (filename) + scope; scope locates the storage directory
- * (memoryDir(cwd)/<scope>) — an id not in that scope's directory is an error (NF2/NF3).
- * Reads the entry content before deleting (F3 — auditable, recoverable).
+ * The physical directories an entry file may live in, in lookup order: the legacy memory
+ * root first (files written before layers existed — _scope "root", no layer), then the
+ * layer dirs. Delete locates an id by its ACTUAL origin here, never by assuming a layer
+ * directory — that is what makes search/list rows deletable regardless of which layer
+ * (or the legacy root) they came from.
  */
-function execDeleteSingle(args, ctx) {
-  const { id, scope } = args
-  if (!scope) return "Error: delete requires id + scope"
-  if (!VALID_SCOPES.has(scope)) {
-    if (scope === "team") return "Error: memory delete: VS Code memory has no team layer — team memory is managed by the CLI"
-    return `Error: invalid scope "${scope}". Must be one of: ${[...VALID_SCOPES].join(", ")}`
+function originDirs(cwd) {
+  return [
+    { layer: null, dir: memoryDir(cwd) },
+    { layer: "personal", dir: scopeDir(cwd, "personal") },
+    { layer: "project", dir: scopeDir(cwd, "project") },
+  ]
+}
+
+/** Find the directory an id (bare filename) physically lives in. onlyLayer restricts the
+ *  lookup to one layer dir (used for the layer validation path). Missing dirs are skipped
+ *  (ENOENT-tolerant); returns null when the file is not on disk anywhere. */
+function locateEntry(cwd, id, onlyLayer = null) {
+  const dirs = onlyLayer
+    ? [{ layer: onlyLayer, dir: scopeDir(cwd, onlyLayer) }]
+    : originDirs(cwd)
+  for (const d of dirs) {
+    try { if (existsSync(join(d.dir, id))) return d } catch { /* unreadable dir — skip */ }
   }
-  // id must be a bare filename: separators / ".." would escape the scope directory (NF3)
-  const bare = id && !id.includes("/") && !id.includes("\\") && id !== "." && id !== ".."
-  if (!bare) {
-    return `Error: memory ${id ?? ""} not found in scope ${scope}`
+  return null
+}
+
+/** Read-then-delete at a located origin (F3 — auditable, recoverable). ENOENT between the
+ *  locate and the unlink is tolerated (already gone — never a false success claim). */
+function deleteAt(loc, id) {
+  const filePath = join(loc.dir, id)
+  let raw
+  try {
+    raw = readFileSync(filePath, "utf8")
+  } catch (e) {
+    if (e?.code === "ENOENT") return `Error: memory ${id} not found`
+    return `Error: memory ${id}: cannot read the file (${e?.message ?? e})`
   }
-  const filePath = join(scopeDir(ctx.cwd, scope), id)
-  if (!existsSync(filePath)) {
-    return `Error: memory ${id} not found in scope ${scope}`
-  }
-  const raw = readFileSync(filePath, "utf8")
   const parsed = parseEntry(raw)
   const title = parsed?.title ?? "(untitled)"
   const content = parsed?.content ?? raw
-  unlinkSync(filePath)
+  try {
+    unlinkSync(filePath)
+  } catch (e) {
+    if (e?.code === "ENOENT") return `Error: memory ${id} not found`
+    return `Error: memory ${id}: cannot delete the file (${e?.message ?? e})`
+  }
   return `Deleted ${id}: ${title}\n${content}`
 }
 
-/** action clear — personal-only full wipe (scope + confirm:true gates; project refused with guidance). */
-function execClear(args, ctx) {
-  const scope = args.scope
-  if (!scope) return 'Error: clear requires scope "personal" — pass scope: "personal" plus confirm: true'
-  if (scope !== "personal") {
-    if (scope === "team") return "Error: memory clear: VS Code memory has no team layer — team memory is managed by the CLI"
-    return "Error: shared layers don't support clear — use delete with type/keyword batch filters instead"
+/**
+ * Single-entry delete — id (filename) + optional layer. The id locates its file by physical
+ * origin (see originDirs); the layer argument is a validation gate: when given, the file
+ * must live in that layer's directory, otherwise the delete is refused (anti-mistake —
+ * 防误删). When omitted, the id routes straight to wherever it actually lives, so any id
+ * surfaced by search/list deletes directly. Local dirs missing → not-found error
+ * (ENOENT tolerance, no false success). Index cleanup is VSC-file-as-truth: no per-entry
+ * DB/index row exists to remove at delete time — the optional semantic vector index is
+ * whole-rebuild (needsRebuild detects the removed memory file) and its read path guards
+ * stale rows (see execSearch), so a deleted entry is never re-surfaced.
+ */
+function execDeleteSingle(args, ctx) {
+  const { id, layer } = args
+  // id must be a bare filename: separators / ".." would escape the memory directory (NF3)
+  const bare = id && !id.includes("/") && !id.includes("\\") && id !== "." && id !== ".."
+  if (!bare) {
+    return layer
+      ? `Error: memory ${id ?? ""} not found in layer ${layer}`
+      : `Error: memory ${id ?? ""} not found`
   }
+  if (layer !== undefined && layer !== null && layer !== "") {
+    if (!VALID_SCOPES.has(layer)) {
+      if (layer === "team") return "Error: memory delete: VS Code memory has no team layer — team memory is managed by the CLI"
+      return `Error: memory delete: invalid layer "${layer}" — must be one of: ${[...VALID_SCOPES].join(", ")}`
+    }
+    const inLayer = locateEntry(ctx.cwd, id, layer)
+    if (inLayer) return deleteAt(inLayer, id)
+    // Not in the requested layer — distinguish a mismatch (file lives elsewhere) from a miss.
+    const anywhere = locateEntry(ctx.cwd, id)
+    if (anywhere) {
+      if (anywhere.layer) {
+        return `Error: memory ${id}: 与 layer ${layer} 不匹配 — the file lives in layer ${anywhere.layer}（防误删——传 layer "${anywhere.layer}" 或省略 layer 按实际位置删除）`
+      }
+      return `Error: memory ${id}: 与 layer ${layer} 不匹配 — the file is a legacy entry without a layer（省略 layer 按实际位置删除）`
+    }
+    return `Error: memory ${id} not found in layer ${layer}`
+  }
+  // layer omitted → route by the id's physical origin
+  const loc = locateEntry(ctx.cwd, id)
+  if (!loc) return `Error: memory ${id} not found`
+  return deleteAt(loc, id)
+}
+
+/** action clear — personal-only full wipe (layer + confirm:true gates; project refused with guidance). */
+function execClear(args, ctx) {
+  const layer = args.layer
+  if (!layer) return 'Error: clear requires layer "personal" — pass layer: "personal" plus confirm: true'
+  if (layer === "team") return "Error: memory clear: VS Code memory has no team layer — team memory is managed by the CLI"
+  if (layer !== "personal") return `Error: clear is personal-only — layer "${layer}" doesn't support clear (use delete with type/keyword batch filters on shared layers)`
   if (args.confirm !== true) return "Error: clear requires confirm:true — this wipes ALL personal memory"
   const dir = scopeDir(ctx.cwd, "personal")
   const entries = readAllEntries(dir)
@@ -277,4 +384,3 @@ function execClear(args, ctx) {
   }
   return `Cleared personal memory (${entries.length} entries deleted)`
 }
-
