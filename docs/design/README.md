@@ -8,11 +8,13 @@
 
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
-| 架构 | `ARCHITECTURE.md` | 权威源 |
+| 架构 | `ARCHITECTURE.md` | 权威源（DOC-REORG-VSC 拆分批——机制板块陆续独立成文） |
+| 工程模式 | `ENGINEERING-MODE.md` | 与 CLI 同名文档对应；会话级开关/eng token/门禁/guard |
+| 评审收敛 | `ADVISOR-CONVERGENCE.md` | 与 CLI 同名文档对应；advisor 轮次衰减/cap/铁律 R1-R7 |
 | 需求与决策 | `REQUIREMENTS.md` | 需求与决策记录 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
-| Responses 传输 | `RESPONSES-TRANSPORT.md` | |
+| Provider/transport | `PROVIDER.md` | 权威源（ARCHITECTURE §5 + RESPONSES-TRANSPORT 并入——2026-09-08 DOC-REORG） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
 | 发布流程 | `RELEASE.md` | |
 | 会诊 | `CONSULTATION.md` | |
@@ -43,3 +45,5 @@
 - 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 `src/config-presets.mjs` PROVIDER_PRESETS 对齐）；其余文档质量观察项见会话记录，未入库
 - 2026-09-06：会话目录残留 GC + 标题写显性化（机制权威源 CLI `SESSION.md` §12）——VSC 端 eng-coder 交付：`src/extension/session-gc.mjs`（残留 GC + 冷 cwd 原语，CLI 同源移植；F2 手动执行面仅 CLI `thincoder session gc`）+ setSlotTitle `{ok, reason}` 契约（session-io.mjs）+ 面板调用方适配（panel-messages/panel-session）+ `test/session-gc.test.mjs`
 - 2026-09-08：文档格式债清理批——**归档 11 件移 `_archive/`**（SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY + COVERAGE-GAPS 对 + SLEEP-REMOVAL 对 + webview-input-lag）并更新登记；整文件单行 demux 为多行 markdown；归属规则加**规则 6（文档人类可读防复发）**——配 `scripts/check-doc-width.mjs` 批量检查。
+- 2026-09-08：DOC-REORG 第 2 批——`RESPONSES-TRANSPORT.md` 并入新建 `PROVIDER.md`（板块 Provider/transport），README 登记行同步（原 Responses 行改为 PROVIDER 行）
+- 2026-09-08：DOC-REORG-VSC 第 4 批——新板块登记：工程模式（ENGINEERING-MODE）+ 评审收敛（ADVISOR-CONVERGENCE），各自独立完整（与 CLI 同名档对应）。
