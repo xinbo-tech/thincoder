@@ -31,6 +31,7 @@
 - **现状**：settle 写内存 Map，落盘只在回合尾 saveSession（`agent-turn.mjs:279`）/退出/增量点。
 - **改**：settle 是唯一结算点 → **settle 当场持久化 token 字段到槽文件**（不等下个回合尾 saveSession）。在 `advisor-async.mjs` settle finally 后直接写（复用 `engTokenSlotFields` 序列化 + session 安全写/轮转，勿裸写文件）。agent 内存 Map 保持为当前进程缓存（常驻，与槽一致）。此消除"settle→下个 saveSession"间的重启丢 token 窗口。
   - **写失败语义（评审 #1）**：settle 的槽写须同步 await——失败即 **settle 失败**（token 不注册、无 Approved 回显、可重评），不静默吞错、不产生"内存有盘上无"态（宁可结算失败可重评，不留半结算态）。
+  - **consume 落盘对称（交付 🔴 复活洞修复——D1+D2 叠加效应）**：consume-design 删内存槽后**当场同步落盘删除**（写空槽/删旧台账）——否则消费→回合尾 save 窗口内 spawn 门禁 miss 回读会从盘上复活已消费 token。落点：`subagent-spawn.mjs` consume-design 动作（或 token-ttl consume 辅助函数）调用 `persistEngTokens`（D1 同款落盘函数，写空槽）。
 - 落点：`src/agent-tools/advisor-async.mjs` settle 路径 + `src/token-ttl.mjs`（暴露可复用的落盘函数）。
 
 ### D2 spawn 门禁读权威（miss 回读槽）
@@ -56,6 +57,8 @@ settle 即落盘（D1）、门禁读权威 miss 回读（D2）、镜像退役（
 
 - 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3）、`src/agent/dispatch.mjs`（写门问槽 D3）、`src/token-ttl.mjs`（落盘函数 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）
 - 文档：本设计 + README 地图登记
+- 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、`src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`src/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
+- 新增：`src/agent-tools/design-token.mjs`（token 工具组拆分——advisor-async 577→487 行硬限内）、`src/session-guard.mjs`（轮转守卫拆分——session-slots 525→485 行）、`test/design-token-settlement.test.mjs`（AC 测试 7 用例 + consume 补充 1）
 
 ## 5. 验收
 
