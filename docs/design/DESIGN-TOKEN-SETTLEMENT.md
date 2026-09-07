@@ -1,6 +1,6 @@
 # async 设计评审 token 结算根治（CLI 端）
 
-> 板块：设计评审凭证结算（async settlement）。状态：**设计（待评审）**——2026-09-08 用户裁定：不再打补丁，按合理结构根治 + 废旧单值镜像 + 双端一起做（CLI/VSC 各自独立文档，同机制语义高度一致）。
+> 板块：设计评审凭证结算（async settlement）。状态：**已批准 + 已实现**（2026-09-08 eng-coder clean 交付 `a7e78b0` + consume 落盘 fix round `08cabb9`——D1-D4 + AC1-AC7 全落地 + 拆分 design-token/session-guard + 测试 9/9）。
 > 背景：VSC 端 async 评审 token 反复丢（`designId not found`）已根治设计；用户裁定**双端做同一件事、逻辑高度一致、一起改**。CLI 现状 explore 一手核实（2026-09-08）——CLI 无 VSC 的死对象/快照/清零 bug，但有一处重启序列化窗口 + 与 VSC 对齐需统一结算语义。
 
 ## 1. 现状与差异（explore 一手核实）
