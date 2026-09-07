@@ -60,12 +60,16 @@
 #### D2.1 依赖方向解（N2）
 - retry.mjs 注释自认"无 core 依赖复制于此——循环依赖回避"——去重前解依赖：errors.mjs 保留实现，retry.mjs 导入 errors.mjs（解循环依赖——retry.mjs 不依赖 core，errors.mjs 也不依赖 retry——单向依赖 errors → retry 或 retry → errors，需实测）。
 - 落点：`src/provider/retry.mjs`（改导入 errors.mjs）或 `src/provider/errors.mjs`（改导入 retry.mjs——实测依赖方向后定）。
+#### D2.1 依赖方向解（N2——实测定稿）
+- **实测依赖图**（评审 #1 采纳）：errors.mjs 和 retry.mjs 都独立（互不依赖，均 import rate.mjs），core.mjs 依赖 errors.mjs——**无循环依赖**（retry.mjs 注释说的"循环依赖回避"是历史遗留，现已无循环）。
+- **去重方案定稿**：errors.mjs 保留实现（parseRetryAfter/isNonRetryableError），retry.mjs 改导入 errors.mjs（删重复实现）。sleepInterruptible 在 core.mjs 保留，retry.mjs 改导入 core.mjs。**不需要新建 retry-utils.mjs**（无循环依赖，直接单向导入）。
+- 落点：`src/provider/retry.mjs`（删重复实现，改导入 errors.mjs/core.mjs）。
 
 #### D2.2 parseRetryAfter 去重（F4）
 - errors.mjs:13-25 保留，retry.mjs:19-31 删（改导入 errors.mjs）。
 
 #### D2.3 sleepInterruptible 去重（F5）
-- core.mjs:33 保留，retry.mjs:34 删（改导入 core.mjs——或统一到新 helper 模块，若 core/retry 循环依赖）。
+- core.mjs:33 保留，retry.mjs:34 删（改导入 core.mjs——无循环依赖，单向导入）。
 
 #### D2.4 429 判定统一（F6）
 - errors.mjs isNonRetryableError（双判版）保留，retry.mjs isQuotaExhausted 删（改导入 errors.mjs）。
