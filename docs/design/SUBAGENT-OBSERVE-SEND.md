@@ -29,13 +29,15 @@
 - **硬缺口**：子代理 runAgent 今日不知自己的池条目——childOpts 未携带 entry 引用，注入要在回合边界消费队列需先把输入源贯通进 runAgent opts。
 
 ### D1 数据源：observe 从 entry.childAgent 拉摘要
-- `subagent-actions.mjs` 加 `observe` 动作执行器：按 id 定位池条目 → 从 `entry.childAgent` 取 `_fullHistory` 尾 N 条（回合摘要：工具调用/关键动作）+ `_touchedFiles` + 当前回合 turn/maxTurns + status。
-- 返回**摘要**（每回合首行/工具名，非全量）——N2 隔离。条数上限（默认最近 ~5 回合摘要，可参数）。
+- `subagent-actions.mjs` 加 `observe` 动作执行器：按 id 定位池条目 → 从 `entry.childAgent` 取最近 N 条**已落回合**摘要（工具调用/关键动作）+ `_touchedFiles` + 当前回合 turn/maxTurns + status + **in-flight 当前工具**（评审 #1——读 child 进行中 dispatch/工具状态，非只读已落 history：卡在长工具调用时 history 无新回合，恰是 observe 要检测的卡死态，须从 dispatch 层读）。
+- 返回**摘要**（每回合首行/工具名 + 当前工具，非全量）——N2 隔离。条数上限（默认最近 ~5 回合摘要，可参数）。
 - 落点：`subagent-actions.mjs`（新 observe 分支）+ 动作 schema（subagent 工具描述加 observe）+ 可能的 `entry.childAgent` 访问收口 helper。
 
 ### D2 注入通道：send 写 entry 队列 + 子回合边界消费
 - 池条目加注入队列：`entry._injected = []`（父 send 写入）。
 - `subagent-actions.mjs` 加 `send` 动作：按 id 定位 → push 消息进 `entry._injected`（仅 running 异步可 send；settle/cancel/unknown → 明确错误）。返回已入队确认。
+- **动作门禁分类（评审 #2）**：observe = **readonly**（查询不副作用）；send = **控制类豁免**（同 cancel/panel——写入子输入队列属父对子轻量引导，非产品代码写，不需 approval 门；父回合内显式调用即授权）。写 AGENT-LOOP §7.2 动作表时注明两分类。
+- **send→settle 竞态（评审 #3）**：消息入队后子代理在下一回合边界前 settle → 消息未投递——send 返回时无法预知；settle 收尾时若有未消费 `_injected` → 附入 settle 报告/错误提示（"N 条注入未投递"），防父误以为引导已落地。
 - **子侧输入源贯通（硬缺口）**：runAgent 需能读到注入队列——仿 VSC stateSink 模式，把"注入队列消费回调"塞进子 runAgent opts（childOpts 加字段），子 turn 循环头（`agent.mjs` 每轮开头，父消费 pendingInput 的同类点）消费 `entry._injected` → `pushReal` 成 user 回合进子历史 → 子 agent 当作普通指令处理。
 - 落点：`subagent-actions.mjs`（send + observe）、`agent-tools/subagent-run.mjs`/`spawn-child`（childOpts 贯通 entry）、`agent.mjs`（子回合边界消费注入点）。
 
@@ -50,6 +52,8 @@
 
 - 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作）、`src/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`src/agent.mjs`（子回合边界消费注入点）
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理 §（动作表加 observe/send）
+- 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作 + §4.1 分类）、`src/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`src/agent.mjs`（子回合边界消费注入点）
+- 文档：本设计（CLI 细节/机制）+ README 地图登记 + **AGENT-LOOP.md §7.2 动作表加 observe/send（含两动作分类 + 契约——单一权威源，本设计不复述契约措辞——评审 #6 防双源漂移）**
 
 ## 4. 验收
 
