@@ -88,7 +88,7 @@ advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、m
 
 | 批 | 债 | 规模 | 建议时序 |
 |---|---|---|---|
-| 批 A | #1 文档格式债（README 地图自坏 → AGENT-LOOP 537KB → TODO.md → VSC 文档 L1） | 大 | 从地图/小文档先清（TOOLS.md 样板），AGENT-LOOP 最大留专批 |
+| 批 A | #1 文档格式债（双端 ~70 坏格式文档重写为人类可读） | **超大** | 本档 §7 详列分批；已启（归档 8 文件已移） |
 | 批 B | #5 system.mjs 拆分 + #6 工具归位 | 中 | 独立清理批（TOOLS.md 尾 TODO 已记"拆分会动整个工具组"） |
 | 批 C | #7 settle 逻辑去重 + abort 去双保险 | 小中 | 抽 helper |
 | 批 D | #3 `_` 字段归组 capsule | 大 | 高收益，需设计（状态归属重构） |
@@ -97,6 +97,42 @@ advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、m
 
 每批独立走工程模式（设计→评审→eng-coder）。本档只路由，不承载单批设计正文（设计落各自板块文档或批专属设计文档）。
 
+## 7. 批 A——文档格式债清理计划（2026-09-07 用户裁定推进）
+
+**目标**：双端全部坏格式设计文档重写为**人类可读** markdown（领导审核级）。方法 = TOOLS.md 样板（用户裁定"统一"）：**保留当前机制正文，历史变更流水账折叠/精简**。
+
+**人类可读验收判据**：①无 >300 字符单行；②markdown 结构正确（表格/标题/列表/规则用空行 + 换行正确分隔，标题不被吞进正文）；③历史逐批记录（需求/设计/测试/核销考古）折叠为当前态 + 一句变更记录；④文档与实现漂移处更新。
+
+**处置分类（用户裁定 2026-09-07）**：
+- **归档 _archive/**：纯历史/方向草案/参考分析/被取代（已移 8：ARCHITECTURE-v2、ROADMAP-0.9.0、COMPETITIVE-CLI-2026、KIMI-CODE-PROMPT-ANALYSIS、TTSR-ANALYSIS、ENGINEERING-WORKLOOP、CLI-LINT-REQUIREMENTS、CLI-LINT-TUNING）
+- **保留 + 重写为可读**：所有当前生效设计文档，含已完成专题的 REQUIREMENTS/TUNING 对（已实现 = 独立保留，非被取代 = 不归档）
+
+**CLI 批（docs/design/）**——按域分批，每批独立 eng-coder：
+
+| 子批 | 文件 | 特征 |
+|---|---|---|
+| A1 | README.md（地图自坏）、REQUIREMENTS.md、FEATURES.md | 小，先清（领导最可能先看） |
+| A2 | ARCHITECTURE.md、PHILOSOPHY.md、METHODOLOGY.md、PROXY.md | 架构/三观/方法论权威 |
+| A3 | AGENT-LOOP.md、ENGINEERING-MODE.md、ADVISOR-CONVERGENCE.md、MULTI-INSTANCE-COLLAB.md | 机制权威（AGENT-LOOP 314KB 最大） |
+| A4 | SESSION.md、CONTEXT-COMPACTION.md、MEMORY.md、PROVIDER.md、CONSULTATION.md、ESCALATE.md | 会话/记忆/Provider/协作 |
+| A5 | TOOLS.md(已清)、MCP.md、CHECKPOINT.md、SETTINGS-TOOL.md、EDIT-TOOL-EOL-{REQ,DESIGN}、ACP-CLIENT.md | 工具/机制 |
+| A6 | TUI.md、TUI-INPUT-BOX.md、TUI-TOOL-OUTPUT.md、PROMPT-DECOUPLING.md、VERIFY-DOCONLY.md | UI/提示词 |
+| A7 | 已实现专题对：AGENT-PARAMS-{REQ,TUN}、TOOL-OUTPUT-LIMITS-{REQ,TUN}、COVERAGE-GAPS-{REQ,TUN}、SEND-STALL-DISTILL-{REQ,TUN}、SLEEP-REMOVAL-{REQ,TUN}、ENG-TOKEN-BINDING-{REQ,TUN}、EVALUATION.md、FEATURES.md、RELEASE.md | 已完成专题（保留重写为可读） |
+| A8 | docs/TODO.md（巨型单行条目）、docs/guides/ides.md | 根 docs |
+
+**VSC 批（thincoder-vscode/docs/design/）**——镜像：
+
+| 子批 | 文件 | 特征 |
+|---|---|---|
+| V1 | README.md、ARCHITECTURE.md（**整文件 1 行 96KB 最极端**）、RELEASE.md、REQUIREMENTS.md | 大件/极端 |
+| V2 | PHILOSOPHY.md、PROJECT-SWITCHER.md、TURN-CAP-CONTINUE.md、SETTINGS.md | 权威/专题 |
+| V3 | 已完成专题对（AGENT-PARAMS/COVERAGE-GAPS/ENG-TOKEN-BINDING/SEND-STALL/SLEEP-REMOVAL/TOOL-OUTPUT-LIMITS）+ SETTINGS-PANEL/REORG/SUBMODEL/MODEL-PICKER-UNIFY/RESPONSES-TRANSPORT/webview-input-lag | 专题 |
+| V4 | CONSULTATION.md、ESCALATE.md + docs/COMPETITIVE_ANALYSIS.md | 协作/参考 |
+| V5 | VSC docs/TODO.md | 根 docs |
+
+**每子批交付**：eng-coder 重写该批文件为可读（保留当前机制 + 折叠历史），git mv 任何发现应归档的到 _archive。验收 = 人类可读判据 4 条 + node --check 无关（纯 md）+ lint。双端同文件域不重叠故可并行 eng-coder。
+
 ## 变更记录
 
 - 2026-09-07：立项。fresh scan（explore）完成——双树结构债评估 + top-8 + 已消解项核实。落本档。结构债此前已部分登记 docs/TODO.md（system.mjs 拆分、verify.mjs 拆分等），本档为横切总账。
+- 2026-09-07：批 A 启动（文档格式债）。归档 8 文件移 _archive（纯历史/被取代）。§7 落详细分批计划（CLI A1-A8 + VSC V1-V5 + 人类可读判据 4 条 + 处置分类）。用户裁定：处置 = 被取代归档 / 已实现保留重写；方法 = TOOLS.md 样板统一。
