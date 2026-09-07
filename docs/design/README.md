@@ -22,7 +22,7 @@
 | 发布流程 | `RELEASE.md` | npm 发布流程 + 踩坑记录 |
 | CLI Lint 引入 | ~~`CLI-LINT-*.md`~~ | 已移 `_archive/`——被 TOOLS.md §10.2 取代（eslint 删除） |
 | Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复 + TTL 7 天可配 |
-| 覆盖率缺口修复 | `COVERAGE-GAPS-REQUIREMENTS.md`、`COVERAGE-GAPS-TUNING.md` | 已完成专题记录 |
+| 覆盖率缺口修复 | `_archive/COVERAGE-GAPS-REQUIREMENTS.md`、`_archive/COVERAGE-GAPS-TUNING.md` | 已移 `_archive/`——测试清零政策取代（锁测试断言产物已删） |
 | 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | 已完成专题记录 |
 | 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除 |
 | 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 |
