@@ -59,7 +59,8 @@
 - [ ] **🔵 五项不修登记（父侧知悉）**：VS sync design 轮次不递增 / VS guard cap 读全局轮 / CLI guard 文案无 async 补注 / VS depth-undefined 缺省 async / CLI T-24b1 墙钟断言（已知不修，留档）
 
 ## 异步 / 挂起 / 调度残留（AGENT-LOOP 后续轮）
-- [ ] **async 结果容器统一（2026-09-08 需求点——等 token 根治交付后启动；STRUCTURE-DEBT 批 E+批 C）**：async settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复** + pending 分叉 + `_sessionSignal` 别名抄 4 次——统一单载体（池+pending 带 role 标签+共享 settle helper+buildChildSignal）
+- [ ] **async 结果容器统一（2026-09-08 需求点——**在途**（双端 ASYNC-RESULT-CONTAINER 设计已批准 + eng-coder 实现中——CLI id=2 + VSC id=1 跑着）——交付后核销勾销）**：async settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复** + pending 分叉 + `_sessionSignal` 别名抄 4 次
+  ——统一单载体（池 accessor+pending 单容器+role+共享 settle helper+buildChildSignal）——最深状态债（涵盖并行 check 双消费/挂起期 check 双投/settle 队列改造/4 explore 等散项）
   ——最深状态债（涵盖并行 check 双消费/挂起期 check 双投/settle 队列改造/4 explore 等散项）
 - [ ] **同回合两个 async 子代理——第二个完成后主 agent 长期卡住**（用户两次 Ctrl+C 均因此）——诊断插桩已撤——根因大幅被自动注入通道取代，残余需确认——**观察项，待用户确认是否仍复现**
 - [ ] **sync spawn 完成精确冻结**（finishSubTask"最早 started"启发式误冻——方案 e：subagent 留 _subagentKey → 精确冻）——设计落 AGENT-LOOP §7.2
@@ -78,9 +79,9 @@
 - [ ] **R10 多实例协作感知**——设计已批准——**在途**（待核销）
 - [ ] **R16 token 生命周期语义修订**（TTL 到期+重启/开模式清过期）——需求已登记——**待设计**
 - [ ] **env-state 补当前会话 slot**（agent 自知当前会话槽号——SESSION §11 env-state 补 slot 字段）——双端——设计启动权在用户
-- [ ] **async 评审凭证结算根治**——**在途**（双端 DESIGN-TOKEN-SETTLEMENT 设计已批准 + eng-coder 实现中——交付后核销勾销）
-- [ ] **父 agent 观察运行中子代理（功能①，2026-09-08 用户需求点——治父看不到中间只靠 turn/touchedFiles 瞎猜死循环）**：父模型侧 `subagent` 动作加 observe——按 id 从 `entry.childAgent` 拉最近 N 条回合摘要 + 当前工具 + turn/touched，返父上下文。核心缺口 = **父模型看不到中间**（用户端 CLI TUI/VSC 已实时看到，几乎零新做）。关键约束：父只在自身回合内能调，异步子代理后台跑时父回合外——需解父子回合错位。归属 AGENT-LOOP 子代理 §，双端镜像
-- [ ] **父 agent 注入提示给运行中子代理（功能②，2026-09-08 用户需求点——纠结时给方向）**：父模型侧 `subagent` 动作加 send——写 entry 注入队列，子 runAgent 回合边界消费 + pushReal 进子历史（镜像父 pendingInput 攒批语义）。关键约束：①子 runAgent 需输入源贯通（今日 childOpts 不携带 entry 引用——硬缺口）②父子回合错位（父只在回合内能发，子后台跑）③注入对 eng-coder 审计/收敛纪律的边界（注入算不算破坏流程——需定义）。归属 AGENT-LOOP 子代理 §，双端镜像
+- [x] ~~**async 评审凭证结算根治**~~——**已实现**（2026-09-08 双端交付：CLI `a7e78b0`+`08cabb9` consume 落盘 / VSC `159a39f`——settle 当场落盘+门禁 miss 回读+镜像退役+consume 落盘对称——token 根治验证通过：async advisor settle 落盘+digest 后 spawn 能过）
+- [x] ~~**父 agent 观察运行中子代理（功能①）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——observe 动作：按 id 拉 5 条回合摘要+当前工具+turn/touched，治父看不到中间）
+- [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
 - [ ] **designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**：设计工作从主会话剥离给专门 designer 子代理——主会话只澄清需求+派 designer+评审设计+批准（不再自己写设计，哪怕小改动也派 designer）。designer 只写设计文档（主会话给澄清后需求+上下文，它产出设计文档到 docs/design/，不参与澄清）；直接写盘（产出即定稿）；一次性（每设计任务 spawn 一个，用完即弃）
   ——需：新 designer 角色（子代理工具加 designer role）+ designer 提示词（固化 METHODOLOGY 三层结构/文档归属/验收标准格式/文档地图检查/受影响文件表格式）+ 主会话提示词改（工程模式 Mandatory Flow 改设计由 designer 做）+ designer 工具集（写 docs/design/ 权限+读代码/文档）——双端（CLI/VSC）同机制
 
@@ -90,9 +91,9 @@
 
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
-- [ ] **链终 token 消费待执行**：consume-design 各已核销 designId（验收核销已完成，消费为收尾动作——重启后执行）
+- [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
 - [ ] **TUI 开放项**：① picker item.note 渲染丢弃 ② question/wizard 并行 UI 统一——架构决策待定（TUI.md §11 承载）
-- [ ] **平台缺口：async advisor digest token 未注册父会话 approved slots**——解法待定（digest 注册 vs spawn 接受 digest 文本）——与 token 结算根治关联
+- [x] ~~**平台缺口：async advisor digest token 未注册父会话 approved slots**~~——**已实现**（2026-09-08 token 根治修复——async advisor settle 当场落盘权威台账+digest 后 spawn 门禁 miss 回读能过——消"未注册父会话"缺口）
 
 ## 工程模式提示词同步（独立小项）
 - [ ] **R3' bash 工具重定向护栏删除**——已实现（id:13 clean，核销见 TOOLS.md §13）——**待父侧勾销**
