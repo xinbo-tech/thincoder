@@ -55,6 +55,7 @@
 3. **新板块才新建**：确无归属的新板块才新建文档，并立即在本表登记。
 4. **单一权威源**：同一机制只在一处详述；其余文档引用（指路），不复制内容——多处复制必然漂移矛盾。
 5. **存量碎片处理（2026-08-25 收口 + 2026-09-07 归档清理）**：方向性/时点/被取代文档移 `_archive/`；已实现专题独立保留。新增同主题内容须先查本表归属。
+6. **文档人类可读（2026-09-07 防复发）**：写/改本文档映射内任一 `docs/design/` 文档须人类可读——**无 >300 字符单行**（整节/表/规则不得压成一行）、**markdown 结构正确**（标题/表格/代码块不被吞进正文，空行隔离节）、**变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）。违反即文档格式债，与源码 500 行硬限同理。批量检查：`node scripts/check-doc-width.mjs`（扫 docs/design/ 无 >300 单行）。
 
 ## 变更记录
 
@@ -67,3 +68,4 @@
 - 2026-09-05：新增专题「settings 工具」。
 - 2026-09-06：provider 数量修正（17→20）；新增「测试基建」「多实例协作感知」；SESSION.md §12；token 生命周期语义修订。
 - 2026-09-07：新增「结构债」（STRUCTURE-DEBT.md）；verify 重构（VERIFY-REDESIGN.md）；**归档 8 文件移 `_archive/`**（ARCHITECTURE-v2/ROADMAP-0.9.0/COMPETITIVE-CLI-2026/KIMI-CODE-PROMPT-ANALYSIS/TTSR-ANALYSIS/ENGINEERING-WORKLOOP/CLI-LINT-REQUIREMENTS/CLI-LINT-TUNING）；地图格式正常化。
+- 2026-09-07：归属规则加**规则 6（文档人类可读防复发）**——无 >300 字符单行 / markdown 结构正确 / 变更记录折叠；配 `scripts/check-doc-width.mjs` 批量检查。
