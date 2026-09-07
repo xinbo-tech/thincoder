@@ -1,6 +1,6 @@
 # 父侧观察 / 注入运行中子代理（VSC 端）
 
-> 板块：Agent 循环 · 子代理运行时观测与控制。状态：**设计（待评审）**——2026-09-08 用户需求点。CLI 同名对应（SUBAGENT-OBSERVE-SEND.md CLI 端）——同一机制各自独立实现。
+> 板块：Agent 循环 · 子代理运行时观测与控制。状态：**已批准 + 已实现**（2026-09-08 eng-coder clean 交付 605a901——observe/send 落地 + 14 测试 40/0 + affected-files reconcile）。CLI 同名对应（SUBAGENT-OBSERVE-SEND.md CLI 端）——同一机制各自独立实现。
 > 背景：父 agent 对运行中异步子代理只看到 turn/touchedFiles（status），看不到中间——eng-coder 跑很久看不出是否死循环（用户实测，VSC 端）。用户端 VSC 面板本已实时显示子代理流（webview activity `sub:role#id` 块）——核心缺口在父模型侧。
 > 范围（用户裁定）：父侧 `subagent` 加 **observe**（查进度）+ **send**（注入引导）；双端各自独立文档同一机制；不做 UI 直连。
 
@@ -50,6 +50,8 @@
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
 - 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、子 runAgent 回合边界消费
+- 修改：`src/agent-tools/subagent-actions.mjs`（observe+send）、`src/agent-tools/subagent-spec.mjs`（schema 描述加两动作 + isReadonlyAction/isControlAction 分类——observe=readonly/send=control）、`src/agent-tools/subagent.mjs` runChild（stateSink 扩注入队列消费入口 + onToolCall 记当前工具）、**`src/agent-tools/subagent-async.mjs` + `subagent-escalate-async.mjs`**（池条目 `_injected` 载体 + settle "未投递"注——escalate 与 spawn 同池须同构）、**`src/agent.mjs`**（子 runAgent 回合边界消费——注入队列消费落点）、子 runAgent 回合边界消费
+- 新增：`test/subagent-observe-send.test.mjs`（14 用例——running/queued/done/unknown/empty/cancel-race/凭证/分类/depth-gate/N=5 截断）+ `test/files.mjs` 登记
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理 §
 
 ## 4. 验收
