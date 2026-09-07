@@ -1,56 +1,177 @@
-# 会诊机制（Consultation）— 需求与设计（CLI） > 状态：**已实施**（2026-08-16，commit 596a69f；0.12.30 随版发布）。与 VS Code 插件同源设计（`thincoder-vscode/docs/design/CONSULTATION.md`），本文件记录 CLI 端的实现差异与接线。
-> 一句话：可配置多模型并行会诊，主 agent 收到全量意见 digest 后自行判断与验证（**R17 修订——2026-09-06——权威规格：AGENT-LOOP.md §25 D-R17a——本节下文除标注外为考古机制记录**）。 --- ## 1. 需求（与插件一致） 遇到疑难杂症（反复失败、卡住、无头绪）时，让多个**不同模型**并行分析同一问题。主 agent **逐个读取先返回的回复，自己判断、自己验证**（用已有的工具：bash / verify / read / 推理），一旦认定某份回复足够好，立即终止其余仍在执行的会诊。工具只负责**编排与收集**，判定权完整归主 agent。 - **两个工具**（R17：`consult_check` 已退役——digest 自动注入是唯一消费通道）：`consult_start`（非阻塞发起）→ `consult_stop`（取消仍在跑的会诊——不产生 digest）。
+# 会诊机制（Consultation）
+
+> 板块：会诊。状态：**已实施 + 已异步化**（R17——2026-09-06）。
+> 权威规格（现行）：`AGENT-LOOP.md` §25 D-R17a（会诊 digest 自动注入 / 跨回合后台 / `consult_check` 退役）。
+> 与 VS Code 插件同源设计（`thincoder-vscode/docs/design/CONSULTATION.md`）——本文记录 CLI 端的实现与接线。
+> 会诊（consult）与飞刀（escalate）是互补机制，见 `ESCALATE.md`。
+
+## 1. 需求
+
+**一句话**：可配置多模型并行会诊，主 agent 收到全量意见 digest 后自行判断与验证。
+
+### 行为
+
+遇到疑难杂症（反复失败、卡住、无头绪）时，让多个**不同模型**并行分析同一问题。
+工具只负责**编排与收集**，判定权完整归主 agent——它逐个读取先返回的回复，用已有的
+工具（bash / verify / read / 推理）自己判断、自己验证。
+
+- **两个工具**：`consult_start`（非阻塞发起）→ `consult_stop`（取消仍在跑的会诊——不产生 digest）。
+  `consult_check` 已退役（R17）——**digest 自动注入是唯一消费通道**。
 - **会诊子 agent 只读**，`main_history` 按需拉取主会话失败轨迹。
-- **生命周期跨 turn**（R17：consultation sessions 是跨回合后台工作——回合尾不再清理——仅 Ctrl+C/会话中止时 abort——与 async 子代理同规则）。
-- **候选池**：`agent.consultModels`（`{ provider, model, effort? }`，≤5），缺省空 = 未启用。 **范围边界（不做）**：工具内置自动验证、模型间交叉通信、会诊子 agent 改文件、部分 settle 提前注入（全 settle 才入 digest 流）。 > **R17 修订段（2026-09-06——权威规格 AGENT-LOOP.md §25 D-R17a——CLI 已实现）**：§1 需求与 §2 设计的 **check 轮询消费模型整体退役**——全 settle（pending=0）后会话移入 `_pendingConsultResults`（独立族流——决策点 ④）→ 下一回合（用户回合或 digest auto-turn）run 首行注入 `[System reminder: consultation #id finished — N of M models replied (F failed)]` + 逐条全文（失败按 per-model 标注——部分/全失败同规则）→ 消化轮逐条判断处置（会诊 = 建议非门禁——动作域按消费回合档位——手动档 digest 整理禁写——无"consult 可写"例外）。`consult_check` 工具删除（描述零残留）；`consult_stop` 保留为**取消**语义（`{abandoned, cancelled:true}`——已答部分丢弃——不入 pending）；running 会诊会话入挂起活度判据（poolLive——空闲 settle 也触发消化轮——T-R17j）；每个 consultant 的活动块在 **child settle 即冻结**（⟦ev⟧done——per-child key——不再经 check 消费冻结）；wait_for "consult done" 条件保留（会话 settle 即移出 map）。本节以下内容（§2.3/2.3.1 接口契约与结算小节）保留为考古记录——实现以 AGENT-LOOP §25 与 consult.mjs 现状为准。 --- ## 2. 设计 ### 2.1 架构与数据流 ```
-主 agent（turn 中，非阻塞） │ consult_start(problem) → 立即返回 { id, models } ▼
-consult 会话（挂在 agent._consultSessions = Map<id, Session>，turn 结束清理） ├─ 并发启动 N 个会诊子任务（独立 AbortController + 只读工具集 + main_history） ├─ 子任务回复流进会话的 reply 队列 │
-主 agent 继续自己的 turn： │ consult_check(id) → await「下一个」先到的回复 → { reply, received, total, done } │ → 主 agent 读回复，用自己的工具判断与验证 │ → 不够 → 再 consult_check；够了 → consult_stop(id) → abort 剩余 ▼
-主 agent 采纳，继续完成任务
-``` ### 2.2 CLI 与插件的实现差异 插件端 `runAgent(provider, cwd, input, callbacks, signal, getAuto, opts)` 内部自建 agent；CLI 端 `runAgent(agent, input, callbacks, opts)` 要求**显式构造 agent 对象**。移植的对应关系： | 环节 | 插件（vscode） | CLI |
-|---|---|---|
-| 子任务 runner | `runner({...provider, model}, cwd, task, callbacks, signal, true, opts)` | `runAgent(child, input, childCallbacks, { depth:1, maxTurns, signal })` |
-| 子 agent 构建 | runAgent 内部 `createAgent` | 显式 `createAgent({ provider, tools, config, cwd, memory, role:"consult" })` |
-| provider 解析 | `buildProvider(m.provider)` | `resolveChildProvider(parent, "provider:model")`（复用 subagent） |
-| 只读工具集 | `builtinTools.filter(readonly)` | `readonlyToolNames(agent.tools)` 过滤父工具集 + `main_history` |
-| 系统 prompt | `role:"consult"` → `_CONSULT_BASE` | `role:"consult"` → `CONSULT_BASE`（setup.mjs base 分支） |
-| 活动流上屏 | `onSubagent` / `onToolPanel` → webview | relay 前缀 `consult#<id>/` → TUI 子 agent 活动区块（§7.2 D4） |
-| 工具注册 | agent.mjs `agentTools` 三分支 | setup.mjs `depthOnly`（depth 0 + consultModels 非空） |
-| 配置入口 | 设置面板（模型选择 + effort 下拉） | `/config` 命令（候选池增删改 + effort picker） | ### 2.3 接口契约 **config（`~/.thincoder/config.json`）**：
-```jsonc
-"agent": { "consultModels": [ { "provider": "deepseek", "model": "deepseek-v4-pro", "effort": "high" }, { "provider": "zhipu-plan", "model": "glm-5.2", "effort": "max" } // 上限 5；缺省空数组 = 未启用 ], "consultTurns": 40, // 每个顾问的工具轮数预算（15 曾致读文件途中撞墙） "consultTimeoutMs": 600000 // 墙钟看门狗（10 分钟；turn 上限只数 LLM 响应，不数慢工具）
-}
-``` **工具**（均在 `src/agent-tools/consult.mjs`）：
+- **生命周期跨 turn**：consultation sessions 是跨回合后台工作——回合尾不再清理——
+  仅 Ctrl+C / 会话中止时 abort（与 async 子代理同规则）。
+- **候选池**：`agent.consultModels`（`{ provider, model, effort? }`，≤5），缺省空 = 未启用。
+
+### 范围边界（不做）
+
+工具内置自动验证、模型间交叉通信、会诊子 agent 改文件、部分 settle 提前注入
+（**全 settle 才入 digest 流**）。
+
+## 2. 设计
+
+### 2.1 架构与数据流
+
 ```
-consult_start - problem (required): 问题简报——现象 + 失败轨迹概述 + 文件入口 （原始报错无需粘贴——会诊子 agent 用 main_history 自行拉取） - models (optional): 子集选择器——["provider:model" | 裸 provider | 裸 model]（大小写不敏感）， 只从 agent.consultModels 里筛出子集跑；缺省/空 = 全池。选择器匹配不到任何池成员 → 报错并列出可选值 → { id, models: ["deepseek:deepseek-v4-pro", ...] } // 非阻塞 consult_check - id (required) - n (required, 2026-08-30): 1-based 递增读序号（首次 1，逐次 +1）——**协议参数，工具体不解构**；作用是让连续 check 的参数集互不相同（循环检测器按参数判重，会诊天然要连续 3~5 次同工具调用）且 transcript 可读（第几次读） → 返回「下一个」先到的回复；回复耗尽且全部 settle 时 done:true → 边界：未知 id → { error }；done 后再 check → 仍 { done:true }（幂等） consult_stop - id (required) - n (required): 递增调用序号（同上，取最后一个 check/stop 的下一值） → { stopped: N, abandoned: M } // abort 剩余 N 个（terminated settle，计数不入队）；abandoned = 放弃时的 pending 数
-``` **main_history**（仅会诊子 agent 可用，readonly）：`limit`（默认 20，最大 100）→ 主 agent 历史尾部窗口，多模态图片替换 `[image omitted]`、tool_calls 显形、60KB 字节预算。 **会话状态**：`agent._consultSessions = Map<id, Session>`。`Session = { controllers, replies, pending, waiters, failed, terminated, stopped, total, received }`。`done = 回复队列空 AND pending==0`——失败的模型也 settle，全失败时 `done` 仍成立，`consult_check` 不挂死。settle 语义：正常回复入队；`session.stopped` 后被 abort 的计 `terminated`（不入队）；报错计 `failed`（入队，带失败 note）。 **TUI 可观测**：每个顾问一条活动卡（子 agent 活动区块，`state.subTasks` 承载），relay 前缀 `consult#<subId>/` 复用 subagent 通道——并行顾问互不覆盖，run 结束随 `processing=false` 区块定格（2026-08-30 注：原 subTasks 窄带已随 AGENT-LOOP.md §7.2 D4 退役为会话流内可折叠区块）。 ### 2.3.1 会话级收尾与墓碑（2026-08-30 残留修复，会诊 4/4 收敛） 一次会诊 spawn N 个并行子代理 = N 个 `consult#1..#N` 活动块，而"会诊结束"的信号只在 check/stop 的返回里——**结算必须是会话级的**： - **`finishSubTasksByRole(state, ["consult"])`**（subagent-blocks.mjs）：done:true / stop 时**全量**标记所有 running consult 块 done。单块版 `finishSubTask`（最早 running 启发式）只冻 1 个，其余 N-1 个 running 幽灵钉在尾部直到回合末被 freezeAllSubTasks 误标 "interrupted"。
-- **`finishSubTaskByModel(state, "consult", r.model)`**：单条 reply（done:false）到达时按 model **精确**收尾对应块（提前答完的模型立即 ✓）。比对做**尾段归一化**（`split(":").pop()`）——`[model]` token 是裸名（resolveChildProvider），`r.model` 是 consultLabel（`provider:model`），直接相等比较永不命中（首版回归测试两侧都用裸名，假绿——2026-08-30 二次会诊 3/3 实锤）。
-- **冻结墓碑**：`state._frozenSubKeys`（Set）——freezeSubTaskLines 记 key，`ensureSubTask` 命中返回 null，四个 routeSub* 对 null 吞掉 token（return true）。防的是 abort 子代理的**尾部迟到 token 复活已冻结块**（复活后无人再冻结，钉屏到下一回合）。墓碑无需清理：`_subAgentCounter` 挂 agent 单调递增，key 进程内永不复用。
-- **消费端**（tool-events.mjs consult_check/consult_stop 分支）：单条 reply → ByModel 精确收 + freezeDoneSubTasks；done:true / stopped（含非 JSON 的 stop 防御）→ ByRole 全量收 + freezeDoneSubTasks。 ### 2.4 受影响文件 | 文件 | 动作 |
+主 agent（turn 中，非阻塞）
+  │  consult_start(problem) → 立即返回 { id, models }
+  ▼
+consult 会话（agent._consultSessions = Map<id, Session>，跨回合存活）
+  ├─ 并发启动 N 个只读会诊子任务
+  │    （独立 AbortController + 只读工具集 + main_history）
+  ├─ 全 settle（pending=0）→ 会话移入 _pendingConsultResults（独立族流）
+  ▼
+下回合 run 首行注入 digest：reminder + 逐条意见全文
+  ▼
+消化轮逐条判断处置（会诊 = 建议非门禁）
+```
+
+会诊 settle 在用户空闲时也触发消化轮（见 §2.2 消费驱动）。
+
+### 2.2 R17 现行机制（digest 消费模型）
+
+R17（2026-09-06）以 digest 自动注入取代旧的 `consult_check` 回合内轮询消费模型：
+
+- **唯一消费通道 = digest 自动注入**；`consult_check` 工具已删除（描述零残留）。
+- **settle 判定**：某 id pending=0（全部模型回复/失败 settle）→ 会话移入
+  `_pendingConsultResults`（独立族流，记账/消费机制与 §24 async 池同型）
+  → 下回合（用户回合或 digest auto-turn）run 首行注入
+  `[System reminder: consultation #id finished — N of M models replied (F failed)]`
+  + 逐条意见全文（失败按 per-model 标注——部分/全失败同规则）。
+- **部分 settle 不提前注入**——全 settle 才入 digest 流（意见全貌才可判断）。
+- **消化轮动作域**：会诊 = 建议非门禁——消化指令语义 = "逐条判断采纳与否并处置"——
+  **动作域按消费回合档位**（§17 D-S6/D-S7 既有规则）：用户回合/AUTO 档 = 正常决策域
+  （写按档放行——手动档审批弹窗 / AUTO autoApprove）；手动档 auto-turn = **整理禁写**
+  （同 advisor digest——无 "consult 可写" 例外）。
+- **注入容量**：超长 → 既有 digest 截断/落盘机制（XML-escaped，>64K offload 预览 + 路径）。
+- **`consult_stop` 保留为取消语义**：`{ abandoned, cancelled: true }`——已答部分丢弃、
+  不入 pending；会话 settle 即移出 map。
+- **消费驱动（评审 #2）**：digest auto-turn 驱动判据推广到所有 pending 族
+  （`_pendingConsultResults`/`_pendingEscalateResults`/advisor 池——任一 pending 族非空）；
+  挂起活度钩子 = running 会诊会话纳入 `poolLive`（consultRunningChildren）——空闲 settle
+  也触发消化轮（T-R17j）。
+- **每 consultant 活动块在 child settle 即冻结**（`⟦ev⟧done`——per-child key——不再经 check 消费冻结）。
+- **`wait_for "consult done"` 条件保留**（会话 settle 即移出 map）。
+
+### 2.3 工具契约
+
+**config（`~/.thincoder/config.json`）**：
+
+```jsonc
+"agent": {
+  // 候选池——会诊与飞刀共用（上限 5；缺省空数组 = 未启用）
+  "consultModels": [
+    { "provider": "deepseek", "model": "deepseek-v4-pro", "effort": "high" },
+    { "provider": "zhipu-plan", "model": "glm-5.2", "effort": "max" }
+  ],
+  "consultTurns": 40,        // 每个顾问的工具轮数预算（15 曾致读文件途中撞墙）
+  "consultTimeoutMs": 600000 // 墙钟看门狗（10 分钟；turn 上限只数 LLM 响应，不数慢工具）
+}
+```
+
+**工具**（均在 `src/agent-tools/consult.mjs`）：
+
+```
+consult_start
+  - problem (required): 问题简报——现象 + 失败轨迹概述 + 文件入口
+    （原始报错无需粘贴——会诊子 agent 用 main_history 自行拉取）
+  - models (optional): 子集选择器——["provider:model" | 裸 provider | 裸 model]
+    （大小写不敏感），只从 agent.consultModels 里筛出子集跑；缺省/空 = 全池。
+    选择器匹配不到任何池成员 → 报错并列出可选值
+  → { id, models: ["deepseek:deepseek-v4-pro", ...] }   // 非阻塞
+
+consult_stop
+  - id (required): consult_start 返回的会话 id
+  → { abandoned: <pending>, cancelled: true }
+    // abort 剩余（terminated settle，计数不入队）；abandoned = 放弃时的 pending 数
+  → 未知 id / 已结束或已取消 → { error: "unknown consult id" }
+```
+
+**main_history**（仅会诊子 agent 可用，readonly）：`limit`（默认 20，最大 100）→
+主 agent 历史尾部窗口，多模态图片替换 `[image omitted]`、tool_calls 显形、60KB 字节预算。
+
+**会话状态**：`Session = { controllers, replies, pending, waiters, failed, terminated,
+stopped, total, received }`。settle 语义：正常回复入队；`session.stopped` 后被 abort 的
+计 `terminated`（不入队）；报错计 `failed`（入队，带失败 note）。全失败时会话照常 settle
+并注入 digest（失败按 per-model 标注）——不挂死。
+
+**TUI 可观测**：每顾问一条活动卡，relay 前缀 `consult#<childRelayN>/` 复用 subagent
+通道（relay 号非会话 id——会话自持 `_consultIdCounter`）；child settle 即冻结
+（`⟦ev⟧done`），并行顾问互不覆盖。
+
+### 2.4 CLI 实现接线
+
+| 环节 | CLI |
 |---|---|
-| `src/agent-tools/consult.mjs` | 新增：三工具 + main_history + 会话状态 + runConsultChild + cleanupConsultSessions |
-| `src/agent-tools/escalate.mjs` | 新增（飞刀，见 ESCALATE.md） |
-| `src/agent/setup.mjs` | depthOnly 注册三工具（depth 0 + consultModels 非空）+ role "consult" base prompt 分支 + `withPool` 候选池装饰 |
-| `src/agent.mjs` | `CONSULT_BASE` 加载导出；runAgent finally → `cleanupConsultSessions` |
-| `src/config.mjs` | DEFAULTS 加 consultModels/consultTurns/consultTimeoutMs + 校验（≤5） |
+| 子 agent 构建 | 显式 `createAgent({ provider, tools, config, cwd, memory, role: "consult" })` |
+| 子任务 runner | `runAgent(child, input, childCallbacks, { depth: 1, maxTurns: consultTurns, signal })` |
+| provider 解析 | `resolveChildProvider(parent, "provider:model")`（复用 subagent——跨 provider 候选） |
+| 只读工具集 | `readonlyToolNames(agent.tools)` 过滤父工具集 + `main_history` |
+| 系统 prompt | `role: "consult"` → `CONSULT_BASE`（setup.mjs base 分支——CLI `consult-base.md`） |
+| effort 越界防护 | `clampEffort`——池 effort 越出该模型 `reasoningEffortEnum` → 整字段丢弃（防 candidate 开跑即死） |
+| API key | `ensureChildApiKey`——缺 key 转清晰 failed reply（不裸 401） |
+| 活动流上屏 | relay 前缀 `consult#<childRelayN>/` → TUI 子 agent 活动区块 |
+| 工具注册 | setup.mjs depthOnly（depth 0 + consultModels 非空）注册 `consult_start`/`consult_stop` 两工具 |
+| 会话收尾 | `cleanupConsultSessions`——仅 Ctrl+C / suspension abort 分支；标记 stopped + abort 清 map |
+| 配置入口 | `/config` 命令（候选池增删改 + effort picker） |
+
+### 2.5 受影响文件
+
+| 文件 | 动作 |
+|---|---|
+| `src/agent-tools/consult.mjs` | 两工具 + main_history + 会话状态 + runConsultChild + settle→`_pendingConsultResults` + cleanupConsultSessions |
+| `src/agent/setup.mjs` | depthOnly 注册两工具 + role "consult" base prompt 分支 + `withPool` 候选池装饰 |
+| `src/agent.mjs` | `CONSULT_BASE` 加载导出 + run 首行 consult digest 注入（含 digest 消费驱动的 pending 族推广） |
+| `src/config.mjs` | DEFAULTS 加 consultModels/consultTurns/consultTimeoutMs + 校验（≤5、provider 存在） |
+| `src/tui/suspension-drive.mjs` | 挂起活度判据（consultRunningChildren / poolLive）+ digest 触发判据推广 |
 | `src/tui/cmd-config.mjs` | `/config` 候选池管理（增删改 + effort picker） |
-| `src/prompts/consult-base.md` | 新增：会诊子任务 prompt（只读约束 + main_history + 预算引导） |
+| `src/prompts/consult-base.md` | 会诊子任务 prompt（只读约束 + main_history + 预算引导） |
 | `src/prompts/main.md` | 主 agent 会诊条款（何时会诊 + 简报质量） |
-| `test/consult.test.mjs` | 新增测试（9 条，CLI 签名适配） | ### 2.5 关键决策记录 - **判定归主 agent，工具零判定**：采纳与否在主 agent 的 turn 里用它的工具完成。
-- **两阶段三工具而非单阻塞工具**：主 agent 阻塞时无法中途判断；拆开后"逐个读、边判边早停"才成立。
+| 测试 | consult 家族测试（会诊 settle 注入 / check 退役 / 取消 / 空闲 settle 消化——用例清单权威 = AGENT-LOOP.md §25.3 T-R17a..r） |
+
+### 2.6 关键决策记录
+
+- **判定归主 agent，工具零判定**：采纳与否在主 agent 的 turn 里用它的工具完成。
+- **digest 自动注入取代 check 轮询（R17）**：发完会诊即可继续交互，判断性消费保留在
+  消化轮；`consult_check` 退役。
 - **只读会诊 + main_history**：会诊子 agent 不改文件；按需拉主会话历史。
-- **turn 绑定生命周期**：runAgent finally 清理，避免孤儿子任务泄漏。
-- **独立 consult role**：不复用 explore 身份——consult-base.md 作裸 prompt，不背编码纪律块；工具集只读过滤 + main_history。
-- **CLI 复用 subagent 的 provider 解析**：`resolveChildProvider("provider:model")` 零新机制，跨 provider 候选天然支持。 --- ## 3. 测试 `test/consult.test.mjs`（9 条，runner 用 CLI 签名 `(childAgent, input, callbacks, opts)` 的 fake）： | 用例 | 断言 |
-|---|---|
-| 发起即返回 | consult_start 立即返回 { id, models } |
-| 逐个读取 | 3 模型回复先后到达 → check 依次返回先到者，done false→true |
-| 早停 | consult_stop 返回 { stopped:N }，剩余 abort |
-| 失败 settle | 报错模型记 failed 入队，不阻断其余 |
-| 未配置 | 空池返回"先配置 agent.consultModels" |
-| 用户 Stop | abort 全部，check 返回 done+stopped |
-| main_history | 返回主历史窗口，字节预算内 |
-| 只读隔离 | 工具过滤只留 readonly + main_history |
-| cleanup | 标记 stopped + abort 残留 + 清空 Map | ## 4. 与插件的已知差异（非缺陷） - **D3（Ctrl+I 中断杀会诊）**：CLI 无中断续传（turn 绑定是刻意设计），与插件一致。
-- **面板回复预览（D10）**：CLI 的回复全文在主 agent 上下文 + 活动流可见，无独立展开预览（TUI 面板已显示工具调用流，回复文本由主 agent 转述）。
-- **usage 上报（D12）**：会诊子任务 usage 不计入主状态栏缓存命中率（与插件一致，记录在案）。
+- **跨 turn 生命周期**：回合尾不再清理，仅 Ctrl+C / 会话中止时 abort。
+- **独立 consult role**：不复用 explore 身份——consult-base.md 作裸 prompt，不背编码
+  纪律块；工具集只读过滤 + main_history。
+- **CLI 复用 subagent 的 provider 解析**：`resolveChildProvider` 零新机制，跨 provider 候选天然支持。
+
+## 3. 测试
+
+会诊测试用例清单的权威 = **AGENT-LOOP.md §25.3**（T-R17a..r：会诊 settle 注入全文 /
+check 退役（调 consult_check 工具不存在）/ 取消不入 pending / 空闲 settle 消化 /
+部分 settle 不注入 / 超长注入截断落盘 / 注入一次竞态 / 手动档动作域零容忍等）。
+
+**验收**（AGENT-LOOP §25）：T-R17a..p 双端绿 + consult 家族既有零回归。
+
+## 变更记录
+
+- 2026-08-16：立项实施（会诊三工具 start/check/stop + check 回合内轮询消费；0.12.30 随版发布）。
+- 2026-08-30：会话级收尾与墓碑修复（会诊 4/4 收敛）；`consult_check` 加递增 `n` 协议参数。
+- 2026-09-06：**R17 完全异步化**——`consult_check` 退役（digest 自动注入是唯一消费通道），
+  跨回合后台 + digest auto-turn 消化，动作域档位制，挂起活度判据推广；机制正文整体收敛到
+  本文 §2 当前态，check 时代接口契约与结算小节折叠为考古。
+- 2026-09-07：DOC-REWRITE 批 A——可读化重写为当前态（多行 markdown，历史折叠为变更记录）。
