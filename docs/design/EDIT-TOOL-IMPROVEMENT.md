@@ -11,7 +11,7 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 
 ### 功能性需求
 - **F1（按行号改）**：edit 加 `line`/`startLine`/`endLine` 参数——知道行号就能改（单行替换/行范围替换），不用猜 old_string。与 old_string/new_string 互斥。
-- **F2（模糊匹配）**：old_string 放宽匹配——细微差异（空白/缩进/引号不同/行尾空格）也能匹配。
+- **F2（模糊匹配）**：old_string 放宽匹配——细微差异（空白/缩进/引号不同/行尾空格）也能匹配。**相似度算法定稿**：行级 normalize 后逐行相等比例（≥90% 行相等即匹配——normalize = 去首尾空白/统一缩进/统一引号/去行尾空格）。**歧义规则（评审 #2）**：唯一模糊命中才应用，多命中报错并附候选（沿用现有 similarLinesBlock 机制——file-edit.mjs 现 old_string 必须唯一精确匹配，放宽后需歧义处理）。
 - **F3（替换即删）**：替换后旧行自动删（不留残留）——当前 edit 的 LCS 保留旧行，改为替换即删。
 
 ### 非功能性需求
@@ -29,7 +29,7 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 ### D1 按行号改（F1）
 - edit 加参数：`line`/`startLine`/`endLine`（1-based 行号/行范围）——与 old_string/new_string 互斥。
 - 实现：读文件 → 按行号定位 → 替换 → 写回（原子）。
-- 落点：`src/tools/file-edit.mjs`（editTool 对象加 line/startLine/endLine 参数处理）+ schema 定义（file-edit.mjs 内）。
+- 落点：`src/tools/file-edit.mjs`（editTool 对象加 line/startLine/endLine 参数处理）+ schema 定义（file-edit.mjs 内）。**拆分边界（评审 #4）**：按行号改逻辑独立拆 `edit-line-params.mjs` 子模块（line/startLine/endLine 参数处理 + 行号定位 + 替换逻辑——file-edit.mjs 456+80 跨 500 硬帽，拆分后 file-edit.mjs 回 ~450 行）。
 
 ### D2 模糊匹配（F2）
 - old_string 匹配算法改：normalize 后比较（去首尾空白/统一缩进/统一引号/去行尾空格）+ fuzzy match（行级 normalize 后逐行相等比例 ≥90%）。
@@ -44,9 +44,9 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 
 ## 3. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/tools/file-edit.mjs`（**456 行**——评审 🔴#1 实测修正，editTool 对象加 line/startLine/endLine 参数 + old_string 模糊匹配——delta ~+80→~536 行，**跨 500 硬帽——拆分到 edit-line-params.mjs 子模块（按行号改逻辑独立）**）、`src/tools/edit-diff.mjs`（**159 行**——评审 🔴#1 实测修正，零重叠→插入分支改替换即删——delta ~-10）、`src/prompts/coder.md`（edit 工具引用说明加参数——delta ~+10）
-- 新增：`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——预估 ~150 行）
-- 文档：本设计 + README 地图登记 + TOOLS.md §15 D15.1（零重叠→插入语义改替换即删——评审 #4）
+- 修改：`src/tools/file-edit.mjs`（**456 行**——评审 🔴#1 实测修正，editTool 对象加 line/startLine/endLine 参数 + old_string 模糊匹配——delta ~+80→~536 行，**跨 500 硬帽——拆分到 edit-line-params.mjs 子模块（按行号改逻辑独立——评审 #4 拆分边界）**）、`src/tools/edit-diff.mjs`（**159 行**——评审 🔴#1 实测修正，零重叠→插入分支改替换即删 + **头注释 :16-25/:105 同步更新**——评审 #3——delta ~-10）、`src/prompts/coder.md`（edit 工具引用说明加参数——delta ~+10）
+- 新增：`src/tools/edit-line-params.mjs`（按行号改子模块——line/startLine/endLine 参数处理 + 行号定位 + 替换逻辑——预估 ~80 行）、`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——预估 ~150 行）
+- 文档：本设计 + README 地图登记 + **TOOLS.md §9 逐工具契约要点**（零重叠→插入语义改替换即删——评审 #1——本仓 TOOLS.md 无 §15/D15.1，VSC edit 语义在 §9）
 
 ## 4. 验收
 
