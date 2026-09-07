@@ -4,11 +4,17 @@
  * findWhitespaceVariant/EDIT_MUTEX_TEXT/WHITESPACE_VARIANT_NOTE + editTool +
  * hashlineEditTool）——语义零变；file.mjs re-export（消费方 import 面不变）。
  * 头注释/import 面沿用 file.mjs（shared.mjs + edit-diff.mjs）。
+ * 2026-09-08 EDIT-TOOL-IMPROVEMENT.md（D1-D4）：edit 加 line/startLine/endLine
+ * 按行号改（逻辑在 edit-line-params.mjs 子模块——500 硬帽拆分，评审 #4）+
+ * old_string 模糊匹配（逻辑在 edit-fuzzy-match.mjs 子模块——同帽拆分）+
+ * 零重叠→替换即删（edit-diff.mjs D3）。
  */
 
 import { readFile, writeFile } from "node:fs/promises"
 import { resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, stripBom, lfOffsetToRaw, detectFileEol, joinWithEol, findCandidates, FFFD_WARNING, gitDiffOne, hashLine, refreshMarkdownPreview } from "./shared.mjs"
 import { applyRegion, EMPTY_NEW_REASON } from "./edit-diff.mjs"
+import { hasLineParams, executeLineEdit, LINE_MUTEX_TEXT } from "./edit-line-params.mjs"
+import { findFuzzyMatch, fuzzyAmbiguousBlock, FUZZY_MATCH_NOTE } from "./edit-fuzzy-match.mjs"
 
 /**
  * F3/§14.1 — similar-lines candidate block for a not-found old_string (§14 F3, extended
@@ -59,6 +65,10 @@ function findWhitespaceVariant(content, old) {
 /** P15.11 note 文案（各端成功消息追加——与 CLI edit-diff WHITESPACE_VARIANT_NOTE 同句） */
 const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (content identical, leading/trailing whitespace differs from your old_string)"
 
+// D2（EDIT-TOOL-IMPROVEMENT.md，2026-09-08）——old_string 模糊匹配逻辑在
+// edit-fuzzy-match.mjs 子模块（findFuzzyMatch / fuzzyAmbiguousBlock / FUZZY_MATCH_NOTE
+// ——500 行硬帽拆分；normalize 契约/歧义规则见该模块头注释）。
+
 // D15.3#9 修订（2026-09-05 用户裁定——CLI edit-diff EDIT_ARGS_MUTEX 同句）：edits 只与顶层
 // old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认）。
 const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry"
@@ -66,12 +76,18 @@ const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_st
 export const editTool = {
   name: "edit",
   description:
-    "Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, new_string is inserted after old_string (old content stays) — except a unique single-line old_string paired with a single-line new_string: that exact line is replaced in place (line count unchanged); for a multi-line replacement, include a shared context line — for adding a new line use insert_after: a unique single-line old/new pair replaces the line in place; multi-line zero-overlap pairs still insert per the diff rules above. replace_all keeps literal replacement of every occurrence — the insert rule does not apply.\n" +
+    "Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, old_string's lines are REPLACED by new_string and the old lines are deleted (替换即删 — no old-line residue); a unique single-line old_string paired with a single-line new_string replaces that exact line in place (line count unchanged). replace_all keeps literal replacement of every occurrence — the diff rules above do not apply.\n" +
+    "old_string matching tiers: 1) exact; 2) unique whitespace-only variant (auto-applied); 3) fuzzy — ≥90% of lines equal after normalization (leading/trailing whitespace stripped, inner whitespace collapsed, quotes unified): a UNIQUE fuzzy match is auto-applied, multiple fuzzy matches error with line-numbered candidates (add more context to disambiguate).\n" +
     "Add a line/entry after a known line → insert_after — includes checklist items and doc lines.\n" +
+    "Know the line number? Use line/startLine/endLine instead of old_string — the target line(s) are replaced by new_string (empty new_string deletes them).\n" +
     "Parameters:\n" +
     "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
-    "- old_string (required): Current content of the region — must match exactly once in the file; for a change that keeps a line, include the unchanged neighbor line in BOTH old_string and new_string\n" +
-    "- new_string (required): Desired result of the region — diffed against old_string (shared lines kept; zero overlap → new_string inserted after old_string — a unique single-line old/new pair replaces the line in place)\n" +
+    "- old_string: Current content of the region — must match exactly once in the file (exact → whitespace-variant → fuzzy tiers); mutually exclusive with line/startLine/endLine; for a change that keeps a line, include the unchanged neighbor line in BOTH old_string and new_string\n" +
+    "- new_string (required): Desired result of the region — diffed against old_string (shared lines kept; zero overlap → old lines replaced and deleted)\n" +
+    "- line: Replace a single line by number (1-based) — requires new_string; mutually exclusive with old_string and startLine/endLine\n" +
+    "- startLine / endLine: Replace an inclusive line range (1-based, both required) — requires new_string; mutually exclusive with old_string and line\n" +
+    "- line: Replace a single line by number (1-based) — requires new_string; mutually exclusive with old_string and startLine/endLine; replace_all does not apply\n" +
+    "- startLine / endLine: Replace an inclusive line range (1-based, both required) — requires new_string; mutually exclusive with old_string and line; replace_all does not apply\n" +
     "- replace_all: Replace every occurrence literally (default false) — the insert rule does not apply\n" +
     "- edits: 批量形态（CLI parity）——同文件多处修改 → 一次调用原子完成（同文件条目串行应用，各基于前一条结果）；多文件独立修改 → 同一 `edits` 数组多条目（先全量检查，任一失败全不写）——prefer one batched call over N single edits。与顶层 old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认——条目自带 path 优先）。\n" +
     "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed",
@@ -80,8 +96,11 @@ export const editTool = {
     properties: {
       path: { type: "string", description: "File path (single form: required; with the edits array: optional top-level default for entries without their own path) (alias: filePath)" },
       filePath: { type: "string", description: "Alias for path" },
-      old_string: { type: "string", description: "Exact text to replace" },
+      old_string: { type: "string", description: "Text to replace — exact match first, then unique whitespace-only variant, then fuzzy (≥90% lines equal after whitespace/quote normalization; unique hit applied, multiple hits error with candidates). Mutually exclusive with line/startLine/endLine." },
       new_string: { type: "string", description: "Replacement text" },
+      line: { type: "integer", description: "Replace this single line (1-based) with new_string — mutually exclusive with old_string and startLine/endLine" },
+      startLine: { type: "integer", description: "First line of the range to replace (1-based, inclusive; endLine required)" },
+      endLine: { type: "integer", description: "Last line of the range to replace (1-based, inclusive; startLine required)" },
       replace_all: { type: "boolean", description: "Replace all occurrences" },
       edits: {
         type: "array",
@@ -165,6 +184,15 @@ export const editTool = {
             // P15.11（2026-09-05）：唯一空白差异窗口 → 自动落点（内容零差异）——歧义/实质差异仍报错
             const variant = findWhitespaceVariant(g.text, oldS)
             if (variant) { oldS = variant.actual; count = 1; note = WHITESPACE_VARIANT_NOTE }
+          }
+          if (count === 0) {
+            // D2（EDIT-TOOL-IMPROVEMENT.md）：唯一模糊命中 → 自动落点；多命中报错附候选（评审 #2 歧义规则）
+            const fuzzy = findFuzzyMatch(g.text, oldS)
+            if (fuzzy?.ambiguous) {
+              return `Error: edit aborted (atomic — no files written): old_string fuzzy-matches ${fuzzy.ambiguous.length} regions in ${g.path} — ambiguous; add more context to make it unique` +
+                fuzzyAmbiguousBlock(g.text, fuzzy.ambiguous)
+            }
+            if (fuzzy?.hit) { oldS = fuzzy.hit.actual; count = 1; note = FUZZY_MATCH_NOTE }
           }
           if (count === 0) {
             // §14.1 D14.1.1 (2026-09-05): batch channel mirrors the single-form F3 block —
@@ -257,6 +285,14 @@ export const editTool = {
     let { path, old_string, new_string, replace_all, filePath } = args
     path = path || filePath
     if (typeof path !== "string" || !path) return "Error: path (or filePath) is required and must be a string"
+    // D1（EDIT-TOOL-IMPROVEMENT.md，2026-09-08）：按行号改——line/startLine/endLine
+    // 与 old_string 互斥；定位/替换逻辑在 edit-line-params.mjs 子模块（拆分边界 评审 #4）。
+    if (hasLineParams(args)) {
+      if (old_string !== undefined) return "Error: " + LINE_MUTEX_TEXT
+      if (replace_all !== undefined) return "Error: replace_all does not apply to line/startLine/endLine edits (line-numbered replacement targets exactly one region)"
+      if (typeof new_string !== "string") return "Error: new_string must be a string (required with line/startLine/endLine)"
+      return await executeLineEdit({ path, line: args.line, startLine: args.startLine, endLine: args.endLine, newString: new_string, cwd: ctx.cwd })
+    }
     if (typeof old_string !== "string" || typeof new_string !== "string") return "Error: old_string and new_string must be strings"
     // A model may paste old_string/new_string straight from a raw CRLF read — its
     // `\r\n` would fail the count gate against the LF-normalized text (entry bug,
@@ -281,6 +317,15 @@ export const editTool = {
       // P15.11（2026-09-05）：唯一空白差异窗口 → 自动落点（内容零差异）——歧义/实质差异仍报错
       const variant = findWhitespaceVariant(text, old_string)
       if (variant) { old_string = variant.actual; count = 1; note = WHITESPACE_VARIANT_NOTE }
+    }
+    if (count === 0) {
+      // D2（EDIT-TOOL-IMPROVEMENT.md）：唯一模糊命中 → 自动落点；多命中报错附候选（评审 #2 歧义规则）
+      const fuzzy = findFuzzyMatch(text, old_string)
+      if (fuzzy?.ambiguous) {
+        return `Error: old_string fuzzy-matches ${fuzzy.ambiguous.length} regions in ${path} — ambiguous; add more context to make it unique` +
+          fuzzyAmbiguousBlock(text, fuzzy.ambiguous)
+      }
+      if (fuzzy?.hit) { old_string = fuzzy.hit.actual; count = 1; note = FUZZY_MATCH_NOTE }
     }
     if (count === 0) {
       // Helpful diagnosis instead of a bare miss: line ending mismatch vs genuinely absent

@@ -1,5 +1,7 @@
 /**
  * edit-diff.mjs — LCS edit semantics (TOOLS.md §15 D15.1 + §15.2 分支 0)
+ * edit-diff.mjs — LCS edit semantics（契约锚：本仓 TOOLS.md §9 edit 契约要点；
+ * 下文 §15/D15.x 编号均指 CLI TOOLS.md 章节——双端同机制各自实现，本仓无 §15）
  *
  * The edit tool's region judgment + application live HERE: file.mjs only wires
  * the result. old_string is the current content of the region (must match
@@ -13,11 +15,11 @@
  *     unchanged — no zero-overlap insertion for this shape). Multi-match and
  *     replace_all never reach this entry (callers reject/route first).
  *     Every other shape falls through to applyPatchLines untouched.
- *   - applyPatchLines — pure diff layer (D15.1, unchanged — its direct unit
- *     semantics stay: a bare single×single call still inserts). Judgment
- *     order per D15.1:
- *     1. zero overlap (every old line absent from the new line set) → INSERT:
- *        new_string is inserted after old_string's last line, old content stays;
+ *   - applyPatchLines — pure diff layer. Judgment
+ *     order per D15.1 (2026-09-08 EDIT-TOOL-IMPROVEMENT.md D3 — 替换即删):
+ *     1. zero overlap (every old line absent from the new line set) → REPLACE:
+ *        old_string's lines are replaced by new_string and the old lines are
+ *        deleted (替换即删 — no old-line residue);
  *     2. general diff (≥1 shared line) → LCS line diff: shared lines are kept
  *        and take their position relative to the shared lines (LCS order);
  *        old-only lines are deleted, new-only lines are inserted;
@@ -102,7 +104,9 @@ export function applyPatchLines(oldText, newText) {
   if (oldLines.length > MAX_REGION_LINES || newLines.length > MAX_REGION_LINES) {
     return { ok: false, reason: REGION_TOO_LARGE_REASON }
   }
-  // 判定 1: zero overlap → insert (old preserved, new after old's last line)
+  // 判定 1: zero overlap → replace-deletes (EDIT-TOOL-IMPROVEMENT.md D3, 2026-09-08
+  // —— 替换即删: old lines are replaced by new lines, no old-line residue; the
+  // previous insert-after-old semantics is retired).
   const newSet = new Set(newLines)
   let zeroOverlap = true
   for (const l of oldLines) {
@@ -110,7 +114,7 @@ export function applyPatchLines(oldText, newText) {
   }
   let resultLines
   if (zeroOverlap) {
-    resultLines = [...oldLines, ...newLines]
+    resultLines = [...newLines]
   } else if (oldLines.length === newLines.length && oldLines.every((l, k) => l === newLines[k])) {
     // 判定 3: trivial no-op (old === new at line level)
     resultLines = oldLines
@@ -140,7 +144,7 @@ export function applyPatchLines(oldText, newText) {
  * longer applies to this shape (T15.33 — the「单行换单行」insert pit).
  *
  * Every other shape (either side multi-line) → applyPatchLines unchanged
- * (zero-overlap insert / LCS / trivial — the pure diff layer stays intact;
+ * (zero-overlap replace / LCS / trivial — the pure diff layer stays intact;
  * multi-match and replace_all semantics untouched — T15.34/35/36 regressions).
  */
 export function applyRegion(oldText, newText) {

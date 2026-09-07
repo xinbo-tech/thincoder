@@ -174,6 +174,12 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 - **git**：action 集含破坏性动作（reset --hard/checkout 丢改动/rm/clean/rebase 有未提交）
   先快照（gitGuardSnapshot）再执行 + 确认；`runGit` 读路径 CLI parity。
+- **edit（EDIT-TOOL-IMPROVEMENT.md，2026-09-08）**：old_string 三级匹配——精确 →
+  唯一空白差异窗口（P15.11）→ 模糊匹配（行级 normalize：去首尾空白/折叠内部空白/
+  统一引号，逐行相等比例 ≥90%；唯一模糊命中自动应用，多命中报错附候选——不猜）；
+  `line`/`startLine`/`endLine` 按行号改（1-based，与 old_string 互斥，逻辑在
+  edit-line-params.mjs 子模块）；零重叠 → **替换即删**（old_string 匹配行被
+  new_string 替换并从文件消失——原"插入保留旧行"语义退役，edit-diff.mjs 判定 1）。
 - **checklist**：mark 支持 id 优先于 index；前缀归一；父 done 须子树全 done 递归归档。
 - **lsp（VS Code 原生实现——无 CLI 的自起 server）**：直接用编辑器语言服务
   （`vscode.executeDefinitionProvider`/`executeReferenceProvider`/`executeHoverProvider`/
