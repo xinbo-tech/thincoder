@@ -1,30 +1,40 @@
-# ThinCoder 设计文档地图（docs/design/） > 本文件是 `docs/design/` 的板块登记表与归属规则——写/改设计文档前**先查这里**。
-> 核心纪律：**一个板块一个文档**；功能点并入所属板块文档（不新建）；新板块才新建并在此登记；同一机制只在一处详述（权威源），其余文档引用、不复制。 ## 板块 → 文档映射 | 板块 | 文档文件 | 备注 |
+# ThinCoder 设计文档地图（docs/design/）
+
+> 本文件是 `docs/design/` 的板块登记表与归属规则——写/改设计文档前**先查这里**。
+> 文档格式债清理批 A1（2026-09-07）：归档 8 文件移 `_archive/`，地图更新引用；格式正常化。
+
+## 核心纪律
+
+**一个板块一个文档**；功能点并入所属板块文档（不新建）；新板块才新建并在此登记；同一机制只在一处详述（权威源），其余文档引用、不复制。
+
+## 板块 → 文档映射
+
+| 板块 | 文档文件 | 备注 |
 |---|---|---|
-| 架构 | `ARCHITECTURE.md` | 权威源。`ARCHITECTURE-v2.md`（2026-08 方向性草案，v2 团队记忆，未启动）归档保留，不合并——启动 v2 时以其为输入 |
-| 需求与决策 | `REQUIREMENTS.md` | 需求讨论记录 |
-| 功能全览 | `FEATURES.md` | |
+| 架构 | `ARCHITECTURE.md` | 权威源。`ARCHITECTURE-v2.md`（v2 草案，未启动）已移 `_archive/` |
+| 需求与决策 | `REQUIREMENTS.md` | 需求讨论与决策记录 |
+| 功能全览 | `FEATURES.md` | 基于代码现状梳理 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
 | 方法论 | `METHODOLOGY.md` | 与仓库根 METHODOLOGY.md 对应 |
 | 会话 | `SESSION.md` | |
 | 上下文压缩 | `CONTEXT-COMPACTION.md` | |
-| 路线图（历史） | `ROADMAP-0.9.0.md` | 0.9.0 已发布过，历史路线图归档保留 |
-| 发布流程 | `RELEASE.md` | npm 发布流程 + 踩坑记录（2026-08-25） |
-| CLI Lint 引入 | `CLI-LINT-REQUIREMENTS.md`、`CLI-LINT-TUNING.md` | ~~ESLint 引入 + 21 error 清零（2026-08-25）~~——**被 TOOLS.md §10.2 取代（2026-09-02）**：ESLint 全套删除，改零依赖 check-syntax（node --check） |
-| Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
-| 覆盖率缺口修复 | `COVERAGE-GAPS-REQUIREMENTS.md`、`COVERAGE-GAPS-TUNING.md` | 遗留测试覆盖收口（2026-08-25） |
-| 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25） |
-| 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25） |
-| 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 16K→64K（2026-08-24） |
-| Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限调整（2026-08-24） |
-| Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留——机制自成一体 |
-| 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md 提示词）同板块保留——历史决策记录 |
+| 路线图（历史） | `_archive/ROADMAP-0.9.0.md` | 0.9.0 已发布，历史路线图已归档 |
+| 发布流程 | `RELEASE.md` | npm 发布流程 + 踩坑记录 |
+| CLI Lint 引入 | ~~`CLI-LINT-*.md`~~ | 已移 `_archive/`——被 TOOLS.md §10.2 取代（eslint 删除） |
+| Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复 + TTL 7 天可配 |
+| 覆盖率缺口修复 | `COVERAGE-GAPS-REQUIREMENTS.md`、`COVERAGE-GAPS-TUNING.md` | 已完成专题记录 |
+| 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | 已完成专题记录 |
+| 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除 |
+| 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 |
+| Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限 |
+| Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留 |
+| 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md）已移 `_archive/` |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
-| 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）、`SETTINGS-TOOL.md`（settings 工具——agent 配置调整——2026-09-05 立项）同板块独立保留——均为已实现专题 |
-| Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 + commit 清理（2026-09-01 定稿） |
-| 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志（回合/LLM/工具/子代理/挂起——按天轮转保留 1 天——根治临时插桩循环——2026-09-03 设计） |
-| 编辑工具可靠性 | `EDIT-TOOL-EOL-REQUIREMENTS.md`、`EDIT-TOOL-EOL-DESIGN.md` | edit/apply_patch/hashline_edit/write 行尾语义 + edit 候选提示 + 编码探测（2026-08-26，走查痛点实证；两端实现） |
-| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`（输入框行为契约）、`TUI-TOOL-OUTPUT.md`（工具输出渲染）同板块独立保留——专题契约各自维护 |
+| 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构） |
+| Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
+| 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志 |
+| 编辑工具可靠性 | `EDIT-TOOL-EOL-REQUIREMENTS.md`、`EDIT-TOOL-EOL-DESIGN.md` | 编辑工具行尾语义 |
+| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md` 同板块独立保留 |
 | 记忆 | `MEMORY.md` | |
 | Provider | `PROVIDER.md` | |
 | Proxy | `PROXY.md` | |
@@ -32,25 +42,28 @@
 | ACP 协议 | `ACP-CLIENT.md` | |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
-| 评估 | `EVALUATION.md` | 权威源。`COMPETITIVE-CLI-2026.md`（2026-08-04 时点竞评快照）归档保留，不合并 |
-| 路线图 | `ROADMAP-0.9.0.md` | |
-| 测试基建 | `TESTING.md` | slow 门/测试分层纪律/库存治理（拆分轮/清理轮）——2026-09-06 立项（由 AGENT-LOOP.md §23 迁出——用户裁定文档归属） |
-| 参考项目分析 | `KIMI-CODE-PROMPT-ANALYSIS.md`、`TTSR-ANALYSIS.md` | 各自独立主题（不同参考项目），不合并 |
-| 多实例协作感知 | `MULTI-INSTANCE-COLLAB.md` | 同 cwd 多 thincoder 副本的 agent 层协作感知（L1 注入/L2 查询/L3 文件域）——2026-09-06 立项（独立处理——难度高；需求池 R10） | ## 规则 1. **一个板块一个文档**：新功能点不新建文档，并入所属板块的现有文档（追加变更段或更新章节）。
-| 结构债 | `STRUCTURE-DEBT.md` | 跨板块结构债/屎山度评估与清理路线图（双端 top-8 分批入口——横切、独立板块）——2026-09-07 立项 |
+| 评估 | `EVALUATION.md` | 权威源。`COMPETITIVE-CLI-2026.md`（竞评快照）已移 `_archive/` |
+| 参考项目分析 | ~~`KIMI-CODE-PROMPT-ANALYSIS.md`/`TTSR-ANALYSIS.md`~~ | 已移 `_archive/` |
+| 测试基建 | `TESTING.md` | 测试分层纪律/库存治理 |
+| 多实例协作感知 | `MULTI-INSTANCE-COLLAB.md` | 多副本 agent 协作感知 |
+| 结构债 | `STRUCTURE-DEBT.md` | 结构债评估与清理路线图（横切） |
+
+## 归属规则
+
+1. **一个板块一个文档**：新功能点不新建文档，并入所属板块的现有文档（追加变更段或更新章节）。
 2. **先查地图定位归属**：写文档前先查本表——找到所属板块就改该板块文档，**不得为既有板块新建文件**。
 3. **新板块才新建**：确无归属的新板块才新建文档，并立即在本表登记。
 4. **单一权威源**：同一机制只在一处详述；其余文档引用（指路），不复制内容——多处复制必然漂移矛盾。
-5. **存量碎片处理（2026-08-25 收口）**：历史"待合并（TODO）"标注已全部处理——真碎片已合并（vscode Settings 6→1），方向性/时点文档明确为归档，已实现专题明确为独立保留。新增同主题内容须先查本表归属。 ## 变更记录 - 2026-08-21：初版（文档归属纪律，规格见 `AGENT-LOOP.md` §12）
-- 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
-- 2026-08-25：新增板块「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）、「CLI Lint 引入」（CLI-LINT-*）与「发布流程」（RELEASE.md）；ROADMAP-0.9.0.md 归档标注（0.9.0 已过，现 0.12.x）
-- 2026-09-01：新增板块「Checkpoint 事故恢复」（CHECKPOINT.md，需求+设计+测试三层定稿）
-- 2026-09-02：CLI Lint 板块（CLI-LINT-*）标记**被 TOOLS.md §10.2 取代**——ESLint 全套删除，改零依赖 check-syntax（node --check）
-- 2026-09-03：新增板块「诊断事件日志」（LOGGING.md，需求+设计+测试三层定稿 + 评审 0🔴 + 两端实现交付——T-L1..L10/镜像用例全绿）
-- 2026-09-05：新增板块专题「settings 工具」（SETTINGS-TOOL.md——工具系统板块独立保留——agent 配置调整 list/get/set——全量 config.json + 敏感遮罩——三项用户裁定）
-- 2026-09-06：README provider 数量修正（17→20——补 GLM Coding Plan / MiMo / MiMo Token Plan，与 src/config.mjs PROVIDER_PRESETS 对齐）；文档质量审查其余观察项（工具集归约式列举、Qwen3.7 措辞）见会话记录，未入库
-- 2026-09-06：新增板块「测试基建」（TESTING.md——slow 门/分层纪律/库存治理——首个设计由 AGENT-LOOP.md §23 迁出——用户裁定归属）
-- 2026-09-06：designToken 设计语义强化（ENG-TOKEN-BINDING-TUNING.md §0 + REQUIREMENTS 头部——用户裁定：流程凭证非密码学安全边界/内存级随会话死亡/不得持久化双源——防 agent 自我发挥瞎改）
-- 2026-09-06：**R16 token 生命周期语义修订**（ENG-TOKEN-BINDING-TUNING.md §5/§5.1——用户裁定：token 跨模式存活（ON→OFF 不清/OFF→ON 不重评）+ TTL 过期三时机清理（恢复过滤/enter 清过期/spawn 拒删槽）——§0 铁律 2/3 supersede 注 + REQUIREMENTS 头部/FR5 同步——评审 round1 1🔴 处置全采纳——已批准待实现）
-- 2026-09-06：新增板块「多实例协作感知」（MULTI-INSTANCE-COLLAB.md——同 cwd 多副本 agent 层协作感知 L1/L2/L3——需求池 R10——独立立项）
-- 2026-09-06：SESSION.md 新增 §12「会话目录残留 GC + 标题写显性化」（双端——残留按 mtime 保留期 GC（session-gc.mjs）+ `thincoder session gc` 冷 cwd 手动清理 + renameSlot/setSlotTitle `{ok, reason}` 契约——板块归位「会话」，地图无新增）
+5. **存量碎片处理（2026-08-25 收口 + 2026-09-07 归档清理）**：方向性/时点/被取代文档移 `_archive/`；已实现专题独立保留。新增同主题内容须先查本表归属。
+
+## 变更记录
+
+- 2026-08-21：初版（文档归属纪律）。
+- 2026-08-24：新增「Agent 运行参数」「工具输出限制」。
+- 2026-08-25：新增「轮末蒸馏异步化」「工具移除」「覆盖率缺口修复」「CLI Lint 引入」「发布流程」；ROADMAP-0.9.0 归档标注。
+- 2026-09-01：新增「Checkpoint 事故恢复」。
+- 2026-09-02：CLI Lint 板块标记被 TOOLS.md §10.2 取代。
+- 2026-09-03：新增「诊断事件日志」。
+- 2026-09-05：新增专题「settings 工具」。
+- 2026-09-06：provider 数量修正（17→20）；新增「测试基建」「多实例协作感知」；SESSION.md §12；token 生命周期语义修订。
+- 2026-09-07：新增「结构债」（STRUCTURE-DEBT.md）；verify 重构（VERIFY-REDESIGN.md）；**归档 8 文件移 `_archive/`**（ARCHITECTURE-v2/ROADMAP-0.9.0/COMPETITIVE-CLI-2026/KIMI-CODE-PROMPT-ANALYSIS/TTSR-ANALYSIS/ENGINEERING-WORKLOOP/CLI-LINT-REQUIREMENTS/CLI-LINT-TUNING）；地图格式正常化。
