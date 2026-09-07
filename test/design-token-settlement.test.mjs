@@ -192,6 +192,46 @@ test("错误/正常：dispatch 写门任一活槽判定（AC4）", async () => {
   assert.ok(!String(r2[0].result).includes("design review required"))
 })
 
+test("consume 落盘对称：consume 后 kill → restart → 门禁 miss 回读不复活（AC7）", () => {
+  const token = liveTok()
+  createSlot({ "did-1": token })
+  // 槽文件预置残留单值镜像（pre-D3 legacy——一并断言 consume 落盘清镜像，锁死
+  // restoreEngTokens 一次性迁移复活已消费 token 的边角路径）
+  const p = slotPath(cwd, slot)
+  const seeded = JSON.parse(readFileSync(p, "utf8"))
+  seeded.engDesignToken = liveTok()
+  writeSessionFile(p, seeded)
+  // 父代理：resume 后的活进程形态——内存已水合槽 + 槽文件旧台账在盘
+  const agent = gateAgent({ _sessionStart: "test-session", _engDesignTokens: new Map([["did-1", token]]) })
+  assert.match(executeConsumeDesignAction({ designId: "did-1" }, { agent }), /closed out/)
+  // 内存槽已删
+  assert.equal(agent._engDesignTokens.size, 0)
+  // 当场落盘删除（不等回合尾 saveSession）：槽文件旧台账 engDesignTokens 与残留镜像
+  // engDesignToken 均已不在盘
+  const disk = JSON.parse(readFileSync(slotPath(cwd, slot), "utf8"))
+  assert.equal(disk.engDesignTokens, undefined)
+  assert.equal(disk.engDesignToken, undefined)
+  // "kill → restart"：新进程 Map 未回填 → spawn 门禁 miss 回读盘 → 不复活（机械拒）
+  assert.throws(() => resolveDesignSlot(gateAgent(), "did-1"), /designId not found/)
+  // 省略 designId 的单设计路径同样不复活
+  assert.throws(() => resolveDesignSlot(gateAgent()), /Invalid or missing design token/)
+})
+
+test("错误：consume 落盘失败 → 回滚内存槽 + 抛错可重试（不留半消费态——AC7 失败面）", () => {
+  const token = liveTok()
+  createSlot({ "did-1": token })
+  const agent = gateAgent({ _sessionStart: "test-session", _engDesignTokens: new Map([["did-1", token]]) })
+  // sabotage：sessions 目录换成同名文件 → 槽写必抛（settle 失败用例同款手法）
+  rmSync(sessionsDir, { recursive: true, force: true })
+  writeFileSync(sessionsDir, "x")
+  assert.throws(
+    () => executeConsumeDesignAction({ designId: "did-1" }, { agent }),
+    /could NOT be durably deleted/,
+  )
+  // 内存槽回滚——盘上旧台账未被删除时消费不得报成功（可重试）
+  assert.equal(agent._engDesignTokens.get("did-1"), token)
+})
+
 test("consume-design：镜像退役——无 Map 无镜像兜底读（D3/AC3）", () => {
   const token = liveTok()
   const agent = gateAgent({ _engDesignTokens: new Map([["a", token]]) })
