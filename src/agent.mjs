@@ -62,7 +62,9 @@ export function createAgent({
     planMode, autoApprove, goal,
     _mutatedThisRun: false, _verifiedThisRun: false, _verifyPassed: undefined, _calledAdvisorThisRun: false,
     _engDesignReviewed: false, // eng-coder: design review gate passed (hard gate in dispatch.mjs)
-    _engDesignToken: null, // issued by advisor(type="design"); required to spawn eng-coder
+    // DESIGN-TOKEN-SETTLEMENT D3 (2026-09-08): single-value `_engDesignToken` mirror retired
+    // (AC3 零写) — no field initializer; the multi-slot Map `_engDesignTokens` is the
+    // authoritative ledger (hydrated by restoreEngTokens / written by settle).
     _touchedFiles: [], _verifyRetries: 0, _advisorRound: 0, _advisorSession: null,
     _advisorRuns: new Map(), // §24 D-24b: per-review convergence instances (rounds/prior/designId)
     _mutationSeq: 0, _mutLog: [], // §24 D-24b: mutation log (in-flight review staleness scan)
@@ -153,8 +155,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // eng-coder authorization is set by subagent.mjs AFTER token validation but BEFORE
   // runAgent — only reset for the top-level agent (depth 0); child runs keep theirs
   if (depth === 0) agent._engDesignReviewed = false
-  // _engDesignToken survives across turns (design review → approval → eng-coder spawn);
-  // lifecycle: invalidated on failed re-review (advisor.mjs), issued on a passing one.
+  // Design slots (_engDesignTokens Map) survive across turns (design review → approval →
+  // eng-coder spawn) — persisted to the session slot at settle time (DESIGN-TOKEN-
+  // SETTLEMENT D1); lifecycle: issued on a passing review, consumed by consume-design / TTL.
   let guardPushbacks = 0
   let advisorPushbacks = 0
   let honestReminderInjected = false

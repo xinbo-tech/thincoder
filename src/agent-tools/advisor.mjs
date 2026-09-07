@@ -193,10 +193,11 @@ export const advisorTool = {
       // Design pass/fail settlement — token echo IS the verdict (prompt-enforced);
       // no findings-table heuristics: a design with issues never carries the token.
       // (session cleanup for design reviews is owned by runAdvisorReview)
-      // Multi-design slots (2026-09-01): store under this review's designId; the single
-      // `_engDesignToken` mirror stays for the legacy boolean gates (dispatch "has token",
-      // session persistence) — key decision ② of ENGINEERING-MODE.md §7 2026-09-01.
-      // Slotting moved into settleDesignReview (shared with the async settle — fix #2).
+      // Multi-design slots (2026-09-01): store under this review's designId.
+      // DESIGN-TOKEN-SETTLEMENT D3 (2026-09-08): the single `_engDesignToken` mirror is
+      // retired — no mirror write here; the dispatch/spawn gates read the authoritative
+      // multi-slot Map (+ slot-file re-read). Slotting moved into settleDesignReview
+      // (shared with the async settle — fix #2).
       const settled = settleDesignReview(agent, resolved.run, designToken, result)
       // F2e (§29.1): the sync prior mirror must not carry the raw echo the runner
       // stored — overwrite with the clean settled form (exact-suffix truncation).

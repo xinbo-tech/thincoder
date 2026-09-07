@@ -40,11 +40,20 @@ function cwdHash(cwd) {
   return createHash("sha1").update(normalizeCwd(cwd)).digest("hex")
 }
 
+/** sessions 根目录隔离缝（2026-09-08 DESIGN-TOKEN-SETTLEMENT 测试——VSC 端
+ *  _setSessionsDirForTest 同构）：默认 null 走真实 configDir；测试指向临时目录
+ *  （beforeEach 设、afterEach 复位）。migrateHashLength 的 legacy 迁移仍查真实
+ *  目录（temp 哈希无 legacy 文件——no-op 无害）。 */
+let sessionsDirOverride = null
+export function _setSessionsDirForTest(dir) { sessionsDirOverride = dir }
+export function _resetSessionsDirForTest() { sessionsDirOverride = null }
+function sessionsBase() { return sessionsDirOverride ?? join(configDir, "sessions") }
+
 /** Derive base session path from cwd hash. Migrates legacy short-hash files on first access. */
 export function sessionPath(cwd) {
   const hash = cwdHash(cwd)
   migrateHashLength(cwd, hash)
-  return join(configDir, "sessions", `${hash}.json`)
+  return join(sessionsBase(), `${hash}.json`)
 }
 
 export function slotPath(cwd, n) { return sessionPath(cwd) + "." + n }

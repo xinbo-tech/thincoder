@@ -20,6 +20,8 @@ import {
   activeSlot, getSessionId, isProcessAlive,
   writeEndMarker, resumeSlot as slotsResumeSlot,
 } from "./session-slots.mjs"
+// F2 轮转守卫自 2026-09-08 迁至 session-guard.mjs（session-slots 再越 500 行硬限拆分）
+import { guardForeignSlotFile } from "./session-guard.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { engTokenSlotFields, restoreEngTokens } from "./token-ttl.mjs"
 
@@ -145,44 +147,14 @@ export function saveSession(agent) {
   const p = slotPath(agent.cwd, slot)
   // 2026-08-31 会诊 F2 🔴：写前校验磁盘文件的 sessionStart——与本进程会话不符（另一
   // 进程/会话的现场）→ 先轮转 .bak 保留再写（11311 条历史被新进程覆盖的实锤场景）。
-  // 检查按 mtime 缓存（_slotMtime）：文件自上次检查/自写未变就跳过全量解析——
-  // 每次保存都 readFileSync+JSON.parse 多 MB 会话 → O(n²) 退化。
-  let rotated = null
-  try {
-    if (existsSync(p)) {
-      const st = statSync(p)
-      let disk = null
-      if (st.mtimeMs !== (agent._slotMtime ?? -1)) {
-        disk = JSON.parse(readFileSync(p, "utf8"))
-        // 2026-08-31 会诊 deepseek 🟡：version>2 的新版文件无论 sessionStart 一律轮转
-        // （loadSlotFile 对 v3 返回 null 不动文件——若其 sessionStart 为 null，旧版首次
-        // 保存会静默覆盖；轮转 .bak 保证新版文件保留）。
-        // 2026-09-01 advisor 🔵：磁盘文件 cwd 不匹配（异项目文件误落本路径）同样轮转——
-        // 与 loadSlotFile/legacy 读的"别人的文件不动"原则对齐（否则 sessionStart null +
-        // version≤2 的异项目文件被静默覆盖且无 .bak）。
-        const diskIsNewer = typeof disk?.version === "number" && disk.version > 2
-        const diskStart = disk?.sessionStart ?? null
-        const myStart = agent._sessionStart ?? null
-        const diskForeign = typeof disk?.cwd === "string" && disk.cwd.toLowerCase() !== agent.cwd.toLowerCase()
-        if (diskIsNewer || diskForeign || (diskStart && diskStart !== myStart)) {
-          const bak = `${p}.bak-${Date.now()}`
-          renameSync(p, bak)
-          rotated = bak
-          console.error(`[session] slot ${slot} holds ${diskIsNewer ? `a newer-version file (v${disk.version})` : diskForeign ? `a foreign-cwd file (${disk.cwd})` : `another session (start ${diskStart}, ours ${myStart})`} — preserved as ${basename(bak)}`)
-        }
-        agent._slotMtime = st.mtimeMs
-      }
-    }
-  } catch {
-    // 文件存在但不可读（损坏/半写）：改名 .corrupted 保留现场（2026-09-01 advisor 🔵——
-    // 与自身 loadSlotFile 的 .corrupted 约定 + VS Code saveSessionToSlot 对齐；.bak 保留
-    // 给 F2 轮转路径，损坏现场不再混入轮转后缀，恢复/清理工具按后缀分类不误判）
-    if (existsSync(p)) {
-      try {
-        renameSync(p, `${p}.corrupted`)
-      } catch {}
-    }
-  }
+  // 守卫自 2026-09-08 提取为 guardForeignSlotFile（session-slots.mjs——DESIGN-TOKEN-
+  // SETTLEMENT D1）——saveSession 与 token-ttl persistEngTokens（settle 当场落盘）
+  // 共用同一份（检查按 mtime 缓存 _slotMtime：自写未变跳过全量解析）。
+  // 守卫自 2026-09-08 提取为 guardForeignSlotFile（session-guard.mjs——DESIGN-TOKEN-
+  // SETTLEMENT D1 二次拆分：先入 session-slots、再因 500 行硬限迁 session-guard）——
+  // saveSession 与 token-ttl persistEngTokens（settle 当场落盘）共用同一份（检查按
+  // mtime 缓存 _slotMtime：自写未变跳过全量解析）。
+  const rotated = guardForeignSlotFile(agent, p, slot)
   writeSessionFile(p, data)
   // 记录我们刚写的 mtime——下次保存跳过重复解析
   try { agent._slotMtime = statSync(p).mtimeMs } catch {}
@@ -427,7 +399,7 @@ export function resetSessionState(agent) {
   agent.title = ""
   agent.tasks = []
   agent._sessionStart = null
-  agent._engDesignToken = null
+  // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：单值镜像 `_engDesignToken` 退役——不再维护
   agent._engDesignTokens = new Map() // multi-design slots die with the session (2026-09-01 fix #2)
   agent._compressFailures = 0
   agent._verifyRetries = 0

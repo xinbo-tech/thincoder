@@ -17,6 +17,7 @@ import { homedir } from "node:os"
 // + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
 // 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（§29 症状根因）。
 import { noteMutations } from "../agent-tools/advisor-async.mjs"
+import { anyLiveDesignSlot } from "../token-ttl.mjs"
 
 const ERRORS_DIR = join(homedir(), ".thincoder", "tool-errors")
 
@@ -174,14 +175,18 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     }
 
     // Engineering mode PARENT gate: the parent agent must not touch code files
-    // before the design review passed. Signaled by _engDesignToken — set on
-    // design-review approval, survives across turns (_engDesignReviewed is
-    // eng-coder-only and reset per run). Exemptions cover ONLY design artifacts
+    // before the design review passed. Signaled by a live design slot (design-review
+    // approval — persists in the session slot, survives across turns; _engDesignReviewed
+    // is eng-coder-only and reset per run). Exemptions cover ONLY design artifacts
     // (docs/** and root-level docs like METHODOLOGY.md/README.md/AGENTS.md/
     // LICENSE) — writing them IS the design/methodology step. Everything under
     // src/ (incl. src/prompts/*.md) is product code, not documentation, and
     // needs a design token. Mechanically blocks "talk then code".
-    if (agent.config?.agent?.engineering && depth === 0 && !agent._engDesignToken
+    // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：资格判据 = 权威槽"任一活槽存在"
+    // （anyLiveDesignSlot——查内存 Map，miss 回读槽文件——单值镜像 `_engDesignToken`
+    // 已退役，门禁不再读镜像——AC4）。
+    if (agent.config?.agent?.engineering && depth === 0
+        && !anyLiveDesignSlot(agent)
         && FILE_MUTATORS.has(toolCall.name)) {
       const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
       // Unknown/missing paths (non-string, e.g. no path argument) are treated

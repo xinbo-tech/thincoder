@@ -33,109 +33,20 @@
  */
 import { randomUUID } from "node:crypto"
 import { join } from "node:path"
-import { tokenExpiryMs } from "../token-ttl.mjs"
+import { persistEngTokens } from "../token-ttl.mjs"
+import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from "./design-token.mjs"
+// design-token 工具组（2026-09-08 自本文件迁至 design-token.mjs——再越 500 行硬限）——
+// 既有 import 面（advisor.mjs / 测试）不变：原导出全部经此 re-export 保留。
+export {
+  buildApprovedSuffix, stripApprovedSuffix, effectiveTokenTtlMs, generateDesignToken,
+  validateDesignToken, makeDesignTokenRegex, settleDesignReview,
+} from "./design-token.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER, looksLikeReviewOutput } from "../advisor/run.mjs"
 import { isDocFile, isTempFile } from "../advisor/repos.mjs"
 import { stripEventToken } from "../agent/spawn-child.mjs"
 import { pushReal } from "../context.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
-
-/**
- * F2c/F2e (§29.1 2026-09-07): the engine-generated Approved suffix — ONE builder
- * shared by the sync settle and the async settle (and the prior stores, which
- * strip it with stripApprovedSuffix — exact-suffix truncation, never a regex
- * guess, zero collateral). The slot count is a point-in-time snapshot taken at
- * settle time — the situation at spawn time may differ (F2d backs that up).
- */
-export function buildApprovedSuffix(designToken, designId, slotCount) {
-  return `Approved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${designId} (pass as the designId parameter when spawning eng-coder — optional while this session holds a single design; ${slotCount} approved design slot(s) held as of this approval, and the count may have changed since — with several designs the spawn gate refuses a missing designId and lists the held ids)`
-}
-
-/** F2e (§29.1): strip the engine-generated Approved suffix from a report before
- *  it becomes a prior — the suffix is deterministic (buildApprovedSuffix), so the
- *  truncation is exact; a text not ending in it passes through untouched. */
-export function stripApprovedSuffix(text, suffix) {
-  if (typeof text !== "string" || !suffix) return text
-  return text.endsWith(suffix) ? text.slice(0, text.length - suffix.length).trim() : text
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Design-token utilities (moved here from agent-tools/advisor.mjs so the sync
-// wrapper and the async settle share one implementation — no module cycle:
-// agent-tools/advisor.mjs imports this module, never the other way around).
-// Re-exported by agent-tools/advisor.mjs for the tests' import surface.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25)
-
-/** Effective token TTL: config override with runtime validation (timeoutMs precedent). */
-export function effectiveTokenTtlMs(agent) {
-  const cfg = agent?.config?.agent?.engTokenTtlMs
-  return (Number.isFinite(cfg) && cfg > 0) ? cfg : TOKEN_TTL_DEFAULT_MS
-}
-
-/** Mint an unsigned design token with expiration (2026-09-06: HMAC layer removed —
- *  the token is a FLOW credential: uuid:expiresAt, exact slot match + TTL only). */
-export function generateDesignToken(agent) {
-  const uuid = randomUUID()
-  const expiresAt = Math.floor(Date.now() + effectiveTokenTtlMs(agent))
-  return `${uuid}:${expiresAt}`
-}
-
-/** Validate a design token: format + expiration — ALL fail-closed (v2 2026-08-25).
- *  R16: format/expiry semantics live in token-ttl.mjs (tokenExpiryMs — single source
- *  shared with restore filtering / enter cleanup / spawn-gate slot deletion — D-R16b). */
-export function validateDesignToken(token) {
-  const expiry = tokenExpiryMs(token)
-  return expiry !== null && expiry >= Date.now()
-}
-
-/** Build a [DESIGN-TOKEN:...] regex matching the FULL token (uuid:expiresAt). */
-export function makeDesignTokenRegex(token, flags = "") {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  return new RegExp(
-    `(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}\\s*\\](?:\\s|$|\`|\\*)`,
-    flags + "ms"
-  )
-}
-
-/**
- * Shared design-review settlement (sync wrapper + async settle): the token echo
- * IS the verdict — the advisor echoes it only on approval. On echo: slot the
- * token under designId (+ single-value mirror + eng-coder gate flag) and return
- * the clean output with the Approved suffix; the review instance CLOSES (a
- * later review of the same doc-set starts a fresh full review). On non-echo:
- * strip every dead token occurrence and return the findings text — slots stay
- * untouched (方案 ②: a failed re-review revokes nothing).
- * @returns {{passed: boolean, output: string}}
- */
-export function settleDesignReview(agent, run, designToken, rawResult) {
-  if (!designToken || typeof rawResult !== "string") {
-    return { passed: false, output: rawResult ?? "" }
-  }
-  const tokenPattern = makeDesignTokenRegex(designToken)
-  if (!tokenPattern.test(rawResult)) {
-    const stripped = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-    return { passed: false, output: stripped || "Advisor: design review did not pass." }
-  }
-  // Echoed the token → review passed. Issue it to the parent for eng-coder.
-  agent._engDesignTokens ??= new Map()
-  agent._engDesignTokens.set(run.designId, designToken)
-  agent._engDesignToken = designToken
-  // Unlock the dispatch design gate for eng-coder SELF-review (defense-in-depth —
-  // see the sync wrapper's note: unreachable today, kept for parity).
-  if (agent._role === "eng-coder") agent._engDesignReviewed = true
-  run.open = false // approval closes this doc-set instance — next review is fresh
-  const clean = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-  // F2c (§29.1): id echo + omission guidance + point-in-time slot snapshot — the
-  // same suffix the F2e prior stores strip with (stored for the exact truncation).
-  run.approvedSuffix = buildApprovedSuffix(designToken, run.designId, agent._engDesignTokens.size)
-  return {
-    passed: true,
-    output: `${clean}\n\n${run.approvedSuffix}`,
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Review-instance registry (agent._advisorRuns — per-review rounds/prior/cap)
@@ -323,10 +234,15 @@ export function cancelAsyncAdvisor(agent, id) {
  *  1. round++ (attempts count — parity with the legacy _advisorRound++ budget);
  *  2. stale determination — mutated targets since launch → no called-mark, no token;
  *  3. non-stale: code review → _calledAdvisorThisRun = true; design review →
- *     token echo check (settleDesignReview: slot + mirror + instance close);
+ *     token echo check (settleDesignReview: slot + instance close; single-value
+ *     mirror retired per DESIGN-TOKEN-SETTLEMENT D3) + D1 settle-time slot persist
+ *     (persistEngTokens — write failure = settle failure: no registration, no
+ *     Approved echo, re-review — 评审 #1);
  *  4. §29 fix B — branch-shaped report output (the caller writes it back to
  *     entry.report; digest injects the CLEANED form): pass → stripped +
- *     Approved/designId suffix (sync 参照形态); stale → echo stripped +
+ *     Approved/designId suffix (sync 参照形态); persist-failed → stripped +
+ *     "D1: …token could NOT be durably written…" re-review notice (no Approved
+ *     suffix — never an unregistered token); stale → echo stripped +
  *     "评审目标已变更——token 未签发" prefix — never an unregistered token.
  * Cancelled / parent-aborted reviews consume nothing (the user dropped the
  * attempt — the retry must not lose budget).
@@ -345,9 +261,42 @@ export function settleAdvisorRun(agent, entry) {
   let passed = false
   if (!stale) {
     if (run.reviewType === "design" && entry.designToken && result) {
+      // settle 前 Map 快照——落盘失败时回滚用（settle 失败 = 结算未发生，不留半结算态：
+      // 重评覆盖旧槽的边角（F2h 复用 designId）也原样恢复旧 token——内存与盘一致）。
+      const preMap = agent._engDesignTokens instanceof Map
+        ? new Map(agent._engDesignTokens)
+        : null
       const settled = settleDesignReview(agent, run, entry.designToken, result)
-      passed = settled.passed
-      report = settled.output
+      if (settled.passed) {
+        // DESIGN-TOKEN-SETTLEMENT D1（2026-09-08）：settle 是唯一结算点——settle 当场
+        // 同步落盘 token 字段到槽文件（persistEngTokens = engTokenSlotFields 序列化 +
+        // session 安全写/轮转——勿裸写文件），不等下个回合尾 saveSession（消除"settle→
+        // 下个 saveSession"间的重启丢 token 窗口）。
+        // 写失败即 settle 失败（评审 #1）：token 不注册（Map 回滚到 settle 前快照）、无
+        // Approved 回显、可重评——不静默吞错、不产生"内存有盘上无"态（宁可结算失败
+        // 可重评，不留半结算态）。
+        let durable = false
+        try {
+          durable = persistEngTokens(agent)
+        } catch (e) {
+          logEvent("advisor:error", { id: `advisor#${entry.id}`, err: `engDesignTokens slot persist threw: ${e?.message ?? String(e)}` })
+        }
+        if (durable) {
+          passed = true
+          report = settled.output
+        } else {
+          if (preMap) agent._engDesignTokens = preMap
+          else delete agent._engDesignTokens
+          run.approvedSuffix = null
+          logEvent("advisor:error", { id: `advisor#${entry.id}`, err: "engDesignTokens slot persist failed — settle failed (re-review)" })
+          const stripped = String(result)
+            .replace(makeDesignTokenRegex(entry.designToken, "g"), "")
+            .trim()
+          report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评).`.trim()
+        }
+      } else {
+        report = settled.output
+      }
     }
     // A completed review covers the code face ONLY when it actually produced a
     // verdict: a mechanical-failure settle ("Advisor: review failed/timeout/…" —
