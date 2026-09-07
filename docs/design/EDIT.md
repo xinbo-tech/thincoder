@@ -96,10 +96,57 @@ edit 加**显式命名删行形态**（行号形态的省略 new_string 分支�
 
 ### 8.3 描述/提示词同步（意见 3）
 
-- CLI `edit.md` 路由段重写：行号新鲜 → edit(line:)，行号漂移/内容杂 → hashline，**删行 → 行号删行形态（8.1）**，加行 → insert_after。
-- VSC `file-edit.mjs` 描述修：重复块（line 与 startLine/endLine bullet 原样两遍）+ 中英混杂（edits 条目整段中文）→ 英文统一 + 空串语义段（8.1 裁定后统一措辞）。
-- discipline.md:39-40（edit = exact-string 单替换）+ system.md:16（"exact-match tools (edit)"）陈旧句 → D1 后 edit 已是两形态+三级匹配，改"edit = patch 区域替换（exact→模糊容错）"。
-- 代码注释 §15/D15.x 旧编号 → EDIT.md 指针（CLI edit 族 17 处：edit-batch/edit-diff/file.mjs:262/patch.mjs:19,71,97——编号残留清理）。
+### 8.3 描述/提示词改写（意见 3——逐处改前/改后，2026-09-08 用户确认）
+
+**① CLI `edit.md` 路由段**——现错（行定位首选指向 hashline，D1 后 edit 自己已能 `line:`）：
+```
+// 现：
+- Precise line-targeted change → `hashline_edit` (hash-based, immune to whitespace/encoding drift — preferred)
+// 改后：
+- Delete a line/range by number → omit new_string: edit with `line: N` / `startLine: N, endLine: M`
+- Line numbers fresh (just read) → `line`/`startLine`/`endLine` targeting — precise, no content copy needed
+- Line numbers may have drifted / content has whitespace-encoding noise → `hashline_edit` (content-hash addressing — position-independent)
+- Add a line/entry after a known line → insert_after
+- Same change across multiple files → apply_patch
+- Rewrite an entire file → write
+```
+（"hashline — preferred" 降为条件性：行号新鲜用 line 形态，漂移才用 hashline——hashline 唯一优势 = 位置无关，不是行定位首选。）
+
+**② CLI `edit.md` 空串 note**（删行形态定后）：
+```
+// 现：
+new_string empty (deletion) is an explicit error — ... (same for line-based edits)
+// 改后：
+Content-based edits: new_string empty is an explicit error (protects against forgetting it).
+Line-based edits: OMIT new_string to delete the line/range — deleting by number is an explicit, bounded intent.
+```
+
+**③ VSC `file-edit.mjs` 描述修 3 处**（细节在 VSC EDIT.md §8.3——此处只列要点）：
+  1. 重复块（line 与 startLine/endLine bullet 原样两遍 :87-90）删第二遍（:89-90），合并保留 "; replace_all does not apply"
+  2. 中英混杂（:92 edits 条目整段中文）改英文（同 CLI edits 段措辞）
+  3. 空串矛盾（:82 "empty new_string deletes them"）改 ② 同义（省略 new_string 才删——删行形态；非"空串=删"）
+  4. normalize 措辞（:80 "inner whitespace collapsed"）移除折叠后改 "tab→space indent"（与 CLI 一致）
+
+**④ 提示词陈旧句**（discipline.md / system.md——双端同修）：
+```
+// discipline.md:39-40 路由表——现：
+`edit` | exact-string single replacement
+`hashline_edit` | line-targeted edit by content hash
+// 改后：
+`edit` | region replacement (line-number or content targeting — exact → fuzzy)
+`hashline_edit` | content-hash-addressed edit (position-independent — use when line numbers may have drifted)
+
+// system.md:16——现：
+"exact-match tools (edit) require the freshest read"
+// 改后（edit 已非纯 exact-match——贴 exact-match 标签过时；数据新鲜度纪律保留）：
+edit's old_string / line numbers / hashes require the freshest read — re-read after the file changed
+```
+
+**⑤ schema 参数描述**（CLI file.mjs / VSC file-edit.mjs）：
+  - new_string：required → **行号形态 optional**（schema 表达"给 new_string 替换 或 省略删行"二选一）
+  - VSC edits items 加 line/startLine/endLine + required 放宽（分歧 c——细节在 VSC §8.4）
+
+**⑥ 代码注释旧编号**：CLI edit 族 §15/D15.x → EDIT.md 指针（edit-batch/edit-diff/file.mjs:262/patch.mjs:19,71,97——17 处）。
 
 
 ## 变更记录
