@@ -14,6 +14,7 @@
 | Agent 循环 | `AGENT-LOOP.md` | 权威源（批 1——ARCHITECTURE §6+§8 迁出写全）。`TURN-CAP-CONTINUE.md`（插件侧实现记录——2026-08-25 两端收口各为实现记录）同板块独立保留 |
 | 工程模式 | `ENGINEERING-MODE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 迁出写全）；会话级开关/eng token/门禁/guard |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 评审收敛迁出写全）；advisor 轮次衰减/cap/铁律 R1-R7 |
+| 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | async 评审 token 结算根治（settle 同步落盘/修快照清零/门禁读权威/废旧镜像）；CLI 同名对应——同机制各自独立 |
 | 工具系统 | `TOOLS.md` | 权威源（批 5——ARCHITECTURE §7 迁出写全）。`MCP.md`（MCP 机制——批 5 自 ARCHITECTURE §13 MCP 行展开，与 CLI 同名对应）同板块独立保留 |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 权威源（批 6——ARCHITECTURE §13 Checkpoint 行展开写全）；快照/回滚，与 CLI 同存储同格式、快照跨端互通 |
 | 记忆 | `MEMORY.md` | 权威源（批 6——ARCHITECTURE §13 Memory 行展开写全）；文件式 markdown + 可选向量，无 FTS5 |
