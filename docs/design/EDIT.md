@@ -68,6 +68,40 @@ EOL 写回（detectFileEol/joinWithEol/majorityEol）与失败候选（findCandi
 
 `test/edit-tool-improvement.test.mjs`（20 用例——18 快层 + 2 slow 端到端：runSingleEdit 按行号写盘/批量混用行号+模糊条目）。用例表历史见「变更记录」引用档。
 
+## 8. 阶段 2 变更段（EDIT-TOOLS-REVIEW——2026-09-08 裁定，评审后实现）
+
+> 编辑工具板块二次整理（功能统一 + 描述/提示词完善）。本段设计待评审——评审通过并入 §1-§7 当前态。
+
+### 8.1 删行形态（裁定 A——用户 2026-09-08）
+
+edit 加**显式命名删行形态**（行号形态的省略 new_string 分支——意图有界，防静默删除保护不适用）：
+
+- **调用**：`{path, startLine: N, endLine: M}`（删行范围）/ `{path, line: N}`（删单行）——**省略 new_string** = 删除该行/范围。
+- **与现有约束的关系**：内容形态空 new_string 仍拒绝（忘了填 new_string 是高频误操作——无界意图）；行号形态给了明确行 → 允许省略（有界意图——删哪行是显式声明）。
+- **schema**：行号形态 new_string 改 optional（现 required——见 file.mjs schema）；描述说明两种删行路径。
+- **返回**：`Deleted lines N-M of <path>` / `Deleted line N of <path>` + diff。
+- **测试**：删单行/删范围/删首末行/空 new_string 内容形态仍拒。
+
+### 8.2 normalize 统一（裁定——评估修正，用户批准 5 条基准）
+
+双端模糊匹配 normalize 算法统一为一实现（现 CLI/VSC 各一——分歧 b）。**统一基准**：
+
+1. trim + 去行尾空白（两端已有）
+2. tab → 2 空格（CLI 规则）
+3. ASCII 单引号 → 双引号（CLI 规则）
+4. 弯引号/反引号 → 直引号（VSC 增量——采纳）
+5. **移除 VSC 行内 `\s+` 折叠**（评估修正——折叠吞缩进/对齐结构，可能误匹配文字相似但结构不同的行；模糊匹配定位是"容错"非"乱配"）
+
+实现：CLI normalizeEditLine 补 4（弯→直）；VSC normalizeLineFuzzy 改 2/3/4 同 CLI（移除折叠）。两端逐字同算法。测试：含弯引号差异行两端同命中 / 结构不同文字相似行两端同不命中（防误匹配回归）。
+
+### 8.3 描述/提示词同步（意见 3）
+
+- CLI `edit.md` 路由段重写：行号新鲜 → edit(line:)，行号漂移/内容杂 → hashline，**删行 → 行号删行形态（8.1）**，加行 → insert_after。
+- VSC `file-edit.mjs` 描述修：重复块（line 与 startLine/endLine bullet 原样两遍）+ 中英混杂（edits 条目整段中文）→ 英文统一 + 空串语义段（8.1 裁定后统一措辞）。
+- discipline.md:39-40（edit = exact-string 单替换）+ system.md:16（"exact-match tools (edit)"）陈旧句 → D1 后 edit 已是两形态+三级匹配，改"edit = patch 区域替换（exact→模糊容错）"。
+- 代码注释 §15/D15.x 旧编号 → EDIT.md 指针（CLI edit 族 17 处：edit-batch/edit-diff/file.mjs:262/patch.mjs:19,71,97——编号残留清理）。
+
+
 ## 变更记录
 
 - 2026-09-08：文档重组——edit 工具语义从 TOOLS.md §6.1 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5 + 测试表 8 用例，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。
