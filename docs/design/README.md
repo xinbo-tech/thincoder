@@ -15,6 +15,7 @@
 | 子代理观测/注入 | `SUBAGENT-OBSERVE-SEND.md` | 父侧 observe(查进度)+send(注入引导) 运行中子代理；CLI 同名对应——同机制各自独立 |
 | async 结果容器统一 | `ASYNC-RESULT-CONTAINER.md` | settle 共享 helper/pending 单容器+role/池 accessor/buildChildSignal；CLI 同名对应——同机制各自独立 |
 | edit 工具改进 | `EDIT-TOOL-IMPROVEMENT.md` | 按行号改+模糊匹配+替换即删（符合模型直觉）；CLI 同名对应——同机制各自独立 |
+| memory 工具完善 | `MEMORY-TOOL-SCOPE-FIX.md` | delete scope 不一致 bug 修复（跨 scope fallback + scope 显示 + scope 查找函数统一）；CLI 同名对应——同机制各自独立 |
 | 工程模式 | `ENGINEERING-MODE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 迁出写全）；会话级开关/eng token/门禁/guard |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 评审收敛迁出写全）；advisor 轮次衰减/cap/铁律 R1-R7 |
 | 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | async 评审 token 结算根治（settle 同步落盘/修快照清零/门禁读权威/废旧镜像）；CLI 同名对应——同机制各自独立 |
