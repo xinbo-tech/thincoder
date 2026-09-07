@@ -92,13 +92,26 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
   - **修正设计**：
     ①**layer 可选**（裁定统一成 layer）——传了则校验（防误删保持），**不传则按 id 前缀直接路由**（与 search/list 找到的 id 直接对接）；批删形态（无 id）仍必填 layer（参数改名）。
     ②**list 补独立 `[layer]` 标签列**（与 search 行对齐，成本低）。
-    ③**第三个真缺口补设计（评审 #2 采纳——定 delete 尊重 uid origin 段）**：delete 文件定位改尊重 uid 内嵌 origin（非当前 dirs[layer]）——否则 search 带出的非当前 origin 行"能看到但碰不到"（违背"id 直接可删"承诺）。落点：deleteByUid 按 uid origin 解析（dirs[layer] 兜底——本地无对应目录 → ENOENT 容错 + syncDir 清索引）。
-  - **输出/错误串同步（评审 #1 采纳——scope→layer 延伸至模型可见输出）**：输出契约 + 错误串的 `scope` 词同步改 `layer`（`Deleted N entries in layer X`/`与 layer project 不匹配`/`not found in layer <layer>`）+ byte 断言测试同步——模型看到的所有文本全是 layer 无 scope 残留；CLI 人类命令面 --scope 随动改 --layer；§6 残留 scope 描述批准后同步更新。
+    ③**第三个真缺口补设计（评审 #2 + #5 采纳——定 delete 尊重 uid origin 段 + VSC uid/origin 格式定稿）**：VSC id = 文件名（无 layer 前缀）；origin = 文件所在物理层目录（.thincoder/memory/personal/ 或 project/）。
+      ——delete 文件定位改尊重 uid 的 origin（非当前 dirs[layer] 假设）——否则 search/list 跨层带出的行"能看到但碰不到"；落点：delete 按 id 定位先查 uid 物理层目录，dirs[layer] 兜底，本地无对应目录 → ENOENT 容错 + syncDir 清索引。
+  - **输出/错误串同步（评审 #1 采纳——scope→layer 延伸至模型可见输出）**：输出契约 + 错误串的 `scope` 词同步改 `layer`（`Deleted N entries in layer X`/`与 layer project 不匹配`/`not found in layer <layer>`）+ byte 断言测试同步——模型看到的所有文本全是 layer 无 scope 残留；CLI --scope 随动改 --layer（CLI 端设计在 CLI MEMORY.md——评审 #2 指正 §6 悬空）；本档 §1-§3 残留 scope 批准后同步。
   - **工具描述具体化（2026-09-08 用户要求——工具描述是模型唯一看到的，须完善）**：工具层 scope 参数全改名 layer（search/put/list/delete/clear 的 args.scope → args.layer + schema scope 字段 → layer + 描述内 scope 词 → layer——用户裁定统一成 layer）。重写后描述要点：
     - **search/list**："layer 可选（personal/project/team——缺省搜全部层）；结果每行含 `[layer]` 标签 + id（id 前缀即 layer）"
     - **delete**："单删 {id, layer}——**layer 可选**：传了则校验（id 前缀须与 layer 匹配防误删），不传则按 id 前缀直接路由；批删（无 id）必填 layer + type/keyword + confirm:true"
     - **layer 概念**："layer = personal/project/team 三层——结果行首 [layer] 标签、id 前缀、delete 的 layer 参数是同一概念——delete 把结果的 [layer] 填进 layer（或省略自动路由）"
     - 无 scope 词（全部 layer）——消命名分裂（模型看到 [layer] → delete 填 layer——直接对应）。
+  - **验收测试表（评审 #1 采纳——补用例表）**：
+    | 用例 | 输入/场景 | 预期输出 | 对应 |
+    |---|---|---|---|
+    | layer 可选单删 | delete {id: 文件名, layer: "project"}（id 在 project 层） | 校验通过 → 删（前缀匹配） | layer 可选 |
+    | layer 省略单删 | delete {id: 文件名}（id 在 project 层） | 按 id origin 路由 → 删（不报 scope 错） | layer 可选 |
+    | layer 不匹配单删 | delete {id: 文件名(project), layer: "personal"} | 明确错误（id 前缀与 layer 不匹配） | 防误删 |
+    | 批删必填 layer | delete {type: "rule", keyword: "x"}（无 layer） | 明确错误（批删需 layer + filter + confirm） | 批删 |
+    | list 补 [layer] 标签 | list project 层 | 每行含 [project] 标签（与 search 对齐） | list 标签 |
+    | 输出无 scope 词 | search/put/list/delete/clear 全动作 | 模型可见文本（结果/错误）无 scope 词（全 layer） | 输出同步 |
+    | delete 尊重 origin | delete 跨 cwd memory 文件的 id | 按 uid origin 定位删除（非当前 dirs[layer]） | origin 尊重 |
+    | 边界 本地无 origin 目录 | delete 远端 clone 的 id（本地无目录） | ENOENT 容错 + syncDir 清索引（不报假成功） | origin 兜底 |
+    | 错误 clear project | clear {layer: "project", confirm: true} | 明确拒绝（clear 仅 personal） | clear 边界 |
   **归属**：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
 - **文件式即真相**：markdown 文件就是存储本身（list/批量 delete 匹配面 = 磁盘扫
   描），无独立 DB/索引文件——与 CLI FTS5 的差异是本端最本质的形态差。
