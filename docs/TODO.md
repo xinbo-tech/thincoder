@@ -117,6 +117,7 @@
 - [ ] **混合边环形等待残留**（dependsOn 边 + 文件域边混合等待链仍可能停滞——非静默，check 守卫返回明确错误 + cancel/AUTO 引导）——建议 §21.2 候选（refill/check 守卫机械检测"无 running 且全 queued 不可启动"）
 - [ ] **§21 普通模式偏差审计 + §18.8.1 会话上下文轮——挂起**（用户"先挂一下"——设计存疑——用户处理后重新决定：评审/修改/放弃）
 - [ ] **挂起模型零散项**：async 双消费竞态（见上）；§17 硬化轮与"4 explore 主回合未消化"同族
+- [ ] **async 结果容器统一（2026-09-08 需求点——等 token 根治交付后启动；STRUCTURE-DEBT 批 E+批 C 方向）**：async 子代理结果 settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复** + pending 三族分叉 + 池/done-in-pool 双表示 + `_sessionSignal` 别名/兜底抄 4 次——统一为单载体（池 + pending 带 role 标签 + 共享 settle 收尾 helper + buildChildSignal）——最深状态债（每次加角色复制整段）；与刚做的 token 结算根治共享"异步结算回父"土壤——关联 Top-8 #4 跨树去重——需 explore 一手诊断 + 设计 + 双端同机制一起改
 
 ## 观察项 / 候选（未登记立项——等样本/用户决定）
 
