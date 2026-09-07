@@ -23,8 +23,8 @@ export function formatPermission(name, args) {
     // §6 action-routed preview: put shows content, batch delete/clear show the gate args
     const action = String(args.action ?? "")
     if (action === "put") return `[${args.type ?? ""}] ${args.title ?? ""}\n${cap(args.content ?? "", 500)}`
-    if (action === "delete") return args.id ? `id=${args.id} scope=${args.scope}` : `batch delete scope=${args.scope} type=${args.type ?? ""} keyword=${args.keyword ?? ""} confirm=${args.confirm}`
-    if (action === "clear") return `clear scope=${args.scope} confirm=${args.confirm}`
+    if (action === "delete") return args.id ? `id=${args.id}${args.layer ? ` layer=${args.layer}` : ""}` : `batch delete layer=${args.layer ?? ""} type=${args.type ?? ""} keyword=${args.keyword ?? ""} confirm=${args.confirm}`
+    if (action === "clear") return `clear layer=${args.layer ?? ""} confirm=${args.confirm}`
     return cap(summarize(args), 300)
   }
   return cap(summarize(args), 300)

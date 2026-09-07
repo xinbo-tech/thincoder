@@ -53,9 +53,9 @@ export function describeToolArgs(name, args) {
       const action = String(a.action ?? "")
       if (action === "put") return String(a.title ?? "")
       if (action === "search") return String(a.query ?? "")
-      if (action === "list") return [a.scope && `scope ${a.scope}`, a.type && `type ${a.type}`, a.keyword && `kw ${a.keyword}`].filter(Boolean).join(" ")
-      if (action === "delete") return a.id ? `id ${a.id} (${a.scope ?? ""})` : `batch ${a.scope ?? ""} ${a.type ? `type ${a.type} ` : ""}${a.keyword ? `kw ${a.keyword}` : ""}`.trim()
-      if (action === "clear") return `clear ${a.scope ?? ""}`
+      if (action === "list") return [a.layer && `layer ${a.layer}`, a.type && `type ${a.type}`, a.keyword && `kw ${a.keyword}`].filter(Boolean).join(" ")
+      if (action === "delete") return a.id ? `id ${a.id}${a.layer ? ` (layer ${a.layer})` : ""}` : `batch ${a.layer ?? ""} ${a.type ? `type ${a.type} ` : ""}${a.keyword ? `kw ${a.keyword}` : ""}`.trim()
+      if (action === "clear") return `clear ${a.layer ?? ""}`
       return action || JSON.stringify(a)
     }
     case "lsp": return [a.subcommand, a.uri].filter(Boolean).map(String).join(" ")

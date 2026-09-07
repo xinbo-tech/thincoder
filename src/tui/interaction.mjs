@@ -47,9 +47,9 @@ export function createInteraction(ctx) {
       const action = String(args.action ?? "")
       if (action === "put") return [`[${args.type ?? ""}] ${args.title ?? ""}`, ...cap(args.content ?? "", 500).split("\n")]
       if (action === "delete") return args.id
-        ? [`delete single: ${args.id} (scope ${args.scope})`]
-        : [`batch delete scope=${args.scope} type=${args.type ?? ""} keyword=${args.keyword ?? ""}`, `confirm=${args.confirm}`]
-      if (action === "clear") return [`clear personal memory`, `scope=${args.scope} confirm=${args.confirm}`]
+        ? [`delete single: ${args.id}${args.layer ? ` (layer ${args.layer})` : ""}`]
+        : [`batch delete layer=${args.layer ?? ""} type=${args.type ?? ""} keyword=${args.keyword ?? ""}`, `confirm=${args.confirm}`]
+      if (action === "clear") return [`clear personal memory`, `layer=${args.layer ?? ""} confirm=${args.confirm}`]
       return [cap(summarize(args), 300)]
     }
     return [cap(summarize(args), 300)]
