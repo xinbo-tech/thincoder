@@ -30,6 +30,7 @@
 | Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留 |
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md）已移 `_archive/` |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
+| 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | async 评审 token 结算根治（settle 当场落盘/门禁读权威/废旧镜像）；VSC 同名对应——同机制各自独立 |
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`VERIFY-DOCONLY.md`（doc-only 快路径）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志 |
