@@ -124,6 +124,7 @@
 - **team 删除语义**：本地删 + syncDir 清索引，**不做 git 提交/推送**（git 传播是 gitmem 职责；删除可逆性优先——工具误删不自动推全团队，git 工具可恢复）。注明：team 记忆经 gitmem 拉取同步时，下次拉取可能复活已删文件（远端未删）——远端删除需经 git 工具。
 - **CLI `memory remove` 命令**：底层 `remove()` 收敛为 deleteByUid 兼容壳（boolean 语义保留）——命令行与工具**同一路由**，避免两套行为漂移；裸数字 id 兼容保留。
 - **错误**：不存在 → `memory <uid> not found in scope <scope>`；id 前缀与 scope 不匹配 → 拒绝（见 §6.4 逐字）。
+- **delete scope 解析统一（2026-09-08 用户发现——delete scope 不一致 bug 修复）**：search/list 跨 scope 搜（personal/project/team 都搜——能找到记忆），delete 限定 scope 找（单 scope 找不到就报错——scope 解析不一致）。**修复**：delete 的 scope 解析改**跨 scope fallback**——先按指定 scope 找（personal/project），找不到则跨 scope fallback（personal → project → team 都找）——与 search/list 一致；或不限定 scope（id 唯一即可——search/list 找到的记忆 id，delete 按 id 删，不管 scope）。**scope 显示**：search/list 结果显示记忆实际 scope（personal/project/team——每行加 scope 字段），让用户/agent 知道记忆在哪，delete 时按显示的 scope 删。**scope 查找函数统一**：search/list/delete 共用同一套 scope 查找函数（`findMemoryById(id, scope?)`——scope 可选，不给则跨 scope 找）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到（可能在 team scope——search/list 与 delete 的 scope 解析不一致）。归属：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
 
 ### 6.3 磁盘为真相（list/批量 delete 匹配面）
 
