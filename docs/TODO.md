@@ -81,6 +81,8 @@
 - [ ] **async 评审凭证结算根治**——**在途**（双端 DESIGN-TOKEN-SETTLEMENT 设计已批准 + eng-coder 实现中——交付后核销勾销）
 - [ ] **父 agent 观察运行中子代理（功能①，2026-09-08 用户需求点——治父看不到中间只靠 turn/touchedFiles 瞎猜死循环）**：父模型侧 `subagent` 动作加 observe——按 id 从 `entry.childAgent` 拉最近 N 条回合摘要 + 当前工具 + turn/touched，返父上下文。核心缺口 = **父模型看不到中间**（用户端 CLI TUI/VSC 已实时看到，几乎零新做）。关键约束：父只在自身回合内能调，异步子代理后台跑时父回合外——需解父子回合错位。归属 AGENT-LOOP 子代理 §，双端镜像
 - [ ] **父 agent 注入提示给运行中子代理（功能②，2026-09-08 用户需求点——纠结时给方向）**：父模型侧 `subagent` 动作加 send——写 entry 注入队列，子 runAgent 回合边界消费 + pushReal 进子历史（镜像父 pendingInput 攒批语义）。关键约束：①子 runAgent 需输入源贯通（今日 childOpts 不携带 entry 引用——硬缺口）②父子回合错位（父只在回合内能发，子后台跑）③注入对 eng-coder 审计/收敛纪律的边界（注入算不算破坏流程——需定义）。归属 AGENT-LOOP 子代理 §，双端镜像
+- [ ] **designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**：设计工作从主会话剥离给专门 designer 子代理——主会话只澄清需求+派 designer+评审设计+批准（不再自己写设计，哪怕小改动也派 designer）。designer 只写设计文档（主会话给澄清后需求+上下文，它产出设计文档到 docs/design/，不参与澄清）；直接写盘（产出即定稿）；一次性（每设计任务 spawn 一个，用完即弃）
+  ——需：新 designer 角色（子代理工具加 designer role）+ designer 提示词（固化 METHODOLOGY 三层结构/文档归属/验收标准格式/文档地图检查/受影响文件表格式）+ 主会话提示词改（工程模式 Mandatory Flow 改设计由 designer 做）+ designer 工具集（写 docs/design/ 权限+读代码/文档）——双端（CLI/VSC）同机制
 
 ## 会话/存储/恢复后续
 - [ ] **R19 护栏语义缺口**（见"代码正确性"节——需 SESSION §13 裁定字节/消息预算）
