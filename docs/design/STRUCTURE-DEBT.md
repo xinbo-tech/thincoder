@@ -82,7 +82,7 @@
 | CLI `src/tools/system.mjs` | 506 | 超硬限——见 #5 |
 | CLI `src/agent-tools/advisor-async.mjs` | 538 | 超硬限（最近 R13/§24 增量推过限）——本批 R13 相关设计已在动，拆分宜随 R13 后续批处理 |
 
-advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、memory/core 300（delete 族 2026-09-08 拆分 delete.mjs 234）、subagent-actions 463、file 443、acp 443、consult 443、shared 447、config 428、dispatch 435；VSC subagent 488、file-edit 456、subagent-async 451、execute-tools 439、suspension 422）——均 <500 不触发硬限，记录观察。
+advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、memory/core 300（delete 族 2026-09-08 拆分 delete.mjs 234）、docs 414（>300 建议线——memory 工具层 2026-09-08 改动后 406→414，既有债观察）、subagent-actions 463、file 443、acp 443、consult 443、shared 447、config 428、dispatch 435；VSC subagent 488、file-edit 456、subagent-async 451、execute-tools 439、suspension 422）——均 <500 不触发硬限，记录观察。
 
 ## 6. 分批清理路线
 

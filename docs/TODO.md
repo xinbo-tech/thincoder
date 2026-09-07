@@ -82,6 +82,9 @@
 - [ ] **edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**：edit 成功率低（old_string 精确匹配太严格 + LCS 保留旧行 + 无按行号改）——改进：①**按行号改**（line/startLine/endLine 参数——知道行号就能改，不用猜 old_string）②**模糊匹配**（old_string 放宽——细微差异/空白/缩进/引号不同也能匹配）③**替换即删**（替换后旧行自动删——不留残留）——归属 TOOLS.md §15 edit 语义升级——双端（CLI/VSC）同机制
 - [ ] **memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**：memory search/list 能找到记忆（跨 scope 搜），但 delete 找不到（限定 scope 找不到——scope 不一致）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到
   ——需：统一 search/list/delete 的 scope 解析（delete 也该跨 scope 找，或 search/list 显示记忆实际 scope）——归属 MEMORY.md 工具语义——双端（CLI/VSC）同机制
+- [x] ~~**memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**~~——**已实现**（2026-09-08 双端交付：CLI `528d2ab` / VSC `426b574`——scope→layer 全统一 + delete layer 可选 + 尊重 uid origin + list [layer] 标签——设计链闭合 consume）
+- [ ] **distill 子系统 scope→layer（2026-09-08 交付跟进——用户裁定延伸）**：distill 转录 JSON 字段 `scope` + `--scope` 命令参数同 memory 统一改 layer（人类命令面一致性——memory remove --scope 已随动改 --layer）——需 JSON 兼容处理（旧转录读取兼容）——归属：distill 命令板块（新设计）——**单端（CLI only——VSC 无 distill——已核实）**
+- [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
 
 ## 会话/存储/恢复后续
 - [ ] **R19 护栏语义缺口**（见"代码正确性"节——需 SESSION §13 裁定字节/消息预算）
