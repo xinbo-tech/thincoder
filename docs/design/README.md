@@ -42,7 +42,7 @@
 | ACP 协议 | `ACP-CLIENT.md` | |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
-| 评估 | `EVALUATION.md` | 权威源。`COMPETITIVE-CLI-2026.md`（竞评快照）已移 `_archive/` |
+| 评估 | `_archive/EVALUATION.md`、`_archive/COMPETITIVE-CLI-2026.md` | 均为竞评快照（时点数据，勿引用为现状）——已移 `_archive/` |
 | 参考项目分析 | ~~`KIMI-CODE-PROMPT-ANALYSIS.md`/`TTSR-ANALYSIS.md`~~ | 已移 `_archive/` |
 | 测试基建 | `TESTING.md` | 测试分层纪律/库存治理 |
 | 多实例协作感知 | `MULTI-INSTANCE-COLLAB.md` | 多副本 agent 协作感知 |

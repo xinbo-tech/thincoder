@@ -15,10 +15,11 @@ const root = (() => {
   return i >= 0 && args[i + 1] ? resolve(args[i + 1]) : join(process.cwd(), "docs", "design");
 })();
 
-/** 递归收集 .md 文件 */
+/** 递归收集 .md 文件（跳过 _archive/——归档区是历史快照，不受人类可读判据约束） */
 function collect(dir, out = []) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
+    if (name === "_archive") continue; // 归档历史快照豁免
     if (statSync(p).isDirectory()) collect(p, out);
     else if (name.endsWith(".md")) out.push(p);
   }
