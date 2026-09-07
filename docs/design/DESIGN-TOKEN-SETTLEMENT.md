@@ -13,7 +13,7 @@
 3. 此刻进程被杀/崩溃/OOM → 该 token 从未落盘 → 重启恢复（`token-ttl.mjs:107 restoreEngTokens`）槽旧 → token 丢
 窗口 = settle 完成 → 下个回合尾 saveSession（正常几秒内；digest 未触发/用户强杀则拉长）
 
-**与 VSC 共享的同构语义**（应保留为对齐标准）：settle 双写 Map+镜像、spawn 门禁读 Map、dispatch 门读镜像、consume/TTL//new 删槽清镜像、restore 过期过滤回填。
+**与 VSC 共享的同构语义**（现行基线——镜像相关项随 D3 双端同步退役，其余保留为对齐标准）：settle 写 Map+槽权威台账、spawn 门禁读 Map、dispatch 写门（现行读镜像 → D3 改问任一活槽）、consume/TTL//new 删槽、restore 过期过滤回填。
 
 **门禁读取分裂（与 VSC 同）**：dispatch 写门（`dispatch.mjs:184`）读单值镜像 `_engDesignToken`，spawn 门（`subagent-spawn.mjs:108`）读 Map——两套真相。
 
@@ -30,6 +30,7 @@
 
 - **现状**：settle 写内存 Map，落盘只在回合尾 saveSession（`agent-turn.mjs:279`）/退出/增量点。
 - **改**：settle 是唯一结算点 → **settle 当场持久化 token 字段到槽文件**（不等下个回合尾 saveSession）。在 `advisor-async.mjs` settle finally 后直接写（复用 `engTokenSlotFields` 序列化 + session 安全写/轮转，勿裸写文件）。agent 内存 Map 保持为当前进程缓存（常驻，与槽一致）。此消除"settle→下个 saveSession"间的重启丢 token 窗口。
+  - **写失败语义（评审 #1）**：settle 的槽写须同步 await——失败即 **settle 失败**（token 不注册、无 Approved 回显、可重评），不静默吞错、不产生"内存有盘上无"态（宁可结算失败可重评，不留半结算态）。
 - 落点：`src/agent-tools/advisor-async.mjs` settle 路径 + `src/token-ttl.mjs`（暴露可复用的落盘函数）。
 
 ### D2 spawn 门禁读权威（miss 回读槽）
@@ -43,6 +44,7 @@
 - **现状**：dispatch 写门（`dispatch.mjs:184`）读 `_engDesignToken` 镜像；settle/restore/consume/TTL/new 双写双清镜像（多处同步成本）。
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。镜像字段读时一次性迁移进 Map，settle/restore/consume/TTL/new 不再维护镜像。
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。**存量兼容：旧会话 slot 文件里可能残留镜像字段值——恢复时一次性读取迁移进 Map（唯一迁移读点，此后不再写镜像、不再读）**。settle/restore/consume/TTL/new 不再维护镜像。
+- **改（评审 #3 采纳——单条权威版）**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽"任一活槽存在"（查内存 Map 或槽文件任一未过期 designId）。**存量兼容：旧会话 slot 文件里可能残留镜像字段值——恢复时一次性读取迁移进 Map（唯一迁移读点，此后不再写镜像、不再读）**。settle/restore/consume/TTL/new 不再维护镜像。
   - 迁移读点：`token-ttl.mjs` restoreEngTokens——若 slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（标 legacy），随后 saveSession 不再写镜像字段。
 - 落点：`src/agent/dispatch.mjs` + `src/agent-tools/advisor-async.mjs` + `src/token-ttl.mjs` + `src/session.mjs`（resetSessionState）。
 
