@@ -136,6 +136,7 @@
 - [ ] **R15 排队用户指令合并处理**——**与 R13/R14 合批（D-24c）**——已批准——**在途**（CLI 面 A #9）——交付后勾销
 - [ ] **R14 子代理槽位按角色分池 + 可配置**（① eng-coder/explore 槽分开 ② 槽位数可配置，默认 eng-coder 四路 + 其他四路）——**与 R13 合批（D-24a）**——已批准——**在途**（CLI 面 A #9）——交付后勾销
 - [ ] **R16 token 生命周期语义修订**（用户裁定：ON→OFF 不清 / OFF→ON 上次评审不重复；TTL 到期+重启/开模式时清理过期）——需求已登记（ENG-TOKEN-BINDING §5）——**待设计**
+- [ ] **env-state 补当前会话 slot**（2026-09-08 用户需求点——agent 不知道当前会话的 slot，环境感知要补上）——SESSION §11 env-state 行（现 env/mode/model/resumed）补 `slot: {N}` 字段，agent 自知当前会话槽号（诊断/跨会话/多实例协作语境需要）——板块 SESSION §11（双端：CLI setup-reminders + VS Code）——登记于 SESSION.md §11 未决，设计启动权在用户
 
 ## 会话/存储/恢复后续
 

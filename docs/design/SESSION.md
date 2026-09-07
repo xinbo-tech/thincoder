@@ -369,6 +369,7 @@ m = loadManifest(cwd)
 
 - VS Code `detectRestoredSession` 为进程级一次性闸——中途切换会话拿不到 `resumed: yes`（按会话跟踪语义待后续完善）；
 - git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）——CLI parity 接受，异步优化待 TODO；
+- **env-state 缺当前会话 slot（2026-09-08 用户需求点登记——SESSION §11 env-state 行无 slot）**：agent 不知道自己落在哪个会话槽——补 `slot: {N}` 字段入 env-state 模板（对齐存储层 `agent._slot`），使 agent 能自知"当前会话槽号"（诊断/跨会话/多实例协作语境需要）。归属：SESSION §11 机制扩展——需设计→评审→实现（双端：CLI setup-reminders + VS Code）。已登记 TODO Requirement Pool。
 - R9 的"模式历史"（agent 自查询模式历史）本批不做——设计只覆盖"当前模式"注入；
 - R12（async 深度门控：depth-0 缺省 async、depth>0 缺省 sync）与本节同批实现——权威 = AGENT-LOOP.md §18。
 
