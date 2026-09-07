@@ -1,45 +1,98 @@
-# 探索蒸馏异步化 — 设计（CLI） > 状态：**已实现**（2026-08-25 评审修订后实施；npm 0.12.43）
-> 需求：`docs/design/SEND-STALL-DISTILL-REQUIREMENTS.md`
-> 关联：`docs/design/README.md`（文档地图）、`docs/design/CONTEXT-COMPACTION.md`（机制背景，不改动） ## 1. 问题陈述（Problem Statement） | # | 现状 | 位置 | 后果 |
-|---|---|---|---|
-| P1 | 轮末蒸馏在回合结束**之前**同步阻塞：`await summarizeRunExplorations(agent, callbacks, signal)` 位于 `handleCompletion` 后、`return cr.content` 前 | `src/agent.mjs:314` | TUI `agent-turn.mjs:381` `await runAgent(...)` 直到蒸馏完成才返回 → `state.processing` 多转 10+ 秒（静默第二次 LLM 调用，无任何 UI 反馈） |
-| P2 | 蒸馏完成后替换 `agent.history`（引用替换）但**不触发保存**——现状由 TUI 在 runAgent 返回后统一保存 | `src/context.mjs:430-436`（`agent.history = next`） | 异步化后必须补保存回调，否则磁盘停在上轮未压缩版，摘要丢失 | ## 2. 解决方案（Solution Approach） ### 2.1 时序重构（P1） `src/agent.mjs` 轮末（`:314` 附近）： ```js
-// 现状（阻塞）：
-if (depth === 0) { try { await summarizeRunExplorations(agent, callbacks, signal) } catch { /* silent (N3) */ } }
-return cr.content // 改为（异步 + 结束信号先行；depth 守卫保留——仅顶层轮末触发，评审 #2）：
-if (depth === 0) { const distill = summarizeRunExplorations(agent, callbacks, signal).catch(() => {}) agent._pendingDistill = distill
+# 探索蒸馏异步化 — 设计（CLI）
+
+> 状态：**已实现**（2026-08-25 实施；npm 0.12.43）——当前生效的现行机制描述。
+> 需求：`SEND-STALL-DISTILL-REQUIREMENTS.md`
+> 关联：`CONTEXT-COMPACTION.md`（蒸馏机制本体，不改动）、`README.md`（文档地图）。
+
+## 1. 问题陈述
+
+- **P1 · 轮末同步阻塞**：蒸馏在回合结束信号**之前**同步 `await summarizeRunExplorations(...)`（位于 `handleCompletion` 之后、`return cr.content` 之前）。TUI `await runAgent(...)` 直到蒸馏完成才返回 → `state.processing` 多转 10+ 秒（一次静默的第二次 LLM 调用，无任何 UI 反馈）。
+- **P2 · 替换后不触发保存**：蒸馏完成用引用替换 `agent.history = next` 但**不触发保存**——现状由 TUI 在 runAgent 返回后统一保存。异步化后蒸馏跑到回合外，必须补保存回调，否则磁盘停在上轮未压缩版、摘要丢失。
+
+## 2. 现行机制（时序）
+
+机制总纲：**结束信号先行 → 蒸馏异步在途 → 下一轮开头/退出时 await → 替换后保存回调**。agent 对象跨轮存活（`src/cli/make-agent.mjs` 一次创建复用），promise 挂 `agent._pendingDistill` 天然跨轮。
+
+### 2.1 轮末：结束信号先行（FR1）
+
+轮末（仅顶层 `depth === 0` 触发——depth 守卫保留）把蒸馏 promise 化挂起，**立即返回回合内容**，UI 不再等蒸馏：
+
+```js
+// src/agent.mjs 轮末（handleCompletion 之后、return cr.content 之前）
+if (depth === 0) {
+  const distill = summarizeRunExplorations(agent, callbacks, signal, depth).catch(() => {})
+  agent._pendingDistill = distill
 }
 return cr.content
-``` - `summarizeRunExplorations`（context.mjs）内部不变——仍是 `await distillExplorations(...)` + `agent.history = next`；promise 化后由调用方决定等待时机。
-- `.catch(() => {})`：防止未处理 rejection（distillExplorations 内部已 catch 返回 null，双保险）。 ### 2.2 下一轮开头 await（N1 竞态安全，FR2） `src/agent.mjs` `runAgent` 开头（`prepareRun` **之前**）： ```js
-// 上一轮异步蒸馏必须先落定：压缩后的机器行是本轮的起点（N1：await 必须在
-// prepareRun push 用户输入之前，否则新输入会被压缩替换清掉）。
-if (agent._pendingDistill) { const p = agent._pendingDistill agent._pendingDistill = null await p
+```
+
+- `.catch(() => {})` 防未处理 rejection（蒸馏内部已 catch 返回 null，双保险）。
+- `agent._pendingDistill` 由 runAgent 轮末写入，起点在 agent 对象初始化处（`_pendingDistill: null`）。
+
+### 2.2 下一轮开头 await（N1 / FR2）
+
+`runAgent` 开头、`prepareRun`（push 用户输入）**之前** await 上一轮蒸馏——压缩后的机器行是本轮的起点，先落定再 push，否则新输入被压缩替换清掉：
+
+```js
+if (agent._pendingDistill) {
+  const p = agent._pendingDistill
+  agent._pendingDistill = null
+  await p
 }
-``` - agent 对象跨轮存活（`src/cli/make-agent.mjs` 一次创建复用，已验证），promise 挂 `agent._pendingDistill` 天然跨轮。
-- await 完成后 `agent.history` 已替换为压缩版，`prepareRun` 再 push 本轮输入 → 顺序正确。 ### 2.3 保存回调（P2，FR3） `summarizeRunExplorations` 完成且实际替换历史后，调用 `callbacks.onDistilled?.()`： ```js
-export async function summarizeRunExplorations(agent, callbacks, signal) { const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal) if (!next) return agent.history = next agent._lastPromptTokens = null agent._usageAtLen = null callbacks.onDistilled?.() // 新增：压缩已落位，调用方应持久化
+```
+
+await 完成后 `agent.history` 已替换为压缩版，`prepareRun` 再 push 本轮输入 → 顺序正确。
+
+### 2.3 保存回调（P2 / FR3）
+
+`summarizeRunExplorations`（现行位于 `src/explore-distill.mjs`——2026-09-05 模块拆分自 `context.mjs` 迁出）替换历史后，**仅在实际替换成功时**调 `onDistilled`：
+
+```js
+export async function summarizeRunExplorations(agent, callbacks, signal, depth = 0) {
+  const next = await distillExplorations(agent.history, agent._runStartHistoryLen ?? 0, agent.provider, signal, agent, depth)
+  if (!next) return                       // 失败/no-op：历史保持原样，不触发回调
+  agent.history = next
+  agent._lastPromptTokens = null
+  agent._usageAtLen = null                // 机器行形状变了——token 基线失效，下次压缩重估
+  callbacks.onDistilled?.()               // 压缩已落位，调用方应持久化
 }
-``` TUI 侧 `src/tui/agent-turn.mjs` 的 callbacks 增加 `onDistilled` → 复用现有保存逻辑（`saveSessionImpl(agent, state.lines)`），带 try/catch 静默。 ### 2.5 退出前 flush 蒸馏（评审 #3，FR3 补强） 进程退出（TUI 关闭/Ctrl+C 二次确认退出）前，await `agent._pendingDistill`（带短超时，如 5s）再执行最终保存。实现注（评审 #3，2026-08-25）：flush 位于 `runAgentTurn` 的 finally，**每轮**最终保存前都会执行（退出场景自然覆盖）——UI 已先行恢复（render 在 flush 之前），每轮最多多等 5s；flush **不摘除** `_pendingDistill`（在途蒸馏留给下一轮 runAgent 开头 await，N1）——否则用户在蒸馏窗口内退出会丢摘要（现状 runAgent 返回前已保存压缩版，异步化后此保证需显式补回）： ```js
-// TUI 退出路径（runAgentTurn finally / 应用关闭钩子）：
-if (agent._pendingDistill) { const p = agent._pendingDistill agent._pendingDistill = null await Promise.race([p, new Promise((r) => setTimeout(r, 5000))]) // 5s 上限，不拖慢退出
+```
+
+TUI 侧 callbacks（`src/tui/tool-events.mjs` 的 `buildToolCallbacks`）提供 `onDistilled` → 复用现有保存逻辑 `saveSessionImpl`，带 try/catch 静默（agent-turn.mjs 只把该 callbacks 传入 runAgent）。
+
+### 2.4 退出前 flush 蒸馏（FR3 补强）
+
+进程退出（TUI 关闭 / Ctrl+C 二次确认退出）前，给在途蒸馏一个**有界等待窗口**（窗口值 = `ctx.distillFlushTimeoutMs ?? DISTILL_FLUSH_TIMEOUT_MS`，默认 5s）再执行最终保存：
+
+```js
+// src/tui/agent-turn.mjs 每轮 runAgentTurn 的 finally——render 已先行，退出场景自然覆盖
+if (agent._pendingDistill) {
+  await Promise.race([
+    agent._pendingDistill,
+    new Promise((r) => setTimeout(r, ctx.distillFlushTimeoutMs ?? DISTILL_FLUSH_TIMEOUT_MS)), // 5000
+  ])
 }
 try { saveSessionImpl(agent, state.lines) } catch { /* 静默 */ }
-``` ### 2.4 失败路径（FR4/N3） - 蒸馏失败 → `distillExplorations` 返回 null → `summarizeRunExplorations` 直接 return（不调 onDistilled，历史保持原样）→ 下一轮 await 立即通过。行为与现状一致。
-- 用户 Stop → signal aborted → chat() 抛错被 catch → null。行为与现状一致。 ## 3. 受影响文件（Affected Files） | 文件 | 动作 | 内容 |
-|---|---|---|
-| `src/agent.mjs` | MODIFY | 轮末 `:314` 阻塞 await → promise 挂 `agent._pendingDistill`；`runAgent` 开头（prepareRun 前）await 上一轮蒸馏 |
-| `src/context.mjs` | MODIFY | `summarizeRunExplorations`（`:430-436`）替换历史后调 `callbacks.onDistilled?.()`；注释更新 |
-| `src/tui/agent-turn.mjs` | MODIFY | callbacks 增加 `onDistilled` → `saveSessionImpl`（静默）；现有 `onTurnEnd` 的 5 轮增量保存逻辑不动 |
-| `test/agent.test.mjs` | MODIFY | 新增：①蒸馏失败不阻塞返回（mock 失败，断言 runAgent 快速返回）；②下一轮 await 蒸馏（mock 慢蒸馏，断言第二轮 history 开头是压缩版）；③onDistilled 触发（mock 回调断言被调用） |
-| `test/context.test.mjs`（如存在） | MODIFY | 蒸馏替换历史 + onDistilled 回调断言（先 grep 确认测试文件名） |
-| 退出 flush 用例 | MODIFY | TUI 退出路径 await pendingDistill 后保存（mock 慢蒸馏 + 短超时，断言保存发生且含摘要） | ## 4. 验收标准（Acceptance Criteria） | # | AC | 验证方式 |
-|---|---|---|
-| AC1 | 轮末 runAgent 返回**不等待**蒸馏：mock 慢蒸馏（如 5s），断言 runAgent 在 <1s 返回 | 单元测试 + 计时断言 |
-| AC2 | 下一轮开头 await 蒸馏：蒸馏未完成时发第二轮，断言第二轮 history 起点是压缩后的机器行（摘要 note 在用户输入之前） | 单元测试 |
-| AC3 | 蒸馏完成后触发 `onDistilled`，且仅在**实际替换**历史时（失败/null 不触发） | 单元测试 |
-| AC4 | 蒸馏失败静默：返回 null，历史保持原样，runAgent 正常返回 | 单元测试 |
-| AC5 | 磁盘会话最终为压缩版：onDistilled 保存后，session 文件的 contextHistory 含摘要 note | 单元测试（mock session 保存） |
-| AC6 | `node --test test/*.test.mjs` 全套通过 | 命令 |
-| AC7 | 无 `await summarizeRunExplorations` 残留（轮末阻塞点） | grep 验证 |
-| AC8 | 退出前 flush：蒸馏未完成时退出，等待（≤5s）后保存压缩版（评审 #3） | 单元测试 |
+```
+
+关键点：flush **不摘除** `_pendingDistill`——蒸馏窗口内新一轮提交/退出，下一轮 `runAgent` 开头的 await 仍能看到在途蒸馏并先 await（N1）；否则用户在蒸馏窗口内退出会丢摘要。
+
+### 2.5 失败路径（FR4 / N3）
+
+- 蒸馏失败 → `distillExplorations` 返回 null → `summarizeRunExplorations` 直接 return（不调 onDistilled，历史保持原样）→ 下一轮 await 立即通过。行为与现状一致。
+- 用户 Stop → signal aborted → chat() 抛错被 catch → null。Stop 只中断回合本身，不再声称可中断已在途的异步蒸馏。
+
+## 3. 实现落点（核销参考）
+
+- `src/agent.mjs`：轮末挂 `agent._pendingDistill`（`summarizeRunExplorations` 异步化）；`runAgent` 开头 prepareRun 前 await 上一轮蒸馏。
+- `src/explore-distill.mjs`：`summarizeRunExplorations` 替换历史后调 `callbacks.onDistilled?.()`。
+- `src/tui/agent-turn.mjs`：callbacks 增加 `onDistilled` → 保存（静默）；退出 flush（≤5s 上限）。
+- `src/tui/tool-events.mjs`：callbacks（`buildToolCallbacks`）提供 `onDistilled` → `saveSessionImpl` 保存（静默）。
+- `src/tui/agent-turn.mjs`：把 callbacks 传入 runAgent；每轮退出 flush（≤5s 上限）后保存。
+- 验收：轮末 runAgent 不等待蒸馏（<1s 返回）；下一轮开头蒸馏已落定（第二轮 history 起点是摘要 note）；onDistilled 仅在实际替换时触发；失败静默返回；退出 flush 有界等待后保存压缩版。全套测试通过。
+
+## 变更记录
+
+- 2026-08-25：立项并实施（评审 #2 N3；#3 退出 flush）。npm 0.12.43。
+- 2026-09-05：`summarizeRunExplorations` 随模块拆分迁至 `src/explore-distill.mjs`（正文 §2.3 已更新落点）。
+- 2026-09-07：文档重写为人类可读当前态（批 A）——时序与决策值不变。

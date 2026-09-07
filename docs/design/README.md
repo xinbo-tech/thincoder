@@ -24,7 +24,7 @@
 | Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复 + TTL 7 天可配 |
 | 覆盖率缺口修复 | `_archive/COVERAGE-GAPS-REQUIREMENTS.md`、`_archive/COVERAGE-GAPS-TUNING.md` | 已移 `_archive/`——测试清零政策取代（锁测试断言产物已删） |
 | 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | 已完成专题记录 |
-| 工具移除 | `SLEEP-REMOVAL-REQUIREMENTS.md`、`SLEEP-REMOVAL-TUNING.md` | sleep 工具删除 |
+| 工具移除 | `_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`_archive/SLEEP-REMOVAL-TUNING.md` | 已移 `_archive/`——sleep 删除被 wait_for（TOOLS.md §16）取代 |
 | 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 |
 | Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限 |
 | Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留 |
