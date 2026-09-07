@@ -24,7 +24,7 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 ### 现状
 - VSC edit 工具实现：`src/tools/file-edit.mjs`（456 行——editTool 对象 + schema 定义）+ `src/tools/edit-diff.mjs`（159 行——diff 形态）。**与 CLI 不同构**（CLI 是 edit-batch.mjs + edit-diff.mjs，VSC 是 file-edit.mjs + edit-diff.mjs——评审 🔴#1 实测）。
 - edit 参数：path/old_string/new_string/edits/replace_all——old_string 精确匹配 + 零重叠→插入保留旧行（edit-diff.mjs:9）。
-- edit 工具描述/schema：在 `file-edit.mjs` 内（editTool 对象）+ `src/prompts/coder.md`（提示词引用）。
+- edit 工具描述/schema：在 `file-edit.mjs` 内（editTool 对象）+ **TOOLS.md §9 逐工具契约要点**（评审 #1——本仓 TOOLS.md 无 §15/D15.1，VSC edit 语义在 §9——交付后实测 coder.md 全文无 edit 工具引用，coder.md 是子代理提示词非 edit 描述源）。
 
 ### D1 按行号改（F1）
 - edit 加参数：`line`/`startLine`/`endLine`（1-based 行号/行范围）——与 old_string/new_string 互斥。
@@ -47,6 +47,9 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 - 修改：`src/tools/file-edit.mjs`（**456 行**——评审 🔴#1 实测修正，editTool 对象加 line/startLine/endLine 参数 + old_string 模糊匹配——delta ~+80→~536 行，**跨 500 硬帽——拆分到 edit-line-params.mjs 子模块（按行号改逻辑独立——评审 #4 拆分边界）**）、`src/tools/edit-diff.mjs`（**159 行**——评审 🔴#1 实测修正，零重叠→插入分支改替换即删 + **头注释 :16-25/:105 同步更新**——评审 #3——delta ~-10）、`src/prompts/coder.md`（edit 工具引用说明加参数——delta ~+10）
 - 新增：`src/tools/edit-line-params.mjs`（按行号改子模块——line/startLine/endLine 参数处理 + 行号定位 + 替换逻辑——预估 ~80 行）、`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——预估 ~150 行）
 - 文档：本设计 + README 地图登记 + **TOOLS.md §9 逐工具契约要点**（零重叠→插入语义改替换即删——评审 #1——本仓 TOOLS.md 无 §15/D15.1，VSC edit 语义在 §9）
+- 修改：`src/tools/file-edit.mjs`（**456 行**——评审 🔴#1 实测修正，editTool 对象加 line/startLine/endLine 参数 + old_string 模糊匹配——delta ~+80→~536 行，**跨 500 硬帽——拆分到 edit-line-params.mjs + edit-fuzzy-match.mjs 两个子模块（按行号改 + 模糊匹配逻辑独立——评审 #4 拆分边界 + 交付后实测 file-edit.mjs 达 559 行仍超 500，模糊匹配也独立成模块）**）、`src/tools/edit-diff.mjs`（**159 行**——评审 🔴#1 实测修正，零重叠→插入分支改替换即删 + **头注释 :16-25/:105 同步更新**——评审 #3——delta ~-10）
+- 新增：`src/tools/edit-line-params.mjs`（按行号改子模块——line/startLine/endLine 参数处理 + 行号定位 + 替换逻辑——实测 115 行）、`src/tools/edit-fuzzy-match.mjs`（模糊匹配子模块——normalize + 滑窗 ≥90% 行相等 + 歧义候选块——实测 66 行）、`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——实测 129 行 13 用例）、`test/files.mjs`（登记新测试文件——delta ~+1）
+- 文档：本设计 + README 地图登记 + **TOOLS.md §9 逐工具契约要点**（零重叠→插入语义改替换即删 + 三级匹配/按行号改契约要点——评审 #1——本仓 TOOLS.md 无 §15/D15.1，VSC edit 语义在 §9）
 
 ## 4. 验收
 
