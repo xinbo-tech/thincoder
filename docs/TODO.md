@@ -79,6 +79,8 @@
 - [ ] **R16 token 生命周期语义修订**（TTL 到期+重启/开模式清过期）——需求已登记——**待设计**
 - [ ] **env-state 补当前会话 slot**（agent 自知当前会话槽号——SESSION §11 env-state 补 slot 字段）——双端——设计启动权在用户
 - [ ] **async 评审凭证结算根治**——**在途**（双端 DESIGN-TOKEN-SETTLEMENT 设计已批准 + eng-coder 实现中——交付后核销勾销）
+- [ ] **父 agent 观察运行中子代理（功能①，2026-09-08 用户需求点——治父看不到中间只靠 turn/touchedFiles 瞎猜死循环）**：父模型侧 `subagent` 动作加 observe/快照——按 id 从 `entry.childAgent`（CLI `_fullHistory`/`_capturedOutput`/当前工具；VSC `sink.agent`/`sink.history`）拉最近 N 条回合摘要 + 当前工具 + turn/touched，返父上下文。核心缺口 = **父模型看不到中间**（用户端 CLI TUI/VSC 已实时看到，几乎零新做）。关键约束：父只在自身回合内能调，异步子代理后台跑时父回合外——需解父子回合错位。归属 AGENT-LOOP 子代理 §，双端镜像
+- [ ] **父 agent 注入提示给运行中子代理（功能②，2026-09-08 用户需求点——纠结时给方向）**：父模型侧 `subagent` 动作加 send——写 entry 注入队列，子 runAgent 回合边界消费 + pushReal 进子历史（镜像父 pendingInput 攒批语义）。关键约束：①子 runAgent 需输入源贯通（今日 childOpts 不携带 entry 引用——硬缺口）②父子回合错位（父只在回合内能发，子后台跑）③注入对 eng-coder 审计/收敛纪律的边界（注入算不算破坏流程——需定义）。归属 AGENT-LOOP 子代理 §，双端镜像
 
 ## 会话/存储/恢复后续
 - [ ] **R19 护栏语义缺口**（见"代码正确性"节——需 SESSION §13 裁定字节/消息预算）
