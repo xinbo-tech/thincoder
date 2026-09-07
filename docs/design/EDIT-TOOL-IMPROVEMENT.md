@@ -46,9 +46,10 @@ edit 工具改进为**符合模型直觉**——模型知道要改哪一行/哪�
 
 ## 3. 受影响文件（CLI，thincoder）
 
-- 修改：`src/tools/edit-batch.mjs`（**92 行**——评审 #1 实测修正，加 line/startLine/endLine 参数 + old_string 模糊匹配 + 替换即删——delta ~+80→~172 行，远低于 300 行触发线，无 split plan 需求）、`src/tools/edit-diff.mjs`（**~266 行**——评审 #1 实测修正，LCS 算法改替换即删——delta ~-20）、`src/tools/edit.md`（工具描述加参数说明——delta ~+30）
-- 新增：`test/edit-tool-improvement.test.mjs`（按行号改/模糊匹配/替换即删用例——预估 ~150 行）
-- 文档：本设计 + README 地图登记 + TOOLS.md §15（edit 语义升级记录）
+- 修改：`src/tools/edit-batch.mjs`（**92 行**实测——加 line/startLine/endLine + 模糊匹配 applyLineEdit/findFuzzyWindow——delta +59）、`src/tools/edit-diff.mjs`（**~266 行**实测——D3 替换即删 + hasLineParams 校验——**325 行 > 300 🟡 登记 TODO**）、`src/tools/edit.md`（D4 描述重写）
+  ——清单外已申报：**`src/tools/file.mjs`**（editTool schema 唯一所在——顶层 + edits items 加 line/startLine/endLine）、**`src/acp/bridge.mjs`**（单形态行号编辑门条件加 hasLineParams——IDE 回落本地写盘与编辑器缓冲脱敏）
+- 新增：`test/edit-tool-improvement.test.mjs`（**20 用例实测**——18 快层 + 2 slow 端到端：runSingleEdit 按行号写盘/批量混用行号+模糊条目）
+- 文档：本设计 + README 地图登记 + **TOOLS.md §6.1**（评审尾巴——代码注释里的 §15/D15.x 是旧编号残留，edit 语义权威节 = §6.1——语义升级记录）
 
 ## 4. 验收
 
