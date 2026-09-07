@@ -1,6 +1,7 @@
 # 编辑共享 helper 权威语义（EDIT-HELPERS）
 
-> 板块：编辑工具（共享底层）。权威源：VSC `src/tools/shared.mjs`（`detectFileEol` / `joinWithEol` / `majorityEol` / `findCandidates` / `FFFD_WARNING`）+ 消费方 `src/tools/file-edit.mjs` / `more-file.mjs` + **`lfOffsetToRaw`（VSC 编辑器路径专属——CRLF 原文偏移映射）**。本文档是 **编辑工具族共享 helper 语义的权威源**——`EDIT.md` / `HASHLINE-EDIT.md` / `APPLY-PATCH.md` / `WRITE.md` 指向此处，不得在别处复制（单一权威）。
+> 板块：编辑工具（共享底层）。权威源：VSC `src/tools/shared.mjs`（`detectFileEol` / `joinWithEol` / `majorityEol` / `findCandidates` / `FFFD_WARNING`）
+> + 消费方 `src/tools/file-edit.mjs` / `more-file.mjs` + `lfOffsetToRaw`（VSC 编辑器路径专属——CRLF 原文偏移映射）。本文档是编辑工具族共享 helper 语义的权威源——`EDIT.md` / `HASHLINE-EDIT.md` / `APPLY-PATCH.md` / `WRITE.md` 指向此处，不得在别处复制（单一权威）。
 > 双端：VSC（本文档）与 CLI（thincoder——helper 语义同，各自实现；**VSC 独有差异**：编辑器路径（doc 已打开）的 range 偏移坐标系映射 `lfOffsetToRaw`——CLI 无此路径）。
 > 状态：**已实现**。历史需求/设计见文末「变更记录」。
 
