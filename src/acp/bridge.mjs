@@ -130,7 +130,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
   const editBatch = async (args) => {
     const edits = args.edits
     if (!Array.isArray(edits) || edits.length === 0) {
-      throw new Error("edits must be a non-empty array of {path, old_string, new_string}")
+      throw new Error("edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}")
     }
     assertEditArgsExclusive(args)
     const groups = new Map() // path → { path, raw, content, edits }

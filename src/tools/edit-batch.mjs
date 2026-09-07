@@ -24,7 +24,7 @@ import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLine
  */
 export async function applyEditBatch(args, ctx) {
   if (!Array.isArray(args.edits) || args.edits.length === 0) {
-    throw new Error("edits must be a non-empty array of {path, old_string, new_string}")
+    throw new Error("edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}")
   }
   assertEditArgsExclusive(args)
   // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
@@ -53,7 +53,8 @@ export async function applyEditBatch(args, ctx) {
   for (const g of groups.values()) {
     g.netShift = 0 // 组内行数差累积（合并快照的 shift = 全组净漂移）
     for (const e of g.edits) {
-      // 条目级判定+应用（edit-diff——§15.2 分支 0 单行替换 + 判定序 1/2/3 + 空 new 显式报错 + >1000 行报错）
+      // 条目级判定+应用（edit-diff——§15.2 分支 0 单行替换 + 判定序 1/2/3 + 空 new 显式报错 +
+      // >1000 行报错（diff 形态——D1 行号条目走 applyLineEdit，不经 LCS，无此上限））
       const out = computeEditEntry(g.content, e, {
         path: g.path,
         absPath: g.abs,
@@ -114,7 +115,7 @@ export const FUZZY_MATCH_NOTE = "applied via fuzzy match (≥90% of lines identi
  * D2 模糊匹配（P15.11 空白自动落点的推广——逐字/trim 等价都失败后的最后一档）：
  * 找文件中**唯一**窗口——行数与 old 相同、normalizeEditLine 后逐行相等比例 ≥90% →
  * 返回 { actual }（actual = 文件窗口原文）；多窗口达标 → null（歧义不猜——走 not-found
- * 报错引导）；old 含尾换行 → null（终止符语义边界——同 P15.11）。比例向下取整行数：
+ * 报错引导）；old 含尾换行 → null（终止符语义边界——同 P15.11）。比例向上取整行数：
  * 需要相等行数 = ceil(m × 0.9)（m=1 即 normalize 后全等——单行细微差异由此命中）。
  */
 export function findFuzzyWindow(content, old) {
