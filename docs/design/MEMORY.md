@@ -1,6 +1,6 @@
 # 记忆系统设计（MEMORY）
 
-> 板块：记忆。权威源：`thincoder/src/memory/`（schema/core/code-index/code-sync/docs）+ `src/memory.mjs`（hub 导出）。本文档描述**当前设计**——三层记忆 + 代码/文档向量索引，`node:sqlite` 单文件存储（零依赖）。
+> 板块：记忆。权威源：`thincoder/src/memory/`（schema/core/delete/code-index/code-sync/docs）+ `src/memory.mjs`（hub 导出）。本文档描述**当前设计**——三层记忆 + 代码/文档向量索引，`node:sqlite` 单文件存储（零依赖）。
 > 跨文档已接管的主题只留指针：工具调度/审批 → `AGENT-LOOP.md`；会话消息历史检索（read_history，非记忆）→ `SESSION.md`；checkpoint/undo 快照 → `CHECKPOINT.md`。
 > 状态：**当前态**（2026-09 整理）。历史变更流水账折叠见文末「变更记录」。
 
@@ -61,7 +61,7 @@
 
 **失败静默降级**：无嵌入 key / 嵌入调用失败 → 回退**纯 FTS**（检索不阻塞、不报错，console 记一条降级日志）。纯 FTS 下 `docSearch`/`codeSearch` 的 ftsQuery 为空且无 embedder 时返回 `[]`。
 
-**scope 限定**：search 检索面 = personal + project（当前 context 项目 origin）+ team 全 origin。`memory.projectOrigin` 存在时，files/向量候选只取 `layer='team' OR origin = projectOrigin`（其他项目的行不进当前搜索）。
+**layer 限定**：search 检索面 = personal + project（当前 context 项目 origin）+ team 全 origin。`memory.projectOrigin` 存在时，files/向量候选只取 `layer='team' OR origin = projectOrigin`（其他项目的行不进当前搜索）。
 
 **输出契约（action search）**：命中行 `[<layer>][<type>] <title> (id=<uid>)` + 换行 + 内容；无命中 / 空 query → `(no matching memories)`。空 query（含纯空白）两端**短路**——直接返回空文案，不触发检索（VS Code 端同文案 `No matching memories found.`）。
 
@@ -94,26 +94,26 @@
 - **启动**：`make-agent.mjs` `createMemory` 开库并迁移；`syncDir` project 层 `.thincoder/memory/`；`startup.mjs` 启动时 `gitSync`（失败回退 `codeSync`/`docSync`）异步建代码/doc 索引。
 - **search 结果注入**：`doc_search`/`memory search` 结果按需注入 system 上下文（`<untrusted_memory>` 包裹——agent 提示词中不可信内容区）。
 - **`put` 自动嵌入选块**：新条目写 DB 后，`ensureEmbeddings` 若嵌入器可用则异步补向量（不阻塞写入）；每次嵌入批次后顺带回填 code/doc chunks 向量。
-- **门禁**：`search`/`list` 只读，放行 / 免权限询问；`put` 侧效门；批量 delete / clear = `confirm:true` + scope 门禁（**confirm 参数即门禁**——直接删裁定，无第二层人类确认）。
+- **门禁**：`search`/`list` 只读，放行 / 免权限询问；`put` 侧效门；批量 delete / clear = `confirm:true` + laye 门禁（**confirm 参数即门禁**——直接删裁定，无第二层人类确认）。
 - **只读子代理工具集过滤**（藏于历史、现行为）：`explore`/`plan`/`consult` 只读子代理按**工具级 readonly** 过滤工具表。memory 工具 `readonly:false`（工具级），故从这些子代理的工具表消失——它们不再能 `memory search`（此前的 memory_search 工具级 readonly:true 在内）；动作级只读分类只覆盖 dispatch 门位，不覆盖子代理工具集过滤。
 
 ## 6. memory 工具契约（单工具五动作）
 
 **单一 agent 工具** `memory`，`action` 枚举 `["search", "put", "list", "delete", "clear"]`，参数按 action 分支；工具级 `readonly:false`。action 枚举 / 参数形态 / 描述文本在 CLI `src/memory/docs.mjs`（`MEMORY_TOOL_DESCRIPTION`）与 VS Code 镜像同源逐字一致（byte-identical 边界）。
 
-**scope 值域按端**：CLI personal/project/team；VS Code 无 team（收到 team 明确拒绝并指引 CLI）。action 侧缺省/必填——`put` 缺省 personal；`search`/`list` 缺省搜全部层；`delete`/`clear` 必填 scope。
+**layer 值域按端**：CLI personal/project/team；VS Code 无 team（收到 team 明确拒绝并指引 CLI）。action 侧缺省/必填——`put` 缺省 personal；`search`/`list` 缺省搜全部层；`delete`（批删）/`clear` 必填 layer。
 
 ### 6.1 五动作
 
-- **search**（只读）——`{query, scope?, limit?}`：自然语言查；limit 默认 5。输出带 id（`[layer][type] title (id=uid)`）。空 query 短路（§3）。
-- **put**——`{type, title, content, tags?, scope?}`：type 限 rule/knowledge/decision/pattern；写 personal（纯 DB 行）或 project/team（putMarkdown）。project/team 输出带完整 uid（`personal:<n>` / `project|team:<origin>:<path>`，与 delete 接受的 id 一致）。
-- **list**（只读）——`{scope?, type?, keyword?, limit?}`：过滤输出紧凑清单，**不拉全文**；limit 默认 50。
-- **delete**——单条形态 `{id, scope}`（§6.2 deleteByUid）+ **条件批量形态** `{scope, type 和/或 keyword, confirm:true}`（§6.3 磁盘真相）。
-- **clear**——`{scope:"personal", confirm:true}` 清空 personal 全部；scope 必填且仅接受 personal，project/team 明确拒绝（`shared layers don't support clear — use delete with type/keyword batch filters instead`）。
+- **search**（只读）——`{query, layer?, limit?}`：自然语言查；limit 默认 5。输出带 id（`[layer][type] title (id=uid)`）。空 query 短路（§3）。
+- **put**——`{type, title, content, tags?, layer?}`：type 限 rule/knowledge/decision/pattern；写 personal（纯 DB 行）或 project/team（putMarkdown）。project/team 输出带完整 uid（`personal:<n>` / `project|team:<origin>:<path>`，与 delete 接受的 id 一致）。
+- **list**（只读）——`{layer?, type?, keyword?, limit?}`：过滤输出紧凑清单，**不拉全文**；limit 默认 50。
+- **delete**——单条形态 `{id, layer?}`（§6.2 deleteByUid）+ **条件批量形态** `{layer, type 和/或 keyword, confirm:true}`（§6.3 磁盘真相）。
+- **clear**——`{layer:"personal", confirm:true}` 清空 personal 全部；layer 必填且仅接受 personal，project/team 明确拒绝（`shared layers don't support clear — use delete with type/keyword batch filters instead`）。
 
-**list/批量删的 origin 限定**（藏于历史、现行为）：CLI `files` 层行（list + 批量 delete）按**当前上下文目录**（projectDir/team dir）过滤——其他项目/团队克隆的存量行不进入 list/批量删（工具只能动它能定位的文件）；单条 delete 仍按 uid 全语义；team scope 的 search 仍全 origin（检索面不变）。
+**list/批量删的 origin 限定**（藏于历史、现行为）：CLI `files` 层行（list + 批量 delete）按**当前上下文目录**（projectDir/team dir）过滤——其他项目/团队克隆的存量行不进入 list/批量删（工具只能动它能定位的文件）；单条 delete 仍按 uid 全语义；team layer 的 search 仍全 origin（检索面不变）。
 
-### 6.2 deleteByUid 路由（core.mjs）
+### 6.2 deleteByUid 路由（delete.mjs——2026-09-08 自 core.mjs 拆分，core 300 行）
 
 按 uid 精确删除单条，返回被删条目 `{ id, layer, type, title, content, tags }`（删除前 `fetchEntry` 读取；缺文件退 path 段查 files 行，再退 `parseEntry` 磁盘重建）。
 
@@ -123,7 +123,7 @@
 - **ENOENT 容错**：文件已缺视为已删继续（不中断），仍 `syncDir` 清索引行。
 - **team 删除语义**：本地删 + syncDir 清索引，**不做 git 提交/推送**（git 传播是 gitmem 职责；删除可逆性优先——工具误删不自动推全团队，git 工具可恢复）。注明：team 记忆经 gitmem 拉取同步时，下次拉取可能复活已删文件（远端未删）——远端删除需经 git 工具。
 - **CLI `memory remove` 命令**：底层 `remove()` 收敛为 deleteByUid 兼容壳（boolean 语义保留）——命令行与工具**同一路由**，避免两套行为漂移；裸数字 id 兼容保留。
-- **错误**：不存在 → `memory <uid> not found in scope <scope>`；id 前缀与 scope 不匹配 → 拒绝（见 §6.4 逐字）。
+- **错误**：不存在 → `memory <uid> not found in layer <layer>`；id 前缀与 layer 不匹配 → 拒绝（见 §6.4 逐字）。
 
 - **layer === scope 概念统一（2026-09-08 用户指出——"不看源代码谁知道 layer=scope？"；用户裁定：全统一成 layer）**：memory 三层（personal/project/team）代码里**两个词混用**——核心层 core.mjs 用 `layer`（DB 列名 + 结果字段 + deleteByUid 从 uid 前缀拆 layer——85 处），工具层参数用 `scope`（docs.mjs 10 处）。
   ——模型看到 search 结果带 `[layer]` 标签、delete 却要 `scope` 参数——命名分裂让模型困惑。**修复（裁定统一成 layer）**：scope 参数改名 layer（工具面 + 描述），DB 列/内部本即 layer 不动（无 schema 迁移）。
@@ -131,7 +131,7 @@
 - **delete 工具语义修正（2026-09-08 explore 一手核实——先前的"delete scope 不一致 bug 修复"注前提错误，作废重写）**：
   - **核实结论**：①search 结果**已显示 layer**（行首 `[layer]` 标签 + id 前缀——"结果不含 scope"不成立）；②id 前缀**已自路由**（命名空间互斥）——deleteByUid **不需要 scope 参数**（从 uid 前缀解析）；③工具层 scope 必填 + 前缀强校验是纯确认门禁——模型 scope 猜错 → 报错——**"search 能找到但 delete 删不掉"的唯一机制**；④跨 scope fallback 不必要。
   - **修正设计**：
-    ①**layer 可选**（裁定统一成 layer）——execDeleteSingle 改：layer 传了则校验（防误删保持——L389 前缀匹配），**不传则按 id 前缀直接路由**（与 search/list 找到的 id 直接对接）；批删形态（无 id）仍必填 layer（L359 不动——参数改名）。
+    ①**layer 可选**（裁定统一成 layer）——execDeleteSingle 改：layer 传了则校验（防误删保持——execDeleteSingle 前缀匹配校验 前缀匹配），**不传则按 id 前缀直接路由**（与 search/list 找到的 id 直接对接）；批删形态（无 id）仍必填 layer（execDelete 批删 scope 必填处 不动——参数改名）。
     ②**list 补独立 `[layer]` 标签列**——现 list 行 `id [type] title（date）` 只有 id 前缀，与 search 行对齐加 `[layer]`（成本低）。
     ③**第三个真缺口补设计（评审 #2 采纳——定 delete 尊重 uid origin 段）**：delete 文件定位改尊重 uid 内嵌 origin（非当前 dirs[layer]）——否则 search 带出的非当前 origin 行"能看到但碰不到"（违背"id 直接可删"承诺）。落点：core.mjs deleteByUid 按 uid origin 解析（dirs[layer] 兜底——本地无对应目录 → ENOENT 容错 + syncDir 清索引）。
   - **输出/错误串同步（评审 #1 采纳——scope→layer 延伸至模型可见输出）**：§6.4 逐字契约 + 错误串的 `scope` 词同步改 `layer`——`Deleted N entries in layer X`/`与 layer project 不匹配`/`not found in layer <layer>` + byte 断言测试同步
@@ -149,7 +149,7 @@
 
 ### 6.4 输出契约（逐字——不改措辞）
 
-两端同文，测试逐字断言。下文占位：`N` = 实际条数，`M` = 截断前总数，`X` = scope 名。
+两端同文，测试逐字断言。下文占位：`N` = 实际条数，`M` = 截断前总数，`X` = layer 名。
 
 | 场景 | 输出（逐字） |
 |---|---|
@@ -159,13 +159,13 @@
 | 批量删预览（N≤5） | `将删 N 条` |
 | 批量删预览（N>5） | `将删 N 条：前 5 条预览` + 5 行 + `5 条——截断前 N` |
 | 批量删预览（confirm 缺失） | 上述预览 + `confirm:true required — re-send with it to execute the deletion` |
-| 批量删执行 | `Deleted N entries in scope X` |
+| 批量删执行 | `Deleted N entries in layer X` |
 | 批量删无匹配 | `0 条匹配`（不报错） |
 | clear | `Cleared personal memory (N entries deleted)` |
 | 单条删执行 | `Deleted <id>: <title>` + 内容摘要 |
-| 单条 scope 不匹配 | `id prefix personal: 与 scope project 不匹配` |
+| 单条 layer 不匹配 | `id prefix personal: 与 layer project 不匹配` |
 
-**批量删门禁**：scope 必填 + type/keyword **至少其一**（无过滤批量删 = 整层清空，绕过 clear 拒共享层门禁 → 拒绝并指引）；confirm 缺失 = **不删**，返回预览让调用方带 confirm 重发。**clear 门禁**：scope 必填且仅接受 personal；confirm:true 必填；project/team 拒绝。
+**批量删门禁**：layer 必填 + type/keyword **至少其一**（无过滤批量删 = 整层清空，绕过 clear 拒共享层门禁 → 拒绝并指引）；confirm 缺失 = **不删**，返回预览让调用方带 confirm 重发。**clear 门禁**：layer 必填且仅接受 personal；confirm:true 必填；project/team 拒绝。
 
 ## 7. 关键设计决策
 
@@ -183,10 +183,10 @@
 
 ## 8. 已知限制与后续项
 
-- **VS Code 镜像**：memory 工具面（五动作 + scope 值域按端）byte-identical 同步；§6.3 磁盘为真相双端同构（VS Code 镜像同步为后续项）。VS Code 存储为文件制，检索实时扫文件；存量根目录 legacy 条目（scope 子目录布局前）**search 可见但 delete 不可删**（目录定位语义）——已知限制，接受。
+- **VS Code 镜像**：memory 工具面（五动作 + layer 值域按端）byte-identical 同步；§6.3 磁盘为真相双端同构（VS Code 镜像同步为后续项）。VS Code 存储为文件制，检索实时扫文件；存量根目录 legacy 条目（scope 子目录布局前）**search 可见但 delete 不可删**（目录定位语义）——已知限制，接受。
 - **只读子代理不能 memory search**：见 §5（工具级 readonly 过滤）——如需恢复，改 allowed 集为动作感知。
 - **doc-sweep**：`docs/` 若干现状描述文件仍含旧 memory 三工具名 / 向量目录旧说（本文件已更新；其他文件的活文 doc-sweep 列为独立后续任务）。
-- **CLI 人类命令面**（`thincoder memory <list|search|put|remove>`）：`list`/`search`/`put` 为 personal-only 核心面（search limit 10、list 支持 --type）；`remove` 走同一 `deleteByUid` 路由（uid 全 scope + 裸数字兼容）——命令行与工具核心路由复用，无漂移。命令面无 list 的共享层/过滤形态、无 clear/批量删（那些是 agent memory 工具面能力）。
+- **CLI 人类命令面**（`thincoder memory <list|search|put|remove>`）：`list`/`search`/`put` 为 personal-only 核心面（search limit 10、list 支持 --type）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移。命令面无 list 的共享层/过滤形态、无 clear/批量删（那些是 agent memory 工具面能力）。
 
 ## 变更记录
 
