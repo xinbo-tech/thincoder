@@ -13,7 +13,7 @@
 > （可选向量检索）、`src/context.mjs`（自动注入）。
 > 装配（VS Code）：`src/tools/index.mjs`（memoryTool 注册）、`src/agent-tools/`
 > 执行门禁（readonly 动作并行）、`src/extension/settings.mjs`（embedding 配置面板）。
-> 关联：ARCHITECTURE.md（§13 源行，本档迁出后留待后续瘦身批）、AGENT-LOOP.md（工
+> 关联：ARCHITECTURE.md（§13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、AGENT-LOOP.md（工
 > 具调度）、TOOLS.md（readonly 分类）。
 
 ## 变更记录

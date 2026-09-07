@@ -14,7 +14,7 @@
 > 装配（VS Code）：`src/extension/panel-callbacks.mjs`（onCompressStart/onCompress/
 > onCompressFail → webview `compress` 消息四态）、`webview/chat.js`（#compress-status
 > 状态行渲染）、`src/explore-distill.mjs`（轮末蒸馏）。
-> 关联：ARCHITECTURE.md（§10 源正文，本档迁出后留待后续瘦身批）、SESSION.md（双线
+> 关联：ARCHITECTURE.md（§10 源正文——ARCHITECTURE 2026-09-08 瘦身收官，源节已删）、SESSION.md（双线
 > 历史/压缩落盘）、AGENT-LOOP.md（主循环调用点/安全点）、SEND-STALL-DISTILL-*
 > （蒸馏专题）。
 

@@ -8,14 +8,20 @@
 
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
-| 架构 | `ARCHITECTURE.md` | 权威源（DOC-REORG-VSC 拆分批——机制板块陆续独立成文） |
-| 工程模式 | `ENGINEERING-MODE.md` | 与 CLI 同名文档对应；会话级开关/eng token/门禁/guard |
-| Webview 前端/消息协议 | `WEBVIEW.md` | VSC 独有（无 CLI 对应）；webview 布局/文件结构/活动面板 R22/组件 + 消息协议（ARCHITECTURE §11+§12 迁出） |
-| 评审收敛 | `ADVISOR-CONVERGENCE.md` | 与 CLI 同名文档对应；advisor 轮次衰减/cap/铁律 R1-R7 |
+| 架构 | `ARCHITECTURE.md` | 薄枢纽（DOC-REORG-VSC 收官 2026-09-08）——设计原则/架构图/模块地图指针/与 CLI 差异表；机制正文在各板块档 |
+| 会话 | `SESSION.md` | 权威源（DOC-REORG-VSC 批 3——ARCHITECTURE §4 迁出写全）；与 CLI 同名对应；槽位/端 marker/GC/懒历史/富注入 |
+| 上下文压缩 | `CONTEXT-COMPACTION.md` | 权威源（批 6——ARCHITECTURE §10 迁出写全）；与 CLI 同名对应 |
+| Agent 循环 | `AGENT-LOOP.md` | 权威源（批 1——ARCHITECTURE §6+§8 迁出写全）。`TURN-CAP-CONTINUE.md`（插件侧实现记录——2026-08-25 两端收口各为实现记录）同板块独立保留 |
+| 工程模式 | `ENGINEERING-MODE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 迁出写全）；会话级开关/eng token/门禁/guard |
+| 评审收敛 | `ADVISOR-CONVERGENCE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 评审收敛迁出写全）；advisor 轮次衰减/cap/铁律 R1-R7 |
+| 工具系统 | `TOOLS.md` | 权威源（批 5——ARCHITECTURE §7 迁出写全）。`MCP.md`（MCP 机制——批 5 自 ARCHITECTURE §13 MCP 行展开，与 CLI 同名对应）同板块独立保留 |
+| Checkpoint 事故恢复 | `CHECKPOINT.md` | 权威源（批 6——ARCHITECTURE §13 Checkpoint 行展开写全）；快照/回滚，与 CLI 同存储同格式、快照跨端互通 |
+| 记忆 | `MEMORY.md` | 权威源（批 6——ARCHITECTURE §13 Memory 行展开写全）；文件式 markdown + 可选向量，无 FTS5 |
+| Provider | `PROVIDER.md` | 权威源（批 2——ARCHITECTURE §5 + RESPONSES-TRANSPORT 并入）；transport/预设表/模型适配 |
+| Webview 前端/消息协议 | `WEBVIEW.md` | VSC 独有（无 CLI 对应——批 7）；webview 布局/文件结构/活动面板 R22/组件 + 消息协议（ARCHITECTURE §11+§12 迁出） |
 | 需求与决策 | `REQUIREMENTS.md` | 需求与决策记录 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
-| Provider/transport | `PROVIDER.md` | 权威源（ARCHITECTURE §5 + RESPONSES-TRANSPORT 并入——2026-09-08 DOC-REORG） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
 | 发布流程 | `RELEASE.md` | |
 | 会诊 | `CONSULTATION.md` | |
@@ -26,7 +32,6 @@
 | 工具移除 | `_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`_archive/SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25，与 CLI 同源）——已移 `_archive/` |
 | 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 16K→64K（2026-08-24，与 CLI 同源） |
 | Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限调整（2026-08-24，与 CLI 同源） |
-| Agent 循环 | `TURN-CAP-CONTINUE.md` | 插件侧实现记录；CLI 端同源文档见 thincoder/docs/design/（2026-08-25 收口：两端各自为实现记录，不再标待合并） |
 | Webview 性能 | `_archive/webview-input-lag.md` | 输入卡顿修复方案（纯历史修复记录，已实施）——已移 `_archive/` |
 
 ## 规则
@@ -49,3 +54,4 @@
 - 2026-09-08：DOC-REORG 第 2 批——`RESPONSES-TRANSPORT.md` 并入新建 `PROVIDER.md`（板块 Provider/transport），README 登记行同步（原 Responses 行改为 PROVIDER 行）
 - 2026-09-08：DOC-REORG-VSC 第 7 批——新板块登记：Webview 前端/消息协议（WEBVIEW，VSC 独有无 CLI 对应），自 ARCHITECTURE §11+§12 迁出（消息协议并入）。
 - 2026-09-08：DOC-REORG-VSC 第 4 批——新板块登记：工程模式（ENGINEERING-MODE）+ 评审收敛（ADVISOR-CONVERGENCE），各自独立完整（与 CLI 同名档对应）。
+- 2026-09-08：DOC-REORG-VSC 收官（第 8 批）——ARCHITECTURE 瘦身为薄枢纽（删除已迁出 §4-§13 与 §15 CLI 指针表；§3 模块地图加「详细设计 →」指针列）；本表全量登记核对 + 板块名对齐 CLI（补齐 会话/上下文压缩/Agent 循环（AGENT-LOOP 权威 + TURN-CAP 同板块）/工具系统/Checkpoint 事故恢复/记忆 行；Provider 行更名对齐；MCP.md 随 CLI 归「工具系统」行独立保留注；顺序归组为 机制板块 → VSC 独有 → 专题）。

@@ -2,9 +2,9 @@
 
 > 板块：飞刀。状态：**已实施 + 已异步化**（R17——2026-09-06，escalate 缺省 async）。本文件为
 > **已完成专题的当前态记录**——记录飞刀机制在 VS Code 端的现行实现与接线。
-> 权威源（现行语义/用例/验收）：VSC `docs/design/ARCHITECTURE.md`「会诊/飞刀完全异步化」引用段
-> （R17 VS Code 镜像）+ CLI `AGENT-LOOP.md` §19（escalate 并入 `subagent` 工具 `action:"escalate"`）+
-> §25 D-R17b（缺省 async + settle 三分类）。
+> 权威源（现行语义/用例/验收）：VSC `AGENT-LOOP.md` §9（会诊/飞刀/advisor 完全异步化——ARCHITECTURE
+> §8.5 迁出，R17 VS Code 镜像）+ CLI `AGENT-LOOP.md` §7.2（escalate = `subagent` 工具 `action:"escalate"`）与
+> §14.2（飞刀——缺省 async + settle 三分类）；F/D/T/AC 见 CLI `ESCALATE.md`（本文件不复制正文）。
 > 与 CLI 端同源（`thincoder/docs/design/ESCALATE.md`）；与会诊（consult）互补，见 `CONSULTATION.md`。
 > 本文件已由 as-of 快照流水重写为当前态记录（历史 surgeon 时代/整改/简化流水见文末「变更记录」）。
 

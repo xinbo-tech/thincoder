@@ -15,7 +15,7 @@
 > 装配（VS Code）：`src/tools/git.mjs`（checkpoint action 路由/只读分类/commit 清
 > 理）、`git-ext.mjs`（破坏性 op 前 snapshotBefore）、`shell.mjs`（bash git 破坏性
 > 命令 gitGuardSnapshot）、`src/config-io.mjs`（configDir 定位）。
-> 关联：ARCHITECTURE.md（§13 源行，本档迁出后留待后续瘦身批）、TOOLS.md（git/shell
+> 关联：ARCHITECTURE.md（§13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、TOOLS.md（git/shell
 > 工具）。
 
 ## 变更记录

@@ -14,7 +14,7 @@
 > `panel-project.mjs`（项目切换重绑）、`panel-messages.mjs`（消息路由/打开历史会话/
 > 手动改名）、`chat-panel.mjs` / `panel-chat.mjs` / `panel-callbacks.mjs`（turn 槽
 > 捕获与回合尾保存）。
-> 关联：ARCHITECTURE.md（双线结构/模块地图，源正文本档迁出后留待后续批瘦身）、
+> 关联：ARCHITECTURE.md（§2 整体架构/§3 模块地图——ARCHITECTURE 2026-09-08 瘦身收官，源节已删）、
 > CONTEXT-COMPACTION.md（压缩/机读线）、ENGINEERING-MODE.md（eng slot 字段、
 > engDesignToken 多槽表写入）。
 
