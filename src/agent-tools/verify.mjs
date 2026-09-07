@@ -1,73 +1,20 @@
 /**
- * verify.mjs — verify tool: pre-completion self-check（2026-09-05 module-split：
- * 532 > 500 硬限——npmCmd/killProcessTree/runWatch/runTestFile/runTestSuite verbatim
- * 迁至 verify-watch.mjs——本文件保留 changed-file 解析 + verifyTool 执行体）。
+ * verify.mjs — verify tool: generic pre-completion verification gate (VERIFY-REDESIGN.md).
+ * Verify is language/framework/project agnostic: it does NOT hardcode any project's
+ * module→test mapping, does NOT auto-run any test/verification command, and does NOT
+ * require a test for every change. The model DECLARES its verification status via the
+ * `verification` argument (whether it already ran the project's verification and the
+ * result); verify makes a mechanical gate decision on that declaration. Which
+ * verification to run is described in natural language in each project's AGENTS.md —
+ * verify never parses or executes it. Retained mechanical checks: doc-only fast path,
+ * an advisory (non-gating) node --check hint, git diff report, and — on the code
+ * path (doc-only changes return early) — the task list and self-review checklist.
  */
 
 import { isDocFile } from "../advisor/repos.mjs"
-import { execSync, spawnSync } from "node:child_process" // execFileSync/spawn 随 watchdog 迁 verify-watch.mjs
-import { readFileSync, existsSync } from "node:fs"
+import { execSync, spawnSync } from "node:child_process"
+import { existsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
-import { runTestFile, runTestSuite } from "./verify-watch.mjs" // watchdog 族（2026-09-05 module-split）
-
-// On Windows, spawning a `.cmd` routes through cmd.exe even with an arg array, so
-// model-controlled values can still be re-parsed by the shell (e.g. `&`, `|`, `;`,
-// `<`, `>`). Instead of depending on that platform behaviour, WHITELIST the filter:
-// a test-name pattern never needs shell metacharacters, so reject anything that a
-// shell could reinterpret. This caps pattern power to plain substrings/regex-minus-
-// metachars, which is exactly what verify's testNamePattern is meant for.
-function assertSafeTestFilter(filter) {
-  if (filter == null) return
-  const s = String(filter)
-  if (!/^[A-Za-z0-9_.\-,\s\[\]()]+$/.test(s)) {
-    throw new Error(`testNamePattern may only contain letters, digits, spaces, and . _ - , [ ] ( ) — rejected to avoid command injection: ${JSON.stringify(s)}`)
-  }
-}
-
-/**
- * Source module → test file mapping (AGENT-LOOP §18.14: test files are split by domain —
- * one module maps to the list of domain files that cover it). Heuristic: the FIRST
- * path component after src/ determines the module. Modules without dedicated tests map to null.
- */
-const MODULE_TO_TEST = {
-  tools: [
-    "test/file-tools.test.mjs", "test/edit-tools.test.mjs", "test/bash.test.mjs",
-    "test/execute.test.mjs", "test/verify-domain.test.mjs",
-  ],
-  "agent-tools": [
-    "test/verify-domain.test.mjs",
-  ],
-  agent: [
-    "test/guards.test.mjs", "test/provider-stream.test.mjs",
-    "test/verify-domain.test.mjs", "test/dispatch.test.mjs",
-  ],
-  memory: ["test/memory.test.mjs"],
-  provider: ["test/integration-provider.mjs"],
-  config: ["test/integration-provider.mjs"],
-  session: ["test/session.test.mjs"],
-  mcp: null,
-  tui: null,
-  advisor: null,
-  context: null,
-  skills: null,
-  distill: null,
-  markdown: ["test/memory.test.mjs"],
-}
-
-/**
- * Extract module name from a source path (src-relative or absolute — §18.12:
- * changed files are normalized to absolute paths before this runs).
- * "src/tools/bash.mjs" → "tools", "src/agent.mjs" → "agent",
- * "D:/proj/src/agent/helpers.mjs" → "agent"
- */
-function moduleName(srcPath) {
-  const norm = srcPath.replace(/\\/g, "/")
-  const srcIdx = norm.lastIndexOf("/src/")
-  const rel = srcIdx === -1 ? norm.replace(/^src\//, "") : norm.slice(srcIdx + 5)
-  const firstSlash = rel.search(/[/\\]/)
-  if (firstSlash === -1) return rel.replace(/\.mjs$/, "")
-  return rel.slice(0, firstSlash)
-}
 
 /**
  * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
@@ -86,9 +33,7 @@ function changedFileKey(p) {
 
 /**
  * Nearest ancestor of an absolute path holding package.json or .git — the
- * project/repo root (§18.12 F-VR1: the agent cwd may be a workspace root that
- * is NOT the repo root — related test files must be located against it).
- * Walk stops at the filesystem root; returns null when no anchor exists.
+ * project/repo root. Walk stops at the filesystem root; returns null when no anchor exists.
  */
 function findProjectRoot(absPath) {
   let dir = dirname(resolve(absPath))
@@ -113,40 +58,51 @@ function isUnderSrc(absPath) {
 }
 
 /**
- * verify tool: pre-completion self-check. When called:
- * 0. Doc-only fast path — all changed files are docs (docs/, *.md, LICENSE…):
- *    short report, no syntax checks, no tests.
- * 1. git diff --stat — changed file list
- * 2. node --check — syntax check all changed .mjs/.js files
- * 3. Related tests — run test files that cover the changed modules (default)
- * 4. npm test — run ALL project tests (only when full=true)
- * 5. task list + self-review checklist
- * Default runs syntax checks + related tests; full=true runs the entire test suite.
- * Agent must not say "done" before verify passes. Fix-verify loop at most MAX_VERIFY_RETRIES rounds.
+ * D-V3 block guidance — a block message must not just say "not verified": it lists
+ * the changed code files and points to the project's AGENTS.md natural-language
+ * description of how to verify, so the model knows what to run/add.
+ */
+function appendBlockGuidance(lines, codeFiles) {
+  lines.push("")
+  lines.push("Changed code file(s):")
+  for (const f of codeFiles) lines.push(`  ${f}`)
+  lines.push("")
+  lines.push("verify does not run commands for you — decide and run the project's verification yourself.")
+  lines.push("Reference the verification approach declared in the project's AGENTS.md (natural language, e.g. \"tests run with npm test\" / \"no automated tests — rely on manual review\") to decide what to run, then call verify again declaring the outcome via verification.status.")
+}
+
+/**
+ * verify tool: generic pre-completion verification gate. Flow:
+ * 0. Doc-only fast path — all changed files are docs: short report, no verification needed.
+ * 1. git diff --stat — changed file list (_touchedFiles ∪ git diff)
+ * 2. Advisory syntax hint (D-V5) — node --check changed .js/.mjs when node exists; SOFT, not gating.
+ * 3. Verification gate (D-V1/D-V2) — requires the model to DECLARE verification.status:
+ *    passed → allowed; failed → blocked; skipped → allowed but needs a summary reason.
+ * 4. Task list + self-review checklist.
+ * Agent must not say "done" before verify passes.
  */
 export const verifyTool = {
   name: "verify",
   description:
-    "Run a pre-completion self-check. By default runs syntax checks on changed files AND any test files related to the changed modules, shows git diff and task list, and displays a self-review checklist. Set full=true to run the project's full test suite (npm test) instead of just related tests. testNamePattern limits the run to matching test names (renamed from filter — the old name is rejected with an error). Call this BEFORE declaring any coding task complete — do not say 'done' until verify passes. " +
-    "Returns the check report — syntax results, related-test outcomes, task list; verify failure blocks the completion claim.",
+    "Generic pre-completion verification gate — language/framework/project agnostic. verify does NOT run any test/verification command for you and does NOT require a test per change. You DECLARE your verification status via the verification argument: { status: 'passed' | 'failed' | 'skipped', command?, summary? }. 'passed' → allowed; 'failed' → blocked (cannot claim done); 'skipped' → allowed but requires a summary reason. Whether/how to verify is described in natural language in the project's AGENTS.md and is decided + executed by you — verify only mechanically gates on your declaration. Also reports changed files (git diff), an advisory node --check hint on changed .js/.mjs (not gating), the task list, and a self-review checklist. Call this BEFORE declaring a coding task complete — do not say 'done' until verify passes.",
   parameters: {
     type: "object",
     properties: {
-      full: { type: "boolean", description: "Run the full test suite (npm test) instead of just related tests. Default false — use sparingly, per the testing discipline rules." },
+      verification: {
+        type: "object",
+        description: "The model's declaration of whether it already ran the project's verification and its outcome. verify does not execute the command — it is self-reported evidence.",
+        properties: {
+          status: { type: "string", enum: ["passed", "failed", "skipped"], description: "The verification outcome you declare: 'passed' → allowed; 'failed' → blocked; 'skipped' → allowed but requires a summary reason." },
+          command: { type: "string", description: "Optional: the verification command you ran (self-reported — verify does not execute it)." },
+          summary: { type: "string", description: "Optional: summary/result of the verification. Required when status='skipped' — a concrete reason (e.g. \"project has no automated tests — verified by manual review\")." },
+        },
+        required: ["status"],
+      },
       workdir: { type: "string", description: "Optional: run verify in this subdirectory (relative to cwd or absolute) — for monorepos" },
-      testNamePattern: { type: "string", description: "Optional: limit the test run to matching test names (node --test-name-pattern / npm test -- --test-name-pattern). Renamed from filter — the old name is rejected with an error." },
     },
   },
   readonly: true,
-  outputPanel: true, // stream test output to a panel instead of inline
   async execute(args, ctx) {
-    if ("filter" in args) {
-      throw new Error("filter was renamed to testNamePattern — use testNamePattern; the old name is rejected")
-    }
-    // Command-injection guard: reject a shell-hostile pattern before it reaches
-    // npm cmd.exe (advisor #2). The whitelist keeps the pattern safe on Windows
-    // regardless of how Node routes the `.cmd` spawn.
-    assertSafeTestFilter(args.testNamePattern)
     const cwd = ctx.agent.cwd
     // Changed-file resolution (§18.12 D-VR3): _touchedFiles (per-run bookkeeping,
     // absolute paths) ∪ git diff fallback — git is tried at testCwd
@@ -202,14 +158,31 @@ export const verifyTool = {
       return true
     })
 
+    // D-V11 G10 (doc-only/empty change set must not swallow an explicit failed):
+    // an explicit verification.status='failed' is ALWAYS respected — never
+    // overridden to pass by the doc-only fast path or the no-code-changed path
+    // below (D-V5 exception, review #6). Aligns CLI with VS Code (T-V8). Lists
+    // the changed files + points at AGENTS.md (D-V3 guidance).
+    if (args.verification?.status === "failed") {
+      lines.push("")
+      lines.push("VERIFY BLOCKED: you declared verification failed (verification.status = 'failed').")
+      lines.push("Do not say 'done' while verification fails — fix the issue, re-run the project's verification, then call verify again declaring the outcome.")
+      lines.push("")
+      lines.push("Changed file(s):")
+      for (const f of changedFiles) lines.push(`  ${f}`)
+      lines.push("")
+      lines.push("verify does not run commands for you — decide and run the project's verification yourself.")
+      lines.push("Reference the verification approach declared in the project's AGENTS.md (natural language, e.g. \"tests run with npm test\" / \"no automated tests — rely on manual review\") to decide what to run, then call verify again declaring the outcome via verification.status.")
+      ctx.agent._verifyPassed = false
+      return lines.join("\n")
+    }
+
     // 1b. Doc-only fast path: every changed file is documentation (docs/, *.md,
-    // LICENSE…) — syntax checks and tests are meaningless for doc changes, and
-    // the task list/self-review checklist add nothing either. Mirrors the
-    // advisor's doc-only review skip ("No issues found — documentation-only
-    // changes, code review skipped."). src/** (incl. prompts/*.md) is product
-    // code — excluded from the fast path, consistent with isProductCode.
-    // Empty list (no changes / git unavailable) intentionally falls through
-    // to the normal path below.
+    // LICENSE…) — syntax checks and a verification declaration are meaningless
+    // for doc changes, and the task list/self-review checklist add nothing either.
+    // src/** (incl. prompts/*.md) is product code — excluded from the fast path,
+    // consistent with isProductCode. Empty list (no changes / git unavailable)
+    // intentionally falls through to the normal path below.
     if (changedFiles.length > 0 && changedFiles.every((f) => !isUnderSrc(f) && isDocFile(f))) {
       lines.push("")
       lines.push("Documentation-only changes — skipping syntax checks and tests.")
@@ -217,147 +190,72 @@ export const verifyTool = {
       return lines.join("\n")
     }
 
-    // 2. Syntax check: run node --check on all changed .mjs/.js files (skip deleted files)
-    let syntaxFailed = false
-    const jsFiles = changedFiles.filter((f) => /\.(m?js)$/i.test(f))
+    // Code files needing verification: anything under src/ (incl. src/prompts/*.md)
+    // or any non-doc file (D-V1 — these require a verification declaration).
+    const codeFiles = changedFiles.filter((f) => isUnderSrc(f) || !isDocFile(f))
+
+    // 2. Advisory syntax hint (D-V5) — node --check on changed .js/.mjs when node
+    // exists. SOFT hint only — it does NOT gate done (no language-specific
+    // enforcement; a non-JS project or a missing node simply skips silently).
+    const jsFiles = codeFiles.filter((f) => /\.(m?js)$/i.test(f) && existsSync(f))
     if (jsFiles.length > 0) {
       lines.push("")
-      lines.push("Syntax check (node --check):")
+      lines.push("Advisory syntax hint (node --check — does not gate):")
       for (const f of jsFiles) {
-        const abs = resolve(cwd, f)
-        if (!existsSync(abs)) continue // skip deleted files
         try {
-          const result = spawnSync("node", ["--check", abs], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 })
+          const result = spawnSync("node", ["--check", f], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 })
           if (result.status !== 0) throw result
           lines.push(`  ✓ ${f}`)
         } catch (e) {
-          syntaxFailed = true
           const errOutput = (e.stderr || e.stdout || e.message || "").toString()
           const errMsg = errOutput.split("\n").slice(0, 3).join("\n")
-          lines.push(`  ✗ ${f}  — syntax error`)
+          lines.push(`  ⚠ ${f}  — node --check flagged it`)
           lines.push(`    ${errMsg.replace(/\n/g, "\n    ")}`)
         }
       }
-      if (!syntaxFailed) lines.push("  All syntax checks passed.")
     }
 
-    // 3. Identify related test files for changed source modules
-    const srcFiles = changedFiles.filter((f) => /\.mjs$/i.test(f) && isUnderSrc(f) && existsSync(f))
-    const modules = [...new Set(srcFiles.map(moduleName))]
-    const relatedTests = [...new Set(modules.flatMap((m) => MODULE_TO_TEST[m] ?? []).filter(Boolean))]
-
-    // 4. Run tests
-    const pkgPath = join(testCwd, "package.json")
-    const hasTestScript = existsSync(pkgPath) && (() => { try { return !!JSON.parse(readFileSync(pkgPath, "utf8")).scripts?.test } catch { return false } })()
-
-    if (args.full) {
-      // Full mode: run the entire test suite
-      if (hasTestScript) {
-        if (ctx.signal?.aborted) {
-          // Advisory #5: a Stop during verify should return promptly, not keep
-          // spawning (each remaining child already carries an aborted signal).
-          lines.push("")
-          lines.push("Verify aborted by user (Stop).")
-          return lines.join("\n")
-        }
+    // 3. Verification gate (D-V1/D-V2): the model declares its verification status.
+    if (codeFiles.length === 0) {
+      // No code changed (empty change set / only temp/non-code files) — nothing to verify.
+      lines.push("")
+      lines.push("No code files changed — nothing to verify.")
+      ctx.agent._verifyPassed = true
+    } else {
+      const v = args.verification ?? {}
+      const status = v?.status
+      if (!status) {
         lines.push("")
-        lines.push("Tests (full suite):")
-        const result = await runTestSuite(testCwd, ctx, args.testNamePattern)
-        if (result.passed) {
-          lines.push("✓ All tests passed.")
-          ctx.agent._verifyPassed = !syntaxFailed
+        lines.push("VERIFY BLOCKED: no verification status was declared.")
+        lines.push("These code changes must be verified before you say 'done' — declare whether you ran the project's verification and its result.")
+        appendBlockGuidance(lines, codeFiles)
+        ctx.agent._verifyPassed = false
+      } else if (status === "passed") {
+        lines.push("")
+        lines.push("Verification declared passed.")
+        if (v.command) lines.push(`  command: ${v.command}`)
+        if (v.summary) lines.push(`  summary: ${v.summary}`)
+        ctx.agent._verifyPassed = true
+      } else if (status === "skipped") {
+        const reason = (v.summary ?? "").trim()
+        if (reason) {
+          lines.push("")
+          lines.push(`Verification skipped with reason: ${reason}`)
+          ctx.agent._verifyPassed = true
         } else {
-          lines.push("✗ Tests FAILED. Review the output above, fix the issues, then run verify again.")
+          lines.push("")
+          lines.push("VERIFY BLOCKED: verification skipped with no summary reason — an empty skip is not allowed.")
+          lines.push("Give a concrete reason in verification.summary (e.g. \"project has no automated tests — verified by manual review\"), or run the project's verification and declare its result.")
+          appendBlockGuidance(lines, codeFiles)
           ctx.agent._verifyPassed = false
         }
       } else {
+        // Unknown status value — defensive (schema enum normally rejects it first).
         lines.push("")
-        lines.push("Tests: no test script in package.json — skipped.")
-        ctx.agent._verifyPassed = !syntaxFailed
-      }
-    } else if (relatedTests.length > 0) {
-      // Default mode: run only related test files
-      lines.push("")
-      lines.push(`Related tests (${relatedTests.length} file(s) for modules: ${modules.join(", ")}):`)
-      let anyTestFailed = false
-      let anyTestMissing = false
-      for (const testFile of relatedTests) {
-        if (ctx.signal?.aborted) {
-          // Advisory #5: a Stop during verify must not keep draining remaining
-          // files (each would spawn with an already-aborted signal).
-          lines.push("")
-          lines.push("Verify aborted by user (Stop) — remaining related tests skipped.")
-          return lines.join("\n")
-        }
-        // Lookup: cwd first (existing behavior), then the changed files' project
-        // root (§18.12 F-VR1 — subagent cwd may be a workspace root, not the repo
-        // root; the mapped test file lives at <projectRoot>/test/...).
-        let testAbs = join(cwd, testFile)
-        let testRunCwd = cwd
-        if (!existsSync(testAbs)) {
-          const roots = [...new Set(srcFiles.map(findProjectRoot).filter(Boolean))]
-          const inRoot = roots.map((r) => ({ root: r, p: join(r, testFile) })).find((x) => existsSync(x.p))
-          if (inRoot) {
-            testAbs = inRoot.p
-            testRunCwd = inRoot.root
-          }
-        }
-        if (!existsSync(testAbs)) {
-          anyTestMissing = true
-          lines.push(`  ? ${testFile} — file not found (cwd + changed files' project root), verify did not run it`)
-          continue
-        }
-        try {
-          const result = await runTestFile(testRunCwd, testAbs, ctx, args.testNamePattern)
-          if (result.passed) {
-            lines.push(`  ✓ ${testFile}`)
-          } else {
-            anyTestFailed = true
-            lines.push(`  ✗ ${testFile} — FAILED`)
-            lines.push(`    ${result.tail.replace(/\n/g, "\n    ")}`)
-          }
-        } catch (e) {
-          anyTestFailed = true
-          lines.push(`  ✗ ${testFile} — error: ${e.message}`)
-        }
-      }
-      if (anyTestFailed) {
-        lines.push("")
-        lines.push("✗ Related tests FAILED. Review the output above, fix the issues, then run verify again.")
+        lines.push(`VERIFY BLOCKED: unknown verification.status ${JSON.stringify(status)} — use 'passed' | 'failed' | 'skipped'.`)
+        appendBlockGuidance(lines, codeFiles)
         ctx.agent._verifyPassed = false
-      } else if (anyTestMissing) {
-        lines.push("")
-        lines.push("✗ Related test file(s) MISSING — verify did NOT certify this change. Locate the test file or fix MODULE_TO_TEST.")
-        ctx.agent._verifyPassed = false
-      } else {
-        lines.push("  All related tests passed.")
-        ctx.agent._verifyPassed = !syntaxFailed
       }
-    } else {
-      // No related tests found for the changed modules
-      const uncovered = modules.filter((m) => !MODULE_TO_TEST[m] || (Array.isArray(MODULE_TO_TEST[m]) && MODULE_TO_TEST[m].length === 0))
-      const untested = modules.filter((m) => !(m in MODULE_TO_TEST))
-      lines.push("")
-      if (uncovered.length > 0) {
-        lines.push(`Related tests: NONE for module(s) ${uncovered.join(", ")} — these modules have no dedicated test file.`)
-        lines.push("ACTION REQUIRED: write a test that covers the change you just made.")
-        lines.push("Do NOT proceed to 'done' — a test file is required before this change is complete.")
-      } else if (untested.length > 0) {
-        lines.push(`Related tests: NONE for module(s) ${untested.join(", ")} — unknown module, no test mapping exists.`)
-        lines.push("ACTION REQUIRED: determine which test file covers this code and add it to MODULE_TO_TEST, or write a new test.")
-      } else if (srcFiles.length === 0) {
-        lines.push("Related tests: no source .mjs files changed — nothing to test.")
-        ctx.agent._verifyPassed = !syntaxFailed
-      } else {
-        lines.push("Related tests: none matched. Run verify with full=true to run the full suite.")
-        ctx.agent._verifyPassed = !syntaxFailed
-      }
-    }
-
-    // Show full-suite hint when not run
-    if (!args.full && hasTestScript) {
-      lines.push("")
-      lines.push("Note: full test suite not run. Use verify full=true to run ALL tests before committing.")
     }
 
     // 4. Task list
@@ -382,7 +280,7 @@ export const verifyTool = {
     // 5. Checklist
     lines.push("")
     lines.push("Self-review checklist:")
-    lines.push("- [ ] Did I run the project's tests and do they pass?")
+    lines.push("- [ ] Did I run the project's verification (per its AGENTS.md) and does it pass, or did I declare a concrete skip reason?")
     lines.push("- [ ] Did I read every file I changed to catch leftover debug code or stale comments?")
     lines.push("- [ ] Do comments and docstrings match what the code actually does?")
     lines.push("- [ ] Did I remove placeholder code, TODO stubs, or commented-out experiment blocks?")

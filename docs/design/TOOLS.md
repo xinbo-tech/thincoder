@@ -112,7 +112,7 @@
 - **wait_for**：条件等待（非 sleep）——`{condition, interval_ms?, timeout_ms?}`；条件语义化（advisor settled / subagent id:N done / consult done / file exists / port open）；未知条件显式报错。readonly；timeout 默认 30s（config agent.waitForTimeoutMs 覆盖，cap 600s）；interval 默认 1s 下限 100ms；唯一非即时返回工具。等待用 wait_for，同步工具后不需要等待。
 - **timer**：默认 180s，seconds 可选。
 - **task**：状态别名归一（completed/finished/…）+ warning；跨会话/项目级用 checklist（描述含路由）。
-- **verify**：参数 `testNamePattern`（旧名 `filter` 不再接受）。语义见独立设计文档（Verify 重构）。
+- **verify**：通用验证门禁——语言/框架/项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）。参数已删 `full`/`testNamePattern`/`filter`（保留 `workdir`）。语义见独立设计文档（Verify 重构）。
 - **read_image**：视觉模型读图；非视觉模型拒绝/占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
 - **websearch/fetch**：网络边界见 §4；fetch 失败错误含 proxy 提示。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
