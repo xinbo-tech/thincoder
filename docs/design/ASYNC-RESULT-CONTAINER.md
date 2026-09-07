@@ -45,7 +45,7 @@
 - escalate/consult 独立流删除（`_pendingEscalateResults`/`_pendingConsultResults` 废弃）。
 
 ### D3 settle 共享 helper
-- 新建 `src/agent-tools/async-settle.mjs`：`settleAsyncEntry(parent, entry, {pool, pendingFamily, onAccounting})`——公共收尾：
+- 新建 `src/agent-tools/async-settle.mjs`：`settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #1——签名与 F3 一致：`pendingFamily` 参数删，单容器+role 后冗余）——公共收尾：
   - settleSeq 递增 + entry._settle() + 唤醒 waiter（公共尾部）
   - 日志三连（ev:cancelled/child:done|error/ev:settled）
   - cancelled 分支（delete + tombstone + ⟦ev⟧stopped + pushReal 提醒）
@@ -72,7 +72,7 @@
 
 ## 4. 验收
 
-AC1 = settle 记账单点（4 族 settle 回调改调 `settleAsyncEntry`，无逐字重复）；AC2 = pending 单容器+role（3 族统一为 `_pendingAsyncResults`，consult 升格完整 entry）；AC3 = done-in-pool 统一表示（留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交）；AC4 = 守卫统一 `!parentAborted`；AC5 = `_sessionSignal` 兜底统一 buildChildSignal（consult 补上）；**AC6 = CLI/VSC 镜像锚在设计中逐字定稿（settle helper 契约/pending 容器字段/buildChildSignal 语义——供 VSC 面照抄，本批验证锚句一致）**。
+AC1 = settle 记账单点（4 族 settle 回调改调 `settleAsyncEntry`，无逐字重复）；AC2 = pending 单容器+role（3 族统一为 `_pendingAsyncResults`，consult 升格完整 entry）；AC3 = done-in-pool 统一表示（留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交）；AC4 = 守卫统一 `!parentAborted`；AC5 = `_sessionSignal` 兜底统一 buildChildSignal（consult 补上）；**AC6 = CLI/VSC 镜像锚在设计中逐字定稿（settle helper 契约/pending 容器字段/buildChildSignal 语义——供 VSC 面照抄，本批验证锚句一致；AGENT-LOOP.md 记录段锚句同属镜像锚范围——评审 #3）**。
 
 ## 测试用例表
 
