@@ -47,12 +47,12 @@ export async function maybeGuardPushbacks(agent, st) {
 
   // Verify guard — OPT-IN (config agent.verifyGuard === true, CLI parity). When off
   // the agent is not pushed back to verify before finishing.
-  if (cfgVerifyGuard && agent._touchedFiles.length > 0 && !agent._verifiedThisRun && pb.guardPushbacks < MAX_VERIFY_PUSHBACKS) {
+  if (cfgVerifyGuard && agent._touchedFiles.length > 0 && !agent._verifiedThisRun && hasCodeMutations(agent) && pb.guardPushbacks < MAX_VERIFY_PUSHBACKS) {
     pb.guardPushbacks++
     pushReal(history, fullHistory, { role: "assistant", content: response.content })
     history.push({
       role: "user",
-      content: "[System reminder: you modified files in this run but have not verified the changes. Before finishing: call the verify tool to run syntax checks and tests. If verify reports failures, fix them and run verify again. If verification is genuinely impossible here, say so explicitly in your reply.]",
+      content: "[System reminder: you modified files in this run but have not verified the changes. Before finishing: run the project's verification yourself (per its AGENTS.md test method), then call verify declaring the outcome via verification.status. verify mechanically gates on your declaration. If verification is genuinely impossible here, say so explicitly in your reply.]",
     })
     callbacks.onSubTurnBreak?.()
     return true
@@ -65,7 +65,7 @@ export async function maybeGuardPushbacks(agent, st) {
       pushReal(history, fullHistory, { role: "assistant", content: response.content })
       history.push({
         role: "user",
-        content: `[System reminder: verify reported failures (retry ${retries}/${MAX_VERIFY_RETRIES}). Review the failures, fix the issues, then run verify again. If you cannot fix after ${MAX_VERIFY_RETRIES} attempts, explain honestly what's blocking you.]`,
+        content: `[System reminder: (retry ${retries}/${MAX_VERIFY_RETRIES}) verify was not passed — either your verification declared failed, was skipped without a reason, or was not declared. Fix or complete your verification, then call verify again declaring the outcome. If you cannot fix after ${MAX_VERIFY_RETRIES} attempts, explain honestly what's blocking you.]`,
       })
       callbacks.onSubTurnBreak?.()
       return true
@@ -79,7 +79,7 @@ export async function maybeGuardPushbacks(agent, st) {
         : ""
       history.push({
         role: "user",
-        content: `[System reminder: ${MAX_VERIFY_RETRIES} verify attempts exhausted and tests are still failing. In your response to the user, you MUST state explicitly: (1) what tests are still failing, (2) what you tried, (3) what you believe the root cause is. Do not present this as complete — the user needs to know the work is unfinished.${consultHint}]`,
+        content: `[System reminder: ${MAX_VERIFY_RETRIES} verify attempts exhausted. You have not passed verification. Either state explicitly that your verification could not be completed, or run verify again once it is. If your verification could not be completed, say so explicitly in your reply to the user — state what you tried and what you believe is blocking you, and do not present the work as complete; the user needs to know it is unfinished.${consultHint}]`,
       })
       callbacks.onSubTurnBreak?.()
       return true

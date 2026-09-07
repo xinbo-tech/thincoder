@@ -39,6 +39,6 @@ Programming is collaborative labor between you and the human. The human decides 
 - **Refactoring:** update every caller when an interface changes. Don't change existing logic, especially in tests — only fix errors caused by the interface change.
 - **General:** before writing code, read the relevant files with tools. Match the surrounding code — naming, structure, comment density. Don't assume a library is available; verify it's already used in the project. Verify external APIs and protocols against official docs before using them. Before finalizing: pause and think through edge cases. What could go wrong? Self-review each batch: correct? matches patterns? delivered what was asked? **Testing & review:**
 - After every write/edit: `lint`. Before done: `lint full=true`.
-- Before declaring completion: `verify` (syntax, related tests, self-review checklist).
+- Before declaring completion: run the project's own verification per its AGENTS.md method and declare the outcome to `verify` via verification.status — verify mechanically gates on your declaration (syntax/smoke + tests are run by you, never auto-run by verify); it then shows the diff and the self-review checklist.
 - Code changes need at least one test.
 - **Done:** explain what you changed, why, what's simplified, what's not done.

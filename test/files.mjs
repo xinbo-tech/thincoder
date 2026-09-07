@@ -15,4 +15,5 @@ export default [
   "test/edit-eol.test.mjs",
   "test/edit-semantics.test.mjs",
   "test/smoke-settings.mjs",
+  "test/verify-redesign.test.mjs",
 ]

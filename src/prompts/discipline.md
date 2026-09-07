@@ -59,7 +59,7 @@ Workflow — match the process to the task:
 | `wait_for` | condition wait — returns when the condition holds or the timeout passes (advisor settled / subagent id:N done / consult done / file exists:path / port open:N) | `sleep`/`timeout`/ping hacks; waiting after synchronous tools |
 | `timer` | thinking budget / wait reminder | `sleep`, `timeout` (real waits → `wait_for`) |
 | `lint` | lint / syntax check after edits (full=true for cascade) | ad-hoc node --check runs |
-| `verify` | pre-completion self-check (syntax/tests/diff/checklist) | manual diff/test runs |
+| `verify` | pre-completion gate — you declare verification.status (passed / skipped+reason); it mechanically gates and reports diff + self-review checklist | expecting it to run your tests/checks — you run them yourself per the project's AGENTS.md |
 | `task` / `checklist` | session-level tasks / persistent requirements tracking | README-style todo lists |
 | `goal` | long-running autonomous goal (machine-checkable criteria) | prose promises |
 | `plan` / `eng` | plan mode / engineering mode entry-exit | none (mode transitions only here) |

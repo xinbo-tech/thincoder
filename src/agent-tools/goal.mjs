@@ -31,6 +31,12 @@ export const goalTool = {
     }
     if (action === "complete") {
       if (!ctx.agent._goal) return "Error: no active goal"
+      // G13 verify gate (CLI goal.mjs parity): files mutated this run but verify
+      // has not run → refuse completion. False completion is the worst outcome of
+      // autonomous work — run the check the criteria names AND verify first.
+      if (ctx.agent._mutatedThisRun && !ctx.agent._verifiedThisRun) {
+        return "Error: files were modified but verify has not run. Run the check your criteria names AND the verify tool before marking the goal complete — false completion is the worst outcome of autonomous work."
+      }
       ctx.agent._goal.status = "completed"
       ctx.callbacks?.onGoal?.({ status: "done", objective: ctx.agent._goal.objective, criteria: ctx.agent._goal.criteria })
       return `Goal completed: ${ctx.agent._goal.objective}`
