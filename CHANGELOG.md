@@ -3,7 +3,7 @@
 - fix: prompts.test 折行断言折叠化收口（2026-09-07 id:3）——双侧 \s+ 归一匹配——负守卫保持负向——锚整块/落位序断言加固
 ## [Unreleased]
 
-> 开发批记录段（0.12.59 已发——下次发布 = 0.12.60 时本段改头——RELEASE.md §1.5）
+> 开发批记录段（0.12.59 已发——下次发布 = 0.12.60 时本段改头——RELEASE.md §4.5 编号体系）
 
 ### Changed
 
@@ -29,11 +29,11 @@
 - **工程模式 token 防伪层删除（ENGINEERING-MODE.md 2026-09-06 段——用户裁定"过度工程给我删了"）**：advisor.mjs 删 DEFAULT_TOKEN_SECRET / USING_DEFAULT_SECRET / TOKEN_SECRET / warnIfDefaultSecret + 启动警告与 HMAC 签名/验签——token 回归**无签名流程凭证**（格式 uuid:expiresAt——TTL 检查 fail-closed + designId 槽位精确匹配不变）；存量 3 段 token 格式判错 fail-closed 拒绝（不迁移——重评一次）；NFR3/§2.3/§2.7/§2.6 文档同步。
 - **会话"当前槽位"按端分离（R4——2026-09-05——SESSION.md §10）**：CLI 与 VS Code 各自 end marker（`{manifest}.cli|.vscode`，本端单写者）记录"本端最后使用的槽位"——恢复决策 resumeSlot（本端记录 → 无记录一次性继承 active 死主槽 → 全新分配）替代共享 manifest.active 作为恢复依据——双端同开时退出 CLI 重进不再进错会话/空白新槽；启动即钉 _slot 闭合"load→首保存"迁移窗口；/session 列表高亮按本端记录（含被删守卫）。双端同批镜像（L2：CLI 1485/1437+48skip/0 + VS Code 1196/1196 全绿）。
 - **git 工具 add/rm/commit 多路径（2026-09-05 发版后——git add 单路径被迫 N 次调用）**：`path` 空格分隔多路径（`git add a b c`——ref 多值先例同法——split(/\s+/)）；path 描述尾追加注（保既有原子串断言）；双端同改（CLI git.test + VS Code git.test 镜像用例——add/rm/commit 三动作多路径覆盖）。
-- **release:check 一键发版门禁（scripts/release-check.mjs——2026-09-05 0.12.59 发版教训）**：lint + test:full 合并一键；全量输出捕获不刷屏（只打摘要）；失败自动提取 failing tests 详情段（此前为看错误详情跑 3 次全量）；RELEASE.md §1 检查单合并 + 修复迭代局部重跑纪律 + prepublishOnly 双保险注。
+- **release:check 一键发版门禁（scripts/release-check.mjs——2026-09-05 0.12.59 发版教训）**：lint + test:full 合并一键；全量输出捕获不刷屏（只打摘要）；失败自动提取 failing tests 详情段（此前为看错误详情跑 3 次全量）；RELEASE.md §1 发布前检查合并 + 修复迭代局部重跑纪律 + prepublishOnly 双保险注。
 
 ## [0.12.59] — 2026-09-05
 
-> 0.12.58 → 0.12.59（§1.5 连续号——发布时定号）
+> 0.12.58 → 0.12.59（§4.5 连续号——发布时定号）
 
 ### Added
 
@@ -49,7 +49,7 @@
 - **普通模式两段式（AGENT-LOOP.md §21 F-N1.5——2026-09-05 用户"把 coder 用起来……解决自查问题"）**：规模实现批次默认委托 coder 子代理（async——设计书为 task book）——执行/检查心智分离（隔离上下文破自查盲区）；小改动/探索留内联；复核走 F-N1.4（偏差退回 coder ≤2 轮）。测试 T-N1.9 双端。
 - **委托操作标准（AGENT-LOOP.md §21 扩展注 4——F-N1.6——2026-09-05 用户"spawn coder 干活现在并没有明确的标准是吗"）**：规模判据可操作化（≥2 文件/单文件 >30 行逻辑/模块边界/双端镜像 → 委托；≤30 行/文档同步/探索 → 内联）；任务书七字段标准（目标/已知事实/设计+禁止/约束/硬验收/报告格式/调度元数据——缺字段=委托缺陷）；委托模式判据（async 默认/sync 仅依赖链/并行仅文件域互斥）；通用验收基线。测试 T-N1.10 双端。
 - **/config 交互修复（2026-09-05）**：改配置项保存后回主菜单（不再退到输入框）——每轮刷新 ac/tc 配置引用（reloadConfig 换对象后显示新值）；view 浏览态同回菜单。
-- **版本号连续性规则（RELEASE.md §1.5——2026-09-05 用户裁定"不要跳号"）**：号在发布时定、开发期不预占（CHANGELOG 挂 [Unreleased]）；待发号 = registry 最高 + 1；缺口不补。
+- **版本号连续性规则（RELEASE.md §4.2/§4.3——2026-09-05 用户裁定"不要跳号"）**：号在发布时定、开发期不预占（CHANGELOG 挂 [Unreleased]）；待发号 = registry 最高 + 1；缺口不补。
 
 ### Fixed
 
