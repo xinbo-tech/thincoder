@@ -69,20 +69,20 @@ memoryTool 注册于 `src/tools/index.mjs`。动作 = search / put / list / dele
 clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行、免审批、可
 并行）；put/delete/clear 保副作用门。
 
-- **search**：query + 可选 scope/limit（默认 5）。空 query 短路 → 固定文案
-  `No matching memories found.`。团队 scope → `Error: memory search: VS Code
+- **search**：query + 可选 layer/limit（默认 5）。空 query 短路 → 固定文案
+  `No matching memories found.`。团队 layer → `Error: memory search: VS Code
   memory has no team layer — team memory is managed by the CLI`。
-- **put**：默认 scope `personal`；type 校验 + title/content 必填 → 写
-  `scopeDir(cwd,scope)/<filename>` → `Saved memory entry "<title>" (type: <type>,
-  scope: <scope>, id=<filename>)`。
-- **list**：scope/type/keyword 过滤，created 倒序，limit 默认 50 → 行 =
+- **put**：默认 layer `personal`；type 校验 + title/content 必填 → 写
+  `scopeDir(cwd,layer)/<filename>` → `Saved memory entry "<title>" (type: <type>,
+  layer: <layer>, id=<filename>)`。
+- **list**：layer/type/keyword 过滤，created 倒序，limit 默认 50 → 行 =
   `<file> [type] <title>（<date>）`；截断 → 首行 `N 条——截断前 M`。无匹配 →
   `0 条匹配`。
 - **delete**：有 id → 单删（读内容后删 → 可审计可恢复，返回
-  `Deleted <id>: <title>\n<content>`）；无 id → 批量（scope + type/keyword，
-  confirm:true 门，无过滤 scope 全清拒绝——clear 专属）。批量返回
-  `Deleted N entries in scope <scope>`。
-- **clear**：仅 personal 全清，`{scope:"personal", confirm:true}` 门 →
+  `Deleted <id>: <title>\n<content>`）；无 id → 批量（layer + type/keyword，
+  confirm:true 门，无过滤 layer 全清拒绝——clear 专属）。批量返回
+  `Deleted N entries in layer <layer>`。
+- **clear**：仅 personal 全清，`{layer:"personal", confirm:true}` 门 →
   `Cleared personal memory (N entries deleted)`；project/team 拒绝。
 - **layer === scope 概念统一（2026-09-08 用户指出——"不看源代码谁知道 layer=scope？"；用户裁定：全统一成 layer）**：memory 三层（personal/project/team）代码里**两个词混用**——核心层用 `layer`（DB 列名 + 结果字段 + deleteByUid 从 uid 前缀拆 layer），工具层参数用 `scope`（search/list/delete 的 scope 参数）。
   ——模型看到 search 结果带 `[layer]` 标签、delete 却要 `scope` 参数——命名分裂让模型困惑。**修复（裁定统一成 layer）**：scope 参数改名 layer（工具面 + 描述），DB 列/内部本即 layer 不动（无 schema 迁移）。
@@ -93,7 +93,7 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
     ①**layer 可选**（裁定统一成 layer）——传了则校验（防误删保持），**不传则按 id 前缀直接路由**（与 search/list 找到的 id 直接对接）；批删形态（无 id）仍必填 layer（参数改名）。
     ②**list 补独立 `[layer]` 标签列**（与 search 行对齐，成本低）。
     ③**第三个真缺口补设计（评审 #2 + #5 采纳——定 delete 尊重 uid origin 段 + VSC uid/origin 格式定稿）**：VSC id = 文件名（无 layer 前缀）；origin = 文件所在物理层目录（.thincoder/memory/personal/ 或 project/）。
-      ——delete 文件定位改尊重 uid 的 origin（非当前 dirs[layer] 假设）——否则 search/list 跨层带出的行"能看到但碰不到"；落点：delete 按 id 定位先查 uid 物理层目录，dirs[layer] 兜底，本地无对应目录 → ENOENT 容错 + syncDir 清索引。
+      ——delete 文件定位改尊重 uid 的 origin（非当前 dirs[layer] 假设）——否则 search/list 跨层带出的行"能看到但碰不到"；落点：delete 按 id 定位先查 uid 物理层目录，dirs[layer] 兜底，本地无对应目录 → ENOENT 容错 not-found 错误（VSC：filterAliveFiles stale-guard——无 syncDir）。
   - **输出/错误串同步（评审 #1 采纳——scope→layer 延伸至模型可见输出）**：输出契约 + 错误串的 `scope` 词同步改 `layer`（`Deleted N entries in layer X`/`与 layer project 不匹配`/`not found in layer <layer>`）+ byte 断言测试同步——模型看到的所有文本全是 layer 无 scope 残留；CLI --scope 随动改 --layer（CLI 端设计在 CLI MEMORY.md——评审 #2 指正 §6 悬空）；本档 §1-§3 残留 scope 批准后同步。
   - **工具描述具体化（2026-09-08 用户要求——工具描述是模型唯一看到的，须完善）**：工具层 scope 参数全改名 layer（search/put/list/delete/clear 的 args.scope → args.layer + schema scope 字段 → layer + 描述内 scope 词 → layer——用户裁定统一成 layer）。重写后描述要点：
     - **search/list**："layer 可选（personal/project/team——缺省搜全部层）；结果每行含 `[layer]` 标签 + id（id 前缀即 layer）"
@@ -110,7 +110,7 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
     | list 补 [layer] 标签 | list project 层 | 每行含 [project] 标签（与 search 对齐） | list 标签 |
     | 输出无 scope 词 | search/put/list/delete/clear 全动作 | 模型可见文本（结果/错误）无 scope 词（全 layer） | 输出同步 |
     | delete 尊重 origin | delete 跨 cwd memory 文件的 id | 按 uid origin 定位删除（非当前 dirs[layer]） | origin 尊重 |
-    | 边界 本地无 origin 目录 | delete 远端 clone 的 id（本地无目录） | ENOENT 容错 + syncDir 清索引（不报假成功） | origin 兜底 |
+    | 边界 本地无 origin 目录 | delete 远端 clone 的 id（本地无目录） | ENOENT 容错 not-found 错误 + 读路径 filterAliveFiles stale-guard（不报假成功——VSC 无 syncDir——索引整库重建 + 读路径 guard 为 VSC 等价物） | origin 兜底 |
     | 错误 clear project | clear {layer: "project", confirm: true} | 明确拒绝（clear 仅 personal） | clear 边界 |
   **归属**：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
 - **文件式即真相**：markdown 文件就是存储本身（list/批量 delete 匹配面 = 磁盘扫
