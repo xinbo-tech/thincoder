@@ -66,6 +66,44 @@ EOL 写回与失败候选——**共享 helper 权威见 `EDIT-HELPERS.md`**（V
 
 `test/edit-tool-improvement.test.mjs`（13 用例）+ `test/files.mjs` 登记。用例表历史见「变更记录」引用档。
 
+## 8. 阶段 2 变更段（EDIT-TOOLS-REVIEW——2026-09-08 裁定，评审后实现）
+
+> 编辑工具板块二次整理（功能统一 + 描述/提示词完善）。本段设计待评审——评审通过并入 §1-§7 当前态。与 CLI EDIT.md §8 同机制镜像——逐字裁定见 CLI 档变更段 + VSC 差异标注。
+
+### 8.1 删行形态（裁定 A——同 CLI）
+
+edit 加**显式命名删行形态**：`{path, startLine: N, endLine: M}` / `{path, line: N}` **省略 new_string** = 删除该行/范围。内容形态空 new_string 仍拒绝（无界意图）；行号形态省略允许（有界意图——删哪行是显式声明）。
+
+- **VSC 现状差异要修**：现 edit-line-params.mjs 空 new_string = `[]` = 删行（edit-line-params.mjs:78 + 描述 :82 "empty new_string deletes them"）——**改为显式删行形态**（省略 new_string 才删；给空串但给了 new_string 键 → 语义统一——见裁定）。VSC 内部两形态矛盾（内容形态拒空串/行号形态空串删行）由此消除。
+- **schema**：行号形态 new_string optional；批量条目（8.4 补行号后）同。
+- **返回**：`Deleted lines N-M of <path>` / `Deleted line N of <path>`。
+
+### 8.2 normalize 统一（裁定——同 CLI 5 条基准）
+
+CLI/VSC normalize 统一一实现。统一基准：trim + 去行尾空白 / tab→2 空格 / ASCII 单→双引号 / 弯引号反引号→直引号 / **移除 VSC 行内 `\s+` 折叠**（评估修正——折叠吞缩进/对齐可能误匹配结构不同行）。
+
+- 实现：VSC normalizeLineFuzzy（edit-fuzzy-match.mjs）改同 CLI 基准（移除折叠、补 tab→2 空格）；CLI normalizeEditLine 补弯引号归一。两端逐字同算法。
+- 测试：弯引号差异行两端同命中 / 结构不同文字相似行两端同不命中。
+
+### 8.3 描述修复（VSC）
+
+- `file-edit.mjs` 描述：**重复块**（line 与 startLine/endLine bullet 原样两遍 :87-90）+ **中英混杂**（:92 edits 条目整段中文）→ 去重 + 英文统一。
+- 空串语义段按 8.1 裁定统一措辞（现 :82 "empty new_string deletes them" 与 CLI 描述相反——改）。
+- 路由段：行号新鲜 → edit(line:)，漂移/杂 → hashline，删行 → 行号删行形态，加行 → insert_after。
+
+### 8.4 批量行号补 VSC（分歧 c）
+
+VSC edits 数组条目**加 line/startLine/endLine**（现 schema items 只有 path/old_string/new_string/replace_all + required:[old_string,new_string]——条目带 line 会静默丢）：
+
+- schema items 加行号参数；required 放宽（行号条目无 old_string——同 CLI items.required 仅 new_string）；批量 execute 处理条目级行号。
+- 与 CLI 对齐（CLI 设计测试表已含"批量混用行号+模糊条目"——现 CLI-only → VSC 补齐）。
+- 测试：批量混用行号+内容条目 VSC 端到端。
+
+### 8.5 代码注释旧编号清理（同 CLI）
+
+VSC edit 族代码注释 §15/D15.x（file-edit.mjs:20-21,72,198,208,235,338,347 / edit-diff.mjs:2-4,11,132 / more-file.mjs:124,126,151,201）→ EDIT.md 指针 + 跨仓悬空（edit-diff.mjs:33 指 CLI EDIT-TOOL-EOL-DESIGN.md）修正为本仓 EDIT-HELPERS.md。
+
+
 ## 变更记录
 
 - 2026-09-08：文档重组——edit 工具语义从 VSC TOOLS.md §9 + EDIT-TOOL-IMPROVEMENT.md 并入本文档（每工具一档——TOOLS.md §9 退地图）。状态"已实现"（D1-D3 落地：按行号改/模糊匹配/替换即删——原 IMPROVEMENT 档设计 + AC1-AC5，见 `_archive/EDIT-TOOL-IMPROVEMENT.md`）。
