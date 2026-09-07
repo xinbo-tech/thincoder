@@ -182,3 +182,4 @@
 - [ ] **VS code 评审陈旧面裁定候选（2026-09-07 id:26 处置 #1）**：VS code 评审陈旧 = 任意文件变更（含文档写）——VS §24 批既有「任意文件面」裁定（测试钉死）——与 D-24b「代码面」措辞偏保守（多耗 cap 轮次——方向 fail-safe）——待用户裁定是否对齐 CLI isCodePath 过滤
 - [ ] **🔵 五项不修登记（2026-09-07 id:26 处置 #3——父侧知悉）**：VS sync design 轮次不递增 / VS guard cap 读全局轮 / CLI guard 文案无 async 补注 / VS depth-undefined 缺省 async / CLI T-24b1 墙钟断言（pre-existing）
 - [ ] **prompts.test 折行断言收口（2026-09-07 id:27 报告——CLI 6/VS 9 断言红——engineering.md/eng-coder.md 折行折叠 vs 旧断言折行形态不符——上一批（§2.6 批）改文未跟断言——随下一提示词批收口更新）**
+- [ ] **TUI 开放项补登记（2026-09-08，来源：TUI.md 重写 §11 未决块——eng-coder id:14 上报）**：① **picker item.note 渲染丢弃**——picker 菜单项 note 字段渲染缺失（架构决策待定）；② **question/wizard 并行 UI 统一**——自由文本态光标/渲染与 wizard 表单的 UI 统一（架构决策待定）。两开放项现只承载于 docs/design/TUI.md §11，按技术待办归属登记此处。
