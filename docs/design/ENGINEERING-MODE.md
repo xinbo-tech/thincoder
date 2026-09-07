@@ -1,224 +1,293 @@
-# 工程模式（Engineering Mode）设计 > 工程模式是 thincoder 的严格方法论工作流：design-before-code、METHODOLOGY 驱动、双门禁（设计评审 + 代码评审）。
+# 工程模式（Engineering Mode）设计
+
+> 板块：工程模式——thincoder 的严格方法论工作流：design-before-code、METHODOLOGY 驱动、双门禁（设计评审 + 代码评审）。
 > 本文档为**架构级机制文档**：功能性需求以机制目标与约束表述（架构级文档以约束替代用户故事——评审 2026-09-02 #1 措辞修正），非功能性需求与测试层完整。
-> 依赖 [ADVISOR-CONVERGENCE.md](ADVISOR-CONVERGENCE.md)：design 评审的 cap 豁免（§8——第 6 次调用不被拒）、code 评审 MAX_ADVISOR_ROUNDS=5 上限、stale-context 保护均定义于该文档；本设计引用其机制。
->
-> **2026-08-24 决策（发起权归用户）**：agent 曾两次越权抢跑（自行提交设计评审→拿 token→直接开发，其中一次全程零确认）——工程模式改为：**设计评审只能由用户发起**（agent 准备+提醒"设计就绪"，不自行调 advisor）；评审打回后每轮呈递发现+修复建议、**用户逐条拍板**再改（agent 不自行修完重送）；**交付 code review 保持流程节点自动**（eng-coder 返回后自动评审，不问用户）；系统推回（guard）在工程模式一律关闭（未来若启用仅作提示，由用户发起评审）。 ## 1. 需求（Requirements） ### 1.1 总体需求 普通模式靠纪律提示词约束模型；工程模式把"设计先行、评审把关、验证收尾"提升为**半机械流程**——可硬性拦截的环节一律拦截（写文件门禁、token 校验），无法硬拦的靠 METHODOLOGY 与提示词约束。核心承诺：**代码必须先有被评审过的设计；评审对象由任务定义而非遍历猜测；评审循环在实现者内部闭环（不依赖父代理持有凭证）。** ### 1.2 功能性需求（机制约束，架构级表述） | # | 机制需求 | 约束 |
+> 依赖与权威关系：[AGENT-LOOP.md](AGENT-LOOP.md)（§8 工程交付协议概览、§10 子代理任务调度器、§12.1 advisor 评审对象锚——本文件机制经其 §17 权威源接管点注册）；[ADVISOR-CONVERGENCE.md](ADVISOR-CONVERGENCE.md)（评审收敛权威：design 评审 cap 豁免、code 评审 MAX_ADVISOR_ROUNDS=5、stale-context 保护）；[TESTING.md](TESTING.md) §1（测试分层 L0+/L1/L2 权威）。
+
+## 0. 铁律（发起权与批准权归用户——2026-08-24 决策）
+
+背景：agent 曾两次越权抢跑（自行提交设计评审 → 拿 token → 直接开发，其中一次全程零确认）。此后固化四条铁律：
+
+1. **设计评审只能由用户发起**——agent 准备并提醒"设计就绪，可以评审"，不自行调 advisor。
+2. **打回后逐条呈递**——评审打回后每轮呈递发现 + 修复建议，**用户逐条拍板**再改（agent 不自行修完重送）。
+3. **交付 code review 保持流程节点自动**——eng-coder 返回后自动评审，不问用户（2026-09-02 起由 eng-coder 内部协议默认承担）。
+4. **系统推回（guard）在工程模式一律关闭**——未来若启用也只作提示，评审仍由用户发起。
+
+## 1. 需求（Requirements）
+
+### 1.1 总体需求
+
+普通模式靠纪律提示词约束模型；工程模式把"设计先行、评审把关、验证收尾"提升为**半机械流程**——可硬性拦截的环节一律拦截（写文件门禁、token 校验），无法硬拦的靠 METHODOLOGY 与提示词约束。核心承诺：**代码必须先有被评审过的设计；评审对象由任务定义而非遍历猜测；评审循环在实现者内部闭环（不依赖父代理持有凭证）。**
+
+### 1.2 功能性需求（机制约束，架构级表述）
+
+| # | 机制需求 | 约束 |
 |---|---|---|
 | FR1 | 设计先行 | 设计文档（三层）存在且通过设计评审前，任何代码文件（含 `src/prompts/*.md`）不可被修改 |
-| FR2 | 设计评审独立 | design review 由独立上下文执行；评审对象 = 调用时显式传入的文档清单，不遍历 git diff |
-| FR3 | 授权链 | 设计评审通过签发 token——连同**随机 designId**（**同 scope 实例恒定——复审沿用同 id（旧 token 存活至 TTL 保留）**——§29.1 F2h 修订；评审 #7 时机口径统一；不锚定文档路径/内容，避开 2026-08-31 已否决的"文档锚失效"问题）存于会话内多设计槽 `Map<designId,{token}>`；spawn eng-coder 必须携带 designId + 匹配 token（单设计时 designId 可省略）；token 随会话 slot 持久化跨进程（TTL 7 天 fail-closed；评审 2026-09-02 #1 统一口径——见 NFR3/§5 持久化口径）；**链终核销时父侧 consume-design 消费（2026-09-07——见 §2.6）** |
-| FR4 | 代码评审归属 | eng-coder 交付前自查（对照验收标准/文件范围，非 LLM）；**2026-09-02 §18 反转**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs depthOnly 装配）且实现无 depth/role 限制（advisor.mjs——readonly 内嵌循环）——2026-08-01 裁定依据（当时工具未装配）已过时——**eng-coder 内部自审计闭环：实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛后一次交付（内部协议，权威源 AGENT-LOOP.md §18 D-E2；R2 2026-09-04 D-TS2：修正轮默认不重跑审计/复评——终审=advisor 复评 1 次定案，LLM 3 次/链——见 §7 变更记录 2026-09-04 条）**；父侧复核保留可选（默认由内部协议承担——stalled/存疑才复核） |
-| FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现+修复建议、用户逐条拍板；**交付 code review 流程节点自动**（2026-09-02 §18 起默认由 eng-coder 内部协议承担——in-child advisor 复评自动运行、不问用户；父侧复核保留可选——stalled/存疑才复核）；失败停止重试（2026-08-24 决策，见头部） |
-| FR6 | 范围约束 | **A 裁定（2026-09-04——用户拍板）**：去掉"文件清单外不可改"硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计"out-of-list"判据改"**改了且未报告=偏差**（静默越权）"；已报告=透明可接受——**（supersede 旧"不得修改清单外任何文件"口径——见 §18.10 D-10.2 ② + AGENT-LOOP §18 D-E2 ① 注）**；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
+| FR2 | 设计评审独立 | design review 由独立上下文执行；评审对象 = 调用时显式传入的文档清单（documents + object 参数，见 §2.4），不遍历 git diff |
+| FR3 | 授权链 | 设计评审通过签发 token——连同**随机 designId**（**同 scope 实例恒定——复审沿用同 id，旧 token 存活至 TTL 保留**；不锚定文档路径/内容——"文档锚失效"路线已否决）存于会话内多设计槽 `Map<designId,{token}>`；spawn eng-coder 必须携带 designId + 匹配 token（单设计时 designId 可省略）；token 随会话 slot 持久化跨进程（TTL 7 天 fail-closed）；**链终核销时父侧 consume-design 消费**（见 §2.6 F1） |
+| FR4 | 代码评审归属 | eng-coder 交付前自查（对照验收标准/文件范围，非 LLM）→ **内部协议闭环**：实现 → explore 偏差审计 → 自修 → advisor(type=code) 复评 → 收敛后一次交付（完整协议权威 = 本文件 §2.2 step 6）；LLM 验证 3 次/链（③审计 → ⑤advisor 首审 → 终审复评），修正轮默认不重跑审计/复评；父侧复核保留可选（默认由内部协议承担——stalled/存疑才复核） |
+| FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现 + 修复建议、用户逐条拍板；**交付 code review 流程节点自动**（eng-coder 内部协议默认承担——in-child advisor 复评自动运行、不问用户；父侧复核保留可选——stalled/存疑才复核）；advisor 失败停止重试 |
+| FR6 | 范围约束 | **A 裁定**：去掉"文件清单外不可改"硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计"out-of-list"判据 = "**改了且未报告 = 偏差**（静默越权）"；已报告 = 透明可接受；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
 | FR7 | 待办管理 | 技术待办统一在 `docs/TODO.md`，不落入设计文档（避免触发重新 doc review） |
-| FR8 | 多任务并行 | 相互独立的设计可**并行推进**（设计/评审/实现/审计/交付评审各环节），上限 ≤4 并发（2026-09-02 用户拍板 3→4——AGENT-LOOP.md §15 D-A4 同步点；**提示词纪律——无机械门禁，评审 round3 #2 补记**）。**调度器条款（2026-09-04 §20.7 口径——supersede 旧"文件集无交集才可并行"手动预判——见 AGENT-LOOP §20.7 D-PS2 + ENGINEERING-MODE §2.2 step8 R3 注（本表 T18 同步改写））**：eng-coder spawn 时**声明 `files`（写域）+ `dependsOn`（依赖）**——冲突/顺序**交调度器**（重叠域自动 queued——冲突清自动启动——依赖链自动顺序）——**不再手动预判/手动串行**（"overlapping domains are queued by the scheduler, never hand-serialized"——§20.7 锚句）；**未声明 files 的任务不参与冲突检测**（D-PS1——声明缺失 = 调度器无法排序——须声明）。用户澄清/批准逐个进行（但可一次连发多个评审/批准）。token 按 designId 隔离（FR3）——各 eng-coder 携自己设计的 designId+token，互不覆盖。**发起权不变**：设计评审仍仅由用户发起（FR5），并行不改变这一点。 | ### 1.3 非功能性需求（技术标准） | # | 维度 | 标准 |
+| FR8 | 多任务并行 | 相互独立的设计可**并行推进**，上限 ≤4 并发（提示词纪律——无机械门禁）。**调度器条款（现行口径）**：spawn 声明 `files`+`dependsOn`——冲突/顺序交调度器自动处理（重叠域 queued、依赖链自动顺序、同步冲突报错），不再手动串行——锚句 "overlapping domains are queued by the scheduler, never hand-serialized"（AGENT-LOOP §10）；未声明 files 不参与冲突检测。token 按 designId 隔离互不覆盖；发起权不变（FR5） |
+
+### 1.3 非功能性需求（技术标准）
+
+| # | 维度 | 标准 |
 |---|---|---|
-| NFR1 | 性能 | token 校验在 spawn 时同步完成（<10ms，无网络依赖——**设计目标，非机械测试**，评审 2026-09-02 #7 标注）；design review 每轮一次 LLM 调用 |
-| NFR2 | 收敛性 | code review 最多 5 轮（MAX_ADVISOR_ROUNDS），第 6 次调用被机械拒绝；design 评审不消耗该预算 |
-| NFR3 | 安全 | token 机械匹配（正则 + TTL fail-closed）+ designId 定位槽；design 评审失败**不波及其他设计的槽**（2026-08-30 隔离逻辑扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL——已知取舍）；token 随 slot 持久化跨进程（TTL 7 天 fail-closed，重进 TTL 内恢复、过期重新评审——评审 2026-09-02 #1）——**2026-09-06**：防伪层删除——token 为无签名流程凭证（uuid:expiresAt——见 2026-09-06 段）——**存量 3 段 token 一次性失效（格式即判错——已批准未实现的设计需重评一次——2026-09-06 迁移代价）** |
+| NFR1 | 性能 | token 校验在 spawn 时同步完成（<10ms，无网络依赖——**设计目标，非机械测试**）；design review 每轮一次 LLM 调用 |
+| NFR2 | 收敛性 | code review 最多 5 轮（MAX_ADVISOR_ROUNDS），第 6 次调用被机械拒绝；design 评审不消耗该预算（cap 豁免） |
+| NFR3 | 安全 | token 机械匹配（格式 + TTL fail-closed）+ designId 定位槽；token 为**无签名流程凭证**（格式 `uuid:expiresAt`——HMAC 防伪层已删，非现行机制）；复审失败不波及其他设计的槽（旧 token 存活至 TTL——已知取舍）；token 随 slot 持久化跨进程（TTL 7 天 fail-closed——重进 TTL 内恢复、过期重新评审）。存量旧 3 段格式 token 拒绝语义见节后注 |
 | NFR4 | 兼容 | 两种模式互斥：工程模式禁用 `coder` 角色，普通模式禁用 `eng-coder`；行为不互相污染（提示词两套独立） |
-| NFR5 | 可维护 | 判定逻辑单一来源：`isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（相对路径语义）；对存绝对路径的 `_touchedFiles` 使用组件级匹配 `/(?:^|[\\/])src[\\/]/`（2026-08-01 实现修正，已接受）——统一用于门禁/guard/doc-only 判定 |
-| NFR6 | 可恢复 | eng-coder 失败/中断可重新 spawn（同 token）；advisor 工具失败不重试，向用户报告 | ## 2. 设计（Design） ### 2.1 角色模型 | 角色 | 职责 | 机械约束 |
+| NFR5 | 可维护 | 判定逻辑单一来源：`isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（相对路径语义）；对存绝对路径的 `_touchedFiles` 使用组件级匹配 `/(?:^|[\\/])src[\\/]/`——统一用于门禁/guard/doc-only 判定 |
+| NFR6 | 可恢复 | eng-coder 失败/中断可重新 spawn（同 token——链中未消费）；advisor 工具失败不重试，向用户报告 |
+
+> **NFR3 注（存量旧 3 段格式拒绝——活机制）**：旧 3 段格式 token（`uuid:expiresAt:HMAC` 形态——HMAC 指历史防伪层签名段，2026-09-06 已删，此处仅作拒绝判定的格式描述）即使 TTL 内也**格式即判错** → fail-closed 拒绝 → 需重新设计评审（迁移代价：已批准未实现的设计重评一次，已接受）。
+
+## 2. 设计（Design）
+
+### 2.1 角色模型
+
+| 角色 | 职责 | 机械约束 |
 |---|---|---|
-| **父代理**（顶层，`role` 未定义） | 架构师：需求/设计文档 → 提醒设计就绪 → 用户发起设计评审（传文档清单）→ 打回呈递+用户拍板 → 用户批准 → spawn eng-coder（默认 async——§18）→ 交付验证（可选的父侧复核） | 拦截型：design token 前写代码被拒；提示词约束：不写实现、不发起评审、等批准、验收 |
-| **eng-coder**（子代理，`role="eng-coder"`） | 实现者：按设计实现 → **内部协议闭环**（§18：explore 偏差审计 → 自修 → advisor 复评 → 收敛，≤5 修正轮）→ 交付（报告含审计/评审轮次 + clean/stalled；永不编辑设计文档） | 拦截型：spawn 需 token、写文件需 `_engDesignReviewed`；内部 spawn 仅 explore+同步（机械门）；审计 ≤6 次（第 7 次机械拒绝） | ### 2.2 主流程 ```
-1. 写需求/设计文档 docs/（三层：需求/设计/测试；按业务板块组织）
-2. 父代理呈递设计摘要 + 提醒"设计就绪，可以评审"——**等待，不自行调 advisor**
-3. 用户发起设计评审：父代理调 advisor(type="design", documents=[涉及文档清单]) ├─ 有 🔴 → 呈递发现+逐项修复建议 → 用户逐条拍板 → 修改 → 再提醒 → 用户发起复审 └─ 无 🔴 → 回显 [DESIGN-TOKEN:…] + designId（同 scope 实例恒定——复审沿用同 id——§29.1 F2h）→ designId+token 入槽
-4. 用户批准设计
-5. subagent(role="eng-coder", designId=<可选，单设计省略>, designToken=token) —— **默认 async（§18 F1/D-E1）**：spawn 返回 {id, running}——交付协议在子代理内部闭环（主会话派完即挂起/可交互——§17 双通道） ├─ 机械校验 _engDesignTokens.get(designId) === token（单设计取唯一槽），不符即 throw ├─ spawn 成功 → child._engDesignReviewed = true（解锁写文件）+ 任务域授权（内部写豁免逐写审批） └─ task 含：Docs involved（需求+设计+引用清单）→ 文件清单 → 验收标准（METHODOLOGY Task Structure）
-6. eng-coder **内部交付协议**（§18 D-E2，子代理内部闭环——实现 → 自查透明表 → explore 偏差审计（审计任务书 = 父 spawn 任务书 ∪ 实际 _touchedFiles 机械并集；对照设计查验收覆盖/静默简化/文档漂移/超清单改动）→ dirty 自修（修正轮 ≤5，`修正轮 N/5` 提醒）→ clean → advisor(type=code) 复评 → findings 自修 → 收敛）——eng-coder 永不编辑设计文档（真实文档漂移写报告归父侧）。**R2（2026-09-04 · §18.7 D-TS2）步内修订**：标准链 = ③审计={LLM#1} → ④dirty自修(L0,无LLM) → ⑤advisor首审={LLM#2} → ⑥findings自修(L0,无LLM) → 终审=advisor复评={LLM#3}(验证fix——不复跑审计) —— **修正轮默认不重跑审计/复评**（仅触碰上次审计/评审未覆盖文件时回③）；LLM 验证 = 3 次/链。
-6.5 交付 settle → 报告注入 → digest/用户回合消化（既有语义——父侧不再自动 spawn 审计/评审）
-7. 返回时 mergeChildMutations：子代理改动合并进父代理（_mutatedThisRun/_touchedFiles，失效旧 verify/advisor 标记，重置 _advisorRound=0）
-8. 父代理交付验证（对照验收标准：跑测试/读改动文件）；**父侧复核（explore 审计 / advisor code review）保留可选**——默认信任内部协议（报告自述轮次+终态 clean/stalled）；stalled/存疑才复核（2026-09-02 §18 反转原自动审计节点）（2026-08-01 裁定"eng-coder 子代理环境无法真实调用 LLM advisor"随 §18 反转——见 FR4；评审范围仍显式化，不遍历 git diff） **R2（2026-09-04）·父侧核销新口径**：信任 eng-coder 内部 L1/L0 结果（§18 内部协议已保真），**父侧 = L2 全量 `test:full` 1 次（每链终态）——不再复跑 L1**；**L2 失败处置（D-TS11）**：test:full 有 fail → 该链终态 non-clean → 报告用户（未达验收——不静默放行）→ 可转 fix round（同 designId+token）或用户决定。 **R3（2026-09-04）·FR8 调度器口径**：FR8 旧"受影响文件集无交集才可并行 spawn + 有依赖串行"手动预判——与 §20.7 D-PS2（"overlapping domains are queued by the scheduler, never hand-serialized"）**机制级矛盾（评审 🔴 判定——2026-09-04 FR8 矛盾核查实锤）**——FR8 重写为调度器条款（声明 files + dependsOn——冲突交调度器——未声明 files 不参与检测）；旧工程模式 engineering.md 锚句（"并行多 eng-coder 不得编辑同一文件"）随 §20.7 修正轮删除（两端）——FR8 具名锚点同步更新。 9. 父代理 verify（对照验收标准）
-10. 完成：验收标准勾销到设计文档
-``` ### 2.3 机械强制链（拦截闸 vs 推回闸） **设计原则：只拦截，不催促。** 评审由流程提示词在正确节点驱动；每轮结束的机械推回（advisor/verify guard）在工程模式下**一律关闭**（含 opt-in 配置）。拦截闸（写文件门禁、token 校验）保持机械强制——防止错误行为，而非催促正确行为。 | 闸 | 类型 | 机制 | 位置 |
+| **父代理**（顶层，`role` 未定义） | 架构师：需求/设计文档 → 提醒设计就绪 → 用户发起设计评审（传 documents + object）→ 打回呈递 + 用户拍板 → 用户批准 → spawn eng-coder（默认 async）→ 交付验证（父侧 = L2 `test:full` 每链终态 1 次 + 可选的父侧复核）→ 链终核销 consume-design | 拦截型：design token 前写产品代码被拒；提示词约束：不写实现、不发起评审、等批准、验收 |
+| **eng-coder**（子代理，`role="eng-coder"`） | 实现者：按设计实现 → **内部协议闭环**（explore 偏差审计 → 自修 → advisor 复评 → 收敛，≤5 修正轮；完整协议 = 本文件 §2.2 step 6）→ 交付（报告含审计/评审轮次 + 终态 clean/stalled；永不编辑设计文档） | 拦截型：spawn 需 token、写文件需 `_engDesignReviewed`；内部 spawn 仅 explore + 同步（机械门）；审计 ≤6 次（第 7 次机械拒绝 = stalled 信号） |
+
+### 2.2 主流程（Mandatory Flow——10 步）
+
+工程模式任务**不分大小**全走本流程——零裁量（逐字锚见 §2.9 锚#1）。普通需求点先按需求池规则登记攒批（锚#2——工程模式专用；机制见 METHODOLOGY 需求池节），不越池提前启动设计。
+
+1. 写需求/设计文档 `docs/`（三层：需求/设计/测试；按业务板块组织）。任务涉及 UI 时设计文档必须收录与用户达成的每一条 UI/交互决策（布局/流程/控件行为/状态/反馈），未定部分标 open、绝不静默发明。
+2. 父代理呈递设计摘要 + 提醒"设计就绪，可以评审"——**等待，不自行调 advisor**。
+3. 用户发起设计评审：父代理调 `advisor(type="design", documents=[涉及文档清单], object={type,target,status,reason,exclude})`。
+   - 有 🔴 → 呈递发现 + 逐项修复建议 → **用户逐条拍板** → 修改 → 再提醒 → 用户发起复审；持续拒绝（>3 轮）→ 停下向用户报告未决项，不静默循环。
+   - 无 🔴 → advisor 回显 `[DESIGN-TOKEN:…]` + designId（同 scope 复审沿用同 id）→ designId+token 入槽（`_engDesignTokens` Map）。
+4. 用户批准设计——显式 sign-off 才解锁实现；用户对设计内容/形态的选择只是需求确认，不是设计批准（锚#4）。
+5. spawn `eng-coder`：`subagent(role="eng-coder", designId, designToken, task)`——designId 可选（单设计省略）；
+   designToken 经 PARAMETER 传值，**绝不进任务文本**；task 按 METHODOLOGY Task Structure 含 Docs
+   involved → 文件清单 → 验收标准——**默认 async**（返回 {id, running}，交付协议在子代理内部闭环）。
+   spawn 声明 `files` + `dependsOn` 交调度器排序（重叠域 queued 自动启动；同步冲突报错；并发 ≤4——FR8）。
+   机械校验：按 designId 定位 `_engDesignTokens.get(designId) === token`（单设计取唯一槽），不符即
+   throw；通过 → child `_engDesignReviewed = true`（解锁写文件）+ 任务域授权（内部写豁免逐写审批）。
+6. eng-coder **内部交付协议**（子代理内部闭环——完整协议以本文件为准，AGENT-LOOP §8 仅概览）：实现 → 自查透明表 → explore 偏差审计
+   （审计任务书 = 父 spawn 任务书 ∪ 实际 `_touchedFiles` **机械并集**，非自述；对照设计查四类偏差：
+   部分实现/静默简化/文档漂移/超清单改动未报告）→ dirty 自修（修正轮 ≤5，`修正轮 N/5` 提醒）→
+   clean → advisor(type="code") 复评（documents = 设计文档 + 交付文件清单——实际文件为对象，非自述）
+   → findings 自修 → 收敛交付。**R2 现行口径**：标准链 = ③审计（LLM#1）→ ④dirty 自修（L0——无
+   LLM）→ ⑤advisor 首审（LLM#2）→ ⑥findings 自修（L0）→ 终审 = advisor 复评（LLM#3——验证 fix，
+   不复跑审计）——**修正轮默认不重跑审计/复评**（仅触碰上次审计/评审未覆盖文件时回③）；LLM 验证
+   = 3 次/链。eng-coder 永不编辑设计文档（真实文档漂移写报告归父侧）。
+7. 交付 settle → 报告注入 → 父侧消化。子代理改动经 mergeChildMutations 合并进父代理（`_mutatedThisRun`/`_touchedFiles`）——失效旧 verify/advisor 标记、**重置 `_advisorRound=0`**。父侧不再自动 spawn 审计/评审（防双重审计/误用）。
+8. 父代理交付验证：对照验收标准跑测试、读改动文件——**信任 eng-coder 内部验证结果（首次实现 L0+、修正轮 L0——测试分层权威 TESTING.md §1）；父侧 = L2 全量 `test:full` 恰一次（每链终态）——不再复跑 L1**。L2 失败（test:full 有 fail）→ 该链终态 non-clean → 报告用户（未达验收——不静默放行）→ 可转 fix round（同 designId+token，docs FIRST）或用户决定。
+9. 父代理 verify（对照验收标准）。
+10. 完成：验收标准勾销到设计文档；链闭合（verified + clean + 已签入）→ 父侧 `subagent(action="consume-design", designId=…)` 消费槽（§2.6 F1/F3）。
+
+### 2.3 机械强制链（拦截闸 vs 流程驱动）
+
+> **设计原则：只拦截，不催促。** 评审由流程提示词在正确节点驱动；每轮结束的机械推回（advisor/verify guard）在工程模式下**一律关闭**（含 opt-in 配置）。拦截闸（写文件门禁、token 校验）保持机械强制——防止错误行为，而非催促正确行为。
+
+| 闸 | 类型 | 机制 | 位置 |
 |---|---|---|---|
-| **Design gate — token** | 拦截 | spawn 按 designId 定位 `parent._engDesignTokens.get(designId)`，校验 `args.designToken === 槽值` + `validateDesignToken`（格式 + TTL fail-closed——HMAC 已删，见 NFR3），不符即拒；会话内仅一个设计时 designId 可省略（取唯一槽），多个设计时缺 designId → 拒并要求指定 | subagent.mjs |
-| **Design gate — 产品代码变更** | 拦截 | eng-coder `!_engDesignReviewed` → 写/删/改产品代码被拒；父代理 `!_engDesignToken` → 产品代码写/删/改被拒（豁免仅设计产出物；评审 2026-09-02 #8：门禁覆盖全部变更形态，非仅写） | dispatch.mjs |
-| **Code review** | 流程驱动 | **eng-coder 内部协议默认承担（2026-09-02 §18 反转）**：子代理内部 advisor(type="code") 复评（documents = 设计文档 + 交付文件清单——实际文件为对象，非自述）→ findings 自修 → 收敛 ≤5 修正轮；in-child advisor 不消耗父侧 NFR2 预算（AGENT-LOOP.md §18 round4 #5）。父侧复核保留可选（stalled/存疑/用户要求——见 AGENT-LOOP.md §18 D-E6）；mergeChildMutations 合并改动供父侧复核使用 | engineering.md；eng-coder.md |
-| **偏差审计** | 流程驱动 | **eng-coder 内部协议默认承担（2026-09-02 §18 下沉）**：子代理内部 explore 审计（对照设计查验收覆盖/静默简化/文档漂移/超清单改动；审计任务书 = 父 spawn 任务书 ∪ _touchedFiles 机械并集）；dirty → 自修 → 再审计；审计 ≤6 次、第 7 次机械拒绝（stalled 信号）。父侧复核保留可选（2026-08-30 裁定"父代理自动"随之反转——见 AGENT-LOOP.md §18） | engineering.md |
-| **收敛上限** | 拦截 | code review 最多 5 轮；design 不消耗轮次；eng-coder 非 LLM 自检不消耗轮次（上限只约束父代理发起的 code review——评审 2026-09-02 #5 澄清） | advisor/run.mjs | ### 2.4 评审范围（Review Scope）——评审对象由任务定义，不由遍历决定 - **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + METHODOLOGY + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（现机制按 diff 找文档——范围大、不准、与任务无关；上轮误审 VERIFY-DOCONLY.md 的教训）。显式传路径同时解决 untracked 新文档 diff 不可见问题（advisor 直接 read）。——**2026-09-04 增补（评审对象锚——纠结评估 #1 修复——§18.8 对象锚机制已实现但父侧未用——6 次评审全部漏传——评审模型被迫从文档反推目标——"我该评哪个"拉锯之源）**：**评审必传 object 参数**（`{type, target, status, reason, exclude?}`——评审对象由任务定义——§18.8 机制——与 documents 同批传入——**漏传 = 评审目标模糊 = 评审质量下降——与 documents 漏传同级错误**）——对象声明块由 advisor 消息层机械注入（§18.8 T-OA）——评审模型无需反推。code review 同理（object 声明交付文件/验收目标）。
-- **code review**：评审范围 = task 的 Docs involved（设计文档）+ 交付文件清单/验收标准（显式化）；不遍历 git diff 找评审对象——2026-09-02 §18 起默认由 eng-coder 内部协议承担（in-child advisor 复评 documents 同此范围），父侧复核可选。
-- 父代理负责收集涉及文档，在设计评审（documents 参数）与 spawn（Docs involved）两处传入。 ### 2.5 评审时机（Review Timing） - **设计评审（doc review）**：仅由**用户发起**——父代理呈递设计就绪并提醒，用户发话才调 advisor；打回后每轮呈递发现+修复建议、用户逐条拍板再改、再提醒复审（agent 不自行修完重送）。
-- **交付 code review**：流程节点自动、不问用户（2026-09-02 §18 起默认由 **eng-coder 内部协议承担**——in-child advisor 复评 → findings 子代理内自修收敛 → 收敛交付；父侧复核保留可选——stalled/存疑才复核，发现问题回 eng-coder 修复（同 designId+token，任务 = 未收敛点清单）或 minor 直修）。
-- **系统推回**：工程模式下 advisor guard 推回一律关闭（§2.3），如未来启用也只作提示用户之用，由用户发起评审。
-- advisor 失败/中断：停止重试，向用户报告原因。 ### 2.6 Token 生命周期 **2026-09-07：token 链终消费制（用户批评——token 不消费 = 复用洞——父代理跳过审核重用旧 token 实证——round1 评审 1🔴+8 项全采纳已落本节——复审发起权在用户）**： > **触发**：父代理对已批准的 §29 设计做偏差修复——未呈方案未审即直接复用旧 token spawn（fix round 合法套用）——用户两点批评：① token 只存不废——同 slot 可反复 spawn 任意批次（现防线只有提示词【fix round 合法复用】——纯自律无机械门）②【fix round 复用】条款被执行为自我授权通道（跳审核）。用户裁定：**spawn eng-coder 整链完成（首 spawn + 全部中间修复轮走完 → 父端验收核销）后从父端消费掉 designToken**。 **功能点**：
-- **F1（链终消费——机械——评审 #3 调用形态定死）**：subagent 工具加 action: consume-design（参数 designId——单设计会话可省略（FR3 spawn 同款语义）——父侧验收核销时显式调用——实现：读 _engDesignTokens.get(designId) 取槽值 → removeDesignTokenSlot(agent, designId, 槽值)（**定义在 src/token-ttl.mjs:42——subagent-spawn.mjs:16 仅 import——评审 #3 归属更正**）——移除该 slot + 单槽镜像条件清（token-ttl.mjs:61——若指向该 slot）+ _engDesignToken 兼容值清——消费后同 designId 再 spawn = resolveDesignSlot not found 机械拒（subagent-spawn.mjs:111）——**新改动（含新偏差修复）一律新评审新 token**——**未知 designId 与重复消费同款 no-op 提示（幂等——不报错——评审 #3 定死）**。
-- **F2（链中复用不受影响）**：fix round（同 designId——首 spawn 后、验收前）仍可 spawn（slot 未消费）——消费点仅在父侧核销时（非交付 digest 时——否则 fix round 无 slot 可用）——**仅链终态（clean 且核销后）才消费（评审 #9——父侧 L2 非 clean = 不消费（同 stalled））**。
-- **F3（提示词义务句——评审 #4 逐字英文锚 + 插入点）**：engineering.md 核销段补（双端锚——**插入点 = Mandatory Flow step 8 Delivery review 行后**）——逐字锚： > **Chain-terminal token consumption**: after the delivery is verified and the chain closes out, call `subagent` with `action:&apos;consume-design&apos;` for this designId — the slot is consumed; a further spawn for the same designId is mechanically rejected, and any new work (including new deviation fixes) requires a fresh design review and token. Leaving a consumed-out token in the slot is the reuse hole. 修正轮句收紧（:167-175 区现有句改）逐字锚： > Fix rounds reuse the same designToken — but docs FIRST, and only while the chain is open (same designId, before parent-side close-out); once the chain terminal state is reached, every further spawn — including deviation fixes — goes through a fresh design review and token.（评审复审 #11 裁定：合并保留 — but docs FIRST 钩——既有断言字串 prompts.test.mjs:331 保持通过） 锚测试（fail-when-unchanged——双端 prompts.test.mjs）。
-- **F4（边界——评审 #5 用例补）**：stalled 交付（未收敛）不消费——fix round 续用；父侧 L2 非 clean 不消费（同 stalled）；用户放弃该设计 → consume-design 作废（或用户明示）；跨会话恢复的持久化槽同受消费管理（恢复后仍在——直到验收消费）；consume-design 幂等；**多槽隔离（消费 A 不动 B——镜像条件清仅同值）**。 **并入项（评审 #2 更正——误诊修订）**：VS settleAdvisorReview 通过分支拼接真实 designId 后缀**已随 §29 双端实现批（id:18）交付**（VS advisor-async.mjs:302 拼接在——与 CLI :114 同形态；VS 测试 :180/:581/:589 断言在）——父侧此前诊断"VS 漏拼"为误判（把 injectAdvisorResult 未通过分支的正确"不加注记"与 settle 重组混淆）——AGENT-LOOP :3161 偏差注基于误诊待更正。**本轮仅核实 + 补一条假 id 负例断言**（评审员报告正文残留自编 designId 与尾部真值并存——模型可能取正文值——断言 spawn 指引位真值性且正文自编值不落在指引位——若已存在则记录在案零改动）。 **测试**：T1 consume-design 后同 designId spawn → not found（机械拒）——T2 链中 fix round（未消费）spawn → 通过——T3 镜像/兼容值清理——T4 幂等 + 未知 id no-op——T5 提示词锚（双端——两逐字锚 fail-when-unchanged）——T6 VS 假 id 负例断言（核实/补）——**T7 多槽隔离（消费 A → B 仍 spawn 通过）——T8 stalled/未核销槽保留（未消费可 fix round）——T9 跨会话恢复后消费生效（评审 #5）**。 **验收**：AC-1 = T1..T9 绿（双端相关域）——AC-2 = 既有 spawn/token 槽/评审家族零回归——AC-3 = 提示词锚双端在。 **受影响文件（评审 #1 R24a 行数标注——实测 2026-09-07）**：
-| 端 | 文件 | 当前行数（实现批实测） | 实际增量 | 档位 |
-|---|---|---|---|---|
-| CLI | src/agent-tools/subagent.mjs | 268 | +9（schema + consume-design action + 描述/enum/文案六处更新——评审 #7） | ≤300 ✓ |
-| CLI | src/agent-tools/subagent-spawn.mjs | 380 | +38（消费执行器——评审 #7 落位声明：与 spawn 侧 slot 族同域——超估 13 但仍 <500 硬限） | >300 主动审视——<500——函数档未触及 ≥300 单体 |
-| CLI | src/prompts/engineering.md（.md 豁免） | 80 | 锚句 ~4 行 | — |
-| CLI | test/prompts.test.mjs | 1330 | +13（T5 锚） | §18.14 测试域 ≤1500 先例（R3——不升级） |
-| CLI | test/eng-token-gate.test.mjs（评审 #7 补列——token 槽家族域） | 429 | +157（T1/T2/T4/T7/T8/T9——超估 97：6 用例 × ~26 行——<500 硬限内） | ≤300+ 主动审视——实测 429 <500 |
-| CLI | test/subagent-tool.test.mjs | 190 | +43（action 面用例 + 受限变体 loop 扩——超估 28——≤300 ✓） | ≤300 ✓ |
-| VS | src/agent-tools/advisor-async.mjs（评审 #2——假 id 负例断言在测试域——本文件零改动） | 381 | 0 | >300 主动审视——本批不动结构 |
-| VS | test/advisor-async.test.mjs | 671 | +~51（T6 假 id 负例——超估 ~31——>500 既有债（§29 批已报——挂债批）） | >500 既有债（§29 批已报——挂债批） |
-| VS | src/agent-tools/subagent.mjs | 488 | +6（valid actions + consume-design 分流） | >300 主动审视——<500 ✓ |
-| VS | src/agent-tools/subagent-spec.mjs | 60 | +3（五动作 + consume-design 描述/enum/designId） | ≤300 ✓ |
-| VS | src/agent-tools/subagent-spawn-gate.mjs | 138 | +49（消费执行器——VS slot 族居所——镜像重指存活槽不变量） | ≤300 ✓ |
-| VS | src/agent/execute-tools.mjs | 439 | +14（isSubagentConsumeDesignAction——planMode 拒/免审直行/不入批分组） | >300 主动审视——<500 ✓ |
-| VS | src/prompts/engineering.md（.md 豁免） | 80 | 锚句 ~4 行 | — |
-| VS | test/subagent-tool.test.mjs | 1267 | +175（T1/T2/T4/T7/T8 + action 面 + planMode/受限变体/enum 同步——>500 既有债（§29 批已报——挂债批）） | >500 既有债（§29 批已报——挂债批） |
-| VS | test/eng-session.test.mjs | 534 | +26（T9 跨会话恢复消费） | >500 既有债（§29 批已报——挂债批） |
-| VS | test/prompts.test.mjs | 1002 | +12（T5 锚） | ≤1500 测试域（同 CLI prompts.test 先例） |
-| 双端 | docs ENGINEERING-MODE.md（本节 + 遗留口径句（复审 #12 行号更新：:170 §2.8 并发 spawn 行 / :206 T14——旧 :122 消费 bullet 已随改写移除）+ **入站引用更新（复审 #10：FR3 :21"见 §2.6 持久化边界"/T3 :193"见 §2.6 失效/已知缺口"/§2.7 :147"§2.6 持久化边界同步"/2026-09-06 段 :496"§2.6 存活段"——四引用改为现承载节（§5/NFR3 口径）或补指针句**）+ AGENT-LOOP :3161 偏差注更正（复审 #13 落通道调和：核实 id:18 即含拼接还是修复轮补入——按实证写）（.md 豁免） | — | — | — | **dispatch 分类（评审 #7d）**：consume-design = 非只读控制动作——depth-0 + 工程模式限定（与 spawn 同门）——planMode 拒绝——不入批审批分组（无文件写——控制类直行）。 **变更记录**：- 2026-09-07：token 链终消费制立项（用户批评复用洞）——round1 评审 1🔴（R24a 标注缺失——已落表）+8🟡🔵（#2-#9 全处置）——**round2 复审 0🔴 通过（——2🟡+2🔵 全采纳已落本节：#10 入站引用更新纳入受影响行 / #11 docs-FIRST 钩合并裁定（— but docs FIRST 保留——既有断言保持通过）/#12 遗留口径句行号更新 :170/:206（旧 :122 已随改写移除）/#13 :3161 偏差注落通道调和）**——复审发起权在用户。
-### 2.6a 凭证不落文档（2026-09-07 · 用户批评——为什么把 token 和 designId 写到文档上——不留值、不留占位——round1 评审 0🔴 通过 6🟡+4🔵 全采纳已落本节）
+| **Design gate — token** | 拦截 | spawn 按 designId 定位 `_engDesignTokens.get(designId)`，校验 `args.designToken === 槽值` + `validateDesignToken`（格式 + TTL fail-closed——token 无签名，见 NFR3），不符即拒；会话内仅一个设计时 designId 可省略（取唯一槽），多个设计时缺 designId → 拒并要求指定 | subagent 域（CLI/VS 双端） |
+| **Design gate — 产品代码变更** | 拦截 | eng-coder `!_engDesignReviewed` → 写/删/改产品代码被拒；父代理无 design token → 产品代码写/删/改被拒（豁免仅设计产出物）；门禁覆盖全部变更形态（写/删/改），非仅写 | dispatch 域（CLI/VS 双端） |
+| **Code review** | 流程驱动 | **eng-coder 内部协议默认承担**：in-child advisor(type="code") 复评（documents = 设计文档 + 交付文件清单）→ findings 自修 → 收敛 ≤5 修正轮；in-child advisor 不消耗父侧 NFR2 预算；父侧复核保留可选（stalled/存疑/用户要求） | engineering.md、eng-coder.md（双端） |
+| **偏差审计** | 流程驱动 | **eng-coder 内部协议默认承担**：in-child explore 审计（任务书 = 父 spawn 任务书 ∪ `_touchedFiles` 机械并集）；dirty → 自修 → 再审计；审计 ≤6 次、第 7 次机械拒绝 = stalled 信号。父侧复核保留可选 | engineering.md（双端） |
+| **收敛上限** | 拦截 | code review 最多 5 轮（MAX_ADVISOR_ROUNDS——code-only）；design 评审不消耗轮次（cap 豁免）；eng-coder 非 LLM 自检不消耗轮次 | advisor/run.mjs（CLI/VS 双端） |
 
-> **触发**：用户连续两次批评——① 父代理把真实 token/designId 值写进设计文档状态行/变更记录（运行时凭证——落文档 = 死值污染 + 诱导后续评审员「照格式模仿」自编——正是 VS 端三次 designId not found 的诱因之一）② 「脱敏占位」也是废话——**根本不要记录**。
+### 2.4 评审范围（Review Scope）——评审对象由任务定义，不由遍历决定
 
-- **F1（提示词纪律——engineering.md 双端）**：Hard Rules 加一条逐字锚（英文——两端一致）：
+- **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + METHODOLOGY + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（早期"按 diff 找文档"范围大、不准、与任务无关，还会漏掉 untracked 新文档——已废弃；advisor 直接 read 显式路径）。
+- **object 参数必传**：评审调用必须携带对象声明 `{type, target, status, reason, exclude}`——评审对象由任务定义（AGENT-LOOP §12.1 评审对象锚机制），与 documents 同批传入；对象声明块由 advisor 消息层机械注入，评审模型无需从文档反推目标（漏传 = 评审目标模糊 = 与 documents 漏传同级错误——历史 6 次评审漏传教训）。code review 同理（object 声明交付文件/验收目标）。
+- **code review**：评审范围 = task 的 Docs involved（设计文档）+ 交付文件清单/验收标准（显式化）；不遍历 git diff 找评审对象。默认由 eng-coder 内部协议承担（in-child advisor 复评 documents 同此范围）；父侧复核可选。
+- 父代理负责收集涉及文档，在设计评审（documents 参数）与 spawn（Docs involved）两处传入。
+
+### 2.5 评审时机（Review Timing）
+
+- **设计评审（doc review）**：仅由**用户发起**——父代理呈递设计就绪并提醒，用户发话才调 advisor；打回后每轮呈递发现 + 修复建议、用户逐条拍板再改、再提醒复审（agent 不自行修完重送）；持续拒绝时停下报告。
+- **交付 code review**：流程节点自动、不问用户——默认由 **eng-coder 内部协议承担**（in-child advisor 复评 → findings 子代理内自修收敛 → 收敛交付）；父侧复核保留可选——stalled/存疑才复核，发现问题回 eng-coder 修复（同 designId+token——修正轮 docs FIRST）或 minor 直修。
+- **系统推回**：工程模式下 advisor/verify guard 推回一律关闭（§2.3），如未来启用也只作提示用户之用，由用户发起评审。
+- **advisor 失败/中断**：停止重试，向用户报告原因。
+
+### 2.6 Token 生命周期（链终消费制——2026-09-07 定稿）
+
+背景：token 只存不废 = 复用洞（父代理跳过审核、未呈方案即直接复用旧 token spawn 的实证）。裁定：**spawn eng-coder 整链完成（首 spawn + 全部中间修复轮走完 → 父端验收核销）后从父端消费掉 designToken**。
+
+- **F1（链终消费——机械）**：subagent 工具提供 `action: "consume-design"`（参数 designId——单设计会话可省略，
+  spawn 同款语义）——父侧验收核销时显式调用。实现：读 `_engDesignTokens.get(designId)` 取槽值 →
+  `removeDesignTokenSlot`（定义在 token-ttl.mjs——移除该 slot + 单槽镜像条件清（若指向该 slot）+
+  `_engDesignToken` 兼容值清）→ 消费后同 designId 再 spawn = 槽 not found **机械拒**。**新改动
+  （含新偏差修复）一律新评审新 token**。未知 designId 与重复消费 = 同款 no-op 提示（幂等——不报错）。
+- **F2（链中复用不受影响——docs FIRST）**：fix round（同 designId——首 spawn 后、验收前）仍可 spawn（slot 未消费）——消费点仅在父侧核销时（非交付 digest 时——否则 fix round 无 slot 可用）。修正轮的 findings + planned changes 必须先落所属设计文档（deviation record / change note 追加至对应章节）**再** spawn eng-coder；跳档 = 文档漂移，等同静默改动（逐字锚见 §2.9 锚#3）。
+- **F3（提示词义务句——两则英文锚逐字，落点各注；锚测试 fail-when-unchanged）**：
+  - engineering.md Mandatory Flow step 8（Delivery review）行后（双端）——逐字文本：
+
+    > **Chain-terminal token consumption**: after the delivery is verified and the chain closes out,
+    > call `subagent` with `action:'consume-design'` for this designId — the slot is consumed; a
+    > further spawn for the same designId is mechanically rejected, and any new work (including new
+    > deviation fixes) requires a fresh design review and token. Leaving a consumed-out token in the
+    > slot is the reuse hole.
+
+  - engineering.md Work Loop「eng-coder delivery」条目修正轮句的逐字文本（双端）：
+
+    > Fix rounds reuse the same designToken — but docs FIRST, and only while the chain is open (same designId, before parent-side close-out); once the chain terminal state is reached, every further spawn — including deviation fixes — goes through a fresh design review and token.
+
+  - 执行判据（父侧架构师）：**链中不疑 token**（多次 spawn/fix round 复用同一 token 是正常态，非 bug，
+    勿误判失效而重评审）；**链终必清 slot**（delivery verified + clean + 已签入 = 链闭合 → 立即
+    consume——不消费 = slot 堆积，旧 designId 从 session 查不到，表现似"token 丢"实为未清）；
+    **未闭合不消费**（stalled / L2 非 clean / fix round 在途 → 同 token 继续）；**重评审只在真新链
+    需要**（同设计无新范围不重评审；新设计/新范围 → 新设计评审签发新 token，consume 旧槽）。
+- **F4（边界）**：stalled 交付（未收敛）不消费——fix round 续用；父侧 L2 非 clean 不消费（同 stalled）；用户放弃该设计 → consume-design 作废（或用户明示）；跨会话恢复的持久化槽同受消费管理（恢复后仍在——直到验收消费）；consume-design 幂等；**多槽隔离（消费 A 不动 B——镜像条件清仅同值）**。
+
+### 2.7 凭证不落文档（2026-09-07）
+
+背景：真实 token/designId 值曾被写进设计文档状态行/变更记录（运行时凭证落文档 = 死值污染 + 诱导后续评审员"照格式模仿"自编）；"脱敏占位"同样是废话——**根本不要记录**。
+
+- **F1（提示词纪律——engineering.md Hard Rules 逐字锚，双端一致；锚测试 fail-when-unchanged）**：
+
   > **Credential values stay out of documents**: never write token or designId VALUES into design docs, change records, or status lines — credentials are runtime state. A review passing is recorded as "review passed"; nothing else. No values, no placeholders.
-  锚测试（fail-when-unchanged——双端 prompts.test.mjs）。
-- **F2（文档面）**：全仓值记载已清（2026-09-07——docs + prompts 全 md 零残留——父侧文档层动作——已做）。
 
-**测试**：T1 锚断言（双端 engineering.md 含逐字句——fail-when-unchanged）——T2 全仓巡检断言（docs/**/*.md + src/prompts/**/*.md + 根级变更记录（CHANGELOG.md/README.md/AGENTS.md——评审 #4 范围对齐锚句义务面）——**值形态正则钉死（评审 #4）**：`/(token|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i`（uuid 形 hex + 可选冒号 epoch 后缀——参数名不匹配——防误伤）——放慢层 + **slow-gate 归册（评审 #5）**——AC-1 以 test:full 执行为准）。
+- **F2（文档面）**：值记载清理是父侧文档层持续义务（2026-09-07 已清一轮；此后新增值残留由巡检把关并报父侧清理——不背书存量零残留现状，以巡检结果为准）。
+- **巡检（慢层 + slow-gate 归册——以 test:full 执行为准）**：值形态正则钉死：`/(token|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i`（uuid 形 hex + 可选冒号 epoch 后缀——参数名不匹配，防误伤）；巡检范围 = `docs/**/*.md` + `src/prompts/**/*.md` + 根级变更记录（CHANGELOG.md/README.md/AGENTS.md）。
+- **验收**：锚断言绿（双端）+ 巡检绿（test:full）+ 既有 prompts 家族零回归。
 
-**验收**：AC-1 = T1/T2 绿（双端——test:full）——AC-2 = 既有 prompts 家族零回归——AC-3 = 无新增文档漂移（审计核销）。
+### 2.8 错误与恢复（Error & Recovery）
 
-**受影响文件（R24a 行数标注——实测 2026-09-07）**：
-| 端 | 文件 | 当前行数 | 预计增量 | 档位 |
-|---|---|---|---|---|
-| CLI | src/prompts/engineering.md（.md 豁免） | 80 | ≤+4 行 | — |
-| CLI | test/prompts.test.mjs | 1330 | +23（实测 1353——超估 8——实现批回填） | >500 既有债——挂债批 |
-| VS | src/prompts/engineering.md（.md 豁免） | 80 | ≤+4 行 | — |
-| VS | test/prompts.test.mjs | 1002 | +24（实测 1026——超估 9——实现批回填） | >500 既有债——挂债批 |
-| 双端 | docs ENGINEERING-MODE.md（本节）（.md 豁免） | — | — | — |
-
-**变更记录**：- 2026-09-07：凭证不落文档立项（用户批评——不留值不留占位）——round1 评审 0🔴 通过（6🟡+4🔵 全采纳已落本节）——评审发起权在用户。
-- 2026-09-07 实现：F1 双端 Hard Rules 逐字锚 + T1 双端锚断言 + T2 双端全仓巡检（慢层）落地——实现发现：CLI CHANGELOG.md:115 含 `Token …` 打码展示样例（值形态残留——regex 命中）待父侧清理（父侧文件——实现者不碰）——T2 在 test:full 红至清理——另记：fast 层既有 6（CLI）/9（VS）断言红为上一批 engineering.md 折行折叠遗留（非本批引入——本批零新增失败——随上一批收口）。
-
-### 2.7 受影响文件
-| 文件 | 动作 | 用途 |
-|---|---|---|
-| `src/agent/setup.mjs` | MODIFY | 提示词独立组装（工程模式不注入 main/discipline）；METHODOLOGY 缺失降级为工程模板+警告 |
-| `src/agent/dispatch.mjs` | MODIFY | 父代理门禁（isProductCode）；未知路径保守拦截——已实现（「语义一致化 4 项」已闭环） |
-| `src/agent-tools/advisor.mjs` | MODIFY | advisor 工具增加 documents 参数；design 通过时同步 _engDesignToken（存入 _engDesignTokens Map——评审 2026-09-02 #3 修正；_engDesignReviewed 为 spawn 时子代理侧标志，非此处）；**2026-09-01**：评审调用生成随机 designId（**2026-09-07 §29.1 F2h 修订：同 scope 实例恒定——复审沿用同 id——旧 token 存活至 TTL 保留**），**通过结果携带 designId 回显给父代理**（评审 #1——多设计首 spawn 的定向依据），通过时 token 存入 `_engDesignTokens` Map（多设计并存）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL）；**2026-09-06**：防伪层删除同步——HMAC 签名/验签/默认密钥/启动警告全部移除（token 为无签名流程凭证——见 2026-09-06 段） |
-| `src/advisor/messages.mjs` | MODIFY | design 分支按 documents 清单构建评审输入（替代 git diff 收集） |
-| `src/agent-tools/subagent.mjs` | MODIFY | mergeChildMutations（已有）；**2026-09-01**：spawn eng-coder 增 `designId` 参数（schema，可选），token 校验改按 `_engDesignTokens` 槽定位——单设计省略 designId 取唯一槽、多设计缺 designId 拒并要求指定、给定 designId 无匹配槽明确报错；修正轮 spawn 回传 designId |
-| 两端 `src/agent-tools/advisor.mjs` + `subagent.mjs` + `src/prompts/engineering.md` + 测试 | **VS Code 端镜像同步（评审 #5）**——engineering.md byte-identical 硬约束 + `_engDesignTokens` 两端同构；VS Code 测试同步加 designId/隔离断言；**VS Code 端 `advisor.mjs` paths 描述同步 CLI（"never inspects diffs"——2026-08-25 documents 改造时 VS Code 漏改，审计 #4 补记）**——**指针（2026-09-04 §18.11）：byte-identical 约束已取消（见 §18.11）——"镜像同步"行指历史批行为——当前一致性 = 设计锚 + 评审/审计** |
-| 两端 `run-helpers.mjs`（VS Code `agentState()`）/ `session.mjs`（CLI slot 持久化）/ `panel-session.mjs`（VS Code 往返） | **多槽序列化（2026-09-01 审计 #1 修复）**——`_engDesignTokens` Map 随 slot 持久化（VS Code 跨轮 agent 重建场景的必要补齐）；NFR3/§5 持久化口径同步。序列化格式 `{ [designId]: token }`（JSON 安全），恢复 `new Map(Object.entries)`；旧 slot 无字段 → 不设 Map（fail-closed TTL 兜底过期 token）。**修复轮补记实际触点**：VS Code 恢复链 `panel-chat.mjs`（engState 携带）→ `setup.mjs`（恢复 Map）；清理对称（**审计修复 #2**）——两端 `agent-tools/eng.mjs`（exit + off→on）+ CLI `tui/cmd-eng.mjs` + `session.mjs` `resetSessionState` 同步 `_engDesignTokens = new Map()`，resolveDesignSlot 的"有 Map 无镜像"防护降级为防御冗余 |
-| 两端 `setup-reminders.mjs`（VS Code）/ `setup.mjs`（CLI）+ `run-helpers.mjs`（VS Code `loadEngineeringPrompt`，评审 2026-09-02 #3 补全）/ METHODOLOGY 缺失警告 | MODIFY | 2026-09-02：警告含模板**绝对路径** + **模板正文**注入（D-M1/D-M2，§7 变更段）——模板可达性修复（CLI 端已实现 2026-09-02，D-AC 勾销见 §7 状态行；VS Code 端并行任务进行中） |
-| 两端 `CHANGELOG.md` | 变更记录（下一版本号——0.12.54/0.8.9 已发布，评审 #3 补记） |
-| `src/prompts/engineering.md` | MODIFY | Delivery review 一步：交付验证 + 可选的父侧复核（原"主代理发起 code review"随 §18 反转——2026-09-02，见变更记录）；Work Loop 交付评审状态同步；**首次交付偏差审计 + eng-coder 修正轮（2026-08-30，见变更记录——§18 起由子代理内部协议承担，父侧复核可选）**；**2026-09-01**：注入"Parallelize aggressively"并行化纪律（§14 条款——顶层工程模式 system prompt 不加载 system.md，该纪律须在 engineering.md 单独出现方生效）+ 多任务并行/文件集交集禁并行/≤4 并发/并行 spawn 调用形态——**as-of 注（2026-09-04）**："文件集交集禁并行"句已随 §20.7 修正轮删除（两端——替代为调度器条款——见 AGENT-LOOP §20.7 D-PS1/D-PS2）——本条为 2026-09-01 时点记录；**2026-09-02 §18**：async 交付叙述 + 内部协议口径（防双重审计/误用）；**2026-09-03 R1**：Mandatory Flow step 1 完成点注入需求池三规则（Pool routing / Threshold reminder / Fast lane 三分句逐字锚——见 §7 变更记录） |
-| `src/prompts/eng-coder.md` | MODIFY | 交付前自评纪律；按 Docs involved 自查 |
-| `src/prompts/discipline.md` | 不动 | 普通模式专属（解耦原则） |
-| `src/prompts/main.md` | 不动 | 普通模式专属（解耦原则） |
-| `test/agent.test.mjs` | MODIFY | 门禁/guard 测试；doc review 范围测试；**2026-09-01**：+designId 多槽 spawn 校验（T15/T16/T17）；engineering.md 并行化条款断言 |
-| `test/advisor.test.mjs` | MODIFY | design 评审输入构建测试；**2026-09-01**：+多设计 token 并存、失败不波及其他槽隔离测试、**advisor 通过结果含 designId 断言（评审 #1）**——**as-of（2026-09-07）**：本行为 2026-09-01 时点记录；test/advisor.test.mjs 已随 §18.14 拆分为 advisor-review/advisor-eng/advisor-async.test.mjs（见 ADVISOR-CONVERGENCE §8） |
-| `docs/TODO.md` | MODIFY | 待办统一维护（已有） |
-| **§18 工程交付协议（2026-09-02）**：`src/agent-tools/subagent.mjs` + `src/agent/setup.mjs` + `src/agent/spawn-child.mjs` + `src/agent/dispatch.mjs` + `src/prompts/engineering-sub.md` + `test/agent.test.mjs` + `test/suspension.test.mjs` | MODIFY | eng-coder 默认 async + 内部自审计闭环——机制与受影响文件权威源 = AGENT-LOOP.md §18；本文档同批同步 FR4/FR5/§2.1/§2.2/§2.3/§2.4 code review 归属句/§2.5 交付评审时机/AC5/AC6/AC9/用例表（见 §7 变更记录 2026-09-02 条） | | **§18.8/§18.10 实现批（2026-09-04——对象锚+判定铁律——补登——CLI 交付记录见 AGENT-LOOP §18.10.3）**：`src/agent-tools/advisor.mjs`（+object 参数/schema/解析/透传）、`src/advisor.mjs`（D-OA1 透传——补登）、`src/advisor/messages.mjs`（对象声明块构造/注入——round1+round2+）、`src/advisor/run.mjs`（+第 7 参 object/注入）、`src/prompts/advisor-design/round1/round2/round3.md`（R1-R7 铁律块+一致性句——4 模板字节一致）、`src/prompts/engineering-sub.md`（机制三句 + **:9/:19 旧硬句同步 A-裁定——修正轮**）、`src/prompts/eng-coder.md`（A-裁定句——两端同步）、两端 `test/advisor.test.mjs` + `test/agent.test.mjs`（T-OA/T-10 断言） | MODIFY | 对象锚+判定铁律——两端镜像 byte-identical（除 eng-coder.md 镜像漂移——修正轮同步）——**指针（2026-09-04 §18.11）：byte-identical 约束已取消——见 §18.11——本条为 §18.8/§18.10 批时点记录** |
-### 2.8 错误与恢复
-（Error & Recovery） | 场景 | 行为 |
+| 场景 | 行为 |
 |---|---|
-| eng-coder 中途失败/中断 | 父代理可重新 spawn（同一 token，token 未失效）；或在报告中说明 |
-| 实现中设计变更（用户反馈） | eng-coder 停下报告（eng-coder.md）；父代理更新设计文档 → 请求用户重新确认 → 必要时重新评审 |
+| eng-coder 中途失败/中断 | 父代理可重新 spawn（同一 token——链中未消费）；或在报告中说明 |
+| 实现中设计变更（用户反馈） | eng-coder 停下报告；父代理更新设计文档 → 请求用户重新确认 → 必要时重新评审 |
 | advisor 工具失败/中断 | 停止重试，向用户报告（评审时机纪律） |
 | merge 冲突/异常 | mergeChildMutations 为纯内存操作，冲突不可能（单线程）；异常向上抛，父代理见错误结果 |
-| 并发 spawn（同一或不同 designId） | 允许（token 不消费（链终前）——链终验收核销时父侧 consume-design 消费，见 §2.6）；各 eng-coder 携自己 designId+token 独立实现，父代理分别验收（2026-09-01 多设计并行） |
-| 会话恢复/重进 | token 随 slot 持久化（TTL 7 天 fail-closed）——重进 TTL 内恢复；过期/换槽才需重新设计评审（评审 2026-09-02 #1） |
+| 并发 spawn（同一或不同 designId） | 允许（token 链终前不消费——链终验收核销时父侧 consume-design 消费，见 §2.6）；各 eng-coder 携自己 designId+token 独立实现，父代理分别验收 |
+| 会话恢复/重进 | token 随 slot 持久化（TTL 7 天 fail-closed）——重进 TTL 内恢复；过期/换槽才需重新设计评审；持久化槽同受链终消费管理（§2.6 F4） |
+
+### 2.9 提示词锚清单（逐字契约——双端一致）
+
+下列逐字锚是 engineering.md（CLI/VS Code 双端同一注入文本）的落地契约。**字节源 = prompts 落地文本本身（本文件不收录压缩改写版本）**；锚测试均为 fail-when-unchanged 断言（双端测试域 + 既有 prompts 对比对家族兜底）。机制语义权威源：需求池 = METHODOLOGY 需求池节；调度器 = AGENT-LOOP §10；评审对象锚 = AGENT-LOOP §12.1；内部协议完整文本 = 本文件 §2.2 step 6（AGENT-LOOP §8 仅概览）。
+
+- **锚#1 零裁量**（落点：engineering.md「Mandatory Flow (every task, no skipping)」标题下、step 1 之前——双端；顶层工程模式生效，main.md 普通模式零触碰）：
+
+  > Task sizing is NOT your call — every user request in this mode runs the full Mandatory Flow
+  > regardless of size. "The task is too small / it is just a tweak" is never a reason to skip or
+  > compress a step, and no change is exempt from being recorded in the design docs. If you find
+  > yourself weighing whether the flow applies, the answer is always the full flow — the user's
+  > decision to be in engineering mode was the sizing decision.
+
+- **锚#2 需求池三规则**（落点：engineering.md step 1「Requirement pool (engineering mode only)」子条目——双端；镜像：methodology-template.md「Requirement-Pool」节——模板对。机制语义（攒批/阈值提醒/快车道/边界）见 METHODOLOGY 需求池节）：
+
+  > 1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
+  > 2. **Threshold reminder** — "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
+  > 3. **Fast lane** — "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
+
+- **锚#3 修正轮 token 复用 + docs FIRST**：修正轮逐字锚见 §2.6 F3 引文（Fix rounds reuse the same designToken — but docs FIRST…）。配套指针句（落点：engineering.md step 7 句尾——双端）：
+
+  > Fix-round re-spawns are docs FIRST too — the deviation record / change note lands in the owning design doc BEFORE the eng-coder spawn (full rule: the eng-coder delivery bullet under Then handle the message).
+
+  语义（engineering.md Work Loop eng-coder delivery 条目——修正轮 spawn 指令后附 docs FIRST 条款段）：修正轮 findings + planned changes 必须先落档再 spawn；"代码变更都必须落文档"对修正轮无豁免——跳档 = 文档漂移，等同静默改动；同设计修正轮是唯一合法 token 复用——超出设计文件清单 = 新任务，需自有流程与新 token。
+
+- **锚#4 用户拍板 ≠ 设计批准**（落点：engineering.md Work Loop「eng-coder delivery」条目 token 边界句后全规则段——双端；step 5「User sign-off」处指针句同义）：
+
+  > A user ruling on design CONTENT (form/shape/option choice) is requirements confirmation — NOT
+  > design approval. New scope — including extensions to an already-approved design — still runs the
+  > full review chain: design ready → user-initiated advisor review → user approval → implementation.
+  > Approving a form ("B", "可以") never shortcuts past review. Only the explicit sign-off after the
+  > advisor review unlocks eng-coder.
+
+  step 5 指针句（引文同上规则，逐字）：
+
+  > A user ruling on design form/shape/option choice is NOT this sign-off — scope extensions (incl. extensions to an already-approved design) still run the full review chain (full rule: the eng-coder delivery bullet under Then handle the message).
+
+- **锚#5 链终消费**：逐字锚见 §2.6 F3 引文（Chain-terminal token consumption…）——落点 engineering.md Mandatory Flow step 8（Delivery review）行后——双端。
+- **锚#6 凭证不落文档**：逐字锚见 §2.7 F1 引文（Credential values stay out of documents…）——落点 engineering.md Hard Rules——双端；配套全仓巡检正则与范围见 §2.7。
+- **锚#7 调度器句**（字节源 = engineering.md 调度器条款段——双端；调度器机制权威 = AGENT-LOOP §10；本文件 FR8 行引文）："overlapping domains are queued by the scheduler, never hand-serialized"。
+
+### 2.10 受影响文件（折叠注）
+
+本文档对应机制的实现早已分批落地（advisor/subagent/dispatch/agent 各层 + 双端 prompts + 测试域）。逐批受影响文件表与 R24a 行数标注为历史批记录（as-of 快照），已随格式债批折叠——不得当契约引用；模块现状以源码目录与 ARCHITECTURE.md 为准，锚落点见 §2.9 各行，行号型引用一律作废（符号锚为准，如 `removeDesignTokenSlot` 于 token-ttl.mjs）。
+
 ## 3. 测试（Testing）
+
 ### 3.1 验收标准（Acceptance Criteria）
+
 - AC1: 工程模式下，无 design token 时写产品代码（含 `src/prompts/*.md`）被 dispatch 拒绝；写 `docs/**` 与根级文档放行。
 - AC2: spawn eng-coder 时 token 不匹配即 throw；匹配则 `_engDesignReviewed = true` 解锁写文件。
 - AC3: 工程模式顶层 system prompt 不含 main.md/discipline.md 条款（解耦后）。
 - AC4: doc review 按显式 documents 清单评审——清单外文档（如无关的 git diff 变更）不被评审。
-- AC5: eng-coder 交付前自查（验收标准/文件范围/测试）；**2026-09-02 §18 修订**：自查扩展为**内部协议闭环**——explore 偏差审计 + advisor code review 复评在子代理内部自动运行（默认承担，无需用户在场），eng-coder 返回的交付 = 已审计已评审的最终交付（报告含审计/评审轮次与终态 clean/stalled）；父侧复核保留可选。
-- AC6: 评审时机纪律生效——设计评审仅用户发起时调用；无用户发起/交付流程节点时，父代理不调 advisor（§18 起交付评审节点 = eng-coder 内部协议自动承担，父侧 advisor 仅可选复核时调用）。
-- AC7: `npm test`（fast 层，slow 门控跳过）与 `npm run test:full`（含 slow 层——session/token 持久化区域按项目测试策略走 full）均通过（平台无关路径写法）。
-- AC8（2026-09-01）: 多设计并行——各 eng-coder 凭自己 designId+token 独立通过，后签发**不覆盖**前签发；单值覆盖缺口消除；某 design 复审失败 → 该次评审不入槽（同 scope 实例恒定——复审沿用同 id——旧 token 存活至 TTL 保留）、**既有槽不清**（旧 token 存活至 TTL，方案 ②）、其他设计槽不受波及；engineering.md 顶层注入并行化纪律（§14 条款在工程模式生效，断言可指认）。
-- AC9（2026-09-01，评审 round3 #1；**2026-09-02 §18 修订**）: 首次交付偏差审计随 §18 **下沉 eng-coder 内部协议**（§2.2 step 6——自动节点无需用户发起不变：内部 explore 审计 + dirty 自修在子代理内部自动闭环，不依赖用户在场）；父侧复核保留可选（stalled/存疑才复核）。 ### 3.2 用例表 | # | 场景 | 输入 | 预期输出 | 映射 |
+- AC5: eng-coder 交付前自查扩展为**内部协议闭环**——explore 偏差审计 + advisor code review 复评在子代理内部自动运行（默认承担，无需用户在场）；交付报告含审计/评审轮次与终态 clean/stalled；父侧复核保留可选。
+- AC6: 评审时机纪律生效——设计评审仅用户发起时调用；无用户发起/交付流程节点时，父代理不调 advisor（交付评审节点 = eng-coder 内部协议自动承担，父侧 advisor 仅可选复核时调用）。
+- AC7: `npm test`（fast 层，slow 门控跳过）与 `npm run test:full`（含 slow 层）均通过（平台无关路径写法）。
+- AC8: 多设计并行——各 eng-coder 凭自己 designId+token 独立通过，后签发**不覆盖**前签发；某 design 复审失败 → 该次评审不入槽（同 scope 复审沿用同 id）、既有槽不清（旧 token 存活至 TTL）、其他设计槽不受波及；顶层 engineering.md 注入并行化纪律（断言可指认）。
+- AC9: 首次交付偏差审计下沉 eng-coder 内部协议（自动节点、无需用户发起不变——内部 explore 审计 + dirty 自修在子代理内部闭环，不依赖用户在场）；父侧复核保留可选（stalled/存疑才复核）。
+
+### 3.2 用例表
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
 |---|---|---|---|---|
 | T1 | 正常：设计→token→spawn | 设计评审通过（无 🔴）→ spawn 带正确 token | token 签发；eng-coder 解锁写文件并完成实现 | FR3 |
 | T2 | 错误：token 不匹配 | spawn 带错误/缺失 token | throw "Invalid or missing design token" | FR3 |
-| T3 | 边界：复审失败（既有通过后的复审） | 复审含 🔴 | token 不签发（同 scope 复审沿用同 id——既有槽原样）；既有 token **存活至 TTL**（评审 #2 方案 ②——与 T17 隔离语义互补，见 NFR3/§6 已知取舍——§29.1 F2h 口径） | FR3/NFR3 |
+| T3 | 边界：复审失败（既有通过后的复审） | 复审含 🔴 | token 不签发（同 scope 复审沿用同 id——既有槽原样）；既有 token **存活至 TTL** | FR3/NFR3 |
 | T4 | 错误：设计前写代码 | engineering=true、无 token、写 src/app.mjs | dispatch 拒绝（"design review required"） | FR1 |
-| T4b | 变更形态全覆盖（评审 2026-09-02 #8 补） | 无 token 删除/移动产品代码文件 | 同写路径被拒（门禁覆盖写/删/改全部变更形态） | FR1 |
+| T4b | 变更形态全覆盖 | 无 token 删除/移动产品代码文件 | 同写路径被拒（门禁覆盖写/删/改全部变更形态） | FR1 |
 | T5 | 边界：设计前写 src/prompts/*.md | 同上，写 src/prompts/x.md | 拒绝（isProductCode） | FR1 |
 | T6 | 边界：设计前写 docs/ 文档 | 同上，写 docs/design/x.md | 放行 | FR1 |
 | T7 | 错误：advisor 失败 | advisor 调用 aborted | 停止重试，报告中说明 | FR5 |
-| T8 | 边界：resume/重进后 token 恢复（TTL 内） | 会话恢复后 spawn（同 slot、TTL 内） | token 校验通过，eng-coder 解锁写文件——不再重新评审（评审 2026-09-02 #1 重写） | FR3 |
-| T8b | 边界：角色互斥（评审 2026-09-02 #6 补） | 工程模式 spawn `role="coder"` | 拒绝（schema 枚举 + 运行期硬门禁） | NFR4 |
-| T9 | 正常：eng-coder 内部复评（2026-09-02 §18 反转） | eng-coder 内部协议 advisor(type=code) 复评（documents=设计文档+交付清单——实际文件为对象，非自述） | 复评通过（或 findings 自修收敛）→ 交付报告含轮次 + clean/stalled；父侧复核可选 | FR4 |
+| T8 | 边界：resume/重进后 token 恢复（TTL 内） | 会话恢复后 spawn（同 slot、TTL 内） | token 校验通过，eng-coder 解锁写文件——不再重新评审 | FR3 |
+| T8b | 边界：角色互斥 | 工程模式 spawn `role="coder"` | 拒绝（schema 枚举 + 运行期硬门禁） | NFR4 |
+| T9 | 正常：eng-coder 内部复评 | eng-coder 内部协议 advisor(type=code) 复评（documents=设计文档+交付清单） | 复评通过（或 findings 自修收敛）→ 交付报告含轮次 + clean/stalled；父侧复核可选 | FR4 |
 | T10 | 边界：评审范围显式化 | design review 传 documents=[X.md]，diff 含无关文档 Y.md | 只评审 X.md，Y.md 不被提及 | FR2 |
-| T11 | 边界：范围外写文件 | eng-coder 试图写文件清单外路径 | **A 裁定（2026-09-04）**：**允许**——交付时逐项报告（说明原因）；审计"out-of-list"判据 = 改了且未报告=偏差（静默越权）；已报告=透明可接受（**落点 = eng-coder.md 纪律 + engineering-sub.md 三句（§18.10 D-10.2 ②——两文件均含——互通**）；机械层无此检查——记录为纪律保障） | FR6 |
-| T12 | 边界：收敛上限 | 工程模式下 code review 第 6 次调用 | 被 MAX_ADVISOR_ROUNDS 拒绝（code-only——design 豁免——详见 ADVISOR-CONVERGENCE.md §8，覆盖于 test/advisor-review.test.mjs cap 用例 + advisor-async.test.mjs） | NFR2 |
-| T13 | 边界：评审时机纪律 | 设计文档就绪但用户未发起时 | 父代理不调 advisor、只提醒就绪（提示词行为；验证 engineering.md 含该纪律，机械层无自动触发——记录为纪律保障） | FR5 |
-| T14 | 边界：同一 token 多次 spawn | 同一设计 token 连续 spawn 两个 eng-coder | 两者均成功（token 不消费（链终前）——链终核销时 consume-design 消费，见 §2.6）；各自独立实现 | FR3 |
-| T15 | 正常：双设计并行 spawn | 两个 design review 分别通过（各自 designId+token，**advisor 结果回显 designId**——评审 #1）→ 并行 spawn eng-coder 各带自己 designId+token | 两者均通过、互不覆盖（单值槽时代后者会拒前者 token） | FR3/FR8 |
-| T16 | 边界：designId 缺失+多设计 | 会话内有两个不同 designId，spawn 只带 designToken 不带 designId | throw 要求指定 designId（不误取任一槽） | FR3 |
-| T17 | 边界：评审失效隔离 | 某 design 的复审失败（含 🔴） | 复审不签发——既有槽原样（同 scope 复审沿用同 id）；**其他并行设计槽不受波及、token 仍有效**（评审 #2 方案 ②：旧 token 存活至 TTL——§29.1 F2h 口径） | FR8/NFR3 |
-| T18 | 边界：并行文件集交集——调度器口径（2026-09-04 R3 改写——supersede 旧“提示串行/停”语义——见 FR8 调度器条款 + §2.2 step8 R3 注） | 两任务“受影响文件”有交集时父代理 spawn（声明 files） | 任务入 queued/waiting-deps 自动排队——冲突清后自动启动（不提示串行/不手动停——调度器语义——与 AGENT-LOOP §20.3 T-SD2/T-SD13 同构）；未声明 files → 无冲突检测（D-PS1 接受 false-negative——已记录）；sync spawn 冲突 → 明确错误（T-SD13） | FR8 |
-| T19 | 正常：内部偏差审计闭环（2026-09-02 §18 下沉原父侧审计节点；**R2 2026-09-04 修订 D-TS2**） | eng-coder 交付前 → 内部 explore 审计（自动，无用户发起）→ dirty 自修（L0）→ advisor 首审 → findings 自修（L0）→ 终审=advisor 复评（LLM#3——验证 fix，不复跑审计）——**修正轮默认不重跑审计/复评**（仅触碰上次未覆盖文件 → 回③重审计）；LLM 验证 = 3 次/链 | 收敛 → 交付（报告含审计/评审轮次 + clean/stalled）；5 轮未收敛或审计节点重试 1 次仍败 → stalled 报告（不静默） | FR4/AC9 |（FR7 待办管理为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。） ## 4. 边界（信任模型） - **eng-coder 拦截型机械约束**：token 校验、写文件门禁。质量靠 eng-coder.md 自查 + 交付前自评。
+| T11 | 边界：范围外写文件 | eng-coder 试图写文件清单外路径 | **A 裁定**：允许——交付时逐项报告（说明原因）；审计"out-of-list"判据 = 改了且未报告 = 偏差（静默越权）；已报告 = 透明可接受（纪律保障，机械层无此检查） | FR6 |
+| T12 | 边界：收敛上限 | 工程模式下 code review 第 6 次调用 | 被 MAX_ADVISOR_ROUNDS 拒绝（code-only——design 评审 cap 豁免，见 ADVISOR-CONVERGENCE.md） | NFR2 |
+| T13 | 边界：评审时机纪律 | 设计文档就绪但用户未发起时 | 父代理不调 advisor、只提醒就绪（提示词行为；机械层无自动触发——纪律保障） | FR5 |
+| T14 | 边界：同一 token 多次 spawn | 同一设计 token 连续 spawn 两个 eng-coder | 两者均成功（token 链终前不消费——链终核销时 consume-design 消费）；各自独立实现 | FR3 |
+| T15 | 正常：双设计并行 spawn | 两个 design review 分别通过（各自 designId+token）→ 并行 spawn eng-coder 各带自己 designId+token | 两者均通过、互不覆盖（单值槽时代后者会拒前者 token） | FR3/FR8 |
+| T16 | 边界：designId 缺失 + 多设计 | 会话内有两个不同 designId，spawn 只带 designToken 不带 designId | throw 要求指定 designId（不误取任一槽） | FR3 |
+| T17 | 边界：评审失效隔离 | 某 design 的复审失败（含 🔴） | 复审不签发——既有槽原样；**其他并行设计槽不受波及、token 仍有效** | FR8/NFR3 |
+| T18 | 边界：并行文件交集——调度器口径 | 两任务写域有交集时父代理 spawn（声明 files） | 重叠任务入 queued 自动排队——冲突清后自动启动（不提示串行/不手动停——调度器语义）；未声明 files → 无冲突检测；同步 spawn 冲突 → 明确错误 | FR8 |
+| T19 | 正常：内部偏差审计闭环（R2 现行口径） | eng-coder 交付前 → 内部 explore 审计 → dirty 自修（L0）→ advisor 首审（L0 自修）→ 终审 = advisor 复评（LLM#3——验证 fix，不复跑审计）——修正轮默认不重跑审计/复评 | 收敛 → 交付（报告含审计/评审轮次 + clean/stalled）；5 轮未收敛或审计节点重试仍败 → stalled 报告（不静默） | FR4/AC9 |
+| T20 | 正常：链终消费 | 链闭合（delivery verified + clean + 已签入）后父侧 consume-design（designId 参数） | slot 消费——同 designId 再 spawn = 机械拒；新工作（含新偏差修复）需新评审新 token | FR3/F1 |
+| T21 | 边界：链中 fix round 复用 | 首 spawn 后、验收前（未消费）——修正轮先落档（docs FIRST）再以同 designId+token spawn | 通过（slot 未消费）；消费点仅在父侧核销时 | F2/F3 |
+| T22 | 边界：未闭合不消费 | stalled 交付，或父侧 L2 test:full 有 fail | 不消费——同 token 续 fix round | F2/F4 |
+| T23 | 边界：幂等 + 多槽隔离 | 未知 designId / 重复 consume；消费 A 时 B 在槽 | 未知 id 与重复消费 = no-op 提示（不报错）；消费 A 不动 B（镜像条件清仅同值） | F1/F4 |
+| T24 | 边界：凭证不落文档巡检（慢层） | 全仓 md（docs/** + src/prompts/** + 根级变更记录）扫描值形态正则 `/(token\|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i` | 零命中（参数名不匹配防误伤） | §2.7 F1/F2 |
+
+注：FR7（待办管理）为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。
+
+## 4. 边界（信任模型）
+
+- **eng-coder 拦截型机械约束**：token 校验、写文件门禁。质量靠 eng-coder.md 自查 + 交付前自评。
 - **父代理拦截型机械约束**：design token 前写产品代码被拒。其余（等批准、不写实现、验收）靠 engineering.md 提示词。
-- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 METHODOLOGY/README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) || !isDocFile(p)`（一致化已实现——「语义一致化 4 项」已闭环）。
-- METHODOLOGY.md 缺失：工程模板 + 警告（不再 fallback discipline）；警告含模板**绝对路径**与**模板正文**（2026-09-02：模板可达性修复——模型可直接 read 或参考正文，不再手写）。 ## 5. 配置与会话恢复 **engineering 与 advisor.guard 都是会话级（2026-08-29 重构）**——事实源是当前会话槽位文件（`~/.thincoder/sessions/{hash}.json.N` 的 `engineering` 字段与 `advisor.guard`），config.json 的 `agent.engineering` / `agent.advisor.guard` 降级为 **CLI 兼容/可见性镜像**，不再是事实源。 背景（跨端污染 bug）：旧设计里 engineering 只存 config.json 全局，而 CLI `/eng` 与 VS Code 设置面板都写它 → 两端互相翻转对方的工程模式（"VS Code 工程模式下模型仍委托 role='coder'"）。会话级化后两端会话各自独立，互不影响。 - 读取优先级（两端一致）：**slot 显式值 > config.json 兜底 > false**。slot 无字段（2026-08-29 前的旧槽位）→ 回退 config.json（兼容锁定，见 `test/session-eng-advisor.test.mjs` / vscode `test/eng-session.test.mjs`）；slot 显式 `false` ≠ 未设置，压过 config 的 `true`。
-- 写入路径（全部双写：slot 先、config 镜像后，slot 写失败不阻断 config 写）： - CLI `/eng`（`src/tui/cmd-eng.mjs` `persistEngineering`）；CLI `eng(enter/exit)` 工具翻转活状态，`saveSession` 每 turn 落盘往返（`session.mjs` 显式字段清单含 `engineering` / `advisor`） - CLI `/advisor` guard 切换（`src/tui/cmd-advisor.mjs` `persistGuard`——仅 guard 双写，model/thinking/effort 仍 config-scoped） - VS Code：设置面板 ENG/GUARD toggle（`panel-messages.mjs` setSlotEngineering/setSlotAdvisorGuard + config 镜像）；`eng` 工具经 `engPersist: { cwd, slot }` 通道（top-level run 专属，subagent 不携带）；`agentState()`（run-helpers.mjs）随每轮 `saveLines` 把 live engineering/advisorGuard 带入槽位
-- agent 初值链（CLI）：`assembleAgent()` 从 config.json 播种 → `bin/thincoder.mjs` 启动 `applySession` 时 slot 值覆盖（TUI 单 agent 长驻，无 per-submit 重建）；VS Code：`setupAgentRun` 每轮从 `engState`（panel-chat 从槽位读）注入。
-- resume 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；design token **随 slot 持久化**（TTL 7 天 fail-closed，重进 TTL 内恢复；过期重新评审——评审 2026-09-02 #1 统一口径）。
-- 角色互斥：工程模式禁用 `coder`，普通模式禁用 `eng-coder`（schema 枚举 + 运行期硬门禁双保险）。 ## 6. 已知取舍（评审记录） 1. 父代理无全面写文件门禁——必须能写设计产出物；越权靠提示词（拦截型门禁覆盖产品代码）。
-2. token 跨任务存活——保守缺口，已接受。
-3. token 持久化边界（2026-09-01 评审更正）——单值自 08-29 起已随 slot 持久化、多槽同构序列化；TTL fail-closed 兜底，过期重评。
+- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 METHODOLOGY/README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（一致化已实现）。
+- **METHODOLOGY.md 缺失降级（D-M1/D-M2——已实现）**：工程模板 + 警告（不再 fallback discipline）；缺失警告含模板**运行时解析的绝对路径**（D-M1——CLI setup.mjs 与 VS Code 对应实现用 `dirname(import.meta.url)` 解析）与**模板完整正文**（D-M2——模型可直接 read 或参考正文，不再手写）；引导"与用户确认是否创建 METHODOLOGY.md"，询问 + 写文件由模型主导，系统不做自动脚手架。
+
+## 5. 配置与会话恢复
+
+**engineering 与 advisor.guard 都是会话级**（2026-08-29 重构）——事实源是当前会话槽位文件
+（`~/.thincoder/sessions/{hash}.json.N` 的 `engineering` 字段与 `advisor.guard`），config.json 的
+`agent.engineering` / `agent.advisor.guard` 降级为 **CLI 兼容/可见性镜像**，不再是事实源。背景
+（跨端污染 bug）：旧设计里 engineering 只存 config.json 全局，CLI `/eng` 与 VS Code 设置面板都写它 → 两端互相翻转对方的工程模式——会话级化后两端会话各自独立，互不影响。
+
+- **读取优先级（两端一致）**：slot 显式值 > config.json 兜底 > false。slot 无字段（旧槽位）→ 回退 config.json（兼容锁定）；slot 显式 `false` ≠ 未设置，压过 config 的 `true`。
+- **写入路径（全部双写：slot 先、config 镜像后——slot 写失败不阻断 config 写）**：
+  - CLI `/eng`（persistEngineering）与 eng(enter/exit) 工具翻转活状态（saveSession 每 turn 落盘往返）；
+  - CLI `/advisor` guard 切换（persistGuard——仅 guard 双写，model/thinking/effort 仍 config-scoped）；
+  - VS Code 设置面板 ENG/GUARD toggle（setSlotEngineering/setSlotAdvisorGuard + config 镜像）、eng 工具经
+    `engPersist: {cwd, slot}` 通道（top-level run 专属）、`agentState()` 随每轮 saveLines 把 live
+    engineering/advisorGuard 带入槽位。
+- **初值链**：CLI `assembleAgent()` 从 config.json 播种 → `applySession` 时 slot 值覆盖（TUI 单 agent 长驻，无 per-submit 重建）；VS Code `setupAgentRun` 每轮从 `engState`（panel-chat 从槽位读）注入。
+- **guard 存槽 ≠ 工程模式机械推回**：guard 状态存槽只是会话级配置事实；工程模式下 guard 推回一律关闭（§2.3 设计原则），存槽不改变这一点。
+- **resume** 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；design token **随 slot 持久化**（TTL 7 天 fail-closed——重进 TTL 内恢复；过期重新评审）；持久化槽同受链终消费管理（§2.6 F4）。
+- **角色互斥**：工程模式禁用 `coder`，普通模式禁用 `eng-coder`（schema 枚举 + 运行期硬门禁双保险）。
+
+## 6. 已知取舍（评审记录）
+
+1. 父代理无全面写文件门禁——必须能写设计产出物；越权靠提示词（拦截型门禁覆盖产品代码）。
+2. token 跨任务存活——保守缺口，已接受（链终消费制收口后：仅链中存活，链终消费）。
+3. token 持久化边界——单值自 08-29 起已随 slot 持久化、多槽同构序列化；TTL fail-closed 兜底，过期重评；无签名格式（uuid:expiresAt）下防伪不声称——门禁可经工程模式开关绕过，防伪无实际安全边界。
 4. multi-repo 时 advisor cwd 取 `repos[0]`——`_touchedFiles` 绝对路径缓解，已知限制。
-5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。 ## 7. 变更记录
-### 2026-09-03：需求池攒批工作流提示词落地（R1——用户裁定 C+E——设计已批准） **机制**：普通需求点攒批后再启动设计（摊薄单点 ~40min 固定流程成本）——工程模式专用（main.md 普通模式不承诺）。权威源 = `docs/design/METHODOLOGY.md`「需求池攒批工作流」节（三分句逐字锚 D-锚1..3 定稿）。机制 6 步：登记（板块需求文档落句 + docs/TODO.md「需求池」组一行）→ 攒批（设计启动权在用户）→ 阈值提醒（同板块 ≥2 或池全局 ≥3，提醒一次不代替发起）→ 批设计（同批评审 → 用户批准 → 批实现）→ 快车道（"急/马上做"跳过池走单点完整流程）→ 边界（池只收用户需求点，技术待办不混池；紧急 bug 走快车道）。 **加固（两端 byte-identical）**：
-- `src/prompts/engineering.md` Mandatory Flow step 1 完成点后注入需求池三规则子条目——Pool routing / Threshold reminder / Fast lane 三分句**逐字锚照抄**（设计文档逐字定稿，禁止自行解释）；工程模式顶层生效（普通模式 main.md 零触碰）。
-- `src/prompts/methodology-template.md` Requirement-Pool 节按**根模板用户面向块**替换（状态头 approved + 动机 + Mechanism 6 步——排除 Prompt sync/Acceptance/Affected 书账子节与"评审 #N"注——模板措辞 = 根模板逐字，非旧版自写措辞）；根模板 `METHODOLOGY.md` 状态头同步批准（根文件非 git 仓——文件级落）。
-- 两端 `test/agent.test.mjs` 增加 T-R1 断言（fail-when-unchanged）：engineering.md 三分句逐字（CLI 侧对照设计文档锚抽取）+「Requirement Pool」组短语 +「pool-wide ≥3」+「single-point full flow」+ 幂等唯一出现；methodology-template 含段头/approved 状态/~40 min 动机阈值句/6 步/无书账子节。
-- CLI + VS Code 15 对 prompts byte-identical 保持（本次只动 engineering.md + methodology-template.md 两对——其余 13 对零触碰）。 **受影响文件**：两端 `src/prompts/engineering.md`、两端 `src/prompts/methodology-template.md`、两端 `test/agent.test.mjs`（T-R1 断言）、根模板 `METHODOLOGY.md`（状态头）、`thincoder/docs/TODO.md`（R1 池行核销）、本节。本变更无新的产品代码文件——§2.7 受影响文件表行更新见下（engineering.md 行追加 R1 注）。 **验收**：两端 engineering.md/methodology-template.md 逐字锚 = 设计锚（程序化校验）；两端 15 对 byte-identical 比对绿；T-R1 两端绿 + 全量测试绿；node --check。不 commit。 ### 2026-09-03：范围扩展评审链——"用户拍板 ≠ 设计批准"条款（用户实测：形态确认被当批准直接开工） **触发**：D-M7b（§19.5 范围扩展——async 标识 + ⏹ 门控——新事件类型牵 §7.2 事件契约）用户拍板形态 B 后 agent 直接派 eng-coder——跳过"提醒评审就绪 → 用户发起 advisor → 批准"链。定性：**用户对设计内容/形态的选择是需求确认——不是设计批准**——扩展（含已批准设计的范围扩展）与修正轮（偏差/评审 fix——同 token 合法）是两条路径——上一轮 docs FIRST 条款的 token 边界句（"beyond file list = NEW task"）未显式挂评审链——缺口。 **加固**：两端 `src/prompts/engineering.md` Mandatory Flow 评审步处加条款——"A user ruling on design content (form/shape/option choice) is requirements confirmation — NOT design approval. New scope (including extensions to an approved design) still needs the full review chain: design ready → user-initiated advisor review → approval → implementation. Only explicit sign-off after review unlocks eng-coder."——两端 byte-identical + 断言 + 本节记录。 **受影响文件**：两端 `src/prompts/engineering.md`、两端 `test/agent.test.mjs`（断言）、本节。 **复评修正（2026-09-03 实现轮后补）**：条款最终落地 = Mandatory Flow step 5（User sign-off）补指针句（"评审后显式批准才解锁——见 :70-73"）+ Work Loop "eng-coder delivery" 分支 token 边界句后全规则（6 行——含 "A user ruling on design CONTENT (form/shape/option choice) is requirements confirmation — NOT design approval…Approving a form (\"B\", \"可以\") never shortcuts past review"）——两端 byte-identical 331 行 + 断言 8 项（CLI :3772-3782 / vscode :1259-1269）——本条目引文为压缩版，以落地文本为准。 ### 2026-09-03：修正轮先落档——docs FIRST（用户实测：同设计修正轮直接 spawn 未先落档） **触发**：用户实测工程模式同设计修正轮（token 复用合法）但修正前没先落文档——直接 spawn eng-coder——文档纪律断链。"代码变更都必须落文档"对修正轮无豁免（METHODOLOGY.md:47——无"改动太小免文档"通道，2026-09-03 同批确立），但 engineering.md 修正轮句未挂钩落档步。 **加固**：两端 `src/prompts/engineering.md` 修正轮 spawn 指令（"Then handle the message" 节 eng-coder delivery 条——"Stalled or doubtful → spawn the fix round …（same designToken/designId）"）后追加 docs FIRST 条款段（7 行英文提示词，首句 "Fix rounds reuse the same designToken — but docs FIRST."）：修正轮 findings + planned changes 必须先落所属设计文档（deviation record / change note 追加至对应章节）再 spawn eng-coder；跳档 = 文档漂移，等同静默改动（与零裁量声明同款语义）；token 复用边界重申——同设计修正轮是唯一合法 token 复用，超出设计文件清单 = 新任务，需自有流程与新 token。两端 byte-identical 保持。 **受影响文件**：两端 `src/prompts/engineering.md`（修正轮句后追加 docs FIRST 条款段）+ 两端 `test/agent.test.mjs`（新增 engineering.md 内容断言 "Fix rounds reuse the same designToken — but docs FIRST"——仿既有 engineering.md 断言风格，防回退）+ 本文档 §7（本条）。本变更无文件增删——§2.7 受影响文件表结构与文件集不变。 **验收**：两端 engineering.md 改后 byte-identical（node 字节对比）；两端新断言测试通过 + node --check；不 commit。 **复评修正（同日 advisor code review round 1——docs FIRST 纪律自证：修正先落档再改码）**：🟡1 补全——同一修正轮 spawn 指令在 Mandatory Flow step 7（交付回退句 :106-108）亦有表述且未挂钩落档步：step 7 句尾补指针句 "Fix-round re-spawns are docs FIRST too — the deviation record / change note lands in the owning design doc BEFORE the eng-coder spawn (full rule: the eng-coder delivery bullet under Then handle the message)"（两端 byte-identical，step 7 与 eng-coder delivery 条两处描述现均挂钩）；🔵3 补断言——两端测试各加 "BEFORE the eng-coder spawn"（锁落档先于 spawn 的命令句）与 "Fix-round re-spawns are docs FIRST too"（锁 step 7 指针句）；🟡2 驳复（Not an issue）——§2.6 "一个设计可 spawn 多个 eng-coder" 同句随文即指"修正轮复用同 designId+token"，非另一合法复用类别；§2.8 失败/中断重 spawn 为同一 task brief/文件清单的重试（非跨任务"复用"），条款操作边界句（anything beyond the design's file list is a NEW task…）已覆盖——条款文本保持任务书逐字（探索审计已验逐字一致），改写需父侧裁定。受影响文件不变（同一 5 文件集，无增删）。 ### 2026-09-03：任务大小零裁量声明（用户裁定：工程模式不分大小全流程） **触发**：agent 反复纠结"小任务是否该走完整 Mandatory Flow"——病根 = METHODOLOGY 旧"小改动不新建文档"豁免条款给了轻走依据（该豁免已于 2026-09-03 删除；METHODOLOGY.md:47 同批确立"代码变更都必须落文档（无改动太小免文档通道）"）。 **裁定（用户）**：工程模式下任务**不分大小**全走 Mandatory Flow——任务大小不是 agent 的裁量项；"任务太小 / 只是小改"永远不是跳过或压缩某一步的理由，也没有任何变更免于在设计文档落档。**进入工程模式这件事本身就是尺寸裁定**（用户已替 agent 做了该决定）。 **加固**：两端 `src/prompts/engineering.md` "## Mandatory Flow (every task, no skipping)" 标题下、第 1 步之前注入零裁量声明段（6 行英文提示词——首句 "Task sizing is NOT your call — every user request in this mode runs the full Mandatory Flow regardless of size."，末句 "...the user's decision to be in engineering mode was the sizing decision."；两端 byte-identical 保持，CLI 既有 15 文件比对断言覆盖）。 **受影响文件**：两端 `src/prompts/engineering.md`（零裁量声明段）+ 两端 `test/agent.test.mjs`（新增 engineering.md 内容断言 "Task sizing is NOT your call"——仿既有 engineering.md 断言风格，防回退）+ 本文档 §7（本条）。本变更无文件增删——§2.7 受影响文件表结构与文件集不变。 **验收**：两端 engineering.md 改后 byte-identical；两端新断言测试通过 + node --check；不 commit。 ### 2026-09-02：§18 工程交付协议——eng-coder 默认 async + 内部自审计闭环（用户重构裁定） **需求**：用户实测同步 spawn eng-coder 阻塞主会话（"功能目的就是 eng-coder 执行中主会话能去干别的"）；初版跨 digest 链状态机方案评审否决后，用户拍板把交付后审计/修正/review 全部移入 eng-coder 子代理内部——主会话只 spawn 一次（默认 async），子代理内部完成"实现 → explore 偏差审计 → 自修 → advisor 复评 → 收敛"后一次交付。 **机制（权威源 = AGENT-LOOP.md §18，本节仅同步点）**：
-- **F1/D-E1 角色级缺省**：`role === "eng-coder" ? true : false`（其余角色默认阻塞不变；`async:false` 显式覆盖）——§15 F4 修订
-- **D-E2 内部交付协议**：实现 → 自查透明表 → explore 偏差审计（对照设计四类偏差；审计任务书 = 父 spawn 任务书 ∪ 实际 _touchedFiles **机械并集**，非 eng-coder 自述）→ dirty 自修（修正轮 ≤5，`修正轮 N/5` 提醒）→ clean → advisor(type=code) 复评 → findings 自修 → 收敛 → 交付报告（轮次 + clean/stalled）；eng-coder **永不编辑设计文档**（round5 #5）；审计 ≤6 次、第 7 次 spawn 机械拒绝 = stalled 信号（round5 #2）；in-child advisor 不消耗父侧 NFR2 预算（round4 #5）
-- **D-E3 工具扩展 + 任务域授权**：eng-coder 子代理工具集补受限 subagent（role 枚举仅 explore + 同步——setup.mjs 参数层过滤 + spawn-child 机械门）；spawn 时任务域授权——child 内部写豁免逐写审批（豁免粒度 = **仅 onPermissionRequest 阶段**——JSON 解析/未知工具/planMode deny/design-token deny 照常生效）；§7「权限」与 §15 D-A3「权限交互」两处 blanket 句加"eng-coder 例外见 §18 D-E3"指向（AC-E7）
-- **反转 2026-08-01 裁定**：advisorTool 已在 eng-coder 子代理工具集（setup.mjs depthOnly）且实现无 depth/role 限制——"子代理环境无法真实调用 LLM advisor"依据过时；交付 code review 与偏差审计由**父代理发起**改为 **eng-coder 内部协议默认承担**（父侧复核保留可选——stalled/存疑/用户要求才复核）——本文档 FR4/FR5/§2.1/§2.2 step 6-8/§2.3 两行/§2.4 code review 归属句/§2.5 交付评审时机/AC5/AC6/AC9/用例表 T9/T19 同批同步
-- **受影响文件（CLI）**：`src/agent-tools/subagent.mjs`（schema 角色级 async 缺省 + 内部 spawn 门 + 审计任务书机械并集 + `_engTaskAuthorized`/`_engTaskInput`）、`src/agent/spawn-child.mjs`（gateEngCoderSpawn + ENG_AUDIT_SPAWN_LIMIT=6）、`src/agent/setup.mjs`（eng-coder depthOnly 补受限 subagent）、`src/agent/dispatch.mjs`（权限门 onPermissionRequest 分支授权豁免）、`src/prompts/engineering-sub.md`（内部协议附录 + 修正轮提醒）、`src/prompts/engineering.md`（async 交付叙述 + 内部协议口径——防双重审计/误用；"Cap: at most 4 concurrent eng-coders"/"past 4" 短语保留）、`test/agent.test.mjs` + `test/suspension.test.mjs`（T-E1..E16）；VS Code 端同构镜像（并行 eng-coder，byte-identical 纪律） **验收**：AC-E1..E7（AGENT-LOOP.md §18 验收标准——T-E1..E16 用例表展开 + 全量绿）；两端 prompts byte-identical（CLI 交付后 VS Code 端对齐）；本文档无残留矛盾（FR4/门表/AC/用例表口径一致） ### 2026-09-02：engineering-sub.md 子代理确认例外声明（用户实测：eng-coder 输出"确认后开始"空转等用户——子代理无用户可等） **问题**：eng-coder 子代理误用"确认范式"——输出"确认后开始"结束回合空转等用户，但子代理无用户。根因 = 模型自发套用训练范式，非提示词直接诱导（engineering-sub.md 已核实无确认句）。 **加固**：两端 `src/prompts/engineering-sub.md` "Additional mandatory constraints:" 追加一条（英文、与既有条目同风格，两端 byte-identical 保持）——子代理任务已由父代理确认、无用户可等、立即执行、禁止确认式提问或以 "waiting for approval" 收尾、任务歧义写最终报告返回。 **受影响文件**：两端 `src/prompts/engineering-sub.md`（追加子代理确认例外声明）+ 两端 `test/agent.test.mjs`（engineering-sub.md 内容断言——此前无断言，补防回退）。 **验收**：两端 engineering-sub.md 改后 byte-identical（既有 15 文件比对断言覆盖）；两端新增断言测试通过。 ### 2026-09-02：METHODOLOGY 缺失模板可达性（用户报告：模型说"模板在源码里访问不到，自己写了一个"） **问题**：项目根无 `METHODOLOGY.md` 时，工程模式注入缺失警告，指引模型参考 `src/prompts/methodology-template.md` 创建——但该路径是**产品源码相对路径**（CLI npm 包 / VS Code 扩展安装目录），用户项目 cwd 下不存在 → 模型读取失败（"模板在源码里，访问不到"）→ 只能自己手写一个，模板参考链路断裂。 **需求**：F1 = 模板路径对模型**可达**（真实路径或内容直达）；F2 = **保留模型互动**（模型询问用户 → 确认后写入 cwd/METHODOLOGY.md——用户裁定：不经过模型不询问的自动脚手架不好，喜欢有模型互动的体验）；F3 = 两端（CLI + VS Code）同行为。 **设计**（用户确认 2026-09-02）： - **D-M1 警告文本给真实路径**：缺失警告中模板路径从静态相对路径 `src/prompts/methodology-template.md` 改为**运行时解析的绝对路径**——setup 代码用 `dirname(import.meta.url)` 拼模板真实位置（`../prompts/methodology-template.md` 的绝对形式），CLI npm 包与 VS Code 扩展安装目录下模型均可直接 read
-- **D-M2 模板正文直接注入警告**：缺失警告消息内附模板**完整正文**（44 行 ≈1.5KB，仅缺失时注入一次）——模型零文件访问障碍，参考内容生成；正文前加注"built-in template（可 read <绝对路径> 或直接参考以下内容）"
-- **D-M3 互动流程保留**：警告文本引导"与用户确认是否创建 METHODOLOGY.md，确认后写 cwd/METHODOLOGY.md"——询问 + 写文件仍由模型主导，系统不做自动脚手架
-- **D-M4 两端落地**：CLI `src/agent/setup.mjs`（buildEngineeringPrompt 缺失警告 + 模板绝对路径解析）；VS Code `src/agent/run-helpers.mjs`（loadEngineeringPrompt 同）+ `src/agent/setup-reminders.mjs`（警告文本同）
-- **D-M5 测试**：两端断言更新——缺失警告含**模板绝对路径**（断言 /(?:thincoder|thincoder-vscode)[\\/].*methodology-template.md/ 或扩展绝对路径形态）与**模板首行内容**（"# METHODOLOGY — AI Agent Collaboration"）；"Ask the user whether to create METHODOLOGY.md" 引导语义保留（新文本断言）
-- **并发上限 3 → 4（2026-09-02 用户拍板）**：架构师并行跟踪 N 任务状态 + 修复轮不串台的实际约束，超限收益递减、混淆风险升；异步化后主会话同一时刻在跑的子代理可能更多，4 为用户拍板值——AGENT-LOOP.md §15 D-A4 同步点（评审 2026-09-02 #4：09-01 条目保持 as-of，本条目记录拍板） **受影响文件**：`src/agent/setup.mjs`（CLI）、`src/agent/run-helpers.mjs` + `src/agent/setup-reminders.mjs`（VS Code）、两端 `test/agent.test.mjs`（警告文本断言）。 **验收**：D-AC1 = 无 METHODOLOGY.md 项目进入工程模式 → 警告含模板绝对路径 + 模板正文（D-M1/D-M2）；D-AC2 = 模型可沿该路径 read 到模板（真机可验证）；D-AC3 = 互动流程不变——仍由模型询问用户后生成（D-M3）；D-AC4 = 两端测试全绿（D-M5）。 **状态（2026-09-02，两端均已实现）**：受影响文件 ✓——CLI `setup.mjs`（buildEngineeringPrompt 增绝对路径解析 + methodologyTemplatePath/Body 返回；缺失警告含绝对路径 + 正文 + 读取失败降级分支）；VS Code `run-helpers.mjs`（loadEngineeringPrompt 同构返回）+ `setup-reminders.mjs`（警告文本与 CLI 逐字一致——D-M3 句 + D-M2 设计字面前缀 + 降级不补句，审计 2026-09-02 修复编码损坏后逐字统一）；两端 `test/agent.test.mjs`（运行时断言：绝对路径形态 + existsSync true（D-AC2）+ 模板首行 + Ask 语义 + write cwd/METHODOLOGY.md + 前缀字面断言（审计补——防编码损坏漏网））。D-AC1 ✓、D-AC2 ✓、D-AC3 ✓、D-AC4 ✓（CLI 1061/0 + lint 209 OK；VS Code 888/888 + lint 197 OK——两端全量全绿，警告文本逐字一致）。 ### 2026-09-01：多任务并行化 + designId 多槽 token（用户拍板方案 a） **需求**：用户要求"能并行化的尽可能并行化"，并追问工程模式并行可行性。评估结论：工程模式各环节（设计/评审/实现/审计/交付评审）多可并行，机制近乎零改动——**唯一硬障碍是 token 单值槽**（`_engDesignToken` 后者覆盖前者）。**触发实证**：本会话 memory_delete + §14 两独立任务尝试并行 spawn eng-coder，后者成功写入槽、前者 spawn 校验 `!== issued` 失败（实为失败后串行重跑，非真并行）。**归因更正**：§14 token 失效真因是单值覆盖，**非**"文档修订使 token 失效"（token = `uuid:expiresAt:HMAC(uuid:expiresAt)`，不含文档哈希，documents 参数仅是评审输入清单——无内容绑定）。**方案**：token 改按**随机 designId** 存 `Map<designId,{token}>`（不锚定文档路径/内容——避开 2026-08-31 已否决的"文档锚失效"路线，即当时预留"未来可再议"的评审实例表方案的落地）。**附带缺口**：§14 并行纪律条款落在 system.md，但顶层工程模式不加载 system.md（setup.mjs 独立组装）→ engineering.md 须单独注入该纪律方生效。 **改动**（全走 eng-coder，两端镜像——评审 #5）：
-1. `src/agent-tools/advisor.mjs`——评审调用生成 designId；**通过结果携带 designId 回显给父代理（评审 #1——多设计首 spawn 定向依据）**，通过时 token 入 `_engDesignTokens` Map（保留 `_engDesignToken` 单槽兼容）；失败该 designId 不入槽、不波及其他槽（隔离扩至多槽；评审 #2 方案 ②：复审失败旧 token 存活至 TTL）
-2. `src/agent-tools/subagent.mjs`——eng-coder 增可选 `designId` 参数；token 校验按槽定位（单设计省略取唯一槽 / 多设计缺 designId 拒 / 给定 designId 无匹配拒）；修正轮回传 designId
-3. `src/prompts/engineering.md`——注入"Parallelize aggressively"（§14 纪律，顶层 system.md 不含）+ 多任务并行纪律（前置文件集交集检查 / ≤4 并发 / 依赖链串行 / 并行 spawn 调用形态——决策③ 取代原 ≤3）
-4. `test/agent.test.mjs` + `test/advisor.test.mjs`——T15-T18 + 多槽/隔离断言 + engineering.md 并行条款断言
-5. `docs/TODO.md`——"多设计并行 token 映射化"条目销账（09-01 规格定稿、评审通过后随 eng-coder 落地销账——落地前条目保持 Open，评审 #3 生命周期统一）；**VS Code 端镜像改动同批（评审 #5：engineering.md byte-identical + 两端同构 + vscode 测试）** **测试**：T1-T14 既有行为不变；T15-T18（见用例表）。
-**关键决策**：① 多设计标识用**随机 designId 而非文档路径**（否决：文档锚——文档改名/回写状态/重组即失效，08-31 已否决此路线；采用：评审调用生成随机 id，文档仅审计不参与校验）；② **保留 `_engDesignToken` 单槽**（向后兼容 + 门禁"有无 token"布尔判定不改为"Map 非空"——改动最小）；③ **并发上限 3**（架构师并行跟踪 N 任务状态 + 修复轮不串台的实际约束，超限收益递减、混淆风险升——as-of 快照；**2026-09-02 用户拍板 3→4，见当日变更记录**）。 **修复轮（2026-09-01，上轮交付的 4 项审计/评审修复，任务全文=清单，invent nothing new）**：
-1. 审计 #1 🔴 多槽序列化——`_engDesignTokens` Map 随 slot 持久化（CLI `saveSession`/`applySession` + VS Code `agentState`→`saveLines`→`panel-chat`→`setup` 四环同构，格式 `{ [designId]: token }`），旧 slot 无字段不设 Map（TTL fail-closed 兜底）；
-2. 审计/评审 #2 🟡 清理对称——清 `_engDesignToken` 的 6 处位置（CLI eng(exit)/off→on + cmd-eng OFF + resetSessionState；VS Code eng(exit)/off→on）同步 `_engDesignTokens = new Map()`，resolveDesignSlot 防护保留为防御冗余；
-3. 审计 #4 🟡 VS Code advisor `paths` 描述去 git-diff 字样（同步 CLI "never inspects diffs"，两端 documents 描述本就同文）；
-4. 卫生 🔵 engineering.md 两端 byte-identical 删重复 `## Questioning Style` 标题；**designId 占位文案归属更正**：实际在两端 `subagent.mjs`（declined 分支），不在 engineering.md——统一为 `(single-design session — designId optional)`。 ### 2026-08-30：首次交付偏差审计 + eng-coder 修正轮（用户裁定） **触发**：用户指示"第一次 eng-coder 开发完成以后先用 explore 查探一次现码与设计文档之间的偏差，然后再跑一次 eng-coder 修正这些偏差"。 **机制**：Mandatory Flow 插入 step 7（偏差审计，自动节点）——首次交付后先 spawn `explore`（thoroughness 按交付规模，默认 medium）对照 Docs involved + 验收标准审计实现：部分实现/静默简化/文档漂移（eng-coder 自查第 6 项的模块地图回写）/超清单改动四类偏差。有偏差 → eng-coder **第二次 spawn**（同一 designToken，偏差清单 = 任务全文，`invent nothing new`——修正轮不发明新需求），返回后逐点核销；无偏差 → 直接进交付评审（原 step 7 顺延为 step 8）。审计是自动节点，不需要用户发起。 **定位**：advisor code review 是独立视角的质量闸（隔离上下文、多模型）；偏差审计是**同源对照**（设计文本 vs 实现文本），explore 的只读全文比对正合适——两者互补，不能互替。静默简化恰是交付报告不会自首的偏差类型（eng-coder 保真条款的执行核查）。 **影响**：`engineering.md`（两端 byte-identical）Flow step 7 + Work Loop "First delivery audit" 状态 + eng-coder delivery 消息处理分支；两端 `test/agent.test.mjs` 新增内容断言（8 项）锁死。每次任务多一个 explore + 可能一轮 eng-coder 的 token 成本，换取静默降级的机械兜底。 ### 2026-08-30：工程模式提示词补委托引导（解耦遗留缺口，用户拍板方案 A） **需求**（用户核对发现）：提示词解耦（PROMPT-DECOUPLING.md）后工程模式顶层不注入 main.md/discipline.md，而 AGENT-LOOP §13（广度探索下沉 explore）只落在 main.md——工程模式从此只剩 eng-coder 委托，零 explore/plan 引导。后果：架构师在需求澄清/设计阶段做广度探索时无规则可循，大概率内联 read 淹没自己的主历史（正是 §13 要解决的问题在工程模式下同样存在）。核实确认非有意取舍（文档无决策记录）：`explore`/`plan` 在工程模式实际可用（setup.mjs role enum = explore/plan/eng-coder）。 **设计**（两端 `src/prompts/engineering.md` byte-identical，插在 Work Loop 与 Questioning Style 之间新增 "## Delegation (subagents)" 一节，6 条）：
-1. 广度探索 → `explore` 子 agent（任务里标注 thoroughness：quick/medium/thorough）；点破隔离收益——子 agent 的 read/grep 不进主历史，内联扫会把架构师自己的上下文埋进噪声。
-2. `plan` 子 agent 独立验证可行性问题；只读、不问最终用户——歧义经报告回给架构师与用户解决。
-3. 精度例外（沿 §13 口径）：仅即将立刻编辑某文件时才亲自 read——架构师因设计判断需要仍可直接读设计相关代码。
-4. 并行多 eng-coder 不得编辑同一文件。
-5. 不重做已委托的探索——eng-coder 交付验证 = 读其声称改动的文件 + 跑测试。
-6. `escalate` 工程模式不可用（与 setup.mjs fail-closed 不注册一致——措辞用 "unavailable" 不用 "禁用"，模型工具表里确实没有该工具）；`consult` 保留可用（疑难判断）。 **明确不做**：不移植 main.md 的全部条款（consult 简报规范/飞刀时机判断不适用——工程模式 escalate 不可用；goal/skill 与工程模式无关）。 **测试**（两端各一，内容级断言英文短语；副本未改时必须能失败）：CLI `test/agent.test.mjs`（"prompts/engineering.md: 委托引导…"）、vscode `test/agent.test.mjs`（"engineering.md: delegation guidance…"）——断言委托句/三档彻底度/隔离收益/精度例外/并行互斥/不重做/escalate 不可用/consult 保留 8 项关键句 + 既有 15 文件 byte-identical 比对测试兜底。 **受影响文件**：`src/prompts/engineering.md`（thincoder/ + thincoder-vscode/ 各一份，182→208 行）、两端 `test/agent.test.mjs`。验证：两端全量测试 784/784、781/781 全绿；`npm run lint` 两端 0 error；byte-identical 比对通过。 ### 2026-08-30：eng-coder 补「实现保真——不许静默降级」条款（用户核对提示词系统后拍板） **需求**（用户核查触发）：提示词系统对"按设计交付不打折"的覆盖——普通模式 system.md 有完整链条（"Decide what's right before deciding what's smallest" / "deliver exactly what was agreed — no simplifying" / 收尾自检 "not a subset, not a reinterpretation"），工程模式架构师侧也有（no silently deviate / never silently invented / no pre-existing cop-out），但 **eng-coder.md 缺正面禁止句**：L10/L16 的 "not silently deviate" 只封"默默换方向"，未封"默默简化已明确的设计"——实现期把设计明确要求的行为（交互/边界/状态）降级成近似版、交付时才在报告里披露，字面上不构成 deviate，正好是漏洞形状（实证：§7.2 折叠区块交互被实现降级，用户裁定"按照设计做都要讨价还价吗"）。 **设计**（两端 `src/prompts/eng-coder.md` byte-identical，Guidelines 节 Follow-the-design 条之后新增一条）："Implement to the full design — no silent degradation"——① 觉得设计元素实现代价高也照样实现、成本写进报告；② 指定行为的"更简单近似"就是 deviation：要么照设计实现，要么编码前停下向父代理呈报权衡，**不许先交缩水版再事后披露**；③ 点破"父代理批准的是设计，不是你的折扣"。 **测试**（两端各一，内容断言英文短语，5 项关键句；副本未改时必须能失败）：CLI `test/agent.test.mjs`（"prompts/eng-coder.md: 实现保真…"）、vscode `test/agent.test.mjs`（"eng-coder.md: full-design fidelity…"）+ 既有 15 文件 byte-identical 比对兜底。 **受影响文件**：`src/prompts/eng-coder.md`（两端各一份，36→44 行）、两端 `test/agent.test.mjs`。验证：CLI 全量 785/785 全绿、vscode 全量 782/782 全绿、CLI lint 0 error、byte-identical 通过。 ### 2026-08-30：system.md 补「设计文档即契约——执行期不许静默降级」（普通模式缝隙，同一触发；同日用户二轮纠偏后改为无条件绑定） **需求**（用户指出：本会话降级实例发生在**普通模式**）：eng-coder 条款补完后，普通模式的缝隙仍在——① system.md L15 的不降级义务挂在 "Once confirmed" 上，而设计文档驱动的任务（如 §7.2 按文档实现）没有显式 confirm 环节，条款挂不上钩；② L26/L60 是披露义务而非禁止义务——降级后如实披露在形式上"合规"，但按 PHILOSOPHY 交付透明条款，披露该发生在**决策前**（让用户选择）而非交付后（通知既成事实）；③ L25 收尾自检发生在最后，管不住实现中途的降级决策时刻。 **第一版缺陷（用户二轮纠偏）**：初版补句 "whenever the behavior is already fixed by a design document or an agreed decision" 仍带前提——把绑定绑在"设计文档或已达成决策"上，**会话中直接说出的要求**（"改成 3 行""默认折叠吧"）两头不沾，字面上仍在降级许可区。 **修订设计**（两端 `src/prompts/system.md` byte-identical，L15 尾部改写为无条件绑定）：① "This binding is UNCONDITIONAL and does not wait for a formal confirmation round"——绑定无条件；② "every requirement the user states — mid-conversation, in a design doc, or in a confirmed plan — binds the moment it is stated"——要求陈述的那一刻即生效，三个来源（会话直述/设计文档/已确认计划）并列覆盖；③ "A stated request IS the contract; whatever its source, implementation may not quietly shrink it"——陈述即契约，实现不得悄悄缩水；④ 保留"代价高照做+报成本 / 实现前呈报权衡 / 交付后披露≠合规"三条出口语义。 **测试**（两端各一，7 项关键句断言；副本未改时必须能失败）+ 既有 byte-identical 比对兜底。 **受影响文件**：`src/prompts/system.md`（两端各一份）、两端 `test/agent.test.mjs`。至此三层闭合且无条件：普通模式主 agent（本条）/ eng-coder（同日上一条）/ 工程模式架构师（既有 surface-or-propose 条款）。 ### 2026-08-29：UI/交互决策全链路落档（用户报告"agent 无视讨论过的 UI 设计"） **需求**（用户拍板）：与用户讨论达成的 UI/交互设计经常不体现在实现里。根因：eng-coder 是零上下文子代理，决策只留在对话里就永远到不了它那里。要求：UI/交互决策必须落设计文档，且必须包含在下达给 eng-coder 的任务中。 **设计**（两端 `src/prompts/` byte-identical）：
-1. `engineering.md` flow 第 2 步（设计文档要素）扩项：任务涉及界面时，设计文档**必须**收录与用户达成的每一条 UI/交互决策（布局、流程、控件行为、状态与反馈），严格照讨论结论；未定部分标 open，绝不静默发明。
-2. `engineering.md` flow 第 6 步（eng-coder 任务书）：涉及 UI 时任务文本**必须**复述已达成的 UI/交互决策（或精确指向设计文档的具体章节）——点破机理"eng-coder has NO conversation context"。
-3. `engineering.md` Hard Rules 加独立条目 "UI/interaction decisions ride the full chain"——"讨论过但没落文档"是实现无视用户要求的最常见原因。
-4. `eng-coder.md` Guidelines 加执行侧闭合：UI/交互严格照任务书与设计文档实现（布局/流程/控件行为/状态/反馈）；任务书与设计文档都没覆盖的界面决策 → 停下报告缺口，不自行发明交互设计。 **测试**（内容级断言英文短语，两端各验；副本未改时必须能失败）：`engineering.md` 三处条款 + `eng-coder.md` 执行闭合，见两端 `test/agent.test.mjs`（"UI/交互决策必须落设计文档且必须进 eng-coder 任务书" / "UI 按任务书与设计文档执行"组）。 **受影响文件**：`src/prompts/engineering.md`、`src/prompts/eng-coder.md`（`thincoder/` + `thincoder-vscode/` 各一份，byte-identical）。 ### 2026-08-29：METHODOLOGY 三缺口修复（核对 engineering.md 提示词时发现） **需求**（用户要求补齐）：核对工程模式提示词时发现三个规范缺口——① engineering.md 引用 "three layers per METHODOLOGY"，但 METHODOLOGY.md 里没有三层定义（总目标/功能用户故事/非功能标准），引用悬空；② METHODOLOGY 硬流程要求三文档（需求/设计/测试文档），engineering.md 的 8 步 flow 没有测试文档环节，两文档口径不一；③ 项目根目录无 METHODOLOGY.md 时静默降级（只拼 engineering.md 模板），"per METHODOLOGY" 引用全部悬空，用户无感知。 **设计**：
-1. **三层定义落地**（`METHODOLOGY.md` 基本流程 + `methodology-template.md` Requirements 步同步改写）：需求文档按三层组织——总目标（一句话为谁解决什么）/ 功能用户故事（可逐条验收，who/what/why 不写 how）/ 非功能标准（写清度量方式）；补完成判据（三层都具体到可以据此设计）；设计文档要素补"每条验收标准回指用户故事"。
-2. **测试文档口径对齐**（`engineering.md` flow 第 7 步）：交付评审明确"METHODOLOGY 存在时测试文档是交付物的一部分——每条用户故事至少一个测试用例（正常/边界/异常），无测试覆盖 = 交付评审不通过"。措辞用 "When METHODOLOGY.md is present" 条件式，与 ③ 的降级路径兼容。
-3. **缺失警告点名后果**（CLI `agent/setup.mjs` 警告块 + VS Code `agent/setup-reminders.mjs` 同款）：从"METHODOLOGY.md not found — project-specific rules are absent."（仅陈述缺席）升级为点名后果——"每个 'per METHODOLOGY' 引用悬空 + 三文档硬流程不被强制执行"，并给恢复路径（先问用户是否创建 METHODOLOGY.md；VS Code 侧同时删掉不存在的 "eng tool's write mode" 陈旧指引）。 **测试**（内容级断言，两端各验；副本未改时必须能失败）：三层结构/完成判据/验收回指（template）、测试文档交付条件句（engineering.md）、警告后果句/恢复路径/陈旧指引删除（setup）。见两端 `test/agent.test.mjs`。 **受影响文件**：`docs/design/METHODOLOGY.md`（CLI）、`src/prompts/methodology-template.md`（两端）、`src/prompts/engineering.md`（两端）、`src/agent/setup.mjs`（CLI 警告块）、`src/agent/setup-reminders.mjs`（VS Code 警告块）。 ### 2026-09-04：R2 工程模式验证链收口（用户裁定：①机械测试 D·父侧收口 ②LLM 验证 A·修正轮收紧(3次/链) ③修正轮粒度 L0(verify默认) ④审计 explore 效率 A1/A2/A3 ⑤advisor B1 批并行+B2 范围收缩——B3 预算暂不动） **设计权威源**：AGENT-LOOP.md §18.7（完整设计 + round1/round2 两轮评审 0🟡通过——用户批准 2026-09-04）。 **实现记录（2026-09-04）**：CLI 侧——终态 clean（审计=LLM#1 → 首审=LLM#2 → 复评=LLM#3——三条链闭合；修正轮 1/5）；L1 快层 1284 pass / 0 fail / 46 skip（终态复跑——VS Code 落地后 byte-identical 断言绿）；**父侧 L2 全量核销 1330/1330, 0 fail, 0 skip**（2026-09-04——核销通过）；交付内容 = engineering-sub.md(①三级粒度) + engineering.md(父侧 L2 新口径——三处) + advisor-round1.md(B2) + subagent.mjs(A1/A2/A3) + advisor/run.mjs(B1) + auto-think.mjs(D-TS12 开关闭环) + 断言(T-TS1..12)。**VS Code 侧**：镜像(byte-identical) + auditTaskBook(A1/A2/A3) + run.mjs(B1)——见对应交付记录。 **待办跟踪**：L0 语义缺口（verify git-diff 定位——修正轮未提交语义稀释——docs/TODO.md「R2 · L0 语义缺口」——待 R2 交付后 fix 处理）；subagent.mjs 690 行（>500——挂债既有——TODO 619→690 已更新）；auto-think depth 恒 0（子代理启用时补传——TODO）。 ### 2026-09-06：design token 防伪层删除——安全剧场（用户裁定——"过度工程给我删了"） > 状态：**已批准（2026-09-06 评审 0🔴——round1 2🔴
-> 处置后 round2 通过；6 建议项随实现批吸收（#1 文件名核实为首条——#2 AC-TO6 已落——
-> #3-6 本题吸收）——用户批准 2026-09-06）** **触发**：启动提示 "engineering token secret is the public default — set THINCODER_TOKEN_SECRET
-to make design tokens unforgeable"——用户质问："哪个傻逼会干这个？他关了工程模式想怎么改怎么改！
-你他妈的是用什么脑子想出来的这个？过度工程给我删了。" 裁定：**HMAC 防伪 = 安全剧场**——门禁
-可经工程模式开关（普通模式无门禁）绕过；防"伪造 token 绕过评审"的攻击者先关工程模式即可——
-防伪无实际安全边界。删除防伪层，保留流程凭证层。 **需求**：删防伪机制（公开默认密钥 + 警告 + HMAC 签名/验签）；token 保留为**流程凭证**（评审通过签发、TTL 7 天、designId 槽位匹配——授权链 FR3 不变）。 **设计（两端同改）**：
-1. `src/agent-tools/advisor.mjs`：删 `DEFAULT_TOKEN_SECRET` / `USING_DEFAULT_SECRET` / `TOKEN_SECRET` / `warnIfDefaultSecret` + `console.warn` 提示；`generateDesignToken` 与 `validateDesignToken` 删 `createHmac` 签名与验签段、删 `createHmac` import——token 改为 **无签名凭证**（格式 `uuid:expiresAt`——TTL 检查保留 fail-closed；槽位匹配 `_engDesignTokens.get(designId) === token` 不变）；
-2. 测试：两端 `test/advisor.test.mjs`（或对应域名测试）删防伪断言；**保留** TTL 过期拒绝 / 格式错误拒绝 / 槽位不匹配拒绝 / 授权链（T1/T2/T8/T14/T15）用例——这些是流程凭证层检查； **新增用例（评审 🟡5——AC-TO5 可判定）**：2 段格式解析（uuid:expiresAt 通过）、旧 3 段 token（uuid:expiresAt:HMAC——TTL 内）判格式错拒绝、错槽 token 拒绝；
-3. 存量 token（评审 🔵6）：**不迁移**——slot 内旧 3 段 token 新格式校验判格式错 → fail-closed 拒绝 → 重新设计评审（TTL 7 天语义兜底——过期/格式错重评——2026-09-01 记录 as-of 不迁移 惯例）；
-4. 文档：本段 + NFR3 安全行措辞改（"token 机械匹配（正则 + TTL fail-closed）+ designId 定位槽"——删 "HMAC" 字样）+ **§2.3「Design gate — token」行同步**（评审 🔴——"validateDesignToken（HMAC/TTL 不变）" → "validateDesignToken（格式 + TTL fail-closed——HMAC 已删，见 NFR3）"）+ 既有受影响文件表（advisor.mjs 行）同步注；两端 CHANGELOG。 **验收**：
-- AC-TO1 = 警告零出现（两端 `src/` 代码 grep 无 "THINCODER_TOKEN_SECRET"/"unforgeable"—— 设计文档引文排除）；
-- AC-TO2 = 无 HMAC 残留（两端 advisor.mjs 无 createHmac/TOKEN_SECRET）；
-- AC-TO3 = TTL/格式/槽位用例绿（过期拒、格式误拒（含旧 3 段 token）、错槽拒——fail-closed 保留）；
-- AC-TO4 = 授权链回归：评审通过 → token 签发 → spawn 解锁写（T1/T14/T15 绿）；
-- AC-TO5 = 两端全量绿（断言数不降——删防伪断言数 ≤ 新格式/存量断言增——用例见设计第 2 点）；
-- AC-TO6 = **文档落地**（评审 🟡2——仿 AC-H4 先例）：NFR3（:34）/§2.3（:79）机制段 grep 无 "HMAC" 残留（变更记录/历史 as-of 行除外）+ 两端 CHANGELOG 已记。 **验收回指**：AC-TO1/2 → NFR3；AC-TO3/4 → FR3；AC-TO5/6 → FR3（回归）+ 文档一致性。 **存量 token 一次性失效（评审 🔵4——`2026-09-01 记录 as-of 不迁移惯例` 表述补明）**：本次变更落地
-后，**所有**在槽旧 3 段 token（含 TTL 内的）因格式校验立即判错 → 需重新评审——与 TTL 无关（触发是格式而非过期）；已批准未实现的设计需重评一次——作为已接受的迁移代价在 NFR3
-同步注一句（已注——见 NFR3 2026-09-06 条）。 **关键决策**：token 语义回归"流程凭证"（防误用而非防伪造——与 `_engDesignReviewed` 标志、
-工程模式开关同信任级）；NFR3 安全层不再声称"unforgeable"；声明式原则——不给“门禁可绕过”的层加防御假设。
+5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
+
+## 7. 变更记录
+
+- 2026-08-24 ~ 2026-09-07：机制逐批演进（发起权归用户铁律 → designId 多槽 token → eng-coder 内部交付协议与默认 async → 无签名 token（防伪层删）→ 链终消费 → 凭证不落文档 → 需求池/零裁量/docs FIRST/用户拍板≠批准提示词锚）——活机制与逐字锚已全部提炼入正文（§0-§6 及 §2.9 锚清单），本节不再重复；逐批需求-评审-实现-核销流水账已折叠，批次轨迹以 git 历史与 docs/TODO.md 为准。
+- 2026-09-07：格式债批 A 重写为人类可读当前态（DOC-REWRITE / DOC-REWRITE-LARGE §5）——无 >300 字符单行、markdown 结构正确、历史折叠；锚句字节源 = prompts 落地文本（engineering.md），对照逐字。
