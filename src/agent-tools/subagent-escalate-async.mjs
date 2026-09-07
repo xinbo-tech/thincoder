@@ -73,6 +73,10 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
     maxTurns: parent.config?.agent?.subagentTurns ?? 100,
     stateSink: sink,
     resume,
+    // SUBAGENT-OBSERVE-SEND.md D2（2026-09-08，out-of-list——飞刀 async 与 spawn 同池公平排队，
+    // 父 send 无差别 targeting 池条目）：飞刀条目同样提供 turnInput 消费回调（读 entry._injected）
+    // ——否则 send 落飞刀静默入队永不到达（settle 才注"未投递"）。语义与 spawn runChild 一致。
+    turnInput: entry ? () => ((entry._injected?.length ?? 0) > 0 ? entry._injected.splice(0) : []) : null,
     ...(resume ? { history: sink.history } : {}),
   })
   const outcome = (kind, text) => ({ kind, text, sink, tag, launchEvents })
@@ -85,7 +89,12 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
         // without it — the panel shows WHAT the expert is thinking, not just tool calls.
         onToken: (t) => { output += t; panel({ kind: "text", text: String(t ?? "") }) },
         onReasoning: (r) => panel({ kind: "think", text: String(r ?? "") }),
-        onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
+        onToolCall: (name, args) => {
+          // SUBAGENT-OBSERVE-SEND.md 评审 #2（2026-09-08，out-of-list）：飞刀条目同步记当前
+          // 工具（observe 读它——与 spawn runChild 一致）。args 截断（N2）。
+          if (entry) entry._currentTool = { name, args: (JSON.stringify(args) || "").slice(0, 200) }
+          panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) })
+        },
         onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
         onComplete: () => {},
         // §19.5 D-M5 同型：turn 钩子同步条目决策字段（status 可见性——与 spawn 子代理一致）
@@ -182,6 +191,11 @@ function settleEscalateEntry(parent, entry, outcome, error, notifySettle) {
     entry.tag = res.tag ?? entry.tag ?? "escalate"
     entry.outcome = isDone ? "done" : "error"
     entry.injectBody = `${res.text}${touchedNote}${warning}${skipNote}`
+    // SUBAGENT-OBSERVE-SEND.md D2 send→settle 竞态（2026-09-08，out-of-list）：飞刀 settle
+    // 未消费 _injected（子在下回合头前终了）→ 报告附"未投递"注记（与 spawn settleAsyncEntry 一致）。
+    if ((entry._injected?.length ?? 0) > 0) {
+      entry.injectBody += `\n[Note: ${entry._injected.length} message(s) sent to subagent #${entry.id} before it settled were NOT delivered (the child finished before its next turn boundary) — resend the guidance in a new escalate/spawn if it still matters]`
+    }
     // park-ALWAYS：报告全文入 _pendingEscalateResults（独立流——D-R17c）→ digest 注入
     const holder = parent.history ?? parent
     const pend = (holder._pendingEscalateResults ??= [])

@@ -39,18 +39,19 @@
 
 | 文件 | 职责 |
 |---|---|
-| `src/agent.mjs` | `runAgent` 主循环：run-start pending 注入 → turn 循环 → chat → 工具批 → 收尾；ContinueError/resume；usage 基线；回合收尾 finalizeAgentTurn |
+| `src/agent.mjs` | `runAgent` 主循环：run-start pending 注入 → turn 循环 → chat → 工具批 → 收尾；ContinueError/resume；usage 基线；回合收尾 finalizeAgentTurn；回合头 turnInput 注入消费（SUBAGENT-OBSERVE-SEND D2——下回合边界消化 send 队列） |
 | `src/agent/setup.mjs` | setupAgentRun：注入上下文/system prompt、阈值解析、角色工具面装配、`getAuto` 注入 |
 | `src/agent/execute-tools.mjs` | 工具调度/门禁/批审批（并行批执行） |
 | `src/agent/run-stages.mjs` | checkAndCompact/fireEndOfRunDistill/finalizeAgentTurn/maybeGuardPushbacks（收尾 guard 推回） |
 | `src/agent/run-helpers.mjs` | 常量（turn 上限/落盘阈值/结果落盘 64K）、pushReal/agentState、工具结果 offload |
 | `src/agent/setup-reminders.mjs` | AUTO_REMINDER / ENG 提醒族 / injectEngineeringReminder |
-| `src/agent-tools/subagent.mjs` | subagent 单工具动作面 + spawn 门 + 引擎（审计受限通道、token 门接点） |
+| `src/agent-tools/subagent.mjs` | subagent 单工具动作面 + spawn 门 + 引擎（审计受限通道、token 门接点）；observe/send dispatch + readonly/control 分类 + runChild onToolCall 记当前工具 / turnInput 注入消费回调（SUBAGENT-OBSERVE-SEND） |
 | `src/agent-tools/subagent-async.mjs` | async 池/collectSettledAsync/mergeChildMutations/gateEngCoderSpawn |
 | `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：filesOverlap/depInfo/queueRunnable/assertNoDepCycle/refillPool/nextSubagentId/停滞检测 |
-| `src/agent-tools/subagent-actions.mjs` | status/cancel/escalate/consume-design 动作执行器 |
+| `src/agent-tools/subagent-actions.mjs` | status/cancel/escalate/consume-design/observe/send 动作执行器（observe/send——SUBAGENT-OBSERVE-SEND 2026-09-08） |
 | `src/agent-tools/subagent-spawn-gate.mjs` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
-| `src/agent-tools/subagent-spec.mjs` | description 面 / modeRoleField（schema enum） |
+| `src/agent-tools/subagent-spec.mjs` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
+| `src/agent-tools/subagent-escalate-async.mjs` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
 | `src/agent-tools/advisor-async.mjs` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=2）+ launchAsyncAdvisor |
 | `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
 | `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))` |
@@ -138,8 +139,8 @@ coder/eng-coder 完整工具 + verify/advisor 自审。轮次/并发上限与调
 
 ## 4. 子代理单工具动作面（subagent.mjs）
 
-**"ONE tool, FIVE actions"**——`action` 缺省 spawn（既有调用零迁移）；枚举 =
-spawn / status / cancel / escalate / **consume-design**：
+**"ONE tool, SEVEN actions"**——`action` 缺省 spawn（既有调用零迁移）；枚举 =
+spawn / status / cancel / escalate / **consume-design** / **observe** / **send**：
 
 - `action:"spawn"`：起一个隔离上下文的子代理，只回最终报告。`task` 必填
   （self-contained——子代理零会话上下文）；`role`/`model`/`designId`/`designToken`
@@ -147,10 +148,23 @@ spawn / status / cancel / escalate / **consume-design**：
 - `action:"status"`：非阻塞进度查询（id 单查或全池概览），零消耗——running 条目
   携 `{role, model, elapsedSec, turn, maxTurns}` + touched-files 摘要
   （touchedFiles 前 5 / touchedMore / 占位 "—（尚无改动）"/"—（未启动）"）。
+- `action:"observe"`（SUBAGENT-OBSERVE-SEND.md D1，2026-09-08）：父查运行中异步子代理
+  的 recent-activity 快照（判推进 vs 卡死）——最近 **N=5** 条回合摘要（截断抽取——每
+  回合 assistant content 首行 / 工具名列表——非原始消息体）+ **当前工具**（onToolCall
+  捕获的 entry._currentTool）+ turn/touched + status。id 必填；零消耗（readonly）。
+  queued → 占位；done（本回合 settle 未取）→ 终态 + 报告预览。
 - `action:"cancel"`：定向中止单个后台 async 子代理——`id` 必填（防误全停；
   Ctrl+C 停全部）；running 条目 abort → `{id, status:"cancelled"}`（不合并、不入
   pending、冻结通知）；queued 出队 → `{id, status:"cancelled", was:"queued"}` +
   position 前移；未知/已完成 id error；幂等。
+- `action:"send"`（SUBAGENT-OBSERVE-SEND.md D2，2026-09-08）：父向 running 异步子代理
+  发消息 → 入池条目 `entry._injected` 队列 → 子**下回合边界**作普通 user 指令消费
+  （引导纠结/跑偏的子代理——比 cancel 省在途工作）。`id` + `message` 必填；仅 running
+  可 send（sync 无池条目→unknown、settled/queued/未知 id 明确错误）。**注入延迟**：
+  send 落子代理正在跑的 generation（mid-LLM-await）不入打断——当前工具/回合返回后下个
+  回合头（runAgent 主循环 opts.turnInput 消费）才入子历史——非即时。send→settle 竞态：
+  settle 收尾未消费 `_injected` → settle 附"未投递"注记（settleAsyncEntry/
+  settleEscalateEntry）。凭证纪律：不读写 token/designId。
 - `action:"escalate"`：飞刀——consult 模型候选池（agent.consultModels）里飞入强
   模型做实现（写权限 + 术后报告），缺省 async；工程模式不可用（实现走
   eng-coder）。触发词条款："用户说 飞刀/escalate → 调 action:'escalate'"。
@@ -160,6 +174,19 @@ spawn / status / cancel / escalate / **consume-design**：
 - `action:"check"` **已删除**（2026-09-06 用户裁定：check 是冗余 API——需要报告 =
   同步 spawn；async = 后台 + 结果自动送达）——**不写回**；status 非阻塞查询取代轮询
   引导（"查进度用 status——check 会阻塞直到完成"防误用语义随删除退役）。
+
+**动作分类（execute-tools.mjs isReadonlyAction/isControlAction——subagent.mjs 谓词）**：
+status / observe = **readonly**（plan mode 放行、零消耗、readonly 批不审批）；cancel /
+send = **control**（控制类豁免——只入队/只停不落盘——plan mode 放行、免权限审批、批审批
+分组不入组、手动档 digest 放行）。`consume-design` 独立谓词只接权限豁免位（非只读非
+control——见 §2.6）。observe/send 仅 depth-0（子代理上下文无 async 池——错误明示）。
+
+**注入贯通（SUBAGENT-OBSERVE-SEND.md D2——stateSink 先例顺延）**：runChild（spawn）与
+飞刀 async 引擎（escalate）各以新回调 `opts.turnInput` 传给子 runAgent——读池条目
+`entry._injected` 清空取回；子 runAgent 主循环**回合头**（agent.mjs）把待投递消息 push
+作 user 回合入子 history。observe 摘要源 = `entry.childAgent.history`（setup 把
+agent.history = 该轮 history——与 runChild 闭包 sink.history 同数组——对象引用实时读）；
+当前工具 = runChild/飞刀引擎 onToolCall 回调顺记 `entry._currentTool`。
 
 **角色按模式互斥**（modeRoleField——schema 首道防线 + 运行期硬门禁双保险）：非工程
 模式 enum `["explore","plan","coder"]`、工程模式 enum `["explore","plan",

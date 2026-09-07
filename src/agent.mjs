@@ -141,6 +141,18 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     // turn 号——subagent runChild 同步进 async 池条目的 entry.turn（status 决策字段）。
     callbacks.onAgentTurn?.(turn + 1)
 
+    // SUBAGENT-OBSERVE-SEND.md D2（2026-09-08）：父 send 注入队列消费点——子 runAgent 每
+    // 回合头清空 turnInput 回调（runChild/escalate 引擎提供——读池条目 entry._injected）取回
+    // 待投递消息 → 作普通 user 回合 push 进子 machine 历史 → 本次 LLM 回合视其为用户指令。
+    // 延迟语义（评审 #3）：send 落子代理 mid-LLM-await 时不打断——当前工具/回合返回后到此
+    // 回合头才消费（非即时）。depth-0/无 turnInput 提供者为 no-op（顶层不走注入）。
+    const turnInjected = opts.turnInput?.() ?? null
+    if (Array.isArray(turnInjected) && turnInjected.length > 0) {
+      for (const m of turnInjected) {
+        if (m && typeof m.message === "string" && m.message.trim()) history.push({ role: "user", content: m.message })
+      }
+    }
+
     // Context compaction check — only at safe points: history ends with a complete
     // exchange (user input or tool result), never mid-assistant (CLI parity D1).
     // 2026-09-05 实践轮：压缩判定/重建/降级计数提为 checkAndCompact 模块函数

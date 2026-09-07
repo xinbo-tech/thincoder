@@ -205,6 +205,10 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     cancelled: false,
     controller: null,
     _onCancelled: null,
+    // SUBAGENT-OBSERVE-SEND.md D2（2026-09-08）：send 注入队列——父 send 动作 push；子
+    // runAgent 回合头经 turnInput 回调消费（subagent.mjs runChild / escalate 引擎）。settle
+    // 收尾未消费 → 附"未投递"注记（下同 settle 分支）。
+    _injected: [],
   }
   entry.settled = new Promise((res) => { entry._resolve = res })
   // §20 D-SD2 域元数据（AGENT-LOOP.md §20——running ∪ queued 全带）：_files（归一化
@@ -329,6 +333,12 @@ function settleAsyncEntry(parent, entry, report, error, notifySettle) {
     if (error != null) logEvent("child:error", { role: entry.role, id: childLogId, ms: childMs, err: errText(error, 200) })
     else logEvent("child:done", { role: entry.role, id: childLogId, ms: childMs, kind: String(report ?? "").includes("turn cap reached") ? "partial" : "ok" })
     if (parent.history?._suspended === true) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
+  }
+  // SUBAGENT-OBSERVE-SEND.md D2 send→settle 竞态：settle 收尾未消费 _injected（父 send 落子
+  // 代理正在跑的最后 generation——子还没到下回合头就终了）→ 报告附"未投递"注记（报告照常
+  // 注入——guidance 未生效需新 spawn 重发）。cancel/纯中止分支不入报告（无注入）。
+  if ((entry._injected?.length ?? 0) > 0 && !entry.cancelled && !(entry.signal?.aborted && !entry.signal?.reason?.interrupt)) {
+    entry.report = `${String(entry.report ?? "")}\n[Note: ${entry._injected.length} message(s) sent to subagent #${entry.id} before it settled were NOT delivered (the child finished before its next turn boundary) — resend the guidance in a new spawn if it still matters]`
   }
   // §19.5 D-M6 cancelled settle（round1 #1 + round2 #2 定稿）：entry.cancelled（cancel
   // 动作 / UI ⏹）→ **不入 _pendingAsyncResults、不参与 collectSettledAsync 直注入**

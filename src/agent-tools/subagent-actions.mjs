@@ -6,7 +6,9 @@
  * 内容：status 组（statusEntryFields/summarizeTouched/shortTouchedPath + subagentStatus
  * ——§19 D-M2 非阻塞查询 + §19.5.6 D-SF1/SF2 touched 文件摘要）、cancel 组
  * （injectCancelReminder/cancelSubagent/cancelSubagentAction——§19.5 D-M6 定向中止 +
- * 控制面 + UI ⏹ 共用核心 + 墓碑/依赖者注记/补位）。依赖 subagent-scheduler.mjs 单向
+ * 控制面 + UI ⏹ 共用核心 + 墓碑/依赖者注记/补位）、observe/send 组
+ * （subagentObserve/subagentSend——SUBAGENT-OBSERVE-SEND.md D1/D2——父侧观察/注入运行中
+ * 异步子代理：最近 N=5 回合摘要 + 当前工具捕获 + 注入队列 + running-only 校验）。依赖 subagent-scheduler.mjs 单向
  * （describeBlockers/dependentLabels/queuePosition/refillPool/refreshQueuedRows/
  * writeTombstone）——模块图无环；subagent.mjs execute 按 action 派发。
  */
@@ -212,3 +214,125 @@ export function cancelSubagentAction({ id }, ctx) {
   }
   return cancelSubagent(ctx.agent, id)
 }
+
+// ─── observe / send 动作（SUBAGENT-OBSERVE-SEND.md D1/D2——2026-09-08 父侧观察/注入运行中异步子代理）───
+
+/** observe 摘要源统一取最近 N 条回合（评审 #1 采纳——N=5 单一常量）：从子代理**当前运行**的
+ *  machine 历史（entry.childAgent.history——setup 把 agent.history = 该轮 history，与
+ *  runChild 闭包 sink.history 同数组——对象引用实时读）尾部**截断抽取**（每回合取 assistant
+ *  content 首行 / 工具名列表——非原始消息体——N2 隔离不破坏），跳过 user/system/tool 结果行
+ *  （tool 结果不回显——无谓噪音）。返回顺序 = 子代理最近轨迹（最老在前、最新在后）。 */
+export const SUBAGENT_OBSERVE_RECENT = 5
+const _OBSERVE_LINE = 160
+function recentTurnSummaries(history, n = SUBAGENT_OBSERVE_RECENT) {
+  const arr = Array.isArray(history) ? history : []
+  const out = []
+  for (let i = arr.length - 1; i >= 0 && out.length < n; i--) {
+    const m = arr[i]
+    if (m?.role !== "assistant") continue // 只摘 assistant 回合（含 tool_calls 的步子）
+    const tcs = m.tool_calls
+    if (Array.isArray(tcs) && tcs.length > 0) {
+      out.push("tools: " + tcs.map((t) => t?.function?.name ?? "?").join(", "))
+    } else if (typeof m.content === "string" && m.content.trim()) {
+      const first = m.content.trim().split("\n").find((l) => l.trim()) ?? ""
+      out.push(first.length > _OBSERVE_LINE ? `${first.slice(0, _OBSERVE_LINE - 1)}…` : first)
+    }
+  }
+  return out.reverse()
+}
+
+/** 从池条目取最近摘要源（queued = 未启动无 childAgent → null——占位由调用方处理）。 */
+function observeHistory(entry) {
+  return entry.childAgent?.history ?? null
+}
+
+/**
+ * §19/§19.5 action:'observe' handler（SUBAGENT-OBSERVE-SEND.md F1/D1）——父查运行中异步
+ * 子代理的 recent-activity 快照（判推进 vs 卡死）：最近 N=5 条回合摘要（截断抽取——首行/
+ * 工具名——非全量——N2）+ 当前工具（onToolCall 捕获的 entry._currentTool）+ turn/touched +
+ * status。深度门同 cancel（depth-0 才有异步池）。observe = readonly（isReadonlyAction）——
+ * 零消耗（不动池/不写墓碑）；queued/done 可查（queued 占位；done = 未取终态 + 报告预览）。
+ * 返回形态（JSON 字符串——工具结果契约）：
+ * - running → { id, role, status:"running", model?, elapsedSec?, turn, maxTurns,
+ *   touchedFiles?/touched?, currentTool: {name,args?}|null, recent: [≤5 摘要串] }
+ * - queued  → { id, role, status:"queued", position?, touched:"—（未启动）", currentTool:null, recent: [] }
+ * - done    → { id, role, status:"done", note, currentTool, recent, reportPreview? }
+ * - 未知 id → { id, status:"error", error:"unknown async subagent id: <id>" }
+ */
+export function subagentObserve({ id }, ctx) {
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "observe is only available at the top level — subagent contexts have no async pool (SUBAGENT-OBSERVE-SEND.md D1)" })
+  }
+  const parent = ctx.agent
+  const map = parent._asyncSubagents
+  const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // 同 status 容错归一
+  if (idNum == null) {
+    return JSON.stringify({ status: "error", error: "observe requires an id — pass the target subagent's id (from an async spawn return) to see its recent activity" })
+  }
+  if (!map || !map.has(idNum)) {
+    return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
+  }
+  const entry = map.get(idNum)
+  const base = statusEntryFields(entry, map, parent, ctx.cwd) // 复用 status 决策字段（status/turn/touched…）
+  base.currentTool = entry._currentTool ?? null
+  if (entry.status === "queued") {
+    base.recent = [] // 未启动——占位（touched 已由 statusEntryFields 给 "—（未启动）"）
+    return JSON.stringify(base)
+  }
+  const history = observeHistory(entry)
+  base.recent = history ? recentTurnSummaries(history) : []
+  // done 条目仍携终报预览（可查——终态虽未取但模型能看到子代理收尾说什么——短截断）。
+  if (entry.done) {
+    const report = String(entry.report ?? "")
+    if (report) base.reportPreview = report.length > 300 ? `${report.slice(0, 299)}…` : report
+  }
+  return JSON.stringify(base)
+}
+
+/**
+ * §19/§19.5 action:'send' handler（SUBAGENT-OBSERVE-SEND.md F2/D2）——父向 running 异步子
+ * 代理发消息，子代理**下回合边界**作普通 user 指令消费（给纠结/跑偏的子代理引导方向）。
+ * send = control（isControlAction——只入队不落盘——免审批/planMode 放行，同 cancel）。
+ * 校验（AC3）：仅 running 异步可 send——sync（无池条目→unknown）、settled(done)/queued/
+ * 未知 id → 明确错误。注入延迟（评审 #3）：消息入队 entry._injected，子代理 mid-LLM-await
+ * 不打断——当前工具/回合返回后下个回合头（agent.mjs 主循环头 opts.turnInput 消费）才入子
+ * 历史作 user 回合。凭证纪律（AC4）：不读写 token/designId。send→settle 竞态 = settle 收尾
+ * 未消费 _injected → settle 侧附"未投递"注记（settleAsyncEntry/settleEscalateEntry）。
+ * 返回：{ id, status:"injected", note }——非即时送达（F2 语义——下回合边界才生效）。
+ */
+export function subagentSend({ id, message }, ctx) {
+  if ((ctx.depth ?? 0) > 0) {
+    return JSON.stringify({ status: "error", error: "send is only available at the top level — subagent contexts have no async pool (SUBAGENT-OBSERVE-SEND.md D2)" })
+  }
+  const parent = ctx.agent
+  const map = parent._asyncSubagents
+  const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id
+  if (idNum == null) {
+    return JSON.stringify({ status: "error", error: "send requires an id — pass the target subagent's id (from an async spawn return)" })
+  }
+  if (typeof message !== "string" || !message.trim()) {
+    return JSON.stringify({ status: "error", error: "send requires a non-empty message — the guidance you want the running subagent to act on as an ordinary user instruction" })
+  }
+  if (!map || !map.has(idNum)) {
+    return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id} — send targets a running async child from an async spawn return (a synchronous spawn returns no pool id)` })
+  }
+  const entry = map.get(idNum)
+  if (entry.done) {
+    return JSON.stringify({ id, status: "error", error: `async subagent id ${id} has already finished — nothing to send to; its report reaches you automatically (resend the guidance in a new spawn if it still matters)` })
+  }
+  // advisor fix: a send racing a concurrent cancel must fail clearly, not queue into a
+  // child that is being aborted — the cancelled settle path drops any _injected silently
+  // (no undelivered note on the cancel branch), so error here instead.
+  if (entry.cancelled) {
+    return JSON.stringify({ id, status: "error", error: `async subagent id ${id} is being cancelled — nothing to send to; its in-flight work is being stopped (partial changes stay unmerged/unaudited)` })
+  }
+  if (entry.status !== "running") {
+    return JSON.stringify({ id, status: "error", error: `async subagent id ${id} is ${entry.status === "queued" ? "still queued (not yet started)" : entry.status} — send only reaches a RUNNING child; a message can be delivered once it starts` })
+  }
+  ;(entry._injected ??= []).push({ message, at: Date.now() })
+  return JSON.stringify({
+    id, status: "injected",
+    note: `message queued for subagent ${entry.role}#${id} — delivered at its next turn boundary as an ordinary user instruction (NOT immediate — it takes effect when the child's current tool/turn returns). Do NOT resend unless you observe it is stuck (action:'observe').`,
+  })
+}
+

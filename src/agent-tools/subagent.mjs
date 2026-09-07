@@ -1,7 +1,7 @@
 /**
- * subagent.mjs — subagentTool (single tool, five actions — AGENT-LOOP.md §19/§19.5:
- * spawn/status/cancel/escalate; no panel action in VS Code — §19.6 AC-P4; §19.8 2026-09-06: action:'check' 删除——结果仅自动通道；§2.6 2026-09-07: +action:'consume-design'
- * 链终消费制——父侧核销消费 designId 槽——执行器在 subagent-spawn-gate.mjs)
+ * subagent.mjs — subagentTool (single tool, seven actions — AGENT-LOOP.md §19/§19.5:
+ * spawn/status/observe/send/cancel/escalate/consume-design; no panel action in VS Code — §19.6 AC-P4; §19.8 2026-09-06: action:'check' 删除——结果仅自动通道；§2.6 2026-09-07: +action:'consume-design'
+ * 链终消费制——父侧核销消费 designId 槽——执行器在 subagent-spawn-gate.mjs; SUBAGENT-OBSERVE-SEND.md 2026-09-08: +action:'observe'/'send' 父侧观察/注入运行中异步子代理——执行器在 subagent-actions.mjs)
  * Spawn a sub-agent for an independent subtask.
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
  * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
@@ -21,7 +21,7 @@
  */
 import { logEvent, errText } from "../log.mjs"
 import { auditTaskBook, gateEngCoderSpawn, shouldAutoResume, spawnAsyncSubagent, mergeChildMutations, nextSubagentId } from "./subagent-async.mjs"
-import { subagentStatus, cancelSubagentAction } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出；§19.8 删 check——subagentCheck 退役）
+import { subagentStatus, cancelSubagentAction, subagentObserve, subagentSend } from "./subagent-actions.mjs" // §19/§19.5 动作执行器（2026-09-05 拆分轮迁出；§19.8 删 check——subagentCheck 退役；2026-09-08 SUBAGENT-OBSERVE-SEND：+observe/send 执行器）
 // Eng-coder spawn design-token gate — resolveDesignSlot / dropExpiredTokenSlot /
 // authorizeEngCoderDesignToken moved to subagent-spawn-gate.mjs on 2026-09-06 (module
 // split: this file crossed the >500-line hard cap). resolveDesignSlot re-exported below
@@ -127,13 +127,17 @@ export const subagentTool = {
   // Used by execute-tools.mjs preGateBlocked / batch grouping / permission stage.
   isReadonlyAction(args) {
     const action = args?.action
-    return action === "status"
+    // observe（SUBAGENT-OBSERVE-SEND.md D1——2026-09-08）= readonly 查询动作——与 status
+    // 同分类：plan mode 放行、零消耗、readonly 批不审批。
+    return action === "status" || action === "observe"
   },
   // §19.5 (AGENT-LOOP.md §19.5 D-M6 round2 #4): cancel = 控制类豁免动作——只停不启
   // （无新副作用）——planMode 放行、免权限审批、批审批分组不入组、手动档 digest 放行。
   // Used by execute-tools.mjs preGateBlocked / collectBatchPermission / permission stage.
+  // send（SUBAGENT-OBSERVE-SEND.md D2——2026-09-08）同 control 类（评审 #4 采纳）：只入
+  // 注入队列不落盘/不改文件——planMode 放行、免权限审批（给运行中子代理引导不视为文件写）。
   isControlAction(args) {
-    return args?.action === "cancel"
+    return args?.action === "cancel" || args?.action === "send"
   },
   description: subagentSpec.description, // description/schema 载荷 verbatim 在 subagent-spec.mjs（2026-09-05 module-split round 2——546 > 500 拆出）
   parameters: subagentSpec.parameters,
@@ -141,17 +145,19 @@ export const subagentTool = {
     // §19 action dispatch（AGENT-LOOP.md §19 D-M1）：缺省 spawn——既有调用零迁移。
     const action = args?.action ?? "spawn"
     const parent = ctx.agent
-    if (!["spawn", "status", "cancel", "escalate", "consume-design"].includes(action)) {
-      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), status, cancel, escalate, consume-design.`)
+    if (!["spawn", "status", "cancel", "escalate", "consume-design", "observe", "send"].includes(action)) {
+      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), status, cancel, escalate, consume-design, observe, send.`)
     }
     // §19 round2 #3 restricted-variant action gate（机械层——schema 层提示在 setup.mjs
     // engAuditSubagentTool）：eng-coder 子代理的受限通道仅 spawn（sync explore 审计）——
-    // escalate 会内部 spawn coder+WRITE（违 explore-only 意图）；status 无意义
+    // escalate 会内部 spawn coder+WRITE（违 explore-only 意图）；status/observe/send 无意义
     // （子代理上下文无 async 池）。镜像 T-E4/E5 的 action 维度。
     if ((ctx.depth ?? 0) > 0 && parent?._role === "eng-coder" && action !== "spawn") {
       throw new Error(`action:'${action}' is unavailable inside an eng-coder subagent — the restricted subagent channel is spawn-only (sync role='explore' audits, AGENT-LOOP.md §18 D-E3)`)
     }
     if (action === "status") return subagentStatus(args, ctx)
+    if (action === "observe") return subagentObserve(args, ctx)
+    if (action === "send") return subagentSend(args, ctx)
     if (action === "cancel") return cancelSubagentAction(args, ctx)
     // §2.6 token 链终消费制（2026-09-07——ENGINEERING-MODE.md F1）：父侧核销消费——
     // 非只读控制动作——depth-0 + 工程模式限定（本分流已过受限变体门；工程模式门在
@@ -348,6 +354,11 @@ export const subagentTool = {
         // source for its audit task book (mechanical — never self-written).
         ...(role === "eng-coder" ? { engTaskInput: task } : {}),
         stateSink: sink,
+        // SUBAGENT-OBSERVE-SEND.md D2（2026-09-08）：注入队列消费回调——子 runAgent 主循环
+        // 每回合头调它，把父 send 入队的 _injected 清空取回 → 作普通 user 回合入子历史。仿
+        // stateSink 作为新回调传给子 runAgent（延迟语义：mid-LLM-await 入队——下回合头才消费
+        //——非即时——评审 #3）。entry 为 null（sync 路径）无池条目 → 无可注入。
+        turnInput: entry ? () => ((entry._injected?.length ?? 0) > 0 ? entry._injected.splice(0) : []) : null,
       }
       // Turn-cap continue loop (escalate parity): hitting the cap asks the user through
       // the panel's question card — unlimited continues, each with a fresh budget and the
@@ -363,7 +374,13 @@ export const subagentTool = {
           const result = await runAgent(provider, cwd, childInput, {
             onToken: (t) => { output += t; panel({ kind: "text", text: t }) },
             onReasoning: (r) => panel({ kind: "think", text: r }),
-            onToolCall: (name, args) => panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) }),
+            onToolCall: (name, args) => {
+              // §19/§19.5 当前工具捕获（SUBAGENT-OBSERVE-SEND.md 评审 #2——2026-09-08）：
+              // 在流式回调处顺手记最后工具名+args 单字段进池条目——observe 读它当"当前工具"
+              //（判推进 vs 卡死——卡在哪个工具上一眼可见）。args 截断（N2——非全量）。
+              if (entry) entry._currentTool = { name, args: (JSON.stringify(args) || "").slice(0, 200) }
+              panel({ kind: "tool", text: name + " " + (JSON.stringify(args) || "").slice(0, 120) })
+            },
             onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
             // §18 visibility (2026-09-03 可见性补齐, CLI parity — 两边都修): the child's
             // ctx.callbacks.onToolPanel (advisor long-form stream, advisor.mjs:142-144;
