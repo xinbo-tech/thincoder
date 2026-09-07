@@ -46,7 +46,7 @@ import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { extractAgentResponseTable } from "./history.mjs"
-import { buildAdvisorUserMessage, resolveScopeFiles } from "./messages.mjs"
+import { buildAdvisorUserMessage, resolveScopeFiles, buildDesignApprovalBlock } from "./messages.mjs"
 import { buildConvergenceBody } from "./convergence.mjs"
 import { escapeLiteralEscapes } from "../escape.mjs"
 // re-export：历史调用方（advisor.test.mjs 等）从本模块 import escapeLiteralEscapes
@@ -213,8 +213,10 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, rv = null)
  * @param {Object|null} [rv] — §24 D-24b 实例上下文 { round, priorOutput }（async advisor——
  *   2026-09-06——并发隔离：round = 本次调用轮次 = 实例已完轮数 + 1；rv 给定 → 轮次/prior
  *   全从 rv 解析（不读全局 _advisorRound/_lastAdvisorOutput、不跑 _mutatedThisRun 重置）
+ * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
+ *   the Approval Signal (round 1 + round 2+ — both values, verbatim anchor).
  */
-export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, rv = null) {
+export function prepareAdvisorMessages(agent, reviewType, designToken = null, documents = null, paths = null, priorParam = null, rv = null, designId = null) {
   // Deterministic convergence state (decision 2026-08-08): round 2+ requires
   // _advisorRound > 0 AND a stored prior review output. No history parsing.
   // priorParam (direct callers) wins over the stored output — same derivation
@@ -230,7 +232,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   if (reviewType === "design" && isRound1) {
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
-      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, rv)) },
+      { role: "user", content: escapeLiteralEscapes(buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, rv, designId)) },
     ]
   }
 
@@ -263,7 +265,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
       agent._advisorRound = 0
     }
     // Mutations exist → KEEP the round (cap keeps advancing through retries).
-    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, rv)
+    const user = buildAdvisorUserMessage(agent, prior, reviewType, designToken, documents, paths, rv, designId)
     return [
       { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
       {
@@ -292,8 +294,25 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // scopeFiles gives the fallback (agent gave no response table) a concrete
   // review surface.
   const scopeFiles = resolveScopeFiles(agent, paths)
+  const followUp = buildAdvisorFollowUp(agent, prior, scopeFiles, rv)
+  // §29.1 F2a（2026-09-07——对齐 CLI src/advisor.mjs:266-282）：design round 2+ 注入段——
+  // 重锚评审范围 + 注入本轮 token 与 designId 两值——async 修正轮续跑必须能 re-approve
+  // （评审员看不到新 token 就永不 re-approve——VS 实测三次 designId not found 的修复面）。
+  if (reviewType === "design") {
+    const docList = Array.isArray(documents)
+      ? documents.filter((d) => typeof d === "string" && d.trim())
+      : []
+    const scopeBlock = docList.length > 0
+      ? `\n\n## Documents to Review\nThe documents below are the review scope. Review ONLY these files — do not scan git diff or read any other files.\n${docList.map((d) => `- ${d} — Read this file in full`).join("\n")}`
+      : ""
+    const tokenBlock = designToken ? `\n\n${buildDesignApprovalBlock(designToken, designId)}` : ""
+    return [
+      { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
+      { role: "user", content: escapeLiteralEscapes(followUp + scopeBlock + tokenBlock) },
+    ]
+  }
   return [
     { role: "system", content: withTime(buildAdvisorSystemPrompt(agent, prior, reviewType, rv)) },
-    { role: "user", content: escapeLiteralEscapes(buildAdvisorFollowUp(agent, prior, scopeFiles, rv)) },
+    { role: "user", content: escapeLiteralEscapes(followUp) },
   ]
 }

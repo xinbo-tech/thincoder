@@ -23,8 +23,9 @@
  *   onToolPanel(`sub:advisor#${id}`, chunk)（subagent 块同型——cancel 走 ②-6b 路由）。
  */
 import { randomUUID } from "node:crypto"
+import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
-import { generateDesignToken, makeDesignTokenRegex } from "./advisor.mjs"
+import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
@@ -33,8 +34,13 @@ import { nextSubagentId } from "./subagent-scheduler.mjs"
  *  前轮处置——排队无意义）。 */
 export const ADVISOR_POOL_LIMIT = 2
 
-/** 实例轮次上限（run.mjs MAX_ADVISOR_ROUNDS 同值 5——每评审 ≤5 轮——修正 #4：第 6 次
- *  启动/settle 拒——ADVISOR-CONVERGENCE 轮次共享条款随之 supersede）。 */
+/** 机械失败前缀（run.mjs resolve 这些文本——永不 throw）：携带它们的 settle 未产出评审
+ *  判定——不得满足 guard（CLI ADVISOR_FAILURE_TEXT 同源——评审发现 #2：失败评审不得静默
+ *  满足 code guard；design 保持任意完成判定置位——sync 镜像）。 */
+const ADVISOR_FAILURE_TEXT = /^Advisor: (?:review failed|review timeout|stopped after|interrupted|context window limit|empty response)/
+
+/** 实例轮次上限（run.mjs MAX_ADVISOR_ROUNDS 同值 5——每评审 ≤5 轮——修正 #4：code
+ *  第 6 次启动拒；design 豁免 cap（2026-09-07 §8——轮次继续递增、不拒）。 */
 export const MAX_REVIEW_ROUNDS = 5
 
 /** 实例轮次载体（history 优先——跨 runAgent 存活——agent per-run 重建）。 */
@@ -76,10 +82,16 @@ export function advisorReviewInFlight(parent) {
   return false
 }
 
-/** 评审 scope 键（type+scope 续跑匹配——paths/documents 排序归一）。 */
-function scopeKeyOf(paths, documents) {
+/** 评审 scope 键（type+scope 续跑匹配——paths/documents 排序归一）。§29.1 F2h（评审发现
+ *  #3）：路径归一（resolve(cwd) 绝对化）——同一文档集换写法（"./" 前缀/反斜杠/相对绝对）
+ *  不误建新实例（CLI docSetKey 同款理由）——sync designScopeKey 与 async 本函数同构同源。 */
+function scopeKeyOf(paths, documents, cwd) {
   const src = Array.isArray(paths) ? paths : (Array.isArray(documents) ? documents : [])
-  return JSON.stringify([...new Set(src.filter((x) => typeof x === "string" && x.trim()))].sort())
+  const norm = (p) => {
+    const s = String(p)
+    return cwd && !/^[a-zA-Z]:[\\/]/.test(s) && !s.startsWith("/") ? resolve(cwd, s) : s
+  }
+  return JSON.stringify([...new Set(src.filter((x) => typeof x === "string" && x.trim()).map(norm))].sort())
 }
 
 /** 陈旧判定（修正 #2——settle 时）：launch 后发生 FILE_MUTATORS——code 评审任意文件面；
@@ -124,7 +136,10 @@ function resolveReviewInstance(parent, reviewType, paths, documents, scopeKey) {
     if (!best || rec.round > best.round) best = rec
   }
   if (best) {
-    if (best.round >= MAX_REVIEW_ROUNDS) {
+    // 2026-09-07 §8 ruling: design reviews are EXEMPT from the cap — a design
+    // instance may continue past 5 rounds (rounds still advance for the
+    // convergence prompts / round display); the cap refuses CODE instances only.
+    if (reviewType !== "design" && best.round >= MAX_REVIEW_ROUNDS) {
       return { error: `Advisor: the ${reviewType} review of this scope has reached its convergence cap (${MAX_REVIEW_ROUNDS} rounds per review instance — §24 D-24b 修正 #4) — accept the current state and proceed, review manually, or start a new session` }
     }
     return { record: best, reviewId: best.reviewId, designId: best.designId ?? null, round: best.round + 1, priorOutput: best.priorOutput ?? null }
@@ -145,7 +160,7 @@ export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, 
   if (running >= ADVISOR_POOL_LIMIT) {
     return { error: "Advisor: another review is already running (pool limit 2 — §24 D-24b ②-6a) — start reviews one at a time and wait for each to finish (另有一评审在跑——逐个发起)" }
   }
-  const scopeKey = scopeKeyOf(paths, documents)
+  const scopeKey = scopeKeyOf(paths, documents, ctx.cwd)
   const inst = resolveReviewInstance(parent, reviewType, paths, documents, scopeKey)
   if (inst.error) return { error: inst.error }
   const runs = advisorRunsMap(parent, true)
@@ -205,7 +220,7 @@ export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, 
     runAdvisorReview(parent, reviewType, {
       onOutput: (chunk) => stream(chunk),
       signal: entry.controller.signal,
-    }, designToken, documents ?? null, paths ?? null, object ?? null, { round: entry.round, priorOutput: inst.priorOutput ?? null })
+    }, designToken, documents ?? null, paths ?? null, object ?? null, { round: entry.round, priorOutput: inst.priorOutput ?? null }, entry.designId)
       .then(
         (result) => settleAdvisorReview(parent, entry, result, null, ctx.callbacks?.onAsyncSettled),
         (err) => settleAdvisorReview(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),
@@ -236,7 +251,7 @@ function designReviewPassed(entry, result) {
  *   "评审已取消——token 未签发"语义）；会话中止（controller aborted 非 cancel）→ 出池清理；
  *   挂起期 settle → 移交 history._pendingAdvisorResults（digest 轮注入——D-S3 ② 同机制）。
  */
-function settleAdvisorReview(parent, entry, result, error, notifySettle) {
+export function settleAdvisorReview(parent, entry, result, error, notifySettle) {
   entry.report = result
   entry.error = error
   entry.done = true
@@ -273,6 +288,9 @@ function settleAdvisorReview(parent, entry, result, error, notifySettle) {
         parent._engDesignTokens ??= new Map()
         parent._engDesignTokens.set(entry.designId, entry.designToken)
         parent._engDesignToken = entry.designToken
+        // F2c（§29.1）：Approved 后缀单一 builder（id 回显 + 省略指引 + 槽数时点注记——
+        // 与 sync 同源）；F2e 的 prior 存储用同一串精确截断。
+        entry.approvedSuffix = buildApprovedSuffix(entry.designToken, entry.designId, parent._engDesignTokens.size)
         // _engPersist = 顶层面板会话（eng tool 先例）——token 直接落 slot（跨 run 恢复——
         // settle 常发生在挂起期——无 onComplete agentState 通道）
         const persist = parent._engPersist
@@ -280,11 +298,21 @@ function settleAdvisorReview(parent, entry, result, error, notifySettle) {
           // 动态 import（fire-and-forget）——settle 是同步记账点；slot 写失败非致命
           // （内存槽仍持态——下个 onComplete agentState 兜底）
           import("../extension/session-slot-write.mjs").then((m) => {
-            m.setSlotEngDesignTokens(persist.cwd, persist.slot, Object.fromEntries(parent._engDesignTokens))
+            // F2g（§29.1）：镜像与多槽表同写——挂起期 settle 后进程死亡 → resume 不再撞
+            // torn-state guard（镜像缺失 + 槽在 = 拒所有 spawn 的恢复洞）。
+            m.setSlotEngDesignTokens(persist.cwd, persist.slot, Object.fromEntries(parent._engDesignTokens), parent._engDesignToken ?? null)
           }).catch(() => { /* slot 不可写——内存槽仍持态 */ })
         }
       }
-      parent._calledAdvisorThisRun = true
+      // 机械失败 settle（run.mjs resolve 失败文本——评审未产出判定）不置 called——CLI
+      // ADVISOR_FAILURE_TEXT 同源（guard 不得被失败评审静默满足——T-24b13 语义）；error
+      // settle（rejection 路径——result=null 带 error）同样无判定——不置 called（advisor 复评
+      // 补边）；design 评审保持任意完成判定置位（sync recordToolResults 镜像——无 code 面）。
+      const failureVerdict = entry.reviewType !== "design" && (
+        ADVISOR_FAILURE_TEXT.test(String(result ?? "")) ||
+        (result == null && entry.error != null)
+      )
+      if (!failureVerdict) parent._calledAdvisorThisRun = true
       if (record) record.stale = false
     } else if (record) {
       record.stale = true
@@ -296,17 +324,20 @@ function settleAdvisorReview(parent, entry, result, error, notifySettle) {
         const stripped = strip(result)
         entry.report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
       } else if (passed) {
-        entry.report = `${strip(result)}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${entry.designToken}\ndesignId: ${entry.designId} (pass as the designId parameter when spawning eng-coder; optional while this session holds a single design)`
+        entry.report = `${strip(result)}\n\n${entry.approvedSuffix}`
       } else {
         entry.report = strip(result) || "Advisor: design review did not pass."
       }
     }
     if (record) {
       record.round = Math.max(record.round ?? 0, entry.round ?? 1)
-      // prior = 清洗后报告（§29 fix B——prior 永不带可回显的方括号 token）
+      // prior = 清洗后报告（§29 fix B——prior 永不带可回显的方括号 token）；F2e（§29.1）：
+      // 再剥引擎 Approved 后缀（精确截断——prior 不带原生 token/designId）。
       const trimmed = String(entry.report ?? "").trim()
       const looksLikeReview = /\|.*\|.*\|/.test(trimmed) || trimmed.length >= 200
-      if (looksLikeReview && entry.report != null) record.priorOutput = entry.report
+      if (looksLikeReview && entry.report != null) {
+        record.priorOutput = stripApprovedSuffix(entry.report, entry.approvedSuffix ?? null)
+      }
       record.state = "settled"
     }
     // 挂起期 settle → 移交 pending（digest 轮注入——与 subagent D-S3 ② 同机制）；

@@ -1,3 +1,6 @@
+- fix: 子代理块 done 后定格修复批（2026-09-07 id:14）——CLI trimSubTree done 豁免 + route* done 守卫（迟到 chunk 丢弃）；VS 冻结门三处 + id 计数器跨 resume 持久化
+
+- fix: prompts.test 折行断言折叠化收口（2026-09-07 id:3）——双侧 \s+ 归一匹配——负守卫保持负向——锚整块/落位序断言加固
 # Changelog
 
 All notable changes to ThinCoder VS Code are documented here.

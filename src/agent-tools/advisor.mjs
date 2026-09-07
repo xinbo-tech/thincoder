@@ -4,6 +4,7 @@
  * type="design" for design doc review, type="code" for code review (default).
  */
 import { randomUUID } from "node:crypto"
+import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 
@@ -24,6 +25,24 @@ export function generateDesignToken(agent) {
   const uuid = randomUUID()
   const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
   return `${uuid}:${expiresAt}`
+}
+
+/**
+ * F2c/F2e（§29.1 2026-09-07）：引擎生成的 Approved 后缀——单一 builder（sync settle +
+ * async settle 共用——advisor-async.mjs import 本文件）；prior 存储面用 stripApprovedSuffix
+ * 精确后缀截断（不用正则猜——零误伤）。槽数为 settle 时点快照——spawn 时槽况可能已变
+ * （F2d 兑底）。
+ */
+export function buildApprovedSuffix(designToken, designId, slotCount) {
+  return `Approved. Pass this exact token to eng-coder (designToken parameter): ${designToken}
+designId: ${designId} (pass as the designId parameter when spawning eng-coder — optional while this session holds a single design; ${slotCount} approved design slot(s) held as of this approval, and the count may have changed since — with several designs the spawn gate refuses a missing designId and lists the held ids)`
+}
+
+/** F2e（§29.1）：从将入 prior 的报告剥掉引擎 Approved 后缀——后缀由 builder 确定性生成，
+ *  截断精确；不以该后缀结尾的文本原样通过。 */
+export function stripApprovedSuffix(text, suffix) {
+  if (typeof text !== "string" || !suffix) return text
+  return text.endsWith(suffix) ? text.slice(0, text.length - suffix.length).trim() : text
 }
 
 /** Parse a design token's numeric expiry — null unless the token is format-valid
@@ -76,6 +95,41 @@ export const makeDesignTokenRegex = (token, flags = "") => {
     `(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}\\s*\\](?:\\s|$|\`|\\*)`,
     flags + "ms"
   )
+}
+
+/** F2h（§29.1 2026-09-07）：sync design scope 键（与 async scopeKeyOf 同构同源——documents
+ *  排序 + resolve(cwd) 归一——换写法不误建新实例——评审发现 #3）。 */
+function designScopeKey(documents, cwd) {
+  const norm = (p) => {
+    const s = String(p)
+    return cwd && !/^[a-zA-Z]:[\\/]/.test(s) && !s.startsWith("/") ? resolve(cwd, s) : s
+  }
+  return JSON.stringify([...new Set((documents ?? []).filter((d) => typeof d === "string" && d.trim()).map(norm))].sort())
+}
+
+/** F2h（§29.1）：会话内该 doc-scope 的 designId——最新的同 scope settled 记录（async
+ *  launch 落记录；sync settle 亦落（下方）——sync→sync 链同样复用）。无 → null。 */
+function designIdForScope(parent, documents, cwd) {
+  const runs = (parent.history ?? parent)._advisorRuns
+  if (!(runs instanceof Map) || runs.size === 0) return null
+  const key = designScopeKey(documents, cwd)
+  for (const rec of [...runs.values()].reverse()) {
+    if (rec.reviewType === "design" && rec.scopeKey === key && rec.designId) return rec.designId
+  }
+  return null
+}
+
+/** F2h（§29.1）：sync settle 登记 scope→designId 映射（与 async 记录同图——下个同 scope
+ *  评审 sync/async 均复用该 id；既有记录不覆盖——async 实例的 round/prior 归其所有）。 */
+function recordSyncDesignScope(parent, documents, designId, cwd) {
+  if (!designId) return
+  const holder = parent.history ?? parent
+  const runs = holder._advisorRuns instanceof Map ? holder._advisorRuns : (holder._advisorRuns = new Map())
+  if (runs.has(designId)) return
+  runs.set(designId, {
+    reviewId: designId, reviewType: "design", scopeKey: designScopeKey(documents, cwd),
+    round: 0, priorOutput: null, stale: false, state: "settled", designId,
+  })
 }
 
 export const advisorTool = {
@@ -175,18 +229,19 @@ export const advisorTool = {
       return `Advisor ${reviewType} review started in the background (review #${e.id}, round ${e.round}) — the report arrives automatically when it finishes (settle → digest). Continue your turn; the review does not block.`
     }
 
-    // Design review: NO round reset — design reviews share the 5-round convergence
-    // budget with code reviews (round advances in agent.mjs; cap in run.mjs).
-    // Session reset also removed: design rounds 2+ continue the convergence
-    // protocol like code reviews (CLI parity).
+    // Design review: NO round reset — design rounds 2+ continue the convergence
+    // prompts like code reviews, but the 5-round cap is CODE-ONLY (2026-09-07
+    // §8: design reviews are exempt — cap enforced in run.mjs / the async
+    // runner for code instances only). Session reset also removed (CLI parity).
 
     // Generate the design token BEFORE the review and inject it into the advisor's prompt.
-    // A random designId is minted for EVERY design-review call (2026-09-01 multi-design
-    // slots, CLI parity): on pass the token is stored in parent._engDesignTokens keyed by
-    // this id and the id is echoed to the parent; on failure the id is dropped — never
-    // stored, so it cannot clobber any other design's slot. Not a document anchor.
+    // F2h（§29.1 2026-09-07）：sync 同 scope 复审沿用会话内该 doc-set 的 designId（取既有
+    // 同 scope 记录——与 async 同构）；通过复审覆写同 id 槽（旧 token 门禁拒——T14）；旧
+    // 槽 TTL 自然淘汰保留为兑底。无记录 → 新随机 id。
     const designToken = reviewType === "design" ? generateDesignToken(agent) : null
-    const designId = reviewType === "design" ? randomUUID() : null
+    const designId = reviewType === "design"
+      ? (designIdForScope(agent, documents, agent.cwd) ?? randomUUID())
+      : null
     // Progress chunks ({kind, text}) stream into the webview — same emission
     // contract as the CLI TUI (think / tool / text kinds). A "start" chunk first
     // opens the in-conversation advisor block tagged with the round number.
@@ -197,9 +252,12 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: (chunk) => ctx.callbacks?.onToolPanel?.("advisor", chunk),
       signal: ctx.signal,
-    }, designToken, documents, paths, object)
+    }, designToken, documents, paths, object, null, designId)
 
     if (reviewType === "design") {
+      // F2h record（§29.1）：无论通过与否都登记 scope→designId（async 同构——launch 时即
+      // 有记录）——下个同 scope 评审复用同 id。
+      recordSyncDesignScope(agent, documents, designId, agent.cwd)
       const tokenPattern = makeDesignTokenRegex(designToken)
       if (designToken && result && tokenPattern.test(result)) {
         // Advisor echoed the token → review passed. Issue it to the parent for eng-coder.
@@ -211,12 +269,19 @@ export const advisorTool = {
         if (agent._role === "eng-coder") agent._engDesignReviewed = true
         const cleanResult = result.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
         // designId rides the Approved block (review #1): the parent needs it to aim the
-        // FIRST eng-coder spawn when several designs live in the same session.
-        return `${cleanResult}\n\nApproved. Pass this exact token to eng-coder (designToken parameter): ${designToken}\ndesignId: ${designId} (pass as the designId parameter when spawning eng-coder; optional while this session holds a single design)`
+        // FIRST eng-coder spawn when several designs live in the same session. F2c (§29.1):
+        // id 回显 + 单槽省略指引 + 槽数时点注记（同一 builder——async settle 同源）。
+        const suffix = buildApprovedSuffix(designToken, designId, agent._engDesignTokens.size)
+        const output = `${cleanResult}\n\n${suffix}`
+        // F2e（§29.1）：sync prior 面——run.mjs 存的是带方括号回显的原输出；通过时覆写为
+        // 清洗后形态（精确后缀截断——prior 永不带原生 token/designId）。
+        agent._lastAdvisorOutput = stripApprovedSuffix(output, suffix)
+        return output
       }
       // Review failed (or advisor chose not to pass) → do NOT touch ANY slot (方案 ②, review #2:
       // a failed RE-review leaves the previously approved token alive until TTL; the failed
-      // call's own designId was never stored, so there is nothing to clear). Isolation
+      // call issued no token, so there is nothing to clear——its designId record（F2h）只登记
+      // 映射不占槽). Isolation
       // (2026-08-30, extended to the multi-slot Map 2026-09-01, CLI parity): a network
       // glitch must not clear / other designs' slots must not be affected — only a COMPLETED
       // non-passing review lands here, and it revokes nothing.

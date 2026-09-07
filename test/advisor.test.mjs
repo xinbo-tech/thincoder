@@ -266,6 +266,23 @@ describe("runAdvisorReview", () => {
     const result = await runAdvisorReview(agent, "code", { signal: { aborted: true } })
     assert.ok(!result.includes("not enabled"), `deprecated enabled must not be read, got: ${result}`)
   })
+
+  it("design reviews are EXEMPT from the convergence cap — round ≥5 still reaches the tool loop (2026-09-07 §8)", async () => {
+    const { runAdvisorReview } = await import("../src/advisor/run.mjs")
+    const agent = {
+      config: { agent: {} },
+      _provider: { name: "p", model: "m" },
+      history: [{ role: "user", content: "review the design" }],
+      _touchedFiles: [],
+      _advisorRound: 5, // cap reached — design reviews bypass it (cap is code-only)
+      cwd: tmpDir,
+    }
+    // Pre-aborted signal: the tool loop returns "interrupted" immediately — no
+    // network call. Reaching the loop proves the cap let the design review through.
+    const result = await runAdvisorReview(agent, "design", { signal: { aborted: true } }, null, ["docs/design/x.md"])
+    assert.ok(!result.includes("convergence cap reached"), `design review must bypass the cap, got: ${result}`)
+    assert.ok(result.includes("interrupted"), `design review must reach the tool loop, got: ${result}`)
+  })
 })
 
 // ─── prepareAdvisorMessages ─────────────────────────────────────
@@ -629,7 +646,8 @@ describe("document ownership + design-review enhancement (2026-08-21)", () => {
     assert.ok(text.includes("file:line"), "引用纪律：精确 file:line 格式")
     assert.ok(text.includes("unverified"), "引用纪律：未核实内容标注 unverified")
     assert.ok(text.includes("## Approval Signal"), "Approval Signal 段保留")
-    assert.ok(text.includes("[DESIGN-TOKEN:...]"), "DESIGN-TOKEN 回显规则保留（防 fallback 删除后丢失）")
+    assert.ok(text.includes("[DESIGN-TOKEN:<token>] and this exact designId: <designId>"), "DESIGN-TOKEN + designId 双值回显规则保留（§29.1 F2a 锚——防回退）")
+    assert.ok(text.includes("Copy BOTH values verbatim"), "双值照抄锚句保留（§29.1 F2a）")
   })
 
   it("system.md: 文档归属纪律条款（doc map / update instead of creating）", () => {

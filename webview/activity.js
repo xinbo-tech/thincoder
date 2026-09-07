@@ -284,7 +284,8 @@ export function applySubagentStatus(m) {
     if (FAMILY_ROLES.includes(m.role) && m.pool && m.id != null) ensureBlock(`sub:${m.role}#${m.id}`)
     for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
       const block = S._subBlocks.get(name)
-      if (!block?._subMeta) continue
+      // §27.1 F3（缺陷①）: 冻结块不收 started——不半复活（与终态分支同形）
+      if (!block?._subMeta || block._subMeta.frozen) continue
       const meta = block._subMeta
       meta.status = "running"
       // pool 标记语义: async 池条目 started 携 pool:true；同步 spawn 不带 → false。

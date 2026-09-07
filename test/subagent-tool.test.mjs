@@ -670,6 +670,135 @@ test("T-R16d (R16 ③): spawn gate — expired token rejected AND its slot delet
   assert.equal(singleParent._engDesignToken, null, "无存活槽 → 镜像清空")
 })
 
+// ─── 2026-09-07 token 链终消费制（ENGINEERING-MODE.md §2.6——T1/T2/T3/T4/T7/T8——CLI 同构） ───
+
+test("T1/T3 (vscode): consume-design 后同 designId spawn 机械拒（not found）+ slot/镜像同步清理", async () => {
+  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn-gate.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await unsignedToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const idA = "66666666-6666-4666-8666-aaaaaaaaaaaa"
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([[idA, tokenA]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  assert.equal(resolveDesignSlot(parent, idA).token, tokenA, "消费前 slot 在位")
+  const out = String(await executeConsumeDesignAction({ designId: idA }, { agent: parent }))
+  assert.match(out, /design slot consumed/)
+  // T3：slot 移除 + 镜像同步（VS 不变量——无存活槽 → 镜像置 null）
+  assert.equal(parent._engDesignTokens.has(idA), false, "消费后 slot 移除")
+  assert.equal(parent._engDesignToken, null, "镜像指向被消费 token → 同步清（无存活槽）")
+  // T1：同 designId 再 spawn → not found 机械拒（复用洞闭合）
+  assert.throws(() => resolveDesignSlot(parent, idA), /designId not found/)
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designId: idA, designToken: tokenA }, { agent: parent, cwd: process.cwd(), callbacks: {} }),
+    /designId not found/,
+    "消费后同 designId spawn → not found（机械拒）",
+  )
+})
+
+test("T2 (vscode): 链中 fix round（未消费）spawn → 通过（slot 未消费——仅链终核销才消费）", async () => {
+  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const token = await unsignedToken("8048bebc-a2a6-4b50-b198-74f37da606ab", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["d1", token]]),
+    _engDesignToken: token,
+    _touchedFiles: [],
+  }
+  // 未消费 → spawn 门禁照常放行（gate 层——authorize 不抛 = 通过；完整 spawn 面由 T15/T-R16a 域覆盖）
+  assert.equal(resolveDesignSlot(parent, "d1").token, token, "链中未消费 → fix round spawn 门禁通过")
+  const { authorizeEngCoderDesignToken } = await import("../src/agent-tools/subagent-spawn-gate.mjs")
+  authorizeEngCoderDesignToken(parent, "d1", token) // 不抛 = 通过
+  assert.equal(parent._engDesignTokens.has("d1"), true, "spawn 不消费 slot（消费点仅在父侧核销）")
+})
+
+test("T4 (vscode): consume-design 幂等 + 未知 designId no-op（不报错）+ 多槽缺 id 拒 + 工程模式限定", async () => {
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn-gate.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await unsignedToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+  }
+  const first = String(await executeConsumeDesignAction({ designId: "id-x" }, { agent: parent }))
+  assert.match(first, /design slot consumed/)
+  // 重复消费 → 同款 no-op 提示（幂等——不报错——评审 #3 定死）
+  const again = String(await executeConsumeDesignAction({ designId: "id-x" }, { agent: parent }))
+  assert.match(again, /no live slot for designId id-x/)
+  // 未知 designId → 同款 no-op（不报错）
+  const unknown = String(await executeConsumeDesignAction({ designId: "no-such" }, { agent: parent }))
+  assert.match(unknown, /no live slot for designId no-such/)
+  // 多槽缺 designId → 拒（spawn 同款语义——不误消费任一槽）
+  const tokenB = await unsignedToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const multi = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-a", tokenA], ["id-b", tokenB]]),
+    _engDesignToken: tokenA,
+  }
+  assert.throws(() => executeConsumeDesignAction({}, { agent: multi }), /Multiple approved designs/)
+  assert.equal(multi._engDesignTokens.size, 2, "拒绝不误消费任一槽")
+  // 工程模式限定（与 spawn 同门）
+  const normal = {
+    config: { agent: { engineering: false } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+  }
+  assert.throws(() => executeConsumeDesignAction({ designId: "id-x" }, { agent: normal }), /Engineering mode is not active/)
+})
+
+test("T7 (vscode): 多槽隔离——消费 A 不动 B（B 仍 spawn 通过；镜像重指存活槽）", async () => {
+  const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn-gate.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await unsignedToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await unsignedToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-a", tokenA], ["id-b", tokenB]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  const out = String(await executeConsumeDesignAction({ designId: "id-a" }, { agent: parent }))
+  assert.match(out, /design slot consumed/)
+  assert.equal(parent._engDesignTokens.has("id-a"), false, "A 槽消费")
+  assert.equal(parent._engDesignTokens.get("id-b"), tokenB, "B 槽不受波及（多槽隔离）")
+  // VS 不变量：镜像指向被消费 token → 重指存活槽（null 镜像 + 残槽会触发 torn-state 拒）
+  assert.equal(parent._engDesignToken, tokenB, "镜像重指存活槽 B（VS torn-state 不变量）")
+  // B 仍 spawn 通过
+  assert.equal(resolveDesignSlot(parent, "id-b").token, tokenB, "消费 A 后 B 仍可 spawn（隔离）")
+  // 消费 B（缺省 designId——单槽剩一）→ 镜像置 null
+  const outB = String(await executeConsumeDesignAction({}, { agent: parent }))
+  assert.match(outB, /design slot consumed/)
+  assert.equal(parent._engDesignTokens.size, 0, "最后一槽消费后 Map 空")
+  assert.equal(parent._engDesignToken, null, "无存活槽 → 镜像置 null")
+})
+
+test("T8 (vscode): 错配拒不消费——stalled/未核销槽保留（未消费可 fix round）", async () => {
+  const { subagentTool, resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+  const exp = Date.now() + 24 * 3600 * 1000
+  const tokenA = await unsignedToken("aaaaaaaa-1111-4111-8111-00000000000a", exp)
+  const tokenB = await unsignedToken("aaaaaaaa-2222-4222-8222-00000000000b", exp)
+  const parent = {
+    config: { agent: { engineering: true } },
+    _engDesignTokens: new Map([["id-x", tokenA]]),
+    _engDesignToken: tokenA,
+    _touchedFiles: [],
+  }
+  // 错配 spawn 拒（stalled 场景噪声）→ 槽保留（只有显式 consume-design 才消费）
+  await assert.rejects(
+    subagentTool.execute({ task: "x", role: "eng-coder", designId: "id-x", designToken: tokenB }, { agent: parent, cwd: process.cwd(), callbacks: {} }),
+    /Invalid or missing design token/,
+  )
+  assert.equal(parent._engDesignTokens.get("id-x"), tokenA, "错配拒不消费槽")
+  assert.equal(parent._engDesignToken, tokenA, "镜像保留")
+  assert.equal(resolveDesignSlot(parent, "id-x").token, tokenA, "stalled/未核销槽保留——未消费可 fix round")
+})
+
 function asyncParent(port, extra = {}) {
   const base = {
     _provider: { name: "t", baseURL: `http://127.0.0.1:${port}`, apiKey: "k", model: "deepseek-v4-pro" },
@@ -821,7 +950,7 @@ test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent �
   assert.equal((await import("../src/agent-tools/index.mjs")).escalateTool, undefined, "escalateTool 导出消失")
   const actionProp = subagentTool.parameters.properties.action
   assert.ok(actionProp, "schema 含 action 参数")
-  assert.deepEqual(actionProp.enum, ["spawn", "status", "cancel", "escalate"], "四动作枚举（§19.5 cancel 并入；§19.8 check 删除）")
+   assert.deepEqual(actionProp.enum, ["spawn", "status", "cancel", "escalate", "consume-design"], "五动作枚举（§19.5 cancel 并入；§19.8 check 删除；§2.6 consume-design——2026-09-07）")
   assert.equal(subagentTool.parameters.required, undefined, "required 移出 schema——按动作在 execute 内校验（spawn 需 task+role / escalate 需 task / cancel 需 id）")
   assert.ok(subagentTool.parameters.properties.id.description.includes("(status/cancel)"), "id 的 status/cancel 语义在参数描述中")
   assert.equal(typeof subagentTool.isReadonlyAction, "function", "action 级只读分类钩子存在")
@@ -837,10 +966,10 @@ test("T-M11: subagent_check / escalate 工具名消失——单工具 subagent �
   assert.equal(subagentTool.isControlAction({}), false)
 })
 
-test("T-M12: 描述引导——四动作 + status 非阻塞定位 + cancel 定位（§19.8：check 已删——无阻塞动作）", async () => {
+test("T-M12: 描述引导——五动作 + status 非阻塞定位 + cancel 定位（§19.8：check 已删——无阻塞动作；§2.6：+consume-design——2026-09-07）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const d = subagentTool.description
-  assert.ok(d.includes("FOUR actions"), "四动作总述（§19.5 cancel 并入；§19.8 check 删除）")
+  assert.ok(d.includes("FIVE actions"), "五动作总述（§19.5 cancel 并入；§19.8 check 删除；§2.6 consume-design 链终消费）")
   assert.ok(d.includes("pick by what you need"), "action 参数引导（§19.7 权威版措辞）")
   assert.ok(d.includes("NON-BLOCKING progress query"), "status 非阻塞定位")
   assert.ok(d.includes("action:'cancel': STOP one background subagent"), "cancel 动作定位（定向中止——权威版措辞）")
@@ -890,6 +1019,7 @@ test("T-M17a: action 级门控——planMode 下 status/cancel 放行（readonly
     { id: "3", name: "subagent", arguments: JSON.stringify({ action: "cancel", id: 9 }) }, // 放行（控制类豁免——§19.5 round2 #4——planMode 允许取消既有子代理）
     { id: "4", name: "subagent", arguments: JSON.stringify({ action: "spawn", task: "x", role: "explore" }) }, // 拒绝
     { id: "5", name: "subagent", arguments: JSON.stringify({ action: "escalate", task: "x" }) }, // 拒绝
+    { id: "7", name: "subagent", arguments: JSON.stringify({ action: "consume-design", designId: "x" }) }, // 拒绝（§2.6 评审 #7d——非只读控制动作——planMode 拒绝——2026-09-07）
     { id: "6", name: "write", arguments: JSON.stringify({ path: "x" }) }, // 拒绝（对照）
   ]
   await executeToolBatches(agent, {
@@ -898,7 +1028,7 @@ test("T-M17a: action 级门控——planMode 下 status/cancel 放行（readonly
   })
   const contents = history.filter((m) => m.role === "tool").map((m) => m.content)
   const blocked = contents.filter((c) => c.includes("plan mode active"))
-  assert.equal(blocked.length, 3, "spawn/escalate/write 被 planMode 拦（status/cancel 不计入）")
+  assert.equal(blocked.length, 4, "spawn/escalate/consume-design/write 被 planMode 拦（status/cancel 不计入）")
   assert.ok(contents.some((c) => c.includes('"overview"')), "status 放行并返回概览")
   assert.ok(contents.some((c) => c.includes("unknown async subagent id: 9")), "cancel 放行（控制类豁免——空池未知 id error 而非 planMode 拒绝）")
 })
@@ -943,6 +1073,49 @@ test("T-M17b: 混合 action 批次批审批按 action 分组——status 不入�
   assert.equal(executed.join(","), "write", "write 执行")
 })
 
+test("§2.6 consume-design 动作面（vscode）：免审直行 + 不入批审批分组（评审 #7d——控制类直行——无文件写）", async () => {
+  const { executeToolBatches } = await import("../src/agent/execute-tools.mjs")
+  const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
+  const executed = []
+  const writeTool = { name: "write", readonly: false, execute: async () => { executed.push("write"); return "ok" } }
+  const agent = {
+    _role: null, _planMode: false,
+    config: { agent: { engineering: true } },
+    _touchedFiles: [], _mutatedThisRun: false, _calledAdvisorThisRun: false,
+    _verifiedThisRun: false, _verifyPassed: undefined, _advisorRound: 0,
+    _engDesignTokens: new Map([["id-cd", "tok-cd"]]), _engDesignToken: "tok-cd",
+  }
+  const history = []
+  const batchAsks = []
+  const singleAsks = []
+  const toolByName = new Map([
+    ["write", writeTool],
+    ["subagent", subagentTool],
+  ])
+  const calls = [
+    { id: "1", name: "subagent", arguments: JSON.stringify({ action: "consume-design", designId: "id-cd" }) },
+    { id: "2", name: "write", arguments: JSON.stringify({ path: "docs/x.md", content: "x" }) }, // docs 路径——消费后工程模式门禁照常放行文档写（批内只有这两个 write）
+    { id: "3", name: "write", arguments: JSON.stringify({ path: "docs/y.md", content: "y" }) },
+  ]
+  await executeToolBatches(agent, {
+    response: { toolCalls: calls }, history, fullHistory: [],
+    toolByName, getAuto: () => false, depth: 0,
+    callbacks: {
+      onBatchPermissionRequest: async ({ tools }) => { batchAsks.push(tools.map((t) => t.name)); return "approveAll" },
+      onPermissionRequired: async () => { singleAsks.push("single"); return true },
+    },
+    signal: undefined, cwd: process.cwd(), recentSigs: [],
+  })
+  // consume-design 免审直行（控制类——无文件写——零询问）
+  assert.deepEqual(singleAsks, [], "consume-design 零逐项询问（免审直行）")
+  assert.equal(batchAsks.length, 1, "双 write 走一次批询问")
+  assert.deepEqual(batchAsks[0], ["write", "write"], "consume-design 不入批审批分组")
+  const contents = history.filter((m) => m.role === "tool").map((m) => m.content)
+  assert.ok(contents.some((c) => c.includes("design slot consumed")), "消费动作真实执行（slot 被消费）")
+  assert.equal(agent._engDesignTokens.size, 0, "id-cd 槽已消费")
+  assert.equal(executed.join(","), "write,write", "双 write 执行")
+})
+
 test("受限变体 action 门（round2 #3 + §19.5）：eng-coder 子代理内 escalate/status/cancel 动作工具层拒绝（镜像 T-E4/E5 的 action 维度）", async () => {
   const { subagentTool } = await import("../src/agent-tools/subagent.mjs")
   const ctx = engChildCtx(1, process.cwd())
@@ -950,6 +1123,7 @@ test("受限变体 action 门（round2 #3 + §19.5）：eng-coder 子代理内 e
     { action: "escalate", task: "x" },
     { action: "status" },
     { action: "cancel", id: 1 }, // §19.5: cancel 同属 spawn-only 受限通道外动作——子代理上下文无 cancel 意义
+    { action: "consume-design", designId: "x" }, // §2.6 链终消费是父侧动作——eng-coder 受限通道外（2026-09-07）
   ]) {
     await assert.rejects(
       subagentTool.execute(args, ctx),
@@ -1035,6 +1209,33 @@ test("T-M27c（advisor round 2 #5）: spawn 缺 task → 干净工具错误（re
   )
   assert.equal(parent._asyncSubagents.size, 0)
   assert.equal(parent._subIdCounter, 0, "拒绝不消耗 id")
+})
+
+test("§27.1 F4/T5: nextSubagentId 计数器沿 sink.history 跨 runAgent 存活——二次 run 后 spawn id 递增（不归零复用）", async () => {
+  const { nextSubagentId } = await import("../src/agent-tools/subagent-scheduler.mjs")
+  // 同 sink.history 的两次 runAgent（agent.mjs :122/:124 同构重建绑定）：agent 对象
+  // 重建（_subIdCounter 归零），池与计数器沿 history 存活。
+  const history = []
+  const pools = { _asyncSubagents: new Map(), _asyncAdvisors: new Map() }
+  history._asyncSubagents = pools._asyncSubagents
+  history._asyncAdvisors = pools._asyncAdvisors
+  const run1 = { ...pools, history }
+  assert.equal(nextSubagentId(run1), 1, "runAgent #1 首个 id")
+  assert.equal(nextSubagentId(run1), 2, "同 run 连续递增")
+  // 撞 turn 上限 AUTO 续跑 → runAgent #2：agent 重建——池沿 history 重绑（agent.mjs 同构）
+  const run2 = { _asyncSubagents: history._asyncSubagents, _asyncAdvisors: history._asyncAdvisors, history }
+  const id3 = nextSubagentId(run2)
+  assert.equal(id3, 3, "二次 runAgent 后 id 递增——不归零复用（explore#1 标签洞消除）")
+  assert.equal(run2._subIdCounter, undefined, "计数器载体 = history——agent 字段零写入")
+  assert.equal(history._subIdCounter, 3, "计数器落 history expando（不进会话文件）")
+  // 无 history 回落（直接 execute ctx）——agent 字段照旧
+  const bare = { _asyncSubagents: new Map(), _asyncAdvisors: new Map() }
+  assert.equal(nextSubagentId(bare), 1)
+  assert.equal(bare._subIdCounter, 1, "无 history → 回落 agent 字段（直接执行 ctx 不变）")
+  // 池内已有更大 id（挂起期用户回合冻结频道仍在池）→ 续号仍单调（不覆盖存活条目）
+  history._asyncSubagents.set(9, { id: 9, role: "eng-coder", status: "running" })
+  const run3 = { _asyncSubagents: history._asyncSubagents, _asyncAdvisors: history._asyncAdvisors, history }
+  assert.equal(nextSubagentId(run3), 10, "池内最大 id 续号（历史条目存活——不覆盖）")
 })
 
 test("T-M17c（§19.5.2b）: 手动档 auto-turn（digest）动作域——spawn 拒、cancel 放行（控制类豁免）", async () => {

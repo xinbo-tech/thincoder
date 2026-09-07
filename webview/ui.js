@@ -38,6 +38,8 @@ export function buildAdvisorBlock(roundLabel) {
  * the block's current sub rides a DOM expando (block._subCur).
  */
 export function appendAdvisorChunk(block, kind, text, sub) {
+  // §27.1 F3（缺陷①）: 冻结块不接受追加（advisor 块无 _subMeta——不受影响）
+  if (block._subMeta?.frozen) return
   const content = block.querySelector(".advisor-content")
   if (!content) return
   const str = String(text ?? "")

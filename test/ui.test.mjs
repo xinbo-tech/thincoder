@@ -325,6 +325,43 @@ describe("subagent 终态 — done/error 通知即冻结入流（R22：面板移
     assert.equal(block.open, false, "escalate 终态同款折叠")
     assert.ok(block.nextElementSibling?.classList?.contains("sub-report-preview") !== true, "escalate 冻结块无 preview（legacy surface）")
   })
+
+  it("§27.1 F3/T3: done 冻结后同频道迟到 toolPanel chunk → 丢弃——块内容行数/文本不变", () => {
+    post({ type: "subagent", id: 10, role: "eng-coder", status: "started", startedAt: Date.now() - 2000, model: "glm-5.3", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#10", kind: "text", text: "line one\nline two" })
+    post({ type: "toolPanel", name: "sub:eng-coder#10", kind: "tool", text: "read x" })
+    const block = findBlock("sub:eng-coder#10")
+    post({ type: "subagent", id: 10, role: "eng-coder", status: "done" })
+    assert.equal(block._subMeta.frozen, true, "done 冻结")
+    const content = block.querySelector(".advisor-content")
+    const rowsBefore = content.children.length
+    const textBefore = content.textContent
+    const stateWordBefore = block._subMeta.stateWord
+    // 迟到同频道 chunk（text 合并型 + tool 新行型）→ 冻结门丢弃
+    post({ type: "toolPanel", name: "sub:eng-coder#10", kind: "text", text: "late text" })
+    post({ type: "toolPanel", name: "sub:eng-coder#10", kind: "tool", text: "late tool" })
+    assert.equal(content.children.length, rowsBefore, "迟到 chunk 不追加（内容行数不变）")
+    assert.equal(content.textContent, textBefore, "内容文本不变")
+    assert.equal(block._subMeta.stateWord, stateWordBefore, "状态词不复活")
+    assert.equal(block.parentElement?.id, "messages", "块仍冻结在消息流（不回活动面板）")
+  })
+
+  it("§27.1 F3/T4: 冻结后 started 状态消息 → 块不半复活（头/status/字段定格）", () => {
+    post({ type: "subagent", id: 11, role: "eng-coder", status: "started", startedAt: Date.now() - 3000, model: "glm-5.3", pool: true })
+    post({ type: "toolPanel", name: "sub:eng-coder#11", kind: "text", text: "working…" })
+    const block = findBlock("sub:eng-coder#11")
+    post({ type: "subagent", id: 11, role: "eng-coder", status: "done", turn: 4, maxTurns: 100 })
+    assert.equal(block._subMeta.frozen, true, "done 冻结")
+    const hdrBefore = block.querySelector(".sub-hdr").textContent
+    // started-after-frozen → 丢弃（不复活——与终态分支同形）
+    post({ type: "subagent", id: 11, role: "eng-coder", status: "started", startedAt: Date.now(), model: "other-model", turn: 9, maxTurns: 100 })
+    assert.equal(block._subMeta.frozen, true, "冻结态保持")
+    assert.equal(block._subMeta.status, "done", "status 不被 started 半复活（仍 done 终态）")
+    assert.equal(block._subMeta.model, "glm-5.3", "model 不被迟到 started 覆盖")
+    assert.equal(block._subMeta.turn, 4, "turn 不被迟到 started 覆盖")
+    assert.equal(block.parentElement?.id, "messages", "块不复活回活动面板")
+    assert.equal(block.querySelector(".sub-hdr").textContent, hdrBefore, "头定格（不重建为 live 头）")
+  })
 })
 
 // ─── eng-coder 子代理内 advisor 流渲染（2026-09-03 可见性补齐）───
@@ -846,4 +883,117 @@ describe("R22 底部活动面板（T-R22a.1-3 / b.1-2 / c.1 / c.2a / d.1）", ()
   })
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Question 卡片 UI 对齐修复注（ARCHITECTURE.md 尾——question.js DOM 分层 +
+// base.css question 段重排——T-QUI.1..4：结构断言 + T-Q8 形态 CSS 内容断言——
+// 防静默回退）。question.js → state.js 在模块顶调 acquireVsCodeApi + 抓 DOM
+// refs——与既有 nested-describe bridge 惯例同守卫；直接调用 showQuestion 做单元
+// 级结构断言（chat.js 的 question 消息路由不在此重复——T-QUI 只锁本模块产物）。
+// ═══════════════════════════════════════════════════════════════════════════
+describe("Question 卡片 DOM 分层 + CSS 断言（T-QUI.1..4——修复注）", () => {
+  let showQuestion
+  const containers = []
+  before(async () => {
+    // Self-sufficient under --test-name-pattern（同既有 nested-describe 守卫）：
+    // question.js 的 state.js 依赖在模块顶调 acquireVsCodeApi + 抓 DOM refs——
+    // body + bridge stub 先于导入。全量跑时模块缓存——chat.js 图已加载，不重初始化。
+    if (!globalThis.acquireVsCodeApi) {
+      const html = readFileSync(join(__dirname, "..", "webview", "index.html"), "utf8")
+      document.body.innerHTML = (html.match(/<body>([\s\S]*)<\/body>/)?.[1] ?? "").replace(/<script[\s\S]*?<\/script>/g, "")
+      globalThis.acquireVsCodeApi = () => ({ postMessage: () => {}, getState: () => null, setState: () => {} })
+    }
+    const qjs = await import("../webview/question.js")
+    showQuestion = qjs.showQuestion
+  })
+  after(() => {
+    // 每用例独立容器（不进共享 #messages——不干扰消息流断言）——统一清出
+    for (const c of containers) c.remove()
+    containers.length = 0
+  })
 
+  const freshCtx = () => {
+    const messagesEl = document.createElement("div")
+    const inputEl = document.createElement("input")
+    document.body.appendChild(messagesEl) // scrollIntoView 需连接树（happy-dom no-op）
+    containers.push(messagesEl)
+    return { messagesEl, inputEl }
+  }
+  const show = (ctx, q, o) => {
+    showQuestion(ctx, q, o)
+    return ctx.messagesEl.querySelector(".question-card")
+  }
+  const cardLayers = (card) => [...card.children].map((c) => c.className)
+
+  it("T-QUI.1: options 路径——.question-options 容器在 .question-actions 前 + 选项按钮为其子（顺序保持）+ actions 层 = input/submit/cancel", () => {
+    const card = show(freshCtx(), "Proceed?", ["Yes", "No", "Maybe"])
+    const children = [...card.children]
+    assert.equal(children.length, 3, "card 三层 = text + options + actions（got: " + cardLayers(card) + "）")
+    assert.ok(children[0].classList.contains("question-text"), "第 1 层文本")
+    const optionsEl = children[1]
+    assert.ok(optionsEl.classList.contains("question-options"), "第 2 层 .question-options 容器")
+    const actionsEl = children[2]
+    assert.ok(actionsEl.classList.contains("question-actions"), "第 3 层 .question-actions")
+    assert.ok(
+      [...card.children].indexOf(optionsEl) < [...card.children].indexOf(actionsEl),
+      ".question-options 在 .question-actions 前（DOM 序断言）",
+    )
+    // 选项按钮为 optionsEl 直接子——顺序保持
+    const opts = [...optionsEl.children]
+    assert.equal(opts.length, 3)
+    assert.deepEqual(opts.map((b) => b.textContent), ["Yes", "No", "Maybe"], "选项按钮顺序保持")
+    for (const b of opts) {
+      assert.equal(b.tagName, "BUTTON")
+      assert.match(b.className, /perm-btn/, "选项按钮带 perm-btn 基类")
+      assert.match(b.className, /question-option/, "选项按钮带 question-option 标")
+    }
+    // actions 层 = input + submit + cancel——选项按钮已移出（不在 actions）
+    assert.deepEqual(
+      [...actionsEl.children].map((a) => a.className),
+      ["question-input", "perm-btn approve", "perm-btn deny"],
+      "actions 层仅 input+submit+cancel（原混排的选项按钮已移入 .question-options）",
+    )
+  })
+
+  it("T-QUI.2（负断言）: 无 options 纯输入路径不建 .question-options 容器——undefined 与空数组同", () => {
+    const c1 = show(freshCtx(), "Type your answer", undefined)
+    assert.ok(!c1.querySelector(".question-options"), "无 options → 无容器")
+    assert.deepEqual(cardLayers(c1), ["question-text", "question-actions"], "纯输入卡仅 text + actions 两层")
+    const c2 = show(freshCtx(), "q", [])
+    assert.ok(!c2.querySelector(".question-options"), "空数组 options 降级纯输入 → 同样无容器")
+    assert.deepEqual(cardLayers(c2), ["question-text", "question-actions"])
+  })
+
+  it("T-QUI.3: cancel 按钮在 .question-actions 层（非 options 层）——两路径同", () => {
+    const c1 = show(freshCtx(), "Proceed?", ["yes", "no"])
+    const cancel1 = c1.querySelector(".perm-btn.deny")
+    assert.ok(cancel1, "cancel 按钮存在（options 路径）")
+    assert.equal(cancel1.textContent, "Cancel", "en locale cancel 文案")
+    assert.ok(cancel1.parentElement.classList.contains("question-actions"), "options 路径 cancel 直属 .question-actions")
+    assert.equal([...cancel1.parentElement.children].at(-1), cancel1, "cancel 为 actions 层末位（input → submit → cancel 序）")
+    const c2 = show(freshCtx(), "Type freely", undefined)
+    const cancel2 = c2.querySelector(".perm-btn.deny")
+    assert.ok(cancel2, "cancel 按钮存在（纯输入路径）")
+    assert.ok(cancel2.parentElement.classList.contains("question-actions"), "纯输入路径 cancel 同样在 actions 层")
+  })
+
+  it("T-QUI.4（T-Q8 形态——readFileSync CSS 内容断言——防静默回退）: 卡内字号统一 14px / 粗体去 / 选项按钮整行宽左对齐", () => {
+    const css = readFileSync(join(__dirname, "..", "webview", "base.css"), "utf8")
+    const rule = (sel) => {
+      const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*\\{([^}]*)\\}"))
+      assert.ok(m, "rule exists: " + sel)
+      return m[1]
+    }
+    const card = rule(".question-card")
+    assert.ok(card.includes("font-size: var(--vscode-editor-font-size, 14px)"), "card 字号 14px——文本继承（got: " + card + "）")
+    const permBtn = rule(".question-card .perm-btn")
+    assert.ok(permBtn.includes("font-size: var(--vscode-editor-font-size, 14px)"), "卡内按钮字号显式 14px（scoped 覆盖点）")
+    assert.ok(permBtn.includes("font-weight: 400"), "粗体去——font-weight 400（原 600）")
+    assert.ok(rule(".question-card .question-input").includes("font-size: var(--vscode-editor-font-size, 14px)"), "卡内 input 字号显式 14px（scoped 覆盖点）")
+    const optBtn = rule(".question-options .perm-btn")
+    assert.ok(optBtn.includes("width: 100%"), "选项按钮整行宽")
+    assert.ok(optBtn.includes("text-align: left"), "选项按钮左对齐")
+    // .question-text 规则零改动（§22 锚 T-Q8 安全——不带字号覆盖）
+    const qtext = rule(".question-text")
+    assert.ok(!qtext.includes("font-size"), ".question-text 未加字号规则")
+  })
+})

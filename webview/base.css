@@ -258,14 +258,28 @@ body {
 
 /* ─── Inline Question Prompt (question tool) ───── */
 
+/* 字号统一 14px（修复注 #3——评审 #1 scoped 覆盖点写明）：card 文本继承此处 font-size。 */
 .question-card {
   margin: 12px 0;
   padding: 10px 14px;
   border: 1px solid var(--accent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
-  font-size: 12px;
+  font-size: var(--vscode-editor-font-size, 14px);
   line-height: 1.5;
+}
+
+/* Scoped 字号/字重覆盖（修复注 #3/#4）：.perm-btn/.question-input 自带字号（11px/12px）
+   不随 card 继承——逐一显式覆盖。全局基样式不动：.perm-btn 现消费点全在 question 卡内
+   （question.js 的 submit/option/cancel 三构造点——permission.js 弹窗用裸 .approve/.deny
+   不命中 .perm-btn，评审 #2 实证——就地改全局亦零副作用）；scoped 覆盖为防御性选择
+   （防未来复用漂移——实现批择一，注释说明）。 */
+.question-card .perm-btn {
+  font-size: var(--vscode-editor-font-size, 14px);
+  font-weight: 400; /* 粗体去（原 600） */
+}
+.question-card .question-input {
+  font-size: var(--vscode-editor-font-size, 14px);
 }
 
 .question-mark {
@@ -282,9 +296,23 @@ body {
   overflow-y: auto;
 }
 
+/* 选项按钮成列（修复注 #1）：每按钮 width:100% + text-align:left——整行可点、左对齐
+   （CLI picker 形态趋同）。容器仅在带 options 时存在于 DOM（纯输入路径无——负断言）。 */
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.question-options .perm-btn {
+  width: 100%;
+  text-align: left;
+}
+
+/* 底部操作行（修复注 #2）：input（flex:1）+ submit + cancel——选项按钮已移入
+   .question-options 层——不再需要 flex-wrap（旧 wrap 正是选项参差换行的成因）。 */
 .question-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }

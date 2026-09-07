@@ -1,6 +1,7 @@
 /**
- * subagent.mjs — subagentTool (single tool, four actions — AGENT-LOOP.md §19/§19.5:
- * spawn/status/cancel/escalate; no panel action in VS Code — §19.6 AC-P4; §19.8 2026-09-06: action:'check' 删除——结果仅自动通道)
+ * subagent.mjs — subagentTool (single tool, five actions — AGENT-LOOP.md §19/§19.5:
+ * spawn/status/cancel/escalate; no panel action in VS Code — §19.6 AC-P4; §19.8 2026-09-06: action:'check' 删除——结果仅自动通道；§2.6 2026-09-07: +action:'consume-design'
+ * 链终消费制——父侧核销消费 designId 槽——执行器在 subagent-spawn-gate.mjs)
  * Spawn a sub-agent for an independent subtask.
  * Engineering mode: role='eng-coder' requires a valid design token from advisor(type='design').
  * §17 (AGENT-LOOP.md D-S1..S9): suspension-aware settle (settled-while-suspended →
@@ -25,7 +26,7 @@ import { subagentStatus, cancelSubagentAction } from "./subagent-actions.mjs" //
 // authorizeEngCoderDesignToken moved to subagent-spawn-gate.mjs on 2026-09-06 (module
 // split: this file crossed the >500-line hard cap). resolveDesignSlot re-exported below
 // for the existing test import paths.
-import { authorizeEngCoderDesignToken } from "./subagent-spawn-gate.mjs"
+import { authorizeEngCoderDesignToken, executeConsumeDesignAction } from "./subagent-spawn-gate.mjs"
 export { resolveDesignSlot } from "./subagent-spawn-gate.mjs"
 import { normalizeFileList, depInfo, describeBlockers, assertNoDepCycle } from "./subagent-scheduler.mjs" // §20 调度器（2026-09-05 拆分轮迁出）
 import { escalateAction } from "./subagent-escalate.mjs" // §19 escalate 引擎（2026-09-03 拆出——500 行纪律——verbatim 迁移）
@@ -140,8 +141,8 @@ export const subagentTool = {
     // §19 action dispatch（AGENT-LOOP.md §19 D-M1）：缺省 spawn——既有调用零迁移。
     const action = args?.action ?? "spawn"
     const parent = ctx.agent
-    if (!["spawn", "status", "cancel", "escalate"].includes(action)) {
-      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), status, cancel, escalate.`)
+    if (!["spawn", "status", "cancel", "escalate", "consume-design"].includes(action)) {
+      throw new Error(`Unknown subagent action: ${JSON.stringify(action)}. Valid actions: spawn (default), status, cancel, escalate, consume-design.`)
     }
     // §19 round2 #3 restricted-variant action gate（机械层——schema 层提示在 setup.mjs
     // engAuditSubagentTool）：eng-coder 子代理的受限通道仅 spawn（sync explore 审计）——
@@ -152,6 +153,10 @@ export const subagentTool = {
     }
     if (action === "status") return subagentStatus(args, ctx)
     if (action === "cancel") return cancelSubagentAction(args, ctx)
+    // §2.6 token 链终消费制（2026-09-07——ENGINEERING-MODE.md F1）：父侧核销消费——
+    // 非只读控制动作——depth-0 + 工程模式限定（本分流已过受限变体门；工程模式门在
+    // 执行器内）——planMode 拒绝（execute-tools 不豁免）——不入批审批分组（免审直行）。
+    if (action === "consume-design") return executeConsumeDesignAction(args, ctx)
     if (action === "escalate") return await escalateAction(args, ctx)
     // ── spawn（缺省 action）——既有 execute 原样 ──
     const { task, role, designToken, designId, model, async: asyncArg } = args

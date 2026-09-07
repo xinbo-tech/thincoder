@@ -14,8 +14,9 @@ const MAX_ADVISOR_TURNS = 100
 // Mechanical convergence cap: the protocol assumes up to 5 rounds suffice
 // (full review, verify+fix cycles, strict verification). A 6th call means the
 // model is looping — refuse it instead of burning tokens on a review that cannot
-// converge. Code AND design reviews share the 5-round budget (each advances
-// _advisorRound in agent.mjs; the cap no longer exempts design).
+// converge. CODE REVIEWS ONLY (2026-09-07 §8 ruling): design reviews are EXEMPT
+// — their rounds keep advancing (convergence prompts + displays), but a 6th
+// design call is never refused by the cap.
 export const MAX_ADVISOR_ROUNDS = 5
 
 // NOTE: prompts/advisor-round{1,2,3}.md encourage the model to finish within
@@ -392,8 +393,10 @@ function extractUnfixedIssues(priorText) {
  * @param {Object|null} [rv] — §24 D-24b per-review instance context { round, priorOutput }
  *   （async advisor——2026-09-06）：给定 → 轮次/prior 从实例解析、cap 判定在 runner
  *   （launch 时按实例 ≤5 轮拒）、完成不写全局 _lastAdvisorOutput（并发隔离）。
+ * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
+ *   the Approval Signal (passed through to the message builders).
  */
-export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null, rv = null) {
+export async function runAdvisorReview(agent, reviewType, callbacks, designToken = null, documents = null, paths = null, object = null, rv = null, designId = null) {
   const onOutput = callbacks?.onOutput
   const signal = callbacks?.signal
   const startTime = Date.now()
@@ -402,14 +405,16 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // former advisor.enabled gate is removed — review capability has no off
   // switch; only the guard (completion pushback) is opt-in via advisor.guard.
 
-  // Mechanical convergence cap — refuse further reviews once the protocol has run
-  // its rounds. _advisorRound counts completed advisor calls (incremented by the
-  // agent after each one — code AND design reviews alike), so >= MAX_ADVISOR_ROUNDS
-  // blocks the next call. 5 rounds max; after that the review is never pushed back
+  // Mechanical convergence cap — CODE REVIEWS ONLY (2026-09-07 §8 ruling: design
+  // reviews are exempt — their rounds keep advancing for the convergence prompts,
+  // the cap never refuses them). For code reviews: refuse once the protocol has
+  // run its rounds. _advisorRound counts completed advisor calls (incremented by
+  // the agent after each sync code review), so >= MAX_ADVISOR_ROUNDS blocks the
+  // next call. 5 rounds max; after that the review is never pushed back
   // (the caller decides: accept, manual re-check, or /new to reset).
   // §24 D-24b：async 实例（rv 给定）的 cap 在 runner launch 时按实例判定（每评审 ≤5 轮——
-  // 修正 #4）——此处只拦 sync 全局轮次。
-  if (!rv && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
+  // 修正 #4——code-only——design 豁免）——此处只拦 sync 全局轮次。
+  if (!rv && reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
     // Summarize unresolved items from the last review output for guidance
     // (line-level status-word scan — no table-header parsing, decision 2026-08-08).
     const prior = agent._lastAdvisorOutput
@@ -430,7 +435,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // Advisor always works in the agent's cwd — scope is defined by paths/documents.
   const advisorCwd = agent.cwd
 
-  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, rv)
+  const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, rv, designId)
 
   // Review-object declaration (AGENT-LOOP.md §18.8 D-OA1): injected AFTER the
   // message build so ONE mechanical point covers all rounds — design r1

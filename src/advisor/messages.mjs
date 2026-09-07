@@ -47,6 +47,25 @@ export function injectObjectDeclaration(content, object) {
 }
 
 /**
+ * Approval-signal block for design reviews (round 1 and round 2+ — §24 D-24b: an
+ * async fix-round continuation must be able to re-approve, so the token is injected
+ * into EVERY design round; the reviewer echoes it only on a clean pass). §29.1 F2a
+ * (2026-09-07): BOTH values are injected — the token AND the designId (anchor
+ * sentence verbatim — Copy BOTH values). designId null (legacy direct callers)
+ * degrades to the token-only form.
+ */
+export function buildDesignApprovalBlock(designToken, designId) {
+  const echo = designId
+    ? `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}] and this exact designId: ${designId}. Copy BOTH values verbatim.`
+    : `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`
+  return [
+    "## Approval Signal",
+    echo,
+    "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If there are any 🔴 issues, do NOT include the token.",
+  ].join("\n")
+}
+
+/**
  * Build the user message for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior issue table
@@ -57,9 +76,12 @@ export function injectObjectDeclaration(content, object) {
  *   When absent, the legacy git-diff-based scope is kept (backward compatible).
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review (deduped; shown under Review Scope)
  * @param {Object|null} [rv] — §24 D-24b 实例上下文（async——round = 本次调用轮次）
+ * @param {string|null} [designId] — §29.1 F2a: injected next to the token in the
+ *   Approval Signal (both values — Copy BOTH values verbatim); null → token-only
+ *   degradation (legacy direct callers).
  * @returns {string} the user message
  */
-export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, rv = null) {
+export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, rv = null, designId = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.
@@ -150,9 +172,7 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
     parts.push("4. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
     if (designToken) {
       parts.push("")
-      parts.push("## Approval Signal")
-      parts.push(`If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`)
-      parts.push("🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If there are any 🔴 issues, do NOT include the token.")
+      parts.push(buildDesignApprovalBlock(designToken, designId))
     }
     return parts.join("\n")
   }

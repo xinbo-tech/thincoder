@@ -359,8 +359,13 @@ export function refreshQueuedRows(parent) {
  * （advisor-async.mjs——§24 D-24b）共用——LIVES HERE（2026-09-06）：自 subagent-async
  * 迁入叶子模块——advisor-async 无环单向取号。
  * §24 D-24b：续号同时跨 subagent 池与 advisor 池（两池条目共用 webview 行 map 的 id
- * 命名空间——全局唯一防行覆盖）。 */
+ * 命名空间——全局唯一防行覆盖）。
+ * §27.1 F4（2026-09-07 三缺陷修复批——缺陷②）：计数器载体改 `parent.history ?? parent`
+ * （_engAuditSpawns 同款先例——expando 不进会话文件）——撞 turn 上限 AUTO 续跑
+ * agent 对象重建（_subIdCounter 归零）后 id 继续递增——不再复用已冻结频道标签
+ * （explore#1 复用洞）；挂起期用户回合冻结频道 id 复用同时消除。 */
 export function nextSubagentId(parent) {
+  const holder = parent.history ?? parent // §27.1 F4: 计数器跨 resume 持久化载体
   let poolMax = 0
   for (const pool of [parent._asyncSubagents, parent._asyncAdvisors]) {
     if (!pool || pool.size === 0) continue
@@ -369,8 +374,8 @@ export function nextSubagentId(parent) {
       if (Number.isFinite(n) && n > poolMax) poolMax = n
     }
   }
-  const next = Math.max(parent._subIdCounter ?? 0, poolMax) + 1
-  parent._subIdCounter = next
+  const next = Math.max(holder._subIdCounter ?? 0, poolMax) + 1
+  holder._subIdCounter = next
   return next
 }
 

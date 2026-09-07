@@ -99,13 +99,17 @@ export function setSlotAdvisorGuard(cwd, slot, value) {
 /** §24 D-24b（R13——2026-09-06）：写 slot 的 engDesignTokens 多槽表（{designId: token}
  *  JSON 形态——与 agentState/panel-session 往返同构）。async 设计评审 settle 常发生在挂起期
  *  （无 onComplete agentState 通道）——settle 记账经 _engPersist 直写 slot——下个 run 的
- *  setup 从 slot 恢复（T-24b3：digest 后 token 入槽 + spawn 可用）。空表写 null（清键）。 */
-export function setSlotEngDesignTokens(cwd, slot, tokensObj) {
+ *  setup 从 slot 恢复（T-24b3：digest 后 token 入槽 + spawn 可用）。空表写 null（清键）。
+ *  §29.1 F2g（2026-09-07）：mirror 参（可选）与多槽表同写——挂起期 settle 后进程死亡 →
+ *  resume 不再撞 torn-state guard（镜像缺失 + 槽在 = 拒所有 spawn 的恢复洞）。
+ *  mirror 缺省（undefined）→ 镜像字段不动（既有调用面零变）。 */
+export function setSlotEngDesignTokens(cwd, slot, tokensObj, mirror) {
   const data = loadSlotForWrite(cwd, slot)
   if (!data) return false
   const t = tokensObj && typeof tokensObj === "object" && Object.keys(tokensObj).length > 0 ? tokensObj : null
   if (t === null) delete data.engDesignTokens
   else data.engDesignTokens = t
+  if (mirror !== undefined) data.engDesignToken = mirror ?? null
   saveSessionToSlot(cwd, slot, data)
   return true
 }

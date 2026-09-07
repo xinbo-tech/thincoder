@@ -318,6 +318,31 @@ describe("multi-slot design tokens — R16 lifecycle + agentState → saveLines 
     assert.equal(resolveDesignSlot(agent, "d1").token, tok, "spawn gate still resolves the slot — no re-review needed")
   })
 
+  it("consume-design closes a restored slot — 跨会话恢复后消费生效 (T9 — 2026-09-07 §2.6)", async () => {
+    const { setupAgentRun } = await import("../src/agent/setup.mjs")
+    const { executeConsumeDesignAction } = await import("../src/agent-tools/subagent-spawn-gate.mjs")
+    const { resolveDesignSlot } = await import("../src/agent-tools/subagent.mjs")
+    const tok = mkTok(TTL)
+    // 真实恢复链：engState（panel-chat 从槽位读）→ setupAgentRun 重建 Map/镜像
+    const { agent } = await setupAgentRun({
+      provider: { name: "t", model: "deepseek-v4-pro" },
+      cwd: tmp, input: "hi",
+      opts: {
+        engState: {
+          enabled: true, advisorGuard: false,
+          engDesignToken: tok,
+          engDesignTokens: { "d9": tok },
+        },
+      },
+      depth: 0, role: null, getAuto: () => true,
+    })
+    assert.equal(resolveDesignSlot(agent, "d9").token, tok, "恢复后槽在位（TTL 内）")
+    const outConsume = String(await executeConsumeDesignAction({ designId: "d9" }, { agent }))
+    assert.match(outConsume, /design slot consumed/)
+    assert.ok(!(agent._engDesignTokens instanceof Map && agent._engDesignTokens.has("d9")), "恢复后的持久化槽可被链终消费")
+    assert.throws(() => resolveDesignSlot(agent, "d9"), /designId not found/, "消费后恢复槽再 spawn → not found")
+  })
+
   it("exit→save→load round-trip: token survives and restore rebuilds it (AC7 inversion)", async () => {
     const { ChatPanel } = await import("../src/extension/chat-panel.mjs")
     const { agentState } = await import("../src/agent/run-helpers.mjs")

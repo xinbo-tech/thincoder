@@ -237,6 +237,8 @@ export function advisorChunk(m) {
 export function subagentChunk(m) {
   const name = String(m.name ?? "")
   const block = ensureBlock(name) // created in the panel; same element freezes into #messages later
+  // §27.1 F3（缺陷①）: 冻结块迟到 chunk 丢弃（CLI tombstone 丢弃链对齐——§7.2 D4 完成态冻结）
+  if (block._subMeta?.frozen) return
   appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
   noteChunk(block, m.kind ?? "tool", m.text)
   _advisorScrollDirty = true

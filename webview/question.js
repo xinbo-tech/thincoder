@@ -18,10 +18,6 @@ export function showQuestion(ctx, question, options) {
   textEl.innerHTML = `<span class="question-mark">${escHtml(t("question.mark"))}</span> ${escHtml(question)}`
   el.appendChild(textEl)
 
-  const actions = document.createElement("div")
-  actions.className = "question-actions"
-  el.appendChild(actions)
-
   const answer = (value) => {
     el.remove()
     vscode.postMessage({ type: "questionResponse", answer: value ?? null })
@@ -30,6 +26,8 @@ export function showQuestion(ctx, question, options) {
 
   // Free-text channel — ALWAYS present (options or not). Users must be able to
   // supplement or correct the AI's preset choices with their own answer.
+  const actions = document.createElement("div")
+  actions.className = "question-actions"
   const addFreeInput = (placeholder) => {
     const input = document.createElement("input")
     input.className = "question-input"
@@ -46,7 +44,15 @@ export function showQuestion(ctx, question, options) {
     actions.appendChild(submit)
   }
 
+  // Preset option buttons stack as their own column — .question-options sits
+  // between the text and the .question-actions row (which keeps only
+  // input + submit + cancel). 修复注: option widths used to wrap unevenly inside
+  // .question-actions' flex-wrap — separating the layers makes each option a
+  // full-width left-aligned row (CLI picker 形态趋同). Pure free-text questions
+  // (no options) create NO container.
   if (Array.isArray(options) && options.length > 0) {
+    const optionsEl = document.createElement("div")
+    optionsEl.className = "question-options"
     for (const opt of options) {
       const b = document.createElement("button")
       b.className = "perm-btn approve question-option"
@@ -55,14 +61,14 @@ export function showQuestion(ctx, question, options) {
       const label = typeof opt === "string" ? opt : (opt?.label ?? opt?.text ?? opt?.title ?? String(opt))
       b.textContent = label
       b.addEventListener("click", () => answer(label))
-      actions.appendChild(b)
+      optionsEl.appendChild(b)
     }
-    // Preset options PLUS a free-text input — the user can pick a preset or
-    // type their own answer (the AI's options are never assumed exhaustive).
+    el.appendChild(optionsEl)
     addFreeInput(t("question.customPlaceholder"))
   } else {
     addFreeInput(t("question.placeholder"))
   }
+  el.appendChild(actions)
 
   const cancel = document.createElement("button")
   cancel.className = "perm-btn deny"

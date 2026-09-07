@@ -85,6 +85,18 @@ function preGateBlocked(agent, { tool, toolName, args, depth }) {
 }
 
 /**
+ * §2.6 token 链终消费制（2026-09-07——评审 #7d dispatch 分类——CLI dispatch.mjs 同构）：
+ * consume-design = 非只读控制动作——planMode 拒绝（不入 readonly/control 豁免——
+ * 与其他非只读动作同门）、免权限审批、不入批审批分组（无文件写——控制类直行）。
+ * 与 cancel 的不同：cancel 是控制类豁免（planMode 放行），consume-design 按设计
+ * planMode 拒绝——故不并入 isControlAction 钩子，单独谓词只接权限豁免位（批扫描 +
+ * 逐项询问两处）。
+ */
+function isSubagentConsumeDesignAction(toolName, args) {
+  return toolName === "subagent" && args?.action === "consume-design"
+}
+
+/**
  * §16 D-B1 同批权限合并询问：扫描同一 response.toolCalls 中所有通过前置门禁、到达权限
  * 询问阶段的非只读工具（深度 0 + 手动模式 + 有 onPermissionRequired），≥2 个时一次询问
  * （onBatchPermissionRequest）→ "approveAll"（本批放行）/ "oneByOne"（回退逐项）/
@@ -101,9 +113,10 @@ async function collectBatchPermission(agent, { response, toolByName, getAuto, ca
     const pre = preGateBlocked(agent, { tool, toolName: tc.name, args, depth })
     if (pre.blocked) continue // 前置门禁拦下的不计入批询问（评审 #7）
     const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
-    // §19.5 D-M6 round2 #4: cancel 类控制动作不入批审批组（免询问——只停不启）
+    // §19.5 D-M6 round2 #4: cancel 类控制动作不入批审批组（免询问——只停不启）；
+    // consume-design 同款免审直行（§2.6——无文件写）
     const controlAction = tool?.isControlAction?.(args) ?? false
-    if (!tool || tool.readonly || actionReadonly || controlAction) continue
+    if (!tool || tool.readonly || actionReadonly || controlAction || isSubagentConsumeDesignAction(tc.name, args)) continue
     list.push({ id: tc.id, name: tc.name, args })
   }
   if (list.length < 2) return null
@@ -192,7 +205,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
       // 只停不启（无新副作用）——控制类豁免（无 permission handler 也不拒）。
       const actionReadonly = tool?.isReadonlyAction?.(args) ?? false
       const controlAction = tool?.isControlAction?.(args) ?? false
-      if (!getAuto() && tool && !tool.readonly && !actionReadonly && !controlAction && depth === 0 && callbacks.onPermissionRequired) {
+      if (!getAuto() && tool && !tool.readonly && !actionReadonly && !controlAction && !isSubagentConsumeDesignAction(toolName, args) && depth === 0 && callbacks.onPermissionRequired) {
         // §16 D-B1 批确认结果套用：deny → 全批拒绝（无二次询问）；approveAll → 本批放行
         if (batchPerm?.denied?.has(tc.id)) {
           return { tool_call_id: tc.id, toolName, content: "Denied by user (permission mode).", meta: null }

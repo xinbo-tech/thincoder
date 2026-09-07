@@ -7,13 +7,19 @@
 
 import { describe, it, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync, existsSync, readFileSync } from "node:fs"
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync, existsSync, readFileSync, readdirSync, lstatSync } from "node:fs"
+import { slow } from "./slow.mjs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { tmpdir } from "node:os"
 import { compactHistory, truncateFallback, shrinkOversized, summarizeRunExplorations, SUMMARIZE_PROMPT, EXPLORE_TOOLS } from "../src/compact.mjs"
 import { MAX_ADVISOR_PUSHBACKS, loadEngineeringPrompt } from "../src/agent/run-helpers.mjs"
 import { pushModeReminders } from "../src/agent/setup-reminders.mjs"
+
+// §18.14a F1 fold-normalized includes (2026-09-07): fold both sides' \s+ runs to single
+// spaces before includes — wrap-drift immune (past reflows must not break anchors);
+// phrase loss still reds; negative guards keep negation under the same folding
+const foldedIncludes = (text, phrase) => text.replace(/\s+/g, " ").includes(phrase.replace(/\s+/g, " "))
 
 function setupTempDir() {
   const dir = mkdtempSync(join(tmpdir(), "thincoder-test-"))
@@ -112,10 +118,10 @@ describe("pre-work plan confirmation discipline", () => {
   it("engineering.md: task sizing is not the agent's call — every request runs the full Mandatory Flow (2026-09-03)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     assert.ok(text.includes("Task sizing is NOT your call"), "zero-discretion statement under Mandatory Flow")
-    assert.ok(text.includes("every user request in this mode runs the full\nMandatory Flow regardless of size"), "no size-based step skipping")
+    assert.ok(foldedIncludes(text, "every user request in this mode runs the full\nMandatory Flow regardless of size"), "no size-based step skipping")
     assert.ok(text.includes('"The task is too small / it is just a tweak"'), "small-task excuse phrase named")
-    assert.ok(text.includes("no change is exempt from\nbeing recorded in the design docs"), "no exemption from design-doc recording")
-    assert.ok(text.includes("the user's decision to be\nin engineering mode was the sizing decision"), "entering engineering mode was the sizing decision")
+    assert.ok(foldedIncludes(text, "no change is exempt from\nbeing recorded in the design docs"), "no exemption from design-doc recording")
+    assert.ok(foldedIncludes(text, "the user's decision to be\nin engineering mode was the sizing decision"), "entering engineering mode was the sizing decision")
   })
 
   it("engineering.md: fix rounds land in docs FIRST — no spawn before the deviation record (2026-09-03)", () => {
@@ -125,6 +131,17 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("is a NEW task needing its own flow and a fresh token"), "beyond the file list = new task with fresh token")
     assert.ok(text.includes("BEFORE the eng-coder spawn"), "doc landing precedes the spawn")
     assert.ok(text.includes("Fix-round re-spawns are docs FIRST too"), "flow-step-7 fix-round docs-FIRST hook present")
+  })
+
+  it("engineering.md: chain-terminal token consumption — two verbatim anchors (2026-09-07, fail-when-unchanged — ENGINEERING-MODE §2.6 F3)", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    const anchor1 = "**Chain-terminal token consumption**: after the delivery is verified and the chain closes out, call `subagent` with `action:'consume-design'` for this designId — the slot is consumed; a further spawn for the same designId is mechanically rejected, and any new work (including new deviation fixes) requires a fresh design review and token. Leaving a consumed-out token in the slot is the reuse hole."
+    const anchor2 = "Fix rounds reuse the same designToken — but docs FIRST, and only while the chain is open (same designId, before parent-side close-out); once the chain terminal state is reached, every further spawn — including deviation fixes — goes through a fresh design review and token."
+    assert.ok(text.includes(anchor1), "chain-terminal consumption anchor verbatim (after Mandatory Flow step 8 Delivery review)")
+    assert.equal(text.split(anchor1).length - 1, 1, "anchor 1 appears exactly once")
+    assert.ok(text.includes(anchor2), "fix-round tightening anchor verbatim (docs-FIRST hook merged — review round2 #11)")
+    assert.equal(text.split(anchor2).length - 1, 1, "anchor 2 appears exactly once")
+    assert.ok(text.includes("Fix rounds reuse the same designToken — but docs FIRST"), "docs-FIRST hook preserved (existing assertion keeps passing — merged ruling)")
   })
 
   it("engineering.md: scope extensions run the full review chain — a user ruling on form/shape is NOT design approval (2026-09-03)", () => {
@@ -230,7 +247,7 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("marked open, never silently invented"), "undecided parts marked open, not invented")
     // 任务书传递强制：eng-coder 无对话上下文
     assert.ok(
-      text.includes("MUST restate the agreed\n   UI/interaction decisions"),
+      foldedIncludes(text, "MUST restate the agreed\n   UI/interaction decisions"),
       "eng-coder task must restate UI/interaction decisions",
     )
     assert.ok(
@@ -266,7 +283,7 @@ describe("pre-work plan confirmation discipline", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     assert.ok(text.includes("METHODOLOGY test document is part of the delivery"), "test-doc required at delivery")
     assert.ok(text.includes("normal / edge / error"), "coverage triple named")
-    assert.ok(text.includes("a delivery without\n   its test coverage fails the review"), "missing coverage fails the review")
+    assert.ok(foldedIncludes(text, "a delivery without\n   its test coverage fails the review"), "missing coverage fails the review")
   })
 
   it("engineering.md: delegation guidance (explore/plan offload + precision exception + parallel exclusion + escalate unavailable)", () => {
@@ -299,9 +316,9 @@ describe("pre-work plan confirmation discipline", () => {
   it("engineering.md: multi-task parallelism discipline injected at top level (2026-09-01, CLI parity)", () => {
     const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
     assert.ok(text.includes("## Multi-Task Parallelism"), "top-level parallelism section present")
-    assert.ok(text.includes("Parallelize aggressively: send multiple\nindependent tool calls in one response"), "§14 D1 clause appears inside engineering.md (top-level mode never loads system.md)")
-    assert.ok(text.includes("splitting changes across independent\nsub-projects"), "F7 sub-project split trigger")
-    assert.ok(text.includes("Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "five no-parallel boundaries")
+    assert.ok(foldedIncludes(text, "Parallelize aggressively: send multiple\nindependent tool calls in one response"), "§14 D1 clause appears inside engineering.md (top-level mode never loads system.md)")
+    assert.ok(foldedIncludes(text, "splitting changes across independent\nsub-projects"), "F7 sub-project split trigger")
+    assert.ok(foldedIncludes(text, "Do NOT parallelize:\nwrites to the same file, dependent steps, bash/approval-gated commands"), "five no-parallel boundaries")
     assert.ok(text.includes("approval storms"), "approval storms named")
     assert.ok(text.includes("skip micro-parallelism (<1s ops)"), "no micro-parallelism")
     // §20.7 T-PS1: scheduler clause replaces the manual same-file/dependency discipline (D-PS2 anchor)
@@ -314,9 +331,9 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("past 4 the bookkeeping cost"), "T-E16: past 4 理由句钉（CLI parity）")
     // §19.5.5 T-CL2: cancel-discipline anchor present (D-CL2 verbatim — post-D-PS2 text — fail-when-unchanged)
     assert.ok(flat.includes("assertions stay green).** Cancelling a running eng-coder is a last resort — its in-flight delivery dies unmerged and unaudited; verify the alarm with reliable checks and prefer scoped recovery first."), "T-CL2: D-CL2 anchor verbatim after D-PS2 text (last resort + verify-first)")
-    assert.ok(text.includes('designId=<id-A>,\n  designToken=<token-A>'), "parallel spawn call form (each with designId+token)")
-    assert.ok(text.includes("each parallel\n   design keeps its own designId+token pair"), "token isolation semantics")
-    assert.ok(text.includes("the DESIGN review is still only fired when\n  the user asks"), "initiation rights unchanged")
+    assert.ok(foldedIncludes(text, 'designId=<id-A>,\n  designToken=<token-A>'), "parallel spawn call form (each with designId+token)")
+    assert.ok(foldedIncludes(text, "each parallel\n   design keeps its own designId+token pair"), "token isolation semantics")
+    assert.ok(foldedIncludes(text, "the DESIGN review is still only fired when\n  the user asks"), "initiation rights unchanged")
     assert.ok(text.includes("plus its designId parameter"), "work-loop approval line mentions designId")
   })
 
@@ -364,10 +381,10 @@ describe("pre-work plan confirmation discipline", () => {
     assert.ok(text.includes("Delivery arrives already audited — do not double-audit"), "父侧不双重审计（step 7 标题）")
     assert.ok(text.includes("terminal state `clean` | `stalled`"), "终态 clean/stalled")
     assert.ok(text.includes("same `designToken` and `designId` parameters"), "修正轮复用同 designId+token（内部收敛外的父侧处理）")
-    assert.ok(text.includes("invent nothing\n   new"), "不发明新需求")
+    assert.ok(foldedIncludes(text, "invent nothing\n   new"), "不发明新需求")
     // step 8：父侧复核保留可选（默认内部协议承担）
     assert.ok(text.includes("OPTIONAL second opinion"), "父侧 advisor = 可选第二意见")
-    assert.ok(text.includes("no user\n   initiation needed (2026-08-24 decision)"), "自动节点语义保留")
+    assert.ok(foldedIncludes(text, "no user\n   initiation needed (2026-08-24 decision)"), "自动节点语义保留")
     // Work Loop：旧 First delivery audit 父侧审计态已由内部协议态取代
     assert.ok(!text.includes("First delivery audit"), "父侧 First delivery audit 态已移除（§18 下沉）")
     assert.ok(text.includes("Delivery (async settle)"), "Work Loop 含 async settle 态")
@@ -476,9 +493,9 @@ describe("pre-work plan confirmation discipline", () => {
     const text = readFileSync(join(PROMPTS_DIR, "eng-coder.md"), "utf8")
     assert.ok(text.includes("Implement to the full design — no silent degradation"), "positive prohibition present")
     assert.ok(text.includes("implement it anyway and note the cost"), "costly elements still get implemented")
-    assert.ok(text.includes("A \"simpler\n  approximation\" of a specified behavior IS a deviation"), "approximation = deviation")
-    assert.ok(text.includes("BEFORE coding —\n  never ship a reduced version and disclose it afterwards"), "surface first, never disclose-after")
-    assert.ok(text.includes("the parent approved the design, not your\n  discount"), "approved the design, not the discount")
+    assert.ok(foldedIncludes(text, "A \"simpler\n  approximation\" of a specified behavior IS a deviation"), "approximation = deviation")
+    assert.ok(foldedIncludes(text, "BEFORE coding —\n  never ship a reduced version and disclose it afterwards"), "surface first, never disclose-after")
+    assert.ok(foldedIncludes(text, "the parent approved the design, not your\n  discount"), "approved the design, not the discount")
   })
 
   it("eng-coder.md: final-review item 6 — structural snapshot sync (2026-08-30)", () => {
@@ -611,13 +628,17 @@ You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.
    state of the files/documents as you read them is the truth. Do not guess
    author intent.`
 
-  it("T-AR3: 角色段位置——身份句（模板首行）之后、既有小节（Review Criteria / Review workflow: / Judgment Rules）之前——既有内容零位移", () => {
+  it("T-AR3: 角色段位置——身份句（模板首句）之后、既有小节（Review Criteria / Review workflow: / Judgment Rules）之前——既有内容零位移", () => {
+    // §18.14a F3（2026-09-07）：行结构免疫——原机制以「首行行尾（\n）」作身份句边界代理，历批折叠
+    // 重排（段落并单物理行）后失效；D-AR1 语义保持（身份句=模板首句 + 角色段紧随其后 + 既有小节序不动）
     for (const f of ROLE_FILES) {
       const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
       const roleIdx = text.indexOf("## Your role (identity")
-      assert.ok(roleIdx > 0, `${f}: 角色段头在且非首行`)
-      const identityEnd = text.indexOf("\n")
-      assert.ok(roleIdx > identityEnd, `${f}: 角色段位于身份句之后`)
+      assert.ok(roleIdx > 0, `${f}: 角色段头在（且非文件首字符）`)
+      const identity = text.match(/^You are [^.]*\./)
+      assert.ok(identity !== null, `${f}: 身份句为模板首句（D-AR1）`)
+      assert.ok(roleIdx > identity[0].length, `${f}: 角色段位于身份句之后（D-AR1——身份句后插入）`)
+      assert.ok(/^\s*$/.test(text.slice(identity[0].length, roleIdx)), `${f}: 角色段紧随身份句（身份句与角色段头之间仅空白间隔——D-AR1 落位——折叠免疫）`)
       for (const later of ["## Review Criteria", "Review workflow:", "## Judgment Rules", "## Citation Discipline", "## Approval Signal"]) {
         const idx = text.indexOf(later)
         if (idx >= 0) assert.ok(roleIdx < idx, `${f}: 角色段位于 "${later}" 之前（既有小节未动）`)
@@ -628,7 +649,7 @@ You are an INDEPENDENT REVIEWER — authority in judgment, not in decisions.
   it("T-AR4: 锚整块逐字存在（四模板同段同文）——删/改任一锚句即失败（防回归）", () => {
     for (const f of ROLE_FILES) {
       const text = readFileSync(join(PROMPTS_DIR, f), "utf8")
-      assert.ok(text.includes(ROLE_ANCHOR), `${f}: 锚整块逐字在（任一锚句删除/改词即失败）`)
+      assert.ok(foldedIncludes(text, ROLE_ANCHOR), `${f}: 锚整块逐字在（任一锚句删除/改词即失败——折叠归一法防折行漂移）`)
     }
   })
 })
@@ -675,7 +696,14 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
     assert.ok(text.includes("Neutrality"), "D-SP1: Neutrality phrase")
     assert.ok(text.includes("Boundary"), "D-SP1: Boundary phrase")
     assert.ok(norm(text).includes("STOP and report the conflict"), "D-SP1: STOP and report phrase")
-    assert.ok(text.includes(CODER_ANCHOR), "D-SP1: anchor block verbatim (删/改任一锚句即失败)")
+    assert.ok(foldedIncludes(text, CODER_ANCHOR), "D-SP1: anchor block verbatim (删/改任一锚句即失败——折叠归一法防折行漂移)")
+    // D-SP1 落位（§18.14a F3 修正轮——2026-09-07——折叠免疫）：锚块头在角色句之后、文件头区后续结构标记
+    // （Guidelines 引导段）之前——防编辑把整块挪走（如移文末/移至引导段后）后断言仍绿的弱化
+    const coderRolePos = text.indexOf("You are a coding subagent")
+    const coderAnchorPos = text.indexOf("## Your role (identity — read before you code)")
+    assert.ok(coderRolePos !== -1 && coderAnchorPos > coderRolePos, "D-SP1: 锚块头位于角色句之后（文件头部区——D-SP1 落位）")
+    const guidelinesPos = text.indexOf("Guidelines:")
+    assert.ok(guidelinesPos === -1 || coderAnchorPos < guidelinesPos, "D-SP1: 锚块头先于 Guidelines 引导段（防整块挪离文件头）")
   }
 
   const checkConsultAnchor = (text) => {
@@ -683,7 +711,15 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
     assert.ok(text.includes("Neutrality"), "D-SP2: Neutrality phrase")
     assert.ok(norm(text).includes('"I don\'t know" is a valid consultant answer'), "D-SP2: \"I don't know\" is a valid consultant answer phrase")
     assert.ok(norm(text).includes("Recommend and reason"), "D-SP2: Recommend and reason phrase")
-    assert.ok(text.includes(CONSULT_ANCHOR), "D-SP2: anchor block verbatim (删/改任一锚句即失败)")
+    assert.ok(foldedIncludes(text, CONSULT_ANCHOR), "D-SP2: anchor block verbatim (删/改任一锚句即失败——折叠归一法防折行漂移)")
+    // D-SP2 落位（§18.14a F3 修正轮——2026-09-07——折叠免疫）：锚块头在角色句之后、后续小节（## Diagnosis 等）之前
+    const consultRolePos = text.indexOf("You are one of several independent expert consultants")
+    const consultAnchorPos = text.indexOf("## Your role (identity — read before you answer)")
+    assert.ok(consultRolePos !== -1 && consultAnchorPos > consultRolePos, "D-SP2: 锚块头位于角色句之后（文件头部区——D-SP2 落位）")
+    for (const later of ["## Diagnosis", "## Recommendation", "## Verification"]) {
+      const idx = text.indexOf(later)
+      if (idx >= 0) assert.ok(consultAnchorPos < idx, `D-SP2: 锚块头位于 "${later}" 之前（防整块挪离文件头）`)
+    }
   }
 
   it("T-SP1: coder.md 含 D-SP1 锚（IMPLEMENTER / Evidence discipline / Neutrality / Boundary / STOP and report + 整块逐字）——fail-when-unchanged", () => {
@@ -986,5 +1022,28 @@ describe("§26 long-output disk discipline (T-R18 — AGENT-LOOP.md §26 D-R18)"
     assert.equal(text.split(R18_CLAUSE).length - 1, 1, "条款恰好一次（无重复无漂移）")
     assert.ok(text.includes("日志放 OS 临时目录或 `~/.thincoder/` 类非工作区位置——查毕删除（防 git 工作区 untracked 污染）"), "T-R18.2: 日志位置/清理执行注在（§26 评审 #7）")
   })
+})
+
+// ---------------------------------------------------------------- §2.6a 凭证不落文档（2026-09-07——ENGINEERING-MODE §2.6a F1/T1/T2）
+// T2 值形态正则钉死（评审 #4）：uuid 形 hex + 可选冒号 epoch 后缀——参数名不匹配——防误伤；放慢层 + slow-gate 归册（评审 #5）——AC-1 以 test:full 执行为准。
+
+const CRED_ANCHOR = "**Credential values stay out of documents**: never write token or designId VALUES into design docs, change records, or status lines — credentials are runtime state. A review passing is recorded as \"review passed\"; nothing else. No values, no placeholders."
+const CRED_VALUE_RE = /(token|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i
+const walkMd = (dir, acc = []) => (readdirSync(dir).forEach((e) => (lstatSync(join(dir, e)).isDirectory() ? walkMd(join(dir, e), acc) : e.endsWith(".md") && acc.push(join(dir, e)))), acc)
+
+describe("§2.6a credential values stay out of documents (ENGINEERING-MODE §2.6a)", () => {
+  it("T1: engineering.md Hard Rules 含逐字锚（fail-when-unchanged）", () => {
+    const text = readFileSync(join(PROMPTS_DIR, "engineering.md"), "utf8")
+    assert.ok(text.includes(CRED_ANCHOR), "T1: Hard Rules 含逐字锚（删/改任一字符即失败）")
+    assert.ok(text.indexOf(CRED_ANCHOR) > text.indexOf("## Hard Rules"), "T1: 锚位于 Hard Rules 段内")
+  })
+})
+
+slow("§2.6a T2: 全仓凭证巡检——docs + src/prompts + 根级变更记录零值形态（正则钉死——放慢层——AC 以 test:full 为准）", () => {
+  const root = join(PROMPTS_DIR, "..", "..") // thincoder-vscode/
+  const files = [...walkMd(join(root, "docs")), ...walkMd(join(root, "src", "prompts")), ...["CHANGELOG.md", "README.md", "AGENTS.md"].map((f) => join(root, f)).filter(existsSync)]
+  const v = []
+  for (const f of files) readFileSync(f, "utf8").split("\n").forEach((line, i) => CRED_VALUE_RE.test(line) && v.push(`${f}:${i + 1}: ${line.trim().slice(0, 80)}`))
+  assert.deepEqual(v, [], `token/designId 值形态残留 ${v.length} 处（零值零占位）：\n${v.join("\n")}`)
 })
 
