@@ -17,6 +17,8 @@ import { freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-block
 import { sweepToolBlocks } from "./tool-events.mjs"
 import { logEvent } from "../log.mjs"
 import { C } from "./ansi.mjs"
+// ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
+import { getAsyncPool, parkAsyncPending } from "../agent-tools/async-settle.mjs"
 
 // ── §24 D-24c（R15——2026-09-06）排队用户指令合并常量：单批 ≤8 条且合并注入
 // ≤2000 字符（双端逐字一致——§22 D-Q3 常量先例）；超限截批先行（余下下批——不丢
@@ -70,9 +72,8 @@ export function planQueuedInput(items) {
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
  *  poolN = _asyncSubagents + _asyncAdvisors（§24 D-24b advisor 池同面板计数——queued
  *  条目同样在 map 内——2026-09-03 code review #2：不再 +queue.length 双计）。
- *  R17（§25 D-R17a/b）：pendingN 推广 = 任一 pending 族（子代理/advisor 共用的
- *  _pendingAsyncResults + 独立流 _pendingConsultResults/_pendingEscalateResults——
- *  digest 驱动判据同推广——T-R17j）。 */
+ *  R17（§25 D-R17a/b）：pendingN = pending 单容器 `_pendingAsyncResults` 条数（
+ *  ASYNC-RESULT-CONTAINER.md D2——四族统一停靠——digest 驱动判据同单容器）。 */
 export function poolCounts(agent) {
   const map = agent?._asyncSubagents
   const adv = agent?._asyncAdvisors
@@ -95,33 +96,26 @@ function consultRunningChildren(agent) {
   return n
 }
 
-/** 任一 pending 族条数（§25 D-R17a 消费驱动判据推广——T-R17j）：digest auto-turn
- *  驱动与计数一律按"任一 pending 族非空"，不再只看子代理 pending。 */
+/** pending 单容器条数（§25 D-R17a 消费驱动判据——T-R17j——ASYNC-RESULT-CONTAINER.md
+ *  D2：四族统一 `_pendingAsyncResults` +role，不再分族三容器）。 */
 export function pendingFamilyCount(agent) {
-  return (agent?._pendingAsyncResults?.length ?? 0)
-    + (agent?._pendingConsultResults?.length ?? 0)
-    + (agent?._pendingEscalateResults?.length ?? 0)
+  return agent?._pendingAsyncResults?.length ?? 0
 }
 
-/** 任一 pending 族非空（digest 触发判据——D-S2/D-S9 推广——§25 D-R17a）。 */
+/** pending 单容器非空（digest 触发判据——D-S2/D-S9——§25 D-R17a）。 */
 export function pendingFamiliesNonEmpty(agent) {
   return pendingFamilyCount(agent) > 0
 }
 
-/** 三族 pending 条目合成（freezeReclaimDigestedBlocks 的归属比对表——escalate 块
- *  awaitDigest 挂 _pendingEscalateResults——R17 决策点 ④ 独立流形态下的比对面合成）。 */
+/** pending 单容器条目（freezeReclaimDigestedBlocks 的归属比对表——四族同容器）。 */
 export function allPendingEntries(agent) {
-  return [
-    ...(agent?._pendingAsyncResults ?? []),
-    ...(agent?._pendingEscalateResults ?? []),
-    ...(agent?._pendingConsultResults ?? []),
-  ]
+  return [...(agent?._pendingAsyncResults ?? [])]
 }
 
 // ─── §17 挂起会话（AGENT-LOOP.md §17 D-S2/D-S9 状态机行表）────────────────
 
 /** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理或后台评审，或已 settle 未注入结果
- *  （pending 任一族非空 = D-S3 "未注入"），或 running consult 会话（会诊跨回合——
+ *  （pending 单容器非空 = D-S3 "未注入"），或 running consult 会话（会诊跨回合——
  *  §25 D-R17a 挂起活度钩子——consult 启动回合尾即入挂起态）。回合尾与每次轮末都用它
  *  评估退出。§24 D-24b：_asyncAdvisors（后台评审池）与子代理池同判——评审飞行中挂起
  *  会话必须存活。 */
@@ -136,23 +130,15 @@ export function poolLive(agent) {
 /** D-S3 ③ 记账清扫：回合边界竞态落下的已 settle 项（settle 回调未及移交——发生在
  *  回合刚结束、_suspended 尚未置位的窗口）补入 pending。幂等：回调已移交的条目已从
  *  map 删除并带 _inPending 标记，不会重复入列。
- *  R17（§25 D-R17b）：escalate 条目（_asyncSubagents 池内共享 other 域槽位——settle
- *  回调在挂起分支只移交 _pendingEscalateResults）此处同样按角色分流——escalate →
- *  _pendingEscalateResults（独立流——决策点 ④），其余 → _pendingAsyncResults。 */
+ *  ASYNC-RESULT-CONTAINER.md D2：pending 单容器（parkAsyncPending——四族统一停靠
+ *  +role；escalate 不再走独立流）。 */
 function sweepSettledToPending(agent) {
-  const maps = [agent._asyncSubagents, agent._asyncAdvisors].filter((m) => m instanceof Map && m.size > 0)
+  const maps = [getAsyncPool(agent, "subagent"), getAsyncPool(agent, "advisor")].filter((m) => m instanceof Map && m.size > 0)
   if (maps.length === 0) return
-  agent._pendingAsyncResults ??= []
   for (const map of maps) {
     for (const e of [...map.values()]) {
       if (e.done && !e._inPending) {
-        e._inPending = true
-        if (e.role === "escalate") {
-          agent._pendingEscalateResults ??= []
-          agent._pendingEscalateResults.push(e)
-        } else {
-          agent._pendingAsyncResults.push(e)
-        }
+        parkAsyncPending(agent, e)
         map.delete(String(e.id))
       }
     }
@@ -286,7 +272,7 @@ export async function suspensionSession(ctx) {
         agent._suspended = true
         // §17.5.5：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
         // （不等池空——settle 锚点 splice——digest 总览文本之前；与 digest 回收同规则）
-        // R17：回收比对 = 任一 pending 族（escalate 块 awaitDigest 挂 _pendingEscalateResults）
+        // R17：回收比对 = pending 单容器（四族统一——ASYNC-RESULT-CONTAINER.md D2）
         freezeReclaimDigestedBlocks(state, allPendingEntries(agent))
         state.status = backgroundStatusText(agent)
         continue
@@ -327,13 +313,12 @@ export async function suspensionSession(ctx) {
       agent._asyncSubagents?.clear()
       agent._asyncAdvisors?.clear()
       agent._asyncQueue = []
+      // ASYNC-RESULT-CONTAINER.md D2：pending 单容器——中止清容器不注入陈旧结果（四族
+      // 统一一处清；consult 会话标记 stopped——settle 不入 digest 流——T-R17c）+
+      // children abort。
       agent._pendingAsyncResults = []
-      // R17：consult/escalate 族随中止一并清场——consult 会话标记 stopped（settle 不入
-      // digest 流——T-R17c）+ children abort；pending 族丢弃（不注入陈旧结果）。
       const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
       cleanupConsultSessions(agent)
-      agent._pendingConsultResults = []
-      agent._pendingEscalateResults = []
       // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）：中止时不静默丢弃挂起期
       // 排队的用户消息——Enter 已清空输入框并入 pendingInput（用户视为已发送），
       // 残余转回 state.queue（{text} 条目，下个普通回合的队列循环续发——零丢失）
@@ -344,21 +329,17 @@ export async function suspensionSession(ctx) {
         pushLine(`[background work stopped — ${queuedN} queued message${queuedN > 1 ? "s" : ""} will run as a normal turn]`, C.warn)
       }
     } else {
-      // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2；R17：
-      // consult 族经 injectConsultResult——escalate 条目与子代理共用 injectAsyncResult）
+      // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2；
+      // ASYNC-RESULT-CONTAINER.md D2：pending 单容器一处清——注入器按 role 分发
+      // （consult → injectConsultResult；其余 → injectAsyncResult——四族同容器）。
       const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
       const { injectConsultResult } = await import("../agent-tools/consult.mjs")
       const residual = agent._pendingAsyncResults
       if (residual?.length) {
-        for (const e of residual.splice(0)) await injectAsyncResult(agent, e)
-      }
-      const residualEsc = agent._pendingEscalateResults
-      if (residualEsc?.length) {
-        for (const e of residualEsc.splice(0)) await injectAsyncResult(agent, e)
-      }
-      const residualCons = agent._pendingConsultResults
-      if (residualCons?.length) {
-        for (const e of residualCons.splice(0)) await injectConsultResult(agent, e)
+        for (const e of residual.splice(0)) {
+          if (e.role === "consult") await injectConsultResult(agent, e)
+          else await injectAsyncResult(agent, e)
+        }
       }
     }
     // 补发 done 冻结：驻留面板的 awaiting-digest 块随池空冻结进流（T-S14）

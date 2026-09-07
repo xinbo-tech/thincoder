@@ -11,6 +11,9 @@
 import { basename, isAbsolute, relative, resolve } from "node:path"
 import { existsSync, statSync } from "node:fs"
 import { poolLimitsFor, runningPoolCount, ASYNC_POOL_LIMITS } from "./subagent-async.mjs"
+// ASYNC-RESULT-CONTAINER.md D1：池 accessor——async-settle.mjs 反向 import 本模块
+// （dependentLabels）构成同款惰性环（函数级绑定——无求值期依赖）。
+import { getAsyncPool } from "./async-settle.mjs"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // §20 子 agent 任务调度器（AGENT-LOOP.md §20——D-SD1..SD5 + 20.4 处置注）
@@ -87,12 +90,14 @@ function showFile(parent, key) {
  */
 export function depInfo(parent, id) {
   const key = String(id)
-  const e = parent._asyncSubagents?.get(key)
+  const e = getAsyncPool(parent, "subagent")?.get(key)
   if (e) {
     if (e.cancelled) return { state: "cancelled", role: e.role }
     if (e.done) return e.error != null ? { state: "failed", role: e.role } : { state: "ok", role: e.role }
     return { state: "pending", role: e.role }
   }
+  // ASYNC-RESULT-CONTAINER.md D2：pending 单容器（四族统一停靠——依赖目标挂起期 settle
+  // 移交也在此——注入前视为已消费）。
   const pend = (parent._pendingAsyncResults ?? []).find((x) => String(x.id) === key)
   if (pend) return pend.error != null ? { state: "failed", role: pend.role } : { state: "ok", role: pend.role }
   const t = parent._asyncTombstones?.get(key)

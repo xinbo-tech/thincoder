@@ -11,6 +11,8 @@ import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../c
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./helpers.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent } from "../log.mjs"
+// ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
+import { getAsyncPool } from "../agent-tools/async-settle.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
@@ -143,16 +145,20 @@ export async function finalizeAgentTurn(agent, ctx) {
   // - anything else: inject the SETTLED entries only; running/queued stay in the
   //   pool for the suspension session (D-S1 — no allSettled turn-end wait).
   if (signal?.aborted && !signal?.reason?.interrupt) {
-    if (agent._asyncSubagents?.size > 0 || agent._asyncAdvisors?.size > 0) {
-      logEvent("ev:stopped", { poolN: (agent._asyncSubagents?.size ?? 0) + (agent._asyncAdvisors?.size ?? 0), where: "turn-end-abort" })
+    const subPool = getAsyncPool(agent, "subagent")
+    const advPool = getAsyncPool(agent, "advisor")
+    if ((subPool?.size ?? 0) > 0 || (advPool?.size ?? 0) > 0) {
+      logEvent("ev:stopped", { poolN: (subPool?.size ?? 0) + (advPool?.size ?? 0), where: "turn-end-abort" })
     }
-    agent._asyncSubagents?.clear()
-    agent._asyncAdvisors?.clear()
+    subPool?.clear()
+    advPool?.clear()
     agent._asyncQueue = []
     // R17: the consult family dies with the user stop (marked stopped — no digest).
     cleanupConsultSessions(agent)
-    agent._pendingConsultResults = []
-    agent._pendingEscalateResults = []
+    // ASYNC-RESULT-CONTAINER.md D2：pending 单容器——中止丢弃 consult/escalate 族停靠
+    // （原 _pendingConsultResults/_pendingEscalateResults 同口径——VSC 同语义 filter）；
+    // subagent/advisor 停靠保留（挂起期 settle 的已完成结果不随中止丢）。
+    agent._pendingAsyncResults = (agent._pendingAsyncResults ?? []).filter((e) => e.role !== "consult" && e.role !== "escalate")
   } else if (thrownError instanceof ContinueError) {
     // keep _asyncSubagents/_asyncAdvisors/_consultSessions — the resumed run continues them
   } else {
@@ -203,7 +209,7 @@ export async function finalizeAgentTurn(agent, ctx) {
  * 2026-09-05 实践轮：自 agent.mjs 迁入（agent.mjs 内仅 finalize 引用——随收尾同迁）。
  */
 async function collectSettledAsync(agent, { suspDriven = false } = {}) {
-  const maps = [agent._asyncSubagents, agent._asyncAdvisors].filter((m) => m instanceof Map && m.size > 0)
+  const maps = [getAsyncPool(agent, "subagent"), getAsyncPool(agent, "advisor")].filter((m) => m instanceof Map && m.size > 0)
   if (maps.length === 0) return false
   const { maybeRefillAsync, injectAsyncResult } = await import("../agent-tools/subagent.mjs")
   maybeRefillAsync(agent) // start queued heads now that slots may have freed — no waiting

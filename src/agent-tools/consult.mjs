@@ -5,7 +5,8 @@
  * (non-blocking spawn) / consult_stop (cancel a running session). consult_check
  * was RETIRED with the digest auto-injection: the mechanism does ZERO judging —
  * when every model of a session settles (pending 0), the session moves to the
- * agent's _pendingConsultResults family stream and the NEXT run start (user turn
+ * pending single container (`_pendingAsyncResults` +role "consult"——
+ * ASYNC-RESULT-CONTAINER.md D2——升格完整 entry) and the NEXT run start (user turn
  * or digest auto-turn) injects the full verdict text ("[System reminder:
  * consultation #id finished — N replies …]" — per-model status annotations on
  * partial/full failures) for the main agent to judge and act on in the digestion
@@ -27,6 +28,8 @@ import { pushReal } from "../context.mjs"
 import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
 import { logEvent, errText } from "../log.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
+// ASYNC-RESULT-CONTAINER.md D2/D3/D6：pending 单容器停靠 + settle 公共收尾 + child signal 单点
+import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 
 // Named consult defaults (consult P2, 2026-08-30).
 const CONSULT_TIMEOUT_MS = 600_000 // default consult lifecycle timeout
@@ -128,24 +131,30 @@ export function makeMainHistoryTool(parentAgent) {
  * Full-session settle routing (R17 — AGENT-LOOP.md §25 D-R17a): a session whose
  * pending count reached 0 has no more replies coming — the session leaves
  * `_consultSessions` and, unless it was cancelled (consult_stop / turn-end
- * abort), moves into the `_pendingConsultResults` family stream as ONE entry
- * whose report carries the full per-model verdict text (composed here — all
- * settle states are known, partial/full failures annotated per model). The
- * entry is injected at the next run start (user turn or digest auto-turn —
- * agent.mjs); the suspension driver is woken (settle-event parity with the
- * async pools) so an idle settle still triggers the digestion round (T-R17j).
+ * abort), moves into the pending single container (`_pendingAsyncResults` +role
+ * "consult"——ASYNC-RESULT-CONTAINER.md D2——升格完整 entry：同 subagent/advisor/
+ * escalate 的 `{id, role, report, done, ...}` 形态）whose report carries the full
+ * per-model verdict text (composed here — all settle states are known,
+ * partial/full failures annotated per model). The entry is injected at the next
+ * run start (user turn or digest auto-turn — agent.mjs); the suspension driver
+ * is woken (settle-event parity with the async pools) so an idle settle still
+ * triggers the digestion round (T-R17j).
+ * D3：公共收尾统一走 settleAsyncEntry 共享 helper（四族同机制）——consult 族参数：
+ * 无池（会话池无条目——settle 即出池）、无 ctx（无 TUI 冻结事件——子块各自 settle 时
+ * 已冻结）、无 onAccounting；helper 按 role "consult" 恒停靠 pending（非挂起期也停靠）。
  * Cancelled sessions produce no digest (T-R17c).
  */
 function sessionSettled(agent, session) {
   agent?._consultSessions?.delete(String(session.id))
   if (session.stopped) return // cancelled — no digest (T-R17c)
-  agent._pendingConsultResults ??= []
-  agent._pendingConsultResults.push({
+  const entry = {
     id: String(session.id),
     role: "consult",
     report: composeConsultDigest(session),
-  })
-  for (const w of (agent._asyncWaiters ?? []).splice(0)) { try { w() } catch { /* noop */ } }
+    error: null, done: true, status: "done", cancelled: false,
+    relayPrefix: null, startedAt: null, _settle: null, _settleSeq: 0,
+  }
+  settleAsyncEntry(agent, entry, { pool: null, ctx: null })
 }
 
 /** Digest body for a fully-settled session — title + one annotated line per
@@ -165,7 +174,8 @@ export function composeConsultDigest(session) {
  * Inject one settled consult family entry into the parent history as a
  * user-role reminder (run-start injection — agent.mjs; same shape rules as
  * injectAsyncResult: XML-escaped, >64K offloaded with preview + path). Consumed
- * = the caller splices the entry out of _pendingConsultResults.
+ * = the caller splices the entry out of the pending single container
+ * (_pendingAsyncResults——ASYNC-RESULT-CONTAINER.md D2——role 分发注入）。
  */
 export async function injectConsultResult(agent, entry) {
   const body = entry?.report ?? "(no consultation result)"
@@ -401,12 +411,15 @@ export const consultStartTool = {
       session.pending++
       const ctrl = new AbortController()
       session.controllers.push(ctrl)
-      if (ctx.signal) {
-        if (ctx.signal.aborted) ctrl.abort()
-        else ctx.signal.addEventListener("abort", () => ctrl.abort(), { once: true })
+      // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md D5——consult 补 _sessionSignal
+      // 兜底：挂起会话内的 consult children 持会话 signal，digest 自身 Ctrl+C 不误伤）。
+      const baseSignal = buildChildSignal(agent, ctx)
+      if (baseSignal) {
+        if (baseSignal.aborted) ctrl.abort()
+        else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
       }
       // Fire and forget — each child settles itself into the session; the session
-      // routes to _pendingConsultResults when every child has settled (R17).
+      // routes to the pending single container when every child has settled (R17).
       runConsultChild(ctx, session, id, m, problem, ctrl)
     }
     return JSON.stringify({ id, models: session.models })

@@ -65,23 +65,25 @@
 
 ### 6.1 edit
 
-**语义 = patch/diff 心智**：`old_string` = 变化区当前内容（精确存在且单次匹配）；`new_string` = 该区期望结果。判定在 normalize(LF) 域做行级 LCS diff（公共行保留、old 独有删、new 独有插）。
+**语义 = patch/diff 心智，两种定位形态（互斥——2026-09-08 语义升级，EDIT-TOOL-IMPROVEMENT.md）**：
+① **按行号改（D1）**：`line: N`（单行）/ `startLine: N, endLine: M`（1-based 闭区间）→ 直接替换该行/行范围为 `new_string`（不需 old_string）；互斥/成对/正整数/越界（含 endLine）/replace_all 均显式报错；空 new_string 同内容形态显式报错（不静默删除）。
+② **内容定位**：`old_string` = 变化区当前内容（单次匹配）；`new_string` = 该区期望结果。匹配档位（D2）：逐字 → 唯一空白差异窗口（trim 等价）→ **模糊匹配**（唯一窗口：行级 normalize——去首尾空白 / tab→2 空格缩进统一 / 单→双引号统一 / 去行尾空格——后逐行相等比例 ≥90% 即匹配，附 note 明示；多窗口歧义/不足阈值仍 not-found 报错，不猜）。判定在 normalize(LF) 域做行级 LCS diff（公共行保留、old 独有删、new 独有插）。
 
 **判定序**：
 1. **分支 0（就地替换）**：old 恰单行 ∧ new 恰单行 ∧ 全文唯一匹配 ∧ new 非空 → 就地整行替换（行数不变）。
-2. **零重叠**（old 每行都不在 new）：按插入——new 插在 old 末行后，旧内容保留。
+2. **零重叠**（old 每行都不在 new）：**替换即删**（D3，2026-09-08——breaking：old 行整体删除、new 取而代之——旧行不再保留；原"插入保留旧行"语义废止；新增行用 insert_after）。
 3. **一般 LCS diff**。
 4. **平凡**：new 与 old 行级全等 → 原样替换（no-op 成功）。
 
 **约束**：
 - 空 new_string = 纯删除意图 → **显式错误**（提示须带保留上下文行；单行替换永不成删除，防删除保护先于分支 0）。
-- replace_all：每处 old→new **字面替换**（不做插入/分支 0）；多匹配无 replace_all → occurrences 错误。
-- edits 数组：`edit({path, old_string, new_string})` 单形态 或 `{edits:[...]}`；顶层 path + edits 合法（顶层 path = 无自带 path 条目的默认，条目自带 path 优先）；edits 与顶层 old/new 互斥；同文件多条**串行累积**、跨 path 并行、**全判后原子写**（任一失败全不写）。
+- replace_all：每处 old→new **字面替换**（不做插入/分支 0；不适用按行号改）；多匹配无 replace_all → occurrences 错误。
+- edits 数组：`edit({path, old_string, new_string})` 单形态 或 `{edits:[...]}`；顶层 path + edits 合法（顶层 path = 无自带 path 条目的默认，条目自带 path 优先）；edits 与顶层 old/new/line/startLine/endLine 互斥；同文件多条**串行累积**、跨 path 并行、**全判后原子写**（任一失败全不写）。条目内同样二选一（old_string 或行号）。
 - 行数上限：old/new 各 ≤1000（超限报 "edit region too large"）。
 - not-found 引导：错误含 `searched:` + grep 建议 + `similar lines (top 3, score)` 段（LCS 连续子串 / 阈 0.5 / top3，单行也覆盖；零候选省略）。
 - 空白自动落点：逐字 occurrences=0 时按行 trim() 等价的**唯一窗口**自动应用（附 note）；多窗口歧义仍 not-found（不猜）。
 
-**实现单一权威**：CLI `src/tools/edit-diff.mjs` 导出 `applyPatchLines` / `computeEditEntry` / `validateEditEntry` / `assertEditArgsExclusive`；本地单形态 / edit-batch / ACP 桥三通道共用；VS Code 镜像 edit-diff.mjs。
+**实现单一权威**：CLI `src/tools/edit-diff.mjs` 导出 `applyPatchLines` / `computeEditEntry` / `validateEditEntry` / `assertEditArgsExclusive` / `hasLineParams` / `splitLines`；D1/D2 纯函数落点 `src/tools/edit-batch.mjs`（`applyLineEdit` / `findFuzzyWindow` / `normalizeEditLine` / `FUZZY_MATCH_NOTE`——edit-diff 调用期导入，ESM 循环安全）；本地单形态 / edit-batch / ACP 桥三通道共用；VS Code 镜像 edit-diff.mjs。
 
 ### 6.2 insert_after
 

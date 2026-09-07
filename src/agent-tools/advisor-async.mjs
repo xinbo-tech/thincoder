@@ -44,9 +44,9 @@ export {
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER, looksLikeReviewOutput } from "../advisor/run.mjs"
 import { isDocFile, isTempFile } from "../advisor/repos.mjs"
 import { stripEventToken } from "../agent/spawn-child.mjs"
-import { pushReal } from "../context.mjs"
-import { logEvent, errText } from "../log.mjs"
-import { escapeXml } from "../agent/helpers.mjs"
+import { logEvent } from "../log.mjs"
+// ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
+import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Review-instance registry (agent._advisorRuns — per-review rounds/prior/cap)
@@ -384,9 +384,10 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
   // Entry controller chained to the session/run base signal (subagent-run parity):
   // Ctrl+C / session abort propagates into the review's chat; a digest's own
   // Ctrl+I must not orphan it (children hold the session signal while suspended).
+  // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md）。
   const ctrl = new AbortController()
   entry.controller = ctrl
-  const baseSignal = parent._sessionSignal ?? ctx?.signal ?? null
+  const baseSignal = buildChildSignal(parent, ctx)
   if (baseSignal) {
     if (baseSignal.aborted) ctrl.abort()
     else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
@@ -404,52 +405,21 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
       .then((report) => { entry.report = report })
       .catch((err) => { entry.error = err?.message ?? String(err) })
       .finally(() => {
-        entry.status = "done"
-        entry.done = true
-        const childLogId = `advisor#${entry.id}`
-        const parentAborted = ctx?.signal?.aborted || entry.controller?.signal?.aborted
-        // Settle accounting runs for genuinely completed reviews only: a parent-aborted
-        // review (Ctrl+C — sync parity) and a cancelled one (②-6b — settleAdvisorRun's
-        // own early return) consume no round and set no called-mark.
-        if (!parentAborted) {
-          const settled = settleAdvisorRun(parent, entry)
-          // §29 fix B：settle 分支输出（清洗/未签发提示）写回 entry.report——digest 原样进。
-          if (settled.report != null) entry.report = settled.report
-        }
-        if (entry.cancelled) {
-          logEvent("ev:cancelled", { id: childLogId })
-        } else if (!parentAborted) {
-          const err = entry.error != null ? errText(entry.error, 200) : null
-          logEvent("child:done", { role: "advisor", id: childLogId, ms: Date.now() - entry.startedAt, kind: err ? "error" : "ok" })
-          if (parent._suspended) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
-        }
-        // Cancelled settle (②-6b): no pending entry, no token slot, a digest
-        // hint reminder ("评审已取消——token 未签发") — subagent-run parity.
-        if (entry.cancelled) {
-          parent._asyncAdvisors?.delete(String(entry.id))
-          const tombstones = (parent._asyncTombstones ??= new Map())
-          tombstones.set(String(entry.id), { status: "cancelled", role: "advisor" })
-          ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
-          pushReal(parent, {
-            role: "user",
-            content: `[System reminder: async advisor review #${escapeXml(String(entry.id))} cancelled — the review did not settle; token not issued (评审已取消——token 未签发)]`,
-          })
-        } else if (!ctx?.signal?.aborted) {
-          // Settle 分流 (D-S3/D-S8): suspended → pending (digest injects at the
-          // next run start); in-run settle → stays pooled until the turn-end
-          // collection / the suspension sweep (subagent-run parity).
-          if (parent._suspended) {
-            parent._pendingAsyncResults ??= []
-            parent._pendingAsyncResults.push(entry)
-            parent._asyncAdvisors?.delete(String(entry.id))
-            ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
-          } else {
-            ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
-          }
-        }
-        entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
-        entry._settle()
-        for (const w of parent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
+        // settle 公共收尾单点（ASYNC-RESULT-CONTAINER.md D3——settleAsyncEntry）：日志三连
+        // /cancelled 分支（出池+墓碑+⟦ev⟧stopped+"评审已取消——token 未签发"提醒）/挂起分流
+        // （pending 单容器+出池——统一守卫 !parentAborted——D4）/公共尾部（settleSeq/_settle/
+        // 唤醒 waiter）统一走共享 helper。族特有 hook = settleAdvisorRun 记账（fix #2/#4——
+        // 陈旧判定/轮次/token D1 落盘——settle 分支输出写回 entry.report，digest 原样进）；
+        // cancelled/parent-aborted 不调（不消费预算——settleAdvisorRun 自己的早退语义等价）。
+        settleAsyncEntry(parent, entry, {
+          pool: parent._asyncAdvisors,
+          ctx,
+          onAccounting: () => {
+            const settled = settleAdvisorRun(parent, entry)
+            // §29 fix B：settle 分支输出（清洗/未签发提示）写回 entry.report——digest 原样进。
+            if (settled.report != null) entry.report = settled.report
+          },
+        })
       })
   }
   parent._asyncAdvisors.set(String(id), entry)

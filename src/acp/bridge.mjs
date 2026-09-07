@@ -20,7 +20,7 @@
  * `{ stopReason: "end_turn" }` (kimi session.ts parity).
  */
 import { detectDanger, normalizeEOL, joinWithEol } from "../tools/shared.mjs"
-import { computeEditEntry, validateEditEntry, assertEditArgsExclusive } from "../tools/edit-diff.mjs"
+import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "../tools/edit-diff.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {
@@ -92,7 +92,7 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
   }
 
   // §15.1（TOOLS.md）D15.7 委派：edit 判定/应用单一权威 = 本地 computeEditEntry
-  // （edit-diff.mjs——校验→判定序→应用：行级 LCS、零重叠→插入、replace_all 字面替换全部）。
+  // （edit-diff.mjs——校验→判定序→应用：行级 LCS、零重叠→替换即删、replace_all 字面替换全部）。
   // 桥只留「读 IDE 缓冲 → computeEditEntry → 写回 IDE 缓冲」——错误文本经抛错原样透传
   // ——与本地通道逐字一致（NF15.6b / AC15.10：not found / occurrences / 空 old / 空 new）。
   const EDIT_ABORT_PREFIX = "edit aborted (atomic — no files written): "
@@ -269,7 +269,10 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
           return { handled: true, result: `Error: fs/write_text_file failed: ${e.message}` }
         }
       }
-      if (base === "edit" && (Array.isArray(args?.edits) || (path && typeof args?.old_string === "string" && typeof args?.new_string === "string"))) {
+      // 2026-09-08 D1：单形态按行号改（path + line/startLine/endLine + new_string——无
+      // old_string）同样走 IDE 缓冲通道（hasLineParams 判定）——否则回落本地写盘会与
+      // IDE 缓冲脱敏；editSingle → computeEditEntry 行号语义自动继承。
+      if (base === "edit" && (Array.isArray(args?.edits) || (path && typeof args?.new_string === "string" && (typeof args?.old_string === "string" || hasLineParams(args))))) {
         try {
           const text = Array.isArray(args?.edits) ? await editBatch(args) : await editSingle(path, args)
           return { handled: true, result: text }

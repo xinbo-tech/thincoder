@@ -38,7 +38,8 @@
 consult 会话（agent._consultSessions = Map<id, Session>，跨回合存活）
   ├─ 并发启动 N 个只读会诊子任务
   │    （独立 AbortController + 只读工具集 + main_history）
-  ├─ 全 settle（pending=0）→ 会话移入 _pendingConsultResults（独立族流）
+  ├─ 全 settle（pending=0）→ 会话升格完整 entry 移入 pending 单容器
+  │    （_pendingAsyncResults +role "consult"——ASYNC-RESULT-CONTAINER.md D2）
   ▼
 下回合 run 首行注入 digest：reminder + 逐条意见全文
   ▼
@@ -52,8 +53,9 @@ consult 会话（agent._consultSessions = Map<id, Session>，跨回合存活）
 R17（2026-09-06）以 digest 自动注入取代旧的 `consult_check` 回合内轮询消费模型：
 
 - **唯一消费通道 = digest 自动注入**；`consult_check` 工具已删除（描述零残留）。
-- **settle 判定**：某 id pending=0（全部模型回复/失败 settle）→ 会话移入
-  `_pendingConsultResults`（独立族流，记账/消费机制与 §24 async 池同型）
+- **settle 判定**：某 id pending=0（全部模型回复/失败 settle）→ 会话升格完整 entry
+  （`{id, role:"consult", report, done:true}`——ASYNC-RESULT-CONTAINER.md D2）移入
+  pending 单容器 `_pendingAsyncResults`（+role——原 `_pendingConsultResults` 独立族流退役）
   → 下回合（用户回合或 digest auto-turn）run 首行注入
   `[System reminder: consultation #id finished — N of M models replied (F failed)]`
   + 逐条意见全文（失败按 per-model 标注——部分/全失败同规则）。
@@ -65,8 +67,8 @@ R17（2026-09-06）以 digest 自动注入取代旧的 `consult_check` 回合内
 - **注入容量**：超长 → 既有 digest 截断/落盘机制（XML-escaped，>64K offload 预览 + 路径）。
 - **`consult_stop` 保留为取消语义**：`{ abandoned, cancelled: true }`——已答部分丢弃、
   不入 pending；会话 settle 即移出 map。
-- **消费驱动（评审 #2）**：digest auto-turn 驱动判据推广到所有 pending 族
-  （`_pendingConsultResults`/`_pendingEscalateResults`/advisor 池——任一 pending 族非空）；
+- **消费驱动（评审 #2）**：digest auto-turn 驱动判据 = pending 单容器非空
+  （`_pendingAsyncResults` 四族统一——2026-09-08 ASYNC-RESULT-CONTAINER.md D2）；
   挂起活度钩子 = running 会诊会话纳入 `poolLive`（consultRunningChildren）——空闲 settle
   也触发消化轮（T-R17j）。
 - **每 consultant 活动块在 child settle 即冻结**（`⟦ev⟧done`——per-child key——不再经 check 消费冻结）。
@@ -138,7 +140,7 @@ stopped, total, received }`。settle 语义：正常回复入队；`session.stop
 
 | 文件 | 动作 |
 |---|---|
-| `src/agent-tools/consult.mjs` | 两工具 + main_history + 会话状态 + runConsultChild + settle→`_pendingConsultResults` + cleanupConsultSessions |
+| `src/agent-tools/consult.mjs` | 两工具 + main_history + 会话状态 + runConsultChild + settle→pending 单容器（升格完整 entry——ASYNC-RESULT-CONTAINER.md D2）+ cleanupConsultSessions |
 | `src/agent/setup.mjs` | depthOnly 注册两工具 + role "consult" base prompt 分支 + `withPool` 候选池装饰 |
 | `src/agent.mjs` | `CONSULT_BASE` 加载导出 + run 首行 consult digest 注入（含 digest 消费驱动的 pending 族推广） |
 | `src/config.mjs` | DEFAULTS 加 consultModels/consultTurns/consultTimeoutMs + 校验（≤5、provider 存在） |

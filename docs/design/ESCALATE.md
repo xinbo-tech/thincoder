@@ -93,7 +93,8 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
   - **error**（child 失败 / 撞 turn cap）：partial mutations 视父侧重叠决定 merge
     （无父侧重叠则 merge；有重叠则不 merge + 差异列于报告）；
   - **cancelled**（⏹ / action cancel）：不入 pending——什么都不 merge。
-- **术后报告经 `_pendingEscalateResults` digest 自动注入**（"报告已 merge——可继续处置"）——
+- **术后报告经 pending 单容器 digest 自动注入**（"报告已 merge——可继续处置"——
+  `_pendingAsyncResults` +role "escalate"——ASYNC-RESULT-CONTAINER.md D2）——
   **动作域仍按消费回合档位**——手动档 digest 禁写——无族例外。
 - **`async: false` 保留同步旧路径**（向后兼容——既有同步语义零回归）。同步路径下：
   回合内等待、撞墙 continue 弹面板等表述适用。

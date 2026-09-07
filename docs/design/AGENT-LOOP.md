@@ -41,14 +41,15 @@
 | `src/agent/helpers.mjs` | 常量（turn 上限、结果落盘阈值）、escapeXml、repairHistory、AUTO_REMINDER 单源、git 上下文、目录树 |
 | `src/agent/record-results.mjs` | 工具结果提交 + 变更记账：tool 消息落盘（多模态延迟注入）、FILE_MUTATORS 失效链、`_touchedFiles` + noteMutations |
 | `src/agent/spawn-child.mjs` | 子代理统一管线：makeRelay / wrapChildCallbacks / runWithContinue / ensureChildApiKey / clampEffort / `⟦ev⟧` strip / 嵌套 done/stopped 补发射 |
-| `src/agent/run-stages.mjs` | （拆分批）回合阶段骨架 / abort 分支 / pending 族清空 |
+| `src/agent/run-stages.mjs` | （拆分批）回合阶段骨架 / abort 分支 / pending 单容器过滤 |
 | `src/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in） |
-| `src/agent-tools/subagent*.mjs` | subagent 工具：spawn/status/escalate/cancel/panel 动作面、async 池、调度器、审计任务书（见 §7/§8/§10） |
+| `src/agent-tools/subagent*.mjs` | subagent 工具：spawn/status/escalate/cancel/panel 动作面、async 池、调度器、审计任务书（见 §7/§8/§10）；subagent-panel.mjs = §19.6 panel 执行器（2026-09-08 自 subagent-actions.mjs 二次拆分） |
+| `src/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper（ASYNC-RESULT-CONTAINER D1-D6）：settleAsyncEntry（四族公共收尾单点）/ getAsyncPool（双池 accessor）/ parkAsyncPending（pending 单容器）/ parentAborted 守卫 / buildChildSignal |
 | `src/agent-tools/subagent-scheduler.mjs` | 任务调度器：normalizeFileList/filesOverlap/depInfo/queueRunnable/assertNoDepCycle/停滞检测（见 §10） |
 | `src/agent-tools/advisor*.mjs` | advisor 工具（async 面见 §11.2）；对象锚与铁律见 §12 |
 | `src/tui/*` | TUI 渲染/交互（见 TUI.md）；子代理相关渲染模块 subagent-blocks / subagent-panel / subagent-children |
 
-模块拆分批：subagent-async.mjs 按 Module Split Policy（§15）拆出 subagent-scheduler.mjs（调度组）与 subagent-actions.mjs（status/panel/escalate 动作执行）——见 §10。
+模块拆分批：subagent-async.mjs 按 Module Split Policy（§15）拆出 subagent-scheduler.mjs（调度组）与 subagent-actions.mjs（status/panel/escalate 动作执行）——见 §10；2026-09-08 subagent-actions.mjs 二次拆分出 subagent-panel.mjs（§19.6 面板段）——见 §7.3。
 
 ## 2. runAgent 主循环
 
@@ -229,6 +230,10 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 **async 分支**：子代理照常启动（复用 spawnChild 管线——relay/turn-cap/权限/mergeChildMutations 全不变），父侧不 await——`_asyncSubagents` 记录 + 立即返回 `{id, role, status:"running"}`。settle → 报告经自动通道送达（回合尾注入 / 挂起 digest——§9）。
 
 **槽位队列 + 分域池**：async 入口检查 running 数（<域上限 → 立即启动；≥ → 入队 `{status:"queued", position}`）；任一 running settle → 队列可启动项自动补位。分域池与可配置上限见 §11.1。
+
+**settle 统一机制（ASYNC-RESULT-CONTAINER.md D1-D6，2026-09-08）**：四族（subagent/advisor/escalate/consult）settle 公共收尾单点 = `settleAsyncEntry`（`agent-tools/async-settle.mjs`——落 done/status、日志三连（ev:cancelled / child:done|:error + ev:settled）、cancelled/parentAborted/挂起分流、settleSeq/`_settle` 唤醒 waiter）；守卫统一 `!parentAborted`（严格版——ctx.signal aborted 或条目 controller aborted）；族特有段作 `onAccounting` hook（advisor 陈旧判定/token D1 落盘记账；escalate 三分类 merge 决策 + 腾槽补位）。**pending 单容器** `_pendingAsyncResults` +role（三族分叉废弃——`_pendingEscalateResults`/`_pendingConsultResults` 退役，consult 升格完整 entry）；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending` 标记保留（settle/sweep 同一表示防重复移交）。**池 accessor** `getAsyncPool(parent, role)`（async-settle.mjs——advisor → `_asyncAdvisors`，其余 → `_asyncSubagents` 吸收双池）。**buildChildSignal**（async-settle.mjs——`_sessionSignal ?? ctx.signal ?? null` 单点，consult 补 _sessionSignal 兜底）。
+**settle 统一机制（ASYNC-RESULT-CONTAINER.md D1-D6，2026-09-08）**：四族（subagent/advisor/escalate/consult）settle 公共收尾单点 = `settleAsyncEntry`（`agent-tools/async-settle.mjs`——落 done/status、日志三连（ev:cancelled / child:done|:error + ev:settled）、cancelled/parentAborted/挂起分流、settleSeq/`_settle` 唤醒 waiter、腾槽补位（subagent/escalate 族恒补——settle/cancel 释放槽即补位；advisor/consult 豁免））；守卫统一 `!parentAborted`（严格版——ctx.signal aborted 或条目 controller aborted）；族特有段作 `onAccounting` hook（advisor 陈旧判定/token D1 落盘记账；escalate 三分类 merge 决策）。**pending 单容器** `_pendingAsyncResults` +role（三族分叉废弃——`_pendingEscalateResults`/`_pendingConsultResults` 退役，consult 升格完整 entry）；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending` 标记保留（settle/sweep 同一表示防重复移交）。**池 accessor** `getAsyncPool(parent, role)`（async-settle.mjs——advisor → `_asyncAdvisors`，其余 → `_asyncSubagents` 吸收双池）。**buildChildSignal**（async-settle.mjs——`_sessionSignal ?? ctx.signal ?? null` 单点，consult 补 _sessionSignal 兜底）。
+*实现偏差注（2026-09-08 advisor code review）：设计 D3 原把 maybeRefillAsync 归入 onAccounting hook（仅 settled 分支执行）——running 取消的 cancelled 分支将不再补位（槽释放但 queued 头停滞）——实现修正为公共尾部恒补（与 VSC 镜像同款）；设计文档 D3/变更记录由父侧随交付报告同步裁定。*
 
 **变更记录**：2026-09-02 显式 async → eng-coder 缺省 async → 2026-09-06 depth-0 全角色缺省 async（R12）。
 
@@ -487,10 +492,10 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 ### 14.1 会诊（consult）
 
 - consult_start 非阻塞发起；**consult_check 退役**（§14——无消费对象——digest 注入后）；**consult_stop 保留**（取消语义——cancel 后不入 pending）。
-- **settle**：`_consultSessions` 某 id pending=0（全部模型回复/失败）→ 移 `_pendingConsultResults`（独立流）→ 下回合 run 首行注入（"[System reminder: consultation #id finished — N replies: …]" 全文）→ 消化轮逐条判断处置。
+- **settle**：`_consultSessions` 某 id pending=0（全部模型回复/失败）→ 升格完整 entry（`{id, role:"consult", report, done:true}`——ASYNC-RESULT-CONTAINER.md D2）移 `_pendingAsyncResults` 单容器（+role——原 `_pendingConsultResults` 独立流退役）→ 下回合 run 首行注入（"[System reminder: consultation #id finished — N replies: …]" 全文）→ 消化轮逐条判断处置。
 - **注入时机**：全 settle 后一次注入（意见全貌才可判断——部分 settle 不提前注入）；超长 → digest 截断/落盘。
 - **消化轮动作域**：按消费回合档位走既有规则（手动档 = 整理禁写；AUTO/用户回合 = 正常决策域）——无"consult 可写"例外。族差异只在消化指令语义（会诊 = 逐条判断采纳并处置）。
-- 空闲 settle 也触发消化（驱动判据推广到所有 pending 族）。
+- 空闲 settle 也触发消化（驱动判据 = pending 单容器非空——四族统一——T-R17j）。
 
 ### 14.2 飞刀（escalate）
 

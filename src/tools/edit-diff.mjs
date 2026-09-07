@@ -1,22 +1,28 @@
 /**
  * edit-diff.mjs — edit 工具的行级 diff 内核（TOOLS.md §15 D15.1，2026-09-04）。
  *
- * edit 新语义（用户裁定——breaking——不承诺旧行为兼容）：old_string = 变化区**当前内容**
- * （必须精确存在、单次匹配——不变）；new_string = 该区的**期望结果**。判定序：
+ * edit 语义（2026-09-08 语义升级——EDIT-TOOL-IMPROVEMENT.md）：两种定位形态（互斥）——
+ * ① 按行号改（D1/F1）：line（单行）/ startLine+endLine（1-based 闭区间）→ 直接替换该
+ *    行/行范围为 new_string（无需 old_string——实现落点 edit-batch.mjs applyLineEdit）；
+ * ② 内容定位：old_string = 变化区**当前内容**（单次匹配——匹配档位：逐字 → P15.11 唯一
+ *    空白差异窗口 → D2/F2 模糊匹配（行级 normalize 后 ≥90% 行相等——edit-batch.mjs
+ *    findFuzzyWindow））；new_string = 该区的**期望结果**。判定序：
  *   0. 分支 0（TOOLS.md §15.2——单行精确替换）：old 单行 && new 单行 && old 全文唯一 &&
  *      new 非空 → **就地替换该行**（行数不变——EOL 由调用方 joinWithEol 恢复）；
- *   1. 零重叠（old 每一行都不出现在 new 行集中）→ 按**插入**——new 整体插入在 old
- *      最后一行之后（旧内容保留——数据零丢失）；
+ *   1. 零重叠（old 每一行都不出现在 new 行集中）→ **替换即删**（D3/F3，2026-09-08——
+ *      breaking：old 行整体删除、new 取而代之——旧行不再保留；新增行用 insert_after）；
  *   2. 有公共行（≥1）→ 行级 LCS——公共行保留、差异行增删；
  *   3. new 与 old 行级完全一致 → 原样替换（no-op 语义——仍报成功）。
- * 空 new_string（纯删除意图）→ 显式报错（不静默——先于分支 0——单行替换永不成删除）；
- * 分支 0 只在 computeEditEntry 条目判定层（壳/桥/批量自动继承）——applyPatchLines
- * （纯 diff 层）语义不动。old/new 行数各上限 1000（超限报错）。
+ * 空 new_string（纯删除意图）→ 显式报错（不静默——先于分支 0——单行替换永不成删除；
+ * 按行号改同语义）；分支 0 只在 computeEditEntry 条目判定层（壳/桥/批量自动继承）——
+ * applyPatchLines（纯 diff 层）语义不动。old/new 行数各上限 1000（超限报错）。
  *
  * 行尾权威 = EDIT-TOOL-EOL-DESIGN.md：判定/应用在 normalizeEOL 后的 LF 域计算，
  * 写回由调用方 joinWithEol(原文) 恢复原行尾。
  * 模块拆分（file.mjs ≤500 硬限）：file.mjs 只留工具壳与转发——单形态执行体与前置校验
  * 分支整段迁出至本模块（模块拆分写优先纪律：先迁后删、逻辑体不变、wiring 导入）。
+ * edit-diff.mjs ↔ edit-batch.mjs 循环引用（2026-09-08——D1/D2 实现落点 edit-batch）：
+ * 两侧仅函数声明（提升初始化）、仅调用期使用——ESM 循环下安全（同 file.mjs 先例）。
  */
 import { readFile, writeFile } from "node:fs/promises"
 import {
@@ -25,14 +31,22 @@ import {
 // file.mjs ↔ edit-diff.mjs 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 import { recordWrite, appendWriteContext, lastWriteOf, isDirty } from "./file.mjs"
+// D1/D2 落点（EDIT-TOOL-IMPROVEMENT.md——edit-batch.mjs）：按行号改 + 模糊匹配纯函数。
+import { applyLineEdit, findFuzzyWindow, FUZZY_MATCH_NOTE } from "./edit-batch.mjs"
 
 export const MAX_DIFF_LINES = 1000
 export const REGION_TOO_LARGE = "edit region too large — narrow the change"
 export const EMPTY_NEW_STRING = "empty new_string — for deletion, keep the context lines you want to preserve in both old_string and new_string"
-export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry"
+export const EDIT_ARGS_MUTEX = "edits array is mutually exclusive with top-level old_string/new_string/line/startLine/endLine — a top-level path is allowed (default for entries without their own path); provide each change's targeting (old_string or line range) and new_string inside its edits entry"
 
-/** 行切分（尾随换行终止最后一行——非额外空行）："a\nb\n" → ["a","b"]。 */
-function splitLines(text) {
+/** D1（2026-09-08）：条目带按行号改参数（line / startLine / endLine 任一）。 */
+export function hasLineParams(entry) {
+  return entry.line !== undefined || entry.startLine !== undefined || entry.endLine !== undefined
+}
+
+/** 行切分（尾随换行终止最后一行——非额外空行）："a\nb\n" → ["a","b"]。
+ *  2026-09-08 导出（D1 落点 edit-batch.mjs applyLineEdit 复用同语义）。 */
+export function splitLines(text) {
   const lines = text.split("\n")
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop()
   return lines
@@ -40,7 +54,9 @@ function splitLines(text) {
 
 /**
  * 行级 LCS（整行相等判定）合并：公共行保留（LCS 序）、old 独有行删除、new 独有行按其在
- * new 中相对公共行的位置插入。结果在 LF 域；区域尾随换行随 oldText（区域边界保持）。
+ * new 中相对公共行的位置插入；**零重叠 → 替换即删**（D3，2026-09-08 语义升级——
+ * breaking：old 行整体删除、new 取而代之，旧行不再保留——原"零重叠→插入保留旧行"
+ * 语义废止；新增行用 insert_after）。结果在 LF 域；区域尾随换行随 oldText（区域边界保持）。
  * 返回 { ok: true, resultText } 或 { ok: false, reason }。
  */
 export function applyPatchLines(oldText, newText) {
@@ -50,11 +66,11 @@ export function applyPatchLines(oldText, newText) {
   if (oldLines.length > MAX_DIFF_LINES || newLines.length > MAX_DIFF_LINES) {
     return { ok: false, reason: REGION_TOO_LARGE }
   }
-  // 判定 1（F15.2）：零重叠 → 插入——new 整体插在 old 最后一行之后（旧内容保留）
+  // 判定 1（D3——替换即删）：零重叠 → old 行删、new 整体取代（旧行不再保留）
   const newSet = new Set(newLines)
   const merged = oldLines.some((l) => newSet.has(l))
     ? lcsMerge(oldLines, newLines) // 判定 2/3——公共行保留、差异行增删
-    : [...oldLines, ...newLines]
+    : [...newLines]
   return { ok: true, resultText: merged.join("\n") + (oldText.endsWith("\n") ? "\n" : "") }
 }
 
@@ -93,20 +109,53 @@ function lcsMerge(a, b) {
 /**
  * D15.3#9 修订（2026-09-05 用户裁定——顶层 path + edits 并存合法化：顶层 path = 无自带
  * path 条目的默认——模型直觉形态「顶层 path + 数组条目」不再拒绝；条目自带 path 优先）。
- * 互斥收窄为只对顶层 old_string/new_string——edits 下它们无批语义可解释——顶层 path 不再触发。
+ * 互斥收窄为只对顶层 old_string/new_string（+ 2026-09-08 D1 的 line/startLine/endLine）——
+ * edits 下它们无批语义可解释——顶层 path 不再触发。
  */
 export function assertEditArgsExclusive(args) {
-  if (args.old_string !== undefined || args.new_string !== undefined) {
+  if (args.old_string !== undefined || args.new_string !== undefined || hasLineParams(args)) {
     throw new Error(EDIT_ARGS_MUTEX)
   }
 }
 
 /**
- * 前置校验（空 old / 非字符串 new）——error 文本按调用形态（单形态 rich / 批量 label）。
+ * 前置校验——内容形态：空 old / 非字符串 new；按行号改形态（D1，2026-09-08）：
+ * 与 old_string 互斥 / line 与 startLine|endLine 互斥 / startLine+endLine 须成对 /
+ * 正整数 / endLine ≥ startLine / replace_all 不适用 / new 须字符串。
+ * error 文本按调用形态（单形态 rich / 批量 label）。
  * opts: { label = ""（批量前缀 "edit for <path>: "）, rich = true（单形态完整文本） }
  */
 export function validateEditEntry(entry, opts = {}) {
   const label = opts.label ?? ""
+  if (hasLineParams(entry)) {
+    if (entry.old_string !== undefined) {
+      throw new Error(label + "line/startLine/endLine are mutually exclusive with old_string — target by line number OR by content, not both")
+    }
+    if (entry.line !== undefined && (entry.startLine !== undefined || entry.endLine !== undefined)) {
+      throw new Error(label + "line is mutually exclusive with startLine/endLine — single line or a range, not both")
+    }
+    if ((entry.startLine === undefined) !== (entry.endLine === undefined)) {
+      throw new Error(label + "startLine and endLine must be given together (1-based, inclusive)")
+    }
+    for (const k of ["line", "startLine", "endLine"]) {
+      if (entry[k] !== undefined && (!Number.isInteger(entry[k]) || entry[k] < 1)) {
+        throw new Error(label + `${k} must be a positive integer (1-based), got ${JSON.stringify(entry[k])}`)
+      }
+    }
+    if (entry.startLine !== undefined && entry.endLine < entry.startLine) {
+      throw new Error(label + `endLine (${entry.endLine}) is before startLine (${entry.startLine})`)
+    }
+    if (entry.replace_all) {
+      throw new Error(label + "replace_all does not apply to line-based edits (a line range is already a single explicit target)")
+    }
+    if (typeof entry.new_string !== "string") {
+      throw new Error(
+        label + `new_string must be a string${entry.new_string === undefined ? " (missing)" : ` (got ${typeof entry.new_string})`}` +
+        (opts.rich === false ? "" : " — nothing written")
+      )
+    }
+    return
+  }
   if (!entry.old_string) {
     throw new Error(
       label + "old_string must not be empty" + (opts.rich === false ? "" : " (empty string matches everywhere and would corrupt the file)")
@@ -137,7 +186,7 @@ function isSingleLineReplace(entry) {
 
 /**
  * 条目级判定+应用（单形态与批量共用——D15.1"批量条目判定+应用调用 edit-diff"）：
- * 匹配校验（精确存在——非 replace_all 单次）→ 按判定序应用（分支 0 单行替换 / 零重叠插入 /
+ * 匹配校验（精确存在——非 replace_all 单次）→ 按判定序应用（分支 0 单行替换 / 零重叠替换即删 /
  * LCS 替换 / replace_all 字面）→
  * 元数据（受影响区首行/行数差/次数——recordWrite 与结果回显用）。
  * 返回 { updated, editStartLine, lineShift, occurrences }；失败抛错（含路径/引导）。
@@ -180,6 +229,9 @@ export const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only ma
 
 export function computeEditEntry(content, entry, opts = {}) {
   validateEditEntry(entry, { ...opts, rich: !opts.abortPrefix })
+  // D1 按行号改（2026-09-08）：行号定位条目直接按行替换（applyLineEdit——落点
+  // edit-batch.mjs），不走 old_string 匹配/判定序；互斥/越界/空 new 均已显式报错。
+  if (hasLineParams(entry)) return applyLineEdit(content, entry, opts)
   // P15.11：not-found 时先查唯一空白差异窗口——命中则以其原文为实际 old 继续（内容零差异
   // ——自动落点 + note 明示）；实质差异/歧义仍走下方 not-found 报错（不猜内容）。
   let old = entry.old_string
@@ -188,6 +240,13 @@ export function computeEditEntry(content, entry, opts = {}) {
   if (occurrences === 0) {
     const variant = findWhitespaceVariant(content, old)
     if (variant) { old = variant.actual; occurrences = 1; note = WHITESPACE_VARIANT_NOTE }
+  }
+  // D2 模糊匹配（2026-09-08——P15.11 的推广）：逐字/trim 等价都失败后，找唯一
+  // normalize 后 ≥90% 行相等的窗口——细微差异（缩进/引号/行尾空格/少量行差异）自动
+  // 落点 + note 明示；多窗口歧义/不足阈值仍走 not-found 报错（不猜内容）。
+  if (occurrences === 0) {
+    const fuzzy = findFuzzyWindow(content, old)
+    if (fuzzy) { old = fuzzy.actual; occurrences = 1; note = FUZZY_MATCH_NOTE }
   }
   if (occurrences === 0) {
     const preview = entry.old_string.slice(0, 100).split("\n")[0]
@@ -242,7 +301,7 @@ export function computeEditEntry(content, entry, opts = {}) {
     updated = content.slice(0, matchIdx) + r.resultText + content.slice(matchIdx + old.length)
     resultForShift = r.resultText
   }
-  // 行数差 = 应用后区域行数 − 旧区域行数（分支 0 单行替换：0；插入：new 行数；LCS：new−old）
+  // 行数差 = 应用后区域行数 − 旧区域行数（分支 0 单行替换：0；零重叠替换即删：new−old；LCS：new−old）
   const lineShift = splitLines(resultForShift).length - splitLines(old).length
   return { updated, editStartLine, lineShift, occurrences: entry.replace_all ? occurrences : 1, note }
 }

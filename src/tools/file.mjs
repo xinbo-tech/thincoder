@@ -217,21 +217,27 @@ export const editTool = {
     type: "object",
     properties: {
       path: { type: "string", description: "File path — single form: required; with the edits array: optional top-level default for entries without their own path" },
-      old_string: { type: "string", description: "Exact text to replace" },
+      old_string: { type: "string", description: "Exact text to replace (tolerant matching: exact → whitespace-only variant → fuzzy match at ≥90% line equality after whitespace/indent/quote normalization). Mutually exclusive with line/startLine/endLine" },
       new_string: { type: "string", description: "Replacement text" },
+      line: { type: "integer", description: "1-based line number — replace that single line with new_string; no old_string needed (mutually exclusive with old_string and startLine/endLine)" },
+      startLine: { type: "integer", description: "1-based first line of the range to replace with new_string (inclusive — requires endLine; mutually exclusive with old_string)" },
+      endLine: { type: "integer", description: "1-based last line of the range to replace with new_string (inclusive — requires startLine; mutually exclusive with old_string)" },
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
       edits: {
         type: "array",
-        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string — provide each change's old/new inside its edits entry.",
+        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) and new_string inside its edits entry.",
         items: {
           type: "object",
           properties: {
             path: { type: "string" },
             old_string: { type: "string" },
             new_string: { type: "string" },
+            line: { type: "integer" },
+            startLine: { type: "integer" },
+            endLine: { type: "integer" },
             replace_all: { type: "boolean" },
           },
-          required: ["old_string", "new_string"],
+          required: ["new_string"],
         },
       },
     },
@@ -254,7 +260,7 @@ export const editTool = {
     if (args.edits) return applyEditBatch(args, ctx)
 
     // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（TOOLS.md §15 D15.1——
-    // 行级 LCS 判定：零重叠→插入 / 一般 diff→LCS / 空 new→显式报错）
+     // 行级 LCS 判定：零重叠→替换即删 / 一般 diff→LCS / 空 new→显式报错）
     return runSingleEdit(args, ctx)
   },
 }

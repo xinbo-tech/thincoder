@@ -94,27 +94,18 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // §17 D-S3: suspension-settled async results inject before EVERY run's prepareRun
   // (user + auto-turn); spliced = consumed. collectSettledAsync owns a different
   // container, so no double-inject across the two consumption points.
+  // ASYNC-RESULT-CONTAINER.md D2 (2026-09-08)：pending 单容器 `_pendingAsyncResults`
+  // +role——四族（subagent/advisor/escalate/consult）统一停靠；注入器按 role 分发
+  // （consult → injectConsultResult；其余 → injectAsyncResult——族分支同 §25 D-R17a/b）
+  // ——单容器一处清，不再逐族三段。
   const pendingAsync = agent._pendingAsyncResults
   if (pendingAsync?.length) {
     const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
-    for (const e of pendingAsync.splice(0)) await injectAsyncResult(agent, e)
-  }
-  // §25 D-R17a: the consult family stream (independent per-family bookkeeping —
-  // decision ④). A fully-settled consultation session lands here and injects its
-  // full verdict text at this same run-start point (user runs AND digest
-  // auto-turns — the model judges/adopts in the digestion round).
-  const pendingConsult = agent._pendingConsultResults
-  if (pendingConsult?.length) {
     const { injectConsultResult } = await import("./agent-tools/consult.mjs")
-    for (const e of pendingConsult.splice(0)) await injectConsultResult(agent, e)
-  }
-  // §25 D-R17b: the escalate family stream — a settled async escalate moved here
-  // by its settle callback (mutations already merged, report composed) — shares
-  // injectAsyncResult's role-branched injection (subagent/advisor/escalate).
-  const pendingEscalate = agent._pendingEscalateResults
-  if (pendingEscalate?.length) {
-    const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
-    for (const e of pendingEscalate.splice(0)) await injectAsyncResult(agent, e)
+    for (const e of pendingAsync.splice(0)) {
+      if (e.role === "consult") await injectConsultResult(agent, e)
+      else await injectAsyncResult(agent, e)
+    }
   }
   agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3)
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(

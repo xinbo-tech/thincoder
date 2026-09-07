@@ -17,22 +17,24 @@
  *   files since launch (overlap → no merge + differences listed in the report);
  *   cancelled → never reaches the digest stream (D-M6 — no merge, stopped
  *   reminder).
- * - the classified report lands in `_pendingEscalateResults` (independent family
- *   stream — decision ④) when the settle happens in a suspension, or stays
- *   pooled for the turn-end collection otherwise; injectAsyncResult's escalate
+ * - the classified report lands in `_pendingAsyncResults`（pending 单容器 +role——
+ *   ASYNC-RESULT-CONTAINER.md D2——挂起期 settle 移交）when the settle happens in a
+ *   suspension, or stays pooled for the turn-end collection otherwise;
+ *   injectAsyncResult's escalate
  *   role branch delivers the digest ("报告已 merge——可继续处置" — the action
  *   domain still follows the consuming turn's tier — no family exception).
  */
 import { relative, isAbsolute } from "node:path"
 import { runAgent, createAgent, CODER_OVERLAY, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
-import { pushReal } from "../context.mjs"
-import { logEvent, errText } from "../log.mjs"
+import { logEvent } from "../log.mjs"
 import {
   mergeChildMutations, runningPoolCount, poolDomainOf, poolLimitsFor, ASYNC_POOL_LIMITS,
 } from "./subagent-async.mjs"
-import { maybeRefillAsync, refreshQueuedTokens } from "./subagent-scheduler.mjs"
+import { refreshQueuedTokens } from "./subagent-scheduler.mjs"
 import { mutationSeqOf } from "./advisor-async.mjs"
+// ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
+import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 
 /** Parent-side mutations (absolute paths) committed AFTER the escalate launch —
  *  the overlap scan feeds the settle classification (review #4/round2 #4: the
@@ -168,7 +170,8 @@ export function launchEscalateAsync(parent, ctx, launch) {
   entry.promise = new Promise((res) => { entry._settle = res })
   const ctrl = new AbortController()
   entry.controller = ctrl
-  const baseSignal = parent._sessionSignal ?? ctx.signal ?? null
+  // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md——D5 同款：_sessionSignal 兜底）。
+  const baseSignal = buildChildSignal(parent, ctx)
   if (baseSignal) {
     if (baseSignal.aborted) ctrl.abort()
     else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
@@ -252,50 +255,22 @@ export function launchEscalateAsync(parent, ctx, launch) {
         entry.error = `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${(child?._capturedOutput ?? "").slice(0, 2000)}`
       })
       .finally(() => {
-        entry.status = "done"
-        entry.done = true
-        const childLogId = `${entry.role}#${entry.id}`
-        const childMs = entry.startedAt ? Date.now() - entry.startedAt : 0
-        const parentAborted = ctx.signal?.aborted || entry.controller?.signal?.aborted
-        const capPartial = String(entry.error ?? entry.report ?? "").includes(TURN_CAP_MARK)
-        if (entry.cancelled) {
-          logEvent("ev:cancelled", { id: childLogId })
-        } else if (!parentAborted) {
-          if (entry.error != null && !capPartial) logEvent("child:error", { role: "escalate", id: childLogId, ms: childMs, err: errText(entry.error, 200) })
-          else logEvent("child:done", { role: "escalate", id: childLogId, ms: childMs, kind: capPartial ? "partial" : "ok" })
-          if (parent._suspended) logEvent("ev:settled", { id: childLogId, kind: "suspended" })
-        }
-        // Three-way settle classification (done/error/cancelled — review #4):
-        // cancelled → D-M6 branch below (no pending, no merge, stopped reminder).
-        if (entry.cancelled) {
-          parent._asyncSubagents?.delete(String(entry.id))
-          const tombstones = (parent._asyncTombstones ??= new Map())
-          tombstones.set(String(entry.id), { status: "cancelled", role: "escalate" })
-          ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
-          pushReal(parent, {
-            role: "user",
-            content: `[System reminder: async escalate #${entry.id} (${entry.tag}) cancelled by user — partial changes not merged/audited]`,
-          })
-        } else if (!parentAborted) {
-          const classified = classifyEscalateSettle(parent, entry)
-          // 完成信号按会话态分流（§17 D-S8 同规则）：挂起 → 移交 _pendingEscalateResults
-          // （独立流——决策点 ④）+ ⟦ev⟧settled 驻留；回合内 → ⟦ev⟧done 立即冻结（条目
-          // 留池——回合尾 collectSettledAsync 注入）。
-          if (parent._suspended) {
-            parent._pendingEscalateResults ??= []
-            parent._pendingEscalateResults.push(entry)
-            parent._asyncSubagents?.delete(String(entry.id))
-            ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
-          } else {
-            ctx.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
-          }
-          void classified
-        }
-        entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
-        entry._settle()
-        for (const w of parent._asyncWaiters?.splice(0) ?? []) { try { w() } catch { /* noop */ } }
-        maybeRefillAsync(parent)
-        refreshQueuedTokens(parent, ctx.callbacks?.onToken)
+        // settle 公共收尾单点（ASYNC-RESULT-CONTAINER.md D3——settleAsyncEntry）：日志三连
+        // /cancelled 分支（出池+墓碑+⟦ev⟧stopped+提醒）/挂起分流（pending 单容器+出池——
+        // 统一守卫 !parentAborted——D4）/公共尾部（settleSeq/_settle/唤醒 waiter + 腾槽补位
+        // ——helper 尾部恒补）统一走共享 helper。族特有 hook = 三分类 merge 决策
+        // （classifyEscalateSettle——done/error 分类；cancelled 不经此——helper cancelled
+        // 分支先行）。
+        settleAsyncEntry(parent, entry, {
+          pool: parent._asyncSubagents,
+          ctx,
+          onAccounting: () => {
+            // Three-way settle classification (done/error/cancelled — review #4)：
+            // done → merge-all + 重叠警告；error → 无父侧重叠才 partial merge；
+            // cancelled 不经此（helper cancelled 分支先行）。
+            void classifyEscalateSettle(parent, entry)
+          },
+        })
       })
   }
   parent._asyncSubagents.set(String(id), entry)

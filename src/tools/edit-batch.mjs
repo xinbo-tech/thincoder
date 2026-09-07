@@ -5,7 +5,7 @@
  *
  * 语义：同一 path 的多条编辑按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的
  * 累积内容做匹配与替换；跨 path 条目互不影响（并行原子语义）；任一条失败 →
- * 全不写（原子性保留）。每条目独立按判定序（§15.2 分支 0 单行替换 / 零重叠→插入 / LCS /
+ * 全不写（原子性保留）。每条目独立按判定序（§15.2 分支 0 单行替换 / 零重叠→替换即删 / LCS /
  * 空 new 显式报错）。顶层 path（args.path）为无自带 path 条目的默认（2026-09-05 用户裁定
  * ——条目自带 path 优先——见 TOOLS.md D15.3#9 修订注）。
  */
@@ -14,9 +14,9 @@ import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } 
 // file.mjs ↔ edit-batch.mjs 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 import { recordWrite, appendWriteContext } from "./file.mjs"
-// TOOLS.md §15 D15.1：批量条目判定+应用共用 edit-diff（§15.2 分支 0 单行替换 + 行级 LCS——零重叠→插入）；
+// TOOLS.md §15 D15.1：批量条目判定+应用共用 edit-diff（§15.2 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
 // D15.3#9：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
-import { assertEditArgsExclusive, validateEditEntry, computeEditEntry } from "./edit-diff.mjs"
+import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING } from "./edit-diff.mjs"
 
 /**
  * Apply the `edits` array form: multi-file atomic replacement. Throws on any
@@ -89,4 +89,76 @@ export async function applyEditBatch(args, ctx) {
     results.push(await appendWriteContext(p.g.abs, p.editStartLine, base))
   }
   return results.join("\n")
+}
+
+// ---------------------------------------------------------------------------
+// 2026-09-08 edit 语义升级（EDIT-TOOL-IMPROVEMENT.md——D1 按行号改 / D2 模糊匹配，
+// 落点定死本模块；条目判定接线在 edit-diff.mjs computeEditEntry——单形态/批量/ACP 桥
+// 三通道自动继承）。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入（ESM 循环引用
+// 安全：两侧仅函数声明，提升初始化——同 file.mjs ↔ edit-diff.mjs 先例）。
+
+/**
+ * D2 行级 normalize（评审 #4 算法定稿）：去首尾空白 / 统一缩进（tab → 2 空格）/
+ * 统一引号（单引号 → 双引号）/ 去行尾空格。仅用于匹配比较——替换永远用文件原文窗口。
+ */
+export function normalizeEditLine(line) {
+  return line.replace(/\t/g, "  ").replace(/'/g, '"').replace(/\s+$/g, "").trim()
+}
+
+/** D2 模糊匹配阈值：行级 normalize 后逐行相等比例 ≥0.9 即匹配（评审 #4 定稿）。 */
+export const FUZZY_MATCH_THRESHOLD = 0.9
+/** D2 成功消息追加 note（双端同句——同 WHITESPACE_VARIANT_NOTE 机制）。 */
+export const FUZZY_MATCH_NOTE = "applied via fuzzy match (≥90% of lines identical after whitespace/indent/quote normalization)"
+
+/**
+ * D2 模糊匹配（P15.11 空白自动落点的推广——逐字/trim 等价都失败后的最后一档）：
+ * 找文件中**唯一**窗口——行数与 old 相同、normalizeEditLine 后逐行相等比例 ≥90% →
+ * 返回 { actual }（actual = 文件窗口原文）；多窗口达标 → null（歧义不猜——走 not-found
+ * 报错引导）；old 含尾换行 → null（终止符语义边界——同 P15.11）。比例向下取整行数：
+ * 需要相等行数 = ceil(m × 0.9)（m=1 即 normalize 后全等——单行细微差异由此命中）。
+ */
+export function findFuzzyWindow(content, old) {
+  if (old.endsWith("\n")) return null
+  const oldLines = old.split("\n")
+  const m = oldLines.length
+  const fileLines = content.split("\n")
+  if (m === 0 || fileLines.length < m) return null
+  const norm = oldLines.map(normalizeEditLine)
+  const need = Math.ceil(m * FUZZY_MATCH_THRESHOLD)
+  let hit = null
+  for (let i = 0; i + m <= fileLines.length; i++) {
+    let eq = 0
+    for (let j = 0; j < m; j++) {
+      if (normalizeEditLine(fileLines[i + j]) === norm[j]) eq++
+    }
+    if (eq < need) continue
+    const actual = fileLines.slice(i, i + m).join("\n")
+    if (actual === old) continue // 逐字已匹配——occurrences=0 前提下不会发生
+    if (hit) return null // 多窗口达标 → 歧义 → 不猜
+    hit = { actual }
+  }
+  return hit
+}
+
+/**
+ * D1 按行号改（F1）：entry 带 line（单行）或 startLine/endLine（1-based 闭区间）→
+ * 直接按行号替换该行/行范围为 new_string（无需 old_string——互斥校验在
+ * validateEditEntry）。内容域 = normalizeEOL 后 LF（与 computeEditEntry 同域）；
+ * 尾随换行随原文件保持。空 new_string → EMPTY_NEW_STRING 显式报错（与内容形态同
+ * 语义——防静默删除）；行号越界 → 明确报错。原子性由调用方保证（本函数纯计算）。
+ * 返回 { updated, editStartLine, lineShift, occurrences, note }（同 computeEditEntry 形态）。
+ */
+export function applyLineEdit(content, entry, opts = {}) {
+  const prefix = opts.abortPrefix ?? ""
+  if (entry.new_string === "") throw new Error(prefix + EMPTY_NEW_STRING)
+  const lines = splitLines(content)
+  const start = entry.line ?? entry.startLine
+  const end = entry.line ?? entry.endLine
+  if (start > lines.length || end > lines.length) {
+    throw new Error(prefix + `line ${end > lines.length ? end : start} out of range — ${opts.path ?? "file"} has ${lines.length} line(s)`)
+  }
+  const newLines = splitLines(entry.new_string)
+  const updated = [...lines.slice(0, start - 1), ...newLines, ...lines.slice(end)].join("\n") +
+    (content.endsWith("\n") ? "\n" : "")
+  return { updated, editStartLine: start, lineShift: newLines.length - (end - start + 1), occurrences: 1, note: null }
 }

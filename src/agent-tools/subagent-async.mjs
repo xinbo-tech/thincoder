@@ -22,7 +22,8 @@ import {
   dependentLabels, maybeRefillAsync, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
 // §24 D-24b (R13): advisor-pool cancel fallback + mutation logging for merged
-// code (cycle-free: advisor-async imports no agent-tools module).
+// code（lazy function-level cycle——advisor-async → async-settle → scheduler →
+// 本模块——全函数级绑定无求值期依赖，环安全）。
 import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
 
 // Async pool limits per role domain (AGENT-LOOP.md §24 D-24a — R14, 2026-09-06):
