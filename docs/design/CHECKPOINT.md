@@ -130,7 +130,9 @@ git 工具破坏性动作**先快照再执行 + 确认，从不拦截**（审批
 
 ### 5.1 工具描述闭环（F1）
 
-两端 git 工具 schema 的破坏性 action 描述（checkout / restore / reset mode 等）写明"操作前自动快照 + rewind 恢复"字样。**只改描述文本**，不改 action 枚举 / 参数结构 / 执行逻辑；checkout 分支切换（非破坏）不涉及。**不改 `snapshotBefore` 输出文本**（tools.test.mjs 既有断言 `snapshot \S+ created BEFORE execution`，输出已含 id）——描述层闭环成本最低，agent 决策时读 schema，输出仅确认执行。
+两端 git 工具 schema 的破坏性 action 描述（checkout / restore / reset mode 等）写明"操作前自动快照 + rewind 恢复"字样。**只改描述文本**，不改 action 枚举 / 参数结构 / 执行逻辑；checkout 分支切换（非破坏）不涉及。
+
+**不改 `snapshotBefore` 输出文本**（历史断言 `snapshot \S+ created BEFORE execution`——测试清零前 tools.test.mjs 所锁；输出已含 id，契约句仍有效）——描述层闭环成本最低，agent 决策时读 schema，输出仅确认执行。
 
 ### 5.2 checkpoint list 输出撤销提示（F2 / D7）
 
@@ -170,6 +172,8 @@ TUI `cmd-restore.mjs` 是用户侧唯一恢复入口，v2 全量回滚禁用后�
 - "恢复前自动快照可逆"提示保留（恢复后 `/restore again` 可回退）；
 - **`handleRestoreCommand` 在 `listCheckpoints` 前调用 `lazyClearIfCommitted(agent.cwd)`**——与 git 工具 checkpoint list 的 F6 懒兜底语义对齐（外部 commit 后不再列出过期快照）；
 - 测试 finally 清理快照目录（`cleanupCheckpoints`，仿 tools.test.mjs 模式）防真实存储污染。
+- 测试 finally 清理快照目录（`cleanupCheckpoints`）防真实存储污染。
+- **测试文件定位注（2026-09-07 测试清零后）**：原 `test/tools.test.mjs` / `test/cmd-restore.test.mjs` 已按"按需加"政策清空。下列为设计权威的测试意图清单——若将来补 checkpoint 测试，按此重建用例（T1-T10 + /restore picker 流）。
 
 ---
 
@@ -177,7 +181,7 @@ TUI `cmd-restore.mjs` 是用户侧唯一恢复入口，v2 全量回滚禁用后�
 
 > 下列定稿值为**逐字契约**——输出文本 / 提示文本 / 判定句 / 常量不得改写措辞（DOC-REWRITE §4 保真规则）。
 
-- **D1 · `snapshotBefore` 输出不改**：保持 `[snapshot {id} created before {label}]`（tools.test.mjs 既有断言 `snapshot \S+ created BEFORE execution`，输出已含 id）。F1 只改 schema 描述。实现模板 = `[snapshot ${id} created before ${label}]`（git-ext.mjs `snapshotBefore`）。
+- **D1 · `snapshotBefore` 输出不改**：保持 `[snapshot {id} created before {label}]`（历史断言 `snapshot \S+ created BEFORE execution`——测试清零前 tools.test.mjs 所锁，契约句仍有效）。F1 只改 schema 描述。实现模板 = `[snapshot ${id} created before ${label}]`（git-ext.mjs `snapshotBefore`）。
 - **D2 · 清理时机与返回**：commit case 中 `commit.ok` 为真（**成功判定，不以输出非空为条件**——安静 commit 输出可为空）后立即清理；返回文本附加 `\n(checkpoints cleared — commit is a new safety baseline)`（若清理成功）；清理失败附加 `(checkpoint cleanup skipped: <err>)`——best-effort（NF7）。
 - **D3 · 懒兜底判定（毫秒对齐）**：`git log -1 --format=%ct`（HEAD commit 时间戳，**epoch 秒**）> 最新快照
   `meta.time`（**统一按毫秒比较：`%ct × 1000`**——否则秒 vs 毫秒比较永不成立，懒清理静默失效）→ 清空；
@@ -227,6 +231,8 @@ TUI `cmd-restore.mjs` 是用户侧唯一恢复入口，v2 全量回滚禁用后�
 
 - `test/tools.test.mjs`：commit 清理（T1 / T2 / T2b / T2c 安静 commit 判定）、懒兜底清理（T3）、list 提示行与幂等（T4）、list 空输出（T5）、action 集精确（T5b，恰 32 个且不含 P2 名称）、上限淘汰（T6）、VS Code 镜像一致性 / commit 清理 / 存量 stash 隔离 / guard 对齐（T7–T7d）、schema 描述（T8）、F7 新 action 可用（T8b）、rebase 保护（T8c）、快照语义边界（T9）、事故恢复流程（T10）；
 - `test/cmd-restore.test.mjs`：`/restore` 两级 picker 流程（untracked 数字显示 + 摘要正确）+ 空快照提示 + 非 git / 无快照提示 + 两级取消路径（slow 分层，真实 git 仓库）。
+- ~~`test/tools.test.mjs`~~（已清空）：commit 清理（T1/T2/T2b/T2c 安静 commit 判定）、懒兜底（T3）、list 提示与幂等（T4）、list 空输出（T5）、action 集精确（T5b 恰 32 不含 P2）、上限淘汰（T6）、VS Code 镜像一致性（T7-T7d）、schema 描述（T8）、F7 action（T8b）、rebase 保护（T8c）、快照语义边界（T9）、事故恢复（T10）；
+- ~~`test/cmd-restore.test.mjs`~~（已清空）：`/restore` 两级 picker 流程（untracked 数字 + 摘要）+ 空快照提示 + 非 git/无快照提示 + 两级取消（slow 分层，真实 git 仓库）。
 
 ---
 
