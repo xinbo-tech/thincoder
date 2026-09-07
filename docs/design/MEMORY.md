@@ -84,11 +84,21 @@ clear。action 级 readonly 分类：**search/list 只读**（plan mode 放行�
   `Deleted N entries in scope <scope>`。
 - **clear**：仅 personal 全清，`{scope:"personal", confirm:true}` 门 →
   `Cleared personal memory (N entries deleted)`；project/team 拒绝。
-- **layer === scope 概念统一（2026-09-08 用户指出——"不看源代码谁知道 layer=scope？"；**用户裁定：全统一成 layer**）**：memory 三层（personal/project/team）代码里**两个词混用**——核心层用 `layer`（DB 列名 + 结果字段 + deleteByUid 从 uid 前缀拆 layer），工具层参数用 `scope`（search/list/delete 的 scope 参数）。模型看到 search 结果带 `[layer]` 标签、delete 却要 `scope` 参数——命名分裂让模型困惑。**修复（裁定：全统一成 layer——scope 参数改名 layer）**：①工具层参数 `scope` → `layer`（search/list/delete 参数改名——与结果字段/DB 列一致）；②**工具描述 scope → layer**（"search/list 结果行首 [layer] 标签即 delete 的 layer 参数值"）；③**结果/文档统一用 layer**（模型看到的全是 layer——无 scope 词）；DB 列/内部逻辑本来就是 layer 不用动（无 schema 迁移）。
+- **layer === scope 概念统一（2026-09-08 用户指出——"不看源代码谁知道 layer=scope？"；用户裁定：全统一成 layer）**：memory 三层（personal/project/team）代码里**两个词混用**——核心层用 `layer`（DB 列名 + 结果字段 + deleteByUid 从 uid 前缀拆 layer），工具层参数用 `scope`（search/list/delete 的 scope 参数）。
+  ——模型看到 search 结果带 `[layer]` 标签、delete 却要 `scope` 参数——命名分裂让模型困惑。**修复（裁定统一成 layer）**：scope 参数改名 layer（工具面 + 描述），DB 列/内部本即 layer 不动（无 schema 迁移）。
 
 - **delete 工具语义修正（2026-09-08 explore 一手核实——先前的"delete scope 不一致 bug 修复"注前提错误，作废重写）**：
-  - **核实结论**：①search 结果**已显示 scope**（行首 `[personal|project|team]` 标签 + id 前缀）——"结果不含 scope"不成立；list 结果 id 也含前缀，只差无独立 `[scope]` 标签列。②id 前缀**已自路由**（命名空间互斥无碰撞）——核心 deleteByUid **从不需要 scope 参数**，scope 从 uid 前缀解析。③工具层 scope **必填 + 前缀强校验**是纯确认门禁，模型 scope 猜错 → 报错——**这是"search 能找到但 delete 删不掉"的唯一机制**。④跨 scope fallback **不必要**。
-  - **修正设计**：①**layer 可选**（裁定统一成 layer——原 scope 参数改名）——传了则校验（防误删保持），不传则按 id 前缀直接路由；批删形态（无 id）仍必填 scope。②**list 补独立 `[scope]` 标签列**（与 search 行对齐，锦上添花）。③**工具描述重写**——写明"search 结果行首 `[personal|project|team]` 即 delete 的 layer 参数值、id 前缀同值；delete layer 可选——不传则按 id 前缀路由"。④**第三个真缺口补设计**：uid origin vs 当前 dir 定位分裂——delete 文件定位用当前 `dirs[layer]` 无视 uid 内嵌 origin，而 search/list 匹配面可带出非当前 origin 行——要么 delete 尊重 uid 的 origin 段，要么工具描述写明"team 记忆可能来自其他克隆，本地无对应目录则删不了"。**归属**：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
+  - **核实结论**：①search 结果**已显示 layer**（行首 `[layer]` 标签 + id 前缀——"结果不含 scope"不成立）；②id 前缀**已自路由**（命名空间互斥）——deleteByUid **不需要 scope 参数**（从 uid 前缀解析）；③工具层 scope 必填 + 前缀强校验是纯确认门禁——模型 scope 猜错 → 报错——**"search 能找到但 delete 删不掉"的唯一机制**；④跨 scope fallback 不必要。
+  - **修正设计**：
+    ①**layer 可选**（裁定统一成 layer）——传了则校验（防误删保持），**不传则按 id 前缀直接路由**（与 search/list 找到的 id 直接对接）；批删形态（无 id）仍必填 layer（参数改名）。
+    ②**list 补独立 `[layer]` 标签列**（与 search 行对齐，成本低）。
+    ③**第三个真缺口补设计**：uid origin vs 当前 dir 定位分裂——delete 文件定位用当前 `dirs[layer]` 无视 uid 内嵌 origin，而 search/list 匹配面可带出非当前 origin 行——要么 delete 尊重 uid 的 origin 段，要么工具描述写明"team 记忆可能来自其他克隆，本地无对应目录则删不了"。
+  - **工具描述具体化（2026-09-08 用户要求——工具描述是模型唯一看到的，须完善）**：工具层 scope 参数全改名 layer（search/put/list/delete/clear 的 args.scope → args.layer + schema scope 字段 → layer + 描述内 scope 词 → layer——用户裁定统一成 layer）。重写后描述要点：
+    - **search/list**："layer 可选（personal/project/team——缺省搜全部层）；结果每行含 `[layer]` 标签 + id（id 前缀即 layer）"
+    - **delete**："单删 {id, layer}——**layer 可选**：传了则校验（id 前缀须与 layer 匹配防误删），不传则按 id 前缀直接路由；批删（无 id）必填 layer + type/keyword + confirm:true"
+    - **layer 概念**："layer = personal/project/team 三层——结果行首 [layer] 标签、id 前缀、delete 的 layer 参数是同一概念——delete 把结果的 [layer] 填进 layer（或省略自动路由）"
+    - 无 scope 词（全部 layer）——消命名分裂（模型看到 [layer] → delete 填 layer——直接对应）。
+  **归属**：MEMORY.md 工具语义（本段）——双端（CLI/VSC）同机制各自独立实现。
 - **文件式即真相**：markdown 文件就是存储本身（list/批量 delete 匹配面 = 磁盘扫
   描），无独立 DB/索引文件——与 CLI FTS5 的差异是本端最本质的形态差。
 - **无 team 层**：本端只有 personal/project 两 scope；team 记忆由 CLI 管理（拒绝
