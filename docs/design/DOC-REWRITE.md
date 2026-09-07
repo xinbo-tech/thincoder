@@ -58,7 +58,6 @@
 
 注：AGENT-LOOP 大小实测 314KB（scan 曾报 537KB 为早期过时值——以实测为准）。
 
-**待 eng-coder（VSC）**——`docs/design/` + `docs/` 相应文件（VSC ARCHITECTURE 96KB 整 1 行最极端等，需 explore 大纲）。
 **待 eng-coder（VSC）**——`docs/design/` + `docs/`（按 STRUCTURE-DEBT §7 V1-V5）：
 - V1 `README.md`/`ARCHITECTURE.md`（96KB 整 1 行最极端）/`RELEASE.md`/`REQUIREMENTS.md`
 - V2 `PHILOSOPHY.md`/`PROJECT-SWITCHER.md`/`TURN-CAP-CONTINUE.md`/`SETTINGS.md`
