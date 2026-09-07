@@ -1,6 +1,6 @@
 # 父侧观察 / 注入运行中子代理（CLI 端）
 
-> 板块：Agent 循环 · 子代理运行时观测与控制。状态：**设计（待评审）**——2026-09-08 用户需求点。
+> 板块：Agent 循环 · 子代理运行时观测与控制。状态：**已批准 + 已实现**（2026-09-08 eng-coder clean 交付 `2060e0d`——observe/send 落地 + 8 测试 24/0 + affected-files reconcile）。VSC 同名对应（已交付 605a901）。
 > 背景：父 agent 对运行中异步子代理（eng-coder/explore 等）只能看到 turn 数 + touchedFiles（`subagent status`），看不到中间（在读啥/改啥/卡在哪）——eng-coder 跑 65 分钟看不出是否死循环（用户实测触发）；也无法中途给纠结的子代理传话引导。用户端（CLI TUI / VSC 面板）本已实时看到子代理输出——**核心缺口在父模型侧**。
 > 范围（用户裁定）：功能 = 父侧 `subagent` 加 **observe**（查进度）+ **send**（注入引导）两动作；双端（CLI/VSC）各自独立文档同一机制。用户可注入也通过父侧，不做 UI 直连。
 
@@ -52,6 +52,9 @@
 
 - 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、subagent 工具描述/schema（加两动作 + §4.1 分类）、`src/agent-tools/subagent-run.mjs` / `spawn-child`（childOpts 贯通 entry——send 消费入口）、`src/agent.mjs`（子回合边界消费注入点）
 - 文档：本设计（CLI 细节/机制）+ README 地图登记 + **AGENT-LOOP.md §7.2 动作表加 observe/send（含两动作分类 + 契约——单一权威源，本设计不复述契约措辞——评审 #6 防双源漂移）**
+- 修改：`src/agent-tools/subagent-actions.mjs`（observe + send 动作执行器）、`src/agent-tools/subagent.mjs`（schema/enum/description + dispatch 分类）、`src/agent-tools/subagent-run.mjs`（_injected/consumeInjected/settle note + spawn-child 贯通）、`src/agent.mjs`（回合边界消费点）、**`src/agent/dispatch.mjs`**（动作分类谓词 + `_inflightTools` in-flight 记账——评审 #1 读 dispatch 状态）、**`src/tui/tool-events.mjs`**（observe/send 从 spawn-like 路由排除——防误冻子块）、**`src/agent-tools/subagent-async.mjs`**（动作数措辞同步）
+- 新增：`test/subagent-observe-send.test.mjs`（8 用例——running/queued/done/unknown/empty/cancel-race/凭证/分类/depth-gate/N=5 截断）
+- 文档：本设计（CLI 细节/机制）+ README 地图登记 + **AGENT-LOOP.md §7.2/§4.1 动作表加 observe/send + 分类 + 契约措辞（单一权威源——评审 #6 防双源漂移）**
 
 ## 4. 验收
 
