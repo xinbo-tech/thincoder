@@ -115,8 +115,16 @@
 
 ## 屎山度第三次评估清扫批（2026-09-08 夜）
 - [x] ~~**批 5（文档小批——N3+N7）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-5-6——CLI 458857c——AGENTS.md 粗分类指 README + README 板块行自登记 + N7 双锚互引——L2 绿——consume f7dc212e）
-- [x] ~~**批 6（代码小批——N1+N6）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-5-6——VSC 65092ff——subagent 508→353 + subagent-run 183 新 + advisor 511→466 + tools 49/provider 35 新 + CLI enqueueAsk ×3——导出面 12/12——L2 绿——consume f7dc212e）eue` 3 处 inline 收 helper（N6——含 escalate 语义澄清 subagent-actions.mjs:426 注释）——走设计→评审
+- [x] ~~**批 6（代码小批——N1+N6）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-5-6——VSC
+  65092ff——subagent 508→353 + subagent-run 183 新 + advisor 511→466 + tools 49/provider 35 新
+  + CLI enqueueAsk ×3——导出面 12/12——L2 绿——consume f7dc212e）
 - [ ] **双端 system.md:24 下批同步**（§11.3 交付上报项 1+2——2026-09-08 用户裁接受 slot 短句纳入）：
   （① token 存活指引矛盾——CLI 例外段 vs VSC tokens 不存活——token 权威 DESIGN-TOKEN-SETTLEMENT——VSC 对齐 CLI）
   （② slot 行内 prose 补 sticky-slot 短句——null when none is bound）
   （③ §11 字段映射补 slot 条目）——走设计链排批
+
+## 等裁项立项批（2026-09-08 夜用户裁——勘察一手）
+- [ ] **收尾批（STRUCTURE-DEBT-BATCH-7）**：L58 isCodePath 对齐 + L24 消息数护栏 + system.md 3 子项——设计已落待评审
+- [ ] **大项 L31 VSC 轨迹存档**（用户裁要——勘察留档：VSC chat() provider.mjs:130 = 同构出口——新建 trace-store 镜像——大——独立全链）
+- [ ] **大项 L50 advisor 裁决模板**（用户裁立项——勘察留档：双端 prompt 逐字同源——round1 表格区加裁决行——前置：host 侧 marker 消费点不在两仓——中——独立全链）
+- [ ] **大项 L52 sync spawn 可中止**（用户裁要——勘察留档：跨信号+TUI+调度——自属 AbortController 链 + AbortError 区分 + panel 门控放开——大——独立全链）

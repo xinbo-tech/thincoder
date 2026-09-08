@@ -27,7 +27,11 @@
 
 ### 3. system.md:24 同步 3 子项（小）
 
-- **3①**：VSC `src/prompts/system.md:24`——括号去 `tokens,`（`(tokens, caches, in-flight flags) survived` → `(caches, in-flight flags) survived`）+ 在 "A mode/model change…" 前插 CLI 逐字例外句（"Design tokens are the exception: a still-valid design token (within its TTL) is restored with the session slot — a passed design review does NOT need to be re-run after a restart; spawn re-validates the token, and expired tokens are dropped at restore."——CLI :24 逐字参照）。
+- **3①**：VSC `src/prompts/system.md:24`——括号去 `tokens,`（`(tokens, caches, in-flight flags)
+  survived` → `(caches, in-flight flags) survived`）+ 在 "A mode/model change…" 前插 CLI 逐字
+  例外句（"Design tokens are the exception: a still-valid design token (within its TTL) is
+  restored with the session slot — … expired tokens are dropped at restore."——CLI :24 逐字参照
+  ——实现时 read CLI :24 逐字复制）。
 - **3②**：双端 system.md:24——"model = the active model" 后插 "slot = the current session's sticky slot (null when none is bound)"（双端各 1 处）。
 - **3③**：CLI `docs/design/SESSION.md` §11 字段映射（:354-359——现 env/mode/model/resumed 四行）——model 行（:358）后补 slot 行（`slot` → 粘性当前会话槽——N2 语义——无绑定 null——§11.2 :406-412 参照）。VSC SESSION.md 无 §11 env-state 镜像段（勘察核——不动）。
 
