@@ -302,19 +302,33 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 - VSC main.md:28 escalate 段仍含 "pass `async:false` to wait for the report synchronously"
   （CLI main.md:28 已纯异步引导——**双端漂移**）；CLI/VSC engineering.md advisor 段无
   async:false 引导（grep 核实——eng-coder 报告项 4 的 engineering.md:16 观察不实）。
+- **工具描述面（最大引导面——2026-09-08 用户质询发现）**：§7.7 item 5 假设"平台侧不可改"
+  **错误**——Async spawn 段 description 在项目仓 src/agent-tools/subagent.mjs:70（CLI）/
+  subagent-spec.mjs:40（VSC）——模型每次调 subagent 看到的描述 = 此处字符串——仍含完整旧
+  async:false 引导（"Pass async:false only when you must handle the report synchronously."+
+  "use a synchronous spawn instead — pass `async:false`"）——§7.7 交付只改提示词未改此面
+  = 主引导面漏改——本设计纳入。
 
 **改**：
 1. **AGENT-LOOP §14.2 :540**："`async:false` 显式同步保留" → 删——escalate 顶层一律异步（同 §7.7）——报告自动到（ack → 回合自然收尾 → 挂起 settle → digest）。
 2. **VSC src/prompts/main.md:28** escalate 段：删 "pass `async:false` to wait for the report synchronously"——对齐 CLI main.md:28 纯异步引导（DEFAULT-ASYNC + 报告自动到）。
 3. CLI main.md:28（已纯异步——核实无需改——若含 async:false 残留一并清）。
-4. **机制注**：escalate/advisor 的 depth-0 async:false 参数仍平台合法（机制零触碰——AC4 同 §7.7）——提示词不引导——标注与 §7.7 一致。
+4. **工具描述 Async spawn 段**（CLI subagent.mjs:70 / VSC subagent-spec.mjs:40——§7.7 item 5 纠错）：
+   删 "Pass async:false only when you must handle the report synchronously" + "use a synchronous
+   spawn instead — pass `async:false`" 引导——改 "顶层一律异步——报告自动到——depth>0 内同步"
+   （对齐 §7.7 新锚句）。escalate 段描述同步去 async:false 句（若含）。
+5. **机制注**：escalate/advisor 的 depth-0 async:false 参数仍平台合法（机制零触碰——AC4 同
+   §7.7）——提示词/工具描述不引导——标注与 §7.7 一致。
 
-**受影响文件**：AGENT-LOOP.md（§14.2 + §7.7.1 新段 + 变更记录）、VSC src/prompts/main.md、CLI src/prompts/main.md（核实）。
+**受影响文件**：AGENT-LOOP.md（§14.2 + §7.7.1 新段 + 变更记录）、VSC src/prompts/main.md、CLI src/prompts/main.md（核实）、CLI src/agent-tools/subagent.mjs（Async spawn 段描述）、VSC src/agent-tools/subagent-spec.mjs（Async spawn 段描述）。
+
+**变更记录**：2026-09-08 用户质询"平台侧不可改"→ 纠错：工具描述在项目仓 src/agent-tools/（可改）——§7.7 item 5 假设错误已注——工具描述面纳入本设计（最大引导面）。
 
 **验收**：
 - AC1 双端 main.md escalate 段无 async:false 同步引导（与 spawn 段一致——一律异步）
 - AC2 §14.2 无 "async:false 显式同步保留" 句
-- AC3 机制零触碰（depth>0 平台 sync 不变——escalate 内部深度规则不动）
+- AC3 工具描述 Async spawn 段无 async:false 顶层引导（双端 subagent.mjs:70/subagent-spec.mjs:40——与锚句一致）
+- AC4 机制零触碰（depth>0 平台 sync 不变——escalate 内部深度规则不动）
 
 
 ### 7.6 子代理/顾问人格逐字锚集
