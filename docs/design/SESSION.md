@@ -373,6 +373,31 @@ m = loadManifest(cwd)
 - R9 的"模式历史"（agent 自查询模式历史）本批不做——设计只覆盖"当前模式"注入；
 - R12（async 深度门控：depth-0 缺省 async、depth>0 缺省 sync）与本节同批实现——权威 = AGENT-LOOP.md §18。
 
+### 11.1 需求段（2026-09-08 用户裁定——env-state slot + resumed 按会话跟踪——快车道）
+
+> 状态：需求登记（2026-09-08 并批评估 + 用户裁"先处理环境感知"——TODO L80 + L15 合并批；git 富注入优化拆开独立排）。设计启动前需澄清确认。
+
+**总体需求**：env-state 行补 `slot: {N}` 字段（agent 自知当前会话槽号）+ resumed 语义从"进程级一次性"完善为"按会话跟踪"（每次会话恢复得一次 `resumed: yes`）——双端（CLI/VS Code）同机制。
+
+**功能性需求**：
+- **F1（slot 字段）**：As a agent, I want env-state 行含 `slot: {N}`（当前会话槽号）, so that 我自知落在哪个会话槽（诊断/跨会话/多实例协作语境）。
+- **F2（resumed 按会话跟踪）**：As a agent, I want 每次会话恢复（进程重启 resume / 中途切换会话到有历史的槽）的首个回合得一次 `resumed: yes`, so that 我不把"切槽恢复"误当"普通续跑"。
+- **F3（CLI 伪触发修复）**：As a 开发者, I want 消除全新会话 turn 2 误报 `process restarted`/`resumed: yes` 的伪触发（现 `_sessionStart != null` 推断缺陷——勘察发现）, so that 无恢复事件不误报。
+
+**非功能性需求**：
+- N1 双端同机制——env-state 行模板同构（只差 END 常量）——slot/resumed 语义双端一致
+- N2 slot 语义 = 粘性当前会话槽（CLI `agent._slot` / VSC `_engPersist.slot`）——非 manifest active 共享指针
+- N3 slot 无绑定窗口 → 字段如实 `slot: null`（不读共享 active 回退——避免 ACP 多会话张冠李戴）
+- N4 判定守卫保持：depth-0 / 非 resume / 非 autoTurn 才注入（digest/续跑不触发）
+- N5 判据统一："载入历史非空"（VSC 现语义）——CLI 由 `_sessionStart != null` 推断改为显式恢复事件
+- N6 注入句解耦：`process restarted at…`（真进程重启）与 resumed（含切槽恢复）语义分离——切槽不误报进程重启
+
+**待设计澄清**（设计时定）：
+- VSC：模块级闸迁 agent 对象字段（agent 换槽销毁重建天然对齐）——restore:true 工厂路径武装
+- CLI：applySession 收敛落点武装恢复事件 + 清 `_sessionStart` 推断
+- 测试：双端新建 setup-reminders.test.mjs（现零测试）
+
+
 ## 12. 会话目录残留 GC 与标题写契约（已实现，双端）
 
 > 目标：治理会话目录长期残留累积（损坏现场/备份/端 marker/manifest 只增不减）与会话元数据写失败的静默性——目录长期可用 + 元数据写失败可见。
