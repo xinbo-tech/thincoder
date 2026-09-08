@@ -1,6 +1,6 @@
 # 文档批 2（DOC-CLEANUP-BATCH）——引用清扫 + 格式债残留
 
-> 板块：跨板块文档批（批专属设计档）。状态：设计待评审——评审通过 eng-coder 实现。
+> 板块：跨板块文档批（批专属设计档）。状态：**设计定稿待评审**（2026-09-08 用户裁：2a-5 并入 + 2b-1 走 a 并入——核实 VERIFY-REDESIGN D-V5/T-V5 接管 doc-only + 未提前身——并入其变更记录）——eng-coder 实现。
 > 来源：STRUCTURE-DEBT §8 执行后核销（2026-09-08 explore 一手——批 A A1-A8/V1-V5 已执行完毕，本批为**净剩余**：2a 引用清扫残留 + 2b 格式债残留 5 件）。纯文档（docs/ 下 .md + 双端）——无代码逻辑改动。
 
 ## 1. 定位
@@ -29,17 +29,17 @@
 - **现状**：R7 铁律正文在 AGENT-LOOP.md §12.2（:442-460）——无"残留扫描只约束活体文案"豁免。
 - **改**：:459 前补 `R7f 引用清扫/旧名残留/文档卫生只约束活体文案（docs/design/ 生效档 + 根级生效文档）；_archive/ 历史快照不在判定面（报 _archive 内旧名/旧路径不构成 🟡/🔵）。`
 
-### 2a-5（扩围候选）VSC 根 METHODOLOGY.md:5 悬空（L44）
+### 2a-5 VSC 根 METHODOLOGY.md:5 悬空（L44——2026-09-08 用户裁：并入本批）
 
 - **现状**：头注指"与 docs/design/METHODOLOGY.md 同源"——VSC design 下无此文件。
-- **改**：指针删或改指根版。**扩围需你裁**（L44 原独立项）。
+- **改**：指针改指根版 METHODOLOGY.md（VSC 根级文档——非 design/ 下）。
 
 ## 2b. 格式债残留（净 5 件）
 
-### 2b-1 CLI VERIFY-DOCONLY.md（结构坏 + 内容漂移——先定去留）
+### 2b-1 CLI VERIFY-DOCONLY.md（结构坏 + 内容漂移——处置定案 a 并入 VERIFY-REDESIGN）
 
-- **现状**：19 行标题吞正文（:2/:5/:13/:16）；内容漂移——自称"已实现(2026-08-03)"但引已删 test/tools.test.mjs + verify 09-07 重构为通用门禁（VERIFY-REDESIGN.md 现行）——doc-only 快路径重构后是否仍存需核。
-- **处置（三选一）**：a) 并入 TOOLS.md 工具系统板块 + 归档；b) 更新为 VERIFY-REDESIGN 续（若 doc-only 快路径仍存）；c) 纯归档（被 VERIFY-REDESIGN 取代）。**需实现时核实 VERIFY-REDESIGN.md 是否覆盖 doc-only——倾向 a/c**。
+- **现状**：19 行标题吞正文（:2/:5/:13/:16）；内容漂移——自称"已实现(2026-08-03)"但引已删 test/tools.test.mjs + verify 09-07 重构为通用门禁（VERIFY-REDESIGN.md 现行）。
+- **处置（2026-09-08 核实 + 用户裁——定案 a）**：**并入 VERIFY-REDESIGN.md**（非 TOOLS.md——核实：REDESIGN L44 D-V5 保留 doc-only 快路径 + L81 T-V5 用例已接管机制；但 REDESIGN 变更记录未提前身——VERIFY-DOCONLY 独有信息 = isDocFile 三处判定统一历史（verify.mjs/guard/dispatch——2026-08-03 实现记录）——并入 REDESIGN 变更记录补前身吸收行）→ **归档 _archive/**。
 
 ### 2b-2 CLI docs/guides/ides.md（结构坏）
 
@@ -69,11 +69,12 @@
 |---|---|---|---|
 | docs/design/AGENT-LOOP.md | CLI | 2a-1 + 2a-4 + 2b-4 | 折行 + 两注 ≤±20 |
 | docs/design/TOOLS.md | CLI | 2a-3 | ≤±1 |
-| docs/design/VERIFY-DOCONLY.md | CLI | 2b-1（处置：并入/更新/归档） | 视处置 |
+| docs/design/VERIFY-REDESIGN.md | CLI | 2b-1 变更记录补前身吸收行（定案 a） | ≤±3 |
+| docs/design/_archive/VERIFY-DOCONLY.md | CLI | 2b-1 归档（移 _archive/） | 移档 |
 | docs/guides/ides.md | CLI | 2b-2 demux | ~+15 |
 | docs/TODO.md | CLI | 2b-5 | ≤±1 |
 | docs/CAPABILITY_GAP.md | VSC | 2a-2 + 2b-3 | ~+10 |
-| docs/design/METHODOLOGY.md（根级） | VSC | 2a-5（若扩围） | ≤±1 |
+| METHODOLOGY.md（根级——VSC 仓） | VSC | 2a-5（2026-09-08 用户裁并入） | ≤±1 |
 | STRUCTURE-DEBT.md | CLI | 执行核销（已标注——随批收尾核销行） | ≤±1 |
 
 ## 4. 验收
@@ -81,7 +82,7 @@
 - AC1 2a-1/2a-3：AGENT-LOOP.md:94 无 memory_search 旧名 + TOOLS.md:4 指针指 EDIT-HELPERS.md
 - AC2 2a-2 + 2b-3：CAPABILITY_GAP.md memory 单工具 + VSC 实际路径 + 干净格式
 - AC3 2a-4：R7f 豁免注在 §12.2
-- AC4 2b-1：VERIFY-DOCONLY 处置完成（并入/更新/归档——不残留坏格式）
+- AC4 2b-1：VERIFY-DOCONLY 并入 VERIFY-REDESIGN 变更记录（前身吸收行——含 isDocFile 三处判定历史）+ 移 _archive/（不残留坏格式——定案 a）
 - AC5 2b-2/2b-4/2b-5：ides.md demux + AGENT-LOOP 3 条折行 + TODO:83 折行——全部 >300 清零
 - 双端 scripts/check-doc-width.mjs 跑绿（或等效宽度检查——判据①）
 
@@ -89,8 +90,8 @@
 
 - 批 A A1-A8/V1-V5 已执行主体（不重复——STRUCTURE-DEBT §8 已标注执行后状态）
 - 已实现专题孪生对（A7/V3——保留重写已落地无需动）
-- L44 VSC METHODOLOGY.md:5 悬空（2a-5 扩围候选——需用户裁）
 
 ## 变更记录
 
 - 2026-09-08：立项。批 A 执行后核销（explore）——规划表更新为执行后状态 + 净剩余落本档。纯文档批——与批 1（代码小修）独立域。
+- 2026-09-08：用户裁两点——2a-5 并入（VSC METHODOLOGY 指针修正）+ 2b-1 定案 a（核实 VERIFY-REDESIGN D-V5/T-V5 接管 doc-only 机制 + 未提前身——并入其变更记录含 isDocFile 历史 → 归档）。设计定稿待评审。
