@@ -7,12 +7,12 @@
 ## 工程模式防盗用
 - [ ] `eng(enter)` 加用户同意门（当前模型可自主翻转并把 `agent.engineering=true` 持久化进共享 config.json）。CLI 侧同样存在
 - [ ] design token 签发后置 pending，需用户批准才可派生 eng-coder（"wait for user approval" 现只是 prompt 散文）。CLI 侧同样存在
-- [ ] 收紧拒绝文案：subagent/advisor 错误信息不再逐条写出解锁步骤。CLI 侧同样存在
+- [x] ~~收紧拒绝文案~~——**2026-09-08 核销**（src+prompts grep "解锁" 0 命中——现拒绝文案均单行通用——前提已消失）
 
 ## 文档债 / ARCHITECTURE 漂移（doc-sweep 候选——是否已被 VSC 文档批覆盖需核）
 - [ ] **设计评审 advisory 未实现项**：design round2 专用提示词 / ARCHITECTURE 补 NFR 小节 / 原则 2 改述 / PROVIDER_PRESETS 静态镜像说明 / 模块小节补 memory/repomap/specs/extension/prompts / §6§3§4 补懒历史·双通道·Ctrl+I·readSSE / runAgent 签名 input→text / §4 补 thinkEnabledValue·noUsageStream / advisor 工具补 lsp
 - [ ] **模块图补录**：`src/extension/panel-chat.mjs` / `webview/streaming.js` / `webview/panels.js` / `webview/state.js` 未入 AGENTS.md 模块图与 ARCHITECTURE——既有漂移
-- [ ] **VSC agent/setup.mjs 500 行**（>500 硬限边缘——2026-09-08 agent 生命周期交付后 396→500——advisor 🟡 零余量）——拆 §11 纯函数族 ~90 行（resetRunState/reconcileEngDesignTokens/applySlotSessionState 独立模块）——下次触碰拆
+- [ ] **VSC agent/setup.mjs 500 行整**（>500 硬限边缘——2026-09-08 实测整 500 行零余量——resetRunState:134/reconcileEngDesignTokens:167/applySlotSessionState:196 仍留本文件未拆独立模块——下次触碰拆——与 CLI TODO L10 同物）
 - [ ] **vscode qwen 请求 thinking 未设置时携带 `thinking:{type:"enabled"}`**（智谱式参数，GLM 修复引入的通用 spec 默认注入）——百炼兼容性属 Qwen enable_thinking 范畴——知悉观察
 
 ## Issue 巡检登记
@@ -23,7 +23,7 @@
 - [ ] `listMemoryFiles` 只看 `.thincoder/memory/` 顶层，`discoverFiles` 递归子目录 → 嵌套 memory 文件被索引却反复判 file-removed（死循环）。二选一未定
 - [ ] **reason 串失配**：`file-changed`（git 路径）vs `file-changes`（fallback），另 file-added/removed/missing 未统一——真差异残留
 - [ ] `loadIndex`/`searchIndex` 不校验 `vector_dim === decode.dim` 与 `embed_model`——切换 embedding 模型（维度不同）静默全 0 得分
-- [ ] indexer 系列修复（c45f1fe→66ea83f）补 changelog 条目
+- [x] ~~indexer 系列修复补 changelog 条目~~——**2026-09-08 核销**（CHANGELOG.md:309 "语义索引系列修复"条目——mtime 重建/git 漂移/空 chunk/manifest-only/multi-root/memory 接线等——与修复面吻合）
 
 ## config.json 外部写盘感知
 - [ ] **config.json FileSystemWatcher**：外部（CLI `/advisor` 等）写盘后扩展端实时感知 → `_pushSettingsLight` 推送快照。B1（openSettings 拉新）已落地；watcher 覆盖"面板常开时外部写盘实时刷新"
@@ -33,6 +33,5 @@
 
 ## 会话流 / UI 反馈（VSC digest 可见性）
 - [ ] **digest 开始无可见指示（2026-09-08 用户实测——对齐 CLI）**：异步子 agent 完成 → 区块并入会话流后长时间无动静（消化已开始但在等消化模型首 token，VSC 只 logEvent 不画指示）。CLI 一进 digestTurn 即画 [auto-turn: digesting…]（零延迟）。改：VSC 消化分支补即刻 host→webview 指示（digesting N finished reports…）+ 状态行置忙，首 token 前不空白——归属 suspension.mjs digest 分支 + webview
-- [ ] **eng-coder 标题栏末尾总显示 thinking（2026-09-08 用户实测——对齐 CLI）**：异步 eng-coder 区块标题栏末尾始终显示 thinking，用户不知道它现在在调用什么（在读/改/等模型？）。CLI 端块头显示 turn n/max + model + currentTool（实时反映当前动作）
-  ——VSC 标题栏缺实时"当前动作"指示，固定 thinking 误导。改：VSC 子代理块头对齐 CLI——显示当前工具/动作（observe 机制已能取 currentTool，UI 接上）+ 区分 thinking vs tool-call 态——归属 webview activity 块头 + subagent 状态流
+- [x] ~~**eng-coder 标题栏末尾总显示 thinking**~~——**2026-09-08 核销**（代码证据：activity.js:150-154 stateWord CLI currentTool parity + :262-274 chunk 级 think→thinking/tool→行尾 state word + chat.js:138-139/status-bar.js:31 _currentTool 实时清/置——固定 thinking 误导已消除）
 
