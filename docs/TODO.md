@@ -83,6 +83,7 @@
 - [ ] **memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**：memory search/list 能找到记忆（跨 scope 搜），但 delete 找不到（限定 scope 找不到——scope 不一致）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到
   ——需：统一 search/list/delete 的 scope 解析（delete 也该跨 scope 找，或 search/list 显示记忆实际 scope）——归属 MEMORY.md 工具语义——双端（CLI/VSC）同机制
 - [x] ~~**memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**~~——**已实现**（2026-09-08 双端交付：CLI `528d2ab` / VSC `426b574`——scope→layer 全统一 + delete layer 可选 + 尊重 uid origin + list [layer] 标签——设计链闭合 consume）
+- [x] ~~distill 子系统 scope→layer~~——**已实现**（2026-09-08 交付 commit 26cd89f——--layer 命令面 + --scope 显式报错两形态 + 读时归一 L124 + 错误串 layer + test 8 用例——设计链评审通过）——遗留：①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）②bin/thincoder.mjs 501 行 >500 存量债（HEAD 前即 501——净 0 行改动）——挂 STRUCTURE-DEBT 观察
 - [ ] **distill 子系统 scope→layer（2026-09-08 交付跟进——用户裁定延伸）**：distill 转录 JSON 字段 `scope` + `--scope` 命令参数同 memory 统一改 layer（人类命令面一致性——memory remove --scope 已随动改 --layer）——需 JSON 兼容处理（旧转录读取兼容）——归属：distill 命令板块（新设计）——**单端（CLI only——VSC 无 distill——已核实）**
 - [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
 

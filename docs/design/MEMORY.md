@@ -168,9 +168,9 @@
 **批量删门禁**：layer 必填 + type/keyword **至少其一**（无过滤批量删 = 整层清空，绕过 clear 拒共享层门禁 → 拒绝并指引）；confirm 缺失 = **不删**，返回预览让调用方带 confirm 重发。**clear 门禁**：layer 必填且仅接受 personal；confirm:true 必填；project/team 拒绝。
 
 
-## 6.5 distill 命令 layer 统一（变更段——2026-09-08 裁定，评审后实现）
+## 6.5 distill 命令 layer 统一（2026-09-08 实现落地——交付 commit 26cd89f）
 
-> distill = 转录→记忆条目提取命令（CLI 单端——VSC 无 distill 已核实）。写记忆入口——scope 词面与 memory 工具 layer 统一（用户裁定延伸：人类命令面一致性）。本段设计待评审——评审通过并入本文档当前态。
+> distill = 转录→记忆条目提取命令（CLI 单端——VSC 无 distill）。写记忆入口——scope 词面与 memory 工具 layer 统一（用户裁定延伸：人类命令面一致性）。现状：已实现——--layer 命令面 + --scope 显式报错 + 读时归一（见下）。
 
 ### 现状（explore 一手核实）
 
@@ -198,7 +198,7 @@
 | 文件 | 现行数 | 改动 | 预计 delta |
 |---|---|---|---|
 | bin/thincoder.mjs | ~450 | usage L90 + bash/zsh/fish completion L353/392/438 | ≤±5（字面替换） |
-| src/cli/distill-command.mjs | ~80 | 注释/usage L13/25 + flags.scope→flags.layer L67 + 展示串 L69 + --scope 显式检查 | ≤±15 |
+| src/cli/distill-command.mjs | ~95 | 注释 L13 + usage **L31**（AC2 块插入后偏移——原 L25）+ flags.scope→flags.layer **L73** + 展示串 **L75** + --scope 显式检查 L23-28 | ≤±15（实测 +15） |
 | src/distill.mjs | ~160 | prompt L21/30 + docstring + 判别变量 L124/131/135/144 + 错误串 L136/145/154 + 读时归一 | ≤±5（同文替换） |
 | src/tui/distill-cmd.mjs | ~40 | 展示串 L25 | ≤±2 |
 | test/distill.test.mjs | 新增 | 读时归一/错误串/--scope 报错 | ~+80（现 0 测试） |
