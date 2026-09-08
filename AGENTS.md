@@ -34,7 +34,7 @@ Design docs in `docs/design/`. Independent product — no dependency on thincode
 - **Checkpoint 事故恢复（快照机制）**：与 CLI 完全一致——权威文档 `thincoder/docs/design/CHECKPOINT.md`（本端引用不复制）。要点：① 快照时机 = git 工具破坏性操作前自动快照（checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）+ bash guard（`gitGuardSnapshot` 宽匹配，先快照后放行）+ 手动 `checkpointAction=create`；② 恢复 = `checkpointAction=list` → `cat` → `rewind checkpointId=<id> path=<文件>`；③ 快照是"操作前状态"而非"良好状态"备份（编码损坏内容 cat 作重建参照）；④ commit 成功后该项目 checkpoint 清空（commit = 新安全基线）；⑤ 存储 = `~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，盘符大写归一化——与 CLI 同目录同格式，快照跨端互通；镜像实现 `src/tools/checkpoint.mjs`）；⑥ **存量 stash 快照不迁移**（不再支持工具 rewind，用户可手动 `git stash drop`）。**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底。
 
 ```
-extension.mjs        Extension entry + ChatPanel class (session CRUD, settings, LLM title generation, CSP injection)
+extension.mjs        Extension entry — 注册 ChatPanel（类已迁 src/extension/chat-panel.mjs）为 WebviewViewProvider + commands/status bar（session CRUD/设置/标题生成/CSP 注入随类迁移）
 src/agent.mjs         Agent main loop — parallel tool batching, multimodal image injection, context compaction, subagent spawning, reasoningEcho
 src/agent-tools.mjs   Re-export shim → src/agent-tools/ (task, subagent, plan, goal, skill, verify, read_history)
 src/agent-tools/subagent-actions.mjs  status/cancel action executors（§19.8 2026-09-06：action:'check' 删除——subagentCheck/MAX_ASYNC_CHECKS/F1 pool-waiter loop 退役——结果仅自动通道；2026-09-05 module split）
@@ -52,9 +52,12 @@ src/memory.mjs        Long-term memory (file-based Markdown entries + frontmatte
 src/repomap.mjs       Repository dependency graph parsing
 src/config.mjs        Model capability specs (context, thinkApi, thinkEnabledValue, noUsageStream, temp ranges)
 src/specs.mjs         Re-export from config.mjs (backward compat)
-src/extension/        Extracted ChatPanel modules: presets, session-io, session-slots, settings
+src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks 等载荷分模块 + session-io/session-slots/settings/presets）
 src/prompts/          System prompts: system.md, discipline.md, main.md, explore/coder/plan.md
 webview/chat.js      Frontend orchestration: message handling, model selector, session history
+webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
+webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块（R22 活动块已迁 activity.js）
+webview/panels.js    侧面板：task progress/subagents/consultants/goal + 挂起态（行面板 bookkeeping——活动块生命周期在 activity.js）
 webview/activity.js   R22 子 agent 底部活动面板: live 活动块 (create/header/⏹/elapsed ticker) + 终态冻结入流 (#messages 身份头 + report preview) — leaf module (state/ui/i18n only)
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer

@@ -30,13 +30,13 @@
 
 | # | 能力 | CLI 位置 | 说明 | 状态 |
 |---|------|---------|------|------|
-| 10 | MCP 支持 | `src/mcp/` | stdio + streamable HTTP 两种 transport，JSON-RPC 2.0。mcpTool 统一入口（connect/list/call/disconnect）。 | ✅ |
+| 10 | MCP 支持 | `src/mcp/` | stdio + HTTP + WS 三种 transport，JSON-RPC 2.0。server 工具**动态展开**为原生工具（`{server}_{tool}`——模型直接调用、可并行——无网关路由——mcpTool 网关已废弃——MCP.md D1）。 | ✅ |
 
 ## Checkpoint（1 项）
 
 | # | 能力 | CLI 位置 | 说明 | 状态 |
 |---|------|---------|------|------|
-| 11 | Checkpoint rewind | `src/git/checkpoint.mjs` | git stash 快照 + `rewind`（自动创建恢复前快照，可逆）+ `cat`（查看快照内文件）+ 单文件恢复。 | ✅ |
+| 11 | Checkpoint rewind | `src/git/checkpoint.mjs` | **全量副本**快照（`~/.thincoder/checkpoints/{cwdHash12}/`——git stash 已退役）+ `rewind`（自动创建恢复前快照，可逆）+ `cat`（查看快照内文件）+ 单文件恢复。 | ✅ |
 
 ---
 
@@ -47,7 +47,7 @@
 | 1-3 | 代码理解 | `repo_outline` + `code_search` + `doc_search` |
 | 4 | 长期记忆 | `memory` 单工具五动作（文件式 md + frontmatter 存储） |
 | 7-9 | Provider | TPM 闸门 + Partial Mode + DeepSeek Prefix |
-| 10 | MCP | stdio + HTTP transport，`mcpTool` 入口 |
+| 10 | MCP | stdio + HTTP + WS transport，工具动态展开（`mcpTool` 网关已废弃） |
 
 ## 受限于零依赖不可移植
 
