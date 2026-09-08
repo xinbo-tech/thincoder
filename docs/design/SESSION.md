@@ -26,6 +26,39 @@
   流水（2026-08-22 ~ 2026-09-07 的 12 位 hash 迁移/会诊 F1-F6/.bak 轮转/端分离 R4/
   残留 GC §12/懒历史）已按机制并入对应章节，折叠为本记录。
 
+
+## 需求段（2026-09-08 用户裁定——agent 生命周期对齐 CLI——快车道设计入口）
+
+> 状态：需求澄清完成（方向用户确认"对"）——设计进行中。本段为需求记录；设计正文落本档 §12（待建）或独立批次档。
+
+### 总体需求
+
+VSC 顶层 agent 生命周期从"每轮 runAgent 重建 + opts.engState/agentState 每轮进出搬运"改为 **CLI 式"面板会话级单例复用"**——一次创建、跨回合复用同一 agent 对象、状态内存携带、回合尾落盘。砍掉 VSC 因"每轮重建"被迫背的补丁链（opts 状态搬运/回合尾 agentState 序列化/多槽 merge/restore 恢复），消除"内存有盘上无/盘有内存无"类跨实例状态漂移（2026-09-08 批 1 异步评审 token 未注册实证——根因即 per-run 重建 + 落盘链复杂）。
+
+### 功能性需求（As a… I want… so that…）
+
+- **F1（会话级单例）**：As a VSC 面板用户, I want 同一面板会话的顶层 agent 只在首轮创建、后续回合（含 Ctrl+I/Continue 续跑）复用同一对象, so that agent 内存状态（_engDesignTokens/_tasks/guard 标记等）跨回合天然携带——不因回合边界丢失或漂移。
+- **F2（状态零搬运）**：As a 开发者, I want 砍掉 opts.engState/agentState 每轮进出 + setup 恢复 + onComplete 落盘搬运链（agent 常驻后不再需要）, so that 状态只有一份内存源（agent）+ 回合尾盘同步——消除双载体不一致。
+- **F3（盘权威保留）**：As a 开发者, I want 保留每回合尾盘同步 + 会话切换/新会话/换项目/退出落盘, so that VS Code 扩展进程被杀/崩溃/重载不丢状态（VSC 进程生命周期不可控——不能完全 CLI 式只退出存）。
+- **F4（生命周期边界）**：As a 开发者, I want 会话切换/新会话/删除/换项目时销毁常驻 agent（agent 内存态随之清理）, so that 不串会话（agent 不跨 session 复用）。
+
+### 非功能性需求
+
+- N1（对齐 CLI 模型）——agent 会话级单例 + 回合复用（CLI：make-agent 建一次 → state._agent → agent-turn 复用）；续跑循环同 agent 只重建 abort controller。
+- N2（状态一致性）——单内存源 + 回合尾盘同步；消除内存/盘双载体漂移（批 1 实证类）。
+- N3（落盘不退化）——每轮盘同步保留（VSC 进程不可控防丢）；不得引入"内存有盘上无"窗口。
+- N4（子代理不动）——子代理本是一次性 runAgent（非面板常驻）——本次只改顶层（depth-0 面板会话 agent）。
+- N5（per-run 字段语义保持）——_advisorRound/_verifiedThisRun 等回合级计数器语义不因 agent 复用而错（回合边界重置逻辑需显式化——CLI 侧同款）。
+
+### 待设计澄清（设计时定）
+
+- 首轮 setup 与后续轮的字段复位清单（哪些 per-run 字段回合尾要清、哪些会话级保留）
+- runAgent/setupAgentRun 签名改造（复用 agent 的入口形态）——新增常驻 agent 后 setup 只做首轮
+- panel._agent 持有 + loadSession/新会话/切换/项目重绑的销毁接线
+- 回合尾落盘保留形态（agent 内存 → 盘同步——复用现有 saveLines 通道还是简化）
+
+---
+
 ---
 
 ## 1. 存储模型与目录形态
