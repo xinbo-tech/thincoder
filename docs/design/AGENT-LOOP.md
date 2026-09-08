@@ -382,7 +382,7 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 
 ### 11.3 行为漂移决策点（设计显式选边——需用户裁）
 
-1. **_tasks / _goal 复位 or 会话级**：CLI 是会话级（回合间保留）；VSC 现因重建每用户回合丢。单例不复位 = 自然变会话级（**对齐 CLI**）；复位 = 保持现行为。**建议对齐 CLI（会话级——不复位）**——收益本体之一。
+1. **_tasks / _goal：照 CLI 定——会话级不复位**（2026-09-08 核 CLI 代码：createAgent 初始化 agent.tasks/agent.goal → 跨回合保留——仅全 done auto-collapse 或 /new 清；goal 由 /goal 命令显式管理。CLI agent 常驻 = tasks/goal 天然会话级。VSC 现因重建丢 = 与 CLI 不一致——单例对齐即不复位——无需裁决）。
 2. **_emptyRetries/_compressFailures/verify·advisor 预算类**：必须复位（防预算跨回合累计——无争议）。
 3. **续跑语义**：resume 迭代（ContinueError/Ctrl+I）每 runAgent 调用复位 = 现行为逐字对齐（建议——保守）。
 
