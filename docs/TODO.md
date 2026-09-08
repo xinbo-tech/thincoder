@@ -71,6 +71,10 @@
 
 ## 需求池 / 在途实现（状态随批推进更新）
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
+> 2026-09-08 批实况：**批 1**（CODE-HARDENING——8 小修——eng-coder id=5 在跑，设计 CODE-HARDENING-BATCH.md 已批签 token a1589d72）；**批 2**（DOC-CLEANUP——评审 #6 中——设计 DOC-CLEANUP-BATCH.md 定稿）；**批 3**（system.mjs 拆——未启动）；**批 4**（需求池——未排）。agent 生命周期重构（AGENT-LOOP §11——eng-coder id=1 在跑）+ D6 union（DESIGN-TOKEN-SETTLEMENT D6——eng-coder id=3 在跑）。
+- [ ] **批 3（结构债批 B——2026-09-08 并批评估定）**：`src/agent/system.mjs` 506 行拆（唯一仍越 500 硬限 CLI 文件）+ 工具归位——中规模确定清理独立批——**未启动（待批 1/批 2 收尾后——设计权在用户）**
+- [ ] **批 4（需求池各自独立——2026-09-08 并批评估定——设计权在用户）**：R16 token 语义 / env-state 补当前 slot / designer 子代理（大）/ R19 护栏裁定——逐个独立全链
+
 - [ ] **R10 多实例协作感知**——设计已批准——**在途**（待核销）
 - [ ] **R16 token 生命周期语义修订**（TTL 到期+重启/开模式清过期）——需求已登记——**待设计**
 - [ ] **env-state 补当前会话 slot**（agent 自知当前会话槽号——SESSION §11 env-state 补 slot 字段）——双端——设计启动权在用户
