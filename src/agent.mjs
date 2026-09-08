@@ -12,7 +12,7 @@ import {
 } from "./agent/run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
-import { setupAgentRun } from "./agent/setup.mjs"
+import { hydrateRun, setupAgentRun } from "./agent/setup.mjs"
 import { AUTO_REMINDER, ENG_OFF_REMINDER, ENG_ON_REMINDER, injectEngineeringReminder } from "./agent/setup-reminders.mjs"
 // 主循环阶段函数（压缩检查/蒸馏发射/回合收尾）2026-09-05 实践轮迁 agent/run-stages.mjs
 import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, maybeGuardPushbacks } from "./agent/run-stages.mjs"
@@ -76,8 +76,20 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     }
   }
 
+  // AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：顶层 agent 会话级单例复用。
+  // opts.agent（仅 depth-0 honored）存在 → hydrateRun 复用同一对象（面板多回合/续跑共享——
+  // AC1/F1——resume 迭代传同一 opts.agent）；缺省（首轮/destroy 重建/子代理/直连）→
+  // setupAgentRun = factory 新建 + hydrate（restore:true——§11.2.1 槽字段回填）。复用与新建
+  // 都走 hydrateRun：其内部先 resetRunState（§11.2 A 清单——顺序纪律：复位在 hydrate 内、
+  // 先于下方 inheritedGuard 应用——guard 标记继承到"复位过的"下一 run）。
+  const existingAgent = (depth === 0 && opts.agent) || null
   const { agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt } =
-    await setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto })
+    await (existingAgent
+      ? hydrateRun(existingAgent, { provider, cwd, input, opts, depth, role, getAuto })
+      : setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto }))
+  // §11 write-back：把建好的顶层单例写回调用方 opts（panel-chat 的 runOpts 对象跨续跑迭代
+  // 存活——下轮 hydrate 复用同一对象；panel._agent 同步是调用方职责——ensurePanelAgent）。
+  if (depth === 0) opts.agent = agent
 
   // §17 per-run flags: _inAutoTurn = manual-tier digest spawn gate; _sessionSignal =
   // suspension-session abort signal — digest's own Stop/interrupt never kills the pool.
@@ -169,7 +181,8 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       onWait: callbacks.onWait,
       signal,
       // LOGGING（LOGGING.md——CLI parity）：llm:* 语义上下文（stage=turn 主循环回合——
-      // digest autoTurn=true；role/depth = 子代理上下文归属——vscode agent 对象 per-run 重建）
+      // digest autoTurn=true；role/depth = 子代理上下文归属——§11 后顶层 agent 为面板会话级
+      // 单例（复用 hydrate），per-run 对象仅子代理/destroy 重建路径）
       logCtx: { stage: "turn", turn: turn + 1, auto: autoTurn, role, depth },
     })
     traceStop(`turn ${turn}: LLM stream ended`)

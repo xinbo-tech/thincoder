@@ -1,14 +1,15 @@
 /**
  * eng-settlement.test.mjs — DESIGN-TOKEN-SETTLEMENT.md (2026-09-08) slot-authority ledger tests.
- * Covers the pure slot-mechanics layer of D1/D2/D4/D5:
+ * Covers the pure slot-mechanics layer of D1/D2/D4/D5/D6:
  *  - slot file = authoritative settlement ledger (setSlotEngDesignTokens / readSlotEngDesignTokens);
  *  - D4: spawn-gate resolveDesignSlot re-reads the authoritative slot on in-memory miss
  *    (a settle that already landed in the slot resolves for a same-session round whose
  *    per-run Map is empty → no `designId not found`);
  *  - D2 ①: consume-design explicitly clears the slot (subsequent spawn mechanically rejected);
  *  - D2 ③: an expired slot token never resolves AND is cleaned from the ledger at the gate;
- *  - D2 (AC2): engTokensMergeForSave — an empty in-memory save keeps a settle-written slot
- *    value (never pins null); a non-empty save overwrites;
+ *  - D2/D6 (AC2): engTokensMergeForSave — an empty in-memory save keeps a settle-written slot
+ *    value (never pins null); a non-empty but incomplete save UNIONS (slot-only settle-written
+ *    tokens survive the busy-time save); same-key → later-minted token wins (评审 #3);
  *  - authorizeEngCoderDesignToken exact-token pass / wrong-token fail-closed.
  * The full suspension/digest/onComplete wiring is exercised by the real flow; these lock the
  * slot-authority primitives the flow depends on.
@@ -145,12 +146,41 @@ test("AC2 saveLines merge: empty in-memory save keeps a settle-written slot valu
   assert.equal(engTokensMergeForSave(null, slotVal), slotVal)
   // abort/finally save (no engDesignTokens key → incoming undefined) → keep slot too.
   assert.equal(engTokensMergeForSave(undefined, slotVal), slotVal)
-  // A round that genuinely holds live tokens writes them over the slot.
+  // D6 union (评审 #2): a round that genuinely holds live tokens merges them into the slot —
+  // the slot-only settle-written item survives beside the fresh in-memory one (was overwrite).
   const mem = { fresh: liveTok() }
-  assert.equal(engTokensMergeForSave(mem, slotVal), mem)
+  assert.deepEqual(engTokensMergeForSave(mem, slotVal), { settled: ta, fresh: mem.fresh })
   // Both empty → null (clean).
   assert.equal(engTokensMergeForSave(null, null), null)
   assert.equal(engTokensMergeForSave(null, undefined), null)
+})
+
+test("D6 busy-time union: incomplete in-memory save keeps the settle-written slot-only token", () => {
+  // settle landed 9 in the SLOT while this round's in-memory Map (hydrated at round start) holds 8
+  const slotTokens = {}
+  for (let i = 0; i < 9; i++) slotTokens[`d${i}`] = liveTok()
+  const memTokens = { ...slotTokens }
+  delete memTokens.d8 // settle's just-landed token — absent from the in-memory save
+  assert.deepEqual(engTokensMergeForSave(memTokens, slotTokens), slotTokens)
+})
+
+test("D6 same-key recency (评审 #3): the later-minted token wins — both directions", () => {
+  const designId = "reused-design-id"
+  const oldTok = `${randomUUID()}:${Date.now() + 60e3}`
+  const newTok = `${randomUUID()}:${Date.now() + 3600e3}`
+  // async re-review (F2h): settle landed the NEW token while memory holds the OLD → existing wins.
+  assert.deepEqual(engTokensMergeForSave({ [designId]: oldTok }, { [designId]: newTok }), { [designId]: newTok })
+  // Continuation round mints a NEW token into memory over the slot's OLD one → incoming wins.
+  assert.deepEqual(engTokensMergeForSave({ [designId]: newTok }, { [designId]: oldTok }), { [designId]: newTok })
+})
+
+test("D6 tie/unparseable determinism: an in-memory value not provably newer never clobbers the slot", () => {
+  const slotTok = liveTok()
+  const exp = slotTok.slice(slotTok.lastIndexOf(":") + 1)
+  // Same expiresAt / unparseable incoming → not provably newer → slot kept.
+  assert.deepEqual(engTokensMergeForSave({ d: `${randomUUID()}:${exp}` }, { d: slotTok }), { d: slotTok })
+  assert.deepEqual(engTokensMergeForSave({ d: "not-a-token" }, { d: slotTok }), { d: slotTok })
+  assert.deepEqual(engTokensMergeForSave({ d: slotTok }, { d: "not-a-token" }), { d: slotTok })
 })
 
 test("clearSlotEngDesignToken removes one designId, keeps siblings", () => {

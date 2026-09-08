@@ -150,19 +150,29 @@ export function clearSlotEngDesignToken(cwd, slot, designId) {
   return true
 }
 
-/** D2 纯合并语义（2026-09-08，panel-session saveLines 用——可单测）：计算 engDesignTokens
- *  字段应写入槽的值。
- *  - incoming = extra.engDesignTokens（agentState 携带：undefined = 未携带 abort/finally 保存）;
- *  - existing = 槽既有值（loadSlot 的 existing.engDesignTokens）。
- *  规则（AC2）：内存真持非空表（incoming 非空对象）→ 写 incoming（覆盖槽，会话内新评审落盘）；
- *  内存空但槽有值（settle 已同步落盘而本回合内存未持有）→ 保留槽值（不钉 null——空态保存不触发
- *  清理，槽清理只经 consume//new/TTL 三触发）；都空 → null；未携带 → 保留槽。 */
+/** D6（评审 #3）：解析 token 尾 :expiresAt（uuid:expiresAt 2 段——validateDesignToken 同源）；无效 → -Infinity（无 mint 时间不参胜——退回槽值）。 */
+function tokenExpiryMs(token) {
+  const p = typeof token === "string" ? token.split(":") : null
+  if (!p || p.length !== 2) return -Infinity
+  const exp = parseInt(p[1], 10)
+  return Number.isNaN(exp) ? -Infinity : exp
+}
+
+/** D2 空态 + D6 union 合并（2026-09-08，panel-session saveLines 用——可单测，详见
+ *  DESIGN-TOKEN-SETTLEMENT.md D2/D6）：incoming = agentState 携带（undefined = 未携带），
+ *  existing = 槽既有值。D2：incoming 空但槽有值 → 保留槽（空态不触发清理）；都空 → null。
+ *  D6 union：incoming 非空但不全 → 并集——槽独有项保留（槽 = 权威台账，consume 对称删盘不复活）；
+ *  同 key 以新 mint 者胜（token 尾 :expiresAt 大 = 后 mint = 新——非盲目 incoming wins）；平手/无效 → 保留槽值。 */
 export function engTokensMergeForSave(incoming, existing) {
   if (incoming === undefined) return existing ?? null
   const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
-  if (hasNew) return incoming
   const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0
-  if (slotHas) return existing
-  return null
+  if (!hasNew) return slotHas ? existing : null
+  if (!slotHas) return incoming
+  const out = { ...existing }
+  for (const [key, tok] of Object.entries(incoming)) {
+    if (!(key in out) || tokenExpiryMs(tok) > tokenExpiryMs(out[key])) out[key] = tok
+  }
+  return out
 }
 

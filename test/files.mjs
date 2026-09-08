@@ -20,4 +20,5 @@ export default [
   "test/subagent-observe-send.test.mjs",
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",
+  "test/agent-lifecycle-singleton.test.mjs", // AGENT-LOOP §11（2026-09-08）：agent 生命周期单例——resetRunState/reconcile/applySlot 映射/绑定判定
 ]

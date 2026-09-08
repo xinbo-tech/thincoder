@@ -2,6 +2,11 @@
  * agent/setup.mjs — pre-loop setup for runAgent: tool table, config, system prompt,
  * dual-line history, and startup context injection.
  * Extracted from agent.mjs (file-size split).
+ * AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：setupAgentRun 拆出
+ * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
+ * reconcile——顶层单例复用路径）。resetRunState / reconcileEngDesignTokens /
+ * applySlotSessionState 为 §11.2 A 复位清单与 §11.2.1 槽↔hydrate 映射的纯函数面
+ * （test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
@@ -16,6 +21,7 @@ import {
 import { settingsTool } from "../agent-tools/settings.mjs"
 import { isExpiredDesignToken, extractTokenUUID } from "../agent-tools/advisor.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
+import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { injectContext } from "../context.mjs"
@@ -87,8 +93,144 @@ function engAuditSubagentTool() {
   }
 }
 
-export async function setupAgentRun({ provider, cwd, input, opts, depth, role, getAuto }) {
-  const { mcpServers, skills, engState, engDesignReviewed, resume = false, planMode = false, autoTurn = false } = opts
+/**
+ * §11.2 agent 对象工厂——首轮-only（hydrateRun 每轮 reconcile）。归类：A = 回合级预算/守卫
+ * （resetRunState 每 runAgent 清零——AC6）；C = 会话级保留（_tasks/_goal/_engDesignTokens
+ * 不复位，hydrate 槽 reconcile）；_pendingReminders = A 复位 + restore 槽回填（A/C 双列注）；
+ * B = run 绑定（每轮重指 _role/_provider/_planMode/cwd/history/_fullHistory/config 等）。
+ * 池载体（_asyncSubagents/…）不在此——挂共享 history 数组（§11.2 D）。
+ */
+export function buildTopLevelAgent() {
+  return {
+    // C — 会话级状态（单例收益本体——hydrate 槽 reconcile / destroy 重建回填）
+    _tasks: [], _goal: null,
+    _engDesignTokens: null, // 惰性建 Map（spawn-gate/advisor.mjs ??= 既有）
+    _pendingReminders: [], // A 复位 + restore 槽回填（resetRunState:156 / applySlotSessionState）
+    // A — 回合级预算/守卫/计数器（resetRunState 每 runAgent 调用清零）
+    _touchedFiles: [], _verifiedThisRun: false, _verifyPassed: undefined, _verifyRetries: 0,
+    _honestReminderInjected: false, _pendingTimers: [],
+    _lastPromptTokens: null, _usageAtLen: null, _compressFailures: 0, _emptyRetries: 0,
+    _taskPushbacks: 0, _advisorRound: 0, _advisorSession: null, _lastAdvisorOutput: null,
+    _calledAdvisorThisRun: false, _mutatedThisRun: false,
+    _inAutoTurn: false, _sessionSignal: null, _runStartHistoryLen: 0, _lastCompressInfo: null,
+    _lastEngState: false, // seeded false: a resumed engineering session re-notifies on turn 1 (CLI parity)
+    // B — run 绑定（hydrateRun 每轮覆盖）
+    _role: null, _provider: null, _planMode: false,
+    _engPersist: null, _engDesignReviewed: false, _engTaskInput: null,
+    cwd: null, history: null, _fullHistory: null,
+    config: {
+      advisor: { guard: false },
+      agent: { engineering: false },
+      proxy: undefined, shell: null, providersList: [], websearch: { provider: "tavily", apiKey: "" },
+    },
+  }
+}
+
+/**
+ * §11.2 A —— per-run 复位清单（现靠重建清零的字段回合边界显式复位——预算/守卫不跨回合
+ * 累计——AC6；顺序纪律：hydrateRun 先复位、agent.mjs 的 inheritedGuard 应用在后）。
+ * 纯函数（单测锚点）。C 类（槽回填源）与 B 类（hydrate 立即重指）不受影响。
+ */
+export function resetRunState(agent) {
+  agent._touchedFiles = []
+  agent._verifiedThisRun = false
+  agent._verifyPassed = undefined
+  agent._verifyRetries = 0
+  agent._honestReminderInjected = false
+  agent._pendingTimers = []
+  agent._lastPromptTokens = null
+  agent._usageAtLen = null
+  agent._compressFailures = 0
+  agent._emptyRetries = 0
+  agent._taskPushbacks = 0 // 预算类同款（清单外补充——task 完成门每任务表态 ≤1 的回合级计数）
+  agent._advisorRound = 0
+  agent._advisorSession = null
+  agent._lastAdvisorOutput = null
+  agent._calledAdvisorThisRun = false
+  agent._mutatedThisRun = false
+  agent._inAutoTurn = false
+  agent._sessionSignal = null
+  agent._runStartHistoryLen = 0
+  agent._lastCompressInfo = null
+  agent._lastEngState = false // eng 进出重通知语义——每 runAgent 重通知（现重建行为逐字对齐）
+  agent._pendingReminders = []
+  return agent
+}
+
+/**
+ * §11.2 C / 11.2.1 engDesignTokens 水合（纯函数）：Map 永不复位清空——内存未结算项保留
+ * （sync advisor 通过后 abort / settle 槽写失败的内存-only token 不因回合边界丢——双载体
+ * 漂移根因消除）；槽权威条目合入（TTL 过滤——expired 从不授权）；过期计数回写（D2 触发③）；
+ * 单值镜像 engDesignToken 仅 Map 空时一次性迁移读（AC3 唯一镜像读点）。
+ * @returns {{ map: Map, droppedExpired: boolean }}
+ */
+export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
+  const map = existing instanceof Map ? existing : new Map()
+  let droppedExpired = false
+  for (const [id, tok] of [...map]) {
+    if (typeof tok === "string" && isExpiredDesignToken(tok)) { map.delete(id); droppedExpired = true }
+  }
+  if (slotTokens && typeof slotTokens === "object" && !Array.isArray(slotTokens)) {
+    for (const [id, tok] of Object.entries(slotTokens)) {
+      if (typeof tok !== "string" || map.has(id)) continue
+      if (isExpiredDesignToken(tok)) { droppedExpired = true; continue }
+      map.set(id, tok)
+    }
+  }
+  // 迁移读（AC3）：Map 空（TTL 清后）且镜像为有效格式 token → 一次性迁入
+  if (map.size === 0 && typeof legacyToken === "string" && !isExpiredDesignToken(legacyToken)) {
+    map.set(extractTokenUUID(legacyToken), legacyToken)
+  }
+  return { map, droppedExpired }
+}
+
+/**
+ * §11.2.1 槽字段 ↔ hydrate 映射（纯函数——单测锚点）。槽 = 权威（每轮 apply）：
+ * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
+ * planMode → agent._planMode（B 类每轮重指；opts.planMode 覆盖优先）；
+ * engDesignTokens → reconcile（C 类永不清空）。restore=true（factory 新建——首轮/destroy
+ * 重建同路径）→ 会话级槽字段回填 tasks/goal/pendingReminders（11.2.1/AC3）。
+ * @param cfg config.json 解析产物（agent.config 由此整建——AC7 每轮拾取外部变更）。
+ * @returns {{ engineering: boolean, droppedExpired: boolean }}
+ */
+export function applySlotSessionState(agent, { slot, engState, planModeOverride }, { cfg, restore = false }) {
+  const slotEng = slot?.engineering
+  const engEnabled = engState?.enabled
+  const engineering = slotEng != null ? slotEng === true
+    : (engEnabled != null ? engEnabled === true : cfg.engineering === true)
+  const slotGuard = slot?.advisor?.guard
+  const engGuard = engState?.advisorGuard
+  const guard = slotGuard != null ? slotGuard === true
+    : (engGuard != null ? engGuard === true : cfg.advisor?.guard === true)
+  agent.config = {
+    advisor: { ...(cfg.advisor ?? {}), guard },
+    agent: { ...(cfg.agentFields ?? {}), engineering },
+    proxy: cfg.proxy, shell: cfg.shell, providersList: cfg.providersList, websearch: cfg.websearch,
+  }
+  agent._planMode = planModeOverride !== undefined ? planModeOverride === true : (slot?.planMode === true)
+  // engDesignTokens：内存保留 + 槽权威合入（slot 优先；无槽绑定（子代理/直连）回退 opts.engState 载体）
+  const rt = reconcileEngDesignTokens(agent._engDesignTokens, slot?.engDesignTokens ?? engState?.engDesignTokens, slot?.engDesignToken ?? engState?.engDesignToken)
+  agent._engDesignTokens = rt.map
+  if (restore) {
+    agent._tasks = Array.isArray(slot?.tasks) ? [...slot.tasks] : []
+    agent._goal = slot?.goal ?? null
+    agent._pendingReminders = Array.isArray(slot?.pendingReminders) ? [...slot.pendingReminders] : []
+  }
+  return { engineering, droppedExpired: rt.droppedExpired }
+}
+
+/**
+ * hydrateRun —— 顶层 agent 每轮 reconcile（§11.1②）：复位（A）→ config/tools/MCP 重建
+ * （AC7）→ 槽水合（11.2.1）→ systemPrompt → history 重指 → 上下文注入。复用（opts.agent
+ * ——面板回合/续跑）与新建（factory + restore:true）同路径；子代理 depth>0 经 setupAgentRun
+ * （opts.agent 仅 depth-0 honored——AC5）。
+ * @returns {{ agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt }}
+ */
+export async function hydrateRun(agent, { provider, cwd, input, opts, depth, role, getAuto, restore = false }) {
+  const { mcpServers, skills, engState, engDesignReviewed, resume = false, autoTurn = false } = opts
+
+  // §11.2 A —— per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
+  resetRunState(agent)
 
   const agentTools = depth === 0
     ? [taskTool, recentChangesTool, readHistoryTool, settingsTool, // SETTINGS-TOOL.md（2026-09-05）：settings list/get 只读动作（isReadonlyAction）——depth-0 主 agent 面（与 memory 同分类）
@@ -148,7 +290,7 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   const toolByName = new Map(tools.map((t) => [t.name, t]))
 
   // Runtime config: advisor settings live in the shared config.json (CLI agent.advisor),
-  // engineering state is per-session (persisted by chat-panel alongside the history lines).
+  // engineering state is per-session (slot authority — see applySlotSessionState).
   let advisorCfg = { guard: false }
   let cfgEngineering = false
   let cfgVerifyGuard = false
@@ -186,17 +328,37 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { provider: "tavily", apiKey: "" }
   } catch { /* config unreadable — defaults */ }
-  // Session-level engineering (2026-08-29): `engState.enabled` comes from the panel's bound
-  // session slot (panel-chat.mjs). `null` = the session NEVER set the flag (legacy slot or
-  // fresh session) → fall back to the config.json CLI-compat mirror; an explicit true/false
-  // always wins over config (this is what keeps an external config flip from hijacking the
-  // session's mode — the reported cross-end pollution bug).
-  const engineering = engState?.enabled ?? cfgEngineering
-  // Advisor guard is ALSO session-level (2026-08-29): the slot value wins when the session
-  // has ever set the guard (panel toggle / eng tool); `null` = never set → config fallback
-  // (legacy slots keep their old behavior). Other advisor keys (provider/model/thinking…)
-  // stay config-scoped — only guard flipped to session authority.
-  advisorCfg = { ...advisorCfg, guard: engState?.advisorGuard ?? advisorCfg.guard ?? false }
+
+  // §11.2.1 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
+  // 落盘在 run 外——hydrate 是唯一 reconcile 点——digest/续跑可见刚落盘的 token）；子代理无
+  // 槽绑定 → 回退 opts.engState（父模式镜像）→ cfg。restore（agent 刚由 factory 新建——
+  // 首轮/destroy 重建）→ tasks/goal/pendingReminders 从槽回填（11.2.1 映射表）。
+  const bind = opts.engPersist
+  const sessionData = (depth === 0 && bind?.cwd && bind?.slot)
+    ? (() => { try { return loadSlot(bind.cwd, bind.slot) } catch { return null } })()
+    : null
+  const cfgBag = {
+    engineering: cfgEngineering,
+    advisor: advisorCfg,
+    agentFields: {
+      subagentModel: cfgSubagentModel, subagentModels: cfgSubagentModels, subagentTurns: cfgSubagentTurns,
+      maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold,
+      consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs,
+      waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits,
+    },
+    proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
+  }
+  const { engineering, droppedExpired } = applySlotSessionState(agent, {
+    slot: sessionData,
+    engState,
+    planModeOverride: opts.planMode,
+  }, { cfg: cfgBag, restore })
+  // D2 触发③：restore/水合发现槽内过期项 → 回写权威台账清 expired（幂等；map 可能已含内存项）
+  if (droppedExpired && bind?.cwd && bind?.slot) {
+    try {
+      setSlotEngDesignTokens(bind.cwd, bind.slot, agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0 ? Object.fromEntries(agent._engDesignTokens) : null)
+    } catch { /* 槽清理非致命——expired 从不授权 */ }
+  }
 
   // Tool schemas are built AFTER `engineering` is known: the subagent role enum is
   // mode-dependent (CLI setup.mjs parity) — normal mode must not advertise 'eng-coder'
@@ -216,90 +378,25 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
     return toOpenAISchema(t)
   })
 
-  // DESIGN-TOKEN-SETTLEMENT D5 (2026-09-08): slot 的 engDesignTokens 多槽表 = 权威结算台账。
-  // 水合时 TTL 过滤（expired 从不入 Map —— 不授权）；单值镜像 `engDesignToken` 已退役 —— 仅
-  // 作**一次性迁移读**：旧 slot 残留镜像值且 Map 空（legacy 镜像-only 会话）→ 迁入 Map
-  // （AC3 排除的唯一迁移读点——此后运行时零镜像读零镜像写）。发现槽内过期项即回写清理
-  // （D2 触发③ TTL 过期清 restore 时——经 opts.engPersist；幂等——过期只在 TTL 刚过后出现）。
-  const restoredEngTokens = (() => {
-    const src = engState?.engDesignTokens
-    const hasMap = src && typeof src === "object" && !Array.isArray(src)
-    let map = hasMap ? new Map() : null
-    let droppedExpired = false
-    if (map) {
-      for (const [id, tok] of Object.entries(src)) {
-        if (isExpiredDesignToken(tok)) { droppedExpired = true; continue }
-        map.set(id, tok)
-      }
-    }
-    // 迁移读（AC3 唯一镜像读点）：Map 空且镜像为有效（格式有效未过期）token → 一次性迁入 Map
-    if (!(map instanceof Map) || map.size === 0) {
-      const legacy = engState?.engDesignToken
-      if (typeof legacy === "string" && !isExpiredDesignToken(legacy)) {
-        if (!map) map = new Map()
-        map.set(extractTokenUUID(legacy), legacy)
-      }
-    }
-    // D2 触发③：restore 发现槽内过期项 → 回写权威台账清 expired（幂等；map 可能已含迁移项）
-    if (droppedExpired && map && opts.engPersist?.cwd && opts.engPersist?.slot) {
-      try {
-        setSlotEngDesignTokens(opts.engPersist.cwd, opts.engPersist.slot, map.size > 0 ? Object.fromEntries(map) : null)
-      } catch { /* 槽清理非致命——expired 从不授权 */ }
-    }
-    return map
-  })()
-
-  const agent = {
-    _tasks: [], _touchedFiles: [], _planMode: planMode,
-    _goal: null, _provider: provider,
-    _verifiedThisRun: false, _pendingTimers: [],
-    // Compaction bookkeeping (CLI parity): measured baseline + failure counter + empty-response budget.
-    // All per-run — the agent object is rebuilt on every runAgent call, so they reset per user message.
-    _lastPromptTokens: null, _usageAtLen: null,
-    _compressFailures: 0, _emptyRetries: 0,
-    // Advisor / engineering bookkeeping (CLI parity). _advisorRound always starts at 0 — the
-    // convergence budget is per-run (runAgent resets it in the CLI), never persisted.
-    _role: role,
-    _advisorRound: 0,
-    _advisorSession: null,
-    // §18 D-E2 ③: the eng-coder's own spawn task — verbatim source of the audit
-    // task book its internal explore-audit spawns get (subagent.mjs augmentation).
-    _engTaskInput: opts.engTaskInput ?? null,
-    _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
-    // Multi-design slots restored from the slot's {designId: token} object (2026-09-01 audit #1);
-    // null/absent → no Map (fresh state — never resurrect slots the writer did not have).
-    // Per-slot TTL filter (above) applies to every entry. D5: 单值镜像字段 _engDesignToken
-    // 已整体退役——agent 不再持该属性（门禁/门禁全问多槽 Map + 权威槽回读）。
-    _engDesignTokens: restoredEngTokens,
-    _engDesignReviewed: engDesignReviewed === true, // eng-coder children arrive pre-authorized
-    _calledAdvisorThisRun: false, _mutatedThisRun: false,
-    _lastEngState: false, // seeded false: a resumed engineering session re-notifies on turn 1 (CLI parity)
-    _pendingReminders: [],
-    config: {
-      advisor: advisorCfg,
-      agent: { engineering, subagentModel: cfgSubagentModel, subagentModels: cfgSubagentModels, subagentTurns: cfgSubagentTurns, maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold, consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs, waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits },
-      proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders,
-      websearch: cfgWebsearch,
-    },
-  }
+  // B 类 run 绑定（每轮重指——复用 agent 不残留上轮引用）+ opts 派生字段
+  agent._role = role
+  agent._provider = provider
+  agent._engTaskInput = opts.engTaskInput ?? null
+  agent._engDesignReviewed = engDesignReviewed === true // eng-coder children arrive pre-authorized
+  if (opts.engPersist) agent._engPersist = opts.engPersist
+  else if (depth === 0 && agent._engPersist) agent._engPersist = null // 直连/非面板顶层 run —— 不残留旧槽绑定
+  const platform = { win32: "Windows", darwin: "macOS", linux: "Linux" }[os.platform()] ?? os.platform()
 
   // Live state channel for the parent (eng-coder mutation merge) — the caller gets a
   // reference to the same array, so it stays current as the child touches files.
+  // §19.5.6 D-SF1 (AGENT-LOOP.md): the agent OBJECT reference (not the array) — the
+  // pool entry's status summary re-reads childAgent._touchedFiles live; a bare array
+  // reference goes stale when a resume re-runs setup (new per-run agent). Each
+  // runAgent re-assigns it, so entry.childAgent always points at the CURRENT run.
   if (opts.stateSink) {
     opts.stateSink.touchedFiles = agent._touchedFiles
-    // §19.5.6 D-SF1 (AGENT-LOOP.md): the agent OBJECT reference (not the array) — the
-    // pool entry's status summary re-reads childAgent._touchedFiles live; a bare array
-    // reference goes stale when a resume re-runs setup (new per-run agent). Each
-    // runAgent re-assigns it, so entry.childAgent always points at the CURRENT run.
     opts.stateSink.agent = agent
   }
-  // Session persistence channel for the eng tool (2026-08-29): `engPersist: { cwd, slot }`
-  // rides opts → agent; eng(enter/exit) persists the flipped flag into the session slot
-  // (slot authority) in addition to the config.json mirror. Top level only — subagents
-  // must never write the parent's slot (they get no engPersist).
-  if (opts.engPersist) agent._engPersist = opts.engPersist
-  const platform = { win32: "Windows", darwin: "macOS", linux: "Linux" }[os.platform()] ?? os.platform()
-
   // System prompt — engineering mode replaces the standard discipline block with
   // engineering.md (or engineering-sub.md for eng-coder) + project METHODOLOGY.md (CLI parity).
   const engPromptActive = engineering && (depth === 0 || role === "eng-coder")
@@ -393,4 +490,10 @@ export async function setupAgentRun({ provider, cwd, input, opts, depth, role, g
   appendImagePointer(userMsg, opts.images, provider.model, { depth })
 
   return { agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt }
+}
+
+/** setupAgentRun —— 既有装配入口（子代理/首轮/直连）：factory 新建 → hydrateRun（restore:true
+ *  ——首轮与 destroy 后重建同路径，槽回填）。顶层复用走 agent.mjs 的 hydrateRun(existing, …)。 */
+export function setupAgentRun(ctx) {
+  return hydrateRun(buildTopLevelAgent(), { ...ctx, restore: true })
 }

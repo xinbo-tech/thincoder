@@ -45,6 +45,23 @@ function newTurnController(panel) {
   return c
 }
 
+/** §11 绑定判定（AGENT-LOOP.md §11——纯函数，单测锚点）：agent 仅在其 _engPersist 绑定的
+ *  cwd×slot 与当前面板会话一致时可复用（同 cwd 同 slot 第二轮 → 复用不销毁——AC1；换 slot/
+ *  换项目 → 不匹配 → 销毁重建——AC4/F4——不跨会话串态）。 */
+export function agentSlotMatches(agent, cwd, slot) {
+  const p = agent?._engPersist
+  return !!(p && p.cwd === cwd && p.slot === slot)
+}
+
+/** §11 ensurePanelAgent（runPanelChatImpl ensureSlot 后调用）：绑定匹配 → 复用；否则销毁
+ *  （panel._agent = null——内存态随对象回收，槽文件仍权威）。销毁后由本回合 runAgent 的
+ *  factory 路径新建（首轮/destroy 重建同路径——hydrate 含 §11.2.1 槽字段回填）。返回当前
+ *  agent（复用对象或 null——供调用方/runOpts 引用）。 */
+export function ensurePanelAgent(panel, turnSlot) {
+  if (panel._agent && !agentSlotMatches(panel._agent, _cwd(), turnSlot)) panel._agent = null
+  return panel._agent
+}
+
 /**
  * LOGGING（docs/design/LOGGING.md——CLI agent-turn.mjs parity）包装：回合骨架事件
  * （turn:start/turn:end——kind user/auto；result ok/stopped/error）。turn:start 在
@@ -83,16 +100,20 @@ async function runPanelChatImpl(panel, opts = {}) {
   // 裸读会把 null 冻进 distillSlot、使 onDistilled 的槽守卫恒拒绝（AC5 回归）。
   panel._turnActive = true
   const turnSlot = susp?.turnSlot ?? ensureSlot(panel)
+  // §11（AGENT-LOOP.md §11——2026-09-08）：会话级顶层 agent 单例——ensureSlot 后绑定判定：
+  // 存在且 _engPersist cwd×slot 匹配 → 复用（同 panel 连续多回合同一对象——AC1）；否则销毁，
+  // 本回合 runAgent 经 opts.agent 缺省路径 factory 新建（首轮/换槽/destroy 重建同路径）。
+  ensurePanelAgent(panel, turnSlot)
   const distillSlot = turnSlot
   const suspLines = susp?.lines ?? null // suspension turns keep the LIVE lines (pool/pending ride them)
   let isFirstMessage // assigned inside the try (needs the loaded lines); read after finally
-  let engState = null // assigned inside the try; the suspension entry below reads it
   let fullHistory = [] // hoisted: the finally-block save must see them even on early-return paths
   let history = []
   try {
 
   // Async distillation mount point (SEND-STALL-DISTILL): the distill promise survives across
-  // turns on the panel (runAgent rebuilds its agent object every call). `pending` is the
+  // turns on the panel (the runAgent-side pending carrier is panel-owned — §11 后 agent 单例
+  // 复用，蒸馏与 agent 生命周期无关，跨回合照常挂载). `pending` is the
   // previous turn's in-flight distill — the next runAgent awaits it before pushing its input.
   panel._distillState ??= { pending: null }
   // One AbortController per panel lifetime — NOT recreated per turn: a rapid second message
@@ -176,23 +197,9 @@ async function runPanelChatImpl(panel, opts = {}) {
   const isFirstMessageNow = !suspLines && fullHistory.filter((m) => (m.type ?? m.role) === "user").length === 0
   isFirstMessage = isFirstMessageNow
 
-  // Restore the session-scoped design token AND the session-level mode flags: engineering
-  // and advisor.guard are SLOT-authoritative (2026-08-29 refactor) — config.json is only a
-  // CLI-compat mirror and the setup fallback. `null` = the session never set the flag,
-  // setup falls back to config (legacy slots).
-  // DESIGN-TOKEN-SETTLEMENT D3 (2026-09-08): 会话内回合（digest/挂起用户回合）也从槽新读
-  // engState（不再复用入场快照 susp.engState）——async settle（D1）把 token 同步落盘后，
-  // digest 从槽读到刚落盘的 token → spawn 不再 designId not found。会话绑定 turnSlot 固定、
-  // 切换被禁，重读安全。engDesignToken 字段读取仅保留作 setup 一次性迁移读（legacy 会话——
-  // 镜像字段已退役 D5，不再写）。
-  const sessionData = panel._activeData(turnSlot) ?? {}
-  engState = {
-    enabled: sessionData.engineering ?? null,
-    advisorGuard: sessionData.advisor?.guard ?? null,
-    engDesignToken: sessionData.engDesignToken ?? null,
-    engDesignTokens: sessionData.engDesignTokens ?? null,
-  }
-
+  // §11（AGENT-LOOP.md §11.1③/F2——2026-09-08）：runOpts 不再搬运 engState/planMode 状态载荷
+  // ——hydrate（setup.mjs applySlotSessionState）每轮直接从权威槽 reconcile（engineering/
+  // advisor.guard/planMode/engDesignTokens——settle 落盘在 run 外，槽读保留）。
   // Persist model selection
   const prefs = { model: modelOverride || p.model, provider: providerName, reasoning: reasoning || "" }
   if (!autoTurn) saveModelPrefs(panel._context.workspaceState, prefs)
@@ -236,7 +243,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   const tLog = opts._logOutcome ?? {}
   tLog.started = true
   logEvent("turn:start", { kind: autoTurn ? "auto" : "user" })
-  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, engState, autoTurn, susp, turnSlot, tLog, askInPanel })
+  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, susp, turnSlot, tLog, askInPanel })
   } finally {
     traceStop("finally: turn complete — UI released", panel._stopClickTs)
     panel._stopClickTs = null
@@ -321,31 +328,33 @@ async function runPanelChatImpl(panel, opts = {}) {
  * 两层提取，verbatim + 签名化，语义零变）：runOpts 构造（guard 继承/会话句柄/持久化
  * 载荷）+ ContinueError/Ctrl+I 续跑循环 + 错误/中止持久化分支。回合骨架事件
  * （turn:start）留在调用点（impl 骨干）；本函数只跑 runAgent 续跑循环。
- * deps：阶段产物（text/cwd/p/callbacks/lines/engState/autoTurn/susp/turnSlot）+ tLog
+ * deps：阶段产物（text/cwd/p/callbacks/lines/autoTurn/susp/turnSlot）+ tLog
  * 载具（LOGGING 终止原因回传）。
+ * §11（2026-09-08）：runOpts 砍 engState/planMode 状态载荷（hydrate 从槽 reconcile）；
+ * runOpts 对象跨续跑迭代共用（resume 字段可变）——runAgent 把建好的顶层 agent 写回
+ * ro.agent（agent.mjs write-back）——Ctrl+I/ContinueError 续跑与下回合复用同一单例。
  */
 async function runTurnLoop(panel, deps) {
-  const { text, cwd, p, callbacks, images, history, fullHistory, engState, autoTurn, susp, turnSlot, tLog, askInPanel } = deps
+  const { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, susp, turnSlot, tLog, askInPanel } = deps
   let carryTaken = false
-  const runOpts = (resume) => {
-    const inherited = (!resume && !autoTurn && !carryTaken) ? (panel._guardCarry ?? null) : undefined
-    if (inherited) { carryTaken = true; panel._guardCarry = null }
-    return {
-      mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory, engState,
-      injections: [collectEditorInjection(cwd)].filter(Boolean), resume,
-      planMode: panel._activeData(turnSlot)?.planMode ?? false,
-      distillState: panel._distillState, distillSignal: panel._distillController?.signal,
-      engPersist: { cwd, slot: turnSlot },
-      // §17 D-S6/D-S9: digest turns skip the input push (setupAgentRun autoTurn),
-      // session children share the session abort signal, guard marks flow per tier.
-      // §17.5: the panel is the suspension driver — turn-end collection must NOT
-      // drain settled entries (they stay pooled → the session digests them).
-      autoTurn,
-      suspDriven: true,
-      sessionSignal: susp?.abort?.signal ?? null,
-      inheritedGuard: inherited,
-      guardCarry: autoTurn ? (panel._guardCarry ??= {}) : undefined,
-    }
+  // §11: guard-carry 只在本回合首个（resume=false）runAgent 应用一次（resume 迭代不重取）
+  const inherited = (!autoTurn && !carryTaken) ? (panel._guardCarry ?? null) : undefined
+  if (inherited) { carryTaken = true; panel._guardCarry = null }
+  const ro = {
+    agent: panel._agent, // §11 单例：存在且绑定匹配（ensurePanelAgent）→ runAgent hydrate 复用
+    mcpServers: getMcpServers(), images, skills: loadSkills(cwd), history, fullHistory,
+    injections: [collectEditorInjection(cwd)].filter(Boolean), resume: false,
+    distillState: panel._distillState, distillSignal: panel._distillController?.signal,
+    engPersist: { cwd, slot: turnSlot },
+    // §17 D-S6/D-S9: digest turns skip the input push (setupAgentRun autoTurn),
+    // session children share the session abort signal, guard marks flow per tier.
+    // §17.5: the panel is the suspension driver — turn-end collection must NOT
+    // drain settled entries (they stay pooled → the session digests them).
+    autoTurn,
+    suspDriven: true,
+    sessionSignal: susp?.abort?.signal ?? null,
+    inheritedGuard: inherited,
+    guardCarry: autoTurn ? (panel._guardCarry ??= {}) : undefined,
   }
   // Turn-cap continue loop (CLI agent-turn.mjs parity): each ContinueError offers
   // "Continue" — unlimited, resume:true keeps history, fresh budget per run. The loop
@@ -353,9 +362,10 @@ async function runTurnLoop(panel, deps) {
   // (The entry try at the top of this function owns the guard-flag finally; exceptions
   // from the loop propagate through it and up to the message handler.)
   for (let resume = false; ; resume = true) {
+    ro.resume = resume
     try {
       traceStop("runAgent: turn starting (no pending click)", panel._stopClickTs)
-      await runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))
+      await runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, ro)
       traceStop("runAgent: turn ended normally", panel._stopClickTs)
       break
     } catch (e) {
@@ -423,6 +433,9 @@ async function runTurnLoop(panel, deps) {
       break
     }
   }
+  // §11 write-back：runAgent 已把（新建的）顶层单例写回 ro.agent——同步到 panel._agent，
+  // 下回合经 ensurePanelAgent 复用同一对象（AC1——_engDesignTokens/_tasks 等回合间携带）。
+  if (ro.agent) panel._agent = ro.agent
 }
 
 

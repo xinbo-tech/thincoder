@@ -119,6 +119,12 @@ export function loadModelPrefs(panel) {
   }
 
 export function loadSession(panel) {
+    // §11 销毁点（AGENT-LOOP.md §11——2026-09-08）：会话切换/新建/删除/项目切换/面板打开的
+    // 会话级 agent 销毁置 null（AC4——内存态不跨 session 复用；槽文件仍权威——下回合经
+    // ensurePanelAgent → runAgent factory 重建 + §11.2.1 槽字段回填）。六销毁点在此汇合
+    // （newSession/deleteSession/switchSession/onProjectChanged/status 全走 loadSession）；
+    // 全部上游带 _turnActive/_susp 守卫——此处执行时无活回合/后台池（销毁安全）。
+    panel._agent = null
     // Session switch (webview newSession/loadSession/deleteSession, project switch, panel open):
     // abort any in-flight async distillation from the previous turn — its history arrays belong
     // to the OLD session (SEND-STALL-DISTILL review #1; onDistilled's slot check is defense in

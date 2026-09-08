@@ -53,6 +53,10 @@ export class ChatPanel {
     // then used for ALL reads and writes — we never re-read the shared manifest's active
     // pointer mid-conversation (it can be changed by a concurrently running CLI).
     this._slot = null
+    // AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：顶层 agent 会话级单例——
+    // 首轮 runAgent 经 ensurePanelAgent 建、后续回合复用同一对象（AC1/F1）；会话切换/换项目/
+    // dispose 销毁置 null（AC4——六销毁点）——内存态随对象回收，槽文件仍权威。
+    this._agent = null
 
     // Follow-active-file project switching (multi-root): when the setting is on and the
     // active editor's folder differs from the current project, switch automatically.
@@ -65,7 +69,11 @@ export class ChatPanel {
         const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
         if (!folder || folder.uri.fsPath === _cwd() || this._turnActive) return
         const r = setProjectFolder(folder.uri.fsPath)
-        if (r.ok) this._onProjectChanged().catch((e) => console.error("[chat-panel] project switch failed:", e.message))
+        if (r.ok) {
+          // §11 销毁点（AGENT-LOOP §11——切换边界守卫在上方 _turnActive 检查——销毁安全）
+          this._agent = null
+          this._onProjectChanged().catch((e) => console.error("[chat-panel] project switch failed:", e.message))
+        }
       } catch (e) {
         console.error("[chat-panel] follow-active-file switch failed:", e.message)
       }
@@ -78,6 +86,8 @@ export class ChatPanel {
       const cwd = _cwd()
       if (!cwd || folders.some((f) => f.uri.fsPath === cwd)) return
       clearProjectOverride()
+      // §11 销毁点（AGENT-LOOP §11——工作区兜底即换 cwd——agent 不跨项目复用）
+      this._agent = null
       this._onProjectChanged().catch((e) => console.error("[chat-panel] project fallback failed:", e.message))
     }))
   }
@@ -100,6 +110,8 @@ export class ChatPanel {
 
     webviewView.onDidDispose(() => {
       this._panel = null
+      // §11 销毁点：view 销毁 → 会话级 agent 随之销毁（面板重开经 ensurePanelAgent 重建）
+      this._agent = null
       this._abortController?.abort()
       this._distillController?.abort()  // kill any in-flight async distillation — it belongs to the dying view
       closeAllMcp()
@@ -161,6 +173,8 @@ export class ChatPanel {
 
   dispose() {
     closeAllMcp()
+    // §11 销毁点：面板 dispose → 会话级 agent 随之销毁（扩展重载/关面板后重建走 ensurePanelAgent）
+    this._agent = null
     this._abortController?.abort()
     this._distillController?.abort()  // in-flight async distillation belongs to the dying panel (SEND-STALL-DISTILL)
     // §17: a live suspension session dies with the panel — abort the session controller
