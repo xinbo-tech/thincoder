@@ -393,7 +393,7 @@ m = loadManifest(cwd)
 - N6 注入句解耦：`process restarted at…`（真进程重启）与 resumed（含切槽恢复）语义分离——切槽不误报进程重启
 
 **待设计澄清**（设计时定）：
-- VSC：模块级闸迁 agent 对象字段（agent 换槽销毁重建天然对齐）——restore:true 工厂路径武装
+- VSC：resumed 信号改 agent 级 `_resumedPending`（agent 换槽销毁重建天然对齐——restore:true 工厂路径武装）——**模块级闸 restartDetectionDone 保留不迁（评审 #7——process restarted 句的进程级信号）**
 - CLI：applySession 收敛落点武装恢复事件 + 清 `_sessionStart` 推断
 - 测试：双端新建 setup-reminders.test.mjs（现零测试）
 
@@ -439,9 +439,9 @@ m = loadManifest(cwd)
 
 **测试**（双端新建——现零测试——explore 确认）：
 - `test/setup-reminders.test.mjs`（双端各建）：envStateLine 模板（slot 字段/null 降级/resumed yes-no）
-  + CLI `_envResumed` 消费即清 + VSC detect 改 agent 载体（新 agent+非空历史→首 run true 次 run false
-  /换槽新建→再 true/depth>0·resume·autoTurn→false）+ CLI applySession 恢复事件（有历史→下回合 yes
-  一次→再切槽→再 yes——无恢复事件恒 no——F3 防伪触发回归）
+  + CLI `_envResumed` 消费即清 + VSC `_resumedPending` agent 级载体（评审 #7 点名——新 agent+
+  非空历史→首 run true 次 run false/换槽新建→再 true/depth>0·resume·autoTurn→false）
+  + CLI applySession 恢复事件（有历史→下回合 yes 一次→再切槽→再 yes——无恢复事件恒 no——F3 防伪触发回归）
 - VSC test/agent-lifecycle-singleton.test.mjs 补"换槽销毁重建 → resumed 事件随绑定新生"用例
 
 **受影响文件**（双端）：
@@ -451,7 +451,7 @@ m = loadManifest(cwd)
 | src/agent/setup.mjs | CLI | prepareRun 恢复判定改显式事件（去 _sessionStart 推断）+ 注入句解耦 |
 | src/session.mjs | CLI | applySession 武装恢复事件（data.history 非空） |
 | bin/thincoder.mjs | CLI | 启动 resume 路径设 `_processRestartPending`（评审 🔴 补——句的进程级信号） |
-| src/agent/setup-reminders.mjs | VSC | 模块级闸迁 agent 字段 + envStateLine 加 slot + push 签名 |
+| src/agent/setup-reminders.mjs | VSC | envStateLine 加 slot + push 签名 + resumed 改 agent 级 `_resumedPending`（**模块级闸保留不迁——评审 #7——process restarted 句不变**） |
 | src/agent/setup.mjs | VSC | hydrateRun 传 slot + 注入句解耦（resumedSession 与 process restarted 分门） |
 | test/setup-reminders.test.mjs | 双端新 | 上述用例 |
 | test/agent-lifecycle-singleton.test.mjs | VSC | 换槽重建 resumed 用例 |
