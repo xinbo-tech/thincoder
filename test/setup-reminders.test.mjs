@@ -165,7 +165,7 @@ test("applySession: 无恢复事件恒 no——空历史槽切换与 sessionStar
   // 向量 2：空历史槽切换（/new 或空会话 applySession——history 为空）→ 不武装
   const a2 = mockAgent()
   applySession(a2, sessionData([]))
-  assert.equal(a2._envResumed, undefined, "空历史不武装（F3）")
+  assert.equal(a2._envResumed, false, "空历史显式清 false（恢复事件按当前 data 重定——评审 round2 🟡）")
   pushEnvStateReminder(a2)
   assert.match(envOf(a2), /resumed: no\./)
   // 向量 3：sessionStart 单值（旧 _sessionStart != null 推断的唯一依据）——空历史 +
@@ -174,9 +174,18 @@ test("applySession: 无恢复事件恒 no——空历史槽切换与 sessionStar
   const a3 = mockAgent()
   applySession(a3, sessionData([], { sessionStart: "2026-01-01T00:00:00.000Z" }))
   assert.equal(a3._sessionStart, "2026-01-01T00:00:00.000Z")
-  assert.equal(a3._envResumed, undefined)
+  assert.equal(a3._envResumed, false)
   pushEnvStateReminder(a3)
   assert.match(envOf(a3), /resumed: no\./)
+  // 向量 4（评审 round2 🟡 回归锚）：已武装 agent（启动恢复过有历史槽）→ 首个回合前切到
+  // 空历史槽 → 残留武装必须被清——新会话首回合恒 no（无恢复事件不误报）
+  const a4 = mockAgent()
+  applySession(a4, sessionData([{ role: "user", content: "restored" }]))
+  assert.equal(a4._envResumed, true, "恢复事件武装")
+  applySession(a4, sessionData([], { sessionStart: "2026-01-01T00:00:00.000Z" }))
+  assert.equal(a4._envResumed, false, "空历史 applySession 清除残留武装（F3 家族——切槽到空槽不误报）")
+  pushEnvStateReminder(a4)
+  assert.match(envOf(a4), /resumed: no\./)
 })
 
 // ─── prepareRun 注入句消费（N6/AC4——双信号独立）───

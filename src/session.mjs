@@ -268,12 +268,13 @@ export function applySession(agent, data) {
   // （contextHistory: [] 是"无机读线"而非空机器线——空机器线会静默丢全部上下文）。
   agent.config ??= {} // ACP test mocks may omit config; be defensive like the ??= below
   const full = Array.isArray(data.history) ? data.history : []
-  // SESSION.md §11.2（2026-09-08——F2/F3）：恢复事件武装——载入历史非空 = 会话恢复 →
-  // 下个 depth-0 回合 env-state resumed:yes 一次（pushEnvStateReminder 读即清——每次恢复
-  // 一次）。/new 与空历史槽切换不武装——无恢复事件恒 no（F3 伪触发消除——不再靠
-  // _sessionStart != null 推断）。_processRestartPending 不在此清——由启动路径
-  // （bin/thincoder.mjs）设、prepareRun 发句清（N6——双信号独立：切槽不报进程重启）。
-  if (full.length > 0) agent._envResumed = true
+  // SESSION.md §11.2（2026-09-08——F2/F3）：恢复事件按当前 data 重定——载入历史非空 = 会话
+  // 恢复 → 下个 depth-0 回合 env-state resumed:yes 一次（pushEnvStateReminder 读即清——每次恢复
+  // 一次）。/new 与空历史槽切换不武装（显式清 false）——无恢复事件恒 no（F3 伪触发消除——不再靠
+  // _sessionStart != null 推断；已武装 agent 切到空历史槽也不残留上次恢复事件——评审 round2 🟡）。
+  // _processRestartPending 不在此清——由启动路径（bin/thincoder.mjs）设、prepareRun 发句清
+  // （N6——双信号独立：切槽不报进程重启）。
+  agent._envResumed = full.length > 0
   const ch = data.contextHistory
   const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
   agent._fullHistory = [...full]
