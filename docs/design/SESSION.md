@@ -348,7 +348,7 @@ m = loadManifest(cwd)
 **机制**：每回合注入**一条统一的"环境状态" transient reminder**（与 AUTO/时间 reminder 同通道、同可变形态——避 prefix 缓存）——一次注入覆盖家族四项；变更在下回合自然感知（不需要"变更时专门注入"）：
 
 ```
-[System reminder: env: {cli|vscode}, mode: {eng|normal}, model: {model-id}, resumed: {yes|no}.]
+[System reminder: env: {cli|vscode}, mode: {eng|normal}, model: {model-id}, slot: {N|null}, resumed: {yes|no}.]
 ```
 
 **字段映射**：
@@ -356,7 +356,7 @@ m = loadManifest(cwd)
 - `env` → 运行身份（R8）——CLI 仓 `END="cli"` / VS Code 仓 `END="vscode"` 静态常量（§10 D-1 先例），不做 cmdline 判别；
 - `mode` → 工程模式（R9）——`agent.config?.agent?.engineering` 现状字段；
 - `model` → 模型（R11）——`agent.activeModel ?? provider.model ?? "unknown"`；
-- `resumed` → 重启感知（R5）——会话是 slot 恢复 = `resumed: yes`；仅恢复后的**首个回合**注入一次（CLI 既有 `process restarted at...` 注入同款——VS Code 同批补齐），后续回合 no。
+- `resumed` → 会话恢复感知（R5——§11.2 按会话跟踪）——有历史的会话被恢复（进程重启 resume / 切槽到有历史槽）→ 恢复后首个回合 `resumed: yes` 一次，后续回合 no；无恢复事件（全新会话 / 空历史恢复）恒 no。
 
 **规则**：
 
