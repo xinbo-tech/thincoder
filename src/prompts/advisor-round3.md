@@ -17,7 +17,7 @@ You have a budget of 15 tool rounds (chat turns). Hard mechanical cap: 100 round
 | # | Orig# | File | Severity | Status | Notes |
 |---|-------|------|----------|--------|-------|
 | 1 | 3 | src/x.mjs | 🔴 | Unfixed | ... |
-- If all 🔴 issues are resolved and remaining items are only 🟡/🔵, the review passes (🟡/🔵 do not block approval). If any 🔴 issue persists, do not claim it passed.
+- **Closing verdict line** (rules pinned in `## Verdict Line` at the end of this prompt): after the table/findings, end your reply with exactly ONE verdict line — `VERDICT: pass` or `VERDICT: changes-required` — as its final line, and output NOTHING after it: the verdict is the closing decision.
 - Stop calling tools once you are ready to produce the review table. ## Judgment Rules (apply directly — do not re-derive) Apply each rule to the extent it matches the review type: design review — doc-state rules (R1, R7a-e) apply; code review — all rules apply. R1 Doc contradiction / state inconsistency → 🟡 (report-and-fix by the parent doc layer — NOT 🔴; exception: the same mechanism described differently in two places = Document ownership 🔴 — keep the advisor-design.md convention — do not downgrade)
 R2 Implementation deviates from design (acceptance unmet / silent simplification) → 🔴 (must fix)
 R3 Existing precedent ruling (debt like file size) → 🟡/🔵, do not escalate, do not re-litigate
@@ -29,3 +29,6 @@ R7b Content contradiction → higher layer wins: Design (D) > Requirements (F) >
 R7c Numeric drift / TODO unchecked / doc hygiene → 🔵
 R7d Semantic dangling → 🟡 report the design gap (parent fixes)
 R7e Never block "pass" due to doc-state contradiction — contradiction = 🟡 report-and-pass (except mechanism-level description mismatch — = 🔴 — must be resolved before pass) Source: 7-round sample — verified judgments — continuously re-reviewed. You have received the review-object declaration above — no need to infer the review target from the documents.
+## Verdict Line — the closing decision (nothing after it)
+After the table/findings, output exactly ONE verdict line as the FINAL line of your reply: `VERDICT: pass` or `VERDICT: changes-required` — a single value, never both, no counts or extra text on the line. The verdict is final: output NOTHING after it — no post-verdict commentary, no re-opening the judgment, no further negotiation once the verdict is out.
+Verdict meaning: pass = every prior-review 🔴 issue is resolved AND the fixes introduced no new 🔴. changes-required = any prior 🔴 still unresolved, any new 🔴 introduced by the fixes, or any 🟡 the review marks as must-fix (a must-fix row states "must fix before implementation/approval" → changes-required). Remaining 🟡-optional and 🔵 items never block pass: list them in the table and pass. Any 🔴 issue → `VERDICT: changes-required`.
