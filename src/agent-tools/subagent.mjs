@@ -345,7 +345,9 @@ export const subagentTool = {
       ctx.callbacks?.onToken?.(`${relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
       emitNestedChildEvent(ctx, relayPrefix, "stopped")
     } finally {
-      disarm() // R7：三路径（成功/折叠/整回合停/错误）统一注销——防跨回合残留
+      // R7 防跨回合残留：成功/折叠②/整回合停①/错误③ 四出口统一注销（设计"三路径"
+      // 口径 = 成功/折叠/整回合停——错误③ 同样 rethrow 经 finally——同归本注销）
+      disarm()
     }
     // §27 R23 D-R23c1（评审 #1 🅰——生成侧补发射）：sync spawn 同步收尾——若本 spawn
     // 处于嵌套上下文（ctx.callbacks 已是嵌套 wrapper——eng-coder 内 explore 审计）→
