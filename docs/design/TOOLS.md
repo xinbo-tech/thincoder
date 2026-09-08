@@ -37,7 +37,7 @@ shim）；`read_image` **不进 builtinTools**——由装配按 `spec.multimoda
 
 | 分类 | 工具（实现文件） |
 |------|------|
-| 文件 | `read`/`write`/`edit`/`hashline_edit`（file.mjs + file-edit.mjs）、`insert_after`/`apply_patch`/`ls`/`delete`（more-file.mjs） |
+| 文件 | `read`/`write`/`edit`/`hashline_edit`（hashline-edit.mjs——2026-09-08 自 file-edit.mjs 拆分 + file-edit.mjs re-export）、`insert_after`/`apply_patch`/`ls`/`delete`（more-file.mjs） |
 | 编辑保障 | `lint`（linter.mjs——零依赖级联） |
 | 列表 | `checklist`（checklist.mjs） |
 | 搜索 | `glob`/`grep`（search.mjs）、`code_search`/`doc_search`（code.mjs）、`repo_outline`（repomap.mjs）、`tree`（tree.mjs） |

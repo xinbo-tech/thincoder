@@ -1,6 +1,6 @@
 # hashline_edit 工具权威语义（HASHLINE-EDIT）
 
-> 板块：编辑工具。权威源：VSC `src/tools/file-edit.mjs`（hashlineEditTool :398-500——滑窗 hash 匹配/BOM 处理/编辑器路径）。本文档是 **hashline_edit 语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
+> 板块：编辑工具。权威源：VSC `src/tools/hashline-edit.mjs`（hashlineEditTool——2026-09-08 自 file-edit.mjs 迁出，500 硬帽拆分；滑窗 hash 匹配/BOM 处理/编辑器路径；file-edit.mjs re-export）。本文档是 **hashline_edit 语义的权威源**——VSC `TOOLS.md` §9 只留地图（定位句 + 指针），不得复制本档正文。
 > 双端：VSC（本文档）与 CLI（thincoder——同机制各自实现；**VSC 差异**：含 BOM 处理 + 编辑器路径分支）。
 > 状态：**已实现**。定位判定（保留独立工具——2026-09-08 用户裁定"先保留"）：见 §4。
 
@@ -14,7 +14,7 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 ## 2. 参数与 schema
 
-hashlineEditTool（`file-edit.mjs`）：
+hashlineEditTool（`hashline-edit.mjs`——2026-09-08 拆分，file-edit re-export）：
 
 - `path`（必须）。
 - `old_hashes`（必须）——待替换行 SHA256 hash 数组（12-char hex）。单行 `[hash]`；连续块按序。**只来自 read(hashes=true)**。
