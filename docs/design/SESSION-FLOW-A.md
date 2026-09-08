@@ -19,13 +19,19 @@
 ### A1（独立最小）
 - 导出 routeUserTurn（panel-messages.mjs:46-69 现模块私有——加 export）
 - sendMessage（chat-panel.mjs:199-206）：回显 postMessage → `routeUserTurn(panel, {text, modelOverride:undefined, …})`——running→_suspQueue（回合尾 FIFO 消费零丢失）+ messageQueued 回执——susp 两态走 _chat 上游分流不变——_panel 空 warning 保留
-- 测试：chat-panel.test.mjs 桩面板加例——_turnState:"running" 下 sendMessage → _chatCalls 空 + 队列含文本 + messageQueued 一次 + 回显 userMessage 一次；susp-active/susp 释放窗口两例保回归
+- 测试：chat-panel.test.mjs 桩面板加例——_turnState:"running" 下 sendMessage → _chatCalls 空 + 队列含文本 +
+  messageQueued 一次 + 回显 userMessage 一次；susp-active/susp 释放窗口两例保回归——评审 #5：回合尾
+  FIFO 排空断言 = 既有 susp 释放窗口测试覆盖（routeUserTurn 共享排空路径）——实现期确认，若缺补一条
 
 ### A2（方案 Y——用户裁）
 - panel-chat.mjs:311-312 标题调用**上移**进 finally 忙态归位（:292-298）之前——stream 完成即 `if (isFirstMessage) await panel._generateTitle(turnSlot)`——再 _publishTurnState(idle|susp) + loading:false
 - 效果：标题窗口 = running（webview Stop 显——路由守卫 running→排队——修并发）——会话内 digest 首回合标题不再阻塞消化入口（标题在归位 susp 前完成——释放窗口不延）
-- 注意：归位前 10s 上限内 webview 停 running（派生 Stop 显——正是想要效果）；_publishTurnState 只在归位行调（无广播时序冲突）
+- 注意：归位前 10s 上限内 webview 停 running（派生 Stop 显——正是想要效果）；_publishTurnState 只在归位行调
+  （无广播时序冲突）
+- 错误路径（评审 #2）：标题 await 包 try/finally 或确认 _generateTitle 内部吞错——_publishTurnState +
+  loading:false 归位恒执行（防标题抛错卡永久 busy）
 - 测试：chat-panel.test.mjs 桩测——首回合 isFirstMessage 无池时标题 await 期间 userMessage 入队（不并发直发）
+  + 错误用例：标题失败仍正常归位（_publishTurnState + loading:false 发出）
 
 ### A3/A4（reducer 派生——用户裁——合并项）
 - loading.js:35 Stop 公式 `(susp||on)` → `S._turnState !== "idle" || on`（一行）
@@ -42,11 +48,11 @@
 
 | 文件 | 改动 | 行数 |
 |---|---|---|
-| src/extension/panel-messages.mjs | routeUserTurn 导出 + sendMessage 接线 | ~418 现（+~6） |
+| src/extension/panel-messages.mjs | routeUserTurn 导出（评审 #3：接线实际在 chat-panel——sendMessage 宿主） | ~418 现（+~2） |
 | src/extension/chat-panel.mjs | sendMessage 走 routeUserTurn | ~392 现（+~2） |
 | src/extension/panel-chat.mjs | A2 标题上移 finally 归位前 | ~493 现（0——移动非新增） |
 | webview/loading.js | Stop 公式 state≠idle 派生 | ~42 现（1 行改） |
-| webview/chat.js | （A4 尾巴时）——不涉及则不动 | ~326 现 |
+| webview/chat.js | 不涉及（评审 #4：A4 尾巴不入本批——TODO 技术组登记——如需 thinking 段恢复后续做） | ~326 现（0） |
 | test/chat-panel.test.mjs | A1 + A2 桩测追加 | ~345 现（+~25） |
 | test/webview-turnstate.test.mjs | ③ 断言翻转 state≠idle | ~206 现（改 ~5） |
 | docs/design/WEBVIEW.md | §8.1/§8.4 措辞 | doc |
@@ -57,6 +63,7 @@
 
 - AC-A1 sendMessage running 守卫（_chatCalls 空 + 队列 + messageQueued + 回显——回合尾 FIFO 消费）
 - AC-A1 susp 两态零回归（susp-active/susp 释放窗口走 _chat 上游分流不变）
+- AC-A1e 空面板 warning 分支保留（_panel 空时 sendMessage warning 不发 _chat——评审 #6 错误用例）
 - AC-A2 标题窗口 = busy（首回合标题 await 期间 userMessage 入队不并发——测试锁）
 - AC-A2 会话内 digest 首回合标题不劫持消化（释放窗口不延——标题在归位 susp 前完成）
 - AC-A3 Stop state≠idle 派生（digest 起跑窗口 Stop 显——测试断言翻转）
@@ -66,4 +73,11 @@
 - AC 测试绿（chat-panel + webview-turnstate 更新组 + 既有——VSC npm test 快层）
 
 ## 变更记录
-- 2026-09-09：A 批落档（A+B 深勘察一手——C2 后基线——A1 残留确认/A2 双缺陷/A3+A4 同根——4 定夺点用户全裁推荐项：A1 routeUserTurn + A2 方案 Y + A3 reducer 派生 + B1 纯时序序 + B2 移门——A 批先落）。
+- 2026-09-09：A 批落档（A+B 深勘察一手——C2 后基线——A1 残留确认/A2 双缺陷/A3+A4 同根——4 定夺点用户全裁推荐项：
+  A1 routeUserTurn + A2 方案 Y + A3 reducer 派生 + B1 纯时序序 + B2 移门——A 批先落）。
+- 2026-09-09 评审 6 项采纳（文档归属注——评审 #1：本档批载体——实现后权威措辞只落 WEBVIEW/SESSION——
+  本文档收敛为实现记录——随核销 README 登记 / 标题错误路径 try-finally / 受影响表一致性修正 / A4 尾巴
+  明确 +~1 或 TODO 登记 / FIFO 断言确认 / 错误用例补——token c6671007）。
+
+> 归属注（评审 #1）：本档 = A 批设计/实现记录载体——权威措辞只落 WEBVIEW.md §8 + SESSION.md §7（文档锚
+> 段）——核销时随 README 地图登记（同 SESSION-FLOW-C 先例）——不双处详述。
