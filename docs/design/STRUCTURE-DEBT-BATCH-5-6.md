@@ -9,7 +9,11 @@
 
 ### 需求
 
-- **N3**：CLI AGENTS.md:14-20 文档地图 8 档悬空（ARCHITECTURE-v2/ENGINEERING-WORKLOOP/VERIFY-DOCONLY/ROADMAP-0.9.0/EVALUATION/COMPETITIVE-CLI-2026/KIMI-CODE-PROMPT-ANALYSIS/TTSR-ANALYSIS——均仅 `_archive/` 但按活体裸名列出——与 README.md 矛盾）+ 7 物理档（5 逻辑批——DOC-CLEANUP-BATCH/DOC-REWRITE*/DOC-REORG-VSC/SYSTEM-SPLIT-BATCH/CODE-HARDENING-BATCH）未登记地图。
+- **N3**：CLI AGENTS.md:14-20 文档地图 8 档悬空（ARCHITECTURE-v2/ENGINEERING-WORKLOOP/
+  VERIFY-DOCONLY/ROADMAP-0.9.0/EVALUATION/COMPETITIVE-CLI-2026/KIMI-CODE-PROMPT-ANALYSIS/
+  TTSR-ANALYSIS——均仅 `_archive/` 但按活体裸名列出——与 README.md 矛盾）+ 7 物理档
+  （5 逻辑批——DOC-CLEANUP-BATCH/DOC-REWRITE*/DOC-REORG-VSC/SYSTEM-SPLIT-BATCH/
+  CODE-HARDENING-BATCH）未登记地图。
 - **N7**：resumed/restart 双端载体异名（CLI `_envResumed`/`_processRestartPending` vs VSC `_resumedPending`/模块级 `restartDetectionDone`）——代码注释无跨端异名锚（仅 VSC 测试文件头一处自注）——统一注释锚。
 
 ### 设计（勘察建议——照做勿自行解释）
@@ -51,7 +55,14 @@
 ### 设计（勘察建议——照做勿自行解释）
 
 1. **VSC subagent.mjs 拆**——切法 A：`:313-479` runChild 巨型闭包（~165 行）→ 新建 `subagent-run.mjs`（CLI 同名词——参数对象收编闭包捕获 parent/ctx/role/subId/asyncFlag/childSignal/terminalStatus）——execute 保留调用——降 ~165 → ~343 行。零消费面影响（runChild 文件内私有）。头部注记更新。
-2. **VSC advisor/run.mjs 拆**——切法 A：`:78-111` 工具集 + 工具 import → 新建 `src/advisor/tools.mjs`（~34 行——独立 read-only 工具包 + 测试覆写 seam——先例 citations.mjs）——+ 切法 B：`:336-360` `resolveAdvisorProvider` → `src/advisor/provider.mjs`（~25 行——config-io import 随迁）——A+B ~59 行 → ~452。**消费面 shim 兜**：MAX_ADVISOR_ROUNDS（run-stages.mjs:16/agent.mjs:13）、runAdvisorReview + resolveAdvisorProvider（advisor-async.mjs:27/advisor.mjs:8）、测试 `_runAdvisorToolLoop`/`_renderTimeline`/`_advisorToolsFor`/`_setAdvisorToolSetForTest`——run.mjs 留 re-export shim（先例 citations.mjs）。镜像注：CLI advisor/run.mjs 499 压线——只 VSC 侧拆、文档注漂移（不强行双端同拆）。
+2. **VSC advisor/run.mjs 拆**——切法 A：`:78-111` 工具集 + 工具 import → 新建 `src/advisor/tools.mjs`
+   （~34 行——独立 read-only 工具包 + 测试覆写 seam——先例 citations.mjs）——+ 切法 B：`:336-360`
+   `resolveAdvisorProvider` → `src/advisor/provider.mjs`（~25 行——config-io import 随迁）——A+B
+   ~59 行 → ~452。**消费面 shim 兜**：MAX_ADVISOR_ROUNDS（run-stages.mjs:16/agent.mjs:13）、
+   runAdvisorReview + resolveAdvisorProvider（advisor-async.mjs:27/advisor.mjs:8）、测试
+   `_runAdvisorToolLoop`/`_renderTimeline`/`_advisorToolsFor`/`_setAdvisorToolSetForTest`——run.mjs
+   留 re-export shim（先例 citations.mjs）。镜像注：CLI advisor/run.mjs 499 压线——只 VSC
+   侧拆、文档注漂移（不强行双端同拆）。
 3. **N6 _permQueue helper**——归属 CLI `subagent-async.mjs`（三处均已直接 import 它——零新增边零环）：
    ```js
    // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
