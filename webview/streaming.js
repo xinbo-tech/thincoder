@@ -1,7 +1,7 @@
 /**
  * streaming.js — token/reasoning stream rendering (rAF-throttled), turn finish,
  * code-block copy buttons, and the in-conversation advisor review block.
- * (R22: subagent activity blocks moved to the bottom panel — activity.js.)
+ * (B1: subagent activity blocks are born in the #messages flow — activity.js.)
  */
 import { ctx, S } from "./state.js"
 import { md } from "./md.js"
@@ -12,8 +12,8 @@ import {
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
-// R22: subagent activity blocks live in the bottom panel (activity.js) —
-// lifecycle (create/header/freeze/ticker/⏹) moved there; panels.js never
+// B1: subagent activity blocks are born in the #messages flow (activity.js) —
+// lifecycle (create/header/freeze/ticker/⏹) lives there; panels.js never
 // imports streaming.js and activity.js imports neither (no cycles).
 import { ensureBlock, noteChunk, resetActivity } from "./activity.js"
 
@@ -223,20 +223,20 @@ export function advisorChunk(m) {
 }
 
 
-/** Subagent/consultant/escalate activity stream — R22: blocks live in the bottom
- *  activity panel (#subagent-activity — own scroll layer, independent of the
- *  conversation flow), one block per channel ("sub:explore#1",
- *  "sub:consult glm:glm-5.2 #4" …). Terminal states REMOVE the block from the
- *  panel and FREEZE it into the #messages tail (activity.freezeBlock — identity
- *  header + expandable content + report preview; §17 settled stays parked with
- *  the awaiting-digestion header until the digest done / session-exit freeze).
+/** Subagent/consultant/escalate activity stream — B1: blocks are born IN the
+ *  conversation flow (#messages stream tail — stream-level siblings of
+ *  .message, one block per channel "sub:explore#1",
+ *  "sub:consult glm:glm-5.2 #4" …). Terminal states freeze the block IN PLACE
+ *  (activity.freezeBlock — identity header + expandable content + report
+ *  preview; no DOM move); §17 settled stays live in flow with the
+ *  awaiting-digestion header until the digest done / session-exit freeze.
  *  The summary header carries [▶ key · sync/async · model · elapsed · turn]
  *  + current tool/state word + folded tail-3 dim (D-R22b). §19.5 D-M7/D-M8:
  *  ⏹ mounts only on running pool entries; nested `sub` labels render via
  *  appendAdvisorChunk. */
 export function subagentChunk(m) {
   const name = String(m.name ?? "")
-  const block = ensureBlock(name) // created in the panel; same element freezes into #messages later
+  const block = ensureBlock(name) // born at the #messages stream tail; freeze folds it in place later
   // §27.1 F3（缺陷①）: 冻结块迟到 chunk 丢弃（CLI tombstone 丢弃链对齐——§7.2 D4 完成态冻结）
   if (block._subMeta?.frozen) return
   appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)

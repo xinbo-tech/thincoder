@@ -16,30 +16,31 @@ postMessage，无共享状态）。UI 状态在 webview 端单一持有（`webvi
 ## 2. 布局（垂直序 + grid）
 
 **垂直序（自顶向下）**：session-bar（项目/会话切换）→ `#messages` 滚动区 → 行面板区
-（`#subagent-panel`/`#goal-panel`/`#task-panel`）→ `#subagent-activity` 固定活动
-面板（R22）→ 输入区（`#toolbar`）。
+（`#subagent-panel`/`#goal-panel`/`#task-panel`）→ 输入区（`#toolbar`）。子代理活动块
+**无独立面板**——live 块出生即在 `#messages` 流内（B1——SESSION-FLOW-B F-B1a/F-B1b，
+R22 底部活动面板容器已拆）。
 
 CSS 布局规则落 `webview/base.css` 的 grid 行模板：
 
 ```
-#chat-container { grid-template-rows: auto minmax(0, 1fr) auto auto auto; height: 100%; }
+#chat-container { grid-template-rows: auto minmax(0, 1fr) auto auto; height: 100%; }
 ```
 
-行模板对应 R22 垂直序：header(session-bar) / `#messages`(1fr) / `#panels`(行面板，
-auto) / `#subagent-activity`(固定活动面板，auto) / `#toolbar`(输入，auto)——后三层均
-为 auto，隐藏项不占高 → 消息区高度 = 容器 − 面板 − 输入（grid 1fr 自动吸收）。
+行模板对应 B1 垂直序：header(session-bar) / `#messages`(1fr) / `#panels`(行面板，
+auto) / `#toolbar`(输入，auto)——后两层均 auto，隐藏项不占高 → 消息区高度 = 容器 −
+面板 − 输入（grid 1fr 自动吸收）。
 
 - 消息区钉底/滚动语义限定 `#messages` 内；`#messages` `overflow-y:auto` +
   `overscroll-behavior:contain`。
-- `#subagent-activity` 独立自滚（自己的 overflow 层，与 `#messages` 互不干扰）；
-  空面板 `display:none` 不占高（activity.js `updateVisibility` 按 live 块驱动）。
-  面板 max-height 32vh。
+- 子代理 live/冻结块均为 `#messages` 直接子元素（与 `.message` 兄弟同层——150 块
+  裁剪只数直接子元素）；live 块内容在块内自滚（`.advisor-content` max-height
+  100px——增长天然有界）。
 
 shell 结构 `webview/index.html`：`#chat-container` 内含 `#session-bar` / `#messages` /
-`#panels`（三个行面板）/ `#subagent-activity` / `#toolbar`（`#status-line` +
-`#input-row`(attach/send/abort) + `#paste-bar` + `#controls-row`）+ `#settings-panel`
-（dialog）+ `#welcome-panel`（首次运行 onboarding）。CSS 经 `__CSS_*_URI__` 占位注入，
-`__CHAT_URI__` 注入模块脚本，CSP 经 `__CSP__` 占位注入。
+`#panels`（三个行面板）/ `#toolbar`（`#status-line` + `#input-row`(attach/send/abort)
++ `#paste-bar` + `#controls-row`）+ `#settings-panel`（dialog）+ `#welcome-panel`
+（首次运行 onboarding）。CSS 经 `__CSS_*_URI__` 占位注入，`__CHAT_URI__` 注入模块
+脚本，CSP 经 `__CSP__` 占位注入。
 
 ## 3. 文件结构（现行）
 
@@ -83,45 +84,43 @@ reasoning, provider, images? } → extension _chat()
 中断/错误/后台态消息见 §7。回合外流（子代理活动/评审流/压缩状态/挂起状态）走
 toolPanel/subagent/compress/suspension 消息族（§7）。
 
-## 5. 活动面板与冻结入流（R22 现行机制）
+## 5. 子代理活动块（流内出生 · 原地冻结——B1 现行机制）
 
-子 agent/consult/escalate/advisor-async 活动块在**底部固定活动面板**（
-`#subagent-activity`，不随 `#messages` 滚动）；终态**冻结折叠入消息流**。角色全同通
-道（频道名差异仅块键/折叠归属）。
+子 agent/consult/escalate/advisor-async 活动块**出生即在对话流**（`#messages` 流尾——
+流级独立块，与 `.message` 兄弟同层，非嵌入父段）；终态**原地冻结折叠**（无 DOM move
+——位置 == 出生位，N3 不变式）。角色全同通道（频道名差异仅块键/折叠归属）。
 
-- **活动块（#subagent-activity 内）**：live 头 = 状态词 + key（= 频道 label——
-  channel 去掉 `sub:` 前缀）+ sync/async 标 + model + 1s 本地 ticker elapsed +
-  （终态通知前无 turn 段）+ ⏹（仅 running 且仅池条目——started 事件 `pool: true`
-  标记区分同步 spawn）；当前工具/等待审批 + tail 3 行 dim 摘要。
-- **终态（非挂起期）**：块从面板移除、**冻结折叠入消息流**——身份头格式：
+- **live 块（#messages 流内）**：live 头 = 状态词 + key（= 频道 label——channel 去掉
+  `sub:` 前缀）+ sync/async 标 + model + 1s 本地 ticker elapsed + （终态通知前无 turn
+  段）+ ⏹（仅 running 且仅池条目——started 事件 `pool: true` 标记区分同步 spawn）；
+  当前工具/等待审批 + tail 3 行 dim 摘要。出生即钉底（maybeScrollDown——pinBottom
+  语义：用户上读时不强拉）。
+- **终态（非挂起期）**：块**原地折叠冻结**——身份头格式：
   `[✓/⏹ key · sync/async · model · done Ns · turn]`（turn = 池终态通知携带的真实
   终值快照；stopped = ⏹ + stopped 词 + 无 report preview；error = ⏹ + error 词 +
-  错误注记）+ 内容保留可展开 + report preview ≤8 行 dim（120 字符截行——CLI
-  tool-events parity；**escalate 无 preview**）。
-- **冻结落位（freezeAnchor——VS 实现注）**：settle 时刻记录锚点
-  `ctx.messagesEl.lastElementChild`（settle 先于 digest 报告渲染——此刻 DOM 尾必在
-  报告前）；freezeBlock 时锚点在 DOM → 锚后**链式**插入（越过连续同锚已冻结块 + 各自
-  preview——同批多块保持完成序，全部位于合并 digest 报告前）；锚点被 150 块裁剪移除 →
-  appendChild 回退（超长会话降级边界——回退处注释防重报）；无 settle 的直接
-  done/stopped/error → `#messages` 尾插。会话退出 freeze（freezeSettledBlocks）经同
-  路径自动获得 settle 位。
-- **挂起期 settle 例外**：不冻结——块驻留面板 + "done · awaiting digestion" 头
-  （digest 完成逐条补发 done → 移除 + 冻结入流；会话退出 freeze 兜底未消化残项）。
+  错误注记）+ 内容保留可展开 + report preview ≤8 行 dim 紧跟块后（120 字符截行——
+  CLI tool-events parity；**escalate 无 preview**）。
+- **挂起期 settle 例外**：不冻结——块**流内驻留**（出生位不动）+ "done · awaiting
+  digestion" 头（digest 完成逐条补发 done → 原地冻结；会话退出 freeze 兜底未消化
+  残项）。CLI `_freezeAt` 语义由出生时序结构性取代（settle 先于 digest 报告——
+  报告自然排在块后）。
 - **频道名**：活动频道 = `sub:${role}#${subId}`（subagent/advisor 族——独立块键，
   resume 续跑 subId 不变块不重复；同步 spawn 也经同一路由）；consult/escalate 频道嵌
   模型段 `sub:consult <model> #N` / `sub:escalate <model> #N`（块键含模型——
   activity.js parseChannel 两形态正则）。
 - **嵌套子标**：内层子代理文本行首 dim 子标（`chunk.sub`——如 `explore#1`，runChild
   forward 去前缀附加；同 sub 文本合并续行不重复前缀；advisor 频道照旧折叠）。
-- **150 块 DOM 裁剪**：冻结块计入 `#messages` 裁剪（与 advisor 块同规则无豁免）；活
-  动面板无独立 DOM 上限（并发池天然约束 + digest 回收 + 面板自滚）。
+- **150 块 DOM 裁剪**：子代理块（**live 与冻结 alike**）从出生即计入 `#messages`
+  裁剪——**无豁免**（F-B1e：预算 = 并发池大小——池有界；与 advisor 块同规则同
+  选择器——.advisor-block 直接子元素计数）。
 - **实现注**：`String.prototype.sub` 陷阱——toolPanelPayload 的 `chunk?.sub` 在
   string chunk 上取到 String 内建方法（truthy）——string 兼容分支显式 `undefined`；
   appendAdvisorChunk 合并分支 `textContent +=` 会清掉行内子标 span——改 `appendChild`
   text node。
 
-行面板（`#subagent-panel`）与活动面板的合并评估：**保留**（其独有载荷 = queued/
-waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独评估。
+行面板（`#subagent-panel`）保留（其独有载荷 = queued/waiting 行 + consult 计数/
+回复 preview）——非缺陷；R22 底部活动面板容器已随 B1 拆除（live 块全入流后容器
+死码）。
 
 ## 6. 交互组件要点与标题
 
@@ -141,7 +140,7 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
   session-bar 显示自动占位（`Session N`），生成完成后经 sessions 刷新更新标题。
 - **模型选择 UI**：主下拉列 provider 行 + hover flyout 子菜单选模型（两级菜单——
   hover 展开 provider 的模型表）；底部含 add/remove/key 管理入口。
-- **挂起 UI**：settle 期间块驻留活动面板（"done · awaiting digestion"——§5）；状态
+- **挂起 UI**：settle 期间块流内驻留（"done · awaiting digestion"——§5）；状态
   行（⏳ 后台 N 子代理 + 待消化计数）；输入框永不锁（loading.js `on && !susp`）；
   digest 中 Enter 由 host 排队（send.js `isRunning && !S._suspended` 才拦截）。
 - 交互控件按钮（mode-buttons.js）：ENG / ADVISOR(guard) / AUTO / PLAN 状态反射。
@@ -261,6 +260,9 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
 
 ## 9. 变更记录（历史折叠——详见 git log）
 
+- 2026-09-09：SESSION-FLOW-B B1 锚段——§2 布局改四行垂直序（grid 五行→四行——活动
+  面板容器随 F-B1a 拆）+ §5 全节重写（子代理块流内出生 · 原地冻结——live/冻结从出生
+  即计入 150——freezeAnchor/面板滚动带全删——CLI _freezeAt 由出生时序取代）。
 - 2026-09-09：SESSION-FLOW-A A 批锚段——§8.1 补命令直发路径（routeUserTurn 单一入口扩
   至 sendMessage——修 R6）；§8.4 Stop 派生 susp → state≠idle（A3——running/susp 全程
   常显 + Reload 冷启恢复）；标题触发时机归位前（A2 方案 Y——权威正文见 SESSION.md §7）。

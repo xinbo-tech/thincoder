@@ -27,8 +27,8 @@
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
   通道，触碰桥白名单，不擅建）——降级口径已定：池条目终态通知携真实终值，冻结身份
   头显示终值。记录在案，无跟进计划。
-- 行面板 `#subagent-panel` 与活动面板的合并评估候选：**保留**（其独有载荷 = queued/
-  waiting 行 + consult 计数/回复 preview）——后续可单独评估，非缺陷。
+- 行面板 `#subagent-panel` **保留**（其独有载荷 = queued/waiting 行 + consult 计数/
+  回复 preview）——B1（SESSION-FLOW-B）拆底部活动面板后已无合并对象——此开放项关闭。
 
 ## 变更记录（历史折叠——详见 git log）
 - 2026-09-08：§11 实现交付后——eng-coder 报告 3 上报项：①槽持久化缺口（agentState 不带 tasks/goal/pendingReminders——destroy 丢）——父侧裁 a 案（补带三字段——文件域扩展 run-helpers/panel-callbacks）落 §11.7；②commit a0fabf8 卷入同伴 D6 文件（共享 git index 竞态——内容正确接受）；③setup.mjs 500 行边缘（挂 TODO 拆）。
@@ -62,7 +62,7 @@
 | `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
 | `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))` |
 | `src/extension/suspension.mjs` | 挂起会话驱动：waitForSettleOrWake（`panel._suspWake` 单槽）、排队合并（MAX_MERGE_ITEMS=8/MAX_MERGE_CHARS=2000） |
-| `webview/activity.js` / `panels.js` | 底部固定活动面板 `#subagent-activity` + 终态冻结入流 |
+| `webview/activity.js` / `panels.js` | 子代理活动块流内出生（`#messages` 尾——B1 拆活动面板）+ 终态原地冻结（无 DOM move）；panels.js 行面板 + 桥路由 |
 
 模块拆分批：subagent-async.mjs 按 Module Split Policy 拆出 subagent-scheduler.mjs 与
 subagent-actions.mjs（同 CLI 拆分治理轮）。
@@ -290,8 +290,9 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
   以普通回合按序执行（中止路径零丢失）。
 - 会话 lines 双键：会话入口 lines 携 `contextHistory: history`（in-session 回合按
   activeLines 契约读 loadedLines.contextHistory——缺键致 digest 死循环的事故修复）。
-- 挂起 UI：settle 期间块驻留活动面板（"done · awaiting digestion"），digest 完成逐条
-  补发 done 回收；状态行（⏳ 后台 N 子代理 + 待消化计数）；输入框永不锁（loading.js
+- 挂起 UI：settle 期间块**流内驻留**（"done · awaiting digestion"——块出生即在
+  #messages 流内，B1 后无活动面板），digest 完成逐条补发 done 原地冻结回收；状态行
+  （⏳ 后台 N 子代理 + 待消化计数）；输入框永不锁（loading.js
   `on && !susp`）；digest 中 Enter 由 host 排队（send.js `isRunning && !S._suspended`
   才拦截）。
 
@@ -342,11 +343,11 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 
 ## 10. 子代理活动显示（本地 webview 机制）
 
-子 agent/consult/escalate/advisor-async 活动块在**底部固定活动面板**（`#subagent-activity`）
-渲染（不随 #messages 滚动），终态**冻结折叠入消息流**。角色全同通道（频道名差异仅块键/
-折叠归属）。UI 详情见 WEBVIEW（活动面板/冻结身份头）。
-折叠归属）。UI 详情见 WEBVIEW（活动面板/冻结身份头——DOC-REORG 后续批建，当下
-对应 ARCHITECTURE §11.1）。
+子 agent/consult/escalate/advisor-async 活动块**出生即在对话流**（#messages 流尾——流
+级独立块与 .message 同层，非嵌入父段），终态**原地冻结折叠**（无 DOM move——位置 =
+出生位）。角色全同通道（频道名差异仅块键/折叠归属）。挂起期 settled 块流内驻留
+（awaiting digestion 头）直到 digest done 原地冻结 / 会话退出冻结。UI 详情见
+WEBVIEW §2/§5（活动块/冻结身份头——B1 后无活动面板容器）。
 
 
 ## 11. agent 生命周期对齐 CLI（设计变更段——2026-09-08 用户裁定，评审后实现）

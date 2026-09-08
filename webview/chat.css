@@ -380,9 +380,6 @@
   margin-top: -3px;
   max-width: 100%;
 }
-/* 活动面板内块间距（面板自带滚动——块间紧凑） */
-#subagent-activity .advisor-block { margin: 4px 0; }
-#subagent-activity .advisor-block:first-child { margin-top: 2px; }
 
 .error-text { flex: 1; }
 .error-retry-btn {

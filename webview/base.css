@@ -81,10 +81,11 @@ body {
 
 #chat-container {
   display: grid;
-  /* R22 垂直序：header(session-bar) / #messages(1fr) / #panels(行面板) /
-     #subagent-activity(固定活动面板) / 输入区(#toolbar) —— 后三层均为 auto，
-     隐藏项不占高 → 消息区高 = 容器 − 面板 − 输入（grid 1fr 自动吸收）。 */
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  /* B1 垂直序（SESSION-FLOW-B F-B1a）：header(session-bar) / #messages(1fr) /
+     #panels(行面板) / 输入区(#toolbar) —— 后两层均为 auto，隐藏项不占高 →
+     消息区高 = 容器 − 面板 − 输入（grid 1fr 自动吸收）。R22 活动面板容器已拆——
+     live 子代理块出生即在 #messages 流内。 */
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   height: 100%;
   position: relative;
 }
@@ -93,17 +94,6 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 12px 12px;
-}
-
-/* R22 子 agent 底部活动面板：独立滚动层（与 #messages 互不干扰）；面板自身
-   内容溢出自滚——消息流滚动/钉底（pinBottom 语义限定 #messages 内）不动面板。 */
-#subagent-activity {
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-  max-height: 32vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 4px 12px 8px;
 }
 
 /* ─── Scroll-to-bottom button ─────────────────── */

@@ -26,7 +26,7 @@ function showLoadOlderIndicator(ctx) {
   el.id = "load-older-indicator"
   el.className = "load-older-indicator"
   el.textContent = t("msg.loadingOlder")
-  const anchor = ctx.messagesEl.querySelector(".message, .tool-call")
+  const anchor = ctx.messagesEl.querySelector(".message, .tool-call, .advisor-block")
   ctx.messagesEl.insertBefore(el, anchor)
 }
 
@@ -48,7 +48,9 @@ export function applyHistoryPage(ctx, m) {
     if (msg.kind === "assistant") attachCopyButtons(el) // code-block copy buttons only
     frag.appendChild(el)
   }
-  const anchor = ctx.messagesEl.querySelector(".message, .tool-call")
+  // F-B1f（SESSION-FLOW-B）: 锚选择器含 .advisor-block——懒历史页与流内子代理块
+  // （live/冻结——同层直接子元素）共存时插位正确（older 页插到最旧块之上）。
+  const anchor = ctx.messagesEl.querySelector(".message, .tool-call, .advisor-block")
   if (m.older) {
     const prevTop = ctx.messagesEl.scrollTop
     const prevHeight = ctx.messagesEl.scrollHeight

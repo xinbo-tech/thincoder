@@ -64,7 +64,7 @@ export function installChatFixture() {
     "session-dropdown", "welcome-panel", "welcome-heading", "welcome-text",
     "welcome-provider-label", "welcome-provider", "welcome-key-label", "welcome-key",
     "welcome-save-btn", "welcome-skip-btn", "welcome-settings-btn", "project-btn",
-    "status-line", "task-panel", "subagent-panel", "goal-panel", "subagent-activity",
+    "status-line", "task-panel", "subagent-panel", "goal-panel",
   ]
   document.body.innerHTML = ids.map((id) => `<div id="${id}"></div>`).join("")
 }

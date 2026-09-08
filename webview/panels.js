@@ -152,14 +152,14 @@ export function handleTaskProgress(m) {
   renderStatusBar()
 }
 
-// ─── R22: 活动块 DOM 生命周期（create/header/freeze/⏹/elapsed ticker/冻结 preview）
-// 整体迁 activity.js（ensureBlock/applySubagentStatus/freezeBlock/freezeSettledBlocks/
+// ─── B1: 活动块 DOM 生命周期（create/header/freeze/⏹/elapsed ticker/冻结 preview）
+// 整体在 activity.js（ensureBlock/applySubagentStatus/freezeBlock/freezeSettledBlocks/
 // resetActivity）——行面板与活动块解耦：本文件只管 #subagent-panel 行 + 桥消息路由。
 
 /** subagent message: track lifecycle (rows); block-side effects delegate to
- *  activity.applySubagentStatus (R22 — blocks live in the bottom panel and
- *  freeze into #messages on terminal states; §17 settled parks in the panel
- *  with the awaiting-digestion header until digest done / session-exit freeze). */
+ *  activity.applySubagentStatus (B1 — live blocks are born at the #messages
+ *  stream tail and freeze IN PLACE on terminal states; §17 settled stays live
+ *  in the flow with the awaiting-digestion header until digest done / exit). */
 export function handleSubagentMessage(m) {
   // Block-side effects FIRST (independent of the row bookkeeping below — a
   // chunk-only block without a row still freezes correctly).
@@ -214,8 +214,9 @@ export function handleSuspensionMessage(m) {
   } else {
     S._suspCounts = null
     if (m.freeze) {
-      // R22/§17.5.5 兜底：驻留面板的 settled 活动块先冻结入流（done 形态——✓ 身份头 +
-      // preview），行随之翻 done（freezeSettledBlocks 按 settled 行定位块——顺序先行）。
+      // B1/§17.5.5 兜底：流内 settled 活动块原地冻结（done 形态——✓ 身份头 +
+      // preview——块已出生在流内出生位），行随之翻 done（freezeSettledBlocks 按
+      // settled 行定位块——顺序先行）。
       freezeSettledBlocks()
       for (const [id, s] of Object.entries(S._subagentMap)) {
         if (s.status !== "settled") continue

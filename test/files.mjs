@@ -9,6 +9,7 @@ export default [
   // 2026-09-09 SESSION-FLOW-C C1 清单修复：agent-core/config-io/execute/git/provider/
   // edit-eol/edit-semantics 在 3b974ae「测试清空」中删除且从未恢复——条目随删除勾销
   // （git 核验——残条目让清单虚报套件组成）。chat-panel.test.mjs 为 C1 重建（本行保留）。
+  "test/activity-flow.test.mjs", // SESSION-FLOW-B B1（2026-09-09）：子代理块流内出生/原地冻结/resetActivity/150 计入/⏹ 规则/parseChannel——F-B1a~f + N3 无 DOM move（happy-dom——helpers/webview-env.mjs）
   "test/chat-panel.test.mjs", // SESSION-FLOW-C C1+C2 host 组（2026-09-09）：turn 句柄保底/abort 启动闩/控制直通/响应器 id 匹配/atComplete seq/保序入队——F-C1a~e + ⑦ C2 忙态状态机（F-C2a）
   "test/webview-turnstate.test.mjs", // SESSION-FLOW-C C2 webview reducer 组（2026-09-09）：_turnState 枚举转换/renderStatusBar 单 writer/Stop susp 常显/_suspCounts 不陈旧——F-C2a~e（happy-dom——helpers/webview-env.mjs）
   "test/edit-tool-improvement.test.mjs",

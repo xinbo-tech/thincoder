@@ -58,7 +58,7 @@ webview/chat.js      Frontend orchestration: message handling, model selector, s
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
 webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块（R22 活动块已迁 activity.js）
 webview/panels.js    侧面板：task progress/subagents/consultants/goal + 挂起态（行面板 bookkeeping——活动块生命周期在 activity.js）
-webview/activity.js   R22 子 agent 底部活动面板: live 活动块 (create/header/⏹/elapsed ticker) + 终态冻结入流 (#messages 身份头 + report preview) — leaf module (state/ui/i18n only)
+webview/activity.js   B1 子代理活动块流内出生+原地冻结 (SESSION-FLOW-B): live 活动块 (create/header/⏹/elapsed ticker) 出生即 #messages 流尾 + 终态原地折叠 (身份头 + report preview——无 DOM move) — leaf module (state/ui/i18n only)
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout
