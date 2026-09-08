@@ -26,12 +26,14 @@
  * filter surface; path = "cwd:<dir>" → list every slot stored for that directory
  * (slot number + full file path + title/message count/updatedAt — no dead-slot
  * filtering, v1 decision). Single-file retrieval is guarded by a line-scan cap
- * (READ_HISTORY_SCAN_MAX) — an oversized file is refused before it is read whole.
+ * (READ_HISTORY_SCAN_MAX — an oversized file is refused before it is read whole)
+ * plus a message-count cap (READ_HISTORY_MAX_MESSAGES = 50,000 — L24 双保险第二道).
  *
  * readonly: true — planMode pass / no permission ask. Registered depth-0 only:
  * subagents get their own throwaway history, so querying "the session" from a
  * child would be semantically confusing (SESSION.md §9.5 refinement 1 + §13 T-R19.4).
- * Mirrored 1:1 in thincoder-vscode/src/agent-tools/read-history.mjs.
+ * §13 R19 extension mirrored per SESSION.md §13 — double-end isomorphic, no
+ * cross-end byte test (thincoder-vscode/src/agent-tools/read-history.mjs).
  */
 
 import { openSync, readSync, closeSync, readFileSync, existsSync, statSync } from "node:fs"
@@ -45,6 +47,10 @@ const VALID_ROLES = new Set(["user", "assistant", "tool"])
 
 /** 单槽检索行扫护栏（SESSION.md §13 D-R19a——评审 #3 定稿：超限不再读全文，返回定稿错误文案）。 */
 export const READ_HISTORY_SCAN_MAX = 200_000
+
+/** L24 消息数预算（评审 #2 钉死——双保险第二道）：行扫按物理 \n 行计——JSON 单行槽
+ *  行扫不设防——parse 后 history 数组长度超限即拒（同款定稿文案——双端同常量同文案）。 */
+export const READ_HISTORY_MAX_MESSAGES = 50_000
 
 /** 超限错误文案（SESSION.md §13——逐字定稿——T-R19.7 断言）。 */
 const TOO_LARGE_ERROR = JSON.stringify({ error: "session too large — refine keyword or since/until" })
@@ -181,6 +187,10 @@ function querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, 
   if (!data || typeof data !== "object" || !Array.isArray(data.history)) {
     return `Error: ${file} is not a valid session file (no history array)`
   }
+  if (data.history.length > READ_HISTORY_MAX_MESSAGES) {
+    // L24 消息数第二道（parse 后——行扫按物理行、单行 JSON 槽行扫不设防——超限同款拒绝）。
+    return TOO_LARGE_ERROR
+  }
   const matched = data.history.filter((m) => matches(m, { role, kwRe, tool, since, until }))
   return formatMatches(matched, direction, limit)
 }
@@ -222,7 +232,7 @@ export const readHistoryTool = {
     "Cross-session (path, optional): a session file path deep-queries THAT session's history with the same filters " +
     "(relative paths resolve against the project cwd); \"cwd:<dir>\" lists every session slot stored for that directory — " +
     "one line per slot: slot number + full session file path + title + message count + updatedAt; copy a listed file path into path= to deep-query it. " +
-    "A session file over 200,000 lines is refused (\"session too large\") instead of being read whole.\n" +
+    "A session file over 50,000 messages or 200,000 lines is refused (\"session too large\") instead of being read whole.\n" +
     SEARCH_FAMILY_GUIDE,
   parameters: {
     type: "object",

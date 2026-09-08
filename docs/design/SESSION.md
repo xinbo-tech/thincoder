@@ -356,6 +356,7 @@ m = loadManifest(cwd)
 - `env` → 运行身份（R8）——CLI 仓 `END="cli"` / VS Code 仓 `END="vscode"` 静态常量（§10 D-1 先例），不做 cmdline 判别；
 - `mode` → 工程模式（R9）——`agent.config?.agent?.engineering` 现状字段；
 - `model` → 模型（R11）——`agent.activeModel ?? provider.model ?? "unknown"`；
+- `slot` → 当前会话槽（粘性——N2：CLI `agent._slot` / VSC `_engPersist.slot`——非 manifest active 共享指针）——无绑定窗口（全新会话首回合/直连）如实 `slot: null`（N3——不读 active 回退）；
 - `resumed` → 会话恢复感知（R5——§11.2 按会话跟踪）——有历史的会话被恢复（进程重启 resume / 切槽到有历史槽）→ 恢复后首个回合 `resumed: yes` 一次，后续回合 no；无恢复事件（全新会话 / 空历史恢复）恒 no。
 
 **规则**：
@@ -369,7 +370,7 @@ m = loadManifest(cwd)
 
 - VS Code `detectRestoredSession` 为进程级一次性闸——中途切换会话拿不到 `resumed: yes`（按会话跟踪语义待后续完善）；
 - git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）——CLI parity 接受，异步优化待 TODO；
-- **env-state 缺当前会话 slot（2026-09-08 用户需求点登记——SESSION §11 env-state 行无 slot）**：agent 不知道自己落在哪个会话槽——补 `slot: {N}` 字段入 env-state 模板（对齐存储层 `agent._slot`），使 agent 能自知"当前会话槽号"（诊断/跨会话/多实例协作语境需要）。归属：SESSION §11 机制扩展——需设计→评审→实现（双端：CLI setup-reminders + VS Code）。已登记 TODO Requirement Pool。
+- ~~**env-state 缺当前会话 slot（2026-09-08 用户需求点登记——SESSION §11 env-state 行无 slot）**~~——**已交付核销**（2026-09-08 快车道批——§11.1/§11.2：双端 setup-reminders envStateLine 加 `slot: {N}` + 本 §11 字段映射 slot 行 + 双端 system.md:24 slot 字段——本条作废，TODO Requirement Pool 登记项勾销）。
 - R9 的"模式历史"（agent 自查询模式历史）本批不做——设计只覆盖"当前模式"注入；
 - R12（async 深度门控：depth-0 缺省 async、depth>0 缺省 sync）与本节同批实现——权威 = AGENT-LOOP.md §18。
 
@@ -555,7 +556,7 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 - 新参数 `path`（可选——默认本会话）：目标会话文件路径（显式）或 `cwd:` 前缀指定目录（自动发现该 cwd 的会话槽——manifest/slotSessions 结构既有）；跨会话查询 = path 指定 → 读目标文件 history 线 → 同 filter 面（role/keyword/tool/since/until/limit/direction——§9 语义）应用。
 - 本会话缺省 = 零行为变化（向后兼容——既有调用全不传 path）。
 - 发现面（path = `cwd:xxx`）：**列全部槽 + 时间序——不做死槽过滤**（v1 决策）。每槽摘要行 = **槽号 + 完整文件路径 + title/消息数/updatedAt**——摘要必须含寻址字段：模型无法自行算 sha1(cwd) 拼文件名，第二步深查 = `path = <摘要行的完整文件路径>` 重调（两步交互与 memory search 同型）。
-- 检索护栏：单槽检索设行扫上限 **READ_HISTORY_SCAN_MAX = 200,000 行**——超限返回 `{error: "session too large — refine keyword or since/until"}`（文案定稿——不再读全文——行扫 + keyword 预筛在前）；返回条数沿用 §9 limit 语义（>200 → 200）。
+- 检索护栏（**双保险**——L24 2026-09-09 消息数预算补充，评审 #2 钉阈值）：单槽检索设**行扫第一道** **READ_HISTORY_SCAN_MAX = 200,000 行**（流式计数——超限不再读全文）+ **消息数第二道** parse 后 `history.length` 超 **READ_HISTORY_MAX_MESSAGES = 50,000** 即拒（JSON 单行槽行扫不设防）——两道超限均返回同一逐字定稿文案 `{error: "session too large — refine keyword or since/until"}`（双端同常量同文案——描述口径 "over 50,000 messages or 200,000 lines is refused"）；返回条数沿用 §9 limit 语义（>200 → 200）。
 - 错误路径：未知 cwd → 明确错误返回（无该 cwd 会话目录）；cwd 无槽 → 空列表 + 提示；目标文件缺失/损坏 → 错误返回不崩（§9 错误处理同型）。
 
 **D-R19b（消歧总纲——read_history 描述尾段逐字定稿，实现时并入各工具描述）**：
