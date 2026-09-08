@@ -250,7 +250,7 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 
 ### 7.5 check 删除 + async 锚句（2026-09-06）
 
-`action:"check"`（阻塞取回 async 报告）已**删除**——check 是冗余 API：需要报告 → 同步 spawn（`async:false`）；async = 后台跑 + 结果自动送达——没有"异步拉起再等它"的路径。删后无"拉回阻塞"动作——模型不再自发轮询钉死回合。结果自动通道（§9）不受影响——done 条目无人工消费后自动通道照常接管（不丢）。consumed 墓碑保留（§10 dependsOn"consumed id 视为已满足"）。
+`action:"check"`（阻塞取回 async 报告）已**删除**——check 是冗余 API。需要报告 → 顶层已禁 async:false（§7.7——一律异步——报告自动到）；深度>0 内（子代理）同步 spawn 仍可用（平台规则）。async = 后台跑 + 结果自动送达——没有"异步拉起再等它"的路径。删后无"拉回阻塞"动作——模型不再自发轮询钉死回合。结果自动通道（§9）不受影响——done 条目无人工消费后自动通道照常接管（不丢）。consumed 墓碑保留（§10 dependsOn"consumed id 视为已满足"）。
 
 **async 锚句（逐字定稿——subagent 描述 Async spawn 段——双端照抄，fail-when-unchanged）**：
 
@@ -262,7 +262,7 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 ### 7.7 顶层 spawn 一律异步——async:false 例外移除（2026-09-08 用户裁定）
 
 > 需求：用户 2026-09-08 裁定（两次痛骂——同步 spawn 反复犯）——**顶层（depth-0）spawn 禁 async:false——一律异步**。depth>0 平台强制 sync 不受影响（子代理内部——平台硬规则）。快车道（用户明确指令）。
-> 状态：**评审通过待 sign-off**（2026-09-08——8 项 advisory 采纳——token e21d5ace 注册 11 slot）——eng-coder 实现（双端提示词同步）。
+> 状态：**已交付核销**（2026-09-08——评审 8 项采纳 + eng-coder clean 交付——CLI c08e1b2 / VSC 8763ac2——L2 双端绿——consume a2b10815——待平台侧工具描述同步 + 机制兜底 TODO）。
 
 **现状问题**：async 锚句（§7.5 :258）与 main.md:13/engineering.md:18 都含 "pass `async:false` only when…"——给了模型 async:false 例外通道——实际反复误用（explore/eng-coder 同步 spawn——阻塞自己 turn + 占池）。
 

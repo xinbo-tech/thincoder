@@ -110,3 +110,5 @@
 ## 文档地图整体清扫（2026-09-08 批 2 报告发现）
 - [ ] **AGENTS.md 文档地图陈旧**：:17 仍列 VERIFY-DOCONLY.md（归档后悬空）+ 整体含早已归档档（ENGINEERING-WORKLOOP 等——批 A 前即如此）——父侧立项整体清扫（非批 2 2b-6 范围——批 2 只做 README/SETTINGS-TOOL）
 - [ ] **双端 system.md:24 env-state 描述未含 slot**（env-state 行实已含 slot——SESSION §11.2 实现后描述漂移——id=9 报告项 3——提示词同步小项——双端逐字同步）
+- [ ] **平台侧 subagent 工具描述仍含旧 async:false 引导**（§7.7 跟进项 2——项目仓不可改——平台注入——需平台侧同步——设计明示上报）
+- [ ] **escalate/advisor 顶层 async:false carve-out 范围界定**（§7.7 跟进项 4——main.md:28 escalate 段 + VSC engineering.md:16 advisor 段仍保留同步例外——设计 §14.2 支持 escalate 例外——补一句范围注或接受）
