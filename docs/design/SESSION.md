@@ -464,6 +464,23 @@ m = loadManifest(cwd)
   ——测试：启动恢复发句一次 + 切槽 resumed:yes 无句 + 进程内多次切槽句不再发
 - AC5 测试绿（双端 setup-reminders.test.mjs + 既有不回归）
 
+### 11.3 描述同步变更段（2026-09-08——用户裁 A + system.md 漂移修正——小改快车道）
+
+> 需求：SESSION §11.2 实现后 system.md:24 描述漂移（缺 slot 字段 + resumed 语义窄化为"process restarted only"）。用户裁 A：**接受实现语义 = 每次会话恢复发 yes（含进程内切槽到有历史槽）**——改描述匹配实现（非改实现）。快车道（用户明确指令——"A"）。
+> 状态：设计就绪待评审（改动小——双端 system.md 单行改）。
+
+**改**（双端 system.md:24——模板行 + 语义描述）：
+1. 模板行 `[System reminder: env: cli|vscode, mode: eng|normal, model: <id>, resumed: yes|no.]` → 加 `slot: {N}`（model 后 resumed 前——与实现 envStateLine 一致——无绑定显式 null）
+2. resumed 语义描述："yes only on the first turn after the process restarted with a restored session" → "**yes on the first turn after the session was restored (a process restart, or switching to a slot that has prior history)**——每次会话恢复一次"
+3. 保留 design token 段（CLI）/ mode-model 段——不改
+
+**受影响文件**：CLI src/prompts/system.md、VSC src/prompts/system.md（模板行 + 语义句——各行 ~900 字符内的子串替换——行数不变）。
+
+**验收**：
+- AC1 双端 system.md:24 模板行含 `slot: {N}`（model 后 resumed 前）
+- AC2 resumed 语义描述 = 每次会话恢复（含切槽）——非 process restarted only
+- AC3 实现零触碰（只改描述——envStateLine 输出/setup-reminders 不动）
+
 
 ## 12. 会话目录残留 GC 与标题写契约（已实现，双端）
 
