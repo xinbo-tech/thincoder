@@ -1,7 +1,7 @@
 # VSC 会话流 C 方向（消息秩序与忙态收敛——VSC-SESSION-FLOW-C）
 
 > 板块：会话流（panel/webview 时序——用户裁 C 先行 A+B 后做）。权威源：WEBVIEW.md（消息协议）+ AGENT-LOOP.md（机制权威——VSC 侧）。
-> 状态：**设计待评审**——2026-09-09 落档（C 深勘察 explore 一手——消息路由全路径 + 忙态镜像全清单 + 6 竞态 H-A~F + 测试基建损坏点）。需求：TODO 需求池「VSC 会话流时序对齐 CLI」——C 先行。
+> 状态：**C 全链已交付核销**——2026-09-09（C1 cbac1d6 + C2 2c74005——C1：turn 句柄/闩/seq/id 匹配/retry 并入/测试清单修复——C2：_turnState 枚举/单广播/renderStatusBar 单 writer/Stop 派生常显/计数不陈旧/WEBVIEW.md §8——VSC L2 140/140 绿——audit clean + advisor pass——consume 022a4ba0——A+B 后做待排）。
 
 ---
 
@@ -91,3 +91,8 @@
 
 ## 变更记录
 - 2026-09-09：C 深勘察落档（消息路由全路径 + 忙态镜像全清单 + H-A~F 竞态 + 方案选型单 FIFO 否决——杀 Stop 红线——C1/C2 分阶——测试基建漂移发现）。需求登记 TODO 需求池（用户裁 C 先行 A+B 后做）。
+- 2026-09-09 C1/C2 交付后收尾：C1（cbac1d6——F-C1a~e 全落 + 测试清单修复 7 残条删 + 6 组测试）→ C2
+  （2c74005——F-C2a~e 全落 + WEBVIEW.md §8 权威锚 + AGENTS.md 镜像）——L2 140/140——上报 4 项：
+  🟡1 Reload 冷启 running 不恢复（设计口径——A 批或后续定）/ 🟡2 digest 窗口 Stop 隐藏毫秒级（闩兜底
+  ——定夺项）/ 🟡3 panel-chat 493 行近 500（下次拆）/ 设计档状态行已翻。A+B 后做（A：sendMessage 守卫
+  依赖 C1 已就绪；B：块原地依赖 C2 已就绪——待排批）。
