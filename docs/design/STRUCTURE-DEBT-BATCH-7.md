@@ -21,17 +21,19 @@
 
 ### 2. L24 R19 read_history 护栏消息数预算（小-中）
 
-- CLI `src/agent-tools/read-history.mjs`：:139-162 行扫 `exceedsScanMax` 保留为廉价第一道 + **:181-184 parse 后加 `data.history.length` 检查**（消息数预算——超限返回 TOO_LARGE_ERROR 同款文案或更新文案）——文案/描述口径 :225 + SESSION.md:558 定稿文案同步（设计决策点：保留行扫第一道 + 加消息数第二道——双保险）。
+- CLI `src/agent-tools/read-history.mjs`：:139-162 行扫 `exceedsScanMax` 保留为廉价第一道 +
+  **:181-184 parse 后加 `data.history.length` 检查**（消息数预算——评审 #2 钉阈值：`READ_HISTORY_MAX_MESSAGES = 50_000`
+  ——超限返回 TOO_LARGE_ERROR 同款文案逐字（`{"error":"session too large — refine keyword or since/until"}`）——
+  双端同常量同文案）——描述口径 :225 改（"over 50,000 messages or 200,000 lines is refused"）+ SESSION.md:558
+  定稿文案同步——受影响表补这两处（评审 #2——双保险行扫第一道 + 消息数第二道）。
 - VSC `src/agent-tools/read-history.mjs`：同构（:52 常量/:136-160 行扫/:182-185 parse 后加 length 检查）。
 - **测试重建**（勘察歧义 1：全仓 test 树无 read-history 专项——CHANGELOG 称 T-R19.1..7 但清理轮疑删）——设计补：双端各建 read-history 护栏测试（消息数超限拒绝 + 行扫第一道 + 正常查询不回归）。
 
 ### 3. system.md:24 同步 3 子项（小）
 
-- **3①**：VSC `src/prompts/system.md:24`——括号去 `tokens,`（`(tokens, caches, in-flight flags)
-  survived` → `(caches, in-flight flags) survived`）+ 在 "A mode/model change…" 前插 CLI 逐字
-  例外句（"Design tokens are the exception: a still-valid design token (within its TTL) is
-  restored with the session slot — … expired tokens are dropped at restore."——CLI :24 逐字参照
-  ——实现时 read CLI :24 逐字复制）。
+- **3①**：VSC `src/prompts/system.md:24`——括号去 `tokens,` + 在 "A mode/model change…" 前插
+  CLI 逐字例外句——**评审 #4 顺序注：先做 VSC 3① 复制（读 CLI 现文）再做 3② 双端插入——或实现时
+  以 CLI 复制为准不重读**（同批同行编辑——复制锚防漂移）。
 - **3②**：双端 system.md:24——"model = the active model" 后插 "slot = the current session's sticky slot (null when none is bound)"（双端各 1 处）。
 - **3③**：CLI `docs/design/SESSION.md` §11 字段映射（:354-359——现 env/mode/model/resumed 四行）——model 行（:358）后补 slot 行（`slot` → 粘性当前会话槽——N2 语义——无绑定 null——§11.2 :406-412 参照）。VSC SESSION.md 无 §11 env-state 镜像段（勘察核——不动）。
 
@@ -39,19 +41,21 @@
 
 | 文件 | 端 | 改动 | 行数 |
 |---|---|---|---|
-| src/agent-tools/advisor-async.mjs:104 | VSC | advisorStale code 分支 isCodePath 过滤 | 现（+~8） |
-| src/advisor/repos.mjs:107 旁 | VSC | isCodePath/isTempFile 补 | 现（+~15） |
-| src/agent/run-helpers.mjs:75-79 | VSC | hasCodeMutations 补 temp 排除 | 现（+~2） |
+| src/agent-tools/advisor-async.mjs:104 | VSC | advisorStale code 分支 isCodePath 过滤 | ~425 现（+~8——评审 #1 补数） |
+| src/advisor/repos.mjs:107 旁 | VSC | isCodePath/isTempFile 补 | ~130 现（+~15——评审 #1 补数） |
+| src/agent/run-helpers.mjs:75-79 | VSC | hasCodeMutations 补 temp 排除 | ~250 现（+~2——评审 #1 补数） |
 | src/agent-tools/read-history.mjs:181-184 | CLI | parse 后 history.length 检查 | ~285 现（+~6） |
-| src/agent-tools/read-history.mjs:182-185 | VSC | 同 | 现（+~6） |
-| test/read-history-guard.test.mjs | 双端新 | 护栏测试（消息数超限/行扫/正常） | 新 |
+| src/agent-tools/read-history.mjs:182-185 | VSC | 同 | ~370 现（+~6——评审 #1 补数） |
+| test/read-history-guard.test.mjs | 双端新 | 护栏测试（消息数超限/行扫/正常） | 新 ~120 各（评审 #1 规模注） |
 | src/prompts/system.md:24 | VSC | 3① token 例外对齐 | 行内 |
 | src/prompts/system.md:24 | 双端 | 3② slot 短句 | 行内 |
-| docs/design/SESSION.md:354-359 | CLI | 3③ 字段映射补 slot 行 | doc |
+| docs/design/SESSION.md:354-359 + :558 | CLI | 3③ 字段映射补 slot 行 + L24 定稿文案同步（评审 #2） | doc |
+| src/agent-tools/read-history.mjs:225 | CLI | L24 描述口径改（评审 #2） | 行内 |
+| src/agent-tools/read-history.mjs:225 | VSC | L24 描述口径改（评审 #2） | 行内 |
 
 ## 验收
 
-- AC1 VSC 评审陈旧 = code-path only（doc/temp 编辑不触发——launch 后 code-path 变更仍触发）
+- AC1 VSC 评审陈旧 = code-path only（doc/temp 编辑不触发——launch 后 code-path 变更仍触发——评审 #3：验证 = VSC 既有 advisor/async-settle 测试补用例或手动 launch 检查——设计期确认测试定位）
 - AC2 read_history 消息数护栏生效（超限拒绝——行扫第一道保留——正常查询不回归——测试绿）
 - AC3 双端 system.md:24 token 指引一致（VSC 含 CLI 逐字例外句——无 tokens 不存活矛盾）+ slot 短句双端在位
 - AC4 SESSION.md §11 字段映射含 slot 行
