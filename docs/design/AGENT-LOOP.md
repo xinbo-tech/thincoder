@@ -363,7 +363,7 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 4. **销毁边界全列**（均 panel._agent = null）：loadSession（panel-session:121——switchSession/newSession/deleteSession/status 全覆盖）+
    applyProjectSwitch（panel-project:26）+ follow-active-editor（chat-panel:60）+ workspace-folder 兜底（chat-panel:76）+ panel dispose（chat-panel:162）+
    webview onDidDispose（chat-panel:101）。**安全前提（explore 确认）**：全部切换边界被 _turnActive/_susp?.active 守卫——销毁时无活回合/后台池。
-5. **落盘链**：agentState(agent)/onComplete/onDistilled 闭包快照/engTokensMergeForSave/setSlotEngDesignTokens **全保留**（回合尾盘同步是明确保留项 N3——VSC 进程不可控防丢）。砍的是"每轮经 opts 搬进全新对象"的搬运，不是槽读写。execute-tools.mjs:57-76 单例友好无需改。
+5. **落盘链**：agentState(agent)/onComplete/onDistilled 闭包快照/engTokensMergeForSave/setSlotEngDesignTokens **全保留**（2026-09-08 澄清：每轮 saveLines 是对话持久化刚需——CLI 回合尾 saveSession 同款——非防丢保险；engDesignTokens settle 落盘 run 外触发——两者均与 agent 生命周期无关，该在还在）。砍的是"每轮经 opts 搬进全新对象"的搬运，不是槽读写。execute-tools.mjs:57-76 单例友好无需改。
 6. **子代理/consult/escalate（depth>0）零改动**——opts.agent 仅 depth-0 honored；stateSink/entry.childAgent 语义不动。
 
 ### 11.2 per-run 字段回合边界复位清单（agent 复用后——防行为漂移）

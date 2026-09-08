@@ -46,7 +46,7 @@ VSC 顶层 agent 生命周期从"每轮 runAgent 重建 + opts.engState/agentSta
 
 - N1（对齐 CLI 模型）——agent 会话级单例 + 回合复用（CLI：make-agent 建一次 → state._agent → agent-turn 复用）；续跑循环同 agent 只重建 abort controller。
 - N2（状态一致性）——单内存源 + 回合尾盘同步；消除内存/盘双载体漂移（批 1 实证类）。
-- N3（落盘不退化）——每轮盘同步保留（VSC 进程不可控防丢）；不得引入"内存有盘上无"窗口。
+- N3（对话持久化不退化——2026-09-08 澄清：每轮 saveLines 是**对话持久化刚需**（fullHistory/contextHistory——CLI 回合尾 saveSession 同款），非"防 agent 状态丢"保险——agent 常驻后照样每轮写，与本改造无关。engDesignTokens 专门落盘（settle 当场）run 外触发——同样不受 agent 生命周期影响）。
 - N4（子代理不动）——子代理本是一次性 runAgent（非面板常驻）——本次只改顶层（depth-0 面板会话 agent）。
 - N5（per-run 字段语义保持）——_advisorRound/_verifiedThisRun 等回合级计数器语义不因 agent 复用而错（回合边界重置逻辑需显式化——CLI 侧同款）。
 
