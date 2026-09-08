@@ -7,22 +7,32 @@
  * 逻辑独立成此模块——2026-09-08 实现期补充，交付报告列明）。
  *
  * 语义契约：
- *   - 行级 normalize：去首尾空白（含行尾空格）/ 折叠内部空白（统一缩进——tab 与
- *     多空格折叠为单空格）/ 统一引号（弯引号/反引号归一到直引号）。
+ *   - 行级 normalize（EDIT.md §8.2 统一基准——与 CLI normalizeEditLine 逐字同算法）：
+ *     ① 去首尾空白 + 去行尾空格；② tab → 2 空格；③ 引号**单遍逐字符映射**——ASCII 单
+ *     引号 / 弯引号 ‘ ’ “ ” / 反引号 → 直双引号 "。**不做行内 \s+ 折叠**（折叠吞缩进/
+ *     对齐可能误匹配结构不同行——缩进/对齐是结构信息）。仅用于匹配比较——替换永远用原文窗口。
  *   - 滑动窗口（行数 = old 行数，尾换行是终结符）逐行 normalize 比较，相等行比例
  *     ≥90% 即模糊命中。
  *   - 歧义规则（评审 #2）：唯一模糊命中才应用；多命中由调用方报错并附候选
  *     （fuzzyAmbiguousBlock——沿用 similarLinesBlock 机制风格），不猜。
  */
 
+/** 引号归一目标字符（8.2 评审 #2 定稿——直双引号；ASCII 单引号同映射——单遍无顺序依赖） */
+const QUOTE_TO_DOUBLE = {
+  "'": '"', "\u2018": '"', "\u2019": '"', "\u201c": '"', "\u201d": '"', "`": '"',
+}
+
 /**
- * old_string 模糊匹配的行级 normalize（契约见头注释）。
+ * old_string 模糊匹配的行级 normalize（契约见头注释——与 CLI normalizeEditLine 同算法：
+ * tab→2 空格 / 引号单遍映射 / trim + 去行尾空格；无行内折叠）。
  */
 export function normalizeLineFuzzy(l) {
-  return l.trim()
-    .replace(/\s+/g, " ")
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’`]/g, "'")
+  let out = ""
+  for (const ch of l) {
+    if (ch === "\t") out += "  "
+    else out += QUOTE_TO_DOUBLE[ch] ?? ch
+  }
+  return out.replace(/\s+$/g, "").trim()
 }
 
 /** D2 模糊命中成功消息追加文案 */

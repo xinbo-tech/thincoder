@@ -121,10 +121,11 @@ export function parsePatch(patch) {
       if (!cur) throw new Error("Malformed patch: hunk header before any file header")
       const m = line.match(/^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/)
       if (!m) {
-        // §15 D15.6: bare "@@" without coordinates — the hunk is located by its
-        // matching-line sequence（空格上下文行 + - 行——applyHunks 锚匹配域——唯一匹配即应用）。
-        // ——零上下文/1 上下文含 - 锚形态由 §15.3 放宽（TOOLS.md D15.10.1——锚序列唯一匹配即应用——
-        // context<2 且无 - 锚仍拒——纯 + 插入位置不可判——NF15.8c——与 CLI patch.mjs 同语义）。
+        // APPLY-PATCH.md §2/§3（宽容格式——无坐标 hunk）：bare "@@" without coordinates — the
+        // hunk is located by its matching-line sequence（空格上下文行 + - 行——applyHunks 锚
+        // 匹配域——唯一匹配即应用）。零上下文/1 上下文含 - 锚形态由 APPLY-PATCH.md §2 放宽
+        // （锚序列唯一匹配即应用——context<2 且无 - 锚仍拒——纯 + 插入位置不可判——与 CLI
+        // patch.mjs 同语义）。
         // hunk.ops keeps the standard shape so applyHunks works unchanged; coordless is marked
         // for anchor reporting.
         if (!/^@@\s*$/.test(line)) throw new Error(`Malformed patch: bad hunk header "${line}"`)
@@ -148,9 +149,10 @@ export function parsePatch(patch) {
           else throw new Error(`Malformed patch: unexpected line "${hl.slice(0, 60)}" inside hunk`)
           i++
         }
-        // §15.3 (D15.10.1——2026-09-04)：context<2 且含 ≥1 个 - 行 → 接受——定位锚 = hunk 内
-        // 匹配行序列（空格上下文行 + - 行——按出现序）连续——唯一匹配即应用（applyHunks 既有锚
-        // 匹配域——多匹配 / not-found 语义不变）。0 上下文与 1 上下文同待遇（评审 #4a）。
+        // APPLY-PATCH.md §2（宽容格式——无坐标 hunk 放宽，2026-09-04）：context<2 且含 ≥1
+        // 个 - 行 → 接受——定位锚 = hunk 内匹配行序列（空格上下文行 + - 行——按出现序）连续
+        // ——唯一匹配即应用（applyHunks 既有锚匹配域——多匹配 / not-found 语义不变）。0 上下文
+        // 与 1 上下文同待遇（评审 #4a）。
         const removedCount = hunk.ops.filter((o) => o.type === "-").length
         if (contextCount < 2 && removedCount === 0) {
           throw new Error(`Malformed patch: hunk "@@" without coordinates needs at least 2 context lines — add more context lines`)
@@ -198,7 +200,7 @@ function isFileHeader(line, nextLine) {
   return /^[ab]\//.test(line.slice(4).trim())
 }
 
-/** Anchor fragment for coordless-hunk error text (D15.6.1): the first context
+/** Anchor fragment for coordless-hunk error text (APPLY-PATCH.md §2): the first context
  *  lines that were tried, truncated to 60 chars each, so the model sees what
  *  the hunk was anchored on. */
 function hunkAnchor(oldSeq) {

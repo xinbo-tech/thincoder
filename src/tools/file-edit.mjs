@@ -1,8 +1,10 @@
 /**
- * file-edit.mjs — edit + hashline_edit tools（2026-09-05 module-split：file.mjs 552 > 500
+ * file-edit.mjs — edit tool + hashline_edit re-export（2026-09-05 module-split：file.mjs 552 > 500
  * 硬限——read/write 留在 file.mjs；本文件 verbatim 迁入 edit 语义族（similarLinesBlock/
  * findWhitespaceVariant/EDIT_MUTEX_TEXT/WHITESPACE_VARIANT_NOTE + editTool +
  * hashlineEditTool）——语义零变；file.mjs re-export（消费方 import 面不变）。
+ * 2026-09-08 阶段 2 后 file-edit.mjs 跨 500 硬帽——hashlineEditTool 迁出至
+ * hashline-edit.mjs（re-export——file.mjs/index.mjs 消费面不变）。
  * 头注释/import 面沿用 file.mjs（shared.mjs + edit-diff.mjs）。
  * 2026-09-08 EDIT-TOOL-IMPROVEMENT.md（D1-D4）：edit 加 line/startLine/endLine
  * 按行号改（逻辑在 edit-line-params.mjs 子模块——500 硬帽拆分，评审 #4）+
@@ -11,19 +13,19 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises"
-import { resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, stripBom, lfOffsetToRaw, detectFileEol, joinWithEol, findCandidates, FFFD_WARNING, gitDiffOne, hashLine, refreshMarkdownPreview } from "./shared.mjs"
+import { resolvePath, getOpenDoc, applyEditorEdit, applyEditorRangeEdit, normalizeEOL, lfOffsetToRaw, detectFileEol, findCandidates, refreshMarkdownPreview } from "./shared.mjs"
 import { applyRegion, EMPTY_NEW_REASON } from "./edit-diff.mjs"
-import { hasLineParams, executeLineEdit, LINE_MUTEX_TEXT } from "./edit-line-params.mjs"
+import { hasLineParams, computeLineEdit, executeLineEdit, LINE_MUTEX_TEXT } from "./edit-line-params.mjs"
 import { findFuzzyMatch, fuzzyAmbiguousBlock, FUZZY_MATCH_NOTE } from "./edit-fuzzy-match.mjs"
 
 /**
- * F3/§14.1 — similar-lines candidate block for a not-found old_string (§14 F3, extended
- * to the batch channel by §14.1 D14.1.1 — CLI parity: the CLI's shared computeEditEntry
- * appends candidates on every not-found, single form and batch alike).
+ * EDIT.md §5（not-found 引导——similar-lines 候选块；单形态与批量通道共用——CLI parity:
+ * the CLI's shared computeEditEntry appends candidates on every not-found, single form
+ * and batch alike).
  * Scoring: LCS line-level, top 3, score ≥ 0.5 (findCandidates); multi-line old_string
  * scores only its first line (header marks it). Zero candidates → "" (whole block
  * omitted — the searched:/grep lines stay). Appended AFTER the searched line — the
- * "Error:"/searched prefixes stay untouched (N-14.1a).
+ * "Error:"/searched prefixes stay untouched.
  */
 function similarLinesBlock(lines, oldString) {
   const cands = findCandidates(lines, oldString)
@@ -69,52 +71,63 @@ const WHITESPACE_VARIANT_NOTE = "applied to the unique whitespace-only match (co
 // edit-fuzzy-match.mjs 子模块（findFuzzyMatch / fuzzyAmbiguousBlock / FUZZY_MATCH_NOTE
 // ——500 行硬帽拆分；normalize 契约/歧义规则见该模块头注释）。
 
-// D15.3#9 修订（2026-09-05 用户裁定——CLI edit-diff EDIT_ARGS_MUTEX 同句）：edits 只与顶层
-// old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认）。
-const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_string/new_string — a top-level path is allowed (default for entries without their own path); provide each change's old_string/new_string inside its edits entry"
-
+// EDIT.md §5（互斥——2026-09-05 用户裁定，CLI edit-diff 同句）：edits 只与顶层
+// old_string/new_string/line/startLine/endLine 互斥——顶层 path/filePath 合法（无自带 path 条目的默认）。
+const EDIT_MUTEX_TEXT = "edits array is mutually exclusive with top-level old_string/new_string/line/startLine/endLine — a top-level path is allowed (default for entries without their own path); provide each change's targeting (old_string, or line / startLine+endLine) and new_string inside its edits entry"
 export const editTool = {
   name: "edit",
   description:
-    "Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, old_string's lines are REPLACED by new_string and the old lines are deleted (替换即删 — no old-line residue); a unique single-line old_string paired with a single-line new_string replaces that exact line in place (line count unchanged). replace_all keeps literal replacement of every occurrence — the diff rules above do not apply.\n" +
-    "old_string matching tiers: 1) exact; 2) unique whitespace-only variant (auto-applied); 3) fuzzy — ≥90% of lines equal after normalization (leading/trailing whitespace stripped, inner whitespace collapsed, quotes unified): a UNIQUE fuzzy match is auto-applied, multiple fuzzy matches error with line-numbered candidates (add more context to disambiguate).\n" +
-    "Add a line/entry after a known line → insert_after — includes checklist items and doc lines.\n" +
-    "Know the line number? Use line/startLine/endLine instead of old_string — the target line(s) are replaced by new_string (empty new_string deletes them).\n" +
+    "Edit a file as a patch. old_string is the current content of the region to change (must match exactly once); new_string is the desired result of that region. Lines shared by both are kept; lines only in new_string take their position relative to the shared lines (LCS order) — when no line overlaps, old_string's lines are REPLACED by new_string and the old lines are deleted (no old-line residue — a replacement never leaves old lines behind); a unique single-line old_string paired with a single-line new_string replaces that exact line in place (line count unchanged). replace_all keeps literal replacement of every occurrence — the diff rules above do not apply.\n" +
+    "old_string matching tiers: 1) exact; 2) unique whitespace-only variant (auto-applied); 3) fuzzy — ≥90% of lines identical after normalization (trimmed, tab→space indent + quote normalization — ASCII single, curly single/double and backtick quotes all unify to straight double quotes): a UNIQUE fuzzy match is auto-applied, multiple fuzzy matches error with line-numbered candidates (add more context to disambiguate).\n" +
+    "Routing — pick the right edit tool:\n" +
+    "- Delete a line/range by number → omit new_string: edit with `line: N` / `startLine: N, endLine: M`\n" +
+    "- Line numbers fresh (just read) → `line`/`startLine`/`endLine` targeting — precise, no content copy needed\n" +
+    "- Line numbers may have drifted / content has whitespace-encoding noise → `hashline_edit` (content-hash addressing — position-independent)\n" +
+    "- Add a line/entry after a known line → insert_after — includes checklist items and doc lines\n" +
+    "Know the line number? Use line/startLine/endLine instead of old_string — give new_string to replace the target line(s), or OMIT new_string to delete the line/range (deleting by number is an explicit, bounded intent); an explicit empty new_string is an error — omit new_string instead of passing an empty string.\n" +
     "Parameters:\n" +
     "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
     "- old_string: Current content of the region — must match exactly once in the file (exact → whitespace-variant → fuzzy tiers); mutually exclusive with line/startLine/endLine; for a change that keeps a line, include the unchanged neighbor line in BOTH old_string and new_string\n" +
-    "- new_string (required): Desired result of the region — diffed against old_string (shared lines kept; zero overlap → old lines replaced and deleted)\n" +
-    "- line: Replace a single line by number (1-based) — requires new_string; mutually exclusive with old_string and startLine/endLine\n" +
-    "- startLine / endLine: Replace an inclusive line range (1-based, both required) — requires new_string; mutually exclusive with old_string and line\n" +
-    "- line: Replace a single line by number (1-based) — requires new_string; mutually exclusive with old_string and startLine/endLine; replace_all does not apply\n" +
-    "- startLine / endLine: Replace an inclusive line range (1-based, both required) — requires new_string; mutually exclusive with old_string and line; replace_all does not apply\n" +
-    "- replace_all: Replace every occurrence literally (default false) — the insert rule does not apply\n" +
-    "- edits: 批量形态（CLI parity）——同文件多处修改 → 一次调用原子完成（同文件条目串行应用，各基于前一条结果）；多文件独立修改 → 同一 `edits` 数组多条目（先全量检查，任一失败全不写）——prefer one batched call over N single edits。与顶层 old_string/new_string 互斥——顶层 path/filePath 合法（无自带 path 条目的默认——条目自带 path 优先）。\n" +
+    "- new_string: Desired result of the region — diffed against old_string (shared lines kept; old-only lines deleted — a replacement never leaves old lines behind). Content-based edits: required — an explicit empty string is an error (protects against forgetting it). Line-based edits (line/startLine/endLine): give it to replace the line/range, or OMIT it to delete — an explicit empty string is NOT deletion (error — omit instead)\n" +
+    "- line: 1-based line number — replace that single line with new_string, or OMIT new_string to DELETE it; mutually exclusive with old_string and startLine/endLine; replace_all does not apply\n" +
+    "- startLine / endLine: 1-based inclusive line range to replace with new_string (given together; mutually exclusive with old_string and line) — OMIT new_string to DELETE the range; replace_all does not apply\n" +
+    "- replace_all: Replace all occurrences instead of just one (default false; content-based targeting only)\n" +
+    "- edits: Batch form — multiple edits in ONE call, atomic; entries without their own path inherit the top-level path (entry paths override). Mutually exclusive with top-level old_string/new_string\n" +
     "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed",
   parameters: {
     type: "object",
     properties: {
       path: { type: "string", description: "File path (single form: required; with the edits array: optional top-level default for entries without their own path) (alias: filePath)" },
       filePath: { type: "string", description: "Alias for path" },
-      old_string: { type: "string", description: "Text to replace — exact match first, then unique whitespace-only variant, then fuzzy (≥90% lines equal after whitespace/quote normalization; unique hit applied, multiple hits error with candidates). Mutually exclusive with line/startLine/endLine." },
-      new_string: { type: "string", description: "Replacement text" },
-      line: { type: "integer", description: "Replace this single line (1-based) with new_string — mutually exclusive with old_string and startLine/endLine" },
-      startLine: { type: "integer", description: "First line of the range to replace (1-based, inclusive; endLine required)" },
-      endLine: { type: "integer", description: "Last line of the range to replace (1-based, inclusive; startLine required)" },
-      replace_all: { type: "boolean", description: "Replace all occurrences" },
+      old_string: { type: "string", description: "Text to replace — exact match first, then unique whitespace-only variant, then fuzzy (≥90% lines identical after trimming, tab→space indent and quote normalization; unique hit applied, multiple hits error with candidates). Mutually exclusive with line/startLine/endLine." },
+      new_string: { type: "string", description: "Replacement text — content-based edits require it (an explicit empty string is an error); with line-based targeting (line/startLine/endLine) give it to replace the line/range, or OMIT it to delete (an explicit empty string is an error — omission is the delete signal)" },
+      line: { type: "integer", description: "1-based line number — replace that single line with new_string, or OMIT new_string to DELETE it; mutually exclusive with old_string and startLine/endLine" },
+      startLine: { type: "integer", description: "1-based first line of the range to replace with new_string (inclusive — requires endLine; mutually exclusive with old_string); OMIT new_string to DELETE the range" },
+      endLine: { type: "integer", description: "1-based last line of the range to replace with new_string (inclusive — requires startLine; mutually exclusive with old_string); OMIT new_string to DELETE the range" },
+      replace_all: { type: "boolean", description: "Replace every occurrence literally (default false) — content-based edits only" },
       edits: {
         type: "array",
         description:
-          "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path (or filePath) is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string — provide each change's old/new inside its edits entry.",
+          "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path (or filePath) is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) inside its edits entry; new_string replaces when given, and line-targeted entries may omit it to DELETE the line/range.",
         items: {
           type: "object",
           properties: {
             path: { type: "string" },
             old_string: { type: "string" },
             new_string: { type: "string" },
+            line: { type: "integer" },
+            startLine: { type: "integer" },
+            endLine: { type: "integer" },
             replace_all: { type: "boolean" },
           },
-          required: ["old_string", "new_string"],
+          oneOf: [
+            // 内容条目：old_string + new_string 必填（内容形态 new 空串/省略均拒——EDIT.md §5）
+            { required: ["old_string", "new_string"] },
+            // 行号条目（单行）：line 定位——new_string optional（省略 = 删行——EDIT.md §8.1）
+            { required: ["line"] },
+            // 行号条目（范围）：startLine + endLine 定位——new_string optional（省略 = 删范围）
+            { required: ["startLine", "endLine"] },
+          ],
         },
       },
     },
@@ -139,13 +152,13 @@ export const editTool = {
     // 2026-08-31 工具顺手度（CLI ebd70eb parity）：数组形态——一次多文件原子替换
     if (args.edits) {
       if (!Array.isArray(args.edits) || args.edits.length === 0) {
-        return "Error: edits must be a non-empty array of {path, old_string, new_string}"
+        return "Error: edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string?}"
       }
-      if (args.old_string !== undefined || args.new_string !== undefined) {
+      if (args.old_string !== undefined || args.new_string !== undefined || hasLineParams(args)) {
         return "Error: " + EDIT_MUTEX_TEXT
       }
       // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
-      // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑
+      // 2026-09-01 缺陷修复（EDIT.md §5——edits 数组同文件多条串行规则）：同一 path 的多条编辑
       // 按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的累积内容做匹配与替换
       // （原实现每条都基于盘上/文档原始内容计算、应用循环后置，同文件后者覆盖前者 →
       // 除最后一条外全部静默丢失）；跨 path 条目互不影响（并行原子语义不变）。
@@ -154,13 +167,25 @@ export const editTool = {
         // #1（2026-09-02 评审修复）：批量形态类型校验补齐——非字符串 old_string/new_string
         // （含缺省 undefined）之前在 normalizeEOL 抛 TypeError 而非错误消息；逐条返回与
         // 单条路径形态同款的诊断消息（单条形态有 typeof 校验，批量形态缺）。
-        if (!e || typeof e !== "object") return "Error: each edit must be an object with {old_string, new_string} — path optional (per entry or top-level)"
+        // 8.4（EDIT.md——批量行号补 VSC）：条目二形态——old_string（内容）或
+        // line/startLine+endLine（行号——8.1 删行形态：省略 new_string = 删行）。
+        if (!e || typeof e !== "object") return "Error: each edit must be an object with {old_string, new_string} or {line / startLine+endLine, new_string?} — path optional (per entry or top-level)"
         // 2026-09-05 用户裁定（CLI parity）：条目 path 优先；缺省回退顶层 path/filePath
         const p = e.path || args.path || args.filePath
         if (!p) return "Error: each edit must have a path — give each entry its own path or pass a top-level path"
-        if (!e.old_string) return `Error: edit for ${p}: old_string must not be empty`
-        if (typeof e.old_string !== "string") return `Error: edit for ${p}: old_string must be a string`
-        if (typeof e.new_string !== "string") return `Error: edit for ${p}: new_string must be a string`
+        const lineBased = hasLineParams(e)
+        if (lineBased) {
+          if (e.old_string !== undefined) return `Error: edit for ${p}: ${LINE_MUTEX_TEXT}`
+          if (e.replace_all) return `Error: edit for ${p}: replace_all does not apply to line-based edits (line numbers target exactly one region)`
+          // new_string optional（省略 = 删行——8.1）；显式空串/非字符串在 computeLineEdit 校验
+          if (e.new_string !== undefined && e.new_string !== "" && typeof e.new_string !== "string") {
+            return `Error: edit for ${p}: new_string must be a string (got ${typeof e.new_string})`
+          }
+        } else {
+          if (!e.old_string) return `Error: edit for ${p}: old_string must not be empty`
+          if (typeof e.old_string !== "string") return `Error: edit for ${p}: old_string must be a string`
+          if (typeof e.new_string !== "string") return `Error: edit for ${p}: new_string must be a string`
+        }
         const abs = resolvePath(p, ctx.cwd)
         let g = groups.get(abs)
         if (!g) {
@@ -176,6 +201,16 @@ export const editTool = {
       const prepared = [] // 顺序 = args.edits 顺序（回显按条）；midText/range 冻结该条应用前的累积状态
       for (const g of groups.values()) {
         for (const e of g.edits) {
+          // 8.4（EDIT.md——批量行号补 VSC）：行号条目——对累积态 g.text 直接定位（串行累积——
+          // 行号引用前序条目已应用后的内容）；省略 new_string = 删行（8.1——返回 Deleted 文本）
+          if (hasLineParams(e)) {
+            const r = computeLineEdit({ text: g.text, line: e.line, startLine: e.startLine, endLine: e.endLine, newString: e.new_string, path: g.path })
+            if (!r.ok) return `Error: edit aborted (atomic — no files written): ${r.reason}`
+            prepared.push({ g, kind: "line", newText: r.newText, deleted: r.deleted, replacedLines: r.replacedLines, firstLine: r.firstLine })
+            g.text = r.newText
+            if (g.doc) g.rawReplaceAll = true // 全量写回——raw 镜像不再推进，后续条目统一全量语义
+            continue
+          }
           let oldS = normalizeEOL(e.old_string)
           const newS = normalizeEOL(e.new_string)
           let note = null
@@ -195,8 +230,8 @@ export const editTool = {
             if (fuzzy?.hit) { oldS = fuzzy.hit.actual; count = 1; note = FUZZY_MATCH_NOTE }
           }
           if (count === 0) {
-            // §14.1 D14.1.1 (2026-09-05): batch channel mirrors the single-form F3 block —
-            // candidates appended after the searched line, zero candidates → block omitted.
+            // EDIT.md §5（not-found 引导）：批量通道镜像单形态候选块——candidates 接在 searched
+            // 行之后，零候选 → 整块省略。
             return `Error: edit aborted (atomic — no files written): old_string not found in ${g.path}\n` +
               `  searched: "${oldS.slice(0, 100).split("\n")[0]}${oldS.length > 100 ? "…" : ""}" — use grep to locate the actual content` +
               similarLinesBlock(g.text.split("\n"), oldS)
@@ -205,10 +240,9 @@ export const editTool = {
             return `Error: edit aborted (atomic — no files written): old_string matches ${count} times in ${g.path}; ` +
               `provide more context or set replace_all`
           }
-          // §15 D15.1 + §15.2 分支 0: empty new_string (pure deletion intent) — explicit
-          // error; each batch entry runs the region judgment in edit-diff.mjs
-          // (applyRegion = §15.2 分支 0 single-line in-place replace + applyPatchLines
-          // LCS diff — replace_all keeps literal per-occurrence swap, never branch 0).
+          // EDIT.md §4/§5（分支 0 单行替换 + 内容形态空 new_string 显式错）：批量每条目在
+          // edit-diff.mjs 跑区域判定（applyRegion = 分支 0 就地替换 + applyPatchLines
+          // LCS diff——replace_all 字面逐处替换，永不落分支 0）。
           if (newS === "") return `Error: edit aborted (atomic — no files written): ${EMPTY_NEW_REASON}`
           let newApplied = newS
           if (!e.replace_all) {
@@ -232,7 +266,7 @@ export const editTool = {
           prepared.push({
             g, midText: g.text, oldS, newS, count, replaceAll: !!e.replace_all,
             note, // P15.11——空白差异自动落点标记（成功消息追加）
-            // D15.1/§15.2: newApplied = applyRegion 判定结果（分支 0 单行×单行就地替换 ===
+            // EDIT.md §4（判定序）：newApplied = applyRegion 判定结果（分支 0 单行×单行就地替换 ===
             // newS；LCS 替换 === newS；零重叠插入情形 = oldS+newS）——写入路径必须用
             // newApplied，否则 batch 里的零重叠条目会退化成纯替换（模拟域 g.text 与真实
             // 写入漂移）。
@@ -255,6 +289,22 @@ export const editTool = {
       // 全部检查通过——逐条应用（每条基于其冻结的累积中间态：最终状态 = 所有条目依序生效）
       const results = []
       for (const p of prepared) {
+        if (p.kind === "line") {
+          // 行号条目写回（8.4）：全量文本（LF 域累积结果——行号条目不经 oldS 匹配，直接应用）
+          const out = p.g.fileEol === "\r\n" ? normalizeEOL(p.newText).replace(/\n/g, "\r\n") : p.newText
+          const msg = p.deleted
+            ? `Deleted ${p.replacedLines === 1 ? `line ${p.firstLine}` : `lines ${p.firstLine}-${p.firstLine + p.replacedLines - 1}`} of ${p.g.path}`
+            : `Replaced ${p.replacedLines} line(s) at L${p.firstLine} in ${p.g.path}`
+          if (p.g.doc) {
+            await applyEditorEdit(p.g.doc, out)
+            results.push(`${msg} (via editor)`)
+          } else {
+            await writeFile(p.g.abs, out, "utf8")
+            refreshMarkdownPreview(p.g.abs)
+            results.push(msg)
+          }
+          continue
+        }
         if (p.g.doc) {
           // range edit 仅在「单处替换 + raw 镜像有效」时用（精确、最小 WorkspaceEdit）；
           // 其余（replace_all / 镜像失效后的条目，range=null）统一走 applyEditorEdit
@@ -289,8 +339,9 @@ export const editTool = {
     // 与 old_string 互斥；定位/替换逻辑在 edit-line-params.mjs 子模块（拆分边界 评审 #4）。
     if (hasLineParams(args)) {
       if (old_string !== undefined) return "Error: " + LINE_MUTEX_TEXT
-      if (replace_all !== undefined) return "Error: replace_all does not apply to line/startLine/endLine edits (line-numbered replacement targets exactly one region)"
-      if (typeof new_string !== "string") return "Error: new_string must be a string (required with line/startLine/endLine)"
+      if (replace_all) return "Error: replace_all does not apply to line/startLine/endLine edits (line-numbered replacement targets exactly one region)" // 真值判定——replace_all:false 与缺省同义（CLI edit-diff validateEditEntry 同句）
+      if (new_string !== undefined && new_string !== "" && typeof new_string !== "string") return "Error: new_string must be a string (got " + typeof new_string + ")"
+      // new_string optional：省略 = 删行（8.1 删行形态）；显式空串 = 显式错误（computeLineEdit 内矩阵判定）
       return await executeLineEdit({ path, line: args.line, startLine: args.startLine, endLine: args.endLine, newString: new_string, cwd: ctx.cwd })
     }
     if (typeof old_string !== "string" || typeof new_string !== "string") return "Error: old_string and new_string must be strings"
@@ -335,8 +386,8 @@ export const editTool = {
       // "not found" black box into a pointer at the most likely intended line.
       // Multi-line old_string: only its first line is scored (marked accordingly). CLI parity.
       const candText = similarLinesBlock(text.split("\n"), old_string)
-      // §14 D-TF2（B——2026-09-04）：not found 结果补 grep 定位建议（英文逐字——与 CLI edit-batch/file.mjs 同句）——
-      // 模型失败后先 grep 定位实际内容，不盲目重试；candidates/CRLF 分支零改（NF-TF）。
+      // EDIT.md §5（not-found 引导——2026-09-04）：not found 结果补 grep 定位建议（英文逐字——
+      // 与 CLI edit-batch/file.mjs 同句）——模型失败后先 grep 定位实际内容，不盲目重试。
       const preview = old_string.slice(0, 100).split("\n")[0]
       const searched = `  searched: "${preview}${old_string.length > 100 ? "…" : ""}" — use grep to locate the actual content`
       return `Error: old_string not found in ${path}\n${searched}${candText}`
@@ -344,11 +395,11 @@ export const editTool = {
     if (!replace_all && count > 1) {
       return `Error: old_string matches ${count} times in ${path} — set replace_all=true or add more context to make it unique`
     }
-    // §15 D15.1 + §15.2 分支 0: empty new_string (pure deletion intent) is an explicit
-    // error — deletion keeps the context lines in BOTH old and new (never silent); the
-    // region judgment lives in edit-diff.mjs (applyRegion = §15.2 分支 0 single-line
-    // in-place replace + applyPatchLines LCS diff — replace_all = literal per-occurrence
-    // swap, never branch 0 — the insert rule does not apply).
+    // EDIT.md §4/§5（分支 0 + 空 new_string 矩阵——内容形态显式错）：empty new_string
+    // (pure deletion intent) is an explicit error — deletion keeps the context lines in
+    // BOTH old and new (never silent); the region judgment lives in edit-diff.mjs
+    // (applyRegion = 分支 0 single-line in-place replace + applyPatchLines LCS diff —
+    // replace_all = literal per-occurrence swap, never branch 0 — the diff rules do not apply).
     if (new_string === "") return `Error: ${EMPTY_NEW_REASON}`
     let region = new_string
     if (!replace_all) {
@@ -395,106 +446,6 @@ export const editTool = {
   },
 }
 
-export const hashlineEditTool = {
-  name: "hashline_edit",
-  readonly: false,
-  description:
-    "Edit a file using content-hash addressing instead of string matching. More reliable than edit when whitespace or encoding varies — hashes are computed from exact line bytes on disk.\n" +
-    "Parameters:\n" +
-    "- path (required): File path\n" +
-    "- old_hashes (required): Array of SHA256 hashes (12-char hex) identifying lines to replace. Read the file with hashes=true first to obtain these hashes. For a single line, pass [hash]; for a contiguous block, pass [hash1, hash2, ...] in order.\n" +
-    "- new_content (required): Replacement text (multi-line ok, \\n separated)\n\n" +
-    "Notes:\n" +
-    "- The hash of each line is computed as SHA256(line_content).slice(0, 12) — the same algorithm used by read(hashes=true)\n" +
-    "- Hashes are position-independent: they identify lines by content, not by line number (which changes after edits)\n" +
-    "- If the hash sequence isn't found, the error will include the current file's hashes so you can retry with corrected values\n" +
-    "- Prefer this over edit when: 1) the file may have mixed whitespace/encoding, 2) you want to edit a block of lines with a single call\n" +
-    "- use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed\n" +
-    "Replacement text replaces the lines identified by the hashes — content not present in new_content is deleted. For a new line after a known line, use insert_after. For a single simple string swap, use edit.",
-  parameters: {
-    type: "object",
-    properties: {
-      path: { type: "string", description: "File path" },
-      old_hashes: { type: "array", items: { type: "string" }, description: "SHA256 hashes (12 chars) of the lines to replace. Read the file with hashes=true first to obtain these hashes. Single line: pass 1 hash; multiple lines: pass the exact sequence of hashes." },
-      new_content: { type: "string", description: "Replacement text (can span multiple lines)" },
-    },
-    required: ["path", "old_hashes", "new_content"],
-  },
-  touchedPaths(args) { return args.path ? [args.path] : [] },
-  async execute({ path, old_hashes, new_content }, ctx) {
-    const abs = resolvePath(path, ctx.cwd)
-    if (!old_hashes?.length) throw new Error("old_hashes must not be empty — read the file with hashes=true to get line hashes")
-    const raw = await readFile(abs, "utf8")
-    // Strip the BOM for the hash domain (hashLine never sees it) but remember it —
-    // the disk write-back must restore it, while the editor path passes BOM-less
-    // text (VS Code re-adds the BOM on save per its file encoding).
-    const hadBom = raw.charCodeAt(0) === 0xFEFF
-    const text = normalizeEOL(stripBom(raw))
-    // Encoding-corruption probe (CLI parity): U+FFFD means the file is not clean
-    // UTF-8 — hash addressing may be unreliable. Warn (never block).
-    const corrupted = text.includes("\uFFFD")
-    const lines = text.split("\n")
-    const fileHashes = lines.map((l) => hashLine(l))
-    const target = old_hashes
-
-    // Sliding-window match: find all occurrences of the hash sequence.
-    const matches = []
-    for (let i = 0; i <= fileHashes.length - target.length; i++) {
-      let match = true
-      for (let j = 0; j < target.length; j++) {
-        if (fileHashes[i + j] !== target[j]) { match = false; break }
-      }
-      if (match) matches.push(i)
-    }
-
-    if (matches.length === 0) {
-      const maxShow = Math.min(fileHashes.length, 50)
-      const hashDump = fileHashes.slice(0, maxShow).map((h, i) => `${h}  L${i + 1}: ${lines[i].slice(0, 80)}`).join("\n")
-      const preview = target.join(" ")
-      throw new Error(
-        `Hash sequence not found in ${path}: ${preview}\n` +
-        `The file may have been modified since you last read it. Current hashes (first ${maxShow} lines):\n${hashDump}` +
-        `\nfor fresh hashes, re-read the file with hashes=true` +
-        (corrupted ? `\n${FFFD_WARNING}` : "")
-      )
-    }
-
-    if (matches.length > 1) {
-      const c = 2
-      const detail = matches.map((m) => {
-        const start = Math.max(0, m - c)
-        const end = Math.min(lines.length, m + target.length + c)
-        const preview = lines.slice(start, end).map((l, i) => {
-          const ln = start + i + 1
-          const marker = m <= ln - 1 && ln - 1 < m + target.length ? ">" : " "
-          return `${marker} L${ln}: ${l.slice(0, 80)}`
-        }).join("\n")
-        return `  Match at line ${m + 1} (${target.length} line(s)):\n${preview}`
-      }).join("\n\n")
-      throw new Error(
-        `Hash sequence matches ${matches.length} positions in ${path} — ambiguous.\n` +
-        `Include more surrounding lines (unique-hash lines before/after the target) to disambiguate.\n\n` +
-        `All matches with surrounding context:\n\n${detail}`
-      )
-    }
-
-    const pos = matches[0]
-    const newLines = normalizeEOL(new_content).split("\n") // normalize: CRLF in new_content would join into \r\r\n
-    lines.splice(pos, target.length, ...newLines)
-    // Write back in the file's original EOL style (same rule as edit / apply_patch).
-    const updated = joinWithEol(lines, raw)
-
-    // Open in editor → WorkspaceEdit; otherwise write to disk
-    const doc = getOpenDoc(abs)
-    if (doc) {
-      if (doc.isDirty) return `Error: File has unsaved changes in the editor: ${abs}. Save or discard before allowing automated edits.`
-      // BOM-less text: the editor re-adds the BOM on save — passing it would double it.
-      await applyEditorEdit(doc, updated)
-    } else {
-      await writeFile(abs, (hadBom ? "\uFEFF" : "") + updated, "utf8")
-      refreshMarkdownPreview(abs)
-    }
-    const diff = gitDiffOne(ctx.cwd, abs)
-    return `Edited ${path}: replaced ${target.length} line(s) at L${pos + 1} with ${newLines.length} line(s)${diff ? "\n" + diff : ""}${corrupted ? `\n${FFFD_WARNING}` : ""}`
-  },
-}
+// hashline_edit（2026-09-08 module-split：file-edit.mjs 500 行硬帽——阶段 2 跨帽后 verbatim
+// 迁至 hashline-edit.mjs——re-export 保 file.mjs/index.mjs 消费面不变）
+export { hashlineEditTool } from "./hashline-edit.mjs"
