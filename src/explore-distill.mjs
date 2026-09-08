@@ -106,8 +106,9 @@ async function distillExplorations(history, runStartLen, provider, signal, agent
     // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI explore-distill.mjs logCtx 同款）：kind=
     // distill + agent 元数据透出（role/depth 经 agent 绑定——hydrate 打点 _role/_depth）；
     // session/cwd 供轨迹对回；traces 开关沿 agent.config（D-TR6——缺省 OFF）。agent 经
-    // summarizeRunExplorations 尾参线程化（run-stages fireEndOfRunDistill 传入）；cwd 无
-    // process.cwd() 回退（VSC extension host cwd ≠ 工作区——轨迹归属错误）。
+    // summarizeRunExplorations 尾参线程化（run-stages fireEndOfRunDistill 传入）；cwd 恒为
+    // agent.cwd——本调用点不依赖 recordChatTrace 的 process.cwd() 兜底（该兜底仅覆盖无
+    // agent 作用域的未来新增调用点；VSC extension host cwd ≠ 工作区——轨迹归属错误）。
     const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
       messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
       signal: signal ?? null,

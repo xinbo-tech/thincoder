@@ -267,8 +267,9 @@ export async function compactHistory(history, systemPrompt, provider, explicitTh
     // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI context.mjs compress logCtx 同款）：kind=
     // compress + agent 元数据透出（role/depth 经 agent 绑定——hydrate 打点 _role/_depth）；
     // session/cwd 供轨迹对回；traces 开关沿 agent.config（D-TR6——agent-state 每轮整建
-    // agent.config.traces——缺省 OFF——与 CLI 同语义）。cwd 无 process.cwd() 回退（VSC
-    // extension host cwd ≠ 工作区——轨迹归属错误）；agent 恒由 checkAndCompact 传入。
+    // agent.config.traces——缺省 OFF——与 CLI 同语义）。cwd 恒为 agent.cwd——本调用点不依赖
+    // recordChatTrace 的 process.cwd() 兜底（该兜底仅覆盖无 agent 作用域的未来新增调用点；
+    // VSC extension host cwd ≠ 工作区——轨迹归属错误）；agent 恒由 checkAndCompact 传入。
     logCtx: {
       stage: "compress", kind: "compress",
       role: agent?._role ?? null,
