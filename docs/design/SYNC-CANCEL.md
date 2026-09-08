@@ -44,11 +44,16 @@
   miss + live 块 → "…finished or stop no longer applies"）
 - 数据层 subagent-blocks.mjs 无需新字段（sync = sub.async !== true 默认——句柄不进 state.subTasks——registry 放 agent——与 async entry controller 存池分层一致）
 
-### 4. 模态交互（R1——**决策点 v1/v2 待用户裁**）
-- 现状：权限 await（dispatch.mjs:265）+ continue 问询（subagent.mjs:206-210）不观 signal——targeted abort 后 child 停在模态——runChildPipeline 不返回——父回合仍阻塞至模态回答（权限模态吞键——但 ⏹ 是鼠标不经模态可点）
-- **v1（低复杂度）**：⏹ 在 sub.approval 非空时仍可点——stop 语义 = abort + 结果延迟至用户回答当前模态（stop 后 child 下一 chat 即抛 AbortError 折叠）
-- **v2（完整）**：stop 时顺带 deny pending ask——需模态 owner 标记（continue ask 已带 key——工具权限 ask 需加 key）+ queued ask 查 stopped 旗标不弹
-- 记录：该缺陷 async cancel 同样存在（现状已知——非本批引入）
+### 4. 模态交互（R1——**用户 2026-09-09 裁 v2 完整**）
+- 现状：权限 await（dispatch.mjs:265）+ continue 问询（subagent.mjs:206-210）不观 signal——targeted abort
+  后 child 停在模态——runChildPipeline 不返回——父回合仍阻塞至模态回答（权限模态吞键——但 ⏹ 是
+  鼠标不经模态可点）
+- **v2（完整——用户裁）**：cancelSyncChild 时**顺带 deny** 该 child 的 pending ask——模态立即解除：
+  - 工具权限 ask 加 owner key 标识（subagent-spawn.mjs:287 name=`${role}/${tool}` 无 key——补 key）
+  - 权限模态（key-modes.mjs 模态）收到 deny → 立即解绕（child 获 AbortError/DenyError）
+  - `_permQueue` 未触发的 queued ask——ask 闭包查 stopped 旗标（entry.stopped）→ 不弹模态直接拒绝
+  - continue ask 已带 args.agent=key（subagent.mjs:208）——同查 stopped
+- 记录：该缺陷 async cancel 同样存在（现状已知——非本批引入——v2 的 deny 机制后续可复用到 async）
 
 ### 5. 测试（async-settle.test.mjs 风格——纯单元无 io）
 1. cancelSyncChild（live abort + 幂等 + 无 key/stopped error）
@@ -66,6 +71,8 @@
 | src/agent-tools/async-settle.mjs:66 | CLI | buildChildSignal 复用（不改） |
 | src/spawn-child.mjs:194-195 旁 | CLI | STOPPED_MARK 常量 |
 | src/agent-tools/tool-events.mjs:178/:205 | CLI | partial 检测扩展 STOPPED_MARK |
+| src/agent-tools/subagent-spawn.mjs:287 | CLI | v2：工具权限 ask 加 owner key（用户裁 v2） |
+| src/tui/key-modes.mjs 模态 | CLI | v2：deny 解绕 + queued ask 查 stopped 旗标不弹 |
 | src/tui/subagent-panel.mjs:170-178 | CLI | ⏹ 门控放宽 sync |
 | src/tui/mouse.mjs:185-208 | CLI | cancelSubagent + sync registry 查 + 文案 |
 | test/（async-settle 风格新测试） | CLI | 上述 5 组 |
