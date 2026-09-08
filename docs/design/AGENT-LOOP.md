@@ -91,7 +91,7 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, s
 1. **git 上下文**（顶层 depth===0）：分支、最近 5 条提交、未提交改动清单（非 git 仓库静默跳过）。**子代理一律不注入**（零 git——见 §7.4）。
 2. **目录树**（顶层）：`listWorkDir`（根 ≤30 项、子目录 ≤10 项，隐藏折叠，超限截断）。
 3. **项目指令**：AGENTS.md / CLAUDE.md / project_rules.md（≤32K 字符，`<untrusted_project_instructions>` 包裹）。
-4. **记忆检索**：`memory_search(input)` 前 3 条（`<untrusted_memory>` 包裹 + XML 转义）。
+4. **记忆检索**：记忆检索（memory search 动作）前 3 条（`<untrusted_memory>` 包裹 + XML 转义）。
 5. **文档检索**：doc_search 前 5 条 chunk（`<untrusted_doc_chunk>` 包裹）。
 6. **依赖大纲**：repomap 输出（`OUTLINE_INJECT_PREFIX`）。
 7. **用户输入**（pushReal：双线）。
@@ -231,7 +231,11 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 
 **槽位队列 + 分域池**：async 入口检查 running 数（<域上限 → 立即启动；≥ → 入队 `{status:"queued", position}`）；任一 running settle → 队列可启动项自动补位。分域池与可配置上限见 §11.1。
 
-**settle 统一机制（ASYNC-RESULT-CONTAINER.md D1-D6，2026-09-08）**：四族（subagent/advisor/escalate/consult）settle 公共收尾单点 = `settleAsyncEntry`（`agent-tools/async-settle.mjs`——落 done/status、日志三连（ev:cancelled / child:done|:error + ev:settled）、cancelled/parentAborted/挂起分流、settleSeq/`_settle` 唤醒 waiter、腾槽补位（subagent/escalate 族恒补——settle/cancel 释放槽即补位；advisor/consult 豁免））；守卫统一 `!parentAborted`（严格版——ctx.signal aborted 或条目 controller aborted）；族特有段作 `onAccounting` hook（advisor 陈旧判定/token D1 落盘记账；escalate 三分类 merge 决策）。**pending 单容器** `_pendingAsyncResults` +role（三族分叉废弃——`_pendingEscalateResults`/`_pendingConsultResults` 退役，consult 升格完整 entry）；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending` 标记保留（settle/sweep 同一表示防重复移交）。**池 accessor** `getAsyncPool(parent, role)`（async-settle.mjs——advisor → `_asyncAdvisors`，其余 → `_asyncSubagents` 吸收双池）。**buildChildSignal**（async-settle.mjs——`_sessionSignal ?? ctx.signal ?? null` 单点，consult 补 _sessionSignal 兜底）。
+- **settle 统一机制（ASYNC-RESULT-CONTAINER.md D1-D6，2026-09-08）**：四族（subagent/advisor/escalate/consult）settle 公共收尾单点 = `settleAsyncEntry`（`agent-tools/async-settle.mjs`——落 done/status、日志三连（ev:cancelled / child:done|:error + ev:settled）、
+  cancelled/parentAborted/挂起分流、settleSeq/`_settle` 唤醒 waiter、腾槽补位（subagent/escalate 族恒补——settle/cancel 释放槽即补位；advisor/consult 豁免））；
+  守卫统一 `!parentAborted`（严格版——ctx.signal aborted 或条目 controller aborted）；族特有段作 `onAccounting` hook（advisor 陈旧判定/token D1 落盘记账；escalate 三分类 merge 决策）。
+  **pending 单容器** `_pendingAsyncResults` +role（三族分叉废弃——`_pendingEscalateResults`/`_pendingConsultResults` 退役，consult 升格完整 entry）；**done-in-pool 统一表示**：留池 done:true + pending 单容器——`_inPending` 标记保留（settle/sweep 同一表示防重复移交）。
+  **池 accessor** `getAsyncPool(parent, role)`（async-settle.mjs——advisor → `_asyncAdvisors`，其余 → `_asyncSubagents` 吸收双池）。**buildChildSignal**（async-settle.mjs——`_sessionSignal ?? ctx.signal ?? null` 单点，consult 补 _sessionSignal 兜底）。
 *实现偏差注（2026-09-08 advisor code review）：设计 D3 原把 maybeRefillAsync 归入 onAccounting hook（仅 settled 分支执行）——running 取消的 cancelled 分支将不再补位（槽释放但 queued 头停滞）——实现修正为公共尾部恒补（与 VSC 镜像同款）；设计文档 D3/变更记录由父侧随交付报告同步裁定。*
 
 **变更记录**：2026-09-02 显式 async → eng-coder 缺省 async → 2026-09-06 depth-0 全角色缺省 async（R12）。
@@ -253,7 +257,31 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 > After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result.
 > If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (eng-coder defaults to async; other roles simply omit async).
 
-**变更记录**：2026-09-06 删 check（§7.5）。
+**变更记录**：2026-09-06 删 check（§7.5）。2026-09-08 用户裁定顶层 spawn 一律异步（§7.7——async:false 例外移除——提示词同步）。
+
+### 7.7 顶层 spawn 一律异步——async:false 例外移除（2026-09-08 用户裁定）
+
+> 需求：用户 2026-09-08 裁定（两次痛骂——同步 spawn 反复犯）——**顶层（depth-0）spawn 禁 async:false——一律异步**。depth>0 平台强制 sync 不受影响（子代理内部——平台硬规则）。快车道（用户明确指令）。
+> 状态：设计待评审——评审通过 eng-coder 实现（双端提示词同步）。
+
+**现状问题**：async 锚句（§7.5 :258）与 main.md:13/engineering.md:18 都含 "pass `async:false` only when…"——给了模型 async:false 例外通道——实际反复误用（explore/eng-coder 同步 spawn——阻塞自己 turn + 占池）。
+
+**改**：
+1. **async 锚句改版**（:258——逐字定稿——fail-when-unchanged 断言需同步）：删 "use a synchronous spawn instead — pass `async:false`" 引导——改为 **顶层一律异步——报告自动送达——如 next step 依赖报告就让 turn 自然结束等 digest 自动到**。新锚句：
+   > "Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule)."
+2. **main.md:13**（双端）：删 "pass `async: false` only when the report is required before continuing" → "never pass `async:false` at top level — results reach you automatically; if your next step depends on the report, end the turn and let it arrive".
+3. **engineering.md:18**：同改（"Pass `async:false` only when you must handle the report synchronously before continuing" → 删——顶层一律 async）。
+4. **§7.3 L228 机制注**：`async:false` 在 depth-0 仍**机制存在**（平台参数合法——子代理内部 depth>0 用）——但**顶层判据 = 用户裁禁**——提示词不再引导——标注"depth-0 async:false 仅平台内部/特殊场景——提示词不鼓励"。
+5. **平台侧 subagent 工具描述**（不可改——平台注入）：仍含旧 async:false 引导——**上报平台侧同步**（项目仓改不了——锚句 fail-when-unchanged 测试需排除平台描述或记录偏差）。
+
+**受影响文件**：AGENT-LOOP.md（锚句 :258 + §7.3 L228 注 + §7.7 新段 + 变更记录）、src/prompts/main.md（双端）、src/prompts/engineering.md（双端）、prompts 内容断言测试（fail-when-unchanged 同步）。
+
+**验收**：
+- AC1 main.md/engineering.md（双端）无 "pass async:false / use synchronous spawn" 顶层引导句
+- AC2 锚句改版在 §7.5（fail-when-unchanged 断言同步——测试绿）
+- AC3 顶层 spawn 实践：explore/eng-coder 全异步（无 async:false——本会话行为约束）
+- AC4 depth>0 平台 sync 不变（机制零触碰）
+
 
 ### 7.6 子代理/顾问人格逐字锚集
 
@@ -456,6 +484,7 @@ Follow this declaration — do not infer the review target from the documents.
 - R7c 数字漂移/TODO 未勾销/文档卫生 → 🔵
 - R7d 语义悬空 → 🟡 报设计缺口（父侧补）
 - R7e 从不因文档状态矛盾卡"通过"——矛盾=🟡 报出即过（**机制级描述不一致除外 =🔴**——必须处理后才可过）
+- R7f 引用清扫/旧名残留/文档卫生只约束活体文案（docs/design/ 生效档 + 根级生效文档）；_archive/ 历史快照不在判定面（报 _archive 内旧名/旧路径不构成 🟡/🔵）。
 - 来源：样本 7 轮——已验证判定——持续复核
 
 ### 12.3 文档归属纪律 + 代码变更都必须落文档
@@ -491,7 +520,8 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 ### 14.1 会诊（consult）
 
 - consult_start 非阻塞发起；**consult_check 退役**（§14——无消费对象——digest 注入后）；**consult_stop 保留**（取消语义——cancel 后不入 pending）。
-- **settle**：`_consultSessions` 某 id pending=0（全部模型回复/失败）→ 升格完整 entry（`{id, role:"consult", report, done:true}`——ASYNC-RESULT-CONTAINER.md D2）移 `_pendingAsyncResults` 单容器（+role——原 `_pendingConsultResults` 独立流退役）→ 下回合 run 首行注入（"[System reminder: consultation #id finished — N replies: …]" 全文）→ 消化轮逐条判断处置。
+- **settle**：`_consultSessions` 某 id pending=0（全部模型回复/失败）→ 升格完整 entry（`{id, role:"consult", report, done:true}`——ASYNC-RESULT-CONTAINER.md D2）移 `_pendingAsyncResults` 单容器（+role——原 `_pendingConsultResults` 独立流退役）→ 下回合 run 首行注入
+  （"[System reminder: consultation #id finished — N replies: …]" 全文）→ 消化轮逐条判断处置。
 - **注入时机**：全 settle 后一次注入（意见全貌才可判断——部分 settle 不提前注入）；超长 → digest 截断/落盘。
 - **消化轮动作域**：按消费回合档位走既有规则（手动档 = 整理禁写；AUTO/用户回合 = 正常决策域）——无"consult 可写"例外。族差异只在消化指令语义（会诊 = 逐条判断采纳并处置）。
 - 空闲 settle 也触发消化（驱动判据 = pending 单容器非空——四族统一——T-R17j）。
