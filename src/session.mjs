@@ -274,6 +274,10 @@ export function applySession(agent, data) {
   // _sessionStart != null 推断；已武装 agent 切到空历史槽也不残留上次恢复事件——评审 round2 🟡）。
   // _processRestartPending 不在此清——由启动路径（bin/thincoder.mjs）设、prepareRun 发句清
   // （N6——双信号独立：切槽不报进程重启）。
+  // 跨端异名互指（结构债批 5 N7——双端同语义各自独立实现、命名不统一是刻意——SESSION.md
+  // §11.2）：VSC 端同机制载体异名 = agent._resumedPending（src/agent/setup.mjs hydrateRun——
+  // restore:true 工厂 + fullHistory 非空时武装——每槽恢复一次）+ 模块级 restartDetectionDone
+  // 一次性闸（src/agent/setup-reminders.mjs——process restarted 句的进程级信号）。
   agent._envResumed = full.length > 0
   const ch = data.contextHistory
   const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)

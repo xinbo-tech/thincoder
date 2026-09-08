@@ -9,22 +9,16 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 
 **需求基线**：`docs/design/REQUIREMENTS.md`（讨论中，随对话更新，定型后拆分为正式需求/设计文档）+ 具体设计文档 + 用户对话。**本项目没有独立于设计文档的需求文件**——评审/开发时以 REQUIREMENTS.md + 相关设计文档 + 对话背景三者为参照。
 
-设计文档在 `docs/design/`。主流程：[`PHILOSOPHY.md`](docs/design/PHILOSOPHY.md)（三观）→ [`METHODOLOGY.md`](docs/design/METHODOLOGY.md)（方法论）→ prompts。其余文档按主题：
+设计文档在 `docs/design/`。主流程：[`PHILOSOPHY.md`](docs/design/PHILOSOPHY.md)（三观）→ [`METHODOLOGY.md`](docs/design/METHODOLOGY.md)（方法论）→ prompts。其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
 
-- **架构与模块**：`ARCHITECTURE.md`（v1 定稿）/ `ARCHITECTURE-v2.md`（v2 决策收口）/ `AGENT-LOOP.md`（主循环+guard 体系）/ `TOOLS.md`（内置工具）/ `PROVIDER.md`（LLM 调用层）/ `PROXY.md` / `SESSION.md`（存储契约）/ `MEMORY.md`（三层记忆）
-- **评审与工程模式**：`ADVISOR-CONVERGENCE.md`（**评审收敛机制——评审代码前必读**）/ `ENGINEERING-MODE.md` / `ENGINEERING-WORKLOOP.md`
-- **多模型协作**：`CONSULTATION.md`（会诊三工具）/ `ESCALATE.md`（飞刀）
-- **上下文管理**：`CONTEXT-COMPACTION.md`（压缩规范基准）/ `VERIFY-DOCONLY.md` / `PROMPT-DECOUPLING.md`
-- **TUI 与客户端**：`TUI.md` / `TUI-INPUT-BOX.md`（输入框行为契约）/ `TUI-TOOL-OUTPUT.md` / `MCP.md` / `ACP-CLIENT.md`
-- **需求与规划**：`REQUIREMENTS.md` / `FEATURES.md`（按实现梳理）/ `ROADMAP-0.9.0.md` / `EVALUATION.md`
-- **参考分析**：`COMPETITIVE-CLI-2026.md` / `KIMI-CODE-PROMPT-ANALYSIS.md` / `TTSR-ANALYSIS.md`
+**逐档权威地图 = [`docs/design/README.md`](docs/design/README.md)**（板块 → 文档映射 + 归档标注 + 归属规则）——AGENTS.md 不逐档裸列（2026-09-08 结构债批 5：曾 28 档裸名清单与 README 地图重复 = 双源漂移——8 档归档后悬空随删消解）——写/改设计文档前先查地图。
 
 ## Hard Constraints
 
 - **Zero npm runtime dependencies**: only `node:` standard library (storage via `node:sqlite`, TUI via bare ANSI). For new features, first ask whether the standard library can do it; if not, raise for discussion.
 - No TypeScript, no build/bundling step.
 - Every change must be verified by running it — no "written but never run" code.
-- **镜像提示词约定（2026-09-04 项目文档层声明——[x] 2026-09-04 11:11 修订——§18.11）**：本仓库（thincoder）与 thincoder-vscode 的 `src/prompts/*.md`——**byte-identical 约束已取消（2026-09-04）——设计锚为准**：锚文本在设计文档（AGENT-LOOP.md §18.x 等）逐字定稿——两端各自照抄实现——差异靠设计评审+交付审计发现（非机械比对）；**不再要求"只写 CLI 侧 + 同步脚本"**（`scripts/sync-prompts.mjs` 同步脚本候选已取消——见 docs/TODO.md 8 点批 #1）。注：两端当前文本仍一致（末次维护 2026-09-04）——未来允许漂移/独立演进。
+- **镜像提示词约定（2026-09-04 项目文档层声明——[x] 2026-09-04 11:11 修订——§12.4）**：本仓库（thincoder）与 thincoder-vscode 的 `src/prompts/*.md`——**byte-identical 约束已取消（2026-09-04）——设计锚为准**：锚文本在设计文档（AGENT-LOOP.md §12.4 等）逐字定稿——两端各自照抄实现——差异靠设计评审+交付审计发现（非机械比对）；**不再要求"只写 CLI 侧 + 同步脚本"**（`scripts/sync-prompts.mjs` 同步脚本候选已取消——见 docs/TODO.md 8 点批 #1）。注：两端当前文本仍一致（末次维护 2026-09-04）——未来允许漂移/独立演进。
 
 ## Key Conventions
 

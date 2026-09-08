@@ -16,7 +16,7 @@ import {
 import { makeRelay, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
-import { resolveChildProvider, buildChildRunOpts } from "./subagent-async.mjs"
+import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import {
   normalizeFileList, describeBlockers, assertNoDepCycle, depInfo,
 } from "./subagent-scheduler.mjs"
@@ -286,8 +286,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
       if (!ctx.onPermissionRequest) return false
       const ask = () => ctx.onPermissionRequest(`${role ?? "sub"}/${name}`, toolArgs)
       // Queue parallel child agent permission requests to avoid two popups simultaneously overwriting each other (lesson from question tool)
-      parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
-      return parent._permQueue
+      return enqueueAsk(parent, "_permQueue", ask)
     }
   }
 

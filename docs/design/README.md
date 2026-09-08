@@ -52,6 +52,7 @@
 | 测试基建 | `TESTING.md` | 测试分层纪律/库存治理 |
 | 多实例协作感知 | `MULTI-INSTANCE-COLLAB.md` | 多副本 agent 协作感知 |
 | 结构债 | `STRUCTURE-DEBT.md` | 结构债评估与清理路线图（横切） |
+| 结构债批执行 | `STRUCTURE-DEBT.md` §7（分批路线——批档清单）+ 批专属档（本行自登记例：`STRUCTURE-DEBT-BATCH-5-6.md`——2026-09-08 批） | 横切结构债每批独立成档（文档批/代码批同规格）；不逐档裸列（批量清单指 §7——免重复漂移）——新批档落档时同步本行 |
 
 ## 归属规则
 
@@ -74,3 +75,4 @@
 - 2026-09-06：provider 数量修正（17→20）；新增「测试基建」「多实例协作感知」；SESSION.md §12；token 生命周期语义修订。
 - 2026-09-07：新增「结构债」（STRUCTURE-DEBT.md）；verify 重构（VERIFY-REDESIGN.md）；**归档 8 文件移 `_archive/`**（ARCHITECTURE-v2/ROADMAP-0.9.0/COMPETITIVE-CLI-2026/KIMI-CODE-PROMPT-ANALYSIS/TTSR-ANALYSIS/ENGINEERING-WORKLOOP/CLI-LINT-REQUIREMENTS/CLI-LINT-TUNING）；地图格式正常化。
 - 2026-09-07：归属规则加**规则 6（文档人类可读防复发）**——无 >300 字符单行 / markdown 结构正确 / 变更记录折叠；配 `scripts/check-doc-width.mjs` 批量检查。
+- 2026-09-08：新增「结构债批执行」板块行——批专属档自登记（STRUCTURE-DEBT-BATCH-5-6；批量清单指 STRUCTURE-DEBT.md §7，不逐档裸列）。

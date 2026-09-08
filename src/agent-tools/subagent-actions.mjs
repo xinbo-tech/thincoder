@@ -423,7 +423,7 @@ export async function executeEscalateAction(args, ctx) {
       child, task, { ...childCallbacks, onPermissionRequest: parent.autoApprove ? async () => true : (ctx.onPermissionRequest ?? null) },
       runOpts,
       {
-        // escalate has NO permQueue: prompts go straight to the user (T-L spec).
+        // sync escalate has NO permQueue——async 飞行权限走 _permQueue（escalate-async.mjs）: prompts go straight to the user (T-L spec).
         askContinue: (e) => (ctx.onPermissionRequest
           ? ctx.onPermissionRequest("continue", { turns: e.turn, agent: tag })
           : Promise.resolve(false)),

@@ -29,7 +29,7 @@ import { runAgent, createAgent, CODER_OVERLAY, DEFAULT_SUBAGENT_TURNS } from "..
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
 import {
-  mergeChildMutations, runningPoolCount, poolDomainOf, poolLimitsFor, ASYNC_POOL_LIMITS,
+  mergeChildMutations, runningPoolCount, poolDomainOf, poolLimitsFor, ASYNC_POOL_LIMITS, enqueueAsk,
 } from "./subagent-async.mjs"
 import { refreshQueuedTokens } from "./subagent-scheduler.mjs"
 import { mutationSeqOf } from "./advisor-async.mjs"
@@ -220,8 +220,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
       : async (name, toolArgs) => {
           if (!ctx.onPermissionRequest) return false
           const ask = () => ctx.onPermissionRequest(`escalate/${name}`, toolArgs)
-          parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
-          return parent._permQueue
+          return enqueueAsk(parent, "_permQueue", ask)
         }
     const report = await runWithContinue(
       (childAgent, input, cbs, opts) => runner(childAgent, input, cbs, opts),

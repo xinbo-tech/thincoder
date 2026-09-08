@@ -6,7 +6,9 @@
  * 内容：resolveChildProvider / async 池常量与域助手（ASYNC_POOL_LIMITS/poolDomainOf/
  * resolvePoolLimits/poolLimitsFor/runningPoolCount——§24 D-24a）/ executeCancelAction +
  * cancelAsyncSubagent（§19.5 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
- * injectAsyncResult / buildChildRunOpts / mergeChildMutations。
+ * injectAsyncResult / buildChildRunOpts / mergeChildMutations / enqueueAsk（批 6——
+ * _permQueue 审批/继续弹窗串行收 helper——消费位 subagent.mjs/subagent-spawn.mjs/
+ * escalate-async.mjs）。
  * 拆分（2026-09-05——Module Split Policy §20.9——纯迁移零行为变化）：§20 调度器 + 文件域
  * 组 → ./subagent-scheduler.mjs（尾部 re-export 保测试动态 import 面——queueRunnable/
  * describeBlockers）；status/panel/escalate 动作执行器 → ./subagent-actions.mjs。
@@ -25,6 +27,14 @@ import {
 // code（lazy function-level cycle——advisor-async → async-settle → scheduler →
 // 本模块——全函数级绑定无求值期依赖，环安全）。
 import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
+
+// agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
+// 永不叠弹窗（返回链供调用方 .then 续接）。
+export function enqueueAsk(owner, key, ask) {
+  const chain = (owner[key] ?? Promise.resolve()).then(ask, ask)
+  owner[key] = chain
+  return chain
+}
 
 // Async pool limits per role domain (AGENT-LOOP.md §24 D-24a — R14, 2026-09-06):
 // the old single cap (ASYNC_SUBAGENT_LIMIT = 4, §15 D-A4) evolved into two

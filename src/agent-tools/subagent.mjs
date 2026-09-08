@@ -22,7 +22,7 @@
 import { gateEngCoderSpawn, TURN_CAP_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
 import { logEvent, errText } from "../log.mjs"
 import {
-  runChildPipeline, executeCancelAction,
+  runChildPipeline, executeCancelAction, enqueueAsk,
 } from "./subagent-async.mjs"
 import { executeStatusAction, executeEscalateAction, executePanelAction, executeObserveAction, executeSendAction } from "./subagent-actions.mjs"
 import { prepareScheduling, buildSpawnChild, executeConsumeDesignAction } from "./subagent-spawn.mjs"
@@ -206,8 +206,7 @@ export const subagentTool = {
     const askSubagentContinue = (e) => {
       if (!ctx.onPermissionRequest) return Promise.resolve(false)
       const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: relayPrefix.slice(0, -1) })
-      parent._permQueue = (parent._permQueue ?? Promise.resolve()).then(ask, ask)
-      return parent._permQueue
+      return enqueueAsk(parent, "_permQueue", ask)
     }
 
     // ── Async branch（2026-09-05 module-split——executeAsyncSpawn verbatim 迁
