@@ -1,7 +1,9 @@
 # Verify 重构：通用验证门禁
 
 > 板块：agent-tools（verify 工具）。权威源指向：TOOLS.md §1（元工具）/ §7（verify 契约，testNamePattern）+ 本文档（verify 重构设计）。
-> 状态：**相 1（verify 工具本体）已实现；相 2（guard/prompt/双端一致收口）设计中**——2026-09-07 用户裁定。相 1 经同步评审签发 + 双 eng-coder 交付 clean；explore 审计发现相 2 缺口（G1-G14）。
+> 状态：**相 1（verify 工具本体）已实现；相 2（guard/prompt/双端一致收口）已实现交付**——2026-09-07 用户裁定。相 1 经同步评审签发 + 双 eng-coder 交付 clean；相 2 代码面 2026-09-08 落地（STRUCTURE-DEBT-BATCH-7 收尾——代码实证见下注）。
+> DOC-SWEEP 注（2026-09-09 核验——相 2 代码面全落）：G1-G4 guard 文案双端逐字（CLI completion.mjs:81/94/109 + VSC run-stages.mjs:55/68/82——declaring the outcome via verification.status）；G5-G9 prompts 声明式语义（双端 eng-coder/engineering-sub/system/discipline/main）；G10 doc-only+failed 打回（verify 描述）；
+> G11 rejectionReport 补 node --check 软提示（VSC verify.mjs:165/269）；G12 VSC guard hasCodeMutations（run-stages.mjs:50）；G13 VSC goal.mjs 门禁（:34 注释自标）；G14 状态面已闭环——**T-V8..V11 全量验收（test:full 双端）待父侧核后正式核销**。
 > 背景注：async advisor 评审 token 跨会话注册 bug（designId not found）尚未修复，用户指示本轮走**同步评审**（async:false）。
 
 ## 1. 问题陈述

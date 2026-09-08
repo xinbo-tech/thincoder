@@ -1,6 +1,6 @@
 # 文档格式债清理——批 A 执行设计（DOC-REWRITE）
 
-> 板块：结构债（`STRUCTURE-DEBT.md` §7 批 A 的执行设计）。状态：**设计（待评审）**——2026-09-07 用户裁定路径 1：一份执行设计签发 token，覆盖整批文档重写，并行 eng-coder 执行各文件。
+> 板块：结构债（`STRUCTURE-DEBT.md` §7 批 A 的执行设计）。状态：**已执行（批 A——2026-09-07/08 双树权威档头重写落地——目标档已按本设计执行——核销见 DOC-CLEANUP-BATCH）**——2026-09-07 用户裁定路径 1：一份执行设计覆盖整批文档重写，并行 eng-coder 执行各文件。
 > 前置：`STRUCTURE-DEBT.md`（top-8 + 批 A 计划）+ 多份 explore 大纲（AGENT-LOOP/METHODOLOGY/ARCHITECTURE/MCP/MEMORY/PROVIDER/CHECKPOINT/CONTEXT-COMPACTION）。
 
 ## 1. 问题与目标

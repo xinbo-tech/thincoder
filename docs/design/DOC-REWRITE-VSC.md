@@ -1,6 +1,6 @@
 # VSC 端文档格式债清理——执行设计（DOC-REWRITE-VSC）
 
-> 板块：结构债（VSC 端文档批——CLI `DOC-REWRITE.md` §6 V1-V5 的 VSC 执行面，独立代码树 `thincoder-vscode`）。状态：**设计（待评审）**——2026-09-08 用户裁定：VSC 端文档批按 CLI 同款路径——一份执行设计评审签发 token → 一次并行 spawn 全批 eng-coder（不哩哩啦啦）。
+> 板块：结构债（VSC 端文档批——CLI `DOC-REWRITE.md` §6 V1-V5 的 VSC 执行面，独立代码树 `thincoder-vscode`）。状态：**已执行（V1-V5 全落——2026-09-08 VSC 权威档头重写交付——双树对照实证）**——2026-09-08 用户裁定：VSC 端文档批按 CLI 同款路径（一份执行设计 → 一次并行 spawn 全批 eng-coder——不哩哩啦啦）。
 > 前置：CLI `docs/design/DOC-REWRITE.md`（判据/保真规则/AC——权威引用源）+ explore 实测扫描（2026-09-08，VSC docs 全景）+ 用户归档裁定。
 
 ## 1. 问题与目标

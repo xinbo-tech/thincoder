@@ -20,11 +20,12 @@
 ## 3. 模块地图（当前态）
 
 ```
+bin/thincoder.mjs    CLI 命令分发（repo 根 bin/）
 src/
 ├── agent.mjs            agent 主循环（createAgent/runAgent）——见 AGENT-LOOP.md
 ├── agent-tools.mjs      元工具注册（task/verify/subagent/advisor 等）
-├── agent-tools/         元工具实现（19 文件）
-├── tools/               内置工具实现（20 文件，index.mjs 注册 25 工具）——见 TOOLS.md
+├── agent-tools/         元工具实现（23 文件）
+├── tools/               内置工具实现（22 文件，index.mjs 注册 25 工具）——见 TOOLS.md
 ├── agent/               主循环分段（dispatch/completion/record-results/run-stages/setup 等）
 ├── advisor.mjs          advisor 评审入口 + repos.mjs（见 ADVISOR-CONVERGENCE.md）
 ├── context.mjs          上下文压缩（estimateTokens/compressIfNeeded）——见 CONTEXT-COMPACTION.md
@@ -41,7 +42,6 @@ src/
 ├── hooks.mjs / rules.mjs / skills.mjs / upgrade.mjs / peer-instances.mjs
 ├── embedding.mjs / token-ttl.mjs / markdown.mjs / escape.mjs / log.mjs
 ├── crash-reports.mjs / auto-think.mjs / generate-title.mjs / prompt-overlays.mjs
-└── bin/thincoder.mjs    CLI 命令分发
 ```
 
 ## 4. 模块接口速览

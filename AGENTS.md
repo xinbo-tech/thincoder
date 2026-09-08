@@ -26,7 +26,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **Prefix caching**: the system prompt must be byte-stable across runs — per-turn varying content goes in user messages, not the system prompt.
 - **Thinking echo**: `reasoning_content` in assistant tool_calls messages depends on the model's `reasoningEcho` spec field.
 - **Commit messages**: `type: summary` (feat / fix / release / docs), single English line.
-- **Release flow**: bump `package.json` version → `npm publish` → commit + `git tag vX.Y.Z` → `git push origin main --tags`. Manual smoke pass before release. **Versioning (CalVer, 2026-08-27)** — see `docs/design/RELEASE.md` §4.6: `年份.月份.月内计数`, month counter resets each month; CLI stays on `0.12.x` through 2026 then switches to `1.1.0` on 2027-01; never bump below the published version (npm/vsce reject downgrades).
+- **Release flow**（权威 `docs/design/RELEASE.md`——发布 = 唯一门禁）：bump（待发号 = registry 最高 + 1——发布时才 bump 不预占）→ 手动改 `package.json` version + `CHANGELOG.md` → `git add/commit` → `git tag vX.Y.Z` → push origin **+ github 双远端**（分支 + tag 都推——github 被墙走代理，RELEASE.md §5.2）→ **`npm publish` 放最后**（`prepublishOnly` 自动跑 lint + test:full 全量单轮 = 唯一门禁——不再手动分轮）。Manual smoke pass before release. **Versioning (CalVer, 2026-08-27)** — see `docs/design/RELEASE.md` §4.6: `年份.月份.月内计数`, month counter resets each month; CLI stays on `0.12.x` through 2026 then switches to `1.1.0` on 2027-01; never bump below the published version (npm/vsce reject downgrades).
 - **Discussion → docs**: design decisions, architecture choices, and naming conventions discussed in chat don't exist until they're in a doc file. After any design discussion, write the conclusions to the relevant document immediately — not "later". Chat context compresses; docs persist.
 - **Doc references use symbols, not line numbers**: design docs anchor code references to symbol/export names (e.g. `routeSubToken` in `subagent-blocks.mjs`), never line numbers — line numbers rot on every edit, symbols are grep-able. Historical change-log entries keep their as-of snapshot.
 - **File size**: single `.mjs` / `.js` source file exceeding 300 lines → advisory (🟡): suggest splitting. Exceeding 500 lines → blocking (🔴): must split before merge.
@@ -42,11 +42,17 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 - **存储**：`~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，Windows 盘符大写归一化）——与 VS Code 端**同存储同格式**，快照跨端互通；每 cwd 上限 100 个（最旧淘汰）。
 - **纪律**：**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底（纵深防御）。
 
+**模块图 = 概览——权威见 [`ARCHITECTURE.md`](docs/design/ARCHITECTURE.md) §3（模块地图当前态）——此处只列主要项**：
 ```
 bin/thincoder.cjs    CLI entry
 src/agent.mjs        main loop + reminder injection + verifyGuard (opt-in) + incremental indexing
-src/agent/           loop helpers (dispatch, setup, helpers, post-turn, completion)
-src/agent-tools/     self-discipline tools (task/plan/goal/verify/subagent/skill/read_history)
+src/agent/           loop helpers (9 files: dispatch/setup/helpers/post-turn/completion/record-results/run-stages/setup-reminders/spawn-child)
+src/agent-tools/     self-discipline tools (23 files: task/plan/goal/verify/subagent/advisor/consult/timer/eng/design-token/skill/read_history/recent-changes/settings/…)
+src/advisor.mjs + src/advisor/   advisor 评审入口（advisor/ 下 run/messages/history/repos/citations/convergence——ADVISOR-CONVERGENCE.md）
+src/acp.mjs + src/acp/   ACP 协议桥（bridge/session/transport——ACP-CLIENT.md——`thincoder acp` 入口）
+src/cli/             CLI 顶层命令实现（setup-wizard/memory-command/distill-command/make-agent/permission——bin/thincoder.mjs 分发 import）
+src/git/             git 子系统（checkpoint.mjs 快照存储 + gitmem.mjs team 层 git 同步）
+src/traces/          trace-store.mjs 完整轨迹存档（AGENT-LOOP.md §18.6——~/.thincoder/traces/）
 src/prompts/         system prompts (system.md / discipline.md / main.md + subagent roles)
 src/provider/        LLM calls (native fetch + SSE)
 src/tools/           built-in tools (file/git/bash/search/web/checklist)

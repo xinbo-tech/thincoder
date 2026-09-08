@@ -1,6 +1,6 @@
 # VSC 文档重组——ARCHITECTURE 拆分 + 双端结构对齐（DOC-REORG-VSC）
 
-> 板块：结构债（VSC 文档组织重构——`thincoder-vscode` 独立代码树）。状态：**设计（待评审）**——2026-09-08 用户裁定。前置：CLI `DOC-REWRITE.md`（判据引用）+ explore 对照报告（2026-09-08，双端 docs/design 结构对照）+ 用户裁定。
+> 板块：结构债（VSC 文档组织重构——`thincoder-vscode` 独立代码树）。状态：**已执行（2026-09-08 交付——重组落地：ARCHITECTURE §13 MCP 行展开成档 MCP.md（第 5 批实证——VSC MCP.md 变更记录）等——双树结构对齐）**。前置：CLI `DOC-REWRITE.md`（判据引用）+ explore 对照报告（2026-09-08，双端 docs/design 结构对照）+ 用户裁定。
 
 ## 1. 问题与目标
 

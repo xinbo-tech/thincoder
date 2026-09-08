@@ -1,6 +1,6 @@
 # Top-8 攒批清理：eng 会话态统一 + provider 去重（CLI 端）
 
-> 板块：工程模式会话态 + Provider 防御层。状态：**设计（待评审）**——2026-09-08 Top-8 #5/#6/#8 攒批（explore 核实：#5/#6 实质重叠合为一设计，#8A provider 去重独立线——文件零冲突可并行）。用户裁定：攒批一起做。
+> 板块：工程模式会话态 + Provider 防御层。状态：**已实现（2026-09-08 交付——代码注释引用 D1.1-D2.3——cmd-eng/retry.mjs/agent.mjs——核销行）**——2026-09-08 Top-8 #5/#6/#8 攒批（explore 核实：#5/#6 实质重叠合为一设计，#8A provider 去重独立线——文件零冲突可并行）。用户裁定：攒批一起做。
 > 背景：#5 工程模式布尔双归属（agent.engineering 双写不对称）+ #6 同物多名（eng.mjs 死 persistState 分支/幽灵 payload 键既是 #5 断点又是 #6 漂移）+ #8A provider 防御三件套逐字重复（parseRetryAfter/sleepInterruptible/429 判定）。explore 核实：#5/#6 同板块（工程模式会话态）合为一设计；#8A provider 独立线（文件零交集）。
 > 范围：线1（#5+#6 eng 会话态统一）+ 线2（#8A provider 去重）——两条实现线，文件零冲突，可并行 eng-coder。#8B/C（防御正则族 + 启发式兜底三处）单列决策点，不与线1/线2 耦合。
 

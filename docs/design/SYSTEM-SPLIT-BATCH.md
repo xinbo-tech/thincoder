@@ -1,6 +1,6 @@
 # 批 3（SYSTEM-SPLIT-BATCH）——system.mjs 拆分 + 工具归位
 
-> 板块：跨板块结构债批（批专属设计档——STRUCTURE-DEBT §7 允批专属文档）。状态：**评审通过待 sign-off**（2026-09-08——3 项 advisory 采纳——token 2000d658 注册 12 slot）——eng-coder 实现。
+> 板块：跨板块结构债批（批专属设计档——STRUCTURE-DEBT §7 允批专属文档）。状态：**已交付核销（2026-09-08 批 3——system.mjs 拆 bash.mjs/search.mjs + question.mjs 归位——bash/search/question 在树实证——对应 TODO 条目勾销）**——（评审通过——3 项 advisory 采纳）。
 > 来源：TODO「模块/行数技术债」#5+#6 + 并批评估批 3（2026-09-08 explore 一手勘察）。**路径勘误：TODO:75 写 src/agent/system.mjs 错——实为 `src/tools/system.mjs`（506 行——现唯一越 500 硬限 src 文件——本批顺手修正 TODO 路径）**。
 
 ## 1. 定位

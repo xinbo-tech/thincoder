@@ -1,6 +1,6 @@
 # 批 A 大件重写规格（SESSION/TUI/ENGINEERING-MODE/ADVISOR-CONVERGENCE）
 
-> 板块：结构债批 A 执行（DOC-REWRITE.md 的 4 大件规格承接——explore 大纲已产出，此处锚定供 eng-coder 任务书引用）。状态：**规格已备**（2026-09-07，explore id=10/11 通读产出）。
+> 板块：结构债批 A 执行（DOC-REWRITE.md 的 4 大件规格承接——explore 大纲已产出，此处锚定供 eng-coder 任务书引用）。状态：**已执行（批 A 4 大件已按本规格重写——SESSION/TUI/ENGINEERING-MODE/ADVISOR-CONVERGENCE——2026-09-07/08 交付）**（2026-09-07 explore id=10/11 通读产出）。
 > 权威源：`DOC-REWRITE.md`（批判据/逐字保真规则/AC）+ 本文档（每文件照抄级要点）。
 
 ## 1. 总则

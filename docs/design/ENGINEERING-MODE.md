@@ -115,8 +115,6 @@
 
 - **F1（链终消费——机械）**：subagent 工具提供 `action: "consume-design"`（参数 designId——单设计会话可省略，
   spawn 同款语义）——父侧验收核销时显式调用。实现：读 `_engDesignTokens.get(designId)` 取槽值 →
-  `removeDesignTokenSlot`（定义在 token-ttl.mjs——移除该 slot + 单槽镜像条件清（若指向该 slot）+
-  `_engDesignToken` 兼容值清）→ 消费后同 designId 再 spawn = 槽 not found **机械拒**。**新改动
   `removeDesignTokenSlot`（定义在 token-ttl.mjs——移除该 slot；**D3 2026-09-08 单值镜像已退役——不再条件清镜像**，consume 只删槽 Map 项）→ 消费后同 designId 再 spawn = 槽 not found **机械拒**。**新改动
   （含新偏差修复）一律新评审新 token**。未知 designId 与重复消费 = 同款 no-op 提示（幂等——不报错）。
 - **F2（链中复用不受影响——docs FIRST）**：fix round（同 designId——首 spawn 后、验收前）仍可 spawn（slot 未消费）——消费点仅在父侧核销时（非交付 digest 时——否则 fix round 无 slot 可用）。修正轮的 findings + planned changes 必须先落所属设计文档（deviation record / change note 追加至对应章节）**再** spawn eng-coder；跳档 = 文档漂移，等同静默改动（逐字锚见 §2.9 锚#3）。
@@ -138,7 +136,7 @@
     consume——不消费 = slot 堆积，旧 designId 从 session 查不到，表现似"token 丢"实为未清）；
     **未闭合不消费**（stalled / L2 非 clean / fix round 在途 → 同 token 继续）；**重评审只在真新链
     需要**（同设计无新范围不重评审；新设计/新范围 → 新设计评审签发新 token，consume 旧槽）。
-- **F4（边界）**：stalled 交付（未收敛）不消费——fix round 续用；父侧 L2 非 clean 不消费（同 stalled）；用户放弃该设计 → consume-design 作废（或用户明示）；跨会话恢复的持久化槽同受消费管理（恢复后仍在——直到验收消费）；consume-design 幂等；**多槽隔离（消费 A 不动 B——镜像条件清仅同值）**。
+- **F4（边界）**：stalled 交付（未收敛）不消费——fix round 续用；父侧 L2 非 clean 不消费（同 stalled）；用户放弃该设计 → consume-design 作废（或用户明示）；跨会话恢复的持久化槽同受消费管理（恢复后仍在——直到验收消费）；consume-design 幂等；**多槽隔离（消费 A 不动 B——consume 只删槽 Map 项——槽间天然隔离）**。
 
 ### 2.7 凭证不落文档（2026-09-07）
 
@@ -249,7 +247,7 @@
 | T20 | 正常：链终消费 | 链闭合（delivery verified + clean + 已签入）后父侧 consume-design（designId 参数） | slot 消费——同 designId 再 spawn = 机械拒；新工作（含新偏差修复）需新评审新 token | FR3/F1 |
 | T21 | 边界：链中 fix round 复用 | 首 spawn 后、验收前（未消费）——修正轮先落档（docs FIRST）再以同 designId+token spawn | 通过（slot 未消费）；消费点仅在父侧核销时 | F2/F3 |
 | T22 | 边界：未闭合不消费 | stalled 交付，或父侧 L2 test:full 有 fail | 不消费——同 token 续 fix round | F2/F4 |
-| T23 | 边界：幂等 + 多槽隔离 | 未知 designId / 重复 consume；消费 A 时 B 在槽 | 未知 id 与重复消费 = no-op 提示（不报错）；消费 A 不动 B（镜像条件清仅同值） | F1/F4 |
+| T23 | 边界：幂等 + 多槽隔离 | 未知 designId / 重复 consume；消费 A 时 B 在槽 | 未知 id 与重复消费 = no-op 提示（不报错）；消费 A 不动 B（consume 只删槽 Map 项——槽间天然隔离） | F1/F4 |
 | T24 | 边界：凭证不落文档巡检（慢层） | 全仓 md（docs/** + src/prompts/** + 根级变更记录）扫描值形态正则 `/(token\|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i` | 零命中（参数名不匹配防误伤） | §2.7 F1/F2 |
 
 注：FR7（待办管理）为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。
@@ -269,12 +267,10 @@
 （跨端污染 bug）：旧设计里 engineering 只存 config.json 全局，CLI `/eng` 与 VS Code 设置面板都写它 → 两端互相翻转对方的工程模式——会话级化后两端会话各自独立，互不影响。
 
 - **读取优先级（两端一致）**：slot 显式值 > config.json 兜底 > false。slot 无字段（旧槽位）→ 回退 config.json（兼容锁定）；slot 显式 `false` ≠ 未设置，压过 config 的 `true`。
-- **写入路径（全部双写：slot 先、config 镜像后——slot 写失败不阻断 config 写）**：
-  - CLI `/eng`（persistEngineering）与 eng(enter/exit) 工具翻转活状态（saveSession 每 turn 落盘往返）；
-  - CLI `/advisor` guard 切换（persistGuard——仅 guard 双写，model/thinking/effort 仍 config-scoped）；
-  - VS Code 设置面板 ENG/GUARD toggle（setSlotEngineering/setSlotAdvisorGuard + config 镜像）、eng 工具经
-    `engPersist: {cwd, slot}` 通道（top-level run 专属）、`agentState()` 随每轮 saveLines 把 live
-    engineering/advisorGuard 带入槽位。
+- **写入路径（2026-09-08 D1.1 收窄——config 不再镜像 `agent.engineering`；双写条款只对 CLI `/advisor` guard + VS Code 设置面板 toggle）**：
+  - CLI `/eng`（persistEngineering）与 eng(enter/exit) 工具 = **slot-only**——翻转活状态落当前会话槽（saveSession 每 turn 落盘往返；cmd-eng.mjs:77-83 注释实证——config.json 只是初值默认，不再镜像写）；
+  - CLI `/advisor` guard 切换（persistGuard）+ VS Code 设置面板 ENG/GUARD toggle（setSlotEngineering/setSlotAdvisorGuard）= **双写**（slot 先、config 镜像后——slot 写失败不阻断 config 写——仅 guard 双写，model/thinking/effort 仍 config-scoped）；
+  - VS Code eng 工具经 `engPersist: {cwd, slot}` 通道（top-level run 专属）、`agentState()` 随每轮 saveLines 把 live engineering/advisorGuard 带入槽位。
 - **初值链**：CLI `assembleAgent()` 从 config.json 播种 → `applySession` 时 slot 值覆盖（TUI 单 agent 长驻，无 per-submit 重建）；VS Code `setupAgentRun` 每轮从 `engState`（panel-chat 从槽位读）注入。
 - **guard 存槽 ≠ 工程模式机械推回**：guard 状态存槽只是会话级配置事实；工程模式下 guard 推回一律关闭（§2.3 设计原则），存槽不改变这一点。
 - **resume** 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；design token **随 slot 持久化**（TTL 7 天 fail-closed——重进 TTL 内恢复；过期重新评审）；持久化槽同受链终消费管理（§2.6 F4）。
