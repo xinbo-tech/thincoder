@@ -109,6 +109,12 @@
 ## 会话/存储/恢复后续
 - [ ] **R19 护栏语义缺口**（见"代码正确性"节——**2026-09-08 已裁消息数预算**——同 L24）
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
+- [ ] **VSC 会话恢复呈现对齐（2026-09-09 用户需求点——退出重进恢复的会话与原始呈现不一致——勘察已定位七类差异 A-G）**：
+  根因 = 恢复链收缩（historyWindow 过滤 content!==string + 字段白名单）非落盘格式——差异：C 机器提醒
+  [System reminder:]以用户气泡上屏（最刺眼）/ A 纯工具回合丢 assistant 标签 / B 工具卡无调用只看结果恒绿
+  / E reasoning 丢 + thinking-only 正文化 / F user 时间=当前时刻（ts vs timestamp）/ G 欢迎块重显 / D 折叠态
+  （预期）——CLI 恢复（startup.mjs historyToLines）语义远强于 VSC——修复方向 = 恢复链对齐 CLI 全量重建语义
+  ——owning board = VSC 会话流——status=勘察完成待排批
 
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
