@@ -135,7 +135,9 @@ advisory 400-500 带（均 <500 不触发硬限，记录观察）：
 
 每批独立走工程模式（设计→评审→eng-coder）。本档只路由，不承载单批设计正文（设计落各自板块文档或批专属设计文档）。
 
-## 8. 批 A——文档格式债清理计划（2026-09-07 用户裁定推进）
+## 8. 批 A——文档格式债清理计划（2026-09-07 用户裁定推进；**2026-09-08 执行后状态**）
+
+> **执行核销（2026-09-08）**：A1-A8（CLI）+ V1-V5（VSC）**已全部执行完毕**——CLI 经 DOC-REWRITE/DOC-REWRITE-LARGE eng-coder 批 + VSC 经 DOC-REWRITE-VSC + DOC-REORG-VSC 第 1-8 批（含 96KB ARCHITECTURE 拆薄枢纽 + 11 机制档）。下表为**原规划**（历史）。**净剩余（实测 2026-09-08）**：VERIFY-DOCONLY.md（结构坏+漂移）/ docs/guides/ides.md（结构坏）/ VSC docs/CAPABILITY_GAP.md（结构坏 + 旧名内容坏）/ AGENT-LOOP.md 3 条 >300 单行（:234/:269/:494）/ docs/TODO.md:83 长行 / TOOLS.md:4 悬空指针 / AGENT-LOOP.md:94 + VSC CAPABILITY_GAP.md:7/8/21 旧工具名 / AGENT-LOOP §12.2 R7 豁免注——归批 2（DOC-CLEANUP-BATCH）设计。
 
 **目标**：双端全部坏格式设计文档重写为**人类可读** markdown（领导审核级）。方法 = TOOLS.md 样板（用户裁定"统一"）：**保留当前机制正文，历史变更流水账折叠/精简**。
 
