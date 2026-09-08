@@ -1,22 +1,23 @@
 /**
  * edit-batch.mjs — edit 工具的数组形态（edits: [...]）：一次多文件原子替换。
  * （2026-08-31 工具顺手度 §9 ②；2026-09-01 缺陷修复"同文件多条串行累积"；
- * 2026-09-04 TOOLS.md §15 D15.1——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
+ * 2026-09-04 EDIT.md §6——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
  *
  * 语义：同一 path 的多条编辑按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的
  * 累积内容做匹配与替换；跨 path 条目互不影响（并行原子语义）；任一条失败 →
- * 全不写（原子性保留）。每条目独立按判定序（§15.2 分支 0 单行替换 / 零重叠→替换即删 / LCS /
- * 空 new 显式报错）。顶层 path（args.path）为无自带 path 条目的默认（2026-09-05 用户裁定
- * ——条目自带 path 优先——见 TOOLS.md D15.3#9 修订注）。
+ * 全不写（原子性保留）。每条目独立按判定序（EDIT.md §4——分支 0 单行替换 / 零重叠→替换即删 /
+ * LCS / 空 new 显式报错；EDIT.md §5（约束——删行形态）：省略 new_string = 删行。顶层 path
+ * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先——见
+ * EDIT.md §5 修订注）。
  */
 import { readFile, writeFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
 // file.mjs ↔ edit-batch.mjs 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 import { recordWrite, appendWriteContext } from "./file.mjs"
-// TOOLS.md §15 D15.1：批量条目判定+应用共用 edit-diff（§15.2 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
-// D15.3#9：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
-import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING } from "./edit-diff.mjs"
+// EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
+// EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
+import { assertEditArgsExclusive, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, deleteTarget } from "./edit-diff.mjs"
 
 /**
  * Apply the `edits` array form: multi-file atomic replacement. Throws on any
@@ -53,7 +54,7 @@ export async function applyEditBatch(args, ctx) {
   for (const g of groups.values()) {
     g.netShift = 0 // 组内行数差累积（合并快照的 shift = 全组净漂移）
     for (const e of g.edits) {
-      // 条目级判定+应用（edit-diff——§15.2 分支 0 单行替换 + 判定序 1/2/3 + 空 new 显式报错 +
+      // 条目级判定+应用（edit-diff——EDIT.md §4 分支 0 单行替换 + 判定序 1/2/3 + 空 new 显式报错 +
       // >1000 行报错（diff 形态——D1 行号条目走 applyLineEdit，不经 LCS，无此上限））
       const out = computeEditEntry(g.content, e, {
         path: g.path,
@@ -66,6 +67,7 @@ export async function applyEditBatch(args, ctx) {
         lineShift: out.lineShift,
         occurrences: out.occurrences,
         note: out.note ?? null, // P15.11——空白差异自动落点标记（成功消息追加）
+        deleted: out.deleted ?? false, // 删行形态（EDIT.md §5）——结果文本用 Deleted 前缀
       })
       g.content = out.updated // 串行累积：下一条基于本条应用后的内容
       g.netShift += out.lineShift
@@ -86,24 +88,38 @@ export async function applyEditBatch(args, ctx) {
     // #4（2026-09-01 交付评审尾巴）：与单文件路径对齐——每条结果附 git diff +
     // autoSyntaxCheck（同文件多条会重复 diff/检查，换取格式一致、实现零分支）
     const diff = gitDiffOne(ctx.cwd, p.g.abs)
-    const base = `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${p.note ? ` — ${p.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
+    const base = p.deleted
+      ? `Deleted ${deleteTarget(p)} of ${p.g.path}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
+      : `Edited ${p.g.path}: replaced ${p.occurrences} occurrence(s)${p.note ? ` — ${p.note}` : ""}${diff ? "\n" + diff : ""}${await autoSyntaxCheck(p.g.abs)}`
     results.push(await appendWriteContext(p.g.abs, p.editStartLine, base))
   }
   return results.join("\n")
 }
 
 // ---------------------------------------------------------------------------
-// 2026-09-08 edit 语义升级（EDIT-TOOL-IMPROVEMENT.md——D1 按行号改 / D2 模糊匹配，
-// 落点定死本模块；条目判定接线在 edit-diff.mjs computeEditEntry——单形态/批量/ACP 桥
-// 三通道自动继承）。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入（ESM 循环引用
-// 安全：两侧仅函数声明，提升初始化——同 file.mjs ↔ edit-diff.mjs 先例）。
+// 2026-09-08 edit 语义升级（EDIT.md §2/§3——D1 按行号改 / D2 模糊匹配，落点定死本模块；
+// 条目判定接线在 edit-diff.mjs computeEditEntry——单形态/批量/ACP 桥三通道自动继承；
+// 阶段 2 删行形态见 EDIT.md §5（约束）。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入
+// （ESM 循环引用安全：两侧仅函数声明，提升初始化——同 file.mjs ↔ edit-diff.mjs 先例）。
 
 /**
- * D2 行级 normalize（评审 #4 算法定稿）：去首尾空白 / 统一缩进（tab → 2 空格）/
- * 统一引号（单引号 → 双引号）/ 去行尾空格。仅用于匹配比较——替换永远用文件原文窗口。
+ * D2 行级 normalize（EDIT.md §3——匹配档位；阶段 2 normalize 统一基准——双端同算法）：
+ * ① 去首尾空白 + 去行尾空格；② tab → 2 空格；③ 引号**单遍逐字符映射**——ASCII 单引号 /
+ * 弯引号 ‘ ’ “ ” / 反引号 → 直双引号 "（评审 #2 定稿目标字符 = "——与 ASCII 单引号规则
+ * 合并为单遍映射，无顺序依赖——防两端分叉）。**不做行内 \s+ 折叠**——缩进/对齐是结构信息，
+ * 折叠会误匹配文字相似但结构不同的行（统一基准 5——CLI 从未折叠，防误配回归）。仅用于匹配
+ * 比较——替换永远用文件原文窗口。
  */
+const QUOTE_TO_DOUBLE = {
+  "'": '"', "\u2018": '"', "\u2019": '"', "\u201c": '"', "\u201d": '"', "`": '"',
+}
 export function normalizeEditLine(line) {
-  return line.replace(/\t/g, "  ").replace(/'/g, '"').replace(/\s+$/g, "").trim()
+  let out = ""
+  for (const ch of line) {
+    if (ch === "\t") out += "  "
+    else out += QUOTE_TO_DOUBLE[ch] ?? ch
+  }
+  return out.replace(/\s+$/g, "").trim()
 }
 
 /** D2 模糊匹配阈值：行级 normalize 后逐行相等比例 ≥0.9 即匹配（评审 #4 定稿）。 */
@@ -142,24 +158,34 @@ export function findFuzzyWindow(content, old) {
 }
 
 /**
- * D1 按行号改（F1）：entry 带 line（单行）或 startLine/endLine（1-based 闭区间）→
- * 直接按行号替换该行/行范围为 new_string（无需 old_string——互斥校验在
- * validateEditEntry）。内容域 = normalizeEOL 后 LF（与 computeEditEntry 同域）；
- * 尾随换行随原文件保持。空 new_string → EMPTY_NEW_STRING 显式报错（与内容形态同
- * 语义——防静默删除）；行号越界 → 明确报错。原子性由调用方保证（本函数纯计算）。
- * 返回 { updated, editStartLine, lineShift, occurrences, note }（同 computeEditEntry 形态）。
+ * D1 按行号改（EDIT.md §2/§5——F1）：entry 带 line（单行）或 startLine/endLine（1-based
+ * 闭区间）→ 直接按行号替换该行/行范围为 new_string（无需 old_string——互斥校验在
+ * validateEditEntry）。阶段 2 删行形态（EDIT.md §5——裁定 A）：**省略 new_string =
+ * 删除该行/范围**（意图有界——删哪行是显式声明）；显式空串 `new_string: ""` →
+ * EMPTY_NEW_STRING_LINE 显式报错（模板生成 new_string 但落空 ≠ 删行意图——防误删）。
+ * 内容域 = normalizeEOL 后 LF（与 computeEditEntry 同域）；尾随换行随原文件保持（删到
+ * 文件为空 → ""——无剩余行即无终止符）。行号越界 → 明确报错。原子性由调用方保证
+ * （本函数纯计算）。
+ * 返回 { updated, editStartLine, lineShift, occurrences, note, deleted? }（同 computeEditEntry 形态）。
  */
 export function applyLineEdit(content, entry, opts = {}) {
   const prefix = opts.abortPrefix ?? ""
-  if (entry.new_string === "") throw new Error(prefix + EMPTY_NEW_STRING)
+  if (entry.new_string === "") throw new Error(prefix + EMPTY_NEW_STRING_LINE)
   const lines = splitLines(content)
   const start = entry.line ?? entry.startLine
   const end = entry.line ?? entry.endLine
   if (start > lines.length || end > lines.length) {
     throw new Error(prefix + `line ${end > lines.length ? end : start} out of range — ${opts.path ?? "file"} has ${lines.length} line(s)`)
   }
+  const removed = end - start + 1
+  if (entry.new_string === undefined) {
+    // 删行/删范围（EDIT.md §5）——省略 new_string：受影响行整体移除
+    const remaining = [...lines.slice(0, start - 1), ...lines.slice(end)]
+    const updated = remaining.join("\n") + (remaining.length > 0 && content.endsWith("\n") ? "\n" : "")
+    return { updated, editStartLine: start, lineShift: -removed, occurrences: 1, note: null, deleted: true }
+  }
   const newLines = splitLines(entry.new_string)
   const updated = [...lines.slice(0, start - 1), ...newLines, ...lines.slice(end)].join("\n") +
     (content.endsWith("\n") ? "\n" : "")
-  return { updated, editStartLine: start, lineShift: newLines.length - (end - start + 1), occurrences: 1, note: null }
+  return { updated, editStartLine: start, lineShift: newLines.length - removed, occurrences: 1, note: null }
 }

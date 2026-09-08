@@ -22,7 +22,7 @@ export async function runDistill(ctx) {
     }
     let saved = 0
     for (const c of candidates) {
-      pushLine(`── Candidate [${c.type}] ${c.title} (scope: ${c.scope ?? "personal"})`, C.warn)
+      pushLine(`── Candidate [${c.type}] ${c.title} (layer: ${c.layer ?? "personal"})`, C.warn)
       for (const line of c.content.split("\n").slice(0, 6)) pushLine(`   ${line}`, C.dim)
       if (c.type === "rule") pushLine("   (rule type — consider writing manually; press y to extract)", C.warn)
       const accept = await askPermission("distill-save", { title: c.title })

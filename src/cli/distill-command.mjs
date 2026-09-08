@@ -10,7 +10,7 @@ function noKeyMessage() {
   return `还没有配置 API key。运行 thincoder 进入 TUI，用 /provider add 和 /provider key 配置；或直接编辑 ${configPath}`
 }
 
-/** thincoder distill <transcript-file> [--yes] [--scope=...]
+/** thincoder distill <transcript-file> [--yes] [--layer=...]
  *  Returns exit code: 0=success, 1=error */
 export async function distillCommand(args, exitSoon) {
   const flags = {}
@@ -20,9 +20,15 @@ export async function distillCommand(args, exitSoon) {
     if (m) flags[m[1]] = m[2] ?? true
     else positional.push(a)
   }
+  // AC2（MEMORY.md §6.5）：显式拦截旧 flag——`--scope=X` 与 `--scope X` 两形态落入 flags.scope，
+  // 报错防静默吞参（解析器本不校验未知 flag——旧 --scope=project 静默落 personal 最危险）。
+  if (flags.scope !== undefined) {
+    console.error("distill: --scope renamed to --layer — update your invocation")
+    return 1
+  }
   const file = positional[0]
   if (!file) {
-    console.error("Usage: thincoder distill <transcript-file> [--yes] [--scope=personal|project|team]")
+    console.error("Usage: thincoder distill <transcript-file> [--yes] [--layer=personal|project|team]")
     return 1
   }
   const { readFile } = await import("node:fs/promises")
@@ -64,9 +70,9 @@ export async function distillCommand(args, exitSoon) {
   }
   let saved = 0
   for (const c of candidates) {
-    if (flags.scope) c.scope = flags.scope
+    if (flags.layer) c.layer = flags.layer
     console.log(`\n--- candidate ---`)
-    console.log(`[${c.type}] ${c.title}  (scope: ${c.scope})`)
+    console.log(`[${c.type}] ${c.title}  (layer: ${c.layer})`)
     console.log(c.content)
     if (c.type === "rule") {
       console.log("(rule 类知识通常建议手动撰写；确认提取吗？)")

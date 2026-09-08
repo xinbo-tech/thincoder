@@ -36,8 +36,8 @@ Workflow — match the process to the task:
 |---|---|---|
 | `read` | read a text file (paged / hashes=true for editing) | `cat`, `type`, `node -e fs.readFileSync` |
 | `write` | create/overwrite a file | `echo >`, `printf >`, heredocs |
-| `edit` | exact-string single replacement | `sed -i`, `perl -p` |
-| `hashline_edit` | line-targeted edit by content hash (whitespace/encoding drift proof) | `sed` by line number |
+| `edit` | region replacement (line-number or content targeting — exact → fuzzy) | `sed -i`, `perl -p` |
+| `hashline_edit` | content-hash-addressed edit (position-independent — use when line numbers may have drifted) | `sed` by line number |
 | `insert_after` | add a block after a known line / regex-anchored | `sed` insertion, line-number surgery |
 | `apply_patch` | multi-file unified diff (all-or-nothing) | `git apply` by hand, patch gymnastics |
 | `delete` | remove a single file (tracked files need force) | `del`, `rm` |

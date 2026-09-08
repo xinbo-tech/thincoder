@@ -218,14 +218,14 @@ export const editTool = {
     properties: {
       path: { type: "string", description: "File path — single form: required; with the edits array: optional top-level default for entries without their own path" },
       old_string: { type: "string", description: "Exact text to replace (tolerant matching: exact → whitespace-only variant → fuzzy match at ≥90% line equality after whitespace/indent/quote normalization). Mutually exclusive with line/startLine/endLine" },
-      new_string: { type: "string", description: "Replacement text" },
-      line: { type: "integer", description: "1-based line number — replace that single line with new_string; no old_string needed (mutually exclusive with old_string and startLine/endLine)" },
-      startLine: { type: "integer", description: "1-based first line of the range to replace with new_string (inclusive — requires endLine; mutually exclusive with old_string)" },
-      endLine: { type: "integer", description: "1-based last line of the range to replace with new_string (inclusive — requires startLine; mutually exclusive with old_string)" },
+      new_string: { type: "string", description: "Replacement text — content-based edits require it (empty is an explicit error); with line-based targeting (line/startLine/endLine) give it to replace the line/range, or OMIT it to delete (an explicit empty string is an error — omission is the delete signal)" },
+      line: { type: "integer", description: "1-based line number — replace that single line with new_string, or OMIT new_string to DELETE the line; no old_string needed (mutually exclusive with old_string and startLine/endLine)" },
+      startLine: { type: "integer", description: "1-based first line of the range to replace with new_string (inclusive — requires endLine; mutually exclusive with old_string); OMIT new_string to DELETE the range" },
+      endLine: { type: "integer", description: "1-based last line of the range to replace with new_string (inclusive — requires startLine; mutually exclusive with old_string); OMIT new_string to DELETE the range" },
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
       edits: {
         type: "array",
-        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) and new_string inside its edits entry.",
+        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) inside its edits entry; new_string replaces when given, and line-targeted entries may omit it to DELETE the line/range.",
         items: {
           type: "object",
           properties: {
@@ -237,7 +237,6 @@ export const editTool = {
             endLine: { type: "integer" },
             replace_all: { type: "boolean" },
           },
-          required: ["new_string"],
         },
       },
     },
@@ -259,8 +258,8 @@ export const editTool = {
     // （应用逻辑在 edit-batch.mjs——2026-09-01 拆出，500 行硬限，先例 git-ext.mjs）
     if (args.edits) return applyEditBatch(args, ctx)
 
-    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（TOOLS.md §15 D15.1——
-     // 行级 LCS 判定：零重叠→替换即删 / 一般 diff→LCS / 空 new→显式报错）
+    // 单文件（现状路径）——执行体整段迁出至 edit-diff.mjs（EDIT.md §6——
+    // 行级 LCS 判定：零重叠→替换即删 / 一般 diff→LCS / 空 new→显式报错）
     return runSingleEdit(args, ctx)
   },
 }

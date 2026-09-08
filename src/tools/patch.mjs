@@ -16,7 +16,7 @@ import { relative, dirname } from "node:path";
  * Parse a unified diff: returns [{ path, isNew, hunks: [{ ops: [{type:" "|"-"|"+", text}] }] }]
  * Consume hunk lines by the line counts in the @@ header — LLMs often strip context blank lines to pure empty lines,
  * so we use counts rather than first characters to determine hunk boundaries.
- * D15.6: a bare "@@" header (no coordinates) is accepted — the hunk body runs until the next hunk/file header
+ * APPLY-PATCH.md §3: a bare "@@" header (no coordinates) is accepted — the hunk body runs until the next hunk/file header
  * ("@@" / "--- " / "+++ " / "diff " / "index "), purely located by its ops.
  */
 /**
@@ -68,7 +68,7 @@ function parsePatch(patch) {
       if (!cur) throw new Error("Malformed patch: hunk header before any file header")
       const m = line.match(/^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/)
       if (!m) {
-        // D15.6 (TOOLS.md §15)：坐标裸 "@@" 头——hunk 完全靠操作行定位。
+        // APPLY-PATCH.md §3：坐标裸 "@@" 头——hunk 完全靠操作行定位。
         // 无行数可用：操作行以 " " / "-" / "+" 开头（空行宽容为上下文行），
         // 直到下一个 hunk 头 / 文件头 "@@"/"--- "/"+++ "/"diff "/"index " 为止。
         if (!/^@@(?: @@)?\s*$/.test(line)) {
@@ -94,7 +94,7 @@ function parsePatch(patch) {
         }
         if (hunk.ops.length === 0) throw new Error(`Malformed patch: empty coordinate-less hunk "${line.trim()}"`)
         const ctxCount = hunk.ops.filter((o) => o.type === " ").length
-        // §15.3 (TOOLS.md D15.10.1——2026-09-04)：context<2 且含 ≥1 个 - 行 → 接受——定位锚 = hunk 内
+        // §3 (APPLY-PATCH.md——2026-09-04)：context<2 且含 ≥1 个 - 行 → 接受——定位锚 = hunk 内
         // 匹配行序列（空格上下文行 + - 行——按出现序）连续——唯一匹配即应用（applyHunks 既有锚匹配域——
         // 多匹配 / not-found 语义不变）。0 上下文与 1 上下文同待遇（评审 #4a）。
         // 纯 +（无 - 锚）且 context<2 仍拒——插入位置不可判——报错引导加锚（NF15.8c）。

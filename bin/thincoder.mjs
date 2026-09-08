@@ -87,7 +87,7 @@ Usage:
   thincoder memory remove <id>                 Remove an entry
   thincoder sync              Sync team memory repo (pull --rebase + reindex)
   thincoder reindex           Rebuild the local index from markdown sources
-  thincoder distill <file> [--yes] [--scope=<s>]
+  thincoder distill <file> [--yes] [--layer=<s>]
                             Extract knowledge candidates from a session
                             transcript file; confirm each before saving
   thincoder session gc --dry-run | --confirm <hash|--all>
@@ -350,7 +350,7 @@ switch (command) {
         list)   COMPREPLY=( \\$(compgen -W "--type=rule --type=knowledge --type=decision --type=pattern" -- "\\$cur") ) ;;
         put)    COMPREPLY=( \\$(compgen -W "--type= --title= --content= --tags=" -- "\\$cur") ) ;;
       esac ;;
-    distill) COMPREPLY=( \\$(compgen -W "--yes --scope=" -- "\\$cur") ) ;;
+    distill) COMPREPLY=( \\$(compgen -W "--yes --layer=" -- "\\$cur") ) ;;
     completion) COMPREPLY=( \\$(compgen -W "bash zsh fish" -- "\\$cur") ) ;;
     *)
       COMPREPLY=( \\$(compgen -W "chat acp memory sync reindex distill upgrade completion session -v --version -h --help" -- "\\$cur") ) ;;
@@ -389,7 +389,7 @@ _thincoder() {
             list) _arguments '--type=[Filter by type]' ;;
             put)  _arguments '--type=[Entry type]' '--title=[Title]' '--content=[Content]' '--tags=[Space-separated tags]' ;;
           esac ;;
-        distill) _arguments '--yes[Skip confirmation]' '--scope=[Scope filter]' ;;
+        distill) _arguments '--yes[Skip confirmation]' '--layer=[Layer filter]' ;;
         completion) _values 'shell' 'bash' 'zsh' 'fish' ;;
       esac ;;
   esac
@@ -435,7 +435,7 @@ complete -c thincoder -n '__fish_seen_subcommand_from memory; and __fish_seen_su
 
 # distill flags
 complete -c thincoder -n '__fish_seen_subcommand_from distill' -l yes   -d 'Skip confirmation'
-complete -c thincoder -n '__fish_seen_subcommand_from distill' -l scope -d 'Scope filter'
+complete -c thincoder -n '__fish_seen_subcommand_from distill' -l layer -d 'Layer filter'
 
 # completion shells
 complete -c thincoder -n '__fish_seen_subcommand_from completion' -a bash -d 'Bash completions'

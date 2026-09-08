@@ -18,7 +18,7 @@ Output a JSON array (nothing else):
     "title": "Short title",
     "content": "Full content, self-contained — understandable without session context",
     "tags": ["tag1", "tag2"],
-    "scope": "personal | project"
+    "layer": "personal | project"
   }
 ]
 
@@ -27,7 +27,7 @@ Extraction criteria:
 - decision: technical decisions made in the session and their rationale
 - pattern: debugging experiences, solutions, reusable workflows
 - rule: coding standards (caution! rules are usually best written manually; only extract rules explicitly established in the session)
-- scope: use "project" for project-specific knowledge; use "personal" for general or personal preferences
+- layer: use "project" for project-specific knowledge; use "personal" for general or personal preferences
 
 Do NOT extract:
 - one-off task details ("changed line X in file Y today")
@@ -53,7 +53,7 @@ function tracesEnabledFromConfig() {
 
 /**
  * Extract candidates from a session transcript. transcript: plain-text session record.
- * Returns [{ type, title, content, tags, scope }], or [] on parse failure.
+ * Returns [{ type, title, content, tags, layer }], or [] on parse failure.
  * opts.traces（可选）：§18.6 D-TR6 开关显式透传（测试隔离/未来调用方）——缺省回退
  * 磁盘配置（tracesEnabledFromConfig）——关 = chat() 出口不落盘。
  */
@@ -117,23 +117,23 @@ export function historyToTranscript(history, { maxChars = 30_000 } = {}) {
 /**
  * Write confirmed candidates to the specified layer.
  * opts: { projectDir, team: { dir } | null, author }
- * scope=team requires opts.team; project requires opts.projectDir.
+ * layer=team requires opts.team; project requires opts.projectDir.
  * Returns write result description.
  */
 export async function saveCandidate(memory, candidate, opts = {}) {
-  const scope = candidate.scope ?? "personal"
+  const layer = candidate.layer ?? candidate.scope ?? "personal"
   // tags come from LLM output (untrusted): if not an array, stringify then split by comma/whitespace —
   // calling .split on a non-string would crash, and models often produce "a, b" comma strings
   const tags = Array.isArray(candidate.tags)
     ? candidate.tags.map((t) => String(t)).filter(Boolean)
     : String(candidate.tags ?? "").split(/[\s,]+/).filter(Boolean)
 
-  if (scope === "personal") {
+  if (layer === "personal") {
     const id = await put(memory, { type: candidate.type, title: candidate.title, content: candidate.content, tags: tags.join(" ") })
     return `personal#${id}`
   }
-  if (scope === "project") {
-    if (!opts.projectDir) throw new Error("project scope unavailable — no project directory configured (set memory.projectDir in ~/.thincoder/config.json)")
+  if (layer === "project") {
+    if (!opts.projectDir) throw new Error("project layer unavailable — no project directory configured (set memory.projectDir in ~/.thincoder/config.json)")
     const filename = await putMarkdown(memory, {
       layer: "project", dir: opts.projectDir,
       type: candidate.type, title: candidate.title, content: candidate.content,
@@ -141,8 +141,8 @@ export async function saveCandidate(memory, candidate, opts = {}) {
     })
     return `project:${filename}`
   }
-  if (scope === "team") {
-    if (!opts.team?.dir) throw new Error("team scope not configured — configure memory.team in ~/.thincoder/config.json")
+  if (layer === "team") {
+    if (!opts.team?.dir) throw new Error("team layer not configured — configure memory.team in ~/.thincoder/config.json")
     const filename = await putMarkdown(memory, {
       layer: "team", dir: opts.team.dir,
       type: candidate.type, title: candidate.title, content: candidate.content,
@@ -151,5 +151,5 @@ export async function saveCandidate(memory, candidate, opts = {}) {
     await commitAndPush(opts.team.dir, filename, `memory: [${candidate.type}] ${candidate.title} (distilled)`)
     return `team:${filename}`
   }
-  throw new Error(`unknown scope: ${scope}`)
+  throw new Error(`unknown layer: ${layer}`)
 }

@@ -1,7 +1,10 @@
 /**
- * edit-tool-improvement.test.mjs — edit 工具改进（2026-09-08，EDIT-TOOL-IMPROVEMENT.md）：
+ * edit-tool-improvement.test.mjs — edit 工具改进（EDIT.md——2026-09-08 D1/D2/D3 已并入 §2-§5）：
  * D1 按行号改（line/startLine/endLine）/ D2 模糊匹配（normalize + ≥90% 行相等）/
  * D3 替换即删（零重叠→旧行删除）/ AC4 向后兼容。
+ * 阶段 2（EDIT.md §8——2026-09-08）：删行形态（省略 new_string——8.1 空串 vs 省略矩阵）/ 
+ * normalize 统一（弯引号/反引号 → 直双引号单遍映射——8.2）/
+ * 防误匹配（无行内 \s+ 折叠——结构不同文字相似行不命中）。
  *
  * 条目级用例走 computeEditEntry / applyPatchLines / validateEditEntry（纯内存——快层）；
  * 落盘端到端（runSingleEdit / applyEditBatch 写 tmp 文件）为 fs 重活——slow() 门控。
@@ -12,7 +15,7 @@ import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { computeEditEntry, applyPatchLines, runSingleEdit } from "../src/tools/edit-diff.mjs"
-import { applyEditBatch, FUZZY_MATCH_NOTE } from "../src/tools/edit-batch.mjs"
+import { applyEditBatch, FUZZY_MATCH_NOTE, normalizeEditLine } from "../src/tools/edit-batch.mjs"
 import { slow } from "./slow.mjs"
 
 const OPTS = { path: "f.txt" }
@@ -176,6 +179,101 @@ test("AC4 edits 数组与顶层 line 参数互斥", async () => {
   }
 })
 
+// ---- 阶段2 删行形态（EDIT.md §8.1——省略 new_string = 删行/范围） -------------
+
+test("阶段2 删行: line 省略 new_string = 删单行", () => {
+  const content = Array.from({ length: 5 }, (_, i) => `l${i + 1}`).join("\n") + "\n"
+  const out = computeEditEntry(content, { line: 3 }, OPTS)
+  assert.equal(out.deleted, true)
+  assert.equal(out.updated, "l1\nl2\nl4\nl5\n")
+  assert.equal(out.lineShift, -1)
+  assert.equal(out.editStartLine, 3)
+  assert.equal(out.occurrences, 1)
+  assert.equal(out.note, null)
+})
+
+test("阶段2 删行: startLine/endLine 省略 new_string = 删范围（闭区间）", () => {
+  const content = Array.from({ length: 6 }, (_, i) => `l${i + 1}`).join("\n") + "\n"
+  const out = computeEditEntry(content, { startLine: 2, endLine: 4 }, OPTS)
+  assert.equal(out.deleted, true)
+  assert.equal(out.updated, "l1\nl5\nl6\n")
+  assert.equal(out.lineShift, -3)
+  assert.equal(out.editStartLine, 2)
+})
+
+test("阶段2 删行: 首行/末行 + 尾随换行语义（含无尾换行文件）", () => {
+  const c = "l1\nl2\nl3\n"
+  assert.equal(computeEditEntry(c, { line: 1 }, OPTS).updated, "l2\nl3\n")
+  assert.equal(computeEditEntry(c, { line: 3 }, OPTS).updated, "l1\nl2\n") // 末行删——前行终止符保留
+  assert.equal(computeEditEntry("l1\nl2", { line: 2 }, OPTS).updated, "l1") // 无尾换行不引入
+  assert.equal(computeEditEntry("l1\nl2", { line: 1 }, OPTS).updated, "l2")
+})
+
+test("阶段2 删行边界: 删全部行 → 空文件（无剩余行即无终止符）", () => {
+  const out = computeEditEntry("l1\nl2\nl3\n", { startLine: 1, endLine: 3 }, OPTS)
+  assert.equal(out.deleted, true)
+  assert.equal(out.updated, "")
+  assert.equal(out.lineShift, -3)
+})
+
+test("阶段2 空串矩阵: 行号形态显式空串 = 显式错（提示省略 new_string 删行）", () => {
+  assert.throws(
+    () => computeEditEntry("a\nb\n", { line: 1, new_string: "" }, OPTS),
+    /OMIT new_string to delete the line\/range/
+  )
+  assert.throws(
+    () => computeEditEntry("a\nb\n", { startLine: 1, endLine: 2, new_string: "" }, OPTS),
+    /empty new_string/
+  )
+})
+
+test("阶段2 空串矩阵: 内容形态空串仍拒 / 省略 new_string 仍拒（无界意图——非删行）", () => {
+  assert.throws(() => computeEditEntry("a\nb\n", { old_string: "a", new_string: "" }, OPTS), /empty new_string/)
+  assert.throws(() => computeEditEntry("a\nb\n", { old_string: "a" }, OPTS), /new_string must be a string \(missing\)/)
+  // replace_all 不得绕过空串保护（否则静默删除全部 occurrences——防损坏路径）
+  assert.throws(() => computeEditEntry("a\nb\na\n", { old_string: "a", new_string: "", replace_all: true }, OPTS), /empty new_string/)
+})
+
+test("阶段2 删行边界: 越界行号删行 → 明确错误", () => {
+  const c = Array.from({ length: 100 }, (_, i) => `l${i + 1}`).join("\n") + "\n"
+  assert.throws(() => computeEditEntry(c, { line: 999 }, OPTS), /line 999 out of range — f\.txt has 100 line\(s\)/)
+  assert.throws(() => computeEditEntry(c, { startLine: 1, endLine: 999 }, OPTS), /out of range/)
+})
+
+test("阶段2 校验: 行号形态非字符串 new_string → 明确错误", () => {
+  assert.throws(() => computeEditEntry("a\nb\n", { line: 1, new_string: 5 }, OPTS), /new_string must be a string \(got number\)/)
+  assert.throws(() => computeEditEntry("a\nb\n", { startLine: 1, endLine: 2, new_string: null }, OPTS), /new_string must be a string \(got object\)/)
+})
+
+// ---- 阶段2 normalize 统一（EDIT.md §8.2——弯引号/反引号 → 直双引号单遍映射） ----
+
+test("阶段2 normalize: 弯引号/反引号差异单行命中（目标字符 = 直双引号）", () => {
+  const content = 'const x = "a"\n'
+  const variants = ["const x = \u2018a\u2019", "const x = \u201ca\u201d", "const x = `a`", "const x = 'a'"]
+  for (const variant of variants) {
+    const out = computeEditEntry(content, { old_string: variant, new_string: "const y = 1" }, OPTS)
+    assert.equal(out.updated, "const y = 1\n", `variant: ${variant}`)
+    assert.equal(out.note, FUZZY_MATCH_NOTE, `variant: ${variant}`)
+  }
+})
+
+test("阶段2 normalize: 单遍字符映射（tab/引号/行尾空白/trim 同遍）", () => {
+  assert.equal(normalizeEditLine("\tx = 'a\u2019"), 'x = "a"')
+  assert.equal(normalizeEditLine("\u201cx\u201d  "), '"x"')
+  assert.equal(normalizeEditLine("  a\tb  "), "a  b") // tab→2 空格；行内多空格保留（无折叠）
+})
+
+test("阶段2 防误匹配: 行内多空格结构差异（文字相同）不命中——无行内 \\s+ 折叠", () => {
+  // 与文件仅 1 行不同：内部空格布局不同（对齐结构）——trim 不等价 → P15.11 不命中；
+  // normalize 无折叠 → fuzzy 不等 → not-found（结构是信息——不因文字相似误匹配）
+  const content = "def f():\n    a = 1\n    b = 2\n    c = 3\n    return\n"
+  const old = "def f():\n    a = 1\n    b  =  2\n    c = 3\n    return"
+  assert.throws(
+    () => computeEditEntry(content, { old_string: old, new_string: "x" }, OPTS),
+    /old_string not found/
+  )
+})
+
 // ---- 端到端（fs 落盘——slow 层） -------------------------------------------
 
 slow("AC1 端到端: runSingleEdit 按行号改写盘（含尾随换行保持）", async () => {
@@ -207,6 +305,45 @@ slow("AC1+AC2 端到端: 批量 edits 混用行号条目与模糊条目（串行
       { cwd: dir }
     )
     assert.equal(await readFile(p, "utf8"), "ONE\ntwo\nconst y = 1\n")
+    assert.match(res, /fuzzy match/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+slow("阶段2 端到端: runSingleEdit 删行落盘（返回 Deleted line N / Deleted lines N-M）", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "thincoder-edit-"))
+  try {
+    const p = join(dir, "del.txt")
+    await writeFile(p, "l1\nl2\nl3\nl4\n", "utf8")
+    const res = await runSingleEdit({ path: p, line: 2 }, { cwd: dir })
+    assert.equal(await readFile(p, "utf8"), "l1\nl3\nl4\n")
+    assert.match(res, /Deleted line 2 of .*del\.txt/)
+    const res2 = await runSingleEdit({ path: p, startLine: 2, endLine: 3 }, { cwd: dir })
+    assert.equal(await readFile(p, "utf8"), "l1\n")
+    assert.match(res2, /Deleted lines 2-3 of .*del\.txt/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+slow("阶段2 端到端: 批量 edits 删行条目 + 模糊替换条目（混合、原子、返回格式）", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "thincoder-edit-"))
+  try {
+    const p = join(dir, "batch.txt")
+    await writeFile(p, 'one\ntwo\nthree\nconst x = "a"\n', "utf8")
+    const res = await applyEditBatch(
+      {
+        path: p,
+        edits: [
+          { line: 2 }, // 删行条目（省略 new_string）
+          { old_string: "const x = 'a'", new_string: "const y = 1" }, // 模糊命中条目
+        ],
+      },
+      { cwd: dir }
+    )
+    assert.equal(await readFile(p, "utf8"), "one\nthree\nconst y = 1\n")
+    assert.match(res, /Deleted line 2 of .*batch\.txt/)
     assert.match(res, /fuzzy match/)
   } finally {
     await rm(dir, { recursive: true, force: true })
