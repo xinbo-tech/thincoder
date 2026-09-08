@@ -79,12 +79,8 @@
 - [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
 - [ ] **designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**：设计工作从主会话剥离给专门 designer 子代理——主会话只澄清需求+派 designer+评审设计+批准（不再自己写设计，哪怕小改动也派 designer）。designer 只写设计文档（主会话给澄清后需求+上下文，它产出设计文档到 docs/design/，不参与澄清）；直接写盘（产出即定稿）；一次性（每设计任务 spawn 一个，用完即弃）
   ——需：新 designer 角色（子代理工具加 designer role）+ designer 提示词（固化 METHODOLOGY 三层结构/文档归属/验收标准格式/文档地图检查/受影响文件表格式）+ 主会话提示词改（工程模式 Mandatory Flow 改设计由 designer 做）+ designer 工具集（写 docs/design/ 权限+读代码/文档）——双端（CLI/VSC）同机制
-- [ ] **edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**：edit 成功率低（old_string 精确匹配太严格 + LCS 保留旧行 + 无按行号改）——改进：①**按行号改**（line/startLine/endLine 参数——知道行号就能改，不用猜 old_string）②**模糊匹配**（old_string 放宽——细微差异/空白/缩进/引号不同也能匹配）③**替换即删**（替换后旧行自动删——不留残留）——归属 TOOLS.md §15 edit 语义升级——双端（CLI/VSC）同机制
-- [ ] **memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**：memory search/list 能找到记忆（跨 scope 搜），但 delete 找不到（限定 scope 找不到——scope 不一致）。案例：`20260907-advisor-评审走默认-async-29-已修-sync-惯性清除-r2dd.md`——search/list 能找到，delete personal/project scope 都找不到
-  ——需：统一 search/list/delete 的 scope 解析（delete 也该跨 scope 找，或 search/list 显示记忆实际 scope）——归属 MEMORY.md 工具语义——双端（CLI/VSC）同机制
 - [x] ~~**memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**~~——**已实现**（2026-09-08 双端交付：CLI `528d2ab` / VSC `426b574`——scope→layer 全统一 + delete layer 可选 + 尊重 uid origin + list [layer] 标签——设计链闭合 consume）
 - [x] ~~distill 子系统 scope→layer~~——**已实现**（2026-09-08 交付 commit 26cd89f——--layer 命令面 + --scope 显式报错两形态 + 读时归一 L124 + 错误串 layer + test 8 用例——设计链评审通过）——遗留：①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）②bin/thincoder.mjs 501 行 >500 存量债（HEAD 前即 501——净 0 行改动）——挂 STRUCTURE-DEBT 观察
-- [ ] **distill 子系统 scope→layer（2026-09-08 交付跟进——用户裁定延伸）**：distill 转录 JSON 字段 `scope` + `--scope` 命令参数同 memory 统一改 layer（人类命令面一致性——memory remove --scope 已随动改 --layer）——需 JSON 兼容处理（旧转录读取兼容）——归属：distill 命令板块（新设计）——**单端（CLI only——VSC 无 distill——已核实）**
 - [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
 
 ## 会话/存储/恢复后续
