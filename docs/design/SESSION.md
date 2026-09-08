@@ -401,6 +401,7 @@ m = loadManifest(cwd)
 ### 11.2 设计段（2026-09-08——F1-F3 + N1-N6 全纳入——勘察 explore 一手——待评审）
 
 > 需求：§11.1 F1-F3 + N1-N6（用户 2026-09-08 确认"都纳入"）。现状勘察：explore 双端源码核实（file:line 见下）——envStateLine 双端无 slot 参数、resumed 双端机制不同源、CLI 有 `_sessionStart` 推断伪触发既有缺陷。
+> 评审 #6（2026-09-08）：🔴 1 项（N6/AC4 双信号未设计——已修复：process restarted 句保留进程级信号——VSC 模块级闸不迁 + CLI 启动专用标记——resumed 用会话级信号）+ 🟡 2 + 🔵 3——🔴 修复后待重评审。
 
 **slot 注入**（F1）：
 - CLI：`pushEnvStateReminder(agent)`（setup-reminders.mjs:33-39）调用点 setup.mjs:179-182——作用域内
@@ -411,21 +412,30 @@ m = loadManifest(cwd)
 - 行位：`env: {END}, mode, model, slot: {N}, resumed`——slot 在 model 后 resumed 前。
 
 **resumed 按会话跟踪**（F2）：
-- **VSC**：模块级闸 `restartDetectionDone`（setup-reminders.mjs:69）→ **迁 agent 对象字段**
-  （如 `agent._restartDetectionDone`）。因 agent 每 (面板×slot) 绑定销毁重建（ensurePanelAgent
-  panel-chat.mjs:60-63——换槽即 `panel._agent = null`；runAgent 缺省 factory 新建 agent.mjs:85-92）
-  ——**每次槽恢复进新 agent 天然得一次 resumed:yes**；同绑定复用 → 闸已关不重发。
-  **只在 agent 新建（restore:true factory 路径——fullHistory 载入非空）武装**——复用不武装。
-  判定保持 `fullHistory?.length > 0`（N5）。`_resetRestartDetectionForTests`（:72）随迁删
-  （buildTopLevelAgent 默认 null 天然复位——测试不再需 seam）。
+- **VSC（评审 🔴 修复——双信号分离）**：resumed 按会话跟踪用**新 agent 级字段**
+  （如 `agent._resumedPending`——只在 agent 新建且 restore:true factory 路径、fullHistory 载入非空时
+  武装——agent 每 (面板×slot) 绑定销毁重建（ensurePanelAgent panel-chat.mjs:60-63——换槽即
+  `panel._agent = null`；runAgent 缺省 factory 新建 agent.mjs:85-92）——每次槽恢复进新 agent
+  天然得一次 resumed:yes——同绑定复用不武装。判定 `fullHistory?.length > 0`（N5）。
+  **模块级 `restartDetectionDone`（:69）保留不迁**——它是 process-restarted 句的进程级闸
+  （extension host 重启后模块级重置——进程内切槽不重置——N6 需）——`_resetRestartDetectionForTests`
+  （:72）保留。两信号独立：resumed = agent 级每恢复；process restarted 句 = 模块级每进程一次。
 - **CLI**：现 setup.mjs:101-121 内联 `_sessionStart != null` 推断 + `agent._restartReminderInjected` 闸
   ——**改显式恢复事件**：恢复落点收敛 `applySession(agent, data)`（session.mjs:261-325——启动 bin:291
   + /session cmd-session:92 + ACP acp:229/276 全汇于此）——applySession 内 `data.history?.length > 0`
   时武装待发标记 + 去 `_sessionStart` 推断 + 闸改由 applySession 复位——prepareRun :115-121 消费标记。
   **顺带修复 F3 伪触发**（全新会话 turn 2 不误报——无恢复事件不武装）。/new 与空历史槽切换不武装。
 
-**注入句解耦**（N6）：
-- 现 CLI :120 与 VSC :475-476 把 `process restarted at …` 与 resumed 绑同一门——**解耦**：仅真进程重启（VSC 现检测语义 / CLI 显式恢复事件且判据进程级）注入该句；切槽恢复（resumed:yes 但非进程重启）不注入 process restarted 句——resumed 字段独立表达"会话恢复"。
+**注入句解耦**（N6——评审 🔴 修复——双信号分离）:
+- **VSC**：process restarted 句继续用模块级 `restartDetectionDone` 一次性闸（:69 保留不迁——
+   extension host 重启后模块级重置；进程内切槽/换槽不重置——真重启语义）——resumed 用 agent 级
+   `_resumedPending`（每槽恢复）——两信号独立——切槽发 resumed:yes 不发 process restarted 句。
+- **CLI**：process restarted 句用**进程启动专用标记** `agent._processRestartPending`——仅 TUI
+   启动 resume 路径（bin:291 resumeSlot→applySession 恢复盘上会话）设一次；/session 切换与 ACP
+   加载不设（同一 applySession 收敛——但调用点区分：启动路径带进程重启标记——切换路径不带）。
+   resumed 用 applySession 武装的 `_envResumed`（每恢复一次）——两信号独立。
+- 消费：prepareRun 内——`_processRestartPending` 真 → 发 process restarted 句 + 清（进程内一次）；
+   `_envResumed` 真 → resumed:yes + 清（每次恢复一次）——互不绑门。
 
 **测试**（双端新建——现零测试——explore 确认）：
 - `test/setup-reminders.test.mjs`（双端各建）：envStateLine 模板（slot 字段/null 降级/resumed yes-no）
@@ -440,6 +450,7 @@ m = loadManifest(cwd)
 | src/agent/setup-reminders.mjs | CLI | envStateLine 加 slot + push 传 agent._slot + 恢复事件消费改标记 |
 | src/agent/setup.mjs | CLI | prepareRun 恢复判定改显式事件（去 _sessionStart 推断）+ 注入句解耦 |
 | src/session.mjs | CLI | applySession 武装恢复事件（data.history 非空） |
+| bin/thincoder.mjs | CLI | 启动 resume 路径设 `_processRestartPending`（评审 🔴 补——句的进程级信号） |
 | src/agent/setup-reminders.mjs | VSC | 模块级闸迁 agent 字段 + envStateLine 加 slot + push 签名 |
 | src/agent/setup.mjs | VSC | hydrateRun 传 slot + 注入句解耦（resumedSession 与 process restarted 分门） |
 | test/setup-reminders.test.mjs | 双端新 | 上述用例 |
@@ -449,7 +460,8 @@ m = loadManifest(cwd)
 - AC1 env-state 行含 `slot: {N}`（双端——无绑定显式 null）
 - AC2 切槽到有历史槽 → resumed:yes 一次（VSC 新 agent 武装 + CLI applySession 事件——双端）
 - AC3 CLI 全新会话无恢复事件 → 恒 no（F3 伪触发消除）
-- AC4 注入句解耦——切槽不发 process restarted（N6）
+- AC4 注入句解耦——切槽不发 process restarted（N6——评审 🔴 修复：双信号分离——VSC 模块级闸保留/CLI 启动专用标记）
+  ——测试：启动恢复发句一次 + 切槽 resumed:yes 无句 + 进程内多次切槽句不再发
 - AC5 测试绿（双端 setup-reminders.test.mjs + 既有不回归）
 
 
