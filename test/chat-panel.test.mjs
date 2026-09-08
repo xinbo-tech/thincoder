@@ -3,11 +3,15 @@
  * docs/design/SESSION-FLOW-C.md C1 节（F-C1a~e——修 H-B/H-C/H-A/H-D/H-F——AC-C1 组）。
  * 评审 #6：新文件——旧同名文件在 3b974ae「测试清空」中删除（git 核验——从未恢复）——
  * 以 files.mjs 实况重建（2026-09-09）。
+ * A 批（SESSION-FLOW-A——2026-09-09）：⑧ A1 sendMessage 走 routeUserTurn（F-A1——running
+ * 守卫/susp 两态回归/A1e 空面板 warning）+ ⑨⑩ A2 标题回合内（F-A2 方案 Y——真实
+ * runPanelChat 桩测：标题窗口 = busy 测试锁 + 错误路径归位恒执行）。
  *
  * 手法：桩面板驱动（桩方法记录 + 可注入 resolve/reject）——不跑真实 agent 循环；组④经真实
  * ChatPanel 原型 + 真实 runPanelChat 驱动 setup 期异常（隔离 config/会话目录——_activeLines
- * 桩注入抛点——H-B 回归红线：修前此用例 unhandled rejection / await 红掉）。
- * 组①-⑥ 全部 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
+ * 桩注入抛点——H-B 回归红线：修前此用例 unhandled rejection / await 红掉）；⑨⑩ 同骨架——
+ * loading:true 首投即抛终止 try 体（isFirstMessage 已置位）→ 命中 finally 的 A2 标题段。
+ * 组①-⑩ 全部 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -16,7 +20,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as vscode from "vscode"
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
-import { newTurnController } from "../src/extension/panel-chat.mjs"
+import { newTurnController, runPanelChat } from "../src/extension/panel-chat.mjs"
 import { makeAskInPanel } from "../src/extension/panel-callbacks.mjs"
 import { atComplete } from "../src/extension/panel-index.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
@@ -341,3 +345,140 @@ test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 +
   assert.equal(ip._chatCalls.length, 1, "idle → 直发 _chat")
 })
 
+// ─── ⑧ A1 sendMessage 守卫（F-A1——修 R6 残留）────────────────
+
+test("⑧ A1 sendMessage 走 routeUserTurn（F-A1）：running 回显先于入队 + messageQueued + 不直呼 _chat；susp 两态走 _chat 上游分流；idle 直发；空面板 warning 分支（A1e）", async () => {
+  // running：回显 userMessage（先于入队）→ _suspQueue 排队 + messageQueued 一次——零直发
+  const p = stubPanel({ _turnState: "running", _suspQueue: [] })
+  ChatPanel.prototype.sendMessage.call(p, "cmd-during")
+  assert.equal(p._chatCalls.length, 0, "running 下命令发送不直呼 _chat（修 R6——不再杀当前回合）")
+  assert.equal(p._suspQueue.length, 1, "入队 _suspQueue（与 webview 输入同队列）")
+  assert.equal(p._suspQueue[0].text, "cmd-during")
+  assert.equal(p._suspQueue[0].modelOverride, undefined, "命令发送无模型/推理覆写（undefined 透传）")
+  const types = p.posted.map((m) => m.type)
+  assert.equal(types.filter((t) => t === "userMessage").length, 1, "回显 userMessage 一次")
+  assert.equal(types.filter((t) => t === "messageQueued").length, 1, "messageQueued 回执一次")
+  assert.ok(types.indexOf("userMessage") < types.indexOf("messageQueued"), "回显先于入队回执（用户气泡 + message queued——与 webview 输入观感一致）")
+  // 回合尾 FIFO 排空 = 共享路径（评审 #5 确认：① 组已断言 routeUserTurn 队列经
+  // popQueuedTurn 的 FIFO 排空——sendMessage 与 userMessage 同队列同 drain——此处只验
+  // sendMessage 条目为 drain 兼容形 {text,…}——不重复 FIFO 用例）
+  const drained = []
+  let next
+  while ((next = popQueuedTurn(p._suspQueue)) !== null) drained.push(next.item.text)
+  assert.deepEqual(drained, ["cmd-during"], "回合尾 FIFO 消费形兼容（零丢失）")
+
+  // susp 会话活跃 → _chat（_chat 内上游分流 pendingInput——D-S5 唤醒语义不被队列短路）
+  const sa = stubPanel({ _turnState: "susp", _susp: { active: true } })
+  ChatPanel.prototype.sendMessage.call(sa, "to-session")
+  assert.deepEqual(sa._chatCalls, [["to-session", undefined, undefined, undefined, undefined]], "susp 会话活跃 → _chat（上游 pendingInput 分流）")
+  assert.equal(sa._suspQueue, undefined, "不经 routeUserTurn 队列")
+  assert.equal(sa.posted.filter((m) => m.type === "messageQueued").length, 0, "直接分流不产生排队回执")
+
+  // susp 释放窗口（会话未建）→ 同样 _chat（内部 _suspQueue 接管——零丢失不变）
+  const sw = stubPanel({ _turnState: "susp", _susp: null })
+  ChatPanel.prototype.sendMessage.call(sw, "in-window")
+  assert.deepEqual(sw._chatCalls, [["in-window", undefined, undefined, undefined, undefined]], "susp 释放窗口 → _chat（会话接管队列）")
+  assert.equal(sw._suspQueue, undefined)
+
+  // idle 直发（旧 sendMessage 语义等价——_chat(text) 同参形）
+  const ip = stubPanel({ _turnState: "idle" })
+  ChatPanel.prototype.sendMessage.call(ip, "direct")
+  assert.deepEqual(ip._chatCalls, [["direct", undefined, undefined, undefined, undefined]], "idle → 直发 _chat（原语义等价）")
+
+  // A1e（评审 #6 错误用例）：_panel 空 → warning 分支保留——不直呼 _chat
+  const realWarn = vscode.window.showWarningMessage
+  let warned = 0
+  vscode.window.showWarningMessage = async () => { warned++ }
+  try {
+    const ep = stubPanel({ _panel: null })
+    ChatPanel.prototype.sendMessage.call(ep, "no-panel")
+    assert.equal(warned, 1, "空面板 → showWarningMessage 一次（分支保留）")
+    assert.equal(ep._chatCalls.length, 0, "空面板不直呼 _chat")
+    assert.equal(ep._suspQueue, undefined, "空面板不入队")
+  } finally {
+    vscode.window.showWarningMessage = realWarn
+  }
+})
+
+// ─── ⑨⑩ A2 标题回合内（F-A2——方案 Y）─────────────────
+
+/** A2 真实 runPanelChat 骨架（⑨⑩ 共用）：真实 ChatPanel 原型 + 真实 runPanelChat——
+ *  _activeLines 空线（isFirstMessage = true）+ loading:true 首投即抛（try 体内 :241 终止——
+ *  命中 finally 时 isFirstMessage 已置位）。_generateTitle 实例覆盖——titleRejects=false →
+ *  挂起于可控 gate（测试锁标题窗口）；true → 立即 reject（错误路径）。 */
+function a2Panel({ titleRejects = false } = {}) {
+  const posted = []
+  const titleGate = []
+  let loadingThrown = false
+  const p = Object.create(ChatPanel.prototype)
+  Object.assign(p, {
+    _chatCalls: [],
+    _slot: 0, // 绑定槽——ensureSlot 免盘
+    _agent: null,
+    _turnState: "idle",
+    _abortController: null,
+    _abortRequested: false,
+    _turnControllers: [],
+    _susp: null,
+    _suspQueue: undefined,
+    _distillState: undefined,
+    _distillController: undefined,
+    _questionQueue: [],
+    _permissionQueue: [],
+    _statusBar: null,
+    _context: { workspaceState: { get: () => undefined, update: async () => {} } },
+    _panel: { webview: { postMessage: (m) => {
+      // 回合进入 loading:true（impl :241）→ 抛——命中 finally（带 isFirstMessage）而不触网
+      if (m.type === "loading" && m.loading === true && !loadingThrown) {
+        loadingThrown = true
+        throw new Error("boom-at-loading:true")
+      }
+      posted.push(m)
+      return Promise.resolve(true)
+    } } },
+    _activeLines() { return { fullHistory: [], contextHistory: [] } }, // 空线——isFirstMessage = true
+    _chat(...args) { p._chatCalls.push(args); return Promise.resolve() }, // 直发记录器（断言不并发用）
+    _generateTitle: titleRejects
+      ? async () => { throw new Error("title-boom") }
+      : async () => new Promise((res) => titleGate.push(res)),
+    posted,
+  })
+  return { p, titleGate }
+}
+
+test("⑨ A2 标题窗口 = busy（F-A2 测试锁）：首回合标题 await 期间 _turnState 仍 running——userMessage 入队不并发直发——标题完成后才归位", async () => {
+  const { p, titleGate } = a2Panel()
+  const turn = runPanelChat(p, { text: "first" })
+  turn.catch(() => {}) // 防 settle 窗口 unhandled rejection（assert.rejects 稍后接管）
+  await settle()
+  assert.equal(titleGate.length, 1, "回合尾标题已触发（isFirstMessage——finally 内归位前）")
+  assert.equal(p._turnState, "running", "标题 await 期间忙态未归位——仍 running（标题窗口 = busy——修前此点已 idle → 消息直开并发回合）")
+
+  // 标题窗口内 userMessage → running 路由守卫排队——不并发直发（R3 无池首回合并发锁）
+  await handlePanelMessage(p, { type: "userMessage", text: "during-title" })
+  assert.equal(p._chatCalls.length, 0, "标题期间消息不直发 _chat（不并发新回合）")
+  assert.deepEqual(p._suspQueue.map((q) => q.text), ["during-title"], "标题期消息入队 _suspQueue（回合尾 FIFO 消费零丢失）")
+  assert.equal(p.posted.filter((m) => m.type === "messageQueued").length, 1, "入队回执一次")
+
+  // 释放标题 → 归位执行（turnState idle 先于 loading:false——F-C2b 时序——A3 无闪烁前提）
+  titleGate[0]()
+  await assert.rejects(turn, /boom-at-loading/, "回合收尾于注入的 setup 异常（标题不吞回合错误）")
+  const iIdle = p.posted.findIndex((m) => m.type === "turnState" && m.state === "idle")
+  const iOff = p.posted.findIndex((m) => m.type === "loading" && m.loading === false)
+  assert.ok(iIdle >= 0 && iOff > iIdle, "归位广播 turnState idle 先于 loading:false（标题后归位）")
+  assert.equal(p._turnState, "idle", "终态 idle")
+})
+
+test("⑩ A2 错误路径（评审 #2）：标题失败不外抛——归位恒执行（turnState idle + loading:false 发出——不卡永久 busy）", async () => {
+  const { p } = a2Panel({ titleRejects: true })
+  const turn = runPanelChat(p, { text: "first" })
+  turn.catch(() => {})
+  await assert.rejects(turn, /boom-at-loading/, "标题错误被兜底吞掉——回合收尾于注入的 setup 异常（title-boom 不外泄）")
+  assert.equal(p._turnState, "idle", "标题抛错仍归位 idle——不卡 running（修前：finally 内异常跳过归位 → 永 busy）")
+  const tsIdle = p.posted.find((m) => m.type === "turnState" && m.state === "idle")
+  assert.ok(tsIdle, "标题失败后归位广播仍发出（try/catch 兜底恒归位）")
+  const loadOff = p.posted.find((m) => m.type === "loading" && m.loading === false)
+  assert.ok(loadOff, "loading:false 仍发出（UI 停止旋转）")
+  const lastTs = [...p.posted].reverse().find((m) => m.type === "turnState")
+  assert.equal(lastTs.state, "idle", "终态广播 = idle（无残留 running）")
+})

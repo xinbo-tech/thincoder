@@ -42,8 +42,10 @@ export function clearProjectOverride() {
  * 与 retry 共用同一路由——turnActive 排队 + messageQueued / 挂起分流（_chat 内 susp 守卫）全走
  * 一套判断——retry 不再绕过 turnActive 队列直呼 _chat（并发新回合竞态——AC-S2 同款）。
  * 同步函数（savePastedImages 同步落盘）——零新 await 窗口。入队消息零丢失（_suspQueue）。
+ * A1（SESSION-FLOW-A F-A1——修 R6 残留）：sendMessage 命令直发（chat-panel.mjs——sendMessage
+ * 宿主）并入同入口——导出供其调用——running→_suspQueue + messageQueued（回显先于入队）。
  */
-function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images }) {
+export function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images }) {
   // Plan B (GitHub thincoder#3): the webview sends pasted images as base64
   // dataURLs; the EXTENSION saves them to <cwd>/.thincoder/tmp/paste-*.<ext>
   // and passes absolute PATHS downstream. The field stays `images` (wire

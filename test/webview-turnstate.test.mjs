@@ -2,6 +2,8 @@
  * webview-turnstate.test.mjs — SESSION-FLOW-C C2 测试（webview 忙态收敛 reducer 组）。
  * docs/design/SESSION-FLOW-C.md C2 节（F-C2a~e——AC-C2 组：_turnState 枚举转换 /
  * renderStatusBar 单 writer / Stop susp 常显 / _suspCounts 不陈旧——N3 单来源镜像侧）。
+ * A3（SESSION-FLOW-A——2026-09-09）：③ 尾段断言翻转——Stop 派生由 susp 扩为 state≠idle
+ * （running+loading:false → Stop 仍常显——标题窗口/digest 起跑窗口/Reload 冷启恢复）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
@@ -136,9 +138,9 @@ test("② renderStatusBar 单 writer：loading 消息不覆写徽标——thinki
   assert.ok(!afterDigestToggles.includes("Thinking"))
 })
 
-// ─── ③ Stop susp 期常显（AC-C2——F-C2d）：digest 间 loading:false 不隐 abort ──
+// ─── ③ Stop state≠idle 派生常显（AC-C2 F-C2d + A3 扩展）：digest 间/running loading:false 不隐 abort ──
 
-test("③ Stop susp 期常显：_turnState===\"susp\" 派生——loading true/false 交替不闪烁", async () => {
+test("③ Stop 派生常显（F-C2d + A3 断言翻转）：_turnState≠idle 派生——susp 期与 running 期 loading true/false 交替都不隐 abort——idle 才收起", async () => {
   const { S, ctx, setLoading, handleTurnStateMessage } = await loadWebview()
   resetBusy({ S, ctx })
   assert.equal(abortShown(), false, "初始（idle）无 Stop")
@@ -161,12 +163,22 @@ test("③ Stop susp 期常显：_turnState===\"susp\" 派生——loading true/f
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   assert.equal(abortShown(), false, "idle → Stop 收起")
 
-  // 普通回合（非 susp）：loading 驱动照旧
+  // 普通回合（A3——state≠idle 派生）：running 期 loading 交替不再隐 Stop（修前：running+
+  // loading:false → 隐——标题窗口/digest 起跑窗口同属 running——隐藏窗口即闪烁源）
   handleTurnStateMessage({ type: "turnState", state: "running" })
   setLoading(ctx, true)
   assert.equal(abortShown(), true)
   setLoading(ctx, false)
-  assert.equal(abortShown(), false, "非 susp 期 loading:false 隐 Stop（原语义）")
+  assert.equal(abortShown(), true, "running+loading:false → Stop 仍显（state≠idle 派生——A3 断言翻转）")
+
+  // A4 派生侧（Reload 冷启）：webviewReady 重推 running（host F-C2b——冷启后无 loading
+  // 消息）→ Stop 恢复（无闪烁窗口）——idle 才收起
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  assert.equal(abortShown(), false, "idle → Stop 收起")
+  handleTurnStateMessage({ type: "turnState", state: "running" }) // Reload 冷启重推形
+  assert.equal(abortShown(), true, "Reload 冷启 running（无 loading 消息）→ Stop 恢复（派生）")
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  assert.equal(abortShown(), false, "终态 idle → Stop 收起")
 })
 
 // ─── ④ _suspCounts 不陈旧（AC-C2e——F-C2e）：重发后 webview 计数 = host 实际 ──

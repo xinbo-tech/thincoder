@@ -20,6 +20,9 @@
 
 ## 变更记录
 
+- 2026-09-09：§7 标题触发时机修订——A2（SESSION-FLOW-A 方案 Y——用户裁）：标题生成
+  上移回合尾 finally 忙态归位之前（标题窗口 = running——路由守卫排队 + webview Stop
+  显——修无池首回合并发/有池首回合消化劫持；错误不外抛——归位恒执行）。
 - 2026-09-08：DOC-REORG-VSC 批 3——从 ARCHITECTURE §4 迁出正文，对照 VSC
   src/ 会话模块（session-io/session-slots/session-gc/session-slot-write/panel-session）
   核实实现细节写全本端独立文档。ARCHITECTURE §4 不删（留后续瘦身批）。历史变更
@@ -384,6 +387,15 @@ autoApprove/planMode/索引状态）随 `_cwd()` 刷新。
   activeProvider)`）——从槽文件取首条 user 消息（`(type ?? role) === "user"`）+ 持久化
   activeProvider（runAgent 不给 history 条目打 provider/model）；`setSlotTitle` 写回，
   失败打印 `{reason}` 不再静默。
+- **触发时机（A2——SESSION-FLOW-A 方案 Y——2026-09-09 用户裁）**：标题 await 在回合尾
+  finally **忙态归位之前**（stream 完成即触发——panel-chat.mjs 归位分支前）：期间
+  `_turnState` 仍 running——标题窗口 = busy——webview Stop 显（state≠idle 派生）+ 路由
+  守卫 running→排队（修 R3 无池首回合并发——归位 idle 后标题的旧序会让窗口内新消息直开
+  并发回合与标题 LLM 调用赛跑；有池首回合同理——标题跨释放窗口延后消化入口——新序
+  「标题在归位 susp 前完成」——释放窗口不延）。错误路径（评审 #2）：`generateTitle`
+  内部全 try/catch 吞错 + 调用点兜底 try/catch——**归位恒执行**（_publishTurnState +
+  loading:false 照发——标题抛错不卡永久 busy）。标题期消息入队 `_suspQueue`（routeUserTurn
+  running 分支直入队——同队列同排空——零丢失）。
 - **IK9UZ8（标题生成质量）**：LLM 标题请求**显式禁用思考**（openai body 加
   `thinking:{type:"disabled"}`、anthropic `thinking:{type:"disabled"}`、google
   `thinkingConfig:{thinkingLevel:"none"}`——防 reasoning_content 吃掉整个输出预算把

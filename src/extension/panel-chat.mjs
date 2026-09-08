@@ -13,6 +13,8 @@
  * C2（SESSION-FLOW-C F-C2a——2026-09-09）：_suspPending/_turnActive 布尔退役——忙态单一
  * _turnState 枚举（idle/running/susp）——释放窗口 = state==="susp" 且 panel._susp 空；
  * 队列尾排空等读者改状态机表达（真值表与旧布尔逐位一致）。
+ * A2（SESSION-FLOW-A F-A2——2026-09-09 用户裁方案 Y）：标题（首回合 isFirstMessage）上移
+ * finally 忙态归位前（running 窗口——修 R3 并发/消化劫持——错误不外抛归位恒执行）。
  */
 import * as vscode from "vscode"
 import { resolveProviders } from "../config-io.mjs"
@@ -277,18 +279,33 @@ async function runPanelChatImpl(panel, opts = {}) {
   } finally {
     traceStop("finally: turn complete — UI released", panel._stopClickTs)
     panel._stopClickTs = null
-    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2）：挂起决策先于任何释放点登记。
-    // finally → generateTitle（可达秒级 LLM 调用）的窗口内用户消息若只走 susp?.active 分流
-    // 会不命中而直接新开回合——新回合从磁盘重载 lines（新 history 数组与池所在数组分离）
-    // + abort 外回合 controller → 池 children 全中止 → 僵尸挂起（aborted settle 不出池 →
-    // poolLive 恒真）或池结果随旧数组静默丢弃（AC-S2 双违）。窗口以 _turnState==="susp"
-    // 且 _susp 空表达——期间 _chat 把消息入队 panel._suspQueue，由下面回合尾的会话入口
-    // 接管（带队列进会话 / 无会话则普通回合兜底——零丢失）。
+    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2——A2 修订）：挂起决策先于任何释放点
+    // 登记——归位与回合尾会话接管之间的异步段内消息不得开并发新回合（从磁盘重载 lines
+    // 孤儿化池 + abort 池 controller——AC-S2）。窗口 = _turnState==="susp" 且 _susp 空——
+    // 期间 _chat 入队 _suspQueue 由函数尾会话入口接管（零丢失）。A2：标题已移入下方
+    // 归位前（running——routeUserTurn 直入队同队列）——标题不再构成此窗口。
     // C2（F-C2a/b——忙态归位 + 单一广播）：会话内回合（digest/会话用户回合）尾 → susp
     // （先于 loading:false 广播——webview Stop 派生在 digest 间不闪烁）；普通回合尾池仍
     // live → susp（释放窗口——同上）；无池无会话 → idle。计数随广播：会话内回合尾带
     // backgroundStatus（F-C2e——轮尾计数刷新到 host 实际；释放窗口期 webview 未入会话
     // 不显示计数段——计数由会话入口 postSuspension 随带）。
+    // Persist BEFORE the title（A2 方案 Y——权威正文 SESSION.md §7）：标题从槽读首条
+    // user 消息——ContinueError→Stop 路径（runTurnLoop break 跳过 catch 落盘）的唯一
+    // 落盘就是本 save——先落盘后标题该路径才出得了标题。CLI agent-turn.mjs finally
+    // parity——"Save session after every turn (survives crashes)"。
+    try {
+      if (fullHistory?.length) panel._saveLines(fullHistory, history, { activeProvider: providerName }, turnSlot)
+    } catch (saveErr) {
+      console.error("[chat-panel] save in finally failed:", saveErr.message)
+    }
+    // A2（SESSION-FLOW-A F-A2——权威正文 SESSION.md §7）：标题上移至此（归位前——
+    // _turnState 仍 running——窗口 = busy：Stop 显 + 路由守卫排队）；错误不外抛——
+    // 归位恒执行（评审 #2）。
+    try {
+      if (isFirstMessage) await panel._generateTitle(turnSlot)
+    } catch (e) {
+      console.error("[chat-panel] title generation threw:", e?.message ?? e)
+    }
     if (!skipSession && !susp && !panel._susp && panel._panel && poolLive(history)) {
       panel._publishTurnState("susp")
     } else if (susp || panel._susp) {
@@ -298,24 +315,12 @@ async function runPanelChatImpl(panel, opts = {}) {
     }
     panel._refreshStatus()
     panel._panel?.webview.postMessage({ type: "loading", loading: false })
-    // Persist on EVERY exit path (CLI agent-turn.mjs finally parity — "Save session after
-    // every turn (survives crashes)"): the ContinueError→Stop `break` above skips the
-    // catch-block save, which stranded the whole turn (user input + N turns of work) in
-    // memory only — lost on session switch/reload.
-    try {
-      if (fullHistory?.length) panel._saveLines(fullHistory, history, { activeProvider: providerName }, turnSlot)
-    } catch (saveErr) {
-      console.error("[chat-panel] save in finally failed:", saveErr.message)
-    }
   }
-  // Generate session title from first message (after agent completes)
-  if (isFirstMessage) await panel._generateTitle(turnSlot)
 
-  // §17 D-S2 释放窗口接管（2026-09-02 偏差修复 #2）：finally 已把忙态置 susp（池仍 live、
-  // 会话未建——_suspPending 语义已并入状态机）——generateTitle await 窗口期经 _chat 入队的
-  // 消息（panel._suspQueue）在这里消费：池仍 live 且会话 controller 未被中止 → 带队列进挂起
-  // 会话（用户输入优先于 digest，D-S5）；池已空 / Stop 已中止 / 面板消失 → 队列消息以普通
-  // 回合兜底执行——入队消息零丢失（AC-S2）。
+  // §17 D-S2 释放窗口接管（偏差修复 #2——A2 修订）：finally 归位 susp 后——标题期
+  // （routeUserTurn 直入队）与释放窗口期（_chat 入队）的 _suspQueue 消息在此消费：
+  // 池 live + controller 未中止 → 带队列进挂起会话（用户输入优先于 digest——D-S5）；
+  // 否则普通回合兜底——入队消息零丢失（AC-S2）。
   if (!skipSession && !susp && !panel._susp && panel._turnState === "susp") {
     const queued = (panel._suspQueue ?? []).splice(0)
     const enter = !skipSession && !susp && !panel._susp && panel._panel

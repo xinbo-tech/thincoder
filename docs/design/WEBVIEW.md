@@ -195,18 +195,24 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
 锁桥测试）。string/对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支
 字段 undefined 安全降级）。
 
-## 8. 消息秩序与忙态收敛（SESSION-FLOW-C——权威锚）
+## 8. 消息秩序与忙态收敛（SESSION-FLOW-C + A——权威锚）
 
 > 本节的协议正文是**唯一来源**（C1/C2 实现与 AGENTS.md 协议表镜像行均指向本节，不重复
-> 正文）。覆盖 C1 消息秩序增量（question promptId/questionCancelled/atComplete seq）
-> 与 C2 忙态收敛（turnState 广播/renderStatusBar 单 writer/Stop 派生）。
+> 正文；SESSION-FLOW-A A1/A2 措辞增量同落本节——不双处详述）。覆盖 C1 消息秩序增量
+> （question promptId/questionCancelled/atComplete seq）、C2 忙态收敛（turnState 广播/
+> renderStatusBar 单 writer/Stop 派生）与 A1/A3 扩展（sendMessage 命令直发同入口/
+> Stop 派生扩为 state≠idle——A2 标题时机正文在 SESSION.md §7）。
 
-### 8.1 回合入口秩序（C1——F-C1e/H-F）
+### 8.1 回合入口秩序（C1——F-C1e/H-F + A1——F-A1/R6）
 
-- `userMessage` 与 `retry` 共用**单一入口 routeUserTurn**（panel-messages.mjs）：回合
-  执行中（host `_turnState==="running"`）的消息一律入队 `panel._suspQueue` + 回执
-  `messageQueued`——回合尾 FIFO 顺序消费（零丢失）；abort/interrupt 等控制消息
-  **永不排队、直通**（延迟红线——杀 Stop 即失败）。
+- `userMessage`、`retry` 与 `sendMessage` 命令直发（quick-input/Ask ThinCoder——A1
+  SESSION-FLOW-A——修 R6 残留：sendMessage 曾是唯一绕过本入口的直呼 _chat 路径）共用
+  **单一入口 routeUserTurn**（panel-messages.mjs）：回合执行中（host `_turnState==="running"`）
+  的消息一律入队 `panel._suspQueue` + 回执 `messageQueued`——回合尾 FIFO 顺序消费
+  （零丢失）；abort/interrupt 等控制消息**永不排队、直通**（延迟红线——杀 Stop 即失败）。
+  sendMessage 回显（`userMessage` postMessage）先于入队——运行中命令发送 = 用户气泡 +
+  "message queued"，与 webview 输入路径观感一致；susp 两态（会话活跃/释放窗口）走
+  _chat 上游分流不变；_panel 空 → warning 分支（不发 _chat）。
 
 ### 8.2 question 卡 id 匹配（C1——F-C1d/H-D）
 
@@ -247,12 +253,17 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
   `S._phase==="thinking"` 标记（`loading` 消息经 setLoading 置位/清除）——renderStatusBar
   同线绘制徽标（task/sub/goal/plan）、挂起计数与 thinking 段——loading 消息不再
   innerHTML 覆写状态行（修 H-E——徽标不被每 digest 的 thinking 重画清掉）。
-- **Stop 常显（F-C2d）**：abort 按钮可见性 = `S._turnState==="susp"` **派生**或
-  loading 驱动——susp 期（含 digest 间）loading:true/false 不再隐/显 abort（修 digest
-  间按钮闪烁）。
+- **Stop 常显（F-C2d + A3——SESSION-FLOW-A）**：abort 按钮可见性 =
+  `S._turnState !== "idle"` **派生**或 loading 驱动——派生由 susp 扩为 state≠idle：running
+  （回合/标题窗口/会话内 digest 起跑）与 susp（digest 间）全程常显——loading:true/false
+  不再隐/显 abort（修 digest 间按钮闪烁 + running 窗口隐藏——标题窗口/digest 起跑窗口/
+  Reload 冷启 webviewReady 重推 running 后无 loading 消息也恢复 Stop）。
 
 ## 9. 变更记录（历史折叠——详见 git log）
 
+- 2026-09-09：SESSION-FLOW-A A 批锚段——§8.1 补命令直发路径（routeUserTurn 单一入口扩
+  至 sendMessage——修 R6）；§8.4 Stop 派生 susp → state≠idle（A3——running/susp 全程
+  常显 + Reload 冷启恢复）；标题触发时机归位前（A2 方案 Y——权威正文见 SESSION.md §7）。
 - 2026-09-09：SESSION-FLOW-C C2 收敛——新增 §8「消息秩序与忙态收敛」（权威锚——C1
   增量 question promptId/questionCancelled/atComplete seq + C2 turnState 单一广播/
   renderStatusBar 单 writer/Stop susp 派生/_suspCounts 不陈旧）；7.1/7.2 表补行。

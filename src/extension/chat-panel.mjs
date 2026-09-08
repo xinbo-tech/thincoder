@@ -14,7 +14,7 @@ import { closeAllMcp } from "../mcp.mjs"
 import { setSlotAutoApprove, setSlotPlanMode } from "./session-io.mjs"
 import { providerStatus, saveProviderKey, saveCustomProvider, deleteProviderKey, pushStatus, fullStatus, agentSettings, proxySettings, shellCandidates, websearchSettings, saveMcpServer, deleteMcpServer } from "./settings.mjs"
 import { loadLocaleStrings } from "../i18n.mjs"
-import { handlePanelMessage, _cwd, setProjectFolder, clearProjectOverride } from "./panel-messages.mjs"
+import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride } from "./panel-messages.mjs"
 import { runPanelChat } from "./panel-chat.mjs"
 import { loadRaw } from "../config-io.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
@@ -53,9 +53,10 @@ export class ChatPanel {
     this._turnState = "idle"
     // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
     // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
-    // _suspQueue = 释放窗口守卫队列（偏差修复 #2——回合尾池仍 live、会话未建立
-    // （generateTitle await 窗口）期间 _chat 入队等待会话接管——窗口由 _turnState==="susp"
-    // 且 _susp 空表达，不再单设布尔）；
+    // _suspQueue = 释放窗口守卫队列（偏差修复 #2——回合尾池仍 live、会话未建立期间
+    // _chat 入队等待会话接管——窗口由 _turnState==="susp" 且 _susp 空表达，不再单设布尔；
+    // A2（SESSION-FLOW-A）：标题已上移 finally 归位前（running 态完成——routeUserTurn
+    // 直入队本队列）——窗口不再跨标题）。
     // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
     this._suspQueue = null
     this._turnControllers = []
@@ -198,8 +199,15 @@ export class ChatPanel {
 
   sendMessage(text) {
     if (this._panel) {
+      // Echo FIRST — the quick-input command renders its own user bubble; a running
+      // turn then lands "user bubble + message queued", the same look as webview input.
       this._panel.webview.postMessage({ type: "userMessage", text })
-      this._chat(text)
+      // A1（SESSION-FLOW-A F-A1——修 R6 残留——sendMessage 曾是唯一绕过 routeUserTurn 的
+      // 入口——回合中 Ask ThinCoder/发送命令直呼 _chat 杀当前回合）：命令直发并入
+      // userMessage/retry 的单一入口——running → _suspQueue 排队 + messageQueued 回执
+      // （回合尾 FIFO 消费零丢失）；susp 两态（会话活跃/释放窗口）走 _chat 上游分流不变
+      // （D-S5 唤醒/接管语义不被队列短路）；idle 直发（原语义等价）。
+      routeUserTurn(this, { text, modelOverride: undefined, reasoning: undefined, providerName: undefined, images: undefined })
     } else {
       vscode.window.showWarningMessage("ThinCoder panel is not ready yet — please wait a moment and try again.")
     }

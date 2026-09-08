@@ -237,9 +237,10 @@ export async function suspensionSession(panel, entry) {
     distillSlot: entry.distillSlot,
     lines,
     abort: panel._abortController ?? new AbortController(),
-    // entry.pendingInput = 释放窗口入队的消息（panel-chat 回合尾移交——2026-09-02 偏差修复 #2：
-    // finally → generateTitle await 窗口期用户消息经 panel._suspQueue 排队，会话入口在这里接管；
-    // 与 _chat 直接入队的 susp.pendingInput 同队列同优先级——用户输入优先于 digest，D-S5）。
+    // entry.pendingInput = 释放窗口入队的消息（panel-chat 回合尾移交——2026-09-02 偏差修复 #2；
+    // 2026-09-09 A2：标题已上移 finally 归位前——标题期（running）消息经 routeUserTurn 直入
+    // panel._suspQueue——此处一并接管；与 _chat 直接入队的 susp.pendingInput 同队列同优先级
+    // ——用户输入优先于 digest，D-S5）。
     pendingInput: [...(entry.pendingInput ?? [])],
     // abortControllers = 进入回合（含 Ctrl+I / ContinueError 续跑重建）的全部 controller 快照
     // ——Stop 统一 abort（2026-09-02 偏差修复 #3：会话句柄只取最后一个 controller 会让持旧
