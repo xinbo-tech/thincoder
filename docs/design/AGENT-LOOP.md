@@ -296,7 +296,7 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 
 > 需求：§7.7 只覆盖 spawn——用户裁 a：**escalate（飞刀）/advisor 顶层也纳入一律异步**——
 > 同步例外全移除（含 §14.2 "async:false 显式同步保留"句）。快车道（用户明确指令）。
-> 状态：设计待评审——评审通过 eng-coder 实现。
+> 状态：**评审通过待 sign-off**（2026-09-08——5 项 advisory 采纳——token 4bf2af9b 注册）——eng-coder 实现。
 
 **现状**：§14.2 :540 escalate "`async:false` 显式同步保留" 与新 §7.7 "顶层一律异步" 打架；
 - VSC main.md:28 escalate 段仍含 "pass `async:false` to wait for the report synchronously"
@@ -310,17 +310,28 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
   = 主引导面漏改——本设计纳入。
 
 **改**：
-1. **AGENT-LOOP §14.2 :540**："`async:false` 显式同步保留" → 删——escalate 顶层一律异步（同 §7.7）——报告自动到（ack → 回合自然收尾 → 挂起 settle → digest）。
+1. **AGENT-LOOP §14.2 飞刀小节**（评审 #1 + #2 N2——行号屡漂——按句引用不硬编号）：
+   "`async:false` 显式同步保留" 句 → 删——escalate 顶层一律异步（同 §7.7）——报告自动到
+   （ack → 回合自然收尾 → 挂起 settle → digest）。
 2. **VSC src/prompts/main.md:28** escalate 段：删 "pass `async:false` to wait for the report synchronously"——对齐 CLI main.md:28 纯异步引导（DEFAULT-ASYNC + 报告自动到）。
 3. CLI main.md:28（已纯异步——核实无需改——若含 async:false 残留一并清）。
-4. **工具描述 Async spawn 段**（CLI subagent.mjs:70 / VSC subagent-spec.mjs:40——§7.7 item 5 纠错）：
+   **advisor 面**（评审 #3——明确声明）：advisor 工具描述/提示词面经 grep 确认无 async:false 同步
+   引导（§11.2 advisor 设计本就缺省 async 无同步保留句——与 escalate §14.2 不同）——仅机制注
+   （item 5）适用——实现时复核一次（含 advisor*.mjs 描述 + main.md/engineering.md advisor 段）。
+4. **§7.2 escalate 行机制注**（评审 #4——与 §7.3 L228 同款中性注）：:208 escalate 行 "`async:false`
+   同步" 保留为机制描述（参数平台合法——item 5）——加注 "（顶层行为受提示词/工具描述约束——见 §7.7.1）"。
+5. **工具描述 Async spawn 段**（CLI subagent.mjs:70 / VSC subagent-spec.mjs:40——§7.7 item 5 纠错）：
    删 "Pass async:false only when you must handle the report synchronously" + "use a synchronous
    spawn instead — pass `async:false`" 引导——改 "顶层一律异步——报告自动到——depth>0 内同步"
    （对齐 §7.7 新锚句）。escalate 段描述同步去 async:false 句（若含）。
-5. **机制注**：escalate/advisor 的 depth-0 async:false 参数仍平台合法（机制零触碰——AC4 同
-   §7.7）——提示词/工具描述不引导——标注与 §7.7 一致。
+6. **机制注**（评审 #2 N1——重编号）：escalate/advisor 的 depth-0 async:false 参数仍
+   平台合法（机制零触碰——AC5 同 §7.7 AC4）——提示词/工具描述不引导——标注与 §7.7 一致。
 
-**受影响文件**：AGENT-LOOP.md（§14.2 + §7.7.1 新段 + 变更记录）、VSC src/prompts/main.md、CLI src/prompts/main.md（核实）、CLI src/agent-tools/subagent.mjs（Async spawn 段描述）、VSC src/agent-tools/subagent-spec.mjs（Async spawn 段描述）。
+**受影响文件**（评审 #2——注解 + 测试点名）：AGENT-LOOP.md（§14.2 + §7.2 escalate 行注 + §7.7.1 新段 + 变更记录）；
+   VSC src/prompts/main.md、CLI src/prompts/main.md（核实）；CLI src/agent-tools/subagent.mjs（Async
+   spawn 段描述——行数 >500 既有债不重论——描述串替换 = structure unchanged——delta ≤±N 实现时刷新）；
+   VSC src/agent-tools/subagent-spec.mjs（同）；prompts 内容断言测试（双端——实现时 grep 定位——
+   §7.7:276 排除平台描述的 carve-out **反转**——描述既在仓内可改——断言纳入——按实际点名补登）。
 
 **变更记录**：2026-09-08 用户质询"平台侧不可改"→ 纠错：工具描述在项目仓 src/agent-tools/（可改）——§7.7 item 5 假设错误已注——工具描述面纳入本设计（最大引导面）。
 
@@ -328,7 +339,10 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 - AC1 双端 main.md escalate 段无 async:false 同步引导（与 spawn 段一致——一律异步）
 - AC2 §14.2 无 "async:false 显式同步保留" 句
 - AC3 工具描述 Async spawn 段无 async:false 顶层引导（双端 subagent.mjs:70/subagent-spec.mjs:40——与锚句一致）
-- AC4 机制零触碰（depth>0 平台 sync 不变——escalate 内部深度规则不动）
+- AC4（评审 #5——肯定断言）双端 main.md escalate 段改后含 "report arrives automatically"（或等义异步引导）
+  而非仅旧句删除——工具描述 Async spawn 段与 §7.5 锚句一致（fail-when-unchanged 正向断言）
+- AC5 机制零触碰（depth>0 平台 sync 不变——escalate 内部深度规则不动）
+- AC6（评审 #5——父侧核销）深度轨迹审计：depth-0 escalate/advisor 启动无 async:false——非 eng-coder 自查项
 
 
 ### 7.6 子代理/顾问人格逐字锚集
