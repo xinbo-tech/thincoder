@@ -225,7 +225,7 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 
 ### 7.3 async 子代理（后台并行）
 
-**缺省 async**：`asyncFlag = asyncArg ?? (depth === 0)`——**depth-0 缺省 async（全角色）**；depth>0 缺省 sync（子代理内部强制同步——eng-coder 内部 explore 审计 spawn 不受破坏）；`async:false` 显式覆盖（逃逸口）。
+**缺省 async**：`asyncFlag = asyncArg ?? (depth === 0)`——**depth-0 缺省 async（全角色）**；depth>0 缺省 sync（子代理内部强制同步——eng-coder 内部 explore 审计 spawn 不受破坏）；`async:false` 显式覆盖（depth-0 参数合法；顶层行为受提示词约束——见 §7.7）。
 
 **async 分支**：子代理照常启动（复用 spawnChild 管线——relay/turn-cap/权限/mergeChildMutations 全不变），父侧不 await——`_asyncSubagents` 记录 + 立即返回 `{id, role, status:"running"}`。settle → 报告经自动通道送达（回合尾注入 / 挂起 digest——§9）。
 
@@ -255,7 +255,7 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 **async 锚句（逐字定稿——subagent 描述 Async spawn 段——双端照抄，fail-when-unchanged）**：
 
 > After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result.
-> If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (eng-coder defaults to async; other roles simply omit async).
+> Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule).
 
 **变更记录**：2026-09-06 删 check（§7.5）。2026-09-08 用户裁定顶层 spawn 一律异步（§7.7——async:false 例外移除——提示词同步）。2026-09-08 评审 8 项采纳（AC1 机械断言/测试点名/锚句单源 §7.5/AC3 验证/TODO 后备/§7.3 中性/编号序注/实现自验注——token e21d5ace）。
 
@@ -288,6 +288,8 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 （评审 #6 后备注：若纯提示词修复后顶层 async:false 仍复发——机制层兜底方案（工具层拒 depth-0 async:false）挂 docs/TODO.md 技术组——本批不实现）
 
 （评审 #8 实现期自验注：eng-coder 开工前先 read 两端 main.md/engineering.md 定位旧句——行号/字句与设计描述不符则停下上报——fail-when-unchanged 断言删旧句会兜底）
+
+（锚句权威指针（评审 #3）：async 锚句改版后的逐字文本以 **§7.5 锚句区**为唯一权威驻点（2026-09-08 改版落此）——本 §7.7 只留变更记录与指针，不重复承载逐字文本——锚句内容以 §7.5 为准。）
 
 
 ### 7.6 子代理/顾问人格逐字锚集
