@@ -1,7 +1,7 @@
 # Advisor 裁决模板（ADVISOR-VERDICT-TEMPLATE）
 
 > 板块：评审收敛（工程模式——advisor 提示词）。权威源：ADVISOR-CONVERGENCE.md + src/prompts/advisor-round1/2/3.md + advisor-design.md。
-> 状态：**设计待评审**——2026-09-09 落档（勘察一手——治 #15/#36 单轮 126s+ 输出 reasoning 自我协商——用户 2026-09-08 裁立项 L50）。
+> 状态：**已交付核销**——2026-09-09（CLI 33ed72b + VSC f9f0335——8 prompt 档裁决行 + 锚测试 9/9——byte 同步 8/8——L2 双端绿——consume 9e85ddd9）。
 
 ---
 
