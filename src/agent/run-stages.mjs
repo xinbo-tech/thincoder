@@ -109,7 +109,7 @@ export async function maybeGuardPushbacks(agent, st) {
       role: "user",
       // §24 D-24b（R13）：depth-0 缺省 async——提醒补注后台语义（评审 settle → digest 自动
       // 回来——模型无需阻塞等待；未决评审期间本提醒不再推回——等 settle 判定）
-      content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. At the top level the advisor launches the review in the BACKGROUND by default — the call returns an ack, the report arrives automatically when it settles (digest), and the review never blocks your turn; pass async:false only when you must read the result before continuing. After the review, produce a response table for every issue found (see discipline rules for format).]`,
+      content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. At the top level the advisor launches the review in the BACKGROUND by default — the call returns an ack, the report arrives automatically when it settles (digest), and the review never blocks your turn; top-level reviews are always async — never pass async:false; if you need the report before continuing, end the turn and let the digest deliver it. After the review, produce a response table for every issue found (see discipline rules for format).]`,
     })
     callbacks.onSubTurnBreak?.()
     return true
