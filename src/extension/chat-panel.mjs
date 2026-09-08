@@ -206,7 +206,8 @@ export class ChatPanel {
     if (this._panel) {
       // Echo FIRST — the quick-input command renders its own user bubble; a running
       // turn then lands "user bubble + message queued", the same look as webview input.
-      this._panel.webview.postMessage({ type: "userMessage", text })
+      // F（SESSION-RESTORE-PARITY）：echo 补真实时间戳——气泡时间 = 发出时刻（非回退"现在"）
+      this._panel.webview.postMessage({ type: "userMessage", text, timestamp: Date.now() })
       // A1（SESSION-FLOW-A F-A1——修 R6 残留——sendMessage 曾是唯一绕过 routeUserTurn 的
       // 入口——回合中 Ask ThinCoder/发送命令直呼 _chat 杀当前回合）：命令直发并入
       // userMessage/retry 的单一入口——running → _suspQueue 排队 + messageQueued 回执

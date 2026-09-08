@@ -8,7 +8,9 @@
 > 权威源。
 > 权威源（VS Code）：`src/extension/session-slots.mjs`（manifest/认领/端 marker/
 > resumeSlot/claimSlot/allocateFresh 原语）、`session-io.mjs`（槽文件读写/slimForDisplay/
-> listSlots/switchToSlot/newSlot/saveSessionToSlot/historyWindow）、`session-gc.mjs`
+> listSlots/switchToSlot/newSlot/saveSessionToSlot/historyWindow——重导出）、
+> `history-window.mjs`（懒历史窗口/配对/isRealUserMsg——SESSION-RESTORE-PARITY 拆分）、
+> `session-gc.mjs`
 > （残留 GC + 冷 cwd 原语）、`session-slot-write.mjs`（会话级标志位写面）。
 > 装配（VS Code）：`src/extension/panel-session.mjs`（面板会话持久化/分页/切换）、
 > `panel-project.mjs`（项目切换重绑）、`panel-messages.mjs`（消息路由/打开历史会话/
@@ -20,6 +22,9 @@
 
 ## 变更记录
 
+- 2026-09-09：§9 懒历史节改写——SESSION-RESTORE-PARITY 交付（恢复链对齐 CLI：assistant
+  帧容器模型 + 嵌套工具卡/配对跨页/reminder 剔除/turnStart 可见前驱/首窗 200/ts 兼容
+  读/首屏 welcome 移除——权威源不滞后）。
 - 2026-09-09：§7 标题触发时机修订——A2（SESSION-FLOW-A 方案 Y——用户裁）：标题生成
   上移回合尾 finally 忙态归位之前（标题窗口 = running——路由守卫排队 + webview Stop
   显——修无池首回合并发/有池首回合消化劫持；错误不外抛——归位恒执行）。
@@ -428,18 +433,38 @@ autoApprove/planMode/索引状态）随 `_cwd()` 刷新。
 
 ## 9. 懒加载历史分页
 
-- **不整读**：`historyWindow(history, before)`（session-io.mjs，
-  `HISTORY_PAGE_SIZE = 20`）——`before == null` 取**末页**（首屏只发末页）；否则取
-  `before` 前结束的一页。`idx` 为**全局** history 下标——webview 的编辑/删除按钮锚定
-  其上，分页永不重编号消息。
+- **不整读**：`historyWindow(history, before)`（src/extension/history-window.mjs——
+  SESSION-RESTORE-PARITY 拆分；`HISTORY_PAGE_SIZE = 200`——首窗对齐 CLI 200，用户裁
+  2026-09-09）——`before == null` 取**末页**（首屏只发末页）；否则取 `before` 前结束的
+  一页 `[s, e)`（半开区间——loadOlder 页不重渲染边界消息）。`idx` 为**全局** history
+  下标——分页永不重编号消息。
+- **输出模型**（规则集：SESSION-RESTORE-PARITY §1——恢复链对齐 CLI historyToLines）：
+  user{kind,text,timestamp,idx} / assistant{kind,text,reasoning,timestamp,idx,turnStart,
+  tools:[{id,name,args,result}]} / tool{kind,name,text,timestamp,idx}（仅**真孤儿**保底
+  ——全历史无主的 tool 条目）。assistant = 帧容器：一帧一条消息、工具卡**嵌套** tools[]
+  随帧下发（DOM 嵌容器内，非顶层独立条目）——被消费 tool 条目不独立产消息
+  （防跨页双显——窗口内无主但全历史有主的条目在窗口内 skip，随其帧页渲染）。timestamp
+  读 `ts ?? timestamp ?? null`（pushReal 打点 ts / 老文件 timestamp / 更老缺失——字段名
+  零改名，webview 不变）。
+- **规则**：① user skip = ¬(isRealUserMsg ∧ content.trim() ≠ "")（reminder/非 string/
+  空白三态）；② assistant 帧全保留（content null 不丢——纯工具回合帧靠卡渲染）——
+  仅幽灵帧（无文本 ∧ 无 tool_calls ∧ 无 reasoning）skip；③ 帧 tool_calls 与紧随 tool
+  条目**滚动配对**（tool_call_id 次序——并行批乱序完成全配；未配调用 result:null）；
+  ④ 配对跨窗口末界照常消费（任何帧的未配调用均可吃界后紧邻条目）——孤儿判定对全历史；
+  ⑤ turnStart = assistant 且上一条**可见**消息为 user 或无可见前驱——从 i-1 回扫跳过
+  条目（skip 不重置回合——CLI inTurn 语义）；⑥ reasoning = reasoning_content ??
+  reasoning（echo 帧恢复为 thinking 块）。
 - **首屏与回滚**：loadSession 只发末页 `{ messages, hasOlder }`；webview 滚近顶部经
   `loadOlder { before }` 取旧页（scroll 补偿前置）。`before` = webview 最小已渲染
-  `data-idx`——live 流消息无 idx，可永不腐蚀窗口；完整回合落盘不会重复（页总是在
-  before 前结束）。实现与寄存器见 AGENTS.md「Lazy history loading」。
+  `data-idx`（只外层 .message 带 idx——嵌套卡不带——被消费条目无 DOM 不锚定）——
+  live 流消息无 idx，可永不腐蚀窗口；完整回合落盘不会重复。非空首屏插入前移除
+  .welcome（空历史保留——G，SESSION-RESTORE-PARITY）。实现与寄存器见
+  AGENTS.md「Lazy history loading」。
 - **发送清洗**（sendHistoryPage）：user 消息剥离 editor-context 注入
-  （`stripEditorInjection`——机器只读注入不得出现在 UI）；tool 消息 text 截 64K。
-- **turnStart 判定**（historyWindow）：assistant 开新 turn 仅当上一条是 user 消息
-  （或首条）——assistant/tool 后续段是回合内延续，不重复画"❯ ThinCoder:"标签。
+  （`stripEditorInjection`——机器只读注入不得出现在 UI）；孤儿 tool 消息 text 截 64K；
+  assistant 嵌套 tools[].result 截 64K（防未 slim 老文件超大结果进 webview）。
+- **turnStart 判定**（规则 ⑤）：可见前驱扫描基于全历史（跨页一致）——assistant 帧画
+  "❯ ThinCoder:" 标签恰一次/回合；assistant/tool 后续段是回合内延续，不重复画标签。
 - **loadSession 同步会话级 UI**：_autoApprove/planMode 从槽字段同步面板标志 + 工具条
   按钮 + clearMessages + 发末页 + pushSessions。
 

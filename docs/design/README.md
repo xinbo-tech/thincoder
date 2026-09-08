@@ -51,6 +51,8 @@
 
 ## 变更记录
 
+- 2026-09-09：SESSION-RESTORE-PARITY 登记（会话/存储/恢复——VSC 恢复呈现对齐 CLI：
+  assistant 帧容器/嵌套工具卡/跨页配对/turnStart 可见前驱/首窗 200——改动见档内受影响文件）
 - 2026-08-21：初版（文档归属纪律，规格见 CLI `docs/design/AGENT-LOOP.md` §12 及本仓库 `ARCHITECTURE.md` 同步段）
 - 2026-08-24：新增板块「Agent 运行参数」（AGENT-PARAMS-*）与「工具输出限制」（TOOL-OUTPUT-LIMITS-*）
 - 2026-08-25：新增「轮末蒸馏异步化」（SEND-STALL-DISTILL-*）、「工具移除」（SLEEP-REMOVAL-*）、「覆盖率缺口修复」（COVERAGE-GAPS-*）；Settings 6 份历史批次文档合并入 `SETTINGS.md`

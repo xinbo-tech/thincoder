@@ -18,8 +18,8 @@ import { join } from "node:path"
 import * as vscode from "vscode"
 import { handlePanelMessage, _cwd } from "../src/extension/panel-messages.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
-import { openSessionContent, status as bootstrapStatus } from "../src/extension/panel-session.mjs"
-import { newSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
+import { openSessionContent, loadOlder, status as bootstrapStatus } from "../src/extension/panel-session.mjs"
+import { newSlot, loadSlot, saveSessionToSlot, _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 
 // ─── 环境隔离（真实槽/配置读写全部指向临时目录——同 chat-panel.test.mjs）───
@@ -208,4 +208,111 @@ test("⑫ 快慢段分离（AC-B2c）：快段 openSessionContent 调用链 push
   assert.ok(types.includes("providerStatus"), "慢段跑 fullStatus（头部 pushStatus——探测在慢段）")
   assert.ok(types.includes("mcpStatus"), "慢段跑 mcpStatus")
   assert.equal(s._slot, null, "慢段不绑槽（resumeSlot 只在快段——AC-B2c）")
+})
+
+// ─── ⑬ 真实形状非空 history（SESSION-RESTORE-PARITY H/AC——评审 #3 补 ⑪ 空 fixture 缺口）──
+
+/** 交替 user（偶 idx）/assistant（奇 idx）填充 [from, to]——真实形状（role 键 + pushReal 打点 ts）。 */
+function fillAlt(from, to) {
+  const out = []
+  for (let i = from; i <= to; i++) {
+    out.push(i % 2 === 0
+      ? { role: "user", content: `user-${i}`, ts: 1000 + i }
+      : { role: "assistant", content: `assistant-${i}`, ts: 2000 + i })
+  }
+  return out
+}
+
+const toolCall = (id, name, args) => ({ id, type: "function", function: { name, arguments: args } })
+const toolMsg = (id, content) => ({ role: "tool", tool_call_id: id, name: "bash", content, ts: 3000 })
+
+function writeFixture(history) {
+  const cwd = _cwd()
+  const disk = loadSlot(cwd, 1) ?? { version: 2, cwd, sessionStart: new Date().toISOString(), contextHistory: [], title: "" }
+  saveSessionToSlot(cwd, 1, { ...disk, history }) // 字段往返 spread——sessionStart 不变防 F2 轮转
+}
+
+const historyPages = (p) => p.posted.filter((m) => m.type === "historyPage")
+
+function assertPageShape(page, firstIdx, count, hasOlder, older, idxList) {
+  assert.equal(page.messages.length, count, `页 ${count} 条消息`)
+  assert.equal(page.hasOlder, hasOlder, "hasOlder 标志")
+  assert.equal(page.older, older, "older 标志（boot 末页 false / loadOlder 旧页 true）")
+  const want = idxList ?? Array.from({ length: count }, (_, k) => firstIdx + k)
+  assert.deepEqual(page.messages.map((m) => m.idx), want, "idx = 全局原始下标（永不复编号）")
+}
+
+test("⑬ 真实形状非空 history：首窗 200 + hasOlder（AC-H）——模型/序/turnStart/配对/剔除 + loadOlder 越页配对（⑪⑫ 零破坏——追加末位）", () => {
+  // fixture A：406 条——前段 [0,6) 含 reminder/纯工具回合帧（reasoning + 配对）/夹帧，尾 400 条交替
+  const fixtureA = [
+    { role: "user", content: "hello zero", ts: 10 },
+    { role: "user", content: "[System reminder: git context]", ts: 11 },
+    { role: "assistant", content: "mid", ts: 12 },
+    { role: "assistant", content: null, reasoning_content: "planning", tool_calls: [toolCall("c1", "bash", '{"cmd":"ls"}')], ts: 13 },
+    toolMsg("c1", "res-4"),
+    { role: "user", content: "fifth", ts: 15 },
+    ...fillAlt(6, 405),
+  ]
+  writeFixture(fixtureA)
+  const p = bootPanel()
+  openSessionContent(p)
+  let pages = historyPages(p)
+  assertPageShape(pages[0], 206, 200, true, false) // 首页 = 200（评审 #3——>200 fixture 首页 200 断言）
+  assert.deepEqual(pages[0].messages.map((m) => m.kind).slice(0, 4), ["user", "assistant", "user", "assistant"], "尾段模型/序（user/assistant 交替）")
+  assert.equal(pages[0].messages[0].text, "user-206")
+  assert.equal(pages[0].messages[0].timestamp, 1000 + 206, "ts 经磁盘往返透传")
+  assert.ok(pages[0].messages.every((m) => m.kind === "user" || m.kind === "assistant"), "首窗无独立 tool 消息（被消费条目随帧）")
+  assert.ok(pages[0].messages.filter((m) => m.kind === "assistant").every((m) => m.turnStart === true), "交替尾段——每 assistant 帧都是新回合（turnStart）")
+  assert.ok(pages[0].messages.every((m) => m.reasoning == null && (!m.tools || m.tools.length === 0)), "首窗帧无 reasoning/无工具（干净尾段）")
+
+  // 第二页 [6,206)——滚回一页（loadOlder）
+  loadOlder(p, 206)
+  pages = historyPages(p)
+  assertPageShape(pages[1], 6, 200, true, true)
+  assert.equal(pages[1].messages[0].text, "user-6")
+
+  // 第三页 [0,6)——剔除/夹帧 turnStart/配对/reasoning 全链（真实文件 → historyWindow）
+  loadOlder(p, 6)
+  pages = historyPages(p)
+  assertPageShape(pages[2], 0, 4, false, true, [0, 2, 3, 5]) // reminder@1 与 tool@4（被消费）不占位
+  assert.deepEqual(pages[2].messages[0], { kind: "user", text: "hello zero", timestamp: 10, idx: 0 }, "u0 原样")
+  assert.deepEqual(pages[2].messages[1], { kind: "assistant", text: "mid", reasoning: null, timestamp: 12, idx: 2, turnStart: true, tools: [] }, "a2——reminder 夹帧间不重置（可见前驱 u0）")
+  assert.deepEqual(pages[2].messages[2], {
+    kind: "assistant", text: null, reasoning: "planning", timestamp: 13, idx: 3, turnStart: false,
+    tools: [{ id: "c1", name: "bash", args: '{"cmd":"ls"}', result: "res-4" }],
+  }, "纯工具回合帧——reminder 后不重置（可见前驱 a2）+ reasoning 透传 + 配对随帧（AC-A/C/E/B）")
+  assert.deepEqual(pages[2].messages[3], { kind: "user", text: "fifth", timestamp: 15, idx: 5 }, "u5")
+  assert.ok(pages[2].messages.every((m) => m.kind !== "user" || !m.text.startsWith("[System reminder:")), "reminder 零出现（C 剔除）")
+
+  // fixture B：408 条——帧 F@204（双调用）的 tool 结果 @205/@206 跨在 loadOlder 窗口边界
+  const fixtureB = [
+    ...fillAlt(0, 203),
+    { role: "assistant", content: null, tool_calls: [toolCall("c9", "bash", "{}"), toolCall("c10", "bash", "{}")], ts: 13 },
+    toolMsg("c9", "res9"),
+    toolMsg("c10", "res10"),
+    ...fillAlt(207, 407),
+  ]
+  writeFixture(fixtureB)
+  openSessionContent(p)
+  pages = historyPages(p)
+  assertPageShape(pages[3], 208, 200, true, false) // 尾窗干净 200（跨页结果在上一窗区域）
+  assert.equal(pages[3].messages[0].idx, 208)
+
+  // loadOlder(before=205)：窗口 [5,205) 末帧 F@204——其结果 @205/@206 在窗口末界后——
+  // 照样配对入帧（规则 4 越页配对——半开区间 [s,e) 防重渲染）
+  loadOlder(p, 205)
+  pages = historyPages(p)
+  assertPageShape(pages[4], 5, 200, true, true)
+  assert.ok(pages[4].messages.every((m) => m.kind !== "tool"), "被消费 tool 条目不独立产消息（跨页——防双显）")
+  const f = pages[4].messages[199]
+  assert.equal(f.idx, 204, "末帧在页尾")
+  assert.deepEqual(f.tools, [{ id: "c9", name: "bash", args: "{}", result: "res9" }, { id: "c10", name: "bash", args: "{}", result: "res10" }], "F 的未配调用消费窗口末界后紧邻 tool 条目（越页配对）")
+
+  // 真实锚点（webview 最小已渲染 data-idx=208）路径同样成立——结果随帧同页
+  loadOlder(p, 208)
+  pages = historyPages(p)
+  const f2 = pages[5].messages.find((m) => m.idx === 204)
+  assert.ok(f2, "F@204 在 [8,208) 页内")
+  assert.deepEqual(f2.tools.map((t) => t.result), ["res9", "res10"], "真实 loadOlder 锚路径配对不变")
+  assert.ok(pages[5].messages.every((m) => m.kind !== "tool"), "结果随帧——无独立 tool 消息（防双显）")
 })

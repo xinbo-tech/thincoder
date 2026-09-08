@@ -7,6 +7,7 @@
 import { md, mdInline, esc } from "./md.js"
 import { fmtTime, capText } from "./lib.js"
 import { t } from "./i18n.js"
+import { buildFinishedToolCard } from "./tool-card-restore.mjs"
 
 // ─── Advisor review block (in-conversation, reasoning-style) ──
 
@@ -138,13 +139,15 @@ export function showBanner(ctx, text, keyOk) {
 // ─── Messages ──────────────────────────────────
 
 /** Historical user message. `idx` (when set) is stored as data-idx on the element
- *  for lazy-load paging (minLoadedIdx) — no action buttons on messages. */
+ *  for lazy-load paging (minLoadedIdx) — no action buttons on messages.
+ *  F（SESSION-RESTORE-PARITY）：时间只显真实 ts——缺失不显示（无 fmtTime(new Date())
+ *  误导回退——恢复老文件无 ts 消息不得假显示"现在"）。 */
 export function buildUserMessage(ctx, text, timestamp, idx) {
   const el = document.createElement("div")
   el.className = "message user"
-  const ts = timestamp ? fmtTime(new Date(timestamp)) : fmtTime(new Date())
+  const ts = timestamp ? fmtTime(new Date(timestamp)) : ""
   if (idx !== undefined) el.dataset.idx = String(idx)
-  el.innerHTML = `<div class="msg-label">❯ ${t("msg.user")}: <span class="msg-time">${ts}</span></div><div class="bubble">${mdInline(text)}</div>` // mdInline escapes raw text — single escape point
+  el.innerHTML = `<div class="msg-label">❯ ${t("msg.user")}:${ts ? ` <span class="msg-time">${ts}</span>` : ""}</div><div class="bubble">${mdInline(text)}</div>` // mdInline escapes raw text — single escape point
   return el
 }
 
@@ -155,15 +158,34 @@ export function addUser(ctx, text, timestamp, idx) {
   scrollDown(ctx)
 }
 
-/** Historical assistant message. The "❯ ThinCoder:" label is painted ONLY when
- *  `turnStart` (one label per turn — CLI parity); mid-turn segments render the
- *  content alone. `idx` stored as data-idx for lazy-load paging. */
+/** Restored assistant FRAME container (SESSION-RESTORE-PARITY — live-DOM parity):
+ *  label（turnStart 才画——❯ ThinCoder: 恒无时间，live 同构）→ thinking 块
+ *  （reasoning → details.reasoning-block[open]——md 渲染，live 同 DOM）→ content bubble
+ *  → 嵌套工具卡 ×n。data-idx = 帧原始全局 idx——分页锚只外层消息。 */
+export function buildAssistantRestore(ctx, msg) {
+  const el = document.createElement("div")
+  el.className = "message assistant"
+  if (msg.idx !== undefined) el.dataset.idx = String(msg.idx)
+  let html = ""
+  if (msg.turnStart) html += `<div class="msg-label">❯ ${t("msg.assistant")}:</div>`
+  if (msg.reasoning) html += `<details class="reasoning-block" open><summary>${escHtml(t("status.thinking"))}...</summary><div class="reasoning-content">${md(msg.reasoning)}</div></details>`
+  if (typeof msg.text === "string" && msg.text.trim() !== "") html += `<div class="bubble content">${md(msg.text)}</div>`
+  el.innerHTML = html
+  for (const tc of msg.tools || []) {
+    const card = buildFinishedToolCard(tc)
+    if (card) el.appendChild(card)
+  }
+  return el
+}
+
+/** Historical assistant message (single-message replay — quick-input echo). The
+ *  "❯ ThinCoder:" label is painted ONLY when `turnStart` (one label per turn);
+ *  mid-turn segments render the content alone. `idx` stored as data-idx. */
 export function buildAssistantHistory(ctx, text, timestamp, idx, turnStart = true) {
   const el = document.createElement("div")
   el.className = "message assistant"
-  const ts = timestamp ? fmtTime(new Date(timestamp)) : ""
   if (idx !== undefined) el.dataset.idx = String(idx)
-  const label = turnStart ? `<div class="msg-label">❯ ${t("msg.assistant")}: ${ts ? `<span class="msg-time">${ts}</span>` : ""}</div>` : ""
+  const label = turnStart ? `<div class="msg-label">❯ ${t("msg.assistant")}:</div>` : ""
   el.innerHTML = `${label}<div class="bubble content">${md(text)}</div>`
   return el
 }
@@ -389,13 +411,14 @@ export function addToolHistory(ctx, name, text, idx) {
 
 /**
  * Build one history element from a historyPage message ({ kind, text, name,
- * timestamp, idx }) — the lazy-loading counterpart of the eager per-message
- * loaders above. Returns null for kinds the UI does not render.
+ * timestamp, idx, turnStart?, reasoning?, tools? }) — the lazy-loading counterpart
+ * of the eager per-message loaders above. Returns null for kinds the UI does not
+ * render. assistant = 帧容器（reasoning/嵌套工具卡）；tool = 真孤儿保底顶层卡。
  */
 export function buildHistoryMessage(ctx, msg) {
   if (!msg) return null
   if (msg.kind === "user") return buildUserMessage(ctx, msg.text, msg.timestamp, msg.idx)
-  if (msg.kind === "assistant") return buildAssistantHistory(ctx, msg.text, msg.timestamp, msg.idx, msg.turnStart !== false)
+  if (msg.kind === "assistant") return buildAssistantRestore(ctx, msg)
   if (msg.kind === "tool") return buildToolHistory(ctx, msg.name ?? "tool", msg.text, msg.idx)
   return null
 }

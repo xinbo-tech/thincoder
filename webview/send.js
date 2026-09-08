@@ -32,7 +32,7 @@ export function send() {
   // §17: panel reset happens per NORMAL turn only — a send during the suspension
   // session belongs to the running session (its subagent rows/blocks stay live).
   if (!S._suspended) clearPanels()
-  addUser(ctx, text)
+  addUser(ctx, text, Date.now()) // F（SESSION-RESTORE-PARITY）：本地气泡补真实时间戳——无 ts 不显示的配套
   // Snapshot + clear IN PLACE (GitHub thincoder#3): autocomplete.js holds this array
   // BY REFERENCE (chat.js passes ctx._pastedImages into initAutocomplete). Reassigning
   // ctx._pastedImages = [] orphanized the shared array — the paste bar kept rendering

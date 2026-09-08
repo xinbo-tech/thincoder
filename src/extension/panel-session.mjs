@@ -167,7 +167,12 @@ export function sendHistoryPage(panel, messages, hasOlder, older) {
     // with the per-message strip in the old eager loader).
     const clean = messages.map((m) => {
       if (m.kind === "user") return { ...m, text: stripEditorInjection(m.text) }
-      if (m.kind === "tool") return { ...m, text: m.text.slice(0, 64 * 1024) }
+      if (m.kind === "tool") return typeof m.text === "string" ? { ...m, text: m.text.slice(0, 64 * 1024) } : m
+      // SESSION-RESTORE-PARITY（B）：tool 结果随 assistant 帧 tools[] 嵌套下发——
+      // 清洗适配嵌套字段（transport 64K 截断——防未 slim 老文件超大结果进 webview）
+      if (m.kind === "assistant" && Array.isArray(m.tools) && m.tools.some((t) => typeof t.result === "string" && t.result.length > 64 * 1024)) {
+        return { ...m, tools: m.tools.map((t) => typeof t.result === "string" && t.result.length > 64 * 1024 ? { ...t, result: t.result.slice(0, 64 * 1024) } : t) }
+      }
       return m
     })
     panel._panel?.webview.postMessage({ type: "historyPage", messages: clean, hasOlder, older })

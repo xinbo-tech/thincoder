@@ -17,6 +17,12 @@ import {
 } from "./session-slots.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 
+// ─── Lazy-history window (SESSION-RESTORE-PARITY split, 2026-09-09) ──────────
+// historyWindow/pairing/isRealUserMsg 逻辑在 history-window.mjs（本文件曾跨 500 行
+// 硬限——拆分布局）——重导出保调用方 import 路径不变（panel-session.mjs 照旧）。
+import { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
+export { historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg } from "./history-window.mjs"
+
 export {
   getSessionId, normalizeCwd, slotPath, manifestPath, loadManifest, saveManifest,
   activeSlot, slotOccupancy, sessionsDir, _setSessionsDirForTest, _resetSessionsDirForTest,
@@ -145,8 +151,9 @@ export function saveSlot(cwd, n, data) {
  *   - tool messages content → 500 chars (head + …)
  *   - multimodal user content array → keep text parts, DROP image_url base64
  *   - plain string messages → untouched
- *  historyWindow only renders string content (never parses arguments), so the
- *  trimmed shapes are display-safe on the webview side too. */
+ *  historyWindow renders string contents and never parses tool arguments, so the
+ *  trimmed shapes are display-safe on the webview side too (SESSION-RESTORE-PARITY:
+ *  tool args/results travel raw — JSON.parse happens in the card builder only). */
 export function slimForDisplay(m) {
   if (m && Array.isArray(m.content)) {
     const textParts = m.content.filter((p) => p?.type !== "image_url")
@@ -178,9 +185,8 @@ export function deleteSlot(cwd, n) {
 
 // ─── Slot metadata (same shape as CLI extractSlotMeta) ─────
 
-function isRealUserMsg(m) {
-  return m.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:")
-}
+// isRealUserMsg 定义已随 historyWindow 迁 history-window.mjs（本文件 import + 重导出——
+// extractSlotMeta 调用不变）
 
 export function extractSlotMeta(history, activeProvider, updatedAt, title = "") {
   const userMsgs = history.filter(isRealUserMsg)
@@ -363,48 +369,6 @@ export function saveSessionToSlot(cwd, slot, data) {
   } catch { /* non-fatal */ }
   slotMtimeCache.set(p, statSync(p).mtimeMs)
   return rotated
-}
-
-/** Page size for lazy history loading (initial paint + scroll-back pages). CLI parity. */
-export const HISTORY_PAGE_SIZE = 20
-
-/**
- * Window into the human line for lazy history loading. `before` = null takes the
- * LAST page (first paint); otherwise the page ending just before `before`.
- * `idx` values are GLOBAL indexes into the full history array — the webview's
- * edit/delete buttons anchor on them, so pagination must never renumber messages.
- */
-export function historyWindow(history, before, pageSize = HISTORY_PAGE_SIZE) {
-  const total = Array.isArray(history) ? history.length : 0
-  if (total === 0) return { messages: [], hasOlder: false }
-  const end = before == null ? total : Math.min(before, total)
-  const start = Math.max(0, end - pageSize)
-  const messages = []
-  for (let i = start; i < end; i++) {
-    const m = history[i]
-    if (typeof m?.content !== "string") continue
-    const kind = m.type ?? m.role
-    if (kind !== "user" && kind !== "assistant" && kind !== "tool") continue
-    // turnStart: an assistant message opens a new turn only when the PREVIOUS
-    // message is a user message (or it is the first message ever). Assistant
-    // segments that follow tool/assistant messages are mid-turn continuations
-    // and must not paint a "❯ ThinCoder:" label (one label per turn).
-    let turnStart = kind === "assistant"
-    if (turnStart && i > 0) {
-      const prev = history[i - 1]
-      const prevKind = prev?.type ?? prev?.role
-      turnStart = prevKind === "user"
-    }
-    messages.push({
-      kind,
-      text: m.content,
-      name: m.name ?? null,
-      timestamp: m.timestamp ?? null,
-      idx: i,
-      turnStart,
-    })
-  }
-  return { messages, hasOlder: start > 0 }
 }
 
 /** Delete a slot + remove from manifest. Returns the new active slot (or null if none left).

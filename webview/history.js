@@ -41,6 +41,9 @@ function removeLoadOlderIndicator(ctx) {
  * the first paint page is appended and scrolled to the bottom.
  */
 export function applyHistoryPage(ctx, m) {
+  // G（SESSION-RESTORE-PARITY）：非空首屏 = 恢复出的真实会话——插入前移除 .welcome
+  // （welcome 是空会话语义——clearMessages 后显示；真实消息上方不得残留）——空历史保留
+  if (!m.older && (m.messages || []).length > 0) ctx.messagesEl.querySelector(".welcome")?.remove()
   const frag = document.createDocumentFragment()
   for (const msg of m.messages || []) {
     const el = buildHistoryMessage(ctx, msg)
