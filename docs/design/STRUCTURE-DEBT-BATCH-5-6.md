@@ -38,8 +38,8 @@
 
 ### 验收（批 5）
 
-- AC1 CLI AGENTS.md 无悬空裸名档（8 档归档随删消解）——地图指 README.md 权威
-- AC2 CLI README.md 地图含「结构债批执行」板块行（7 档登记）
+- AC1 CLI AGENTS.md 无悬空裸名档（8 档归档随删消解）——地图指 README.md 权威——:27 注释参照同步（评审 #4）
+- AC2 CLI README.md 地图含「结构债批执行」板块行（评审 #3：含本档 STRUCTURE-DEBT-BATCH-5-6 自登记——8 档/或行指向 §7 不逐档）
 - AC3 N7 双武装位注释含跨端异名互指（CLI session.mjs 点 VSC 名 + VSC setup.mjs 点 CLI 名——见 SESSION.md §11.2）
 - AC4 零功能改动（注释 + 文档——测试不回归）
 
@@ -50,7 +50,9 @@
 ### 需求
 
 - **N1**：VSC `src/agent-tools/subagent.mjs` 508 行 + `src/advisor/run.mjs` 511 行越 500 硬限（今日增量推过线——上次 488/未列）——照 500 硬拆纪律小拆。
-- **N6**：`_permQueue` 3 处 inline（CLI subagent.mjs:209-210 / subagent-spawn.mjs:289-290 / escalate-async.mjs:223-224——逐字同型）收 helper——VSC 零 _permQueue（勘察核——不镜像）。
+- **N6**：`_permQueue` 3 处 inline（CLI subagent.mjs:209-210 / subagent-spawn.mjs:289-290 /
+  escalate-async.mjs:223-224——逐字同型）收 helper——VSC 零 _permQueue（勘察核——不镜像）
+  ——+ subagent-actions.mjs:426 注释界定 sync/async（评审 #5——字面矛盾消解——入需求）。
 
 ### 设计（勘察建议——照做勿自行解释）
 
@@ -85,11 +87,11 @@
 | src/advisor/run.mjs | VSC | 工具集 → tools.mjs + provider → provider.mjs + re-export shim | 511 → ~452 |
 | src/advisor/tools.mjs | VSC 新 | 工具集 + 测试覆写 seam | ~34 新 |
 | src/advisor/provider.mjs | VSC 新 | resolveAdvisorProvider（config-io 随迁） | ~25 新 |
-| src/agent-tools/subagent-async.mjs | CLI | enqueueAsk helper 导出 | ≤500 现（+~10） |
+| src/agent-tools/subagent-async.mjs | CLI | enqueueAsk helper 导出 | ≤500 现（+~10——评审 #2：若实超 500 则 enqueueAsk 落新文件或并入 async-settle——后备注） |
 | src/agent-tools/subagent.mjs:209 | CLI | → enqueueAsk | ~284 现（-2） |
 | src/agent-tools/subagent-spawn.mjs:289 | CLI | → enqueueAsk | ~289 现（-2） |
-| src/agent-tools/escalate-async.mjs:223 | CLI | → enqueueAsk | 现（-2） |
-| src/agent-tools/subagent-actions.mjs:426 | CLI | 注释界定 sync/async | 现（+1） |
+| src/agent-tools/escalate-async.mjs:223 | CLI | → enqueueAsk | ~230 现（-2——评审 #1 补数） |
+| src/agent-tools/subagent-actions.mjs:426 | CLI | 注释界定 sync/async | ~440 现（+1——评审 #1 补数） |
 
 ### 验收（批 6）
 
