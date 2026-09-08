@@ -19,8 +19,14 @@
 
 ## 设计
 
-1. **round1.md**（表格规范区 :16-25 后 + pass/fail 段 :25 处）加裁决行指令：表格/发现后**收尾一行** `VERDICT: pass | changes-required`（pass = 无 🔴；changes-required = 有 🔴/🟡 需修）——**裁决后不再输出任何内容**（治尾部长协商）。
-2. **round2/3.md**（verify-only :20 "If all 🔴 resolved… passes" prose）同加：核验表后 `VERDICT: pass | changes-required` + 收尾禁续。
+1. **round1.md**（表格规范区 :16-25 后 + pass/fail 段 :25 处）加裁决行指令：表格/发现后**收尾一行**
+   `VERDICT: pass | changes-required`（pass = 无 🔴；changes-required = 有 🔴/🟡 需修）——**裁决后不再输出
+   任何内容**（治尾部长协商）——**评审 #2 双轨消除：既有 pass/fail 句（round1 :25 "🟡/🔵 do NOT block
+   approval"）改写并入钉死规则——🟡-可选/🔵 不阻断 pass；🟡-需修 = advisory 明示"must fix before
+   implementation/approval"（advisory 分类在表格列明——模型判类依据）→ changes-required**。
+2. **round2/3.md**（verify-only——round2 该句实 :24/round3 :20——评审 #3 锚点行号注）同加：核验表后
+   `VERDICT: pass | changes-required` + 收尾禁续——**评审 #2：既有 prose 同步改写**（"🟡/🔵 do not
+   block" → "🟡-可选/🔵 不阻断——🟡-需修 → changes-required"）。
 3. **advisor-design.md**（:16 Approval Signal 区——已有 DESIGN-TOKEN 回显结构）——加 `VERDICT: pass |
    changes-required` 前置行（token 回声前）——**评审 #2 措辞定制："VERDICT 行后仅允许回显 DESIGN-TOKEN
    与 designId——之后不再输出任何内容"**——token+designId 保持末字节——不干扰 tokenPattern 解析
@@ -32,10 +38,10 @@
 
 | 文件 | 端 | 改动 | 行数 |
 |---|---|---|---|
-| src/prompts/advisor-round1.md | 双端 | 尾加裁决行指令 | ~60 现（+~4——评审 #3 补数） |
-| src/prompts/advisor-round2.md | 双端 | 同 | ~25 现（+~3——评审 #3 补数） |
-| src/prompts/advisor-round3.md | 双端 | 同 | ~25 现（+~3——评审 #3 补数） |
-| src/prompts/advisor-design.md | 双端 | VERDICT 前置行（评审 #2 定制措辞） | ~30 现（+~2——评审 #3 补数） |
+| src/prompts/advisor-round1.md | 双端 | 尾加裁决行指令 | 35 现（+~4——评审 #3 实测） |
+| src/prompts/advisor-round2.md | 双端 | 同 | 35 现（+~3——评审 #3 实测） |
+| src/prompts/advisor-round3.md | 双端 | 同 | 31 现（+~3——评审 #3 实测） |
+| src/prompts/advisor-design.md | 双端 | VERDICT 前置行（评审 #2 定制措辞） | 31 现（+~2——评审 #3 实测） |
 | prompts 锚测试（如有） | 双端 | VERDICT 断言 | 按实际 |
 
 ## 验收
@@ -47,6 +53,7 @@
 - AC5（评审 #4）既有测试不回归——实现前测试层补全（per-file VERDICT 存在断言 AC1/AC2/AC4——双端 byte 同步
   检查——锚测试回归——有输入/预期输出——09-07 清空事实实现期确认）
 - AC6（评审 #6 NFR——行为可观测）VERDICT 行后无实质内容段（content-level 抽查——非仅指令在位）
+- AC7（评审 #2——双轨消除）文件内无与裁决行冲突的旧 pass 定义（旧 prose 已改写并入——grep/目视核）
 
 ## 变更记录
 - 2026-09-09：L50 立项落档（勘察一手——marker 消费调研：design = design-token tokenPattern 回声/ code = 失败前缀排除无正向消费）。评审 6 项采纳（裁决单值格式 + 每轮 pass 规则钉死 / design 档 token 回显措辞定制 / 受影响表补行数 / 测试层完成注 / 文档归属注 / NFR 度量 AC6——token 0bc7a599）。

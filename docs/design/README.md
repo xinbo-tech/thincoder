@@ -34,7 +34,7 @@
 | 编辑工具（板块） | `EDIT.md`、`HASHLINE-EDIT.md`、`INSERT-AFTER.md`、`APPLY-PATCH.md`、`WRITE.md` + `EDIT-HELPERS.md`（共享 helper） | 每工具一档（2026-09-08 重组——TOOLS.md §6 退地图）。edit：按行号改+模糊匹配+替换即删；原 EDIT-TOOL-IMPROVEMENT/EOL-REQUIREMENTS/EOL-DESIGN 已并档归档。VSC 同名对应——同机制各自独立 |
 | memory 工具完善 | `MEMORY.md` §6.2（delete 工具语义修正/layer 统一段——2026-09-08 并入所属板块文档，原 MEMORY-TOOL-SCOPE-FIX.md 作废删除） | scope 参数改名 layer + delete layer 可选 + 工具描述重写；VSC 同名对应——同机制各自独立 |
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md）已移 `_archive/` |
-| 评审收敛 | `ADVISOR-CONVERGENCE.md` | |
+| 评审收敛 | `ADVISOR-CONVERGENCE.md` / `ADVISOR-VERDICT-TEMPLATE.md`（裁决行模板——L50——2026-09-09） | |
 | 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | async 评审 token 结算根治（settle 当场落盘/门禁读权威/废旧镜像）；VSC 同名对应——同机制各自独立 |
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径已由本档 D-V5 接管，前身 `VERIFY-DOCONLY.md` 并入后归档） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
