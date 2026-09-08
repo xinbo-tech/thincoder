@@ -7,11 +7,15 @@ import { vscode } from "./state.js"
 import { t } from "./i18n.js"
 import { escHtml } from "./ui.js"
 
-export function showQuestion(ctx, question, options) {
+export function showQuestion(ctx, question, options, promptId) {
   const el = document.createElement("div")
   el.className = "question-card"
   el.setAttribute("role", "alert")
   el.setAttribute("aria-label", t("question.label"))
+  // C1（SESSION-FLOW-C F-C1d——修 H-D）：卡片记住 promptId——answer 回传原样带 id（host 按
+  // id 查队列条目——非无条件 shift——迟到/错序响应不 resolve 错队头）；questionCancelled
+  // case（chat.js）按同 id 移除卡片。
+  if (promptId != null) el.dataset.promptId = String(promptId)
 
   const textEl = document.createElement("div")
   textEl.className = "question-text"
@@ -20,7 +24,9 @@ export function showQuestion(ctx, question, options) {
 
   const answer = (value) => {
     el.remove()
-    vscode.postMessage({ type: "questionResponse", answer: value ?? null })
+    const payload = { type: "questionResponse", answer: value ?? null }
+    if (promptId != null) payload.promptId = promptId
+    vscode.postMessage(payload)
     ctx.inputEl.focus()
   }
 

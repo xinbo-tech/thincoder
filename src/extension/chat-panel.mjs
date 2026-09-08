@@ -32,6 +32,12 @@ export class ChatPanel {
     this._panel = null
 
     this._abortController = null
+    // C1（SESSION-FLOW-C F-C1a/b）：_turnHandle = 最近回合的 promise（fire 语义——不 await）——
+    // 保底 catch 挂它（回合 promise 永不悬挂——H-B）；_abortRequested = abort 启动闩（H-C——
+    // Startup 窗口 Stop 被吞）——router 交付无效时置位，newTurnController（panel-chat.mjs）
+    // 消费即复位。
+    this._turnHandle = null
+    this._abortRequested = false
     this._distillController = null  // async distillation abort (SEND-STALL-DISTILL): aborted ONLY on dispose / session switch, never per turn
     this._permissionQueue = []
     // Live autoApprove flag for the current turn — approve-all / the AUTO toolbar
@@ -288,7 +294,7 @@ export class ChatPanel {
   // ─── Index (implementations in panel-index.mjs) ───
 
   _pushIndexStatus() { return pushIndexStatus(this) }
-  async _atComplete(query, cwd) { return atComplete(this, query, cwd) }
+  async _atComplete(query, cwd, seq) { return atComplete(this, query, cwd, seq) }
   async _saveEmbeddingConfig(config) { return saveEmbeddingConfig(this, config) }
   async _maybePromptIndex() { return maybePromptIndex(this) }
   async _buildIndex() { return buildIndex(this) }
@@ -320,7 +326,22 @@ export class ChatPanel {
       (this._suspQueue ??= []).push({ text, modelOverride, reasoning, providerName, images })
       return
     }
-    await runPanelChat(this, { text, modelOverride, reasoning, providerName, images })
+    // C1（SESSION-FLOW-C F-C1a——turn 句柄化——修 H-B）：fire 语义不变（不 await——
+    // sendMessage/消息路由都不阻塞）；句柄挂 panel._turnHandle。保底 catch：回合 setup 期
+    // 异常（impl try 之前的抛点——ensureSlot/agent 绑定等）会跳过 impl 的 finally——UI 卡
+    // running——这里兜底 error + loading:false + 复位忙态（不变量：回合 promise 永不悬挂）。
+    // catch 内不再抛——派生 promise 恒 resolve——无 unhandled rejection 面。
+    const handle = runPanelChat(this, { text, modelOverride, reasoning, providerName, images })
+    this._turnHandle = handle
+    handle.catch((e) => {
+      console.error("[chat-panel] turn failed (F-C1a guard):", e?.message ?? e)
+      const rawMsg = (e && (e.message || String(e))) || "unknown turn error"
+      const errTextLine = rawMsg.split("\n")[0].replace(/https?:\/\/[^\s,)"']+/g, "[endpoint]")
+      this._turnActive = false
+      this._refreshStatus()
+      this._panel?.webview.postMessage({ type: "error", text: errTextLine, techInfo: rawMsg })
+      this._panel?.webview.postMessage({ type: "loading", loading: false })
+    })
   }
 
   // ─── HTML ─────────────────────────────────────

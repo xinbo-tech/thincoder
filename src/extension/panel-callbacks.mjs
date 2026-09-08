@@ -21,16 +21,21 @@ import { toolPanelPayload } from "./panel-toolpanel.mjs"
  */
 export function makeAskInPanel(panel) {
   return (question, options) => new Promise((resolve) => {
-    const entry = { resolve }
+    // C1（SESSION-FLOW-C F-C1d——修 H-D）：卡片带 promptId——webview 回传 → host 按 id 查队列
+    // 条目（非无条件 shift——迟到/错序响应不 resolve 错队头）。id = panel 单调计数（每问自增）。
+    panel._questionSeq = (panel._questionSeq ?? 0) + 1
+    const id = panel._questionSeq
+    const entry = { id, resolve }
     panel._questionQueue.push(entry)
     panel._setStatus("waiting")
-    panel._panel?.webview.postMessage({ type: "question", question, options: options ?? null })
+    panel._panel?.webview.postMessage({ type: "question", question, options: options ?? null, promptId: id })
     // Stop must release the waiting turn — an unanswered question would otherwise keep the
     // loop hung on this promise forever (user presses Stop, UI stays "running").
     const onAbort = () => {
       const i = panel._questionQueue.indexOf(entry)
       if (i >= 0) panel._questionQueue.splice(i, 1)
-      panel._panel?.webview.postMessage({ type: "questionCancelled" })
+      // promptId 随行——webview 据此移除对应卡片（questionCancelled case——chat.js）
+      panel._panel?.webview.postMessage({ type: "questionCancelled", promptId: id })
       resolve(null)
     }
     if (panel._abortController?.signal.aborted) onAbort()

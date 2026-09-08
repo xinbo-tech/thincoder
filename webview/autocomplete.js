@@ -13,7 +13,7 @@ import { t } from "./i18n.js"
  * @param {Array<string>} ui.pastedImages — shared array for pasted images
  */
 export function initAutocomplete({ inputEl, atDropdown, vscode, pastedImages }) {
-  let _atTimer = null, _atActive = false, _atBase = ""
+  let _atTimer = null, _atActive = false, _atBase = "", _atSeq = 0
 
   function handleAtInput() {
     const pos = inputEl.selectionStart
@@ -26,7 +26,10 @@ export function initAutocomplete({ inputEl, atDropdown, vscode, pastedImages }) 
     const query = text.slice(atIdx)
     clearTimeout(_atTimer)
     _atTimer = setTimeout(() => {
-      vscode.postMessage({ type: "atComplete", query, cwd: "" })
+      // C1（SESSION-FLOW-C F-C1c——修 H-A）：请求带自增 seq——host 只回显最新（慢 findFiles
+      // 迟到返回不覆盖新下拉——防抖已挡连续输入风暴，seq 兜住防抖窗外的乱序返回）。
+      _atSeq += 1
+      vscode.postMessage({ type: "atComplete", query, cwd: "", seq: _atSeq })
     }, 150)
   }
 

@@ -236,8 +236,19 @@ window.addEventListener("message", (e) => {
       updateProxyTestResult(m.result || {})
       break
     case "question":
-      showQuestion(ctx, m.question, m.options)
+      showQuestion(ctx, m.question, m.options, m.promptId)
       break
+    case "questionCancelled": {
+      // C1（SESSION-FLOW-C F-C1d——修 H-D）：extension 侧中止未答 question（Stop/abort——
+      // makeAskInPanel onAbort）——移除对应卡片（卡片带 promptId——answer null 已随
+      // questionResponse 自行移除——这里管 extension 主动取消的卡）。promptId 精确匹配；
+      // 无 promptId（旧 host）→ 移除全部 question 卡（中止即整轮作废——无悬挂卡）。
+      const cards = [...document.querySelectorAll(".question-card")]
+      for (const c of cards) {
+        if (m.promptId == null || String(c.dataset.promptId) === String(m.promptId)) c.remove()
+      }
+      break
+    }
     case "compress":
       showCompressStatus(m)
       break

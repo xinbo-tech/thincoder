@@ -37,11 +37,21 @@ import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
  * susp.abortControllers，Stop 统一 abort——否则会话中止句柄只取最后一个 controller，旧
  * children 逃逸中止（跑完整个 turn 预算 + mergeChildMutations 写入 guard 标记被下次重建
  * 清掉——用户以为全停但磁盘仍被改写、advisor/verify 门被绕过）。
- */
-function newTurnController(panel) {
+ * C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C——评审 #1 消费即复位）：Startup 窗口
+ * （回合起点后、本 controller 建立前的 await 段——prevDistill/provider 解析可达秒级）内
+ * 到达的 abort/interrupt 无活 controller 可交付（router 侧交付无效才置闩）——置位则新建
+ * controller 立即 abort 并复位闩（防下次正常回合被误杀）。运行中交付的 abort/interrupt
+ * 不置闩（交付即生效）——本消费点对中断续跑重建（runTurnLoop 内 interrupt/ContinueError
+ * 路径）恒 no-op，Ctrl+I 续跑不受影响。
+ * 导出——chat-panel.test.mjs 桩面板直测闩消费（C1 组③）。 */
+export function newTurnController(panel) {
   const c = new AbortController()
   ;(panel._turnControllers ??= []).push(c)
   panel._abortController = c
+  if (panel._abortRequested) {
+    panel._abortRequested = false
+    c.abort()
+  }
   return c
 }
 
@@ -92,6 +102,22 @@ export async function runPanelChat(panel, opts = {}) {
 async function runPanelChatImpl(panel, opts = {}) {
   let { text, modelOverride, reasoning, providerName, images, autoTurn = false, susp = null, skipSession = false } = opts
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
+
+  // C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C）：回合起点（任何 await 之前）清闩 +
+  // 清上回合僵尸 controller（abort + 置 null + 清登记）。僵尸清理原在下方 controller 建立
+  // 前（原 215 行 if(!susp) 块）——上移等价安全：非 susp 回合只能启动于池空/无会话时（释放
+  // 窗口守卫 _suspPending——偏差修复 #2——池 children 不持有上回合 controller）；会话
+  // （susp）内回合不动会话句柄（susp.abort = 进入回合 controller——digest Stop 不得杀池）。
+  // 清理后启动窗口内 router 的 abort/interrupt 无活 controller 可交付 → 记闩
+  // _abortRequested → 下方 newTurnController 消费（立即 abort 新建 controller + 复位闩）。
+  // 陈旧闩（空闲/双击竞态等交付过活 controller 后又置位的边缘）随本行清——防误杀下次
+  // 正常回合（回归：Startup 窗口 abort 后下次正常回合干净启动）。
+  if (!susp) {
+    panel._abortController?.abort()
+    panel._abortController = null
+    panel._turnControllers = []
+  }
+  panel._abortRequested = false
 
   // 交付评审 🔴#1（2026-08-28）：turn 启动的守卫标志与槽绑定必须发生在任何 await 之前——
   // 否则启动窗口内（provider 解析 / await prevDistill，可达秒级）的会话切换会绕过守卫、
@@ -210,12 +236,9 @@ async function runPanelChatImpl(panel, opts = {}) {
   // §17: suspension-session turns must NOT abort the previous controller — the session
   // handle (susp.abort = the entering turn's controller) is what pool children hold; a
   // digest's Stop must not kill the pool. Per-turn controllers only exist for the turn.
-  // 偏差修复 #3：顶层回合起点清空 controller 登记表（#2 释放窗口守卫保证此刻池已空——旧
-  // 回合 controller 不再被任何 live child 持有）；会话内回合（susp）只追加不重置。
-  if (!susp) {
-    panel._abortController?.abort()
-    panel._turnControllers = []
-  }
+  // 顶层回合起点的僵尸清理已上移至函数入口（C1 F-C1b——见上方注释——任何 await 之前清闩 +
+  // 清上回合 controller）；此处每回合（含会话内回合）建立自己的 controller——newTurnController
+  // 内部消费启动闩（置位则立即 abort + 复位——修 H-C Startup 窗口 Stop 被吞）。
   newTurnController(panel)
 
   const askInPanel = makeAskInPanel(panel)

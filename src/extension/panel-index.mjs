@@ -30,8 +30,13 @@ export function pushIndexStatus(panel) {
     panel._panel?.webview.postMessage({ type: "indexStatus", status, hasEmbedder: !!embedder })
   }
 
-export async function atComplete(panel, query, cwd) {
+export async function atComplete(panel, query, cwd, seq) {
     try {
+      // C1（SESSION-FLOW-C F-C1c——修 H-A）：请求 seq 在 webview 侧自增（autocomplete.js）——
+      // host 只回显最新：慢 findFiles 迟到返回时若已有更新请求（seq 前进）→ 丢弃——旧扫描
+      // 不覆盖新下拉。webview 防抖已挡连续输入风暴——seq 兜住防抖窗外的乱序返回。无 seq
+      // （旧 webview）→ undefined 恒等——行为不变。
+      panel._atSeq = seq
       const base = cwd || _cwd() || process.cwd()
       const pattern = query.startsWith("@") ? query.slice(1) : query
       const uris = await vscode.workspace.findFiles(
@@ -39,6 +44,7 @@ export async function atComplete(panel, query, cwd) {
         "**/node_modules/**,**/.git/**,**/dist/**",
         20,
       )
+      if (panel._atSeq !== seq) return  // 迟到扫描——丢弃（不覆盖新下拉）
       const matches = uris.slice(0, 20).map((u) => {
         // path.relative (not slice) — multi-root workspaces can resolve files OUTSIDE
         // `base`, where slice would corrupt the prefix; cross-drive returns the abs path.
@@ -46,10 +52,11 @@ export async function atComplete(panel, query, cwd) {
         const parts = rel.split("/")
         return { name: parts[parts.length - 1], path: rel }
       })
-      panel._panel?.webview.postMessage({ type: "atResults", matches })
+      panel._panel?.webview.postMessage({ type: "atResults", matches, seq })
     } catch (e) {
+      if (panel._atSeq !== seq) return  // 迟到错误同样不回显（空回显会清掉新下拉）
       console.error("[chat-panel] atComplete failed:", e.message)
-      panel._panel?.webview.postMessage({ type: "atResults", matches: [] })
+      panel._panel?.webview.postMessage({ type: "atResults", matches: [], seq })
     }
   }
 

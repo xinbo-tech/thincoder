@@ -37,35 +37,43 @@ export function clearProjectOverride() {
 }
 
 /**
+ * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage
+ * 与 retry 共用同一路由——turnActive 排队 + messageQueued / 挂起分流（_chat 内 susp 守卫）全走
+ * 一套判断——retry 不再绕过 turnActive 队列直呼 _chat（并发新回合竞态——AC-S2 同款）。
+ * 同步函数（savePastedImages 同步落盘）——零新 await 窗口。入队消息零丢失（_suspQueue）。
+ */
+function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images }) {
+  // Plan B (GitHub thincoder#3): the webview sends pasted images as base64
+  // dataURLs; the EXTENSION saves them to <cwd>/.thincoder/tmp/paste-*.<ext>
+  // and passes absolute PATHS downstream. The field stays `images` (wire
+  // compat), but from here on it carries paths — setupAgentRun appends the
+  // "[Attached images: ...]" pointer and the model views them via read_image.
+  const saved = Array.isArray(images) && images.length > 0
+    ? savePastedImages(images, _cwd())
+    : undefined
+  // 2026-09-05 人机并行对齐（CLI state.queue 语义——实践验证模式）：父回合运行中
+  // （_turnActive）的消息一律排队——不 abort 父回合、不杀子代理、不并发新回合
+  // （并发会从磁盘重载 lines 孤儿化后台池——AC-S2 同款竞态）；回合尾顺序消费
+  // （impl 尾 while——对位 CLI agent-turn 尾 state.queue 消费）。挂起活跃期由
+  // panel._chat 上游分流（susp.active → pendingInput——D-S5）。
+  if (panel._turnActive) {
+    panel._suspQueue ??= []
+    panel._suspQueue.push({ text, modelOverride, reasoning, providerName, images: saved })
+    panel._panel?.webview.postMessage({ type: "messageQueued" })
+    return
+  }
+  panel._chat(text, modelOverride, reasoning, providerName, saved)
+}
+
+/**
  * Handle one webview message. `panel` is the ChatPanel instance — its methods
  * (session mgmt, chat, settings push) stay in the class; this router only switches.
  */
 export async function handlePanelMessage(panel, msg) {
   switch (msg.type) {
-    case "userMessage": {
-      const text = msg.text || ""
-      // Plan B (GitHub thincoder#3): the webview sends pasted images as base64
-      // dataURLs; the EXTENSION saves them to <cwd>/.thincoder/tmp/paste-*.<ext>
-      // and passes absolute PATHS downstream. The field stays `images` (wire
-      // compat), but from here on it carries paths — setupAgentRun appends the
-      // "[Attached images: ...]" pointer and the model views them via read_image.
-      const images = Array.isArray(msg.images) && msg.images.length > 0
-        ? savePastedImages(msg.images, _cwd())
-        : undefined
-      // 2026-09-05 人机并行对齐（CLI state.queue 语义——实践验证模式）：父回合运行中
-      // （_turnActive）的消息一律排队——不 abort 父回合、不杀子代理、不并发新回合
-      // （并发会从磁盘重载 lines 孤儿化后台池——AC-S2 同款竞态）；回合尾顺序消费
-      // （impl 尾 while——对位 CLI agent-turn 尾 state.queue 消费）。挂起活跃期由
-      // panel._chat 上游分流（susp.active → pendingInput——D-S5）。
-      if (panel._turnActive) {
-        panel._suspQueue ??= []
-        panel._suspQueue.push({ text, modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images })
-        panel._panel?.webview.postMessage({ type: "messageQueued" })
-        break
-      }
-      panel._chat(text, msg.model, msg.reasoning, msg.provider, images)
+    case "userMessage":
+      routeUserTurn(panel, { text: msg.text || "", modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images: msg.images })
       break
-    }
     case "selectModel": {
       const prefs = panel._loadModelPrefs()
       prefs.model = msg.model
@@ -146,14 +154,22 @@ export async function handlePanelMessage(panel, msg) {
       break
     }
     case "retry": {
+      // C1（F-C1e——H-F）：retry 与 userMessage 同入口（routeUserTurn）——回合中 retry 不再
+      // 绕过 turnActive 队列直开并发回合；队列消息回合尾顺序消费（零丢失）。
       const history = panel._activeHistory()
       const lastUser = [...history].reverse().find((m) => (m.type ?? m.role) === "user")
-      if (lastUser) panel._chat(lastUser.content, undefined, undefined, lastUser.provider)
+      if (lastUser) routeUserTurn(panel, { text: lastUser.content, modelOverride: undefined, reasoning: undefined, providerName: lastUser.provider })
       break
     }
     case "abort":
       panel._stopClickTs = Date.now()
       traceStop("click received — abort() called", panel._stopClickTs)
+      // C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C）：Startup 窗口（回合起点后、本回合
+      // controller 建立前的 await 段——prevDistill/provider 解析可达秒级）无活 controller 可
+      // 交付——abort 只能命中上回合僵尸 controller（交付无效）。此时记闩——newTurnController
+      // 消费（新建 controller 立即 abort + 复位闩）。有活 controller（运行中）→ 交付即生效——
+      // 不置闩（置了会被中断续跑重建消费——误杀 Ctrl+I/Continue 续跑）。
+      if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
       // §17 D-S9: Stop during a suspension session aborts the WHOLE background session
       // (CLI Ctrl+C parity — digests' own per-turn controllers only kill the digest):
       // session controller (pool children) + current turn controller + wake the driver.
@@ -198,7 +214,14 @@ export async function handlePanelMessage(panel, msg) {
     }
     // Ctrl+I inject (CLI parity): abort with an interrupt reason — the agent loop
     // commits partial output, injects the message, and resumes from the same context.
-    case "interrupt": panel._stopClickTs = Date.now(); traceStop("interrupt received", panel._stopClickTs); panel._abortController?.abort({ interrupt: true, message: msg.message }); break
+    case "interrupt":
+      panel._stopClickTs = Date.now(); traceStop("interrupt received", panel._stopClickTs)
+      // C1（F-C1b）：同 abort——启动窗口 interrupt 无活 controller → 记闩（回合起点消费；
+      // 窗口内 interrupt 无法注入续跑——降级为停止）。运行中 → 交付（interrupt 续跑重建消费
+      // 点恒 no-op——不置闩）。
+      if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
+      panel._abortController?.abort({ interrupt: true, message: msg.message })
+      break
     // Clickable file paths in tool cards — open in the editor, at the line if given.
     case "openFile": {
       try {
@@ -216,13 +239,22 @@ export async function handlePanelMessage(panel, msg) {
     case "openDiff": await openDiffPreview(msg.diff); break
     case "loadOlder": panel._loadOlder(msg.before); break
     case "questionResponse": {
-      const entry = panel._questionQueue.shift()
-      entry?.resolve(msg.answer ?? null)  // null → tool returns "(user cancelled)"
+      // C1（SESSION-FLOW-C F-C1d——修 H-D）：按 promptId 精确匹配队列条目——不再无条件 shift
+      // （旧卡片/乱序响应会错 resolve 队头——新 question 被旧卡答案吞）。无 promptId（旧
+      // webview）→ 回退队头（历史语义）；找不到 → no-op（陈旧卡——不虚构 resolve——不 resolve
+      // 错队头）。
+      const entry = msg.promptId != null
+        ? panel._questionQueue.find((e) => e.id === msg.promptId) ?? null
+        : (panel._questionQueue[0] ?? null)
+      if (entry == null) break
+      const i = panel._questionQueue.indexOf(entry)
+      if (i >= 0) panel._questionQueue.splice(i, 1)
+      entry.resolve(msg.answer ?? null)  // null → tool returns "(user cancelled)"
       panel._refreshStatus()
       break
     }
     case "setAutoApprove": await panel._setAutoApprove(!!msg.value); break
-    case "atComplete": await panel._atComplete(msg.query, msg.cwd); break
+    case "atComplete": await panel._atComplete(msg.query, msg.cwd, msg.seq); break
     case "permissionResponse": {
       const entry = panel._permissionQueue.shift()
       if (msg.approved === "approveAll") {
