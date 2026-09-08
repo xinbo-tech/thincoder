@@ -98,7 +98,7 @@
     ①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）
     ②bin/thincoder.mjs 501 行 >500 存量债（HEAD 前即 501——净 0 行改动）——挂 STRUCTURE-DEBT 观察
 - [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
-- [ ] **VSC 会话流时序对齐 CLI（2026-09-09 用户需求点——C 全链已交付 cbac1d6/2c74005——A 已交付 aacebee——B 剩——B1 块原地/B2 打开原子化——用户已裁纯时序序+移门——B 批设计待落）**：对比勘察已定位机制根源（UI 呈现层——非 agent 核心）——
+- [x] ~~**VSC 会话流时序对齐 CLI**~~——**2026-09-09 全链核销**（C1 cbac1d6 + C2 2c74005 + A aacebee + B1 52e03f3 + B2 6e98807——C：消息秩序/忙态收敛——A：sendMessage 守卫/标题回合内/Stop 派生——B：块原地/单向 boot——VSC L2 154/154——consume 022a4ba0/aa9e9376/2e3c1b83——A4 尾巴/忙态冷启守卫/底部面板收敛评估 = 观察子项——见技术组）
   - 技术子项（父侧）：A4 尾巴（webviewReady 补推 loading:true——Reload 冷启 thinking 段恢复）不入 A 批——TODO 登记
   - 技术子项（父侧）：extension.mjs:63 _panel.sendMessage(selection).catch——同步方法 catch 多余——后续补 .catch 移除或 promise 化（既有观察——非本批引入）
   - 技术子项（父侧）：chat-panel.test.mjs 485 行逼近 500——拆分规划（后续轮）
