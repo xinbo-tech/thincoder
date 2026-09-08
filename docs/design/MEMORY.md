@@ -167,6 +167,38 @@
 
 **批量删门禁**：layer 必填 + type/keyword **至少其一**（无过滤批量删 = 整层清空，绕过 clear 拒共享层门禁 → 拒绝并指引）；confirm 缺失 = **不删**，返回预览让调用方带 confirm 重发。**clear 门禁**：layer 必填且仅接受 personal；confirm:true 必填；project/team 拒绝。
 
+
+## 6.5 distill 命令 layer 统一（变更段——2026-09-08 裁定，评审后实现）
+
+> distill = 转录→记忆条目提取命令（CLI 单端——VSC 无 distill 已核实）。写记忆入口——scope 词面与 memory 工具 layer 统一（用户裁定延伸：人类命令面一致性）。本段设计待评审——评审通过并入本文档当前态。
+
+### 现状（explore 一手核实）
+
+- scope 出现 6 文件：bin/thincoder.mjs（usage L90 + bash/zsh/fish completion L353/392/438）、src/cli/distill-command.mjs（L13/25/67/69）、src/distill.mjs（L21/30/56/120/124/131/135/144/136/145/154）、src/tui/distill-cmd.mjs（L25）。
+- **无持久转录 JSON**——scope 只存在于 LLM 候选输出 JSON（每运行现产现用不落盘）——JSON 兼容落点 = 读时归一单点（distill.mjs L124）。
+- distill --scope 是**全 CLI 现存唯一 scope flag**（memory remove 现仅 <uid> 无 flag——先例是工具参数面非 CLI flag）。
+- **flag 静默吞参风险**：现 flag 解析不校验未知 flag（distill-command L16-22）——纯改名会让旧 --scope 输入静默 no-op。
+- 值域分裂：prompt "personal|project"（L21）≠ saveCandidate 支持 personal/project/team（L131-153）≠ CLI usage（L25）——与改名正交。
+
+### 设计（裁定 A/B）
+
+**A. flag 兼容（用户裁定——纯 --layer + 显式报错）**：
+- --scope → --layer（usage/帮助/bash/zsh/fish completion 全改）。
+- **遇 --scope 输入显式报错**（"distill: --scope renamed to --layer — update your invocation"）——现解析器不校验未知 flag，需加显式检查——防静默失效（人类输入面：旧 --scope=project 静默落 personal 最危险）。
+
+**B. 值域收敛（用户裁定——语义不动仅措辞对齐）**：
+- 功能语义不变：提示仍引导 personal/project；saveCandidate 支持 team 是防御性（LLM 偶发/显式 --layer=team 可走）——不改。
+- usage/completion/prompt 措辞随改名对齐（Scope filter → Layer filter 类），不扩值域语义。
+
+**JSON 兼容（读时归一——单点）**：
+- distill.mjs L124 改 `const layer = candidate.layer ?? candidate.scope ?? "personal"`——新字段优先旧字段兜底——消化旧 LLM 输出（模型忽略新 prompt 字段名时仍产 scope）。
+- LLM 提示模板 L21/L30 字段名 scope → layer + 引导语随动。
+
+**受影响文件（CLI 单端 6 + 测试 + 文档）**：
+- bin/thincoder.mjs（usage/completion 4 处）、src/cli/distill-command.mjs（注释/usage/flags.scope→flags.layer/展示串 + --scope 显式检查）、src/distill.mjs（prompt/docstring/判别变量/错误串/读时归一）、src/tui/distill-cmd.mjs（展示串）、新增 test/distill.test.mjs（读时归一/错误串/--scope 报错——现 distill 0 测试）、MEMORY.md（本段——评审后并入当前态）+ TODO 勾销。
+
+**验收**：AC1 --scope 全改 --layer（grep 命令面 0 scope 残留）；AC2 遇 --scope 显式报错（非静默）；AC3 读时归一 candidate.layer ?? candidate.scope ?? personal；AC4 错误串 layer（unknown layer: X/project layer unavailable/team layer not configured）；AC5 测试（归一/报错/旧 scope 字段兜底）；AC6 值域语义不变（提示仍 personal/project）。
+
 ## 7. 关键设计决策
 
 | 决策 | 理由 |
