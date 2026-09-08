@@ -26,14 +26,25 @@
 
 ### B1（先行——webview 8 文件 + 测试骨架从零立）
 
-1. **拆容器**：index.html:31 删 div——base.css:87 grid 五行→四行（删 #subagent-activity 行——auto minmax(0,1fr) auto auto）——base.css:98-107 整段删——chat.css:384-385 删——chat.js:89 subagent-activity click 监听删（messagesEl 委托 :88 仍在——in-flow ⏹ 由它接）——activity.js activityPanel()/updateVisibility() 及调用点删——webview-env.mjs:67 fixture id 移除
-2. **ensureBlock 挂载**（activity.js:250-254）：appendChild → ctx.messagesEl（state.js:15——流尾）+ 出生后 maybeScrollDown(ctx)（ui.js:431-433 import——钉底替代面板 scrollTop）——落点 A（流级独立块——.advisor-block 同层）——两路汇合：applySubagentStatus started（:284）+ subagentChunk→ensureBlock（streaming.js:237-246）都改挂载
+1. **拆容器**：index.html:31 删 div——base.css:87 grid 五行→四行（删 #subagent-activity 行）——
+   base.css:98-107 整段删——chat.css:384-385 删——chat.js:89 subagent-activity click 监听删（messagesEl
+   委托 :88 仍在——in-flow ⏹ 由它接）——activity.js activityPanel()/updateVisibility() 及调用点删——
+   webview-env.mjs:67 fixture id 移除
+2. **ensureBlock 挂载**（activity.js:250-254）：appendChild → ctx.messagesEl（state.js:15——流尾）+
+   出生后 maybeScrollDown(ctx)（ui.js:431-433 import——钉底替代面板 scrollTop）——落点 A（流级独立块
+   ——.advisor-block 同层）——两路汇合：applySubagentStatus started（:284）+ subagentChunk→ensureBlock
+   （streaming.js:237-246）都改挂载
 3. **freezeBlock 退化**（activity.js:350-393）：freezeAnchor 机制全删（:317/:374-388/字段 :247）——settled 分支（:303-325）只翻状态（✓ done · awaiting digestion 原地显）——freezeBlock 保留终态翻/class 换/⏹ 移除/refreshBlock/appendPreview（原地即其下方）——freezeSettledBlocks（:422-432）不变
 4. **resetActivity 扩展**（activity.js:471-477）：清 ticker + S._subBlocks 值中 !frozen && isConnected remove() + 防御 .sub-live 孤儿清——frozen 不动
 5. **CSS**：删面如上——零新增主体规则（.advisor-block/.sub-block/.sub-report-preview 原样适用 in-flow——.advisor-content 100px 内滚/content-visibility 原样——live 块内容增长天然有界）
 6. **history 锚**（history.js:29/:51）：锚选择器扩含 .advisor-block
 7. **文档**：WEBVIEW.md §2 布局正文/grid 行模板 + §5 全节重写（"子代理块（live/冻结）计入 150"措辞）+ AGENT-LOOP.md:65/:345 活动面板行 + activity.js 模块头/chat.js:76-80/panels.js:155-162 注释同步（机制描述文档债随代码批）
-8. **测试骨架**（前置项——B1 从零立）：test/activity-flow.test.mjs 新建（登记 files.mjs）——webview-turnstate 骨架复制（setupWebview + installChatFixture + 动态 import——ticker seam setActivityTickDisabled + activityTick 假时钟）——用例 8 组：① 出生 #messages 尾 + 钉底 ② freeze 原地（parentNode 不变/头翻/preview 紧跟/stopped 无 preview）③ settled 挂起驻留 + digest done 原地冻——**无 DOM move 断言**（回归红线）④ sync 父回合中途出生 + 续段后块位不变 ⑤ resetActivity live 移除 + frozen 保留 ⑥ trimOldMessages 计入 ⑦ ⏹ 可见性规则 ⑧ parseChannel 轻量
+8. **测试骨架**（前置项——B1 从零立）：test/activity-flow.test.mjs 新建（登记 files.mjs）——
+   webview-turnstate 骨架复制（setupWebview + installChatFixture + 动态 import——ticker seam
+   setActivityTickDisabled + activityTick 假时钟）——用例 8 组：① 出生 #messages 尾 + 钉底 ② freeze
+   原地（parentNode 不变/头翻/preview 紧跟/stopped 无 preview）③ settled 挂起驻留 + digest done 原地冻
+   ——**无 DOM move 断言**（回归红线）④ sync 父回合中途出生 + 续段后块位不变 ⑤ resetActivity live
+   移除 + frozen 保留 ⑥ trimOldMessages 计入 ⑦ ⏹ 可见性规则 ⑧ parseChannel 轻量
 
 ### B2（后行——extension 3 文件）
 
