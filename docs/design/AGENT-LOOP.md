@@ -32,6 +32,8 @@
 
 ## 变更记录（历史折叠——详见 git log）
 
+- 2026-09-08：新增 §11 agent 生命周期对齐 CLI 设计变更段（需求 SESSION.md 需求段——用户裁定快车道）。评审后并入 §2。
+
 - 2026-09-08：从 ARCHITECTURE §6/§8 迁出成立本档——写全 VSC 独立实现（runAgent/子
   代理动作面/async 池/挂起 digest/eng-coder 交付），正文照抄 + 去 CLI 镜像指针。
 
@@ -343,3 +345,60 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 折叠归属）。UI 详情见 WEBVIEW（活动面板/冻结身份头）。
 折叠归属）。UI 详情见 WEBVIEW（活动面板/冻结身份头——DOC-REORG 后续批建，当下
 对应 ARCHITECTURE §11.1）。
+
+
+## 11. agent 生命周期对齐 CLI（设计变更段——2026-09-08 用户裁定，评审后实现）
+
+> 需求：SESSION.md「需求段」F1-F4 + N1-N5。本段为设计——评审通过并入 §2 现状态。
+> 一句话：VSC 顶层 agent 从"每轮 runAgent 重建 + opts 状态搬运"改 CLI 式"面板会话级单例复用"——panel 持 panel._agent，首轮建、回合复用、状态内存携带、回合尾落盘保留。砍 per-run 重建背的 opts.engState/agentState 搬运链（批 1 异步评审 token 未注册 = 双载体漂移实证）。
+
+### 11.1 方案
+
+**核心拆分**：setup.mjs 的 setupAgentRun 拆出三段——① agent 对象构造（:252-284）抽独立工厂 `buildTopLevelAgent`（首轮-only）；② 每轮 hydrate（config/tools/MCP/engDesignTokens 水合/systemPrompt/history 重指/上下文注入——每轮执行）；③ 回合上下文注入（:350-394——每轮原样）。runAgent 加 `opts.agent`（仅 depth-0 honored）：存在 → hydrate 复用；缺省 → 工厂新建（子代理/向后兼容）。
+
+**改造面**（从 explore 一手报告提炼——详见各文件:行）：
+1. **setup.mjs**：拆 buildTopLevelAgent（对象构造 :252-284）+ hydrateRun（每轮 reconcile：config :150-199 保留每轮拾取外部变更/tools+MCP :93-148 每轮重建/engDesignTokens 水合 :219-250 每轮保留（settle 落盘在 run 外——hydrate 是唯一 reconcile 点）/systemPrompt 每轮/stateSink 附加不动（子级专属））。
+2. **agent.mjs runAgent**：:79-80 改——顶层 + opts.agent → hydrateRun（跳过构造）；:84-103 逐 run 覆盖字段；resume 迭代（ContinueError/Ctrl+I）传同一 opts.agent（单例）——但每 runAgent 调用仍做 per-run 复位（= 现行为逐字对齐——避免续跑语义漂移）。
+3. **panel-chat.mjs / chat-panel.mjs**：ChatPanel 构造加 `this._agent = null`；runPanelChatImpl ensureSlot 后 ensurePanelAgent（存在且 _engPersist 的 cwd×slot 匹配 → 复用；否则销毁新建）；runOpts 砍 engState/planMode 状态载荷（hydrate 直接从槽 reconcile——槽读保留：settle 落盘在 run 外）。
+4. **销毁边界全列**（均 panel._agent = null）：loadSession（panel-session:121——switchSession/newSession/deleteSession/status 全覆盖）+
+   applyProjectSwitch（panel-project:26）+ follow-active-editor（chat-panel:60）+ workspace-folder 兜底（chat-panel:76）+ panel dispose（chat-panel:162）+
+   webview onDidDispose（chat-panel:101）。**安全前提（explore 确认）**：全部切换边界被 _turnActive/_susp?.active 守卫——销毁时无活回合/后台池。
+5. **落盘链**：agentState(agent)/onComplete/onDistilled 闭包快照/engTokensMergeForSave/setSlotEngDesignTokens **全保留**（回合尾盘同步是明确保留项 N3——VSC 进程不可控防丢）。砍的是"每轮经 opts 搬进全新对象"的搬运，不是槽读写。execute-tools.mjs:57-76 单例友好无需改。
+6. **子代理/consult/escalate（depth>0）零改动**——opts.agent 仅 depth-0 honored；stateSink/entry.childAgent 语义不动。
+
+### 11.2 per-run 字段回合边界复位清单（agent 复用后——防行为漂移）
+
+**A. 每 runAgent 调用必须显式复位**（现靠重建清零）：
+  - _tasks/_goal（**决策点——见 11.3**）/ _touchedFiles/_verifiedThisRun/_verifyPassed/_verifyRetries/_honestReminderInjected/_pendingTimers/_lastPromptTokens/_usageAtLen/_compressFailures/_emptyRetries
+  - _advisorRound/_advisorSession/_lastAdvisorOutput/_calledAdvisorThisRun/_mutatedThisRun/_pendingReminders/_inAutoTurn/_sessionSignal/_runStartHistoryLen/_lastCompressInfo
+  - _lastEngState（**必须复位 false**——eng 进出重通知语义）。
+  **顺序纪律**：复位清单先于 inheritedGuard 应用（:87-89——guard 标记继承到"复位过的"下一 run）。
+
+**B. run 绑定每轮重指**（覆盖即可）：_provider/_role/cwd/history/_fullHistory/_planMode/config/_engPersist。
+
+**C. 会话级保留（单例收益本体）**：_engDesignTokens（Map——hydrate reconcile + TTL，**永不复位清空**）/config 的 engineering+advisor.guard（槽权威）/ _engPersist（绑定键）/ _engDesignReviewed（顶层恒 false 无影响）。
+
+**D. 池载体仍挂共享 history 数组**（_asyncSubagents/_asyncAdvisors/_pendingAsyncResults/_consultSessions/_suspended/_asyncTombstones——agent.mjs:97-99 仅 run 期 attach）——单例不复用这些字段做持久化载体。
+
+### 11.3 行为漂移决策点（设计显式选边——需用户裁）
+
+1. **_tasks / _goal 复位 or 会话级**：CLI 是会话级（回合间保留）；VSC 现因重建每用户回合丢。单例不复位 = 自然变会话级（**对齐 CLI**）；复位 = 保持现行为。**建议对齐 CLI（会话级——不复位）**——收益本体之一。
+2. **_emptyRetries/_compressFailures/verify·advisor 预算类**：必须复位（防预算跨回合累计——无争议）。
+3. **续跑语义**：resume 迭代（ContinueError/Ctrl+I）每 runAgent 调用复位 = 现行为逐字对齐（建议——保守）。
+
+### 11.4 测试
+
+- **纯函数单测**（对标 eng-settlement.test 模式）：hydrate 复位清单纯函数 + ensurePanelAgent 绑定判定（cwd×slot 匹配/不匹配）——快层可测。
+- 生命周期语义（回合复用/切换销毁）真机 slow 门控兜底。
+- 回归：现有快层套件不 import setup/runAgent/panel-*——无直接网；补上述纯函数锁。
+
+### 11.5 验收
+
+- AC1 顶层 agent 会话级单例：同一 panel 连续多回合 panel._agent 同一对象（_engDesignTokens 回合间携带）
+- AC2 状态零搬运：opts.engState 移除——hydrate 从槽 reconcile（无 per-run 全量重建）
+- AC3 落盘不退化：回合尾 onComplete 落盘保留（engDesignTokens 回合尾盘同步）——槽文件仍是权威
+- AC4 切换销毁：loadSession/new/delete/project-switch/dispose 后 panel._agent = null + 盘不丢
+- AC5 子代理不动：depth>0 runAgent 仍新建（无回归）
+- AC6 复位清单生效：回合级计数器回合边界清零（advisor/verify 预算不跨回合累计）
+- AC7 config/MCP 变更下轮生效（hydrate 每轮 reconcile——非首轮-only）
+- 测试：纯函数单测绿 + 真机 slow 绿
