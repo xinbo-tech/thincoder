@@ -1,14 +1,18 @@
 /**
  * advisor/run.mjs — advisor execution: tool loop, provider resolution, and the review entry point.
  * VS Code port of thincoder CLI src/advisor/run.mjs (kept in sync with the CLI).
+ * 2026-09-08 结构债批 6（511 > 500 硬限拆分）：read-only 工具集 + 测试覆写 seam →
+ * ./tools.mjs；resolveAdvisorProvider → ./provider.mjs——run.mjs 保留 re-export shim
+ *（_advisorToolsFor/_setAdvisorToolSetForTest/resolveAdvisorProvider——消费面与测试
+ * import 兼容——模块拆分先例 citations.mjs）。
  */
 import { chat } from "../provider.mjs"
-import { resolveProviders, findProvider } from "../config-io.mjs"
 import { specForModel } from "../specs.mjs"
-import { toOpenAISchema } from "../tools/index.mjs"
 import { prepareAdvisorMessages } from "./main.mjs"
 import { injectObjectDeclaration } from "./messages.mjs"
 import { appendCitationReport } from "./citations.mjs"
+import { _resolvedAdvisorToolsFor } from "./tools.mjs"
+import { resolveAdvisorProvider } from "./provider.mjs"
 
 const MAX_ADVISOR_TURNS = 100
 // Mechanical convergence cap: the protocol assumes up to 5 rounds suffice
@@ -75,40 +79,11 @@ function compactMessages(messages) {
     ...recent)
 }
 
-const { readTool, globTool, grepTool, lsTool } = await import("../tools/index.mjs")
-const { lspTool } = await import("../tools/lsp.mjs")
-const { codeSearchTool } = await import("../tools/code.mjs")
-
-/**
- * Advisor tool set — ZERO git, read-only ONLY, every round. The change surface
- * comes from the review scope (paths / _touchedFiles injected by the caller),
- * never from git: git output misled reviews (committed fixes never show in
- * `git diff HEAD`, so "no changes" was read as "not fixed") and the user
- * mandate is full decoupling (7d49a52 + d3be613). The reviewer reads files
- * and searches code; it never touches git and never writes.
- * No round parameter — the set is constant across all rounds.
- * @param {Object} _agent — accepted for API compatibility with the CLI
- *   (there the parameter selects the code index); UNUSED in the VS Code port
- *   (code_search reads the workspace index directly).
- */
-function advisorToolsFor(_agent) {
-  // VS Code port: code_search reads the workspace index — no agent.memory
-  // dependency, so the set is constant (ZERO git, read-only only).
-  const tools = [readTool, globTool, grepTool, lsTool, lspTool, codeSearchTool]
-  return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
-}
-// Test seam: the tool set is pure (agent.memory → code_search inclusion).
-export { advisorToolsFor as _advisorToolsFor }
-
-// Test seam (AGENT-LOOP.md §18.7 D-TS7, T-TS8/9): the B1 batch-parallelism
-// tests mock two slow read-only tools in one LLM reply. Production path is
-// unchanged — the override only replaces the RESOLVED set when set.
-let _advisorToolSetOverride = null
-export function _setAdvisorToolSetForTest(tools) {
-  _advisorToolSetOverride = Array.isArray(tools)
-    ? { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
-    : null
-}
+// _advisorToolsFor / _setAdvisorToolSetForTest — moved to tools.mjs (2026-09-08
+// 结构债批 6——run.mjs 511 > 500 硬限拆分——模块拆分先例 citations.mjs——测试覆写 seam
+// 状态随迁 tools.mjs；run.mjs 经 _resolvedAdvisorToolsFor 消费）。kept re-exported
+// here for import compatibility (CLI-parity test import paths).
+export { advisorToolsFor as _advisorToolsFor, _setAdvisorToolSetForTest } from "./tools.mjs"
 
 /** Compact one-line summary of tool args for panel progress lines.
  *  Picks the most identifying field; falls back to truncated JSON. */
@@ -161,7 +136,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   const onThink = emit("think")
   const onText = emit("text")
   const onTool = emit("tool")
-  const { schemas: toolSchemas, byName: toolByName } = _advisorToolSetOverride ?? advisorToolsFor(agent)
+  const { schemas: toolSchemas, byName: toolByName } = _resolvedAdvisorToolsFor(agent)
   let turns = 0
   const startTime = Date.now()
   
@@ -333,31 +308,10 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
 // tests drive the loop against a local mock LLM server.
 export { runAdvisorToolLoop as _runAdvisorToolLoop }
 
-/** Resolve the advisor's provider: config advisor.provider/model when set, otherwise the main agent's provider (CLI parity). */
-export function resolveAdvisorProvider(agent) {
-  const cfg = agent.config?.advisor
-  if (cfg?.provider) {
-    try {
-      const { providers } = resolveProviders()
-      const provider = findProvider(providers, cfg.provider)
-      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider }
-      if (cfg.thinking === null || cfg.thinking === false) result.thinking = undefined  // explicitly off
-      else if (cfg.thinking !== undefined) result.thinking = cfg.thinking
-      if (cfg.reasoningEffort !== undefined) result.reasoningEffort = cfg.reasoningEffort
-      if (typeof cfg.effort === "string" && cfg.effort) result.reasoningEffort = cfg.effort // panel-persisted effort (MODEL-PICKER-UNIFY §3.3)
-      return result
-    } catch (e) {
-      console.warn(`[advisor] resolveAdvisorProvider: ${e.message}`)
-    }
-  }
-  const provider = { ...agent._provider }
-  if (cfg?.model) provider.model = cfg.model
-  if (cfg?.thinking === null || cfg?.thinking === false) provider.thinking = undefined
-  else if (cfg?.thinking !== undefined) provider.thinking = cfg.thinking
-  if (cfg?.reasoningEffort !== undefined) provider.reasoningEffort = cfg.reasoningEffort
-  if (typeof cfg?.effort === "string" && cfg.effort) provider.reasoningEffort = cfg.effort
-  return provider
-}
+// resolveAdvisorProvider — moved to provider.mjs (2026-09-08 结构债批 6——run.mjs 511
+// > 500 硬限拆分——config-io import 随迁）。kept re-exported here for import
+// compatibility (advisor.mjs / advisor-async.mjs import it from run.mjs).
+export { resolveAdvisorProvider } from "./provider.mjs"
 
 /**
  * Extract unfixed issues from prior review text (for the cap message).

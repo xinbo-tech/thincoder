@@ -355,6 +355,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 重启语义）。判据 = 载入（进场）历史非空（N5）——检测必须在用户输入落线（下方
   // pushReal）之前求值：否则全新会话首回合输入使 fullHistory 变非空而伪触发（F3 同族
   // 修正——本仓注释"进场即非空"即此语义）。发句位在输入前——CLI prepareRun 同序。
+  // 跨端异名互指（结构债批 5 N7——双端同语义各自独立实现、命名不统一是刻意——thincoder
+  // SESSION.md §11.2）：CLI 端同机制载体异名 = agent._envResumed（session.mjs
+  // applySession——载入历史非空即武装——每次恢复一次）+ agent._processRestartPending
+  // （bin/thincoder.mjs 启动 resume 路径设——prepareRun 发句清——进程级句）。
   const processRestarted = detectRestoredSession({ depth, resume, autoTurn, fullHistory })
   if (processRestarted) {
     history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
