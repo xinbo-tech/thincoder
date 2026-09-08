@@ -10,8 +10,8 @@
  * (depth-0 → async, every role; depth>0 → sync — D-E1 role-level 缺省已 supersede),
  * internal delivery protocol; eng-coder children may only spawn synchronous explore
  * audit children (gateEngCoderSpawn — mechanical, incl. the 7th-spawn backstop).
- * §19/§19.5 (AGENT-LOOP.md, 2026-09-03): ONE tool, four actions — spawn/status/
- * cancel/escalate（§19.8 2026-09-06：action:'check' 删除——结果仅自动通道）; action:"cancel" = control-class gate exemption (isControlAction),
+ * §19/§19.5 (AGENT-LOOP.md, 2026-09-03): ONE tool, seven actions — spawn/status/observe/send/
+ * cancel/escalate/consume-design（§19.8 2026-09-06：action:'check' 删除——结果仅自动通道）; action:"cancel" = control-class gate exemption (isControlAction),
  * status decision fields (D-M5), per-entry AbortController + cancelled settle +
  * model-visible reminder (D-M6), runChild(entry) binding, nested sub-attribution
  * forwarding (D-M8 webview 子标)。description/schema 载荷 verbatim 在 subagent-spec.mjs
