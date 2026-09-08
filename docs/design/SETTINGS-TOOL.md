@@ -1,6 +1,6 @@
 # settings 工具——agent 配置调整
 
-> 板块：工具系统（TOOLS.md 同板块独立保留——MCP.md / VERIFY-DOCONLY.md 先例）。
+> 板块：工具系统（TOOLS.md 同板块独立保留——MCP.md 先例）。
 > 状态：**已实现**（2026-09-05——CLI settings.test 11/11 + VS Code 镜像 6/6 全绿——CLI dispatch 回归绿——热应用/遮罩/门禁/类型校验 T-S1.1-11 全勾销）。
 > 权威源：CLI `src/agent-tools/settings.mjs`、`src/config.mjs`（DEFAULTS / writeConfigAtomic / configPath）。
 > 关联：`docs/design/README.md`（地图）、`docs/design/TOOLS.md`（工具系统权威——§1 注册表/§3 门禁）、`docs/design/AGENT-PARAMS-*.md`（Agent 运行参数专题——本工具是其 agent 化调整面）。

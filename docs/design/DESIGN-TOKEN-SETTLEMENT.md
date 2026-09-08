@@ -53,13 +53,16 @@ settle 即落盘（D1）、门禁读权威 miss 回读（D2）、镜像退役（
 
 ## 4. 受影响文件（CLI，thincoder）
 
-- 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、`src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`src/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
+- 修改：`src/agent-tools/advisor-async.mjs`（settle 当场落盘 D1/D3）、`src/agent-tools/subagent-spawn.mjs`（miss 回读 D2/D3 + **consume 落盘对称**——交付 🔴 复活洞修复）、`src/agent/dispatch.mjs`（写门问槽 D3）、
+  `src/token-ttl.mjs`（落盘函数 persistEngTokens + reconcileEngTokensFromSlot 回读 + 去镜像）、`src/session.mjs`（resetSessionState 去镜像）、**`src/agent.mjs`**（镜像初始化删——AC3 零写必需）、**`src/agent-tools/advisor.mjs`**（陈旧注释修正）、**`src/tui/cmd-new.mjs`**（陈旧注释修正）
 - 文档：本设计 + README 地图登记
 - 新增：`src/agent-tools/design-token.mjs`（token 工具组拆分——advisor-async 577→487 行硬限内）、`src/session-guard.mjs`（轮转守卫拆分——session-slots 525→485 行）、`test/design-token-settlement.test.mjs`（AC 测试 7 用例 + consume 补充 1）
 
 ## 5. 验收
 
-AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → spawn eng-coder 通过（token 已落盘）；AC2 = settle 落盘后 spawn 门禁从槽读到 token（缓存 miss 回读）；AC3 = `_engDesignToken` 镜像退役（**零写 + 仅一次性迁移读**——唯一读点在 token-ttl restoreEngTokens，其余运行时读写 grep 零命中）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）；**AC7 = consume 当场落盘删——重启后已消费 token 不从盘复活（consume-design 落盘对称——交付 🔴 复活洞修复）**。
+AC1 = async design 评审 settle 后进程重启（不等回合尾）resume → spawn eng-coder 通过（token 已落盘）；AC2 = settle 落盘后 spawn 门禁从槽读到 token（缓存 miss 回读）；
+AC3 = `_engDesignToken` 镜像退役（**零写 + 仅一次性迁移读**——唯一读点在 token-ttl restoreEngTokens，其余运行时读写 grep 零命中）；AC4 = dispatch 写门读"任一活槽存在"判定资格；
+AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）；**AC7 = consume 当场落盘删——重启后已消费 token 不从盘复活（consume-design 落盘对称——交付 🔴 复活洞修复）**。
 
 ### 测试用例表
 

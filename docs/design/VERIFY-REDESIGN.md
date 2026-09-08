@@ -97,3 +97,4 @@ AC1 = T-V1..V11 全绿（test:full）；AC2 = verify.mjs 不含 `MODULE_TO_TEST`
 - 2026-09-07：立项（用户裁定 verify 改造走工程模式——通用 agent 不 hardcode 项目测试逻辑——需求澄清三轮：①定位=通用门禁；②项目 AGENTS.md 自然语言声明验证方式；③机械检查判定，模型自决执行）。设计落本文档。
 - 2026-09-07 相 1：设计同步评审签发 + 双 eng-coder（CLI+VS Code）交付 clean——工具本体重构 + T-V1..V6b。
 - 2026-09-07 相 2：explore 审计确认 verify 机制整链另三面未跟上（guard 强制端文案/提示词引导/双端一致 G1-G14），设计收口相 2 缺口（D-V9..V11 + T-V8..V11）。
+- 2026-09-08：前身吸收——`VERIFY-DOCONLY.md`（doc-only 快路径专题，2026-08-03 实现记录）并入本档后归档 `_archive/`：其独有信息 = isDocFile 三处判定统一历史（verify 入口/guard/dispatch 门禁同判据——纯文档改动跳过语法与测试、`_verifyPassed=true`、代码改动行为不变）——doc-only 机制已由本档 D-V5 保留段/T-V5 用例接管。

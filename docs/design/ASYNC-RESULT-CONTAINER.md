@@ -11,8 +11,10 @@
 
 ### 功能性需求
 - **F1（池 accessor 吸收双池）**：消费端统一经 accessor（`getAsyncPool(role)`）访问池——底层保留 `_asyncSubagents`/`_asyncAdvisors` 双池（advisor 无队列独立调度），accessor 吸收差异。
-- **F2（pending 单容器+role）**：3 族 pending（`_pendingAsyncResults`/`_pendingEscalateResults`/`_pendingConsultResults`）统一为**单容器 `_pendingAsyncResults`**，条目带 role 字段；consult 裸对象 `{id,role,report}` 升格为完整 entry 形态（同 subagent/advisor/escalate）。**done-in-pool 统一表示（评审 #4）**：留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交（同 subagent/advisor/escalate 现语义）。
-- **F3（settle 共享 helper）**：新建 `src/agent-tools/async-settle.mjs`——公共 settle 收尾（settleSeq/_settle/唤醒 waiter/日志三连/cancelled 分支/挂起分流）抽共享 helper `settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #3——`pendingFamily` 参数删：单容器+role 后冗余，只需 `onAccounting` hook + entry.role）；族特有段（settleAdvisorRun 记账/classifyEscalateSettle/maybeRefillAsync）作 hook 注入。
+- **F2（pending 单容器+role）**：3 族 pending（`_pendingAsyncResults`/`_pendingEscalateResults`/`_pendingConsultResults`）统一为**单容器 `_pendingAsyncResults`**，条目带 role 字段；
+  consult 裸对象 `{id,role,report}` 升格为完整 entry 形态（同 subagent/advisor/escalate）。**done-in-pool 统一表示（评审 #4）**：留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交（同 subagent/advisor/escalate 现语义）。
+- **F3（settle 共享 helper）**：新建 `src/agent-tools/async-settle.mjs`——公共 settle 收尾（settleSeq/_settle/唤醒 waiter/日志三连/cancelled 分支/挂起分流）抽共享 helper `settleAsyncEntry(parent, entry, {pool, onAccounting})`（评审 #3——`pendingFamily` 参数删：单容器+role 后冗余，只需 `onAccounting` hook + entry.role）；
+  族特有段（settleAdvisorRun 记账/classifyEscalateSettle/maybeRefillAsync）作 hook 注入。
 - **F4（守卫统一）**：settle 守卫统一为 `!parentAborted`（escalate 严格版——覆盖 ctx.signal ∨ entry.controller aborted），替代 subagent 的 `!ctx.signal?.aborted`（漏 controller）。
 - **F5（consult 补信号兜底）**：consult 补 `_sessionSignal` 兜底（同 subagent/advisor/escalate——修一致性 bug），统一 buildChildSignal。
 - **F6（buildChildSignal）**：新建/扩展 helper 吸收 `_sessionSignal ?? ctx.signal ?? null` 兜底抄 3 处（subagent-run/advisor-async/escalate）+ consult 补上。
@@ -50,7 +52,8 @@
   - 日志三连（ev:cancelled/child:done|error/ev:settled）
   - cancelled 分支（delete + tombstone + ⟦ev⟧stopped + pushReal 提醒）
   - 挂起分流（pending push + 池 delete + ⟦ev⟧settled/done——统一守卫 `!parentAborted`）
-- 族特有 hook：`onAccounting`（advisor 调 settleAdvisorRun 记账——D1 落盘保留；escalate 调 classifyEscalateSettle——**maybeRefillAsync 从 onAccounting 移出——改公共尾部恒补（交付偏差 2026-09-08：design 把 refill 归入 onAccounting 仅 settled 分支——running 取消的 cancelled 分支将不再补位（挂起会话队列停滞）——修正为公共尾部恒补（subagent/escalate 族；advisor/consult 豁免——同 VSC `refill !== false` 语义——代码内附偏差注 + 回归锁定测试）**）。
+  - 族特有 hook：`onAccounting`（advisor 调 settleAdvisorRun 记账——D1 落盘保留；escalate 调 classifyEscalateSettle——**maybeRefillAsync 从 onAccounting 移出——改公共尾部恒补
+    （交付偏差 2026-09-08：design 把 refill 归入 onAccounting 仅 settled 分支——running 取消的 cancelled 分支将不再补位（挂起会话队列停滞）——修正为公共尾部恒补（subagent/escalate 族；advisor/consult 豁免——同 VSC `refill !== false` 语义——代码内附偏差注 + 回归锁定测试）**）。
 - 调用点改：subagent-run/advisor-async/escalate-async/consult settle 回调改调 `settleAsyncEntry`。
 
 ### D4 守卫统一
@@ -67,12 +70,17 @@
 ## 3. 受影响文件（CLI，thincoder）
 
 - 新建：`src/agent-tools/async-settle.mjs`（settle 共享 helper + buildChildSignal + 池 accessor——预估 ~150 行）
-- 修改：`src/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`src/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/escalate-async.mjs`（~300 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/consult.mjs`（~450 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、`src/agent.mjs`（~410 行，pending 消费单容器——delta ~-15）、`src/agent/run-stages.mjs`（~250 行，池 accessor + pending 清理单容器——delta ~-10）、`src/tui/suspension-drive.mjs`（~380 行，sweep 改调 helper + pending 清理单容器——delta ~-20）、`src/agent-tools/subagent-actions.mjs`（~500 行，池 accessor——delta ~+5，**>300 档位——拆分到 async-pool 子模块若跨 500**）、`src/agent-tools/subagent-scheduler.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-async.mjs`（~450 行，pending 聚合单容器——delta ~-15）
+- 修改：`src/agent-tools/subagent-run.mjs`（~200 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-30）、`src/agent-tools/advisor-async.mjs`（~490 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、
+  `src/agent-tools/escalate-async.mjs`（~300 行，settle 改调 helper + 信号改 buildChildSignal——delta ~-20）、`src/agent-tools/consult.mjs`（~450 行，settle 升格完整 entry + 信号兜底 + 改调 helper——delta ~-10）、
+  `src/agent.mjs`（~410 行，pending 消费单容器——delta ~-15）、`src/agent/run-stages.mjs`（~250 行，池 accessor + pending 清理单容器——delta ~-10）、`src/tui/suspension-drive.mjs`（~380 行，sweep 改调 helper + pending 清理单容器——delta ~-20）、
+  `src/agent-tools/subagent-actions.mjs`（~500 行，池 accessor——delta ~+5，**>300 档位——拆分到 async-pool 子模块若跨 500**）、`src/agent-tools/subagent-scheduler.mjs`（~400 行，池 accessor——delta ~+5）、`src/agent-tools/subagent-async.mjs`（~450 行，pending 聚合单容器——delta ~-15）
 - 文档：本设计 + README 地图登记 + AGENT-LOOP.md 子代理/async §（settle 统一机制记录）
 
 ## 4. 验收
 
-AC1 = settle 记账单点（4 族 settle 回调改调 `settleAsyncEntry`，无逐字重复）；AC2 = pending 单容器+role（3 族统一为 `_pendingAsyncResults`，consult 升格完整 entry）；AC3 = done-in-pool 统一表示（留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交）；AC4 = 守卫统一 `!parentAborted`；AC5 = `_sessionSignal` 兜底统一 buildChildSignal（consult 补上）；**AC6 = CLI/VSC 镜像锚在设计中逐字定稿（settle helper 契约/pending 容器字段/buildChildSignal 语义——供 VSC 面照抄，本批验证锚句一致；AGENT-LOOP.md 记录段锚句同属镜像锚范围——评审 #3）**。
+AC1 = settle 记账单点（4 族 settle 回调改调 `settleAsyncEntry`，无逐字重复）；AC2 = pending 单容器+role（3 族统一为 `_pendingAsyncResults`，consult 升格完整 entry）；
+AC3 = done-in-pool 统一表示（留池 done:true + pending 单容器——`_inPending` 标记保留防重复移交）；AC4 = 守卫统一 `!parentAborted`；
+AC5 = `_sessionSignal` 兜底统一 buildChildSignal（consult 补上）；**AC6 = CLI/VSC 镜像锚在设计中逐字定稿（settle helper 契约/pending 容器字段/buildChildSignal 语义——供 VSC 面照抄，本批验证锚句一致；AGENT-LOOP.md 记录段锚句同属镜像锚范围——评审 #3）**。
 
 ## 测试用例表
 
@@ -89,4 +97,6 @@ AC1 = settle 记账单点（4 族 settle 回调改调 `settleAsyncEntry`，无�
 
 ## 变更记录
 - 2026-09-08：立项。Top-8 #2 async 结果容器统一（STRUCTURE-DEBT 批 E+批 C）——explore CLI 一手核实（settle 4 处重复/pending 3 族/done-in-pool 3 表示/信号兜底抄 3 处+consult 无兜底）+ 用户裁定 4 决策（池 accessor/pending 单容器+role/守卫统一 !parentAborted/consult 补信号兜底）。
-- 2026-09-08：交付偏差记录——D3 maybeRefillAsync 从 onAccounting hook 移出改公共尾部恒补（design 归入 onAccounting 仅 settled 分支——running 取消的 cancelled 分支不再补位致挂起会话队列停滞——修正为公共尾部恒补，subagent/escalate 族；advisor/consult 豁免——同 VSC `refill !== false` 语义）；受影响文件表补 subagent-panel.mjs（§19.6 面板段拆分目标）/test/async-settle.test.mjs/ops.mjs 池访问点未改（不在受影响文件表——D1 正文提及——待下轮）；scheduler describeBlockers/detectStall/queueRunnable 直读池（域专属扫描，advisor 判定 🔵 非缺陷）
+- 2026-09-08：交付偏差记录——D3 maybeRefillAsync 从 onAccounting hook 移出改公共尾部恒补（design 归入 onAccounting 仅 settled 分支——running 取消的 cancelled 分支不再补位致挂起会话队列停滞——修正为公共尾部恒补，subagent/escalate 族；advisor/consult 豁免——同 VSC `refill !== false` 语义）；
+  受影响文件表补 subagent-panel.mjs（§19.6 面板段拆分目标）/test/async-settle.test.mjs/ops.mjs 池访问点未改（不在受影响文件表——D1 正文提及——待下轮）；
+  scheduler describeBlockers/detectStall/queueRunnable 直读池（域专属扫描，advisor 判定 🔵 非缺陷）

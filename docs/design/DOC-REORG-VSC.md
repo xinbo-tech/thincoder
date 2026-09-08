@@ -63,7 +63,9 @@ VSC 19 → 约 28-30 档（净增 ~10 机制档 + WEBVIEW，RESPONSES 并入减 
 
 ## 6. 逐字契约保真 + 漂移（引用 CLI DOC-REWRITE §3/§4/§8 判据）
 
-同批判据：无 >300 行 / markdown 正确 / 逐字锚句保留 / 漂移更新 / 历史折叠随正文迁。**迁出是移动非改写**——ARCHITECTURE 正文块原样移入新档（各档再按需重组当前态），从 ARCHITECTURE 删块防双份。**模块 Split Policy**：先在新档写入移动段（verbatim），再从 ARCHITECTURE 删对应节——任何时刻正文有且仅一份。**AC3 compare 快照（评审 #5）**：byte-exact 对比以**迁移前 ARCHITECTURE 原始状态**为源（先打快照再迁，防删后无法 compare）——各新档重组非锚句正文可改，但锚句须 byte-exact。
+同批判据：无 >300 行 / markdown 正确 / 逐字锚句保留 / 漂移更新 / 历史折叠随正文迁。**迁出是移动非改写**——ARCHITECTURE 正文块原样移入新档（各档再按需重组当前态），从 ARCHITECTURE 删块防双份。
+**模块 Split Policy**：先在新档写入移动段（verbatim），再从 ARCHITECTURE 删对应节——任何时刻正文有且仅一份。
+**AC3 compare 快照（评审 #5）**：byte-exact 对比以**迁移前 ARCHITECTURE 原始状态**为源（先打快照再迁，防删后无法 compare）——各新档重组非锚句正文可改，但锚句须 byte-exact。
 
 ## 7. 执行模型
 
@@ -74,7 +76,9 @@ VSC 19 → 约 28-30 档（净增 ~10 机制档 + WEBVIEW，RESPONSES 并入减 
 
 ## 8. 验收
 
-AC1 = 拆分后各文件无 >300 行（check-doc-width.mjs；薄 ARCHITECTURE 若 §14 差异表使总量逼近限制则先瘦表——评审 #4）；AC2 = markdown 正确；AC3 = 迁出锚句 byte-exact 未改（compare 源 = 迁移前 ARCHITECTURE 章节快照）；AC4 = ARCHITECTURE 瘦身为薄枢纽（§4-§13 机制节迁出，无残留双份）；AC5 = README 地图登记全部新档 + 板块归属对齐 CLI；AC6 = 每 VSC 机制档含 ≥1 条本端实现接线描述（非指针空壳——评审 #1：grep 有 VSC 特有符号 / 非"仅见 CLI §x 指针"）。
+AC1 = 拆分后各文件无 >300 行（check-doc-width.mjs；薄 ARCHITECTURE 若 §14 差异表使总量逼近限制则先瘦表——评审 #4）；AC2 = markdown 正确；
+AC3 = 迁出锚句 byte-exact 未改（compare 源 = 迁移前 ARCHITECTURE 章节快照）；AC4 = ARCHITECTURE 瘦身为薄枢纽（§4-§13 机制节迁出，无残留双份）；
+AC5 = README 地图登记全部新档 + 板块归属对齐 CLI；AC6 = 每 VSC 机制档含 ≥1 条本端实现接线描述（非指针空壳——评审 #1：grep 有 VSC 特有符号 / 非"仅见 CLI §x 指针"）。
 
 ## 变更记录
 
