@@ -12,7 +12,7 @@
 ## 文档债 / ARCHITECTURE 漂移（doc-sweep 候选——是否已被 VSC 文档批覆盖需核）
 - [ ] **设计评审 advisory 未实现项**：design round2 专用提示词 / ARCHITECTURE 补 NFR 小节 / 原则 2 改述 / PROVIDER_PRESETS 静态镜像说明 / 模块小节补 memory/repomap/specs/extension/prompts / §6§3§4 补懒历史·双通道·Ctrl+I·readSSE / runAgent 签名 input→text / §4 补 thinkEnabledValue·noUsageStream / advisor 工具补 lsp
 - [ ] **模块图补录**：`src/extension/panel-chat.mjs` / `webview/streaming.js` / `webview/panels.js` / `webview/state.js` 未入 AGENTS.md 模块图与 ARCHITECTURE——既有漂移
-- [ ] **VSC agent/setup.mjs 396 行**（>300 advisory——2026-09-08 实测已增长至 396，非原记 331）——下次触碰拆
+- [ ] **VSC agent/setup.mjs 500 行**（>500 硬限边缘——2026-09-08 agent 生命周期交付后 396→500——advisor 🟡 零余量）——拆 §11 纯函数族 ~90 行（resetRunState/reconcileEngDesignTokens/applySlotSessionState 独立模块）——下次触碰拆
 - [ ] **vscode qwen 请求 thinking 未设置时携带 `thinking:{type:"enabled"}`**（智谱式参数，GLM 修复引入的通用 spec 默认注入）——百炼兼容性属 Qwen enable_thinking 范畴——知悉观察
 
 ## Issue 巡检登记
