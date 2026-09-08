@@ -8,18 +8,54 @@
 
 记录跨双仓的**结构债（屎山度）评估**与**分批清理路线**。结构债病痛与治疗时机错开（平时无症状、撞上才暴露），靠文档显式追踪防止"挂账不处理"。每批独立立项（设计→评审→实现），本档是分批入口路由。
 
-## 2. 评估方法（2026-09-07 fresh scan）
+## 2. 评估方法（2026-09-07 fresh scan——第二次评估）
 
 只读 thorough：双树逐目录字节探针 → ≥14KB 源码 offset 探针取精确行数 → 状态层/工具层 grep 全树。排除无关树（ai-gateway/kimi-code/oh-my-pi/thin4/thin5）。**已消解项不计债**：测试清零（.test.mjs=0）、verify 通用门禁重构、TOOLS.md 重写、多数文件尺寸债。
 
-## 3. 已消解（勿当债）
+
+## 3. 前身评估：第一次屎山度扫描（2026-09-07 初——会话落盘补记）
+
+> 2026-09-08 补落盘：第一次评估（7 proxy + Top-8 原始清单）当时只留会话历史（slot 27），未成文档（拟落本档时被另一实例占 docs 区搁置）。本节为历史完整性——原始 Top-8 与本节第二次 Top-8 是**两套不同清单**（第一次 = proxy 视角：状态搬运/token/文档为主；第二次 = 2026-09-07 fresh 重排）。消解追溯见下表。
+
+### 第一次 7 proxy 严重度（原报告）
+
+| Proxy | 严重度 | 核心发现 |
+|---|---|---|
+| 1. 状态搬运 | 高 | `_engDesignToken(s)` 摊 9+ 文件；async 结果 5 容器跨 ~12 文件；`_sessionSignal` 四处复制 |
+| 2. torn-state guard | 高(token)/中 | mirror∈slots 不变量、`token-ttl.mjs` 整模块 = 防"同进程不可能撕裂"的状态 |
+| 3. 过度防御 | 中-高 | 70+ 处兜底；abort 双保险在 execute/system/shared 三处重复 |
+| 4. 债注记密度 | 极高（文档） | AGENT-LOOP.md 536KB 单文档、~59 份碎片文档、历史批注只增不减 |
+| 5. 超大文件 | 代码低/测试高/文档极高 | src 已拆小；测试 26(CLI)+17(vscode) 个 >500 行未拆（后测试清零消解） |
+| 6. 命名漂移 | 中-高 | `_engDesignReviewed` 注释与实现不符；recent_changes vs recent-changes；agent/history 混用 |
+| 7. 同型补丁家族 | 高 | token/async 生命周期/工程模式双归属/`_permQueue`×3/`_inheritedGuard` 全同型 |
+
+### 第一次 Top-8 原始清单 + 消解追溯（2026-09-08 核）
+
+| # | 债 | 状态（2026-09-08） |
+|---|---|---|
+| 1 | `_engDesignToken(s)`+TTL+序列化 → 单一会话级 owner | ✅ 完成（token 结算根治双端——CLI a7e78b0/08cabb9 + VSC 159a39f + consume 落盘） |
+| 2 | async 结果 5 容器生命周期 → 单一 owner | ✅ 消解（async-settle.mjs 统一——CLI 2de2a04 + VSC 5a85a20 = 本节第二次 Top-8 #2/批 E） |
+| 3 | AGENT-LOOP.md 536KB + 59 份文档瘦身 | ✅ 完成（CLI+VSC 文档批 + ARCHITECTURE 拆分）——剩余格式债见第二次 #1/批 A |
+| 4 | 跨树去重（agentState vs engTokenSlotFields） | ⏳ 未做（#2 消解后大半解决——需核剩余） |
+| 5 | 工程模式布尔双归属合并 | ⏳ 未做（ENG-SESSION-PROVIDER-CLEANUP 部分处理） |
+| 6 | 同物多名统一 | 🔄 部分（token 镜像退役消解部分；scope/layer 统一 2026-09-08 同类） |
+| 7 | `_permQueue`/`_sessionSignal` 收 helper | 🔄 部分（consult `_sessionSignal` 兜底并入 buildChildSignal 2026-09-08；`_permQueue` 未） |
+| 8 | 防御三工具去重 + TUI 兜底收敛 | ⏳ 未做 |
+
+**第一次 vs 第二次清单关系**：第一次聚焦**状态归属架构**（token/async 容器/同型补丁——多被 2026-09-08 前的双端机制统一消解）；第二次（本节 §4）重排后聚焦**文档格式债 + 容器分叉 + `_` 字段摊平**——两清单有交叠（async 容器、命名漂移/同物多名），第二次为现行路线（§7 分批 A-F）。
+
+
+
+## 4. 已消解（勿当债）
 
 - 测试文件全清零（.test.mjs=0，按需新加政策）
 - verify 工具本体重构为通用门禁（CLI 280/VSC 322 行）
 - TOOLS.md 重写干净（13.2KB，唯一格式干净大件）
 - 早期文件尺寸债大部消散（agent.mjs 530→396、session-slots 拆分等）
+- **async 状态容器统一（2026-09-08——第二次 Top-8 #2/批 E）**：CLI async-settle.mjs（settleAsyncEntry 四族单点 + pending 单容器 + 池 accessor + buildChildSignal）+ VSC 镜像——双查询/双删/容器名分叉消解
+- **async settle 去重（2026-09-08——第二次 Top-8 #7/批 C）**：settle→pending+waiter 唤醒逻辑四族收口 settleAsyncEntry 单点
 
-## 4. Top-8 结构债（2026-09-07 实测）
+## 5. Top-8 结构债（2026-09-07 实测）
 
 ### #1 设计文档单行整节坏格式（🔴 高 · 最高债）
 
@@ -75,20 +111,22 @@
 **现象**：state/tools/prompts/advisor 层双端整片存在，靠镜像锚/fork；#2/#4/#6 是复制漂移的具体表现。
 **方向**：维持语义锚文档为唯一权威源 + 双端镜像断言，收缩自由复制面。
 
-## 5. 源码 >500 行清单（实测，仅 2 处）
+## 6. 源码 >500 行清单（实测，仅 2 处）
 
 | 文件 | 行数 | 状态 |
 |---|---|---|
 | CLI `src/tools/system.mjs` | 506 | 超硬限——见 #5 |
 | CLI `src/agent-tools/advisor-async.mjs` | 538 | 超硬限（最近 R13/§24 增量推过限）——本批 R13 相关设计已在动，拆分宜随 R13 后续批处理 |
 
-advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、memory/core 300（delete 族 2026-09-08 拆分 delete.mjs 234）、docs 414（>300 建议线——memory 工具层 2026-09-08 改动后 406→414，既有债观察）、subagent-actions 463、file 443、acp 443、consult 443、shared 447、config 428、dispatch 435；VSC subagent 488、file-edit 456、subagent-async 451、execute-tools 439、suspension 422）——均 <500 不触发硬限，记录观察。
+advisory 400-500 带（均 <500 不触发硬限，记录观察）：
+- CLI：advisor/run 499、session 483、session-slots 476、memory/core 300（delete 族 2026-09-08 拆分 delete.mjs 234）、docs 414（>300 建议线——memory 工具层 2026-09-08 406→414 既有债）、subagent-actions 463、file 443、acp 443、consult 443、shared 447、config 428、dispatch 435
+- VSC：subagent 488、file-edit 456（2026-09-08 hashline-edit.mjs 拆分后 452）、subagent-async 451、execute-tools 439、suspension 422
 
-## 6. 分批清理路线
+## 7. 分批清理路线
 
 | 批 | 债 | 规模 | 建议时序 |
 |---|---|---|---|
-| 批 A | #1 文档格式债（双端 ~70 坏格式文档重写为人类可读） | **超大** | 本档 §7 详列分批；已启（归档 8 文件已移） |
+| 批 A | #1 文档格式债（双端 ~70 坏格式文档重写为人类可读） | **超大** | 本档 §8 详列分批；已启（归档 8 文件已移） |
 | 批 B | #5 system.mjs 拆分 + #6 工具归位 | 中 | 独立清理批（TOOLS.md 尾 TODO 已记"拆分会动整个工具组"） |
 | 批 C | #7 settle 逻辑去重 + abort 去双保险 | 小中 | 抽 helper |
 | 批 D | #3 `_` 字段归组 capsule | 大 | 高收益，需设计（状态归属重构） |
@@ -97,7 +135,7 @@ advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、m
 
 每批独立走工程模式（设计→评审→eng-coder）。本档只路由，不承载单批设计正文（设计落各自板块文档或批专属设计文档）。
 
-## 7. 批 A——文档格式债清理计划（2026-09-07 用户裁定推进）
+## 8. 批 A——文档格式债清理计划（2026-09-07 用户裁定推进）
 
 **目标**：双端全部坏格式设计文档重写为**人类可读** markdown（领导审核级）。方法 = TOOLS.md 样板（用户裁定"统一"）：**保留当前机制正文，历史变更流水账折叠/精简**。
 
@@ -134,5 +172,7 @@ advisory 400-500 带（CLI advisor/run 499、session 483、session-slots 476、m
 
 ## 变更记录
 
+- 2026-09-08：第一次屎山度评估补落盘（原只留会话 slot 27）——新增 §3 前身评估节（7 proxy + 原始 Top-8 + 消解追溯——两套清单关系）；§4 已消解补 async 容器统一/async settle 去重（今日交付）；重编号 §5-§8；§6 advisory 带拆行。
+
 - 2026-09-07：立项。fresh scan（explore）完成——双树结构债评估 + top-8 + 已消解项核实。落本档。结构债此前已部分登记 docs/TODO.md（system.mjs 拆分、verify.mjs 拆分等），本档为横切总账。
-- 2026-09-07：批 A 启动（文档格式债）。归档 8 文件移 _archive（纯历史/被取代）。§7 落详细分批计划（CLI A1-A8 + VSC V1-V5 + 人类可读判据 4 条 + 处置分类）。用户裁定：处置 = 被取代归档 / 已实现保留重写；方法 = TOOLS.md 样板统一。
+- 2026-09-07：批 A 启动（文档格式债）。归档 8 文件移 _archive（纯历史/被取代）。§8 落详细分批计划（CLI A1-A8 + VSC V1-V5 + 人类可读判据 4 条 + 处置分类）。用户裁定：处置 = 被取代归档 / 已实现保留重写；方法 = TOOLS.md 样板统一。
