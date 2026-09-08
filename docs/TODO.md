@@ -87,6 +87,12 @@
 - [x] ~~**父 agent 观察运行中子代理（功能①）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——observe 动作：按 id 拉 5 条回合摘要+当前工具+turn/touched，治父看不到中间）
 - [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
 - [x] ~~**designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**~~——**2026-09-09 用户裁取消**（想法改变——eng 模式主会话本身就是 designer——设计已在主会话内实现（本会话全部设计档）——不建独立 designer 子代理角色——原需求的"designer 提示词固化"诉求由主会话既有设计纪律覆盖（METHODOLOGY 三层/文档地图/受影响表——无需新角色））
+- [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
+  设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
+  对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）
+  ——**载体确认（用户 2026-09-09）**：行为纪律（执行性——自检/选型/勘察流程）写入 **engineering.md 提示词**
+  （eng 实际注入——当场遵循）+ 结构定义（三层/单一锚）留 **METHODOLOGY 文档**——双端（CLI/VSC
+  prompts 同构）——排批后走设计链——status=awaiting design
 - [x] ~~**memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**~~——**已实现**（2026-09-08 双端交付：CLI `528d2ab` / VSC `426b574`——scope→layer 全统一 + delete layer 可选 + 尊重 uid origin + list [layer] 标签——设计链闭合 consume）
 - [x] ~~distill 子系统 scope→layer~~——**已实现**（2026-09-08 交付 commit 26cd89f——--layer 命令面 + --scope 显式报错两形态 + 读时归一 L124 + 错误串 layer + test 8 用例——设计链评审通过）——遗留：
     ①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）
