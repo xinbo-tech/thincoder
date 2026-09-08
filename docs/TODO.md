@@ -35,3 +35,5 @@
 - [ ] **digest 开始无可见指示（2026-09-08 用户实测——对齐 CLI）**：异步子 agent 完成 → 区块并入会话流后长时间无动静（消化已开始但在等消化模型首 token，VSC 只 logEvent 不画指示）。CLI 一进 digestTurn 即画 [auto-turn: digesting…]（零延迟）。改：VSC 消化分支补即刻 host→webview 指示（digesting N finished reports…）+ 状态行置忙，首 token 前不空白——归属 suspension.mjs digest 分支 + webview
 - [x] ~~**eng-coder 标题栏末尾总显示 thinking**~~——**2026-09-08 核销**（代码证据：activity.js:150-154 stateWord CLI currentTool parity + :262-274 chunk 级 think→thinking/tool→行尾 state word + chat.js:138-139/status-bar.js:31 _currentTool 实时清/置——固定 thinking 误导已消除）
 
+## 提示词同步（2026-09-08 env-state 实现后）
+- [ ] **system.md:24 env-state 描述未含 slot**（SESSION §11.2 实现后漂移——双端逐字同步——与 CLI TODO 同项）
