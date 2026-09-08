@@ -160,14 +160,19 @@ export function renderSubagentPanel(state, cols, maxRows) {
       : ""
     let headText = `${bracket} ${sliceByWidth(statePart + argSummary, Math.max(0, cols - 2 - bracketWidth))}`
     const line = { color: C.tool, _foldToggle: foldKey }
-    // §19.5 D-M7 ⏹ + D-M7b ③ 门控：⏹ 只对 async 区块（running && SUBAGENT_ROLES &&
-    // sub.async——sync 区块无 ⏹——杜绝"可见但不可中止"误导——用户裁定 B 形态）。
-    // done/awaitingDigest/压缩面板（role compress）/consult 无标记（点击只对池内
-    // async 子代理有意义）：dim 停止标记钉在折叠头右缘**内收一列**（code review
+    // §19.5 D-M7 ⏹ + D-M7b ③ 门控 + SYNC-CANCEL F3（2026-09-09）：⏹ 只对 **live 可中止**
+    // 区块——async（running && sub.async——⟦ev⟧async 置位）∪ **sync registry live**
+    // （state._agent?._syncChildAborts?.has(sub.key)——阻塞 spawn 运行期注册——成功/折叠/
+    // 整回合停后 finally 注销——门控自动放下）——杜绝"可见但不可中止"误导。真实 subagent
+    // 角色（SUBAGENT_ROLES）+ advisor；escalate/consult/compress 无 registry 无 ⏹。
+    // **headless/测试无 _agent → sync 不钉 ⏹**（registry miss——零回归——AC6）；async
+    // 区块不依赖 _agent（sub.async 置位即钉）。done/awaitingDigest 无标记（点击只对池内/
+    // registry 内 live 子代理有意义）：dim 停止标记钉在折叠头右缘**内收一列**（code review
     // 🟡#1——glyph 在 cols−1、最右列留 margin——避免终端最末列点击不可靠/全角字形
     // 顶格被裁；命中区 = col ≥ _stopCol = cols−1——含 glyph 与其右 margin，左邻
     // padding 空格仍走折叠）。整行 ≤ cols：内容先按 cols−3 截断。
-    if (!sub.done && sub.async === true && (SUBAGENT_ROLES.includes(sub.role) || sub.role === "advisor")) {
+    const registryLive = state._agent?._syncChildAborts?.has(sub.key) === true
+    if (!sub.done && (sub.async === true || registryLive) && (SUBAGENT_ROLES.includes(sub.role) || sub.role === "advisor")) {
       const cut = sliceByWidth(headText, Math.max(0, cols - 3))
       headText = cut + " ".repeat(Math.max(0, cols - 3 - stringWidth(cut)))
       line.text = `${headText} ${ansi.dim}⏹${ansi.reset} `

@@ -9,6 +9,29 @@ import { C } from "./ansi.mjs"
 import { readClipboardText, insertPastedText } from "./clipboard.mjs"
 import { QUESTION_CUSTOM } from "./interaction.mjs"
 
+/** SYNC-CANCEL v2 模态 deny 解绕（用户裁——2026-09-09）：⏹ 定向中止 sync child 时
+ *  顺带 deny 其 pending 权限/continue 模态——ask 不观 signal（R1——targeted abort 后
+ *  child 停在模态则 runChildPipeline 不返回、父回合阻塞至模态回答）。owner 判定：
+ *  工具权限 ask name 前缀 `${key}/`（subagent-spawn.mjs 装配——owner key 标识）；continue
+ *  ask args.agent === key（subagent.mjs askSubagentContinue 既有参数）。副作用镜像
+ *  handlePermissionMode deny 分支（清除模态 + deny 轨迹 + resolve(false)——子代理随即
+ *  在 abort 检出点解绕折叠）。返回 true = 本模态属该 child 且已 deny 解绕。鼠标 ⏹ 路径
+ *  （mouse.mjs cancelSubagent）调用——key-modes 是权限模态归属语义的驻点。 */
+export function denyModalForOwner(state, key, { pushLine, render } = {}) {
+  const p = state?.permission
+  if (!p) return false
+  const owned = (typeof p.name === "string" && p.name.startsWith(`${key}/`)) || p.args?.agent === key
+  if (!owned) return false
+  const { resolve, name } = p
+  state.permission = null
+  state.permissionPreview = []
+  state.status = "Processing..."
+  pushLine?.(`  [denied] ${name}`, C.error)
+  resolve(false)
+  render?.()
+  return true
+}
+
 /** permission 确认模态：y/n/a（a = approve + AUTO ON）；batch（§16 D-B1）：a/o/n（Esc = deny）。
  *  consume：valid 键或 Esc 走 resolve 分支；其余键静默吞掉（模态独占）。 */
 export function handlePermissionMode(str, key, ctx) {

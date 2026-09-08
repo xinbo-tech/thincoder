@@ -284,7 +284,17 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   } else {
     childPermission = async (name, toolArgs) => {
       if (!ctx.onPermissionRequest) return false
-      const ask = () => ctx.onPermissionRequest(`${role ?? "sub"}/${name}`, toolArgs)
+      // SYNC-CANCEL v2（用户裁——2026-09-09）：工具权限 ask 加 owner key 标识——
+      // name `${key}/${tool}`（原 `${role}/${tool}` 无 key——模态 deny 归属判定 +
+      // 显示可辨 child）；relayPrefix 在 buildSpawnChild 尾部定值——闭包运行于 child
+      // 实际 runAgent（buildSpawnChild 返回后）——无 TDZ 风险
+      const ownerKey = relayPrefix.slice(0, -1)
+      const ask = () => {
+        // ⏹ 后（entry.stopped）不再弹模态——直接拒绝（_permQueue 排队 ask 到达时查
+        // stopped 旗标——子代理随即在 abort 检出点解绕——v2 模态 deny）
+        if (parent._syncChildAborts?.get(ownerKey)?.stopped) return Promise.resolve(false)
+        return ctx.onPermissionRequest(`${ownerKey}/${name}`, toolArgs)
+      }
       // Queue parallel child agent permission requests to avoid two popups simultaneously overwriting each other (lesson from question tool)
       return enqueueAsk(parent, "_permQueue", ask)
     }

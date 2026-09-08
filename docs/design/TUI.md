@@ -395,11 +395,18 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   （与 model 标识同生命周期）；**旧区块（无 async 字段）回退标 sync**（数据无法区分历史 async——
   显示层已知回退）。model 名先按显示宽度截断（≤cols/3——防模型名撑破括号宽度预算），状态区按
   剩余宽度截断——整行 ≤ cols 铁律。
-- **⏹ 停止标记（门控）**：**仅 running && SUBAGENT_ROLES/advisor && sub.async 的
-  async 区块**——sync 无 ⏹（杜绝"可见但不可中止"误导）；dim，钉在折叠头右缘**内收一列**（glyph
-  在 cols−1、最右列留 margin——终端最末列点击不可靠/全角字形顶格被裁）；命中区 = col ≥ _stopCol
-  （cols−1），点击 = 定向 cancel（ctx.cancelSubagent → cancelAsyncSubagent/cancelAsyncAdvisor——
-  池条目定向 abort，不经模型回合——不触发折叠翻转），左邻 padding 与 sync 头右缘点击 = 折叠切换。
+- **⏹ 停止标记（门控）**：**仅 running && SUBAGENT_ROLES/advisor &&（sub.async === true
+  ∪ sync registry live）的区块**——async 由 `⟦ev⟧async` 置位；**sync 由
+  `state._agent._syncChildAborts` live 判据（SYNC-CANCEL——2026-09-09：阻塞 spawn 运行期
+  注册 {ctrl, stopped}——成功/折叠/整回合停 finally 注销——⏹ 随注册出现随注销消失）**——
+  钉与可中止一一对应（杜绝"可见但不可中止"误导；headless/测试无 _agent → sync 不钉——
+  零回归）；dim，钉在折叠头右缘**内收一列**（glyph 在 cols−1、最右列留 margin——终端最末
+  列点击不可靠/全角字形顶格被裁）；命中区 = col ≥ _stopCol（cols−1），点击 = 定向 cancel
+  （ctx.cancelSubagent → cancelAsyncSubagent/cancelAsyncAdvisor（池条目定向 abort）/sync
+  registry 经 cancelSyncChild（⏹ 顺带 deny 该 child 的 pending 权限/continue 模态——v2 模态
+  deny 解绕）——不经模型回合——不触发折叠翻转），左邻 padding 与无 ⏹ 块右缘点击 = 折叠切换；
+  sync ⏹ 中止 = 折叠 stopped partial 报告（merge + STOPPED_MARK + partial 警示——块冻结标
+  stopped 而非 done——父回合继续拿报告）——机制正文见 AGENT-LOOP.md §7.2 cancel 边界注。
 - **waiting/queued 块（排队面板 UX——AGENT-LOOP §10/§10.3）**：排队 spawn 返回即建面板块（不等子代理首 token）；括号状态
   词 = `waiting`（依赖未满足/域冲突——状态区 `waiting for: …` 原因恒标；依赖取消/失败滞留恒标
   `dependency cancelled`——不静默）或 `queued`（槽满等位——`queued · position N（槽满等位）`）；

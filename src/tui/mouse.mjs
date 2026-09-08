@@ -17,8 +17,9 @@
 import { computeLayout, subagentLineIndex } from "./layout.mjs"
 import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
-import { cancelAsyncSubagent } from "../agent-tools/subagent-async.mjs"
+import { cancelAsyncSubagent, cancelSyncChild } from "../agent-tools/subagent-async.mjs"
 import { cancelAsyncAdvisor } from "../agent-tools/advisor-async.mjs"
+import { denyModalForOwner } from "./key-modes.mjs"
 import { C } from "./ansi.mjs"
 
 /** 2026-08-31 滚轮事件分派（用户需求"展开块能滚动阅读全文"）：坐标命中展开块内容行 →
@@ -128,10 +129,11 @@ export function handleMouseClick(ctx, col, row) {
     // 评审 #4：保底截断后可见行 ≠ 前 h 行——命中映射与 render-frame 同一几何契约
     // （subagentLineIndex：分隔线 + 末尾区块行优先）。
     const lineEl = layout.subagentLines[subagentLineIndex(layout.subagentLines, P.subagent.h, r - P.subagent.y)]
-    // §19.5 D-M7/D-M7b ⏹ 停止标记（round1 #6 + 用户裁定 B 形态）：列级命中——⏹ 列
-    // 点击 = cancel（定向该子代理——ctx.cancelSubagent 直连池 abort 路径，不经模型
-    // 回合），不触发折叠翻转；**仅 async 区块带 _stopSub 元数据**（sync 无 ⏹——
-    // 其右缘点击照常走折叠翻转——D-M7b ③）；⏹ 区外点击照常走折叠/翻窗。
+    // §19.5 D-M7/D-M7b ⏹ 停止标记（round1 #6 + 用户裁定 B 形态）+ SYNC-CANCEL F3
+    // （2026-09-09）：列级命中——⏹ 列点击 = cancel（定向该子代理——ctx.cancelSubagent
+    // 直连池/registry abort 路径，不经模型回合），不触发折叠翻转；**async 区块与 registry
+    // live 的 sync 区块带 _stopSub 元数据**（headless 无 _agent → sync 不钉——零回归）；
+    // ⏹ 区外点击照常走折叠/翻窗。
     if (lineEl?._stopSub && col >= (lineEl._stopCol ?? Infinity)) {
       ctx.cancelSubagent?.(lineEl._stopSub)
       render()
@@ -188,17 +190,31 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
       const isAdvisorBlock = key.startsWith("advisor#")
       // §24 D-24b (②-6b): ⏹ on an advisor block cancels the background review
       // (directed abort → cancelled settle: no pending entry / no token).
-      const r = isAdvisorBlock
+      // SYNC-CANCEL F3: async 池/advisor miss 后查 sync registry（⏹ 门控已放开 sync——
+      // cancelSyncChild 与 async cancel 同模块同形态——subagent-async.mjs）。
+      let r = isAdvisorBlock
         ? cancelAsyncAdvisor(agent, id)
         : cancelAsyncSubagent(agent, id)
+      let syncStopped = false
+      if (!isAdvisorBlock && r?.status === "error") {
+        r = cancelSyncChild(agent, key)
+        syncStopped = r?.status === "cancelled"
+      }
       if (r?.status === "error") {
-        // 池内无此条目但区块仍 live（!done）→ 阻塞型（sync）spawn 中——无池条目可定向
-        // 中止（§19.5 cancel 只针对 async 后台子代理）；给出可操作指引而非神秘 unknown id
+        // 拒绝文案改（SYNC-CANCEL）：registry/池 miss + live 块 → 定向中止窗口已过
+        // （成功/折叠/整回合停后 finally 注销——"finished or stop no longer applies"——
+        // 原 "blocking (sync) child mid-call — targeted stop not available" 文案退役——
+        // sync 现已可中止）；无 live 块（真 miss/未知 key）→ 原错误直显。
         const liveBlock = state.subTasks?.[key] && !state.subTasks[key].done
         pushLine(liveBlock
-          ? `[subagent stop] ${key} is a blocking (sync) child mid-call — targeted stop is not available; use Ctrl+C to interrupt the turn`
+          ? `[subagent stop] ${key} has finished or stop no longer applies`
           : `[subagent stop] ${r.error}`, C.error)
       } else {
+        // SYNC-CANCEL v2 模态 deny（用户裁）：**sync ⏹** 顺带 deny 该 child 的 pending
+        // ask（权限/continue 模态）——模态立即解除——child 解绕折叠（async cancel 的
+        // 同类缺陷现状已知——非本批引入——v2 deny 机制后续可复用到 async——此处仅
+        // syncStopped 路径 deny——async 成功取消不 deny 模态——零回归）。
+        if (syncStopped) denyModalForOwner(state, key, { pushLine, render })
         pushLine(`[subagent ${key} stop requested]`, C.warn)
       }
     } catch (e) {

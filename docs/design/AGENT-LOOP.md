@@ -221,7 +221,42 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 "Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first; prefer scoped recovery (restore a single affected file) over killing the child — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited."
 `action:"status"` running 条目带 **touched files 摘要**（复用 `_touchedFiles`——杀前看得见代价——前 5 + 截断）。`action:"observe"` running 条目同样带 touched 摘要 + recentTurns + currentTool。
 
-**变更记录**：2026-09-03 五动作（含 escalate 并入/status/cancel/panel）→ 2026-09-06 check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 observe/send（SUBAGENT-OBSERVE-SEND）——五 → 七动作。
+**sync 定向中止（SYNC-CANCEL——2026-09-09 机制正文；专题设计 SYNC-CANCEL.md——README
+随核销登记）**：
+- **面**：CLI TUI **顶层 sync 块**（sync spawn——深度>0 或阻塞调用）运行中 ⏹ 可点——
+  定向中止（只停子代理——父回合继续拿 stopped 报告）。嵌套层无独立 ⏹ 面（F5 逐层自属
+  controller 链传播）；VSC webview 不同构——单独立项；escalate sync 块无 ⏹ 面；
+  **action:"cancel" 只对 async 池/advisor 池——sync 由 ⏹ → cancelSyncChild 直连**
+  （subagent-async.mjs——与 cancelAsyncSubagent 同模块同形态）。
+- **信号链（F1/F5）**：sync 阻塞分支（subagent.mjs execute）runChildPipeline 前建**自属**
+  AbortController——`armSyncChildAbort`（childRunOpts.signal 覆写 ctrl.signal——照抄 async
+  分支覆写模式——buildChildRunOpts 不改——escalate/consult 零触碰）；ctrl 链到基信号
+  `buildChildSignal`（`_sessionSignal ?? ctx.signal`——挂起 digest 场景 ctx.signal 未 abort
+  而 base aborted——R2）——Ctrl+C/I 整回合停语义不变（base abort 逐链传播）；**注册
+  `parent._syncChildAborts`**（Map——key = relayPrefix 去尾 `role#N`——{ ctrl,
+  stopped:false }——与 async 条目 controller 存池分层一致）——try/finally **三路径注销**
+  （成功/折叠/整回合停——R7 防跨回合残留）。
+- **catch 三分支（F2）**：纯函数 `classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err)`
+  ——① base/ctx aborted → 整回合停现状保留（rethrow）；② err AbortError && ctrl aborted
+  && 非整回合停 → **折叠**：eng-coder mergeChildMutations（escalate runner 先例）+ stopped
+  partial 报告（STOPPED_MARK 公共锚 + `_capturedOutput` + eng-coder designId 后缀）+
+  ⟦ev⟧stopped 直发（TUI 块冻结标 stopped 而非 done——R6）+ 正常 return（ctx._subagentKey
+  照设——成功冻结管线复用）；③ 其他错误现状保留。
+- **TUI 三层**：面板门控 `!sub.done && (sub.async === true ||
+  state._agent?._syncChildAborts?.has(sub.key)) && (SUBAGENT_ROLES/advisor)`（headless/测试
+  无 _agent → sync 不钉——零回归）；mouse 命中区零改动——cancelSubagent 池/advisor miss 后
+  查 sync registry → cancelSyncChild；**v2 模态 deny（用户裁）**：⏹ 顺带 deny 该 child 的
+  pending 权限/continue 模态（ask 加 owner key 标识——name `${key}/${tool}`；continue ask
+  args.agent=key 既有）——模态立即解除（child 随即在 abort 检出点解绕折叠）；`_permQueue`
+  排队 ask 闭包查 entry.stopped 旗标 → 不弹模态直接拒绝。该缺陷 async cancel 同样存在
+  （现状已知——非本批引入——v2 deny 机制后续可复用 async）。
+- **STOPPED_MARK**（spawn-child.mjs TURN_CAP_MARK 旁——"stopped by user"）：折叠报告公共
+  锚——tool-events onToolResult partial 检测扩展该串（块冻结标 stopped 而非 done）。
+
+**变更记录**：2026-09-03 五动作（含 escalate 并入/status/cancel/panel）→ 2026-09-06
+check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 observe/send
+（SUBAGENT-OBSERVE-SEND）——五 → 七动作 → 2026-09-09 sync ⏹ 定向中止
+（SYNC-CANCEL——本节 cancel 边界注）。
 
 ### 7.3 async 子代理（后台并行）
 

@@ -24,7 +24,7 @@ import {
   routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "./subagent-blocks.mjs"
-import { TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { TURN_CAP_MARK, STOPPED_MARK } from "../agent/spawn-child.mjs"
 // 2026-09-05 module-split：ticks/maps/sweep/slim/settle/探测/find 族迁 tool-display.mjs——
 // buildToolCallbacks 内部引用用本地 import；sweepToolBlocks re-export（agent-turn 消费面）
 import {
@@ -175,7 +175,9 @@ export function buildToolCallbacks(deps) {
           //    不冻结任何块（round1 #1——错误路径不冻结 running 块——T-F5）；
           // ③ subKey undefined 非错误（老回调/测试直调——成功路径未知工具）→ 启发式
           //    兜底（既有行为不变——面板单块时与精确冻同效——T-F1）。
-          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null
+          // SYNC-CANCEL（R6）：⏹ 折叠报告带 STOPPED_MARK——块冻结标 stopped 而非 done
+          // （lastError 注记 + 事件定格——兜底竞态窗口的 dispatch 精确冻路径）
+          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
           const hasSubKey = subKey !== undefined && subKey !== null && subKey !== ""
           if (hasSubKey) {
             finishSubTaskKey(state, String(subKey), lastError)
@@ -202,7 +204,9 @@ export function buildToolCallbacks(deps) {
           // §7.2.3（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
           // 失败/老回调无 subKey → escalate 角色启发式兜底（escalate 串行 + 角色限定——
           // 既有行为）。
-          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : null
+          // SYNC-CANCEL（R6）：同上——escalate 路径同款扩展（sync escalate 无 registry——
+          // 恒不折叠——扩展仅口径一致——零行为变化）
+          const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
           if (subKey !== undefined && subKey !== null && subKey !== "") {
             finishSubTaskKey(state, String(subKey), lastError)
           } else {

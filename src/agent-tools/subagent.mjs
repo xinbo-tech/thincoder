@@ -19,14 +19,74 @@
  * → ./subagent-run.mjs——execute 只保留动作分流 + 装配调用 + 阻塞路径。
  */
 
-import { gateEngCoderSpawn, TURN_CAP_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
+import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
 import { logEvent, errText } from "../log.mjs"
 import {
-  runChildPipeline, executeCancelAction, enqueueAsk,
+  runChildPipeline, executeCancelAction, enqueueAsk, mergeChildMutations,
 } from "./subagent-async.mjs"
+// SYNC-CANCEL（L52——2026-09-09）：阻塞路径自属 AbortController 链到会话/回合基信号
+// 的单点（async-settle.mjs D6——_sessionSignal ?? ctx.signal——与 async 条目 controller
+// 链同一语义——挂起场景 base 命中而 ctx.signal 未 abort——R2）。
+import { buildChildSignal } from "./async-settle.mjs"
 import { executeStatusAction, executeEscalateAction, executePanelAction, executeObserveAction, executeSendAction } from "./subagent-actions.mjs"
 import { prepareScheduling, buildSpawnChild, executeConsumeDesignAction } from "./subagent-spawn.mjs"
 import { executeAsyncSpawn } from "./subagent-run.mjs"
+
+// ─── SYNC-CANCEL 纯函数（可测——无 io）──────────────────────────────────────────
+
+/**
+ * SYNC-CANCEL F2 catch 三分支分类（可测纯函数——R3 收紧）：
+ * ① "base" 整回合停：ctx.signal 或 baseSignal（= parent._sessionSignal ?? ctx.signal——
+ *    buildChildSignal——挂起会话场景 base 命中而 ctx.signal 未 abort——R2）aborted →
+ *    现状保留（emitNestedChildEvent stopped + rethrow）；
+ * ② "targeted" 定向中止：err 是 AbortError 且自属 ctrl aborted（且非整回合停）→
+ *    折叠 stopped partial 报告（父回合继续——merge/STOPPED_MARK/警示）；
+ * ③ "error" 其他错误 → 现状保留（child:error + rethrow）。
+ * ⚠ 查 baseSignal 非仅 ctx.signal——挂起 digest 场景 child 链 _sessionSignal（R2——
+ *    digest 自身 Ctrl+I/Ctrl+C 不误伤；会话 Stop 逐链中止必须归 ①）。
+ */
+export function classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err) {
+  if (ctxSignal?.aborted || baseSignal?.aborted) return "base"
+  if (err?.name === "AbortError" && ctrlSignal?.aborted) return "targeted"
+  return "error"
+}
+
+/**
+ * SYNC-CANCEL F1/F5 中止控制器装配（可测）：sync 阻塞 spawn 建**自属** AbortController
+ * （childRunOpts.signal 覆写为 ctrl.signal——照抄 async 分支 subagent-run.mjs 覆写模式）
+ * ——ctrl 链到基信号：baseSignal aborted → ctrl.abort()；否则 addEventListener("abort",
+ * → ctrl.abort(), { once:true })——Ctrl+C/I 整回合停语义不变（base abort 逐链传播——
+ * AC2）；嵌套 sync spawn 递归可中止（内层链外层 ctrl.signal——逐层自属——AC4）。
+ * 注册 `parent._syncChildAborts`（key = relayPrefix 去尾——{ ctrl, stopped:false }——
+ * TUI ⏹ 门控 live 判据 + cancelSyncChild 定向中止目标——与 async 条目 controller 存池
+ * 分层一致）。返回 { ctrl, disarm }——disarm 注销 registry（调用方 try/finally 三路径
+ * 共用——R7 防跨回合残留）。
+ */
+export function armSyncChildAbort(parent, key, baseSignal) {
+  const ctrl = new AbortController()
+  if (baseSignal) {
+    if (baseSignal.aborted) ctrl.abort()
+    else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+  }
+  const registry = (parent._syncChildAborts ??= new Map())
+  registry.set(key, { ctrl, stopped: false })
+  const disarm = () => { registry.delete(key) }
+  return { ctrl, disarm }
+}
+
+/**
+ * SYNC-CANCEL ② 折叠报告构建（可测纯函数——仿 runChildPipeline onDeclined partial 形态，
+ * subagent-async.mjs onDeclined：STOPPED_MARK + partial 警示 + 捕获输出 + eng-coder
+ * designId 后缀——AC3）。capturedOutput = child._capturedOutput（spawn-child.mjs
+ * runWithContinue capture 累积——子代理已流式输出的剥哨兵文本）。
+ */
+export function buildSyncStoppedReport(role, capturedOutput, designId) {
+  let report = `Subagent (${role}) ${STOPPED_MARK} — work may be partial; review recent_changes before deciding next steps.\nPartial output: ${capturedOutput || ""}`
+  if (role === "eng-coder") {
+    report += `\ndesignId: ${designId ?? "(single-design session — designId optional)"} — reuse it (with the same designToken) when re-spawning this eng-coder.`
+  }
+  return report
+}
 
 /**
  * subagent tool — ONE tool, EIGHT actions (AGENT-LOOP.md §19/§19.5/§19.6/§19.8 +
@@ -205,7 +265,14 @@ export const subagentTool = {
     // turns them into Error tool results — unchanged behavior).
     const askSubagentContinue = (e) => {
       if (!ctx.onPermissionRequest) return Promise.resolve(false)
-      const ask = () => ctx.onPermissionRequest("continue", { turns: e.turn, agent: relayPrefix.slice(0, -1) })
+      const key = relayPrefix.slice(0, -1)
+      const ask = () => {
+        // SYNC-CANCEL v2（模态 deny——用户裁）：⏹ 后 entry.stopped——continue 问询
+        // 不弹模态直接拒绝（_permQueue 排队 ask 到达时查 stopped 旗标——子代理随即在
+        // 下个 abort 检出点解绕——不卡父回合）
+        if (parent._syncChildAborts?.get(key)?.stopped) return Promise.resolve(false)
+        return ctx.onPermissionRequest("continue", { turns: e.turn, agent: key })
+      }
       return enqueueAsk(parent, "_permQueue", ask)
     }
 
@@ -215,43 +282,77 @@ export const subagentTool = {
       return executeAsyncSpawn(parent, ctx, role, args, child, input, childOpts, childRunOpts, relayPrefix, built.childProvider, prep.files, prep.dependsOn)
     }
 
-    // ── Blocking path (unchanged semantics): await the full pipeline ──
-    // LOGGING（LOGGING.md）：child:*（阻塞 spawn——runChildPipeline 前后；declined
-    // partial 由 TURN_CAP_MARK 检出；错误原样上抛（dispatch 转 tool:error））
+    // ── Blocking path (unchanged semantics + SYNC-CANCEL targeted stop) ──
+    // SYNC-CANCEL F1/F5（2026-09-09）：自属 AbortController（armSyncChildAbort——
+    // childRunOpts.signal 覆写 ctrl.signal——照抄 async 分支 subagent-run.mjs 的
+    // 覆写模式——buildChildRunOpts 不改——escalate/consult 零触碰）——⏹ 定向中止
+    // （cancelSyncChild → ctrl.abort）与整回合停（base abort 逐链传播）解耦；registry
+    // 注册/注销（try/finally 三路径——R7 防跨回合残留）。LOGGING（LOGGING.md）：
+    // child:*（阻塞 spawn——runChildPipeline 前后；declined partial 由 TURN_CAP_MARK
+    // 检出；⏹ 折叠由 STOPPED_MARK 检出——kind partial；错误原样上抛（dispatch 转
+    // tool:error））
     const blockT0 = Date.now()
     logEvent("child:spawn", { role, id: child._logId, kind: "blocking" })
+    const syncKey = relayPrefix.slice(0, -1)
+    // baseSignal 一次性快照（spawn 时刻）——catch 分类复用同一信号对象（会话收尾把
+    // _sessionSignal 置 null 的窗口内重读会漂移——快照防误判）
+    const baseSignal = buildChildSignal(parent, ctx)
+    const { ctrl, disarm } = armSyncChildAbort(parent, syncKey, baseSignal)
+    let pipelineReport
     try {
-      const pipelineReport = await runChildPipeline(child, input, childOpts, childRunOpts, {
+      pipelineReport = await runChildPipeline(child, input, childOpts, { ...childRunOpts, signal: ctrl.signal }, {
         parent, role, args,
         askContinue: askSubagentContinue,
       })
-      // §27 R23 D-R23c1（评审 #1 🅰——生成侧补发射）：sync spawn 同步收尾——若本 spawn
-      // 处于嵌套上下文（ctx.callbacks 已是嵌套 wrapper——eng-coder 内 explore 审计）→
-      // 发内层 ⟦ev⟧done（完整嵌套前缀——wrapper 链自动补外层）→ 主 TUI 路由子块定格
-      // （T-R23c.1）。非嵌套（depth-0）零变化——冻结仍由 dispatch subKey 精确冻承接。
-      emitNestedChildEvent(ctx, relayPrefix, "done")
-      logEvent("child:done", { role, id: child._logId, ms: Date.now() - blockT0, kind: String(pipelineReport).includes(TURN_CAP_MARK) ? "partial" : "ok" })
-      // §7.2.3 sync spawn 完成精确冻结（方案 e）：execute 返回前 ctx 留子代理 key
-      // （relayPrefix 去尾 = `role#N`）——dispatch runOne 读它作 onToolResult 第 4 参 →
-      // TUI finishSubTaskKey 按 key 精确冻（async eng-coder 先启动时不再误冻其块——
-      // T-F2）。仅成功路径设置：async 分支不设（round2 #2——ack 带 status:running 由
-      // isAsyncSpawnResult 跳过冻结）；错误/拒绝路径到此之前已 throw/return——ctx 未设
-      // ——错误路径不触发冻结（round1 #1——T-F5）。
-      ctx._subagentKey = relayPrefix.slice(0, -1)
-      return pipelineReport
     } catch (e) {
-      if (ctx.signal?.aborted || e?.name === "AbortError") {
+      // SYNC-CANCEL F2 三分支（classifySyncAbort 纯函数）：
+      const cls = classifySyncAbort(ctx.signal, baseSignal, ctrl.signal, e)
+      if (cls === "base") {
+        // ① 整回合停（现状逐字保留——挂起场景 base 命中而 ctx.signal 未 abort——R2）：
         // §27 R23：外层 abort 传播的中断——内层开块随之外层冻结前先收尾定格
         // （D-R23c1 stopped——T-R23c.2a 生成侧路径；TUI 冻结兜底仍在 freezeSubTaskLines）
         emitNestedChildEvent(ctx, relayPrefix, "stopped")
         throw e // 用户停——不落错误事件
       }
-      // §27 R23 error-run 映射（实现批补一行）：run 错误（非 abort）→ 同样发 stopped
-      // ——内层子块定格不悬空（T-R23a.3——工具错/运行错误路径）。
+      if (cls === "error") {
+        // ③ 其他错误（现状逐字保留——:249-253）：
+        // §27 R23 error-run 映射（实现批补一行）：run 错误（非 abort）→ 同样发 stopped
+        // ——内层子块定格不悬空（T-R23a.3——工具错/运行错误路径）。
+        emitNestedChildEvent(ctx, relayPrefix, "stopped")
+        logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(e, 200) })
+        throw e
+      }
+      // ② targeted 折叠（err AbortError && 自属 ctrl aborted && 非整回合停）：merge +
+      // stopped partial 报告（父回合继续拿报告——AC1/AC3）。merge 镜像 escalate sync
+      // runner 先例（subagent-actions.mjs runner 包装层——guard 在 mergeChildMutations
+      // 内——见子代理已写文件才传播）。
+      if (role === "eng-coder" && child._mutatedThisRun) mergeChildMutations(parent, child)
+      pipelineReport = buildSyncStoppedReport(role, child._capturedOutput ?? "", args?.designId)
+      // 块冻结标 stopped（R6——非 done）：⏹ 定向中止的 TUI 顶层块立即定格 stopped
+      // （async settle cancelled 分支同款直发——async-settle.mjs settleAsyncEntry）；
+      // 嵌套（eng-coder 内 explore 审计）经 emitNestedChildEvent 定格子块——stopped
+      // 幂等无害（重复/迟到 done 由 §27.1 F2 done 子块定格丢弃兜底）。
+      ctx.callbacks?.onToken?.(`${relayPrefix}⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`)
       emitNestedChildEvent(ctx, relayPrefix, "stopped")
-      logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(e, 200) })
-      throw e
+    } finally {
+      disarm() // R7：三路径（成功/折叠/整回合停/错误）统一注销——防跨回合残留
     }
+    // §27 R23 D-R23c1（评审 #1 🅰——生成侧补发射）：sync spawn 同步收尾——若本 spawn
+    // 处于嵌套上下文（ctx.callbacks 已是嵌套 wrapper——eng-coder 内 explore 审计）→
+    // 发内层 ⟦ev⟧done（完整嵌套前缀——wrapper 链自动补外层）→ 主 TUI 路由子块定格
+    // （T-R23c.1）。非嵌套（depth-0）零变化——冻结仍由 dispatch subKey 精确冻承接。
+    // ② 折叠 = 正常 return（本共用出口：done 补发照设 + ctx._subagentKey 照设——成功
+    // 冻结管线复用——迟到 done 对已定格 stopped 块被丢弃——幂等无害）。
+    emitNestedChildEvent(ctx, relayPrefix, "done")
+    logEvent("child:done", { role, id: child._logId, ms: Date.now() - blockT0, kind: String(pipelineReport).includes(TURN_CAP_MARK) || String(pipelineReport).includes(STOPPED_MARK) ? "partial" : "ok" })
+    // §7.2.3 sync spawn 完成精确冻结（方案 e）：execute 返回前 ctx 留子代理 key
+    // （relayPrefix 去尾 = `role#N`）——dispatch runOne 读它作 onToolResult 第 4 参 →
+    // TUI finishSubTaskKey 按 key 精确冻（async eng-coder 先启动时不再误冻其块——
+    // T-F2）。仅成功/折叠路径设置：async 分支不设（round2 #2——ack 带 status:running 由
+    // isAsyncSpawnResult 跳过冻结）；base/error 路径到此之前已 throw——ctx 未设
+    // ——中止/错误路径不触发冻结（round1 #1——T-F5）。
+    ctx._subagentKey = syncKey
+    return pipelineReport
   },
 }
 

@@ -196,6 +196,30 @@ export function cancelAsyncSubagent(agent, id) {
   return { id: key, status: "cancelled" }
 }
 
+/**
+ * SYNC-CANCEL（L52——2026-09-09）：sync spawn（深度>0 或阻塞调用——阻塞路径）定向中止
+ * 核心（TUI ⏹ 直连——不经模型回合）。registry `agent._syncChildAborts`（key =
+ *  relayPrefix 去尾 `role#N`——subagent.mjs 阻塞路径注册 { ctrl, stopped:false }，
+ *  try/finally 三路径注销——R7）——与 async 的池条目 controller 存 agent 分层一致
+ * （subagent.mjs 装配注）：
+ * - 有 live ctrl（未 stopped）→ 置 stopped 旗标 + ctrl.abort()（child runAgent 的
+ *   childRunOpts.signal = ctrl.signal——N4 无轮询直连 abort——AbortError 解绕）→
+ *   { id, status:"cancelled" }——catch 三分支②折叠 stopped partial 报告（父回合继续）
+ * - 无 live ctrl（registry miss——未注册/已注销——或已 stopped——stop 在途/已完成）→
+ *   error 文案（mouse :199 同款——"finished or stop no longer applies"）
+ * 幂等边界：stopped 后再调恒 error（不重复 abort——无副作用）；重复 ⏹ 由调用方文案兜底。
+ */
+export function cancelSyncChild(agent, key) {
+  const k = String(key)
+  const entry = agent?._syncChildAborts?.get(k)
+  if (!entry || entry.stopped) {
+    return { id: k, status: "error", error: `sync child ${k} has no live stop control — it has finished or stop no longer applies` }
+  }
+  entry.stopped = true
+  entry.ctrl.abort()
+  return { id: k, status: "cancelled" }
+}
+
 /** subagent action:"cancel" (§19.5 D-M6): depth-0 main-session control only.
  *  §20 D-SD5/round1 #4（queued 依赖取消——无 settle 事件）：出队后**返回即**重估
  *  依赖者——依赖者留 queued 标 dependency cancelled（refreshQueuedTokens 发更新块头

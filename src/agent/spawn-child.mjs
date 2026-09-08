@@ -26,6 +26,12 @@ const RS = "\x1e"
  *  单源化（2026-08-30 评审）：文案演进只改这里，消除文案与检测正则的漂移面。 */
 export const TURN_CAP_MARK = "stopped: turn cap reached"
 
+/** SYNC-CANCEL（L52）：sync spawn ⏹ 定向中止折叠报告的公共锚点——sync 折叠文案必含
+ *  此子串（buildSyncStoppedReport）；消费端（TUI tool-events onToolResult）用
+ *  includes() 检测"用户定向中止——工作可能不完整"语义（块冻结标 stopped 而非 done——
+ *  R6）。与 TURN_CAP_MARK 同族单源纪律。 */
+export const STOPPED_MARK = "stopped by user"
+
 /**
  * §18 D-E3 eng-coder 内部 spawn 机械门（AGENT-LOOP.md §18 D-E2 round5 #2 后备）：
  * eng-coder 子代理（depth>0 且 parent._role==="eng-coder"）的内部 spawn 通道只做
