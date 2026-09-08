@@ -71,12 +71,12 @@
 
 ## 需求池 / 在途实现（状态随批推进更新）
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
-> 2026-09-08 批实况：**批 1** 已交付核销（VSC 2.7 以 CLI 为单一测试锚已裁）；**批 2** 评审过
-> （token 067b9ccf → round4 eaf0a8e3 注册）——eng-coder id=2 重跑中（id=14 被杀接管）；**批 3** 已交付
-> clean（152092c+af94f69——待 L2/consume 3aaf4154——system.mjs 文档指针父侧核销）；**批 4** env-state
-> slot+resumed 需求段已落（SESSION §11.1 等确认）+ designer/R19 未排。agent 生命周期重构 + 11.7 + D6
-> union 均交付核销（L2 96/96）。§7.7 顶层 spawn 一律异步评审过（token e21d5ace）——eng-coder
-> id=5 queued（等批 2 释放 AGENT-LOOP 域）。
+> 2026-09-08 批实况（17:07 终态）：**批 1/批 2/批 3** 全交付核销（L2 双端 112/105 全绿——批 3 文档
+> 指针同步：CHECKPOINT/STRUCTURE-DEBT system.mjs 改指 bash.mjs/search.mjs——父侧收尾）；**env-state
+> 扩展**（SESSION §11.2）已交付核销（bba68df/0bf02b0 + VSC 7e7d90a/ec1e4c4——slot+resumed 按会话
+> +F3+双信号——L2 绿——consume 554b6251——**双端 system.md:24 env-state 描述未含 slot——需同步**）；
+> **§7.7 顶层异步**已交付核销（c08e1b2/8763ac2——L2 绿——consume a2b10815）；agent 生命周期 + 11.7 + D6
+> union 早前核销。批 4 剩 designer/R19（未排）。
 - [x] ~~**批 3（结构债批 B）**~~——**2026-09-08 已交付**（SYSTEM-SPLIT——bash.mjs/search.mjs/question.mjs——待 L2 终链 + consume 3aaf4154）
 - [ ] **批 4（需求池各自独立——2026-09-08 并批评估定——设计权在用户）**：~~R16 token 语义~~（**已死——D1-D5 覆盖——L81 勾销**）/ env-state 补当前 slot（**需求段已落 SESSION §11.1——等确认**）/ designer 子代理（大）/ R19 护栏裁定——逐个独立全链
 
@@ -106,3 +106,7 @@
 
 ## 工程模式提示词同步（独立小项）
 - [x] ~~**R3' bash 工具重定向护栏删除**~~——**2026-09-08 勾销**（TOOLS.md 无护栏文案——bash.mjs 仅保留 >2MB 输出丢弃指引）
+
+## 文档地图整体清扫（2026-09-08 批 2 报告发现）
+- [ ] **AGENTS.md 文档地图陈旧**：:17 仍列 VERIFY-DOCONLY.md（归档后悬空）+ 整体含早已归档档（ENGINEERING-WORKLOOP 等——批 A 前即如此）——父侧立项整体清扫（非批 2 2b-6 范围——批 2 只做 README/SETTINGS-TOOL）
+- [ ] **双端 system.md:24 env-state 描述未含 slot**（env-state 行实已含 slot——SESSION §11.2 实现后描述漂移——id=9 报告项 3——提示词同步小项——双端逐字同步）
