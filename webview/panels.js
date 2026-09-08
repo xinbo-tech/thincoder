@@ -237,6 +237,23 @@ export function handleSuspensionMessage(m) {
   setLoading(ctx, ctx.isRunning)
 }
 
+/**
+ * C2 (SESSION-FLOW-C F-C2b/F-C2e——webview 单一 reducer): {type:"turnState", state,
+ * counts?} —— host _publishTurnState 单一广播的镜像侧。更新 S._turnState（idle/
+ * running/susp——派生：Stop 常显 susp、busy 判断）；counts（host backgroundStatus
+ * 形 {running,queued,pending,done}——digest 间重发/settle 触发点随广播到达）刷新
+ * _suspCounts——webview 计数 = host 实际不陈旧。既有 _suspended 仍由 suspension
+ * 消息驱动（会话级语义不变）。每次广播后重绘状态行 + 重派 Stop 可见性。
+ */
+export function handleTurnStateMessage(m) {
+  S._turnState = m.state ?? S._turnState
+  if (m.counts) {
+    S._suspCounts = { running: m.counts.running ?? 0, queued: m.counts.queued ?? 0, pending: m.counts.pending ?? 0, done: m.counts.done ?? 0 }
+  }
+  renderStatusBar()
+  setLoading(ctx, ctx.isRunning)
+}
+
 /** goal message: refresh the goal panel + status badge. */
 export function handleGoalMessage(m) {
   S._goalInfo = m

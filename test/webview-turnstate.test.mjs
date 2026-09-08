@@ -1,0 +1,206 @@
+/**
+ * webview-turnstate.test.mjs — SESSION-FLOW-C C2 测试（webview 忙态收敛 reducer 组）。
+ * docs/design/SESSION-FLOW-C.md C2 节（F-C2a~e——AC-C2 组：_turnState 枚举转换 /
+ * renderStatusBar 单 writer / Stop susp 常显 / _suspCounts 不陈旧——N3 单来源镜像侧）。
+ *
+ * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
+ * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
+ * 后动态 import 真模块（state.js/loading.js/status-bar.js/panels.js——单一运行时对象 S），
+ * 直接驱动 host 消息对应的 reducer（chat.js window message case 的行为等价面：
+ * loading case → setLoading；turnState case → handleTurnStateMessage；suspension →
+ * handleSuspensionMessage）——不引导 chat.js 全量模块图。
+ * 快层直跑（全部 <800ms——无真实定时器；panels.js 的 2s 清扫 interval 在 after 经
+ * unload 事件清掉——防悬挂）。
+ */
+import { test, before, after } from "node:test"
+import assert from "node:assert/strict"
+import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
+
+// ─── happy-dom 环境（必须先于 webview 模块 import——state.js 顶层读 DOM + acquireVsCodeApi）───
+
+let cleanupEnv
+
+before(() => {
+  const env = setupWebview()
+  cleanupEnv = env.cleanup
+  installChatFixture()
+})
+
+after(() => {
+  // panels.js 模块顶的 2s 清扫 interval——经其注册的 unload 监听清掉（防 node --test 悬挂）
+  try { window.dispatchEvent(new window.Event("unload")) } catch { /* happy-dom teardown edge */ }
+  cleanupEnv()
+})
+
+/** 动态 import 真模块（模块缓存——每文件一次；必须在 setupWebview 之后）。 */
+async function loadWebview() {
+  const state = await import("../webview/state.js")
+  const loading = await import("../webview/loading.js")
+  const statusBar = await import("../webview/status-bar.js")
+  const panels = await import("../webview/panels.js")
+  return { S: state.S, ctx: state.ctx, setLoading: loading.setLoading, renderStatusBar: statusBar.renderStatusBar, ...panels }
+}
+
+const statusLine = () => document.getElementById("status-line").innerHTML
+const abortShown = () => document.getElementById("abort-btn").style.display === "flex"
+
+/** 逐测冷启复位（node --test 同文件串行——模块缓存共享同一 S——每测独立起点）。 */
+function resetBusy({ S, ctx }) {
+  S._turnState = "idle"
+  S._suspended = false
+  S._suspCounts = null
+  S._phase = null
+  ctx.isRunning = false
+  document.getElementById("abort-btn").style.display = "none"
+  document.getElementById("status-line").innerHTML = ""
+}
+
+// ─── ① susp 进出 + loading 交替 → S._turnState/isRunning 转换（AC-C2 枚举）──────
+
+test("① _turnState 枚举转换（AC-C2）：idle→running→susp→running(digest)→susp→idle + loading 交替驱动 isRunning/phase", async () => {
+  const { S, ctx, setLoading, handleTurnStateMessage, handleSuspensionMessage } = await loadWebview()
+  resetBusy({ S, ctx })
+  // 初始（webview 冷启）
+  assert.equal(S._turnState, "idle", "初始 idle")
+  assert.equal(S._phase, null)
+
+  // 回合开始：host 回合入口广播 running（先于 loading:true）
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  assert.equal(S._turnState, "running")
+  setLoading(ctx, true) // loading:true 消息
+  assert.equal(ctx.isRunning, true, "loading:true → isRunning")
+  assert.equal(S._phase, "thinking", "loading:true → S._phase=thinking")
+  assert.equal(abortShown(), true)
+
+  // 挂起会话进入：释放窗口/会话入口广播 susp + suspension active:true（带计数）
+  handleTurnStateMessage({ type: "turnState", state: "susp", counts: { running: 2, queued: 0, pending: 1, done: 0 } })
+  assert.equal(S._turnState, "susp")
+  handleSuspensionMessage({ type: "suspension", active: true, running: 2, queued: 0, pending: 1, done: 0 })
+  assert.equal(S._suspended, true, "suspension active → _suspended")
+  assert.equal(S._suspCounts.pending, 1)
+
+  // digest 交替：digest 回合 running + loading true/false——状态/按钮正确翻转。
+  // （host 序：digest 尾 finally 先广播 susp 再发 loading:false——panel-chat.mjs 292-300）
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  assert.equal(S._turnState, "running", "digest 执行中 → running")
+  setLoading(ctx, true)
+  assert.equal(ctx.isRunning, true)
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  assert.equal(S._turnState, "susp", "digest 尾 → 回 susp")
+  setLoading(ctx, false) // digest 尾 loading:false（host 序：state susp 先于 loading:false——见 ③）
+  assert.equal(ctx.isRunning, false, "loading:false → isRunning false")
+  assert.equal(S._phase, null)
+
+  // 会话退出：suspension active:false + turnState idle（host 序：idle 先于 suspension 终态）
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  assert.equal(S._turnState, "idle")
+  handleSuspensionMessage({ type: "suspension", active: false })
+  assert.equal(S._suspended, false, "suspension exit → _suspended false")
+  assert.equal(S._suspCounts, null, "计数随会话退出清空")
+})
+
+// ─── ② #status-line 单 writer（AC-C2——F-C2c/H-E）：loading 不覆写徽标 ────────
+
+test("② renderStatusBar 单 writer：loading 消息不覆写徽标——thinking 同线绘制——终态 = 最后消息驱动", async () => {
+  const { S, ctx, setLoading, handleTaskProgress, handleTurnStateMessage, handleSuspensionMessage } = await loadWebview()
+  resetBusy({ S, ctx })
+  // 先置 task 徽标（taskProgress 消息 → renderStatusBar 绘 task-badge）
+  handleTaskProgress({ type: "taskProgress", done: 1, inProgress: 0, pending: 1, total: 2, items: [
+    { title: "a", status: "done" }, { title: "b", status: "pending" },
+  ] })
+  assert.ok(S._taskStatus, "badge 文本就位")
+  assert.ok(statusLine().includes("task-badge"), "状态行含 task 徽标")
+
+  // loading:true（旧实现：innerHTML 覆写状态行 → 徽标被清——H-E）
+  setLoading(ctx, true)
+  const afterLoad = statusLine()
+  assert.ok(afterLoad.includes("task-badge"), "loading 不覆写徽标（单 writer——修 H-E）")
+  assert.ok(afterLoad.includes("Thinking"), "thinking 段由 renderStatusBar 同线绘制")
+  assert.ok(afterLoad.includes("loading-dots"), "thinking 带 loading dots")
+
+  // loading:false（旧实现：thinking 留在状态行直到下个 usage 渲染——终态不干净）
+  setLoading(ctx, false)
+  const afterOff = statusLine()
+  assert.ok(afterOff.includes("task-badge"), "loading:false 后徽标仍在")
+  assert.ok(!afterOff.includes("Thinking"), "终态 = 最后消息驱动——thinking 已清除")
+
+  // 挂起期：susp + 计数 → 状态行含 ⏳ 段；digest loading 交替不清计数行
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  handleSuspensionMessage({ type: "suspension", active: true, running: 1, queued: 0, pending: 3, done: 0 })
+  const withSusp = statusLine()
+  assert.ok(withSusp.includes("awaiting digestion"), "susp 计数段就位（1 running · 3 awaiting digestion）")
+  setLoading(ctx, true)
+  setLoading(ctx, false)
+  const afterDigestToggles = statusLine()
+  assert.ok(afterDigestToggles.includes("awaiting digestion"), "digest loading 交替不覆写 susp 计数")
+  assert.ok(!afterDigestToggles.includes("Thinking"))
+})
+
+// ─── ③ Stop susp 期常显（AC-C2——F-C2d）：digest 间 loading:false 不隐 abort ──
+
+test("③ Stop susp 期常显：_turnState===\"susp\" 派生——loading true/false 交替不闪烁", async () => {
+  const { S, ctx, setLoading, handleTurnStateMessage } = await loadWebview()
+  resetBusy({ S, ctx })
+  assert.equal(abortShown(), false, "初始（idle）无 Stop")
+
+  // 挂起会话进入（digest 间等待）——无 loading 消息 Stop 也常显
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  assert.equal(abortShown(), true, "susp 期 Stop 常显（无需 loading:true）")
+
+  // digest 序列：running+loading:true → susp+loading:false（host 广播序）反复——永不隐
+  for (let i = 0; i < 3; i++) {
+    handleTurnStateMessage({ type: "turnState", state: "running" })
+    setLoading(ctx, true)      // digest 开始
+    assert.equal(abortShown(), true, `digest ${i} loading:true → Stop 显`)
+    handleTurnStateMessage({ type: "turnState", state: "susp" })
+    setLoading(ctx, false)     // digest 尾（host 序：state susp 先于 loading:false）
+    assert.equal(abortShown(), true, `digest ${i} 尾 loading:false → Stop 仍常显（susp 派生——不闪烁）`)
+  }
+
+  // 会话退出 → idle → Stop 收起
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  assert.equal(abortShown(), false, "idle → Stop 收起")
+
+  // 普通回合（非 susp）：loading 驱动照旧
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  setLoading(ctx, true)
+  assert.equal(abortShown(), true)
+  setLoading(ctx, false)
+  assert.equal(abortShown(), false, "非 susp 期 loading:false 隐 Stop（原语义）")
+})
+
+// ─── ④ _suspCounts 不陈旧（AC-C2e——F-C2e）：重发后 webview 计数 = host 实际 ──
+
+test("④ _suspCounts 在 re-post 间不陈旧（AC-C2e）：digest 间重发/settle 触发点后计数 = host 实际——loading 交替不清计数", async () => {
+  const { S, ctx, setLoading, handleTurnStateMessage, handleSuspensionMessage } = await loadWebview()
+  resetBusy({ S, ctx })
+
+  // 会话进入：host 计数（轮末 282/300 重发形）
+  handleTurnStateMessage({ type: "turnState", state: "susp", counts: { running: 2, queued: 1, pending: 0, done: 0 } })
+  handleSuspensionMessage({ type: "suspension", active: true, running: 2, queued: 1, pending: 0, done: 0 })
+  assert.deepEqual(S._suspCounts, { running: 2, queued: 1, pending: 0, done: 0 }, "进入计数 = host 实际")
+
+  // digest 执行中 settle 触发点重发（F-C2e：onAsyncSettled → turnState 带 counts——state 随当前）
+  handleTurnStateMessage({ type: "turnState", state: "running", counts: { running: 1, queued: 0, pending: 2, done: 1 } })
+  assert.equal(S._turnState, "running", "settle 重发不翻状态（running 中）")
+  assert.deepEqual(S._suspCounts, { running: 1, queued: 0, pending: 2, done: 1 }, "settle 触发点计数刷新 = host 实际")
+
+  // digest 间轮末重发（282/300——suspension + turnState 双通道同源）
+  setLoading(ctx, true)
+  setLoading(ctx, false) // digest loading 交替
+  handleTurnStateMessage({ type: "turnState", state: "susp", counts: { running: 1, queued: 0, pending: 1, done: 0 } })
+  handleSuspensionMessage({ type: "suspension", active: true, running: 1, queued: 0, pending: 1, done: 0 })
+  assert.deepEqual(S._suspCounts, { running: 1, queued: 0, pending: 1, done: 0 }, "轮末重发后计数 = host 实际（不陈旧）")
+
+  // loading 消息不清计数（状态行单 writer 保留 ⏳ 段）
+  assert.ok(statusLine().includes("background subagent"), "状态行 ⏳ 段在位")
+  assert.equal(S._suspCounts.pending, 1, "loading 交替后计数未被清/覆写")
+
+  // 无 counts 的 running 广播（digest 开始）保留既有计数（reducer 不误清）
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  assert.deepEqual(S._suspCounts, { running: 1, queued: 0, pending: 1, done: 0 }, "无 counts 广播不清计数")
+
+  // 会话退出清空（suspension 终态）
+  handleSuspensionMessage({ type: "suspension", active: false })
+  assert.equal(S._suspCounts, null, "会话退出计数清空")
+})

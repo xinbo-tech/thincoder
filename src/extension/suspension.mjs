@@ -371,12 +371,20 @@ export function mergeTransportFor(items) {
   return out
 }
 
-/** 挂起态通知（状态行文本由 webview 按 locale 组合——host 只发计数）。 */
+/** 挂起态通知（状态行文本由 webview 按 locale 组合——host 只发计数）。
+ *  C2（F-C2b/F-C2e——单一广播同点）：suspension 消息（既有族——S._suspended/freeze 语义
+ *  不变）之外，忙态单广播 _publishTurnState 同点重发 susp + counts——282/300 重发时机的
+ *  counts 走上 turnState 通道（webview reducer 以 counts 刷新 _suspCounts——digest 间
+ *  计数不陈旧）。两通道同源（backgroundStatus）——幂等一致。 */
 function postSuspension(panel, susp) {
-  panel._panel?.webview.postMessage({ type: "suspension", active: true, ...backgroundStatus(susp.lines.history) })
+  const counts = backgroundStatus(susp.lines.history)
+  panel._panel?.webview.postMessage({ type: "suspension", active: true, ...counts })
+  panel._publishTurnState?.("susp", counts)
 }
 
-/** 挂起退出通知：freeze = 补发 done 冻结（驻留面板的 awaiting-digest 块折叠进流）。 */
+/** 挂起退出通知：freeze = 补发 done 冻结（驻留面板的 awaiting-digest 块折叠进流）。
+ *  C2：先广播 idle（忙态收敛——Stop 派生/路由守卫以 idle 收尾）再发 suspension 终态。 */
 function postSuspensionEnd(panel, { freeze }) {
+  panel._publishTurnState?.("idle")
   panel._panel?.webview.postMessage({ type: "suspension", active: false, freeze })
 }

@@ -166,10 +166,10 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
 | ext → wv | `token`/`reasoning` | `{ text }`（reasoning = 思考折叠块） |
 | ext → wv | `turnBreak` | `—`——机器子回合边界 |
 | ext → wv | `toolCall`/`toolResult` | `{ name, args?/text }` |
-| ext → wv | `complete`/`loading`/`aborted`/`error` | `{ text? }`（error 携 needsSetup） |
+| ext → wv | `complete`/`loading`/`aborted`/`error` | `{ text? }`（error 携 needsSetup；loading 消息与 busy-state 的关系见 §8） |
 | ext → wv | `providerInfo`/`autoApprove`/`models`/`sessions` | Provider 态 / AUTO 会话级 / 模型表 / 会话列表 |
 | ext → wv | `historyPage`/`loadOlder` | 懒历史：末页先发（older=false）+ scroll 补偿 |
-| wv → ext | `question`/`questionResponse` | 内联 question 卡（非原生弹窗） |
+| wv → ext | `question`/`questionResponse` | 内联 question 卡（非原生弹窗）——questionResponse `{ answer, promptId }`（C1——见 §8） |
 | ext → wv | `userMessage`/`assistantMessage` | 历史回放（quick-input 命令回显用） |
 | ext → wv | `clearMessages` | `—` |
 
@@ -182,7 +182,9 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
 | `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op；advisor role 复用同路由） |
 | `batchPermissionResponse` | wv → ext | approveAll / oneByOne / deny |
 | `compress` | ext → wv | start/done/failed/fallback 四态（压缩状态行） |
-| `suspension` | ext → wv | 挂起态行/冻结通知（settled→done 补发/active:false+freeze） |
+| `suspension` | ext → wv | 挂起态行/冻结通知（settled→done 补发/active:false+freeze）——计数载荷与 turnState 双通道一致（§8） |
+| `turnState` | ext → wv | `{ state, counts? }`——忙态单一广播（C2——§8 权威锚） |
+| `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（C1——§8） |
 | `onAgentTurn` | 内部 | 每轮迭代 turn 计数钩子（顶层无订阅 no-op——池条目同步用） |
 
 ### 7.3 演进纪律（三落点）
@@ -193,8 +195,67 @@ waiting 行 + consult 计数/回复 preview）——非缺陷，后续可单独�
 锁桥测试）。string/对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支
 字段 undefined 安全降级）。
 
-## 8. 变更记录（历史折叠——详见 git log）
+## 8. 消息秩序与忙态收敛（SESSION-FLOW-C——权威锚）
 
+> 本节的协议正文是**唯一来源**（C1/C2 实现与 AGENTS.md 协议表镜像行均指向本节，不重复
+> 正文）。覆盖 C1 消息秩序增量（question promptId/questionCancelled/atComplete seq）
+> 与 C2 忙态收敛（turnState 广播/renderStatusBar 单 writer/Stop 派生）。
+
+### 8.1 回合入口秩序（C1——F-C1e/H-F）
+
+- `userMessage` 与 `retry` 共用**单一入口 routeUserTurn**（panel-messages.mjs）：回合
+  执行中（host `_turnState==="running"`）的消息一律入队 `panel._suspQueue` + 回执
+  `messageQueued`——回合尾 FIFO 顺序消费（零丢失）；abort/interrupt 等控制消息
+  **永不排队、直通**（延迟红线——杀 Stop 即失败）。
+
+### 8.2 question 卡 id 匹配（C1——F-C1d/H-D）
+
+- host 发 `question` 携带单调自增 `promptId`；webview 卡片以 `data-prompt-id` 落 DOM。
+- wv → ext `questionResponse` 回带 `{ answer, promptId }`——host 按 id 查 `_questionQueue`
+  条目（**非无条件 shift**——找不到 no-op，绝不 resolve 错队头）。无 promptId（旧
+  webview）→ 回退队头（历史语义）。
+- host 中止未答 question（Stop/abort——makeAskInPanel onAbort）→ 发 `questionCancelled`
+  `{ promptId }`——webview 按 id 移除对应卡片（无 promptId → 移除全部 question 卡）；
+  abort 收尾路径（finish(aborted)——streaming.js）同样清屏上 question 卡。
+
+### 8.3 atComplete seq（C1——F-C1c/H-A）
+
+- wv → ext `atComplete` `{ query, cwd, seq }`——seq 在 webview 侧（autocomplete.js）请求
+  自增（防抖 150ms 之外）；host 只回显**最新 seq**（旧扫描迟到结果丢弃）——
+  `atResults` `{ matches, seq }` 回带该 seq——旧扫描不覆盖新下拉。
+
+### 8.4 忙态收敛（C2——F-C2a~e）
+
+- **host `_turnState` 枚举 `{idle, running, susp}`**：running = 回合（含会话内
+  digest/会话用户回合）执行中；susp = 挂起会话活跃或释放窗口（池仍 live、会话未建）；
+  waiting（权限/question 队列非空）是 running 的**修饰态非互斥**——只经
+  `_refreshStatus` 呈现（"waiting 优先 running"），不入枚举。读者一律走谓词
+  `panel.turnBusy()`（= state ≠ idle）。
+- **单一广播 `_publishTurnState(state, counts?)`**：每次忙态 set/clear 调——发
+  `{type:"turnState", state, counts?}`——webview **单一 reducer**
+  `handleTurnStateMessage` 更新 `S._turnState`。counts = host `backgroundStatus` 形
+  `{ running, queued, pending, done }`——随 susp 广播/重发携带：挂起驱动轮末（会话内
+  回合尾 finally、postSuspension 入口与 282/300 同点）**与 settle 触发点**
+  （onAsyncSettled——digest 间计数即时刷新）+ `webviewReady` 重推（Reload Window 冷启
+  恢复）——webview `_suspCounts` 恒 = host 实际（F-C2e 不陈旧）。
+- **时序**：状态广播先于同批 `loading:false`（digest/回合尾）——webview Stop 派生无
+  闪烁窗口。
+- **`S._suspended` 语义不变**：仍由 `suspension` 消息（active/freeze）驱动（会话级
+  语义——digest 执行中 state 为 running 时不得翻 false）；`S._turnState` 是独立的忙态
+  阶段镜像。
+- **#status-line 单 writer = `renderStatusBar`**（status-bar.js）：thinking 态 =
+  `S._phase==="thinking"` 标记（`loading` 消息经 setLoading 置位/清除）——renderStatusBar
+  同线绘制徽标（task/sub/goal/plan）、挂起计数与 thinking 段——loading 消息不再
+  innerHTML 覆写状态行（修 H-E——徽标不被每 digest 的 thinking 重画清掉）。
+- **Stop 常显（F-C2d）**：abort 按钮可见性 = `S._turnState==="susp"` **派生**或
+  loading 驱动——susp 期（含 digest 间）loading:true/false 不再隐/显 abort（修 digest
+  间按钮闪烁）。
+
+## 9. 变更记录（历史折叠——详见 git log）
+
+- 2026-09-09：SESSION-FLOW-C C2 收敛——新增 §8「消息秩序与忙态收敛」（权威锚——C1
+  增量 question promptId/questionCancelled/atComplete seq + C2 turnState 单一广播/
+  renderStatusBar 单 writer/Stop susp 派生/_suspCounts 不陈旧）；7.1/7.2 表补行。
 - 2026-09-07：R22 子 agent 显示趋同 CLI——底部活动面板 + 块头升级 + 完成冻结入流
   （webview/activity.js 新）。
 - 2026-09-07：R22 冻结块插入位置修复（freezeAnchor settle 锚点记录 + 链式落位 + 150

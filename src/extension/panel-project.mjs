@@ -24,7 +24,9 @@ export function pushProject(panel) {
 
   /** Apply a project switch (validated): rebind the slot and reload everything per-cwd. */
 export async function applyProjectSwitch(panel, fsPath) {
-    if (panel._turnActive) {
+    // C2（F-C2a）：守卫改谓词 turnBusy()——running 或 susp（含会话等待）一律拒绝
+    //（旧 _turnActive 只挡回合——挂起会话期换项目会孤儿化后台池）。
+    if (panel.turnBusy()) {
       vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before switching projects.")
       return
     }

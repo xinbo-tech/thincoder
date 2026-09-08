@@ -19,7 +19,7 @@ import { send } from "./send.js"
 import { onToken, onReasoning, onTurnBreak, finish, attachCopyButtons, advisorChunk, subagentChunk } from "./streaming.js"
 import { resetActivity } from "./activity.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
-import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage } from "./panels.js"
+import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage, handleTurnStateMessage } from "./panels.js"
 import { updateSessionTitle, handleProjectMessage } from "./session-bar.js"
 import { initOnboarding, showWelcomePanel, maybeShowWelcome } from "./onboarding.js"
 import { handleAutoApprove, handleAgentSettings, handlePlanMode } from "./mode-buttons.js"
@@ -158,15 +158,12 @@ window.addEventListener("message", (e) => {
       break
     }
     case "toolHistory":      addToolHistory(ctx, m.name, m.text, m.idx); break
-    case "loading": {
-      if (m.loading) {
-        document.getElementById("status-line").innerHTML = S._planActive
-          ? `<span style="color:var(--accent)">${t("status.plan")}</span> <span class="status-sep">|</span> ${t("status.thinking")}<span class="loading-dots"></span>`
-          : `${t("status.thinking")}<span class="loading-dots"></span>`
-      }
-      setLoading(ctx, m.loading)
-      break
-    }
+    // C2 (SESSION-FLOW-C F-C2c——修 H-E): loading case 不再 innerHTML 覆写 #status-line——
+    // setLoading 置 S._phase（thinking 标记）→ renderStatusBar（唯一 writer）同线绘制徽标/
+    // 计数/thinking；Stop 可见性 = S._turnState==="susp" 派生或 loading 驱动（F-C2d）。
+    case "loading":          setLoading(ctx, m.loading); break
+    // C2 (F-C2b): host 忙态单一广播（{type:"turnState", state, counts?}）→ 单一 reducer
+    case "turnState":        handleTurnStateMessage(m); break
     case "complete":         finish(); break
     case "aborted":          finish(true); break
     case "error":

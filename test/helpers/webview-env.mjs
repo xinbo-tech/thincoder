@@ -3,7 +3,12 @@
  *
  * The webview (chat.js/settings.js/ui.js) is otherwise untestable: it reads
  * global document/window at call time. This registers happy-dom, injects the
- * English locale, and stubs window._vscode so the modules run under node --test.
+ * English locale, and stubs the VS Code bridge so the modules run under node --test.
+ *
+ * state.js calls `acquireVsCodeApi()` at module top — the real webview gets it
+ * from the VS Code API injection; under happy-dom it must be stubbed as a bare
+ * global BEFORE importing any state.js-importing module (panels/loading/
+ * status-bar/streaming...). Messages are captured into the returned array.
  */
 import { GlobalRegistrator } from "@happy-dom/global-registrator"
 import { readFileSync } from "node:fs"
@@ -21,7 +26,10 @@ export function setupWebview() {
   setStrings(en)
 
   // Stub the VS Code webview bridge — tests capture messages via capturedPosts.
+  // state.js exports the acquireVsCodeApi() result as its `vscode` handle, so the
+  // stub must be the bare global the real webview receives from the extension API.
   const capturedPosts = []
+  globalThis.acquireVsCodeApi = () => ({ postMessage: (msg) => capturedPosts.push(msg) })
   window._vscode = { postMessage: (msg) => capturedPosts.push(msg) }
 
   return {
@@ -42,4 +50,21 @@ export function installSettingsFixture() {
       <div class="panel-body" id="settings-body"></div>
     </div>
   `
+}
+
+/**
+ * Minimal DOM fixture for chat modules (state.js reads ~25 ids at import; the
+ * busy-state renderers touch status-line/panels/buttons). Element ids mirror
+ * webview/index.html. Call BEFORE importing webview/state.js consumers.
+ */
+export function installChatFixture() {
+  const ids = [
+    "messages", "input", "send-btn", "abort-btn", "model-btn", "reasoning-btn",
+    "model-dropdown", "reasoning-dropdown", "session-selector", "session-title",
+    "session-dropdown", "welcome-panel", "welcome-heading", "welcome-text",
+    "welcome-provider-label", "welcome-provider", "welcome-key-label", "welcome-key",
+    "welcome-save-btn", "welcome-skip-btn", "welcome-settings-btn", "project-btn",
+    "status-line", "task-panel", "subagent-panel", "goal-panel", "subagent-activity",
+  ]
+  document.body.innerHTML = ids.map((id) => `<div id="${id}"></div>`).join("")
 }

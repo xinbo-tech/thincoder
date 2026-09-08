@@ -98,6 +98,15 @@ export const S = {
   // breaking digests), the status line shows the background counts. Never touched by
   // background events beyond these host-driven updates (F3).
   _suspended: false,
-  _suspCounts: null, // { running, queued, pending } — rendered into the status line
+  _suspCounts: null, // { running, queued, pending, done } — rendered into the status line
+  // C2 (SESSION-FLOW-C F-C2a/b): host busy-state single broadcast mirror —
+  // {type:"turnState", state, counts?} → 单一 reducer 更新本字段（S._turnState ∈
+  // idle/running/susp——waiting 是 running 修饰态非互斥——不入枚举）。派生读：
+  // Stop 常显（state==="susp"——F-C2d）、loading 按钮态。既有 _suspended 保持
+  // suspension 消息驱动（会话级语义——digest 执行中 state 为 running 时不得翻 false）。
+  _turnState: "idle",
+  // C2 (F-C2c): thinking 态标记——loading 消息经 setLoading 置位/清除；renderStatusBar
+  // （#status-line 唯一 writer）据此绘制 thinking 段——不再 innerHTML 覆写状态行（修 H-E）。
+  _phase: null, // null | "thinking"
 }
 

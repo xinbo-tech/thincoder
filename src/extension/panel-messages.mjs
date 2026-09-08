@@ -12,6 +12,7 @@ import { selectProviderModel, loadRaw, loadMcpServers } from "../config-io.mjs"
 import { openDiffPreview } from "./diff-preview.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { savePastedImages } from "./image-handler.mjs"
+import { backgroundStatus } from "./suspension.mjs"
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
@@ -52,11 +53,13 @@ function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, im
     ? savePastedImages(images, _cwd())
     : undefined
   // 2026-09-05 人机并行对齐（CLI state.queue 语义——实践验证模式）：父回合运行中
-  // （_turnActive）的消息一律排队——不 abort 父回合、不杀子代理、不并发新回合
+  // （_turnState==="running"）的消息一律排队——不 abort 父回合、不杀子代理、不并发新回合
   // （并发会从磁盘重载 lines 孤儿化后台池——AC-S2 同款竞态）；回合尾顺序消费
   // （impl 尾 while——对位 CLI agent-turn 尾 state.queue 消费）。挂起活跃期由
-  // panel._chat 上游分流（susp.active → pendingInput——D-S5）。
-  if (panel._turnActive) {
+  // panel._chat 上游分流（susp.active → pendingInput——D-S5——等待期输入唤醒驱动；
+  // C2：susp 等待态 _turnState 非 running → 走 _chat——语义与旧 _turnActive 布尔逐位一致）。
+  // 释放窗口（state==="susp" 且 _susp 空）同样走 _chat → _suspQueue（入队等待会话接管）。
+  if (panel._turnState === "running") {
     panel._suspQueue ??= []
     panel._suspQueue.push({ text, modelOverride, reasoning, providerName, images: saved })
     panel._panel?.webview.postMessage({ type: "messageQueued" })
@@ -102,8 +105,9 @@ export async function handlePanelMessage(panel, msg) {
       // 会话切换竞态守卫（GitHub #2/#5，2026-08-28）：运行中禁止切换——此前只改 _slot 指针
       // 不 abort，旧 turn 的 stream/complete/标题会灌进新会话视图（"思考串台"）、内容落错槽
       // （"写错会话文件"）。与 applyProjectSwitch（panel-project.mjs）的运行中拒绝同模式。
-      // §17：挂起会话（后台子代理 + 待消化结果）同属运行中守卫。
-      if (panel._turnActive || panel._susp?.active) {
+      // C2（F-C2a）：守卫改谓词 turnBusy()——running 或 susp（含 digest 间等待）一律拒绝
+      // （旧 _turnActive || _susp?.active 双读合一）。
+      if (panel.turnBusy()) {
         vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before switching sessions.")
         break
       }
@@ -366,6 +370,9 @@ export async function handlePanelMessage(panel, msg) {
       // providerStatus rides along (2026-09-05 真机走查：它同样经 async status()
       // 推送——Reload Window 竞态会丢——欢迎条两态文案/配置横幅随之失配——
       // webviewReady 是唯一可靠握手点——i18n 同机制）。
+      // C2（F-C2b）：忙态随握手重推（Reload Window 后 webview 冷启为 idle——正在执行的
+      // 回合/挂起会话的派生态（Stop/thinking）需以此恢复——单一广播的幂等直发）。
+      panel._panel?.webview.postMessage({ type: "turnState", state: panel._turnState ?? "idle", ...(panel._susp ? { counts: backgroundStatus(panel._susp.lines.history) } : {}) })
       panel._panel?.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
       panel._pushStatus()

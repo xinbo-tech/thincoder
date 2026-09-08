@@ -11,6 +11,7 @@ import { extractFileLinks } from "./file-links.mjs"
 import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
+import { backgroundStatus } from "./suspension.mjs"
 
 /**
  * Ask a question in the panel (persistent in-chat card, never auto-dismisses) — shared
@@ -132,6 +133,14 @@ export function buildPanelCallbacks(panel, deps) {
     onQuestion: (question, options) => askInPanel(question, options),
     // §17: async settle events wake the suspension driver (no-op when it isn't parked —
     // panel._suspWake is set only while the driver waits for the next settle).
-    onAsyncSettled: () => panel._suspWake?.(),
+    // C2 (SESSION-FLOW-C F-C2e——触发点补)：挂起会话活跃期间（digest 间——轮末 282/300
+    // 重发之间的窗口）每个 settle 都会改变池/待消化计数——即时重发到忙态单广播
+    // （_publishTurnState 带 counts）——webview 计数 = host 实际，不陈旧。状态随当前
+    // _turnState（会话用户回合/digest 执行中为 running——只刷计数不误翻状态）。
+    onAsyncSettled: () => {
+      panel._suspWake?.()
+      const susp = panel._susp
+      if (susp?.active) panel._publishTurnState?.(panel._turnState ?? "susp", backgroundStatus(susp.lines.history))
+    },
   }
 }

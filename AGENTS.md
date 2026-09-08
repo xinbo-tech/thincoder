@@ -92,8 +92,10 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active }` |
 | extension → webview | `historyPage` | `{ messages: [{ kind, text, name?, timestamp, idx }], hasOlder, older }` — lazy history: first paint sends the LAST page (`older=false`); scroll-back pages come via `loadOlder` (`older=true`, prepended with scroll compensation) |
 | webview → extension | `loadOlder` | `{ before }` — `before` = earliest rendered global idx (from `data-idx`), the older page ends just before it |
-| extension → webview | `question` | `{ question, options }` — inline question-tool card (option buttons or free-text input + submit/cancel), NOT a native VS Code popup |
-| webview → extension | `questionResponse` | `{ answer }` — null = cancelled → tool returns "(user cancelled)" |
+| extension → webview | `question` | `{ question, options, promptId }` — inline question-tool card (option buttons or free-text input + submit/cancel), NOT a native VS Code popup; card carries a host-generated monotonic `promptId` — `questionResponse` matches by it (C1, WEBVIEW.md §8) |
+| webview → extension | `questionResponse` | `{ answer, promptId }` — null = cancelled → tool returns "(user cancelled)"; host resolves the queue entry BY promptId (never an unconditional head shift — C1, see WEBVIEW.md §8) |
+| extension → webview | `questionCancelled` | `{ promptId }` — an unanswered question card was released by abort/Stop; the webview removes the matching card (C1, see WEBVIEW.md §8) |
+| extension → webview | `turnState` | `{ state, counts? }` — single busy-state broadcast: `state` ∈ `idle`/`running`/`susp`; `counts` = `{ running, queued, pending, done }` background-pool numbers riding the susp publishes (C2 — authoritative prose in WEBVIEW.md §8, mirrored here without duplication) |
 | extension → webview | `userMessage` / `assistantMessage` | `{ text }` (history replay — retained for the quick-input `sendMessage` command echo) |
 | extension → webview | `clearMessages` | — |
 

@@ -46,13 +46,17 @@ export class ChatPanel {
     this._autoApprove = false
     this._questionQueue = []  // pending inline question-tool prompts (panel, not native popups)
     this._statusBar = null    // status-bar run indicator (idle/running/waiting)
-    this._turnActive = false  // an agent turn is running (drives the status indicator)
+    // C2（SESSION-FLOW-C F-C2a——忙态单来源）：_turnState 枚举 {idle, running, susp}——
+    // running = 回合（含会话内 digest/用户回合）执行中；susp = 挂起会话活跃（或释放窗口
+    // 池仍 live）；waiting（权限/question 队列）为 running 修饰态非互斥——只经 _refreshStatus
+    // 呈现（"waiting 优先 running"语义保留），不入枚举。读者一律走谓词 turnBusy()（缩小迁移面）。
+    this._turnState = "idle"
     // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
     // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
-    // _suspPending/_suspQueue = 释放窗口守卫（偏差修复 #2——回合尾已登记挂起、会话未建立
-    // （generateTitle await 窗口）期间 _chat 入队等待会话接管）；
+    // _suspQueue = 释放窗口守卫队列（偏差修复 #2——回合尾池仍 live、会话未建立
+    // （generateTitle await 窗口）期间 _chat 入队等待会话接管——窗口由 _turnState==="susp"
+    // 且 _susp 空表达，不再单设布尔）；
     // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
-    this._suspPending = false
     this._suspQueue = null
     this._turnControllers = []
     // The slot number this panel is bound to. Set once when a session is opened/created,
@@ -66,17 +70,18 @@ export class ChatPanel {
 
     // Follow-active-file project switching (multi-root): when the setting is on and the
     // active editor's folder differs from the current project, switch automatically.
-    // Guarded by _turnActive — never yank the cwd out from under a running turn.
+    // Guarded by turnBusy() — never yank the cwd out from under a running turn OR a
+    // live suspension session (C2: susp counts as busy).
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (!editor) return
       try {
         const follow = vscode.workspace.getConfiguration("thincoder.project").get("followActiveEditor", false)
         if (!follow) return
         const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
-        if (!folder || folder.uri.fsPath === _cwd() || this._turnActive) return
+        if (!folder || folder.uri.fsPath === _cwd() || this.turnBusy()) return
         const r = setProjectFolder(folder.uri.fsPath)
         if (r.ok) {
-          // §11 销毁点（AGENT-LOOP §11——切换边界守卫在上方 _turnActive 检查——销毁安全）
+          // §11 销毁点（AGENT-LOOP §11——切换边界守卫在上方 turnBusy() 检查——销毁安全）
           this._agent = null
           this._onProjectChanged().catch((e) => console.error("[chat-panel] project switch failed:", e.message))
         }
@@ -162,10 +167,33 @@ export class ChatPanel {
     }
   }
 
+  /**
+   * C2（SESSION-FLOW-C F-C2a——忙态单来源）：读者谓词——任何回合执行中 / 挂起会话活跃 /
+   * 释放窗口（池仍 live）都算 busy。内部以 _turnState 枚举表达；读者只调本方法
+   * （迁移面缩小——6+ 处读者不用各自推导 idle/running/susp）。
+   */
+  turnBusy() {
+    return this._turnState !== "idle"
+  }
+
+  /**
+   * C2（SESSION-FLOW-C F-C2b——忙态单一广播点）：每次忙态 set/clear 行调用——
+   * 发 {type:"turnState", state, counts?} 新消息（webview 单一 reducer 更新 S._turnState；
+   * counts 随 susp 计数刷新携带——F-C2e digest 间不陈旧）。状态未变且无 counts → 不重发
+   * （幂等——282/300 同态重发只靠 counts 参数驱动）。
+   */
+  _publishTurnState(state, counts) {
+    const changed = state !== this._turnState
+    this._turnState = state
+    if (changed || counts) {
+      this._panel?.webview.postMessage({ type: "turnState", state, ...(counts ? { counts } : {}) })
+    }
+  }
+
   /** Waiting prompts beat running; without pending prompts, fall back to turn state. */
   _refreshStatus() {
     if (this._permissionQueue.length > 0 || this._questionQueue.length > 0) { this._setStatus("waiting"); return }
-    this._setStatus(this._turnActive ? "running" : "idle")
+    this._setStatus(this.turnBusy() ? "running" : "idle")
   }
 
   sendMessage(text) {
@@ -317,12 +345,13 @@ export class ChatPanel {
       this._suspWake?.()
       return
     }
-    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2）：回合尾已登记挂起（_suspPending）但会话
-    // 尚未建立（generateTitle await 窗口，可达秒级）——消息入队等待会话接管，不得开并发
-    // 独立回合：新回合从磁盘重载 lines（孤儿化池）+ abort 外回合 controller（池 children
-    // 全中止 → 僵尸挂起或结果丢失，AC-S2）。队列由 runPanelChat 回合尾消费（带队列进会话
-    // / 无会话则普通回合兜底）——入队消息零丢失。
-    if (this._suspPending) {
+    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2）：回合尾已登记挂起（池仍 live——
+    // _turnState==="susp" 且会话尚未建立）但会话尚未建立（generateTitle await 窗口，可达
+    // 秒级）——消息入队等待会话接管，不得开并发独立回合：新回合从磁盘重载 lines（孤儿化池）
+    // + abort 外回合 controller（池 children 全中止 → 僵尸挂起或结果丢失，AC-S2）。队列由
+    // runPanelChat 回合尾消费（带队列进会话 / 无会话则普通回合兜底）——入队消息零丢失。
+    // （会话活跃期的输入在更上方的 susp?.active 分流已接走——这里只兜释放窗口。）
+    if (this._turnState === "susp") {
       (this._suspQueue ??= []).push({ text, modelOverride, reasoning, providerName, images })
       return
     }
@@ -337,7 +366,7 @@ export class ChatPanel {
       console.error("[chat-panel] turn failed (F-C1a guard):", e?.message ?? e)
       const rawMsg = (e && (e.message || String(e))) || "unknown turn error"
       const errTextLine = rawMsg.split("\n")[0].replace(/https?:\/\/[^\s,)"']+/g, "[endpoint]")
-      this._turnActive = false
+      this._publishTurnState("idle")
       this._refreshStatus()
       this._panel?.webview.postMessage({ type: "error", text: errTextLine, techInfo: rawMsg })
       this._panel?.webview.postMessage({ type: "loading", loading: false })

@@ -44,16 +44,16 @@ after(() => {
   try { rmSync(_tmp, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 
-/** C1 桩面板——方法记录 + 字段直控（桩 _chat 记参返回 resolve——组④ 除外）。 */
+/** C1/C2 桩面板——方法记录 + 字段直控（桩 _chat 记参返回 resolve——组④ 除外）。
+ *  C2（SESSION-FLOW-C F-C2a）：忙态以 _turnState 枚举表达（旧 _turnActive 布尔已退役）。 */
 function stubPanel(overrides = {}) {
   const posted = []
   const p = {
-    _turnActive: false,
+    _turnState: "idle",
     _turnControllers: [],
     _abortController: null,
     _abortRequested: false,
     _susp: null,
-    _suspPending: false,
     _suspQueue: undefined,
     _questionQueue: [],
     _questionSeq: 0,
@@ -78,7 +78,7 @@ const settle = () => new Promise((r) => setTimeout(r, 10))
 // ─── ① 保序 + retry 同入口（F-C1e/H-F）──────────────
 
 test("① 保序：turnActive 中 userMessage（发起回合之后的后续消息）一律入队 + 逐条 messageQueued——回合尾 FIFO 消费零丢失；retry 与 userMessage 同入口", async () => {
-  const p = stubPanel({ _turnActive: true, _suspQueue: [] })
+  const p = stubPanel({ _turnState: "running", _suspQueue: [] })
   await handlePanelMessage(p, { type: "userMessage", text: "second" })
   await handlePanelMessage(p, { type: "userMessage", text: "third" })
   assert.deepEqual(p._chatCalls, [], "回合运行中不得开并发回合（直呼 _chat）")
@@ -87,7 +87,7 @@ test("① 保序：turnActive 中 userMessage（发起回合之后的后续消�
 
   // retry（H-F——守卫双份修复前直呼 _chat 绕过 turnActive 队列）
   const rp = stubPanel({
-    _turnActive: true,
+    _turnState: "running",
     _suspQueue: [],
     _activeHistory: () => [{ role: "user", content: "retry-me", provider: "p1" }],
   })
@@ -105,7 +105,7 @@ test("① 保序：turnActive 中 userMessage（发起回合之后的后续消�
   const longA = "x".repeat(2500)
   const longB = "y".repeat(2500)
   const longC = "z".repeat(2500)
-  const fp = stubPanel({ _turnActive: true, _suspQueue: [] })
+  const fp = stubPanel({ _turnState: "running", _suspQueue: [] })
   for (const t of [longA, longB, longC]) {
     await handlePanelMessage(fp, { type: "userMessage", text: t })
   }
@@ -122,7 +122,7 @@ test("① 保序：turnActive 中 userMessage（发起回合之后的后续消�
 
 test("② 控制直通（AC 红线——不引入全量 FIFO 串行）：turnActive 中 abort 直达 controller——不被消息队列阻塞——交付有效不置闩", async () => {
   const ctrl = new AbortController()
-  const p = stubPanel({ _turnActive: true, _abortController: ctrl })
+  const p = stubPanel({ _turnState: "running", _abortController: ctrl })
   await handlePanelMessage(p, { type: "abort" })
   assert.equal(ctrl.signal.aborted, true, "运行中 abort 必须直达（控制消息永不排队——杀 Stop 即失败）")
   assert.equal(p._abortRequested, false, "交付有效的 abort 不置闩（防中断续跑/下次正常回合误杀）")
@@ -169,12 +169,11 @@ test("④ 错误不悬挂（H-B 回归红线）：回合 setup 期异常 → 保
   Object.assign(p, {
     _slot: 0, // 绑定槽——ensureSlot 免盘
     _agent: null,
-    _turnActive: false,
+    _turnState: "idle",
     _abortController: null,
     _abortRequested: false,
     _turnControllers: [],
     _susp: null,
-    _suspPending: false,
     _suspQueue: undefined,
     _distillState: undefined,
     _distillController: undefined,
@@ -189,10 +188,12 @@ test("④ 错误不悬挂（H-B 回归红线）：回合 setup 期异常 → 保
   p._chat("hello") // fire-and-forget（生产语义）——修前此处产生 unhandled rejection
   await settle()
   assert.ok(p._turnHandle, "回合句柄挂面板（_turnHandle）")
-  assert.equal(p._turnActive, false, "忙态复位——不永卡 running")
-  const error = posted.find((m) => m.type === "error")
-  assert.ok(error, "保底 catch 发 error")
-  assert.match(String(error.text), /boom: setup failure/, "error 携带原始 setup 异常")
+  assert.equal(p._turnState, "idle", "忙态复位——不永卡 running（C2: 枚举 idle）")
+  const tsIdle = posted.find((m) => m.type === "turnState" && m.state === "idle")
+  assert.ok(tsIdle, "finally 忙态归位广播 turnState idle（C2 F-C2b——真实 impl 路径）")
+  const err = posted.find((m) => m.type === "error")
+  assert.ok(err, "保底 catch 发 error")
+  assert.match(String(err.text), /boom: setup failure/, "error 携带原始 setup 异常")
   const off = posted.find((m) => m.type === "loading" && m.loading === false)
   assert.ok(off, "loading:false 保底发出（UI 停止旋转）")
 })
@@ -273,3 +274,70 @@ test("⑥ atComplete seq（H-A）：两次调用乱序 resolve → 只采纳新 
     try { rmSync(base, { recursive: true, force: true }) } catch { /* ignore */ }
   }
 })
+
+// ─── ⑦ C2 忙态：枚举转换/谓词/等待修饰/路由守卫（F-C2a + AC-C2）──────
+
+test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 + turnBusy 谓词 + waiting 修饰态优先 + routeUserTurn 按枚举路由", async () => {
+  // 转换 + 广播：ChatPanel 原型方法（真实 _refreshStatus/_setStatus 路径——vscode mock
+  // 无 ThemeColor——_setStatus 以实例覆盖记录）。
+  const posted = []
+  const seenStatus = []
+  const p = Object.create(ChatPanel.prototype)
+  Object.assign(p, {
+    _turnState: "idle",
+    _susp: null,
+    _suspQueue: undefined,
+    _permissionQueue: [],
+    _questionQueue: [],
+    _statusBar: null,
+    _panel: { webview: { postMessage: (m) => { posted.push(m); return Promise.resolve(true) } } },
+  })
+  p._setStatus = (s) => seenStatus.push(s)
+
+  p._publishTurnState("running")
+  assert.equal(p._turnState, "running", "枚举转换 idle→running")
+  assert.equal(p.turnBusy(), true)
+  assert.equal(posted.at(-1).type, "turnState")
+  assert.equal(posted.at(-1).state, "running")
+  assert.equal(posted.at(-1).counts, undefined, "running 无 counts")
+  const n = posted.length
+  p._publishTurnState("running")
+  assert.equal(posted.length, n, "同态重发无 counts → 不重发（幂等）")
+
+  // susp + counts（挂起会话轮末/进入广播形）→ 重发带 counts
+  p._publishTurnState("susp", { running: 2, queued: 0, pending: 1, done: 0 })
+  assert.equal(p._turnState, "susp")
+  assert.deepEqual(posted.at(-1).counts, { running: 2, queued: 0, pending: 1, done: 0 })
+  p._publishTurnState("idle")
+  assert.equal(p.turnBusy(), false, "idle → turnBusy false")
+
+  // waiting 修饰态：权限/question 队列非空 → waiting 优先（不翻转枚举——非互斥）
+  p._publishTurnState("susp")
+  p._permissionQueue.push({})
+  p._refreshStatus()
+  assert.deepEqual(seenStatus.at(-1), "waiting", "waiting 优先 running（susp 也算 busy）")
+  assert.equal(p._turnState, "susp", "waiting 不入枚举——修饰态非互斥")
+  p._permissionQueue.length = 0
+  p._refreshStatus()
+  assert.deepEqual(seenStatus.at(-1), "running", "队列空 → susp busy → running")
+  p._publishTurnState("idle")
+  p._refreshStatus()
+  assert.deepEqual(seenStatus.at(-1), "idle", "idle → idle")
+
+  // routeUserTurn 按枚举路由：running → _suspQueue 排队；susp 释放窗口/会话等待 → _chat
+  // （_chat 内部上游分流 pendingInput/_suspQueue——D-S5 唤醒语义不被队列短路）；idle 直发
+  const qp = stubPanel({ _turnState: "running", _suspQueue: [] })
+  await handlePanelMessage(qp, { type: "userMessage", text: "during" })
+  assert.deepEqual(qp._chatCalls, [], "running → 入队（不直呼 _chat）")
+  assert.deepEqual(qp._suspQueue.map((q) => q.text), ["during"])
+
+  const sp = stubPanel({ _turnState: "susp", _susp: null }) // 释放窗口（会话未建）
+  await handlePanelMessage(sp, { type: "userMessage", text: "window" })
+  assert.equal(sp._chatCalls.length, 1, "susp（非 running）→ 走 _chat（上游分流/唤醒）")
+  assert.equal(sp._suspQueue, undefined, "不经 routeUserTurn 队列")
+
+  const ip = stubPanel({ _turnState: "idle" })
+  await handlePanelMessage(ip, { type: "userMessage", text: "direct" })
+  assert.equal(ip._chatCalls.length, 1, "idle → 直发 _chat")
+})
+

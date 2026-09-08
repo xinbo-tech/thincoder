@@ -27,6 +27,9 @@ export function renderStatusBar(m) {
       ? `<span style="color:var(--vscode-editorWarning-foreground, #cca700)">context ${ctxPct}%</span>`
       : `context ${ctxPct}%`)
   }
+  // C2 (F-C2c——修 H-E): thinking 态 = S._phase 标记——由本函数（#status-line 唯一
+  // writer）绘制——loading 消息不再 innerHTML 覆写状态行（徽标/挂起计数同线保留）。
+  if (S._phase === "thinking") parts.push(`${t("status.thinking")}<span class="loading-dots"></span>`)
   // CLI status parity: current tool, turn count (LLM calls), elapsed seconds
   if (S._currentTool) parts.push(`<span class="status-tool">${t("status.currentTool")}: ${escHtml(S._currentTool)}</span>`)
   if (S._llmCalls > 0) parts.push(`${t("status.turns")} ${S._llmCalls}`)

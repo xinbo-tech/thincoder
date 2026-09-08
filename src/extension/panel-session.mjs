@@ -128,7 +128,7 @@ export function loadSession(panel) {
     // 会话级 agent 销毁置 null（AC4——内存态不跨 session 复用；槽文件仍权威——下回合经
     // ensurePanelAgent → runAgent factory 重建 + §11.2.1 槽字段回填）。六销毁点在此汇合
     // （newSession/deleteSession/switchSession/onProjectChanged/status 全走 loadSession）；
-    // 全部上游带 _turnActive/_susp 守卫——此处执行时无活回合/后台池（销毁安全）。
+    // 全部上游带 turnBusy()/susp 守卫（C2：谓词合一）——此处执行时无活回合/后台池（销毁安全）。
     panel._agent = null
     // Session switch (webview newSession/loadSession/deleteSession, project switch, panel open):
     // abort any in-flight async distillation from the previous turn — its history arrays belong
@@ -170,9 +170,9 @@ export function sendHistoryPage(panel, messages, hasOlder, older) {
 
 export async function newSession(panel) {
     // 会话切换竞态守卫（GitHub #2/#5，2026-08-28）：运行中禁止新建——与 applyProjectSwitch
-    // 同模式（_turnActive → warning → return）。运行中放行会让旧 turn 的 stream/complete
+    // 同模式（turnBusy() → warning → return）。运行中放行会让旧 turn 的 stream/complete
     // 灌进新会话视图、内容落错槽。
-    if (panel._turnActive) {
+    if (panel.turnBusy()) {
       vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before creating a new session.")
       return
     }
@@ -184,7 +184,7 @@ export async function newSession(panel) {
 export async function deleteSession(panel, slot) {
     // 会话切换竞态守卫（GitHub #2/#5，2026-08-28）：运行中禁止删除——运行 turn 可能正写
     // 该槽（saveLines turnSlot 绑定），删除会产生半写/误删。
-    if (panel._turnActive) {
+    if (panel.turnBusy()) {
       vscode.window.showWarningMessage("ThinCoder: a task is running — stop it before deleting a session.")
       return
     }
