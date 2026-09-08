@@ -31,6 +31,7 @@
   waiting 行 + consult 计数/回复 preview）——后续可单独评估，非缺陷。
 
 ## 变更记录（历史折叠——详见 git log）
+- 2026-09-08：§11 实现交付后——eng-coder 报告 3 上报项：①槽持久化缺口（agentState 不带 tasks/goal/pendingReminders——destroy 丢）——父侧裁 a 案（补带三字段——文件域扩展 run-helpers/panel-callbacks）落 §11.7；②commit a0fabf8 卷入同伴 D6 文件（共享 git index 竞态——内容正确接受）；③setup.mjs 500 行边缘（挂 TODO 拆）。
 
 - 2026-09-08：新增 §11 agent 生命周期对齐 CLI 设计变更段（需求 SESSION.md 需求段——用户裁定快车道）。评审后并入 §2。
 - 2026-09-08：§11 评审 9 项 advisory 全采纳——#1 SESSION 状态指针/#2 槽字段↔hydrate 映射表(11.2.1)/#3 受影响文件表(11.3.1)/#4 用例表(11.4.1)/#5 A-C 归类(_tasks/_goal/_pendingReminders 移会话级)/#6 §11.3 标题(裁定记录——无待裁)/#7/#9 merge 清单(11.6)/#8 F2 措辞(砍 opts 搬运非落盘链)。
@@ -458,3 +459,11 @@ destroy 边界（loadSession/project-switch/dispose/reload）重建单例时，�
 - [ ] SESSION.md:32 需求状态行更新（需求定稿 + 指向本 §11）（评审 #1）
 - [ ] 本 §11 变更段折叠入 §2/§3（3 层→2 层）
 - [ ] 变更记录补评审采纳行
+
+
+### 11.7 交付缺口补强（2026-09-08 实现后父侧裁——a 案）
+
+- **缺口（eng-coder 交付报告 §4 项 3 上报）**：§11.2.1/AC3「saveLines 已持久化 tasks/goal/pendingReminders」对纯 VSC 会话**不成立**——`agentState()` 只带 engineering/advisorGuard/engDesignTokens（run-helpers.mjs:228-236）——tasks/goal/pendingReminders **从不回写槽** → destroy/重载后这三字段只能靠对话文本重建（单例切走再切回同槽会丢——F4 场景）。
+- **父侧裁（2026-09-08 用户批准 a 案）**：**agentState 补带三字段回写槽**——与 CLI 一致（CLI saveSession 带 tasks/goal——session.mjs:131/137）——单例收益完整跨 destroy 存活。
+- **文件域扩展（越原 §11.3.1 表）**：`src/agent/run-helpers.mjs`（agentState 补 tasks/goal/pendingReminders）+ `src/extension/panel-callbacks.mjs`（onComplete 携入——现有 `{...agentState}` 透传即带）——原 §11.3.1 受影响表未列——实现时补登。
+- **验证**：destroy（loadSession 切走）→ 切回同槽 → 重建 hydrate 从槽回填 tasks/goal/pendingReminders（原 11.2.1 用例表「destroy 后重建回填」行覆盖）。
