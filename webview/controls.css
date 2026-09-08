@@ -345,7 +345,7 @@
 
 #panels:empty { display: none; }
 
-#subagent-panel, #goal-panel, #task-panel {
+#goal-panel, #task-panel {
   padding: 4px 14px 6px;
   font-size: 12px;
   max-height: 200px;
@@ -522,46 +522,6 @@ mark.search-hit.current {
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
-
-/* ─── Subagent items ────────────────────────── */
-
-.sub-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 0;
-  opacity: 0.7;
-}
-
-.sub-role {
-  color: var(--accent);
-  font-weight: 600;
-  flex-shrink: 0;
-  min-width: 40px;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-}
-
-.sub-tool {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.5;
-  font-family: var(--vscode-editor-font-family, monospace);
-}
-
-.sub-status {
-  font-size: 10px;
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
-.sub-status.started { color: var(--accent); }
-.sub-status.done { opacity: 0.4; }
-.sub-status.error { color: var(--error-fg); }
 
 /* ─── Goal items ─────────────────────────────── */
 

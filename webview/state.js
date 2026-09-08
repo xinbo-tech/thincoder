@@ -13,6 +13,9 @@ window._vscode = vscode
 export const ctx = {
   vscode,
   messagesEl: document.getElementById("messages"),
+  // SESSION-ACTIVITY-REVISED（2026-09-09）：子代理活动区容器（#messages 与输入之间——
+  // live 子代理块出生区——freeze 落流时移入 messagesEl——CLI 单面板形态回归）。
+  subAgentArea: document.getElementById("subagent-activity"),
   inputEl: document.getElementById("input"),
   sendBtn: document.getElementById("send-btn"),
   abortBtn: document.getElementById("abort-btn"),
@@ -99,11 +102,13 @@ export const S = {
   // background events beyond these host-driven updates (F3).
   _suspended: false,
   _suspCounts: null, // { running, queued, pending, done } — rendered into the status line
-  // C2 (SESSION-FLOW-C F-C2a/b): host busy-state single broadcast mirror —
-  // {type:"turnState", state, counts?} → 单一 reducer 更新本字段（S._turnState ∈
-  // idle/running/susp——waiting 是 running 修饰态非互斥——不入枚举）。派生读：
-  // Stop 常显（state==="susp"——F-C2d）、loading 按钮态。既有 _suspended 保持
-  // suspension 消息驱动（会话级语义——digest 执行中 state 为 running 时不得翻 false）。
+  // C2（SESSION-FLOW-C F-C2a/b）→ F-6（SESSION-ACTIVITY-REVISED 2026-09-09——评审 #1
+  // 定论）：host busy-state 单广播镜像——{type:"turnState", state, counts?} → 单一
+  // reducer 更新本字段（S._turnState ∈ idle/running/susp——waiting 是 running 修饰态非
+  // 互斥——不入枚举）。派生读：Stop 只显（state==="running"——回合/digest/标题窗口/
+  // Reload 冷启重推——F-6 收窄：susp 纯池跑不显——无全停——池空自然消化完——子代理停
+  // 止靠活动区逐块 ⏹）。既有 _suspended 保持 suspension 消息驱动（会话级语义——digest
+  // 执行中 state 为 running 时不得翻 false）。
   _turnState: "idle",
   // C2 (F-C2c): thinking 态标记——loading 消息经 setLoading 置位/清除；renderStatusBar
   // （#status-line 唯一 writer）据此绘制 thinking 段——不再 innerHTML 覆写状态行（修 H-E）。

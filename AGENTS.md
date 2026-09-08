@@ -56,9 +56,9 @@ src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-
 src/prompts/          System prompts: system.md, discipline.md, main.md, explore/coder/plan.md
 webview/chat.js      Frontend orchestration: message handling, model selector, session history
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
-webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块（R22 活动块已迁 activity.js）
-webview/panels.js    侧面板：task progress/subagents/consultants/goal + 挂起态（行面板 bookkeeping——活动块生命周期在 activity.js）
-webview/activity.js   B1 子代理活动块流内出生+原地冻结 (SESSION-FLOW-B): live 活动块 (create/header/⏹/elapsed ticker) 出生即 #messages 流尾 + 终态原地折叠 (身份头 + report preview——无 DOM move) — leaf module (state/ui/i18n only)
+webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块 + 活动块路由（live 块固定在活动区——activity.js——freeze 落流移入 #messages）
+webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——SESSION-ACTIVITY-REVISED——簿记 map 仅供活动块 meta 水合——活动块生命周期在 activity.js）
+webview/activity.js   SESSION-ACTIVITY-REVISED 子代理活动块（F-1~F-5）：live 块固定于 #subagent-activity 活动区（messages 与输入之间——不随会话流滚动）——终态 freeze 移入 #messages（普通尾推/settled settle 锚 _freezeAtEl 插 digest 报告前）——150 只数冻结——queued 区内等待块头——consult answered 无块防御——⏹/elapsed ticker（区内 live 块）——leaf module（state/ui/i18n only）
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout

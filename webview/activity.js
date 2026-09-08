@@ -1,22 +1,19 @@
 /**
- * activity.js — 子代理活动块生命周期（B1 原地版——SESSION-FLOW-B F-B1b/F-B1c——
- * webview 镜像 CLI subagent-panel）。
+ * activity.js — 子代理活动块生命周期（SESSION-ACTIVITY-REVISED——B1 修正——
+ * CLI 单固定块面板形态回归——webview 镜像 CLI subagent-panel.mjs + subagent-freeze.mjs）。
  *
- * Live subagent/escalate/consult/advisor-async activity blocks render IN the
- * conversation flow: born appended to the #messages stream tail as stream-level
- * blocks — siblings of .message elements (落点 A), never embedded in a parent
- * block. On terminal states (done / stopped / error) the block FREEZES IN
- * PLACE (no DOM move — position == birth position, N3): collapsed block with
- * an identity header (✓/⏹ key · sync/async · model · done Ns · turn) + a dim
- * report preview inserted right after the block (≤8 lines — CLI
- * tool-events.mjs:187-191 parity; escalate gets no preview).
- *
- * §17 挂起例外: a "settled" (child finished while the suspension session is
- * live) does NOT freeze — the block stays LIVE in the flow at its birth
- * position with the "done · awaiting digestion" header until the digest
- * completes (host re-posts done — reclaimDigestedBlocks → freeze in place) or
- * the session exit freeze (freeze:true). 150 块 DOM 窗口（F-B1e）: live 与
- * 冻结子块从出生即计入 #messages 裁剪——无豁免（预算 = 并发池大小——池有界）。
+ * Live subagent/escalate/consult/advisor-async activity blocks render in the
+ * FIXED ACTIVITY AREA (#subagent-activity — between #messages and the input):
+ * born appended to the area container as siblings (parentNode = the area —
+ * messages scroll never loses them), never embedded in a parent block. On
+ * terminal states (done / stopped / error) the block FREEZES and MOVES INTO the
+ * #messages flow: plain terminals append to the messages tail (CLI append
+ * parity); §17 "settled" blocks (child finished while the suspension session is
+ * live) stay parked in the AREA with the "done · awaiting digestion" header and
+ * are inserted at their settle-time flow anchor (_freezeAtEl) when the digest
+ * done re-post / session-exit freeze arrives — right BEFORE the digest report
+ * that narrates them (CLI _freezeAt DOM 版). 150 块 DOM 窗口: 只数 #messages 内冻结
+ * 块（live 块在活动区——不计窗——预算 = 并发池大小——池有界——裁剪函数零改）。
  *
  * Header field sources (D-R22b 数据源映射): model/startedAt/pool ride the
  * existing "started" status events (rows/panels.js map) or the channel name
@@ -25,15 +22,17 @@
  * blocks exist); turn n/max renders ONLY when a status message carries the
  * fields (empirically the events do not carry live turn today — degraded per
  * design D-R22b: the terminal done event carries the final entry turn for pool
- * children; live headers omit the part until then).
+ * children; live headers omit the part until then). queued/waiting entries get
+ * an AREA waiting block head ([⏳ key] + queued/waiting state word — no ⏹ —
+ * never started; D-4) instead of a flow row.
  *
  * Import graph: state/ui/i18n only — no panels/streaming import (both import
- * this module; no cycles). ui.js keeps appendAdvisorChunk/buildAdvisorBlock/
- * maybeScrollDown.
+ * this module; no cycles). ui.js keeps appendAdvisorChunk/maybeScrollDown (the
+ * latter messages-only — the area pins its own bottom internally).
  */
 import { ctx, S } from "./state.js"
 import { t } from "./i18n.js"
-import { buildAdvisorBlock, maybeScrollDown } from "./ui.js"
+import { buildAdvisorBlock, appendAdvisorChunk } from "./ui.js"
 
 // Roles whose header carries the sync/async mode word (CLI SUBAGENT_ROLES +
 // advisor parity — consult/escalate keys embed their model instead).
@@ -72,7 +71,7 @@ export function blockNamesFor(role, id, model, sessionId) {
   return out
 }
 
-/** Row-map lookup (S._subagentMap — row panel bookkeeping) for meta hydration:
+/** Row-map lookup (S._subagentMap — 行面板撤除后的簿记——仅供块 meta 水合):
  *  family/escalate rows are id-keyed; consult rows carry sessionId + model. */
 function rowFor(ch) {
   if (ch.role === "consult") {
@@ -95,17 +94,22 @@ const W = {
   stopped: () => t("sub.stopped") || "stopped",
   error: () => t("sub.error") || "error",
   awaiting: () => t("sub.awaitingDigest") || "done · awaiting digestion",
+  queued: () => t("sub.queued") || "queued",
   thinking: () => t("status.thinking") + "…",
 }
 
 /** Identity/status header line, e.g.:
  *  live   → "[▶ eng-coder#3 · async · glm-5.3 · 12s · turn 3/100] read x.mjs"
+ *  queued → "[⏳ eng-coder#4] queued · position 2"（等待块头——状态词块外承载）
  *  frozen → "[✓ eng-coder#3 · async · glm-5.3 · done 15s · turn 4/100]"
  *  stopped→ "[⏹ eng-coder#3 · async · glm-5.3 · stopped 12s]"
  *  Parts are conditional on what the events actually carried (turn only with a
  *  real count — degraded mode, see module doc). */
 function headerText(meta, now) {
   const frozen = meta.frozen
+  // queued/waiting 等待块头（D-4）: 未启动——无 elapsed/mode/model 段（无 ticker——
+  // 队列等待信息由 refreshBlock 块外状态词承载：queued · position N / waiting 原因）
+  if (!frozen && meta.status === "queued") return `[⏳ ${meta.label}]`
   const sec = Math.max(0, Math.floor(((frozen || meta.status === "settled" ? (meta.doneAt ?? now) : now) - (meta.startedAt ?? now)) / 1000))
   let icon = "▶"
   let verb = null
@@ -138,9 +142,10 @@ function headerText(meta, now) {
 }
 
 /** State word after the bracket (live): last tool line tail / thinking /
- *  awaiting-digestion — CLI currentTool parity. */
+ *  awaiting-digestion / queued-waiting — CLI currentTool parity. */
 function stateWord(meta) {
   if (meta.status === "settled") return W.awaiting()
+  if (meta.status === "queued") return meta.stateWord || W.queued()
   return meta.stateWord || W.thinking()
 }
 
@@ -170,9 +175,9 @@ export function refreshBlock(block) {
   hdr.className = "sub-hdr"
   if (meta.frozen && (meta.status === "cancelled" || meta.status === "error")) hdr.classList.add("sub-stopped")
   // Frozen: bracket only (verb inside: done/stopped/error Ns). Live settled:
-  // bracket + "done · awaiting digestion" state word. Live running: bracket +
-  // current-tool/state word (stateWord() falls back to thinking…).
-  hdr.textContent = headerText(meta, Date.now()) + (meta.frozen ? "" : " " + (meta.status === "settled" ? W.awaiting() : stateWord(meta)))
+  // bracket + "done · awaiting digestion" state word. Live running/queued:
+  // bracket + state word (stateWord() falls back to thinking…).
+  hdr.textContent = headerText(meta, Date.now()) + (meta.frozen ? "" : " " + stateWord(meta))
   summary.appendChild(hdr)
   // Folded context: tail-3 dim lines under the header. Live folded blocks show
   // their recent activity; FROZEN blocks mirror the CLI's folded-frozen form
@@ -188,7 +193,7 @@ export function refreshBlock(block) {
     }
   }
   // ⏹ — running pool children of the cancelable family only (T-M23 semantics:
-  // never on sync spawns, never after terminal states).
+  // never on sync spawns, never after terminal states, never on queued heads).
   updateStopButton(block)
 }
 
@@ -214,15 +219,49 @@ function updateStopButton(block) {
   }
 }
 
+// ─── Activity-area visibility & pin ─────────────
+
+/** 区空隐藏（F-1/⑨）: 区内无块 → display none 零高（grid auto 行不占）；有块 → 显。
+ *  与 base.css `#subagent-activity:empty{display:none}` 互为兜底（CSS 管静态空态；
+ *  JS 管块生灭后的翻转——inline style 优先于 CSS 需显式复位）。 */
+function updateAreaVisibility() {
+  const area = ctx.subAgentArea
+  if (!area) return
+  area.style.display = area.children.length > 0 ? "" : "none"
+}
+
+/** 区内自滚管理——区底 pin（F-2）：区溢出（多块超 max-height 32vh）时新块出生若已在
+ *  区底（近底 32px——与 messagesEl pinBottom 同语义）→ 滚到底；用户上读区内历史时
+ *  不强拉。区内块内容增长在块内自滚（.advisor-content 100px）——区级 scrollHeight
+ *  只随块生/灭变化——pin 只在出生/移除点评估。 */
+function pinActivityArea() {
+  const area = ctx.subAgentArea
+  if (!area) return
+  if (area.scrollHeight > area.clientHeight && area.scrollTop + area.clientHeight >= area.scrollHeight - 32) {
+    area.scrollTop = area.scrollHeight
+  }
+}
+
 // ─── Block lifecycle ─────────────────────────────
 
 /** Get (create on first sight) the activity block for a channel name. The block
- *  is BORN IN the #messages flow (F-B1b) — appended to the current stream tail
- *  as a sibling of .message elements; freeze later folds the SAME element in
- *  place (no DOM move — N3; key/identity continuity — fold state carries over). */
+ *  is BORN IN the fixed activity area (F-1 — #subagent-activity container,
+ *  between #messages and the input; messages scroll never displaces it); freeze
+ *  later MOVES the element into the #messages flow (tail push / settle anchor —
+ *  F-4). */
 export function ensureBlock(name) {
   let block = S._subBlocks.get(name)
-  if (block) return block
+  if (block) {
+    // 防御性清扫：map 中冻结块元素已被 150 窗口裁掉（isConnected=false）→ 迟来消息
+    // 拿不到活元素——移出簿记（tombstone 语义由调用点 frozen 守卫承担——迟到 chunk
+    // 丢弃路径见 streaming.subagentChunk）
+    if (block._subMeta?.frozen && !block.isConnected) {
+      S._subBlocks.delete(name)
+      block = null
+    } else {
+      return block
+    }
+  }
   const ch = parseChannel(name)
   const row = rowFor(ch)
   block = buildAdvisorBlock(ch.label)
@@ -236,15 +275,16 @@ export function ensureBlock(name) {
     startedAt: row?.startedAt ?? Date.now(), pool: row?.pool ?? null,
     turn: null, maxTurns: 0, status: "running", stateWord: null,
     doneAt: null, frozen: false, error: null, queued: false,
+    // F-4 落流锚（settle 时记录——CLI _freezeAt DOM 版）: 仅 settled 块携带
+    _freezeAtEl: null, settleSeq: 0,
   }
   block.addEventListener("toggle", () => { if (block._subMeta && !block._subMeta.frozen) refreshBlock(block) })
-  // 挂载点 = #messages 流尾（落点 A——流级独立块，150 裁剪只数直接子元素——F-B1e）。
-  // 出生即钉底（maybeScrollDown——pinBottom 语义替代 R22 面板 scrollTop：用户上读
-  // 时不强拉）。freezeBlock 不再移动该元素——终态在出生位原地折叠。
-  if (ctx.messagesEl) {
-    ctx.messagesEl.appendChild(block)
-    maybeScrollDown(ctx)
+  // 挂载点 = 活动区容器（F-1——不触碰 #messages——messages 滚动零扰动——live 固定可见）。
+  if (ctx.subAgentArea) {
+    ctx.subAgentArea.appendChild(block)
+    pinActivityArea()
   }
+  updateAreaVisibility()
   S._subBlocks.set(name, block)
   ensureTicker()
   refreshBlock(block)
@@ -268,11 +308,35 @@ export function noteChunk(block, kind, text) {
   }
 }
 
-/** Status-message effects on blocks (rows are handled in panels.js). */
+/** Status-message effects on blocks (rows bookkeeping is in panels.js). */
 export function applySubagentStatus(m) {
+  if (m.status === "queued") {
+    // D-4（SESSION-ACTIVITY-REVISED——queued 等待块头）: 排队 spawn 即建区内等待块头
+    // （行面板撤除后 queued/waiting 等待态的唯一承载面——CLI waiting 块等价——F-3）。
+    // 重复 queued（位置/等待态刷新——cancel 前移/依赖终态转移）覆盖式更新头；
+    // 启动（started）后转 running（⏹ 随之出现——running+pool）；取消（was:"queued"）
+    // 移除块头（从未启动——不冻结——CLI waiting 块移除同语义）。
+    if (m.id == null || m.role == null) return
+    const name = `sub:${m.role}#${m.id}`
+    const block = ensureBlock(name)
+    const meta = block._subMeta
+    if (meta.frozen) return
+    meta.status = "queued"
+    meta.queued = true
+    if (m.waiting) {
+      meta.stateWord = "waiting" + (m.reason ? " — " + String(m.reason).replace(/\s+/g, " ").trim().slice(0, 64) : "")
+    } else if (m.position != null) {
+      meta.stateWord = `${W.queued()} · position ${m.position}`
+    } else {
+      meta.stateWord = W.queued()
+    }
+    refreshBlock(block)
+    return
+  }
   if (m.status === "started") {
     // Pool children of the cancelable family get their block at START (visible
-    // before the first relay chunk; sync spawns create on first chunk).
+    // before the first relay chunk; sync spawns create on first chunk). A queued
+    // head (status queued) flips to running here — stale queue state word cleared.
     if (FAMILY_ROLES.includes(m.role) && m.pool && m.id != null) ensureBlock(`sub:${m.role}#${m.id}`)
     for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
       const block = S._subBlocks.get(name)
@@ -280,6 +344,8 @@ export function applySubagentStatus(m) {
       if (!block?._subMeta || block._subMeta.frozen) continue
       const meta = block._subMeta
       meta.status = "running"
+      meta.stateWord = null // queued 头残留的等待标注清掉（转 running——由 chunk 状态词接管）
+      meta.queued = false
       // pool 标记语义: async 池条目 started 携 pool:true；同步 spawn 不带 → false。
       // （escalate-async/advisor-async 亦携 pool:true——escalate 无 mode 词豁免）
       meta.pool = m.pool === true
@@ -291,21 +357,25 @@ export function applySubagentStatus(m) {
     }
     return
   }
-  if (m.status === "queued") return // queued rows only — no activity block yet
   if (m.status === "settled") {
     for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
       const block = S._subBlocks.get(name)
       if (!block?._subMeta || block._subMeta.frozen) continue
-      // B1（F-B1c）: settle 只翻状态——✓ + "done · awaiting digestion" 原地显示
-      // （块已出生在流内出生位——无 freezeAnchor 记录、无 DOM move——N3 不变式）。
-      // digest 完成后 host 补发 done → freezeBlock 原地冻结；settle 到 done 之间
-      // 渲染的 digest 报告/后续消息自然排在块后（CLI _freezeAt 语义由出生时序
-      // 结构性取代）。挂起期终态通知同携 entry 快照（subagent.mjs runChild
-      // terminalStatus）——冻结头 turn 延续（digest 补发 done 不再带 turn——meta 已存）。
-      block._subMeta.status = "settled"
-      block._subMeta.doneAt = Date.now()
-      if (m.maxTurns != null) block._subMeta.maxTurns = m.maxTurns
-      if (m.turn != null) block._subMeta.turn = m.turn
+      // F-4（SESSION-ACTIVITY-REVISED）: settle 翻状态 + 块留驻活动区（✓ "done ·
+      // awaiting digestion"——区内等待 digest）——记落流锚 _freezeAtEl = settle 时
+      // #messages 流尾元素（digest 报告流内排在锚后——digest done 补发时块插回
+      // 报告前——CLI _freezeAt DOM 版）。多 settled 同锚按 settle 序升序落流
+      // （settleSeq 单调——插入点 walk 见 freezeInsertPoint）。挂起期终态通知同携
+      // entry 快照（terminalStatus）——冻结头 turn 延续（digest 补发 done 不再带
+      // turn——meta 已存）。
+      const meta = block._subMeta
+      meta.status = "settled"
+      meta.queued = false
+      meta.doneAt = Date.now()
+      meta._freezeAtEl = ctx.messagesEl ? ctx.messagesEl.lastElementChild : null
+      meta.settleSeq = ++_settleSeq
+      if (m.maxTurns != null) meta.maxTurns = m.maxTurns
+      if (m.turn != null) meta.turn = m.turn
       refreshBlock(block)
     }
     return
@@ -319,7 +389,36 @@ export function applySubagentStatus(m) {
     : m.status === "failed" ? "error"
     : null
   if (kind === null) return
-  for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
+  // §20 D-SD3b: cancelled 带 was:"queued" = queued 取消（从未启动——无冻结）→ 等待
+  // 块头移除（行面板撤前同语义——CLI waiting 块移除）。
+  if (m.status === "cancelled" && m.was === "queued") {
+    for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
+      const block = S._subBlocks.get(name)
+      if (block?._subMeta && !block._subMeta.frozen && block._subMeta.status === "queued") {
+        S._subBlocks.delete(name)
+        block.remove()
+        updateAreaVisibility()
+      }
+    }
+    return
+  }
+  const names = blockNamesFor(m.role, m.id, m.model, m.sessionId)
+  let found = false
+  for (const name of names) {
+    const block = S._subBlocks.get(name)
+    if (block?._subMeta) { found = true; break }
+  }
+  // ⑭ consult answered 无块防御（评审 #3——SESSION-ACTIVITY-REVISED）: answered 携
+  // replyPreview 而无活动块（频道工具流未及建块/块已随重置消失——行面板撤后回复不
+  // 得丢）→ 按 replyPreview 行快照建块再冻结（report 内容 = 快照行——digest 轮逐字
+  // 呈现仍是回复权威呈现面——此块为防御承载）。
+  if (!found && m.status === "answered" && m.model != null && m.sessionId != null && m.replyPreview) {
+    const snap = ensureBlock(`sub:consult ${m.model} #${m.sessionId}`)
+    appendAdvisorChunk(snap, "text", String(m.replyPreview))
+    freezeBlock(snap, "done")
+    return
+  }
+  for (const name of names) {
     const block = S._subBlocks.get(name)
     if (!block?._subMeta || block._subMeta.frozen) continue
     const meta = block._subMeta
@@ -330,14 +429,36 @@ export function applySubagentStatus(m) {
   }
 }
 
-/** Fold a live block IN PLACE (B1 F-B1c — no DOM move, position == birth
- *  position; N3): terminal status flip, class sub-live → sub-frozen, collapse
- *  (open=false), ⏹ removal, header refresh + dim report preview inserted right
- *  after the block (still in the flow — CLI tool-events parity; escalate
- *  excluded, stopped excluded). Blocks frozen from the §17 settled park show
- *  the digest's completion order: settle order == birth order — no anchor chain
- *  needed (the CLI _freezeAt machinery is structurally replaced by the birth
- *  timeline). */
+// ─── Freeze → 落流（F-4：CLI _freezeAt DOM 版——普通终态尾推 / settled 锚插）──
+
+/** 落流插入点（settled 锚插用）：自锚向后 walk——同锚且 settle 更早的已冻结块
+ *  （及其紧跟 preview）属于"应排在本块之前"的插入组——跳过；遇同锚 settle 更晚的
+ *  冻结块/其他内容（digest 报告等）即停——本块插其前。任意到达序（digest 补发
+ *  done = settle 升序；freezeSettledBlocks 退出批 = 已按 settleSeq 排序）下同锚
+ *  相对序都 = settle 序（后 settle 先插进组——相对序 = settle 序——设计定论）。 */
+function freezeInsertPoint(anchor, meta) {
+  let el = anchor.nextSibling
+  while (el) {
+    const m = el._subMeta
+    if (m?.frozen && m._freezeAtEl === anchor && (m.settleSeq ?? 0) < meta.settleSeq) {
+      el = el.nextSibling
+      if (el?.classList?.contains("sub-report-preview")) el = el.nextSibling
+      continue
+    }
+    break
+  }
+  return el
+}
+
+/** Fold a live block AND MOVE it into the #messages flow (F-4 — B1 原地折叠的
+ *  修正反转：DOM move 红线从"无 move"反转为"落流必 move"——区外冻结块 = 会话流
+ *  历史一部分——150 裁剪只数冻结——区为纯 live 面): terminal status flip, class
+ *  sub-live → sub-frozen, collapse (open=false), ⏹ removal, header refresh +
+ *  dim report preview inserted right after the block in the flow (CLI parity;
+ *  escalate excluded, stopped excluded). Plain terminals (never settled): tail
+ *  push (appendChild — CLI append parity). §17 settled parkers: insert at
+ *  meta._freezeAtEl 后（digest 报告前）——锚被 150 裁（isConnected=false）→ 尾推
+ *  退化（⑫）。不强制滚动（折叠单行落定——不调 maybeScrollDown）。 */
 export function freezeBlock(block, kind) {
   const meta = block._subMeta
   if (!meta || meta.frozen) return
@@ -349,6 +470,13 @@ export function freezeBlock(block, kind) {
   block.open = false
   block.querySelector(".sub-stop-btn")?.remove()
   refreshBlock(block)
+  // 落流（DOM move——活动区 → #messages）: 区内移除由 insertBefore/appendChild 隐含。
+  const target = ctx.messagesEl ?? block.parentNode
+  if (target) {
+    if (meta._freezeAtEl?.isConnected) target.insertBefore(block, freezeInsertPoint(meta._freezeAtEl, meta))
+    else target.appendChild(block) // 普通终态/锚被裁（⑫ 尾推退化）
+  }
+  updateAreaVisibility()
   if (kind === "done" || kind === "error") appendPreview(block) // stopped = interrupted — no report preview (CLI parity)
   ensureTicker()
 }
@@ -378,16 +506,23 @@ function appendPreview(block) {
   block.insertAdjacentElement("afterend", div)
 }
 
+// settle 序单调计数器（同锚多 settled 落流序——Date.now() 同毫秒不可靠）
+let _settleSeq = 0
+
 /** Session-exit freeze (suspension freeze:true — §17.5.5 兜底): every block
- *  still live with a settled row freezes as done (in place — no move). */
+ *  still live with a settled row freezes as done (anchored insert — settle 序
+ *  升序逐块——同锚相对序 = settle 序）。 */
 export function freezeSettledBlocks() {
+  const blocks = []
   for (const [id, row] of Object.entries(S._subagentMap)) {
     if (row.status !== "settled") continue
     for (const name of blockNamesFor(row.role, row.id ?? id, row.model, row.sessionId)) {
       const block = S._subBlocks.get(name)
-      if (block?._subMeta && !block._subMeta.frozen) freezeBlock(block, "done")
+      if (block?._subMeta && !block._subMeta.frozen && block._subMeta.status === "settled") blocks.push(block)
     }
   }
+  blocks.sort((a, b) => (a._subMeta.settleSeq ?? 0) - (b._subMeta.settleSeq ?? 0))
+  for (const block of blocks) freezeBlock(block, "done")
   ensureTicker()
 }
 
@@ -425,12 +560,12 @@ export function activityTick() {
   }
 }
 
-/** Full reset — turn end (!suspended), session clear / send: live blocks are
- *  REMOVED from the #messages flow (turn-scoped), map cleared, ticker stopped.
- *  Frozen blocks in #messages are NOT touched (F-B1d — they live in the
- *  conversation history until the 150-block DOM window trims them). Defensive:
- *  stray live blocks outside the map (edge paths) are removed by their
- *  .sub-block.sub-live class — frozen blocks never carry sub-live. */
+/** Full reset — turn abort（无挂起会话）/ session clear: live blocks are REMOVED
+ *  from the activity AREA, map cleared, ticker stopped. Frozen blocks in
+ *  #messages are NOT touched (F-4 — they live in the conversation history until
+ *  the 150-block DOM window trims them). Defensive: stray live blocks outside
+ *  the map (edge paths) are removed by their .sub-block.sub-live class — frozen
+ *  blocks never carry sub-live. 区空即隐藏（updateAreaVisibility）。 */
 export function resetActivity() {
   if (_ticker) { clearInterval(_ticker); _ticker = null }
   for (const block of S._subBlocks.values()) {
@@ -439,4 +574,5 @@ export function resetActivity() {
   S._subBlocks.clear()
   // 防御清：map 外孤儿 live 块（非冻结点产生的残留路径）——frozen 不动
   for (const el of document.querySelectorAll(".sub-block.sub-live")) el.remove()
+  updateAreaVisibility()
 }

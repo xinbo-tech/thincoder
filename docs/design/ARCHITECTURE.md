@@ -21,8 +21,11 @@
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
   通道，触碰桥白名单，不擅建）——降级口径已定：池条目终态通知携真实终值，冻结身份
   头显示终值。记录在案，无跟进计划。
-- 行面板 `#subagent-panel` 与活动面板的合并评估候选：**保留**（其独有载荷 = queued/
-  waiting 行 + consult 计数/回复 preview）——后续可单独评估，非缺陷。
+- 行面板（子代理行）**保留裁定反转（评审 #4——不得当历史折叠）**：候选评估曾裁
+  **保留**（其独有载荷 = queued/waiting 行 + consult 计数/回复 preview）——SESSION-
+  ACTIVITY-REVISED（2026-09-09 用户裁定）全撤（行面板 = VSC 独有历史残留——双面根源）：
+  queued/consult 载荷迁活动区（区内等待块头/sub: 频道块 + 冻结 preview）——单面板形态
+  一体满足用户三连——开放项关闭（实现批：#subagent-panel 零残留 + 状态行计数徽标撤）。
 - 快层 slow-gate（D-T6）在本机负载下对清单外存量用例偶发触红（session-io-parity
   F4 / compaction / dual-history / mcp 等 800-2100ms 浮动）——非本批引入，报父侧
   处置（归册或阈值复议）。

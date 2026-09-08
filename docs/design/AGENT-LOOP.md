@@ -27,8 +27,12 @@
 - UI ⏹ 活动块 live 头缺逐轮 turn 段（现有状态事件不携 turn——逐轮跳动需扩展端新
   通道，触碰桥白名单，不擅建）——降级口径已定：池条目终态通知携真实终值，冻结身份
   头显示终值。记录在案，无跟进计划。
-- 行面板 `#subagent-panel` **保留**（其独有载荷 = queued/waiting 行 + consult 计数/
-  回复 preview）——B1（SESSION-FLOW-B）拆底部活动面板后已无合并对象——此开放项关闭。
+- 行面板（子代理行 + consult 计数/回复 preview）**保留裁定反转（评审 #4——不得当历史
+  折叠）**：B1 拆底部活动面板时裁"保留"（其独有载荷 = queued/waiting 行 + consult
+  计数/回复 preview——开放项关闭）→ SESSION-ACTIVITY-REVISED（2026-09-09 用户裁定——
+  行面板 = VSC 独有历史残留——双面根源）全撤：queued/consult 载荷迁活动区（等待块头/
+  频道块 + 冻结 preview）——单面板形态一体满足用户三连（live 固定可见 + 一个面板 +
+  CLI 一致）——#subagent-panel 自 index.html/CSS/panels.js 零残留（⑮ grep 锁）。
 
 ## 变更记录（历史折叠——详见 git log）
 - 2026-09-08：§11 实现交付后——eng-coder 报告 3 上报项：①槽持久化缺口（agentState 不带 tasks/goal/pendingReminders——destroy 丢）——父侧裁 a 案（补带三字段——文件域扩展 run-helpers/panel-callbacks）落 §11.7；②commit a0fabf8 卷入同伴 D6 文件（共享 git index 竞态——内容正确接受）；③setup.mjs 500 行边缘（挂 TODO 拆）。
@@ -62,7 +66,7 @@
 | `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
 | `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))` |
 | `src/extension/suspension.mjs` | 挂起会话驱动：waitForSettleOrWake（`panel._suspWake` 单槽）、排队合并（MAX_MERGE_ITEMS=8/MAX_MERGE_CHARS=2000） |
-| `webview/activity.js` / `panels.js` | 子代理活动块流内出生（`#messages` 尾——B1 拆活动面板）+ 终态原地冻结（无 DOM move）；panels.js 行面板 + 桥路由 |
+| `webview/activity.js` / `panels.js` | 子代理活动块固定于活动区 `#subagent-activity`（messages 与输入之间——live 固定可见——SESSION-ACTIVITY-REVISED 回归）+ 冻结落流锚移入 #messages（尾推/settle 锚插 digest 报告前）；panels.js 行面板已撤（簿记 map 供块 meta 水合）+ goal/task 面板 + 桥路由 |
 
 模块拆分批：subagent-async.mjs 按 Module Split Policy 拆出 subagent-scheduler.mjs 与
 subagent-actions.mjs（同 CLI 拆分治理轮）。
@@ -284,17 +288,23 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 - 释放窗口守卫：回合尾先于任何释放点登记 `panel._suspPending`，generateTitle await
   窗口内 `_chat` 入队 `_suspQueue`（零并发独立回合）；池已空/中止/面板消失 → 普通回合
   兜底（零丢失）。
-- 中止统一：每次 controller 创建/重建登记 `panel._turnControllers`；会话中止
-  （Stop/Ctrl+C/dispose）统一 abort 全部（旧 controller 的池 children 一并停止——
-  aborted settle 即出池清理，不注入陈旧错误）；中止后 digest 排队消息**无条件消费残余**
-  以普通回合按序执行（中止路径零丢失）。
+- 中止语义（F-6——SESSION-ACTIVITY-REVISED 2026-09-09 评审 #1——废除 D-S9 全停）：
+  每次 controller 创建/重建登记 `panel._turnControllers`；**Stop 只停主会话当前
+  controller**（回合/digest 轮——panel-messages abort case 以 `_turnState==="running"`
+  为门——不再 `abortControllers`/会话句柄全链 abort、不再 `_suspWake` 唤醒——无全停
+  按钮——susp 纯池跑 Stop 不显——池空自然消化完——CLI 对拍）；子代理停止靠活动区每块
+  ⏹（cancelSubagent 定向 abort——仅 running+pool 块——queued/waiting 块头不挂——接受
+  无取消路径——队列自然推进）。面板销毁（dispose）仍统一中止会话（abortControllers
+  快照 + susp.abort——面板死 = 会话死——唯一全链路径）；中止后 digest 排队消息无条件
+  消费残余以普通回合按序执行（中止路径零丢失）。
 - 会话 lines 双键：会话入口 lines 携 `contextHistory: history`（in-session 回合按
   activeLines 契约读 loadedLines.contextHistory——缺键致 digest 死循环的事故修复）。
-- 挂起 UI：settle 期间块**流内驻留**（"done · awaiting digestion"——块出生即在
-  #messages 流内，B1 后无活动面板），digest 完成逐条补发 done 原地冻结回收；状态行
-  （⏳ 后台 N 子代理 + 待消化计数）；输入框永不锁（loading.js
-  `on && !susp`）；digest 中 Enter 由 host 排队（send.js `isRunning && !S._suspended`
-  才拦截）。
+- 挂起 UI：settle 期间块**驻留活动区**（"done · awaiting digestion"——live 块固定于
+  `#subagent-activity`——SESSION-ACTIVITY-REVISED——行面板已撤），digest 完成逐条补发
+  done → 块按 settle 锚（_freezeAtEl）插回 #messages digest 报告前（锚被 150 裁 →
+  尾推退化）；状态行（⏳ 后台 N 子代理 + 待消化计数——子代理计数徽标撤）；输入框永不
+  锁（loading.js）；digest 中 Enter 由 host 排队（send.js `isRunning && !S._suspended`
+  才拦截）；Stop 只在 running 显（susp 纯池跑不显——无全停）。
 
 ## 8. eng-coder 交付协议（本端闭环）
 
@@ -343,11 +353,12 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 
 ## 10. 子代理活动显示（本地 webview 机制）
 
-子 agent/consult/escalate/advisor-async 活动块**出生即在对话流**（#messages 流尾——流
-级独立块与 .message 同层，非嵌入父段），终态**原地冻结折叠**（无 DOM move——位置 =
-出生位）。角色全同通道（频道名差异仅块键/折叠归属）。挂起期 settled 块流内驻留
-（awaiting digestion 头）直到 digest done 原地冻结 / 会话退出冻结。UI 详情见
-WEBVIEW §2/§5（活动块/冻结身份头——B1 后无活动面板容器）。
+子 agent/consult/escalate/advisor-async 活动块**固定于活动区**（`#subagent-activity`——
+messages 与输入之间——live 固定可见——不随会话流滚动丢失），终态**冻结移入对话流**
+（`#messages`——普通终态尾推 append；§17 settled 驻留区 + settle 锚 `_freezeAtEl` 插
+回 digest 报告前——CLI _freezeAt DOM 版——150 窗口只数冻结）。queued/waiting = 区内
+等待块头（无 ⏹）。挂起期 settled 块驻留区（awaiting digestion 头）直到 digest done
+补发/会话退出冻结。UI 详情见 WEBVIEW §2/§5（活动区/落流锚/等待块头）。
 
 
 ## 11. agent 生命周期对齐 CLI（设计变更段——2026-09-08 用户裁定，评审后实现）

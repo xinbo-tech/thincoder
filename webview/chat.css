@@ -468,15 +468,7 @@
 }
 
 
-.sub-status.terminated { color: var(--muted, #888); }
-.sub-status.cancelled { color: var(--muted, #888); } /* §19.5 D-M6 stopped 行态（与 terminated 同灰——interrupted 语义） */
-.sub-status.queued { color: var(--muted, #888); font-style: italic; } /* §20 D-SD3b waiting 行态（排队等位——spawn 即见） */
 .msg-queued { color: var(--muted, #888); font-style: italic; font-size: 0.85em; margin: 6px 8px; } /* 2026-09-05：异步子代理执行中消息排队提示（不打断） */
-
-/* Consultation reply preview (collapsible, inside the subagent panel row) */
-.sub-item .consult-reply { width: 100%; margin-top: 4px; font-size: 12px; }
-.sub-item .consult-reply summary { cursor: pointer; opacity: 0.7; user-select: none; }
-.sub-item .consult-reply pre { max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: var(--input-bg, rgba(127,127,127,.08)); border-radius: 6px; padding: 8px; margin: 6px 0 0; }
 
 /* Subagent/consultation activity blocks — same content height as advisor reviews
    (2026-09-05 用户设定：advisor/subagent 均 100px——内容完整、内部滚动), dimmer title —

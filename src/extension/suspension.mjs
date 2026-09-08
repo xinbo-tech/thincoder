@@ -219,12 +219,17 @@ function waitForSettleOrWake(panel, susp) {
  * 用户回合执行期翻 false（普通回合语义：① 直注入 + settle 即冻结）。
  *
  * entry = { turnSlot, distillSlot, lines: { history, fullHistory }, runTurn,
- *           pendingInput? }。runTurn({ text, modelOverride, reasoning, providerName, images,
+ *          pendingInput? }。runTurn({ text, modelOverride, reasoning, providerName, images,
  * autoTurn }) 执行一个回合（digest: autoTurn=true 且 text=""）。susp.abort = 进入回合的
  * turn controller——池 children 持其 signal（pre-suspension spawn 同款）；会话内各回合用
- * 自己的 controller。susp.abortControllers = 进入回合期间全部 controller 的快照（取自
- * panel._turnControllers，2026-09-02 偏差修复 #3——Stop 统一 abort）；susp.pendingInput
- * 起始装载释放窗口入队消息（偏差修复 #2，见 runPanelChat 回合尾）。
+ * 自己的 controller。
+ * F-6（SESSION-ACTIVITY-REVISED——2026-09-09 用户裁定——评审 #1）：susp.abortControllers /
+ * aborted 标记不再由 Stop 驱动（panel-messages abort 已收窄为只停 digest 轮 controller——
+ * 全停路径废除——无全停按钮——子代理靠活动区每块 ⏹——池空自然消化完）；susp.abort 中止仅
+ * 剩面板销毁/会话切换前守卫等生命周期路径（chat-panel dispose）。abortControllers 快照
+ * （取自 panel._turnControllers）保留仅供该 dispose 统一中止（2026-09-02 偏差修复 #3 语义
+ * 收窄——旧 controller signal 的池 children 随面板死一并停）。susp.pendingInput 起始装载
+ * 释放窗口入队消息（偏差修复 #2，见 runPanelChat 回合尾）。
  * D3 (2026-09-08): 本驱动不再捕获/复用入场 engState 快照——会话内回合每轮从槽新读
  * （suspension.mjs 存过的 susp.engState 已删——settle 落盘后 digest 才能看到 token）。
  */
@@ -243,9 +248,11 @@ export async function suspensionSession(panel, entry) {
     // ——用户输入优先于 digest，D-S5）。
     pendingInput: [...(entry.pendingInput ?? [])],
     // abortControllers = 进入回合（含 Ctrl+I / ContinueError 续跑重建）的全部 controller 快照
-    // ——Stop 统一 abort（2026-09-02 偏差修复 #3：会话句柄只取最后一个 controller 会让持旧
-    // controller signal 的池 children 逃逸中止）。快照后清空：会话内回合（digest/用户回合）
-    // 的 controller 与池无关（children 持会话 signal），由下个顶层回合起点重新登记。
+    // ——面板销毁统一中止（dispose 路径——2026-09-02 偏差修复 #3：会话句柄只取最后一个
+    // controller 会让持旧 controller signal 的池 children 逃逸中止）。快照后清空：会话内回合
+    // （digest/用户回合）的 controller 与池无关（children 持会话 signal），由下个顶层回合
+    // 起点重新登记。F-6（SESSION-ACTIVITY-REVISED）：本快照不再被 Stop 消费（全停废除——
+    // 只停 digest 轮 controller 见 panel-messages abort case）。
     abortControllers: [...(panel._turnControllers ?? [])],
     aborted: false,
   })

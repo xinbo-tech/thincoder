@@ -179,20 +179,16 @@ export async function handlePanelMessage(panel, msg) {
       // 交付——abort 只能命中上回合僵尸 controller（交付无效）。此时记闩——newTurnController
       // 消费（新建 controller 立即 abort + 复位闩）。有活 controller（运行中）→ 交付即生效——
       // 不置闩（置了会被中断续跑重建消费——误杀 Ctrl+I/Continue 续跑）。
-      if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
-      // §17 D-S9: Stop during a suspension session aborts the WHOLE background session
-      // (CLI Ctrl+C parity — digests' own per-turn controllers only kill the digest):
-      // session controller (pool children) + current turn controller + wake the driver.
-      // 偏差修复 #3: 统一 abort 进入回合的全部 controller（abortControllers）——Ctrl+I /
-      // ContinueError 重建后持旧 controller signal 的池 children 一并中止（否则跑完整个
-      // turn 预算 + mergeChildMutations 写父 guard 标记——磁盘被改、advisor/verify 门被绕过）。
-      if (panel._susp?.active) {
-        panel._susp.aborted = true
-        panel._susp.abortControllers?.forEach((c) => c.abort())
-        panel._susp.abort?.abort()
-        panel._abortController?.abort()
-        panel._suspWake?.()
-      } else {
+      // F-6（SESSION-ACTIVITY-REVISED——2026-09-09 用户裁定——评审 #1——废除 D-S9 susp
+      // 全停）：Stop 只在主会话 running（回合/digest）显示与生效——只停当前主会话 controller
+      // （_abortController = newTurnController 每回合新建——digest 轮 controller 或用户回合
+      // controller——池 children 持会话 signal 不受影响——susp 等待期本无 digest 可停）。
+      // 挂起等待期（susp——纯后台池跑）陈旧/竞态 Stop 点击 no-op——不再 _susp.aborted /
+      // _susp.abortControllers 全链 abort / _susp.abort / _suspWake 唤醒（全停路径删除——
+      // 无全停按钮——池空自然消化完——CLI 对拍）；子代理停止靠活动区每块 ⏹
+      // （cancelSubagent 定向 abort——仅 running+pool 块挂 ⏹——queued/waiting 不挂）。
+      if (panel._turnState === "running") {
+        if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
         panel._abortController?.abort()
       }
       break

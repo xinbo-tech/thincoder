@@ -34,9 +34,7 @@ export function renderStatusBar(m) {
   if (S._currentTool) parts.push(`<span class="status-tool">${t("status.currentTool")}: ${escHtml(S._currentTool)}</span>`)
   if (S._llmCalls > 0) parts.push(`${t("status.turns")} ${S._llmCalls}`)
   if (S._turnStart) parts.push(`${t("status.elapsed")} ${Math.round((Date.now() - S._turnStart) / 1000)}s`)
-  const subCount = Object.keys(S._subagentMap).length
-  if (subCount > 0) parts.push(`<span id="sub-badge" role="button" tabindex="0" aria-label="${subCount} subagents" style="cursor:pointer">sub:${subCount}</span>`)
-  if (S._taskStatus) parts.push(`<span id="task-badge" role="button" tabindex="0" aria-label="Task progress" style="cursor:pointer">${S._taskStatus}</span>`)
+  if (S._taskStatus) parts.push(`<span id="task-badge" role="button" tabindex="0" aria-label="Task progress" style="cursor:pointer">${S._taskStatus}</span>`) // 子代理计数徽标已撤（SESSION-ACTIVITY-REVISED 评审 #2——活动区自动显隐——计数由 ⏳ 挂起段承担）
   // §17 background-mode status line (D-S8): "后台 N 子代理运行中" while the suspension
   // session is live — appended after the usage stats, dim badge.
   if (S._suspended) {
@@ -51,9 +49,11 @@ export function renderStatusBar(m) {
     parts.push(`<span class="susp-status">⏳ ${escHtml(text)}</span>`)
   }
   document.getElementById("status-line").innerHTML = parts.join(` <span class="status-sep">|</span> `)
-  // Wire click handlers for all three badges — `onclick` (not addEventListener):
-  // the status line is rebuilt by innerHTML on every render, so old elements
-  // (and their listeners) are discarded; onclick overwrites rather than stacks.
+  // Wire click handlers for the two panel badges (the subagent count badge was
+  // removed with the row panel — SESSION-ACTIVITY-REVISED 评审 #2 — the activity
+  // area shows/hides itself) — `onclick` (not addEventListener): the status line
+  // is rebuilt by innerHTML on every render, so old elements (and their
+  // listeners) are discarded; onclick overwrites rather than stacks.
   const wire = (id, panelId) => {
     const el = document.getElementById(id)
     if (el) el.onclick = (e) => {
@@ -63,7 +63,6 @@ export function renderStatusBar(m) {
     }
   }
   wire("task-badge", "task-panel")
-  wire("sub-badge", "subagent-panel")
   wire("goal-badge", "goal-panel")
 }
 

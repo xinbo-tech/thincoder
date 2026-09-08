@@ -137,8 +137,10 @@ test("② 控制直通（AC 红线——不引入全量 FIFO 串行）：turnAct
 
 test("③ C1a 启动闩（H-C）：Startup 窗口 abort/interrupt → 记闩 → 新建 controller 立即 aborted + 复位——下次正常回合干净启动", async () => {
   // Startup 窗口形态：回合起点已清僵尸 controller（_abortController null）——本回合
-  // controller 尚未建立——abort 无活 controller 可交付。
-  const p = stubPanel({ _abortController: null })
+  // controller 尚未建立——abort 无活 controller 可交付。F-6（SESSION-ACTIVITY-REVISED）：
+  // abort 只在主会话 running 时交付（Startup 窗口 state 已在回合入口发布为 running——
+  // runPanelChatImpl 顶部任何 await 前——真态一致）；susp 纯池等待期 Stop 不可点不交付。
+  const p = stubPanel({ _turnState: "running", _abortController: null })
   await handlePanelMessage(p, { type: "abort" })
   assert.equal(p._abortRequested, true, "窗口内无活 controller → 记闩")
 
@@ -236,8 +238,9 @@ test("⑤ 响应器匹配（H-D）：questionResponse 按 promptId 查队列—�
   await handlePanelMessage(p3, { type: "questionResponse", answer: "head" })
   assert.deepEqual(seen, ["head"], "无 promptId → 队头（历史语义不回退破坏）")
 
-  // Stop 释放未答卡——questionCancelled 随行 promptId（webview 据此移除正确卡片）
-  const p2 = stubPanel({ _abortController: new AbortController() })
+  // Stop 释放未答卡——questionCancelled 随行 promptId（webview 据此移除正确卡片）。
+  // F-6：Stop 只在 running 期点击（susp 纯池等待不可点——状态门）
+  const p2 = stubPanel({ _turnState: "running", _abortController: new AbortController() })
   const ask2 = makeAskInPanel(p2)
   const rr = []
   ask2("q", null).then((a) => rr.push(a))

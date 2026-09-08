@@ -2,8 +2,9 @@
  * webview-turnstate.test.mjs — SESSION-FLOW-C C2 测试（webview 忙态收敛 reducer 组）。
  * docs/design/SESSION-FLOW-C.md C2 节（F-C2a~e——AC-C2 组：_turnState 枚举转换 /
  * renderStatusBar 单 writer / Stop susp 常显 / _suspCounts 不陈旧——N3 单来源镜像侧）。
- * A3（SESSION-FLOW-A——2026-09-09）：③ 尾段断言翻转——Stop 派生由 susp 扩为 state≠idle
- * （running+loading:false → Stop 仍常显——标题窗口/digest 起跑窗口/Reload 冷启恢复）。
+ * A3（SESSION-FLOW-A——2026-09-09）→ F-6（SESSION-ACTIVITY-REVISED——2026-09-09）：
+ * ③ 尾段断言再翻转——Stop 派生由 state≠idle 收窄为 state==="running"（评审 #1 定论：
+ * susp = 纯后台池跑——主空闲——不显 Stop——无全停——子代理停止靠活动区每块 ⏹）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
@@ -11,7 +12,7 @@
  * 直接驱动 host 消息对应的 reducer（chat.js window message case 的行为等价面：
  * loading case → setLoading；turnState case → handleTurnStateMessage；suspension →
  * handleSuspensionMessage）——不引导 chat.js 全量模块图。
- * 快层直跑（全部 <800ms——无真实定时器；panels.js 的 2s 清扫 interval 在 after 经
+ * 快层直跑（全部 <800ms——无真实定时器；panels.js 的 2s 状态行 interval 在 after 经
  * unload 事件清掉——防悬挂）。
  */
 import { test, before, after } from "node:test"
@@ -138,41 +139,41 @@ test("② renderStatusBar 单 writer：loading 消息不覆写徽标——thinki
   assert.ok(!afterDigestToggles.includes("Thinking"))
 })
 
-// ─── ③ Stop state≠idle 派生常显（AC-C2 F-C2d + A3 扩展）：digest 间/running loading:false 不隐 abort ──
+// ─── ③ Stop running 派生（AC-6——F-6 收窄：state≠idle → running——susp 不显）───
 
-test("③ Stop 派生常显（F-C2d + A3 断言翻转）：_turnState≠idle 派生——susp 期与 running 期 loading true/false 交替都不隐 abort——idle 才收起", async () => {
+test("③ Stop running 派生（AC-6——SESSION-ACTIVITY-REVISED F-6 断言翻转）：susp 纯池跑不显——running 期（digest/普通回合/Reload 冷启）loading 交替都不隐——idle 收起", async () => {
   const { S, ctx, setLoading, handleTurnStateMessage } = await loadWebview()
   resetBusy({ S, ctx })
   assert.equal(abortShown(), false, "初始（idle）无 Stop")
 
-  // 挂起会话进入（digest 间等待）——无 loading 消息 Stop 也常显
+  // 挂起会话进入（digest 间等待——纯后台池跑——主空闲）——无 Stop（F-6 反转：susp 不显）
   handleTurnStateMessage({ type: "turnState", state: "susp" })
-  assert.equal(abortShown(), true, "susp 期 Stop 常显（无需 loading:true）")
+  assert.equal(abortShown(), false, "susp 纯池跑 Stop 不显（无全停——子代理 ⏹ 逐块停）")
 
-  // digest 序列：running+loading:true → susp+loading:false（host 广播序）反复——永不隐
+  // digest 序列：running+loading:true → susp+loading:false（host 广播序）——running 期显、
+  // susp 期隐（F-6：Stop 只停主会话 digest 轮——digest 间无可停主会话）
   for (let i = 0; i < 3; i++) {
     handleTurnStateMessage({ type: "turnState", state: "running" })
     setLoading(ctx, true)      // digest 开始
     assert.equal(abortShown(), true, `digest ${i} loading:true → Stop 显`)
     handleTurnStateMessage({ type: "turnState", state: "susp" })
     setLoading(ctx, false)     // digest 尾（host 序：state susp 先于 loading:false）
-    assert.equal(abortShown(), true, `digest ${i} 尾 loading:false → Stop 仍常显（susp 派生——不闪烁）`)
+    assert.equal(abortShown(), false, `digest ${i} 尾 → susp → Stop 收起（纯池等待——无全停——F-6 翻转）`)
   }
 
   // 会话退出 → idle → Stop 收起
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   assert.equal(abortShown(), false, "idle → Stop 收起")
 
-  // 普通回合（A3——state≠idle 派生）：running 期 loading 交替不再隐 Stop（修前：running+
-  // loading:false → 隐——标题窗口/digest 起跑窗口同属 running——隐藏窗口即闪烁源）
+  // 普通回合（running 派生保留——A3 窗口）：running 期 loading 交替不隐 Stop（标题窗口/
+  // digest 起跑窗口同属 running——隐藏窗口即闪烁源）
   handleTurnStateMessage({ type: "turnState", state: "running" })
   setLoading(ctx, true)
   assert.equal(abortShown(), true)
   setLoading(ctx, false)
-  assert.equal(abortShown(), true, "running+loading:false → Stop 仍显（state≠idle 派生——A3 断言翻转）")
+  assert.equal(abortShown(), true, "running+loading:false → Stop 仍显（running 派生——AC-6）")
 
-  // A4 派生侧（Reload 冷启）：webviewReady 重推 running（host F-C2b——冷启后无 loading
-  // 消息）→ Stop 恢复（无闪烁窗口）——idle 才收起
+  // Reload 冷启：webviewReady 重推 running（host F-C2b——冷启后无 loading 消息）→ Stop 恢复
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   assert.equal(abortShown(), false, "idle → Stop 收起")
   handleTurnStateMessage({ type: "turnState", state: "running" }) // Reload 冷启重推形

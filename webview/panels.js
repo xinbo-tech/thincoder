@@ -1,10 +1,12 @@
 /**
- * panels.js — side panels: task progress, subagents/consultants, goal.
- * Owns the auto-clean interval and the taskProgress / subagent / goal /
- * suspension message handlers.
- * R22: activity-BLOCK lifecycle (create/header/freeze/⏹/ticker) moved to
- * activity.js — this module keeps the ROW panel (#subagent-panel rows) and
- * calls activity.* for block-side effects (one-way import, no cycle).
+ * panels.js — side panels: task progress, goal + suspension message handlers
+ * and the subagent/turnState bridge routing.
+ * SESSION-ACTIVITY-REVISED（2026-09-09——F-3 行面板撤除——D-3 方案 A）：行面板 DOM 渲染
+ * 面全删（queued/consult 载荷迁活动区：queued = 区内等待块头；consult = sub: 频道块 +
+ * 冻结块 preview；👥 计数由状态行 _suspCounts 承担——autoClean linger 迁区内块生命周
+ * 期——冻结块落流即永久可见）。S._subagentMap/handleSubagentMessage 状态簿记保留——
+ * 供 activity.js 块 meta 水合（rowFor：model/pool/startedAt——freezeSettledBlocks 按
+ * settled 行定位块）。
  */
 import { ctx, S } from "./state.js"
 import { t } from "./i18n.js"
@@ -36,57 +38,6 @@ export function renderTaskPanel() {
   panel.style.display = "block"
 }
 
-export function renderSubagentPanel() {
-  const panel = document.getElementById("subagent-panel")
-  const subs = Object.values(S._subagentMap)
-  if (subs.length === 0) { panel.style.display = "none"; return }
-  const consults = subs.filter((s) => s.role === "consult")
-  const consultProgress = consults.length > 0
-    ? ` · 👥 ${consults.filter((s) => s.status === "answered").length}/${consults.length} ${t("consult.answered")}`
-    : ""
-  panel.innerHTML = `<div class="panel-desc">${t("panel.subDesc") || "Background sub-tasks — explore, plan, or implement independently"}${consultProgress}</div>` +
-    subs.map((s) => {
-    // Consult states get their own colors + labels (answered was rendering as red "error")
-    // §17: "settled" = the child finished while the suspension session is active —
-    // "done · awaiting digestion" intermediate state, stays in the panel until the
-    // pool drains (the session-exit freeze then flips it to done).
-    // §20 D-SD3b: "queued" rows = scheduler wait states (spawn-return visibility —
-    // waiting-deps reason / slot position in the tool column; no ⏹ — never started).
-    const statusCls = s.status === "started" ? "started"
-      : (s.status === "done" || s.status === "answered") ? "done"
-      : s.status === "queued" ? "queued"
-      : s.status === "settled" ? "settled"
-      : s.status === "terminated" ? "terminated"
-      : s.status === "cancelled" ? "cancelled" // §19.5 D-M6（stopped 冻结——行态灰色）
-      : "error"
-    const statusText = s.status === "started" ? t("sub.running")
-      : s.status === "answered" ? t("consult.answered")
-      : s.status === "queued" ? (t("sub.queued") || (s.waiting === "dependency-cancelled" ? "dependency cancelled" : "queued"))
-      : s.status === "settled" ? t("sub.awaitingDigest")
-      : s.status === "terminated" ? t("consult.terminated")
-      : s.status === "failed" ? t("consult.failed")
-      : s.status === "cancelled" ? (t("sub.cancelled") || "cancelled") // §19.5
-      : s.status
-    // Rows with a model tag (consult, escalate) show it so parallel consultants and
-    // the flown-in escalate are distinguishable (three-way review 2026-08-16 — surgeon
-    // rows rendered as a bare "surgeon" even though the event carries the model).
-    // §20: queued rows show the wait annotation in the tool column
-    // （waiting for:/dependency cancelled: 恒标——slot 等位 `queued · position N`）。
-    const label = s.model ? `${s.role} · ${s.model}` : (s.status === "queued" ? `${s.role} · ${s.waiting ?? "waiting"}` : s.role)
-    // answered consults carry a collapsible preview of the reply (review D10)
-    const preview = s.role === "consult" && s.replyPreview
-      ? `<details class="consult-reply"><summary>${t("consult.replyPreview") || "view reply"}</summary><pre>${escHtml(s.replyPreview)}</pre></details>`
-      : ""
-    return `<div class="sub-item">
-      <span class="sub-role">${escHtml(label)}</span>
-      <span class="sub-tool">${s.tool ? escHtml(s.tool) : ""}</span>
-      <span class="sub-status ${statusCls}">${statusText}</span>
-      ${preview}
-    </div>`
-  }).join("")
-  panel.style.display = "block"
-}
-
 export function renderGoalPanel() {
   const panel = document.getElementById("goal-panel")
   if (!S._goalInfo) { panel.style.display = "none"; return }
@@ -106,38 +57,20 @@ export function renderGoalPanel() {
 }
 
 export function clearPanels() {
-  // R22: activity blocks are NOT reset here (send/queue-time — live children of
-  // the running turn must keep their blocks; finish()/clearMessages reset them).
+  // SESSION-ACTIVITY-REVISED: 活动块不由本函数重置（send/队列时间——live children 的
+  // 块必须保留——resetActivity 由回合中止/clearMessages 驱动）；行面板元素已撤——只隐 goal/task。
   S._subagentMap = {}
   S._goalInfo = null
   S._taskProgress = null
   S._taskStatus = null
-  document.getElementById("subagent-panel").style.display = "none"
   document.getElementById("goal-panel").style.display = "none"
   document.getElementById("task-panel").style.display = "none"
 }
 
-function autoCleanPanels() {
-  // Remove finished subagents/consultants after a short linger
-  const now = Date.now()
-  for (const [id, s] of Object.entries(S._subagentMap)) {
-    // consult cards linger 60s — the answered reply preview is the consultation's core
-    // output; 3s (plain subagents) would delete it before the user looks up.
-    const linger = s.role === "consult" ? 60000 : 3000
-    const lingerErr = s.role === "consult" ? 60000 : 5000
-    if ((s.status === "done" || s.status === "answered" || s.status === "terminated") && s.doneAt && now - s.doneAt > linger) delete S._subagentMap[id]
-    if ((s.status === "error" || s.status === "failed" || s.status === "cancelled") && s.doneAt && now - s.doneAt > lingerErr) delete S._subagentMap[id]
-  }
-  renderSubagentPanel()
-  // Refresh elapsed seconds while a turn is running (CLI 1s ticker parity)
-  if (S._turnStart) renderStatusBar()
-}
-
-// Auto-clean panel entries (done subagents after 3s, tool panels after 10s)
-// Panel cleanup interval. The webview has no teardown path today (it lives for
-// the panel's lifetime and dies with it), but the ID is captured so a future
-// dispose/visibility-hidden handler can clear it.
-const _panelTimer = setInterval(autoCleanPanels, 2000)
+// 状态行 elapsed 刷新（原 autoCleanPanels 2s 间隔随行面板撤除而收缩——保留运行期
+// 驱动：usage/toolCall 消息之间有长工具批——elapsed 段不得冻结）。行簿记 linger 清理
+// 已迁区内块生命周期（冻结落流——无需行级 autoClean）。
+const _panelTimer = setInterval(() => { if (S._turnState === "running") renderStatusBar() }, 2000)
 // Webview lifetime == panel lifetime, but clear on unload so a future
 // teardown/dispose path cannot leak the interval.
 window.addEventListener("unload", () => clearInterval(_panelTimer))
@@ -152,61 +85,47 @@ export function handleTaskProgress(m) {
   renderStatusBar()
 }
 
-// ─── B1: 活动块 DOM 生命周期（create/header/freeze/⏹/elapsed ticker/冻结 preview）
-// 整体在 activity.js（ensureBlock/applySubagentStatus/freezeBlock/freezeSettledBlocks/
-// resetActivity）——行面板与活动块解耦：本文件只管 #subagent-panel 行 + 桥消息路由。
+// ─── 桥消息路由：行面板 DOM 渲染已撤（SESSION-ACTIVITY-REVISED F-3）——簿记 map 与
+// 活动块生命周期分离：本文件只管 _subagentMap 簿记（供块 meta 水合）+ 状态行刷新。
 
-/** subagent message: track lifecycle (rows); block-side effects delegate to
- *  activity.applySubagentStatus (B1 — live blocks are born at the #messages
- *  stream tail and freeze IN PLACE on terminal states; §17 settled stays live
- *  in the flow with the awaiting-digestion header until digest done / exit). */
+/** subagent message: 簿记更新（行面板撤后无行渲染——map 仍供 activity.rowFor 水合：
+ *  family 行 id 键控；consult 行携 sessionId+model）；块侧效果委托 activity.js
+ *  applySubagentStatus（D-4 queued 建区内等待块头 / freeze 落流锚 / settled 驻留区）。 */
 export function handleSubagentMessage(m) {
   // Block-side effects FIRST (independent of the row bookkeeping below — a
   // chunk-only block without a row still freezes correctly).
   applySubagentStatus(m)
   if (m.status === "queued") {
-    // §20 D-SD3b：排队 spawn 行（spawn 返回即见——waiting 标注/等位——CLI waiting 块
-    // 的 webview 行等价）。重复 queued 消息（位置/等待态刷新——cancel 前移/依赖终态
-    // 转移）覆盖式更新行内容；启动（started）后行转 running——cancelled（was:"queued"）
-    // 移除行（不冻结——从未启动无活动块）。
+    // §20 D-SD3b：排队 spawn 簿记（spawn 返回即见——queue 位置/waiting 标注只经
+    // applySubagentStatus 直接取自消息进块头——簿记不存——防双源漂移——评审 🔵）。
+    // 重复 queued 消息覆盖式更新；启动（started）后转 running；cancelled
+    // （was:"queued"）移除簿记（不冻结——从未启动无冻结块）。
     const prev = S._subagentMap[m.id]
     S._subagentMap[m.id] = {
       role: m.role, status: "queued", startedAt: prev?.startedAt ?? Date.now(),
-      // 等待标注显示于 tool 列：waiting for:/dependency cancelled: 原因恒标（不静默——
-      // NF-SD）；slot 等位 = `queued · position N`。
-      tool: m.reason ?? (m.position != null ? `queued · position ${m.position}` : "queued"),
       model: null, pool: false,
-      position: m.position ?? prev?.position ?? null,
-      waiting: m.waiting ?? prev?.waiting ?? null,
-      reason: m.reason ?? prev?.reason ?? null,
     }
-    renderSubagentPanel()
-    renderStatusBar()
     return
   }
   if (m.status === "started") {
-    S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), tool: null, model: m.model ?? null, pool: !!m.pool, sessionId: m.sessionId ?? null }
-    // §19.5 D-M7: ⏹/块由 activity（applySubagentStatus——池条目建块 + refresh 装 ⏹）
-    renderSubagentPanel()
-    renderStatusBar()
+    S._subagentMap[m.id] = { role: m.role, status: "started", startedAt: m.startedAt || Date.now(), model: m.model ?? null, pool: !!m.pool, sessionId: m.sessionId ?? null }
     return
   }
   const s = S._subagentMap[m.id]
   if (s) { s.status = m.status; s.doneAt = Date.now(); if (m.error) s.error = m.error; if (m.replyPreview) s.replyPreview = m.replyPreview }
   // §20 D-SD3b：cancelled 带 was:"queued" = queued 取消（从未启动——无活动块可冻结）
-  // → 行移除（不留 stopped 残行——CLI waiting 块移除同语义）。
+  // → 簿记移除（不留 stopped 残行——CLI waiting 块移除同语义）。
   if (m.status === "cancelled" && m.was === "queued") {
     delete S._subagentMap[m.id]
   }
-  renderSubagentPanel()
-  renderStatusBar()
 }
 
 /** §17 D-S2/D-S8: the suspension-session message from the host — activates the
- *  background mode (input stays usable, Stop aborts the whole session), updates the
- *  status-line counts, and on session exit freezes the settled blocks into the
- *  conversation (CLI freezeAllSubTasks parity — "done · awaiting digestion" rows
- *  flip to done and collapse; the report summaries are already in the conversation). */
+ *  background mode (input stays usable; Stop 语义 = SESSION-ACTIVITY-REVISED F-6——
+ *  susp 纯池跑不显 Stop——子代理停止靠活动区逐块 ⏹——无全停——池空自然消化完), updates
+ *  the status-line counts, and on session exit freezes the settled blocks into the
+ *  conversation at their settle anchors (CLI freezeAllSubTasks parity — "done ·
+ *  awaiting digestion" 驻留块落流折叠；报告 preview 随块入流）。 */
 export function handleSuspensionMessage(m) {
   S._suspended = !!m.active
   if (m.active) {
@@ -214,9 +133,9 @@ export function handleSuspensionMessage(m) {
   } else {
     S._suspCounts = null
     if (m.freeze) {
-      // B1/§17.5.5 兜底：流内 settled 活动块原地冻结（done 形态——✓ 身份头 +
-      // preview——块已出生在流内出生位），行随之翻 done（freezeSettledBlocks 按
-      // settled 行定位块——顺序先行）。
+      // SESSION-ACTIVITY-REVISED F-4 兜底：区内 settled 驻留块按 settle 锚落流冻结
+      // （done 形态——✓ 身份头 + preview——插 digest 报告前/锚被裁尾推退化——
+      // freezeSettledBlocks 按 settled 行定位块——顺序先行）。
       freezeSettledBlocks()
       for (const [id, s] of Object.entries(S._subagentMap)) {
         if (s.status !== "settled") continue
@@ -224,27 +143,29 @@ export function handleSuspensionMessage(m) {
         s.doneAt = Date.now()
       }
     }
-    // §20 D-SD3b：会话退出（含 Stop 全停——池被清空）时移除残留 waiting 行（queued——
-    // 池空/清池后无对应条目——CLI freezeAllSubTasks 兜底清场的 webview 等价；自然退出
-    // 池空本就无 queued 行——no-op）。
+    // §20 D-SD3b：会话退出时移除残留 waiting 簿记（queued——池空/清池后无对应条目——
+    // CLI freezeAllSubTasks 兜底清场的 webview 等价；自然退出池空本就无 queued 行——
+    // no-op）。
     for (const id of Object.keys(S._subagentMap)) {
       if (S._subagentMap[id].status === "queued") delete S._subagentMap[id]
     }
   }
-  renderSubagentPanel()
   renderStatusBar()
-  // Re-derive send/abort button visibility from the current loading state — entering
-  // suspension shows Stop (abort the background session), exiting hides it again.
+  // Re-derive send/abort button visibility from the current loading state —
+  // 进出挂起刷新输入/按钮态（Stop 可见性本身 = S._turnState==="running" 派生——
+  // loading.js——susp 不显——F-6）。
   setLoading(ctx, ctx.isRunning)
 }
 
 /**
- * C2 (SESSION-FLOW-C F-C2b/F-C2e——webview 单一 reducer): {type:"turnState", state,
- * counts?} —— host _publishTurnState 单一广播的镜像侧。更新 S._turnState（idle/
- * running/susp——派生：Stop 常显 susp、busy 判断）；counts（host backgroundStatus
- * 形 {running,queued,pending,done}——digest 间重发/settle 触发点随广播到达）刷新
- * _suspCounts——webview 计数 = host 实际不陈旧。既有 _suspended 仍由 suspension
- * 消息驱动（会话级语义不变）。每次广播后重绘状态行 + 重派 Stop 可见性。
+ * C2 (SESSION-FLOW-C F-C2b/F-C2e——webview 单一 reducer) → F-6（SESSION-ACTIVITY-
+ * REVISED——Stop running 派生——评审 #1）: {type:"turnState", state, counts?} —— host
+ * _publishTurnState 单一广播的镜像侧。更新 S._turnState（idle/running/susp——
+ * 派生：Stop 只在 running 显——susp 纯池跑不显——无全停——池空自然消化完；busy 判断）；
+ * counts（host backgroundStatus 形 {running,queued,pending,done}——digest 间重发/
+ * settle 触发点随广播到达）刷新 _suspCounts——webview 计数 = host 实际不陈旧。既有
+ * _suspended 仍由 suspension 消息驱动（会话级语义不变）。每次广播后重绘状态行 + 重派
+ * Stop 可见性。
  */
 export function handleTurnStateMessage(m) {
   S._turnState = m.state ?? S._turnState

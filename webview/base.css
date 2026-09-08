@@ -81,11 +81,12 @@ body {
 
 #chat-container {
   display: grid;
-  /* B1 垂直序（SESSION-FLOW-B F-B1a）：header(session-bar) / #messages(1fr) /
-     #panels(行面板) / 输入区(#toolbar) —— 后两层均为 auto，隐藏项不占高 →
-     消息区高 = 容器 − 面板 − 输入（grid 1fr 自动吸收）。R22 活动面板容器已拆——
-     live 子代理块出生即在 #messages 流内。 */
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  /* SESSION-ACTIVITY-REVISED（2026-09-09）垂直序：header(session-bar) /
+     #messages(1fr) / #subagent-activity(活动区——live 子代理块固定容器——auto，空时
+     display:none 零高不占行) / #panels(goal/task——auto) / 输入区(#toolbar)。
+     后三层均为 auto，隐藏项不占高 → 消息区高 = 容器 − 面板 − 输入（grid 1fr 自动
+     吸收）。 */
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   height: 100%;
   position: relative;
 }
@@ -95,6 +96,21 @@ body {
   overscroll-behavior: contain;
   padding: 0 12px 12px;
 }
+
+/* ─── 子代理活动区（SESSION-ACTIVITY-REVISED F-1/F-2——CLI 单面板形态回归）──── */
+/* 固定容器于 #messages 与输入之间：live 子代理块出生即区内（不随会话流滚动丢失）。
+   区内块 = .advisor-block.sub-block（chat.css 现样式原样——头/⏹/内容 100px 内滚）。
+   区自适应块内容（auto 行高）——max-height ~32vh 封顶 + 内部自滚（webview 可视
+   约束——CLI 终端可挤 webview 不能）；空时隐藏零高（:empty 兜底 + activity.js
+   updateAreaVisibility 同驱——区内无块即无行）。 */
+#subagent-activity {
+  max-height: 32vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+  padding: 0 12px 2px;
+}
+#subagent-activity:empty { display: none; }
 
 /* ─── Scroll-to-bottom button ─────────────────── */
 
@@ -412,9 +428,9 @@ body {
   background: var(--hover-bg-strong);
 }
 
-/* Status bar badges */
+/* Status bar badges（子代理计数徽标已随行面板撤除——SESSION-ACTIVITY-REVISED 评审
+   #2——活动区自动显隐无需 badge 开关——计数由 ⏳ 挂起段承担） */
 #goal-badge:focus-visible,
-#sub-badge:focus-visible,
 #task-badge:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
