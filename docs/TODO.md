@@ -19,11 +19,11 @@
 - [ ] **C 方案：read 读回 offload 文件防炸**——read 返回"头+尾"防读回 1MB——独立后续（A 方案含尾部预览已落地——C 堵剩余回路）
 - [ ] **advisor 截断方向另议**——advisor/run.mjs 头向 line-aware 截断——尾部结果被切问题未解决
 - [ ] **VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）
-- [ ] **files 尾随空格目录声明检测**（normalizeFileList 对 "test/ " 尾随空格仍逃过——一行加固 trimEnd 判后缀）
+- [ ] **files 尾随空格目录声明检测**（normalizeFileList 对 "test/ " 尾随空格仍逃过——一行加固 trimEnd 判后缀——2026-09-08 批 1 2.7 处理中——实为 subagent-scheduler.mjs:38）
 - [ ] **R19 read_history 发现面无 top-N cap**（discoverCwd 列全部槽——大目录摘要可打输出上限——加 top-N + overflow 提示）
 - [ ] **R19 护栏语义缺口**：READ_HISTORY_SCAN_MAX 按物理 \n 行计，自产槽紧凑单行换行≈0 → 护栏不触发——需 SESSION §13 裁定字节/消息预算（双端镜像同值）
 - [ ] **R18+R19 VS Code 交付跟进**（保留部分）：① read-history.mjs 349 行拆分 ③ ROUTE_NA 移除后路由断言加固（②测试预拆、④已实现——勾销）
-- [ ] **agent 生命周期小项**：VSC subagent.mjs 注释过时 / A2 摘要触发条件（仅 ## 节标题）/ auto-think depth 恒 0
+- [ ] **agent 生命周期小项**：VSC subagent.mjs 注释过时（2026-09-08 核：:13-14 "four actions" vs :2-3 "seven" 矛盾）/ A2 摘要触发条件（仅 ## 节标题）/ ~~auto-think depth 恒 0~~（**2026-09-08 核：agent._depth 无赋值点——设它牵连状态债 #3 `_` 字段摊平——归状态重构处理**）
 - [ ] **TUI tool-args 块标题兜底**：action-only subagent 调用块标题光秃 "❯ subagent"——加 a.action 兜底显示
 - [ ] **setup.mjs knife-edge 注记过期**：agent/setup.mjs:313 仍写 "adjusted to 12500"，T3b 重校准 14000 未同步
 - [ ] **ACP 桥结构化映射**（⟦ev⟧ 剥除已落地 D7；ACP tool_call_update 结构化映射留待后续）

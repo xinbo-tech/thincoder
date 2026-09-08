@@ -39,13 +39,13 @@ TODO 小修组的**确定性快赢项**（真未做、一行级、CLI-only 为�
 - **改**：注释改 seven actions（与 :2-3 一致）。
 - **验收**：注释一致。
 
-### 2.6 CLI auto-think depth 传值（TODO L26b——CLI 侧）
+### ~~2.6 CLI auto-think depth 传值~~（评审 #1 采纳后剔出——2026-09-08 核实）
 
-- **行为**：auto-think.mjs:95 注释自认 "agent state carries no depth stamp (the call site passes none)"——agent.mjs:205 调用未传 depth，trace logCtx 归因精度缺 depth。
-- **改**：agent.mjs:205 调用点传 depth（trace logCtx 归因用）。
-- **验收**：调用点传 depth（确认调用链——若 depth 不可得则记录说明）。
+- **核实结论（评审 #1 采纳）**：agent._depth 全树唯一读点 = auto-think.mjs:95（`depth: agent._depth ?? 0`）——**从无赋值点**（恒 undefined→0）。设它需动 agent 创建/继承链（子代理嵌套层赋值）——牵连状态债 #3（`_` 字段摊平）地盘——**非一行小修**。
+- **处置**：剔出本批——归状态债 #3 域（TODO L26b 保留，标注需随状态重构处理；auto-think.mjs:95 注释已如实说明 depth 恒 0 现状——无隐藏漂移）。
 
-### 2.7 files 尾随空格目录声明检测（TODO L22）
+
+### 2.7 files 尾随空格目录声明检测（TODO L22——评审 #2 文件修正）
 
 - **行为**：normalizeFileList 对 "test/ "（尾随空格）仍逃过——目录声明带尾随空格未检测。
 - **改**：一行加固 trimEnd 判后缀（"test/ " → 识别为目录声明）。
@@ -66,10 +66,10 @@ TODO 小修组的**确定性快赢项**（真未做、一行级、CLI-only 为�
 | src/config.mjs | CLI | 2.3 改判 ok:false | ≤±3 |
 | src/tui/tool-args.mjs | CLI | 2.4 action 兜底 | ≤±3 |
 | src/agent-tools/subagent.mjs | VSC | 2.5 注释 | ≤±1 |
-| src/agent.mjs | CLI | 2.6 depth 传值 | ≤±2 |
-| src/tools/file.mjs（normalizeFileList 定位后） | CLI | 2.7 trimEnd | ≤±1 |
+| ~~src/agent.mjs~~（2.6 剔出——见 §2.6） | — | — | — |
+| src/agent-tools/subagent-scheduler.mjs | CLI | 2.7 normalizeFileList trimEnd（评审 #2 修正） | ≤±1 |
 | src/agent/setup.mjs | CLI | 2.8 注记 | ≤±1 |
-| 测试（对应文件或新增小测试） | — | 2.1/2.2/2.3/2.4/2.7 各 1 用例 | ~+50 |
+| 测试（对应文件或新增小测试） | — | 2.1/2.2/2.3/2.4/2.7 各 1 用例（2.6 已剔出） | ~+50 |
 
 ## 4. 验收（批级）
 
@@ -78,7 +78,7 @@ TODO 小修组的**确定性快赢项**（真未做、一行级、CLI-only 为�
 - AC3 2.3 servers 非数组 ok:false
 - AC4 2.4 action-only 标题含 action
 - AC5 2.5/2.8 注释一致/不悬空
-- AC6 2.6/2.7 调用点/分类正确
+- AC6 2.7 分类正确（2.6 已剔出——归状态债 #3）
 - node --check + 相关测试绿 + npm test 快层绿
 
 ## 5. 剔除项（不在此批——explore 核实归类）
