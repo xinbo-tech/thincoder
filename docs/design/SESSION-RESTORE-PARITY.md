@@ -1,7 +1,7 @@
 # VSC 会话恢复呈现对齐（SESSION-RESTORE-PARITY）
 
 > 板块：会话/存储/恢复（VSC——恢复链对齐 CLI 语义）。权威源：CLI startup.mjs historyToLines（恢复蓝本）+ session-io.mjs（VSC 恢复链）。
-> 状态：**设计待评审**——2026-09-09 落档（恢复对齐深勘察 explore 一手——A-G 七类差异根因矩阵 + 改造级修复骨架 + CLI 逐行对拍）。需求：TODO「会话/存储/恢复后续」——用户裁一次全修（C+A+B+E+F+G）+ 首窗对齐 200 并入。
+> 状态：**已交付核销**——2026-09-09（0231627——historyWindow 重写拆分 history-window.mjs + buildFinishedToolCard 拆分 tool-card-restore.mjs + C/A/B/E/F/G/H 全修——VSC L2 179/179 绿——audit clean + advisor pass——consume 592ea112——真机对拍 CLI /session vs VSC 实现期走查）。
 
 ---
 

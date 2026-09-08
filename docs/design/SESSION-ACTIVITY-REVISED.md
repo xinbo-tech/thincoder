@@ -1,7 +1,7 @@
 # VSC 子代理活动区回归 + Stop 语义（SESSION-ACTIVITY-REVISED）
 
 > 板块：会话流（VSC——B1 修正——对齐 CLI 单面板形态）。权威源：CLI subagent-panel.mjs（单固定块面板蓝本）+ subagent-freeze.mjs（落流锚）。
-> 状态：**设计待评审**——2026-09-09 落档（B1 修正深勘察 explore 一手——CLI 单面板对拍结论 + 回退面精确 + freeze 锚机制 + 开口项）。需求：用户三连（①live 固定可见②一个面板③CLI 一致）+ Stop 语义裁定 + 恢复对齐待评审档独立。
+> 状态：**已交付核销**——2026-09-09（5be6c67——活动区回归 + freeze 落流锚 + 行面板撤除 + Stop running 派生——VSC L2 179/179 绿——audit clean + advisor pass——consume f125c0d5——activity.js 579 行拆分挂 TODO——真机走查实现期）。
 
 ---
 

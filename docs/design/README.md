@@ -63,3 +63,7 @@
 - 2026-09-08：DOC-REORG-VSC 第 7 批——新板块登记：Webview 前端/消息协议（WEBVIEW，VSC 独有无 CLI 对应），自 ARCHITECTURE §11+§12 迁出（消息协议并入）。
 - 2026-09-08：DOC-REORG-VSC 第 4 批——新板块登记：工程模式（ENGINEERING-MODE）+ 评审收敛（ADVISOR-CONVERGENCE），各自独立完整（与 CLI 同名档对应）。
 - 2026-09-08：DOC-REORG-VSC 收官（第 8 批）——ARCHITECTURE 瘦身为薄枢纽（删除已迁出 §4-§13 与 §15 CLI 指针表；§3 模块地图加「详细设计 →」指针列）；本表全量登记核对 + 板块名对齐 CLI（补齐 会话/上下文压缩/Agent 循环（AGENT-LOOP 权威 + TURN-CAP 同板块）/工具系统/Checkpoint 事故恢复/记忆 行；Provider 行更名对齐；MCP.md 随 CLI 归「工具系统」行独立保留注；顺序归组为 机制板块 → VSC 独有 → 专题）。
+
+## 变更记录（SESSION 系列补登——2026-09-09 核销）
+- `SESSION-RESTORE-PARITY.md`（恢复呈现对齐——0231627——consume 592ea112）
+- `SESSION-ACTIVITY-REVISED.md`（活动区回归/Stop 语义——5be6c67——consume f125c0d5）
