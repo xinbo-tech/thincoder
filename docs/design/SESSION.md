@@ -470,14 +470,21 @@ m = loadManifest(cwd)
 > 状态：设计就绪待评审（改动小——双端 system.md 单行改）。
 
 **改**（双端 system.md:24——模板行 + 语义描述）：
-1. 模板行 `[System reminder: env: cli|vscode, mode: eng|normal, model: <id>, resumed: yes|no.]` → 加 `slot: {N}`（model 后 resumed 前——与实现 envStateLine 一致——无绑定显式 null）
-2. resumed 语义描述："yes only on the first turn after the process restarted with a restored session" → "**yes on the first turn after the session was restored (a process restart, or switching to a slot that has prior history)**——每次会话恢复一次"
+1. 模板行 `[System reminder: env: cli|vscode, mode: eng|normal, model: <id>, resumed: yes|no.]` → 加
+   `slot: <N|null>`（model 后 resumed 前——与实现 envStateLine 一致——无绑定显式 null——
+   评审 #4：占位符沿用 <…> 风格——与 model <id> 一致——AC1 断言字面同步）
+2. resumed 语义描述："yes only on the first turn after the process restarted with a restored session" →
+   "**yes on the first turn after a session with prior history was restored (a process restart that
+   resumed it, or a slot switch to it)**"——（评审 #1 + #3：引号内为 system.md 逐字英文内容——
+   重启分支也限 prior history——空历史恢复不发 yes——与 §11.2 武装条件 data.history 非空一致）每次会话恢复一次
 3. 保留 design token 段（CLI）/ mode-model 段——不改
 
-**受影响文件**：CLI src/prompts/system.md、VSC src/prompts/system.md（模板行 + 语义句——各行 ~900 字符内的子串替换——行数不变）。
+**受影响文件**：CLI src/prompts/system.md、VSC src/prompts/system.md（模板行 + 语义句——各行
+   ~900 字符内子串替换——行数不变）+ SESSION.md §11 自身模板记录 :351/:359 同步补 slot
+   （评审 #2——避免本档自身无 slot 描述与同步后 system.md 打架——同批 doc-only 改）
 
 **验收**：
-- AC1 双端 system.md:24 模板行含 `slot: {N}`（model 后 resumed 前）
+- AC1 双端 system.md:24 模板行含 `slot: <N|null>`（model 后 resumed 前——评审 #4 占位符 <…> 风格）
 - AC2 resumed 语义描述 = 每次会话恢复（含切槽）——非 process restarted only
 - AC3 实现零触碰（只改描述——envStateLine 输出/setup-reminders 不动）
 
