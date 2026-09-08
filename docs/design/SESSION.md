@@ -398,7 +398,7 @@ m = loadManifest(cwd)
 - 测试：双端新建 setup-reminders.test.mjs（现零测试）
 
 
-### 11.2 设计段（2026-09-08——F1-F3 + N1-N6 全纳入——勘察 explore 一手——待评审）
+### 11.2 设计段（2026-09-08——F1-F3 + N1-N6 全纳入——勘察 explore 一手——**已交付核销**——bba68df/0bf02b0 + VSC 7e7d90a/ec1e4c4——consume 554b6251）
 
 > 需求：§11.1 F1-F3 + N1-N6（用户 2026-09-08 确认"都纳入"）。现状勘察：explore 双端源码核实（file:line 见下）——envStateLine 双端无 slot 参数、resumed 双端机制不同源、CLI 有 `_sessionStart` 推断伪触发既有缺陷。
 > 评审 #6（2026-09-08）：🔴 1 项（N6/AC4 双信号未设计——已修复：process restarted 句保留进程级信号——VSC 模块级闸不迁 + CLI 启动专用标记——resumed 用会话级信号）+ 🟡 2 + 🔵 3——🔴 修复后待重评审。
@@ -467,7 +467,7 @@ m = loadManifest(cwd)
 ### 11.3 描述同步变更段（2026-09-08——用户裁 A + system.md 漂移修正——小改快车道）
 
 > 需求：SESSION §11.2 实现后 system.md:24 描述漂移（缺 slot 字段 + resumed 语义窄化为"process restarted only"）。用户裁 A：**接受实现语义 = 每次会话恢复发 yes（含进程内切槽到有历史槽）**——改描述匹配实现（非改实现）。快车道（用户明确指令——"A"）。
-> 状态：设计就绪待评审（改动小——双端 system.md 单行改）。
+> 状态：**已交付核销**（2026-09-08——CLI 6910be1 / VSC 752c127——AC1-AC4 字节断言绿——双端 L2 待跑——consume 278e7612——上报待裁项见 §11.3 变更记录）。
 
 **改**（双端 system.md:24——模板行 + 语义描述）：
 1. 模板行 `[System reminder: env: cli|vscode, mode: eng|normal, model: <id>, resumed: yes|no.]` → 加
