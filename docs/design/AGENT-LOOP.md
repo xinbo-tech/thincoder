@@ -257,30 +257,37 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 > After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result.
 > If your next step genuinely needs the report, use a synchronous spawn instead — pass `async:false` (eng-coder defaults to async; other roles simply omit async).
 
-**变更记录**：2026-09-06 删 check（§7.5）。2026-09-08 用户裁定顶层 spawn 一律异步（§7.7——async:false 例外移除——提示词同步）。
+**变更记录**：2026-09-06 删 check（§7.5）。2026-09-08 用户裁定顶层 spawn 一律异步（§7.7——async:false 例外移除——提示词同步）。2026-09-08 评审 8 项采纳（AC1 机械断言/测试点名/锚句单源 §7.5/AC3 验证/TODO 后备/§7.3 中性/编号序注/实现自验注——token e21d5ace）。
 
 ### 7.7 顶层 spawn 一律异步——async:false 例外移除（2026-09-08 用户裁定）
 
 > 需求：用户 2026-09-08 裁定（两次痛骂——同步 spawn 反复犯）——**顶层（depth-0）spawn 禁 async:false——一律异步**。depth>0 平台强制 sync 不受影响（子代理内部——平台硬规则）。快车道（用户明确指令）。
-> 状态：设计待评审——评审通过 eng-coder 实现（双端提示词同步）。
+> 状态：**评审通过待 sign-off**（2026-09-08——8 项 advisory 采纳——token e21d5ace 注册 11 slot）——eng-coder 实现（双端提示词同步）。
 
 **现状问题**：async 锚句（§7.5 :258）与 main.md:13/engineering.md:18 都含 "pass `async:false` only when…"——给了模型 async:false 例外通道——实际反复误用（explore/eng-coder 同步 spawn——阻塞自己 turn + 占池）。
 
 **改**：
-1. **async 锚句改版**（:258——逐字定稿——fail-when-unchanged 断言需同步）：删 "use a synchronous spawn instead — pass `async:false`" 引导——改为 **顶层一律异步——报告自动送达——如 next step 依赖报告就让 turn 自然结束等 digest 自动到**。新锚句：
+1. **async 锚句改版**（:258——**§7.5 为唯一权威驻点（评审 #3——行 8 单源纪律——§7.7 只留指针不重复承载逐字文本）**——fail-when-unchanged 断言需同步）：删 "use a synchronous spawn instead — pass `async:false`" 引导——改为 **顶层一律异步**。新锚句（实现时落 §7.5 :258——§7.7 此处仅变更记录）：
    > "Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule)."
+   （评审 #3：实现后 §7.5 锚句区为此文唯一权威——§7.7 保留指针引用不再逐字复述）
 2. **main.md:13**（双端）：删 "pass `async: false` only when the report is required before continuing" → "never pass `async:false` at top level — results reach you automatically; if your next step depends on the report, end the turn and let it arrive".
 3. **engineering.md:18**：同改（"Pass `async:false` only when you must handle the report synchronously before continuing" → 删——顶层一律 async）。
-4. **§7.3 L228 机制注**：`async:false` 在 depth-0 仍**机制存在**（平台参数合法——子代理内部 depth>0 用）——但**顶层判据 = 用户裁禁**——提示词不再引导——标注"depth-0 async:false 仅平台内部/特殊场景——提示词不鼓励"。
+4. **§7.3 L228 机制注**（评审 #7——措辞中性化）：L228 括注 "（逃逸口）" 改中性机制描述——"depth-0 参数合法；顶层行为受提示词约束——见 §7.7"——`async:false` 机制保留（子代理内部 depth>0 用）——不并置"逃逸口"与"不鼓励"混杂信号。
 5. **平台侧 subagent 工具描述**（不可改——平台注入）：仍含旧 async:false 引导——**上报平台侧同步**（项目仓改不了——锚句 fail-when-unchanged 测试需排除平台描述或记录偏差）。
 
-**受影响文件**：AGENT-LOOP.md（锚句 :258 + §7.3 L228 注 + §7.7 新段 + 变更记录）、src/prompts/main.md（双端）、src/prompts/engineering.md（双端）、prompts 内容断言测试（fail-when-unchanged 同步）。
+（评审 #5 编号序注：§7.7 编号超前 §7.6——本段插入于 §7.5 后（主题邻接——async 锚句）——重排编号会断既有引用——取保留现序 + 此注说明——§7.6 人格锚不受影响）
+
+**受影响文件**（评审 #2——测试文件点名 + 行数注）：AGENT-LOOP.md（锚句 :258 + §7.3 L228 注 + §7.7 新段 + 变更记录）；src/prompts/main.md（双端——CLI thincoder + VSC thincoder-vscode 各一）；src/prompts/engineering.md（双端）；prompts 内容断言测试（双端——实现时 grep 定位含 async 锚句断言的测试文件——按实际点名补登——delta ≤±N）——行数实现时刷新。
 
 **验收**：
-- AC1 main.md/engineering.md（双端）无 "pass async:false / use synchronous spawn" 顶层引导句
+- AC1（评审 #1——机械断言 1:1）：main.md/engineering.md（双端）删旧句逐字（"pass `async: false` only when the report is required before continuing" / "Pass `async:false` only when you must handle the report synchronously before continuing"）+ 新句存在断言（"never pass `async:false` at top level"）——fail-when-unchanged 双端内容断言同步
 - AC2 锚句改版在 §7.5（fail-when-unchanged 断言同步——测试绿）
-- AC3 顶层 spawn 实践：explore/eng-coder 全异步（无 async:false——本会话行为约束）
+- AC3（评审 #4——验证方式明确）顶层 spawn 实践：explore/eng-coder 全异步——父侧核销项（会话轨迹审计——depth-0 spawn 无 async:false）——非 eng-coder 自查项
 - AC4 depth>0 平台 sync 不变（机制零触碰）
+
+（评审 #6 后备注：若纯提示词修复后顶层 async:false 仍复发——机制层兜底方案（工具层拒 depth-0 async:false）挂 docs/TODO.md 技术组——本批不实现）
+
+（评审 #8 实现期自验注：eng-coder 开工前先 read 两端 main.md/engineering.md 定位旧句——行号/字句与设计描述不符则停下上报——fail-when-unchanged 断言删旧句会兜底）
 
 
 ### 7.6 子代理/顾问人格逐字锚集
