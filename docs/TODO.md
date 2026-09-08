@@ -112,3 +112,7 @@
 - [ ] **双端 system.md:24 env-state 描述未含 slot**（env-state 行实已含 slot——SESSION §11.2 实现后描述漂移——id=9 报告项 3——提示词同步小项——双端逐字同步）
 - [x] ~~**平台侧 subagent 工具描述仍含旧 async:false 引导**~~——**2026-09-08 §7.7.1 勾销**（纠错：工具描述在项目仓 src/agent-tools/ 可改——本批已清 subagent.mjs/subagent-spec.mjs Async spawn 段 + escalate 段 + advisor.mjs 描述——锚句逐字落入——测试锚定）
 - [x] ~~**escalate/advisor 顶层 async:false carve-out 范围界定**~~——**2026-09-08 §7.7.1 勾销**（用户裁 a：escalate/advisor 顶层也纳入一律异步——§14.2 同步保留句删 + main.md/engineering.md/discipline.md 引导清 + §7.2 escalate 行注——全链完成）
+
+## 屎山度第三次评估清扫批（2026-09-08 夜）
+- [ ] **批 5（文档小批——N3+N7）**：AGENTS.md 地图陈旧 8+ 悬空 + 5 档批执行文档未登记（N3）+ resumed/restart 载体异名统一注释锚（N7——语义已裁 A——文档级）——走设计→评审
+- [ ] **批 6（代码小批——N1+N6）**：VSC subagent.mjs 507 行 + advisor/run.mjs 511 行越线小拆（N1——500 硬拆纪律）+ `_permQueue` 3 处 inline 收 helper（N6——含 escalate 语义澄清 subagent-actions.mjs:426 注释）——走设计→评审
