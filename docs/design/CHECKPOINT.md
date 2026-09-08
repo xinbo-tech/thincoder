@@ -3,7 +3,7 @@
 > 状态：**当前态设计**（机制已实现并定稿，2026-09-01；本文档 2026-09-07 重写为人类可读格式）。
 > 权威源（CLI）：`src/git/checkpoint.mjs`（快照存储 / rewind 单一权威）、`src/tools/git-checkpoint.mjs`
 > （git 工具 checkpoint action + F6 懒清理 + F2 提示行）、`src/tools/git-ext.mjs`（F7 扩展 action + `snapshotBefore`）、
-> `src/tools/git.mjs`（commit 清理 + 核心 action）、`src/tools/system.mjs`（bash guard `gitGuardSnapshot`）、
+> `src/tools/git.mjs`（commit 清理 + 核心 action）、`src/tools/bash.mjs`（bash guard `gitGuardSnapshot`——2026-09-08 批 3 拆分后）、
 > `src/tui/cmd-restore.mjs`（`/restore` 两级 picker）。
 > 关联权威：`TOOLS.md` §7（git 工具 action 集全集——本文档不列双清单，避免漂移）；两端 `AGENTS.md`（各自 Checkpoint 小节，落档用）。
 
@@ -48,7 +48,7 @@
 破坏性操作前自动快照，共有三路触发：
 
 1. **git 工具破坏性 action 前 `snapshotBefore`**：checkout `-- path` / restore / `reset --hard` / `stash pop` / branch|tag delete（CLI `git.mjs` 既有）+ F7 补齐的 `clean` / `rebase`（`git-ext.mjs`）。输出 `[snapshot {id} created before {label}]`（D1）；
-2. **bash guard `gitGuardSnapshot`**：bash 破坏性 git 命令前自动快照（`system.mjs` `GIT_DESTRUCTIVE_RE` 宽匹配，D4）——为"git 操作一律走 git 工具"纪律（§4.3）漏网兜底；
+2. **bash guard `gitGuardSnapshot`**：bash 破坏性 git 命令前自动快照（`bash.mjs` `GIT_DESTRUCTIVE_RE` 宽匹配——2026-09-08 批 3 拆分——D4）——为"git 操作一律走 git 工具"纪律（§4.3）漏网兜底；
 3. **手动 `checkpointAction=create`**。
 
 平台层"任务列表删除 / 上下文压缩前"自动快照**未在本项目代码中证实**——文档不声称，留待平台层确认。
@@ -121,7 +121,7 @@ git 工具破坏性动作**先快照再执行 + 确认，从不拦截**（审批
 
 ### 4.4 bash guard 对齐（D4）
 
-- CLI `src/tools/system.mjs`：`GIT_DESTRUCTIVE_RE` 宽匹配 + `gitGuardSnapshot`（bash 破坏性 git 命令前自动 `createCheckpoint` 全量副本 + 通知含 rewind 指引——`checkpoint action=checkpoint checkpointAction=rewind checkpointId=<id>`，即 F1/F2 事故恢复闭环的既有部分，保留不删）；
+- CLI `src/tools/bash.mjs`：`GIT_DESTRUCTIVE_RE` 宽匹配 + `gitGuardSnapshot`（2026-09-08 批 3 拆分——原 system.mjs 迁 bash.mjs）（bash 破坏性 git 命令前自动 `createCheckpoint` 全量副本 + 通知含 rewind 指引——`checkpoint action=checkpoint checkpointAction=rewind checkpointId=<id>`，即 F1/F2 事故恢复闭环的既有部分，保留不删）；
 - VS Code `src/tools/shell.mjs` 曾用 **stash + 精确 matcher**（`git checkout HEAD -- .` 变体曾绕过）——对齐方向：改 CLI 同构——**宽匹配同款 + 全量副本（镜像 createCheckpoint）+ 通知含 rewind 指引**；**stash 从 guard 路径移除**（与 F5 存储统一一致）；存量用户 stash 不受影响。
 
 ---
@@ -218,7 +218,7 @@ TUI `cmd-restore.mjs` 是用户侧唯一恢复入口，v2 全量回滚禁用后�
 | cat | 快照内文件读取 | **同（镜像）** |
 | 上限 | NF6 目录快照数 100 | **同** |
 | 清理（F6） | 删 `checkpointRoot(cwd)` 目录 | **同** |
-| shell guard（bash 破坏性 git 命令保护） | `system.mjs` `GIT_DESTRUCTIVE_RE` 宽匹配 + 全量副本 + rewind 指引 | **对齐 CLI**（stash → 镜像全量副本 + 同款宽匹配 + rewind 指引） |
+| shell guard（bash 破坏性 git 命令保护） | `bash.mjs` `GIT_DESTRUCTIVE_RE` 宽匹配（2026-09-08 批 3 拆分——原 system.mjs）+ 全量副本 + rewind 指引 | **对齐 CLI**（stash → 镜像全量副本 + 同款宽匹配 + rewind 指引） |
 | 存量 stash 快照 | — | 不再支持工具 rewind（手动 `git stash drop`） |
 
 两端能力分级（F7 P0/P1）与 action 集完全一致；CLI 建的快照 VS Code 可 list / rewind（同 cwd 同目录同格式，跨端互通 T7）。

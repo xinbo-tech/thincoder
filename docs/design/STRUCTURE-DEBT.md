@@ -115,7 +115,7 @@
 
 | 文件 | 行数 | 状态 |
 |---|---|---|
-| CLI `src/tools/system.mjs` | 506 | 超硬限——见 #5 |
+| ~~CLI src/tools/system.mjs 506~~ | **已拆**（2026-09-08 批 3——bash.mjs 269 + search.mjs 237 + question.mjs——见 #5 核销） | — |
 | CLI `src/agent-tools/advisor-async.mjs` | 538 | 超硬限（最近 R13/§24 增量推过限）——本批 R13 相关设计已在动，拆分宜随 R13 后续批处理 |
 
 advisory 400-500 带（均 <500 不触发硬限，记录观察）：
