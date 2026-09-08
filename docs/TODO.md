@@ -98,7 +98,7 @@
     ①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）
     ②bin/thincoder.mjs 501 行 >500 存量债（HEAD 前即 501——净 0 行改动）——挂 STRUCTURE-DEBT 观察
 - [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
-- [ ] **VSC 会话流时序对齐 CLI（2026-09-09 用户需求点——VSC 时序乱/不清晰）**：对比勘察已定位机制根源（UI 呈现层——非 agent 核心）——
+- [ ] **VSC 会话流时序对齐 CLI（2026-09-09 用户需求点——C 全链已交付 cbac1d6/2c74005——A+B 剩）**：对比勘察已定位机制根源（UI 呈现层——非 agent 核心）——
   用户裁**分层全做（非三选一）**——**C 先行**（消息路由串行 R9 + 忙态状态机收敛 R4）→ A+B 后做（A：sendMessage
   守卫 R6/状态行单 writer/标题回合内 R3；B：子代理块原地 R5/会话打开原子化 R2）——VSC 专属——owning board = VSC
   会话流（panel/webview）——C 深勘察在途（explore——报告后落 C 设计档）——status=勘察中
