@@ -109,6 +109,11 @@
 ## 会话/存储/恢复后续
 - [ ] **R19 护栏语义缺口**（见"代码正确性"节——**2026-09-08 已裁消息数预算**——同 L24）
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
+- [ ] **VSC Stop 语义重定义（2026-09-09 用户 UI 语义裁定——主会话空闲也显 Stop 误导——Stop 只停主会话）**：
+  现状：Stop 显示 = A3 派生 state≠idle——susp（后台池/digest）也常显——作用 = 停整个挂起会话（D-S9
+  全停含 subagent）；用户裁定：① Stop 只在主会话真正 busy（running/digest 消化）显示——susp 纯池跑
+  （主空闲）不显示 ② Stop 只停主会话——不能停 subagent ③ subagent 停止靠 live 区各自 ⏹——
+  与 B1 修正（活动区恢复——subagent 各自 ⏹ 载体）合并设计——owning board = VSC 会话流——status=勘察在途
 - [ ] **VSC 会话恢复呈现对齐（2026-09-09 用户需求点——退出重进恢复的会话与原始呈现不一致——勘察已定位七类差异 A-G）**：
   根因 = 恢复链收缩（historyWindow 过滤 content!==string + 字段白名单）非落盘格式——差异：C 机器提醒
   [System reminder:]以用户气泡上屏（最刺眼）/ A 纯工具回合丢 assistant 标签 / B 工具卡无调用只看结果恒绿
