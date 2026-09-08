@@ -51,9 +51,11 @@
 - **现状**：26 行行内吞节（:1/:5/:10/:14/:16/:18/:23）——不在任何 V 批清单漏网。
 - **改**：格式重写 + 2a-2 内容修正同批。
 
-### 2b-4 >300 长行全量折行（评审重核——实际残留 7 档 15 行 + 双端）
+### 2b-4 >300 长行全量折行（评审重核——实际残留 8 档 17 行——CLI 6 档 15 行 + VSC 2 档 2 行）
 
-- **现状（2026-09-08 实测——远超原估 3 行）**：docs/design >300 单行共 15 行 × 7 档——AGENT-LOOP:234(len952)/:494 + ASYNC-RESULT-CONTAINER ×6(:14/:15/:53/:70/:75/:92) + DESIGN-TOKEN-SETTLEMENT ×2(:56/:62) + DOC-REORG-VSC ×2(:66/:77) + STRUCTURE-DEBT:140 + SUBAGENT-OBSERVE-SEND ×2(:55/:61)。
+- **现状（2026-09-08 实测——远超原估 3 行）**：>300 单行共 **17 行 × 8 档**（评审 🔵 校准——7 档漏 VSC 端）。
+  **CLI 6 档 15 行**：AGENT-LOOP:234(len952)/:494 + ASYNC-RESULT-CONTAINER ×6(:14/:15/:53/:70/:75/:92) + DESIGN-TOKEN-SETTLEMENT ×2(:56/:62) + DOC-REORG-VSC ×2(:66/:77) + STRUCTURE-DEBT:140 + SUBAGENT-OBSERVE-SEND ×2(:55/:61)。
+  **VSC 2 档 2 行**：ASYNC-RESULT-CONTAINER:61(len827) + SUBAGENT-OBSERVE-SEND:53(len457)。
 - **改**：全量折行（判据①——无 >300 单行）——随批修（2b-6 顺带条款转正——受影响表全列）。
 - **注**：原 2b-4 列 :269（Neutrality——恰 300 字符不超——不入折行——:234/:494 才是）。
 
@@ -78,6 +80,8 @@
 | docs/design/DOC-REORG-VSC.md | CLI | 2b-4 折行 ×2 | ≤±4 |
 | docs/design/STRUCTURE-DEBT.md | CLI | 2b-4 折行(:140) | ≤±2 |
 | docs/design/SUBAGENT-OBSERVE-SEND.md | CLI | 2b-4 折行 ×2 | ≤±4 |
+| docs/design/ASYNC-RESULT-CONTAINER.md | VSC | 2b-4 折行 :61（评审 🔵 补——双端跑绿需） | ≤±2 |
+| docs/design/SUBAGENT-OBSERVE-SEND.md | VSC | 2b-4 折行 :53（评审 🔵 补——双端跑绿需） | ≤±2 |
 | docs/design/TOOLS.md | CLI | 2a-3 | ≤±1 |
 | docs/design/VERIFY-REDESIGN.md | CLI | 2b-1 变更记录补前身吸收行（定案 a） | ≤±3 |
 | docs/design/_archive/VERIFY-DOCONLY.md | CLI | 2b-1 归档（移 _archive/） | 移档 |
@@ -96,7 +100,7 @@
 - AC3 2a-4：R7f 豁免注在 §12.2
 - AC4 2b-1：VERIFY-DOCONLY 并入 VERIFY-REDESIGN 变更记录（前身吸收行——含 isDocFile 三处判定历史）+ 移 _archive/（不残留坏格式——定案 a）
 - AC4b 2b-6：归档后无悬空引用——README.md:39 无 VERIFY-DOCONLY 活条目 + SETTINGS-TOOL.md:3 无先例引用
-- AC5 2b-2/2b-4/2b-5：ides.md demux + docs/design 全部 15 条 >300 折行（7 档）+ TODO 2 条折行——全部 >300 清零（双端 scripts/check-doc-width 跑绿）
+- AC5 2b-2/2b-4/2b-5：ides.md demux + **CLI 15 条 + VSC 2 条 >300 全折（8 档——评审 🔵 校准）** + TODO 2 条折行——全部 >300 清零（双端 scripts/check-doc-width 跑绿）
 - 双端 scripts/check-doc-width.mjs 跑绿（或等效宽度检查——判据①）
 
 ## 5. 剔除项
@@ -109,3 +113,4 @@
 - 2026-09-08：立项。批 A 执行后核销（explore）——规划表更新为执行后状态 + 净剩余落本档。纯文档批——与批 1（代码小修）独立域。
 - 2026-09-08：用户裁两点——2a-5 并入（VSC METHODOLOGY 指针修正）+ 2b-1 定案 a（核实 VERIFY-REDESIGN D-V5/T-V5 接管 doc-only 机制 + 未提前身——并入其变更记录含 isDocFile 历史 → 归档）。设计定稿待评审。
 - 2026-09-08：两次评审超时（600s 验证引用扫描面大）——中途线索人工采纳——2b-4 扩全量折行（实测 7 档 15 行——远超原估 3 行）+ 2b-5 行号校准（:74/:87——非 :83）+ 2b-6 转正归档引用清扫（README:39/SETTINGS-TOOL:3——归档后悬空自查漏）——待重评审。
+- 2026-09-08：第三次评审通过（token 067b9ccf）——🔵 采纳——2b-4 档数校准 8 档 17 行（7 档漏 VSC 端 2 文件——实测 VSC ASYNC:61/SUBAGENT:53）——受影响表补 VSC 2 行——双端跑绿可达成。
