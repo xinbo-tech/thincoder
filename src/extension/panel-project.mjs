@@ -46,7 +46,8 @@ export async function onProjectChanged(panel) {
     panel._slot = null
     const cwd = _cwd()
     // 2026-09-05 §10 D-2：认领点改 resumeSlot（本端记录/一次性继承/全新分配——与
-    // panel-session 的 ensureSlot/status 同点）；全新项目 claim 先行，文件首保存落盘
+    // panel-session 的 ensureSlot/openSessionContent（B2——原 status 位置，2026-09-09）
+    // 同点）；全新项目 claim 先行，文件首保存落盘
     panel._slot = resumeSlot(cwd).slot
     pushProject(panel)
     loadSession(panel)   // clearMessages + new project's history + sessions + autoApprove/planMode

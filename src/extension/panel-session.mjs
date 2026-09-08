@@ -127,8 +127,13 @@ export function loadSession(panel) {
     // §11 销毁点（AGENT-LOOP.md §11——2026-09-08）：会话切换/新建/删除/项目切换/面板打开的
     // 会话级 agent 销毁置 null（AC4——内存态不跨 session 复用；槽文件仍权威——下回合经
     // ensurePanelAgent → runAgent factory 重建 + §11.2.1 槽字段回填）。六销毁点在此汇合
-    // （newSession/deleteSession/switchSession/onProjectChanged/status 全走 loadSession）；
-    // 全部上游带 turnBusy()/susp 守卫（C2：谓词合一）——此处执行时无活回合/后台池（销毁安全）。
+    // （newSession/deleteSession/switchSession/onProjectChanged/openSessionContent 全走
+    // loadSession——B2 2026-09-09：status 快慢段拆后快段 openSessionContent 接替其 loadSession
+    // 调用；status 慢段不再经此）。
+    // 会话操作类上游（newSession/deleteSession/switchSession/onProjectChanged）带
+    // turnBusy()/susp 守卫（C2：谓词合一）；openSessionContent 由 webviewReady 冷启握手
+    // 引导（槽绑定顺延 resolve→webviewReady——正常 UI 流 view 打开时无活回合；忙态冷启
+    // 仅 dev reload/webview 崩溃重载可达——销毁安全面不变）。
     panel._agent = null
     // Session switch (webview newSession/loadSession/deleteSession, project switch, panel open):
     // abort any in-flight async distillation from the previous turn — its history arrays belong
@@ -252,15 +257,32 @@ export function pushSessions(panel) {
     panel._panel?.webview.postMessage({ type: "sessions", sessions, active: ensureSlot(panel) })
   }
 
-export async function status(panel) {
-    // Ensure at least one session slot exists (shared format with the CLI)
+/**
+ * B2（SESSION-FLOW-B F-B2a/F-B2b——2026-09-09）：会话打开**单向 boot 快段**——只在
+ * webviewReady 握手后运行（panel-messages.mjs webviewReady case 调用）。原 status()
+ * 头部快段（评审 #3 计数校正：resumeSlot 绑槽 + _pushProject + pushSessions 单发 +
+ * loadSession——四调用）提为导出；resolve 期 webview 尚未加载——此刻发内容即丢（Reload
+ * 后对话区空缺陷的静态根因——F-B2b 修）。
+ * F-B2c sessions 合并：独立 pushSessions 不再单发（同 tick 双发消除）——loadSession 尾
+ * 内部发送保留（既有调用方依赖）——sessions 恰一次（N2）；异步第三发（fullStatus cb——
+ * status() 慢段内）保留不同 tick。
+ * 槽绑定时机随之上移（resolve → webviewReady）——webviewReady 前无 slot 读者（安全）。
+ */
+export function openSessionContent(panel) {
     const cwd = _cwd()
-    // 2026-09-05 §10 D-2：恢复决策改 resumeSlot（本端记录/一次性继承/全新分配——与
+    // 2026-09-05 §10 D-2：恢复决策 resumeSlot（本端记录/一次性继承/全新分配——与
     // ensureSlot/onProjectChanged 同点）；全新目录下 claim 先行——文件在首保存时落盘
     panel._slot = resumeSlot(cwd).slot
     panel._pushProject()
-    pushSessions(panel)
     loadSession(panel)
+}
+
+export async function status(panel) {
+    // B2（SESSION-FLOW-B F-B2a——快慢段拆）：本函数 = 慢段（探测/设置/索引——原
+    // status() 的 :266-273 尾段）——resolveWebviewView 期只起本段（探测与 webview 加载
+    // 重叠并行）；快段 openSessionContent 移入 webviewReady——resolve 期不得双跑快段
+    // （内容双发/槽重绑）。慢段头部 pushStatus（fullStatus 内）可能丢——webviewReady
+    // _pushStatus 兜底已有（幂等）。
     // One-time migration of legacy key stores (SecretStorage + thincoder.providers settings)
     // into the shared ~/.thincoder/config.json. Flag-guarded, safe to call on every open.
     await migrateLegacySettings(panel._context)

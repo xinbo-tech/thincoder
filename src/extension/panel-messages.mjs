@@ -7,6 +7,10 @@ import { t, loadLocaleStrings } from "../i18n.mjs"
 import { saveModelPrefs, switchToSlot, setSlotTitle, setSlotAdvisorGuard, setSlotEngineering, slotOccupancy } from "./session-io.mjs"
 import { handleAddProvider, handleRemoveProvider, handleSetProviderProxy, agentSettings, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection } from "./settings.mjs"
 import { PRESETS } from "./presets.mjs"
+import { openSessionContent } from "./panel-session.mjs"
+// B2（SESSION-FLOW-B——2026-09-09）：panel-messages ↔ panel-session 环 import（panel-session
+// 头部 import 本文件 _cwd）——openSessionContent 只在 webviewReady case 函数体内使用（延迟
+// 解引用）——环安全（两模块均无顶层跨环读取）。
 import { addProviderFlow, removeProviderFlow, setKeyFlow } from "./provider-flows.mjs"
 import { selectProviderModel, loadRaw, loadMcpServers } from "../config-io.mjs"
 import { openDiffPreview } from "./diff-preview.mjs"
@@ -378,6 +382,13 @@ export async function handlePanelMessage(panel, msg) {
       panel._panel?.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
       panel._pushStatus()
+      // B2（SESSION-FLOW-B F-B2a/F-B2b——2026-09-09）：握手后接快段 openSessionContent——
+      // 会话打开**单向 boot**：内容（pushProject → loadSession 内部序 autoApprove → planMode
+      // → clearMessages → historyPage → sessions）只在 webviewReady 后落定——resolve 期
+      // webview 未加载，此刻发内容即丢（Reload 后对话区空缺陷的静态根因）。sessions 同
+      // tick 恰一次（N2——loadSession 尾单发——F-B2c——异步第三发在 status() 慢段 fullStatus
+      // cb——不同 tick 保留）。槽绑定随之顺延至此——webviewReady 前无 slot 读者（安全）。
+      openSessionContent(panel)
       break
     }
     case "setAdvisorGuard": {

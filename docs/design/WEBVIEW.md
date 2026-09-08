@@ -197,7 +197,8 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 ## 8. 消息秩序与忙态收敛（SESSION-FLOW-C + A——权威锚）
 
 > 本节的协议正文是**唯一来源**（C1/C2 实现与 AGENTS.md 协议表镜像行均指向本节，不重复
-> 正文；SESSION-FLOW-A A1/A2 措辞增量同落本节——不双处详述）。覆盖 C1 消息秩序增量
+> 正文；SESSION-FLOW-A A1/A2 措辞增量同落本节——不双处详述；SESSION-FLOW-B B2 boot 契约
+> 同落本节——8.5）。覆盖 C1 消息秩序增量
 > （question promptId/questionCancelled/atComplete seq）、C2 忙态收敛（turnState 广播/
 > renderStatusBar 单 writer/Stop 派生）与 A1/A3 扩展（sendMessage 命令直发同入口/
 > Stop 派生扩为 state≠idle——A2 标题时机正文在 SESSION.md §7）。
@@ -258,8 +259,32 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
   不再隐/显 abort（修 digest 间按钮闪烁 + running 窗口隐藏——标题窗口/digest 起跑窗口/
   Reload 冷启 webviewReady 重推 running 后无 loading 消息也恢复 Stop）。
 
+### 8.5 会话打开单向 boot（SESSION-FLOW-B B2——F-B2a~c 权威锚）
+
+> 会话打开（首开 / Reload Window 重开）的**单向 boot 契约**——扩展端消息发射点的唯一定序。
+> B2 静态判定并修复"Reload 后对话区空"缺陷：内容曾在 resolve 期（webview 未加载）发出即丢。
+
+- **resolveWebviewView 只起慢段**（`status()` = migrate/fullStatus/mcpStatus/模型偏好/索引探测
+  ——与 webview 加载重叠并行）；慢段头部 pushStatus 可能丢——webviewReady 的 `_pushStatus`
+  兜底（幂等）。resolve **绝不发会话内容、绝不绑槽**（AC-B2b——内容双发/槽重绑红线）。
+- **webviewReady = 会话内容唯一发射点**（快段 `openSessionContent`——panel-session.mjs）：
+  握手后才允许 run——`resumeSlot` 绑槽 → `pushProject` → `loadSession` 全量（内部序
+  autoApprove → planMode → clearMessages → historyPage → sessions）。槽绑定时机 =
+  resolve → webviewReady 顺延——webviewReady 前无 slot 读者（安全）。
+- **单向 boot 顺序**：clearMessages 先于 historyPage（先清后灌——一次内容整体落定，无
+  "波浪式"增量）；`older=false` 末页（懒历史首屏——scroll-back 页仍走 loadOlder）。
+- **sessions 恰一次（N2——同 tick 单发纪律）**：快段内无独立 pushSessions——loadSession 尾
+  单发（F-B2c 合并同 tick 双发）；异步第三发（慢段 fullStatus cb）保留**不同 tick**
+  （跨 tick 允许——N2 只锁同 tick）。
+- Reload 冷启：webviewReady 快段内 sessions 同 tick 恰一次；慢段 fullStatus cb（仅
+  provider 已配置时触发）为跨 tick 刷新——允许（N2 只锁同 tick；无 provider 则整条
+  resolve + webviewReady 流总数恰一次）。真机 Reload 走查 = 实现期验证项（N4）。
+
 ## 9. 变更记录（历史折叠——详见 git log）
 
+- 2026-09-09：SESSION-FLOW-B B2 boot 锚段——新增 §8.5（会话打开单向 boot 契约：resolve
+  只起慢段零内容——webviewReady = 内容唯一发射点——sessions 同 tick 恰一次——Reload 空
+  缺陷静态修复）。
 - 2026-09-09：SESSION-FLOW-B B1 锚段——§2 布局改四行垂直序（grid 五行→四行——活动
   面板容器随 F-B1a 拆）+ §5 全节重写（子代理块流内出生 · 原地冻结——live/冻结从出生
   即计入 150——freezeAnchor/面板滚动带全删——CLI _freezeAt 由出生时序取代）。

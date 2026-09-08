@@ -138,6 +138,11 @@ export class ChatPanel {
     })
 
     this._initStatusBar()
+    // B2（SESSION-FLOW-B F-B2a/F-B2b——2026-09-09）：resolve 只起慢段（_status() = status()
+    // 慢段——migrate/fullStatus/mcpStatus/模型偏好/索引——探测与 webview 加载重叠并行）；
+    // 快段 openSessionContent（会话内容 + 槽绑定）移入 webviewReady 握手——resolve 期
+    // webview 未加载，此刻发内容即丢（Reload 后对话区空缺陷的静态根因）——不得双跑快段
+    // （内容双发/槽重绑）。慢段头部 pushStatus 可能丢——webviewReady _pushStatus 兜底（幂等）。
     this._status()
   }
 
