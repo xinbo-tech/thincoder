@@ -76,9 +76,9 @@
 > 扩展**（SESSION §11.2）已交付核销（bba68df/0bf02b0 + VSC 7e7d90a/ec1e4c4——slot+resumed 按会话
 > +F3+双信号——L2 绿——consume 554b6251——**双端 system.md:24 env-state 描述未含 slot——需同步**）；
 > **§7.7 顶层异步**已交付核销（c08e1b2/8763ac2——L2 绿——consume a2b10815）；agent 生命周期 + 11.7 + D6
-> union 早前核销。批 4 剩 designer/R19（未排）。
+> union 早前核销。批 4 剩 env-state/R19（未排）——designer 2026-09-09 用户裁取消（eng 主会话即 designer）。
 - [x] ~~**批 3（结构债批 B）**~~——**2026-09-08 已交付**（SYSTEM-SPLIT——bash.mjs/search.mjs/question.mjs——待 L2 终链 + consume 3aaf4154）
-- [ ] **批 4（需求池各自独立——2026-09-08 并批评估定——设计权在用户）**：~~R16 token 语义~~（**已死——D1-D5 覆盖——L81 勾销**）/ env-state 补当前 slot（**需求段已落 SESSION §11.1——等确认**）/ designer 子代理（大）/ R19 护栏裁定——逐个独立全链
+- [ ] **批 4（需求池各自独立——2026-09-08 并批评估定——设计权在用户）**：~~R16 token 语义~~（**已死——D1-D5 覆盖——L81 勾销**）/ env-state 补当前 slot（**需求段已落 SESSION §11.1——等确认**）/ ~~designer 子代理~~（**2026-09-09 用户裁取消——eng 主会话即 designer**）/ R19 护栏裁定——逐个独立全链
 
 - [x] ~~**R10 多实例协作感知**~~——**2026-09-08 核销**（双端 pushPeerReminder 在位——peer-instances.mjs 在——config 写前 mtime 门控 F5b 在——MULTI-INSTANCE-COLLAB.md 双端）
 - [x] ~~**R16 token 生命周期语义修订**~~——**2026-09-08 核销勾销**（被 DESIGN-TOKEN-SETTLEMENT D1-D5 双端根治覆盖——settle 落盘权威台账 + TTL 三时机清理 purgeExpiredDesignTokens + restore 过滤 + 门禁过期拒——"待设计"标记过期）
@@ -86,8 +86,7 @@
 - [x] ~~**async 评审凭证结算根治**~~——**已实现**（2026-09-08 双端交付：CLI `a7e78b0`+`08cabb9` consume 落盘 / VSC `159a39f`——settle 当场落盘+门禁 miss 回读+镜像退役+consume 落盘对称——token 根治验证通过：async advisor settle 落盘+digest 后 spawn 能过）
 - [x] ~~**父 agent 观察运行中子代理（功能①）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——observe 动作：按 id 拉 5 条回合摘要+当前工具+turn/touched，治父看不到中间）
 - [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
-- [ ] **designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**：设计工作从主会话剥离给专门 designer 子代理——主会话只澄清需求+派 designer+评审设计+批准（不再自己写设计，哪怕小改动也派 designer）。designer 只写设计文档（主会话给澄清后需求+上下文，它产出设计文档到 docs/design/，不参与澄清）；直接写盘（产出即定稿）；一次性（每设计任务 spawn 一个，用完即弃）
-  ——需：新 designer 角色（子代理工具加 designer role）+ designer 提示词（固化 METHODOLOGY 三层结构/文档归属/验收标准格式/文档地图检查/受影响文件表格式）+ 主会话提示词改（工程模式 Mandatory Flow 改设计由 designer 做）+ designer 工具集（写 docs/design/ 权限+读代码/文档）——双端（CLI/VSC）同机制
+- [x] ~~**designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**~~——**2026-09-09 用户裁取消**（想法改变——eng 模式主会话本身就是 designer——设计已在主会话内实现（本会话全部设计档）——不建独立 designer 子代理角色——原需求的"designer 提示词固化"诉求由主会话既有设计纪律覆盖（METHODOLOGY 三层/文档地图/受影响表——无需新角色））
 - [x] ~~**memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**~~——**已实现**（2026-09-08 双端交付：CLI `528d2ab` / VSC `426b574`——scope→layer 全统一 + delete layer 可选 + 尊重 uid origin + list [layer] 标签——设计链闭合 consume）
 - [x] ~~distill 子系统 scope→layer~~——**已实现**（2026-09-08 交付 commit 26cd89f——--layer 命令面 + --scope 显式报错两形态 + 读时归一 L124 + 错误串 layer + test 8 用例——设计链评审通过）——遗留：
     ①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）
