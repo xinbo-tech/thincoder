@@ -29,7 +29,7 @@
 
 ## 需求段（2026-09-08 用户裁定——agent 生命周期对齐 CLI——快车道设计入口）
 
-> 状态：需求澄清完成（方向用户确认"对"）——设计进行中。本段为需求记录；设计正文落本档 §12（待建）或独立批次档。
+> 状态：需求定稿（2026-09-08——评审 #1：状态指针修正）。设计正文在 AGENT-LOOP.md §11（评审通过待 sign-off）——本段为需求记录，不再另建 §12。
 
 ### 总体需求
 
@@ -38,7 +38,7 @@ VSC 顶层 agent 生命周期从"每轮 runAgent 重建 + opts.engState/agentSta
 ### 功能性需求（As a… I want… so that…）
 
 - **F1（会话级单例）**：As a VSC 面板用户, I want 同一面板会话的顶层 agent 只在首轮创建、后续回合（含 Ctrl+I/Continue 续跑）复用同一对象, so that agent 内存状态（_engDesignTokens/_tasks/guard 标记等）跨回合天然携带——不因回合边界丢失或漂移。
-- **F2（状态零搬运）**：As a 开发者, I want 砍掉 opts.engState/agentState 每轮进出 + setup 恢复 + onComplete 落盘搬运链（agent 常驻后不再需要）, so that 状态只有一份内存源（agent）+ 回合尾盘同步——消除双载体不一致。
+- **F2（状态零搬运）**：As a 开发者, I want 砍掉「每轮经 opts 把状态搬进全新对象」的搬运（opts.engState/agentState 进出 + setup 恢复读侧——评审 #8 修正：onComplete 落盘链保留——见 N3）, so that 状态只有一份内存源（agent）+ 回合尾盘同步——消除双载体不一致。
 - **F3（盘权威保留）**：As a 开发者, I want 保留每回合尾盘同步 + 会话切换/新会话/换项目/退出落盘, so that VS Code 扩展进程被杀/崩溃/重载不丢状态（VSC 进程生命周期不可控——不能完全 CLI 式只退出存）。
 - **F4（生命周期边界）**：As a 开发者, I want 会话切换/新会话/删除/换项目时销毁常驻 agent（agent 内存态随之清理）, so that 不串会话（agent 不跨 session 复用）。
 
