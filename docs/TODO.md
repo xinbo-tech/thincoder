@@ -27,7 +27,7 @@
 - [ ] **TUI tool-args 块标题兜底**：action-only subagent 调用块标题光秃 "❯ subagent"——加 a.action 兜底显示
 - [ ] **setup.mjs knife-edge 注记过期**：agent/setup.mjs:313 仍写 "adjusted to 12500"，T3b 重校准 14000 未同步
 - [ ] **ACP 桥结构化映射**（⟦ev⟧ 剥除已落地 D7；ACP tool_call_update 结构化映射留待后续）
-- [ ] **doc-sweep 旧名残留**（memory 旧裸工具名）：FEATURES.md/AGENT-LOOP/ARCHITECTURE/VSC CAPABILITY_GAP.md（FEATURES/CAPABILITY_GAP 优先）
+- [ ] **doc-sweep 旧名残留（memory 旧裸工具名——2026-09-08 部分核销）**：FEATURES.md/ARCHITECTURE 已净（grep 0 命中）——剩 CLI AGENT-LOOP.md:94（§3 活体注入规格仍写 memory_search）+ VSC CAPABILITY_GAP.md:7/8/21（列当前能力 + 路径双过期 src/memory/core.mjs）——归文档批
 - [ ] **VS Code 端轨迹存档同构实现**（完整轨迹落盘 VSC 端）——**需用户明确"也要 VS Code"才启动**
 - [ ] **轨迹目录清理策略**（CLI trace-store 已有 D-TR10 24h 清理；按天/会话 GC 补充策略）——**需用户定是否还需**
 
@@ -37,8 +37,8 @@
   - CONTEXT-COMPACTION.md:247/:342 + SESSION.md:166/:212 + PROMPT-DECOUPLING.md:42/:53/:84
   - SEND-STALL:96 + TOOL-OUTPUT-LIMITS:50-53/:61-62/:104 + ADVISOR-CONVERGENCE:176 + VERIFY-DOCONLY:34
   - AGENT-PARAMS:61-2/:71 + COVERAGE-GAPS:11/:19/:32/:58-9 + ENG-TOKEN-BINDING:13-4 + ARCHITECTURE:255 + MCP:3
-- [ ] **ARCHITECTURE.md:596 §20 残留 test/subagent.test.mjs 引用**（引用已删测试文件路径——文档层残留未扫）
-- [ ] **ARCHITECTURE.md §19.6 引用段缺口**（§19.6 panel 检查工具实体未实现——引用段待补）
+- [x] ~~**ARCHITECTURE.md:596 §20 残留 test/subagent.test.mjs 引用**~~——**2026-09-08 核销**：ARCHITECTURE.md 已缩至 84 行指针档（:596 不存在），docs 全树 grep subagent.test.mjs 0 命中——前提已死
+- [x] ~~**ARCHITECTURE.md §19.6 引用段缺口**~~——**2026-09-08 核销**：§19.6 panel 检查工具实体已实现（subagent-panel.mjs——AGENT-LOOP.md:46/52 明记 2026-09-08 二次拆分 + agent-tools/subagent.mjs:80 panel action）——引用段待补前提消失
 - [ ] **AGENTS.md release flow 与 RELEASE.md §2 分歧**（实测 AGENTS bump→publish→commit→push vs RELEASE bump→commit→tag→push→publish——真实 doc 分歧）
 - [ ] **R7 AC 补"残留扫描只约束活体文案"豁免注**（advisor 🔵 未采纳——随 R7 核销记录落）
 - [ ] **VS Code 根 METHODOLOGY.md 头注悬空指针**（指向本仓不存在的 docs/design/METHODOLOGY.md）——顺手修
@@ -48,7 +48,7 @@
 - [ ] **修正轮纠结密度观察**：修正轮密度 2.20/1K > 基线 1.86——AC-OA4 可能低估受益面——等样本
 - [ ] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度——低优先
 - [ ] **advisor 裁决模板立项**（治 #15/#36 单轮 126s+ 输出 reasoning 自我协商）——等用户定时机
-- [ ] **§19.6 panel 检查工具**（已批未实现——重启后重评审）
+- [x] ~~**§19.6 panel 检查工具（已批未实现）**~~——**2026-09-08 核销**：已实现（subagent-panel.mjs 双端在 + action 面在——与 L41 同证据）
 - [ ] **sync spawn 区块 ⏹ 语义裁决**：sync 运行中 ⏹ 可见不可中止（有 Ctrl+C 指引）——彻底方案（⏹ 按池门控）需跨 TUI 改造——用户裁决后立项
 - [ ] **setup.mjs 受限变体 schema 补 cancel 词**（描述层同步）
 - [ ] **engineering-sub.md L1 "~15s" 数字漂移**（实测 18.5-19.7s）——随下个提示词批修
