@@ -292,6 +292,31 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 （锚句权威指针（评审 #3）：async 锚句改版后的逐字文本以 **§7.5 锚句区**为唯一权威驻点（2026-09-08 改版落此）——本 §7.7 只留变更记录与指针，不重复承载逐字文本——锚句内容以 §7.5 为准。）
 
 
+### 7.7.1 escalate/advisor 顶层也纳入一律异步（2026-09-08 用户裁定 a——范围扩展）
+
+> 需求：§7.7 只覆盖 spawn——用户裁 a：**escalate（飞刀）/advisor 顶层也纳入一律异步**——
+> 同步例外全移除（含 §14.2 "async:false 显式同步保留"句）。快车道（用户明确指令）。
+> 状态：设计待评审——评审通过 eng-coder 实现。
+
+**现状**：§14.2 :540 escalate "`async:false` 显式同步保留" 与新 §7.7 "顶层一律异步" 打架；
+- VSC main.md:28 escalate 段仍含 "pass `async:false` to wait for the report synchronously"
+  （CLI main.md:28 已纯异步引导——**双端漂移**）；CLI/VSC engineering.md advisor 段无
+  async:false 引导（grep 核实——eng-coder 报告项 4 的 engineering.md:16 观察不实）。
+
+**改**：
+1. **AGENT-LOOP §14.2 :540**："`async:false` 显式同步保留" → 删——escalate 顶层一律异步（同 §7.7）——报告自动到（ack → 回合自然收尾 → 挂起 settle → digest）。
+2. **VSC src/prompts/main.md:28** escalate 段：删 "pass `async:false` to wait for the report synchronously"——对齐 CLI main.md:28 纯异步引导（DEFAULT-ASYNC + 报告自动到）。
+3. CLI main.md:28（已纯异步——核实无需改——若含 async:false 残留一并清）。
+4. **机制注**：escalate/advisor 的 depth-0 async:false 参数仍平台合法（机制零触碰——AC4 同 §7.7）——提示词不引导——标注与 §7.7 一致。
+
+**受影响文件**：AGENT-LOOP.md（§14.2 + §7.7.1 新段 + 变更记录）、VSC src/prompts/main.md、CLI src/prompts/main.md（核实）。
+
+**验收**：
+- AC1 双端 main.md escalate 段无 async:false 同步引导（与 spawn 段一致——一律异步）
+- AC2 §14.2 无 "async:false 显式同步保留" 句
+- AC3 机制零触碰（depth>0 平台 sync 不变——escalate 内部深度规则不动）
+
+
 ### 7.6 子代理/顾问人格逐字锚集
 
 > 收 **prompts 测试锁定的逐字锚句**（设计文档 = 锚定稿源）——coder.md/consult-base.md/advisor 四模板角色句后插入，两端照抄，内容断言 fail-when-unchanged（byte-identical 已取消——§12.4——语义锚）。
