@@ -1,6 +1,6 @@
 # async 设计评审 token 结算根治（VSC 端）
 
-> 板块：设计评审凭证结算（async settlement）。状态：**已批准 + 已实现**（2026-09-08 eng-coder clean 交付——D1-D5 全落地 + eng-settlement.test.mjs 11 用例 npm test 26/0）。用户裁定：不再打补丁，按合理结构根治 + 废旧单值镜像 + 双端一起做（CLI/VSC 各自独立文档，同机制语义）。
+> 板块：设计评审凭证结算（async settlement）。状态：**已批准 + 已实现**（2026-09-08 双 eng-coder clean 交付——D1-D5 + D6 union 全落地——eng-settlement.test.mjs 现 14 用例）。用户裁定：不再打补丁，按合理结构根治 + 废旧单值镜像 + 双端一起做（CLI/VSC 各自独立文档，同机制语义）。
 > 背景：VSC 端 async 设计评审通过后 token/designId 反复丢失（`designId not found`）——explore 一手核实（2026-09-08）定位根因在 VSC extension 层双源设计。
 
 ## 1. 问题与根因（explore 一手核实）
@@ -99,6 +99,8 @@ AC1 = async design 评审 settle 后：①同进程后续回合 spawn eng-coder 
   incoming 非空但不全时忙时 saveLines 不覆盖 settle 刚落盘的项）；AC3 = `_engDesignToken` 镜像全仓退役（grep 零运行时读写，仅历史/文档提及）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）。
 
 ## 变更记录
+
+- 2026-09-08：D6 实现交付 clean（eng-coder）——union 合并 + tokenExpiryMs 内联解析（!p[0] 空 uuid 校验）——测试 11→14。历史注：D6 主体 30/40 行随 a0fabf8（agent 生命周期并发 commit——共享 git index 竞态）落入——修正增量 433a00a 补——内容正确全绿接受现状。
 
 - 2026-09-08：D6 评审 6 项采纳——#1 §4 补 session-slot-write.mjs（实际改动文件）+ panel-session 改"仅调用不变"/#2 测试改"改用例+补用例"（现 overwrite 断言钉 D2 语义须改）/#3 同 key 改 expiresAt 比较新者胜（防 async 重评审同 designId 丢新 token）/#4 行数标注（session-slot-write 168/delta≤±10、test 166/delta≤±30）/#5 D2/D5 重复句清理/#6 TTL 注记。
 - 2026-09-08：D6——写侧 merge 补 union（二次观察实证：忙时 settle 落盘被主会话 saveLines 覆盖抹——
