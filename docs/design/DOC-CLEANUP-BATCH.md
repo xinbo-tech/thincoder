@@ -51,28 +51,40 @@
 - **现状**：26 行行内吞节（:1/:5/:10/:14/:16/:18/:23）——不在任何 V 批清单漏网。
 - **改**：格式重写 + 2a-2 内容修正同批。
 
-### 2b-4 CLI AGENT-LOOP.md 3 条 >300 单行（:234/:269/:494）
+### 2b-4 >300 长行全量折行（评审重核——实际残留 7 档 15 行 + 双端）
 
-- **现状**：settle 统一机制/Neutrality/consult settle 密度段 3 条长单行（09-08 新增长行）。
-- **改**：折行（判据①——无 >300 单行）。
+- **现状（2026-09-08 实测——远超原估 3 行）**：docs/design >300 单行共 15 行 × 7 档——AGENT-LOOP:234(len952)/:494 + ASYNC-RESULT-CONTAINER ×6(:14/:15/:53/:70/:75/:92) + DESIGN-TOKEN-SETTLEMENT ×2(:56/:62) + DOC-REORG-VSC ×2(:66/:77) + STRUCTURE-DEBT:140 + SUBAGENT-OBSERVE-SEND ×2(:55/:61)。
+- **改**：全量折行（判据①——无 >300 单行）——随批修（2b-6 顺带条款转正——受影响表全列）。
+- **注**：原 2b-4 列 :269（Neutrality——恰 300 字符不超——不入折行——:234/:494 才是）。
 
-### 2b-5 CLI docs/TODO.md:83 长行
+### 2b-5 CLI docs/TODO.md 长行（:74/:87——行号校准）
 
-- **现状**：distill 条目长行（98 行档剩 1 条 >300）。
-- **改**：折行。
+- **现状（2026-09-08 实测）**：TODO.md 102 行（非 98）——长行 2 条：**:74（批实况行——2026-09-08 新增）+ :87（distill 条目——原写 :83 错——行号已漂）**。
+- **改**：两行折行。
 
-### 2b-6 顺带：TOOLS.md §8 地图/双端其他若扫描发现 >300 残留——随批修（不另立项）
+### 2b-6 归档引用清扫（评审线索——VERIFY-DOCONLY 归档后地图/先例悬空）
+
+- **现状**：2b-1 归档 VERIFY-DOCONLY.md 后——README.md:39 地图仍列 "VERIFY-DOCONLY.md（doc-only 快路径）同板块独立保留" + SETTINGS-TOOL.md:3 仍引 "MCP.md / VERIFY-DOCONLY.md 先例"——**归档即悬空（自查漏）**。
+- **改**：README.md:39 移除 VERIFY-DOCONLY（并入 VERIFY-REDESIGN 注——同板块独立保留只留 MCP/SETTINGS-TOOL）；SETTINGS-TOOL.md:3 去 VERIFY-DOCONLY 先例（改 MCP.md 单例）。
+- **顺带**：双端其他若扫描发现 >300 残留——随批修（不另立项）。
 
 ## 3. 受影响文件
 
 | 文件 | 端 | 改动 | 预计 delta |
 |---|---|---|---|
-| docs/design/AGENT-LOOP.md | CLI | 2a-1 + 2a-4 + 2b-4 | 折行 + 两注 ≤±20 |
+| docs/design/AGENT-LOOP.md | CLI | 2a-1 + 2a-4 + 2b-4 折行(:234/:494) | 折行 + 两注 ≤±20 |
+| docs/design/ASYNC-RESULT-CONTAINER.md | CLI | 2b-4 折行 ×6 | ≤±12 |
+| docs/design/DESIGN-TOKEN-SETTLEMENT.md | CLI | 2b-4 折行 ×2 | ≤±4 |
+| docs/design/DOC-REORG-VSC.md | CLI | 2b-4 折行 ×2 | ≤±4 |
+| docs/design/STRUCTURE-DEBT.md | CLI | 2b-4 折行(:140) | ≤±2 |
+| docs/design/SUBAGENT-OBSERVE-SEND.md | CLI | 2b-4 折行 ×2 | ≤±4 |
 | docs/design/TOOLS.md | CLI | 2a-3 | ≤±1 |
 | docs/design/VERIFY-REDESIGN.md | CLI | 2b-1 变更记录补前身吸收行（定案 a） | ≤±3 |
 | docs/design/_archive/VERIFY-DOCONLY.md | CLI | 2b-1 归档（移 _archive/） | 移档 |
 | docs/guides/ides.md | CLI | 2b-2 demux | ~+15 |
-| docs/TODO.md | CLI | 2b-5 | ≤±1 |
+| docs/TODO.md | CLI | 2b-5 折行 ×2(:74/:87) | ≤±2 |
+| docs/design/README.md | CLI | 2b-6 移除 VERIFY-DOCONLY 地图条目 | ≤±2 |
+| docs/design/SETTINGS-TOOL.md | CLI | 2b-6 去 VERIFY-DOCONLY 先例 | ≤±1 |
 | docs/CAPABILITY_GAP.md | VSC | 2a-2 + 2b-3 | ~+10 |
 | METHODOLOGY.md（根级——VSC 仓） | VSC | 2a-5（2026-09-08 用户裁并入） | ≤±1 |
 | STRUCTURE-DEBT.md | CLI | 执行核销（已标注——随批收尾核销行） | ≤±1 |
@@ -83,7 +95,8 @@
 - AC2 2a-2 + 2b-3：CAPABILITY_GAP.md memory 单工具 + VSC 实际路径 + 干净格式
 - AC3 2a-4：R7f 豁免注在 §12.2
 - AC4 2b-1：VERIFY-DOCONLY 并入 VERIFY-REDESIGN 变更记录（前身吸收行——含 isDocFile 三处判定历史）+ 移 _archive/（不残留坏格式——定案 a）
-- AC5 2b-2/2b-4/2b-5：ides.md demux + AGENT-LOOP 3 条折行 + TODO:83 折行——全部 >300 清零
+- AC4b 2b-6：归档后无悬空引用——README.md:39 无 VERIFY-DOCONLY 活条目 + SETTINGS-TOOL.md:3 无先例引用
+- AC5 2b-2/2b-4/2b-5：ides.md demux + docs/design 全部 15 条 >300 折行（7 档）+ TODO 2 条折行——全部 >300 清零（双端 scripts/check-doc-width 跑绿）
 - 双端 scripts/check-doc-width.mjs 跑绿（或等效宽度检查——判据①）
 
 ## 5. 剔除项
@@ -95,3 +108,4 @@
 
 - 2026-09-08：立项。批 A 执行后核销（explore）——规划表更新为执行后状态 + 净剩余落本档。纯文档批——与批 1（代码小修）独立域。
 - 2026-09-08：用户裁两点——2a-5 并入（VSC METHODOLOGY 指针修正）+ 2b-1 定案 a（核实 VERIFY-REDESIGN D-V5/T-V5 接管 doc-only 机制 + 未提前身——并入其变更记录含 isDocFile 历史 → 归档）。设计定稿待评审。
+- 2026-09-08：两次评审超时（600s 验证引用扫描面大）——中途线索人工采纳——2b-4 扩全量折行（实测 7 档 15 行——远超原估 3 行）+ 2b-5 行号校准（:74/:87——非 :83）+ 2b-6 转正归档引用清扫（README:39/SETTINGS-TOOL:3——归档后悬空自查漏）——待重评审。
