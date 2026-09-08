@@ -10,7 +10,9 @@
  *   - path=<full session-file path> → read that session file's history line and
  *     apply the SAME filter surface (role / keyword / tool / since-until / limit /
  *     direction). Read-only: the target file is never renamed / rewritten; a file
- *     with more than READ_HISTORY_SCAN_MAX (200,000) lines errors before full parse.
+ *     over 50,000 messages (READ_HISTORY_MAX_MESSAGES) or 200,000 lines
+ *     (READ_HISTORY_SCAN_MAX) is refused with the "session too large" error
+ *     (L24 双保险：行扫第一道 + parse 后消息数第二道——双端同常量同文案).
  *   - path="cwd:<directory>" → discovery listing of that cwd's session slots
  *     (session files live at ~/.thincoder/sessions/<sha1(cwd)>.json.<N> — shared
  *     with the CLI): one summary line per slot with the slot number, the FULL
@@ -50,6 +52,13 @@ const VALID_ROLES = new Set(["user", "assistant", "tool"])
 /** §13 D-R19a guardrail (评审 #3 — 具体化): per-slot line-scan cap for cross-session reads.
  *  A file over the cap errors with the design-finalized message BEFORE full parse. */
 const READ_HISTORY_SCAN_MAX = 200_000
+
+/** L24 消息数预算（评审 #2 钉死——双保险第二道）：行扫按物理 \n 行计——JSON 单行槽
+ *  行扫不设防——parse 后 history 数组长度超限即拒（同款定稿文案）。 */
+const READ_HISTORY_MAX_MESSAGES = 50_000
+
+/** 超限错误文案（SESSION.md §13——定稿逐字——行扫/消息数两道共用——CLI TOO_LARGE_ERROR 同文案）。 */
+const TOO_LARGE_ERROR = JSON.stringify({ error: "session too large — refine keyword or since/until" })
 
 /** Message text for keyword matching + output: strings pass through; multimodal content arrays → text parts joined (never crashes, empty parts skipped, images ignored). */
 function messageText(m) {
@@ -171,7 +180,7 @@ function loadSessionHistory(filePath) {
     return `Error: cannot read session file "${filePath}": ${e.message}`
   }
   if (scan.over) {
-    return JSON.stringify({ error: "session too large — refine keyword or since/until" })
+    return TOO_LARGE_ERROR
   }
   let data
   try {
@@ -181,6 +190,10 @@ function loadSessionHistory(filePath) {
   }
   if (!data || typeof data !== "object" || (data.version !== 1 && data.version !== 2) || !Array.isArray(data.history)) {
     return `Error: not a session history file: "${filePath}"`
+  }
+  if (data.history.length > READ_HISTORY_MAX_MESSAGES) {
+    // L24 消息数第二道（parse 后——行扫按物理行、单行 JSON 槽行扫不设防——超限同款拒绝）。
+    return TOO_LARGE_ERROR
   }
   return data.history
 }
@@ -300,6 +313,7 @@ export const readHistoryTool = {
     "Use when you need to recall what was said or done earlier: design decisions, tool-call timing, past rulings. " +
     "Cross-session: set path to a full session-file path (from a cwd: listing below) to run the same filters against that session's history; " +
     "or set path to \"cwd:<directory>\" to list that directory's sessions — every summary line carries the slot number, the full session-file path, title, message count and updatedAt — then re-call with path=<that full path> for the messages. " +
+    "A session file over 50,000 messages or 200,000 lines is refused (\"session too large\") instead of being read whole. " +
     "Filters combine with AND: role / keyword (case-insensitive substring of message text) / " +
     "tool (tool result messages by name AND the assistant messages that declared the call — pair with tool_call_id / ts for timing) / " +
     "since-until (epoch ms time window; only messages with ts can match) / limit (default 50, clamped to 200) / direction (which end of the matches to take). " +

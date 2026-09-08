@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { join, resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadAgentSettings } from "../config-io.mjs"
-import { isDocFile } from "../advisor/repos.mjs"
+import { isCodePath } from "../advisor/repos.mjs"
 
 /** File-modifying tools — the engineering design gate blocks these before review passes (CLI parity). */
 export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])
@@ -69,13 +69,15 @@ export function escapeXml(s) {
 
 /**
  * True when this run mutated at least one CODE file (CLI hasCodeMutations parity).
- * Doc-only changes (docs/, *.md, LICENSE…) must NOT trigger the advisor guard.
- * _touchedFiles stores absolute paths; the src/ check matches a path component.
+ * Code = src/ unconditional (incl. src/prompts/*.md) OR anything that is neither
+ * a doc file (docs/, *.md, LICENSE…) nor a temp file (tmp-*, .tmp/.temp — L58
+ * 附带差：scratch 脚本不触发 guard——CLI isTempFile 同规则). _touchedFiles stores
+ * absolute paths; the src/ check matches a path component.
  */
 export function hasCodeMutations(agent) {
   const files = agent._touchedFiles ?? []
   if (files.length === 0) return agent._mutatedThisRun
-  return files.some((p) => /(?:^|[\\/])src[\\/]/.test(p) || !isDocFile(p))
+  return files.some((p) => isCodePath(p))
 }
 export const MAX_TOOL_RESULT = 64 * 1024 // chars — large results saved to disk instead of truncated (aligns with CLI)
 export const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // §5 D-4.1 head slice preserved (preview 保头保尾)

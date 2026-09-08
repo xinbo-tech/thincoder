@@ -7,7 +7,8 @@
  *   链）→ cancelled settle：不入 pending、不入 token 槽、模型可见取消提醒（"评审已取消——
  *   token 未签发"语义——注入机读线——与 subagent injectCancelReminder 同型）；
  * - settle 记账（探索结论③ + 修正 #2/#4——settle 时执行）：① 陈旧判定（launch 后 FILE
- *   MUTATORS——code 评审任意文件面 / design 评审按对象文档面）→ 不置 _calledAdvisorThisRun、
+ *   MUTATORS——code 评审按 code-path 面（doc/temp 编辑不触发——L58）/ design 评审按对象
+ *   文档面）→ 不置 _calledAdvisorThisRun、
  *   设计评审不签发 token（guard 仍推回——防静默漏审）；② 通过 → token 入槽
  *   _engDesignTokens.set(designId, token) + 当场同步落盘 slot 权威台账（D1——无镜像，D5）；
  *   ③ 轮次按 review 实例记（history._advisorRuns——cap 随实例——每评审 ≤5 轮——修正 #4，
@@ -25,6 +26,7 @@
 import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
+import { isCodePath } from "../advisor/repos.mjs"
 import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
@@ -94,14 +96,20 @@ function scopeKeyOf(paths, documents, cwd) {
   return JSON.stringify([...new Set(src.filter((x) => typeof x === "string" && x.trim()).map(norm))].sort())
 }
 
-/** 陈旧判定（修正 #2——settle 时）：launch 后发生 FILE_MUTATORS——code 评审任意文件面；
- *  design 评审按对象文档面（documents 命中；无 documents → 文档形态面 docs/*.md）。 */
+/** 陈旧判定（修正 #2 + L58——settle 时）：launch 后发生 FILE_MUTATORS——code 评审按
+ *  code-path 面（src/ 无条件；temp/doc 排除——doc/temp 编辑不判陈旧——对齐 CLI
+ *  reviewIsStale code 分支）；design 评审按对象文档面（documents 命中；无 documents
+ *  → 文档形态面 docs/*.md）。 */
 export function advisorStale(parent, entry) {
   const events = (parent.history ?? parent)._fileMutEvents
   if (!Array.isArray(events)) return false
   const after = events.slice(entry.eventsAtLaunch ?? 0)
   if (after.length === 0) return false
-  if (entry.reviewType !== "design") return true // code 面：任意文件变更即陈旧
+  if (entry.reviewType !== "design") {
+    // code 面：仅 code-path 变更判陈旧（doc/temp 编辑不触发）。events 为绝对路径——
+    // isCodePath 直接适用（src/ 组件 + temp/doc 文件形态双判定）。
+    return after.some((p) => isCodePath(p))
+  }
   // design 面：变更命中评审文档（相对 cwd 或绝对形态——win32 分隔符归一）→ 陈旧
   const docs = Array.isArray(entry.documents) ? entry.documents.filter(Boolean) : []
   const cwd = entry.cwd ?? process.cwd()

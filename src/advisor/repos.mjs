@@ -108,6 +108,28 @@ export function isDocFile(p) {
   return DOC_FILE.test(p ?? "")
 }
 
+/** Temporary/scratch files that must NOT count as code mutations: tmp-* named
+ *  scratch scripts (tmp-c1.mjs, tmp-check.mjs…) and .tmp/.temp extensions.
+ *  The advisor/verify guards skip these — a throwaway diagnostic script is not
+ *  a code change, and writing one must not push the agent into a review loop
+ *  (CLI repos.mjs TEMP_FILE parity). Basename match at ANY depth — _touchedFiles
+ *  stores absolute paths, so the pattern must work for "D:/proj/tmp-check.mjs". */
+const TEMP_FILE = /(?:^|[/\\])tmp-[^/\\]+$|\.(?:tmp|temp)$/i
+
+/** True when a path is a throwaway temp file (tmp-* name or .tmp/.temp ext).
+ *  Excluded from code-mutation detection so scratch scripts don't trigger
+ *  advisor/verify guards. */
+export function isTempFile(p) {
+  return TEMP_FILE.test(p ?? "")
+}
+
+/** True when a path counts as a CODE mutation: src/ is unconditional (incl.
+ *  src/prompts/*.md — product code); temp/doc exclusions apply only outside
+ *  src/ (CLI hasCodeMutations isCodePath parity — L58). */
+export function isCodePath(p) {
+  return /(?:^|[\\/])src[\\/]/.test(p ?? "") || (!isTempFile(p) && !isDocFile(p))
+}
+
 /** True when all changed files across repos are documentation (md/txt/LICENSE etc.).
  *  Anything under src/ (incl. src/prompts/*.md) counts as product code —
  *  isProductCode semantics, consistent with the design gate. */
