@@ -73,13 +73,6 @@ function killProcessTree(child) {
 }
 
 /**
- * Run a bash command: spawn, stream stdout/stderr with buffering and decoding,
- * enforce timeout and signal abort, return formatted result.
- *
- * Returns a promise that resolves to the formatted output string (stdout + stderr + status + truncation note).
- */
-
-/**
  * Detect destructive git commands and auto-snapshot BEFORE execution.
  * The scenario: the model writes uncommitted code, then (after breaking things)
  * runs `git checkout -- .` / `git restore` / `git reset --hard` / `git clean -f` to
@@ -116,6 +109,12 @@ async function gitGuardSnapshot(command, cwd) {
   }
 }
 
+/**
+ * Run a bash command: spawn, stream stdout/stderr with buffering and decoding,
+ * enforce timeout and signal abort, return formatted result.
+ *
+ * Returns a promise that resolves to the formatted output string (stdout + stderr + status + truncation note).
+ */
 function runBash(command, cwd, { timeout, signal, onOutput, shell }) {
   return new Promise((resolve) => {
     // Windows + default cmd: force UTF-8 code page for this child process (each spawn
