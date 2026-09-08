@@ -114,8 +114,8 @@
 - [x] ~~**escalate/advisor 顶层 async:false carve-out 范围界定**~~——**2026-09-08 §7.7.1 勾销**（用户裁 a：escalate/advisor 顶层也纳入一律异步——§14.2 同步保留句删 + main.md/engineering.md/discipline.md 引导清 + §7.2 escalate 行注——全链完成）
 
 ## 屎山度第三次评估清扫批（2026-09-08 夜）
-- [ ] **批 5（文档小批——N3+N7）**：AGENTS.md 地图陈旧 8+ 悬空 + 5 档批执行文档未登记（N3）+ resumed/restart 载体异名统一注释锚（N7——语义已裁 A——文档级）——走设计→评审
-- [ ] **批 6（代码小批——N1+N6）**：VSC subagent.mjs 507 行 + advisor/run.mjs 511 行越线小拆（N1——500 硬拆纪律）+ `_permQueue` 3 处 inline 收 helper（N6——含 escalate 语义澄清 subagent-actions.mjs:426 注释）——走设计→评审
+- [x] ~~**批 5（文档小批——N3+N7）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-5-6——CLI 458857c——AGENTS.md 粗分类指 README + README 板块行自登记 + N7 双锚互引——L2 绿——consume f7dc212e）
+- [x] ~~**批 6（代码小批——N1+N6）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-5-6——VSC 65092ff——subagent 508→353 + subagent-run 183 新 + advisor 511→466 + tools 49/provider 35 新 + CLI enqueueAsk ×3——导出面 12/12——L2 绿——consume f7dc212e）eue` 3 处 inline 收 helper（N6——含 escalate 语义澄清 subagent-actions.mjs:426 注释）——走设计→评审
 - [ ] **双端 system.md:24 下批同步**（§11.3 交付上报项 1+2——2026-09-08 用户裁接受 slot 短句纳入）：
   （① token 存活指引矛盾——CLI 例外段 vs VSC tokens 不存活——token 权威 DESIGN-TOKEN-SETTLEMENT——VSC 对齐 CLI）
   （② slot 行内 prose 补 sticky-slot 短句——null when none is bound）
