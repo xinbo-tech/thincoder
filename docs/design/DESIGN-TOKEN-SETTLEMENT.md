@@ -11,7 +11,12 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 
 三处 VSC 独有断点：
 1. **快照永不刷新（断点②）**：挂起会话入口一次性捕获 `susp.engState`（`suspension.mjs:248`），会话内回合复用（`panel-chat.mjs:193`），**从不重读槽文件** → 会话内回合（digest）用陈旧空快照重建 Map → spawn 门禁读空 Map → `designId not found`。
-2. **写侧清零（断点②b——最硬根因）**：会话内回合正常完成时 `onComplete` 携 `agentState(agent)` 落盘（`panel-callbacks.mjs:105-107`），而 `agentState` 恒含 `engDesignToken/engDesignTokens` 两键（`run-helpers.mjs:229-240`）→ `panel-session.mjs:105,110` 键存在性写**用空态覆盖槽** → 把 settle 刚落盘的 token 钉 null。**时序必杀**：settle 写 token → 唤醒 digest → digest 空态 onComplete 清零 → token 在 digest 后必死。
+   （D3 修复：会话内回合从槽新读。）
+2. **写侧清零（断点②b——最硬根因）**：会话内回合正常完成时 `onComplete` 携 `agentState(agent)` 落盘
+   （`panel-callbacks.mjs:105-107`），而 `agentState` 恒含 `engDesignToken/engDesignTokens` 两键（`run-helpers.mjs:229-240`）→
+   `panel-session.mjs:105,110` 键存在性写**用空态覆盖槽** → 把 settle 刚落盘的 token 钉 null。**时序必杀**：settle 写 token →
+   唤醒 digest → digest 空态 onComplete 清零 → token 在 digest 后必死。
+   （D2/D6 修复：空态保留槽 + union 合并。）
 3. **F2g fire-and-forget（断点③⑦）**：settle 的 `_engPersist` 槽直写（`advisor-async.mjs:294-305`）动态 import `.then` **不 await**——settle 后进程死/落盘前 → token 只死在内存。
 
 另：spawn 门禁（`subagent-spawn-gate.mjs` resolveDesignSlot）只读当前 run 的内存 Map（`parent._engDesignTokens`）；dispatch 写门（`execute-tools.mjs:75`）读单值镜像 `_engDesignToken`——**门禁读取分裂**（Map vs 镜像两套真相）。
@@ -52,24 +57,52 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 - **改**：门禁读内存 Map，**miss 时回读槽文件权威台账**（reconcile 内存缓存 + 判定）——会话内回合也能从槽读到 settle 落盘的 token。TTL 过滤保留。
 - 落点：`src/agent-tools/subagent-spawn-gate.mjs`。
 
+### D6 写侧 merge 补 union（2026-09-08 二次观察实证——D2 只修半边）
+
+- **实证**：D1-D5 落地后 async 评审 token 仍偶发丢失（评审 digest 显示 Approved + 槽数 9，盘上槽 8）。用户观察：**主会话空闲时 settle 落盘成功、主会话忙时丢失**。
+- **根因（代码核实）**：`engTokensMergeForSave`（session-slot-write.mjs:160-167——D2 语义）只修了"incoming 空 + 槽有值 → 保留槽"半边，**没修"incoming 非空但不完整"半边**：
+  ```js
+  incoming 非空 → return incoming        // ← 用内存表整体覆盖槽表
+  incoming 空 + 槽有值 → return existing  // ← D2 已修
+  ```
+  忙时场景：settle 落盘 9 项到槽 → **settle 只更新闭包 parent（发起评审的 agent 实例）的 `_engDesignTokens`
+  （advisor-async.mjs:322-323），主会话当前 agent 内存 Map 仍是旧 8 项**（settle 发生在其回合处理中途，回合开始时水合
+  早于 settle）→ 主会话回合尾 saveLines → agentState 携 incoming = 8 项（非空）→ `return incoming` →
+  **8 项整体覆盖槽的 9 项 → 新 token 被抹**。空闲时无后续 saveLines → 槽保留 9 项。
+- **改（用户确认 union 方案）**：merge 改 **union 合并**——`{ ...existing, ...incoming }`：
+  - 同 key 以 incoming（内存）为准——续跑 round 同 designId 新 token 覆盖旧值
+  - **槽独有项保留**（incoming 缺的——如 settle 刚落盘而主会话内存未同步的项）——多写者（settle/consume/跨端）互不覆盖
+  - 槽 = 权威台账：回合尾保存永不丢弃槽里自己内存不知道的项
+  - consume 安全：consume = "内存删 + 对称删盘"——槽已无该项 → union 不复活
+  - TTL 过期：由 setup 水合 TTL 过滤清——回合尾 union 保留无害（spawn 门禁会滤）
+- 落点：`src/extension/session-slot-write.mjs` engTokensMergeForSave 一个函数 + `test/eng-settlement.test.mjs` 补用例。
+
 ### D5 废旧单值镜像（R2 用户选 B）
 
 - **现状**：dispatch 写门（`execute-tools.mjs:75`）读 `_engDesignToken` 镜像拦产品代码写；spawn 读 Map——两套真相。
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽**"任一活槽存在"**（查内存 Map 或槽文件任一未过期 designId）——有任一活槽即有资格写产品代码。镜像字段读时一次性迁移进 Map，不再双写。
 - 落点：`src/agent/execute-tools.mjs` + settle 不再写镜像 + setup 不再恢复镜像 + consume/TTL/new 不再清镜像。
+  （评审 #1 迁移读点见上——唯一例外。）
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽**"任一活槽存在"**（查内存 Map 或槽文件任一未过期 designId）——有任一活槽即有资格写产品代码。**存量兼容：旧 slot 文件可能残留镜像值——setup 水合 engState 时一次性读迁进 Map（唯一迁移读点，此后零读零写）**，settle 不再写镜像、setup 不再恢复镜像、consume/TTL/new 不再清镜像。
 - **迁移读点（评审 #1）**：setup 水合处——slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（legacy 标），随后不再写镜像；AC3 的 grep 清扫**排除此单点**（其余镜像读写零命中）。
 - 落点：`src/agent/execute-tools.mjs` + settle 不再写镜像 + setup 不再恢复镜像（改唯一迁移读）+ consume/TTL/new 不再清镜像。
 
 ## 4. 受影响文件（VSC，thincoder-vscode）
 
-- 修改：`src/agent-tools/advisor-async.mjs`（settle 同步落盘 D1/D5）、`src/agent-tools/subagent-spawn-gate.mjs`（miss 回读 D4/D5）、`src/agent/execute-tools.mjs`（写门问槽 D5）、`src/agent/run-helpers.mjs`（agentState 去镜像 D5）、`src/agent/setup.mjs`（水合去镜像 D1/D5）、`src/extension/panel-callbacks.mjs`（onComplete 保留槽 D2）、`src/extension/panel-session.mjs`（saveLines 合并 D2）、`src/extension/panel-chat.mjs` + `suspension.mjs`（读槽 D3）
+- 修改：`src/agent-tools/advisor-async.mjs`（settle 同步落盘 D1/D5）、`src/agent-tools/subagent-spawn-gate.mjs`（miss 回读 D4/D5）、
+  `src/agent/execute-tools.mjs`（写门问槽 D5）、`src/agent/run-helpers.mjs`（agentState 去镜像 D5）、`src/agent/setup.mjs`（水合去镜像 D1/D5）、
+  `src/extension/panel-callbacks.mjs`（onComplete 保留槽 D2）、`src/extension/panel-session.mjs`（saveLines 合并 D2 + **D6 union**）、
+  `src/extension/panel-chat.mjs` + `suspension.mjs`（读槽 D3）
+  + `test/eng-settlement.test.mjs`（D6 补用例）
 - 文档：本设计 + README 地图登记
 
 ## 5. 验收
 
-AC1 = async design 评审 settle 后：①同进程后续回合 spawn eng-coder 通过 ②挂起会话 digest 回合 spawn 通过 ③settle 落盘后进程重启 resume → spawn 通过——均不再 `designId not found`；AC2 = 会话内回合 onComplete 不再把 settle 已落盘 token 钉 null（槽值保留）；AC3 = `_engDesignToken` 镜像全仓退役（grep 零运行时读写，仅历史/文档提及）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）。
+AC1 = async design 评审 settle 后：①同进程后续回合 spawn eng-coder 通过 ②挂起会话 digest 回合 spawn 通过 ③settle 落盘后进程重启 resume → spawn 通过——均不再 `designId not found`；AC2 = 会话内回合 onComplete 不再把 settle 已落盘 token 钉 null/抹掉（槽值保留——D2 空态半边 + D6 union 补半边：
+  incoming 非空但不全时忙时 saveLines 不覆盖 settle 刚落盘的项）；AC3 = `_engDesignToken` 镜像全仓退役（grep 零运行时读写，仅历史/文档提及）；AC4 = dispatch 写门读"任一活槽存在"判定资格；AC5 = 凭证不落文档巡检通过；AC6 = CLI/VSC 同机制语义一致（各自独立文档）。
 
 ## 变更记录
 
+- 2026-09-08：D6——写侧 merge 补 union（二次观察实证：忙时 settle 落盘被主会话 saveLines 覆盖抹——
+  engTokensMergeForSave 只修了空态半边，补"incoming 非空但不全"的 union 合并）。
 - 2026-09-08：立项。基于会诊（4 模型收敛：槽文件权威台账 + settle 同步落盘 + 门禁读权威）+ explore VSC 一手核实（断点②快照/②b写侧清零/③F2g/④门禁/⑤镜像）+ 用户裁定（B：连镜像一起废；双端一起做；各一份文档）。
