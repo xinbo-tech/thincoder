@@ -88,15 +88,13 @@ CLI/VSC normalize 统一一实现。统一基准：trim + 去行尾空白 / tab�
 - 实现：VSC normalizeLineFuzzy（edit-fuzzy-match.mjs）改同 CLI 基准（移除折叠、补 tab→2 空格）；CLI normalizeEditLine 补弯引号归一。两端逐字同算法。
 - 测试：弯引号差异行两端同命中 / 结构不同文字相似行两端同不命中。
 
-### 8.3 描述修复（VSC）
-
 ### 8.3 描述修复（VSC——逐处改前/改后，2026-09-08 用户确认；CLI 对应具体改写见 CLI EDIT.md §8.3）
 
 `file-edit.mjs` editTool 描述 4 处（模型可见文本——行号引 file-edit.mjs 当前）：
   1. **重复块**（:87-90——line 与 startLine/endLine bullet 原样两遍，仅后者多 "; replace_all does not apply"）→ 删第二遍（:89-90），合并保留 "; replace_all does not apply"
   2. **中英混杂**（:92 edits 条目整段中文"批量形态（CLI parity）——同文件多处修改…"）→ 改英文（同 CLI edit.md edits 段措辞——
      "Batch form — multiple edits in ONE call, atomic; entries without their own path inherit the top-level path (entry paths override). Mutually exclusive with top-level old_string/new_string"）
-  3. **空串矛盾**（:82 "empty new_string deletes them"）→ 与 CLI ② 同义：行号形态 **省略 new_string** 才删（删行形态——8.1）；给空串=给了 new_string 键 → 空串语义统一（内容形态拒、行号形态显式删）
+  3. **空串矛盾**（:82 "empty new_string deletes them"）→ 与 CLI ② 同义：行号形态 **省略 new_string** 才删（删行形态——8.1）；给空串=给了 new_string 键 → 空串语义统一（同 8.1：内容形态拒 `""`；行号形态显式 `""` = 显式错误——仅省略 new_string 才删）
   4. **normalize 措辞**（:80 "inner whitespace collapsed"）→ 移除折叠后改 "tab→space indent + quote normalization"（与 CLI 8.2 统一基准一致）
   5. 路由段（新——现缺）：行号新鲜 → `line` 形态；漂移/内容杂 → `hashline_edit`；删行 → 省略 new_string；加行 → `insert_after`（镜像 CLI ①）
 
@@ -104,13 +102,21 @@ CLI/VSC normalize 统一一实现。统一基准：trim + 去行尾空白 / tab�
 
 VSC edits 数组条目**加 line/startLine/endLine**（现 schema items 只有 path/old_string/new_string/replace_all + required:[old_string,new_string]——条目带 line 会静默丢）：
 
-- schema items 加行号参数；required 放宽（行号条目无 old_string——同 CLI items.required 仅 new_string）；批量 execute 处理条目级行号。
+- schema items 加行号参数；**条件 schema（评审 #1 采纳——oneOf 明确）**：内容条目 old_string+new_string 必填；行号条目 line/startLine-endLine + new_string optional（省略 = 删行——8.1）；items.required 不设硬性（execute 期按条目形态校验——防批量删行被 required 拒）。批量 execute 处理条目级行号。
 - 与 CLI 对齐（CLI 设计测试表已含"批量混用行号+模糊条目"——现 CLI-only → VSC 补齐）。
 - 测试：批量混用行号+内容条目 VSC 端到端。
 
 ### 8.5 代码注释旧编号清理（同 CLI）
 
 VSC edit 族代码注释 §15/D15.x（file-edit.mjs:20-21,72,198,208,235,338,347 / edit-diff.mjs:2-4,11,132 / more-file.mjs:124,126,151,201）→ EDIT.md 指针 + 跨仓悬空（edit-diff.mjs:33 指 CLI EDIT-TOOL-EOL-DESIGN.md）修正为本仓 EDIT-HELPERS.md。
+
+### 8.6 合并 §1-§7 核销清单（评审 #3/#4 采纳）
+
+§8 并入当前态时须联动同步的现文位置（逐条核销）：
+- **§5:50 裁定 A 摘要（评审 #3）**——"空/省略 new_string = 删除"改**仅省略**（显式 `""` = 显式错误——8.1 矩阵）；
+- **§1:11 路由段（评审 #4）**——现"路由在…Routing 段"与 8.3 新增路由段矛盾——统一为"8.3 落地后 Routing 段存在"；
+- §2 edits 条目"不含行号"改"含行号（8.4）"；§5 空串约束补 8.1 矩阵；
+- §3 档位 normalize 描述更新 8.2 基准；§7 测试计数更新。
 
 
 ## 变更记录
