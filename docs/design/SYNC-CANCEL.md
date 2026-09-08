@@ -14,7 +14,11 @@
   - F3 TUI ⏹ 门控放开 sync（registry live 才钉）——mouse 命中 → cancelSyncChild 定向 abort
   - F4 折叠报告：merge child mutations + STOPPED_MARK 文案 + partial 警示——走成功冻结管线（done 补发/精确冻/预览入流）
   - F5 嵌套 sync spawn 逐层自属（递归可中止——内层链外层 ctrl）
-  - **范围边界**：只做 CLI TUI depth-0 sync spawn 顶层块（VSC webview 不同构——单独立项）；escalate sync 块无 ⏹ 面——另议；async cancel 语义不变（折叠只在 sync 层——不改 runChildPipeline）；模型侧 executeCancelAction 不扩（sync 无 ack——L52 面 = TUI ⏹ 直连）。
+  - **范围边界（评审 #4 措辞精化）**：只做 CLI TUI **顶层 sync 块**（用户直接观察的
+    最外层 sync spawn 带 ⏹ 面 + registry 检查；嵌套层经 controller 链传播中止——无独立 ⏹ 面
+    ——F5 逐层自属保证传播）；VSC webview 不同构——单独立项；escalate sync 块无 ⏹ 面——另议；
+    async cancel 语义不变（折叠只在 sync 层——不改 runChildPipeline）；模型侧 executeCancelAction
+    不扩（sync 无 ack——L52 面 = TUI ⏹ 直连）。
 
 ## 设计（深勘察骨架——照做勿自行解释）
 
@@ -64,20 +68,26 @@
 
 ## 受影响文件
 
-| 文件 | 端 | 改动 |
+| 文件 | 端 | 改动 | 行数 |
 |---|---|---|
-| src/agent-tools/subagent.mjs:218-254 | CLI | 自属 ctrl + 三分支 catch + registry 注册/注销 |
-| src/agent-tools/subagent-async.mjs | CLI | cancelSyncChild 新函数 |
+| src/agent-tools/subagent.mjs:218-254 | CLI | 自属 ctrl + 三分支 catch + registry 注册/注销 | ~284 现（+~30——评审 #1） |
+| src/agent-tools/subagent-async.mjs | CLI | cancelSyncChild 新函数 | ~420 现（+~20——评审 #1） |
 | src/agent-tools/async-settle.mjs:66 | CLI | buildChildSignal 复用（不改） |
-| src/spawn-child.mjs:194-195 旁 | CLI | STOPPED_MARK 常量 |
-| src/agent-tools/tool-events.mjs:178/:205 | CLI | partial 检测扩展 STOPPED_MARK |
-| src/agent-tools/subagent-spawn.mjs:287 | CLI | v2：工具权限 ask 加 owner key（用户裁 v2） |
-| src/tui/key-modes.mjs 模态 | CLI | v2：deny 解绕 + queued ask 查 stopped 旗标不弹 |
-| src/tui/subagent-panel.mjs:170-178 | CLI | ⏹ 门控放宽 sync |
-| src/tui/mouse.mjs:185-208 | CLI | cancelSubagent + sync registry 查 + 文案 |
-| test/（async-settle 风格新测试） | CLI | 上述 5 组 |
+| src/spawn-child.mjs:194-195 旁 | CLI | STOPPED_MARK 常量 | ~210 现（+~3——评审 #1） |
+| src/agent-tools/tool-events.mjs:178/:205 | CLI | partial 检测扩展 STOPPED_MARK | ~220 现（+~2——评审 #1） |
+| src/agent-tools/subagent-spawn.mjs:287 | CLI | v2：工具权限 ask 加 owner key（用户裁 v2） | ~295 现（+~3——评审 #1） |
+| src/tui/key-modes.mjs 模态 | CLI | v2：deny 解绕 + queued ask 查 stopped 旗标不弹 | ~50 现（+~8——评审 #1） |
+| src/tui/subagent-panel.mjs:170-178 | CLI | ⏹ 门控放宽 sync | ~180 现（+~4——评审 #1） |
+| src/tui/mouse.mjs:185-208 | CLI | cancelSubagent + sync registry 查 + 文案 | ~215 现（+~8——评审 #1） |
+| test/（async-settle 风格新测试） | CLI | 上述 5 组 | 新 ~150 |
 | docs/design/TUI.md:398-402 | CLI | ⏹ 门控锚同步 |
 | docs/design/AGENT-LOOP.md §19.5 | CLI | cancel 边界注 |
+
+## 非功能性需求（评审 #3 补）
+- N1 零回归：async/consult/escalate 路径行为不变（折叠只在 sync 层——buildChildRunOpts 不改）
+- N2 `_syncChildAborts` 清理保证（try/finally 三路径——无跨回合残留）
+- N3 headless/测试无 _agent → sync 不钉 ⏹（零回归）
+- N4 ⏹ 命中到 abort 生效低延迟（无轮询——直连 ctrl.abort）
 
 ## 验收
 
@@ -90,3 +100,9 @@
 
 ## 变更记录
 - 2026-09-09：L52 深勘察落档（信号流全链实证 + 改造骨架 + 8 风险 R1-R8）——v1/v2 模态决策点待用户裁——评审后 eng-coder。
+- 2026-09-09 评审 5 项采纳（受影响表补行数/README 地图登记注/NFR 小节/深度措辞注/测试表实现前完整——
+  token 1b9be692）。
+
+> 归属注（评审 #2）：本档为 L52 专题设计——实现时机制正文落 AGENT-LOOP.md（cancel 权威源）+
+> TUI.md:398-402 锚同步——本档完成后随核销登记 docs/design/README.md 地图（或并入 AGENT-LOOP——
+> 以实施时裁定为准——README 登记防悬空）。
