@@ -43,19 +43,30 @@
 ### 5. 行面板撤除（F-3——D-3 方案 A）
 - #subagent-panel 从 index.html/#panels 撤——panels.js renderSubagentPanel DOM 渲染面删（簿记保留——S._subagentMap/handleSubagentMessage 状态簿记仍供块 meta 水合）
 - queued：区内等待块头（ensureSubTaskKey 在 queued 即建块头——activity.js 现 queued 早退无块——改为建头——D-4）
-- consult：sub: 频道块承载（consult.mjs:254 已全量 stream——answered 无块防御：按行快照建冻结块）
+- consult：sub: 频道块承载（consult.mjs:254 工具流全量 stream——评审 #3：answered 携 replyPreview
+  （consult.mjs:202）——appendPreview 只镜像块内文本（activity.js:358-379）——预 digest 回复可见性 = digest
+  轮逐字呈现覆盖（agent.mjs:27——设计明示）+ answered 无块防御建冻结块（测试 ⑭）
 - autoClean linger 迁区内块生命周期——👥 计数弃（_suspCounts 状态行承担）——consult reply preview 冻结块覆盖
 - 实现期 grep subagent-panel|sub-item|consult-reply 全量复核连带面
 
-### 6. Stop 语义（F-6——用户裁定）
-- Stop 显示：`S._turnState !== "idle"` → 收窄为 **running**（A3 派生改——susp 不显）——但 digest 消化 = running（需核 digest 期间 _turnState 值——若 susp 内 digest 也是 susp 则需状态细分或 digest 期间发 running——勘察待核 suspension.mjs 转换）
-- Stop 作用：主会话 abort（回合/digest）——废除 susp 期"全停"（panel-messages abort case 的 _susp.abortControllers 全链 abort 收窄为仅 digest controller）——subagent 靠活动区每块 ⏹（cancelSubagent 已有定向 abort——现 panel-messages :199 直连）
-- 挂起会话整体退出（用户想全停时）：保留什么入口？——CLI 有？——勘察待核（CLI suspension 退出语义——池空自然退出/无全停按钮？）——若 CLI 也无全停 → VSC 同（池空自然消化完）
+### 6. Stop 语义（F-6——用户裁定——评审 #1 定论）
+- Stop 显示：`S._turnState !== "idle"` → 收窄为 **running**（A3 派生改——susp 不显）——digest 消化 = running
+  （定论——评审 #1：webview-turnstate 测试 ① 已实证 digest 期间广播 running——测试行 84-91——无需状态
+  细分——实现期以 suspension.mjs/panel-chat 广播点复核确认）
+- Stop 作用：主会话 abort（回合/digest——digest controller 单停）——废除 susp 期"全停"（panel-messages
+  abort case 收窄——不再 _susp.abortControllers 全链 abort——只停 digest 轮 controller）——subagent 靠活动区
+  每块 ⏹（cancelSubagent 定向 abort——panel-messages :199 直连——仅 running+pool 块——CLI 同）
+- 全停入口定论（评审 #1）：**无全停按钮——池空自然消化完**（CLI 对拍：CLI 无全停——池空自然退出）——
+  queued/waiting 块头不挂 ⏹（未启动不可单独停——CLI 同——接受无取消路径——队列自然推进）——
+  用户想停整个后台 = 逐块 ⏹ 停 running 块 + digest 轮 Stop 停消化——池空即退
 
 ### 7. 测试（activity-flow.test.mjs 8 组改写 + 新增）
 - 改：① 出生活动区（parentNode = 区容器——区内钉底——messages 零扰动）② freeze 移入 messagesEl 尾（DOM move 红线反转——原 N3 无 move 删）③ settled 驻留区 + digest 报告流内 + done 插报告前（_freezeAtEl 锚断言）④ sync 区内出生与父流并行 + 冻结落当前尾 ⑤ resetActivity 清区 frozen 流内保留 ⑥ 150 只数冻结（live 占位断言删）
 - 保：⑦ ⏹ 门控（容器换区微调）⑧ parseChannel
-- 新：⑨ 区空隐藏 ⑩ 区自适应/封顶自滚 ⑪ 多 settled 同锚降序冻结序 ⑫ _freezeAtEl 被裁尾推退化 ⑬ queued 等待块头（D-3 A）
+- 新：⑨ 区空隐藏 ⑩ 区自适应/封顶自滚 ⑪ 多 settled 同锚降序冻结序 ⑫ _freezeAtEl 被裁尾推退化 ⑬ queued
+  等待块头（D-3 A）⑭ consult answered 无块防御（评审 #3——answered 携 replyPreview 无块时按行快照建
+  冻结块——回复可见性由 digest 轮逐字呈现覆盖——agent.mjs:27）⑮ #subagent-panel 零残留 grep 断言
+  （评审 #3——index.html/panels.js 无 subagent-panel 引用）
 - Stop 语义测试：susp 纯池跑 Stop 不显（webview-turnstate ③ 改——state≠idle 派生 → running 派生断言翻转）
 
 ## 受影响文件（VSC 单仓）
@@ -69,17 +80,20 @@
 | webview/chat.js | ⏹ 委托换区 | ~324 现（±~2） |
 | webview/state.js | ctx 活动区引用 | ~113 现（+~2） |
 | webview/loading.js | Stop running 派生 | ~44 现（1 行改） |
+| webview/status-bar.js | sub-badge 处置（评审 #2——#subagent-panel 撤后 badge 点击 null 崩——
+  移除 badge 或改指活动区——base.css 徽标规则同步） | ~77 现（±~6——评审 #2 实测） |
 | src/extension/panel-messages.mjs | abort 收窄（去 susp 全停）+ digest 单停 | ~431 现（±~8） |
 | src/extension/suspension.mjs | digest 期间状态（running？——实现期核） | ~392 现（±~4） |
 | webview/streaming.js | rAF 扫区 + 注释 | ~246 现（±~2） |
 | test/activity-flow.test.mjs | 改写 + 新 | ~333 现（±~50） |
 | test/webview-turnstate.test.mjs | ③ Stop 派生翻转 | ~219 现（改 ~5） |
 | test/helpers/webview-env.mjs | fixture 区容器 | ~70 现（+~2） |
-| 文档：WEBVIEW.md §2/§5 + AGENT-LOOP.md + AGENTS.md | 权威措辞 | doc |
+| 文档：WEBVIEW.md §2/§5 + AGENT-LOOP.md + AGENTS.md + **ARCHITECTURE.md:24-25 未决行关闭**（评审 #4——
+  行面板保留裁定反转——不得当历史折叠） | 权威措辞 | doc |
 
 ## 验收
 
-- AC-1 live 块在固定活动区（messages 滚动不丢——测试 ① 锁——区空隐藏）
+- AC-1 live 块在固定活动区（messages 滚动不丢——测试 ① 锁）+ 区空隐藏（测试 ⑨ 锁——评审 #5 引用修正）
 - AC-2 活动区自适应 + 封顶自滚（测试 ⑨⑩ 锁）
 - AC-3 行面板撤除（#subagent-panel 零残留——queued 等待块头——consult 频道块——测试 ⑬ 锁）
 - AC-4 freeze 落流锚（done 尾推/settled 插 digest 报告前/多 settled 降序/锚裁退化——测试 ②③⑪⑫ 锁）
@@ -90,4 +104,8 @@
 - AC 真机走查：live 固定可见 + 单面板 + 冻结落流观感（用户最终验收）
 
 ## 变更记录
-- 2026-09-09：B1 修正落档（深勘察一手——CLI 单固定块面板对拍结论——行面板 = VSC 独有历史残留——双面根源——单面板形态一体满足用户三连）——D-1/D-2/D-3 用户全裁推荐 + Stop 语义裁定并入。
+- 2026-09-09：B1 修正落档（深勘察一手——CLI 单固定块面板对拍结论——行面板 = VSC 独有历史残留——双面根源——
+  单面板形态一体满足用户三连）——D-1/D-2/D-3 用户全裁推荐 + Stop 语义裁定并入。
+- 2026-09-09 评审 7 项采纳（digest running 定论/全停入口定论——无全停池空自然完——status-bar 入表/consult
+  answered 路径明示 + 测试 ⑭⑮/ARCHITECTURE 入文档/AC-1 引用修正/尺寸注——token 0b9d1f32）——核销时
+  README 地图登记（同 SESSION-FLOW 先例）。
