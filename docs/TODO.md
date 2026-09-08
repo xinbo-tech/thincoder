@@ -5,8 +5,8 @@
 ---
 
 ## 工程模式防盗用
-- [ ] `eng(enter)` 加用户同意门（当前模型可自主翻转并把 `agent.engineering=true` 持久化进共享 config.json）。CLI 侧同样存在
-- [ ] design token 签发后置 pending，需用户批准才可派生 eng-coder（"wait for user approval" 现只是 prompt 散文）。CLI 侧同样存在
+- [x] ~~`eng(enter)` 加用户同意门~~——**2026-09-08 用户裁不处理**（合理——设计如此：模型自主翻转 + 持久化是设计意图——工程模式进出权在模型——无机械同意门）
+- [x] ~~design token 签发后置 pending 需用户批准门~~——**2026-09-08 用户裁不处理**（合理——设计如此：approval 保持 prompt 散文层——无机械 pending 门——评审链的人控点在 sign-off 流程本身）
 - [x] ~~收紧拒绝文案~~——**2026-09-08 核销**（src+prompts grep "解锁" 0 命中——现拒绝文案均单行通用——前提已消失）
 
 ## 文档债 / ARCHITECTURE 漂移（doc-sweep 候选——是否已被 VSC 文档批覆盖需核）
