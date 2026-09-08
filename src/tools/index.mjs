@@ -3,9 +3,11 @@ export { toOpenAISchema } from "./shared.mjs";
 
 import { readTool, writeTool, editTool, insertAfterTool, readImageTool, hashlineEditTool } from "./file.mjs";
 import { applyPatchTool, deleteTool } from "./patch.mjs";
-import { bashTool, globTool, grepTool, lsTool } from "./system.mjs";
+import { bashTool } from "./bash.mjs";
+import { globTool, grepTool, lsTool } from "./search.mjs";
 import { websearchTool, fetchTool } from "./web.mjs";
-import { gitTool, questionTool } from "./git.mjs";
+import { gitTool } from "./git.mjs";
+import { questionTool } from "./question.mjs";
 import { checklistTool } from "./checklist.mjs";
 import { lintTool } from "./linter.mjs";
 import { lspTool } from "./lsp.mjs";
