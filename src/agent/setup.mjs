@@ -4,9 +4,9 @@
  * Extracted from agent.mjs (file-size split).
  * AGENT-LOOP.md §11（2026-09-08——agent 生命周期对齐 CLI）：setupAgentRun 拆出
  * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
- * reconcile——顶层单例复用路径）。resetRunState / reconcileEngDesignTokens /
- * applySlotSessionState 为 §11.2 A 复位清单与 §11.2.1 槽↔hydrate 映射的纯函数面
- * （test/agent-lifecycle-singleton.test.mjs 单测锚点）。
+ * reconcile——顶层单例复用路径）。纯函数层 resetRunState / reconcileEngDesignTokens /
+ * applySlotSessionState 已拆 agent-state.mjs（§11.2 A 复位清单与 §11.2.1 槽↔hydrate
+ * 映射——500 行硬限——test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
@@ -19,7 +19,7 @@ import {
   advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
 } from "../agent-tools.mjs"
 import { settingsTool } from "../agent-tools/settings.mjs"
-import { isExpiredDesignToken, extractTokenUUID } from "../agent-tools/advisor.mjs"
+import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
@@ -124,99 +124,6 @@ export function buildTopLevelAgent() {
       proxy: undefined, shell: null, providersList: [], websearch: { provider: "tavily", apiKey: "" },
     },
   }
-}
-
-/**
- * §11.2 A —— per-run 复位清单（现靠重建清零的字段回合边界显式复位——预算/守卫不跨回合
- * 累计——AC6；顺序纪律：hydrateRun 先复位、agent.mjs 的 inheritedGuard 应用在后）。
- * 纯函数（单测锚点）。C 类（槽回填源）与 B 类（hydrate 立即重指）不受影响。
- */
-export function resetRunState(agent) {
-  agent._touchedFiles = []
-  agent._verifiedThisRun = false
-  agent._verifyPassed = undefined
-  agent._verifyRetries = 0
-  agent._honestReminderInjected = false
-  agent._pendingTimers = []
-  agent._lastPromptTokens = null
-  agent._usageAtLen = null
-  agent._compressFailures = 0
-  agent._emptyRetries = 0
-  agent._taskPushbacks = 0 // 预算类同款（清单外补充——task 完成门每任务表态 ≤1 的回合级计数）
-  agent._advisorRound = 0
-  agent._advisorSession = null
-  agent._lastAdvisorOutput = null
-  agent._calledAdvisorThisRun = false
-  agent._mutatedThisRun = false
-  agent._inAutoTurn = false
-  agent._sessionSignal = null
-  agent._runStartHistoryLen = 0
-  agent._lastCompressInfo = null
-  agent._lastEngState = false // eng 进出重通知语义——每 runAgent 重通知（现重建行为逐字对齐）
-  agent._pendingReminders = []
-  return agent
-}
-
-/**
- * §11.2 C / 11.2.1 engDesignTokens 水合（纯函数）：Map 永不复位清空——内存未结算项保留
- * （sync advisor 通过后 abort / settle 槽写失败的内存-only token 不因回合边界丢——双载体
- * 漂移根因消除）；槽权威条目合入（TTL 过滤——expired 从不授权）；过期计数回写（D2 触发③）；
- * 单值镜像 engDesignToken 仅 Map 空时一次性迁移读（AC3 唯一镜像读点）。
- * @returns {{ map: Map, droppedExpired: boolean }}
- */
-export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
-  const map = existing instanceof Map ? existing : new Map()
-  let droppedExpired = false
-  for (const [id, tok] of [...map]) {
-    if (typeof tok === "string" && isExpiredDesignToken(tok)) { map.delete(id); droppedExpired = true }
-  }
-  if (slotTokens && typeof slotTokens === "object" && !Array.isArray(slotTokens)) {
-    for (const [id, tok] of Object.entries(slotTokens)) {
-      if (typeof tok !== "string" || map.has(id)) continue
-      if (isExpiredDesignToken(tok)) { droppedExpired = true; continue }
-      map.set(id, tok)
-    }
-  }
-  // 迁移读（AC3）：Map 空（TTL 清后）且镜像为有效格式 token → 一次性迁入
-  if (map.size === 0 && typeof legacyToken === "string" && !isExpiredDesignToken(legacyToken)) {
-    map.set(extractTokenUUID(legacyToken), legacyToken)
-  }
-  return { map, droppedExpired }
-}
-
-/**
- * §11.2.1 槽字段 ↔ hydrate 映射（纯函数——单测锚点）。槽 = 权威（每轮 apply）：
- * engineering/advisor.guard → agent.config（槽字段钉；缺席 → engState（子代理镜像）→ cfg）；
- * planMode → agent._planMode（B 类每轮重指；opts.planMode 覆盖优先）；
- * engDesignTokens → reconcile（C 类永不清空）。restore=true（factory 新建——首轮/destroy
- * 重建同路径）→ 会话级槽字段回填 tasks/goal/pendingReminders（11.2.1/AC3）。
- * @param cfg config.json 解析产物（agent.config 由此整建——AC7 每轮拾取外部变更）。
- * @returns {{ engineering: boolean, droppedExpired: boolean }}
- */
-export function applySlotSessionState(agent, { slot, engState, planModeOverride }, { cfg, restore = false }) {
-  const slotEng = slot?.engineering
-  const engEnabled = engState?.enabled
-  const engineering = slotEng != null ? slotEng === true
-    : (engEnabled != null ? engEnabled === true : cfg.engineering === true)
-  const slotGuard = slot?.advisor?.guard
-  const engGuard = engState?.advisorGuard
-  const guard = slotGuard != null ? slotGuard === true
-    : (engGuard != null ? engGuard === true : cfg.advisor?.guard === true)
-  agent.config = {
-    advisor: { ...(cfg.advisor ?? {}), guard },
-    agent: { ...(cfg.agentFields ?? {}), engineering },
-    proxy: cfg.proxy, shell: cfg.shell, providersList: cfg.providersList, websearch: cfg.websearch,
-  }
-  agent._planMode = planModeOverride !== undefined ? planModeOverride === true : (slot?.planMode === true)
-  // engDesignTokens：内存保留 + 槽权威合入（slot 优先；无槽绑定（子代理/直连）回退 opts.engState 载体）
-  const rt = reconcileEngDesignTokens(agent._engDesignTokens, slot?.engDesignTokens ?? engState?.engDesignTokens, slot?.engDesignToken ?? engState?.engDesignToken)
-  agent._engDesignTokens = rt.map
-  if (restore) {
-    agent._tasks = Array.isArray(slot?.tasks) ? [...slot.tasks] : []
-    agent._goal = slot?.goal ?? null
-    agent._pendingReminders = Array.isArray(slot?.pendingReminders) ? [...slot.pendingReminders] : []
-  }
-  return { engineering, droppedExpired: rt.droppedExpired }
 }
 
 /**
@@ -438,6 +345,20 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // attach at depth 0 only (subagent throwaway lines are never reachable, the tool is not
   // registered for them anyway).
   if (depth === 0) agent._fullHistory = fullHistory
+  // SESSION.md §11.2（2026-09-08——F2 评审 #7 修复版）：resumed 按会话跟踪——agent 级
+  // _resumedPending 只在 agent 新建（restore:true factory 路径——首轮/destroy 换槽重建
+  // 同路径）且 fullHistory 载入非空时武装——每次槽恢复进新 agent 天然得一次 resumed:yes；
+  // 同绑定复用（restore=false）不武装（下方注入点消费即清——复用路径恒 no）。
+  if (restore && fullHistory.length > 0) agent._resumedPending = true
+  // process restarted 句（N6——评审 🔴 修复）：进程级信号——模块级 restartDetectionDone
+  // 一次性闸（现语义保留不迁：extension host 重启后模块级重置；进程内切槽不重置——真
+  // 重启语义）。判据 = 载入（进场）历史非空（N5）——检测必须在用户输入落线（下方
+  // pushReal）之前求值：否则全新会话首回合输入使 fullHistory 变非空而伪触发（F3 同族
+  // 修正——本仓注释"进场即非空"即此语义）。发句位在输入前——CLI prepareRun 同序。
+  const processRestarted = detectRestoredSession({ depth, resume, autoTurn, fullHistory })
+  if (processRestarted) {
+    history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
+  }
 
   // Live history reference for the parent: same array the loop appends to — a caller
   // that catches ContinueError can hand it back via opts.history to resume the child
@@ -468,14 +389,15 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     pushReal(history, fullHistory, userMsg)
   }
 
-  // SESSION.md §11.1：统一 env-state reminder（每回合、depth-0）+ R5 重启感知
-  // （CLI setup.mjs L116 同款补齐——恢复会话的首个进程内回合注入 process restarted，
-  // env-state 同回合 resumed: yes；detectRestoredSession 一次性闸——见 setup-reminders）。
-  const resumedSession = detectRestoredSession({ depth, resume, autoTurn, fullHistory })
-  if (resumedSession) {
-    history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
+  // SESSION.md §11.1/§11.2：统一 env-state reminder（每回合、depth-0）——注入句解耦
+  // （N6——评审 🔴 修复、双信号独立消费）：resumed:yes = agent 级 _resumedPending（上方
+  // restore 路径武装——读即清，每次会话恢复一次；切槽恢复只发 resumed:yes、不误报进程
+  // 重启）。process restarted 句已在输入前按进场历史求值（上方 detectRestoredSession）。
+  if (depth === 0) {
+    const resumed = agent._resumedPending === true
+    agent._resumedPending = false
+    pushEnvStateReminder(history, { engineering, provider, slot: bind?.slot ?? null, resumed })
   }
-  if (depth === 0) pushEnvStateReminder(history, { engineering, provider, resumed: resumedSession })
 
   // R10 L1（MULTI-INSTANCE-COLLAB.md D-L1a——决策④ 每回合）：同伴实例提醒——env-state
   // 之后、time reminder 之前（transient；有同伴才注入——peerInstances 惰性 mtime 缓存）。

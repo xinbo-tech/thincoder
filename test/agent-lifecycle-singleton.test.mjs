@@ -16,6 +16,7 @@
  * 生命周期语义（回合复用/切换销毁/落盘）由真机 slow 门控兜底。
  */
 import { test, beforeEach, afterEach } from "node:test"
+import { slow } from "./slow.mjs"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -23,8 +24,9 @@ import { join } from "node:path"
 import { randomUUID } from "node:crypto"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
 import {
-  buildTopLevelAgent, resetRunState, reconcileEngDesignTokens, applySlotSessionState, hydrateRun,
+  buildTopLevelAgent, hydrateRun,
 } from "../src/agent/setup.mjs"
+import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "../src/agent/agent-state.mjs"
 import { agentSlotMatches, ensurePanelAgent } from "../src/extension/panel-chat.mjs"
 import { _cwd } from "../src/extension/panel-messages.mjs"
 import { agentState } from "../src/agent/run-helpers.mjs"
@@ -383,3 +385,46 @@ test("saveLines: 干净完成空态即权威——无任务/无目标写 []/null
   assert.deepEqual(data.pendingReminders, [])
 })
 
+
+slow("§11.2 resumed 随绑定新生：换槽销毁重建 → 恢复事件每 (面板×槽) 绑定一次——同绑定复用不重复（AC2）", async () => {
+  const cwd = _cwd() // vscode mock workspaceFolders=[] → process.cwd()；sessions dir 已隔离
+  const provider = { model: "deepseek-v4-pro" }
+  const envOf = (hist) => {
+    for (let i = hist.length - 1; i >= 0; i--) {
+      const c = hist[i]?.content
+      if (typeof c === "string" && c.startsWith("[System reminder: env: vscode,")) return c
+    }
+    return null
+  }
+  const optsFor = (fullHistory, slot, restore) => ({
+    provider, cwd, input: "hi",
+    opts: { fullHistory, engPersist: { cwd, slot } },
+    depth: 0, role: null, getAuto: () => false, restore,
+  })
+  // 槽 1/2 落盘有历史（saveLines 写面——destroy 重建后 hydrate 读的会话文件同源）
+  const h1 = [{ role: "user", content: "u1" }, { role: "assistant", content: "a1" }]
+  saveLines({}, [...h1], [...h1], { activeProvider: "p" }, 1)
+  const h2 = [{ role: "user", content: "u2" }]
+  saveLines({}, [...h2], [...h2], { activeProvider: "p" }, 2)
+  const full1 = loadSlot(cwd, 1).history
+  const full2 = loadSlot(cwd, 2).history
+  assert.ok(full1.length > 0 && full2.length > 0)
+  // 面板绑定槽 1 → 首轮 factory 新建（restore:true——首轮/destroy 重建同路径）→ resumed:yes
+  const agent1 = buildTopLevelAgent()
+  const r1 = await hydrateRun(agent1, optsFor(full1, 1, true))
+  assert.equal(agent1._resumedPending, false, "恢复回合消费即清")
+  assert.match(envOf(r1.history), /resumed: yes\./, "槽 1 恢复首回合 resumed:yes 一次")
+  // 同绑定连续回合（restore:false 复用——同一对象不销毁）→ 不重新武装 → 恒 no
+  const r2 = await hydrateRun(agent1, optsFor(full1, 1, false))
+  assert.equal(r2.agent, agent1, "绑定匹配复用（AC1）")
+  assert.match(envOf(r2.history), /resumed: no\./, "同绑定复用不重复武装")
+  // 换槽：绑定不匹配 → ensurePanelAgent 销毁（panel._agent = null）→ 下回合 factory 新建
+  agent1._engPersist = { cwd, slot: 1 }
+  const panel = { _agent: agent1 }
+  assert.equal(ensurePanelAgent(panel, 2), null, "绑定不匹配 → 销毁")
+  assert.equal(panel._agent, null)
+  const agent2 = buildTopLevelAgent()
+  const r3 = await hydrateRun(agent2, optsFor(full2, 2, true))
+  assert.notEqual(r3.agent, agent1, "换槽后新 agent 对象")
+  assert.match(envOf(r3.history), /resumed: yes\./, "resumed 随绑定新生——每次槽恢复得一次 yes（F2/AC2）")
+})

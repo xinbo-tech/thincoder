@@ -26,17 +26,22 @@ import { peerInstances } from "../extension/peer-instances.mjs"
 // 注入当前状态，下回合自然反映。git 不入 env-state 行（§11.1：不重复 clean|dirty
 // 摘要）——由下方 collectGitContext 的富注入（branch/commits/uncommitted）承载。
 
-/** env-state line builder — pure, unit-testable (CLI parity, END="vscode"). */
-export function envStateLine({ mode, model, resumed }) {
-  return `[System reminder: env: ${END}, mode: ${mode}, model: ${model}, resumed: ${resumed ? "yes" : "no"}.]`
+/** env-state line builder — pure, unit-testable (CLI parity, END="vscode").
+ *  §11.2（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null）。 */
+export function envStateLine({ mode, model, slot, resumed }) {
+  return `[System reminder: env: ${END}, mode: ${mode}, model: ${model}, slot: ${slot}, resumed: ${resumed ? "yes" : "no"}.]`
 }
 
 /** Per-turn env-state push (depth-0 runs — the line describes the MAIN agent's
- *  host/mode/model identity). Degrades safely: provider.model missing → "unknown". */
-export function pushEnvStateReminder(history, { engineering, provider, resumed }) {
+ *  host/mode/model/slot identity). slot = 粘性当前会话槽（opts.engPersist.slot——
+ *  §11.2 N2/N3——无绑定显式 null，不读 manifest active 共享指针）。resumed 由调用方
+ *  传入 agent 级 _resumedPending 消费结果（§11.2 评审 #7——按会话跟踪；模块级
+ *  restartDetectionDone 闸保留为 process restarted 句专用——见 setup.mjs）。
+ *  Degrades safely: provider.model missing → "unknown". */
+export function pushEnvStateReminder(history, { engineering, provider, slot, resumed }) {
   const mode = engineering ? "eng" : "normal"
   const model = provider?.model ?? "unknown"
-  history.push({ role: "user", content: envStateLine({ mode, model, resumed }), transient: true })
+  history.push({ role: "user", content: envStateLine({ mode, model, slot, resumed }), transient: true })
 }
 
 // R10 L1（MULTI-INSTANCE-COLLAB.md D-L1a——VS Code 镜像）：同伴实例感知注入。
@@ -62,10 +67,12 @@ export function pushPeerReminder(history, cwd) {
   }
 }
 
-// R5 重启检测：进程内首个顶层用户回合若背着磁盘恢复的会话（fullHistory 进场即非空）
-// → resumed: yes + `process restarted` 注入，一次性（CLI setup.mjs
-// _restartReminderInjected 语义镜像——每进程一次；新会话首回合 fullHistory 为空 → no，
-// 且检测随即关闸，后续回合（history 已非空）不误判）。
+// R5 重启检测：process restarted 句的进程级一次性闸（SESSION.md §11.2 评审 #7——N6 双信号
+// 分离：本闸保留为"真进程重启"句专用——extension host 重启后模块级重置；进程内切槽/换槽
+// 不重置 → 切槽不误报进程重启）。resumed:yes 已改 agent 级 _resumedPending（setup.mjs
+// hydrateRun——restore:true 工厂路径 + fullHistory 非空时武装——每次会话恢复一次）。
+// 新会话首回合 fullHistory 为空 → 句不发，且检测随即关闸，后续回合（history 已非空）
+// 不误判。
 let restartDetectionDone = false
 
 /** Test seam — restores first-turn restart detection (production never calls this). */
