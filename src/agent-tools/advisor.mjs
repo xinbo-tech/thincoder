@@ -174,7 +174,7 @@ export const advisorTool = {
       },
       async: {
         type: "boolean",
-        description: "Launch the review in the BACKGROUND (AGENT-LOOP.md §24 D-24b): the tool returns an ack immediately, the turn ends naturally, and the report arrives automatically (settle → digest) — the review never blocks the turn. Default: true at the top level (depth-0 — §24 R12 depth-0 async default precedent), always sync inside subagents (passing async:true there is refused). Pass async:false for a blocking review whose result you need before continuing.",
+        description: "Launch the review in the BACKGROUND (AGENT-LOOP.md §24 D-24b): the tool returns an ack immediately, the turn ends naturally, and the report arrives automatically (settle → digest) — the review never blocks the turn. Default: true at the top level (depth-0 — §24 R12 depth-0 async default precedent), always sync inside subagents (passing async:true there is refused). async:false forces the blocking review (mechanism parameter — top-level launches are async by default).",
       },
     },
   },

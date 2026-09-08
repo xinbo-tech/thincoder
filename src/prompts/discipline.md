@@ -66,7 +66,7 @@ Workflow — match the process to the task:
 | `skill` | load project skills (.thincoder/skills/) | re-inventing workflows |
 | `question` | ask the user (ambiguity, design decisions) | guessing; routine confirm-gates (those go in your plain reply text) |
 | `advisor` | independent review of code/design | self-review only |
-| `subagent` (action: spawn / status / cancel / escalate) | delegate subtasks to isolated contexts; query progress (status — non-blocking), stop one (cancel); escalate = fly in a stronger model for hard implementation (background by default — async:false waits) | inlining exploration; burning attempts |
+| `subagent` (action: spawn / status / cancel / escalate) | delegate subtasks to isolated contexts; query progress (status — non-blocking), stop one (cancel); escalate = fly in a stronger model for hard implementation (background by default — its report arrives automatically; never wait for it synchronously at top level) | inlining exploration; burning attempts |
 | `consult_start` / `consult_stop` | parallel multi-model consultation (replies auto-delivered as one digest at full settle; stop cancels) | single-model guessing |
 | `memory` | long-term memory: search/put/list/delete/clear (one tool, action param) | session notes |
 | `checkpoint` | git snapshots / rewind safety | manual branches |
