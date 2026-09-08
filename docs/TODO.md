@@ -20,16 +20,16 @@
 - [ ] **advisor 截断方向另议**——advisor/run.mjs 头向 line-aware 截断——尾部结果被切问题未解决
 - [ ] **VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）
 - [x] ~~**files 尾随空格目录声明检测**~~——**2026-09-08 批 1 2.7 已修双端**（CLI scheduler:43 + VSC scheduler:104 trimEnd——VSC 以 CLI 为单一测试锚）
-- [ ] **R19 read_history 发现面无 top-N cap**（discoverCwd 列全部槽——大目录摘要可打输出上限——加 top-N + overflow 提示）
-- [ ] **R19 护栏语义缺口**：READ_HISTORY_SCAN_MAX 按物理 \n 行计，自产槽紧凑单行换行≈0 → 护栏不触发——需 SESSION §13 裁定字节/消息预算（双端镜像同值）
+- [x] ~~**R19 read_history 发现面无 top-N cap**~~——**2026-09-08 用户裁不要**（每 cwd 目录槽数有上界——listSlots 时间序有限——无打爆风险——维持现状）
+- [ ] **R19 护栏语义缺口**：READ_HISTORY_SCAN_MAX 按物理 \n 行计，自产槽紧凑单行换行≈0 → 护栏不触发——**2026-09-08 用户裁消息数预算**（解析后消息数组长度——最精确——SESSION §13 承载——走设计链排批——双端镜像）像同值）
 - [ ] **R18+R19 VS Code 交付跟进（剩 ①）**：① read-history.mjs 349 行拆分（现 368 行未拆——>300 advisory）——③ ROUTE_NA 已移除（②④已勾销）
 - [ ] **agent 生命周期小项（剩 A2）**：A2 摘要触发条件（仅 ## 节标题）——注释段已修（批 1 2.5 seven actions）+ auto-think depth 归状态债 #3
 - [x] ~~**TUI tool-args 块标题兜底**~~——**2026-09-08 批 1 2.4 已修**（tool-args.mjs:47-48 action 兜底）
 - [x] ~~**setup.mjs knife-edge 注记过期**~~——**2026-09-08 批 1 2.8 已修**（删注为首——无树内夹具常量可校准——17000 最新）
 - [x] ~~**ACP 桥结构化映射**~~——**2026-09-08 核销**（bridge.mjs:201-204 tool_call 结构化 + :212-214 tool_call_update 落地）
 - [ ] **doc-sweep 旧名残留（2026-09-08 大部分核销）**：CLI AGENT-LOOP.md:94 已净（批 2 2a-1 memory search 动作）——剩 VSC CAPABILITY_GAP.md:7/8/21（批 2 2a-2 未落地——eng-coder id=2 在跑）
-- [ ] **VS Code 端轨迹存档同构实现**（完整轨迹落盘 VSC 端）——**需用户明确"也要 VS Code"才启动**
-- [ ] **轨迹目录清理策略**（CLI trace-store 已有 D-TR10 24h 清理；按天/会话 GC 补充策略）——**需用户定是否还需**
+- [ ] **VS Code 端轨迹存档同构实现**（完整轨迹落盘 VSC 端——**2026-09-08 用户裁要**——VSC 模型调用出口加同款采集点 + JSONL 落盘 ~/.thincoder/traces/——CLI trace-store §18.6 参照——走设计链——等 §11.3/批 5/6 交付后排批）
+- [x] ~~**轨迹目录清理策略补充**~~——**2026-09-08 用户裁不要**（D-TR10 24h 保留时间窗已隐含总量有界——保留期可配——无需按天/会话额外 GC）
 
 ## 模块拆分 · 文档引用清扫（父侧，逐文件批）
 - [ ] **D-T1.8 文档引用修正（剩余清单）**：ENGINEERING-MODE.md ~20 处 + TOOLS.md:93/:131 + TUI.md:4/:331
@@ -47,15 +47,15 @@
 - [ ] **§18.8/§18.10 复核（AC-OA4）**：after 样本 = T（2026-09-04 05:06）后首次干净外部评审——信号密度 ≤0.70×1.86=1.30 达成——未达呈报（观察，等样本）
 - [ ] **修正轮纠结密度观察**：修正轮密度 2.20/1K > 基线 1.86——AC-OA4 可能低估受益面——等样本
 - [ ] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度——低优先
-- [ ] **advisor 裁决模板立项**（治 #15/#36 单轮 126s+ 输出 reasoning 自我协商）——等用户定时机
+- [ ] **advisor 裁决模板立项**（治 #15/#36 单轮 126s+ 输出 reasoning 自我协商——**2026-09-08 用户裁立项**——评审提示词 round1/2/3 + design 模板化——走设计链——等 §11.3/批 5/6 交付后排批）
 - [x] ~~**§19.6 panel 检查工具（已批未实现）**~~——**2026-09-08 核销**：已实现（subagent-panel.mjs 双端在 + action 面在——与 L41 同证据）
-- [ ] **sync spawn 区块 ⏹ 语义裁决**：sync 运行中 ⏹ 可见不可中止（有 Ctrl+C 指引）——彻底方案（⏹ 按池门控）需跨 TUI 改造——用户裁决后立项
+- [ ] **sync spawn 可中止能力**（**2026-09-08 用户裁要**——TUI.md:398 门控 sync 无 ⏹ 只消"可见不可中止"误导——现补 sync 真中止能力——⏹ 按池门控——需跨 TUI + 调度改造——走设计链排批）
 - [ ] **setup.mjs 受限变体 schema 补 cancel 词**（描述层同步）
 - [ ] **engineering-sub.md L1 "~15s" 数字漂移**（实测 18.5-19.7s）——随下个提示词批修
 
 ## VS Code 镜像/评审面差异
 - [x] ~~**VS advisor-design.md 缺 R24a 第 8 条评审标准**~~——**2026-09-08 核销**（VSC advisor-design.md:8 已含 Affected-file size annotations——与 CLI 逐字一致）
-- [ ] **VS code 评审陈旧面裁定候选**（VS 评审陈旧=任意文件变更 vs CLI isCodePath）——待用户裁定对齐
+- [ ] **VSC 评审陈旧面对齐 CLI isCodePath**（**2026-09-08 用户裁对齐**——VSC 只代码路径算陈旧——文档改动不催评审——走设计链排批——CLI 参照）
 - [ ] **🔵 五项不修登记（父侧知悉）**：VS sync design 轮次不递增 / VS guard cap 读全局轮 / CLI guard 文案无 async 补注 / VS depth-undefined 缺省 async / CLI T-24b1 墙钟断言（已知不修，留档）
 
 ## 异步 / 挂起 / 调度残留（AGENT-LOOP 后续轮）
@@ -64,7 +64,7 @@
 - [x] ~~**sync spawn 完成精确冻结**~~——**2026-09-08 核销**（subagent-freeze.mjs:51-58 finishSubTaskKey 按 relay key 精确冻——tool-events:141-209 带 ctx._subagentKey）
 - [ ] **processing 态 Ctrl+C 武装化 + 回合 abort 与池解耦**（回合 abort 无条件清池连坐杀后台）——首按=interrupt 不清池 + 3s 二按=清池
 - [ ] **混合边环形等待残留**（dependsOn 边 + 文件域边混合链）——建议 §21.2 候选（停滞检测）
-- [ ] **§21 普通模式偏差审计 + §18.8.1 会话上下文轮——挂起**（用户"先挂一下"——重新决定：评审/修改/放弃）
+- [ ] **§21 普通模式偏差审计 + §18.8.1 会话上下文轮**（**2026-09-08 用户裁恢复**——评审该审计项要不要做——走设计链/勘察评估——等 §11.3/批 5/6 交付后排）
 
 - [ ] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随——A 已落地，B 待工具集真变再动）
 - [x] ~~**CLI ⏹ / 面板行数增长缺陷**~~（trimSubTree done 子块无豁免）——**2026-09-08 核查已修**：§27.1 F1（2026-09-07 三缺陷修复批 b06bca7）trimSubTree 已跳过 done 子块（subagent-children.mjs:66 `if (c.done) continue`）+ done 定格守卫——原待办作废
@@ -95,13 +95,13 @@
 - [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
 
 ## 会话/存储/恢复后续
-- [ ] **R19 护栏语义缺口**（见"代码正确性"节——需 SESSION §13 裁定字节/消息预算）
+- [ ] **R19 护栏语义缺口**（见"代码正确性"节——**2026-09-08 已裁消息数预算**——同 L24）
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
 
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
-- [ ] **TUI 开放项**：① picker item.note 渲染丢弃 ② question/wizard 并行 UI 统一——架构决策待定（TUI.md §11 承载）
+- [ ] **TUI 开放项**（**2026-09-08 用户裁两项都做**）：① picker item.note 渲染 bug 修（buildProviderEntries baseURL/无 key 提示 + cmd-advisor 主菜单 Provider 注记不显示——疑似 bug）② question/wizard/picker 三套选择 UI 统一——走设计链排批（TUI.md §11 承载）
 - [x] ~~**平台缺口：async advisor digest token 未注册父会话 approved slots**~~——**已实现**（2026-09-08 token 根治修复——async advisor settle 当场落盘权威台账+digest 后 spawn 门禁 miss 回读能过——消"未注册父会话"缺口）
 
 ## 工程模式提示词同步（独立小项）
