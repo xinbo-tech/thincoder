@@ -105,7 +105,7 @@ export function buildTopLevelAgent() {
     // C — 会话级状态（单例收益本体——hydrate 槽 reconcile / destroy 重建回填）
     _tasks: [], _goal: null,
     _engDesignTokens: null, // 惰性建 Map（spawn-gate/advisor.mjs ??= 既有）
-    _pendingReminders: [], // A 复位 + restore 槽回填（resetRunState:156 / applySlotSessionState）
+    _pendingReminders: [], // A 复位 + restore 槽回填（resetRunState / applySlotSessionState——agent-state.mjs）
     // A — 回合级预算/守卫/计数器（resetRunState 每 runAgent 调用清零）
     _touchedFiles: [], _verifiedThisRun: false, _verifyPassed: undefined, _verifyRetries: 0,
     _honestReminderInjected: false, _pendingTimers: [],
