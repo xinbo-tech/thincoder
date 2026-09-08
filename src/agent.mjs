@@ -183,7 +183,17 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       // LOGGING（LOGGING.md——CLI parity）：llm:* 语义上下文（stage=turn 主循环回合——
       // digest autoTurn=true；role/depth = 子代理上下文归属——§11 后顶层 agent 为面板会话级
       // 单例（复用 hydrate），per-run 对象仅子代理/destroy 重建路径）
-      logCtx: { stage: "turn", turn: turn + 1, auto: autoTurn, role, depth },
+      // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI agent.mjs logCtx 同款）：kind/cwd/session/
+      // traces 开关——kind 按 depth/role 分域（consult 孩子 = consult——CLI 同判据）；session =
+      // agent._sessionStart（setup hydrate 打点——子代理不经 depth-0 设置——轨迹 session 为
+      // null——CLI 同语义）；traces 沿 agent.config.traces.enabled（D-TR6——缺省 OFF 隐私裁定）。
+      logCtx: {
+        stage: "turn", turn: turn + 1, auto: autoTurn, role, depth,
+        kind: depth > 0 ? (role === "consult" ? "consult" : "subagent") : "turn",
+        session: agent._sessionStart ?? null,
+        cwd,
+        traces: agent.config?.traces?.enabled !== false,
+      },
     })
     traceStop(`turn ${turn}: LLM stream ended`)
 

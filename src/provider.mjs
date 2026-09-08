@@ -8,6 +8,7 @@ import { proxyFetch } from "./proxy.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import { escapeMessages } from "./escape.mjs"
 import { logEvent, errText, classifyErr, headText } from "./log.mjs"
+import { recordChatTrace } from "./traces/trace-store.mjs"
 export { stripLocalMessageFields } from "./escape.mjs"
 import {
   RETRYABLE_STATUS, MAX_RETRIES, MAX_CONTINUATIONS,
@@ -146,6 +147,10 @@ export async function chat(provider, opts = {}) {
       finish: result?.finishReason ?? null,
       tools: Array.isArray(result?.toolCalls) ? result.toolCalls.length : 0,
     })
+    // TRACE-STORE-VSC（CLI core.mjs 出口收集镜像）：成功路径轨迹——chatImpl 已在其内部
+    // 完成续写合并——此处 result 为合并后全量（D-TR1——reasoning 全量才完整）；fire-and-
+    // forget——返回的落盘 promise 不消费（不阻塞 chat() 返回）。
+    recordChatTrace(provider, opts, result, null)
     return result
   } catch (e) {
     logEvent("llm:error", {
@@ -155,12 +160,14 @@ export async function chat(provider, opts = {}) {
       err: errText(e, 200),
       kind: classifyErr(e, opts.signal),
     })
+    // TRACE-STORE-VSC（D-TR5 镜像）：失败路径也落盘——error + finishReason:null
+    recordChatTrace(provider, opts, null, e)
     throw e
   }
 }
 
 /** chat 本体（LOGGING llm:* 包装之外——见上方 chat）。 */
-async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, parallelToolCalls }) {
+async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, parallelToolCalls, logCtx }) {
   const spec = specForModel(provider.model)
   const transport = getTransport(provider)
   messages = stripImagesForTextModel(messages, spec)
@@ -233,6 +240,10 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
           onReasoning,
           onWait,
           signal,
+          // TRACE-STORE-VSC（CLI core.mjs 续写递归镜像）：续写是同一逻辑调用的子请求——
+          // logCtx 原样透传（元数据与门控 traces.enabled 对续写调用同样生效）+ 标记
+          // isContinuation:true（D-TR1——续写链一环；外层新调用 false——T-TR14 语义）。
+          logCtx: { ...logCtx, isContinuation: true },
         },
       )
     } catch (error) {

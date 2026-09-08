@@ -90,7 +90,7 @@ function serializeExplorationMessages(messages) {
  * history array, or null when there is nothing to shrink (<3 exploration results / LLM failure).
  * Pairing-safe: whole assistant→tool blocks are removed, so no orphan tool_calls/tool can survive.
  */
-async function distillExplorations(history, runStartLen, provider, signal) {
+async function distillExplorations(history, runStartLen, provider, signal, agent = null) {
   const start = runStartLen ?? 0
   if (!Array.isArray(history) || history.length - start < 2) return null
   const blocks = findExplorationBlocks(history, start)
@@ -103,10 +103,22 @@ async function distillExplorations(history, runStartLen, provider, signal) {
   try {
     // Silent by design (D11): thinking:null and no stream callbacks — this internal
     // distillation must not reach the frontend. (compactHistory parity: signal rides along.)
+    // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI explore-distill.mjs logCtx 同款）：kind=
+    // distill + agent 元数据透出（role/depth 经 agent 绑定——hydrate 打点 _role/_depth）；
+    // session/cwd 供轨迹对回；traces 开关沿 agent.config（D-TR6——缺省 OFF）。agent 经
+    // summarizeRunExplorations 尾参线程化（run-stages fireEndOfRunDistill 传入）；cwd 无
+    // process.cwd() 回退（VSC extension host cwd ≠ 工作区——轨迹归属错误）。
     const resp = await chat({ ...provider, thinking: null, reasoningEffort: null }, {
       messages: [{ role: "user", content: EXPLORE_SUMMARY_PROMPT + serialized }],
       signal: signal ?? null,
-      logCtx: { stage: "distill" }, // LOGGING（LOGGING.md——CLI context.mjs parity）：A/C 候选区分
+      logCtx: {
+        stage: "distill", kind: "distill",
+        role: agent?._role ?? null,
+        depth: agent?._depth ?? null,
+        session: agent?._sessionStart ?? null,
+        cwd: agent?.cwd ?? null,
+        traces: agent?.config?.traces?.enabled !== false,
+      },
     })
     summary = resp?.content
   } catch {
@@ -138,6 +150,6 @@ async function distillExplorations(history, runStartLen, provider, signal) {
  * summarizeRunExplorations; only the call shape differs (this end passes the machine line
  * explicitly, like compactHistory).
  */
-export async function summarizeRunExplorations(history, runStartLen, provider, signal) {
-  return distillExplorations(history, runStartLen, provider, signal)
+export async function summarizeRunExplorations(history, runStartLen, provider, signal, agent = null) {
+  return distillExplorations(history, runStartLen, provider, signal, agent)
 }

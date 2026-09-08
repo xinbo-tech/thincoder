@@ -271,11 +271,26 @@ export const AGENT_DEFAULTS = {
   poolLimits: { engCoder: 4, other: 4 },
 }
 
-/** Trace 段默认（对齐 CLI DEFAULTS.traces——2026-09-05 隐私裁定 enabled:false）——
- *  类型派生用（VS Code 无 trace 机制（D-TR7 CLI-only）——键由 CLI 消费——settings 工具跨端调） */
+/** Trace 段默认（对齐 CLI DEFAULTS.traces——2026-09-05 隐私裁定 enabled:false——
+ *  发布默认关——新用户零采集——本地调试可显式开）——类型派生用（settings 工具类型表
+ *  自 TRACES_DEFAULTS 派生）+ 运行读取默认（loadTracesSettings——trace-store 门/清理）
+ *  ——VSC 端消费键与 CLI 相同（共享 config.json 不双端漂移） */
 export const TRACES_DEFAULTS = {
   enabled: false,
   retentionHours: 24,
+}
+
+/** Trace 段运行读取（TRACE-STORE-VSC——config.traces 可配点）：raw.traces 合并
+ *  TRACES_DEFAULTS（config 缺失/不可读 → 默认 enabled=false/retentionHours=24——
+ *  CLI loadConfig 的 DEFAULTS 合并同语义）。供 chat 调用点算 logCtx.traces 开关与
+ *  trace-store per-write prune 的保留期。 */
+export function loadTracesSettings() {
+  let t = null
+  try { t = loadRaw().traces } catch { /* config 不可读 → 默认 */ }
+  return {
+    enabled: t?.enabled ?? TRACES_DEFAULTS.enabled,
+    retentionHours: t?.retentionHours ?? TRACES_DEFAULTS.retentionHours,
+  }
 }
 
 /** Agent runtime settings from config.json（默认值单一来源 AGENT_DEFAULTS——2026-09-05） */

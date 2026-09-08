@@ -264,7 +264,19 @@ export async function compactHistory(history, systemPrompt, provider, explicitTh
     signal: signal ?? null,
     // LOGGING：vscode agent 对象 per-run 重建、从不 stamp _logId——只带 stage 归属
     //（2026-09-03 code review #7：去掉死引用 child: agent?._logId——CLI 专属字段）
-    logCtx: { stage: "compress" },
+    // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI context.mjs compress logCtx 同款）：kind=
+    // compress + agent 元数据透出（role/depth 经 agent 绑定——hydrate 打点 _role/_depth）；
+    // session/cwd 供轨迹对回；traces 开关沿 agent.config（D-TR6——agent-state 每轮整建
+    // agent.config.traces——缺省 OFF——与 CLI 同语义）。cwd 无 process.cwd() 回退（VSC
+    // extension host cwd ≠ 工作区——轨迹归属错误）；agent 恒由 checkAndCompact 传入。
+    logCtx: {
+      stage: "compress", kind: "compress",
+      role: agent?._role ?? null,
+      depth: agent?._depth ?? null,
+      session: agent?._sessionStart ?? null,
+      cwd: agent?.cwd ?? null,
+      traces: agent?.config?.traces?.enabled !== false,
+    },
   })
   const summary = resp.content || ""
   const now = Date.now() // SESSION.md §9 D-S1 (CLI parity): compaction injections carry the compaction moment

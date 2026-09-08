@@ -196,7 +196,8 @@ export async function checkAndCompact(agent, ctx) {
  * 原历史保留，永不阻塞返回。@returns {Promise} 蒸馏 promise（调用方挂 distillState）。
  */
 export function fireEndOfRunDistill(agent, history, provider, signal, callbacks) {
-  return summarizeRunExplorations(history, agent._runStartHistoryLen ?? 0, provider, signal)
+  // TRACE-STORE-VSC（D-TR4）：agent 尾参线程化——蒸馏轨迹带 cwd/session/kind 元数据
+  return summarizeRunExplorations(history, agent._runStartHistoryLen ?? 0, provider, signal, agent)
     .then((shrunk) => {
       if (shrunk) {
         history.length = 0

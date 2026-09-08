@@ -25,7 +25,7 @@ import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { injectContext } from "../context.mjs"
-import { loadRaw, normalizeProxy, resolveProviders } from "../config-io.mjs"
+import { loadRaw, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
 import { loadEngineeringPrompt, pushReal } from "./run-helpers.mjs"
 import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
 
@@ -215,6 +215,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §16 — CLI parity); undefined → tool default 30s
   let cfgProviders = []
   let cfgWebsearch = { provider: "tavily", apiKey: "" } // structured search; empty key → Bing fallback
+  // TRACE-STORE-VSC（D-TR6 镜像——CLI config.mjs DEFAULTS.traces 合并同语义）：traces 段
+  // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
+  let cfgTraces = { ...TRACES_DEFAULTS }
   try {
     const raw = loadRaw()
     advisorCfg = raw.agent?.advisor ?? { guard: false }
@@ -234,6 +237,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgWaitForTimeoutMs = raw.agent?.waitForTimeoutMs ?? undefined // wait_for timeout override — tool applies its own default/cap when absent
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { provider: "tavily", apiKey: "" }
+    cfgTraces = { ...TRACES_DEFAULTS, ...(raw.traces ?? {}) }
   } catch { /* config unreadable — defaults */ }
 
   // §11.2.1 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
@@ -254,6 +258,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits,
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
+    traces: cfgTraces,
   }
   const { engineering, droppedExpired } = applySlotSessionState(agent, {
     slot: sessionData,
@@ -287,6 +292,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // B 类 run 绑定（每轮重指——复用 agent 不残留上轮引用）+ opts 派生字段
   agent._role = role
+  agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
   agent._engTaskInput = opts.engTaskInput ?? null
   agent._engDesignReviewed = engDesignReviewed === true // eng-coder children arrive pre-authorized
@@ -341,6 +347,13 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // keep those aliases live so the ported modules work unchanged.
   agent.cwd = cwd
   agent.history = history
+  // TRACE-STORE-VSC（D-TR4 镜像——CLI agent/setup.mjs `_sessionStart ??=` 同语义）：顶层
+  // 会话身份 = 槽 sessionStart（跨端同身份——F2 打点同源）优先，无槽/未保存则首建打点；
+  // 复用 agent 不重打（??=——同会话跨回合恒等）；子代理（depth>0）不设——轨迹 session
+  // 字段 null（CLI parity——children 无 _sessionStart——回靠 role+depth 归属）。
+  if (depth === 0 && agent._sessionStart == null) {
+    agent._sessionStart = sessionData?.sessionStart ?? new Date().toISOString()
+  }
   // read_history (SESSION.md §9 D-S2): the tool reads the HUMAN line via agent._fullHistory —
   // attach at depth 0 only (subagent throwaway lines are never reachable, the tool is not
   // registered for them anyway).

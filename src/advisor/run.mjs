@@ -190,7 +190,18 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       signal: signal ?? null,
       onToken: onText,
       onReasoning: onThink,
-      logCtx: { stage: "advisor" },
+      // LOGGING（LOGGING.md——CLI parity）：advisor 评审独立于子代理——按 stage 可 grep
+      // TRACE-STORE-VSC（§18.6 D-TR4 镜像——CLI advisor/run.mjs logCtx 同款）：kind=advisor
+      //（评审独立于子代理）；role 透出调用方角色（eng-coder 内嵌评审时为 "eng-coder"）；
+      // session/cwd 供轨迹对回；traces 开关沿 agent.config（D-TR6——缺省 OFF）。
+      logCtx: {
+        stage: "advisor",
+        role: agent?._role ?? null,
+        kind: "advisor",
+        session: agent?._sessionStart ?? null,
+        cwd,
+        traces: agent?.config?.traces?.enabled !== false,
+      },
     })
 
     // No tool calls — this is the final review text
