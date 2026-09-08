@@ -1,6 +1,6 @@
 # async 结果容器统一（CLI 端）
 
-> 板块：Agent 循环 · 异步子代理结果结算。状态：**设计（待评审）**——2026-09-08 Top-8 #2 启动（STRUCTURE-DEBT 批 E+批 C 方向）。用户裁定 4 决策：池保留双池 accessor 吸收 / pending 单容器+role / 守卫统一 !parentAborted / consult 补 _sessionSignal 兜底。
+> 板块：Agent 循环 · 异步子代理结果结算。状态：**已实现**（2026-09-08——async-settle.mjs 单点 + 测试交付——档头随核销更新——见 TODO L62）。立项：2026-09-08 Top-8 #2（STRUCTURE-DEBT 批 E+批 C）。用户裁定 4 决策：池保留双池 accessor 吸收 / pending 单容器+role / 守卫统一 !parentAborted / consult 补 _sessionSignal 兜底。
 > 背景：async 子代理结果 settle 记账在 subagent/advisor/escalate/consult **4 处逐字重复**（公共尾部/日志三连/cancelled/挂起分流）+ pending 三族分叉 + done-in-pool 三表示 + `_sessionSignal` 兜底抄 3 处（consult 无兜底）——最深状态债（每次加角色复制整段 settle）。token 根治（a7e78b0）只加落盘未统一 settle。
 > 范围：CLI 端 async 结果容器统一（池/pending/settle helper/buildChildSignal）；VSC 同名对应（各自独立实现）。
 
