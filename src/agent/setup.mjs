@@ -98,7 +98,6 @@ export async function prepareRun(agent, input, callbacks, {
     if (depth === 0) {
       const tree = listWorkDir(agent.cwd)
       const platform = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] ?? process.platform
-      const wasRestored = agent._sessionStart != null
       agent._sessionStart ??= new Date().toISOString()
       // Inject OS/cwd + cwd-tree only ONCE per process (restored sessionStart keeps the
       // content byte-identical across restarts — 2026-08-16 cache audit). Without the guard
@@ -112,11 +111,14 @@ export async function prepareRun(agent, input, callbacks, {
         }
   
       }
-      if (wasRestored && !agent._restartReminderInjected) {
-        agent._restartReminderInjected = true
-        // SESSION.md §11.1 R5: the per-turn env-state reminder carries resumed:yes
-        // on THIS first turn after the restore (consumed by pushEnvStateReminder).
-        agent._envResumed = true
+      // SESSION.md §11.2（2026-09-08——N6 评审 🔴 修复：注入句解耦——双信号独立消费）：
+      // process restarted 句 = 进程级信号 _processRestartPending——仅 TUI 启动 resume 路径
+      // （bin/thincoder.mjs resumeSlot→applySession）设一次；/session 切换与 ACP 加载不设。
+      // 发句即清——进程内只发一次。resumed:yes 走 _envResumed（applySession 载入历史非空
+      // 时武装——每次恢复一次——pushEnvStateReminder 读即清）——互不绑门：切槽恢复只发
+      // resumed:yes、不误报进程重启（F3 伪触发消除——不再用 _sessionStart != null 推断）。
+      if (agent._processRestartPending) {
+        agent._processRestartPending = false
         agent.history.push({ role: "user", content: `[System reminder: process restarted at ${new Date().toISOString()}.]`, transient: true })
       }
       if (agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {

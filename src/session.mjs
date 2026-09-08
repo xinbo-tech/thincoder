@@ -147,9 +147,6 @@ export function saveSession(agent) {
   const p = slotPath(agent.cwd, slot)
   // 2026-08-31 会诊 F2 🔴：写前校验磁盘文件的 sessionStart——与本进程会话不符（另一
   // 进程/会话的现场）→ 先轮转 .bak 保留再写（11311 条历史被新进程覆盖的实锤场景）。
-  // 守卫自 2026-09-08 提取为 guardForeignSlotFile（session-slots.mjs——DESIGN-TOKEN-
-  // SETTLEMENT D1）——saveSession 与 token-ttl persistEngTokens（settle 当场落盘）
-  // 共用同一份（检查按 mtime 缓存 _slotMtime：自写未变跳过全量解析）。
   // 守卫自 2026-09-08 提取为 guardForeignSlotFile（session-guard.mjs——DESIGN-TOKEN-
   // SETTLEMENT D1 二次拆分：先入 session-slots、再因 500 行硬限迁 session-guard）——
   // saveSession 与 token-ttl persistEngTokens（settle 当场落盘）共用同一份（检查按
@@ -271,6 +268,12 @@ export function applySession(agent, data) {
   // （contextHistory: [] 是"无机读线"而非空机器线——空机器线会静默丢全部上下文）。
   agent.config ??= {} // ACP test mocks may omit config; be defensive like the ??= below
   const full = Array.isArray(data.history) ? data.history : []
+  // SESSION.md §11.2（2026-09-08——F2/F3）：恢复事件武装——载入历史非空 = 会话恢复 →
+  // 下个 depth-0 回合 env-state resumed:yes 一次（pushEnvStateReminder 读即清——每次恢复
+  // 一次）。/new 与空历史槽切换不武装——无恢复事件恒 no（F3 伪触发消除——不再靠
+  // _sessionStart != null 推断）。_processRestartPending 不在此清——由启动路径
+  // （bin/thincoder.mjs）设、prepareRun 发句清（N6——双信号独立：切槽不报进程重启）。
+  if (full.length > 0) agent._envResumed = true
   const ch = data.contextHistory
   const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
   agent._fullHistory = [...full]
@@ -413,7 +416,10 @@ export function resetSessionState(agent) {
   agent._slot = null
   agent._slotMtime = null
   agent._osReminderInjected = false
-  agent._restartReminderInjected = false
+  // §11.2（2026-09-08）：一次性注入标志换名——_restartReminderInjected 推断退役（F3——
+  // _sessionStart != null 伪触发）；/new 清零新标记——恢复武装/启动句标志不跨会话复活
+  agent._envResumed = false
+  agent._processRestartPending = false
   agent._lastEngState = false
 }
 
