@@ -1,7 +1,7 @@
 # VSC 轨迹存档同构（TRACE-STORE-VSC）
 
 > 板块：轨迹存档（横切——模型调用可追溯分析）。权威源：CLI `docs/design/` trace-store 规格（AGENT-LOOP.md §18.6 D-TR1..TR8——CLI 已实现）+ 本文档（VSC 端同构设计）。
-> 状态：**设计待评审**——2026-09-09 落档（勘察 explore 一手——VSC chat() = CLI core.mjs chat() 同构出口实证）。
+> 状态：**已交付核销**——2026-09-09（VSC d84980d + db7f5f9——trace-store 255 行 + provider 出口 + 测试 396 行——审计/advisor clean——VSC L2 129/129 绿——consume 3da9a9b5——docs 登记 = VSC README 地图轨迹行——并发提交 d84980d 由活动会话落（内容 = 在位实现 + try/catch 强化））。
 
 ---
 
