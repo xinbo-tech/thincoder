@@ -41,7 +41,6 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 - **问题**：会话内回合 `onComplete` 用陈旧空态 `agentState` 键存在性覆盖 slot，把 settle 已落盘的 token 钉 null。
 - **改**：保存时**不得用内存空态覆盖槽里已由 settle 写好的 token**——区分"内存真无 token"（agent 从未有//new 清）vs"token 由 async settle 已落盘"（内存空但槽有值）。槽有值而内存空 → **保留槽值，不钉 null**。空态不能当"清空指令"。
 - 落点：`src/extension/panel-callbacks.mjs` onComplete + `src/extension/panel-session.mjs` saveLines 合并语义。
-- **改**：保存时**不得用内存空态覆盖槽里已由 settle 写好的 token**——区分"内存真无 token"（agent 从未有//new 清）vs"token 由 async settle 已落盘"（内存空但槽有值）。槽有值而内存空 → **保留槽值，不钉 null**。
 - **槽失效触发（评审 #3——空态≠清空，但槽须有明确清理路径）**：①**consume-design 后清**（链终消费显式 delete 该槽）；②**/new 会话重置清**（resetSessionState 对在跑池 abort + 清该会话账本）；③**TTL 过期清**（restore/门禁拒时删过期槽）。三触发之外，空态 agentState 保存**不触发清理**（只防误清 settle 已落盘 token）。
 - 落点：`src/extension/panel-callbacks.mjs` onComplete + `src/extension/panel-session.mjs` saveLines 合并语义 + consume//new/TTL 清理点。
 
@@ -70,19 +69,16 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
   早于 settle）→ 主会话回合尾 saveLines → agentState 携 incoming = 8 项（非空）→ `return incoming` →
   **8 项整体覆盖槽的 9 项 → 新 token 被抹**。空闲时无后续 saveLines → 槽保留 9 项。
 - **改（用户确认 union 方案）**：merge 改 **union 合并**——`{ ...existing, ...incoming }`：
-  - 同 key 以 incoming（内存）为准——续跑 round 同 designId 新 token 覆盖旧值
+  - **同 key 以新 mint 者胜（评审 #3——比较 token 尾部 `:expiresAt`——同 TTL 源下 expiresAt 大 = 后 mint = 新）**——非盲目 incoming wins：续跑 round 同 designId 新 token 覆盖旧值（incoming 新）✓；async 重评审同 designId（F2h 复用 id——settle 落槽新 token 而主会话内存仍是旧 token——incoming 旧 vs existing 新）→ **existing（新）胜**——不丢新 token
   - **槽独有项保留**（incoming 缺的——如 settle 刚落盘而主会话内存未同步的项）——多写者（settle/consume/跨端）互不覆盖
   - 槽 = 权威台账：回合尾保存永不丢弃槽里自己内存不知道的项
   - consume 安全：consume = "内存删 + 对称删盘"——槽已无该项 → union 不复活
-  - TTL 过期：由 setup 水合 TTL 过滤清——回合尾 union 保留无害（spawn 门禁会滤）
-- 落点：`src/extension/session-slot-write.mjs` engTokensMergeForSave 一个函数 + `test/eng-settlement.test.mjs` 补用例。
+  - TTL 过期：由 setup 水合 TTL 过滤清——回合尾 union 保留无害（spawn 门禁会滤）——过期项最终由既有 TTL 三触发清（评审 #6 注记：union 失去 D2 全量覆写"顺带丢陈旧槽项"的副作用——行为仍正确，仅死台账滞留至触发清）
+- 落点：`src/extension/session-slot-write.mjs` engTokensMergeForSave 一个函数 + `test/eng-settlement.test.mjs` **改用例 + 补用例**（评审 #2：现 overwrite 断言 eng-settlement.test.mjs:148-150 与文件头注释 :10-11 钉 D2 覆盖语义——union 后该用例断言改为 `{...existing, ...incoming}` 并集结果——非只增不改）。
 
 ### D5 废旧单值镜像（R2 用户选 B）
 
 - **现状**：dispatch 写门（`execute-tools.mjs:75`）读 `_engDesignToken` 镜像拦产品代码写；spawn 读 Map——两套真相。
-- **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽**"任一活槽存在"**（查内存 Map 或槽文件任一未过期 designId）——有任一活槽即有资格写产品代码。镜像字段读时一次性迁移进 Map，不再双写。
-- 落点：`src/agent/execute-tools.mjs` + settle 不再写镜像 + setup 不再恢复镜像 + consume/TTL/new 不再清镜像。
-  （评审 #1 迁移读点见上——唯一例外。）
 - **改**：`_engDesignToken` 单值镜像**退役**。dispatch 写门判断资格改问权威槽**"任一活槽存在"**（查内存 Map 或槽文件任一未过期 designId）——有任一活槽即有资格写产品代码。**存量兼容：旧 slot 文件可能残留镜像值——setup 水合 engState 时一次性读迁进 Map（唯一迁移读点，此后零读零写）**，settle 不再写镜像、setup 不再恢复镜像、consume/TTL/new 不再清镜像。
 - **迁移读点（评审 #1）**：setup 水合处——slot 有残留 `engDesignToken` 且 Map 空 → 一次性迁入 Map（legacy 标），随后不再写镜像；AC3 的 grep 清扫**排除此单点**（其余镜像读写零命中）。
 - 落点：`src/agent/execute-tools.mjs` + settle 不再写镜像 + setup 不再恢复镜像（改唯一迁移读）+ consume/TTL/new 不再清镜像。
@@ -91,9 +87,10 @@ async design 评审（`advisor async:true`）在**挂起会话**期间 settle（
 
 - 修改：`src/agent-tools/advisor-async.mjs`（settle 同步落盘 D1/D5）、`src/agent-tools/subagent-spawn-gate.mjs`（miss 回读 D4/D5）、
   `src/agent/execute-tools.mjs`（写门问槽 D5）、`src/agent/run-helpers.mjs`（agentState 去镜像 D5）、`src/agent/setup.mjs`（水合去镜像 D1/D5）、
-  `src/extension/panel-callbacks.mjs`（onComplete 保留槽 D2）、`src/extension/panel-session.mjs`（saveLines 合并 D2 + **D6 union**）、
+  `src/extension/panel-callbacks.mjs`（onComplete 保留槽 D2）、`src/extension/panel-session.mjs`（saveLines 合并调用点 D2——**评审 #1：仅调用不变**）、
+  **`src/extension/session-slot-write.mjs`（engTokensMergeForSave union 改造——D6 实际改动文件——评审 #1 补入；当前 168 行——delta ≤±10——评审 #4）**、
   `src/extension/panel-chat.mjs` + `suspension.mjs`（读槽 D3）
-  + `test/eng-settlement.test.mjs`（D6 补用例）
+  + `test/eng-settlement.test.mjs`（D6 改用例 + 补忙时用例——评审 #2；当前 166 行——delta ≤±30——评审 #4）
 - 文档：本设计 + README 地图登记
 
 ## 5. 验收
@@ -103,6 +100,7 @@ AC1 = async design 评审 settle 后：①同进程后续回合 spawn eng-coder 
 
 ## 变更记录
 
+- 2026-09-08：D6 评审 6 项采纳——#1 §4 补 session-slot-write.mjs（实际改动文件）+ panel-session 改"仅调用不变"/#2 测试改"改用例+补用例"（现 overwrite 断言钉 D2 语义须改）/#3 同 key 改 expiresAt 比较新者胜（防 async 重评审同 designId 丢新 token）/#4 行数标注（session-slot-write 168/delta≤±10、test 166/delta≤±30）/#5 D2/D5 重复句清理/#6 TTL 注记。
 - 2026-09-08：D6——写侧 merge 补 union（二次观察实证：忙时 settle 落盘被主会话 saveLines 覆盖抹——
   engTokensMergeForSave 只修了空态半边，补"incoming 非空但不全"的 union 合并）。
 - 2026-09-08：立项。基于会诊（4 模型收敛：槽文件权威台账 + settle 同步落盘 + 门禁读权威）+ explore VSC 一手核实（断点②快照/②b写侧清零/③F2g/④门禁/⑤镜像）+ 用户裁定（B：连镜像一起废；双端一起做；各一份文档）。
