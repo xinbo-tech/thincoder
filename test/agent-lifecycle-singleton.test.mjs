@@ -9,7 +9,10 @@
  *  - applySlotSessionState §11.2.1 槽↔hydrate 映射：engineering/advisor.guard/planMode/
  *    engDesignTokens 每轮槽权威；restore（首轮/destroy 重建）回填 tasks/goal/
  *    pendingReminders——复用路径内存权威（不覆盖）；
- *  - agentSlotMatches / ensurePanelAgent 绑定判定（cwd×slot 匹配复用/不匹配销毁——AC1/AC4）。
+ *  - agentSlotMatches / ensurePanelAgent 绑定判定（cwd×slot 匹配复用/不匹配销毁——AC1/AC4）；
+ *  - §11.7（交付缺口补强）：agentState 6 字段（tasks/goal/pendingReminders 回写槽）+ saveLines
+ *    落盘闭环（agentState → saveLines → 槽 → destroy 重建 hydrate 回填——F4）+ abort/finally
+ *    键缺席保留槽值 + 干净完成空态即权威（stale 提醒不跨重建复活）。
  * 生命周期语义（回合复用/切换销毁/落盘）由真机 slow 门控兜底。
  */
 import { test, beforeEach, afterEach } from "node:test"
@@ -24,6 +27,9 @@ import {
 } from "../src/agent/setup.mjs"
 import { agentSlotMatches, ensurePanelAgent } from "../src/extension/panel-chat.mjs"
 import { _cwd } from "../src/extension/panel-messages.mjs"
+import { agentState } from "../src/agent/run-helpers.mjs"
+import { saveLines } from "../src/extension/panel-session.mjs"
+import { loadSlot } from "../src/extension/session-io.mjs"
 
 let sessionsDir
 
@@ -286,3 +292,94 @@ test("hydrateRun: 复用同一 agent 对象——A 复位回合边界、B 每轮
   assert.equal(agent._tasks[0].title, "carry", "C 类 _tasks 会话级不复位（F1）")
   assert.equal(agent._fullHistory, r2.fullHistory, "history 每轮重指")
 })
+
+test("agentState §11.7: 6 fields — tasks/goal/pendingReminders ride the slot round-trip", () => {
+  const a = buildTopLevelAgent()
+  a.config.agent.engineering = true
+  a.config.advisor = { guard: true }
+  const tok = liveTok()
+  a._engDesignTokens = new Map([["d1", tok]])
+  const tasks = [{ title: "t1", status: "in_progress" }]
+  const goal = { objective: "g", status: "active", turnsUsed: 2 }
+  a._tasks = tasks
+  a._goal = goal
+  a._pendingReminders = ["[System reminder: engineering mode is now ON]"]
+  const s = agentState(a)
+  // 3 mode/token fields + §11.7 三会话级字段
+  assert.equal(Object.keys(s).length, 6)
+  assert.equal(s.engineering, true)
+  assert.equal(s.advisorGuard, true)
+  assert.deepEqual(s.engDesignTokens, { d1: tok })
+  assert.deepEqual(s.tasks, tasks)
+  assert.deepEqual(s.goal, goal)
+  assert.deepEqual(s.pendingReminders, a._pendingReminders)
+  // 快照拷贝（非引用）——onComplete 后内存继续变更不泄漏进已捕获的保存态
+  assert.notEqual(s.tasks, tasks)
+  assert.notEqual(s.goal, goal)
+  assert.notEqual(s.pendingReminders, a._pendingReminders)
+  // 空态如实反映内存：fresh agent → []/null（干净完成回合内存即权威）
+  const f = buildTopLevelAgent()
+  const sf = agentState(f)
+  assert.deepEqual(sf.tasks, [])
+  assert.equal(sf.goal, null)
+  assert.deepEqual(sf.pendingReminders, [])
+  assert.equal(sf.engDesignTokens, null) // 空 Map → null（D2: 是否清槽由 saveLines 合并决定）
+})
+
+test("§11.7 closed loop: agentState → saveLines 落盘三字段 → destroy 重建 hydrate 回填（F4）", () => {
+  const cwd = _cwd() // vscode mock workspaceFolders=[] → process.cwd()；sessions dir 已隔离
+  const slot = 1
+  const agent = buildTopLevelAgent()
+  agent._tasks = [{ title: "rt", status: "pending" }]
+  agent._goal = { objective: "rg", status: "active", turnsUsed: 3 }
+  agent._pendingReminders = ["[System reminder: restored]"]
+  const fullHistory = [{ role: "user", content: "hi" }]
+  // onComplete 路径同款 extra：{ activeProvider, ...agentState }（panel-callbacks 透传）
+  saveLines({}, fullHistory, [...fullHistory], { activeProvider: "test-provider", ...agentState(agent) }, slot)
+  const data = loadSlot(cwd, slot)
+  assert.ok(data, "slot written by saveLines")
+  assert.deepEqual(data.tasks, agent._tasks)
+  assert.deepEqual(data.goal, agent._goal)
+  assert.deepEqual(data.pendingReminders, agent._pendingReminders)
+  // destroy（loadSession 切走）→ 切回同槽 → 重建 hydrate restore 回填（11.2.1「destroy
+  // 后重建回填」用例表行——经真实 saveLines 落盘闭环，非合成槽）
+  const rebuilt = buildTopLevelAgent()
+  applySlotSessionState(rebuilt, { slot: data, engState: null, planModeOverride: undefined }, { cfg: cfgBag(), restore: true })
+  assert.deepEqual(rebuilt._tasks, agent._tasks)
+  assert.deepEqual(rebuilt._goal, agent._goal)
+  assert.deepEqual(rebuilt._pendingReminders, agent._pendingReminders)
+})
+
+test("saveLines: abort/finally 保存（键缺席）保留既有 tasks/goal/pendingReminders——undefined 语义", () => {
+  const cwd = _cwd()
+  const slot = 1
+  const agent = buildTopLevelAgent()
+  agent._tasks = [{ title: "keep", status: "in_progress" }]
+  agent._goal = { objective: "keep-goal", status: "active", turnsUsed: 1 }
+  agent._pendingReminders = ["[System reminder: keep]"]
+  saveLines({}, [], [], { activeProvider: "p", ...agentState(agent) }, slot)
+  // panel-chat finally/abort 路径：extra 只带 activeProvider——三字段键缺席 → 槽值原样保留
+  saveLines({}, [], [], { activeProvider: "p" }, slot)
+  const data = loadSlot(cwd, slot)
+  assert.deepEqual(data.tasks, agent._tasks)
+  assert.deepEqual(data.goal, agent._goal)
+  assert.deepEqual(data.pendingReminders, agent._pendingReminders)
+})
+
+test("saveLines: 干净完成空态即权威——无任务/无目标写 []/null，stale 提醒不跨重建复活", () => {
+  const cwd = _cwd()
+  const slot = 1
+  // 槽先有 stale 会话级状态（CLI 旧写/上一会话残留）
+  const prior = buildTopLevelAgent()
+  prior._tasks = [{ title: "stale", status: "pending" }]
+  prior._goal = { objective: "stale-goal", status: "active", turnsUsed: 9 }
+  prior._pendingReminders = ["[System reminder: stale]"]
+  saveLines({}, [], [], { activeProvider: "p", ...agentState(prior) }, slot)
+  // 干净完成回合：fresh agent（内存空）→ 空态如实落盘——提醒已 flush 进历史，重建不得复活
+  saveLines({}, [], [], { activeProvider: "p", ...agentState(buildTopLevelAgent()) }, slot)
+  const data = loadSlot(cwd, slot)
+  assert.deepEqual(data.tasks, [])
+  assert.equal(data.goal, null)
+  assert.deepEqual(data.pendingReminders, [])
+})
+

@@ -217,14 +217,23 @@ export function pushReal(history, fullHistory, msg) {
   history.push(msg)
 }
 
-/** Extract the persisted engineering/advisor state for the session file (CLI session.mjs fields).
- *  The design tokens AND the mode flags are session-scoped (2026-08-29): engineering and
- *  advisor.guard persist into the slot (slot authority, config.json is the CLI mirror);
- *  the advisor convergence budget still resets per run (CLI parity).
+/** Extract the persisted engineering/advisor/session state for the session file (CLI
+ *  session.mjs fields — saveSession parity). The design tokens AND the mode flags are
+ *  session-scoped (2026-08-29): engineering and advisor.guard persist into the slot (slot
+ *  authority, config.json is the CLI mirror); the advisor convergence budget still resets
+ *  per run (CLI parity).
  *  DESIGN-TOKEN-SETTLEMENT D2/D5 (2026-09-08): 单值镜像 _engDesignToken 已退役——不再写入
  *  slot（镜像字段运行时零写）；只带多槽表 engDesignTokens（内存 Map 真持有态）。空态保存是否
  *  清权威槽由 saveLines 的 D2 合并语义决定（内存空但槽有值 → 保留槽值，不钉 null）——此处只
- *  如实反映内存。 */
+ *  如实反映内存。
+ *  §11.7 交付缺口补强 (2026-09-08): tasks/goal/pendingReminders 会话级字段（C 类——
+ *  buildTopLevelAgent 内存真持有态）随回合完成回写槽（agent.mjs onComplete → saveLines
+ *  spread 携入）——CLI saveSession 同款三字段（session.mjs:131/137），destroy/重载后重建
+ *  hydrate restore 从槽回填（§11.2.1 映射表——F4 闭环）。字段名以内存源 _tasks/_goal/
+ *  _pendingReminders 为准（槽键 tasks/goal/pendingReminders 不变——applySlotSessionState
+ *  读侧同键）。空态 []/null 如实反映内存——干净完成回合内存即权威；abort/finally 保存不带
+ *  agentState（键缺席 undefined）→ saveLines 保留槽值。快照拷贝（非引用）：onComplete 与
+ *  onDistilled 异步保存间后续回合的内存变更不得泄漏进旧快照（engDesignTokens 同语义）。 */
 export function agentState(agent) {
   return {
     engineering: agent.config?.agent?.engineering ?? false,
@@ -235,6 +244,11 @@ export function agentState(agent) {
     engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
       ? Object.fromEntries(agent._engDesignTokens)
       : null,
+    // §11.7: 会话级三字段回写槽（slot keys: tasks/goal/pendingReminders）。JSON-safe
+    // snapshot copies of the agent's memory — live arrays/objects are never handed out.
+    tasks: Array.isArray(agent._tasks) ? [...agent._tasks] : [],
+    goal: agent._goal ? { ...agent._goal } : null,
+    pendingReminders: Array.isArray(agent._pendingReminders) ? [...agent._pendingReminders] : [],
   }
 }
 

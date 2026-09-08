@@ -88,7 +88,12 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
       // Clear it defensively so OLD CLI builds still fall back to history instead
       // of resuming from a stale snapshot missing every VS Code-added message.
       display: [], tasks: extra.tasks ?? existing.tasks ?? [],
-      planMode: existing.planMode ?? false, goal: existing.goal ?? null,
+      planMode: existing.planMode ?? false,
+      // §11.7（2026-09-08）：tasks/goal/pendingReminders 会话级三字段随 agentState 回写槽
+      // （onComplete {...agentState} spread 携入——CLI saveSession session.mjs:131/137 同款）。
+      // 键缺席（undefined——abort/finally 保存只带 activeProvider）→ 保留槽值；键在场（干净
+      // 完成回合）→ 内存即权威（空态 []/null 如实写——含 goal 工具完成/取消的显式清空）。
+      goal: extra.goal !== undefined ? extra.goal : (existing.goal ?? null),
       autoApprove: existing.autoApprove ?? false,
       advisor: advisorOut,
       // Engineering state persisted by runAgent (agentState): design token survives turns;
@@ -104,7 +109,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
       // 保存**不触发清理**。内存空但槽有值（settle 已同步落盘而本回合内存未持有）→ 保留槽值，
       // 不钉 null（AC2）。槽清理只经三触发（consume-design 显式清 /new 空槽 /TTL 过期清）。
       engDesignTokens: engTokensMergeForSave("engDesignTokens" in extra ? extra.engDesignTokens : undefined, existing.engDesignTokens),
-      pendingReminders: existing.pendingReminders ?? [], sessionStart: existing.sessionStart ?? new Date().toISOString(),
+      pendingReminders: extra.pendingReminders !== undefined ? extra.pendingReminders : (existing.pendingReminders ?? []), sessionStart: existing.sessionStart ?? new Date().toISOString(),
       // 2026-09-01 会诊 kimi/qwen 🔴：sessionStart 是 F2 覆盖防护的会话身份——VS Code
       // 此前从不赋值（恒 null）→ diskStart 恒 null → F2 轮转条件永不触发（纯 VS Code
       // 会话无覆盖防护）；更糟：CLI 加载 VS Code 槽时 setup 的 `??=` 打上 CLI 自己的
