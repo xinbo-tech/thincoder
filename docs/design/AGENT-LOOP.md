@@ -205,7 +205,7 @@ consult 家族维持独立（会诊多模型会话级生命周期——不并入
 | status | id?（省 = 全部概览） | 结构化对象数组 `{running/queued/done}`——running 带 model/elapsedSec/turn/maxTurns/touched 摘要；queued 带 position/waiting/reason；不消费 | 不阻塞（立即） |
 | observe | id（必填）+ recent?（摘要条数上限，默认 5） | `{id, role, status, turn, maxTurns, touched…, currentTool? (数组——在跑工具名), recentTurns:[…], done?}`——running 带最近 N 条回合摘要 + in-flight 当前工具（读 dispatch 状态非仅 history——卡死检测）+ touched；queued 占位；done 可查（终报走自动通道） | 不阻塞（立即） |
 | send | id（必填）+ message（必填） | `{id, status:"delivered", queued}`——消息入队待子回合边界消费；error（settled/cancel/unknown/queued/sync） | 立即（入队） |
-| escalate | task/model?（consultModels 池——缺省池首） | 术后报告（专家 WRITE 干活）——缺省 async（other 池后台 + settle 三分类 → digest） | 缺省 async；`async:false` 同步 |
+| escalate | task/model?（consultModels 池——缺省池首） | 术后报告（专家 WRITE 干活）——缺省 async（other 池后台 + settle 三分类 → digest） | 缺省 async；`async:false` 同步（顶层行为受提示词/工具描述约束——见 §7.7.1） |
 | cancel | id（必填——防误全停） | `{id, status:"cancelled"}` / `{was:"queued"}` / error | 立即（定向 abort） |
 | panel | {view?, freeze?}（互斥，view 默认） | 镜像快照 / 冻结回收确认 | 同步 |
 
@@ -331,9 +331,11 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
    VSC src/prompts/main.md、CLI src/prompts/main.md（核实）；CLI src/agent-tools/subagent.mjs（Async
    spawn 段描述——行数 >500 既有债不重论——描述串替换 = structure unchanged——delta ≤±N 实现时刷新）；
    VSC src/agent-tools/subagent-spec.mjs（同）；prompts 内容断言测试（双端——实现时 grep 定位——
-   §7.7:276 排除平台描述的 carve-out **反转**——描述既在仓内可改——断言纳入——按实际点名补登）。
+   §7.7:276 排除平台描述的 carve-out **反转**——描述既在仓内可改——断言纳入——按实际点名补登——
+   实测 test/ 对 async 锚句/描述零命中——本批新建 CLI test/prompts-async-guidance.test.mjs + VSC
+   test/prompts-async-guidance.test.mjs（AC1-AC4 fail-when-unchanged 正向断言）。
 
-**变更记录**：2026-09-08 用户质询"平台侧不可改"→ 纠错：工具描述在项目仓 src/agent-tools/（可改）——§7.7 item 5 假设错误已注——工具描述面纳入本设计（最大引导面）。
+**变更记录**：2026-09-08 用户质询"平台侧不可改"→ 纠错：工具描述在项目仓 src/agent-tools/（可改）——§7.7 item 5 假设错误已注——工具描述面纳入本设计（最大引导面）。2026-09-08 §7.7.1 实现交付（eng-coder——item 1/4 落 §14.2 + §7.2 escalate 行注——见上）：实现核实纠正设计三处观察不实（CLI main.md:28 实含 "pass `async: false` when you must work with the report synchronously" 残留 / VSC engineering.md:16 advisor 段实含 "Pass `async:false` only when you must block…" / advisor*.mjs 描述实含同步句（CLI:44 "Pass async:false to force the blocking review" + VSC:177 "Pass async:false for a blocking review whose result you need"）——已一并清（advisory 面"有则一并清并上报"）；VSC discipline.md:69 escalate 行 "async:false waits" 同款残留一并清（报告项）；VSC run-stages.mjs:112 advisor 提醒串含 "pass async:false only when you must read the result before continuing"——机制文件未动——上报父侧待裁；explore 审计 Q2：双端 main.md:8 委托标准段残留 "async default — sync only when the next step depends on this output and nothing else can proceed"（F-N1.6——spawn 域 §7.7 批未点名的同款残留——与 §7.5 锚句张力——上报父侧待裁——本批未动）；待父侧核销（L2/consume）。
 
 **验收**：
 - AC1 双端 main.md escalate 段无 async:false 同步引导（与 spawn 段一致——一律异步）
@@ -590,12 +592,12 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 
 ### 14.2 飞刀（escalate）
 
-- escalate 加 async 语义——**入 other 池**（与 explore/plan 共享槽——公平排队）。发起返回 ack → 回合自然收尾 → 挂起态 → settle。`async:false` 显式同步保留。缺省 async depth-0。
+- escalate 加 async 语义——**入 other 池**（与 explore/plan 共享槽——公平排队）。发起返回 ack → 回合自然收尾 → 挂起态 → settle。**顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）。机制默认与参数合法性见 §7.2 escalate 行注（机制描述保留——提示词/工具描述不引导）。
 - **settle 三分类**：done → merge mutations 回父（重叠写文件 → 报告级重叠警告——不 gate）+ 报告全文入 pending → digest；error（child 失败/撞 cap）→ 按父侧是否已改重叠文件决定 partial merge + 错误报告注入；cancelled → 不入 pending——提示（对齐 cancel 定向中止语义）。
 - **工程模式拒保持**（engineering.md 拒 escalate——普通模式工具——eng 模式走 eng-coder）。
 - **消化指令语义**：escalate = "报告已 merge——可继续改进"——动作域仍按档（无"飞刀可写"例外）。
 
-**变更记录**：2026-09-06 R17（用户"这两都得完全异步化"）——设计 §14——CLI 已实现 + VS 镜像。
+**变更记录**：2026-09-06 R17（用户"这两都得完全异步化"）——设计 §14——CLI 已实现 + VS 镜像。2026-09-08 §7.7.1——escalate 顶层一律异步（同步保留句移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）。
 
 ## 15. 操作纪律 / 工具使用（提示词层）
 

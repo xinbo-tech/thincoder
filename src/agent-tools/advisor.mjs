@@ -41,8 +41,7 @@ export const advisorTool = {
     "ASYNC (AGENT-LOOP.md §24 D-24b): at depth 0 the review runs in the BACKGROUND by default " +
     "(async:true or omitted) — the call returns an ack immediately, the turn ends, and the report " +
     "arrives automatically in a digest turn when the review finishes; at most 2 reviews run in " +
-    "parallel (excess launches are refused — launch one at a time). Pass async:false to force the " +
-    "blocking review (result returned inline). Inside a child (depth>0 — eng-coder self-review) " +
+    "parallel (excess launches are refused — launch one at a time). Inside a child (depth>0 — eng-coder self-review) " +
     "reviews are always synchronous; async:true is rejected there. " +
     "Returns the review report — the advisor's findings verdict: all-clear (call verify) or a findings list to fix.",
   parameters: {
