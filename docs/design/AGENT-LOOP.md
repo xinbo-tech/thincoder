@@ -296,7 +296,7 @@ sync（父在等不可中转）/queued（未启动）/settled/cancel/未知 id �
 
 > 需求：§7.7 只覆盖 spawn——用户裁 a：**escalate（飞刀）/advisor 顶层也纳入一律异步**——
 > 同步例外全移除（含 §14.2 "async:false 显式同步保留"句）。快车道（用户明确指令）。
-> 状态：**评审通过待 sign-off**（2026-09-08——5 项 advisory 采纳——token 4bf2af9b 注册）——eng-coder 实现。
+> 状态：**已交付核销**（2026-09-08——评审 #1 5项 + #2 4项采纳——eng-coder clean 交付——CLI ed4fc5c / VSC 1a89da8——双端测试 118/111 全绿——L2 绿——consume 494298fe——上报待裁项见 §7.7.1 变更记录）。
 
 **现状**：§14.2 :540 escalate "`async:false` 显式同步保留" 与新 §7.7 "顶层一律异步" 打架；
 - VSC main.md:28 escalate 段仍含 "pass `async:false` to wait for the report synchronously"
