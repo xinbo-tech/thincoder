@@ -116,4 +116,7 @@
 ## 屎山度第三次评估清扫批（2026-09-08 夜）
 - [ ] **批 5（文档小批——N3+N7）**：AGENTS.md 地图陈旧 8+ 悬空 + 5 档批执行文档未登记（N3）+ resumed/restart 载体异名统一注释锚（N7——语义已裁 A——文档级）——走设计→评审
 - [ ] **批 6（代码小批——N1+N6）**：VSC subagent.mjs 507 行 + advisor/run.mjs 511 行越线小拆（N1——500 硬拆纪律）+ `_permQueue` 3 处 inline 收 helper（N6——含 escalate 语义澄清 subagent-actions.mjs:426 注释）——走设计→评审
-- [ ] **双端 system.md:24 token 存活指引矛盾**（§11.3 交付上报项 1——CLI 有 "design tokens are the exception…restored with the session slot" 例外段 vs VSC "(tokens, caches…) survived" 把 token 列入不存活——直接矛盾 + SESSION:365 消费指导旧语义——token 生命周期权威 = DESIGN-TOKEN-SETTLEMENT（token 随槽恢复 + TTL）——VSC 该对齐 CLI——走设计链排批）
+- [ ] **双端 system.md:24 下批同步**（§11.3 交付上报项 1+2——2026-09-08 用户裁接受 slot 短句纳入）：
+  （① token 存活指引矛盾——CLI 例外段 vs VSC tokens 不存活——token 权威 DESIGN-TOKEN-SETTLEMENT——VSC 对齐 CLI）
+  （② slot 行内 prose 补 sticky-slot 短句——null when none is bound）
+  （③ §11 字段映射补 slot 条目）——走设计链排批
