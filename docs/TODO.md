@@ -124,7 +124,7 @@
   （③ §11 字段映射补 slot 条目）——走设计链排批
 
 ## 等裁项立项批（2026-09-08 夜用户裁——勘察一手）
-- [ ] **收尾批（STRUCTURE-DEBT-BATCH-7）**：L58 isCodePath 对齐 + L24 消息数护栏 + system.md 3 子项——设计已落待评审
+- [x] ~~**收尾批（STRUCTURE-DEBT-BATCH-7）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-7——CLI 10cd978 + VSC 1bbd474——L58 code-path only + L24 50K 双门 + system.md 3 子项——双端测试 122/115 绿——L2 批 7 用例全过（VSC 唯一失败 = L31 并行方在途 trace-store 测试）——consume a0775ae9）
 - [ ] **大项 L31 VSC 轨迹存档**（用户裁要——勘察留档：VSC chat() provider.mjs:130 = 同构出口——新建 trace-store 镜像——大——独立全链）
 - [ ] **大项 L50 advisor 裁决模板**（用户裁立项——勘察留档：双端 prompt 逐字同源——round1 表格区加裁决行——前置：host 侧 marker 消费点不在两仓——中——独立全链）
 - [ ] **大项 L52 sync spawn 可中止**（用户裁要——勘察留档：跨信号+TUI+调度——自属 AbortController 链 + AbortError 区分 + panel 门控放开——大——独立全链）
