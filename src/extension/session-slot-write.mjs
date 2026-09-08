@@ -153,7 +153,7 @@ export function clearSlotEngDesignToken(cwd, slot, designId) {
 /** D6（评审 #3）：解析 token 尾 :expiresAt（uuid:expiresAt 2 段——validateDesignToken 同源）；无效 → -Infinity（无 mint 时间不参胜——退回槽值）。 */
 function tokenExpiryMs(token) {
   const p = typeof token === "string" ? token.split(":") : null
-  if (!p || p.length !== 2) return -Infinity
+  if (!p || !p[0] || p.length !== 2) return -Infinity
   const exp = parseInt(p[1], 10)
   return Number.isNaN(exp) ? -Infinity : exp
 }
