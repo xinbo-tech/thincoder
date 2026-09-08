@@ -1,7 +1,7 @@
 # VSC 会话流 B 批（SESSION-FLOW-B）
 
 > 板块：会话流（panel/webview 时序——B 批 = B1 子代理块原地 + B2 会话打开原子化——A 批已交付 aacebee 后）。权威源：WEBVIEW.md（§2 布局/§5 子代理机制/§8 消息秩序——权威措辞只落此）。
-> 状态：**设计待评审**——2026-09-09 落档（B 批深勘察 explore 一手——A 批后基线行号——B1/B2 文件面零重叠——可分两次 eng-coder——推荐 B1 先行）。需求：TODO 需求池「VSC 会话流时序对齐 CLI」——B 批——用户裁 B1 纯时序序 + B2 移门——后续自动跑授权。
+> 状态：**已交付核销**——2026-09-09（B1 52e03f3 + B2 6e98807——B1：拆容器/freeze 原地/150 无豁免/activity-flow 8 组——B2：openSessionContent 单向 boot/session-boot 组——VSC L2 154/154 绿——audit clean + advisor pass——consume 2e3c1b83——VSC 会话流 C+A+B 全链闭合——A4 尾巴/忙态冷启 boot 守卫观察项留 TODO）。
 
 ---
 
