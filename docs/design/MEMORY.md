@@ -194,18 +194,27 @@
 - distill.mjs L124 改 `const layer = candidate.layer ?? candidate.scope ?? "personal"`——新字段优先旧字段兜底——消化旧 LLM 输出（模型忽略新 prompt 字段名时仍产 scope）。
 - LLM 提示模板 L21/L30 字段名 scope → layer + 引导语随动。
 
-**受影响文件（CLI 单端 6 + 测试 + 文档）**：
-- bin/thincoder.mjs（usage/completion 4 处）、src/cli/distill-command.mjs（注释/usage/flags.scope→flags.layer/展示串 + --scope 显式检查）、src/distill.mjs（prompt/docstring/判别变量/错误串/读时归一）、src/tui/distill-cmd.mjs（展示串）、新增 test/distill.test.mjs（读时归一/错误串/--scope 报错——现 distill 0 测试）、MEMORY.md（本段——评审后并入当前态）+ TODO 勾销。
+**受影响文件（评审 #1/#3 采纳——补行数 + 计数对齐：scope 实际分布 4 CLI 文件 + 2 归档历史档（_archive 不更新）——4 为有效改动面）**：
+| 文件 | 现行数 | 改动 | 预计 delta |
+|---|---|---|---|
+| bin/thincoder.mjs | ~450 | usage L90 + bash/zsh/fish completion L353/392/438 | ≤±5（字面替换） |
+| src/cli/distill-command.mjs | ~80 | 注释/usage L13/25 + flags.scope→flags.layer L67 + 展示串 L69 + --scope 显式检查 | ≤±15 |
+| src/distill.mjs | ~160 | prompt L21/30 + docstring + 判别变量 L124/131/135/144 + 错误串 L136/145/154 + 读时归一 | ≤±5（同文替换） |
+| src/tui/distill-cmd.mjs | ~40 | 展示串 L25 | ≤±2 |
+| test/distill.test.mjs | 新增 | 读时归一/错误串/--scope 报错 | ~+80（现 0 测试） |
+| docs/design/MEMORY.md | 本段 | 评审后并入当前态 | 本段 |
 
-**验收**：AC1 --scope 全改 --layer（grep 命令面 0 scope 残留）；AC2 遇 --scope 显式报错（非静默）；AC3 读时归一 candidate.layer ?? candidate.scope ?? personal；AC4 错误串 layer（unknown layer: X/project layer unavailable/team layer not configured）；AC5 测试（归一/报错/旧 scope 字段兜底）；AC6 值域语义不变（提示仍 personal/project）。
+**验收（评审 #2 采纳——AC1 排除豁免；#4 归一前置确认）**：
+AC1 --scope 全改 --layer（grep **排除错误串字面行 + JSON 兜底行两处有意 scope**——命令面 usage/completion/展示 0 scope 残留）；
+AC2 遇 --scope 显式报错（非静默——含 `--scope=X` 与 `--scope X` 两形态）；
+AC3 读时归一 candidate.layer ?? candidate.scope ?? "personal"（确认 L124 是唯一消费点——TUI 预览同源——归一前置无 display 空层）；
+AC4 错误串 layer（unknown layer: X/project layer unavailable/team layer not configured）；
+AC5 测试（归一/报错两形态/旧 scope 字段兜底/TUI 预览同源）；
+AC6 值域语义不变（提示仍 personal/project）。
+
 
 ## 7. 关键设计决策
 
-| 决策 | 理由 |
-|---|---|
-| 单文件 SQLite（node:sqlite，零依赖） | 全部存储统一于 `~/.thincoder/memory.db`——无第三方依赖、事务/迁移/触发器一库搞定；向量存随行 BLOB，行删即清，无独立表 |
-| 文件即真相（project/team 层） | 人工可读可改、可 git 管理；DB 只是可重建的索引（syncDir 幂等） |
-| FTS5 + 向量双路召回（RRF 合并） | 纯 FTS 对语义近义召回差；纯向量对精确术语差；合并互补 |
 | 嵌入懒构建 + 失败降级 | 无 key 也能用（纯 FTS）；首次检索延迟可接受 |
 | CJK 逐字分段 | FTS5 无中文分词器；单字索引保召回（BM25 排序仍合理）；写入/查询同处理保证命中 |
 | git diff 增量同步 | 大仓库全扫太慢；diff 只处理改动文件（超阈值回退全扫） |
