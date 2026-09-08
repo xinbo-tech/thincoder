@@ -1,7 +1,7 @@
 # Sync Spawn 可中止（SYNC-CANCEL——L52）
 
 > 板块：Agent 循环 · 子代理取消（TUI ⏹ 语义）。权威源：AGENT-LOOP.md（cancel/子代理生命周期）+ TUI.md（⏹ 门控段 :398-402）。
-> 状态：**设计待评审**——2026-09-09 落档（深勘察 explore 一手——信号流全链 + 三分支 + TUI 三层 + 8 风险）。用户 2026-09-08 裁"要 sync 可中止"（L52——TUI TODO）。
+> 状态：**已交付核销**——2026-09-09（CLI 3d7be35 + 9e3fd68 + 687fd7b——三分支 catch + TUI 三层 + v2 deny + 4 测试组——L2 129/129 绿——audit clean + advisor pass——consume 1e5870bb——机制正文已落 AGENT-LOOP.md §7.2）。
 
 ---
 

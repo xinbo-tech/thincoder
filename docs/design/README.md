@@ -39,7 +39,7 @@
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径已由本档 D-V5 接管，前身 `VERIFY-DOCONLY.md` 并入后归档） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志 |
-| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md` 同板块独立保留 |
+| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md`、`SYNC-CANCEL.md`（sync ⏹ 中止——L52——2026-09-09 已交付——机制正文落 AGENT-LOOP §7.2）同板块独立保留 |
 | 记忆 | `MEMORY.md` | |
 | Provider | `PROVIDER.md` | |
 | Proxy | `PROXY.md` | |
