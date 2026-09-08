@@ -308,10 +308,6 @@ export async function prepareRun(agent, input, callbacks, {
     : agent._role === "coder" ? [verifyTool, advisorTool]
     : agent._role === "consult" ? [recentChangesTool]
     : []
-  // NOTE: every depth-0 tool schema is estimated into the compaction overhead per turn
-  // (context.mjs extras.tools) — a tool-schema change shifts the compaction fixture
-  // knife-edges (agent.test T3b: read_history's schema +~470 tokens once crossed its
-  // 11000 threshold; fixture adjusted to 12500 — rationale in the test comment).
   const tools = [...agent.tools, taskTool, planTool, timerTool, ...depthOnly]
   const toolSchemas = tools.map(toOpenAISchema)
   const toolByName = new Map(tools.map((t) => [t.name, t]))

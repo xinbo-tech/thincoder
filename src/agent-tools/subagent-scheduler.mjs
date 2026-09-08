@@ -40,7 +40,7 @@ export function normalizeFileList(files, cwd) {
   const violations = [] // §28 R26 F-R26b：父侧维护文件命中（保留声明原样——提示可读）
   for (const f of Array.isArray(files) ? files : []) {
     if (typeof f !== "string" || !f.trim()) continue
-    if (f.endsWith("/") || f.endsWith("\\")) {
+    if (f.trimEnd().endsWith("/") || f.trimEnd().endsWith("\\")) { // 2.7 批：尾随空格目录声明（"test/ "）同拒
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
     const abs = resolve(cwd ?? process.cwd(), f)

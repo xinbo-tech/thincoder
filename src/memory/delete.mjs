@@ -155,6 +155,8 @@ export async function deleteByUid(memory, uid, { dirs = {} } = {}) {
   const norm = /^\d+$/.test(uid) ? `personal:${uid}` : String(uid)
   const [layer, ...rest] = norm.split(":")
   if (layer === "personal") {
+    // 畸形尾缀拒绝（2026-09-08 代码正确性批 2.2）：personal:5:extra 不得静默删 id=5
+    if (norm.split(":").length > 2) throw new Error(`invalid memory id: ${norm}`)
     const id = rest[0] ?? ""
     if (!/^\d+$/.test(id)) throw new Error(`invalid memory id: ${norm}`)
     const entry = fetchEntry(memory, norm)

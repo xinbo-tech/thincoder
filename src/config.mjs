@@ -344,7 +344,8 @@ function readMcpSection(path = configPath) {
     if (!existsSync(path)) return { ok: true, servers: [] }
     const raw = JSON.parse(readFileSync(path, "utf8"))
     const servers = raw?.mcp?.servers
-    if (servers !== undefined && !Array.isArray(servers)) return { ok: true, servers: [] }
+    // 非数组 = 畸形磁盘配置（2.3 代码正确性批）——ok:false 走调用方既有畸形回退（reloadMcpFromDisk 早退）
+    if (servers !== undefined && !Array.isArray(servers)) return { ok: false, error: "mcp.servers must be an array" }
     return { ok: true, servers: Array.isArray(servers) ? servers : [] }
   } catch (error) {
     return { ok: false, error: error?.message ?? String(error) }

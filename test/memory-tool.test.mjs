@@ -137,6 +137,25 @@ test("AC3 护栏（code review #6）：无索引行的伪造 origin 不得删任
   assert.ok(existsSync(join(dirX, fx)), "unmanaged file survives")
 })
 
+// ---- AC3b: deleteByUid 畸形 uid 尾缀拒绝（2.2 批——CODE-HARDENING-BATCH §2.2） ----
+
+test("2.2 畸形 uid 尾缀（personal:1:extra）报错不删；正常 personal:1 可删", async (t) => {
+  const { mem, toolA } = await fresh(t)
+  await toolA.execute({ action: "put", type: "rule", title: "suffix-guard", content: "must survive" })
+  // personal:1:extra 此前只查首段 5 是数字 → 尾缀放行 → 静默删 id=1（bug）
+  await assert.rejects(
+    () => toolA.execute({ action: "delete", id: "personal:1:extra" }),
+    (e) => e.message === "invalid memory id: personal:1:extra",
+  )
+  const list = await toolA.execute({ action: "list", layer: "personal" })
+  assert.ok(list.includes("personal:1"), "畸形 uid 被拒 → entry survives")
+  // 单删原语层同拒
+  await assert.rejects(() => deleteByUid(mem, "personal:1:extra", { dirs: {} }), /invalid memory id/)
+  // 正常 personal:1 删得掉（无回归）
+  const out = await toolA.execute({ action: "delete", id: "personal:1" })
+  assert.ok(out.startsWith("Deleted personal:1: suffix-guard"), out)
+})
+
 // ---- AC4: 输出/错误串全 layer，无 scope 词 ------------------------------------
 
 test("AC4 错误串 layer（not found / clear / invalid layer / mismatch）", async (t) => {

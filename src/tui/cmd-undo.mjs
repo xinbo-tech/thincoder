@@ -6,7 +6,7 @@
  */
 
 import { existsSync, writeFileSync, unlinkSync, readFileSync } from "node:fs"
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { ansi, C } from "./ansi.mjs"
 
 const MAX_UNDO = 50
@@ -20,7 +20,8 @@ export function snapshotForUndo(agent, toolName, args, cwd) {
   const path = args.path ?? args.file
   if (!path || typeof path !== "string") return
 
-  const abs = join(cwd, ...path.split("/"))
+  // 绝对路径直接用（path.join 对绝对段不重置——Windows 反斜杠路径也不按 "/" 切分）；相对路径整段 join(cwd)。
+  const abs = isAbsolute(path) ? path : join(cwd, path)
   let backup = null
   try {
     if (existsSync(abs)) {
@@ -68,7 +69,7 @@ export async function handleUndoCommand(ctx) {
   const e = await showPicker("Undo", entries)
   if (!e) return
   const item = stack[e.idx]
-  const abs = join(agent.cwd, ...item.path.split("/"))
+  const abs = isAbsolute(item.path) ? item.path : join(agent.cwd, item.path)
 
   try {
     if (item.backup === null) {
