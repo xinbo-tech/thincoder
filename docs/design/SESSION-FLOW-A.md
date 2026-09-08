@@ -1,7 +1,7 @@
 # VSC 会话流 A 批（消息秩序后补——SESSION-FLOW-A）
 
 > 板块：会话流（panel/webview 时序——A+B 批的 A 部分——C 全链交付后）。权威源：WEBVIEW.md §8（消息秩序与忙态收敛）+ SESSION.md §7（标题触发）。
-> 状态：**设计待评审**——2026-09-09 落档（A+B 深勘察 explore 一手——C2 后基线内容锚）。需求：TODO 需求池「VSC 会话流时序对齐 CLI」——A+B 后做——用户裁全做 + 定夺点全裁推荐项。
+> 状态：**已交付核销**——2026-09-09（aacebee——A1 sendMessage routeUserTurn + A2 标题方案 Y + A3/A4 Stop 派生——VSC L2 143/143 绿——audit clean + advisor 终审 pass——consume aa9e9376——A4 尾巴不入本批——B 批待排）。
 
 ---
 
