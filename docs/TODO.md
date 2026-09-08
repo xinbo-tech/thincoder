@@ -7,12 +7,12 @@
 
 ## 模块/行数技术债（超限拆分候选）
 - [x] ~~**system.mjs 506 行超 500 硬限**~~——**2026-09-08 批 3 已拆**（SYSTEM-SPLIT——bash.mjs 269 + search.mjs 237 + question.mjs 27——index.mjs:6-7 改 import——src/ 代码引用零残留——CHECKPOINT/STRUCTURE-DEBT 文档指针由父侧核销同步）
-- [ ] **VSC agent/setup.mjs 500 行**（>500 硬限边缘——2026-09-08 实测整 500 行——resetRunState/reconcileEngDesignTokens/applySlotSessionState §11 纯函数族仍留本文件——拆独立模块——与 VSC 仓 TODO L15 同物——数字已校准）
+- [x] ~~**VSC agent/setup.mjs 500 行**~~——**2026-09-08 核销**（agent-state.mjs 102 行三函数已建——resetRunState/reconcileEngDesignTokens/applySlotSessionState 迁出——setup.mjs 现 422 行 <500——id=9 env-state 交付顺带完成）
 - [x] ~~模块拆分轮超限债~~——**2026-09-08 核查已兑现勾销**：模块拆分轮已把 session/CLI 8 文件/subagent 家族/verify/run/context/render-conversation/tool-events/agent-turn/compact 等全拆至 <500
   （实测 session 483 / agent 384 / context 381 / subagent ~284 / subagent-async 382 / verify 291 / agent-turn 326 / render-conversation 425 / tool-events 401 / file 443 / bin 500；VSC subagent 489 / subagent-async 450 / compact 302 / run.mjs 拆为 run-helpers+stages）；测试 >500 债随测试全删消解
 
 ## 代码正确性 / 边界小修（低优先加固）
-- [ ] **VS Code detectRestoredSession 闸语义完善**（环境感知层遗留——按会话跟踪 vs 进程级一次性闸——中途切换会话拿不到 resumed:yes——语义完善项）
+- [x] ~~**VS Code detectRestoredSession 闸语义完善**~~——**2026-09-08 核销**（§11.2 env-state 已实现按会话跟踪——resumed 迁 agent 级 _resumedPending 每恢复一次——切槽进新 agent 天然得 yes——detectRestoredSession 余留服务 process restarted 句（模块级闸——N6 设计意图））
 - [x] ~~**join(cwd, p) 双前缀 bug 残留**~~——**2026-09-08 批 1 2.1 已修**（cmd-undo.mjs:23-24/:72 isAbsolute 分支——VSC 镜像核查 N/A——无 /undo 机制）
 - [x] ~~**memory_delete 边缘容错**~~——**2026-09-08 批 1 2.2 已修**（delete.mjs:158-159 split(":").length>2 → throw）
 - [x] ~~**MCP readMcpSection servers 非数组静默当空**~~——**2026-09-08 批 1 2.3 已修**（config.mjs:347-348 ok:false）
@@ -41,7 +41,7 @@
 - [x] ~~**ARCHITECTURE.md §19.6 引用段缺口**~~——**2026-09-08 核销**：§19.6 panel 检查工具实体已实现（subagent-panel.mjs——AGENT-LOOP.md:46/52 明记 2026-09-08 二次拆分 + agent-tools/subagent.mjs:80 panel action）——引用段待补前提消失
 - [ ] **AGENTS.md release flow 与 RELEASE.md §2 分歧**（实测 AGENTS bump→publish→commit→push vs RELEASE bump→commit→tag→push→publish——真实 doc 分歧）
 - [x] ~~**R7 AC 补"残留扫描只约束活体文案"豁免注**~~——**2026-09-08 批 2 2a-4 已落**（AGENT-LOOP R7f 在位）
-- [ ] **VS Code 根 METHODOLOGY.md 头注悬空指针**（指向本仓不存在的 docs/design/METHODOLOGY.md）——顺手修
+- [x] ~~**VS Code 根 METHODOLOGY.md 头注悬空指针**~~——**2026-09-08 核销**（批 2 2a-5 已修——VSC METHOD:5 改指 CLI 端 thincoder/docs/design/METHODOLOGY.md——含 :61/:94 同类修正轮）
 
 ## 工程模式 / 评审收敛（prompts + 机制）
 - [ ] **§18.8/§18.10 复核（AC-OA4）**：after 样本 = T（2026-09-04 05:06）后首次干净外部评审——信号密度 ≤0.70×1.86=1.30 达成——未达呈报（观察，等样本）
