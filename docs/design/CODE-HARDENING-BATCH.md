@@ -71,7 +71,7 @@ TODO 小修组的**确定性快赢项**（真未做、一行级、CLI-only 为�
 | src/agent-tools/subagent-scheduler.mjs | CLI | 2.7 normalizeFileList trimEnd | 343（>300——无档越界） | ≤±1 |
 | **src/agent-tools/subagent-scheduler.mjs** | **VSC** | **2.7 同款 trimEnd（评审 #3——VSC 镜像同洞——:99-123 normalizeFileList 字节同款）** | **~123** | **≤±1** |
 | src/agent/setup.mjs | CLI | 2.8 注记 | ~390 | ≤±1 |
-| 测试：cmd-undo 新增小测试 + delete/config/tool-args/eng-settle 对应测试文件各补（评审 #2——用例落点明确） | — | 2.1/2.2/2.3/2.4/2.7 各 1 用例 | — | ~+50 |
+| 测试：cmd-undo 新增小测试 + delete/config/tool-args 对应文件各补 + 2.7 CLI 用例（评审 #2——落点明确；**VSC 镜像 2.7 以 CLI 为单一测试锚——2026-09-08 父侧裁——双端字节同款代码由 CLI 用例锁定——VSC 补测冗余**） | — | 2.1/2.2/2.3/2.4/2.7 各 1 用例 | — | ~+50 |
 
 ## 4. 验收（批级）
 
@@ -97,3 +97,4 @@ TODO 小修组的**确定性快赢项**（真未做、一行级、CLI-only 为�
 - 2026-09-08：立项（8 项小修批——首轮 async 评审通过但 token 未注册——结算 bug 实证——设计待用）。
 - 2026-09-08：评审 #1 采纳——2.6 剔出（agent._depth 无赋值点——归状态债 #3）+ 2.7 文件修正（subagent-scheduler.mjs:38 非 file.mjs）+ 测试归属明确。
 - 2026-09-08：重评审 6 项采纳——#1 2.8 事实校准（15500→17000——CHANGELOG:10 再校准）+ 删注为首/#2 受影响表行数列（含 >300/>500 注）/ #3 2.7 VSC 镜像补（thincoder-vscode subagent-scheduler.mjs 同洞）/ #4 §5 补 L21/L25/L26-A2 + L15 移已核销桶/#5 头计数修正（1+4+2）/#6 2.1 VSC 镜像核查 N/A 记录。
+- 2026-09-08：交付后父侧裁——VSC 2.7 以 CLI 为单一测试锚（双端字节同款——CLI 用例锁定——VSC 补测冗余——设计测试行补注）。测试实增 ~205 行 vs 估 ~+50（09-07 测试清空后快层仅 7 文件——delete/config/tool-args/cmd-undo 测试文件不存在——2.2 入 memory-tool.test.mjs + 2.3/2.4/2.7 新建小测试——内容正确接受）。
