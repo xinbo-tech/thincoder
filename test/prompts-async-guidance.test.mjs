@@ -4,6 +4,9 @@
  * fail-when-unchanged 正向断言（锚句存在）+ 反向断言（旧同步引导不复发）。
  * 纯文件读取 + 字符串匹配——无 io/网络——快层直跑。
  * 双端对拍：VSC test/prompts-async-guidance.test.mjs（各端独立断言自身文本）。
+ * ADVISOR-VERDICT-TEMPLATE L50（2026-09-09）：本文件兼作 prompts 内容锚——4 档 advisor
+ * prompt（round1/2/3 + design）单值 VERDICT 裁决行指令驻留断言（AC1/AC2）+ 旧 pass
+ * 定义不复发（AC7）。AC4 双端 byte 同步以交付机械核为准（双端同锚驻留即对拍约定）。
  */
 import { test } from "node:test"
 import assert from "node:assert"
@@ -61,4 +64,39 @@ test("subagent 描述 escalate 段 + async 参数描述无同步引导", () => {
 test("advisor 描述无 async:false 顶层同步引导（§7.7.1 advisor 面复核）", () => {
   const adv = read("src/agent-tools/advisor.mjs")
   assert.doesNotMatch(adv, /Pass async:false to force the blocking review/, "advisor 描述: sync 引导残留")
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADVISOR-VERDICT-TEMPLATE L50（2026-09-09）：advisor 4 档单值裁决行指令驻留。
+// 双端同锚驻留（对拍约定）——AC4 byte 同步以交付机械核为准。
+// ─────────────────────────────────────────────────────────────────────────────
+const r1 = read("src/prompts/advisor-round1.md")
+const r2 = read("src/prompts/advisor-round2.md")
+const r3 = read("src/prompts/advisor-round3.md")
+const rd = read("src/prompts/advisor-design.md")
+const TIERS = [["advisor-round1.md", r1], ["advisor-round2.md", r2], ["advisor-round3.md", r3], ["advisor-design.md", rd]]
+
+test("AC1 各档含单值 VERDICT 裁决行指令（pass | changes-required 双值声明）", () => {
+  for (const [name, f] of TIERS) {
+    assert.ok(f.includes("`VERDICT: pass` or `VERDICT: changes-required`"), `${name}: 单值裁决行双值声明缺失`)
+    assert.ok(f.includes("VERDICT: pass") && f.includes("VERDICT: changes-required"), `${name}: 裁决值缺一`)
+  }
+})
+
+test("AC2 裁决后禁续（rounds: 尾部 Verdict Line 段+禁续句——design: 定制措辞仅允许 token 回显）", () => {
+  for (const [name, f] of TIERS.slice(0, 3)) {
+    assert.ok(f.includes("## Verdict Line"), `${name}: 尾部 Verdict Line 段缺失`)
+    assert.ok(f.includes("no further negotiation once the verdict is out"), `${name}: 裁决后禁续句缺失`)
+  }
+  assert.ok(rd.includes("After the VERDICT line, the ONLY allowed content is the token echo"), "advisor-design.md: VERDICT 后仅 token 回显句缺失")
+  assert.ok(rd.includes("the designId must be the LAST thing you output"), "advisor-design.md: designId 末字节句缺失")
+  assert.ok(rd.includes("Copy BOTH values verbatim"), "advisor-design.md: token 逐字回声句缺失")
+})
+
+test("AC7 双轨消除——旧 pass 定义不复发（旧 prose 已改写并入裁决行）", () => {
+  assert.doesNotMatch(r1, /findings do NOT block approval/, "round1: 旧 🟡 不阻断审批句残留")
+  assert.doesNotMatch(r2, /do not block approval/, "round2: 旧 (🟡\/🔵 do not block approval) 句残留")
+  assert.doesNotMatch(r3, /do not block approval/, "round3: 旧 (🟡\/🔵 do not block approval) 句残留")
+  assert.doesNotMatch(rd, /findings do NOT block approval/, "advisor-design: 旧 🟡 不阻断审批句残留")
+  assert.doesNotMatch(rd, /briefly state the design is approved/, "advisor-design: 旧 token 前散文许可句残留")
 })
