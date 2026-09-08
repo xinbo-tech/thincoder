@@ -266,12 +266,22 @@ export const subagentTool = {
     const askSubagentContinue = (e) => {
       if (!ctx.onPermissionRequest) return Promise.resolve(false)
       const key = relayPrefix.slice(0, -1)
-      const ask = () => {
-        // SYNC-CANCEL v2（模态 deny——用户裁）：⏹ 后 entry.stopped——continue 问询
-        // 不弹模态直接拒绝（_permQueue 排队 ask 到达时查 stopped 旗标——子代理随即在
-        // 下个 abort 检出点解绕——不卡父回合）
-        if (parent._syncChildAborts?.get(key)?.stopped) return Promise.resolve(false)
-        return ctx.onPermissionRequest("continue", { turns: e.turn, agent: key })
+      const ask = async () => {
+        // SYNC-CANCEL v2（模态 deny——用户裁）：⏹ 后 entry.stopped——不再弹模态。
+        // ⚠ 不能直接 resolve(false) 走 onDeclined 降级（TURN_CAP partial——child 已撞
+        // cap——runWithContinue 的 decline 是正常 return——永远到不了 abort 检出点——
+        // stopped 折叠语义丢失：无 ⟦ev⟧stopped/无 STOPPED_MARK——块冻结标 done 而非
+        // stopped——评审 🟡#2）。stopped 分支改抛 AbortError——runWithContinue 只捕
+        // ContinueError——原样上抛 → 阻塞 catch 三分支②折叠（"child 随即在 abort 检出点
+        // 解绕折叠"——AGENT-LOOP §7.2 机制文）。abort 恒已在途（stopped 只由
+        // cancelSyncChild 与 ctrl.abort 同时置位）——信号语义真实。
+        if (parent._syncChildAborts?.get(key)?.stopped) throw new DOMException("Aborted", "AbortError")
+        const go = await ctx.onPermissionRequest("continue", { turns: e.turn, agent: key })
+        // ⏹ deny（denyModalForOwner resolve(false)）与用户按 n 同形——旗标区分：
+        // stopped → 同上抛（折叠——abort 先于 deny 已在途）；普通 n → false 走 decline
+        // （现状——cap partial 报告）。
+        if (parent._syncChildAborts?.get(key)?.stopped) throw new DOMException("Aborted", "AbortError")
+        return go
       }
       return enqueueAsk(parent, "_permQueue", ask)
     }
