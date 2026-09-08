@@ -32,14 +32,14 @@
 - [x] ~~**轨迹目录清理策略补充**~~——**2026-09-08 用户裁不要**（D-TR10 24h 保留时间窗已隐含总量有界——保留期可配——无需按天/会话额外 GC）
 
 ## 模块拆分 · 文档引用清扫（父侧，逐文件批）
-- [ ] **D-T1.8 文档引用修正（剩余清单）**：ENGINEERING-MODE.md ~20 处 + TOOLS.md:93/:131 + TUI.md:4/:331
+- [x] ~~**D-T1.8 文档引用修正（剩余清单）**~~——**2026-09-09 核销**（DOC-SWEEP——CLI 34cbf3b + VSC 820947e——勘察收敛：~20 锚仅 ENGINEERING-MODE 4 处真残留（EM-1~4 已清）其余 15 锚已修/超界/归档豁免——+ release flow/模块图/CAPABILITY_GAP/8 批档状态——A-E 交付 F 本行核销）
   - TUI-INPUT-BOX.md:151/:169/:209/:233 + CHECKPOINT.md:124/:137 + MEMORY.md:177
   - CONTEXT-COMPACTION.md:247/:342 + SESSION.md:166/:212 + PROMPT-DECOUPLING.md:42/:53/:84
   - SEND-STALL:96 + TOOL-OUTPUT-LIMITS:50-53/:61-62/:104 + ADVISOR-CONVERGENCE:176 + VERIFY-DOCONLY:34
   - AGENT-PARAMS:61-2/:71 + COVERAGE-GAPS:11/:19/:32/:58-9 + ENG-TOKEN-BINDING:13-4 + ARCHITECTURE:255 + MCP:3
 - [x] ~~**ARCHITECTURE.md:596 §20 残留 test/subagent.test.mjs 引用**~~——**2026-09-08 核销**：ARCHITECTURE.md 已缩至 84 行指针档（:596 不存在），docs 全树 grep subagent.test.mjs 0 命中——前提已死
 - [x] ~~**ARCHITECTURE.md §19.6 引用段缺口**~~——**2026-09-08 核销**：§19.6 panel 检查工具实体已实现（subagent-panel.mjs——AGENT-LOOP.md:46/52 明记 2026-09-08 二次拆分 + agent-tools/subagent.mjs:80 panel action）——引用段待补前提消失
-- [ ] **AGENTS.md release flow 与 RELEASE.md §2 分歧**（实测 AGENTS bump→publish→commit→push vs RELEASE bump→commit→tag→push→publish——真实 doc 分歧）
+- [x] ~~**AGENTS.md release flow 与 RELEASE.md §2 分歧**~~——**2026-09-09 核销**（DOC-SWEEP B 项——AGENTS.md:29 已改 RELEASE §2 序：bump→commit→tag→push 双远端→publish 最后——CLI 34cbf3b）
 - [x] ~~**R7 AC 补"残留扫描只约束活体文案"豁免注**~~——**2026-09-08 批 2 2a-4 已落**（AGENT-LOOP R7f 在位）
 - [x] ~~**VS Code 根 METHODOLOGY.md 头注悬空指针**~~——**2026-09-08 核销**（批 2 2a-5 已修——VSC METHOD:5 改指 CLI 端 thincoder/docs/design/METHODOLOGY.md——含 :61/:94 同类修正轮）
 
