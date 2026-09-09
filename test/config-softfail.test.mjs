@@ -98,3 +98,16 @@ test("AC-4 级联清理：removeProviderEntry 删渠道清悬挂引用——下�
   assert.deepEqual(loadAgentSettings().consultModels, [{ provider: "deepseek", model: "deepseek-v4-pro" }], "读面无悬挂无过滤")
   assert.match(removeProviderEntry("deepseek"), /active provider cannot be removed/, "active 渠道保护回归")
 })
+
+test("F-1 hub re-export 面：consult 符号经 config-io 同源 re-export（hub 断链 = import 响亮失败）", async () => {
+  // BATCH-3-STRUCTURE F-1（config-io 预拆——config-consult.mjs leaf）：调用方 import 面
+  // 不变——四符号仍从 config-io 导出且同源（re-export 非影子实现）。hub/leaf 断链时静态
+  // import 方在模块装载期即响亮失败（"does not provide an export"）——本文件顶部 import
+  // 即该错误行守卫；此处锁同源面。
+  const hub = await import("../src/config-io.mjs")
+  const leaf = await import("../src/config-consult.mjs")
+  for (const name of ["sanitizeConsultModels", "warnConsultModelsFiltered", "loadConsultPool", "cascadeRemoveProvider"]) {
+    assert.equal(typeof hub[name], "function", `config-io 仍导出 ${name}（hub API 面不变）`)
+    assert.equal(hub[name], leaf[name], `${name} 同源 re-export——config-io 非影子实现`)
+  }
+})
