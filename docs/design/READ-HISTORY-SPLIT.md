@@ -17,7 +17,11 @@
 ## 设计（核实勘察骨架——功能段分类照勘察——照做勿自行解释）
 
 ### 功能段分类（现 read-history.mjs 382 行锚）
-① 文件头文档块 :1-41 ② 常量+错误文案 :43-61 ③ 纯消息助手（messageText/truncateContent/toolCallName/parseTs/toEntry）:63-113 ④ 过滤/窗口 queryMessages :115-140 ⑤ 行扫护栏 scanLinesSync :142-169 ⑥ 会话文件装载 loadSessionHistory :171-199 ⑦ **发现面 listCwdSessions + slotMeta/tidyCwd/sha1hex :201-307（~107 行——最大单段——最自然分文件候选）** ⑧ 工具导出+execute :309-381
+① 文件头文档块 :1-41 ② 常量+错误文案 :43-61 ③ 纯消息助手
+（messageText/truncateContent/toolCallName/parseTs/toEntry）:63-113 ④ 过滤/窗口 queryMessages :115-140
+⑤ 行扫护栏 scanLinesSync :142-169 ⑥ 会话文件装载 loadSessionHistory :171-199
+⑦ **发现面 listCwdSessions + slotMeta/tidyCwd/sha1hex :201-307（~107 行——最大单段——最自然分文件
+候选）** ⑧ 工具导出+execute :309-381
 
 ### 文件划分
 1. **read-history.mjs（核心——382 → ~280）保留**：头文档 + 常量错误 + 消息助手（③）+ queryMessages + scanLinesSync + loadSessionHistory + 工具导出 execute + import 发现面 + re-export（若外部消费）
