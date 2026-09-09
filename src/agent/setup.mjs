@@ -84,18 +84,18 @@ export async function prepareRun(agent, input, callbacks, {
   agent.history = repairHistory(agent.history)
 
   if (!resume) {
-      // Git context: branch, recent commits, uncommitted changes
-      // GIT-ASYNC L21：collectGitContext → async（3×execFile 并行 + 失败冷却）——await
-      if (depth === 0) {
-        const gitCtx = await collectGitContext(agent.cwd)
-        if (gitCtx) {
-          agent.history.push({
-            role: "user",
-            content: `[System reminder: git context:\n${escapeXml(gitCtx)}]`,
-            transient: true,
-          })
-        }
+    // Git context: branch, recent commits, uncommitted changes
+    // GIT-ASYNC L21：collectGitContext → async（3×execFile 并行 + 失败冷却）——await
+    if (depth === 0) {
+      const gitCtx = await collectGitContext(agent.cwd)
+      if (gitCtx) {
+        agent.history.push({
+          role: "user",
+          content: `[System reminder: git context:\n${escapeXml(gitCtx)}]`,
+          transient: true,
+        })
       }
+    }
     if (depth === 0) {
       const tree = listWorkDir(agent.cwd)
       const platform = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] ?? process.platform

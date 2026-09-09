@@ -11,7 +11,7 @@
  *    yes；无恢复事件恒 no（空历史槽切换 / sessionStart 单值——旧 _sessionStart != null
  *    推断的两条伪触发向量——均不武装——F3 回归锚）；
  *  - prepareRun 注入句解耦（AC4）：_processRestartPending（bin 启动 resume 路径设）→
- *    _processRestartPending）→ 发 process restarted 句一次 + 清；随后切槽（applySession 再武装 _envResumed、不设
+ *    发 process restarted 句一次 + 清；随后切槽（applySession 再武装 _envResumed、不设
  *    _processRestartPending）→ resumed:yes 无句；进程内多次切槽句不再发；全新会话
  *    turn 2（_sessionStart 已播种）不发句、恒 resumed:no。
  *  - GIT-ASYNC L21（2026-09-09）：composeGitContext 三形态单测（AC-4 字节 parity——
