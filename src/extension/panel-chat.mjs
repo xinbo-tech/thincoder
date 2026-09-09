@@ -2,11 +2,12 @@
  * panel-chat.mjs — ChatPanel chat turn runner (split out of chat-panel.mjs).
  * Resolves the provider, loads the dual history lines, runs the agent with
  * streaming callbacks, persists the lines on complete.
- * §17 (2026-09-02，AGENT-LOOP.md §17 D-S1..S9): a turn ending with the async pool
- * still live enters the suspension session (suspension.mjs) — input stays usable,
- * settles drive auto-turn digests (manual tier organize-only / AUTO full semantics),
- * pool-empty + no queued input exits naturally back to idle. Digests are plain
- * runPanelChat turns with autoTurn: true inside the session.
+ * §17 (2026-09-02，AGENT-LOOP.md §7 D-S1..S9): a turn ending with the async pool
+ * still live enters the suspension session (suspension.mjs) — susp-idle input stays
+ * usable (fills the single pendingInput slot + wake), busy (running incl. digest)
+ * input is disabled (INPUT-LOCK-ASYNC C' — 2026-09-09 — routeUserTurn rejects, no
+ * queue), settles drive auto-turn digests (manual tier organize-only / AUTO full
+ * semantics), pool-empty + no queued input exits naturally back to idle.
  * §17 偏差修复（2026-09-02 #2/#3）: 挂起入口在 finally 先于任何释放点登记（释放窗口——
  * 关闭 generateTitle 释放窗口的并发新回合）；控制器重建全部登记（_turnControllers →
  * 会话统一 abort）。
@@ -31,7 +32,7 @@ import { traceStop } from "./stop-trace.mjs"
 import { resolveReasoningMode } from "./reasoning-mode.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd } from "./panel-messages.mjs"
-import { suspensionSession, poolLive, popQueuedTurn, buildMergedMessage, mergeTransportFor, backgroundStatus } from "./suspension.mjs"
+import { suspensionSession, poolLive, backgroundStatus } from "./suspension.mjs"
 import { logEvent, errText } from "../log.mjs"
 // 2026-09-05 实践轮 module-split：回调工厂迁 panel-callbacks.mjs（webview 桥接面独立决策）
 import { buildPanelCallbacks, makeAskInPanel } from "./panel-callbacks.mjs"
@@ -279,11 +280,11 @@ async function runPanelChatImpl(panel, opts = {}) {
   } finally {
     traceStop("finally: turn complete — UI released", panel._stopClickTs)
     panel._stopClickTs = null
-    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2——A2 修订）：挂起决策先于任何释放点
-    // 登记——归位与回合尾会话接管之间的异步段内消息不得开并发新回合（从磁盘重载 lines
-    // 孤儿化池 + abort 池 controller——AC-S2）。窗口 = _turnState==="susp" 且 _susp 空——
-    // 期间 _chat 入队 _suspQueue 由函数尾会话入口接管（零丢失）。A2：标题已移入下方
-    // 归位前（running——routeUserTurn 直入队同队列）——标题不再构成此窗口。
+    // §17 D-S2 释放窗口守卫（2026-09-02 偏差修复 #2——A2 + INPUT-LOCK-ASYNC 修订）：挂起
+    // 决策先于任何释放点登记——归位与回合尾会话接管之间的异步段内消息不得开并发新回合
+    // （从磁盘重载 lines 孤儿化池 + abort 池 controller——AC-S2）。窗口 = _turnState==="susp"
+    // 且 _susp 空——A2 标题移入下方归位前（running——routeUserTurn 拒收——禁排队）——标题
+    // 不再构成此窗口；会话建立与 susp 广播同同步续段（下方块）——入队容器已废弃。
     // C2（F-C2a/b——忙态归位 + 单一广播）：会话内回合（digest/会话用户回合）尾 → susp
     // （先于 loading:false 广播——webview Stop 派生在 digest 间不闪烁）；普通回合尾池仍
     // live → susp（释放窗口——同上）；无池无会话 → idle。计数随广播：会话内回合尾带
@@ -299,7 +300,7 @@ async function runPanelChatImpl(panel, opts = {}) {
       console.error("[chat-panel] save in finally failed:", saveErr.message)
     }
     // A2（SESSION-FLOW-A F-A2——权威正文 SESSION.md §7）：标题上移至此（归位前——
-    // _turnState 仍 running——窗口 = busy：Stop 显 + 路由守卫排队）；错误不外抛——
+    // _turnState 仍 running——窗口 = busy：Stop 显 + 路由守卫拒收）；错误不外抛——
     // 归位恒执行（评审 #2）。
     try {
       if (isFirstMessage) await panel._generateTitle(turnSlot)
@@ -317,12 +318,13 @@ async function runPanelChatImpl(panel, opts = {}) {
     panel._panel?.webview.postMessage({ type: "loading", loading: false })
   }
 
-  // §17 D-S2 释放窗口接管（偏差修复 #2——A2 修订）：finally 归位 susp 后——标题期
-  // （routeUserTurn 直入队）与释放窗口期（_chat 入队）的 _suspQueue 消息在此消费：
-  // 池 live + controller 未中止 → 带队列进挂起会话（用户输入优先于 digest——D-S5）；
-  // 否则普通回合兜底——入队消息零丢失（AC-S2）。
+  // §17 D-S2 释放窗口接管（偏差修复 #2——A2 修订 + INPUT-LOCK-ASYNC 2026-09-09）：标题
+  // 已移 finally 归位前（running——routeUserTurn 拒收）——入队容器（_suspQueue）随排队
+  // 机制废弃——释放窗口 = 会话建立的同一同步续段（susp 广播与 suspensionSession 间零
+  // await——无事件窗口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起
+  // 会话（用户输入优先于 digest——D-S5）；否则忙态归位 idle（防 susp 悬空——Stop 派生/
+  // 路由守卫以 idle 收敛）。
   if (!skipSession && !susp && !panel._susp && panel._turnState === "susp") {
-    const queued = (panel._suspQueue ?? []).splice(0)
     const enter = !skipSession && !susp && !panel._susp && panel._panel
       && poolLive(history) && !panel._abortController?.signal.aborted
     if (enter) {
@@ -341,39 +343,12 @@ async function runPanelChatImpl(panel, opts = {}) {
         //（settle 落盘后 digest 可见）。suspension.mjs 不再存 susp.engState。
         cwd,
         runTurn,
-        pendingInput: queued,
       })
       // 会话自然退出（驱动 finally）已把忙态置 idle——无额外处理。
-    } else if (queued.length > 0 && panel._panel) {
-      // §24 D-24c（R15）：释放窗口队列兜底同样攒批合并（回合空闲——≥2 可合批段合成一条）
-      while (queued.length > 0 && !panel._susp && panel._panel) {
-        const next = popQueuedTurn(queued)
-        const q = next.items ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) } : next.item
-        await runPanelChat(panel, { ...q })
-      }
     } else {
-      // 无会话（池已死 / 已中止）且无排队消息——释放窗口关闭：忙态回 idle
-      // （防 susp 悬空——Stop 派生/路由守卫以 idle 收敛）。
+      // 无会话（池已死 / 已中止）——释放窗口关闭：忙态回 idle（防 susp 悬空）。
       panel._publishTurnState("idle")
     }
-  }
-
-  // 2026-09-05 人机并行对齐（CLI agent-turn 尾 state.queue 消费——实践验证模式）：
-  // processing 期间排队的消息（panel-messages userMessage → _suspQueue——任何回合中
-  // 都可输入排队）在此回合尾顺序消费；池 live 时上方挂起入口已领走队列（pendingInput
-  // 由挂起会话调度——D-S5 用户输入优先），此处兜底池空/无会话路径——零滞留零丢失。
-  // 与释放窗口块互斥（上方块消费后队列已空；释放窗口期 _chat 排队项也在上方 queued
-  // splice 中——本循环只接消费后新增/未处理项）。
-  // C2（F-C2a——队列尾排空守卫以状态机表达）：回合执行中（running）不排——消化期入队的
-  // 消息由该 digest 尾（会话内回合 finally 已回 susp、会话仍活——与旧 !_turnActive &&
-  // !_suspPending 同真值）或会话退出后（idle）顺序消费；释放窗口（susp 且会话未建）期
-  // _chat 排队项归上方块——不在此排。
-  while ((panel._suspQueue?.length ?? 0) > 0
-      && panel._turnState !== "running"
-      && !(panel._turnState === "susp" && !panel._susp)) {
-    const next = popQueuedTurn(panel._suspQueue)
-    const q = next.items ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) } : next.item
-    await runPanelChat(panel, { ...q })
   }
 }
 

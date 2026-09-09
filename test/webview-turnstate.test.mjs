@@ -5,6 +5,9 @@
  * A3（SESSION-FLOW-A——2026-09-09）→ F-6（SESSION-ACTIVITY-REVISED——2026-09-09）：
  * ③ 尾段断言再翻转——Stop 派生由 state≠idle 收窄为 state==="running"（评审 #1 定论：
  * susp = 纯后台池跑——主空闲——不显 Stop——无全停——子代理停止靠活动区每块 ⏹）。
+ * INPUT-LOCK（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）：⑤ 锁派生组——
+ * busy（running 含 digest——单一判据）锁输入（readOnly + busy 占位符）/susp·idle 解锁——
+ * Ctrl+I 中断模态豁免（ctx._interruptMode——注入通道保留）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
@@ -41,7 +44,8 @@ async function loadWebview() {
   const loading = await import("../webview/loading.js")
   const statusBar = await import("../webview/status-bar.js")
   const panels = await import("../webview/panels.js")
-  return { S: state.S, ctx: state.ctx, setLoading: loading.setLoading, renderStatusBar: statusBar.renderStatusBar, ...panels }
+  const i18n = await import("../webview/i18n.js")
+  return { S: state.S, ctx: state.ctx, t: i18n.t, setLoading: loading.setLoading, applyBusyLock: loading.applyBusyLock, renderStatusBar: statusBar.renderStatusBar, ...panels }
 }
 
 const statusLine = () => document.getElementById("status-line").innerHTML
@@ -54,6 +58,8 @@ function resetBusy({ S, ctx }) {
   S._suspCounts = null
   S._phase = null
   ctx.isRunning = false
+  ctx._interruptMode = false
+  ctx.inputEl.readOnly = false
   document.getElementById("abort-btn").style.display = "none"
   document.getElementById("status-line").innerHTML = ""
 }
@@ -216,4 +222,54 @@ test("④ _suspCounts 在 re-post 间不陈旧（AC-C2e）：digest 间重发/se
   // 会话退出清空（suspension 终态）
   handleSuspensionMessage({ type: "suspension", active: false })
   assert.equal(S._suspCounts, null, "会话退出计数清空")
+})
+
+// ─── ⑤ INPUT-LOCK 锁派生（C'——AC-1/AC-2/AC-6：running 锁输入——susp/idle 解锁）───
+
+test("⑤ busy 锁输入（INPUT-LOCK-ASYNC）：running（普通回合/digest 同态）→ 输入锁 readOnly + busy 占位符——loading 交替不解除；susp/idle 解锁 + 默认占位符；Ctrl+I 中断模态豁免（applyBusyLock 读 ctx._interruptMode——注入通道不误伤）", async () => {
+  const { S, ctx, t, setLoading, applyBusyLock, handleTurnStateMessage } = await loadWebview()
+  resetBusy({ S, ctx })
+  const input = ctx.inputEl
+
+  // 回合/digest（running——单一判据）：loading:true 锁输入
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  setLoading(ctx, true)
+  assert.equal(input.readOnly, true, "running → 输入锁（readOnly）")
+  assert.equal(input.placeholder, t("input.busyPlaceholder"), "running → busy 占位符文案")
+  // loading 交替不解除锁（running 派生——与 Stop 同源同派生）
+  setLoading(ctx, false)
+  assert.equal(input.readOnly, true, "running + loading:false → 仍锁（running 派生——防 digest 间闪烁）")
+
+  // 挂起会话（susp——纯后台池跑——主空闲）：输入开放（AC-2——消息填单槽不排队）
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  setLoading(ctx, false)
+  assert.equal(input.readOnly, false, "susp → 解锁（挂起空闲输入开放）")
+  assert.equal(input.placeholder, t("input.placeholder"), "susp → 默认占位符恢复")
+
+  // digest 执行中（susp 会话内回合 → running）：再次锁（digest 属 running——评审 #3 实证）
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  setLoading(ctx, true)
+  assert.equal(input.readOnly, true, "digest（running）→ 锁输入")
+  // digest 尾 → 回 susp：解锁
+  handleTurnStateMessage({ type: "turnState", state: "susp" })
+  setLoading(ctx, false)
+  assert.equal(input.readOnly, false, "digest 尾回 susp → 解锁")
+
+  // idle：解锁（会话退出/普通回合尾）
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  setLoading(ctx, false)
+  assert.equal(input.readOnly, false, "idle → 解锁")
+
+  // Ctrl+I 中断模态豁免（红线——注入通道在门禁前）：running + 模态激活 → 解锁可输入；
+  // 模态退出（ctx._interruptMode 复位）→ applyBusyLock 重派生回锁
+  handleTurnStateMessage({ type: "turnState", state: "running" })
+  ctx._interruptMode = true
+  applyBusyLock()
+  assert.equal(input.readOnly, false, "中断模态激活 → 豁免锁（注入框可输入）")
+  ctx._interruptMode = false
+  applyBusyLock()
+  assert.equal(input.readOnly, true, "模态退出 → 重派生回锁（busy 仍在）")
+  handleTurnStateMessage({ type: "turnState", state: "idle" })
+  applyBusyLock()
+  assert.equal(input.readOnly, false, "idle → 终态解锁")
 })

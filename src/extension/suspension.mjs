@@ -1,9 +1,10 @@
 /**
- * suspension.mjs — §17 挂起回合会话驱动（AGENT-LOOP.md §17 D-S2/D-S9，VS Code 对齐）。
+ * suspension.mjs — §17 挂起回合会话驱动（AGENT-LOOP.md §7 D-S2/D-S9，VS Code 对齐）。
  * 挂起态是交互层状态：一个用户回合结束后后台 async 池仍 live（running/queued/未注入）
- * → 不阻塞回合，进入挂起会话——输入放开（新消息经 panel._chat 排队 + 唤醒）、settle
- * 事件驱动 auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理
- * 输入 → 补发冻结自然退出。状态机行表见 AGENT-LOOP.md §17 D-S9。
+ * → 不阻塞回合，进入挂起会话——挂起空闲输入开放（新消息经 panel._chat 填单槽 + 唤醒）、
+ * busy（running 含 digest）输入禁用（INPUT-LOCK-ASYNC C'——2026-09-09——routeUserTurn
+ * 拒收——无排队）、settle 事件驱动 auto-turn 消化（手动档 organize-only / AUTO 档全语
+ * 义）、池空 + 无待处理输入 → 补发冻结自然退出。状态机行表见 AGENT-LOOP.md §7。
  *
  * 与 CLI 的结构差异（同语义移植）：CLI 的池/pending/_suspended 挂 agent 对象（跨 run
  * 存活）；VS Code 的 agent 对象 per-run 重建——池（_asyncSubagents）、pending
@@ -18,75 +19,10 @@ import { injectPendingAsync, parkAsyncPending } from "../agent-tools/async-settl
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs" // §25 R17：会诊会话中止清理（挂起活度见 poolLive 内联读）
 import { logEvent } from "../log.mjs"
 
-// ═══════════════════════════════════════════════════════════════════════════
-// §24 D-24c（AGENT-LOOP.md §24——R15 排队用户指令合并——2026-09-06）
-// ═══════════════════════════════════════════════════════════════════════════
-// 常量逐字一致（双端同值——§22 D-Q3 先例）：单批 ≤8 条且合并注入 ≤2000 字符。
-export const MAX_MERGE_ITEMS = 8 // 单批合并上限（条）
-export const MAX_MERGE_CHARS = 2000 // 合并注入上限（字符——超限截批先行）
-
-/** 队列消息形态：{ text, modelOverride, reasoning, providerName, images }（panel 排队项）。
- *  可合批判据：text 非空 ≤2000 字符且无图片附件（图片属于单条消息——合并会丢附件边界
- *  ——逐条直发；/cmd 即时命令本端不存在（webview 命令走 msg.type 按钮路由，text 队列零
- *  命令项）——无需排除类）。 */
-function mergeable(q) {
-  const t = q?.text
-  return typeof t === "string" && t.length > 0 && t.length <= MAX_MERGE_CHARS
-    && !(Array.isArray(q.images) && q.images.length > 0)
-}
-
-/**
- * §24 D-24c 合并注入文案（模型可见——编号列出逐条——形态同 T-S11 先例的编号列表）：
- *  "你排队了 N 条消息：1. … 2. …——一次处理" 的英文对应。单批数量/字符受上方常量约束。
- */
-export function buildMergedMessage(items) {
-  const n = items.length
-  const body = items.map((q, i) => `${i + 1}. ${q.text}`).join("\n")
-  return `[System reminder: you queued ${n} messages — handle them all in this one turn:\n${body}]`
-}
-
-/**
- * §24 D-24c 消费取数（纯函数——driver 与 panel-chat 兜底循环共用）：FIFO 队列取下一回合
- *  载荷。规则：
- *  - 队首不可合批（超长/带图/空）→ 直发单条（shift 返回 { item }）——保序；
- *  - 否则取**队首连续可合批段**：段长 ≥2 且合并注入 ≤2000 字符且 ≤8 条 → 合并
- *    （返回 { items }——调用方 shift 前 n 条后以合并文案开回合；余下留待下批——
- *    不丢不截断单条）；段长 1 → 直发单条；
- *  - 合并注入超 2000 → 截批到最长前缀（保序）；空队 → null。
- *  合并回合的传输参数（model/reasoning/provider）取段内最后一条（最近发送意图——
- *  面板输入框状态即最新）。
- */
-export function popQueuedTurn(queue) {
-  if (!Array.isArray(queue) || queue.length === 0) return null
-  const head = queue[0]
-  if (!mergeable(head)) {
-    queue.shift()
-    return { item: head }
-  }
-  // 连续可合批段（遇不可合批即断段——保序：断点之后的不越前合并）
-  const run = [head]
-  for (let i = 1; i < queue.length; i++) {
-    if (!mergeable(queue[i])) break
-    run.push(queue[i])
-    if (run.length >= MAX_MERGE_ITEMS) break // 8 条封顶——超出留待下批（截批先行）
-  }
-  if (run.length < 2) {
-    queue.shift()
-    return { item: head }
-  }
-  // 字符上限：取最长前缀（含标题/编号开销）≤2000——超限截批（余下留待下批）
-  let take = run.length
-  for (;;) {
-    const merged = buildMergedMessage(run.slice(0, take))
-    if (merged.length <= MAX_MERGE_CHARS || take <= 1) break
-    take--
-  }
-  const items = run.slice(0, take)
-  queue.splice(0, items.length)
-  if (items.length === 1) return { item: items[0] }
-  return { items }
-}
-
+// INPUT-LOCK-ASYNC（C'——2026-09-09，设计 thincoder/docs/design/INPUT-LOCK-ASYNC.md——双端）：
+// R15 排队用户指令合并整批废弃（攒批取数/合并文案/上限常量全删）——busy（_turnState
+// running 含 digest）输入禁用（routeUserTurn 拒收 + loading.js 锁）——挂起空闲消息走
+// pendingInput 单槽（至多一条待交接——单消息逐发不攒批）。废弃记录见 AGENT-LOOP.md §7。
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity；
  *  §24 D-24b：两池合计——advisor 独立池同口径；D2 pending 单容器——四族停靠同一
  *  _pendingAsyncResults——pendingN = 单容器长度） */
@@ -207,7 +143,8 @@ function waitForSettleOrWake(panel, susp) {
 /**
  * §17 挂起会话驱动（D-S9 行表；由 runPanelChat 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
- *   用户消息 → pendingInput 队列（digest 运行中排队，D-S5）——用户输入优先于 digest；
+ *   挂起空闲用户消息 → pendingInput 单槽（busy 含 digest 提交拒收——INPUT-LOCK-ASYNC）
+ *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
  * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → reclaimDigestedBlocks 对该
@@ -242,11 +179,10 @@ export async function suspensionSession(panel, entry) {
     distillSlot: entry.distillSlot,
     lines,
     abort: panel._abortController ?? new AbortController(),
-    // entry.pendingInput = 释放窗口入队的消息（panel-chat 回合尾移交——2026-09-02 偏差修复 #2；
-    // 2026-09-09 A2：标题已上移 finally 归位前——标题期（running）消息经 routeUserTurn 直入
-    // panel._suspQueue——此处一并接管；与 _chat 直接入队的 susp.pendingInput 同队列同优先级
-    // ——用户输入优先于 digest，D-S5）。
-    pendingInput: [...(entry.pendingInput ?? [])],
+    // pendingInput = 挂起空闲期消息单槽（INPUT-LOCK-ASYNC——busy（running 含 digest/标题
+    // 窗口）输入禁用——routeUserTurn 拒收——digest 运行期不再有入队——挂起纯等待期消息
+    // 经 panel._chat 直推本数组——driver 消费清槽（用户输入优先于 digest，D-S5）。
+    pendingInput: [],
     // abortControllers = 进入回合（含 Ctrl+I / ContinueError 续跑重建）的全部 controller 快照
     // ——面板销毁统一中止（dispose 路径——2026-09-02 偏差修复 #3：会话句柄只取最后一个
     // controller 会让持旧 controller signal 的池 children 逃逸中止）。快照后清空：会话内回合
@@ -266,15 +202,12 @@ export async function suspensionSession(panel, entry) {
   try {
     while (!susp.aborted && !susp.abort.signal.aborted) {
       sweepSettledToPending(history)
-      // 1. 用户输入优先（D-S5）：pendingInput 队列（digest 运行中排队的消息）。
-      // §24 D-24c（R15——2026-09-06）：消费点攒批合并——长度 ≥2 的可合批段合成一条
-      // 注入（编号列出逐条——模型单回合处理全部）；超长/带图单条直发保序；截批余量
-      // 留队由下轮接走（不丢不截断单条）。
+      // 1. 用户输入优先（D-S5）：pendingInput 单槽——INPUT-LOCK-ASYNC（C'——2026-09-09）：
+      //    busy（running 含 digest）输入禁用（routeUserTurn 拒收 + loading.js 锁）——消息只
+      //   可能落在挂起空闲（driver 纯等待期——唤醒即消费）——至多一条待交接——消费清槽即
+      //   开新回合。R15 攒批已废弃（单消息逐发——无取数计划无合并）。
       if (susp.pendingInput.length > 0) {
-        const next = popQueuedTurn(susp.pendingInput)
-        const q = next.items
-          ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) }
-          : next.item
+        const q = susp.pendingInput.shift()
         // §17.5.5：run 首行会消费当时 pending——快照本轮消化者（用户回合同样注入）。
         // D2 pending 单容器同快照（role 分发——漏快照会让 advisor 行的 digest-done 回收
         // 延迟到会话退出冻结——review fix）；会诊条目无 webview 行——不进。
@@ -347,36 +280,18 @@ export async function suspensionSession(panel, entry) {
     // 折叠——CLI freezeAllSubTasks 的中断语义：无 digest 消费、不留悬空 live 块）。
     postSuspensionEnd(panel, { freeze: true })
     panel._refreshStatus?.()
-    // 排队输入兜底（2026-09-02 code review round2 #2-VS Code 偏差修复）：会话退出时
-    // pendingInput 残余不得静默丢弃——输入框已清空 + 用户气泡已上屏（webview send.js
-    // 先 addUser 再 postMessage——用户视为已发送）。两条路径同样以普通回合执行：
-    // - 自然退出竞态：池空退出的瞬间 _chat 入队（loop 检查后入队）——池已空直接执行；
-    // - 中止：digest 运行期排队、abort 前未被 loop 消费的消息——abort 分支已清池 →
-    //   以普通回合执行（与释放窗口队列的中止兜底同语义——panel-chat「Stop 已中止 →
-    //   队列消息普通回合兜底执行」，入队消息零丢失 AC-S2；Stop 中止的是后台池与消化轮，
-    //   不撤销用户已发送的回合请求——气泡不得无响应悬挂）。
-    // 面板已死（dispose）→ 无渲染目标，消息随会话终止。
-    if (panel._panel) {
-      while (susp.pendingInput.length > 0) {
-        const next = popQueuedTurn(susp.pendingInput)
-        const q = next.items
-          ? { text: buildMergedMessage(next.items), ...mergeTransportFor(next.items) }
-          : next.item
-        try { await entry.runTurn(q) } catch { /* surfaced by the turn runner */ }
+      // 排队输入兜底（2026-09-02 code review round2 #2-VS Code 偏差修复 + INPUT-LOCK 单槽化
+      // 2026-09-09）：会话退出时 pendingInput 单槽残余不得静默丢弃——输入框已清空 + 用户气
+      // 泡已上屏（webview send.js 先 addUser 再 postMessage——用户视为已发送）。中止路径以
+      // 普通回合执行（零丢失 AC-S2——中止清的是后台池与消化轮，不撤销用户已发送的回合请
+      // 求——气泡不得无响应悬挂）。面板已死（dispose）→ 无渲染目标，消息随会话终止。
+      if (panel._panel) {
+        while (susp.pendingInput.length > 0) {
+          const q = susp.pendingInput.shift()
+          try { await entry.runTurn(q) } catch { /* surfaced by the turn runner */ }
+        }
       }
-    }
   }
-}
-
-/** 合并回合的传输参数（模型/推理档/provider）取段内最后一条（最近发送意图）。
- *  导出——panel-chat 兜底循环同用（driver 与普通回合间消费点共享）。 */
-export function mergeTransportFor(items) {
-  const last = items[items.length - 1] ?? {}
-  const out = {}
-  for (const k of ["modelOverride", "reasoning", "providerName"]) {
-    if (last[k] !== undefined && last[k] !== null && last[k] !== "") out[k] = last[k]
-  }
-  return out
 }
 
 /** 挂起态通知（状态行文本由 webview 按 locale 组合——host 只发计数）。

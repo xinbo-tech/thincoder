@@ -468,8 +468,6 @@
 }
 
 
-.msg-queued { color: var(--muted, #888); font-style: italic; font-size: 0.85em; margin: 6px 8px; } /* 2026-09-05：异步子代理执行中消息排队提示（不打断） */
-
 /* Subagent/consultation activity blocks — same content height as advisor reviews
    (2026-09-05 用户设定：advisor/subagent 均 100px——内容完整、内部滚动), dimmer title —
    collapsible, reopenable, height 0 when closed. */

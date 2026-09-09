@@ -66,8 +66,8 @@
 | `src/agent-tools/subagent-escalate-async.mjs` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
 | `src/agent-tools/advisor-async.mjs` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=4——可配 agent.poolLimits.advisor——同 scope 守卫）+ launchAsyncAdvisor |
 | `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
-| `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))` |
-| `src/extension/suspension.mjs` | 挂起会话驱动：waitForSettleOrWake（`panel._suspWake` 单槽）、排队合并（MAX_MERGE_ITEMS=8/MAX_MERGE_CHARS=2000） |
+| `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))`；INPUT-LOCK-ASYNC（C'——2026-09-09）：busy 拒收分流（_chat 单槽 pendingInput——挂起空闲） |
+| `src/extension/suspension.mjs` | 挂起会话驱动：waitForSettleOrWake（`panel._suspWake` 单槽）、单槽 pendingInput 消费（R15 排队合并已废——INPUT-LOCK-ASYNC——2026-09-09） |
 | `webview/activity.js` / `panels.js` | 子代理活动块固定于活动区 `#subagent-activity`（messages 与输入之间——live 固定可见——SESSION-ACTIVITY-REVISED 回归）+ 冻结落流锚移入 #messages（尾推/settle 锚插 digest 报告前）；panels.js 行面板已撤（簿记 map 供块 meta 水合）+ goal/task 面板 + 桥路由 |
 
 模块拆分批：subagent-async.mjs 按 Module Split Policy 拆出 subagent-scheduler.mjs 与
@@ -278,12 +278,13 @@ session — so end the turn; do not poll or wait for the result."（本体在 sp
 ## 7. 挂起回合 digest（VS 结构差异——本地接线）
 
 挂起态是**交互层状态**（extension 驱动）：用户回合结束而后台池仍 live → 不阻塞
-回合，进入挂起会话——输入放开（新消息经 `panel._chat` 排队 + 唤醒）；settle 事件驱动
-auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域模板
+回合，进入挂起会话——挂起空闲输入开放（新消息经 `panel._chat` 填 pendingInput 单槽 + 唤
+醒）；**busy（`_turnState==="running"`——普通回合/digest/标题窗口——单一判据）输入禁用**
+（INPUT-LOCK-ASYNC C'——2026-09-09——提交拒收不排队——webview 输入锁见下方 UI 段）；settle
+事件驱动 auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域模板
 `AUTO_TURN_DIGEST_DOMAIN` 注入 agent.mjs；AUTO 档全语义推进）；池空 + 无待处理输入 →
-补发冻结自然退出。排队用户指令合并：单批 ≤8 条（`MAX_MERGE_ITEMS`）且合并注入 ≤2000
-字符（`MAX_MERGE_CHARS`）；≥2 合批编号注入；超长/带图/空 → 直发单条保序；截批留队不
-丢。digest 撞 ContinueError → AUTO 自动 resume / 手动静默停止（部分消化留历史不丢）。
+补发冻结自然退出。排队用户指令合并（R15）已随禁排队废弃（单消息逐发——攒批取数/合并文案/
+上限常量全删）。digest 撞 ContinueError → AUTO 自动 resume / 手动静默停止（部分消化留历史不丢）。
 
 **VS Code 结构差异**（与 CLI 同语义移植——CLI 的池/pending/_suspended 挂 agent 对象
 跨 run 存活；VS Code agent 对象 per-run 重建——全部挂共享 depth-0 history 数组 §2）：
@@ -291,10 +292,12 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 - 唤醒单槽：`panel._suspWake`（waitForSettleOrWake 注入）——`_chat` 挂起分流、settle
   回调（onAsyncSettled → `panel._suspWake?.()`）、abort 分支同槽（历史 `susp.wake`
   死字段修复——**VS 实现注**）。
-- 释放窗口守卫：回合尾先于任何释放点登记 `panel._suspPending`，generateTitle await
-  窗口内 `_chat` 入队 `_suspQueue`（零并发独立回合）；池已空/中止/面板消失 → 普通回合
-  兜底（零丢失）。
-- 中止语义（F-6——SESSION-ACTIVITY-REVISED 2026-09-09 评审 #1——废除 D-S9 全停）：
+- 释放窗口守卫：回合尾先于任何释放点登记 `panel._suspPending`，A2 后标题移入 finally 归位
+  前（running——routeUserTurn 拒收）——释放窗口与会话建立同同步续段（零事件窗口——入队容
+  器已随禁排队废弃）；`_chat` 对无会话的 susp 态消息防御拒收（零并发独立回合——不孤儿化池）。
+  中止残余单槽消息以普通回合兜底执行（零丢失）。
+- 中止语义（F-6——SESSION-ACTIVITY-REVISED 2026-09-09 评审 #1——废除 D-S9 全停）+
+  INPUT-LOCK（C'——2026-09-09）：
   每次 controller 创建/重建登记 `panel._turnControllers`；**Stop 只停主会话当前
   controller**（回合/digest 轮——panel-messages abort case 以 `_turnState==="running"`
   为门——不再 `abortControllers`/会话句柄全链 abort、不再 `_suspWake` 唤醒——无全停
@@ -302,15 +305,17 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
   ⏹（cancelSubagent 定向 abort——仅 running+pool 块——queued/waiting 块头不挂——接受
   无取消路径——队列自然推进）。面板销毁（dispose）仍统一中止会话（abortControllers
   快照 + susp.abort——面板死 = 会话死——唯一全链路径）；中止后 digest 排队消息无条件
-  消费残余以普通回合按序执行（中止路径零丢失）。
+  消费残余以普通回合按序执行（中止路径零丢失）——busy 禁排队后残余至多单槽一条。
 - 会话 lines 双键：会话入口 lines 携 `contextHistory: history`（in-session 回合按
   activeLines 契约读 loadedLines.contextHistory——缺键致 digest 死循环的事故修复）。
 - 挂起 UI：settle 期间块**驻留活动区**（"done · awaiting digestion"——live 块固定于
   `#subagent-activity`——SESSION-ACTIVITY-REVISED——行面板已撤），digest 完成逐条补发
   done → 块按 settle 锚（_freezeAtEl）插回 #messages digest 报告前（锚被 150 裁 →
-  尾推退化）；状态行（⏳ 后台 N 子代理 + 待消化计数——子代理计数徽标撤）；输入框永不
-  锁（loading.js）；digest 中 Enter 由 host 排队（send.js `isRunning && !S._suspended`
-  才拦截）；Stop 只在 running 显（susp 纯池跑不显——无全停）。
+  尾推退化）；状态行（⏳ 后台 N 子代理 + 待消化计数——子代理计数徽标撤）；**输入锁 = busy
+  （`S._turnState==="running"`——含 digest/标题窗口）派生**（loading.js——readOnly + busy
+  占位符——Ctrl+C 全停/Ctrl+I 注入保留：中断模态豁免锁——注入通道在门禁前——不误伤——红线）；
+  susp 纯池等待输入开放（消息填单槽 + 唤醒——不排队）；send.js 出口守卫兜 busy 拒发（文本
+  保留）；Stop 只在 running 显（susp 纯池跑不显——无全停）。
 
 ## 8. eng-coder 交付协议（本端闭环）
 

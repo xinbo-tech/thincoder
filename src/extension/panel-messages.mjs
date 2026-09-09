@@ -43,13 +43,22 @@ export function clearProjectOverride() {
 
 /**
  * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage
- * 与 retry 共用同一路由——turnActive 排队 + messageQueued / 挂起分流（_chat 内 susp 守卫）全走
- * 一套判断——retry 不再绕过 turnActive 队列直呼 _chat（并发新回合竞态——AC-S2 同款）。
- * 同步函数（savePastedImages 同步落盘）——零新 await 窗口。入队消息零丢失（_suspQueue）。
+ * 与 retry 共用同一路由——busy 拒收（INPUT-LOCK-ASYNC C'）与挂起分流（_chat 内 susp 守卫）
+ * 全走一套判断——retry 不再绕过路由直呼 _chat（并发新回合竞态——AC-S2 同款）。
+ * 同步函数（savePastedImages 同步落盘）——零新 await 窗口。
  * A1（SESSION-FLOW-A F-A1——修 R6 残留）：sendMessage 命令直发（chat-panel.mjs——sendMessage
- * 宿主）并入同入口——导出供其调用——running→_suspQueue + messageQueued（回显先于入队）。
+ * 宿主）并入同入口——导出供其调用——running→拒收（无回显无排队——回显由宿主先决）。
  */
 export function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images }) {
+  // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）：busy（_turnState==="running"——回合含
+  // digest/标题窗口——单一判据）输入禁用——消息一律拒收不排队（排队机制与排队回执 UI
+  // 消息类型全删）——webview 输入框已由 loading.js 锁（正常发送到不了这里——本守卫
+  // 兜外部入口：Ask ThinCoder 命令/retry/竞态窗口）——提示明示（不静默丢）。susp 等待态
+  // （纯后台池跑——主空闲）→ _chat 上游分流（pendingInput 单槽——D-S5 唤醒）；idle 直发。
+  if (panel._turnState === "running") {
+    vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+    return
+  }
   // Plan B (GitHub thincoder#3): the webview sends pasted images as base64
   // dataURLs; the EXTENSION saves them to <cwd>/.thincoder/tmp/paste-*.<ext>
   // and passes absolute PATHS downstream. The field stays `images` (wire
@@ -58,19 +67,6 @@ export function routeUserTurn(panel, { text, modelOverride, reasoning, providerN
   const saved = Array.isArray(images) && images.length > 0
     ? savePastedImages(images, _cwd())
     : undefined
-  // 2026-09-05 人机并行对齐（CLI state.queue 语义——实践验证模式）：父回合运行中
-  // （_turnState==="running"）的消息一律排队——不 abort 父回合、不杀子代理、不并发新回合
-  // （并发会从磁盘重载 lines 孤儿化后台池——AC-S2 同款竞态）；回合尾顺序消费
-  // （impl 尾 while——对位 CLI agent-turn 尾 state.queue 消费）。挂起活跃期由
-  // panel._chat 上游分流（susp.active → pendingInput——D-S5——等待期输入唤醒驱动；
-  // C2：susp 等待态 _turnState 非 running → 走 _chat——语义与旧 _turnActive 布尔逐位一致）。
-  // 释放窗口（state==="susp" 且 _susp 空）同样走 _chat → _suspQueue（入队等待会话接管）。
-  if (panel._turnState === "running") {
-    panel._suspQueue ??= []
-    panel._suspQueue.push({ text, modelOverride, reasoning, providerName, images: saved })
-    panel._panel?.webview.postMessage({ type: "messageQueued" })
-    return
-  }
   panel._chat(text, modelOverride, reasoning, providerName, saved)
 }
 
@@ -164,8 +160,8 @@ export async function handlePanelMessage(panel, msg) {
       break
     }
     case "retry": {
-      // C1（F-C1e——H-F）：retry 与 userMessage 同入口（routeUserTurn）——回合中 retry 不再
-      // 绕过 turnActive 队列直开并发回合；队列消息回合尾顺序消费（零丢失）。
+      // C1（F-C1e——H-F）+ INPUT-LOCK（C'）：retry 与 userMessage 同入口（routeUserTurn）——
+      // 回合中（running）retry 不再直开并发回合（拒收提示——禁排队）；idle/susp 直发。
       const history = panel._activeHistory()
       const lastUser = [...history].reverse().find((m) => (m.type ?? m.role) === "user")
       if (lastUser) routeUserTurn(panel, { text: lastUser.content, modelOverride: undefined, reasoning: undefined, providerName: lastUser.provider })

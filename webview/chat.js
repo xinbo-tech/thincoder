@@ -196,14 +196,6 @@ window.addEventListener("message", (e) => {
       updateSessionTitle()
       break
     case "project":          handleProjectMessage(m); break
-    case "messageQueued": { // 2026-09-05：消息已排队（后台子代理执行中——不打断）
-      const div = document.createElement("div")
-      div.className = "msg-queued"
-      div.textContent = t("msg.queued")
-      ctx.messagesEl.appendChild(div)
-      maybeScrollDown(ctx)
-      break
-    }
     case "models":           handleModelsMessage(m); break
     case "providerStatus":
       S._lastProviderStatus = m.status || {}

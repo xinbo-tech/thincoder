@@ -16,31 +16,45 @@
  *   susp（纯后台池跑——主空闲）不显（无全停——池空自然消化完——子代理停止靠活动区
  *   逐块 ⏹）；loading:false 不再隐 abort（修 digest 间按钮闪烁 + 标题窗口/digest
  *   起跑窗口隐藏）。
+ * INPUT-LOCK-ASYNC（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）：
+ * - 输入锁派生 `_turnState === "running"`（评审 #3：VSC digest 属 running 已含——
+ *   chat-panel.mjs:50 实证）——busy 锁输入（readOnly——保留键盘事件：Ctrl+C 全停 +
+ *   Ctrl+I 注入在门禁前不误伤——红线）+ busy 占位符文案；susp/idle 解锁。
+ * - 锁派生 = applyBusyLock() 单点——setLoading（loading 消息）与 panels.js 的
+ *   turnState/suspension reducer 重派生共用；Ctrl+I 中断模态（input.js）经
+ *   ctx._interruptMode 豁免（注入框可输入——注入通道保留）。
  */
-import { S } from "./state.js"
+import { S, ctx } from "./state.js"
 import { renderStatusBar } from "./status-bar.js"
+import { t } from "./i18n.js"
+
+/**
+ * INPUT-LOCK 锁派生单点：busy（S._turnState==="running"——回合/digest/标题窗口）锁输入
+ * （readOnly + busy 占位符）；susp/idle 解锁 + 默认占位符。Ctrl+I interrupt 模态激活
+ * （ctx._interruptMode）时豁免——注入框需要键盘（readOnly 保留键盘事件——Ctrl+C/I 不误
+ * 伤）；占位符在该模态下归 input.js 管理（applyBusyLock 不动）。
+ */
+export function applyBusyLock() {
+  const busy = S._turnState === "running" && !ctx._interruptMode
+  ctx.inputEl.readOnly = busy
+  if (ctx._interruptMode) return
+  ctx.inputEl.placeholder = busy ? t("input.busyPlaceholder") : t("input.placeholder")
+}
 
 /**
  * Loading state: send/abort button swap + input lock + thinking phase marker.
- * §17 suspension → SESSION-ACTIVITY-REVISED F-6：挂起会话期输入框永不锁（digest 回合
- * 在后台跑——Enter 排队）——send 常显；Stop 只在 S._turnState==="running" 显（digest/
- * 回合执行中可停主会话——susp 纯池等待不显——子代理 ⏹ 逐块停——无全停——池空自然完）。
+ * INPUT-LOCK-ASYNC：busy（running）锁输入——send 按钮常显（F-6 语义保留——发送由
+ * send.js 出口守卫兜 busy 拒——readOnly 框内文本保留不吞）；Stop 只在
+ * S._turnState==="running" 显（digest/回合执行中可停主会话——susp 纯池等待不显——
+ * 子代理 ⏹ 逐块停——无全停——池空自然完）。
  * Explicit assignment (not conditional): entering suspension must RE-ENABLE an input
  * disabled by the previous loading state — no dependence on caller ordering (F7).
  */
 export function setLoading(ctx, on) {
   S._phase = on ? "thinking" : null
-  // 2026-09-05 人机并行对齐（CLI state.queue 语义——实践验证模式）：processing 期间
-  // 输入框始终可用（发送=排队不打断）；send 常显、abort 仅运行中显。回滚 poolActive
-  // 特例（只池活跃解锁是窄化——CLI 任何处理中都可输入排队）。
-  // SESSION-ACTIVITY-REVISED（F-6——评审 #1 定论）：Stop 可见性 = S._turnState ===
-  // "running" 派生（回合/digest/标题窗口/Reload 冷启重推 running）——susp（纯后台池跑
-  // ——主空闲——digest 间等待/释放窗口）不显——无全停按钮——子代理停止靠活动区每块 ⏹
-  // （running+pool）——池空自然消化完（CLI 对拍）。loading 参数不再驱动 abort（running
-  // 恒先于 loading 广播——host 序 panel-chat impl 入口）。
   ctx.sendBtn.style.display = "flex"
   ctx.abortBtn.style.display = S._turnState === "running" ? "flex" : "none"
-  ctx.inputEl.disabled = false
+  applyBusyLock()
   if (!on) ctx.inputEl.focus()
   ctx.isRunning = on
   // C2 (F-C2c): thinking 段经 renderStatusBar（唯一 writer）绘制——徽标/挂起计数同线保留。

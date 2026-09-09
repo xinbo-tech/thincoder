@@ -53,12 +53,10 @@ export class ChatPanel {
     this._turnState = "idle"
     // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
     // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
-    // _suspQueue = 释放窗口守卫队列（偏差修复 #2——回合尾池仍 live、会话未建立期间
-    // _chat 入队等待会话接管——窗口由 _turnState==="susp" 且 _susp 空表达，不再单设布尔；
-    // A2（SESSION-FLOW-A）：标题已上移 finally 归位前（running 态完成——routeUserTurn
-    // 直入队本队列）——窗口不再跨标题）。
+    // _suspQueue 随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09——busy（running 含
+    // digest/标题窗口）输入禁用——routeUserTurn 拒收——无入队容器；挂起空闲消息走
+    // susp.pendingInput 单槽（_chat 内分流）。
     // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
-    this._suspQueue = null
     this._turnControllers = []
     // The slot number this panel is bound to. Set once when a session is opened/created,
     // then used for ALL reads and writes — we never re-read the shared manifest's active
@@ -203,19 +201,27 @@ export class ChatPanel {
   }
 
   sendMessage(text) {
+    if (!this._panel) {
+      vscode.window.showWarningMessage("ThinCoder panel is not ready yet — please wait a moment and try again.")
+      return
+    }
+    // INPUT-LOCK-ASYNC（C'——F-1/F-3）：busy（_turnState==="running"——回合/digest/标题
+    // 窗口——单一判据）输入禁用——外部入口（Ask ThinCoder 命令）先于回显拒绝——不排队
+    // 不回显（拒收 = 无假气泡——webview 输入框已由 loading.js 锁——正常发送到不了这里）。
+    if (this._turnState === "running") {
+      vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+      return
+    }
     if (this._panel) {
-      // Echo FIRST — the quick-input command renders its own user bubble; a running
-      // turn then lands "user bubble + message queued", the same look as webview input.
+      // Echo FIRST — the quick-input command renders its own user bubble. 非 running 提交
+      // 才回显（susp 挂起空闲消息经 _chat 上游分流——气泡先行观感一致）。
       // F（SESSION-RESTORE-PARITY）：echo 补真实时间戳——气泡时间 = 发出时刻（非回退"现在"）
       this._panel.webview.postMessage({ type: "userMessage", text, timestamp: Date.now() })
       // A1（SESSION-FLOW-A F-A1——修 R6 残留——sendMessage 曾是唯一绕过 routeUserTurn 的
       // 入口——回合中 Ask ThinCoder/发送命令直呼 _chat 杀当前回合）：命令直发并入
-      // userMessage/retry 的单一入口——running → _suspQueue 排队 + messageQueued 回执
-      // （回合尾 FIFO 消费零丢失）；susp 两态（会话活跃/释放窗口）走 _chat 上游分流不变
-      // （D-S5 唤醒/接管语义不被队列短路）；idle 直发（原语义等价）。
+      // userMessage/retry 的单一入口——running 拒收（INPUT-LOCK——禁排队）；susp 两态
+      // （会话活跃/释放窗口）走 _chat 上游分流不变（D-S5 唤醒/接管语义）；idle 直发。
       routeUserTurn(this, { text, modelOverride: undefined, reasoning: undefined, providerName: undefined, images: undefined })
-    } else {
-      vscode.window.showWarningMessage("ThinCoder panel is not ready yet — please wait a moment and try again.")
     }
   }
 
@@ -344,29 +350,32 @@ export class ChatPanel {
   // ─── Chat ─────────────────────────────────────
 
   async _chat(text, modelOverride, reasoning, providerName, images) {
-    // §17 D-S4/D-S5: while a suspension session is active the message goes to the
-    // driver's queue — input during a digest queues (auto-continues after the digest
-    // ends), input while waiting wakes the driver for immediate processing. Never
-    // launches a concurrent independent turn (it would reload the lines from disk and
-    // orphan the background pool).
+    // §17 D-S4/D-S5（INPUT-LOCK-ASYNC C'——2026-09-09）：挂起会话活跃期消息走 driver 的
+    // pendingInput 单槽——挂起空闲（driver 纯等待）填槽 + 唤醒即开用户回合；busy（running
+    // 含 digest）由 routeUserTurn 上游拒收（本端只接挂起空闲——单槽语义——至多一条待交接，
+    // 绝不并发开独立回合（会从磁盘重载 lines 孤儿化后台池）。
     const susp = this._susp
     if (susp?.active) {
+      // 槽满（同事件循环竞态防御——driver 唤醒即消费，正常不可达）→ 拒收提示不覆盖不丢
+      if (susp.pendingInput.length > 0) {
+        vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
+        return
+      }
       susp.pendingInput.push({ text, modelOverride, reasoning, providerName, images })
       // 唤醒走 panel._suspWake 单槽（waitForSettleOrWake 在纯等待期注入；digest/回合执行期
-      // 为 null → no-op——排队消息由驱动轮末 pendingInput 检查接走）。susp.wake 曾是死字段
+      // 为 null → no-op——driver 轮末 pendingInput 检查接走）。susp.wake 曾是死字段
       // （2026-09-02 偏差修复 #4 已从 suspension.mjs 删除——唤醒槽单槽化至 _suspWake，
       // 历史说明见 ARCHITECTURE.md「挂起唤醒断链修复」段）。
       this._suspWake?.()
       return
     }
-    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2）：回合尾已登记挂起（池仍 live——
-    // _turnState==="susp" 且会话尚未建立）但会话尚未建立（generateTitle await 窗口，可达
-    // 秒级）——消息入队等待会话接管，不得开并发独立回合：新回合从磁盘重载 lines（孤儿化池）
-    // + abort 外回合 controller（池 children 全中止 → 僵尸挂起或结果丢失，AC-S2）。队列由
-    // runPanelChat 回合尾消费（带队列进会话 / 无会话则普通回合兜底）——入队消息零丢失。
-    // （会话活跃期的输入在更上方的 susp?.active 分流已接走——这里只兜释放窗口。）
+    // §17 D-S2 释放窗口（2026-09-02 偏差修复 #2 + A2 修订 + INPUT-LOCK）：回合尾已登记
+    // 挂起（池仍 live——_turnState==="susp" 且会话尚未建立）——A2 后标题移入 finally 归位前
+    //（running——routeUserTurn 拒收），会话建立与 susp 广播同同步续段（零事件窗口）——
+    // 防御：无会话的 susp 态消息拒收（开并发独立回合 = 从磁盘重载 lines 孤儿化池 + abort
+    // 外回合 controller——AC-S2 竞态）。
     if (this._turnState === "susp") {
-      (this._suspQueue ??= []).push({ text, modelOverride, reasoning, providerName, images })
+      vscode.window.showWarningMessage("ThinCoder: a task is running — wait for it to finish before sending.")
       return
     }
     // C1（SESSION-FLOW-C F-C1a——turn 句柄化——修 H-B）：fire 语义不变（不 await——

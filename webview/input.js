@@ -7,26 +7,34 @@
 import { ctx, vscode } from "./state.js"
 import { t } from "./i18n.js"
 import { send } from "./send.js"
+import { applyBusyLock } from "./loading.js"
 
 // ─── Interrupt mode (Ctrl+I inject, CLI parity) ──
 // Interrupt mode: the input box switches to "inject a message" — Enter aborts
 // the turn and injects it, Esc cancels.
+// INPUT-LOCK-ASYNC（C'）：中断模态 = 注入通道（红线——门禁前不误伤）——busy（running）
+// 期锁输入豁免：进入即解锁（ctx._interruptMode 标记——applyBusyLock 读它跳过锁 +
+// 占位符归本模态管理）；退出（Enter 注入/Esc）重派生锁（applyBusyLock——回 busy 态锁）。
 let _interruptMode = false
 let _savedPlaceholder = ""
 
 function enterInterruptMode() {
   _interruptMode = true
+  ctx._interruptMode = true
   _savedPlaceholder = ctx.inputEl.placeholder
   ctx.inputEl.placeholder = t("input.interruptPlaceholder")
+  ctx.inputEl.readOnly = false
   ctx.inputEl.classList.add("interrupt-mode")
   ctx.inputEl.focus()
 }
 function exitInterruptMode() {
   _interruptMode = false
+  ctx._interruptMode = false
   ctx.inputEl.placeholder = _savedPlaceholder
   ctx.inputEl.classList.remove("interrupt-mode")
   ctx.inputEl.value = ""
   ctx.inputEl.style.height = "auto"
+  applyBusyLock()
 }
 
 ctx.inputEl.addEventListener("keydown", (e) => {

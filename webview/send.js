@@ -10,13 +10,16 @@ import { clearPanels } from "./panels.js"
 
 export function send() {
   const text = ctx.inputEl.value.trim()
-  // §17 F7: during a suspension session the input NEVER locks — Enter while a digest
-  // runs does not break it (F3: the background never touches the input box); the host
-  // queues the message and auto-continues after the digest. isRunning is only a gate
-  // in the normal (non-suspended) mode.
-  // 2026-09-05 人机并行对齐（CLI state.queue 语义）：processing 期间发送一律放行——
-  // extension 排队（回合尾顺序消费——CLI 已验证模式：任何回合中都可输入排队）。
+  // INPUT-LOCK-ASYNC（C'——2026-09-09）：busy（S._turnState==="running"——回合/digest/
+  // 标题窗口——与 loading.js 锁同判据）send 出口守卫——拒发（文本保留不吞——readOnly
+  // 输入框内容原样——忙完可重按）。webview 输入框 busy 期只读（Enter 不可达）——本守卫
+  // 兜 send 按钮点击/竞态窗口（输入框解锁瞬间的陈旧按键）。模态（question/permission——
+  // 独立控件）不受影响（AC-6）。
   if (!text) return
+  if (S._turnState === "running") {
+    ctx.inputEl.placeholder = t("input.busyPlaceholder")
+    return
+  }
   const h = ctx._inputHistory
   if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
   ctx._historyIdx = -1

@@ -1,17 +1,21 @@
 /**
- * chat-panel.test.mjs — SESSION-FLOW-C C1 测试（VSC 消息秩序——竞态修复 + turn 句柄化）。
+ * chat-panel.test.mjs — SESSION-FLOW-C C1 测试（VSC 消息秩序——竞态修复 + turn 句柄化）
+ * + INPUT-LOCK-ASYNC（C'——thincoder/docs/design/INPUT-LOCK-ASYNC.md——2026-09-09）。
  * docs/design/SESSION-FLOW-C.md C1 节（F-C1a~e——修 H-B/H-C/H-A/H-D/H-F——AC-C1 组）。
  * 评审 #6：新文件——旧同名文件在 3b974ae「测试清空」中删除（git 核验——从未恢复）——
  * 以 files.mjs 实况重建（2026-09-09）。
  * A 批（SESSION-FLOW-A——2026-09-09）：⑧ A1 sendMessage 走 routeUserTurn（F-A1——running
  * 守卫/susp 两态回归/A1e 空面板 warning）+ ⑨⑩ A2 标题回合内（F-A2 方案 Y——真实
  * runPanelChat 桩测：标题窗口 = busy 测试锁 + 错误路径归位恒执行）。
+ * INPUT-LOCK 批（C'——2026-09-09）：①⑦⑧⑨ 排队语义改拒收（_suspQueue/messageQueued/攒批
+ * 全删）——running（含 digest/标题窗口）拒收 + 警告明示；⑪ _chat 单槽交接（pendingInput
+ * 至多一条 + 唤醒 + 槽满/释放窗口防御拒）——测试锁。
  *
  * 手法：桩面板驱动（桩方法记录 + 可注入 resolve/reject）——不跑真实 agent 循环；组④经真实
  * ChatPanel 原型 + 真实 runPanelChat 驱动 setup 期异常（隔离 config/会话目录——_activeLines
  * 桩注入抛点——H-B 回归红线：修前此用例 unhandled rejection / await 红掉）；⑨⑩ 同骨架——
  * loading:true 首投即抛终止 try 体（isFirstMessage 已置位）→ 命中 finally 的 A2 标题段。
- * 组①-⑩ 全部 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
+ * 组①-⑪ 全部 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -24,7 +28,6 @@ import { newTurnController, runPanelChat } from "../src/extension/panel-chat.mjs
 import { makeAskInPanel } from "../src/extension/panel-callbacks.mjs"
 import { atComplete } from "../src/extension/panel-index.mjs"
 import { ChatPanel } from "../src/extension/chat-panel.mjs"
-import { popQueuedTurn } from "../src/extension/suspension.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-io.mjs"
 
@@ -49,7 +52,8 @@ after(() => {
 })
 
 /** C1/C2 桩面板——方法记录 + 字段直控（桩 _chat 记参返回 resolve——组④ 除外）。
- *  C2（SESSION-FLOW-C F-C2a）：忙态以 _turnState 枚举表达（旧 _turnActive 布尔已退役）。 */
+ *  C2（SESSION-FLOW-C F-C2a）：忙态以 _turnState 枚举表达（旧 _turnActive 布尔已退役）。
+ *  INPUT-LOCK（C'）：_suspQueue 已删（排队机制废弃）——不设。 */
 function stubPanel(overrides = {}) {
   const posted = []
   const p = {
@@ -58,7 +62,6 @@ function stubPanel(overrides = {}) {
     _abortController: null,
     _abortRequested: false,
     _susp: null,
-    _suspQueue: undefined,
     _questionQueue: [],
     _questionSeq: 0,
     _permissionQueue: [],
@@ -79,47 +82,41 @@ function stubPanel(overrides = {}) {
 /** 微任务/短定时冲刷（真实 runPanelChat 的 async 段全为同步体 await——单 setTimeout 足够）。 */
 const settle = () => new Promise((r) => setTimeout(r, 10))
 
-// ─── ① 保序 + retry 同入口（F-C1e/H-F）──────────────
+// ─── ① INPUT-LOCK 拒收 + retry 同入口（F-C1e/H-F + C'）──────────────
 
-test("① 保序：turnActive 中 userMessage（发起回合之后的后续消息）一律入队 + 逐条 messageQueued——回合尾 FIFO 消费零丢失；retry 与 userMessage 同入口", async () => {
-  const p = stubPanel({ _turnState: "running", _suspQueue: [] })
-  await handlePanelMessage(p, { type: "userMessage", text: "second" })
-  await handlePanelMessage(p, { type: "userMessage", text: "third" })
-  assert.deepEqual(p._chatCalls, [], "回合运行中不得开并发回合（直呼 _chat）")
-  assert.equal(p.posted.filter((m) => m.type === "messageQueued").length, 2, "每条入队一次 messageQueued")
-  assert.deepEqual(p._suspQueue.map((q) => q.text), ["second", "third"], "入队保序")
+test("① busy（running）拒收不排队（INPUT-LOCK C'）：userMessage/retry 一律拒——无 _chat 无回执无容器——警告明示；空闲直发（排队机制废弃）", async () => {
+  const realWarn = vscode.window.showWarningMessage
+  const warned = []
+  vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+  try {
+    const p = stubPanel({ _turnState: "running" })
+    await handlePanelMessage(p, { type: "userMessage", text: "second" })
+    await handlePanelMessage(p, { type: "userMessage", text: "third" })
+    assert.deepEqual(p._chatCalls, [], "回合运行中不得开并发回合（直呼 _chat）")
+    assert.equal(warned.length, 2, "每条拒收一次警告（明示不静默丢）")
+    assert.equal(p.posted.length, 0, "拒收零消息（无回显无回执——排队 UI 已废）")
 
-  // retry（H-F——守卫双份修复前直呼 _chat 绕过 turnActive 队列）
-  const rp = stubPanel({
-    _turnState: "running",
-    _suspQueue: [],
-    _activeHistory: () => [{ role: "user", content: "retry-me", provider: "p1" }],
-  })
-  await handlePanelMessage(rp, { type: "retry" })
-  assert.equal(rp._chatCalls.length, 0, "retry 回合中不直呼 _chat")
-  assert.deepEqual(rp._suspQueue.map((q) => q.text), ["retry-me"], "retry 与 userMessage 同队列（_suspQueue 统一）")
-  assert.equal(rp.posted.filter((m) => m.type === "messageQueued").length, 1)
+    // retry（H-F——守卫双份修复前直呼 _chat 绕过 turnActive 队列）→ 同拒收
+    const rp = stubPanel({
+      _turnState: "running",
+      _activeHistory: () => [{ role: "user", content: "retry-me", provider: "p1" }],
+    })
+    await handlePanelMessage(rp, { type: "retry" })
+    assert.equal(rp._chatCalls.length, 0, "retry 回合中不直呼 _chat")
+    assert.equal(warned.length, 3, "retry 拒收同警告")
+  } finally {
+    vscode.window.showWarningMessage = realWarn
+  }
 
   // 空闲 retry 直发（同入口的直呼分支——模型/provider 透传）
   const rp2 = stubPanel({ _activeHistory: () => [{ role: "user", content: "again", provider: "p2" }] })
   await handlePanelMessage(rp2, { type: "retry" })
   assert.deepEqual(rp2._chatCalls, [["again", undefined, undefined, "p2", undefined]], "空闲 retry 经 _chat 直发（与 userMessage 同参形——原语义）")
 
-  // 回合尾 FIFO（消费循环 popQueuedTurn——超长单条不可合批 → 逐条直发保序零丢失）
-  const longA = "x".repeat(2500)
-  const longB = "y".repeat(2500)
-  const longC = "z".repeat(2500)
-  const fp = stubPanel({ _turnState: "running", _suspQueue: [] })
-  for (const t of [longA, longB, longC]) {
-    await handlePanelMessage(fp, { type: "userMessage", text: t })
-  }
-  const drained = []
-  let next
-  while ((next = popQueuedTurn(fp._suspQueue)) !== null) {
-    assert.ok(next.item, "不可合批单条直发（{item} 形态）")
-    drained.push(next.item.text)
-  }
-  assert.deepEqual(drained, [longA, longB, longC], "回合尾 FIFO——保序零丢失")
+  // 空闲 userMessage 直发（无队列无回执）
+  const ip = stubPanel({})
+  await handlePanelMessage(ip, { type: "userMessage", text: "free" })
+  assert.deepEqual(ip._chatCalls, [["free", undefined, undefined, undefined, undefined]], "空闲 userMessage → _chat 直发（原语义等价）")
 })
 
 // ─── ② 控制直通（红线不变量）──────────────────────
@@ -130,7 +127,7 @@ test("② 控制直通（AC 红线——不引入全量 FIFO 串行）：turnAct
   await handlePanelMessage(p, { type: "abort" })
   assert.equal(ctrl.signal.aborted, true, "运行中 abort 必须直达（控制消息永不排队——杀 Stop 即失败）")
   assert.equal(p._abortRequested, false, "交付有效的 abort 不置闩（防中断续跑/下次正常回合误杀）")
-  assert.equal(p.posted.filter((m) => m.type === "messageQueued").length, 0, "控制消息不产生排队反馈")
+  assert.equal(p._abortRequested, false, "交付有效的 abort 不置闩（防中断续跑/下次正常回合误杀）")
 })
 
 // ─── ③ C1a 启动闩（F-C1b/H-C）───────────────────
@@ -180,7 +177,6 @@ test("④ 错误不悬挂（H-B 回归红线）：回合 setup 期异常 → 保
     _abortRequested: false,
     _turnControllers: [],
     _susp: null,
-    _suspQueue: undefined,
     _distillState: undefined,
     _distillController: undefined,
     _questionQueue: [],
@@ -293,7 +289,6 @@ test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 +
   Object.assign(p, {
     _turnState: "idle",
     _susp: null,
-    _suspQueue: undefined,
     _permissionQueue: [],
     _questionQueue: [],
     _statusBar: null,
@@ -331,57 +326,61 @@ test("⑦ C2 忙态状态机（F-C2a）：_publishTurnState 单一广播幂等 +
   p._refreshStatus()
   assert.deepEqual(seenStatus.at(-1), "idle", "idle → idle")
 
-  // routeUserTurn 按枚举路由：running → _suspQueue 排队；susp 释放窗口/会话等待 → _chat
-  // （_chat 内部上游分流 pendingInput/_suspQueue——D-S5 唤醒语义不被队列短路）；idle 直发
-  const qp = stubPanel({ _turnState: "running", _suspQueue: [] })
-  await handlePanelMessage(qp, { type: "userMessage", text: "during" })
-  assert.deepEqual(qp._chatCalls, [], "running → 入队（不直呼 _chat）")
-  assert.deepEqual(qp._suspQueue.map((q) => q.text), ["during"])
+  // routeUserTurn 按枚举路由：running → 拒收（INPUT-LOCK C'——不排队不直发——警告
+  // 明示）；susp 两态与 idle → _chat（_chat 内上游分流 pendingInput 单槽——D-S5 唤醒
+  // 语义不被队列短路）
+  const realWarn = vscode.window.showWarningMessage
+  const warned = []
+  vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+  try {
+    const qp = stubPanel({ _turnState: "running" })
+    await handlePanelMessage(qp, { type: "userMessage", text: "during" })
+    assert.deepEqual(qp._chatCalls, [], "running → 拒收（不直呼 _chat——禁排队）")
+    assert.equal(warned.length, 1, "拒收警告一次")
 
-  const sp = stubPanel({ _turnState: "susp", _susp: null }) // 释放窗口（会话未建）
-  await handlePanelMessage(sp, { type: "userMessage", text: "window" })
-  assert.equal(sp._chatCalls.length, 1, "susp（非 running）→ 走 _chat（上游分流/唤醒）")
-  assert.equal(sp._suspQueue, undefined, "不经 routeUserTurn 队列")
+    const sp = stubPanel({ _turnState: "susp", _susp: null }) // 释放窗口（会话未建——同步零事件窗口）
+    await handlePanelMessage(sp, { type: "userMessage", text: "window" })
+    assert.equal(sp._chatCalls.length, 1, "susp（非 running）→ 走 _chat（上游分流/防御拒）")
 
-  const ip = stubPanel({ _turnState: "idle" })
-  await handlePanelMessage(ip, { type: "userMessage", text: "direct" })
-  assert.equal(ip._chatCalls.length, 1, "idle → 直发 _chat")
+    const sa = stubPanel({ _turnState: "susp", _susp: { active: true } })
+    await handlePanelMessage(sa, { type: "userMessage", text: "session" })
+    assert.equal(sa._chatCalls.length, 1, "susp 会话活跃 → _chat（_chat 内 pendingInput 分流）")
+
+    const ip = stubPanel({ _turnState: "idle" })
+    await handlePanelMessage(ip, { type: "userMessage", text: "direct" })
+    assert.equal(ip._chatCalls.length, 1, "idle → 直发 _chat")
+  } finally {
+    vscode.window.showWarningMessage = realWarn
+  }
 })
 
-// ─── ⑧ A1 sendMessage 守卫（F-A1——修 R6 残留）────────────────
+// ─── ⑧ A1 sendMessage 守卫（F-A1 + INPUT-LOCK）────────────────
 
-test("⑧ A1 sendMessage 走 routeUserTurn（F-A1）：running 回显先于入队 + messageQueued + 不直呼 _chat；susp 两态走 _chat 上游分流；idle 直发；空面板 warning 分支（A1e）", async () => {
-  // running：回显 userMessage（先于入队）→ _suspQueue 排队 + messageQueued 一次——零直发
-  const p = stubPanel({ _turnState: "running", _suspQueue: [] })
-  ChatPanel.prototype.sendMessage.call(p, "cmd-during")
-  assert.equal(p._chatCalls.length, 0, "running 下命令发送不直呼 _chat（修 R6——不再杀当前回合）")
-  assert.equal(p._suspQueue.length, 1, "入队 _suspQueue（与 webview 输入同队列）")
-  assert.equal(p._suspQueue[0].text, "cmd-during")
-  assert.equal(p._suspQueue[0].modelOverride, undefined, "命令发送无模型/推理覆写（undefined 透传）")
-  const types = p.posted.map((m) => m.type)
-  assert.equal(types.filter((t) => t === "userMessage").length, 1, "回显 userMessage 一次")
-  assert.equal(types.filter((t) => t === "messageQueued").length, 1, "messageQueued 回执一次")
-  assert.ok(types.indexOf("userMessage") < types.indexOf("messageQueued"), "回显先于入队回执（用户气泡 + message queued——与 webview 输入观感一致）")
-  // 回合尾 FIFO 排空 = 共享路径（评审 #5 确认：① 组已断言 routeUserTurn 队列经
-  // popQueuedTurn 的 FIFO 排空——sendMessage 与 userMessage 同队列同 drain——此处只验
-  // sendMessage 条目为 drain 兼容形 {text,…}——不重复 FIFO 用例）
-  const drained = []
-  let next
-  while ((next = popQueuedTurn(p._suspQueue)) !== null) drained.push(next.item.text)
-  assert.deepEqual(drained, ["cmd-during"], "回合尾 FIFO 消费形兼容（零丢失）")
+test("⑧ A1 sendMessage 走 routeUserTurn（F-A1 + C'）：running 拒收先于回显（无假气泡无排队回执）；susp 两态回显 + 走 _chat 上游分流；idle 直发；空面板 warning 分支（A1e）", async () => {
+  // running：拒收先于回显——不 postMessage userMessage、不 _chat（禁排队——无"气泡 +
+  // message queued"形态）——警告明示（用户重发由自己掌控）
+  const realWarn = vscode.window.showWarningMessage
+  const warned = []
+  vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+  try {
+    const p = stubPanel({ _turnState: "running" })
+    ChatPanel.prototype.sendMessage.call(p, "cmd-during")
+    assert.equal(p._chatCalls.length, 0, "running 下命令发送不直呼 _chat（修 R6——不再杀当前回合）")
+    assert.equal(p.posted.filter((m) => m.type === "userMessage").length, 0, "拒收无回显（不画假气泡——排队形态已废）")
+    assert.equal(warned.length, 1, "拒收警告一次")
+  } finally {
+    vscode.window.showWarningMessage = realWarn
+  }
 
-  // susp 会话活跃 → _chat（_chat 内上游分流 pendingInput——D-S5 唤醒语义不被队列短路）
+  // susp 会话活跃 → 回显 + _chat（_chat 内上游分流 pendingInput——D-S5 唤醒语义不被队列短路）
   const sa = stubPanel({ _turnState: "susp", _susp: { active: true } })
   ChatPanel.prototype.sendMessage.call(sa, "to-session")
   assert.deepEqual(sa._chatCalls, [["to-session", undefined, undefined, undefined, undefined]], "susp 会话活跃 → _chat（上游 pendingInput 分流）")
-  assert.equal(sa._suspQueue, undefined, "不经 routeUserTurn 队列")
-  assert.equal(sa.posted.filter((m) => m.type === "messageQueued").length, 0, "直接分流不产生排队回执")
-
-  // susp 释放窗口（会话未建）→ 同样 _chat（内部 _suspQueue 接管——零丢失不变）
+  assert.equal(sa.posted.filter((m) => m.type === "userMessage").length, 1, "susp 回显一次（气泡先行观感）")
+  // susp 释放窗口（会话未建——同步零事件窗口）→ 回显 + _chat（上游防御拒——不开并发）
   const sw = stubPanel({ _turnState: "susp", _susp: null })
   ChatPanel.prototype.sendMessage.call(sw, "in-window")
-  assert.deepEqual(sw._chatCalls, [["in-window", undefined, undefined, undefined, undefined]], "susp 释放窗口 → _chat（会话接管队列）")
-  assert.equal(sw._suspQueue, undefined)
+  assert.deepEqual(sw._chatCalls, [["in-window", undefined, undefined, undefined, undefined]], "susp 释放窗口 → _chat（上游分流）")
 
   // idle 直发（旧 sendMessage 语义等价——_chat(text) 同参形）
   const ip = stubPanel({ _turnState: "idle" })
@@ -389,15 +388,46 @@ test("⑧ A1 sendMessage 走 routeUserTurn（F-A1）：running 回显先于入�
   assert.deepEqual(ip._chatCalls, [["direct", undefined, undefined, undefined, undefined]], "idle → 直发 _chat（原语义等价）")
 
   // A1e（评审 #6 错误用例）：_panel 空 → warning 分支保留——不直呼 _chat
-  const realWarn = vscode.window.showWarningMessage
-  let warned = 0
-  vscode.window.showWarningMessage = async () => { warned++ }
+  const realWarn2 = vscode.window.showWarningMessage
+  let warned2 = 0
+  vscode.window.showWarningMessage = async () => { warned2++ }
   try {
     const ep = stubPanel({ _panel: null })
     ChatPanel.prototype.sendMessage.call(ep, "no-panel")
-    assert.equal(warned, 1, "空面板 → showWarningMessage 一次（分支保留）")
+    assert.equal(warned2, 1, "空面板 → showWarningMessage 一次（分支保留）")
     assert.equal(ep._chatCalls.length, 0, "空面板不直呼 _chat")
-    assert.equal(ep._suspQueue, undefined, "空面板不入队")
+  } finally {
+    vscode.window.showWarningMessage = realWarn2
+  }
+})
+
+// ─── ⑪ _chat 单槽交接（INPUT-LOCK C'——F-6 单槽化测试锁）────────────────
+
+test("⑪ _chat 单槽（INPUT-LOCK）：挂起会话活跃期消息填 pendingInput 单槽 + 唤醒 driver；槽满/释放窗口（susp 无会话）拒收——零并发守卫不静默丢", async () => {
+  const realWarn = vscode.window.showWarningMessage
+  const warned = []
+  vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+  try {
+    // 会话活跃：真实 _chat 分流——pendingInput 单槽 + _suspWake（挂起空闲唤醒即消费）
+    const wakes = []
+    const p = stubPanel({ _susp: { active: true, pendingInput: [] }, _suspWake: () => wakes.push("wake") })
+    await ChatPanel.prototype._chat.call(p, "m1", undefined, undefined, undefined, undefined)
+    assert.deepEqual(p._susp.pendingInput.map((q) => q.text), ["m1"], "单槽填入（至多一条待交接）")
+    assert.deepEqual(wakes, ["wake"], "唤醒 driver（waitForSettleOrWake 单槽）")
+    // 槽满（同事件循环竞态防御——正常不可达）→ 拒收提示——不覆盖不静默丢
+    await ChatPanel.prototype._chat.call(p, "m2", undefined, undefined, undefined, undefined)
+    assert.equal(p._susp.pendingInput.length, 1, "槽满不覆盖")
+    assert.deepEqual(p._susp.pendingInput[0].text, "m1", "原消息保留（零丢失）")
+    assert.equal(warned.length, 1, "槽满拒收警告一次")
+
+    // 释放窗口（_turnState susp 且无会话——防御：开并发独立回合会孤儿化后台池——AC-S2）
+    const rw = stubPanel({ _turnState: "susp", _susp: null })
+    await ChatPanel.prototype._chat.call(rw, "win", undefined, undefined, undefined, undefined)
+    assert.equal(rw._chatCalls.length, 0, "释放窗口防御拒（真实 _chat 不开并发回合）")
+    assert.equal(warned.length, 2, "防御拒收警告一次")
+
+    // idle：真实 _chat → runPanelChat fire（stub runPanelChat 不可注入——此处断言经桩 _chat
+    // 路由层面已在 ⑧ idle 分支覆盖——直接构造回合的路径由组④⑨⑩真实 runPanelChat 覆盖）
   } finally {
     vscode.window.showWarningMessage = realWarn
   }
@@ -423,7 +453,6 @@ function a2Panel({ titleRejects = false } = {}) {
     _abortRequested: false,
     _turnControllers: [],
     _susp: null,
-    _suspQueue: undefined,
     _distillState: undefined,
     _distillController: undefined,
     _questionQueue: [],
@@ -449,7 +478,7 @@ function a2Panel({ titleRejects = false } = {}) {
   return { p, titleGate }
 }
 
-test("⑨ A2 标题窗口 = busy（F-A2 测试锁）：首回合标题 await 期间 _turnState 仍 running——userMessage 入队不并发直发——标题完成后才归位", async () => {
+test("⑨ A2 标题窗口 = busy（F-A2 测试锁 + INPUT-LOCK C'）：首回合标题 await 期间 _turnState 仍 running——userMessage 拒收（不并发不排队——禁排队）；标题完成后才归位", async () => {
   const { p, titleGate } = a2Panel()
   const turn = runPanelChat(p, { text: "first" })
   turn.catch(() => {}) // 防 settle 窗口 unhandled rejection（assert.rejects 稍后接管）
@@ -457,11 +486,17 @@ test("⑨ A2 标题窗口 = busy（F-A2 测试锁）：首回合标题 await 期
   assert.equal(titleGate.length, 1, "回合尾标题已触发（isFirstMessage——finally 内归位前）")
   assert.equal(p._turnState, "running", "标题 await 期间忙态未归位——仍 running（标题窗口 = busy——修前此点已 idle → 消息直开并发回合）")
 
-  // 标题窗口内 userMessage → running 路由守卫排队——不并发直发（R3 无池首回合并发锁）
-  await handlePanelMessage(p, { type: "userMessage", text: "during-title" })
+  // 标题窗口内 userMessage → running 拒收——不并发直发不排队（R3 无池首回合并发锁 + C'）
+  const realWarn = vscode.window.showWarningMessage
+  const warned = []
+  vscode.window.showWarningMessage = async (m) => { warned.push(m) }
+  try {
+    await handlePanelMessage(p, { type: "userMessage", text: "during-title" })
+  } finally {
+    vscode.window.showWarningMessage = realWarn
+  }
   assert.equal(p._chatCalls.length, 0, "标题期间消息不直发 _chat（不并发新回合）")
-  assert.deepEqual(p._suspQueue.map((q) => q.text), ["during-title"], "标题期消息入队 _suspQueue（回合尾 FIFO 消费零丢失）")
-  assert.equal(p.posted.filter((m) => m.type === "messageQueued").length, 1, "入队回执一次")
+  assert.equal(warned.length, 1, "拒收警告一次（禁排队——无入队容器无回执）")
 
   // 释放标题 → 归位执行（turnState idle 先于 loading:false——F-C2b 时序——A3 无闪烁前提）
   titleGate[0]()

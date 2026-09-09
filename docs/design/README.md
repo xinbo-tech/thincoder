@@ -11,7 +11,7 @@
 | 架构 | `ARCHITECTURE.md` | 薄枢纽（DOC-REORG-VSC 收官 2026-09-08）——设计原则/架构图/模块地图指针/与 CLI 差异表；机制正文在各板块档 |
 | 会话 | `SESSION.md` | 权威源（DOC-REORG-VSC 批 3——ARCHITECTURE §4 迁出写全）；与 CLI 同名对应；槽位/端 marker/GC/懒历史/富注入 |
 | 上下文压缩 | `CONTEXT-COMPACTION.md` | 权威源（批 6——ARCHITECTURE §10 迁出写全）；与 CLI 同名对应 |
-| Agent 循环 | `AGENT-LOOP.md` | 权威源（批 1——ARCHITECTURE §6+§8 迁出写全）。`TURN-CAP-CONTINUE.md`（插件侧实现记录——2026-08-25 两端收口各为实现记录）同板块独立保留 |
+| Agent 循环 | `AGENT-LOOP.md` | 权威源（批 1——ARCHITECTURE §6+§8 迁出写全）。`TURN-CAP-CONTINUE.md`（插件侧实现记录——2026-08-25 两端收口各为实现记录）同板块独立保留；`INPUT-LOCK-ASYNC`（CLI docs/design——主会话输入禁排队 C'——2026-09-09 双端——机制正文本端落 AGENT-LOOP §7——登记于此防悬空——CLI 地图 TUI 行同登记） |
 | 子代理观测/注入 | `SUBAGENT-OBSERVE-SEND.md` | 父侧 observe(查进度)+send(注入引导) 运行中子代理；CLI 同名对应——同机制各自独立 |
 | async 结果容器统一 | `ASYNC-RESULT-CONTAINER.md` | settle 共享 helper/pending 单容器+role/池 accessor/buildChildSignal；CLI 同名对应——同机制各自独立 |
 | 轨迹存档 | `TRACE-STORE-VSC.md`（CLI docs/design——2026-09-09 L31） | VSC chat() 出口完整轨迹 JSONL 落盘同构 CLI（D-TR1-TR10）——trace-store.mjs/src/traces——设计档在 CLI 侧（thincoder/docs/design/TRACE-STORE-VSC.md）——登记于此防悬空 |
@@ -51,6 +51,7 @@
 
 ## 变更记录
 
+- 2026-09-09：INPUT-LOCK-ASYNC 登记（主会话输入禁排队 C'——busy（running 含 digest）锁输入/拒收——R15 排队合并废弃 + 单槽交接——CLI+VSC 双端实现——本端机制正文 AGENT-LOOP §7 更新）
 - 2026-09-09：SESSION-RESTORE-PARITY 登记（会话/存储/恢复——VSC 恢复呈现对齐 CLI：
   assistant 帧容器/嵌套工具卡/跨页配对/turnStart 可见前驱/首窗 200——改动见档内受影响文件）
 - 2026-08-21：初版（文档归属纪律，规格见 CLI `docs/design/AGENT-LOOP.md` §12 及本仓库 `ARCHITECTURE.md` 同步段）
