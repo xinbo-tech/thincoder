@@ -16,7 +16,7 @@
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
@@ -24,6 +24,7 @@ import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extensi
 import { newSlotData, saveSessionToSlot, setSlotEngDesignTokens } from "../src/extension/session-io.mjs"
 import { readSlotEngDesignTokens, clearSlotEngDesignToken, engTokensMergeForSave } from "../src/extension/session-slot-write.mjs"
 import { resolveDesignSlot, authorizeEngCoderDesignToken, executeConsumeDesignAction } from "../src/agent-tools/subagent-spawn-gate.mjs"
+import { injectAsyncResult, DIGEST_INJECT_BUDGET } from "../src/agent-tools/subagent-async.mjs"
 
 let sessionsDir
 const cwd = "/proj/eng-settlement" // session filename is keyed by hash(cwd) under the isolated sessions dir
@@ -192,4 +193,97 @@ test("clearSlotEngDesignToken removes one designId, keeps siblings", () => {
   assert.equal(read.engDesignTokens.a, undefined)
   // Unknown id → idempotent no-op false.
   assert.equal(clearSlotEngDesignToken(cwd, slot, "ghost"), false)
+})
+
+// ─── BATCH-3-STRUCTURE F-2：digest 注入批量预算（VSC 镜像——2026-09-09）───
+// 用例表 1:1（与 CLI async-settle.test.mjs 同尺寸钉死）：3 条 pending 30K+30K+40K（合计
+// 100K > 64K）→ 后条清单行（报告已落盘 <path>——不 inline 全文——path 来源钉死）；累计恰
+// 64K → 全部 inline（预算含边界）；单条 ≤64K 不回归 + 空轮 no-op。digest 轮 = 同 history
+// 连续注入（无他人落史——pushReal 每次恰 +1）；预算状态键 history 对象。VSC 落盘目录 =
+// <cwd>/.thincoder/tmp（offload 同目录约定）——cwd 用 mkdtemp 沙箱。
+
+/** 最小 history 载体（数组 + 墓碑 Map——injectAsyncResult 读写的面）。 */
+function mkHistory() {
+  const h = []
+  h._asyncTombstones = new Map()
+  return h
+}
+
+test("F-2 超预算：单 digest 轮 30K+30K+40K（100K > 64K）→ 后条清单行不 inline（全文落盘 path 钉死）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    const history = mkHistory()
+    const ctx = { history, fullHistory: [], cwd }
+    const mkBig = (id, ch, n) => ({ id, role: "explore", report: ch.repeat(n), error: null })
+    await injectAsyncResult(mkBig(1, "A", 30000), ctx)
+    await injectAsyncResult(mkBig(2, "B", 30000), ctx)
+    await injectAsyncResult(mkBig(3, "C", 40000), ctx)
+    assert.equal(history.length, 3)
+    assert.ok(history[0].content.includes("A".repeat(200)), "首条 30K inline")
+    assert.ok(history[1].content.includes("B".repeat(200)), "次条 30K inline（累计 60K ≤ 64K）")
+    const third = history[2].content
+    assert.ok(!third.includes("C".repeat(200)), "第三条不 inline 全文")
+    const m = third.match(/saved to disk[^:]*: (.+)/)
+    assert.ok(m, "清单行含落盘 path（报告已落盘 <path> 形态）")
+    const file = m[1].trim().split(/\n/)[0]
+    assert.ok(file.startsWith(join(cwd, ".thincoder", "tmp")), "path 来源 = cwd/.thincoder/tmp（offload 同目录）")
+    assert.equal(readFileSync(file, "utf8"), "C".repeat(40000), "清单行指向的文件 = 第三条全文")
+    // 轮复位：他人落史（下一请求窗口）→ 预算清零——后续单条照旧 inline
+    history.push({ role: "user", content: "next turn" })
+    await injectAsyncResult(mkBig(4, "D", 20000), ctx)
+    assert.equal(history.length, 5)
+    assert.ok(history[4].content.includes("D".repeat(200)), "新轮（累计不跨轮残留）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("F-2 边界：累计恰 64K（32K+32K）全部 inline——预算含边界（≤ 判定）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    assert.equal(DIGEST_INJECT_BUDGET, 65536, "预算常量 64K")
+    const history = mkHistory()
+    const ctx = { history, fullHistory: [], cwd }
+    const mkBig = (id, ch, n) => ({ id, role: "explore", report: ch.repeat(n), error: null })
+    await injectAsyncResult(mkBig(1, "A", 32768), ctx)
+    await injectAsyncResult(mkBig(2, "B", 32768), ctx)
+    assert.equal(history.length, 2)
+    assert.ok(history[0].content.includes("A".repeat(200)), "首条 inline")
+    assert.ok(history[1].content.includes("B".repeat(200)), "65536 ≤ 64K——含边界全 inline")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("F-2 单条 ≤64K 不回归 + 空轮 no-op：预算不跨 history 残留（轮隔离）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    const heavy = mkHistory()
+    await injectAsyncResult({ id: 1, role: "explore", report: "A".repeat(60000), error: null }, { history: heavy, fullHistory: [], cwd })
+    assert.ok(heavy[0].content.includes("A".repeat(200)), "单条 60K inline")
+    // 空轮（无 pending → 无注入调用）不改变任何状态——新 history 首条即新轮：恒 inline
+    const fresh = mkHistory()
+    await injectAsyncResult({ id: 1, role: "explore", report: "B".repeat(30000), error: null }, { history: fresh, fullHistory: [], cwd })
+    assert.equal(fresh.length, 1)
+    assert.ok(fresh[0].content.includes("B".repeat(200)), "单条 ≤64K 不回归（预算按 history 隔离——heavy 轮不泄漏）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞报告不抛——结果零丢失）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    mkdirSync(join(cwd, ".thincoder"), { recursive: true })
+    writeFileSync(join(cwd, ".thincoder", "tmp"), "blocker", "utf8") // tmp 位置为文件——mkdir 必败
+    const history = mkHistory()
+    const ctx = { history, fullHistory: [], cwd }
+    await injectAsyncResult({ id: 1, role: "explore", report: "A".repeat(30000), error: null }, ctx)
+    await injectAsyncResult({ id: 2, role: "explore", report: "C".repeat(40000), error: null }, ctx) // 累计 70K > 64K → 超限 → 落盘失败兜底
+    assert.equal(history.length, 2, "两注均入史（中途不抛——余条不丢）")
+    assert.ok(history[0].content.includes("A".repeat(200)), "首条 inline")
+    assert.ok(history[1].content.includes("C".repeat(200)), "兜底：全文 inline——报告不丢")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
 })
