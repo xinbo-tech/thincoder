@@ -117,7 +117,9 @@ export function resolveChildProvider(parent, modelArg) {
     return { ...withKey(p), model: mname || p.model }
   }
   const byName = providers.find((x) => x.name === modelArg)
-  if (byName) return withKey(byName)
+  // F-1 (QUICKFIX-BATCH-2——CLI F-2c 镜像)：裸渠道名克隆须重派生 model（MODEL-MERGE schema
+  // 渠道无 model 键）→ models[0] ?? parent 兜底（byName 解析自 parent 的 providers——同渠道家族）。
+  if (byName) return { ...withKey(byName), model: byName.models?.[0] ?? parent._provider?.model }
   return { ...parent._provider, model: modelArg }
 }
 

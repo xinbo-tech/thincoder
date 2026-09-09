@@ -9,8 +9,10 @@
  * 覆盖（用例表 + 验收 AC-1/AC-2）：
  * - F-1 provider.model undefined/null/空串 → buildRequest 可读 throw（ProviderError——带
  *   provider 名 + 修复线索）——不发病体（guard 在 body 组装前——不 mock fetch）
- * - F-2b resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 主 provider 的
- *   model（渠道自带 .model 优先）；cfg.model 显式 → override 不变
+ * - F-2b resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 命中渠道 models[0]
+ *   （跨渠道——非主 provider model——QUICKFIX-BATCH-2 F-2）；cfg.model 显式 → override 不变
+ * - F-1（QUICKFIX-BATCH-2——CLI F-2c 镜像）：resolveChildProvider byName 裸渠道名 → models[0]
+ *   （无候选 → parent model 兜底——同渠道家族）
  * - F-2d saveLines 槽装配面（panel-session.mjs 镜像——CLI applySession `||` 语义）：extra 带
  *   activeModel="" 不把空串钉进槽（回退 existing——槽 model 恒有值/恒缺失）；null/缺席保留
  *   槽值（不回归）；真实模型照常替换
@@ -81,18 +83,31 @@ test("F-1 有 model 不拦——body 照常带 model 键", () => {
 // F-2b advisor：cfg.provider 命中渠道（新 schema——models[] 无 model）但无 cfg.model
 const MAIN = { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-flash", apiKey: "k-main" }
 
-test("F-2b advisor 无 cfg.model → provider.model = 主 provider 的 model（渠道克隆重派生——model 键不缺失）", async () => {
+test("F-2b advisor 跨渠道 无 cfg.model → model = 命中渠道 models[0]（非主 provider model——QUICKFIX-BATCH-2 F-2）", async () => {
   const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
   const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi" } } })
   assert.equal(r.name, "kimi", "渠道命中")
   assert.equal(r.baseURL, "https://x", "端点=advisor 渠道——model 重派生不换端点")
-  assert.equal(r.model, MAIN.model, "model = 主 provider 的 model")
+  assert.equal(r.model, "kimi-k3", "model = 命中渠道（kimi 渠道）models[0]——非主 provider model")
 })
 
 test("F-2b cfg.model 显式 → override 不变（model: cfg.model 分支零回归）", async () => {
   const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
   const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi", model: "kimi-k3" } } })
   assert.equal(r.model, "kimi-k3")
+})
+
+test("F-2b 同渠道（cfg.provider=主渠道）无 cfg.model → model = 主渠道 models[0]（渠道自己的模型——不回归）", async () => {
+  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
+  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "deepseek" } } })
+  assert.equal(r.model, "deepseek-v4-pro", "config deepseek 渠道 models[0]（非 MAIN.model）——主渠道自己的候选首")
+})
+
+test("F-1 byName 裸渠道名 → model = 渠道 models[0]（克隆重派生——CLI F-2c 镜像）；无候选 → parent model 兜底（同渠道家族）", async () => {
+  const { resolveChildProvider } = await import("../src/agent-tools/subagent.mjs")
+  const parent = { _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", models: ["kimi-k3", "kimi-k2"], apiKey: "k2" }] } }
+  assert.equal(resolveChildProvider(parent, "kimi").model, "kimi-k3", "models[0] 命中")
+  assert.equal(resolveChildProvider({ _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", models: [], apiKey: "k2" }] } }, "kimi").model, MAIN.model, "渠道无候选 → parent model 兜底")
 })
 
 test("F-2b 无 cfg.provider → 主 provider 原样（含 model——fallback 分支零回归）", async () => {
