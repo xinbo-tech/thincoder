@@ -18,7 +18,8 @@ import { postPoolSnapshot } from "./panel-callbacks.mjs"
 import { addProviderFlow, removeProviderFlow, setKeyFlow } from "./provider-flows.mjs"
 import { openDiffPreview } from "./diff-preview.mjs"
 import { traceStop } from "./stop-trace.mjs"
-import { savePastedImages } from "./image-handler.mjs"
+import { savePastedImages, runVisionReader } from "./image-handler.mjs"
+import { specForModel } from "../specs.mjs"
 import { backgroundStatus } from "./suspension.mjs"
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
@@ -48,11 +49,12 @@ export function clearProjectOverride() {
  * C1（SESSION-FLOW-C F-C1e——retry 并入 userMessage 同入口——修 H-F 守卫双份）：userMessage
  * 与 retry 共用同一路由——busy 拒收（INPUT-LOCK-ASYNC C'）与挂起分流（_chat 内 susp 守卫）
  * 全走一套判断——retry 不再绕过路由直呼 _chat（并发新回合竞态——AC-S2 同款）。
- * 同步函数（savePastedImages 同步落盘）——零新 await 窗口。
+ * savePastedImages 同步落盘；F-1 降级分支（IMAGE-DOWNGRADE-VISION）在 await 前先置 running
+ * （C' 忙锁不变量保持——降级窗口内拒收并发回合）。
  * A1（SESSION-FLOW-A F-A1——修 R6 残留）：sendMessage 命令直发（chat-panel.mjs——sendMessage
  * 宿主）并入同入口——导出供其调用——running→拒收（无回显无排队——回显由宿主先决）。
  */
-export function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images }) {
+export async function routeUserTurn(panel, { text, modelOverride, reasoning, providerName, images, visionReader = null }) {
   // INPUT-LOCK-ASYNC（C'——2026-09-09——F-1/F-3）：busy（_turnState==="running"——回合含
   // digest/标题窗口——单一判据）输入禁用——消息一律拒收不排队（排队机制与排队回执 UI
   // 消息类型全删）——webview 输入框已由 loading.js 锁（正常发送到不了这里——本守卫
@@ -67,9 +69,26 @@ export function routeUserTurn(panel, { text, modelOverride, reasoning, providerN
   // and passes absolute PATHS downstream. The field stays `images` (wire
   // compat), but from here on it carries paths — setupAgentRun appends the
   // "[Attached images: ...]" pointer and the model views them via read_image.
-  const saved = Array.isArray(images) && images.length > 0
+  // F-1（IMAGE-DOWNGRADE-VISION——2026-09-09——评审 #1 定稿 appendImagePointer 零动）：本入口 =
+  // depth-0 主回合面——非视觉主模型贴图（specForModel(modelOverride).multimodal 假——webview
+  // echo）→ 先置 running（C' 忙锁——await 窗口拒并发回合）→ 视觉渠道一次性子代理读图
+  // （visionReader ?? runVisionReader——评审 #6 seam：参数注入 mock、缺省回落生产）——成功：描述
+  // 注入 text（[图片 <路径> 描述: <描述>]）+ images 清空（throw 路径不再到达）；无渠道/spawn
+  // 失败/超时/空返/异常 → 原样下发（主回合 setup 现报错文案——可读不静默丢）。susp 等待态
+  // 不降级（排队回合走现路径——depth>0 子代理无此入口——边界明示）。
+  let saved = Array.isArray(images) && images.length > 0
     ? savePastedImages(images, _cwd())
     : undefined
+  if (saved?.length && modelOverride && panel._turnState !== "susp" && !specForModel(modelOverride).multimodal) {
+    panel._publishTurnState?.("running")
+    let out = null
+    try { out = await (visionReader ?? runVisionReader)({ paths: saved, providerName, cwd: _cwd() }) } catch { out = null }
+    if (out?.ok && typeof out.description === "string" && out.description.trim()) {
+      const marker = `[图片 ${saved.join("、")} 描述: ${out.description.trim()}]`
+      text = text?.trim() ? `${text}\n\n${marker}` : marker
+      saved = undefined
+    }
+  }
   panel._chat(text, modelOverride, reasoning, providerName, saved)
 }
 
