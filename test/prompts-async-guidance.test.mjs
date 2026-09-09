@@ -144,3 +144,17 @@ test("ASYNC-RESIDUE-FIX F-2/F-3 engineering.md step 4 旧 token 句删除 + asyn
   assert.ok(step4.includes("On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn."), "step 4: token 自动签发句缺失")
   assert.doesNotMatch(step4, /it returns a design token in plain text in its response/, "step 4: 旧 token 句残留")
 })
+
+test("BATCH-4-DOC-CLEANUP F-1 ESCALATE.md async:false 残留句零 + 锚句驻留（同步旧路径/同步语义零回归——fail-when-present）", () => {
+  const escalate = read("docs/design/ESCALATE.md")
+  assert.doesNotMatch(escalate, /同步旧路径/, "ESCALATE.md: 同步旧路径残留（§2.3 async 段/变更记录）")
+  assert.doesNotMatch(escalate, /同步语义零回归/, "ESCALATE.md: 同步语义零回归残留")
+  assert.ok(escalate.includes("**顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）"), "ESCALATE.md: §7.7.1 锚句缺失（byte-final 照抄 AGENT-LOOP §14.2）")
+})
+
+test("BATCH-4-DOC-CLEANUP F-2 WEBVIEW.md 输入锁旧句零残留（readOnly 锁/由 host 排队——fail-when-present）", () => {
+  const webview = read("docs/design/WEBVIEW.md")
+  assert.doesNotMatch(webview, /readOnly 锁/, "WEBVIEW.md: readOnly 锁旧句残留（INPUT-LOCK-BEHAVIOR-REVISED 后应零）")
+  assert.doesNotMatch(webview, /由 host 排队/, "WEBVIEW.md: send.js 拦截旧句残留（digest 中 Enter 由 host 排队——已修为 send 拦截保留）")
+})
+

@@ -171,8 +171,8 @@ queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 previ
   hover 展开 provider 的模型表）；底部含 add/remove/key 管理入口。
 - **挂起 UI**：settle 期间块驻留活动区（"done · awaiting digestion"——§5——digest
   done 补发落流锚插回 digest 报告前）；状态行（⏳ 后台 N 子代理 + 待消化计数——
-  `_suspCounts`——子代理计数徽标已撤）；输入框永不锁（loading.js）；digest 中 Enter
-  由 host 排队（send.js `isRunning && !S._suspended` 才拦截）。Stop 只在 running 显
+  `_suspCounts`——子代理计数徽标已撤）；输入框永不锁（loading.js）；send 拦截保留
+  （`isRunning`——Enter/发送按钮拒发——输入框不禁——可继续录入）。Stop 只在 running 显
   （susp 纯池跑不显——子代理停止靠活动区每块 ⏹——F-6）。
 - 交互控件按钮（mode-buttons.js）：ENG / ADVISOR(guard) / AUTO / PLAN 状态反射。
 
@@ -317,6 +317,9 @@ queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 previ
   resolve + webviewReady 流总数恰一次）。真机 Reload 走查 = 实现期验证项（N4）。
 
 ## 9. 变更记录（历史折叠——详见 git log）
+- 2026-09-09：BATCH-4-DOC-CLEANUP——§6 挂起 UI send 拦截句同步 INPUT-LOCK-BEHAVIOR-REVISED
+  （只禁 send 不禁录入——send 拦截保留 `isRunning`——Enter/发送按钮拒发——输入框不禁可继续录入——
+  L175 旧拦截句清）。
 
 - 2026-09-09：SESSION-ACTIVITY-REVISED 锚段（B1 修正——行面板保留裁定反转）——§2 布局
   改五行垂直序（活动区 #subagent-activity 回——messages 与输入之间——空时隐藏零高）+
