@@ -119,7 +119,9 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // §20 D-SD3b waiting 块（sub.queued——排队 spawn 返回即建——未启动无 relay 流）：
     // 括号状态词 = waiting（依赖/域冲突等位——detail 即原因）或 queued（槽满等位——
     // 状态区显示 position）；不显示 sync/async 词（尚未启动——无 async 标记可言——
-    // sync 词会误导：async spawn 排队的块不是 sync）；⏹ 门控不变（async 启动后才置）。
+    // sync 词会误导：async spawn 排队的块不是 sync）；⏹ 门控（QUEUED-VISIBILITY F-2——
+    // 2026-09-09）：queued 块头即置取消 ⏹（slot/wait/depc 三态——用户可撤销排队决策——
+    // 点击 = 出队——覆盖 SESSION-ACTIVITY-REVISED F-6“接受无取消”旧裁）。
     const queued = sub.queued ?? null
     const statusWord = queued ? (queued.kind === "slot" ? "queued" : "waiting") : null
     const modeWord = isSubRole && !queued ? (sub.async === true ? "async" : "sync") : null
@@ -172,7 +174,10 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // 顶格被裁；命中区 = col ≥ _stopCol = cols−1——含 glyph 与其右 margin，左邻
     // padding 空格仍走折叠）。整行 ≤ cols：内容先按 cols−3 截断。
     const registryLive = state._agent?._syncChildAborts?.has(sub.key) === true
-    if (!sub.done && (sub.async === true || registryLive) && (SUBAGENT_ROLES.includes(sub.role) || sub.role === "advisor")) {
+    // F-2（QUEUED-VISIBILITY——2026-09-09）：门控扩 queued——排队块（sub.queued——
+    // slot/wait/depc 三态）头置取消 ⏹（用户可撤销排队决策）——queued 恒先于 async 置位
+    // （subagent-blocks queued 分支守卫）——async/registry-live 判定不变（running 停面）。
+    if (!sub.done && (sub.async === true || registryLive || !!queued) && (SUBAGENT_ROLES.includes(sub.role) || sub.role === "advisor")) {
       const cut = sliceByWidth(headText, Math.max(0, cols - 3))
       headText = cut + " ".repeat(Math.max(0, cols - 3 - stringWidth(cut)))
       line.text = `${headText} ${ansi.dim}⏹${ansi.reset} `

@@ -19,6 +19,8 @@ import { buildConvLines, convViewport } from "./render-conversation.mjs"
 import { toggleFoldBlock, scrollFoldBlock, foldScrollOffset } from "./fold-block.mjs"
 import { cancelAsyncSubagent, cancelSyncChild } from "../agent-tools/subagent-async.mjs"
 import { cancelAsyncAdvisor } from "../agent-tools/advisor-async.mjs"
+import { maybeRefillAsync, refreshQueuedTokens } from "../agent-tools/subagent-scheduler.mjs" // F-2：queued 取消后续（补位/位置刷新）——叶子模块
+import { routeSubToken } from "./subagent-blocks.mjs" // F-2：queued 取消块移除（⟦ev⟧cancelled 就地路由——引擎动作路径同通道）
 import { denyModalForOwner } from "./key-modes.mjs"
 import { C } from "./ansi.mjs"
 
@@ -215,6 +217,16 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
         // 同类缺陷现状已知——非本批引入——v2 deny 机制后续可复用到 async——此处仅
         // syncStopped 路径 deny——async 成功取消不 deny 模态——零回归）。
         if (syncStopped) denyModalForOwner(state, key, { pushLine, render })
+        // F-2（QUEUED-VISIBILITY——2026-09-09）：queued 出队（引擎返回 was:"queued"——
+        // 无 settle 事件链）——UI 直连路径无回合 ctx 事件流——补 executeCancelAction
+        // 同款 TUI 维护：等待块移除（⟦ev⟧cancelled 就地路由——守卫同 routeSubToken
+        // cancelled 分支——不冻结）+ 补位 + 剩余排队头位置/依赖标注刷新（⟦ev⟧queued）。
+        if (r?.was === "queued") {
+          const emit = (t) => { if (!routeSubToken(state, t, render)) pushLine(t, C.dim) }
+          emit(`${key}/⟦ev⟧cancelled\x1e`)
+          maybeRefillAsync(agent)
+          refreshQueuedTokens(agent, emit)
+        }
         pushLine(`[subagent ${key} stop requested]`, C.warn)
       }
     } catch (e) {
