@@ -48,7 +48,6 @@ src/mcp.mjs           Re-export shim → src/mcp/ (stdio/http transport, MCP cli
 src/provider.mjs      LLM provider (fetch + SSE, non-retryable error detection, rate-limit retry) + re-exports rate gate
 src/provider/rate.mjs TPM rate limiting gate
 src/log.mjs           Diagnostic event log（LOGGING.md——CLI src/log.mjs 同构：logEvent/轮转/黑名单；共享 ~/.thincoder/logs/ 同格式同事件面）
-src/context.mjs       Context compaction + repo outline builder + context injection
 src/memory.mjs        Long-term memory (file-based Markdown entries + frontmatter, CLI entry-format compatible; vector semantic search when an embedding key is configured, keyword fallback — no FTS5)
 src/repomap.mjs       Repository dependency graph parsing
 src/config.mjs        Model capability specs (context, thinkApi, thinkEnabledValue, noUsageStream, temp ranges)

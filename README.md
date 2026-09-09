@@ -169,7 +169,6 @@ thincoder-vscode/
 │   ├── mcp/               # MCP transport (stdio, http)
 │   ├── mcp.mjs            # Re-export shim
 │   ├── extension/         # Extracted modules — presets, session-io, settings
-│   ├── context.mjs        # Context compaction + repo outline + injection
 │   ├── config.mjs         # Model capability specs (self-contained)
 │   ├── memory.mjs         # Long-term memory (FTS5)
 │   ├── repomap.mjs        # Repository dependency graph

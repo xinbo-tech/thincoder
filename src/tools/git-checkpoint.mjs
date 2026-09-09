@@ -16,7 +16,8 @@ import {
 } from "./checkpoint.mjs"
 
 /** XML-escape for file names flowing back into the model's context (CLI helpers.mjs 同款，
- *  含 `'` → &apos;——vscode context.mjs 的本地版不转义单引号，这里镜像 CLI 版本）。 */
+ *  含 `'` → &apos;——VSC 本地版不转义单引号（run-helpers.mjs escapeXml——原 context.mjs
+ *  本地版随 GIT-ASYNC L21 删除，同源继承），这里镜像 CLI 版本）。 */
 function escapeXml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")
 }

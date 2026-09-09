@@ -10,7 +10,8 @@
 > 内部。
 > 权威源（VS Code）：`src/memory.mjs`（存储/解析/检索核）、`src/memory-tool.mjs`
 > （memory 工具面 + 动作执行）、`src/embedding.mjs`/`embed-config.mjs`/`indexer.mjs`
-> （可选向量检索）、`src/context.mjs`（自动注入）。
+> （可选向量检索）——检索为 memory 工具按需（原 `src/context.mjs` 回合自动注入
+> 已随该文件删除退役——GIT-ASYNC L21）。
 > 装配（VS Code）：`src/tools/index.mjs`（memoryTool 注册）、`src/agent-tools/`
 > 执行门禁（readonly 动作并行）、`src/extension/settings.mjs`（embedding 配置面板）。
 > 关联：ARCHITECTURE.md（§13 源行——ARCHITECTURE 2026-09-08 瘦身收官，源行已删）、AGENT-LOOP.md（工

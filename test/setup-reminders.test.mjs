@@ -13,13 +13,18 @@
  *  - slot 注入：engPersist.slot 透传进 env 行；无绑定（直连/非面板顶层 run）→ slot: null；
  *  - 注入句解耦（N6/AC4）：process restarted 句 = 模块级闸（进程内首个恢复回合发一次）——
  *    同进程换槽重建只发 resumed:yes、句不再发（闸已关）；全新会话首回合不发句不误报。
+ *  - GIT-ASYNC L21（2026-09-09）：composeGitContext 三形态单测（AC-4 字节 parity——
+ *    detached/dirty>20 截断/clean——纯函数不需真 git）+ collectGitContext 失败冷却单测
+ *    （AC-3 必做锁——非 git 目录 ms 级真失败 → catch 记 ts → 30s 内二次调用跳过——不触发
+ *    真 5s 超时；Map 预填 ts 正向锁 skip 路径 + >30s 旧条目访问时惰性清）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { envStateLine, pushEnvStateReminder, _resetRestartDetectionForTests } from "../src/agent/setup-reminders.mjs"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+import { envStateLine, pushEnvStateReminder, _resetRestartDetectionForTests, composeGitContext, collectGitContext, _gitFailureCooldownForTests, _clearGitFailureCooldownForTests } from "../src/agent/setup-reminders.mjs"
 import { buildTopLevelAgent, hydrateRun } from "../src/agent/setup.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/extension/session-slots.mjs"
 
@@ -49,6 +54,20 @@ const envOf = (hist) => {
 const restartCount = (hist) => hist.filter((m) =>
   typeof m.content === "string" && m.content.startsWith("[System reminder: process restarted at ")
 ).length
+
+/** Windows 实测：git 子进程退出后其 cwd 目录句柄释放滞后 close 事件 ~300ms——rmSync 偶发
+ *  EPERM（rmSync maxRetries 不覆盖此窗）——短重试兜底（GIT-ASYNC 冷却测试专用）。 */
+async function rmGitCwdDir(dir) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      rmSync(dir, { recursive: true, force: true })
+      return
+    } catch {
+      if (attempt >= 10) throw new Error(`rmGitCwdDir: dir still locked after retries: ${dir}`)
+      await new Promise((r) => setTimeout(r, 250))
+    }
+  }
+}
 
 const hist = [{ role: "user", content: "u1" }]
 const provider = { model: "deepseek-v4-pro" }
@@ -181,3 +200,67 @@ test("hydrateRun: 全新会话（空历史）首回合——无句、闸随即�
   assert.equal(restartCount(r2.history), 0)
   assert.match(envOf(r2.history), /resumed: no\./)
 })
+
+// ─── GIT-ASYNC L21：composeGitContext 三形态（AC-4 字节 parity 锁——纯函数不需真 git）───
+
+test("composeGitContext: 富形态——branch + commits + uncommitted（逐字节 parity——现拼装保留）", () => {
+  assert.equal(
+    composeGitContext({ branch: "main", log: "abc123 first commit\ndef456 second", status: " M src/x.mjs\n?? new.mjs" }),
+    "Git context: on branch `main`, 2 uncommitted change(s).\n" +
+      "Recent commits:\nabc123 first commit\ndef456 second\n" +
+      "Uncommitted:\n M src/x.mjs\n?? new.mjs",
+  )
+})
+
+test("composeGitContext: detached（branch 空 → (detached)）+ dirty>20 截断（头 20 + 省略注差）", () => {
+  const lines = Array.from({ length: 25 }, (_, i) => ` M f${String(i).padStart(2, "0")}.mjs`)
+  assert.equal(
+    composeGitContext({ branch: "", log: "only one", status: lines.join("\n") }),
+    "Git context: on branch `(detached)`, 25 uncommitted change(s).\n" +
+      "Recent commits:\nonly one\n" +
+      "Uncommitted:\n" + lines.slice(0, 20).join("\n") + "\n… (5 more)",
+  )
+})
+
+test("composeGitContext: clean 形态（空 status/log——等价 git 无输出）+ log-only 变体", () => {
+  assert.equal(
+    composeGitContext({ branch: "main", log: "", status: "" }),
+    "Git context: on branch `main`, working tree clean.",
+  )
+  assert.equal(
+    composeGitContext({ branch: "main", log: "abc one", status: "" }),
+    "Git context: on branch `main`, working tree clean.\nRecent commits:\nabc one",
+  )
+})
+
+// ─── GIT-ASYNC L21：失败冷却（AC-3 必做锁——确定性 seam = 非 git 目录 ms 级快失败 +
+//      Map 预填正向锁——评审 #3：真 git 5s 超时永不触发）───
+
+test("collectGitContext: 非 git 目录真失败 → all-or-nothing '' + 记冷却 ts + 30s 内二次调用跳过", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "gitctx-fail-"))
+  try {
+    assert.equal(await collectGitContext(dir), "", "非 git 仓——git ms 级失败 → ''（AC-2 同路径）")
+    const ts = _gitFailureCooldownForTests(dir)
+    assert.ok(typeof ts === "number" && Date.now() - ts < 2000, "catch 已记冷却 ts（Map 读回）")
+    assert.equal(await collectGitContext(dir), "", "冷却期内（<30s）二次调用直接跳过 → ''")
+  } finally {
+    _clearGitFailureCooldownForTests(dir) // 清理 Map 条目
+    await rmGitCwdDir(dir) // Windows: git 子进程 cwd 句柄释放滞后 → EPERM 短重试
+  }
+})
+
+test("collectGitContext: Map 预填——健康 git 仓也跳过；>30s 旧条目访问时惰性清后恢复收集（评审 #2）", async () => {
+  // 探针 = 本仓根（test 文件上级——健康 git 仓：无冷却时 collect 必非空——compose 首行恒非空）
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
+  try {
+    _gitFailureCooldownForTests(repoRoot, Date.now())
+    assert.equal(await collectGitContext(repoRoot), "", "预填 ts=now → 冷却期内跳过（健康仓也跳过——正向锁 skip 路径）")
+    _gitFailureCooldownForTests(repoRoot, Date.now() - (30_000 + 1000))
+    const out = await collectGitContext(repoRoot)
+    assert.notEqual(out, "", ">30s 旧条目 → 访问时惰性清 → 恢复收集（健康仓输出非空）")
+    assert.equal(_gitFailureCooldownForTests(repoRoot), undefined, "惰性清后条目已删")
+  } finally {
+    _clearGitFailureCooldownForTests(repoRoot)
+  }
+})
+

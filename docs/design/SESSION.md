@@ -484,6 +484,11 @@ time 注入 = 恒为该轮最后一条（位置契约由测试独立锁定——
 - 重放主体必须与存盘机读线逐字节一致（§4.3 双线契约）——否则 prefix 缓存 miss。
 - git/env/process-restarted 均为 transient（人读线落盘过滤、机读线保留——§4.3），
   变更下回合自然感知。
+- git 富注入（GIT-ASYNC L21——2026-09-09 双端异步化）：`pushGitContext`/
+  `collectGitContext` → async——3×execFile 并行（Promise.all——最坏 = 单次 5s 超时
+  ——事件循环不再冻结）+ 失败冷却 30s（Map<cwd,ts>——访问时惰性清）——setup.mjs
+  调用点 `await`——**确认序契约不变**（git 仍在重放后、time 恒为最后一条）；
+  all-or-nothing 保持（任一失败/超时 → 整段不注入）。
 
 ## 11. 废弃方案（pre-release，无迁移）
 

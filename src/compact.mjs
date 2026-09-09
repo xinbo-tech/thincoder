@@ -1,6 +1,7 @@
 /**
  * compact.mjs — context compaction (CLI CONTEXT-COMPACTION.md parity)
- * Split out of context.mjs (both files stay under the 500-line hard limit).
+ * Split out of the former context.mjs (GIT-ASYNC L21 整文件删除——原文件已不存；
+ * 本文件独立守 500 行硬限)。
  * The unified compaction spec lives in thincoder/docs/design/CONTEXT-COMPACTION.md.
  */
 import { chat } from "./provider.mjs"

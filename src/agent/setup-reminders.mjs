@@ -10,11 +10,15 @@
  *   - pasted-image pointer appended to the REAL user message (by reference — never
  *     history.at(-1), which is the transient time reminder pushed after the input)
  *
- * Pure functions over (history, opts, …) — no I/O, trivially unit-testable.
+ * Builders are pure over (history, opts, …); the git-context collector
+ * (collectGitContext/pushGitContext) is the module's one I/O spot — async git
+ * subprocesses (execFile ×3 并行 + 失败冷却——GIT-ASYNC L21), everything else
+ * stays I/O-free and trivially unit-testable（:13 "no I/O" 过期注修复）。
  */
 
 import { specForModel } from "../specs.mjs"
-import { execSync } from "node:child_process"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
 import { escapeXml } from "./run-helpers.mjs"
 import { END } from "../extension/session-slots.mjs"
 import { peerInstances } from "../extension/peer-instances.mjs"
@@ -88,29 +92,74 @@ export function detectRestoredSession({ depth, resume, autoTurn, fullHistory }) 
 
 const GIT_TIMEOUT_MS = 5000
 const MAX_GIT_CHANGES_DISPLAY = 20
+// maxBuffer 沿用 execSync 默认现值 1 MiB（评审 #1——防大输出仓 ENOBUFS 翻转 → "" 破 AC-4 字节 parity）
+const GIT_MAX_BUFFER = 1024 * 1024
+// 失败冷却 v1（用户裁——F-3）：真失败/超时后 30s 内跳过该 cwd 的收集——病态 repo 周期拖慢变一次性
+const GIT_FAILURE_COOLDOWN_MS = 30_000
+/** cwd → 最近一次 git 收集失败的 ts。评审 #2：访问时惰性清 >30s 旧条目（防长活
+ *  extension host 无界累积——v1 接受）。 */
+const gitFailureCooldowns = new Map()
+
+const execFileAsync = promisify(execFile)
+
+/** 冷却检查 + 惰性清扫：冷却期内的 cwd 返回 true（调用方直接 "" 跳过）。 */
+function gitCooldownActive(cwd) {
+  const now = Date.now()
+  const lastFailure = gitFailureCooldowns.get(cwd)
+  if (lastFailure === undefined) return false
+  if (now - lastFailure >= GIT_FAILURE_COOLDOWN_MS) {
+    gitFailureCooldowns.delete(cwd) // 惰性清过期条目
+    return false
+  }
+  return true
+}
+
+/** Test seams — cooldown Map 状态控制（生产从不调用）：
+ *  `_gitFailureCooldownForTests(cwd, ts)` 读（ts 省略）或写 ts；`_clear…` 删条目。 */
+export function _gitFailureCooldownForTests(cwd, ts) {
+  if (ts !== undefined) gitFailureCooldowns.set(cwd, ts)
+  return gitFailureCooldowns.get(cwd)
+}
+export function _clearGitFailureCooldownForTests(cwd) {
+  gitFailureCooldowns.delete(cwd)
+}
+
+/** Git context 纯格式化（branch/log/status = trim 后原串）——独立导出供单测锁
+ *  AC-4 字节 parity（现拼装逐字节保留——detached/dirty>20 截断/clean 三形态）。 */
+export function composeGitContext({ branch, log, status }) {
+  const dirty = status ? status.split("\n").length : 0
+  return [
+    `Git context: on branch \`${branch || "(detached)"}\`${dirty ? `, ${dirty} uncommitted change(s)` : ", working tree clean"}.`,
+    log ? `Recent commits:\n${log}` : "",
+    status ? `Uncommitted:\n${status.split("\n").slice(0, MAX_GIT_CHANGES_DISPLAY).join("\n")}${dirty > MAX_GIT_CHANGES_DISPLAY ? `\n… (${dirty - MAX_GIT_CHANGES_DISPLAY} more)` : ""}` : "",
+  ].filter(Boolean).join("\n")
+}
 
 /** Rich git context — CLI helpers.mjs collectGitContext parity (SESSION.md §11.1
- *  T-E6：branch/commits/uncommitted 富注入，非 clean|dirty 摘要）。 */
-export function collectGitContext(cwd) {
+ *  T-E6：branch/commits/uncommitted 富注入，非 clean|dirty 摘要）。GIT-ASYNC L21：
+ *  3×execSync 串行 → 3×execFile 并行（Promise.all——最坏 = 单次 5s 超时——事件循环
+ *  不冻结）。单 catch → "" 保持 all-or-nothing（任一失败/超时 → 整段不注入——非 git
+ *  快失败同路径）；catch 记冷却 ts——30s 内该 cwd 直接跳过。 */
+export async function collectGitContext(cwd) {
+  if (gitCooldownActive(cwd)) return ""
   try {
-    const opts = { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: GIT_TIMEOUT_MS }
-    const branch = execSync("git branch --show-current", opts).trim()
-    const log = execSync("git --no-pager log --oneline -5", opts).trim()
-    const status = execSync("git status --short", opts).trim()
-    const dirty = status ? status.split("\n").length : 0
-    return [
-      `Git context: on branch \`${branch || "(detached)"}\`${dirty ? `, ${dirty} uncommitted change(s)` : ", working tree clean"}.`,
-      log ? `Recent commits:\n${log}` : "",
-      status ? `Uncommitted:\n${status.split("\n").slice(0, MAX_GIT_CHANGES_DISPLAY).join("\n")}${dirty > MAX_GIT_CHANGES_DISPLAY ? `\n… (${dirty - MAX_GIT_CHANGES_DISPLAY} more)` : ""}` : "",
-    ].filter(Boolean).join("\n")
+    const opts = { cwd, encoding: "utf8", timeout: GIT_TIMEOUT_MS, windowsHide: true, maxBuffer: GIT_MAX_BUFFER }
+    const [branch, log, status] = await Promise.all([
+      execFileAsync("git", ["branch", "--show-current"], opts).then((r) => r.stdout.trim()),
+      execFileAsync("git", ["--no-pager", "log", "--oneline", "-5"], opts).then((r) => r.stdout.trim()),
+      execFileAsync("git", ["status", "--short"], opts).then((r) => r.stdout.trim()),
+    ])
+    return composeGitContext({ branch, log, status })
   } catch {
+    gitFailureCooldowns.set(cwd, Date.now()) // 真失败/超时——冷却 30s
     return ""
   }
 }
 
-/** Git context push (CLI setup.mjs parity) — transient, depth-0 user turns only. */
-export function pushGitContext(history, cwd) {
-  const gitCtx = collectGitContext(cwd)
+/** Git context push (CLI setup.mjs parity) — transient, depth-0 user turns only.
+ *  async（collectGitContext 异步化——调用方 await——注入相对序不变——F-4）。 */
+export async function pushGitContext(history, cwd) {
+  const gitCtx = await collectGitContext(cwd)
   if (gitCtx) {
     history.push({ role: "user", content: `[System reminder: git context:\n${escapeXml(gitCtx)}]`, transient: true })
   }

@@ -138,8 +138,9 @@ mtime 超 3 天（`TMP_RETENTION_MS`）的文件——子目录不动、异常�
 （CLI `~/.thincoder/tool-results/`、VS Code `<cwd>/.thincoder/tmp/`）。
 
 **上下文注入（顶层）**：`[System: working directory snapshot]` + `[System: project
-dependency outline]`（repomap 依赖图——实现注入格式为 `[System reminder: project
-dependency outline: …]`，context.mjs）+ user input；`[System: AUTO mode active]` 在
+dependency outline]`（repomap 依赖图——注入格式 `[System reminder: project
+dependency outline: …]`；注入载体原为 context.mjs——GIT-ASYNC L21 整文件删除——
+现 repo outline 由 repo_outline 工具按需取）+ user input；`[System: AUTO mode active]` 在
 AUTO 时注入（每次循环迭代动态检查 live getter——approve-all/AUTO 按钮轮次中途翻转后
 下一条注入即生效）。每迭代重读 live AUTO 并补推 AUTO_REMINDER（翻转/压缩丢提醒不
 遗漏）；engineering-mode 转换提醒经 injectEngineeringReminder（覆盖 TUI/panel 切换与

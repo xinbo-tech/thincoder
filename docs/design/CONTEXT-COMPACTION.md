@@ -1,16 +1,18 @@
 # VS Code 上下文压缩与回注（CONTEXT-COMPACTION）
 
 > 板块：上下文压缩（VS Code 端实现）。状态：**当前态规格**（2026-09-08 由
-> ARCHITECTURE §10 迁出并对照 `src/compact.mjs`/`src/context.mjs`/`src/agent/`
+> ARCHITECTURE §10 迁出并对照 `src/compact.mjs`/`src/agent/`（原
+> `src/context.mjs` 亦在列——GIT-ASYNC L21 整文件删除后剔除）
 > 核实写全——DOC-REORG-VSC 批 6）。
 > 与 CLI `CONTEXT-COMPACTION.md` 同名对应同一"上下文压缩"机制板块——各端独立实
 > 现，内容以本端代码为准（用户裁定：两端文档各自独立完整，不互指、不复制共享正
 > 文）。本档只写 VSC 端真实接线；CLI 端 TUI 压缩面板等差异在此不表。
 > 权威源（VS Code）：`src/compact.mjs`（压缩/降级全逻辑——
 > compactHistory/truncateFallback/shrinkOversized/tailStartByBudget/REVERSE 配对保
-> 护 + explore-distill 再导出）、`src/context.mjs`（非压缩职责：repo outline/富注
-> 入）、`src/agent/run-stages.mjs`（checkAndCompact 判定点）、`src/agent.mjs`（主
-> 循环安全点调用）。
+> 护 + explore-distill 再导出）、`src/repomap.mjs`（repo_outline 工具）/`src/agent/
+> setup-reminders.mjs`（非压缩职责：repo outline 按需工具 + git/editor 富注入——
+> 原 `src/context.mjs` 载体已删，GIT-ASYNC L21）、`src/agent/run-stages.mjs`
+> （checkAndCompact 判定点）、`src/agent.mjs`（主循环安全点调用）。
 > 装配（VS Code）：`src/extension/panel-callbacks.mjs`（onCompressStart/onCompress/
 > onCompressFail → webview `compress` 消息四态）、`webview/chat.js`（#compress-status
 > 状态行渲染）、`src/explore-distill.mjs`（轮末蒸馏）。
@@ -126,8 +128,18 @@
   元素原地更新；会话视图清除重建 replaceChildren）。仅生命周期可见——摘要正文永远
   不进前端（D11 静默纪律）。
 
-## 8. 非压缩职责边界（context.mjs）
+## 8. 非压缩职责边界（原 context.mjs——GIT-ASYNC L21 整文件删除）
 
-- repo outline builder（buildRepoOutline——scan .js/.mjs/.ts/.tsx，函数/类边界分
-  组）、富注入（git/目录/时间/project instructions/skills/rules/相关 memory/doc
-  注入）留在 context.mjs——本档只管压缩与压缩后回注。
+原 `src/context.mjs` 承载的非压缩职责已分迁，本档只管压缩与压缩后回注：
+
+- repo outline：`src/repomap.mjs`（repoOutlineTool——按需工具，非回合自动注入）；
+- git 富注入（branch/commits/uncommitted）：`src/agent/setup-reminders.mjs`
+  collectGitContext/pushGitContext（async——GIT-ASYNC L21——见 SESSION.md §11.1/§10）；
+- editor/机器注入：`src/extension/editor-context.mjs` + setup-reminders pushInjections。
+
+## 变更记录（GIT-ASYNC L21——2026-09-09）
+
+- `src/context.mjs` 整文件删除（injectContext/findDocChunks/escapeXml +
+  buildRepoOutline/parseImports/collectSourceFiles 全死代码）——本档 :4 对照源、
+  权威源 :11 与 §8 边界改指现行载体（compact.mjs / repomap.mjs /
+  setup-reminders.mjs / editor-context.mjs）。

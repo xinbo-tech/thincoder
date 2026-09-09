@@ -24,7 +24,6 @@ import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
-import { injectContext } from "../context.mjs"
 import { loadRaw, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
 import { loadEngineeringPrompt, pushReal } from "./run-helpers.mjs"
 import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
@@ -390,7 +389,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // Git context (SESSION.md §11.1 T-E6——CLI setup.mjs 富注入同款补齐：branch/
   // commits/uncommitted，非 clean|dirty 摘要）：顶层用户回合每回合注入当前状态。
-  if (depth === 0 && !resume && !autoTurn) pushGitContext(history, cwd)
+  // GIT-ASYNC L21：pushGitContext → async（collectGitContext 3×execFile 并行）——
+  // await 保持相对注入序（mode → git → user → env-state → peer → time）。
+  if (depth === 0 && !resume && !autoTurn) await pushGitContext(history, cwd)
 
   // resume (interrupt continuation): the input is already in history — pushing it
   // again would duplicate the user message (CLI setup.mjs resume parity).
