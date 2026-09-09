@@ -1,7 +1,7 @@
 # CLI TUI 崩溃 stderr 默认捕获（TUI-STDERR-CAPTURE）
 
 > 板块：TUI 生命周期崩溃面（CLI——崩溃诊断留痕）。权威源：bin/thincoder.mjs 入口 + src/crash-reports.mjs（R25——JS/V8/C++ 断言已覆盖——本批补第 4 类：外部终止/native abort 的 stderr 诊断）。
-> 状态：**设计待评审**——2026-09-09 落档（用户场景实证：resize 崩溃无 [error] 行 + crash-reports 空 + 事件日志零 node 记录 = 进程被外部终止（ConPTY/终端层）——Node 无钩子——native abort 诊断走 stderr(fd 2) 进程内不可改——**外层父进程包装 = 唯一默认捕获路**——用户裁接受包装）。需求：TODO CLI TUI 崩溃 stderr 默认捕获（用户反馈——"固定在程序里默认记录——出问题查"）。
+> 状态：**评审通过——已交付（commit 13592c8——clean——236/0——wrapped-spawn 38 + 测试 6/6 真 spawn 崩溃链——修正轮 1/5——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
