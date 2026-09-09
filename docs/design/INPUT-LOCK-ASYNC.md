@@ -1,7 +1,7 @@
 # 主会话输入禁排队（INPUT-LOCK-ASYNC——C'）
 
 > 板块：挂起回合/输入 UI（双端——主会话 busy 禁输入——排队废弃）。权威源：AGENT-LOOP.md §9（挂起回合/digest）+ §24 R15（排队合并——本批废弃）。
-> 状态：**设计待评审**——2026-09-09 落档（禁排队勘察 explore 一手——busy 判据 state.processing 统一——门禁落点 key-handler L265——R15 废弃面 + 释放窗口/abort 承诺边界）。需求：TODO 主会话输入禁排队（C'——digest 意图污染演进——用户裁 Q1 整键吞 + Q2 白名单保留）。
+> 状态：**评审通过——已交付（CLI e79aa5b/4811832 + VSC 71a175c/0f5bab8——clean——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
