@@ -1,7 +1,7 @@
 # 调度器动态文件域（SCHEDULER-DYNAMIC-DOMAIN）
 
 > 板块：subagent 调度器（双端——subagent-scheduler.mjs 同构）。权威源：AGENT-LOOP §10.1/§10.2（调度器——2026-09-09 重编号后）+ §7.2（status/observe touched 上报）。
-> 状态：**设计待评审**——2026-09-09 落档（touched 追踪勘察 explore 一手——方案完整）。需求：TODO 文件纪律放宽 + 调度器动态文件域（用户裁——② 调度器纳入实际 touched——① 纪律主体已落地仅残留清理）。
+> 状态：**评审通过——已交付（CLI c7626ab + VSC e55a516——clean——修正轮 1/5——CLI 208/208 + VSC 238/238——L2 待链稳定）**——2026-09-09 落档
 
 ---
 

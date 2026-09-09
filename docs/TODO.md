@@ -117,7 +117,7 @@
     （/exit /help /model 紧急控制通道——不排队语义无冲突）——释放窗口守卫 + abort 零丢失承诺保留（单槽
     交接等价物）——status=裁定全齐待设计启动——设计权在用户
 
-- [ ] **全异步化提示词/工具描述适配评估（2026-09-09 用户需求——改全面异步化后整体适配审计）**：
+- [x] ~~**全异步化提示词/工具描述适配评估（2026-09-09 用户需求——改全面异步化后整体适配审计）**~~——**2026-09-09 完成**（残留清单产出——主修 ASYNC-RESIDUE-FIX 已交付核销——文档面候选归批 4）：
   范围全：双端全部注入提示词（system.md/engineering.md/eng-coder.md/engineering-sub.md/METHODOLOGY.md）+
   全部工具描述（subagent/advisor/consult/escalate/send 等——src/agent-tools/*.mjs）+ 平台提示词段
   （advisor-design.md/advisor-convergence 等）——判据：同步时代残留措辞（async:false 显式引导/等子代理
@@ -125,7 +125,7 @@
   （父侧裁优先级分批修——每处修走评审链）——owning board = 提示词系统 + 工具描述——status=登记待评估
   启动——设计权在用户
 
-- [ ] **Gitee issue 修复批（2026-09-09 用户裁攒批待设计——三 issue 勘察根因已定位）**：
+- [x] ~~**Gitee issue 修复批（2026-09-09 用户裁攒批待设计——三 issue 勘察根因已定位）**~~——**2026-09-09 已交付**（F-1 ef94736 + F-4 05de9cb/c7a444d——chain 闭合核销）：
   ① IKE85W（CLI 真 bug——resolveAdvisorProvider run.mjs:330 读 agent.providers??[agent.provider]——child 只单元素
   ——advisor.provider≠child 实际 → findProvider throw → catch 错配 403——VSC 无此缺陷（provider.mjs 读磁盘全量）
   ——修：候选源扩 agent.config.providersList（child config 已带全量——resolveChildProvider 同款）——小改——
@@ -145,7 +145,7 @@
   收敛双端同基再镜像——与 MAIN-DESIGN 增强批（id=6 注入 A1-A4 中）协调——排其交付后——owning board = 
   提示词系统——status=评估完成待设计（清单齐——设计权在用户）
 
-- [ ] **live 面板排队 subagent 可见（2026-09-09 用户需求——UI 增强）**：
+- [x] ~~**live 面板排队 subagent 可见（2026-09-09 用户需求——UI 增强）**~~——**2026-09-09 已交付核销**（QUEUED-VISIBILITY——VSC bacf545 + CLI 16f0095——L2 239/239）：
   排队中的 subagent（queued——被调度器按文件域/依赖串行）在 live 面板可见（现只显示 running——
   queued 不可见——排队位置/等待原因不透明）——owning board = VSC UI（panel-live/activity-flow）——
   status=登记待设计（勘察结论——两端差集已定位：CLI 已有排队显示（subagent-panel.mjs §20 D-SD3b
