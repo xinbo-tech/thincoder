@@ -11,9 +11,10 @@
  *     history.at(-1), which is the transient time reminder pushed after the input)
  *
  * Builders are pure over (history, opts, …); the git-context collector
- * (collectGitContext/pushGitContext) is the module's one I/O spot — async git
- * subprocesses (execFile ×3 并行 + 失败冷却——GIT-ASYNC L21), everything else
- * stays I/O-free and trivially unit-testable（:13 "no I/O" 过期注修复）。
+ * (collectGitContext/pushGitContext) is the module's one slow/blocking I/O spot
+ * — async git subprocesses (execFile ×3 并行 + 失败冷却——GIT-ASYNC L21);
+ * everything else stays I/O-free（peer 提醒的 stat 经 peerInstances 惰性委
+ * 托——见下）and trivially unit-testable（:13 "no I/O" 过期注修复）。
  */
 
 import { specForModel } from "../specs.mjs"
