@@ -14,7 +14,7 @@
 | [1] 人格层 | "你是谁"：模式/角色的身份与边界宣言 | 每人格一份（主会话按模式、子代理按角色） |
 | [2] 公共层 | 两模式共用的协作基础（语言/人机分工/确认门/合同纪律） | 恒一份（恒第二位） |
 | [3] 纪律层 | "怎么干活"：本模式的工作流程/行为规则/工具观 | 每模式一份 |
-| [4] 其他 | 项目层（METHODOLOGY/AGENTS——cwd 注入）+ skills 清单等追加 | 动态 |
+| [4] 其他 | 项目层（AGENTS——cwd 注入）+ skills 清单等追加 | 动态 |
 
 独立于主装配链的**特殊模块**：consult（会诊）、advisor（评审）——自含基底、独立注入（§3.3）。
 
@@ -32,7 +32,7 @@
 | [3] 纪律层·普通 | discipline-normal.md |
 | 特殊模块 | consult-base.md / advisor-design.md / advisor-round{1,2,3}.md（自含——不套前缀法） |
 
-L5 项目层（METHODOLOGY.md / AGENTS.md）不随二进制分发、命名不变。
+L5 项目层（AGENTS.md）不随二进制分发、命名不变。
 
 ## 2.5 各文件内容大纲（目标态——每文件写什么）
 
@@ -60,11 +60,11 @@ L5 项目层（METHODOLOGY.md / AGENTS.md）不随二进制分发、命名不变
 | discipline-engineering.md | ① 四步硬流程（需求→设计→实施→测试）不跳步 + 铁律（撞错结构就改不挂账/checklist 跟踪）② 文档规范（三层结构/方案选型对比模板/多实现面纪律/板块归属/归属判定四问）③ 评审收敛纪律（发起权/裁决表/轮次衰减）④ 实施委托结构化（任务书 + file 域语义）⑤ 需求池攒批/R24 挂钩/写文档人类可读 ⑥ 工具观条款（搜索优先级等） |
 | discipline-normal.md | ① 写码工作流（before/while/收尾——现 system.md 执行节迁入）② 按任务型匹配（Bug/Feature/Refactor/General）③ 测试与交付纪律（lint/verify/测试面）④ 代码结构判据（函数/文件档位表 + 原则十条 + 模块拆分 policy + 查重 + 意图理解）⑤ 常用纪律（三招/动手比动眼/长输出落盘/日志细则 + 工具观条款） |
 
-> **METHODOLOGY 骨干分拣（用户裁定 2026-09-10——通用方法论并进槽位，不开新层）**：现 cwd
-> METHODOLOGY.md 的通用骨干按内容性质分拣入上表（铁律/四步/攒批/R24/文档规范 →
-> discipline-engineering；结构判据/常用纪律 → discipline-normal；协作原则 → common.md）——
-> **项目 METHODOLOGY.md 瘦成纯项目差异**（项目特有约定/项目事实/板块地图指针——无则薄）；
-> methodology-template.md 同步瘦成项目空骨架（不再复制通用骨干）。
+> **METHODOLOGY 骨干分拣 + 退役（用户裁定 2026-09-10——通用方法论并进槽位不开新层；项目方法论
+> 概念退役并入 AGENTS.md）**：现 cwd METHODOLOGY.md 的通用骨干按内容性质分拣入上表（铁律/四步/攒批
+> /R24/文档规范 → discipline-engineering；结构判据/常用纪律 → discipline-normal；协作原则 →
+> common.md）；**项目方法论文档退役**——项目约定直接写 AGENTS.md；methodology-template.md 退役
+> （不再提供模板）。详见「项目层收敛」节。
 
 ### 特殊模块（自含——微调对齐，不套槽位）
 
@@ -76,6 +76,16 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 - "file list = 授权边界"表述（任务书结构/审计偏差定义/调度 files 声明处）统一改述为
   "file 域声明 = 预期触碰面（调度 + 披露基准）"——超域 ≠ 越权，披露即可
 - 主会话 spawn 任务书模板同步（不再写"不得触碰清单外文件"）
+
+### 项目层收敛（用户裁定 2026-09-10——METHODOLOGY.md 退役）
+
+- **项目方法论文档退役**：不再有独立 METHODOLOGY.md——项目相关约定**直接写进 AGENTS.md**（项目层
+  唯一入口——现有 loadProjectInstructions 已注入，零新机制）；方法论骨干已分拣进纪律层（上表）。
+- **methodology-template.md 退役**：不再提供模板——通用骨干已入纪律层随产品分发，项目侧无需模板。
+- **降级链简化**：D-M1/D-M2（METHODOLOGY 缺失警告+模板携带）整套删除——AGENTS.md 缺失 = 项目层空缺
+  跳过（现状语义），无警告需求。
+- 双端存量迁移：双仓 cwd/METHODOLOGY.md 内容并入各自 AGENTS.md 后删除；METHODOLOGY 概念相关锚句/
+  文档同步清理（ENGINEERING-MODE/PROMPT-DECOUPLING 各处引用）。
 
 ## 3. 装配逻辑
 
@@ -95,9 +105,9 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 
 | 场景 | 装配链 |
 |---|---|
-| 主会话·工程 | persona-engineering.md → common.md → discipline-engineering.md → METHODOLOGY + AGENTS + skills |
+| 主会话·工程 | persona-engineering.md → common.md → discipline-engineering.md → AGENTS + skills |
 | 主会话·普通 | persona-normal.md → common.md → discipline-normal.md → AGENTS + skills |
-| 子代理·eng-coder | persona-eng-coder.md → common.md → discipline-engineering.md → METHODOLOGY + AGENTS |
+| 子代理·eng-coder | persona-eng-coder.md → common.md → discipline-engineering.md → AGENTS |
 | 子代理·explore | persona-explore.md → common.md → discipline-normal.md → AGENTS |
 | 子代理·coder | persona-coder.md → common.md → discipline-normal.md → AGENTS |
 | 子代理·plan | persona-plan.md → common.md → discipline-normal.md → AGENTS |
@@ -113,7 +123,7 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 ### 3.4 降级链（目标态）
 
 - 人格/纪律文件缺失 → 该槽空缺（装配跳过）+ 醒目警告（不 fallback 其他槽位的文件——层间隔离）
-- 项目 METHODOLOGY.md 缺失 → 警告 + 内置模板路径与全文随警告携带（D-M1/D-M2 沿用）
+- AGENTS.md 缺失 → 项目层空缺跳过（无警告需求——D-M1/D-M2 随 METHODOLOGY 退役删除）
 - 特殊模块基底缺失 → 该模块不可用报错（不自降级）
 
 ## 4. 内容归属判定规则（新增/修改提示词内容的分层判定法）
