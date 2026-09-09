@@ -50,7 +50,7 @@ export function migrateLegacyModelFields(raw) {
       const m = rawAM || provModel.get(rawAP) || (Array.isArray(ap.models) && ap.models.length ? ap.models[0] : "")
       if (m) dm = `${rawAP}:${m}`
     } else {
-      dm = null // 老 activeProvider 已不存在 —— 不迁移 defaultModel（见头注释）
+      dm = null // 老 activeProvider 已不存在 —— 走下方首渠道兜底
     }
     if (!dm) {
       const first = providers.find((p) => Array.isArray(p?.models) && p.models.length > 0)
