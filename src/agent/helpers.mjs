@@ -6,7 +6,8 @@ import { readFileSync, readdirSync } from "node:fs"
 import { homedir } from "node:os"
 import { writeFile, mkdir, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"
-import { execSync } from "node:child_process"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
 
 /** Single source for the AUTO-mode reminder (was duplicated in agent.mjs +
  *  setup.mjs — consult P2, 2026-08-30). */
@@ -138,20 +139,65 @@ export async function offloadToolResult(text, callId, dir = join(configDir, "too
   }
 }
 
-/** Collect git branch, recent commits, and working tree status as context text */
-export function collectGitContext(cwd) {
+// 失败冷却 v1（用户裁——GIT-ASYNC L21）：真失败/超时后 30s 内跳过该 cwd 的收集——
+// 病态 repo 周期拖慢变一次性。VSC setup-reminders.mjs 同构镜像。
+const GIT_FAILURE_COOLDOWN_MS = 30_000
+/** cwd → 最近一次 git 收集失败的 ts。评审 #2：访问时惰性清 >30s 旧条目（防无界累积）。 */
+const gitFailureCooldowns = new Map()
+// maxBuffer 沿用 execSync 默认现值 1 MiB（评审 #1——防大输出仓 ENOBUFS 翻转 → "" 破字节 parity）
+const GIT_MAX_BUFFER = 1024 * 1024
+
+const execFileAsync = promisify(execFile)
+
+/** 冷却检查 + 惰性清扫：冷却期内的 cwd 返回 true（调用方直接 "" 跳过）。 */
+function gitCooldownActive(cwd) {
+  const now = Date.now()
+  const lastFailure = gitFailureCooldowns.get(cwd)
+  if (lastFailure === undefined) return false
+  if (now - lastFailure >= GIT_FAILURE_COOLDOWN_MS) {
+    gitFailureCooldowns.delete(cwd) // 惰性清过期条目
+    return false
+  }
+  return true
+}
+
+/** Test seams — cooldown Map 状态控制（生产从不调用）：
+ *  `_gitFailureCooldownForTests(cwd, ts)` 读（ts 省略）或写 ts；`_clear…` 删条目。 */
+export function _gitFailureCooldownForTests(cwd, ts) {
+  if (ts !== undefined) gitFailureCooldowns.set(cwd, ts)
+  return gitFailureCooldowns.get(cwd)
+}
+export function _clearGitFailureCooldownForTests(cwd) {
+  gitFailureCooldowns.delete(cwd)
+}
+
+/** Git context 纯格式化（branch/log/status = trim 后原串）——独立导出供单测锁字节
+ *  parity（现拼装逐字节保留——detached/dirty>20 截断/clean 三形态——VSC 镜像）。 */
+export function composeGitContext({ branch, log, status }) {
+  const dirty = status ? status.split("\n").length : 0
+  return [
+    `Git context: on branch \`${branch || "(detached)"}\`${dirty ? `, ${dirty} uncommitted change(s)` : ", working tree clean"}.`,
+    log ? `Recent commits:\n${log}` : "",
+    status ? `Uncommitted:\n${status.split("\n").slice(0, MAX_GIT_CHANGES_DISPLAY).join("\n")}${dirty > MAX_GIT_CHANGES_DISPLAY ? `\n… (${dirty - MAX_GIT_CHANGES_DISPLAY} more)` : ""}` : "",
+  ].filter(Boolean).join("\n")
+}
+
+/** Collect git branch, recent commits, and working tree status as context text.
+ *  GIT-ASYNC L21：3×execSync 串行（最坏 15s 阻塞）→ 3×execFile 并行（Promise.all——
+ *  最坏 = 单次 5s 超时——事件循环不冻结）。单 catch → "" 保持 all-or-nothing（任一
+ *  失败/超时 → 整段不注入——非 git 快失败同路径）；catch 记冷却 ts——30s 内跳过。 */
+export async function collectGitContext(cwd) {
+  if (gitCooldownActive(cwd)) return ""
   try {
-    const opts = { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: GIT_TIMEOUT_MS }
-    const branch = execSync("git branch --show-current", opts).trim()
-    const log = execSync("git --no-pager log --oneline -5", opts).trim()
-    const status = execSync("git status --short", opts).trim()
-    const dirty = status ? status.split("\n").length : 0
-    return [
-      `Git context: on branch \`${branch || "(detached)"}\`${dirty ? `, ${dirty} uncommitted change(s)` : ", working tree clean"}.`,
-      log ? `Recent commits:\n${log}` : "",
-      status ? `Uncommitted:\n${status.split("\n").slice(0, MAX_GIT_CHANGES_DISPLAY).join("\n")}${dirty > MAX_GIT_CHANGES_DISPLAY ? `\n… (${dirty - MAX_GIT_CHANGES_DISPLAY} more)` : ""}` : "",
-    ].filter(Boolean).join("\n")
+    const opts = { cwd, encoding: "utf8", timeout: GIT_TIMEOUT_MS, windowsHide: true, maxBuffer: GIT_MAX_BUFFER }
+    const [branch, log, status] = await Promise.all([
+      execFileAsync("git", ["branch", "--show-current"], opts).then((r) => r.stdout.trim()),
+      execFileAsync("git", ["--no-pager", "log", "--oneline", "-5"], opts).then((r) => r.stdout.trim()),
+      execFileAsync("git", ["status", "--short"], opts).then((r) => r.stdout.trim()),
+    ])
+    return composeGitContext({ branch, log, status })
   } catch {
+    gitFailureCooldowns.set(cwd, Date.now()) // 真失败/超时——冷却 30s
     return ""
   }
 }

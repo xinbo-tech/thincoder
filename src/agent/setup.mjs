@@ -85,8 +85,9 @@ export async function prepareRun(agent, input, callbacks, {
 
   if (!resume) {
       // Git context: branch, recent commits, uncommitted changes
+      // GIT-ASYNC L21：collectGitContext → async（3×execFile 并行 + 失败冷却）——await
       if (depth === 0) {
-        const gitCtx = collectGitContext(agent.cwd)
+        const gitCtx = await collectGitContext(agent.cwd)
         if (gitCtx) {
           agent.history.push({
             role: "user",

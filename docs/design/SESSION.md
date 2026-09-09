@@ -369,7 +369,7 @@ m = loadManifest(cwd)
 **未决/限制**（后续项，非本批）：
 
 - VS Code `detectRestoredSession` 为进程级一次性闸——中途切换会话拿不到 `resumed: yes`（按会话跟踪语义待后续完善）；
-- git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）——CLI parity 接受，异步优化待 TODO；
+- ~~git 富注入 = 3×execSync 每回合同步（最坏 ~15s 阻塞事件循环）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改：collectGitContext → async——3×execFile 并行（Promise.all——最坏单次 5s）+ all-or-nothing + 失败冷却 30s（Map<cwd,ts> 惰性清）——本节 §11.1 注入语义/字节 parity 不变——设计档 VSC 仓 `docs/design/GIT-ASYNC.md`）；
 - ~~**env-state 缺当前会话 slot（2026-09-08 用户需求点登记——SESSION §11 env-state 行无 slot）**~~——**已交付核销**（2026-09-08 快车道批——§11.1/§11.2：双端 setup-reminders envStateLine 加 `slot: {N}` + 本 §11 字段映射 slot 行 + 双端 system.md:24 slot 字段——本条作废，TODO Requirement Pool 登记项勾销）。
 - R9 的"模式历史"（agent 自查询模式历史）本批不做——设计只覆盖"当前模式"注入；
 - R12（async 深度门控：depth-0 缺省 async、depth>0 缺省 sync）与本节同批实现——权威 = AGENT-LOOP.md §18。

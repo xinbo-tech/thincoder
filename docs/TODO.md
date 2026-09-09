@@ -18,7 +18,7 @@
 - [x] ~~**MCP readMcpSection servers 非数组静默当空**~~——**2026-09-08 批 1 2.3 已修**（config.mjs:347-348 ok:false）
 - [ ] **C 方案：read 读回 offload 文件防炸**——read 返回"头+尾"防读回 1MB——独立后续（A 方案含尾部预览已落地——C 堵剩余回路）
 - [ ] **advisor 截断方向另议**——advisor/run.mjs 头向 line-aware 截断——尾部结果被切问题未解决
-- [ ] **VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）
+- [x] ~~**VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改交付：VSC `setup-reminders.mjs` collectGitContext/pushGitContext → async + CLI `helpers.mjs` collectGitContext → async——3×execFile 并行 Promise.all + all-or-nothing + 失败冷却 30s（评审 #3 冷却单测必做已锁）——设计档 VSC 仓 `docs/design/GIT-ASYNC.md`）
 - [x] ~~**files 尾随空格目录声明检测**~~——**2026-09-08 批 1 2.7 已修双端**（CLI scheduler:43 + VSC scheduler:104 trimEnd——VSC 以 CLI 为单一测试锚）
 - [x] ~~**R19 read_history 发现面无 top-N cap**~~——**2026-09-08 用户裁不要**（每 cwd 目录槽数有上界——listSlots 时间序有限——无打爆风险——维持现状）
 - [x] ~~**R19 护栏语义缺口**~~——**2026-09-09 核销**（核实：裁定指标已作第二道落地——批 7 双端 READ_HISTORY_MAX_MESSAGES=50_000 消息数门（parse 后长度）+ 200K 物理行主门保留——两门组合最优——不 parse 拿不到消息数故主门不能改消息数——代码无需再动——仅簿记）像同值）
@@ -88,6 +88,14 @@
 - [x] ~~**父 agent 观察运行中子代理（功能①）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——observe 动作：按 id 拉 5 条回合摘要+当前工具+turn/touched，治父看不到中间）
 - [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
 - [x] ~~**designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**~~——**2026-09-09 用户裁取消**（想法改变——eng 模式主会话本身就是 designer——设计已在主会话内实现（本会话全部设计档）——不建独立 designer 子代理角色——原需求的"designer 提示词固化"诉求由主会话既有设计纪律覆盖（METHODOLOGY 三层/文档地图/受影响表——无需新角色））
+- [ ] **并发池统一可配置 + advisor 归位（2026-09-09 用户需求点——用户裁 advisor 独立槽方向认可——
+  独立优于并入因需轮次特有语义）**：三类槽（① eng-coder 池 ② other 池 ③ advisor 评审池）统一默认 4 +
+  用户可配置——配置界面 CLI /config（并发池子菜单——cmd-config.mjs:234-259 现只 engCoder/other——
+  advisor 并入）+ VSC 配置面板（现无 poolLimits 暴露——需补三类）——现状核对：engCoder/other 已默认 4
+  已可配（agent.poolLimits——CLI /config 已显）——advisor 评审池现平台限 2（§24 D-24b ②-6a——不可配）
+  → 核心增量 = advisor 归位可配 + 默认 4 + VSC 面板 + CLI advisor 项——advisor 池平台层落点待勘察
+  （实现层可能涉平台——双端）——owning board = 并发/评审池（AGENT-LOOP §24 域）——status=澄清完成
+  （三类确认）待设计启动——设计权在用户
 - [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
   对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）
