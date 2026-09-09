@@ -1,7 +1,7 @@
 # 头尾保留读取与截断（DUAL-END-TRUNCATION——L19+L20）
 
 > 板块：工具输出限制（CLI+VSC 双端——read 工具 C 方案 + advisor 截断双端化）。权威源：TOOL-OUTPUT-LIMITS-{REQUIREMENTS,TUNING}.md（板块档）+ L19/L20 待办。
-> 状态：**设计待评审**——2026-09-09 落档（代码正确性核实一手 + 用户裁 B 双端方向——L19 read C + L20 advisor 截断同构合并设计）。需求：TODO L19（read offload C 真未做）+ L20（advisor 截断方向——用户裁 B 双端）。
+> 状态：**已交付核销**——2026-09-09（双仓：CLI b4c65b0 + VSC 619f7d0——read 头尾 C 方案 + advisor 双保——truncate.mjs 双端 byte-identical——CLI 147/VSC 201 绿——audit clean + advisor pass + 父侧 code review pass——consume 9ef31e7f——VSC L2 链终跑）。需求：TODO L19（read offload C 真未做）+ L20（advisor 截断方向——用户裁 B 双端）。
 
 ---
 
@@ -69,3 +69,6 @@
 > 归属注（评审 #1）：本档 = L19+L20 批设计载体——实现时权威措辞并入 TOOL-OUTPUT-LIMITS-TUNING.md
 > §新增（read C + advisor 双端——同批更新防双述）——REQUIREMENTS.md FR 增补——核销时随 README 变更记录
 > 登记或归档（同 MEMORY-TOOL-SCOPE-FIX 先例）。
+
+> 父侧 code review #18 pass 注：🟡 空头洞（truncate 单行超限 → 0 内容只报注）——可选修——记后续；
+> 🟡 4 文件 >300 既有债——已记录；AC 勾销见上——评审 #5 空头洞注记。
