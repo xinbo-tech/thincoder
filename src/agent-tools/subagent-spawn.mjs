@@ -11,7 +11,6 @@
 import {
   createAgent,
   readonlyToolNames, escapeXml,
-  EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY,
 } from "../agent.mjs"
 import { makeRelay, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
@@ -268,12 +267,10 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     tools = parent.tools
   }
 
-  // Select prompt overlay by role
-  let overlay = ""
-  if (role === "explore") overlay = EXPLORE_OVERLAY
-  else if (role === "coder") overlay = CODER_OVERLAY
-  else if (role === "plan") overlay = PLAN_OVERLAY
-  else if (role === "eng-coder") overlay = ENG_CODER_OVERLAY
+  // PROMPT-SYSTEM 施工② G3（2026-09-10）：overlay（人格）装载随装配改造退役——人格槽
+  // 由 assemblePrompt 的 D1 场景表按 role 承载（persona-{role}，explore/coder/plan =
+  // PERSONA_NORMAL 同源）；child.overlay 恒空（setup 不再前缀叠加）。
+  const overlay = ""
 
   // explore/plan: force read-only permission; coder/default: AUTO passes through directly,
   // manual mode queues permission requests for the parent agent's approval UI (human in the loop, child agent is no longer silently rejected)
@@ -301,7 +298,8 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     }
   }
 
-  // eng-coder: force engineering=true on child config so setup.mjs applies engineering prompt
+  // G6（施工②）：eng-coder 场景即工程纪律——engineering=true 使 setup 场景映射落到
+  // assemblePrompt("eng-coder")（persona-eng-coder + common + discipline-engineering）。
   const childConfig = role === "eng-coder"
     ? { ...parent.config, agent: { ...parent.config.agent, engineering: true } }
     : parent.config

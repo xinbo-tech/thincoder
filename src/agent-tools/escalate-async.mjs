@@ -25,7 +25,7 @@
  *   domain still follows the consuming turn's tier — no family exception).
  */
 import { relative, isAbsolute } from "node:path"
-import { runAgent, createAgent, CODER_OVERLAY, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
+import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
 import {
@@ -190,7 +190,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
       config: parent.config,
       cwd: parent.cwd,
       memory: parent.memory,
-      overlay: CODER_OVERLAY,
+      // G3（施工②）：overlay 摘除——coder 人格槽由 assemblePrompt 场景表承载（G3 映射）。
       role: "coder",
     })
     entry.childAgent = child // settle 分类/status touched 摘要绑定（start 时刻）

@@ -12,7 +12,7 @@
  * CONTAINER.md D1 落地（池访问点改 getAsyncPool accessor）。
  */
 import { isAbsolute, relative } from "node:path"
-import { runAgent, createAgent, CODER_OVERLAY, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
+import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import {
   runWithContinue, TURN_CAP_MARK, makeRelay, wrapChildCallbacks,
   ensureChildApiKey, clampEffort,
@@ -388,13 +388,13 @@ export async function executeEscalateAction(args, ctx) {
   let escT0 = Date.now()
   try {
     // 全写路径（role "coder"）：权限经父 onPermissionRequest，mutations merge 回父
+    // G3（施工②）：overlay 摘除——coder 人格槽由 assemblePrompt 场景表承载（G3 映射）。
     child = createAgent({
       provider,
       tools: parent.tools,
       config: parent.config,
       cwd: parent.cwd,
       memory: parent.memory,
-      overlay: CODER_OVERLAY,
       role: "coder",
     })
     child._logId = escId // LOGGING：子内事件归属（escalate#N）

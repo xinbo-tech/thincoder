@@ -10,15 +10,13 @@ import { search as memorySearch, docSearch } from "../memory.mjs"
 import { pushReal } from "../context.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { loadSkills, formatSkillListing } from "../skills.mjs"
+import { assemblePrompt } from "../prompt-overlays.mjs"
 import {
   escapeXml, repairHistory, listWorkDir,
   collectGitContext, loadProjectInstructions, OUTLINE_INJECT_PREFIX,
   DEFAULT_MAX_TURNS, ensureAutoReminder,
 } from "./helpers.mjs"
 import { pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
-import { readFileSync, existsSync } from "node:fs"
-import { resolve, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
 
 const DEFAULT_COMPACT_THRESHOLD = 100_000
 const DOC_SEARCH_LIMIT = 5
@@ -36,45 +34,12 @@ function safeSliceUTF16(text, max) {
 }
 const MEMORY_SEARCH_LIMIT = 3
 
-/** Build engineering-mode system prompt by reading METHODOLOGY.md and wrapping it in the engineering template */
-export async function buildEngineeringPrompt(cwd, role) {
-  const engFile = role === "eng-coder" ? "engineering-sub.md" : "engineering.md"
-  const engTemplatePath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "prompts", engFile)
-  let engTemplate = ""
-  let templateMissing = false
-  try { engTemplate = readFileSync(engTemplatePath, "utf8") } catch {
-    templateMissing = true
-    if (role === "eng-coder") console.warn(`[setup] engineering-sub.md missing — eng-coder will run with degraded engineering constraints. Path: ${engTemplatePath}`)
-    else console.warn(`[setup] engineering.md missing — engineering mode will use template-only constraints. Path: ${engTemplatePath}`)
-  }
-  const methodologyPath = resolve(cwd, "METHODOLOGY.md")
-  if (!existsSync(methodologyPath)) {
-    // Template-only — engineering constraints stay active, minus project rules.
-    // The caller injects a warning into the history. Resolve the built-in
-    // methodology template to an absolute path (same-source join as the
-    // engineering template above — the packaged path is unreachable from the
-    // user's cwd) and carry its body so the warning can embed it verbatim
-    // (2026-09-02 D-M1/D-M2: template reachability for the model).
-    const methodologyTemplatePath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "prompts", "methodology-template.md")
-    let methodologyTemplateBody = null
-    try { methodologyTemplateBody = readFileSync(methodologyTemplatePath, "utf8") } catch {
-      // Template unreadable (packaging) — degraded: base warning only (no path/body injected), same as VS Code.
-    }
-    return { prompt: engTemplate || null, templateMissing, methodologyMissing: true, methodologyTemplatePath, methodologyTemplateBody }
-  }
-  const methodology = readFileSync(methodologyPath, "utf8")
-  const prompt = engTemplate
-    ? `${engTemplate}\n\n---\n\n## Project METHODOLOGY.md\n\n${methodology}`
-    : `[ENGINEERING MODE]\n\nFollow this methodology strictly:\n\n${methodology}`
-  return { prompt, templateMissing, methodologyMissing: false }
-}
-
 /**
  * Prepare an agent run: inject context, build system prompt, inject tools.
  * Returns all state needed by the main loop, and writes initialization messages into agent.history.
  */
 export async function prepareRun(agent, input, callbacks, {
-  depth = 0, signal, overrideTurns, resume, systemPrompt: corePrompt, disciplineRules, mainOverlay,
+  depth = 0, signal, overrideTurns, resume,
 } = {}) {
   const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_TURNS
   const threshold = agent.config?.agent?.compactThreshold ?? DEFAULT_COMPACT_THRESHOLD
@@ -206,7 +171,6 @@ export async function prepareRun(agent, input, callbacks, {
   // eng-coder subagents get advisor for mandatory design review before coding
   const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool } = await import("../agent-tools.mjs")
   const { consultStartTool, consultStopTool } = await import("../agent-tools/consult.mjs")
-  const { CONSULT_BASE } = await import("../agent.mjs")
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
   // retired escalate tool surface is now the subagent action:"escalate" — its pool
@@ -316,57 +280,41 @@ export async function prepareRun(agent, input, callbacks, {
   const toolByName = new Map(tools.map((t) => [t.name, t]))
   agent._onTaskUpdate = callbacks.onTaskUpdate
 
-  // system prompt
-  const needsDiscipline = depth === 0 || agent._role === "coder" || agent._role === "eng-coder"
-  let base
-  if (agent._role === "consult") {
-    // consult children: a lean, purpose-built base prompt (consult-base.md) — NOT the full
-    // main-agent system.md (whose coding-agent persona, checklist/task/verify workflows and
-    // tool references conflict with a read-only diagnosis and cost tokens every turn).
-    base = CONSULT_BASE
-  } else if ((depth === 0 || agent._role === "eng-coder") && agent.config?.agent?.engineering) {
-    // Engineering mode: strict methodology, NO standard discipline injection.
-    // Falling back to standard discipline on METHODOLOGY.md absence would leak
-    // advisor enforcement into engineering mode — the two prompt sets stay separate.
-    const engResult = await buildEngineeringPrompt(agent.cwd, agent._role)
-    if (engResult.prompt) {
-      base = `${corePrompt}\n\n${engResult.prompt}`
-    } else {
-      // Template unreadable — last resort: core prompt only, no methodology.
-      base = corePrompt
-    }
-    // Warn when templates or METHODOLOGY.md are missing (degraded engineering constraints).
-    if (depth === 0) {
-      const warnings = []
-      if (engResult.templateMissing) {
-        warnings.push(`Engineering template (${agent._role === "eng-coder" ? "engineering-sub.md" : "engineering.md"}) not found — using degraded constraints.`)
-      }
-      if (engResult.methodologyMissing) {
-        let warning = "METHODOLOGY.md not found in the project root — no project methodology is loaded, so every 'per METHODOLOGY' reference in the engineering prompt is dangling and the three-document hard flow (requirements / design / test doc) is NOT enforced. Ask the user whether to create METHODOLOGY.md; if the user confirms, write cwd/METHODOLOGY.md before designing."
-        // 2026-09-02 D-M1/D-M2 (template accessibility): absolute path + full body — the model
-        // can read the template directly instead of hand-writing one from an unreachable source
-        // path. Body read failure → degraded warning above (path/body not injected). VS Code
-        // setup-reminders.mjs parity (两端警告文本一致，本端以 CLI 为准).
-        if (engResult.methodologyTemplateBody) {
-          warning += `\n\nbuilt-in template（可 read ${engResult.methodologyTemplatePath} 或直接参考以下内容）:\n\n${engResult.methodologyTemplateBody}`
-        }
-        warnings.push(warning)
-      }
-      if (warnings.length > 0) {
-        agent.history.push({
-          role: "user",
-          content: `[System reminder: ENGINEERING MODE is active but ${warnings.join(" ")}]`,
-        })
-      }
-    }
-  } else {
-    base = needsDiscipline ? `${corePrompt}\n\n${disciplineRules}` : corePrompt
+  // ── system prompt ── PROMPT-SYSTEM 施工② G2/G3（2026-09-10）：四槽位装配函数
+  // assemblePrompt({scenario}) 表驱动（D1 场景表 = 蓝图 §3.2 装配矩阵）——取代旧
+  // consult/工程/普通三分支 + overlay 前缀。固定序 人格→common→纪律（§3.1）；[4] 层
+  // （AGENTS + skills）由下方既有尾部逻辑承担。降级链（蓝图 §3.4）：人格/纪律/common
+  // 槽文件缺失 → 该槽空缺跳过 + 醒目警告（不 fallback 其他槽——层间隔离）；AGENTS.md
+  // 缺失 → loadProjectInstructions 静默跳过（无警告——既有语义）。
+  // consult = 特殊模块（§3.3）——CONSULT_BASE 自含基底直接返回，不入主链、无四槽。
+  // eng-coder 场景即工程纪律（G6——subagent-spawn 的 childConfig engineering=true
+  // 强制语义由此表行承载：scenario=eng-coder → discipline-engineering 槽）。
+  const { prompt: base, warnings: slotWarnings } = assemblePrompt(
+    agent._role === "consult"
+      ? "consult"
+      : (depth === 0 || agent._role === "eng-coder") && agent.config?.agent?.engineering
+        ? (agent._role === "eng-coder" ? "eng-coder" : "engineering")
+        : (depth === 0 ? "normal" : agent._role ?? "normal"),
+  )
+  // D2 警告通道 = 既有 setup 警告通道（history 注入）——不新增机制。深度 0 才注入
+  // （子代理警告不打扰主会话历史——旧工程警告块同款深度门）。
+  // ── Q1 审计收敛（蓝图 §3.4 第 4 款）：特殊模块基底缺失 → 该模块不可用报错（不自降级
+  // ——空基底绝不可静默上岗）。consult 场景在外部消费点收口：入历史后抛错（Agent 循环
+  // → 历史已含错误句可见——不静默、不降级）。四槽场景维持跳过+警告降级链（AC-2 三款）。
+  if (agent._role === "consult" && !base) {
+    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (蓝图 §3.4 特殊模块不自降级). Check the installation's prompts directory.]"
+    agent.history.push({ role: "user", content: msg })
+    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback per PROMPT-SYSTEM §3.4)`)
   }
-  let systemPrompt = agent.overlay
-    ? `${agent.overlay}\n\n${base}`
-    : depth === 0 && !agent.config?.agent?.engineering
-      ? `${base}\n\n${mainOverlay}`
-      : base
+  if (depth === 0 && slotWarnings.length > 0) {
+    agent.history.push({
+      role: "user",
+      content: `[System reminder: prompt slots degraded — ${slotWarnings.join(" ")}]`,
+    })
+  }
+  // G3（施工②审计收敛）：overlay（人格）前缀分支退役——CLI/VSC 同构（人格槽由场景表
+  // 承载，spawn 侧 overlay 恒空——createAgent 的 overlay 参数留空兼容位）。
+  const systemPrompt = base
 
   // Time injection deliberately does NOT live here: system prompts must be byte-identical
   // across runs (provider prefix caches). The time rides a transient user reminder per turn

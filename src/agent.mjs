@@ -5,15 +5,16 @@
 import { chat } from "./provider/index.mjs"
 import { pushReal, summarizeRunExplorations } from "./context.mjs"
 import { specForModel } from "./config.mjs"
-import { readFileSync } from "node:fs"
-import { join, dirname, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { resolve } from "node:path"
 import { executeToolCalls } from "./agent/dispatch.mjs"
 import { recordToolResults } from "./agent/record-results.mjs"
 import { FILE_MUTATORS } from "./agent/helpers.mjs"
 import { prepareRun } from "./agent/setup.mjs"
 import { injectPostTurn } from "./agent/post-turn.mjs"
 import { handleCompletion } from "./agent/completion.mjs"
+// PROMPT-SYSTEM 施工② G1（2026-09-10）：六件槽位常量装载收口 prompt-overlays.mjs
+// （与子代理角色常量同源——单一权威锚 D1）；旧三件文件读取随本批退役。
+// 槽位常量通过下方 re-export 面（mod: rel — re-export 保 import 面）；本文件自身零直接消费。
 // 主循环阶段函数（压缩检查/注入组/回合收尾）2026-09-05 实践轮迁 agent/run-stages.mjs
 import { runCompactionCheck, injectTurnReminders, finalizeAgentTurn, injectResponseReminders } from "./agent/run-stages.mjs"
 import {
@@ -25,17 +26,18 @@ import {
   AUTO_TURN_DIGEST_DOMAIN,
 } from "./agent/helpers.mjs"
 // ENG 提醒族 + auto-turn domain 2026-09-05 迁 agent/helpers.mjs（agent.mjs 530 > 500 硬限）
-// overlay 载荷（explore/coder/plan/eng-coder/consult）迁 prompt-overlays.mjs——re-export 保面
+// PROMPT-SYSTEM 施工② G1（2026-09-10）：六件槽位常量装载收口 prompt-overlays.mjs
+// （与子代理角色常量同源——单一权威锚 D1）；本文件 re-export 保 import 面。
 export {
-  EXPLORE_OVERLAY, CODER_OVERLAY, PLAN_OVERLAY, ENG_CODER_OVERLAY, CONSULT_BASE,
+  PERSONA_ENGINEERING, PERSONA_NORMAL, COMMON,
+  DISCIPLINE_ENGINEERING, DISCIPLINE_NORMAL,
+  CONSULT_BASE,
 } from "./prompt-overlays.mjs"
 export { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "./agent/helpers.mjs"
 
-// Prompt files (byte-stable, loaded once)
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const SYSTEM_PROMPT = readFileSync(join(__dirname, "prompts", "system.md"), "utf8")
-const DISCIPLINE_RULES = readFileSync(join(__dirname, "prompts", "discipline.md"), "utf8")
-const MAIN_OVERLAY = readFileSync(join(__dirname, "prompts", "main.md"), "utf8")
+// Role → persona slot mapping note（施工② G3）: 子代理人格由 assemblePrompt 场景表按
+// role 承载（persona-explore/coder/plan/eng-coder.md——D1 表 = 蓝图 §3.2 1:1）；
+// spawn 侧 overlay 概念已退役（prompt-overlays.mjs 不再导出 OVERLAY 别名常量）。
 
 // exported for consumption by agent-tools.mjs
 export {
@@ -109,8 +111,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   }
   agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3)
   const { maxTurns, threshold, tools, toolSchemas, toolByName, systemPrompt } = await prepareRun(
+    // G1/G2（施工②）：prompt 装配收口 prepareRun 内部（assemblePrompt——prompt-overlays.mjs
+    // 槽位常量，与子代理角色常量同源——单一权威锚 D1）；本调用不再携带 prompt 常量。
     agent, input, callbacks,
-    { depth, signal, overrideTurns, resume: resume || autoTurn, systemPrompt: SYSTEM_PROMPT, disciplineRules: DISCIPLINE_RULES, mainOverlay: MAIN_OVERLAY },
+    { depth, signal, overrideTurns, resume: resume || autoTurn },
   )
 
   // Exploration-distillation boundary (CONTEXT-COMPACTION §5): prepareRun already
