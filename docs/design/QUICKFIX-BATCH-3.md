@@ -1,7 +1,11 @@
 # 批 1：工具/代码面四小修（QUICKFIX-BATCH-3）
 
 > 板块：跨面快修（CLI+VSC——工具缺陷镜像 + 注释债 + 代码洁）。权威源：QUICKFIX-BATCH-2（CLI F-3 git commit --only 先例）+ POOL-CONFIG-UNIFIED（§24→§11.1/§11.2 映射权威——F-7）+ RESIZE-MOUSE-LEAK-FIX 交付建议 + IMAGE-DOWNGRADE-VISION 跟进项。
-> 状态：**设计待评审（重发定稿版）**——2026-09-09 落档（10 条评估分批——批 1 = **四小修**——L255（VSC git L204-207 granular add + 整索引实证）+ L216（**CLI src 29 处 + VSC src 39 处 = 68 处实证**——远超初勘 8+）+ L260（tui-lifecycle L20/L84 字面量三源核过）+ L250②（image-handler L77 maxTurns 10 固定实证——8+ 图超载面成立）——首评对象漂移未签 token——9 findings 全修正后重发）。需求：TODO L255 + L216 + L260 + L250②（用户裁推进——实证过的才入批）。
+> 状态：**设计待评审（重发定稿版）**——2026-09-09 落档（10 条评估分批——批 1 = **四小修**——L255（VSC git
+>   L204-207 granular add + 整索引实证）+ L216（**CLI src 29 处 + VSC src 39 处 = 68 处实证**——远超初勘 8+）
+>   + L260（tui-lifecycle L20/L84 字面量三源核过）+ L250②（image-handler L77 maxTurns 10 固定实证——8+ 图
+>   超载面成立）——首评对象漂移未签 token——9 findings 全修正后重发）。需求：TODO L255 + L216 + L260 + L250②
+>   （用户裁推进——实证过的才入批）。
 
 ---
 
