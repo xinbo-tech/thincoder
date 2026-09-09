@@ -9,7 +9,7 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 
 **需求基线**：`docs/design/REQUIREMENTS.md`（讨论中，随对话更新，定型后拆分为正式需求/设计文档）+ 具体设计文档 + 用户对话。**本项目没有独立于设计文档的需求文件**——评审/开发时以 REQUIREMENTS.md + 相关设计文档 + 对话背景三者为参照。
 
-设计文档在 `docs/design/`。主流程：[`PHILOSOPHY.md`](docs/design/PHILOSOPHY.md)（三观）→ [`METHODOLOGY.md`](docs/design/METHODOLOGY.md)（方法论）→ prompts。其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
+设计文档在 `docs/design/`。主流程：[`PHILOSOPHY.md`](docs/design/PHILOSOPHY.md)（三观）→ prompts（`src/prompts/` 人格/公共/纪律三层提示词——项目方法论骨干已入纪律层槽位文件，无独立 METHODOLOGY 注入体）。其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
 
 **逐档权威地图 = [`docs/design/README.md`](docs/design/README.md)**（板块 → 文档映射 + 归档标注 + 归属规则）——AGENTS.md 不逐档裸列（2026-09-08 结构债批 5：曾 28 档裸名清单与 README 地图重复 = 双源漂移——8 档归档后悬空随删消解）——写/改设计文档前先查地图。
 
@@ -53,7 +53,7 @@ src/acp.mjs + src/acp/   ACP 协议桥（bridge/session/transport——ACP-CLIEN
 src/cli/             CLI 顶层命令实现（setup-wizard/memory-command/distill-command/make-agent/permission——bin/thincoder.mjs 分发 import）
 src/git/             git 子系统（checkpoint.mjs 快照存储 + gitmem.mjs team 层 git 同步）
 src/traces/          trace-store.mjs 完整轨迹存档（AGENT-LOOP.md §18.6——~/.thincoder/traces/）
-src/prompts/         system prompts (system.md / discipline.md / main.md + subagent roles)
+src/prompts/         system prompts (槽位化：persona-engineering / persona-normal / persona-{eng-coder,explore,coder,plan} + common + discipline-engineering / discipline-normal + 特殊模块 consult-base / advisor-design / advisor-round{1,2,3}——装配链 [1]人格 → [2]公共 → [3]纪律 → [4]项目 AGENTS+skills；旧 system/engineering/engineering-sub/main/discipline/methodology-template 已退役——PROMPT-SYSTEM.md)
 src/provider/        LLM calls (native fetch + SSE)
 src/tools/           built-in tools (file/git/bash/search/web/checklist)
 src/tui/             bare-ANSI terminal UI
