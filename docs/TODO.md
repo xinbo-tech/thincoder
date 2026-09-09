@@ -230,6 +230,14 @@
   touched "—（尚无改动）"——滞后/失真——UI（live 块）显示比 status 准——修：status touched 从真实写
   入记录实时取（与 observe/UI 同源——不滞后）——status=登记——owner = 平台（subagent status 通道——与
   advisor 池盲区/子代理 abort 无标注同属可观测性族）
+- [ ] **子代理 id 复用（2026-09-09 用户观察——平台 bug——§27.1 F4 修复洞）**：设计应跨 runAgent/
+  resume 单调递增（subagent.mjs L293-295——F4 2026-09-07 消复用洞）——实际从 1 重新开始——
+  nextSubagentId（subagent-scheduler.mjs L433-446）双保险：history._subIdCounter expando（期望跨 run
+  持久）+ poolMax 池内兜底——**洞**：池空时 poolMax=0（L437）只靠 counter——reload/进程重启后 history
+  从槽文件恢复（新数组不带 expando）→ counter 丢 → 池空 + counter 丢 = id 从 1 复用——实证：批1
+  #1/#2→重发#4-#6（池有活条目 poolMax 生效）→22:10 reload 后批2 回 #1/#2→ACTIVITY 又 #1——
+  **坐实块 key（sub:role#id）跨批/reload 复用风险**（挂起池活跨 reload 时撞冻结块）——修：counter
+  持久化到槽文件（随 history 存）或恢复时从历史频道标签续号——status=登记——owner = 平台
   (core.mjs L433 signal 只留取消链)/proxy(proxy.mjs L263-265 头超时+body idle)均无整体墙钟残留——
   死亡另有来源——需来源标注钉死
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
