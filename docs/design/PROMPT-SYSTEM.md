@@ -41,25 +41,45 @@
 | advisor-round1/2/3.md | 40/39/35 | 独立评审 | "You are a(n independent) code review advisor" | advisor/main.mjs L72-78 |
 | methodology-template.md | 39 | L5 兜底 | "# METHODOLOGY — AI Agent Collaboration" | setup.mjs（METHODOLOGY 缺失警告携带）+ cmd-eng.mjs |
 
-## 3. 装配矩阵（目标态——2026-09-10 用户裁定：人格层恒前、system.md 恒第二；→ = "\n\n" 连接）
+## 3. 装配逻辑（抽象顺序原则——先于具体文件）
 
-**批准前现状提示**：代码尚未改（CLI setup.mjs L319-388 / VSC L317-334 仍是旧链 system.md 在前）——
-本矩阵为 §7 拆分批批准后的目标态；现状链见 §7 前的历史（或各批次档）。落地后本节即为权威现状。
+**四槽位固定序**（每个槽位至多一份文件；未命中角色/模式的槽位跳过）：
 
-| 场景 | 目标拼装顺序 |
-|---|---|
-| 主会话·工程模式 | `engineering.md(+METHODOLOGY.md) → system.md` + AGENTS.md + skills 列表 |
-| 主会话·普通模式 | `normal.md（新）→ system.md` + AGENTS.md + skills 列表 |
-| eng-coder 子代理 | `eng-coder.md → engineering.md(+METHODOLOGY) → system.md`——**与主会话同构**（人格→纪律→基础）；**engineering-sub.md 废除**（同层两份文本的历史怪胎——工程纪律层复用主会话同一份，eng-coder 特有差异由 eng-coder.md 角色层覆写表达） |
-| explore/coder/plan 子代理 | `角色.md → discipline.md → system.md`（人格→纪律→基础——同构；两模式同链） |
-| consult 子代理 | `consult-base.md`（独立会话——不变） |
-| advisor 评审 | `advisor-design.md` 或 `advisor-roundN.md`（独立会话——无主装配链——不变） |
+```
+[1] 人格层   —— 你是谁：每角色一份（主会话按模式、子代理按角色）
+[2] 公共层   —— 两模式共用协作基础：system.md（恒第二）
+[3] 纪律层   —— 怎么干活：按模式二选一（工程 discipline / 普通 discipline）
+[4] 其他     —— 项目层（METHODOLOGY/AGENTS）、skills 清单等追加
+```
 
-装配尾部统一追加（全部场景）：项目指令（AGENTS.md，`<untrusted_project_instructions>` 包裹）+ depth0 的 skills 清单。
+设计原则：
+- **同槽位不重复**：一个槽位一份文件——同一层禁止两份文本并存（历史分文件由此判定非法）
+- **同槽位复用**：同层若两场景语义一致，共用同一份文件，不另立副本（角色特有差异归人格层
+  覆写表达，不下沉纪律层）
+- **人格先行**：身份定义永远先于行为规则——模型先知道"是谁"再读"怎么干"
+- **公共恒二**：system.md 位置固定，人格冲突不落入公共层（L4 纯度由 §4 判定规则保障）
+
+### 槽位映射（目标态——各槽位的实现文件）
+
+| 槽位 | 主会话·工程 | 主会话·普通 | eng-coder | explore/coder/plan | consult | advisor |
+|---|---|---|---|---|---|---|
+| [1] 人格层 | engineering.md | normal.md（新） | eng-coder.md | 角色.md（各一） | consult-base.md 兼 | advisor-*.md 兼 |
+| [2] 公共层 | system.md | system.md | system.md | system.md | —（consult-base 自含） | —（自含） |
+| [3] 纪律层 | engineering.md（续） | discipline.md | engineering.md（续） | discipline.md | — | —（criteria 自带） |
+| [4] 其他 | +METHODOLOGY+AGENTS+skills | +AGENTS+skills | +METHODOLOGY+AGENTS | +AGENTS | +问题简报 | +评审对象 |
+
+**实现说明**：工程纪律 = engineering.md 全文——主会话直接作人格层，子代理侧拆为「eng-coder.md
+人格 + engineering.md 纪律」——同一份文件在不同装配链中占据不同槽位（文件 ≠ 层：一份文件可同
+时是人格槽与纪律槽的实现，槽位才是抽象契约）。
+
+### 落地差异（目标 vs 现码——批准后由实施批消除）
+
+现码（CLI setup.mjs / VSC setup.mjs）仍是 system.md 在前 + engineering-sub.md 分流 + normal.md
+不存在——以 §7 拆分批落地为目标，批准前代码不动。现链历史详见 §6 批次史。
 
 ### 降级链（METHODOLOGY/模板缺失——目标态）
 
-- engineering.md 缺失 → 人格层空位裸 system.md（+templateMissing 警告）——公共基础仍恒尾完整
+- engineering.md 缺失 → 人格+纪律槽空缺裸 system.md（+templateMissing 警告）
 - METHODOLOGY.md 缺失 → 工程模板本体（不 fallback discipline）+ 警告携带 methodology-template.md
   绝对路径与全文（D-M1/D-M2）
 - consult 无降级（consult-base 随二进制分发必在）
@@ -74,8 +94,7 @@
 
 ## 5. 已知结构债（本档登记）
 
-- **双重人格**：engineering.md（L1 ARCHITECT）与 system.md（coding agent + while-coding 执行节）并存
-  ——工程模式每轮读两套身份。**待批修正 = §7 基础拆分批**
+- **engineering-sub.md** 废除（§7）：工程纪律槽全场景共用 engineering.md——同槽位不重复原则
 - system.md 实际承载 = 公共基础 + 写码执行层（while coding/Rules/按任务型匹配/测试与交付）——
   L4 不纯（§7 修正对象）
 
