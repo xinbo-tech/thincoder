@@ -43,12 +43,11 @@ export function applyBusyLock() {
 
 /**
  * Loading state: send/abort button swap + input lock + thinking phase marker.
- * INPUT-LOCK-ASYNC：busy（running）锁输入——send 按钮常显（F-6 语义保留——发送由
- * send.js 出口守卫兜 busy 拒——readOnly 框内文本保留不吞）；Stop 只在
- * S._turnState==="running" 显（digest/回合执行中可停主会话——susp 纯池等待不显——
- * 子代理 ⏹ 逐块停——无全停——池空自然完）。
- * Explicit assignment (not conditional): entering suspension must RE-ENABLE an input
- * disabled by the previous loading state — no dependence on caller ordering (F7).
+ * INPUT-LOCK-ASYNC：busy（running）锁输入（applyBusyLock 派生——readOnly + busy 占位符）；
+ * send 按钮常显（F-6 语义保留——发送由 send.js 出口守卫兜 busy 拒——readOnly 框内文本保留
+ * 不吞）；Stop 只在 S._turnState==="running" 显（digest/回合执行中可停主会话——susp 纯池等
+ * 待不显——子代理 ⏹ 逐块停——无全停——池空自然完）。每次调用重派生锁（显式赋值语义由
+ * applyBusyLock 承担——进出 susp/running 都刷新——不依赖调用方顺序——F7）。
  */
 export function setLoading(ctx, on) {
   S._phase = on ? "thinking" : null
