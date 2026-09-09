@@ -12,7 +12,7 @@
  */
 
 import * as vscode from "vscode"
-import { PROVIDER_PRESETS, presetToEntry, resolveProviders, persistRaw, conflictError, setProviderKey } from "../config-io.mjs"
+import { PROVIDER_PRESETS, presetToEntry, resolveProviders, persistRaw, conflictError, setProviderKey, cascadeRemoveProvider } from "../config-io.mjs"
 
 const FORMATS = ["openai", "anthropic", "google"]
 
@@ -67,7 +67,11 @@ export function removeProviderEntry(name) {
   }
   if (!providers.some((p) => p.name === name)) return `No provider named "${name}"`
   if (name === activeProvider) return "The active provider cannot be removed — switch active first"
-  const r = persistRaw((raw) => { raw.providers = (raw.providers ?? []).filter((p) => p?.name !== name) })
+  const r = persistRaw((raw) => {
+    raw.providers = (raw.providers ?? []).filter((p) => p?.name !== name)
+    // F-4 (IKCDMR——AC-4 级联)：删渠道同步清 consultModels/subagentModels/advisor.provider 悬挂引用
+    cascadeRemoveProvider(raw, name)
+  })
   return conflictError(r) // F5b：冲突 → 错误串提示（调用方 providerError 通道展示）
 }
 

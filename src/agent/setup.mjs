@@ -24,7 +24,7 @@ import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
-import { loadRaw, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
+import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
 import { loadEngineeringPrompt, pushReal } from "./run-helpers.mjs"
 import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
 
@@ -55,7 +55,9 @@ try { _ENG_SUB = readFileSync(join(__dirname, "..", "prompts", "engineering-sub.
  * merged in as action:"escalate").
  */
 function withPool(tool) {
-  const models = loadRaw().agent?.consultModels ?? []
+  // F-4 (IKCDMR)：运行时读面清洗（loadConsultPool——未知渠道条目过滤 + 一次性警告——
+  // CLI loadConfig 同规则）——池描述只列合法候选（防模型照描述点名悬挂条目）。
+  const models = loadConsultPool()
   const list = models.map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ")
   if (!list) return tool
   return {
@@ -147,11 +149,12 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       // The escalate action errors when the pool is empty (existing error semantics);
       // with a pool configured the tool description lists the current candidates
       // (withPool — escalate picks 'provider:model' from it), same as consult_start.
-      ...(loadRaw().agent?.consultModels?.length ? [withPool(subagentTool)] : [subagentTool]),
+      ...(loadConsultPool().length ? [withPool(subagentTool)] : [subagentTool]),
       planTool, goalTool, skillTool, verifyTool, timerTool, advisorTool, engTool,
       // consult tools registered only when configured — an unconfigured model would otherwise
       // see the tool, call it, and eat an error turn (prompt-system review 2026-08-15).
-      ...(loadRaw().agent?.consultModels?.length
+      // F-4：注册门经清洗后池（悬挂-only 配置不注册——防"注册了但跑不了"）
+      ...(loadConsultPool().length
         ? [withPool(consultStartTool), consultStopTool] // §25 R17: consult_check 退役——结果经自动 digest 通道
         : [])]
     : role === "eng-coder"
@@ -229,7 +232,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgSubagentModels = raw.agent?.subagentModels ?? {} // per-type subagent model overrides (CLI parity)
     cfgSubagentTurns = raw.agent?.subagentTurns ?? 100 // subagent turn cap (CLI parity)
     cfgMaxTurns = raw.agent?.maxTurns ?? 200
-    cfgConsultModels = raw.agent?.consultModels ?? [] // consultation model list (CONSULTATION.md)
+    cfgConsultModels = loadConsultPool() // consultation model list (CONSULTATION.md——F-4 清洗后合法池)
     cfgConsultTurns = raw.agent?.consultTurns ?? 40 // consultation turn budget (panel-exposed)
     cfgConsultTimeoutMs = raw.agent?.consultTimeoutMs ?? 600_000 // consultation wall-clock watchdog (panel-exposed)
     cfgPoolLimits = raw.agent?.poolLimits ?? null // §24 D-24a: async pool per-domain limits（校验在 scheduler 读点）

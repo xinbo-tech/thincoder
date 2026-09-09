@@ -32,5 +32,6 @@ export default [
   "test/read-dual-end.test.mjs", // DUAL-END-TRUNCATION F-1（2026-09-09）：read 双端——大文件头+省略注+尾 / K=0 无假注 / 重叠不重复 / ≤阈值零变化 / hashes——CLI 镜像
   "test/advisor-truncation.test.mjs", // DUAL-END-TRUNCATION F-2（2026-09-09）：advisor 截断双端化——超 64K 头尾保/中段注/offset 提示/K=0 透传——truncate.mjs 直驱——CLI 镜像（byte-identical）
   "test/config-pool.test.mjs", // POOL-CONFIG-UNIFIED（2026-09-09）：耦合锁三键 4/4/4 + advisor 读取器 + 容量拒/scope 守卫 + 白名单 + 落盘——纯单元（拒发路径——config 测试缝隔离）
+  "test/config-softfail.test.mjs", // ISSUE-FIX-BATCH F-4（2026-09-09，IKCDMR）：consultModels 软失败（读面过滤 + 一次性警告——CLI 同规则双端锁步）+ 面板写路径对齐 + removeProvider 级联清理（consultModels/subagentModels/advisor.provider）
   "test/settings-panel.test.mjs", // POOL-CONFIG-UNIFIED F-4（2026-09-09）：面板三框回退显 4（agentCardHtml webview 面 + agentSettings extension 面——happy-dom）+ poolAdvisor 双语文案
 ]

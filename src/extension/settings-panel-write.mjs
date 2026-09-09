@@ -6,7 +6,7 @@
  * saveShellSettingsFromPanel——config-io.mjs hub re-export（import 面不变——
  * settings.mjs/tests 照旧）。
  */
-import { persistRaw, conflictError, loadAgentSettings } from "../config-io.mjs"
+import { persistRaw, conflictError, loadAgentSettings, loadRaw, sanitizeConsultModels } from "../config-io.mjs"
 
 /** 单写通道：agent.* 键合并语义 = config-io saveAgentSettings（delete on
  *  undefined/null/""/空对象）——同文件内联执行（defaultModel 顶层 + agent 一次落盘——
@@ -44,11 +44,13 @@ export function saveAgentSettingsFromPanel(payload) {
   if (payload.consultTurns != null) patch.consultTurns = Number(payload.consultTurns) || undefined
   if (payload.consultTimeoutMs != null) patch.consultTimeoutMs = Number(payload.consultTimeoutMs) || undefined
   // Consultation models (CONSULTATION.md): array of {provider, model}, ≤5, validated.
+  // F-4 (IKCDMR)：写路径清洗对齐 CLI loadConfig 读规则（双端锁步——共享 config）——形状非法/
+  // 未知渠道条目在保存时丢弃（面板 consult 行只可能引用已配置渠道——全悬挂保存 = 删键）。
   if (payload.consultModels !== undefined) {
     const arr = Array.isArray(payload.consultModels) ? payload.consultModels : []
-    const clean = arr
-      .filter((m) => m && typeof m.provider === "string" && m.provider.trim() && typeof m.model === "string" && m.model.trim())
-      .slice(0, 5)
+    const raw = loadRaw()
+    const names = (Array.isArray(raw.providers) ? raw.providers : []).map((p) => p?.name).filter(Boolean)
+    const clean = sanitizeConsultModels(arr, names).keep
       .map((m) => ({
         provider: m.provider.trim(),
         model: m.model.trim(),
