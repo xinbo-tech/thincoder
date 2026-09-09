@@ -15,7 +15,7 @@
 | 层 | 职责 | 文件 |
 |---|---|---|
 | L1 模式人格层 | 定义本模式的身份/角色/边界（"你是谁、你的交付物是什么"） | engineering.md（工程主）/ normal.md（拟设——待批 §7） |
-| L2 模式纪律层 | 本模式的工作纪律/流程/工具观 | discipline.md（普通）/ engineering-sub.md（eng-coder 子代理工程纪律） |
+| L2 模式纪律层 | 本模式的工作纪律/流程/工具观（**全场景共用同一份**——不分主会话/子代理） | discipline.md（普通）/ engineering.md（工程——主会话与 eng-coder 同源） |
 | L3 角色层 | 子代理角色覆写（在模式层之上收窄职责） | explore.md / coder.md / plan.md / eng-coder.md |
 | L4 公共基础层 | 两模式共用的身份语言/协作原则/确认门 | system.md |
 | L5 项目层 | 项目方法论与约定（cwd 注入，不随二进制分发） | 项目根 METHODOLOGY.md / AGENTS.md / methodology-template.md（缺失兜底模板） |
@@ -31,7 +31,7 @@
 | discipline.md | 84 | L2（普通） | "Workflow — match the process to the task" | agent.mjs 常量 → prepareRun |
 | main.md | 91 | 主代理补充（普通） | "Main-agent role — only the top-level agent" | agent.mjs 常量 → prepareRun（depth0 且非工程） |
 | engineering.md | 277 | L1（工程主） | "[ENGINEERING MODE …]" | setup.mjs buildEngineeringPrompt |
-| engineering-sub.md | 15 | L2（eng-coder） | "[ENGINEERING MODE …] You MUST strictly" | setup.mjs L41（role 分支） |
+| engineering-sub.md | 15 | **废除（§7）** | 历史分流产物（同层两份文本）——内容并入 engineering.md/eng-coder.md 覆写 |
 | explore.md | 13 | L3 | "You are now running as a subagent" | subagent-spawn.mjs EXPLORE_OVERLAY |
 | coder.md | 14 | L3 | "You are a coding subagent" | subagent-spawn.mjs CODER_OVERLAY |
 | plan.md | 10 | L3 | "You are now running as a subagent" | subagent-spawn.mjs PLAN_OVERLAY |
@@ -50,9 +50,9 @@
 |---|---|
 | 主会话·工程模式 | `engineering.md(+METHODOLOGY.md) → system.md` + AGENTS.md + skills 列表 |
 | 主会话·普通模式 | `normal.md（新）→ system.md` + AGENTS.md + skills 列表 |
-| eng-coder 子代理 | `eng-coder.md → engineering-sub.md(+METHODOLOGY) → system.md` |
-| explore/coder/plan 子代理 | `角色.md → discipline.md → system.md`（两模式同链——人格/角色层恒前） |
-| consult 子代理 | `consult-base.md`（单独基底——不变） |
+| eng-coder 子代理 | `eng-coder.md → engineering.md(+METHODOLOGY) → system.md`——**与主会话同构**（人格→纪律→基础）；**engineering-sub.md 废除**（同层两份文本的历史怪胎——工程纪律层复用主会话同一份，eng-coder 特有差异由 eng-coder.md 角色层覆写表达） |
+| explore/coder/plan 子代理 | `角色.md → discipline.md → system.md`（人格→纪律→基础——同构；两模式同链） |
+| consult 子代理 | `consult-base.md`（独立会话——不变） |
 | advisor 评审 | `advisor-design.md` 或 `advisor-roundN.md`（独立会话——无主装配链——不变） |
 
 装配尾部统一追加（全部场景）：项目指令（AGENTS.md，`<untrusted_project_instructions>` 包裹）+ depth0 的 skills 清单。
@@ -94,9 +94,12 @@
 装配链翻转：**人格层恒前、system.md 恒第二**——
 - 主会话工程：`engineering.md(+METHODOLOGY) → system.md`
 - 主会话普通：`normal.md（新）→ system.md`
-- system.md 瘦身回纯 L4（写码执行层迁 normal.md）；子代理 system.md 恒尾（eng-coder = eng-coder.md →
-  engineering-sub → system.md；explore/coder/plan = 角色.md → discipline.md → system.md；consult 不动）
-- 双端各自落地语义同源。**批准后本档 §3 装配矩阵按新链重写。**
+- **子代理同构化**：eng-coder = `eng-coder.md → engineering.md(+METHODOLOGY) → system.md`——
+  **engineering-sub.md 废除**（工程纪律层复用主会话同一份——同层两份文本的历史分流产物——其
+  eng-coder 特有句由 eng-coder.md 覆写承接）；explore/coder/plan = `角色.md → discipline.md →
+  system.md`；consult 不动
+- system.md 瘦身回纯 L4（写码执行层迁 normal.md）
+- 双端各自落地语义同源。**批准后本档 §3 装配矩阵即为权威现状。**
 
 ## 变更记录
 
