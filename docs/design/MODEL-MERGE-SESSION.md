@@ -1,7 +1,7 @@
 # 模型合并 + 会话级隔离（MODEL-MERGE-SESSION）
 
 > 板块：模型选择架构（双端——activeProvider/activeModel 合并为 provider:model 复合——会话级隔离）。权威源：SESSION.md（会话模型语义）+ config（providers/defaultModel）。
-> 状态：**设计待评审**——2026-09-09 落档（模型合并深勘察 explore 一手——schema 迁移面/复合解析器/消费面全清单 + 诚实权衡——用户裁定 ①-⑦ 全采纳）。需求：TODO 模型合并（Nancywb 报告反方向——串扰根治——维护者裁定会话级隔离）。
+> 状态：**评审通过——已交付（CLI 46b6ecb/3ff4acf/decdf88 + VSC a4b2c0f/a3708b6/2f2d1d2/97612f5——clean——修正轮 3/5——CLI 182/0 + VSC 233/0——L2 待链稳定）**——2026-09-09 落档
 
 ---
 

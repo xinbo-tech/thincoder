@@ -153,6 +153,22 @@
     双端均未暴露（工具层 queued cancel 有——CLI ⏹ 门控排队块不钉 / VSC 无——全量含可取消则两端补）——
     设计权在用户）
 
+- [ ] **eng-coder 文件纪律放宽 + 调度器动态文件域（2026-09-09 用户需求——两联动条）**：
+  ① 纪律改动：eng-coder 任务书"不得触碰清单外文件 + 需更多先停报告" → "允许按需调整（改清单外）+
+    必须报告"——涉及 eng-coder 任务书模板/eng-coder.md/engineering.md（Implementation Handoff）+ 审计判据
+    （explore audit 偏差 #4 现判"清单外 AND 未报告 = 偏差"——新纪律下报告了 = 合规——判据改"未报告 = 偏差"）
+  ② 调度器动态文件域：subagent-scheduler 冲突判定现纯声明 files（entry._files——D-SD2）——不看实际 touched
+    ——out-of-list 写入无域保护（INPUT-LOCK input.js/chat.js/locales 实证——并行写入竞争可能）——建议纳入
+    running 子代理实际修改文件（touchedFiles——§19.5.6 已有上报）——域 = declared ∪ touched——
+    owning board = 工程模式纪律 + 调度器机制——status=登记待澄清（①报告粒度/时机——②touched 追踪机制与
+    调度器接入——需深勘察）——设计权在用户
+
+- [ ] **digest 装配 400 观察项（2026-09-09 平台 bug——eng-coder#12 消化三连报）**：
+  巨大上下文（>1.1MB——MODEL-MERGE 33 文件大链交付）digest 请求 JSON 缺 model 字段——deepseek 400
+  "missing field model at column 1128244"——同 digest 推 3 次（3 次装配尝试）——平台层（不在工作仓源码）
+  ——下次复现带 trace（会话日志 advisor:digest 序列）定位装配截断点——非设计/交付链问题——
+  status=登记观察——设计权在用户
+
 - [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
   对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）
