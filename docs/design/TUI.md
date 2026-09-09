@@ -16,17 +16,17 @@
 ## 1. 模块地图（结构性快照）
 
 纪律（2026-08-30）：本表是**结构性快照**，随实现同步回写——交付新增/改名/删除文件时同批
-更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-09 实测（INPUT-LOCK-ASYNC 批回写），
+更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-09 实测（INPUT-LOCK-ASYNC 批回写 + INPUT-LOCK-BEHAVIOR-REVISED 批回写），
 仅供量级参考（会漂）。
 
 ### 核心管线（stdin → 状态 → 渲染 → 回合）
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `index.mjs` | 448 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（busy 吞防御 + 白名单——INPUT-LOCK-ASYNC C'）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export） |
+| `index.mjs` | 448 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（busy 吞防御——busy 全拒——白名单已删——INPUT-LOCK-BEHAVIOR-REVISED）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export） |
 | `tui-lifecycle.mjs` | 75 | TUI 生命周期终端序列（2026-08-31 自 index 拆出）：writeStartupSequence（alt buffer + 光标 + 鼠标/粘贴/键盘增强 + **DECRST 7 禁环绕**）、writeCleanupSequence（恢复 DECSET 7 等）、createExitCleanup（退出闭包）、setTuiActive |
 | `update-notice.mjs` | 77 | 后台升级提示（2026-09-03 D-S1c 自 index 拆出）：upgradeFailureText / pendingNoticeReady 纯函数（index re-export）+ createUpdateNotice（提示 picker + 启动检查装配） |
-| `key-handler.mjs` | 443 | 按键分发：模态入口（permission/question/search/picker/wizard/interruptPrompt）+ 输入编辑；**busy 门禁**（INPUT-LOCK C'——busy 提交吞 + 白名单直执行）；挂起空闲 Enter → pendingInput 单槽+唤醒（槽满吞）；Ctrl+C 分支（picker 取消/武装/挂起两级/首按停回合/空闲双确认）；convMaxScroll 导出 |
+| `key-handler.mjs` | 440 | 按键分发：模态入口（permission/question/search/picker/wizard/interruptPrompt）+ 输入编辑；**busy 门禁**（INPUT-LOCK——提交吞——斜杠同禁发——空 Enter 静默）；挂起空闲 Enter → pendingInput 单槽+唤醒（槽满吞）；Ctrl+C 分支（picker 取消/武装/挂起两级/首按停回合/空闲双确认）；convMaxScroll 导出 |
 | `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支，2026-08-30 拆出） |
 | `key-modes.mjs` | 216 | 按键模态层（2026-09-03 D-S4 自 key-handler 拆出）：permission / question / interruptPrompt 独占模态 handler——模态激活即消费全部按键（返回 true，未激活 false）；ctx 注入 state/agent/pushLine/render |
 | `agent-turn.mjs` | 323 | runAgentTurn（`{ autoTurn, skipSession }`）回合驱动器：状态复位 / runAgent 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（冻结决策、sweep、标题、落盘）/ 交接消息单条续发（state.queue 残项单容器——INPUT-LOCK）；LOGGING turn 包装；挂起会话段迁 suspension-drive.mjs（函数级静态环互相 import——回合尾进入驱动器、驱动器内回合递归本文件） |
@@ -167,10 +167,12 @@ permission（y/n/a/esc；batch a/o/n；continue y/n）
 
 模态分支（key-modes.mjs）：permission/question/interruptPrompt 激活时**消费全部按键**（含未匹
 配键——不落入下层编辑路径）；搜索模态另居 key-handler-search.mjs。**busy 门禁**（INPUT-LOCK-ASYNC
-C'——2026-09-09——processing 含 digest 单一判据）：打字照常进输入框（吞提交不吞字符——评审
-#2 (i)），非白名单 Enter 提交吞 + busy 提示（"主会话处理中"——状态栏/提示行）；斜杠白名单
-（/exit /help /model…）检查先于吞判——键入即直执行；Ctrl+D 与排队面板随机制废弃删除。**挂起
-空闲**（AGENT-LOOP §9——busy 之外）Enter（非 slash）→ pendingInput **单槽**（至多一条待交接——
+C'——2026-09-09 + INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09 修订：processing 含 digest 单一判
+据）：输入不禁——打字照常进输入框回显（吞提交不吞字符——评审 #2 (i)）；Enter 提交吞 + busy
+提示（"主会话处理中"——状态栏/提示行）——**斜杠命令同禁发**（白名单机制已删——/exit 也发不
+出——退出靠 Ctrl+C 终端层武装通道——门禁前不误伤）；空 Enter 静默（text 非空才吞——不刷屏）。
+Ctrl+D 与排队面板随机制废弃删除。**挂起空闲**（AGENT-LOOP §9——busy 之外）Enter（非 slash）→
+pendingInput **单槽**（至多一条待交接——
 槽满吞 + 提示）+ 唤醒（`_suspWake`，不打断后台——输入框零干扰 F3）；释放窗口（`_suspPending`）
 期间同语义。F1 帮助与 `/` 补全提示（status bar live hints）由 slash-commands 提供。
 
@@ -540,8 +542,9 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 - **slash-commands.mjs**：SLASH_COMMANDS 表 + SLASH_ALIASES（/h /x /m /p /t /c /n）+ HANDLERS 分派
   （handler 异常统一拦截成 [error] 行——不击穿 TUI 主循环）；completions(input) 按命令/参数补全；
   Tab 循环候选。命令分两类：**即时反馈**（/plan /auto /fold 等本地状态切换）与**菜单循环**
-  （/config /think /mcp /provider 等 picker 驱动）。processing 期安全命令白名单即时执行，其余入
-  队。
+  （/config /think /mcp /provider 等 picker 驱动）。busy（processing）期命令全部禁发——Enter
+  提交吞（白名单已删——斜杠同禁——INPUT-LOCK-BEHAVIOR-REVISED 2026-09-09）；非 busy 期（含挂
+  起空闲）经 submit 直执行（handleSlash——控制通道不排队）。
 - **/submodel 命令**（cmd-submodel.mjs）：子 agent 模型设置入口——与 /model（主会话模型）对称。
   按类型分别配置：4 种子 agent 类型（explore/plan/coder/eng-coder）各有独立配置项。picker 菜单导航
   （无参时）：菜单列出全局 + 4 类型共 5 个槽位（各显示当前生效值与继承来源）→ 二级选择：
@@ -631,6 +634,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 | 2026-09-03/04 | 配置界面 picker 化 + question 光标——全 CLI 仅一处"固定枚举手输"违约（Add Provider Custom 的 API format）改 picker 枚举（D-C1）；wizard Custom 同步加 format 步（D-C2，endpoint 后 key 前）；question 自由文本态光标（TUI-INPUT-BOX.md §7 权威——本文件不复制） | 已实现（pickers/wizard——见 §9） |
 | 2026-09-03 | 行数债拆分批（index/render-conversation/key-handler→key-modes/tool-events/subagent-blocks/agent-turn/cmd-mcp）——re-export 保导出面，模块地图同批回写 | 已实现（§1 地图呈现现状；2026-09-05 续拆 suspension-drive/subagent-freeze/tool-display/tui-lifecycle/cmd-mcp-form） |
 | 2026-09-09 | 主会话输入禁排队（INPUT-LOCK-ASYNC C'——专题 INPUT-LOCK-ASYNC.md——机制正文落 AGENT-LOOP §9/§11.3）：busy（processing 含 digest）提交吞 + 白名单直执行——queue 面板/提示/Ctrl+D/攒批全撤——pendingInput 单槽 + 交接残项单容器（模块地图行数同批回写——净减 60 行） | 已实现（§4 门禁 + §8 交接续发；测试 test/input-lock.test.mjs） |
+| 2026-09-09 | busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——专题 INPUT-LOCK-BEHAVIOR-REVISED.md）：VSC readOnly 锁移除（busy 不禁录入——打字回显——send 禁由 send.js 出口守卫兜——占位符文案更新）+ CLI 斜杠白名单删（busy 斜杠同禁发——/exit 也发不出——退出靠 Ctrl+C 终端层通道）——门禁判据（processing/_turnState running）零动 | 已实现（§4 门禁去白名单 + §1 行数回写；双端 INPUT-LOCK 测试更新） |
 
 > **未决/待办承接（来自 2026-09-03 picker 化评审旁支——开放项不折叠）**：① picker item.note 渲染丢弃
 > （pickers.mjs 只消费 header.note——buildProviderEntries 的 baseURL/无 key 提示与 cmd-advisor
@@ -640,6 +644,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 
 ## 变更记录
 
+- 2026-09-09：INPUT-LOCK-BEHAVIOR-REVISED 批（busy 行为修订——VSC 不禁录入只禁 send——CLI 白名单删、忙时斜杠同吞）——§4 门禁描述去白名单、§9 slash 命令节同步、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-09：INPUT-LOCK-ASYNC 批（C'——busy 提交吞/白名单/单槽化/queue UI 撤）——§4 门禁、§8 交接续发、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-07：格式债批 A——本文件由逐批变更档案重写为人类可读当前态（DOC-REWRITE.md +
   DOC-REWRITE-LARGE.md §4）。按机制主题重组；历史流水折叠入 §11 专题完成史与本文档底部；模块地图

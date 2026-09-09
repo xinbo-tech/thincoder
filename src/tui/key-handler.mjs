@@ -21,7 +21,7 @@ export function convMaxScroll(state) {
  *         wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
  *         renderWizard, pushLine, cleanup, showPicker } */
 export function createKeyHandler(ctx) {
-  const { agent, state, render, popPicker, renderPickerLines, handleSlash, handleTab, submit, pasteClipboardImage, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems, renderWizard, pushLine, cleanup, showPicker, loadOlder, busySafeCommand } = ctx
+  const { agent, state, render, popPicker, renderPickerLines, handleSlash, handleTab, submit, pasteClipboardImage, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems, renderWizard, pushLine, cleanup, showPicker, loadOlder } = ctx
 
   return function onKeypress(str, key = {}) {
     // permission confirm: y/n/a (a = approve + AUTO ON); batch (§16 D-B1): a/o/n (Esc = deny)
@@ -263,21 +263,17 @@ export function createKeyHandler(ctx) {
     }
 
     if (state.processing) {
-      // INPUT-LOCK-ASYNC（C'——F-1/F-3/F-4/F-7）：busy（processing——含 digest auto-turn——
-      // 单一判据）输入禁用——**吞提交不吞字符**（评审 #2 (i)：字符照进输入框回显——非
-      // 白名单 Enter 提交吞 + busy 提示）；斜杠白名单检查先于吞判（F-4——键入即直执行——
-      // 不经吞）；历史导航/Tab 补全仍禁（防 yank 覆盖在编文本）；Ctrl+D 与 queue 面板已
-      // 随排队机制废弃删除（F-7）。多行换行 Enter（meta/enter——编辑）照常放行。
+      // busy 门禁（INPUT-LOCK C'——2026-09-09 + INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：
+      // processing（含 digest——单一判据）输入不禁——吞提交不吞字符（打字照常回显）；Enter
+      // 提交吞 + busy 提示——斜杠同禁发（白名单已删——/exit 也发不出——退出靠 Ctrl+C 终端
+      // 层通道——门禁前不误伤）；空 Enter 静默（text 非空才吞）；Tab/↑↓ 仍禁；多行换行
+      // （meta/enter——编辑）照常放行。
       if (key.name === "tab" || key.name === "up" || key.name === "down") return
       const isSend = (key.name === "return" && !key.meta) || (str === "\r" && !key.meta)
-      if (isSend) {
-        const text = state.input.join("").trim()
-        // 白名单斜杠命令（/exit /help /model…——紧急控制通道）→ 落正常 Enter 流直执行
-        if (text && !busySafeCommand(text)) {
-          pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
-          render()
-          return
-        }
+      if (isSend && state.input.join("").trim()) {
+        pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
+        render()
+        return
       }
     }
 

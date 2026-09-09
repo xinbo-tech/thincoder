@@ -2,6 +2,7 @@
 
 > 板块：挂起回合/输入 UI（双端——主会话 busy 禁输入——排队废弃）。权威源：AGENT-LOOP.md §9（挂起回合/digest）+ §24 R15（排队合并——本批废弃）。
 > 状态：**评审通过——已交付（CLI e79aa5b/4811832 + VSC 71a175c/0f5bab8——clean——L2 待链稳定）**——2026-09-09 落档
+> **supersede（2026-09-09——INPUT-LOCK-BEHAVIOR-REVISED 评审通过——行为过度面被修订取代）**：busy 期 VSC readOnly 锁禁录入（过度——应允许继续录入只禁 send）+ CLI 斜杠白名单 BUSY_SAFE_COMMANDS/busySafeCommand（过度设计——删——忙时斜杠同禁发）——本档机制正文（busy 判据 processing/_turnState running、门禁落点、pendingInput 单槽化、queue 废弃）**不变**——权威见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md。
 
 ---
 

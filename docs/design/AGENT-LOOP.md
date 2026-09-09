@@ -449,7 +449,8 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 > 权威：CLI `src/tui/agent-turn.mjs`（runAgentTurn + suspensionSession 驱动）+ VS Code 面板
 > 循环同构。**机制核心**：async 子代理运行中主会话**回合尾不阻塞**——进入挂起态（挂起空闲
 > 输入可用、状态行"后台 N 子代理运行中"）；子代理完成 → 自动消化（digest auto-turn）。
-> **主会话 busy（processing 含 digest）输入禁用**——排队机制整批废弃（INPUT-LOCK-ASYNC——
+> **主会话 busy（processing 含 digest）提交禁发**（输入不禁——可打字回显——Enter/斜杠同
+> 吞——斜杠白名单已删——INPUT-LOCK-BEHAVIOR-REVISED 2026-09-09 修订）——排队机制整批废弃（INPUT-LOCK-ASYNC——
 > 专题记录 `INPUT-LOCK-ASYNC.md`——2026-09-09：R15 攒批删 + pendingInput 单槽化——§9.2 行表/§11.3）。
 
 **问题源**：async 子代理运行期间主会话回合尾阻塞等待全部完成（等待期用户无法输入）。用户方案：回合尾语义从"等全部"改为"收已完成 + 移交未完成"——挂起态是**交互层状态**（runAgent 保持"单输入 → 输出"不变式——挂起循环落在调用方 turn 循环）。
@@ -466,7 +467,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 | idle | 回合返回且池空 | 正常回 idle | 不变 |
 | suspension | 池项 settle 且无 pendingInput | settle 入 `_pendingAsyncResults` → 开 auto-turn | auto-turn 期间仍挂起 |
 | suspension | 用户 Enter（无 digest 在跑——挂起空闲） | 新回合输入入 `pendingInput` 单槽（至多一条——F-6）+ 唤醒 | 回合末池空 → idle；非空 → 回 suspension |
-| suspension | 用户 Enter（digest 在跑 = busy） | **提交吞**——非白名单 Enter 不发送 + busy 提示（INPUT-LOCK-ASYNC F-3——旧"入 pendingInput 队列"已废——busy 禁排队） | auto-turn 结束后回挂起（文本保留可重发） |
+| suspension | 用户 Enter（digest 在跑 = busy） | **提交吞**——Enter 不发送（斜杠命令同吞——白名单已删——INPUT-LOCK-BEHAVIOR-REVISED）+ busy 提示（INPUT-LOCK F-3——旧"入 pendingInput 队列"已废——busy 禁排队） | auto-turn 结束后回挂起（文本保留可重发） |
 | suspension | 释放窗口/槽满 Enter | 单槽交接（偏差 #1 守卫）——槽满吞 + 提示 | 不变 |
 | auto-turn | 池项 settle（消化中） | settle 入 pending（不并发开新轮——单 runAgent 循环） | 轮末按 pending/池态续开或退出 |
 | auto-turn | 结束且池空 + 无 pendingInput | 补发 done 冻结 + 清 `_suspended` | → idle（挂起自然退出） |
@@ -499,7 +500,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 - **二按统一全停块**：武装检查提升到状态路由之前（两次按下之间状态会迁移）；二按 = 当前回合平 abort（清池）+ abort 集合全部 controller；仅挂起态置 `_suspAborted` + 唤醒（非挂起语境置位会粘滞阻塞未来会话重入）。
 - **清理**：中止后复位 `state._suspAborted`（可重新进入挂起态）；残余 pendingInput 单槽消息转回 `state.queue`（单条——不静默丢）；回合启动解除 `exitArmed` 残留（空闲退出双确认不跨回合）。
 
-**变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；2026-09-06 pendingInput 排队用户指令合并（§11.3）；2026-09-09 INPUT-LOCK-ASYNC（C'——busy 含 digest 输入禁用——提交吞 + 白名单直执行——R15 攒批/queue 排队废弃——pendingInput 单槽——§11.3 全文废弃记录——专题 INPUT-LOCK-ASYNC.md）。
+**变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；2026-09-06 pendingInput 排队用户指令合并（§11.3）；2026-09-09 INPUT-LOCK-ASYNC（C'——busy 含 digest 输入禁用——提交吞 + 白名单直执行——R15 攒批/queue 排队废弃——pendingInput 单槽——§11.3 全文废弃记录——专题 INPUT-LOCK-ASYNC.md）；2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——忙时同吞——退出靠 Ctrl+C——双端实现——专题档见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md）。
 
 ## 10. 子代理任务调度器（files/dependsOn）
 
@@ -584,6 +585,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
   2026-09-09 并发池统一可配置（POOL-CONFIG-UNIFIED——三键 4/4/4 + advisor 读取器 + 同 scope
   守卫 + 文案去数字化——§11.1/§11.2 更新）；2026-09-09 R15 整批废弃（INPUT-LOCK-ASYNC——busy
  禁排队——§11.3 改废弃记录——CLI/VSC 双端实现）。
+ 2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——双端实现——见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md）。
 
 ## 12. 评审收敛 + 铁律 + 文档纪律
 

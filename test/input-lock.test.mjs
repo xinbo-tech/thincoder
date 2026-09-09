@@ -1,7 +1,9 @@
 /**
  * input-lock.test.mjs — INPUT-LOCK-ASYNC（C'——docs/design/INPUT-LOCK-ASYNC.md——2026-09-09）
- * 用例表测试锁：busy（processing 含 digest）输入禁用（提交吞 + busy 提示）/ 白名单忙时
- * 直执行 / 挂起空闲输入开放（单槽）/ 释放窗口单槽交接 / abort 零丢失 / 状态栏 busy 文案。
+ * + INPUT-LOCK-BEHAVIOR-REVISED（docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md——2026-09-09 修订——
+ * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy（processing 含 digest）提交禁发（吞提交
+ * 不吞字符——打字回显）/ 忙时斜杠同吞（/exit 也发不出）/ 空 Enter 静默 / 挂起空闲输入开放
+ * （单槽）/ 释放窗口单槽交接 / abort 零丢失 / 状态栏 busy 文案。
  * 手法：createKeyHandler 桩 ctx 直驱按键（无真实 TTY）；suspensionSession 桩 agent/state
  * 直驱驱动循环（ctx.runAgent 注入——runAgentTurn 测试缝——真实单消息交接路径）。快层直跑
  * （<800ms——无定时器悬挂：驱动会话必然终止）。
@@ -11,10 +13,6 @@ import assert from "node:assert/strict"
 import { createKeyHandler } from "../src/tui/key-handler.mjs"
 import { suspensionSession } from "../src/tui/suspension-drive.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
-
-/** busy 白名单（index.mjs submit 同集同源——测试复制锁：白名单任一变更需同步本集）。 */
-const BUSY_SAFE = new Set(["/help", "/exit", "/model", "/submodel", "/shell", "/think", "/config", "/skills", "/mcp", "/goal", "/session"])
-const busySafeCommand = (text) => BUSY_SAFE.has(text.split(/\s+/)[0].toLowerCase())
 
 /** 最小按键态。 */
 function baseState(over = {}) {
@@ -42,7 +40,6 @@ function keyCtx(state, over = {}) {
     wizardProviderItems: () => [], renderWizard() {},
     pushLine: (text) => calls.lines.push(text),
     cleanup() {}, showPicker() {}, loadOlder() {},
-    busySafeCommand,
     ...over,
   }
   base.calls = calls
@@ -51,9 +48,9 @@ function keyCtx(state, over = {}) {
 
 const pressEnter = (kh) => kh("\r", { name: "return" })
 
-// ─── AC-1/AC-3：busy 提交吞 + 白名单直执行（普通回合 + digest 两态）────────
+// ─── AC-1/AC-4：busy 提交吞 + 忙时斜杠同禁（普通回合 + digest 两态）──────
 
-test("busy（processing）输入禁用：非白名单 Enter 提交吞 + busy 提示 + 字符保留（AC-1——F-3）；digest（processing+suspended）同判据不落 pendingInput；白名单忙时直执行（AC-3——F-4）；空 Enter 无提示", () => {
+test("busy（processing）提交禁发：Enter 提交吞 + busy 提示 + 字符保留（AC-1/AC-4——F-3 修订）；digest（processing+suspended）同判据不落 pendingInput；忙时斜杠（/exit）同吞禁发（白名单已删）；空 Enter 静默无提示", () => {
   // 普通回合 busy：打字照进输入框（回显），Enter 吞——文本保留 + busy 提示 + 不 submit
   const s1 = baseState({ processing: true, input: [..."hello"], cursor: 5 })
   const c1 = keyCtx(s1)
@@ -61,7 +58,7 @@ test("busy（processing）输入禁用：非白名单 Enter 提交吞 + busy 提
   kh1("h", { name: "h" }) // 字符回显（busy 期可打字）
   assert.deepEqual(s1.input, [..."helloh"], "字符照进输入框回显（吞提交不吞字符）")
   pressEnter(kh1)
-  assert.equal(c1.calls.submit, 0, "非白名单 Enter 提交被吞（不 submit）")
+  assert.equal(c1.calls.submit, 0, "Enter 提交被吞（不 submit）")
   assert.equal(c1.calls.lines.length, 1, "busy 提示一次")
   assert.match(c1.calls.lines[0], /主会话处理中/, "busy 提示文案含主会话处理中")
   assert.deepEqual(s1.input, [..."helloh"], "吞提交不清框（文本保留——回合结束重按 Enter）")
@@ -74,13 +71,14 @@ test("busy（processing）输入禁用：非白名单 Enter 提交吞 + busy 提
   assert.equal(s2.pendingInput.length, 0, "digest 期不排队（旧 D-S5 入队已废——禁排队）")
   assert.match(c2.calls.lines[0], /主会话处理中/, "digest 期 busy 提示同文案")
 
-  // 白名单忙时直执行（/exit /help /model——检查先于吞判）
+  // 忙时斜杠同禁发（INPUT-LOCK-BEHAVIOR-REVISED——白名单直执行已删——/exit 也吞——退出靠 Ctrl+C）
   const s3 = baseState({ processing: true, input: [..."/exit"] })
   const c3 = keyCtx(s3)
   pressEnter(createKeyHandler(c3))
-  assert.equal(c3.calls.submit, 1, "白名单斜杠忙时直执行（不经吞——submit 直放行）")
-  assert.equal(c3.calls.lines.length, 0, "白名单无 busy 提示")
-  assert.deepEqual(s3.input, [..."/exit"], "submit 未执行清框（真实 submit 侧清框）")
+  assert.equal(c3.calls.submit, 0, "忙时 /exit 提交被吞（斜杠同禁发——白名单删）")
+  assert.equal(c3.calls.lines.length, 1, "忙时斜杠同 busy 提示一次")
+  assert.match(c3.calls.lines[0], /主会话处理中/, "斜杠吞提示同文案")
+  assert.deepEqual(s3.input, [..."/exit"], "吞后文本保留输入框（回合结束重按）")
 
   // 空 Enter busy：无提示无动作（静默——不刷屏）
   const s4 = baseState({ processing: true })

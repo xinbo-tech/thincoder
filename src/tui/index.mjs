@@ -25,7 +25,7 @@ import { closeAllMcp } from "../mcp.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { createRenderLoop } from "./render-loop.mjs"
 import { makeDimsState } from "./dims.mjs"
-import { SLASH_COMMANDS, SLASH_ALIASES, createSlashCommands } from "./slash-commands.mjs"
+import { SLASH_COMMANDS, createSlashCommands } from "./slash-commands.mjs"
 import { createWizard } from "./wizard.mjs"
 import { writeStartupSequence, setTuiActive, createExitCleanup } from "./tui-lifecycle.mjs"
 import { createPickers } from "./pickers.mjs"
@@ -320,23 +320,13 @@ export async function startTUI(agent, opts = {}) {
 
   // ---------------------------------------------------------- Submit
 
-  // INPUT-LOCK-ASYNC（C'——F-4）：斜杠白名单 = busy（processing 含 digest）期唯一可直执行
-  // 命令（紧急控制通道——不吞不排队）。检查先于吞判（key-handler L265 门禁）——
-  // busySafeCommand 经 ctx 注入 key-handler——submit 防御同源同集。
-  const BUSY_SAFE_COMMANDS = new Set(["/help", "/exit", "/model", "/submodel", "/shell", "/think", "/config", "/skills", "/mcp", "/goal", "/session"])
-  const busySafeCommand = (text) => {
-    if (!text.startsWith("/")) return false
-    const cmd0 = text.split(/\s+/)[0].toLowerCase()
-    return BUSY_SAFE_COMMANDS.has(SLASH_ALIASES[cmd0] ?? cmd0)
-  }
-
   async function submit() {
     const text = state.input.join("").trim()
     if (!text) return
-    // INPUT-LOCK 防御（C'——2026-09-09）：提交吞的门禁在 key-handler（L265——非白名单
-    // Enter 已吞 + 提示，文本保留）——submit 只在白名单斜杠放行时达此；防御直呼/上游
-    // 改动：busy 期非白名单拒绝（不清输入框不吞内容）。
-    if (state.processing && !busySafeCommand(text)) {
+    // INPUT-LOCK 防御（C'——2026-09-09）+ INPUT-LOCK-BEHAVIOR-REVISED（2026-09-09——白名单
+    // 已删——busy 全拒）：提交吞的门禁在 key-handler（busy Enter 已吞 + 提示，文本保留）——
+    // submit 只在非 busy 期达此；防御直呼/上游改动：busy 期拒绝（不清输入框不吞内容）。
+    if (state.processing) {
       pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
       render()
       return
@@ -350,8 +340,8 @@ export async function startTUI(agent, opts = {}) {
     state.scroll = 0
     state._followTail = true // 2026-08-31 会诊 deepseek：新消息恢复跟随（注释曾承诺、实现缺漏）
 
-    // Slash commands: handled locally, don't enter agent loop. busy 期 queue 分支已删
-    // （INPUT-LOCK——非白名单在 key-handler 门禁被吞——白名单在此直执行）
+    // Slash commands: handled locally, don't enter agent loop. busy 期提交在 key-handler
+    // 门禁被吞（白名单已删——斜杠同吞——INPUT-LOCK-BEHAVIOR-REVISED）——submit 仅非 busy 期可达。
     if (text.startsWith("/")) {
       await handleSlash(text)
       render()
@@ -420,7 +410,7 @@ export async function startTUI(agent, opts = {}) {
     agent, state, render, popPicker, renderPickerLines,
     handleSlash, handleTab, submit, pasteClipboardImage,
     wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
-    renderWizard, pushLine, cleanup, showPicker, loadOlder, busySafeCommand,
+    renderWizard, pushLine, cleanup, showPicker, loadOlder,
   })
   keyStream.on("keypress", (str, key) => {
     try {
