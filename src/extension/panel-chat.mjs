@@ -107,25 +107,28 @@ export async function runPanelChat(panel, opts = {}) {
 /**
  * MODEL-MERGE-SESSION 模型/stamp 决策纯函数（评审修复导出——runPanelChatImpl 调用——单测锚）。
  * 语义：
- * - 会话模型 = 槽复合（F-4——providerName 缺席时调用侧以槽渠道优先解析）。
+ * - 会话模型 = 槽复合（F-4——providerName 缺席时调用侧以槽渠道优先解析；keyless 槽不入参）。
  * - webview userMessage 恒带 dropdown 复合（echo——dropdown = 会话级选择，selectModel 消息已写
  *   槽）：echo == 槽复合 ≠ per-message override（裁定④只约束真·与槽不符的单回合试运行）。
- * - 落槽值（sessionStampModel）：真 override 单回合不落槽——同渠道试运行保留槽模型（slotModel；
- *   null = legacy 无模型槽 → 保留语义——saveLines ?? 往返）；无 override 回合落实际运行模型
- *   （runModel）——槽播种/恒非空（CLI saveSession 对拍）。异渠道试运行落 baseModel（配对渠道）。
+ * - 落槽值（修正轮 3/5——评审行 3/4）：有槽复合 → **槽复合权威**——任何 echo/override 不覆写
+ *   会话记录（会话模型只经 selectModel 消息变更；与槽不符的显式模型 = 试运行——跑而不落，含
+ *   异渠道 echo——stampProvider 恒为槽渠道——陈旧下拉/协议边缘不破坏槽）；无槽复合（新会话/空
+ *   槽）→ 首回合实际运行复合播种（恒非空——CLI saveSession 对拍——空槽 echo 非试运行）。
  * @param {string} providerName 本回合 provider
  * @param {string|null|undefined} modelOverride 显式 per-message 模型（webview echo / 试运行）
- * @param {{provider: string, model: string|null}|null} slotRef 槽复合（面板回合入口恒读）
+ * @param {{provider: string, model: string|null}|null} slotRef 可运行槽复合（面板回合入口恒读）
  * @param {string|null} baseModel 该渠道默认解析值（defaultModel 属该渠道或首候选）
- * @returns {{ runModel: string|null, trialOverride: boolean, sessionStampModel: string|null }}
+ * @returns {{ runModel: string|null, trialOverride: boolean, stampProvider: string,
+ *            sessionStampModel: string|null }}
  */
 export function resolveTurnModelAndStamp({ providerName, modelOverride, slotRef, baseModel }) {
   const isSlotChannel = slotRef?.provider === providerName
   const slotModel = isSlotChannel ? slotRef.model : null
-  const trialOverride = !!(modelOverride && !(isSlotChannel && slotModel && modelOverride === slotModel))
+  const trialOverride = !!(modelOverride && slotRef && !(isSlotChannel && slotModel && modelOverride === slotModel))
   const runModel = modelOverride || slotModel || baseModel
-  const sessionStampModel = trialOverride ? (isSlotChannel ? slotModel : baseModel) : runModel
-  return { runModel, trialOverride, sessionStampModel }
+  const stampProvider = slotRef ? slotRef.provider : providerName
+  const sessionStampModel = slotRef ? slotRef.model : runModel
+  return { runModel, trialOverride, stampProvider, sessionStampModel }
 }
 
 /** runPanelChat 本体（LOGGING 包装之外——见上方 runPanelChat 包装器）。 */
@@ -197,11 +200,12 @@ async function runPanelChatImpl(panel, opts = {}) {
   // ── MODEL-MERGE-SESSION：会话槽复合恒读（F-4 恢复读槽——非仅 providerName 缺席路径）。
   // webview userMessage 恒带 dropdown 复合（send.js echo——dropdown = 会话级选择——selectModel
   // 消息已写槽）——echo == 槽复合 ≠ per-message override（裁定④只约束真·与槽不符的单回合试运行）。
-  let slotRef = null // { provider, model|null } | null
+  let slotRef = null // { provider, model|null } | null —— 仅当槽渠道当前可运行（有 key）——
+  // keyless 槽不参与复合（运行/播种都自愈到实际渠道——不把无 key 复合钉进会话记录）
   let slotData = null
   try {
     slotData = panel._activeData?.(turnSlot)
-    if (slotData?.activeProvider) {
+    if (slotData?.activeProvider && await getKey(slotData.activeProvider)) {
       slotRef = {
         provider: slotData.activeProvider,
         model: typeof slotData.activeModel === "string" && slotData.activeModel ? slotData.activeModel : null,
@@ -242,9 +246,9 @@ async function runPanelChatImpl(panel, opts = {}) {
   // MODEL-MERGE-SESSION：模型/stamp 决策收敛纯函数（resolveTurnModelAndStamp——导出供单测
   // 锚——语义见函数头注释：真 override 单回合不落槽——无 override 落实际运行模型）
   const baseModel = p.model ?? null // 渠道默认解析值（defaultModel 属该渠道 → 用之；否则首候选）
-  const { runModel, sessionStampModel } = resolveTurnModelAndStamp({ providerName, modelOverride, slotRef, baseModel })
+  const { runModel, stampProvider, sessionStampModel } = resolveTurnModelAndStamp({ providerName, modelOverride, slotRef, baseModel })
   if (runModel && runModel !== p.model) p = { ...p, model: runModel }
-  const slotStamp = { activeProvider: providerName, activeModel: sessionStampModel }
+  const slotStamp = { activeProvider: stampProvider, activeModel: sessionStampModel }
   // Reasoning selector → provider fields. "off" AND "none" (the effort enum's lowest
   // level, labeled "off" in the UI) are a true thinking toggle — previously "none"
   // fell into the effort branch and left thinking:enabled untouched, so the button

@@ -529,6 +529,7 @@ test("⑪ stamp 语义：webview echo == 槽复合 ≠ override——落槽值 =
   let r = resolveTurnModelAndStamp({ providerName: "deepseek", modelOverride: "deepseek-v4-flash", slotRef, baseModel: "deepseek-v4-pro" })
   assert.equal(r.trialOverride, false, "echo == 槽模型 → 非 override")
   assert.equal(r.runModel, "deepseek-v4-flash")
+  assert.equal(r.stampProvider, "deepseek")
   assert.equal(r.sessionStampModel, "deepseek-v4-flash", "落槽 = 槽模型——不被渠道默认 deepseek-v4-pro 顶掉（评审行 1 修复）")
   // 无 override（digest/挂起回合——槽渠道）→ 落槽 = 槽模型
   r = resolveTurnModelAndStamp({ providerName: "deepseek", modelOverride: null, slotRef, baseModel: "deepseek-v4-pro" })
@@ -542,10 +543,29 @@ test("⑪ 真 per-message override（≠ 槽复合）单回合不落槽——槽
   assert.equal(r.trialOverride, true, "与槽不符的显式模型 = 试运行")
   assert.equal(r.runModel, "deepseek-r1-trial", "试运行模型跑本回合")
   assert.equal(r.sessionStampModel, "deepseek-v4-flash", "落槽保留槽模型——override 不落槽")
-  // 无槽（新会话）试运行 → 播渠道默认（配对渠道——非试运行模型）
-  const r2 = resolveTurnModelAndStamp({ providerName: "deepseek", modelOverride: "deepseek-r1-trial", slotRef: null, baseModel: "deepseek-v4-pro" })
-  assert.equal(r2.trialOverride, true)
-  assert.equal(r2.sessionStampModel, "deepseek-v4-pro", "空槽试运行播渠道默认（恒非空——CLI saveSession 对拍）")
+})
+
+test("⑪ 空槽（新会话首回合）echo/override = 播种实际运行复合——非试运行（评审行 3 修复）", () => {
+  // 无槽复合：dropdown 沿用上一会话模型（F-7 沿用当前——selectModel 先写槽的流程在空槽未发生）
+  // → 首回合 echo 即本会话播种值——落槽 = 实际运行模型（恒非空——CLI saveSession 对拍）
+  const r = resolveTurnModelAndStamp({ providerName: "deepseek", modelOverride: "deepseek-v4-flash", slotRef: null, baseModel: "deepseek-v4-pro" })
+  assert.equal(r.trialOverride, false, "无槽复合可比 → 非试运行")
+  assert.equal(r.runModel, "deepseek-v4-flash")
+  assert.equal(r.sessionStampModel, "deepseek-v4-flash", "空槽播实际运行模型（修前：播渠道默认 → 重开后模型静默翻转）")
+  assert.equal(r.stampProvider, "deepseek")
+  // 无 echo（config 默认解析运行）同样播种实际复合
+  const r2 = resolveTurnModelAndStamp({ providerName: "deepseek", modelOverride: null, slotRef: null, baseModel: "deepseek-v4-pro" })
+  assert.equal(r2.sessionStampModel, "deepseek-v4-pro")
+})
+
+test("⑪ 异渠道 echo（陈旧下拉/协议边缘）不覆写槽复合——stamp 恒为槽渠道（评审行 4 加固）", () => {
+  const slotRef = { provider: "deepseek", model: "deepseek-v4-flash" }
+  // 与槽渠道冲突的显式 provider+model：跑请求的模型——会话记录保持槽复合（会话模型只经 selectModel 变更）
+  const r = resolveTurnModelAndStamp({ providerName: "kimi", modelOverride: "kimi-k3", slotRef, baseModel: "deepseek-v4-pro" })
+  assert.equal(r.trialOverride, true)
+  assert.equal(r.runModel, "kimi-k3", "本回合按请求模型跑")
+  assert.equal(r.stampProvider, "deepseek", "槽渠道权威——不因陈旧 echo 换渠道")
+  assert.equal(r.sessionStampModel, "deepseek-v4-flash", "槽复合完整保留")
 })
 
 test("⑪ 槽渠道优先：providerName 缺席 → slotRef 渠道/模型生效；legacy 无模型槽保留语义", () => {
