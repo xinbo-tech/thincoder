@@ -73,12 +73,12 @@ ctx.messagesEl.addEventListener("keydown", (e) => {
   if (link) { e.preventDefault(); link.click() }
 })
 
-// §19.5 D-M7 UI 停止（VS Code）：子代理块标题行 ⏹ 点击 → postMessage cancelSubagent →
+// §19.5 D-M7 UI 停止（VS Code）：子代理块 ⏹ 点击 → postMessage cancelSubagent →
 // extension 层定向 abort——不经模型回合（失控子代理时模型可能不可靠——直连路径）。
 // preventDefault + stopPropagation：⏹ 命中区不触发 details 折叠翻转（T-M22 断言——
-// 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。SESSION-ACTIVITY-REVISED（F-3/F-5）：
-// live 块固定在活动区（#subagent-activity）——委托绑活动区容器（区内 live 块 ⏹——
-// 冻结块无 ⏹ 无需流级委托——已随 freeze 移除按钮）。
+// 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。ACTIVITY-REWRITE-SIMPLE（2026-09-09）：
+// 块出生即在 #messages 流内（running + queued 头挂 ⏹——冻结块 ⏹ 已随 freeze 移除——
+// 无区容器）——委托绑 messagesEl。
 const onStopClick = (e) => {
   const btn = e.target.closest(".sub-stop-btn")
   if (!btn) return
@@ -86,7 +86,7 @@ const onStopClick = (e) => {
   e.stopPropagation()
   vscode.postMessage({ type: "cancelSubagent", id: Number(btn.dataset.subId), role: btn.dataset.subRole })
 }
-ctx.subAgentArea?.addEventListener("click", onStopClick)
+ctx.messagesEl.addEventListener("click", onStopClick)
 
 // Close all dropdowns on Escape
 document.addEventListener("keydown", (e) => {
@@ -161,7 +161,7 @@ window.addEventListener("message", (e) => {
     // C2 (SESSION-FLOW-C F-C2c——修 H-E): loading case 不再 innerHTML 覆写 #status-line——
     // setLoading 置 S._phase（thinking 标记）→ renderStatusBar（唯一 writer）同线绘制徽标/
     // 计数/thinking；Stop 可见性 = S._turnState==="running" 派生（F-6——susp 纯池跑不显——
-    // 无全停——子代理停止靠活动区逐块 ⏹——CLI 对拍）。
+    // 无全停——子代理停止靠流内逐块 ⏹——CLI 对拍）。
     case "loading":          setLoading(ctx, m.loading); break
     // C2 (F-C2b): host 忙态单一广播（{type:"turnState", state, counts?}）→ 单一 reducer
     case "turnState":        handleTurnStateMessage(m); break

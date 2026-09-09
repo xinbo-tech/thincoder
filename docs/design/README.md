@@ -95,3 +95,10 @@
 ## 变更记录（REMOVE-POOL-SNAPSHOT 补登——2026-09-09）
 - `REMOVE-POOL-SNAPSHOT.md`（撤 F-3 webviewReady 池快照重推——postPoolSnapshot 过度工程——VSC 端实现——F-2 queued 可见保留——QUEUED-VISIBILITY F-3 已撤销注记于该档）
 
+## 变更记录（ACTIVITY-REWRITE-SIMPLE 交付——2026-09-09）
+- `ACTIVITY-REWRITE-SIMPLE.md`（活动块去加戏重写——B1 流尾形态回归——活动区容器/DOM
+  move/落流锚插/settle 驻留/簿记/awaiting/preview/ticker 删——queued 可见保留去 reload
+  恢复——扩展端零动）——**supersedes**：`SESSION-ACTIVITY-REVISED.md` / `QUEUED-VISIBILITY.md`
+  / `ACTIVITY-SPLIT.md`（整档）+ `SESSION-FLOW-B.md` B1 节（子代理块流尾形态段——B2 boot
+  节不涉）。WEBVIEW.md §2/§5 权威措辞随批同步。
+

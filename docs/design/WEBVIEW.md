@@ -15,37 +15,34 @@ postMessage，无共享状态）。UI 状态在 webview 端单一持有（`webvi
 
 ## 2. 布局（垂直序 + grid）
 
-**垂直序（自顶向下）**：session-bar（项目/会话切换）→ `#messages` 滚动区 → 活动区
-（`#subagent-activity`——live 子代理块固定容器）→ 行面板区（`#goal-panel`/
-`#task-panel`）→ 输入区（`#toolbar`）。活动区 = CLI 单面板形态回归
-（SESSION-ACTIVITY-REVISED F-1——live 块**固定于 messages 与输入之间**——不随会话流
-滚动丢失——freeze 落流时移入 `#messages`）。
+**垂直序（自顶向下）**：session-bar（项目/会话切换）→ `#messages` 滚动区（消息流——
+子代理活动块**出生即流尾**——与 `.message` 同层）→ 行面板区（`#goal-panel`/
+`#task-panel`）→ 输入区（`#toolbar`）。ACTIVITY-REWRITE-SIMPLE（2026-09-09）：子代理
+活动区容器及其派生（区样式/显隐/pin/32vh/区内自滚）全删——块随消息流走——无独立活动
+面（CLI 对话流同形态——B1 参照回归）。
 
 CSS 布局规则落 `webview/base.css` 的 grid 行模板：
 
 ```
-#chat-container { grid-template-rows: auto minmax(0, 1fr) auto auto auto; height: 100%; }
+#chat-container { grid-template-rows: auto minmax(0, 1fr) auto auto; height: 100%; }
 ```
 
-行模板对应垂直序：header(session-bar) / `#messages`(1fr) / `#subagent-activity`
-(活动区，auto) / `#panels`(goal/task，auto) / `#toolbar`(输入，auto)——后三层均
-auto，隐藏项不占高 → 消息区高度 = 容器 − 活动区 − 面板 − 输入（grid 1fr 自动吸收）。
+行模板对应垂直序：header(session-bar) / `#messages`(1fr) / `#panels`(goal/task，auto) /
+`#toolbar`(输入，auto)——后两层均 auto，隐藏项不占高 → 消息区高度 = 容器 − 面板 − 输入
+（grid 1fr 自动吸收）。
 
 - 消息区钉底/滚动语义限定 `#messages` 内；`#messages` `overflow-y:auto` +
   `overscroll-behavior:contain`。
-- 活动区自适应块内容（auto 行高）——`max-height: 32vh` 封顶 + 区内自滚（区底 pin——
-  近底出生滚到底、上读不强拉——F-2 与 messagesEl pinBottom 同语义）；空时隐藏零高
-  （`:empty` + activity-view.js `updateAreaVisibility` 双驱——hub 经 activity.js 可达）。区内块 = `.advisor-block`
-  `.sub-block`（chat.css 样式原样——块内容 100px 内滚——增长天然有界）。
-- 冻结块为 `#messages` 直接子元素（与 `.message` 兄弟同层——150 块裁剪只数冻结块——
-  live 块在活动区不计窗——预算 = 并发池大小——池有界）。
+- 子代理活动块为 `#messages` 直接子元素（与 `.message` 兄弟同层——`appendChild` 流尾
+  出生——150 块裁剪从出生即计，live/冻结均无豁免——预算 = 并发子代理数——池有界）。
+- 冻结块原地折叠（无 DOM move——位置 = 出生位——SESSION-RESTORE-PARITY：消息流即历
+  史——不做跨 reload 恢复）。
 
 shell 结构 `webview/index.html`：`#chat-container` 内含 `#session-bar` / `#messages` /
-`#subagent-activity`（活动区——无 role 无内文——`:empty` 生效）/ `#panels`（goal/task
-两个行面板）/ `#toolbar`（`#status-line` + `#input-row`(attach/send/abort)
-+ `#paste-bar` + `#controls-row`）+ `#settings-panel`（dialog）+ `#welcome-panel`
-（首次运行 onboarding）。CSS 经 `__CSS_*_URI__` 占位注入，`__CHAT_URI__` 注入模块
-脚本，CSP 经 `__CSP__` 占位注入。
+`#panels`（goal/task 两个行面板）/ `#toolbar`（`#status-line` + `#input-row`(attach/
+send/abort) + `#paste-bar` + `#controls-row`）+ `#settings-panel`（dialog）+
+`#welcome-panel`（首次运行 onboarding）。CSS 经 `__CSS_*_URI__` 占位注入，`__CHAT_URI__`
+注入模块脚本，CSP 经 `__CSP__` 占位注入。
 
 ## 3. 文件结构（现行）
 
@@ -58,16 +55,15 @@ shell 结构 `webview/index.html`：`#chat-container` 内含 `#session-bar` / `#
   state.js）
 - `md.js`（markdown 渲染）、`state.js`（单一 UI 状态 `S` + DOM 引用 `ctx` + `vscode`
   postMessage 桥）
-- `activity.js`（编排层 + hub——ACTIVITY-SPLIT：parse/rowFor 水合 + ensureBlock +
-  applySubagentStatus 状态机 + freezeSettledBlocks 批冻 + resetActivity——呈现委
-  activity-view.js、落流冻结委 activity-freeze.js——re-export hub：panels/chat/
-  streaming/test 的 import 面零改动）
-- `activity-view.js`（呈现叶——ACTIVITY-SPLIT 新：块头/状态词/⏹/区显隐与 pin/
-  noteChunk/elapsed ticker 全族含 stopTicker——leaf：state/i18n only）
-- `activity-freeze.js`（冻结叶——ACTIVITY-SPLIT 新：freezeBlock 折叠 + 落流锚插/
-  appendPreview/preview 尺寸——leaf：state/activity-view only——不依赖核心）
-- `panels.js`（goal/task 面板 + 挂起态 + 桥路由；行面板 DOM 已撤——簿记 map 仅供块 meta
-  水合——SESSION-ACTIVITY-REVISED F-3）
+- `activity.js`（编排层——ACTIVITY-REWRITE-SIMPLE：ensureBlock（块 append #messages 流尾
+  ——终态幂等守卫返 null） + applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻
+  running/其余 status 一律终态折叠——lookup-only 绝不建块——settled 视同 done） + freeze
+  原地折叠 + resetActivity + freezeLiveBlocks（suspension 退出兜底）——导出消费面：
+  panels/chat/streaming）
+- `activity-view.js`（呈现叶——refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹
+  ——区显隐/pin/ticker/awaiting·position·waiting 词已删——leaf：i18n only——不依赖核心）
+- `panels.js`（goal/task 面板 + 挂起态 + 桥路由；簿记 map 已删——handleSubagentMessage
+  纯转发 applySubagentStatus——ACTIVITY-REWRITE-SIMPLE）
 - `send.js`/`loading.js`（输入门 + 永不锁挂起分支）、`mode-buttons.js`（ENG/GUARD/
   AUTO/PLAN 按钮）
 - `permission.js`/`question.js`（权限弹窗/批确认/question 卡）
@@ -96,60 +92,50 @@ reasoning, provider, images? } → extension _chat()
 中断/错误/后台态消息见 §7。回合外流（子代理活动/评审流/压缩状态/挂起状态）走
 toolPanel/subagent/compress/suspension 消息族（§7）。
 
-## 5. 子代理活动块（活动区固定 · 冻结落流锚——SESSION-ACTIVITY-REVISED 现行机制）
+## 5. 子代理活动块（流尾出生 · 原地冻结——ACTIVITY-REWRITE-SIMPLE 现行机制）
 
-子 agent/consult/escalate/advisor-async 活动块**出生即固定在活动区**（`#subagent-activity`
-——messages 与输入之间的固定容器——live 块不随会话流滚动丢失——F-1 用户三连①的解）；
-终态**冻结并移入 `#messages` 流**（DOM move——B1"原地折叠"修正反转：区为纯 live 面，
-流只收冻结块——150 窗口只数冻结——AC-5）。角色全同通道（频道名差异仅块键/折叠归属）。
+子 agent/consult/escalate/advisor-async 活动块**出生即 append 到 `#messages` 流尾**
+（与 `.message` 同层——`ensureBlock`——label = channel 去掉 `sub:` 前缀；无独立活动
+区/容器——补丁叠补丁的加戏形态全删——B1 流尾形态回归）。**生命周期只有 live → frozen
+两态**——终态原地折叠（无 DOM move——位置 = 出生位——消息流即历史）。
 
-- **live 块（活动区内）**：live 头 = 状态词 + key（= 频道 label——channel 去掉 `sub:`
-  前缀）+ sync/async 标 + model + 1s 本地 ticker elapsed + （终态通知前无 turn 段）+
-  ⏹（仅 running 且仅池条目——started 事件 `pool: true` 标记区分同步 spawn）；当前
-  工具/等待审批 + tail 3 行 dim 摘要。**区底 pin**：区溢出（多块超 32vh）时近底出生滚
-  到底——用户上读区历史不强拉（messagesEl pinBottom 同语义）。区空隐藏（`:empty` +
-  `updateAreaVisibility`——无块零高不占 grid 行——⑨）。
-- **queued/waiting（区内等待块头——D-4）**：排队 spawn 即建头（`[⏳ key]` + queued ·
-  position N / waiting 原因状态词——行面板撤后等待态唯一承载面）；**不挂 ⏹**（未启动
-  不可单独停——CLI 同——队列自然推进——无取消路径——F-6 定论）；started 转 running
-  （⏹ 现）；cancelled（was:"queued"）移除头（从未启动不冻结）。
-- **普通终态（非挂起——done/stopped/error/consult answered）**：块**尾推移入**
-  `#messages`（`appendChild`——CLI append 尾推）——身份头格式：
-  `[✓/⏹ key · sync/async · model · done Ns · turn]`（turn = 池终态通知携带的真实终值
-  快照；stopped = ⏹ + stopped 词 + 无 report preview；error = ⏹ + error 词 + 错误
-  注记）+ 内容保留可展开 + report preview ≤8 行 dim 紧跟块后（120 字符截行——CLI
-  tool-events parity；**escalate 无 preview**）。freeze 不强制滚动（折叠单行落定）。
-- **挂起期 settle（`_freezeAtEl` 落流锚——CLI _freezeAt DOM 版——F-4）**：settle 不
-  冻结——块**驻留活动区**（✓ "done · awaiting digestion" 头）并记
-  `meta._freezeAtEl` = settle 时 `#messages` 流尾元素（+ settleSeq 单调序）；digest
-  完成后 host 逐条补发 done → 块插回 **锚后（digest 报告前）**——多 settled 同锚按
-  settle 序升序落流（插入点 walk——任意 done 到达序相对序恒 = settle 序——⑪）；锚被
-  150 裁（isConnected=false）→ 尾推退化（⑫）。会话退出 freeze 兜底未消化残项（同锚
-  机制）。consult answered 无块防御（评审 #3——⑭）：answered 携 replyPreview 而无块 →
-  按行快照建冻结块（回复不丢——digest 轮逐字呈现仍为权威呈现面——agent.mjs run-start
-  pending 注入）。
-- **频道名**：活动频道 = `sub:${role}#${subId}`（subagent/advisor 族——独立块键，
-  resume 续跑 subId 不变块不重复；同步 spawn 也经同一路由）；consult/escalate 频道嵌
-  模型段 `sub:consult <model> #N` / `sub:escalate <model> #N`（块键含模型——
-  activity.js parseChannel 两形态正则）。
-- **嵌套子标**：内层子代理文本行首 dim 子标（`chunk.sub`——如 `explore#1`，runChild
-  forward 去前缀附加；同 sub 文本合并续行不重复前缀；advisor 频道照旧折叠）。
-- **150 块 DOM 裁剪**：只数 `#messages` 内冻结子块（**live 在活动区不计窗**——
-  AC-5——F-B1e 预算 = 并发池大小——池有界；与 advisor 块同规则同选择器——
-  .advisor-block 直接子元素计数）。冻结块元素被裁后其 map 簿记防御性清扫（ensureBlock
-  isConnected 检查——tombstone 语义由调用点 frozen 守卫承担）。
-- **实现注**：`String.prototype.sub` 陷阱——toolPanelPayload 的 `chunk?.sub` 在
-  string chunk 上取到 String 内建方法（truthy）——string 兼容分支显式 `undefined`；
-  appendAdvisorChunk 合并分支 `textContent +=` 会清掉行内子标 span——改 `appendChild`
-  text node。
+- **live 块（流内）**：live 头 = `[▶ key · sync/async · model · Ns · turn]` + 状态词
+  （工具尾句 / thinking…——事件驱动——**无 1s ticker**——纯事件驱动显示 elapsed）；
+  open 可展开内容。⏹ 覆盖按钮：running + pool 条目（started `pool:true` 区分同步
+  spawn——同步 spawn 无 ⏹——随首 chunk 建块）。嵌套子标（`chunk.sub`——如 `explore#1`）
+  行首 dim 归属照旧（appendAdvisorChunk 原样——ui.js 零改动）。
+- **queued（流内 ⏳ 等待头——F-2 QUEUED-VISIBILITY 保留）**：排队 spawn 消息即建头
+  `[⏳ key]`——头只显 ⏳（position/waiting 状态词及词键删）——**挂取消 ⏹**（标签键
+  `sub.cancelQueueBtn`——取消沿既有 `cancelSubagent` 路径——协议零改——扩展端零动）；
+  started 到达 → 同块翻 running（⏹ 换 stop 标签）；cancelled（was:"queued"）→ 头移除
+  （从未启动——不冻结）。
+- **终态折叠（终态集合闭合——F-1）**：任何非 queued/started 的 status（done/settled/
+  error/cancelled/answered/terminated/failed…）一律视同终态原地折叠——class
+  sub-live→sub-frozen + open=false + ⏹ 移除 + 头词换 `[✓ key · done Ns]`（stopped =
+  ⏹ 词、error = 错误注记随头）。**settled 视同 done 即时折叠**（无 awaiting digestion
+  驻留——词键删）；**answered 有块折叠、无块 no-op**（回复走 digest 逐字呈现——无块防
+  御建块已删）；**终态/trim 路径 lookup-only 绝不建块**（reload 后陈旧消息无块频道一律
+  no-op——不做跨 reload 恢复——SESSION-RESTORE-PARITY：live 块不入 history——消息流是历
+  史——块无需跨 reload 生命）。
+- **幂等守卫（单 map 单守卫）**：S._subBlocks 键 = 频道名——map 有键且已终态 →
+  ensureBlock 返 null（迟来消息丢弃——不复活不重建）；map 有键且 live → 返回既有元素
+  （重复 started/queued 覆盖式刷新头词不重挂）；map 无键 → 建块 append 流尾。
+- **150 块 DOM 裁剪**：`.advisor-block` 直接子元素计数（与 advisor 块同规则同选择器）
+  ——live/冻结**出生即计窗无豁免**（预算 = 并发子代理数——池有界）。冻结块随窗裁——
+  终态条目保留（守卫仍丢迟来消息）；**live 块被裁** → 下次 ensureBlock 遇
+  !frozen && !isConnected → tombstone 移出簿记（后续消息丢弃）。
+- **resetActivity**（回合中止无挂起会话/会话清）：移除 .sub-live 块 + 清 map——frozen
+  块不动（会话流历史——随 150 窗裁）。
+- **会话退出 freeze 兜底**（suspension active:false + freeze:true）：freezeLiveBlocks
+  折叠残余 live 块（settled 已随消息即时折叠——兜底只覆盖极窄竞态——CLI freezeAllSubTasks
+  中断语义：不留悬空 live 块）。
+- **report preview / appendPreview 已删**（F-3——折叠块自身 header + tail-3 dim 摘要即
+  呈现面——内容保留可展开）；**ticker/区显隐/pin/落流锚全删**（无 idle 时钟）。
 
 行面板（子代理行 + consult 计数/回复 preview）已随 SESSION-ACTIVITY-REVISED F-3 全撤
-（D-3 方案 A——行面板 = VSC 独有历史残留——双面根源——单面板形态一体满足用户三连）：
-queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 preview + digest 轮逐字
-呈现覆盖；👥 计数由状态行 `_suspCounts` 承担；autoClean linger 迁区内块生命周期（冻
-结落流即永久可见——无 3s/60s 删除窗）；`#subagent-panel` 自 index.html/CSS/panels.js
-零残留（⑮ grep 锁——含 status-bar 子代理计数徽标撤除——评审 #2——base.css 徽标焦点规
-则同步）。
+（历史——2026-09-09）；ACTIVITY-REWRITE-SIMPLE 再撤活动区容器（2026-09-09）——
+queued 等待头入流（⏳ + 取消 ⏹）；👥 计数由状态行 `_suspCounts` 承担（susp.running/
+susp.digesting 键）；冻结块落流即会话流历史（随 150 窗裁——无删除窗）。
 
 ## 6. 交互组件要点与标题
 
@@ -169,11 +155,11 @@ queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 previ
   session-bar 显示自动占位（`Session N`），生成完成后经 sessions 刷新更新标题。
 - **模型选择 UI**：主下拉列 provider 行 + hover flyout 子菜单选模型（两级菜单——
   hover 展开 provider 的模型表）；底部含 add/remove/key 管理入口。
-- **挂起 UI**：settle 期间块驻留活动区（"done · awaiting digestion"——§5——digest
-  done 补发落流锚插回 digest 报告前）；状态行（⏳ 后台 N 子代理 + 待消化计数——
-  `_suspCounts`——子代理计数徽标已撤）；输入框永不锁（loading.js）；send 拦截保留
+- **挂起 UI**：settle 视同 done 即时折叠（§5——无驻留无锚插——digest done 补发被幂等
+  守卫吞——惰性 no-op）；状态行（⏳ 后台 N 子代理 + 待消化计数——`_suspCounts`——子代
+  理计数徽标已撤）；输入框永不锁（loading.js）；send 拦截保留
   （`isRunning`——Enter/发送按钮拒发——输入框不禁——可继续录入）。Stop 只在 running 显
-  （susp 纯池跑不显——子代理停止靠活动区每块 ⏹——F-6）。
+  （susp 纯池跑不显——子代理停止靠流内逐块 ⏹——F-6）。
 - 交互控件按钮（mode-buttons.js）：ENG / ADVISOR(guard) / AUTO / PLAN 状态反射。
 
 ## 7. 消息协议（webview ↔ extension）
@@ -284,7 +270,7 @@ queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 previ
   `S._phase==="thinking"` 标记（`loading` 消息经 setLoading 置位/清除）——renderStatusBar
   同线绘制徽标（task/goal/plan）、挂起计数与 thinking 段——loading 消息不再
   innerHTML 覆写状态行（修 H-E——徽标不被每 digest 的 thinking 重画清掉）。子代理计数
-  徽标已随行面板撤除（SESSION-ACTIVITY-REVISED 评审 #2——活动区自动显隐无需开关）。
+  徽标已随行面板撤除（SESSION-ACTIVITY-REVISED 评审 #2——计数由状态行挂起段承担——无徽标开关面）。
 - **Stop running 派生（F-6——SESSION-ACTIVITY-REVISED 评审 #1 定论——收窄 A3 的
   state≠idle）**：abort 按钮可见性 = `S._turnState === "running"` **派生**——running
   （回合/标题窗口/会话内 digest 起跑/Reload 冷启重推）常显——**susp（纯后台池跑——
@@ -292,8 +278,8 @@ queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 previ
   loading:true/false 不再隐/显 abort（修 digest 间按钮闪烁 + running 窗口隐藏）。
   Stop 作用收窄：host abort case 只停主会话当前 controller（digest 轮 controller——
   newTurnController 每回合新建）——不再全链中止挂起会话（废除 D-S9——`_suspWake`/
-  `abortControllers` 全停路径删除——子代理停止靠活动区每块 ⏹——running+pool——
-  queued/waiting 不挂——cancelSubagent 定向 abort）。
+  `abortControllers` 全停路径删除——子代理停止靠流内逐块 ⏹（running+pool 停 + queued
+  头取消 ⏹——F-2 QUEUED-VISIBILITY 保留）——cancelSubagent 定向 abort）。
 
 ### 8.5 会话打开单向 boot（SESSION-FLOW-B B2——F-B2a~c 权威锚）
 
@@ -317,6 +303,12 @@ queued/waiting 转区内等待块头；consult 回复 preview 由冻结块 previ
   resolve + webviewReady 流总数恰一次）。真机 Reload 走查 = 实现期验证项（N4）。
 
 ## 9. 变更记录（历史折叠——详见 git log）
+- 2026-09-09：ACTIVITY-REWRITE-SIMPLE 锚段（活动块去加戏重写）——§2 布局改四行垂直序
+  （活动区容器删——grid 五行→四行）+ §3 activity 模块行同步（freeze 并入 activity.js——
+  activity-freeze.js 删——簿记删）+ §5 全节重写（块出生即 #messages 流尾 · 原地折叠——
+  终态集合闭合/settled 视同 done/queued ⏳ 头含取消 ⏹/无 DOM move/无 preview/无 ticker/
+  无跨 reload 恢复——live/冻结出生即计 150）+ §6 挂起 UI + §8.4 子代理停句同步（活动区
+  措辞清——queued 取消 ⏹ F-2 保留）。
 - 2026-09-09：BATCH-4-DOC-CLEANUP——§6 挂起 UI send 拦截句同步 INPUT-LOCK-BEHAVIOR-REVISED
   （只禁 send 不禁录入——send 拦截保留 `isRunning`——Enter/发送按钮拒发——输入框不禁可继续录入——
   L175 旧拦截句清）。

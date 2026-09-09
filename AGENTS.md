@@ -56,11 +56,10 @@ src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-
 src/prompts/          System prompts: system.md, discipline.md, main.md, explore/coder/plan.md
 webview/chat.js      Frontend orchestration: message handling, model selector, session history
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
-webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块 + 活动块路由（live 块固定在活动区——activity.js——freeze 落流移入 #messages）
-webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——SESSION-ACTIVITY-REVISED——簿记 map 仅供活动块 meta 水合——活动块生命周期在 activity.js）
-webview/activity.js   编排层 + re-export hub（ACTIVITY-SPLIT 拆分）：parse/rowFor 水合 + ensureBlock（live 块生于活动区）+ applySubagentStatus 状态机（queued/started/settled/terminal——freezeSettledBlocks 批冻按 settled 行表——panels.js 直接消费）+ resetActivity——呈现委 activity-view.js、落流冻结委 activity-freeze.js——hub re-export 保外部 import 面零改动（liveBlocks/_ticker 私有）
-webview/activity-view.js   呈现叶（ACTIVITY-SPLIT 新）：块头/状态词/⏹/区显隐与底 pin/noteChunk/elapsed ticker 全族（含 stopTicker——reset 路径清理入口）——leaf（state/i18n only）
-webview/activity-freeze.js  冻结叶（ACTIVITY-SPLIT 新）：freezeBlock（折叠 + 落流 DOM move——尾推/settled 锚插）+ appendPreview/preview 尺寸——leaf（state/activity-view only——不依赖核心）
+webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块 + 活动块路由（块出生即 #messages 流尾——activity.js——subagentChunk 空安全守卫）
+webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——簿记 map 已删——handleSubagentMessage 纯转发——活动块生命周期在 activity.js）
+webview/activity.js   编排层（ACTIVITY-REWRITE-SIMPLE 重写——B1 流尾形态）：ensureBlock（append #messages 流尾——终态幂等守卫返 null）+ applySubagentStatus 三态机（queued ⏳ 头含取消 ⏹/started 翻 running/其余 status 一律终态折叠——lookup-only 绝不建块——settled 视同 done）+ freeze 原地折叠 + resetActivity + freezeLiveBlocks——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）
+webview/activity-view.js   呈现叶（refreshBlock/updateStopButton/noteChunk——块头/状态词/⏹——区显隐/pin/ticker/awaiting 词删）——leaf（i18n only——不依赖核心）
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout

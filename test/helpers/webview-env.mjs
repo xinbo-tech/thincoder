@@ -64,9 +64,8 @@ export function installChatFixture() {
     "session-dropdown", "welcome-panel", "welcome-heading", "welcome-text",
     "welcome-provider-label", "welcome-provider", "welcome-key-label", "welcome-key",
     "welcome-save-btn", "welcome-skip-btn", "welcome-settings-btn", "project-btn",
-    "status-line", "task-panel", "goal-panel", "subagent-activity",
+    "status-line", "task-panel", "goal-panel",
   ]
-  // SESSION-ACTIVITY-REVISED: #subagent-panel 撤（行面板）——#subagent-activity 回（活动区——
-  // 初始隐藏——activity.js updateAreaVisibility 在块生灭时翻转——⑨ 锁区空隐藏）。
-  document.body.innerHTML = ids.map((id) => `<div id="${id}"${id === "subagent-activity" ? " style=\"display:none\"" : ""}></div>`).join("")
+  // ACTIVITY-REWRITE-SIMPLE: #subagent-activity 容器删（子代理块出生即 #messages 流内）。
+  document.body.innerHTML = ids.map((id) => `<div id="${id}"></div>`).join("")
 }

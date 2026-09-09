@@ -1,8 +1,8 @@
 /**
  * streaming.js — token/reasoning stream rendering (rAF-throttled), turn finish,
  * code-block copy buttons, and the in-conversation advisor review block.
- * (SESSION-ACTIVITY-REVISED: subagent activity blocks live in the fixed
- * #subagent-activity area — activity.js.)
+ * (ACTIVITY-REWRITE-SIMPLE: subagent activity blocks live in the #messages flow —
+ * activity.js. ensureBlock 可返 null——subagentChunk 空安全守卫。)
  */
 import { ctx, S } from "./state.js"
 import { md } from "./md.js"
@@ -13,10 +13,9 @@ import {
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
-// SESSION-ACTIVITY-REVISED: subagent activity blocks are born in the fixed
-// #subagent-activity AREA (activity.js) — lifecycle (create/header/freeze/ticker/
-// ⏹) lives there; frozen blocks move into #messages (tail push / settle anchor);
-// panels.js never imports streaming.js and activity.js imports neither (no cycles).
+// ACTIVITY-REWRITE-SIMPLE: subagent activity blocks are born in the #messages flow
+// (activity.js) — lifecycle (create/flip/fold/⏹) lives there; panels.js never
+// imports streaming.js and activity.js imports neither (no cycles).
 import { ensureBlock, noteChunk, resetActivity } from "./activity.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
@@ -54,13 +53,10 @@ function scheduleStreamRender() {
       _tokenDirty = false
     }
     if (_advisorScrollDirty) {
-      // 内容自滚扫活动区 live 块 + 流内 advisor 块（SESSION-ACTIVITY-REVISED：
-      // 子代理 live 块固定于活动区——冻结块已落流（frozen 静态——跳过——注释同步））
-      for (const block of [S._advisorBlock, ...S._subBlocks.values()]) {
-        if (block?._subMeta?.frozen) continue // frozen blocks are static (in #messages)
-        const c = block?.querySelector(".advisor-content")
-        if (c) c.scrollTop = c.scrollHeight
-      }
+      // 流内 advisor 块内容自滚钉底（ACTIVITY-REWRITE-SIMPLE：rAF 活动区扫描删——
+      // 子代理块随流内 append——无强制滚动——简单形态——B1 参照）
+      const c = S._advisorBlock?.querySelector(".advisor-content")
+      if (c) c.scrollTop = c.scrollHeight
       _advisorScrollDirty = false
     }
     maybeScrollDown(ctx)
@@ -175,10 +171,10 @@ export function finish(aborted) {
   ctx._toolRefs = {}
   S._currentTool = null
   S._turnStart = null
-  // SESSION-ACTIVITY-REVISED（2026-09-09）: 活动块生命周期 = 块终态（freeze 落流）/池
-  // 退出（suspension freeze）——不再随普通回合尾重置。行面板撤除后区内 live 块是池
-  // children 的唯一承载面——正常 complete 尾池 live → 挂起会话接管（块驻留区等
-  // settle/digest done 补发折叠）；池空 → 无 live 块——reset 恒 no-op。abort 且无挂起
+  // ACTIVITY-REWRITE-SIMPLE（2026-09-09）: 活动块生命周期 = 块终态（终态消息即时折
+  // 叠——settled 视同 done）/会话退出兜底（suspension freeze）——不再随普通回合尾重置。
+  // 块随消息流（#messages 内 live/冻结同层）——正常 complete 尾池 live → 挂起会话接管
+  // （块留流内等终态通知）；池空 → 无 live 块——reset 恒 no-op。abort 且无挂起
   // 会话 → 池 children 持回合 controller signal 随中止而死（无终态通知）——resetActivity
   // 清孤儿 live 块；digest/会话内回合中止（_suspended true）不动块（池仍 live——children
   // 持会话 signal）。
@@ -231,23 +227,18 @@ export function advisorChunk(m) {
 }
 
 
-/** Subagent/consultant/escalate activity stream — SESSION-ACTIVITY-REVISED:
- *  blocks are born in the FIXED activity area (#subagent-activity — one block per
- *  channel "sub:explore#1", "sub:consult glm:glm-5.2 #4" …). Terminal states
- *  FREEZE and MOVE the block into the #messages flow (activity.freezeBlock —
- *  identity header + expandable content + report preview; plain terminals tail
- *  push, §17 settled parkers insert at their settle anchor before the digest
- *  report); queued spawns get an area waiting block head. The summary header
- *  carries [▶/⏳ key · sync/async · model · elapsed · turn] + current tool/state
- *  word + folded tail-3 dim (D-R22b). §19.5 D-M7/D-M8: ⏹ mounts only on running
- *  pool entries; nested `sub` labels render via appendAdvisorChunk. */
+/** Subagent/consultant/escalate activity stream — ACTIVITY-REWRITE-SIMPLE: 块出生即
+ *  #messages 流尾（activity.js ensureBlock——channel "sub:explore#1"/"sub:consult
+ *  glm:glm-5.2 #4"…——append 不插锚——label 去 sub: 前缀）；终态原地折叠（live→frozen
+ *  ——头词 ✓ done Ns）；queued spawns 得 ⏳ 等待头（含取消 ⏹——F-2）。ensureBlock 可返
+ *  null（map 有键且已终态 = 幂等守卫 / live 被 150 裁 tombstone）——空安全守卫丢弃。 */
 export function subagentChunk(m) {
   const name = String(m.name ?? "")
-  const block = ensureBlock(name) // born in the activity area; freeze moves it into the flow later
-  // §27.1 F3（缺陷①）: 冻结块迟到 chunk 丢弃（CLI tombstone 丢弃链对齐——§7.2 D4 完成态冻结）
-  if (block._subMeta?.frozen) return
+  const block = ensureBlock(name)
+  // 空安全 + 冻结守卫（评审 round2 #5）：ensureBlock 对已终态频道返 null——迟到 chunk
+  // 丢弃（CLI tombstone 丢弃链对齐——§7.2 D4 完成态冻结——不复活不重建）
+  if (!block || block._subMeta?.frozen) return
   appendAdvisorChunk(block, m.kind ?? "tool", m.text, m.sub)
   noteChunk(block, m.kind ?? "tool", m.text)
-  _advisorScrollDirty = true
-  scheduleStreamRender()
+  scheduleStreamRender() // 钉底跟随（rAF 节流——无块内自滚 pin——简单形态）
 }

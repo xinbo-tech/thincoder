@@ -13,9 +13,6 @@ window._vscode = vscode
 export const ctx = {
   vscode,
   messagesEl: document.getElementById("messages"),
-  // SESSION-ACTIVITY-REVISED（2026-09-09）：子代理活动区容器（#messages 与输入之间——
-  // live 子代理块出生区——freeze 落流时移入 messagesEl——CLI 单面板形态回归）。
-  subAgentArea: document.getElementById("subagent-activity"),
   inputEl: document.getElementById("input"),
   sendBtn: document.getElementById("send-btn"),
   abortBtn: document.getElementById("abort-btn"),
@@ -73,12 +70,12 @@ export const S = {
   _lastUsage: null,
   _lastCtxPct: null,
   _planActive: false,
-  _subagentMap: {},
   _goalInfo: null,
   // Current live-turn advisor block (in-conversation details element) — advisor
   // output streams here like reasoning instead of the side tool panel.
   _advisorBlock: null,
-  // Subagent/consultant activity-stream blocks (reset per turn together with _advisorBlock).
+  // Subagent/consultant activity-stream blocks (ACTIVITY-REWRITE-SIMPLE——簿记 map 删
+  // ——单 map 单守卫——键 = 频道名——终态冻结后条目保留作幂等守卫直至 resetActivity)。
   _subBlocks: new Map(),
   // Lazy history loading: ctx._hasOlder = more pages exist before the first rendered
   // message; _loadingOlder guards against scroll-triggered double requests.
@@ -107,7 +104,7 @@ export const S = {
   // reducer 更新本字段（S._turnState ∈ idle/running/susp——waiting 是 running 修饰态非
   // 互斥——不入枚举）。派生读：Stop 只显（state==="running"——回合/digest/标题窗口/
   // Reload 冷启重推——F-6 收窄：susp 纯池跑不显——无全停——池空自然消化完——子代理停
-  // 止靠活动区逐块 ⏹）。既有 _suspended 保持 suspension 消息驱动（会话级语义——digest
+  // 止靠流内逐块 ⏹）。既有 _suspended 保持 suspension 消息驱动（会话级语义——digest
   // 执行中 state 为 running 时不得翻 false）。
   _turnState: "idle",
   // C2 (F-C2c): thinking 态标记——loading 消息经 setLoading 置位/清除；renderStatusBar
