@@ -35,6 +35,8 @@
   CLI 一致）——#subagent-panel 自 index.html/CSS/panels.js 零残留（⑮ grep 锁）。
 
 ## 变更记录（历史折叠——详见 git log）
+- 2026-09-09：§8 任务书机械追加措辞核（A2-SUMMARY-PARITY——A2 摘要对齐 CLI：节头定位优先 + 无 `##` flat 任务书 inline 兜底 + marker 未命中 → "(not found in the parent task book)" 不编造——删 <2 节整书 verbatim 回退）。
+
 - 2026-09-08：§11 实现交付后——eng-coder 报告 3 上报项：①槽持久化缺口（agentState 不带 tasks/goal/pendingReminders——destroy 丢）——父侧裁 a 案（补带三字段——文件域扩展 run-helpers/panel-callbacks）落 §11.7；②commit a0fabf8 卷入同伴 D6 文件（共享 git index 竞态——内容正确接受）；③setup.mjs 500 行边缘（挂 TODO 拆）。
 
 - 2026-09-08：新增 §11 agent 生命周期对齐 CLI 设计变更段（需求 SESSION.md 需求段——用户裁定快车道）。评审后并入 §2。
@@ -311,7 +313,10 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
 - 交付协议在 eng-coder **内部闭环**（async 为其缺省运行形态——depth-0 全角色缺省
   async，§5）：实现 → explore 偏差审计（**BLOCKING ONLY**——受限变体 spawn-only，无
   status/escalate/async；审计预算 ≤6，第 7 次机械拒绝 = stalled 信号；任务书机械追加 =
-  父 spawn 任务书 verbatim + 实际 `_touchedFiles` 并集，非自述清单）→ dirty 自修 →
+  父 spawn 任务书摘要（三要素 verbatim——涉及文档/文件清单/验收标准——节头定位优先、
+  无 `##` 的 flat 任务书 inline 兜底；marker 未命中 → "(not found in the parent task
+  book)" 不编造——无整书 verbatim 回退——A2-SUMMARY-PARITY 2026-09-09）+ 实际
+  `_touchedFiles` 并集，非自述清单）→ dirty 自修 →
   advisor 复评 → 收敛 → 一次交付。
 - **token 门**（authorizeEngCoderDesignToken，subagent-spawn-gate.mjs）：eng-coder
   spawn 必须持有 advisor(type='design') 评审 0🔴 签发的 token——格式（`uuid:expiresAt`）

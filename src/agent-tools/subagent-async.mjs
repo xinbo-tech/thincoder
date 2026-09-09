@@ -64,32 +64,61 @@ export function gateEngCoderSpawn(parent, depth, role, asyncArg) {
 }
 
 /**
- * A2 helper (AGENT-LOOP.md §18.7 D-TS5): mechanical summary of the parent spawn
- * task book — keep ONLY the audit-relevant sections (docs involved / affected
- * file list / acceptance criteria), each VERBATIM, and drop the verbose
- * background/context sections (the auditor reads the design documents itself —
- * they remain reachable via read/glob/grep). Sections are delimited by the
- * `## ` headings of the METHODOLOGY Implementation Handoff structure
- * (涉及文档 / 文件清单 / 验收标准 or their English equivalents). Conservative
- * fallback: when the section markers do not resolve, return the task book
- * VERBATIM — never lose information an auditor may need. Independence is
- * unchanged: still built from _engTaskInput (not the eng-coder's self-report).
+ * A2 helper (AGENT-LOOP.md §18.7 D-TS5): mechanically summarize the parent spawn
+ * task book for the audit spawn — the three audit-relevant elements VERBATIM
+ * (design doc paths / affected-file list / acceptance criteria); verbose
+ * context/background is dropped (the auditor reads the design documents itself —
+ * they remain reachable via read/glob/grep). Sections are located by header
+ * marker, prioritizing header lines (structured task books: "## 文件清单 …")
+ * and falling back to inline markers (flat one-line task books); a section runs
+ * to the next header of the SAME OR HIGHER level ("## 文件清单" survives a
+ * "### 修改" sub-header). Marker not found → the section is reported as missing
+ * (never fabricate) — NO whole-book verbatim fallback (A2-SUMMARY-PARITY
+ * 2026-09-09 — CLI parity; the old <2-kept-sections verbatim guard is deleted).
+ * Isomorphic declaration (评审 #4 — AC-3 diff anchor): summarizeEngTaskInput is
+ * verbatim-isomorphic with the CLI's summarizeEngTaskBook
+ * (thincoder/src/agent-tools/subagent-spawn.mjs:37-73) — this function body is
+ * byte-identical to it; the only textual differences are the declaration-line
+ * name and the repos' line-ending convention (CLI stays the untouched baseline).
+ * Independence is unchanged: still built from _engTaskInput (not the
+ * eng-coder's self-report).
  */
 function summarizeEngTaskInput(taskInput) {
   if (!taskInput) return "(unavailable)"
-  const headingRe = /^##[ \t]+(.+)$/gm
-  const keepRe = /涉及文档|Docs involved|文件清单|file list|受影响文件|验收标准|acceptance/i
-  const heads = [...taskInput.matchAll(headingRe)]
-  if (heads.length === 0) return taskInput
-  const kept = []
-  for (let i = 0; i < heads.length; i++) {
-    const start = heads[i].index
-    const end = i + 1 < heads.length ? heads[i + 1].index : taskInput.length
-    if (keepRe.test(heads[i][1])) kept.push(taskInput.slice(start, end))
+  const SECTIONS = [
+    { name: "Design docs involved", markers: [/Docs? involved/i, /涉及文档/] },
+    { name: "Affected-file list", markers: [/Files? (?:list|to (?:modify|change)|modified)/i, /受影响文件/, /文件清单/, /涉及文件/] },
+    { name: "Acceptance criteria", markers: [/Acceptance(?: criteria)?/i, /验收标准/] },
+  ]
+  const lines = taskInput.split("\n")
+  const headerLevel = (l) => {
+    const m = l.match(/^\s*(#{1,6})\s/)
+    return m ? m[1].length : 0
   }
-  // <2 kept sections → a wrong summary is worse than the verbatim task book.
-  if (kept.length < 2) return taskInput
-  return kept.join("\n").trim()
+  const headerIdx = lines.map((l, i) => (headerLevel(l) > 0 ? i : -1)).filter((i) => i >= 0)
+  const boundsFor = (from, level) => {
+    for (const j of headerIdx) {
+      if (j > from && (level === 0 || headerLevel(lines[j]) <= level)) return j
+    }
+    return lines.length
+  }
+  const out = []
+  for (const { name, markers } of SECTIONS) {
+    let from = -1
+    let level = 0
+    for (const i of headerIdx) {
+      if (markers.some((m) => m.test(lines[i]))) { from = i; level = headerLevel(lines[i]); break }
+    }
+    if (from === -1) {
+      for (let i = 0; i < lines.length; i++) {
+        if (markers.some((m) => m.test(lines[i]))) { from = i; level = 0; break }
+      }
+    }
+    if (from === -1) { out.push(`${name}: (not found in the parent task book)`); continue }
+    const body = lines.slice(from, boundsFor(from, level)).join("\n").trim()
+    out.push(body || `${name}: (empty section)`)
+  }
+  return out.join("\n\n")
 }
 
 /**

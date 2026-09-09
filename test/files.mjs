@@ -26,4 +26,5 @@ export default [
   "test/history-window.test.mjs", // SESSION-RESTORE-PARITY ①（2026-09-09）：historyWindow 直驱——turnStart 可见前驱矩阵/C reminder 剔除/B 配对（乱序全配+args 透传+无结果 null）/E reasoning ?? 兼容/F ts 三形态+idx+hasOlder/窗口跨页配对+孤儿 skip/HISTORY_PAGE_SIZE===200
   "test/history-restore.test.mjs", // SESSION-RESTORE-PARITY ③（2026-09-09）：webview DOM——applyHistoryPage 直驱（G welcome 移除/空保留/assistant 帧序 label→thinking→bubble→嵌套卡/data-idx 仅外层/工具卡 args/Error 红 open/user ts/F 缺失不显/孤儿 tool 顶层保底）
   "test/trace-store.test.mjs", // TRACE-STORE-VSC（2026-09-09）：VSC 轨迹存档同构——recordChatTrace 字段集/脱敏/fire-and-forget/seq/清理/禁用/写失败/保留边界 + per-caller 形状 + chat() 出口采集
+  "test/subagent-audit-summary.test.mjs", // A2-SUMMARY-PARITY（2026-09-09）：A2 摘要对齐 CLI——auditTaskBook seam 驱动 _engTaskInput fixture——flat inline 兜底/结构化节摘/marker 缺失 (not found)/单可保留节无整书回退
 ]

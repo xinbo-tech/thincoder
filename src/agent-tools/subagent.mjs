@@ -294,9 +294,12 @@ export const subagentTool = {
 
     // §18 D-E2 ③: the audit spawn's task book is appended MECHANICALLY — the eng-coder's
     // OWN spawn task (mechanical SUMMARY of _engTaskInput — auditTaskBook keeps the
-    // docs-involved / file-list / acceptance sections VERBATIM via summarizeEngTaskInput;
-    // full verbatim only when the task book lacks section headings — never a self-written
-    // list) ∪ mechanically tracked _touchedFiles (mechanism lives in subagent-async.mjs).
+    // docs-involved / file-list / acceptance sections VERBATIM via summarizeEngTaskInput
+    // (CLI-isomorphic, A2-SUMMARY-PARITY): header-first with an inline-marker fallback
+    // for flat books without "## " headings — markers not found are reported
+    // "(not found in the parent task book)", never fabricated — there is NO whole-book
+    // verbatim fallback; never a self-written list) ∪ mechanically tracked _touchedFiles
+    // (mechanism lives in subagent-async.mjs).
     const childInput = auditTaskBook(task, ctx.agent, engAuditAttempt)
 
     // Subagent runs without MAIN-CONVERSATION callbacks — results are captured.
