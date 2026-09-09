@@ -214,3 +214,7 @@
 - [x] ~~**大项 L50 advisor 裁决模板**~~——**2026-09-09 核销**（ADVISOR-VERDICT-TEMPLATE——33ed72b/f9f0335——L2 绿——consume 9e85ddd9）
 - [x] ~~**大项 L52 sync spawn 可中止**~~——**2026-09-09 核销**（SYNC-CANCEL——3d7be35——见工程模式节同项核销——consume 1e5870bb）
 - [ ] **§24→§11 旧锚全仓清理**（2026-09-09 POOL-CONFIG AC-7 补挂——触碰行已更新——全仓注释残留双端数十处——后续批大扫）
+- [ ] **config-io 499 预拆（2026-09-09 F-4 交付注——距 500 硬限 1 行）**：VSC src/config-io.mjs 现 499 行——
+  F-4 净增后距 500 硬限 1 行——下个改动必拆——建议预拆 F-4 块为 config-consult.mjs（同 config-io
+  hub 惯例）——owning board = 结构债——status=登记——设计权在用户
+
