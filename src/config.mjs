@@ -55,14 +55,18 @@ export const DEFAULTS = {
     advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
     engineering: false,   // strict methodology enforcement — read METHODOLOGY.md, design-before-code
-    // Async subagent pool limits per role domain (AGENT-LOOP.md §24 D-24a/R14):
-    // { engCoder, other } — eng-coder pool / other-role pool, defaults 4/4 (user
-    // ruling "eng-coder 四路，其他 4 路"). Runtime-validated at every pool admission
-    // (positive integer ≥1, invalid/absent keys fall back to 4 — settings tool and
-    // the /config 并发池 menu write this key; change applies to the next spawn).
-    // ⚠ 与 subagent-async.mjs ASYNC_POOL_LIMITS 逐键同值（运行时回退常量）——耦合锚
-    // T-24a4 断言锁住——勿单侧改默认。
-    poolLimits: { engCoder: 4, other: 4 },
+    // Async pool limits (AGENT-LOOP.md §11.1 D-24a/R14 + §11.2 R13 — POOL-CONFIG-
+    // UNIFIED 2026-09-09): { engCoder, other, advisor } — eng-coder pool / other-role
+    // pool / advisor-review pool, defaults 4/4/4 (user ruling "eng-coder 四路，其他
+    // 4 路" + advisor 评审池并入同一可配体系——三池统一默认 4)。engCoder/other
+    // runtime-validated at every subagent pool admission (subagent-async
+    // resolvePoolLimits); advisor runtime-validated at every advisor launch
+    // (advisor-async advisorPoolLimitFor——F-2——两域读取器独立不共享)——非法/缺省
+    // 回退 4——settings tool 与 /config 并发池菜单写此键——变更下个 spawn/launch 生效。
+    // ⚠ 与 subagent-async.mjs ASYNC_POOL_LIMITS（两键）/advisor-async.mjs
+    // ADVISOR_POOL_LIMIT 逐键同值（运行时回退常量）——耦合锚 T-24a4 断言锁住——
+    // 勿单侧改默认。
+    poolLimits: { engCoder: 4, other: 4, advisor: 4 },
   },
   memory: {
     dbPath: join(configDir, "memory.db"),

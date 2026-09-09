@@ -12,6 +12,13 @@ export function embeddingPatch(raw, embKey, defaults) {
   }
 }
 
+/** 并发池三键当前值读取（POOL-CONFIG-UNIFIED F-3——2026-09-09）：配置值合法（≥1 整数）
+ *  读配置——非法/缺省回退 DEFAULTS（agent.poolLimits 三键——/config 并发池子菜单/
+ *  主菜单/view 三面共用同一读取——config-pool.test.mjs 单测面）。 */
+export function poolCur(pl, defaults) {
+  return (k) => (Number.isInteger(pl?.[k]) && pl[k] >= 1 ? pl[k] : defaults.agent.poolLimits[k])
+}
+
 /** /config command: view and set agent/embedding/proxy config. */
 export async function handleConfigCommand(ctx, args = []) {
   const { agent, pushLine, pushLabel, showPicker, askQuestion, persistRaw, maskKey, pickModelForSlot } = ctx
@@ -231,19 +238,21 @@ export async function handleConfigCommand(ctx, args = []) {
     }
   }
 
-  // ── 并发池子菜单（§24 D-24a/R14——agent.poolLimits——读/改两域；保存经 saveProxy
+  // ── 并发池子菜单（§11.1/§11.2——agent.poolLimits——读/改三域；保存经 saveProxy
   // 落盘 + reloadConfig 热应用——下个 spawn 生效）──
   async function poolMenu() {
     let poolIdx = 0
     for (;;) {
       const pl = agent.config?.agent?.poolLimits ?? {}
       // 显示回退与默认同源（DEFAULTS.agent.poolLimits——配置 DEFAULTS 与运行时回退常量
-      // ASYNC_POOL_LIMITS 的耦合由 T-24a4 锚定断言锁住——防默认值单侧漂移）
-      const cur = (k) => (Number.isInteger(pl[k]) && pl[k] >= 1 ? pl[k] : DEFAULTS.agent.poolLimits[k])
+      // ASYNC_POOL_LIMITS/ADVISOR_POOL_LIMIT 的耦合由 T-24a4 锚定断言（config-pool.test.mjs）
+      // 锁住——防默认值单侧漂移）
+      const cur = poolCur(pl, DEFAULTS)
       const entries = [
-        { type: "header", text: `Async pools: eng-coder ${cur("engCoder")} / other ${cur("other")}（默认 4/4——分域互不阻塞——超限排队）` },
+        { type: "header", text: `Async pools: eng-coder ${cur("engCoder")} / other ${cur("other")} / advisor ${cur("advisor")}（默认 4/4/4——分域互不阻塞——subagent 超限排队/advisor 超限即拒）` },
         { type: "item", text: `eng-coder 池上限 = ${cur("engCoder")}`, action: "engCoder" },
         { type: "item", text: `其他角色池上限 = ${cur("other")}`, action: "other" },
+        { type: "item", text: `advisor 评审池上限 = ${cur("advisor")}`, action: "advisor" },
       ]
       const c = await showPicker("并发池（agent.poolLimits）", entries, { defaultIndex: poolIdx })
       if (!c) return // Esc 返回主菜单
@@ -252,11 +261,12 @@ export async function handleConfigCommand(ctx, args = []) {
       if (!val) continue // 空输入不改动
       const num = Number(val)
       if (!Number.isInteger(num) || num < 1) { pushLine("Pool limit must be a positive integer (≥1)", C.error); continue }
-      const next = { engCoder: cur("engCoder"), other: cur("other"), [c.action]: num }
+      // 写盘全对象（三键——未触碰的键带当前值重写——全非法/空输入不改动）
+      const next = { engCoder: cur("engCoder"), other: cur("other"), advisor: cur("advisor"), [c.action]: num }
       try {
-        await saveProxy((raw) => { raw.agent ??= {}; raw.agent.poolLimits = { engCoder: next.engCoder, other: next.other } })
+        await saveProxy((raw) => { raw.agent ??= {}; raw.agent.poolLimits = { engCoder: next.engCoder, other: next.other, advisor: next.advisor } })
         pushLabel("❯ Config", ansi.bold + C.tool)
-        pushLine(`agent.poolLimits = { engCoder: ${next.engCoder}, other: ${next.other} }（下个 spawn 生效——分域互不阻塞）`, C.tool)
+        pushLine(`agent.poolLimits = { engCoder: ${next.engCoder}, other: ${next.other}, advisor: ${next.advisor} }（下个 spawn 生效——分域互不阻塞）`, C.tool)
       } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
     }
   }
@@ -271,12 +281,12 @@ export async function handleConfigCommand(ctx, args = []) {
     tc = agent.config?.traces ?? {}
     const consultCount = (ac.consultModels ?? []).length
     const pl = ac.poolLimits ?? {}
-    const cur = (k) => (Number.isInteger(pl[k]) && pl[k] >= 1 ? pl[k] : DEFAULTS.agent.poolLimits[k])
+    const cur = poolCur(pl, DEFAULTS)
     const mainEntries = [
       { type: "header", text: `proxy=${proxySummary()} | maxTurns=${ac.maxTurns ?? 200} | compactThreshold=${ac.compactThreshold ?? 100000} | verifyGuard=${ac.verifyGuard === true ? "on" : "off"} | consult=${consultCount} model(s) | embedding=${agent.memory?.embedder ? "on" : "off"} | traces=${tc.enabled === false ? "off" : "on"}` },
       { type: "item", text: `agent.maxTurns = ${ac.maxTurns ?? 200}`, action: "agent.maxTurns" },
       { type: "item", text: `agent.subagentTurns = ${ac.subagentTurns ?? 100}`, action: "agent.subagentTurns" },
-      { type: "item", text: `并发池 agent.poolLimits = engCoder ${cur("engCoder")} / other ${cur("other")}（async 分域上限）`, action: "pool" },
+      { type: "item", text: `并发池 agent.poolLimits = engCoder ${cur("engCoder")} / other ${cur("other")} / advisor ${cur("advisor")}（async 分域上限）`, action: "pool" },
       { type: "item", text: `agent.compactThreshold = ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, action: "agent.compactThreshold" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
       { type: "item", text: `traces.enabled = ${tc.enabled === false ? "off" : "on"}（轨迹存档——发布默认关——隐私）`, action: "traces.enabled" },
@@ -304,7 +314,7 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLine(`traces.enabled: ${tc.enabled === false ? "off" : "on"}（默认 off——发布隐私——本地分析可开）`, C.dim)
       pushLine(`traces.retentionHours: ${tc.retentionHours ?? 24}（超期文件启动清理——D-TR10）`, C.dim)
       pushLine(`agent.consultModels: ${(ac.consultModels ?? []).map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ") || "(none)"}`, C.dim)
-      pushLine(`agent.poolLimits: { engCoder: ${cur("engCoder")}, other: ${cur("other")} }（async 分域上限——默认 4/4——agent.poolLimits 可配）`, C.dim)
+      pushLine(`agent.poolLimits: { engCoder: ${cur("engCoder")}, other: ${cur("other")}, advisor: ${cur("advisor")} }（async 分域上限——默认 4/4/4——agent.poolLimits 可配）`, C.dim)
       pushLine(`agent.consultTurns: ${ac.consultTurns ?? 40}`, C.dim)
       pushLine(`agent.consultTimeoutMs: ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, C.dim)
       pushLine(`embedding: ${agent.memory?.embedder ? `enabled (${ec.model ?? ""})` : "disabled (FTS only)"}`, C.dim)

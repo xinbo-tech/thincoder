@@ -1,5 +1,5 @@
 /**
- * advisor-async.mjs — async advisor reviews (AGENT-LOOP.md §24 D-24b — R13, 2026-09-06).
+ * advisor-async.mjs — async advisor reviews (AGENT-LOOP.md §11.2 — R13, 2026-09-06).
  *
  * The advisor tool runs reviews in a background pool at depth 0 (default async —
  * ruling ②-3 A): the launch returns an ack, the turn ends naturally, the session
@@ -17,9 +17,10 @@
  *     launch); code reviews continue the newest OPEN code instance (round 2+ of
  *     a fix loop) and CLOSE at normal user-run ends once no review is in flight
  *     (a converged/abandoned thread must not burn the cap of later tasks);
- *  3. the async pool (agent._asyncAdvisors — ADVISOR_POOL_LIMIT = 2, no
- *     queueing: an over-limit launch returns the refusal text immediately,
- *     ruling ②-6a); cancel (ruling ②-6b — directed abort → cancelled settle: no
+ *  3. the async pool (agent._asyncAdvisors — ADVISOR_POOL_LIMIT = 4 default,
+ *     agent.poolLimits.advisor configurable — POOL-CONFIG-UNIFIED; over-limit and
+ *     same-scope-running launches are refused at once — never queued (②-6a; F-5);
+ *     cancel (ruling ②-6b — directed abort → cancelled settle: no
  *     pending entry, no token, a "评审已取消——token 未签发" reminder);
  *  4. SETTLE accounting (fixes #2/#4 — moved from the tool-result commit): a
  *     review whose targets mutated after launch settles STALE — it marks no
@@ -88,7 +89,7 @@ function openDesignRun(agent, key) {
 }
 
 /**
- * Resolve the review instance a launch continues (§24 D-24b ③ — per-review
+ * Resolve the review instance a launch continues (§11.2 ③ — per-review
  * rounds/prior; reviewId = designId for design reviews, a random id for code).
  *  - design: continue the OPEN instance of the same document set (fix rounds of
  *    a review thread keep its designId and its round/prior); none → new instance.
@@ -190,10 +191,40 @@ export function reviewIsStale(agent, entry) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Async pool (agent._asyncAdvisors — ADVISOR_POOL_LIMIT = 2, launch-and-refuse)
+// Async pool (agent._asyncAdvisors — pool 上限 F-1/F-2:常量 = 运行时回退权威(2 → 4),
+// config.mjs DEFAULTS.agent.poolLimits.advisor = config 层镜像——耦合锁 config-pool
+// .test.mjs 逐键断言——勿单侧改默认)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const ADVISOR_POOL_LIMIT = 2
+export const ADVISOR_POOL_LIMIT = 4
+
+/** §11.2 advisor 池生效上限（纯——读 agent.poolLimits.advisor——合法 ≥1 整数生效——
+ *  非法/缺省回退 ADVISOR_POOL_LIMIT——与 subagent 域 resolvePoolLimits 独立不共享
+ *  （subagent 两键表不含本键——键表语义不同——POOL-CONFIG-UNIFIED F-2））。 */
+export function resolveAdvisorPoolLimit(raw) {
+  const v = raw?.advisor
+  return Number.isInteger(v) && v >= 1 ? v : ADVISOR_POOL_LIMIT
+}
+
+/** launch 判定点每次读 agent.config（/config 热应用——变更即生效下个 launch——文案
+ *  如实报本值）。 */
+export function advisorPoolLimitFor(agent) {
+  return resolveAdvisorPoolLimit(agent?.config?.agent?.poolLimits)
+}
+/** §11.2 同 scope 守卫（F-5——用户裁①）：同 reviewType+scope 有 running 评审 → true
+ *  （拒——running 并行多实例歧义放大——settled 续跑语义不变）。design scope = 文档集键
+ *  （docSetKey）；code = 单 code 线程（记录不记路径键——与 openCodeRun 语义一致）。
+ *  与池容量守卫独立：容量 = 全局 ≤N——scope = 同 scope ≤1——两关都过才启动。 */
+export function runningAdvisorOfScope(agent, reviewType, docSetKey) {
+  const pool = agent?._asyncAdvisors
+  if (!(pool instanceof Map)) return false
+  for (const e of pool.values()) {
+    if (e.status !== "running" || e.reviewType !== reviewType) continue
+    if (reviewType === "design" && e.run?.docSetKey !== docSetKey) continue
+    return true
+  }
+  return false
+}
 
 export function runningAdvisorCount(agent) {
   return [...(agent?._asyncAdvisors?.values() ?? [])].filter((e) => e.status === "running").length
@@ -356,13 +387,23 @@ function relayAdvisorOutput(callbacks, prefix, chunk) {
  * The runner wraps runAdvisorReview (promise → report/error) — the subagent
  * pipeline is untouched (ruling ②-2 A). The entry carries role "advisor" so the
  * digest/panel/freeze consumers route it like any other settled block.
- * @returns {{ok: true, id: string}} — ack; or {{error: string}} — pool full
- *   (ADVISOR_POOL_LIMIT — "另有一评审在跑——逐个发起", never queued) or invalid ctx.
+ * @returns {{ok: true, id: string}} — ack; or {{error: string}} — scope guard
+ *   (same reviewType+scope running — §11.2 F-5) or pool full (the effective
+ *   agent.poolLimits.advisor limit, never queued) or invalid ctx.
  */
 export function launchAsyncAdvisor(parent, ctx, launch) {
   const { reviewType, documents, paths, object, designToken, designId, run } = launch
-  if (runningAdvisorCount(parent) >= ADVISOR_POOL_LIMIT) {
-    return { error: `Advisor: 另有一评审在跑——逐个发起 — another review is already running in the background pool (${ADVISOR_POOL_LIMIT} reviews at most); launch them one at a time (AGENT-LOOP.md §24 D-24b ruling ②-6a).` }
+  const limit = advisorPoolLimitFor(parent)
+  // §11.2 same-scope guard（F-5——用户裁①）：同 type+scope 有 running → 拒——与池容量
+  // 守卫独立两关都过才启动——不等不排（②-6a 无排队语义保持——settled 续跑不变）。
+  if (runningAdvisorOfScope(parent, reviewType, run?.docSetKey ?? null)) {
+    const scopeNote = reviewType === "design"
+      ? "a design review of this document set is still running"
+      : "a code review is still running (code reviews are a single thread — launch the next one after it settles)"
+    return { error: `Advisor: 此 scope 已有评审在跑——settle 后逐个发起 — ${scopeNote}; round/prior continuation would be ambiguous while it is in flight — wait for it to settle, then launch the next review (AGENT-LOOP.md §11.2).` }
+  }
+  if (runningAdvisorCount(parent) >= limit) {
+    return { error: `Advisor: 另有一评审在跑——逐个发起 — another review is already running in the background pool (${limit} reviews at most — agent.poolLimits.advisor, default ${ADVISOR_POOL_LIMIT}); launch them one at a time (AGENT-LOOP.md §11.2 ruling ②-6a).` }
   }
   parent._asyncAdvisors ??= new Map()
   const id = (parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1)

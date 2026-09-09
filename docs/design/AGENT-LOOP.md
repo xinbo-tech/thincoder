@@ -535,12 +535,13 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 - **池容量**：`ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }`（默认——用户裁定"eng-coder 四路，其他 4 路"）；角色域 = role ∈ {eng-coder} → engCoder 池；其余（explore/plan/coder/sub）→ other 池（VS Code 按装配实况——未知角色归 other）。
 - **运行中计数按域分别记**；队列补位按域腾槽。跨域总量 8、同域仍 4。
-- **配置键**：单对象 `agent.poolLimits = { engCoder, other }`；运行期读 + 校验（正整数 ≥1，非法回退默认 4/4）+ 变更下回合生效；入口 CLI /config + VS Code 设置面板。
+- **配置键**：单对象 `agent.poolLimits = { engCoder, other, advisor }`——subagent 两键运行期读 + 校验（正整数 ≥1，非法回退默认 4/4）；**advisor 第三键（POOL-CONFIG-UNIFIED 2026-09-09——三池统一默认 4/4/4）**由 §11.2 的独立读取器消费（合法 ≥1 整数生效——非法/缺省回退默认 4——与 subagent 域读取器独立不共享——键表语义不同）。变更下回合生效；入口 CLI /config + VS Code 设置面板。
 
 ### 11.2 async advisor（R13——独立后台评审池）
 
-- **池形态**：独立 `_asyncAdvisors`（复用 pending/digest/注入/冻结机制；新 runner 包装 runAdvisorReview——不碰 subagent 管线）。容量 `ADVISOR_POOL_LIMIT = 2`（并行评审上限）——超限 → 返回错误文案（"另有一评审在跑——逐个发起"——评审间有依赖语义，排队无意义）。
+- **池形态**：独立 `_asyncAdvisors`（复用 pending/digest/注入/冻结机制；新 runner 包装 runAdvisorReview——不碰 subagent 管线）。容量默认 `ADVISOR_POOL_LIMIT = 4`（三池统一默认 4——POOL-CONFIG-UNIFIED F-1）——**可配 `agent.poolLimits.advisor`**（advisor-async 读取器每 launch 读 agent.config——合法 ≥1 整数生效、非法/缺省回退 4——拒文案报当前生效上限）——超限 → 返回错误文案（"另有一评审在跑——逐个发起"——评审间有依赖语义，排队无意义——②-6a 无排队语义不变）。
 - **工具语义**：advisor 加 `async: true`；**缺省 async**（R12 depth-0 缺省先例）——仅 depth-0（depth>0 显式 async 拒 / 缺省恒同步）。发起返回 ack → 回合自然收尾 → 挂起态 → settle → digest。
+- **同 scope 并发守卫（POOL-CONFIG-UNIFIED F-5——用户裁① 2026-09-09）**：launch 判定 = 两关独立——① 池容量（全局 running ≤ 生效上限）；② 同 scope（同 reviewType+scope 有 running 评审 → 拒——design scope = 文档集键 docSetKey——code = 单 code 线程 openCodeRun 语义——任一 running code 评审阻断新 code launch）。**settled 续跑语义不变**（round+1/prior 注入——resolve 只查 settled 的分歧由此消除——running 并行多实例歧义放大被拒）；拒文案含 scope 语义与指引（"此 scope 已有评审在跑——settle 后逐个发起"——去数字化）。
 - **UI 通道**：subagent 面板 + role="advisor" 伪角色（块/⏹/冻结全复用；cancel = 定向 abort → cancelled settle：不入 pending、不入 token 槽、digest 提示"评审已取消——token 未签发"）。
 - **settle 记账（token/guard/cap 改绑）**：评审 settle 时（消化链首行注入前）执行：
   - ①**陈旧判定**——评审 launch 后发生 FILE_MUTATORS → 评审基于旧状态 → 不置 `_calledAdvisorThisRun`、代码评审不签发 token（guard 仍推回发起新评审）；
@@ -553,7 +554,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 pendingInput 消费改**攒批合并**：回合空闲时 pendingInput ≥2 → 合成一条注入（编号列出逐条，一次处理）。**边界**：单批 ≤8 条且合并注入 ≤2000 字符（`MAX_MERGE_ITEMS = 8`/`MAX_MERGE_CHARS = 2000`）；超限 → 截批先行（前 8 条合并，余下留待下批）；单条 >2000 字符不进批逐条直发；**/cmd 类不进合并缓冲**（逐条保序即时）；到达时间窗 = 空闲即合（不设延迟）。与挂起消化共存（子代理报告合并与用户指令合并共用消费点不互扰）。
 
-**变更记录**：2026-09-06 三合一合批（§11——分域池 + async advisor + 排队合并）大合验双端全绿；会诊/飞刀完全异步化（R17）→ §14；2026-09-07 凭证机制完整设计（ENGINEERING-MODE 同步）。
+**变更记录**：2026-09-06 三合一合批（§11——分域池 + async advisor + 排队合并）大合验双端全绿；会诊/飞刀完全异步化（R17）→ §14；2026-09-07 凭证机制完整设计（ENGINEERING-MODE 同步）；2026-09-09 并发池统一可配置（POOL-CONFIG-UNIFIED——三键 4/4/4 + advisor 读取器 + 同 scope 守卫 + 文案去数字化——§11.1/§11.2 更新）。
 
 ## 12. 评审收敛 + 铁律 + 文档纪律
 

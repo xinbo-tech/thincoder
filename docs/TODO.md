@@ -96,6 +96,18 @@
   → 核心增量 = advisor 归位可配 + 默认 4 + VSC 面板 + CLI advisor 项——advisor 池平台层落点待勘察
   （实现层可能涉平台——双端）——owning board = 并发/评审池（AGENT-LOOP §24 域）——status=澄清完成
   （三类确认）待设计启动——设计权在用户
+- [ ] **模型模型合并 + 会话级隔离（2026-09-09 维护者裁定——Nancywb 问题报告反方向——反 §14）**：
+  合并模型概念——activeProvider 与 activeModel 不再是分开参数——模型 = 显式复合值 "provider:model"——
+  schema：providers[].models（候选名单——选择器硬约束只能选候选内——不匹配拒——裁硬约束）——
+  无渠道默认捆绑（裁 1：providers[].model 单数默认不留）——config 顶层 defaultModel: "provider:model"
+  （裁 3 放 config——默认模型选择——新建会话起点）——会话槽头记会话模型（复合值——恢复用——不看
+  config——预期行为固化）——串扰实证：现 /model → pickers.mjs:310 写 config.activeModel 全局 override
+  （config.mjs:278）→ 所有窗口被带偏——Nancywb 误判"会话记忆是 bug"（§14 全取 config = 固化串扰）
+  ——新语义：① /model = 纯会话级（选 provider:model 写槽——不碰 config——裁 C）② config 默认模型走
+  专用入口（裁 C：CLI /config "默认模型"子菜单 + VSC 面板项——裁入口形态）③ 新建会话 = config.
+  defaultModel（渠道都可用——不用的渠道删掉——裁 2——无"激活"概念）④ 恢复 = 槽值——已存在会话永
+  不被 config 动 ⑤ providers[].models 候选维护 = 编辑 config（或渠道配置面）——owning board = SESSION
+  ——status=澄清完成（语义全封口）待设计启动——设计权在用户
 - [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
   对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）

@@ -11,7 +11,7 @@ Read a text file. Returns numbered lines. Use offset/limit to page large files.
 Parameters:
 - path (required): File path, relative to cwd or absolute (alias: filePath)
 - offset: 1-based line number to start reading from
-- limit: Max lines to return (default 2000)
+- limit: Max lines to return (default 2000) — windows over files beyond that return head + `…(truncated: K lines in middle, use offset to continue)` + the file's real tail lines, so the file end is never hidden
 - hashes: Include SHA256 content hashes per line (for hashline_edit). Set true before using hashline_edit.
 
 Notes:

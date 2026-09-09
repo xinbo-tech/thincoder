@@ -4,7 +4,7 @@
  * consume-design + observe/send（SUBAGENT-OBSERVE-SEND）——§19.8 check 已删；spawn 路径与
  * 工具面在 subagent.mjs；cancel 动作执行器与机械、管线在本模块——check 执行器随 §19.8 删除）。
  * 内容：resolveChildProvider / async 池常量与域助手（ASYNC_POOL_LIMITS/poolDomainOf/
- * resolvePoolLimits/poolLimitsFor/runningPoolCount——§24 D-24a）/ executeCancelAction +
+ * resolvePoolLimits/poolLimitsFor/runningPoolCount——§11.1）/ executeCancelAction +
  * cancelAsyncSubagent（§19.5 D-M6——工具与 TUI ⏹ 共用）/ runChildPipeline /
  * injectAsyncResult / buildChildRunOpts / mergeChildMutations / enqueueAsk（批 6——
  * _permQueue 审批/继续弹窗串行收 helper——消费位 subagent.mjs/subagent-spawn.mjs/
@@ -23,7 +23,7 @@ import { offloadToolResult } from "../agent/helpers.mjs"
 import {
   dependentLabels, maybeRefillAsync, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
-// §24 D-24b (R13): advisor-pool cancel fallback + mutation logging for merged
+// §11.2 (R13): advisor-pool cancel fallback + mutation logging for merged
 // code（lazy function-level cycle——advisor-async → async-settle → scheduler →
 // 本模块——全函数级绑定无求值期依赖，环安全）。
 import { cancelAsyncAdvisor, noteMutations } from "./advisor-async.mjs"
@@ -36,19 +36,20 @@ export function enqueueAsk(owner, key, ask) {
   return chain
 }
 
-// Async pool limits per role domain (AGENT-LOOP.md §24 D-24a — R14, 2026-09-06):
+// Async pool limits per role domain (AGENT-LOOP.md §11.1 — R14, 2026-09-06):
 // the old single cap (ASYNC_SUBAGENT_LIMIT = 4, §15 D-A4) evolved into two
 // independent pools — eng-coder 4 / other roles 4 (user ruling "eng-coder 四路，
 // 其他 4 路") — a full engCoder pool never blocks an explore spawn and vice versa
 // (same-domain cap still 4, cross-domain total up to 8). The per-turn check
 // budget was deleted with the check action (§19.8 — results arrive only via the
 // auto channel; no loop guard needed).
-// ⚠ 与 config.mjs DEFAULTS.agent.poolLimits 逐键同值（loadConfig/settings 默认源）——
-// 耦合锚 T-24a4 断言锁住——勿单侧改默认。
+// ⚠ 与 config.mjs DEFAULTS.agent.poolLimits 的 SUBAGENT 两键（engCoder/other）逐键同值
+// （loadConfig/settings 默认源）——耦合锚 T-24a4 断言锁住——勿单侧改默认。advisor 第三键
+// 不属本域（POOL-CONFIG-UNIFIED 2026-09-09——由 advisor-async 读取器消费——见该文件）。
 export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
 
 /**
- * Role → pool domain (single source of truth — §24 D-24a 修正 #8): the CLI role
+ * Role → pool domain (single source of truth — §11.1 修正 #8): the CLI role
  * enum/assembly table is subagent.mjs's ROLES = { explore, plan, coder, eng-coder }
  * (mode-filtered: normal → explore/plan/coder, engineering → explore/plan/eng-coder).
  * eng-coder → engCoder pool; every other role (including unknown roles — fail-safe)
@@ -105,7 +106,7 @@ export function poolLimitsFor(agent) {
 function warnPoolFallback(what, sig) {
   if (warnedPoolConfigs.has(sig)) return
   warnedPoolConfigs.add(sig)
-  console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)} (AGENT-LOOP.md §24 D-24a)`)
+  console.warn(`[config] agent.poolLimits: ${what} — must be a positive integer ≥1 — falling back to default ${JSON.stringify(ASYNC_POOL_LIMITS)} (AGENT-LOOP.md §11.1)`)
 }
 
 /** Running count within ONE pool domain (口径同 §15 D-A1/T6: queued 与已完成不计入；
@@ -236,7 +237,7 @@ export function executeCancelAction(args, ctx) {
   const key = String(id)
   const agent = ctx.agent
   const entry = agent._asyncSubagents?.get(key)
-  // §24 D-24b (②-6b): an id that names no async SUBAGENT falls through to the
+  // §11.2 (②-6b): an id that names no async SUBAGENT falls through to the
   // async ADVISOR pool (the background reviews share the cancel surface — ⏹ on
   // an advisor block / action:'cancel' with an advisor id abort that review).
   if (!entry && agent?._asyncAdvisors?.has(key)) {
@@ -325,7 +326,7 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
 export async function injectAsyncResult(agent, entry) {
   const body = entry.error ?? entry.report ?? "(no report)"
   const preview = await offloadToolResult(String(body), `async-subagent-${entry.id}`)
-  // §24 D-24b: advisor entries label themselves (role "advisor") — the digest
+  // §11.2: advisor entries label themselves (role "advisor") — the digest
   // reminder says "async advisor review #N finished" (T-24b2 shape); subagent
   // entries keep the legacy wording verbatim.
   // §25 D-R17b (R17): escalate entries (role "escalate" — async 飞刀) label
@@ -398,7 +399,7 @@ export function mergeChildMutations(parent, child) {
     if (!parent._touchedFiles.includes(abs)) parent._touchedFiles.push(abs)
     merged.push(abs)
   }
-  // §24 D-24b: merged code mutates the parent's state — log it for the stale
+  // §11.2: merged code mutates the parent's state — log it for the stale
   // scan of in-flight reviews (a review whose code changed under it is stale).
   noteMutations(parent, merged)
   if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false

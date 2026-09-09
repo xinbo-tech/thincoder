@@ -21,6 +21,10 @@ import { join, relative, dirname } from "node:path";
 
 const MAX_FILE_READ_BYTES = 10_000_000
 const MAX_IMAGE_BYTES = 15_000_000
+// DUAL-END-TRUNCATION (F-1, C 方案——2026-09-09)：read 双端尾行数——窗口截断大文件时
+// 返回 头 N 行（N = 请求窗口，默认 MAX_READ_LINES）+ 省略注 + 尾 M 行（本常量）。M 与
+// 窗口合计（2500 行）为"整读上限"——K=0（尾区与窗口相接）时整印剩余、不产生假省略注。
+export const READ_TAIL_LINES = 500
 
 // ────────────────────────────────────────
 // Dirty-file tracking (read-before-insert guard)
@@ -95,17 +99,30 @@ export const readTool = {
     const lines = content.split("\n")
     const offset = Math.max(1, args.offset ?? 1)
     const limit = Math.min(args.limit ?? MAX_READ_LINES, MAX_READ_LINES)
-    const slice = lines.slice(offset - 1, offset - 1 + limit)
-    const numbered = slice.map((l, i) => {
-      const ln = offset + i
-      if (args.hashes) {
-        const h = createHash("sha256").update(l).digest("hex").slice(0, 12)
-        return `${ln}\t[${h}] ${l}`
-      }
+    const windowEnd = offset - 1 + limit // index just past the requested window
+    const render = (slice, startLn) => slice.map((l, i) => {
+      const ln = startLn + i
+      if (args.hashes) return `${ln}\t[${hashLine(l)}] ${l}`
       return `${ln}\t${l}`
     }).join("\n")
-    const suffix = offset - 1 + limit < lines.length ? `\n... (${lines.length} lines total, use offset to continue)` : ""
-    return truncate(numbered + suffix)
+    // DUAL-END-TRUNCATION (F-1, C 方案——docs/design/DUAL-END-TRUNCATION.md 2026-09-09):
+    // 大文件（> MAX_READ_LINES 行）窗口截断时返回 头（请求窗口）+ 中段省略注 +
+    // 文件真实尾部（末 READ_TAIL_LINES 行——现尾注升级为真实尾行内容——offload 产物
+    // 的尾端结论可见）。≤ 阈值文件任何窗口走旧头向路径（字节零变化）；窗口覆盖全文件
+    // 也走旧路径。与 hashes 模式照常交互（头尾行 hash 照算）。
+    if (windowEnd >= lines.length || lines.length <= MAX_READ_LINES) {
+      const suffix = windowEnd < lines.length ? `\n... (${lines.length} lines total, use offset to continue)` : ""
+      return truncate(render(lines.slice(offset - 1, windowEnd), offset) + suffix)
+    }
+    const head = render(lines.slice(offset - 1, windowEnd), offset)
+    // 尾区 = 文件末 READ_TAIL_LINES 行；尾区起点落在窗口内（重叠）→ 尾区从窗口后开始
+    // —— 任何行不打印两次；剩余全被覆盖（K=0）→ 整印余段且无假省略注。
+    const tailStart = Math.max(windowEnd, lines.length - READ_TAIL_LINES)
+    const middle = tailStart - windowEnd
+    const tail = render(lines.slice(tailStart), tailStart + 1)
+    return middle > 0
+      ? `${head}\n…(truncated: ${middle} lines in middle, use offset to continue)\n${tail}`
+      : `${head}\n${tail}`
   },
 }
 

@@ -8,6 +8,7 @@ import { toOpenAISchema } from "../tools/index.mjs"
 import { prepareAdvisorMessages } from "../advisor.mjs"
 import { appendCitationReport } from "./citations.mjs"
 import { describeToolArgs } from "../tui/tool-args.mjs"
+import { truncateAdvisorResult } from "./truncate.mjs"
 
 const MAX_ADVISOR_TURNS = 100
 // Mechanical convergence cap: up to 5 rounds suffice; a 6th call means the model
@@ -307,32 +308,14 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     }))
 
     // Backfill in toolCalls order (executed[i] ↔ parsed[i]); per-result
-    // non-string serialization + line-aware truncation stay per-tool.
+    // non-string serialization + dual-end line-aware truncation stay per-tool
+    // (DUAL-END-TRUNCATION F-2 — truncate.mjs: head ≈60% + tail ≈40% — keep the
+    // tail verdicts; ≤ MAX_RESULT_CHARS results pass through untouched).
     for (let i = 0; i < parsed.length; i++) {
       let result = executed[i]
       if (typeof result !== "string") result = JSON.stringify(result)
 
-      if (result.length > MAX_RESULT_CHARS) {
-        const lines = result.split("\n")
-        let truncated = ""
-        let charCount = 0
-        let keptLines = 0
-
-        for (let j = 0; j < lines.length; j++) {
-          const line = lines[j]
-          if (charCount + line.length + 1 > MAX_RESULT_CHARS) break
-          truncated += line + "\n"
-          charCount += line.length + 1
-          keptLines++
-        }
-
-        const remainingLines = lines.length - keptLines
-        result = (
-          truncated +
-          `\n… (truncated: ${remainingLines} more lines, ${result.length} chars total)\n` +
-          `To see more content, use: read(path, offset=${keptLines + 1}, limit=200)`
-        )
-      }
+      result = truncateAdvisorResult(result, MAX_RESULT_CHARS)
 
       messages.push({ role: "tool", tool_call_id: parsed[i].tc.id, content: result })
     }

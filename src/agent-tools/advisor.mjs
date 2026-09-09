@@ -2,7 +2,7 @@
  * agent-tools/advisor.mjs — advisor tool wrapper.
  * The agent calls this explicitly to get an independent review.
  * type="design" for design doc review, type="code" for code review (default).
- * §24 D-24b (R13 — async advisor): at depth 0 the review launches into the
+ * §11.2 (R13 — async advisor): at depth 0 the review launches into the
  * background pool by DEFAULT (async:true / omitted; async:false forces the
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
@@ -38,10 +38,12 @@ export const advisorTool = {
     "Optionally pass object={type,target,status,reason,exclude} to anchor the review target " +
     "(AGENT-LOOP.md §18.8 — the review-object declaration is mechanically injected into the review message); " +
     "absent → legacy behavior (no injection). " +
-    "ASYNC (AGENT-LOOP.md §24 D-24b): at depth 0 the review runs in the BACKGROUND by default " +
+    "ASYNC (AGENT-LOOP.md §11.2): at depth 0 the review runs in the BACKGROUND by default " +
     "(async:true or omitted) — the call returns an ack immediately, the turn ends, and the report " +
-    "arrives automatically in a digest turn when the review finishes; at most 2 reviews run in " +
-    "parallel (excess launches are refused — launch one at a time). Inside a child (depth>0 — eng-coder self-review) " +
+    "arrives automatically in a digest turn when the review finishes; background reviews share one pool — " +
+    "at most agent.poolLimits.advisor concurrent reviews (default 4 — configurable via /config 并发池 or " +
+    "config.json; pool-full and same-scope refusals state the current limit) — launch reviews one at a time. " +
+    "Inside a child (depth>0 — eng-coder self-review) " +
     "reviews are always synchronous; async:true is rejected there. " +
     "Returns the review report — the advisor's findings verdict: all-clear (call verify) or a findings list to fix.",
   parameters: {
@@ -112,7 +114,7 @@ export const advisorTool = {
       }
     }
 
-    // §24 D-24b (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
+    // §11.2 (R13 — ruling ②-3 A): async gate. Depth-0 defaults to the
     // background pool; depth>0 (eng-coder internal self-review) is ALWAYS sync —
     // an explicit async:true there is rejected, the default never flips.
     const depth = ctx?.depth
@@ -120,13 +122,13 @@ export const advisorTool = {
       // 拒发登记（与 cap/池满拒同款）：评审未跑——不置 called/不耗轮次（record-results
       // 的 REFUSED 契约——advisor 评审发现 #1：拒发不得静默满足 guard）。
       if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP.md §24 D-24b); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
+      return "Advisor: async reviews are only available at depth 0 — the top-level session owns the background pool (AGENT-LOOP.md §11.2); inside a child (eng-coder self-review) reviews run synchronously. Call advisor again without async:true (or with async:false)."
     }
     const isAsync = args.async === true || (depth === 0 && args.async !== false)
     // (ctx.depth undefined = direct callers/tests without a dispatch context —
     // legacy sync semantics.)
 
-    // Per-review instance resolution (§24 D-24b ③ — ruling ②-5 A): fix rounds
+    // Per-review instance resolution (§11.2 ③ — ruling ②-5 A): fix rounds
     // continue the same reviewId (design = the doc-set instance's designId —
     // slot/spawn continuity; code = the newest OPEN instance). The resolution
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
