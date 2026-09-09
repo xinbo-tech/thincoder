@@ -10,7 +10,7 @@
 - **总体目标**：文档面收尾——① ESCALATE 双端 async:false 残留句（与 §7.7.1"同步保留例外全移除"矛盾——全异步化评估残留清单文档面候选）② VSC WEBVIEW.md 陈旧句（INPUT-LOCK busy 门禁句——修订交付后需同步"只禁 send 不禁录入"）。
 - **功能性**：
   - F-1（ESCALATE 双端 async:false 残留——评审 #1 真面）：
-    - CLI ESCALATE.md **L99**（逐字旧句）"**`async: false` 保留同步旧路径**（向后兼容——既有同步语义零回归）。同步路径下："——与 §7.7.1 矛盾——修为"顶层一律异步（同 §7.7——同步保留例外全移除——报告自动到）——`async:false` 仅机制参数（depth>0 子代理内同步——平台规则）"——逐字锚照抄 AGENT-LOOP §7.7.1（L668 escalate 句）
+    - CLI ESCALATE.md **L99**（逐字旧句）"**`async: false` 保留同步旧路径**（向后兼容——既有同步语义零回归）。同步路径下："——与 §7.7.1 矛盾——修为"顶层一律异步（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到）——`async:false` 仅机制参数（depth>0 子代理内同步——平台规则）"——逐字锚照抄 AGENT-LOOP §7.7.1（L668 escalate 句——byte-final——评审 #7 round2）
     - VSC ESCALATE.md **L105**（逐字旧句）"**`async:false` 保留同步旧路径**（向后兼容——既有同步语义零回归）。"——同修（VSC 档结构不同——锚句一致照抄）
     - 检查同段其余句（同步语义描述——若残留一并清——grep "同步旧路径/同步语义零回归" 双端零）
   - F-2（VSC WEBVIEW.md send.js 拦截句——评审 #1 真面——INPUT-LOCK 修订同步）：
@@ -21,7 +21,9 @@
 ## 设计（勘察落点——照做勿自行解释）
 
 ### 1. F-1 ESCALATE 双端（残留句——逐字枚举）
-- CLI ESCALATE.md（177 实测）：L99 旧句删"`async: false` 保留同步旧路径（向后兼容——既有同步语义零回归）。同步路径下："→ 新句"顶层一律异步（同 §7.7——同步保留例外全移除——报告自动到）。`async:false` 仅机制参数——depth>0 子代理内同步（平台规则）。"——**逐字锚 = AGENT-LOOP §7.7.1 escalate 句（L668——"顶层一律异步（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到"）照抄**——锚句 byte-final（评审 #6）
+- CLI ESCALATE.md（177 实测）：L99 旧句删"`async: false` 保留同步旧路径（向后兼容——既有同步语义零回归）。同步路径下："→ 新句"顶层一律异步（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到）。`async:false` 仅机制参数——depth>0 子代理内同步（平台规则）。"
+  ——**逐字锚 = AGENT-LOOP §7.7.1 escalate 句（L668——byte-final——评审 #7 round2：新句首段与锚逐字一致（含
+  §7.7.1：）——实现时以 AGENT-LOOP 原文为准照抄**——锚句 byte-final（评审 #6）
 - VSC ESCALATE.md（165 实测）：L105 同款旧句删 → 同锚新句（VSC 档结构不同——检查 §2.3 async 现行机制段残余同步描述——grep "同步旧路径/同步语义零回归" 段清）
 - 测试：grep 断言（双端——"async:false 保留同步旧路径" / "同步语义零回归" 零残留——fail-when-present——AC-1）
 
@@ -53,11 +55,11 @@
 
 ## 验收
 
-- AC-1 ESCALATE 双端 async:false 残留句零（grep "async:false 保留同步旧路径" + "同步语义零回归" 零命中——fail-when-present）
-- AC-2 WEBVIEW.md 与 INPUT-LOCK-BEHAVIOR-REVISED 行为一致（send 禁保留——无"输入框禁用/readOnly 锁"旧句——grep 断言）
+- AC-1 ESCALATE 双端 async:false 残留句零（grep 片段 "同步旧路径" + "同步语义零回归"——评审 #8 round2：全串模式因反引号/空格不命中两端逐字引文——片段为准——零命中 fail-when-present）
+- AC-2 WEBVIEW.md 与 INPUT-LOCK-BEHAVIOR-REVISED 行为一致（send 禁保留——无"输入框禁用/readOnly 锁"旧句 + **L175 特征片段 "由 host 排队" 零残留（评审 #8 round2——L175 头条编辑守卫）**——grep 断言）
 - AC-3 **机制/产品代码零动**（src 逻辑 diff 空——测试断言文件除外——评审 #3 措辞修正）
 - AC-4 双端 npm test 快层零回归
-- AC-5 锚句与 AGENT-LOOP §7.7.1 一致（照抄——语义锚）
+- AC-5 锚句与 AGENT-LOOP §7.7.1 L668 **byte-final 逐字一致**（评审 #7 round2——非语义锚——双端照抄同源）
 - 红线：机制零动；SESSION-FLOW-A/B/C + SESSION.md 零动（评审 #1——非陈旧面）；doc 结构不重组；锚句 byte-final 以 AGENT-LOOP §7.7.1 为准
 
 ## 变更记录
