@@ -545,7 +545,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 - **UI 通道**：subagent 面板 + role="advisor" 伪角色（块/⏹/冻结全复用；cancel = 定向 abort → cancelled settle：不入 pending、不入 token 槽、digest 提示"评审已取消——token 未签发"）。
 - **settle 记账（token/guard/cap 改绑）**：评审 settle 时（消化链首行注入前）执行：
   - ①**陈旧判定**——评审 launch 后发生 FILE_MUTATORS → 评审基于旧状态 → 不置 `_calledAdvisorThisRun`、代码评审不签发 token（guard 仍推回发起新评审）；
-  - ②通过 → token 入槽 `_engDesignTokens.set(designId, token)` + 单槽镜像；③`_advisorRound` 改按 review 实例记（`_advisorRuns`——cap 随实例 ≤5 轮）；④guard 推回判定看后台评审是否已 settle 且非陈旧。
+  - ②通过 → token 入槽 `_engDesignTokens.set(designId, token)` + 当场同步落盘权威台账（D1——单值镜像已退役——DESIGN-TOKEN-SETTLEMENT.md D3/D5）；③`_advisorRound` 改按 review 实例记（`_advisorRuns`——cap 随实例 ≤5 轮）；④guard 推回判定看后台评审是否已 settle 且非陈旧。
 - **收敛状态 per-review 化**：`_advisorRuns: Map<reviewId, {round, priorOutput, stale}>`——reviewId = designId（设计评审）/随机 id（code 复核）；多评审并行隔离。
 - **消化处置轮**：报告注入 → 模型消化（呈递发现 + 修复建议——不擅自动手——手动档 digest 禁写域自洽）→ 用户逐项拍板 → 修正轮在 agent 回合内发起 round2（async 再启——round/prior 从 `_advisorRuns` 取）。
 - **凭证机制（designId/token）**：设计锚/同步/回显/登记/消费/校验——权威见 ENGINEERING-MODE.md §2.6（2026-09-07 凭证机制完整设计；sync 语义同 scope 复审沿用同 id；VS round2+ 注入段对齐 CLI）。

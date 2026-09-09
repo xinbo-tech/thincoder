@@ -107,7 +107,17 @@
   专用入口（裁 C：CLI /config "默认模型"子菜单 + VSC 面板项——裁入口形态）③ 新建会话 = config.
   defaultModel（渠道都可用——不用的渠道删掉——裁 2——无"激活"概念）④ 恢复 = 槽值——已存在会话永
   不被 config 动 ⑤ providers[].models 候选维护 = 编辑 config（或渠道配置面）——owning board = SESSION
-  ——status=澄清完成（语义全封口）待设计启动——设计权在用户
+   ⑥ 初始值裁定 A：defaultModel 未设 → 新建会话显式提示先设（/config 默认模型入口——无自动兜底）——status=澄清完成（语义全封口）待设计启动——设计权在用户
+- [ ] **digest 输入意图污染（2026-09-09 用户反馈——全异步体验——指令被 digest 后置带偏）**：
+  场景：digest auto-turn 在跑时用户 Enter → pendingInput 排队（suspension-drive L253——digest 回合先跑完）
+  → 用户指令在 history 里紧贴 digest 消化输出之后 → 模型把后台消化当正常回复——用户独立指令被读成
+  "对 digest 的下一条"——误判意图——深层根因 = digest 模型输出走同一条 assistant pushReal（agent.mjs:
+  265/283——autoTurn 分支无差异）——与普通回复同形态——模型结构上无法区分——用户裁 B：**digest 不
+  打断** + **隔离标记**——落点：① digest 注入消息（pending 移交——run 首行）加性质标记（"系统驱动消化
+  ——非用户对话"）② digest 模型输出尾部加划界标记（"后台 digest 结束——后续用户消息为独立新指令"）——
+  A（打断 digest）否决——owning board = 挂起回合（AGENT-LOOP §17/digest）——status=方向定（B）待设计
+  启动——设计权在用户
+
 - [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
   对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）
