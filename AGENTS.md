@@ -58,7 +58,9 @@ webview/chat.js      Frontend orchestration: message handling, model selector, s
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
 webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块 + 活动块路由（live 块固定在活动区——activity.js——freeze 落流移入 #messages）
 webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——SESSION-ACTIVITY-REVISED——簿记 map 仅供活动块 meta 水合——活动块生命周期在 activity.js）
-webview/activity.js   SESSION-ACTIVITY-REVISED 子代理活动块（F-1~F-5）：live 块固定于 #subagent-activity 活动区（messages 与输入之间——不随会话流滚动）——终态 freeze 移入 #messages（普通尾推/settled settle 锚 _freezeAtEl 插 digest 报告前）——150 只数冻结——queued 区内等待块头——consult answered 无块防御——⏹/elapsed ticker（区内 live 块）——leaf module（state/ui/i18n only）
+webview/activity.js   编排层 + re-export hub（ACTIVITY-SPLIT 拆分）：parse/rowFor 水合 + ensureBlock（live 块生于活动区）+ applySubagentStatus 状态机（queued/started/settled/terminal——freezeSettledBlocks 批冻按 settled 行表——panels.js 直接消费）+ resetActivity——呈现委 activity-view.js、落流冻结委 activity-freeze.js——hub re-export 保外部 import 面零改动（liveBlocks/_ticker 私有）
+webview/activity-view.js   呈现叶（ACTIVITY-SPLIT 新）：块头/状态词/⏹/区显隐与底 pin/noteChunk/elapsed ticker 全族（含 stopTicker——reset 路径清理入口）——leaf（state/i18n only）
+webview/activity-freeze.js  冻结叶（ACTIVITY-SPLIT 新）：freezeBlock（折叠 + 落流 DOM move——尾推/settled 锚插）+ appendPreview/preview 尺寸——leaf（state/activity-view only——不依赖核心）
 webview/ui.js        DOM helpers: welcome banner, message bubbles, tool call rendering
 webview/md.js        Lightweight Markdown → HTML renderer
 webview/base.css     Base styles, variables, layout

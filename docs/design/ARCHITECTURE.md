@@ -251,6 +251,9 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
   CONTEXT-COMPACTION/WEBVIEW/MEMORY/MCP/CHECKPOINT 各档）与 §15 CLI 权威指针表
   （用户裁定：两端独立不互指）；瘦身为薄枢纽——§3 模块地图加「详细设计 →」指针
   列，差异表 §14 移为 §4（对比辅助），历史条目旧引用以文首注为准。
+- 2026-09-09：模块拆分轮——webview/activity.js 579 → 287 行 + 新 activity-view.js
+  （呈现叶）/activity-freeze.js（冻结叶）（hub re-export 兜住零消费点改动——
+  panels/chat/streaming/测试 import 面不变——ACTIVITY-SPLIT；§11.1 活动块面）。
 
 > 注：上列条目折叠单位 = 原文档逐批追加的引用/实现段落（含其内部评审轮与测试记录）；
 > 测试明细以 git log 与各批实现文件头注释为准，不复刻。

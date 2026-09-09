@@ -1,7 +1,7 @@
 # VSC 子代理活动区回归 + Stop 语义（SESSION-ACTIVITY-REVISED）
 
 > 板块：会话流（VSC——B1 修正——对齐 CLI 单面板形态）。权威源：CLI subagent-panel.mjs（单固定块面板蓝本）+ subagent-freeze.mjs（落流锚）。
-> 状态：**已交付核销**——2026-09-09（5be6c67——活动区回归 + freeze 落流锚 + 行面板撤除 + Stop running 派生——VSC L2 179/179 绿——audit clean + advisor pass——consume f125c0d5——activity.js 579 行拆分挂 TODO——真机走查实现期）。
+> 状态：**已交付核销**——2026-09-09（5be6c67——活动区回归 + freeze 落流锚 + 行面板撤除 + Stop running 派生——VSC L2 179/179 绿——audit clean + advisor pass——consume f125c0d5——真机走查实现期——activity.js 579 行拆分已交付核销（ACTIVITY-SPLIT——三文件终局——hub re-export 外部零改动——详见变更记录）。
 
 ---
 
@@ -109,3 +109,7 @@
 - 2026-09-09 评审 7 项采纳（digest running 定论/全停入口定论——无全停池空自然完——status-bar 入表/consult
   answered 路径明示 + 测试 ⑭⑮/ARCHITECTURE 入文档/AC-1 引用修正/尺寸注——token 0b9d1f32）——核销时
   README 地图登记（同 SESSION-FLOW 先例）。
+- 2026-09-09：activity.js 579 行拆分交付（ACTIVITY-SPLIT——三文件终局——activity.js 编排层
+  287 行 + activity-view.js 呈现叶 229 行 + activity-freeze.js 冻结叶 94 行——hub re-export
+  外部消费方零改动——依赖纯 DAG 无环——verbatim 移动断言 parity 162/15——resetActivity ticker
+  清理提 view.stopTicker（评审 #1 例外标注）——详见 docs/design/ACTIVITY-SPLIT.md）。

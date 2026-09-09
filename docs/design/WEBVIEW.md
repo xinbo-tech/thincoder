@@ -35,7 +35,7 @@ auto，隐藏项不占高 → 消息区高度 = 容器 − 活动区 − 面板 
   `overscroll-behavior:contain`。
 - 活动区自适应块内容（auto 行高）——`max-height: 32vh` 封顶 + 区内自滚（区底 pin——
   近底出生滚到底、上读不强拉——F-2 与 messagesEl pinBottom 同语义）；空时隐藏零高
-  （`:empty` + activity.js `updateAreaVisibility` 双驱）。区内块 = `.advisor-block`
+  （`:empty` + activity-view.js `updateAreaVisibility` 双驱——hub 经 activity.js 可达）。区内块 = `.advisor-block`
   `.sub-block`（chat.css 样式原样——块内容 100px 内滚——增长天然有界）。
 - 冻结块为 `#messages` 直接子元素（与 `.message` 兄弟同层——150 块裁剪只数冻结块——
   live 块在活动区不计窗——预算 = 并发池大小——池有界）。
@@ -58,8 +58,14 @@ shell 结构 `webview/index.html`：`#chat-container` 内含 `#session-bar` / `#
   state.js）
 - `md.js`（markdown 渲染）、`state.js`（单一 UI 状态 `S` + DOM 引用 `ctx` + `vscode`
   postMessage 桥）
-- `activity.js`（SESSION-ACTIVITY-REVISED 活动块生命周期：区内出生/⏹/elapsed ticker/
-  freeze 落流锚——leaf：只依赖 state/ui/i18n；与 panels/streaming 双向无环）
+- `activity.js`（编排层 + hub——ACTIVITY-SPLIT：parse/rowFor 水合 + ensureBlock +
+  applySubagentStatus 状态机 + freezeSettledBlocks 批冻 + resetActivity——呈现委
+  activity-view.js、落流冻结委 activity-freeze.js——re-export hub：panels/chat/
+  streaming/test 的 import 面零改动）
+- `activity-view.js`（呈现叶——ACTIVITY-SPLIT 新：块头/状态词/⏹/区显隐与 pin/
+  noteChunk/elapsed ticker 全族含 stopTicker——leaf：state/i18n only）
+- `activity-freeze.js`（冻结叶——ACTIVITY-SPLIT 新：freezeBlock 折叠 + 落流锚插/
+  appendPreview/preview 尺寸——leaf：state/activity-view only——不依赖核心）
 - `panels.js`（goal/task 面板 + 挂起态 + 桥路由；行面板 DOM 已撤——簿记 map 仅供块 meta
   水合——SESSION-ACTIVITY-REVISED F-3）
 - `send.js`/`loading.js`（输入门 + 永不锁挂起分支）、`mode-buttons.js`（ENG/GUARD/
