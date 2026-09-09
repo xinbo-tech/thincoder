@@ -1,7 +1,7 @@
 # 贴图自动降级视觉子代理（IMAGE-DOWNGRADE-VISION）
 
 > 板块：贴图处理链（双端——VSC 主 + CLI 镜像）。权威源：MODEL_SPECS（multimodal 判定）+ setup-reminders appendImagePointer。
-> 状态：**设计待评审**——2026-09-09 落档（贴图链勘察 explore 一手——全链闭环：拦截/落盘/引擎判定/报错/read_image/子代理视觉能力——降级落点定位）。需求：TODO 贴图自动降级（用户裁批 1）。
+> 状态：**评审通过——已交付（VSC bd7c803 + CLI 1090eb4——clean——advisor pass 0 修正轮——VSC 243/0 + CLI 210/0——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
@@ -46,11 +46,13 @@
 | 文件 | 端 | 现行数（实测） | 预计净变 | 改动 |
 |---|---|---|---|---|
 | src/agent/setup-reminders.mjs | VSC | 288 | **零改（评审 #1 定稿——appendImagePointer 不动）** | — |
-| src/extension/panel-messages.mjs | VSC | 444 | ≤+25 | F-1 降级触发（routeUserTurn 预跑分支——评审 #1 定稿） |
+| src/extension/panel-messages.mjs | VSC | 444→463 | +19 | F-1 降级触发（routeUserTurn 预跑分支） |
+| src/extension/image-handler.mjs（交付 OOL 补行——跑者落 paste-图域同族） | VSC | 53→81 | +28 | runVisionReader + 60s 超时 |
+| src/config-io.mjs | VSC | 499 | 零改（vision-channel 独立——不接线——交付注） | — |
 | src/config-io.mjs + 视觉渠道查找 helper（新——评审 #2：config-io 499 撞 500 硬限——helper 独立新文件
   vision-channel.mjs 新 ≤40——config-io 只接线） | VSC | 499 | helper 新 + config-io ≤+2 | resolveProviders 扫 multimodal |
 | （F-4 移出本批——评审 #3：无 AC 用例——UX 后批——settings.mjs/webview 零动） | VSC | — | — | — |
-| src/tools/file.mjs | CLI | 190 区 | ≤+3 | F-3 错误文案引导 |
+| src/tools/file.mjs | CLI | 467→470 | +3 | F-3 错误文案引导（评审：行数实测 467——非 190 区） |
 | test/image-downgrade.test.mjs（新——评审 #6 跑者注入 seam） | VSC | 新 | 新 ≤120 | 非视觉+有图 → 视觉子代理读图 → 描述注入；无渠道/失败/空返 → fallback；视觉模型零动 |
 
 ## 用例表
