@@ -226,3 +226,11 @@
   mouse.mjs + render-loop resize 重绘 + 终端模式切换）——有概率 = 竞态非必现——owning board = TUI
   （mouse/渲染）——status=登记待勘察（复现路径 + resize/mouse 时序）——设计权在用户
 
+- [ ] **贴图自动降级视觉子代理（2026-09-09 用户需求——VSC 截图在案）**：
+  现象：贴图到非视觉模型（deepseek-v4-flash）直接报错"This model does not support pasted images. Switch
+  to a vision-capable model..."——要求手动换模型——**无自动降级**——用户期望：非视觉模型 + 贴图 → 自动
+  spawn 视觉模型子代理读图（返回描述给主模型——不打扰用户换模型）——现错误文案第二建议"attach as
+  file and let the model read it"对非视觉模型也不通（read_image 只支持视觉模型）——owning board = 贴图
+  处理链（paste 拦截 → 模型支持判定 → 降级/报错）——status=登记待设计（降级形态：自动 spawn 视觉子代理
+  vs 提示用户选视觉模型 vs 混合）——设计权在用户
+
