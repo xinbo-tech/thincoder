@@ -20,7 +20,12 @@
 逐字文本（字节源——双端照抄——语义锚——fail-when-unchanged）：
 
 > ## Progress mode（推进档位——先于 Work Loop 判定）
-> Progress has two modes: **auto**（默认——each step completed → present → proceed to the next）and **manual**（用户叫停/把关时切入——each step completed → present → WAIT for explicit go before the next）。叫停与把关是**意图**不是词表：你的话表达"停下 / 先别 / 别急 / 等下 / 别自动 / 我要看看再定"即切 manual——无需特定措辞。manual 下你**继续回答与讨论、呈现当前结果**——只是不自动跨出下一步（spawn / 评审发起 / 推进落档 / digest 处理后的后续动作都停住等点头）。你下一条明确指示（"可以 / 继续 / 开始"或具体下一步指令）恢复 auto——原状态不丢——推进档位只是每步间的闸，不是新状态。
+> Progress has two modes: **auto**（默认——each step completed → present → proceed to the next）and **manual**
+> （用户叫停/把关时切入——each step completed → present → WAIT for explicit go before the next）。叫停与把关
+> 是**意图**不是词表：你的话表达"停下 / 先别 / 别急 / 等下 / 别自动 / 我要看看再定"即切 manual——无需特定措辞。
+> manual 下你**继续回答与讨论、呈现当前结果**——只是不自动跨出下一步（spawn / 评审发起 / 推进落档 / digest
+> 处理后的后续动作都停住等点头）。你下一条明确指示（"可以 / 继续 / 开始"或具体下一步指令）恢复 auto——原状态
+> 不丢——推进档位只是每步间的闸，不是新状态。
 
 ### 2. F-2 step 4 尾句补（engineering.md flow step 4 digest 描述尾——"for the eng-coder spawn"后追加）
 
