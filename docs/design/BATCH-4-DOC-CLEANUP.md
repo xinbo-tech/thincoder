@@ -1,7 +1,7 @@
 # 批 4：异步残留 doc 候选 + 跨文档陈旧清理（BATCH-4-DOC-CLEANUP）
 
 > 板块：文档面（双端——异步化残留候选 + 陈旧清理）。权威源：AGENT-LOOP §7.7.1（escalate/advisor 顶层一律异步——同步保留例外全移除）+ §11.2 R13 + 全异步化适配评估残留清单。
-> 状态：**评审通过——待实现**（round 3——评审 #1/#2 changes-required 修正 + 评审 #3 pass——token 已落盘——锚 byte-final 统一 + 片段模式）。需求：TODO 异步残留 doc 候选（批 4——用户裁 8 点分批收尾）。
+> 状态：**评审通过——已交付（CLI 2a22c1e + VSC f696369——clean——CLI 221/0 + VSC 262/0——ESCALATE 双端锚句 byte-final 核对 + WEBVIEW L175 同步——8 点分批收尾——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
@@ -63,6 +63,9 @@
 - 红线：机制零动；SESSION-FLOW-A/B/C + SESSION.md 零动（评审 #1——非陈旧面）；doc 结构不重组；锚句 byte-final 以 AGENT-LOOP §7.7.1 为准
 
 ## 变更记录
+- 2026-09-09 **交付偏差记录**：F-2 测试宿主偏离设计点名——webview-turnstate.test.mjs 被并行 INPUT-LOCK
+  （id=13）占用——断言置入双端已点名的 prompts-async-guidance.test.mjs（doc 断言同族）——父侧已确认可接受
+  （受影响表该行由父侧更新为实测宿主）。
 - 2026-09-09：落档（初版——SESSION-FLOW.md 归属误标——评审 #1 🔴 纠正：SESSION-FLOW-A/B/C 在 VSC 仓为已实施机制档、CLI SESSION.md 勘察零命中——真面 = ESCALATE 双端 async:false 残留句（L99/L105——与 §7.7.1 矛盾）+ WEBVIEW.md L175 send.js 句——重写受影响表——句子逐字枚举 + AC-3 措辞 + 行数实测 + 锚句 byte-final——round 2 待评）。
 - 2026-09-09：round 2 修正（评审 #2 changes-required——#7 锚句统一含 §7.7.1：+ AC-5 byte-final 措辞 + #8 AC 片段模式 + L175 特征）——round 3 待评）。
 - 2026-09-09：round 3 修正（评审 #3 pass——#8 残留：:28/:33 测试行对齐片段措辞——评审通过——待实现）。
