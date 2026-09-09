@@ -11,14 +11,40 @@
 - **功能性**：
   - F-1 评审前预检 checklist（挂 flow step 3——design 评审触发前自检）
   - F-2 设计文档强制"方案选型对比"子节（候选 ≥2 才需对比——单方案声明豁免）
-  - F-3 设计启动前勘察 checklist（doc_search → 文档地图定 owner → 既有实现/先例 → 测试面 → 双端对位）
+  - F-3 设计启动前勘察 checklist（doc_search → 文档地图定 owner → 既有实现/先例 → 测试面 → 双端对位——
+    评审 #6：挂 step 1 需求澄清后/设计前交界（A1 逐字文本定位——不缠需求池登记子条目））
   - F-4 实践沉淀方法论化入口句（好实践 → METHODOLOGY 机制正文/反例档案——不散落会话）
   - **范围边界**：无代码改动（纯提示词 + 文档）；不侵蚀"评审发起权在用户"（预检是准备非评审本身）；勘察 checklist 不与"委派纪律/不重复已委派探索"冲突。
 
 ## 设计（勘察骨架——照做勿自行解释）
 
+## 逐字锚定文本（评审 #1 补——实现字节源——双端照抄勿自行解释）
+
+> 以下四段为注入 engineering.md 的**逐字文本**（双端同源——内容断言目标）——嵌入位置见各段标注——
+> eng-coder 实现时按本字节源照抄，不改一字。
+
+### A1 勘察 checklist（挂 flow step 1——"Clarify requirements." 句后追加）
+> 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md 地图——
+> 已有则更新不新建）② 读既有实现与先例 ③ 核测试面（既有用例/测试文件）④ 核双端对位面（CLI/VSC 镜像）
+> ⑤ 广度勘察委派 explore 子代理（不重复已委派探索——主会话不重扫）。
+
+### A2 方案对比（挂 flow step 2——"Design." 句——设计文档要求）
+> 候选方案 ≥2 时，设计文档 MUST 含**方案选型对比**子节（候选/判据/取舍/否决理由表）；单一候选显式声明豁免
+> （"单方案——无对比"）即可。
+
+### A3 评审前预检（挂 flow step 3——"Remind readiness" 前执行）
+> 提"设计就绪待评审"前先跑**评审前预检**：① 需求三层具体到可设计？② 受影响文件全清单 + 行数标注（R24a）？
+> ③ 验收标准逐条回指需求（每条可机器验证）？④ UI/交互决策全落档（无"讨论过但没写"）？⑤ 方案对比已做（A2）？
+> ——预检不过先修，不自发起评审（发起权仍在用户）。
+
+### A4 实践沉淀入口句（挂"Docs Capture the Conversation"纪律——追加句）
+> 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（docs/design/METHODOLOGY.md）——不散落会话。
+
+
 ### 载体落点
-1. **行为纪律 → engineering.md（双端 src/prompts/engineering.md——逐字同构）**：四维执行条款——F-1 预检清单挂 Mandatory Flow step 3（"设计就绪待评审"步——present + remind 前自检：三层具体可设计？/ 受影响文件全且标注行数？/ 验收逐条回指？/ UI 决策全落档？/ 方案对比已做？）——F-2 方案对比模板子节要求——F-3 勘察 checklist 挂 step 1——F-4 沉淀入口句（好实践 → docs/design/METHODOLOGY.md——不散落）
+1. **行为纪律 → engineering.md（双端 src/prompts/engineering.md——逐字同构——评审 #4 中性引用）**：
+   四维执行条款 = 逐字锚定文本 A1-A4（本档上节——字节源——A4 落点中性引用"METHODOLOGY 机制正文/
+   反例档案"——不硬编码 docs/design/METHODOLOGY.md 路径——VSC 端落根 METHODOLOGY.md）
 2. **结构定义 → METHODOLOGY**：权威源 thincoder/docs/design/METHODOLOGY.md 新增节（三层模板细化 + 方案选型对比模板表 + 单一锚纪律）——同步 CLI 根 METHODOLOGY.md + VSC 根 METHODOLOGY.md（同源字节同步——先落 docs/design 再同步根）
 3. **ENGINEERING-MODE.md §2.9 锚登记**：新纪律若含逐字锚句 → 登记 §2.9 锚清单（7→N——fail-when-unchanged 断言）
 4. **测试**：双端 prompts-async-guidance 型断言（新纪律句驻留 + 双端逐字一致 fail-when-unchanged）——无代码测试
@@ -36,7 +62,8 @@
 | docs/design/METHODOLOGY.md | CLI | 结构定义新增节（权威源） |
 | METHODOLOGY.md（根注入副本） | CLI/VSC | 同源同步 |
 | docs/design/ENGINEERING-MODE.md | 双端 | §2.9 锚登记（如落锚） |
-| test/（prompts-async-guidance 型） | 双端 | 断言新纪律句驻留 |
+| test/prompts-async-guidance.test.mjs | 双端 | 断言新纪律句驻留（评审 #2：CLI 现 103 行——预计 +4~+8
+  断言行——不跨档） |
 
 ## 用例表
 
@@ -51,12 +78,16 @@
 
 ## 验收
 
-- AC-1 engineering.md 双端含四维纪律句（逐字一致——prompts-async-guidance 断言绿）
+- AC-1 engineering.md 双端含四维纪律句（评审 #4 拆述：字节源 = 本档逐字锚定文本 A1-A4——每端断言各自
+  驻留绿（prompts-async-guidance）——跨端一致由同源字节保证 + 交付审计——非单端测试证明）
 - AC-2 METHODOLOGY 权威源 + 双端根同步（新增节三处一致）
 - AC-3 锚登记（若落锚——ENGINEERING-MODE §2.9 更新 + 断言）
 - AC-4 预检/勘察不冲突委派纪律（措辞核对）
 - AC-5 评审发起权在用户不受影响（无自动评审措辞）
-- 红线：无代码改动（纯提示词/文档）——双端逐字同构
+- 红线：**无产品代码改动**（src/ 实现面零改——纯提示词/文档）——prompt 内容断言扩展计入既有
+  prompts-async-guidance.test.mjs（测试文件——评审 #3 精化）——双端逐字同构
 
 ## 变更记录
 - 2026-09-09：落档（勘察一手——四维缺口确认 + 载体落点 + 无 designer 历史提示词确认（现树/archive 均无——取消于实现前）+ 冲突点防设）。
+- 2026-09-09 评审 #1 修正（评审 #5 注：地图登记循批档先例——STRUCTURE-DEBT-BATCH 自登记行——核销时
+  README 登记）——token 见评审（🔴 #1 文本定稿 + 5 advisory 采纳——待重评）。
