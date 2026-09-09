@@ -51,12 +51,14 @@ slow("F-3 多文件空格分隔 → 一次 commit --only 两个路径（他批�
   assert.deepEqual(git(repo, "diff", "--cached", "--name-only").split("\n"), ["b.txt"], "b.txt 仍 staged——未混入")
 })
 
-slow("F-3 空/空白 path → 明确错误——不回落 add -A（无提交、无暂存）", async () => {
+slow("F-3 空/空白 path（\"\" 与 \"   \"）→ 明确错误——不回落 add -A（无提交、无暂存）", async () => {
   writeFileSync(join(repo, "a.txt"), "a3\n")
   const head = git(repo, "log", "-1", "--format=%s")
-  const out = await gitTool.execute({ action: "commit", path: "   ", message: "should not land" }, { cwd: repo })
-  assert.equal(out, "Error: commit path is empty/whitespace — give at least one file path (space-separated)")
-  assert.equal(git(repo, "log", "-1", "--format=%s"), head, "无提交产生")
+  for (const bad of ["", "   "]) {
+    const out = await gitTool.execute({ action: "commit", path: bad, message: "should not land" }, { cwd: repo })
+    assert.equal(out, "Error: commit path is empty/whitespace — give at least one file path (space-separated)", `path=${JSON.stringify(bad)}`)
+    assert.equal(git(repo, "log", "-1", "--format=%s"), head, "无提交产生")
+  }
   assert.deepEqual(git(repo, "diff", "--name-only").split("\n"), ["a.txt"], "改动仍 unstaged——未 add -A")
 })
 

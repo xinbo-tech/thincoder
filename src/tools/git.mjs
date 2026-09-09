@@ -149,12 +149,13 @@ export const gitTool = {
       }
       case "commit": {
         if (!args.message) return "Error: commit requires message"
-        // F-3 (QUICKFIX-BATCH-2)：path 给定 → git commit --only <paths>——从工作树取列文件
-        // 提交（忽略索引他批——原子——不再先 add）。空/空白 path（trim 后空）→ 明确错误
-        // （不回落 add -A）。空格分隔唯一形态（含空格文件名不支持）。无 path → add -A 全量。
+        // F-3 (QUICKFIX-BATCH-2)：path 给定（含空串——空/空白 trim 后空一律明确错误，绝不
+        // 回落 add -A）→ git commit --only <paths>——从工作树取列文件提交（忽略索引他批——
+        // 原子——不再先 add）。空格分隔唯一形态（含空格文件名不支持）。无 path（缺省）→ add
+        // -A 全量（单代理语义保留）。
         const parts = []
         let commit
-        if (args.path) {
+        if (args.path !== undefined && args.path !== null) {
           const trimmed = args.path.trim()
           if (!trimmed) return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
           commit = runGitStrict(ctx.cwd, ["commit", "--only", ...trimmed.split(/\s+/), "-m", args.message])
