@@ -42,16 +42,19 @@
 
 | 文件 | 端 | 改动 |
 |---|---|---|
-| src/tools/file.mjs:96-108 | CLI | read C 方案（头+尾） |
-| src/tools/file.mjs:13-55 | VSC | read C 方案 + 行数提示补 |
-| src/advisor/run.mjs:315-335 | CLI | 截断双端化（头~60%+尾~40%） |
-| src/advisor/run.mjs:285-306 | VSC | 同 |
-| test/（read + advisor 截断测试双端） | 双端 | 新测试 |
-| docs/design/TOOL-OUTPUT-LIMITS-TUNING.md | CLI | C 方案核销 + 双端化记录 |
+| src/tools/file.mjs:96-108 | CLI | read C 方案（头+尾）——评审 #2：现数实现期实测——预计 ≤±15（结构不变级——行数表随实现回填） |
+| src/tools/file.mjs:13-55 | VSC | read C 方案 + 行数提示补——评审 #2：同上现数实现期实测 ≤±15 |
+| src/advisor/run.mjs:315-335 | CLI | 截断双端化（头~60%+尾~40%）——评审 #2：同上现数实现期实测 ≤±15 |
+| src/advisor/run.mjs:285-306 | VSC | 同——评审 #2：同上现数实现期实测 ≤±15 |
+| test/read-dual-end.test.mjs + test/advisor-truncation.test.mjs（评审 #5：具体文件名——双端各自同名镜像） | 双端 | 新测试 |
+| docs/design/TOOL-OUTPUT-LIMITS-TUNING.md | CLI | §2.5 advisor 截断描述同批更新（评审 #3——防双述）+
+  C 方案核销 + 双端化记录 |
+| docs/design/TOOL-OUTPUT-LIMITS-REQUIREMENTS.md | CLI | FR3/FR4 双端语义增补（评审 #3——同批不滞后） |
 
 ## 验收
 
-- AC-1 read 大文件返回头+尾（形态断言——头 N + 省略注 + 尾 M——双端测试）
+- AC-1 read 大文件返回头+尾（形态断言——头 N + 省略注 + 尾 M——双端测试——评审 #4：边沿补——
+  offset 窗口与尾区重叠不重复/无尾注时 K=0 无假省略注/≤阈值文件走旧头向路径——实现期数值钉死 N/M/阈值）
 - AC-2 advisor 超限结果头尾保（头部上下文 + 尾部结论可见——offset 续读提示在——双端测试）
 - AC-3 offset 续读/hashes 模式零回归（现路径不破坏）
 - AC-4 双端锁步（CLI/VSC 同实现——逐字同构）
@@ -59,4 +62,10 @@
 - AC 红线：单次输出上限/64K offload 主循环/A 方案不动——纯 read+advisor 截断层
 
 ## 变更记录
-- 2026-09-09：L19+L20 合并落档（核实一手——read C 真未做/advisor 保头弃尾——用户裁 B 双端 + 与 L19 同构合并设计——双端锁步）。
+- 2026-09-09：L19+L20 合并落档（核实一手——read C 真未做/advisor 保头弃尾——用户裁 B 双端 + 与 L19
+  同构合并设计——双端锁步）。
+- 2026-09-09 评审 5 项采纳（文档归属注/受影响表补行数/同批文档一致性/AC 边沿用例/测试文件名——token e7aa5d71）。
+
+> 归属注（评审 #1）：本档 = L19+L20 批设计载体——实现时权威措辞并入 TOOL-OUTPUT-LIMITS-TUNING.md
+> §新增（read C + advisor 双端——同批更新防双述）——REQUIREMENTS.md FR 增补——核销时随 README 变更记录
+> 登记或归档（同 MEMORY-TOOL-SCOPE-FIX 先例）。
