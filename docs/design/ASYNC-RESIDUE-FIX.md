@@ -22,12 +22,18 @@
 
 ## 设计（评估清单——照做勿自行解释）
 
-### 逐处修正（双端各自——逐字文本见评估引用——照抄勿自行解释）
+### 逐处修正（双端各自——逐字文本见评估引用——照抄勿自行解释——评审 #5：单方案声明——本批每处修复均单一路径
+（删/补/合——评估定稿——无 ≥2 候选对比——豁免）
 1. **main.md:8 双端**：删 `sync only when the next step depends on this output and nothing else can proceed`——改 `if your next step depends on the report, end the turn and let it arrive (or declare dependsOn)`
-2. **engineering.md:16 CLI step 4**：补 async 机制段（从 VSC async 段移植——评审默认 async——ack 即收尾——settle→digest——批准 token 自动签发会话 + digest 回显 designId——同 scope 续跑解析）
-3. **engineering.md:16 VSC step 4**：删旧 `it returns a design token in plain text in its response` 句——wait 句改跨回合语义（settle→digest→下轮发起——非回合内等）
+2. **engineering.md:16 双端 step 4（评审 #1：旧句双端都有——CLI 863 字符只有旧句 / VSC 1819 含 async 段**
+   ——收敛 = 双端删旧句 `- If advisor approves: it returns a design token in plain text in its response.`
+   （CLI 无 async 段 → 整体移植 VSC 现 L16 删旧句后文本——**字节源 = VSC engineering.md:16 删旧句后**
+    ——CLI 照抄 + 交付 diff 审计——单一锚：以 VSC 现文本为字节源不自行撰写）
+3. **engineering.md:16 VSC step 4（评审 #1：与 F-2 合并为一次双端收敛——VSC 删旧句（字节源）**——
+   wait 句已含于 VSC 现文本（"start reviews one at a time and wait for each to settle"——评审 #3 遗留
+   澄清——跨回合语义注：settle→digest→下轮发起——非回合内等——注于设计不改字节）
 4. **advisor.mjs:55 CLI**：async 参数描述加 `(mechanism parameter — top-level launches are async by default)`（对齐 VSC:177）——测试断言同步扩
-5. **main.md:13 双端**：重复句合一
+5. **main.md:13 双端**：重复句合一（"results reach you automatically" 一句两现 → 留一）
 6. **discipline.md:68 CLI**：工具路由表 subagent 行动作补 cancel——escalate 行加异步注（对齐 VSC:69）
 
 ### 测试
@@ -38,11 +44,12 @@
 
 | 文件 | 端 | 现行数 | 预计净变 | 改动 |
 |---|---|---|---|---|
-| src/prompts/main.md | CLI/VSC | 各 ~40 | ≤±3 | F-1 删 sync 例外 + F-5 重复合一 |
+| src/prompts/main.md | CLI/VSC | 各 35（实测——评审 #4） | ≤±3 | F-1 删 sync 例外 + F-5 重复合一 |
 | src/prompts/engineering.md | CLI/VSC | 各 ~90 | ±5 | F-2 CLI 补 async 段 + F-3 VSC 删旧句——双端收敛同基 |
 | src/agent-tools/advisor.mjs | CLI | 213（并发池后） | ≤+1 | F-4 机制参数限定 |
-| src/prompts/discipline.md | CLI | ~70 | ≤+2 | F-6 路由表补 cancel |
-| test/（prompts-async-guidance 类） | 双端 | 各 ~110 | +4~+8 | 断言扩展 |
+| src/prompts/discipline.md | CLI | 84（实测——评审 #4） | ≤+2 | F-6 路由表补 cancel |
+| test/prompts-async-guidance.test.mjs | 双端 | 各 120（实测——评审 #4） | +4~+8 | 断言扩展 |
+| docs/design/README.md | 双端 | doc | +2 | 本档地图登记一行 + 变更记录（评审 #3） |
 | 文档面候选（ESCALATE.md 等） | 双端 | doc | 父侧裁 | 指针注（可选） |
 
 ## 用例表
