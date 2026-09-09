@@ -57,8 +57,14 @@ L5 项目层（METHODOLOGY.md / AGENTS.md）不随二进制分发、命名不变
 
 | 文件 | 内容大纲 |
 |---|---|
-| discipline-engineering.md | ① 四步硬流程（需求→设计→实施→测试）不跳步 ② 文档规范（三层结构/板块归属/归属判定四问）③ 评审收敛纪律（发起权/裁决表/轮次衰减）④ 实施委托结构化（任务书）⑤ checklist/TODO 纪律 + Problem-Solving ⑥ 工具观条款（搜索优先级等） |
-| discipline-normal.md | ① 写码工作流（before/while/收尾——现 system.md 执行节迁入）② 按任务型匹配（Bug/Feature/Refactor/General）③ 测试与交付纪律（lint/verify/测试面）④ 模块拆分 policy + 查重 + 意图理解 ⑤ 长输出落盘/日志细则 + 工具观条款 |
+| discipline-engineering.md | ① 四步硬流程（需求→设计→实施→测试）不跳步 + 铁律（撞错结构就改不挂账/checklist 跟踪）② 文档规范（三层结构/方案选型对比模板/多实现面纪律/板块归属/归属判定四问）③ 评审收敛纪律（发起权/裁决表/轮次衰减）④ 实施委托结构化（任务书 + file 域语义）⑤ 需求池攒批/R24 挂钩/写文档人类可读 ⑥ 工具观条款（搜索优先级等） |
+| discipline-normal.md | ① 写码工作流（before/while/收尾——现 system.md 执行节迁入）② 按任务型匹配（Bug/Feature/Refactor/General）③ 测试与交付纪律（lint/verify/测试面）④ 代码结构判据（函数/文件档位表 + 原则十条 + 模块拆分 policy + 查重 + 意图理解）⑤ 常用纪律（三招/动手比动眼/长输出落盘/日志细则 + 工具观条款） |
+
+> **METHODOLOGY 骨干分拣（用户裁定 2026-09-10——通用方法论并进槽位，不开新层）**：现 cwd
+> METHODOLOGY.md 的通用骨干按内容性质分拣入上表（铁律/四步/攒批/R24/文档规范 →
+> discipline-engineering；结构判据/常用纪律 → discipline-normal；协作原则 → common.md）——
+> **项目 METHODOLOGY.md 瘦成纯项目差异**（项目特有约定/项目事实/板块地图指针——无则薄）；
+> methodology-template.md 同步瘦成项目空骨架（不再复制通用骨干）。
 
 ### 特殊模块（自含——微调对齐，不套槽位）
 
