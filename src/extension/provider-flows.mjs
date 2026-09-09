@@ -7,7 +7,8 @@
  *  2. Settings panel messages (addProvider / removeProvider / setProviderProxy) — the
  *     panel posts a payload straight to the pure functions (no UI round-trip on the host).
  *
- * Persistence semantics are identical to the CLI (config.json providers[] + activeProvider).
+ * Persistence semantics are identical to the CLI (config.json providers[] with models[]
+ * candidates + defaultModel — MODEL-MERGE-SESSION——渠道 model 字段已退役)。
  */
 
 import * as vscode from "vscode"
@@ -42,7 +43,7 @@ export function addProviderEntry({ preset, custom, key } = {}) {
     if (!model) return "Model is required"
     const format = (custom.format || "openai").trim()
     if (!FORMATS.includes(format)) return `Unknown API format: ${format} (expected ${FORMATS.join("/")})`
-    entry = { name, baseURL, model }
+    entry = { name, baseURL, models: [model] } // MODEL-MERGE-SESSION：渠道 model 字段退役 → models 种子
     if (format !== "openai") entry.format = format
   } else {
     return "Add provider needs a preset or a custom config"
@@ -85,7 +86,7 @@ export async function addProviderFlow(refresh) {
 
   const items = Object.entries(PROVIDER_PRESETS)
     .filter(([name]) => !existing.has(name))
-    .map(([name, p]) => ({ label: name, description: p.desc, detail: p.model, kind: "preset", name }))
+    .map(([name, p]) => ({ label: name, description: p.desc, detail: p.models?.[0] ?? "", kind: "preset", name }))
   items.push({ label: "Custom (manual config)", description: "enter baseURL/model/format", kind: "custom" })
 
   const sel = await vscode.window.showQuickPick(items, {
@@ -154,7 +155,7 @@ export async function removeProviderFlow(refresh) {
     return
   }
   const sel = await vscode.window.showQuickPick(
-    candidates.map((p) => ({ label: p.name, description: p.model })),
+    candidates.map((p) => ({ label: p.name, description: p.models?.[0] ?? "" })),
     { placeHolder: "Remove provider" },
   )
   if (!sel) return

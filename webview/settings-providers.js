@@ -6,6 +6,7 @@ import { escHtml } from "./ui.js"
 import { t } from "./i18n.js"
 import { SS, PROVIDER_LABELS } from "./settings-state.js"
 import { keyRowEdit, flashSaved } from "./settings-widgets.js"
+import { openModelMenu } from "./model-menu.js"
 
 /** Show preset info (read-only) or custom fields depending on the Add form's type select. */
 function paTypeChanged() {
@@ -20,7 +21,7 @@ function paTypeChanged() {
     const p = (SS.providerStatus.presets || []).find((x) => x.name === type)
     info.style.display = "block"
     customFields.style.display = "none"
-    info.textContent = p ? `${p.model} · ${p.baseURL ?? ""}` : ""
+    info.textContent = p ? `${(p.models ?? [])[0] ?? "(no candidates)"} · ${p.baseURL ?? ""}` : ""
   }
 }
 
@@ -76,6 +77,34 @@ export function installProviderHandlers() {
     }
   }
   window._paTypeChanged = paTypeChanged
+  window._setDefaultModel = function(provider, model) {
+    const dm = provider + ":" + model
+    SS.agentSettings = { ...(SS.agentSettings ?? {}), defaultModel: dm }
+    const v = document.getElementById("defaultmodel-value")
+    if (v) v.textContent = dm
+    window._vscode.postMessage({ type: "saveAgentSettings", settings: { defaultModel: dm } })
+  }
+  // MODEL-MERGE-SESSION：默认模型两级菜单（L1 provider → L2 models[] 候选）——写 raw.defaultModel
+  window._defaultModelMenu = function() {
+    const btn = document.getElementById("defaultmodel-btn")
+    if (!btn) return
+    const rows = []
+    for (const [name, st] of Object.entries(SS.providerStatus.providers || {})) {
+      const models = Array.isArray(st.models) ? st.models : []
+      if (models.length === 0) continue
+      const label = SS.providerStatus.labels?.[name] || PROVIDER_LABELS[name] || name
+      for (const m of models) rows.push({ id: m, label: m, provider: name, group: label, reasoning: [] })
+    }
+    if (rows.length === 0) return
+    const cur = SS.agentSettings?.defaultModel ?? ""
+    const sep = cur.indexOf(":")
+    const value = sep > 0 ? { provider: cur.slice(0, sep), model: cur.slice(sep + 1) } : null
+    openModelMenu({
+      anchorEl: btn, models: rows, value,
+      onPick: ({ provider, model }) => window._setDefaultModel(provider, model),
+      up: true,
+    })
+  }
   // Custom provider: probe baseURL+key via /models — validates the connection
   // AND populates the model dropdown so the model is picked, not hand-typed.
   window._paFetchModels = function() {
@@ -123,6 +152,16 @@ export function installProviderHandlers() {
 export function providersCardHtml() {
   const ps = SS.providerStatus.providers || {}
   let html = `<section id="providers-card" class="settings-card"><h4 class="settings-card-title">${t("settings.providersSection")}</h4><div class="settings-card-body">`
+  // MODEL-MERGE-SESSION：config.defaultModel 面板项（新会话起点——provider → models[] 两级
+  // 菜单——候选只读 config 渠道候选——写 raw.defaultModel——会话槽不受影响）
+  const dm = SS.agentSettings?.defaultModel ?? null
+  html += `<div class="prov-row" id="prov-defaultmodel-row">
+    <div class="prov-main">
+      <span class="prov-name" title="New sessions start from config.defaultModel">${t("settings.defaultModel")}</span>
+      <span class="key-status ok" id="defaultmodel-value">${dm ? escHtml(dm) : t("settings.notConfigured")}</span>
+      <span class="prov-actions"><button class="key-btn" id="defaultmodel-btn">${t("settings.pickModel")}…</button></span>
+    </div>
+  </div>`
   html += `<div id="prov-list">`
   for (const [name, s0] of Object.entries(ps)) {
     const label = SS.providerStatus.labels?.[name] || PROVIDER_LABELS[name] || name
@@ -139,7 +178,7 @@ export function providersCardHtml() {
         </span>
       </div>
       <div class="prov-sub">
-        <span class="prov-model">${escHtml(s0.model || "")}${s0.baseURL ? ` · ${escHtml(s0.baseURL)}` : ""}</span>
+        <span class="prov-model">${escHtml((s0.models ?? []).join(", ") || "(no candidates)")}${s0.baseURL ? ` · ${escHtml(s0.baseURL)}` : ""}</span>
         <label class="switch" title="${t("settings.proxyRowTitle")}"><input type="checkbox" ${s0.proxy ? "checked" : ""} onchange="window._setProviderProxy('${escHtml(name)}', this.checked)"> ${t("settings.proxyRow")}</label>
       </div>
     </div>`
@@ -153,7 +192,7 @@ export function providersCardHtml() {
     <div class="settings-subtitle">${t("settings.addProviderTitle")}</div>
     <div class="key-field"><label>${t("settings.presetChoice")}</label>
       <select id="pa-type" onchange="window._paTypeChanged()">
-        ${presets.map((p) => `<option value="${escHtml(p.name)}">${escHtml(p.name)} — ${escHtml(p.desc)} (${escHtml(p.model)})</option>`).join("")}
+        ${presets.map((p) => `<option value="${escHtml(p.name)}">${escHtml(p.name)} — ${escHtml(p.desc)} (${escHtml((p.models ?? [])[0] ?? "")})</option>`).join("")}
         <option value="custom">${t("settings.customChoice")}</option>
       </select>
     </div>
@@ -183,6 +222,7 @@ export function providersCardHtml() {
 export function bindAddProviderForm() {
   document.getElementById("pa-save-btn").addEventListener("click", () => { window._paSave(); flashSaved(document.getElementById("pa-save-btn")) })
   document.getElementById("pa-cancel-btn").addEventListener("click", () => window._toggleAddForm(false))
+  document.getElementById("defaultmodel-btn")?.addEventListener("click", () => window._defaultModelMenu())
   paTypeChanged()
 }
 

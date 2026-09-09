@@ -15,6 +15,8 @@ export default [
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
   "test/eng-settlement.test.mjs",
+  "test/config-merge.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：迁移折中 C 双端同规则 VSC 面（幂等/失败不阻断/凭据不丢）+ defaultModel 解析（activeProvider 渠道/首渠道回退/providerFromConfig 模型）
+  "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
   "test/subagent-observe-send.test.mjs",
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",

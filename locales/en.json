@@ -80,6 +80,7 @@
   "settings.baseUrl": "Base URL",
   "settings.model": "Model",
   "settings.providersSection": "Providers",
+  "settings.defaultModel": "Default model (new sessions)",
   "settings.addProvider": "+ Add",
   "settings.addProviderTitle": "Add Provider",
   "settings.presetChoice": "Preset",

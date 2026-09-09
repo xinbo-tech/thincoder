@@ -52,7 +52,9 @@ export function makeAskInPanel(panel) {
  * providerName / turnSlot / distillSlot（落盘槽位 + AC6 槽守卫）/ autoTurn（digest 无通知）。
  */
 export function buildPanelCallbacks(panel, deps) {
-  const { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel } = deps
+  // slotStamp（MODEL-MERGE-SESSION——panel-chat 会话复合落槽值 { activeProvider, activeModel }
+  // ——随 agentState spread——override 回合不落槽：stamp 恒为会话模型而非 per-message 试运行值）
+  const { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel, slotStamp } = deps
   // Token stream is forwarded live to the webview; the assistant reply is persisted by runAgent's
   // pushReal into fullHistory (no separate accumulation needed here).
   // Accumulate token usage across all LLM calls in this turn (matches CLI)
@@ -110,7 +112,7 @@ export function buildPanelCallbacks(panel, deps) {
     onToolPanel: (name, chunk) => panel._panel?.webview.postMessage(toolPanelPayload(name, chunk)),
     onComplete: (content, agentState) => {
       lastAgentState = agentState ?? {}
-      panel._saveLines(fullHistory, history, { activeProvider: providerName, ...agentState }, turnSlot)
+      panel._saveLines(fullHistory, history, { ...slotStamp, ...agentState }, turnSlot)
       panel._panel?.webview.postMessage({ type: "complete" })
       panel._pushSessions()
       // Native notification when the user is in another window (no-op when focused).
@@ -124,7 +126,7 @@ export function buildPanelCallbacks(panel, deps) {
     // never write it into the new one (AC6). Silent (N3): a save failure must not surface.
     onDistilled: () => {
       if (panel._slot !== distillSlot) return
-      try { panel._saveLines(fullHistory, history, { activeProvider: providerName, ...lastAgentState }, distillSlot) }
+      try { panel._saveLines(fullHistory, history, { ...slotStamp, ...lastAgentState }, distillSlot) }
       catch (e) { console.error("[chat-panel] distill save failed:", e.message) }
     },
     onPermissionRequired: permissionGate(panel),

@@ -107,6 +107,7 @@ export async function runPanelChat(panel, opts = {}) {
 /** runPanelChat 本体（LOGGING 包装之外——见上方 runPanelChat 包装器）。 */
 async function runPanelChatImpl(panel, opts = {}) {
   let { text, modelOverride, reasoning, providerName, images, autoTurn = false, susp = null, skipSession = false } = opts
+  let slotModel = null // 会话槽模型（默认解析支捕获——无 per-回合 override 时用槽复合建 provider）
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
 
   // C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C）：回合起点（任何 await 之前）清闩 +
@@ -171,15 +172,26 @@ async function runPanelChatImpl(panel, opts = {}) {
     await prevDistill
   }
   if (!providerName) {
-    // Default provider: activeProvider first (CLI parity) — the settings-panel radio
-    // sets this pointer; fall back to the first provider that has a key.
+    // MODEL-MERGE-SESSION：无 per-回合 override → 会话槽复合优先（CLI applySession 对拍——
+    // F-4 恢复读槽——VSC 行为新增）；槽无复合/槽渠道无 key → config defaultModel 运行时回退。
+    // 槽模型（slotModel）只在本回合无 override 时使用（override = 单回合试运行不落槽——裁定④）。
     try {
-      const { activeProvider } = resolveProviders()
-      if (activeProvider && await getKey(activeProvider)) providerName = activeProvider
+      const sd = panel._activeData?.(turnSlot)
+      if (sd?.activeProvider && await getKey(sd.activeProvider)) {
+        providerName = sd.activeProvider
+        slotModel = typeof sd.activeModel === "string" && sd.activeModel ? sd.activeModel : null
+      }
     } catch {}
     if (!providerName) {
-      for (const n of providerNames()) {
-        try { if (await getKey(n)) { providerName = n; break } } catch {}
+      // 回退：config defaultModel 渠道（resolveProviders activeProvider = default 渠道/首渠道）
+      try {
+        const { activeProvider } = resolveProviders()
+        if (activeProvider && await getKey(activeProvider)) providerName = activeProvider
+      } catch {}
+      if (!providerName) {
+        for (const n of providerNames()) {
+          try { if (await getKey(n)) { providerName = n; break } } catch {}
+        }
       }
     }
   }
@@ -196,7 +208,13 @@ async function runPanelChatImpl(panel, opts = {}) {
     return
   }
   if (!p) { panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: providerName }), needsSetup: true }); return }
+  const baseModel = p.model ?? null // override 前的解析模型（会话落槽值——override 单回合不落槽）
   if (modelOverride) p = { ...p, model: modelOverride }
+  else if (slotModel) p = { ...p, model: slotModel }
+  // 会话复合落槽值：override 回合保持槽模型（无槽模型 → 渠道默认解析值）；无 override 回合
+  // 即本回合模型——槽播种/恒非空（CLI saveSession 对拍）
+  const sessionModelValue = slotModel ?? baseModel ?? p.model
+  const slotStamp = { activeProvider: providerName, activeModel: sessionModelValue }
   // Reasoning selector → provider fields. "off" AND "none" (the effort enum's lowest
   // level, labeled "off" in the UI) are a true thinking toggle — previously "none"
   // fell into the effort branch and left thinking:enabled untouched, so the button
@@ -256,7 +274,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   // they can't drift apart). 2026-09-05 实践轮 module-split：回调工厂（webview 桥接
   // 面——token/reasoning/tool 流/压缩生命周期/落盘/权限/问答 25 个 onX）verbatim 迁
   // panel-callbacks.mjs buildPanelCallbacks——总用量累计与 lastAgentState 随工厂闭包。
-  const callbacks = buildPanelCallbacks(panel, { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel })
+  const callbacks = buildPanelCallbacks(panel, { cwd, p, fullHistory, history, providerName, turnSlot, distillSlot, autoTurn, askInPanel, slotStamp })
   // §17 D-S7 (manual tier): digest turns must not pop permission/question UI — an
   // unattended digest may neither hang on a panel prompt nor be interrupted by one.
   // The VS Code dispatch executes un-gated when no handler is present (unlike the CLI's
@@ -276,7 +294,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   const tLog = opts._logOutcome ?? {}
   tLog.started = true
   logEvent("turn:start", { kind: autoTurn ? "auto" : "user" })
-  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, susp, turnSlot, tLog, askInPanel })
+  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, susp, turnSlot, tLog, askInPanel, slotStamp })
   } finally {
     traceStop("finally: turn complete — UI released", panel._stopClickTs)
     panel._stopClickTs = null
@@ -295,7 +313,7 @@ async function runPanelChatImpl(panel, opts = {}) {
     // 落盘就是本 save——先落盘后标题该路径才出得了标题。CLI agent-turn.mjs finally
     // parity——"Save session after every turn (survives crashes)"。
     try {
-      if (fullHistory?.length) panel._saveLines(fullHistory, history, { activeProvider: providerName }, turnSlot)
+      if (fullHistory?.length) panel._saveLines(fullHistory, history, slotStamp, turnSlot)
     } catch (saveErr) {
       console.error("[chat-panel] save in finally failed:", saveErr.message)
     }
@@ -363,7 +381,7 @@ async function runPanelChatImpl(panel, opts = {}) {
  * ro.agent（agent.mjs write-back）——Ctrl+I/ContinueError 续跑与下回合复用同一单例。
  */
 async function runTurnLoop(panel, deps) {
-  const { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, susp, turnSlot, tLog, askInPanel } = deps
+  const { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, susp, turnSlot, tLog, askInPanel, slotStamp } = deps
   let carryTaken = false
   // §11: guard-carry 只在本回合首个（resume=false）runAgent 应用一次（resume 迭代不重取）
   const inherited = (!autoTurn && !carryTaken) ? (panel._guardCarry ?? null) : undefined
@@ -441,7 +459,7 @@ async function runTurnLoop(panel, deps) {
       // (The finally block below also saves unconditionally — CLI agent-turn.mjs parity —
       // so this catch-block save is now redundant on this path, but harmless.)
       try {
-        panel._saveLines(fullHistory, history, { activeProvider: providerName }, turnSlot)
+        panel._saveLines(fullHistory, history, slotStamp, turnSlot)
       } catch (saveErr) {
         console.error("[chat-panel] save after abort/error failed:", saveErr.message)
       }

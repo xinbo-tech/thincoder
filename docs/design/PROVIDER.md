@@ -18,11 +18,15 @@
 与 CLI 共享 `~/.thincoder/config.json`。读写核心 `src/config-io.mjs`（纯 Node、无
 `vscode` 依赖，可单测），面板读写面 `src/extension/settings.mjs` / `presets.mjs`。
 
-- **providers[]**：每项 `{ name, baseURL, model, apiKey?, chatPath?, maxTokens?,
+- **providers[]**：每项 `{ name, baseURL, models[], apiKey?, chatPath?, maxTokens?,
   temperature?, thinking?, reasoningEffort?, format?, context?, proxy?, responseFormat? }`。
-  `baseURL` 尾斜杠在读取时归一（`resolveProviders`）。
-- **指针**：`activeProvider` + 可选 `activeModel`（`selectProviderModel` 只在覆盖与
-  provider 默认不同时写 `activeModel`，否则删键）。`manifest` 无 —— config.json 单文件承载。
+  `baseURL` 尾斜杠在读取时归一（`resolveProviders`）。`models[]` = 候选硬约束（非空渠道候选——
+  选择/默认入口的成员校验表）。
+- **默认（MODEL-MERGE-SESSION）**：顶层 `defaultModel = "provider:model"` 复合 = 新会话起点；
+  旧 `activeProvider`/`activeModel`/`providers[].model` 三键已删——loadRaw 检测老形态经
+  `config-migrate.mjs` `migrateLegacyModelFields` 折中 C 迁移（幂等；写回失败不阻断——下次重试）。
+  `resolveProviders().activeProvider` = defaultModel 渠道（失效回退首渠道——面板 radio/删除守卫
+  用）。`manifest` 无 —— config.json 单文件承载。
 - **apiKey**：`resolveKey` **只读 config.json `entry.apiKey`**，环境变量不是密钥源（用户经
   面板/config 配置；与 CLI 的 env 回退语义不同）。空 → provider 不可用
   （`providerFromConfig` 返回 null；模型选择走 onboarding）。
@@ -53,7 +57,9 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 
 - **模型选择（对齐 CLI 二级菜单）**：主下拉列 provider 行（名 + 当前模型 + `›`），hover
   弹出该 provider 模型 flyout 子菜单；点击选中。主下拉底部含 add / remove / key 管理入口。
-  Webview 无键盘导航 → 用 hover flyout。选中写 config.json（`selectProviderModel`）。
+  Webview 无键盘导航 → 用 hover flyout。**选中 = 写当前会话槽**（`activeProvider` +
+  `activeModel` 双字段——`selectProviderModel` config 写路径已退役）；配置默认 = 设置面板
+  「默认模型」项（provider → models[] 两级——写 raw.defaultModel）。
 - **Add**：`provider-flows.mjs` `addProviderFlow`（QuickPick preset[过滤已添加，filter by
   desc/model] 或 Custom 手输 name/baseURL/model + format）→ `addProviderEntry`（预设自动填
   baseURL/model；custom 逐字段校验，format 三值 openai/anthropic/google + 拒绝未知）→ 问

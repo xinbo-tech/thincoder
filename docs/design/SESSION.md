@@ -22,6 +22,12 @@
 
 ## 变更记录
 
+- 2026-09-09：MODEL-MERGE-SESSION 语义同步（双端）：config 三旧层（activeProvider/
+  activeModel/providers[].model）删除 + defaultModel 复合顶层 + providers[].models[] 候选
+  （loadRaw 经 config-migrate.mjs 折中 C 迁移——写回失败不阻断）；会话槽双字段恒非空；
+  面板模型选择 = 写当前槽（panel-messages selectModel——saveLines 通道带 activeModel）；
+  runPanelChatImpl 无 per-回合 override 时用槽复合建 provider；saveLines 落槽值 = 会话
+  模型（override 单回合试运行不落槽）。
 - 2026-09-09：§9 懒历史节改写——SESSION-RESTORE-PARITY 交付（恢复链对齐 CLI：assistant
   帧容器模型 + 嵌套工具卡/配对跨页/reminder 剔除/turnStart 可见前驱/首窗 200/ts 兼容
   读/首屏 welcome 移除——权威源不滞后）。
@@ -245,8 +251,9 @@ m = loadManifest(cwd)；死主清理（cleanDeadOwners）；rec = readEndMarker(
   "version": 2,            // 格式版本（1 = 旧单线；2 = 双线；>2 的新版文件只读不动）
   "cwd": "D:\\teamcode",   // 会话目录（hash 依据；恢复校验"是不是别人的文件"）
   "title": "…",            // 会话标题（会话列表显示；自动标题见 §7）
-  "activeProvider": "deepseek",
-  "activeModel": null,
+  "activeProvider": "deepseek",     // MODEL-MERGE-SESSION 槽双字段恒非空（有渠道即携带具体复合值——
+  "activeModel": "deepseek-v4-pro",   // 恢复按槽值（CLI applySession / 面板 runPanelChatImpl 同读）——
+  //                                    // 不看 config（defaultModel 只是新会话起点））
   "updatedAt": 1754200000000,  // epoch ms
   "history": [ /* 人读线：完整真实消息（UI 渲染 + 恢复显示读它） */ ],
   "contextHistory": [ /* 机读线：可能已压缩的模型上下文（恢复后保留压缩收益） */ ],

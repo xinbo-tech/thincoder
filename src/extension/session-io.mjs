@@ -188,7 +188,7 @@ export function deleteSlot(cwd, n) {
 // isRealUserMsg 定义已随 historyWindow 迁 history-window.mjs（本文件 import + 重导出——
 // extractSlotMeta 调用不变）
 
-export function extractSlotMeta(history, activeProvider, updatedAt, title = "") {
+export function extractSlotMeta(history, activeProvider, updatedAt, title = "", activeModel = null) {
   const userMsgs = history.filter(isRealUserMsg)
   const first = userMsgs[0]?.content ?? ""
   return {
@@ -196,6 +196,8 @@ export function extractSlotMeta(history, activeProvider, updatedAt, title = "") 
     turnCount: userMsgs.length,
     firstMessage: first.slice(0, 80),
     activeProvider: activeProvider ?? "",
+    // MODEL-MERGE-SESSION：摘要带 activeModel——listSlots 合成显 "p:m"（CLI session-slots 同规则）
+    activeModel: activeModel ?? "",
     updatedAt: updatedAt ?? Date.now(),
     title,
   }
@@ -215,7 +217,7 @@ function loadSlotMeta(cwd, slot, v) {
     if (!existsSync(p)) return { ts }
     const data = JSON.parse(readFileSync(p, "utf8"))
     const history = data.history ?? []
-    return { ts, ...extractSlotMeta(history, data.activeProvider, data.updatedAt ?? ts, data.title ?? "") }
+    return { ts, ...extractSlotMeta(history, data.activeProvider, data.updatedAt ?? ts, data.title ?? "", data.activeModel ?? null) }
   } catch {
     return { ts }
   }
@@ -235,7 +237,9 @@ export function listSlots(cwd) {
         turnCount: meta.turnCount ?? 0,
         messageCount: meta.messageCount ?? 0,
         firstMessage: meta.firstMessage ?? "",
-        activeProvider: meta.activeProvider ?? "",
+        // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
+        // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；panel sessions 行免改）
+        activeProvider: meta.activeProvider ? (meta.activeModel ? `${meta.activeProvider}:${meta.activeModel}` : meta.activeProvider) : "",
         timestamp: meta.ts,
         date: new Date(meta.ts).toLocaleString(),
         updatedAt: meta.updatedAt ?? meta.ts,
@@ -299,7 +303,7 @@ export function newSlot(cwd) {
   saveSlot(cwd, slot, data)
   m.slotSessions ??= {}
   m.slotSessions[slot] = mySessionId
-  m.slots[slot] = { ts: Date.now(), ...extractSlotMeta([], "", data.updatedAt, "") }
+  m.slots[slot] = { ts: Date.now(), ...extractSlotMeta([], "", data.updatedAt, "", null) }
   m.active = slot
   // deletions 过滤掉本调用刚重新认领的槽（防删掉自己的新属主）——与 ensureActive deadParam 同型
   const deletions = deadSlots.length
@@ -364,7 +368,7 @@ export function saveSessionToSlot(cwd, slot, data) {
   saveSlot(cwd, slot, data)
   try {
     const m = loadManifest(cwd)
-    m.slots[slot] = { ts: Date.now(), ...extractSlotMeta(data.history ?? [], data.activeProvider, data.updatedAt, data.title ?? "") }
+    m.slots[slot] = { ts: Date.now(), ...extractSlotMeta(data.history ?? [], data.activeProvider, data.updatedAt, data.title ?? "", data.activeModel ?? null) }
     saveManifest(cwd, m)
   } catch { /* non-fatal */ }
   slotMtimeCache.set(p, statSync(p).mtimeMs)

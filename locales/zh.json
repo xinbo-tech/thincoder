@@ -80,6 +80,7 @@
   "settings.baseUrl": "Base URL",
   "settings.model": "模型",
   "settings.providersSection": "Providers",
+  "settings.defaultModel": "默认模型（新会话起点）",
   "settings.addProvider": "+ 添加",
   "settings.addProviderTitle": "添加 Provider",
   "settings.presetChoice": "预设",

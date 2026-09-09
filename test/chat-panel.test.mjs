@@ -38,8 +38,8 @@ let _tmp
 before(() => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-c1-"))
   writeFileSync(join(_tmp, "config.json"), JSON.stringify({
-    providers: [{ name: "p1", apiKey: "k1", baseURL: "http://127.0.0.1/v1", model: "m1" }],
-    activeProvider: "p1",
+  providers: [{ name: "p1", apiKey: "k1", baseURL: "http://127.0.0.1/v1", models: ["m1"] }],
+  defaultModel: "p1:m1",
   }))
   _setConfigPathForTest(join(_tmp, "config.json"))
   _setSessionsDirForTest(join(_tmp, "sessions"))

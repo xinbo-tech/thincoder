@@ -4,15 +4,15 @@
  */
 import * as vscode from "vscode"
 import { t, loadLocaleStrings } from "../i18n.mjs"
-import { saveModelPrefs, switchToSlot, setSlotTitle, setSlotAdvisorGuard, setSlotEngineering, slotOccupancy } from "./session-io.mjs"
+import { saveModelPrefs, switchToSlot, setSlotTitle, setSlotAdvisorGuard, setSlotEngineering, slotOccupancy, loadSlot } from "./session-io.mjs"
 import { handleAddProvider, handleRemoveProvider, handleSetProviderProxy, agentSettings, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection } from "./settings.mjs"
 import { PRESETS } from "./presets.mjs"
+import { loadRaw, loadMcpServers } from "../config-io.mjs"
 import { openSessionContent } from "./panel-session.mjs"
 // B2（SESSION-FLOW-B——2026-09-09）：panel-messages ↔ panel-session 环 import（panel-session
 // 头部 import 本文件 _cwd）——openSessionContent 只在 webviewReady case 函数体内使用（延迟
 // 解引用）——环安全（两模块均无顶层跨环读取）。
 import { addProviderFlow, removeProviderFlow, setKeyFlow } from "./provider-flows.mjs"
-import { selectProviderModel, loadRaw, loadMcpServers } from "../config-io.mjs"
 import { openDiffPreview } from "./diff-preview.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { savePastedImages } from "./image-handler.mjs"
@@ -80,15 +80,26 @@ export async function handlePanelMessage(panel, msg) {
       routeUserTurn(panel, { text: msg.text || "", modelOverride: msg.model, reasoning: msg.reasoning, providerName: msg.provider, images: msg.images })
       break
     case "selectModel": {
+      // MODEL-MERGE-SESSION：模型选择 = 会话级——workspaceState prefs 保留 UI 态 + 写当前
+      // 会话槽（saveLines 通道带 activeModel——槽播种——CLI resume/下回合恢复读槽——F-4）；
+      // selectProviderModel（config 写路径）已退役——选择不再串扰 config 全局。会话槽模型
+      // 双端自由（applySession 槽值权威——成员校验只约束 CLI /model 选择面与 defaultModel
+      // 入口——菜单经 webview 候选 seed models[] 保证常驻候选行）。
       const prefs = panel._loadModelPrefs()
       prefs.model = msg.model
       prefs.provider = msg.provider || ""
       saveModelPrefs(panel._context.workspaceState, prefs)
-      // Persist into the shared config.json too (CLI selectModel semantics): the CLI
-      // resumes this session with activeProvider/activeModel, so the selection must
-      // survive the panel, not just the workspaceState prefs.
       if (msg.provider && msg.model) {
-        try { selectProviderModel(msg.provider, msg.model) } catch {}
+        try {
+          const slot = panel._ensureSlot()
+          const cwd = _cwd()
+          const data = loadSlot(cwd, slot) ?? { history: [], contextHistory: [] }
+          // 全量保存通道（saveLines——existing 往返字段保全）——只翻 activeProvider/activeModel
+          panel._saveLines(data.history ?? [], data.contextHistory ?? [], { activeProvider: msg.provider, activeModel: msg.model }, slot)
+          panel._pushSessions() // 会话列表摘要（p:m）随选随新
+        } catch (e) {
+          console.error("[chat-panel] selectModel slot write failed:", e.message)
+        }
       }
       break
     }

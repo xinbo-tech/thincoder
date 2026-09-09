@@ -1,14 +1,16 @@
 /**
  * config-io.mjs — shared config file I/O (VS Code side)
- * Same file, same structure, same semantics as the CLI (`thincoder/src/config.mjs`):
- * providers[] + activeProvider (+ optional activeModel runtime override), apiKey per
- * provider with env-var fallback.
+ * MODEL-MERGE-SESSION schema (mirrors CLI `thincoder/src/config.mjs`): providers[] with
+ * models[] candidate lists + config.defaultModel top-level composite — activeProvider/
+ * activeModel/providers[].model retired from config (session slots keep double fields);
+ * legacy shapes migrate on loadRaw (config-migrate.mjs migrateLegacyModelFields —
+ * same rule both ends).
  *
  * Pure Node — no `vscode` import — so unit tests can run outside the extension host.
  * Split for the 500-line limit: preset table → config-presets.mjs (zero deps),
- * legacy migration core → config-migrate.mjs, MCP servers → config-mcp.mjs.
- * All three are re-exported here so existing `from "../config-io.mjs"` import sites
- * keep working.
+ * legacy migration core → config-migrate.mjs, MCP servers → config-mcp.mjs,
+ * panel write surface → extension/settings-panel-write.mjs.
+ * All are re-exported here so existing `from "../config-io.mjs"` import sites keep working.
  * The VS Code-specific one-time migration glue lives in extension/migrate-settings.mjs.
  */
 
@@ -17,9 +19,11 @@ import { spawnSync } from "node:child_process"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { PROVIDER_PRESETS, presetToEntry } from "./config-presets.mjs"
-import { migrateCore } from "./config-migrate.mjs"
+import { migrateCore, migrateLegacyModelFields } from "./config-migrate.mjs"
+// 面板写面（MODEL-MERGE-SESSION 拆分——config-io 需容纳 schema/迁移/解析增长）
+export { saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./extension/settings-panel-write.mjs"
 
-export { PROVIDER_PRESETS, presetToEntry, migrateCore }
+export { PROVIDER_PRESETS, presetToEntry, migrateCore, migrateLegacyModelFields }
 
 export const configDir = join(homedir(), ".thincoder")
 export const configPath = join(configDir, "config.json")
@@ -46,7 +50,9 @@ function statTupleOf(path) {
   } catch { return null }
 }
 
-/** Read the raw config object ({} when missing). Throws on invalid JSON — same as CLI loadConfig. */
+/** Read the raw config object ({} when missing). Throws on invalid JSON — same as CLI loadConfig.
+ *  MODEL-MERGE-SESSION §3：老形态检测 → 内存迁移态先行；写回（saveRaw——F5b 门控）失败绝不
+ *  阻断（冲突 → 下次 loadRaw 重试——幂等——saveRaw 不递归 loadRaw 无环）。 */
 export function loadRaw() {
   const path = _configPath()
   if (!existsSync(path)) { readMtimes.set(path, null); return {} }
@@ -58,6 +64,14 @@ export function loadRaw() {
     throw new Error(`Config file is not valid JSON, check or delete it: ${path}\n  ${error.message}`, { cause: error })
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  if (migrateLegacyModelFields(raw)) {
+    try {
+      const r = saveRaw(raw) // 磁盘 fresh 读 → 已迁移 raw 写回（mtime 门控——基线见上）
+      if (r && r.ok === false) console.warn(`[config] model-merge migration write-back skipped (${r.reason}) — memory state continues, retried on next loadRaw`)
+    } catch (e) {
+      console.warn(`[config] model-merge migration write-back failed — memory state continues, retried on next loadRaw: ${e.message}`)
+    }
+  }
   return raw
 }
 
@@ -128,6 +142,9 @@ const warnedContext = new Set()
  * single source of truth. An empty/missing providers[] resolves to an EMPTY list
  * (no synthetic preset entries): the onboarding UI (welcome panel) is the path from
  * "nothing configured" to a setup.
+ * MODEL-MERGE-SESSION：activeProvider 语义 = config.defaultModel 的渠道（解析后成员——
+ * 严格双段）；defaultModel 缺失/失效 → 回退首 provider（design——去 raw.activeProvider
+ * 读——老字段已随 loadRaw 迁移删除）。
  */
 export function resolveProviders() {
   const raw = loadRaw()
@@ -136,6 +153,9 @@ export function resolveProviders() {
     : []
   for (const p of providers) {
     if (typeof p.baseURL === "string") p.baseURL = p.baseURL.replace(/\/+$/, "")
+    // models[] 内存归一（非字符串成员丢弃；缺省 → 空候选——D-S1 走引导）
+    if (!Array.isArray(p.models)) p.models = []
+    else p.models = p.models.filter((m) => typeof m === "string" && m)
     // PROVIDER.md §15 D-C1: providers[].context must be a positive integer (K units).
     // Invalid (0/negative/non-integer/non-numeric) → ignored (spec value used) +
     // warned ONCE per provider name (loadConfig-equivalent validation).
@@ -150,7 +170,12 @@ export function resolveProviders() {
       }
     }
   }
-  const activeProvider = raw.activeProvider || providers[0]?.name
+  let activeProvider = ""
+  if (typeof raw.defaultModel === "string" && raw.defaultModel.includes(":")) {
+    const dmProvider = raw.defaultModel.slice(0, raw.defaultModel.indexOf(":"))
+    if (providers.some((p) => p.name === dmProvider)) activeProvider = dmProvider
+  }
+  if (!activeProvider) activeProvider = providers[0]?.name ?? ""
   return { providers, activeProvider }
 }
 
@@ -163,16 +188,28 @@ export function resolveKey(entry) {
 }
 
 /**
- * Runtime model — config only: config.activeModel overrides provider.model.
- * (No env-var overrides — configuration comes exclusively from config.json.)
+ * Runtime model for an entry — MODEL-MERGE-SESSION defaultModel 解析：raw.defaultModel
+ * 复合属本渠道且 model ∈ 候选 → 用之；否则首候选（渠道默认字段已删——models[0] 是
+ * 显示/回退种子）。null when the channel has no resolvable model.
  */
-export function resolveModel(entry, rawActiveModel) {
-  return rawActiveModel || entry.model
+export function resolveDefaultModel(entry, raw) {
+  const dm = typeof raw?.defaultModel === "string" ? raw.defaultModel : ""
+  const models = Array.isArray(entry?.models) ? entry.models : []
+  if (dm && entry) {
+    const sep = dm.indexOf(":")
+    if (sep > 0 && dm.slice(0, sep) === entry.name) {
+      const m = dm.slice(sep + 1)
+      if (models.includes(m)) return m
+    }
+  }
+  return models.length > 0 ? models[0] : null
 }
 
 /**
  * Build the runtime provider object for LLM calls from config.json.
  * null when the provider has no resolvable API key. Throws on unknown name (findProvider parity).
+ * MODEL-MERGE-SESSION：provider.model = resolveDefaultModel（defaultModel 复合属该渠道
+ *  则用之——否则首候选）——API/spec 消费点零改（provider.model = 解析后具体值）。
  */
 export function providerFromConfig(name) {
   const { providers, activeProvider } = resolveProviders()
@@ -184,7 +221,7 @@ export function providerFromConfig(name) {
   const provider = {
     ...target,
     apiKey,
-    model: resolveModel(target, raw.activeModel),
+    model: resolveDefaultModel(target, raw),
   }
   if (provider.baseURL) provider.baseURL = provider.baseURL.replace(/\/+$/, "")
 
@@ -217,23 +254,8 @@ export function removeProviderKeyFromConfig(name) {
   return conflictError(r)
 }
 
-/** Persist a model selection (CLI selectModel semantics): provider.model becomes the selected
- *  model; activeModel records the override only when it differs from the provider default
- *  (null → omit, so the CLI resume sees the same pointer). F5b 冲突提示同 setProviderKey。 */
-export function selectProviderModel(name, model) {
-  const r = persistRaw((raw) => {
-    raw.providers = Array.isArray(raw.providers) ? raw.providers : []
-    const entry = raw.providers.find((p) => p?.name === name)
-    if (!entry) return
-    // CLI selectModel: activeModel records the override only when it differs from the
-    // provider default. Compare BEFORE overwriting entry.model.
-    raw.activeModel = model !== entry.model ? model : null
-    if (raw.activeModel == null) delete raw.activeModel
-    entry.model = model
-    raw.activeProvider = name
-  })
-  return conflictError(r)
-}
+// selectProviderModel 已退役（MODEL-MERGE-SESSION——selectModel 消息不再写 config 全局：
+// 会话模型落会话槽——VSC 面板写面见 panel-messages.mjs selectModel case）
 
 /** List provider names present in config.json ([] when none). */
 export function providerNamesInConfig() {
@@ -330,95 +352,9 @@ export function saveAgentSettings(patch) {
   return conflictError(r)
 }
 
-/** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
- *  Single write channel — all fields (incl. advisor) go through one saveAgentSettings(patch);
- *  an early return for advisor would silently discard non-advisor fields (reported bug).
- *  Pure function of payload + current config; lives here (no vscode dependency) so it is testable. */
-export function saveAgentSettingsFromPanel(payload) {
-  const patch = {}
-  if (payload.maxTurns != null) patch.maxTurns = Number(payload.maxTurns) || undefined
-  if (payload.subagentTurns != null) patch.subagentTurns = Number(payload.subagentTurns) || undefined
-  // "in payload" guards let explicit undefined (cleared field) flow through as deletion
-  if ("subagentModel" in payload) patch.subagentModel = payload.subagentModel || undefined
-  if ("subagentModels" in payload) {
-    // Per-type overrides: only non-empty values kept; empty object deletes the whole key
-    const m = {}
-    for (const [role, v] of Object.entries(payload.subagentModels ?? {})) {
-      if (v && typeof v === "string" && v.trim()) m[role] = v.trim()
-    }
-    patch.subagentModels = Object.keys(m).length > 0 ? m : undefined
-  }
-  if (payload.compactThreshold !== undefined) patch.compactThreshold = payload.compactThreshold === "" ? undefined : (Number(payload.compactThreshold) || undefined)
-  if (payload.verifyGuard !== undefined) patch.verifyGuard = !!payload.verifyGuard
-  if (payload.engineering !== undefined) patch.engineering = !!payload.engineering
-  if (payload.consultTurns != null) patch.consultTurns = Number(payload.consultTurns) || undefined
-  if (payload.consultTimeoutMs != null) patch.consultTimeoutMs = Number(payload.consultTimeoutMs) || undefined
-  // Consultation models (CONSULTATION.md): array of {provider, model}, ≤5, validated.
-  if (payload.consultModels !== undefined) {
-    const arr = Array.isArray(payload.consultModels) ? payload.consultModels : []
-    const clean = arr
-      .filter((m) => m && typeof m.provider === "string" && m.provider.trim() && typeof m.model === "string" && m.model.trim())
-      .slice(0, 5)
-      .map((m) => ({
-        provider: m.provider.trim(),
-        model: m.model.trim(),
-        ...(typeof m.effort === "string" && m.effort.trim() ? { effort: m.effort.trim() } : { effort: null }),
-      }))
-    patch.consultModels = clean.length > 0 ? clean : undefined
-  }
-  // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量（面板写
-  // 同一键）。逐键正整数 ≥1；非法键丢弃（空对象/全非法 → 删整键——运行期回退默认
-  // 4/4/4 + 文案）。
-  if ("poolLimits" in payload) {
-    const pl = {}
-    for (const key of ["engCoder", "other", "advisor"]) {
-      const v = payload.poolLimits?.[key]
-      if (Number.isInteger(v) && v >= 1) pl[key] = v
-    }
-    patch.poolLimits = Object.keys(pl).length > 0 ? pl : undefined
-  }
-  if (payload.advisor !== undefined) {
-    // Merge semantics (GitHub #3, 2026-08-29): the panel payload only carries the fields
-    // the panel owns. A MISSING key backfills from config.json — the CLI may have written
-    // advisor.provider/model/thinking/reasoningEffort that must survive a panel save
-    // (the old "in"-guard merge treated a missing key as "don't merge", so
-    // saveAgentSettings replaced the whole object and silently wiped them). An explicit
-    // null / '' / undefined in the payload is a CLEARED field and deletes the key
-    // (the webview sends null because postMessage JSON serialization drops undefined
-    // keys — "slot missing" and "explicitly cleared" must stay distinguishable on the wire).
-    // advisor.enabled is deprecated (2026-08-21) — never written; guard defaults OFF.
-    const adv = payload.advisor ?? {}
-    const current = loadAgentSettings().advisor ?? {}
-    // Seed from disk: every scalar/plain-object advisor key survives the merge.
-    // Arrays (and functions, which JSON files can't have) are never written by either
-    // side — don't resurrect them.
-    const merged = {}
-    for (const [k, v] of Object.entries(current)) {
-      if (v === null || Array.isArray(v)) continue
-      merged[k] = v
-    }
-    // Payload wins where it speaks (guard / timeoutMs / effort / provider / model).
-    merged.guard = adv.guard !== undefined ? !!adv.guard : (merged.guard ?? false)
-    // timeoutMs passthrough (AGENT-PARAMS-TUNING, P4): the panel has no timeoutMs
-    // input — an explicit valid payload value wins, otherwise the hand-written
-    // config.json value survives a panel save (never silently dropped, never stored invalid).
-    if (typeof adv.timeoutMs === "number" && adv.timeoutMs > 0) merged.timeoutMs = adv.timeoutMs
-    if (!Number.isFinite(merged.timeoutMs) || merged.timeoutMs <= 0) delete merged.timeoutMs
-    if ("effort" in adv) {
-      if (typeof adv.effort === "string" && adv.effort.trim()) merged.effort = adv.effort.trim()
-      else delete merged.effort
-    }
-    for (const key of ["provider", "model"]) {
-      if (key in adv) {
-        if (typeof adv[key] === "string" && adv[key].trim()) merged[key] = adv[key].trim()
-        else delete merged[key] // explicit null / '' / undefined = CLEARED slot
-      }
-    }
-    delete merged.enabled // deprecated 2026-08-21 — never resurrect a stale key
-    patch.advisor = merged
-  }
-  saveAgentSettings(patch)
-}
+// ─── Panel persistence write surface ───
+// saveAgentSettingsFromPanel / saveShellSettingsFromPanel 迁 extension/settings-panel-write.mjs
+// （MODEL-MERGE-SESSION 拆分——config-io 500 行硬限头寸）——本文件顶部 hub re-export（import 面不变）
 
 // ─── Shell candidates (platform-aware, cached once per session — CLI /shell parity) ───
 
@@ -460,15 +396,7 @@ export function shellCandidates() {
 }
 
 /** Persist shell setting from the panel. value: string path/command, '' or null = system default.
- *  F5b 冲突提示同 setProviderKey。 */
-export function saveShellSettingsFromPanel(value) {
-  const v = typeof value === "string" ? value.trim() : ""
-  const r = persistRaw((raw) => {
-    if (!v) delete raw.shell
-    else raw.shell = v
-  })
-  return conflictError(r)
-}
+ *  F5b 冲突提示同 setProviderKey。 —— 已迁 settings-panel-write.mjs（hub re-export） */
 
 // ─── MCP servers (shared config.json mcp.servers[] — CLI parity) ───
 // 2026-09-06 500 行硬限拆分：MCP 段迁 config-mcp.mjs（config-presets/config-migrate 同款

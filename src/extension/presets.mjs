@@ -1,8 +1,9 @@
 /**
  * presets.mjs — provider access layer for the extension.
  * Single source of truth is the shared ~/.thincoder/config.json (CLI format:
- * providers[] + activeProvider, apiKey per provider with env-var fallback).
- * Preset table mirrors CLI PROVIDER_PRESETS — see src/config-io.mjs.
+ * providers[] with models[] candidates + top-level defaultModel composite — MODEL-
+ * MERGE-SESSION——会话模型 = 会话槽双字段，provider.model = 运行时解析值).
+ * Preset table mirrors CLI PROVIDER_PRESETS (models seeds) — see src/config-io.mjs.
  */
 
 export { PROVIDER_PRESETS as PRESETS } from "../config-io.mjs"
