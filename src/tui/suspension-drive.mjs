@@ -22,7 +22,7 @@ import { C } from "./ansi.mjs"
 import { getAsyncPool, parkAsyncPending } from "../agent-tools/async-settle.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 docs/design/INPUT-LOCK-ASYNC.md）：R15 排队
-// 用户指令合并（§24 D-24c——planQueuedInput/formatMergedMessages/MAX_MERGE_*）整批废弃
+// 用户指令合并（§24 D-24c——攒批计划/合并文案/上限常量）整批废弃
 // ——busy 提交吞 + pendingInput 单槽化（至多一条待交接——单消息逐发不攒批）。
 // 废弃记录见 AGENT-LOOP.md §11.3。
 

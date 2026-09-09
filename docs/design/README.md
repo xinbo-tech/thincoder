@@ -39,7 +39,7 @@
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径已由本档 D-V5 接管，前身 `VERIFY-DOCONLY.md` 并入后归档） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志 |
-| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md`、`SYNC-CANCEL.md`（sync ⏹ 中止——L52——2026-09-09 已交付——机制正文落 AGENT-LOOP §7.2）同板块独立保留 |
+| TUI | `TUI.md` | 权威源。`TUI-INPUT-BOX.md`、`TUI-TOOL-OUTPUT.md`、`SYNC-CANCEL.md`（sync ⏹ 中止——L52——2026-09-09 已交付——机制正文落 AGENT-LOOP §7.2）、`INPUT-LOCK-ASYNC.md`（主会话输入禁排队 C'——L51——2026-09-09 已交付——机制正文落 AGENT-LOOP §9/§11.3 + TUI.md §4/§8——双端实现）同板块独立保留 |
 | 记忆 | `MEMORY.md` | |
 | Provider | `PROVIDER.md` | |
 | Proxy | `PROXY.md` | |
@@ -65,6 +65,7 @@
 
 ## 变更记录
 
+- 2026-09-09：INPUT-LOCK-ASYNC 登记（主会话输入禁排队 C'——busy 提交吞/白名单直执行/单槽交接——CLI+VSC 双端实现——评审采纳版）——TUI 行注登记。
 - 2026-08-21：初版（文档归属纪律）。
 - 2026-08-24：新增「Agent 运行参数」「工具输出限制」。
 - 2026-08-25：新增「轮末蒸馏异步化」「工具移除」「覆盖率缺口修复」「CLI Lint 引入」「发布流程」；ROADMAP-0.9.0 归档标注。

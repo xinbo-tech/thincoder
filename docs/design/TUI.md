@@ -16,26 +16,27 @@
 ## 1. 模块地图（结构性快照）
 
 纪律（2026-08-30）：本表是**结构性快照**，随实现同步回写——交付新增/改名/删除文件时同批
-更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-07 实测，仅供量级参考（会漂）。
+更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-09 实测（INPUT-LOCK-ASYNC 批回写），
+仅供量级参考（会漂）。
 
 ### 核心管线（stdin → 状态 → 渲染 → 回合）
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `index.mjs` | 454 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（队列 + 安全白名单）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export） |
+| `index.mjs` | 448 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（busy 吞防御 + 白名单——INPUT-LOCK-ASYNC C'）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export） |
 | `tui-lifecycle.mjs` | 75 | TUI 生命周期终端序列（2026-08-31 自 index 拆出）：writeStartupSequence（alt buffer + 光标 + 鼠标/粘贴/键盘增强 + **DECRST 7 禁环绕**）、writeCleanupSequence（恢复 DECSET 7 等）、createExitCleanup（退出闭包）、setTuiActive |
 | `update-notice.mjs` | 77 | 后台升级提示（2026-09-03 D-S1c 自 index 拆出）：upgradeFailureText / pendingNoticeReady 纯函数（index re-export）+ createUpdateNotice（提示 picker + 启动检查装配） |
-| `key-handler.mjs` | 431 | 按键分发：permission/question/search/picker/wizard/interruptPrompt 模态入口 + 输入编辑；**挂起态输入**（AGENT-LOOP §9——Enter → pendingInput + 唤醒）；**Ctrl+C 分支**（picker 取消 / suspAbortArmed 状态路由前统一检查 / 挂起两级 / processing 首按停回合+3s 武装 / 空闲双确认）；convMaxScroll 导出（懒加载判别式） |
+| `key-handler.mjs` | 443 | 按键分发：模态入口（permission/question/search/picker/wizard/interruptPrompt）+ 输入编辑；**busy 门禁**（INPUT-LOCK C'——busy 提交吞 + 白名单直执行）；挂起空闲 Enter → pendingInput 单槽+唤醒（槽满吞）；Ctrl+C 分支（picker 取消/武装/挂起两级/首按停回合/空闲双确认）；convMaxScroll 导出 |
 | `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支，2026-08-30 拆出） |
 | `key-modes.mjs` | 216 | 按键模态层（2026-09-03 D-S4 自 key-handler 拆出）：permission / question / interruptPrompt 独占模态 handler——模态激活即消费全部按键（返回 true，未激活 false）；ctx 注入 state/agent/pushLine/render |
-| `agent-turn.mjs` | 325 | runAgentTurn（`{ autoTurn, skipSession }`）回合驱动器：状态复位 / runAgent 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（冻结决策、sweep、标题、落盘）/ 队列批处理；LOGGING turn 包装；挂起会话段迁 suspension-drive.mjs（函数级静态环互相 import——回合尾进入驱动器、驱动器内回合递归本文件） |
-| `suspension-drive.mjs` | 371 | 挂起会话驱动器（2026-09-05 module-split：agent-turn 535 > 500 硬限——poolCounts/suspensionSession/digestTurn/poolLive/sweepSettledToPending/waitForSettleOrWake/backgroundStatusText/freezeReclaimDigestedBlocks 等 verbatim 迁入，语义零变）——状态机行表见 AGENT-LOOP.md §9.2 |
+| `agent-turn.mjs` | 323 | runAgentTurn（`{ autoTurn, skipSession }`）回合驱动器：状态复位 / runAgent 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（冻结决策、sweep、标题、落盘）/ 交接消息单条续发（state.queue 残项单容器——INPUT-LOCK）；LOGGING turn 包装；挂起会话段迁 suspension-drive.mjs（函数级静态环互相 import——回合尾进入驱动器、驱动器内回合递归本文件） |
+| `suspension-drive.mjs` | 297 | 挂起会话驱动器（2026-09-05 split：agent-turn 535>500——driver 族 verbatim 迁入；2026-09-09 INPUT-LOCK：R15 攒批删+单槽消费+残余单消息化——净减）——状态机行表见 AGENT-LOOP.md §9.2 |
 | `tool-events.mjs` | 401 | 工具事件 → TUI 状态：buildToolCallbacks + flushStream、`_toolBlock` 载体生命周期（onToolCall 开 / onToolResult 定态 / onToolOutput 追加 + advisor 有序块）、onCompress*/onTaskUpdate/onTurnEnd 落盘；权限/批权限/问答按 ctx 条件接线（auto-turn null → denied）；finishSubTaskKey；slimToolResultForDisplay |
 | `tool-display.mjs` | 143 | 工具块显示/计时/清扫 helper 族（2026-09-05 module-split：tool-events 537 > 500——_toolTicks/_subActions 计时表、sweepToolBlocks、settle/slim/async 探测/find 等 verbatim 迁入；模块级可变对象导出 + re-export sweepToolBlocks 保 agent-turn 消费面） |
 | `subagent-blocks.mjs` | 457 | 子 agent 区块数据层：SUB_EVENT_RE 路由（settled/stopped/queued/cancelled + ⟦ev⟧async 置位与 _pendingAsyncKeys 兜底）、finishSubTask/Key、trimSubTree（N2 树级环）、SUB_RELAY_THROTTLE_MS=250、SUBAGENT_ROLES、parseRelayPath（R23）；冻结族迁 subagent-freeze.mjs |
 | `subagent-freeze.mjs` | 173 | 子 agent 完成/冻结族（2026-09-05 split：subagent-blocks 625 > 500）：freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks + syncPanelSnapshot（§19.6 D-P1 面板镜像——刷 agent._panelSnapshot 供 action:"panel" 读）——verbatim 迁入 + re-export |
 | `subagent-children.mjs` | 177 | 嵌套子代理子块载体数据层（R23 嵌套子代理子块方案）：ensureSubChild/descendSubChild/appendSubChild（任意 inner 深度）、树级 trim（trimSubTree 后序丢行——子块输出先丢、外层叙述保留）、closeSubChild、closeOpenSubChildren（外层冻结定格 stopped）、SUB_BLOCK_LINE_LIMIT/appendSubBlock 迁移至此（re-export 保 import 面） |
-| `render-frame.mjs` | 382 | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板（行由 layout 预计算直接 put）；renderHeader（logo+版本+模型+think 徽章+cwd）；question 自由文本态光标例外（TUI-INPUT-BOX.md §7.2——hasOverlay 细化：options/permission/picker/wizard-provider 态无光标，自由文本态保留反显 + 硬件定位） |
+| `render-frame.mjs` | 376 | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板（行由 layout 预计算直接 put）；renderHeader（logo+版本+模型+think 徽章+cwd）；状态栏 busy 文案（INPUT-LOCK——主会话处理中——queue 提示已撤）；question 自由文本态光标例外（TUI-INPUT-BOX.md §7.2） |
 | `render-conversation.mjs` | 425 | 对话面板行构建（纯函数）：三层缓存（convCacheKey 全量 / 行级 wrapRowsCached / 段级 _lineSegCache——2026-09-03 D-S2 后只管普通源行段，tool/frozenSub/frozenAdvisor 三段随实现迁 render-segments.mjs 各带独立 WeakMap）；搜索高亮、折叠装配（六处折叠点）、主输出前后空行、连续 dim 折叠；convViewport 视口数学单源导出 |
 | `render-segments.mjs` | 183 | 对话行三类特殊段渲染（2026-09-03 D-S2 自 render-conversation 拆出）：tool 块 / frozenSubTask / frozenAdvisor——段渲染 + sig 分支 + 独立 WeakMap 段缓存三段合一（toolSeg/frozenSubSeg/frozenAdvSeg）；buildConvLines 主循环只留 ~3 行分支调用；R23 冻结载体尾部挂 renderSubChildSections |
 | `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30）：foldCapRows（60%）、isExpanded/toggleFoldBlock、renderFoldedHead、renderExpandedBlock（窗口 + 底部收起）、renderBlockTimeline、foldTailLines、scrollFoldBlock、renderMathAndMarkdown——消费方：长消息/连续 dim/子 agent/advisor/工具块 |
@@ -43,7 +44,7 @@
 | `tool-args.mjs` | 80 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
 | `render.mjs` | 253 | 纯函数：字符宽度（CJK/emoji/组合字符）、wrap、slice、markdown 表格对齐、sanitize |
 | `render-loop.mjs` | 129 | 渲染调度：整帧 recompute + 行 diff（只重绘变化行）+ 光标定位，防闪烁；MIN_RENDER_INTERVAL_MS 16ms 节流；每帧 write 包 wrapOff/wrapOn（Ambiguous 防线②）——1s ticker 在 agent-turn.mjs（含 subRunning() 驱动面板 elapsed 走秒） |
-| `layout.mjs` | 229 | 面板布局计算（行/列分配；运行中区块 → panels.subagent 槽 + subagentLines 预计算）；小终端压缩链（subagent 面板最先让位 → conversation → picker → permission → todo 分隔线）；question 自由文本态 boxLines = layoutAnswer（layoutInput 同实现 + MAX_INPUT_LINES cap + offset 滚动） |
+| `layout.mjs` | 226 | 面板布局计算（行/列分配；运行中区块 → panels.subagent 槽 + subagentLines 预计算）；小终端压缩链（subagent 面板最先让位 → conversation → picker → permission → todo 分隔线）；question 自由文本态 boxLines = layoutAnswer（layoutInput 同实现 + MAX_INPUT_LINES cap + offset 滚动）；queue 面板槽已撤（INPUT-LOCK F-7） |
 | `dims.mjs` | 47 | 终端尺寸单源：get() 读缓存；refresh() 只在事件钩子（启动 seed/resize），sane-gate（cols≥40/rows≥10）挡 falsy（headless/无 TTY），任何 sane 采样（含缩小）立即提交；2026-08-31 简化——ConPTY stale 假说防御（双确认/trusted settle/看门狗）整体移除：误诊根因是 fold-block 组件漏传 cols=80，且双确认反而卡死真实拖拽缩小 |
 
 ### 渲染内容层
@@ -165,10 +166,13 @@ permission（y/n/a/esc；batch a/o/n；continue y/n）
 ```
 
 模态分支（key-modes.mjs）：permission/question/interruptPrompt 激活时**消费全部按键**（含未匹
-配键——不落入下层编辑路径）；搜索模态另居 key-handler-search.mjs。挂起态（AGENT-LOOP §9）Enter（非 slash）
-→ pendingInput 队列 + 唤醒（`_suspWake`，不打断后台——输入框零干扰 F3）；释放窗口
-（`_suspPending`）期间同语义。F1 帮助与 `/` 补全提示（status bar live hints）由 slash-commands
-提供。
+配键——不落入下层编辑路径）；搜索模态另居 key-handler-search.mjs。**busy 门禁**（INPUT-LOCK-ASYNC
+C'——2026-09-09——processing 含 digest 单一判据）：打字照常进输入框（吞提交不吞字符——评审
+#2 (i)），非白名单 Enter 提交吞 + busy 提示（"主会话处理中"——状态栏/提示行）；斜杠白名单
+（/exit /help /model…）检查先于吞判——键入即直执行；Ctrl+D 与排队面板随机制废弃删除。**挂起
+空闲**（AGENT-LOOP §9——busy 之外）Enter（非 slash）→ pendingInput **单槽**（至多一条待交接——
+槽满吞 + 提示）+ 唤醒（`_suspWake`，不打断后台——输入框零干扰 F3）；释放窗口（`_suspPending`）
+期间同语义。F1 帮助与 `/` 补全提示（status bar live hints）由 slash-commands 提供。
 
 ### Ctrl+C 分支（IK61BI + 挂起态 + processing 武装化——三态武装一致）
 
@@ -219,7 +223,7 @@ header（logo/版本/模型/think 徽章/cwd）
 子 agent 面板（运行中/排队 waiting 区块，会话与 todo 之间——AGENT-LOOP §10/§10.3：running ∪ queued 非空即渲染）
 todo 面板（task 列表，≤5 行，全部 done 自动收起）
 输入框（layoutInput：多行展开、光标定位、粘贴快捷键提示角标）
-状态栏（模式/耗时/token/上下文利用率/队列/快捷键提示）
+状态栏（模式/耗时/token/上下文利用率/busy 提示（INPUT-LOCK——主会话处理中）/快捷键提示）
 ```
 
 布局分配见 `layout.mjs computeLayout`：面板高度随内容伸缩；**运行中子 agent 活动为固定底部
@@ -511,16 +515,16 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
    suspended 未置位，无守卫会并发开第二个 runAgentTurn——双驱动器竞态）；sweepToolBlocks（未 done
    工具载体标 interrupted + 清计时）；ensureSessionTitle（首条真实 user 消息自动生成标题）→
    distill flush 有界等待（DISTILL_FLUSH_TIMEOUT_MS 5000，退出路径不挂死）→ saveSession 增量落盘。
-6. 队列：processing 期间输入的消息进 `state.queue`，回合结束自动处理——**攒批合并**（连续文本
-   合并一回合；斜杠命令逐条保序即时执行；单条超长直发；边界幂等不丢）；释放窗口期入 pendingInput
-   的消息在池已空时转回队列。
+6. 交接消息单条续发（INPUT-LOCK-ASYNC C'——2026-09-09）：busy 提交吞 + R15 攒批删——`state.queue`
+   缩为**残项单容器**（释放窗口兜底 `_suspPending` 池空转正 / 挂起中止残余——各至多一条——零丢失）
+   ——回合尾单条直发（slash 直接执行——保序）；释放窗口期入 pendingInput 的消息在池已空时转回队列。
 7. **挂起会话**（suspension-drive.mjs `suspensionSession`——状态机行表以 AGENT-LOOP.md §9.2
    为权威，本文件不复制）：队列清空后池仍 live 且非 skipSession 且未 `_suspAborted` → 进入
-   挂起态——输入放开（Enter 走 pendingInput，§4）、settle 事件驱动 auto-turn 消化轮（digestTurn →
-   runAgentTurn("", { autoTurn: true })）、状态行"后台 N 子代理运行中 · M 待消化"、池空 + 无待处理
-   输入 → 补发 done 冻结自然退出；彻底中止（Ctrl+C 统一全停）后会话退出**复位 `_suspAborted`**
-   （防粘滞——不清则中止后池再 live 永不重新进入挂起态）并把残余 pendingInput 转回 state.queue
-   （不静默丢）。
+   挂起态——**busy（processing 含 digest）提交吞；挂起空闲输入开放**（Enter 走 pendingInput 单槽，
+   §4）、settle 事件驱动 auto-turn 消化轮（digestTurn → runAgentTurn("", { autoTurn: true })）、状态行
+   "后台 N 子代理运行中 · M 待消化"、池空 + 无待处理输入 → 补发 done 冻结自然退出；彻底中止（Ctrl+C
+   统一全停）后会话退出**复位 `_suspAborted`**（防粘滞——不清则中止后池再 live 永不重新进入挂起态）
+   并把残余 pendingInput 单消息转回 state.queue（不静默丢）。
 
 ## 9. 交互层与命令层
 
@@ -626,6 +630,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 | 2026-08-31 | TUI 性能分析——懒加载卡顿根治后无热点；实测（3247 条存档/120×40）：冷启动 buildConvLines 100.8ms（启动一次性可接受）、流式帧 1.6ms/均 0.6ms、renderRows 全帧 2.2ms、loadOlder 后 rebuild 5-8ms 平坦；剩余空间（冷启动/convCacheKey/diff）均"不值得做" | 结论有效；**监控建议**：真机手感是唯一判据——若再报卡顿先测 buildConvLines rebuild 时间（段缓存命中应 5-8ms；>20ms = 缓存失效或新热点） |
 | 2026-09-03/04 | 配置界面 picker 化 + question 光标——全 CLI 仅一处"固定枚举手输"违约（Add Provider Custom 的 API format）改 picker 枚举（D-C1）；wizard Custom 同步加 format 步（D-C2，endpoint 后 key 前）；question 自由文本态光标（TUI-INPUT-BOX.md §7 权威——本文件不复制） | 已实现（pickers/wizard——见 §9） |
 | 2026-09-03 | 行数债拆分批（index/render-conversation/key-handler→key-modes/tool-events/subagent-blocks/agent-turn/cmd-mcp）——re-export 保导出面，模块地图同批回写 | 已实现（§1 地图呈现现状；2026-09-05 续拆 suspension-drive/subagent-freeze/tool-display/tui-lifecycle/cmd-mcp-form） |
+| 2026-09-09 | 主会话输入禁排队（INPUT-LOCK-ASYNC C'——专题 INPUT-LOCK-ASYNC.md——机制正文落 AGENT-LOOP §9/§11.3）：busy（processing 含 digest）提交吞 + 白名单直执行——queue 面板/提示/Ctrl+D/攒批全撤——pendingInput 单槽 + 交接残项单容器（模块地图行数同批回写——净减 60 行） | 已实现（§4 门禁 + §8 交接续发；测试 test/input-lock.test.mjs） |
 
 > **未决/待办承接（来自 2026-09-03 picker 化评审旁支——开放项不折叠）**：① picker item.note 渲染丢弃
 > （pickers.mjs 只消费 header.note——buildProviderEntries 的 baseURL/无 key 提示与 cmd-advisor
@@ -635,6 +640,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 
 ## 变更记录
 
+- 2026-09-09：INPUT-LOCK-ASYNC 批（C'——busy 提交吞/白名单/单槽化/queue UI 撤）——§4 门禁、§8 交接续发、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-07：格式债批 A——本文件由逐批变更档案重写为人类可读当前态（DOC-REWRITE.md +
   DOC-REWRITE-LARGE.md §4）。按机制主题重组；历史流水折叠入 §11 专题完成史与本文档底部；模块地图
   按现文件结构回写（2026-09-05 拆分文件 suspension-drive/subagent-freeze/tool-display/

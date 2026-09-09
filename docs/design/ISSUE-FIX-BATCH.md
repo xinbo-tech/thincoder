@@ -21,10 +21,12 @@
 
 ### 1. Issue 1（F-1——CLI run.mjs 小改）
 - `src/advisor/run.mjs:330`：`const provider = findProvider(agent.providers ?? [agent.provider],
-  cfg.provider)` → `findProvider(agent.providers ?? agent.config?.providersList ??
-  [agent.provider], cfg.provider)`——child config 带完整 providersList（subagent-spawn childConfig = 父
-  config 拷贝）——findProvider 有全量可查——不再退化单元素
-- 或备选：buildSpawnChild 补 `child.providers = parent.providers`（与 make-agent 对齐）——二选一（主推前者——最小面）
+  cfg.provider)` → `findProvider(agent.providers?.length ? agent.providers :
+  agent.config?.providersList ?? [agent.provider], cfg.provider)`——child config 带完整 providersList
+  （subagent-spawn childConfig = 父 config 拷贝）——findProvider 有全量可查——不再退化单元素——
+  空数组守卫（评审：`??` 遇 [] 不落链——length 判断防空数组静默不生效）
+- 备选已拒（评审记录）：buildSpawnChild 补 `child.providers = parent.providers`——弃因：动 spawn 装配面
+  （buildSpawnChild 所有 child 型共享）——run.mjs 候选源最小面即达目的
 - VSC 无此 bug（provider.mjs 读磁盘全量）——不须改——只对齐语义验证
 - 修复消 Issue 2 主放大器（child 交付评审不再 403 → 不阻塞 → 不重来循环）
 
@@ -42,11 +44,13 @@
 
 | 文件 | 端 | 现行数 | 预计净变 | 改动 | 排期 |
 |---|---|---|---|---|---|
-| src/advisor/run.mjs | CLI | ~500 区（评审后） | ≤+2 | F-1 候选源扩 providersList | 本批（独立域） |
+| src/advisor/run.mjs | CLI | ~500 区（评审后） | ≤+2 | F-1 候选源扩 providersList（评审：逼近 500 档——
+  ≤+2 不跨线——结构债随评审批跟踪） | 本批（独立域） |
 | src/config.mjs | CLI | 433（模型合并后 ~473） | ≤+15 | F-4 consultModels 软失败化 | **模型合并后**（同域串行） |
 | src/tui/pickers.mjs | CLI | 500（模型合并拆后 ≤450） | ≤+10 | F-4 removeProvider 级联清理 | **模型合并后** |
 | src/config-io.mjs | VSC | 497（模型合并拆后 ≤460） | ≤+5 | F-4 对等软失败/清理 | **模型合并后** |
-| src/extension/presets.mjs + settings.mjs | VSC | 84/309 | ≤+5 | F-4 对等 | **模型合并后** |
+| src/extension/presets.mjs + settings.mjs | VSC | 84/309 | ≤+5 | F-4 对等（评审：presets 写 models 种子不加
+  consultModels 悬挂条目——settings providerStatus 显 consultModels 软失败过滤态） | **模型合并后** |
 | 测试（F-1/F-4） | 双端 | 新 | 新 ≤100 | run.mjs child provider / consultModels 软失败 / 级联清理 | 分批随实现 |
 
 ## 用例表
@@ -62,7 +66,8 @@
 ## 验收
 
 - AC-1 F-1 修（child 内 advisor 评审 provider 正确——无 403——父侧不回归）
-- AC-2 F-2 主循环拆（403 失败环消——交付评审不再每次失败阻塞）
+- AC-2 F-2 主循环拆（403 失败环消——交付评审不再每次失败阻塞——评审：验证 = F-1 child 用例 + 既有
+  交付评审测试——非独立用例）
 - AC-3 F-4 consultModels 软失败（启动不崩——过滤 + 警告 + 引导清）
 - AC-4 F-4 级联清理（删渠道清悬挂引用）
 - AC-5 双端锁步（config 校验两端同规则）

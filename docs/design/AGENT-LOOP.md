@@ -446,7 +446,11 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 ## 9. 挂起回合：会话级后台双通道 + digest
 
-> 权威：CLI `src/tui/agent-turn.mjs`（runAgentTurn + suspensionSession 驱动）+ VS Code 面板循环同构。**机制核心**：async 子代理运行中主会话**回合尾不阻塞**——进入挂起态（输入可用、状态行"后台 N 子代理运行中"）；子代理完成 → 自动消化（digest auto-turn）；用户输入随时开新回合与之并行。
+> 权威：CLI `src/tui/agent-turn.mjs`（runAgentTurn + suspensionSession 驱动）+ VS Code 面板
+> 循环同构。**机制核心**：async 子代理运行中主会话**回合尾不阻塞**——进入挂起态（挂起空闲
+> 输入可用、状态行"后台 N 子代理运行中"）；子代理完成 → 自动消化（digest auto-turn）。
+> **主会话 busy（processing 含 digest）输入禁用**——排队机制整批废弃（INPUT-LOCK-ASYNC——
+> 专题记录 `INPUT-LOCK-ASYNC.md`——2026-09-09：R15 攒批删 + pendingInput 单槽化——§9.2 行表/§11.3）。
 
 **问题源**：async 子代理运行期间主会话回合尾阻塞等待全部完成（等待期用户无法输入）。用户方案：回合尾语义从"等全部"改为"收已完成 + 移交未完成"——挂起态是**交互层状态**（runAgent 保持"单输入 → 输出"不变式——挂起循环落在调用方 turn 循环）。
 
@@ -461,8 +465,9 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 | idle | 回合返回且池非空 | 置 `_suspended` → 挂起态 | → suspension |
 | idle | 回合返回且池空 | 正常回 idle | 不变 |
 | suspension | 池项 settle 且无 pendingInput | settle 入 `_pendingAsyncResults` → 开 auto-turn | auto-turn 期间仍挂起 |
-| suspension | 用户 Enter（无 digest 在跑） | 普通新回合（prepareRun 注入 pending） | 回合末池空 → idle；非空 → 回 suspension |
-| suspension | 用户 Enter（digest 在跑） | 入 `pendingInput` 单槽队列 | auto-turn 结束后自动开新回合 |
+| suspension | 用户 Enter（无 digest 在跑——挂起空闲） | 新回合输入入 `pendingInput` 单槽（至多一条——F-6）+ 唤醒 | 回合末池空 → idle；非空 → 回 suspension |
+| suspension | 用户 Enter（digest 在跑 = busy） | **提交吞**——非白名单 Enter 不发送 + busy 提示（INPUT-LOCK-ASYNC F-3——旧"入 pendingInput 队列"已废——busy 禁排队） | auto-turn 结束后回挂起（文本保留可重发） |
+| suspension | 释放窗口/槽满 Enter | 单槽交接（偏差 #1 守卫）——槽满吞 + 提示 | 不变 |
 | auto-turn | 池项 settle（消化中） | settle 入 pending（不并发开新轮——单 runAgent 循环） | 轮末按 pending/池态续开或退出 |
 | auto-turn | 结束且池空 + 无 pendingInput | 补发 done 冻结 + 清 `_suspended` | → idle（挂起自然退出） |
 | auto-turn | 结束且 pending 非空 + 无 pendingInput | 立即续开合并消化轮（一次注入全部 pending） | → 新 auto-turn |
@@ -473,7 +478,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 ### 9.3 digest auto-turn（动作域两档）
 
-- **触发**：挂起态池项 settle 且无 pendingInput → 交互层开 auto-turn（注入由 auto-turn 的 prepareRun 统一完成——单注入点）；多子代理近邻完成 → 一轮消化全部。
+- **触发**：挂起态池项 settle 且无待处理用户消息（pendingInput 单槽空）→ 交互层开 auto-turn（注入由 auto-turn 的 prepareRun 统一完成——单注入点）；多子代理近邻完成 → 一轮消化全部。
 - **消化动作域（两档）**：
   - **手动档**（无 AUTO——只做"信息整理"）：允许——总结报告要点注入会话流、更新任务清单、标记需决策点 + 写下建议（只写不执行）；禁止——写文件/改代码、执行类工具（bash/execute/verify）、spawn 一切子代理（async + 同步——**机械拒绝**，subagent 入口检查 `_inAutoTurn && !autoApprove`）。
   - **AUTO 档**（autoApprove 开——与用户回合一致全语义推进型）：读/写/spawn/verify/执行全开放（用户授权无人值守）；禁 spawn 机械限制撤销（推进链成立——链终止 = 池空自然停 + 用户输入随时打断）；guard = 普通回合同款。
@@ -492,9 +497,9 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 - **processing/挂起态 Ctrl+C 首按** → `abort({ interrupt: true })` 无 message（停当前回合——不清池——后台保留——提示"再按中止全部后台"）+ 武装 3s；**3s 内二按** → 全停（平 abort → 清池 + 标记 + 唤醒）。
 - 挂起态①（digest/会话内回合首按）同改 interrupt 语义（不清池——会话续活）。`/abort` 命令实体不存在——全停 = 二按语义。
 - **二按统一全停块**：武装检查提升到状态路由之前（两次按下之间状态会迁移）；二按 = 当前回合平 abort（清池）+ abort 集合全部 controller；仅挂起态置 `_suspAborted` + 唤醒（非挂起语境置位会粘滞阻塞未来会话重入）。
-- **清理**：中止后复位 `state._suspAborted`（可重新进入挂起态）；残余 pendingInput 转回 `state.queue`（不静默丢）；回合启动解除 `exitArmed` 残留（空闲退出双确认不跨回合）。
+- **清理**：中止后复位 `state._suspAborted`（可重新进入挂起态）；残余 pendingInput 单槽消息转回 `state.queue`（单条——不静默丢）；回合启动解除 `exitArmed` 残留（空闲退出双确认不跨回合）。
 
-**变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；2026-09-06 pendingInput 排队用户指令合并（§11.3）。
+**变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；2026-09-06 pendingInput 排队用户指令合并（§11.3）；2026-09-09 INPUT-LOCK-ASYNC（C'——busy 含 digest 输入禁用——提交吞 + 白名单直执行——R15 攒批/queue 排队废弃——pendingInput 单槽——§11.3 全文废弃记录——专题 INPUT-LOCK-ASYNC.md）。
 
 ## 10. 子代理任务调度器（files/dependsOn）
 
@@ -527,9 +532,9 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 **变更记录**：2026-09-03 任务调度器（§10 + prompts 调度器条款）；2026-09-04 目录声明拒绝（§10.1）+ 环形死锁修正（§10.2）+ 停滞检测；2026-09-07 files 父侧文件拦截（R26，§10.4）。
 
 
-## 11. 回合外事件后台化统一模型（分域池 + async advisor + 排队合并）
+## 11. 回合外事件后台化统一模型（分域池 + async advisor）
 
-> R13（advisor async）+ R14（角色分池 + 可配置）+ R15（排队用户指令合并）合批。**统一模型**：既有 async 池机制（pending 移交/run 首行注入/消化轮/冻结回收）角色无关——advisor/escalate/consult 复用同一套 pending/digest/注入/冻结消费机制。
+> R13（advisor async）+ R14（角色分池 + 可配置）合批（R15 排队用户指令合并已随 INPUT-LOCK-ASYNC 废弃——见 §11.3 废弃记录——2026-09-09）。**统一模型**：既有 async 池机制（pending 移交/run 首行注入/消化轮/冻结回收）角色无关——advisor/escalate/consult 复用同一套 pending/digest/注入/冻结消费机制。
 
 ### 11.1 角色分池 + 可配置（R14）
 
@@ -550,11 +555,23 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 - **消化处置轮**：报告注入 → 模型消化（呈递发现 + 修复建议——不擅自动手——手动档 digest 禁写域自洽）→ 用户逐项拍板 → 修正轮在 agent 回合内发起 round2（async 再启——round/prior 从 `_advisorRuns` 取）。
 - **凭证机制（designId/token）**：设计锚/同步/回显/登记/消费/校验——权威见 ENGINEERING-MODE.md §2.6（2026-09-07 凭证机制完整设计；sync 语义同 scope 复审沿用同 id；VS round2+ 注入段对齐 CLI）。
 
-### 11.3 排队用户指令合并（R15）
+### 11.3 排队用户指令合并（R15）——废弃记录（2026-09-09 INPUT-LOCK-ASYNC）
 
-pendingInput 消费改**攒批合并**：回合空闲时 pendingInput ≥2 → 合成一条注入（编号列出逐条，一次处理）。**边界**：单批 ≤8 条且合并注入 ≤2000 字符（`MAX_MERGE_ITEMS = 8`/`MAX_MERGE_CHARS = 2000`）；超限 → 截批先行（前 8 条合并，余下留待下批）；单条 >2000 字符不进批逐条直发；**/cmd 类不进合并缓冲**（逐条保序即时）；到达时间窗 = 空闲即合（不设延迟）。与挂起消化共存（子代理报告合并与用户指令合并共用消费点不互扰）。
+**机制**（2026-09-06——已实现后废弃）：pendingInput 消费改**攒批合并**：回合空闲时 pendingInput ≥2 → 合成一条注入（编号列出逐条，一次处理）。**边界**：单批 ≤8 条且合并注入 ≤2000 字符（常量双端同名）；超限 → 截批先行；单条 >2000 字符不进批逐条直发；**/cmd 类不进合并缓冲**（逐条保序即时）。
 
-**变更记录**：2026-09-06 三合一合批（§11——分域池 + async advisor + 排队合并）大合验双端全绿；会诊/飞刀完全异步化（R17）→ §14；2026-09-07 凭证机制完整设计（ENGINEERING-MODE 同步）；2026-09-09 并发池统一可配置（POOL-CONFIG-UNIFIED——三键 4/4/4 + advisor 读取器 + 同 scope 守卫 + 文案去数字化——§11.1/§11.2 更新）。
+**废弃原因与去向**（INPUT-LOCK-ASYNC——用户裁 C'——2026-09-09）：主会话 busy（processing 含
+ digest）输入禁用——**排队从源头根除**（digest 后置意图污染）——pendingInput 收敛单槽（至多
+ 一条待交接——挂起空闲 Enter 填槽 + 唤醒——driver 消费清槽单消息逐发）；`state.queue` 缩为残项
+ 单容器（释放窗口兜底/中止残余——零丢失保留）。双端删除面：CLI 攒批纯函数族 + 渲染 queue 面板/
+ 提示/Ctrl+D/"❯ You: (from queue)" 标签 + 提交排队分支；VSC 消费取数/合并文案/上限常量 + 路由
+ 入队 + 排队回执 UI 消息。双端单槽交接与中止残余兜底均有测试锁（CLI `test/input-lock.test.mjs`；
+ VSC chat-panel/webview-turnstate 测试族更新）。
+
+**变更记录**：2026-09-06 三合一合批（§11——分域池 + async advisor + 排队合并）大合验双端全绿；
+  会诊/飞刀完全异步化（R17）→ §14；2026-09-07 凭证机制完整设计（ENGINEERING-MODE 同步）；
+  2026-09-09 并发池统一可配置（POOL-CONFIG-UNIFIED——三键 4/4/4 + advisor 读取器 + 同 scope
+  守卫 + 文案去数字化——§11.1/§11.2 更新）；2026-09-09 R15 整批废弃（INPUT-LOCK-ASYNC——busy
+ 禁排队——§11.3 改废弃记录——CLI/VSC 双端实现）。
 
 ## 12. 评审收敛 + 铁律 + 文档纪律
 
