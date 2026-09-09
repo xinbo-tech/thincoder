@@ -18,7 +18,8 @@
 - [x] ~~**MCP readMcpSection servers 非数组静默当空**~~——**2026-09-08 批 1 2.3 已修**（config.mjs:347-348 ok:false）
 - [x] ~~**C 方案：read 读回 offload 文件防炸**~~——**2026-09-09 核销**（DUAL-END-TRUNCATION——b4c65b0/619f7d0——read 头尾——L2 CLI 157/VSC 214——consume 9ef31e7f）
 - [x] ~~**advisor 截断方向另议**~~——**2026-09-09 核销**（DUAL-END-TRUNCATION——用户裁 B 双端——advisor 头尾双保——truncate.mjs——consume 9ef31e7f）
-- [x] ~~**VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改交付：VSC `setup-reminders.mjs` collectGitContext/pushGitContext → async + CLI `helpers.mjs` collectGitContext → async——3×execFile 并行 Promise.all + all-or-nothing + 失败冷却 30s（评审 #3 冷却单测必做已锁）——设计档 VSC 仓 `docs/design/GIT-ASYNC.md`）
+- [x] ~~**VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改交付：VSC `setup-reminders.mjs` collectGitContext/pushGitContext → async + CLI `helpers.mjs` collectGitContext → async——
+  3×execFile 并行 Promise.all + all-or-nothing + 失败冷却 30s（评审 #3 冷却单测必做已锁）——设计档 VSC 仓 `docs/design/GIT-ASYNC.md`）
 - [x] ~~**files 尾随空格目录声明检测**~~——**2026-09-08 批 1 2.7 已修双端**（CLI scheduler:43 + VSC scheduler:104 trimEnd——VSC 以 CLI 为单一测试锚）
 - [x] ~~**R19 read_history 发现面无 top-N cap**~~——**2026-09-08 用户裁不要**（每 cwd 目录槽数有上界——listSlots 时间序有限——无打爆风险——维持现状）
 - [x] ~~**R19 护栏语义缺口**~~——**2026-09-09 核销**（核实：裁定指标已作第二道落地——批 7 双端 READ_HISTORY_MAX_MESSAGES=50_000 消息数门（parse 后长度）+ 200K 物理行主门保留——两门组合最优——不 parse 拿不到消息数故主门不能改消息数——代码无需再动——仅簿记）像同值）
@@ -92,7 +93,7 @@
   + VSC 619f7d0 内含——三池 4/4/4 + advisor 读取器 + 同 scope 守卫 + 文案活引用——L2 CLI 157/VSC 214
   ——consume d1324e26——commit 归属混合待清理（父侧链闭合后 rebase）——CLI advisor-async 498 新最热点
   （下批先拆）——§24 全仓清理观察项补挂见下）
-- [ ] **模型模型合并 + 会话级隔离（2026-09-09 维护者裁定——Nancywb 问题报告反方向——反 §14）**：
+- [x] ~~**模型模型合并 + 会话级隔离（2026-09-09 维护者裁定——Nancywb 问题报告反方向——反 §14）**~~——**2026-09-09 已交付**（MODEL-MERGE-SESSION——CLI 46b6ecb/3ff4acf/decdf88 + VSC a4b2c0f/a3708b6/2f2d1d2/97612f5——clean——L2 待链稳定）：
   合并模型概念——activeProvider 与 activeModel 不再是分开参数——模型 = 显式复合值 "provider:model"——
   schema：providers[].models（候选名单——选择器硬约束只能选候选内——不匹配拒——裁硬约束）——
   无渠道默认捆绑（裁 1：providers[].model 单数默认不留）——config 顶层 defaultModel: "provider:model"
@@ -104,7 +105,7 @@
   defaultModel（渠道都可用——不用的渠道删掉——裁 2——无"激活"概念）④ 恢复 = 槽值——已存在会话永
   不被 config 动 ⑤ providers[].models 候选维护 = 编辑 config（或渠道配置面）——owning board = SESSION
    ⑥ 初始值裁定 A：defaultModel 未设 → 新建会话显式提示先设（/config 默认模型入口——无自动兜底）——status=澄清完成（语义全封口）待设计启动——设计权在用户
-- [ ] **主会话输入禁排队（2026-09-09 用户反馈演进——digest 意图污染 → C' 方案终稿）**：
+- [x] ~~**主会话输入禁排队（2026-09-09 用户反馈演进——digest 意图污染 → C' 方案终稿）**~~——**2026-09-09 已交付**（INPUT-LOCK-ASYNC——CLI e79aa5b/4811832 + VSC 71a175c/0f5bab8——clean——L2 待链稳定）：
   场景：主会话 busy 时用户输入排队 → digest/普通回合消化输出后置恢复 → 指令粘后台消化输出之后 → 模型
   误判意图——演进：初裁 B 隔离标记（digest 不打断）→ **最终 C'：去掉输入排队本身**——主会话 busy
   （普通回合 processing + digest）→ **输入禁用**（无排输入——错位从源头根除）——主会话空闲（含纯后台池
@@ -134,7 +135,7 @@
   （removeProvider 不清悬挂引用）——模型合并 defaultModel 软失败 D-S1 范式可对齐——小改软失败化）——
   owning board = 评审机制 + provider 校验——status=登记待设计（三一起走全链——用户裁）——设计权在用户
 
-- [ ] **异步化残留修复批（2026-09-09 全异步化适配评估产出——残留清单分级）**：
+- [x] ~~**异步化残留修复批（2026-09-09 全异步化适配评估产出——残留清单分级）**~~——**2026-09-09 已交付**（ASYNC-RESIDUE-FIX——clean——F-1~6 全落地——L2 待链稳定）：
   🔴 main.md:8 双端（"sync only when next step depends"——§7.7 前例外——与 :13 自相矛盾——改"结束回合等
   digest/dependsOn"）+ engineering.md:16 CLI step 4 缺 async 机制段（VSC 有——CLI 漂移）🟡 engineering.
   md:16 VSC 新旧句自相矛盾（删旧 token 句 + wait 句澄清）+ advisor.mjs:55 CLI async 参数缺机制参数限定
@@ -170,7 +171,7 @@
   （2026-09-09）：不应全量传上下文——会爆炸——digest 装配应限量/摘要化（非全量历史注入——摘要/窗口/
   裁剪——防 >1MB 请求体）**——status=登记待设计（digest 上下文限量装配——摘要化方案）——设计权在用户
 
-- [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
+- [x] ~~**主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**~~——**2026-09-09 已交付**（MAIN-DESIGN-ENHANCE——CLI fe6d62d + VSC c14cbbe——clean——L2 待链稳定）：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
   对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）
   ——**载体确认（用户 2026-09-09）**：行为纪律（执行性——自检/选型/勘察流程）写入 **engineering.md 提示词**
