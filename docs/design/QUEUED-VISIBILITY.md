@@ -13,7 +13,8 @@
   - F-1 现状确认基线（非改动）：VSC queued 等待块头显示已在（SESSION-ACTIVITY-REVISED 交付）——CLI 排队显示已在（subagent-panel §20 D-SD3b）——验收含不回归
   - F-2（可取消——用户新裁覆盖 SESSION-ACTIVITY-REVISED F-6 "接受无取消路径"旧裁定）queued/waiting 等待块头挂 **取消 ⏹**（双端——VSC activity-view ⏹ 门控扩 queued + CLI subagent-panel ⏹ 门控扩 queued）——点击 = 出队 + 墓碑 + 位置前移（引擎/工具层 cancelSubagent queued 路径已存在——纯 UI 暴露 + 路由接线）
   - F-3 VSC Reload 冷启快照重推（真缺口）：webview reload 后 queued/running 子代理块重建——extension 侧补队列快照推送（getState 或 reload 后事件重推——复用 refreshQueuedRows 载荷）
-  - F-4 i18n：waiting 状态词 + "· position N" 段走 i18n（en/zh——对齐 queued 词现有模式）
+  - F-4 i18n：waiting 状态词 + "· position N" 段 + **queued-取消 ⏹ 标签键**（评审 #2 扩——en "cancel queue"/
+  zh "取消排队"——对齐 sub.stopBtn 模式——逐字定稿）
   - **范围边界**：consult 无排队语义不涉及；advisor 池独立（cancelAdvisorReview 已存在——不扩）；冻结/settled 块不涉及；CLI 数据通道零改（渲染循环从池重读已覆盖）。
 
 ## 设计（双端差集增量——照做勿自行解释）
@@ -25,7 +26,10 @@
 - 测试：双端活动区测试——queued 块挂 ⏹ → 点击 → 出队 + 墓碑 + 位置前移 + 块移除（VSC activity-flow 测试族 + CLI subagent 测试族）
 
 ### 2. F-3 Reload 冷启快照重推（VSC）
-- extension reload 握手补队列快照：panel-messages getState/reload 响应带 queued/running 子代理清单（池 _asyncSubagents/_asyncAdvisors 的 running+queued 条目——字段 id/role/status/position/waiting/reason——复用 describeBlockers/refreshQueuedRows 载荷形状）——webview 冷启重建等待块头 + running 块（对齐 CLI 渲染循环从池重建语义）
+- extension **webviewReady 握手**（评审 #3 定稿——chat.js:318 → panel-messages.mjs:363 webviewReady
+  case——无 getState 消息）：握手响应携带 queued/running 池快照（字段 id/role/status/position/
+  waiting/reason——复用 refreshQueuedRows 载荷形状）——webview 冷启重建等待块头 + running 块
+  （快照 = 现有 queued 行消息形状**重放**——activity.js 现消费路径承接——非新消息类型）
 - 注：SESSION-RESTORE-PARITY "子代理 live 块不入 history" = 保存侧裁定（磁盘不落）——F-3 是运行中池态推 webview（内存——不冲突）
 - 测试：VSC reload 握手——queued 条目在 reload 后块头仍在（新测试）
 
@@ -36,15 +40,21 @@
 
 | 文件 | 端 | 现行数 | 预计净变 | 改动 |
 |---|---|---|---|---|
-| webview/activity-view.mjs | VSC | ~150 | ≤+10 | F-2 ⏹ 门控扩 queued + F-4 i18n 词 |
-| webview/activity.js | VSC | ~250 | ≤+5 | F-2 queued 取消态处理（若有） |
+| webview/activity-view.js | VSC | 229（实测——评审 #1） | ≤+10 | F-2 ⏹ 门控扩 queued（updateStopButton
+  :129-149 + :124-125 注同步改）+ F-4 i18n 词 |
+| locales/en.json + zh.json | VSC | 各 ~145（评审 #2 补行） | ≤+6 | F-4 waiting/position 键 + F-2 取消排队标签键
+  （en/zh——逐字定稿于设计） |
+| webview/activity.js | VSC | 287（实测——评审 #1） | ≤+5 | F-2 queued 取消态处理（快照重放消费若新消息） |
 | webview/chat.js | VSC | ~330 | ≤+2 | F-2 路由确认（现路由已通——小） |
-| src/extension/panel-messages.mjs | VSC | 427 | ≤+15 | F-3 reload 快照重推 + F-2 路由（若现无） |
-| src/extension/panel-callbacks.mjs | VSC | ~80 | ≤+5 | F-3 快照载荷（若现无） |
+| src/extension/panel-messages.mjs | VSC | 422（实测——评审 #1） | ≤+15 | F-3 webviewReady 握手响应带快照（:363 case
+  扩展——重放 queued 行消息）+ F-2 路由确认（:198 已通） |
+| src/extension/panel-callbacks.mjs | VSC | 147（实测——评审 #1） | ≤+5 | F-3 快照载荷（webviewReady 响应挂载） |
 | src/tui/subagent-panel.mjs | CLI | 200 | ≤+5 | F-2 ⏹ 门控扩 queued |
-| src/tui/subagent-blocks.mjs | CLI | ~250 | ≤+3 | F-2 queued 块 ⏹ 态 |
-| src/tui/mouse.mjs | CLI | ~130 | ≤+2 | F-2 queued 取消路由确认 |
-| test/（activity-flow + subagent 族） | 双端 | 既有 | +10~+20 | F-2/F-3 测试 |
+| src/tui/subagent-blocks.mjs | CLI | 457（实测——评审 #1——>300 审视存量） | ≤+3 | F-2 queued 块 ⏹ 态 |
+| src/tui/mouse.mjs | CLI | 229（实测——评审 #1） | ≤+2 | F-2 queued 取消路由确认（D-S1a 已通——小） |
+| test/activity-flow.test.mjs（VSC）+ 双端 subagent 族测试（评审 #4 具名——现行数实现时核） | 双端 | 既有 | +10~+20 | F-2/F-3 测试 |
+| docs/design/SESSION-ACTIVITY-REVISED.md（评审 #5——F-6 旧裁定勾销/覆盖注） | VSC | doc | +3 | F-2 覆盖旧"接受无取消"裁定——防双文档冲突 |
+| docs/design/README.md（评审 #5——核销时登记） | VSC | doc | +2 | QUEUED-VISIBILITY 补登（SESSION-RESTORE-PARITY 同式） |
 
 ## 用例表
 
@@ -53,6 +63,10 @@
 | F-1 queued 显示现状 | VSC/CLI 排队 spawn | 等待块头可见（位置/原因）——不回归——F-1 |
 | F-2 排队取消 | queued 块 ⏹ 点击 | 出队 + 墓碑 + 位置前移 + 块移除——F-2 |
 | F-2 running 取消不回归 | running 块 ⏹ | 原取消路径不变——F-2 |
+| F-2 错误 | 已出队块残留 ⏹ 点击 | 引擎 error 路径——块已移除无副作用（评审 #4 补）——F-2 |
+| F-3 边界 | 空池 reload | 无快照消息——活动区空（评审 #4 补）——F-3 |
+| F-3 边界 | 仅 running 池 reload | running 块重建——queued 无（评审 #4 补）——F-3 |
+| F-4 边界 | en 缺省回退 + zh 覆盖 | 键缺省 en——zh 切换生效（评审 #4 补）——F-4 |
 | F-3 reload 后排队可见 | webview reload + queued 在池 | 块头重建——位置/原因保留——F-3 |
 | F-4 i18n | zh 环境 waiting/position | 中文词——F-4 |
 
