@@ -319,11 +319,10 @@ async function runPanelChatImpl(panel, opts = {}) {
   }
 
   // §17 D-S2 释放窗口接管（偏差修复 #2——A2 修订 + INPUT-LOCK-ASYNC 2026-09-09）：标题
-  // 已移 finally 归位前（running——routeUserTurn 拒收）——入队容器（_suspQueue）随排队
-  // 机制废弃——释放窗口 = 会话建立的同一同步续段（susp 广播与 suspensionSession 间零
-  // await——无事件窗口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起
-  // 会话（用户输入优先于 digest——D-S5）；否则忙态归位 idle（防 susp 悬空——Stop 派生/
-  // 路由守卫以 idle 收敛）。
+  // 已移 finally 归位前（running——routeUserTurn 拒收）——入队容器已随排队机制废弃——释放
+  // 窗口 = 会话建立的同一同步续段（susp 广播与 suspensionSession 间零 await——无事件窗
+  // 口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起会话（用户输入优先于
+  // digest——D-S5）；否则忙态归位 idle（防 susp 悬空——Stop 派生/路由守卫以 idle 收敛）。
   if (!skipSession && !susp && !panel._susp && panel._turnState === "susp") {
     const enter = !skipSession && !susp && !panel._susp && panel._panel
       && poolLive(history) && !panel._abortController?.signal.aborted

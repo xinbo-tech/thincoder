@@ -53,8 +53,8 @@ export class ChatPanel {
     this._turnState = "idle"
     // §17 挂起（suspension.mjs / panel-chat.mjs，2026-09-02）：
     // _susp/_suspWake 由 suspensionSession 建/清（会话句柄 + 单槽唤醒器）；
-    // _suspQueue 随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09——busy（running 含
-    // digest/标题窗口）输入禁用——routeUserTurn 拒收——无入队容器；挂起空闲消息走
+    // 入队容器已随排队机制废弃（INPUT-LOCK-ASYNC C'——2026-09-09——busy（running 含
+    // digest/标题窗口）输入禁用——routeUserTurn 拒收——挂起空闲消息走
     // susp.pendingInput 单槽（_chat 内分流）。
     // _turnControllers = 回合内 controller 重建登记（偏差修复 #3——会话 Stop 统一 abort）。
     this._turnControllers = []
