@@ -15,7 +15,9 @@
  * ChatPanel 原型 + 真实 runPanelChat 驱动 setup 期异常（隔离 config/会话目录——_activeLines
  * 桩注入抛点——H-B 回归红线：修前此用例 unhandled rejection / await 红掉）；⑨⑩ 同骨架——
  * loading:true 首投即抛终止 try 体（isFirstMessage 已置位）→ 命中 finally 的 A2 标题段。
- * 组①-⑪ 全部 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
+ * 组①-⑫ 全部 <800ms——快层直跑不标 slow（test/slow.mjs 归册阈值纪律）。
+ * ⑫（2026-09-09）：F-2 queued 取消路由测试自 pool-snapshot.test.mjs 迁入（REMOVE-POOL-
+ * SNAPSHOT 撤 F-3 快照重推——F-2 取消覆盖保留——红线）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -578,4 +580,41 @@ test("⑪ 槽渠道优先：providerName 缺席 → slotRef 渠道/模型生效�
   const legacy = resolveTurnModelAndStamp({ providerName: "kimi", modelOverride: "kimi-other", slotRef: { provider: "kimi", model: null }, baseModel: "kimi-k3" })
   assert.equal(legacy.trialOverride, true)
   assert.equal(legacy.sessionStampModel, null)
+})
+
+// ─── ⑫ F-2 queued 取消路由（QUEUED-VISIBILITY F-2——自 pool-snapshot.test.mjs 迁入——
+// REMOVE-POOL-SNAPSHOT 2026-09-09：F-3 快照重推撤销——F-2 取消路由覆盖保留——红线）────
+
+/** 最小 live lines history（真数组 + 池 expando——与 agent 运行期 history 同形——
+ *  cancelSubagent 路由读 _asyncSubagents/_asyncTombstones 的最小载体面）。 */
+function poolHistory() {
+  const history = []
+  Object.assign(history, {
+    _asyncSubagents: new Map(),
+    _asyncAdvisors: new Map(),
+    _asyncTombstones: new Map(),
+    _pendingAsyncResults: [],
+  })
+  return history
+}
+
+test("⑫ F-2 cancelSubagent 路由（queued 目标）：引擎出队 + was:\"queued\" 通知 + 墓碑——陈旧 ⏹ no-op（用例表 F-2 错误行）", async () => {
+  const notified = []
+  const history = poolHistory()
+  const e9 = { id: 9, role: "eng-coder", status: "queued", done: false, cancelled: false, _files: [], _dependsOn: [] }
+  e9._onCancelled = (wasQueued) => notified.push({ id: 9, role: "eng-coder", status: "cancelled", ...(wasQueued ? { was: "queued" } : {}) })
+  history._asyncSubagents.set(9, e9)
+  const p = stubPanel({ _liveLines: { history, fullHistory: history, cwd: "C:/ws" } })
+
+  await handlePanelMessage(p, { type: "cancelSubagent", id: "9", role: "eng-coder" })
+
+  assert.equal(history._asyncSubagents.has(9), false, "queued 目标出队（map 移除——引擎 cancelSubagent）")
+  assert.deepEqual(history._asyncTombstones.get(9), { status: "cancelled", role: "eng-coder" }, "出队即终态 → cancelled 墓碑（依赖者查得）")
+  assert.equal(notified.length, 1, "was:\"queued\" 通知发出（生产 = entry._onCancelled → onSubagent → webview 移除等待头）")
+  assert.equal(notified[0].was, "queued", "webview 消费形状（activity.js cancelled+was 分支——块移除）")
+
+  // 陈旧 ⏹（块已出队残留点击——用例表 F-2 错误行）→ 路由 no-op（未知 id——无虚构状态）
+  await handlePanelMessage(p, { type: "cancelSubagent", id: "9", role: "eng-coder" })
+  assert.equal(notified.length, 1, "陈旧点击零通知（引擎 error 路径——块已移除无副作用）")
+  assert.equal(history._asyncTombstones.size, 1, "无新墓碑（幂等）")
 })

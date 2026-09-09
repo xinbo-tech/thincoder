@@ -613,39 +613,36 @@ test("⑮ #subagent-panel 零残留：index.html/panels.js/CSS 无 subagent-pane
   assert.ok(!statusBar.includes("sub-badge"), "status-bar.js 无 sub-badge（评审 #2——#subagent-panel 撤后 badge 点击 null 崩——徽标撤）")
 })
 
-// ─── ⑯ F-3 Reload 冷启快照重放消费面（AC-3——QUEUED-VISIBILITY）──────────────
+// ─── ⑯ F-3 撤除后冷启空活动区（REMOVE-POOL-SNAPSHOT——2026-09-09——boot 无快照重放——
+// 活动区空——增量消息到达才建块——F-2 queued 可见保留红线）──────────────
 
-test("⑯ F-3 reload 快照重放（webview 消费面）：冷启后 queued/running 行按到达序重放 → 等待块头 + running 块重建（位置/等待词保留——重复重放幂等）", async () => {
+test("⑯ 冷启空断言（REMOVE-POOL-SNAPSHOT）：reload boot 零快照消息——活动区空隐藏——增量消息（queued/started）到达才建块（F-2 路径保留）", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   const area = ctx.subAgentArea
 
-  // webview reload = DOM 冷启（fresh 后区空）——extension webviewReady 响应重放 live
-  // 池行（快照 = 现有消息形状重放——非新消息类型——此处逐条重放 = postPoolSnapshot 载荷）
+  // webview reload 冷启（fresh 后区空）——F-3 快照重推已撤（REMOVE-POOL-SNAPSHOT）——
+  // boot 不再重放 live 池行：零快照消息——活动区空（无等待头无 running 块——区隐藏）
+  assert.equal(area.children.length, 0, "冷启零快照消息——活动区空（无等待头无 running 块）")
+  assert.equal(area.style.display, "none", "区空隐藏（零高不占 grid 行）")
+  assert.equal(S._subBlocks.size, 0, "无重放建块（map 空）")
+
+  // 等增量消息才建块：queued 行（F-2 等待头——可见保留红线）→ 建块
   applySubagentStatus({ type: "subagent", status: "queued", role: "explore", id: 21, position: 1 })
-  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 20, pool: true, startedAt: Date.now() - 5000, model: "glm-5.3" })
-  applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 22, waiting: "waiting-deps", reason: "files overlap: x/y.mjs" })
-
-  assert.equal(area.children.length, 3, "三块重建（双等待头 + running 块——活动区）")
   const b21 = S._subBlocks.get("sub:explore#21")
-  const b22 = S._subBlocks.get("sub:plan#22")
-  const b20 = S._subBlocks.get("sub:eng-coder#20")
-  assert.ok(b21 && b22 && b20, "重放建块（map 登记）")
+  assert.ok(b21, "增量 queued 消息 → 等待块头（F-2 可见——非快照——保留）")
+  assert.equal(b21.parentNode, area, "块建在活动区")
   const h21 = b21.querySelector(".sub-hdr").textContent
-  assert.ok(h21.includes("⏳") && h21.includes("queued · position 1"), "等待头重建——位置保留（AC-3）")
-  assert.equal(b21.querySelector(".sub-stop-btn")?.title, "cancel queue", "等待头重建——取消 ⏹ 随行（F-2 面）")
-  const h22 = b22.querySelector(".sub-hdr").textContent
-  assert.ok(h22.includes("waiting") && h22.includes("x/y.mjs"), "waiting 头重建——等待词/原因保留")
-  assert.ok(b22.querySelector(".sub-stop-btn"), "waiting 头重建——取消 ⏹ 随行")
-  const h20 = b20.querySelector(".sub-hdr").textContent
-  assert.ok(h20.includes("▶") && h20.includes("glm-5.3"), "running 块重建（started 形重放——数据水合）")
-  assert.equal(b20.querySelector(".sub-stop-btn")?.title, "Stop this subagent", "running ⏹ 停标签（重建面）")
-  assert.equal(area.style.display, "", "重建后区显")
+  assert.ok(h21.includes("⏳") && h21.includes("queued · position 1"), "等待头状态词/位置在位")
+  assert.equal(b21.querySelector(".sub-stop-btn")?.title, "cancel queue", "等待头取消 ⏹ 随行（F-2 面）")
 
-  // 队列推进（出队后位置刷新重放）→ 覆盖式更新（幂等——不重复建块）
-  applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 22, position: 1 })
-  assert.equal(area.children.length, 3, "重复重放不重复建块（覆盖式更新）")
-  assert.ok(b22.querySelector(".sub-hdr").textContent.includes("position 1"), "位置前移覆盖式更新")
+  // started 增量（补位启动——同频道）→ running 块（块形状照旧——⏹ 换停标签）
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 21, pool: true, startedAt: Date.now() - 5000, model: "glm-5.3" })
+  assert.equal(area.children.length, 1, "增量路径同块翻转——不重复建块")
+  const h21b = b21.querySelector(".sub-hdr").textContent
+  assert.ok(h21b.includes("▶") && h21b.includes("glm-5.3"), "started 增量 → running 块（数据水合）")
+  assert.equal(b21.querySelector(".sub-stop-btn")?.title, "Stop this subagent", "running ⏹ 停标签（增量路径照旧）")
+  assert.equal(area.style.display, "", "有块即显")
 })
 
 // ─── ⑱ F-4 i18n 词（AC-4——QUEUED-VISIBILITY）──────────────────────────────

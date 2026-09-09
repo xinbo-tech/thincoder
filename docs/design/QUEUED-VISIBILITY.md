@@ -25,7 +25,7 @@
 - **CLI**：subagent-blocks/subagent-panel ⏹ 门控扩 queued（现"async 启动后才置"注——排队块 ⏹ 补）——mouse D-S1a cancelSubagent 路由对 queued 同路径（工具层支持——CLI cancel 命令/mouse 已走引擎同实现）
 - 测试：双端活动区测试——queued 块挂 ⏹ → 点击 → 出队 + 墓碑 + 位置前移 + 块移除（VSC activity-flow 测试族 + CLI subagent 测试族）
 
-### 2. F-3 Reload 冷启快照重推（VSC）
+### 2. F-3 Reload 冷启快照重推（VSC）——**⚠ 已撤销（2026-09-09——REMOVE-POOL-SNAPSHOT——以下仅留档，AC-3 随之失效）**
 - extension **webviewReady 握手**（评审 #3 定稿——chat.js:318 → panel-messages.mjs:363 webviewReady
   case——无 getState 消息）：握手响应携带 queued/running 池快照（字段 id/role/status/position/
   waiting/reason——复用 refreshQueuedRows 载荷形状）——webview 冷启重建等待块头 + running 块
@@ -81,3 +81,4 @@
 
 ## 变更记录
 - 2026-09-09：落档（深勘察——**VSC queued 可见已存在**（SESSION-ACTIVITY-REVISED 5be6c67 核销）——真差集 = F-2 取消 ⏹（用户全量裁覆盖 F-6 旧"接受无取消"裁定）+ F-3 Reload 快照（SESSION-RESTORE-PARITY 不覆盖——真空缺）+ F-4 i18n——CLI 参照系确认（subagent-panel queued 显示已有——补 ⏹ 即齐）。
+- 2026-09-09：**F-3 已撤销**（REMOVE-POOL-SNAPSHOT——webviewReady 快照重推过度工程——retainContextWhenHidden=true 无 webview 重建场景 + 整窗 reload 池清快照空转——postPoolSnapshot/SNAPSHOT_ROLES/pool-snapshot.test.mjs 删除）——F-2 queued 可见（增量消息驱动）与 F-4 i18n 保留不变；F-2 取消路由测试迁 chat-panel.test.mjs 保留覆盖。

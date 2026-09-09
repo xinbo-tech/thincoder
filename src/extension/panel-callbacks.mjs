@@ -12,7 +12,6 @@ import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
 import { backgroundStatus } from "./suspension.mjs"
-import { describeBlockers } from "../agent-tools/subagent-scheduler.mjs" // F-3（QUEUED-VISIBILITY——等待态活派生——叶子模块——无环）
 
 /**
  * Ask a question in the panel (persistent in-chat card, never auto-dismisses) — shared
@@ -148,47 +147,3 @@ export function buildPanelCallbacks(panel, deps) {
   }
 }
 
-// ─── F-3 pool snapshot（QUEUED-VISIBILITY——2026-09-09）───────────────────────
-// webview reload 冷启快照重推（挂在 webviewReady 响应——panel-messages.mjs）：
-// live 池行（queued/running）以**既有消息形状重放**——queued 行 = refreshQueuedRows
-// 载荷形（id/role/status/position/waiting/reason——等待态/位置在此活算——引擎同源
-// describeBlockers + 池 Map 序过滤计数）；running 行 = started 事件形（id/role/
-// status/startedAt/model/pool:true——块重建 + running ⏹ 门控面）。webview 端
-// activity.js 现消费路径承接——**非新消息类型——数据通道零新建**。空池 → 零消息。
-const SNAPSHOT_ROLES = new Set(["explore", "plan", "coder", "eng-coder", "advisor"])
-
-/** 重放 live 池快照。lines = { history, fullHistory, cwd }（panel._liveLines /
- *  panel._susp.lines 同形——与 cancelSubagent 路由同一锚点）。 */
-export function postPoolSnapshot(panel, lines) {
-  const wv = panel?._panel?.webview
-  const history = lines?.history
-  if (!wv || !(history?._asyncSubagents instanceof Map)) return
-  const parent = { history, cwd: lines.cwd || process.cwd() }
-  const rows = []
-  // queued 行：position/waiting 引擎同源（refreshQueuedRows——subagent 池全量
-  // queued 过滤计数——含非 family 角色（escalate——等待头同样可见））。
-  let pos = 0
-  for (const e of history._asyncSubagents.values()) {
-    if (e.status !== "queued") continue
-    pos++
-    const blk = describeBlockers(parent, e, e._auto?.() ?? false)
-    const row = { id: e.id, role: e.role, status: "queued", position: pos }
-    if (blk.kind !== "slot") {
-      row.waiting = blk.kind === "depc" ? "dependency-cancelled" : "waiting-deps"
-      row.reason = blk.detail
-    }
-    rows.push(row)
-  }
-  // running 行：family 角色（建块面 = started 事件——非 family 的块由内容流承载——
-  // 下个 chunk 自然重建——同步子代理同语义）。
-  for (const map of [history._asyncSubagents, history._asyncAdvisors]) {
-    if (!(map instanceof Map)) continue
-    for (const e of map.values()) {
-      if (e.status !== "running" || !SNAPSHOT_ROLES.has(e.role)) continue
-      rows.push({ id: e.id, role: e.role, status: "started", startedAt: e.startedAt ?? undefined, model: e.model ?? null, pool: true })
-    }
-  }
-  // 双池共号源——id 升序 ≈ 原始 spawn/到达序——活动区块序复刻。
-  rows.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
-  for (const row of rows) wv.postMessage({ type: "subagent", ...row })
-}
