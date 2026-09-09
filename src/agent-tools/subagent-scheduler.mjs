@@ -363,3 +363,30 @@ export function maybeRefillAsync(parent) {
     queue.splice(pick, 1)[0].start()
   }
 }
+
+/**
+ * 分配下一子代理 id——池活续号兜底（SUBAGENT-ID-COUNTER-AGENT，2026-09-09——双端同构
+ * 机制：VSC 端载体自 history expando 移本体并接本函数；CLI 端计数器一直挂 agent 本体
+ * （`_subAgentCounter`——per-run reset 清单不含——跨 run/跨压缩存活），本函数补齐
+ * poolMax 兜底：计数器丢失面（AUTO 撞上限续跑/挂起驱动的重建形态）不再复用仍在
+ * 跑/排队的条目 id——map.set 覆盖旧条目 = 静默丢报告 + status/cancel 错址）。优先级
+ * next = max(counter ?? 0, poolMax) + 1——取号后 counter 同步（首取号初始化）。id 作用
+ * 域 = 进程内（不做槽持久化——reload 后池清块消失，新进程从 1 无冲突——设计范围边界）。
+ * spawn（subagent-spawn.mjs async 分支）、escalate（escalate-async.mjs）、async-advisor
+ * 池（advisor-async.mjs——§11.2 跨池共号）共用；executeAsyncSpawn 直读 counter（分配与
+ * 消费同步——无 await 间隙）。CLI 两池键均为字符串（set(String(id))——解析分支防御保留）。
+ * @returns {number} 全池唯一的下一 id（单调——进程内）
+ */
+export function nextSubagentId(parent) {
+  let poolMax = 0
+  for (const pool of [parent?._asyncSubagents, parent?._asyncAdvisors]) {
+    if (!pool || pool.size === 0) continue
+    for (const k of pool.keys()) {
+      const n = typeof k === "number" ? k : Number.parseInt(k, 10)
+      if (Number.isFinite(n) && n > poolMax) poolMax = n
+    }
+  }
+  const next = Math.max(parent?._subAgentCounter ?? 0, poolMax) + 1
+  parent._subAgentCounter = next
+  return next
+}

@@ -48,6 +48,7 @@ import { stripEventToken } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { nextSubagentId } from "./subagent-scheduler.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Review-instance registry (agent._advisorRuns — per-review rounds/prior/cap)
@@ -406,7 +407,8 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     return { error: `Advisor: 另有一评审在跑——逐个发起 — another review is already running in the background pool (${limit} reviews at most — agent.poolLimits.advisor, default ${ADVISOR_POOL_LIMIT}); launch them one at a time (AGENT-LOOP.md §11.2 ruling ②-6a).` }
   }
   parent._asyncAdvisors ??= new Map()
-  const id = (parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1)
+  // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：取号统一走 nextSubagentId——池活续号兜底 + 跨池共号（§11.2）。
+  const id = nextSubagentId(parent)
   const entry = {
     id, role: "advisor", reviewType, run,
     reviewId: run.reviewId, designId, designToken, documents, paths, object,

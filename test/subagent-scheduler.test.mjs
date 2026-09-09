@@ -6,7 +6,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { resolve } from "node:path"
-import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync } from "../src/agent-tools/subagent-scheduler.mjs"
+import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync, nextSubagentId } from "../src/agent-tools/subagent-scheduler.mjs"
 
 test("2.7 尾随空格目录声明（\"test/ \"）被识别为目录声明 throw", () => {
   assert.throws(() => normalizeFileList(["test/ "], "C:/w"), /directory declarations are not supported/)
@@ -84,4 +84,52 @@ test("动态域 F-3：refill 重扫实时见 running touched——冲突 queued 
   running.childAgent._touchedFiles = []
   maybeRefillAsync(p)
   assert.equal(started, 1) // touched 清空后补位启动
+})
+
+// ─── SUBAGENT-ID-COUNTER-AGENT（2026-09-09）——id 计数器载体 = agent 本体 ───
+// 设计用例表逐条（SUBAGENT-ID-COUNTER-AGENT.md §用例表）：压缩后取号 / 池活续号 /
+// 进程重启边界。真实 spawn 链路（spawn 前缀 → executeAsyncSpawn id 消费）由
+// subagent-id-counter.test.mjs 独立锁定——本文件专注 scheduler 纯函数。
+
+/** 池键=字符串 id 的池（CLI 形态——set(String(id))）。 */
+const idPool = (p) => ({ _asyncSubagents: new Map([...(p.sub ?? [])].map((id) => [String(id), { id, status: "running" }])), _asyncAdvisors: new Map() })
+const idPoolAdv = (p) => ({ _asyncSubagents: new Map(), _asyncAdvisors: new Map([...(p.adv ?? [])].map((id) => [String(id), { id, status: "running" }])) })
+
+test("ID-COUNTER：压缩替换 history 后取号仍递增——counter 存活于 agent 本体（跨压缩）", () => {
+  const p = { _subAgentCounter: 3, history: [{ role: "user", content: "x" }] }
+  assert.equal(nextSubagentId(p), 4, "常规递增")
+  p.history = [{ role: "user", content: "compacted" }] // 模拟压缩：history 数组被整体替换
+  p.history[0]._asyncSubagents = new Map() // 压缩前旧 expando 形态——本体计数器不随它走
+  assert.equal(nextSubagentId(p), 5, "history 数组替换后 id 仍递增（agent 本体计数器存活）")
+  assert.equal(p._subAgentCounter, 5, "counter 同步回写本体")
+  assert.equal(p.history[0]._subAgentCounter, undefined, "计数器不落 history（载体=本体——非 expando）")
+})
+
+test("ID-COUNTER：池活续号——计数器丢失面（undef）从池内最大 id 续号——不复用活条目 id", () => {
+  const p = idPool({ sub: [2, 5] })
+  assert.equal(p._subAgentCounter, undefined, "计数器丢失面：undef（重建形态）")
+  assert.equal(nextSubagentId(p), 6, "poolMax 兜底——活池 5 → 取 6")
+  assert.equal(p._subAgentCounter, 6, "首取号初始化（取号后 counter 同步）")
+  assert.equal(nextSubagentId(p), 7, "回写后继续单调")
+})
+
+test("ID-COUNTER：池空 + counter 缺省 → 首取号 = 1（进程重启边界——设计范围边界用例）", () => {
+  const p = idPool({ sub: [] })
+  assert.equal(nextSubagentId(p), 1, "reload 后首取号从 1——池清块消失无冲突")
+})
+
+test("ID-COUNTER：跨池续号——advisor 池最大 id 兜底（跨池共号——id 命名空间唯一）", () => {
+  const p = idPoolAdv({ adv: [4] })
+  assert.equal(nextSubagentId(p), 5, "advisor 池 id 4 → 续 5")
+})
+
+test("ID-COUNTER：counter 与 poolMax 并存 → 取大者（counter 回退面不越过活池）", () => {
+  const p = idPool({ sub: [3] })
+  p._subAgentCounter = 2 // counter 回退（低于活池 max 3）——若不取大者会复用 3
+  assert.equal(nextSubagentId(p), 4, "max(counter=2, poolMax=3) + 1 = 4")
+})
+
+test("ID-COUNTER：池键非数字/畸形防御（Number.parseInt 解析 NaN 丢弃——不误判 poolMax）", () => {
+  const p = { _asyncSubagents: new Map([["e1", { id: "e1" }], ["not-a-num", {}], ["7", { id: 7 }]]), _asyncAdvisors: new Map() }
+  assert.equal(nextSubagentId(p), 8, "畸形键丢弃、可解析键 7 参与续号")
 })

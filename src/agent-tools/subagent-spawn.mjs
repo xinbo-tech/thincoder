@@ -17,6 +17,7 @@ import { makeRelay, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
+import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
   normalizeFileList, describeBlockers, assertNoDepCycle, depInfo,
 } from "./subagent-scheduler.mjs"
@@ -398,8 +399,11 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // children don't paint an empty panel block ("queued 态不显示").
   let relayPrefix
   if (wantAsync) {
-    parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
-    relayPrefix = `${role}#${parent._subAgentCounter}/`
+    // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：async id 取号统一走 nextSubagentId
+    // （池活续号兜底——counter 载体= agent 本体 _subAgentCounter——跨 run/跨压缩
+    // 存活——per-run reset 清单不含它）。sync 分支 makeRelay 不进池——照旧。
+    const id = nextSubagentId(parent)
+    relayPrefix = `${role}#${id}/`
   } else {
     relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
   }

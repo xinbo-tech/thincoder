@@ -31,7 +31,7 @@ import { logEvent } from "../log.mjs"
 import {
   mergeChildMutations, runningPoolCount, poolDomainOf, poolLimitsFor, ASYNC_POOL_LIMITS, enqueueAsk,
 } from "./subagent-async.mjs"
-import { refreshQueuedTokens } from "./subagent-scheduler.mjs"
+import { refreshQueuedTokens, nextSubagentId } from "./subagent-scheduler.mjs"
 import { mutationSeqOf } from "./advisor-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
@@ -146,9 +146,10 @@ export function launchEscalateAsync(parent, ctx, launch) {
   // counter at launch — the returned id stays stable while the entry sits queued.
   // The [model] token (TUI block creation) is DEFERRED to actual start so queued
   // flights don't paint an empty panel block (subagent-parity).
-  parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
-  const relayPrefix = `escalate#${parent._subAgentCounter}/`
-  const id = parent._subAgentCounter
+  // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：取号统一走 nextSubagentId（池活续号
+  // 兜底——counter 载体= agent 本体 _subAgentCounter——跨 run/跨压缩存活）。
+  const id = nextSubagentId(parent)
+  const relayPrefix = `escalate#${id}/`
   const entry = {
     id, role: "escalate", relayPrefix,
     _pool: poolDomainOf("escalate"), // other — shares the domain with explore/plan/coder (§24 D-24a)
