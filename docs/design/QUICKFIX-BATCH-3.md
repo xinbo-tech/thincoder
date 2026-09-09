@@ -29,8 +29,13 @@
 - 测试：grep §24 断言零残留（双端 src——fail-when-present）
 
 ### 3. F-3 CLEANUP_REST 常量（CLI tui-lifecycle.mjs——87 现）
-- 三源现状：writeCleanupSequence（L20——clearScreen+mouseOff+…+wrapOn 全串）+ createExitCleanup 余部（L84——clearScreen+bracketedPasteOff+…+wrapOn——mouseOff 已单写）+ 测试字节锁（tui-exit-cleanup.test.mjs 断言）
-- 改：`export const CLEANUP_REST = ansi.clearScreen + ansi.bracketedPasteOff + ansi.keyboardPop + ansi.modifyOtherKeysOff + ansi.mainBuffer + ansi.showCursor + ansi.reset + ansi.wrapOn`——writeCleanupSequence = `ansi.mouseOff + CLEANUP_REST`？——**注意**：writeCleanupSequence 现串顺序 = clearScreen + mouseOff + …（mouseOff 在 clearScreen 后）——cleanup 余部 = clearScreen + …（mouseOff 单写先行）——**两序不同**（writeCleanupSequence 是崩溃路径整包——mouseOff 在 clearScreen 后）——常量需表达"除 mouseOff 外的余部"——writeCleanupSequence 保持整包原样（不拆——崩溃路径不动）——CLEANUP_REST = clearScreen + bracketedPasteOff + keyboardPop + modifyOtherKeysOff + mainBuffer + showCursor + reset + wrapOn（cleanup 余部用）——writeCleanupSequence 内部引 CLEANUP_REST 但插 mouseOff 于 clearScreen 后（`ansi.clearScreen + ansi.mouseOff + 其余`——其余 = CLEANUP_REST 去 clearScreen 段？）——**简化**：CLEANUP_REST 定义 = 余部全串（cleanup L84 用）——writeCleanupSequence 重构 = `ansi.clearScreen + ansi.mouseOff + CLEANUP_REST_WITHOUT_CLEAR`——过度复杂——**设计裁定：CLEANUP_REST = 除 mouseOff + clearScreen 前缀外的尾部共享段**（bracketedPasteOff…wrapOn）——writeCleanupSequence = clearScreen + mouseOff + CLEANUP_REST——cleanup 余部 = clearScreen + CLEANUP_REST——测试引常量断言——**实现时按实际段结构定（工程选择——保证序列字节不变）**
+- 三源现状：writeCleanupSequence（L20——clearScreen+mouseOff+…+wrapOn 全串）+ createExitCleanup 余部
+  （L84——clearScreen+bracketedPasteOff+…+wrapOn——mouseOff 已单写）+ 测试字节锁
+  （tui-exit-cleanup.test.mjs 断言）
+- 改（评审前设计裁定——CLEANUP_REST = 除 mouseOff 外的尾部共享段 bracketedPasteOff…wrapOn）：
+  - writeCleanupSequence（崩溃路径整包——不改序）= `ansi.clearScreen + ansi.mouseOff + CLEANUP_REST`
+  - createExitCleanup 余部（mouseOff 已单写先行）= `ansi.clearScreen + CLEANUP_REST`
+  - 测试断言引常量——实现时按实际段结构定（工程选择——**保证序列字节不变——现测试绿=零回归**）
 - 测试：字节不变断言保持（现测试绿=零回归）
 
 ### 4. F-4 maxTurns 伸缩（VSC image-handler.mjs——81 现）
