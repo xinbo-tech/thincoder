@@ -180,8 +180,8 @@
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
 - [x] ~~**VSC Stop 语义重定义**~~——**2026-09-09 核销**（并入 SESSION-ACTIVITY-REVISED——5be6c67——Stop running 派生 +
   digest 单停 + D-S9 全停废除 + subagent 靠活动区块 ⏹——L2 179/179——consume f125c0d5）
-- [ ] **activity.js 579 行拆分**（2026-09-09 B1 修正交付后——超 500 惯例——advisor 🔵——queued 块头/落流锚/区显隐
-  机制均在——挂 TODO 拆分子项——后续轮）
+- [x] ~~**activity.js 579 行拆分（2026-09-09 B1 修正交付后——超 500 惯例——advisor 🔵）**~~——**2026-09-09 勾销（评估核实：活动区机制已拆——activity.js 287 + activity-freeze.js 94 + activity-view.js 242 同族并存——单体 579 已拆散——登记过时）**
+
 - [x] ~~**VSC 会话恢复呈现对齐**~~——**2026-09-09 核销**（SESSION-RESTORE-PARITY——0231627——L2 179/179——consume 592ea112——见需求池勾销行）
 
 ## 其他在途/待核销（勾销即移出本节）
