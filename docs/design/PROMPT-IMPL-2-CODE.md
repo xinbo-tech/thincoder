@@ -11,11 +11,11 @@
 
 | 改造点 | 现状 | 目标 |
 |---|---|---|
-| G1 常量装载 | agent.mjs L36-38 SYSTEM_PROMPT/DISCIPLINE_RULES/MAIN_OVERLAY | 换七件：PERSONA_ENGINEERING/PERSONA_NORMAL/COMMON/DISCIPLINE_ENGINEERING/DISCIPLINE_NORMAL/CONSULT_BASE（+顾问系不变）；agent.mjs L113 prepareRun 传参同步 |
+| G1 常量装载 | agent.mjs L36-38 SYSTEM_PROMPT/DISCIPLINE_RULES/MAIN_OVERLAY | 换**六件**（评审 #1：七件计数错——实际六常量）：PERSONA_ENGINEERING/PERSONA_NORMAL/COMMON/DISCIPLINE_ENGINEERING/DISCIPLINE_NORMAL/CONSULT_BASE（+顾问系不变）；agent.mjs L113 prepareRun 传参同步。**explore/coder/plan 人格常量 = PERSONA_NORMAL 同源（蓝图槽位复用——变体差异归人格层覆写）** |
 | G2 主装配分支 | L322-336（consult/工程/普通三分支） | 四槽位装配函数 `assemblePrompt({scenario})`：人格→common→纪律→(AGENTS+skills 由既有尾部逻辑承担)——每槽缺失跳过+警告（蓝图 §3.4） |
 | G3 子代理分支 | L320/L363 needsDiscipline | 子代理 scenario 映射：eng-coder=人格 eng-coder+纪律 engineering；explore/coder/plan=各人格+纪律 normal；consult=CONSULT_BASE 不变 |
 | G4 buildEngineeringPrompt | L40-74（读 engineering.md/engineering-sub.md+METHODOLOGY+D-M1/D-M2） | **删除**（被四槽位装配取代）；METHODOLOGY 读取/D-M1/D-M2 警告/template 携带整段删 |
-| G5 METHODOLOGY/AGENTS | L376 loadProjectInstructions（AGENTS）保留 | 不动；METHODOLEY 读取点删 |
+| G5 METHODOLOGY/AGENTS | L376 loadProjectInstructions（AGENTS） | 不动；METHODOLOGY 读取点删（评审 #5 拼写+串列修正） |
 | G6 eng-coder 强制工程 | subagent-spawn.mjs L305 childConfig engineering=true | 语义保留（scenario=eng-coder 即工程纪律）——实现形式随 G3 |
 
 ### 1.2 VSC（setup.mjs L317-334 + run-helpers.mjs loadEngineeringPrompt L43-63）
@@ -24,7 +24,9 @@
 
 ## 2. 设计决策
 
-- **D1 单装配函数**：assemblePrompt(scenario) 取代散落 if/else——场景→槽位文件映射表驱动（表 = 蓝图 §3.2 矩阵的字面实现），新增场景只加表行
+- **D1 单装配函数**：assemblePrompt({scenario}) 取代散落 if/else（评审 #6 统一签名）——场景→槽位文件映射表驱动（**表 = 蓝图 §3.2 矩阵内联如下**：工程=persona-engineering/common/discipline-engineering+METHODOLOGY+AGENTS+skills；普通=persona-normal/common/discipline-normal+AGENTS+skills；eng-coder=persona-eng-coder/common/discipline-engineering+AGENTS；explore/coder/plan=persona-{role}/common/discipline-normal+AGENTS；consult=consult-base 自含——**①②并行契约以此表为锚，评审 #2**）
+- **D5 中间态预期（评审 #4）**：本批落地后 prompts-async-guidance.test.mjs 旧断言预期红（对象文件已退役）——实现者**不得碰该文件**（施工③重写）；②单批验收 = AC-1/2/3 + AC-4 括注（快层回归验算排除该已知③文件）
+- **D6 被否决备选（评审 #8）**：保留双分支+追加表驱动（否决——两套装配并存=回归面翻倍）；扩展 buildEngineeringPrompt 兼容新槽位（否决——兼容层永久化，退役不彻底）
 - **D2 警告通道**：槽缺失警告走既有 setup 警告通道（history 注入）——不新增机制
 - **D3 字节稳定**：同场景每 run 拼装结果字节确定（provider prefix cache 前提）——槽文件内容固定、顺序固定
 - **D4 前缀缓存考量**：人格层在前意味着不同模式前缀不同——可接受（模式切换低频）；公共层位置固定不漂移
@@ -36,9 +38,9 @@
 | src/agent/setup.mjs | 390 | -60 区 | G2-G5：三分支→assemblePrompt；buildEngineeringPrompt/D-M1/D-M2 删 |
 | src/agent.mjs | 146 行区 | ±8 | G1 常量换七件+传参 |
 | src/agent-tools/subagent-spawn.mjs | 431 | ±5 | G6 scenario 语义 |
-| VSC setup.mjs | 待实测 | 同构 | 同 CLI |
-| VSC run-helpers.mjs | 待实测 | -25 区 | loadEngineeringPrompt 删 |
-| VSC agent.mjs（对应装载点） | 待实测 | 同构 | 同 CLI |
+| VSC setup.mjs | 377 | 同构 | 同 CLI（评审 #3 实测补行数） |
+| VSC run-helpers.mjs | 214 | -25 区 | loadEngineeringPrompt 删 |
+| VSC agent.mjs | 152 | 同构 | 同 CLI |
 | test/prompts-async-guidance.test.mjs | 165 | 重写 | 施工③范围——本批锚测试面 |
 
 （setup.mjs 390→~330：不跨档；VSC 待实测行数进施工③核。）
@@ -63,3 +65,7 @@
 
 ## 变更记录
 - 2026-09-10：落档（施工②装配代码——与施工①并行——D1 表驱动装配为核心决策）。
+- 2026-09-10：评审 PASS + 8 项修订：①G1 计数改六件+子代理人格常量着落 ②D1 内联场景→槽位文件表
+  （①②并行契约）③VSC 三文件实测行数补齐 ④D5 中间态红预期+实现者禁碰测试文件 ⑤G5 拼写/串列修正
+  ⑥签名统一 {scenario}+四槽→三装配槽表述 ⑦agent.mjs 路径精确化 ⑧D6 被否决备选补录——修订版待
+  批准。
