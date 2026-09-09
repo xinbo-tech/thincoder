@@ -206,6 +206,10 @@
   "重启后首任务丢"假设待受控复现验证（重启扩展→立即发起 async 任务看块 vs 稳定后发起）——
   **REMOVE-POOL-SNAPSHOT 撤除批先行（评审中）**——撤后观察：若窗口现象仍在→出生投递窗口问题坐实（快照非因）
   ——若撤后恢复→快照机制意外干扰
+  ——**撤除后实证（22:32）**：REMOVE-POOL-SNAPSHOT 已交付（撤了快照重推）——问题依旧——**坐实快照非因**——
+  新精确复现：**同响应双 spawn 两个 eng-coder——状态行 2 running（扩展侧 pool 计数对）——live block 只渲染
+  1 个**——出生/显示链并发竞态（两个 started 紧邻——webview 渲染端只建一块——可能丢消息/互踩）——
+  与 reload 无关（正常会话内）——真因定位新方向 = webview 渲染端并发消息处理——非扩展侧（扩展侧计数正确）
 - [ ] **advisor 池状态不可查询 + 不可取消（2026-09-09 用户反馈——平台机制缺陷——已实证三次）**：
   ① subagent status 只查 subagent 池——advisor 池（_asyncAdvisors）无状态通道——评审是否在跑/卡住/完成不可知
   ——digest 是唯一信号（死等）② wait_for "advisor settled" 误报（0ms 即过但池仍拒重发——口径与实际池状态脱钩）
