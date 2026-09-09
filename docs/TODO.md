@@ -186,6 +186,17 @@
 
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
+- [ ] **VSC live 块显示不可靠（2026-09-09 用户反馈——"实际启动了但不能可靠显示 live 块"）**：
+  现象——子代理/评审实际启动（ack 收到）但界面 live 块有时不显示/显示不可靠——近期关联改动：QUEUED-VISIBILITY
+  （bacf545——queued 可见/快照重推/i18n）+ ACTIVITY-SPLIT（6d66dd5——activity.js 三文件拆分）+ SESSION-ACTIVITY
+  系（B1）——待勘察根因（哪批引入回归或 advisor 池块的显示面缺口——advisor 伪角色块在 §11.2 宣称"块/⏹/冻结全
+  复用"——实测显示不可靠）——status=登记待勘察——设计权在用户
+- [ ] **advisor 池状态不可查询 + 不可取消（2026-09-09 用户反馈——平台机制缺陷——已实证三次）**：
+  ① subagent status 只查 subagent 池——advisor 池（_asyncAdvisors）无状态通道——评审是否在跑/卡住/完成不可知
+  ——digest 是唯一信号（死等）② wait_for "advisor settled" 误报（0ms 即过但池仍拒重发——口径与实际池状态脱钩）
+  ③ advisor 无 cancel 通道（同 scope 重发被拒"settle 后逐个发起"——对象漂移时旧评审杀不掉）
+  ——修：advisor 池状态可见（status 支持 advisor 查询/子代理面板展示评审 live 块——与 live 块问题可能同源）+
+  wait_for settled 口径修正 + cancel 通道（同 subagent cancel）——status=登记——owner = 平台（AGENT-LOOP/工具面）
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
 - [ ] **advisor 进行中评审不可取消（2026-09-09 用户反馈——平台 bug）**：设计评审发起后对象漂移（文档中途编辑）
   → 需杀旧重发——但**无 cancel 通道**（advisor 无 cancel action——同 scope 重发被拒"settle 后逐个发起"——
