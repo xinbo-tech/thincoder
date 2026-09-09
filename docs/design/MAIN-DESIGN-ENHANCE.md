@@ -1,7 +1,7 @@
 # 主会话设计能力增强（MAIN-DESIGN-ENHANCE）
 
 > 板块：工程模式提示词（双端——主会话即 designer——承接 designer 取消）。权威源：METHODOLOGY.md（结构）+ engineering.md（行为纪律——双端注入）。
-> 状态：**设计待评审**——2026-09-09 落档（主会话增强勘察 explore 一手——四维缺口确认——载体明确：行为→engineering.md + 结构→METHODOLOGY + 锚→ENGINEERING-MODE §2.9 + 断言测试）。需求：TODO 主会话设计能力增强（四维——2026-09-09 用户裁 designer 取消——主会话即 designer）。
+> 状态：**评审通过——已交付核销（CLI fe6d62d + VSC c14cbbe——clean——A1-A4 四维锚双端驻留 + METHODOLOGY §7 + ENGINEERING-MODE §2.9 锚 8——L2 239/239——consume 14adbea1 闭合）**——2026-09-09 落档
 
 ---
 
