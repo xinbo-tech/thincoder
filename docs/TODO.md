@@ -16,8 +16,8 @@
 - [x] ~~**join(cwd, p) 双前缀 bug 残留**~~——**2026-09-08 批 1 2.1 已修**（cmd-undo.mjs:23-24/:72 isAbsolute 分支——VSC 镜像核查 N/A——无 /undo 机制）
 - [x] ~~**memory_delete 边缘容错**~~——**2026-09-08 批 1 2.2 已修**（delete.mjs:158-159 split(":").length>2 → throw）
 - [x] ~~**MCP readMcpSection servers 非数组静默当空**~~——**2026-09-08 批 1 2.3 已修**（config.mjs:347-348 ok:false）
-- [ ] **C 方案：read 读回 offload 文件防炸**——read 返回"头+尾"防读回 1MB——独立后续（A 方案含尾部预览已落地——C 堵剩余回路）
-- [ ] **advisor 截断方向另议**——advisor/run.mjs 头向 line-aware 截断——尾部结果被切问题未解决
+- [x] ~~**C 方案：read 读回 offload 文件防炸**~~——**2026-09-09 核销**（DUAL-END-TRUNCATION——b4c65b0/619f7d0——read 头尾——L2 CLI 157/VSC 214——consume 9ef31e7f）
+- [x] ~~**advisor 截断方向另议**~~——**2026-09-09 核销**（DUAL-END-TRUNCATION——用户裁 B 双端——advisor 头尾双保——truncate.mjs——consume 9ef31e7f）
 - [x] ~~**VS Code git 富注入异步优化**（3×execSync 每回合——最坏 ~15s 阻塞——异步优化项）~~——**2026-09-09 核销**（GIT-ASYNC L21——双端同改交付：VSC `setup-reminders.mjs` collectGitContext/pushGitContext → async + CLI `helpers.mjs` collectGitContext → async——3×execFile 并行 Promise.all + all-or-nothing + 失败冷却 30s（评审 #3 冷却单测必做已锁）——设计档 VSC 仓 `docs/design/GIT-ASYNC.md`）
 - [x] ~~**files 尾随空格目录声明检测**~~——**2026-09-08 批 1 2.7 已修双端**（CLI scheduler:43 + VSC scheduler:104 trimEnd——VSC 以 CLI 为单一测试锚）
 - [x] ~~**R19 read_history 发现面无 top-N cap**~~——**2026-09-08 用户裁不要**（每 cwd 目录槽数有上界——listSlots 时间序有限——无打爆风险——维持现状）
@@ -88,14 +88,10 @@
 - [x] ~~**父 agent 观察运行中子代理（功能①）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——observe 动作：按 id 拉 5 条回合摘要+当前工具+turn/touched，治父看不到中间）
 - [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
 - [x] ~~**designer 子代理架构（2026-09-08 用户需求点——主会话纯中转，设计要求固化 designer 提示词）**~~——**2026-09-09 用户裁取消**（想法改变——eng 模式主会话本身就是 designer——设计已在主会话内实现（本会话全部设计档）——不建独立 designer 子代理角色——原需求的"designer 提示词固化"诉求由主会话既有设计纪律覆盖（METHODOLOGY 三层/文档地图/受影响表——无需新角色））
-- [ ] **并发池统一可配置 + advisor 归位（2026-09-09 用户需求点——用户裁 advisor 独立槽方向认可——
-  独立优于并入因需轮次特有语义）**：三类槽（① eng-coder 池 ② other 池 ③ advisor 评审池）统一默认 4 +
-  用户可配置——配置界面 CLI /config（并发池子菜单——cmd-config.mjs:234-259 现只 engCoder/other——
-  advisor 并入）+ VSC 配置面板（现无 poolLimits 暴露——需补三类）——现状核对：engCoder/other 已默认 4
-  已可配（agent.poolLimits——CLI /config 已显）——advisor 评审池现平台限 2（§24 D-24b ②-6a——不可配）
-  → 核心增量 = advisor 归位可配 + 默认 4 + VSC 面板 + CLI advisor 项——advisor 池平台层落点待勘察
-  （实现层可能涉平台——双端）——owning board = 并发/评审池（AGENT-LOOP §24 域）——status=澄清完成
-  （三类确认）待设计启动——设计权在用户
+- [x] ~~**并发池统一可配置 + advisor 归位**~~——**2026-09-09 核销**（POOL-CONFIG-UNIFIED——CLI 3944d54/5d7af7e
+  + VSC 619f7d0 内含——三池 4/4/4 + advisor 读取器 + 同 scope 守卫 + 文案活引用——L2 CLI 157/VSC 214
+  ——consume d1324e26——commit 归属混合待清理（父侧链闭合后 rebase）——CLI advisor-async 498 新最热点
+  （下批先拆）——§24 全仓清理观察项补挂见下）
 - [ ] **模型模型合并 + 会话级隔离（2026-09-09 维护者裁定——Nancywb 问题报告反方向——反 §14）**：
   合并模型概念——activeProvider 与 activeModel 不再是分开参数——模型 = 显式复合值 "provider:model"——
   schema：providers[].models（候选名单——选择器硬约束只能选候选内——不匹配拒——裁硬约束）——
@@ -175,3 +171,4 @@
 - [x] ~~**大项 L31 VSC 轨迹存档**~~——**2026-09-09 已交付**（TRACE-STORE-VSC——d84980d + db7f5f9——VSC L2 129/129 绿——consume 3da9a9b5——generate-title raw fetch 不经 chat()——不入轨迹范围记录）
 - [x] ~~**大项 L50 advisor 裁决模板**~~——**2026-09-09 核销**（ADVISOR-VERDICT-TEMPLATE——33ed72b/f9f0335——L2 绿——consume 9e85ddd9）
 - [x] ~~**大项 L52 sync spawn 可中止**~~——**2026-09-09 核销**（SYNC-CANCEL——3d7be35——见工程模式节同项核销——consume 1e5870bb）
+- [ ] **§24→§11 旧锚全仓清理**（2026-09-09 POOL-CONFIG AC-7 补挂——触碰行已更新——全仓注释残留双端数十处——后续批大扫）
