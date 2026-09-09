@@ -25,7 +25,7 @@ function mkFrame() {
     streaming: "", reasoning: "", _followTail: true, _pauseAnchorLen: null, _hasOlder: false,
     expandedBlocks: new Set(), dims: { get: () => DIMS },
   }
-  const agent = { history: [], provider: null, cwd: process.cwd(), _currentTurn: 0, _maxTurns: 0, _panelSnapshot: [] }
+  const agent = { history: [], provider: null, cwd: process.cwd(), _currentTurn: 0, _maxTurns: 0 }
   return { state, agent }
 }
 

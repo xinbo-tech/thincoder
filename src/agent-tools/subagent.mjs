@@ -190,7 +190,10 @@ export const subagentTool = {
       if (action === "consume-design") return executeConsumeDesignAction(args, ctx)
       // §19.6 panel 动作：view（readonly 面——digest 内放行——自省类）与 freeze
       // （控制类——同 cancel——digest 内放行）。深度/门控检查在 executePanelAction 内。
-      if (action === "panel") return executePanelAction(args, ctx)
+      // CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）接线：executePanelAction 经 ctx.state
+      // （= agent._tuiState——startTUI 反向挂载）读时现算面板块（computePanelBlocks）——
+      // 手工面板镜像已退役。headless/VSC 无挂载 → 现算返 null → 降级照旧。
+      if (action === "panel") return executePanelAction(args, { ...ctx, state: ctx.agent?._tuiState })
       // SUBAGENT-OBSERVE-SEND：observe = readonly 查询（同 status——digest/planMode 放行）；
       // send = 控制类豁免（同 cancel——父回合内显式调用即授权）。深度门在各自执行器内。
       if (action === "observe") return executeObserveAction(args, ctx)

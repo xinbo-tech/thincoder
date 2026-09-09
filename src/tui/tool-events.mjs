@@ -4,7 +4,8 @@
  *
  *  - onToken/onReasoning  : 子agent 前缀分流（routeSub*）→ 主流 streaming/reasoning
  *  - onToolCall           : 状态栏 + `❯ name args` 标题行 + 计时 + §19 action 记录
- *  - onToolResult         : 子agent 完成冻结（finishSubTask + freezeDoneSubTasks）、
+ *  - onToolResult         : 子agent 完成冻结（finishSubTaskKey 精确冻 + freezeDoneSubTasks——
+ *                           F-2 后 finishSubTask 为 no-op 兼容保留）、
  *                           工具块结果入块、advisor 评审冻结框
  *  - onToolOutput         : advisor 有序块缓冲 / 工具块输出流
  *  - 其余                 : usage 累计、等待提示、task 面板、回合末增量落盘
@@ -28,7 +29,7 @@ import { TURN_CAP_MARK, STOPPED_MARK } from "../agent/spawn-child.mjs"
 // 2026-09-05 module-split：ticks/maps/sweep/slim/settle/探测/find 族迁 tool-display.mjs——
 // buildToolCallbacks 内部引用用本地 import；sweepToolBlocks re-export（agent-turn 消费面）
 import {
-  TOOL_OUTPUT_LINE_CAP, SUBAGENT_PREVIEW_LINES, PREVIEW_LINE_CHARS, REMINDER_CAP, REMINDER_PERSIST_TURNS,
+  TOOL_OUTPUT_LINE_CAP, REMINDER_CAP, REMINDER_PERSIST_TURNS,
   _toolTicks, _subActions, _subActionQ,
   tickStart, tickTake, settleToolBlock, isAsyncSpawnResult, isSpawnErrorResult,
   findToolBlock, slimToolResultForDisplay, sweepToolBlocks,
@@ -173,8 +174,9 @@ export function buildToolCallbacks(deps) {
           //    启发式（async eng-coder 先启动时 explore 完成会误冻其块——7.2.3.1/T-F2）；
           // ② spawn 门拒错误（{status:"error"} JSON——auto-turn digest spawn 拒绝）：
           //    不冻结任何块（round1 #1——错误路径不冻结 running 块——T-F5）；
-          // ③ subKey undefined 非错误（老回调/测试直调——成功路径未知工具）→ 启发式
-          //    兜底（既有行为不变——面板单块时与精确冻同效——T-F1）。
+          // ③ subKey undefined 非错误（老回调/测试直调——成功路径未知工具）→ 不冻结
+          //    任何块（CLI-ACTIVITY-DEBLOAT F-2 收窄：finishSubTask 恒 no-op——无 key
+          //    无从精确归属，宁可 no-op 不误冻；块由回合尾 freezeAllSubTasks 兜底清场）。
           // SYNC-CANCEL（R6）：⏹ 折叠报告带 STOPPED_MARK——块冻结标 stopped 而非 done
           // （lastError 注记 + 事件定格——兜底竞态窗口的 dispatch 精确冻路径）
           const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null
@@ -186,11 +188,10 @@ export function buildToolCallbacks(deps) {
             finishSubTask(state, SUBAGENT_ROLES, lastError)
             freezeDoneSubTasks(state)
           }
-          // Subagent report preview (max 8 lines) displayed directly in conversation
-          const lines = result.split("\n")
-          const preview = lines.slice(0, SUBAGENT_PREVIEW_LINES).map((l) => l.slice(0, PREVIEW_LINE_CHARS)).join("\n")
-          if (preview) pushLine(preview, C.dim)
-          if (lines.length > SUBAGENT_PREVIEW_LINES) pushLine(`  ... (${lines.length - SUBAGENT_PREVIEW_LINES} more lines)`, C.dim)
+          // CLI-ACTIVITY-DEBLOAT F-1 (2026-09-10): the conversation-stream report
+          // preview (max 8 dim lines) is deleted — the frozen block is the ONLY
+          // carrier of the child's report (full text also lives in history for the
+          // model; escalate#N keeps its no-preview surface unchanged).
         }
       } else if (isEscalate) {
         // 飞刀 post-op report landed under the subagent tool name — freeze the
@@ -202,8 +203,8 @@ export function buildToolCallbacks(deps) {
         // event at flight end). Sync results (async:false) freeze below.
         if (!isAsyncSpawnResult(result)) {
           // §7.2.3（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
-          // 失败/老回调无 subKey → escalate 角色启发式兜底（escalate 串行 + 角色限定——
-          // 既有行为）。
+          // 失败/老回调无 subKey → 不冻结任何块（F-2 收窄——finishSubTask 恒 no-op，
+          // 块由回合尾 freezeAllSubTasks 兜底清场）。
           // SYNC-CANCEL（R6）：同上——escalate 路径同款扩展（sync escalate 无 registry——
           // 恒不折叠——扩展仅口径一致——零行为变化）
           const lastError = result.includes(TURN_CAP_MARK) ? "turn cap reached — work may be partial" : result.includes(STOPPED_MARK) ? "stopped by user — work may be partial" : null

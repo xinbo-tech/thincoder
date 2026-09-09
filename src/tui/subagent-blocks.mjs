@@ -18,10 +18,12 @@ import {
   closeSubChild,
 } from "./subagent-children.mjs"
 export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
-// 2026-09-05 module-split：finish/freeze 族 + §19.6 面板镜像迁 subagent-freeze.mjs——
+// 2026-09-05 module-split：finish/freeze 族 + §19.6 面板现算迁 subagent-freeze.mjs——
 // routeSub*/compression panel 内部用本地 import；re-export 保外部 import 面（index.mjs 等）
-import { freezeSubTaskLines, syncPanelSnapshot, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors } from "./subagent-freeze.mjs"
-export { syncPanelSnapshot, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
+// CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：面板手工镜像退役——re-export 面换现算导出
+// computePanelBlocks（读时现算），本文件全部刷镜调用点删除（单账本——变更点不再手动同步）。
+import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors } from "./subagent-freeze.mjs"
+export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
 
 /** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */
 export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
@@ -62,7 +64,8 @@ export function parseRelayPath(text) {
 
 /** N1: render-layer throttle for child tool-output appends (generation relays verbatim). */
 export const SUB_RELAY_THROTTLE_MS = 250
-/** Roles a subagent tool child can take (finishSubTask matches the block's role). */
+/** Roles a subagent tool child can take（⏹ 门控/渲染角色判据；F-2 后角色匹配完成面 =
+ *  finishSubTasksByRole——finishSubTask 已收窄 no-op）。 */
 export const SUBAGENT_ROLES = ["sub", "explore", "plan", "coder", "eng-coder"]
 
 let _subRenderLast = 0
@@ -105,7 +108,6 @@ export function ensureSubTaskKey(state, key, role) {
     // pending 标志（routeSubToken——async 先于块创建到达：排队条目补位启动的时序窗口）
     // ——块创建（此处）即应用——sub.async 区块创建即知（⏹ 门控/头标判定源保真）。
     if (state._pendingAsyncKeys?.delete(key)) state.subTasks[key].async = true
-    syncPanelSnapshot(state) // §19.6 D-P1: 块创建 → running 入镜
   }
   return state.subTasks[key]
 }
@@ -163,7 +165,6 @@ export function routeSubToken(state, t, scheduleRender) {
       if (live.queued) {
         delete live.queued
         live.started = Date.now()
-        syncPanelSnapshot(state) // §19.6 D-P1: queued → running 状态变更刷镜
       }
     }
     else {
@@ -182,7 +183,6 @@ export function routeSubToken(state, t, scheduleRender) {
     const live = state.subTasks?.[path.head]
     if (live && !live.done && live.async !== true) {
       delete state.subTasks[path.head]
-      syncPanelSnapshot(state) // §19.6 D-P1: 移除后刷镜（块出面板）
     }
     scheduleRender()
     return true
@@ -224,7 +224,6 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.currentTool = null
       sub.approval = null
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
-      syncPanelSnapshot(state) // §19.6 D-P1: waiting 块建/刷新刷镜
       scheduleRender()
       return true
     }
@@ -239,7 +238,6 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.currentTool = null
       sub.approval = null
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
-      syncPanelSnapshot(state) // §19.6 D-P1: settled → awaitingDigest 状态变更刷镜
       scheduleRender()
       return true
     }
@@ -251,7 +249,6 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
       freezeSubTaskLines(state, sub)
       delete state.subTasks[sub.key]
-      syncPanelSnapshot(state) // §19.6 D-P1: 冻结删除后刷镜
       scheduleRender()
       return true
     }
@@ -264,7 +261,6 @@ export function routeSubToken(state, t, scheduleRender) {
       sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
       freezeSubTaskLines(state, sub)
       delete state.subTasks[sub.key]
-      syncPanelSnapshot(state) // §19.6 D-P1: 冻结删除后刷镜
       scheduleRender()
       return true
     }
@@ -410,7 +406,6 @@ export function ensureCompressPanel(state, info = {}) {
   const messages = Number.isInteger(info.messages) && info.messages >= 0 ? info.messages : "?"
   appendSubBlock(panel, "status", "Compressing context…\n", { fresh: true })
   appendSubBlock(panel, "meta", `summarizing ${messages} messages\n`, { fresh: true })
-  syncPanelSnapshot(state) // §19.6 D-P1: 压缩面板建/重置刷镜
   return panel
 }
 
@@ -427,7 +422,6 @@ export function markCompressFailed(state, error) {
 function freezeCompressPanel(state, panel) {
   freezeSubTaskLines(state, panel)
   delete state.subTasks[panel.key]
-  syncPanelSnapshot(state) // §19.6 D-P1: 压缩面板冻结删除后刷镜
 }
 
 /** 完成态（onCompress）："Compressed: N tokens freed → summary (Xs)"——冻结可折叠。 */

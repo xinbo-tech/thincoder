@@ -23,7 +23,7 @@
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `index.mjs` | 448 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（busy 吞防御——busy 全拒——白名单已删——INPUT-LOCK-BEHAVIOR-REVISED）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export） |
+| `index.mjs` | 450 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（busy 吞防御——busy 全拒——白名单已删——INPUT-LOCK-BEHAVIOR-REVISED）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export）；`state._agent` + `agent._tuiState` 双向挂载（DEBLOAT F-3） |
 | `tui-lifecycle.mjs` | 75 | TUI 生命周期终端序列（2026-08-31 自 index 拆出）：writeStartupSequence（alt buffer + 光标 + 鼠标/粘贴/键盘增强 + **DECRST 7 禁环绕**）、writeCleanupSequence（恢复 DECSET 7 等）、createExitCleanup（退出闭包）、setTuiActive |
 | `update-notice.mjs` | 77 | 后台升级提示（2026-09-03 D-S1c 自 index 拆出）：upgradeFailureText / pendingNoticeReady 纯函数（index re-export）+ createUpdateNotice（提示 picker + 启动检查装配） |
 | `key-handler.mjs` | 440 | 按键分发：模态入口（permission/question/search/picker/wizard/interruptPrompt）+ 输入编辑；**busy 门禁**（INPUT-LOCK——提交吞——斜杠同禁发——空 Enter 静默）；挂起空闲 Enter → pendingInput 单槽+唤醒（槽满吞）；Ctrl+C 分支（picker 取消/武装/挂起两级/首按停回合/空闲双确认）；convMaxScroll 导出 |
@@ -31,10 +31,10 @@
 | `key-modes.mjs` | 216 | 按键模态层（2026-09-03 D-S4 自 key-handler 拆出）：permission / question / interruptPrompt 独占模态 handler——模态激活即消费全部按键（返回 true，未激活 false）；ctx 注入 state/agent/pushLine/render |
 | `agent-turn.mjs` | 323 | runAgentTurn（`{ autoTurn, skipSession }`）回合驱动器：状态复位 / runAgent 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（冻结决策、sweep、标题、落盘）/ 交接消息单条续发（state.queue 残项单容器——INPUT-LOCK）；LOGGING turn 包装；挂起会话段迁 suspension-drive.mjs（函数级静态环互相 import——回合尾进入驱动器、驱动器内回合递归本文件） |
 | `suspension-drive.mjs` | 297 | 挂起会话驱动器（2026-09-05 split：agent-turn 535>500——driver 族 verbatim 迁入；2026-09-09 INPUT-LOCK：R15 攒批删+单槽消费+残余单消息化——净减）——状态机行表见 AGENT-LOOP.md §9.2 |
-| `tool-events.mjs` | 401 | 工具事件 → TUI 状态：buildToolCallbacks + flushStream、`_toolBlock` 载体生命周期（onToolCall 开 / onToolResult 定态 / onToolOutput 追加 + advisor 有序块）、onCompress*/onTaskUpdate/onTurnEnd 落盘；权限/批权限/问答按 ctx 条件接线（auto-turn null → denied）；finishSubTaskKey；slimToolResultForDisplay |
-| `tool-display.mjs` | 143 | 工具块显示/计时/清扫 helper 族（2026-09-05 module-split：tool-events 537 > 500——_toolTicks/_subActions 计时表、sweepToolBlocks、settle/slim/async 探测/find 等 verbatim 迁入；模块级可变对象导出 + re-export sweepToolBlocks 保 agent-turn 消费面） |
-| `subagent-blocks.mjs` | 457 | 子 agent 区块数据层：SUB_EVENT_RE 路由（settled/stopped/queued/cancelled + ⟦ev⟧async 置位与 _pendingAsyncKeys 兜底）、finishSubTask/Key、trimSubTree（N2 树级环）、SUB_RELAY_THROTTLE_MS=250、SUBAGENT_ROLES、parseRelayPath（R23）；冻结族迁 subagent-freeze.mjs |
-| `subagent-freeze.mjs` | 173 | 子 agent 完成/冻结族（2026-09-05 split：subagent-blocks 625 > 500）：freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks + syncPanelSnapshot（§19.6 D-P1 面板镜像——刷 agent._panelSnapshot 供 action:"panel" 读）——verbatim 迁入 + re-export |
+| `tool-events.mjs` | 404 | 工具事件 → TUI 状态：buildToolCallbacks + flushStream、`_toolBlock` 载体生命周期（onToolCall 开 / onToolResult 定态 / onToolOutput 追加 + advisor 有序块）、onCompress*/onTaskUpdate/onTurnEnd 落盘；权限/批权限/问答按 ctx 条件接线（auto-turn null → denied）；finishSubTaskKey；slimToolResultForDisplay |
+| `tool-display.mjs` | 144 | 工具块显示/计时/清扫 helper 族（2026-09-05 module-split：tool-events 537 > 500——_toolTicks/_subActions 计时表、sweepToolBlocks、settle/slim/async 探测/find 等 verbatim 迁入；模块级可变对象导出 + re-export sweepToolBlocks 保 agent-turn 消费面；DEBLOAT F-1：报告 preview 常量已删） |
+| `subagent-blocks.mjs` | 450 | 子 agent 区块数据层：SUB_EVENT_RE 路由（settled/stopped/queued/cancelled + ⟦ev⟧async 置位与 _pendingAsyncKeys 兜底）、finishSubTask/Key、trimSubTree（N2 树级环）、SUB_RELAY_THROTTLE_MS=250、SUBAGENT_ROLES、parseRelayPath（R23）；冻结族迁 subagent-freeze.mjs |
+| `subagent-freeze.mjs` | 169 | 子 agent 完成/冻结族（2026-09-05 split：subagent-blocks 625 > 500）：freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks + computePanelBlocks（§19.6 面板**读时现算**——DEBLOAT F-3 手工镜像退役）——re-export |
 | `subagent-children.mjs` | 177 | 嵌套子代理子块载体数据层（R23 嵌套子代理子块方案）：ensureSubChild/descendSubChild/appendSubChild（任意 inner 深度）、树级 trim（trimSubTree 后序丢行——子块输出先丢、外层叙述保留）、closeSubChild、closeOpenSubChildren（外层冻结定格 stopped）、SUB_BLOCK_LINE_LIMIT/appendSubBlock 迁移至此（re-export 保 import 面） |
 | `render-frame.mjs` | 376 | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板（行由 layout 预计算直接 put）；renderHeader（logo+版本+模型+think 徽章+cwd）；状态栏 busy 文案（INPUT-LOCK——主会话处理中——queue 提示已撤）；question 自由文本态光标例外（TUI-INPUT-BOX.md §7.2） |
 | `render-conversation.mjs` | 425 | 对话面板行构建（纯函数）：三层缓存（convCacheKey 全量 / 行级 wrapRowsCached / 段级 _lineSegCache——2026-09-03 D-S2 后只管普通源行段，tool/frozenSub/frozenAdvisor 三段随实现迁 render-segments.mjs 各带独立 WeakMap）；搜索高亮、折叠装配（六处折叠点）、主输出前后空行、连续 dim 折叠；convViewport 视口数学单源导出 |
@@ -384,7 +384,7 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
 ### 子 agent 活动区块（数据层指针 + 面板/冻结渲染）
 
 区块数据层在 `subagent-blocks.mjs` / `subagent-children.mjs` / `subagent-freeze.mjs`（§1 地图行
-——事件 token 路由、⟦ev⟧async 置位、N2 环、R23 子块载体、冻结族、面板镜像 syncPanelSnapshot）；
+——事件 token 路由、⟦ev⟧async 置位、N2 环、R23 子块载体、冻结族、面板现算 computePanelBlocks）；
 编排语义（settle 时序、async 生命周期、排队规则）以 AGENT-LOOP.md（子代理工具族 §7.2、async
 §7.3、挂起 §9、调度与排队 §10、async advisor §11.2；权威源接管点 §17）为权威。显示层契约：
 
@@ -439,6 +439,32 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   `advisor review (round N · model)`（resolveAdvisorProvider 解析一次，onToolCall 时）；async
   advisor ⏹ = 取消后台评审（async advisor 池定向取消——AGENT-LOOP §11.2）；压缩（compress 伪角色）以同款面板块渲染——
   CONTEXT-COMPACTION.md §8/§8.3 权威。
+
+#### 活动块去加戏（CLI-ACTIVITY-DEBLOAT——2026-09-10 批，施工册要点并档）
+
+- **报告 preview 已删（F-1）**：sync spawn 完成不再往会话流塞 8 行 dim 摘要与
+  `... (N more lines)` 行（tool-events onToolResult / tool-display 两常量随删）——冻结块是
+  子代理报告的**唯一显示载体**（全文在 history 供模型；escalate#N 无 preview 注释面不变）。
+- **finishSubTask 收窄为精确匹配校验（F-2）**：`finishSubTask(state, roles, lastError)`
+  恒 no-op 返 null（"最早 started"启发式支路删除——7.2.3.1 实测误冻源归零；宁可 no-op 不误
+  冻）；`finishSubTaskKey`（dispatch ctx._subagentKey 精确 key）是**唯一完成路径**；无 key
+  窗口的块由回合尾 freezeAllSubTasks 兜底清场。finishSubTasksByRole（consult 残项整组 settle）
+  不受影响。
+- **面板手工镜像退役——读时现算（F-3）**：`computePanelBlocks(state)`（subagent-freeze.mjs
+  ——subTasks 活值纯推导：key/role/status 三态映射/startedAt——与原 syncPanelSnapshot 输出
+  形状一致）；`agent._panelSnapshot` 读写全删，`index.mjs` 反向挂载 `agent._tuiState = state`，
+  subagent.mjs panel 分流接线 `ctx.state`；subagent-panel.mjs 的 panelFreezeGate/view 面改经
+  ctx.state 现算——**门控语义零动**（awaitingDigest 限定/池归属查/pending 查）。状态变更点
+  不再手动刷镜（subagent-freeze/subagent-blocks 调用点全清——单账本）。`state._agent` 挂载保留
+  （SYNC-CANCEL ⏹ 门控 `state._agent._syncChildAborts` 依赖）。
+- **降级路径不变（T-P5）**：无 TUI 装配（headless/VSC/子代理——`agent._tuiState` 缺省）→
+  现算返 null → view 降级池视图 + freeze 报不可用照旧。
+- **④ awaitingDigest 驻留零动（用户裁定）**：settled 三态机/_freezeAt settle 锚 splice/
+  shiftFreezeAnchors 头裁补偿/降序 splice/freezeReclaimDigestedBlocks 逐条回收/
+  panelFreezeGate 门控——全部保留（§17.5.5 有意决策；用户可见变化仅 F-1 少 8 行重复摘要与
+  F-2 误冻消除——生产路径本走精确 key）。不引入块落盘恢复；协议零改。
+- 测试：`test/activity-debloat.test.mjs`（用例表 1:1——preview 删/精确 key 命中与无块/
+  现算正常与空态/降级路径/门控等价/驻留回收/锚点不回归）。
 
 ### 约束
 
@@ -644,6 +670,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 
 ## 变更记录
 
+- 2026-09-10：CLI-ACTIVITY-DEBLOAT 批（活动块去加戏：F-1 报告 preview 删 / F-2 finishSubTask 收窄精确匹配 / F-3 面板镜像改读时现算 computePanelBlocks——agent._tuiState 反向挂载；④ awaitingDigest 驻留零动）——§6.4 补充节 + §1 模块地图行数回写。
 - 2026-09-09：INPUT-LOCK-BEHAVIOR-REVISED 批（busy 行为修订——VSC 不禁录入只禁 send——CLI 白名单删、忙时斜杠同吞）——§4 门禁描述去白名单、§9 slash 命令节同步、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-09：INPUT-LOCK-ASYNC 批（C'——busy 提交吞/白名单/单槽化/queue UI 撤）——§4 门禁、§8 交接续发、§1 模块地图行数回写（见 §11 完成史行）。
 - 2026-09-07：格式债批 A——本文件由逐批变更档案重写为人类可读当前态（DOC-REWRITE.md +

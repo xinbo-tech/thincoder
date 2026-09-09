@@ -5,9 +5,14 @@
  * pending 单容器 _pendingAsyncResults 四族统一——escalate/consult 独立族退役））。
  * 内容：executePanelAction（D-P2——readonly 视图面 + 门控 freeze）+ panelFreezeGate
  * （D-P3 冻结门控）+ blockKeyIn（块归属判定随行）。
+ * CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：手工面板镜像退役——视图面与门控改读时现算
+ * computePanelBlocks(ctx.state)（ctx.state = agent._tuiState——TUI 装配处接线——单账本）；
+ * 未挂载（headless/VSC/子代理）→ 现算返 null → 降级/报不可用照旧
+ * （T-P5 语义零变）。门控语义零动（F-4）——仅数据源从镜像换现算。
  * subagent-actions.mjs 尾部 re-export executePanelAction 保 subagent.mjs 既有 import 面。
  */
 import { getAsyncPool } from "./async-settle.mjs"
+import { computePanelBlocks } from "../tui/subagent-freeze.mjs" // F-3：面板视图读时现算（单账本——tui→core 单向依赖，无环）
 
 /** 面板块 key（role#N）在池（Map——条目值）/pending 单容器（数组）中的归属判定。 */
 function blockKeyIn(container, key) {
@@ -22,13 +27,15 @@ function blockKeyIn(container, key) {
  * ——pending 已消费——状态滞后——补发冻结不破坏任何顺序）。
  * - pending 仍有对应（报告未达模型）→ 拒绝（提前回收破坏消化顺序——T-P3）
  * - 不存在的 key / 仍 running / done 的块 → 拒绝（T-P4——running 块 settle 时自冻）
- * - 无镜像 → 拒绝（headless/VS Code——freeze 不可用——T-P5）
+ * - 无面板（现算返 null）→ 拒绝（headless/VS Code——freeze 不可用——T-P5）
  * 错误信息明确（模型可解释 + 自助修正）。返回 { ok:true } 或 { err }。
  */
-function panelFreezeGate(agent, key) {
-  const snap = agent._panelSnapshot
+function panelFreezeGate(ctx, key) {
+  // F-3（2026-09-10）：镜像退役——经 ctx.state 读时现算（CLI-ACTIVITY-DEBLOAT）。
+  // 门控语义零动（F-4）：awaitingDigest 限定/池归属查/pending 查逐字保留——仅数据源换现算。
+  const snap = computePanelBlocks(ctx.state)
   if (!Array.isArray(snap)) {
-    return { err: "panel unavailable — no CLI TUI panel mirror in this session (headless / VS Code / subagent contexts — freeze unavailable; panel is CLI-TUI-only, AC-P4)" }
+    return { err: "panel unavailable — no CLI TUI panel in this session (headless / VS Code / subagent contexts — freeze unavailable; panel is CLI-TUI-only, AC-P4)" }
   }
   const block = snap.find((b) => b.key === key)
   if (!block) {
@@ -44,12 +51,12 @@ function panelFreezeGate(agent, key) {
     }
     return { err: `block ${key} is in state ${block.status} — freeze only reclaims awaitingDigest blocks whose report is already digested` }
   }
-  if (blockKeyIn(getAsyncPool(agent, "subagent"), key) || blockKeyIn(getAsyncPool(agent, "advisor"), key)) {
+  if (blockKeyIn(getAsyncPool(ctx.agent, "subagent"), key) || blockKeyIn(getAsyncPool(ctx.agent, "advisor"), key)) {
     return { err: `block ${key} still has a live pool entry — it is NOT a digested-stuck block (freeze refused; status action shows the pool)` }
   }
   // ASYNC-RESULT-CONTAINER.md D2：pending 单容器（四族统一——原 escalate/consult
   // 独立族退役）。
-  if (blockKeyIn(agent._pendingAsyncResults, key)) {
+  if (blockKeyIn(ctx.agent._pendingAsyncResults, key)) {
     return { err: `block ${key} is still genuinely awaiting digestion — its report is still pending and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically — §17.5.5)` }
   }
   return { ok: true }
@@ -58,15 +65,15 @@ function panelFreezeGate(agent, key) {
 /**
  * §19.6 subagent action:"panel"（D-P2——readonly 视图面 + 门控干预面——单动作双参，
  * freeze 优先）：
- * - view（缺省——返回镜像区块列表）：agent._panelSnapshot = TUI 面板镜像（块级
- *   状态变更点由 subagent-blocks syncPanelSnapshot 同步刷新——与用户所见一致——
- *   index.mjs 装配 state._agent）。awaitingDigest 条目**读时交叉**
+ * - view（缺省——返回面板块列表）：ctx.state（= agent._tuiState——CLI TUI 装配）经
+ *   computePanelBlocks **读时现算**（F-3 单账本——与用户所见一致）。awaitingDigest 条目
+ *   **读时交叉**
  *   _pendingAsyncResults/池 标注 digested（round1 #3——digested:true
  *   = 报告已消化但块仍驻留——异常块——freeze 候选；模型可定位解释 UI 怪相）。
  * - freeze:key（D-P3 门控通过 → 发 key + "/" + ⟦ev⟧done 哨兵字面 token——
  *   onToken——TUI routeSubToken 冻结回收——落位复用 sub._freezeAt settle 锚点
  *   splice，无锚点尾推兜底——§17.5.5 同口径——round1 #2）。
- * 无镜像（headless/VS Code——D-P2 round1 #1：webview 无 state.subTasks 对应物——
+ * 无 TUI state（headless/VS Code——D-P2 round1 #1：webview 无 state.subTasks 对应物——
  * 7.2.3.2 #8 先例）→ view 恒降级池视图（双池经 getAsyncPool + pending 单容器
  * 合成）+ no panel 注；freeze 报不可用。CLI-only 完整能力（AC-P4）。
  */
@@ -80,10 +87,10 @@ export function executePanelAction(args, ctx) {
     if ((ctx.depth ?? 0) > 0) {
       return JSON.stringify({ status: "error", error: "panel freeze is only available at depth 0 — a child agent has no panel of its own (AGENT-LOOP.md §19.6 D-P2)" })
     }
-    const gate = panelFreezeGate(agent, freezeKey)
+    const gate = panelFreezeGate(ctx, freezeKey)
     if (gate.err) return JSON.stringify({ status: "error", error: gate.err })
     if (!ctx.callbacks?.onToken) {
-      return JSON.stringify({ status: "error", error: `panel mirror present but no token relay in this context — the freeze of ${freezeKey} cannot reach the TUI` })
+      return JSON.stringify({ status: "error", error: `panel present but no token relay in this context — the freeze of ${freezeKey} cannot reach the TUI` })
     }
     // 门控通过 → 发 done 冻结事件（settle 同机制字面格式——TUI routeSubToken done
     // 分支冻结回收——落位 _freezeAt settle 锚点 splice；无锚点（旧会话残留）时
@@ -100,9 +107,9 @@ export function executePanelAction(args, ctx) {
   if (args?.view === false) {
     return JSON.stringify({ status: "error", error: "panel has nothing to do — view:false with no freeze key; pass freeze:'role#N' to reclaim a digested-stuck block, or omit view (defaults to true)" })
   }
-  const snap = agent._panelSnapshot
+  const snap = computePanelBlocks(ctx.state)
   if (!Array.isArray(snap)) {
-    // F-P3 降级：无镜像（headless/VS Code/子代理上下文——CLI TUI-only 完整能力）→
+    // F-P3 降级：无 TUI state（headless/VS Code/子代理上下文——CLI TUI-only 完整能力）→
     // 池视图（双池经 getAsyncPool——运行/排队条目 + pending 单容器待消化条目）
     const blocks = []
     const queue = agent._asyncQueue ?? []
@@ -132,7 +139,7 @@ export function executePanelAction(args, ctx) {
     }
     return JSON.stringify({
       degraded: true,
-      note: "no panel — this session has no CLI TUI panel mirror (headless / VS Code / subagent context — panel view is CLI-TUI-only, AC-P4); pool-derived view below; action:'status' shows the full pool",
+      note: "no panel — this session has no CLI TUI panel (headless / VS Code / subagent context — panel view is CLI-TUI-only, AC-P4); pool-derived view below; action:'status' shows the full pool",
       panel: blocks,
     })
   }

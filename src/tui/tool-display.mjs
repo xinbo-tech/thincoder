@@ -14,10 +14,11 @@
 // a parallel same-name batch finishing out of order swaps durations between
 // siblings — same magnitude, both keep an elapsed (display-level, acceptable).
 
-// Named caps (consult P2, 2026-08-30): inline 200/8/120/3/5 were magic numbers.
+// Named caps (consult P2, 2026-08-30): inline 200/3/5 were magic numbers.
+// CLI-ACTIVITY-DEBLOAT F-1 (2026-09-10): the report preview constants (former named caps)
+// deleted with the conversation-stream preview (tool-events onToolResult) — the
+// frozen block is the ONLY carrier of a child's report.
 export const TOOL_OUTPUT_LINE_CAP = 200     // per-call streaming output ring buffer
-export const SUBAGENT_PREVIEW_LINES = 8     // report preview rows in the conversation
-export const PREVIEW_LINE_CHARS = 120       // per-line preview slice
 export const REMINDER_CAP = 3               // max pending reminders shown on turn end
 export const REMINDER_PERSIST_TURNS = 5     // persist reminders every N turns
 
