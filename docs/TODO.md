@@ -187,15 +187,19 @@
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
 - [ ] **VSC live 块显示不可靠（2026-09-09 用户反馈——"实际启动了但不能可靠显示 live 块"）——根因已定位**
-  （explore#1 勘察 2026-09-09）：🔴① **advisor-only 会话快照门控失效**——run-stages.mjs:279 池空即把
-  history 池字段摘成 undefined——postPoolSnapshot（panel-callbacks.mjs:165）门控只认 _asyncSubagents Map——
-  评审场景（subagent 池空——常态）快照空转——webview 加载/重载窗口丢 started 消息后 advisor 块永不重建
-  （增量 started 必发但死窗丢——快照兜底失效）；🔴② **终态对 never-born 块 no-op**——applySubagentStatus
-  settled/done 分支只遍历已存在块——advisor/family 无 consult 同款快照建块防御（activity.js L234-239）——
-  块缺失一旦发生即永久；🟡③ clearMessages（boot 必经）在池仍活时抹 live 块——重建依赖后续 chunk/快照
-  ——修复指向（explore 给）：门控改双池任一 Map 即放行 + 快照扩 settled-in-pending/never-born 建块防御
-  （consult 模式扩展 advisor/family）+ 测试补 advisor-only 快照用例（现 fixture 恒双 Map——盲区）——
-  status=根因已定位待设计
+  （explore#1 勘察 2026-09-09 + 用户观察补强 21:07）：**用户实测模式 = 普遍时有时无**——第一次 advisor 没出现
+  + explore（subagent 角色）也没出现 + 后来 advisor 又出现——**非 advisor-only——三重脆弱广化根因**：
+  🔴① **出生靠窗口**——started 落在 webview 未就绪/加载窗口即静默丢弃（postMessage 可选链无队列——
+  panel-callbacks.mjs:81/113）——无兜底则块永不显示；🔴② **快照兜底不全**——postPoolSnapshot 门控只认
+  _asyncSubagents Map（panel-callbacks.mjs:165——run-stages.mjs:279 池空摘 undefined——advisor-only 会话
+  空转）+ 快照只重放 running（L187）——explore/评审跑完 settle 出池后 reload/clearMessages 抹块则永不重建；
+  🔴③ **终态对 never-born 块 no-op**——applySubagentStatus settled/done 分支只遍历已存在块（activity.js
+  L179-201/L240-248）——advisor/family 无 consult 快照建块防御（L234-239）——块缺失一旦发生即永久；🟡④
+  clearMessages（boot/loadSession 必经——chat.js:180-189）池仍活时抹全部 live 块——重建依赖后续快照
+  ——修复指向：门控双池任一放行 + 快照扩 settled-in-pending（未 digest 重建驻留块）+ never-born 终态建块
+  防御（consult 模式扩 advisor/family）+（根治选项）出生消息队列/webview 就绪补发——测试补 advisor-only +
+  explore-only + settle-after-reload 快照用例（现 fixture 恒双 Map running——盲区）——status=根因已定位待
+  设计——修复方向（修补 vs 出生队列根治）待用户裁
 - [ ] **advisor 池状态不可查询 + 不可取消（2026-09-09 用户反馈——平台机制缺陷——已实证三次）**：
   ① subagent status 只查 subagent 池——advisor 池（_asyncAdvisors）无状态通道——评审是否在跑/卡住/完成不可知
   ——digest 是唯一信号（死等）② wait_for "advisor settled" 误报（0ms 即过但池仍拒重发——口径与实际池状态脱钩）
