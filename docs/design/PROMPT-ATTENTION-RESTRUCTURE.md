@@ -49,6 +49,9 @@
   归类 → **关键规则提权位置标注**（哪些规则提到文件前 20%）
 - 方案在设计档定稿（权威源——排版/提权位置统一）——各端独立落地照抄（不加 byte 硬校验）
 - 产出后**呈现给用户审**——审过才执行（不自动进入 B）
+- **A 定稿（2026-09-09——用户批准）**：施工图 = PROMPT-ATTENTION-RESTRUCTURE-SPLIT-PLAN.md（15 文件实测
+  方案——6 项裁定：① 开关段 S2 序 ② 表行转条目 ③ 建标题骨架 ④ 工程-sub 重复只拆不删 ⑤ 命令句化只标不改
+  ⑥ L16 digest 锚句保完整）——施工顺序与验证见该档尾部
 
 ### 阶段 B：eng-coder 分批执行
 - 按权重序分批：engineering.md → system.md/main.md → engineering-sub.md → discipline.md → advisor 四件套/其余
