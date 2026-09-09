@@ -327,7 +327,9 @@ export function resolveAdvisorProvider(agent) {
   const cfg = agent.config?.advisor
   if (cfg?.provider) {
     try {
-      const provider = findProvider(agent.providers ?? [agent.provider], cfg.provider)
+      // F-1 (ISSUE-FIX-BATCH): children carry no agent.providers (spawn childConfig copies the
+      // parent config) — fall back to config.providersList (.length: [] must not skip the list).
+      const provider = findProvider(agent.providers?.length ? agent.providers : agent.config?.providersList ?? [agent.provider], cfg.provider)
       const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider }
       if (cfg.thinking === null || cfg.thinking === false) result.thinking = undefined  // explicitly off
       else if (cfg.thinking !== undefined) result.thinking = cfg.thinking
