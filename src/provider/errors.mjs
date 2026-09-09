@@ -74,3 +74,28 @@ export function compileStreamRules(rules) {
     }
   }).filter(Boolean)
 }
+
+/**
+ * Provider-level pre-flight error (MODEL-400-FIX F-1 — 请求体组装前断言): carries the
+ * provider identity so a fail-fast throw is readable ("which provider + what to fix")
+ * instead of a wire-time serde 400 or a bare message without context.
+ */
+export class ProviderError extends Error {
+  constructor(provider, message) {
+    super(`provider "${provider?.name ?? provider?.model ?? "unknown"}": ${message}`)
+    this.name = "ProviderError"
+  }
+}
+
+/**
+ * F-1 (MODEL-400-FIX — docs/design/MODEL-400-FIX.md) 根因兜底——请求体组装前断言：渠道裸克隆
+ * （`{...渠道}`——MODEL-MERGE schema：渠道无 model 字段，只带 models[] 候选）未重派生 .model 时
+ * provider.model 为 undefined/null——JSON.stringify 会丢 undefined 键 → 无 model 请求 → serde 400。
+ * fail-fast 报可读错误（带 provider 名 + 修复线索），不发病体。core.mjs chatImpl openai body 组装
+ * 前调用（单行——core.mjs 500 行硬限）。
+ */
+export function assertProviderModel(provider) {
+  if (!provider.model) {
+    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (MODEL-MERGE schema: channels carry models[] not model)")
+  }
+}

@@ -319,11 +319,13 @@ export function applySession(agent, data) {
   const slotProvider = data.activeProvider ? agent.providers?.find((pr) => pr.name === data.activeProvider) : null
   if (slotProvider) {
     // ① 槽 provider 存在 → 按槽值设（不看 config）：双字段恒非空——legacy 槽 activeModel
-    //    null/缺省 = 无 override——回该渠道首候选（models[0]——老"渠道默认"的唯一残留形态）
+    //    null/缺省 = 无 override——回该渠道首候选（models[0]——老"渠道默认"的唯一残留形态）。
+    //    F-2d（MODEL-400-FIX）：`||` 非 `??`——空串也兜（activeModel="" 的槽会让 `??` 不落链 →
+    //    空槽 model 恒有值，provider.model 键不缺失）
     const prevName = agent.activeProvider
     const prevModel = agent.activeModel ?? null
     const models = Array.isArray(slotProvider.models) ? slotProvider.models : []
-    const slotModel = data.activeModel ?? models[0] ?? null
+    const slotModel = data.activeModel || models[0]
     const switched = prevName !== slotProvider.name || prevModel !== slotModel
     agent.activeProvider = slotProvider.name
     agent.activeModel = slotModel

@@ -148,7 +148,10 @@ export function resolveChildProvider(parent, modelArg) {
     return { ...withKey(p), model: mname || p.model }
   }
   const byName = providers.find((x) => x.name === modelArg)
-  if (byName) return withKey(byName)
+  // F-2c (MODEL-400-FIX)：裸渠道名克隆须重派生 model——MODEL-MERGE schema 渠道无 model 字段
+  // （models[] 候选）→ 裸 `{...withKey(byName)}` 丢 model 键 → 无 model 请求 → serde 400。
+  // 取渠道候选首（models[0]——老"渠道默认"语义的残留形态）；无候选 → 主 provider 的 model。
+  if (byName) return { ...withKey(byName), model: byName.models?.[0] ?? parent.provider?.model }
   return { ...parent.provider, model: modelArg }
 }
 

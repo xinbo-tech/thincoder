@@ -17,7 +17,7 @@ import {
   estimateRequestTokens, rateGate, recordRate,
 } from "./rate.mjs"
 // 2026-09-05 module-split：错误分类/流规则族迁 provider/errors.mjs（core.mjs 557 > 500 硬限）
-import { parseRetryAfter, isNonRetryableError, betaBaseURL, compileStreamRules } from "./errors.mjs"
+import { parseRetryAfter, isNonRetryableError, betaBaseURL, compileStreamRules, assertProviderModel } from "./errors.mjs"
 // 测试 import 面（provider-stream/stream-rules）——core 曾直接 export 这两个
 export { parseRetryAfter, compileStreamRules } from "./errors.mjs"
 
@@ -178,6 +178,8 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   }
   // Compile string-pattern rules to RegExp at call time
   const rules = compileStreamRules(streamRules)
+  // F-1 (MODEL-400-FIX)：请求体组装前断言 model 恒有值——见 errors.mjs assertProviderModel
+  assertProviderModel(provider)
   const body = {
     model: provider.model,
     messages,
