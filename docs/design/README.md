@@ -36,6 +36,8 @@
 | 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md）已移 `_archive/` |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` / `ADVISOR-VERDICT-TEMPLATE.md`（裁决行模板——L50——2026-09-09） | |
 | 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | async 评审 token 结算根治（settle 当场落盘/门禁读权威/废旧镜像）；VSC 同名对应——同机制各自独立 |
+| 提示词系统 | `PROMPT-SYSTEM.md` | 板块总体档（2026-09-10 建档——分层模型/文件清单/装配矩阵/判定规则权威现状）。批次史档独立保留：`PROMPT-DECOUPLING.md`（解耦批——其 §2.5 基础拆分批待评审）、`MAIN-DESIGN-ENHANCE.md`（设计纪律锚批）、`PROMPT-ATTENTION-RESTRUCTURE.md`（注意力重排批）。冲突时以 PROMPT-SYSTEM 现状为准。VSC 端差异面 = （VSC 仓）`VSC-PROMPTS.md` |
+
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径已由本档 D-V5 接管，前身 `VERIFY-DOCONLY.md` 并入后归档） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `LOGGING.md` | 常驻事件骨架日志 |
