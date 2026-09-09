@@ -1,7 +1,7 @@
 # 批 4：异步残留 doc 候选 + 跨文档陈旧清理（BATCH-4-DOC-CLEANUP）
 
 > 板块：文档面（双端——异步化残留候选 + 陈旧清理）。权威源：AGENT-LOOP §7.7.1（escalate/advisor 顶层一律异步——同步保留例外全移除）+ §11.2 R13 + 全异步化适配评估残留清单。
-> 状态：**设计待评审（round 2）**——2026-09-09 落档（勘察已齐——评审 #1 changes-required 修正版：文件归属纠正——真面 = ESCALATE 双端 async:false 残留句 + WEBVIEW.md send.js 拦截句——SESSION-FLOW-A/B/C/SESSION.md 非陈旧面移除）。需求：TODO 异步残留 doc 候选（批 4——用户裁 8 点分批收尾）。
+> 状态：**评审通过——待实现**（round 3——评审 #1/#2 changes-required 修正 + 评审 #3 pass——token 已落盘——锚 byte-final 统一 + 片段模式）。需求：TODO 异步残留 doc 候选（批 4——用户裁 8 点分批收尾）。
 
 ---
 
@@ -25,12 +25,12 @@
   ——**逐字锚 = AGENT-LOOP §7.7.1 escalate 句（L668——byte-final——评审 #7 round2：新句首段与锚逐字一致（含
   §7.7.1：）——实现时以 AGENT-LOOP 原文为准照抄**——锚句 byte-final（评审 #6）
 - VSC ESCALATE.md（165 实测）：L105 同款旧句删 → 同锚新句（VSC 档结构不同——检查 §2.3 async 现行机制段残余同步描述——grep "同步旧路径/同步语义零回归" 段清）
-- 测试：grep 断言（双端——"async:false 保留同步旧路径" / "同步语义零回归" 零残留——fail-when-present——AC-1）
+- 测试：grep 断言（双端——片段 "同步旧路径" + "同步语义零回归" 零残留——fail-when-present——AC-1——评审 #8 round2：全串模式不命中逐字引文——片段为准）
 
 ### 2. F-2 WEBVIEW.md 陈旧句（INPUT-LOCK 修订同步——评审 #1 真面）
 - VSC WEBVIEW.md（344 实测）L175：send.js 拦截句修为新行为（INPUT-LOCK-BEHAVIOR-REVISED 已批——行为定稿：send 禁保留——输入不禁）——全档 grep busy/readOnly/排队句——凡与"只禁 send 不禁录入"矛盾的句修——非矛盾句（busy-state 机制面）保留
 - 时序（评审 #5 coordination）：INPUT-LOCK-BEHAVIOR-REVISED 实现中（id=13）——本批 F-2 紧随其后执行（或同批——若 id=13 先交付按实现同步——若未交付按设计档行为修——以设计为准）
-- 测试：grep 断言（"readOnly 锁" 旧句零残留——WEBVIEW 面——AC-2）
+- 测试：grep 断言（"readOnly 锁" 旧句零残留 + "由 host 排队" L175 特征零残留——WEBVIEW 面——AC-2——评审 #8 round2）
 
 ## 受影响文件（双端——评审 #1 纠正版）
 
@@ -64,3 +64,5 @@
 
 ## 变更记录
 - 2026-09-09：落档（初版——SESSION-FLOW.md 归属误标——评审 #1 🔴 纠正：SESSION-FLOW-A/B/C 在 VSC 仓为已实施机制档、CLI SESSION.md 勘察零命中——真面 = ESCALATE 双端 async:false 残留句（L99/L105——与 §7.7.1 矛盾）+ WEBVIEW.md L175 send.js 句——重写受影响表——句子逐字枚举 + AC-3 措辞 + 行数实测 + 锚句 byte-final——round 2 待评）。
+- 2026-09-09：round 2 修正（评审 #2 changes-required——#7 锚句统一含 §7.7.1：+ AC-5 byte-final 措辞 + #8 AC 片段模式 + L175 特征）——round 3 待评）。
+- 2026-09-09：round 3 修正（评审 #3 pass——#8 残留：:28/:33 测试行对齐片段措辞——评审通过——待实现）。
