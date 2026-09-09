@@ -9,7 +9,9 @@
 
 - **总体目标**：修三个 Gitee open issue（IKE85W advisor provider 错配 / IKDCVV 评审反复 + 无续跑 / IKCDMR consultModels 硬崩）——各含根因实证——按修复方向落地。
 - **功能性**：
-  - F-1（IKE85W）CLI `resolveAdvisorProvider` 候选源修复：`agent.providers ?? [agent.provider]` → 扩 `agent.config.providersList`（child config 已带全量——resolveChildProvider 同款语义）——child 内 advisor 评审 provider 正确解析
+  - F-1（IKE85W）CLI `resolveAdvisorProvider` 候选源修复：`agent.providers ?? [agent.provider]` → 扩
+    `agent.config.providersList`（child config 已带全量——resolveChildProvider 同款语义）——child 内
+    advisor 评审 provider 正确解析
   - F-2（IKDCVV 主循环）随 F-1 拆 403 失败环（child 交付评审不再每次失败）——评审"很久"= 设计预算不改
   - F-3（IKDCVV 真缺口——单发评审无断点续跑）登记为后续大项（本批不做——单列 TODO——中断全损重来是较大设计：跨调用续跑/预算分段）
   - F-4（IKCDMR）consultModels 校验软失败化（throw → 过滤非法条目 + 启动警告/引导——D-S1 范式）+ removeProviderFlow 级联清理（删渠道清 consultModels/subagentModels/advisor.provider 悬挂引用）——VSC 对等路径对齐
@@ -18,7 +20,10 @@
 ## 设计（勘察骨架——照做勿自行解释）
 
 ### 1. Issue 1（F-1——CLI run.mjs 小改）
-- `src/advisor/run.mjs:330`：`const provider = findProvider(agent.providers ?? [agent.provider], cfg.provider)` → `findProvider(agent.providers ?? agent.config?.providersList ?? [agent.provider], cfg.provider)`——child config 带完整 providersList（subagent-spawn childConfig = 父 config 拷贝）——findProvider 有全量可查——不再退化单元素
+- `src/advisor/run.mjs:330`：`const provider = findProvider(agent.providers ?? [agent.provider],
+  cfg.provider)` → `findProvider(agent.providers ?? agent.config?.providersList ??
+  [agent.provider], cfg.provider)`——child config 带完整 providersList（subagent-spawn childConfig = 父
+  config 拷贝）——findProvider 有全量可查——不再退化单元素
 - 或备选：buildSpawnChild 补 `child.providers = parent.providers`（与 make-agent 对齐）——二选一（主推前者——最小面）
 - VSC 无此 bug（provider.mjs 读磁盘全量）——不须改——只对齐语义验证
 - 修复消 Issue 2 主放大器（child 交付评审不再 403 → 不阻塞 → 不重来循环）
