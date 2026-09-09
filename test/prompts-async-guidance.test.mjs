@@ -128,8 +128,9 @@ test("ASYNC-RESIDUE-FIX F-1 main.md:8 sync 例外通道句清除 + 新引导句�
   assert.doesNotMatch(mainL8, /sync only when the next step depends on this output and nothing else can proceed/, "main.md:8: sync 例外通道句残留")
 })
 
-test("ASYNC-RESIDUE-FIX F-5 main.md:13 重复句合一（results reach you automatically 恰一现）", () => {
+test("ASYNC-RESIDUE-FIX F-5 main.md:13 重复句合一（results reach you automatically 恰一现）+ 无 sync 例外", () => {
   assert.strictEqual((mainL13.match(/results reach you automatically/g) || []).length, 1, "main.md:13: 重复句未合一")
+  assert.doesNotMatch(mainL13, /pass `?async: ?false`? only when|sync only when/, "main.md:13: sync 例外引导残留")
 })
 
 test("ASYNC-RESIDUE-FIX F-4 advisor.mjs async 参数机制限定句驻留（防回归）", () => {
