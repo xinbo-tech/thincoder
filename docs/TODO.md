@@ -200,6 +200,12 @@
   防御（consult 模式扩 advisor/family）+（根治选项）出生消息队列/webview 就绪补发——测试补 advisor-only +
   explore-only + settle-after-reload 快照用例（现 fixture 恒双 Map running——盲区）——status=根因已定位待
   设计——修复方向（修补 vs 出生队列根治）待用户裁
+  ——**用户观察补强（21:30）**：**间歇性非恒定**——丢集中在 20:52（round2 评审）+21:01（explore）——21:06
+  （round3）起连续正常（round3/阶段A explore/eng-coder 批1/REMOVE 评审全出现）——时段性窗口/竞态模型：
+  20:30 进程重启后**头一两个 async 任务落在面板/webview 重建窗口——started 丢——面板稳定后恢复**——
+  "重启后首任务丢"假设待受控复现验证（重启扩展→立即发起 async 任务看块 vs 稳定后发起）——
+  **REMOVE-POOL-SNAPSHOT 撤除批先行（评审中）**——撤后观察：若窗口现象仍在→出生投递窗口问题坐实（快照非因）
+  ——若撤后恢复→快照机制意外干扰
 - [ ] **advisor 池状态不可查询 + 不可取消（2026-09-09 用户反馈——平台机制缺陷——已实证三次）**：
   ① subagent status 只查 subagent 池——advisor 池（_asyncAdvisors）无状态通道——评审是否在跑/卡住/完成不可知
   ——digest 是唯一信号（死等）② wait_for "advisor settled" 误报（0ms 即过但池仍拒重发——口径与实际池状态脱钩）
