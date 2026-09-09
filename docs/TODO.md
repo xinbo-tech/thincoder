@@ -27,8 +27,8 @@
 - [x] ~~**TUI tool-args 块标题兜底**~~——**2026-09-08 批 1 2.4 已修**（tool-args.mjs:47-48 action 兜底）
 - [x] ~~**setup.mjs knife-edge 注记过期**~~——**2026-09-08 批 1 2.8 已修**（删注为首——无树内夹具常量可校准——17000 最新）
 - [x] ~~**ACP 桥结构化映射**~~——**2026-09-08 核销**（bridge.mjs:201-204 tool_call 结构化 + :212-214 tool_call_update 落地）
-- [ ] **doc-sweep 旧名残留（2026-09-08 大部分核销）**：CLI AGENT-LOOP.md:94 已净（批 2 2a-1 memory search 动作）——剩 VSC CAPABILITY_GAP.md:7/8/21（批 2 2a-2 未落地——eng-coder id=2 在跑）
-- [ ] **VS Code 端轨迹存档同构实现**（完整轨迹落盘 VSC 端——**2026-09-08 用户裁要**——VSC 模型调用出口加同款采集点 + JSONL 落盘 ~/.thincoder/traces/——CLI trace-store §18.6 参照——走设计链——等 §11.3/批 5/6 交付后排批）
+- [x] ~~**doc-sweep 旧名残留**~~——**2026-09-09 核销**（勘察确认：VSC CAPABILITY_GAP memory_search 旧名零残留——memory 五动作现行表述——批 2 2a-2 已随 DOC-SWEEP 清）
+- [x] ~~**VS Code 端轨迹存档同构实现**~~——**2026-09-09 核销**（TRACE-STORE-VSC——d84980d——trace-store.mjs 255 行 + provider 出口——VSC L2 129/129——consume 3da9a9b5）
 - [x] ~~**轨迹目录清理策略补充**~~——**2026-09-08 用户裁不要**（D-TR10 24h 保留时间窗已隐含总量有界——保留期可配——无需按天/会话额外 GC）
 
 ## 模块拆分 · 文档引用清扫（父侧，逐文件批）
@@ -49,13 +49,13 @@
 - [ ] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度——低优先
 - [x] ~~**advisor 裁决模板立项**~~——**2026-09-09 已交付**（ADVISOR-VERDICT-TEMPLATE——CLI 33ed72b + VSC f9f0335——VERDICT 单值裁决行 + 双轨消除——L2 绿——consume 9e85ddd9）
 - [x] ~~**§19.6 panel 检查工具（已批未实现）**~~——**2026-09-08 核销**：已实现（subagent-panel.mjs 双端在 + action 面在——与 L41 同证据）
-- [ ] **sync spawn 可中止能力**（**2026-09-08 用户裁要**——TUI.md:398 门控 sync 无 ⏹ 只消"可见不可中止"误导——现补 sync 真中止能力——⏹ 按池门控——需跨 TUI + 调度改造——走设计链排批）
+- [x] ~~**sync spawn 可中止能力**~~——**2026-09-09 核销**（SYNC-CANCEL——3d7be35——TUI ⏹ 定向中止——L2 129/129——consume 1e5870bb）
 - [ ] **setup.mjs 受限变体 schema 补 cancel 词**（描述层同步）
 - [ ] **engineering-sub.md L1 "~15s" 数字漂移**（实测 18.5-19.7s）——随下个提示词批修
 
 ## VS Code 镜像/评审面差异
 - [x] ~~**VS advisor-design.md 缺 R24a 第 8 条评审标准**~~——**2026-09-08 核销**（VSC advisor-design.md:8 已含 Affected-file size annotations——与 CLI 逐字一致）
-- [ ] **VSC 评审陈旧面对齐 CLI isCodePath**（**2026-09-08 用户裁对齐**——VSC 只代码路径算陈旧——文档改动不催评审——走设计链排批——CLI 参照）
+- [x] ~~**VSC 评审陈旧面对齐 CLI isCodePath**~~——**2026-09-09 核销**（批 7——1bbd474——VSC advisorStale code-path only + repos isCodePath——L2 绿——consume a0775ae9）
 - [ ] **🔵 五项不修登记（父侧知悉）**：VS sync design 轮次不递增 / VS guard cap 读全局轮 / CLI guard 文案无 async 补注 / VS depth-undefined 缺省 async / CLI T-24b1 墙钟断言（已知不修，留档）
 
 ## 异步 / 挂起 / 调度残留（AGENT-LOOP 后续轮）
@@ -78,11 +78,11 @@
 > **§7.7 顶层异步**已交付核销（c08e1b2/8763ac2——L2 绿——consume a2b10815）；agent 生命周期 + 11.7 + D6
 > union 早前核销。批 4 剩 env-state/R19（未排）——designer 2026-09-09 用户裁取消（eng 主会话即 designer）。
 - [x] ~~**批 3（结构债批 B）**~~——**2026-09-08 已交付**（SYSTEM-SPLIT——bash.mjs/search.mjs/question.mjs——待 L2 终链 + consume 3aaf4154）
-- [ ] **批 4（需求池各自独立——2026-09-08 并批评估定——设计权在用户）**：~~R16 token 语义~~（**已死——D1-D5 覆盖——L81 勾销**）/ env-state 补当前 slot（**需求段已落 SESSION §11.1——等确认**）/ ~~designer 子代理~~（**2026-09-09 用户裁取消——eng 主会话即 designer**）/ R19 护栏裁定——逐个独立全链
+- [x] ~~**批 4（需求池各自独立）**~~——**2026-09-09 核销**（R16 D1-D5 覆盖 / env-state slot 批 7 落地 / designer 用户裁取消——原批 4 项全清——余项各自独立条目）
 
 - [x] ~~**R10 多实例协作感知**~~——**2026-09-08 核销**（双端 pushPeerReminder 在位——peer-instances.mjs 在——config 写前 mtime 门控 F5b 在——MULTI-INSTANCE-COLLAB.md 双端）
 - [x] ~~**R16 token 生命周期语义修订**~~——**2026-09-08 核销勾销**（被 DESIGN-TOKEN-SETTLEMENT D1-D5 双端根治覆盖——settle 落盘权威台账 + TTL 三时机清理 purgeExpiredDesignTokens + restore 过滤 + 门禁过期拒——"待设计"标记过期）
-- [ ] **env-state 补当前会话 slot**（agent 自知当前会话槽号——SESSION §11 env-state 补 slot 字段）——双端——设计启动权在用户
+- [x] ~~**env-state 补当前会话 slot**~~——**2026-09-09 核销**（批 7——10cd978——env-state slot 字段双端 system.md 同步——SESSION §11.2 落地）
 - [x] ~~**async 评审凭证结算根治**~~——**已实现**（2026-09-08 双端交付：CLI `a7e78b0`+`08cabb9` consume 落盘 / VSC `159a39f`——settle 当场落盘+门禁 miss 回读+镜像退役+consume 落盘对称——token 根治验证通过：async advisor settle 落盘+digest 后 spawn 能过）
 - [x] ~~**父 agent 观察运行中子代理（功能①）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——observe 动作：按 id 拉 5 条回合摘要+当前工具+turn/touched，治父看不到中间）
 - [x] ~~**父 agent 注入提示给运行中子代理（功能②）**~~——**已实现**（2026-09-08 双端交付：CLI `2060e0d` / VSC `605a901`——send 动作：写 entry._injected 队列，子 runAgent 回合边界消费作普通 user 指令——治无法中途引导）
@@ -107,18 +107,13 @@
   会话流（panel/webview）——C 深勘察在途（explore——报告后落 C 设计档）——status=勘察中
 
 ## 会话/存储/恢复后续
-- [ ] **R19 护栏语义缺口**（见"代码正确性"节——**2026-09-08 已裁消息数预算**——同 L24）
+- [x] ~~**R19 护栏语义缺口（会话节指针）**~~——**2026-09-09 去重**（同 L24——唯一条目在"代码正确性"节——会话节不重复挂）
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
 - [x] ~~**VSC Stop 语义重定义**~~——**2026-09-09 核销**（并入 SESSION-ACTIVITY-REVISED——5be6c67——Stop running 派生 +
   digest 单停 + D-S9 全停废除 + subagent 靠活动区块 ⏹——L2 179/179——consume f125c0d5）
 - [ ] **activity.js 579 行拆分**（2026-09-09 B1 修正交付后——超 500 惯例——advisor 🔵——queued 块头/落流锚/区显隐
   机制均在——挂 TODO 拆分子项——后续轮）
-- [ ] **VSC 会话恢复呈现对齐（2026-09-09 用户需求点——退出重进恢复的会话与原始呈现不一致——勘察已定位七类差异 A-G）**：
-  根因 = 恢复链收缩（historyWindow 过滤 content!==string + 字段白名单）非落盘格式——差异：C 机器提醒
-  [System reminder:]以用户气泡上屏（最刺眼）/ A 纯工具回合丢 assistant 标签 / B 工具卡无调用只看结果恒绿
-  / E reasoning 丢 + thinking-only 正文化 / F user 时间=当前时刻（ts vs timestamp）/ G 欢迎块重显 / D 折叠态
-  （预期）——CLI 恢复（startup.mjs historyToLines）语义远强于 VSC——修复方向 = 恢复链对齐 CLI 全量重建语义
-  ——owning board = VSC 会话流——status=勘察完成待排批
+- [x] ~~**VSC 会话恢复呈现对齐**~~——**2026-09-09 核销**（SESSION-RESTORE-PARITY——0231627——L2 179/179——consume 592ea112——见需求池勾销行）
 
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
@@ -131,7 +126,7 @@
 
 ## 文档地图整体清扫（2026-09-08 批 2 报告发现）
 - [ ] **AGENTS.md 文档地图陈旧**：:17 仍列 VERIFY-DOCONLY.md（归档后悬空）+ 整体含早已归档档（ENGINEERING-WORKLOOP 等——批 A 前即如此）——父侧立项整体清扫（非批 2 2b-6 范围——批 2 只做 README/SETTINGS-TOOL）
-- [ ] **双端 system.md:24 env-state 描述未含 slot**（env-state 行实已含 slot——SESSION §11.2 实现后描述漂移——id=9 报告项 3——提示词同步小项——双端逐字同步）
+- [x] ~~**双端 system.md:24 env-state 描述未含 slot**~~——**2026-09-09 核销**（批 7——10cd978/1bbd474——双端 system.md env-state slot 短句同步）
 - [x] ~~**平台侧 subagent 工具描述仍含旧 async:false 引导**~~——**2026-09-08 §7.7.1 勾销**（纠错：工具描述在项目仓 src/agent-tools/ 可改——本批已清 subagent.mjs/subagent-spec.mjs Async spawn 段 + escalate 段 + advisor.mjs 描述——锚句逐字落入——测试锚定）
 - [x] ~~**escalate/advisor 顶层 async:false carve-out 范围界定**~~——**2026-09-08 §7.7.1 勾销**（用户裁 a：escalate/advisor 顶层也纳入一律异步——§14.2 同步保留句删 + main.md/engineering.md/discipline.md 引导清 + §7.2 escalate 行注——全链完成）
 
@@ -140,13 +135,12 @@
 - [x] ~~**批 6（代码小批——N1+N6）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-5-6——VSC
   65092ff——subagent 508→353 + subagent-run 183 新 + advisor 511→466 + tools 49/provider 35 新
   + CLI enqueueAsk ×3——导出面 12/12——L2 绿——consume f7dc212e）
-- [ ] **双端 system.md:24 下批同步**（§11.3 交付上报项 1+2——2026-09-08 用户裁接受 slot 短句纳入）：
-  （① token 存活指引矛盾——CLI 例外段 vs VSC tokens 不存活——token 权威 DESIGN-TOKEN-SETTLEMENT——VSC 对齐 CLI）
+- [x] ~~**双端 system.md:24 下批同步**~~——**2026-09-09 核销**（批 7——3①② slot 短句 + SESSION.md 3③——双端逐字——consume a0775ae9）
   （② slot 行内 prose 补 sticky-slot 短句——null when none is bound）
   （③ §11 字段映射补 slot 条目）——走设计链排批
 
 ## 等裁项立项批（2026-09-08 夜用户裁——勘察一手）
 - [x] ~~**收尾批（STRUCTURE-DEBT-BATCH-7）**~~——**2026-09-09 已交付**（STRUCTURE-DEBT-BATCH-7——CLI 10cd978 + VSC 1bbd474——L58 code-path only + L24 50K 双门 + system.md 3 子项——双端测试 122/115 绿——L2 批 7 用例全过（VSC 唯一失败 = L31 并行方在途 trace-store 测试）——consume a0775ae9）
 - [x] ~~**大项 L31 VSC 轨迹存档**~~——**2026-09-09 已交付**（TRACE-STORE-VSC——d84980d + db7f5f9——VSC L2 129/129 绿——consume 3da9a9b5——generate-title raw fetch 不经 chat()——不入轨迹范围记录）
-- [ ] **大项 L50 advisor 裁决模板**（用户裁立项——勘察留档：双端 prompt 逐字同源——round1 表格区加裁决行——前置：host 侧 marker 消费点不在两仓——中——独立全链）
-- [ ] **大项 L52 sync spawn 可中止**（用户裁要——勘察留档：跨信号+TUI+调度——自属 AbortController 链 + AbortError 区分 + panel 门控放开——大——独立全链）
+- [x] ~~**大项 L50 advisor 裁决模板**~~——**2026-09-09 核销**（ADVISOR-VERDICT-TEMPLATE——33ed72b/f9f0335——L2 绿——consume 9e85ddd9）
+- [x] ~~**大项 L52 sync spawn 可中止**~~——**2026-09-09 核销**（SYNC-CANCEL——3d7be35——见工程模式节同项核销——consume 1e5870bb）
