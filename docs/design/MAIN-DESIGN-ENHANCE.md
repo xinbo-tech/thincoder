@@ -38,8 +38,10 @@
 > ——预检不过先修，不自发起评审（发起权仍在用户）。
 
 ### A4 实践沉淀入口句（挂"Docs Capture the Conversation"纪律——追加句）
-> 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（本端 METHODOLOGY.md——权威源在
-> docs/design/METHODOLOGY.md——评审 #4 中性引用：不硬编码单端路径——VSC 端指根 METHODOLOGY.md）——不散落会话。
+> 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（本端 METHODOLOGY.md）——不散落会话。
+
+（落地注——非字节：双端同一文本——"本端 METHODOLOGY.md" 中性引用——权威源在 docs/design/METHODOLOGY.md
+——评审 #4 裁定不硬编码单端路径——VSC 端指根 METHODOLOGY.md。）
 
 
 ### 载体落点
