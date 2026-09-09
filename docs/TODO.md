@@ -230,6 +230,11 @@
   touched "—（尚无改动）"——滞后/失真——UI（live 块）显示比 status 准——修：status touched 从真实写
   入记录实时取（与 observe/UI 同源——不滞后）——status=登记——owner = 平台（subagent status 通道——与
   advisor 池盲区/子代理 abort 无标注同属可观测性族）
+- [ ] **advisor 评审状态查询假空（2026-09-10 用户判定平台 bug——池实有跑者查询返空）**：01:57 发起的三
+  施工档设计评审（advisor 后台），02:29 用户问进度 → subagent status 查询返回 running/queued/done 全空
+  ——但评审实际在池中运行（digest 未到，无法判死活）——查询工具与 advisor 池真实状态脱节。与既有
+  「advisor 池盲区（不可查/不可取消）」同族——修：status 聚合纳入 advisor 池真实条目（含 running 评审
+  的 scope/耗时）——owner = 平台（可观测性族）
 - [ ] **子代理 id 复用（2026-09-09 用户观察——平台 bug——§27.1 F4 修复洞）**：设计应跨 runAgent/
   resume 单调递增（subagent.mjs L293-295——F4 2026-09-07 消复用洞）——实际从 1 重新开始——
   nextSubagentId（subagent-scheduler.mjs L433-446）双保险：history._subIdCounter expando（期望跨 run
