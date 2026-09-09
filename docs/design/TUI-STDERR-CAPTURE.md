@@ -65,4 +65,8 @@
 - 红线：子进程 TUI 路径零行为变化（env 门后纯现逻辑）；非 TUI 命令零包装；VSC 零动
 
 ## 变更记录
-- 2026-09-09：落档（用户场景链实证：resize 崩溃 → 无 [error] 行（handleFatal 未触发）+ crash-reports 空（R25 三类未触发）+ Windows 事件日志 45 天零 node 崩溃记录 → 崩溃 = 进程被外部终止（ConPTY/终端层杀）——Node 无钩子——native abort stderr 走 fd 2 进程内不可改——外层父进程 stderr pipe tee = 唯一默认捕获路——用户裁接受包装——只 TUI 模式（一次性命令 stderr 可见无需）——R25 保留补第 4 类诊断面——Windows Ctrl+C 信号语义实证注）。
+- 2026-09-09：落档（用户场景链实证：resize 崩溃 → 无 [error] 行（handleFatal 未触发）+ crash-reports 空
+  （R25 三类未触发）+ Windows 事件日志 45 天零 node 崩溃记录 → 崩溃 = 进程被外部终止（ConPTY/终端层杀）
+  ——Node 无钩子——native abort stderr 走 fd 2 进程内不可改——外层父进程 stderr pipe tee = 唯一默认捕获
+  路——用户裁接受包装——只 TUI 模式（一次性命令 stderr 可见无需）——R25 保留补第 4 类诊断面——Windows
+  Ctrl+C 信号语义实证注）。
