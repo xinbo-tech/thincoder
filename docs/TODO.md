@@ -252,3 +252,8 @@
   ——大贴图（>6-8 张）可能落 F-2 fallback——按图数伸缩建议（2+paths.length*2——后批）③ Stop 点击在降级 await
   窗口内 no-op（≤60s——v1 接受）——status=登记——设计权在用户
 
+- [ ] **VSC git 工具 commit 镜像缺口（2026-09-09 QUICKFIX-2 交付注——后批镜像 F-3）**：
+  thincoder-vscode/src/tools/git.mjs:200-220 commit case 仍有同款"granular add + 整索引 commit"双层混扫
+  缺陷——CLI F-3 commit --only 已修——VSC 镜像待补——owning board = git 工具面（双端对齐）——
+  status=登记——设计权在用户
+

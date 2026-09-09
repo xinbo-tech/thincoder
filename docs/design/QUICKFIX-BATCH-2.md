@@ -1,7 +1,7 @@
 # 快修批 2：MODEL-400 裁断项 + git pathspec（QUICKFIX-BATCH-2）
 
 > 板块：provider 克隆防御 + git 工具面（双端）。权威源：MODEL-400-FIX（已交付）+ git.mjs。
-> 状态：**设计待评审**——2026-09-09 落档（MODEL-400 交付裁断项 + git 工具缺陷勘察——根因齐）。需求：TODO MODEL-400 交付裁断项 + git 工具 commit pathspec 完善（用户裁批 2 快修落地）。
+> 状态：**评审通过——已交付（CLI c65aae7/b5b678f/40b15cc + VSC 5043d68/a4f1255——clean——修正轮 2/5——CLI 207/0 + VSC 255/0——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
@@ -68,4 +68,8 @@
 - 红线：MODEL-400 主修不重开；git 工具 add/其他动作零动
 
 ## 变更记录
+- 2026-09-09：交付（clean——F-1 VSC byName 镜像 + F-2 跨渠道 models[0]（命中渠道候选首非主 model）+
+  F-3 git commit --only（path 给定原子提交——空 path 明确错误——无 path add -A 保留）——out-of-list：git.md
+  契约同步 + VSC test/files.mjs guard 登记（MODEL-400 遗留——双门禁从不跑该文件）——VSC git.mjs 镜像缺口登记
+  TODO（后批）——L2 待链稳定）。
 - 2026-09-09：落档（MODEL-400 交付裁断项 ①VSC byName ②F-2a 跨渠道 + git.mjs:150-174 缺陷勘察——commit 无 path → add -A 全量暂存 + commit 无 pathspec 提交整个索引——双层混扫源——用户裁批 2 快修）。
