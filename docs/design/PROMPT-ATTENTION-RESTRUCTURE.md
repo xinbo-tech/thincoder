@@ -29,12 +29,14 @@
   - F-2（开关段并入——合并 AUTO-PROGRESS-SWITCH）自动推进档位（auto/manual）作为最高规则段放**主会话提示词**
     **最前部**（engineering.md/main.md/system.md——用户在场的）——**子代理提示词不放**（coder/advisor-design/
     round1-3/explore/plan/eng-coder/consult-base/engineering-sub——子代理内无用户可等——"execute immediately"
-    语义保留）——逐字文本 = 原 AUTO-PROGRESS-SWITCH F-1/F-2/F-3（本档 §设计 2 节——字节源——见下）
+    语义保留）——逐字文本 = 原 AUTO-PROGRESS-SWITCH F-1/F-2/F-3（字节源——权威内容见阶段 C——**逐字保真
+    仅限 engineering.md 的三个结构位**（Work Loop 前/step 4 尾/分派表最前——main.md/system.md 无同结构））
   - F-3（锚断言联动）ENGINEERING-MODE §2.9 + 测试——重排后断言改写（改写清单见 §设计 3——行号索引断言
-    重定位 + bullet 切片断言重定位 + 整句锚改关键子串——**A1-A4 类核心锚句保逐字**——§2.9 契约文本更新）
+    重定位 + bullet 切片断言重定位 + 锚断言**按形态分类**——列举型（A1/A3）关键子串 / 命令型（A2/A4 + 核心
+    纪律句）保逐字——§2.9 契约文本更新）
   - **范围边界**：内容语义零改动（纯拆行/换行/换位/提权——不改规则含义）；**双端同源不硬一致**（方案在设计档
     定稿权威源——各端独立落地照抄——端特有段各端保留——不加 byte-identical 硬校验/同步依赖——语义锚断言守
-    一致）；开关段只进主会话提示词（子代理零动——engineering-sub 保留）；ENGINEERING-MODE.md 本身 🟢 不重排
+    一致）；开关段只进主会话提示词（子代理提示词零**开关段**改动——F-1 重排照常——engineering-sub 保留）；ENGINEERING-MODE.md 本身 🟢 不重排
     （只联动 §2.9）；fe6d62d src/tui 混批单独排查；AUTO-PROGRESS-SWITCH.md 删除（合并作废——本档唯一权威）。
 
 ## 设计（分阶段——照做勿自行解释）
@@ -65,17 +67,26 @@
 3. **分派表加 manual 语义**（engineering.md "Then handle the message" 列表最前——原 AUTO-PROGRESS-SWITCH F-3）：
 > - **User stop / hold-back**（你说"停 / 先别 / 别急 / 等下 / 别自动"或表达"我要把关再定"——意图为准非词表）→
 >   推进切 manual：本消息仅回答/呈现，不落文档推进、不 spawn、不发起评审——你明确指示后恢复。
-4. **main.md/system.md 对应段**：主会话提示词按同语义落对应位置（main.md 顶部纪律区 + system.md 确认门区）——
-   措辞同源——端特有结构各自落
+4. **main.md/system.md 对应段**：主会话提示词按同语义落对应位置（main.md 顶部纪律区 + system.md 确认门区）
+   ——措辞源 = 本档顶层档位规则语义（auto/manual 两档 + 叫停意图非词表 + 不丢状态 + 恢复词）——main/system
+   无 engineering 的 Work Loop/digest/分派表结构——不逐字抄结构句——落**语义对应段**（端特有结构各自位置）
+   ——兜底断言 = AC-2 前 20% 巡检（auto/manual 档位词在该文件前 20%）
 
-### 3. 锚断言改写清单（评审 #1 #2——设计定稿——实现照此改测试）
+### 3. 锚断言改写清单（评审 #1 #2 + 评审 #2 #1——设计定稿——实现照此改测试）
 - **行号索引断言重定位**：main.md L8/L13（测试用 split("\n")[7]/[12]）、engineering.md step 4 L16
   （split("\n")[15]）——重排后行号变——断言改为**锚定内容特征**（该行起始文本片段）而非行号
 - **bullet 切片断言重定位**：main.md escalate 段 escSeg 切片（测试 L36-37 区）——同法改内容特征锚
-- **整句锚改关键子串**：A1-A4 类 + 需求池锚——重排若拆开原整句——改断关键子串（fail-when-unchanged 保留）
-  ——**核心纪律句（批准门/WAIT/发起权——§2.9 锚 #4 类）保逐字整句**——不降级
-- §2.9 契约文本更新：锚清单注新断言形式（哪些保逐字——哪些子串）——双端同步
-- 上游字节源档（MAIN-DESIGN-ENHANCE A1-A4 定稿文本）同步注（若锚文本被拆——该档保原逐字——注下游子串化）
+- **锚断言按形态分类（权威分类——F-3/AC-4 引用此——消除 A1-A4 整体归类的假两难）**：
+  - **列举型 → 关键子串断言**：A1 勘察 checklist（①-⑤ 子条）+ A3 评审前预检（①-⑤ 子条）——重排拆成
+    独立子行——断言改**子条级关键词子串**（每条 ①②③…的触发词 fail-when-unchanged）——子条才是防漂移点
+  - **命令型 → 保逐字整句**：A2 方案对比（候选≥2 → MUST 对比子节——单意命令）+ A4 实践沉淀（短句）——
+    重排不拆——整句逐字 fail-when-unchanged
+  - **核心纪律句 → 保逐字整句不降级**：批准门/WAIT/发起权（step 3/step 5 语义——§2.9 锚 #4 类独立于 A1-A4）
+  - **需求池锚 → 关键子串**：三规则句本就子串断言形态——重排拆行后仍按原子串
+- §2.9 契约文本更新：锚清单注每锚断言形式（保逐字名单：A2/A4 + 核心纪律句——子串名单：A1/A3 子条 + 需求池）
+  ——双端同步
+- 上游字节源档（MAIN-DESIGN-ENHANCE A1-A4 定稿文本）同步注：MAIN-DESIGN-ENHANCE 保原逐字（字节源不拆）——
+  下游 engineering.md 重排后 A1/A3 子条子串化、A2/A4 保整句——注记 §2.9（保逐字与子串名单一致——无冲突）
 - AC-5 快层零回归为兜底——漏改断言显红
 
 ## 受影响文件（双端——评审 #1 #3 补预计增量）
@@ -87,13 +98,15 @@
 | src/prompts/system.md | 双端 | 44 | 重排 44→~120 + 开关对应 ≤+5 | F-1 + F-2 |
 | src/prompts/main.md | 双端 | 34 | 重排 34→~90 + 开关对应 ≤+5 | F-1 + F-2 |
 | src/prompts/methodology-template.md | 双端 | 38 | 重排 38→~90 | F-1 |
-| src/prompts/advisor-design/round1/2/3.md | 双端 | 33-39×2 | 各重排 →~60-80 | F-1 |
+| src/prompts/advisor-design.md | 双端 | 33 | 重排 →~60 | F-1 |
+| src/prompts/advisor-round1/2/3.md | 双端 | 39/38/34 | 各重排 →~60-80 | F-1 |
 | src/prompts/discipline.md | 双端 | 84-85 | 重排 →~150 | F-1 |
 | src/prompts/coder.md / eng-coder.md | 双端 | 13-19 | 各重排 →~40-50 | F-1 |
 | src/prompts/plan.md / explore.md / consult-base.md | 双端 | 9-17 | 各重排 →~30-40 | F-1 |
 | docs/design/ENGINEERING-MODE.md（§2.9 锚断言形式） | CLI | 313 | ≤+10 | F-3 契约文本更新（本身不重排） |
 | test/prompts-async-guidance.test.mjs | 双端 | CLI 165 / VSC 160 | ±30 | F-3 断言改写（行号→内容特征 + 锚子串化） |
 | ~~AUTO-PROGRESS-SWITCH.md~~（B 裁——合并作废删除） | CLI | 67 | 删除 | 权威内容并入本档 |
+| docs/design/README.md（文档地图——评审 #2 #3） | CLI | — | ≤+3 | 本档登记 + AUTO-PROGRESS-SWITCH 删除注 |
 
 ## 用例表（评审 #1 #6 补边界/错误行）
 
@@ -112,8 +125,10 @@
 
 - AC-1 全部 15 文件双端重排：**量化判据**——每条规则独立一行（无多规则并一行）+ 行长 ≤200 字符 + 标题
   全独立 + 无 >500 行——机械可验（巡检脚本扫 src/prompts）
-- AC-2 注意力分布：**最高规则（批准门/推进档位）在文件前 20%**（巡检断言——前 20% 含关键词）+ 命令句
-  （含"WAIT/Do NOT/never"类）——机械可验
+- AC-2 注意力分布：**最高规则（批准门/推进档位）在文件前 20%**（巡检断言——前 20% 含巡检标记词——
+  WAIT/Do NOT/never/auto/manual 类命令句标记）+ 命令句形态——机械可验
+  （注：AC-2 巡检标记词 ≠ 红线禁止的"叫停触发词表"——前者是断言扫描用的命令句标记——后者是把叫停
+  理解降级成词表匹配——不同物不冲突）
 - AC-3 内容语义零改动（逐句对照——措辞含义不变——实现批自查 + 交付审计）
 - AC-4 锚断言改写版双端绿（行号→内容特征 + 核心纪律句保逐字 fail-when-unchanged）
 - AC-5 双端 npm test 快层零回归
@@ -127,3 +142,9 @@
 - 2026-09-09：评审 #1 changes-required 修正版（🔴 AUTO-PROGRESS-SWITCH 双规格矛盾——**B 裁：合并本档作废删除**
   开关段范围 = 主会话提示词（子代理无用户可等不放）+ 🟡 #2 锚断言改写清单 + 🟡 #3 受影响表补预计增量 + 🟡 #4
   AC 量化判据 + 🔵 #5-7 措辞/用例/地图注——round 2 待评）。
+- 2026-09-09：评审 #2 changes-required 修正版（🔴 #1 锚断言分类矛盾解——**按形态分类非 A1-A4 整体**：列举型
+  A1/A3 → 子条级关键子串（重排可拆）——命令型 A2/A4 + 核心纪律句 → 保逐字整句不拆——需求池按原子串——
+  F-3/§3/AC-4 引用单一权威分类——上游 MAIN-DESIGN-ENHANCE 保逐字注记调和）+ 🟡 #2 表补 advisor-design 行
+  （15 文件齐）+ 🟡 #3 README 地图行 + 🟡 #4 main/system 语义对应段明 scope（逐字仅 engineering 三结构位——
+  AC-2 兜底）+ 🔵 #5 编号指针修正 + 🔵 #6 AC-2 巡检标记 ≠ 红线触发词表区分语 + 🔵 #7 子代理零开关段改动
+  措辞——round 3 待评）。
