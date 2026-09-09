@@ -7,6 +7,8 @@
  * config（/model 不再串扰全局默认——根治）。候选硬约束：二级列表 = providers[].models[]
  * 成员；候选外（含裸 provider 直给、API fetch 建议）一律拒——显式 p:m + models[] 成员。
  * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变。
+ * F-4 (ISSUE-FIX-BATCH)：removeProviderFlow 级联清理——删渠道同步清 consultModels/
+ * subagentModels/advisor.provider 悬挂引用（cascadeRemoveProvider——文件尾导出）。
  * ctx: { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey, showPicker,
  *      closePicker, renderPickerLines }（后三者为 pickers.mjs 通用 picker 绑定——本文件经
  *      闭包入参使用，不反向 import——环安全）。
@@ -376,8 +378,16 @@ export function createModelPicker(ctx) {
       raw.providers ??= []
       const idx = raw.providers.findIndex((p) => p?.name === se.name)
       if (idx !== -1) raw.providers.splice(idx, 1)
+      // F-4 级联（IKCDMR——AC-4）：同盘清 consultModels/subagentModels/advisor.provider 悬挂引用
+      cascadeRemoveProvider(raw, se.name)
     })
     agent.providers.splice(agent.providers.findIndex((p) => p.name === se.name), 1)
+    // 会话内存镜像同清（agent.config = loadConfig 产物——consult/escalate 同会话读
+    // agent.config.agent.*；merged.advisor 为 agent.advisor 的提升拷贝——双处清理）
+    if (agent.config) {
+      cascadeRemoveProvider(agent.config, se.name)
+      if (agent.config.advisor?.provider === se.name) delete agent.config.advisor.provider
+    }
   }
 
   async function setKeyFlow() {
@@ -451,4 +461,29 @@ export function createModelPicker(ctx) {
   }
 
   return { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot }
+}
+
+/** F-4 (IKCDMR) 级联清理（删渠道共享写点）：raw/merged config 移除 name 渠道后清悬挂引用——
+ *  agent.consultModels 条目 / agent.subagentModels 角色值（=== name 或 "name:…" 前缀——
+ *  角色值是 "provider:model" | 裸渠道名 | 裸模型名）/ agent.advisor.provider。
+ *  纯 mutate（removeProviderFlow persistRaw 的 D-F5 新鲜 raw 上调用；agent.config 内存镜像
+ *  子树与 raw.agent 同构可复用）。空数组/空对象键删除（规范形态）。 */
+export function cascadeRemoveProvider(raw, name) {
+  const a = raw?.agent
+  if (!a || typeof a !== "object" || Array.isArray(a)) return
+  if (Array.isArray(a.consultModels)) {
+    const keep = a.consultModels.filter((m) => m?.provider !== name)
+    if (keep.length) a.consultModels = keep
+    else delete a.consultModels
+  }
+  if (a.subagentModels && typeof a.subagentModels === "object" && !Array.isArray(a.subagentModels)) {
+    for (const role of Object.keys(a.subagentModels)) {
+      const v = a.subagentModels[role]
+      if (typeof v === "string" && (v === name || v.startsWith(`${name}:`))) delete a.subagentModels[role]
+    }
+    if (Object.keys(a.subagentModels).length === 0) delete a.subagentModels
+  }
+  if (a.advisor && typeof a.advisor === "object" && !Array.isArray(a.advisor) && a.advisor.provider === name) {
+    delete a.advisor.provider
+  }
 }

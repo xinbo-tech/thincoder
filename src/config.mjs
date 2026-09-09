@@ -165,6 +165,44 @@ export function resolveEnableThinking(provider, spec) {
 /** Module-level one-time warn dedupe for invalid providers[].context (PROVIDER.md §15 D-C1). */
 const warnedContextProviders = new Set()
 
+/** F-4 (IKCDMR) 软失败清洗（D-S1 范式——loadConfig 是 CLI 启动砖点）：consultModels 非法
+ *  条目过滤不 throw——非数组 → []、形状非法/未知渠道丢弃、超 5 截断（keep 前 5）。
+ *  返回 { keep, dropped }——dropped 供一次性警告；merged.agent.consultModelsFiltered 挂载
+ *  供后续首帧引导消费（数据层——本批文件面无消费方——同 providerInvalidReason 载体先例）。 */
+function sanitizeConsultModels(cm, providerNames) {
+  if (cm === undefined || cm === null) return { keep: [], dropped: [] }
+  if (!Array.isArray(cm)) {
+    return { keep: [], dropped: [`agent.consultModels must be an array of { provider, model } entries (got ${typeof cm})`] }
+  }
+  const names = new Set(providerNames)
+  const keep = []
+  const dropped = []
+  for (const entry of cm) {
+    if (keep.length >= 5) { dropped.push(`over the 5-entry cap — dropped ${JSON.stringify(entry)}`); continue }
+    if (!entry || typeof entry !== "object" || typeof entry.provider !== "string" || !entry.provider.trim()
+        || typeof entry.model !== "string" || !entry.model.trim()) {
+      dropped.push(`invalid entry (expected { provider: string, model: string }) — got ${JSON.stringify(entry)}`)
+      continue
+    }
+    if (!names.has(entry.provider)) {
+      dropped.push(`entry "${entry.provider}:${entry.model}" references unknown provider "${entry.provider}" (available: ${[...names].join(", ") || "none"})`)
+      continue
+    }
+    keep.push(entry)
+  }
+  return { keep, dropped }
+}
+
+/** F-4：过滤警告——进程级一次性（loadConfig 同进程可多次调用：TUI 启动 + reloadConfig）。 */
+let warnedConsultModels = false
+function warnConsultModelsFiltered(dropped, path) {
+  if (warnedConsultModels || dropped.length === 0) return
+  warnedConsultModels = true
+  console.warn(`[config] agent.consultModels: ${dropped.length} invalid entr${dropped.length === 1 ? "y ignored" : "ies ignored"} (filtered — startup continues; no crash):\n` +
+    dropped.map((d) => `  - ${d}`).join("\n") +
+    `\n  Fix: clean agent.consultModels in ${path} or use /config → consult/escalate pool menu.`)
+}
+
 /**
  * Find provider by name in providers[].
  * Throws if name is non-empty but not found — a typo in activeProvider silently falling to the first provider would use the wrong key on the wrong endpoint.
@@ -263,27 +301,15 @@ export function loadConfig() {
     delete p.context
   }
 
-  // Consult/escalate pool validation (CLI parity with the plugin): up to 5 candidates.
-  const cm = merged.agent.consultModels
-  if (cm !== undefined && !Array.isArray(cm)) {
-    throw new Error(`agent.consultModels must be an array of { provider, model } entries (got ${typeof cm})`)
-  }
-  if (Array.isArray(cm) && cm.length > 5) {
-    throw new Error(`agent.consultModels supports at most 5 models (got ${cm.length})`)
-  }
-  if (Array.isArray(cm)) {
-    // Fail fast at load: a pool entry whose provider doesn't exist in providers[] fails
-    // every consult/escalate call at runtime with a quiet error string (eats a turn).
-    const providerNames = merged.providers.map((p) => p.name)
-    for (const entry of cm) {
-      if (!entry || typeof entry !== "object" || typeof entry.provider !== "string" || typeof entry.model !== "string") {
-        throw new Error(`agent.consultModels entries must be { provider: string, model: string } objects (got ${JSON.stringify(entry)})`)
-      }
-      if (!providerNames.includes(entry.provider)) {
-        throw new Error(`agent.consultModels entry "${entry.provider}:${entry.model}" references unknown provider "${entry.provider}" (available: ${providerNames.join(", ") || "none"})`)
-      }
-    }
-  }
+  // F-4 (IKCDMR) consultModels 软失败化——D-S1 范式（defaultModel 无效同族）：非法条目
+  // 过滤不 throw（去 startup brick——无修复入口的硬崩消）；一次性启动警告内嵌修复指引
+  // （引导清条目载体——保留 discoverability）；过滤记录挂 merged.agent.consultModelsFiltered
+  // （数据层——consumer-ready——首帧 UI 消费点同 D-S1 promptProviderIfInvalid 属后续批）。
+  // VSC loadAgentSettings 同规则（共享 config——双端锁步）。
+  const cmClean = sanitizeConsultModels(merged.agent.consultModels, merged.providers.map((p) => p.name))
+  warnConsultModelsFiltered(cmClean.dropped, path)
+  merged.agent.consultModels = cmClean.keep
+  if (cmClean.dropped.length) merged.agent.consultModelsFiltered = cmClean.dropped
 
   // Backward compatibility: promote root-level config fields to agent sub-object
   if (config.verifyGuard !== undefined) {
