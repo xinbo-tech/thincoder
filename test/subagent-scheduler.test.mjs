@@ -6,7 +6,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { resolve } from "node:path"
-import { normalizeFileList } from "../src/agent-tools/subagent-scheduler.mjs"
+import { normalizeFileList, effectiveFiles, describeBlockers, queueRunnable, detectStall, maybeRefillAsync } from "../src/agent-tools/subagent-scheduler.mjs"
 
 test("2.7 尾随空格目录声明（\"test/ \"）被识别为目录声明 throw", () => {
   assert.throws(() => normalizeFileList(["test/ "], "C:/w"), /directory declarations are not supported/)
@@ -20,4 +20,68 @@ test("2.7 尾随空格反斜杠目录声明（\"test\\ \"）同拒（win32 形�
 test("2.7 无尾随空格不受影响：文件级路径归一化通过，纯目录形态照旧拒", () => {
   assert.throws(() => normalizeFileList(["test/"], "C:/w"), /directory declarations are not supported/)
   assert.deepEqual(normalizeFileList(["src/a.mjs"], "C:/w"), [resolve("C:/w", "src/a.mjs")])
+})
+
+// ─── SCHEDULER-DYNAMIC-DOMAIN（2026-09-09）——动态域 = 声明 ∪ running touched ───
+const W = "C:/w"
+const abs = (f) => resolve(W, f)
+const pool = (...entries) => ({ cwd: W, _asyncSubagents: new Map(entries.map((e) => [String(e.id), e])) }) // CLI 池键为字符串（depInfo get(String(id))）
+
+test("动态域 effectiveFiles：queued/running 无 childAgent 只声明域（`?.` null 安全——零行为变化）", () => {
+  const declared = [abs("src/a.mjs")]
+  assert.deepEqual(effectiveFiles({ status: "queued", _files: declared }), declared)
+  assert.deepEqual(effectiveFiles({ status: "running", _files: declared }), declared)
+  assert.deepEqual(effectiveFiles({ status: "running" }), [])
+})
+
+test("动态域 effectiveFiles：running + childAgent touched → 声明 ∪ touched（fileKey 去重）", () => {
+  const e = { status: "running", _files: [abs("src/a.mjs")], childAgent: { _touchedFiles: [abs("src/b.mjs"), abs("src/a.mjs")] } }
+  assert.deepEqual(effectiveFiles(e), [abs("src/a.mjs"), abs("src/b.mjs")])
+})
+
+test("动态域：running touched（未声明）撞新声明域 → queueRunnable 拒 + waiting 注（运行中实际写入）", () => {
+  const running = { id: 1, role: "eng-coder", status: "running", _files: [abs("src/x.mjs")], childAgent: { _touchedFiles: [abs("src/y.mjs")] } }
+  const queued = { id: 2, role: "explore", status: "queued", _files: [abs("src/y.mjs")] }
+  const p = pool(running, queued)
+  assert.equal(queueRunnable(p, queued), false)
+  const blk = describeBlockers(p, queued)
+  assert.equal(blk.kind, "wait")
+  assert.match(blk.detail, /域冲突 src[\\/]y\.mjs（运行中实际写入）/)
+})
+
+test("动态域：纯声明冲突文案不回归（含声明∩touched 重叠优先级——∈ 声明域不加注）", () => {
+  const running = { id: 1, role: "eng-coder", status: "running", _files: [abs("src/x.mjs")], childAgent: { _touchedFiles: [abs("src/x.mjs"), abs("src/z.mjs")] } }
+  const queued = { id: 2, role: "explore", status: "queued", _files: [abs("src/x.mjs")] }
+  const blk = describeBlockers(pool(running, queued), queued)
+  assert.match(blk.detail, /域冲突 src[\\/]x\.mjs）/)
+  assert.doesNotMatch(blk.detail, /运行中实际写入/)
+})
+
+test("动态域：queued 条目只按声明域判（无 childAgent——既有序判定零变化）", () => {
+  const first = { id: 1, role: "eng-coder", status: "queued", _files: [abs("src/x.mjs")] }
+  const second = { id: 2, role: "explore", status: "queued", _files: [abs("src/x.mjs")] }
+  const p = pool(first, second)
+  assert.equal(queueRunnable(p, second), false) // 先入者阻断
+  assert.equal(queueRunnable(p, first), true) // 先入者自身可启动
+})
+
+test("detectStall 回归：混合边闭环判定零变化（动态域读法对停滞检测零增量——running 锚点守卫）", () => {
+  const a = { id: 1, role: "eng-coder", status: "queued", _files: [abs("src/x.mjs")], _dependsOn: [3] }
+  const b = { id: 2, role: "explore", status: "queued", _files: [abs("src/x.mjs")] }
+  const c = { id: 3, role: "explore", status: "queued", _dependsOn: [2] }
+  const stall = detectStall(pool(a, b, c))
+  assert.ok(stall?.chains?.length > 0)
+})
+
+test("动态域 F-3：refill 重扫实时见 running touched——冲突 queued 不启动（touched 清空后即补位）", () => {
+  const running = { id: 1, role: "eng-coder", status: "running", _pool: "other", _files: [], childAgent: { _touchedFiles: [abs("src/y.mjs")] } }
+  let started = 0
+  const queued = { id: 2, role: "explore", status: "queued", _pool: "other", _files: [abs("src/y.mjs")], start() { started++ } }
+  const p = pool(running, queued)
+  p._asyncQueue = [queued]
+  maybeRefillAsync(p)
+  assert.equal(started, 0) // refill 重扫见新 touched——不启动冲突
+  running.childAgent._touchedFiles = []
+  maybeRefillAsync(p)
+  assert.equal(started, 1) // touched 清空后补位启动
 })

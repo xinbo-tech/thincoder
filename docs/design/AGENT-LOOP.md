@@ -507,11 +507,16 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 ### 10.1 调度参数与准入
 
-- **`files?: string[]`**——写域声明（eng-coder 纪律"不碰清单外文件"+ 审计兜底；不做任务书文本自动解析）。**目录声明不支持**（`normalizeFileList` 对以 `/` 或 `\` 结尾 / 指向既有目录 → 抛明确错误——fail-closed）。归一化：相对 cwd 转绝对 + 正斜杠 + win32 小写比较键。
+- **`files?: string[]`**——写域声明（eng-coder 纪律——§8.1 L443 A 裁定：清单外改动允许但必须逐项报告——审计兜底；不做任务书文本自动解析）。**目录声明不支持**（`normalizeFileList` 对以 `/` 或 `\` 结尾 / 指向既有目录 → 抛明确错误——fail-closed）。归一化：相对 cwd 转绝对 + 正斜杠 + win32 小写比较键。
 - **`dependsOn?: string[]`**——子代理 id 列表（显式依赖）。
 - **缺省**（无 files 无 dependsOn）= 既有语义（立即启动、不参与冲突检测）。
 - **准入（spawn 时）**：若 (running ∪ queued) 有 files 交集 或 dependsOn 未 done → 入 queued（waiting-deps 态记原因）；否则立即 start。
 - **仅 async 参与调度**：sync spawn（async:false）带 files/dependsOn 且命中冲突 → **明确错误**（不队列化——sync 语义零变更）。
+- **动态文件域（SCHEDULER-DYNAMIC-DOMAIN 2026-09-09）**：冲突判定的"他条目域" =
+  `effectiveFiles(e)` = 声明域 ∪（running 且已绑 childAgent 时的
+  `childAgent._touchedFiles`——写工具批提交实时记录，绝对路径与 normalizeFileList 同源，
+  fileKey/filesOverlap 键空间零改动）。queued 条目无 childAgent（start 才绑）——天然只
+  声明域（`?.` null 安全）。out-of-list 写入（交付常态——纪律允许 + 逐项报告）由此获得域保护。
 
 ### 10.2 补位 + 环形死锁防御 + 停滞检测
 
@@ -520,6 +525,13 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 - **依赖终态释放**：依赖在目标 settle（任何终态）或条目移除时视为满足；**默认分支**——依赖取消/失败 → 依赖者留 queued 标 `dependency-cancelled` + 注入提醒供模型决策（仅父侧显式处置或 AUTO 档才自动启动——滞留有意、显式可清、不静默）。
 - **dependsOn 成环** → spawn 拒绝（防御断言）；**unknown id** → 拒绝（明确错误）。
 - **停滞机械检测（detectStall）**：池无 running 且 queued ≥1 且每 queued 的 blocker（files 冲突者 + 未 settle 依赖目标）都落在 queued 集内（阻塞闭包无外逃）且无 dep-cancelled 标记 → status 视图标记停滞 + 逐条阻塞链 + 引导 cancel 破环。保守不误报。
+- **动态域读点（SCHEDULER-DYNAMIC-DOMAIN）**：describeBlockers / queueRunnable /
+  detectStall 三处"他条目域"统一经 `effectiveFiles` 实时读（refill 在 queued start 前
+  必经重扫——start 决策保护不依赖新事件）。waiting 文案区分命中来源：命中仅来自
+  touched（∉ 声明域）→ `域冲突 <file>（运行中实际写入）`；纯声明命中（含声明∩touched
+  重叠）文案不变。detectStall 因 running 锚点守卫动态域零增量（读法同界防御一致）。
+  **边界**：running-vs-running 抢占不做（动态域只保护未来 start 决策——后续项）；中途写
+  窗口（批提交延迟）接受。
 
 ### 10.3 排队面板 UX（waiting 标注）
 
@@ -529,7 +541,7 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 父侧维护文件（docs/TODO.md、CHANGELOG.md、checklist.md 及 checklist* 前缀）**不得列入 files 声明**（核销/记录义务归架构师）——黑名单机械校验：归一化后 basename 全名匹配 + 大小写不敏感（路径任意层）→ 声明含任一 → 拒绝 + 英文提示（fail-closed——校验先于调度器）。**设计文档（docs/design/*.md）仍可声明**（eng-coder 落 supersede/实现记录是常态）——不误伤。
 
-**变更记录**：2026-09-03 任务调度器（§10 + prompts 调度器条款）；2026-09-04 目录声明拒绝（§10.1）+ 环形死锁修正（§10.2）+ 停滞检测；2026-09-07 files 父侧文件拦截（R26，§10.4）。
+**变更记录**：2026-09-03 任务调度器（§10 + prompts 调度器条款）；2026-09-04 目录声明拒绝（§10.1）+ 环形死锁修正（§10.2）+ 停滞检测；2026-09-07 files 父侧文件拦截（R26，§10.4）；2026-09-09 调度器动态文件域（SCHEDULER-DYNAMIC-DOMAIN——声明 ∪ running touched——§10.1/§10.2）+ files 纪律残留清（§10.1 对齐 §8.1 L443 A 裁定）。
 
 
 ## 11. 回合外事件后台化统一模型（分域池 + async advisor）

@@ -27,7 +27,7 @@
 | 工具移除 | `_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`_archive/SLEEP-REMOVAL-TUNING.md` | 已移 `_archive/`——sleep 删除被 wait_for（TOOLS.md §16）取代 |
 | 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 |
 | Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限 |
-| Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留；`ASYNC-RESIDUE-FIX.md`（异步化残留 6 处修复——双端 prompts 措辞清理——机制权威源 §7.5/§7.7/§7.7.1——同板块独立保留——2026-09-09） |
+| Agent 循环 | `AGENT-LOOP.md` | 权威源。`TURN-CAP-CONTINUE.md`（撞墙可继续，已实现专题）同板块独立保留；`ASYNC-RESIDUE-FIX.md`（异步化残留 6 处修复——双端 prompts 措辞清理——机制权威源 §7.5/§7.7/§7.7.1——同板块独立保留——2026-09-09）；`SCHEDULER-DYNAMIC-DOMAIN.md`（调度器动态文件域——声明 ∪ running touched——机制权威源 AGENT-LOOP §10.1/§10.2——同板块独立保留——2026-09-09） |
 | 子代理观测/注入 | `SUBAGENT-OBSERVE-SEND.md` | 父侧 observe(查进度)+send(注入引导) 运行中子代理；VSC 同名对应——同机制各自独立 |
 | async 结果容器统一 | `ASYNC-RESULT-CONTAINER.md` | settle 共享 helper/pending 单容器+role/池 accessor/buildChildSignal；VSC 同名对应——同机制各自独立 |
 | eng 会话态/provider 清理 | `ENG-SESSION-PROVIDER-CLEANUP.md` | Top-8 #5/#6/#8 攒批——eng 会话态统一（双归属/死代码/命名漂移）+ provider 防御三件套去重；两实现线文件零冲突可并行 |
@@ -80,3 +80,5 @@
 - 2026-09-08：新增「结构债批执行」板块行——批专属档自登记（STRUCTURE-DEBT-BATCH-5-6；批量清单指 STRUCTURE-DEBT.md §7，不逐档裸列）。
 
 - 2026-09-09：本会话批核销——INPUT-LOCK-ASYNC / MAIN-DESIGN-ENHANCE / MODEL-MERGE-SESSION / ISSUE-FIX-BATCH / ASYNC-RESIDUE-FIX / QUEUED-VISIBILITY / MODEL-400-FIX 全交付 clean + L2 双仓全绿（CLI 204/204 + VSC 239/239）——consume 核销（槽闭合）——SCHEDULER-DYNAMIC-DOMAIN 评审通过待实现（token 0de32ad6 槽保留）。
+- 2026-09-09：SCHEDULER-DYNAMIC-DOMAIN 登记（调度器动态文件域——声明 ∪ running touched——双端 scheduler effectiveFiles——评审采纳版）——Agent 循环 行注登记。
+- 2026-09-09：SCHEDULER-DYNAMIC-DOMAIN 双端交付（CLI+VSC scheduler/测试/文档 7 文件——双端快层全绿——audit/advisor clean）——consume 核销待父侧。
