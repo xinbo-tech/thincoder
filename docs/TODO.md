@@ -22,7 +22,8 @@
 - [x] ~~**files 尾随空格目录声明检测**~~——**2026-09-08 批 1 2.7 已修双端**（CLI scheduler:43 + VSC scheduler:104 trimEnd——VSC 以 CLI 为单一测试锚）
 - [x] ~~**R19 read_history 发现面无 top-N cap**~~——**2026-09-08 用户裁不要**（每 cwd 目录槽数有上界——listSlots 时间序有限——无打爆风险——维持现状）
 - [x] ~~**R19 护栏语义缺口**~~——**2026-09-09 核销**（核实：裁定指标已作第二道落地——批 7 双端 READ_HISTORY_MAX_MESSAGES=50_000 消息数门（parse 后长度）+ 200K 物理行主门保留——两门组合最优——不 parse 拿不到消息数故主门不能改消息数——代码无需再动——仅簿记）像同值）
-- [ ] **R18+R19 VS Code 交付跟进（剩 ①）**：① read-history.mjs 349 行拆分（现 368 行未拆——>300 advisory）——③ ROUTE_NA 已移除（②④已勾销）
+- [x] ~~**R18+R19 VS Code 交付跟进（剩 ①）**~~——**2026-09-09 核销**（READ-HISTORY-SPLIT——5300f09——read-history.mjs
+  272 + discovery 119——L2 179/178——consume 521b9987——②③④先前已勾销——R18 拆分全清）
 - [ ] **agent 生命周期小项（剩 A2）**：A2 摘要触发条件（仅 ## 节标题）——注释段已修（批 1 2.5 seven actions）+ auto-think depth 归状态债 #3
 - [x] ~~**TUI tool-args 块标题兜底**~~——**2026-09-08 批 1 2.4 已修**（tool-args.mjs:47-48 action 兜底）
 - [x] ~~**setup.mjs knife-edge 注记过期**~~——**2026-09-08 批 1 2.8 已修**（删注为首——无树内夹具常量可校准——17000 最新）
