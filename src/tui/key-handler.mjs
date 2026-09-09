@@ -269,7 +269,7 @@ export function createKeyHandler(ctx) {
       // 不经吞）；历史导航/Tab 补全仍禁（防 yank 覆盖在编文本）；Ctrl+D 与 queue 面板已
       // 随排队机制废弃删除（F-7）。多行换行 Enter（meta/enter——编辑）照常放行。
       if (key.name === "tab" || key.name === "up" || key.name === "down") return
-      const isSend = (key.name === "return" && !key.meta) || str === "\r"
+      const isSend = (key.name === "return" && !key.meta) || (str === "\r" && !key.meta)
       if (isSend) {
         const text = state.input.join("").trim()
         // 白名单斜杠命令（/exit /help /model…——紧急控制通道）→ 落正常 Enter 流直执行

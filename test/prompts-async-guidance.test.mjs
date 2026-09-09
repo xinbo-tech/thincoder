@@ -117,3 +117,40 @@ test("MAIN-DESIGN-ENHANCE A1-A4 四维纪律句驻留 engineering.md（AC-1/AC-3
   assert.ok(engDoc.includes(A3_ANCHOR), "A3 评审前预检句缺失（step 3——Remind readiness 动作前）")
   assert.ok(engDoc.includes(A4_ANCHOR), "A4 实践沉淀句缺失（Docs capture the conversation 条尾）")
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ASYNC-RESIDUE-FIX（2026-09-09）：异步化残留 6 处修复——main.md:8 sync 例外通道句清除
+// （F-1——双端）+ main.md:13 重复句合一（F-5——双端）+ advisor async 机制参数限定（F-4——
+// 对齐 VSC）+ engineering.md step 4 双端收敛同基（F-2/F-3——字节源 = VSC L16 删旧句后——
+// CLI 照抄）+ discipline 路由 subagent 补 cancel（F-6——对齐 VSC）。fail-when-unchanged。
+// ─────────────────────────────────────────────────────────────────────────────
+const mainL8 = cliMain.split("\n")[7]
+const mainL13 = cliMain.split("\n")[12]
+
+test("ASYNC-RESIDUE-FIX F-1 main.md:8 sync 例外通道句清除 + 新引导句驻留（fail-when-unchanged）", () => {
+  assert.ok(mainL8.includes("if your next step depends on the report, end the turn and let it arrive (or declare dependsOn)"), "main.md:8: F-1 新句缺失")
+  assert.doesNotMatch(mainL8, /sync only when the next step depends on this output and nothing else can proceed/, "main.md:8: sync 例外通道句残留")
+})
+
+test("ASYNC-RESIDUE-FIX F-5 main.md:13 重复句合一（results reach you automatically 恰一现）+ 无 sync 例外", () => {
+  assert.strictEqual((mainL13.match(/results reach you automatically/g) || []).length, 1, "main.md:13: 重复句未合一")
+  assert.doesNotMatch(mainL13, /pass `?async: ?false`? only when|sync only when/, "main.md:13: sync 例外引导残留")
+})
+
+test("ASYNC-RESIDUE-FIX F-4 advisor.mjs async 参数机制限定句驻留（对齐 VSC:177——fail-when-unchanged）", () => {
+  const advF4 = read("src/agent-tools/advisor.mjs")
+  assert.ok(advF4.includes("(mechanism parameter — top-level launches are async by default)"), "advisor.mjs async 参数: 机制参数限定句缺失")
+})
+
+test("ASYNC-RESIDUE-FIX F-2/F-3 engineering.md step 4 async 段驻留 + 旧 token 句不复发（双端收敛同基）", () => {
+  const step4 = engDoc.split("\n")[15]
+  assert.ok(step4.includes("**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**"), "step 4: async 段锚缺失（CLI 未照抄字节源）")
+  assert.ok(step4.includes("On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn."), "step 4: token 自动签发句缺失")
+  assert.doesNotMatch(step4, /it returns a design token in plain text in its response/, "step 4: 旧 token 句残留")
+})
+
+test("ASYNC-RESIDUE-FIX F-6 discipline 路由 subagent 补 cancel + escalate 异步注（对齐 VSC）", () => {
+  const discF6 = read("src/prompts/discipline.md")
+  assert.ok(discF6.includes("(action: spawn / status / cancel / escalate)"), "discipline 路由: subagent 行动作列缺 cancel")
+  assert.ok(discF6.includes("escalate = fly in a stronger model for hard implementation (background by default — its report arrives automatically; never wait for it synchronously at top level)"), "discipline 路由: escalate 异步注缺失")
+})

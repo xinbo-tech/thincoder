@@ -259,7 +259,7 @@ export function renderRows(state, agent, opts) {
   if (panels.todo) put(panels.todo.y, renderTodo(visibleTasks, cols))
   if (panels.picker) put(panels.picker.y, renderPicker(state, cols, panels.picker, overlay))
   if (panels.permission) put(panels.permission.y, renderPermission(permPreviewLines))
-  // queue 面板已撤（INPUT-LOCK-ASYNC F-7——2026-09-09——busy 提交吞——无排队展示）
+  // 排队面板提示已撤（INPUT-LOCK-ASYNC F-7——2026-09-09——busy 提交吞——无排队展示）
   // question 自由文本态：box 内容是 layoutAnswer 行——光标布局/滚动随 box 内容走
   // （questionLayout/questionOffset）；主输入 inputLayout 此时无意义（被 question 行替换）。
   const qFree = Boolean(state.question && state.question.options.length === 0)
@@ -370,7 +370,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const ctxHint = ctxPct > 0
     ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
   // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧
-  // queue 提示（queueHint 已删——F-7）——“主会话处理中——Enter 提交禁用”
+  // 排队提示（F-7 已删）——“主会话处理中——Enter 提交禁用”
   const enterHint = state.processing ? `主会话处理中 — Enter 提交禁用（字符可输入，回合结束请重按 Enter）` : "Enter: send"
   return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }

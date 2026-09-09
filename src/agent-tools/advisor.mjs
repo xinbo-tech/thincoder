@@ -52,7 +52,7 @@ export const advisorTool = {
       type: { type: "string", enum: ["code", "design"], description: "Review type: 'design' for design doc review, 'code' for code review (default)" },
       async: {
         type: "boolean",
-        description: "Background review: default at depth 0 = true (async — ack now, report via digest); async:false forces the blocking review. depth>0 → always sync (async:true rejected).",
+        description: "Background review: default at depth 0 = true (async — ack now, report via digest); async:false forces the blocking review (mechanism parameter — top-level launches are async by default). depth>0 → always sync (async:true rejected).",
       },
       object: {
         type: "object",

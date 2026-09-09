@@ -144,6 +144,15 @@
   收敛双端同基再镜像——与 MAIN-DESIGN 增强批（id=6 注入 A1-A4 中）协调——排其交付后——owning board = 
   提示词系统——status=评估完成待设计（清单齐——设计权在用户）
 
+- [ ] **live 面板排队 subagent 可见（2026-09-09 用户需求——UI 增强）**：
+  排队中的 subagent（queued——被调度器按文件域/依赖串行）在 live 面板可见（现只显示 running——
+  queued 不可见——排队位置/等待原因不透明）——owning board = VSC UI（panel-live/activity-flow）——
+  status=登记待设计（勘察结论——两端差集已定位：CLI 已有排队显示（subagent-panel.mjs §20 D-SD3b
+    ——⟦ev⟧queued 事件——waiting/queued 状态词 + position + detail 原因文本——INPUT-LOCK 后已落）——
+    VSC live 面板 queued 不可见——对齐差集 = ① VSC 补显示（位置/原因/detail——对齐 CLI）② 排队取消 UI
+    双端均未暴露（工具层 queued cancel 有——CLI ⏹ 门控排队块不钉 / VSC 无——全量含可取消则两端补）——
+    设计权在用户）
+
 - [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
   对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）

@@ -87,6 +87,14 @@ test("busy（processing）输入禁用：非白名单 Enter 提交吞 + busy 提
   const c4 = keyCtx(s4)
   pressEnter(createKeyHandler(c4))
   assert.equal(c4.calls.lines.length, 0, "空提交无 busy 提示")
+
+  // 多行换行 Enter（meta+return——Shift+Enter 翻译形）busy 期照常编辑（插入 \n——不吞不提示）
+  const s5 = baseState({ processing: true, input: [..."draft"], cursor: 5 })
+  const c5 = keyCtx(s5)
+  createKeyHandler(c5)("\r", { name: "return", meta: true })
+  assert.deepEqual(s5.input, [..."draft", "\n"], "meta+Enter 插新行（编辑放行——F-3 吞提交不吞编辑）")
+  assert.equal(c5.calls.lines.length, 0, "多行编辑无 busy 提示")
+  assert.equal(c5.calls.submit, 0, "多行编辑不提交")
 })
 
 // ─── AC-2：挂起空闲输入开放（单槽）+ 释放窗口同路径 + 槽满吞 ────────────
@@ -191,8 +199,8 @@ test("busy 状态栏文案：processing → 主会话处理中（Enter 提交禁
   })
   const busy = renderStatus(st(), agent, 120, [])
   assert.match(busy, /主会话处理中/, "busy 文案（主会话处理中）")
-  assert.ok(!busy.includes("(queue)"), "queue 提示零残留")
-  assert.ok(!busy.includes("queue:"), "queueHint 零残留")
+  assert.ok(!busy.includes("(queue)"), "排队提示零残留")
+  assert.ok(!busy.includes("queue:"), "排队计数提示零残留")
   const idle = renderStatus({ ...st(), processing: false, status: "Ready" }, agent, 120, [])
   assert.match(idle, /Enter: send/, "空闲 Enter: send")
 })
