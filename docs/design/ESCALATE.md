@@ -96,8 +96,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 - **术后报告经 pending 单容器 digest 自动注入**（"报告已 merge——可继续处置"——
   `_pendingAsyncResults` +role "escalate"——ASYNC-RESULT-CONTAINER.md D2）——
   **动作域仍按消费回合档位**——手动档 digest 禁写——无族例外。
-- **`async: false` 保留同步旧路径**（向后兼容——既有同步语义零回归）。同步路径下：
-  回合内等待、撞墙 continue 弹面板等表述适用。
+- **顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）。`async:false` 仅机制参数——depth>0 子代理内同步（平台规则）。
 
 消化轮动作域（消费驱动 / 档位制）与 consult/advisor 族规则同源，权威 = `AGENT-LOOP.md`
 §17 D-S6/D-S7 + §25。
@@ -172,5 +171,6 @@ pending / error partial-merge 决策 / 空闲 settle 消化等）。
 - 2026-09-03：escalate 并入 `subagent` 工具 `action:"escalate"`（工具面收敛——语义/约束/
   relay 前缀 `escalate#N` 全保留——AGENT-LOOP §19）。
 - 2026-09-06：**R17 缺省 async**——后台 other 池 + settle 三分类 + digest 自动注入；
-  `async:false` 保留同步旧路径；机制正文收敛到本文 §2 当前态。
+  `async:false` 显式同步保留——2026-09-08 §7.7.1 移除（同步保留例外全移除——顶层一律异步——见 2026-09-09 条）；机制正文收敛到本文 §2 当前态。
 - 2026-09-07：DOC-REWRITE 批 A——可读化重写为当前态（多行 markdown，历史折叠为变更记录）。
+- 2026-09-09：BATCH-4-DOC-CLEANUP——§2.3 async:false 残留句清（§7.7.1 锚句照抄 AGENT-LOOP §14.2——顶层一律异步——`async:false` 仅机制参数）。

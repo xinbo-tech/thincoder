@@ -154,3 +154,11 @@ test("ASYNC-RESIDUE-FIX F-6 discipline 路由 subagent 补 cancel + escalate 异
   assert.ok(discF6.includes("(action: spawn / status / cancel / escalate)"), "discipline 路由: subagent 行动作列缺 cancel")
   assert.ok(discF6.includes("escalate = fly in a stronger model for hard implementation (background by default — its report arrives automatically; never wait for it synchronously at top level)"), "discipline 路由: escalate 异步注缺失")
 })
+
+test("BATCH-4-DOC-CLEANUP F-1 ESCALATE.md async:false 残留句零 + 锚句驻留（同步旧路径/同步语义零回归——fail-when-present）", () => {
+  const escalate = read("docs/design/ESCALATE.md")
+  assert.doesNotMatch(escalate, /同步旧路径/, "ESCALATE.md: 同步旧路径残留（§2.3 async 段/变更记录）")
+  assert.doesNotMatch(escalate, /同步语义零回归/, "ESCALATE.md: 同步语义零回归残留")
+  assert.ok(escalate.includes("**顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）"), "ESCALATE.md: §7.7.1 锚句缺失（byte-final 照抄 AGENT-LOOP §14.2）")
+})
+
