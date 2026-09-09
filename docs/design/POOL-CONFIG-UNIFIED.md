@@ -17,11 +17,17 @@
   - F-6 模型可见静态文案去数字化（用户裁②）：CLI advisor.mjs:43 / VSC engineering.md:16 死数字 → 活配置引用——错误文案含生效上限（CLI 已插值——VSC :173 硬编码改插值）
   - F-7 §24 旧锚触碰行更新（用户裁③）：本批触碰行注释 §24→§11.1/§11.2——全仓清理挂 TODO 观察项
   - **范围边界**：全仓 §24→§11 大扫 = 后续（挂 TODO）；评审轮次上限 MAX_REVIEW_ROUNDS=5/②-6a 不排队语义不变；subagent 两域现语义不变（engCoder/other 已 4 已可配——本批只界面/一致性）；排队机制（advisor 无排队——超限即拒）不变——仅阈值 + scope 守卫。
+  - **非功能性（评审 #4 补）**：双端锁步同构（CLI/VSC 三键体系 + 守卫逻辑 diff 核）；性能零影响
+    （并发判定 O(1)~O(池条目)——不改 spawn 热路径复杂度）；配置持久化语义（旧 2 键 poolLimits 对象
+    无 advisor → 读回退 4——新写全 3 键落盘——非法键不落盘回退）；向后兼容（既有 engCoder/other 配置
+    值零迁移）。
 
 ## 设计（勘察骨架 + 用户三裁——照做勿自行解释）
 
 ### 1. 默认值统一 4（F-1）
-- 双端 `advisor-async.mjs` `ADVISOR_POOL_LIMIT` 常量（CLI :196 / VSC :39）2 → 4（回退默认——唯一权威改点）
+- 双端 `advisor-async.mjs` `ADVISOR_POOL_LIMIT` 常量（CLI :196 / VSC :39）2 → 4——评审 #6 措辞：
+  常量 = 运行时回退权威——DEFAULTS/回退对象 = config 层镜像（保持逐字节同值——耦合锁测试保一致）——
+  四源同改缺一即漂移
 - 默认源同步 4：CLI config.mjs:65 DEFAULTS.agent.poolLimits 加 `advisor: 4` / VSC config-io.mjs:271 AGENT_DEFAULTS.poolLimits + VSC settings.mjs:96 回退对象加 `advisor: 4`
 - **耦合锁补真空**（勘察：T-24a4 锚定测试现不存在——注释宣称锁但测试树零引用）——新测试断言 DEFAULTS ↔ 运行时常量逐键同值（3 键 4/4/4）
 
@@ -41,7 +47,10 @@
 - locales/en.json:235-238 + zh.json:235-238 加 settings.poolAdvisor/Help
 - extension/panel-messages.mjs:361-362 → config-io.mjs:369-376 saveAgentSettingsFromPanel 白名单（:371 现 ["engCoder","other"]）加 "advisor"（全非法 → 删整键回退默认语义不变）
 - settings.mjs:96 回退对象加 advisor + settings-agent.js 显示 `?? 4`
-- 运行期：effectivePoolLimits 加 advisor 键遍历（subagent-scheduler.mjs:344-360 键表 2→3——注意该函数服务 subagent 域——advisor 读取器独立——见 F-2）——每 run 起始 setup 重建 cfg——下个 spawn 生效（R14 语义）
+- 运行期：effectivePoolLimits 加 advisor 键遍历（subagent-scheduler.mjs:344-360 键表 2→3——评审 #2：
+  第三键**仅供面板生效值显示/读取回退**——调度路径过滤不消费（subagent 两域 engCoder/other 判定不变）——
+  advisor 实际调度上限由 advisor-async 独立读取器（§2）决定——两路径各司其职）——每 run 起始
+  setup 重建 cfg——下个 spawn 生效（R14 语义）
 
 ### 5. 同 scope 并发守卫（F-5——用户裁①）
 - resolve/launch 判定：现查同 type+scope **settled** → 续跑；加查同 type+scope **running** → 存在则**拒**（不等不排——②-6a 无排队语义保持）
@@ -60,27 +69,33 @@
 - 本批触碰文件内 §24 引用注释（advisor-async.mjs/subagent-async.mjs/scheduler/cmd-config 触碰行）→ §11.1/§11.2（现行节号）
 - 全仓 §24→§11 清理 → CLI docs/TODO.md 挂观察项（后续批——不做全仓大扫）
 
-## 受影响文件（双端）
+## 受影响文件（双端——评审 #1 实测行数 + 预计增量——>300 审视注）
 
-| 文件 | 端 | 改动 |
-|---|---|---|
-| src/agent-tools/advisor-async.mjs:196/:364-365 | CLI | 常量 4 + 读取器 + scope 守卫 + 文案生效值 |
-| src/config.mjs:65 | CLI | DEFAULTS poolLimits 加 advisor:4 |
-| src/tui/cmd-config.mjs:236-262/:279/:307 | CLI | advisor 第三项 |
-| src/agent-tools/advisor.mjs:43 | CLI | 描述去数字化活引用 |
-| src/agent-tools/subagent-async.mjs（触碰行注释） | CLI | §24→§11 注释 |
-| src/agent-tools/advisor-async.mjs:39/:171-173/:281 | VSC | 常量 4 + 读取器 + scope 守卫 + 文案插值 |
-| src/config-io.mjs:271/:369-376 | VSC | 默认 + 白名单加 advisor |
-| src/extension/settings.mjs:96 | VSC | 回退对象加 advisor:4 |
-| webview/settings-agent.js:19-21/:91-101 | VSC | 第三数字框 |
-| locales/en.json + zh.json:235-238 | VSC | poolAdvisor 文案 |
-| src/agent-tools/subagent-scheduler.mjs（触碰注释/键表） | VSC | 键表评估 + §24 注释 |
-| src/prompts/engineering.md:16 | VSC | 去数字化活引用 |
-| docs/design/AGENT-LOOP.md §11.1/:11.2 + :67/:350 | CLI/VSC | 三键 + advisor 可配 + 守卫语义 |
-| docs/design/ENGINEERING-MODE.md:163 + ARCHITECTURE.md 镜像段 | VSC | 同步 |
-| docs/TODO.md L91 | CLI | 需求勾销（核销时）|
-| test/（双端——见用例表） | 双端 | 新测试 |
+> 档位总览：全 <500 硬限（最接近 VSC config-io 494 +1 → 495 安全）——8 文件 >300 advisory 档——
+> 本批增量全部 ≤±25 不触发拆分——审视注：无 >500 诞生/逼近风险（config-io 495 记录为最热点——
+> 下次触碰优先拆）——纯 .md 豁免行数标注。
 
+| 文件 | 端 | 现行数（评审 #1 实测） | 预计增量 | 改动 |
+|---|---|---|---|---|
+| src/agent-tools/advisor-async.mjs | CLI | 457（>300 审视——增量安全） | ≤±25 | 常量 4 + 读取器 + scope 守卫 + 文案生效值 |
+| src/config.mjs | CLI | 429（>300 审视——结构不变） | +1 | DEFAULTS poolLimits 加 advisor:4 |
+| src/tui/cmd-config.mjs | CLI | 393（>300 审视——增量安全） | ≤+12 | advisor 第三项 |
+| src/agent-tools/advisor.mjs | CLI | 211 | ≤+2 | 描述去数字化活引用 |
+| src/agent-tools/subagent-async.mjs | CLI | 417（>300 审视——仅注释） | 0（替换） | §24→§11 注释 |
+| src/agent-tools/advisor-async.mjs | VSC | 433（>300 审视——增量安全） | ≤±25 | 常量 4 + 读取器 + scope 守卫 + 文案插值 |
+| src/config-io.mjs | VSC | 494（>300 审视——最热点 495 安全） | +1 | 默认 + 白名单加 advisor |
+| src/extension/settings.mjs | VSC | 309（>300 审视——增量安全） | +1 | 回退对象加 advisor:4 |
+| webview/settings-agent.js | VSC | 169 | ≤+10 | 第三数字框 |
+| locales/en.json + zh.json | VSC | 240 ×2 | ≤+4 ×2 | poolAdvisor 文案 |
+| src/agent-tools/subagent-scheduler.mjs | VSC | 459（>300 审视——键表评估） | ≤+1 | 键表 + §24 注释 |
+| src/prompts/engineering.md | VSC | 88（.md 豁免——列结构变更） | ≤+2 | 去数字化活引用 |
+| docs/design/AGENT-LOOP.md + ENGINEERING-MODE.md + ARCHITECTURE.md | 双端 | doc 豁免 | doc | 同步 |
+| docs/design/README.md | CLI | doc 豁免 | doc | 登记（核销时） |
+| docs/TODO.md L91 | CLI | doc 豁免 | doc | 需求勾销（核销时）|
+| test/（评审 #3 点名：CLI test/config-pool.test.mjs（耦合锁/读取器/容量拒/scope 守卫/子菜单读写——
+  若 TUI 基建无则子菜单走人工清单）+ test/advisor-description.test.mjs（活引用）；VSC
+  test/config-pool.test.mjs（耦合锁/读取器/容量拒/scope 守卫/白名单）+ test/settings-panel.test.mjs
+  （回退显 4）） | 双端 | 新 | 新 ≤150 | 新测试 |
 ## 用例表（正常/边界/错误——对应 F-1~7）
 
 | 用例 | 输入 | 预期输出 |
@@ -101,7 +116,8 @@
 
 - AC-1 三池默认 4（双端常量 + DEFAULTS + 回退 4/4/4——耦合锁测试绿）
 - AC-2 advisor 可配（读取器合法覆盖/非法回退——文案含生效值——双端测试）
-- AC-3 CLI /config 三域读写（子菜单/主菜单/view 一致——TUI 测试或人工走查）
+- AC-3 CLI /config 三域读写（子菜单/主菜单/view 一致——评审 #3 钉死：config-pool.test.mjs 子菜单读写测
+  （若 TUI 基建无 → 固定人工走查清单：/config → 并发池 → 三值读写 → 重进核对））
 - AC-4 VSC 面板三框读写（白名单 + 落盘 + 回退显 4——config-io 纯函数单测）
 - AC-5 同 scope 并发守卫（running 同 scope 拒——settled 续跑不回归——异 scope 并行允许——双端测试）
 - AC-6 文案去数字化（advisor.mjs 描述/engineering.md/拒文案无死数字——活引用生效值）
