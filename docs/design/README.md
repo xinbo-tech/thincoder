@@ -76,3 +76,7 @@
 
 ## 变更记录（A2-SUMMARY-PARITY 补登——2026-09-09 核销）
 - `A2-SUMMARY-PARITY.md`（A2 摘要对齐 CLI——051b317——consume c6fe8a25）
+
+## 变更记录（GIT-ASYNC 补登——2026-09-09 核销）
+- `GIT-ASYNC.md`（git 富注入异步化双端——L21——ed3fe3e——CLI 镜像半 ccd1b51——consume 待父侧补记）
+
