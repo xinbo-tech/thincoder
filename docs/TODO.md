@@ -238,6 +238,11 @@
   #1/#2→重发#4-#6（池有活条目 poolMax 生效）→22:10 reload 后批2 回 #1/#2→ACTIVITY 又 #1——
   **坐实块 key（sub:role#id）跨批/reload 复用风险**（挂起池活跨 reload 时撞冻结块）——修：counter
   持久化到槽文件（随 history 存）或恢复时从历史频道标签续号——status=登记——owner = 平台
+  ——**归因修正（23:16 用户纠正）**：**非 reload 特有——每轮 runAgent 都从 1**（L293 注释自述
+  "agent._subIdCounter per-run 重建"）——20:30 重启后同进程 20:37 explore #1 与 21:01 explore 又 #1
+  （中间无 reload）——只有同轮内连续 spawn 递增（批1 #1/#2）——跨轮 = 上轮池空 + counter 归零 →
+  poolMax=0 兜底失效 → 每轮首 spawn 都 #1——reload 仅加剧非根因——修方向不变（counter 跨轮持久
+  或从历史频道标签续号）
   (core.mjs L433 signal 只留取消链)/proxy(proxy.mjs L263-265 头超时+body idle)均无整体墙钟残留——
   死亡另有来源——需来源标注钉死
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
