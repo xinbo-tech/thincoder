@@ -247,7 +247,6 @@
   history 数组时 _subIdCounter expando 随旧数组被抹**（agent.mjs L88 注释警告的 "history replace wipes
   it" 模式——distill 处防了（L88-91 await 先消化）——counter 没防）——长会话高频压缩（本会话开头即
   compacted）→ counter 反复归零 → 池空时 spawn 回 #1——修：counter 不挂 history expando（压缩不丢）
-  或压缩时迁移 expando 或池空时从历史消息频道标签（sub:role#N）续号
   (core.mjs L433 signal 只留取消链)/proxy(proxy.mjs L263-265 头超时+body idle)均无整体墙钟残留——
   死亡另有来源——需来源标注钉死
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
