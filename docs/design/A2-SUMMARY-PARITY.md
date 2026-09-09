@@ -1,7 +1,7 @@
 # VSC A2 摘要对齐 CLI（A2-SUMMARY-PARITY）
 
 > 板块：评审收敛（eng-coder audit A2 摘要——VSC 对齐 CLI）。权威源：CLI subagent-spawn.mjs summarizeEngTaskBook（:37-73——inline 兜底实现）。
-> 状态：**设计待评审**——2026-09-09 落档（代码正确性核实一手——双端分叉定位 + 用户裁 A 对齐 CLI）。需求：TODO L26（agent A2 摘要触发条件——仅 ## 节标题——双端分叉）。
+> 状态：**已交付核销**——2026-09-09（051b317——summarizeEngTaskInput CLI 逐字同构——36 行 diff 一致——183/182 绿——audit clean + advisor pass——consume c6fe8a25——VSC L2 链终跑）。需求：TODO L26（agent A2 摘要触发条件——仅 ## 节标题——双端分叉）。
 
 ---
 

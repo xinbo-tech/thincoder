@@ -73,3 +73,6 @@
 
 ## 变更记录（READ-HISTORY-SPLIT 补登——2026-09-09 核销）
 - `READ-HISTORY-SPLIT.md`（read-history.mjs 两文件拆分——5300f09——272/119——consume 521b9987）
+
+## 变更记录（A2-SUMMARY-PARITY 补登——2026-09-09 核销）
+- `A2-SUMMARY-PARITY.md`（A2 摘要对齐 CLI——051b317——consume c6fe8a25）
