@@ -78,3 +78,5 @@
 - 2026-09-07：新增「结构债」（STRUCTURE-DEBT.md）；verify 重构（VERIFY-REDESIGN.md）；**归档 8 文件移 `_archive/`**（ARCHITECTURE-v2/ROADMAP-0.9.0/COMPETITIVE-CLI-2026/KIMI-CODE-PROMPT-ANALYSIS/TTSR-ANALYSIS/ENGINEERING-WORKLOOP/CLI-LINT-REQUIREMENTS/CLI-LINT-TUNING）；地图格式正常化。
 - 2026-09-07：归属规则加**规则 6（文档人类可读防复发）**——无 >300 字符单行 / markdown 结构正确 / 变更记录折叠；配 `scripts/check-doc-width.mjs` 批量检查。
 - 2026-09-08：新增「结构债批执行」板块行——批专属档自登记（STRUCTURE-DEBT-BATCH-5-6；批量清单指 STRUCTURE-DEBT.md §7，不逐档裸列）。
+
+- 2026-09-09：本会话批核销——INPUT-LOCK-ASYNC / MAIN-DESIGN-ENHANCE / MODEL-MERGE-SESSION / ISSUE-FIX-BATCH / ASYNC-RESIDUE-FIX / QUEUED-VISIBILITY / MODEL-400-FIX 全交付 clean + L2 双仓全绿（CLI 204/204 + VSC 239/239）——consume 核销（槽闭合）——SCHEDULER-DYNAMIC-DOMAIN 评审通过待实现（token 0de32ad6 槽保留）。
