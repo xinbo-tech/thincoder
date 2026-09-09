@@ -7,7 +7,7 @@ Run a git command. Only works inside a git repository.
 - action='log': recent commits. count (default 10), oneline=true compact, path=<file> for one file's history.
 - action='show': a commit's details (--stat). ref=<ref> (default HEAD).
 - action='add': stage files — path=<file> (granular) or all changes when path omitted.
-- action='commit': stage + commit. message required; path=<file> for granular staging.
+- action='commit': commit. message required; path=<file> → `git commit --only <paths>` — commits those files' working-tree content only (other staged batches are NOT mixed in — atomic); without path → add -A + full commit.
 - action='rm': untrack a file/dir (git rm --cached, kept on disk). path required.
 - action='push'/'fetch'/'pull': sync with remote. remote=<origin>, ref=<branch or tag> (space-separated for multiple), tags=true for --tags.
 - action='tag': manage tags. tagAction=list (optional filter) / create (name, optional ref) / delete (name; snapshots first).

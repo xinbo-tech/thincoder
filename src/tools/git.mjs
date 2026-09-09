@@ -149,14 +149,21 @@ export const gitTool = {
       }
       case "commit": {
         if (!args.message) return "Error: commit requires message"
-        // Granular staging when path given (only stage these); otherwise stage all (add -A).
-        // 多路径：空格分隔（ref 先例——2026-09-05 发版痛点）
-        const staged = args.path ? args.path.split(/\s+/).filter(Boolean) : null
-        const add = runGitStrict(ctx.cwd, staged?.length ? ["add", "--", ...staged] : ["add", "-A"])
-        if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)
-        const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
+        // F-3 (QUICKFIX-BATCH-2)：path 给定 → git commit --only <paths>——从工作树取列文件
+        // 提交（忽略索引他批——原子——不再先 add）。空/空白 path（trim 后空）→ 明确错误
+        // （不回落 add -A）。空格分隔唯一形态（含空格文件名不支持）。无 path → add -A 全量。
         const parts = []
-        if (add.out) parts.push(add.out)
+        let commit
+        if (args.path) {
+          const trimmed = args.path.trim()
+          if (!trimmed) return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
+          commit = runGitStrict(ctx.cwd, ["commit", "--only", ...trimmed.split(/\s+/), "-m", args.message])
+        } else {
+          const add = runGitStrict(ctx.cwd, ["add", "-A"])
+          if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)
+          if (add.out) parts.push(add.out)
+          commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
+        }
         if (commit.ok) {
           if (commit.out) parts.push(commit.out)
           // F6: commit = new safety baseline — clear this project's checkpoints

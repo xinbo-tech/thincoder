@@ -9,8 +9,9 @@
  * 覆盖（用例表 + 验收 AC-1/AC-2）：
  * - F-1 model undefined/null/空串 → 经真实 chat() 可读 throw（ProviderError——带 provider 名
  *   + 修复线索）——不发病体（guard 在 body 组装前——pre-network，不 mock fetch）
- * - F-2a resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 主 provider.model
- *   （渠道自带 .model 优先——legacy 形态不回归）；链式空兜 → 仍 throw（F-1）
+ * - F-2a resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 命中渠道 models[0]
+ *   （跨渠道——非主 provider model——QUICKFIX-BATCH-2 F-2；渠道自带 .model 优先——legacy
+ *   形态不回归）；链式空兜 → 仍 throw（F-1）
  * - F-2c resolveChildProvider：裸渠道名（byName）→ models[0]；渠道无候选 → 主 provider.model
  * - F-2d applySession：槽 activeModel="" + models 有候选 → 兜 models[0]（`||` 非 `??`——
  *   空串也兜）；null 槽回退不回归
@@ -49,25 +50,32 @@ const MAIN = { name: "deepseek", baseURL: "https://api.deepseek.com/v1", model: 
 // 渠道新 schema 形态：models[] 候选、无 model 字段（MODEL-MERGE）
 const KIMI = { name: "kimi", baseURL: "https://api.moonshot.cn/v1", models: ["kimi-k3", "kimi-k2"], apiKey: "k-ch" }
 
-test("F-2a advisor 无 cfg.model → provider.model = 主 provider.model（渠道克隆重派生——model 键不缺失）", () => {
+test("F-2a advisor 跨渠道 无 cfg.model → model = 命中渠道 models[0]（非主 provider model——QUICKFIX-BATCH-2 F-2）", () => {
   const agent = { provider: MAIN, providers: [MAIN, KIMI], config: { providersList: [MAIN, KIMI], advisor: { provider: "kimi" } } }
   const r = resolveAdvisorProvider(agent)
   assert.equal(r.name, "kimi", "渠道命中")
   assert.equal(r.baseURL, KIMI.baseURL, "端点=advisor 渠道——model 重派生不换端点")
-  assert.equal(r.model, MAIN.model, "model = 主 provider.model")
+  assert.equal(r.model, "kimi-k3", "model = 命中渠道（kimi）models[0]")
+  assert.notEqual(r.model, MAIN.model, "不再借主 provider 的 model 发别家端点（403 险）")
 })
 
-test("F-2a legacy 渠道自带 .model → 保留自身 model（provider.model ?? 主 model 首取渠道值——不回归）", () => {
+test("F-2a 同渠道（cfg.provider=主渠道 models[] 形态）无 cfg.model → model = 主渠道 models[0]（同渠道不回归）", () => {
+  const MAIN_M = { name: "deepseek", baseURL: "https://api.deepseek.com/v1", models: ["deepseek-v4-flash", "deepseek-v4-pro"], apiKey: "k-main" }
+  const agent = { provider: MAIN_M, providers: [MAIN_M], config: { providersList: [MAIN_M], advisor: { provider: "deepseek" } } }
+  assert.equal(resolveAdvisorProvider(agent).model, "deepseek-v4-flash", "命中渠道 = 主渠道 → 自己的 models[0]")
+})
+
+test("F-2a legacy 渠道自带 .model → 保留自身 model（provider.model ?? models[0] 首取渠道值——不回归）", () => {
   const KIMI_L = { name: "kimi", baseURL: "https://x", model: "kimi-legacy", apiKey: "k" }
   const agent = { provider: MAIN, providers: [KIMI_L], config: { providersList: [KIMI_L], advisor: { provider: "kimi" } } }
   assert.equal(resolveAdvisorProvider(agent).model, "kimi-legacy")
 })
 
-test("F-2a 链式空兜（渠道无 model + 主 provider 无 model）→ model 键缺失面由 F-1 兜（resolve 不崩、模型为空）", () => {
+test("F-2a 渠道无候选（models 空）→ model undefined——留 F-1 断言兜（不发病体）", () => {
   const EMPTY_CH = { name: "kimi", baseURL: "https://x", models: [], apiKey: "k" }
   const agent = { provider: { name: "main", baseURL: "https://x", apiKey: "k" }, providers: [EMPTY_CH], config: { providersList: [EMPTY_CH], advisor: { provider: "kimi" } } }
   const r = resolveAdvisorProvider(agent)
-  assert.equal(r.model, undefined, "双空 → 无 model——留 F-1 断言兜（不发病体）")
+  assert.equal(r.model, undefined, "渠道无候选 → 无 model——留 F-1 断言兜（不发病体）")
   assert.equal(r.name, "kimi")
 })
 

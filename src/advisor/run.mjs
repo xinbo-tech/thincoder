@@ -332,8 +332,9 @@ export function resolveAdvisorProvider(agent) {
       const provider = findProvider(agent.providers?.length ? agent.providers : agent.config?.providersList ?? [agent.provider], cfg.provider)
       // F-2a (MODEL-400-FIX)：无 cfg.model 时渠道克隆须重派生 model——MODEL-MERGE schema 渠道
       // 无 model 字段（models[] 候选）→ `{...provider}` 会丢 model 键 → 无 model 请求 → serde 400。
-      // 语义恢复（原头注）：advisor 不配 model = 用主 agent provider 的 model（渠道自带 .model 优先）。
-      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? agent.provider?.model }
+      // QUICKFIX-BATCH-2 F-2（跨渠道语义）：无 cfg.model → 命中渠道自己的候选首
+      // （provider.model ?? provider.models[0]）——非主 provider model——自己的模型发自己端点。
+      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? provider.models?.[0] }
       if (cfg.thinking === null || cfg.thinking === false) result.thinking = undefined  // explicitly off
       else if (cfg.thinking !== undefined) result.thinking = cfg.thinking
       if (cfg.reasoningEffort !== undefined) result.reasoningEffort = cfg.reasoningEffort
