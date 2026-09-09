@@ -239,3 +239,11 @@
   ② F-2a 跨渠道语义（cfg.provider≠主渠道且无 cfg.model → 现用主 provider.model 发别家端点 = 403 险——
   建议改用命中渠道 models[0]）——status=登记——设计权在用户
 
+- [ ] **INPUT-LOCK busy 行为修订（2026-09-09 用户反馈——对已交付核销设计的体验修正）**：
+  ① 输入不禁用：主会话 busy 时**允许继续录入**（VSC readOnly 锁禁打字 = 过度——改不禁——可打字回显）
+    ——但 **send/Enter 禁止**（不允许发出去——VSC send.js 守卫保留/CLI 提交吞保留）
+  ② 斜杠白名单删除：busySafeCommand/BUSY_SAFE_COMMANDS（CLI——/exit /help /model 忙时直执行）= 过度设计——
+    删——斜杠命令 busy 时同走 send 禁止——（紧急退出 = Ctrl+C 门禁前保留——与白名单无关）
+  ——owning board = INPUT-LOCK（已核销——**新范围走新设计评审链——新 token**）——status=登记待设计
+  （用户裁：忙时斜杠也禁 send——/exit 也发不出——退出靠 Ctrl+C——纯一致禁发）——设计权在用户
+
