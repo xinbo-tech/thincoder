@@ -5,7 +5,7 @@
  */
 import { loadSlot, saveSessionToSlot, newSlot, deleteSlotAndUpdate, setSlotTitle, loadModelPrefs as loadStoredModelPrefs, historyWindow, listSlots, slimForDisplay, isLegacyTransient, stripTruncatedToolArgs, resumeSlot, readEndMarker, writeEndMarker } from "./session-io.mjs"
 import { engTokensMergeForSave } from "./session-slot-write.mjs"
-import { fullStatus } from "./settings.mjs"
+import { fullStatus, lastModelsPayload } from "./settings.mjs"
 import { migrateLegacySettings } from "./migrate-settings.mjs"
 import { stripEditorInjection } from "./editor-context.mjs"
 import { generateTitle as generateSessionTitle } from "./generate-title.mjs"
@@ -153,6 +153,20 @@ export function loadSession(panel) {
     const { messages, hasOlder } = historyWindow(history, null)
     sendHistoryPage(panel, messages, hasOlder, false)
     pushSessions(panel)
+    // MODEL-MERGE-SESSION：切/开会话 → 下拉同步本会话复合（F-4 恢复 UI 面——复用既有
+    // "models" 消息——prefs 载具带槽复合；webview 按 prefs 选行 + selectModel 回写同值——
+    // 无缓存列表不发（防空表清下拉））；新会话（无复合）不发——沿用当前（F-7）
+    try {
+      const data = activeData(panel)
+      const payload = lastModelsPayload()
+      if (data?.activeProvider && data.activeModel && payload.length) {
+        panel._panel?.webview.postMessage({
+          type: "models",
+          models: payload,
+          prefs: { ...loadStoredModelPrefs(panel._context.workspaceState), model: data.activeModel, provider: data.activeProvider },
+        })
+      }
+    } catch { /* 槽不可读 → 下拉保持现状 */ }
   }
 
   /** Older-history page for the webview's scroll-back lazy loading. */
@@ -291,7 +305,19 @@ export async function status(panel) {
     // One-time migration of legacy key stores (SecretStorage + thincoder.providers settings)
     // into the shared ~/.thincoder/config.json. Flag-guarded, safe to call on every open.
     await migrateLegacySettings(panel._context)
-    await fullStatus(panel._panel, panel._context.workspaceState, () => pushSessions(panel))
+    // MODEL-MERGE-SESSION：models push prefs = 会话槽复合优先（有槽复合即本会话模型——
+    // F-4 下拉随会话；无复合 = 新会话 → workspaceState 兜底——F-7 沿用当前）。慢段绝不绑槽
+    // （AC-B2c——resumeSlot 只在快段 openSessionContent）——只读已绑槽
+    let prefsOverride = null
+    try {
+      if (panel._slot != null) {
+        const data = loadSlot(_cwd(), panel._slot)
+        if (data?.activeProvider && data.activeModel) {
+          prefsOverride = { ...loadStoredModelPrefs(panel._context.workspaceState), model: data.activeModel, provider: data.activeProvider }
+        }
+      }
+    } catch { /* 槽不可读 → workspaceState 兜底 */ }
+    await fullStatus(panel._panel, panel._context.workspaceState, () => pushSessions(panel), prefsOverride)
     panel._pushMcpStatus()
     const prefs = loadModelPrefs(panel)
     if (prefs.model && panel._statusBar) panel._statusBar.text = `$(hubot) ${prefs.model}`

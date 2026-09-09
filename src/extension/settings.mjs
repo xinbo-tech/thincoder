@@ -281,7 +281,12 @@ export function pushStatus(panel) {
   panel?.webview.postMessage({ type: "providerStatus", keyOk: anyKey, status: s })
 }
 
-export async function fullStatus(panel, workspaceState, pushSessionsFn) {
+// MODEL-MERGE-SESSION：最近一次 models 载荷缓存（loadSession 复用既有 "models" 消息把
+// 会话槽复合同步给 webview 下拉——F-4 恢复 UI 面——避免空表清下拉；extension 进程内缓存）
+let _lastModelsPayload = []
+export function lastModelsPayload() { return _lastModelsPayload }
+
+export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOverride = null) {
   pushStatus(panel)
   const s = providerStatus()
   const anyKey = Object.values(s.providers).some((p) => p.configured)
@@ -316,6 +321,11 @@ export async function fullStatus(panel, workspaceState, pushSessionsFn) {
     })
   )
   const allModels = results.flatMap((r) => r.status === "fulfilled" ? r.value.models : [])
-  panel?.webview.postMessage({ type: "models", models: allModels, prefs: loadModelPrefs(workspaceState) })
+  _lastModelsPayload = allModels
+  // MODEL-MERGE-SESSION：models push 的 prefs = 会话槽复合优先（调用侧 status() 经
+  // prefsOverride 传入——打开/切换后下拉跟随本会话——F-4）；无槽复合（新会话）→ 文件夹级
+  // workspaceState prefs 兜底（最近使用——F-7 /new 沿用当前语义）
+  const prefs = prefsOverride ?? loadModelPrefs(workspaceState)
+  panel?.webview.postMessage({ type: "models", models: allModels, prefs })
   pushSessionsFn?.()
 }

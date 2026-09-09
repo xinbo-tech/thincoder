@@ -317,6 +317,10 @@ offload 写时自清理回收（paste-* 同目录，无名字过滤）。
 
 ## 9. 变更记录（历史折叠——详见 git log 与并入源）
 
+- 2026-09-09：MODEL-MERGE-SESSION 语义同步——§1 配置存储改写（三旧层删除 + defaultModel
+  顶层复合 + providers[].models[] 候选 + 迁移核 config-migrate）；§2 Preset models 种子；
+  §3 模型选择写会话槽（selectProviderModel config 写路径退役）+ 设置面板「默认模型」入口。
+
 - 2026-09-08：DOC-REORG 第 2 批——本档自 ARCHITECTURE §5 迁出 + 并入 RESPONSES-TRANSPORT.md
   （内容合入 §5/§6 后删原文件）；RESPONSES buildRequest/parseStream 契约块逐字保留（§5.3）。
 - 2026-08-31：Responses transport + tool_choice/parallel_tool_calls 能力层 + fetch 绝对墙钟

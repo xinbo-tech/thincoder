@@ -104,10 +104,33 @@ export async function runPanelChat(panel, opts = {}) {
   }
 }
 
+/**
+ * MODEL-MERGE-SESSION 模型/stamp 决策纯函数（评审修复导出——runPanelChatImpl 调用——单测锚）。
+ * 语义：
+ * - 会话模型 = 槽复合（F-4——providerName 缺席时调用侧以槽渠道优先解析）。
+ * - webview userMessage 恒带 dropdown 复合（echo——dropdown = 会话级选择，selectModel 消息已写
+ *   槽）：echo == 槽复合 ≠ per-message override（裁定④只约束真·与槽不符的单回合试运行）。
+ * - 落槽值（sessionStampModel）：真 override 单回合不落槽——同渠道试运行保留槽模型（slotModel；
+ *   null = legacy 无模型槽 → 保留语义——saveLines ?? 往返）；无 override 回合落实际运行模型
+ *   （runModel）——槽播种/恒非空（CLI saveSession 对拍）。异渠道试运行落 baseModel（配对渠道）。
+ * @param {string} providerName 本回合 provider
+ * @param {string|null|undefined} modelOverride 显式 per-message 模型（webview echo / 试运行）
+ * @param {{provider: string, model: string|null}|null} slotRef 槽复合（面板回合入口恒读）
+ * @param {string|null} baseModel 该渠道默认解析值（defaultModel 属该渠道或首候选）
+ * @returns {{ runModel: string|null, trialOverride: boolean, sessionStampModel: string|null }}
+ */
+export function resolveTurnModelAndStamp({ providerName, modelOverride, slotRef, baseModel }) {
+  const isSlotChannel = slotRef?.provider === providerName
+  const slotModel = isSlotChannel ? slotRef.model : null
+  const trialOverride = !!(modelOverride && !(isSlotChannel && slotModel && modelOverride === slotModel))
+  const runModel = modelOverride || slotModel || baseModel
+  const sessionStampModel = trialOverride ? (isSlotChannel ? slotModel : baseModel) : runModel
+  return { runModel, trialOverride, sessionStampModel }
+}
+
 /** runPanelChat 本体（LOGGING 包装之外——见上方 runPanelChat 包装器）。 */
 async function runPanelChatImpl(panel, opts = {}) {
   let { text, modelOverride, reasoning, providerName, images, autoTurn = false, susp = null, skipSession = false } = opts
-  let slotModel = null // 会话槽模型（默认解析支捕获——无 per-回合 override 时用槽复合建 provider）
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
 
   // C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C）：回合起点（任何 await 之前）清闩 +
@@ -171,17 +194,25 @@ async function runPanelChatImpl(panel, opts = {}) {
     panel._distillState.pending = null
     await prevDistill
   }
-  if (!providerName) {
-    // MODEL-MERGE-SESSION：无 per-回合 override → 会话槽复合优先（CLI applySession 对拍——
-    // F-4 恢复读槽——VSC 行为新增）；槽无复合/槽渠道无 key → config defaultModel 运行时回退。
-    // 槽模型（slotModel）只在本回合无 override 时使用（override = 单回合试运行不落槽——裁定④）。
-    try {
-      const sd = panel._activeData?.(turnSlot)
-      if (sd?.activeProvider && await getKey(sd.activeProvider)) {
-        providerName = sd.activeProvider
-        slotModel = typeof sd.activeModel === "string" && sd.activeModel ? sd.activeModel : null
+  // ── MODEL-MERGE-SESSION：会话槽复合恒读（F-4 恢复读槽——非仅 providerName 缺席路径）。
+  // webview userMessage 恒带 dropdown 复合（send.js echo——dropdown = 会话级选择——selectModel
+  // 消息已写槽）——echo == 槽复合 ≠ per-message override（裁定④只约束真·与槽不符的单回合试运行）。
+  let slotRef = null // { provider, model|null } | null
+  let slotData = null
+  try {
+    slotData = panel._activeData?.(turnSlot)
+    if (slotData?.activeProvider) {
+      slotRef = {
+        provider: slotData.activeProvider,
+        model: typeof slotData.activeModel === "string" && slotData.activeModel ? slotData.activeModel : null,
       }
-    } catch {}
+    }
+  } catch {}
+  if (!providerName) {
+    // provider 未显式给（digest/挂起/首回合竞态）→ 槽渠道优先（有 key），其次 config defaultModel
+    if (slotRef?.provider) {
+      try { if (await getKey(slotRef.provider)) providerName = slotRef.provider } catch {}
+    }
     if (!providerName) {
       // 回退：config defaultModel 渠道（resolveProviders activeProvider = default 渠道/首渠道）
       try {
@@ -208,13 +239,12 @@ async function runPanelChatImpl(panel, opts = {}) {
     return
   }
   if (!p) { panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: providerName }), needsSetup: true }); return }
-  const baseModel = p.model ?? null // override 前的解析模型（会话落槽值——override 单回合不落槽）
-  if (modelOverride) p = { ...p, model: modelOverride }
-  else if (slotModel) p = { ...p, model: slotModel }
-  // 会话复合落槽值：override 回合保持槽模型（无槽模型 → 渠道默认解析值）；无 override 回合
-  // 即本回合模型——槽播种/恒非空（CLI saveSession 对拍）
-  const sessionModelValue = slotModel ?? baseModel ?? p.model
-  const slotStamp = { activeProvider: providerName, activeModel: sessionModelValue }
+  // MODEL-MERGE-SESSION：模型/stamp 决策收敛纯函数（resolveTurnModelAndStamp——导出供单测
+  // 锚——语义见函数头注释：真 override 单回合不落槽——无 override 落实际运行模型）
+  const baseModel = p.model ?? null // 渠道默认解析值（defaultModel 属该渠道 → 用之；否则首候选）
+  const { runModel, sessionStampModel } = resolveTurnModelAndStamp({ providerName, modelOverride, slotRef, baseModel })
+  if (runModel && runModel !== p.model) p = { ...p, model: runModel }
+  const slotStamp = { activeProvider: providerName, activeModel: sessionStampModel }
   // Reasoning selector → provider fields. "off" AND "none" (the effort enum's lowest
   // level, labeled "off" in the UI) are a true thinking toggle — previously "none"
   // fell into the effort branch and left thinking:enabled untouched, so the button
@@ -227,8 +257,9 @@ async function runPanelChatImpl(panel, opts = {}) {
   // Sync the live mid-turn flag from the session slot (CLI parity — autoApprove is a
   // session-level slot field, not a VS Code setting). runAgent receives a GETTER: the
   // agent loop and the permission gate re-read it every iteration, so approve-all /
-  // the AUTO button take effect immediately mid-turn.
-  panel._autoApprove = panel._activeData(turnSlot)?.autoApprove ?? false
+  // the AUTO button take effect immediately mid-turn. （slotData = 上方槽复合同一次读取——
+  // 避免每回合多次 parse 大槽文件）
+  panel._autoApprove = slotData?.autoApprove ?? false
 
   text = injectAtRefs(text, cwd)
 
