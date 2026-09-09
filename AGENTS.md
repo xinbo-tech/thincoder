@@ -53,7 +53,7 @@ src/repomap.mjs       Repository dependency graph parsing
 src/config.mjs        Model capability specs (context, thinkApi, thinkEnabledValue, noUsageStream, temp ranges)
 src/specs.mjs         Re-export from config.mjs (backward compat)
 src/extension/        ChatPanel 分解模块（chat-panel.mjs 类本体 + panel-chat/panel-messages/panel-session/panel-project/panel-mcp/panel-index/panel-toolpanel/panel-callbacks 等载荷分模块 + session-io/session-slots/settings/presets）
-src/prompts/          System prompts: system.md, discipline.md, main.md, explore/coder/plan.md
+src/prompts/          System prompts (槽位化：persona-engineering / persona-normal / persona-{eng-coder,explore,coder,plan} + common + discipline-engineering / discipline-normal + 特殊模块 consult-base / advisor-design / advisor-round{1,2,3}——装配链 [1]人格 → [2]公共 → [3]纪律 → [4]项目 AGENTS+skills；旧 system/engineering/engineering-sub/main/discipline/methodology-template 已退役——PROMPT-SYSTEM.md)
 webview/chat.js      Frontend orchestration: message handling, model selector, session history
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
 webview/streaming.js  token/reasoning 流式渲染（rAF 节流）+ 回合收尾 + advisor review 块 + 活动块路由（块出生即 #messages 流尾——activity.js——subagentChunk 空安全守卫）
