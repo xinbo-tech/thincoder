@@ -18,6 +18,7 @@ export default [
   "test/config-merge.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：迁移折中 C 双端同规则 VSC 面（幂等/失败不阻断/凭据不丢）+ defaultModel 解析（activeProvider 渠道/首渠道回退/providerFromConfig 模型）
   "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
   "test/subagent-observe-send.test.mjs",
+  "test/subagent-id-counter.test.mjs", // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：id 计数器载体 = agent 本体——压缩换线后 spawn id 仍递增 + 两池 poolMax 兜底
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",
   "test/prompts-async-guidance.test.mjs", // AGENT-LOOP §7.7.1（2026-09-08）：escalate/advisor/spawn 顶层一律异步——async:false 同步引导内容断言（CLI 对拍同款）

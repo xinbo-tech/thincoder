@@ -418,20 +418,20 @@ export function refreshQueuedRows(parent) {
 }
 
 /**
- * 分配下一子代理 id——跨 runAgent 单调（advisor fix #1，2026-09-03）：agent 对象
- * （_subIdCounter）per-run 重建，async 池沿 history._asyncSubagents 存活——无池内
+ * 分配下一子代理 id——跨 runAgent 单调（advisor fix #1，2026-09-03）：async 池沿
+ * history._asyncSubagents 存活——无池内
  * 最大 id 续号则后续 run 会复用仍在跑的条目 id（map.set 覆盖旧条目：静默丢报告 +
  * status/cancel 错址）。spawn 路径（subagent.mjs）、escalate action、async-advisor 池
   * （advisor-async.mjs——§11.2）共用——LIVES HERE（2026-09-06）：自 subagent-async
  * 迁入叶子模块——advisor-async 无环单向取号。
   * §11.2：续号同时跨 subagent 池与 advisor 池（两池条目共用 webview 行 map 的 id
  * 命名空间——全局唯一防行覆盖）。
- * §27.1 F4（2026-09-07 三缺陷修复批——缺陷②）：计数器载体改 `parent.history ?? parent`
- * （_engAuditSpawns 同款先例——expando 不进会话文件）——撞 turn 上限 AUTO 续跑
- * agent 对象重建（_subIdCounter 归零）后 id 继续递增——不再复用已冻结频道标签
- * （explore#1 复用洞）；挂起期用户回合冻结频道 id 复用同时消除。 */
+ * SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：计数器载体定于 agent 本体 `parent._subIdCounter`
+ * （history 载体随压缩重建/会话线重绑换数组即丢——per-run 复位清单 §11.2 A 不含它——
+ * 顶层单例复用跨 run 存活）；poolMax 兜底保留——优先级 max(counter ?? 0, poolMax) + 1。
+ * §27.1 F4（2026-09-07 三缺陷修复批——缺陷②）：撞 turn 上限 AUTO 续跑后 id 继续递增——
+ * 不再复用已冻结频道标签（explore#1 复用洞）；挂起期用户回合冻结频道 id 复用同时消除。 */
 export function nextSubagentId(parent) {
-  const holder = parent.history ?? parent // §27.1 F4: 计数器跨 resume 持久化载体
   let poolMax = 0
   for (const pool of [parent._asyncSubagents, parent._asyncAdvisors]) {
     if (!pool || pool.size === 0) continue
@@ -440,8 +440,8 @@ export function nextSubagentId(parent) {
       if (Number.isFinite(n) && n > poolMax) poolMax = n
     }
   }
-  const next = Math.max(holder._subIdCounter ?? 0, poolMax) + 1
-  holder._subIdCounter = next
+  const next = Math.max(parent._subIdCounter ?? 0, poolMax) + 1
+  parent._subIdCounter = next
   return next
 }
 
