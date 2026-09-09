@@ -1,19 +1,20 @@
 # 批 1：工具/代码面四小修（QUICKFIX-BATCH-3）
 
-> 板块：跨面快修（CLI+VSC——工具缺陷镜像 + 注释债 + 代码洁）。权威源：QUICKFIX-2（CLI F-3 git commit --only 先例）+ POOL-CONFIG（§24→§11 锚迁移）+ RESIZE 交付建议 + IMAGE 跟进项。
-> 状态：**设计待评审**——2026-09-09 落档（10 条评估分批——批 1 = 高价值/轻量代码面四小修）。需求：TODO L255 + L216 + L260 + L250②（用户裁推进）。
+> 板块：跨面快修（CLI+VSC——工具缺陷镜像 + 注释债 + 代码洁）。权威源：QUICKFIX-2（CLI F-3 git commit --only 先例）+ POOL-CONFIG（§24→§11 锚迁移）+ RESIZE 交付建议。
+> 状态：**设计待评审**——2026-09-09 落档（10 条评估分批——批 1 = 核实通过三小修——L255 实证（L204-207 granular add + 整索引）+ L216 实证（L133 §24 D-24b）+ L260（L20/L84 字面量三源核过）——**L250②/L190/L268 未亲核——撤出批 1 待补勘察**）。需求：TODO L255 + L216 + L260（用户裁推进——评估后核实过的才入批）。
 
 ---
 
 ## 需求
 
-- **总体目标**：四小修打包——① VSC git commit pathspec 镜像（CLI F-3 已修——VSC 同款缺陷）② §24→§11 旧锚双端注释清理（锚迁移残留——POOL-CONFIG AC-7）③ CLEANUP_REST 常量收拢（RESIZE 恢复序列三源）④ image-handler maxTurns 伸缩（大贴图落 fallback 面）。
+- **总体目标**：三小修打包——① VSC git commit pathspec 镜像（CLI F-3 已修——VSC 同款缺陷实证）② §24→§11
+  旧锚双端注释清理（锚迁移残留——实证）③ CLEANUP_REST 常量收拢（RESIZE 恢复序列三源字面量）。
 - **功能性**：
   - F-1（VSC git commit 镜像——L255）VSC src/tools/git.mjs（392 现）commit case（L200-207）——CLI F-3 同款镜像：path 给定 → `commit --only -m msg -- <paths>`（原子——不再先 add 全量暂存——整索引提交缺陷同 CLI 旧版）——空/空白 path 明确错误——无 path 保留 add -A 现行为——与 CLI 逐字锚语义一致
   - F-2（§24→§11 旧锚清理——L216）双端 src + docs 注释/文本中 §24 旧锚残留 → §11 新锚（POOL-CONFIG 已迁移——注释未跟随）——grep §24 全仓清理——机械替换——清理后 grep §24 零残留（排除历史文档/CHANGELOG 记史）
   - F-3（CLEANUP_REST 常量——L260）CLI tui-lifecycle 恢复序列三源（writeCleanupSequence 字面量 + createExitCleanup 余部 + 测试第三份）→ **CLEANUP_REST 常量单源**（tui-lifecycle 导出——cleanup 余部与测试共用——writeCleanupSequence 引用拼接）——消除漂移面
-  - F-4（maxTurns 伸缩——L250②）VSC image-handler runVisionReader maxTurns 固定 10 → `2 + paths.length * 2`（大贴图 >6-8 张不落 fallback）——一行伸缩
-  - **范围边界**：VSC git 只镜像 commit case（add/其他动作零动）；§24 清理只动注释/文档文本（代码逻辑零动——锚是注释引用）；CLEANUP_REST 只收拢字面量（序列内容零变——测试字节锁保持）；F-4 只改 maxTurns 计算（超时/fallback 逻辑零动）。
+  - **范围边界**：VSC git 只镜像 commit case（add/其他动作零动）；§24 清理只动注释/文档文本（代码逻辑零动
+    ——锚是注释引用）；CLEANUP_REST 只收拢字面量（序列内容零变——测试字节锁保持）。
 
 ## 设计（先例/勘察落点——照做勿自行解释）
 
@@ -38,9 +39,6 @@
   - 测试断言引常量——实现时按实际段结构定（工程选择——**保证序列字节不变——现测试绿=零回归**）
 - 测试：字节不变断言保持（现测试绿=零回归）
 
-### 4. F-4 maxTurns 伸缩（VSC image-handler.mjs——81 现）
-- runVisionReader maxTurns 10 → `2 + paths.length * 2`（paths = 图片路径数组——大贴图量伸缩）
-- 测试：maxTurns 计算断言（1 图 → 4 / 5 图 → 12——边界）
 
 ## 受影响文件（双端）
 
@@ -51,8 +49,6 @@
 | test/（§24 零残留断言） | 双端 | 既有 | +5 | F-2 |
 | src/tui/tui-lifecycle.mjs | CLI | 87 | ≤+4 | F-3 CLEANUP_REST |
 | test/tui-exit-cleanup.test.mjs | CLI | 96 | ±2 | F-3 常量断言 |
-| src/extension/image-handler.mjs | VSC | 81 | +1 | F-4 maxTurns 伸缩 |
-| test/image-downgrade.test.mjs | VSC | 120 | +5 | F-4 |
 
 ## 用例表
 
@@ -63,16 +59,18 @@
 | F-1 无 path | 无 path | add -A 保留——F-1 |
 | F-2 替换 | §24 旧锚注释 | §11——grep 零残留——F-2 |
 | F-3 常量 | cleanup 余部 + 测试 | 单源 CLEANUP_REST——字节不变——F-3 |
-| F-4 伸缩 | 5 图 | maxTurns = 12——F-4 |
 
 ## 验收
 
 - AC-1 VSC git commit --only（path 原子——空 path 错误——无 path 回归——测试绿）
 - AC-2 §24 旧锚双端零残留（grep——fail-when-present——记史文档除外）
 - AC-3 CLEANUP_REST 单源（cleanup 余部/测试共用——序列字节不变——测试绿）
-- AC-4 maxTurns 伸缩（2+paths*2——测试）
-- AC-5 双端 npm test 快层零回归
-- 红线：VSC git 只 commit case；§24 只注释文本；CLEANUP_REST 序列字节零变；F-4 只 maxTurns 计算；历史文档/CHANGELOG 记史不换
+- AC-4 双端 npm test 快层零回归
+- 红线：VSC git 只 commit case；§24 只注释文本；CLEANUP_REST 序列字节零变；历史文档/CHANGELOG 记史不换
 
 ## 变更记录
-- 2026-09-09：落档（10 条评估分批——批 1 四小修：L255 VSC git commit 镜像（CLI F-3 先例——L207 整索引缺陷确认）+ L216 §24 旧锚（CLI src 8+ 处确认）+ L260 CLEANUP_REST（RESIZE advisor 建议——三源）+ L250② maxTurns 伸缩（IMAGE 交付注——大贴图 fallback 面）——L183 已评估过时勾销（activity 拆散）——L197 VERIFY-DOCONLY 零命中过时——L180 无痛点不推）。
+- 2026-09-09：落档（10 条评估分批——批 1 三小修：L255 VSC git commit 镜像（CLI F-3 先例——实证 L204-207 granular
+  add + 整索引）+ L216 §24 旧锚（实证 CLI src/advisor/messages.mjs:133 §24 D-24b）+ L260 CLEANUP_REST
+  （tui-lifecycle L20/L84 三源字面量核过）——**L250② maxTurns / L190 UI / L268 digest 扩面未亲核——撤出批 1
+  待补勘察后重新评估**——L183 已勾销（ACTIVITY-SPLIT 头注实证三文件终局）——L197 过时（AGENTS.md 已重写
+  干净版无地图段——清扫无对象关）——L180 无痛点不推）。
