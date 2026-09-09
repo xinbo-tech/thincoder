@@ -247,3 +247,8 @@
   ——owning board = INPUT-LOCK（已核销——**新范围走新设计评审链——新 token**）——status=登记待设计
   （用户裁：忙时斜杠也禁 send——/exit 也发不出——退出靠 Ctrl+C——纯一致禁发）——设计权在用户
 
+- [ ] **IMAGE-DOWNGRADE 跟进项（2026-09-09 交付注）**：
+  ① susp 等待态贴图不降级（走现报错——保守方向——父侧确认预期——实现为显式边界）② runVisionReader maxTurns 固定 10
+  ——大贴图（>6-8 张）可能落 F-2 fallback——按图数伸缩建议（2+paths.length*2——后批）③ Stop 点击在降级 await
+  窗口内 no-op（≤60s——v1 接受）——status=登记——设计权在用户
+
