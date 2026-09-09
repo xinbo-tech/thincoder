@@ -10,6 +10,15 @@
 - 2026-08（初）：工程模式顶层提示词与普通模式**完全独立**（setup.mjs overlay 条件 + 降级路径改造；删除 main.md 注入与 discipline fallback）。
 - 2026-09-02：搜索工具优先级条款（用户 Q5）——discipline.md / engineering.md 同条款落地，T1/T4 断言锁措辞。
 - 2026-09-07：重写为当前态（格式正常化、历史流水账折叠为本记录）。
+- 2026-09-10：**基础拆分批（PROMPT-BASE-SPLIT——用户裁定，待评审/待批准）**——解耦前提失效修正：
+  system.md 此后吸收大量写码执行层内容（while coding 节/按任务型匹配/测试与交付等），不再是 §2 所称
+  "纯通用基础"——工程模式拼装下与 engineering.md 人格（ARCHITECT/不写实现码）冲突 = 双重人格。
+  裁定：① 装配链翻转——**人格层恒前、system.md 恒第二**：主会话工程 = engineering.md → system.md；
+  主会话普通 = **normal.md（新）** → system.md；② system.md 瘦身回纯公共基础（确认门/语言/协作原则/
+  先定对再定小/决策冲突原则）——写码执行层迁 normal.md（逐句两可判普通，engineering.md 有兑底——
+  宁瘦不肥）；③ 子代理同规则（eng-coder → engineering-sub → system.md 恒尾；explore/coder/plan =
+  角色.md → discipline.md → system.md；consult 不动）；④ 双端各自落地语义同源。
+  详设计：§5（本文件新增节）。**原 §2 模式矩阵由本批修订**（普通模式行 discipline/main 前置）。
 
 ---
 
@@ -39,6 +48,72 @@
 - **降级路径（METHODOLOGY.md 缺失）**：`buildEngineeringPrompt` 返回工程模板本身（工程约束仍生效，仅缺项目规则），**不 fallback 到 discipline**；setup 向 history 注入警告（点名后果：三文档硬流程不被强制 + 引用悬空），并把内置模板绝对路径 + 全文随警告带入（模板对模型可达）。
 
 **不变动**：`discipline.md`（普通模式纪律）、`main.md`（普通模式专属）、`system.md`（纯通用基础，两模式共用）、`METHODOLOGY.md`（项目方法论）。
+
+## 2.5 基础拆分批（2026-09-10——待评审/待批准）
+
+> 归属裁定：本批为 §2 解耦设计的修正批，并入本档（不另立新档——用户 2026-09-10 纠正违反"一个板块
+> 一个文档"约定）。**§2 模式矩阵由本批修订**。
+
+### 触发（解耦前提失效）
+
+system.md 此后吸收大量写码执行层内容（while coding 节/按任务型匹配/测试与交付等）——不再是 §2 所称
+"纯通用基础"——工程模式拼装下与 engineering.md 人格（ARCHITECT/不写实现码）冲突 = 双重人格。
+
+### 用户裁定
+
+① 装配链翻转——**人格层恒前、system.md 恒第二**：主会话工程 = engineering.md → system.md；主会话
+普通 = **normal.md（新）** → system.md；② system.md 瘦身回纯公共基础（确认门/语言/协作原则/先定对
+再定小/决策冲突原则）——写码执行层迁 normal.md；③ 子代理同规则：eng-coder = eng-coder.md →
+engineering-sub(+METHODOLOGY) → system.md；explore/coder/plan = 角色.md → discipline.md → system.md；
+consult = consult-base.md 不变；④ 双端各自落地语义同源（多实现面纪律）。
+
+### 迁移判定规则（宁瘦不肥）
+
+- **公共基础（留 system.md）**：身份与语言/协作原则/确认与批准门/确认理解与合同纪律/文档先行与
+  先定对再定小/决策冲突原则——两模式逐句都要
+- **普通专属（迁 normal.md）**：while coding 节全族（并行工具/自检 lint/模块拆分 write-first/查重/
+  意图理解细则）/收尾前（lint full/verify 门/测试纪律）/Rules/按任务型匹配（Bug fix/Feature/
+  Refactoring/General）/测试与交付/长输出落盘与日志细则
+- 逐句两可判普通专属（工程模式有 engineering.md 兑底）
+
+### 接线（双端同构）
+
+- CLI：setup.mjs 工程分支（L327-336）改 `engResult.prompt + corePrompt`；普通分支（L363）改
+  `NORMAL_PROMPT + corePrompt`；agent.mjs L113 加 NORMAL_PROMPT 传参；子代理 needsDiscipline 分支同步
+- VSC：setup.mjs L322-334 同构翻转；run-helpers.mjs loadEngineeringPrompt 调用侧换序；
+  MAIN_OVERLAY 条件去除（normal.md 取代其位置语义）
+- AGENTS.md 模块图/提示词清单同步（双端）
+
+### 受影响文件
+
+| 文件 | 端 | 现行数 | 增量 | 改动 |
+|---|---|---|---|---|
+| src/prompts/normal.md | 双端各一 | 新增 | ~70 行 | 承接 system.md 普通专属节 |
+| src/prompts/system.md | 双端 | 117 | -45 区 | 瘦身至公共基础 |
+| src/agent/setup.mjs | 双端 | 391 区(VSC)/CLI 待实测 | ±10 | 装配顺序翻转 + normal.md 装载 |
+| src/agent.mjs | CLI | 146 行区 | +3 | NORMAL_PROMPT 常量 + 传参 |
+| src/agent/run-helpers.mjs | VSC | 待实测 | ±5 | 调用侧换序 |
+| test/prompts-async-guidance.test.mjs | 双端 | 待实测 | 同步 | 锚测试改（新装配顺序+迁移内容锚） |
+| AGENTS.md | 双端 | — | 模块行 | 提示词清单同步 |
+
+### 用例表
+
+| 用例 | 输入 | 预期 |
+|---|---|---|
+| 工程人格前置 | 工程模式回合 system prompt | engineering.md 全文在 system.md 前——F-1 |
+| 普通人格前置 | 普通模式回合 | normal.md 在 system.md 前——F-1/F-2 |
+| system.md 瘦身 | grep 迁移节 | system.md 零命中——normal.md 全数承接——F-3 |
+| 公共基础不丢 | grep 确认门/语言/协作原则 | system.md 保留——两模式注入均含——F-3 |
+| 子代理换序 | eng-coder spawn | eng-coder.md→engineering-sub→system.md——F-4 |
+| 普通行为不回归 | 双端 npm test 快层 | 全绿（锚测试同步后）——N1 |
+
+### 验收
+
+- AC-1 装配顺序断言（测试锁：工程/普通/eng-coder 三链各文件相对位置）
+- AC-2 system.md 仅含公共基础（逐节核对表进交付报告）
+- AC-3 normal.md 双端落地、内容=迁移清单全量（无静默丢句）
+- AC-4 双端 npm test 快层零回归（锚测试同步后）
+- 红线：consult 基底不动；METHODOLOGY 注入逻辑不动；字节稳定（N3）不破坏；超出本表文件停下报告
 
 ## 3. 搜索工具优先级条款（2026-09-02 变更段——已实现）
 
