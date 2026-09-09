@@ -3,7 +3,7 @@
  * (300-line advisory; 2026-08-29 thincoder#3 review #2).
  *
  * All builders here push "user"-role context messages onto the machine history line:
- *   - AUTO/permission reminder + engineering degraded-constraint warnings (top-level turns)
+ *   - AUTO/permission reminder (top-level turns)
  *   - transient per-run time grounding (must stay LAST, after the user input, so its
  *     second-precision content never shifts a provider prefix cache)
  *   - machine-only injections (editor context), transient, never into fullHistory
@@ -172,10 +172,11 @@ export async function pushGitContext(history, cwd) {
 export const AUTO_REMINDER = "[System reminder: AUTO mode is active — all tool calls are automatically approved without asking.]"
 
 /**
- * AUTO/permission reminder + engineering degraded-constraint warnings.
- * Only for top-level turns with a fresh (uncompressed) machine line.
+ * AUTO/permission reminder — top-level turns with a fresh (uncompressed) machine line.
+ * 施工② G4（2026-09-10）：engineering degraded-constraint 警告块随 D-M1/D-M2 机制退役
+ * （METHODOLOGY 概念退役——槽位缺失警告由 assemblePrompt 的 D2 通道承担）。
  */
-export function pushModeReminders(history, { depth, freshMachineLine, getAuto, role, engPromptActive, engResult }) {
+export function pushModeReminders(history, { depth, freshMachineLine, getAuto }) {
   if (depth !== 0 || !freshMachineLine) return
   if (getAuto()) {
     history.push({ role: "user", content: AUTO_REMINDER })
@@ -183,29 +184,6 @@ export function pushModeReminders(history, { depth, freshMachineLine, getAuto, r
     history.push({
       role: "user",
       content: "[System reminder: Permission mode — confirm with the user before making changes. Describe what you intend to do first.]",
-    })
-  }
-  // Engineering mode degraded-constraint warnings (CLI setup.mjs parity)
-  if (engPromptActive && (engResult.templateMissing || engResult.methodologyMissing)) {
-    const warnings = []
-    if (engResult.templateMissing) warnings.push(`Engineering template (${role === "eng-coder" ? "engineering-sub.md" : "engineering.md"}) not found — the full engineering constraints may be incomplete.`)
-    if (engResult.methodologyMissing) {
-      const { methodologyTemplatePath, methodologyTemplateBody } = engResult
-      let warning = "METHODOLOGY.md not found in the project root — no project methodology is loaded, so every 'per METHODOLOGY' reference in the engineering prompt is dangling and the three-document hard flow (requirements / design / test doc) is NOT enforced. Ask the user whether to create METHODOLOGY.md; if the user confirms, write cwd/METHODOLOGY.md before designing."
-      // 2026-09-02 D-M1/D-M2 (template accessibility): absolute path + full body — the model
-      // can read the template directly instead of hand-writing one from an unreachable source
-      // path. Body read failure → degraded warning above (no path/body injected), same as CLI.
-      if (methodologyTemplateBody) {
-        // 2026-09-02 D-M1/D-M2 parity: mirror CLI setup.mjs verbatim (design literal
-        // "built-in template（可 read <path> 或直接参考以下内容）:"); body read failure
-        // → degraded warning above (no path/body injected), same as CLI.
-        warning += `\n\nbuilt-in template（可 read ${methodologyTemplatePath} 或直接参考以下内容）:\n\n${methodologyTemplateBody}`
-      }
-      warnings.push(warning)
-    }
-    history.push({
-      role: "user",
-      content: `[System reminder: ENGINEERING MODE is active but ${warnings.join(" ")}]`,
     })
   }
 }

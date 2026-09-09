@@ -8,7 +8,6 @@
  * applySlotSessionState 已拆 agent-state.mjs（§11.2 A 复位清单与 §11.2.1 槽↔hydrate
  * 映射——500 行硬限——test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
-import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import * as os from "node:os"
@@ -25,21 +24,13 @@ import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
-import { loadEngineeringPrompt, pushReal } from "./run-helpers.mjs"
+import { pushReal } from "./run-helpers.mjs"
+import { assemblePrompt } from "../prompt-overlays.mjs"
 import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
 
+// PROMPT-SYSTEM 施工② G1（2026-09-10）：旧三件（system.md/discipline.md/main.md）退役——
+// 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SYSTEM_PROMPT = readFileSync(join(__dirname, "..", "prompts", "system.md"), "utf8")
-const DISCIPLINE_RULES = readFileSync(join(__dirname, "..", "prompts", "discipline.md"), "utf8")
-const MAIN_OVERLAY = readFileSync(join(__dirname, "..", "prompts", "main.md"), "utf8")
-let _EXPLORE, _CODER, _PLAN, _ENG_CODER, _ENG_MAIN, _ENG_SUB, _CONSULT_BASE
-try { _EXPLORE = readFileSync(join(__dirname, "..", "prompts", "explore.md"), "utf8") } catch { _EXPLORE = "" }
-try { _CODER = readFileSync(join(__dirname, "..", "prompts", "coder.md"), "utf8") } catch { _CODER = "" }
-try { _PLAN = readFileSync(join(__dirname, "..", "prompts", "plan.md"), "utf8") } catch { _PLAN = "" }
-try { _ENG_CODER = readFileSync(join(__dirname, "..", "prompts", "eng-coder.md"), "utf8") } catch { _ENG_CODER = "" }
-try { _ENG_MAIN = readFileSync(join(__dirname, "..", "prompts", "engineering.md"), "utf8") } catch { _ENG_MAIN = "" }
-try { _CONSULT_BASE = readFileSync(join(__dirname, "..", "prompts", "consult-base.md"), "utf8") } catch { _CONSULT_BASE = "" }
-try { _ENG_SUB = readFileSync(join(__dirname, "..", "prompts", "engineering-sub.md"), "utf8") } catch { _ENG_SUB = "" }
 
 /** AUTO mode reminder lives in setup-reminders.mjs (single source of truth — its
  *  pushModeReminders pushes it; agent.mjs imports it from there for the dedupe check). */
@@ -312,26 +303,24 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     opts.stateSink.touchedFiles = agent._touchedFiles
     opts.stateSink.agent = agent
   }
-  // System prompt — engineering mode replaces the standard discipline block with
-  // engineering.md (or engineering-sub.md for eng-coder) + project METHODOLOGY.md (CLI parity).
+  // ── System prompt ── PROMPT-SYSTEM 施工② G2/G3（2026-09-10）：四槽位装配函数
+  // assemblePrompt({scenario}) 表驱动（D1 场景表 = 蓝图 §3.2 装配矩阵）——取代旧
+  // consult/工程/普通三分支 + overlay 前缀。固定序 人格→common→纪律（§3.1）；
+  // 降级链（蓝图 §3.4）：人格/纪律/common 槽文件缺失 → 该槽空缺跳过 + 醒目警告
+  // （不 fallback 其他槽——层间隔离）。consult = 特殊模块（§3.3）——CONSULT_BASE
+  // 自含基底直接返回，不入主链、无四槽。eng-coder 场景即工程纪律（G6——本端
+  // spawn 侧 engineering 镜像语义同 CLI：scenario=eng-coder → discipline-engineering 槽）。
+  // OS/cwd 尾行为 VSC 端特有——原地保留，多实现面纪律。
   const engPromptActive = engineering && (depth === 0 || role === "eng-coder")
-  const engResult = engPromptActive ? loadEngineeringPrompt(cwd, role) : null
-  // consult children: a lean, purpose-built base prompt (consult-base.md) — NOT the full
-  // main-agent system.md (whose coding-agent persona, checklist/task/verify workflows, and
-  // tool references conflict with a read-only diagnosis and cost tokens every turn).
-  let base = role === "consult"
-    ? _CONSULT_BASE
-    : engPromptActive
-      ? (engResult.prompt ? `${SYSTEM_PROMPT}\n\n${engResult.prompt}` : SYSTEM_PROMPT)
-      : `${SYSTEM_PROMPT}\n\n${DISCIPLINE_RULES}`
-  if (depth > 0 && role) {
-    const overlay = { explore: _EXPLORE, coder: _CODER, plan: _PLAN, "eng-coder": _ENG_CODER }[role] || ""
-    base = overlay ? `${overlay}\n\n${base}` : base
-  }
-  // Time injection deliberately does NOT live here: system prompts must be byte-identical
-  // across runs (provider prefix caches). The time rides a transient user reminder pushed
-  // at each turn start (below) — variable content belongs in the history, not the cached prefix.
-  const systemPrompt = `${base}${depth === 0 && !engPromptActive ? `\n\n${MAIN_OVERLAY}` : ""}\n\nOS: ${platform}. Working directory: ${cwd}.`
+  const scenario =
+    role === "consult"
+      ? "consult"
+      : engPromptActive
+        ? (role === "eng-coder" ? "eng-coder" : "engineering")
+        : (depth === 0 ? "normal" : role ?? "normal")
+  const { prompt: base, warnings: slotWarnings } = assemblePrompt(scenario)
+  // G3：overlay（人格）随装配改造退役——人格槽由场景表承载，不再前缀叠加。
+  const systemPrompt = `${base}${depth === 0 ? `\n\nOS: ${platform}. Working directory: ${cwd}.` : ""}`
 
   // Dual-line history. Top-level runs use PERSISTENT lines passed in via opts (survive across calls,
   // written to the session file by chat-panel): history = machine context (compaction shrinks it),
@@ -344,6 +333,21 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     // CONTINUE a turn-cap-limited child (escalate resume) passes the previous run's
     // history back in — the conversation survives across runAgent calls.
     : (opts.history ?? [])
+
+  // ── Q1 审计收敛（蓝图 §3.4 第 4 款）：特殊模块基底缺失 → 该模块不可用报错（不自降级
+  // ——空基底绝不可静默上岗）。consult 场景在外部消费点收口：入历史后抛错（面板回合
+  // → 错误可见——不静默、不降级）。四槽场景维持跳过+警告降级链（AC-2 三款）。
+  // 位置纪律：必须在 history 初始化之后（advisor round1 🔴——此前引用未初始化的
+  // history 绑定会 TDZ ReferenceError，守卫/警告在触发时自爆）。
+  if (role === "consult" && !base) {
+    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (蓝图 §3.4 特殊模块不自降级). Check the installation's prompts directory.]"
+    history.push({ role: "user", content: msg })
+    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback per PROMPT-SYSTEM §3.4)`)
+  }
+  // D2 警告通道 = history 注入（CLI 同款深度门——depth 0 才注入）。
+  if (depth === 0 && slotWarnings.length > 0) {
+    for (const w of slotWarnings) history.push({ role: "user", content: w })
+  }
 
   // The advisor helpers (ported from the CLI) reach for agent.cwd and agent.history —
   // keep those aliases live so the ported modules work unchanged.
@@ -388,7 +392,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // These machine-only injections are transient context; a persistent machine line already carries
   // them from prior turns, so only inject when starting a brand-new (empty) machine line.
   const freshMachineLine = history.length === 0
-  pushModeReminders(history, { depth, freshMachineLine, getAuto, role, engPromptActive, engResult })
+  // 施工② G2：slotWarnings 已于上方 system prompt 装配处按 depth===0 门注入（D2 通道）；
+  // engResult 参数随 G4 退役——pushModeReminders 只再承担 AUTO/permission 提醒。
+  pushModeReminders(history, { depth, freshMachineLine, getAuto })
 
   // Git context (SESSION.md §11.1 T-E6——CLI setup.mjs 富注入同款补齐：branch/
   // commits/uncommitted，非 clean|dirty 摘要）：顶层用户回合每回合注入当前状态。

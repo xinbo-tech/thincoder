@@ -29,38 +29,9 @@ export const MAX_EMPTY_RETRIES = 2 // empty-response retry budget (CLI parity, I
 /** Task re-injection reminder prefix — stale copies are filtered before re-injecting (CLI parity D7). */
 export const TASK_REINJECT_PREFIX = "[System reminder: your current task list after compaction:"
 
-// Engineering-mode prompt templates (loaded once; methodology is read per-run from the project).
-let _ENG_MAIN = ""
-let _ENG_SUB = ""
-try { _ENG_MAIN = readFileSync(new URL("../prompts/engineering.md", import.meta.url), "utf8") } catch { /* */ }
-try { _ENG_SUB = readFileSync(new URL("../prompts/engineering-sub.md", import.meta.url), "utf8") } catch { /* */ }
-
-/**
- * Build the engineering-mode prompt fragment: engineering template + project METHODOLOGY.md
- * (CLI setup.mjs buildEngineeringPrompt parity). Returns { prompt, templateMissing,
- * methodologyMissing, methodologyTemplatePath, methodologyTemplateBody }.
- */
-export function loadEngineeringPrompt(cwd, role) {
-  const engTemplate = role === "eng-coder" ? _ENG_SUB : _ENG_MAIN
-  let methodology = ""
-  try { methodology = readFileSync(join(cwd, "METHODOLOGY.md"), "utf8") } catch { /* no methodology */ }
-  const templateMissing = !engTemplate
-  const methodologyMissing = !methodology
-  // Methodology template for the missing-warning (2026-09-02 D-M1/D-M2): absolute path so
-  // the model can read the template directly, plus the full body for zero-access reference
-  // (CLI setup.mjs parity — same-source join). Loaded only in the missing branch; a read
-  // failure leaves the body null → the caller warns honestly without injecting it.
-  let methodologyTemplatePath = null
-  let methodologyTemplateBody = null
-  if (methodologyMissing) {
-    methodologyTemplatePath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "prompts", "methodology-template.md")
-    try { methodologyTemplateBody = readFileSync(methodologyTemplatePath, "utf8") } catch { /* template unreadable — degraded warning */ }
-  }
-  const prompt = engTemplate
-    ? (methodology ? `${engTemplate}\n\n---\n\n## Project METHODOLOGY.md\n\n${methodology}` : engTemplate)
-    : (methodology ? `[ENGINEERING MODE]\n\nFollow this methodology strictly:\n\n${methodology}` : null)
-  return { prompt, templateMissing, methodologyMissing, methodologyTemplatePath, methodologyTemplateBody }
-}
+// Engineering-mode prompt templates retired (PROMPT-SYSTEM 施工② G4, 2026-09-10):
+// the per-run engineering prompt builder and its methodology warning machinery
+// removed — the slot-based assemblePrompt (prompt-overlays.mjs) owns assembly now.
 
 /** XML 转义（reminder 纪律：子代理报告/错误可能含来自文件/网页的注入面内容——注入会话前转义）。 */
 export function escapeXml(s) {
