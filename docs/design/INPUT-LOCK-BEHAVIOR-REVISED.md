@@ -14,7 +14,8 @@
   - F-3（测试更新）INPUT-LOCK 测试族——白名单直执行测删/改禁发测 + VSC busy 锁测改（readOnly 移除 → 可录入 + send 禁断言）
   - **范围边界**：门禁判据（busy = processing/_turnState running）零动；Ctrl+C/Ctrl+I 终端层紧急通道保留（key-handler 门禁前——与白名单无关）；CLI 提交吞 + 字符回显保留（已允许录入——只删白名单）；VSC 中断模态豁免（_interruptMode——Ctrl+I 注入）保留——不禁录入后 readOnly 相关豁免面重查。
 
-## 设计（行为修订——照做勿自行解释）
+## 设计（行为修订——照做勿自行解释——评审 #6 单方案声明：修订纯由用户裁定驱动——F-1/F-2/F-3 均为用户裁定
+执行——无 ≥2 候选对比——豁免）
 
 ### 1. F-1 VSC 不禁录入（loading.js/input.js + send.js）
 - `webview/loading.js` applyBusyLock：readOnly 锁**移除**（`inputEl.readOnly = false`——可打字）——busy 占位符文案改（"主会话处理中——Enter 提交禁用——可继续输入"）
@@ -23,8 +24,11 @@
 - 测试：busy 时输入框可打字（readOnly false）+ Enter 拒发（send 守卫）+ 文本保留
 
 ### 2. F-2 CLI 白名单删（index.mjs + key-handler.mjs）
-- index.mjs：BUSY_SAFE_COMMANDS 定义 + busySafeCommand 注入删
+- index.mjs：BUSY_SAFE_COMMANDS 定义 + busySafeCommand 注入删——**submit() 守卫改写（评审 #2）：
+  `if (state.processing && !busySafeCommand(text))` → `if (state.processing)`（:335 区——busy 全拒——
+  白名单符号删后无悬挂引用）**
 - key-handler.mjs：L265 门禁——白名单检查分支删（`ctx.busySafeCommand` 直执行删）——斜杠忙时同走提交吞
+  ——**吞判保持 text 非空为条件（评审 #3——空 Enter 静默不提示——不破既有测试）**
 - 测试：白名单直执行测删——忙时斜杠也吞测（/exit 忙时 Enter → 吞——不发）
 
 ### 3. F-3 测试族更新（双端 INPUT-LOCK 测试）
@@ -38,10 +42,13 @@
 | webview/loading.js | VSC | 62 | ≤-3 | F-1 readOnly 移除 + 占位符改 |
 | webview/send.js | VSC | 53 | ≤+1 | F-1 守卫确认（已有——小） |
 | webview/input.js | VSC | 135 | ≤-5 | F-1 豁免面重查（readOnly 移除后） |
-| webview/chat.js + locales（占位符文案） | VSC | ~320 | ≤+2 | F-1 文案 |
-| src/tui/index.mjs | CLI | 449 | ≤-5 | F-2 BUSY_SAFE_COMMANDS 删 |
-| src/tui/key-handler.mjs | CLI | 443 | ≤-8 | F-2 白名单分支删 |
-| test/（input-lock + webview-turnstate 族） | 双端 | 既有 | ±10 | F-3 |
+| locales/en.json + locales/zh.json（评审 #4——busy 占位符文案真实载体——chat.js 无副本不动） | VSC | 各 ~150 | ≤+2 | F-1 文案（input.busyPlaceholder） |
+| src/tui/index.mjs | CLI | 454（实测——评审 #5） | ≤-5 | F-2 BUSY_SAFE_COMMANDS 删 + submit 守卫改写 |
+| src/tui/key-handler.mjs | CLI | 444（实测——评审 #5） | ≤-8 | F-2 白名单分支删 |
+| test/input-lock.test.mjs + test/webview-turnstate.test.mjs | 双端 | 既有 | ±10 | F-3 |
+| docs/design/AGENT-LOOP.md（评审 #1——§9.2 门禁行表"非白名单"措辞清 + §11.3/变更记录） | CLI | doc | +3 | 机制正文去白名单 |
+| docs/design/TUI.md（评审 #1——§1 模块地图行数回写 + §4 门禁描述去白名单） | CLI | doc | +3 | 机制正文同步 |
+| docs/design/INPUT-LOCK-ASYNC.md（评审 #1——supersede 注） | CLI | doc | +1 | 旧档注被修订取代 |
 
 ## 用例表
 
@@ -51,6 +58,7 @@
 | F-1 VSC send 禁 | busy 时 Enter/发送 | 拒发——文本保留输入框——F-1 |
 | F-1 空闲恢复 | 回合结束 | send 恢复——F-1 |
 | F-2 白名单删 | 忙时 /exit | 同提交吞——不发（白名单直执行删）——F-2 |
+| F-2 空 Enter 边界 | 忙时空 Enter | 静默——无提示不 submit（评审 #3——保持既有——text 非空才吞）——F-2 |
 | F-2 Ctrl+C | 忙时 Ctrl+C | 终端层紧急退出保留（门禁前）——F-2 |
 | F-3 测试更新 | 双端测试跑 | 白名单测删 + 禁发测绿——F-3 |
 
