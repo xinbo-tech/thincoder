@@ -115,7 +115,12 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
       // 会话无覆盖防护）；更糟：CLI 加载 VS Code 槽时 setup 的 `??=` 打上 CLI 自己的
       // start → 跨端保存必轮转对方现场（F2 自伤，"先占者赢"）。现在 null 时赋一次
       // （与 CLI agent/setup.mjs `_sessionStart ??=` 同语义——同会话两端打点一致，F2 放行）。
-      activeModel: extra.activeModel ?? existing.activeModel ?? null,
+      // F-2d (MODEL-400-FIX mirror——CLI applySession `||` 语义)：`??` 不兜空串——extra 带
+      // activeModel="" 会把空串钉进槽（双字段恒非空语义下空串 = 无 override）→ 下游克隆缺
+      // model 键 → 无 model 请求 → serde 400。`||` 视空串为缺失——回退 existing（槽 model
+      // 恒有值/恒缺失——与 CLI F-2d 同防御方向；null/undefined 保留槽值语义不变）；legacy
+      // "" 残留槽值在下次保存时归一 null（读侧 slotRef 组装本就 truthy-guard 空串）。
+      activeModel: extra.activeModel || existing.activeModel || null,
     })
   }
 

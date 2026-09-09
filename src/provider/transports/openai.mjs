@@ -6,6 +6,18 @@
 import { specForModel } from "../../specs.mjs"
 import { resolveEnableThinking } from "../../config.mjs"
 
+/**
+ * Provider-level pre-flight error (MODEL-400-FIX F-1 — 请求体组装前断言): carries the
+ * provider identity so a fail-fast throw is readable ("which provider + what to fix")
+ * instead of a wire-time serde 400. CLI parity: CLI side lives in provider/errors.mjs.
+ */
+export class ProviderError extends Error {
+  constructor(provider, message) {
+    super(`provider "${provider?.name ?? provider?.model ?? "unknown"}": ${message}`)
+    this.name = "ProviderError"
+  }
+}
+
 /** Convert our tool schemas to OpenAI format */
 export function normalizeTools(tools) {
   return tools
@@ -13,6 +25,13 @@ export function normalizeTools(tools) {
 
 /** Build the HTTP request */
 export function buildRequest(provider, messages, tools, { toolChoice, parallelToolCalls } = {}) {
+  // F-1 (MODEL-400-FIX — docs/design/MODEL-400-FIX.md) 根因兜底：渠道裸克隆
+  // （`{...渠道}`——MODEL-MERGE schema：渠道无 model 字段，只带 models[] 候选）未重派生
+  // .model 时 provider.model 为 undefined/null——JSON.stringify 会丢 undefined 键 →
+  // 无 model 请求 → serde 400。fail-fast 报可读错误（带 provider 名 + 修复线索），不发病体。
+  if (!provider.model) {
+    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (MODEL-MERGE schema: channels carry models[] not model)")
+  }
   const spec = specForModel(provider.model)
   const body = {
     model: provider.model,
