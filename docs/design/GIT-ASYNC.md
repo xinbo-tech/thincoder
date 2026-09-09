@@ -1,7 +1,11 @@
 # Git 富注入异步化（GIT-ASYNC——L21）
 
 > 板块：上下文注入（双端——git 富注入 execSync → 并行 async）。权威源：SESSION.md（注入语义——快照不缓存）+ setup-reminders.mjs/helpers.mjs（现实现）。
-> 状态：**设计待评审**——2026-09-09 落档（L21 深勘察 explore 一手——并行 async 推荐 + context.mjs 整文件死代码发现）。需求：TODO L21（VS Code git 富注入异步优化——3×execSync×5s 最坏 15s 阻塞）——用户裁全采纳（双端同改 + 失败冷却 v1 + all-or-nothing）。
+> 状态：**已交付核销**——2026-09-09（双仓：VSC ed3fe3e/6ba2a36/9076f1b + CLI ccd1b51/9c2318c——collectGitContext 双端
+  async 逐字节同构——context.mjs 整删 287 行——冷却 30s 单测锁——VSC 188/187 + CLI 134/130 绿——audit
+  clean + advisor pass——consume 521b9987（与 L25 共槽一次关两链）——VSC L2 链终跑）。需求：TODO L21
+  （VS Code git 富注入异步优化——3×execSync×5s 最坏 15s 阻塞）——用户裁全采纳（双端同改 + 失败冷却 v1
+  + all-or-nothing）。
 
 ---
 
@@ -56,7 +60,7 @@
 |---|---|---|
 | src/agent/setup-reminders.mjs | VSC | collectGitContext/pushGitContext async + compose 抽 + 冷却 + 注修 |
 | src/agent/setup.mjs | VSC | :393 await + :27 死 import 删 |
-| src/context.mjs | VSC | **整体删除**（评审 #4：现 ~254 行锚——删除 → −254） |
+| src/context.mjs | VSC | **整体删除**（实测 287 行——删除 → −287——交付回填） |
 | src/agent/helpers.mjs | CLI | collectGitContext async + compose 抽 + 冷却 |
 | src/agent/setup.mjs | CLI | :89 await |
 | test/setup-reminders.test.mjs | 双端 | compose 单测 + 冷却单测 |
