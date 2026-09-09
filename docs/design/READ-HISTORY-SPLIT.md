@@ -1,7 +1,7 @@
 # VSC read-history 拆分（READ-HISTORY-SPLIT）
 
 > 板块：工具实现（VSC——read-history.mjs 382 行超 300 advisory）。权威源：CLI read-history.mjs 295 行（未超限——同构参照）。
-> 状态：**设计待评审**——2026-09-09 落档（代码正确性组核实 explore 一手——382 行实读 + 功能段分类 + 发现面 ~107 行可拆候选）。需求：TODO L25 ①（R18+R19 VS Code 交付跟进——read-history.mjs 349 行拆分——现 382 行续涨）。
+> 状态：**已交付核销**——2026-09-09（5300f09——272/119——verbatim 字节证明——0 外部消费者不 re-export——parity 179/178 相等——audit clean + advisor pass——consume 521b9987——VSC L2 链终跑）。需求：TODO L25 ①（R18+R19 VS Code 交付跟进——read-history.mjs 349 行拆分——现 382 行续涨）。
 
 ---
 
@@ -28,8 +28,10 @@
 ### 文件划分
 1. **read-history.mjs（核心——382 → ~280）保留**：头文档 + 常量错误 + 消息助手（③）+ queryMessages + scanLinesSync + loadSessionHistory + 工具导出 execute + import 发现面 + re-export（若外部消费）
 2. **read-history-discovery.mjs（新 ~110）**：listCwdSessions + slotMeta/tidyCwd/sha1hex（:201-307 verbatim 迁入）
-   ——依赖核（评审 #2 设计时定：勘察确认发现面仅引用 node:fs/node:path + 自带工具——不引用核心私有
-   常量/助手——零 export-surface 变更——若实现期发现反例→ 停报父侧而非静默扩）——新文件头注释
+   ——依赖核（评审 #2 设计时定 + 勘误：勘察确认发现面仅引用 node:fs/node:path + 自带工具——实现期实测
+   发现实含 **node:crypto（sha1hex createHash）+ session-io.mjs（tidyCwd normalizeCwd/listCwdSessions
+   sessionsDir）**——verbatim 强制非静默扩展——5300f09 交付报告三处上报——零核心私有引用约束成立）
+   ——新文件头注释
 3. **外部消费方核对**（实现期第一步——评审 #1 规则统一）：按 F-3 决策规则执行——0 不 re-export /
    恰 1 直改 import / ≥2 hub re-export
 

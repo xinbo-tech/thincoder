@@ -70,3 +70,6 @@
 
 ## 变更记录（ACTIVITY-SPLIT 补登——2026-09-09 核销）
 - `ACTIVITY-SPLIT.md`（activity.js 三文件拆分——6d66dd5——287/229/94——consume 18d53f6e）
+
+## 变更记录（READ-HISTORY-SPLIT 补登——2026-09-09 核销）
+- `READ-HISTORY-SPLIT.md`（read-history.mjs 两文件拆分——5300f09——272/119——consume 521b9987）
