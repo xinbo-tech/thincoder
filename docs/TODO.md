@@ -218,3 +218,11 @@
   F-4 净增后距 500 硬限 1 行——下个改动必拆——建议预拆 F-4 块为 config-consult.mjs（同 config-io
   hub 惯例）——owning board = 结构债——status=登记——设计权在用户
 
+- [ ] **CLI 缩放鼠标序列飞出 bug（2026-09-09 用户报告——v0.12.60——截图在案）**：
+  现象：CLI TUI 窗口缩放（resize）时有概率异常飞出——把鼠标追踪转义序列回显成字面文本到 shell
+  提示符行（`[122;50M[122;50m[444444;111;46M...[555555;111;46M^C`——XTerm 鼠标事件上报序列
+  `ESC [ < button ; x ; y M` 本应被 TUI 消费却漏出回显——坐标 x=444444 超大异常——缩放竞态嫌疑）
+  ——可疑点：resize 处理 + 鼠标追踪 DECSET 开/关时序竞态（TUI 退出/状态切换瞬间未先关鼠标追踪——
+  mouse.mjs + render-loop resize 重绘 + 终端模式切换）——有概率 = 竞态非必现——owning board = TUI
+  （mouse/渲染）——status=登记待勘察（复现路径 + resize/mouse 时序）——设计权在用户
+
