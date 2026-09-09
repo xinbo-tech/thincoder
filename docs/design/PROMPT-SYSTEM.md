@@ -92,9 +92,14 @@
    优先级（system.md 在后不等于被覆盖——**两层并存时矛盾句 = 设计债，见 §7 待批**）
 4. 独立评审/独立会话系（advisor/consult）自含身份——不入主装配链
 
-## 5. 已知结构债（本档登记）
+## 5. 已知结构债（本档登记——均由 §7 拆分批修正）
 
-- **engineering-sub.md** 废除（§7）：工程纪律槽全场景共用 engineering.md——同槽位不重复原则
+- **双重人格**：engineering.md（ARCHITECT 人格）与 system.md（coding agent + while-coding 执行节）
+  并存——工程模式每轮读两套身份（人格层被公共层污染 + 执行层错放公共层）
+- **同层两份文本**：engineering-sub.md 与 engineering.md 同属纪律层却各自成文（历史分流产物）——
+  违反同槽位不重复原则，废除（差异句由 eng-coder.md 人格层覆写承接）
+- **system.md 层不纯**：实际承载 = 公共基础 + 写码执行层（while coding/Rules/按任务型匹配/测试与
+  交付）——执行层应属人格/纪律层（迁 normal.md）
 - system.md 实际承载 = 公共基础 + 写码执行层（while coding/Rules/按任务型匹配/测试与交付）——
   L4 不纯（§7 修正对象）
 
