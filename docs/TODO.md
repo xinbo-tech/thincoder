@@ -154,7 +154,7 @@
     双端均未暴露（工具层 queued cancel 有——CLI ⏹ 门控排队块不钉 / VSC 无——全量含可取消则两端补）——
     设计权在用户）
 
-- [ ] **eng-coder 文件纪律放宽 + 调度器动态文件域（2026-09-09 用户需求——两联动条）**：
+- [x] ~~**eng-coder 文件纪律放宽 + 调度器动态文件域（2026-09-09 用户需求——两联动条）**~~——**2026-09-09 已交付核销**（SCHEDULER-DYNAMIC-DOMAIN——CLI c7626ab + VSC e55a516——clean——L2 236/263 全绿）：
   ① 纪律改动：eng-coder 任务书"不得触碰清单外文件 + 需更多先停报告" → "允许按需调整（改清单外）+
     必须报告"——涉及 eng-coder 任务书模板/eng-coder.md/engineering.md（Implementation Handoff）+ 审计判据
     （explore audit 偏差 #4 现判"清单外 AND 未报告 = 偏差"——新纪律下报告了 = 合规——判据改"未报告 = 偏差"）
@@ -164,14 +164,14 @@
     owning board = 工程模式纪律 + 调度器机制——status=登记待澄清（①报告粒度/时机——②touched 追踪机制与
     调度器接入——需深勘察）——设计权在用户
 
-- [ ] **digest 装配 400 观察项（2026-09-09 平台 bug——eng-coder#12 消化三连报）**：
+- [x] ~~**digest 装配 400 观察项（2026-09-09 平台 bug——eng-coder#12 消化三连报）**~~——**2026-09-09 已交付**（MODEL-400 根因 model undefined 修复 + BATCH-3 digest 注入批量预算 64K——双端——预算扩面见 L268）：
   巨大上下文（>1.1MB——MODEL-MERGE 33 文件大链交付）digest 请求 JSON 缺 model 字段——deepseek 400
   "missing field model at column 1128244"——同 digest 推 3 次（3 次装配尝试）——平台层（不在工作仓源码）
   ——下次复现带 trace（会话日志 advisor:digest 序列）定位装配截断点——非设计/交付链问题——**用户裁
   （2026-09-09）：不应全量传上下文——会爆炸——digest 装配应限量/摘要化（非全量历史注入——摘要/窗口/
   裁剪——防 >1MB 请求体）**——status=登记待设计（digest 上下文限量装配——摘要化方案）——设计权在用户
 
-- [ ] **git 工具 commit pathspec 完善（2026-09-09 用户需求——并行批混扫根治——工具改进）**：
+- [x] ~~**git 工具 commit pathspec 完善（2026-09-09 用户需求——并行批混扫根治——工具改进）**~~——**2026-09-09 已交付核销**（QUICKFIX-2 F-3——CLI commit --only 原子——VSC 镜像缺口另记 L255）：
   现状（src/tools/git.mjs:150-174）：commit 无 path → `git add -A` 全量暂存工作树（含他批未暂存）→
   `git commit -m` 无 pathspec 提交整个索引（含他批 pre-staged）——并行批双层混扫源（fe6d62d 实证）。
   完善方向：① path 给定 → `git commit --only <path> -m`（原子——只提交列文件——忽略索引他批——git CLI
@@ -214,11 +214,11 @@
 - [x] ~~**大项 L50 advisor 裁决模板**~~——**2026-09-09 核销**（ADVISOR-VERDICT-TEMPLATE——33ed72b/f9f0335——L2 绿——consume 9e85ddd9）
 - [x] ~~**大项 L52 sync spawn 可中止**~~——**2026-09-09 核销**（SYNC-CANCEL——3d7be35——见工程模式节同项核销——consume 1e5870bb）
 - [ ] **§24→§11 旧锚全仓清理**（2026-09-09 POOL-CONFIG AC-7 补挂——触碰行已更新——全仓注释残留双端数十处——后续批大扫）
-- [ ] **config-io 499 预拆（2026-09-09 F-4 交付注——距 500 硬限 1 行）**：VSC src/config-io.mjs 现 499 行——
+- [x] ~~**config-io 499 预拆（2026-09-09 F-4 交付注——距 500 硬限 1 行）**~~——**2026-09-09 已交付核销**（BATCH-3 F-1——VSC de08fd0——437 + config-consult 78——L2 全绿）：VSC src/config-io.mjs 现 499 行——
   F-4 净增后距 500 硬限 1 行——下个改动必拆——建议预拆 F-4 块为 config-consult.mjs（同 config-io
   hub 惯例）——owning board = 结构债——status=登记——设计权在用户
 
-- [ ] **CLI 缩放鼠标序列飞出 bug（2026-09-09 用户报告——v0.12.60——截图在案）**：
+- [x] ~~**CLI 缩放鼠标序列飞出 bug（2026-09-09 用户报告——v0.12.60——截图在案）**~~——**2026-09-09 已交付核销**（RESIZE-MOUSE-LEAK-FIX b251623——正常退出路径残留修复——**崩溃面另由 TUI-STDERR-CAPTURE 捕获观察**）：
   现象：CLI TUI 窗口缩放（resize）时有概率异常飞出——把鼠标追踪转义序列回显成字面文本到 shell
   提示符行（`[122;50M[122;50m[444444;111;46M...[555555;111;46M^C`——XTerm 鼠标事件上报序列
   `ESC [ < button ; x ; y M` 本应被 TUI 消费却漏出回显——坐标 x=444444 超大异常——缩放竞态嫌疑）
@@ -226,7 +226,7 @@
   mouse.mjs + render-loop resize 重绘 + 终端模式切换）——有概率 = 竞态非必现——owning board = TUI
   （mouse/渲染）——status=登记待勘察（复现路径 + resize/mouse 时序）——设计权在用户
 
-- [ ] **贴图自动降级视觉子代理（2026-09-09 用户需求——VSC 截图在案）**：
+- [x] ~~**贴图自动降级视觉子代理（2026-09-09 用户需求——VSC 截图在案）**~~——**2026-09-09 已交付核销**（IMAGE-DOWNGRADE-VISION——VSC bd7c803 + CLI 1090eb4——clean——跟进项 L250）：
   现象：贴图到非视觉模型（deepseek-v4-flash）直接报错"This model does not support pasted images. Switch
   to a vision-capable model..."——要求手动换模型——**无自动降级**——用户期望：非视觉模型 + 贴图 → 自动
   spawn 视觉模型子代理读图（返回描述给主模型——不打扰用户换模型）——现错误文案第二建议"attach as
@@ -234,12 +234,12 @@
   处理链（paste 拦截 → 模型支持判定 → 降级/报错）——status=登记待设计（降级形态：自动 spawn 视觉子代理
   vs 提示用户选视觉模型 vs 混合）——设计权在用户
 
-- [ ] **MODEL-400 交付裁断项（2026-09-09 id=25 遗留——防御完善非急）**：
+- [x] ~~**MODEL-400 交付裁断项（2026-09-09 id=25 遗留——防御完善非急）**~~——**2026-09-09 已交付核销**（QUICKFIX-2 F-1 VSC byName 镜像 + F-2 跨渠道 models[0]——双端）：
   ① VSC byName 镜像（subagent.mjs:119-120——设计锚 CLI-only——F-1 断言兜住——补镜像+测试更净）
   ② F-2a 跨渠道语义（cfg.provider≠主渠道且无 cfg.model → 现用主 provider.model 发别家端点 = 403 险——
   建议改用命中渠道 models[0]）——status=登记——设计权在用户
 
-- [ ] **INPUT-LOCK busy 行为修订（2026-09-09 用户反馈——对已交付核销设计的体验修正）**：
+- [x] ~~**INPUT-LOCK busy 行为修订（2026-09-09 用户反馈——对已交付核销设计的体验修正）**~~——**2026-09-09 已交付核销**（INPUT-LOCK-BEHAVIOR-REVISED——CLI 8ee5309 + VSC c9509ad——clean——L2 ⑤ 断言在列）：
   ① 输入不禁用：主会话 busy 时**允许继续录入**（VSC readOnly 锁禁打字 = 过度——改不禁——可打字回显）
     ——但 **send/Enter 禁止**（不允许发出去——VSC send.js 守卫保留/CLI 提交吞保留）
   ② 斜杠白名单删除：busySafeCommand/BUSY_SAFE_COMMANDS（CLI——/exit /help /model 忙时直执行）= 过度设计——
@@ -247,8 +247,8 @@
   ——owning board = INPUT-LOCK（已核销——**新范围走新设计评审链——新 token**）——status=登记待设计
   （用户裁：忙时斜杠也禁 send——/exit 也发不出——退出靠 Ctrl+C——纯一致禁发）——设计权在用户
 
-- [ ] **IMAGE-DOWNGRADE 跟进项（2026-09-09 交付注）**：
-  ① susp 等待态贴图不降级（走现报错——保守方向——父侧确认预期——实现为显式边界）② runVisionReader maxTurns 固定 10
+- [ ] **IMAGE-DOWNGRADE 跟进项（2026-09-09 交付注——①已闭合）**：
+  ① ~~susp 等待态贴图不降级~~（已闭合——实现为显式边界——父侧确认接受）② runVisionReader maxTurns 固定 10
   ——大贴图（>6-8 张）可能落 F-2 fallback——按图数伸缩建议（2+paths.length*2——后批）③ Stop 点击在降级 await
   窗口内 no-op（≤60s——v1 接受）——status=登记——设计权在用户
 
