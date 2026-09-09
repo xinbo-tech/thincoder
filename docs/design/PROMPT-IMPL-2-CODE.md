@@ -11,7 +11,9 @@
 
 | 改造点 | 现状 | 目标 |
 |---|---|---|
-| G1 常量装载 | agent.mjs L36-38 SYSTEM_PROMPT/DISCIPLINE_RULES/MAIN_OVERLAY | 换**六件**（评审 #1：七件计数错——实际六常量）：PERSONA_ENGINEERING/PERSONA_NORMAL/COMMON/DISCIPLINE_ENGINEERING/DISCIPLINE_NORMAL/CONSULT_BASE（+顾问系不变）；agent.mjs L113 prepareRun 传参同步。**explore/coder/plan 人格常量 = PERSONA_NORMAL 同源（蓝图槽位复用——变体差异归人格层覆写）** |
+| G1 常量装载 | agent.mjs L36-38 SYSTEM_PROMPT/DISCIPLINE_RULES/MAIN_OVERLAY | 换**六件**（评审 #1：七件计数错——实际六常量）：PERSONA_ENGINEERING/PERSONA_NORMAL/COMMON/DISCIPLINE_ENGINEERING/DISCIPLINE_NORMAL/CONSULT_BASE（+顾问系不变）；
+  agent.mjs L113 prepareRun 传参同步；**explore/coder/plan 人格常量 = PERSONA_NORMAL 同源（蓝图槽位
+  复用——变体差异归人格层覆写）** |
 | G2 主装配分支 | L322-336（consult/工程/普通三分支） | 四槽位装配函数 `assemblePrompt({scenario})`：人格→common→纪律→(AGENTS+skills 由既有尾部逻辑承担)——每槽缺失跳过+警告（蓝图 §3.4） |
 | G3 子代理分支 | L320/L363 needsDiscipline | 子代理 scenario 映射：eng-coder=人格 eng-coder+纪律 engineering；explore/coder/plan=各人格+纪律 normal；consult=CONSULT_BASE 不变 |
 | G4 buildEngineeringPrompt | L40-74（读 engineering.md/engineering-sub.md+METHODOLOGY+D-M1/D-M2） | **删除**（被四槽位装配取代）；METHODOLOGY 读取/D-M1/D-M2 警告/template 携带整段删 |
@@ -24,7 +26,16 @@
 
 ## 2. 设计决策
 
-- **D1 单装配函数**：assemblePrompt({scenario}) 取代散落 if/else（评审 #6 统一签名）——场景→槽位文件映射表驱动（**表 = 蓝图 §3.2 矩阵内联如下**：工程=persona-engineering/common/discipline-engineering+METHODOLOGY+AGENTS+skills；普通=persona-normal/common/discipline-normal+AGENTS+skills；eng-coder=persona-eng-coder/common/discipline-engineering+AGENTS；explore/coder/plan=persona-{role}/common/discipline-normal+AGENTS；consult=consult-base 自含——**①②并行契约以此表为锚，评审 #2**）
+- **D1 单装配函数**：assemblePrompt({scenario}) 取代散落 if/else（评审 #6 统一签名）——场景→槽位
+  文件映射表驱动（**表 = 蓝图 §3.2 矩阵内联如下**，①②并行契约以此表为锚——评审 #2）：
+
+  | 场景 | 槽位链 |
+  |---|---|
+  | 工程 | persona-engineering → common → discipline-engineering → METHODOLOGY + AGENTS + skills |
+  | 普通 | persona-normal → common → discipline-normal → AGENTS + skills |
+  | eng-coder | persona-eng-coder → common → discipline-engineering → AGENTS |
+  | explore/coder/plan | persona-{role} → common → discipline-normal → AGENTS |
+  | consult | consult-base 自含 |
 - **D5 中间态预期（评审 #4）**：本批落地后 prompts-async-guidance.test.mjs 旧断言预期红（对象文件已退役）——实现者**不得碰该文件**（施工③重写）；②单批验收 = AC-1/2/3 + AC-4 括注（快层回归验算排除该已知③文件）
 - **D6 被否决备选（评审 #8）**：保留双分支+追加表驱动（否决——两套装配并存=回归面翻倍）；扩展 buildEngineeringPrompt 兼容新槽位（否决——兼容层永久化，退役不彻底）
 - **D2 警告通道**：槽缺失警告走既有 setup 警告通道（history 注入）——不新增机制
