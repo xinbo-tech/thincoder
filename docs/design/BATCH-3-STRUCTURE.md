@@ -1,7 +1,7 @@
 # 批 3：config-io 预拆 + digest 限量装配（BATCH-3-STRUCTURE）
 
 > 板块：结构债（VSC config-io 拆分）+ 异步 settle 注入面（双端——digest 上下文限量）。权威源：MODEL-MERGE-SESSION（config-io 现状——499 行）+ digest 装配勘察（injectAsyncResult 落点）。
-> 状态：**设计待评审**——2026-09-09 落档（勘察已齐——config-io 499 距 500 硬限 1 行 + digest 注入器批量预算落点）。需求：TODO config-io 499 预拆 + digest 装配限量（用户裁批 3）。
+> 状态：**评审通过——已交付（CLI 065c14d + VSC de08fd0/7f44e21——clean——CLI 220/0 + VSC 260/0——config-io 437/config-consult 78——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
@@ -61,4 +61,9 @@
 - 红线：config-io 调用方零改（hub 保 API）；offloadToolResult 落盘机制零动；compaction/截断不动
 
 ## 变更记录
+- 2026-09-09 **交付偏差记录（上报项 1——父侧确认）**：F-2"四族共用单点"与实际派发不符——CLI consult 走
+  injectConsultResult（不经 injectAsyncResult）；VSC advisor/escalate/consult 各族注入器全部绕过（仅
+  subagent 族经本路径）——预算实际覆盖 = 双端 subagent 族 + CLI 3 族（advisor/escalate 经 injectAsyncResult）
+  ——consult 族 + VSC 非 subagent 族未落——扩面（VSC 分发点 injectPendingAsync/consult 注入器）需新任务重评审
+  ——登记 TODO。
 - 2026-09-09：落档（config-io 499 距硬限 1 行——F-4 交付注建议预拆——consult 块迁 config-consult.mjs hub——镜像 CLI config.mjs 惯例；digest 注入批量预算 64K——MODEL-400 修根因后防 UX 复发——勘察给落点 injectAsyncResult 四族共用单点）。

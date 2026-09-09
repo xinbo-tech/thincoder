@@ -265,3 +265,7 @@
   ——设计受影响表只列 CLI doc 行——补 VSC doc 同步（下批——doc 面）② key-handler busy 门禁注释"Tab/↑↓ 仍禁"
   措辞微瑕 + L271 tab 死条件（🔵 级——下批）——status=登记——设计权在用户
 
+- [ ] **digest 注入预算扩面（2026-09-09 BATCH-3 交付偏差——后批）**：预算现覆盖 = 双端 subagent 族 + CLI
+  advisor/escalate 族——consult 族（CLI injectConsultResult）+ VSC advisor/escalate/consult 各族注入器绕过
+  ——扩面 = VSC 分发点 injectPendingAsync + consult 注入器逐点落预算——需新设计评审——status=登记
+
