@@ -234,3 +234,8 @@
   处理链（paste 拦截 → 模型支持判定 → 降级/报错）——status=登记待设计（降级形态：自动 spawn 视觉子代理
   vs 提示用户选视觉模型 vs 混合）——设计权在用户
 
+- [ ] **MODEL-400 交付裁断项（2026-09-09 id=25 遗留——防御完善非急）**：
+  ① VSC byName 镜像（subagent.mjs:119-120——设计锚 CLI-only——F-1 断言兜住——补镜像+测试更净）
+  ② F-2a 跨渠道语义（cfg.provider≠主渠道且无 cfg.model → 现用主 provider.model 发别家端点 = 403 险——
+  建议改用命中渠道 models[0]）——status=登记——设计权在用户
+

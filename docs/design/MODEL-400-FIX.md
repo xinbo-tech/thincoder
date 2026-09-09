@@ -1,7 +1,7 @@
 # digest 400 急修（MODEL-400-FIX）
 
 > 板块：provider 装配（双端——渠道克隆 model 重派生）。权威源：AGENT-LOOP（MODEL-MERGE-SESSION 后 schema——渠道无 model 默认字段——models[] 候选）。
-> 状态：**设计待评审**——2026-09-09 落档（MODEL-MERGE 回归勘察 explore 一手——根因闭环：JSON.stringify 丢 undefined 键 → 无 model 请求 → serde 400——现场 a-d 双端）。需求：TODO digest 装配 400（用户裁赶紧修复——两端都有）。
+> 状态：**评审通过——已交付（CLI 51e75a8 + VSC 18db206——clean——修正轮 1/5——CLI 200/0 + VSC 238/0——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
@@ -66,4 +66,8 @@ model / 渠道加回默认 model / 请求层统一注入）均因 schema 不动�
 - 红线：MODEL-MERGE schema 不动（渠道仍无 model 字段——models[] 候选）；只改克隆/断言面
 
 ## 变更记录
+- 2026-09-09：交付（clean——F-1 断言 + F-2 a-d 双端——errors.mjs 超清单新增 ProviderError/assertProviderModel
+  （设计引用不存在符号——必要已声明）+ F-2d VSC 落点 = panel-session.mjs saveLines 写侧（与 CLI 读侧对应）——
+  交付裁断项（TODO 登记）：VSC byName 镜像（subagent.mjs:119-120——设计锚 CLI-only——F-1 断言兜住）+
+  F-2a 跨渠道语义（cfg.provider≠主渠道无 cfg.model → 现用主 model 发别家端点 403 险——建议渠道 models[0]）。
 - 2026-09-09：落档（勘察一手——JSON.stringify 丢 undefined → 无 model 请求 → serde 400——column≈body 长吻合——MODEL-MERGE 删渠道 model 字段后克隆链丢键——现场 a-d 双端——VSC 实证（panel-chat:484 格式）+ CLI 同险——主会话正常因 per-message echo——digest/advisor 无 echo 走克隆链落空——急修）。
