@@ -7,7 +7,8 @@
 
 ## 需求
 
-- **总体目标**：排队中的 subagent 在双端 live 面板可见且可控。勘察结论——VSC queued 显示链已交付（等待块头 + queued · position N / waiting — reason——状态词三分支与 CLI 已对齐）——**真差集 = ① queued 取消 ⏹ 双端 UI 未暴露（工具层有——裁定层"接受无取消"）② VSC webview Reload 冷启 queued 等待块头丢失（无快照重推——SESSION-RESTORE-PARITY 只覆盖保存侧——live 块不入 history 裁定不覆盖运行中恢复）③ i18n 小缺（waiting 词 + position 段未走 i18n）**。
+- **总体目标**：排队中的 subagent 在双端 live 面板可见且可控。勘察结论——VSC queued 显示链已交付（等待块头 + queued · position N / waiting — reason——状态词三分支与 CLI 已对齐）——**真差集 = ① queued 取消 ⏹ 双端 UI 未暴露（工具层有——裁定层"接受无取消"）② VSC webview Reload 冷启 queued 等待块头丢失（无快照重推——SESSION-RESTORE-PARITY 只覆盖保存侧——
+  live 块不入 history 裁定不覆盖运行中恢复）③ i18n 小缺（waiting 词 + position 段未走 i18n）**。
 - **功能性**：
   - F-1 现状确认基线（非改动）：VSC queued 等待块头显示已在（SESSION-ACTIVITY-REVISED 交付）——CLI 排队显示已在（subagent-panel §20 D-SD3b）——验收含不回归
   - F-2（可取消——用户新裁覆盖 SESSION-ACTIVITY-REVISED F-6 "接受无取消路径"旧裁定）queued/waiting 等待块头挂 **取消 ⏹**（双端——VSC activity-view ⏹ 门控扩 queued + CLI subagent-panel ⏹ 门控扩 queued）——点击 = 出队 + 墓碑 + 位置前移（引擎/工具层 cancelSubagent queued 路径已存在——纯 UI 暴露 + 路由接线）
@@ -18,7 +19,8 @@
 ## 设计（双端差集增量——照做勿自行解释）
 
 ### 1. F-2 取消 ⏹（双端——引擎路径已有纯 UI 暴露）
-- **VSC**：activity-view.mjs updateStopButton 门控扩——`status==="running"` → `running || queued/waiting`（slot/wait/depc 三态都挂 ⏹——用户可撤销排队决策）——但 ⏹ 图标/文案区分（running = 停 / queued = 取消排队）——click → chat.js postMessage {type:"cancelSubagent", id, role}（现路由 panel-messages:198-215 已处理 queued 目标出队——引擎 cancelSubagent 对 queued = dequeue + 墓碑 + {was:"queued"}——webview 移除块 + refreshQueuedRows 位置前移——链路通——纯门控扩展）
+- **VSC**：activity-view.mjs updateStopButton 门控扩——`status==="running"` → `running || queued/waiting`（slot/wait/depc 三态都挂 ⏹——用户可撤销排队决策）——但 ⏹ 图标/文案区分（running = 停 / queued = 取消排队）——
+  click → chat.js postMessage {type:"cancelSubagent", id, role}（现路由 panel-messages:198-215 已处理 queued 目标出队——引擎 cancelSubagent 对 queued = dequeue + 墓碑 + {was:"queued"}——webview 移除块 + refreshQueuedRows 位置前移——链路通——纯门控扩展）
 - **CLI**：subagent-blocks/subagent-panel ⏹ 门控扩 queued（现"async 启动后才置"注——排队块 ⏹ 补）——mouse D-S1a cancelSubagent 路由对 queued 同路径（工具层支持——CLI cancel 命令/mouse 已走引擎同实现）
 - 测试：双端活动区测试——queued 块挂 ⏹ → 点击 → 出队 + 墓碑 + 位置前移 + 块移除（VSC activity-flow 测试族 + CLI subagent 测试族）
 
