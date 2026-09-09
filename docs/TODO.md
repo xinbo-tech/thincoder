@@ -247,8 +247,12 @@
   history 数组时 _subIdCounter expando 随旧数组被抹**（agent.mjs L88 注释警告的 "history replace wipes
   it" 模式——distill 处防了（L88-91 await 先消化）——counter 没防）——长会话高频压缩（本会话开头即
   compacted）→ counter 反复归零 → 池空时 spawn 回 #1——修：counter 不挂 history expando（压缩不丢）
-  (core.mjs L433 signal 只留取消链)/proxy(proxy.mjs L263-265 头超时+body idle)均无整体墙钟残留——
-  死亡另有来源——需来源标注钉死
+  ——**已落地（09-10 00:00——SUBAGENT-ID-COUNTER-AGENT——用户纠正：内存变量不需持久化——id 作用域=
+  进程内——撤槽持久化方案——载体改 agent 本体 ±4 行/端——VSC 交付 clean（subagent-id-counter.test
+  4/4 绿）——CLI 端在途）**——遗留：subagent.mjs L293-294 注释仍述旧载体前提（留下批触碰该文件时修）
+- [x] ~~**子代理 abort 无来源标注（2026-09-09 eng-coder #1/#4 两次 timeout）**~~——**登记保留**（错误
+  消息 "aborted due to timeout" 无栈无层标注——不知死于 provider fetch/body idle/工具/平台层——
+  死亡另有来源——需来源标注钉死——09-02 已拆 TTFB+idle 墙钟已废——时长巧合 ~600s 非机制）
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
 - [ ] **advisor 进行中评审不可取消（2026-09-09 用户反馈——平台 bug）**：设计评审发起后对象漂移（文档中途编辑）
   → 需杀旧重发——但**无 cancel 通道**（advisor 无 cancel action——同 scope 重发被拒"settle 后逐个发起"——
