@@ -1,7 +1,7 @@
 # Gitee Issue 修复批（ISSUE-FIX-BATCH）
 
 > 板块：评审机制 + provider 校验（CLI 主——VSC 对齐）。权威源：AGENT-LOOP §8（评审机制）+ config 校验（D-S1 软失败先例）。
-> 状态：**设计待评审**——2026-09-09 落档（Gitee issue 排查 explore 一手——三 issue 根因闭环定位 + 修复方向）。需求：TODO Gitee issue 修复批（用户裁三一起攒批走全链）。
+> 状态：**评审通过——F-1 已交付（ef94736——clean——L2 待链稳定）——F-4 排模型合并后**（设计待评审已过——2026-09-09 round1 pass——2026-09-09 F-1 实现交付）。需求：TODO Gitee issue 修复批（用户裁三一起攒批走全链）。
 
 ---
 
