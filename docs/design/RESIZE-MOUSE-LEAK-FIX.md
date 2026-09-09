@@ -1,7 +1,7 @@
 # CLI 缩放鼠标序列飞出修复（RESIZE-MOUSE-LEAK-FIX）
 
 > 板块：TUI 生命周期（CLI——mouse/退出序/resize）。权威源：tui-lifecycle.mjs + index.mjs + key-handler.mjs + cmd-exit.mjs。
-> 状态：**设计待评审**——2026-09-09 落档（缩放勘察 explore 一手——根因 RC1/RC2/RC3 定位——修复方向齐）。需求：TODO CLI 缩放鼠标序列飞出 bug（用户报告 v0.12.60——批 1）。
+> 状态：**评审通过——已交付（commit b251623——clean——修正轮 1/5——225/216 pass 0 fail——L2 待链稳定）**——2026-09-09 落档
 
 ---
 

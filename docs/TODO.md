@@ -257,3 +257,6 @@
   缺陷——CLI F-3 commit --only 已修——VSC 镜像待补——owning board = git 工具面（双端对齐）——
   status=登记——设计权在用户
 
+- [ ] **RESIZE 交付建议（2026-09-09——advisor 可选 🟡——后批）**：恢复序列字面量三源（writeCleanupSequence vs
+  cleanup 余部 + 测试第三份）→ CLEANUP_REST 常量收拢——当前测试字节锁兜底——status=登记——设计权在用户
+
