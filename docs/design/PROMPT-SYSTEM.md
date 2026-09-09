@@ -41,14 +41,17 @@
 | advisor-round1/2/3.md | 40/39/35 | 独立评审 | "You are a(n independent) code review advisor" | advisor/main.mjs L72-78 |
 | methodology-template.md | 39 | L5 兜底 | "# METHODOLOGY — AI Agent Collaboration" | setup.mjs（METHODOLOGY 缺失警告携带）+ cmd-eng.mjs |
 
-## 3. 装配逻辑（抽象顺序原则——先于具体文件）
+## 3. 装配逻辑（抽象顺序原则——先于具体文件；**适用面 = 主装配链（主会话 + 常规子代理）**）
+
+**适用面声明**：consult（独立会诊会话）与 advisor（独立评审会话）为**特殊模块**——自含基底、
+独立注入，不入本装配链（各自细节见其板块档）；本节规则只约束主装配链。
 
 **四槽位固定序**（每个槽位至多一份文件；未命中角色/模式的槽位跳过）：
 
 ```
 [1] 人格层   —— 你是谁：每角色一份（主会话按模式、子代理按角色）
 [2] 公共层   —— 两模式共用协作基础：system.md（恒第二）
-[3] 纪律层   —— 怎么干活：按模式二选一（工程 discipline / 普通 discipline）
+[3] 纪律层   —— 怎么干活：按模式二选一（工程 engineering.md / 普通 discipline.md）
 [4] 其他     —— 项目层（METHODOLOGY/AGENTS）、skills 清单等追加
 ```
 
@@ -59,14 +62,17 @@
 - **人格先行**：身份定义永远先于行为规则——模型先知道"是谁"再读"怎么干"
 - **公共恒二**：system.md 位置固定，人格冲突不落入公共层（L4 纯度由 §4 判定规则保障）
 
-### 槽位映射（目标态——各槽位的实现文件）
+### 槽位映射（目标态——主装配链各槽位的实现文件）
 
-| 槽位 | 主会话·工程 | 主会话·普通 | eng-coder | explore/coder/plan | consult | advisor |
-|---|---|---|---|---|---|---|
-| [1] 人格层 | engineering.md | normal.md（新） | eng-coder.md | 角色.md（各一） | consult-base.md 兼 | advisor-*.md 兼 |
-| [2] 公共层 | system.md | system.md | system.md | system.md | —（consult-base 自含） | —（自含） |
-| [3] 纪律层 | engineering.md（续） | discipline.md | engineering.md（续） | discipline.md | — | —（criteria 自带） |
-| [4] 其他 | +METHODOLOGY+AGENTS+skills | +AGENTS+skills | +METHODOLOGY+AGENTS | +AGENTS | +问题简报 | +评审对象 |
+| 槽位 | 主会话·工程 | 主会话·普通 | eng-coder | explore/coder/plan |
+|---|---|---|---|---|
+| [1] 人格层 | engineering.md | normal.md（新） | eng-coder.md | 角色.md（各一） |
+| [2] 公共层 | system.md | system.md | system.md | system.md |
+| [3] 纪律层 | engineering.md（续） | discipline.md | engineering.md（续） | discipline.md |
+| [4] 其他 | +METHODOLOGY+AGENTS+skills | +AGENTS+skills | +METHODOLOGY+AGENTS | +AGENTS |
+
+**特殊模块（不入本链）**：consult = consult-base.md 单独基底（setup.mjs L322 分支）；advisor =
+advisor-design/round1-3 独立注入（advisor/main.mjs）+ criteria 随评审对象携带。
 
 **实现说明**：工程纪律 = engineering.md 全文——主会话直接作人格层，子代理侧拆为「eng-coder.md
 人格 + engineering.md 纪律」——同一份文件在不同装配链中占据不同槽位（文件 ≠ 层：一份文件可同
