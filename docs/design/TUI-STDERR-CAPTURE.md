@@ -13,17 +13,25 @@
   - F-2（日志生命周期）tui-stderr-*.log 落 crash-reports 目录（R25 既有——语义同族）——purge 扩展匹配（>30 天淘汰——搭车现有写时清理）
   - F-3（退出码传播 + 控制台信号）父 exit 码 = 子 exit 码；Windows 控制台 Ctrl+C 父子共享——父 **忽略 SIGINT**（不打断 tee）——子正常处理（raw mode key-handler 二按退出）→ 父收 exit 退
   - **范围边界**：只包装 TUI 模式（case "tui"/undefined——常驻进程崩溃面最大）——chat/acp/memory 等一次性命令**不包装**（stderr 终端可见无盖屏——不需）；VSC 无此面；R25（JS 异常/V8 fatal/C++ 断言写 crash-*.json/report.*.json）**保留不动**（子进程内照常——本批只补 stderr 诊断面）。
+  - **非功能性（评审 #3 补）**：tee 开销可忽略（父进程空转——每 stderr chunk 一次同步 append）；兼容——Windows/Node 24
+    （Ctrl+C 语义实证锁定）+ POSIX（signal 死 code null 映射）；尽力面——父同死时日志含已 append 内容（不保证最后
+    chunk）；日志权限 0600（crash-*.json 先例——评审 #8）——30 天 purge（R25 搭车）。
 
 ## 设计（入口结构勘察实证——照做勿自行解释）
 
 ### 1. F-1 包装插入（bin/thincoder.mjs）
 - 插入点：L30 command 解析后（case "tui"/undefined 判定已知）——**prepareCrashReporting()（L36）之前**（父进程不预建/不设 report——子进程做）
 - 判定：`(command === undefined || command === "tui") && !process.env.THINCODER_TUI_WRAPPED` → **父进程分支**（L119 switch 前 return/分流）——否则正常（子进程或非 TUI）
-- 父进程逻辑（新函数 `spawnTuiWrapped()`——bin 内或新 src/tui/wrapped-spawn.mjs——实现时选——≤40 行）：
-  1. 打开日志文件 `join(crashReportsDir(), tui-stderr-${Date.now()}-${process.pid}.log)`（append——失败 → 不包装直接子进程跑——尽力面）
+- 父进程逻辑（评审 #4 定稿——**新文件 src/tui/wrapped-spawn.mjs**——`spawnTuiWrapped()` ≤40 行——bin 只留
+  判定 + 调用 ≤+8——避免 bin ≤+30 与 ≤40 函数矛盾）：
+  1. **mkdir -p crash-reports 目录**（评审 #2——wrapper 先建目录——prepareCrashReporting 只在子内跑——
+     新装首启目录不存在会静默不包装——mkdir 后开日志文件 `tui-stderr-${Date.now()}-${process.pid}.log`
+     （append——仍失败 → 不包装直接跑——尽力面）
   2. `spawn(process.execPath, [binPath, ...process.argv.slice(2)], { stdio: ["inherit", "inherit", "pipe"], env: { ...process.env, THINCODER_TUI_WRAPPED: "1" }, windowsHide: false })`
   3. 子 stderr data → 双写（`process.stderr.write` + `appendFileSync` 日志）
-  4. 子 exit → 日志 flush → `process.exit(childExitCode)`——exit 事件兜底（子死未收 exit → 超时 30s 强退？——实现时定——子死必发 exit）
+  4. 子 exit → 日志 flush → `process.exit(childExitCode)`——**exit 码 null 映射（评审 #1）：
+     `childExitCode ?? (signal ? 1 : 0)`**——exit 事件兜底（超时 30s 强退）+ **子 spawn error 事件
+     （评审 #5：spawn 失败不发 exit 只发 error——error → 日志注失败 → exit 1）**
 - 子进程路径：env 门已设 → 走现逻辑（L36 prepareCrashReporting + switch——正常 TUI）——**子进程内零行为变化**
 
 ### 2. F-2 日志生命周期（crash-reports.mjs）
@@ -39,7 +47,8 @@
 
 | 文件 | 现行数（实测） | 预计净变 | 改动 |
 |---|---|---|---|
-| bin/thincoder.mjs | 399 | ≤+30 | F-1 包装插入 + spawnTuiWrapped |
+| bin/thincoder.mjs | 399 | ≤+8（评审 #4——函数拆新文件） | F-1 判定 + 调用 |
+| src/tui/wrapped-spawn.mjs（评审 #4——新） | 新 | 新 ≤40 | F-1 spawnTuiWrapped + tee + 信号 |
 | src/crash-reports.mjs | 124 | ≤+6 | F-2 purge 扩展 + 元信息头 |
 | test/（wrapped-spawn 新测试） | 新 | 新 ≤80 | F-1/F-2/F-3 |
 
@@ -52,6 +61,8 @@
 | F-1 env 门 | THINCODER_TUI_WRAPPED=1 | 不包装——子直接跑——零行为变化——F-1 |
 | F-2 日志 | 崩溃后查 crash-reports | tui-stderr-<ts>-<pid>.log 存在 + 30 天 purge——F-2 |
 | F-3 退出码 | 子 exit 3 | 父 exit 3——F-3 |
+| F-3 信号死（评审 #1） | 子被信号杀（code null） | 父 exit 1（null 映射）——F-3 |
+| 错误：spawn 失败（评审 #5） | 子 spawn error | 日志注 + exit 1（不挂死）——F-1 |
 | 错误：日志开失败 | crash-reports 不可写 | 不包装直接跑（尽力面——不阻断）——F-1 |
 
 ## 验收
