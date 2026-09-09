@@ -25,25 +25,39 @@ VSC summarizeEngTaskInput（subagent-async.mjs:78-93）现状：
 - 只认 `^##[ \t]+` 头（headingRe :80）——h1/h3-h6 及无头全不认
 - 无头或保留节 <2 → 整书 verbatim 返回（:83/:91——摘要不触发）
 
-改：VSC 补 inline 兜底分支（无 ## → 按 CLI inline 标记全行逻辑摘）——保留节 <2 的 verbatim 回退是否保留按 CLI 语义对齐（CLI 无 verbatim 整书回退——最小保留节摘——实现期按 CLI 逐字核）——headingRe 同 CLI 头匹配
+改：VSC 补 inline 兜底分支（无 ## → 按 CLI inline 标记全行逻辑摘）——保留节 <2 的 verbatim 回退
+（评审 #3 定论：**删 VSC 保守守卫——对齐 CLI 无整书回退**——## 有但可保留节 <2 → 最小保留节摘——
+与 CLI 逐字核）——headingRe 同 CLI 头匹配
+- 用例（评审 #3 补——测试锁）：## 有但仅 1 可保留节 → 输出该节（无 verbatim 整书）
 
 ### 连带
-- VSC subagent-async.mjs 头注释（isomorphic 声明——对齐后成真）
-- 测试：A2 摘要——无 ## flat 任务书也触发摘要（CLI inline 兜底形态断言）+ 有 ## 正常摘 + marker 缺失 "(not found)"——VSC 测试（CLI 已有？——核——无则双端补）
+- VSC subagent-async.mjs 头注释（评审 #4：现头无 isomorphic 声明——对齐后**新增**声明句注明与 CLI
+  summarizeEngTaskBook 逐字同构 + AC-3 diff 锚）
+- 测试：A2 摘要——无 ## flat 任务书也触发摘要（CLI inline 兜底形态断言）+ 有 ## 正常摘 + marker
+  缺失 "(not found)"——VSC 测试（评审 #2 定论：CLI 生产+测试双零触碰——CLI 测试缺失记 CLI 侧 TODO——
+  "双端补"字句废弃——红线只含 VSC 单仓）
 
 ## 受影响文件（VSC 单仓——CLI 零改动）
 
 | 文件 | 改动 | 行数 |
 |---|---|---|
 | src/agent-tools/subagent-async.mjs:78-93 | summarizeEngTaskInput inline 兜底对齐 CLI | ~420 现（+~8——评审 #1 实测） |
-| test/（A2 摘要测试） | 新——对齐面断言 | 新 ~60 |
-| docs/design/AGENT-LOOP.md | isomorphic 声明同步（如涉及） | doc |
+| test/subagent-audit-summary.test.mjs | 新——对齐面断言（评审 #5：seam = 导出 auditTaskBook 驱动
+  agent._engTaskInput/_touchedFiles fixture——summarizeEngTaskInput 私有不直接测） | 新 ~60 |
+| docs/design/AGENT-LOOP.md | §8 声明同步 + 任务书 verbatim 措辞核（评审 #4——无 ## 无 marker →
+  "(not found)" 后措辞核对——确定化非如涉及） | doc |
+| docs/design/README.md | 地图登记本档（评审 #1——循 SESSION-RESTORE-PARITY 先例——核销时父侧） | doc |
+
+## 非功能性需求（评审 #7 补——三层完整）
+- 约束：marker 缺失不编造 "(not found)" / A1 指令 + A3 报告模板零触碰 / CLI 生产+测试零改动 /
+  既有触发路径零回归——与 AC 红线同源（不重复展开）
 
 ## 验收
 
 - AC-1 无 ## flat 任务书 VSC 也触发摘要（inline 兜底——对齐 CLI 形态——测试锁）
 - AC-2 有 ## 正常摘要（不回归）+ marker 缺失 "(not found)"（不编造）
-- AC-3 双端同构（CLI/VSC 摘要逻辑逐字一致——diff 核）
+- AC-3 双端同构（CLI/VSC 摘要逻辑逐字一致——评审 #6：交付期跨仓 diff——diff 输出作为交付报告证据——
+  评审核——非 npm test 内可跑）
 - AC-4 测试绿（A2 摘要测试 + 既有——VSC npm test 快层）
 - AC 红线：CLI 零改动 + A1 指令/A3 报告模板零触碰 + 行为边界（不编造 marker）保留
 
