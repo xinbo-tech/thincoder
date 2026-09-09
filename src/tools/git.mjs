@@ -158,7 +158,7 @@ export const gitTool = {
         if (args.path !== undefined && args.path !== null) {
           const trimmed = args.path.trim()
           if (!trimmed) return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
-          commit = runGitStrict(ctx.cwd, ["commit", "--only", ...trimmed.split(/\s+/), "-m", args.message])
+          commit = runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...trimmed.split(/\s+/)])
         } else {
           const add = runGitStrict(ctx.cwd, ["add", "-A"])
           if (!add.ok) return truncate(`git add failed: ${add.err || add.out || "(no output)"}`)

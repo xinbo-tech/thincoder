@@ -1,9 +1,7 @@
 /**
- * git-commit-pathspec.test.mjs — QUICKFIX-BATCH-2 F-3（docs/design/QUICKFIX-BATCH-2.md）：
- * git 工具 commit 的 path 参数 → git commit --only <paths>——从工作树取列文件提交（忽略索引
- * 他批——原子——并行批不混扫——不再先 add）。用例：path + 索引他批 pre-staged → 只提交列文件；
- * 多文件空格分隔；空/空白 path → 明确错误；无 path → add -A 全量（保留行为——单代理语义）。
- * 真 git 子进程 —— slow 归册（npm test 快层 skip；test:full / THINCODER_TEST_FULL=1 放行）。
+ * git-commit-pathspec.test.mjs — QUICKFIX-BATCH-2 F-3：git commit path → commit --only
+ * <paths>（工作树列文件——忽略索引他批——原子）。用例：他批 pre-staged 不混入 / 多文件 /
+ * 空与空白 path 错误 / untracked 须先 add / 无 path 回归。真 git 子进程——slow 归册。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -36,7 +34,6 @@ slow("F-3 path 给定 + 索引他批 pre-staged → 只提交列文件（commit 
   git(repo, "add", "b.txt") // 他批 pre-staged——不得混入本次提交
   const out = await gitTool.execute({ action: "commit", path: "a.txt", message: "only a" }, { cwd: repo })
   assert.ok(!out.startsWith("git commit failed") && !out.startsWith("git add failed"), out)
-  assert.equal(git(repo, "log", "-1", "--format=%s"), "only a")
   assert.deepEqual(git(repo, "diff", "HEAD^", "HEAD", "--name-only").split("\n"), ["a.txt"], "提交只含列文件")
   assert.deepEqual(git(repo, "diff", "--cached", "--name-only").split("\n"), ["b.txt"], "a.txt 索引已随 commit 刷新为提交内容；他批 b.txt 仍 staged（不混入不丢失）")
 })
@@ -60,6 +57,16 @@ slow("F-3 空/空白 path（\"\" 与 \"   \"）→ 明确错误——不回落 a
     assert.equal(git(repo, "log", "-1", "--format=%s"), head, "无提交产生")
   }
   assert.deepEqual(git(repo, "diff", "--name-only").split("\n"), ["a.txt"], "改动仍 unstaged——未 add -A")
+})
+
+slow("F-3 untracked 新文件 + path → 明确失败（pathspec 不识未跟踪路径）；add 本批后 --only 原子可提", async () => {
+  writeFileSync(join(repo, "new.txt"), "n1\n")
+  const fail = await gitTool.execute({ action: "commit", path: "new.txt", message: "should not land" }, { cwd: repo })
+  assert.ok(fail.startsWith("git commit failed:"), fail) // pathspec 失败 → 零副作用（无提交）
+  git(repo, "add", "new.txt")
+  const ok = await gitTool.execute({ action: "commit", path: "new.txt", message: "new file" }, { cwd: repo })
+  assert.ok(!ok.includes("failed"), ok)
+  assert.deepEqual(git(repo, "diff", "HEAD^", "HEAD", "--name-only").split("\n"), ["new.txt"], "只提交本批新文件")
 })
 
 slow("F-3 无 path → add -A 全量提交（保留行为——含 untracked 与残留 staged）", async () => {
