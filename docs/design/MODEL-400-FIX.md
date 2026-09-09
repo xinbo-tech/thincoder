@@ -13,10 +13,12 @@
   - F-2（克隆修复——双端 a/b/c/d 四现场）渠道裸克隆补 model 重派生：
     - a/b（advisor provider 无 cfg.model）→ 兜底主 agent provider 的 model（cfg.provider 命中但无 model → 用主 provider.model——原头注"否则用主 agent provider"语义恢复）
     - c（resolveChildProvider byName 裸渠道名）→ `model: byName.models?.[0]`（候选首个）
-    - d（applySession 恢复态）→ `""`/null 槽 model 用 `?? models[0]` 兜（双字段恒非空语义下空槽不可能——但防御补）
+    - d（applySession 恢复态）→ `""`/null 槽 model 用 `|| models[0]` 兜（评审 #3：`||` 非 `??`——空串也兜——
+      与设计/用例对齐）
   - **范围边界**：digest 注入限量（用户需求——防 1.3MB 复发）留待下批（本批急修根因——限量落点已勘察：injectAsyncResult 批量预算——另立设计）；VSC e 现场（resolveDefaultModel 返 null → model:null 另一类 400）同修（断言兜底覆盖）。
 
-## 设计（勘察现场——照做勿自行解释）
+## 设计（勘察现场——照做勿自行解释——评审 #6 单方案声明：F-1/F-2 为红线内唯一路径——备选（serde 容忍无
+model / 渠道加回默认 model / 请求层统一注入）均因 schema 不动红线否决——无 ≥2 候选对比）
 
 ### 1. F-1 请求体断言（双端）
 - CLI `src/provider/core.mjs:181` 前：`if (!provider.model) throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (MODEL-MERGE schema: channels carry models[] not model)")`——可读错误带 provider 名
@@ -28,7 +30,8 @@
 - b. VSC `src/advisor/provider.mjs:11-26` 同款
 - c. CLI `src/agent-tools/subagent-async.mjs:150-152` resolveChildProvider byName：`{...withKey(byName)}` → `{...withKey(byName), model: byName.models?.[0] ?? parent.provider.model}`——裸渠道名取候选首
 - d. CLI `src/session.mjs:319-331` applySession：`data.activeModel ?? models[0] ?? null` 对 `""` 不回退 → `data.activeModel || models[0]`（`||` 非 `??`——空串也兜）——slotModel falsy 时不缺 model 键
-- VSC 镜像同款（panel-chat/session 装配面——resolveTurnModelAndStamp/slotRef 链——查对应）
+- VSC 镜像同款（panel-chat/session 装配面——resolveTurnModelAndStamp/slotRef 链——评审 #2：实现任务书已要求
+  定位后报告文件:行 + 改动——交付时回报）
 - 测试：advisor 无 cfg.model → provider.model = 主 provider.model；byName 裸名 → models[0]；槽空 activeModel + models 有候选 → 兜 models[0]
 
 ## 受影响文件（双端）
