@@ -3,7 +3,10 @@
 > 板块：提示词工程（双端 src/prompts/ 全 15 文件 + ENGINEERING-MODE.md 联动 + AUTO-PROGRESS-SWITCH 合并）。
 > 权威源：全量勘察（explore#1——31 文件基线：🔴24/🟡6/🟢1——提示词目录无一个达标——最长行 1959 字符
 > engineering.md L13——形态成因=批式编辑行尾 append + 标题标记 inline）。
-> 状态：**设计待评审（评审 #1 changes-required 修正版——round 2）**——2026-09-09 落档（用户指出"没做注意力
+> 状态：**设计待评审（评审 #2 changes-required 修正版——round 3 PASS——2026-09-09 21:11）**——评审 #3 附 5 项
+> 非阻塞 advisory（🟡 状态行/AC-4 引用/AUTO 行状态 + 🔵 孤号/300 档豁免）——本批已修——token 已签发
+> （designId 60ff4e55）——阶段 A 待启动（explore 切分方案——先审后执行）。2026-09-09 落档（用户指出
+> "没做注意力
 > 优化"——designer 增强 fe6d62d 实证把 A1-A4 锚行中内插进千字行——注意力污染起点——方向：**先重排再加段**——
 > **B 裁：AUTO-PROGRESS-SWITCH 合并本档作废**——开关段范围 = 主会话提示词——全提示词都要重排）。需求：TODO
 > 提示词注意力优化重排 + 自动推进开关（用户反馈——2026-09-09）。
@@ -31,7 +34,7 @@
     round1-3/explore/plan/eng-coder/consult-base/engineering-sub——子代理内无用户可等——"execute immediately"
     语义保留）——逐字文本 = 原 AUTO-PROGRESS-SWITCH F-1/F-2/F-3（字节源——权威内容见阶段 C——**逐字保真
     仅限 engineering.md 的三个结构位**（Work Loop 前/step 4 尾/分派表最前——main.md/system.md 无同结构））
-  - F-3（锚断言联动）ENGINEERING-MODE §2.9 + 测试——重排后断言改写（改写清单见 §设计 3——行号索引断言
+  - F-3（锚断言联动）ENGINEERING-MODE §2.9 + 测试——重排后断言改写（改写清单见阶段 D——行号索引断言
     重定位 + bullet 切片断言重定位 + 锚断言**按形态分类**——列举型（A1/A3）关键子串 / 命令型（A2/A4 + 核心
     纪律句）保逐字——§2.9 契约文本更新）
   - **范围边界**：内容语义零改动（纯拆行/换行/换位/提权——不改规则含义）；**双端同源不硬一致**（方案在设计档
@@ -49,7 +52,7 @@
 
 ### 阶段 B：eng-coder 分批执行
 - 按权重序分批：engineering.md → system.md/main.md → engineering-sub.md → discipline.md → advisor 四件套/其余
-- 每批执行后：无 >500 行 + 标题全独立 + 锚断言绿（改写后版——见 §设计 3）
+- 每批执行后：无 >500 行 + 标题全独立 + 锚断言绿（改写后版——见阶段 D）
 
 ### 阶段 C：开关段并入（重排后——合并 AUTO-PROGRESS-SWITCH 权威内容）
 1. **顶层档位规则**（engineering.md Work Loop 前插——逐字文本——原 AUTO-PROGRESS-SWITCH F-1）：
@@ -72,7 +75,7 @@
    无 engineering 的 Work Loop/digest/分派表结构——不逐字抄结构句——落**语义对应段**（端特有结构各自位置）
    ——兜底断言 = AC-2 前 20% 巡检（auto/manual 档位词在该文件前 20%）
 
-### 3. 锚断言改写清单（评审 #1 #2 + 评审 #2 #1——设计定稿——实现照此改测试）
+### 阶段 D：锚断言改写清单（评审 #1 #2 + 评审 #2 #1——设计定稿——实现照此改测试）
 - **行号索引断言重定位**：main.md L8/L13（测试用 split("\n")[7]/[12]）、engineering.md step 4 L16
   （split("\n")[15]）——重排后行号变——断言改为**锚定内容特征**（该行起始文本片段）而非行号
 - **bullet 切片断言重定位**：main.md escalate 段 escSeg 切片（测试 L36-37 区）——同法改内容特征锚
@@ -105,7 +108,7 @@
 | src/prompts/plan.md / explore.md / consult-base.md | 双端 | 9-17 | 各重排 →~30-40 | F-1 |
 | docs/design/ENGINEERING-MODE.md（§2.9 锚断言形式） | CLI | 313 | ≤+10 | F-3 契约文本更新（本身不重排） |
 | test/prompts-async-guidance.test.mjs | 双端 | CLI 165 / VSC 160 | ±30 | F-3 断言改写（行号→内容特征 + 锚子串化） |
-| ~~AUTO-PROGRESS-SWITCH.md~~（B 裁——合并作废删除） | CLI | 67 | 删除 | 权威内容并入本档 |
+| ~~AUTO-PROGRESS-SWITCH.md~~（B 裁——已合并作废删除——文件已从仓移除） | CLI | 已删除 | 无动作（权威内容已并入本档阶段 C） | B 裁合并 |
 | docs/design/README.md（文档地图——评审 #2 #3） | CLI | — | ≤+3 | 本档登记 + AUTO-PROGRESS-SWITCH 删除注 |
 
 ## 用例表（评审 #1 #6 补边界/错误行）
@@ -125,12 +128,14 @@
 
 - AC-1 全部 15 文件双端重排：**量化判据**——每条规则独立一行（无多规则并一行）+ 行长 ≤200 字符 + 标题
   全独立 + 无 >500 行——机械可验（巡检脚本扫 src/prompts）
+  （注：提示词为整文件加载资产——&gt;300 行档不适用拆分——工程文件守 ≤500 硬顶——AC-1 检 ≤500 即可）
 - AC-2 注意力分布：**最高规则（批准门/推进档位）在文件前 20%**（巡检断言——前 20% 含巡检标记词——
   WAIT/Do NOT/never/auto/manual 类命令句标记）+ 命令句形态——机械可验
   （注：AC-2 巡检标记词 ≠ 红线禁止的"叫停触发词表"——前者是断言扫描用的命令句标记——后者是把叫停
   理解降级成词表匹配——不同物不冲突）
 - AC-3 内容语义零改动（逐句对照——措辞含义不变——实现批自查 + 交付审计）
-- AC-4 锚断言改写版双端绿（行号→内容特征 + 核心纪律句保逐字 fail-when-unchanged）
+- AC-4 锚断言改写版双端绿——**按阶段 D 形态分类**（A1/A3 子条级子串 + A2/A4/核心纪律句保逐字整句 + 需求池
+  原子串——fail-when-unchanged——行号→内容特征重定位含 bullet 切片）
 - AC-5 双端 npm test 快层零回归
 - 红线：不改规则语义；子代理提示词无开关段（engineering-sub 保留 "execute immediately"）；双端同源不硬一致
   （不加 byte 硬校验）；ENGINEERING-MODE.md 本身不重排（只动 §2.9 断言形式）；fe6d62d src/tui 混批单独排查；
