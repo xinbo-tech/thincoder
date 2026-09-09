@@ -48,14 +48,16 @@ L5 项目层（METHODOLOGY.md / AGENTS.md）不随二进制分发、命名不变
 - **同槽位不重复**：一个槽位一份文件（同一层禁止两份文本并存）
 - **同槽位复用**：同层多场景语义一致时共用同一份文件，不另立副本（变体差异归人格层覆写）
 
-### 3.2 装配矩阵（目标态）
+### 3.2 装配矩阵（目标态——每个场景一行，子代理不合并）
 
 | 场景 | 装配链 |
 |---|---|
 | 主会话·工程 | persona-engineering.md → common.md → discipline-engineering.md → METHODOLOGY + AGENTS + skills |
 | 主会话·普通 | persona-normal.md → common.md → discipline-normal.md → AGENTS + skills |
 | 子代理·eng-coder | persona-eng-coder.md → common.md → discipline-engineering.md → METHODOLOGY + AGENTS |
-| 子代理·explore/coder/plan | persona-{role}.md → common.md → discipline-normal.md → AGENTS |
+| 子代理·explore | persona-explore.md → common.md → discipline-normal.md → AGENTS |
+| 子代理·coder | persona-coder.md → common.md → discipline-normal.md → AGENTS |
+| 子代理·plan | persona-plan.md → common.md → discipline-normal.md → AGENTS |
 | 特殊·consult | consult-base.md（自含——不入主链） |
 | 特殊·advisor | advisor-design.md / advisor-round{N}.md（自含——不入主链） |
 
