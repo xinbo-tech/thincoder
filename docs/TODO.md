@@ -187,6 +187,13 @@
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
+- [ ] **advisor 进行中评审不可取消（2026-09-09 用户反馈——平台 bug）**：设计评审发起后对象漂移（文档中途编辑）
+  → 需杀旧重发——但**无 cancel 通道**（advisor 无 cancel action——同 scope 重发被拒"settle 后逐个发起"——
+  wait_for "advisor settled" 误报 0ms 即过但池仍拒——只能死等自然 settle）——对象漂移 = 旧评审对最终版打折
+  = 部分意义（用户裁杀）——建议：① advisor 加 cancel（同 subagent cancel）或 ② 发起后禁改对象纪律 +
+  ③ wait_for settled 口径修正（查 advisor 池真实态非 digest）——平台侧待修——status=登记——owner = 平台
+- [ ] **QUICKFIX-BATCH-3 评审待重发（2026-09-09——对象漂移杀旧后卡死）**：旧 review #1（漂移对象版）在跑杀不掉
+  ——重发被拒——等旧 digest 自然到后重发覆盖最终版（87 行 F-1~F-4 实证版）——status=等旧 settle——设计权在用户
 - [ ] **TUI 开放项**（**2026-09-08 用户裁两项都做**）：① picker item.note 渲染 bug 修（buildProviderEntries baseURL/无 key 提示 + cmd-advisor 主菜单 Provider 注记不显示——疑似 bug）② question/wizard/picker 三套选择 UI 统一——走设计链排批（TUI.md §11 承载）
 - [x] ~~**平台缺口：async advisor digest token 未注册父会话 approved slots**~~——**已实现**（2026-09-08 token 根治修复——async advisor settle 当场落盘权威台账+digest 后 spawn 门禁 miss 回读能过——消"未注册父会话"缺口）
 
