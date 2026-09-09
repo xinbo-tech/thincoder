@@ -88,3 +88,6 @@
 
 ## 变更记录（本会话批核销——2026-09-09）
 - INPUT-LOCK / MAIN-DESIGN / MODEL-MERGE / ISSUE-FIX / ASYNC-RESIDUE / QUEUED-VISIBILITY / MODEL-400 全交付——consume 核销——L2 全绿（CLI 204/204 + VSC 239/239）。
+
+## 变更记录（SCHEDULER-DYNAMIC-DOMAIN 补登——2026-09-09）
+- `SCHEDULER-DYNAMIC-DOMAIN`（CLI docs/design——调度器动态文件域 = 声明 ∪ running touched——双端 scheduler effectiveFiles 同构镜像——机制正文本端落 AGENT-LOOP §6——CLI 地图 Agent 循环 行注登记；本端行注从略——行已 287 字符，规则 6 三百字符硬限容不下新增注记）。

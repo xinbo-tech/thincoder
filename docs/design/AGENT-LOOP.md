@@ -274,6 +274,14 @@ session — so end the turn; do not poll or wait for the result."（本体在 sp
   （"sync spawn (async:false) cannot queue behind a scheduling conflict…"）。
 - 依赖被取消/失败 → 条目驻留标记 "dependency cancelled" 由模型决定。
 - SLA waiting 行渲染 + 停滞检测（waiting 越行不阻塞槽位——refillPool 最早可启动）。
+- **动态文件域（SCHEDULER-DYNAMIC-DOMAIN 2026-09-09——CLI docs/design 同名专题——同构镜像）**：
+  冲突判定的"他条目域" = `effectiveFiles(e)` = 声明域 ∪（running 且已绑 childAgent 的
+  `childAgent._touchedFiles`——写工具批提交实时记录，fileKey/filesOverlap 键空间零改动）；
+  queued 无 childAgent（首 onAgentTurn 才绑）——天然只声明域。describeBlockers /
+  queueRunnable / detectStall 三处统一经有效域实时读（refill 在 start 前必经重扫——start
+  决策保护不依赖新事件）；waiting 文案区分命中来源——命中仅来自 touched（∉ 声明域）→
+  `域冲突 <file>（运行中实际写入）`，纯声明命中（含声明∩touched 重叠）文案不变。边界：
+  running-vs-running 抢占不做（只保护未来 start 决策——后续项）；中途写窗口接受。
 
 ## 7. 挂起回合 digest（VS 结构差异——本地接线）
 

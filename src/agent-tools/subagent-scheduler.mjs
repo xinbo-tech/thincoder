@@ -3,7 +3,7 @@
  * D-SD1..SD5 + 20.4——CLI 同规格镜像；2026-09-05 模块拆分轮从 subagent-async.mjs verbatim
  * 迁出——纯模块迁移零行为变化——只允许 import 调整与头部注释更新）。内容：池 Map/终态墓碑
  * 载体访问（poolMap/tombMap/writeTombstoneTo/writeTombstone）、文件域归一化与冲突检测
- * （normalizeFileList/fileKey/filesOverlap/showFile——目录声明 fail-closed）、依赖/等待态
+ * （normalizeFileList/fileKey/filesOverlap/effectiveFiles（动态域——SCHEDULER-DYNAMIC-DOMAIN）/showFile——目录声明 fail-closed）、依赖/等待态
  * 查询与补位判据（idNum/depInfo/describeBlockers/queueRunnable/refillPool——D-SD4 释放点
  * 补位）、排队行刷新（refreshQueuedRows——D-SD3b 去重 sig）、依赖者标注（dependentLabels——
  * D-SD5 提醒）、环防御（assertNoDepCycle）、停滞机械检测（detectStall/stallErrorText——
@@ -137,6 +137,22 @@ function showFile(parent, key) {
   return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : key
 }
 
+/** 有效文件域（SCHEDULER-DYNAMIC-DOMAIN 2026-09-09——动态域 = 声明 ∪ 运行中实际写入——
+ *  CLI 同构镜像）：running 且已绑 childAgent → 声明域 ∪ childAgent._touchedFiles（写工具批提交
+ *  实时记录——绝对路径与 normalizeFileList 同源——fileKey/filesOverlap 键空间零改动——去重按
+ *  fileKey）。queued 无 childAgent（首 onAgentTurn 才绑）——天然只声明域（`?.` null 安全——零行为变化）。 */
+export function effectiveFiles(e) {
+  const declared = e._files ?? []
+  if (e.status !== "running" || !e.childAgent) return declared
+  const out = [...declared]
+  const seen = new Set(declared.map(fileKey))
+  for (const f of e.childAgent._touchedFiles ?? []) {
+    const k = fileKey(f)
+    if (!seen.has(k)) { seen.add(k); out.push(f) }
+  }
+  return out
+}
+
 /** 数字 id 归一（池 map keys 数字——spawn 返回/模型回传可能字符串——advisor fix #3 先例）。 */
 const idNum = (id) => (typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id)
 
@@ -184,9 +200,13 @@ export function describeBlockers(parent, entry, auto = false) {
       // 条目——后入者（queued 且 id 晚于当前任务）不列——避免 status/waiting 误导"等
       // 一个其实等不到的人"（旧代码两个 queued 同文件互列——环形死锁的展示面）。
       if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
-      const hit = filesOverlap(myFiles, e._files ?? [])
+      // SCHEDULER-DYNAMIC-DOMAIN（2026-09-09）：他条目域 = effectiveFiles(e)（声明 ∪
+      // running 实际 touched）；命中仅来自 touched（∉ 声明域）→ 加注"运行中实际写入"
+      // ——纯声明命中文案不回归（评审 #7 重叠优先级：声明∩touched 同文件不加注）。
+      const hitDeclared = filesOverlap(myFiles, e._files ?? [])
+      const hit = hitDeclared ?? filesOverlap(myFiles, effectiveFiles(e))
       if (!hit) continue
-      wait.push(`${e.role}#${e.id}（域冲突 ${showFile(parent, hit)}）`)
+      wait.push(`${e.role}#${e.id}（域冲突 ${showFile(parent, hit)}${hitDeclared ? "" : "（运行中实际写入）"}）`)
     }
   }
   const cut = (arr) => (arr.length > 3 ? [...arr.slice(0, 3), `…（共 ${arr.length} 项）`] : arr)
@@ -220,7 +240,7 @@ export function queueRunnable(parent, entry, auto = false) {
       // 字符串化）；非数字 → NaN → 比较 false → 不跳过（fail-closed——保守按"先入者"
       // 阻断语义——与旧行为一致，不放开任何阻断）。
       if (e.status === "queued" && Number(e.id) > Number(entry.id)) continue
-      if (filesOverlap(myFiles, e._files ?? [])) return false
+      if (filesOverlap(myFiles, effectiveFiles(e))) return false // 动态域：声明 ∪ running touched
     }
   }
   return true
@@ -266,7 +286,7 @@ export function detectStall(parent) {
         // §21.1 D-SL1 序判定（与 queueRunnable/describeBlockers 同款）：后入者（queued 且 id
         // 晚于当前任务）不阻断；running 已被锚点守卫排除——停滞闭包内的域 blocker 必为先入者。
         if (o.status === "queued" && Number(o.id) > Number(e.id)) continue
-        const hit = filesOverlap(myFiles, o._files ?? [])
+        const hit = filesOverlap(myFiles, effectiveFiles(o)) // 动态域（running 锚点守卫下零增量——读法同界防御一致）
         if (!hit) continue
         wait.push({ key: idNum(o.id), label: `${o.role ?? "sub"}#${o.id}`, reason: `域冲突 ${showFile(parent, hit)}——先入者` })
       }
