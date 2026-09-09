@@ -19,7 +19,7 @@
     granular add 后整索引 commit——同 CLI 旧版缺陷）——镜像 CLI F-3 交付形态：path 给定 →
     `commit --only -m msg -- <paths>`（`--` 分隔——原子——不再先 add——他批 staged 不混入）——
     空/空白 path 明确错误——无 path 保留 add -A 现行为
-  - F-2（§24→§11 旧锚清理——L216）双端 src 注释 §24 旧锚残留（实证 CLI 29 处 16 文件 + VSC 39 处 18 文件）
+  - F-2（§24→§11 旧锚清理——L216）双端 src 注释 §24 旧锚残留（实证 CLI 29 处 19 文件 + VSC 39 处 13 文件）
     → 新锚——**映射权威 = POOL-CONFIG-UNIFIED F-7（§24→§11.1/§11.2 现行节号粒度——非裸 §11——R13/R14 类
     引用落 §11.1/§11.2——D-24x 决策锚按其现行家）**——逐处核上下文——清理后 grep §24 src 零残留
     （记史/历史文档不换）
@@ -89,7 +89,8 @@
 | src/tools/git.mjs | VSC | 392 | ≤+8 | F-1 commit --only 镜像 + 描述层同步 |
 | test/git-commit-pathspec.test.mjs（评审 #3 新） | VSC | 新 | 新 ≤80 | F-1 原子/空 path/无 path 回归 + files.mjs 登记 |
 | test/files.mjs | VSC | 既有 | +1 | F-1 测试登记 |
-| src/（§24 残留族——CLI 29 处 16 文件 + VSC 39 处 18 文件） | 双端 | — | 各 -N | F-2 逐处替换 |
+| src/（§24 残留族——CLI 29 处 19 文件 + VSC 39 处 13 文件——评审 #2 round2 数值校正） | 双端 | — | 各 -N | F-2 逐处替换 |
+| test/advisor-description.test.mjs（评审 #2 round2 补行——枚举含 :18——替换目标） | CLI | 既有 | ±1 | F-2 替换 |
 | test/prompts-async-guidance.test.mjs（评审 #4 具名宿主） | 双端 | 既有 | +5 | F-2 §24 零残留断言 |
 | src/tui/tui-lifecycle.mjs | CLI | 87 | ≤+4 | F-3 CLEANUP_REST |
 | test/tui-exit-cleanup.test.mjs | CLI | 96 | ±2 | F-3 常量断言 |
@@ -118,6 +119,8 @@
 - 红线：VSC git 只 commit case；§24 只注释文本；CLEANUP_REST 序列字节零变；F-4 只 maxTurns 计算；历史文档/CHANGELOG 记史不换
 
 ## 变更记录
+- 2026-09-09：评审 #2 round2 通过（token 已签发——9 findings 全 Fixed——新 2 🔵 已修：文件数 16/18 → 19/13
+  校正 + test/advisor-description.test.mjs 补受影响行——定稿版待实现）。
 - 2026-09-09：落档（10 条评估分批——批 1 四小修——L255 VSC git commit 镜像（实证 L204-207）+ L216 §24 旧锚
   （**实证 68 处**——映射权威 POOL-CONFIG-UNIFIED F-7 §11.1/§11.2）+ L260 CLEANUP_REST（L20/L84 核过）+
   L250② maxTurns（L77 实证——visionMaxTurns 纯函数）——L183 已勾销（ACTIVITY-SPLIT 实证三文件终局）——L197
