@@ -212,6 +212,13 @@
   ③ advisor 无 cancel 通道（同 scope 重发被拒"settle 后逐个发起"——对象漂移时旧评审杀不掉）
   ——修：advisor 池状态可见（status 支持 advisor 查询/子代理面板展示评审 live 块——与 live 块问题可能同源）+
   wait_for settled 口径修正 + cancel 通道（同 subagent cancel）——status=登记——owner = 平台（AGENT-LOOP/工具面）
+- [ ] **子代理 abort 无来源标注——死亡不可诊断（2026-09-09 用户反馈——平台可观测性缺陷——已实证两次）**：
+  ① eng-coder #1/#4（CLI 端 engineering.md 重排——同 designId 60ff4e55）两次 abort 仅报 "The operation was
+  aborted due to timeout"——**无错误栈/无来源层标注**——不知死于 provider fetch（09-02 已拆 TTFB+idle——墙钟
+  600s 已废）/body idle/工具超时/平台层——无法诊断 ② 时长巧合 ~600s 但墙钟语义已废除——推断不可靠
+  ——需修：子代理 abort/失败携带来源标注（哪层 timeout + 已等待时长 + 最后一次 LLM 调用/工具活动）——
+  错误消息含可诊断字段——status=登记——owner = 平台（子代理/错误通道——与 advisor 池盲区/live 块同属可观测性族）
+  ——#4 重发若再死凭完整错误钉死
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
 - [ ] **advisor 进行中评审不可取消（2026-09-09 用户反馈——平台 bug）**：设计评审发起后对象漂移（文档中途编辑）
   → 需杀旧重发——但**无 cancel 通道**（advisor 无 cancel action——同 scope 重发被拒"settle 后逐个发起"——
