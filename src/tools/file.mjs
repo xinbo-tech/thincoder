@@ -8,7 +8,13 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { dirname } from "node:path"
-import { resolvePath, getOpenDoc, applyEditorEdit, normalizeEOL, stripBom, detectFileEol, majorityEol, hashLine, refreshMarkdownPreview } from "./shared.mjs"
+import { resolvePath, getOpenDoc, applyEditorEdit, normalizeEOL, stripBom, detectFileEol, majorityEol, hashLine, refreshMarkdownPreview, MAX_READ_LINES } from "./shared.mjs"
+
+// DUAL-END-TRUNCATION (F-1, C 方案——2026-09-09，CLI file.mjs 逐字同构镜像)：read
+// 双端尾行数——窗口截断大文件时返回 头 N 行（N = 请求窗口，默认 MAX_READ_LINES）+ 省略注
+// + 尾 M 行（本常量——文件真实尾部——offload 产物尾端结论可见）。M + 窗口 = 整读上限——
+// K=0（尾区与窗口相接）时整印剩余、无假省略注。
+export const READ_TAIL_LINES = 500
 
 export const readTool = {
   name: "read",
@@ -19,7 +25,7 @@ export const readTool = {
     "Parameters:\n" +
     "- path (required): File path, relative to cwd or absolute (alias: filePath)\n" +
     "- offset: 1-based line number to start reading from\n" +
-    "- limit: Max lines to return (default 2000)\n" +
+    "- limit: Max lines to return (default 2000) — windows over files beyond that return head + `…(truncated: K lines in middle, use offset to continue)` + the file's real tail lines, so the file end is never hidden\n" +
     "- hashes: Include SHA256 line hashes (for hashline_edit)",
   parameters: {
     type: "object",
@@ -27,7 +33,7 @@ export const readTool = {
       path: { type: "string", description: "File path (alias: filePath)" },
       filePath: { type: "string", description: "Alias for path" },
       offset: { type: "number", description: "1-based line number to start from" },
-      limit: { type: "number", description: "Max lines to return" },
+      limit: { type: "number", description: `Max lines to return (default ${MAX_READ_LINES})` },
       hashes: { type: "boolean", description: "Include SHA256 line hashes for hash-based editing (default false). Use when you plan to edit the file with hashline_edit." },
     },
     required: ["path"],
@@ -43,14 +49,31 @@ export const readTool = {
     // sticks to line 1, so every line hash mismatches what hashline_edit computes.
     const lines = normalizeEOL(stripBom(text)).split("\n")
     const start = Math.max(0, (offset || 1) - 1)
-    const end = limit ? start + limit : lines.length
-    const chunk = lines.slice(start, end)
-    if (hashes) {
-      // Parity with CLI read (review R9#3): hashline_edit is unusable without a way
-      // to obtain line hashes — read is that way on the CLI side; mirror it here.
-      return chunk.map((l, i) => `${String(start + i + 1).padStart(6, " ")}${hashLine(l)}  ${l}`).join("\n")
+    // DUAL-END-TRUNCATION (F-1, C 方案——2026-09-09，CLI file.mjs 同构)：补默认 2000
+    // 上限（描述原已声明 default 2000——CLI parity）+ 补 total 尾注 + 大文件窗口截断
+    // 返回 头 + 省略注 + 真实尾。判别锚 = 窗口截断且 total > MAX_READ_LINES。
+    const lim = Math.min(limit || MAX_READ_LINES, MAX_READ_LINES)
+    const windowEnd = start + lim
+    const render = (slice, startLn) => slice.map((l, i) => {
+      const ln = startLn + i
+      if (hashes) return `${String(ln).padStart(6, " ")}${hashLine(l)}  ${l}`
+      return `${String(ln).padStart(6, " ")}\t${l}`
+    }).join("\n")
+    // ≤ 阈值文件任何窗口走旧头向路径（字节零变化——VSC 补 total 尾注：窗口截断时提示
+    // 续读）；窗口覆盖全文件也走旧路径。
+    if (windowEnd >= lines.length || lines.length <= MAX_READ_LINES) {
+      const suffix = windowEnd < lines.length ? `\n... (${lines.length} lines total, use offset to continue)` : ""
+      return render(lines.slice(start, windowEnd), start + 1) + suffix
     }
-    return chunk.map((l, i) => `${String(start + i + 1).padStart(6, " ")}\t${l}`).join("\n")
+    const head = render(lines.slice(start, windowEnd), start + 1)
+    // 尾区 = 文件末 READ_TAIL_LINES 行；尾区起点落在窗口内（重叠）→ 从窗口后开始——
+    // 任何行不打印两次；剩余全被覆盖（K=0）→ 整印余段且无假省略注。
+    const tailStart = Math.max(windowEnd, lines.length - READ_TAIL_LINES)
+    const middle = tailStart - windowEnd
+    const tail = render(lines.slice(tailStart), tailStart + 1)
+    return middle > 0
+      ? `${head}\n…(truncated: ${middle} lines in middle, use offset to continue)\n${tail}`
+      : `${head}\n${tail}`
   },
 }
 

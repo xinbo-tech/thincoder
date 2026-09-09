@@ -56,7 +56,15 @@ export const TOOL_RESULT_PREVIEW_TAIL = 48 * 1024 // §5 D-4.1 nominal tail — 
 
 ### 2.5 advisor 截断（P3）
 
-`src/advisor/run.mjs` `MAX_RESULT_CHARS = 64 * 1024`（line-aware 保留完整行，仅上限变化，与主链路 64K 对齐）。advisor 上下文保护已有 `compactMessages` 兜底，放宽后不新增风险。
+`src/advisor/run.mjs` `MAX_RESULT_CHARS = 64 * 1024`（与主链路 64K 对齐）。**双端化截断**
+（2026-09-09 DUAL-END-TRUNCATION——评审尾部结论不再被切）：工具结果回填从"保头弃尾"
+（纯头向 line-aware 累加至 64K break）改为**头尾双保**——头行累加至预算 ~60%
+（`ADVISOR_HEAD_RATIO = 0.6`）→ 中段切 → 尾行累加至剩余预算（保尾结论——裁决/
+结论行可见）——头尾之间省略注 `… (truncated: N more lines, N chars total)` + offset
+续读提示保留（`read(path, offset=…, limit=…)` 续中段）。实现落点：截断纯函数迁至
+`src/advisor/truncate.mjs`（`truncateAdvisorResult`——头尾预算行级累加、绝不半行切开、
+K=0 防御不谎报截断——run.mjs 工具回填调用同函数——CLI truncate.mjs 逐字同构镜像，
+byte-identical）。advisor 上下文保护已有 `compactMessages` 兜底，放宽后不新增风险。
 
 ### 2.6 实时显示（P4）
 
@@ -82,11 +90,26 @@ if (m.kind === "tool") return { ...m, text: m.text.slice(0, 64 * 1024) }
 
 preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 compaction 机制兜底（与 advisor 侧 compactMessages 同构）。
 
+### 2.9 read 双端返回（C 方案——2026-09-09 实现，CLI TUNING §2.6 同构）
+
+`src/tools/file.mjs` read 工具对大文件/offload 产物的读回（VSC 侧同时补行数提示：default 2000 上限
+此前有描述无实现——`MAX_READ_LINES` 补入 `src/tools/shared.mjs`（CLI parity）——窗口截断时补 total 尾注）：
+
+- **判别锚（实测）**：窗口截断（`windowEnd < total`）**且**文件行数 > `MAX_READ_LINES`（2000）
+  → 双端分支。≤ 2000 行文件任何窗口走**旧路径**（默认读完整列出零变化；显式小窗口截断时含
+  `... (N lines total, use offset to continue)` total 尾注）；窗口覆盖全文件也走旧路径。
+- **返回形态**：头 N 行（请求窗口——默认 2000，offset 起，续读路径不变）+ `…(truncated:
+  K lines in middle, use offset to continue)` + 尾 M 行（文件**真实尾部**——`READ_TAIL_LINES
+  = 500`——现尾注升级为真实尾行内容）。K = 尾区起点 − 窗口终点；尾区 = 文件末 500 行，
+  起点落入窗口（重叠）→ 从窗口后开始——**任何行不重复**；剩余全被覆盖（K=0）→ 整印余段
+  **无假省略注**。hashes 模式照常（头尾行 hash 与 hashline_edit 同域）。
+
 ## 3. 实现落点与兼容性
 
 - `src/agent/run-helpers.mjs`：常量（`MAX_TOOL_RESULT`/`TOOL_RESULT_PREVIEW_HEAD`/`TOOL_RESULT_PREVIEW_TAIL`）+ `safeSliceUTF16`/`safeSliceUTF16Tail`/`buildHeadTailPreview`/`offloadToolResult`（含写时自清理）。
 - 调用点 `src/agent/execute-tools.mjs`：`offloadToolResult`（行为改、调用零改）。
-- `src/advisor/run.mjs`：`MAX_RESULT_CHARS`。
+- `src/advisor/run.mjs`：`MAX_RESULT_CHARS`（截断行为迁 `src/advisor/truncate.mjs`——2026-09-09）。
+- `src/tools/shared.mjs`：`MAX_READ_LINES`（补 2000 上限——CLI parity）。`src/tools/file.mjs`：read 双端返回（§2.9——`READ_TAIL_LINES`）。
 - `src/extension/panel-callbacks.mjs`：`onToolResult` `slice(0, 64 * 1024)`。
 - `src/extension/panel-session.mjs`：历史页工具卡 `slice(0, 64 * 1024)`。
 - `webview/lib.js`：`MAX_TOOL_OUTPUT = 64 * 1024` 已达标，不动。
@@ -103,9 +126,13 @@ preview 放大后每次落盘结果最多 64K 进模型上下文，由既有 com
 - AC7 落盘格式与清理逻辑不变：现有 offload 测试（清理/保留/目录缺失）通过（原 20_000 触发输入的测试改 >65536 输入）。
 - AC8 `npm test` 全套通过。
 - AC9 `src/` 无 16000/20000/2000/12000（工具输出相关）残留（grep 验证；区分业务常量——12000 为 advisor 截断，已改 65536）。
+- AC10 read 双端（2026-09-09 C 方案）：大文件窗口截断返回 头 + 省略注 + 真实尾（`test/read-dual-end.test.mjs`——CLI 镜像——K=0 无假注/重叠不重复/≤阈值零变化/hashes）。
+- AC11 advisor 截断双端化（2026-09-09）：超 64K 结果头尾保 + 中段注 + offset 提示（`test/advisor-truncation.test.mjs`——truncate.mjs 直驱——与 CLI byte-identical）。
 
 ## 变更记录
 
 - 2026-08-24：首版——阈值 16K→64K、preview 2K→64K、advisor 12K→64K、实时 20K→64K、历史 2K→64K。marketplace / Open VSX 0.1.49。
 - 2026-09-04：预览保头保尾修订——preview 改为头 16K + 省略注 + 尾（预算余量）；失败回退同用双端切片。
 - 2026-09-08：文档重写为人类可读当前态（批 V3b）——双端修订并入正文，折叠实现流水并更新模块落点（实时显示自 panel-chat.mjs 迁 panel-callbacks.mjs 等）。
+- 2026-09-09：read C 方案实现 + advisor 截断双端化（DUAL-END-TRUNCATION——§2.5 头尾双保 /
+  §2.9 read 双端 + 2000 上限补——truncate.mjs 拆分——CLI 同构锁步）。

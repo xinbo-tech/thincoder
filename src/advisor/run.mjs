@@ -13,6 +13,7 @@ import { injectObjectDeclaration } from "./messages.mjs"
 import { appendCitationReport } from "./citations.mjs"
 import { _resolvedAdvisorToolsFor } from "./tools.mjs"
 import { resolveAdvisorProvider } from "./provider.mjs"
+import { truncateAdvisorResult } from "./truncate.mjs"
 
 const MAX_ADVISOR_TURNS = 100
 // Mechanical convergence cap: the protocol assumes up to 5 rounds suffice
@@ -282,28 +283,9 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       }
       if (typeof result !== "string") result = JSON.stringify(result)
 
-      // Line-aware truncation: preserve line integrity
-      if (result.length > MAX_RESULT_CHARS) {
-        const lines = result.split("\n")
-        let truncated = ""
-        let charCount = 0
-        let keptLines = 0
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
-          if (charCount + line.length + 1 > MAX_RESULT_CHARS) break
-          truncated += line + "\n"
-          charCount += line.length + 1
-          keptLines++
-        }
-
-        const remainingLines = lines.length - keptLines
-        result = (
-          truncated +
-          `\n… (truncated: ${remainingLines} more lines, ${result.length} chars total)\n` +
-          `To see more content, use: read(path, offset=${keptLines + 1}, limit=200)`
-        )
-      }
+      // DUAL-END-TRUNCATION F-2 (CLI parity — truncate.mjs, 2026-09-09): 头尾双保
+      //（头 ~60% + 中段省略注 + 尾 ~40%——评审尾结论不被切）——≤ MAX_RESULT_CHARS 原样透传。
+      result = truncateAdvisorResult(result, MAX_RESULT_CHARS)
 
       return result
     }))

@@ -265,10 +265,12 @@ export const AGENT_DEFAULTS = {
   consultTimeoutMs: 600000,
   advisor: { guard: false }, // timeoutMs 面板直传；运行默认 600_000（advisor/run.mjs）
   consultModels: [], // {provider, model, effort?}[]——≤5
-  // §24 D-24a（R14——2026-09-06）：async 池按角色域容量——agent.poolLimits =
-  // { engCoder, other }——默认 eng-coder 四路、其他四路（用户裁定）；运行期每次入池
-  // 判定时读（scheduler.effectivePoolLimits——非法回退默认 4/4）。
-  poolLimits: { engCoder: 4, other: 4 },
+  // §11.1/§11.2（R14/R13——2026-09-06 + POOL-CONFIG-UNIFIED 2026-09-09）：async 池按
+  // 角色域容量——agent.poolLimits = { engCoder, other, advisor }——默认 4/4/4（eng-coder
+  // 四路/其他四路 + advisor 评审池并入同一可配体系——三池统一默认）；subagent 两键每次
+  // 入池判定时读（scheduler.effectivePoolLimits——非法回退默认 4）；advisor 键由
+  // advisor-async 独立读取器消费（与 ADVISOR_POOL_LIMIT 同值——耦合锁 config-pool.test.mjs）。
+  poolLimits: { engCoder: 4, other: 4, advisor: 4 },
 }
 
 /** Trace 段默认（对齐 CLI DEFAULTS.traces——2026-09-05 隐私裁定 enabled:false——
@@ -310,7 +312,7 @@ export function loadAgentSettings() {
     consultTimeoutMs: a?.consultTimeoutMs ?? d.consultTimeoutMs, // wall-clock watchdog per consultant (10 min)
     advisor: a?.advisor ?? d.advisor, // timeoutMs passes through panel saves; runtime default 600_000 (advisor/run.mjs)
     consultModels: Array.isArray(a?.consultModels) ? a.consultModels : d.consultModels,
-    poolLimits: a?.poolLimits ?? d.poolLimits, // §24 D-24a: async pool limits per role domain（校验在运行期读点）
+    poolLimits: a?.poolLimits ?? d.poolLimits, // §11.1/§11.2: async pool limits per role domain（校验在运行期读点——advisor 键面板显示/回退）
   }
 }
 
@@ -364,11 +366,12 @@ export function saveAgentSettingsFromPanel(payload) {
       }))
     patch.consultModels = clean.length > 0 ? clean : undefined
   }
-  // §24 D-24a（R14）：并发池分域容量（面板写同一键）。逐键正整数 ≥1；非法键丢弃
-  // （空对象/全非法 → 删整键——运行期回退默认 4/4 + 文案）。
+  // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量（面板写
+  // 同一键）。逐键正整数 ≥1；非法键丢弃（空对象/全非法 → 删整键——运行期回退默认
+  // 4/4/4 + 文案）。
   if ("poolLimits" in payload) {
     const pl = {}
-    for (const key of ["engCoder", "other"]) {
+    for (const key of ["engCoder", "other", "advisor"]) {
       const v = payload.poolLimits?.[key]
       if (Number.isInteger(v) && v >= 1) pl[key] = v
     }

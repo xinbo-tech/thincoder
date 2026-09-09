@@ -37,7 +37,7 @@ export function poolMap(parent) {
 // 字段 alias，两端可能并存同一 Map 引用）。叶子模块承载（本模块本就来池载体访问——
 // async-settle.mjs 与各族模块单向 import，模块图无环）。
 
-/** 族 → 池键：subagent/escalate 同池（_asyncSubagents——escalate 入 other 域 §24 D-24a）；
+/** 族 → 池键：subagent/escalate 同池（_asyncSubagents——escalate 入 other 域 §11.1）；
  *  advisor 独立池（_asyncAdvisors）；consult 会话池（_consultSessions）。 */
 export const ASYNC_POOL_KEYS = {
   subagent: "_asyncSubagents",
@@ -288,7 +288,7 @@ export function stallErrorText(chains) {
 
 
 /** 补位扫描（settle/cancel 释放点共用）：最早可启动（依赖全满足 + 域无冲突 + **该条目的
- *  角色域有槽**）→ 启动到该域槽满（§24 D-24a——分池语义：扫描跳过域已满的 queued——
+  *  角色域有槽**）→ 启动到该域槽满（§11.1——分池语义：扫描跳过域已满的 queued——
  *  他域腾槽不得启动本域条目——跨域不互等不互占）。纯 slot 队列与旧队首语义等价（单域
  *  视图下全部可启动 → 最早 == 队首）。条目留池（status → running——queued 过滤自然出列）；
  *  autoFor：条目级 AUTO 活读器。 */
@@ -310,7 +310,7 @@ export function refillPool(parent, autoFor = null) {
 }
 
 /**
- * §24 D-24a（AGENT-LOOP.md §24——R14 角色分池——2026-09-06）：角色域映射单一事实源。
+ * §11.1（AGENT-LOOP.md §11.1——R14 角色分池——2026-09-06）：角色域映射单一事实源。
  * role ∈ {eng-coder} → "engCoder" 池；其余（explore/plan/coder + 本端无 "sub" 角色——
  * 未知角色防御）→ "other" 池。池容量默认 ASYNC_POOL_LIMITS（engCoder 4 + other 4——
  * 用户裁定"eng-coder 四路，其他 4 路"）。VS Code 角色枚举 = explore/plan/coder/eng-coder
@@ -320,7 +320,7 @@ export function entryDomain(entry) {
   return entry?._poolDomain ?? (entry?.role === "eng-coder" ? "engCoder" : "other")
 }
 
-/** 运行中计数按域分别记（running 判定按域过滤——§24 D-24a）。 */
+/** 运行中计数按域分别记（running 判定按域过滤——§11.1）。 */
 export function runningByDomain(map) {
   const out = { engCoder: 0, other: 0 }
   for (const e of map?.values() ?? []) {
@@ -330,36 +330,48 @@ export function runningByDomain(map) {
   return out
 }
 
-/** 池容量默认（§24 D-24a——单常量 ASYNC_SUBAGENT_LIMIT 改为按角色域配置；常量保留
+/** 池容量默认（§11.1——单常量 ASYNC_SUBAGENT_LIMIT 改为按角色域配置；常量保留
  *  re-export 兼容（tests/prompts import 面——值 4 = 单域默认）。 */
 export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
 
+/** 面板生效值第三键默认（POOL-CONFIG-UNIFIED 2026-09-09——评审 #2）：effectivePoolLimits
+ *  的 advisor 键仅供面板生效值显示/读取回退——调度路径过滤不消费（spawn/refill 只读
+ *  engCoder/other——subagent 两域判定不变）——advisor 实际调度上限由 advisor-async.mjs
+ *  独立读取器决定——两路径各司其职。默认同 config-io AGENT_DEFAULTS / advisor-async
+ *  ADVISOR_POOL_LIMIT 的 advisor 值 4（耦合锁 config-pool.test.mjs——勿单侧改）。 */
+const ADVISOR_POOL_KEY_FALLBACK = 4
+const POOL_LIMIT_KEYS = ["engCoder", "other", "advisor"]
+
 /**
- * §24 D-24a 配置读取（运行期读——每次入池判定时调用——变更即生效下个 spawn）：
- * config.agent.poolLimits = { engCoder, other }——单对象配置键（②-1 A）。校验：每键
- * 正整数 ≥1（timeoutMs 先例）；非法/缺失/形状错 → 该键回退默认 4（全非法 → 4/4）。
+ * §11.1/§11.2 配置读取（运行期读——每次入池判定时调用——变更即生效下个 spawn）：
+ * config.agent.poolLimits = { engCoder, other, advisor }——单对象配置键（②-1 A）。
+ * 校验：每键正整数 ≥1（timeoutMs 先例）；非法/缺失/形状错 → 该键回退默认（4）。
  * 返回 { limits, warnings }——warnings 携带非法键文案（spawn 结果注记——T-24a4 文案面；
- * 引擎内部消费只取 limits）。
+ * 引擎内部消费只取 limits 的 engCoder/other——advisor 键仅显示/回退）。
  */
 export function effectivePoolLimits(parent) {
   const raw = parent?.config?.agent?.poolLimits
   const warn = []
-  const out = { engCoder: ASYNC_POOL_LIMITS.engCoder, other: ASYNC_POOL_LIMITS.other }
+  const out = {
+    engCoder: ASYNC_POOL_LIMITS.engCoder,
+    other: ASYNC_POOL_LIMITS.other,
+    advisor: ADVISOR_POOL_KEY_FALLBACK,
+  }
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    for (const key of ["engCoder", "other"]) {
+    for (const key of POOL_LIMIT_KEYS) {
       const v = raw[key]
       if (v !== undefined && v !== null) {
         if (Number.isInteger(v) && v >= 1) out[key] = v
-        else warn.push(`agent.poolLimits.${key}=${JSON.stringify(v)} invalid (positive integer ≥1 required) — falling back to ${ASYNC_POOL_LIMITS[key]}`)
+        else warn.push(`agent.poolLimits.${key}=${JSON.stringify(v)} invalid (positive integer ≥1 required) — falling back to ${out[key]}`)
       }
     }
   } else if (raw !== undefined && raw !== null) {
-    warn.push(`agent.poolLimits=${JSON.stringify(raw)} invalid (object { engCoder, other } required) — falling back to defaults 4/4`)
+    warn.push(`agent.poolLimits=${JSON.stringify(raw)} invalid (object { engCoder, other, advisor } required) — falling back to defaults 4/4/4`)
   }
   return { limits: out, warnings: warn }
 }
 
-/** 机械并发上限（§24 D-24a 前语义——单域全局上限 4——历史断言/导入面兼容：
+/** 机械并发上限（§11.1 前语义——单域全局上限 4——历史断言/导入面兼容：
  *  subagent-async.mjs/spawn 判定已改按域；本常量保留为单域默认值语义）。 */
 export const ASYNC_SUBAGENT_LIMIT = ASYNC_POOL_LIMITS.engCoder
 
@@ -390,9 +402,9 @@ export function refreshQueuedRows(parent) {
  * （_subIdCounter）per-run 重建，async 池沿 history._asyncSubagents 存活——无池内
  * 最大 id 续号则后续 run 会复用仍在跑的条目 id（map.set 覆盖旧条目：静默丢报告 +
  * status/cancel 错址）。spawn 路径（subagent.mjs）、escalate action、async-advisor 池
- * （advisor-async.mjs——§24 D-24b）共用——LIVES HERE（2026-09-06）：自 subagent-async
+  * （advisor-async.mjs——§11.2）共用——LIVES HERE（2026-09-06）：自 subagent-async
  * 迁入叶子模块——advisor-async 无环单向取号。
- * §24 D-24b：续号同时跨 subagent 池与 advisor 池（两池条目共用 webview 行 map 的 id
+  * §11.2：续号同时跨 subagent 池与 advisor 池（两池条目共用 webview 行 map 的 id
  * 命名空间——全局唯一防行覆盖）。
  * §27.1 F4（2026-09-07 三缺陷修复批——缺陷②）：计数器载体改 `parent.history ?? parent`
  * （_engAuditSpawns 同款先例——expando 不进会话文件）——撞 turn 上限 AUTO 续跑

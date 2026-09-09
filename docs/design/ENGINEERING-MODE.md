@@ -160,7 +160,9 @@
   subagent schema 不展示 eng-coder（§5 角色互斥）。活动面板渲染 advisor 活动块/取消
   按钮路由（`panel-messages.mjs` role=advisor）。
 - **async advisor（R13）**：depth-0 缺省后台——`advisor(type="design")` 返回 ack，
-  评审后台跑（`_asyncAdvisors` 池，ADVISOR_POOL_LIMIT=2），settle → digest 自动回；
+  评审后台跑（`_asyncAdvisors` 池，ADVISOR_POOL_LIMIT=4 默认——agent.poolLimits.advisor
+  可配——同 scope running 守卫——超限/同 scope 拒文案报生效上限——POOL-CONFIG-UNIFIED
+  2026-09-09），settle → digest 自动回；
   design 评审 settle 后 token 入槽 + `_engPersist` 直写 slot（挂起期无 onComplete 通道
   的持久化路径）。depth>0 恒同步（eng-coder 内自审不翻转）。收敛语义（轮次/cap/prior
   随实例）见 ADVISOR-CONVERGENCE.md；实例机制权威 = AGENT-LOOP.md（VSC 端建档）。

@@ -235,5 +235,7 @@
   "settings.poolEng": "Eng-coder Pool",
   "settings.poolEngHelp": "Max concurrent eng-coder subagents (async pool, per role domain).",
   "settings.poolOther": "Other Roles Pool",
-  "settings.poolOtherHelp": "Max concurrent explore/plan/coder subagents (async pool, per role domain)."
+  "settings.poolOtherHelp": "Max concurrent explore/plan/coder subagents (async pool, per role domain).",
+  "settings.poolAdvisor": "Advisor Review Pool",
+  "settings.poolAdvisorHelp": "Max concurrent background advisor reviews (agent.poolLimits.advisor — independent pool; over-limit or same-scope launches are refused, not queued)."
 }

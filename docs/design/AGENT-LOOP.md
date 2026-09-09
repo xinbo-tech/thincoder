@@ -64,7 +64,7 @@
 | `src/agent-tools/subagent-spawn-gate.mjs` | authorizeEngCoderDesignToken/executeConsumeDesignAction/resolveDesignSlot/dropExpiredTokenSlot |
 | `src/agent-tools/subagent-spec.mjs` | description 面 / modeRoleField（schema enum）；observe/send 动作描述 + 枚举（SUBAGENT-OBSERVE-SEND） |
 | `src/agent-tools/subagent-escalate-async.mjs` | 飞刀 async 引擎：turnInput 消费回调 + onToolCall 记当前工具 + settle 未投递注记（SUBAGENT-OBSERVE-SEND——与 spawn 同池 send 一致性，out-of-list） |
-| `src/agent-tools/advisor-async.mjs` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=2）+ launchAsyncAdvisor |
+| `src/agent-tools/advisor-async.mjs` | 后台评审池（`_asyncAdvisors`，ADVISOR_POOL_LIMIT=4——可配 agent.poolLimits.advisor——同 scope 守卫）+ launchAsyncAdvisor |
 | `src/agent-tools/consult.mjs` / `subagent-escalate(-async).mjs` | consult_start/stop / escalate sync+async 路径 |
 | `src/extension/chat-panel.mjs` / `panel-chat.mjs` | ChatPanel 生命周期；回合驱动经 `runAgent(p, cwd, text, callbacks, panel._abortController.signal, () => panel._autoApprove, runOpts(resume))` |
 | `src/extension/suspension.mjs` | 挂起会话驱动：waitForSettleOrWake（`panel._suspWake` 单槽）、排队合并（MAX_MERGE_ITEMS=8/MAX_MERGE_CHARS=2000） |
@@ -234,7 +234,10 @@ session — so end the turn; do not poll or wait for the result."（本体在 sp
 - **并发上限**：`ASYNC_SUBAGENT_LIMIT = 4`（历史常量，随角色分池演进——见下）；角色
   分池：`ASYNC_POOL_LIMITS { engCoder: 4, other: 4 }`，entryDomain 单一事实源
   （`role === "eng-coder" ? "engCoder" : "other"`），`agent.poolLimits` 面板可配置
-  （逐键校验 payload-wins——每键正整数 ≥1，非法 fall back 默认 4/4）；满池排队返回
+  （逐键校验 payload-wins——每键正整数 ≥1，非法 fall back 默认 4/4；**第三键 advisor——
+  POOL-CONFIG-UNIFIED 2026-09-09——effectivePoolLimits 遍历键表 3 键——仅供面板生效值
+  显示/读取回退——调度路径过滤不消费（subagent 两域判定不变）——advisor 实际调度上限
+  由 advisor-async 独立读取器决定（§9）**）；满池排队返回
   `{id, role, status:"queued", position, waiting?, reason?}`，settle 自动补位
   （refillPool 最早可启动扫描——waiting 越行不阻塞槽位）。
 - **终态**：settle 即翻 done + 墓碑（`history._asyncTombstones`）；报告自动送达——
@@ -347,8 +350,11 @@ auto-turn 消化（digest：手动档 organize-only 禁 spawn/写——动作域
   报告；error → partial merge 决策（父 `_fileMutEvents` 重叠 → 不 merge + 报告列差异；
   无重叠 → merge）；cancelled → 不入 pending。settle 即出池（status 查为 unknown——报告
   park-ALWAYS 入 pending 单容器（role=escalate）经 digest 自动到达）。escalate 经 opts.streamOutput 选入 onToken（长手术不静默）。
-- **async advisor**：`advisor-async.mjs`——`_asyncAdvisors` 独立池（ADVISOR_POOL_LIMIT=2
-  超限拒）+ launchAsyncAdvisor（design reviewId=designId / 续跑轮现铸 token / rv 实例
+- **async advisor**：`advisor-async.mjs`——`_asyncAdvisors` 独立池（ADVISOR_POOL_LIMIT=4
+  默认——**可配 agent.poolLimits.advisor（读取器每 launch 判定——非法/缺省回退 4——
+  超限拒文案报生效上限——POOL-CONFIG-UNIFIED 2026-09-09）**——同 scope 守卫：同
+  reviewType+scopeKey 有 running 记录 → 拒（settle 后逐个发起——settled 续跑 round+1
+  语义不变——与池容量守卫两关独立）+ launchAsyncAdvisor（design reviewId=designId / 续跑轮现铸 token / rv 实例
   上下文）；settle 记账（陈旧判定跨 run、token 入槽 + engPersist slot 直写、round/prior
   ≤5、cancel 不入 pending 不入槽）→ digest 注入 + guard 未决不推回 + cancelAdvisorReview。
   ≤5、cancel 不入 pending 不入槽）→ 挂起期 settle 移交 pending 单容器（role=advisor）

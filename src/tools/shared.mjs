@@ -14,6 +14,10 @@ export const MAX_STREAM_BUF = 2_000_000
 /** Max chars in a finished tool result (CLI parity). */
 export const MAX_OUTPUT_CHARS = 200_000
 
+/** Default/cap for read windows (CLI shared.mjs parity — DUAL-END-TRUNCATION 2026-09-09
+ *  补 VSC 侧 read 2000 上限：双端锁步判别锚/窗口同构）。 */
+export const MAX_READ_LINES = 2000
+
 const ENCODING_DETECT_MAX_TRIM = 3
 
 /** Incremental byte→text decoder with encoding detection (CLI shared.mjs parity).

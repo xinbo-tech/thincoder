@@ -254,6 +254,12 @@ AGENTS.md 模块清单为维护寄存器；本节为分组总览 + 「详细设�
 - 2026-09-09：模块拆分轮——webview/activity.js 579 → 287 行 + 新 activity-view.js
   （呈现叶）/activity-freeze.js（冻结叶）（hub re-export 兜住零消费点改动——
   panels/chat/streaming/测试 import 面不变——ACTIVITY-SPLIT；§11.1 活动块面）。
+- 2026-09-09：并发池统一可配置镜像（POOL-CONFIG-UNIFIED——双端同构：agent.poolLimits
+  = { engCoder, other, advisor } 三键默认 4/4/4——advisor 池并入同可配体系（默认
+  ADVISOR_POOL_LIMIT 2 → 4）——面板第三数字框 + 白名单 + 回退——effectivePoolLimits
+  键表 3 键（advisor 仅供显示/回退——调度两域判定不消费）——同 scope 并发守卫
+  （running 同 scope 拒——settled 续跑不变）——文案去数字化。同步：AGENT-LOOP §5/§9 +
+  ENGINEERING-MODE §7）。
 
 > 注：上列条目折叠单位 = 原文档逐批追加的引用/实现段落（含其内部评审轮与测试记录）；
 > 测试明细以 git log 与各批实现文件头注释为准，不复刻。

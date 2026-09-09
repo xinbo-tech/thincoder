@@ -1,8 +1,10 @@
 /**
- * advisor-async.mjs — §24 D-24b async advisor 后台评审池（AGENT-LOOP.md §24——R13——
+ * advisor-async.mjs — §11.2 async advisor 后台评审池（AGENT-LOOP.md §11.2——R13——
  * 2026-09-06——VS Code 镜像）。独立 _asyncAdvisors（复用同一套 pending/digest/注入/冻结
  * 消费机制——机制角色无关——不碰 subagent 管线）：
- * - 容量 ADVISOR_POOL_LIMIT = 2（并行评审上限）——超限新评审发起即返回错误文案（不排队）；
+ * - 容量默认 ADVISOR_POOL_LIMIT = 4（三池统一默认 4——POOL-CONFIG-UNIFIED F-1 2026-09-09）
+ *   ——可配 agent.poolLimits.advisor（读取器每 launch 判定——非法/缺省回退 4）——
+ *   超限新评审发起即返回错误文案（不排队——文案报当前生效上限）；
  * - 取消（②-6b）：⏹/cancel 定向中止 running 评审（entry.controller abort——run.mjs signal
  *   链）→ cancelled settle：不入 pending、不入 token 槽、模型可见取消提醒（"评审已取消——
  *   token 未签发"语义——注入机读线——与 subagent injectCancelReminder 同型）；
@@ -34,9 +36,24 @@ import { nextSubagentId, getAsyncPool } from "./subagent-scheduler.mjs"
 import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 
-/** §24 D-24b（②-6a）：并行评审上限 2——超限拒（不排队——评审间有依赖语义——修正轮依赖
- *  前轮处置——排队无意义）。 */
-export const ADVISOR_POOL_LIMIT = 2
+/** §11.2（②-6a）：并行评审上限默认 4（2 → 4——POOL-CONFIG-UNIFIED F-1——三池统一
+ *  默认——运行时回退权威——config-io AGENT_DEFAULTS.poolLimits.advisor 为 config 层
+ *  镜像——耦合锁 test/config-pool.test.mjs 逐键断言）——可配 agent.poolLimits.advisor——
+ *  超限拒（不排队——评审间有依赖语义——修正轮依赖前轮处置——排队无意义）。 */
+export const ADVISOR_POOL_LIMIT = 4
+
+/** §11.2 advisor 池生效上限（纯——POOL-CONFIG-UNIFIED F-2）：读 agent.poolLimits.advisor
+ *  ——合法（≥1 整数）→ 生效值；非法/缺省 → 回退 ADVISOR_POOL_LIMIT（4）。与 subagent
+ *  域 effectivePoolLimits 独立不共享——键表语义不同（subagent 两键表不含本键）。 */
+export function resolveAdvisorPoolLimit(raw) {
+  const v = raw?.advisor
+  return Number.isInteger(v) && v >= 1 ? v : ADVISOR_POOL_LIMIT
+}
+
+/** launch 判定点每次读 parent.config（变更即生效下个 launch——文案如实报生效值）。 */
+export function advisorPoolLimitFor(parent) {
+  return resolveAdvisorPoolLimit(parent?.config?.agent?.poolLimits)
+}
 
 /** 机械失败前缀（run.mjs resolve 这些文本——永不 throw）：携带它们的 settle 未产出评审
  *  判定——不得满足 guard（CLI ADVISOR_FAILURE_TEXT 同源——评审发现 #2：失败评审不得静默
@@ -130,16 +147,22 @@ export function advisorStale(parent, entry) {
 }
 
 /**
- * §24 D-24b 实例解析：同 type+scope 的 settled 记录（已完轮数最高者）→ 续跑（round+1，
+ * §11.2 实例解析：同 type+scope 的 settled 记录（已完轮数最高者）→ 续跑（round+1，
  *  prior 注入、designId 沿用——同一设计的修正轮）；无 → 新实例（round 1）。
  *  record state: running（飞行中）/settled（可续跑）/cancelled（取消——不匹配——
  *  取消轮不计轮次）。cap：记录 round ≥ MAX_REVIEW_ROUNDS → 第 6 次启动拒（修正 #4）。
+ *  同 scope 守卫（POOL-CONFIG-UNIFIED F-5——用户裁① 2026-09-09）：同 type+scope 有
+ *  running 记录 → 拒（running 并行多实例歧义放大——现只收 settled——settled 续跑
+ *  语义不变——与池容量守卫独立两关都过才启动）。
  */
 function resolveReviewInstance(parent, reviewType, paths, documents, scopeKey) {
   const runs = advisorRunsMap(parent)
   let best = null
   for (const rec of runs.values()) {
     if (rec.reviewType !== reviewType || rec.scopeKey !== scopeKey) continue
+    if (rec.state === "running") {
+      return { error: `Advisor: 此 scope 已有 ${reviewType} 评审在跑——settle 后逐个发起 — a ${reviewType} review of this scope (same documents/paths) is still running; round/prior continuation would be ambiguous — wait for it to settle, then launch the next review (AGENT-LOOP.md §11.2).` }
+    }
     if (rec.state !== "settled") continue
     if (!best || rec.round > best.round) best = rec
   }
@@ -148,7 +171,7 @@ function resolveReviewInstance(parent, reviewType, paths, documents, scopeKey) {
     // instance may continue past 5 rounds (rounds still advance for the
     // convergence prompts / round display); the cap refuses CODE instances only.
     if (reviewType !== "design" && best.round >= MAX_REVIEW_ROUNDS) {
-      return { error: `Advisor: the ${reviewType} review of this scope has reached its convergence cap (${MAX_REVIEW_ROUNDS} rounds per review instance — §24 D-24b 修正 #4) — accept the current state and proceed, review manually, or start a new session` }
+      return { error: `Advisor: the ${reviewType} review of this scope has reached its convergence cap (${MAX_REVIEW_ROUNDS} rounds per review instance — §11.2 修正 #4) — accept the current state and proceed, review manually, or start a new session` }
     }
     return { record: best, reviewId: best.reviewId, designId: best.designId ?? null, round: best.round + 1, priorOutput: best.priorOutput ?? null }
   }
@@ -157,10 +180,10 @@ function resolveReviewInstance(parent, reviewType, paths, documents, scopeKey) {
 }
 
 /**
- * §24 D-24b async 评审 launch（advisor 工具 async 分支调用——不 await 评审）。
+ * §11.2 async 评审 launch（advisor 工具 async 分支调用——不 await 评审）。
  * reviewType: "design" | "code"。design 实例：reviewId = designId（②-5——token 槽键）；
  *  designToken 每轮现铸（uuid:expiresAt 流程凭证——续跑同 id 新 token）。
- * 返回 { entry }（已启动入池）或 { error }（容量满/实例 cap/深度门——工具层转返回文案）。
+ * 返回 { entry }（已启动入池）或 { error }（容量满/实例 cap/scope 守卫/深度门——工具层转返回文案）。
  */
 export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, object }) {
   // 写侧经 agent 字段建池——安全前提 = run 起始绑定不变式（agent.mjs 在 run 起始把
@@ -168,9 +191,10 @@ export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, 
   // D1 accessor（advisorPoolMap/getAsyncPool）history 优先与之一致；direct-execute ctx
   // 回落 agent 字段同一载体）。
   const pool = (parent._asyncAdvisors ??= new Map())
+  const limit = advisorPoolLimitFor(parent)
   const running = [...pool.values()].filter((e) => e.status === "running").length
-  if (running >= ADVISOR_POOL_LIMIT) {
-    return { error: "Advisor: another review is already running (pool limit 2 — §24 D-24b ②-6a) — start reviews one at a time and wait for each to finish (另有一评审在跑——逐个发起)" }
+  if (running >= limit) {
+    return { error: `Advisor: another review is already running (pool limit ${limit} — agent.poolLimits.advisor, default ${ADVISOR_POOL_LIMIT} — §11.2 ②-6a) — start reviews one at a time and wait for each to finish (另有一评审在跑——逐个发起)` }
   }
   const scopeKey = scopeKeyOf(paths, documents, ctx.cwd)
   const inst = resolveReviewInstance(parent, reviewType, paths, documents, scopeKey)
@@ -251,7 +275,7 @@ function designReviewPassed(entry, result) {
 }
 
 /**
- * §24 D-24b settle（记账点——修正 #2/#4——在 pending 移交/消化注入之前执行）：
+ * §11.2 settle（记账点——修正 #2/#4——在 pending 移交/消化注入之前执行）：
  * ① 陈旧判定（advisorStale）→ 不置 _calledAdvisorThisRun、设计不签发 token（guard 仍推回）；
  * ② 非陈旧 + 设计通过 → token 入槽（designId 键 + D1 同步落盘权威 slot——镜像已退役 D5）；
  *   非陈旧任意完成 → _calledAdvisorThisRun = true（sync 路径 execute 后记账的镜像）；
@@ -290,7 +314,7 @@ export function settleAdvisorReview(parent, entry, result, error, notifySettle) 
   })
 }
 
-/** §24 D-24b settle 记账（①-④——onAccounting hook，仅非 cancelled/非中止的 settled
+/** §11.2 settle 记账（①-④——onAccounting hook，仅非 cancelled/非中止的 settled
  *  相位执行；ASYNC-RESULT-CONTAINER.md D3 族 hook——D1 落盘保留）。 */
 function advisorSettleAccounting(parent, entry, record) {
   const result = entry.report
@@ -380,7 +404,7 @@ function advisorSettleAccounting(parent, entry, record) {
   }
 }
 
-/** §24 D-24b 取消（②-6b——UI ⏹ 路由 + 共用核心——镜像 cancelSubagent）：
+/** §11.2 取消（②-6b——UI ⏹ 路由 + 共用核心——镜像 cancelSubagent）：
  *  running 评审 → entry.cancelled + controller.abort（run.mjs signal 链——定向中止）+
  *  机读线提醒（cancelled settle 不入 pending/不入 token 槽——"评审已取消——token 未签发"
  *  由提醒表达——digest 提示语义）。 */
@@ -403,7 +427,7 @@ export function cancelAdvisorReview(parent, id) {
   return JSON.stringify({ id, status: "cancelled" })
 }
 
-/** §24 D-24b digest 注入（同 injectAsyncResult 形态——报告 XML 转义 + >64K offload）。
+/** §11.2 digest 注入（同 injectAsyncResult 形态——报告 XML 转义 + >64K offload）。
  *  注入即消费（调用方从容器移除）。§29 fix B：报告本体由 settle 按分支清洗（通过 =
  *  Approved/designId 后缀——sync 参照形态同构；stale = 剥回显 + 未签发提示）——此处
  *  原样注入、不再附 designId 注记（未通过/未签发的 digest 附 spawn 指引会误导模型——

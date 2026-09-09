@@ -15,10 +15,12 @@ export function agentCardHtml() {
   html += `<section class="settings-card"><h4 class="settings-card-title">${t("settings.agentSection")}</h4><div class="settings-card-body">`
   html += `<div class="key-field"><label title="${t("settings.maxTurnsHelp")}">${t("settings.maxTurns")}</label><input id="ag-maxturns" type="number" min="1" value="${as.maxTurns ?? 200}"></div>`
   html += `<div class="key-field"><label title="${t("settings.subagentTurnsHelp")}">${t("settings.subagentTurns")}</label><input id="ag-subturns" type="number" min="1" value="${as.subagentTurns ?? 100}"></div>`
-  // §24 D-24a（R14）：并发池分域容量（eng-coder 池 / 其他角色池——默认 4/4）
+  // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量
+  // （eng-coder/other/advisor——默认 4/4/4——面板逐键回退 ?? 4）
   const pool = as.poolLimits || {}
   html += `<div class="key-field"><label title="${t("settings.poolEngHelp")}">${t("settings.poolEng")}</label><input id="ag-pool-engcoder" type="number" min="1" value="${pool.engCoder ?? 4}"></div>`
   html += `<div class="key-field"><label title="${t("settings.poolOtherHelp")}">${t("settings.poolOther")}</label><input id="ag-pool-other" type="number" min="1" value="${pool.other ?? 4}"></div>`
+  html += `<div class="key-field"><label title="${t("settings.poolAdvisorHelp")}">${t("settings.poolAdvisor")}</label><input id="ag-pool-advisor" type="number" min="1" value="${pool.advisor ?? 4}"></div>`
   html += `<div class="key-field"><label title="${t("settings.compactThresholdHelp")}">${t("settings.compactThreshold")}</label><input id="ag-compact" type="number" min="0" placeholder="auto" value="${as.compactThreshold ?? ""}"></div>`
   html += `<label class="switch" title="${t("settings.verifyGuardHelp")}"><input type="checkbox" id="ag-verifyguard" ${as.verifyGuard ? "checked" : ""}> ${t("settings.verifyGuard")}</label>`
   html += `<div class="settings-subtitle">${t("settings.submodelSection")}</div>`
@@ -87,16 +89,20 @@ export function bindAgentControls() {
       settings: {
         maxTurns: get("ag-maxturns") || undefined,
         subagentTurns: get("ag-subturns") || undefined,
-        // §24 D-24a（R14）：并发池分域容量——null（未填/清空）→ 删键（回退默认 4/4）
+        // §11.1/§11.2（R14/R13——POOL-CONFIG-UNIFIED 2026-09-09）：并发池三域容量——
+        // null（未填/清空）→ 删键（回退默认 4/4/4）
         poolLimits: (() => {
           const eng = get("ag-pool-engcoder")
           const other = get("ag-pool-other")
+          const adv = get("ag-pool-advisor")
           const pl = {}
           const n = (v) => { const x = Number(v); return Number.isInteger(x) && x >= 1 ? x : null }
           const en = n(eng)
           const ot = n(other)
+          const ad = n(adv)
           if (en !== null) pl.engCoder = en
           if (ot !== null) pl.other = ot
+          if (ad !== null) pl.advisor = ad
           return Object.keys(pl).length > 0 ? pl : null
         })(),
         // null (not undefined): postMessage JSON-serializes and DROPS undefined keys — a
