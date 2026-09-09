@@ -221,6 +221,11 @@
   ——#4 重发若再死凭完整错误钉死
   ——**证据补强（22:18）**：core.mjs L70-71/L430 注释自述「600s 绝对墙钟曾腰斩长上下文子代理（eng-coder
   TTFB>10min 即死）——2026-09-01 根因修复」——现 ~600s 死 = **09-01 已修 bug 复发/残留路径**——直连
+- [ ] **subagent status touched 显示不准（2026-09-09 用户实证——可观测性缺陷）**：eng-coder #1 已写完
+  engineering.md 正在跑内部 advisor code review（observe 实证 currentTool=advisor）——但 status 显示
+  touched "—（尚无改动）"——滞后/失真——UI（live 块）显示比 status 准——修：status touched 从真实写
+  入记录实时取（与 observe/UI 同源——不滞后）——status=登记——owner = 平台（subagent status 通道——与
+  advisor 池盲区/子代理 abort 无标注同属可观测性族）
   (core.mjs L433 signal 只留取消链)/proxy(proxy.mjs L263-265 头超时+body idle)均无整体墙钟残留——
   死亡另有来源——需来源标注钉死
 - [x] ~~**链终 token 消费待执行**~~——**已实现**（2026-09-08 token 根治后 consume 落盘对称——`08cabb9`——consume-design 删内存槽后当场同步落盘删除，消复活洞）
