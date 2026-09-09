@@ -31,9 +31,14 @@ export function crashReportsDir() {
 }
 
 /** 记录文件模式（评审 #8 定死）：crash-*.json = 自写（F-R25a）；report.*.json = Node
- *  fatal（默认命名 report.YYYYMMDD.HHMMSS.<pid>.<seq>.json——2026-09-07 实现批实测）。 */
+ *  fatal（默认命名 report.YYYYMMDD.HHMMSS.<pid>.<seq>.json——2026-09-07 实现批实测）。
+ *  purge 另含 tui-stderr-*.log（TUI-STDERR-CAPTURE F-2——30 天同族淘汰）——但 recentCrashHint
+ *  不计该类：tui-stderr 每次 TUI 启动都生成（正常退出也留档）——计入即正常会话误报"异常终止"。 */
 function isCrashRecordName(name) {
   return /^crash-.+\.json$/.test(name) || /^report\..+\.json$/.test(name)
+}
+function isPurgeRecordName(name) {
+  return isCrashRecordName(name) || /^tui-stderr-.+\.log$/.test(name)
 }
 
 /** >30 天淘汰（评审 #6）——写时自清理；搭车点 = 写 / 入口 mkdir / 启动扫描（复审 #4）。 */
@@ -42,7 +47,7 @@ function purgeOldCrashReports(dir) {
   let names
   try { names = readdirSync(dir) } catch { return } // 目录不存在/不可读 → 无事可做
   for (const name of names) {
-    if (!isCrashRecordName(name)) continue
+    if (!isPurgeRecordName(name)) continue
     try {
       if (statSync(join(dir, name)).mtimeMs < cutoff) unlinkSync(join(dir, name))
     } catch { /* 单个文件失败不影响其余 */ }

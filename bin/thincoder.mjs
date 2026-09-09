@@ -26,8 +26,15 @@ import { summarize, askPermission } from "../src/cli/permission.mjs"
 import { distillCommand } from "../src/cli/distill-command.mjs"
 import { prepareCrashReporting, recentCrashHint, writeCrashRecord } from "../src/crash-reports.mjs"
 import { setTuiActive, restoreTerminalAfterCrash } from "../src/tui/tui-lifecycle.mjs"
+import { spawnTuiWrapped } from "../src/tui/wrapped-spawn.mjs"
 
 const [command, ...args] = process.argv.slice(2)
+// TUI-STDERR-CAPTURE（F-1）：TUI 启动（tui/无命令）默认包装——父 spawn 子 tee stderr 落盘（外部
+// 终止/native abort——第 4 类崩溃面——诊断默认捕获）。须在 prepareCrashReporting 前（父不预建/不设
+// report——子进程做——R25 保留）。env 门已设（包装内子进程）或包装失败 → 直行现逻辑（尽力面）。
+if ((command === undefined || command === "tui") && !process.env.THINCODER_TUI_WRAPPED) {
+  if (spawnTuiWrapped()) await new Promise(() => {}) // 包装成功 → 挂起（tee/收尾退出全在 wrapped-spawn——不达下方 switch）
+}
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
 // R25（F-R25b）：crash-reports 预建 + process.report 启用——入口最前（一切重活前——缩编程
