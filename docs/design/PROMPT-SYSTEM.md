@@ -41,23 +41,25 @@
 | advisor-round1/2/3.md | 40/39/35 | 独立评审 | "You are a(n independent) code review advisor" | advisor/main.mjs L72-78 |
 | methodology-template.md | 39 | L5 兜底 | "# METHODOLOGY — AI Agent Collaboration" | setup.mjs（METHODOLOGY 缺失警告携带）+ cmd-eng.mjs |
 
-## 3. 装配矩阵（现行——以 CLI setup.mjs L319-388 为权威；VSC setup.mjs 同构 L317-334）
+## 3. 装配矩阵（目标态——2026-09-10 用户裁定：人格层恒前、system.md 恒第二；→ = "\n\n" 连接）
 
-| 场景 | 实际拼装顺序（→ = "\n\n" 连接） |
+**批准前现状提示**：代码尚未改（CLI setup.mjs L319-388 / VSC L317-334 仍是旧链 system.md 在前）——
+本矩阵为 §7 拆分批批准后的目标态；现状链见 §7 前的历史（或各批次档）。落地后本节即为权威现状。
+
+| 场景 | 目标拼装顺序 |
 |---|---|
-| 主会话·工程模式 | `system.md → engineering.md(+METHODOLOGY.md)` + AGENTS.md + skills 列表 |
-| 主会话·普通模式 | `system.md → discipline.md → main.md` + AGENTS.md + skills 列表 |
-| eng-coder 子代理 | `system.md(经agent.overlay前缀) → eng-coder.md？`——**实际：eng-coder.md(overlay) → system.md → engineering-sub.md(+METHODOLOGY)** |
-| explore/coder/plan 子代理 | `角色.md(overlay) → system.md → discipline.md` |
-| coder/eng-coder·非工程分支 | `system.md → discipline.md`（needsDiscipline L320/L363） |
-| consult 子代理 | `consult-base.md`（单独基底——无 system.md） |
-| advisor 评审 | `advisor-design.md` 或 `advisor-roundN.md`（独立会话——无主装配链） |
+| 主会话·工程模式 | `engineering.md(+METHODOLOGY.md) → system.md` + AGENTS.md + skills 列表 |
+| 主会话·普通模式 | `normal.md（新）→ system.md` + AGENTS.md + skills 列表 |
+| eng-coder 子代理 | `eng-coder.md → engineering-sub.md(+METHODOLOGY) → system.md` |
+| explore/coder/plan 子代理 | `角色.md → discipline.md → system.md`（两模式同链——人格/角色层恒前） |
+| consult 子代理 | `consult-base.md`（单独基底——不变） |
+| advisor 评审 | `advisor-design.md` 或 `advisor-roundN.md`（独立会话——无主装配链——不变） |
 
 装配尾部统一追加（全部场景）：项目指令（AGENTS.md，`<untrusted_project_instructions>` 包裹）+ depth0 的 skills 清单。
 
-### 降级链（METHODOLOGY/模板缺失）
+### 降级链（METHODOLOGY/模板缺失——目标态）
 
-- engineering.md 缺失 → 裸 corePrompt（system.md）+ templateMissing 警告
+- engineering.md 缺失 → 人格层空位裸 system.md（+templateMissing 警告）——公共基础仍恒尾完整
 - METHODOLOGY.md 缺失 → 工程模板本体（不 fallback discipline）+ 警告携带 methodology-template.md
   绝对路径与全文（D-M1/D-M2）
 - consult 无降级（consult-base 随二进制分发必在）
