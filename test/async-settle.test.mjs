@@ -8,12 +8,14 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join, dirname } from "node:path"
+import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import {
   settleAsyncEntry, getAsyncPool, parkAsyncPending, parentAborted, buildChildSignal,
 } from "../src/agent-tools/async-settle.mjs"
+import { injectAsyncResult, DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "../src/agent-tools/subagent-async.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -246,4 +248,101 @@ test("池 accessor（D1）：getAsyncPool 吸收双池——advisor → _asyncAd
   assert.equal(getAsyncPool(parent, "explore"), parent._asyncSubagents)
   assert.equal(getAsyncPool(mkParent({ _asyncSubagents: undefined }), "subagent"), null)
   assert.equal(getAsyncPool({}, "advisor"), null)
+})
+
+// ─── BATCH-3-STRUCTURE F-2：digest 注入批量预算（CLI 端——2026-09-09）───
+// 用例表 1:1：3 条 pending 30K+30K+40K（100K > 64K——尺寸钉死）→ 后条清单行（报告已落盘
+// <path>——不 inline 全文）；累计恰 64K → 全部 inline（预算含边界）；单条 ≤64K 不回归 + 轮
+// 复位/隔离。digest 轮 = 同 agent 连续注入（历史无他人落史）；预算状态键 agent——每例新
+// parent 即新轮。落盘目录经 _setDigestOffloadDirForTest 沙箱（生产路径 configDir/tool-results）。
+
+function mkBig(id, ch, n) {
+  return mkEntry(id, "explore", { report: ch.repeat(n) })
+}
+
+function assertInline(msg, ch) {
+  assert.ok(msg.content.includes(ch.repeat(200)), `${ch}×200 头段 inline`)
+}
+
+test("F-2 超预算：单 digest 轮 30K+30K+40K（合计 100K > 64K）→ 后条清单行不 inline（全文落盘 path 钉死）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  _setDigestOffloadDirForTest(dir)
+  try {
+    const parent = mkParent()
+    await injectAsyncResult(parent, mkBig(1, "A", 30000))
+    await injectAsyncResult(parent, mkBig(2, "B", 30000))
+    await injectAsyncResult(parent, mkBig(3, "C", 40000))
+    assert.equal(parent.history.length, 3)
+    assertInline(parent.history[0], "A")
+    assertInline(parent.history[1], "B") // 累计 60K ≤ 64K——第二条仍 inline
+    const third = parent.history[2].content
+    assert.ok(!third.includes("C".repeat(200)), "第三条不 inline 全文")
+    const m = third.match(/saved to disk[^:]*: (.+)/)
+    assert.ok(m, "清单行含落盘 path（报告已落盘 <path> 形态）")
+    const file = m[1].trim().split(/\n/)[0]
+    assert.ok(file.startsWith(dir), "path 来源 = digest 落盘目录")
+    assert.ok(file.includes("-async-subagent-3.log"), "命名同 offload 约定（callId 入名）")
+    assert.equal(readFileSync(file, "utf8"), "C".repeat(40000), "清单行指向的文件 = 第三条全文")
+    // 轮复位：历史他人落史（下一请求窗口）→ 预算清零——后续单条照旧 inline
+    parent.history.push({ role: "user", content: "next turn" })
+    await injectAsyncResult(parent, mkBig(4, "D", 20000))
+    assert.equal(parent.history.length, 5)
+    assertInline(parent.history[4], "D") // 新轮（累计不跨轮残留）
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("F-2 边界：累计恰 64K（32K+32K）全部 inline——预算含边界（≤ 判定）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  _setDigestOffloadDirForTest(dir)
+  try {
+    assert.equal(DIGEST_INJECT_BUDGET, 65536, "预算常量 64K")
+    const parent = mkParent()
+    await injectAsyncResult(parent, mkBig(1, "A", 32768))
+    await injectAsyncResult(parent, mkBig(2, "B", 32768))
+    assert.equal(parent.history.length, 2)
+    assertInline(parent.history[0], "A")
+    assertInline(parent.history[1], "B") // 65536 ≤ 64K——含边界全 inline
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("F-2 单条 ≤64K 不回归 + 空轮 no-op：预算不跨 agent 残留（轮隔离）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  _setDigestOffloadDirForTest(dir)
+  try {
+    const heavy = mkParent()
+    await injectAsyncResult(heavy, mkBig(1, "A", 60000)) // 耗满一轮
+    assertInline(heavy.history[0], "A")
+    // 空轮（无 pending → 无注入调用）不改变任何状态——新 agent 首条即新轮：恒 inline
+    const fresh = mkParent()
+    await injectAsyncResult(fresh, mkBig(1, "B", 30000))
+    assert.equal(fresh.history.length, 1)
+    assertInline(fresh.history[0], "B") // 单条 ≤64K 不回归（预算按 agent 隔离——heavy 轮不泄漏）
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞报告不抛——结果零丢失）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  const blocker = join(dir, "blocker") // 已存在文件——mkdir 必败 → persistDigestReport catch → null
+  writeFileSync(blocker, "x", "utf8")
+  _setDigestOffloadDirForTest(blocker)
+  try {
+    const parent = mkParent()
+    await injectAsyncResult(parent, mkBig(1, "A", 30000))
+    await injectAsyncResult(parent, mkBig(2, "C", 40000)) // 累计 70K > 64K → 超限 → 落盘失败兜底
+    assert.equal(parent.history.length, 2, "两注均入史（中途不抛——余条不丢）")
+    assertInline(parent.history[0], "A")
+    assertInline(parent.history[1], "C") // 兜底：全文 inline——报告不丢
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
 })

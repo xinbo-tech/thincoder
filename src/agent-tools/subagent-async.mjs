@@ -18,8 +18,11 @@ import {
   MIN_REPORT_CHARS, REPORT_CONTINUATION, DEFAULT_SUBAGENT_TURNS,
 } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
+import { mkdir, writeFile } from "node:fs/promises"
+import { join } from "node:path"
 import { pushReal } from "../context.mjs"
-import { offloadToolResult } from "../agent/helpers.mjs"
+import { offloadToolResult, cleanupOldToolResults } from "../agent/helpers.mjs"
+import { configDir } from "../config.mjs"
 import {
   dependentLabels, maybeRefillAsync, refreshQueuedTokens,
 } from "./subagent-scheduler.mjs"
@@ -318,6 +321,46 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
   return report
 }
 
+// ─── BATCH-3-STRUCTURE F-2：digest 注入批量预算（2026-09-09）───
+// 单 digest 轮（一次连续注入——合并轮多条 pending/collect 条目）inline 合计 ≤ 64K——防多条
+// pending 合并轮累计超限（1.3MB 请求体复发——MODEL-400 修根因后的 UX/性能防线）。四族共用
+// 常量（subagent/advisor/escalate——consult 走 injectConsultResult 族注入器）。
+export const DIGEST_INJECT_BUDGET = 64 * 1024 // 64K——与 offload 单条预览同量级
+// 轮记账：agent → { len, used }。轮界 = 相邻注入间 history 无其他落史（每次注入 pushReal 恰
+// +1——他人落史 = 新请求窗口 → 预算复位）。键 agent（会话级复用——Map 常驻一两项）。
+const digestRounds = new Map()
+function digestRoundFor(agent) {
+  const h = agent.history
+  const r = digestRounds.get(agent)
+  if (!r || h.length !== r.len + 1) {
+    const fresh = { len: h.length, used: 0 }
+    digestRounds.set(agent, fresh)
+    return fresh
+  }
+  r.len = h.length
+  return r
+}
+
+// 超限条目全量落盘（offloadToolResult 同目录同命名约定——落盘机制零动——只改 inline 决策 + 补
+// 超限条目持久化面）。返回清单行文本（inline = 仅此——不 inline 全文）。落盘失败 → null（调用
+// 方回退常规 inline 路径——offload 同款失败不吞报告语义——结果零丢失）。
+let _digestOffloadDirOverride = null
+/** Test seam: 落盘目录重定向（单测沙箱——生产从不调用）。 */
+export function _setDigestOffloadDirForTest(dir) { _digestOffloadDirOverride = dir }
+async function persistDigestReport(body, callId) {
+  try {
+    const dir = _digestOffloadDirOverride ?? join(configDir, "tool-results")
+    await cleanupOldToolResults(dir)
+    await mkdir(dir, { recursive: true })
+    const file = join(dir, `${Date.now()}-${String(callId).replace(/[^a-zA-Z0-9_-]/g, "_")}.log`)
+    await writeFile(file, body, "utf8")
+    return `Report saved to disk (digest inject budget exceeded — full text not inlined): ${file}\nRead it with the read tool (offset/limit).`
+  } catch (e) {
+    console.warn(`[digest] report persist failed — falling back to inline (report not lost): ${e.message}`)
+    return null
+  }
+}
+
 /**
  * Inject one settled async entry into the parent history as a user-role reminder
  * (§17 D-S3 — the auto channel, sole consumption path since §19.8: turn-end
@@ -328,7 +371,16 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
  */
 export async function injectAsyncResult(agent, entry) {
   const body = entry.error ?? entry.report ?? "(no report)"
-  const preview = await offloadToolResult(String(body), `async-subagent-${entry.id}`)
+  // F-2：注入前查轮累计——超限条目不 inline 全文，改清单行（全文经 persistDigestReport 落盘
+  // ——path 随行）。首条豁免（used===0 不判超）：单条大报告 >64K offload 预览照旧——轮预算
+  // 只约束累计（多条合并轮），不回归单条路径。
+  const round = digestRoundFor(agent)
+  const size = String(body).length
+  const over = round.used > 0 && round.used + size > DIGEST_INJECT_BUDGET
+  round.used += size
+  const preview = over
+    ? (await persistDigestReport(String(body), `async-subagent-${entry.id}`)) ?? await offloadToolResult(String(body), `async-subagent-${entry.id}`)
+    : await offloadToolResult(String(body), `async-subagent-${entry.id}`)
   // §11.2: advisor entries label themselves (role "advisor") — the digest
   // reminder says "async advisor review #N finished" (T-24b2 shape); subagent
   // entries keep the legacy wording verbatim.
