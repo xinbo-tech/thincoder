@@ -21,7 +21,7 @@ export function convMaxScroll(state) {
  *         wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
  *         renderWizard, pushLine, cleanup, showPicker } */
 export function createKeyHandler(ctx) {
-  const { agent, state, render, popPicker, renderPickerLines, handleSlash, handleTab, submit, pasteClipboardImage, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems, renderWizard, pushLine, cleanup, showPicker, loadOlder } = ctx
+  const { agent, state, render, popPicker, renderPickerLines, handleSlash, handleTab, submit, pasteClipboardImage, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems, renderWizard, pushLine, cleanup, showPicker, loadOlder, busySafeCommand } = ctx
 
   return function onKeypress(str, key = {}) {
     // permission confirm: y/n/a (a = approve + AUTO ON); batch (§16 D-B1): a/o/n (Esc = deny)
@@ -263,17 +263,22 @@ export function createKeyHandler(ctx) {
     }
 
     if (state.processing) {
-      // during processing, allow input (queued), but block arrow-key history and Tab completion
+      // INPUT-LOCK-ASYNC（C'——F-1/F-3/F-4/F-7）：busy（processing——含 digest auto-turn——
+      // 单一判据）输入禁用——**吞提交不吞字符**（评审 #2 (i)：字符照进输入框回显——非
+      // 白名单 Enter 提交吞 + busy 提示）；斜杠白名单检查先于吞判（F-4——键入即直执行——
+      // 不经吞）；历史导航/Tab 补全仍禁（防 yank 覆盖在编文本）；Ctrl+D 与 queue 面板已
+      // 随排队机制废弃删除（F-7）。多行换行 Enter（meta/enter——编辑）照常放行。
       if (key.name === "tab" || key.name === "up" || key.name === "down") return
-      // Ctrl+D: remove last item from queue
-      if (key.ctrl && key.name === "d") {
-        if (state.queue.length > 0) {
-          state.queue.pop()
+      const isSend = (key.name === "return" && !key.meta) || str === "\r"
+      if (isSend) {
+        const text = state.input.join("").trim()
+        // 白名单斜杠命令（/exit /help /model…——紧急控制通道）→ 落正常 Enter 流直执行
+        if (text && !busySafeCommand(text)) {
+          pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
           render()
+          return
         }
-        return
       }
-      // remaining printable characters go into input box normally
     }
 
     // Tab: slash-command completion (cycle candidates); other input ignored (\t would blow up input box, never inserted directly)
@@ -372,15 +377,23 @@ export function createKeyHandler(ctx) {
         render()
       } else {
         const text = state.input.join("").trim()
-        // §17 D-S5/F3/F7 + 偏差 #1：挂起态（suspended 或释放窗口 _suspPending）Enter =
-        // 新回合输入（非打断）——入 pendingInput 由挂起会话调度；输入框零干扰（F3）。
+        // §17 D-S5/F3/F7 + 偏差 #1 + INPUT-LOCK 单槽化（F-6——2026-09-09）：挂起态
+        // （suspended 或释放窗口 _suspPending）Enter = 新回合输入（非打断）——填
+        // pendingInput 单槽（至多一条待交接——busy 提交吞在 L265 门禁先拦，digest 期
+        // 不会到这——仅挂起空闲/释放窗口触达）由挂起会话调度；输入框零干扰（F3）。
+        // 槽满（竞态防御——不覆盖不丢失）→ 吞 + 提示，文本保留在输入框。
         if ((state.suspended || state._suspPending) && text && !text.startsWith("/")) {
+          state.pendingInput ??= []
+          if (state.pendingInput.length > 0) {
+            pushLine(`[主会话处理中 —— 已有一条消息待发送，请等其处理完成后再发送]`, C.warn)
+            render()
+            return
+          }
           state.input = []
           state.cursor = 0
           state.history.push(text)
           state.historyIndex = -1
           state._draft = null
-          state.pendingInput ??= []
           state.pendingInput.push(text)
           state._suspWake?.()
           render()

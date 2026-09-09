@@ -4,10 +4,11 @@
  * re-import（runAgentTurn ↔ suspensionSession 函数级静态环——模块求值期无顶层调用，
  * 环安全——session-slots ↔ session.mjs 同款先例）。
  *
- * §17（2026-09-02，AGENT-LOOP.md §17 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
- * 进入挂起态——输入放开（Enter = 新回合 / digest 中 Enter 排队 pendingInput）、
- * settle 事件驱动 auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无
- * 待处理输入 → 补发 done 冻结自然退出。状态机行表见 AGENT-LOOP.md §17 D-S9。
+ * §17（2026-09-02，AGENT-LOOP.md §9 D-S1..S9）：回合尾后台池非空 → 不阻塞等待，
+ * 进入挂起态——挂起空闲输入开放（Enter = 新回合填单槽 + 唤醒）、busy（processing 含
+ * digest）输入禁用（INPUT-LOCK-ASYNC C'——提交吞——2026-09-09）、settle 事件驱动
+ * auto-turn 消化（手动档 organize-only / AUTO 档全语义）、池空 + 无待处理输入 → 补发
+ * done 冻结自然退出。状态机行表见 AGENT-LOOP.md §9.2。
  */
 
 // 函数级静态环（2026-09-05）：drive 的 digestTurn/用户回合经 runAgentTurn 递归进入
@@ -20,54 +21,10 @@ import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
 import { getAsyncPool, parkAsyncPending } from "../agent-tools/async-settle.mjs"
 
-// ── §24 D-24c（R15——2026-09-06）排队用户指令合并常量：单批 ≤8 条且合并注入
-// ≤2000 字符（双端逐字一致——§22 D-Q3 常量先例）；超限截批先行（余下下批——不丢
-// 不截断单条）；单条 >2000 字符直发不进批；/cmd 不进合并（逐条保序即时）。──
-export const MAX_MERGE_ITEMS = 8
-export const MAX_MERGE_CHARS = 2000
-
-/** 合并注入形态（编号逐条——模型一次处理全部——设计措辞锚）。 */
-export function formatMergedMessages(items) {
-  return `你排队了 ${items.length} 条消息：\n${items.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n——一次处理`
-}
-
-/**
- * R15 攒批计划（纯函数——消费点共享同一事实源）：按队列顺序产出动作序列。
- * - { kind:"slash", text, count:1 }——/cmd 逐条即时执行（保序——不进合并缓冲）；
- * - { kind:"turn", text, count, merged }——文本批次：连续非 / 条目攒批（单批 ≤8 条；
- *   合并注入（格式化后）≤2000 字符；count ≥2 → merged 编号注入；count === 1 → 原文
- *   直发（含单条 >2000 字符——不进批）；超限截批先行——余下条目留待下批（不丢）。
- * 消费者每次取动作 [0] 并按 count 从源队列移除——下轮重新计划余项（边界幂等）。
- */
-export function planQueuedInput(items) {
-  const actions = []
-  const n = items.length
-  let i = 0
-  while (i < n) {
-    const cur = String(items[i])
-    if (cur.startsWith("/")) { actions.push({ kind: "slash", text: cur, count: 1 }); i++; continue }
-    let j = i
-    for (;;) {
-      if (j - i >= MAX_MERGE_ITEMS || j >= n) break
-      const it = String(items[j])
-      if (it.startsWith("/")) break
-      if (it.length > MAX_MERGE_CHARS) break // 单条超长——不进批（留作直发）
-      const cand = items.slice(i, j + 1)
-      if (cand.length > 1 && formatMergedMessages(cand).length > MAX_MERGE_CHARS) break // 批总长超限——截批
-      j++
-    }
-    // 超长条目堵头（内环一步未进）→ 该条直发（不进批——也不与前后合并）
-    if (j === i) { actions.push({ kind: "turn", text: String(items[i]), count: 1, merged: false }); i++; continue }
-    const taken = items.slice(i, j)
-    if (taken.length === 1) {
-      actions.push({ kind: "turn", text: String(taken[0]), count: 1, merged: false })
-    } else {
-      actions.push({ kind: "turn", text: formatMergedMessages(taken), count: taken.length, merged: true })
-    }
-    i = j
-  }
-  return actions
-}
+// INPUT-LOCK-ASYNC（C'——2026-09-09，本档 docs/design/INPUT-LOCK-ASYNC.md）：R15 排队
+// 用户指令合并（§24 D-24c——planQueuedInput/formatMergedMessages/MAX_MERGE_*）整批废弃
+// ——busy 提交吞 + pendingInput 单槽化（至多一条待交接——单消息逐发不攒批）。
+// 废弃记录见 AGENT-LOOP.md §11.3。
 
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
  *  poolN = _asyncSubagents + _asyncAdvisors（§24 D-24b advisor 池同面板计数——queued
@@ -217,7 +174,8 @@ async function digestTurn(ctx) {
 /**
  * §17 挂起会话驱动（D-S9 行表；由 runAgentTurn 回合尾进入，池空自然退出）：
  * - suspension：池项 settle → 入 pending → 开 auto-turn（合并消化近邻 settle）；
- *   用户 Enter → pendingInput（digest 运行中排队，D-S5）——用户输入优先于 digest；
+ *   挂起空闲用户 Enter → pendingInput 单槽（busy 含 digest 提交吞——INPUT-LOCK-ASYNC）
+ *   ——用户输入优先于 digest；
  * - auto-turn：消化中 settle 不并发开新轮（单 runAgent 循环），轮末按 pending/池态
  *   续开合并消化轮或回挂起；pendingInput 非空 → 以该消息开新回合（不触发新 digest）；
  * - §17.5.5：每次消化/会话内用户回合消费 pending 后 → freezeReclaimDigestedBlocks
@@ -250,25 +208,14 @@ export async function suspensionSession(ctx) {
   try {
     while (!state._suspAborted && !agent._sessionAbort.signal.aborted) {
       sweepSettledToPending(agent)
-      // 1. 用户输入优先（D-S5）：pendingInput（digest 期排队）→ queue（处理期排队）。
-      //    §24 D-24c（R15）：空闲消费攒批合并——同源连续文本合成单条注入（编号逐条
-      //    ——单批 ≤8 条 / ≤2000 字符；单条超长直发不进批；余下留待下批——不丢）；
-      //    /cmd 不进合并——逐条保序即时（位置 = 源内队列序）。每次取计划动作 [0]——
-      //    单回合消费后回环续取（新到消息自然并进下一回合——不设延迟窗口）。
-      const fromPending = state.pendingInput.length > 0
-      const srcLen = fromPending ? state.pendingInput.length : state.queue.length
-      if (srcLen > 0) {
-        const src = fromPending ? state.pendingInput : state.queue.map((q) => q.text)
-        const head = planQueuedInput(src)[0]
-        if (fromPending) state.pendingInput.splice(0, head.count)
-        else state.queue.splice(0, head.count)
-        if (head.kind === "slash") {
-          await ctx.handleSlash?.(head.text)
-          render()
-          continue
-        }
+      // 1. 用户输入优先（D-S5）：pendingInput 单槽（INPUT-LOCK-ASYNC C'——busy（processing
+      //    含 digest）提交吞——Enter 只可能落在挂起空闲/释放窗口——至多一条待交接——driver
+      //    消费清槽即开新回合）。R15 攒批/queue 双源已随排队机制废弃收敛（2026-09-09——
+      //    单消息交接——无合并无 /cmd 分流——key-handler 只收非斜杠文本——单消息逐发）。
+      if ((state.pendingInput?.length ?? 0) > 0) {
+        const head = String(state.pendingInput.shift())
         agent._suspended = false // 用户回合 = 普通回合语义（① 直注入 + settle 即冻结）
-        await runAgentTurn(ctx, head.text, { skipSession: true })
+        await runAgentTurn(ctx, head, { skipSession: true })
         agent._suspended = true
         // §17.5.5：该回合消化完 pending（run 首行注入）→ 逐条冻结回收驻留块
         // （不等池空——settle 锚点 splice——digest 总览文本之前；与 digest 回收同规则）
@@ -319,14 +266,13 @@ export async function suspensionSession(ctx) {
       agent._pendingAsyncResults = []
       const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
       cleanupConsultSessions(agent)
-      // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）：中止时不静默丢弃挂起期
-      // 排队的用户消息——Enter 已清空输入框并入 pendingInput（用户视为已发送），
-      // 残余转回 state.queue（{text} 条目，下个普通回合的队列循环续发——零丢失）
-      // + 提示行明示去向（不静默丢）。
-      const queuedN = state.pendingInput?.length ?? 0
-      if (queuedN > 0) {
-        state.queue.push(...state.pendingInput.splice(0).map((t) => ({ text: String(t) })))
-        pushLine(`[background work stopped — ${queuedN} queued message${queuedN > 1 ? "s" : ""} will run as a normal turn]`, C.warn)
+      // §17 round2 偏差 #2-CLI（code review round2 #2-CLI）+ INPUT-LOCK 单槽化：中止时
+      // 不静默丢弃挂起期输入——Enter 已清空输入框并入 pendingInput（用户视为已发送）——
+      // 单槽语义下残余至多一条——转回 state.queue（{text} 单条目，下个普通回合的队列
+      // 循环续发——零丢失）+ 提示行明示去向（不静默丢）。
+      if ((state.pendingInput?.length ?? 0) > 0) {
+        state.queue.push({ text: String(state.pendingInput.shift()) })
+        pushLine(`[background work stopped — the message you entered will run as a normal turn]`, C.warn)
       }
     } else {
       // D-S3 ③ 兜底：退出前残余（极端竞态）直注入再退——结果零丢失（AC-S2；

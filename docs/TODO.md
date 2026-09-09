@@ -112,7 +112,37 @@
   （pendingInput 单槽/R15 攒批合并）**废弃/简化**——隔离标记（B）**不需要**（场景从源头消失——去）——
   digest 回合结构标记（agent.mjs:265/283 assistant pushReal 同形态）如已有 digest 显示标签则保留（呈现
   层非上下文）——owning board = 挂起回合（AGENT-LOOP §17/§24 R15）+ 输入禁用（key-handler/输入框 UI）
-  ——status=方案定（C'）待设计启动——设计权在用户
+  ——Q1 用户输入反馈 = 整键吞 + busy 提示（输入框 Processing——字面 C'）/ Q2 斜杠白名单保留直执行
+    （/exit /help /model 紧急控制通道——不排队语义无冲突）——释放窗口守卫 + abort 零丢失承诺保留（单槽
+    交接等价物）——status=裁定全齐待设计启动——设计权在用户
+
+- [ ] **全异步化提示词/工具描述适配评估（2026-09-09 用户需求——改全面异步化后整体适配审计）**：
+  范围全：双端全部注入提示词（system.md/engineering.md/eng-coder.md/engineering-sub.md/METHODOLOGY.md）+
+  全部工具描述（subagent/advisor/consult/escalate/send 等——src/agent-tools/*.mjs）+ 平台提示词段
+  （advisor-design.md/advisor-convergence 等）——判据：同步时代残留措辞（async:false 显式引导/等子代理
+  完成阻塞/回合内消费结果/评审逐个发起等待/未 digest 化表述等与新异步语义不符处）——产出 = 残留清单
+  （父侧裁优先级分批修——每处修走评审链）——owning board = 提示词系统 + 工具描述——status=登记待评估
+  启动——设计权在用户
+
+- [ ] **Gitee issue 修复批（2026-09-09 用户裁攒批待设计——三 issue 勘察根因已定位）**：
+  ① IKE85W（CLI 真 bug——resolveAdvisorProvider run.mjs:330 读 agent.providers??[agent.provider]——child 只单元素
+  ——advisor.provider≠child 实际 → findProvider throw → catch 错配 403——VSC 无此缺陷（provider.mjs 读磁盘全量）
+  ——修：候选源扩 agent.config.providersList（child config 已带全量——resolveChildProvider 同款）——小改——
+  拆 Issue 2 主循环）② IKDCVV（评审反复/中断——部分设计预算 600s/100轮 + 机械重评面（Issue 1 同根 + stale/失败
+  不算数推回）+ **单发评审无断点续跑（中断=全损重来——真设计缺口）** + "停止重试"纪律未落机械——需设计项
+  ——修 Issue 1 拆主循环）③ IKCDMR（consultModels fail-fast throw 硬崩启动无修复入口 + 删除路径无级联清理
+  （removeProvider 不清悬挂引用）——模型合并 defaultModel 软失败 D-S1 范式可对齐——小改软失败化）——
+  owning board = 评审机制 + provider 校验——status=登记待设计（三一起走全链——用户裁）——设计权在用户
+
+- [ ] **异步化残留修复批（2026-09-09 全异步化适配评估产出——残留清单分级）**：
+  🔴 main.md:8 双端（"sync only when next step depends"——§7.7 前例外——与 :13 自相矛盾——改"结束回合等
+  digest/dependsOn"）+ engineering.md:16 CLI step 4 缺 async 机制段（VSC 有——CLI 漂移）🟡 engineering.
+  md:16 VSC 新旧句自相矛盾（删旧 token 句 + wait 句澄清）+ advisor.mjs:55 CLI async 参数缺机制参数限定
+  （VSC:177 有——测试只拒旧字面）🔵 main.md:13 重复句 + discipline.md:68 CLI 路由表缺 cancel（VSC:69 有）
+  ——文档面候选（ESCALATE.md async:false 句加 depth>0 指针/AGENT-LOOP 过时注——父侧裁）——**关键前置：
+  engineering.md 双端 :15/:16 已不同构（CLI:15 预检段=VSC 无 / VSC:16 async 段=CLI 无）——修 step 4 需先
+  收敛双端同基再镜像——与 MAIN-DESIGN 增强批（id=6 注入 A1-A4 中）协调——排其交付后——owning board = 
+  提示词系统——status=评估完成待设计（清单齐——设计权在用户）
 
 - [ ] **主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**：eng 模式主会话即 designer——
   设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型

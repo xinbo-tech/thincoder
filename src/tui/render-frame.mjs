@@ -72,13 +72,6 @@ export function renderPermission(permPreviewLines) {
   return [`${ansi.bold}${C.warn}❯ Permission Request${ansi.reset}`, ...permPreviewLines.map((w) => `${C.warn}${w}${ansi.reset}`)]
 }
 
-/** Queue preview (1 line when queue has items during processing). */
-export function renderQueue(state, W) {
-  if (state.queue.length === 0 || !state.processing) return ""
-  const preview = sliceByWidth(state.queue[0].text, W - 20)
-  return `${C.dim}❯ Queue: ${state.queue.length} pending${state.queue.length > 1 ? ` (next: ${preview}…)` : ` (next: ${preview})`} — Ctrl+D delete │ Ctrl+I inject${ansi.reset}`
-}
-
 /** Picker/wizard overlay panel. Returns empty when no overlay. */
 export function renderPicker(state, cols, panel, overlay) {
   if (!panel || !overlay) return []
@@ -266,7 +259,7 @@ export function renderRows(state, agent, opts) {
   if (panels.todo) put(panels.todo.y, renderTodo(visibleTasks, cols))
   if (panels.picker) put(panels.picker.y, renderPicker(state, cols, panels.picker, overlay))
   if (panels.permission) put(panels.permission.y, renderPermission(permPreviewLines))
-  if (panels.queue) put(panels.queue.y, [renderQueue(state, W)])
+  // queue 面板已撤（INPUT-LOCK-ASYNC F-7——2026-09-09——busy 提交吞——无排队展示）
   // question 自由文本态：box 内容是 layoutAnswer 行——光标布局/滚动随 box 内容走
   // （questionLayout/questionOffset）；主输入 inputLayout 此时无意义（被 question 行替换）。
   const qFree = Boolean(state.question && state.question.options.length === 0)
@@ -376,6 +369,8 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
   const ctxHint = ctxPct > 0
     ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""
-  const queueHint = state.queue.length > 0 ? ` │ queue: ${state.queue.length}` : ""
-  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${queueHint}${scrollHint} │ Enter: send${state.processing ? " (queue)" : ""} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+  // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧
+  // queue 提示（queueHint 已删——F-7）——“主会话处理中——Enter 提交禁用”
+  const enterHint = state.processing ? `主会话处理中 — Enter 提交禁用（字符可输入，回合结束请重按 Enter）` : "Enter: send"
+  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }

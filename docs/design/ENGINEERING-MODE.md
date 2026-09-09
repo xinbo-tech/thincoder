@@ -200,6 +200,25 @@
 - **锚#5 链终消费**：逐字锚见 §2.6 F3 引文（Chain-terminal token consumption…）——落点 engineering.md Mandatory Flow step 8（Delivery review）行后——双端。
 - **锚#6 凭证不落文档**：逐字锚见 §2.7 F1 引文（Credential values stay out of documents…）——落点 engineering.md Hard Rules——双端；配套全仓巡检正则与范围见 §2.7。
 - **锚#7 调度器句**（字节源 = engineering.md 调度器条款段——双端；调度器机制权威 = AGENT-LOOP §10；本文件 FR8 行引文）："overlapping domains are queued by the scheduler, never hand-serialized"。
+- **锚#8 主会话四维设计纪律（MAIN-DESIGN-ENHANCE A1-A4——2026-09-09）**（字节源 = 设计档
+  MAIN-DESIGN-ENHANCE.md「逐字锚定文本 A1-A4」——A4 为评审 #4 中性化版（落点不硬编码单端路径——
+  双端同一文本）；机制语义权威 = METHODOLOGY §7 设计文档模板细化（三层模板/方案选型对比表/单一锚
+  纪律——本节不收录压缩改写版本）；断言：prompts-async-guidance.test.mjs（双端——各端断言自身
+  驻留 fail-when-unchanged）——逐字锚与落点：
+  - **A1 勘察 checklist**（落点：engineering.md Mandatory Flow step 1——"Clarify requirements."
+    段内、"Do NOT start the design before this." 句后——需求澄清后/设计前交界，不缠需求池子条目）：
+    > 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md
+    > 地图——已有则更新不新建）② 读既有实现与先例 ③ 核测试面（既有用例/测试文件）④ 核双端对位面
+    > （CLI/VSC 镜像）⑤ 广度勘察委派 explore 子代理（不重复已委派探索——主会话不重扫）。
+  - **A2 方案对比**（落点：engineering.md step 2 首句（设计文档内容清单句）后——设计文档要求簇）：
+    > 候选方案 ≥2 时，设计文档 MUST 含**方案选型对比**子节（候选/判据/取舍/否决理由表）；单一候选
+    > 显式声明豁免（"单方案——无对比"）即可。
+  - **A3 评审前预检**（落点：engineering.md step 3——"Remind readiness" 动作句前执行）：
+    > 提"设计就绪待评审"前先跑**评审前预检**：① 需求三层具体到可设计？② 受影响文件全清单 + 行数
+    > 标注（R24a）？③ 验收标准逐条回指需求（每条可机器验证）？④ UI/交互决策全落档（无"讨论过但没
+    > 写"）？⑤ 方案对比已做？——预检不过先修，不自发起评审（发起权仍在用户）。
+  - **A4 实践沉淀**（落点：engineering.md Hard Rules「Docs capture the conversation」条尾——追加句）：
+    > 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（本端 METHODOLOGY.md）——不散落会话。
 
 ### 2.10 受影响文件（折叠注）
 
@@ -288,3 +307,6 @@
 
 - 2026-08-24 ~ 2026-09-07：机制逐批演进（发起权归用户铁律 → designId 多槽 token → eng-coder 内部交付协议与默认 async → 无签名 token（防伪层删）→ 链终消费 → 凭证不落文档 → 需求池/零裁量/docs FIRST/用户拍板≠批准提示词锚）——活机制与逐字锚已全部提炼入正文（§0-§6 及 §2.9 锚清单），本节不再重复；逐批需求-评审-实现-核销流水账已折叠，批次轨迹以 git 历史与 docs/TODO.md 为准。
 - 2026-09-07：格式债批 A 重写为人类可读当前态（DOC-REWRITE / DOC-REWRITE-LARGE §5）——无 >300 字符单行、markdown 结构正确、历史折叠；锚句字节源 = prompts 落地文本（engineering.md），对照逐字。
+- 2026-09-09：MAIN-DESIGN-ENHANCE 批——engineering.md 双端注入四维设计纪律逐字锚（A1 勘察/A2 方案
+  对比/A3 评审前预检/A4 实践沉淀——§2.9 锚#8 登记——锚文本照抄设计档逐字锚定文本）；结构语义落
+  METHODOLOGY §7（设计文档模板细化）；各端 prompts-async-guidance 驻留断言钉住。

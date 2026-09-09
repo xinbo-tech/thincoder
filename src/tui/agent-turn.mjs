@@ -21,7 +21,7 @@ import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 §17 段迁 suspension-drive.mjs
 import { ensureSessionTitle } from "../generate-title.mjs"
 import { logEvent, errText } from "../log.mjs"
-import { suspensionSession, poolLive, planQueuedInput } from "./suspension-drive.mjs"
+import { suspensionSession, poolLive } from "./suspension-drive.mjs"
 
 /** Exit-flush bound for the async end-of-run distillation (SEND-STALL-DISTILL §2.5):
  *  wait at most this long for the in-flight distill before the final session save —
@@ -283,26 +283,25 @@ async function runAgentTurnInner(ctx, text, opts) {
     render()
   }
 
-  // §17 偏差 #1 兜底：释放窗口期 Enter 已入 pendingInput——链条走到此处若池已空
-  //（挂起会话不会启动，下方 while 是最后一个消费点）则转正队列照常续发，消息不滞留
-  // 不并发。池非空时挂起会话先消费 pendingInput（D-S5 输入优先），无需此处处理。
+  // §17 偏差 #1 兜底（INPUT-LOCK 单槽化——2026-09-09）：释放窗口期 Enter 已入
+  // pendingInput 单槽——链条走到此处若池已空（挂起会话不会启动，下方 while 是最后一个
+  // 消费点）则转正队列照常续发，消息不滞留不并发。池非空时挂起会话先消费 pendingInput
+  // （D-S5 输入优先），无需此处处理。单槽语义下残余至多一条。
   if (!skipSession && !state._suspAborted && (state.pendingInput?.length ?? 0) > 0 && !poolLive(agent)) {
-    state.queue.push(...state.pendingInput.splice(0).map((t) => ({ text: String(t) })))
+    state.queue.push({ text: String(state.pendingInput.shift()) })
   }
 
-  // Queued messages: auto-process next one（§24 D-24c/R15：攒批合并——合并仅限
-  // 连续文本——/cmd 逐条保序即时——单条超长直发；每条 runAgentTurn 回合后余项
-  // 由递归层的本循环续取——边界幂等不丢）
+  // 交接消息自动续发（INPUT-LOCK 单消息——2026-09-09）：submit 不再排队（busy 提交吞）
+  // + R15 攒批删——state.queue 只剩残项单消息（释放窗口兜底/挂起中止残余——零丢失
+  // 承诺）——逐条直发；斜杠命令直接执行（保序）；回合后的续发由递归层同循环续取。
   while (state.queue.length > 0 && !state.processing) {
-    const head = planQueuedInput(state.queue.map((q) => q.text))[0]
-    state.queue.splice(0, head.count)
-    // Queued slash commands execute directly — order-preserved, never merged
-    if (head.kind === "slash") {
+    const head = state.queue.shift()
+    // 残项斜杠命令直接执行——保序、绝不合并
+    if (head.text.startsWith("/")) {
       await handleSlash(head.text)
       render()
       continue
     }
-    pushLabel(`❯ You: (from queue)`, ansi.bold + C.user)
     await runAgentTurn(ctx, head.text)
     return
   }

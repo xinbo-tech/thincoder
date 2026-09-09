@@ -3,7 +3,7 @@
  * Computes position and height of each panel from state + terminal dimensions.
  * Does not modify state — side effects are performed by the caller before rendering.
  *
- *   header → conversation → subagent 面板 → todo → picker → permission → queue → input → status
+ *   header → conversation → subagent 面板 → todo → picker → permission → input → status
  * Running subagent activity renders in a FIXED bottom panel between the
  * conversation and the todo panel (AGENT-LOOP.md §7.2.1) — full adaptive height
  * (the conversation shrinks); compressed away first on small terminals (to 0 =
@@ -127,11 +127,10 @@ export function computeLayout(state, { cols, rows }) {
     permPreviewH = 1 + permPreviewLines.length // 1 for header line
   }
 
-  // Queue preview (1 line when queue has items and processing)
-  const queueH = state.queue.length > 0 && state.processing ? 1 : 0
+  // Queue 面板已撤（INPUT-LOCK-ASYNC F-7——2026-09-09——busy 提交吞——无排队展示）
 
   // --- elastic panel: conversation takes remaining space ---
-  const fixedH = headerH + inputBoxH + statusH + pickerH + taskPanelH + permPreviewH + queueH + subagentH
+  const fixedH = headerH + inputBoxH + statusH + pickerH + taskPanelH + permPreviewH + subagentH
   let convH = Math.max(1, rows - fixedH)
 
   // 小终端高度补偿：subagent 面板最先让位（可至 0 隐藏，活动仍进缓冲区不丢），
@@ -183,13 +182,12 @@ export function computeLayout(state, { cols, rows }) {
   const todo = todoFinalH > 0 ? { y, h: todoFinalH } : null; y += todoFinalH
   const picker = pickerFinalH > 0 ? { y, h: pickerFinalH } : null; y += pickerFinalH
   const permission = permFinalH > 0 ? { y, h: permFinalH } : null; y += permFinalH
-  const queue = queueH > 0 ? { y, h: queueH } : null; y += queueH
   const inputBox = { y, h: inputBoxH }; y += inputBoxH
   const status = { y, h: statusH }
 
   return {
     W, cols, rows,
-    panels: { header, conversation, subagent, picker, todo, permission, queue, inputBox, status },
+    panels: { header, conversation, subagent, picker, todo, permission, inputBox, status },
     // precomputed content (affects height, reused during render)
     inputLayout,
     inputOffset,
