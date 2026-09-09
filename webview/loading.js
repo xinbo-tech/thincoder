@@ -16,38 +16,37 @@
  *   susp（纯后台池跑——主空闲）不显（无全停——池空自然消化完——子代理停止靠活动区
  *   逐块 ⏹）；loading:false 不再隐 abort（修 digest 间按钮闪烁 + 标题窗口/digest
  *   起跑窗口隐藏）。
- * INPUT-LOCK-ASYNC（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）：
- * - 输入锁派生 `_turnState === "running"`（评审 #3：VSC digest 属 running 已含——
- *   chat-panel.mjs:50 实证）——busy 锁输入（readOnly——保留键盘事件：Ctrl+C 全停 +
- *   Ctrl+I 注入在门禁前不误伤——红线）+ busy 占位符文案；susp/idle 解锁。
- * - 锁派生 = applyBusyLock() 单点——setLoading（loading 消息）与 panels.js 的
- *   turnState/suspension reducer 重派生共用；Ctrl+I 中断模态（input.js）经
- *   ctx._interruptMode 豁免（注入框可输入——注入通道保留）。
+ * INPUT-LOCK-ASYNC（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）→
+ * INPUT-LOCK-BEHAVIOR-REVISED（2026-09-09 修订——不禁录入只禁 send——评审通过）：busy
+ * 派生 `_turnState === "running"`（评审 #3：digest 属 running——chat-panel.mjs:50 实证）
+ * ——输入不禁（readOnly 锁移除——打字回显——send 禁由 send.js 出口守卫兜——Ctrl+C/I 门禁
+ * 前不误伤——红线）+ busy 占位符；susp/idle 默认。状态派生单点见 applyBusyLock（input.js
+ * 中断模态经 ctx._interruptMode 管占位符归属）。
  */
 import { S, ctx } from "./state.js"
 import { renderStatusBar } from "./status-bar.js"
 import { t } from "./i18n.js"
 
 /**
- * INPUT-LOCK 锁派生单点：busy（S._turnState==="running"——回合/digest/标题窗口）锁输入
- * （readOnly + busy 占位符）；susp/idle 解锁 + 默认占位符。Ctrl+I interrupt 模态激活
- * （ctx._interruptMode）时豁免——注入框需要键盘（readOnly 保留键盘事件——Ctrl+C/I 不误
- * 伤）；占位符在该模态下归 input.js 管理（applyBusyLock 不动）。
+ * INPUT-LOCK 状态派生单点：busy（S._turnState==="running"——回合/digest/标题窗口）不禁
+ * 录入（readOnly 锁移除——打字回显——Enter 拒发由 send.js 出口守卫兜——文本保留）——只
+ * 换 busy 占位符；susp/idle 默认占位符。Ctrl+I interrupt 模态（ctx._interruptMode）下
+ * 占位符归 input.js 管理（applyBusyLock 不动）。
  */
 export function applyBusyLock() {
   const busy = S._turnState === "running" && !ctx._interruptMode
-  ctx.inputEl.readOnly = busy
+  ctx.inputEl.readOnly = false // 锁移除——始终可编辑（INPUT-LOCK-BEHAVIOR-REVISED）
   if (ctx._interruptMode) return
   ctx.inputEl.placeholder = busy ? t("input.busyPlaceholder") : t("input.placeholder")
 }
 
 /**
- * Loading state: send/abort button swap + input lock + thinking phase marker.
- * INPUT-LOCK-ASYNC：busy（running）锁输入（applyBusyLock 派生——readOnly + busy 占位符）；
- * send 按钮常显（F-6 语义保留——发送由 send.js 出口守卫兜 busy 拒——readOnly 框内文本保留
- * 不吞）；Stop 只在 S._turnState==="running" 显（digest/回合执行中可停主会话——susp 纯池等
- * 待不显——子代理 ⏹ 逐块停——无全停——池空自然完）。每次调用重派生锁（显式赋值语义由
- * applyBusyLock 承担——进出 susp/running 都刷新——不依赖调用方顺序——F7）。
+ * Loading state: send/abort button swap + input state + thinking phase marker.
+ * INPUT-LOCK：busy（running）不禁录入（readOnly 锁移除——打字回显）——占位符 busy 文案；
+ * send 按钮常显（F-6 语义保留——发送由 send.js 出口守卫兜 busy 拒——文本保留不吞）；Stop
+ * 只在 S._turnState==="running" 显（digest/回合执行中可停主会话——susp 纯池等待不显——子
+ * 代理 ⏹ 逐块停——无全停——池空自然完）。每次调用重派生状态（applyBusyLock——进出 susp/
+ * running 都刷新——不依赖调用方顺序——F7）。
  */
 export function setLoading(ctx, on) {
   S._phase = on ? "thinking" : null

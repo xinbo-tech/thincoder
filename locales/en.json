@@ -10,7 +10,7 @@
   "session.renameTooLong": "Title is too long (max 60 characters)",
   "session.generatingTitle": "generating title…",
   "input.placeholder": "Ask ThinCoder... (Shift+Enter for new line)",
-  "input.busyPlaceholder": "Main session busy — sending disabled (wait for the turn to finish)",
+  "input.busyPlaceholder": "主会话处理中——Enter 提交禁用——可继续输入",
   "toolbar.send": "Send (Enter)",
   "toolbar.stop": "Stop",
   "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",

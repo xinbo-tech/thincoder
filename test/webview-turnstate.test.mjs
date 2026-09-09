@@ -5,9 +5,10 @@
  * A3（SESSION-FLOW-A——2026-09-09）→ F-6（SESSION-ACTIVITY-REVISED——2026-09-09）：
  * ③ 尾段断言再翻转——Stop 派生由 state≠idle 收窄为 state==="running"（评审 #1 定论：
  * susp = 纯后台池跑——主空闲——不显 Stop——无全停——子代理停止靠活动区每块 ⏹）。
- * INPUT-LOCK（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）：⑤ 锁派生组——
- * busy（running 含 digest——单一判据）锁输入（readOnly + busy 占位符）/susp·idle 解锁——
- * Ctrl+I 中断模态豁免（ctx._interruptMode——注入通道保留）。
+ * INPUT-LOCK（C'——2026-09-09，thincoder/docs/design/INPUT-LOCK-ASYNC.md）→ 修订
+ * （INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：⑤ 状态派生组——busy（running 含 digest——
+ * 单一判据）不禁录入（readOnly 锁移除——打字回显）+ busy 占位符 + send 拒发（Enter/发送
+ * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（ctx._interruptMode）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
@@ -25,10 +26,12 @@ import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 // ─── happy-dom 环境（必须先于 webview 模块 import——state.js 顶层读 DOM + acquireVsCodeApi）───
 
 let cleanupEnv
+let capturedPosts
 
 before(() => {
   const env = setupWebview()
   cleanupEnv = env.cleanup
+  capturedPosts = env.capturedPosts
   installChatFixture()
 })
 
@@ -44,8 +47,9 @@ async function loadWebview() {
   const loading = await import("../webview/loading.js")
   const statusBar = await import("../webview/status-bar.js")
   const panels = await import("../webview/panels.js")
+  const sendMod = await import("../webview/send.js")
   const i18n = await import("../webview/i18n.js")
-  return { S: state.S, ctx: state.ctx, t: i18n.t, setLoading: loading.setLoading, applyBusyLock: loading.applyBusyLock, renderStatusBar: statusBar.renderStatusBar, ...panels }
+  return { S: state.S, ctx: state.ctx, t: i18n.t, send: sendMod.send, setLoading: loading.setLoading, applyBusyLock: loading.applyBusyLock, renderStatusBar: statusBar.renderStatusBar, ...panels }
 }
 
 const statusLine = () => document.getElementById("status-line").innerHTML
@@ -224,52 +228,64 @@ test("④ _suspCounts 在 re-post 间不陈旧（AC-C2e）：digest 间重发/se
   assert.equal(S._suspCounts, null, "会话退出计数清空")
 })
 
-// ─── ⑤ INPUT-LOCK 锁派生（C'——AC-1/AC-2/AC-6：running 锁输入——susp/idle 解锁）───
+// ─── ⑤ INPUT-LOCK busy 输入面（修订——INPUT-LOCK-BEHAVIOR-REVISED：不禁录入只禁 send）───
 
-test("⑤ busy 锁输入（INPUT-LOCK-ASYNC）：running（普通回合/digest 同态）→ 输入锁 readOnly + busy 占位符——loading 交替不解除；susp/idle 解锁 + 默认占位符；Ctrl+I 中断模态豁免（applyBusyLock 读 ctx._interruptMode——注入通道不误伤）", async () => {
-  const { S, ctx, t, setLoading, applyBusyLock, handleTurnStateMessage } = await loadWebview()
+test("⑤ busy 不禁录入 + send 禁（INPUT-LOCK-BEHAVIOR-REVISED——AC-1/AC-2）：running → readOnly false（打字回显）+ busy 占位符 + send 拒发（Enter/发送按钮——文本保留不吞）；loading 交替不翻；susp/idle 默认占位符；Ctrl+I 中断模态占位符归属（ctx._interruptMode——注入通道不误伤）", async () => {
+  const { S, ctx, t, send, setLoading, applyBusyLock, handleTurnStateMessage } = await loadWebview()
   resetBusy({ S, ctx })
   const input = ctx.inputEl
+  const userPosts = () => capturedPosts.filter((m) => m.type === "userMessage")
 
-  // 回合/digest（running——单一判据）：loading:true 锁输入
+  // 回合/digest（running——单一判据）：loading:true —— 输入框不禁（readOnly false——可打字回显）
   handleTurnStateMessage({ type: "turnState", state: "running" })
   setLoading(ctx, true)
-  assert.equal(input.readOnly, true, "running → 输入锁（readOnly）")
+  assert.equal(input.readOnly, false, "running → 输入不禁（readOnly false——AC-1 可录入）")
   assert.equal(input.placeholder, t("input.busyPlaceholder"), "running → busy 占位符文案")
-  // loading 交替不解除锁（running 派生——与 Stop 同源同派生）
+  // 打字回显 + send 拒发（Enter 路径 = send() 出口守卫——文本保留不吞不拒收）
+  input.value = "busy 期录入的文字"
+  const before = userPosts().length
+  send()
+  assert.equal(input.value, "busy 期录入的文字", "send 拒发后文本保留输入框（AC-2——不吞）")
+  assert.equal(userPosts().length, before, "busy send 拒发——无 userMessage 发出（AC-2）")
+  assert.equal(input.placeholder, t("input.busyPlaceholder"), "拒发提示 = busy 占位符（send.js 出口守卫）")
+  // loading 交替不翻（running 派生——防 digest 间闪烁）
   setLoading(ctx, false)
-  assert.equal(input.readOnly, true, "running + loading:false → 仍锁（running 派生——防 digest 间闪烁）")
+  assert.equal(input.readOnly, false, "running + loading:false → 仍不禁（running 派生）")
+  assert.equal(input.placeholder, t("input.busyPlaceholder"), "running + loading:false → busy 占位符仍在")
 
-  // 挂起会话（susp——纯后台池跑——主空闲）：输入开放（AC-2——消息填单槽不排队）
+  // 挂起会话（susp——主空闲）：默认占位符（输入开放——消息填单槽不排队）
   handleTurnStateMessage({ type: "turnState", state: "susp" })
   setLoading(ctx, false)
-  assert.equal(input.readOnly, false, "susp → 解锁（挂起空闲输入开放）")
+  assert.equal(input.readOnly, false, "susp → 不禁录入")
   assert.equal(input.placeholder, t("input.placeholder"), "susp → 默认占位符恢复")
 
-  // digest 执行中（susp 会话内回合 → running）：再次锁（digest 属 running——评审 #3 实证）
+  // digest 执行中（susp 会话内回合 → running）：再进 busy 态
   handleTurnStateMessage({ type: "turnState", state: "running" })
   setLoading(ctx, true)
-  assert.equal(input.readOnly, true, "digest（running）→ 锁输入")
-  // digest 尾 → 回 susp：解锁
+  assert.equal(input.readOnly, false, "digest（running）→ 不禁录入（同判据）")
+  assert.equal(input.placeholder, t("input.busyPlaceholder"), "digest → busy 占位符")
+  // digest 尾 → 回 susp：默认占位符
   handleTurnStateMessage({ type: "turnState", state: "susp" })
   setLoading(ctx, false)
-  assert.equal(input.readOnly, false, "digest 尾回 susp → 解锁")
+  assert.equal(input.placeholder, t("input.placeholder"), "digest 尾回 susp → 默认占位符")
 
-  // idle：解锁（会话退出/普通回合尾）
+  // idle：默认占位符（会话退出/普通回合尾）
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   setLoading(ctx, false)
-  assert.equal(input.readOnly, false, "idle → 解锁")
+  assert.equal(input.placeholder, t("input.placeholder"), "idle → 默认占位符")
 
-  // Ctrl+I 中断模态豁免（红线——注入通道在门禁前）：running + 模态激活 → 解锁可输入；
-  // 模态退出（ctx._interruptMode 复位）→ applyBusyLock 重派生回锁
+  // Ctrl+I 中断模态（红线——注入通道保留）：模态激活期间占位符归 input.js（applyBusyLock
+  // 不动）；模态退出（ctx._interruptMode 复位）→ applyBusyLock 重派生（回 busy 占位符）
   handleTurnStateMessage({ type: "turnState", state: "running" })
+  ctx.inputEl.placeholder = "sentinel" // 模态中由 input.js enterInterruptMode 管理——applyBusyLock 不抢
   ctx._interruptMode = true
   applyBusyLock()
-  assert.equal(input.readOnly, false, "中断模态激活 → 豁免锁（注入框可输入）")
+  assert.equal(input.placeholder, "sentinel", "中断模态激活 → applyBusyLock 不碰占位符（归本模态管理）")
+  assert.equal(input.readOnly, false, "中断模态 → 输入可编辑（注入框）")
   ctx._interruptMode = false
   applyBusyLock()
-  assert.equal(input.readOnly, true, "模态退出 → 重派生回锁（busy 仍在）")
+  assert.equal(input.placeholder, t("input.busyPlaceholder"), "模态退出 → 重派生回 busy 占位符")
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   applyBusyLock()
-  assert.equal(input.readOnly, false, "idle → 终态解锁")
+  assert.equal(input.placeholder, t("input.placeholder"), "idle → 终态默认占位符")
 })

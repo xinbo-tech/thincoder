@@ -10,11 +10,10 @@ import { clearPanels } from "./panels.js"
 
 export function send() {
   const text = ctx.inputEl.value.trim()
-  // INPUT-LOCK-ASYNC（C'——2026-09-09）：busy（S._turnState==="running"——回合/digest/
-  // 标题窗口——与 loading.js 锁同判据）send 出口守卫——拒发（文本保留不吞——readOnly
-  // 输入框内容原样——忙完可重按）。webview 输入框 busy 期只读（Enter 不可达）——本守卫
-  // 兜 send 按钮点击/竞态窗口（输入框解锁瞬间的陈旧按键）。模态（question/permission——
-  // 独立控件）不受影响（AC-6）。
+  // INPUT-LOCK-ASYNC（C'——2026-09-09）→ INPUT-LOCK-BEHAVIOR-REVISED（2026-09-09）：busy
+  // （S._turnState==="running"——回合/digest/标题窗口——与 loading.js 同判据）send 出口
+  // 守卫——拒发（文本保留不吞——忙完可重按）。busy 期输入框不禁（readOnly 锁已移除——
+  // 打字回显）——Enter（input.js keydown）与发送按钮都经此拒。模态不受影响（AC-6）。
   if (!text) return
   if (S._turnState === "running") {
     ctx.inputEl.placeholder = t("input.busyPlaceholder")
