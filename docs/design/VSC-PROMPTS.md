@@ -8,6 +8,30 @@
 
 ---
 
+## 加载拼装机制（setup.mjs L315-334 + run-helpers.mjs loadEngineeringPrompt L43-63）
+
+### 主会话（depth 0）
+
+- **工程模式 on**：`SYSTEM_PROMPT(system.md)` + `engineering.md` + 项目根 `METHODOLOGY.md`（存在则
+  以 `---\n\n## Project METHODOLOGY.md` 拼尾；缺失则注入 methodology-template.md 全文作参考——
+  L55-58 missing 分支）。**main.md/discipline.md 不注入**（工程模式替换普通模式纪律块）。
+- **普通模式**：`SYSTEM_PROMPT(system.md)` + `DISCIPLINE_RULES(discipline.md)` + `MAIN_OVERLAY(main.md)`
+  （L326/L334——三件套）。engineering.md/METHODOLOGY 不注入。
+
+### 子代理（depth > 0）
+
+| 角色 | 拼装（L317-330） |
+|---|---|
+| eng-coder | eng-coder.md（overlay 顶层） + system.md + **engineering-sub.md**（L44 role 分支）+ 项目 METHODOLOGY.md（同主会话规则） |
+| explore / coder / plan | 对应 .md（overlay） + system.md + discipline.md（非工程基底——L317 engPromptActive 仅 depth 0 或 eng-coder 为真） |
+| consult | consult-base.md 单独基底（L322——不用 system.md） |
+| advisor（评审） | 不走 setup 拼装——advisor/main.mjs 独立注入：advisor-design.md（设计评审 L83）或 advisor-round1/2/3.md（代码评审轮次 L72-78） |
+
+### 降级链（L59-61）
+
+engineering.md 模板缺失 → 仅 `[ENGINEERING MODE]` + METHODOLOGY.md；两者都缺 → engResult.prompt
+为 null → 退回裸 system.md。templateMissing/methodologyMissing 随状态面提示（D-M1/D-M2 警告）。
+
 ## 现行形态（2026-09-09 注意力重排后）
 
 ### 主会话提示词（三文件——重排完成——含自动推进开关段）
