@@ -1,7 +1,11 @@
 # activity.js 拆分（ACTIVITY-SPLIT）
 
 > 板块：webview 前端（VSC——activity.js 579 行超 500 惯例拆分）。权威源：CLI subagent-blocks/freeze/panel 三文件拓扑（拆分参照）。
-> 状态：**设计待评审**——2026-09-09 落档（activity 拆分勘察 explore 一手——逐段分类 + 依赖图 + 候选对比——候选 B 推荐）。需求：TODO activity.js 579 行拆分（B1 修正交付后——advisor 🔵——挂 TODO）。
+> 状态：**已交付核销**——2026-09-09（6d66dd5——三文件 287/229/94——hub re-export 外部零改动——verbatim 机械对拍字节一致——parity 162/15 零增零减——audit clean + advisor pass——consume 18d53f6e——VSC L2 链终跑）。需求：TODO activity.js 579 行拆分（B1 修正交付后——advisor 🔵——挂 TODO）。
+>
+> 行数带外注（评审 #1 接受——eng-coder 上报 §4-1）：AC-1 view 实测 229 raw > 设计 ~210±10 上沿 220（+9）——
+> 合法下界 ≈227（头注释/imports/stopTicker/分段空行强制新增）——再压破坏 verbatim——接受带外——文档寄存器
+> 如实记 287/229/94。
 
 ---
 

@@ -67,3 +67,6 @@
 ## 变更记录（SESSION 系列补登——2026-09-09 核销）
 - `SESSION-RESTORE-PARITY.md`（恢复呈现对齐——0231627——consume 592ea112）
 - `SESSION-ACTIVITY-REVISED.md`（活动区回归/Stop 语义——5be6c67——consume f125c0d5）
+
+## 变更记录（ACTIVITY-SPLIT 补登——2026-09-09 核销）
+- `ACTIVITY-SPLIT.md`（activity.js 三文件拆分——6d66dd5——287/229/94——consume 18d53f6e）
