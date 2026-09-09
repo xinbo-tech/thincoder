@@ -67,6 +67,18 @@ test("AC-2 迁移纯函数幂等 + 老指针失效走 C 第三级（首渠道首
   assert.equal(migrateLegacyModelFields(fresh), false)
 })
 
+test("F4 混合形态：.model 与已非空 models 并存 → 默认 ∈ 候选（不产每启必弹的无效 defaultModel）", () => {
+  const raw = { providers: [{ name: "a", baseURL: "https://a", models: ["a1", "a2"], model: "a-legacy" }], activeProvider: "a" }
+  assert.equal(migrateLegacyModelFields(raw), true)
+  assert.equal(raw.defaultModel, "a:a1", "models 在场优先于遗留 .model——复合必 ∈ 候选")
+  assert.deepEqual(raw.providers[0].models, ["a1", "a2"])
+  assert.equal("model" in raw.providers[0], false)
+  // 渠道无候选时遗留 .model 仍兜底（模型名不丢）
+  const raw2 = { providers: [{ name: "b", baseURL: "https://b", model: "b1" }], activeProvider: "b" }
+  migrateLegacyModelFields(raw2)
+  assert.equal(raw2.defaultModel, "b:b1")
+})
+
 test("AC-2 写回失败绝不阻断启动（内存迁移态继续——下次 load 重试）", () => {
   const t = tmpCfg({
     providers: [{ name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k" }],

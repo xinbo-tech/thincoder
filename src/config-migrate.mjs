@@ -47,7 +47,9 @@ export function migrateLegacyModelFields(raw) {
     if (ap) {
       const models = Array.isArray(ap.models) ? ap.models : (ap.models = [])
       if (rawAM && !models.includes(rawAM)) { models.unshift(rawAM); changed = true }
-      const m = rawAM || provModel.get(rawAP) || (Array.isArray(ap.models) && ap.models.length ? ap.models[0] : "")
+      // 混合形态（.model 与已非空 models 并存）：默认必须 ∈ 候选——models 在场优先于
+      // 遗留 .model（后者只在渠道无候选时生效——防迁移自产无效 defaultModel 每启弹）
+      const m = rawAM || (models.length > 0 ? models[0] : (provModel.get(rawAP) ?? ""))
       if (m) dm = `${rawAP}:${m}`
     } else {
       dm = null // 老 activeProvider 已不存在 —— 走下方首渠道兜底
