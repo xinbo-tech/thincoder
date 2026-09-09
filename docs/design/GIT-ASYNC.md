@@ -19,9 +19,13 @@
 ## 设计（L21 深勘察骨架——照做勿自行解释）
 
 ### 1. VSC（setup-reminders.mjs）
-- collectGitContext → async：execFileAsync = promisify(execFile)——每条 `execFileAsync("git", [args], {cwd, encoding:"utf8", timeout:5000, windowsHide:true, maxBuffer})`——Promise.all 3 条 + 单 catch → ""（all-or-nothing）
+- collectGitContext → async：execFileAsync = promisify(execFile)——每条
+  `execFileAsync("git", [args], {cwd, encoding:"utf8", timeout:5000, windowsHide:true, maxBuffer: 现 execSync 同值})`
+  （评审 #1：maxBuffer **沿用现 execSync 值不变**——防大输出仓 ENOBUFS 翻转 → "" 破 AC-4 字节 parity）
+  ——Promise.all 3 条 + 单 catch → ""（all-or-nothing）
 - 抽纯格式化函数（composeGitContext({branch,log,status})——独立导出供测——detached/dirty>20 截断/clean 形态）
-- 失败冷却：模块级 Map<cwd, ts>——catch 时记 ts——30s 内跳过（直接返回 ""）
+- 失败冷却：模块级 Map<cwd, ts>——catch 时记 ts——30s 内跳过（直接返回 ""）——评审 #2：访问时惰性
+  清 >30s 旧条目（防长活 extension host 无界累积——v1 接受）
 - pushGitContext → async——修 :13 "no I/O" 过期注（git 注入进来后本就过期）
 - :17 execSync import 删（唯一用途）
 
@@ -42,15 +46,17 @@
 ### 5. 测试
 - 双端 setup-reminders.test.mjs 增镜像格式化单测（composeGitContext——detached/dirty>20 截断/clean——不需真 git）
 - 现有 hydrateRun/prepareRun 测试（mkdtemp 非 git 目录——命令快失败 → "" → 不注入——async 化行为不变断言不变——调用已 await 无需改）
-- 失败冷却单测（可选——Map 注入假失败——30s 跳过断言）
+- 失败冷却单测（评审 #3 定论——AC-3 锁 = **必做**非可选）：确定性 seam = 非 git 目录快失败模式
+  （:44 既有 mkdtemp 非 git——git 命令 ms 级失败）——catch 记 ts 后二次调用 30s 内跳过 → "" 断言——
+  不触发真 5s 超时——Map 预填 ts 注入法可选备用
 
 ## 受影响文件（双端）
 
-| 文件 | 端 | 改动 |
+| 文件 | 端 | 改动（评审 #4：行数实现期实测回填——删除行给现数锚） |
 |---|---|---|
 | src/agent/setup-reminders.mjs | VSC | collectGitContext/pushGitContext async + compose 抽 + 冷却 + 注修 |
 | src/agent/setup.mjs | VSC | :393 await + :27 死 import 删 |
-| src/context.mjs | VSC | **整体删除** |
+| src/context.mjs | VSC | **整体删除**（评审 #4：现 ~254 行锚——删除 → −254） |
 | src/agent/helpers.mjs | CLI | collectGitContext async + compose 抽 + 冷却 |
 | src/agent/setup.mjs | CLI | :89 await |
 | test/setup-reminders.test.mjs | 双端 | compose 单测 + 冷却单测 |
