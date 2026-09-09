@@ -135,9 +135,11 @@ function extractSlotMeta(history, activeProvider, updatedAt, title = "") {
   }
 }
 
-/** Extract preview summary from session data for manifest storage (with current timestamp) */
+/** Extract preview summary from session data for manifest storage (with current timestamp)
+ *  MODEL-MERGE-SESSION：摘要升级带 activeModel——listSlots 合成显 "p:m"（双端同规则）。 */
 export function slotDigest(data) {
   const meta = extractSlotMeta(data.history ?? [], data.activeProvider, data.updatedAt, data.title ?? "")
+  if (data.activeModel) meta.activeModel = data.activeModel
   return { ts: Date.now(), ...meta }
 }
 
@@ -356,6 +358,7 @@ function loadSlotMeta(cwd, slot, v) {
     const data = JSON.parse(readFileSync(p, "utf8"))
     const history = data.history ?? []
     const meta = extractSlotMeta(history, data.activeProvider, data.updatedAt ?? ts, data.title ?? "")
+    if (data.activeModel) meta.activeModel = data.activeModel
     return { ts, ...meta }
   } catch {
     return { ts }
@@ -381,7 +384,9 @@ export function listSlots(cwd) {
         messageCount: meta.messageCount ?? 0,
         turnCount: meta.turnCount ?? 0,
         firstMessage: meta.firstMessage ?? "",
-        activeProvider: meta.activeProvider ?? "",
+        // MODEL-MERGE-SESSION 摘要 "p:m"：activeProvider 保持裸渠道名——列表消费面显复合
+        // （旧摘要无 activeModel → 回退裸渠道名——新老兼容；cmd-session/VSC sessions 行免改）
+        activeProvider: meta.activeProvider ? (meta.activeModel ? `${meta.activeProvider}:${meta.activeModel}` : meta.activeProvider) : "",
         updatedAt: meta.updatedAt ?? meta.ts,
         updatedDate: new Date(meta.updatedAt ?? meta.ts).toLocaleString(),
         title: meta.title ?? "",

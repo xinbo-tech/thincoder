@@ -15,6 +15,7 @@
 
 import { readFileSync, renameSync, existsSync, statSync } from "node:fs"
 import { basename } from "node:path"
+import { resolveCompactThreshold } from "./config.mjs"
 import {
   slotPath, writeSessionFile, loadManifest, saveManifest, slotDigest,
   activeSlot, getSessionId, isProcessAlive,
@@ -123,8 +124,10 @@ export function saveSession(agent) {
     version: 2,
     cwd: agent.cwd,
     title: agent.title ?? "",
-    activeProvider: agent.activeProvider ?? agent.provider?.name,
-    activeModel: agent.activeModel ?? null,
+    // MODEL-MERGE-SESSION 槽双字段恒非空（裁定 a）：有 provider 即携带具体复合值——
+    // 恢复不看 config（F-4）——无渠道默认可回落 ""/null（全新未配态——读侧容忍）
+    activeProvider: agent.activeProvider ?? agent.provider?.name ?? "",
+    activeModel: agent.activeModel ?? agent.provider?.model ?? null,
     updatedAt: Date.now(),
     history,
     contextHistory,
@@ -252,20 +255,24 @@ function stripTruncatedToolArgs(m) {
   return changed ? { ...m, tool_calls } : m
 }
 
-/** Apply loaded session data onto an agent object; returns true if provider was switched.
- *  2026-08-31 会诊 F1：清空 _slot/_slotMtime 缓存——切换后下次保存重新认领（F1b 回归：
- *  switchToSlot 后保存必须落新槽而非旧槽）。 */
+/** Apply loaded session data onto an agent object; returns true if the runtime composite
+ *  was switched. 2026-08-31 会诊 F1：清空 _slot/_slotMtime 缓存——切换后下次保存重新认领。
+ *
+ *  MODEL-MERGE-SESSION（F-4）applySession 重写为两支 + 删旧支（评审 #7/#9 措辞——防
+ *  "三支"误读）：
+ *  ① 槽 provider 存在 → provider/model 按槽值设（双字段恒非空——模型取 data.activeModel，
+ *     legacy 槽 null/缺省回该渠道首候选 models[0]——老"渠道默认"语义的唯一残留形态）+ 重算
+ *     compactThreshold（auto 时——按恢复后模型）——不看 config（defaultModel 只是新会话起点）；
+ *  ② 槽 provider 没了 → D-S3 保留——静默保持现状（config 有效则有效——两方都无效由调用侧
+ *     复验 validateProvider 弹重选）。
+ *  删旧支："activeModel==null 清 stale override 回渠道默认"——前提 = 渠道默认字段——已随
+ *  三旧层删除消失——双字段恒非空故不可能触发（评审 #7）。 */
 export function applySession(agent, data) {
-  // data.history is the FULL never-compacted record (human line); data.contextHistory is the
-  // (possibly compacted) machine line. Restore each line from its own source — the machine
-  // context keeps its compaction savings across resume. Legacy files without contextHistory
-  // fall back to seeding the machine line from the full history (it re-compacts when needed).
-  // 2026-08-31 会诊 deepseek 🟡：机读线必须从 contextHistory 恢复而非从完整 history 重建——
-  // 后者会把已压缩的中间过程塞回上下文（实测 prompt 膨胀到 283%）。compactThresholdAuto 时
-  // 按恢复后的模型重新推导阈值（bin/thincoder.mjs）。v1 老文件（无 contextHistory）回退
-  // 播种时剥离被 slimForDisplay 截断的 tool_calls.arguments（以 … 结尾 → 置 {}；会诊 F6——
-  // 截断可劈断 \\uXXXX 产生 400 毒载荷）。2026-09-01 会诊三家：length > 0 才当机读线
-  // （contextHistory: [] 是"无机读线"而非空机器线——空机器线会静默丢全部上下文）。
+  // 机读线语义（历史注释保留）：data.history = FULL 未压缩记录（人读线）；data.contextHistory =
+  // 压缩后机器线——恢复各从其源（保留压缩收益——从完整 history 重建会塞回中间过程——实测
+  // prompt 膨胀 283%）。v1 老文件（无 contextHistory）回退播种，剥离被 slimForDisplay 截断的
+  // tool_calls.arguments（… 结尾 → 置 {}——截断可劈断 \\uXXXX 产生 400 毒载荷）。length > 0 才
+  // 当机读线（contextHistory: [] 是"无机读线"而非空机器线——空机器线静默丢全部上下文）。
   agent.config ??= {} // ACP test mocks may omit config; be defensive like the ??= below
   const full = Array.isArray(data.history) ? data.history : []
   // SESSION.md §11.2（2026-09-08——F2/F3）：恢复事件按当前 data 重定——载入历史非空 = 会话
@@ -308,27 +315,28 @@ export function applySession(agent, data) {
   agent._verifyPassed = false
   agent._slot = null // 粘性缓存清空——切换后重新认领（F1b）
   agent._slotMtime = null
-  if (data.activeProvider && data.activeProvider !== agent.activeProvider) {
-    const p = agent.providers?.find((pr) => pr.name === data.activeProvider)
-    if (p) {
-      agent.provider = { ...p }
-      agent.activeProvider = p.name
-      agent.activeModel = data.activeModel ?? null
-      if (agent.activeModel) agent.provider.model = agent.activeModel
-      return true
+  // ── MODEL-MERGE-SESSION 恢复（F-4——两支）──
+  const slotProvider = data.activeProvider ? agent.providers?.find((pr) => pr.name === data.activeProvider) : null
+  if (slotProvider) {
+    // ① 槽 provider 存在 → 按槽值设（不看 config）：双字段恒非空——legacy 槽 activeModel
+    //    null/缺省 = 无 override——回该渠道首候选（models[0]——老"渠道默认"的唯一残留形态）
+    const prevName = agent.activeProvider
+    const prevModel = agent.activeModel ?? null
+    const models = Array.isArray(slotProvider.models) ? slotProvider.models : []
+    const slotModel = data.activeModel ?? models[0] ?? null
+    const switched = prevName !== slotProvider.name || prevModel !== slotModel
+    agent.activeProvider = slotProvider.name
+    agent.activeModel = slotModel
+    agent.provider = { ...slotProvider }
+    if (slotModel) agent.provider.model = slotModel
+    // 重算 compactThreshold（auto 时——阈值跟模型走；原在 bin 的 switched 分支——收拢本处）
+    if (switched && agent.config?.agent?.compactThresholdAuto && agent.provider.model) {
+      agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
-  } else if (data.activeModel != null) {
-    // Same provider, different model
-    agent.activeModel = data.activeModel
-    if (agent.activeModel && agent.provider) agent.provider.model = agent.activeModel
-  } else if (data.activeProvider && data.activeProvider === agent.activeProvider) {
-    // Same provider, session has no activeModel → clear stale override
-    agent.activeModel = null
-    if (agent.provider) {
-      const p = agent.providers?.find((pr) => pr.name === agent.activeProvider)
-      if (p) agent.provider.model = p.model
-    }
+    return switched
   }
+  // ② 槽 provider 没了 → D-S3 保留——静默保持现状（不报错不纠正——config 有效则静默用
+  //    config/defaultModel 运行时；两方都无效由调用侧复验 validateProvider 弹重选）
   return false
 }
 

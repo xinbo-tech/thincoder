@@ -96,7 +96,7 @@ Usage:
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version
 
-Config: ~/.thincoder/config.json (providers[] + activeProvider; manage via /provider, /model in TUI)
+Config: ~/.thincoder/config.json — providers[] (models[] candidates) + defaultModel (new-session starting point); manage via /config → 默认模型 and /model (session-level) in TUI
 `
 
 /** Unified message when no API key is configured */
@@ -131,10 +131,11 @@ switch (command) {
     if (crashNotice) console.error(crashNotice)
 
     const agent = await assembleAgent()
-    // SESSION.md §8 D-S4（F4）：headless 无 TUI —— 可读错误 + 退出码 1，不弹 UI、不崩溃
+    // SESSION.md §8 D-S4（F4）+ MODEL-MERGE-SESSION：headless 无 TUI —— 可读错误 + 退出码 1，
+    // 不弹 UI、不崩溃；文案改引 defaultModel（F-6 引导 A headless 面——/config → 默认模型）
     if (agent._providerInvalid) {
-      const prov = agent.activeProvider || "(未设置)"
-      console.error(`[error] 未配置有效 provider（activeProvider "${prov}"：${agent._providerInvalidReason}）。请运行 thincoder 进入 TUI 重新选择，或编辑 ${configPath}`)
+      const dm = agent.config?.defaultModel
+      console.error(`[error] 未配置有效模型（defaultModel "${dm ?? "(not set)"}"：${agent._providerInvalidReason}）。请运行 thincoder 进入 TUI 设置（/config → 默认模型；或 /model 选择后以会话槽生效），或编辑 ${configPath}`)
       exitSoon(1)
       break
     }
@@ -288,13 +289,8 @@ switch (command) {
     const { resumeSlot, applySession } = await import("../src/session.mjs")
     const { slot, data } = resumeSlot(process.cwd())
     if (data) {
-      const switched = applySession(agent, data)
-      if (switched && agent.config?.agent?.compactThresholdAuto) {
-        // 压缩阈值跟模型走（与 TUI 切换 provider 时的处理一致）；传 provider 对象——
-        // providers[].context 覆盖生效（PROVIDER.md §15 T-C2）
-        const { resolveCompactThreshold } = await import("../src/config.mjs")
-        agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
-      }
+      // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支
+      applySession(agent, data)
       // SESSION.md §11.2（2026-09-08——N6 评审 🔴 修复）：process restarted 句 = 进程级
       // 信号——仅本启动 resume 路径设一次（真进程重启恢复盘上会话）；/session 切换与 ACP
       // 加载走同一 applySession 收敛但不设（不误报进程重启）。prepareRun 发句即清——进程

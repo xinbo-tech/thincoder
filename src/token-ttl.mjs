@@ -237,7 +237,8 @@ export function persistEngTokens(agent) {
       cwd: agent.cwd,
       title: agent.title ?? "",
       activeProvider: agent.activeProvider ?? agent.provider?.name,
-      activeModel: agent.activeModel ?? null,
+      // MODEL-MERGE-SESSION 恒非空形态：随 saveSession 同款回落链（无渠道仍容忍 null）
+      activeModel: agent.activeModel ?? agent.provider?.model ?? null,
       history: [],
       contextHistory: [],
       tasks: agent.tasks ?? [],

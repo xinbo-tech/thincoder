@@ -16,18 +16,20 @@ import { ansi, C } from "./ansi.mjs"
 export function createWizard(ctx) {
   const { agent, state, pushLine, pushLabel, render, persistRaw } = ctx
 
-  /** Candidates for the menu step: existing providers (marked "no key" if missing), unadded presets, custom */
+  /** Candidates for the menu step: existing providers (marked "no key" if missing), unadded presets, custom
+   *  MODEL-MERGE-SESSION：渠道默认模型字段已删——显示首候选（models[0]——preset 种子 [原 model]） */
   function wizardProviderItems() {
     const items = []
     for (const p of agent.providers) {
-      items.push({ kind: "existing", name: p.name, baseURL: p.baseURL, model: p.model, label: `${p.name} (added${p.apiKey ? "" : ", no key"})` })
+      items.push({ kind: "existing", name: p.name, baseURL: p.baseURL, model: p.models?.[0] ?? "", label: `${p.name} (added${p.apiKey ? "" : ", no key"})` })
     }
     for (const [name, p] of Object.entries(PRESETS)) {
       if (!agent.providers.some((x) => x.name === name)) {
         items.push({
-          kind: "preset", name, baseURL: p.baseURL, model: p.model, label: `${name} (${p.desc})`,
+          kind: "preset", name, baseURL: p.baseURL, model: p.models?.[0] ?? "", label: `${name} (${p.desc})`,
           // 预设自身声明的扩展字段随 preset 直达落盘（code review 🟡——与 pickers preset 路径同构；
           // claude/gemini 缺 format、deepseek/glm 缺 thinking/maxTokens 会静默错配）；不新增提问步。
+          models: [...(p.models ?? [])],
           format: p.format, thinking: p.thinking, reasoningEffort: p.reasoningEffort,
           maxTokens: p.maxTokens, chatPath: p.chatPath,
         })
@@ -109,8 +111,8 @@ export function createWizard(ctx) {
       w.step = "name"
     } else {
       w.fields = { name: item.name, baseURL: item.baseURL, model: item.model }
-      // preset 直达：预设声明的扩展字段（format/thinking/maxTokens/chatPath…）直接带进 fields——
-      // 无 format 提问步（T-C4）但落盘不丢字段（code review 🟡——picker preset 路径同款复制）。
+      // preset 直达：models 种子随行（preset.models → 落盘渠道候选）——其余扩展字段照旧
+      if (item.models?.length) w.fields.models = item.models
       for (const k of ["format", "thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
         if (item[k]) w.fields[k] = item[k]
       }
@@ -145,46 +147,54 @@ export function createWizard(ctx) {
 
   function cancelWizard() {
     state.wizard = null
-    pushLine("Skipped initial setup. Use /model to add providers and configure API keys anytime.", C.dim)
+    // MODEL-MERGE-SESSION 引导 A（F-6）：有 provider 但 defaultModel 未设时指引 /config 入口
+    const hint = (agent.providers?.length ?? 0) > 0 && !agent.config?.defaultModel
+      ? "Skipped initial setup. 已配置渠道但 config.defaultModel 未设——新会话无起点：/config → 默认模型 设置一次（或 /model 仅改本会话）。"
+      : "Skipped initial setup. Use /model to add providers and configure API keys anytime."
+    pushLine(hint, C.dim)
     render()
   }
 
-  /** Wizard complete: write provider (update if exists), set active, persist, then open model picker */
+  /** Wizard complete: write provider (update if exists) with models[] 种子, set config.defaultModel
+   *  （裁定⑦——首配模型即写 defaultModel——新会话起点）, then open the session model picker. */
   async function finishWizard() {
     const f = state.wizard.fields
     state.wizard = null
     // D-C2：format 非默认（anthropic/google）时落盘；openai = 默认省略（与 D-C1 picker 路径同构）
-    const providerRec = { name: f.name, baseURL: f.baseURL, model: f.model, apiKey: f.key }
+    // MODEL-MERGE-SESSION：渠道默认 model 字段退役 → models 种子（preset 自带；custom 单模型入种）
+    const providerRec = { name: f.name, baseURL: f.baseURL, models: [...(f.models ?? [f.model])], apiKey: f.key }
     if (f.format && f.format !== "openai") providerRec.format = f.format
-    // code review 🟡：preset 直达带来的扩展字段一并落盘（truthy 语义与 pickers preset 分支一致——
-    // thinking: null 不落；Custom 路径无这些字段不受影响）
     for (const k of ["thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
       if (f[k]) providerRec[k] = f[k]
     }
     // D-F5a（wizard finishWizard——清单外同型写回补正）先盘后存：磁盘 fresh raw 单操作
-    // （upsert 目标项 + active 指针）——冲突放弃不留下内存 ghost（F5 约定）
+    // （upsert 目标项 + defaultModel + 清 legacy 字段）——冲突放弃不留下内存 ghost（F5 约定）
     await persistRaw((raw) => {
       raw.providers ??= []
       const existing = raw.providers.find((p) => p?.name === f.name)
       if (existing) Object.assign(existing, providerRec)
       else raw.providers.push(providerRec)
-      raw.activeProvider = f.name
-      raw.activeModel = undefined  // reset to default model
+      raw.defaultModel = `${f.name}:${providerRec.models[0] ?? f.model}`
+      delete raw.activeProvider
+      delete raw.activeModel
+      // 渠道老 model 字段清理（wizard 直写路径——不依赖下次 load 迁移）
+      if (existing && "model" in existing) delete existing.model
     })
     const existing = agent.providers.find((p) => p.name === f.name)
     if (existing) Object.assign(existing, providerRec)
     else agent.providers.push(providerRec)
     agent.activeProvider = f.name
-    agent.activeModel = null
+    agent.activeModel = providerRec.models[0] ?? f.model
     agent.provider = { ...agent.providers.find((p) => p.name === f.name) }
+    agent.provider.model = agent.activeModel
     if (agent.config?.agent?.compactThresholdAuto) {
       const { resolveCompactThreshold } = await import("../config.mjs")
-      agent.config.agent.compactThreshold = resolveCompactThreshold(null, f.model).value
+      agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
-    agent.config.activeProvider = f.name
-    agent.config.activeModel = null
+    // agent.config 是 loadConfig merged——无 active* 键可写——defaultModel 随内存 merged 更新
+    agent.config.defaultModel = `${f.name}:${agent.activeModel}`
     pushLabel(`❯ Setup`, ansi.bold + C.tool)
-    pushLine(`Setup complete: ${f.name} / ${f.model} (saved to config)`, C.tool)
+    pushLine(`Setup complete: ${f.name} / ${agent.activeModel} (defaultModel 已设——新会话起点)`, C.tool)
     // embedding key: if provided, enable vector search; if not, show how to enable later
     if (f.embedkey) {
       // D-F5b 语义先盘后存（embedding 单键补丁——冲突放弃不留 ghost）
@@ -199,7 +209,7 @@ export function createWizard(ctx) {
     } else {
       pushLine(`Vector search disabled (memory falls back to text-only search). Run /config embedkey <key> to enable.`, C.dim)
     }
-    pushLine(`Select model (Esc to keep ${f.model})`, C.dim)
+    pushLine(`Select model (Esc to keep ${agent.activeModel})`, C.dim)
     ctx.openModelPicker().catch((e) => pushLine(`[error] ${e.message}`, C.error))
   }
 

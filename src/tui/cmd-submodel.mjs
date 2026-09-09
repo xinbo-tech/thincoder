@@ -26,7 +26,9 @@ function slotDisplay(agent, role) {
  *  /submodel <type> <value>         → set a role slot
  *  /submodel <type>                 → show a slot
  *  /submodel reset [type]           → clear global (or a slot)
- *  value forms: provider:model | provider name | model name (same as subagent tool model arg) */
+ *  value forms: provider:model | provider name | model name (same as subagent tool model arg) —
+ *  MODEL-MERGE-SESSION：会话模型 = provider:model 复合（agent.activeProvider/activeModel 双字段
+ *  恒非空——无渠道默认字段——父会话模型引用一律复合值）。 */
 export async function handleSubmodelCommand(ctx, args = []) {
   const { agent, pushLine, showPicker, askQuestion, persistRaw, pickModelForSlot } = ctx
   const input = args.join(" ").trim()
@@ -132,7 +134,8 @@ export async function handleSubmodelCommand(ctx, args = []) {
         pushLine(`Subagent global model set to \`${value}\`.`, C.text)
       }
     } else if (sub.action === "parent") {
-      const value = `${agent.activeProvider}:${agent.activeModel ?? agent.provider?.model}`
+      // 会话复合值语义（MODEL-MERGE-SESSION——activeModel 恒非空——不再回退渠道字段）
+      const value = `${agent.activeProvider}:${agent.activeModel ?? ""}`
       if (role) {
         await persist((a) => { a.subagentModels ??= {}; a.subagentModels[role] = value })
       } else {

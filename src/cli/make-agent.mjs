@@ -20,7 +20,7 @@ export async function assembleAgent() {
   const { injectProxy } = await import("../proxy.mjs")
   injectProxy(providers, config)
   // config.provider 是 loadConfig 里的独立拷贝，同步注入结果
-  provider.proxyUri = providers.find((p) => p.name === config.activeProvider)?.proxyUri
+  if (provider?.name) provider.proxyUri = providers.find((p) => p.name === provider.name)?.proxyUri
 
   const memory = createMemory({ dbPath: config.memory.dbPath })
   // Vector retrieval: enabled if embedding is configured (lazy vector generation, computed on first search)
@@ -107,12 +107,18 @@ export async function assembleAgent() {
     memory,
   })
   agent.providers = providers
-  agent.activeProvider = config.activeProvider
-  agent.activeModel = config.activeModel ?? null
+  // MODEL-MERGE-SESSION：config 无 active*——会话运行时起点 = defaultModel 复合解析
+  // （provider 对象带解析后 model——API/spec 消费点零改）；无效 → {} + 原因走 D-S1 标记
+  agent.activeProvider = provider.name ?? ""
+  agent.activeModel = provider.model ?? null
   agent._mcpWarnings = mcpWarnings
   // SESSION.md §8 D-S1：assembleAgent 后唯一校验点（TUI/chat 两路径同源）——不抛错不退出，
   // 标记由调用侧消费（TUI 弹重选 / headless 报错）。空 provider 由 TUI 路径在 startTUI 前清空。
   validateProvider(agent)
+  // defaultModel 无效/未设的具体原因覆盖通用判据文案（providers 存在时更有指导性）
+  if (agent._providerInvalid && config.providerInvalidReason) {
+    agent._providerInvalidReason = config.providerInvalidReason
+  }
   return agent
 }
 

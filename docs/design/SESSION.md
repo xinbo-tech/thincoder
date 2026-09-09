@@ -81,8 +81,8 @@
   "version": 2,            // 格式版本（1 = 旧单线；2 = 双线；>2 的新版文件只读不动）
   "cwd": "D:\\teamcode",   // 会话目录（hash 依据；恢复校验"是不是别人的文件"）
   "title": "…",            // 会话标题（/session 列表显示）
-  "activeProvider": "deepseek",
-  "activeModel": null,
+  "activeProvider": "deepseek",   // MODEL-MERGE-SESSION 槽双字段恒非空（有渠道即携带具体复合值——
+  "activeModel": "deepseek-v4-pro", // 恢复按槽值——不看 config（defaultModel 只是新会话起点））
   "updatedAt": 1754200000000,  // epoch ms
   "history": [ /* 人读线：完整真实消息（UI 渲染 + resume 显示读它；运行期不压缩——落盘瘦身见 §3.3） */ ],
   "contextHistory": [ /* 机读线：可能已压缩的模型上下文（恢复后保留压缩收益——与 provider 前缀缓存逐字节一致） */ ],
@@ -217,20 +217,21 @@ _slot/_slotMtime 清空（切换后保存重新认领 manifest active——防�
 
 标题请求**显式禁用思考**（OpenAI 兼容 body 加 `thinking:{type:"disabled"}`；anthropic/google 分支不传即不思考）且 **`max_tokens` 30→100**，双端同修（CLI `src/generate-title.mjs` 单一 fetch 直拼 body + VS Code `requestTitle` 独立 fetch 三分支）——读取逻辑（`choices[0].message.content`）、标题规范（≤40 字符、无引号）、超时 10s 与失败静默降级均不变。
 
-## 8. 会话恢复 provider/model 无效 → 模型重选（已实现）
+## 8. 会话恢复 provider/model 无效 → 模型重选 + 复合语义（已实现——MODEL-MERGE-SESSION 同步）
 
-触发场景：会话保存时用的 provider A（或 model）已不存在，CLI 重进时 config 里已无 A——曾直接 throw → uncaughtException 报错退出、进不了 TUI。现改为引导 UI 重选：
+触发场景：会话保存时用的 provider A（或模型）已不存在，CLI 重进时 config 里已无 A——曾直接 throw → uncaughtException 报错退出、进不了 TUI。现改为引导 UI 重选。
 
-- **D-S1 启动前校验**：`loadConfig` 对缺失 activeProvider **不再抛错**——runtimeProvider 置空对象 `{}`（无 model/baseURL/apiKey），providers 列表与 activeProvider 原值保留；`findProvider` 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
-  `make-agent.mjs` `assembleAgent` 末尾调用 `validateProvider(agent)`（幂等：有效时清标记）——`provider.model`/`baseURL` 缺失 → 打 `agent._providerInvalid = true` + `_providerInvalidReason`（provider 不存在 / model 缺失 / 缺少 baseURL）。
-  - **model 无效判据**：仅当 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（自定义端点模型不在 MODEL_SPECS 是常态；spec 表不是 allowlist；未知模型 = 受支持场景）。
+- **模型 = 显式复合 "provider:model"（MODEL-MERGE-SESSION）**：config 顶层 `defaultModel` 是**新会话起点**（会话槽恢复后即被槽值取代）；会话槽 `activeProvider`+`activeModel` 双字段恒非空（裁定 a）——恢复 = 槽值（F-4——不看 config）。config 的 activeProvider/activeModel/providers[].model 三旧层已删（老配置 load 时经 config-migrate.mjs 折中 C 迁移：model → models 种子 + defaultModel 复合 + 写回失败不阻断）。
+- **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失/无效（provider ∉ providers 或 model ∉ models[]）**不再抛错**——runtimeProvider 置空对象 `{}` + `providerInvalidReason`（models[] 是候选硬约束——严格双段解析见 model-ref.mjs parseModelRef——不复用旧 findProvider 宽松三态）；`findProvider` 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
+  `make-agent.mjs` `assembleAgent` 末尾调用 `validateProvider(agent)`（幂等：有效时清标记；**判据不变**——仅 model/baseURL/name 缺失判 invalid——spec 表不是 allowlist）——`provider.model`/`baseURL` 缺失 → 打 `agent._providerInvalid = true` + `_providerInvalidReason`（defaultModel 原因优先覆盖——更有指导性）。
+  - **model 无效判据**：仅当解析后 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（自定义端点模型不在 MODEL_SPECS 是常态；spec 表不是 allowlist；未知模型 = 受支持场景）。
   - 不抛错、不退出：空 provider 不再流入 runAgent——TUI 路径在 startTUI 前置 `agent.provider = null`，由启动逻辑触发模型选择。
-- **D-S2 TUI 重选流程**：`startTUI` 首帧前检查 `_providerInvalid`（或 `!agent.provider`）→ 先弹模型选择 picker（复用 `openModelPicker`/`selectModel`，展示当前可用 providers）→ 选定后继续正常启动（`promptProviderIfInvalid(agent, openModelPicker, pushLine)`——index.mjs 导出）。
-  取消（Esc）→ **仍进入 TUI** + 提示行"未配置有效 provider，可用 /model 选择或 /provider 配置"——绝不因无 provider 拒绝进入；空 provider 渲染路径（renderHeader/renderStatus/showStartup 的 `agent.provider?.model`）有可选链守卫。`/model` 在无有效 provider 时行为不变。
-- **D-S3 恢复优先级**：`applySession` 对不存在的 provider 静默保持现状（不报错不纠正）；会话 `activeProvider` 无效但 config 的 `activeProvider` 有效 → **静默用 config 的 provider**（不弹重选）——仅当**两者都无效**才弹；applySession 后 bin 复验一次 `validateProvider`（会话中的有效 provider 修复 config 错误后清除标记）。
-  会话 `activeModel` 无效（provider 存在但 model 字段缺失）→ 弹重选（默认选中该 provider 默认模型）。
-- **D-S4 headless**（`thincoder chat`）：遇无效 provider → `console.error` 可读消息（"会话引用的 provider 'X' 不存在，请运行 thincoder 进入 TUI 重新选择，或编辑 config.json"）+ `exitSoon(1)`——不弹 UI、明确退出码。
-- **关键决策**：检测后置 provider=null（空对象流入下游是崩溃源——让选择流程从干净状态开始）；校验点收敛到 assembleAgent 之后一处（TUI/chat 两路径同源）；否决了：启动即退出打印"请编辑 config"（用户要 UI 重选）、静默回退第一个可用 provider（可能 unaware 换错模型）、自动用 config.activeProvider 覆盖会话 provider（用户上次明确选的模型不能静默丢）。
+- **D-S2 TUI 重选流程**：`startTUI` 首帧前检查 `_providerInvalid`（或 `!agent.provider`）→ 先弹模型选择 picker（`openModelPicker`——会话级两级面：L1 provider → L2 providers[].models[] 候选——候选外拒）→ 选定后继续正常启动（`promptProviderIfInvalid(agent, openModelPicker, pushLine)`）。
+  取消（Esc）→ **仍进入 TUI** + 提示行——引导 A（F-6）：空槽（data:null）+ defaultModel 未设 + 有渠道 → 提示 /config → 默认模型（新会话起点）；无渠道 → 原 /model 提示。绝不因无 provider 拒绝进入。
+- **D-S3 恢复优先级（applySession 两支 + 删旧支）**：① 槽 `activeProvider` 在 providers[] 存在 → provider/model **按槽值设**（legacy 槽 activeModel null/缺省 = 无 override → 回该渠道首候选 models[0]）+ 重算 compactThreshold（auto 时——阈值跟模型走——原 bin 的 switched 分支收拢进 applySession）+ 返回 switched；② 槽 provider 没了 → **静默保持现状**（不报错不纠正——config defaultModel 有效则有效——**仅当两方都无效**才弹）；applySession 后 bin 复验一次 `validateProvider`（会话中的有效 provider 修复 defaultModel 错误后清除标记）。
+  **删旧支**："activeModel==null 清 stale override 回渠道默认"——前提 = 渠道默认字段——已随三旧层删除消失——双字段恒非空故不可能触发。
+- **D-S4 headless**（`thincoder chat`）：遇无效 defaultModel → `console.error` 可读消息（文案引 defaultModel + /config → 默认模型 指引）+ `exitSoon(1)`——不弹 UI、明确退出码。
+- **关键决策**：检测后置 provider=null（空对象流入下游是崩溃源——让选择流程从干净状态开始）；校验点收敛到 assembleAgent 之后一处（TUI/chat 两路径同源）；否决了：启动即退出打印"请编辑 config"（用户要 UI 重选）、静默回退第一个可用 provider（可能 unaware 换错模型）、自动用 defaultModel 覆盖会话槽模型（用户上次明确选的模型不能静默丢）。
 
 ## 9. 消息时间戳与 read_history 工具（已实现，双端）
 
@@ -355,7 +356,7 @@ m = loadManifest(cwd)
 
 - `env` → 运行身份（R8）——CLI 仓 `END="cli"` / VS Code 仓 `END="vscode"` 静态常量（§10 D-1 先例），不做 cmdline 判别；
 - `mode` → 工程模式（R9）——`agent.config?.agent?.engineering` 现状字段；
-- `model` → 模型（R11）——`agent.activeModel ?? provider.model ?? "unknown"`；
+- `model` → 模型（R11）——`agent.activeModel ?? provider.model ?? "unknown"`（MODEL-MERGE-SESSION：activeModel = 会话复合具体值恒非空——回退链仅 legacy 形态兜底）；
 - `slot` → 当前会话槽（粘性——N2：CLI `agent._slot` / VSC `_engPersist.slot`——非 manifest active 共享指针）——无绑定窗口（全新会话首回合/直连）如实 `slot: null`（N3——不读 active 回退）；
 - `resumed` → 会话恢复感知（R5——§11.2 按会话跟踪）——有历史的会话被恢复（进程重启 resume / 切槽到有历史槽）→ 恢复后首个回合 `resumed: yes` 一次，后续回合 no；无恢复事件（全新会话 / 空历史恢复）恒 no。
 

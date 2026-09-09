@@ -53,7 +53,12 @@ export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) 
   if (!(agent._providerInvalid || !agent.provider)) return false
   await openModelPicker()
   if (!agent.provider) {
-    pushLine("未配置有效 provider，可用 /model 选择或 /provider 配置", C.warn)
+    // MODEL-MERGE-SESSION 引导 A（F-6）：空槽 + defaultModel 未设 → 提示 /config 默认模型入口
+    // （index.mjs 本行为 D-S2 取消提示扩展——设计文件清单外——随批上报）
+    const hasProviders = (agent.providers?.length ?? 0) > 0
+    pushLine(hasProviders && !agent.config?.defaultModel
+      ? "尚未设置默认模型（config.defaultModel——新会话起点）：/config → 默认模型 设置一次；/model 仅改本会话"
+      : "未配置有效 provider，可用 /model 选择或 /provider 配置", C.warn)
   }
   return true
 }

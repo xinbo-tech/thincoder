@@ -50,38 +50,39 @@ export async function handleConfigCommand(ctx, args = []) {
     return true
   }
 
-  /** 保存后的公共重载：loadConfig → injectProxy → 恢复 provider 选择。
-   *  运行时 /model 切过 provider（未落盘）时保持它，不回滚到磁盘值。 */
+  /** 保存后的公共重载：loadConfig → injectProxy → 恢复运行时 provider 选择。
+   *  MODEL-MERGE-SESSION 三支改写（cfg 无 active*）：运行时由「会话槽复合仍在 providers 中 →
+   *  保持槽值」或「config defaultModel（新会话起点）」决定——不再有渠道默认字段可回退。 */
   async function reloadConfig() {
     const { loadConfig } = await import("../config.mjs")
     const { injectProxy } = await import("../proxy.mjs")
     const cfg = loadConfig()
     injectProxy(cfg.providersList, cfg)
-    const runtimeName = agent.activeProvider
-    const runtimeModel = agent.activeModel
+    const sessionName = agent.activeProvider
+    const sessionModel = agent.activeModel
     agent.providers = cfg.providersList
     agent.config = cfg
     agent.config.agent ??= {}
-    const keep = cfg.providersList.find((p) => p.name === runtimeName)
-    if (runtimeName && runtimeName !== cfg.activeProvider && keep) {
-      // 运行时选择在新配置里仍存在 → 保持（provider 为注入 proxyUri 后的新对象）
-      agent.activeProvider = runtimeName
-      agent.activeModel = runtimeModel
+    const keep = sessionName ? cfg.providersList.find((p) => p.name === sessionName) : null
+    if (keep) {
+      // 会话 provider 仍存在 → 会话复合优先（槽值——不看 cfg 默认；模型空时落默认复合/首候选）
+      const dm = cfg.provider.name ? cfg.provider : null
+      const model = sessionModel ?? (dm && dm.name === sessionName ? dm.model : keep.models?.[0] ?? "")
+      agent.activeProvider = keep.name
+      agent.activeModel = model || null
       agent.provider = { ...keep }
-      if (agent.activeModel) agent.provider.model = agent.activeModel
-    } else if (runtimeName && runtimeName === cfg.activeProvider && runtimeModel) {
-      // Same provider, runtime had a model override — keep it
-      agent.activeProvider = cfg.activeProvider
-      agent.activeModel = runtimeModel
-      const p = cfg.providersList.find((pr) => pr.name === cfg.activeProvider)
-      agent.provider = p ? { ...p } : cfg.provider
-      agent.provider.model = runtimeModel
-      agent.provider.proxyUri = p?.proxyUri
+      agent.provider.model = model
     } else {
-      agent.activeProvider = cfg.activeProvider
-      agent.activeModel = cfg.activeModel ?? null
-      agent.provider = cfg.provider
-      agent.provider.proxyUri = cfg.providersList.find((p) => p.name === cfg.activeProvider)?.proxyUri
+      // 会话 provider 没了（D-S3 静默保留处置）/尚未选 → 采纳 config defaultModel 运行时
+      agent.activeProvider = cfg.provider.name ?? ""
+      agent.activeModel = cfg.provider.model ?? null
+      agent.provider = cfg.provider.name ? { ...cfg.provider } : {}
+    }
+    // 运行时重建后同步注入结果（cfg.provider 系 loadConfig 内建——injectProxy 后建）
+    agent.provider.proxyUri = cfg.providersList.find((p) => p.name === agent.activeProvider)?.proxyUri
+    if (agent.config?.agent?.compactThresholdAuto) {
+      const { resolveCompactThreshold } = await import("../config.mjs")
+      agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
   }
 
@@ -271,6 +272,42 @@ export async function handleConfigCommand(ctx, args = []) {
     }
   }
 
+  // ── 默认模型子菜单（F-5：config.defaultModel 专用入口——L1 provider → L2 models[] →
+  // 写 config.defaultModel——saveProxy/writeConfigAtomic 通道——不落会话槽）──
+  async function defaultModelMenu() {
+    let idx = 0
+    for (;;) {
+      const dm = agent.config?.defaultModel ?? null
+      const entries = [
+        { type: "header", text: `config.defaultModel = ${dm ?? "(not set — 新会话起点未配置)"}` },
+        ...agent.providers.map((p) => {
+          const n = p.models?.length ?? 0
+          return { type: "item", text: `${p.name.padEnd(10)} (${n} candidate${n === 1 ? "" : "s"})`, action: "provider", provider: p.name }
+        }),
+      ]
+      const c = await showPicker("Default Model (新会话起点)", entries, { defaultIndex: idx })
+      if (!c) return // Esc → 返回主菜单
+      idx = Math.max(0, entries.filter((e) => e.type === "item").indexOf(c))
+      if (c.action !== "provider") continue
+      const p = agent.providers.find((x) => x.name === c.provider)
+      const models = p?.models ?? []
+      if (models.length === 0) {
+        pushLine(`${c.provider} 无候选 models[]——候选为空无法设默认（先加入候选：手写 config.json 或 /model 加渠道时带模型）`, C.error)
+        continue
+      }
+      const me = await showPicker(`${c.provider} models`, [
+        { type: "header", text: "选为 config.defaultModel（新会话起点——当前会话槽不受影响）" },
+        ...models.map((m) => ({ type: "item", text: m, action: "model", model: m })),
+      ])
+      if (!me) continue // Esc → 回默认模型菜单
+      try {
+        await saveProxy((raw) => { raw.defaultModel = `${c.provider}:${me.model}` })
+        pushLabel("❯ Config", ansi.bold + C.tool)
+        pushLine(`config.defaultModel = ${c.provider}:${me.model}（新会话起点；会话模型不受影响）`, C.tool)
+      } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
+    }
+  }
+
   // ── Main config loop ──
   let running = true
   let mainIdx = 0 // 记住上次选中位置，改完一项回主菜单时恢复
@@ -288,6 +325,7 @@ export async function handleConfigCommand(ctx, args = []) {
       { type: "item", text: `agent.subagentTurns = ${ac.subagentTurns ?? 100}`, action: "agent.subagentTurns" },
       { type: "item", text: `并发池 agent.poolLimits = engCoder ${cur("engCoder")} / other ${cur("other")} / advisor ${cur("advisor")}（async 分域上限）`, action: "pool" },
       { type: "item", text: `agent.compactThreshold = ${ac.compactThreshold ?? 100000}${agent.config?.agent?.compactThresholdAuto ? " (auto)" : ""}`, action: "agent.compactThreshold" },
+      { type: "item", text: `config.defaultModel = ${agent.config?.defaultModel ?? "(未设置 — 新会话起点)"}`, action: "defaultModel" },
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
       { type: "item", text: `traces.enabled = ${tc.enabled === false ? "off" : "on"}（轨迹存档——发布默认关——隐私）`, action: "traces.enabled" },
       { type: "item", text: `traces.retentionHours = ${tc.retentionHours ?? 24} h（超期文件启动时清理）`, action: "traces.retentionHours" },
@@ -305,7 +343,8 @@ export async function handleConfigCommand(ctx, args = []) {
 
     if (choice.action === "view") {
       pushLabel("❯ Config", ansi.bold + C.tool)
-      pushLine(`Active: ${agent.activeProvider} / ${agent.provider.model}`, C.dim)
+      pushLine(`Session model: ${agent.activeProvider ? `${agent.activeProvider}:${agent.activeModel ?? ""}` : "(none)"}`, C.dim)
+      pushLine(`defaultModel (config): ${agent.config?.defaultModel ?? "(not set — 新会话起点)"}`, C.dim)
       pushLine(`Key:    ${maskKey(agent.provider.apiKey)}`, C.dim)
       pushLine(`agent.maxTurns: ${ac.maxTurns ?? 200}`, C.dim)
       pushLine(`agent.subagentTurns: ${ac.subagentTurns ?? 100}`, C.dim)
@@ -335,6 +374,11 @@ export async function handleConfigCommand(ctx, args = []) {
 
     if (choice.action === "pool") {
       await poolMenu()
+      continue
+    }
+
+    if (choice.action === "defaultModel") {
+      await defaultModelMenu()
       continue
     }
 

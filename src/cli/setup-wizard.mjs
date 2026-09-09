@@ -53,23 +53,26 @@ export async function setupWizard() {
     const embedKey = (await ask("Optional: embedding API key (SiliconFlow, for vector search; press Enter to skip): ")).trim()
     // D-F5b：磁盘新鲜读 → mutate → mtime 门控写（writeConfigAtomic 收口）；冲突 = 放弃
     // + 提示重试（首配场景另有实例同时写盘——极低概率；不自动合并——决策点① A）
+    // MODEL-MERGE-SESSION：渠道 model → models:[model] 种子 + defaultModel 顶层复合（裁定⑦）
     const r = writeConfigAtomic(configPath, (raw) => {
       const providers = raw.providers?.length ? raw.providers : []
       const existing = providers.find((p) => p.name === name)
-      if (existing) Object.assign(existing, { baseURL, model, apiKey })
-      else providers.push({ name, baseURL, model, apiKey })
+      const rec = { name, baseURL, models: [model], apiKey }
+      if (existing) { Object.assign(existing, rec); delete existing.model } // 清老渠道字段（防下次 load 反复迁移）
+      else providers.push(rec)
       raw.providers = providers
-      raw.activeProvider = name
-      delete raw.activeModel  // reset to default model
+      raw.defaultModel = `${name}:${model}`
+      delete raw.activeProvider
+      delete raw.activeModel
       if (embedKey) raw.embedding = { ...(raw.embedding ?? {}), apiKey: embedKey }
     })
     if (!r.ok) {
       console.error("config changed on disk concurrently — retry")
       return null
     }
-    console.error(`Configured: ${name} / ${model} (saved to ${configPath})`)
+    console.error(`Configured: ${name} / ${model} (defaultModel = ${name}:${model} — saved to ${configPath})`)
     console.error(embedKey ? "Vector search enabled\n" : "(No embedding key configured: memory search will use text-only FTS. Add embedding.apiKey to config.json to enable vector search later.)\n")
-    return { name, baseURL, model, apiKey }
+    return { name, baseURL, model, apiKey, defaultModel: `${name}:${model}` }
   } finally {
     rl.close()
   }
