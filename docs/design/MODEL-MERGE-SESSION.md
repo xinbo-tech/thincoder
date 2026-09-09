@@ -29,7 +29,8 @@
 - loadConfig 加 defaultModel 校验（同 consultModels 先例——provider ∈ providers[] ∧ model ∈ models[]——无效 D-S1 处置不 throw）
 - resolveCompactThreshold/providerSpec 输入不变（provider 带解析后 model）
 
-### 2. 复合解析器（新模块 model-ref.mjs——config.mjs 432 行将超 500——独立 + re-export hub）
+### 2. 复合解析器（新模块 model-ref.mjs——config.mjs 实测 433 → +~40 → ~473 安全（评审 #9：不触发 >500 必拆——
+  解析器独立模块化 + re-export hub 系结构选择非超限触发）——与受影响表标注一致）
 - parseModelRef(ref, providers) → {ok, provider, model} | {ok:false, reason}
 - resolveRuntimeProvider(providers, defaultModel, legacyFields?)
 - 无效处理：runtimeProvider={} + _providerInvalid + 原因——TUI 首帧弹 defaultModel 设置选择器——headless 可读报错（bin 文案改引 defaultModel）——恢复路径 D-S3 保留（会话值优先——两方都无效才弹）
@@ -82,6 +83,8 @@
 | src/config.mjs | CLI | 433 | ≤+40（→~473 安全） | schema 删三层 + defaultModel + 校验 |
 | src/model-ref.mjs（新） | CLI | 新 | 新 ~80 | 复合解析器 |
 | src/tui/pickers.mjs | CLI | **500（恰线）** | **拆分先行（→≤450）** | /model 两级面迁 model-picker.mjs |
+| src/tui/model-picker.mjs（新——拆分产物——评审 #9 规模注） | CLI | 新 | 新 ~60 | /model 两级面 |
+| src/extension/settings-panel-write.mjs（新——拆分产物——评审 #9 规模注） | VSC | 新 | 新 ~50 | config-io 面板写面迁出 |
 | src/tui/cmd-model.mjs | CLI | 24 | ≤+5 | 裸 provider 拒 |
 | src/tui/cmd-submodel.mjs | CLI | 152 | ≤+5 | 会话复合语义 |
 | src/tui/cmd-config.mjs | CLI | 403 | ≤+20 | 默认模型入口 + reloadConfig 改写 |
@@ -115,7 +118,7 @@
 | 无 model 渠道迁移 | provider 无 .model 字段 | models:[] → 走无效/D-S1 路径（弹选择——不静默破）——评审 #7 |
 | 复合解析合法 | "deepseek:deepseek-v4-flash" | ok + provider + model——F-2 |
 | 解析无效 | 未知 provider/model 不在 models | ok:false——D-S1——F-2 |
-| /model 会话级 | 选 models 内 | 写槽不写 config（mtime 断言）——F-3 |
+| /model 会话级 | 选 models 内 | 写槽不写 config（评审 #9：**config 内容字节断言**——非 mtime——与 AC-4 同）——F-3 |
 | /model 裸 provider | /model deepseek | 拒（显式 p:m）——F-7 |
 | /model 候选外 | models 外模型 | 拒——F-1 |
 | 恢复 | 槽有 provider/model | applySession 用槽值（不看 config）——F-4 |
@@ -135,7 +138,7 @@
 - AC-3 解析器（合法/无效/候选外）
 - AC-4 /model 纯会话级（写槽不写 config——评审 #7：**config 内容字节断言**（写前快照 vs 写后 compare——
   非 mtime——mtime 粒度假过）双端）
-- AC-5 恢复 = 槽值（applySession 新三支 + VSC 槽播种——不看 config）
+- AC-5 恢复 = 槽值（applySession 新两支 + 删旧支（评审 #9：措辞与 §4 对齐——防 "三支" 误读为三活支）+ VSC 槽播种——不看 config）
 - AC-6 默认入口双端（CLI /config 子菜单 + VSC 面板——写 defaultModel）
 - AC-7 引导 A（空槽未设 → 引导）
 - AC-8 双端锁步（diff 核——schema/迁移/解析同规则）
