@@ -96,3 +96,20 @@ test("AC7 双轨消除——旧 pass 定义不复发（旧 prose 已改写并入
   assert.doesNotMatch(rd, /findings do NOT block approval/, "advisor-design: 旧 🟡 不阻断审批句残留")
   assert.doesNotMatch(rd, /briefly state the design is approved/, "advisor-design: 旧 token 前散文许可句残留")
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN-DESIGN-ENHANCE（2026-09-09）：四维设计纪律句驻留（A1-A4 逐字锚——字节源 = 设计档
+// MAIN-DESIGN-ENHANCE.md 逐字锚定文本——双端照抄——fail-when-unchanged——AC-1/AC-3）。
+// ─────────────────────────────────────────────────────────────────────────────
+const engDoc = read("src/prompts/engineering.md")
+const A1_ANCHOR = "设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md 地图——已有则更新不新建）② 读既有实现与先例 ③ 核测试面（既有用例/测试文件）④ 核双端对位面（CLI/VSC 镜像）⑤ 广度勘察委派 explore 子代理（不重复已委派探索——主会话不重扫）。"
+const A2_ANCHOR = "候选方案 ≥2 时，设计文档 MUST 含**方案选型对比**子节（候选/判据/取舍/否决理由表）；单一候选显式声明豁免（\"单方案——无对比\"）即可。"
+const A3_ANCHOR = "提\"设计就绪待评审\"前先跑**评审前预检**：① 需求三层具体到可设计？② 受影响文件全清单 + 行数标注（R24a）？③ 验收标准逐条回指需求（每条可机器验证）？④ UI/交互决策全落档（无\"讨论过但没写\"）？⑤ 方案对比已做？——预检不过先修，不自发起评审（发起权仍在用户）。"
+const A4_ANCHOR = "本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（本端 METHODOLOGY.md）——不散落会话。"
+
+test("MAIN-DESIGN-ENHANCE A1-A4 四维纪律句驻留 engineering.md（AC-1/AC-3——逐字 fail-when-unchanged）", () => {
+  assert.ok(engDoc.includes(A1_ANCHOR), "A1 勘察 checklist 句缺失（step 1——需求澄清后/设计前交界）")
+  assert.ok(engDoc.includes(A2_ANCHOR), "A2 方案对比句缺失（step 2——设计文档要求）")
+  assert.ok(engDoc.includes(A3_ANCHOR), "A3 评审前预检句缺失（step 3——Remind readiness 动作前）")
+  assert.ok(engDoc.includes(A4_ANCHOR), "A4 实践沉淀句缺失（Docs capture the conversation 条尾）")
+})
