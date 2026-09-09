@@ -9,8 +9,9 @@
 
 - **总体目标**：修窗口缩放时有概率把鼠标上报序列回显成字面文本飞出（shell 提示符行 `[122;50M...` 伪影）——退出路径根治（RC1/RC2）+ 越界守卫（RC3 放大消减）。
 - **功能性**：
-  - F-1（停用序重排 + 排空——RC1 主修）cleanup 改为：① 先写 `mouseOff` DECRST → ② 短暂 settle（DECRST 往返——~20ms）→ ③ `setRawMode(false)` → ④ **排空 stdin**（摘 data 监听/pause/限时读丢弃在途鼠标上报）→ ⑤ 恢复屏幕 → 退出——消除"回显开而鼠标未停"暴露窗口 + 在途字节不归 shell
-  - F-2（/exit 同路径——RC2）`cmd-exit.mjs` 改走 `ctx.exit`（index.mjs:407 现成——cleanup + 延迟 exit——不再 process.exit(0) 直调零提前量）
+  - F-1（停用序重排 + 排空——RC1 主修）cleanup 改为：① 先写 `mouseOff` DECRST → ② 短暂 settle（DECRST 往返——~20ms）→ ③ `setRawMode(false)` → ④ **排空 stdin**（摘 data 监听 + pause——评审 #2：不依赖限时读——settle 已保证无新上报）→ ⑤ 恢复屏幕 → 退出——消除"回显开而鼠标未停"暴露窗口 + 在途字节不归 shell
+  - F-2（/exit 与 Ctrl+C 同退出形态——RC2——评审 #2：非同一派发路径）`cmd-exit.mjs` 改走 `ctx.exit`（index.mjs:407
+    现成——cleanup + 延迟 exit——不再 process.exit(0) 直调零提前量前量）
   - F-3（鼠标坐标 sane-gate——RC3 放大消减 + 越界防误命中）mouse.mjs 解析后坐标 sane-gate（col > dims.cols / row > dims.rows → 丢弃——与 dims.mjs 同哲学）——resize 后短窗口越界上报不落应用
   - **范围边界**：resize 抑制（resize 期 DECRST/DECSET 重开）不做（复杂度/终端行为依赖——sane-gate 已消减）；x=444444 终端侧伪影不可代码修（记录——终端行为）；X10 格式兼容缺口（:243 正则不剥 X10——低相关——另记）。
 
@@ -26,7 +27,8 @@
 - 注（评审 #1）：排空 = removeAllListeners + pause（不依赖限时读——settle 已保证无新上报——在途已读字节被摘监听
   丢弃；未读内核缓冲在 settle 后无新来源——pause 不消费仅防 100ms 延迟窗口新到）——**exit 事件路径同步约束**：
   cleanup 注册于 process.on("exit")（index.mjs:265）——settle 20ms 需同步等待（Atomics.wait 或拆注册点——
-  实现时选一并注）——/exit 与 Ctrl+C 走 ctx.exit（延迟退出——异步安全）——exit 事件只兜底异常退出
+  实现时选一并注）——/exit 走 ctx.exit（延迟退出——异步安全）——**Ctrl+C = key-handler 直调 cleanup + 自持
+  定时器（评审 #2——非 ctx.exit——AC-2 述准）**——exit 事件只兜底异常退出
 
 ### 2. F-2 /exit 走 ctx.exit（cmd-exit.mjs）
 - 现：`cmd-exit.mjs:8` process.exit(0) 直调（清理押 'exit' 事件——零提前量）
@@ -50,6 +52,8 @@
 | src/tui/tui-lifecycle.mjs | 75 区 | ≤+8 | F-1 cleanup 序重排 + stdin 排空 |
 | src/tui/cmd-exit.mjs | 10 区 | ≤+3 | F-2 走 ctx.exit |
 | src/tui/mouse.mjs | 241（实测——评审 #4） | ≤+8 | F-3 sane-gate |
+| src/tui/render-loop.mjs（评审 #2 补行） | 128（实测） | ≤+3 | F-2 doRender tuiActive 守卫 |
+| src/tui/tui-lifecycle.mjs（评审 #2 补——isTuiActive 读导出） | 75 | ≤+9 | F-1 序重排 + F-2 读导出（现仅 setTuiActive——无读访问器） |
 | src/tui/index.mjs | 454（实测——评审 #4） | ≤+5 | F-3 滚轮 fallback 拦截（评审 #3 定稿——非"若需"） |
 | test/tui-exit-cleanup.test.mjs + test/mouse-sane-gate.test.mjs（评审 #4 具名） | 新 | 新 ≤80 | F-1/F-3 |
 
@@ -73,6 +77,9 @@
 - 红线：鼠标解析器主体不动（只加 gate）；resize 重绘逻辑零动；X10 兼容缺口另记不扩
 
 ## 变更记录
-- 2026-09-09：落档（勘察一手——RC1 退出时在途上报不排空 + setRawMode(false) 先于 DECRST（tui-lifecycle:70-71）——暴露窗口；RC2 /exit 直调 process.exit 
+- 2026-09-09：落档（勘察一手——RC1 退出时在途上报不排空 + setRawMode(false) 先于 DECRST（tui-lifecycle:70-71）——
+  暴露窗口；RC2 /exit 直调 process.exit（cmd-exit:8）零提前量；RC3 resize 全量重绘压 stdin 消费放大——修复：
+  序重排 + 排空 + /exit 同退出形态 + sane-gate——x=444444 终端侧伪影不可代码解释（记录——非合法 SGR 按钮值
+  cb≤92——终端/ConPTY 行为）。
 - 2026-09-09 评审 #1 修正：F-1/§1 统一唯一权威序（mouseOff 单独写 → settle 20ms → raw off → 排空 → 恢复屏幕）+ 
-  exit 事件同步约束注；评审 #2 渲染抑制（doRender tuiActive 守卫）+ AC-2 改；评审 #3 gate 落点定稿三处；评审 #4 行数实测——待 round 2 重评。零提前量（cmd-exit:8）；RC3 resize 全量重绘压 stdin 消费放大——修复：序重排 + 排空 + /exit 同路径 + sane-gate——x=444444 终端侧伪影不可代码解释（记录——非合法 SGR 按钮值 cb≤92——终端/ConPTY 行为）。
+  exit 事件同步约束注；评审 #2 渲染抑制（doRender tuiActive 守卫）+ AC-2 改；评审 #3 gate 落点定稿三处；评审 #4 行数实测——待 round 2 重评。
