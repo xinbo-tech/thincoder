@@ -8,8 +8,8 @@
  * settled/error/cancelled/answered/terminated/failed…——settled 视同 done）原地折叠
  * （class sub-live→sub-frozen + open=false + ⏹ 移除 + 头词 ✓ done Ns——无 DOM move/
  * 无锚插/无 report preview）。幂等守卫 = map 有键且已终态 → ensureBlock 返 null（迟来
- * 消息丢弃——绝不复活重建）；live 块被 150 窗裁（!isConnected）→ tombstone 移出簿记
- * （后续消息丢弃）。queued → ⏳ 等待头（含取消 ⏹——F-2——QUEUED-VISIBILITY 保留——取消
+ * 消息丢弃——绝不复活重建）；live 块被 150 窗裁（!isConnected）→ tombstone 守卫（条目
+ * 保留——终态/被裁同守卫——后续消息一律丢弃——resetActivity 才清）。queued → ⏳ 等待头（含取消 ⏹——F-2——QUEUED-VISIBILITY 保留——取消
  * 沿既有 cancelSubagent 路径——协议零改）；started → 翻 running。不做跨 reload 恢复
  * （reload 进程死块死——消息流是历史——SESSION-RESTORE-PARITY）。
  *
@@ -61,16 +61,16 @@ function blockNamesFor(role, id, model, sessionId) {
  *  计无豁免）。返回契约：
  *  - map 无键 → 新建块（meta = { status:"running", … }）+ append 流尾 + 钉底
  *  - map 有键且已终态（frozen）→ null（幂等守卫——迟来消息丢弃）
- *  - map 有键且 live 但元素被 150 窗裁（!isConnected）→ tombstone 移出簿记 → null
+ *  - map 有键且 live 但元素被 150 窗裁（!isConnected）→ tombstone 守卫 → null（条目保
+ *    留——后续消息一律丢弃——resetActivity 才清）
  *  - map 有键且 live → 返回既有元素（重复 started/queued 覆盖式刷新头词——不重挂） */
 export function ensureBlock(name) {
   const existing = S._subBlocks.get(name)
   if (existing) {
-    if (existing._subMeta?.frozen) return null // 幂等守卫（frozen 元素随窗裁后守卫仍在）
-    if (!existing.isConnected) {
-      S._subBlocks.delete(name) // live 被裁 tombstone——后续消息丢弃
-      return null
-    }
+    // 单 map 单守卫：终态（frozen）或被 150 窗裁（!isConnected——live tombstone）的条目
+    // 一律返 null——后续消息全部丢弃（绝不复活重建）。簿记条目保留至 resetActivity 才清
+    // （与冻结条目同生命周期——frozen 元素随窗裁后守卫仍在）。
+    if (existing._subMeta?.frozen || !existing.isConnected) return null
     return existing
   }
   const ch = parseChannel(name)

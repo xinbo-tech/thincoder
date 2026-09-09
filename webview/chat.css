@@ -367,19 +367,6 @@
 /* 冻结入流块（#messages 尾）：与运行态同卡面——折叠默认、可展开；头行含
    done/stopped 时长。 */
 .advisor-block.sub-block.sub-frozen { opacity: 1; }
-/* 冻结块后的报告 preview（≤8 行 dim 落流——CLI tool-events parity；escalate 无） */
-.sub-report-preview {
-  color: var(--fg);
-  opacity: 0.55;
-  font-family: var(--mono, monospace);
-  font-size: 11px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  padding: 0 10px 8px;
-  margin-top: -3px;
-  max-width: 100%;
-}
 
 .error-text { flex: 1; }
 .error-retry-btn {

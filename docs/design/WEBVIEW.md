@@ -122,8 +122,9 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
   （重复 started/queued 覆盖式刷新头词不重挂）；map 无键 → 建块 append 流尾。
 - **150 块 DOM 裁剪**：`.advisor-block` 直接子元素计数（与 advisor 块同规则同选择器）
   ——live/冻结**出生即计窗无豁免**（预算 = 并发子代理数——池有界）。冻结块随窗裁——
-  终态条目保留（守卫仍丢迟来消息）；**live 块被裁** → 下次 ensureBlock 遇
-  !frozen && !isConnected → tombstone 移出簿记（后续消息丢弃）。
+  终态条目保留（守卫仍丢迟来消息）；**live 块被裁** → ensureBlock 遇 !isConnected →
+  tombstone 守卫（条目保留——终态/被裁同守卫——后续消息一律丢弃——resetActivity 才清
+  簿记）。
 - **resetActivity**（回合中止无挂起会话/会话清）：移除 .sub-live 块 + 清 map——frozen
   块不动（会话流历史——随 150 窗裁）。
 - **会话退出 freeze 兜底**（suspension active:false + freeze:true）：freezeLiveBlocks

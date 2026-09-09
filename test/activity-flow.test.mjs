@@ -1,10 +1,8 @@
 /**
- * activity-flow.test.mjs — ACTIVITY-REWRITE-SIMPLE 全族重写（B1 流尾形态）——设计档
- * 用例表逐行：出生/内容/终态折叠/settled 视同 done/queued 三分支含取消 ⏹/迟来丢弃/
- * 多并行/会话清/reload 无恢复/150 裁（冻结+live tombstone）/error/answered/重复 started。
- * 手法（happy-dom）：installChatFixture（无 #subagent-activity）后动态 import 真模块
- * （state.js/ui.js/activity.js），直接驱动 activity 导出 + ui.appendAdvisorChunk
- * （streaming.subagentChunk 内部同一函数）。无真实定时器——快层直跑。
+ * activity-flow.test.mjs — ACTIVITY-REWRITE-SIMPLE 全族重写（B1 流尾形态——设计档用例表
+ * 逐行：出生/内容/终态折叠/settled/queued 三分支含取消 ⏹/迟来/多并行/会话清/reload/
+ * 150 裁（冻结+live tombstone）/error/answered/重复 started）。手法：installChatFixture
+ * 后动态 import 真模块，直接驱动 activity 导出 + ui.appendAdvisorChunk。无真实定时器。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -230,15 +228,18 @@ test("150 裁（冻结）：冻结块随窗裁——map 终态守卫仍丢迟来
   assert.equal(ensureBlock("sub:explore#7"), null, "迟来消息守卫丢（frozen 条目保留 → null）")
 })
 
-test("150 裁（live 运行中）：live 块出生即计窗——被裁 → tombstone 移出簿记 → 后续消息丢弃", async () => {
-  const { S, ctx, ensureBlock, trimOldMessages } = await loadWebview()
+test("150 裁（live 运行中）：live 块出生即计窗——被裁 → tombstone 守卫——后续消息一律丢弃", async () => {
+  const { S, ctx, ensureBlock, trimOldMessages, resetActivity } = await loadWebview()
   fresh({ S, ctx })
   const live = ensureBlock("sub:eng-coder#3") // 出生即 #messages——150 无豁免
   for (let i = 0; i < 151; i++) addMessage(ctx, "m" + i)
   trimOldMessages(ctx)
   assert.equal(live.isConnected, false, "live 块成最旧被裁（无豁免——出生即计窗）")
-  assert.equal(ensureBlock("sub:eng-coder#3"), null, "后续消息丢弃（不重建）")
-  assert.ok(!S._subBlocks.has("sub:eng-coder#3"), "tombstone：被裁 live 移出簿记")
+  assert.equal(ensureBlock("sub:eng-coder#3"), null, "被裁后消息丢弃（tombstone 守卫——不重建）")
+  assert.equal(ensureBlock("sub:eng-coder#3"), null, "连续消息同样丢弃（条目保留作守卫——非一次性删除）")
+  assert.ok(S._subBlocks.has("sub:eng-coder#3"), "簿记条目保留（守卫直至 resetActivity——与冻结条目同生命周期）")
+  resetActivity()
+  assert.ok(!S._subBlocks.has("sub:eng-coder#3"), "resetActivity 清簿记——条目释放")
 })
 
 test("error：error 消息终态折叠 + error 头词", async () => {
@@ -284,7 +285,6 @@ test("重复 started：同频道二次 started 覆盖式刷新头词——不重
   assert.ok(second.includes("turn 2/100"), "二次 started 覆盖式刷新头词（turn 续延）")
   assert.ok(!block.classList.contains("sub-frozen"), "重复 started 不翻终态")
 })
-
 test("suspension 退出兜底：freezeLiveBlocks 折叠残余 live 块（settled 已即时折叠后仅剩 live）", async () => {
   const { S, ctx, applySubagentStatus, freezeLiveBlocks } = await loadWebview()
   fresh({ S, ctx })
