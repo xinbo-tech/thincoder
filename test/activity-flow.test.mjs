@@ -302,9 +302,9 @@ test("⑥ trimOldMessages 150 窗口：冻结块占位计数——live 活动区
   assert.equal(tags.length, 149, "消息面 149（148 旧 + overflow——m0 已裁）")
 })
 
-// ─── ⑦ ⏹ 可见性规则（运行 + pool + FAMILY；区内容器；queued 不挂）───────────
+// ─── ⑦ ⏹ 可见性规则（运行 + pool + FAMILY；区内容器；queued 等待头挂取消 ⏹ F-2）────
 
-test("⑦ ⏹ 可见性：running+pool+FAMILY → 按钮（区内 live 块）；sync（pool:false）/consult/queued/冻结 → 无", async () => {
+test("⑦ ⏹ 可见性：running+pool+FAMILY → 按钮（区内 live 块）；queued 等待头 → 取消 ⏹（F-2）；sync（pool:false）/consult/escalate-queued/冻结 → 无", async () => {
   const { S, ctx, ensureBlock, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   // 池条目 started → 建块 + refreshBlock 装 ⏹（applySubagentStatus 驱动）
@@ -326,11 +326,19 @@ test("⑦ ⏹ 可见性：running+pool+FAMILY → 按钮（区内 live 块）；
   applySubagentStatus({ type: "subagent", status: "started", role: "consult", id: 4, model: "glm-5.2", sessionId: 4, pool: true })
   assert.ok(!b3.querySelector(".sub-stop-btn"), "consult 无 ⏹（FAMILY 外）")
 
-  // queued 等待块头（⑬ 面）→ 无 ⏹（未启动不可单独停——F-6 定论）
+  // queued 等待块头（⑬/F-2 面）→ 挂取消 ⏹（可撤销排队决策——QUEUED-VISIBILITY F-2——
+  // 用户新裁覆盖 F-6 旧“接受无取消”）
   applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 5, position: 1 })
   const bq = S._subBlocks.get("sub:plan#5")
   assert.ok(bq, "queued 建等待块头")
-  assert.ok(!bq.querySelector(".sub-stop-btn"), "queued/waiting 块头不挂 ⏹（队列自然推进——接受无取消路径）")
+  const qbtn = bq.querySelector(".sub-stop-btn")
+  assert.ok(qbtn, "queued/waiting 块头挂取消 ⏹（F-2——用户可撤销排队决策）")
+  assert.equal(qbtn.title, "cancel queue", "queued ⏹ 标签 = cancel queue（running 停区分——en fixture 词——逐字定稿）")
+  // 非 family 角色（escalate——generic 排队头）→ 不挂 ⏹（⏹ 角色面 = cancelable family）
+  applySubagentStatus({ type: "subagent", status: "queued", role: "escalate", id: 6, position: 3 })
+  const be = S._subBlocks.get("sub:escalate#6")
+  assert.ok(be, "escalate 排队亦建头（generic 形态）")
+  assert.ok(!be.querySelector(".sub-stop-btn"), "非 family（escalate）排队头不挂 ⏹（角色门控面不变）")
 
   // settle 收起 ⏹（非 running）；冻结后无
   applySubagentStatus({ type: "subagent", status: "settled", role: "eng-coder", id: 1 })
@@ -494,14 +502,14 @@ test("⑫ settled 锚被 150 裁（isConnected=false）→ done 冻结尾推退�
   assert.ok(block.nextElementSibling?.classList.contains("sub-report-preview"), "preview 紧随")
 })
 
-// ─── ⑬ queued 等待块头（D-4——AC-3——区内等待块 + 状态词 + 无 ⏹）────────────
+// ─── ⑬ queued 等待块头（D-4——AC-3——区内等待块 + 状态词 + 取消 ⏹ F-2）──────────
 
-test("⑬ queued/waiting 区内等待块头：queued 即建头（position/waiting 状态词）——started 转 running（⏹ 现）——queued 取消移除", async () => {
+test("⑬ queued/waiting 区内等待块头：queued 即建头（position/waiting 状态词 + 取消 ⏹）——started 转 running（⏹ 换停标签）——queued 取消移除（位置前移刷新）", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   const area = ctx.subAgentArea
 
-  // queued（slot 等位）→ 区内等待块头
+  // queued（slot 等位）→ 区内等待块头 + 取消 ⏹（F-2——QUEUED-VISIBILITY）
   applySubagentStatus({ type: "subagent", status: "queued", role: "eng-coder", id: 9, position: 2 })
   const b9 = S._subBlocks.get("sub:eng-coder#9")
   assert.ok(b9, "queued 即建块（旧早退无块——D-4 改为建头）")
@@ -509,31 +517,48 @@ test("⑬ queued/waiting 区内等待块头：queued 即建头（position/waitin
   const h9 = b9.querySelector(".sub-hdr").textContent
   assert.ok(h9.includes("⏳"), "等待块头 ⏳ 标（未启动——非 running ▶）")
   assert.ok(h9.includes("queued") && h9.includes("position 2"), "等待状态词：queued · position 2")
-  assert.ok(!b9.querySelector(".sub-stop-btn"), "等待块头不挂 ⏹（未启动不可单独停——F-6 定论）")
+  const stop9 = b9.querySelector(".sub-stop-btn")
+  assert.ok(stop9, "等待块头挂取消 ⏹（F-2——用户可撤销排队决策——覆盖 F-6 旧定论）")
+  assert.equal(stop9.dataset.subId, "9", "⏹ 携 id（cancelSubagent 路由锚）")
+  assert.equal(stop9.dataset.subRole, "eng-coder", "⏹ 携 role（角色交叉校验）")
+  assert.equal(stop9.title, "cancel queue", "queued ⏹ 标签 = cancel queue（running 停区分——i18n 键）")
   assert.equal(area.style.display, "", "等待块头也使区显（有块即显）")
 
-  // waiting-deps 形态（依赖/域等待——reason 标注）
+  // waiting-deps 形态（依赖/域等待——reason 标注）→ 同样挂取消 ⏹（slot/wait/depc 三态）
   applySubagentStatus({ type: "subagent", status: "queued", role: "explore", id: 10, waiting: "waiting-deps", reason: "files overlap: a/b.mjs" })
   const b10 = S._subBlocks.get("sub:explore#10")
   assert.ok(b10, "waiting 亦建头")
   assert.ok(b10.querySelector(".sub-hdr").textContent.includes("waiting"), "waiting 状态词在位")
   assert.ok(b10.querySelector(".sub-hdr").textContent.includes("files overlap"), "等待原因标注")
+  const stop10 = b10.querySelector(".sub-stop-btn")
+  assert.ok(stop10, "waiting 头亦挂取消 ⏹（三态一致——slot/wait/depc）")
+  assert.equal(stop10.title, "cancel queue", "waiting ⏹ 标签同 cancel queue")
   assert.equal(area.children.length, 2, "两块等待头堆叠")
 
-  // 补位启动（started——同频道）→ 头转 running：⏳/queued 词清——⏹ 现（running+pool）
+  // 补位启动（started——同频道）→ 头转 running：⏳/queued 词清——⏹ 换停标签（running+pool）
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 9, pool: true, model: "glm-5.3" })
   const h9b = b9.querySelector(".sub-hdr").textContent
   assert.ok(h9b.includes("▶"), "started → running 头（▶）")
   assert.ok(!h9b.includes("queued · position"), "排队状态词清除（转 running 状态词）")
   assert.ok(h9b.includes("glm-5.3") && h9b.includes("async"), "mode/model 段在位（started 数据水合）")
-  assert.ok(b9.querySelector(".sub-stop-btn"), "running+pool → ⏹ 现（可定向停）")
+  const stop9b = b9.querySelector(".sub-stop-btn")
+  assert.ok(stop9b, "running+pool → ⏹ 在位（可定向停）")
+  assert.equal(stop9b.title, "Stop this subagent", "running ⏹ 标签回 stop（queued→running 翻转重挂——幂等刷新）")
 
-  // queued 取消（was:\"queued\"——从未启动）→ 等待块头移除（不冻结）
+  // queued 取消（was:"queued"——从未启动）→ 等待块头移除（不冻结——⏹ 随块消失）
   applySubagentStatus({ type: "subagent", status: "cancelled", role: "explore", id: 10, was: "queued" })
   assert.equal(b10.isConnected, false, "queued 取消 → 等待块头移除")
   assert.ok(!S._subBlocks.has("sub:explore#10"), "map 同步清")
   assert.equal(area.children.length, 1, "区中剩 running 块")
   assert.ok(b9.isConnected, "running 块不受影响")
+
+  // 出队后位置前移（refreshQueuedRows 重放——取消释放 → 后续等待头位置刷新覆盖式更新）
+  applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 11, position: 1 })
+  const b11 = S._subBlocks.get("sub:plan#11")
+  assert.ok(b11.querySelector(".sub-hdr").textContent.includes("position 1"), "后续排队头 position 1（出队前移生效面）")
+  applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 11, position: 1 })
+  assert.ok(b11.querySelector(".sub-stop-btn"), "刷新后 ⏹ 仍在（幂等重挂不重复）")
+  assert.equal(b11.querySelectorAll(".sub-stop-btn").length, 1, "重复 queued 刷新 → 恰一 ⏹")
 })
 
 // ─── ⑭ consult answered 无块防御（评审 #3——replyPreview 行快照冻结块）──────
@@ -587,3 +612,72 @@ test("⑮ #subagent-panel 零残留：index.html/panels.js/CSS 无 subagent-pane
   const statusBar = read(wv + "/status-bar.js")
   assert.ok(!statusBar.includes("sub-badge"), "status-bar.js 无 sub-badge（评审 #2——#subagent-panel 撤后 badge 点击 null 崩——徽标撤）")
 })
+
+// ─── ⑯ F-3 Reload 冷启快照重放消费面（AC-3——QUEUED-VISIBILITY）──────────────
+
+test("⑯ F-3 reload 快照重放（webview 消费面）：冷启后 queued/running 行按到达序重放 → 等待块头 + running 块重建（位置/等待词保留——重复重放幂等）", async () => {
+  const { S, ctx, applySubagentStatus } = await loadWebview()
+  fresh({ S, ctx })
+  const area = ctx.subAgentArea
+
+  // webview reload = DOM 冷启（fresh 后区空）——extension webviewReady 响应重放 live
+  // 池行（快照 = 现有消息形状重放——非新消息类型——此处逐条重放 = postPoolSnapshot 载荷）
+  applySubagentStatus({ type: "subagent", status: "queued", role: "explore", id: 21, position: 1 })
+  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 20, pool: true, startedAt: Date.now() - 5000, model: "glm-5.3" })
+  applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 22, waiting: "waiting-deps", reason: "files overlap: x/y.mjs" })
+
+  assert.equal(area.children.length, 3, "三块重建（双等待头 + running 块——活动区）")
+  const b21 = S._subBlocks.get("sub:explore#21")
+  const b22 = S._subBlocks.get("sub:plan#22")
+  const b20 = S._subBlocks.get("sub:eng-coder#20")
+  assert.ok(b21 && b22 && b20, "重放建块（map 登记）")
+  const h21 = b21.querySelector(".sub-hdr").textContent
+  assert.ok(h21.includes("⏳") && h21.includes("queued · position 1"), "等待头重建——位置保留（AC-3）")
+  assert.equal(b21.querySelector(".sub-stop-btn")?.title, "cancel queue", "等待头重建——取消 ⏹ 随行（F-2 面）")
+  const h22 = b22.querySelector(".sub-hdr").textContent
+  assert.ok(h22.includes("waiting") && h22.includes("x/y.mjs"), "waiting 头重建——等待词/原因保留")
+  assert.ok(b22.querySelector(".sub-stop-btn"), "waiting 头重建——取消 ⏹ 随行")
+  const h20 = b20.querySelector(".sub-hdr").textContent
+  assert.ok(h20.includes("▶") && h20.includes("glm-5.3"), "running 块重建（started 形重放——数据水合）")
+  assert.equal(b20.querySelector(".sub-stop-btn")?.title, "Stop this subagent", "running ⏹ 停标签（重建面）")
+  assert.equal(area.style.display, "", "重建后区显")
+
+  // 队列推进（出队后位置刷新重放）→ 覆盖式更新（幂等——不重复建块）
+  applySubagentStatus({ type: "subagent", status: "queued", role: "plan", id: 22, position: 1 })
+  assert.equal(area.children.length, 3, "重复重放不重复建块（覆盖式更新）")
+  assert.ok(b22.querySelector(".sub-hdr").textContent.includes("position 1"), "位置前移覆盖式更新")
+})
+
+// ─── ⑱ F-4 i18n 词（AC-4——QUEUED-VISIBILITY）──────────────────────────────
+
+test("⑱ F-4 i18n：zh 覆盖下 waiting 词/位置段/取消 ⏹ 标签中文——en fixture 词不回归", async () => {
+  const { S, ctx, applySubagentStatus } = await loadWebview()
+  fresh({ S, ctx })
+  const { setStrings } = await import("../webview/i18n.js")
+  const readL = (f) => JSON.parse(readFileSync(fileURLToPath(new URL(`../locales/${f}`, import.meta.url)), "utf8"))
+  const zh = readL("zh.json")
+  try {
+    setStrings(zh)
+    // queued slot 等位：排队中 · 位置 N（词段走 i18n——逐字定稿）
+    applySubagentStatus({ type: "subagent", status: "queued", role: "eng-coder", id: 31, position: 2 })
+    const b31 = S._subBlocks.get("sub:eng-coder#31")
+    const h31 = b31.querySelector(".sub-hdr").textContent
+    assert.ok(h31.includes("排队中") && h31.includes("位置 2"), "zh 位置段：排队中 · 位置 2")
+    assert.equal(b31.querySelector(".sub-stop-btn")?.title, "取消排队", "zh 取消 ⏹ 标签键")
+    // waiting：等待中 — reason
+    applySubagentStatus({ type: "subagent", status: "queued", role: "explore", id: 32, waiting: "waiting-deps", reason: "域冲突 z.mjs" })
+    const h32 = S._subBlocks.get("sub:explore#32").querySelector(".sub-hdr").textContent
+    assert.ok(h32.includes("等待中"), "zh waiting 词：等待中 — reason")
+    assert.ok(h32.includes("域冲突 z.mjs"), "reason 原样随行")
+    // running ⏹ zh 停标签（frozen 词不回归面）
+    applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 31, pool: true })
+    assert.equal(b31.querySelector(".sub-stop-btn")?.title, "停止该子代理", "zh running ⏹ 停标签")
+  } finally {
+    setStrings(readL("en.json")) // 还原 fixture 注入（同文件后测零串扰）
+  }
+  // en fixture 词不回归（还原后即时断言——⑬/⑯ 已锁 en 词形——此处补跑状态词切换面）
+  applySubagentStatus({ type: "subagent", status: "queued", role: "coder", id: 33, position: 1 })
+  const h33 = S._subBlocks.get("sub:coder#33").querySelector(".sub-hdr").textContent
+  assert.ok(h33.includes("queued") && h33.includes("position 1"), "en 词回位（zh 切换不残留）")
+})
+

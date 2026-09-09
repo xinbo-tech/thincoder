@@ -82,3 +82,6 @@
 ## 变更记录（GIT-ASYNC 补登——2026-09-09 核销）
 - `GIT-ASYNC.md`（git 富注入异步化双端——L21——ed3fe3e——CLI 镜像半 ccd1b51——consume 待父侧补记）
 
+## 变更记录（QUEUED-VISIBILITY 补登——2026-09-09 交付）
+- `QUEUED-VISIBILITY.md`（排队 subagent 可见性差集增量——F-1 基线 + F-2 queued ⏹ 取消双端（覆盖 SESSION-ACTIVITY-REVISED F-6 旧"接受无取消"裁定）+ F-3 VSC Reload 快照重推 + F-4 i18n——设计档在 VSC 侧——CLI 参照读绝对路径——双仓实现——consume 待父侧补记）
+

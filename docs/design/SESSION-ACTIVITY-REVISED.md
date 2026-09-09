@@ -57,7 +57,10 @@
   abort case 收窄——不再 _susp.abortControllers 全链 abort——只停 digest 轮 controller）——subagent 靠活动区
   每块 ⏹（cancelSubagent 定向 abort——panel-messages :199 直连——仅 running+pool 块——CLI 同）
 - 全停入口定论（评审 #1）：**无全停按钮——池空自然消化完**（CLI 对拍：CLI 无全停——池空自然退出）——
-  queued/waiting 块头不挂 ⏹（未启动不可单独停——CLI 同——接受无取消路径——队列自然推进）——
+  ~~queued/waiting 块头不挂 ⏹（未启动不可单独停——CLI 同——接受无取消路径——队列自然推进）~~
+  **（上述划线句已覆盖——2026-09-09 QUEUED-VISIBILITY F-2 用户新裁：queued/waiting 等待块头挂
+  取消 ⏹——点击 = 出队 + 墓碑 + 位置前移——双端——纯 UI 暴露——引擎路径既有——详见
+  QUEUED-VISIBILITY.md——本句之外机制正文不动）**——
   用户想停整个后台 = 逐块 ⏹ 停 running 块 + digest 轮 Stop 停消化——池空即退
 
 ### 7. 测试（activity-flow.test.mjs 8 组改写 + 新增）
@@ -113,3 +116,6 @@
   287 行 + activity-view.js 呈现叶 229 行 + activity-freeze.js 冻结叶 94 行——hub re-export
   外部消费方零改动——依赖纯 DAG 无环——verbatim 移动断言 parity 162/15——resetActivity ticker
   清理提 view.stopTicker（评审 #1 例外标注）——详见 docs/design/ACTIVITY-SPLIT.md）。
+- 2026-09-09：**F-6 旧裁定段被 QUEUED-VISIBILITY F-2 覆盖**（上方针出线）——用户新裁：queued/
+  waiting 等待块头挂取消 ⏹（可撤销排队决策）——本档机制正文其余不动（§6 全停入口定论其余
+  保留——逐块 ⏹ 语义扩 queued——详见 docs/design/QUEUED-VISIBILITY.md）。

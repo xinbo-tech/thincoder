@@ -143,9 +143,9 @@ export function applySubagentStatus(m) {
     meta.status = "queued"
     meta.queued = true
     if (m.waiting) {
-      meta.stateWord = "waiting" + (m.reason ? " — " + String(m.reason).replace(/\s+/g, " ").trim().slice(0, 64) : "")
+      meta.stateWord = W.waiting() + (m.reason ? " — " + String(m.reason).replace(/\s+/g, " ").trim().slice(0, 64) : "")
     } else if (m.position != null) {
-      meta.stateWord = `${W.queued()} · position ${m.position}`
+      meta.stateWord = `${W.queued()} ${W.position(m.position)}`
     } else {
       meta.stateWord = W.queued()
     }

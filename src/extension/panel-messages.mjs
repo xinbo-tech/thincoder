@@ -9,6 +9,9 @@ import { handleAddProvider, handleRemoveProvider, handleSetProviderProxy, agentS
 import { PRESETS } from "./presets.mjs"
 import { loadRaw, loadMcpServers } from "../config-io.mjs"
 import { openSessionContent } from "./panel-session.mjs"
+// F-3（QUEUED-VISIBILITY——2026-09-09）：webviewReady 快照重推（postPoolSnapshot）
+// ——panel-messages ↔ panel-callbacks 无环（callbacks 只 import 叶子/独立模块）。
+import { postPoolSnapshot } from "./panel-callbacks.mjs"
 // B2（SESSION-FLOW-B——2026-09-09）：panel-messages ↔ panel-session 环 import（panel-session
 // 头部 import 本文件 _cwd）——openSessionContent 只在 webviewReady case 函数体内使用（延迟
 // 解引用）——环安全（两模块均无顶层跨环读取）。
@@ -193,7 +196,8 @@ export async function handlePanelMessage(panel, msg) {
       // 挂起等待期（susp——纯后台池跑）陈旧/竞态 Stop 点击 no-op——不再 _susp.aborted /
       // _susp.abortControllers 全链 abort / _susp.abort / _suspWake 唤醒（全停路径删除——
       // 无全停按钮——池空自然消化完——CLI 对拍）；子代理停止靠活动区每块 ⏹
-      // （cancelSubagent 定向 abort——仅 running+pool 块挂 ⏹——queued/waiting 不挂）。
+      // （cancelSubagent 定向 abort——running+pool 块挂停 ⏹——queued/waiting 等待头挂取消 ⏹
+      // （F-2——QUEUED-VISIBILITY——2026-09-09——覆盖 F-6 旧“queued/waiting 不挂”定论）。
       if (panel._turnState === "running") {
         if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
         panel._abortController?.abort()
@@ -392,6 +396,12 @@ export async function handlePanelMessage(panel, msg) {
       // tick 恰一次（N2——loadSession 尾单发——F-B2c——异步第三发在 status() 慢段 fullStatus
       // cb——不同 tick 保留）。槽绑定随之顺延至此——webviewReady 前无 slot 读者（安全）。
       openSessionContent(panel)
+      // F-3（QUEUED-VISIBILITY——2026-09-09）：Reload 冷启 queued/running 块重建。
+      // boot 快段（openSessionContent → loadSession → clearMessages——活动区重置）后重放
+      // live 池行快照——消息 FIFO 保证 clearMessages 先于重放行（块不被清）；非新消息
+      // 类型（现有 subagent 行形状重放——activity.js 现消费路径承接）；空池 → 零消息。
+      const live = panel._liveLines ?? panel._susp?.lines
+      if (live?.history) postPoolSnapshot(panel, live)
       break
     }
     case "setAdvisorGuard": {

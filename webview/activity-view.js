@@ -24,6 +24,8 @@ export const W = {
   error: () => t("sub.error") || "error",
   awaiting: () => t("sub.awaitingDigest") || "done · awaiting digestion",
   queued: () => t("sub.queued") || "queued",
+  waiting: () => t("sub.waiting") || "waiting",
+  position: (n) => t("sub.position", { n }) || `· position ${n}`,
   thinking: () => t("status.thinking") + "…",
 }
 
@@ -121,29 +123,40 @@ export function refreshBlock(block) {
       summary.appendChild(tail)
     }
   }
-  // ⏹ — running pool children of the cancelable family only (T-M23 semantics:
-  // never on sync spawns, never after terminal states, never on queued heads).
+  // ⏹ — running pool children AND queued/waiting heads of the cancelable
+  // family (T-M23 + F-2 QUEUED-VISIBILITY: queued heads carry a cancel ⏹ — the
+  // user can revoke a queue decision; never on sync spawns, never after terminal
+  // states). ⏹ label differentiates: running = stop / queued = cancel queue.
   updateStopButton(block)
 }
 
-/** ⏹ stop overlay: visible only while running + pool-marked + cancelable role. */
+/** ⏹ stop overlay: visible while live + cancelable family role — running+pool
+ *  (stop) or queued/waiting head (cancel queue — F-2 QUEUED-VISIBILITY). Label
+ *  distinguishes the two actions; title refreshes on every call (idempotent — a
+ *  queued→running flip re-arms the title, locale re-set included). */
 function updateStopButton(block) {
   const meta = block._subMeta
-  const btn = block.querySelector(".sub-stop-btn")
+  let btn = block.querySelector(".sub-stop-btn")
+  const cancelingQueued = meta && !meta.frozen && meta.status === "queued"
   const want = meta
-    && !meta.frozen && meta.status === "running" && meta.pool === true
+    && !meta.frozen
+    && ((meta.status === "running" && meta.pool === true) || cancelingQueued)
     && FAMILY_ROLES.includes(meta.role)
     && block.isConnected
-  if (want && !btn) {
-    const b = document.createElement("button")
-    b.className = "sub-stop-btn"
-    b.type = "button"
-    b.dataset.subId = String(meta.id)
-    b.dataset.subRole = meta.role
-    b.textContent = "⏹"
-    b.title = t("sub.stopBtn") || "Stop this subagent"
-    block.appendChild(b)
-  } else if (!want && btn) {
+  if (want) {
+    if (!btn) {
+      btn = document.createElement("button")
+      btn.className = "sub-stop-btn"
+      btn.type = "button"
+      btn.dataset.subId = String(meta.id)
+      btn.dataset.subRole = meta.role
+      btn.textContent = "⏹"
+      block.appendChild(btn)
+    }
+    btn.title = cancelingQueued
+      ? (t("sub.cancelQueueBtn") || "cancel queue")
+      : (t("sub.stopBtn") || "Stop this subagent")
+  } else if (btn) {
     btn.remove()
   }
 }
