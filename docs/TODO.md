@@ -171,33 +171,12 @@
   （2026-09-09）：不应全量传上下文——会爆炸——digest 装配应限量/摘要化（非全量历史注入——摘要/窗口/
   裁剪——防 >1MB 请求体）**——status=登记待设计（digest 上下文限量装配——摘要化方案）——设计权在用户
 
-- [ ] **git commit --only 纪律落档（2026-09-09 用户裁定——并行批混扫根治）**：
-  问题：git 工具 commit stage+commit 全量暂存——并行批混扫他批文件（fe6d62d 实证）——
-  裁定：改用 bash `commit --only <显式路径>` 原子提交（忽略索引他批）——已传达在跑 eng-coder（id=19/22/25）
-  + 存 project memory——落档待办：纪律入任务书模板/eng-coder 提示词（AGENT-LOOP §20 或工程模式纪律面——
-  让未来 spawn 默认带——不靠手动 send）——status=登记待落档——设计权在用户
-
-- [x] ~~**主会话设计能力增强（2026-09-09 用户需求点——承接 designer 取消）**~~——**2026-09-09 已交付**（MAIN-DESIGN-ENHANCE——CLI fe6d62d + VSC c14cbbe——clean——L2 待链稳定）：eng 模式主会话即 designer——
-  设计能力四维增强（**用户确认全做**）：① 设计质量自查强化（评审前预检）② 思维工具结构化（方案选型
-  对比/影响面分析模板）③ 勘察效率系统化（探索前信息收集 checklist）④ 实践沉淀（本会话好实践方法论化）
-  ——**载体确认（用户 2026-09-09）**：行为纪律（执行性——自检/选型/勘察流程）写入 **engineering.md 提示词**
-  （eng 实际注入——当场遵循）+ 结构定义（三层/单一锚）留 **METHODOLOGY 文档**——双端（CLI/VSC
-  prompts 同构）——排批后走设计链——status=awaiting design
-- [x] ~~**memory 工具完善（2026-09-08 用户发现——delete scope 不一致 bug）**~~——**已实现**（2026-09-08 双端交付：CLI `528d2ab` / VSC `426b574`——scope→layer 全统一 + delete layer 可选 + 尊重 uid origin + list [layer] 标签——设计链闭合 consume）
-- [x] ~~distill 子系统 scope→layer~~——**已实现**（2026-09-08 交付 commit 26cd89f——--layer 命令面 + --scope 显式报错两形态 + 读时归一 L124 + 错误串 layer + test 8 用例——设计链评审通过）——遗留：
-    ①distill-command L75 展示无兜底（legacy scope-only 输出展示空层——Advisor #1 Deferred——需父侧裁定前置归一 vs 展示兜底——现 L124 唯一消费点设计）
-    ②bin/thincoder.mjs 501 行 >500 存量债（HEAD 前即 501——净 0 行改动）——挂 STRUCTURE-DEBT 观察
-- [x] ~~**edit 工具改进（2026-09-08 用户需求点——符合模型直觉）**~~——**已实现**（2026-09-08 双端交付：CLI `2de2a04`+`9c4eaa4` / VSC `85bfc7f`——按行号改 line/startLine/endLine + 模糊匹配 + 替换即删——阶段 2 功能统一/文档重组见下）
-- [x] ~~**VSC 会话流时序对齐 CLI**~~——**2026-09-09 全链核销**（C1 cbac1d6 + C2 2c74005 + A aacebee + B1 52e03f3 + B2 6e98807——C：消息秩序/忙态收敛——A：sendMessage 守卫/标题回合内/Stop 派生——B：块原地/单向 boot——VSC L2 154/154——consume 022a4ba0/aa9e9376/2e3c1b83——A4 尾巴/忙态冷启守卫/底部面板收敛评估 = 观察子项——见技术组）
-  - 技术子项（父侧）：A4 尾巴（webviewReady 补推 loading:true——Reload 冷启 thinking 段恢复）不入 A 批——TODO 登记
-  - 技术子项（父侧）：extension.mjs:63 _panel.sendMessage(selection).catch——同步方法 catch 多余——后续补 .catch 移除或 promise 化（既有观察——非本批引入）
-  - 技术子项（父侧）：chat-panel.test.mjs 485 行逼近 500——拆分规划（后续轮）
-  用户裁**分层全做（非三选一）**——**C 先行**（消息路由串行 R9 + 忙态状态机收敛 R4）→ A+B 后做（A：sendMessage
-  守卫 R6/状态行单 writer/标题回合内 R3；B：子代理块原地 R5/会话打开原子化 R2）——VSC 专属——owning board = VSC
-  会话流（panel/webview）——C 深勘察在途（explore——报告后落 C 设计档）——status=勘察中
-
-## 会话/存储/恢复后续
-- [x] ~~**R19 护栏语义缺口（会话节指针）**~~——**2026-09-09 去重**（同 L24——唯一条目在"代码正确性"节——会话节不重复挂）
+- [ ] **git 工具 commit pathspec 完善（2026-09-09 用户需求——并行批混扫根治——工具改进）**：
+  现状（src/tools/git.mjs:150-174）：commit 无 path → `git add -A` 全量暂存工作树（含他批未暂存）→
+  `git commit -m` 无 pathspec 提交整个索引（含他批 pre-staged）——并行批双层混扫源（fe6d62d 实证）。
+  完善方向：① path 给定 → `git commit --only <path> -m`（原子——只提交列文件——忽略索引他批——git CLI
+  --only 语义）② 无 path → 保留现行为（或裁定改安全默认）——纪律 workaround 已传在跑批 + project memory——
+  工具修好即不依赖手动纪律——owning board = 工具面（git）——status=登记待设计——设计权在用户
 - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
 - [x] ~~**VSC Stop 语义重定义**~~——**2026-09-09 核销**（并入 SESSION-ACTIVITY-REVISED——5be6c67——Stop running 派生 +
   digest 单停 + D-S9 全停废除 + subagent 靠活动区块 ⏹——L2 179/179——consume f125c0d5）
