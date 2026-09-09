@@ -260,3 +260,8 @@
 - [ ] **RESIZE 交付建议（2026-09-09——advisor 可选 🟡——后批）**：恢复序列字面量三源（writeCleanupSequence vs
   cleanup 余部 + 测试第三份）→ CLEANUP_REST 常量收拢——当前测试字节锁兜底——status=登记——设计权在用户
 
+- [ ] **INPUT-LOCK-BEHAVIOR 交付注（2026-09-09——out-of-scope + 🔵 级）**：
+  ① VSC docs/design/AGENT-LOOP.md §7 机制正文（L290/L322——"readOnly 锁 + 中断模态豁免锁"旧句）仍 C' 态
+  ——设计受影响表只列 CLI doc 行——补 VSC doc 同步（下批——doc 面）② key-handler busy 门禁注释"Tab/↑↓ 仍禁"
+  措辞微瑕 + L271 tab 死条件（🔵 级——下批）——status=登记——设计权在用户
+

@@ -1,7 +1,7 @@
 # INPUT-LOCK busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED）
 
 > 板块：主会话输入门禁（双端——INPUT-LOCK-ASYNC 已交付核销——本修订改其行为）。权威源：INPUT-LOCK-ASYNC（门禁机制——已核销）+ 本修订。
-> 状态：**设计待评审**——2026-09-09 落档（用户反馈修订——对已交付设计的体验修正）。需求：TODO INPUT-LOCK busy 行为修订（用户裁：允许录入不禁输入框——只禁 send——斜杠白名单删——忙时斜杠也禁——纯一致禁发）。
+> 状态：**评审通过——已交付（CLI 8ee5309 + VSC c9509ad——clean——审计 CLEAN + advisor pass——CLI 216/0 + VSC 255/0——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
@@ -9,7 +9,9 @@
 
 - **总体目标**：修 INPUT-LOCK 交付的行为过度——① busy 时输入框**不禁用**（允许继续录入回显——VSC readOnly 锁 = 过度）——只 **send/Enter 禁发**；② **斜杠命令白名单删除**（busySafeCommand/BUSY_SAFE_COMMANDS = 过度设计）——忙时斜杠同禁发（纯一致——/exit 也发不出——退出靠 Ctrl+C 终端层紧急通道）。
 - **功能性**：
-  - F-1（VSC 不禁录入）busy 锁改：readOnly 移除（可打字回显）——send 禁保留（send.js 出口守卫——回车/发送按钮拒——占位符文案改"输入中——主会话处理中——Enter 提交禁用"）
+  - F-1（VSC 不禁录入）busy 锁改：readOnly 移除（可打字回显）——send 禁保留（send.js 出口守卫——回车/发送
+    按钮拒——占位符文案改"主会话处理中——Enter 提交禁用——可继续输入"（评审 #8：与设计节 :21 统一——
+    单一定稿串））
   - F-2（CLI 白名单删）BUSY_SAFE_COMMANDS/busySafeCommand 机制删（index.mjs + key-handler.mjs）——斜杠命令忙时同走提交吞（白名单直执行分支删）
   - F-3（测试更新）INPUT-LOCK 测试族——白名单直执行测删/改禁发测 + VSC busy 锁测改（readOnly 移除 → 可录入 + send 禁断言）
   - **范围边界**：门禁判据（busy = processing/_turnState running）零动；Ctrl+C/Ctrl+I 终端层紧急通道保留（key-handler 门禁前——与白名单无关）；CLI 提交吞 + 字符回显保留（已允许录入——只删白名单）；VSC 中断模态豁免（_interruptMode——Ctrl+I 注入）保留——不禁录入后 readOnly 相关豁免面重查。
@@ -42,7 +44,7 @@
 | webview/loading.js | VSC | 62 | ≤-3 | F-1 readOnly 移除 + 占位符改 |
 | webview/send.js | VSC | 53 | ≤+1 | F-1 守卫确认（已有——小） |
 | webview/input.js | VSC | 135 | ≤-5 | F-1 豁免面重查（readOnly 移除后） |
-| locales/en.json + locales/zh.json（评审 #4——busy 占位符文案真实载体——chat.js 无副本不动） | VSC | 各 ~150 | ≤+2 | F-1 文案（input.busyPlaceholder） |
+| locales/en.json + locales/zh.json（评审 #4——busy 占位符文案真实载体——chat.js 无副本不动） | VSC | 各 245（实测——评审 #7） | ≤+2 | F-1 文案（input.busyPlaceholder：13 行） |
 | src/tui/index.mjs | CLI | 454（实测——评审 #5） | ≤-5 | F-2 BUSY_SAFE_COMMANDS 删 + submit 守卫改写 |
 | src/tui/key-handler.mjs | CLI | 444（实测——评审 #5） | ≤-8 | F-2 白名单分支删 |
 | test/input-lock.test.mjs + test/webview-turnstate.test.mjs | 双端 | 既有 | ±10 | F-3 |
