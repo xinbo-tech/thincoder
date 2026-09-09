@@ -19,10 +19,12 @@
   - F-1（流尾形态）块出生即 #messages 流尾（与 .message 同层）——结束原地折叠——无 DOM move/锚插/
     顺序维护——生命周期只有 live → frozen——**终态集合闭合：任何非 queued/started 的 status（done/settled/
     error/cancelled/answered/terminated/failed…）一律视同终态折叠——settled 视同 done——answered 对无块
-    频道 no-op（有块则折叠——consult 终态驱动保留）**
+    频道 no-op（有块则折叠——consult 终态驱动保留）**——**终态/trim 路径 lookup-only 绝不建块**（评审
+    round2 #1）
   - F-2（queued 排队可见——保留）queued 消息 → 建等待头（⏳ **含取消 ⏹——QUEUED-VISIBILITY F-2 保留——
-    F-4 ⏹ 范围 = running + queued**）；started → 翻 running；cancelled (was:queued) → 移除——三分支——
-    **position/waiting 状态词删（头只显 ⏳ + 取消 ⏹——无位置/等待原因文本）**——**不做跨 reload 恢复**（reload 进程死块死——消息流是历史——SESSION-RESTORE-
+    取消 ⏹ 沿既有 cancelSubagent 路径（协议零改）——其标签键 sub.cancelQueueBtn 保留不删**）；started →
+    翻 running；cancelled (was:queued) → 移除——三分支——**position/waiting 状态词删（头只显 ⏳ + 取消
+    ⏹——无位置/等待原因文本——sub.waiting/sub.position/sub.awaitingDigest 三键删）**——**不做跨 reload 恢复**（reload 进程死块死——消息流是历史——SESSION-RESTORE-
     PARITY 定论）
   - F-3（删加戏）容器及其派生全删（区样式/显隐/pin/32vh/区内自滚）；DOM move 落流 + freezeInsertPoint
     锚插链删（freeze = 原地折叠）；settle 驻留 + awaiting digestion 词删（settled 视同 done 即时折叠）；
@@ -31,12 +33,18 @@
     waiting 分支删
   - F-4（留核心）150 窗 trim（核心——防 DOM 无界——live/冻结出生即计窗无豁免）；resetActivity 简化版
     （清 .sub-live + map）；块内内容流 append（ui.js appendAdvisorChunk 原样）；头行状态词
-    （noteChunk/refreshBlock 核心）；⏹ 停止控制（running 块——委托回 messagesEl）；一层幂等终态守卫
+    （noteChunk/refreshBlock 核心）；⏹ 停止控制（**running + queued——委托回 messagesEl——queued 取消沿
+    既有 cancelSubagent 路径——评审 round2 #3**）；一层幂等终态守卫
   - F-5（扩展端零动——安全边界）消息协议零改——settled 仍发 webview 视同 done；reclaim 补发 done 被
     守卫吞（惰性 no-op）——扩展端/桥/测试协议面不动
   - **范围边界**：只动 VSC webview 端（activity 三文件 + panels/chat/streaming/state + index.html/base.css
-    + activity-flow 测试族 + **locales（若删词键）**）——扩展端零动——CLI 端零动——boot 原子化（B2）保留
+    + activity-flow 测试族 + **locales（删 3 词键）**）——扩展端零动——CLI 端零动——boot 原子化（B2）保留
     ——ui.js appendAdvisorChunk 零改动假设（其冻结守卫已含 null/非块保护——不成立则计入受影响面）
+- **非功能性需求（评审 round2 #4——机制文档标准成层）**：
+  - N1 性能：150 窗 DOM 有界（live/冻结出生即计窗无豁免——trim 保底）——内容流 append 零额外复制
+  - N2 兼容：扩展端消息协议零改（F-5 边界）——settled/answered 等既有 status 全被终态闭合覆盖
+  - N3 语义：reload/新会话无块特殊恢复（消息流 = 历史——SESSION-RESTORE-PARITY）
+  - N4 可维护：块生命周期只 live → frozen 两态——单 map 单守卫——无 DOM move/锚/顺序维护
 
 ## 设计（手工重写——照做勿自行解释）
 
@@ -69,11 +77,12 @@ reload/新会话 → 无块特殊恢复（clearMessages→historyPage 即一切�
 | webview/chat.js | 319 | -3 | ⏹ 委托回 messagesEl（删区容器委托）——其余不变（>300 档：改动仅删 2 行委托——结构不变——不涉拆分） |
 | webview/streaming.js | 254 | -15 | subagentChunk 守卫改空安全（`if (!block || frozen) return`）+ 删 rAF 活动区扫描 |
 | webview/state.js | 118 | -3 | 删 ctx.subAgentArea；S._subBlocks 保留 |
-| index.html | 89 | -1 | 容器 div 删 |
+| index.html | 89 | -4 | 容器 div + 注释（L25-28 区）删——评审 round2 #5 口径 |
 | base.css | 449 | -30 | grid 五行→四行 + #subagent-activity 规则删（>300 档：净删不改结构——不涉拆分） |
 | test/activity-flow.test.mjs | 680 | 重写 | **全族按新形态重写——目标 ≤300 行（拆简后规模参考 B1 8 组 ~260——超出则拆多文件）** |
 | test/helpers/webview-env.mjs | 73 | -1 | fixture #subagent-activity id 删 |
-| locales/en.json + zh.json | — | -4 词键 | waiting/position/awaitingDigestion/cancelQueue 死键删（若词删）——评审 #1 #7 |
+| locales/en.json + zh.json | — | -3 词键 | sub.waiting/sub.position/sub.awaitingDigest 死键删——**sub.cancelQueueBtn
+  保留（queued ⏹ 标题——F-2）**——评审 round2 #2 |
 | docs/design/README.md | — | ≤+5 | 本档登记 + 被取代档（SESSION-ACTIVITY-REVISED/QUEUED-VIS/ACTIVITY-SPLIT/SESSION-FLOW-B B1 段）标 superseded——评审 #1 #4 |
 | docs/design/WEBVIEW.md | — | ≤+15 | §2 布局 + §5 子代理机制权威措辞同步（流尾形态——删容器/DOM-move/awaiting 描述）——评审 #1 #4 |
 
@@ -111,6 +120,8 @@ reload/新会话 → 无块特殊恢复（clearMessages→historyPage 即一切�
 
 - AC-1 grep 零命中：freezeInsertPoint/settleSeq/_freezeAtEl/freezeSettledBlocks/reclaim 消费/
   updateAreaVisibility/pinActivityArea/subagent-activity（webview 端——测试除外待重写）
+- AC-1b 死键确认：locales 无 sub.waiting/sub.position/sub.awaitingDigest——**sub.cancelQueueBtn 在**
+  （queued ⏹ 标题活键）
 - AC-2 块出生 #messages 流尾（activity-flow 断言 parentNode = messagesEl）
 - AC-3 终态原地折叠无 DOM move（parentNode 不变断言）
 - AC-4 queued 三分支（⏳ 头 + **取消 ⏹**/翻转/取消移除）绿——扩展端消息协议零改
@@ -129,3 +140,7 @@ reload/新会话 → 无块特殊恢复（clearMessages→historyPage 即一切�
   头保留取消 ⏹（F-4 扩 running+queued）position/waiting 词整删 + 🟡#4 doc-sync 行（README 登记 + 被取代档
   superseded + WEBVIEW §2/§5 同步）+ 🔵#5 streaming 空安全守卫注 + 🔵#6 live 被裁 tombstone 路径 + 🔵#7
   locales 词键/ui.js 面处理——round 2 待评）。
+- 2026-09-09：评审 round2 PASS + 5 项 advisory 修正（🟡#1 终态/trim lookup-only 绝不建块明写 + 🟡#2 locales
+  只删 3 键（waiting/position/awaitingDigest）——cancelQueueBtn 保留（queued ⏹ 活键）键名精确化 + 🟡#3 F-4
+  ⏹ 措辞对齐 running+queued + 🔵#4 NFR 块成层（N1-N4）+ 🔵#5 index.html 增量 -4 口径——执行版定稿——
+  token 73ee0eee）。
