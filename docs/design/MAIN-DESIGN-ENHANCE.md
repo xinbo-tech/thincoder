@@ -34,11 +34,12 @@
 
 ### A3 评审前预检（挂 flow step 3——"Remind readiness" 前执行）
 > 提"设计就绪待评审"前先跑**评审前预检**：① 需求三层具体到可设计？② 受影响文件全清单 + 行数标注（R24a）？
-> ③ 验收标准逐条回指需求（每条可机器验证）？④ UI/交互决策全落档（无"讨论过但没写"）？⑤ 方案对比已做（A2）？
+> ③ 验收标准逐条回指需求（每条可机器验证）？④ UI/交互决策全落档（无"讨论过但没写"）？⑤ 方案对比已做？
 > ——预检不过先修，不自发起评审（发起权仍在用户）。
 
 ### A4 实践沉淀入口句（挂"Docs Capture the Conversation"纪律——追加句）
-> 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（docs/design/METHODOLOGY.md）——不散落会话。
+> 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（本端 METHODOLOGY.md——权威源在
+> docs/design/METHODOLOGY.md——评审 #4 中性引用：不硬编码单端路径——VSC 端指根 METHODOLOGY.md）——不散落会话。
 
 
 ### 载体落点
@@ -62,8 +63,7 @@
 | docs/design/METHODOLOGY.md | CLI | 结构定义新增节（权威源） |
 | METHODOLOGY.md（根注入副本） | CLI/VSC | 同源同步 |
 | docs/design/ENGINEERING-MODE.md | 双端 | §2.9 锚登记（如落锚） |
-| test/prompts-async-guidance.test.mjs | 双端 | 断言新纪律句驻留（评审 #2：CLI 现 103 行——预计 +4~+8
-  断言行——不跨档） |
+| test/prompts-async-guidance.test.mjs | 双端 | 断言新纪律句驻留（评审 #2：CLI 现 103 行——预计 +4~+8 断言行——不跨档） |
 
 ## 用例表
 
