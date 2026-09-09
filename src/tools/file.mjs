@@ -162,11 +162,14 @@ export const readImageTool = {
 
     // Vision capability gate: injecting an image into a text-only model's history poisons the whole
     // conversation (every subsequent request 400s on the image part). Refuse before reading the file.
+    // F-3（IMAGE-DOWNGRADE-VISION——2026-09-09）：软引导句逐字锚（设计档照抄——CLI 无 extension
+    // 式自动降级——模型收到错误后自选 spawn 视觉渠道子代理路径）。
     const model = ctx.agent?.provider?.model
     if (model && !specForModel(model).multimodal) {
       throw new Error(
         `Model "${model}" does not support image input — read_image is unavailable with this provider. ` +
-        `Verify visual output programmatically (file size, dimensions, pixel checks via code) or ask the user to switch to a vision-capable provider.`
+        `Verify visual output programmatically (file size, dimensions, pixel checks via code) or ask the user to switch to a vision-capable provider.\n` +
+        `模型不支持图像——可 spawn 一个视觉模型子代理（subagent model 参数指视觉渠道）用 read_image 读图`
       )
     }
     const mime = IMAGE_EXTENSIONS[ext]
