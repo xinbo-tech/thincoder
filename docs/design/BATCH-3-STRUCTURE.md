@@ -17,7 +17,8 @@
 
 ### 1. F-1 config-io 预拆（VSC）
 - src/config-io.mjs（499）——F-4 相关块（sanitizeConsultModels/warnConsultModelsFiltered/loadConsultPool/cascadeRemoveProvider——现 config-io 内）迁 **src/config-consult.mjs（新 ~80）**——config-io 改 re-export hub（import + export——调用方 import 面不变）
-- 拆后：config-io ≤460（净减 ~40）+ config-consult 新 ~80——均 <500
+- 拆后：config-io ≤460（净减 ≥40）+ config-consult 新 ≤80（评审 #3——迁出块体 + import/export
+  开销 ≈ 新文件总量——上限收紧 ≤80——AC-1 实测为门）——均 <500
 - 测试：config-io hub re-export 面测试（import 等价——既有 config-io 测试零改零回归）
 
 ### 2. F-2 digest 注入批量预算（CLI subagent-async + VSC 同构）
@@ -33,7 +34,9 @@
 | src/config-consult.mjs（新） | VSC | 新 | 新 ~80 | F-1 consult 块 |
 | src/agent-tools/subagent-async.mjs | CLI | 421 | ≤+10 | F-2 批量预算 |
 | src/agent-tools/subagent-async.mjs | VSC | ~420 | ≤+10 | F-2 镜像 |
-| test/（config-io hub + digest 预算） | 双端 | 既有 | +20~+40 | F-1/F-2 |
+| test/config-softfail.test.mjs（F-1 hub re-export 面——咨询块迁移后零改零回归——评审 #1 具名） | VSC | 既有 | +0~+10 | F-1 |
+| test/async-settle.test.mjs（F-2 CLI digest 预算——评审 #1 具名） | CLI | 既有 | +10~+15 | F-2 |
+| test/eng-settlement.test.mjs（F-2 VSC digest 镜像预算——评审 #1 具名） | VSC | 既有 | +10~+15 | F-2 |
 
 ## 用例表
 
@@ -41,8 +44,12 @@
 |---|---|---|
 | F-1 hub 面 | 既有调用方 import config-io | API 面不变——测试零回归——F-1 |
 | F-1 规模 | config-io 拆后 | ≤460 + config-consult ~80——均 <500——F-1 |
-| F-2 超预算 | 单 digest 轮 3 条 pending（合计 >64K） | 后条清单行（报告已落盘）——不 inline 全文——F-2 |
+| F-2 超预算 | 单 digest 轮 3 条 pending：30K+30K+40K（合计 100K >64K——评审 #4 尺寸钉死） |
+  后条清单行（报告已落盘 <path>——path 来源在测试断言钉死——不 inline 全文）——F-2 |
 | F-2 单条 | 单条 ≤64K | inline 预览不回归——F-2 |
+| 错误：恰好 =64K 边界 | 累计恰 64K | 全部 inline（预算含边界——评审 #2）——F-2 |
+| 错误：空轮 | 无 pending 条目 | no-op（预算零注入）——F-2 |
+| 错误：hub 符号缺失 | config-io re-export 断链 | import 响亮失败（测试断言）——F-1 |
 
 ## 验收
 
