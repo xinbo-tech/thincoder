@@ -18,17 +18,29 @@
 
 ### 1. F-1 cleanup 序重排（tui-lifecycle.mjs:51-74 createExitCleanup）
 - 现序：saveSession → closeAllMcp → `setRawMode(false)`（:70）→ `writeCleanupSequence`（:71——含 mouseOff）→ setTuiActive(false)
-- 改序：saveSession → closeAllMcp → **① `writeCleanupSequence`（先 mouseOff DECRST——回显未开）→ ② `setRawMode(false)` → ③ stdin 排空**（`process.stdin.removeAllListeners("data")` + `process.stdin.pause()`——丢弃在途——不再转发 keyStream）→ ④ setTuiActive(false)
-- 注：writeCleanupSequence 内含 clearScreen/mouseOff/bracketedPasteOff/mainBuffer 等——DECRST 先于回显开——暴露窗口消
-- 排空 = removeAllListeners + pause（有 100ms 延迟退出路径——Ctrl+C 的 setTimeout 窗口——监听器已摘——残留字节不再被转发/渲染）
+- 改序（评审 #1 定稿——**唯一权威序**——F-1 需求与实现统一）：
+  saveSession → closeAllMcp → **① 写 `mouseOff`（DECRST——单独写——不整包 writeCleanupSequence）→ ② settle ~20ms**
+  （DECRST 往返——raw 仍开——回显仍关——无暴露窗口）→ **③ setRawMode(false)** → **④ stdin 排空**（removeAllListeners
+  + pause——raw 已关但 DECRST 已处理——无新上报——在途已读字节摘监听丢弃）→ **⑤ writeCleanupSequence 余部**
+  （clearScreen/bracketedPasteOff/mainBuffer/恢复屏幕）→ ⑥ setTuiActive(false)
+- 注（评审 #1）：排空 = removeAllListeners + pause（不依赖限时读——settle 已保证无新上报——在途已读字节被摘监听
+  丢弃；未读内核缓冲在 settle 后无新来源——pause 不消费仅防 100ms 延迟窗口新到）——**exit 事件路径同步约束**：
+  cleanup 注册于 process.on("exit")（index.mjs:265）——settle 20ms 需同步等待（Atomics.wait 或拆注册点——
+  实现时选一并注）——/exit 与 Ctrl+C 走 ctx.exit（延迟退出——异步安全）——exit 事件只兜底异常退出
 
 ### 2. F-2 /exit 走 ctx.exit（cmd-exit.mjs）
 - 现：`cmd-exit.mjs:8` process.exit(0) 直调（清理押 'exit' 事件——零提前量）
-- 改：走 ctx.exit（index.mjs:407 现成——cleanup 同步执行 + 延迟 exit——与 Ctrl+C 同路径）
-- 测试：/exit 触发 cleanup 序列（mock ctx.exit 调用断言）
+- 改：走 ctx.exit（index.mjs:407 现成——cleanup 同步执行 + 延迟 exit）——**评审 #2：需渲染抑制**——
+  handleSlash 返回后 index.mjs:352-354 无条件 render()——cleanup 恢复主屏后会把 TUI 帧重绘到主屏 ~100ms——
+  **doRender 前加 tuiActive 守卫**（render-loop——!tuiActive → 跳过帧写——cleanup 已 setTuiActive(false)）
+- 测试：/exit 触发 cleanup 序列（mock ctx.exit 断言）+ **退出前无帧写入断言**（tuiActive false 后 render no-op——
+  评审 #2 AC-2 补）
 
 ### 3. F-3 鼠标 sane-gate（mouse.mjs）
-- parseMouseClicks（mouse.mjs:79-86）解析后 + index.mjs 滚轮/左键处理——坐标 sane-gate：`col > state.dims.cols || row > state.dims.rows → 丢弃`（不落 keyStream/不触发动作）——resize 后尺寸变化瞬间的越界上报天然被灭
+- sane-gate 落点定稿（评审 #3）：① handleMouseClick 入口（mouse.mjs——state.dims 可用——越界点击丢弃）②
+  handleWheel 入口（越界滚轮丢弃——不落面板）③ **index.mjs 滚轮 fallback 前**（:218-227——未命中面板的
+  会话滚动——越界 wheel 也禁止滚动——评审 #3：mouse.mjs 内 gate 无法覆盖此路径）——`col > dims.cols ||
+  row > dims.rows → 丢弃`（>非 >=——末行列合法）
 - 测试：越界坐标（col > cols）→ 无动作无落框；正常坐标不回归
 
 ## 受影响文件（CLI）
@@ -37,9 +49,9 @@
 |---|---|---|---|
 | src/tui/tui-lifecycle.mjs | 75 区 | ≤+8 | F-1 cleanup 序重排 + stdin 排空 |
 | src/tui/cmd-exit.mjs | 10 区 | ≤+3 | F-2 走 ctx.exit |
-| src/tui/mouse.mjs | 229 | ≤+8 | F-3 sane-gate |
-| src/tui/index.mjs | 449 | ≤+3 | F-3 接线（若滚轮/左键处理处需传 dims） |
-| test/（cleanup 序 + sane-gate 新测试） | 新 | 新 ≤80 | F-1/F-3 |
+| src/tui/mouse.mjs | 241（实测——评审 #4） | ≤+8 | F-3 sane-gate |
+| src/tui/index.mjs | 454（实测——评审 #4） | ≤+5 | F-3 滚轮 fallback 拦截（评审 #3 定稿——非"若需"） |
+| test/tui-exit-cleanup.test.mjs + test/mouse-sane-gate.test.mjs（评审 #4 具名） | 新 | 新 ≤80 | F-1/F-3 |
 
 ## 用例表
 
@@ -54,10 +66,13 @@
 ## 验收
 
 - AC-1 cleanup 序（mouseOff → setRawMode(false) → stdin 排空——测试锁序）
-- AC-2 /exit 与 Ctrl+C 同路径（ctx.exit——测试）
+- AC-2 /exit 走 ctx.exit（cleanup + 延迟 exit——评审 #2：非"同路径"——Ctrl+C 是 key-handler 直调 cleanup——
+  断言含退出前无帧写入（渲染抑制生效））
 - AC-3 sane-gate（越界丢弃——正常不回归——测试）
 - AC-4 npm test 快层零回归
 - 红线：鼠标解析器主体不动（只加 gate）；resize 重绘逻辑零动；X10 兼容缺口另记不扩
 
 ## 变更记录
-- 2026-09-09：落档（勘察一手——RC1 退出时在途上报不排空 + setRawMode(false) 先于 DECRST（tui-lifecycle:70-71）——暴露窗口；RC2 /exit 直调 process.exit 零提前量（cmd-exit:8）；RC3 resize 全量重绘压 stdin 消费放大——修复：序重排 + 排空 + /exit 同路径 + sane-gate——x=444444 终端侧伪影不可代码解释（记录——非合法 SGR 按钮值 cb≤92——终端/ConPTY 行为）。
+- 2026-09-09：落档（勘察一手——RC1 退出时在途上报不排空 + setRawMode(false) 先于 DECRST（tui-lifecycle:70-71）——暴露窗口；RC2 /exit 直调 process.exit 
+- 2026-09-09 评审 #1 修正：F-1/§1 统一唯一权威序（mouseOff 单独写 → settle 20ms → raw off → 排空 → 恢复屏幕）+ 
+  exit 事件同步约束注；评审 #2 渲染抑制（doRender tuiActive 守卫）+ AC-2 改；评审 #3 gate 落点定稿三处；评审 #4 行数实测——待 round 2 重评。零提前量（cmd-exit:8）；RC3 resize 全量重绘压 stdin 消费放大——修复：序重排 + 排空 + /exit 同路径 + sane-gate——x=444444 终端侧伪影不可代码解释（记录——非合法 SGR 按钮值 cb≤92——终端/ConPTY 行为）。
