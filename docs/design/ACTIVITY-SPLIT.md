@@ -12,7 +12,9 @@
   - F-1 拆分 3 文件：activity.js（核心编排 ~290）+ activity-view.js（呈现叶 ~210 新）+ activity-freeze.js（冻结叶 ~85 新）
   - F-2 依赖方向：core→view→{state,i18n} 与 core→freeze→view→state——纯 DAG 无环（repo leaf 纪律）
   - F-3 外部消费方零改动（hub re-export——panels/chat/streaming/test 动态 import 路径不变——CLI subagent-blocks:23-24 先例）
-  - F-4 verbatim 移动——函数体零改——仅 imports 调整
+  - F-4 verbatim 移动——函数体零改——仅 imports 调整——**唯一例外（评审 #1 显式标注）：resetActivity
+    的 ticker 清理行提为 view 的 stopTicker 新函数（原内联 clearInterval/_tickDisabled/liveBlocks 清——
+    拆后状态在 view——resetActivity 体改为单调用 stopTicker()）——stopTicker = 新代码非 verbatim 移**
   - **范围边界**：非本任务 = activity-flow.test.mjs 自身 ~590 行债（单列后续）+ applySubagentStatus 状态机逻辑改（不动——只搬家）+ freeze 逻辑改（不动）+ 新区命名/细拆待定项（设计定稿）。
 
 ## 设计（activity 拆分勘察骨架——候选 B——照做勿自行解释）
@@ -26,7 +28,10 @@
    - applySubagentStatus（:312——120 行状态机——queued/started/settled/terminal 全分支）
    - _settleSeq（:510）+ freezeSettledBlocks（:515——留核心理由：按 settled 行表驱动的策略——panels.js 直接消费——若随 freeze 出移则 freeze 需 import 核心成环）
    - resetActivity（:569——17 行——ticker 清经新 stopTicker 调）
-   - re-export 块（~13 行）
+   - re-export 块（~13 行——评审 #2 枚举：`export * from "./activity-view.js"`（含 FAMILY_ROLES——供核心
+     import）+ 命名 `export { freezeBlock } from "./activity-freeze.js"`——liveBlocks 私有不导出——
+     外部消费方实测仅用 applySubagentStatus/freezeSettledBlocks/resetActivity/ensureBlock/noteChunk/
+     测试 7 符号——勘察核）
    - **导出**：applySubagentStatus/ensureBlock/resetActivity/freezeSettledBlocks/parseChannel/blockNamesFor 直接 + `export { freezeBlock } from "./activity-freeze.js"` + view 族 re-export
 2. **activity-view.js（新区 ~210——live 呈现叶——镜像 CLI subagent-panel.mjs + fold-block 渲染面）**迁入：
    - FAMILY_ROLES（:37）
@@ -45,6 +50,7 @@
 ```
 core (activity.js) ──→ activity-view.js ──→ state.js / i18n.js
         └──────────→ activity-freeze.js ──→ activity-view.js ──→ state.js
+                                     └─────────────→ state.js（评审 #4——ctx.messagesEl 直依赖）
 ```
 
 ### 拆分机械步骤（Module Split Policy）
@@ -63,7 +69,7 @@ core (activity.js) ──→ activity-view.js ──→ state.js / i18n.js
 
 | 文件 | 改动 | 行数 |
 |---|---|---|
-| webview/activity.js | 核心保留 + re-export 枢纽 | 579 现（→~290——评审 #1 实测） |
+| webview/activity.js | 核心保留 + re-export 枢纽 | 579 现（−289±10 → ~290——评审 #1 实测） |
 | webview/activity-view.js | 新建——呈现叶 | 新 ~210 |
 | webview/activity-freeze.js | 新建——冻结叶 | 新 ~85 |
 | docs/design/WEBVIEW.md §3 | 文件结构更新 | doc |
@@ -76,7 +82,9 @@ core (activity.js) ──→ activity-view.js ──→ state.js / i18n.js
 - AC-1 三文件拆分（activity ~290 / activity-view ~210 / activity-freeze ~85——实测 ±10 内）
 - AC-2 依赖无环（core→view/freeze——view/freeze 不依赖 core——node 加载绿）
 - AC-3 外部消费方零改动（panels/chat/streaming import 路径不变——test 动态 import activity.js 不变——hub re-export 全符号可达）
-- AC-4 verbatim 移动（git diff 函数体零改——仅 imports/头注释——activity-flow.test.mjs 断言数 parity——零增零减）
+- AC-4 verbatim 移动（git diff 函数体零改——仅 imports/头注释——**唯一例外：resetActivity ticker 清理 →
+  stopTicker() 调用——评审 #1 显式标注**——activity-flow.test.mjs 断言数 parity——零增零减——**基线数
+  实现期开工时记录（评审 #3）**）
 - AC-5 测试绿（activity-flow 15 组 + 既有——VSC npm test 快层——断言计数与拆分前相等）
 - AC 红线：行为零改（纯重构——无逻辑变更——无消息协议动）
 
