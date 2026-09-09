@@ -1,7 +1,7 @@
 # 排队 subagent 可见性对齐（QUEUED-VISIBILITY）
 
 > 板块：subagent 活动面板（双端——CLI subagent-panel + VSC chat 活动区）。权威源：SESSION-ACTIVITY-REVISED（VSC 已交付——queued 等待块头 + ⟦ev⟧queued 等价通道）+ AGENT-LOOP §19.5（⏹ 门控）+ §20 D-SD3b（CLI queued 块）。
-> 状态：**设计待评审**——2026-09-09 落档（深勘察双端现状——**重要发现：VSC queued 可见链已存在并交付核销**（SESSION-ACTIVITY-REVISED 5be6c67——179/179 绿）——本设计 = **差集增量**非从零建通道）。需求：TODO live 面板排队 subagent 可见（用户裁全量：位置 + 原因 + 依赖链 + 可取消）。
+> 状态：**评审通过——已交付（VSC bacf545——10 文件 + CLI 16f0095——3 文件——clean——修正轮 1/5——VSC 236/0 + CLI 188/0——L2 待链稳定）**——2026-09-09 落档
 
 ---
 
