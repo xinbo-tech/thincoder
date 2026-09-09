@@ -32,7 +32,7 @@ import { createPickers } from "./pickers.mjs"
 import { runDistill as runDistillImpl } from "./distill-cmd.mjs"
 import { createInteraction } from "./interaction.mjs"
 import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, translateShiftEnter, stripKeyboardProtocol } from "./clipboard.mjs"
-import { parseMouseClicks, handleWheel, createMouseDispatch } from "./mouse.mjs"
+import { parseMouseClicks, handleWheel, createMouseDispatch, mouseOob } from "./mouse.mjs"
 import { runAgentTurn } from "./agent-turn.mjs"
 import { createKeyHandler, convMaxScroll } from "./key-handler.mjs"
 import { showStartup, backgroundIndex, createLoadOlder } from "./startup.mjs"
@@ -214,6 +214,10 @@ export async function startTUI(agent, opts = {}) {
     for (const m of text.matchAll(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/g)) {
       const button = Number(m[1])
       if (button === 64 || button === 65) {
+        // F-3 sane-gate ③（RESIZE-MOUSE-LEAK-FIX）：越界 wheel 禁止会话滚动——handleWheel
+        // 对越界返回未消费会穿到 fallback 滚动（mouse.mjs 内 gate 覆盖不到此路径）
+        const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+        if (mouseOob(Number(m[2]), Number(m[3]), dims)) continue
         const consumed = handleWheel(mouseCtx(), button, Number(m[2]), Number(m[3]))
         if (!consumed) {
           if (button === 64) {

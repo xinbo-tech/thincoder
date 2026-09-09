@@ -33,6 +33,7 @@ export function handleWheel(ctx, button, col, row) {
   const r = row - 1
   if (r < 0) return false
   const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+  if (mouseOob(col, row, dims)) return false // F-3 sane-gate ②：越界滚轮丢弃——不落面板（> 非 >=——末行列合法）
   const layout = computeLayout(state, dims)
   const P = layout.panels
   // §7.2.1 D4: 固定子agent 面板（conversation 与 todo 之间）——面板行默认穿出
@@ -85,6 +86,13 @@ export function parseMouseClicks(text) {
   return out
 }
 
+/** F-3 sane-gate（RESIZE-MOUSE-LEAK-FIX）：越界坐标判定——resize 后短窗口越界上报丢弃
+ *  （col > dims.cols || row > dims.rows——> 非 >=——末行列合法——与 dims.mjs 同哲学）。
+ *  落点：① handleMouseClick 入口 ② handleWheel 入口 ③ index.mjs 滚轮 fallback 前（评审 #3 定稿）。 */
+export function mouseOob(col, row, dims) {
+  return col > dims.cols || row > dims.rows
+}
+
 /** Map a 0-based screen row to a conversation line index (same math as renderConversation). */
 export function convGlobalIndex(convLen, convH, scroll) {
   const { start, pad } = convViewport(convLen, convH, scroll)
@@ -108,6 +116,7 @@ export function handleMouseClick(ctx, col, row) {
   // Single source (Windows ConPTY instability, 2026-08-30): the cached dims,
   // never a live read that can flip between stale and fresh values.
   const dims = state.dims ? state.dims.get() : { cols: process.stdout.columns || 80, rows: process.stdout.rows || 24 }
+  if (mouseOob(col, row, dims)) return false // F-3 sane-gate ①：越界点击丢弃——resize 后短窗口越界上报不落应用（> 非 >=——末行列合法）
   const layout = computeLayout(state, dims)
   const P = layout.panels
 

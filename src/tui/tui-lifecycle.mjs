@@ -32,6 +32,11 @@ export function setTuiActive(active) {
   tuiActive = active === true
 }
 
+/** 读 TUI 活动态（F-2 渲染抑制守卫——render-loop doRender 前查——cleanup 清 false 后不再重绘已恢复的主屏）。 */
+export function isTuiActive() {
+  return tuiActive
+}
+
 /** R25 崩溃恢复：仅 TUI 活动态执行 writeCleanupSequence（复用本模块清理序列——符号锚）。
  *  测试缝（T-R25a.2——env 门注入）：THINCODER_TEST_CLEANUP_OUT 指向文件时序列写入该文件
  *  （观察恢复被调 + stdout 管道零 ANSI）——生产不设该 env → 恒 stdout（零变化）。
@@ -47,8 +52,10 @@ export function restoreTerminalAfterCrash() {
   return true
 }
 
-/** 退出清理闭包：保存会话（同步）+ 关闭 MCP 子进程 + 恢复终端。幂等（cleanedUp 守卫）。 */
-export function createExitCleanup({ agent, saveSession, closeAllMcp }) {
+/** 退出清理闭包：保存会话 + 关闭 MCP + 恢复终端。幂等（cleanedUp 守卫）。stdin/write 注入缝（测试锁序——缺省生产零变化）。
+ *  F-1 唯一权威序（RESIZE-MOUSE-LEAK-FIX）：① mouseOff DECRST → ② settle ~20ms（DECRST 往返——raw 仍开回显仍关）→
+ *  ③ raw off → ④ stdin 排空 → ⑤ 恢复屏幕 → ⑥ 清 TUI 活动态。 */
+export function createExitCleanup({ agent, saveSession, closeAllMcp, stdin = process.stdin, write = (s) => process.stdout.write(s) }) {
   let cleanedUp = false
   return () => {
     if (cleanedUp) return
@@ -67,8 +74,14 @@ export function createExitCleanup({ agent, saveSession, closeAllMcp }) {
     } catch {
       // Can't close? fine, process is exiting anyway
     }
-    process.stdin.setRawMode(false)
-    writeCleanupSequence()
-    setTuiActive(false) // R25：清理完成即清活动态（崩溃钩子不再收到误判）
+    // ① mouseOff 单独写（DECRST——不整包 writeCleanupSequence）：先于 raw off 停鼠标——消除「回显开而鼠标未停」暴露窗口
+    write(ansi.mouseOff)
+    // ② settle 20ms：Atomics.wait 同步等（不拆注册点——cleanup 亦挂 process.on("exit") 兜底异常退出——exit 事件仅同步合法）
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20)
+    // ③ raw off（DECRST 已被终端处理——无新上报可回显）→ ④ 排空：摘 data 监听 + pause——不依赖限时读——在途已读字节丢弃不归 shell
+    stdin.setRawMode(false); stdin.removeAllListeners("data"); stdin.pause()
+    // ⑤ writeCleanupSequence 余部（mouseOff 已单写——clearScreen/bracketedPasteOff/…/wrapOn 恢复屏幕）
+    write(ansi.clearScreen + ansi.bracketedPasteOff + ansi.keyboardPop + ansi.modifyOtherKeysOff + ansi.mainBuffer + ansi.showCursor + ansi.reset + ansi.wrapOn)
+    setTuiActive(false) // ⑥ R25：清理完即清活动态（崩溃钩子不再误判——渲染抑制锚）
   }
 }

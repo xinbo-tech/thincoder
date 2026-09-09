@@ -16,6 +16,7 @@
 import { countConvLines, renderRows } from "./render-frame.mjs"
 import { estimateTokens } from "../context.mjs"
 import { ansi, C } from "./ansi.mjs"
+import { isTuiActive } from "./tui-lifecycle.mjs" // F-2 渲染抑制守卫（RESIZE-MOUSE-LEAK-FIX）
 
 const MIN_RENDER_INTERVAL_MS = 16
 
@@ -55,6 +56,7 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
   }
 
   function doRender() {
+    if (!isTuiActive()) return // F-2 渲染抑制（RESIZE-MOUSE-LEAK-FIX）：cleanup 已清活动态——退出期不再把 TUI 帧重绘到已恢复的主屏
     try {
       // Single source (Windows ConPTY instability, 2026-08-30). CACHE ONLY —
       // no per-frame refresh: during heavy streaming output ConPTY reports a
