@@ -117,6 +117,8 @@
 - [x] ~~**§19.6 panel 检查工具（已批未实现）**~~——**2026-09-08 核销**：已实现（subagent-panel.mjs 双端在 + action 面在——与 L41 同证据）
 - [x] ~~**sync spawn 可中止能力**~~——**2026-09-09 核销**（SYNC-CANCEL——3d7be35——TUI ⏹ 定向中止——L2 129/129——consume 1e5870bb）
 - [ ] **setup.mjs 受限变体 schema 补 cancel 词**（描述层同步）
+- [ ] **eng-designer 角色 / 行为纪律批的 VSC 镜像**（设计档：只改了 CLI——`thincoder` 仓）——**VSC 端无**版型门禁/batchDoc 门/新角色；需镜像时同步 `thincoder-vscode`
+- [ ] **CLI 侧自用首验（batchDoc 门 + 新角色）**：本会话宿主 = VSC，传 `batchDoc` **不等于门禁生效**（VSC 无此门、未知参数被忽略）——需在 CLI 会话内跑一次真 spawn 验证第 1 批门禁
 - [ ] **engineering-sub.md L1 "~15s" 数字漂移**（实测 18.5-19.7s）——随下个提示词批修
 
 ## VS Code 镜像/评审面差异

@@ -135,3 +135,15 @@ AC23 主 agent 人格改述 · AC24 撤销“主会话即 designer” · AC25 FR
 ## §4 用户批准（主 agent 记）
 
 - **已批准 2026-09-10**（轮次 4 pass 后显式“批准”）——解锁 eng-coder 实施（本批范围 = 第 2 批 CLI：eng-designer 角色 + 行为纪律 + 文档更新纪律）。
+
+## §5 实施记录（写手：目标态 eng-coder 自写；本批 = 交付报告 + 父侧代写落档）
+
+> **待交付**——eng-coder 运行中（设计评审轮次 4 pass + 用户批准后 spawn，designId/designToken 走参数）。
+> 槽位：交付摘要（改了什么 / 碰过的文件 / 如何验证）· 交付透明表（Done / Simplified / Not done）· 审计与代码评审（轮次 / 终态 clean|stalled）· fix round（如有）。
+
+
+## §6 验证与收口（父代理自写）
+
+> **宿主注记（2026-09-10 用户指出）**：本批实施期的会话宿主是 **VS Code**（VSC 端实现），而本批只改 **CLI 端**（`thincoder` 仓）——
+> 故 **spawn 时传了 `batchDoc` ≠ 门禁生效**：VSC 端无此门禁，未知参数被默默忽略，**证明不了**第 1 批的 CLI 门禁正常。
+> **自用首验必须在 CLI 会话里做**（遗留项，待登记）——VSC 镜像本批按用户指令延后。
