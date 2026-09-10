@@ -268,9 +268,82 @@
 - **边界重申**：撞设计缺口 → 停下报告；超范围改动 → 逐项报告；不编辑设计文档。
 
 
+### 评审修正轮（2026-09-11——13 条采纳项落档）
+
+> 依据：§3 轮次 1 评审（🟡×6 + 🔵×7——VERDICT: pass）经主 agent 裁决**全部采纳**；本轮 = 设计档修正（docs FIRST——同一 designId 链内，不重新发起评审）。
+> 落点全部在 `../design/PROVIDER.md`；本小节声明对 §2 上文的修正——**上表与本小节不一致处，以本小节 + PROVIDER.md §17.2 为准**。
+
+**逐条落点（编号 = §3 评审发现编号）**：
+
+| # | 落点（PROVIDER.md 节） | 内容 |
+|---|---|---|
+| 1 | §16.2 M1 · T2/T3 · §17.2 AC-1 | 完整 URL 钉死（claude `…/v1/models`、gemini `…/v1beta/models`——与 chat 同基）；T2/T3 增完整 URL 断言；mock-only 残余风险 + 上机验证动作记录 |
+| 2 | §16.2 M1（表 + 翻页 bullet）· T26/T27 | 跟随翻页（cursor loop，≤10 页上限；任一分页失败整体抛出）——否决「接受单页截断」；规范依据补 `has_more` / `nextPageToken` |
+| 3 | §16.2 M3④ · §16.5（CLI/VSC advisor 行）· §16.8 · T28 | advisor 兜底对齐 subagent：`provider.model ?? agent.provider?.model`（父兜底）；空值语义句（极端缺失 → chat 前 guard fail-fast）；§16.8「红线零改」措辞精确化 |
+| 4 | §17.2 AC-8 | 显式排除集：`--exclude=PROVIDER.md --exclude-dir=_archive`；目标态自检（排除后当前码非空 → 目标空）；归档 SHA 检查保留 |
+| 5 | §16.5（VSC 源表 + VSC 测试表） | 行数补齐：openai.mjs 308 · presets 85 / panel-messages 454 / panel-session 333 · files 41 · smoke-provider 65；smoke-provider 增量「核查」→「改」 |
+| 6 | R9 · §16.2 M8/M9 · §16.7 · T24 · AC-9 | 文案分工钉死：消息本体 = 逐字长句 `…——无法选择模型，请改用其他渠道`；状态标签 = `不可用`（唯一逐字断言对象） |
+| 7 | §16.3（model-catalog 行）· T6 | 缓存时钟可注入（先例 `rate.mjs` `_rateHooks`；本函数钩子 `_catalogHooks`）——T6 假时钟确定性断言 |
+| 8 | §16.2 M1 · §16.6 #14 | 决策：候选不过滤非对话模型（embedding 等）——理由与否决备选入决策表 |
+| 9 | N2 · §16.2 M9 边界 · T25 | 零探测边界定义：探测只允许发生在配置写入面；首启向导加渠道 = 配置流内动作（不受限）；非配置流启动零探测 |
+| 10 | §16.2 M3① · §16.5 turn-model.mjs 行 | VSC 对位核验：等价回落**已有**（`runModel = modelOverride \|\| slotModel \|\| baseModel`——槽空经 `baseModel`=`resolveDefaultModel` 新回退链）；注释同步项列入 |
+| 11 | §16.2 M1 超时行 · §16.4 a1 | 超时统一 15s（核实现：`core.mjs` listModels 整体 / header / body idle 均 15s）；a1「≤10s」→「≤15s」 |
+| 12 | §16.5 CLI 文档行 | 长度注记改 as-of 快照（PROVIDER.md ≈800 行 / SESSION.md ≈536 行——2026-09-11 实测） |
+| 13 | §16.5 over-tier 说明 | 拆分阈值对齐 500 硬限；`model-picker.mjs` 估算 455 行——**455 可接受、本批不拆**（主 agent 裁决） |
+
+**对 §2 上文的修正与编号同步声明**：
+
+- **AC-8 文本替换**（覆盖上文验收标准表 AC-8 行——旧「无现状残留（`_archive/` 除外）」作废）：最终文本 = PROVIDER.md §17.2 AC-8（显式排除集 + 目标态自检 + 归档 SHA 检查保留）。
+- **AC-1 / AC-3 / AC-9 增补**（与 §17.2 对齐）：AC-1 += 翻页合并（T26/T27）+ 上机验证动作；AC-3 += 克隆空值语义（T28）；AC-9 += 失败消息逐字长句 + 行内标 `不可用`。
+- **T 编号新增 T26–T28**（§17.1 表尾；引用点：AC-1 / AC-3 / §16.5 三行）——R 编号（R1–R9）与 AC 编号（AC-1–AC-9）总数不变；三方编号（§0.2 ↔ 本节上文 ↔ §17.2）已逐项核对一致。
+- **受影响文件行数呈现**与 §16.5 对齐（VSC openai.mjs 308 · presets 85 / panel-messages 454 / panel-session 333 · test/files 41 · smoke-provider 65）。
+- `model-picker.mjs` 拆分：主 agent 裁决**本批不拆**（触发阈值对齐 500 硬限；估算 455 行可接受）。
+
+**格式债披露**（`node scripts/check-doc-width.mjs` 实测——2026-09-11）：
+
+- 本档 §3 轮次 1 发现表第 1 条 / 第 5 条两行为 >300 字符长行（评审子代理笔迹——超本任务写域；建议父侧收口时压缩）。
+- 全仓其余 >300 字符行 7 处为存量（AGENT-LOOP ×3 / SESSION ×1 / SUBAGENT-ID-COUNTER-AGENT ×1 / TUI ×2——与本批无关）。
+- PROVIDER.md 本次编辑后：超宽行 **0**；一致性检查新增违规 **0**（存量 23 条在基线内）——新增 V1/V2/V3 违规与新增超宽行均为零。
+
 ## §3 设计评审（评审子代理自写）
 
 > 待写（过渡期注：advisor 自写机制未落地前由父侧代写）。
+
+### 轮次 1（评审子代理）
+
+> 评审对象：`docs/design/PROVIDER.md` §0/§16/§17 + `docs/design/SESSION.md` §8 + 本档 §2（第 3 批 MODEL-SELECTION——设计评审，2026-09-11）。发现表：
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Feasibility / Clarity | 🟡 | M1 把 anthropic 拉取记为 `GET {baseURL}/models`（PROVIDER.md:462），但未说明 claude 预设的 baseURL 是否含版本段（同档 §8:174 把聊天路径写作 `POST /v1/messages`；Anthropic List Models 位于 `/v1/models`）。**…余文与建议逐字见下「§3-补 1」** | **（见下「§3-补 1」）** |
+| 2 | Feasibility / Defensiveness | 🟡 | 翻页防御不足：anthropic 行「分页 `limit` 传大值取全量」（:462）忽略 has_more——端点若对 limit 有上限即静默截断；google 行未处理设计自己在规范依据中引用的 `nextPageToken`（:468）。截断 =「清单权威」静默失全，mock 用例不覆盖翻页。 | 二选一落进 M1/T 表：跟随翻页（token/上限内 loop），或显式记录「接受单页截断」的取舍与理由 |
+| 3 | Requirements / Feasibility | 🟡 | M3④ 把 advisor 克隆兜底链整段删至 `provider.model`（:484）——渠道无默认模型（M3「空值合法」、M7 空结果合法）时取值 undefined 的下游行为未写；subagent 侧显式保留父兜底（:485），advisor 侧没有；§16.8:707「红线零改」与「兜底值被删」存在措辞张力；该路径无用例（:622 仅「核查」）。 | 补一句空值语义（或对齐 subagent 的父兜底），并给该调用点一条测试断言 |
+| 4 | Acceptance criteria | 🟡 | AC-8 的机器检查按字面不可能返回空——被搜字面量出现在 AC-8 自己行（:779）、R8 行（:34）、§16.1（:444）、§16.4 表头（:490）与 SESSION.md:230（变更叙述）；两处版本排除集不一致（:779「§16 本文叙述除外」vs 批次档 :259 仅「_archive/ 除外」）。 | 按 AC-2 白名单范式给出显式排除/收窄 pattern，两处 AC 文本对齐；保留归档 SHA 检查 |
+| 5 | File-size annotations | 🟡 | §16.5 部分将改动的源/测试文件缺「当前行数」（「—」）：VSC `transports/openai.mjs`（:635）。**…余文与建议逐字见下「§3-补 5」** | **（见下「§3-补 5」）** |
+| 6 | Document consistency | 🟡 | 准入失败文案两版本并存：R9（:35）/M9（:535）引 `…——不可用`；M8（:527）/§16.7（:693）/批次档「失败文案终态」（:156）为 `…——无法选择模型，请改用其他渠道`；T24（:762）只断言「标『不可用』」。测试将锁定的逐字文案不唯一。 | 以批次档终态为准统一长句（或明写「——不可用」=状态标签、长句=消息本体），使 T24/AC-9 有唯一逐字断言对象 |
+| 7 | Tests / Determinism | 🔵 | T6（:744）缓存 TTL 未给确定性测试缝——按壁钟/睡眠写即脆弱测试。 | 预制可注入时钟/钩子（先例 rate.mjs `_rateHooks`），在 §16.3 helper 契约点明 |
+| 8 | Content / Defensiveness | 🔵 | 拉取候选将包含非对话模型（Gemini embedding 类等）——设计未过滤也未记录该取舍。 | 一句话记录「不过滤」决策（或按能力字段过滤，如 google `supportedGenerationMethods`） |
+| 9 | N2 一致性 | 🔵 | 「运行期零探测」边界未写死：M9 落点含「首启加渠道探 `/models`」（:599），而 T25 断言「会话启动 / 发请求 → 无 `/models` 调用」——首启即启动路径，测试口径需显式排除「配置流内探测」。 | 在 M9/N2 交界写边界定义（探测只允许发生在配置写入面，与发生在进程早期无关），T25 场景表述同步 |
+| 10 | Double-end parity | 🔵 | CLI M3① 槽位兜底（`activeModel` 空 → `slotProvider.model`，:482）在 §16.5 VSC 列中无对位改动/核验项——若 VSC 恢复路径对同形态槽无等价回落，N4「语义同源」在两端行为上出现缺口。 | 核验 VSC 对位语义并如实落档（有则标「已有」、无则列入） |
+| 11 | Numeric drift | 🔵 | 拉取超时数字两处不一致——M1「header/body idle 15s」（:466）vs §16.4 a1「≤10s 超时」（:558）。 | 统一为一个数字并确认与既有实现一致 |
+| 12 | Numeric drift / docs | 🔵 | 文档长度注记过时——:624「440→约 770 行」（现约 800 行，末内容行 :800）、「SESSION.md（527 行）」（现约 536 行）；.md 豁免行数硬纪律，仅影响准确性。正面核对：§16.5 与批次档 §2 的源/测试行数逐项一致，按估算无文件越过 500 硬限（最大 499/±0）。 | 刷新注记或改标 as-of 快照 |
+| 13 | Clarity / Scope | 🔵 | 「:582 `model-picker.mjs` 若超 450，拆分计划=…」的触发条件按设计自己估算已命中（490−35=455 > 450），但拆分写成条件式且批次档 §2 不携带该拆分——实施时既可能多做一次重构、也可能不做而「违反」设计自设阈值。 | 二选一写死：声明本批拆（并入交付报告），或把触发阈值对齐项目硬限（>500）并说明 455 可接受 |
+
+**§3-补 1 / §3-补 5**（父侧格式整备——表内第 1、5 条余文；**原文文字逐字保留**，仅插入换行与定位标签；2026-09-11）
+
+> **§3-补 1 余文（发现 1）**：两种组合必有一种是 404；T2 只断言请求头、契约 mock-only（真机未验），自洽的错误组合会保持全绿
+> ——且在 M8 准入判据下会把该渠道整体判为不可用。baseURL 实际形态在本评审范围不可核（unverified）。
+>
+> **§3-补 1 建议（发现 1）**：在 M1 行内钉死组合后的完整 URL（或明写 baseURL 形态），T2/T3 增加完整 URL 断言；
+> 两个新分支安排一次真机一发验证，或显式记录 mock-only 残余风险。
+>
+> **§3-补 5 余文（发现 5）**：`presets.mjs`/`panel-messages.mjs`/`panel-session.mjs`（:644——批次档 :241 反而带 454/333）、
+> `test/files.mjs`（:663）、`test/smoke-provider.mjs`（:664，箭头明示要改而增量仅「核查」）。
+>
+> **§3-补 5 建议（发现 5）**：补齐行数+增量（或统一「structure unchanged」）；消除 §16.5 与批次档 :241 的呈现差异（权威源处应更全）。
+
+计数：🔴×0 · 🟡×6 · 🔵×7（共 13 项）
+VERDICT: pass
 
 ## §4 用户批准（主 agent 记）
 

@@ -32,14 +32,14 @@ VS Code 端同批对齐。
 | R6 | **VSC 端同批对齐**：面板候选同源（provider 拉取）+ `resolveDefaultModel` 不再静默回退 `models[0]`。 | VSC 面板候选来自运行期拉取（`models[]` 字段删除后不受影响）；`resolveDefaultModel` 回退链改为"复合属本渠道 → 渠道默认单值 → null"。 |
 | R7 | **契约测试反转**（随件）：`test/model-ref.test.mjs`、`test/config-merge.test.mjs`、`test/provider-model-guard.test.mjs`（双端）转为新契约。 | 三族测试断言候选外可切换、不再标 invalid；双端跑绿。 |
 | R8 | **文档连带改写**（随件）：`SESSION.md` 硬约束句、`model-ref.mjs` 头注与注释、`PROVIDER.md` 本文件、`_archive/MODEL-MERGE-SESSION.md` 取代关系一行、代码内 F-1/F-7 注释引用。 | 现状描述中无"候选硬约束 / 候选外拒"残留；归档正文不重写、取代关系在变更记录可见。 |
-| R9 | **渠道准入校验（配置阶段）**：加渠道 / 设 API key / 设默认模型的配置路径对目标渠道探一次 `GET /models`（复用 M1）；探通 → 渠道可用、候选可直接用于默认模型选择；探不通 → 界面明示「该渠道不提供模型列表（GET /models {状态}）——不可用」且**不作为默认模型可选来源**；**不阻断配置流**（条目仍可保存）。 | 双端配置写入面各实现探通/探不通两态；探不通渠道不入可选清单且界面标注；运行期（启动 / 请求）零探测（N2）。 |
+| R9 | **渠道准入校验（配置阶段）**：加渠道 / 设 API key / 设默认模型的配置路径对目标渠道探一次 `GET /models`（复用 M1）；探通 → 渠道可用、候选可直接用于默认模型选择；探不通 → 界面明示失败消息（消息本体 = 逐字长句 + 状态标签 `不可用`——分工与逐字文案见 §16.2 M8）且**不作为默认模型可选来源**；**不阻断配置流**（条目仍可保存）。 | 双端配置写入面各实现探通/探不通两态；探不通渠道不入可选清单且界面标注；运行期（启动 / 请求）零探测（N2，边界见 §16.2 M9）。 |
 
 ### 0.3 非功能性需求
 
 | # | 维度 | 标准 |
 |---|---|---|
 | N1 | 兼容 | 全部老配置形态（形态 A：`providers[].model` + `activeProvider/activeModel`；形态 B：`models[]` + `defaultModel`）迁移不丢凭据、不丢默认模型；写回失败不阻断启动（幂等——下次 load 重试）。 |
-| N2 | 性能 | `specForModel` 保持热路径形态（共享对象 + 单次查表——来源回显不新增每请求开销）；清单拉取不阻塞会话切换（异步 + 超时上限）；准入校验只在配置阶段（启动/请求零 `/models` 探测）。 |
+| N2 | 性能 | `specForModel` 保持热路径形态（共享对象 + 单次查表——来源回显不新增每请求开销）；清单拉取不阻塞会话切换（异步 + 超时上限）；准入校验只在配置阶段（启动/请求零 `/models` 探测——边界定义：探测只发生在**配置写入面**，含首启向导的加渠道步骤；非配置流一律零探测——详 §16.2 M9）。 |
 | N3 | 单一权威 | 模型清单的唯一权威 = provider 运行期拉取结果；进程内缓存仅作加速（失败即失效、过期即重拉）。 |
 | N4 | 双端独立 | CLI / VS Code 各自实现、语义同源；不做逐字硬一致、不加双端同步依赖（差异如实落档——本次差异：回显仅 CLI 面，见 §16.7）。 |
 
@@ -459,13 +459,22 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | format | 请求 | 响应解析 |
 |---|---|---|
 | openai（缺省） | `GET {baseURL}/models`；头 `Authorization: Bearer {apiKey}` | `data[].id` |
-| anthropic | `GET {baseURL}/models`；头 `x-api-key: {apiKey}` + `anthropic-version: 2023-06-01` | `data[].id`（分页 `limit` 传大值取全量） |
-| google | `GET {baseURL}/models?key={apiKey}` | `models[].name`——剥 `models/` 前缀 |
+| anthropic | `GET {baseURL}/models?limit=1000`；头 `x-api-key: {apiKey}` + `anthropic-version: 2023-06-01` | `data[].id`；`has_more` → 以 `after_id` 翻页跟随（≤10 页） |
+| google | `GET {baseURL}/models?key={apiKey}&pageSize=1000` | `models[].name`——剥 `models/` 前缀；`nextPageToken` 翻页跟随（≤10 页） |
 
+- **URL 组合钉死**（评审修正轮）：组合规则 = `{baseURL}` + 相对路径，与 chat 各 transport 同构——`baseURL` 自带版本段：
+  claude 预设 `https://api.anthropic.com/v1` → 拉取完整 URL `https://api.anthropic.com/v1/models`（Anthropic List Models 端点；与聊天 `{baseURL}/messages` = `…/v1/messages` 同基）；
+  gemini 预设 `https://generativelanguage.googleapis.com/v1beta` → `…/v1beta/models?key=…`（与聊天 `{baseURL}/models/{model}:generateContent` 同基）；openai 系 → `{baseURL}/models`。
+  自定义 baseURL 需含版本段（聊天同要求——既有行为，非本批新增约束）。
+- **翻页跟随**（评审修正轮）：cursor loop，≤10 页上限防死循环；每页沿用超时；任一分页失败即整体抛出（不部分返回）。
+  理由：清单权威语义不容静默截断；两 API 均为 cursor 分页，loop 实现对称；上限 10 页 × 每页至多 1000 个模型远超现实模型数。
 - 返回 `string[]`（排序由调用方）；HTTP 非 2xx / 网络失败**抛出**（调用方决定降级——与现实现同）。
-- 超时制度沿用现实现（header/body idle 15s；调用方可传 `signal` 短路）；未知/缺省 format → openai（与 chat 分派缺省一致）。
-- 规范依据（2026-09-10 经官方 SDK 源码核验）：Anthropic List Models 返回 `Page<ModelInfo>`（`data[].id` / `display_name` 等字段），带 `limit` 分页参数；
-  Gemini `models.list` 返回 `{models: [{name: "models/…"}], nextPageToken}`——`name` 带 `models/` 前缀。解析保持防御性（字段缺失即跳过该项）。
+- 超时制度沿用现实现（整体 15s + header 15s + body idle 15s；调用方可传 `signal` 短路；翻页时逐页各自计时）；未知/缺省 format → openai（与 chat 分派缺省一致）。
+- 规范依据（2026-09-10 经官方 SDK 源码核验、2026-09-11 修正轮补翻页）：Anthropic List Models 返回 `Page<ModelInfo>`（`data[].id` / `display_name`，`has_more`/`last_id`，`limit` ≤1000）；
+  Gemini `models.list` 返回 `{models: [{name: "models/…"}], nextPageToken}`（`pageSize` ≤1000）——`name` 带 `models/` 前缀。解析保持防御性（字段缺失即跳过该项）。
+- 候选**不做对话能力过滤**（embedding 等非对话模型一并返回）——取舍见 §16.6 #14。
+- **残余风险（评审修正轮记录）**：两新分支（anthropic / google）为 **mock-only**（单测锁定完整 URL / 请求头 / 解析 / 失败态）；
+  实施后安排一次上机验证动作（claude / gemini 各一发 `listModels`，真 key 环境）——失败即回改本表 URL 组合。见 §17.2 AC-1。
 - 旧实现只有 openai 形状——`claude`（`format:"anthropic"`）与 `gemini`（`format:"google"`）用旧实现会 401/404（已勘察）。
 
 **M2 候选面 = 拉取（CLI）**：
@@ -479,10 +488,11 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 - 类型：非空字符串 | 缺失；非字符串/空串归一删除（`loadConfig` / VSC `resolveProviders`）。
 - 播种：20 个预设各携其原候选首值（deepseek→deepseek-v4-pro 等）；wizard / picker 加渠道 / setup-wizard 只落单值。
-- 消费：①会话槽位 `activeModel` 空/缺失 → 回落 `slotProvider.model`（`session.mjs`）②picker/管理面显示回退（L1 行、ctx 标签、remove/set-key/context 列表）③`/config → 默认模型` 渠道行显示
-  ④advisor / subagent 裸渠道名克隆时 model 重派生——两个调用点语义不同，分列实施：
-  - `advisor/run.mjs:337`：`provider.model ?? provider.models?.[0]` → **`provider.model`**（`?? models?.[0]` 兜底整段删除——字段退场，不再读）。
+- 消费：①会话槽位 `activeModel` 空/缺失 → 回落 `slotProvider.model`（`session.mjs`；VSC 对位见 §16.5 `turn-model.mjs` 行——等价语义已有）②picker/管理面显示回退（L1 行、ctx 标签、remove/set-key/context 列表）③`/config → 默认模型` 渠道行显示
+  ④advisor / subagent 裸渠道名克隆时 model 重派生——两调用点语义同源（渠道单值优先 + 父兜底）：
+  - `advisor/run.mjs:341`：`provider.model ?? provider.models?.[0]` → **`provider.model ?? agent.provider?.model`**（`models[0]` 换为父兜底——与 subagent F-2c 同构；VSC `advisor/provider.mjs` 镜像同改）。
   - `agent-tools/subagent-async.mjs:157`：`byName.models?.[0] ?? parent.provider?.model` → **`byName.model ?? parent.provider?.model`**（`models[0]` 换为渠道单值；**尾部 `?? parent.provider?.model` 父 provider 兜底保留**——兜底链尾不动）。
+  - **空值语义**（评审修正轮补）：渠道无默认模型（M3「空值合法」/ M7 空结果合法）→ 克隆取值回退主 provider model；两者皆无（极端）→ model 缺失交 chat 前 guard fail-fast（`assertProviderModel`——文案同步不再称 `models[]`）；**绝不产出静默 undefined-model 请求**。用例 T28。
 - 不承担：不是候选清单；不做成员校验；不限制显式 `p:m`；空值合法（模型选择经 `/models` 拉取候选——准入判据见 M8/M9）。
 
 **M4 放行语义（`parseModelRef` v2）**：
@@ -525,6 +535,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 - **`/models` 不可用 → 该渠道视为不可用**：不列候选、不可选、无静态兜底、无手输绕过；用户应改用其他渠道。
 - 失败文案：`该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用其他渠道`（{状态} = HTTP 状态或网络错误摘要；不出现手输 / 改 config / 命令面绕过类指引）。
+- 文案分工（评审修正轮钉死）：**消息本体** = 上列长句（逐字——界面明示与 T24/AC-9 的唯一断言对象）；**状态标签** = `不可用`（列表行内短标——渠道管理行注记）。
 - **执行层 = 配置阶段（M9）**；运行期不加闸——命令面放行语义不变、启动 / 请求零探测（边界详 M9）。
 
 **M9 渠道准入校验（配置阶段——用户 2026-09-10 裁定）**：
@@ -532,9 +543,9 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - **落点**：配置写入面——加渠道 / 设 API key / 设默认模型的配置路径。CLI：`cmd-config.mjs`（默认模型菜单与渠道管理 flow）、`tui/wizard.mjs`、`cli/setup-wizard.mjs`；
   VSC：`provider-flows.mjs`（addProviderEntry / setKeyFlow）、`settings.mjs`（handleAddProvider / saveProviderKey——复用既有 `testProviderConnection` 探针模式）、`settings-panel-write.mjs`（defaultModel 顶层写）、`webview/settings-providers.js`（UI 标注）。
 - **动作**：对目标渠道探一次 `GET /models`（复用 M1 实现 + 既有超时）；**失败不缓存**（下次配置动作重试）。
-- **判据与表现**：探通 → 渠道可用，探得候选可直接用于该流内的默认模型选择；探不通 → 界面明示 `该渠道不提供模型列表（GET /models {状态}）——不可用`，且该渠道**不作为默认模型的可选来源**（不进入可选清单）。
+- **判据与表现**：探通 → 渠道可用，探得候选可直接用于该流内的默认模型选择；探不通 → 界面明示失败消息（**消息本体** = 逐字长句 `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用其他渠道`；**状态标签** = `不可用`——分工见 M8），且该渠道**不作为默认模型的可选来源**（不进入可选清单）。
 - **不阻断配置流**：渠道条目本身仍可保存（提示 + 标记不可用——不是拒绝写 config）。
-- **边界（运行期不加闸）**：① `/model provider:model` 命令面放行语义不变（R4——用户 2026-09-10 结案：命令面不受渠道准入约束）；② 会话启动 / 每次发请求不做 `/models` 探测（不引入启动期网络依赖——N2）。
+- **边界（运行期不加闸）**：① `/model provider:model` 命令面放行语义不变（R4——用户 2026-09-10 结案：命令面不受渠道准入约束）；② 会话启动 / 每次发请求不做 `/models` 探测（不引入启动期网络依赖——N2）。**边界定义**（评审修正轮）：M9 探测只允许发生在**配置写入面**（用户配置动作触发的流内——落点即本行列出的配置路径）；「首启向导加渠道」的探测属于配置流内动作（进程早期发生不改变其性质），不受 ② 限；非配置流的启动（TUI / headless / 面板打开）一律零探测。
 
 ### 16.3 接口契约（函数级）
 
@@ -546,7 +557,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `specMatch(model)` | **新增** | `{ spec, matched }`——matched:false = DEFAULT 兜底 |
 | `specForModel` / `providerSpec` | 不变 | 热路径与拷贝覆盖契约不动 |
 | `migrateLegacyModelFields(raw)` | 语义反转（M7） | 幂等纯函数；返回 changed |
-| TUI 拉取 helper：`src/tui/model-catalog.mjs`（新增） | **新增** | `getProviderModels(providerConfig) → Promise<string[]>`（会话缓存 TTL 60s，失败不缓存；`dedupeModels` / `modelSeries` 迁入） |
+| TUI 拉取 helper：`src/tui/model-catalog.mjs`（新增） | **新增** | `getProviderModels(providerConfig) → Promise<string[]>`（会话缓存 TTL 60s，失败不缓存；`dedupeModels` / `modelSeries` 迁入；**缓存时钟可注入**——测试假时钟钩子（先例 `rate.mjs` `_rateHooks`），T6 确定性断言不依赖壁钟） |
 | VSC `resolveDefaultModel(entry, raw)` | 回退链改（R6） | 复合属本渠道 → 渠道默认单值 → `null`（不再 `models[0]`） |
 
 ### 16.4 方案选型对比
@@ -555,7 +566,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 | # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
 |---|---|---|---|---|
-| a1 | 每次进 L2 即拉（无缓存） | 新鲜度最好；每次等待网络（≤10s 超时）；失败态每次出现 | 实现最简；连续操作重复付网络成本 | 否决——慢网/无网反复等待 |
+| a1 | 每次进 L2 即拉（无缓存） | 新鲜度最好；每次等待网络（≤15s 超时——与 M1 实现一致）；失败态每次出现 | 实现最简；连续操作重复付网络成本 | 否决——慢网/无网反复等待 |
 | a2 | 会话级缓存 + TTL 60s（失败不缓存） | 首拉后 TTL 内秒开；60s 新鲜窗口；失败即重试 | 多一个会话内缓存态；TTL 内新模型不可见（过期后重拉） | **选定**——成本与收益平衡 |
 | a3 | 缓存 + stale-while-revalidate（先渲染后刷新） | 体感最好；打开状态下列表替换的边界多（保持选中/行消失） | 复杂度最高 | 否决——增量收益不抵复杂度 |
 
@@ -577,9 +588,10 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 ### 16.5 受影响文件清单
 
-> 行数为 2026-09-10 快照。**over-tier 说明**：`config.mjs`(484) / `model-picker.mjs`(490) / `core.mjs`(498) 均接近
-> 500 硬限——本批净增为负或 ≈0（listModels / 拉取逻辑迁出反而减负）；若实施中单文件预计超 500，必须就地拆分并入交付报告。
-> `model-picker.mjs` 若超 450，拆分计划 = 槽位面（`buildSlotEntriesForProvider` / `fetchSlotModels` / `pickModelForSlot`）迁出独立文件。
+> 行数为 2026-09-10 快照（评审修正轮补齐的 VSC / 测试行数为 2026-09-11 实测）。**over-tier 说明**：`config.mjs`(484) / `model-picker.mjs`(490) / `core.mjs`(498) 均接近
+> 500 硬限——本批净增为负或 ≈0（listModels / 拉取逻辑迁出反而减负）；若实施中单文件预计超 500 硬限，必须就地拆分并入交付报告。
+> `model-picker.mjs` 按设计估算 490−35 = 455 行（低于 500 硬限——**455 可接受、本批不拆**）；若实施后仍预计超 500，
+> 拆分计划 = 槽位面（`buildSlotEntriesForProvider` / `fetchSlotModels` / `pickModelForSlot`）迁出独立文件。
 
 **CLI 源（thincoder/src）**：
 
@@ -594,7 +606,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `src/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派（M1） |
 | `src/provider/index.mjs` | 7 | ±0 | re-export 改指 |
 | `src/provider/errors.mjs` | 102 | ±0 | F-1 guard 文案与注释（不再称 `models[]`） |
-| `src/advisor/run.mjs` | 488 | ±0 | `?? provider.models?.[0]` 兜底整段删除（留 `provider.model`）；注释 |
+| `src/advisor/run.mjs` | 488 | ±0 | `models?.[0]` 兜底换父兜底 `agent.provider?.model`（与 subagent 同构——M3④）；注释 |
 | `src/agent-tools/subagent-async.mjs` | 473 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent.provider?.model` 父兜底**）；注释 |
 | `src/cli/setup-wizard.mjs` | 80 | +10 | `preset.model` 读取修复（旧版漏改的既存 bug——本批自动对上）；落单值；首启加渠道探 `/models`（M9） |
 | `src/cli/make-agent.mjs` | 163 | ±0 | 注释 |
@@ -613,15 +625,15 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
-| `test/list-models.test.mjs` | **新增** | ~130 | 三 format 分派（正常/边界/错误——T1–T6） |
+| `test/list-models.test.mjs` | **新增** | ~150 | 三 format 分派（正常/边界/错误——T1–T6 + T26/T27 翻页） |
 | `test/model-ref.test.mjs` | 170 | 重写 ~190 | 放行/无效表驱动（M4）+ 回显（M6）+ 候选外可切换 |
 | `test/config-merge.test.mjs` | 151 | 重写 ~160 | 迁移 v2（M7）+ 预设单值 + 无 models 键 |
-| `test/provider-model-guard.test.mjs` | 132 | ~140 | F-2a/c/d 改单值兜底；F1_RE 新文案 |
+| `test/provider-model-guard.test.mjs` | 132 | ~140 | F-2a/c/d 改单值兜底（含 T28 subagent 侧）；F1_RE 新文案 |
 | `test/provider-admission.test.mjs` | **新增** | ~110 | 配置阶段准入两态 + 运行期零探测（T23–T25——M9） |
 | `test/consult-models-softfail.test.mjs` | 98 | 核查 | fixture 走新迁移（断言看 consultModels——预期不变） |
-| `test/advisor-provider.test.mjs` | 72 | 核查 | F-1 遗留腿不受影响 |
+| `test/advisor-provider.test.mjs` | 72 | 核查 + T28（克隆空值语义断言） | F-1 遗留腿不受影响 |
 
-**CLI 文档**：`docs/design/PROVIDER.md`（本档，440→约 770 行）· `docs/design/SESSION.md`（527 行，3 处句子——D-S1/D-S2/D-S3 段）· `docs/TODO.md`（需求池条目状态——维护面）。
+**CLI 文档**：`docs/design/PROVIDER.md`（本档；as-of 2026-09-11 快照 ≈800 行）· `docs/design/SESSION.md`（as-of 2026-09-11 快照 ≈536 行，3 处句子——D-S1/D-S2/D-S3 段）· `docs/TODO.md`（需求池条目状态——维护面）。
 
 **VSC 源（thincoder-vscode/src）**：
 
@@ -632,16 +644,16 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `src/config-io.mjs` | 438 | ±5 | normalize 单值；`resolveDefaultModel` 回退链（R6） |
 | `src/provider.mjs` | 456 | −15 | `listModels` 迁出/加 format 分派 |
 | `src/provider/list-models.mjs` | **新增** | ~95 | 三 format 分派 |
-| `src/provider/transports/openai.mjs` | — | ±0 | guard 文案（不再称 `models[]`） |
-| `src/advisor/provider.mjs` | 39 | ±0 | `?? provider.models?.[0]` 兜底整段删除（留 `provider.model`）；注释 |
+| `src/provider/transports/openai.mjs` | 308 | ±0（文案） | guard 文案（不再称 `models[]`） |
+| `src/advisor/provider.mjs` | 39 | ±0 | `models?.[0]` 兜底换父兜底 `agent._provider?.model`（与 VSC subagent 同构——M3④）；注释 |
 | `src/agent-tools/subagent.mjs` | 358 | ±0 | `models?.[0]`→`byName.model`（**保 `?? parent._provider?.model` 父兜底**）；注释 |
 | `src/extension/settings.mjs` | 332 | +20 | status payload 单值；`fullStatus` 候选=fetch（失败 = 该渠道不可选 + 明示原因——无 fallback 候选）；custom 空条目判据；准入探复用（M9——既有 `testProviderConnection` 模式） |
 | `src/extension/settings-panel-write.mjs` | 134 | +10 | defaultModel 面板写加准入探（M9——探不通标不可用、不入可选来源） |
 | `src/extension/provider-flows.mjs` | 193 | +15 | 播种单值；`p.models?.[0]`→`p.model`；addProviderEntry / setKeyFlow 加准入探（M9——不通标不可用，不阻断保存） |
 | `src/extension/vision-channel.mjs` | 23 | +5 | 视觉候选判据改渠道默认模型（下注） |
 | `src/extension/panel-chat.mjs` | 499 | 核查 | 「否则首候选」决策/注释 |
-| `src/extension/turn-model.mjs` | 28 | 核查 | 同上 |
-| `src/extension/presets.mjs` / `panel-messages.mjs` / `panel-session.mjs` | — | ±0 | 头注/注释 |
+| `src/extension/turn-model.mjs` | 28 | 核查 | VSC 对位 M3①：`runModel = modelOverride || slotModel || baseModel`（槽空经 `baseModel`=`resolveDefaultModel` 新回退链回落——等价语义**已有**）；注释同步（『首候选』旧词） |
+| `src/extension/presets.mjs` / `panel-messages.mjs` / `panel-session.mjs` | 85 / 454 / 333 | ±0（注释） | 头注/注释 |
 | `webview/settings-providers.js` | 264 | +20 | 渠道行（默认模型）、预设行、默认模型菜单数据源改运行期载荷；准入失败渠道标「不可用」且剔出默认模型可选来源（M9） |
 
 > `webview/` 其余文件（`model-menu.js` / `settings-models.js` 等）消费的是 **`models` 消息载荷**（运行期模型行）——
@@ -660,8 +672,8 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `test/provider-model-guard.test.mjs` | 149 | 改（单值兜底 + 新文案；同 `:58` 锚） |
 | `test/image-downgrade.test.mjs` | 120 | 改（视觉判据） |
 | `test/config-io-panel.test.mjs` / `config-softfail.test.mjs` / `settings-panel.test.mjs` / `chat-panel.test.mjs` | 101/114/87/621 | 核查（fixture 迁移触发） |
-| `test/files.mjs`（注册表） | — | 核查（新增测试登记） |
-| `test/smoke-provider.mjs` | — | 核查（`preset.models?.[0]`→`preset.model`） |
+| `test/files.mjs`（注册表） | 41 | 核查（新增测试登记——结构不变） |
+| `test/smoke-provider.mjs` | 65 | 改（`preset.models?.[0]`→`preset.model`） |
 
 **VSC 文档**：`thincoder-vscode/docs/design/PROVIDER.md`（333 行——§1 `models[]` 描述 / §3 模型选择 / §2 预设表需同步）
 ——**执行者 = 父侧收口后执行**（用户 2026-09-10 裁定 O4；非本批设计交付物，不入 eng-coder 任务面）。
@@ -683,6 +695,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | 11 | 不加 UI 手输行（O1 归零——用户 2026-09-10） | **命令面 `/model provider:model` 仍放行任意串（R4 不变，那是既有能力）——被否的只是「在 UI 里新造一个手输入口」**；用户原话：「模型名不要手输，那个是过度设计」 | UI 手输行（O1 原方案①②——均否） |
 | 12 | 渠道准入判据 = `/models` 可用（用户 2026-09-10——**翻转先前「渠道照常可用」读法**） | 不支持 / 拉不到的渠道 = 不可用渠道：不列候选、不可选、无静态兜底、无手输绕过；不为其新建任何绕过路径 | 「渠道照常可用 + 手输 `p:m`」（先前读法——已翻转） |
 | 13 | 准入校验落**配置阶段**（M9），运行期不加闸（用户 2026-09-10） | 运行期加闸引入启动期网络依赖与延迟（离线不可用、每请求开销）——与 N2「不阻塞会话切换 / 零启动依赖」冲突；配置阶段探一次即可满足准入；命令面不受准入约束（结案） | 运行期每次探测 / 启动探测 / 命令面加闸（均否） |
+| 14 | 候选列表**不过滤非对话模型**（embedding 等——评审修正轮） | 拉取面忠实呈现 provider 事实（权威语义）；跨 format 无统一能力字段（google `supportedGenerationMethods` 有、openai/anthropic 无等价字段）；错误模型在请求时显式报错（可诊断）；过滤规则会成第二个人工维护清单 | 按能力字段过滤（仅 google 可行——跨端不一致；本批不做） |
 
 ### 16.7 UI/交互决策（含 open）
 
@@ -690,12 +703,12 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 - 切换回显文案与颜色（M6）——正常 `C.tool`；DEFAULT 兜底 `C.error`（警示色）+
   `set context in /config to override` 提示（承接「经 /config 设 context 覆盖」的既有提示路径）。
-- 拉取加载中 / 失败文案（M2/M8）——`(loading…)` / `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用其他渠道`（明示原因 + 指引换渠道；无绕过指引）。
+- 拉取加载中 / 失败文案（M2/M8）——`(loading…)` / 失败消息逐字 `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用其他渠道`（消息本体；行内状态标签 = `不可用`——分工见 M8；明示原因 + 指引换渠道；无绕过指引）。
 - 候选列表行 = 直接可选（不再区分「候选 / 建议」两组——两组语义已合一）。
 - 渠道无默认模型时显示 `(no default model)`（替代原 `(no candidates)`）。
 - **O1 已裁（用户 2026-09-10——决策记录见 §16.6 #11）**：`/model` L2 与 `/config → 默认模型` L2 **两处都不加** UI 手输行。
 - **O2 已裁（用户 2026-09-10）**：本批**不加** VSC 面板 spec 来源回显（理由：批范围第 ⑥ 项字面仅含「候选同源 + resolveDefaultModel」——不扩范围）。
-- **渠道准入（用户 2026-09-10 裁定）**：配置阶段探 `/models`（M9）——探不通的渠道界面标「不可用」且不作为默认模型可选来源；命令面 `/model provider:model` 不受准入约束（R4 放行不变）；运行期 / 启动零探测。
+- **渠道准入（用户 2026-09-10 裁定）**：配置阶段探 `/models`（M9）——探不通的渠道界面标 `不可用`（失败消息本体 = M8 长句）且不作为默认模型可选来源；命令面 `/model provider:model` 不受准入约束（R4 放行不变）；运行期 / 启动零探测。
 
 **open 项：无**（O1 / O2 均已裁——用户 2026-09-10）。
 
@@ -704,7 +717,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - **不做** MODEL_SPECS 前缀匹配的无条件继承隐患（`qwen3.8-flash` 蹭泛前缀一类）——已登记独立待办（用户同意）。
 - **不做** 候选外二次确认 / `--force` 类白名单后门（用户否）。
 - **不改** `defaultModel` 的 F-5/F-6 语义（新会话起点 + 未设显式引导）。
-- **不改** 子代理 / advisor 的模型覆盖语义（自由串——红线零改）；只改其 `models[0]` 兜底取值。
+- **不改** 子代理 / advisor 的模型覆盖语义（自由串 / 裸渠道名 / `default` 别名的解析优先级——红线零改）；只改其克隆兜底值来源（`models[0]` → 渠道单值 + 父兜底——M3④）。
 - **不做** 双端同步依赖 / 逐字硬一致（多实现面纪律）。
 - **不做** 拉取结果的持久化缓存（会话内进程缓存即可——清单是运行期事实）。
 - **不动** `_archive/MODEL-MERGE-SESSION.md` 正文（冻结）——仅取代关系一行。
@@ -737,11 +750,11 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | # | 类 | 用例 | 输入 | 预期输出 | 映射 | 端 |
 |---|---|---|---|---|---|---|
 | T1 | 正常 | openai 拉取 | mock `{data:[{id:"a"},{id:"b"}]}` | `["a","b"]` | R1 | 双端 |
-| T2 | 正常 | anthropic 拉取 | mock `{data:[{id:"claude-x"}]}` + 断言请求头 `x-api-key` / `anthropic-version` | `["claude-x"]` | R1 | 双端 |
-| T3 | 正常 | google 拉取 | mock `{models:[{name:"models/gemini-2.5-flash"}]}` | `["gemini-2.5-flash"]`（剥前缀） | R1 | 双端 |
+| T2 | 正常 | anthropic 拉取 | mock `{data:[{id:"claude-x"}],has_more:false}` + 断言完整 URL `https://api.anthropic.com/v1/models?limit=1000`（claude 预设组合）与请求头 `x-api-key` / `anthropic-version` | `["claude-x"]` | R1 | 双端 |
+| T3 | 正常 | google 拉取 | mock `{models:[{name:"models/gemini-2.5-flash"}]}` + 断言完整 URL `https://generativelanguage.googleapis.com/v1beta/models?key=…&pageSize=1000`（gemini 预设组合） | `["gemini-2.5-flash"]`（剥前缀） | R1 | 双端 |
 | T4 | 边界 | google 名称无前缀 / 缺字段项 | `{models:[{name:"gemini-x"},{}]}` | `["gemini-x"]`（跳过缺项） | R1 | 双端 |
 | T5 | 错误 | 拉取 HTTP 非 2xx / 网络失败（渠道准入） | mock 失败 | 抛错；picker 显失败文案（明示原因 + 请改用其他渠道）；该渠道不可选；缓存不写入 | R1 | CLI |
-| T6 | 边界 | 会话缓存 TTL | 两次调用 <60s / >60s | 第二次不发请求 / 重拉 | R1/N3 | CLI |
+| T6 | 边界 | 会话缓存 TTL | 假时钟注入（`_catalogHooks`）——推进 <60s / >60s 两次调用 | 第二次不发请求 / 重拉 | R1/N3 | CLI |
 | T7 | 正常 | 放行显式复合（候选外） | `parseModelRef("kimi:any-model")` | `ok:true`（不再成员校验） | R4 | CLI |
 | T8 | 边界 | 多冒号 | `parseModelRef("a:b:c")`（a 存在） | `ok:true`，model=`"b:c"` | R4 | CLI |
 | T9 | 错误 | 三类无效 | `""` / `"kimi"` / `":m"` / `"kimi:"` / `"ghost:m"` | `ok:false` + 各自 reason | R4 | CLI |
@@ -759,26 +772,33 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | T21 | 正常 | specMatch | 已知 / 未知模型名 | `matched:true` / `false` | R5 | CLI |
 | T22 | 错误 | F-1 guard 新文案 | `model` 缺失渠道克隆后 chat | throw 新文案（不再称 `models[]`） | R7/R8 | 双端 |
 | T23 | 正常 | 配置阶段准入探通（M9） | 加渠道 / 设默认模型时 mock `/models` 成功 | 渠道可用；探得候选直接可用（不入不可用清单） | R9 | 双端 |
-| T24 | 错误 | 配置阶段准入探不通（M9） | mock `/models` 失败 | 标「不可用」（明示原因）；不入默认模型可选来源；**渠道条目仍可保存** | R9 | 双端 |
-| T25 | 边界 | 运行期不探测（M9/N2） | 会话启动 / 发请求 | 无 `/models` 调用（零启动期网络依赖）；命令面放行不变 | R9/N2 | 双端 |
+| T24 | 错误 | 配置阶段准入探不通（M9） | mock `/models` 失败 | 失败消息逐字 = 长句（`…——无法选择模型，请改用其他渠道`）+ 行内标 `不可用`；不入默认模型可选来源；**渠道条目仍可保存** | R9 | 双端 |
+| T25 | 边界 | 运行期不探测（M9/N2） | 非配置流启动 / 发请求（配置流内探测不在本断言范围——M9 边界定义） | 无 `/models` 调用（零启动期网络依赖）；命令面放行不变 | R9/N2 | 双端 |
+| T26 | 边界 | anthropic 翻页合并 | 两页 mock（`has_more:true` → `false`，第二页 `after_id`） | 两页合并；请求次数 = 2；上限 10 页截停（防死循环） | R1 | 双端 |
+| T27 | 边界 | google 翻页合并 | 两页 mock（`nextPageToken` 两页） | 两页合并；`pageToken` 透传；上限 10 页截停 | R1 | 双端 |
+| T28 | 边界 | 渠道无默认模型时克隆取值（M3④） | 渠道 `p.model` 缺失 + 无显式模型 | advisor：`provider.model ?? agent.provider?.model`；subagent：`byName.model ?? parent.provider?.model`（父兜底生效，无静默 undefined 请求） | R3 | CLI |
 
 ### 17.2 验收标准（逐条回指——每条可机器验证）
 
-- **AC-1（R1）**：`node --test test/list-models.test.mjs` 全绿——三 format 分派（URL/请求头/响应解析/失败态）；
+- **AC-1（R1）**：`node --test test/list-models.test.mjs` 全绿——三 format 分派（完整 URL / 请求头 / 响应解析 / 失败态 / 翻页合并——T1–T6 + T26/T27）；
   拉取失败 = 该渠道不可选 + 明示原因（T5/T20）；picker 候选行来自拉取（mock 注入断言）；VSC 静态候选来源清除：`cd thincoder-vscode && grep -rn "configCandidates" src/` → 空
   （该标识符只存在于 VSC 仓——现状命中于 `src/extension/settings.mjs:301-317`；CLI 仓无此名——判据限定 VSC 仓方有验证力。）
+  上机验证动作（mock-only 残余风险的破解——评审修正轮记录）：实施后 claude / gemini 各一发真实 `listModels`（真 key 环境）；失败即回改 §16.2 M1 的 URL 组合。
 - **AC-2（R2）**：`node --test test/config-merge.test.mjs` 全绿——迁移后磁盘无 `models` 键；
   配置字段读写零残留：`cd thincoder && grep -rn --exclude=config-migrate.mjs --exclude=consult.mjs --exclude=cmd-advisor.mjs --exclude=model-catalog.mjs --exclude=list-models.mjs "\.models" src/` → 空
   白名单（非配置语义的 `.models`）= 迁移读点（config-migrate）· 运行期容器/缓存（consult 的 `picked.models`/`session.models`、cmd-advisor 的 `cached.models`、model-catalog 缓存条目）·
   API 响应形状（list-models 的 google `{models:[…]}`）；白名单外出现新命中 → 停下报告，不静默扩围。自检：白名单外当前码非空、目标态空。
-- **AC-3（R3）**：预设 20 条单值断言（config-merge 套件内）；槽位/克隆兜底断言绿（provider-model-guard）。
+- **AC-3（R3）**：预设 20 条单值断言（config-merge 套件内）；槽位/克隆兜底断言绿（provider-model-guard）；克隆空值语义断言（T28——advisor / subagent 父兜底，无 undefined-model 请求）。
 - **AC-4（R4）**：`node --test test/model-ref.test.mjs` 表驱动全绿——放行（候选外/多冒号）与无效（三类）分界。
 - **AC-5（R5）**：回显断言——正常与 DEFAULT 两分支（含警示色分支与 `/config` 提示文案）。
 - **AC-6（R6）**：VSC `resolveDefaultModel` 新回退链断言 + `fullStatus` 拉取失败 = 渠道不可选断言（明示原因；无 fallback 候选）。
 - **AC-7（R7）**：双端 `npm test` 全绿（含三道契约测试族 + 新增面）。
-- **AC-8（R8）**：`grep -rn "候选硬约束\|候选外拒" docs/design/ src/ bin/` 无现状描述残留
-  （`_archive/` 与 §16 本文叙述除外）；`_archive/MODEL-MERGE-SESSION.md` 字节不变（SHA 比对）。
-- **AC-9（R9）**：配置阶段准入探两态断言（探通 → 渠道可用；探不通 → 标「不可用」+ 明示原因 + 不入默认模型可选来源 + 条目仍可保存）；运行期不探测断言（启动 / 请求零 `/models` 调用）——T23/T24/T25。
+- **AC-8（R8）**：`cd thincoder && grep -rn "候选硬约束\|候选外拒" docs/design/ src/ bin/ --exclude=PROVIDER.md --exclude-dir=_archive` → 空
+  （排除集显式化——评审修正轮：`PROVIDER.md` = 本档叙述承载（§0 / §16 / §17 的 v1/v2 对比与变更叙述、本行自身）；`docs/design/_archive/` = 冻结归档。
+  目标态自检（2026-09-11 实测）：排除后当前码非空——`src/tui/model-picker.mjs` 5 处 + `src/tui/cmd-model.mjs` 1 处旧注释、`SESSION.md:230` 1 处变更叙述；
+  后者收尾改以替代措辞（「候选成员校验」）表达（随 R8 落地）；改写完成后本命令为空。）
+  `_archive/MODEL-MERGE-SESSION.md` 字节不变（SHA 比对）。
+- **AC-9（R9）**：配置阶段准入探两态断言（探通 → 渠道可用；探不通 → 失败消息逐字长句 + 行内标 `不可用` + 不入默认模型可选来源 + 条目仍可保存）；运行期不探测断言（非配置流启动 / 请求零 `/models` 调用）——T23/T24/T25。
 
 > 验收勾销 / 逐条验收结论落**批次档 §6**（不写进本档——用户 2026-09-10 裁定）。
 
@@ -798,3 +818,4 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
   `_archive/MODEL-MERGE-SESSION.md` 正文冻结不重写，以本条为取代记录）；清单权威 = provider 运行期拉取
   （按 format 分派，§16 M1）；渠道单值默认模型恢复（§16 M3——**部分回滚 MODEL-MERGE「无渠道默认捆绑」裁 1**）；
   显式 `p:m` 一律放行（§16 M4）；切换回显规格来源（§16 M5/M6）；预设改单值（§11）；渠道准入判据 = `/models` 可用（§16 M8/M9——配置阶段校验，运行期不加闸）。
+- 2026-09-11 评审修正轮：13 条采纳项落档（M1 URL 组合钉死 + 翻页跟随 + mock-only 残余风险与上机验证动作；M3④ 空值语义 / 父兜底对齐；M8/M9 失败文案分工与零探测边界；AC-8 显式排除集；§16.5 行数补齐 + 拆分阈值对齐 500 硬限；§16.6 #14 非对话模型不过滤；T26–T28 新增）。
