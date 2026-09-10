@@ -669,7 +669,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 
 ### 2.22 VSC 端镜像（第 5 批——FR23）
 
-**目标**：把第 1/2/4 批机制落到 `thincoder-vscode`，使两端**同一套机制、各自实现**。终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档**（需求 §1.17 N4）。
+**目标**：把第 1/2/4 批机制落到 `thincoder-vscode`，使两端**同一套机制、各自实现**。终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档**（需求 `requirements/ENGINEERING-MODE.md` FR23 行 / §1.17 总体目标——N4 是验收两层，非判据句，轮次2 评审 #14）。
 
 #### 2.22.1 总原则：语义同源·原文自持（N1）
 
@@ -677,6 +677,10 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 镜像 ≠ 抄实现：**抄的是契约与锚句**，适配的是落点（勘察已证 VSC 落点多处不同）。
 
 #### 2.22.2 镜像锚（逐字源钉死——多实现面规则 §1.12）
+
+**主 agent 人格面同批落地（轮次2 评审 #1 🔴）**：`thincoder-vscode/src/prompts/persona-engineering.md:10-13` 实证仍写「You are the ARCHITECT… deliverables are: the requirements + design documents」——
+与本批带入 VSC 的 A1/A4（D1「需求/设计档=eng-designer」）**在同一次装配内互斥**（同 §2.15:365 判据）；且本批要拷的 CLI 中文镜像恰是改述后版本——
+不落此面则中文权威与英文落地相反。**故 `persona-engineering.md` 双源入本批锚/受影响文件（A12）**。
 
 需逐字一致的段**不在本设计重述**（避免第三份副本），而以 **CLI 文件:节为逐字源**，实现面**照拷、禁自行解释**；差异只允许在路径/UI 引用处，且必须登记：
 
@@ -692,9 +696,11 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | A8 | **`batch_segment` 工具描述文案**（段白名单枚举 / 无路径参数 / append-only / 来源戳 / 剥凭证 / 失败明示） | `src/agent-tools/batch-segment.mjs`（描述字符串，196 行） | 新增同名档 |
 | A9 | **来源戳形态**（`### 轮次 N（评审子代理）`、N = §3 内该形态行计数 + 1、排骨架行） | `design/ENGINEERING-MODE.md` §2.20.1 | 同上（工具实现） |
 | A10 | **V3 触发判据**（§4 或 §6 有实质内容；骨架/占位行不算） | `design/ENGINEERING-MODE.md` §2.20.6 | `scripts/check-doc-width.mjs`（V3） |
-| A11 | **spawn 样例行带 `batchDoc=`**（发现 #3/#14：门禁先行而样例不教 = 每次撞墙） | `src/prompts/discipline-engineering.md`（spawn 样例节） | 同 A1 宿主（**VSC:168-169 现无 `batchDoc=`**——本批补） |
+| A11 | **spawn 样例行带 `batchDoc=`**（发现 #3：门禁先行而样例不教 = 每次撞墙） | `src/prompts/discipline-engineering.md`（spawn 样例节） | 同 A1 宿主（**VSC:168-169 现无 `batchDoc=`**——本批补） |
+| A12 | **主 agent 人格改述 + spawn eng-designer 调用链**（轮次2 评审 #1 🔴） | `src/prompts/persona-engineering.md`（身份段 + 调用链段；中文镜像同档） | **双源同名两档**（VSC 现仍是 ARCHITECT 旧身份——`:10-13` 实证） |
 
-> **判据**：A1-A11 在 VSC 侧（宿主文件，双源两侧）的出现文本与 CLI 侧**逐字相同**（N3 的 grep 断言对象）；白名单枚举、参数名、状态词一律不得改写。
+> **判据**：**文本类锚**（A1-A8、A11、A12）在 VSC 侧宿主文件（双源两侧）与 CLI 侧逐字相同（grep 断言；白名单枚举/参数名/状态词不得改写）；
+> **A9/A10 为行为锚**（宿主是工具/脚本代码，无“双源两侧”可言——轮次2 评审 #8）：断言面改为行为用例（A9 → T59 来源戳 / A10 → T61 V3 零假阳），**不进 grep 集合**。
 > A1 的宿主已从“CLI §1.12 抬头”（VSC 无该树）改为 **VSC `src/prompts/discipline-engineering.md` 新增六段节**（发现 #7：锚必须有落点才能断言）。
 
 #### 2.22.3 batchDoc 门（F1——两处各落 + 共享校验）
@@ -707,7 +713,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 - **角色域（发现 #3——必须写死，否则违 N2 零回归）**：门**只对 `NEEDS_BATCH_DOC = { eng-coder, eng-designer }` 生效**——其余角色（explore / plan / coder）**零变更**（不带 batchDoc 照常 spawn）。
   AC37/T55 的“两路拒”**仅指这两个角色**；反面例（explore 不带 batchDoc 不得被拒）入 T55b。
 - **参数面（发现 #3）**：spawn schema 需新增 `batchDoc` 属性（否则参数无处传入）；受限变体（审计/勘察子代理）的 `delete props` 清单**同步加 `batchDoc`**（不得透传给子代）。
-- **注入**：通过校验后子代理携带 `child._batchDoc = <abs>`（与 CLI 第 4 批同形态）——`batch_segment` 取用。
+- **注入**：通过校验后子代理携带 `child._batchDoc = <abs>`（与 CLI 第 4 批同形态）——`batch_segment` 取用；
+  **child 任务文本行是否同形（轮次2 评审 #12）**：**镜像**（CLI 第 1 批形态 = “Batch record (batchDoc): <abs>”行）；若实施改为仅绑定形态，须在交付报告明示（不得静默二选一）。
 
 #### 2.22.4 eng-designer 角色（F2——**八处落地**；发现 #1/#4）
 
@@ -718,7 +725,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | ① **运行期白名单** | `src/agent-tools/subagent.mjs:254-256`（`const ROLES = new Set([...])`） | 加入 `"eng-designer"`，**并改写错误文案的角色列举**（现列 4 个角色——漏改则报错信息说谎） |
 | ② **模式门（第三门）** | `src/agent-tools/subagent.mjs:267-272`（现只有 coder↔eng-coder 互斥两门） | 加：`eng-designer` 仅在工程模式可用（非工程模式 → 拒，文案同族） |
 | ③ **子代 spawn 门** | `src/agent-tools/subagent-async.mjs:47`（现 `parent._role !== "eng-coder"` 即 null 放行） | 父角色集合扩入 `eng-designer`（designer 的勘察子代 = explore-only） |
-| ④ **装配分支** | `src/agent/setup.mjs:151-160`（449 行） | 增 `eng-designer` 分支：读/搜/写设计产出 + `batch_segment`；**不含 advisor**；+ **勘察子代理变体**（见下表末行） |
+| ④ **装配分支** | `src/agent/setup.mjs:151-160`（449 行） | 增 `eng-designer` 分支：读/搜/写设计产出 + `batch_segment`；**不含 advisor**；+ **勘察子代理变体**（explore-only，见本节 ⑨） |
 | ⑤ **角色 enum** | `src/agent-tools/subagent.mjs:56-74`（`modeRoleField`） | 工程模式 enum 由 `[explore, plan, eng-coder]` → 含 `eng-designer` |
 | ⑥ **场景表** | `src/prompt-overlays.mjs`（82 行） | 补 `"persona-eng-designer.md": loadSlot(...)` 与 `"eng-designer": [...]` 两行（CLI:26/CLI:52 同形——**全文逐行同构，最干净的可照抄点**） |
 | ⑦ **webview 枚举** | `activity-view.js:13`（157）· `activity.js:37`（205）· `settings-agent.js`（175）· `settings-models.js`（215） | 四处角色枚举/regex 补 `eng-designer` |
@@ -741,12 +748,15 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 |---|---|---|---|
 | 扫描域 | A **含三个目录，缺失即跳过** · B 镜像时把 VSC docs 树建齐 | **A** | VSC 无 `docs/requirements//docs/batches/`；批次档**仍落 CLI 仓**（单一归属）；建空树 = 造无用目录；现有 CLI 实现已有跳过语义 |
 
-- VSC `scripts/check-doc-width.mjs`（51 行，现**仅宽度、无导出、无 CLI 模式、未接自动化**）→ 扩为一致性扫描（V1 段引用 / V2 计数与列表 / V3 批次档 §3）+ 基线读写 + 导出；增量 **+≤120（→171）——距 300 档尚远，无需拆分评审**（发现 #9：原括注“>300 档需主动拆分评审”与算术相悖，已删）。
+- VSC `scripts/check-doc-width.mjs`（51 行，现**仅宽度、无导出、无 CLI 模式、未接自动化**）→ 扩为一致性扫描（V1 段引用 / V2 计数与列表 / V3 批次档 §3）+ 基线读写 + 导出；
+  增量上限**对齐 CLI 同机制实测**：CLI 同档现 **298 行**（宽检+V1/V2+V3 全量；§2.21 记 as-of 281 + ≤19 守 300）——本批上限 **≤+250（→≤300）**，
+  **保留 CLI 退路条款：若超 300 即拆 `scripts/doc-consistency.mjs`（二选一，不得都做也不得都不做）**；原“+≤120/距 300 尚远”估算与 CLI 实测差约百行，已废（轮次2 评审 #5）。
 - **V3 扫描根与跨仓边界（发现 #6——不得空转）**：
   VSC 的 V3 默认扫**本仓** `docs/batches/`——该目录不存在 → **跳过不报**（现状）；
   **但批次档的单一归属是 CLI 仓**（决策 A），**真实守门在 CLI 侧的 V3**（已落地，第 4 批）；
   VSC 侧 V3 的价值 = 结构对等 + 测试面 + 未来 VSC 自建批次档时可用；**若将来需要扫 CLI 仓批次档，以显式参数传入扫描根**（不得硬编码跨仓相对路径）。
-- **接线是硬项**（N3）：VSC 快层目标 = 显式清单 `test/files.mjs`（41 行，**28 条清单项**；`test/` 下 **27 个 `.test.mjs`**——两数口径不同，发现 #11）——**必须入册**（或在 `package.json` scripts 里挂）——否则“有校验器但不跑” = 机制没活。
+- **接线是硬项**（N3）：接线落点**钉死 `test/files.mjs` 入册**（**`package.json` 不入本批受影响文件与两个实现面文件域**——轮次2 评审 #4；5 个新用例档 + 锚句断言档**全部入册**，`test/files.mjs` 增量按入册条数上调）——
+  VSC 快层目标 = 显式清单 `test/files.mjs`（41 行，**28 条清单项**；`test/` 下 **27 个 `.test.mjs`**——两数口径不同，发现 #11）——否则“有校验器但不跑” = 机制没活。
 
 #### 2.22.7 提示词双源（F6——用户在裁：双源）
 
@@ -754,8 +764,10 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 - **本批建 `docs/design/prompts/` 15 文件**（中文权威）——初始内容 **逐字自 CLI `docs/design/prompts/` 拷贝**（现有 15 档）。
 - **端特有段处置（发现 #8——不得静默）**：CLI 纪律明文「**端特有段各端保留**」（CLI `src/prompts/discipline-engineering.md:91` / `:205`：VSC R14 池规则段“原地保留于 VSC、CLI 不引入”），
   而 VSC `src/prompts/discipline-engineering.md:202-205` 确有该段——故“逐字拷 CLI 中文档”后，**VSC 的中文权威镜像不含其英文源里的端特有段**。
-  本批定：**端特有段一并进 VSC 中文镜像**（以 VSC `src/prompts` 为准适配写入），**逐项登记在镜像差异表**（文件 + 段 + 来源），并让 AC43 的双源断言**覆盖端特有段存在性**（非仅锚句）。
-- **VSC `src/prompts/` 14 → 15**（新增 `persona-eng-designer.md`）；余 14 档**只做锚句定点改写**（A1-A7/A11）——**不得拿 CLI 的 src/prompts 整体覆盖**（VSC 自持原文，整体覆盖会回退 VSC 特有内容）。
+  本批定：**端特有段一并进 VSC 中文镜像**（以 VSC `src/prompts` 为准适配写入），**逐项登记在镜像差异表**（文件 + 段 + 来源；**差异表宿主 = `thincoder-vscode/docs/design/README.md` 新增节**——轮次2 评审 #13），并让 AC43 的双源断言**覆盖端特有段存在性**（非仅锚句）。
+- **跨仓节引用处置（轮次2 评审 #9）**：CLI 中文档含 CLI 侧文档节引用（实证 `docs/design/prompts/discipline-engineering.md:81`「需求档 §1.12」/`:91`「§2.20」/`:138`「docs/README.md 文档规范 §2.7」），VSC 无对应档；
+  **逐字拷入后按“路径/UI 引用处”豁免**：能对上目标仓对应节的改写、对不上的改注“（CLI 侧）”，**逐项入镜像差异表**——VSC 侧 V1 扫 `docs/design/**` 含镜像目录，**不得产生悬空引用**（首跑进基线的悬空引用 = 假阳，稀释“零假阳才常驻”）。
+- **VSC `src/prompts/` 14 → 15**（新增 `persona-eng-designer.md`）；**锚句宿主档定点改写**（A1/A2/A4/A6/A7/A11/A12 所在档），**其余档不动**（轮次2 评审 #10——不做“余 14 档都改”的宽表述）——**不得拿 CLI 的 src/prompts 整体覆盖**（VSC 自持原文，整体覆盖会回退 VSC 特有内容）。
 - `thincoder-vscode/docs/design/README.md:30` 的“机制权威 = CLI 仓”句随之改写（登记项；发现 #12 注仓前缀）。
 
 #### 2.22.8 实现面拆分（选型 3）
@@ -793,12 +805,12 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | src/agent/setup.mjs | 修改 | 449 | +≤20（eng-designer 分支 + 勘察变体）——>300 档：不拆 |
 | src/agent-tools/index.mjs | 修改 | 16 | +≤2（barrel） |
 | src/prompt-overlays.mjs | 修改 | 82 | +≤4（两行 eng-designer 条目） |
-| scripts/check-doc-width.mjs | 修改 | 51 | **+≤120（→171，距 300 尚远——不需拆分评审）** |
+| scripts/check-doc-width.mjs | 修改 | 51 | **+≤250（→≤300，对齐 CLI 同机制实测 298 行）；若超 300 即拆 `scripts/doc-consistency.mjs`（二选一）** |
 | webview/activity-view.js | 修改 | 157 | +≤2（FAMILY_ROLES） |
 | webview/activity.js | 修改 | 205 | +≤2（角色 regex） |
 | webview/settings-agent.js | 修改 | 175 | +≤2 |
 | webview/settings-models.js | 修改 | 215 | +≤2 |
-| test/files.mjs | 修改 | 41 | +≤2（新用例入册） |
+| test/files.mjs | 修改 | 41 | +≤8（6 个新用例/断言档全部入册——轮次2 评审 #7） |
 | test/batch-segment.test.mjs | **新增** | — | +200 |
 | test/batch-doc-gate.test.mjs | **新增** | — | +150 |
 | test/eng-designer-role.test.mjs | **新增** | — | +180（含运行期门三例） |
@@ -814,8 +826,10 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | src/prompts/advisor-design.md · advisor-round2.md · advisor-round3.md | 修改 | 36 / 41 / 37 | 锚句 A5/A6 定点改 |
 | src/prompts/discipline-engineering.md | 修改 | 206 | 锚句 **A1/A2/A4/A6/A7/A11** 定点改 + **新增六段节**（A1/A2 宿主） |
 | src/prompts/persona-eng-coder.md | 修改 | 43 | 锚句 A3 |
-| thincoder-vscode/docs/design/prompts/*.md | **新增 15** | — | 逐字自 CLI `docs/design/prompts/` 拷贝 + **端特有段适配**（§2.22.7） |
-| test/prompts-mirror-anchors.test.mjs | **新增** | — | 锚句 A1-A11 双源断言 + 端特有段存在性（面 ②） |
+| src/prompts/persona-engineering.md | 修改 | 71 | 锚句 **A12**（身份段改述 + spawn eng-designer 调用链——轮次2 评审 #1 🔴） |
+| docs/design/prompts/persona-engineering.md | 修改 | — | 中文镜像同步（A12 中文版） |
+| thincoder-vscode/docs/design/prompts/*.md | **新增 15** | — | 逐字自 CLI `docs/design/prompts/` 拷贝 + **端特有段适配**（§2.22.7） + **跨仓节引用改写**（轮次2 评审 #9） |
+| test/prompts-mirror-anchors.test.mjs | **新增** | — | +≤120（锚句 A1-A8/A11/A12 双源断言 + 端特有段存在性；面 ②） |
 
 > 行数为 2026-09-10 实测（VSC 仓）；**唯一逼近硬顶**：`subagent-async.mjs` 489 + ≤10 = 499——越 500 停下报告并带拆分计划。
 
@@ -879,14 +893,17 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 - AC36（§2.20.2/§2.20.8——并发隔离，评审 #7）: 绑定按**评审实例键**（非单值会话态）；两个不同批次档的设计评审并发 → **各自正确落档**，不得串档（实例键下的预期即为两者均成——无“或拒”并列）。
 - AC37（§2.22.3——batchDoc 门移植）: VSC **两路 spawn**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs`）均：**目标角色**（`eng-coder` / `eng-designer`）batchDoc 缺 → 拒；路径不可读 → 拒；参数在 + 可读 → 放行并注入；
   **非目标角色（explore/plan/coder）零变更**（不带 batchDoc 不拒）；**校验逻辑单份**（共享 `resolveBatchDoc`，无重复实现）；schema 含 `batchDoc` 属性、受限变体 delete 清单含之。
-- AC38（§2.22.4——eng-designer **八处** + 勘察通道）: ①运行期白名单（`ROLES`，**含错误文案列举**）②模式门（非工程模式拒 designer）③子代 spawn 门（父角色集合）
-  ④装配分支（工具集含 `batch_segment`、**不含 advisor**）⑤角色 enum ⑥`prompt-overlays` 两行 ⑦**webview 四处** ⑧人格文件；⑨勘察变体（或显式记取舍 + 同步人格文本）。
-- AC39（§2.22.2——锚句 A1-A11）: VSC 侧（宿主文件双源两侧）出现文本与 CLI 侧**逐字相同**（grep 断言；白名单枚举/参数名/状态词不得改写）；**A1/A2 宿主 = VSC discipline-engineering.md 新增六段节**。
+- AC38（§2.22.4——eng-designer **八处** + 勘察通道⑨）: ①运行期白名单（`ROLES`，**含错误文案列举**）②模式门（非工程模式拒 designer）③子代 spawn 门（父角色集合）
+  ④装配分支（工具集含 `batch_segment`、**不含 advisor**）⑤角色 enum ⑥`prompt-overlays` 两行 ⑦**webview 四处** ⑧人格文件；
+  **⑨勘察变体必搬**（explore-only，参数化复用 CLI §2.15 D4 口径；**无“不搬”选项**——否则人格文本指向不存在的能力，轮次2 评审 #4）。
+- AC39（§2.22.2——锚句 A1-A12）: **文本类锚**（A1-A8、A11、A12）在 VSC 侧宿主文件（双源两侧）与 CLI 侧**逐字相同**（grep 断言；白名单枚举/参数名/状态词不得改写）；**A1/A2 宿主 = VSC discipline-engineering.md 新增六段节**；
+  **A12 宿主 = VSC `persona-engineering.md` 双源**（含产品经理身份 + spawn eng-designer 调用链，**不含 ARCHITECT 交付物句**——轮次2 评审 #1）；
+  **A9/A10 为行为锚，不进 grep 集合**（断言由 T59/T61 行为用例承载——轮次2 评审 #8）。
 - AC40（§2.22.5——工具移植 + 只读面）: 工具契约同 §2.20.1（无 `path` / 段白名单按身份 / append-only / 戳仅 §3 / 自有剥证正则 / fail-closed 六条）；
   VSC `src/advisor/tools.mjs` **仅当 `reviewType==='design'` 且 batchDoc 已绑定**时追加；**代码评审工具集逐字节不变**（`_resolvedAdvisorToolsFor` 断言）。
 - AC41（§2.22.5 适配点②——实例键通道）: batchDoc 沿 **`rv` 实例参数**传递（非单值会话态）；两批设计评审并发各自正确落档。
 - AC42（§2.22.6——V1/V2/V3 + 接线 + 跨仓边界）: VSC `check-doc-width.mjs` 扩为一致性扫描（V1/V2/V3）+ 基线读写 + 导出；
-  **并接线进自动化**（`test/files.mjs` 入册或 `package.json` script）——“有校验器但不跑”不算完成；**V3 扫描根/跨仓边界**按 §2.22.6 定（本仓缺目录即跳过；真守门在 CLI 侧）；**V1/V2 两面各有用例**。
+  **接线钉死 `test/files.mjs` 入册**（`package.json` 不在本批文件域——不得改，轮次2 评审 #4）；**V3 扫描根/跨仓边界**按 §2.22.6 定（本仓缺目录即跳过；真守门在 CLI 侧）；**V1/V2 两面各有用例**。
 - AC43（§2.22.7——双源结构 + 端特有段）: VSC 建 `docs/design/prompts/` **15 文件**（与 CLI 同名集合一一对应）；`src/prompts/` 14 → **15**；
   **同名集合两侧相等**（无多无少）；**端特有段进镜像且被断言**（非仅锚句）；VSC 特有文件不得被 CLI 版本整体覆盖（逐差异面登记）。
 - AC44（§2.22.9 + 需求 N4——验收不冒充）: 机械面全绿之外，**交付报告必须写明“生效需重载扩展”**；不得以“文件存在/静态断言绿”声称机制已生效（第 2 批教训）。
@@ -970,7 +987,7 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | T52b | 正常：超量后分段追加（轮次4 评审 #1） | 超量拒收后拆成两次调用写同轮内容 | 两次**各成节**：N = 1、2（档案按节记，分区诚实——**无“不新盖戳”承诺**） | AC34/§2.20.1 |
 | T53 | 正常：身份判据同源（评审 #6） | 设计评审实例写入时断言身份判定与目标档绑定读**同一实例键** | 不读他批状态；无单值会话态依赖 | AC36/§2.20.1 |
 
-**第 5 批用例（VSC 镜像——在 VSC 仓跑，T54–T62）**
+**第 5 批用例（VSC 镜像——在 VSC 仓跑，T54–T64，含 T55b/T57b）**
 
 | # | 场景 | 输入 | 预期输出 | 映射 |
 |---|---|---|---|---|
@@ -986,7 +1003,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | T61 | 边界：V3 零假阳 | ①在飞批次（仅骨架/占位行）②§4 有实质内容 + §3 无工具轮次行 ③二者均备 ④**本仓缺 `docs/batches/`** | ①不报 ②报 ③不报 ④**跳过不报**（跨仓边界） | AC42/F5 |
 | T63 | 正常：V1/V2（发现 #5） | ①人造段引用失配 → ②计数声明与列表不符 → ③存量不达基线 | ①②**报** ③**降报告**（不阻断） | AC42/F5 |
 | T64 | 正常：接线（发现 #5） | `test/files.mjs` 入册 / `package.json` script 与实跑 | 校验器**真被跑到**（未接线 = 红） | AC42/N3 |
-| T62 | 正常：双源结构 + 锚句 + 端特有段 | 同名集合对比 + 锚句 A1-A11 grep（双源）+ 端特有段存在性 | **两侧各 15**、集合相等；锚句逐字一致；端特有段在镜像中 | AC39/AC43/F6 |
+| T62 | 正常：双源结构 + 锚句 + 端特有段 | 同名集合对比 + 文本类锚 grep（双源）+ 端特有段存在性 | **两侧各 15**、集合相等；锚句逐字一致；端特有段在镜像中 | AC39/AC43/F6 |
+| T65 | 边界：主 agent 人格（轮次2 评审 #1，对齐 CLI T38） | 双源 grep `thincoder-vscode/src/prompts/persona-engineering.md` + 中文镜像 | 含产品经理身份 + spawn eng-designer 调用链；**不含 ARCHITECT/交付物句** | AC39/AC44/FR23 |
 
 ## 5. 配置与会话恢复
 
@@ -1014,6 +1032,16 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-10（晚·十六）：**第 5 批设计评审轮次 2 处置**（1🔴+8🟡+5🔵，用户裁定**全修**）：
+  🔴 **主 agent 人格面缺位**（VSC `persona-engineering.md:10-13` 实证仍是 ARCHITECT/设计档交付者——与带入的 A1/A4/D1 同装配互斥）——**新增锚 A12**（双源改述 + spawn eng-designer 调用链，逐字源 = CLI 同档）+ §2.23 补双源两行 + **T65** + §2.22 目标段记实证；
+  🟡 用例标题 **T54–T65**（含 T55b/T57b/T65；T62 归位）+ 批次档 §2 同步；
+  轮次 1 发现落点：批次档 §3 待父侧代写打标（§3 = 评审子代理自写，工具落地前通道：**本轮先补设计档内“发现 #N”可解析性**——处置段已逐条化）；
+  AC38 ⑨ **勘察变体必搬**（无“不搬”选项）；接线落点**钉死 files.mjs**（package.json 不入文件域）；
+  check-doc-width 增量上限改 **≤+250（→≤300，对齐 CLI 实测 298 行）** + 保留拆分退路；
+  测试标注补齐（anchors 档 +≤120；files.mjs +≤8）；**AC39 分文本类锚/行为锚**（A9/A10 不进 grep，改 T59/T61 承载）；
+  跨仓节引用处置（改写/注 CLI 侧/入差异表——不产生悬空引用）；镜像差异表宿主钉死（VSC docs/design/README.md 新增节）；
+  “余 14 档都改”收紧为“仅锚句宿主档”；注入行同形镜像（T54 断言，改形态须报告）；终局判据指针改 FR23/§1.17。
 
 - 2026-09-10（晚·十五）：**第 5 批设计评审轮次 1 处置**（2🔴+8🟡+4🔵，用户裁定**全修**）：
   🔴 **F2 漏运行期门**（照设计落地则 designer 根本 spawn 不出来）——§2.22.4 由五处→**八处**（白名单 `subagent.mjs:254-256`+错误文案 / 模式门第三门 / 子代 spawn 门）+ 不变量 6 + T57 下沉运行期 + 新 **T57b**；
