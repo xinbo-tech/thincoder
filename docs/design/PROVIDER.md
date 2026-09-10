@@ -18,15 +18,23 @@
 与 CLI 共享 `~/.thincoder/config.json`。读写核心 `src/config-io.mjs`（纯 Node、无
 `vscode` 依赖，可单测），面板读写面 `src/extension/settings.mjs` / `presets.mjs`。
 
-- **providers[]**：每项 `{ name, baseURL, models[], apiKey?, chatPath?, maxTokens?,
+- **providers[]**：每项 `{ name, baseURL, model, apiKey?, chatPath?, maxTokens?,
   temperature?, thinking?, reasoningEffort?, format?, context?, proxy?, responseFormat? }`。
-  `baseURL` 尾斜杠在读取时归一（`resolveProviders`）。`models[]` = 候选硬约束（非空渠道候选——
-  选择/默认入口的成员校验表）。
-- **默认（MODEL-MERGE-SESSION）**：顶层 `defaultModel = "provider:model"` 复合 = 新会话起点；
-  旧 `activeProvider`/`activeModel`/`providers[].model` 三键已删——loadRaw 检测老形态经
-  `config-migrate.mjs` `migrateLegacyModelFields` 折中 C 迁移（幂等；写回失败不阻断——下次重试）。
+  `baseURL` 尾斜杠在读取时归一（`resolveProviders`）。**`model`（单值）= 渠道默认模型**
+  （MODEL-SELECTION v2——`models[]` 候选清单字段整字段退场；清单权威 = 运行期从 provider 拉取，
+  见 §3.1）；非字符串 / 空串在读取时归一删除。
+- **默认（MODEL-MERGE-SESSION + MODEL-SELECTION v2）**：顶层 `defaultModel = "provider:model"` 复合 =
+  新会话起点；旧 `activeProvider`/`activeModel` 两键已删——loadRaw 检测老形态经 `config-migrate.mjs`
+  `migrateLegacyModelFields` 迁移（幂等；写回失败不阻断——下次重试）。**v2 迁移**（规则与 CLI 端同源
+  （CLI 侧 `PROVIDER.md` §16.2 M7）；本端独立实现）：`delete p.models`；`p.model` 保留（老形态 A =
+  渠道单值 + active* 复合），或由 `defaultModel` 属本渠道模型段 / 现有单值 / `models[]` 首个非空值
+  播种（形态 B）；垃圾形态（非字符串 model / 非数组 models）清理。**注**：`providers[].model` 单值于
+  v2 恢复（渠道默认模型——新装种子 / 槽空兜底），与 `defaultModel` 两权分立。
   `resolveProviders().activeProvider` = defaultModel 渠道（失效回退首渠道——面板 radio/删除守卫
   用）。`manifest` 无 —— config.json 单文件承载。
+- **`resolveDefaultModel(entry, raw)` 回退链（v2——R6）**：① `defaultModel` 复合属本渠道 → 用之；
+  ② 渠道默认单值 `entry.model`；③ `null`——**不再静默回退 `models[0]`**；`providerFromConfig`
+  的 `provider.model` = 本函数解析值（API/spec 消费点零改）。
 - **apiKey**：`resolveKey` **只读 config.json `entry.apiKey`**，环境变量不是密钥源（用户经
   面板/config 配置；与 CLI 的 env 回退语义不同）。空 → provider 不可用
   （`providerFromConfig` 返回 null；模型选择走 onboarding）。
@@ -52,6 +60,8 @@ siliconflow / openrouter / groq。claude / gemini 携 `format: "anthropic"` / `"
 minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 
 `presetToEntry(name)` 剥离 `desc`（面板显示字段），余下发成 provider 条目。
+**v2（MODEL-SELECTION）**：各预设携**单值默认模型 `model`**（原 `models[]` 候选种子退场——
+承接新装种子 / 槽空兜底 / 显示回退；CLI 语义同源、本端独立实现）。
 
 ## 3. 模型选择 UI 与 Provider 增删
 
@@ -59,16 +69,55 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
   弹出该 provider 模型 flyout 子菜单；点击选中。主下拉底部含 add / remove / key 管理入口。
   Webview 无键盘导航 → 用 hover flyout。**选中 = 写当前会话槽**（`activeProvider` +
   `activeModel` 双字段——`selectProviderModel` config 写路径已退役）；配置默认 = 设置面板
-  「默认模型」项（provider → models[] 两级——写 raw.defaultModel）。
+  「默认模型」项（provider → 运行期拉取候选 两级——写 raw.defaultModel；候选数据源与不可用
+  渠道剔除见 §3.1）。
 - **Add**：`provider-flows.mjs` `addProviderFlow`（QuickPick preset[过滤已添加，filter by
   desc/model] 或 Custom 手输 name/baseURL/model + format）→ `addProviderEntry`（预设自动填
   baseURL/model；custom 逐字段校验，format 三值 openai/anthropic/google + 拒绝未知）→ 问
   key → `setProviderKey`。Settings 面板消息 `addProvider`/`removeProvider`/
-  `setProviderProxy` 直落纯函数。`testProviderConnection` 经 `/models` 探测 baseURL+key
-  有效性并拉回模型列表供挑选（`listModels`）。
+  `setProviderProxy` 直落纯函数。`testProviderConnection({ baseURL, apiKey, format })` 经
+  `/models` 探测 baseURL+key 有效性并拉回模型列表供挑选（`listModels` 三 format 分派；
+  `format` 随表单透传、缺省 = openai）；加渠道后的准入探见 §3.1（M9）。
 - **Remove**：`removeProviderFlow` 列非 active provider 供删；active 受保护不可删。
 - **Key**：`setKeyFlow` 设/改；`removeProviderKeyFromConfig` 删 key 保留条目（custom 空条目
   整体清）。
+
+### 3.1 清单来源与渠道准入（MODEL-SELECTION v2）
+
+- **清单来源 = provider 运行期拉取**（`GET /models`；本端独立实现 `src/provider/list-models.mjs`）：
+  `listModels(provider, { signal })` 按 `provider.format` 三格式分派——openai（缺省/未知）：
+  `GET {baseURL}/models` + `Authorization: Bearer`；anthropic：`GET {baseURL}/models?limit=1000`
+  + `x-api-key` + `anthropic-version: 2023-06-01`；google：`GET {baseURL}/models?key=…&pageSize=1000`
+  （剥 `models/` 前缀）。cursor 分页（`has_more`→`after_id` / `nextPageToken`）跟随翻页、
+  ≤10 页上限；15s 超时；失败抛出（调用方降级）——**无静态候选、无 fallback 候选**（拉不到列表 =
+  该渠道不可选）。
+- **候选面**：`extension/settings.mjs` `fullStatus` 单源拉取（逐已配置渠道各探一次）；探通 →
+  候选行 = 拉取结果（直接可选）；探不通 → 该渠道不可选 + 失败消息本体随载荷下发。webview 默认
+  模型菜单与预设行改消费**运行期载荷**（`SS.getModels`——不再直读 config 字段）；`providerStatus`
+  行显单值默认模型（`models[]` 退场）；失败渠道经 `available:false` / `unavailableReason` 标注。
+- **M9 配置阶段准入**（探针 `probeChannelModels` + 展示态 `recordAdmission` / `admissionOf`，
+  收敛于 `provider/list-models.mjs`；探针形状由 `config-io.mjs` `probeTargetFromEntry` 组装）：
+  加渠道（`addProviderFlow` / 面板 `addProvider`）/ 设 API key（`setKeyFlow` / `saveProviderKey`）/
+  设默认模型（`settings-panel-write.mjs` defaultModel 写面）时对目标渠道探一次 `GET /models`。
+  探不通 → 失败消息逐字长句 `该渠道不提供模型列表（GET /models {状态}）——无法选择模型，请改用
+  其他渠道`（`channelUnavailableMessage`）+ 行内状态标签 `不可用`（`.prov-unavailable` /
+  `.prov-hint`）+ 不入默认模型可选来源 + **不阻断保存**；失败不缓存（下次配置动作重探）。
+  `defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）。
+- **运行期零探测**：非配置流（启动 / 发请求 / 面板打开）不做 `/models` 探测；配置流内探测不受限。
+  命令面 `provider:model` 放行语义不变。
+
+### 3.2 双端语义同源与差异（N4——如实落档）
+
+> 各端独立实现、语义同源；不做逐字硬一致、不加双端同步依赖。
+
+| 面 | CLI | 本端（VSC） | 说明 |
+|---|---|---|---|
+| 切换回显 spec 来源 | 有 | **无**（本批不加） | O2 已裁——批范围第 ⑥ 面字面仅含「候选同源 + resolveDefaultModel」 |
+| 拉取实现 | `provider/list-models.mjs` + `tui/model-catalog.mjs`（会话缓存 TTL 60s / 失败不缓存） | `provider/list-models.mjs`（本端独立；`fullStatus` 每次拉取——**无会话级 TTL 缓存**） | 已知不对称（后续可选） |
+| 拉取结果排序 | 调用方 | `listModels` 内部排序保留（既有行为） | 双端允许差异 |
+| 准入探针宿主 | `tui/model-catalog.mjs` + `model-picker.mjs` 落点 | `provider/list-models.mjs`（探针 + 展示态） | 设计未钉宿主，两端各自落地 |
+| 失败诊断载荷 | —— | `models` 载荷附 `unavailable[{provider,reason}]` | 本端自定（测试/排障面） |
+| webview 下拉兜底 | 会话重载兜底 = 保持会话值（不读候选清单） | 拉取清单不命中时取首项并经 `selectModel` 回写会话槽——**未随本批对齐** | 已知缺口（批次档 §5 已披露——处置待裁定） |
 
 ## 4. transport 分派与调用链（provider.mjs chat）
 
@@ -317,6 +366,7 @@ offload 写时自清理回收（paste-* 同目录，无名字过滤）。
 
 ## 9. 变更记录（历史折叠——详见 git log 与并入源）
 
+- 2026-09-11：镜像档同步（O4）——MODEL-SELECTION v2 语义落地本端（§1 配置存储 / §2 预设 / §3.1 清单来源与渠道准入 / §3.2 双端差异）。
 - 2026-09-09：MODEL-MERGE-SESSION 语义同步——§1 配置存储改写（三旧层删除 + defaultModel
   顶层复合 + providers[].models[] 候选 + 迁移核 config-migrate）；§2 Preset models 种子；
   §3 模型选择写会话槽（selectProviderModel config 写路径退役）+ 设置面板「默认模型」入口。

@@ -26,11 +26,12 @@ export function normalizeTools(tools) {
 /** Build the HTTP request */
 export function buildRequest(provider, messages, tools, { toolChoice, parallelToolCalls } = {}) {
   // F-1 (MODEL-400-FIX — docs/design/MODEL-400-FIX.md) 根因兜底：渠道裸克隆
-  // （`{...渠道}`——MODEL-MERGE schema：渠道无 model 字段，只带 models[] 候选）未重派生
-  // .model 时 provider.model 为 undefined/null——JSON.stringify 会丢 undefined 键 →
-  // 无 model 请求 → serde 400。fail-fast 报可读错误（带 provider 名 + 修复线索），不发病体。
+  // （`{...渠道}` 未重派生 .model 时 provider.model 为 undefined/null）——JSON.stringify
+  // 会丢 undefined 键 → 无 model 请求 → serde 400。fail-fast 报可读错误（带 provider 名 +
+  // 修复线索），不发病体。MODEL-SELECTION：渠道单值 `providers[].model` 与新形态兜底链
+  // （resolveDefaultModel / 父 provider 兜底）已在克隆点补齐；本 guard 是最后一道防御。
   if (!provider.model) {
-    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (MODEL-MERGE schema: channels carry models[] not model)")
+    throw new ProviderError(provider, "model is undefined — the provider clone has no model; set providers[].model, the session model, or an explicit provider:model")
   }
   const spec = specForModel(provider.model)
   const body = {

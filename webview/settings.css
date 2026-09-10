@@ -202,6 +202,21 @@
   min-width: 0;
 }
 
+/* MODEL-SELECTION M9：准入失败渠道的行内标注（消息本体在 .prov-hint） */
+.prov-unavailable {
+  color: var(--red);
+  opacity: 1;
+}
+
+.prov-hint {
+  font-size: 10px;
+  color: var(--red);
+  opacity: 0.8;
+  padding-left: 15px;
+  margin-top: 3px;
+  white-space: normal;
+}
+
 /* ─── Switch (checkbox → toggle) ────────────── */
 
 .switch {

@@ -21,7 +21,8 @@ function paTypeChanged() {
     const p = (SS.providerStatus.presets || []).find((x) => x.name === type)
     info.style.display = "block"
     customFields.style.display = "none"
-    info.textContent = p ? `${(p.models ?? [])[0] ?? "(no candidates)"} · ${p.baseURL ?? ""}` : ""
+    // MODEL-SELECTION：预设行显单值默认模型（候选清单字段已退场）
+    info.textContent = p ? `${p.model || "(no default model)"} · ${p.baseURL ?? ""}` : ""
   }
 }
 
@@ -84,16 +85,18 @@ export function installProviderHandlers() {
     if (v) v.textContent = dm
     window._vscode.postMessage({ type: "saveAgentSettings", settings: { defaultModel: dm } })
   }
-  // MODEL-MERGE-SESSION：默认模型两级菜单（L1 provider → L2 models[] 候选）——写 raw.defaultModel
+  // MODEL-SELECTION：默认模型两级菜单（L1 provider → L2 该渠道的运行期候选）——数据源 =
+  // 运行期 `/models` 拉取载荷（SS.getModels → chat.js 的 ctx._models；**不再直读 config 字段**）——
+  // 写 raw.defaultModel。M9：准入失败渠道不入可选来源（拉不到列表 → 无候选行）。
   window._defaultModelMenu = function() {
     const btn = document.getElementById("defaultmodel-btn")
     if (!btn) return
     const rows = []
-    for (const [name, st] of Object.entries(SS.providerStatus.providers || {})) {
-      const models = Array.isArray(st.models) ? st.models : []
-      if (models.length === 0) continue
-      const label = SS.providerStatus.labels?.[name] || PROVIDER_LABELS[name] || name
-      for (const m of models) rows.push({ id: m, label: m, provider: name, group: label, reasoning: [] })
+    for (const m of SS.getModels?.() || []) {
+      if (!m?.id || !m.provider) continue
+      if (SS.providerStatus.providers?.[m.provider]?.available === false) continue // 不可用渠道剔出
+      const label = SS.providerStatus.labels?.[m.provider] || PROVIDER_LABELS[m.provider] || m.provider
+      rows.push({ id: m.id, label: m.label || m.id, provider: m.provider, group: label, reasoning: m.reasoning ?? [] })
     }
     if (rows.length === 0) return
     const cur = SS.agentSettings?.defaultModel ?? ""
@@ -110,13 +113,15 @@ export function installProviderHandlers() {
   window._paFetchModels = function() {
     const baseURL = document.getElementById("pa-url")?.value?.trim()
     const apiKey = document.getElementById("pa-key")?.value?.trim()
+    // M1 三格式分派：探针必须携带表单选的 format（anthropic/google 与 openai 不同端点/头）
+    const format = document.getElementById("pa-format")?.value
     const status = document.getElementById("pa-conn-status")
     if (!baseURL) {
       if (status) { status.textContent = t("settings.providerUrlRequired"); status.style.color = "var(--red)" }
       return
     }
     if (status) { status.textContent = t("settings.connecting"); status.style.color = "" }
-    window._vscode.postMessage({ type: "testProvider", baseURL, apiKey })
+    window._vscode.postMessage({ type: "testProvider", baseURL, apiKey, format })
   }
   window._paSave = function() {
     const type = document.getElementById("pa-type")?.value
@@ -152,8 +157,8 @@ export function installProviderHandlers() {
 export function providersCardHtml() {
   const ps = SS.providerStatus.providers || {}
   let html = `<section id="providers-card" class="settings-card"><h4 class="settings-card-title">${t("settings.providersSection")}</h4><div class="settings-card-body">`
-  // MODEL-MERGE-SESSION：config.defaultModel 面板项（新会话起点——provider → models[] 两级
-  // 菜单——候选只读 config 渠道候选——写 raw.defaultModel——会话槽不受影响）
+  // MODEL-SELECTION：config.defaultModel 面板项（新会话起点——候选 = 运行期拉取的渠道模型；
+  // 写 raw.defaultModel——会话槽不受影响）
   const dm = SS.agentSettings?.defaultModel ?? null
   html += `<div class="prov-row" id="prov-defaultmodel-row">
     <div class="prov-main">
@@ -178,9 +183,10 @@ export function providersCardHtml() {
         </span>
       </div>
       <div class="prov-sub">
-        <span class="prov-model">${escHtml((s0.models ?? []).join(", ") || "(no candidates)")}${s0.baseURL ? ` · ${escHtml(s0.baseURL)}` : ""}</span>
+        <span class="prov-model">${escHtml(s0.model || "(no default model)")}${s0.baseURL ? ` · ${escHtml(s0.baseURL)}` : ""}${s0.available === false ? ` · <span class="prov-unavailable">不可用</span>` : ""}</span>
         <label class="switch" title="${t("settings.proxyRowTitle")}"><input type="checkbox" ${s0.proxy ? "checked" : ""} onchange="window._setProviderProxy('${escHtml(name)}', this.checked)"> ${t("settings.proxyRow")}</label>
       </div>
+      ${s0.available === false && s0.unavailableReason ? `<div class="prov-hint">${escHtml(s0.unavailableReason)}</div>` : ""}
     </div>`
   }
   html += `<button id="prov-add-btn" class="key-btn" onclick="window._toggleAddForm(true)">${t("settings.addProvider")}</button>`
@@ -192,7 +198,7 @@ export function providersCardHtml() {
     <div class="settings-subtitle">${t("settings.addProviderTitle")}</div>
     <div class="key-field"><label>${t("settings.presetChoice")}</label>
       <select id="pa-type" onchange="window._paTypeChanged()">
-        ${presets.map((p) => `<option value="${escHtml(p.name)}">${escHtml(p.name)} — ${escHtml(p.desc)} (${escHtml((p.models ?? [])[0] ?? "")})</option>`).join("")}
+        ${presets.map((p) => `<option value="${escHtml(p.name)}">${escHtml(p.name)} — ${escHtml(p.desc)} (${escHtml(p.model || "")})</option>`).join("")}
         <option value="custom">${t("settings.customChoice")}</option>
       </select>
     </div>

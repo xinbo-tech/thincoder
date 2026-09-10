@@ -12,19 +12,21 @@ import {
   persistRaw, resolveProviders, loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer,
   loadAgentSettings, loadRaw, normalizeProxy,
 } from "../config-io.mjs"
-import { addProviderEntry, removeProviderEntry } from "./provider-flows.mjs"
+import { addProviderEntry, removeProviderEntry, probeProviderAdmission } from "./provider-flows.mjs"
 import { mcpConnectedNames } from "../mcp.mjs"
-import { listModels } from "../provider.mjs"
+import { listModels, admissionOf, channelUnavailableMessage, recordAdmission } from "../provider/list-models.mjs"
 import { specForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 
 /**
  * Status snapshot for the settings panel. Shape consumed by webview/settings.js:
- * { providers: { name: { configured, masked, baseURL, models, isActive } }, custom, labels,
- *   presets: [{ name, desc, models }] (not yet added), activeProvider }.
- * MODEL-MERGE-SESSION：渠道 model 字段已删——行显 models[]（候选）；activeProvider =
- * resolveProviders 的 defaultModel 渠道/首渠道回退。models 随行下发——webview 默认模型
- * 两级菜单与候选 seed 的数据源。
+ * { providers: { name: { configured, masked, baseURL, model, isActive, proxy,
+ *                       available?, unavailableReason? } }, custom, labels,
+ *   presets: [{ name, desc, model }] (not yet added), activeProvider }.
+ * MODEL-SELECTION：每渠道行显**单值默认模型** `model`（候选清单字段已退场——候选面 =
+ * 运行期 `/models` 拉取，见 fullStatus）；activeProvider = resolveProviders 的 defaultModel
+ * 渠道/首渠道回退。`available:false` = M9 配置阶段探针判定该渠道不可用（unavailableReason
+ * = 失败消息本体逐字长句；UI 行内标 `不可用`）。
  * Providers are dynamic (config.json providers[]), so labels travel with the payload.
  */
 export function providerStatus() {
@@ -36,11 +38,15 @@ export function providerStatus() {
   for (const name of providerNames()) {
     const configured = isProviderConfigured(name)
     const entry = providers[name] || {}
+    const admission = admissionOf(name)
     status[name] = {
       configured, masked: configured ? "****" : "",
-      baseURL: entry.baseURL, models: Array.isArray(entry.models) ? entry.models : [],
+      baseURL: entry.baseURL,
+      model: typeof entry.model === "string" ? entry.model : "",
       isActive: name === activeProvider,
       proxy: entry.proxy === true, // per-provider proxy flag (row checkbox, preset/custom agnostic)
+      ...(admission ? { available: admission.ok === true } : {}),
+      ...(admission && admission.ok === false ? { unavailableReason: admission.reason } : {}),
     }
     labels[name] = providerLabel(name)
   }
@@ -48,9 +54,9 @@ export function providerStatus() {
   const existing = new Set(providerNames())
   const presets = Object.entries(PRESETS)
     .filter(([name]) => !existing.has(name))
-    .map(([name, p]) => ({ name, desc: p.desc, models: Array.isArray(p.models) ? p.models : [], baseURL: p.baseURL }))
+    .map(([name, p]) => ({ name, desc: p.desc, model: typeof p.model === "string" ? p.model : "", baseURL: p.baseURL }))
   const custom = providers.custom && typeof providers.custom === "object" && !Array.isArray(providers.custom)
-    ? { baseURL: providers.custom.baseURL || "", models: Array.isArray(providers.custom.models) ? providers.custom.models : [], hasKey: isProviderConfigured("custom") }
+    ? { baseURL: providers.custom.baseURL || "", model: typeof providers.custom.model === "string" ? providers.custom.model : "", hasKey: isProviderConfigured("custom") }
     : null
   return { providers: status, custom, labels, presets, activeProvider }
 }
@@ -151,8 +157,9 @@ export function deleteWebsearchKeyFromPanel() {
  * Probe a provider's connection by listing its /models. Used by the Add-Provider
  * form: validates baseURL+key AND returns the model list so a custom provider's
  * model can be PICKED (not hand-typed). Returns { ok, models } or { ok:false, error }.
+ * `format`（openai/anthropic/google）随表单下发——M1 三格式分派（缺省 = openai）。
  */
-export async function testProviderConnection({ baseURL, apiKey }) {
+export async function testProviderConnection({ baseURL, apiKey, format }) {
   const url = (baseURL || "").trim().replace(/\/+$/, "")
   if (!url) return { ok: false, error: "baseURL is required" }
   if (!/^https?:\/\//.test(url)) return { ok: false, error: "baseURL must start with http:// or https://" }
@@ -160,7 +167,7 @@ export async function testProviderConnection({ baseURL, apiKey }) {
   const px = normalizeProxy(loadRaw().proxy)
   const proxyUri = px && px.web !== false ? px.uri : null
   try {
-    const models = await listModels({ baseURL: url, apiKey: apiKey || "", model: "", proxyUri })
+    const models = await listModels({ baseURL: url, apiKey: apiKey || "", model: "", format, proxyUri })
     return { ok: true, models }
   } catch (e) {
     return { ok: false, error: e.message || String(e) }
@@ -212,10 +219,13 @@ export async function testProxyConnection(uri) {
 export async function saveProviderKey(name, key) {
   // storeProviderKey performs the same !key || !key.trim() guard — delegate only.
   await storeProviderKey(name, key)
+  // M9：设 API key = 配置写入面——探一次 GET /models（探不通 → 标不可用 + 不入候选；
+  // 不阻断保存——key 已落盘）。探针失败不缓存——下次配置动作重探。
+  await probeProviderAdmission(name)
 }
 
 /** Save a custom provider entry (provider named "custom" in config.json).
- *  MODEL-MERGE-SESSION：渠道 model 字段退役——custom 单模型入种 models:[model]。 */
+ *  MODEL-SELECTION：单值默认模型入 `model`（候选清单字段已退场）。 */
 export async function saveCustomProvider({ key, baseURL, model }) {
   const url = (baseURL || "").trim().replace(/\/+$/, "")
   const mdl = (model || "").trim()
@@ -224,29 +234,31 @@ export async function saveCustomProvider({ key, baseURL, model }) {
     raw.providers = Array.isArray(raw.providers) ? raw.providers : []
     let entry = raw.providers.find((p) => p?.name === "custom")
     if (k) {
-      if (!entry) { entry = { name: "custom", models: mdl ? [mdl] : [] }; raw.providers.push(entry) }
+      if (!entry) { entry = { name: "custom" }; raw.providers.push(entry) }
       entry.apiKey = k
       if (url) entry.baseURL = url
-      if (mdl) { entry.models = [mdl]; delete entry.model }
+      if (mdl) entry.model = mdl
     } else if ((url || mdl) && entry) {
       // No key but url/model given → update the existing entry in place (a
       // future per-field UI must not silently drop baseURL/model updates).
       if (url) entry.baseURL = url
-      if (mdl) { entry.models = [mdl]; delete entry.model }
+      if (mdl) entry.model = mdl
     } else if (!url && !mdl && entry) {
       // All fields empty → user cleared everything: drop the entry
       raw.providers = raw.providers.filter((p) => p?.name !== "custom")
     }
   })
+  // M9：加/改 custom 渠道 = 配置写入面——探一次 /models（探不通标不可用，不阻断保存）
+  if (k) await probeProviderAdmission("custom")
 }
 
 export async function deleteProviderKey(name) {
   await removeProviderKey(name)
-  // A bare "custom" entry with no baseURL/models is useless — drop it entirely
+  // A bare "custom" entry with no baseURL/model is useless — drop it entirely
   if (name === "custom") {
     persistRaw((raw) => {
       const entry = Array.isArray(raw.providers) ? raw.providers.find((p) => p?.name === "custom") : null
-      if (entry && !entry.baseURL && (!Array.isArray(entry.models) || entry.models.length === 0) && !entry.apiKey && !entry.model) {
+      if (entry && !entry.baseURL && !entry.model && !entry.apiKey) {
         raw.providers = raw.providers.filter((p) => p?.name !== "custom")
       }
     })
@@ -286,6 +298,14 @@ export function pushStatus(panel) {
 let _lastModelsPayload = []
 export function lastModelsPayload() { return _lastModelsPayload }
 
+/**
+ * Full status push: sync snapshot + **运行期模型清单拉取**（MODEL-SELECTION M2/R6——候选面唯一
+ * 来源 = `GET /models`，无静态兜底）。每个已配置渠道探一次：
+ * - 探通 → 候选行 = 拉取结果（直接可选；渠道默认单值仅在槽位/会话回退面使用）；
+ * - 探不通 → 该渠道**不可选**（无候选、无 fallback 候选行）+ 失败消息本体随载荷下发
+ *   （M8 逐字长句——准入判据）；结果入准入展示态（providerStatus 行 `不可用`）。
+ * 注：本拉取 = 候选面机制本身（R6），非 M9 新增探测点；失败不阻断任何流。
+ */
 export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOverride = null) {
   pushStatus(panel)
   const s = providerStatus()
@@ -296,9 +316,6 @@ export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOve
     providerNames().filter((n) => s.providers[n]?.configured).map(async (name) => {
       const prov = await buildProvider(name)
       if (!prov) return { name, models: [] }
-      // MODEL-MERGE-SESSION 候选 seed：config models[] 候选恒在——API 探测结果为补集
-      // （fetched ∖ candidates）——候选优先（渠道候选是 UI 常驻行——无网/探测失败也可选）
-      const configCandidates = (s.providers[name]?.models ?? []).filter((m) => typeof m === "string" && m)
       const row = (id) => {
         const spec = specForModel(id)
         const r = spec.reasoningEffortEnum || (spec.thinking ? ["enabled"] : [])
@@ -306,26 +323,27 @@ export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOve
       }
       try {
         const ids = await listModels(prov)
-        const fetched = ids.length > 0 ? ids : []
-        const extras = fetched.filter((id) => !configCandidates.includes(id))
-        const list = configCandidates.length > 0 || fetched.length > 0
-          ? [...configCandidates, ...extras]
-          : [PRESETS[name]?.models?.[0] || prov.model].filter(Boolean)
-        return { name, models: list.filter(Boolean).map(row) }
-      } catch {
-        const fallback = configCandidates.length > 0
-          ? configCandidates
-          : [PRESETS[name]?.models?.[0] || prov.model].filter(Boolean)
-        return { name, models: fallback.filter(Boolean).map(row) }
+        recordAdmission(name, { ok: true })
+        return { name, models: ids.map(row) }
+      } catch (e) {
+        const reason = channelUnavailableMessage(e)
+        recordAdmission(name, { ok: false, reason })
+        return { name, models: [], unavailable: { provider: name, reason } }
       }
     })
   )
-  const allModels = results.flatMap((r) => r.status === "fulfilled" ? r.value.models : [])
+  const settled = results.flatMap((r) => r.status === "fulfilled" ? [r.value] : [])
+  const allModels = settled.flatMap((v) => v.models)
+  const unavailable = settled.flatMap((v) => (v.unavailable ? [v.unavailable] : []))
   _lastModelsPayload = allModels
-  // MODEL-MERGE-SESSION：models push 的 prefs = 会话槽复合优先（调用侧 status() 经
-  // prefsOverride 传入——打开/切换后下拉跟随本会话——F-4）；无槽复合（新会话）→ 文件夹级
-  // workspaceState prefs 兜底（最近使用——F-7 /new 沿用当前语义）
+  // MODEL-SELECTION：models push 的 prefs = 会话槽复合优先（调用侧 status() 经
+  // prefsOverride 传入——打开/切换后下拉跟随本会话）；无槽复合（新会话）→ 文件夹级
+  // workspaceState prefs 兜底（最近使用——/new 沿用当前语义）
   const prefs = prefsOverride ?? loadModelPrefs(workspaceState)
-  panel?.webview.postMessage({ type: "models", models: allModels, prefs })
+  pushStatus(panel) // 准入展示态已更新（M9）——状态行重推（webview 按变更重渲染）
+  // `unavailable` = 拉取失败渠道的诊断载荷（{ provider, reason }[]）——UI 面失败原因经
+  // providerStatus 行（`不可用` + .prov-hint 渲染失败消息本体）；本字段供测试与排障
+  // （provider-admission.test.mjs T24 断言原因随载荷下发）。
+  panel?.webview.postMessage({ type: "models", models: allModels, prefs, ...(unavailable.length ? { unavailable } : {}) })
   pushSessionsFn?.()
 }

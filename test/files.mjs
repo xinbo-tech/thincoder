@@ -15,7 +15,8 @@ export default [
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
   "test/eng-settlement.test.mjs",
-  "test/config-merge.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：迁移折中 C 双端同规则 VSC 面（幂等/失败不阻断/凭据不丢）+ defaultModel 解析（activeProvider 渠道/首渠道回退/providerFromConfig 模型）
+  "test/config-merge.test.mjs", // MODEL-SELECTION（2026-09-10）：迁移 v2 双端同规则 VSC 面（形态 A/B→单值、幂等/失败不阻断/凭据不丢、磁盘无 models 键）+ 预设 20 条单值 + resolveDefaultModel 新回退链（复合→渠道默认单值→null）
+  "test/provider-admission.test.mjs", // MODEL-SELECTION（2026-09-10）：VSC 渠道准入——三 format 拉取/翻页（T1–T4/T26/T27）+ M9 配置阶段两态（T23/T24——含 fullStatus 拉取失败=不可选）+ 运行期零探测（T25）+ 面板行 `不可用` 标注（happy-dom）
   "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
   "test/subagent-observe-send.test.mjs",
   "test/subagent-id-counter.test.mjs", // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：id 计数器载体 = agent 本体——压缩换线后 spawn id 仍递增 + 两池 poolMax 兜底
@@ -35,7 +36,7 @@ export default [
   "test/config-pool.test.mjs", // POOL-CONFIG-UNIFIED（2026-09-09）：耦合锁三键 4/4/4 + advisor 读取器 + 容量拒/scope 守卫 + 白名单 + 落盘——纯单元（拒发路径——config 测试缝隔离）
   "test/config-softfail.test.mjs", // ISSUE-FIX-BATCH F-4（2026-09-09，IKCDMR）：consultModels 软失败（读面过滤 + 一次性警告——CLI 同规则双端锁步）+ 面板写路径对齐 + removeProvider 级联清理（consultModels/subagentModels/advisor.provider）
   "test/settings-panel.test.mjs", // POOL-CONFIG-UNIFIED F-4（2026-09-09）：面板三框回退显 4（agentCardHtml webview 面 + agentSettings extension 面——happy-dom）+ poolAdvisor 双语文案
-  "test/provider-model-guard.test.mjs", // MODEL-400-FIX/QUICKFIX-BATCH-2（2026-09-09）：双端 guard 镜像补登记——F-1 model 缺失可读 throw + F-2b advisor 跨渠道 models[0] + F-1 byName（此前交付未入册——直跑调试路径才执行——补录后入双门禁）
+  "test/provider-model-guard.test.mjs", // MODEL-400-FIX/QUICKFIX-BATCH-2（2026-09-09）+ MODEL-SELECTION（2026-09-10）：双端 guard 镜像——F-1 model 缺失可读 throw + F-2b advisor 跨渠道渠道默认单值（无则父兜底——T28）+ F-1 byName 单值/父兜底
   "test/image-downgrade.test.mjs", // IMAGE-DOWNGRADE-VISION（2026-09-09）：非视觉贴图自动降级视觉子代理——F-1 描述注入/images 清空 + F-2 fallback 三态 + AC-2 视觉零回归 + runner seam 缺省回落生产（mock 跑者/keyless 短路——零网络）
   // VSC 端镜像（2026-09-11 第 5 批 · ENGINEERING-MODE.md §2.22/§2.23——新档一律入册，否则接线没活）
   "test/batch-doc-gate.test.mjs", // batchDoc spawn 门（§2.22.3）：两路各一调用点 + 校验逻辑单份 + 角色域（T54/T55/T55b/T56）

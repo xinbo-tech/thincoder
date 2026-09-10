@@ -27,7 +27,7 @@ if (!preset) { console.error(`Unknown: ${name}. Valid: ${Object.keys(PRESETS).jo
 const provider = {
   baseURL: preset.baseURL,
   apiKey,
-  model: preset.models?.[0] ?? "", // MODEL-MERGE-SESSION：preset model 字段退役 → models 种子首项
+  model: preset.model ?? "", // MODEL-SELECTION：预设单值默认模型（候选清单字段已退场）
   maxTokens: preset.maxTokens,
   ...(preset.thinking ? { thinking: preset.thinking } : {}),
   ...(preset.reasoningEffort ? { reasoningEffort: preset.reasoningEffort } : {}),

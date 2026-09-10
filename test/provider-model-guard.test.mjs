@@ -2,17 +2,18 @@
  * provider-model-guard.test.mjs — MODEL-400-FIX（docs/design/MODEL-400-FIX.md——评审采纳版）
  * F-1 请求体断言 + F-2 克隆现场 model 重派生（VSC 面——CLI test/provider-model-guard 镜像）。
  *
- * 根因：MODEL-MERGE 删渠道 model 字段（渠道只带 models[] 候选）——`{...渠道}` 裸克隆不
- * 重派生 .model → model 键缺失 → JSON.stringify 丢 undefined 键 → 无 model 请求 → serde 400
- * （digest/advisor 无 echo 走克隆链落空；主会话 per-message echo 正常）。
+ * 根因：渠道裸克隆（`{...渠道}`）不重派生 .model → model 键缺失 → JSON.stringify 丢
+ * undefined 键 → 无 model 请求 → serde 400（digest/advisor 无 echo 走克隆链落空）。
+ * MODEL-SELECTION（2026-09-10）M3④：渠道默认单值 `providers[].model` 优先，无则父
+ * provider 兜底（`_provider.model`）——绝不产出 undefined-model 请求。
  *
  * 覆盖（用例表 + 验收 AC-1/AC-2）：
  * - F-1 provider.model undefined/null/空串 → buildRequest 可读 throw（ProviderError——带
  *   provider 名 + 修复线索）——不发病体（guard 在 body 组装前——不 mock fetch）
- * - F-2b resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 命中渠道 models[0]
- *   （跨渠道——非主 provider model——QUICKFIX-BATCH-2 F-2）；cfg.model 显式 → override 不变
- * - F-1（QUICKFIX-BATCH-2——CLI F-2c 镜像）：resolveChildProvider byName 裸渠道名 → models[0]
- *   （无候选 → parent model 兜底——同渠道家族）
+ * - F-2b resolveAdvisorProvider：cfg.provider 命中但无 cfg.model → model = 命中渠道默认单值；
+ *   渠道无默认模型 → 父 provider 兜底（T28）；cfg.model 显式 → override 不变
+ * - F-1（QUICKFIX-BATCH-2——CLI F-2c 镜像）：resolveChildProvider byName 裸渠道名 →
+ *   渠道默认单值；无一→ parent model 兜底（T28）
  * - F-2d saveLines 槽装配面（panel-session.mjs 镜像——CLI applySession `||` 语义）：extra 带
  *   activeModel="" 不把空串钉进槽（回退 existing——槽 model 恒有值/恒缺失）；null/缺席保留
  *   槽值（不回归）；真实模型照常替换
@@ -37,8 +38,8 @@ before(() => {
   writeFileSync(cfgPath, JSON.stringify({
     defaultModel: "deepseek:deepseek-v4-pro",
     providers: [
-      { name: "deepseek", baseURL: "https://api.deepseek.com", models: ["deepseek-v4-pro", "deepseek-v4-flash"], apiKey: "k1" },
-      { name: "kimi", baseURL: "https://x", models: ["kimi-k3"], apiKey: "k2" },
+      { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
+      { name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" },
     ],
   }, null, 2) + "\n", "utf8")
   _setConfigPathForTest(cfgPath)
@@ -55,7 +56,7 @@ after(() => {
 
 const { buildRequest } = await import("../src/provider/transports/openai.mjs")
 
-const F1_RE = /provider "deepseek": model is undefined — provider cloned without model re-derivation \(MODEL-MERGE schema: channels carry models\[\] not model\)/
+const F1_RE = /provider "deepseek": model is undefined — the provider clone has no model; set providers\[\]\.model, the session model, or an explicit provider:model/
 
 function runProvider(model) {
   return { name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey: "k-test", model }
@@ -80,15 +81,15 @@ test("F-1 有 model 不拦——body 照常带 model 键", () => {
 
 // ─── F-2 克隆现场 model 重派生（AC-2）───
 
-// F-2b advisor：cfg.provider 命中渠道（新 schema——models[] 无 model）但无 cfg.model
+// F-2b advisor：cfg.provider 命中渠道（新 schema——渠道默认单值）但无 cfg.model
 const MAIN = { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-flash", apiKey: "k-main" }
 
-test("F-2b advisor 跨渠道 无 cfg.model → model = 命中渠道 models[0]（非主 provider model——QUICKFIX-BATCH-2 F-2）", async () => {
+test("F-2b advisor 跨渠道 无 cfg.model → model = 命中渠道默认单值（非主 provider model——M3④）", async () => {
   const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
   const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi" } } })
   assert.equal(r.name, "kimi", "渠道命中")
   assert.equal(r.baseURL, "https://x", "端点=advisor 渠道——model 重派生不换端点")
-  assert.equal(r.model, "kimi-k3", "model = 命中渠道（kimi 渠道）models[0]——非主 provider model")
+  assert.equal(r.model, "kimi-k3", "model = 命中渠道（kimi 渠道）默认单值——非主 provider model")
 })
 
 test("F-2b cfg.model 显式 → override 不变（model: cfg.model 分支零回归）", async () => {
@@ -97,17 +98,35 @@ test("F-2b cfg.model 显式 → override 不变（model: cfg.model 分支零回�
   assert.equal(r.model, "kimi-k3")
 })
 
-test("F-2b 同渠道（cfg.provider=主渠道）无 cfg.model → model = 主渠道 models[0]（渠道自己的模型——不回归）", async () => {
+test("F-2b 同渠道（cfg.provider=主渠道）无 cfg.model → model = 主渠道默认单值（渠道自己的模型——不回归）", async () => {
   const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
   const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "deepseek" } } })
-  assert.equal(r.model, "deepseek-v4-pro", "config deepseek 渠道 models[0]（非 MAIN.model）——主渠道自己的候选首")
+  assert.equal(r.model, "deepseek-v4-pro", "config deepseek 渠道默认单值（非 MAIN.model）——主渠道自己的模型")
 })
 
-test("F-1 byName 裸渠道名 → model = 渠道 models[0]（克隆重派生——CLI F-2c 镜像）；无候选 → parent model 兜底（同渠道家族）", async () => {
+test("F-1 byName 裸渠道名 → model = 渠道默认单值（克隆重派生——CLI F-2c 镜像）；渠道无默认模型 → parent model 兜底（T28）", async () => {
   const { resolveChildProvider } = await import("../src/agent-tools/subagent.mjs")
-  const parent = { _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", models: ["kimi-k3", "kimi-k2"], apiKey: "k2" }] } }
-  assert.equal(resolveChildProvider(parent, "kimi").model, "kimi-k3", "models[0] 命中")
-  assert.equal(resolveChildProvider({ _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", models: [], apiKey: "k2" }] } }, "kimi").model, MAIN.model, "渠道无候选 → parent model 兜底")
+  const parent = { _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" }] } }
+  assert.equal(resolveChildProvider(parent, "kimi").model, "kimi-k3", "渠道默认单值命中")
+  assert.equal(resolveChildProvider({ _provider: MAIN, config: { providersList: [{ name: "kimi", baseURL: "https://x", apiKey: "k2" }] } }, "kimi").model, MAIN.model, "渠道无默认模型 → parent model 兜底")
+})
+
+test("T28 渠道无默认模型时 advisor 克隆：provider.model ?? agent._provider.model（父兜底——无 undefined-model 请求）", async () => {
+  const { resolveAdvisorProvider } = await import("../src/advisor/provider.mjs")
+  writeFileSync(cfgPath, JSON.stringify({ providers: [
+    { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
+    { name: "kimi", baseURL: "https://x", apiKey: "k2" },
+  ] }, null, 2) + "\n", "utf8")
+  const r = resolveAdvisorProvider({ _provider: MAIN, config: { advisor: { provider: "kimi" } } })
+  assert.equal(r.name, "kimi")
+  assert.equal(r.model, MAIN.model, "渠道无默认单值 → 父 provider 兜底（不产出 undefined-model）")
+  writeFileSync(cfgPath, JSON.stringify({
+    defaultModel: "deepseek:deepseek-v4-pro",
+    providers: [
+      { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
+      { name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" },
+    ],
+  }, null, 2) + "\n", "utf8")
 })
 
 test("F-2b 无 cfg.provider → 主 provider 原样（含 model——fallback 分支零回归）", async () => {

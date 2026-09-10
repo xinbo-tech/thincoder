@@ -6,7 +6,8 @@
  * saveShellSettingsFromPanel——config-io.mjs hub re-export（import 面不变——
  * settings.mjs/tests 照旧）。
  */
-import { persistRaw, conflictError, loadAgentSettings, loadRaw, sanitizeConsultModels } from "../config-io.mjs"
+import { persistRaw, conflictError, loadAgentSettings, loadRaw, sanitizeConsultModels, probeTargetFromEntry } from "../config-io.mjs"
+import { probeChannelModels } from "../provider/list-models.mjs"
 
 /** 单写通道：agent.* 键合并语义 = config-io saveAgentSettings（delete on
  *  undefined/null/""/空对象）——同文件内联执行（defaultModel 顶层 + agent 一次落盘——
@@ -18,6 +19,23 @@ function applyAgentPatch(raw, patch) {
     else if (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0) delete raw.agent[k]
     else raw.agent[k] = v
   }
+}
+
+/** M9：设默认模型的配置写入面——对复合渠道探一次 `GET /models`（复用 M1 实现）。
+ *  本写面为同步契约（调用方不 await）→ 探针 fire-and-forget（内部全捕获，绝不 reject）；
+ *  失败结果入准入展示态（providerStatus 行 `不可用` + 失败消息本体）——不阻断写；
+ *  失败不缓存——下次配置动作重探。 */
+function probeDefaultModelChannel(dm) {
+  const value = typeof dm === "string" ? dm.trim() : ""
+  const sep = value.indexOf(":")
+  if (sep <= 0 || !value.slice(sep + 1)) return
+  const name = value.slice(0, sep)
+  void (async () => {
+    const raw = loadRaw()
+    const entry = (Array.isArray(raw.providers) ? raw.providers : []).find((p) => p?.name === name)
+    if (!entry) return
+    await probeChannelModels(name, probeTargetFromEntry(entry))
+  })().catch(() => { /* 探针绝不阻断写面 */ })
 }
 
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
@@ -118,6 +136,8 @@ export function saveAgentSettingsFromPanel(payload) {
     }
     applyAgentPatch(raw, patch)
   })
+  // M9：设默认模型 = 配置写入面——写后探一次 /models（探不通标不可用，不阻断保存）
+  if ("defaultModel" in payload) probeDefaultModelChannel(payload.defaultModel)
   return conflictError(r)
 }
 

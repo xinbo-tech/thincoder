@@ -12,6 +12,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 import { saveAgentSettingsFromPanel } from "../src/extension/settings-panel-write.mjs"
+import { _setProbeImplForTest } from "../src/provider/list-models.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../src/extension/session-io.mjs"
 import { handlePanelMessage } from "../src/extension/panel-messages.mjs"
 import { loadRaw } from "../src/config-io.mjs"
@@ -28,12 +29,15 @@ before(() => {
   writeFileSync(cfgPath, JSON.stringify({
     defaultModel: "deepseek:deepseek-v4-pro",
     providers: [
-      { name: "deepseek", baseURL: "https://api.deepseek.com", models: ["deepseek-v4-pro", "deepseek-v4-flash"], apiKey: "k1" },
-      { name: "kimi", baseURL: "https://x", models: ["kimi-k3"], apiKey: "k2" },
+      { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
+      { name: "kimi", baseURL: "https://x", model: "kimi-k3", apiKey: "k2" },
     ],
   }, null, 2) + "\n", "utf8")
   _setConfigPathForTest(cfgPath)
   _setSessionsDirForTest(sessionsDir)
+  // M9：defaultModel 面板写会 fire-and-forget 探一次 /models——本文件断言的是**写面**，
+  // 探针以测试缝替身屏蔽（绝不碰网络——真探针面在 provider-admission.test.mjs）
+  _setProbeImplForTest(async () => ({ ok: true, models: [] }))
 })
 
 after(() => {

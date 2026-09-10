@@ -18,8 +18,8 @@ let cfgPath
 const fixture = () => ({
   defaultModel: "deepseek:deepseek-v4-pro",
   providers: [
-    { name: "deepseek", baseURL: "https://api.deepseek.com", models: ["deepseek-v4-pro"], apiKey: "k1" },
-    { name: "kimi", baseURL: "https://api.moonshot.cn/v1", models: ["kimi-k3"], apiKey: "k2" },
+    { name: "deepseek", baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", apiKey: "k1" },
+    { name: "kimi", baseURL: "https://api.moonshot.cn/v1", model: "kimi-k3", apiKey: "k2" },
   ],
 })
 

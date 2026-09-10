@@ -301,33 +301,10 @@ export function buildContinuationMessages(messages, result, spec) {
 }
 
 
-/** List available model IDs from the provider's /models endpoint */
-export async function listModels(provider, { signal } = {}) {
-  const ctrl = new AbortController()
-  const timeout = setTimeout(() => ctrl.abort(), 15000)
-  if (signal) signal.addEventListener("abort", () => ctrl.abort(), { once: true })
-  try {
-    const response = await proxyFetch(`${provider.baseURL}/models`, {
-      headers: { Authorization: `Bearer ${provider.apiKey}` },
-      signal: ctrl.signal,
-    }, provider.proxyUri)
-    if (!response.ok) {
-      const text = await response.text().catch(() => "")
-      throw new Error(`GET /models failed ${response.status}: ${text}`)
-    }
-    // 2026-08-31 会诊 #10：代理/网关返回 HTML 或非 JSON 时 response.json() 抛 SyntaxError
-    // 直接冒到模型下拉框——先 text 再容错解析，失败返回空列表（下拉框自然显示无模型）。
-    const rawText = await response.text().catch(() => "")
-    let data = null
-    try { data = JSON.parse(rawText) } catch { /* non-JSON body → empty list */ }
-    return (data?.data ?? []).map((m) => m.id).filter(Boolean).sort()
-  } catch (e) {
-    if (e.name === "AbortError") return [] // timeout/silence → empty list
-    throw e
-  } finally {
-    clearTimeout(timeout)
-  }
-}
+/** List available model IDs from the provider's /models endpoint.
+ *  2026-09-10 MODEL-SELECTION：实现迁 `provider/list-models.mjs`（按 `provider.format`
+ *  三格式分派 + 翻页——M1）；本文件保留同名 re-export 保调用方 import 面不变。 */
+export { listModels, channelUnavailableMessage, probeChannelModels, recordAdmission, admissionOf } from "./provider/list-models.mjs"
 
 async function requestWithRetry(provider, url, headers, body, signal, onWait) {
   let lastError

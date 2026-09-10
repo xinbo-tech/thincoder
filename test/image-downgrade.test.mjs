@@ -21,11 +21,11 @@ let _tmp, _conf1, _conf2, _savedWs
 before(() => {
   _tmp = mkdtempSync(join(tmpdir(), "tc-imgd-"))
   _conf1 = join(_tmp, "c1.json") // 仅非视觉渠道（无视觉渠道形态）
-  writeFileSync(_conf1, JSON.stringify({ providers: [{ name: "ds", apiKey: "k1", baseURL: "http://127.0.0.1/v1", models: ["deepseek-v4-pro"] }], defaultModel: "ds:deepseek-v4-pro" }))
+  writeFileSync(_conf1, JSON.stringify({ providers: [{ name: "ds", apiKey: "k1", baseURL: "http://127.0.0.1/v1", model: "deepseek-v4-pro" }], defaultModel: "ds:deepseek-v4-pro" }))
   _conf2 = join(_tmp, "c2.json") // 非视觉主渠道 + keyless 视觉渠道（渠道命中但 spawn 前置失败）
   writeFileSync(_conf2, JSON.stringify({ providers: [
-    { name: "ds", apiKey: "k1", baseURL: "http://127.0.0.1/v1", models: ["deepseek-v4-pro"] },
-    { name: "kimi", baseURL: "http://127.0.0.1/v2", models: ["kimi-k3"] },
+    { name: "ds", apiKey: "k1", baseURL: "http://127.0.0.1/v1", model: "deepseek-v4-pro" },
+    { name: "kimi", baseURL: "http://127.0.0.1/v2", model: "kimi-k3" },
   ] }))
   _savedWs = vscode.workspace.workspaceFolders
   vscode.workspace.workspaceFolders = [{ uri: { fsPath: _tmp } }]
@@ -102,6 +102,13 @@ test("F-2 runner 直调：无渠道 / keyless 视觉渠道 → null（不碰网�
   _setConfigPathForTest(_conf2)
   assert.equal(await runVisionReader({ paths: ["x.png"], providerName: "ds", cwd: _tmp }), null, "有视觉渠道但无 key → providerFromConfig null（spawn 前置失败）")
   _setConfigPathForTest(_conf1)
+})
+
+test("视觉判据（MODEL-SELECTION）：判据 = 渠道默认单值模型的 spec——非视觉默认模型不被选中；旧候选字段不再被读", async () => {
+  const { findVisionChannel } = await import("../src/extension/vision-channel.mjs")
+  assert.equal(findVisionChannel([{ name: "ds", model: "deepseek-v4-pro" }]), null, "默认模型非视觉 → 不选中（能力收窄已入档）")
+  assert.deepEqual(findVisionChannel([{ name: "kimi", model: "kimi-k3" }], "kimi"), { provider: "kimi", model: "kimi-k3" }, "默认模型视觉 → 选中")
+  assert.equal(findVisionChannel([{ name: "x", models: ["kimi-k3"] }]), null, "旧 models 候选字段不再被读（判据单一来源）")
 })
 
 test("F-2 spawn 失败/超时/空返 → fallback（images 原样——文本零改动）", async () => {

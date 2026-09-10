@@ -1,9 +1,10 @@
 /**
  * presets.mjs — provider access layer for the extension.
  * Single source of truth is the shared ~/.thincoder/config.json (CLI format:
- * providers[] with models[] candidates + top-level defaultModel composite — MODEL-
- * MERGE-SESSION——会话模型 = 会话槽双字段，provider.model = 运行时解析值).
- * Preset table mirrors CLI PROVIDER_PRESETS (models seeds) — see src/config-io.mjs.
+ * providers[] with a single `model` default per channel + top-level defaultModel composite —
+ * MODEL-SELECTION：渠道单值 = 新装种子/槽空兜底/显示回退；provider.model = 运行时解析值；
+ * 候选面 = 运行期 `/models` 拉取（非配置字段））。
+ * Preset table mirrors CLI PROVIDER_PRESETS (single-value `model`) — see src/config-io.mjs.
  */
 
 export { PROVIDER_PRESETS as PRESETS } from "../config-io.mjs"

@@ -1,10 +1,10 @@
 /**
  * config-io.mjs — shared config file I/O (VS Code side)
- * MODEL-MERGE-SESSION schema (mirrors CLI `thincoder/src/config.mjs`): providers[] with
- * models[] candidate lists + config.defaultModel top-level composite — activeProvider/
- * activeModel/providers[].model retired from config (session slots keep double fields);
- * legacy shapes migrate on loadRaw (config-migrate.mjs migrateLegacyModelFields —
- * same rule both ends).
+ * MODEL-SELECTION schema（2026-09-10——mirrors CLI `thincoder/src/config.mjs`）：providers[]
+ * with a single `model` default per channel + config.defaultModel top-level composite；
+ * `providers[].models[]` 候选清单字段已退场（清单权威 = provider 运行期 `/models` 拉取——
+ * `provider/list-models.mjs`）；legacy shapes migrate on loadRaw (config-migrate.mjs
+ * migrateLegacyModelFields — same rule both ends).
  *
  * Pure Node — no `vscode` import — so unit tests can run outside the extension host.
  * Split for the 500-line limit: preset table → config-presets.mjs (zero deps),
@@ -144,9 +144,9 @@ const warnedContext = new Set()
  * single source of truth. An empty/missing providers[] resolves to an EMPTY list
  * (no synthetic preset entries): the onboarding UI (welcome panel) is the path from
  * "nothing configured" to a setup.
- * MODEL-MERGE-SESSION：activeProvider 语义 = config.defaultModel 的渠道（解析后成员——
+ * MODEL-SELECTION：activeProvider 语义 = config.defaultModel 的渠道（解析后成员——
  * 严格双段）；defaultModel 缺失/失效 → 回退首 provider（design——去 raw.activeProvider
- * 读——老字段已随 loadRaw 迁移删除）。
+ * 读——老字段已随 loadRaw 迁移删除）。渠道单值 `model` 归一：非字符串/空串删除（M3）。
  */
 export function resolveProviders() {
   const raw = loadRaw()
@@ -155,9 +155,9 @@ export function resolveProviders() {
     : []
   for (const p of providers) {
     if (typeof p.baseURL === "string") p.baseURL = p.baseURL.replace(/\/+$/, "")
-    // models[] 内存归一（非字符串成员丢弃；缺省 → 空候选——D-S1 走引导）
-    if (!Array.isArray(p.models)) p.models = []
-    else p.models = p.models.filter((m) => typeof m === "string" && m)
+    // 单值 `model` 内存归一（非字符串/空串删除——M3：非空字符串 | 缺失）
+    if (typeof p.model === "string" && p.model.trim()) p.model = p.model.trim()
+    else delete p.model
     // PROVIDER.md §15 D-C1: providers[].context must be a positive integer (K units).
     // Invalid (0/negative/non-integer/non-numeric) → ignored (spec value used) +
     // warned ONCE per provider name (loadConfig-equivalent validation).
@@ -190,28 +190,45 @@ export function resolveKey(entry) {
 }
 
 /**
- * Runtime model for an entry — MODEL-MERGE-SESSION defaultModel 解析：raw.defaultModel
- * 复合属本渠道且 model ∈ 候选 → 用之；否则首候选（渠道默认字段已删——models[0] 是
- * 显示/回退种子）。null when the channel has no resolvable model.
+ * Runtime model for an entry——MODEL-SELECTION 回退链（R6）：
+ * ① raw.defaultModel 复合属本渠道 → 用之；② 渠道默认单值 `entry.model`；③ null。
+ *（不再静默回退 models[0]——候选清单字段已退场；空值合法——准入/候选经 /models 拉取）。
  */
 export function resolveDefaultModel(entry, raw) {
   const dm = typeof raw?.defaultModel === "string" ? raw.defaultModel : ""
-  const models = Array.isArray(entry?.models) ? entry.models : []
   if (dm && entry) {
     const sep = dm.indexOf(":")
     if (sep > 0 && dm.slice(0, sep) === entry.name) {
       const m = dm.slice(sep + 1)
-      if (models.includes(m)) return m
+      if (m) return m
     }
   }
-  return models.length > 0 ? models[0] : null
+  return typeof entry?.model === "string" && entry.model ? entry.model : null
+}
+
+/**
+ * M9 探针目标：渠道条目 → `listModels` 可消费的 provider 形状（探针走模型请求的
+ * 代理链——与 providerFromConfig 同规则：per-provider `proxy: true` 且全局 `proxy.model === true`）。
+ * apiKey 缺失 → 空串（探针会如实失败 → 渠道标「不可用」——准入判据 M8）。
+ */
+export function probeTargetFromEntry(entry) {
+  const raw = loadRaw()
+  const proxyCfg = normalizeProxy(raw.proxy)
+  const proxyUri = entry?.proxy === true && proxyCfg?.uri && proxyCfg.model === true ? proxyCfg.uri : undefined
+  return {
+    name: entry?.name,
+    baseURL: entry?.baseURL,
+    apiKey: resolveKey(entry) ?? "",
+    format: entry?.format,
+    proxyUri,
+  }
 }
 
 /**
  * Build the runtime provider object for LLM calls from config.json.
  * null when the provider has no resolvable API key. Throws on unknown name (findProvider parity).
- * MODEL-MERGE-SESSION：provider.model = resolveDefaultModel（defaultModel 复合属该渠道
- *  则用之——否则首候选）——API/spec 消费点零改（provider.model = 解析后具体值）。
+ * MODEL-SELECTION：provider.model = resolveDefaultModel（defaultModel 复合属该渠道
+ *  则用之——否则渠道默认单值）——API/spec 消费点零改（provider.model = 解析后具体值）。
  */
 export function providerFromConfig(name) {
   const { providers, activeProvider } = resolveProviders()
