@@ -28,7 +28,10 @@ test("AC-3 预设 20 条：各携单值 `model`，无 `models` 键（R3 播种�
     assert.ok(p.model.length > 0, `${name}.model 非空`)
     assert.equal("models" in p, false, `${name} 无 models 候选字段`)
   }
-  assert.equal(PROVIDER_PRESETS.deepseek.model, "deepseek-v4-pro", "播种 = 原候选首值")
+  assert.equal(PROVIDER_PRESETS.deepseek.model, "deepseek-flash", "播种 = V4.1-Flash 在役名（第 6 批——R15/T35）")
+  assert.deepEqual(PROVIDER_PRESETS.deepseek.thinking, { type: "enabled" }, "第 6 批 T35：thinking 不变（V4.1-Flash 默认开——显式 enabled 合法）")
+  assert.equal(PROVIDER_PRESETS.deepseek.reasoningEffort, "max", "第 6 批 T35：effort 不变（∈ enum low/high/max）")
+  assert.equal(PROVIDER_PRESETS.deepseek.maxTokens, 393216, "第 6 批 T35：maxTokens 不变（393216 = 384K）")
   assert.equal(PROVIDER_PRESETS.claude.format, "anthropic", "预设扩展字段原样保留")
 })
 
