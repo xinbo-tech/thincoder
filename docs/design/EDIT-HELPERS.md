@@ -46,8 +46,26 @@ edit 在编辑器路径（doc 已打开）的 range 编辑，其定位偏移必�
 - VSC：`src/tools/shared.mjs`（四 helper + FFFD_WARNING + lfOffsetToRaw）——edit/hashline_edit/apply_patch/write 同写路径共用 + 编辑器路径偏移。
 - 消费点：edit（file-edit.mjs——写回 + 失败候选 + 编辑器 range）、hashline_edit（写回 + U+FFFD + BOM）、apply_patch（写回 + 新建）、write（覆盖按原行尾/新建 majorityEol）、insert_after（编辑器分支换行符）。
 
+## 7. 仓库检出 EOL 约定（`.gitattributes`）
+
+本仓（`thincoder-vscode`）以 `* text=auto eol=lf` 固定检出 EOL。
+
+**动机**：本仓 `core.autocrlf` 不受本仓控制——Windows 版 Git 全局默认 `true`（来源 `C:/Program Files/Git/etc/gitconfig`）。
+于是纯 LF 的 blob 在新检出时被写成 CRLF，而多条测试断言是**多行逐字引用**（`"…\n…"`）——遇 `\r\n` 配对失败 → 干净克隆/新工作树上直接假红。
+
+**生效条件（关键）**：该文件**必须 tracked**。未追踪的 `.gitattributes` 只护住本地工作区，对新克隆 / 新工作树**完全无效**——修复的生效条件就是入库本身。
+
+**作用范围**：仅约束**未来检出**；不重写既有 blob（本仓追踪档 blob 已为纯 LF → 入库不触发 renormalize 风暴）。
+
+**不设豁免**：无 `.bat` / `.cmd` / `.ps1` / `.sh` 例外（本仓无此类脚本）。
+
+**双端**：与 CLI 仓 `thincoder/.gitattributes` 逐字节同源（语义同源·各端自持——多实现面纪律）。
+
+**配套**：逐字引用类 EOL 脆弱断言（`prompts-async-guidance.test.mjs` / `doc-consistency.test.mjs` / `prompts-mirror-anchors.test.mjs`）根因已在检出层根治；断言侧加固属独立的纵深防御批次，未并入本次。
+
 ## 变更记录
 
+- 2026-09-11：§7 落库——仓库检出 EOL 约定（`.gitattributes` = `* text=auto eol=lf`）成文并入库（未 tracked 即对新克隆无效）。
 - 2026-09-08：文档重组——VSC helper 语义从注释指针（原指 CLI EDIT-TOOL-EOL-DESIGN.md——跨仓悬空）独立成档（本文档——用户裁定 A：共享底层独立归属）。VSC 现有关档 `_archive/`。
 - 2026-09-07：格式债清理——F5 并入 §5（已实现）。
 - 2026-08-25~26：需求澄清与实证 + 设计定稿，两端落地实现（F5 2026-08-28 并入）。
