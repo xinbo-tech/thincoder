@@ -31,12 +31,16 @@ function cacheKey(providerConfig) {
 
 /**
  * 拉取渠道模型清单（会话缓存 TTL 60s）。命中缓存（TTL 内）直接返回，否则走 M1 拉取；
- * **失败不缓存**（下次调用重试——失败态由调用方降级展示）。抛错契约与 listModels 一致。
+ * **失败不缓存**（下次调用重试——失败态由调用方降级展示）。
+ * `fresh: true` 跳过缓存读（仍写回——M9 准入探必须真发一次请求：换 key 不得被旧 key 的缓存短路）。
+ * 抛错契约与 listModels 一致。
  */
-export async function getProviderModels(providerConfig, { signal } = {}) {
+export async function getProviderModels(providerConfig, { signal, fresh = false } = {}) {
   const key = cacheKey(providerConfig)
-  const hit = _cache.get(key)
-  if (hit && _catalogHooks.now() - hit.at < CACHE_TTL_MS) return hit.models
+  if (!fresh) {
+    const hit = _cache.get(key)
+    if (hit && _catalogHooks.now() - hit.at < CACHE_TTL_MS) return hit.models
+  }
   const models = await listModels(providerConfig, { signal })
   _cache.set(key, { models, at: _catalogHooks.now() })
   return models
@@ -51,13 +55,14 @@ export function modelListFailureText(error) {
 }
 
 /**
- * M9 配置阶段准入探：对目标渠道探一次 `GET /models`（复用 M1 + 既有超时；探通入会话缓存——
- * 该流内候选直接可用）。返回 `{ ok:true, list }` | `{ ok:false, message }`——**不抛错**
- * （探不通不是异常：调用方标注不可用 + 明示原因，配置流不阻断）。
+ * M9 配置阶段准入探：对目标渠道探一次 `GET /models`（复用 M1 + 既有超时；**fresh——真发一次
+ * 请求**（换 key 不被旧缓存短路）；探通入会话缓存——该流内候选直接可用）。
+ * 返回 `{ ok:true, list }` | `{ ok:false, message }`——**不抛错**（探不通不是异常：调用方标注
+ * 不可用 + 明示原因，配置流不阻断）。
  */
 export async function probeChannelModels(providerConfig) {
   try {
-    return { ok: true, list: await getProviderModels(providerConfig) }
+    return { ok: true, list: await getProviderModels(providerConfig, { fresh: true }) }
   } catch (error) {
     return { ok: false, message: modelListFailureText(error) }
   }

@@ -1,20 +1,16 @@
 /**
  * model-picker.mjs — /model two-level picker + provider management + session-slot model
- * selection (MODEL-MERGE-SESSION 拆分产物——/model 两级面自 pickers.mjs 迁出——评审 #9
- * 规模注：拆出面 ~370 行——含管理流——迁入后 pickers.mjs ≤450)。
+ * selection（MODEL-MERGE-SESSION 拆分产物——/model 两级面自 pickers.mjs 迁出）。
  *
  * 语义（2026-09-10 MODEL-SELECTION v2）：selectModel 写**会话槽**（agent 内存态 + saveSession）——
  * 不写 config（/model 不再串扰全局默认——根治）。候选 = **运行期拉取**（`GET /models`——M2；
- * 拉到的行直接可选，不再有「候选/建议」两组）；显式 `provider:model` 一律放行（M4——仅[空值/
- * 裸值/未知 provider]无效）。切换成功回显规格来源（M6）。渠道默认模型 = `providers[].model`
- * 单值（M3——显示回退/播种由此读取）。配置写入面（加渠道 / 设 key）探一次 `/models`（M9——
- * 探不通标「不可用」+ 明示原因，不阻断保存）。
- * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变。
- * F-4 (ISSUE-FIX-BATCH)：removeProviderFlow 级联清理——删渠道同步清 consultModels/
- * subagentModels/advisor.provider 悬挂引用（cascadeRemoveProvider——文件尾导出）。
+ * 拉到的行直接可选）；显式 `provider:model` 一律放行（M4——仅[空值/裸值/未知 provider]无效）。
+ * 切换成功回显规格来源（M6）；渠道默认模型 = `providers[].model` 单值（M3——显示回退读取）。
+ * 配置写入面（加渠道 / 设 key）探一次 `/models`（M9——探不通标「不可用」+ 明示原因，不阻断保存）。
+ * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变。F-4 (ISSUE-FIX-BATCH)：
+ * removeProviderFlow 级联清理悬挂引用（cascadeRemoveProvider——文件尾导出）。
  * ctx: { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey, showPicker,
- *      closePicker, renderPickerLines }（后三者为 pickers.mjs 通用 picker 绑定——本文件经
- *      闭包入参使用，不反向 import——环安全）。
+ *      closePicker, renderPickerLines }（后三者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
 import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch } from "../config.mjs"
@@ -137,7 +133,9 @@ export function createModelPicker(ctx) {
     return entries
   }
 
-  /** Level 2 entries（/model 会话面——候选运行期拉取）：当前会话行 + 候选区（拉取填充）。 */
+  /** Level 2 entries（/model 会话面——候选运行期拉取）：当前会话行 + 候选区（拉取填充）。
+   *  占位行必须存在：showPicker 对 0 item **立即 resolve(null)**（picker 不打开、entries 不可达）——
+   *  非会话渠道/空槽渠道的候选区在拉取落地前不能是空的。 */
   function buildModelEntriesForProvider(providerName, providerConfig) {
     const entries = []
     const sessionProvider = providerName === agent.activeProvider
@@ -147,7 +145,25 @@ export function createModelPicker(ctx) {
       entries.push({ type: "item", text: `${sessionModel}  ← keep`, action: "keep", provider: providerName, model: sessionModel })
     }
     entries.push({ type: "header", text: "Available models (loading…)" })
+    entries.push(loadingRow())
     return entries
+  }
+
+  /** 拉取期占位行（不可选）；拉取落地后由 loader 移除。 */
+  function loadingRow() {
+    return { type: "item", text: "(loading…)", action: "none", placeholder: true }
+  }
+
+  /** 清占位行 + 在 `Available models` header 后填行（空结果/失败也给一条不可选行——
+   *  picker 已打开，0 item 列表不可交互）。 */
+  function fillAvailableModels(entries, rows, emptyText) {
+    const phIdx = entries.findIndex((e) => e.placeholder)
+    if (phIdx >= 0) entries.splice(phIdx, 1)
+    const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
+    if (headerIdx < 0) return
+    entries[headerIdx].text = rows.length ? `Available models (${rows.length} — type to filter)` : "Available models (none)"
+    if (rows.length) entries.splice(headerIdx + 1, 0, ...rows)
+    else entries.splice(headerIdx + 1, 0, { type: "item", text: emptyText, action: "none" })
   }
 
   /** 会话面拉取（M2）：候选 = 拉取结果直接可选（会话面提升到槽位面语义）；归并后并入。
@@ -157,21 +173,20 @@ export function createModelPicker(ctx) {
     try {
       const models = await getProviderModels(providerConfig)
       if (state.picker?.entries !== entries) return // picker closed or changed
-      const itemRows = entries.filter((e) => e.type === "item")
+      const itemRows = entries.filter((e) => e.type === "item" && !e.placeholder)
       selKey = itemRows[state.picker.index] ? entryKey(itemRows[state.picker.index]) : null
       const listed = new Set(itemRows.map((e) => e.model).filter(Boolean))
       const rows = dedupeModels(models).filter((m) => !listed.has(m))
-      const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
-      if (headerIdx >= 0) {
-        entries[headerIdx].text = `Available models (${rows.length} — type to filter)`
-        entries.splice(headerIdx + 1, 0, ...rows.map((m) => ({
-          type: "item", text: m, action: "switch", provider: providerName, model: m,
-        })))
-      }
+      fillAvailableModels(entries, rows.map((m) => ({
+        type: "item", text: m, action: "switch", provider: providerName, model: m,
+      })), "(no models)")
     } catch (error) {
       if (state.picker?.entries !== entries) return
+      const phIdx = entries.findIndex((e) => e.placeholder)
+      if (phIdx >= 0) entries.splice(phIdx, 1)
       const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
       if (headerIdx >= 0) entries[headerIdx].text = `Available models (fetch failed: ${sliceByWidth(error.message, 30)})`
+      entries.splice(headerIdx + 1, 0, { type: "item", text: "(no models — 该渠道不可用)", action: "none" })
       pushLine(modelListFailureText(error), C.error)
     }
     restoreSelection(entries, selKey)
@@ -179,7 +194,8 @@ export function createModelPicker(ctx) {
   }
 
   /** Level 2 entries（槽位面——/submodel + /config consult 池——advisor/subagent 覆盖语义
-   *  独立不受清单约束——红线零改）：当前行 + 拉取建议可直接选（写 agent.* 自由串）。 */
+   *  独立不受清单约束——红线零改）：当前行 + 拉取建议可直接选（写 agent.* 自由串）。
+   *  占位行同会话面：候选区在拉取落地前不能为空（showPicker 0 item = 不打开）。 */
   function buildSlotEntriesForProvider(providerName, providerConfig) {
     const entries = []
     const sessionProvider = providerName === agent.activeProvider
@@ -190,6 +206,7 @@ export function createModelPicker(ctx) {
       entries.push({ type: "item", text: currentModel, action: "switch", provider: providerName, model: currentModel })
     }
     entries.push({ type: "header", text: "Available models (loading…)" })
+    entries.push(loadingRow())
     return entries
   }
 
@@ -257,7 +274,7 @@ export function createModelPicker(ctx) {
   }
 
   /** Slot 面 fetch：模型直接并入可选行（旧 pickModelForSlot 语义——自由面；槽位面零改——
-   *  仅随 M1 获得三 format 支持）。 */
+   *  仅随 M1 获得三 format 支持 + 占位行（同会话面：0 item 的 picker 不会打开））。 */
   async function fetchSlotModels(providerName, providerConfig, entries) {
     const { listModels } = await import("../provider/index.mjs")
     let selKey = null
@@ -267,20 +284,19 @@ export function createModelPicker(ctx) {
         { signal: AbortSignal.timeout(10000) }
       )
       if (state.picker?.entries !== entries) return
-      const itemRows = entries.filter((e) => e.type === "item")
+      const itemRows = entries.filter((e) => e.type === "item" && !e.placeholder)
       selKey = itemRows[state.picker.index] ? entryKey(itemRows[state.picker.index]) : null
-      const deduped = dedupeModels(models).filter((m) => !entries.some((en) => en.type === "item" && en.model === m))
-      const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
-      if (headerIdx >= 0) {
-        entries[headerIdx].text = `Available models (${deduped.length} — type to filter)`
-        entries.splice(headerIdx + 1, 0, ...deduped.map((m) => ({
-          type: "item", text: m, action: "switch", provider: providerName, model: m,
-        })))
-      }
+      const deduped = dedupeModels(models).filter((m) => !itemRows.some((en) => en.model === m))
+      fillAvailableModels(entries, deduped.map((m) => ({
+        type: "item", text: m, action: "switch", provider: providerName, model: m,
+      })), "(no models)")
     } catch (error) {
       if (state.picker?.entries !== entries) return
+      const phIdx = entries.findIndex((e) => e.placeholder)
+      if (phIdx >= 0) entries.splice(phIdx, 1)
       const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
       if (headerIdx >= 0) entries[headerIdx].text = `Available models (fetch failed: ${sliceByWidth(error.message, 30)})`
+      entries.splice(headerIdx + 1, 0, { type: "item", text: "(no models)", action: "none" })
     }
     restoreSelection(entries, selKey)
     renderPickerLines()

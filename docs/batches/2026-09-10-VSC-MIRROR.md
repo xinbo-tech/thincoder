@@ -189,9 +189,37 @@ FR23 F1-F7 + N1-N5——逐条见 `docs/requirements/ENGINEERING-MODE.md` §1.17
 
 ## §5 实施记录（eng-coder 自写）
 
+> **父侧代写并打标（2026-09-11）**：两个并行 eng-coder（面① 代码面 / 面② 提示词双源面）会写同一档，为避免并发写冲突按 §3 同款代写打标通道转写；两面交付报告全文在各自会话，以下为逐条转写。`batch_segment` 需**重载扩展**后生效（生效前置见下）。
+
 ### 交付摘要（改了什么 / 碰过的文件 / 如何验证）
 
-_（待实施）_
+**面① 代码面**（20 改 + 6 增）：`batch-segment.mjs`(184 行,契约同 CLI)· batchDoc 门（共享 `resolveBatchDoc` @ `subagent-spawn-gate.mjs` + 阻塞/异步两路各一调用点 +
+  角色域 `{eng-coder,eng-designer}` + schema 属性 + 受限变体 delete 清单 + `child._batchDoc` + 任务文本 `Batch record (batchDoc): <abs>` 行·同形无退路）·
+  eng-designer **八处**全落（白名单+错误文案/第三模式门/子代门/装配含 batch_segment+勘察通道/enum/overlays 两行/webview 四处/人格档属面②）·
+  advisor 适配点①（`advisorToolsFor` 三参,仅 design+已绑定,代码评审工具集逐字节不变）+ ②（`rv.batchDoc` 实例键；同步路 `callbacks.batchDoc`——无 rv,已注明）·
+  `check-doc-width.mjs` 51→297（宽检+V1/V2/V3+基线+导出,V1「(CLI 侧)」豁免,缺目录跳过）· 接线钉死 `test/files.mjs`（5 新档全入册）。
+**面② 提示词双源面**（18 增 + 8 改）：新建 `docs/design/prompts/` 15 档中文权威（逐字拷 CLI；9 档 identical,6 档差异全登记）·
+  端特有段 3 处进镜像（R14 池规则/persona 独有段/persona-eng-coder 实现纪律节）· 跨仓节引用按「能对上改写、对不上注（CLI 侧）」处置（**零悬空引用**）·
+  `src/prompts/` 14→15（新建 `persona-eng-designer.md`）+ 锚句宿主 6 档定点改（A1/A2/A4/A6/A7/A11 → discipline-engineering 新增六段节+D1-D7+A7+A11 样例；
+  A5/A6 → advisor 三档 §3 落档节；A3 → persona-eng-coder；**A12 → persona-engineering 身份段/调用链段**）· 新建 `test/prompts-mirror-anchors.test.mjs`(203 行,五面断言)·
+  `docs/design/README.md`「机制权威」句改写 + 镜像差异表 9 行。
+
+**如何验证**：VSC 仓 `npm test` **353/352 pass / 0 fail / 1 skip**（含两面新档）；CLI 仓 `npm test` **341/330 / 0 fail**
+  （基线补 1 条 V3 工具前时代批次档——T41① 真阳性,按 §2.19 存量入基线）；`check-doc-width` 新增违规 0；档位 `subagent-async.mjs` **499 ≤499**、`check-doc-width.mjs` **297 ≤298**；A12 抽验（VSC persona-engineering 无 ARCHITECT 句,含 PM 身份+调用链）。
+
+### 交付透明表（Done / Simplified / Not done）
+
+| 项 | 状态 |
+|---|---|
+| batchDoc 门（两路+角色域+schema/delete+双形态注入+同形无退路） | Done（面①） |
+| eng-designer 八处 + ⑨勘察通道（explore-only/sync/不计审计预算） | Done（面①） |
+| batch_segment 契约 + advisor 适配点①② + 代码评审工具集逐字节不变 | Done（面①） |
+| V1/V2/V3+基线+接线（files.mjs 钉死）+ 跨仓边界 + V1「(CLI 侧)」豁免 | Done（面①） |
+| 15 档中文镜像 + 端特有段进镜像且被断言 + 跨仓引用零悬空 + 差异表 9 行 | Done（面②） |
+| 锚句宿主定点改（A1-A8/A11/A12 宿主）+ persona-eng-designer 新建 + A12 人格改述 | Done（面②） |
+| Simplified | 无 |
+| 越界改动（已登记报备） | 面①：subagent-run(+2 绑定透传)/AGENTS.md(+1 模块图)/subagent-spec(角色矩阵对齐)/prompts-async-guidance(+2 接线)/两处测试缝；面②：discipline-engineering:38 语境注改述（与新增 A1 六段节同档互斥）/persona-engineering 端特有段样例补 batchDoc= |
+| Not done（如实列出） | ① AGENT-LOOP §18/§25 节号统一改号（需同批改 src 双源——超出锚点范围，镜像已注）② docs/design/VSC-PROMPTS.md 未随批更新（装配矩阵缺 eng-designer 行——**designer 写域**）③ 设计档 §2.23 as-of 行数已位移（as-of 快照不当契约）④ 镜像锚测试依赖兄弟仓（缺仓 fail-closed）⑤ V3 占位行判据两端同调问题 ⑥ subagent-spec.mjs 未入 §2.23 表（设计档缺口） |
 
 ### 交付透明表（Done / Simplified / Not done）
 
@@ -209,7 +237,17 @@ _（待实施）_
 
 ### 父侧验证（L2 全量结果 + verify）
 
-_（待核销）_
+**2026-09-11 父侧核验（架构师）**——两面内层协议已各自完成（面① explore 审计+advisor 评审+修正轮 1/5+复审计，终态 **clean**；面② explore 审计+advisor 两轮，终态 **clean**），父侧做合流核验：
+
+| 核验项 | 结果 |
+|---|---|
+| VSC 仓 `npm test`（两面合流） | **353/352 pass / 0 fail / 1 skip**（含两面全部新档） |
+| CLI 仓 `npm test`（零回归面） | **341/330 / 0 fail**（基线补 1 条 V3 工具前时代批次档——T41① 真阳性，按 §2.19 存量入基线，非缺陷） |
+| 锚点抽验（面①） | ROLES 含 eng-designer+错误文案 / resolveBatchDoc+两路调用点 / advisorToolsFor 三参 / batch_segment 无 path+戳仅 §3 / V1-V3 函数齐 / V1「(CLI 侧)」豁免 / 5 新档入册 ✓ |
+| 锚点抽验（面②） | 镜像 15↔15 集合相等 / A12 正反断言（无 ARCHITECT 句、含 PM 身份+调用链）/ 端特有段（R14）进镜像 / 新测试档 203 行 ✓ |
+| 档位 | `subagent-async.mjs` **499 ≤499** · `check-doc-width.mjs` **297 ≤298**（未触发拆分退路） |
+| 越界改动 | 面① 5 项 / 面② 2 项——**均已报备并核可**（同档互斥改述与样例同步属设计本意） |
+| 面内 L0 | 面① 83/83+129/129；面② 48/48；宽度/一致性 0 新增违规 |
 
 ### 逐条验收结论（通过 / 未过 / 未做 + 理由）
 
@@ -217,12 +255,22 @@ _（待核销）_
 
 ### 需求池核销
 
-_（待核销）_
+- 2026-09-11：`docs/TODO.md` 需求池「VSC 端镜像（FR23——第 5 批）」条目已勾销（FR23 实现面落地）；遗留项（designer 写域的文档同步、AGENT-LOOP 节号统一、VSC-PROMPTS.md 更新等）转入技术分组。
 
 ### 核销同步清单（逐项核：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销）
 
-_（待核销）_
+- [x] TODO 需求池勾销（FR23 条目 → [x]）+ 遗留项入技术分组
+- [x] 设计档 `ENGINEERING-MODE.md` §7 补第 5 批核销行
+- [x] 本档 §5（父侧代写打标，两面转写）+ §6 回填
+- [x] 两端 L2 全绿（VSC 353 / CLI 341）
+- [ ] **用户终局自验（需求 N4）**：重载扩展 → 本会话 spawn eng-designer → 看其自写 §2/设计档（**生效前置：源码改动需重载**）
+- [ ] designer 写域同步（designer 落笔，需 CLI 会话或下批）：需求档 §1.17 N3 计数口径 · VSC-PROMPTS.md 装配矩阵 · AGENT-LOOP 节号统一
 
 ### 遗留项
 
-_（待核销）_
+1. **用户终局自验未做**（需求 N4 第二层）：重载扩展后 spawn eng-designer 实跑——验收权在用户；
+2. **designer 写域文档同步**（需 eng-designer，本宿主不可 spawn）：需求档 §1.17 N3 计数口径 · `thincoder-vscode/docs/design/VSC-PROMPTS.md` 装配矩阵（缺 eng-designer 行、仍写 14 文件）· `AGENT-LOOP.md` §18/§25 节号统一（src 双源）；
+3. **两端同调问题**：V3 占位行判据（只豁免 `_（…）_` 形态）——CLI/VSC 同调；
+4. **镜像锚测试依赖兄弟仓**（缺仓 fail-closed 整档红）——建议独立 script 或显式 skip；
+5. **`subagent-spec.mjs` 未入设计 §2.23 表**（设计档缺口——本批越界改动已报备）；
+6. **并行会话共写 `subagent.mjs`**（MODEL-SELECTION 批 `resolveChildProvider` 1 行在途）——合入时注意。

@@ -206,14 +206,14 @@ test("T23/T24 设 API key 面（M9）：探通清标记 / 探不通标不可用�
     const { ctx, lines } = makeCtx(agent, t.p, () => null)
     const picker = createModelPicker({ ...ctx, state: {}, ansi: {}, C: { tool: "t", error: "e", dim: "d" }, closePicker() {}, renderPickerLines() {} })
     await picker.setProviderKey("kimi", "sk-new")
-    assert.equal(m.calls.length, 1, "设 key 探一次")
+    assert.equal(m.calls.length, 1, "设 key 探一次（fresh——真发请求）")
     assert.equal(agent.providers[0]._unavailable, undefined, "探通清「不可用」标记")
     assert.equal(agent.providers[0].apiKey, "sk-new", "key 已保存（不阻断）")
     assert.ok(lines.some((l) => l.text.includes("/models 可用")), "探通明示")
-    // 探不通：仍不阻断（key 已存），标不可用 + 长句
+    // 探不通：仍不阻断（key 已存），标不可用 + 长句；**TTL 内也真发请求**（不被同渠道旧缓存短路）
     fail = true
-    _clearModelCatalogCache()
     await picker.setProviderKey("kimi", "sk-2")
+    assert.equal(m.calls.length, 2, "换 key 后再探——未被 60s 会话缓存短路")
     assert.equal(agent.providers[0]._unavailable, true, "探不通标「不可用」")
     assert.equal(agent.providers[0].apiKey, "sk-2", "key 仍保存（不阻断配置流）")
     assert.ok(lines.some((l) => l.text.includes("该渠道不提供模型列表（GET /models 500）——无法选择模型，请改用其他渠道")), "长句明示原因")

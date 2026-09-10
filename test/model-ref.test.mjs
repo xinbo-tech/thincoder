@@ -71,13 +71,17 @@ test("T21 specMatch：已知模型 matched:true / 未知模型 matched:false（D
 
 // ── M2：会话面 L2 候选 = 运行期拉取（mock 注入断言）+ 失败态（M8）──
 
-/** 迷你 picker 绑定：state.picker 仿真实实现（loader 的 entries 恒等判定依赖它）。 */
+/** 迷你 picker 绑定：state.picker 仿真实实现（loader 的 entries 恒等判定依赖它）；
+ *  **0 item 保护同真实 showPicker**（pickers.mjs:48——0 item 立即 resolve(null)、不打开）——
+ *  本夹具必须同形，否则「非会话渠道 L2 不打开」类回归测不出来。 */
 function miniPickers() {
   const state = {}
   let pending = null
   return {
     state,
     showPicker(title, entries, opts = {}) {
+      const itemCount = entries.filter((e) => e.type === "item").length
+      if (itemCount === 0) return Promise.resolve(null) // 真实实现同形（0 item 不打开）
       state.picker = { title, entries, index: opts.defaultIndex ?? 0 }
       return new Promise((resolve) => { pending = resolve })
     },
@@ -109,6 +113,48 @@ function mockFetchOnce(handler) {
   }
   return { calls, restore: () => { globalThis.fetch = orig } }
 }
+
+test("M2 回归：非当前渠道 L2 仍可打开（占位行——0-item 不自闭）+ 拉取候选可选", async () => {
+  const { _clearModelCatalogCache } = await import("../src/tui/model-catalog.mjs")
+  const providers = [
+    { name: "kimi", baseURL: "https://kimi.test/v1", model: "kimi-k3", apiKey: "k" },
+    { name: "deepseek", baseURL: "https://ds.test/v1", model: "deepseek-v4-pro", apiKey: "k" },
+  ]
+  const agent = {
+    cwd: process.cwd(), history: [], tasks: [],
+    activeProvider: "kimi", activeModel: "kimi-k3", // ← 非当前渠道 = deepseek（无 keep 行）
+    providers, provider: { ...providers[0] },
+    config: { agent: {}, defaultModel: "kimi:kimi-k3" },
+  }
+  _clearModelCatalogCache()
+  const m = mockFetchOnce(() => ({ status: 200, body: { data: [{ id: "deepseek-v4-pro" }, { id: "deepseek-v4-flash" }] } }))
+  try {
+    const { createModelPicker } = await import("../src/tui/model-picker.mjs")
+    const p = miniPickers()
+    const picker = createModelPicker({
+      agent, state: p.state, ansi: {}, C: { tool: "T_TOOL", error: "T_ERROR", dim: "T_DIM" },
+      pushLine: () => {}, askQuestion: async () => "", maskKey: (k) => k, persistRaw: async () => {},
+      showPicker: p.showPicker, closePicker: p.closePicker, renderPickerLines: p.renderPickerLines,
+    })
+    const opening = picker.openModelPicker() // L1
+    await flush()
+    p.settle({ action: "open-models", provider: "deepseek" })
+    await flush()
+    assert.equal(p.state.picker?.title, "deepseek models", "非当前渠道 L2 已打开（0-item 未自闭——占位行生效）")
+    await flush(20)
+    const rows = p.state.picker.entries.filter((e) => e.action === "switch").map((e) => e.model)
+    assert.deepEqual(rows, ["deepseek-v4-flash", "deepseek-v4-pro"], "拉取候选可选（跨渠道切换可达；dedupeModels 排序）")
+    assert.equal(p.state.picker.entries.some((e) => e.placeholder), false, "占位行已移除")
+    assert.equal(m.calls.length, 1)
+    p.settle(null)
+    await flush()
+    p.settle(null)
+    await opening
+  } finally {
+    m.restore()
+    _clearModelCatalogCache()
+  }
+})
 
 test("M2/T5 会话面 L2：候选行来自运行期拉取（mock）；失败 → 该渠道不可选 + M8 长句", async () => {
   const { _clearModelCatalogCache } = await import("../src/tui/model-catalog.mjs")

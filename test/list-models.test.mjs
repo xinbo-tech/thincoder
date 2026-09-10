@@ -7,7 +7,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { listModels } from "../src/provider/list-models.mjs"
 import { PROVIDER_PRESETS } from "../src/config.mjs"
-import { getProviderModels, _catalogHooks, _clearModelCatalogCache } from "../src/tui/model-catalog.mjs"
+import { getProviderModels, probeChannelModels, _catalogHooks, _clearModelCatalogCache } from "../src/tui/model-catalog.mjs"
 
 /** fetch 注入：calls 记录 (url, opts)；handler 返回 {status, body} 或抛错（network）。 */
 function mockFetch(handler) {
@@ -141,6 +141,20 @@ test("T6 会话缓存 TTL 60s：TTL 内不重拉 / 过期重拉 / 失败不缓�
     await assert.rejects(() => getProviderModels(pf), /boom/)
     await assert.rejects(() => getProviderModels(pf), /boom/)
     assert.equal(m.calls.length - before, 2, "失败不缓存——下次配置动作重试")
+    // M9 准入探 fresh：同渠道 TTL 内也真发一次请求（换 key 不得被旧 key 的缓存短路）
+    fail = false
+    const fresh0 = m.calls.length
+    const ok1 = await probeChannelModels(p)
+    assert.equal(ok1.ok, true)
+    assert.equal(m.calls.length - fresh0, 1, "探针 fresh——直发请求")
+    now += 10_000 // TTL 内（前一次探针刚写入缓存）
+    const ok2 = await probeChannelModels(p)
+    assert.equal(ok2.ok, true)
+    assert.equal(m.calls.length - fresh0, 2, "TTL 内再探仍发请求（fresh 不被缓存短路）")
+    // 缓存仍被写入（后续候选面读缓存——不再是网络往返）
+    const cached = m.calls.length
+    await getProviderModels(p)
+    assert.equal(m.calls.length, cached, "探针结果入缓存——候选面直接可用")
   } finally {
     _catalogHooks.now = origNow
     m.restore()
