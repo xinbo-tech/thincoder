@@ -667,6 +667,136 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 > **二选一**：①增量 ≤19 守住 300（V3 仅少许行）；②V1/V2/V3 拆入 `scripts/doc-consistency.mjs`（增量不限）。
 > `src/advisor/run.mjs` 488 + ≤±10 = 498 **逼近 500 硬顶**——若实施中越 500，停下报告并带拆分计划（不静默越）。
 
+### 2.22 VSC 端镜像（第 5 批——FR23）
+
+**目标**：把第 1/2/4 批机制落到 `thincoder-vscode`，使两端**同一套机制、各自实现**。终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档**（需求 §1.17 N4）。
+
+#### 2.22.1 总原则：语义同源·原文自持（N1）
+
+两端**不共用代码、不作跨仓 import**（VSC 自定纪律 `src/prompt-overlays.mjs:5`）；机制语义同源，**实现各写一份**。
+镜像 ≠ 抄实现：**抄的是契约与锚句**，适配的是落点（勘察已证 VSC 落点多处不同）。
+
+#### 2.22.2 镜像锚（逐字源钉死——多实现面规则 §1.12）
+
+需逐字一致的段**不在本设计重述**（避免第三份副本），而以 **CLI 文件:节为逐字源**，实现面**照拷、禁自行解释**；差异只允许在路径/UI 引用处，且必须登记：
+
+| 锚 # | 内容 | CLI 逐字源 |
+|---|---|---|
+| A1 | 六段 append-only、**一段一作者** 声明句 | `requirements/ENGINEERING-MODE.md` §1.12 抬头 |
+| A2 | **六段自写**纪律句 | `src/prompts/discipline-engineering.md`（六段节） |
+| A3 | **执行者拒收**·**澄清必经主 agent**·**三方条目一致** | `src/prompts/persona-eng-coder.md` + `persona-eng-designer.md` |
+| A4 | **D1-D7 文档更新纪律表** | `src/prompts/discipline-engineering.md`（文档更新纪律节） |
+| A5 | **§3 写入指令句 + 适用面限定子串**（仅设计评审/工具已挂载） | `src/prompts/advisor-design.md` / `advisor-round2.md` / `advisor-round3.md`（三档） |
+| A6 | **失败明示句**（“§× 未写入” + “父侧代写必须打标”） | `src/prompts/discipline-engineering.md` + 评审三档 |
+| A7 | **调用侧句**（有批次档在飞时发起设计评审必须传 `batchDoc`） | `src/prompts/discipline-engineering.md`（发起评审节） |
+| A8 | **`batch_segment` 工具描述文案**（段白名单枚举 / 无路径参数 / append-only / 来源戳 / 剥凭证 / 失败明示） | `src/agent-tools/batch-segment.mjs`（描述字符串） |
+| A9 | **来源戳形态**（`### 轮次 N（评审子代理）`、N = §3 内该形态行计数 + 1、排骨架行） | `design/ENGINEERING-MODE.md` §2.20.1 |
+| A10 | **V3 触发判据**（§4 或 §6 有实质内容；骨架/占位行不算） | `design/ENGINEERING-MODE.md` §2.20.6 |
+
+> **判据**：A1-A10 在 VSC 侧的出现文本与 CLI 侧逐字相同（N3 的 grep 断言对象）；白名单枚举、参数名、状态词一律不得改写。
+
+#### 2.22.3 batchDoc 门（F1——两处各落 + 共享校验）
+
+| 决策点 | 候选 | 选定 | 否决理由 |
+|---|---|---|---|
+| 门落在哪 | A **两处各落 + 共享校验函数**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs` 各一个调用点，校验逻辑单份） · B 先造共享 spawn 等价点 | **A** | VSC **无** CLI 的双路装配单点（勘察实证）；B 是结构性重构（动阻塞/异步两条链的公共骨架）= 风险超出镜像范围；A 改动面最小且校验逻辑仍单份（语义不会漂） |
+
+- **共享校验函数落点**：`src/agent-tools/subagent-spawn-gate.mjs`（169 行——token gate 家族所在，门的天然落点）；签名 `resolveBatchDoc(agent, batchDoc)`：空/解析失败/非文件 → throw（消息明示）。
+- **注入**：通过校验后子代理携带 `child._batchDoc = <abs>`（与 CLI 第 4 批同形态）——`batch_segment` 取用。
+
+#### 2.22.4 eng-designer 角色（F2——五处落地）
+
+| 处 | 落点（as-of） | 内容 |
+|---|---|---|
+| ① 装配分支 | `src/agent/setup.mjs:151-160`（449 行） | 增 `eng-designer` 分支（工具集：读/搜/写设计产出 + `batch_segment`；**不含 advisor**） |
+| ② 角色 enum | `src/agent-tools/subagent.mjs:56-74`（`modeRoleField`） | 工程模式 enum 由 `[explore, plan, eng-coder]` → 含 `eng-designer` |
+| ③ 场景表 | `src/prompt-overlays.mjs`（82 行） | 补 `"persona-eng-designer.md": loadSlot(...)` 与 `"eng-designer": [...]` 两行（CLI:26/CLI:52 同形——**全文逐行同构，最干净的可照抄点**） |
+| ④ webview 枚举 | `activity-view.js:13`（157）· `activity.js:37`（205）· `settings-agent.js`（175）· `settings-models.js`（215） | 四处角色枚举/regex 补 `eng-designer` |
+| ⑤ 人格文件 | `src/prompts/persona-eng-designer.md`（**新增**） | 逐字源 = CLI 同名文件（56 行）；锚句 A3 |
+
+#### 2.22.5 batch_segment 移植（F4——工具本体 + 两个适配点）
+
+- **工具本体**：新增 `src/agent-tools/batch-segment.mjs`（契约同 §2.20.1：无路径参数 / 段白名单按身份 / append-only / 来源戳仅 §3 / 剥证自有正则 / fail-closed 六条）——**无依赖冲突，可逐步移植**。
+- **适配点 ①（工具集落点）**：VSC 的 `advisorToolsFor` 在 **`src/advisor/tools.mjs:26`（单参，49 行）**而非 `run.mjs`——签名改 `(agent, reviewType, batchDoc)`，**仅当 `reviewType === "design"` 且 batchDoc 已绑定**时追加工具；测试缝 `_resolvedAdvisorToolsFor` 保留语义。
+- **适配点 ②（实例键通道）**：VSC 的 `runAdvisorReview`（`src/advisor/run.mjs:346`，459 行）比 CLI 多一个 `rv` 实例参数——`batchDoc` 沿 **`rv.batchDoc`** 传递（与 `rv.round`/`rv.priorOutput` 同族），**不用单值会话态**（与 §2.20.2 同口径）。
+- **挂载**：`src/agent-tools/index.mjs`（16 行）barrel export；`src/agent-tools.mjs`（2 行）为 `export * from` 不需改。
+
+#### 2.22.6 文档纪律与 V1/V2/V3（F5——含「接线」这一半）
+
+| 决策点 | 候选 | 选定 | 理由 |
+|---|---|---|---|
+| 扫描域 | A **含三个目录，缺失即跳过** · B 镜像时把 VSC docs 树建齐 | **A** | VSC 无 `docs/requirements//docs/batches/`；批次档**仍落 CLI 仓**（单一归属）；建空树 = 造无用目录；现有 CLI 实现已有跳过语义 |
+
+- VSC `scripts/check-doc-width.mjs`（51 行，现**仅宽度、无导出、无 CLI 模式、未接自动化**）→ 扩为一致性扫描（V1 段引用 / V2 计数与列表 / V3 批次档 §3）+ 基线读写 + 导出；两处档位账：**+≤120（→171，>300 档需主动拆分评审）**。
+- **接线是硬项**（N3）：VSC 快层目标 = 显式清单 `test/files.mjs`（41 行，28 条）——**必须入册**（或在 `package.json` scripts 里挂）——否则“有校验器但不跑” = 机制没活。
+
+#### 2.22.7 提示词双源（F6——用户在裁：双源）
+
+- **VSC 现状单源**：`src/prompts/` 14 文件，`docs/design/prompts/` **不存在**；VSC 自己的 `docs/design/README.md:30` 写明“机制权威 = CLI 仓”。
+- **本批建 `docs/design/prompts/` 15 文件**（中文权威）——**逐字自 CLI `docs/design/prompts/` 拷贝**（现有 15 档）。
+- **VSC `src/prompts/` 14 → 15**（新增 `persona-eng-designer.md`）；余 14 档**只做锚句定点改写**（A2-A7）——**不得拿 CLI 的 src/prompts 整体覆盖**（VSC 自持原文，整体覆盖会回退 VSC 特有内容）。
+- `docs/design/README.md:30` 的“机制权威 = CLI 仓”句随之改写（登记项）。
+
+#### 2.22.8 实现面拆分（选型 3）
+
+| 面 | 文件域 | 内容 |
+|---|---|---|
+| **① 代码面** | `src/**`（除 prompts）· `scripts/**` · `test/**`（除锚句断言） | 门/角色/工具/装配/枚举/V1-V3 + 四个新用例档 |
+| **② 提示词双源面** | `src/prompts/**` · `docs/design/prompts/**` · `docs/design/README.md` | 15 拷贝 + 14 定点改 + 1 新建 + 锚句断言测试 |
+
+**文件域不相交** → 两个 eng-coder **并行**（`files` 声明交调度器）；**锚句断言测试归面 ②**（它拥有那些文件），面 ① 的测试只测代码行为——避免跨面依赖。
+
+#### 2.22.9 不变量
+
+1. **代码评审纯只读不削弱**（零 git + 只读工具集；`batch_segment` 仅设计评审附加）。
+2. **凭证绝不落档**（工具级剥除，VSC 侧同口径）。
+3. **语义同源·原文自持**（不跨仓 import；锚句 A1-A10 逐字一致）。
+4. **零回归**（VSC 27 用例 + 冒烟集不变红）。
+5. **验收不拿静态存在冒充生效**（N4：必须重载扩展后实跑）。
+
+### 2.23 受影响文件（第 5 批 as-of——VSC 仓实测，不得当契约引用）
+
+**代码面**（`thincoder-vscode`）
+
+| 文件 | 性质 | as-of | 增量上限 |
+|---|---|---|---|
+| src/agent-tools/batch-segment.mjs | **新增** | — | +200 |
+| src/agent-tools/subagent-spawn-gate.mjs | 修改 | 169 | +≤15（共享校验 `resolveBatchDoc`） |
+| src/agent-tools/subagent.mjs | 修改 | 358 | +≤12（阻塞路门 + eng-designer 角色） |
+| src/agent-tools/subagent-async.mjs | 修改 | 489 | **+≤10（→499，越 500 停下报告）** |
+| src/agent-tools/advisor.mjs | 修改 | 296 | +≤14（`batchDoc` 参数） |
+| src/agent-tools/advisor-async.mjs | 修改 | 457 | +≤10（`rv.batchDoc` 实例字段） |
+| src/advisor/tools.mjs | 修改 | 49 | +≤10（三参签名 + 注入） |
+| src/advisor/run.mjs | 修改 | 459 | +≤10（调用点 / rv 透传） |
+| src/agent/setup.mjs | 修改 | 449 | +≤12（eng-designer 装配分支） |
+| src/agent-tools/index.mjs | 修改 | 16 | +≤2（barrel） |
+| src/prompt-overlays.mjs | 修改 | 82 | +≤4（两行 eng-designer 条目） |
+| scripts/check-doc-width.mjs | 修改 | 51 | **+≤120（→171；>300 档预留）** |
+| webview/activity-view.js | 修改 | 157 | +≤2（FAMILY_ROLES） |
+| webview/activity.js | 修改 | 205 | +≤2（角色 regex） |
+| webview/settings-agent.js | 修改 | 175 | +≤2 |
+| webview/settings-models.js | 修改 | 215 | +≤2 |
+| test/files.mjs | 修改 | 41 | +≤2（新用例入册） |
+| test/batch-segment.test.mjs | **新增** | — | +200 |
+| test/batch-doc-gate.test.mjs | **新增** | — | +150 |
+| test/eng-designer-role.test.mjs | **新增** | — | +150 |
+| test/doc-consistency.test.mjs | **新增** | — | +150 |
+| test/fixtures/doc-consistency-baseline.json | **新增** | — | 基线 |
+| docs/design/README.md | 修改 | — | ≤±4（“机制权威 = CLI 仓”句改写） |
+
+**提示词双源面**
+
+| 文件 | 性质 | as-of | 说明 |
+|---|---|---|---|
+| src/prompts/persona-eng-designer.md | **新增** | — | 逐字源 = CLI 同名档（56 行） |
+| src/prompts/advisor-design.md · advisor-round2.md · advisor-round3.md | 修改 | 36 / 41 / 37 | 锚句 A5/A6 定点改 |
+| src/prompts/discipline-engineering.md | 修改 | 206 | 锚句 A2/A4/A6/A7 定点改 |
+| src/prompts/persona-eng-coder.md | 修改 | 43 | 锚句 A3 |
+| docs/design/prompts/*.md | **新增 15** | — | 逐字自 CLI `docs/design/prompts/` 拷贝 |
+| test/prompts-mirror-anchors.test.mjs | **新增** | — | 锚句 A1-A10 双源断言（面 ②） |
+
+> 行数为 2026-09-10 实测（VSC 仓）；**唯一逼近硬顶**：`subagent-async.mjs` 489 + ≤10 = 499——越 500 停下报告并带拆分计划。
+
 ## 3. 测试（Testing）
 
 ### 3.1 验收标准（Acceptance Criteria）
@@ -725,6 +855,17 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 - AC35（§2.20.4/§2.20.5——F4/F5 + 多轮面，评审 #3/#6）: 三条评审提示词**双源**（`advisor-design.md`/`advisor-round2.md`/`advisor-round3.md`）均含「把发现表+VERDICT+计数**逐字**写入批次档 §3」句**且带适用面限定子串**（“仅设计评审 / 工具已挂载”类——轮次5 评审 #7）（grep 断言）——
   盖住 round 2+ 设计评审（`src/advisor.mjs:109-115`）不读 advisor-design.md 的事实。
 - AC36（§2.20.2/§2.20.8——并发隔离，评审 #7）: 绑定按**评审实例键**（非单值会话态）；两个不同批次档的设计评审并发 → **各自正确落档**，不得串档（实例键下的预期即为两者均成——无“或拒”并列）。
+- AC37（§2.22.3——batchDoc 门移植）: VSC **两路 spawn**（阻塞 `subagent.mjs` / 异步 `subagent-async.mjs`）均：batchDoc 缺 → 拒；路径不可读 → 拒；参数在 + 可读 → 放行并注入；**校验逻辑单份**（共享 `resolveBatchDoc`，无重复实现）。
+- AC38（§2.22.4——eng-designer 角色五处）: 角色判据含 `eng-designer`；工程模式 role enum 含之；装配分支工具集含 `batch_segment` 且**不含 advisor**；`prompt-overlays` 场景表两行在位；**webview 四处枚举含之**；人格文件存在。
+- AC39（§2.22.2——锚句 A1-A10）: VSC 侧（双源）出现文本与 CLI 侧**逐字相同**（grep 断言；白名单枚举/参数名/状态词不得改写）。
+- AC40（§2.22.5——工具移植 + 只读面）: 工具契约同 §2.20.1（无 `path` / 段白名单按身份 / append-only / 戳仅 §3 / 自有剥证正则 / fail-closed 六条）；
+  VSC 的 `src/advisor/tools.mjs` **仅当 `reviewType==='design'` 且 batchDoc 已绑定**时追加；**代码评审工具集逐字节不变**（`_resolvedAdvisorToolsFor` 断言）。
+- AC41（§2.22.5 适配点②——实例键通道）: batchDoc 沿 **`rv` 实例参数**传递（非单值会话态）；两批设计评审并发各自正确落档。
+- AC42（§2.22.6——V1/V2/V3 + 接线）: VSC `check-doc-width.mjs` 扩为一致性扫描（V1 段引用 / V2 计数 / V3 批次档 §3）+ 基线读写 + 导出；
+  **并接线进自动化**（`test/files.mjs` 入册或 `package.json` script）——“有校验器但不跑”不算完成。
+- AC43（§2.22.7——双源结构）: VSC 建 `docs/design/prompts/` **15 文件**（与 CLI 同名集合一一对应）；`src/prompts/` 14 → **15**（新增 `persona-eng-designer.md`）；
+  **同名集合両侧相等**（无多无少）；VSC 特有文件不得被 CLI 版本整体覆盖（逐差异面登记）。
+- AC44（§2.22.9 + 需求 N4——验收不冒充）: 机械面全绿之外，**交付报告必须写明“生效需重载扩展”**；不得以“文件存在/静态断言绿”声称机制已生效（第 2 批教训）。
 
 ### 3.2 用例表
 
@@ -805,6 +946,20 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 | T52b | 正常：超量后分段追加（轮次4 评审 #1） | 超量拒收后拆成两次调用写同轮内容 | 两次**各成节**：N = 1、2（档案按节记，分区诚实——**无“不新盖戳”承诺**） | AC34/§2.20.1 |
 | T53 | 正常：身份判据同源（评审 #6） | 设计评审实例写入时断言身份判定与目标档绑定读**同一实例键** | 不读他批状态；无单值会话态依赖 | AC36/§2.20.1 |
 
+**第 5 批用例（VSC 镜像——在 VSC 仓跑，T54–T62）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T54 | 正常：门放行两路 | 阻塞/异步两路 spawn 各带可读 batchDoc | 两路均放行并注入 `_batchDoc`；**两路命中同一校验函数** | AC37/F1 |
+| T55 | 错误：缺参 | 两路 spawn 不带 batchDoc | 两路均拒（消息明示缺参）；**不得只拒一路** | AC37/F1 |
+| T56 | 错误：不可读 | batchDoc 指向不存在/非文件路径 | 两路均拒（消息含路径与原因） | AC37/F1 |
+| T57 | 正常：角色可 spawn | 工程模式下 spawn `eng-designer` | 角色 enum 放行；工具集含 `batch_segment`、**不含 advisor**；人格槽位命中 | AC38/F2 |
+| T58 | 边界：webview 四处 | grep `activity-view.js` / `activity.js` / `settings-agent.js` / `settings-models.js` | 四处均含 `eng-designer`（漏一处即红） | AC38/F2 |
+| T59 | 正常：工具行为（VSC 独立实现） | 段白名单（越段拒）/ append-only（既存字节不变）/ 来源戳（§3、N=节序号、排骨架行）/ 剥凭证（零命中） | 逐项同 CLI T43–T45 口径 | AC40/F4 |
+| T60 | 错误：只读面 | `_resolvedAdvisorToolsFor`（code） | 工具集**不含** batch_segment（零变更） | AC40/N1 |
+| T61 | 边界：V3 零假阳 | ①在飞批次（仅骨架/占位行）②§4 有实质内容 + §3 无工具轮次行 ③二者均备 | ①不报 ②报 ③不报 | AC42/F5 |
+| T62 | 正常：双源结构 + 锚句 | 同名集合对比 + 锚句 grep（A1-A10 双源） | 両側各 15、集合相等；锚句逐字一致 | AC39/AC43/F6 |
+
 ## 5. 配置与会话恢复
 
 **engineering 与 advisor.guard 都是会话级**（2026-08-29 重构）——事实源是当前会话槽位文件
@@ -831,6 +986,12 @@ text 限量：≤20000 字符 / 次（超出拒，引导**分段追加**——�
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-10（晚·十四）：**第 5 批设计（VSC 端镜像，FR23/§1.17）**——新增 **§2.22**（总原则语义同源原文自持 / **镜像锚 A1-A10 逐字源钉死** / batchDoc 门两处各落+共享校验 / eng-designer 五处落地 / batch_segment 两个适配点 / V1-V2-V3 含**接线硬项** / 双源新建 15 档 / 实现面拆分 / 五条不变量）
+  + **§2.23**（受影响文件 as-of：VSC 仓 23 项代码面 + 6 项提示词面，行数实测；唯一逼近硬顶 `subagent-async.mjs` 489+≤10=499）+ **AC37–AC44** + **T54–T62**。
+  **适配点**：工具集落点 = `src/advisor/tools.mjs:26`（三参签名）；实例键通道 = `rv.batchDoc`（非单值会话态）。
+  **实现面拆分（选型 3）**：2 个并行 eng-coder（①代码面 ②提示词双源面，文件域不相交；锚句断言测试归面 ②）。
+  **待用户裁**：无（四项选型已定，见 §2.22）；**实现未启动**（待用户发起评审 → 批准）。
 
 - 2026-09-10（晚·十三）：**第 4 批实施交付核销**（eng-coder 终态 **clean**）——交付 26 文件：新 2（`src/agent-tools/batch-segment.mjs` 196 / `test/batch-segment.test.mjs` 321），改 24（挂载三处 + advisor 参数/实例键 + run.mjs 设计分支 + V3 入 check-doc-width + 提示词双源 12 + TOOLS/AGENT-LOOP 登记）。
   内层 explore 审计 1 轮 + advisor 代码评审 2 轮 **pass**；父侧 L2 **324/324 全绿**；AC29–AC36/T43–T53 全绿；档位两约束未越（497/298）。**FR22 已落地**；批次档 §6 已回填（父侧验证/核销清单/遗留四项）。
