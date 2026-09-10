@@ -1,7 +1,7 @@
 # Agent 运行参数调整 — 设计（CLI）
 
 > 状态：**已实现**（2026-08-24 评审修订后实施；npm 0.12.43）。
-> 需求：`AGENT-PARAMS-REQUIREMENTS.md`。
+> 需求：`../requirements/AGENT-PARAMS.md`。
 > 关联：`AGENT-LOOP.md`、`TURN-CAP-CONTINUE.md`、`docs/README.md`（总地图）。
 
 ## 1. 问题陈述（Problem Statement）

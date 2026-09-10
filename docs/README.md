@@ -73,7 +73,8 @@ docs/
 ## 3. 板块 → 文档映射
 
 > 路径相对本文件（`docs/`）。`~~删除线~~` = 已退役/已取代；`_archive/` = 变更史（正文冻结，不作现状依据）。
-> 需求层当前为空（`requirements/` 仅说明档）——存量需求内容仍在各设计档内，拆分按**新老划断**（碰到哪迁哪，见 §2.4）。
+> 需求层已启用：`requirements/PROJECT.md` + 四对专题需求档已入位；其余板块的需求内容仍在各设计档内
+> （三层同档历史形态），拆分按**新老划断**（碰到哪迁哪，见 §2.4）——批量拆分清单见勘察报告（`docs/TODO.md` 登记）。
 
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
@@ -84,10 +85,10 @@ docs/
 | 会话 | `design/SESSION.md` | CLI 会话/存储权威 |
 | 上下文压缩 | `design/CONTEXT-COMPACTION.md` | |
 | 发布流程 | `design/RELEASE.md` | npm 发布流程 + 踩坑记录 |
-| Design Token 硬化 | `design/ENG-TOKEN-BINDING-REQUIREMENTS.md`、`design/ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复 + TTL 7 天可配 |
-| 轮末蒸馏异步化 | `design/SEND-STALL-DISTILL-REQUIREMENTS.md`、`design/SEND-STALL-DISTILL-TUNING.md` | 机制本体归 `design/CONTEXT-COMPACTION.md` §5 |
-| 工具输出限制 | `design/TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`design/TOOL-OUTPUT-LIMITS-TUNING.md` | 现行权威源（TOOLS.md 未复制）；落盘阈值/显示层 |
-| Agent 运行参数 | `design/AGENT-PARAMS-REQUIREMENTS.md`、`design/AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限 |
+| Design Token 硬化 | `requirements/ENG-TOKEN-BINDING.md`（需求）+ `design/ENG-TOKEN-BINDING.md`（设计） | 镜像命名（2026-09-10 归位）；v2 收窄：TTL 7 天可配 |
+| 轮末蒸馏异步化 | `requirements/SEND-STALL-DISTILL.md`（需求）+ `design/SEND-STALL-DISTILL.md`（设计） | 机制本体归 `design/CONTEXT-COMPACTION.md` §5 |
+| 工具输出限制 | `requirements/TOOL-OUTPUT-LIMITS.md`（需求）+ `design/TOOL-OUTPUT-LIMITS.md`（设计） | 现行权威源（TOOLS.md 未复制）；落盘阈值/显示层 |
+| Agent 运行参数 | `requirements/AGENT-PARAMS.md`（需求）+ `design/AGENT-PARAMS.md`（设计） | 评审超时/轮次上限 |
 | Agent 循环 | `design/AGENT-LOOP.md` | 权威源。`design/TURN-CAP-CONTINUE.md`（撞墙可继续）同板块独立保留 |
 | Agent 循环 · 批记录 | `_archive/ASYNC-RESIDUE-FIX.md`、`_archive/SCHEDULER-DYNAMIC-DOMAIN.md` | 2026-09-10 入档——机制权威分别在 AGENT-LOOP §7.5/§7.7/§7.7.1、§10.1/§10.2 |
 | 子代理观测/注入 | `design/SUBAGENT-OBSERVE-SEND.md` | 父侧 observe + send；VSC 同名对应——同机制各自独立 |

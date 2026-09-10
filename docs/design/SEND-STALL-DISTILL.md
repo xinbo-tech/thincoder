@@ -1,7 +1,7 @@
 # 探索蒸馏异步化 — 设计（CLI）
 
 > 状态：**已实现**（2026-08-25 实施；npm 0.12.43）——当前生效的现行机制描述。
-> 需求：`SEND-STALL-DISTILL-REQUIREMENTS.md`
+> 需求：`../requirements/SEND-STALL-DISTILL.md`
 > 关联：`CONTEXT-COMPACTION.md`（蒸馏机制本体，不改动）、`docs/README.md`（总地图）。
 
 ## 1. 问题陈述

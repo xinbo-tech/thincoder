@@ -2,7 +2,7 @@
 
 > 板块：轮末探索蒸馏的**时序**——"何时等待/是否等待"（已实现专题，**当前生效**）。
 > 蒸馏机制本体（`EXPLORE_SUMMARY_PROMPT`、替换规则、D11 静默）归 `CONTEXT-COMPACTION.md` §5——本专题只定蒸馏的触发与等待时序。
-> 关联：`SEND-STALL-DISTILL-TUNING.md`（设计）、`CONTEXT-COMPACTION.md`（机制背景）。
+> 关联：`../design/SEND-STALL-DISTILL.md`（设计）、`CONTEXT-COMPACTION.md`（机制背景）。
 > 状态：**已实现**（2026-08-25 实施；npm 0.12.43 / VS Code 0.1.49）。
 > 跨端：VS Code 扩展有同语义独立需求文档；蒸馏逻辑两端各仓库独立实现——**改动须两端同步（lockstep）**，单边改动造成行为漂移。
 

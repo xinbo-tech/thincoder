@@ -1,7 +1,7 @@
 # Design Token 硬化 — 设计（CLI）
 
 > 状态：**已实现**（v2 + R16——2026-08-25 / 2026-09-06）。
-> 需求：`ENG-TOKEN-BINDING-REQUIREMENTS.md`。
+> 需求：`../requirements/ENG-TOKEN-BINDING.md`。
 > 现码核对（2026-09-07）：`src/token-ttl.mjs`（共享 TTL 纯函数 + 槽清理 + 会话序列化/恢复面）、
 > `src/agent-tools/eng.mjs` / `src/tui/cmd-eng.mjs`（跨模式存活 + 开模式清过期）、
 > `src/agent-tools/advisor-async.mjs`（签发/校验/结算）、`src/session.mjs`（恢复过滤）、

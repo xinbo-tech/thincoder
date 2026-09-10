@@ -1,7 +1,7 @@
 # Design Token 硬化 — 需求（CLI）
 
 > 状态：**已实现**（v2 收窄 + R16 TTL 生命周期修订——2026-08-25/2026-09-06 分阶段落地）。
-> 设计语义（2026-09-06 用户裁定，权威见 TUNING.md §2）：designToken 是**流程凭证**（防 agent
+> 设计语义（2026-09-06 用户裁定，权威见 `../design/ENG-TOKEN-BINDING.md` §2）：designToken 是**流程凭证**（防 agent
 > 跳过评审步骤），**非密码学安全边界**（HMAC/加密因子是 security theater——已删，无签名）；
 > token **跨模式存活**（ON→OFF 不清 / OFF→ON 不重评），**仅 TTL 过期清**（三时机：恢复过滤 /
 > 开模式清过期 / spawn 门禁拒删槽）；slot 持久化 = **跨重启/跨模式恢复的有意载体**（单一权威
