@@ -555,38 +555,45 @@ batch_segment({ segment, text })     // 无路径参数——目标档由会话�
 text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
 ```
 
-| 守卫 | 机制 |
-|---|---|
-| **无路径参数** | schema 不含 `path`——**语法上写不到别处** |
-| **段白名单（按调用者身份）** | `eng-designer → §2` · `设计评审（reviewType=design）→ §3` · `eng-coder → §5`；**参数只声明段号，身份定权限**——越段/未知段 → throw |
-| **append-only** | 只做**插入**，不重写任何既有行（定位段尾：下一条 `## §N` 或 EOF）；档内既有字节不变 |
-| **凭证剥除（工具做）** | 写入前按 §2.7 过滤 `[DESIGN-TOKEN:…]` 与 `designId: …` 形态行——**模型可能忘，机械不能忘** |
-| **失败 fail-closed** | 未绑定批次档 / 路径不可读 / 越段 / 超量 → throw（消息带原因，供报告引用）；**不静默兜底** |
+| 守卫 | 机制 | 身份判据（定权限的依据） |
+|---|---|---|
+| **无路径参数** | schema 不含 `path`——**语法上写不到别处** | — |
+| **段白名单（按调用者身份）** | `eng-designer → §2` · `设计评审（reviewType=design）→ §3` · `eng-coder → §5`；**参数只声明段号，身份定权限**——越段/未知段 → throw | designer/coder = `agent._role`；设计评审 = `agent._advisorBatchDoc` 存在性（depth-0 父 agent 无 `_role`） |
+| **append-only** | 只做**插入**，不重写任何既有行（定位段尾：下一条 `## §N` 或 EOF）；档内既有字节不变 | — |
+| **骨架保护（评审 #9）** | `text` 内出现 `^## §\d` 行 → **拒**（防段定位错位/破坏 append-only 预期）；引导改写为转义或去标题 | — |
+| **来源戳由工具生成（评审 #1——N4）** | 小节标题 **由工具写**：`### 轮次 N（评审子代理）`——N = 档内既有 `### 轮次` 计数 + 1；**调用方 text 内的同名标题行被忽略**（不可伪造/不可漏写；父侧代写无法产生此戳） | — |
+| **凭证剥除（工具做）** | 写入前按 §2.7 过滤 `[DESIGN-TOKEN:…]` 与 `designId: …` 形态行——**模型可能忘，机械不能忘** | — |
+| **失败 fail-closed** | 未绑定批次档 / 路径不可读 / 越段 / 超量 / 含 `^## §\d` → throw（消息带原因，供报告引用）；**不静默兜底** | — |
 
 #### 2.20.2 会话态绑定（路径怎么到执行者手里）
 
 | 角色 | 绑定时机 | 落点 |
 |---|---|---|
 | designer / coder | spawn 时（第 1 批 `batchDoc` 门已保证「参数在 + 路径可读」）→ `child._batchDoc = batchDocAbs` | `src/agent-tools/subagent-spawn.mjs`（复用第 1 批已有的 `batchDocAbs` 变量） |
-| 设计评审 | advisor 工具**显式参数** `batchDoc` + 门禁（空/不可读 → throw）→ 存入 `agent._advisorBatchDoc` | `src/agent-tools/advisor.mjs` |
+| 设计评审 | advisor 工具**显式参数** `batchDoc`；门禁口径 = **“若传则须可读”（空/不可读 → throw）**——**不强制必传**（零回归，见 §2.20.8 不改 N5）；绑定 **按评审实例键**（`resolved.run.batchDoc`，与 `reviewType/round/designId` 同族）——**不用单值会话态** | `src/agent-tools/advisor.mjs`（参数 + 门禁 + 实例键绑定） |
+
+**并发隔离（评审 #7）**：绑定必须**按评审实例**（顾问池默认 4，仅同 scope 拒——`src/agent-tools/advisor-async.mjs:20-22`/`:400`）；
+若用单值会话态，后发起的另一批设计评审会覆盖前绑定，而正在跑的评审其工具执行读的是**当前** agent 状态（`src/advisor/run.mjs:291`）
+→ 发现表可能落进**别批的 §3**（项目对 token 已因同类问题废弃单值镜像——本档 `:87`）。**不变量：异批次并发必须各自正确落档（或门禁明拒）**。
 
 **为何“参数在外、传递走会话态”**：参数保留可拒可测（门禁在工具入口）；传参链若不落地就得改 `src/advisor/run.mjs:91-97` 的 `advisorToolsFor` 调用点与 `_advisorToolsFor` 测试缝，**而 `advisor-async.mjs` 已 500 行 = 档位硬顶**（+行即越线）——会话态是本产品**既有机制**（`_engTaskInput` / `_touchedFiles` / `_engDesignId` 同族），且 fail-closed（未绑定即不可用）。
 
 #### 2.20.3 评审工具集（只读面不扩）
 
-`src/advisor/run.mjs:91-97` `advisorToolsFor(agent)` → `advisorToolsFor(agent, reviewType)`：
-**仅当 `reviewType === "design"` 且 `agent._advisorBatchDoc` 存在时**，追加 `batch_segment`；**代码评审工具集零变更**（零 git、只读仍是核心安全属性）。
+`src/advisor/run.mjs:91-97` `advisorToolsFor(agent)` → `advisorToolsFor(agent, reviewType, batchDoc)`：
+**仅当 `reviewType === "design"` 且 batchDoc 已绑定（可读）时**，追加 `batch_segment`；**代码评审工具集零变更**（零 git、只读仍是核心安全属性）。
+——与 §2.20.2 的“不强制必传”口径一致（**非死条件**：未传 → 工具不挂载，设计评审照常跑）。
 测试缝 `_advisorToolsFor` 保留。
 
 #### 2.20.4 §3 内容 = 评审结论全文（FR22 F4）
 
-每轮追加一个附录节：**`### 轮次 N（评审子代理）` + 该轮发现表（逐字 markdown 表）+ VERDICT 行 + 计数**；
+每轮追加一个附录节：**`### 轮次 N（评审子代理）`（**标题由工具生成**，见 §2.20.1）+ 该轮发现表（逐字 markdown 表）+ VERDICT 行 + 计数**；
 多轮各自成节（append）。**逐字不转述**（父侧不得代润色/缩减）；`§3` 写在**批次档**（非被审文档）——与 D5 冻结窗口不冲突。
 
 #### 2.20.5 提示词侧（双源）
 
 - 六段自写句 → 改为「用 `batch_segment` 写己段」（designer/coder 各自 persona + 纪律层）；
-- 评审层 `advisor-design.md`：指示评审者在报告之外**调工具把表与 VERDICT 写进批次档 §3**；
+- 评审层**三条提示词全覆盖（评审 #3）**：`advisor-design.md`（round 1）+ **`advisor-round2.md` + `advisor-round3.md`**（round 2+ 的设计评审**不读** advisor-design.md——`src/advisor.mjs:109-115`）——均指示评审者在报告之外**调工具把表与 VERDICT 写进批次档 §3**；
 - **失败明示句**：「写不进去 → 报告里明说‘§× 未写入’；父侧代写**必须打标**」（不得静默、不得假装写过）。
 
 #### 2.20.6 V3 机械校验（零假阳口径）
@@ -609,6 +616,12 @@ text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
 2. **凭证绝不落档**（工具级强制，不靠纪律）。
 3. **父代理不走本工具**（§1/§4/§6 走普通文档写）。
 4. **不静默兜底**（失败必可见 + 代写必打标）。
+5. **来源戳不可伪造**（工具生成标题与 N——N4）。
+6. **并发隔离**：异批次并发的设计评审**各自正确落档**（实例键绑定），不得串档。
+
+**取舍记录（评审 #2）**：评审侧 `batchDoc` 定为**“若传则须可读”而非“必传”**——理由：`type="design"` 无工程模式门（`src/agent-tools/advisor.mjs:85-115`；advisor 工具两侧模式均挂载 `src/agent/setup.mjs:275`），
+“必传”会改变**无批次档场景下的设计评审行为**（本仓 `docs/README.md:174` 即列三份“设计待评审”在途设计档）——与 **N5 零回归**冲突。
+本设计**不扩大、也不收窄**既有评审路径：无批次档 → 工具不挂载，评审照常跑。
 
 ### 2.21 受影响文件（第 4 批 as-of 快照——不得当契约引用）
 
@@ -618,9 +631,12 @@ text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
 | src/agent/setup.mjs | 修改 | 353 | ≤±12 | >300 档——**不拆**：挂载链（:286-290）两分支各加一项 |
 | src/agent-tools/subagent-spawn.mjs | 修改 | 449 | ≤±6 | >300 档——**不拆**：复用已有 `batchDocAbs` 设 `_batchDoc` |
 | src/agent-tools/advisor.mjs | 修改 | 213 | ≤±14 | 参数 + 门禁 + 会话态绑定 |
-| src/advisor/run.mjs | 修改 | 488 | **≤±10** | **>300 档 + 逼近 500 硬顶（498）——若实施中越 500，停下报告并带拆分计划（不得静默越线）** |
-| src/prompts/advisor-design.md | 修改 | 36 | ≤±8 | 纯 .md（评审者用工具写 §3） |
+| src/advisor/run.mjs | 修改 | 488 | **≤±10** | **>300 档 + 逼近 500 硬顶（488 + 上限 10 = 498）——若实施中越 500，停下报告并带拆分计划（不得静默越线）** |
+| src/prompts/advisor-design.md | 修改 | 36 | ≤±8 | 纯 .md（round 1 评审者用工具写 §3） |
 | docs/design/prompts/advisor-design.md | 修改 | 66 | ≤±8 | 纯 .md（双源） |
+| src/prompts/advisor-round2.md | 修改 | 41 | ≤±6 | 纯 .md（**round 2 设计评审也须写 §3**——评审 #3） |
+| src/prompts/advisor-round3.md | 修改 | 37 | ≤±6 | 纯 .md（round 3+ 同） |
+| src/agent-tools.mjs | 修改 | 17 | ≤±2 | **barrel export（评审 #4）**——`setup.mjs:172` 从它解构工具符号；新工具必须加 export 行 |
 | src/prompts/discipline-engineering.md | 修改 | 219 | ≤±10 | 纯 .md（六段自写→用工具 + 失败明示） |
 | docs/design/prompts/discipline-engineering.md | 修改 | 147 | ≤±10 | 纯 .md（双源） |
 | src/prompts/persona-eng-designer.md | 修改 | 56 | ≤±6 | 纯 .md（§2 自写→用工具） |
@@ -631,7 +647,8 @@ text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
 | test/batch-segment.test.mjs | **新增** | — | +150±40 | T43–T47 |
 | test/doc-consistency.test.mjs | 修改 | 176 | ≤±30 | V3 用例 |
 | docs/design/TOOLS.md | 修改 | — | ≤±8 | 工具系统权威源（登记新工具） |
-| docs/requirements/ENGINEERING-MODE.md | 修改（**父侧**） | 675 | ≤±4 | §1.12 段作者表加「写入手段」列 |
+| docs/design/AGENT-LOOP.md | 修改 | 721 | ≤±2 | **评审 #11**：`:283`「恒定六工具不含 git」对**设计评审**不再成立（代码评审仍成立）——一句话级修正 |
+| docs/requirements/ENGINEERING-MODE.md | 修改（**eng-designer 落笔**——写权表 §2.15 A2 / D1） | 675 | ≤±4 | §1.12 段作者表加「写入手段」列（评审 #5：父侧不得直改需求档） |
 
 > 行数为 2026-09-10 实测；**两处档位风险已显式标注**（`src/advisor/run.mjs` 498 逼近 500；`scripts/check-doc-width.mjs` 326 越 300）——
 > 实施中若确实越线，**停下报告 + 带拆分计划**（不静默越）。
@@ -686,6 +703,11 @@ text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
   未绑定批次档时工具 **fail-closed**（不挂载/调用即拒）；**代码评审工具集零变更**（`_advisorToolsFor` 断言 code review 不含本工具）。
 - AC32（§2.20.6——V3）: 对**已批准/已收口**批次（§4 或 §6 非空）断言「§3 非空且含 `### 轮次` 行」；**在飞批次不报**（零假阳）；反证：已批准+§3 空 → 必报。
 - AC33（§2.20.5——失败明示）: 双源提示词含「写不进去→报告明示‘§× 未写入’」「父侧代写**必须打标**」句（grep 断言）。
+- AC34（§2.20.1——来源戳，评审 #1/N4）: `### 轮次 N（评审子代理）` **由工具生成**——N = 档内既有 `### 轮次` 计数 + 1；
+  调用方 text 内的同名标题行被忽略；**工具写入的段落必带该戳**（缺戳/伪造戳用例反证）。
+- AC35（§2.20.4/§2.20.5——F4/F5 + 多轮面，评审 #3/#6）: 三条评审提示词**双源**（`advisor-design.md`/`advisor-round2.md`/`advisor-round3.md`）均含「把发现表+VERDICT+计数**逐字**写入批次档 §3」句（grep 断言）——
+  盖住 round 2+ 设计评审（`src/advisor.mjs:109-115`）不读 advisor-design.md 的事实。
+- AC36（§2.20.2/§2.20.8——并发隔离，评审 #7）: 绑定按**评审实例键**（非单值会话态）；两个不同批次档的设计评审并发 → **各自正确落档**（或门禁明拒），不得串档。
 
 ### 3.2 用例表
 
@@ -755,7 +777,11 @@ text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
 | T44 | 错误：越段 | designer 写 §3 / coder 写 §2 / 设计评审写 §2 | 三者均 throw（身份定权限） | AC29/FR22F2 |
 | T45 | 边界：凭证剥除 | text 内嵌 `[DESIGN-TOKEN:…]` + `designId: …` 行 | 落档后档内零命中；其余内容逐字保留 | AC30/§2.7 |
 | T46 | 边界：V3 零假阳 | ①在飞批次（§4/§6 空）②已批准但 §3 空 ③已批准且含 `### 轮次` 行 | ①不报 ②报 ③不报 | AC32/FR22N3 |
-| T47 | 错误：路径门与只读面 | 评审不带 `batchDoc` → throw；`_advisorToolsFor(agent, "code")` | 前者拒；后者工具集不含 batch_segment | AC31/FR22N1 |
+| T47 | 错误：路径门与只读面 | 评审带**不可读的** `batchDoc` → throw；评审**不带** `batchDoc` → 工具**不挂载**且评审照常跑（零回归）；`_advisorToolsFor(agent, "code")` | 前两者如上；后者工具集不含 batch_segment | AC31/FR22N1·N5 |
+| T48 | 边界：来源戳不可伪造（评审 #1） | ①正常写入 ②text 内自带 `### 轮次 1（评审子代理）` ③连写两轮 | ①工具写的标题为首行；②自带标题被忽略、N 由工具算；③两轮 N = 1、2（缺戳/伪造戳反证） | AC34/FR22N4 |
+| T49 | 正常：多轮提示词面（评审 #3） | grep 双源 `advisor-design.md` / `advisor-round2.md` / `advisor-round3.md` | 三档均含写入 §3 指令 | AC35/FR22F3F4 |
+| T50 | 边界：骨架保护（评审 #9） | text 含 `## §4 用户批准` 行 | throw（引导改写） | AC29/§2.20.1 |
+| T51 | 边界：并发隔离（评审 #7） | 两个设计评审（不同批次档）并发启动并各自写 §3 | 各自落自档（或启动即拒），无串档 | AC36/§2.20.8 |
 
 ## 5. 配置与会话恢复
 
@@ -783,6 +809,13 @@ text 限量：≤20000 字符 / 次（超出拒，引导分段追加）
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-10（晚·八）：**第 4 批设计评审轮次 1 处置**（1🔴+6🟡+5🔵——用户裁定**全照办**）：
+  🔴 来源戳——守卫表新增「**来源戳由工具生成**」（N = 计数 + 1；调用方同名标题被忽略）+ **AC34/T48**；
+  🟡 评审侧门禁改「**若传则须可读**」并记取舍（不改 N5 零回归；§2.20.8 取舍记录）· 提示词面扩到 **round2/round3**（`src/advisor.mjs:109-115` 实证）+ **AC35/T49** ·
+  §2.21 补 **`src/agent-tools.mjs`（barrel）** · 需求档行改标 **eng-designer 落笔** · F4/F5 补 AC35 ·
+  评审侧绑定改**评审实例键**（并发出隔离不变量 + **AC36/T51**）；
+  🔵 run.mjs 行数写法澄清 · **骨架保护**（拒 `^## §\d`，T50）· 守卫表补「身份判据」列 · §2.21 计入 `AGENT-LOOP.md:283` 修正 · 抽查结果回记。
 
 - 2026-09-10（晚·七）：**第 4 批设计（C——批次档段写入工具，FR22/§1.16）**——新增 **§2.20**（工具契约 / 会话态绑定 / 评审工具集只读面 / §3 内容口径 / 提示词侧 / V3 零假阳 / **四个选型决策** / 四条不变量）+ **§2.21**（受影响文件 as-of，**两处档位风险显式标注**）+ **AC29–AC33 + T43–T47**。
   **编号避让**：并行会话的「模型选择面重构」批已占「第 3 批」→ 本批称**第 4 批**。
