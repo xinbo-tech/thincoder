@@ -7,7 +7,7 @@
 > 各历史批次档（PROMPT-DECOUPLING / MAIN-DESIGN-ENHANCE / PROMPT-ATTENTION-RESTRUCTURE）降为变更史
 > 记录（冲突时以本档为准）。双端各自独立实现、语义同源（多实现面纪律——METHODOLOGY·多实现面任务
 > 派发节）。
-> 状态：**已批准（2026-09-10）——施工①②③已交付**（施工档归档见 `docs/README.md` §3 地图）。
+> 状态：**已批准（2026-09-10）——施工①②③已交付**（施工档归档见 `docs/README.md` §4 地图）。
 
 ---
 

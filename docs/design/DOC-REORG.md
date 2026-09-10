@@ -110,18 +110,18 @@
 
 | 段 | 去向 |
 |---|---|
-| 板块 → 文档映射表（含归档标注） | `docs/README.md` §3（填空占位；表格行重排，避免搬运长行） |
-| 核心纪律 / 归属规则 | 并入 `docs/README.md` §2 / §4（去重——新规范已覆盖，重复部分不复制） |
+| 板块 → 文档映射表（含归档标注） | `docs/README.md` §4（填空占位；表格行重排，避免搬运长行） |
+| 核心纪律 / 归属规则 | 并入 `docs/README.md` §3（规范）/ §5（归属四问）（去重——新规范已覆盖，重复部分不复制） |
 | 变更记录 | 并入 `docs/README.md` 变更记录 |
 
 **三步（顺序即依赖）**：
 
-1. 地图内容迁入 `docs/README.md` §3（+ 去重 + 变更记录）——新权威就位。
+1. 地图内容迁入 `docs/README.md` §4（+ 去重 + 变更记录）——新权威就位。
 2. `design/README.md` 转**过渡副本**：保留地图正文 + 顶部加一行过渡注
    （"地图权威已上移 `docs/README.md`；本档为过渡副本，批尾删除"）。
    理由：`src/advisor/messages.mjs:250-254` 现读该路径并把**文件全文**注入 advisor 作 "## Document Map" 段
    （评审第 7 维 Document ownership 的依据）——若在此处改成几行指针，过渡期该维度实质**降级**；
-   保留正文则零降级。内容与 `docs/README.md` §3 同源（同一次迁移产物），无漂移风险。
+   保留正文则零降级。内容与 `docs/README.md` §4 同源（同一次迁移产物），无漂移风险。
 3. **批尾**（§9.4 T1 代码改指新路径后）**删除** `design/README.md`——避免"两处地图"漂移源长期存在。
 
 ## 5. 引用更新清单（文档/提示词面——本批内做）
@@ -132,7 +132,7 @@
 |---|---|---|
 | `AGENT-LOOP.md:631` | 文档地图 = `docs/design/README.md` | 定义改指 `docs/README.md` |
 | `AGENT-LOOP.md:633` | "任何代码变更都在 `docs/design/` 落文档" | 落文档域扩为 `docs/`（requirements + design） |
-| `CHECKPOINT.md:150` | "文档地图：`docs/design/README.md` 登记本板块" | 改指 `docs/README.md` §3 |
+| `CHECKPOINT.md:150` | "文档地图：`docs/design/README.md` 登记本板块" | 改指 `docs/README.md` §4 |
 | `SETTINGS-TOOL.md:6,132` | 关联行 + 受影响文件表中的地图路径 | 同上 |
 | `STRUCTURE-DEBT.md:3` | 权威源指向 `docs/design/README.md` | 同上 |
 | `STRUCTURE-DEBT.md:64` | "地图自身违反格式纪律"债条（L1/2/39/43） | **勾销**——地图上移后债对象不存在（注：现地图已无 >300 字符行，该债条本已过时） |
@@ -165,7 +165,7 @@
 | `AGENTS.md:10` | "**本项目没有独立于设计文档的需求文件**"——与 `docs/README.md:11/24`（需求层独立成档）冲突；改为"需求层 `docs/requirements/` + 设计层 `docs/design/`（存量按新老划断迁移）" |
 | `AGENTS.md:12` | "设计文档在 `docs/design/`" → 需求/设计双目录表述 |
 | `AGENTS.md:14` | 逐档权威地图链接与路径 → `docs/README.md` |
-| `docs/README.md` §3 | 填空（迁入板块登记表，表格行重排）；§2 补归属规则去重结果 |
+| `docs/README.md` §4 | 填空（迁入板块登记表，表格行重排）；§2 补归属规则去重结果 |
 
 ### 5.4 不更新（明确排除）
 
@@ -208,7 +208,7 @@
 | `docs/design/CHECKPOINT.md` | 250 | ±1 |
 | `docs/design/ADVISOR-CONVERGENCE.md` | 232 | ±2 |
 | `docs/design/STRUCTURE-DEBT.md` | 183 | -2（债条勾销） |
-| `docs/design/PHILOSOPHY.md` | 175 | ±1 |
+| `docs/PHILOSOPHY.md` | 175 | ±1 |
 | `docs/design/SETTINGS-TOOL.md` | 135 | ±2 |
 | `docs/design/POOL-CONFIG-UNIFIED.md` | 130 | ±1 |
 | `docs/design/SEND-STALL-DISTILL-TUNING.md` | 99 | ±1 |
@@ -228,7 +228,7 @@
 | `docs/design/ESCALATE.md` | 179 | -1（重复条删除） |
 | `.thincoder/index/manifest.json` | 生成物 | 重建（§5.5） |
 
-> 全部对象均为 `.md`／生成物——按 `docs/README.md` §2 与项目文档行宽规则，**无代码文件**；
+> 全部对象均为 `.md`／生成物——按 `docs/README.md` §3 与项目文档行宽规则，**无代码文件**；
 > `AGENT-LOOP.md` 722 行超软档为既有债，非本批引入。
 
 ### 7.3 新增
@@ -246,12 +246,12 @@
 | AC2 | `docs/design/` 顶层 `.md` = **52**：47 权威 + 3 在途 + `README.md`（过渡副本）+ 本档 `DOC-REORG.md` | 计数断言（口径见 §3.2 注） |
 | AC3 | `docs/design/_archive/` = **52** 档（原 17 + 新 35） | 计数断言 |
 | AC4 | `docs/design/README.md` 保留地图正文 + 顶部过渡注（指向 `docs/README.md`） | 内容断言（过渡注串 + 登记表首行） |
-| AC5 | 板块登记表已入 `docs/README.md` §3；无"待迁移"占位 | 内容断言 |
+| AC5 | 板块登记表已入 `docs/README.md` §4；无"待迁移"占位 | 内容断言 |
 | AC6 | §5 所列引用处全部改指新路径 | grep `docs/design/README.md`：**活体档零命中**；例外仅限 §5.4 豁免面（`_archive/` 既有档、冻结档内部历史引用、CHANGELOG、VSC 仓）与 `docs/design/README.md` 过渡副本自身 |
 | AC7 | 提示词双源一致：模板与 src 的路径串同步（6 文件） | grep 对比 |
 | AC8 | **`_archive/` 既有 17 档 + `CHANGELOG.md` 零 diff**；新迁 35 档 diff 面 = 每档仅 +3 行头注（无正文改动） | git diff 范围检查 |
 | AC9 | 无内容篡改：搬迁为 `git mv` + 头注追加（除 §5/§7 列明处外零内容 diff） | `git diff --stat` 核对 |
-| AC10 | 规范一致性：`docs/README.md` §2 与纪律层文档规范节关键句一致 | 关键句 grep 对比（如"按板块组织文档，不按功能点拆"、"同一机制只在一处详述"两串在两侧均命中） |
+| AC10 | 规范一致性：`docs/README.md` §3 与纪律层文档规范节关键句一致 | 关键句 grep 对比（如"按板块组织文档，不按功能点拆"、"同一机制只在一处详述"两串在两侧均命中） |
 | AC11 | `docs/requirements/` 目录 + `README.md` 说明档存在（说明三层归属与新老划断） | 路径存在 + 内容断言 |
 | AC12 | `PROMPT-SYSTEM.md` 状态行统一（"已批准、施工①②③已交付"，不再出现"待评审/待批准"） | 内容断言 |
 | AC13 | `ESCALATE.md` 变更记录去重：L177/L178 同串出现次数 = 1 | 重复检测断言 |
@@ -265,7 +265,7 @@
 | 边界·重名 | 目标 `_archive/` 已存在同名档 | **不得覆盖**——停下报告（勘察已确认当前零重名） |
 | 边界·双源不一致 | 模板与 src 路径串改后比对不等 | 以模板为准回填 src；仍不等 → 报告为双源漂移 |
 | 错误·缺档 | §3.1 清单中的档在磁盘不存在 | 停下报告，不跳过（清单以磁盘勘察为源） |
-| 错误·stub 缺失 | 交接期 `design/README.md` 被误删 | 从 `docs/README.md` §3 重建过渡副本（advisor 注入面不可缺） |
+| 错误·stub 缺失 | 交接期 `design/README.md` 被误删 | 从 `docs/README.md` §4 重建过渡副本（advisor 注入面不可缺） |
 
 ### 8.3 预期红灯（已知且接受）
 
@@ -322,7 +322,7 @@ ENOENT。用户裁定"红就红"——批尾以**解耦**方式根治（§9.4 T2
 
 - 35 档 `git mv` → `docs/design/_archive/` + 冻结头注（每档 +3 行）
 - 建 `docs/requirements/` + `README.md`（说明档）
-- 地图三步：登记表迁入 `docs/README.md` §3；`design/README.md` 转过渡副本（正文保留 + 顶部过渡注）；批尾删除待 T1 后
+- 地图三步：登记表迁入 `docs/README.md` §4；`design/README.md` 转过渡副本（正文保留 + 顶部过渡注）；批尾删除待 T1 后
 - 引用更新：活体档 13 档 / 17 处 + 提示词双源 6 文件 + `AGENTS.md` 3 处（含 `:10` 需求基线句）
 - 顺手修：`PROMPT-SYSTEM.md` 状态行（AC12）、`ESCALATE.md` 变更记录去重（AC13）
 
@@ -350,6 +350,6 @@ ENOENT。用户裁定"红就红"——批尾以**解耦**方式根治（§9.4 T2
   §5.3 AGENTS.md:10、§5.2 advisor-design METHODOLOGY 引用、§5.5 索引处置、AC2 计数口径（52）、
   AC4 过渡副本承载正文（避免 advisor 第 7 维降级）、AC8 收窄、AC11–AC14 新增、§8.2 用例表、
   §2/§9.2 计数口径统一（39→47）、§5.1 标题计数（13 档/17 处）、§7.2 补齐行数、ADVISOR-CONVERGENCE
-  新权威目标更正（不得指 docs/README.md §2.5）、问题陈述 #1 措辞按实测更正。
+  新权威目标更正（不得指 docs/README.md §3.5）、问题陈述 #1 措辞按实测更正。
 - 2026-09-10：**用户批准——文档面已实施**（§10 实施记录：35 档搬迁 + 地图三步 + 引用更新 +
   顺手修；偏差 D1-D3 已落档；发现 check-doc-width 扫描域缺口——提请新增批尾项 T6）。
