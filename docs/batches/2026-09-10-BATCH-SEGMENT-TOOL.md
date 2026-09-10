@@ -1,6 +1,6 @@
 # 批次档段写入工具（C）· 批次记录（2026-09-10）
 
-> 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（**eng-designer**——角色已落地，本批起不再由主 agent 代写）·
+> 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer；**本批由父侧代写并打标**——本会话为 VSC 宿主，工具面只暴露 explore/plan/eng-coder，eng-designer 尚不可 spawn，见 §2 抬头）·
 > §3 设计评审（**评审子代理**——本批工具落地后用 `batch_segment` 自写，落地前由父侧代写并**打标**）· §4 用户批准（主 agent）· §5 实施记录（**eng-coder**）· §6 验证与收口（**父代理**）。
 > 不是规格：需求在 `requirements/` 成文；整批做完整档冻结。机制与模板见 `requirements/ENGINEERING-MODE.md` §1.12。
 
@@ -64,25 +64,49 @@
 
 ## §2 批次任务（eng-designer 自写）
 
+> **父侧代写并打标（2026-09-10）**：本会话为 VSC 宿主，其 subagent 工具面只暴露 `explore` / `plan` / `eng-coder`（`eng-designer` 注册在本仓 CLI 侧，宿主未镜像）——**无法 spawn 设计者，故由主 agent 代写本节**。与 §1.12 的“一段一作者”不冲突：这是**宿主能力缺失下的打标代写**，非作者变更。
+
 ### 本批覆盖的需求条目
 
-_（待 designer）_
+FR22 F1-F7（工具契约）+ N1-N5（非功能面）——逐条见 `docs/requirements/ENGINEERING-MODE.md` §1.16（三层：契约 / 非功能 / 四项待设计选型，已收口）。§1 的「本批需求 4 条」是它的事源清单。
 
 ### 明确不在本批的条目
 
-_（待 designer）_
+| 项 | 去向 |
+|---|---|
+| **VSC 端镜像**（含本批工具 + 第 2 批六段机制） | 待镜像批（本批仅 CLI） |
+| 需求档 4 项同步（段表「写入手段」列 · §1.11 B9 · §1.16 F1 口径 · §1.16 N2 措辞） | **eng-designer 落笔**（本会话不可 spawn → 走 CLI 会话或后续批）——已登记待办 |
+| D（FR18 需求池指针化）/ E（可移植性 FR10-FR15） | 单列 |
 
 ### 受影响文件（带当前行数 + 预计增量）
 
-_（待 designer）_
+**以设计档 `docs/design/ENGINEERING-MODE.md` §2.21 为权威表**（as-of 2026-09-10）；两处档位风险已明标：
+
+| 文件 | 性质 | as-of | 增量上限 |
+|---|---|---|---|
+| `src/agent-tools/batch-segment.mjs` | 新增 | — | +180 |
+| `src/agent-tools.mjs`（barrel export） | 修改 | 17 | ≤±2 |
+| `src/agent/setup.mjs` | 修改 | 353 | ≤±12 |
+| `src/agent-tools/subagent-spawn.mjs` | 修改 | 449 | ≤±6 |
+| `src/agent-tools/advisor.mjs` | 修改 | 213 | ≤±14 |
+| `src/advisor/run.mjs` | 修改 | 488 | **≤±10（→498，越 500 停下报告）** |
+| `scripts/check-doc-width.mjs` | 修改 | 281 | **≤±19 守 300；超出则拆 `scripts/doc-consistency.mjs`（新增行已备）** |
+| `test/batch-segment.test.mjs` | 新增 | — | +200 |
+| `test/doc-consistency.test.mjs` | 修改 | 176 | ≤±30 |
+| 提示词双源 × 5 对 | 修改 | — | 逐对 ±8 |
+
+（提示词双源 5 对：`advisor-design.md` / `advisor-round2.md` / `advisor-round3.md` / `discipline-engineering.md` / `persona-eng-designer.md` / `persona-eng-coder.md`——各含 `src/prompts/` + `docs/design/prompts/` 两份，共 12 文件。）
 
 ### 验收标准（逐条回指需求）
 
-_（待 designer）_
+**实施者自验以设计档 §3.1 / §3.2 为准**，不得转述：
+
+- **AC29**（工具契约 + fail-closed 逐条）· **AC30**（凭证剥除零命中）· **AC31**（路径门禁 + 代码评审只读面零变更）· **AC32**（V3 触发「§4/§6 有实质内容」+ 排骨架行）· **AC33**（失败明示句双源）· **AC34**（来源戳工具生成、仅 §3、N=节序号）· **AC35**（三条评审提示词双源 + 适用面限定子串）· **AC36**（并发隔离按实例键）。
+- **用例表 T43–T53**（含 T43b/T49b/T52b）——逐条输入/预期输出已定死，实现后必须全绿。
 
 ### 任务书就绪（本节即任务书——spawn 传路径，不另写副本）
 
-_（待 designer）_
+**就绪**。eng-coder 任务 = 按设计 §2.20 + §2.21 + AC29–AC36 + T43–T53 实现；文件清单以 §2.21 为准；两处档位风险按上述上限执行，**越线停下报告并带拆分计划**。
 
 ## §3 设计评审（评审子代理自写）
 
@@ -94,7 +118,13 @@ _（本工具落地前：父侧代写并打标；落地后：`batch_segment` 逐
 
 ### 批准（日期 + 批准范围）
 
-_（待用户批准）_
+**2026-09-10 · 用户批准（原话：「批准」）**——批准范围：
+
+1. **设计** `docs/design/ENGINEERING-MODE.md` **§2.20–§2.21**（批次档段写入工具）+ **AC29–AC36** + **T43–T53**；
+2. **评审链**：设计评审 5 轮（轮次 5 **PASS**），PASS 后 advisory（6🟡+5🔵）已**同链全修**（无新范围，不触发重评审）；
+3. **实现方式**：spawn `eng-coder`（任务书 = 本节 §2 + 设计 §2.20/§2.21），设计凭证由平台签发给本会话（**凭证值不落档**——§2.7 续）。
+
+**附带条件（用户未附加额外条件）**：两处档位风险按 §2.21 上限执行；越线停下报告（不得静默越）。
 
 ## §5 实施记录（eng-coder 自写）
 
