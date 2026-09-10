@@ -3,6 +3,9 @@
 > 权威源：thincoder/src/tools/ + src/agent-tools/ + src/mcp/。本文档描述工具系统的**当前设计**——工具如何暴露给模型、如何安全工作、如何调度。跨文档已接管的主题只留指针，不复制。
 > 关联权威：`AGENT-LOOP.md`（调度/审批/question 抑制）、`SESSION.md`（read_history）、`MCP.md`（MCP 客户端）、`CHECKPOINT.md`（快照）、`EDIT-HELPERS.md`（编辑工具 EOL 语义——原 EDIT-TOOL-EOL-DESIGN 并入本档）、`PROVIDER.md`（模型上下文配置）、`TOOL-OUTPUT-LIMITS-*.md`（输出落盘阈值）。
 
+
+> 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/TOOLS.md`——本档保留设计与测试细节。
+
 ## 1. 总览
 
 工具系统是 agent 与外部世界（文件/命令/网络/git/MCP/项目状态）交互的**唯一通道**：

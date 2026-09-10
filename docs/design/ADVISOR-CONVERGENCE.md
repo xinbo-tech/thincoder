@@ -20,6 +20,9 @@
 > - **工程模式 = ENGINEERING-MODE.md**（token/门禁/guard 开关/信任模型）——本文件只保留收敛相关与指针。
 > - 设计文档档位纪律（>300/>500 拆分判据）= 纪律层 `src/prompts/discipline-normal.md`（代码结构判据节）；行数标注义务 = 纪律层 `src/prompts/discipline-engineering.md`「文档规范」节；评审核查维度行为 = 本文档 §9（原 METHODOLOGY.md 已退役入 `_archive/`——权威链改指纪律层）。
 
+
+> 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/ADVISOR-CONVERGENCE.md`——本档保留设计与测试细节。
+
 ## 1. 目标
 
 独立评审必须在"审查 → 修复 → 复审"循环中**收敛**：要么确认全部问题已修复（passed），要么在有限轮次内机械终止。历史病根：advisor 反复执行、每轮全量扫描都报新问题、永不收敛（修复前 system prompt 冻结在 ROUND1，收敛约束只存在于 user 级消息，system 权重压过 user）；以及复评引用旧文件状态、把已修复问题反复报回。以下机制均为这些病根的修复产物：

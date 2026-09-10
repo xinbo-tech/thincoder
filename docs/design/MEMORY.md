@@ -4,6 +4,9 @@
 > 跨文档已接管的主题只留指针：工具调度/审批 → `AGENT-LOOP.md`；会话消息历史检索（read_history，非记忆）→ `SESSION.md`；checkpoint/undo 快照 → `CHECKPOINT.md`。
 > 状态：**当前态**（2026-09 整理）。历史变更流水账折叠见文末「变更记录」。
 
+
+> 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/MEMORY.md`——本档保留设计与测试细节。
+
 ## 1. 总览与目标
 
 记忆系统让 agent 跨会话保存、检索、治理三类知识——个人记忆、项目共享记忆、团队共享记忆——并同时提供**代码/文档索引**（code/doc chunk），使 `memory` / `code_search` / `doc_search` / `repo_outline` 得以在当前代码库内检索。

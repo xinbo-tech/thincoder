@@ -5,6 +5,9 @@
 > 关联：本文档 §1 是分层纪律（L0/L1/L2）的权威叙述（原 AGENT-LOOP §18.7 已迁此）；工程模式实现侧分级正文 = `src/prompts/persona-eng-coder.md` + `discipline-engineering.md`（模型侧实际拿到的分级正文——旧 engineering-sub.md 已随 PROMPT-SYSTEM 施工①退役）；仓库根 `AGENTS.md`（本项目的两分层测试政策与 smoke 说明）。
 > 状态：**机制已落地并维持当前态**。分层纪律（L0/L1/L2）+ slow 门机制仍生效；2026-09-07 存量测试库存按"按需加"政策清零，测试随机制需要按需补（详见 §2）。
 
+
+> 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/TESTING.md`——本档保留设计与测试细节。
+
 ## 1. 分层纪律（L0 / L1 / L2）与 slow 门
 
 ### 1.1 分层纪律（L0 / L1 / L2）

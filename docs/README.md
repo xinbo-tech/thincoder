@@ -127,6 +127,45 @@ docs/
 | 文档基建（本批） | `design/DOC-REORG.md` | 2026-09-10 文档目录结构重组施工设计（批尾入档） |
 | 在途设计档（未实施） | `design/POOL-CONFIG-UNIFIED.md`、`design/QUICKFIX-BATCH-3.md`、`design/SUBAGENT-ID-COUNTER-AGENT.md` | 设计待评审——未实施，不适用冻结 |
 
+### 3.1 需求层文档（`requirements/`）
+
+> 需求层文档清单（板块镜像——`requirements/<板块>.md` ↔ `design/<板块>.md`）。
+> 未列出的板块，其需求层内容仍在对应设计档内（三层同档历史形态——按新老划断迁移，见 §2.4）。
+
+| 需求档 | 板块 |
+|---|---|
+| `requirements/ACP-CLIENT.md` | ACP 协议（IDE 接入） |
+| `requirements/ADVISOR-CONVERGENCE.md` | 评审收敛（advisor 审 → 修 → 复审循环的收敛保证） |
+| `requirements/AGENT-LOOP.md` | Agent 循环（主循环/子代理生命周期/异步化） |
+| `requirements/AGENT-PARAMS.md` | — |
+| `requirements/ASYNC-RESULT-CONTAINER.md` | async 结果容器统一（settle 共享 helper / pending 单容器 / role·池 accesso |
+| `requirements/CHECKPOINT.md` | Checkpoint 事故恢复（快照/回滚保险） |
+| `requirements/CONSULTATION.md` | 会诊（多模型并行分析同一问题） |
+| `requirements/CONTEXT-COMPACTION.md` | 上下文压缩 |
+| `requirements/DESIGN-TOKEN-SETTLEMENT.md` | 设计评审凭证结算（settle 当场落盘 / 门禁读权威 / 废旧镜像） |
+| `requirements/ENG-TOKEN-BINDING.md` | — |
+| `requirements/ENGINEERING-MODE.md` | 工程模式——thincoder 的严格方法论工作流：design-before-code、纪律层槽位提示词驱动、双门禁（ |
+| `requirements/ESCALATE.md` | 飞刀（升级到更强模型实现） |
+| `requirements/LOGGING.md` | 诊断事件日志（常驻事件骨架日志） |
+| `requirements/MCP.md` | 工具系统 · MCP 客户端 |
+| `requirements/MEMORY.md` | 记忆系统（三层记忆 + 代码/文档索引） |
+| `requirements/MULTI-INSTANCE-COLLAB.md` | 多实例协作感知（多副本 agent 互相感知） |
+| `requirements/PROJECT.md` | 项目层（定位/技术约束/功能范围/远期需求） |
+| `requirements/PROMPT-SYSTEM.md` | 提示词系统（提示词分层/装配逻辑/文件命名法/各文件内容大纲/编写纪律） |
+| `requirements/RELEASE.md` | 发布流程（npm / VS Code marketplace 发布） |
+| `requirements/SEND-STALL-DISTILL.md` | 轮末探索蒸馏的**时序**——"何时等待/是否等待"（已实现专题，**当前生效**） |
+| `requirements/SESSION.md` | 会话（CLI 会话存储/加载/恢复） |
+| `requirements/SETTINGS-TOOL.md` | settings 工具（运行时配置查看/修改/热应用） |
+| `requirements/STRUCTURE-DEBT.md` | 结构债（横切——跨双仓的结构债评估与分批清理） |
+| `requirements/SUBAGENT-OBSERVE-SEND.md` | 子代理观测/注入（父侧 observe 查进度 + send 注入引导） |
+| `requirements/TESTING.md` | 测试基建（分层纪律/库存治理/slow 门） |
+| `requirements/TOOL-OUTPUT-LIMITS.md` | 工具输出的超长**落盘阈值与显示层**（已实现专题，**当前生效**——本对文档是该机制的现行权威源；`TOOLS.md |
+| `requirements/TOOLS.md` | 工具系统（注册表/调度/安全边界/描述规范） |
+| `requirements/TUI-TOOL-OUTPUT.md` | TUI 工具输出（行间区块显示） |
+| `requirements/TUI.md` | TUI（终端界面：渲染/滚动/输入/会话显示） |
+| `requirements/TURN-CAP-CONTINUE.md` | Agent 循环 · 撞墙继续（轮数预算耗尽后的续跑） |
+| `requirements/VERIFY-REDESIGN.md` | verify 重构（声明式完成前门） |
+
 ## 4. 归属判定（写档前四问）
 
 1. 这个主题**已有档案**吗？（查 §3——有则更新它，不新建）

@@ -35,12 +35,13 @@
 | FR6 | 范围约束 | **A 裁定**：去掉"文件清单外不可改"硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计"out-of-list"判据 = "**改了且未报告 = 偏差**（静默越权）"；已报告 = 透明可接受；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
 | FR7 | 待办管理 | 技术待办统一在 `docs/TODO.md`，不落入设计文档（避免触发重新 doc review） |
 | FR8 | 多任务并行 | 相互独立的设计可**并行推进**，上限 ≤4 并发（提示词纪律——无机械门禁）。**调度器条款（现行口径）**：spawn 声明 `files`+`dependsOn`——冲突/顺序交调度器自动处理（重叠域 queued、依赖链自动顺序、同步冲突报错），不再手动串行——锚句 "overlapping domains are queued by the scheduler, never hand-serialized"（AGENT-LOOP §10）；未声明 files 不参与冲突检测。token 按 designId 隔离互不覆盖；发起权不变（FR5） |
+| FR9 | **角色三段链**（2026-09-10 用户裁定——需求已收口，待设计） | 主 agent = 产品经理（需求 + 编排/确认/核验 + 设计判断权）；<br>新增 eng-designer = 设计（唯一写稿人，自勘察，无 token，不发起评审）；eng-coder = 实现。<br>定位：设计 = 对需求的检验——需求不过 advisor 评审；撞需求缺口 → 停下报告交回主 agent。<br>**9 条裁定见 §1.4**；提示词实现面见 `PROMPT-SYSTEM.md` §8 |
+
 > **FR3 注（授权链细则）**：designId 为**同 scope 实例恒定**（复审沿用同 id，旧 token 存活至 TTL 保留）；
 > 不锚定文档路径/内容（"文档锚失效"路线已否决）。spawn 单设计时 designId 可省略。
 > token 随会话 slot 持久化跨进程（**TTL 7 天 fail-closed**）。**链终核销由父侧 consume-design 消费**
 > （设计见 `../design/ENGINEERING-MODE.md` §2.6）。
 
-| FR9 | **角色三段链**（2026-09-10 用户裁定——需求已收口，待设计） | 主 agent = 产品经理（需求 + 编排/确认/核验 + 设计判断权）；<br>新增 eng-designer = 设计（唯一写稿人，自勘察，无 token，不发起评审）；eng-coder = 实现。<br>定位：设计 = 对需求的检验——需求不过 advisor 评审；撞需求缺口 → 停下报告交回主 agent。<br>**9 条裁定见 §1.4**；提示词实现面见 `PROMPT-SYSTEM.md` §8 |
 
 ### 1.3 非功能性需求（技术标准）
 

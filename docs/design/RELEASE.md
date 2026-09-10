@@ -5,6 +5,9 @@
 > 仓库：Gitee `https://gitee.com/shanghai-xinbo/thincoder`（main 分支）+ GitHub 镜像远端 `github`。
 > 状态：发布 = 唯一门禁（R7 单轮制已落地）——`npm publish` 的 `prepublishOnly` 自动跑 lint + test:full 全量单轮。
 
+
+> 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/RELEASE.md`——本档保留设计与测试细节。
+
 ## 1. 发布前检查
 
 - [ ] `npm view thincoder version` 记录 registry 最高已发号（待发号必须 = 最高 + 1——见 §4.3）；

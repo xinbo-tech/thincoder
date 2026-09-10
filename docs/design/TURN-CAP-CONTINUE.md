@@ -4,6 +4,9 @@
 > 状态：**机制已实现并在现行代码生效**——主/子/飞刀/会诊四类 agent 撞轮数墙都能"继续"，且不限次数。与 VS Code 插件端同源（两端语义一致）。
 > 权威源：`src/agent/spawn-child.mjs`（`runWithContinue` 骨架）、`src/agent-tools/subagent.mjs` / `subagent-actions.mjs` / `escalate-async.mjs` / `consult.mjs`、`src/tui/agent-turn.mjs`（主 agent 面板）、`src/agent.mjs`（`ContinueError` / runAgent 循环）。
 
+
+> 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/TURN-CAP-CONTINUE.md`——本档保留设计与测试细节。
+
 ## 统一语义
 
 - **撞墙** = runAgent 耗尽 maxTurns 抛 `ContinueError`（携带轮数）；
