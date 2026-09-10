@@ -234,15 +234,24 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 `batchDoc is required for role='eng-coder' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it.`
 （路径不可读时后缀 ` (given path is not a readable file)`。）
 
-**配套四点**：
+**配套四点（含落点全路径）**：
 
-- **schema**（`subagent.mjs` properties，designToken 邻域）：`batchDoc` string 描述含 "REQUIRED for eng-coder"——
+- **schema**（`src/agent-tools/subagent.mjs` 的 properties，designToken 邻域）：`batchDoc` string 描述含 "REQUIRED for eng-coder"——
   schema 保持 advisory（`required:[]` 不动，机械检查在 execute 链——现行注释口径不变）。
 - **工具描述**：动作说明串加一句（batchDoc 必传 + 拒绝语义）。
-- **审计受限变体**（`setup.mjs` eng-coder 内部审计通道）：`delete props.batchDoc`——审计子代理不派生批次参数
-  （与既有的 `delete props.async/id/designToken/designId` 同列）。
-- **提示词最小同步**（门禁配套，非第 2 批规则）：`discipline-engineering.md`（中英双端）spawn 样例行补
-  `batchDoc=<路径>` + 一句"必传，没传即拒"——机械门禁先行而样例不教，会每次撞墙。
+- **审计受限变体**（`src/agent/setup.mjs` 的 eng-coder 内部审计通道）：`delete props.batchDoc`——审计子代理不派生批次参数
+  （与既有的 `delete props.async/id/n/designToken/designId` 同列）。
+- **提示词最小同步**（门禁配套，非第 2 批规则）：`src/prompts/discipline-engineering.md`（spawn 样例行所在处）+ 中文权威
+   `docs/design/prompts/discipline-engineering.md` 的 spawn 样例行补 `batchDoc=<路径>` + 一句“必传，没传即拒”——
+  **机械门禁先行而样例不教，会每次撞墙**。
+
+**落点全路径**（评审 #2）：「校验落点 = `buildSpawnChild`」指 **`src/agent-tools/subagent-spawn.mjs`**（:237 导出；
+调用点 `src/agent-tools/subagent.mjs:260`，async 分支在 :294 之后——故两端均经此处）；
+**不要**误放进 `src/agent-tools/subagent.mjs`（那里只是 schema 所在处）。
+
+**文案与字面的界定**（评审 #7）：错误消息里的 `docs/batches/<批>-<主题>.md` 是**提示文案**，
+**不参与路径判定、不是默认位置**（判定只看 `batchDoc` 传入值）——与 §2.11 第 2 点“不硬编码运行期路径”不矛盾；
+该串仅在消息里引导，不向用户项目强加目录形状。
 
 ### 2.13 交界面锚的机械面（FR17 本批可落部分）
 
@@ -259,11 +268,27 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 
 | 决策点 | 候选 | 选定 | 否决理由 |
 |---|---|---|---|
-| 校验落点 | A `buildSpawnChild`（token 门旁）· B `subagent.mjs` execute 内 · C 两处都查 | **A** | async/sync 双路必经 A，一处生效；B 只盖同步前半（async 路径绕过 execute 后半段）；C 冗余 |
+| 校验落点 | A `buildSpawnChild`（token 门旁）· B `subagent.mjs` execute 内 · C 两处都查 | **A** | **A 与 B 的覆盖等价**（`execute` 在 :260 调 `buildSpawnChild`，async 分支在其后 :294——放 B 同样双路覆盖），
+A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周期一致）；B 会把门禁拆到与 token 门不同的层，后续加角色时需再想一遍；C 冗余（评审 #5 修正了本条否决理由） |
 | 判据级别 | (i) 措辞正则（"已收口"）· (ii) 机器标记（HTML 注释）· (iii) 存在 + 可读 | **(iii)** | (i) 把中文措辞写死进代码、模板一改就断；(ii) 给文档加机器字段=形状约束；(iii) 零脆弱——内容好坏由执行者拒收兜底（需求已定） |
 | 提示词同步时机 | 本批最小同步（样例行）· 全部留给第 2 批 | **本批最小同步** | 门禁先行而样例不教 = 每次调用撞墙；第 2 批的"六段自写"规则仍留第 2 批 |
-| 测试落点 | 新文件 `test/batch-doc-gate.test.mjs` · 并入 design-token-settlement | **新文件** | 机制独立（batchDoc ≠ token）；token 测试已 245 行；构造手法照抄（隔离缝 + 手写最小 agent + assert.throws 正则） |
+| 测试落点 | 新文件 `test/batch-doc-gate.test.mjs` · 并入 design-token-settlement | **新文件** | 机制独立（batchDoc ≠ token）；token 测试已 245 行。构造手法照抄**两份**先例：`test/design-token-settlement.test.mjs`（隔离缝 + 最小 agent + assert.throws）与 **`test/subagent-id-counter.test.mjs:12,27`**（直驱 `buildSpawnChild`——T27 成功路径断言靠它） |
 
+
+### 2.14 受影响文件（第 1 批 as-of 快照——不得当契约引用）
+
+| 文件 | 性质 | as-of 行数 | 预计增量 | 拆分评审 |
+|---|---|---|---|---|
+| src/agent-tools/subagent.mjs | 修改 | 394 | ≤±12 | **>300 文件档**——本批不拆：单点增量（properties 一项 + 描述一句），不新增函数；若实施中发现单函数将超 300 行 → 停下报告，不静默扩 |
+| src/agent-tools/subagent-spawn.mjs | 修改 | 418 | ≤±25 | **>300 文件档**——本批不拆：门禁为 `buildSpawnChild` 内一段短判断 + 消息构造；不触发函数档但拆留待整体重构批 |
+| src/agent/setup.mjs | 修改 | 340 | ≤±2 | **>300 文件档**——本批不拆：单行 `delete props.batchDoc` |
+| src/prompts/discipline-engineering.md | 修改 | 195 | ≤±4 | 纯 .md——免除行数标注（按评审标准） |
+| docs/design/prompts/discipline-engineering.md | 修改 | 122 | ≤±4 | 纯 .md——免除标注（中文权威模板，双源同步） |
+| docs/design/AGENT-LOOP.md | 修改 | 715 | ≤±6 | 纯 .md——免除标注（§10.1 参数表加 batchDoc 行） |
+| test/batch-doc-gate.test.mjs | **新增** | — | +80±30 | 新建测试文件（T25/T25b/T26/T27/T28/T29） |
+
+> 行数为 2026-09-10 实测（`wc -l` 口径：读工具总行数报数）；三个 &gt;300 行源文件均**不触发拆分**
+> （本批增量合计 ≤39 行、无新函数），故不出拆分计划——待后续整体重构批（见 TODO 结构债组）。
 
 ## 3. 测试（Testing）
 
@@ -281,7 +306,9 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 - AC10（§2.12）: engineering 模式 spawn eng-coder **不带 batchDoc** → throw（消息含纠正动作）；**带存在路径** → 通过且 child 任务输入含该路径；**带不存在路径** → throw（消息含 "(given path is not a readable file)" 后缀）。
 - AC11（§2.12）: 判据只到"参数在 + 路径可读"——**不校验内容/措辞**（不匹配模板、不生成、不判"已收口"）。
 - AC12（§2.12）: explore/plan/coder（普通模式）spawn 不要求 batchDoc——现行行为零变更；sync 与 async 两条路径均被门禁覆盖（校验在 buildSpawnChild）。
-- AC13（§2.12）: eng-coder 审计受限 schema 变体**不含** batchDoc 属性（delete 清单）。
+- AC13（§2.12）: eng-coder 审计受限 schema 变体**不含** batchDoc 属性（delete 清单——实现枚举照 `src/agent/setup.mjs` 实际清单 async/id/n/designToken/designId 追加）。
+- AC14（§2.11 点 2）: `src/` 内**无 `docs/batches/` 逻辑字面**（评审 #3）——源码全仓扫描该串仅出现在**错误/提示文案**中（§2.12 消息），无路径解析/默认位置引用。
+- AC15（§2.11 点 3 + §2.12 提示词同步）: `src/` 不生成/不校验批次档模板（无“已收口”类措辞匹配、无模板常量）；且 spawn 样例行含 `batchDoc=`（双端 `discipline-engineering.md` 锚句驻留——prompt 锚断言家族现有机制覆盖）。
 
 ### 3.2 用例表
 
@@ -315,7 +342,8 @@ explore / plan / coder（普通模式）**不适用**——行为零变更。
 | T24 | 边界：凭证不落文档巡检（慢层） | 全仓 md（docs/** + src/prompts/** + 根级变更记录）扫描值形态正则 `/(token\|designId)\s+[0-9a-f]{8}[0-9a-f:.-]*/i` | 零命中（参数名不匹配防误伤） | §2.7 F1/F2 |
 | T25 | 错误：eng-coder 无 batchDoc | engineering=true、token 合法、spawn 不带 batchDoc | throw /batchDoc is required/（含纠正动作） | FR20#9/§2.12 |
 | T26 | 错误：batchDoc 指向不存在路径 | batchDoc="docs/batches/none.md"（文件不存在） | throw，消息含 "(given path is not a readable file)" | FR20#9/§2.12 |
-| T27 | 正常：batchDoc 存在 | 先建临时批次档文件，spawn 带 batchDoc=<路径> | 通过；child 任务输入含 "Batch record (batchDoc): <abs>" | FR16/§2.11 |
+| T27 | 正常：batchDoc 存在 | 先建临时批次档文件，spawn 带 batchDoc=<路径> | 通过；child 任务输入含 "Batch record (batchDoc): <abs>" | FR16/FR17#5/§2.11 |
+| T25b | 错误：sync 路径缺 batchDoc（评审 #4） | engineering=true、token 合法、`async:false`、不带 batchDoc | 同样 throw（双路覆盖断言成真——校验在 buildSpawnChild） | AC12/§2.12 |
 | T28 | 边界：非 eng-coder 不受影响 | explore spawn 不带 batchDoc | 现行行为不变（不拒绝） | §2.12 |
 | T29 | 边界：审计受限变体 | setup 组装 eng-coder 审计通道 schema | properties 不含 batchDoc | AC13 |
 
