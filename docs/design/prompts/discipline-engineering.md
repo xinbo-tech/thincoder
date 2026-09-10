@@ -18,11 +18,8 @@
 
 ## 文档规范
 ### 设计文档模板细化（三层模板 + 方案选型对比 + 多实现面纪律）
-> 语境（2026-09-09——MAIN-DESIGN-ENHANCE）：主会话即 designer（designer 子代理已取消）——
-> 设计行为纪律（勘察/方案对比/预检/实践沉淀四维）以逐字锚句落 discipline-engineering.md（字节源 = 设计档
-> 逐字锚定文本 A1-A4——双端照抄）；本节 = 结构定义——三层模板细化、方案选型对比表、多实现面纪律。
-> 行为锚文本不在此复制（单一权威源——同一机制只在一处详述），锚登记与断言由 ENGINEERING-MODE
-> 锚纪律与各端 prompts 内容测试承载。
+> 主会话即 designer——设计行为纪律（勘察/方案对比/预检/实践沉淀四维）由下方「设计行为纪律四维」
+> 节承载；本节 = 结构定义——三层模板细化、方案选型对比表、多实现面纪律。
 
 #### 三层模板细化
 板块设计文档（docs/design/<TOPIC>.md——一板块一档、功能点不独立成文）按**三节 + 变更记录**组织；
@@ -47,7 +44,7 @@
 
 单一候选：显式声明「单方案——无对比」即豁免。
 
-#### 多实现面纪律（双端镜像——2026-09-09 修订：byte-identical 硬一致已废）
+#### 多实现面纪律（双端镜像）
 同一机制落多个实现面（如 CLI/VSC 双端 prompts 或文档镜像）时：
 1. **各端独立实现，语义同源**：双端各自的文本以其端原文为准——不做 byte-identical 硬一致、不加双端
    同步依赖（硬一致形成互相依赖——并发处理不利——已废）；一致由同源设计 + 各端独立语义锚断言守
@@ -79,11 +76,11 @@
   `Deferred` 适合 🟡/🔵 改进项或需要用户先拍板的 🔴——绝不是静默丢弃真缺陷的方式；未解决的 🔴 必须向用户呈现。
 - 轮次衰减：Round 2 验证前表 + 标记明显新问题；round 3+ 严格只验证前表（不猎新）。总共最多 5 轮。
   当 advisor 报告全清（无剩余 🔴），运行 `verify`。
-- 异步锚句（逐字随迁——原 engineering.md 评审节）：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**
+- 异步锚句：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**
   On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
 
 ## 实施委托结构化（任务书结构 + file 域语义）
-- 有规模的实施批次（多文件/跨模块/有已确认设计）默认由 coder 子代理实现——以设计文档为任务书 async spawn（§21 F-N1.5 2026-09-05 裁定）；小型/探索性/交互式变更留在主会话做。
+- 有规模的实施批次（多文件/跨模块/有已确认设计）默认由 coder 子代理实现——以设计文档为任务书 async spawn）；小型/探索性/交互式变更留在主会话做。
   能自己做也别自己做有规模的批次——隔离上下文才能打破自审盲区。
 - 每次委派都带任务书，包含：
   目标与为什么
@@ -91,14 +88,14 @@
   设计要点与禁止范围
   验收标准（机器可验证：命令、阈值、断言数——不要"做好点"）
   交付报告格式。
-  有规模委派缺这些字段是缺陷——coder 会重复勘察父代理已知的东西（§21 F-N1.6 2026-09-05 裁定；async 默认——若你的下一步依赖报告，结束回合让它到达（或声明 dependsOn）；传 `files` 供调度器串行化）。
-- **file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可（用户裁定 2026-09-10）**：
+  有规模委派缺这些字段是缺陷——coder 会重复勘察父代理已知的东西（async 默认——若你的下一步依赖报告，结束回合让它到达（或声明 dependsOn）；传 `files` 供调度器串行化）。
+- **file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可**：
   **files 声明只列实现者的写入域**（源、测试、设计文档文件）
   ——父侧维护文件（docs/TODO.md、CHANGELOG.md、checklist 族）不得列入；
   对账注记和 CHANGELOG 条目是父侧的职责，在 eng-coder 交付后落地。
   files 必须是文件级路径（每文件一条）。不支持目录声明——它们绕过冲突检测器，会被拒错。
 
-## 需求池攒批工作流（2026-09-03 · 用户裁定——低触发，用到时才读）
+## 需求池攒批工作流（低触发——用到时才读）
 单点流水线固定成本 ~40 分钟——被一个需求点独扛；批量把固定成本摊到多个点。攒批只改变"触发时机"，不改变"每点怎么做"。
 1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
 2. **Threshold reminder** — "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
@@ -113,7 +110,7 @@
 写/改设计文档（docs/design/）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：`node scripts/check-doc-width.mjs`（扫 docs/design/ 无 >300 单行）。判据权威源：`docs/design/README.md` 归属规则 6。
 
 ## 工具观条款
-### 搜索工具优先级（行为规则——2026-09-02，Bing 垃圾循环教训）
+### 搜索工具优先级（行为规则）
 - **任何搜索前先查工具表**：MCP 搜索工具（`*_web_search*` / `*_search_prime` 等）是技术验证和通用搜索的**首选**
 — `websearch`（Bing）只是**后备**（不可用：未配置，或调用失败）。
 - **`websearch` 连续两次返回垃圾/无关结果 → 立即切换**到 MCP 搜索工具或其他路径——不要死磕。不要重复同一查询。
