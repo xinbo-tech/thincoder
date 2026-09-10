@@ -78,7 +78,7 @@ docs/
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
 | 架构 | `design/ARCHITECTURE.md` | 权威源。`_archive/ARCHITECTURE-v2.md`（v2 草案，未启动） |
-| 需求与决策 | `design/REQUIREMENTS.md` | 需求讨论与决策记录（存量三层同档形态） |
+| 项目需求（定位/决策/远期） | `requirements/PROJECT.md` | 自原 `design/REQUIREMENTS.md` 迁入（2026-09-10 文档重组）——三层重排：总体需求/功能性需求/非功能性需求 |
 | 功能全览 | `design/FEATURES.md` | 基于代码现状梳理 |
 | 三观（提示词根基） | `design/PHILOSOPHY.md` | 所有提示词具体规则由此处推导 |
 | 会话 | `design/SESSION.md` | CLI 会话/存储权威 |

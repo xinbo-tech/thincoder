@@ -16,7 +16,7 @@
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
 | 架构 | `ARCHITECTURE.md` | 权威源。`ARCHITECTURE-v2.md`（v2 草案，未启动）已移 `_archive/` |
-| 需求与决策 | `REQUIREMENTS.md` | 需求讨论与决策记录 |
+| 需求与决策 | `requirements/PROJECT.md`（需求层——2026-09-10 迁出 design/） | 项目需求与决策记录 |
 | 功能全览 | `FEATURES.md` | 基于代码现状梳理 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
 | 方法论 | ~~`METHODOLOGY.md`~~ | 已退役（2026-09-10——PROMPT-SYSTEM §2.5 项目层收敛）：通用方法论骨干分拣入纪律层槽位文件（`src/prompts/discipline-engineering.md` / `discipline-normal.md` / `common.md`）——项目约定直接写 AGENTS.md；本档降为变更史记录保留 |

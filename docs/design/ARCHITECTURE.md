@@ -5,7 +5,7 @@
 
 ## 1. 定位与硬约束
 
-- 依据：`REQUIREMENTS.md`（需求决策记录）。
+- 依据：`docs/requirements/PROJECT.md`（项目需求——需求层）。
 - 硬约束：纯 `.mjs` / 无构建步骤 / **Node.js ≥ 24** / **零 npm 依赖**（仅 Node 标准库——`node:sqlite`、`fetch`、裸 ANSI）。
 
 ## 2. 设计原则
