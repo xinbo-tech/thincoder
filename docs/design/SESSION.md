@@ -18,6 +18,7 @@
 - 2026-09-06（§12——12.6/12.8 核销折叠；12.7 legacy v1 扩展同批实现）：会话目录残留 GC + 标题写契约 `{ok, reason}`，双端实现；裸 v1 `{hash}.json` 纳入冷 cwd 删除集（用户裁决）（机制见 §12）。
 - 2026-09-06（R19——§13.3 测试表折叠为验收方向）：跨会话历史检索设计落节——read_history 加 path/cwd 参数 + 检索族消歧总纲；round1 评审 1🔴+6🟡+3🔵 全采纳——**复审发起权在用户**（设计见 §13）。
 - 2026-09-07：本文档重写为当前态——格式正常化（无 >300 字符行、markdown 结构修正）、历史变更流水账折叠为本记录；活机制正文与逐字契约未改。
+- 2026-09-10（MODEL-SELECTION 批——连带改写）：§8 D-S1「无效」判据收窄（不含"候选外"）/ D-S2 候选改运行期拉取 / D-S3 兜底改渠道默认单值——机制权威见 `PROVIDER.md` §16。
 
 ---
 
@@ -221,15 +222,24 @@ _slot/_slotMtime 清空（切换后保存重新认领 manifest active——防�
 
 触发场景：会话保存时用的 provider A（或模型）已不存在，CLI 重进时 config 里已无 A——曾直接 throw → uncaughtException 报错退出、进不了 TUI。现改为引导 UI 重选。
 
-- **模型 = 显式复合 "provider:model"（MODEL-MERGE-SESSION）**：config 顶层 `defaultModel` 是**新会话起点**（会话槽恢复后即被槽值取代）；会话槽 `activeProvider`+`activeModel` 双字段恒非空（裁定 a）——恢复 = 槽值（F-4——不看 config）。config 的 activeProvider/activeModel/providers[].model 三旧层已删（老配置 load 时经 config-migrate.mjs 折中 C 迁移：model → models 种子 + defaultModel 复合 + 写回失败不阻断）。
-- **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失/无效（provider ∉ providers 或 model ∉ models[]）**不再抛错**——runtimeProvider 置空对象 `{}` + `providerInvalidReason`（models[] 是候选硬约束——严格双段解析见 model-ref.mjs parseModelRef——不复用旧 findProvider 宽松三态）；`findProvider` 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
+- **模型 = 显式复合 "provider:model"（MODEL-MERGE-SESSION）**：config 顶层 `defaultModel` 是**新会话起点**（会话槽恢复后即被槽值取代）；
+  会话槽 `activeProvider`+`activeModel` 双字段恒非空（裁定 a）——恢复 = 槽值（F-4——不看 config）。
+  config 的 activeProvider/activeModel 两旧层已删（老配置 load 时经 config-migrate.mjs 迁移：`models[]` / active* 老形态 → 单值默认模型 +
+  defaultModel 复合 + 写回失败不阻断——`PROVIDER.md` §16 M7；2026-09-10 起 `providers[].model` 回归为**单值默认模型**字段）。
+- **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失/无效**不再抛错**——runtimeProvider 置空对象 `{}` + `providerInvalidReason`
+  （"无效"判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含"候选外"**：候选硬约束已随清单 provider 化废除，见 `PROVIDER.md` §16；
+  严格双段解析见 model-ref.mjs parseModelRef——不复用旧 findProvider 宽松三态）；`findProvider` 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
   `make-agent.mjs` `assembleAgent` 末尾调用 `validateProvider(agent)`（幂等：有效时清标记；**判据不变**——仅 model/baseURL/name 缺失判 invalid——spec 表不是 allowlist）——`provider.model`/`baseURL` 缺失 → 打 `agent._providerInvalid = true` + `_providerInvalidReason`（defaultModel 原因优先覆盖——更有指导性）。
   - **model 无效判据**：仅当解析后 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（自定义端点模型不在 MODEL_SPECS 是常态；spec 表不是 allowlist；未知模型 = 受支持场景）。
   - 不抛错、不退出：空 provider 不再流入 runAgent——TUI 路径在 startTUI 前置 `agent.provider = null`，由启动逻辑触发模型选择。
-- **D-S2 TUI 重选流程**：`startTUI` 首帧前检查 `_providerInvalid`（或 `!agent.provider`）→ 先弹模型选择 picker（`openModelPicker`——会话级两级面：L1 provider → L2 providers[].models[] 候选——候选外拒）→ 选定后继续正常启动（`promptProviderIfInvalid(agent, openModelPicker, pushLine)`）。
+- **D-S2 TUI 重选流程**：`startTUI` 首帧前检查 `_providerInvalid`（或 `!agent.provider`）→ 先弹模型选择 picker（`openModelPicker`——会话级两级面：L1 provider → L2 运行期拉取候选（清单 provider 化，2026-09-10——`PROVIDER.md` §16 M2））→ 选定后继续正常启动（`promptProviderIfInvalid(agent, openModelPicker, pushLine)`）。
   取消（Esc）→ **仍进入 TUI** + 提示行——引导 A（F-6）：空槽（data:null）+ defaultModel 未设 + 有渠道 → 提示 /config → 默认模型（新会话起点）；无渠道 → 原 /model 提示。绝不因无 provider 拒绝进入。
-- **D-S3 恢复优先级（applySession 两支 + 删旧支）**：① 槽 `activeProvider` 在 providers[] 存在 → provider/model **按槽值设**（legacy 槽 activeModel null/缺省 = 无 override → 回该渠道首候选 models[0]）+ 重算 compactThreshold（auto 时——阈值跟模型走——原 bin 的 switched 分支收拢进 applySession）+ 返回 switched；② 槽 provider 没了 → **静默保持现状**（不报错不纠正——config defaultModel 有效则有效——**仅当两方都无效**才弹）；applySession 后 bin 复验一次 `validateProvider`（会话中的有效 provider 修复 defaultModel 错误后清除标记）。
-  **删旧支**："activeModel==null 清 stale override 回渠道默认"——前提 = 渠道默认字段——已随三旧层删除消失——双字段恒非空故不可能触发。
+- **D-S3 恢复优先级（applySession 两支 + 删旧支）**：① 槽 `activeProvider` 在 providers[] 存在 → provider/model **按槽值设**
+  （legacy 槽 activeModel null/缺省 = 无 override → 回该渠道默认模型 `providers[].model`——2026-09-10 起为单值）
+  + 重算 compactThreshold（auto 时——阈值跟模型走——原 bin 的 switched 分支收拢进 applySession）+ 返回 switched；
+  ② 槽 provider 没了 → **静默保持现状**（不报错不纠正——config defaultModel 有效则有效——**仅当两方都无效**才弹）；
+  applySession 后 bin 复验一次 `validateProvider`（会话中的有效 provider 修复 defaultModel 错误后清除标记）。
+  **删旧支**："activeModel==null 清 stale override 回渠道默认"——双字段恒非空（槽写入恒非空）故不可能触发；渠道兜底已由 D-S3 ① 的单值回落（`providers[].model`）承担。
 - **D-S4 headless**（`thincoder chat`）：遇无效 defaultModel → `console.error` 可读消息（文案引 defaultModel + /config → 默认模型 指引）+ `exitSoon(1)`——不弹 UI、明确退出码。
 - **关键决策**：检测后置 provider=null（空对象流入下游是崩溃源——让选择流程从干净状态开始）；校验点收敛到 assembleAgent 之后一处（TUI/chat 两路径同源）；否决了：启动即退出打印"请编辑 config"（用户要 UI 重选）、静默回退第一个可用 provider（可能 unaware 换错模型）、自动用 defaultModel 覆盖会话槽模型（用户上次明确选的模型不能静默丢）。
 
