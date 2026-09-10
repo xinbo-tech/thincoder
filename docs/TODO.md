@@ -75,8 +75,9 @@
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
 
 - [ ] **文档目录结构重组**（2026-09-10 用户裁定——设计已批准）——实施档 `docs/design/DOC-REORG.md`。
-  **文档面已实施**（35 档入 `_archive/` + 建 `requirements/` + 地图上移 `docs/README.md` + 引用更新；
-  L2 = 267 pass / 2 fail——2 红为设计预告项，待批尾 T2 解耦）；**批尾代码项 T1-T4 待做**（advisor 地图路径 / 测试解耦 / 注释去路径 / 索引重建）。
+  **已全部完成**（文档面 + 批尾 T1-T5：35 档入 `_archive/`、`requirements/` 34 档、地图唯一 `docs/README.md`、
+  advisor 注入改指+fallback、测试解耦 2 红归零、L2 **280/280 全绿**；批档入档冻结）。
+  后续项：VSC 仓镜像、T6 扫描域（待裁）、注释扫尾——见下两条与技术分组
 - [ ] **check-doc-width 扫描域缺口**（2026-09-10 DOC-REORG 实施发现）——`scripts/check-doc-width.mjs` 默认域 = `docs/design/`，不覆盖 `docs/requirements/` / `docs/README.md` / `docs/TODO.md`——宽度纪律对新目录无机械约束。DOC-REORG §10.3 提议新增批尾项 T6（域改 `docs`）。**待用户裁**。
 
 - [ ] **评审注入路径硬编码项目约定**（2026-09-10 用户裁定——**待设计**）——`src/advisor/messages.mjs:245-254` 硬编码文档地图路径；<br>  `:236/:349` 硬编码项目根 `METHODOLOGY.md`。用户项目布局不同即**静默跳过** → 评审维度无声消失（不可见）。<br>  方向：配置项 / AGENTS.md 项目自述 / 保留探测作 fallback。**归属 = `docs/requirements/ADVISOR-CONVERGENCE.md` §5.1**。

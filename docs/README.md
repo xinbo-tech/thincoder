@@ -144,7 +144,7 @@ docs/
 | 工具移除（历史） | `_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`_archive/SLEEP-REMOVAL-TUNING.md` | sleep 删除被 wait_for（TOOLS.md §16）取代 |
 | 提示词架构（历史） | ~~`_archive/PROMPT-DECOUPLING.md`~~ | 已被 PROMPT-SYSTEM 蓝图 + 施工①②③取代 |
 | 路线图/评估/竞评（历史） | `_archive/ROADMAP-0.9.0.md`、`_archive/EVALUATION.md`、`_archive/COMPETITIVE-CLI-2026.md`、`_archive/KIMI-CODE-PROMPT-ANALYSIS.md`、`_archive/TTSR-ANALYSIS.md`、`_archive/EDIT-TOOL-*.md` | 时点数据/已被取代——勿引用为现状 |
-| 文档基建（本批） | `design/DOC-REORG.md` | 2026-09-10 文档目录结构重组施工设计（批尾入档） |
+| 文档基建（本批） | `_archive/DOC-REORG.md` | 2026-09-10 文档目录结构重组施工设计——**已交付入档**（批尾 T1-T5 同日完成） |
 | 在途设计档（未实施） | `design/POOL-CONFIG-UNIFIED.md`、`design/QUICKFIX-BATCH-3.md`、`design/SUBAGENT-ID-COUNTER-AGENT.md` | 设计待评审——未实施，不适用冻结 |
 
 ### 4.1 需求层文档（`requirements/`）

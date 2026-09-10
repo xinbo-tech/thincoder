@@ -1,3 +1,6 @@
+> **变更史——正文冻结**（2026-09-10 文档重组批）：本档为一次实施批的过程记录或已被取代的旧权威档，
+> 内容 as-of 交付时点，**不作为现状依据**。现状见 `docs/README.md` 地图指向的板块权威档。
+
 # 文档目录结构重组（DOC-REORG——施工设计）
 
 > 板块：文档基建（`docs/` 目录结构与文档规范）。
@@ -342,6 +345,25 @@ ENOENT。用户裁定"红就红"——批尾以**解耦**方式根治（§9.4 T2
 - **既有格式债（非本批引入）**：checker 现报 **4 文件 / 9 行**超宽——`AGENT-LOOP.md`×3、`SESSION.md`×3、
   `SUBAGENT-ID-COUNTER-AGENT.md`×1、`TUI.md`×2。本批未动（提议另立清理项）。
 
+### 10.4 批尾代码面实施记录（eng-coder 交付——clean，L2 280/280 全绿）
+
+| 项 | 结果 |
+|---|---|
+| T1 advisor 地图注入 | **Done**——优先 `docs/README.md` + 旧路径 fallback（候选列表）；注释同步 |
+| T2 测试解耦 | **Done**——A1/A3 断言源 → `src/prompts/discipline-engineering.md`（真字节源），断言串不变；**2 红归零** |
+| T3 注释去路径 | **Done**——15 处（5 src + 10 test）纯注释，零逻辑改动 |
+| T4 索引核查 | **Done（无需动作）**——`.thincoder/index/` 是 DB 化前死产物（mtime 2026-07-29，全仓零读写点）；活体索引 `~/.thincoder/memory.db` 启动增量同步自动收敛 |
+| T5 过渡副本删除 | **Done**——`docs/design/README.md` 已删；docs/ 下 README 唯一 |
+| VSC 镜像 | **Not done（按用户裁定"只 CLI 仓"延后）**——设计 T1 行"（+VSC 镜像）"与 §5.4 冲突，以 §5.4/用户裁定为准；VSC 侧重组时一并做 |
+
+### 10.5 批尾移交父侧的跟进项
+
+1. 真断链 1 处：`src/tui/wrapped-spawn.mjs:1` 注释指向已入档的 TUI-STDERR-CAPTURE.md；另有约 12 处带 `docs/design/` 前缀的注释（指现行档）——扫尾项
+2. `test/prompts-async-guidance.test.mjs:186,193` 仍以硬路径读 ESCALATE/AGENT-LOOP（现行档未搬故不红）——后续解耦项
+3. `messages.mjs`（402 行）、`file.mjs`（470）、`subagent-actions.mjs`（470）超 300 行——既有结构债
+4. 死产物目录 `.thincoder/index/` 登记删除
+5. T6（check-doc-width 扫描域）——**未做，待用户裁**
+
 ## 变更记录
 
 - 2026-09-10：建档（勘察①②双份报告 + 用户四项裁定：只 CLI 仓 / 只动结构 / METHODOLOGY 入档修引用 /
@@ -353,3 +375,5 @@ ENOENT。用户裁定"红就红"——批尾以**解耦**方式根治（§9.4 T2
   新权威目标更正（不得指 docs/README.md §3.5）、问题陈述 #1 措辞按实测更正。
 - 2026-09-10：**用户批准——文档面已实施**（§10 实施记录：35 档搬迁 + 地图三步 + 引用更新 +
   顺手修；偏差 D1-D3 已落档；发现 check-doc-width 扫描域缺口——提请新增批尾项 T6）。
+- 2026-09-10：**批尾代码面已实施并收口**（§10.4：T1-T5 全 Done——eng-coder clean，L2 280/280 全绿；
+  §10.5 跟进项 5 条移交父侧）。**本批收口，本档入档冻结（AC14 ✓）**。
