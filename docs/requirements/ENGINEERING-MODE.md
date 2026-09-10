@@ -340,7 +340,7 @@ PROMPT-SYSTEM 状态行与施工档打架、METHODOLOGY 已退役而产品仍拿
 | B4 | eng-designer → 需求体系 | 本批需求 | 直接编辑（**写稿面**） | 需求条目（**带判定句**）+ 全体系对账修正 | `requirements/<板块>.md` |
 | B5 | eng-designer → 需求池 | todo 项状态推进 | 直接编辑（**提示词规定的动作**；不在 `files` 声明） | 状态更新 | `docs/TODO.md` 需求池组 |
 | B6 | eng-designer → 批次档 §2 | **批次任务** | **追加**（不重写 §1） | 本批覆盖条目 + 不在本批条目 + 受影响文件 + 验收标准 | `batches/<批>-<主题>.md` §2 |
-| B7 | eng-designer → 设计 | 设计 | 直接编辑（写稿面） | 设计档（**产出要求 9 项**） | `design/<板块>.md` |
+| B7 | eng-designer → 设计 | 设计 | 直接编辑（写稿面） | 设计档（**产出要求 8 项**——口径与 FR19:78 一致） | `design/<板块>.md` |
 | B8 | eng-designer → 主 agent | —（交回） | **最后一条消息**（报告） | 改了哪几处 / 设计在哪 / 自检结果 / 打回点 | 报告不落档；主 agent 核（**第一关**） |
 | B9 | 主 agent → advisor | documents 清单（**设计档 + 需求档 + 批次档§2 批次任务**）+ object 声明（type/target/status/reason/exclude） | advisor **参数**（**发起权在用户**） | 发现表 + VERDICT + token/designId | **凭证入会话槽，不落文档** |
 | B10 | 用户 → 主 agent | 显式 sign-off / 逐条拍板 | 对话 | 批准（或打回） | — |
