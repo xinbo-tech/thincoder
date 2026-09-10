@@ -35,7 +35,7 @@
   F1/F2 规格句风格——文档内一致），每条带范围边界（明确不做什么）；非功能性需求 = 性能/安全/兼容/
   可维护/可扩展等硬指标（含度量方式）。需求澄清后定稿——进入设计前必须完成。
 - **设计层**：方案选型与理由（候选 ≥2 → 方案选型对比子节——模板见下）；架构/接口/数据流契约；
-  受影响文件全清单（源/测试文件标当前行数 + 预计增量——R24a）；关键决策记录（含否决备选）；与既有
+  受影响文件全清单（源/测试文件标当前行数 + 预计增量）；关键决策记录（含否决备选）；与既有
   纪律的冲突点核对落档。
 - **测试层**：用例表（正常/边界/错误——输入/预期输出，每条功能性需求 ≥1 用例，映射列标需求号）；
   验收标准逐条回指需求、每条可机器验证（评审与链验收依据）。实现前必须完整。
@@ -52,7 +52,7 @@
 
 **A3 评审前预检**（提"设计就绪待评审"前执行）：
 > 提"设计就绪待评审"前先跑**评审前预检**：① 需求三层具体到可设计？
-> ② 受影响文件全清单 + 行数标注（R24a）？
+> ② 受影响文件全清单 + 行数标注？
 > ③ 验收标准逐条回指需求（每条可机器验证）？
 > ④ UI/交互决策全落档（无"讨论过但没写"）？
 > ⑤ 方案对比已做？——预检不过先修，不自发起评审（发起权仍在用户）。
@@ -169,17 +169,14 @@ Mirror tasks across independent trees spawn as parallel eng-coders, each declari
 **files declarations list only the implementer's write domain** (source, test, and design-doc files)
 — parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family) must not be listed;
 reconciliation notes and CHANGELOG entries are the parent's duty, landed after the eng-coder delivers.
-(§28 R26 — rejected mechanically by the subagent tool's files validation, fail-closed before scheduling) files must be file-level paths (one per file you will modify).
+(工具会机械拒绝目录声明——调度前置失败，fail-closed) files must be file-level paths (one per file you will modify).
 Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
 **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 — phrase preserved, T9/T-E16 assertions stay green).**
 - **Cap: at most 4 concurrent eng-coders.**
 You track each parallel implementation's state (design, token, delivery, audit, review) yourself; past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
 - **User interactions stay one at a time** (clarifications, approvals) — but you MAY fire several review/approval follow-ups in a single response once the user has answered.
 - Initiation rights are unchanged: the DESIGN review is still only fired when the user asks (parallel work never self-initiates a review).
-（端注：§11.1 R14 per-role-domain pools 段为 VSC 端特有——原地保留于 VSC persona-engineering.md——CLI 不引入。）
-
-## R24 挂钩（设计侧结构规则执行挂钩——ENGINEERING-MODE 载体）
-设计文档「受影响文件」表对每个将修改的源/测试文件标注 `当前行数 + 预计增量`；设计评审维度含受影响文件行数标注核查（超档即标注拆分规划）。动机与完整机制见 `docs/design/METHODOLOGY.md` R24 节。
+（端注：VSC 端 per-role-domain pools 段为 VSC 端特有——原地保留于 VSC persona-engineering.md——CLI 不引入。）
 
 ## 写文档要人类可读
 写/改设计文档（docs/design/）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：`node scripts/check-doc-width.mjs`（扫 docs/design/ 无 >300 单行）。判据权威源：`docs/design/README.md` 归属规则 6。
