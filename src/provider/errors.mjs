@@ -1,7 +1,7 @@
 /**
  * provider/errors.mjs — 错误分类与流规则编译族（2026-09-05 module-split：core.mjs
  * 557 > 500 硬限——parseRetryAfter/isNonRetryableError/betaBaseURL/compileStreamRules
- * verbatim 迁入，语义零变；core.mjs import 回（chat/listModels 调用点零改）。
+ * verbatim 迁入，语义零变；core.mjs import 回（chat 调用点零改）。
  * 注：retry.mjs（anthropic/google/responses 通道）自 2026-09-08 起导入本文件的
  * parseRetryAfter/isNonRetryableError（ENG-SESSION-PROVIDER-CLEANUP D2.2/D2.4 去重——
  * 单实现；早先的"循环依赖回避"复制已随依赖方向实测消解）。
@@ -88,14 +88,14 @@ export class ProviderError extends Error {
 }
 
 /**
- * F-1 (MODEL-400-FIX — MODEL-400-FIX.md) 根因兜底——请求体组装前断言：渠道裸克隆
- * （`{...渠道}`——MODEL-MERGE schema：渠道无 model 字段，只带 models[] 候选）未重派生 .model 时
- * provider.model 为 undefined/null——JSON.stringify 会丢 undefined 键 → 无 model 请求 → serde 400。
+ * F-1 (MODEL-400-FIX) 根因兜底——请求体组装前断言：渠道裸克隆（`{...渠道}`——渠道只带
+ * 默认单值 `model`，克隆链未重派生 `.model` 时）provider.model 为 undefined/null——
+ * JSON.stringify 会丢 undefined 键 → 无 model 请求 → serde 400。
  * fail-fast 报可读错误（带 provider 名 + 修复线索），不发病体。core.mjs chatImpl openai body 组装
  * 前调用（单行——core.mjs 500 行硬限）。
  */
 export function assertProviderModel(provider) {
   if (!provider.model) {
-    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (MODEL-MERGE schema: channels carry models[] not model)")
+    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (set providers[].model — the channel default model)")
   }
 }

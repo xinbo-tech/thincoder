@@ -3,9 +3,12 @@
  * selection (MODEL-MERGE-SESSION 拆分产物——/model 两级面自 pickers.mjs 迁出——评审 #9
  * 规模注：拆出面 ~370 行——含管理流——迁入后 pickers.mjs ≤450)。
  *
- * 语义（F-3/F-7 裁定）：selectModel 写**会话槽**（agent 内存态 + saveSession）——不写
- * config（/model 不再串扰全局默认——根治）。候选硬约束：二级列表 = providers[].models[]
- * 成员；候选外（含裸 provider 直给、API fetch 建议）一律拒——显式 p:m + models[] 成员。
+ * 语义（2026-09-10 MODEL-SELECTION v2）：selectModel 写**会话槽**（agent 内存态 + saveSession）——
+ * 不写 config（/model 不再串扰全局默认——根治）。候选 = **运行期拉取**（`GET /models`——M2；
+ * 拉到的行直接可选，不再有「候选/建议」两组）；显式 `provider:model` 一律放行（M4——仅[空值/
+ * 裸值/未知 provider]无效）。切换成功回显规格来源（M6）。渠道默认模型 = `providers[].model`
+ * 单值（M3——显示回退/播种由此读取）。配置写入面（加渠道 / 设 key）探一次 `/models`（M9——
+ * 探不通标「不可用」+ 明示原因，不阻断保存）。
  * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变。
  * F-4 (ISSUE-FIX-BATCH)：removeProviderFlow 级联清理——删渠道同步清 consultModels/
  * subagentModels/advisor.provider 悬挂引用（cascadeRemoveProvider——文件尾导出）。
@@ -14,33 +17,14 @@
  *      闭包入参使用，不反向 import——环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
-import { PROVIDER_PRESETS as PRESETS, providerSpec, firstCandidate } from "../config.mjs"
+import { PROVIDER_PRESETS as PRESETS, providerSpec, specMatch } from "../config.mjs"
 import { saveSession } from "../session.mjs"
+import { getProviderModels, probeChannelModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
 
 /** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot } */
 export function createModelPicker(ctx) {
   const { agent, state, pushLine, persistRaw, askQuestion, maskKey, showPicker, closePicker, renderPickerLines } = ctx
   const { ansi, C } = ctx
-
-  /** Strip known version/date suffixes to get the "series" name of a model.
-   *  e.g. "qwen-max-latest" → "qwen-max", "qwen-max-2024-09-19" → "qwen-max" */
-  function modelSeries(name) {
-    return name
-      .replace(/-latest$/, "")
-      .replace(/-\d{4}-\d{2}-\d{2}$/, "") // date suffix like -2024-09-19
-      .replace(/-\d{8}$/, "")              // date suffix like -20240919
-  }
-
-  /** Dedupe model list: group by series, keep shortest name per group. */
-  function dedupeModels(models) {
-    const groups = new Map()
-    for (const m of models) {
-      const series = modelSeries(m)
-      const existing = groups.get(series)
-      if (!existing || m.length < existing.length) groups.set(series, m)
-    }
-    return [...groups.values()].sort()
-  }
 
   /** entry 唯一标识：异步更新 entries 后按它恢复选中项 */
   function entryKey(e) {
@@ -59,10 +43,18 @@ export function createModelPicker(ctx) {
     return providerConfig.apiKey
   }
 
-  /** 渠道候选显示值：无候选渠道显 "(no candidates)" */
-  function candidatesLabel(p) {
-    const n = p?.models?.length ?? 0
-    return n === 0 ? "(no candidates)" : firstCandidate(p)
+  /** 渠道默认模型显示值（M3③：无默认模型显 "(no default model)"——替代旧 "(no candidates)"）。 */
+  function defaultModelLabel(p) {
+    return p?.model ? p.model : "(no default model)"
+  }
+
+  /** 异步更新 entries 后的选中项恢复（selKey 命中则回原位，否则钳位）。 */
+  function restoreSelection(entries, selKey) {
+    const pk = state.picker
+    if (!pk) return
+    const itemRows = entries.filter((e) => e.type === "item")
+    const restored = selKey ? itemRows.findIndex((e) => entryKey(e) === selKey) : -1
+    pk.index = restored >= 0 ? restored : Math.min(pk.index, Math.max(0, itemRows.length - 1))
   }
 
   /** Level 1: provider list（/model 入口——session 复合两级面）。 */
@@ -91,7 +83,7 @@ export function createModelPicker(ctx) {
     }
   }
 
-  /** Level 2: model list for a specific provider. Returns true if a model was selected. */
+  /** Level 2: model list for a specific provider（M2——候选 = 运行期拉取）。返回 true = 已选定模型。 */
   async function openModelListForProvider(providerName) {
     const providerConfig = agent.providers.find((p) => p.name === providerName)
     if (!providerConfig) return false
@@ -103,10 +95,9 @@ export function createModelPicker(ctx) {
     const current = currentModel ? items.findIndex((e) => e.model === currentModel) : -1
     const picked = showPicker(`${providerName} models`, entries, { defaultIndex: Math.max(0, current) })
 
-    // Async fetch models in background — 仅作候选建议辅助（加入候选需显式落 config——F-7）
-    fetchSuggestions(providerName, providerConfig, entries).catch((err) => {
-      pushLine(`[model] fetch models failed: ${err.message}`, C.error)
-    })
+    // 进入 L2 即触发拉取（会话缓存 TTL 60s——失败不缓存；失败态在 header + 提示行展示）
+    loadSessionModels(providerName, providerConfig, entries)
+      .catch((err) => pushLine(`[model] fetch models failed: ${err.message}`, C.error))
 
     const e = await picked
     if (!e) return false // Esc → back to provider list
@@ -115,11 +106,6 @@ export function createModelPicker(ctx) {
       return true
     }
     if (e.action === "keep") return true // 当前会话模型行——保持（无写）
-    if (e.action === "suggest") {
-      // 候选外拒（fetch 建议——models[] 外——显式落 config 才能成为候选）
-      pushLine(`"${e.model}" 不在 ${providerName} 的候选 models[] 中——候选加入需显式落 config（编辑 ${providerConfig.name} 的 models[] 或经 /config 全量查看）`, C.error)
-      return false // 留在 L1（未选——可再进 L2）
-    }
     return false
   }
 
@@ -128,18 +114,19 @@ export function createModelPicker(ctx) {
     const entries = []
     for (const p of agent.providers) {
       const active = p.name === agent.activeProvider
-      const shown = active ? (agent.activeModel ?? candidatesLabel(p)) : candidatesLabel(p)
+      const shown = active ? (agent.activeModel ?? defaultModelLabel(p)) : defaultModelLabel(p)
       const marker = active ? "●" : ""
       const note = active ? " ← session" : ""
       const keyStatus = p.apiKey ? "" : " (no key)"
-      const ctxTag = ` (ctx ${fmtContextK(providerSpec({ ...p, model: firstCandidate(p) }).context)})`
+      const unavailable = p._unavailable ? " (不可用)" : ""
+      const ctxTag = ` (ctx ${fmtContextK(providerSpec(p).context)})`
       entries.push({
         type: "item",
         text: `${p.name.padEnd(12)} ${shown}${ctxTag}${note}`,
         action: "open-models",
         provider: p.name,
         marker,
-        note: `${p.baseURL}${keyStatus}`,
+        note: `${p.baseURL}${keyStatus}${unavailable}`,
       })
     }
     entries.push({ type: "header", text: "Management" })
@@ -150,7 +137,7 @@ export function createModelPicker(ctx) {
     return entries
   }
 
-  /** Level 2 entries（/model 会话面——候选硬约束）：models[] 候选 + 建议位（fetch——候选外拒）。 */
+  /** Level 2 entries（/model 会话面——候选运行期拉取）：当前会话行 + 候选区（拉取填充）。 */
   function buildModelEntriesForProvider(providerName, providerConfig) {
     const entries = []
     const sessionProvider = providerName === agent.activeProvider
@@ -159,25 +146,45 @@ export function createModelPicker(ctx) {
       entries.push({ type: "header", text: `Current (session): ${sessionModel}` })
       entries.push({ type: "item", text: `${sessionModel}  ← keep`, action: "keep", provider: providerName, model: sessionModel })
     }
-    const models = Array.isArray(providerConfig.models) ? providerConfig.models : []
-    entries.push({ type: "header", text: `Candidates (config models[] — ${models.length})` })
-    if (models.length === 0) {
-      entries.push({ type: "item", text: "(no candidates — models[] 为空；加入候选需显式落 config)", action: "none" })
-    }
-    for (const m of models) {
-      if (m === sessionModel) continue // current row above 已列
-      entries.push({ type: "item", text: m, action: "switch", provider: providerName, model: m })
-    }
-    entries.push({ type: "header", text: "Suggestions (API fetch — models[] 外需先落 config)" })
+    entries.push({ type: "header", text: "Available models (loading…)" })
     return entries
   }
 
+  /** 会话面拉取（M2）：候选 = 拉取结果直接可选（会话面提升到槽位面语义）；归并后并入。
+   *  失败：header 标 `(fetch failed: …)` + 一行失败消息本体（M8 长句——该渠道不可选）。 */
+  async function loadSessionModels(providerName, providerConfig, entries) {
+    let selKey = null
+    try {
+      const models = await getProviderModels(providerConfig)
+      if (state.picker?.entries !== entries) return // picker closed or changed
+      const itemRows = entries.filter((e) => e.type === "item")
+      selKey = itemRows[state.picker.index] ? entryKey(itemRows[state.picker.index]) : null
+      const listed = new Set(itemRows.map((e) => e.model).filter(Boolean))
+      const rows = dedupeModels(models).filter((m) => !listed.has(m))
+      const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
+      if (headerIdx >= 0) {
+        entries[headerIdx].text = `Available models (${rows.length} — type to filter)`
+        entries.splice(headerIdx + 1, 0, ...rows.map((m) => ({
+          type: "item", text: m, action: "switch", provider: providerName, model: m,
+        })))
+      }
+    } catch (error) {
+      if (state.picker?.entries !== entries) return
+      const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
+      if (headerIdx >= 0) entries[headerIdx].text = `Available models (fetch failed: ${sliceByWidth(error.message, 30)})`
+      pushLine(modelListFailureText(error), C.error)
+    }
+    restoreSelection(entries, selKey)
+    renderPickerLines()
+  }
+
   /** Level 2 entries（槽位面——/submodel + /config consult 池——advisor/subagent 覆盖语义
-   *  独立不受 models[] 约束——红线零改）：当前复合行 + fetch 建议可直接选（写 agent.* 自由串）。 */
+   *  独立不受清单约束——红线零改）：当前行 + 拉取建议可直接选（写 agent.* 自由串）。 */
   function buildSlotEntriesForProvider(providerName, providerConfig) {
     const entries = []
     const sessionProvider = providerName === agent.activeProvider
-    const currentModel = sessionProvider ? (agent.activeModel || (providerConfig.models?.[0] ?? "")) : (providerConfig.models?.[0] ?? "")
+    const fallback = providerConfig.model ?? ""
+    const currentModel = sessionProvider ? (agent.activeModel || fallback) : fallback
     entries.push({ type: "header", text: "Current model" })
     if (currentModel) {
       entries.push({ type: "item", text: currentModel, action: "switch", provider: providerName, model: currentModel })
@@ -186,58 +193,16 @@ export function createModelPicker(ctx) {
     return entries
   }
 
-  /** Async fetch: append fetched models NOT in models[] as non-selectable suggestion rows */
-  async function fetchSuggestions(providerName, providerConfig, entries) {
-    const { listModels } = await import("../provider/index.mjs")
-    let selKey = null
-    try {
-      const models = await listModels(
-        { baseURL: providerConfig.baseURL, apiKey: getApiKey(providerConfig) ?? "" },
-        { signal: AbortSignal.timeout(10000) }
-      )
-      if (state.picker?.entries !== entries) return // picker closed or changed
-      const itemRows = entries.filter((e) => e.type === "item")
-      selKey = itemRows[state.picker.index] ? entryKey(itemRows[state.picker.index]) : null
-      const candidates = new Set(Array.isArray(providerConfig.models) ? providerConfig.models : [])
-      const suggestions = dedupeModels(models).filter((m) => !candidates.has(m))
-      const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Suggestions"))
-      if (headerIdx >= 0) {
-        entries[headerIdx].text = suggestions.length
-          ? `Suggestions (API — ${suggestions.length}；models[] 外——选择会被拒——先落 config 为候选)`
-          : `Suggestions (API — all fetched models already in candidates)`
-        entries.splice(headerIdx + 1, 0, ...suggestions.map((m) => ({
-          type: "item", text: m, action: "suggest", provider: providerName, model: m,
-        })))
-      }
-    } catch (error) {
-      if (state.picker?.entries !== entries) return
-      const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Suggestions"))
-      if (headerIdx >= 0) {
-        entries[headerIdx].text = `Suggestions (fetch failed: ${sliceByWidth(error.message, 30)})`
-      }
-    }
-    // Restore selection (index 按 entries 重算——rebuild 内会再按 filter 收敛)
-    const pk = state.picker
-    if (pk) {
-      const itemRows = entries.filter((e) => e.type === "item")
-      const restored = selKey ? itemRows.findIndex((e) => entryKey(e) === selKey) : -1
-      pk.index = restored >= 0 ? restored : Math.min(pk.index, Math.max(0, itemRows.length - 1))
-    }
-    renderPickerLines()
-  }
-
   /** F-3 /model 纯会话级：写槽（agent 内存态 + saveSession）——绝不写 config。
-   *  候选硬约束（F-1）：model 必须是该 provider models[] 成员——裸 provider/候选外 → throw（显式 p:m）。 */
+   *  放行语义（M4）：仅未知 provider 拒——显式 p:m 一律放行（候选外/多冒号不再拒）。 */
   async function selectModel(item) {
     closePicker()
     const target = agent.providers.find((pp) => pp.name === item.provider)
     if (!target) {
       throw new Error(`Unknown provider: ${item.provider}`)
     }
-    const models = Array.isArray(target.models) ? target.models : []
-    if (!models.includes(item.model)) {
-      const shown = models.length ? `(models[]: ${models.join(", ")})` : "(models[] 为空——渠道无候选)"
-      throw new Error(`"${item.model}" 不在 ${item.provider} 的候选 ${shown} 中——/model 只接受 provider:model 且 model ∈ models[]（候选外拒——F-1）；加入候选需显式落 config`)
+    if (!item.model) {
+      throw new Error(`Missing model name for provider: ${item.provider}`)
     }
     // 内存态（agent 会话运行时）——不触碰 config
     agent.activeProvider = target.name
@@ -250,14 +215,22 @@ export function createModelPicker(ctx) {
     }
     // 写会话槽（saveSession——槽双字段恒非空）——config 文件零写
     saveSession(agent)
+    // M6 切换回显：规格来源一行（DEFAULT 兜底 → 警示色 + /config 提示）
+    const { matched } = specMatch(agent.provider.model)
+    const spec = providerSpec(agent.provider)
+    pushLine(
+      matched
+        ? `Model: ${item.provider}:${item.model} — spec found (ctx ${fmtContextK(spec.context)} / out ${fmtContextK(spec.maxOutput)})`
+        : `Model: ${item.provider}:${item.model} — spec not found in MODEL_SPECS — default 128K ctx / 32K out; set context in /config to override`,
+      matched ? C.tool : C.error,
+    )
     if (!agent.provider.apiKey) {
       const selKey = await askQuestion(`Enter API key for ${item.provider} (leave empty to skip):`)
       if (selKey) await setProviderKey(item.provider, selKey)
     }
   }
 
-  /** Slot-bound picker: two-level provider → model selection that RETURNS { provider, model }
-  /** Slot-bound picker（/submodel + consult 池——红线：subagent/advisor 覆盖语义独立不受候选
+  /** Slot-bound picker（/submodel + consult 池——红线：subagent/advisor 覆盖语义独立不受清单
    *  约束）：两级 provider → model——fetch 建议可直接选（写 agent.* 自由串——provider:model
    *  或自由值——与 subagent 工具 model 参数同语义）。返回 { provider, model } 或 null。 */
   async function pickModelForSlot() {
@@ -266,7 +239,7 @@ export function createModelPicker(ctx) {
       if (!providers.length) return null
       const e = await showPicker("Select provider", providers.map((p) => ({
         type: "item",
-        text: `${p.name.padEnd(12)} ${candidatesLabel(p)}`,
+        text: `${p.name.padEnd(12)} ${defaultModelLabel(p)}`,
         action: "open-models",
         provider: p.name,
       })))
@@ -283,13 +256,14 @@ export function createModelPicker(ctx) {
     }
   }
 
-  /** Slot 面 fetch：模型建议直接并入可选行（旧 pickModelForSlot 语义——自由面）。 */
+  /** Slot 面 fetch：模型直接并入可选行（旧 pickModelForSlot 语义——自由面；槽位面零改——
+   *  仅随 M1 获得三 format 支持）。 */
   async function fetchSlotModels(providerName, providerConfig, entries) {
     const { listModels } = await import("../provider/index.mjs")
     let selKey = null
     try {
       const models = await listModels(
-        { baseURL: providerConfig.baseURL, apiKey: getApiKey(providerConfig) ?? "" },
+        { baseURL: providerConfig.baseURL, apiKey: getApiKey(providerConfig) ?? "", format: providerConfig.format },
         { signal: AbortSignal.timeout(10000) }
       )
       if (state.picker?.entries !== entries) return
@@ -308,22 +282,31 @@ export function createModelPicker(ctx) {
       const headerIdx = entries.findIndex((e) => e.type === "header" && e.text.startsWith("Available models"))
       if (headerIdx >= 0) entries[headerIdx].text = `Available models (fetch failed: ${sliceByWidth(error.message, 30)})`
     }
-    const pk = state.picker
-    if (pk) {
-      const itemRows = entries.filter((e) => e.type === "item")
-      const restored = selKey ? itemRows.findIndex((e) => entryKey(e) === selKey) : -1
-      pk.index = restored >= 0 ? restored : Math.min(pk.index, Math.max(0, itemRows.length - 1))
-    }
+    restoreSelection(entries, selKey)
     renderPickerLines()
   }
 
   // ═══ 渠道管理流（provider 级 config 写——语义不变——与 /model 会话选择分离）═══
 
+  /** M9 配置阶段准入探：探通 → 清标记；探不通 → 会话内存标「不可用」+ 明示原因（绝不落 config；
+   *  不阻断保存——条目已保存，仅标注）。 */
+  async function probeChannelFlow(cfg, label) {
+    const r = await probeChannelModels(cfg)
+    if (r.ok) {
+      delete cfg._unavailable
+      pushLine(`${label}: /models 可用（${r.list.length} 个模型可候选）`, C.tool)
+    } else {
+      cfg._unavailable = true
+      pushLine(`${label} 不可用 — ${r.message}`, C.error)
+    }
+    return r
+  }
+
   async function addProviderFlow() {
     const entries = [
       { type: "header", text: "Select a preset provider" },
       ...Object.entries(PRESETS).filter(([name]) => !agent.providers.some((p) => p.name === name))
-        .map(([name, p]) => ({ type: "item", text: `${name.padEnd(10)} ${p.desc ?? ""} (${firstCandidate(p)})`, name, kind: "preset" })),
+        .map(([name, p]) => ({ type: "item", text: `${name.padEnd(10)} ${p.desc ?? ""} (${p.model ?? ""})`, name, kind: "preset" })),
       { type: "header", text: "Other" },
       { type: "item", text: "Custom (manual config)", name: "__custom__", kind: "custom" },
     ]
@@ -343,18 +326,19 @@ export function createModelPicker(ctx) {
         { type: "item", text: "google", name: "google" },
       ])
       if (!format) return // Esc/取消 → 中止流程
-      const cfg = { name, baseURL, models: [model] }
+      const cfg = { name, baseURL, model }
       if (format.name === "anthropic" || format.name === "google") cfg.format = format.name
       else if (format.name !== "openai") return // 防御：未知格式（理论不可达——picker 枚举）
       await persistRaw((raw) => { raw.providers ??= []; raw.providers.push(cfg) }) // D-F5a 先盘后存
       agent.providers.push(cfg)
       const key = await askQuestion(`Enter API key for ${name} (skip if none):`)
-      if (key) await setProviderKey(name, key)
+      if (key) await setProviderKey(name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
+      await probeChannelFlow(cfg, name) // M9 准入探（加渠道配置写入面；保存已落——不阻断）
       return
     }
     const preset = PRESETS[se.name]
     if (!preset || agent.providers.some((p) => p.name === se.name)) return
-    const cfg = { name: se.name, baseURL: preset.baseURL, models: [...(preset.models ?? [])] }
+    const cfg = { name: se.name, baseURL: preset.baseURL, model: preset.model }
     if (preset.thinking) cfg.thinking = preset.thinking
     if (preset.reasoningEffort) cfg.reasoningEffort = preset.reasoningEffort
     if (preset.maxTokens) cfg.maxTokens = preset.maxTokens
@@ -363,7 +347,8 @@ export function createModelPicker(ctx) {
     await persistRaw((raw) => { raw.providers ??= []; raw.providers.push(cfg) }) // D-F5a 先盘后存
     agent.providers.push(cfg)
     const key = await askQuestion(`Enter API key for ${se.name} (skip if none):`)
-    if (key) await setProviderKey(se.name, key)
+    if (key) await setProviderKey(se.name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
+    await probeChannelFlow(cfg, se.name) // M9 准入探（加渠道配置写入面；保存已落——不阻断）
   }
 
   async function removeProviderFlow() {
@@ -371,7 +356,7 @@ export function createModelPicker(ctx) {
     if (!candidates.length) return
     const se = await showPicker("Remove Provider", [
       { type: "header", text: "Select provider to remove" },
-      ...candidates.map((p) => ({ type: "item", text: `${p.name} (${candidatesLabel(p)})`, name: p.name })),
+      ...candidates.map((p) => ({ type: "item", text: `${p.name} (${defaultModelLabel(p)})`, name: p.name })),
     ])
     if (!se) return
     await persistRaw((raw) => {
@@ -400,7 +385,10 @@ export function createModelPicker(ctx) {
     if (key) await setProviderKey(se.name, key)
   }
 
-  async function setProviderKey(name, key) {
+  /** 设 API key（可以来自渠道管理流 / 加渠道流内的 key 步）：写盘 + 内存镜像；
+   *  M9：设 key 属配置写入面——默认探一次 `/models`（不阻断——key 已保存）；
+   *  加渠道流内调用传 `{ probe: false }`（探由该流尾部统一执行——精确一次）。 */
+  async function setProviderKey(name, key, { probe = true } = {}) {
     const target = agent.providers.find((p) => p.name === name)
     if (!target) return
     await persistRaw((raw) => {
@@ -410,6 +398,7 @@ export function createModelPicker(ctx) {
     })
     target.apiKey = key
     if (name === agent.activeProvider) agent.provider.apiKey = key
+    if (probe) await probeChannelFlow(target, name)
   }
 
   /** /model provider 管理：context 窗口字段（K 单位）——picker 选 provider + 表单输入。 */
@@ -418,7 +407,7 @@ export function createModelPicker(ctx) {
       { type: "header", text: "Select provider" },
       ...agent.providers.map((p) => ({
         type: "item",
-        text: `${p.name} (ctx ${fmtContextK(providerSpec({ ...p, model: firstCandidate(p) }).context)})`,
+        text: `${p.name} (ctx ${fmtContextK(providerSpec(p).context)})`,
         name: p.name,
       })),
     ])

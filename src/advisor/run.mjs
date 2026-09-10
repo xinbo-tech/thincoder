@@ -334,11 +334,12 @@ export function resolveAdvisorProvider(agent) {
       // F-1 (ISSUE-FIX-BATCH): children carry no agent.providers (spawn childConfig copies the
       // parent config) — fall back to config.providersList (.length: [] must not skip the list).
       const provider = findProvider(agent.providers?.length ? agent.providers : agent.config?.providersList ?? [agent.provider], cfg.provider)
-      // F-2a (MODEL-400-FIX)：无 cfg.model 时渠道克隆须重派生 model——MODEL-MERGE schema 渠道
-      // 无 model 字段（models[] 候选）→ `{...provider}` 会丢 model 键 → 无 model 请求 → serde 400。
-      // QUICKFIX-BATCH-2 F-2（跨渠道语义）：无 cfg.model → 命中渠道自己的候选首
-      // （provider.model ?? provider.models[0]）——非主 provider model——自己的模型发自己端点。
-      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? provider.models?.[0] }
+      // F-2a (MODEL-400-FIX)：无 cfg.model 时渠道克隆须重派生 model——渠道裸克隆会丢 model 键
+      // → 无 model 请求 → serde 400。
+      // MODEL-SELECTION v2（M3④）：无 cfg.model → 命中渠道自己的默认模型（`provider.model`
+      // 单值）；渠道无默认模型 → 父 provider 兜底（与 subagent F-2c 同构）——绝不产出静默
+      // undefined-model 请求（最极端两者皆无 → chat 前 assertProviderModel fail-fast）。
+      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? agent.provider?.model }
       if (cfg.thinking === null || cfg.thinking === false) result.thinking = undefined  // explicitly off
       else if (cfg.thinking !== undefined) result.thinking = cfg.thinking
       if (cfg.reasoningEffort !== undefined) result.reasoningEffort = cfg.reasoningEffort

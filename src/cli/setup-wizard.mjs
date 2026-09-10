@@ -1,5 +1,6 @@
 import { createInterface } from "node:readline"
 import { configPath, writeConfigAtomic, PROVIDER_PRESETS } from "../config.mjs"
+import { probeChannelModels } from "../tui/model-catalog.mjs"
 
 /** First-time setup (TTY chat / distill): ask a few questions to configure a provider, save to disk, return runtime provider. Cancel returns null. */
 export async function setupWizard() {
@@ -51,14 +52,20 @@ export async function setupWizard() {
       return null
     }
     const embedKey = (await ask("Optional: embedding API key (SiliconFlow, for vector search; press Enter to skip): ")).trim()
+    // M9 配置阶段准入（加渠道 = 配置写入面）：探一次 `/models`——探通/探不通都不阻断保存，
+    // 仅明示结果（失败文案 = M8 消息本体；无绕过指引）。
+    const probe = await probeChannelModels({ name, baseURL, apiKey })
+    console.error(probe.ok
+      ? `✓ ${name}: /models 可用（${probe.list.length} 个模型可候选）`
+      : `⚠ ${probe.message}`)
     // D-F5b：磁盘新鲜读 → mutate → mtime 门控写（writeConfigAtomic 收口）；冲突 = 放弃
     // + 提示重试（首配场景另有实例同时写盘——极低概率；不自动合并——决策点① A）
-    // MODEL-MERGE-SESSION：渠道 model → models:[model] 种子 + defaultModel 顶层复合（裁定⑦）
+    // MODEL-SELECTION v2：渠道默认模型 = 单值 `model` + defaultModel 顶层复合
     const r = writeConfigAtomic(configPath, (raw) => {
       const providers = raw.providers?.length ? raw.providers : []
       const existing = providers.find((p) => p.name === name)
-      const rec = { name, baseURL, models: [model], apiKey }
-      if (existing) { Object.assign(existing, rec); delete existing.model } // 清老渠道字段（防下次 load 反复迁移）
+      const rec = { name, baseURL, model, apiKey }
+      if (existing) Object.assign(existing, rec) // 渠道老字段（models 候选清单）由 config-migrate 在下次 load 统一清理
       else providers.push(rec)
       raw.providers = providers
       raw.defaultModel = `${name}:${model}`

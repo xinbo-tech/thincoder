@@ -8,6 +8,7 @@
 
 import { PROVIDER_PRESETS as PRESETS } from "../config.mjs"
 import { ansi, C } from "./ansi.mjs"
+import { probeChannelModels } from "./model-catalog.mjs"
 
 /**
  * Creates the wizard controller.
@@ -17,19 +18,18 @@ export function createWizard(ctx) {
   const { agent, state, pushLine, pushLabel, render, persistRaw } = ctx
 
   /** Candidates for the menu step: existing providers (marked "no key" if missing), unadded presets, custom
-   *  MODEL-MERGE-SESSION：渠道默认模型字段已删——显示首候选（models[0]——preset 种子 [原 model]） */
+   *  MODEL-SELECTION v2：渠道默认模型 = 单值 `model`（preset 自带；候选清单运行期拉取） */
   function wizardProviderItems() {
     const items = []
     for (const p of agent.providers) {
-      items.push({ kind: "existing", name: p.name, baseURL: p.baseURL, model: p.models?.[0] ?? "", label: `${p.name} (added${p.apiKey ? "" : ", no key"})` })
+      items.push({ kind: "existing", name: p.name, baseURL: p.baseURL, model: p.model ?? "", label: `${p.name} (added${p.apiKey ? "" : ", no key"})` })
     }
     for (const [name, p] of Object.entries(PRESETS)) {
       if (!agent.providers.some((x) => x.name === name)) {
         items.push({
-          kind: "preset", name, baseURL: p.baseURL, model: p.models?.[0] ?? "", label: `${name} (${p.desc})`,
+          kind: "preset", name, baseURL: p.baseURL, model: p.model ?? "", label: `${name} (${p.desc})`,
           // 预设自身声明的扩展字段随 preset 直达落盘（code review 🟡——与 pickers preset 路径同构；
           // claude/gemini 缺 format、deepseek/glm 缺 thinking/maxTokens 会静默错配）；不新增提问步。
-          models: [...(p.models ?? [])],
           format: p.format, thinking: p.thinking, reasoningEffort: p.reasoningEffort,
           maxTokens: p.maxTokens, chatPath: p.chatPath,
         })
@@ -111,8 +111,7 @@ export function createWizard(ctx) {
       w.step = "name"
     } else {
       w.fields = { name: item.name, baseURL: item.baseURL, model: item.model }
-      // preset 直达：models 种子随行（preset.models → 落盘渠道候选）——其余扩展字段照旧
-      if (item.models?.length) w.fields.models = item.models
+      // preset 直达：其余扩展字段照旧（渠道默认模型 = 单值 model——随 fields 落盘）
       for (const k of ["format", "thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
         if (item[k]) w.fields[k] = item[k]
       }
@@ -155,14 +154,16 @@ export function createWizard(ctx) {
     render()
   }
 
-  /** Wizard complete: write provider (update if exists) with models[] 种子, set config.defaultModel
-   *  （裁定⑦——首配模型即写 defaultModel——新会话起点）, then open the session model picker. */
+  /** Wizard complete: write provider (update if exists) with its single default model (`model`),
+   *  set config.defaultModel（裁定⑦——首配模型即写 defaultModel——新会话起点）, then open the
+   *  session model picker. 加渠道 = 配置写入面——落盘后探一次 `/models`（M9：探不通标「不可用」
+   *  + 明示原因，不阻断保存）。 */
   async function finishWizard() {
     const f = state.wizard.fields
     state.wizard = null
     // D-C2：format 非默认（anthropic/google）时落盘；openai = 默认省略（与 D-C1 picker 路径同构）
-    // MODEL-MERGE-SESSION：渠道默认 model 字段退役 → models 种子（preset 自带；custom 单模型入种）
-    const providerRec = { name: f.name, baseURL: f.baseURL, models: [...(f.models ?? [f.model])], apiKey: f.key }
+    // MODEL-SELECTION v2：渠道默认模型 = 单值 model
+    const providerRec = { name: f.name, baseURL: f.baseURL, model: f.model, apiKey: f.key }
     if (f.format && f.format !== "openai") providerRec.format = f.format
     for (const k of ["thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
       if (f[k]) providerRec[k] = f[k]
@@ -174,17 +175,16 @@ export function createWizard(ctx) {
       const existing = raw.providers.find((p) => p?.name === f.name)
       if (existing) Object.assign(existing, providerRec)
       else raw.providers.push(providerRec)
-      raw.defaultModel = `${f.name}:${providerRec.models[0] ?? f.model}`
+      raw.defaultModel = `${f.name}:${providerRec.model}`
       delete raw.activeProvider
       delete raw.activeModel
-      // 渠道老 model 字段清理（wizard 直写路径——不依赖下次 load 迁移）
-      if (existing && "model" in existing) delete existing.model
+      // 渠道老字段（models 候选清单）由 config-migrate 在下次 load 统一清理（迁移唯一权威）
     })
     const existing = agent.providers.find((p) => p.name === f.name)
     if (existing) Object.assign(existing, providerRec)
     else agent.providers.push(providerRec)
     agent.activeProvider = f.name
-    agent.activeModel = providerRec.models[0] ?? f.model
+    agent.activeModel = providerRec.model
     agent.provider = { ...agent.providers.find((p) => p.name === f.name) }
     agent.provider.model = agent.activeModel
     if (agent.config?.agent?.compactThresholdAuto) {
@@ -195,6 +195,16 @@ export function createWizard(ctx) {
     agent.config.defaultModel = `${f.name}:${agent.activeModel}`
     pushLabel(`❯ Setup`, ansi.bold + C.tool)
     pushLine(`Setup complete: ${f.name} / ${agent.activeModel} (defaultModel 已设——新会话起点)`, C.tool)
+    // M9 配置阶段准入：加渠道属配置写入面——保存已落，探一次 `/models`（探不通标「不可用」+ 明示原因；不阻断）
+    const channel = agent.providers.find((p) => p.name === f.name) ?? providerRec
+    const probe = await probeChannelModels(channel)
+    if (probe.ok) {
+      delete channel._unavailable
+      pushLine(`${f.name}: /models 可用（${probe.list.length} 个模型可候选）`, C.tool)
+    } else {
+      channel._unavailable = true
+      pushLine(`${f.name} 不可用 — ${probe.message}`, C.error)
+    }
     // embedding key: if provided, enable vector search; if not, show how to enable later
     if (f.embedkey) {
       // D-F5b 语义先盘后存（embedding 单键补丁——冲突放弃不留 ghost）

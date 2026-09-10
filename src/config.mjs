@@ -1,10 +1,12 @@
 /**
  * config.mjs — configuration loading and saving
- * Model-merge schema (MODEL-MERGE-SESSION): providers[] carry a models[] candidate list
- * (channel default model field removed); config.defaultModel (top level, "provider:model"
- * composite) is the new-session starting point; activeProvider/activeModel are gone from
- * config (session slots keep their own double fields). Legacy fields migrate on load
- * (折中 C — write-back failure never blocks startup).
+ * Model-merge schema v2 (2026-09-10 MODEL-SELECTION): providers[] carry ONE default model
+ * per channel (`providers[].model` — the new-install seed / empty-slot fallback); the
+ * candidates list field models[] is gone — the available-model list is fetched from the
+ * provider at runtime (`GET /models`, PROVIDER.md §16). config.defaultModel (top level,
+ * "provider:model" composite) is the new-session starting point; activeProvider/activeModel
+ * are gone from config (session slots keep their own double fields). Legacy fields migrate
+ * on load (write-back failure never blocks startup).
  * Config file: ~/.thincoder/config.json
  * API key can fall back to environment variables (when not configured in providers).
  */
@@ -12,11 +14,11 @@
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
-import { parseModelRef, resolveRuntimeProvider, defaultModelReason, firstCandidate } from "./model-ref.mjs"
-// 老形态迁移核（折中 C——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
+import { parseModelRef, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
+// 老形态迁移核（M7 v2——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
 import { migrateLegacyModelFields } from "./config-migrate.mjs"
 
-export { parseModelRef, resolveRuntimeProvider, defaultModelReason, firstCandidate, migrateLegacyModelFields }
+export { parseModelRef, resolveRuntimeProvider, defaultModelReason, migrateLegacyModelFields }
 
 export const configDir = join(homedir(), ".thincoder")
 export const configPath = join(configDir, "config.json")
@@ -28,29 +30,29 @@ export function _resetConfigPathForTest() { _pathOverride = null }
 function cfgPath() { return _pathOverride ?? configPath }
 
 /** Built-in provider presets: shared by /provider add <preset> and first-run wizard.
- *  MODEL-MERGE-SESSION: preset `model` field retired → `models` seed ([原 model] —
- *  渠道至少一候选——裁定⑦)。 */
+ *  MODEL-SELECTION v2 (2026-09-10): each preset carries exactly ONE default model
+ *  (`model` — 新装启动种子/槽位空兜底; 候选清单不再预置——运行期从 provider 拉取). */
 export const PROVIDER_PRESETS = {
-  deepseek: { baseURL: "https://api.deepseek.com", models: ["deepseek-v4-pro"], thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 393216, desc: "DeepSeek" },
-  kimi:     { baseURL: "https://api.moonshot.cn/v1", models: ["kimi-k3"], thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi / Moonshot" },
-  "kimi-code": { baseURL: "https://api.kimi.com/coding/v1", models: ["k3"], thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi For Coding (platform.kimi.com — sk-kimi- keys; NOT interchangeable with Moonshot)" },
-  glm:      { baseURL: "https://open.bigmodel.cn/api/paas/v4", models: ["glm-5.2"], thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 128000, desc: "Zhipu GLM" },
-  "glm-code": { baseURL: "https://open.bigmodel.cn/api/coding/paas/v4", models: ["glm-5.2"], thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 128000, desc: "Zhipu GLM Coding Plan (coding endpoint — same key as GLM; server-forced thinking)" },
-  qwen:     { baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", models: ["qwen3.7-max"], reasoningEffort: "high", maxTokens: 131072, desc: "Qwen / Alibaba" },
-  qwenplan: { baseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", models: ["qwen3.7-max"], reasoningEffort: "high", maxTokens: 131072, desc: "Qwen Token Plan (百炼套餐)" },
-  mimo:     { baseURL: "https://api.xiaomimimo.com/v1", models: ["mimo-v2.5-pro"], thinking: { type: "enabled" }, maxTokens: 131072, desc: "MiMo (Xiaomi)" },
-  mimoplan: { baseURL: "https://token-plan-cn.xiaomimimo.com/v1", models: ["mimo-v2.5-pro"], thinking: { type: "enabled" }, maxTokens: 131072, desc: "MiMo Token Plan (小米套餐 — tp- keys; 与按量付费 sk- 密钥不通用)" },
-  minimax:  { baseURL: "https://api.minimaxi.com/v1", models: ["MiniMax-M3"], thinking: { type: "adaptive" }, maxTokens: 128000, chatPath: "/text/chatcompletion_v2", desc: "MiniMax" },
-  openai:   { baseURL: "https://api.openai.com/v1", models: ["gpt-4o"], desc: "OpenAI" },
-  claude:   { baseURL: "https://api.anthropic.com/v1", models: ["claude-sonnet-4"], format: "anthropic", maxTokens: 8192, desc: "Claude (Anthropic)" },
-  gemini:   { baseURL: "https://generativelanguage.googleapis.com/v1beta", models: ["gemini-2.5-flash"], format: "google", maxTokens: 8192, desc: "Gemini (Google)" },
-  grok:     { baseURL: "https://api.x.ai/v1", models: ["grok-4.5"], maxTokens: 65536, desc: "Grok (xAI)" },
-  mistral:  { baseURL: "https://api.mistral.ai/v1", models: ["mistral-large"], maxTokens: 32768, desc: "Mistral" },
-  volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", models: ["doubao-pro-32k"], maxTokens: 32768, desc: "Volcengine Ark (豆包)" },
-  hunyuan:  { baseURL: "https://api.hunyuan.cloud.tencent.com/v1", models: ["hunyuan-pro"], maxTokens: 32768, desc: "Hunyuan (腾讯混元)" },
-  siliconflow: { baseURL: "https://api.siliconflow.cn/v1", models: ["deepseek-ai/DeepSeek-V3"], maxTokens: 32768, desc: "SiliconFlow (硅基流动)" },
-  openrouter: { baseURL: "https://openrouter.ai/api/v1", models: ["anthropic/claude-sonnet-4"], maxTokens: 32768, desc: "OpenRouter" },
-  groq:     { baseURL: "https://api.groq.com/openai/v1", models: ["llama-3.3-70b-versatile"], maxTokens: 32768, desc: "Groq" },
+  deepseek: { baseURL: "https://api.deepseek.com", model: "deepseek-v4-pro", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 393216, desc: "DeepSeek" },
+  kimi:     { baseURL: "https://api.moonshot.cn/v1", model: "kimi-k3", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi / Moonshot" },
+  "kimi-code": { baseURL: "https://api.kimi.com/coding/v1", model: "k3", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi For Coding (platform.kimi.com — sk-kimi- keys; NOT interchangeable with Moonshot)" },
+  glm:      { baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 128000, desc: "Zhipu GLM" },
+  "glm-code": { baseURL: "https://open.bigmodel.cn/api/coding/paas/v4", model: "glm-5.2", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 128000, desc: "Zhipu GLM Coding Plan (coding endpoint — same key as GLM; server-forced thinking)" },
+  qwen:     { baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen3.7-max", reasoningEffort: "high", maxTokens: 131072, desc: "Qwen / Alibaba" },
+  qwenplan: { baseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", model: "qwen3.7-max", reasoningEffort: "high", maxTokens: 131072, desc: "Qwen Token Plan (百炼套餐)" },
+  mimo:     { baseURL: "https://api.xiaomimimo.com/v1", model: "mimo-v2.5-pro", thinking: { type: "enabled" }, maxTokens: 131072, desc: "MiMo (Xiaomi)" },
+  mimoplan: { baseURL: "https://token-plan-cn.xiaomimimo.com/v1", model: "mimo-v2.5-pro", thinking: { type: "enabled" }, maxTokens: 131072, desc: "MiMo Token Plan (小米套餐 — tp- keys; 与按量付费 sk- 密钥不通用)" },
+  minimax:  { baseURL: "https://api.minimaxi.com/v1", model: "MiniMax-M3", thinking: { type: "adaptive" }, maxTokens: 128000, chatPath: "/text/chatcompletion_v2", desc: "MiniMax" },
+  openai:   { baseURL: "https://api.openai.com/v1", model: "gpt-4o", desc: "OpenAI" },
+  claude:   { baseURL: "https://api.anthropic.com/v1", model: "claude-sonnet-4", format: "anthropic", maxTokens: 8192, desc: "Claude (Anthropic)" },
+  gemini:   { baseURL: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", format: "google", maxTokens: 8192, desc: "Gemini (Google)" },
+  grok:     { baseURL: "https://api.x.ai/v1", model: "grok-4.5", maxTokens: 65536, desc: "Grok (xAI)" },
+  mistral:  { baseURL: "https://api.mistral.ai/v1", model: "mistral-large", maxTokens: 32768, desc: "Mistral" },
+  volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-pro-32k", maxTokens: 32768, desc: "Volcengine Ark (豆包)" },
+  hunyuan:  { baseURL: "https://api.hunyuan.cloud.tencent.com/v1", model: "hunyuan-pro", maxTokens: 32768, desc: "Hunyuan (腾讯混元)" },
+  siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32768, desc: "SiliconFlow (硅基流动)" },
+  openrouter: { baseURL: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", maxTokens: 32768, desc: "OpenRouter" },
+  groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32768, desc: "Groq" },
 }
 
 export const DEFAULTS = {
@@ -111,8 +113,8 @@ export const DEFAULTS = {
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
 // extract — config.mjs had grown past the 300-line advisory). Re-exported here
 // so the 23 existing importers keep their import paths.
-import { specForModel, providerSpec } from "./model-specs.mjs"
-export { specForModel, providerSpec }
+import { specForModel, providerSpec, specMatch } from "./model-specs.mjs"
+export { specForModel, providerSpec, specMatch }
 
 
 // Window utilization threshold: compacts at 60% context, reserving 40% headroom
@@ -259,7 +261,7 @@ export function loadConfig() {
     }
   }
 
-  // ── 迁移折中 C：检测老字段 → 内存迁移态先行；写回失败绝不阻断（下次 load 重试——幂等）──
+  // ── 迁移（M7 v2）：检测老字段（models[] / active* / 垃圾值）→ 内存迁移态先行；写回失败绝不阻断（下次 load 重试——幂等）──
   if (migrateLegacyModelFields(config)) {
     try {
       const r = writeConfigAtomic(path, migrateLegacyModelFields) // 磁盘 fresh raw 同变换
@@ -282,10 +284,11 @@ export function loadConfig() {
     traces: { ...DEFAULTS.traces, ...config.traces },
   }
 
-  // providers[].models 内存归一（非字符串数组成员丢弃；缺省 → 空候选——D-S1 走引导）
+  // providers[].model 内存归一（v2 M3：非空字符串保留；非字符串/空串归一删除）——渠道默认模型
+  // 单值；无默认模型合法（模型选择经 /models 拉取候选——准入判据见 M8/M9）。
   for (const p of merged.providers) {
-    if (!Array.isArray(p.models)) p.models = []
-    else p.models = p.models.filter((m) => typeof m === "string" && m)
+    if (typeof p.model === "string" && p.model.trim()) continue
+    if (p.model !== undefined) delete p.model
   }
 
   // providers[].context (K units, PROVIDER.md §15 D-C1): positive integer only — invalid

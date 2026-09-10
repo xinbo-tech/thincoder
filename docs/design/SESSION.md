@@ -19,6 +19,7 @@
 - 2026-09-06（R19——§13.3 测试表折叠为验收方向）：跨会话历史检索设计落节——read_history 加 path/cwd 参数 + 检索族消歧总纲；round1 评审 1🔴+6🟡+3🔵 全采纳——**复审发起权在用户**（设计见 §13）。
 - 2026-09-07：本文档重写为当前态——格式正常化（无 >300 字符行、markdown 结构修正）、历史变更流水账折叠为本记录；活机制正文与逐字契约未改。
 - 2026-09-10（MODEL-SELECTION 批——连带改写）：§8 D-S1「无效」判据收窄（不含"候选外"）/ D-S2 候选改运行期拉取 / D-S3 兜底改渠道默认单值——机制权威见 `PROVIDER.md` §16。
+- 2026-09-11（MODEL-SELECTION 批——修正轮）：§8 D-S1 叙述措辞改用「候选成员校验」表达（R8 目标态自检配套——语义不变、被扫字面量清零）。
 
 ---
 
@@ -227,7 +228,7 @@ _slot/_slotMtime 清空（切换后保存重新认领 manifest active——防�
   config 的 activeProvider/activeModel 两旧层已删（老配置 load 时经 config-migrate.mjs 迁移：`models[]` / active* 老形态 → 单值默认模型 +
   defaultModel 复合 + 写回失败不阻断——`PROVIDER.md` §16 M7；2026-09-10 起 `providers[].model` 回归为**单值默认模型**字段）。
 - **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失/无效**不再抛错**——runtimeProvider 置空对象 `{}` + `providerInvalidReason`
-  （"无效"判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含"候选外"**：候选硬约束已随清单 provider 化废除，见 `PROVIDER.md` §16；
+  （"无效"判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含"候选外"**：候选成员校验已随清单 provider 化废除，见 `PROVIDER.md` §16；
   严格双段解析见 model-ref.mjs parseModelRef——不复用旧 findProvider 宽松三态）；`findProvider` 的 throw 契约保留（advisor/run.mjs 等直接调用方仍依赖）。
   `make-agent.mjs` `assembleAgent` 末尾调用 `validateProvider(agent)`（幂等：有效时清标记；**判据不变**——仅 model/baseURL/name 缺失判 invalid——spec 表不是 allowlist）——`provider.model`/`baseURL` 缺失 → 打 `agent._providerInvalid = true` + `_providerInvalidReason`（defaultModel 原因优先覆盖——更有指导性）。
   - **model 无效判据**：仅当解析后 `provider.model` **为空/缺失**时判 invalid——**不得用 MODEL_SPECS 成员资格判无效**（自定义端点模型不在 MODEL_SPECS 是常态；spec 表不是 allowlist；未知模型 = 受支持场景）。

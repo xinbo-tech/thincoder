@@ -183,7 +183,8 @@ async function fetchAdvisorModels(agent) {
   const result = new Map()
   await Promise.all((agent.providers || []).map(async (p) => {
     try {
-      const models = await listModels({ baseURL: p.baseURL, apiKey: p.apiKey ?? "" }, { signal: AbortSignal.timeout(10000) })
+      // format 透传（M1 分派依据——claude/gemini 走 anthropic/google 拉取分支）
+      const models = await listModels({ baseURL: p.baseURL, apiKey: p.apiKey ?? "", format: p.format }, { signal: AbortSignal.timeout(10000) })
       result.set(p.name, { models, error: null })
     } catch (err) {
       result.set(p.name, { models: [], error: err.message.slice(0, 40) })

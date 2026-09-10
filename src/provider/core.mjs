@@ -1,6 +1,6 @@
 /**
  * provider/core.mjs — LLM call core
- * chat / listModels / createProvider / requestWithRetry
+ * chat / createProvider / requestWithRetry
  * SSE parsing → provider/sse.mjs
  */
 
@@ -348,25 +348,9 @@ function mergeRetryToolCalls(result, toolCalls) {
   }
 }
 
-/** List available model IDs from the provider's /models endpoint */
-export async function listModels(provider, { signal } = {}) {
-  // 2026-08-31 会诊 #10：与 chat 路径对齐——走 proxyUri、加 15s 超时、JSON 解析兜底
-  // （原实现直连 fetch 无超时无代理，慢/被墙域名的 /models 会挂死 UI）
-  const url = `${provider.baseURL}/models`
-  const opts = {
-    headers: { ...(provider.headers ?? {}), Authorization: `Bearer ${provider.apiKey}` },
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
-    _headerTimeoutMs: 15_000,
-    _bodyIdleMs: 15_000,
-  }
-  const response = await (provider.proxyUri ? proxyFetch(url, opts, provider.proxyUri) : fetch(url, opts))
-  if (!response.ok) {
-    const text = await response.text().catch(() => "")
-    throw new Error(`GET /models failed ${response.status}: ${text}`)
-  }
-  const data = await response.json().catch(() => null)
-  return (data?.data ?? []).map((m) => m.id).filter(Boolean).sort()
-}
+// listModels 已迁 provider/list-models.mjs（PROVIDER.md §16 M1——按 format 分派）：2026-09-10
+// 模型选择面重构——原 OpenAI-only 实现在此，迁出并扩 anthropic / google 两分支；
+// provider/index.mjs re-export 改指新文件——调用点零改。
 
 async function requestWithRetry(provider, body, signal, onWait) {
   // THIN_DEBUG_BODY=1：发送前诊断——复现网关侧 "unexpected end of hex escape" 400 时

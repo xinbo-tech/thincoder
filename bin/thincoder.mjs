@@ -103,7 +103,7 @@ Usage:
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version
 
-Config: ~/.thincoder/config.json — providers[] (models[] candidates) + defaultModel (new-session starting point); manage via /config → 默认模型 and /model (session-level) in TUI
+Config: ~/.thincoder/config.json — providers[] (one default model per channel) + defaultModel (new-session starting point); the available-model list is fetched from the provider at runtime (GET /models); manage via /config → 默认模型 and /model (session-level) in TUI
 `
 
 /** Unified message when no API key is configured */

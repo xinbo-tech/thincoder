@@ -256,7 +256,7 @@
 | AC-5 | R5 | 回显断言——正常与 DEFAULT 两分支（警示色分支 + `/config` 提示文案） |
 | AC-6 | R6 | VSC `resolveDefaultModel` 新回退链断言；`fullStatus` 拉取失败 = 渠道不可选断言（明示原因；无 fallback 候选） |
 | AC-7 | R7 | 双端 `npm test` 全绿（三道契约测试族 + 新增面） |
-| AC-8 | R8 | `grep -rn "候选硬约束\|候选外拒" docs/design/ src/ bin/` 无现状残留（`_archive/` 除外）；`_archive/MODEL-MERGE-SESSION.md` 字节不变 |
+| AC-8 | R8 | `cd thincoder && grep -rn "候选硬约束\|候选外拒" docs/design/ src/ bin/ --exclude=PROVIDER.md --exclude-dir=_archive` → 空（排除：`PROVIDER.md`=叙述承载 · `_archive/`=冻结归档）；目标态自检（排除后当前码非空 → 目标空；细则见 `PROVIDER.md` §17.2 AC-8）；`_archive/MODEL-MERGE-SESSION.md` 字节不变（SHA 比对） |
 | AC-9 | R9 | 配置阶段准入探两态断言（探通可用 / 探不通标不可用 + 不入可选来源 + 条目仍可保存）；运行期不探测断言（启动 / 请求零 `/models`）——T23/T24/T25 |
 
 ### 任务书就绪（本节即任务书——spawn 传路径，不另写副本）
@@ -293,7 +293,8 @@
 
 **对 §2 上文的修正与编号同步声明**：
 
-- **AC-8 文本替换**（覆盖上文验收标准表 AC-8 行——旧「无现状残留（`_archive/` 除外）」作废）：最终文本 = PROVIDER.md §17.2 AC-8（显式排除集 + 目标态自检 + 归档 SHA 检查保留）。
+- **AC-8 行已于 2026-09-11 就地修正**（上表 AC-8 行即最终文本；原「AC-8 文本替换」覆盖注记作废）。
+- **AC-8 目标态自检（2026-09-11 修正轮重跑；本机 cmd 无 grep——经 Git usr/bin/grep，正则与排除集未变）**：`SESSION.md:230` 已按 §17.2 既定措辞改以「候选成员校验」表达（字面量消除、语义不变）；排除后命中集 = `src/tui/model-picker.mjs` 5 处 + `src/tui/cmd-model.mjs` 1 处旧注释（设计文档面已清零）；src 注释随实施清零，实施后本命令为空。
 - **AC-1 / AC-3 / AC-9 增补**（与 §17.2 对齐）：AC-1 += 翻页合并（T26/T27）+ 上机验证动作；AC-3 += 克隆空值语义（T28）；AC-9 += 失败消息逐字长句 + 行内标 `不可用`。
 - **T 编号新增 T26–T28**（§17.1 表尾；引用点：AC-1 / AC-3 / §16.5 三行）——R 编号（R1–R9）与 AC 编号（AC-1–AC-9）总数不变；三方编号（§0.2 ↔ 本节上文 ↔ §17.2）已逐项核对一致。
 - **受影响文件行数呈现**与 §16.5 对齐（VSC openai.mjs 308 · presets 85 / panel-messages 454 / panel-session 333 · test/files 41 · smoke-provider 65）。
@@ -347,11 +348,79 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent 记）
 
-> 待记。
+**2026-09-11 00:33 用户批准**（原话："批准"）——解锁实现。前置条件全绿：
+
+- 设计评审 **pass**（0🔴 · 6🟡 · 7🔵——发现表见 §3）；
+- 13 条评审采纳项**已全部落档**并经主 agent 核验（独立复核：URL 钉死 vs `src/config.mjs` 预设 = 正确；
+  VSC 6 处行数实测 = 全中；三方编号 R1–R9 / AC-1..AC-9 / T1–T28 对齐）；
+- 评审后收尾轮（**文档可达性修正**——AC-8 字面量冲突 + §2 该 AC 双版本合一）在途，**属文档整备、非设计变更**，
+  不影响本批准范围；
+- §3 表内两条超宽行由父侧格式整备（原文逐字保留，见 §3-补；内容零改）。
+
+**批准范围**：`docs/design/PROVIDER.md` §0/§16/§17 定稿 + `docs/design/SESSION.md` §8 连带改写 +
+§2 任务书所载 **CLI / VSC 双端**实现。
+
+**不含**：VSC 仓设计档同步（O4——父侧收口后执行）· `docs/TODO.md` 状态推进（本批准后翻「在途」）。
+
+**下一节点**：eng-coder ×2 并行（CLI 面 / VSC 面）。
 
 ## §5 实施记录（eng-coder 自写）
 
 > 待写。
+
+### VSC 面（eng-coder 自写 · 2026-09-11）
+
+**交付摘要**
+
+- 范围：MODEL-SELECTION 第 3 批 **VSC 端**（`thincoder-vscode/`）——R1–R9 的 VSC 面 + 测试层；交付 = 工作区未提交（未 commit）。
+- 新增 2 文件：`src/provider/list-models.mjs`（163 行——三 format 分派 + 翻页 ≤10 页 + 15s 超时 + 失败抛出带 status + M9 渠道准入探针/展示态）· `test/provider-admission.test.mjs`（267 行——T1–T4/T23–T27 本端用例）。
+- 改动源 16 / webview 2 / 测试 9：`config-presets.mjs`(41) · `config-migrate.mjs`(186, 迁移 v2) · `config-io.mjs`(455, 单值归一 + resolveDefaultModel 新链 + probeTargetFromEntry) · `provider.mjs`(433, listModels 迁出 + re-export) · `provider/transports/openai.mjs`(309, guard 文案) · `advisor/provider.mjs`(40) · `agent-tools/subagent.mjs`(381) · `extension/settings.mjs`(352, status 单值 + fullStatus 拉取 + M9) · `extension/provider-flows.mjs`(221, M9 探 + 单值播种) · `extension/settings-panel-write.mjs`(154, defaultModel 写面探) · `extension/vision-channel.mjs`(24) · `extension/panel-messages.mjs`(455, selectModel 注释 + addProvider M9 接线 + testProvider format 透传) · `extension/panel-chat.mjs` / `turn-model.mjs` / `presets.mjs`（注释同步） · `webview/settings-providers.js`(270, 四处配置直读改运行期载荷 + 不可用标注) · `webview/settings.css`(+15, 标注样式——超 §16.5 清单，已披露)。
+- 测试：`cd thincoder-vscode && npm test` → **353 tests / 352 pass / 1 skipped（既有 slow 归册）/ 0 fail**，exit 0；日志 `_t-modelselect-vsc.log`（工作区根，实现期产物）。AC-1 VSC 侧机器判据：`grep -rn "configCandidates" src/` → 空。
+- 轮次与终态：explore 差异审计 1 轮（0🔴/1🟡/5🔵——🟡 已修）→ 内部 advisor 代码评审 1 轮（**VERDICT: pass**，0🔴/2🟡/3🔵）→ 复核全绿 → **clean**。
+
+**逐需求透明表（VSC 面，逐条对 R1–R9）**
+
+| 需求 | 状态 | VSC 落点与说明 |
+|---|---|---|
+| R1 清单来源 provider 化 | **Done** | 新 `provider/list-models.mjs`：openai（缺省/未知）/anthropic（`?limit=1000` + x-api-key/anthropic-version）/google（`?key=…&pageSize=1000` + 剥 `models/` 前缀）；翻页 `has_more→after_id` / `nextPageToken→pageToken`（≤10 页，任一分页失败整体抛）；失败抛出（调用方降级）。候选面 = `settings.mjs fullStatus` 单源拉取（无静态兜底）；`webview/settings-providers.js` 默认模型菜单改运行期载荷；`testProviderConnection` 带动 `format` 三格式分派。 |
+| R2 `providers[].models[]` 整字段删除 | **Done** | 预设 20 条单值；迁移 v2 `delete p.models`；`resolveProviders` 单值归一（非字符串/空串删）；`saveCustomProvider`/`deleteProviderKey` custom 判据改 `entry.model`；`openai.mjs` guard 文案不再称 `models[]`。 |
+| R3 渠道默认模型（单值） | **Done** | 预设 20 条各携 `model`（T13 锁定）；`resolveDefaultModel` 第二级 = 渠道单值；advisor `provider.model ?? agent._provider?.model`；subagent `byName.model ?? parent._provider?.model`（T28 父兜底锁定）；槽位空兜底链（`runModel = modelOverride \|\| slotModel \|\| baseModel`）经核验**已有**，仅注释同步。 |
+| R4 显式 `provider:model` 放行 | **Done（本端无闸）** | VSC 侧不存在成员校验路径（命令面属 CLI）；`selectModel` 消息 = 会话槽写（无候选校验）；注释同步（显式 p:m 一律放行）。 |
+| R5 切换回显 spec 来源 | **N/A（设计明示不加）** | O2 已裁：回显仅 CLI 面（§16.7——不扩范围）；VSC 未实现。 |
+| R6 VSC 同批对齐 | **Done** | `resolveDefaultModel` 新回退链（复合属本渠道 → 渠道默认单值 → null，不再 `models[0]`）；`fullStatus` 失败 = 该渠道不可选（无候选行、无 fallback）+ `unavailable[{provider,reason}]` 随载荷；webview 四处 config 直读（presets 行 / 默认模型菜单 / 渠道行 / custom）改运行期载荷与单值。 |
+| R7 契约测试反转 | **Done（本端）** | `config-merge.test.mjs` 重写（迁移 A/B + 预设单值 + 回退链）· `provider-model-guard.test.mjs` 改（F-1 新文案 + 单值兜底 + T28）· `image-downgrade.test.mjs` 改（视觉判据 + 旧字段不读）· `provider-admission.test.mjs` 新增；`files.mjs` 登记。 |
+| R8 文档连带改写（代码注释面） | **Done（本端）** | 头注/注释：config-io / config-migrate / config-presets / presets / provider-flows / panel-messages / panel-chat / turn-model / vision-channel / list-models / openai.mjs。 |
+| R9 渠道准入（配置阶段） | **Done** | 探针落点 6 处：`addProviderFlow` · `setKeyFlow` · `saveProviderKey` · `saveCustomProvider`(有 key) · panel `addProvider` case · `defaultModel` 写面（fire-and-forget）；探不通 → 标 `不可用`（行内）+ 失败消息逐字长句 + 不入默认模型可选来源 + **不阻断保存**；失败不缓存（重探）；运行期零**新增**探测点（fullStatus 拉取 = R6 候选面既有机制，非 M9）。 |
+| N1–N4 | **Done** | N1 迁移不丢凭据（测试锁）；N2 拉取 15s 超时/异步、零启动期新增依赖；N3 失败不缓存/成功结果即权威；N4 独立实现、零双端 import、差异如实落档（回显仅 CLI）。 |
+
+**决策透明表（实现取舍与披露项）**
+
+| # | 事项 | 取舍 | 理由 / 披露 |
+|---|---|---|---|
+| 1 | 准入展示态与探针宿主 | 新增于 `provider/list-models.mjs`（`_admission` + `probeChannelModels` / `recordAdmission` / `admissionOf` + `_setProbeImplForTest` 测试缝） | 设计未钉宿主；该模块为依赖叶（settings / provider-flows / settings-panel-write 均可引，零环），M9 明示「复用 M1」 |
+| 2 | `defaultModel` 写面探针形态 | fire-and-forget（`settings-panel-write.mjs`） | 写面为**同步契约**（调用方不 await）；探针全捕获、绝不 reject、不阻断写——结果入展示态 |
+| 3 | 加渠道探针落点 | `panel-messages` addProvider case + `addProviderFlow`（非 `addProviderEntry` 内部） | 保持纯持久化函数零副作用；两 UI 路径各探一次、可 await、失败可提示 |
+| 4 | `testProviderConnection` 增 `format` 参数 | settings.mjs + `webview/settings-providers.js` + panel-messages 三处接线 | M1 三格式分派对自定义渠道表单是**必需**：否则 anthropic/google 渠道表单探针走 openai 形状 → 拉不到候选 → 无法保存（审计 🟡#1 即此处漏接线，已修 + T23b 锁定） |
+| 5 | 新增 `webview/settings.css` 两条类 | `.prov-unavailable` / `.prov-hint` | **超 §16.5 文件清单**（该文件未列）——为 M9 行内标注的样式承载；如实披露，父侧收口时补表 |
+| 6 | VSC `listModels` 内部 `.sort()` | 保留本端排序（文件头已注明） | 设计行文「排序由调用方」；本仓既有行为即内部排序（UI 确定性），双端 N4 允许差异——已披露，未改动 |
+| 7 | `models` 载荷新增 `unavailable` 字段 | 失败渠道诊断载荷（原因随载荷下发） | 设计未钉原因承载位置；UI 面失败原因实际经 providerStatus 行渲染（`.prov-hint`），本字段为测试/排障面（T24 断言对象） |
+| 8 | custom 渠道无 key 保存不探 | `saveCustomProvider` 仅在写 key 时探 | 无 key 渠道本就不可用（无候选）；已披露为边界豁免 |
+
+**审计与代码评审轮次与终态**
+
+- **explore 差异审计（轮次 1）**：0🔴 / 1🟡 / 5🔵。
+  - 🟡（**已修**）：`panel-messages.mjs` 的 `testProvider` case 未透传 `format` → 自定义渠道 anthropic/google 表单探针走 openai 形状（拉不到候选→渠道加不进）——修为 `format: msg.format` + 新增 `T23b` 断言（anthropic 完整 URL/头 + 下拉得到候选）。
+  - 5🔵：① settings.css 超清单（已披露）② 受影响文件表呈现差异（panel-messages 实含功能性 M9 接线、list-models 含探针展示态）→ 父侧收口时更新 §16.5/§2 ③ 排序措辞（保留，见透明表 #6）④ custom 无 key 不探（透明表 #8）⑤ 无。
+- **内部 advisor 代码评审（轮次 1）**：**VERDICT: pass**，0🔴 / 2🟡 / 3🔵。
+  - 🟡#1 **语义悬挂（Deferred——上报父侧裁定）**：`webview/model-picker.js:118-126` 兜底（prefs/当前选择不命中拉取清单时取 `_models[0]` 并 post `selectModel`）→ `panel-messages` 随即**写会话槽**；本批把 `models` 载荷来源从静态候选换成运行期拉取后，兜底值变为「首个已配置渠道的排序首项」，会话开面板/切槽时可能被静默改写渠道+模型。该消费面**不在本批交付清单**（属设计缺口；CLI 对位已由设计裁为 `:70 兜底首候选 → keep.model`）。建议父侧按 CLI 对位语义立项/补做（仅命中才回写，或兜底保持当前）。
+  - 🟡#2 `docs/TODO.md:130` 状态仍 `待设计`（§4 已批准）→ 父侧收口翻「在途」（非本端文档域）。
+  - 🔵#3 `unavailable` 载荷无 UI 消费点 → 已补注释（诊断/测试载荷，见透明表 #7）。
+  - 🔵#4 排序措辞漂移 → 保留（透明表 #6）。
+  - 🔵#5 VSC `fullStatus` 无会话级缓存（CLI 有 TTL 60s）→ 记录为已知双端不对称（可选后续）。
+- **修正轮**：1 轮（审计 🟡 修复 + T23b 新增 + 全量复核绿）；advisor 后仅注释澄清（0 代码语义改动）。
+- **终态：clean**——可修项全部修复；剩余 2🟡/3🔵 = 已披露项（父侧裁定/文档收口/设计表补录），无未披露偏离。
+
+**实现期产物（非交付物）**：`thincoder-vscode/_t-modelselect-vsc.log`（测试日志留证）——提交前可由父侧清理。
 
 ## §6 验证与收口（父代理自写）
 

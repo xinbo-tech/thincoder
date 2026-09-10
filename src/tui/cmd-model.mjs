@@ -2,8 +2,9 @@ import { C } from "./ansi.mjs"
 import { parseModelRef } from "../config.mjs"
 
 /** /model command: open the session model picker, or switch the SESSION model directly via
- *  `/model <provider>:<model>` (MODEL-MERGE-SESSION——裁定③：裸 provider 拒——显式 p:m；
- *  候选硬约束：model 必须是该渠道 models[] 成员——候选外拒 F-1——selectModel 内复核）。
+ *  `/model <provider>:<model>`（MODEL-MERGE-SESSION——裁定③：裸 provider 拒——显式 p:m；
+ *  MODEL-SELECTION v2：显式复合一律放行——仅[空值/裸值/未知 provider]无效（M4），候选清单
+ *  由运行期拉取决定——不再有成员校验）。
  *  /model 是会话级操作（写槽——不写 config）——config 默认模型走 /config → 默认模型。
  *  ctx: { agent, openModelPicker, selectModel, pushLine } */
 export async function handleModelCommand(ctx, args = []) {
@@ -12,7 +13,8 @@ export async function handleModelCommand(ctx, args = []) {
     ctx.openModelPicker().catch((e) => ctx.pushLine(`[error] ${e.message}`, C.error))
     return
   }
-  // 严格双段复合解析（parseModelRef——裸 provider / 未知 provider / models[] 外 → ok:false）
+  // 首冒号复合解析（parseModelRef——裸 provider / 未知 provider / 空模型段 → ok:false；
+  // 候选外/多冒号一律放行——M4）
   const parsed = parseModelRef(raw, ctx.agent.providers)
   if (!parsed.ok) {
     ctx.pushLine(`[error] ${parsed.reason}`, C.error)

@@ -261,7 +261,8 @@ function stripTruncatedToolArgs(m) {
  *  MODEL-MERGE-SESSION（F-4）applySession 重写为两支 + 删旧支（评审 #7/#9 措辞——防
  *  "三支"误读）：
  *  ① 槽 provider 存在 → provider/model 按槽值设（双字段恒非空——模型取 data.activeModel，
- *     legacy 槽 null/缺省回该渠道首候选 models[0]——老"渠道默认"语义的唯一残留形态）+ 重算
+ *     legacy 槽 null/空串回该渠道默认模型 `providers[].model`（单值——2026-09-10 MODEL-SELECTION
+ *     v2；老 models[] 首候选形态已退场））+ 重算
  *     compactThreshold（auto 时——按恢复后模型）——不看 config（defaultModel 只是新会话起点）；
  *  ② 槽 provider 没了 → D-S3 保留——静默保持现状（config 有效则有效——两方都无效由调用侧
  *     复验 validateProvider 弹重选）。
@@ -319,13 +320,12 @@ export function applySession(agent, data) {
   const slotProvider = data.activeProvider ? agent.providers?.find((pr) => pr.name === data.activeProvider) : null
   if (slotProvider) {
     // ① 槽 provider 存在 → 按槽值设（不看 config）：双字段恒非空——legacy 槽 activeModel
-    //    null/缺省 = 无 override——回该渠道首候选（models[0]——老"渠道默认"的唯一残留形态）。
+    //    null/空串 = 无 override——回该渠道默认模型（`providers[].model` 单值——M3）。
     //    F-2d（MODEL-400-FIX）：`||` 非 `??`——空串也兜（activeModel="" 的槽会让 `??` 不落链 →
     //    空槽 model 恒有值，provider.model 键不缺失）
     const prevName = agent.activeProvider
     const prevModel = agent.activeModel ?? null
-    const models = Array.isArray(slotProvider.models) ? slotProvider.models : []
-    const slotModel = data.activeModel || models[0]
+    const slotModel = data.activeModel || slotProvider.model
     const switched = prevName !== slotProvider.name || prevModel !== slotModel
     agent.activeProvider = slotProvider.name
     agent.activeModel = slotModel

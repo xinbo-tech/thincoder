@@ -2,7 +2,8 @@ import { computeLayout } from "./layout.mjs"
 import { createModelPicker } from "./model-picker.mjs"
 
 /** Generic list picker plumbing + /model two-level surface delegation.
- *  MODEL-MERGE-SESSION 拆分（评审 #9）：/model 两级面（L1 provider → L2 models[]）+ 渠道
+ *  MODEL-MERGE-SESSION 拆分（评审 #9）：/model 两级面（L1 provider → L2 模型行——
+ *  2026-09-10 MODEL-SELECTION v2 起 L2 行 = 运行期拉取候选）+ 渠道
  *  管理流 + selectModel + pickModelForSlot 迁 model-picker.mjs——本文件只留通用 picker
  *  栈（showPicker/closePicker/popPicker/rebuildLines）——createModelPicker 以 ctx 接收
  *  通用绑定（showPicker/closePicker/renderPickerLines）再行装配——index.mjs 消费面不变。

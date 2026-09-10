@@ -151,10 +151,10 @@ export function resolveChildProvider(parent, modelArg) {
     return { ...withKey(p), model: mname || p.model }
   }
   const byName = providers.find((x) => x.name === modelArg)
-  // F-2c (MODEL-400-FIX)：裸渠道名克隆须重派生 model——MODEL-MERGE schema 渠道无 model 字段
-  // （models[] 候选）→ 裸 `{...withKey(byName)}` 丢 model 键 → 无 model 请求 → serde 400。
-  // 取渠道候选首（models[0]——老"渠道默认"语义的残留形态）；无候选 → 主 provider 的 model。
-  if (byName) return { ...withKey(byName), model: byName.models?.[0] ?? parent.provider?.model }
+  // F-2c (MODEL-400-FIX)：裸渠道名克隆须重派生 model——渠道裸克隆会丢 model 键 → 无 model 请求
+  // → serde 400。MODEL-SELECTION v2（M3④）：取渠道默认模型（`provider.model` 单值——2026-09-10
+  // 起；老 models[] 首候选形态已退场）；无默认模型 → 主 provider 的 model 兜底（T28）。
+  if (byName) return { ...withKey(byName), model: byName.model ?? parent.provider?.model }
   return { ...parent.provider, model: modelArg }
 }
 

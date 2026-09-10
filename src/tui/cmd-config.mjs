@@ -1,4 +1,5 @@
 import { ansi, C } from "./ansi.mjs"
+import { probeChannelModels, dedupeModels } from "./model-catalog.mjs"
 /** Merge an embedding-key save into the raw config, backfilling baseURL/model from defaults.
  *  Keeps existing custom values (Ollama/local embedding); defaults are the single source
  *  (TUI.md §9.3D — NF1). Exported for unit tests. */
@@ -65,9 +66,9 @@ export async function handleConfigCommand(ctx, args = []) {
     agent.config.agent ??= {}
     const keep = sessionName ? cfg.providersList.find((p) => p.name === sessionName) : null
     if (keep) {
-      // 会话 provider 仍存在 → 会话复合优先（槽值——不看 cfg 默认；模型空时落默认复合/首候选）
+      // 会话 provider 仍存在 → 会话复合优先（槽值——不看 cfg 默认；模型空时落默认复合/渠道默认单值）
       const dm = cfg.provider.name ? cfg.provider : null
-      const model = sessionModel ?? (dm && dm.name === sessionName ? dm.model : keep.models?.[0] ?? "")
+      const model = sessionModel ?? (dm && dm.name === sessionName ? dm.model : keep.model ?? "")
       agent.activeProvider = keep.name
       agent.activeModel = model || null
       agent.provider = { ...keep }
@@ -89,12 +90,14 @@ export async function handleConfigCommand(ctx, args = []) {
   /** 保存 config（mutate 改 raw）→ reloadConfig（provider 代理无需重启即生效）。
    *  D-F5b：磁盘新鲜读 → mutate → 写前 mtime 门控（writeConfigAtomic——冲突放弃 +
    *  .bak 留现场）；冲突时先 reloadConfig 采纳磁盘新值再 throw——调用方 try/catch
-   *  统一展示 "Save failed: config changed on disk concurrently — retry"。 */
+   *  统一展示 "Save failed: config changed on disk concurrently — retry"。
+   *  写链走 ctx.persistRaw（与 TUI 其余 config 写点同源——createConfigHelpers 的
+   *  configPath 测试注入缝随之生效；生产 = 同一 writeConfigAtomic 调用）。 */
   async function saveProxy(mutate) {
-    const { writeConfigAtomic, configPath } = await import("../config.mjs")
-    const r = writeConfigAtomic(configPath, mutate)
+    let failure = null
+    try { await persistRaw(mutate) } catch (e) { failure = e }
     await reloadConfig()
-    if (!r.ok) throw new Error("config changed on disk concurrently — retry")
+    if (failure) throw failure
   }
 
   // ── Proxy sub-menu loop：每轮重建 entries 显示最新状态，defaultIndex 记住上次位置 ──
@@ -272,32 +275,46 @@ export async function handleConfigCommand(ctx, args = []) {
     }
   }
 
-  // ── 默认模型子菜单（F-5：config.defaultModel 专用入口——L1 provider → L2 models[] →
-  // 写 config.defaultModel——saveProxy/writeConfigAtomic 通道——不落会话槽）──
+  // ── 默认模型子菜单（F-5：config.defaultModel 专用入口——L1 provider → L2 **运行期拉取**候选 →
+  // 写 config.defaultModel——saveProxy/writeConfigAtomic 通道——不落会话槽；不加手输行——O1 已裁）──
   async function defaultModelMenu() {
     let idx = 0
+    // M9 配置阶段准入：进本子菜单探一次各渠道 `/models`（复用 M1 + 会话缓存）。
+    // 探通 → 渠道可用 + 候选直接可用；探不通 → 不缓存不阻断（标「不可用」且不入可选来源）。
+    const probes = new Map()
+    pushLine("Fetching channel model lists (GET /models)…", C.dim)
+    await Promise.all(agent.providers.map(async (p) => {
+      const r = await probeChannelModels(p)
+      probes.set(p.name, r)
+      if (r.ok) delete p._unavailable
+      else p._unavailable = true
+    }))
     for (;;) {
       const dm = agent.config?.defaultModel ?? null
       const entries = [
         { type: "header", text: `config.defaultModel = ${dm ?? "(not set — 新会话起点未配置)"}` },
         ...agent.providers.map((p) => {
-          const n = p.models?.length ?? 0
-          return { type: "item", text: `${p.name.padEnd(10)} (${n} candidate${n === 1 ? "" : "s"})`, action: "provider", provider: p.name }
+          const r = probes.get(p.name)
+          if (!r?.ok) return { type: "item", text: `${p.name.padEnd(10)} 不可用`, action: "provider", provider: p.name, unavailable: true }
+          const n = r.list.length
+          // M3③：渠道行显示渠道默认模型（单值）+ 探得候选数
+          return { type: "item", text: `${p.name.padEnd(10)} ${p.model ?? "(no default model)"} (${n} model${n === 1 ? "" : "s"})`, action: "provider", provider: p.name }
         }),
       ]
       const c = await showPicker("Default Model (新会话起点)", entries, { defaultIndex: idx })
       if (!c) return // Esc → 返回主菜单
       idx = Math.max(0, entries.filter((e) => e.type === "item").indexOf(c))
       if (c.action !== "provider") continue
-      const p = agent.providers.find((x) => x.name === c.provider)
-      const models = p?.models ?? []
-      if (models.length === 0) {
-        pushLine(`${c.provider} 无候选 models[]——候选为空无法设默认（先加入候选：手写 config.json 或 /model 加渠道时带模型）`, C.error)
+      const r = probes.get(c.provider)
+      if (!r?.ok) {
+        // 准入判据：探不通的渠道不作为默认模型的可选来源——明示原因（M8 长句），不阻断菜单
+        pushLine(r?.message ?? `${c.provider} 不可用`, C.error)
         continue
       }
+      if (r.list.length === 0) { pushLine(`${c.provider}: /models 未返回任何模型`, C.error); continue }
       const me = await showPicker(`${c.provider} models`, [
         { type: "header", text: "选为 config.defaultModel（新会话起点——当前会话槽不受影响）" },
-        ...models.map((m) => ({ type: "item", text: m, action: "model", model: m })),
+        ...dedupeModels(r.list).map((m) => ({ type: "item", text: m, action: "model", model: m })),
       ])
       if (!me) continue // Esc → 回默认模型菜单
       try {

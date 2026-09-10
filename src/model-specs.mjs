@@ -95,11 +95,15 @@ const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000, cacheMode: "none" }
  * 且含 "/" 时，剥掉第一个 "/" 前的 namespace 再按前缀匹配一次——ZHIPU/GLM-5.3 → glm-5.3 命中
  * 真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias 行保留为文档锚（发送路径
  * provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
-const warnedModels = new Set() // warn once per model name — specForModel is a hot path (every request)
-// Pre-sorted once at module scope — specForModel runs on every request (agent, provider core,
+const warnedModels = new Set() // warn once per model name — spec lookup runs on every request (hot path)
+// Pre-sorted once at module scope — spec lookup runs on every request (agent, provider core,
 // context, auto-think, TUI rendering); re-sorting per call was wasteful.
 const SORTED_SPECS = [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)
-export function specForModel(model) {
+
+/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive)
+ *  with vendor-namespace stripping. Returns null on a miss (DEFAULT_SPEC is the caller-side
+ *  fallback and is deliberately NOT returned here — `matched` needs the miss itself). */
+function lookupSpec(model) {
   const m = (model ?? "").toLowerCase()
   for (const [prefix, spec] of SORTED_SPECS) {
     if (m.startsWith(prefix.toLowerCase())) return spec
@@ -112,13 +116,35 @@ export function specForModel(model) {
       if (bare.startsWith(prefix.toLowerCase())) return spec
     }
   }
-  // Unknown model: warn ONCE (not per request) so a typo'd ID or a missing alias surfaces
-  // instead of silently degrading to the 128K default (IK5VGJ).
+  return null
+}
+
+/** Unknown model: warn ONCE (not per request) so a typo'd ID or a missing alias surfaces
+ *  instead of silently degrading to the 128K default (IK5VGJ). The dedupe set is shared by
+ *  specForModel / specMatch (PROVIDER.md §16 M5). */
+function warnUnknownModel(model) {
+  const m = (model ?? "").toLowerCase()
   if (m && !warnedModels.has(m)) {
     warnedModels.add(m)
     console.warn(`[config] model "${model}" not found in MODEL_SPECS — using default spec (128K context, 32K output). Check the model ID or add an alias.`)
   }
+}
+
+export function specForModel(model) {
+  const hit = lookupSpec(model)
+  if (hit) return hit
+  warnUnknownModel(model)
   return DEFAULT_SPEC
+}
+
+/** specMatch(model) → { spec, matched }（PROVIDER.md §16 M5——切换回显的来源判定）。
+ *  `matched:false` = DEFAULT_SPEC 兜底（未知模型）；与 specForModel 共享同一查表实现（单次），
+ *  specForModel 的返回形状与共享对象契约零改（热路径零变）。 */
+export function specMatch(model) {
+  const hit = lookupSpec(model)
+  if (hit) return { spec: hit, matched: true }
+  warnUnknownModel(model)
+  return { spec: DEFAULT_SPEC, matched: false }
 }
 
 /**

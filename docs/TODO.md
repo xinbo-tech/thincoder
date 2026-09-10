@@ -127,7 +127,7 @@
 - [ ] **模型清单 provider 化 + 去候选否决权**（2026-09-10 用户裁定；原登记 = "models[] 候选白名单越权否决模型
   可用性 / MODEL_SPECS 职能纠偏"——**范围升格**：清单权威交还 provider 运行期拉取，`providers[].models[]` 整字段删除）
   → 设计 `design/PROVIDER.md`（需求层同档承载——Provider 板块无 `requirements/` 镜像）·
-  任务书 `batches/2026-09-10-MODEL-SELECTION.md` §2 · status=待设计
+  任务书 `batches/2026-09-10-MODEL-SELECTION.md` §2 · status=在途（2026-09-11 §4 用户批准后——CLI/VSC 双端实施中）
 - [ ] **子块「已省略 N 行」计数虚高**（2026-09-10 用户报告原话："cli subagent 调 explore 时行数计数不对——应该不是行数，而是 chunk 数"）——**已实证**（主 agent 两轮实验）：`src/tui/subagent-children.mjs:28-50` `dropCarrierLines` 把省略标记（meta 块）当普通块走 FIFO 丢弃 → 丢完再 `unshift` 重建标记（`:48`，`_lineCount += 1`）→ ① 每轮 trim 有 1 单位预算耗在标记自身上（树恒超限 1 → 后续每次追加都触发 trim）；② 每轮给 `dropped` 记 1 行**无对应隐藏内容**的幽灵行 —— 稳态下显示值 ≈ 真实隐藏行 ×2（实测：稳态追加 50 行 → 显示 +100 / 真实 +50；混合场景 显示 139 vs 真实 79）。另 `countBlockLines`（`:17`）按 `split("\n")` 计数，行尾 `\n` 令每块多算 1 元素。→ 板块 TUI · status=待讨论
 
 ## 其他在途/待核销（勾销即移出本节）

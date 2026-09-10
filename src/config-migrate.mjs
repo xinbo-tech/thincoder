@@ -1,67 +1,70 @@
 /**
- * config-migrate.mjs — model-merge legacy-shape migration core (MODEL-MERGE-SESSION §3).
+ * config-migrate.mjs — model-schema legacy-shape migration core (MODEL-SELECTION v2, §16.2 M7).
  * Split out of config.mjs (500-line hard limit). Pure function, zero imports — the
  * write-back orchestration (writeConfigAtomic / persistRaw, failure tolerance) stays in
- * the caller (CLI: config.mjs loadConfig; VSC: config-io.mjs loadRaw — same rule, 防各
- * 写各的——AC-8 diff 核对照本文件与 thincoder-vscode/src/config-migrate.mjs 的
- * migrateLegacyModelFields)。
+ * the caller (CLI: config.mjs loadConfig; VSC: config-io.mjs loadRaw — same rule, 双端各自
+ * 独立实现——不做同步依赖).
  *
- * 迁移折中 C：老形态（providers[].model || activeModel || activeProvider）→ 新 schema。
- * - 每渠道 .model → models:[model]（models 已存在且非空则保留——新字段优先）
- * - defaultModel = (activeModel ?? activeProvider 渠道 model ?? 首渠道首候选) 复合
- * - 幂等：无老字段 → 返回 false 不动；slot 旧字段（会话文件内）不迁移——读侧容忍
- *
- * 语义细则：
- * - rawAM 覆盖值并入渠道候选（老 override 可不在渠道 .model——默认 AP:AM 必须能通过
- *   parseModelRef 严格成员校验，迁移不自产无效 defaultModel）
- * - 无 .model 的渠道 → models 留空 []（→ D-S1 弹选择——不静默破——评审 #7）
- * - 老 activeProvider 指向不存在的渠道 → 跳过 AP:AM 复合（AM 无法归属）→ 走折中 C 第三级
- *   「首渠道首候选」兜底——迁移产物必可用（不留下每启必弹的破损态）
+ * 目标形态 C：每渠道恰好一个默认模型（`providers[].model` 单值）+ 顶层 `defaultModel` 复合。
+ * 老形态迁移（v2）：
+ * - A：`providers[].model` + `activeProvider/activeModel` → `p.model` **保留**（不再搬入 models）；
+ *   `activeProvider/activeModel` → `defaultModel` 复合（`activeModel` 优先；AP 不存在/AM 空 → 首渠道回退）
+ * - B：`providers[].models[]` → `p.model = defaultModel 属本渠道的模型段 ?? 现有 p.model（非空字符串）
+ *   ?? models[] 首个非空字符串`，然后 `delete p.models`
+ * - 混合/垃圾：非数组 `p.models` / 非字符串（空串）`p.model` → 删除（清理）
+ * - 顺序：先构造/读取有效 `defaultModel` 值（含老 active* 转换），再按它给各渠道播种 `p.model`
+ * - 幂等：无老字段（无 `models` / 无 active* / 无垃圾值）→ 返回 false 不动；slot 旧字段
+ *   （会话文件内）不迁移——读侧容忍
+ * - 空结果合法：渠道无模型来源 → `p.model` 不设（模型选择经 `/models` 拉取候选——M8/M9）
  */
 export function migrateLegacyModelFields(raw) {
   if (!raw || typeof raw !== "object") return false
   const providers = Array.isArray(raw.providers) ? raw.providers : []
-  const provModel = new Map() // provider name → 旧 .model 值
   let changed = false
-  for (const p of providers) {
-    if (!p || typeof p !== "object") continue
-    if (typeof p.model === "string" && p.model) {
-      provModel.set(p.name, p.model)
-      const models = Array.isArray(p.models) ? p.models : []
-      if (models.length === 0) p.models = [p.model]
-      delete p.model
-      changed = true
-    } else if (p.model !== undefined) {
-      delete p.model // 空/非字符串 model —— 老字段垃圾一并清
-      changed = true
-    }
-    if (p.models === undefined) { p.models = []; changed = true } // 新 schema 归一：渠道必有 models 字段
-  }
-  const hasAP = raw.activeProvider !== undefined
-  const hasAM = raw.activeModel !== undefined
-  if (hasAP || hasAM) {
+
+  // ── ① 有效 defaultModel 值（含老 active* 转换）──
+  if (raw.activeProvider !== undefined || raw.activeModel !== undefined) {
     const rawAP = typeof raw.activeProvider === "string" && raw.activeProvider.trim() ? raw.activeProvider : ""
     const rawAM = typeof raw.activeModel === "string" && raw.activeModel.trim() ? raw.activeModel : ""
-    let dm = null
     const ap = rawAP ? providers.find((p) => p?.name === rawAP) : null
-    if (ap) {
-      const models = Array.isArray(ap.models) ? ap.models : (ap.models = [])
-      if (rawAM && !models.includes(rawAM)) { models.unshift(rawAM); changed = true }
-      // 混合形态（.model 与已非空 models 并存）：默认必须 ∈ 候选——models 在场优先于
-      // 遗留 .model（后者只在渠道无候选时生效——防迁移自产无效 defaultModel 每启弹）
-      const m = rawAM || (models.length > 0 ? models[0] : (provModel.get(rawAP) ?? ""))
-      if (m) dm = `${rawAP}:${m}`
+    if (ap && rawAM) {
+      if (raw.defaultModel == null) { raw.defaultModel = `${rawAP}:${rawAM}`; changed = true }
     } else {
-      dm = null // 老 activeProvider 已不存在 —— 走下方首渠道兜底
+      // AP 已不存在 / AM 无法归属 → 首渠道回退（该渠道有模型来源才可用——迁移产物必可用）
+      const first = providers.find((p) => seedModel(p) != null)
+      if (first && raw.defaultModel == null) { raw.defaultModel = `${first.name}:${seedModel(first)}`; changed = true }
     }
-    if (!dm) {
-      const first = providers.find((p) => Array.isArray(p?.models) && p.models.length > 0)
-      if (first) dm = `${first.name}:${first.models[0]}`
-    }
-    if (dm && raw.defaultModel == null) { raw.defaultModel = dm; changed = true }
     delete raw.activeProvider
     delete raw.activeModel
     changed = true
   }
+
+  // ── ② 渠道播种单值 `p.model` + 清 models ──
+  const dm = typeof raw.defaultModel === "string" && raw.defaultModel.trim() ? raw.defaultModel : null
+  const dmSep = dm ? dm.indexOf(":") : -1
+  const dmProvider = dmSep > 0 ? dm.slice(0, dmSep) : null
+  const dmModel = dmSep > 0 && dmSep < dm.length - 1 ? dm.slice(dmSep + 1) : null
+  for (const p of providers) {
+    if (!p || typeof p !== "object") continue
+    if (Array.isArray(p.models)) {
+      const next = (p.name === dmProvider && dmModel)
+        ? dmModel
+        : (typeof p.model === "string" && p.model.trim() ? p.model : seedModel(p))
+      if (next == null) delete p.model
+      else p.model = next
+      delete p.models
+      changed = true
+      continue
+    }
+    if (p.models !== undefined) { delete p.models; changed = true } // 非数组 models —— 垃圾清理
+    if (p.model !== undefined && !(typeof p.model === "string" && p.model.trim())) { delete p.model; changed = true }
+  }
   return changed
+}
+
+/** 渠道级模型来源读数（迁移用）：现有 `p.model`（非空字符串优先）或 `models[]` 首个非空字符串。 */
+function seedModel(p) {
+  if (typeof p?.model === "string" && p.model.trim()) return p.model
+  const models = Array.isArray(p?.models) ? p.models : []
+  return models.find((m) => typeof m === "string" && m.trim()) ?? null
 }
