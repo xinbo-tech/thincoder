@@ -5,6 +5,70 @@
 > 维护：工程模式下由架构师（agent）在对话中即时更新；用户在需要时增删。
 ---
 
+## 产品可移植性缺陷登记（2026-09-10 全面勘察——**只登记，待整明白后统一处理**）
+
+> 来源：勘察报告（src/ 全量"硬编码项目约定"扫描——按任意用户项目视角判定）。需求依据 = `requirements/ENGINEERING-MODE.md` §2（FR10-FR15）+ `requirements/PROJECT.md`。
+> 分级：🔴 = 静默失效（用户不可见、不可修）· 🟡 = 降级可见或噪声 · 🔵 = 无害/仅信息。
+> **未动任何代码**——用户裁定：先全整明白，再改。
+
+### 🔴 静默失效（10 项）
+
+| # | file:line | 硬编码 | 不符约定时的静默后果 |
+|---|---|---|---|
+| P1 | `src/advisor/messages.mjs:253` | 文档地图 = `docs/README.md` / `docs/design/README.md` | 探不到 → 静默跳过——"文档归属"评审维度失去对照物 |
+| P2 | `src/advisor/messages.mjs:236,349` | 项目方法论 = 项目根 `METHODOLOGY.md` | 不存在 → 空 catch 静默不注入，评审仍按"方法论合规"打分 |
+| P3 | `src/advisor/messages.mjs:265,267,269` | 指令文本要求"Read METHODOLOGY.md" | 与 P2 独立——即使未注入也要求读不存在文件（白耗轮次/凭空判断） |
+| P4 | `src/prompts/advisor-design.md:9,18,24` | `docs/README.md` + 示例 `docs/design/AGENT-LOOP.md:180` | 任意项目工程模式下被要求读不存在的文件 |
+| P5 | `src/prompts/discipline-engineering.md:32,47,61` | `docs/design/<TOPIC>.md` 树形状 | 代理会在用户项目里创建 ThinCoder 形状的 docs 树 |
+| P6 | `src/prompts/discipline-engineering.md:141,142,147,151,170,171` | `docs/TODO.md` / `CHANGELOG.md` / checklist 边界 | 用户项目没有这些文件也要"先入池" |
+| P7 | `src/prompts/discipline-engineering.md:182` | `docs/requirements/`+`docs/design/`+**`node scripts/check-doc-width.mjs`** | **自指脚本**——该脚本只在本仓存在，用户项目跑必失败 |
+| P8 | `src/memory/code-sync.mjs:112-124` | `git rev-parse --show-toplevel` 失败 → 返回 `[]` | **非 git 项目：代码/文档索引全空**（表现为"无索引源"） |
+| P9 | `src/memory/schema.mjs:18,20,23-32` | 代码/文档扩展名白名单 + SKIP_DIRS + 体积上限 | 白名单外扩展名**完全不可检索**（.fs/.clj/.dart/.lua/.cs 等代码；.org/.wiki 等文档），无提示 |
+| P10 | `src/agent/dispatch.mjs:199` + `src/advisor/repos.mjs:168` | `^src[\\/]` **字符串锚定** | 嵌套布局（`packages/foo/src/x.md`）被当文档 → **静默绕过设计门禁**；非 `src/` 布局则全部文件都当产品代码 |
+
+### 🟡 降级可见 / 噪声（18 项）
+
+| # | file:line | 内容 | 影响 |
+|---|---|---|---|
+| P11 | `src/prompts/discipline-normal.md:13,32,213` | `docs/README.md` 地图（:32 有降级子句） | 13/213 无降级 |
+| P12 | `src/prompts/persona-engineering.md:12` | "需求+设计文档（docs/）" | 提示层假设 |
+| P13 | `src/agent-tools/advisor.mjs:104-114` | documents 校验限 `docs/` 前缀或文档扩展名 | 用 `.org/.wiki/.html/.tex` 记设计的项目被硬拒 |
+| P14 | `src/tui/cmd-eng.mjs:31,35-46` | 工程模式门禁要求项目根 `METHODOLOGY.md`；"从模板创建"指向**已不存在**的 `methodology-template.md` | **自相矛盾 + 活 bug**——选项必炸；与本仓"METHODOLOGY 已退役"冲突 |
+| P15 | `src/agent/dispatch.mjs:204`、`src/agent-tools/eng.mjs:59` | 提示文本写死 "in docs/" | 模型可见错误提示带本仓布局 |
+| P16 | `src/advisor/messages.mjs:35-57` | 项目根判据 = 存在 `AGENTS.md`（唯一） | monorepo 子项目无 AGENTS.md → P1/P2 查错目录 |
+| P17 | `src/agent/helpers.mjs:321-327` | 项目指令仅读 cwd 的 AGENTS.md / project_rules.md | 缺失时返回空、**无提示**；不向上走；不认 `.cursor/rules`/`CLAUDE.md` |
+| P18 | `src/advisor/repos.mjs:22-41` 等 | 以 `.git` 判仓库根/评审范围/快照 | 非 git 项目范围采集为空 |
+| P19 | `src/tui/clipboard.mjs:142` → `src/tools/file.mjs:192` | 粘贴图片落盘 `<cwd>/.thincoder-paste-<ts>.png` | 未读则该文件**留在用户仓库根**（污染） |
+| P20 | `src/tools/repomap.mjs:138-145` | 只解析 JS/TS + Python 的 import/export | 其他语言静默缺依赖信息 |
+| P21 | `src/tools/linter.mjs:43-46,119-128` | 语言→linter 表 | 表外语言"no linter available"（可见） |
+| P22 | `src/tools/linter.mjs:61,92` | 配置只看**当前 cwd**（tsconfig.json / Cargo.toml） | monorepo 子包（配置在上级）→ 静默视为无 linter |
+| P23 | `src/agent-tools/subagent-scheduler.mjs:52-54` | 父侧维护文件黑名单 = basename `todo.md`/`changelog.md`/`checklist*`（任意层级） | 用户项目恰有同名文件 → eng-coder **无法声明它**（fail-closed 可见） |
+| P24 | `src/agent-tools/verify.mjs:38-58` | 项目根 = 含 package.json/.git 的最近祖先 | 无锚点 → 退化为松散全局匹配 |
+| P25 | `src/advisor/repos.mjs:146` vs `src/agent-tools/advisor-async.mjs:170` | 同一条"src 是不变量"**两种正则**（组件匹配 vs 锚定） | 语义分叉 |
+| P26 | `src/tools/shared.mjs:20` | `IGNORED_DIRS={node_modules,.git,dist,build,.turbo,coverage}` | 源码在 `build/`/`dist/` → 搜不到（文案有声明） |
+| P27 | `src/tools/tree.mjs:13` | SKIP_DIRS 另含 `bin,obj` 等 | 源码在 `bin/`（Go/脚本项目）→ 树中消失 |
+| P28 | `src/memory/code-sync.mjs:61,141,345` | 任意 `.` 开头路径段一律跳过 | 源码在 `.github/scripts/` 等 → **永不入索引** |
+
+### 🔵 无害 / 仅信息（7 项）
+
+`cmd-init.mjs:12,24-58`（类型探测，双配置项目误判 Node）· `completion.mjs:81`+`verify.mjs:71,175,283`（措辞层）· `.thincoder/` 命名空间（产品自命名空间，非对用户项目的假设）· `~/.thincoder/` · `.mcp.json`（跨工具约定）· `verify.mjs:197-216`（JS node --check，advisory）· `helpers.mjs:264,271,286`（隐藏项有计数行）
+
+### 一致性债务（"整明白"时要一起裁的）
+
+1. **`src/` 判据有 4 种实现**：`^src/` 锚定 `dispatch.mjs:199`+`repos.mjs:168` vs 组件匹配 `repos.mjs:146`+`advisor-async.mjs:170` vs 根锚定 `verify.mjs:38-58` vs 注释里的 `isProductCode`（**该函数不存在**，仅注释概念——`repos.mjs:151`、`verify.mjs:184`）
+2. **"项目根"有两个互不相干的定义**：AGENTS.md 版（`messages.mjs:35`）vs package.json+.git 版（`verify.mjs:38`）
+3. **文档/临时文件判定**：扩展名白名单（`repos.mjs:100,116`），不参考任何项目自述
+4. **已有"让项目自己说"的先例**（改造样板）：`.thincoder/advisor.md`（有默认回退的覆盖）· advisor `documents=[…]` 参数（显式声明，但按次不持久）· verify 的自然语言验证法（**明确拒绝硬编码测试命令**——证明本产品既有设计取向）
+
+### 已核实"不受影响"（防重复勘察）
+
+顶层 `README.md` 从不被读取 · **无任何代码执行用户项目的测试命令**（verify 明确不自跑）· 无构建/发布假设（`package.json` 仅读 ThinCoder 自身）· `test/` 目录假设零命中 · `.vscode/` 仅作端标识后缀 · `prepublishOnly` 用户侧零命中。
+
+### 另立（勘察外，实施中发现）
+
+- `.thincoder/index/`（`.thincoder/index/manifest.json` + vectors.bin）—— **DB 化前死产物**（mtime 2026-07-29，全仓零读写点；活体索引 = `~/.thincoder/memory.db`）→ 可删。
+- `src/tui/wrapped-spawn.mjs:1` 注释指向已入档的 TUI-STDERR-CAPTURE.md（**真断链**）；另有约 12 处带 `docs/design/` 前缀注释（指现行档）——扫尾项。
+
 ## 模块/行数技术债（超限拆分候选）
 - [x] ~~**system.mjs 506 行超 500 硬限**~~——**2026-09-08 批 3 已拆**（SYSTEM-SPLIT——bash.mjs 269 + search.mjs 237 + question.mjs 27——index.mjs:6-7 改 import——src/ 代码引用零残留——CHECKPOINT/STRUCTURE-DEBT 文档指针由父侧核销同步）
 - [x] ~~**VSC agent/setup.mjs 500 行**~~——**2026-09-08 核销**（agent-state.mjs 102 行三函数已建——resetRunState/reconcileEngDesignTokens/applySlotSessionState 迁出——setup.mjs 现 422 行 <500——id=9 env-state 交付顺带完成）
