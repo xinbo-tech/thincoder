@@ -32,7 +32,7 @@ export function collectConsultRows() {
 /** Wire add/remove/cascade for consult rows (idempotent — called after each buildSettings). */
 export function mountModelMenus() {
   // subagent slots (stored as "provider:model" — CLI compatible)
-  for (const id of ["global", "explore", "plan", "coder", "eng-coder"]) {
+  for (const id of ["global", "explore", "plan", "coder", "eng-coder", "eng-designer"]) {
     const slot = document.getElementById("submodel-slot-" + id)
     if (!slot || slot.dataset.mounted === "1") continue
     slot.dataset.mounted = "1"

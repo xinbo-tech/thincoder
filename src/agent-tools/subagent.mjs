@@ -29,7 +29,7 @@ import { subagentStatus, cancelSubagentAction, subagentObserve, subagentSend } f
 // authorizeEngCoderDesignToken moved to subagent-spawn-gate.mjs on 2026-09-06 (module
 // split: this file crossed the >500-line hard cap). resolveDesignSlot re-exported below
 // for the existing test import paths.
-import { authorizeEngCoderDesignToken, executeConsumeDesignAction } from "./subagent-spawn-gate.mjs"
+import { authorizeEngCoderDesignToken, executeConsumeDesignAction, resolveBatchDoc, NEEDS_BATCH_DOC } from "./subagent-spawn-gate.mjs"
 export { resolveDesignSlot } from "./subagent-spawn-gate.mjs"
 import { normalizeFileList, depInfo, describeBlockers, assertNoDepCycle } from "./subagent-scheduler.mjs" // §20 调度器（2026-09-05 拆分轮迁出）
 import { escalateAction } from "./subagent-escalate.mjs" // §19 escalate 引擎（2026-09-03 拆出——500 行纪律——verbatim 迁移）
@@ -58,10 +58,10 @@ export function modeRoleField(engineering) {
     ? {
         role: {
           type: "string",
-          enum: ["explore", "plan", "eng-coder"],
+          enum: ["explore", "plan", "eng-coder", "eng-designer"],
           description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
         },
-        suffix: "In engineering mode, use role='eng-coder' for implementation (coder is disabled).",
+        suffix: "In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for design writing.",
       }
     : {
         role: {
@@ -146,7 +146,15 @@ export const subagentTool = {
     return args?.action === "cancel" || args?.action === "send"
   },
   description: subagentSpec.description, // description/schema 载荷 verbatim 在 subagent-spec.mjs（2026-09-05 module-split round 2——546 > 500 拆出）
-  parameters: subagentSpec.parameters,
+  // §2.22.3 参数面：batchDoc（spawn schema 属性——否则参数无处传入；受限变体的 delete 清单
+  // 需有该键可删）。本仓 schema 载荷在 subagent-spec.mjs——此处单键扩展，不动 spec 载荷。
+  parameters: {
+    ...subagentSpec.parameters,
+    properties: {
+      ...subagentSpec.parameters.properties,
+      batchDoc: { type: "string", description: "REQUIRED for role='eng-coder' and role='eng-designer': the batch record path (docs/batches/<batch>-<topic>.md) — the batch §2 task book this spawn implements (or writes). The spawn is mechanically refused without it, and also when the path does not resolve (cwd-relative or absolute) to a readable file; the CONTENT is never validated (the batch record owns that). explore/plan/coder spawns ignore it (ENGINEERING-MODE.md §2.12/§2.22.3)." },
+    },
+  },
   async execute(args, ctx) {
     // §19 action dispatch（AGENT-LOOP.md §19 D-M1）：缺省 spawn——既有调用零迁移。
     const action = args?.action ?? "spawn"
@@ -158,8 +166,8 @@ export const subagentTool = {
     // engAuditSubagentTool）：eng-coder 子代理的受限通道仅 spawn（sync explore 审计）——
     // escalate 会内部 spawn coder+WRITE（违 explore-only 意图）；status/observe/send 无意义
     // （子代理上下文无 async 池）。镜像 T-E4/E5 的 action 维度。
-    if ((ctx.depth ?? 0) > 0 && parent?._role === "eng-coder" && action !== "spawn") {
-      throw new Error(`action:'${action}' is unavailable inside an eng-coder subagent — the restricted subagent channel is spawn-only (sync role='explore' audits, AGENT-LOOP.md §18 D-E3)`)
+    if ((ctx.depth ?? 0) > 0 && (parent?._role === "eng-coder" || parent?._role === "eng-designer") && action !== "spawn") {
+      throw new Error(`action:'${action}' is unavailable inside an ${parent._role} subagent — the restricted subagent channel is spawn-only (sync role='explore' children, AGENT-LOOP.md §18 D-E3 / ENGINEERING-MODE.md §2.15 D)`)
     }
     if (action === "status") return subagentStatus(args, ctx)
     if (action === "observe") return subagentObserve(args, ctx)
@@ -178,7 +186,9 @@ export const subagentTool = {
     if (typeof task !== "string" || !task.trim()) {
       throw new Error("subagent spawn requires a task description (task) — brief the sub-agent like a colleague who just walked in")
     }
-    const { runAgent } = await import("../agent.mjs")
+    const agentMod = await import("../agent.mjs")
+    // 测试缝（escalate-async 同形 `ctx.runAgent ??` 先例）：缺省 = 生产 runAgent；仅测试注入。
+    const runAgent = ctx.runAgent ?? agentMod.runAgent
     const cwd = ctx.cwd
     // §18 D-E1a depth-gated async default (2026-09-06 需求池 R12——CLI parity):
     // depth-0 spawns default to async for EVERY role (the old role-level default —
@@ -251,9 +261,9 @@ export const subagentTool = {
     // and fell through to full-tool/no-overlay (a full-write coder without design review).
     // Schema enums are advisory; providers don't enforce them. Fail closed on anything that
     // isn't an exact known role.
-    const ROLES = new Set(["explore", "plan", "coder", "eng-coder"])
+    const ROLES = new Set(["explore", "plan", "coder", "eng-coder", "eng-designer"])
     if (!ROLES.has(role)) {
-      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder (exact spelling).`)
+      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder, eng-designer (exact spelling).`)
     }
     // §18 D-E3 internal-spawn mechanical gate: an eng-coder sub-agent may only spawn
     // SYNC explore (audit) children — non-explore roles and async spawns are refused,
@@ -269,6 +279,10 @@ export const subagentTool = {
     }
     if (!parent.config?.agent?.engineering && role === "eng-coder") {
       throw new Error("Engineering mode is not active — use role='coder' for implementation tasks.")
+    }
+    // 第三门（§2.22.4 ②）：eng-designer 工程模式限定（同族文案，不撞 generic engineering-mode 文案）。
+    if (!parent.config?.agent?.engineering && role === "eng-designer") {
+      throw new Error("Engineering mode is not active — role='eng-designer' is engineering-mode only (it writes the requirements/design documents inside the engineering workflow); use role='explore' or role='plan' for read-only work.")
     }
     // §15 D-A3: async spawn is a depth-0 main-session capability — a subagent trying to
     // async-spawn its own children would create an unbounded background tree. Reject loud.
@@ -325,9 +339,17 @@ export const subagentTool = {
     // ——消费面零影响。runChildFor 保持原调用形态（sync 路径 await 无 entry / async 池
     // 条目由 spawnAsyncSubagent 以 entry 调用同一包装）。
     const runChildOpts = { parent, ctx, cwd, runAgent, role, subId, maxTurns, childInput, provider, designId, task, asyncFlag, childSignal }
-    const runChildFor = (entry = null) => runChild(entry, runChildOpts)
+    // §2.22.3 绑定下发（两路共用出口）：abs → runChild → setup 的 `agent._batchDoc`（batch_segment 取用）+ 任务文本行。
+    const runChildFor = (entry = null, batchDocAbs = null) => {
+      const abs = batchDocAbs ?? entry?._batchDoc ?? null
+      return runChild(entry, abs
+        ? { ...runChildOpts, batchDoc: abs, childInput: `${childInput}\n\nBatch record (batchDoc): ${abs}` }
+        : runChildOpts)
+    }
 
     if (!asyncFlag) {
+      // §2.22.3 门调用点①（阻塞路）：目标角色缺参/不可读 → throw（共享 resolveBatchDoc，与异步路同函数）；非目标角色 → null 零变更。
+      const batchDocAbs = NEEDS_BATCH_DOC.has(role) ? resolveBatchDoc(parent, args.batchDoc) : null
       ctx.callbacks?.onSubagent?.({ id: subId, role, status: "started", startedAt: Date.now(), model: provider.model ?? null })
       // LOGGING（LOGGING.md——CLI parity）：child:* 阻塞 spawn——runChild 前后；
       // partial = turn-cap 拒绝（TURN_CAP_MARK 检出）；cancel 非阻塞路径不适用。
@@ -335,7 +357,7 @@ export const subagentTool = {
       const cT0 = Date.now()
       logEvent("child:spawn", { role, id: childLogId, kind: "blocking" })
       try {
-        const report = await runChildFor()
+        const report = await runChildFor(null, batchDocAbs)
         const r = String(report)
         const ms = Date.now() - cT0
         if (r.startsWith(`Subagent (${role}) error:`)) logEvent("child:error", { role, id: childLogId, ms, err: errText(r.split("\n")[0].replace(/^Subagent \([^)]*\) error: /, ""), 200) })
@@ -352,6 +374,6 @@ export const subagentTool = {
     // slot queue — returns immediately, does not await the report.
     // §20：files/dependsOn 域元数据随 spawn 传入（entry _files/_dependsOn——D-SD2——
     // 等待态准入落点在 spawnAsyncSubagent 内复算：非 slot → 强制 queued 不占槽）。
-    return spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild: runChildFor, files, dependsOn })
+    return spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild: runChildFor, files, dependsOn, batchDoc: args.batchDoc })
   },
 }

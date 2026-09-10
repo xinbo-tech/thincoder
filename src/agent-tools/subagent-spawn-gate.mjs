@@ -7,8 +7,23 @@
  * (D4/D5 — 2026-09-08) — the CLI counterpart lives in agent-tools/subagent-spawn.mjs;
  * mirror discipline = design doc only, no cross-alignment.
  */
+import { existsSync, statSync } from "node:fs"
+import { resolve } from "node:path"
 import { validateDesignToken, isExpiredDesignToken } from "./advisor.mjs"
 import { setSlotEngDesignTokens, readSlotEngDesignTokens, clearSlotEngDesignToken } from "../extension/session-slot-write.mjs"
+
+/** batchDoc gate（§2.22.3）：工程角色必传可读批次档路径（空/非文件 → throw）——校验单份、同步/异步两路各一调用点；其余角色 explore/plan/coder 零变更（调用点按 NEEDS_BATCH_DOC 判定）。 */
+export const NEEDS_BATCH_DOC = new Set(["eng-coder", "eng-designer"])
+export function resolveBatchDoc(parent, batchDoc) {
+  const given = typeof batchDoc === "string" ? batchDoc.trim() : ""
+  const bad = (s = "") => new Error("batchDoc is required for an engineering-role spawn (eng-coder / eng-designer) — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it." + s)
+  if (!given) throw bad()
+  const abs = resolve(parent?.cwd ?? process.cwd(), given.replace(/\\/g, "/"))
+  let ok = false
+  try { ok = existsSync(abs) && statSync(abs).isFile() } catch { ok = false }
+  if (!ok) throw bad(` (given path is not a readable file: ${given})`)
+  return abs
+}
 
 /**
  * DESIGN-TOKEN-SETTLEMENT D4 (2026-09-08): 权威回读 —— 从 _engPersist 绑定的槽文件读权威

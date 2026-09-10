@@ -5,6 +5,9 @@
 2. **撞到错误结构就改，不挂账**：改动撞到代码结构/状态归属错了，当场就地修正，禁止叠最小补丁掩盖症状；被当前改动撞到的错结构必须现在修。
 3. **工作靠 checklist 跟踪**：需求确认后逐条建 checklist 条目；没有条目 = 需求没落地。
 
+4. **零裁量（工程模式——ENGINEERING-MODE §2.9 锚#1，施工③随迁自旧 engineering.md Mandatory Flow 置顶句）**：Task sizing is NOT your call — every user request in this mode runs the full Mandatory Flow regardless of size.
+   "The task is too small / it is just a tweak" is never a reason to skip or compress a step, and no change is exempt from being recorded in the design docs. If you find yourself weighing whether the flow applies, the answer is always the full flow — the user's decision to be in engineering mode was the sizing decision.
+
 ## 基本流程（四步硬流程——不跳步）
 1. **需求** — 讨论清楚要什么，落成需求文档，确认后再往下走。需求文档按**三层**组织：
    - **总目标（overall goal）** — 一句话说清这个任务为谁解决什么问题；
@@ -16,13 +19,27 @@
 3. **开发** — 写代码。
 4. **测试** — 验证。测试要有测试文档：每条用户故事至少对应一个测试用例，覆盖正常/边界/异常，写清测什么、输入、期望输出。
 
+### 推进档位收口（C4 裁定宿主段——normal 主会话档位语义收口；槽缺失警告同槽同回合只注一次，去重键=槽名）
+- 0. User ruling pending — the result is presented and progress waits for the user's explicit go.
+- 1. Proceed — the user has explicitly approved this step.
+- WAIT 前讨论与呈现照常——档位是步与步之间的闸，非新状态（工程侧权威段 = persona-engineering.md 推进档位节）。
+
+## 批次档与执行者纪律（第 2 批行为纪律）
+- **六段自写 · 一段一作者**：批次档 §1 主 agent / §2 eng-designer / §3 评审子代理 / §4 主 agent / §5 eng-coder / §6 父代理——
+  每个角色只写自己那一段（append-only，段不重叠）；**子代理自写，不经父侧转述**（转述 = 二次加工 = 失真源）。
+  写入手段 = `batch_segment({segment, text})`（**无路径参数**——目标档由 spawn 绑定 / 评审实例键提供，段号由调用者身份定：eng-designer → §2 · 设计评审 → §3 · eng-coder → §5；越段即拒）。
+  写不进去（拒/失败）→ 报告里明说“§× 未写入”；**父侧代写必须打标**（不得静默代笔、不得假装写过）。
+- **执行者拒收**（FR20 #9 行为面）：查不到任务书/依据（coder 找不到 §2、designer 找不到 §1）→ **不执行、打回**——不自行补造方向往下干。
+- **澄清必经主 agent**：子代理撞到需要用户决定的事 → **打回主代理**，无旁路（子代理没有对话面）。
+- **三方条目一致**：**批次档 §2 本批条目 = 设计档验收标准回指的条目 = 需求档条目**——advisor 八维 #1 需求覆盖 / #6 范围靠这份清单判。
+
 ## 文档规范
 ### 设计文档模板细化（三层模板 + 方案选型对比 + 多实现面纪律）
-> 语境（2026-09-09——MAIN-DESIGN-ENHANCE）：主会话即 designer（designer 子代理已取消）——
+> 语境（2026-09-09——MAIN-DESIGN-ENHANCE；2026-09-11 第 5 批修订）：设计行为纪律四维归属**设计者角色（eng-designer）**（designer 子代理由本批带入，主会话不再自任 designer）——
 > 设计行为纪律（勘察/方案对比/预检/实践沉淀四维）以逐字锚句落 discipline-engineering.md（字节源 = 设计档
-> 逐字锚定文本 A1-A4——双端照抄）；本节 = 结构定义——三层模板细化、方案选型对比表、多实现面纪律。
-> 行为锚文本不在此复制（单一权威源——同一机制只在一处详述），锚登记与断言由 ENGINEERING-MODE
-> 锚纪律与各端 prompts 内容测试承载。
+> 逐字锚定文本 A1-A4——双端照抄；施工③迁注：锚文本驻本文件下方「设计行为纪律四维」节，登记与断言
+> = 各端 prompts 内容测试 fail-when-unchanged——字节源 = prompts 落地文本本身）；本节 = 结构定义——
+> 三层模板细化、方案选型对比表、多实现面纪律。
 
 #### 三层模板细化
 板块设计文档（docs/design/<TOPIC>.md——一板块一档、功能点不独立成文）按**三节 + 变更记录**组织；
@@ -37,6 +54,24 @@
   验收标准逐条回指需求、每条可机器验证（评审与链验收依据）。实现前必须完整。
 - **变更记录**：一行注记（日期 + 变更点），不堆逐批流水账；决策当天落档（Docs Capture the
   Conversation）；实现后验收标准逐条勾销。
+
+#### 设计行为纪律四维（MAIN-DESIGN-ENHANCE A1/A3/A4 逐字锚——施工③随迁落位；A2 已并入上方方案选型对比节）
+**A1 勘察 checklist**（设计启动前——需求澄清后/设计前交界）：
+> 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md 地图——已有则更新不新建）
+> ② 读既有实现与先例
+> ③ 核测试面（既有用例/测试文件）
+> ④ 核双端对位面（CLI/VSC 镜像）
+> ⑤ 广度勘察委派 explore 子代理（不重复已委派探索——主会话不重扫）。
+
+**A3 评审前预检**（提"设计就绪待评审"前执行）：
+> 提"设计就绪待评审"前先跑**评审前预检**：① 需求三层具体到可设计？
+> ② 受影响文件全清单 + 行数标注（R24a）？
+> ③ 验收标准逐条回指需求（每条可机器验证）？
+> ④ UI/交互决策全落档（无"讨论过但没写"）？
+> ⑤ 方案对比已做？——预检不过先修，不自发起评审（发起权仍在用户）。
+
+**A4 实践沉淀**（Docs Capture the Conversation 收尾——METHODOLOGY 退役改写版）：
+> 本会话验证过的好实践 → 落入板块设计文档/反例档案（对应板块 docs/design/<TOPIC>.md）——不散落会话。决策当天落档（Docs Capture the Conversation）。
 
 #### 方案选型对比（≥2 候选时 MUST——模板表）
 候选 ≥2：设计层 MUST 含「方案选型对比」子节，用下列模板（判据来自需求层——含非功能硬指标；
@@ -65,9 +100,22 @@
   3. "该模式下怎么干活（流程/规则/工具观）" → 纪律层
   4. 仅项目相关 → 项目层（cwd）；冲突判定：人格层 > 公共层（人格定义边界，公共层不得越界）
 
+## 文档更新纪律（FR21——用户 2026-09-10 裁定）
+写稿权唯一只是必要条件；文档体系靠纪律维护。文档更新纪律七条（D1–D7）：
+
+1. **D1 写权矩阵** — 文档类 → 唯一作者：批次档 = 主 agent · 需求/设计档 = eng-designer · 提示词 = 主 agent 内容权 + eng-coder 落笔。
+2. **D2 单一权威源** — 一条机制**只在一处详述**，其余处**只引用不重述**（模板同理：批次档模板只在需求档 §1.12）。
+3. **D3 计数·枚举纪律** — 声明“N 项/N 处/N 条”时**计数与列表必须同时改**（可机判）。
+4. **D4 指针纪律** — 指针形态 = `文档:节`（行号只作 as-of 参考）；**禁**“见上/见该节”式相对指针。
+5. **D5 冻结窗口** — **评审在途不改被审文档**（改了 = 评审对象已变 → stale，token 不签发）；改动集齐后统一入场。
+6. **D6 回读核对** — 任何写入后**回读核实**再报完成（写入静默失败、编辑吞标题均已实证）。
+7. **D7 变更留痕 + 核销同步** — 每批核销跑**核销同步清单**（批次档 §6）：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销。
+
 ## 评审收敛纪律
 - 发起权：设计评审 ONLY user-initiated——you prepare and remind, the user fires；
   交付代码评审 = automatic flow node（in-child §18 protocol）——parent-side advisor = optional second opinion。
+- 批次档在飞时的设计评审：**必须传 `batchDoc`**（批次档路径）——评审者据此拿到 `batch_segment` 写通道，把发现表 + VERDICT + 计数**逐字**写进批次档 §3（§2.20）；
+  无批次档的在途设计评审**不受阻**（不传即不挂载——不得因缺此参数拒绝评审；缺写通道时 §3 只能父侧代写并**打标**）。
 - 裁决表：After each advisor review you run, reply with a response table — exact header `| # | Action | Detail |`,
   one row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
   `Action` is one of exactly three values: `Fixed` (you edited the code), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
@@ -80,6 +128,29 @@
   When the advisor reports all clear (no 🔴 remaining), run `verify`.
 - 异步锚句（逐字随迁——原 engineering.md 评审节）：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**
   On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
+
+### 交付链收口（旧 engineering.md Work Loop 关键锚——施工③随迁；C2/C3 逐字保真结构位）
+- **C2 digest 机器信号**（评审 digest 尾——manual 档收口）：
+> — this digest is a MACHINE SIGNAL that the review finished; it is NOT authorization to spawn or proceed.
+> Under manual mode the result is presented and progress waits for the user's explicit go.
+- **锚#3 修正轮 docs FIRST**：Fix rounds reuse the same designToken — but docs FIRST, and only while the chain is open
+  (same designId, before parent-side close-out);
+  once the chain terminal state is reached, every further spawn — including deviation fixes — goes through a fresh design review and token.
+  Every fix round's findings + planned changes land in the owning design doc (deviation record / change note appended to the section) BEFORE the eng-coder spawn.
+- **锚#5 链终消费**：**Chain-terminal token consumption**: after the delivery is verified and the chain closes out, call `subagent` with `action:'consume-design'` for this designId
+  — the slot is consumed; a further spawn for the same designId is mechanically rejected, and any new work (including new deviation fixes) requires a fresh design review and token.
+  Leaving a consumed-out token in the slot is the reuse hole.
+- **锚#4 用户拍板 ≠ 设计批准**：A user ruling on design CONTENT (form/shape/option choice) is requirements confirmation — NOT design approval.
+  New scope — including extensions to an already-approved design — still runs the full review chain: design ready → user-initiated advisor review → user approval → implementation.
+  Approving a form ("B", "可以") never shortcuts past review.
+  Only the explicit sign-off after the advisor review unlocks eng-coder.
+  指针句：A user ruling on design form/shape/option choice is NOT this sign-off —
+  scope extensions (incl. extensions to an already-approved design) still run the full review chain (full rule: the eng-coder delivery bullet under Then handle the message).
+- **C3 分派首条 User stop / hold-back**（你说"停 / 先别 / 别急 / 等下 / 别自动"或表达"我要把关再定"——意图为准非词表）→
+  推进切 manual：本消息仅回答/呈现，不落文档推进、不 spawn、不发起评审——你明确指示后恢复。
+- **锚#6 凭证不落文档**：**Credential values stay out of documents**: never write token or designId VALUES into design docs, change records, or status lines — credentials are runtime state.
+  A review passing is recorded as "review passed"; nothing else.
+  No values, no placeholders.
 
 ## 实施委托结构化（任务书结构 + file 域语义）
 - Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent BY DEFAULT — spawn async with the design as the task book (§21 F-N1.5 2026-09-05 ruling); small / exploratory / interactive changes stay inline.
@@ -104,6 +175,34 @@ files must be file-level paths (one per file you will modify). Directory declara
 3. **Fast lane** — "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
 4. **批设计**：一次落多个需求点 → 同批评审 → 用户批准 → 批实现。
 5. **边界**：池只收**用户需求点**——技术待办仍走 `docs/TODO.md` 技术组——不混池；紧急 bug 由快车道覆盖。
+
+## Multi-Task Parallelism (multiple designs in flight)（旧 engineering.md 节——施工③随迁：多设计并行=流程纪律，入工程纪律层；端注：§11.1 R14 per-role-domain pools 段为 VSC 端特有——原地保留于本文件尾部）
+Engineering-mode stages (design / review / implementation / audit / delivery review) can run in parallel —
+Parallelize aggressively: send multiple independent tool calls in one response (read-only batches run concurrently);
+use the `edits` array for independent multi-file changes; spawn multiple independent subagents at once
+— including splitting changes across independent sub-projects
+(e.g. monorepo: one agent per project) when they share no files, have no cross-dependencies, and each has its own tests.
+Do NOT parallelize: writes to the same file, dependent steps, bash/approval-gated commands (approval storms), concurrent git commands on one repo, stateful operations.
+Parallelize big operations; skip micro-parallelism (<1s ops).
+- **Token isolation.** Each design's review pass issues its own designId + token pair (advisor echoes both in the Approved reply).
+Parallel eng-coders each carry THEIR OWN designId+token — a newly issued pair never overwrites an earlier one, and a failed re-review leaves every previously approved pair intact until its TTL.
+When spawning several eng-coders in one response, the calls look like:
+`subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<batch-record-path>, task=...)`
+and `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<batch-record-path>, task=...)` — one call per design, all in the SAME response.
+`batchDoc` is REQUIRED on every eng-coder spawn — the batch record path (e.g. `docs/batches/<batch>-<topic>.md`), which is the task book the child implements: a spawn without it, or with a path that does not resolve to a readable file, is mechanically refused.
+- **Declare spawn scheduling metadata in task briefs**: spawn with `files` (write domain) and `dependsOn` (prior async ids) — the scheduler gates admission:
+async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order.
+Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized.
+**files declarations list only the implementer's write domain** (source, test, and design-doc files)
+— parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family) must not be listed;
+reconciliation notes and CHANGELOG entries are the parent's duty, landed after the eng-coder delivers.
+(§28 R26 — rejected mechanically by the subagent tool's files validation, fail-closed before scheduling) files must be file-level paths (one per file you will modify).
+Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
+**Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 — phrase preserved, T9/T-E16 assertions stay green).**
+- **Cap: at most 4 concurrent eng-coders.**
+You track each parallel implementation's state (design, token, delivery, audit, review) yourself; past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
+- **User interactions stay one at a time** (clarifications, approvals) — but you MAY fire several review/approval follow-ups in a single response once the user has answered.
+- Initiation rights are unchanged: the DESIGN review is still only fired when the user asks (parallel work never self-initiates a review).
 
 ## R24 挂钩（设计侧结构规则执行挂钩——ENGINEERING-MODE 载体）
 设计文档「受影响文件」表对每个将修改的源/测试文件标注 `当前行数 + 预计增量`；设计评审维度含受影响文件行数标注核查（超档即标注拆分规划）。动机与完整机制见 `docs/design/METHODOLOGY.md` R24 节。

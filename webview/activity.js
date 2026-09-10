@@ -34,7 +34,7 @@ export { noteChunk } from "./activity-view.js"
 function parseChannel(name) {
   const channel = String(name ?? "")
   const label = channel.startsWith("sub:") ? channel.slice(4) : channel
-  const m = /^sub:(explore|plan|coder|eng-coder|advisor)#(\d+)$/.exec(channel)
+  const m = /^sub:(explore|plan|coder|eng-coder|eng-designer|advisor)#(\d+)$/.exec(channel)
   if (m) return { channel, label, role: m[1], id: Number(m[2]), model: null }
   const c = /^sub:(consult|escalate) (.+) #(\d+)$/.exec(channel)
   if (c) return { channel, label, role: c[1], id: Number(c[3]), model: c[2] }

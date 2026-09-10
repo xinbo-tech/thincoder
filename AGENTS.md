@@ -41,6 +41,7 @@ src/agent-tools/subagent-actions.mjs  status/cancel action executors（§19.8 20
 src/agent-tools/subagent-async.mjs  async/audit machinery (gateEngCoderSpawn/auditTaskBook/shouldAutoResume/spawnAsyncSubagent/settleAsyncEntry/injectAsyncResult/collectSettledAsync/mergeChildMutations + F2 interrupt chain filter + interrupt-settle 豁免（2026-09-05 module split——行数随维护漂移不记档）
 src/agent-tools/subagent-scheduler.mjs  §20 scheduler + file-domain machinery (pool/tombstone/conflict/dep/refill/stall/queueRunnable — 2026-09-05 module split)
 src/agent-tools/read-history-discovery.mjs  read_history discovery-face leaf（READ-HISTORY-SPLIT 新——listCwdSessions + 私有助手 slotMeta/tidyCwd/sha1hex verbatim 自 read-history.mjs——零行为改）——依赖核 node:fs/node:crypto/node:path + session-io.mjs（无核心私有引用）——仅 read-history.mjs 内部 import（0 外部消费者——不 re-export）
+src/agent-tools/batch-segment.mjs  批次档段写入工具（第 5 批 VSC 镜像 · ENGINEERING-MODE.md §2.20/§2.22.5——无 path 参数/段白名单按身份 designer§2·评审§3·coder§5/append-only/来源戳仅 §3/凭证剥除）+ resolveBatchDocPath（评审侧「若传则须可读」）
 src/tools.mjs         Re-export shim → src/tools/ (file ops, bash, glob, grep, git, web, checkpoint, read_image)
 src/tools/checkpoint.mjs  Checkpoint 快照全量副本（CLI src/git/checkpoint.mjs 镜像，CHECKPOINT.md F5 存储统一）
 src/tools/git-ext.mjs / git-checkpoint.mjs  git 工具 F7 扩展 action（clone/init/rebase/remote/clean/switch/apply/worktree/archive/blame/mv）+ checkpoint 子系统（500 行拆分，CLI 镜像）

@@ -27,7 +27,7 @@
 | Webview 前端/消息协议 | `WEBVIEW.md` | VSC 独有（无 CLI 对应——批 7）；webview 布局/文件结构/活动面板 R22/组件 + 消息协议（ARCHITECTURE §11+§12 迁出） |
 | 需求与决策 | `REQUIREMENTS.md` | 需求与决策记录 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
-| 提示词系统（本端） | `VSC-PROMPTS.md` | 本端 14 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = CLI 仓 `thincoder/docs/design/PROMPT-SYSTEM.md`（装配矩阵/命名法/编写纪律蓝图）；施工档三件（IMPL-1-TEXT/2-CODE/3-TEST-MIGRATE）在 CLI 侧——2026-09-10 双端同批交付 |
+| 提示词系统（双源：中文权威 + 英文落地） | `VSC-PROMPTS.md` + `docs/design/prompts/`（15 档中文权威） | 本端 15 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = **本端双源**（中文权威 ↔ `src/prompts/` 英文落地，差异逐项见「镜像差异表」节）；CLI 仓 `PROMPT-SYSTEM.md` 蓝图 + 施工档三件为参照（语义同源·原文自持）——2026-09-10 双端同批 · 2026-09-11 双源化（第 5 批 VSC-MIRROR） |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
 | 发布流程 | `RELEASE.md` | |
@@ -50,8 +50,26 @@
 5. **存量碎片处理（2026-08-25 收口）**：Settings 6 文档已合并为 `SETTINGS.md`（现行权威源，历史批次文档已归档 `_archive/`）；TURN-CAP 两端同源已收口为各自实现记录。新增同主题内容须先查本表归属。
 6. **文档人类可读（2026-09-08 防复发）**：写/改本文档映射内任一 `docs/design/` 文档须人类可读——**无 >300 字符单行**（整节/表/规则不得压成一行）、**markdown 结构正确**（标题/表格/代码块不被吞进正文，空行隔离节）、**变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）。违反即文档格式债，与源码长行硬限同理。批量检查：`node scripts/check-doc-width.mjs`（扫 `docs/design/` 无 >300 单行，`_archive/` 豁免）。
 
+## 镜像差异表（提示词双源——`docs/design/prompts/` ↔ `src/prompts/` ↔ CLI 仓同名档）
+
+> 第 5 批 VSC-MIRROR（2026-09-11）建双源：`docs/design/prompts/` 15 档初始内容**逐字**自 CLI 仓同名档拷贝；
+> 差异只允许在**路径/UI 引用处**与**端特有段**，逐项登记如下（语义同源·原文自持——依据 CLI 侧设计档 `ENGINEERING-MODE.md` §2.22.1/§2.22.7（CLI 侧））。
+
+| # | 文件 + 段 | 差异 | 来源 |
+|---|---|---|---|
+| 1 | `discipline-engineering.md` · 尾部「VSC 端特有段：R14 池规则」节 | 镜像独有（CLI 侧不引入） | 端特有段 = 本端 `src/prompts/discipline-engineering.md` 同名尾部节（as-of :225-228；per-role-domain pools / `agent.poolLimits`） |
+| 2 | `persona-engineering.md` · 尾部「VSC 端特有段」节 | 镜像独有 | 端特有段 = 本端 `src/prompts/persona-engineering.md` VSC 独有段（多并行指针 / R14 池规则 / 取消语义） |
+| 3 | `advisor-design.md`（评审标准 7 + 要点，2 处）/ `discipline-normal.md`（工作流节 + 文档先行节，2 处） | `docs/README.md` → `docs/design/README.md` | 跨仓路径改写（本端文档地图 = `docs/design/README.md`） |
+| 4 | `discipline-engineering.md` · D2 / 评审收敛纪律 / 委派节 / 写文档节 | CLI 侧引用注记 + 本端权威改写 | 跨仓节引用（需求档树/`docs/batches/`/§2.20/`docs/design/METHODOLOGY.md` 属 CLI 仓 → 注「（CLI 侧）」；`docs/README.md` 文档规范 §2.7 → 本端 `docs/design/README.md` 归属规则 6） |
+| 5 | `discipline-normal.md` / `persona-eng-coder.md` / `persona-engineering.md` · AGENT-LOOP 引用；`discipline-engineering.md` · 异步锚句 | 保留 CLI 节号 + 注「（CLI 侧）」+ 本端对应节号 | 跨仓节引用（CLI 侧 `AGENT-LOOP.md` §18/§25、以及机制对不上的 §11.2——本端对应 §8 交付协议 / §9 异步化） |
+| 6 | `discipline-normal.md` / `persona-eng-designer.md` / `persona-engineering.md` · 需求层与批次档树引用 | 行内注记「CLI 侧」（如「——CLI 侧批次档树」） | 跨仓路径（本端无 `docs/requirements/`·`docs/batches/`——批次档单一归属 = CLI 仓） |
+| 7 | （V1 判据——非文本差异） | 含「（CLI 侧）」注记的引用行 V1 豁免（不报、不入基线）；本表自身的 CLI 侧设计档引用同此注记 | **VSC 独有语义**（CLI 侧 V1 不变）——CLI 侧设计档 `ENGINEERING-MODE.md` §2.22.7 |
+| 8 | `persona-eng-coder.md` · 尾部「VSC 端特有段：实现纪律与交付报告」节 | 镜像独有（CLI 侧不引入）；反向差异：镜像 `file 域声明语义` 节在本端英文落地无对应节（镜像以 CLI 结构为准） | 端特有段 = 本端 `src/prompts/persona-eng-coder.md:33-49`（实现纪律 / 逐文件自查 / 清单外变更 / 收尾自审 / 报告格式） |
+| 9 | `discipline-engineering.md` · 端内锚注/施工迁注文本（`:8` Mandatory Flow 零裁量锚（ENGINEERING-MODE §2.9 锚#1）/ `:38-41` 第 5 批修订注 / `:58` 设计行为纪律四维锚节） | 镜像不并入（镜像以 CLI 中文档结构与机制文本为准；本项为端内锚注/迁注文本——差异已如实登记） | 端内文本差异——已登记（非静默） |
+
 ## 变更记录
 
+- 2026-09-11：提示词双源化（第 5 批 VSC-MIRROR）——新建 `docs/design/prompts/` 15 档中文权威镜像（逐字自 CLI 仓拷贝 + 端特有段并入 + 跨仓节引用改写，逐项见「镜像差异表」节）；`src/prompts/` 14→15（新增 `persona-eng-designer.md`）+ 锚句宿主档定点改写（A1–A8/A11/A12）；「机制权威」句改写为**本端双源**
 - 2026-09-09：ASYNC-RESIDUE-FIX 登记（CLI docs/design——双端 prompts 异步残留措辞清理——本端 main.md/engineering.md 同步修正——评审采纳版）——Agent 循环 行注登记。
 - 2026-09-09：INPUT-LOCK-ASYNC 登记（主会话输入禁排队 C'——busy（running 含 digest）锁输入/拒收——R15 排队合并废弃 + 单槽交接——CLI+VSC 双端实现——本端机制正文 AGENT-LOOP §7 更新）
 - 2026-09-09：SESSION-RESTORE-PARITY 登记（会话/存储/恢复——VSC 恢复呈现对齐 CLI：

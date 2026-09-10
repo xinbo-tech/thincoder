@@ -121,7 +121,7 @@ export { renderTimeline as _renderTimeline }
  * the panel keeps moving while the advisor explores — otherwise the panel sits
  * frozen through every tool-call phase and the review appears to have stalled.
  */
-async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd) {
+async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd, reviewType = "code", batchDoc = null) {
   // Kind-tagged wrappers: the TUI panel colors reasoning / answer / tool progress differently.
   // Every chunk is ALSO recorded into an ordered timeline — the persisted record
   // must show the review process (thinking ↔ tool progress ↔ final text) at its
@@ -137,7 +137,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   const onThink = emit("think")
   const onText = emit("text")
   const onTool = emit("tool")
-  const { schemas: toolSchemas, byName: toolByName } = _resolvedAdvisorToolsFor(agent)
+  const { schemas: toolSchemas, byName: toolByName } = _resolvedAdvisorToolsFor(agent, reviewType, batchDoc)
   let turns = 0
   const startTime = Date.now()
   
@@ -395,8 +395,17 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
     messages[userIdx] = { ...messages[userIdx], content: injectObjectDeclaration(messages[userIdx].content, object) }
   }
 
+  // §2.20.2/§2.22.5 评审侧批次档实例绑定（第 5 批 VSC 适配点②）：只有**设计评审**才可能带写
+  // 通道。异步路 = `rv.batchDoc`（本评审实例键——与 round/priorOutput 同族：并发各绑各档，
+  // 不用单值会话态）；同步路 = 调用点 `callbacks.batchDoc`（该路径无 rv 实例——传入非空 rv 会
+  // 改变 round/prior 解析，故沿用 per-call 通道，同样不是会话态）。
+  // 判别行为：未传 → 工具不挂载、评审照常（零回归）；不可读在调用点已 throw。
+  const boundBatchDoc = reviewType === "design"
+    ? (rv && "batchDoc" in rv ? rv.batchDoc ?? null : (callbacks && "batchDoc" in callbacks ? callbacks.batchDoc ?? null : null))
+    : null
+
   try {
-    const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd)
+    const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd, reviewType, boundBatchDoc)
 
     // Host-verified citations (decision d698434): mechanically check every
     // `file:line: content` reference in the review against the CURRENT file

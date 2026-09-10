@@ -24,6 +24,7 @@ import { join } from "node:path"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
 import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, runningByDomain, writeTombstoneTo } from "./subagent-scheduler.mjs"
+import { resolveBatchDoc, NEEDS_BATCH_DOC } from "./subagent-spawn-gate.mjs"
 import { settleAsyncEntry } from "./async-settle.mjs"
 import { recordFileMutation } from "./advisor-async.mjs"
 // 测试 import 面（test/subagent-scheduler.test.mjs——测试文件零改动约束）：§20 调度符号经
@@ -43,14 +44,19 @@ export { describeBlockers, queueRunnable, nextSubagentId } from "./subagent-sche
  * mechanical enforcement.
  */
 export const ENG_AUDIT_SPAWN_LIMIT = 6 // 6 audit spawns allowed; the 7th is refused
+/** §18 D-E3 / §2.22.4 ③：内部 spawn 受限通道的父角色集（eng-coder 审计 / eng-designer 勘察）。 */
+export const ENG_CHILD_PARENTS = new Set(["eng-coder", "eng-designer"])
 export function gateEngCoderSpawn(parent, depth, role, asyncArg) {
-  if ((depth ?? 0) <= 0 || parent?._role !== "eng-coder") return null
+  const parentRole = parent?._role
+  if ((depth ?? 0) <= 0 || !ENG_CHILD_PARENTS.has(parentRole)) return null
   if (role !== "explore") {
-    throw new Error("eng-coder subagents may only spawn role='explore' — internal spawns exist solely for the read-only divergence audit (AGENT-LOOP.md §18 D-E3)")
+    throw new Error(`${parentRole} subagents may only spawn role='explore' — internal spawns exist solely for read-only work (the eng-coder divergence audit / the designer's own survey) (AGENT-LOOP.md §18 D-E3, ENGINEERING-MODE.md §2.15 D)`)
   }
   if (asyncArg === true) {
-    throw new Error("eng-coder internal spawns are sync-only — the audit report must return before the next protocol step; async spawn is only available at the top level (AGENT-LOOP.md §18 D-E3)")
+    throw new Error(`${parentRole} internal spawns are sync-only — the report must return before the next protocol step; async spawn is only available at the top level (AGENT-LOOP.md §18 D-E3)`)
   }
+  // designer 勘察路径：校验通过即返回 null（非审计——不计数、不触发审计任务书注入）
+  if (parentRole === "eng-designer") return null
   // §18 audit budget lives per DELIVERY, not per runAgent segment (code review #2):
   // the child agent object is rebuilt on every runAgent call (incl. ContinueError
   // resume via opts.history) — carry the count on the run history array (survives
@@ -213,7 +219,10 @@ export function shouldAutoResume(asyncFlag, parent, ctx) {
  * 队列等待不计入运行时长）；entry._onCancelled = 停止冻结通知（onSubagent
  * status:"cancelled"——spawn 上下文绑定——webview ⟦ev⟧stopped 冻结相位）。
  */
-export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild, files, dependsOn, settle }) {
+export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSignal, runChild, files, dependsOn, settle, batchDoc = null }) {
+  // §2.22.3 门调用点②（异步路）：目标角色缺参/不可读 → throw（共享 resolveBatchDoc——
+  // 与阻塞路同函数）；非目标角色 → null 零变更。绑定随条目给 runChild 包装下发。
+  const batchDocAbs = NEEDS_BATCH_DOC.has(role) ? resolveBatchDoc(parent, batchDoc) : null
   // 写侧经 agent 字段建池——安全前提 = run 起始绑定不变式（agent.mjs 在 run 起始把
   // agent._asyncSubagents 绑定到 history 同一 Map 或新 Map，回合尾回写 history——读侧
   // D1 accessor（poolMap/getAsyncPool）history 优先与之一致）。
@@ -227,6 +236,7 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     // §17: the child's effective signal (session-first) — the settle callback reads it
     // to skip the pending transfer when the session was aborted (abort = discard).
     signal: childSignal,
+    _batchDoc: batchDocAbs, // §2.20.2 spawn 绑定（runChild 包装读它注入 child._batchDoc + 任务文本行）
     // §19.5 D-M5 可决策字段（status 输出 + cancel 决策）——spawn 时装配。
     model: provider.model ?? null,
     maxTurns: parent.config?.agent?.subagentTurns ?? 100,

@@ -185,7 +185,7 @@ function resolveReviewInstance(parent, reviewType, paths, documents, scopeKey) {
  *  designToken 每轮现铸（uuid:expiresAt 流程凭证——续跑同 id 新 token）。
  * 返回 { entry }（已启动入池）或 { error }（容量满/实例 cap/scope 守卫/深度门——工具层转返回文案）。
  */
-export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, object }) {
+export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, object, batchDoc = null }) {
   // 写侧经 agent 字段建池——安全前提 = run 起始绑定不变式（agent.mjs 在 run 起始把
   // agent._asyncAdvisors 绑定到 history 同一 Map 或新 Map，回合尾回写 history——读侧
   // D1 accessor（advisorPoolMap/getAsyncPool）history 优先与之一致；direct-execute ctx
@@ -222,6 +222,7 @@ export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, 
     id, role: "advisor", status: "running",
     reviewType, reviewId: inst.reviewId, round: inst.round,
     documents: documents ?? null, paths: paths ?? null, object: object ?? null,
+    batchDoc, // §2.20.2/§2.22.5 实例键绑定（entry.batchDoc → runAdvisorReview 的 rv.batchDoc）
     designId, designToken,
     model: null, startedAt: Date.now(),
     done: false, report: null, error: null, cancelled: false,
@@ -252,12 +253,14 @@ export function launchAsyncAdvisor({ parent, ctx, reviewType, documents, paths, 
     entry.startedAt = Date.now()
     ctx.callbacks?.onSubagent?.({ id: entry.id, role: "advisor", status: "started", startedAt: entry.startedAt, model: entry.model, pool: true })
     logEvent("advisor:spawn", { id: `${entry.reviewType}#${entry.id}`, round: entry.round, kind: "async", status: "running" })
+    // 测试缝（escalate-async `ctx.runAgent ??` 同形先例）：缺省 = 生产 runAdvisorReview；仅测试注入。
+    const reviewRunner = ctx?.runAdvisorReview ?? runAdvisorReview
     // runAdvisorReview promise = entry.start 等值（runner 包装——rv 携带实例轮次/prior——
     // 并发隔离——不读全局 round/prior）
-    runAdvisorReview(parent, reviewType, {
+    reviewRunner(parent, reviewType, {
       onOutput: (chunk) => stream(chunk),
       signal: entry.controller.signal,
-    }, designToken, documents ?? null, paths ?? null, object ?? null, { round: entry.round, priorOutput: inst.priorOutput ?? null }, entry.designId)
+    }, designToken, documents ?? null, paths ?? null, object ?? null, { round: entry.round, priorOutput: inst.priorOutput ?? null, batchDoc: entry.batchDoc ?? null }, entry.designId)
       .then(
         (result) => settleAdvisorReview(parent, entry, result, null, ctx.callbacks?.onAsyncSettled),
         (err) => settleAdvisorReview(parent, entry, null, err?.message ?? String(err), ctx.callbacks?.onAsyncSettled),

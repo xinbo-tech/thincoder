@@ -1,6 +1,6 @@
 /**
  * prompts-async-guidance.test.mjs — prompts 内容锚测试（VSC 端——PROMPT-SYSTEM 施工③ 2026-09-10
- * 重写，与 CLI test/prompts-async-guidance.test.mjs 同构）。断言对象 = 本端 src/prompts/ 新 14 文件
+ * 重写，与 CLI test/prompts-async-guidance.test.mjs 同构）。断言对象 = 本端 src/prompts/ 新 15 文件
  * （persona-*×6 / common / discipline-*×2 / 特殊×5）+ 装配代码（src/prompt-overlays.mjs）。
  * 旧 10 文件（system/engineering/engineering-sub/main/discipline/methodology-template 等）已退役——
  * 锚句随迁新文件（PROMPT-IMPL-1-TEXT §2.3），本文件按新宿主重写断言；退役态零残留也在此对账
@@ -25,7 +25,7 @@ const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
 const exists = (rel) => existsSync(join(__here, "..", rel))
 
 const NEW_PROMPTS = [
-  "persona-engineering.md", "persona-normal.md", "persona-eng-coder.md",
+  "persona-engineering.md", "persona-normal.md", "persona-eng-coder.md", "persona-eng-designer.md",
   "persona-explore.md", "persona-coder.md", "persona-plan.md",
   "common.md", "discipline-engineering.md", "discipline-normal.md",
   "consult-base.md", "advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md",
@@ -350,7 +350,7 @@ test("§3.4 降级链④：特殊模块基底缺失→不可用报错（不自�
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// §2.7 编写纪律巡检（机械扫——14 文件 + 14 条纪律可机械部分）。
+// §2.7 编写纪律巡检（机械扫——15 文件 + 14 条纪律可机械部分）。
 // ─────────────────────────────────────────────────────────────────────────────
 test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -->（主链 [1]-[3] 数字槽位）", () => {
   for (const f of NEW_PROMPTS) {

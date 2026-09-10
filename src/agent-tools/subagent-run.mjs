@@ -13,7 +13,7 @@
  */
 import { shouldAutoResume, mergeChildMutations } from "./subagent-async.mjs"
 
-export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId, maxTurns, childInput, provider, designId, task, asyncFlag, childSignal }) {
+export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId, maxTurns, childInput, provider, designId, task, asyncFlag, childSignal, batchDoc = null }) {
       let output = ""
       const sink = {}
       const panel = (chunk) => ctx.callbacks?.onToolPanel?.(`sub:${role}#${subId}`, chunk)
@@ -55,6 +55,8 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
         // JSON parse / unknown tool / planMode / design-token gates run BEFORE the
         // permission stage in execute-tools and stay fully effective (T-E14).
         engDesignReviewed: role === "eng-coder", // token verified above → child may write files
+        // §2.22.3（第 5 批）：批次档绑定随 run opts 进 setup（→ `agent._batchDoc`，batch_segment 取用）。
+        batchDoc,
         // §18 D-E2 ③: the eng-coder's own spawn task rides the child as the verbatim
         // source for its audit task book (mechanical — never self-written).
         ...(role === "eng-coder" ? { engTaskInput: task } : {}),

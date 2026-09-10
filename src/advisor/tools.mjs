@@ -6,6 +6,7 @@
  * _resolvedAdvisorToolsFor — production path unchanged (override ?? advisorToolsFor).
  */
 import { toOpenAISchema } from "../tools/index.mjs"
+import { batchSegmentTool } from "../agent-tools/batch-segment.mjs"
 
 const { readTool, globTool, grepTool, lsTool } = await import("../tools/index.mjs")
 const { lspTool } = await import("../tools/lsp.mjs")
@@ -22,11 +23,16 @@ const { codeSearchTool } = await import("../tools/code.mjs")
  * @param {Object} _agent — accepted for API compatibility with the CLI
  *   (there the parameter selects the code index); UNUSED in the VS Code port
  *   (code_search reads the workspace index directly).
+ * @param {string} [reviewType] — "design" | "code"（§2.22.5 适配点①）
+ * @param {string|null} [batchDoc] — 设计评审的批次档绑定（实例键）——仅二者同时到位才追加写通道
  */
-export function advisorToolsFor(_agent) {
+export function advisorToolsFor(_agent, reviewType = "code", batchDoc = null) {
   // VS Code port: code_search reads the workspace index — no agent.memory
   // dependency, so the set is constant (ZERO git, read-only only).
   const tools = [readTool, globTool, grepTool, lsTool, lspTool, codeSearchTool]
+  // §2.20.3/§2.22.5（第 5 批）：**仅当 reviewType==='design' 且 batchDoc 已绑定**时追加
+  // batch_segment——代码评审工具集**逐字节不变**（只读不变量）；未绑定 → 不挂载（fail-closed）。
+  if (reviewType === "design" && batchDoc) tools.push(batchSegmentTool(batchDoc, { review: true }))
   return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
 }
 // Test seam: the tool set is pure (agent.memory → code_search inclusion).
@@ -43,6 +49,6 @@ export function _setAdvisorToolSetForTest(tools) {
 }
 
 /** Effective set resolution: test override ?? production set (state lives here). */
-export function _resolvedAdvisorToolsFor(agent) {
-  return _advisorToolSetOverride ?? advisorToolsFor(agent)
+export function _resolvedAdvisorToolsFor(agent, reviewType = "code", batchDoc = null) {
+  return _advisorToolSetOverride ?? advisorToolsFor(agent, reviewType, batchDoc)
 }

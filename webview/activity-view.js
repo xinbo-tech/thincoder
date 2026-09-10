@@ -10,7 +10,7 @@ import { t } from "./i18n.js"
 
 // Roles whose header carries the sync/async mode word (CLI SUBAGENT_ROLES +
 // advisor parity — consult/escalate keys embed their model instead).
-export const FAMILY_ROLES = ["explore", "plan", "coder", "eng-coder", "advisor"]
+export const FAMILY_ROLES = ["explore", "plan", "coder", "eng-coder", "eng-designer", "advisor"]
 const TAIL_LINES = 3
 
 /** Meta word helpers — visible wording rides locale keys (fallback raw). */

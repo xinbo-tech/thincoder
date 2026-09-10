@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url"
 import * as os from "node:os"
 import { builtinTools, toOpenAISchema, readImageTool } from "../tools.mjs"
 import {
-  taskTool, recentChangesTool, subagentTool,
+  taskTool, recentChangesTool, subagentTool, batchSegmentTool,
   planTool, goalTool, skillTool, verifyTool, timerTool,
   advisorTool, engTool, readHistoryTool, consultStartTool, consultStopTool, // §25 R17: consult_check 退役
 } from "../agent-tools.mjs"
@@ -58,29 +58,32 @@ function withPool(tool) {
 }
 
 /**
- * §18 D-E3 (AGENT-LOOP.md): the eng-coder child's restricted subagent channel —
- * built when an eng-coder child (depth>0) toolset is assembled. Schema level:
- * role enum is explore-only, the async parameter is REMOVED (sync only), and the
- * action parameter is REMOVED (spawn-only — §19 round2 #3: escalate/status are
- * refused in-child; §19.8 check 已删) — the model-facing filters; the mechanical enforcement
- * lives in subagent.mjs execute → gateEngCoderSpawn (role/async) + the §19
- * restricted-variant action gate (schema enums are advisory, providers don't
- * enforce them).
+ * §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 5 批 VSC 镜像 §2.22.4 ④/⑨）：工程子代理的受限
+ * subagent 通道——eng-coder 的偏差审计（explore）与 eng-designer 的勘察（explore）。
+ * Schema 层：role enum 仅 explore、async 参数删除（sync only）、action 参数删除（spawn-only）、
+ * **batchDoc 删除**（受限变体不得透传——与 async/id/n/designToken/designId 同清单语义）；
+ * 机械强制在 subagent.mjs execute → gateEngCoderSpawn（role/async）+ §19 受限变体 action 门
+ * （schema 枚举只是给模型的提示，provider 不强制）。
  */
-function engAuditSubagentTool() {
+function engChildSubagentTool(childRole) {
   const props = { ...subagentTool.parameters.properties }
-  delete props.async // sync only — the eng-coder blocks on the audit report
-  delete props.action // spawn-only — the audit channel has no status/escalate（§19.8 check 已删）
+  delete props.async // sync only — the eng child blocks on the report
+  delete props.action // spawn-only — the restricted channel has no status/escalate（§19.8 check 已删）
+  delete props.batchDoc // §2.22.3：受限变体 delete 清单同步加 batchDoc（不透传给子代）
+  const designer = childRole === "eng-designer"
   props.role = {
     type: "string",
     enum: ["explore"],
-    description: "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
+    description: designer
+      ? "explore only — the eng-designer's internal spawn channel is reserved for read-only surveys of the current state (ENGINEERING-MODE.md §2.15 D; ≤6 spawns per batch)."
+      : "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
   }
   return {
     ...subagentTool,
     name: "subagent",
-    description:
-      "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only (no action:'status'/'escalate', no async): the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+    description: designer
+      ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY — spawn-only (no action:'status'/'escalate', no async). Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
+      : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only (no action:'status'/'escalate', no async): the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
     parameters: { ...subagentTool.parameters, properties: props },
   }
 }
@@ -108,7 +111,7 @@ export function buildTopLevelAgent() {
     _lastEngState: false, // seeded false: a resumed engineering session re-notifies on turn 1 (CLI parity)
     // B — run 绑定（hydrateRun 每轮覆盖）
     _role: null, _provider: null, _planMode: false,
-    _engPersist: null, _engDesignReviewed: false, _engTaskInput: null,
+    _engPersist: null, _engDesignReviewed: false, _engTaskInput: null, _batchDoc: null,
     cwd: null, history: null, _fullHistory: null,
     config: {
       advisor: { guard: false },
@@ -126,7 +129,7 @@ export function buildTopLevelAgent() {
  * @returns {{ agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt }}
  */
 export async function hydrateRun(agent, { provider, cwd, input, opts, depth, role, getAuto, restore = false }) {
-  const { mcpServers, skills, engState, engDesignReviewed, resume = false, autoTurn = false } = opts
+  const { mcpServers, skills, engState, engDesignReviewed, resume = false, autoTurn = false, batchDoc = null } = opts
 
   // §11.2 A —— per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
   resetRunState(agent)
@@ -150,7 +153,15 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
         : [])]
     : role === "eng-coder"
       ? [taskTool, recentChangesTool, planTool, timerTool, advisorTool, verifyTool,
-         engAuditSubagentTool()] // §18 D-E3: the audit-only restricted subagent channel (explore + sync + spawn-only — schema level; the mechanical gates are subagent.mjs gateEngCoderSpawn + the §19 restricted-variant action gate)
+         batchSegmentTool(batchDoc), // 目标档 = 本次 spawn 绑定（同下 agent._batchDoc；装配先于 B 类赋值——直接取 opts 值）
+         engChildSubagentTool("eng-coder")] // §18 D-E3: the audit-only restricted subagent channel (explore + sync + spawn-only — schema level; the mechanical gates are subagent.mjs gateEngCoderSpawn + the §19 restricted-variant action gate)
+    // eng-designer（ENGINEERING-MODE.md §2.15 D / §2.22.4 ④）：读/搜/写设计产出（builtin 读写工具
+    // 随 baseTools 注入）+ batch_segment 段写入通道（§2，目标档 = spawn 绑定 agent._batchDoc）+
+    // 勘察通道（explore-only 受限变体）；**不含 advisor**（设计师不发起评审）。
+    : role === "eng-designer"
+      ? [taskTool, planTool, timerTool,
+         batchSegmentTool(batchDoc),
+         engChildSubagentTool("eng-designer")]
     // Write-permission coder sub-agents: their system prompt names verify (system.md)
     // and advisor (discipline.md) — without them the escalate/coder hit "unknown tool"
     // and fell back to bash node --check / npm test to self-verify (2026-08-16 deepseek
@@ -288,6 +299,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
   agent._engTaskInput = opts.engTaskInput ?? null
+  // §2.22.3（第 5 批）：spawn 侧批次档绑定上车（batch_segment 的唯一路径来源；无 path 参数——
+  // 目标档由 spawn 绑定 / 评审实例键提供）。顶层/非工程角色恒 null（不挂载工具）。
+  agent._batchDoc = batchDoc
   agent._engDesignReviewed = engDesignReviewed === true // eng-coder children arrive pre-authorized
   if (opts.engPersist) agent._engPersist = opts.engPersist
   else if (depth === 0 && agent._engPersist) agent._engPersist = null // 直连/非面板顶层 run —— 不残留旧槽绑定
@@ -311,12 +325,12 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // 自含基底直接返回，不入主链、无四槽。eng-coder 场景即工程纪律（G6——本端
   // spawn 侧 engineering 镜像语义同 CLI：scenario=eng-coder → discipline-engineering 槽）。
   // OS/cwd 尾行为 VSC 端特有——原地保留，多实现面纪律。
-  const engPromptActive = engineering && (depth === 0 || role === "eng-coder")
+  const engPromptActive = engineering && (depth === 0 || role === "eng-coder" || role === "eng-designer")
   const scenario =
     role === "consult"
       ? "consult"
       : engPromptActive
-        ? (role === "eng-coder" ? "eng-coder" : "engineering")
+        ? (role === "eng-coder" || role === "eng-designer" ? role : "engineering")
         : (depth === 0 ? "normal" : role ?? "normal")
   const { prompt: base, warnings: slotWarnings } = assemblePrompt(scenario)
   // G3：overlay（人格）随装配改造退役——人格槽由场景表承载，不再前缀叠加。

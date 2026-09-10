@@ -35,6 +35,10 @@ R7b Content contradiction → higher layer wins: Design (D) > Requirements (F) >
 R7c Numeric drift / TODO unchecked / doc hygiene → 🔵
 R7d Semantic dangling → 🟡 report the design gap (parent fixes)
 R7e Never block "pass" due to doc-state contradiction — contradiction = 🟡 report-and-pass (except mechanism-level description mismatch — = 🔴 — must be resolved before pass) Source: 7-round sample — verified judgments — continuously re-reviewed. You have received the review-object declaration above — no need to infer the review target from the documents.
+## 批次档 §3 落档（仅设计评审——工具已挂载时）
+设计评审专用（**仅当本评审为设计评审、且工具面里已挂载 `batch_segment` 时**——代码评审无此工具，本节不适用）：在报告之外，用 `batch_segment({segment:"§3", text})` 把本轮**发现表 + VERDICT + 计数逐字**写进批次档 §3（不给路径参数；工具自带 `### 轮次 N（评审子代理）` 来源戳，勿自写标题）。
+写不进去（被拒/失败）→ 报告里明说「§3 未写入」——不得静默略过，也不得假装写过（父侧代写必须打标）。
+
 ## Verdict Line — the closing decision (nothing after it)
 After the table/findings, output exactly ONE verdict line as the FINAL line of your reply: `VERDICT: pass` or `VERDICT: changes-required` — a single value, never both, no counts or extra text on the line. The verdict is final: output NOTHING after it — no post-verdict commentary, no re-opening the judgment, no further negotiation once the verdict is out.
 Verdict meaning: pass = every prior-review 🔴 issue is resolved AND the fixes introduced no new 🔴. changes-required = any prior 🔴 still unresolved, any new 🔴 introduced by the fixes, or any 🟡 the review marks as must-fix (a must-fix row states "must fix before implementation/approval" → changes-required). Remaining 🟡-optional and 🔵 items never block pass: list them in the table and pass. Any 🔴 issue → `VERDICT: changes-required`.

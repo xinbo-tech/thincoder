@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
+import { resolveBatchDocPath } from "./batch-segment.mjs"
 
 const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides. 2026-09-06 设计 B: HMAC 防伪层删除——token = 无签名流程凭证 uuid:expiresAt（public-default-secret 警告一并移除——安全剧场——见 ENGINEERING-MODE.md 2026-09-06 段）
 
@@ -160,6 +161,10 @@ export const advisorTool = {
         items: { type: "string" },
         description: "Explicit list of doc paths to review (design docs, requirements docs, referenced docs). The advisor reviews ONLY these — it does NOT scan git diff. Use for both design review and code review to pass the task's Docs involved list.",
       },
+      batchDoc: {
+        type: "string",
+        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the batch_segment write channel to record its findings table + VERDICT + counts into §3 (ENGINEERING-MODE.md §2.20/§2.22.5). Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
+      },
       object: {
         type: "object",
         description:
@@ -218,12 +223,19 @@ export const advisorTool = {
       }
     }
 
+    // §2.20.2 评审侧批次档门禁（第 5 批 VSC 镜像；口径 = **「若传则须可读」**）：空/不可读 →
+    // throw（不静默忽略）；未传 → 不挂载写通道、评审照常（N5 零回归）。绑定随后续通道
+    // 到达工具集（同步 callbacks.batchDoc / 异步 rv.batchDoc——实例键，非单值会话态）。
+    const boundBatchDoc = args.batchDoc !== undefined && args.batchDoc !== null
+      ? resolveBatchDocPath(agent.cwd, args.batchDoc)
+      : null
+
     // §24 D-24b async 分支：后台启动（ack 即回——回合自然收尾）——容量/实例 cap 在
     // runner（launchAsyncAdvisor——{ error } 转返回文案——不排队）。settle 记账/消化
     // 全部走 advisor-async 机制（token 槽/guard 标记/cap/陈旧判定——见该模块头注）。
     if (asyncFlag) {
       const { launchAsyncAdvisor } = await import("./advisor-async.mjs")
-      const r = launchAsyncAdvisor({ parent: agent, ctx, reviewType, documents, paths, object })
+      const r = launchAsyncAdvisor({ parent: agent, ctx, reviewType, documents, paths, object, batchDoc: boundBatchDoc })
       if (r.error) return r.error
       const e = r.entry
       return `Advisor ${reviewType} review started in the background (review #${e.id}, round ${e.round}) — the report arrives automatically when it finishes (settle → digest). Continue your turn; the review does not block.`
@@ -252,6 +264,8 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: (chunk) => ctx.callbacks?.onToolPanel?.("advisor", chunk),
       signal: ctx.signal,
+      // 同步路的实例绑定传递（异步路走 rv.batchDoc——run.mjs 自行解析）：per-call 通道，非会话态。
+      batchDoc: boundBatchDoc,
     }, designToken, documents, paths, object, null, designId)
 
     if (reviewType === "design") {

@@ -23,6 +23,13 @@ Your delivery is the FINAL audited delivery: implement → internal explore dive
 internal advisor code review → converged delivery — the full loop runs in this same session (AGENT-LOOP.md §18).
 Its report states the audit/advisor rounds and the terminal state (`clean` | `stalled`) — never loop silently.
 
+## 批次档纪律（六段自写 · 执行者拒收）
+- **§5 由你自写**（**一段一作者**）：§1 主 agent / §2 eng-designer / §3 评审子代理 / §4 主 agent / **§5 你** / §6 父代理——
+  交付摘要 / 决策透明表 / 审计与代码评审轮次与终态 / fix round，落**批次档 §5**，不靠父侧转述（转述 = 失真源）。
+  写入手段 = `batch_segment({segment, text})`（**无路径参数**——目标档 = 你 spawn 时的批次档绑定，段号由你的身份定：eng-coder → §5）；
+  写不进去（拒/失败）→ 报告里明说“§5 未写入”——不得静默跳过，也不得假设父侧会代写。
+- **执行者拒收**：查不到任务书（批次档 §2 / `batchDoc` 路径不可读）→ **不执行、打回**——不自行补造任务书往下干。
+
 ## Guidelines - Work independently. The parent only sees your final report.
 - Follow the design document. If you find issues during implementation, note them — do not silently deviate.
 - **Implement to the full design — no silent degradation.** If a stated design element (interaction, behavior, edge case, state) feels costly or fiddly to implement, implement it anyway and note the cost in your report. A "simpler approximation" of a specified behavior IS a deviation: either implement it as designed, or stop and surface the trade-off to the parent BEFORE coding — never ship a reduced version and disclose it afterwards. Disclosed after the fact is still a broken delivery: the parent approved the design, not your discount.

@@ -25,7 +25,7 @@ export function agentCardHtml() {
   html += `<label class="switch" title="${t("settings.verifyGuardHelp")}"><input type="checkbox" id="ag-verifyguard" ${as.verifyGuard ? "checked" : ""}> ${t("settings.verifyGuard")}</label>`
   html += `<div class="settings-subtitle">${t("settings.submodelSection")}</div>`
   html += `<div class="key-field"><label title="${t("settings.submodelHelp")}">${t("settings.submodelGlobal")}</label><span id="submodel-slot-global" class="submodel-slot" data-value="${escHtml(as.subagentModel || "")}"></span></div>`
-  html += `${["explore", "plan", "coder", "eng-coder"].map((role) => `
+  html += `${["explore", "plan", "coder", "eng-coder", "eng-designer"].map((role) => `
     <div class="key-field"><label title="${t("settings.submodelHelp")}">${role}</label><span id="submodel-slot-${role}" class="submodel-slot" data-value="${escHtml(as.subagentModels?.[role] || "")}"></span></div>`).join("")}`
   html += `</div></section>`
   return html
@@ -80,7 +80,7 @@ export function bindAgentControls() {
     const chk = (id) => document.getElementById(id)?.checked ?? false
     const compactRaw = get("ag-compact")
     const subModels = {}
-    for (const role of ["explore", "plan", "coder", "eng-coder"]) {
+    for (const role of ["explore", "plan", "coder", "eng-coder", "eng-designer"]) {
       const v = document.getElementById(`submodel-slot-${role}`)?.dataset.value || ""
       if (v) subModels[role] = v
     }

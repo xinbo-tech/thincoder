@@ -37,4 +37,11 @@ export default [
   "test/settings-panel.test.mjs", // POOL-CONFIG-UNIFIED F-4（2026-09-09）：面板三框回退显 4（agentCardHtml webview 面 + agentSettings extension 面——happy-dom）+ poolAdvisor 双语文案
   "test/provider-model-guard.test.mjs", // MODEL-400-FIX/QUICKFIX-BATCH-2（2026-09-09）：双端 guard 镜像补登记——F-1 model 缺失可读 throw + F-2b advisor 跨渠道 models[0] + F-1 byName（此前交付未入册——直跑调试路径才执行——补录后入双门禁）
   "test/image-downgrade.test.mjs", // IMAGE-DOWNGRADE-VISION（2026-09-09）：非视觉贴图自动降级视觉子代理——F-1 描述注入/images 清空 + F-2 fallback 三态 + AC-2 视觉零回归 + runner seam 缺省回落生产（mock 跑者/keyless 短路——零网络）
+  // VSC 端镜像（2026-09-11 第 5 批 · ENGINEERING-MODE.md §2.22/§2.23——新档一律入册，否则接线没活）
+  "test/batch-doc-gate.test.mjs", // batchDoc spawn 门（§2.22.3）：两路各一调用点 + 校验逻辑单份 + 角色域（T54/T55/T55b/T56）
+  "test/batch-segment.test.mjs", // 批次档段写入工具 VSC 面（§2.22.5）：工具契约 + 只读面零变更 + rv 实例键不串档（T59/T60/T66）
+  "test/eng-designer-role.test.mjs", // eng-designer 运行期八处（§2.22.4）：白名单/模式门/子代门/装配/枚举/场景/webview/勘察通道（T57/T57b/T57c/T58）
+  "test/doc-consistency.test.mjs", // 文档一致性 V1/V2/V3 + 基线 + 接线（§2.22.6）：零新增、V1「（CLI 侧）」豁免、V3 三态零假阳（T61/T63/T64）
+  // 「5 新档全入册」之第五档（面② 的锚句断言档——文件域属面②，入册归本表）
+  "test/prompts-mirror-anchors.test.mjs", // 提示词双源镜像锚（§2.22.2/§2.22.7）：A1-A8/A11/A12 逐字 + 双源 15 档集合 + 端特有段（T62/T65）
 ]
