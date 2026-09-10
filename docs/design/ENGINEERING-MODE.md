@@ -51,7 +51,8 @@
 7. 交付 settle → 报告注入 → 父侧消化。子代理改动经 mergeChildMutations 合并进父代理（`_mutatedThisRun`/`_touchedFiles`）——失效旧 verify/advisor 标记、**重置 `_advisorRound=0`**。父侧不再自动 spawn 审计/评审（防双重审计/误用）。
 8. 父代理交付验证：对照验收标准跑测试、读改动文件——**信任 eng-coder 内部验证结果（首次实现 L0+、修正轮 L0——测试分层权威 TESTING.md §1）；父侧 = L2 全量 `test:full` 恰一次（每链终态）——不再复跑 L1**。L2 失败（test:full 有 fail）→ 该链终态 non-clean → 报告用户（未达验收——不静默放行）→ 可转 fix round（同 designId+token，docs FIRST）或用户决定。
 9. 父代理 verify（对照验收标准）。
-10. 完成：验收标准勾销到设计文档；链闭合（verified + clean + 已签入）→ 父侧 `subagent(action="consume-design", designId=…)` 消费槽（§2.6 F1/F3）。
+10. 完成：**验收勾销落批次档 §6**（逐条验收结论——通过/未过/未做 + 理由）；设计档只承载设计本身，**勾销不进设计档**（用户 2026-09-10 裁定：“勾销这些都应该在批次档做，不是设计档”）。
+    链闭合（verified + clean + 已签入）→ 父侧 `subagent(action="consume-design", designId=…)` 消费槽（§2.6 F1/F3）。
 
 ### 2.3 机械强制链（拦截闸 vs 流程驱动）
 
@@ -316,10 +317,18 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 | 批次档 `batches/*.md`（§1/§4/§6 段） | **主 agent** | 它是唯一对话面——批次讨论/批准/收口由它记（段作者明细见需求档 §1.12） |
 | 需求档 `requirements/*.md` | **eng-designer** | 并入本批需求 + 全体系对账（§1.8 五步） |
 | 设计档 `design/*.md` | **eng-designer** | **含修订**（FR9 #3：含小改——**写稿权唯一，不给主 agent 直改留口子**） |
+| **验收勾销 / 批次状态** | **主 agent·批次档 §6** | **用户裁定（2026-09-10）**：“勾销这些都应该在**批次档**做，不是设计档”——逐条验收结论/需求池核销/遗留项均在批次档 §6；**设计档内不写勾销状态** |
+
+**三个写入面的路由（消除“同一机制两处不同描述”）**：
+
+- **语义修订**（方案/验收标准/接口/受影响文件的改动）→ **只经 eng-designer**（主 agent 不自改；含小改）——§2.2 step1 / §2.8 已改指，另 §2.6 F2/§2.5 的**修正轮 docs FIRST** 落档动作同属此类 → 同走 designer。
+- **勾销/验收/核销**→ **批次档 §6**（主 agent；见上表末行）——**不写进设计档**，故与“写稿权唯一”不冲突。
+- **提示词**→ 主 agent 定内容、eng-coder 落笔（§1.5 #8）。
 | 提示词文件（`src/prompts/*` + `docs/design/prompts/*`） | 主 agent（**内容权**）+ eng-coder（落笔） | §1.5 #8 注；落笔仍走链（`src/prompts/*.md` 是产品代码） |
 
-**调用形态（链路可执行性——本轮评审 🔴）**：主 agent 在批次讨论收口后
-`subagent(role="eng-designer", batchDoc=<本批批次档路径>, task=<极简指针>)`——任务书本体 = 批次档 §2（B11）；
+**调用形态（链路可执行性——评审 🔴）**：主 agent 在批次讨论收口后
+`subagent(role="eng-designer", batchDoc=<本批批次档路径>, files=[...], task=<极简指针>)`——任务书本体 = 批次档 §2（B11）；
+**`files` 声明照需求 §1.11 B3**（写明将要改的文档，**不声明 `docs/TODO.md`**——TODO 状态推进是提示词规定的动作、不经 files）；
 designer 产出 = 设计档 + 回写批次档 §2；主 agent 核验（内容性核验 §1.5 #2）→ 提醒用户发起评审。
 **为何必须成文**：只落角色不落调用，落地后没有任何提示词/设计句说明“谁写设计档、谁去派 designer”——
 同档 §2.8 原句（父代理更新设计文档）与新角色直接冲突（同一机制两处不同描述）。
@@ -332,9 +341,9 @@ designer 产出 = 设计档 + 回写批次档 §2；主 agent 核验（内容性
 | 2 | 主 agent 内容性核验设计稿 | ✅ 落 | 同上（人格文本明写） |
 | 3 | 设计修订全部回 designer | ✅ 落 | §2.15 A2 写权表 + §2.8 路由改目标态 |
 | 4 | designer 无 designToken | ✅ 落 | AC20/T36（机制面） |
-| 5 | 需求文档不过 advisor 评审 | — 沿用现状 | 无机制动作（advisor 评审对象仅由调用清单定义）；只作纪律告知 |
+| 5 | 需求文档不过 advisor 评审 | — 沿用现状 | 无**机制**动作（advisor 评审对象仅由调用清单定义）；**纪律告知落点 = persona-eng-designer 内容要素一句**（“需求档不经 advisor——用户确认即定稿”） |
 | 6 | 评审发起权仍在主 agent | ✅ 落 | persona-engineering 改写保留发起权句 |
-| 7 | 勘察归 designer 自己做 | ✅ 落 | §2.15 D2 勘察变体 |
+| 7 | 勘察归 designer 自己做 | ✅ 落 | §2.15 D2 勘察变体 + **勘察预算**（每批 ≤6 次 explore spawn——与审计预算（6）语义独立、各自计数；调用形态里的“主 agent 勘察结果仅作参考传递”写进 persona） |
 | 8 | 提示词编写权 | ✅ 落 | §1.5 #8 注（内容权）+ A2 写权表 |
 | 9 | 设计确认门 A⊃B | ◆ 部分 | A（用户反馈迭代改稿路径）= A2 写权表（修订回 designer）；B（advisor 评审必经）= 现有流程节点 |
 
@@ -353,11 +362,13 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 删去“deliverables = 需求+设计文档”句；**新增调用链段**：主 agent 写批次档 → `spawn eng-designer(batchDoc=<本批档>)` → 核验其产出 → 提醒用户发起评审（§2.15 A2） |
 | `src/prompts/persona-engineering.md`（英文落地） | 同义改述（现行 `:10-13` “You are the ARCHITECT… 1. the requirements + design documents”、`:34` “You design and delegate”）+ 调用链段 |
 
-**为何必须同批**：不落此面，落地后**主会话人格仍自称设计文档的交付者**——与 §2.15:295“eng-designer = 写稿面唯一作者”直接互斥（机制级两处不同描述）。
-**同时改**：§2.2 step 1（`docs/design/ENGINEERING-MODE.md:30` 现写“写需求/设计文档 docs/”作为父代理流程）→ 标明**设计档已路由 eng-designer**；
-§2.8 路由行（`:129` 现写“父代理更新设计文档”）→ 改“**转 eng-designer 更新设计档**（写稿权唯一）”。两处均在本批设计范围内一并改定。
+**为何必须同批**：不落此面，落地后**主会话人格仍自称设计文档的交付者**——与 §2.15 A2“eng-designer = 写稿面唯一作者”直接互斥（机制级两处不同描述）。
 
-**为何必须同批**：不落此面，落地后**主会话人格仍自称设计文档的交付者**——与 §2.15:295“eng-designer = 写稿面唯一作者”直接互斥（机制级两处不同描述）。
+**同时改**（写入面路由——评审轮次 3 补全）：
+
+- `docs/design/ENGINEERING-MODE.md:54`（§2.2 step 10）：验收勾销 → **批次档 §6**（不进设计档，见 A2 表末行）。
+- `:90`（§2.6 F2）+ `:78`（§2.5）：修正轮 **docs FIRST** 的落档动作 → **eng-designer**（语义修订写权唯一）。
+- `:30`（§2.2 step 1）已改指 designer·`:129`（§2.8）已改路由——**四点合起来覆盖全部设计档写入面**（AC27 核对集）。
 
 **纪律层“主会话即 designer”句撤销（评审 #2——PROMPT-SYSTEM §8.1:274 已登记）**：
 双源 `discipline-engineering.md`（`src/prompts/:28` / `docs/design/prompts/:21`）删该句；“设计行为纪律四维”归属改述为**设计者角色**的纪律。
@@ -391,6 +402,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 
 **内容要素**（逐项对应需求，不自由发挥）：身份=写稿面唯一作者 · 授权=需求已确认（**无 token**）· 边界=不写实现/不改提示词/不发起评审 ·
 收到什么（批次档 §1 + 本批 todo 项 + 需求体系 + 清单）· **缺料就打回** · 五步（勘察 → 并入需求 + 体系对账 → 每条需求配判定句 → 写设计 → 自检交回停）·
+**todo 状态推进**（需求 §1.8 步 2 / §1.11 B5：并入需求时同步推进 `docs/TODO.md` 状态——提示词规定的动作，机械面归 FR18【单列】）·
 失败路径 · **执行者拒收**（查不到任务书不执行）· 批次的写手边界（§2 自写）。
 
 **FR19 产出要求——必含要素逐项列（评审 #5；需求档 :78 / §1.8）**：
@@ -433,9 +445,10 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 `src/tui/slash-commands.mjs:45`（描述串）+ `:147`（补全候选）· `src/tui/subagent-blocks.mjs:69` SUBAGENT_ROLES。
 （`:29` 前缀正则已含连字符——无需改。）
 
-**G. 文档登记面（6 处——评审 #6 修正计数）**：`docs/requirements/PROMPT-SYSTEM.md:39`（命名法角色行）· `:45-46`（文件计数）·
+**G. 文档登记面（7 处——含 `docs/README.md`，评审 #2）**：`docs/requirements/PROMPT-SYSTEM.md:39`（命名法角色行）· `:45-46`（文件计数）·
 `:54-59`（人格层大纲加行）· `:195-207`（§3.2 装配矩阵加行）· `docs/design/AGENT-LOOP.md:177-184`（角色矩阵 + Mode filtering）·
-`AGENTS.md:56`（槽位清单）。
+`AGENTS.md:56`（槽位清单）· **`docs/README.md:12`（§1 目录行“requirements ← 主 agent·产品经理产物”）+ `:44`（§3.1 作者表：需求层作者行）**
+——两处均改为 **eng-designer**（含过渡期注：eng-designer 未落地前由主 agent 代行），与 §2.15 A2 写权表口径一致。
 
 ### 2.16 行为纪律（第 2 批 B——提示词层，双源同步）
 
@@ -483,14 +496,16 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | docs/design/prompts/persona-eng-coder.md | 修改 | 30 | ≤±4 | 纯 .md（双源） |
 | src/prompts/persona-engineering.md | 修改 | 40 | ≤±15 | 纯 .md——**主 agent 人格改述**（评审 #1；PROMPT-SYSTEM §8.1:271） |
 | docs/design/prompts/persona-engineering.md | 修改 | 40 | ≤±15 | 纯 .md（中文权威，双源） |
-| docs/requirements/PROMPT-SYSTEM.md | 修改 | 295 | ≤±8 | 纯 .md（登记面 6 处——与 §2.15 G 口径一致，评审 #5） |
+| docs/requirements/PROMPT-SYSTEM.md | 修改 | 295 | ≤±8 | 纯 .md（登记面 7 处——与 §2.15 G 口径一致） |
+| docs/README.md | 修改 | 226 | ≤±4 | 纯 .md——§1 目录行 + §3.1 作者表改 eng-designer（评审 #2） |
 | docs/design/AGENT-LOOP.md | 修改 | 720 | ≤±6 | 纯 .md |
 | AGENTS.md | 修改 | 69 | ≤±2 | 纯 .md |
-| test/prompts-async-guidance.test.mjs | 修改 | 417 | ≤±25 | **>300 档——不拆**：仅增断言、不新增函数。**需同步之处（评审 #12）**：`:51/:294/:413` 的六场景数组与 `:32` 注释“新 14 文件全集”（新场景/新文件不入则无覆盖） |
+| test/prompts-async-guidance.test.mjs | 修改 | 417 | ≤±25 | **>300 档——不拆**：仅增断言、不新增函数。**需同步之处（评审 #12）**：`:51/:294/:413` 的六场景数组→**七场景**（+`eng-designer`）与 `:32` 注释“14 文件全集”→“**15 文件**”（+`persona-eng-designer.md`）；新场景/新文件不入则无覆盖 |
 | test/batch-doc-gate.test.mjs | 修改 | 160 | ≤±25 | 门文案与角色集同步 |
 | test/eng-designer-role.test.mjs | **新增** | — | +120±40 | 角色注册/装配不回退/勘察受限用例 |
 | scripts/check-doc-width.mjs | 修改 | 51 | ≤±60 | §2.19 机械校验 V1/V2（扩为文档一致性扫描）——小脚本，不触档位 |
 | test/doc-consistency.test.mjs | **新增** | — | +90±30 | V1/V2 机判用例（进快层 `test/*.test.mjs` glob，随 `npm test` 生效） |
+| test/fixtures/doc-consistency-baseline.json | **新增** | — | +与存量同数 | V1/V2 **基线**（首跑固化清单——AC28 “存量降报告”的判据源） |
 
 > 行数为 2026-09-10 实测；.md 提示词/文档文件按标准豁免行数标注；
 > 表中 **>300 行的共 5 个**（4 个源文件 `subagent.mjs` 395 / `subagent-spawn.mjs` 444 / `setup.mjs` 343 / `subagent-blocks.mjs` 451
@@ -508,7 +523,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | D1 | **写权矩阵** | 文档类 → 唯一作者（§2.15 A2 表）：批次档=主 agent · 需求/设计档=eng-designer · 提示词=主 agent 内容权 + eng-coder 落笔 | 提示词（纪律层）+ §2.15 A2 |
 | D2 | **单一权威源** | 一条机制**只在一处详述**；其余处**只引用不重述**（含模板：批次档模板只在需求档 §1.12，设计不重抄） | 提示词 + 评审判据（advisor 八维 #7） |
 | D3 | **计数·枚举纪律** | 声明“**N 项/N 处**”时，紧跟可枚举的来源；计数与列表必须同时改——**机械校验 D3**（下方） | 脚本 + 测试 |
-| D4 | **指针纪律** | 指针形态 = `文档:节`（行号仅作 as-of 参考，标 as-of）；**禁止**“见上/见该节”式相对指针 | 提示词 + 机械校验 D5 |
+| D4 | **指针纪律** | 指针形态 = `文档:节`（行号仅作 as-of 参考，标 as-of）；**禁止**“见上/见该节”式相对指针 | 提示词 + **机械校验 V1** |
 | D5 | **冻结窗口** | 评审在途**不改被审文档**（改了 = 评审对象已变 → stale，token 不签发）；改动集齐后统一入场 | 提示词（纪律层） |
 | D6 | **回读核对** | 任何写入后**回读核实**再报完成（本会话三次事故：写入静默失败仍报完成、编辑吞标题×2）——已是踩坑记录，本批**升为纪律** | 提示词 |
 | D7 | **变更留痕 + 核销同步** | 每批核销时跑**核销同步清单**（需求档 §1.12 批次档 §6 模板新槽位）——逐项检查：角色表 / 头部状态行 / 计数 / 指针 / 变更记录 / 待办勾销 | 模板槽位（父侧） |
@@ -517,14 +532,14 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 
 | 校验 | 内容 | 落点 |
 |---|---|---|
-| V1 **段引用可解析** | 扫描 `docs/**/*.md` 里的 `§N` / `文档:节` 引用，目标节号在目标文档或本档内**存在** | `scripts/check-doc-width.mjs`（扩为文档一致性扫描）或新脚本 + `test/doc-consistency.test.mjs` |
-| V2 **计数与列表一致** | 匹配“**N 项/N 处/N 条**”声明并在同节内找到对应列表；列表条数 ≠ 声明值 → 报 | 同上 |
+| V1 **段引用可解析** | 扫描 **`docs/design/` + `docs/requirements/` + `docs/batches/`** 里的 `§N` / `文档:节` 引用，目标节号存在（**排除 `_archive/`**——历史快照豁免，同 check-doc-width 现行口径） | `scripts/check-doc-width.mjs`（**定死此文件**——扩为文档一致性扫描，不留“或新脚本”） |
+| V2 **计数与列表一致** | 匹配“**N 项/N 处/N 条**”声明，并在**同节（同一标题块）**内找对应陈述；其条数 ≠ 声明值 → 报。识别三形态：md 列表行 / 表格行 / 顿号·斜杠枚举（括号内计数） | `scripts/check-doc-width.mjs` + `test/doc-consistency.test.mjs` |
 
-> 边界（不硬判）：V1/V2 只查**可机判的两类**；语义级一致性（“同一机制两处不同描述”）仍归**评审**（advisor 八维#1/#6）——
+> 边界（不硬判）：V1/V2 只查**可机判的两类**；语义级一致性（“同一机制两处不同描述”）仍归**评审**（advisor 八维 **#7 Document ownership**——`src/prompts/advisor-design.md:9`）——
 > 机械只管计数/指针，不管意思（否则误报湮没信号）。
 
 **受影响**：`scripts/check-doc-width.mjs`（扩扫——现 51 行）+ **新增** `test/doc-consistency.test.mjs`（进快层 glob，随 `npm test` 生效）；
-提示词层三句（D5/D6/D2）入锚家族（AC22 口径）。
+提示词层三句（D5/D6/D2）入锚家族（**AC22 ② 项**）。
 
 
 ## 3. 测试（Testing）
@@ -554,18 +569,22 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 - AC19（§2.15 E）: **写域边界为提示词级（无机械门——用户裁定）**——`persona-eng-designer.md`（双源）**明写写域**（`docs/` 且不写 `docs/design/prompts/`）；`src/agent/dispatch.mjs` **保持不变**（不新增写域判定；其他角色行为零变更）。
 - AC20（§2.15 D2/D3）: designer 的勘察变体 = **explore-only**（无法 spawn 其他角色）；且**无 designToken 需求**（设计师不需要凭证——§1.5 #4）。
 - AC21（§2.15 C）: `persona-eng-designer.md` 双源齐备（`src/prompts/` + `docs/design/prompts/`），首行头注合 `slot:[1] consumers:[...]` 格式，且已入 `NEW_PROMPTS` 清单（否则不打格式/宽行断言）。
-- AC22（§2.16）: 四条行为纪律句双源在位且入锚断言家族：六段自写·一段一作者 / 执行者拒收 / 澄清必经主 agent / 三方条目一致。
+- AC22（§2.16 + §2.15:371 + §2.19:527）: **锚断言家族覆盖全清单**（一双源在位 + 进 fail-when-unchanged）：
+  ①四条行为纪律句（六段自写·一段一作者 / 执行者拒收 / 澄清必经主 agent / 三方条目一致）
+  ②四步流程三句（设计=需求检验 / 需求缺口停报链 / 写权句）
+  ③文档更新纪律三句（D2 单一权威源 / D5 冻结窗口 / D6 回读核对）。
 - AC23（§2.15 A——评审 #1）: **主 agent 人格已改述**（PROMPT-SYSTEM §8.1:271 落档）——双源 `persona-engineering.md` 含产品经理/会话面身份，**不再自称设计文档交付者**（`ARCHITECT`/`You design and delegate` 语义已除）。
 - AC24（§2.15 A——评审 #2）: **“主会话即 designer”句已撤销**——双源 `discipline-engineering.md` 无该句；设计行为纪律四维归属已改述。
-- AC25（§2.15 C——评审 #5）: `persona-eng-designer.md` 必含 FR19 产出要素（产出两件不混 + 设计档 8 项 + 判定句 + 打回链）——双源 grep 关键子串验证。
-- AC25（§2.15 C——评审 #5）: `persona-eng-designer.md` 必含 FR19 产出要素——双源 grep **固定子串**（评审 #4 钉死）：
-  `批次档 §2` · `不写进设计档` · `选型对比` · `拆分计划` · `验收标准逐条回指` · `用例表` · `UI` · `open` · `判定句` · `打回`。
+- AC25（§2.15 C——评审 #5；子串钉死见评审 #4）: `persona-eng-designer.md` 必含 FR19 产出要素——
+  双源 grep **固定子串**：`批次档 §2` · `不写进设计档` · `选型对比` · `拆分计划` · `验收标准逐条回指` · `用例表` · `UI` · `open` · `判定句` · `打回` · `todo 状态推进`。
 - AC26（§2.15 E——评审 #7）: designer 子代理**保留**人工 ask 路径（不加任务域豁免）：其写操作经父侧授权；且授权弹窗提供“全部授权/切自动”。
   **依据（评审 #9）**：ask 路径 = 勘察实证（`dispatch.mjs:220` 非授权子代理逐写 ask）；“全部授权/切自动”= 用户 2026-09-10 裁定原话（**非本档可验行为**——实现时由 eng-coder 自验）。
-- AC27（§2.15 A2——写权路由）: 设计档写权**单一**——§2.2 step 1 / §2.8 路由行 / §2.15 A2 三处口径一致（均指向 eng-designer）；
-  `persona-engineering.md` 双源含**调用链段**（批次档 → spawn eng-designer → 核验 → 提醒评审）。
+- AC27（§2.15 A2——写权路由）: 设计档**语义修订写权单一**，且“勾销归批次档”已落——核对集 = **六个写入面**：
+  §2.2 step 1 / §2.2 step 10 / §2.6 F2 / §2.5 / §2.8 / §2.15 A2——口径一致（语义修订→eng-designer；勾销/验收/核销→**批次档 §6**，不进设计档）；
+  另 `docs/README.md:12/:44` 的作者口径一致；`persona-engineering.md` 双源含**调用链段**（批次档 → spawn eng-designer（带 `files`）→ 核验 → 提醒评审）。
 - AC28（§2.19 文档更新纪律）: 纪律表 D1-D7 双源在位（写权矩阵/单一权威源/计数枚举/指针/冻结窗口/回读核对/变更留痕）；
-  机械校验 V1/V2 在 `test/doc-consistency.test.mjs` 内可跑且**对现有 docs 存量结果为已知基线**（新增违规才红）。
+  机械校验 V1/V2 在 `test/doc-consistency.test.mjs` 内可跑：**新增违规阻断、存量不达基线降为报告**（口径照需求档 §1.15:614，非自创）；
+  基线 = 首跑固化清单（存 `test/fixtures/doc-consistency-baseline.json`，入 §2.18）。
 
 ### 3.2 用例表
 
@@ -613,11 +632,12 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | T30 | 正常：角色注册五处 | 工程模式 spawn `role="eng-designer"` | 不被白名单/模式门拒；child 装配工程纪律槽 | AC16/FR9 |
 | T31 | 错误：角色互斥 | **非**工程模式 spawn `eng-designer` | throw（与 eng-coder 门同族） | AC16/NFR4 |
 | T32 | 边界：装配不静默回退 | `assemblePrompt("eng-designer")` | prompt 非空、≠ CONSULT_BASE、槽序正确、warnings=[] | AC17/FR9 |
-| T33 | 错误：designer 无 batchDoc | 带 token 合法上下文、不带 batchDoc | throw（文案含 eng-designer） | AC18/FR20#9 |
+| T33 | 错误：designer 无 batchDoc | 工程模式合法上下文（**不带凭证**）、不带 batchDoc | throw（文案含 eng-designer） | AC18/FR20#9 |
 | T34 | **边界：写域纪律（提示词级）** | grep 双源 `persona-eng-designer.md`；并校对 `src/agent/dispatch.mjs` | persona 含写域声明（`docs/` 扣除 `docs/design/prompts/`）；dispatch **无新增写域判定**（机械层零变更） | AC19/**§1.5#8** + 批次档 §1 对账发现 2 |
 | T35 | 边界：勘察受限 | designer 内 spawn `role="coder"` / `role="explore"` | 前者拒（explore-only）、后者允；**且勘察任务输入不含 Audit scope 块**（评审 #4） | AC20/§1.5#7 |
 | T36 | 边界：designer 无 token 需求 | spawn 不带 designToken | 通过（不需凭证——与 eng-coder 形成对照） | AC20/§1.5#4 |
-| T37 | 边界：纪律锚驻留 | 四条纪律句双源 grep + 锚断言 | 双源命中；新 person 文件已入 NEW_PROMPTS；锚断言绿 | AC22/FR16/FR17/FR20 |
+| T37 | 边界：纪律锚驻留（**AC21/AC22 共用例**） | 四条纪律句 + 四步三句 + D2/D5/D6 三句双源 grep + 锚断言；新 person 文件已入 NEW_PROMPTS | 双源命中；锚断言绿 | AC21/**AC22** |
+| T42 | 边界：撤销句/产出要素（评审 #10） | 双源 grep `discipline-engineering.md`（无“主会话即 designer”）；grep `persona-eng-designer.md`（FR19 固定子串） | 前者零命中；后者十一子串全命中 | AC24/AC25 |
 | T38 | 边界：主 agent 人格改述 | 双源 grep `persona-engineering.md` | 含产品经理/会话面身份；不含 `ARCHITECT`/`You design and delegate` 类交付物句 | AC23/FR9#1#2 |
 | T39 | 边界：designer 写操作走 ask（评审 #7） | designer 子代理写 `docs/x.md`（manual 档位） | 触发父侧授权（非静默）；授权后可“全部授权/切自动” | AC26 |
 | T40 | 边界：写权路由单一口径 | grep §2.2 step1 / §2.8 / §2.15 A2 / persona-engineering（双源） | 四处均指向 eng-designer；无“父代理更新设计文档”残留 | AC27/FR9#3 |
@@ -652,6 +672,14 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-10（晚·五）：**设计评审轮次 3 处置**（2🔴+9🟡+3🔵——用户裁定“**勾销这些都应该在批次档做，不是设计档**”）：
+  🔴1 写权路由收口（**勾销→批次档 §6** 入 A2 表；**§2.2 step10 / §2.6 F2 / §2.5** 三写入面补路由；AC27 核对集→六面）；
+  🔴2 `docs/README.md` 纳入（登记面→7 处 + §2.18 新增行）；
+  🟡 AC25 合并去重 · 删逐字重复段 · 需求 §1.15 尾段改指针 · 批次档计数 8 条 · V1 落点定死+`_archive` 豁免+V2 三形态判据 ·
+  AC28 口径照需求档（新增阻断/存量降报告 + 基线文件）· AC22 枚举扩全（三组九句）· 补 T42（AC24/AC25）· FR9 #5 落点与 #7 勘察预算（≤6/批，与审计预算独立）；
+  🔵 T33 输入措辞 · D4 落点→V1 · 八维编号校正为 **#7 Document ownership**（定耆 `advisor-design.md:9`）· 目标计数 7 场景/15 文件 ·
+  A2 补 `files` 声明 + C 补 todo 状态推进（§1.8 步 2 / B5）。
 
 - 2026-09-10（晚·三）：**设计评审轮次 2 处置**（1🔴+5🟡+3🔵——用户逐条裁）：
   🔴 写权路由——用户裁定**“主代理负责的是批次档，设计档由 designer 负责”**：新增 **§2.15 A2**（写权矩阵 + 调用形态）、
