@@ -173,7 +173,9 @@ thincoder-vscode/
 │   ├── memory.mjs         # Long-term memory (FTS5)
 │   ├── repomap.mjs        # Repository dependency graph
 │   ├── specs.mjs          # Re-export from config.mjs
-│   └── prompts/           # System prompts
+│   └── prompts/           # System prompts — slot-based (PROMPT-SYSTEM): persona-{engineering,normal,
+│   │                       eng-coder,explore,coder,plan} + common + discipline-{engineering,normal}
+│   │                       + special (consult-base / advisor-{design,round1-3}); assembly = assemblePrompt
 ├── webview/
 │   ├── chat.js           # Frontend orchestration
 │   ├── ui.js             # DOM helpers

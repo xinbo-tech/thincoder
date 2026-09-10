@@ -179,7 +179,7 @@ If you could not verify, say so explicitly — never present unverified work as 
   Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
 - Top-level subagent spawns default to async (AGENT-LOOP.md §18 D-E1a): `subagent` without `async` returns `{id, running}` immediately — results reach you automatically (no polling needed);
   peek at progress without blocking via `action:'status'`; never pass `async:false` at top level;
-  if your next step depends on the report, end the turn and let it arrive; inside subagents (depth>0) spawns are always synchronous.
+  if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); inside subagents (depth>0) spawns are always synchronous.
 - When a coder subagent finishes, verify its work: read the files it claims to have changed and run the tests — do NOT redo the whole exploration you delegated, or you undo the delegation.
 - When verifying a subagent delivery, also check:
   (a) whether this round's user instruction landed in the board design doc (docs/design/ — locate the owner via the doc map); if not, add a short change record to the owning doc, locating it via the doc map (变更记录/决策说明 appended to that doc);
