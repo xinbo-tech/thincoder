@@ -20,16 +20,15 @@ docs/
 
 | 文件/目录 | 里面是什么 | 什么说了算 |
 |---|---|---|
-| `PHILOSOPHY.md` | **三观**：ThinCoder 相信什么——提示词的根基 | **最高**：需求、设计、提示词都从它推导；与任何文档冲突时以它为准 |
-| `requirements/` | **需求**：产品应该是什么样 | 用户确认即定稿（不过 advisor 评审） |
+| `requirements/PHILOSOPHY.md` | **三观**：ThinCoder 相信什么 | **最高需求**：提示词/设计/代码与之不符 → 改它们（或走需求变更改本档） |
+| `requirements/` | **需求**：产品应该是什么样（含 `FEATURES.md` 功能清单） | 用户确认即定稿（不过 advisor 评审） |
 | `design/` | **设计 + 测试**：打算怎么做、怎么证明做对了 | 设计评审通过 + 用户批准后定稿 |
-| `design/FEATURES.md` | **功能全览**：现在有什么（从代码反推） | **不算数**：可重建、会漂；与代码/需求/设计冲突时信后者 |
 | `design/_archive/` | **变更史**：当时做了什么（批次档/被取代档） | 冻结——不作现状依据 |
 | `TODO.md` | **待办**：还没做什么 | 操作清单 |
 | `guides/` | 使用指南 | — |
 
-**判定"现状"只看 `requirements/` + `design/` 的现行档**：只有它们说"现在该是什么样"。
-`FEATURES.md` 是从代码反推的快照（代码改了它没改就是它错）；`_archive/` 是历史。
+**判定"现状"只看 `requirements/` + `design/` 的现行档**：需求说"应该是什么样"，设计说"怎么做"；
+`_archive/` 是历史（不作现状依据）。
 
 > 三观（`PHILOSOPHY.md`）不在三层之内——它是三层**共同的依据**；功能全览也不是三层之一——
 > 它从属于**代码**（是结果的镜像）。
@@ -98,8 +97,8 @@ docs/
 |---|---|---|
 | 架构 | `design/ARCHITECTURE.md` | 权威源。`_archive/ARCHITECTURE-v2.md`（v2 草案，未启动） |
 | 项目需求（定位/决策/远期） | `requirements/PROJECT.md` | 自原 `design/REQUIREMENTS.md` 迁入（2026-09-10 文档重组）——三层重排：总体需求/功能性需求/非功能性需求 |
-| 功能全览 | `design/FEATURES.md` | 基于代码现状梳理 |
-| 三观（提示词根基） | `PHILOSOPHY.md` | 所有提示词具体规则由此处推导 |
+| 功能全览 | `requirements/FEATURES.md` | 功能清单（功能性需求现状） |
+| 三观（提示词根基） | `requirements/PHILOSOPHY.md` | 最高需求——所有提示词/设计具体规则由此处推导 |
 | 会话 | `design/SESSION.md` | CLI 会话/存储权威 |
 | 上下文压缩 | `design/CONTEXT-COMPACTION.md` | |
 | 发布流程 | `design/RELEASE.md` | npm 发布流程 + 踩坑记录 |

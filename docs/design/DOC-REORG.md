@@ -208,7 +208,7 @@
 | `docs/design/CHECKPOINT.md` | 250 | ±1 |
 | `docs/design/ADVISOR-CONVERGENCE.md` | 232 | ±2 |
 | `docs/design/STRUCTURE-DEBT.md` | 183 | -2（债条勾销） |
-| `docs/PHILOSOPHY.md` | 175 | ±1 |
+| `docs/requirements/PHILOSOPHY.md` | 175 | ±1 |
 | `docs/design/SETTINGS-TOOL.md` | 135 | ±2 |
 | `docs/design/POOL-CONFIG-UNIFIED.md` | 130 | ±1 |
 | `docs/design/SEND-STALL-DISTILL-TUNING.md` | 99 | ±1 |
