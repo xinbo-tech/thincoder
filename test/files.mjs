@@ -17,6 +17,7 @@ export default [
   "test/eng-settlement.test.mjs",
   "test/config-merge.test.mjs", // MODEL-SELECTION（2026-09-10）：迁移 v2 双端同规则 VSC 面（形态 A/B→单值、幂等/失败不阻断/凭据不丢、磁盘无 models 键）+ 预设 20 条单值 + resolveDefaultModel 新回退链（复合→渠道默认单值→null）
   "test/provider-admission.test.mjs", // MODEL-SELECTION（2026-09-10）：VSC 渠道准入——三 format 拉取/翻页（T1–T4/T26/T27）+ M9 配置阶段两态（T23/T24——含 fullStatus 拉取失败=不可选）+ 运行期零探测（T25）+ 面板行 `不可用` 标注（happy-dom）
+  "test/model-picker-fallback.test.mjs", // MODEL-SELECTION v2 范围追加（2026-09-11）：M10/T29——面板候选未命中不写会话槽（零 selectModel/selectReasoning post + 显示与状态回落会话槽复合 prefs 复合）+ 命中分支同值回写正控（happy-dom 直驱 handleModelsMessage）
   "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
   "test/subagent-observe-send.test.mjs",
   "test/subagent-id-counter.test.mjs", // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：id 计数器载体 = agent 本体——压缩换线后 spawn id 仍递增 + 两池 poolMax 兜底

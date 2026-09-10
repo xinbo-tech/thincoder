@@ -115,15 +115,16 @@ export function handleModelsMessage(m) {
       ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && ctx.selectedReasoning !== "off")
       vscode.postMessage({ type: "selectModel", model: match.id, provider: match.provider })
       vscode.postMessage({ type: "selectReasoning", reasoning: ctx.selectedReasoning })
-    } else if (!ctx._models.find((x) => x.id === ctx.selectedModel)) {
-      const m0 = ctx._models[0]
-      ctx.selectedModel = m0.id; ctx.selectedProvider = m0.provider || ""; ctx.modelBtn.textContent = m0.id
-      const levels = m0.reasoning || []
-      ctx.selectedReasoning = levels.length > 0 ? levels[0] : "off"
-      ctx.reasoningBtn.textContent = ctx.selectedReasoning === "none" ? "off" : (reasoningLabel(ctx.selectedReasoning))
-      ctx.reasoningBtn.classList.toggle("active", levels.length > 0 && ctx.selectedReasoning !== "off")
-      vscode.postMessage({ type: "selectModel", model: m0.id, provider: m0.provider || "" })
-      vscode.postMessage({ type: "selectReasoning", reasoning: ctx.selectedReasoning })
+    } else if (prefs.model) {
+      // M10 MODEL-SELECTION v2 (2026-09-11 scope add-on, user ruling): a prefs composite
+      // NOT in the pulled list must never silently write the session slot. Display AND
+      // state fall back to the slot composite (turn-echo parity: send.js:47 →
+      // turn-model.mjs:22); slot writes stay explicit-click only — zero selectModel /
+      // selectReasoning posts (selectModel = the only slot writer; selectReasoning only
+      // writes workspaceState). ctx.selectedReasoning stays untouched.
+      ctx.selectedModel = prefs.model
+      ctx.selectedProvider = prefs.provider
+      ctx.modelBtn.textContent = prefs.model
     }
   } else {
     ctx.modelBtn.textContent = ""
