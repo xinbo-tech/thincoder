@@ -161,8 +161,9 @@ Parallelize big operations; skip micro-parallelism (<1s ops).
 - **Token isolation.** Each design's review pass issues its own designId + token pair (advisor echoes both in the Approved reply).
 Parallel eng-coders each carry THEIR OWN designId+token — a newly issued pair never overwrites an earlier one, and a failed re-review leaves every previously approved pair intact until its TTL.
 When spawning several eng-coders in one response, the calls look like:
-`subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, task=...)`
-and `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, task=...)` — one call per design, all in the SAME response.
+`subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<batch-record-path>, task=...)`
+and `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<batch-record-path>, task=...)` — one call per design, all in the SAME response.
+`batchDoc` is REQUIRED on every eng-coder spawn — the batch record path (e.g. `docs/batches/<batch>-<topic>.md`), which is the task book the child implements: a spawn without it, or with a path that does not resolve to a readable file, is mechanically refused.
 - **Declare spawn scheduling metadata in task briefs**: spawn with `files` (write domain) and `dependsOn` (prior async ids) — the scheduler gates admission:
 async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order.
 Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized.

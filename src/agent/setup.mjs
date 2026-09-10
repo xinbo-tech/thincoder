@@ -225,15 +225,18 @@ export async function prepareRun(agent, input, callbacks, {
     ? (() => {
         const props = { ...subagentTool.parameters.properties }
         // §19 review hygiene: the audit channel is spawn-only sync explore — drop
-        // async, the check/status params (id/n) and the eng-coder token params
+        // async, the check/status params (id/n), the eng-coder token params
         // (designToken/designId are meaningless for a read-only audit spawn; the
-        // parent spawn already carried the token). Schema noise would invite the
+        // parent spawn already carried the token) and batchDoc (the audit child
+        // derives no batch parameter — its task book rides the mechanical summary
+        // of the parent's _engTaskInput instead). Schema noise would invite the
         // model to pass irrelevant args.
         delete props.async // sync only — the eng-coder blocks on the audit report
         delete props.id
         delete props.n
         delete props.designToken
         delete props.designId
+        delete props.batchDoc
         props.role = {
           type: "string",
           enum: ["explore"],

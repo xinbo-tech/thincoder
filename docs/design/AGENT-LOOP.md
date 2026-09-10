@@ -510,6 +510,11 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 - **`files?: string[]`**——写域声明（eng-coder 纪律——§8.1 L443 A 裁定：清单外改动允许但必须逐项报告——审计兜底；不做任务书文本自动解析）。**目录声明不支持**（`normalizeFileList` 对以 `/` 或 `\` 结尾 / 指向既有目录 → 抛明确错误——fail-closed）。归一化：相对 cwd 转绝对 + 正斜杠 + win32 小写比较键。
 - **`dependsOn?: string[]`**——子代理 id 列表（显式依赖）。
+- **`batchDoc?: string`**（eng-coder spawn 门禁参数——**非调度参数**，不参与冲突判定）：工程模式下 spawn
+  `role="eng-coder"` **必传**——批次档路径（`docs/batches/<批>-<主题>.md`，即该 spawn 实现的任务书）；
+  判据 = 参数在 + `resolve(cwd, batchDoc)` 存在且为文件（**不校验内容/措辞**）；没传 / 路径不可读 →
+  spawn 拒绝（校验落点 = `buildSpawnChild`——token 门之前，sync/async 两路共经）。explore/plan/coder
+  spawn 不受影响；机制权威 = ENGINEERING-MODE.md §2.12。
 - **缺省**（无 files 无 dependsOn）= 既有语义（立即启动、不参与冲突检测）。
 - **准入（spawn 时）**：若 (running ∪ queued) 有 files 交集 或 dependsOn 未 done → 入 queued（waiting-deps 态记原因）；否则立即 start。
 - **仅 async 参与调度**：sync spawn（async:false）带 files/dependsOn 且命中冲突 → **明确错误**（不队列化——sync 语义零变更）。

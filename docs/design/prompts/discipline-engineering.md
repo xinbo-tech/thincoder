@@ -80,7 +80,9 @@
   On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
 
 ## 实施委托结构化（任务书结构 + file 域语义）
-- 有规模的实施批次（多文件/跨模块/有已确认设计）默认由 coder 子代理实现——以设计文档为任务书 async spawn）；小型/探索性/交互式变更留在主会话做。
+- 有规模的实施批次（多文件/跨模块/有已确认设计）默认由 coder 子代理实现——以设计文档为任务书 async spawn；小型/探索性/交互式变更留在主会话做。
+  工程模式下 spawn 形如：`subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<批次档路径>, task=...)`
+  ——**`batchDoc` 必传**（批次档路径，如 `docs/batches/<批>-<主题>.md`；它就是该 spawn 实现的任务书）：**没传即拒**——机械门禁，判据只到“参数在 + 路径可读”，不校验内容。
   能自己做也别自己做有规模的批次——隔离上下文才能打破自审盲区。
 - 每次委派都带任务书，包含：
   目标与为什么
