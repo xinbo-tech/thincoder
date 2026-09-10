@@ -196,8 +196,10 @@ src/
                     clipboard.mjs (paste/copy), ansi.mjs
   tui.mjs           re-export shim → src/tui/index.mjs
   tui-render.mjs    re-export shim → src/tui/render.mjs
-  prompts/          prompt texts — system.md (core), discipline.md (coding/testing rules),
-                    main.md (main-agent overlay), explore.md / coder.md / plan.md (subagent roles)
+  prompts/          prompt texts — slot-based (PROMPT-SYSTEM): persona-engineering / persona-normal /
+                    persona-{eng-coder,explore,coder,plan} + common + discipline-engineering / discipline-normal
+                    + special modules (consult-base / advisor-design / advisor-round{1,2,3});
+                    assembly = assemblePrompt (prompt-overlays.mjs): persona → common → discipline → [4] AGENTS+skills
 test/               node:test offline unit tests (npm test)
 scripts/            real-environment verification scripts (compaction, team sync)
 ```
