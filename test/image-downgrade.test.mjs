@@ -111,6 +111,37 @@ test("视觉判据（MODEL-SELECTION）：判据 = 渠道默认单值模型的 s
   assert.equal(findVisionChannel([{ name: "x", models: ["kimi-k3"] }]), null, "旧 models 候选字段不再被读（判据单一来源）")
 })
 
+test("T36 第 6 批：DeepSeek V4.1-Flash 三行 = 契约（R11–R13）+ 新名/退役名渠道入视觉判据", async () => {
+  const { specForModel } = await import("../src/config.mjs")
+  const { findVisionChannel } = await import("../src/extension/vision-channel.mjs")
+  // §19.2（a）契约（VSC 侧——每行多 reasoningEffortDefault: "high"）
+  const CONTRACT = {
+    context: 1_000_000, maxOutput: 384_000, thinking: true, prefixMode: true, multimodal: true,
+    cacheMode: "auto", thinkApi: "type", reasoningEcho: "required",
+    reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2],
+  }
+  for (const name of ["deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"]) {
+    const spec = specForModel(name)
+    for (const [k, v] of Object.entries(CONTRACT)) assert.deepEqual(spec[k], v, `${name}.${k} = 契约值`)
+    assert.deepEqual(Object.keys(spec).sort(), Object.keys(CONTRACT).sort(), `${name} 字段集 = 契约`)
+  }
+  assert.deepEqual(findVisionChannel([{ name: "ds", model: "deepseek-flash" }]),
+    { provider: "ds", model: "deepseek-flash" }, "新名渠道被选中（不再 null——R11）")
+  assert.deepEqual(findVisionChannel([{ name: "ds", model: "deepseek-v4-flash" }]),
+    { provider: "ds", model: "deepseek-v4-flash" }, "退役名渠道进入视觉判据（R12——行为变化）")
+})
+
+test("T38 第 6 批：pro 只读字段锚（R14——字段零改 + 非视觉保守——防误改）", async () => {
+  const { specForModel } = await import("../src/config.mjs")
+  const pro = specForModel("deepseek-v4-pro")
+  assert.ok(!pro.multimodal, "不加 multimodal（视觉能力未核实——保守）")
+  assert.equal(pro.context, 1_000_000, "context 零改")
+  assert.equal(pro.maxOutput, 384_000, "maxOutput 零改")
+  assert.equal(pro.prefixMode, true, "prefixMode 零改")
+  assert.deepEqual(pro.reasoningEffortEnum, ["low", "high", "max"], "effort enum 零改")
+})
+
+
 test("F-2 spawn 失败/超时/空返 → fallback（images 原样——文本零改动）", async () => {
   for (const mock of [
     async () => { throw new Error("vision channel down") }, // spawn 失败 / 超时（runAgent throw → runner null 同路）

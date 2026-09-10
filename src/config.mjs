@@ -20,11 +20,18 @@
  *   format:                API wire format: "openai" (default) | "anthropic" | "google"
  */
 const MODEL_SPECS = [
-  // DeepSeek V4 series (official Models & Pricing: dual models, both 1M ctx / 384K out,
-  // thinking default-on with effort low/high/max, automatic disk cache)
+  // DeepSeek V4.1 series (2026-09-11). `deepseek-flash` = DeepSeek-V4.1-Flash (in service):
+  // 1M ctx / 384K out, thinking default-on with effort low/high/max, Chat Prefix Completion
+  // beta, automatic disk cache, vision. The two legacy names below are RETIRED — still accepted
+  // and served by V4.1-Flash today (no switch window), so their rows carry the V4.1-Flash
+  // parameters (v4-flash gains multimodal).
+  ["deepseek-flash",    { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2], multimodal: true }],
+  // deepseek-v4-pro (V4-Pro-0813): fields unchanged — vision capability NOT verified, so no
+  // multimodal (conservative). From 2026-09-14 12:00 Beijing all requests route to V4.1-Flash.
   ["deepseek-v4-pro",   { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2] }],
-  ["deepseek-v4-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2] }],
-  // DeepSeek V4 Flash Vision (experimental) — image input on top of the full V4-Flash stack
+  // deepseek-v4-flash: RETIRED name — still accepted, served by V4.1-Flash today → aligned row
+  ["deepseek-v4-flash", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2], multimodal: true }],
+  // deepseek-v4-flash-vision-exp: retired experimental vision name — still accepted (V4.1-Flash)
   ["deepseek-v4-flash-vision-exp", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "high", tempRange: [0, 2], multimodal: true }],
   // Kimi series
   ["kimi-k3",           { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true, cacheMode: "auto", thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], reasoningEffortDefault: "max" }],

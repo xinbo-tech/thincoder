@@ -134,6 +134,7 @@ test("AC-3 预设 20 条：各携单值 `model`（无 models 键）", () => {
     assert.ok(p.model.length > 0, `${name} 非空`)
     assert.equal("models" in p, false, `${name} 无 models 候选清单`)
   }
+  assert.equal(PROVIDER_PRESETS.deepseek.model, "deepseek-flash", "第 6 批 T37：预设播种 = V4.1-Flash 在役名（R15）")
 })
 
 // ─── resolveDefaultModel 新回退链（T18/T19——AC-6）───

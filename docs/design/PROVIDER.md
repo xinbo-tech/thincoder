@@ -62,6 +62,8 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 `presetToEntry(name)` 剥离 `desc`（面板显示字段），余下发成 provider 条目。
 **v2（MODEL-SELECTION）**：各预设携**单值默认模型 `model`**（原 `models[]` 候选种子退场——
 承接新装种子 / 槽空兜底 / 显示回退；CLI 语义同源、本端独立实现）。
+**2026-09-11（第 6 批）**：`deepseek` 预设默认模型 → `deepseek-flash`（DeepSeek V4.1-Flash 接入——
+语义与 CLI 同源；规格行/退役与限期路由处置见 §6.1）。
 
 ## 3. 模型选择 UI 与 Provider 增删
 
@@ -70,7 +72,8 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
   Webview 无键盘导航 → 用 hover flyout。**选中 = 写当前会话槽**（`activeProvider` +
   `activeModel` 双字段——`selectProviderModel` config 写路径已退役）；配置默认 = 设置面板
   「默认模型」项（provider → 运行期拉取候选 两级——写 raw.defaultModel；候选数据源与不可用
-  渠道剔除见 §3.1）。
+  渠道剔除见 §3.1）。候选未命中（prefs 复合不在拉取清单）→ 保持当前选择显示与状态（回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post——**本批处置**
+  （未命中场景写槽仅显式点击；命中分支维持现状——同值回写；M10 语义同源，见 §3.2）。
 - **Add**：`provider-flows.mjs` `addProviderFlow`（QuickPick preset[过滤已添加，filter by
   desc/model] 或 Custom 手输 name/baseURL/model + format）→ `addProviderEntry`（预设自动填
   baseURL/model；custom 逐字段校验，format 三值 openai/anthropic/google + 拒绝未知）→ 问
@@ -117,7 +120,7 @@ minimax 携 `chatPath: "/text/chatcompletion_v2"`。
 | 拉取结果排序 | 调用方 | `listModels` 内部排序保留（既有行为） | 双端允许差异 |
 | 准入探针宿主 | `tui/model-catalog.mjs` + `model-picker.mjs` 落点 | `provider/list-models.mjs`（探针 + 展示态） | 设计未钉宿主，两端各自落地 |
 | 失败诊断载荷 | —— | `models` 载荷附 `unavailable[{provider,reason}]` | 本端自定（测试/排障面） |
-| webview 下拉兜底 | 会话重载兜底 = 保持会话值（不读候选清单） | 拉取清单不命中时取首项并经 `selectModel` 回写会话槽——**未随本批对齐** | 已知缺口（批次档 §5 已披露——处置待裁定） |
+| webview 下拉兜底 | 会话重载 = **会话值优先**（`cmd-config.mjs:67-71` `sessionModel ?? dm.model ?? keep.model`——`keep.model` 仅链尾兜底；不读候选清单） | 候选未命中 = **保持当前选择显示与状态（回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post**（不再取候选首项写会话槽）——**本批处置**（用户 2026-09-11 裁定；M10） | 语义同源（双端独立实现）；T29 / AC-10 锁定 |
 
 ## 4. transport 分派与调用链（provider.mjs chat）
 
@@ -291,6 +294,13 @@ arguments }` 与 openai transport 输出一致，agent 循环零改动。
 完整名前缀未命中且含 `/` → 剥首个 `/` 前 namespace 再匹配（`ZHIPU/GLM-5.3 → glm-5.3`），不
 改 `provider.model`。未知模型 → `DEFAULT_SPEC`（128K/32K）+ warn once（IK5VGJ）。
 
+**DeepSeek V4.1-Flash（2026-09-11 第 6 批）**：新增 `deepseek-flash` 行；两退役名
+（`deepseek-v4-flash` / `deepseek-v4-flash-vision-exp`——仍收、当下即路由）参数随 V4.1-Flash
+（v4-flash 加 `multimodal`）；`deepseek-v4-pro` 保留 + 注释（9/14 12:00 北京起路由 V4.1-Flash——
+不预支视觉；该名视觉能力未核实、保守按无视觉；重评触发含 2026-09-14 路由生效后复检——
+权威见 CLI 侧设计档 `PROVIDER.md` §19.5 #3）。行为面：前两名渠道进视觉判据/贴图放行；`deepseek-v4-pro` 保持非视觉。
+（本批语义与 CLI 同源；设计/用例权威落 CLI 侧设计档 PROVIDER.md §18–§20（CLI 侧）。）
+
 ### 6.2 thinking / 续写 / reasoning_effort
 
 - **openai buildRequest spec 驱动 thinking 默认**：`thinking:true` 模型（GLM/Kimi/…）provider
@@ -364,8 +374,18 @@ provider.context * 1024}`），不污染共享 spec（跨 provider 串扰防护�
 （execute-tools multimodal 路径注入 part）。历史内容保持字符串（不回放 images）。文件随
 offload 写时自清理回收（paste-* 同目录，无名字过滤）。
 
+**2026-09-11（第 6 批）**：DeepSeek V4.1-Flash 系（`deepseek-flash` / 两退役名）`multimodal` 为真——
+渠道默认模型为其中任一者时进入视觉判据/贴图放行；`deepseek-v4-pro` 保持非视觉（保守——§6.1）。
+
 ## 9. 变更记录（历史折叠——详见 git log 与并入源）
 
+- 2026-09-11（第 6 批评审修正轮）：§6.1 决策口径同步——`deepseek-v4-pro` 视觉能力未核实（保守按
+  无视觉）；重评触发含 2026-09-14 路由生效后复检（权威见 CLI 侧设计档 `PROVIDER.md` §19.5 #3；语义与 CLI 同源）。
+- 2026-09-11（第 6 批 DeepSeek V4.1-Flash）：`deepseek` 预设默认模型 → `deepseek-flash`；规格行新增/
+  对齐（`deepseek-flash` 新行 + 两退役名参数随 V4.1-Flash + `deepseek-v4-pro` 保留注释）——§2/§6.1/§8
+  同步（语义与 CLI 同源；设计/用例权威落 CLI 侧设计档）。
+- 2026-09-11（范围追加——用户裁定）：§3.2 webview 兜底行「未随本批对齐」→ **本批处置**（候选未命中 = 保持当前选择显示 + 零 post——M10；T29/AC-10 锁定）；§3 叙述同步。
+- 2026-09-11（范围追加评审修正轮）：§3 补「命中分支维持现状（同值回写）」+ 断言口径统一（零 `selectModel` / `selectReasoning` post）；§3.2 CLI 对位措辞精确化（会话值优先——`keep.model` 仅链尾）；webview 兜底行同步（显示与状态回落会话槽复合）。
 - 2026-09-11：镜像档同步（O4）——MODEL-SELECTION v2 语义落地本端（§1 配置存储 / §2 预设 / §3.1 清单来源与渠道准入 / §3.2 双端差异）。
 - 2026-09-09：MODEL-MERGE-SESSION 语义同步——§1 配置存储改写（三旧层删除 + defaultModel
   顶层复合 + providers[].models[] 候选 + 迁移核 config-migrate）；§2 Preset models 种子；
