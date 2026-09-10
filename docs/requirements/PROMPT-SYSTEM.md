@@ -259,7 +259,7 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 
 ## 8. 工程模式角色重定义——提示词实现面（需求——2026-09-10 用户裁定；待设计）
 
-> **机制权威源 = `ENGINEERING-MODE.md` §1.2 FR9 + §1.4 裁定清单**（需求层——同目录）+ `../design/ENGINEERING-MODE.md` §2.1 目标态注。
+> **机制权威源 = `ENGINEERING-MODE.md` §1.2 FR9 + §1.5 裁定清单**（需求层——同目录）+ `../design/ENGINEERING-MODE.md` §2.1 目标态注。
 > 本节**只承载提示词实现面**（新增/改写哪些槽位文件、装配矩阵、锚断言、双端镜像）——避免同一机制两处详述。
 > 状态：**需求已收口（用户确认）——待设计**。
 
@@ -286,7 +286,7 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
   四槽位固定序 + 层前缀命名法 + 装配矩阵 + 结构债清单 + 实施批边界）。
 - 2026-09-10：§8 新增——工程模式角色重定义需求（产品经理/eng-designer/eng-coder 三段链，
   设计=需求检验定位，9 条裁定——用户逐条确认；待设计）。**归属整理（当日）**：机制权威源改指
-  `requirements/ENGINEERING-MODE.md`（§1.2 FR9 + §1.4 裁定清单）+ `design/ENGINEERING-MODE.md` §2.1 目标态注；本节收窄为提示词实现面。
+  `requirements/ENGINEERING-MODE.md`（§1.2 FR9 + §1.5 裁定清单）+ `design/ENGINEERING-MODE.md` §2.1 目标态注；本节收窄为提示词实现面。
 - 2026-09-10：评审 PASS（10 项——3🟡+7🔵）全采纳修订：①降级链补 common.md 缺失语义（四槽全覆盖）
   ②施工设计档候选排除已降级档（定独立短档）③METHODOLOGY"不得触碰清单外文件"句改述后迁入纪律层
   ④"L5"改槽位[4] ⑤文件清单总数口径（主链11含特殊14，不含AGENTS）⑥"METHODOLOGY §7"改节名引

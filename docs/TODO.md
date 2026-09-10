@@ -153,7 +153,7 @@
   FR12 代码文档判据不得写死 `^src/`（嵌套布局静默绕过门禁）/ FR13 纪律层不得把本仓形状强加用户项目（含自指脚本 check-doc-width）/
   FR14 推进档位 auto-manual 入需求 / FR15 非 git 项目行为定义。**归属 = `docs/requirements/ENGINEERING-MODE.md` §2**。
   **验证方向**：非 Node、非 `src/`、无 `docs/` 树、非 git 的项目跑全流程——不得静默失效、不得被不存在文件卡住。
-- [ ] **工程模式角色重定义**（2026-09-10 用户裁定——需求已收口，**待设计**）——主agent=产品经理（需求文档+全流程编排/确认/核验）/ eng-designer=设计（从需求到设计，唯一写稿人，自己做勘察，无 designToken）/ eng-coder=实现；核心定位「设计 = 对需求的检验」（需求不过 advisor 评审）。**归属档 = `docs/requirements/ENGINEERING-MODE.md` §1.2 FR9 + §1.4 裁定清单**（提示词实现面见 requirements/PROMPT-SYSTEM.md §8）。
+- [ ] **工程模式角色重定义**（2026-09-10 用户裁定——需求已收口，**待设计**）——主agent=产品经理（需求文档+全流程编排/确认/核验）/ eng-designer=设计（从需求到设计，唯一写稿人，自己做勘察，无 designToken）/ eng-coder=实现；核心定位「设计 = 对需求的检验」（需求不过 advisor 评审）。**归属档 = `docs/requirements/ENGINEERING-MODE.md` §1.2 FR9 + §1.5 裁定清单**（提示词实现面见 requirements/PROMPT-SYSTEM.md §8）。
 
 > 2026-09-08 批实况（17:07 终态）：**批 1/批 2/批 3** 全交付核销（L2 双端 112/105 全绿——批 3 文档
 > 指针同步：CHECKPOINT/STRUCTURE-DEBT system.mjs 改指 bash.mjs/search.mjs——父侧收尾）；**env-state
