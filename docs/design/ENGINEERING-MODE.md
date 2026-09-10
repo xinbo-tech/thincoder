@@ -290,6 +290,122 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 > 行数为 2026-09-10 实测（`wc -l` 口径：读工具总行数报数）；三个 &gt;300 行源文件均**不触发拆分**
 > （本批增量合计 ≤39 行、无新函数），故不出拆分计划——待后续整体重构批（见 TODO 结构债组）。
 
+### 2.15 eng-designer 角色（第 2 批——CLI 端；FR9 + FR19）
+
+**角色定位**：写稿面唯一作者——写 **需求文档 / 设计档 / 批次档 §2**；**不写实现代码**、**不改提示词文件**（§1.5 #8）、
+**不发起评审**（#6）；**无 designToken**（#4：授权 = 需求已确认）；**必传 `batchDoc`**（与 coder 同门）。
+
+**A. 角色注册（五处硬清单 + 模式门）**
+
+| 落点 | 改动 |
+|---|---|
+| `src/agent-tools/subagent.mjs:145`（schema enum） | 加 `"eng-designer"` |
+| `:224` ROLES 白名单 + `:226` 错误文案 | 加角色 |
+| `:124-129` 工具描述（角色矩阵 + Mode filtering 句） | 加 designer 行；模式句改“工程模式 = explore/plan/**eng-designer**/eng-coder” |
+| `src/agent/setup.mjs:187`（工程模式 enum）+ `:189` suffix | 加角色 |
+| `src/tui/tool-args.mjs:44`（显示 case） | 加 `case "eng-designer"` |
+
+**模式门（对称补全）**：`subagent.mjs:236-241` 现有两门（工程禁 coder / 非工程禁 eng-coder）→ **加第三门**：
+**非工程模式 spawn eng-designer → throw**（它是工程模式专属角色，与 eng-coder 同族）。
+
+**B. 提示词装配（四处——漏一处不报错，是静默回退陷阱）**
+
+| 落点 | 改动 |
+|---|---|
+| `src/prompt-overlays.mjs:22-32` SLOT_CONTENTS | 加 `loadSlot("persona-eng-designer.md")`（不登记 → `:77` 缺槽告警路径） |
+| `:47-55` SCENARIO_SLOT_FILES | 加 `"eng-designer": ["persona-eng-designer.md", "common.md", "discipline-engineering.md"]`（不登记 → `:70-71` **静默返回 CONSULT_BASE 且零警告**） |
+| `src/agent/setup.mjs:295-301` 场景映射 | 把 `(depth === 0 \|\| agent._role === "eng-coder")` 谓词扩为**工程角色集合**，使 designer 落入工程链 |
+| `src/agent-tools/subagent-spawn.mjs:322-326` childConfig | `role === "eng-coder" → engineering:true` 扩为工程角色集合（designer 也必须 `engineering:true` 才能装配工程纪律槽） |
+
+**C. 新槽文件（双源——体例照 `persona-eng-coder.md`：头注 `slot:[1] consumers:[...]` + 身份/授权/边界/产出/纪律）**
+
+- `docs/design/prompts/persona-eng-designer.md`（**中文权威模板**，先定稿）
+- `src/prompts/persona-eng-designer.md`（英文落地产物）
+
+**内容要素**（逐项对应需求，不自由发挥）：身份=写稿面唯一作者 · 授权=需求已确认（**无 token**）· 边界=不写实现/不改提示词/不发起评审 ·
+收到什么（批次档 §1 + 本批 todo 项 + 需求体系 + 清单）· **缺料就打回** · 五步（勘察 → 并入需求 + 体系对账 → 每条需求配判定句 → 写设计 → 自检交回停）·
+失败路径 · **执行者拒收**（查不到任务书不执行）· 批次的写手边界（§2 自写）。
+
+**D. spawn 面：batchDoc 同门 + 勘察能力**
+
+1. **batchDoc 门扩角色集**：`subagent-spawn.mjs:251/254` 的 `role === "eng-coder"` 精确串 → 角色集合
+   `NEEDS_BATCH_DOC = {eng-coder, eng-designer}`；错误文案相应参数化（带实际角色名）；注入行 `:366` 同步扩。
+2. **勘察能力（§1.5 #7——设计者自己做勘察）**：新增 **designer 专属受限 subagent 变体**（explore-only）——
+   镜像 `setup.mjs:224-257` 的 eng-coder 审计变体：`props.role = { enum: ["explore"] }` +
+   `delete props.async/id/n/designToken/designId/batchDoc`；注入点同族（`setup.mjs:277` 的 depthOnly 链，`designer` 行加入该变体）。
+3. **子代 spawn 门**：`src/agent/spawn-child.mjs:44-58` `gateEngCoderSpawn` 现只认父角色 eng-coder——**扩为父角色集合**
+   （eng-coder / eng-designer）→ 两者都只允许 spawn `explore`；**审计预算（6）仍只计 eng-coder**（designer 勘察非审计；
+   防滥用靠并发池 other≤4）。
+
+**E. 写域边界（**提示词纪律——无机械门**，2026-09-10 用户裁定）**
+
+设计者的写域 = `docs/`（扣 `docs/design/prompts/`）。**不新增机械门**（用户裁定“不需要机械门禁”）——
+靠 **persona-eng-designer 明写写域** + **主 agent 内容性核验**（§1.5 #2）兼底。
+
+- 事实前提（勘察实证）：现行 `dispatch.mjs` **无障碍拦 designer 写 `src/**`**（它只是+不再拦 eng-coder 门或 depth-0 门命中）——
+  本批**有意不补门**：越界风险由提示词 + 核验承担（与“执行者拒收”同族纪律）。
+- **不新增写域门 = 不改 `src/agent/dispatch.mjs`**（从受影响文件表移除该项）。
+
+**F. 展示面（TUI 四处）**：`src/tui/cmd-submodel.mjs:4` SUBMODEL_SLOTS（+ `:24/:90` 注释“4 role slots”→5）·
+`src/tui/slash-commands.mjs:45`（描述串）+ `:147`（补全候选）· `src/tui/subagent-blocks.mjs:69` SUBAGENT_ROLES。
+（`:29` 前缀正则已含连字符——无需改。）
+
+**G. 文档登记面（5 处）**：`docs/requirements/PROMPT-SYSTEM.md:39`（命名法角色行）· `:45-46`（文件计数）·
+`:54-59`（人格层大纲加行）· `:195-207`（§3.2 装配矩阵加行）· `docs/design/AGENT-LOOP.md:177-184`（角色矩阵 + Mode filtering）·
+`AGENTS.md:56`（槽位清单）。
+
+### 2.16 行为纪律（第 2 批 B——提示词层，双源同步）
+
+| 纪律 | 内容 | 落点 |
+|---|---|---|
+| **六段自写 · 一段一作者** | §1 主 agent / **§2 designer** / §3 评审子代理 / §4 主 agent / §5 coder / §6 父代理 | persona-eng-designer（§2 自写）+ persona-eng-coder（§5 自写）+ discipline-engineering（§3/§4/§6 归属 + **过渡期注**：§3 自写机制未落地前由父侧代写） |
+| **执行者拒收**（FR20 #9 行为面） | 任务书/依据不存在→**不执行、打回**（coder 找不到 §2 / designer 找不到 §1） | persona-eng-designer + persona-eng-coder + discipline-engineering |
+| **澄清必经主 agent**（#3） | 子代理撞到需用户决定的事→打回主代理（无旁路） | discipline-engineering |
+| **三方条目一致**（#4） | 批次档 §2 条目 = 设计档验收回指 = 需求档条目 | discipline-engineering |
+
+**锚断言口径**：四条纪律的关键句（执行者拒收 / 一段一作者 / 澄清必经主 agent / 三方一致）**进 fail-when-unchanged 家族**
+（`test/prompts-async-guidance.test.mjs` 现有机制）——**且新增 `persona-eng-designer.md` 必须进 `NEW_PROMPTS` 清单**
+（`test:33-38`），否则首行格式断言（`:374-384`）与表行宽断言（`:386-398`）**不覆盖它**（漏覆盖即漏防）。
+
+### 2.17 方案选型（第 2 批四个决策点）
+
+| 决策点 | 候选 | 选定 | 否决理由 |
+|---|---|---|---|
+| **设计者写域边界** | A 加机械门（仅 docs/，扣 prompts）· B **纯提示词纪律 + 核验兜底** | **B**（2026-09-10 **用户裁定**） | A 需新增一道门（直改 dispatch 拦截层），而写稿面越界概率低、已有两层兼底（persona 明写写域 + 主 agent 内容性核验 §1.5#2）；**用户裁定：不需要机械门禁** |
+| **设计者勘察手段** | A 受限 explore-only 变体 · B 全量 subagent 工具 · C 不给（只靠主 agent 勘察） | **A** | #7 明定“设计者自己做勘察”——C 直接违背；B 让设计者能 spawn coder 类写手 = 越界面过大（最小权限） |
+| **角色是否全量入 TUI** | A 入（submodel/subagent-blocks/补全） · B 只入核心、展示面留后 | **A** | 角色半登记会造成“可在但不显示/不可配模型”的怪异态；本批一次做完 |
+| **纪律句进锚断言** | A 进 · B 只上文案 | **A** | 锚断言家族正是“提示词不得静默漂移”的机械保障；纪律句是本批核心产物 |
+
+### 2.18 受影响文件（第 2 批 as-of 快照——不得当契约引用）
+
+| 文件 | 性质 | as-of 行数 | 预计增量 | 拆分评审 |
+|---|---|---|---|---|
+| src/agent-tools/subagent.mjs | 修改 | 395 | ≤±10 | >300 档——**不拆**：四处枚举/描述单点增量，无新函数 |
+| src/agent-tools/subagent-spawn.mjs | 修改 | 444 | ≤±15 | >300 档——**不拆**：门判据扩集合 + 注入行扩；不新增函数 |
+| src/agent/spawn-child.mjs | 修改 | 218 | ≤±12 | — |
+| src/agent/setup.mjs | 修改 | 343 | ≤±20 | >300 档——**不拆**：枚举/变体/场景映射/工具链四处单点 |
+| src/prompt-overlays.mjs | 修改 | 81 | ≤±4 | — |
+| src/tui/cmd-submodel.mjs | 修改 | 155 | ≤±6 | — |
+| src/tui/slash-commands.mjs | 修改 | 187 | ≤±2 | — |
+| src/tui/subagent-blocks.mjs | 修改 | 451 | ≤±2 | >300 档——**不拆**：数组加一项 |
+| src/tui/tool-args.mjs | 修改 | 82 | ≤±1 | — |
+| src/prompts/persona-eng-designer.md | **新增** | — | ~30 | 新提示词槽文件（英文落地） |
+| docs/design/prompts/persona-eng-designer.md | **新增** | — | ~30 | 新提示词槽文件（中文权威） |
+| src/prompts/discipline-engineering.md | 修改 | 196 | ≤±12 | 纯 .md 豁免行数标注（纪律句） |
+| docs/design/prompts/discipline-engineering.md | 修改 | 124 | ≤±12 | 纯 .md 豁免（双源） |
+| src/prompts/persona-eng-coder.md | 修改 | 30 | ≤±4 | 纯 .md（§5 自写 + 拒收句） |
+| docs/design/prompts/persona-eng-coder.md | 修改 | 30 | ≤±4 | 纯 .md（双源） |
+| docs/requirements/PROMPT-SYSTEM.md | 修改 | 295 | ≤±8 | 纯 .md（登记面 5 处） |
+| docs/design/AGENT-LOOP.md | 修改 | 720 | ≤±6 | 纯 .md |
+| AGENTS.md | 修改 | 69 | ≤±2 | 纯 .md |
+| test/prompts-async-guidance.test.mjs | 修改 | 417 | ≤±25 | 新角色/新锚句断言 |
+| test/batch-doc-gate.test.mjs | 修改 | 160 | ≤±25 | 门文案与角色集同步 |
+| test/eng-designer-role.test.mjs | **新增** | — | +120±40 | 角色注册/装配不回退/勘察受限用例 |
+
+> 行数为 2026-09-10 实测；四个新增/修改的 .md 提示词文件按标准豁免行数标注；
+> 六个 >300 行源文件均**不触发拆分**（各为单点增量≤20 行、无新函数）——若实施中出现单函数超 300 行，停下报告。
+
+
 ## 3. 测试（Testing）
 
 ### 3.1 验收标准（Acceptance Criteria）
@@ -309,6 +425,13 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 - AC13（§2.12）: eng-coder 审计受限 schema 变体**不含** batchDoc 属性（delete 清单——实现枚举照 `src/agent/setup.mjs` 实际清单 async/id/n/designToken/designId 追加）。
 - AC14（§2.11 点 2）: `src/` 内**无 `docs/batches/` 逻辑字面**（评审 #3）——源码全仓扫描该串仅出现在**错误/提示文案**中（§2.12 消息），无路径解析/默认位置引用。
 - AC15（§2.11 点 3 + §2.12 提示词同步）: `src/` 不生成/不校验批次档模板（无“已收口”类措辞匹配、无模板常量）；且 spawn 样例行含 `batchDoc=`（**双源** `discipline-engineering.md`——`src/prompts` 英文落地 + `docs/design/prompts` 中文权威，非双端；校验方式 = 对两文件 grep `batchDoc=`，**非既有锚断言家族**——该家族只断言枚举子串）。
+- AC16（§2.15 A）: `eng-designer` 入四处硬清单（subagent.mjs 的 schema/ROLES/描述 + setup.mjs 工程模式枚举 + tool-args 显示）——四处在位且可分别断言；非工程模式 spawn 它 → throw。
+- AC17（§2.15 B——**防静默回退**）: designer 场景**已登记**装配——`assemblePrompt("eng-designer")` 返回的 prompt **非空且 ≠ CONSULT_BASE**，槽序 = `persona-eng-designer → common → discipline-engineering`，warnings 为空（盖 `prompt-overlays.mjs:70-71` 的静默回退陷阱）。
+- AC18（§2.15 D）: designer spawn **必传 `batchDoc`**（与 eng-coder 同门；不带→throw、带可读路径→通过且任务输入含 `Batch record` 行）；错误文案**含实际角色名**。
+- AC19（§2.15 E）: **写域边界为提示词级（无机械门——用户裁定）**——`persona-eng-designer.md`（双源）**明写写域**（`docs/` 且不写 `docs/design/prompts/`）；`src/agent/dispatch.mjs` **保持不变**（不新增写域判定；其他角色行为零变更）。
+- AC20（§2.15 D2/D3）: designer 的勘察变体 = **explore-only**（无法 spawn 其他角色）；且**无 designToken 需求**（设计师不需要凭证——§1.5 #4）。
+- AC21（§2.15 C）: `persona-eng-designer.md` 双源齐备（`src/prompts/` + `docs/design/prompts/`），首行头注合 `slot:[1] consumers:[...]` 格式，且已入 `NEW_PROMPTS` 清单（否则不打格式/宽行断言）。
+- AC22（§2.16）: 四条行为纪律句双源在位且入锚断言家族：六段自写·一段一作者 / 执行者拒收 / 澄清必经主 agent / 三方条目一致。
 
 ### 3.2 用例表
 
@@ -349,6 +472,19 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 
 注：FR7（待办管理）为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。
 
+**第 2 批用例（T30–T37）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T30 | 正常：角色注册四处 | 工程模式 spawn `role="eng-designer"` | 不被白名单/模式门拒；child 装配工程纪律槽 | AC16/FR9 |
+| T31 | 错误：角色互斥 | **非**工程模式 spawn `eng-designer` | throw（与 eng-coder 门同族） | AC16/NFR4 |
+| T32 | 边界：装配不静默回退 | `assemblePrompt("eng-designer")` | prompt 非空、≠ CONSULT_BASE、槽序正确、warnings=[] | AC17/FR9 |
+| T33 | 错误：designer 无 batchDoc | 带 token 合法上下文、不带 batchDoc | throw（文案含 eng-designer） | AC18/FR20#9 |
+| T34 | **边界：写域纪律（提示词级）** | grep 双源 `persona-eng-designer.md`；并校对 `src/agent/dispatch.mjs` | persona 含写域声明（`docs/` 扣除 `docs/design/prompts/`）；dispatch **无新增写域判定**（机械层零变更） | AC19/§1.5#3 |
+| T35 | 边界：勘察受限 | designer 内 spawn `role="coder"` / `role="explore"` | 前者拒（explore-only）、后者允 | AC20/§1.5#7 |
+| T36 | 边界：designer 无 token 需求 | spawn 不带 designToken | 通过（不需凭证——与 eng-coder 形成对照） | AC20/§1.5#4 |
+| T37 | 边界：纪律锚驻留 | 四条纪律句双源 grep + 锚断言 | 双源命中；新 person 文件已入 NEW_PROMPTS；锚断言绿 | AC22/FR16/FR17/FR20 |
+
 > 需求层已迁出（2026-09-10 需求层拆分批）：信任模型/边界需求见 `../requirements/ENGINEERING-MODE.md` §2。
 - ~~METHODOLOGY.md 缺失降级（D-M1/D-M2——已实现）~~ **已随 METHODOLOGY 退役删除（2026-09-10——PROMPT-SYSTEM 蓝图 §2.5 项目层收敛）**：工程模板携带/缺失警告整段移除——项目层唯一入口 = AGENTS.md（loadProjectInstructions 已注入，缺失 = 项目层空缺静默跳过，无警告需求）；方法论骨干已分拣入纪律层槽位文件。
 
@@ -378,6 +514,13 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-10：**eng-designer 角色 + 行为纪律设计**（第 2 批——FR9 九条裁定 / FR19 产出要求 / FR16 行为面 / FR17 #3#4 / FR20 #9 行为面；
+  CLI 端）——新增 §2.15（角色注册五处 + 模式门 + 装配四处 + 新槽双源 + spawn 同门 + 勘察变体 + **写域=提示词纪律（无机械门，用户裁定）** + TUI 四处 + 文档登记五处）·
+  §2.16（四条行为纪律 + 锚断言口径）· §2.17（四个决策点）· §2.18（受影响文件 as-of）+ AC16–AC22 + T30–T37。
+  **实现未启动**（待用户发起评审 → 批准 → eng-coder）；VSC 镜像延后。
+  **需求侧澄清（同日）**：§1.5 #8 的“提示词编写权” = **内容权**（落笔仍走 eng-coder）——用户裁定：豁免会抽掉纪律面的门禁，
+  而本批重构的正是它。
 
 - 2026-09-10：**批次档机制第 1 批设计**（FR16 载体 / FR17 铁律#5 机械面 / FR20#9 门禁——CLI 端）——新增
   §2.11-§2.14（载体三点 / batchDoc 门禁 / 交界面锚 / 方案选型 / 受影响文件 as-of 表）+ AC10-15 + T25/T25b/T26-29 + 四条方案选型。
