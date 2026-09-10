@@ -296,7 +296,7 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
 
 ### 7.7 顶层 spawn 一律异步——async:false 例外移除（2026-09-08 用户裁定）
 
-> 需求：用户 2026-09-08 裁定（两次痛骂——同步 spawn 反复犯）——**顶层（depth-0）spawn 禁 async:false——一律异步**。depth>0 平台强制 sync 不受影响（子代理内部——平台硬规则）。快车道（用户明确指令）。
+> 需求层已迁出（2026-09-10）：顶层 spawn 异步化需求见 `../requirements/AGENT-LOOP.md` §2。
 > 状态：**已交付核销**（2026-09-08——评审 8 项采纳 + eng-coder clean 交付——CLI c08e1b2 / VSC 8763ac2——L2 双端绿——consume a2b10815——待平台侧工具描述同步 + 机制兜底 TODO）。
 
 **现状问题**：async 锚句（§7.5 :258）与 main.md:13/engineering.md:18 都含 "pass `async:false` only when…"——给了模型 async:false 例外通道——实际反复误用（explore/eng-coder 同步 spawn——阻塞自己 turn + 占池）。
@@ -329,7 +329,7 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
 
 ### 7.7.1 escalate/advisor 顶层也纳入一律异步（2026-09-08 用户裁定 a——范围扩展）
 
-> 需求：§7.7 只覆盖 spawn——用户裁 a：**escalate（飞刀）/advisor 顶层也纳入一律异步**——
+> 需求层已迁出（2026-09-10）：escalate/advisor 顶层异步化需求见 `../requirements/AGENT-LOOP.md` §2。
 > 同步例外全移除（含 §14.2 "async:false 显式同步保留"句）。快车道（用户明确指令）。
 > 状态：**已交付核销**（2026-09-08——评审 #1 5项 + #2 4项采纳——eng-coder clean 交付——CLI ed4fc5c / VSC 1a89da8——双端测试 118/111 全绿——L2 绿——consume 494298fe——上报待裁项见 §7.7.1 变更记录）。
 
@@ -688,14 +688,7 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 
 **变更记录**：2026-08-21 开工前确认/文档归属；2026-08-23 委托策略；2026-09-01 操作并行化；2026-09-03 代码变更都落文档；2026-09-04 Module Split Policy + 审计范围引导；2026-09-05 委托操作标准/执行检查分离/edit 纪律；2026-09-06 长测试输出落盘。
 
-## 16. question 工具抑制（2026-09-06）
-
-**总体需求**：抑制 question 工具过度使用与不当形态（过度提问/大段文字/一条多问），修复 VS Code 卡片渲染可读性。**确认门（routine confirmation）用普通文本回复履行**——用户直接答"可以"——question 只留给真正需要用户选择/输入的场景。
-
-- **工具描述三锚（question.md/VS Code question.mjs 对齐）**：每调用一问；单问简短（背景/分析放正文回复不放 question）；routine confirmations 走普通回复（仅真决策用工具）。
-- **提示词**：discipline-engineering.md Questioning Style 语义 + common.md 确认门段 + discipline-normal.md 工具表反模式列（旧 system/engineering/discipline 表述——施工③随迁）。
-- **机械限制**：question 长度 ≤100 字符、options ≤4 条——超限返回错误串不弹卡不调 onQuestion。
-- **VS Code 渲染**：`.question-text` 加 white-space:pre-wrap + max-height 兜底滚动。
+> 需求层已迁出（2026-09-10 需求层拆分批）：question 工具抑制需求见 `../requirements/AGENT-LOOP.md` §1。
 
 **变更记录**：2026-09-06 用户实测 VS Code 端过度偏爱 question——四层根因 + CLI 已实现 + VS 镜像。
 

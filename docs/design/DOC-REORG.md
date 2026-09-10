@@ -224,7 +224,7 @@
 | `docs/design/prompts/advisor-design.md` | 66 | ±4 |
 | `AGENTS.md` | 69 | ±3 |
 | `docs/TODO.md` | 386 | ±8（需求池勾销 + 批尾/后续项登记） |
-| `docs/design/PROMPT-SYSTEM.md` | 294 | ±1（状态行统一） |
+| `docs/design/PROMPT-SYSTEM.md`（实施后迁 `requirements/`） | 294 | ±1（状态行统一） |
 | `docs/design/ESCALATE.md` | 179 | -1（重复条删除） |
 | `.thincoder/index/manifest.json` | 生成物 | 重建（§5.5） |
 
@@ -316,6 +316,9 @@ ENOENT。用户裁定"红就红"——批尾以**解耦**方式根治（§9.4 T2
 ## 10. 实施记录（2026-09-10——文档面已执行）
 
 ### 10.1 已执行
+
+- 批次 4a：`PROMPT-SYSTEM.md` 整档迁 `requirements/`（档位=需求/目标蓝图——§3 装配逻辑 +
+  §7 批次史属设计层随档保留）；引用面 4 处同步（README/TODO/本档）
 
 - 35 档 `git mv` → `docs/design/_archive/` + 冻结头注（每档 +3 行）
 - 建 `docs/requirements/` + `README.md`（说明档）

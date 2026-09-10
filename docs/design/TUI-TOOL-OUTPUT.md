@@ -3,27 +3,7 @@
 > 状态：已实现。本文档描述的工具输出**行间区块机制**已落地；工具面板区已废除（`src/agent/dispatch.mjs` "Panel area abolished"），不存在面板/行间双轨。
 > 区块渲染是 UI 层预览，完整结果始终落 history（FR4/NFR）。本文档只覆盖**普通工具输出**路径——子 agent / advisor / subagent 活动由专用分支承载（见 §6 边界）。
 
-## 1. 需求
-
-### 1.1 总体需求
-
-TUI 的工具输出统一为**行间区块**：所有工具执行时在对话区产出 `❯ toolName args` 标题行 + 执行中滚动内容 + 完成行。
-
-### 1.2 功能性需求
-
-| # | 用户故事 |
-|---|---|
-| FR1 | 每个工具调用产生一个行间区块，含工具名和参数摘要作为 title（`❯ write src/x.mjs` / `❯ bash npm test`） |
-| FR2 | 执行中内容以 `│ ` 前缀滚动显示，默认保留最近 N 行（N = `agent.streamPreviewLines` ?? 工具限定值 ?? 5），溢出折叠为 `│ …` |
-| FR3 | 工具完成时清掉滚动块，追加完成行 `❯ name — done (耗时) → 摘要`（含 OK/FAILED 语义） |
-| FR4 | 完整输出不受区块限制——超长结果落盘保留（阈值权威 = TOOL-OUTPUT-LIMITS-*.md，常量 `agent/helpers.mjs` TOOL_RESULT_OFFLOAD_LIMIT），行间区块只做预览；模型从 history 读取完整结果 |
-
-### 1.3 非功能性需求
-
-| # | 维度 | 标准 |
-|---|---|---|
-| NFR1 | 性能 | 区块渲染与行间消息同开销，流式追加走 scheduleRender 增量路径，不触发全量重绘 |
-| NFR2 | 可维护 | 输出经 `onToolOutput(name, chunk)` 单一入口；chunk 契约见 §3 |
+> 需求层已迁出（2026-09-10 需求层拆分批）：本板块需求见 `../requirements/TUI-TOOL-OUTPUT.md`——本档保留设计+测试层。
 
 ## 2. 区块格式与生命周期
 

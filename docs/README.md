@@ -11,7 +11,7 @@ docs/
   requirements/<板块>.md ← 需求层（主 agent·产品经理产物；说明见 requirements/README.md）
   design/<板块>.md       ← 设计层 + 测试层（eng-designer 产物；测试与设计同档共评审）
   design/_archive/       ← 变更史档（批次档/已取代档——正文冻结，不再作为现状依据）
-  design/prompts/        ← 提示词中文模板（权威源——双源流程见 design/PROMPT-SYSTEM.md §2）
+  design/prompts/        ← 提示词中文模板（权威源——双源流程见 requirements/PROMPT-SYSTEM.md §2）
   TODO.md                ← 项目级统一待办（含需求池）
   guides/                ← 使用指南
 ```
@@ -99,7 +99,7 @@ docs/
 | 工程模式 | `design/ENGINEERING-MODE.md` | 权威源。`_archive/ENGINEERING-WORKLOOP.md`（已固化进纪律层提示词） |
 | 评审收敛 | `design/ADVISOR-CONVERGENCE.md`；`_archive/ADVISOR-VERDICT-TEMPLATE.md` | 裁决行模板 2026-09-10 入档——裁决行本体在 `src/prompts/advisor-*.md` |
 | 设计评审凭证结算 | `design/DESIGN-TOKEN-SETTLEMENT.md` | VSC 同名对应——同机制各自独立 |
-| 提示词系统 | `design/PROMPT-SYSTEM.md` | 板块总体档（分层模型/装配矩阵/编写纪律权威现状）。施工档 `_archive/PROMPT-IMPL-{1-TEXT,2-CODE,3-TEST-MIGRATE}.md`；变更史 `_archive/{PROMPT-DECOUPLING,MAIN-DESIGN-ENHANCE,PROMPT-ATTENTION-RESTRUCTURE,PROMPT-ATTENTION-RESTRUCTURE-SPLIT-PLAN}.md`（冲突以 PROMPT-SYSTEM 为准） |
+| 提示词系统 | `requirements/PROMPT-SYSTEM.md` | 板块总体档（分层模型/装配矩阵/编写纪律权威现状）。施工档 `_archive/PROMPT-IMPL-{1-TEXT,2-CODE,3-TEST-MIGRATE}.md`；变更史 `_archive/{PROMPT-DECOUPLING,MAIN-DESIGN-ENHANCE,PROMPT-ATTENTION-RESTRUCTURE,PROMPT-ATTENTION-RESTRUCTURE-SPLIT-PLAN}.md`（冲突以 PROMPT-SYSTEM 为准） |
 | 工具系统 | `design/TOOLS.md` | 权威源。`design/MCP.md`、`design/SETTINGS-TOOL.md` 同板块独立保留；`design/VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径由 TOOLS.md D-V5 接管） |
 | Checkpoint 事故恢复 | `design/CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `design/LOGGING.md` | 常驻事件骨架日志 |
