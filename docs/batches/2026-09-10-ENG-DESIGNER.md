@@ -76,3 +76,62 @@
 
 > 踩坑记录·第四条（源于本轮实操）：**编辑吻标题**——本会话已两次（§2.14 插入吞 §3 标题、§2.19 插入又吞 §3.1 标题）。
 > 教训：插节时 old_string 必须回带被替换的标题；与“回读核对”同源（已升为纪律 D6）。
+
+
+---
+
+## §2 批次任务（写手：目标态 eng-designer；A6 落地期 = 主 agent 代写）
+
+> **本节即 eng-coder 的任务书**（用户裁定——不另派生副本；spawn 传本节路径 + `batchDoc` 参数）。
+> 写手：目标态 = **eng-designer 自写**；**落地注记（A6）**：eng-designer 尚未落地 → **本节由主 agent 代写**。
+> 状态：**已就绪 2026-09-10**（设计评审轮次 4 pass + 用户批准）。
+
+### 本批覆盖的需求条目
+
+| 需求 | 本批落地面 |
+|---|---|
+| **FR9 九条裁定** | 角色注册五处 + 模式门 + A2 写权路由 + 主 agent 人格改述（#1/#2/#3/#4/#6/#7/#8 落 · #5 纪律告知 · #9 部分——逐条状态表见设计 §2.15） |
+| **FR19 设计要求** | persona-eng-designer 必含产出要素（产出两件 + 设计档 8 项 + 判定句 + 打回链） |
+| **FR16 行为面** | 六段自写 · 一段一作者 · 随件传递（batchDoc 已由第 1 批落地） |
+| **FR17 铁律 #3/#4** | 澄清必经主 agent · 三方条目一致（纪律层句） |
+| **FR20 #9 行为面** | 执行者拒收（coder 找不到 §2 / designer 找不到 §1 → 不执行、打回） |
+| **FR21 文档更新纪律** | D1-D7 七条 + 机械校验 V1/V2 + 核销同步清单槽位 |
+
+### 明确不在本批
+
+C（advisor 写 §3 权限）· D（FR18 需求池指针化）· E（可移植性 FR10–FR15）· **VSC 镜像**（仅 CLI）· 勘察预算的机械门禁（提示词级）。
+
+### 受影响文件（带行数——详见设计档 §2.18）
+
+源/测试（as-of 行数 + 档位结论）：`src/agent-tools/subagent.mjs`(395) · `src/agent-tools/subagent-spawn.mjs`(444) · `src/agent/spawn-child.mjs`(218) ·
+`src/agent/setup.mjs`(343) · `src/prompt-overlays.mjs`(81) · `src/tui/cmd-submodel.mjs`(155) · `src/tui/slash-commands.mjs`(187) ·
+`src/tui/subagent-blocks.mjs`(451) · `src/tui/tool-args.mjs`(82) · `scripts/check-doc-width.mjs`(51)；
+**新增**：`test/eng-designer-role.test.mjs` · `test/doc-consistency.test.mjs` · `test/fixtures/doc-consistency-baseline.json`；
+修改测试：`test/prompts-async-guidance.test.mjs`(417) · `test/batch-doc-gate.test.mjs`(160)；
+提示词（双源）：`src/prompts/persona-eng-designer.md`（新）· `docs/design/prompts/persona-eng-designer.md`（新）· `discipline-engineering.md`(196/124) ·
+`persona-eng-coder.md`(30/30) · `persona-engineering.md`(40/40)；
+文档登记：`docs/requirements/PROMPT-SYSTEM.md` · `docs/design/AGENT-LOOP.md` · `AGENTS.md`。
+
+> **父侧预落项（不必重做，只需核）**：`docs/README.md`（§1 目录行 + §3.1 作者表 + 勾销句——评审处置时已改）。
+
+### 验收标准（逐步回指需求）
+
+**引用设计档 §3.1 AC16–AC28 全文**（不重抄——单一权威源 D2）：AC16 角色注册五处/模式门 · AC17 装配不静默回退 + 接线断言 ·
+AC18 batchDoc 同门 · AC19 写域=提示词级 · AC20 勘察变体 explore-only + 无 token · AC21 新槽双源 + NEW_PROMPTS · AC22 锚家族三组十句 ·
+AC23 主 agent 人格改述 · AC24 撤销“主会话即 designer” · AC25 FR19 固定子串 · AC26 保留人工 ask · AC27/AC27b 写权六面 · AC28 文档一致性 V1/V2。
+**用例**：设计档 §3.2 T30–T42（正常 / 边界 / 错误三态齐备）。
+
+### 任务书就绪
+
+本节即任务书（spawn 传路径 + `batchDoc` 参数）；`files` 声明照需求 §1.11 B3（不声明 `docs/TODO.md`）。
+
+## §3 设计评审（评审子代理自写；本批代写落档——advisor 自写机制未落地）
+
+- **轮次 1**：changes-required——1🔴（§2.14 受影响文件表缺失）+ 7🟡 + 2🔵；用户裁定全部照办。
+- **轮次 2**：changes-required——1🔴（写权路由未闭环）+ 5🟡 + 3🔵；用户裁定：**“主代理负责的是批次档，设计档由 designer 负责。”**
+- **轮次 3**：changes-required——2🔴（写权路由只闭环一半 + README 冲突未纳入）+ 9🟡 + 3🔵；用户裁定：**“勾销这些都应该在批次档做，不是设计档。”**
+- **轮次 4**：**pass**（0 🔴；11🟡 + 5🔵 advisory 已逐条处置）。
+
+## §4 用户批准（主 agent 记）
+
+- **已批准 2026-09-10**（轮次 4 pass 后显式“批准”）——解锁 eng-coder 实施（本批范围 = 第 2 批 CLI：eng-designer 角色 + 行为纪律 + 文档更新纪律）。
