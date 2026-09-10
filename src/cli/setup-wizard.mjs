@@ -64,7 +64,10 @@ export async function setupWizard() {
     // D-F5b：磁盘新鲜读 → mutate → mtime 门控写（writeConfigAtomic 收口）；冲突 = 放弃
     // + 提示重试（首配场景另有实例同时写盘——极低概率；不自动合并——决策点① A）
     // MODEL-SELECTION v2：渠道默认模型 = 单值 `model` + defaultModel 顶层复合；
-    // 预设扩展字段（format/thinking/maxTokens…）随行落盘（与 TUI wizard 同构——探针/聊天同源）
+    // 预设扩展字段（format/thinking/maxTokens…）随行落盘——与 TUI wizard 近似同构（探针/聊天字段同源），
+    // 但 `thinking` 复制语义不同：本文件用 `!== undefined` → kimi/kimi-code 预设的 `thinking: null`
+    // **被落盘**；TUI 路径用真值过滤（model-picker.mjs / wizard.mjs）不落该键。
+    // `thinking: null`（NF1 = 显式 off）落盘差异已登记待口径统一（父侧）。
     const r = writeConfigAtomic(configPath, (raw) => {
       const providers = raw.providers?.length ? raw.providers : []
       const existing = providers.find((p) => p.name === name)

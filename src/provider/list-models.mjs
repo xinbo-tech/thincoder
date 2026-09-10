@@ -49,7 +49,7 @@ function collect(rows, pick) {
 
 async function listOpenai(provider, signal) {
   const url = `${provider.baseURL}/models`
-  const data = await fetchJson(provider, url, { ...(provider.headers ?? {}), Authorization: `Bearer ${provider.apiKey}` }, signal)
+  const data = await fetchJson(provider, url, { ...(provider.headers ?? {}), Authorization: `Bearer ${provider.apiKey ?? ""}` }, signal)
   return collect(data?.data, (m) => m?.id)
 }
 

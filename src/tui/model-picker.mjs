@@ -149,7 +149,8 @@ export function createModelPicker(ctx) {
     return entries
   }
 
-  /** 拉取期占位行（不可选）；拉取落地后由 loader 移除。 */
+  /** 拉取期占位行——选中该行视为返回上一级（action:"none" → 非 switch/keep → `return false`；
+   *  拉取后台继续、缓存照写——通用 picker 无禁用项概念）；拉取落地后由 loader 移除。 */
   function loadingRow() {
     return { type: "item", text: "(loading…)", action: "none", placeholder: true }
   }

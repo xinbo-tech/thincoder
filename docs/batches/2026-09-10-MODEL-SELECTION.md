@@ -422,6 +422,54 @@ VERDICT: pass
 
 **实现期产物（非交付物）**：`thincoder-vscode/_t-modelselect-vsc.log`（测试日志留证）——提交前可由父侧清理。
 
+### 交付（eng-coder · CLI 面 = `thincoder/` 仓）
+
+**交付摘要**：CLI 面实现完成（含修复轮）。新增源 2 + 新增测试 2；改源 20 + 改测试 3。
+`npm test`（快层）= **342 tests / 331 pass / 0 fail / 11 skipped**；AC-1/AC-2/AC-3/AC-4/AC-8/AC-9 命令逐条过。
+上机验证：openai 分支真机两发（kimi 4 模型 / deepseek 2 模型，真 key）——**anthropic / google 两分支本环境无真 key，仍为 mock-only**（设计 §16.2 M1 已记录的残余风险；上机验证动作待父侧安排）。
+
+**新增文件**：`src/provider/list-models.mjs`（94 行——三 format 分派 + 完整 URL 钉死 + `has_more`→`after_id` / `nextPageToken` 翻页 ≤10 页 + 15s 三重超时）· `src/tui/model-catalog.mjs`（90 行——拉取 + 会话缓存 TTL 60s/失败不缓存 + `_catalogHooks` 假时钟 + M9 准入探 + M8 失败文案 + `dedupeModels`/`modelSeries` 迁入）· `test/list-models.test.mjs` · `test/provider-admission.test.mjs`。
+
+**逐需求透明表（Done / Simplified / Not done——逐条对 R1–R9）**
+
+| 需求 | 状态 | 落地 | 备注 |
+|---|---|---|---|
+| R1 清单 provider 化 | **Done** | `provider/list-models.mjs`（三 format）· `tui/model-catalog.mjs`（缓存）· `model-picker.mjs`（L2 候选=拉取，进入即触发）· `cmd-config.mjs`（默认模型菜单同源） | 真机仅 openai 分支；anthropic/google = mock-only（残余风险已记录） |
+| R2 `models[]` 整字段删除 | **Done** | `config.mjs`（20 预设单值 + normalize）· `config-migrate.mjs`（v2：只读旧形态 + `delete p.models`）· `session.mjs` · `model-ref.mjs` · `model-picker.mjs` · `wizard.mjs` · `cli/setup-wizard.mjs` | AC-2 grep：白名单外零命中 |
+| R3 渠道单值默认模型 | **Done** | 预设 20 条 · 槽位兜底 `session.mjs` · 显示回退（L1/槽位/管理面）· `advisor/run.mjs` + `subagent-async.mjs` 克隆链（`?? 父 model` 兜底，T28） | |
+| R4 显式 `p:m` 放行 | **Done** | `model-ref.mjs`（首冒号分割 v2；删 `firstCandidate`）· `selectModel`（仅未知 provider/空模型名拒）· `cmd-model.mjs` | 表驱动 T7/T8/T9 |
+| R5 切换回显 spec 来源 | **Done** | `model-specs.mjs`（`specMatch` 共享单次查表）· `selectModel` 两分支（正常 `C.tool` / DEFAULT `C.error` + `/config` 提示） | 含 `providers[].context` 覆盖用例 |
+| R6 VSC 端同批 | **Not in this end** | —— | 另一端 eng-coder 并行实施（非本端文件域，未触碰 `thincoder-vscode/`） |
+| R7 契约测试反转 | **Done** | `test/model-ref` / `config-merge` / `provider-model-guard` 三族重写 + 新 `test/list-models` | |
+| R8 文档连带改写（代码注释与文案面） | **Done** | `model-ref` 头注 · `model-picker`/`pickers`/`cmd-model`/`wizard`/`errors`/`session`/`config`/`core`/`bin` 注释与帮助文案 | AC-8 grep 空；`_archive/MODEL-MERGE-SESSION.md` SHA 未变（`35d1d6b8…`），`docs/**` 零改 |
+| R9 渠道准入校验（配置阶段） | **Done** | `probeChannelModels`（fresh 探）· cmd-config 默认模型菜单（探不通标 `不可用` + 不入可选来源 + 不阻断）· `setProviderKey` / 加渠道流（`wizard.js`、`cli/setup-wizard.mjs`） | 运行期零探测（T25）；命令面放行不变 |
+
+**与设计的偏差（逐条透明）**
+
+| # | 偏差 | 理由 |
+|---|---|---|
+| 1 | M9 准入探落在 `model-picker.mjs`（§16.5 该文件行未列探点；R9/§16.2 M9 落点含「加渠道 / 设 API key」；VSC 对位 `provider-flows.mjs` 同） | 按 R9 需求面落地——CLI 的渠道管理 flow 宿主即 model-picker |
+| 2 | `probeChannelModels` / `modelListFailureText` 落 `tui/model-catalog.mjs`（§16.3 只列 `getProviderModels`）；`cli/setup-wizard.mjs` 由 `../tui/model-catalog.mjs` 引入（跨层） | 探针与文案单一权威（避免重复字面量）；无环、无 TUI 依赖 |
+| 3 | `cmd-config.saveProxy` 改走 `ctx.persistRaw`（原直调 `writeConfigAtomic(configPath, …)`） | 语义等价（同 `writeConfigAtomic` + 冲突重试文案）；使既有 `createConfigHelpers` 测试注入缝对写链生效（T23/T24 可测） |
+| 4 | 槽位面 / 会话面候选区新增 `(loading…)` 占位行（+ `fillAvailableModels`）；槽位面 fetch 增 `format` 透传（`cmd-advisor.mjs` 同） | 修复 explore/advisor 发现：0-item 会让 `showPicker` 立即 `resolve(null)`（picker 不打开、拉取结果被弃）；`format` 是三 format 支持到达调用点的必要条件 |
+| 5 | `wizard.mjs` / `setup-wizard.mjs` 不再就地 `delete …models` | 迁移唯一权威 = `config-migrate`（下次 load 统一清理） |
+| 6 | `setup-wizard.mjs` 预设分支落全量扩展字段（`format`/`thinking`/`reasoningEffort`/`maxTokens`/`chatPath`，与 TUI wizard 同构）+ 探针输入同源 | 修复 advisor 发现：探针缺 `format` 会误报「不可用」；落盘缺字段会走错协议路径 |
+
+**轮次（内层自含交付协议）**
+
+- **explore 分歧审计 ×1**（0🔴 / 1🟡 / 7🔵）：🟡（加渠道当次无 key 则不探）+ 测试覆盖提示 → 已修（探统一到流尾、**精确一次**；补「设 API key」面用例）；其余为已声明偏差 / 文档面归属 / 设计边界所许（D8：`settings` 工具直写 config 点路径不在 M9 枚举落点内）。
+- **advisor 代码评审 ×1**（1🔴 / 2🟡 / 1🔵）：🔴 = 非当前渠道（及空槽渠道）L2 恒空 → `showPicker` 0-item 自闭、拉取结果被弃（跨渠道切换在 picker 面不可用、D-S1 恢复流被卡）→ **已修**（两候选区占位行 + `fillAvailableModels` 落地填充 + 回归用例）；🟡 = M9 探被 60s 会话缓存短路 → **已修**（`getProviderModels(…,{fresh})`，探针 `fresh:true`）；🟡 = setup-wizard 探针缺 `format`、不落预设扩展字段 → **已修**（预设全量字段探针/落盘同源）；🔵 = 回显 out 的二进制 K 口径 → **不改**（设计 M6 例 `out 128K` 由 kimi-k3 `maxOutput 131_072` 二进制换算得出——设计例即该口径；证据同档留痕）。
+- **修复验证轮**：advisor 复评 3 发均**环境故障**（2×600s 超时、1×「文件不可读」）——未取得独立复评结论，**如实披露不静默**；替代证据 = 本端逐条机械核验（新增回归用例 + 全量 `npm test` 复绿 342/331/0 + AC 命令逐条重跑）。
+- **fix round 计数**：2（审计修 1 + 评审修 1；未触 5 轮上限）。
+
+**终态**：`clean` —— 本端全部验收命令绿（含修复后全量复跑）；唯一未竟项 = advisor 复评的环境故障（已披露，非内容阻塞）。工作区状态：**clean（HEAD 已含本端全部改动——父侧提交；本 coder 全程未执行任何 git 写操作）**。
+
+**日志证据**：`thincoder/_t-modelselect-cli.log`（全量快层复跑尾部 ℹ 计数 + 失败段）。
+
+### 父侧代码评审小修正轮（eng-coder 自写 · 2026-09-11）
+
+父侧代码评审小修正轮（2026-09-11）：#5 空 key 守卫对齐（`src/provider/list-models.mjs:52` → `Bearer ${provider.apiKey ?? ""}`，与本文件 `:57`/`:74` 兜空对齐）· #4 占位行注释（`src/tui/model-picker.mjs:152`——"（不可选）"改为"选中视为返回上一级；拉取后台继续、缓存照写；通用 picker 无禁用项概念"）· #1 首启向导注释（`src/cli/setup-wizard.mjs:67`——"与 TUI wizard 同构"改为"近似同构" + `thinking: null` 落盘差异已登记待口径统一（父侧））——3 处均注释/一行级，**零行为改动**；`npm test`（快层）= **342 tests / 331 pass / 0 fail** / 11 skipped（exit 0；日志 `thincoder/_t-modelselect-fix.log`）。
+
 ## §6 验证与收口（父代理自写）
 
 > 待写。

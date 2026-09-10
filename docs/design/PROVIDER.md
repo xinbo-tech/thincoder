@@ -795,8 +795,8 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 - **AC-7（R7）**：双端 `npm test` 全绿（含三道契约测试族 + 新增面）。
 - **AC-8（R8）**：`cd thincoder && grep -rn "候选硬约束\|候选外拒" docs/design/ src/ bin/ --exclude=PROVIDER.md --exclude-dir=_archive` → 空
   （排除集显式化——评审修正轮：`PROVIDER.md` = 本档叙述承载（§0 / §16 / §17 的 v1/v2 对比与变更叙述、本行自身）；`docs/design/_archive/` = 冻结归档。
-  目标态自检（2026-09-11 实测）：排除后当前码非空——`src/tui/model-picker.mjs` 5 处 + `src/tui/cmd-model.mjs` 1 处旧注释、`SESSION.md:230` 1 处变更叙述；
-  后者收尾改以替代措辞（「候选成员校验」）表达（随 R8 落地）；改写完成后本命令为空。）
+  目标态自检（2026-09-11 收尾轮后）：排除后命中 **0**，目标态成立——`docs/design/` 面已清零
+  （`SESSION.md:230` 收尾轮已改以「候选成员校验」表达）；`src/` 面 6 处旧注释（`model-picker.mjs` 5 + `cmd-model.mjs` 1）已随实施清理。）
   `_archive/MODEL-MERGE-SESSION.md` 字节不变（SHA 比对）。
 - **AC-9（R9）**：配置阶段准入探两态断言（探通 → 渠道可用；探不通 → 失败消息逐字长句 + 行内标 `不可用` + 不入默认模型可选来源 + 条目仍可保存）；运行期不探测断言（非配置流启动 / 请求零 `/models` 调用）——T23/T24/T25。
 
@@ -819,3 +819,4 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
   （按 format 分派，§16 M1）；渠道单值默认模型恢复（§16 M3——**部分回滚 MODEL-MERGE「无渠道默认捆绑」裁 1**）；
   显式 `p:m` 一律放行（§16 M4）；切换回显规格来源（§16 M5/M6）；预设改单值（§11）；渠道准入判据 = `/models` 可用（§16 M8/M9——配置阶段校验，运行期不加闸）。
 - 2026-09-11 评审修正轮：13 条采纳项落档（M1 URL 组合钉死 + 翻页跟随 + mock-only 残余风险与上机验证动作；M3④ 空值语义 / 父兜底对齐；M8/M9 失败文案分工与零探测边界；AC-8 显式排除集；§16.5 行数补齐 + 拆分阈值对齐 500 硬限；§16.6 #14 非对话模型不过滤；T26–T28 新增）。
+- 2026-09-11：AC-8 的 `SESSION.md:230` 命中枚举改准（该处收尾轮已改以「候选成员校验」表达——docs/design 面清零的现状同步；语义不变）。
