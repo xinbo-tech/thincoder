@@ -1,7 +1,7 @@
 # 工程模式 · 批次记录（2026-09-10）
 
 > 三段 append-only：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 验收结论（主 agent）。
-> 不是规格：需求在 `requirements/` 成文；整批做完整档冻结。规范见 `docs/README.md` §3.8。
+> 不是规格：需求在 `requirements/` 成文；整批做完整档冻结。机制与模板见 `requirements/ENGINEERING-MODE.md` §1.12。
 
 ---
 
