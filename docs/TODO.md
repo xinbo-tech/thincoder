@@ -80,7 +80,7 @@
 - [ ] **check-doc-width 扫描域缺口**（2026-09-10 DOC-REORG 实施发现）——`scripts/check-doc-width.mjs` 默认域 = `docs/design/`，不覆盖 `docs/requirements/` / `docs/README.md` / `docs/TODO.md`——宽度纪律对新目录无机械约束。DOC-REORG §10.3 提议新增批尾项 T6（域改 `docs`）。**待用户裁**。
 - [ ] **既有文档超宽行清理**（2026-09-10 DOC-REORG 实施发现——非本批引入）——`node scripts/check-doc-width.mjs` 报 4 文件 / 9 行：`AGENT-LOOP.md`×3、`SESSION.md`×3、`SUBAGENT-ID-COUNTER-AGENT.md`×1、`TUI.md`×2。
 - [ ] **提示词公共层扩容**（2026-09-10 用户裁定——需求已收口，**待设计**）——common.md 由 4 节扩至 10 节（+证据纪律/停下上报/任务边界/交付报告格式/工具观+路由表/系统接口语义框架）；C1/C2/C4/C5/C6/C7 上移、C3 不上移、C8 落人格层。**归属档 = `docs/design/requirements/PROMPT-SYSTEM.md` §2.5 + §4**。
-- [ ] **工程模式角色重定义**（2026-09-10 用户裁定——需求已收口，**待设计**）——主agent=产品经理（需求文档+全流程编排/确认/核验）/ eng-designer=设计（从需求到设计，唯一写稿人，自己做勘察，无 designToken）/ eng-coder=实现；核心定位「设计 = 对需求的检验」（需求不过 advisor 评审）。**归属档 = `docs/design/ENGINEERING-MODE.md` §1.2 FR9 + §1.4 裁定清单**（提示词实现面见 requirements/PROMPT-SYSTEM.md §8）。
+- [ ] **工程模式角色重定义**（2026-09-10 用户裁定——需求已收口，**待设计**）——主agent=产品经理（需求文档+全流程编排/确认/核验）/ eng-designer=设计（从需求到设计，唯一写稿人，自己做勘察，无 designToken）/ eng-coder=实现；核心定位「设计 = 对需求的检验」（需求不过 advisor 评审）。**归属档 = `docs/requirements/ENGINEERING-MODE.md` §1.2 FR9 + §1.4 裁定清单**（提示词实现面见 requirements/PROMPT-SYSTEM.md §8）。
 
 > 2026-09-08 批实况（17:07 终态）：**批 1/批 2/批 3** 全交付核销（L2 双端 112/105 全绿——批 3 文档
 > 指针同步：CHECKPOINT/STRUCTURE-DEBT system.mjs 改指 bash.mjs/search.mjs——父侧收尾）；**env-state

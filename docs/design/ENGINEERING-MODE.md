@@ -6,64 +6,9 @@
 > 工程纪律与逐字锚现驻 `src/prompts/discipline-engineering.md` + `persona-engineering.md`（双端各自实现——蓝图 §3.2 装配矩阵）。
 > 依赖与权威关系：[AGENT-LOOP.md](AGENT-LOOP.md)（§8 工程交付协议概览、§10 子代理任务调度器、§12.1 advisor 评审对象锚——本文件机制经其 §17 权威源接管点注册）；[ADVISOR-CONVERGENCE.md](ADVISOR-CONVERGENCE.md)（评审收敛权威：design 评审 cap 豁免、code 评审 MAX_ADVISOR_ROUNDS=5、stale-context 保护）；[TESTING.md](TESTING.md) §1（测试分层 L0+/L1/L2 权威）。
 
-## 0. 铁律（发起权与批准权归用户——2026-08-24 决策）
+> 需求层已迁出（2026-09-10 需求层拆分批）：四条铁律见 `../requirements/ENGINEERING-MODE.md` §0。
 
-背景：agent 曾两次越权抢跑（自行提交设计评审 → 拿 token → 直接开发，其中一次全程零确认）。此后固化四条铁律：
-
-1. **设计评审只能由用户发起**——agent 准备并提醒"设计就绪，可以评审"，不自行调 advisor。
-2. **打回后逐条呈递**——评审打回后每轮呈递发现 + 修复建议，**用户逐条拍板**再改（agent 不自行修完重送）。
-3. **交付 code review 保持流程节点自动**——eng-coder 返回后自动评审，不问用户（2026-09-02 起由 eng-coder 内部协议默认承担）。
-4. **系统推回（guard）在工程模式一律关闭**——未来若启用也只作提示，评审仍由用户发起。
-
-## 1. 需求（Requirements）
-
-### 1.1 总体需求
-
-普通模式靠纪律提示词约束模型；工程模式把"设计先行、评审把关、验证收尾"提升为**半机械流程**——可硬性拦截的环节一律拦截（写文件门禁、token 校验），无法硬拦的靠纪律层槽位提示词约束。核心承诺：**代码必须先有被评审过的设计；评审对象由任务定义而非遍历猜测；评审循环在实现者内部闭环（不依赖父代理持有凭证）。**
-
-### 1.2 功能性需求（机制约束，架构级表述）
-
-| # | 机制需求 | 约束 |
-|---|---|---|
-| FR1 | 设计先行 | 设计文档（三层）存在且通过设计评审前，任何代码文件（含 `src/prompts/*.md`）不可被修改 |
-| FR2 | 设计评审独立 | design review 由独立上下文执行；评审对象 = 调用时显式传入的文档清单（documents + object 参数，见 §2.4），不遍历 git diff |
-| FR3 | 授权链 | 设计评审通过签发 token——连同**随机 designId**（**同 scope 实例恒定——复审沿用同 id，旧 token 存活至 TTL 保留**；不锚定文档路径/内容——"文档锚失效"路线已否决）存于会话内多设计槽 `Map<designId,{token}>`；spawn eng-coder 必须携带 designId + 匹配 token（单设计时 designId 可省略）；token 随会话 slot 持久化跨进程（TTL 7 天 fail-closed）；**链终核销时父侧 consume-design 消费**（见 §2.6 F1） |
-| FR4 | 代码评审归属 | eng-coder 交付前自查（对照验收标准/文件范围，非 LLM）→ **内部协议闭环**：实现 → explore 偏差审计 → 自修 → advisor(type=code) 复评 → 收敛后一次交付（完整协议权威 = 本文件 §2.2 step 6）；LLM 验证 3 次/链（③审计 → ⑤advisor 首审 → 终审复评），修正轮默认不重跑审计/复评；父侧复核保留可选（默认由内部协议承担——stalled/存疑才复核） |
-| FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现 + 修复建议、用户逐条拍板；**交付 code review 流程节点自动**（eng-coder 内部协议默认承担——in-child advisor 复评自动运行、不问用户；父侧复核保留可选——stalled/存疑才复核）；advisor 失败停止重试 |
-| FR6 | 范围约束 | **A 裁定**：去掉"文件清单外不可改"硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计"out-of-list"判据 = "**改了且未报告 = 偏差**（静默越权）"；已报告 = 透明可接受；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
-| FR7 | 待办管理 | 技术待办统一在 `docs/TODO.md`，不落入设计文档（避免触发重新 doc review） |
-| FR8 | 多任务并行 | 相互独立的设计可**并行推进**，上限 ≤4 并发（提示词纪律——无机械门禁）。**调度器条款（现行口径）**：spawn 声明 `files`+`dependsOn`——冲突/顺序交调度器自动处理（重叠域 queued、依赖链自动顺序、同步冲突报错），不再手动串行——锚句 "overlapping domains are queued by the scheduler, never hand-serialized"（AGENT-LOOP §10）；未声明 files 不参与冲突检测。token 按 designId 隔离互不覆盖；发起权不变（FR5） |
-| FR9 | **角色三段链**（2026-09-10 用户裁定——需求已收口，待设计） | 主 agent = 产品经理（需求 + 编排/确认/核验 + 设计判断权）；<br>新增 eng-designer = 设计（唯一写稿人，自勘察，无 token，不发起评审）；eng-coder = 实现。<br>定位：设计 = 对需求的检验——需求不过 advisor 评审；撞需求缺口 → 停下报告交回主 agent。<br>**9 条裁定见 §1.4**；提示词实现面见 `PROMPT-SYSTEM.md` §8 |
-
-### 1.3 非功能性需求（技术标准）
-
-| # | 维度 | 标准 |
-|---|---|---|
-| NFR1 | 性能 | token 校验在 spawn 时同步完成（<10ms，无网络依赖——**设计目标，非机械测试**）；design review 每轮一次 LLM 调用 |
-| NFR2 | 收敛性 | code review 最多 5 轮（MAX_ADVISOR_ROUNDS），第 6 次调用被机械拒绝；design 评审不消耗该预算（cap 豁免） |
-| NFR3 | 安全 | token 机械匹配（格式 + TTL fail-closed）+ designId 定位槽；token 为**无签名流程凭证**（格式 `uuid:expiresAt`——HMAC 防伪层已删，非现行机制）；复审失败不波及其他设计的槽（旧 token 存活至 TTL——已知取舍）；token 随 slot 持久化跨进程（TTL 7 天 fail-closed——重进 TTL 内恢复、过期重新评审）。存量旧 3 段格式 token 拒绝语义见节后注 |
-| NFR4 | 兼容 | 两种模式互斥：工程模式禁用 `coder` 角色，普通模式禁用 `eng-coder`；行为不互相污染（提示词两套独立） |
-| NFR5 | 可维护 | 判定逻辑单一来源：`isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（相对路径语义）；对存绝对路径的 `_touchedFiles` 使用组件级匹配 `/(?:^|[\\/])src[\\/]/`——统一用于门禁/guard/doc-only 判定 |
-| NFR6 | 可恢复 | eng-coder 失败/中断可重新 spawn（同 token——链中未消费）；advisor 工具失败不重试，向用户报告 |
-
-> **NFR3 注（存量旧 3 段格式拒绝——活机制）**：旧 3 段格式 token（`uuid:expiresAt:HMAC` 形态——HMAC 指历史防伪层签名段，2026-09-06 已删，此处仅作拒绝判定的格式描述）即使 TTL 内也**格式即判错** → fail-closed 拒绝 → 需重新设计评审（迁移代价：已批准未实现的设计重评一次，已接受）。
-
-### 1.4 角色重定义裁定清单（FR9 澄清产物——2026-09-10 用户逐条确认；需求层，待设计）
-
-| # | 事项 | 裁定 |
-|---|---|---|
-| 1 | 主 agent 是否保留编排/核验/确认/发起权 | **全部保留**（产品经理 + 流程编排者） |
-| 2 | 主 agent 对设计稿的核验深度 | **内容性核验**（判断设计方案对不对、是否覆盖需求）——非仅流程核验 |
-| 3 | 设计修订路径 | **全部回 eng-designer**（含小改——写稿权唯一） |
-| 4 | eng-designer 是否需要 designToken | **不需要**——其授权 = 需求已确认；设计稿的接受由 advisor 评审 + 用户批准裁定 |
-| 5 | 需求文档是否过 advisor 评审 | **不**——用户确认即可（设计的产出过程就是需求的评审） |
-| 6 | 评审发起权/提醒权 | **仍在主 agent**（唯一对话面）——eng-designer 交付后由主 agent 核验、整理评审对象、提醒 |
-| 7 | 勘察归属 | **eng-designer 自己做**（可派 explore 并行、给勘察预算）；主 agent 勘察结果仅作参考传递——只有设计者自己勘察才能发现需求缺口 |
-| 8 | 提示词文件编写权 | **主 agent**（产品内容——不经设计流程） |
-| 9 | 设计确认门 | **A⊃B**：用户反馈驱动的迭代改稿路径存在，且 advisor 设计评审是必经节点 |
-
-> 过渡例外（设计启动时定）：本需求自身的设计稿由谁出——a 主 agent 破例 / b 先造最小
-> eng-designer 自举。提示词实现面（新增/改写槽位文件、装配矩阵、锚断言）见 `PROMPT-SYSTEM.md` §8。
+> 需求层已迁出（2026-09-10 需求层拆分批）：铁律（§0）+ 总体需求/FR/NFR/裁定清单见 `../requirements/ENGINEERING-MODE.md`。
 
 ## 2. 设计（Design）
 
@@ -71,7 +16,7 @@
 
 > **目标态注（2026-09-10——FR9 角色重定义，需求已收口待设计）**：现行实现为下列两角色；
 > 目标态为**三段链**（主 agent 产品经理 / eng-designer / eng-coder）。本表在 FR9 设计落地前
-> 描述**现行态**；目标态细节（9 条裁定）见 §1.4。
+> 描述**现行态**；目标态细节（9 条裁定）见 `../requirements/ENGINEERING-MODE.md` §1.4。
 
 | 角色 | 职责 | 机械约束 |
 |---|---|---|
@@ -302,11 +247,7 @@
 
 注：FR7（待办管理）为流程级约定，由 Docs/Project TODO 纪律保障，不作机械测试——方法论明示。
 
-## 4. 边界（信任模型）
-
-- **eng-coder 拦截型机械约束**：token 校验、写文件门禁。质量靠 eng-coder.md 自查 + 交付前自评。
-- **父代理拦截型机械约束**：design token 前写产品代码被拒。其余（等批准、不写实现、验收）靠 engineering.md 提示词。
-- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（一致化已实现）。
+> 需求层已迁出（2026-09-10 需求层拆分批）：信任模型/边界需求见 `../requirements/ENGINEERING-MODE.md` §2。
 - ~~METHODOLOGY.md 缺失降级（D-M1/D-M2——已实现）~~ **已随 METHODOLOGY 退役删除（2026-09-10——PROMPT-SYSTEM 蓝图 §2.5 项目层收敛）**：工程模板携带/缺失警告整段移除——项目层唯一入口 = AGENTS.md（loadProjectInstructions 已注入，缺失 = 项目层空缺静默跳过，无警告需求）；方法论骨干已分拣入纪律层槽位文件。
 
 ## 5. 配置与会话恢复
