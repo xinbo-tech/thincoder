@@ -132,7 +132,7 @@ export function createModelPicker(ctx) {
       const marker = active ? "●" : ""
       const note = active ? " ← session" : ""
       const keyStatus = p.apiKey ? "" : " (no key)"
-      const ctxTag = ` (ctx ${fmtContextK(providerSpec(p).context)})`
+      const ctxTag = ` (ctx ${fmtContextK(providerSpec({ ...p, model: firstCandidate(p) }).context)})`
       entries.push({
         type: "item",
         text: `${p.name.padEnd(12)} ${shown}${ctxTag}${note}`,
@@ -418,7 +418,7 @@ export function createModelPicker(ctx) {
       { type: "header", text: "Select provider" },
       ...agent.providers.map((p) => ({
         type: "item",
-        text: `${p.name} (ctx ${fmtContextK(providerSpec(p).context)})`,
+        text: `${p.name} (ctx ${fmtContextK(providerSpec({ ...p, model: firstCandidate(p) }).context)})`,
         name: p.name,
       })),
     ])
