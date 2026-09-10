@@ -205,7 +205,7 @@ if (!advisorReviewInFlight(agent)     // async 评审未决 → 未决不算未�
 
 ## 7. 响应表纪律（Action 三值）
 
-`discipline.md`（普通模式）/ `engineering.md`（工程模式——父代理）的响应表纪律（纯提示
+`discipline-normal.md`（普通模式）/ `persona-engineering.md`+`discipline-engineering.md`（工程模式——父代理——旧 engineering.md 退役后宿主）的响应表纪律（纯提示
 词纪律——**不加机械解析**——响应表仍是"聚焦参考"，不驱动控制流）：
 
 1. **表头精确**：`| # | Action | Detail |`——运行时按此精确提取

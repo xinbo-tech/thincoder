@@ -2,6 +2,9 @@
 
 > 板块：工程模式——ThinCoder VS Code 的严格方法论工作流：design-before-code、
 > METHODOLOGY 驱动、双门禁（设计评审 + 代码评审）。
+> 提示词载体注（2026-09-10——PROMPT-SYSTEM 施工①③）：旧 engineering.md/engineering-sub.md 已退役——
+> 工程纪律现驻 `src/prompts/discipline-engineering.md` + `persona-engineering.md`（装配链 = assemblePrompt
+> 四槽位——蓝图 §3.2）；机制语义权威 = CLI 仓 `thincoder/docs/design/ENGINEERING-MODE.md`（§2.9 锚清单）。
 > 与 CLI `docs/design/ENGINEERING-MODE.md` 同名文档对应同一机制板块——各端独立实现，
 > 内容以本端代码为准（本端 = `thincoder-vscode`；DOC-REORG-VSC）。
 > 本文档为**架构级机制文档**：功能性需求以机制目标与约束表述；评审收敛/轮次衰减的
@@ -21,7 +24,7 @@
 
 工程模式把"设计先行、评审把关、验证收尾"提升为半机械流程：可硬拦的环节一律硬拦
 （写文件门禁、token 校验、guard 推回、角色互斥），无法硬拦的靠
-`engineering.md` / `engineering-sub.md` 提示词约束。核心承诺：**代码必须先有被评审过
+`discipline-engineering.md` / `persona-engineering.md` / `persona-eng-coder.md` 纪律层与人格层槽位提示词约束（旧 `engineering.md` / `engineering-sub.md` 已随 PROMPT-SYSTEM 施工①退役）。核心承诺：**代码必须先有被评审过
 的设计；评审对象由任务定义而非遍历猜测；评审循环在 eng-coder 内部闭环。**
 
 本端实现面与 CLI 的差异只在于**平台接线**（webview 面板/会话槽位文件/extension 层）；
@@ -153,9 +156,9 @@
 ## 7. engineering 会话行为与 UI
 
 - **system prompt**：工程模式（`engineering && (depth === 0 || role === "eng-coder")`）
-  用 `engineering.md`（父）/`engineering-sub.md`（eng-coder）+ 项目 METHODOLOGY.md 替
-  代普通 discipline 块（`setup.mjs` `loadEngineeringPrompt`）；METHODOLOGY 缺失时降级 +
-  显式警告。
+  经 `assemblePrompt` 四槽位装配：eng-coder → `persona-eng-coder.md`+common+`discipline-engineering.md`、
+  engineering 主会话 → `persona-engineering.md`+common+`discipline-engineering.md`（PROMPT-SYSTEM 施工②
+  ——旧 `loadEngineeringPrompt` + METHODOLOGY 降级警告已退役；蓝图 §3.4 降级链 = 槽缺失跳过+警告）。
 - **模式 UI**：ENG 按钮/设置面板 toggle（消息 `setEngineeringEnabled`）；非工程模式
   subagent schema 不展示 eng-coder（§5 角色互斥）。活动面板渲染 advisor 活动块/取消
   按钮路由（`panel-messages.mjs` role=advisor）。
@@ -174,7 +177,7 @@
 | 工具 | `src/agent-tools/eng.mjs`（enter/exit + sweep + 双写）、`advisor.mjs`（签发/校验/Approved）、`subagent.mjs`（role 门/互斥）、`subagent-spawn-gate.mjs`（resolveDesignSlot/authorize/consume） |
 | agent 装配 | `src/agent/setup.mjs`（engState 读/restore filter/modeRoleField）、`run-helpers.mjs`（agentState/hasCodeMutations/上限）、`execute-tools.mjs`（dispatch 门禁）、`run-stages.mjs`（guard 推回） |
 | 会话/面板 | `src/extension/session-slot-write.mjs`（setSlot*）、`session-io.mjs`、`panel-chat.mjs`（engState 读）、`panel-messages.mjs`（ENG/GUARD 消息） |
-| 提示词 | `src/prompts/engineering.md`、`engineering-sub.md`、`engineering-*` 锚落点 |
+| 提示词 | `src/prompts/persona-engineering.md`、`persona-eng-coder.md`、`discipline-engineering.md`、`common.md`（工程锚落点——旧 engineering.md/engineering-sub.md 已退役——PROMPT-SYSTEM 施工①③） |
 | 评审 | `src/advisor/*.mjs` + `src/prompts/advisor-*.md`（见 ADVISOR-CONVERGENCE.md） |
 
 ## 9. 测试与验证

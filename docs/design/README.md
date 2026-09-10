@@ -27,6 +27,7 @@
 | Webview 前端/消息协议 | `WEBVIEW.md` | VSC 独有（无 CLI 对应——批 7）；webview 布局/文件结构/活动面板 R22/组件 + 消息协议（ARCHITECTURE §11+§12 迁出） |
 | 需求与决策 | `REQUIREMENTS.md` | 需求与决策记录 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
+| 提示词系统（本端） | `VSC-PROMPTS.md` | 本端 14 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = CLI 仓 `thincoder/docs/design/PROMPT-SYSTEM.md`（装配矩阵/命名法/编写纪律蓝图）；施工档三件（IMPL-1-TEXT/2-CODE/3-TEST-MIGRATE）在 CLI 侧——2026-09-10 双端同批交付 |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
 | 发布流程 | `RELEASE.md` | |
