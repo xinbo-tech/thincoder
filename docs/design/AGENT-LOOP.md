@@ -669,22 +669,22 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 
 - escalate 加 async 语义——**入 other 池**（与 explore/plan 共享槽——公平排队）。发起返回 ack → 回合自然收尾 → 挂起态 → settle。**顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）。机制默认与参数合法性见 §7.2 escalate 行注（机制描述保留——提示词/工具描述不引导）。
 - **settle 三分类**：done → merge mutations 回父（重叠写文件 → 报告级重叠警告——不 gate）+ 报告全文入 pending → digest；error（child 失败/撞 cap）→ 按父侧是否已改重叠文件决定 partial merge + 错误报告注入；cancelled → 不入 pending——提示（对齐 cancel 定向中止语义）。
-- **工程模式拒保持**（engineering.md 拒 escalate——普通模式工具——eng 模式走 eng-coder）。
+- **工程模式拒保持**（工程纪律层拒 escalate——普通模式工具——eng 模式走 eng-coder；旧 engineering.md 表述——施工③随迁 persona-engineering.md 分工界面节）。
 - **消化指令语义**：escalate = "报告已 merge——可继续改进"——动作域仍按档（无"飞刀可写"例外）。
 
 **变更记录**：2026-09-06 R17（用户"这两都得完全异步化"）——设计 §14——CLI 已实现 + VS 镜像。2026-09-08 §7.7.1——escalate 顶层一律异步（同步保留句移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）。
 
 ## 15. 操作纪律 / 工具使用（提示词层）
 
-> 提示词纪律条款的**来源语义**——落点 = system.md/engineering.md/discipline.md/main.md 等（各端照抄镜像锚——§12.4）。此处不复制提示词全文，只列本文件关联的操作纪律骨架 + 逐字锚归属。
+> 提示词纪律条款的**来源语义**——落点 = 14 文件槽位集合（persona-*×6/common/discipline-*×2/特殊×5——2026-09-10 PROMPT-SYSTEM 施工①③起；旧 system.md/engineering.md/discipline.md/main.md 已退役，历史批次叙述按写作时点保留）。此处不复制提示词全文，只列本文件关联的操作纪律骨架 + 逐字锚归属。
 
 - **操作并行化**：Parallelize aggressively——独立信息获取一次发多个；多文件编辑用 edits 数组；独立子任务一次 spawn 多个（含跨独立子项目拆分——share no files / no cross-dependencies / each has its own tests）；**Do NOT parallelize**：写同一文件（**声明 files 的 async spawn 例外——调度器自动排队**）、依赖链、bash/审批敏感命令（审批风暴）、同一 git 仓库并发 git、有状态操作；并行大操作、跳过微操作。
 - **批量形态引导**（§4.3）：edits 数组原子多文件 / apply_patch 新建多文件——描述层引导。
-- **委托标准**（main.md F-N1.6）：委托 = 改动面 ≥2 文件 或 单文件逻辑改动 >30 行 或 涉模块边界/导入面；内联 = 单文件 ≤30 行 或 纯文档/提示词同步 或 探索性。任务书标准结构（目标/已知事实/设计要点+禁止/约束/验收硬/交付报告表/调度元数据）——"Sized delegation without these fields is a defect"。
+- **委托标准**（纪律层委派节——旧 main.md F-N1.6 登记名）：委托 = 改动面 ≥2 文件 或 单文件逻辑改动 >30 行 或 涉模块边界/导入面；内联 = 单文件 ≤30 行 或 纯文档/提示词同步 或 探索性。任务书标准结构（目标/已知事实/设计要点+禁止/约束/验收硬/交付报告表/调度元数据）——"Sized delegation without these fields is a defect"。
 - **委托规模默认走 coder 子代理**（执行/检查分离——避免自查盲区）——"implemented by a coder subagent BY DEFAULT"/"spawn async with the design as the task book"。
 - **长测试输出先落盘再查**：全量/长测试（≥60s）先重定向日志文件再查（`node --test … > log 2>&1`）——汇总从日志尾读、失败详情 grep——不用过滤管道直接跑长命令（过滤丢失败详情 + 管道缓冲截断）。日志放非工作区（OS 临时/~/.thincoder/）查毕删除。
 - **Module Split Policy**：大文件拆分标准方法——①**write-first**（先整段写入目标文件再删源——任何时刻有副本）②段零改动（只修 import）③接线 ④node --check + 相关测试 + 全量绿 + **test/assertion 计数前后一致**（孤儿体/断引用显性暴露；断言静默丢弃 = 拆分缺陷）+ **同一任务内完成**（不拆两批中间态）。
-- **edit 工具纪律**（main.md 扩展注 2）：old_string/行号/hash 只来自最新 read（never reconstruct from memory）；hashline old_hashes 只来自 read(hashes=true)；报错即修法——第二次同形失败 = 重读文件——never retry the identical input a third time。
+- **edit 工具纪律**（discipline-normal.md Edit & write discipline 节——旧 main.md 扩展注登记名）：old_string/行号/hash 只来自最新 read（never reconstruct from memory）；hashline old_hashes 只来自 read(hashes=true)；报错即修法——第二次同形失败 = 重读文件——never retry the identical input a third time。
 
 **变更记录**：2026-08-21 开工前确认/文档归属；2026-08-23 委托策略；2026-09-01 操作并行化；2026-09-03 代码变更都落文档；2026-09-04 Module Split Policy + 审计范围引导；2026-09-05 委托操作标准/执行检查分离/edit 纪律；2026-09-06 长测试输出落盘。
 
@@ -693,7 +693,7 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 **总体需求**：抑制 question 工具过度使用与不当形态（过度提问/大段文字/一条多问），修复 VS Code 卡片渲染可读性。**确认门（routine confirmation）用普通文本回复履行**——用户直接答"可以"——question 只留给真正需要用户选择/输入的场景。
 
 - **工具描述三锚（question.md/VS Code question.mjs 对齐）**：每调用一问；单问简短（背景/分析放正文回复不放 question）；routine confirmations 走普通回复（仅真决策用工具）。
-- **提示词**：engineering.md Questioning Style + system.md 确认门段 + discipline.md 工具表反模式列。
+- **提示词**：discipline-engineering.md Questioning Style 语义 + common.md 确认门段 + discipline-normal.md 工具表反模式列（旧 system/engineering/discipline 表述——施工③随迁）。
 - **机械限制**：question 长度 ≤100 字符、options ≤4 条——超限返回错误串不弹卡不调 onQuestion。
 - **VS Code 渲染**：`.question-text` 加 white-space:pre-wrap + max-height 兜底滚动。
 

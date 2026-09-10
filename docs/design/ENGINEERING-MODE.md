@@ -1,7 +1,9 @@
 # 工程模式（Engineering Mode）设计
 
-> 板块：工程模式——thincoder 的严格方法论工作流：design-before-code、METHODOLOGY 驱动、双门禁（设计评审 + 代码评审）。
+> 板块：工程模式——thincoder 的严格方法论工作流：design-before-code、纪律层槽位提示词驱动、双门禁（设计评审 + 代码评审）。
 > 本文档为**架构级机制文档**：功能性需求以机制目标与约束表述（架构级文档以约束替代用户故事——评审 2026-09-02 #1 措辞修正），非功能性需求与测试层完整。
+> 提示词载体注（2026-09-10——PROMPT-SYSTEM 施工①③）：旧 engineering.md/engineering-sub.md 已退役——
+> 工程纪律与逐字锚现驻 `src/prompts/discipline-engineering.md` + `persona-engineering.md`（双端各自实现——蓝图 §3.2 装配矩阵）。
 > 依赖与权威关系：[AGENT-LOOP.md](AGENT-LOOP.md)（§8 工程交付协议概览、§10 子代理任务调度器、§12.1 advisor 评审对象锚——本文件机制经其 §17 权威源接管点注册）；[ADVISOR-CONVERGENCE.md](ADVISOR-CONVERGENCE.md)（评审收敛权威：design 评审 cap 豁免、code 评审 MAX_ADVISOR_ROUNDS=5、stale-context 保护）；[TESTING.md](TESTING.md) §1（测试分层 L0+/L1/L2 权威）。
 
 ## 0. 铁律（发起权与批准权归用户——2026-08-24 决策）
@@ -17,7 +19,7 @@
 
 ### 1.1 总体需求
 
-普通模式靠纪律提示词约束模型；工程模式把"设计先行、评审把关、验证收尾"提升为**半机械流程**——可硬性拦截的环节一律拦截（写文件门禁、token 校验），无法硬拦的靠 METHODOLOGY 与提示词约束。核心承诺：**代码必须先有被评审过的设计；评审对象由任务定义而非遍历猜测；评审循环在实现者内部闭环（不依赖父代理持有凭证）。**
+普通模式靠纪律提示词约束模型；工程模式把"设计先行、评审把关、验证收尾"提升为**半机械流程**——可硬性拦截的环节一律拦截（写文件门禁、token 校验），无法硬拦的靠纪律层槽位提示词约束。核心承诺：**代码必须先有被评审过的设计；评审对象由任务定义而非遍历猜测；评审循环在实现者内部闭环（不依赖父代理持有凭证）。**
 
 ### 1.2 功能性需求（机制约束，架构级表述）
 
@@ -56,7 +58,7 @@
 
 ### 2.2 主流程（Mandatory Flow——10 步）
 
-工程模式任务**不分大小**全走本流程——零裁量（逐字锚见 §2.9 锚#1）。普通需求点先按需求池规则登记攒批（锚#2——工程模式专用；机制见 METHODOLOGY 需求池节），不越池提前启动设计。
+工程模式任务**不分大小**全走本流程——零裁量（逐字锚见 §2.9 锚#1）。普通需求点先按需求池规则登记攒批（锚#2——工程模式专用；机制见 `src/prompts/discipline-engineering.md` 需求池攒批工作流节），不越池提前启动设计。
 
 1. 写需求/设计文档 `docs/`（三层：需求/设计/测试；按业务板块组织）。任务涉及 UI 时设计文档必须收录与用户达成的每一条 UI/交互决策（布局/流程/控件行为/状态/反馈），未定部分标 open、绝不静默发明。
 2. 父代理呈递设计摘要 + 提醒"设计就绪，可以评审"——**等待，不自行调 advisor**。
@@ -65,7 +67,8 @@
    - 无 🔴 → advisor 回显 `[DESIGN-TOKEN:…]` + designId（同 scope 复审沿用同 id）→ designId+token 入槽（`_engDesignTokens` Map）。
 4. 用户批准设计——显式 sign-off 才解锁实现；用户对设计内容/形态的选择只是需求确认，不是设计批准（锚#4）。
 5. spawn `eng-coder`：`subagent(role="eng-coder", designId, designToken, task)`——designId 可选（单设计省略）；
-   designToken 经 PARAMETER 传值，**绝不进任务文本**；task 按 METHODOLOGY Task Structure 含 Docs
+   designToken 经 PARAMETER 传值，**绝不进任务文本**；task 按 Implementation Handoff 结构化任务书（纪律层
+   "实施委托结构化"节）含 Docs
    involved → 文件清单 → 验收标准——**默认 async**（返回 {id, running}，交付协议在子代理内部闭环）。
    spawn 声明 `files` + `dependsOn` 交调度器排序（重叠域 queued 自动启动；同步冲突报错；并发 ≤4——FR8）。
    机械校验：按 designId 定位 `_engDesignTokens.get(designId) === token`（单设计取唯一槽），不符即
@@ -97,7 +100,7 @@
 
 ### 2.4 评审范围（Review Scope）——评审对象由任务定义，不由遍历决定
 
-- **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + METHODOLOGY + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（早期"按 diff 找文档"范围大、不准、与任务无关，还会漏掉 untracked 新文档——已废弃；advisor 直接 read 显式路径）。
+- **doc review**：`advisor(type="design")` 调用时**显式传 documents 参数**（需求 + 设计 + 引用文档路径）；advisor 只评审清单内文档，**不收集 git diff 变更集**（早期"按 diff 找文档"范围大、不准、与任务无关，还会漏掉 untracked 新文档——已废弃；advisor 直接 read 显式路径）。
 - **object 参数必传**：评审调用必须携带对象声明 `{type, target, status, reason, exclude}`——评审对象由任务定义（AGENT-LOOP §12.1 评审对象锚机制），与 documents 同批传入；对象声明块由 advisor 消息层机械注入，评审模型无需从文档反推目标（漏传 = 评审目标模糊 = 与 documents 漏传同级错误——历史 6 次评审漏传教训）。code review 同理（object 声明交付文件/验收目标）。
 - **code review**：评审范围 = task 的 Docs involved（设计文档）+ 交付文件清单/验收标准（显式化）；不遍历 git diff 找评审对象。默认由 eng-coder 内部协议承担（in-child advisor 复评 documents 同此范围）；父侧复核可选。
 - 父代理负责收集涉及文档，在设计评审（documents 参数）与 spawn（Docs involved）两处传入。
@@ -119,7 +122,8 @@
   （含新偏差修复）一律新评审新 token**。未知 designId 与重复消费 = 同款 no-op 提示（幂等——不报错）。
 - **F2（链中复用不受影响——docs FIRST）**：fix round（同 designId——首 spawn 后、验收前）仍可 spawn（slot 未消费）——消费点仅在父侧核销时（非交付 digest 时——否则 fix round 无 slot 可用）。修正轮的 findings + planned changes 必须先落所属设计文档（deviation record / change note 追加至对应章节）**再** spawn eng-coder；跳档 = 文档漂移，等同静默改动（逐字锚见 §2.9 锚#3）。
 - **F3（提示词义务句——两则英文锚逐字，落点各注；锚测试 fail-when-unchanged）**：
-  - engineering.md Mandatory Flow step 8（Delivery review）行后（双端）——逐字文本：
+  - 链终消费锚（落点：纪律层交付链收口节（`discipline-engineering.md`）——双端；原 engineering.md
+    Mandatory Flow step 8 行后）——逐字文本：
 
     > **Chain-terminal token consumption**: after the delivery is verified and the chain closes out,
     > call `subagent` with `action:'consume-design'` for this designId — the slot is consumed; a
@@ -163,7 +167,13 @@
 
 ### 2.9 提示词锚清单（逐字契约——双端一致）
 
-下列逐字锚是 engineering.md（CLI/VS Code 双端同一注入文本）的落地契约。**字节源 = prompts 落地文本本身（本文件不收录压缩改写版本）**；锚测试均为 fail-when-unchanged 断言（双端测试域 + 既有 prompts 对比对家族兜底）。机制语义权威源：需求池 = METHODOLOGY 需求池节；调度器 = AGENT-LOOP §10；评审对象锚 = AGENT-LOOP §12.1；内部协议完整文本 = 本文件 §2.2 step 6（AGENT-LOOP §8 仅概览）。
+下列逐字锚是工程模式纪律层（2026-09-10 前为 engineering.md；现 = `src/prompts/discipline-engineering.md` +
+`persona-engineering.md`——CLI/VS Code 双端各自实现同一语义集合）的落地契约。**字节源 = prompts 落地文本本身
+（本文件不收录压缩改写版本）**；锚测试均为 fail-when-unchanged 断言（双端测试域 + 既有 prompts 对比对家族兜底）。
+机制语义权威源：需求池 = `discipline-engineering.md` 需求池攒批工作流节；调度器 = AGENT-LOOP §10；
+评审对象锚 = AGENT-LOOP §12.1；内部协议完整文本 = 本文件 §2.2 step 6（AGENT-LOOP §8 仅概览）。
+
+> 落点历史注（2026-09-10——PROMPT-SYSTEM 施工①③）：下表"engineering.md"落点自施工③起 = `discipline-engineering.md`（纪律类锚——零裁量/需求池/docs FIRST/拍板≠批准/链终消费/凭证/调度器/Multi-Task/交付链收口）与 `persona-engineering.md`（人格层锚——发起权/推进档位；VSC 端 Multi-Task/R14 段原地保留于其 persona-engineering.md——端特有段各端保留）。锚句字节源不变——逐字随迁（施工③断言绿为迁移完整性凭证）。
 
 - **锚#1 零裁量**（落点：engineering.md「Mandatory Flow (every task, no skipping)」标题下、step 1 之前——双端；顶层工程模式生效，main.md 普通模式零触碰）：
 
@@ -173,19 +183,19 @@
   > yourself weighing whether the flow applies, the answer is always the full flow — the user's
   > decision to be in engineering mode was the sizing decision.
 
-- **锚#2 需求池三规则**（落点：engineering.md step 1「Requirement pool (engineering mode only)」子条目——双端；镜像：methodology-template.md「Requirement-Pool」节——模板对。机制语义（攒批/阈值提醒/快车道/边界）见 METHODOLOGY 需求池节）：
+- **锚#2 需求池三规则**（落点：纪律层需求池攒批工作流节（`discipline-engineering.md`）——双端；原 methodology-template.md 镜像已随模板退役。机制语义（攒批/阈值提醒/快车道/边界）= 同节三条英文锚句 + 中文批设计/边界条）：
 
   > 1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
   > 2. **Threshold reminder** — "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
   > 3. **Fast lane** — "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
 
-- **锚#3 修正轮 token 复用 + docs FIRST**：修正轮逐字锚见 §2.6 F3 引文（Fix rounds reuse the same designToken — but docs FIRST…）。配套指针句（落点：engineering.md step 7 句尾——双端）：
+- **锚#3 修正轮 token 复用 + docs FIRST**：修正轮逐字锚见 §2.6 F3 引文（Fix rounds reuse the same designToken — but docs FIRST…）。配套指针句（落点：纪律层交付链收口节（`discipline-engineering.md`）——双端）：
 
   > Fix-round re-spawns are docs FIRST too — the deviation record / change note lands in the owning design doc BEFORE the eng-coder spawn (full rule: the eng-coder delivery bullet under Then handle the message).
 
-  语义（engineering.md Work Loop eng-coder delivery 条目——修正轮 spawn 指令后附 docs FIRST 条款段）：修正轮 findings + planned changes 必须先落档再 spawn；"代码变更都必须落文档"对修正轮无豁免——跳档 = 文档漂移，等同静默改动；同设计修正轮是唯一合法 token 复用——超出设计文件清单 = 新任务，需自有流程与新 token。
+  语义（原 engineering.md Work Loop eng-coder delivery 条目——施工③随迁至纪律层交付链收口节——修正轮 spawn 指令后附 docs FIRST 条款段）：修正轮 findings + planned changes 必须先落档再 spawn；"代码变更都必须落文档"对修正轮无豁免——跳档 = 文档漂移，等同静默改动；同设计修正轮是唯一合法 token 复用——超出设计文件清单 = 新任务，需自有流程与新 token。
 
-- **锚#4 用户拍板 ≠ 设计批准**（落点：engineering.md Work Loop「eng-coder delivery」条目 token 边界句后全规则段——双端；step 5「User sign-off」处指针句同义）：
+- **锚#4 用户拍板 ≠ 设计批准**（落点：纪律层交付链收口节（`discipline-engineering.md`）——双端；step 5「User sign-off」指针句同文随迁）：
 
   > A user ruling on design CONTENT (form/shape/option choice) is requirements confirmation — NOT
   > design approval. New scope — including extensions to an already-approved design — still runs the
@@ -197,16 +207,16 @@
 
   > A user ruling on design form/shape/option choice is NOT this sign-off — scope extensions (incl. extensions to an already-approved design) still run the full review chain (full rule: the eng-coder delivery bullet under Then handle the message).
 
-- **锚#5 链终消费**：逐字锚见 §2.6 F3 引文（Chain-terminal token consumption…）——落点 engineering.md Mandatory Flow step 8（Delivery review）行后——双端。
-- **锚#6 凭证不落文档**：逐字锚见 §2.7 F1 引文（Credential values stay out of documents…）——落点 engineering.md Hard Rules——双端；配套全仓巡检正则与范围见 §2.7。
-- **锚#7 调度器句**（字节源 = engineering.md 调度器条款段——双端；调度器机制权威 = AGENT-LOOP §10；本文件 FR8 行引文）："overlapping domains are queued by the scheduler, never hand-serialized"。
+- **锚#5 链终消费**：逐字锚见 §2.6 F3 引文（Chain-terminal token consumption…）——落点纪律层交付链收口节（`discipline-engineering.md`）——双端。
+- **锚#6 凭证不落文档**：逐字锚见 §2.7 F1 引文（Credential values stay out of documents…）——落点纪律层交付链收口节（`discipline-engineering.md`）——双端；配套全仓巡检正则与范围见 §2.7。
+- **锚#7 调度器句**（字节源 = Multi-Task Parallelism 节调度器条款段——CLI= `discipline-engineering.md`、VSC = `persona-engineering.md`（R14 池规则段原地保留）——调度器机制权威 = AGENT-LOOP §10；本文件 FR8 行引文）："overlapping domains are queued by the scheduler, never hand-serialized"。
 - **锚#8 主会话四维设计纪律（MAIN-DESIGN-ENHANCE A1-A4——2026-09-09）**（字节源 = 设计档
   MAIN-DESIGN-ENHANCE.md「逐字锚定文本 A1-A4」——A4 为评审 #4 中性化版（落点不硬编码单端路径——
-  双端同一文本）；机制语义权威 = METHODOLOGY §7 设计文档模板细化（三层模板/方案选型对比表/单一锚
-  纪律——本节不收录压缩改写版本）；断言：prompts-async-guidance.test.mjs（双端——各端断言自身
+  双端同一文本；施工③ A1/A3/A4 逐字随迁 `discipline-engineering.md`「设计行为纪律四维」节，
+  A2 改写形态 = 同文件方案选型对比节）；机制语义权威 = `discipline-engineering.md` 文档规范节
+  （三层模板/方案选型对比表/单一锚纪律——本节不收录压缩改写版本）；断言：prompts-async-guidance.test.mjs（双端——各端断言自身
   驻留 fail-when-unchanged）——逐字锚与落点：
-  - **A1 勘察 checklist**（落点：engineering.md Mandatory Flow step 1——"Clarify requirements."
-    段内、"Do NOT start the design before this." 句后——需求澄清后/设计前交界，不缠需求池子条目）：
+  - **A1 勘察 checklist**（落点：`discipline-engineering.md`「设计行为纪律四维」节——需求澄清后/设计前交界语义位，不缠需求池子条目）：
     > 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md
     > 地图——已有则更新不新建）② 读既有实现与先例 ③ 核测试面（既有用例/测试文件）④ 核双端对位面
     > （CLI/VSC 镜像）⑤ 广度勘察委派 explore 子代理（不重复已委派探索——主会话不重扫）。
@@ -217,8 +227,7 @@
     > 提"设计就绪待评审"前先跑**评审前预检**：① 需求三层具体到可设计？② 受影响文件全清单 + 行数
     > 标注（R24a）？③ 验收标准逐条回指需求（每条可机器验证）？④ UI/交互决策全落档（无"讨论过但没
     > 写"）？⑤ 方案对比已做？——预检不过先修，不自发起评审（发起权仍在用户）。
-  - **A4 实践沉淀**（落点：engineering.md Hard Rules「Docs capture the conversation」条尾——追加句）：
-    > 本会话验证过的好实践 → 落 METHODOLOGY 机制正文/反例档案（本端 METHODOLOGY.md）——不散落会话。
+  - **A4 实践沉淀**（落点：`discipline-engineering.md`「设计行为纪律四维」节——Docs Capture the Conversation 收尾语义位；施工③按 METHODOLOGY 退役改述——"落板块设计文档/反例档案"，不再指 METHODOLOGY.md 注入体）：
 
 ### 2.10 受影响文件（折叠注）
 
@@ -275,8 +284,8 @@
 
 - **eng-coder 拦截型机械约束**：token 校验、写文件门禁。质量靠 eng-coder.md 自查 + 交付前自评。
 - **父代理拦截型机械约束**：design token 前写产品代码被拒。其余（等批准、不写实现、验收）靠 engineering.md 提示词。
-- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 METHODOLOGY/README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（一致化已实现）。
-- **METHODOLOGY.md 缺失降级（D-M1/D-M2——已实现）**：工程模板 + 警告（不再 fallback discipline）；缺失警告含模板**运行时解析的绝对路径**（D-M1——CLI setup.mjs 与 VS Code 对应实现用 `dirname(import.meta.url)` 解析）与**模板完整正文**（D-M2——模型可直接 read 或参考正文，不再手写）；引导"与用户确认是否创建 METHODOLOGY.md"，询问 + 写文件由模型主导，系统不做自动脚手架。
+- **门禁豁免边界**：豁免仅覆盖设计产出物（`docs/**`、根级 README/AGENTS/LICENSE）；`src/` 下一切文件（含 prompts/*.md）为产品代码。判定 `isProductCode(p) = /^src[\\/]/.test(p) \|\| !isDocFile(p)`（一致化已实现）。
+- ~~METHODOLOGY.md 缺失降级（D-M1/D-M2——已实现）~~ **已随 METHODOLOGY 退役删除（2026-09-10——PROMPT-SYSTEM 蓝图 §2.5 项目层收敛）**：工程模板携带/缺失警告整段移除——项目层唯一入口 = AGENTS.md（loadProjectInstructions 已注入，缺失 = 项目层空缺静默跳过，无警告需求）；方法论骨干已分拣入纪律层槽位文件。
 
 ## 5. 配置与会话恢复
 
@@ -310,3 +319,7 @@
 - 2026-09-09：MAIN-DESIGN-ENHANCE 批——engineering.md 双端注入四维设计纪律逐字锚（A1 勘察/A2 方案
   对比/A3 评审前预检/A4 实践沉淀——§2.9 锚#8 登记——锚文本照抄设计档逐字锚定文本）；结构语义落
   METHODOLOGY §7（设计文档模板细化）；各端 prompts-async-guidance 驻留断言钉住。
+- 2026-09-10：PROMPT-SYSTEM 施工①③批——旧 engineering.md/engineering-sub.md/methodology-template.md
+  退役，锚句逐字随迁 `discipline-engineering.md`（+ VSC 端 Multi-Task/R14 段驻其 persona-engineering.md）；
+  D-M1/D-M2 随 METHODOLOGY 退役删除；§2.9 落点全部改指新宿主；prompts-async-guidance.test.mjs 重写
+  （施工③——本批）——锚网整体收编至新文件（fail-when-unchanged 续防）。

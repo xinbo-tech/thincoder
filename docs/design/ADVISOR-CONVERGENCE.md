@@ -173,7 +173,7 @@ if (!pending // async 评审在飞/排队 → 未决不算未评审 → 不推�
 
 ## 7. 响应表纪律（Action 三值）
 
-`discipline.md`（普通模式）/ `engineering.md`（工程模式——父代理）的响应表纪律（纯提示词纪律——**不加机械解析**——响应表仍是"聚焦参考"，不驱动控制流）：
+ `discipline-normal.md`（普通模式）/ `persona-engineering.md`+`discipline-engineering.md`（工程模式——父代理——旧 engineering.md 施工③退役后宿主）的响应表纪律（纯提示词纪律——**不加机械解析**——响应表仍是"聚焦参考"，不驱动控制流）：
 
 1. **表头精确**：`| # | Action | Detail |`——运行时按此精确提取（`extractAgentResponseTable`），保持逐字。每 issue 一行；`#` = advisor 的 issue 编号（**round2+ 用 `Orig#`**——原编号，不重编号）。
 2. **`Action` 三值封闭词表**：`Fixed`（已改代码/设计）、`Not an issue`（技术反驳，附证据）、`Deferred`（承认但不修，附理由——仅适用于 🟡/🔵 改进或需用户先拍板的 🔴，不得用于静默丢弃真缺陷）。`Detail` = 改了哪、在哪（file:line），或证据/理由。

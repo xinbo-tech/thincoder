@@ -60,7 +60,7 @@
 - **Token 生命周期 F1-F4（2026-09-07 定稿）**：链终 consume-design 消费；fix round 链中复用；stalled/L2 非 clean 不消费；多槽隔离；幂等。F3/F4 英文锚逐字。
 - **凭证不落文档锚逐字**：`Credential values stay out of documents: never write token or designId VALUES into design docs…`。
 - 提示词锚清单（逐字，各注双端落点）：零裁量（Task sizing is NOT your call…）/docs FIRST（Fix-round re-spawns are docs FIRST too…）/用户拍板≠批准（A user ruling on design content is requirements confirmation — NOT design approval…）/需求池三规则/链终消费/凭证不落文档。
-- 信任模型：门禁豁免仅 docs/**+根级；src/ 全为产品码（含 prompts）；METHODOLOGY 缺失降级 D-M1/M2。
+- 信任模型：门禁豁免仅 docs/**+根级；src/ 全为产品码（含 prompts）；METHODOLOGY 缺失降级 D-M1/M2（2026-09-10 注：已随 METHODOLOGY 退役删除）。
 - §5 会话级：engineering/advisor.guard 会话级（slot 事实源>config 镜像>false）；双写。
 - §7 变更记录折叠（但每条已硬约束的锚提炼进正文）。
 - 漂移：HMAC 字样删、as-of 批记录勿当契约。

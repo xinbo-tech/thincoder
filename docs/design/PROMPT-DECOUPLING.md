@@ -1,6 +1,11 @@
 # 提示词架构解耦：工程模式与普通模式完全独立
 
 > 状态：**已实现**（工程模式顶层 = system.md + engineering.md + METHODOLOGY.md，不注入 main.md/discipline.md）。
+> **已被取代（2026-09-10——PROMPT-SYSTEM.md 蓝图 + 施工①②③交付）**：本档描述的工程模式装配
+> （system.md/engineering.md/engineering-sub.md/METHODOLOGY.md 组合与 buildEngineeringPrompt 降级链）
+> 已退役——现行为四槽位装配（assemblePrompt：persona → common → discipline → [4] AGENTS/skills，
+> 蓝图 §3.2 装配矩阵）。本档降为**变更史记录**——正文不再改动（叙述按写作时点保留）；冲突时以
+> PROMPT-SYSTEM.md 为准。
 > 权威源（CLI）：`src/agent/setup.mjs`（提示词组装 + 降级路径）、`src/prompts/*.md`（提示词文件）。
 > 关联：`docs/design/ENGINEERING-MODE.md`（工程模式总设计）、`docs/design/METHODOLOGY.md`（项目方法论）。
 > **未决/开放项**：多模态读图引导（见 §4）——2026-09-07 设计，待评审，尚未实现。

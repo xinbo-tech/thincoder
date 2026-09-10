@@ -1,6 +1,10 @@
 # 提示词注意力优化重排 + 自动推进开关（PROMPT-ATTENTION-RESTRUCTURE）
 
 > 板块：提示词工程（双端 src/prompts/ 全 15 文件 + ENGINEERING-MODE.md 联动 + AUTO-PROGRESS-SWITCH 合并）。
+> **已被取代（2026-09-10——PROMPT-SYSTEM 施工①③）**：本档描述的 15 文件形态已退役——14 文件新集合
+> 落地（persona-*×6/common/discipline-*×2/特殊×5），开关段 C1-C4 与锚句形态分类（阶段 D）继续有效
+> ——宿主已随迁（施工③断言收编）。本档降为变更史记录——正文不再改动；阶段 D 分类仍是本批测试的
+> 断言形态权威。
 > 权威源：全量勘察（explore#1——31 文件基线：🔴24/🟡6/🟢1——提示词目录无一个达标——最长行 1959 字符
 > engineering.md L13——形态成因=批式编辑行尾 append + 标题标记 inline）。
 > 状态：**设计待评审（评审 #2 changes-required 修正版——round 3 PASS——2026-09-09 21:11）**——评审 #3 附 5 项

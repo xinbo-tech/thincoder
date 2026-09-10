@@ -15,7 +15,7 @@
 | 需求与决策 | `REQUIREMENTS.md` | 需求讨论与决策记录 |
 | 功能全览 | `FEATURES.md` | 基于代码现状梳理 |
 | 三观（提示词根基） | `PHILOSOPHY.md` | |
-| 方法论 | `METHODOLOGY.md` | 与仓库根 METHODOLOGY.md 对应 |
+| 方法论 | ~~`METHODOLOGY.md`~~ | 已退役（2026-09-10——PROMPT-SYSTEM §2.5 项目层收敛）：通用方法论骨干分拣入纪律层槽位文件（`src/prompts/discipline-engineering.md` / `discipline-normal.md` / `common.md`）——项目约定直接写 AGENTS.md；本档降为变更史记录保留 |
 | 会话 | `SESSION.md` | |
 | 上下文压缩 | `CONTEXT-COMPACTION.md` | |
 | 路线图（历史） | `_archive/ROADMAP-0.9.0.md` | 0.9.0 已发布，历史路线图已归档 |
@@ -33,10 +33,10 @@
 | eng 会话态/provider 清理 | `ENG-SESSION-PROVIDER-CLEANUP.md` | Top-8 #5/#6/#8 攒批——eng 会话态统一（双归属/死代码/命名漂移）+ provider 防御三件套去重；两实现线文件零冲突可并行 |
 | 编辑工具（板块） | `EDIT.md`、`HASHLINE-EDIT.md`、`INSERT-AFTER.md`、`APPLY-PATCH.md`、`WRITE.md` + `EDIT-HELPERS.md`（共享 helper） | 每工具一档（2026-09-08 重组——TOOLS.md §6 退地图）。edit：按行号改+模糊匹配+替换即删；原 EDIT-TOOL-IMPROVEMENT/EOL-REQUIREMENTS/EOL-DESIGN 已并档归档。VSC 同名对应——同机制各自独立 |
 | memory 工具完善 | `MEMORY.md` §6.2（delete 工具语义修正/layer 统一段——2026-09-08 并入所属板块文档，原 MEMORY-TOOL-SCOPE-FIX.md 作废删除） | scope 参数改名 layer + delete layer 可选 + 工具描述重写；VSC 同名对应——同机制各自独立 |
-| 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进 engineering.md）已移 `_archive/` |
+| 工程模式 | `ENGINEERING-MODE.md` | 权威源。`ENGINEERING-WORKLOOP.md`（已固化进工程纪律层提示词——旧 engineering.md，现 `discipline-engineering.md`）已移 `_archive/` |
 | 评审收敛 | `ADVISOR-CONVERGENCE.md` / `ADVISOR-VERDICT-TEMPLATE.md`（裁决行模板——L50——2026-09-09） | |
 | 设计评审凭证结算 | `DESIGN-TOKEN-SETTLEMENT.md` | async 评审 token 结算根治（settle 当场落盘/门禁读权威/废旧镜像）；VSC 同名对应——同机制各自独立 |
-| 提示词系统 | `PROMPT-SYSTEM.md` | 板块总体档（2026-09-10 建档——分层模型/文件清单/装配矩阵/判定规则权威现状）。批次史档独立保留：`PROMPT-DECOUPLING.md`（解耦批——其 §2.5 基础拆分批待评审）、`MAIN-DESIGN-ENHANCE.md`（设计纪律锚批）、`PROMPT-ATTENTION-RESTRUCTURE.md`（注意力重排批）。冲突时以 PROMPT-SYSTEM 现状为准。VSC 端差异面 = （VSC 仓）`VSC-PROMPTS.md` |
+| 提示词系统 | `PROMPT-SYSTEM.md` | 板块总体档（2026-09-10 建档——分层模型/装配矩阵/编写纪律权威现状）。<br>施工档三件已交付归档：`PROMPT-IMPL-1-TEXT.md`（文本迁移）/`PROMPT-IMPL-2-CODE.md`（装配代码）/`PROMPT-IMPL-3-TEST-MIGRATE.md`（锚测试与迁移）。<br>变更史档三件已加"已被取代"注（正文冻结）：<br>DECOUPLING / MAIN-DESIGN-ENHANCE /<br>ATTENTION-RESTRUCTURE 三档（冲突以现状为准） |
 
 | 工具系统 | `TOOLS.md` | 权威源。`MCP.md`（MCP 机制规范）、`SETTINGS-TOOL.md`（settings 工具）同板块独立保留；`VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径已由本档 D-V5 接管，前身 `VERIFY-DOCONLY.md` 并入后归档） |
 | Checkpoint 事故恢复 | `CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |

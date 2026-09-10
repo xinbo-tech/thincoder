@@ -105,7 +105,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 
 | 环节 | CLI |
 |---|---|
-| 子 agent 构建 | 显式 `createAgent({ provider, tools, config, cwd, memory, overlay: CODER_OVERLAY, role: "coder" })` |
+| 子 agent 构建 | 显式 `createAgent({ provider, tools, config, cwd, memory, role: "coder" })`——人格槽由 `assemblePrompt` 场景表承载（PROMPT-SYSTEM 施工② G3——旧 `overlay: CODER_OVERLAY` 前缀参数已退役） |
 | 子任务 runner | `runAgent(child, task, childCallbacks, { depth: 1, maxTurns, signal })` |
 | provider 解析 | `resolveChildProvider(parent, "provider:model")` |
 | 改动合并 | `mergeChildMutations(parent, child)`（child agent 对象） |
@@ -142,7 +142,7 @@ R17（2026-09-06）把 escalate 改为**缺省 async**（depth-0——唯一允�
 | `src/agent-tools/consult.mjs` | 会诊工具（候选池同源——见 CONSULTATION.md） |
 | `src/config.mjs` | consultModels 校验 |
 | `src/tui/cmd-config.mjs` | `/config` 候选池管理 |
-| `src/prompts/main.md` | 飞刀条款（术语 + 时机 + 直接调用红线） |
+| `src/prompts/discipline-normal.md` | 飞刀条款（术语 + 时机 + 直接调用红线——旧 main.md 飞刀节施工③随迁于此） |
 | 测试 | escalate 家族测试（async ack / settle merge / error partial-merge / 取消 / sync 保留 / 深度护栏 / 工程模式 / 撞墙继续——用例清单权威 = AGENT-LOOP.md §25.3 T-R17a..r） |
 
 ### 2.7 关键决策记录
@@ -174,3 +174,5 @@ pending / error partial-merge 决策 / 空闲 settle 消化等）。
   `async:false` 显式同步保留——2026-09-08 §7.7.1 移除（同步保留例外全移除——顶层一律异步——见 2026-09-09 条）；机制正文收敛到本文 §2 当前态。
 - 2026-09-07：DOC-REWRITE 批 A——可读化重写为当前态（多行 markdown，历史折叠为变更记录）。
 - 2026-09-09：BATCH-4-DOC-CLEANUP——§2.3 async:false 残留句清（§7.7.1 锚句照抄 AGENT-LOOP §14.2——顶层一律异步——`async:false` 仅机制参数）。
+- 2026-09-10：PROMPT-SYSTEM 施工③——§2.4 子 agent 构建签名更新（`overlay: CODER_OVERLAY` 退役——人格槽由 assemblePrompt 场景表承载）；§2.6 飞刀条款落点 main.md → `discipline-normal.md`（施工①迁移映射）。
+- 2026-09-10：PROMPT-SYSTEM 施工③——§2.4 子 agent 构建签名更新（`overlay: CODER_OVERLAY` 退役——人格槽由 assemblePrompt 场景表承载）；§2.6 飞刀条款落点 main.md → `discipline-normal.md`（施工①迁移映射）。

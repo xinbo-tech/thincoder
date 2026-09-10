@@ -137,8 +137,10 @@ test("T-V9 guard 文案声明式（G1-G4）", async () => {
   assert.doesNotMatch(guard, /tests are still failing/)
 })
 
-test("T-V10 prompts 无旧 verify 语义（G5-G9）", async () => {
-  const files = ["eng-coder.md", "engineering-sub.md", "system.md", "discipline.md", "main.md"]
+test("T-V10 prompts 无旧 verify 语义（G5-G9——PROMPT-SYSTEM 施工③宿主更新：退役文件 → 新槽位宿主）", async () => {
+  // 旧名单 [eng-coder, engineering-sub, system, discipline, main] 的新宿主映射（施工①迁移映射表）：
+  // eng-coder/engineering-sub → persona-eng-coder；system/discipline/main 的写码执行收尾 → discipline-normal。
+  const files = ["persona-eng-coder.md", "discipline-normal.md"]
   for (const f of files) {
     const src = readFileSync(join(__here, "..", "src", "prompts", f), "utf8")
     // 旧语义：verify 声称 runs syntax checks / runs tests / related tests

@@ -14,7 +14,7 @@
   - F-3 CLI /config 并发池子菜单并入 advisor 第三项（cmd-config.mjs）
   - F-4 VSC 配置面板并入 advisor 第三数字框（settings-agent.js + locales + 白名单 + 回退）
   - F-5 同 scope 并发守卫（用户裁①）：同 type+scope 有 running 评审实例 → 新启动拒（现 resolve 只查 settled——running 并行多实例歧义放大）
-  - F-6 模型可见静态文案去数字化（用户裁②）：CLI advisor.mjs:43 / VSC engineering.md:16 死数字 → 活配置引用——错误文案含生效上限（CLI 已插值——VSC :173 硬编码改插值）
+  - F-6 模型可见静态文案去数字化（用户裁②）：CLI advisor.mjs:43 / VSC engineering.md:16（旧宿主名——该文件 2026-09-10 已退役，现 persona-engineering.md）死数字 → 活配置引用——错误文案含生效上限（CLI 已插值——VSC :173 硬编码改插值）
   - F-7 §24 旧锚触碰行更新（用户裁③）：本批触碰行注释 §24→§11.1/§11.2——全仓清理挂 TODO 观察项
   - **范围边界**：全仓 §24→§11 大扫 = 后续（挂 TODO）；评审轮次上限 MAX_REVIEW_ROUNDS=5/②-6a 不排队语义不变；subagent 两域现语义不变（engCoder/other 已 4 已可配——本批只界面/一致性）；排队机制（advisor 无排队——超限即拒）不变——仅阈值 + scope 守卫。
   - **非功能性（评审 #4 补）**：双端锁步同构（CLI/VSC 三键体系 + 守卫逻辑 diff 核）；性能零影响

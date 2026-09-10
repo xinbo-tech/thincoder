@@ -2,6 +2,9 @@
 
 > 板块：工程模式提示词（双端——主会话即 designer——承接 designer 取消）。权威源：METHODOLOGY.md（结构）+ engineering.md（行为纪律——双端注入）。
 > 状态：**评审通过——已交付核销（CLI fe6d62d + VSC c14cbbe——clean——A1-A4 四维锚双端驻留 + METHODOLOGY §7 + ENGINEERING-MODE §2.9 锚 8——L2 239/239——consume 14adbea1 闭合）**——2026-09-09 落档
+> **已被取代（2026-09-10——PROMPT-SYSTEM 施工①③）**：本档行为纪律锚的宿主 engineering.md 已退役——
+> A1/A3/A4 逐字随迁 `discipline-engineering.md`「设计行为纪律四维」节、A2 改写形态驻方案选型对比节
+> （双端）；本档降为变更史记录——正文（含 A1-A4 逐字锚定文本字节源）不再改动。
 
 ---
 
