@@ -136,6 +136,15 @@
 - [x] ~~**CLI ⏹ / 面板行数增长缺陷**~~（trimSubTree done 子块无豁免）——**2026-09-08 核查已修**：§27.1 F1（2026-09-07 三缺陷修复批 b06bca7）trimSubTree 已跳过 done 子块（subagent-children.mjs:66 `if (c.done) continue`）+ done 定格守卫——原待办作废
 
 ## 需求池 / 在途实现（状态随批推进更新）
+- [ ] **批次档 = 任务书（2026-09-10 用户裁定——需求已立，待设计）**：`requirements/ENGINEERING-MODE.md` §1.12/§1.11
+  B11 定「**批次档 §2 就是 eng-coder 的任务书**」——spawn 只传 §2 **路径** + 凭证参数，**不另写副本**
+  （副本 = 漂移源；且原「任务书作为 spawn 消息文本派生」违反界面铁律 #1「产物落盘、消息只报告」）。
+  **现行实现仍是旧模型**（任务书 = spawn task 文本）——待设计变更的落地面：
+  ① `design/ENGINEERING-MODE.md` §2.2 step 5（spawn 任务书结构化描述）② `design/prompts/discipline-engineering.md`
+  「实施委托结构化」节 ③ `design/prompts/persona-engineering.md`（任务书产出）④ `design/AGENT-LOOP.md` §8.1
+  审计任务书 = 父 spawn 任务书 ∪ `_touchedFiles`（并集左项改为批次档 §2 路径）⑤ 纪律层 spawn 时校验
+  （§1 已收口 / §2 已存在——§1.12 待设计项）——status=登记——设计权在用户
+
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
 
 - [ ] **文档目录结构重组**（2026-09-10 用户裁定——设计已批准）——实施档 `docs/design/DOC-REORG.md`。
