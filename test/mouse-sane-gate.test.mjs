@@ -1,6 +1,6 @@
 /**
  * mouse-sane-gate.test.mjs — RESIZE-MOUSE-LEAK-FIX F-3 sane-gate 测试（2026-09-09——设计档
- * docs/design/RESIZE-MOUSE-LEAK-FIX.md）。落点 ① handleMouseClick 入口 + ② handleWheel 入口
+ * RESIZE-MOUSE-LEAK-FIX.md）。落点 ① handleMouseClick 入口 + ② handleWheel 入口
  * （mouse.mjs）——越界丢弃（col > cols || row > rows——> 非 >=——末行列合法）、正常坐标不回归；
  * ③ index.mjs 滚轮 fallback 前拦截与 ①② 共用同一 mouseOob 判定（判定本体在 mouse.mjs 锁测
  * ——index.mjs 的 startTUI 数据闭包无单测缝——与既有 index 内部路径同测试面边界）。

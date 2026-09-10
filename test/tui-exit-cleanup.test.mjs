@@ -1,6 +1,6 @@
 /**
  * tui-exit-cleanup.test.mjs — RESIZE-MOUSE-LEAK-FIX F-1/F-2 测试（2026-09-09——设计档
- * docs/design/RESIZE-MOUSE-LEAK-FIX.md）。AC-1：cleanup 唯一权威序（① mouseOff → ② settle
+ * RESIZE-MOUSE-LEAK-FIX.md）。AC-1：cleanup 唯一权威序（① mouseOff → ② settle
  * ~20ms → ③ raw off → ④ stdin 排空 → ⑤ 恢复屏幕 → ⑥ 清 TUI 活动态）——测试锁序。AC-2：
  * /exit 走 ctx.exit（不再直调 process.exit）+ 退出前无帧写入（渲染抑制——isTuiActive false
  * 后 render no-op——handleSlash 后无条件 render() 不重绘主屏）。

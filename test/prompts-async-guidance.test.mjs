@@ -12,7 +12,7 @@
  * 承载批次（各批锚在本文件各节——fail-when-unchanged）：
  *   - AGENT-LOOP §7.7/§7.7.1 异步纪律（escalate/advisor/spawn 顶层一律异步）
  *   - ADVISOR-VERDICT-TEMPLATE L50（advisor 四件套 VERDICT 裁决行——内容冻结）
- *   - MAIN-DESIGN-ENHANCE A1-A4 四维设计纪律（§2.9 锚#8）
+ *   - MAIN-DESIGN-ENHANCE A1-A4 四维设计纪律（§2.9 锚#8——A1/A3 断言源 = src/prompts/discipline-engineering.md 字节源，非归档档）
  *   - ENGINEERING-MODE §2.9 锚#1-#7（零裁量/需求池/docs FIRST/拍板≠批准/链终消费/凭证/调度器）
  *   - PROMPT-ATTENTION 开关段 C1-C4（推进档位 auto/manual）
  *   - PROMPT-SYSTEM §2.7 编写纪律巡检 / §3.2 装配矩阵 / §3.4 降级链
@@ -60,7 +60,7 @@ test("退役旧件不存在于 prompts 树（AC-2——退役七件+main/discipl
 // 形态分类（阶段 D）：A2/A4 命令型保逐字；A1/A3 列举型子条级子串（重排拆行防漂移点=子条）。
 // ─────────────────────────────────────────────────────────────────────────────
 test("MAIN-DESIGN-ENHANCE A1 勘察 checklist 子条子串驻留（①-⑤——列举型）", () => {
-  const doc = read("docs/design/MAIN-DESIGN-ENHANCE.md")
+  const doc = read("src/prompts/discipline-engineering.md")
   assert.ok(doc.includes("设计启动前先跑**勘察 checklist**"), "A1 引句（字节源档——概念驻留）")
   for (const sub of ["① `doc_search` 定位所属设计文档", "② 读既有实现与先例", "③ 核测试面", "④ 核双端对位面", "⑤ 广度勘察委派 explore 子代理"]) {
     assert.ok(doc.includes(sub), `A1 子条缺失: ${sub}`)
@@ -73,8 +73,8 @@ test("MAIN-DESIGN-ENHANCE A2 方案对比逐字驻留 discipline-engineering（�
   assert.ok(de.includes("单一候选：显式声明「单方案——无对比」即豁免"), "A2 豁免句缺失")
 })
 
-test("MAIN-DESIGN-ENHANCE A3 评审前预检子条子串驻留 MAIN-DESIGN-ENHANCE.md（列举型——概念锚）", () => {
-  const doc = read("docs/design/MAIN-DESIGN-ENHANCE.md")
+test("MAIN-DESIGN-ENHANCE A3 评审前预检子条子串驻留 discipline-engineering（prompts 字节源）（列举型——概念锚）", () => {
+  const doc = read("src/prompts/discipline-engineering.md")
   assert.ok(doc.includes("评审前预检"), "A3 引句缺失")
   for (const sub of ["① 需求三层具体到可设计", "② 受影响文件全清单", "③ 验收标准逐条回指需求", "④ UI/交互决策全落档", "⑤ 方案对比已做"]) {
     assert.ok(doc.includes(sub), `A3 子条缺失: ${sub}`)

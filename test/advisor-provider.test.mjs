@@ -1,6 +1,6 @@
 /**
  * advisor-provider.test.mjs — F-1 候选源修复（ISSUE-FIX-BATCH §1，Gitee IKE85W——
- * docs/design/ISSUE-FIX-BATCH.md，2026-09-09）：resolveAdvisorProvider 在 cfg.provider
+ * ISSUE-FIX-BATCH.md，2026-09-09）：resolveAdvisorProvider 在 cfg.provider
  * 场景的候选源 = agent.providers（父——全量）→ config.providersList（child——spawn
  * childConfig 拷贝父 config 带全量，child 无 agent.providers）→ [agent.provider] 遗留。
  * .length 空数组守卫：providers=[] 不得静默跳过列表查找（?? 遇 [] 不落链）。错配场景

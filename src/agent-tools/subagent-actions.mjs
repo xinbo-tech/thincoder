@@ -172,7 +172,7 @@ export function executeStatusAction(args, ctx) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SUBAGENT-OBSERVE-SEND（docs/design/SUBAGENT-OBSERVE-SEND.md——CLI 端）
+// SUBAGENT-OBSERVE-SEND（SUBAGENT-OBSERVE-SEND.md——CLI 端）
 // observe（D1——readonly 查询）+ send（D2——控制类豁免注入引导）——动作执行器。
 // 目标 = 父自身 spawn 的异步子代理池条目（_asyncSubagents——非 advisor/escalate——
 // 后者共享 id 计数但非"读写子代理"，错误路径明示）。

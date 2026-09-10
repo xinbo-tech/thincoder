@@ -1,4 +1,4 @@
-/** tui-stderr-capture.test.mjs — TUI-STDERR-CAPTURE（docs/design/TUI-STDERR-CAPTURE.md）F-1~F-3：
+/** tui-stderr-capture.test.mjs — TUI-STDERR-CAPTURE（TUI-STDERR-CAPTURE.md）F-1~F-3：
  * mock 注入缝面 + slow 真 spawn 面（THINCODER_TEST_CRASH 门）；Windows 实测 process.kill(SIGINT)=硬杀≠Ctrl+C → 信号 mock；crash-reports 经 USERPROFILE/HOME 重定向隔离。 */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"

@@ -1,6 +1,6 @@
 /**
  * queued-stop.test.mjs — QUEUED-VISIBILITY F-2 测试（CLI 端——2026-09-09——设计档
- * thincoder-vscode/docs/design/QUEUED-VISIBILITY.md——CLI 参照读绝对路径）。
+ * thincoder-vscode/QUEUED-VISIBILITY.md——CLI 参照读绝对路径）。
  * 用例表 F-2 行（queued ⏹ 点击 = 出队 + 墓碑 + 位置前移 + 块移除——running ⏹ 不回归）：
  * 1. renderSubagentPanel ⏹ 门控扩 queued（等待块头挂 ⏹——slot/wait/depc 三态同一对象面；
  *    async running 不回归——headless sync 不钉——非 SUBAGENT_ROLES 角色（escalate）无 ⏹）

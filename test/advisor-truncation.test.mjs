@@ -1,6 +1,6 @@
 /**
  * advisor-truncation.test.mjs — advisor 工具结果截断双端化（DUAL-END-TRUNCATION F-2——
- * docs/design/DUAL-END-TRUNCATION.md，2026-09-09）：超限结果 头行(~60%) + 中段省略注 +
+ * DUAL-END-TRUNCATION.md，2026-09-09）：超限结果 头行(~60%) + 中段省略注 +
  * 尾行(余预算 ~40%)——保头上下文（评审目标/标准）+ 保尾结论（裁决不被切）——offset 续读
  * 提示在。双端（CLI/VSC）各自同名镜像且 byte-identical（含本注释）；纯函数直驱
  * （truncate.mjs——run.mjs 工具回填调用同函数，行为一致）。

@@ -105,7 +105,7 @@ export const readTool = {
       if (args.hashes) return `${ln}\t[${hashLine(l)}] ${l}`
       return `${ln}\t${l}`
     }).join("\n")
-    // DUAL-END-TRUNCATION (F-1, C 方案——docs/design/DUAL-END-TRUNCATION.md 2026-09-09):
+    // DUAL-END-TRUNCATION (F-1, C 方案——DUAL-END-TRUNCATION.md 2026-09-09):
     // 大文件（> MAX_READ_LINES 行）窗口截断时返回 头（请求窗口）+ 中段省略注 +
     // 文件真实尾部（末 READ_TAIL_LINES 行——现尾注升级为真实尾行内容——offload 产物
     // 的尾端结论可见）。≤ 阈值文件任何窗口走旧头向路径（字节零变化）；窗口覆盖全文件

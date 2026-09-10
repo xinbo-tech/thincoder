@@ -1,6 +1,6 @@
 /**
- * input-lock.test.mjs — INPUT-LOCK-ASYNC（C'——docs/design/INPUT-LOCK-ASYNC.md——2026-09-09）
- * + INPUT-LOCK-BEHAVIOR-REVISED（docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md——2026-09-09 修订——
+ * input-lock.test.mjs — INPUT-LOCK-ASYNC（C'——INPUT-LOCK-ASYNC.md——2026-09-09）
+ * + INPUT-LOCK-BEHAVIOR-REVISED（INPUT-LOCK-BEHAVIOR-REVISED.md——2026-09-09 修订——
  * 白名单删——忙时斜杠同禁发）：用例表测试锁：busy（processing 含 digest）提交禁发（吞提交
  * 不吞字符——打字回显）/ 忙时斜杠同吞（/exit 也发不出）/ 空 Enter 静默 / 挂起空闲输入开放
  * （单槽）/ 释放窗口单槽交接 / abort 零丢失 / 状态栏 busy 文案。

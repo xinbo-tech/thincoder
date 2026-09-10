@@ -1,5 +1,5 @@
 /**
- * activity-debloat.test.mjs — CLI-ACTIVITY-DEBLOAT（docs/design/TUI.md §6.4——
+ * activity-debloat.test.mjs — CLI-ACTIVITY-DEBLOAT（TUI.md §6.4——
  * 2026-09-10 施工册并档版）测试用例表 1:1：
  * - F-1 preview 删：onToolResult 不再往会话流塞报告预览（正常路径——用例表行 1）
  * - F-2 finishSubTask 收窄：精确 key 命中（正常路径）/ 精确 key 无块（边界）/

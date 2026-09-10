@@ -88,7 +88,7 @@ export class ProviderError extends Error {
 }
 
 /**
- * F-1 (MODEL-400-FIX — docs/design/MODEL-400-FIX.md) 根因兜底——请求体组装前断言：渠道裸克隆
+ * F-1 (MODEL-400-FIX — MODEL-400-FIX.md) 根因兜底——请求体组装前断言：渠道裸克隆
  * （`{...渠道}`——MODEL-MERGE schema：渠道无 model 字段，只带 models[] 候选）未重派生 .model 时
  * provider.model 为 undefined/null——JSON.stringify 会丢 undefined 键 → 无 model 请求 → serde 400。
  * fail-fast 报可读错误（带 provider 名 + 修复线索），不发病体。core.mjs chatImpl openai body 组装

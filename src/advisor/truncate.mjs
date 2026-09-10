@@ -1,6 +1,6 @@
 /**
  * truncate.mjs — advisor 工具结果的行感知双端截断（DUAL-END-TRUNCATION F-2，
- * docs/design/DUAL-END-TRUNCATION.md，2026-09-09——CLI/VSC 双端逐字同构镜像）。
+ * DUAL-END-TRUNCATION.md，2026-09-09——CLI/VSC 双端逐字同构镜像）。
  *
  * 原 run.mjs 内联截断为纯头向（line-aware 从首行累加至 64K break）——评审尾部
  * 结论/裁决被切。现改头尾双保：头行累加至预算 ~60% → 中段省略注 → 尾行累加至

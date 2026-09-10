@@ -242,13 +242,17 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
       } catch { /* file doesn't exist — skip */ }
     }
 
-    // Document map (docs/design/README.md) — inject when the discovered
-    // project root has one: the reviewer checks document ownership against it
-    // (a change for an existing section must amend that section's document,
-    // not spawn a new file for it). Absent map → skip (nothing to check against).
+    // Document map (docs/README.md — the single map since the 2026-09-10 docs
+    // reorg) — inject when the discovered project root has one: the reviewer
+    // checks document ownership against it (a change for an existing section
+    // must amend that section's document, not spawn a new file for it). Falls
+    // back to the legacy pre-reorg map path for downstream projects that have
+    // not run the docs reorg yet. Absent map → skip (nothing to check against).
     try {
-      const mapPath = resolve(guideRoot ?? agent.cwd, "docs", "design", "README.md")
-      if (existsSync(mapPath)) {
+      const mapRoot = guideRoot ?? agent.cwd
+      const mapCandidates = [resolve(mapRoot, "docs", "README.md"), resolve(mapRoot, "docs", "design", "README.md")]
+      const mapPath = mapCandidates.find((p) => existsSync(p))
+      if (mapPath) {
         parts.push("## Document Map")
         parts.push("The document map below registers which document files exist per section. Use it for the Document ownership criterion: a change for an existing section must amend that section's document, not create a new file.")
         parts.push(readFileSync(mapPath, "utf8"))

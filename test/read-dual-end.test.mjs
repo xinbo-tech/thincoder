@@ -1,6 +1,6 @@
 /**
  * read-dual-end.test.mjs — read 工具双端返回（DUAL-END-TRUNCATION F-1，C 方案——
- * docs/design/DUAL-END-TRUNCATION.md，2026-09-09）：
+ * DUAL-END-TRUNCATION.md，2026-09-09）：
  * 大文件（> MAX_READ_LINES=2000 行）窗口截断时返回 头（请求窗口）+ `…(truncated:
  * K lines in middle, use offset to continue)` + 尾（末 READ_TAIL_LINES=500 行）——
  * 现"(N lines total)"尾注升级为真实尾行内容。AC-1 边沿：offset 窗口与尾区重叠不重复 /

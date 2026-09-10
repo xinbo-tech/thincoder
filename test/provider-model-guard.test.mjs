@@ -1,5 +1,5 @@
 /**
- * provider-model-guard.test.mjs — MODEL-400-FIX（docs/design/MODEL-400-FIX.md——评审采纳版）
+ * provider-model-guard.test.mjs — MODEL-400-FIX（MODEL-400-FIX.md——评审采纳版）
  * F-1 请求体断言 + F-2 克隆现场 model 重派生（CLI 面——VSC 同名测试镜像）。
  *
  * 根因：MODEL-MERGE 删渠道 model 字段（渠道只带 models[] 候选）——`{...渠道}` 裸克隆不
