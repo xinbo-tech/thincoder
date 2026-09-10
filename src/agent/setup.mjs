@@ -314,7 +314,9 @@ export async function prepareRun(agent, input, callbacks, {
   }
   // G3（施工②审计收敛）：overlay（人格）前缀分支退役——CLI/VSC 同构（人格槽由场景表
   // 承载，spawn 侧 overlay 恒空——createAgent 的 overlay 参数留空兼容位）。
-  const systemPrompt = base
+  // let——下方按 projectRules / skills listing 尾部追加（L326/L331 +=）再赋值；
+  // const 声明会 TypeError: Assignment to constant variable（每次 run 必炸）。
+  let systemPrompt = base
 
   // Time injection deliberately does NOT live here: system prompts must be byte-identical
   // across runs (provider prefix caches). The time rides a transient user reminder per turn
