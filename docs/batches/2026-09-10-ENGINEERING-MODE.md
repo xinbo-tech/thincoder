@@ -171,11 +171,45 @@ commit 与向用户汇报却都写了“§2.14 已完成”。**规矩：任何�
 
 ## §2 批次任务（写手：目标态 eng-designer；A6 落地期 = 主 agent 代写）
 
-> **待追加**——本批尚未进入实施阶段。
-> 槽位：本批覆盖的需求条目 / 明确不在本批的条目 / 受影响文件（带行数） / 验收标准（逐条回指需求） / 任务书就绪。
-> **本节即 eng-coder 的任务书**（用户 2026-09-10 裁定——不另派生副本；spawn 只传本节路径 + 凭证参数）。
-> 写手：目标态 = **eng-designer 自写**（随件传递：它拿到本档路径）；**落地注记（A6）**：eng-designer 尚未落地，
-> **本节由主 agent 代写（spawn 前补齐）**——评审轮次 1 处置 ⑧（批次档 §1）。
+> **本节即 eng-coder 的任务书**（用户 2026-09-10 裁定——不另派生副本；门禁落地后 spawn 只传本节路径 + 凭证参数）。
+> 写手：目标态 = **eng-designer 自写**；**落地注记（A6）**：eng-designer 尚未落地 → **本节由主 agent 代写（spawn 前已补齐）**。
+> 状态：**已就绪 2026-09-10**（设计评审轮次 2 pass + 用户批准）。
+
+### 本批覆盖的需求条目
+
+| 需求 | 本批落地面 |
+|---|---|
+| **FR16**（批次记录机制——载体面） | `batchDoc` 参数 + 路径注入 child 任务输入（§2.11）；六段模板/自写行为**不在本批** |
+| **FR17** 铁律 #5（随件传递） | 机械面 = 路径注入（§2.11 第 1 点）；行为面（自写己段）不在本批 |
+| **FR20 #9**（依据缺失） | 机械面：eng-coder spawn **必传 `batchDoc`**，没传即拒（§2.12） |
+
+### 明确不在本批
+
+- eng-designer 角色落地（FR9）· 六段自写 / 一段一作者等**行为纪律**· 需求池指针化（FR18）· 可移植性 FR10–FR15 ·
+  **VSC 镜像**（用户指令：仅 CLI）· 执行者拒收的提示词规则（需求 §1.14 #9 行为面——第 2 批）。
+
+### 受影响文件（详情见设计档 §2.14）
+
+| 文件 | 变更 |
+|---|---|
+| src/agent-tools/subagent.mjs | properties 加 `batchDoc`；工具描述补一句 |
+| src/agent-tools/subagent-spawn.mjs | `buildSpawnChild` 内门禁（token 门旁）+ 任务输入注入 |
+| src/agent/setup.mjs | 审计受限变体 `delete props.batchDoc` |
+| src/prompts/discipline-engineering.md | spawn 样例行补 `batchDoc=` + 一句“必传” |
+| docs/design/prompts/discipline-engineering.md | 同上（中文权威，双源） |
+| docs/design/AGENT-LOOP.md | §10.1 参数表加 `batchDoc` 行 |
+| test/batch-doc-gate.test.mjs | **新增**（T25/T25b/T26–T29） |
+
+### 验收标准
+
+**逐条引用设计档 §3.1 AC10–AC15**（不在本节重抄——单一权威源）：AC10/AC11（门禁三态 + 判据只到“参数在+可读”）·
+AC12（非 eng-coder 零变更 + 双路覆盖）· AC13（审计变体无 batchDoc）· AC14（`src/` 无 `docs/batches/` 逻辑字面）·
+AC15（不生成/不校验模板 + 双源样例 grep `batchDoc=`）。
+
+### 任务书就绪
+
+本节即任务书；**本批实施时门禁尚未存在**（本批就是造它）——故本批 spawn 用**任务文本传任务书**（自举窗口，已知）；
+门禁落地后下批起改为“传本节路径”。
 
 ---
 
