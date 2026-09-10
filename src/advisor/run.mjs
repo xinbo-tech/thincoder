@@ -9,6 +9,7 @@ import { prepareAdvisorMessages } from "../advisor.mjs"
 import { appendCitationReport } from "./citations.mjs"
 import { describeToolArgs } from "../tui/tool-args.mjs"
 import { truncateAdvisorResult } from "./truncate.mjs"
+import { batchSegmentTool, batchDocForReview } from "../agent-tools/batch-segment.mjs"
 
 const MAX_ADVISOR_TURNS = 100
 // Mechanical convergence cap: up to 5 rounds suffice; a 6th call means the model
@@ -88,11 +89,14 @@ const { codeSearchTool } = await import("../memory/code-sync.mjs")
  * @param {Object} agent — only used for the code index (agent.memory); the
  *   semantic code_search tool needs it. Without a memory, the set is 5 tools.
  */
-function advisorToolsFor(agent) {
+function advisorToolsFor(agent, reviewType = "code", batchDoc = null) {
   const search = agent?.memory ? codeSearchTool(agent.memory) : null
   const tools = search
     ? [readTool, globTool, grepTool, lsTool, lspTool, search]
     : [readTool, globTool, grepTool, lsTool, lspTool]
+  // §2.20.3（第 4 批）：**只有绑定了批次档的设计评审**额外拿到写通道——代码评审工具集
+  // 逐字节不变（零 git + 只读不变量，§2.20.8 #1）；未绑定 → 不挂载（fail-closed）。
+  if (reviewType === "design" && batchDoc) tools.push(batchSegmentTool(batchDoc, { review: true }))
   return { schemas: tools.map(toOpenAISchema), byName: new Map(tools.map((t) => [t.name, t])) }
 }
 // Test seam: the tool set is pure (agent.memory → code_search inclusion).
@@ -132,7 +136,7 @@ export { runAdvisorToolLoop as _runAdvisorToolLoop }
  * the panel keeps moving while the advisor explores — otherwise the panel sits
  * frozen through every tool-call phase and the review appears to have stalled.
  */
-async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd, toolsOverride = null) {
+async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, cwd, toolsOverride = null, reviewType = "code", batchDoc = null) {
   // Kind-tagged wrappers: the TUI panel colors reasoning / answer / tool progress differently.
   // Every chunk is ALSO recorded into an ordered timeline — the persisted record
   // must show the review process (thinking ↔ tool progress ↔ final text) at its
@@ -150,7 +154,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   const onTool = emit("tool")
   // toolsOverride = test seam (T-TS8/9): the real advisor tool set, or a mock
   // set with controllable timing/errors.
-  const { schemas: toolSchemas, byName: toolByName } = toolsOverride ?? advisorToolsFor(agent)
+  const { schemas: toolSchemas, byName: toolByName } = toolsOverride ?? advisorToolsFor(agent, reviewType, batchDoc)
   let turns = 0
   const startTime = Date.now()
   
@@ -427,8 +431,13 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
 
   const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, object, designId)
 
+  // §2.20.3 批次档写通道的绑定（仅设计评审）：同步路径 = 调用方（advisor 工具）传入的
+  // callbacks.batchDoc（即 resolved.run 的实例绑定）；异步路径 = 本实例在跑池条目的
+  // run.batchDoc（同文档集实例键——各评审各取各档，不用单值会话态）。
+  const boundBatchDoc = reviewType === "design" ? batchDocForReview(agent, documents, callbacks) : null
+
   try {
-    const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd)
+    const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd, null, reviewType, boundBatchDoc)
 
     // Host-verified citations (decision d698434): mechanically check every
     // `file:line: content` reference in the review against the CURRENT file

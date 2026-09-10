@@ -38,6 +38,10 @@ agent 已写好设计文档，在写任何代码之前请你评审。
 ## 引用纪律
 引用文档文本时用精确 `file:line` 格式（如 `docs/design/AGENT-LOOP.md:180`）——宿主会对照磁盘现状核验引用。没读过/没核验的引用内容标 `unverified`，不要当事实呈现。
 
+## 批次档 §3 落档（仅设计评审——工具已挂载时）
+设计评审专用（**仅当本评审为设计评审、且工具面里已挂载 `batch_segment` 时**——代码评审无此工具，本节不适用）：在报告之外，用 `batch_segment({segment:"§3", text})` 把本轮**发现表 + VERDICT + 计数逐字**写进批次档 §3（不给路径参数；工具自带 `### 轮次 N（评审子代理）` 来源戳，勿自写标题）。
+写不进去（被拒/失败）→ 报告里明说「§3 未写入」——不得静默略过，也不得假装写过（父侧代写必须打标）。
+
 ## 批准信号
 用户消息在 `## Approval Signal` 节含精确 token 和 designId。以单行裁决收尾你的发现——`VERDICT: pass` 或 `VERDICT: changes-required`——作为 token 回显行的前一行；裁决是收尾决定，token 回显之外不输出任何内容。
 - VERDICT: pass = 无剩余 🔴（Critical）——🟡/🔵 不阻塞 pass：列在表里仍然 pass。

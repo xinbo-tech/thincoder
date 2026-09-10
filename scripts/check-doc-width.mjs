@@ -11,6 +11,7 @@
  *    节号解析 = 标题编号（`## 2.15 标题` / `### §2.15 标题`），父节号算存在（`§18` 由 `### 18.5` 满足）。
  * ③ V2 计数与列表一致：声明“N 项/N 处/N 条”（N ≥ 2）且**紧邻**枚举时，枚举条数必须 == N。
  *    识别三形态：md 列表行 / 表格行 / 括号内顿号·斜杠枚举（声明前后紧邻）。
+ * ④ V3 批次档 §3 工具写入轮次行（FR22 N3/§2.20.6）：触发判据 = 该档「§4 或 §6 有实质内容」（**骨架行/斜体占位行不算内容**——在飞批次不报，零假阳）；命中则 §3 必须含工具写入形态 `### 轮次 N（评审子代理）`（骨架行不计）。
  *
  * 精度取向（评审要求“零假阳才能常驻”）：V2 只判**结构上明确相邻**的声明+枚举
  * （行内声明后紧跟列表/表格，或紧邻括号枚举）；正文散文里的计数不判（语义级一致性归评审——
@@ -19,7 +20,7 @@
  *
  * 用法：node scripts/check-doc-width.mjs [--dir <docs/design>] [--max 300]
  * 导出（test/doc-consistency.test.mjs 消费）：collectMarkdown / checkDocWidths /
- * checkSectionRefs / checkCountLists / checkDocConsistency / loadBaseline / SCAN_DIRS。
+ * checkSectionRefs / checkCountLists / checkBatchSegments / checkDocConsistency / loadBaseline / SCAN_DIRS。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve, basename } from "node:path";
@@ -215,15 +216,31 @@ export function checkCountLists(root) {
   return out;
 }
 
-/** V1+V2 一次跑全：{ v1, v2 } */
+/** V1+V2+V3 一次跑全：{ v1, v2, v3 } */
 export function checkDocConsistency(root) {
-  return { v1: checkSectionRefs(root), v2: checkCountLists(root) };
+  return { v1: checkSectionRefs(root), v2: checkCountLists(root), v3: checkBatchSegments(root) };
+}
+
+/** V3：批次档 §4/§6 有实质内容（排骨架行/斜体占位行）时，§3 必须含工具写入的轮次行。
+ *  在飞批次不报；判据不引用 §1 讨论状态词。split 只吃标题前缀——每段首行剩标题余文，先剥。 */
+export function checkBatchSegments(root) {
+  const out = [];
+  for (const f of scanDomain(root).filter((p) => /[\\/]docs[\\/]batches[\\/]/.test(p))) {
+    const parts = readFileSync(f, "utf8").split(/^## §(\d+)(?=\s|$)/m), sec = {};
+    for (let i = 1; i < parts.length; i += 2) sec[parts[i]] = parts[i + 1].replace(/^[^\n]*\n?/, "");
+    const real = (n) => String(sec[n] ?? "").split("\n").some((l) => l.trim() && !/^#{1,6}\s/.test(l) && !/^_[（(].*[）)]_$/.test(l.trim()));
+    if ((real("4") || real("6")) && !/^### 轮次 \d+（评审子代理）/m.test(sec["3"] ?? "")) {
+      out.push({ file: f.slice(root.length + 1).replace(/\\/g, "/"), kind: "batch" });
+    }
+  }
+  return out;
 }
 
 /** 基线条目键（稳定：不含行号——文档编辑位移不影响） */
 export const v1Key = (r) => `V1|${r.file}|${r.ref}`;
 export const v2Key = (r) => `V2|${r.file}|${r.decl}|${r.declared}|${r.found}|${r.form}`;
-
+/** V3 条目键（同一批次档一条——修好即可从基线移除） */
+export const v3Key = (r) => `V3|${r.file}`;
 /** 读基线清单（缺失/损坏 → 空清单 = 全部视为新增）。 */
 export function loadBaseline(root) {
   try {
@@ -260,20 +277,20 @@ if (isMain) {
     console.log(`OK(宽度): 扫描域全部 .md 无 >${maxW} 字符单行（${widthFiles.length} 文件）。`);
   }
 
-  // ② 一致性 V1/V2——新增阻断、存量报告（基线 = test/fixtures/doc-consistency-baseline.json）
-  const { v1, v2 } = checkDocConsistency(root);
+  // ② 一致性 V1/V2/V3——新增阻断、存量报告（基线 = test/fixtures/doc-consistency-baseline.json）
+  const { v1, v2, v3 } = checkDocConsistency(root);
   const baseline = loadBaseline(root);
-  const all = [...v1.map((r) => [v1Key(r), r]), ...v2.map((r) => [v2Key(r), r])];
+  const all = [...v1.map((r) => [v1Key(r), r]), ...v2.map((r) => [v2Key(r), r]), ...v3.map((r) => [v3Key(r), r])];
   const fresh = all.filter(([k]) => !baseline.has(k));
   const known = all.length - fresh.length;
   for (const [, r] of fresh) {
-    console.log(r.declared !== undefined
-      ? `✗ V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`
+    console.log(r.kind === "batch" ? `✗ V3 ${r.file} §3 缺工具写入的轮次行（一批一段——FR22 N3）`
+      : r.declared !== undefined ? `✗ V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`
       : `✗ V1 ${r.file} “${r.ref}”（${r.reason}）`);
   }
-  console.log(`一致性 V1/V2：新增违规 ${fresh.length} 条 · 存量（基线内）${known} 条。`);
+  console.log(`一致性 V1/V2/V3：新增违规 ${fresh.length} 条 · 存量（基线内）${known} 条。`);
   if (fresh.length) {
-    console.log(`\nFAIL(一致性): ${fresh.length} 条新增违规（V1 段引用 / V2 计数）——修掉或（存量）入基线 ${BASELINE_PATH}。`);
+    console.log(`\nFAIL(一致性): ${fresh.length} 条新增违规（V1 段引用 / V2 计数 / V3 批次档 §3）——修掉或（存量）入基线 ${BASELINE_PATH}。`);
     process.exit(1);
   }
   process.exit(widthHits.length ? 1 : 0);

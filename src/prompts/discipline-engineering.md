@@ -29,7 +29,8 @@
 ## 批次档与执行者纪律（第 2 批行为纪律）
 - **六段自写 · 一段一作者**：批次档 §1 主 agent / §2 eng-designer / §3 评审子代理 / §4 主 agent / §5 eng-coder / §6 父代理——
   每个角色只写自己那一段（append-only，段不重叠）；**子代理自写，不经父侧转述**（转述 = 二次加工 = 失真源）。
-  过渡期注：§3 评审子代理自写机制未落地前由父侧代写。
+  写入手段 = `batch_segment({segment, text})`（**无路径参数**——目标档由 spawn 绑定 / 评审实例键提供，段号由调用者身份定：eng-designer → §2 · 设计评审 → §3 · eng-coder → §5；越段即拒）。
+  写不进去（拒/失败）→ 报告里明说“§× 未写入”；**父侧代写必须打标**（不得静默代笔、不得假装写过）。
 - **执行者拒收**（FR20 #9 行为面）：查不到任务书/依据（coder 找不到 §2、designer 找不到 §1）→ **不执行、打回**——不自行补造方向往下干。
 - **澄清必经主 agent**：子代理撞到需要用户决定的事 → **打回主代理**，无旁路（子代理没有对话面）。
 - **三方条目一致**：**批次档 §2 本批条目 = 设计档验收标准回指的条目 = 需求档条目**——advisor 八维 #1 需求覆盖 / #6 范围靠这份清单判。
@@ -112,6 +113,8 @@
 ## 评审收敛纪律
 - 发起权：设计评审 ONLY user-initiated——you prepare and remind, the user fires；
   交付代码评审 = automatic flow node（in-child §18 protocol）——parent-side advisor = optional second opinion。
+- 批次档在飞时的设计评审：**必须传 `batchDoc`**（批次档路径）——评审者据此拿到 `batch_segment` 写通道，把发现表 + VERDICT + 计数**逐字**写进批次档 §3（§2.20）；
+  无批次档的在途设计评审**不受阻**（不传即不挂载——不得因缺此参数拒绝评审；缺写通道时 §3 只能父侧代写并**打标**）。
 - 裁决表：After each advisor review you run, reply with a response table — exact header `| # | Action | Detail |`,
   one row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
   `Action` is one of exactly three values: `Fixed` (you edited the code), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).

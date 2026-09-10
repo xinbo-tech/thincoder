@@ -280,7 +280,7 @@ check 删除（§7.5）——工具面六动作 → 五动作 → 2026-09-08 obs
 
 **全部 explore/plan（及审计）子代理零 git**：不注入 git 上下文、不承诺 git 命令、工具集无 git——子代理证据链只含"任务书 + 磁盘当前状态（read/glob/grep）+（审计时）`_touchedFiles` 机械并集"。
 
-顶层主 agent 的 git 上下文保留（§3——有完整 git 工具、实时收集、无断裂）。动机：git 是污染源（`git diff HEAD` 不见已提交修复、untracked 新文件不可见、`status` 是全工作区脏状态）——比没有 git 更危险。与 advisor 零 git（恒定六工具不含 git）同构——双物理防线（工具不存在 + 不注入）。
+顶层主 agent 的 git 上下文保留（§3——有完整 git 工具、实时收集、无断裂）。动机：git 是污染源（`git diff HEAD` 不见已提交修复、untracked 新文件不可见、`status` 是全工作区脏状态）——比没有 git 更危险。与 advisor 零 git 同构——双物理防线（工具不存在 + 不注入）；**口径收窄（第 4 批）**：「恒定六工具不含 git」只对代码评审成立——设计评审在批次档已绑定时额外挂 `batch_segment` 写通道（`ENGINEERING-MODE.md` §2.20.3），git 仍在零工具之列。
 
 **变更记录**：2026-09-04 用户两次裁定（偏差审计禁 git → 根本不该注入）——§7.4。
 

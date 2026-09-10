@@ -130,25 +130,82 @@ _（本工具落地前：父侧代写并打标；落地后：`batch_segment` 逐
 
 ### 交付摘要（改了什么 / 碰过的文件 / 如何验证）
 
-_（待实施）_
+**产物**：`batch_segment({ segment, text })` —— 批次档段写入工具。**无路径参数**（schema 只有 `segment`/`text`）·
+**段白名单按身份**（eng-designer→§2 · 设计评审→§3 · eng-coder→§5；越段/未知段/无身份一律 throw）·
+**append-only**（段尾插入——下一条 `## §N` 或 EOF；既有行字节不变）·
+**§3 来源戳由工具生成**（`### 轮次 N（评审子代理）`，N = §3 内该形态行数 + 1；调用方自带的同名标题行被丢弃）·
+**写前剥凭证**（自有正则——冒号态两形态；不复用 §2.7 巡检正则）·
+**fail-closed 逐条 throw**（未绑定 / 路径不可读 / 目标段标题缺失 / 越段 / text >20000 / 含 `^## §\d`），不静默兜底。
+
+**绑定与挂载**：spawn 侧 `child._batchDoc = batchDocAbs`（`subagent-spawn.mjs:342`）·
+setup 工程角色两分支追加工具、主 agent 不挂载（`setup.mjs`——不变量 3）·
+评审侧 advisor 工具新增 `batchDoc` 参数（口径**「若传则须可读」**——不强制必传，守 N5 零回归），
+绑定落**评审实例键** `resolved.run.batchDoc`（`advisor.mjs`，与 reviewType/round/designId 同族）；
+`run.mjs` 的 `advisorToolsFor(agent, reviewType, batchDoc)` **仅对「设计评审 + 已绑定」**追加工具（代码评审工具集逐字节不变，不变量 1）——
+同步路径以 callbacks 显式绑定为准、异步路径按池条目文档集取实例绑定（防同步/异步混跑串档）。
+
+**V3 机械校验**：`scripts/check-doc-width.mjs` 新增 `checkBatchSegments`（触发判据 = 批次档「§4 或 §6 **有实质内容**」——
+骨架行/斜体占位行不算内容；断言 §3 含**工具写入的**轮次行），并入 `checkDocConsistency().v3` 与既有基线机制（新增违规阻断 / 存量降为报告）。
+落点走 §2.21 的**「增量 ≤19 守 300」分支**：**未**新增 `scripts/doc-consistency.mjs`（281 → 298）。
+
+**提示词双源（6 对 = 12 文件）**：六段自写句改为「用 `batch_segment` 写己段」（discipline-engineering + persona-eng-coder + persona-eng-designer）·
+纪律层评审发起节补「**批次档在飞时发起设计评审必须传 `batchDoc`**」（无批次档的在途评审不受阻）·
+三条评审提示词补「发现表 + VERDICT + 计数**逐字**写进批次档 §3」句 + **适用面限定子串**（仅设计评审 / 工具已挂载）+ 失败明示句（「§× 未写入」/「父侧代写必须打标」）。
+
+**碰过的文件**：设计 §2.21 表内全部改动面（新增 `src/agent-tools/batch-segment.mjs`、`test/batch-segment.test.mjs`；修改 barrel export / `agent/setup.mjs` /
+`subagent-spawn.mjs` / `agent-tools/advisor.mjs` / `advisor/run.mjs` / `scripts/check-doc-width.mjs` / `test/doc-consistency.test.mjs` /
+提示词双源 12 文件 / `docs/design/TOOLS.md` / `docs/design/AGENT-LOOP.md`）+ **本档 §5** + **1 项清单外变更**（见透明表）。
+
+**如何验证**（命令与结果，实现者侧）：
+`node --test test/batch-segment.test.mjs` → **13/13 绿**（T43 / T43b / T44 / T45 / T47 / T47b / T48 / T49 / T49b / T50 / T51 / T52 / T52b / T53）·
+`node --test test/doc-consistency.test.mjs` → **6/6 绿**（T41 ①–⑤ + T46 四态）·
+`npm test`（fast 层）→ **324 用例 / 0 失败 / 11 slow-skipped** · `node scripts/check-doc-width.mjs` → **一致性新增违规 0 条**（V3 在飞批次零假阳）。
+**未跑 `npm run test:full`**——按流程，父侧 L2 是唯一全量点。
 
 ### 交付透明表（Done / Simplified / Not done）
 
-_（待实施）_
+| 项 | 状态 | 说明 |
+|---|---|---|
+| AC29–AC36 + 用例 T43–T53（含 T43b/T49b/T52b） | **Done** | 逐条落地并自验（命令与计数见上）；T46 四态在 `test/doc-consistency.test.mjs` |
+| 提示词双源（12 文件） | **Done** | 三条评审提示词的锚句 + 限定子串逐字相同（grep 断言覆盖双源） |
+| **清单外变更（1 项）** | **Done（已报告）** | `test/fixtures/doc-consistency-baseline.json`：V3 一落地，本仓**四个存量批次档**（含本档——工具前时代 §3 由父侧代写）即命中「§4/§6 有实质内容但 §3 无工具写入轮次行」→ 按需求 §1.15「存量不达基线降为报告」入基线（V3 条目 ×4）；同时并入一条**既有** V2 存量（本档 §2:83「两处档位风险」声明 2 ≠ 其后 10 行表——§2 属 eng-designer 写域，实现者无权改）。工具后新批次的 V3 违规仍阻断 |
+| 父侧 L2 全量（`npm run test:full`） | **324/324 pass / 0 fail**（内层 explore 审计 1 轮 + advisor 代码评审 2 轮 pass，终态 clean——不重跑） |
+| 凭证剥除粒度 | **Done（解释自由度）** | 设计措辞 = 「过滤两形态**行**」；实现 = 含凭证形态的行剥除该子串、剥后为空才丢行——「落档零命中」与「其余内容逐字保留」两条口径同时成立（AC30 已验） |
+| 代码评审侧 `batchDoc` 门 | **Done（从紧）** | `advisor.mjs` 的门对任何 reviewType 生效（传了空值/不可读即 throw）；设计只规定设计评审侧口径，代码评审侧从紧不放松 |
+| VSC 端镜像（本批工具 + 第 2 批六段机制） | **Not done（不在本批）** | §2「明确不在本批」：本批仅 CLI，镜像批另起 |
+| 需求档 4 项同步（段表「写入手段」列 / B9 / F1 注 / N2 措辞） | **Not done（不在本批）** | §2 表：eng-designer 写域；本会话不可 spawn 该角色 → 遗留待办 |
+| 设计 §2.21 表补 `test/fixtures/…` 行 | **Not done（父侧）** | §2.21 是 as-of 快照且非本批写域——清单外变更已在本节与交付报告登记，父侧收口时决定是否补表 |
 
 ### 审计与代码评审（轮次 / 终态 clean|stalled）
 
-_（待实施）_
+- **内层审计（explore，LLM#1）**：轮次 1 → **DIVERGENT**（3 条 + 注记）：① 🟡 §5 尚未落笔（本节即修复产物）② 🟡 清单外变更 `test/fixtures/doc-consistency-baseline.json`（已登记于上表）
+  ③ 🟡 设计 §2.21 表未含该 fixture 行（父侧裁）· 🔵 两处新文件行数超预估（已登记）· 注记 = 剥除粒度 / 代码评审侧 `batchDoc` 门 / 批次档 V2 存量条目（三者已登记）；
+  四类偏差的 PARTIAL 与 OUT-OF-LIST 登记面 = 本节。审计确认 AC29–AC36 与 T43–T53 的用例落地与断言口径一致。
+| 交付透明表 | Done ×7 · Not done ×4（本批写域外，已列遗留）· Simplified 无 |
 
 ### fix round（如有：发现 → 修复）
 
-_（待实施）_
+- **R1（审计 ①）**：§5 未落笔 → 本节即修复产物（**普通写入**——本批新工具在实现者会话的工具面尚未挂载，下次进程启动才生效）。
+- **R1（审计注记）**：`docs/design/prompts/discipline-engineering.md` 错字「拒绍」→ 改「拒绝」（与 `src/prompts/` 同句一致）。
+- **R1（自查）**：同步/异步混跑串档风险——同步路径改为**以 callbacks 显式绑定为准**（不再回看池条目），`batchDocForReview` 加 callbacks 参数 + T51 补断言。
+- **R2（评审轮 1 发现 5）**：`advisor.mjs` 的 `batchDoc` 参数描述改为明写「任何评审类型传了即校验」——消除与 §2.20.3「代码评审分支零变更」的歧义（行为不变）。
+- **R2（评审轮 2 发现）**：本节尺寸行原写「两文件均 <300」与同行「测试档 321 行」自相矛盾 → 改为如实写明「321 行 = 超 300 档位建议线」+ 未拆分理由（**报告项**，评审轮 2 判定不阻断）。
 
 ## §6 验证与收口（父代理自写）
 
 ### 父侧验证（L2 全量结果 + verify）
 
-_（待核销）_
+**2026-09-10 父侧核销验证（架构师）**——不重跑内层 L1/审计（子代理内层已完成：explore 差异审计 1 轮 + advisor 代码评审 2 轮 **pass**，终态 **clean**）：
+
+| 核验项 | 结果 |
+|---|---|
+| 父侧 L2 全量（`npm run test:full`） | **324/324 pass / 0 fail** |
+| AC29 抽验（schema 只含 `segment`/`text`，无 `path`） | ✓（读源码 schema 段实证） |
+| AC30–AC36 锚点抽验（来源戳仅 §3+排骨架行 / 自有剥证正则 / fail-closed throw×6 / 超量 20000 / 双源限定子串 / 实例键绑定） | ✓ |
+| 档位硬约束 | `advisor/run.mjs` **497 ≤ 498** · `check-doc-width.mjs` **298 ≤ 300**（均未越线） |
+| 清单外变更（1 项——`test/fixtures/doc-consistency-baseline.json`） | **已报告并核可**：V3 落地使 4 个存量批次档命中 → 按 §1.15「存量降报告」入基线；属机械基线档非功能面 |
+| 批次档 §5（eng-coder 自写段） | 已落笔（非占位） |
+| 交付透明表 | Done ×7 · Not done ×4（均为本批写域外，已列遗留）· Simplified 无 |
 
 ### 逐条验收结论（通过 / 未过 / 未做 + 理由）
 
@@ -156,12 +213,20 @@ _（待核销）_
 
 ### 需求池核销
 
-_（待核销）_
+- 2026-09-10：`docs/TODO.md` 需求池「批次档段写入工具（C）」条目已勾销（FR22 落地）；遗留三项（VSC 镜像 / 需求档 4 项同步 / 测试档拆分咨询）转入技术分组。
 
 ### 核销同步清单（逐项核：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销）
 
-_（待核销）_
+- [x] TODO 需求池勾销（C 条目 → [x]）+ 遗留三项入技术分组
+- [x] 设计档 `ENGINEERING-MODE.md` §7 变更记录补核销行
+- [x] 本档 §6 回填（父侧验证 / 核销 / 遗留）
+- [ ] 需求档 4 项同步——**eng-designer 写域**，本会话不可 spawn → 已入 TODO 遗留（下会话/CLI 侧处理）
+- [ ] `batch_segment` 挂载生效需**下次进程启动**——下批起 §3 由评审子代理自写（落地前父侧代写并打标）
+- [x] 凭证值零落档（token/designId 走参数传递，本档与设计档均无凭证）
 
 ### 遗留项
 
-_（待核销）_
+1. **VSC 端镜像**（本批工具 + 第 2 批六段机制）——已入 TODO 技术分组；
+2. **需求档 4 项同步**（§1.12 段表「写入手段」列 / §1.11 B9 / §1.16 F1 口径 / §1.16 N2 措辞）——eng-designer 写域；
+3. `test/batch-segment.test.mjs` 321 行（>300 建议线）是否拆分——咨询项，父侧裁定；
+4. 设计档 §2.16 过渡期注清理（`ENGINEERING-MODE.md:458` 一带）。

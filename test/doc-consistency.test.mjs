@@ -20,8 +20,8 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
-  checkDocConsistency, checkSectionRefs, checkCountLists, checkDocWidths,
-  loadBaseline, v1Key, v2Key, SCAN_DIRS, BASELINE_PATH,
+  checkDocConsistency, checkSectionRefs, checkCountLists, checkDocWidths, checkBatchSegments,
+  loadBaseline, v1Key, v2Key, v3Key, SCAN_DIRS, BASELINE_PATH,
 } from "../scripts/check-doc-width.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
@@ -43,20 +43,21 @@ function writeDoc(name, content) {
   writeFileSync(join(dir, name), content)
 }
 
-test("T41 ① 仓库扫描：V1/V2 违规全部在基线内（新增违规阻断）", () => {
-  const { v1, v2 } = checkDocConsistency(REPO)
+test("T41 ① 仓库扫描：V1/V2/V3 违规全部在基线内（新增违规阻断）", () => {
+  const { v1, v2, v3 } = checkDocConsistency(REPO)
   const baseline = loadBaseline(REPO)
   assert.ok(baseline.size > 0, "基线清单非空（首跑固化）")
   const fresh = [
     ...v1.map((r) => [v1Key(r), `V1 ${r.file} “${r.ref}”（${r.reason}）`]),
     ...v2.map((r) => [v2Key(r), `V2 ${r.file}:${r.line} “${r.decl}” 声明 ${r.declared} ≠ 枚举 ${r.found}（${r.form}）`]),
+    ...v3.map((r) => [v3Key(r), `V3 ${r.file} §3 缺工具写入的轮次行`]),
   ].filter(([k]) => !baseline.has(k))
   assert.deepStrictEqual(fresh.map(([, msg]) => msg), [], "新增违规（修掉或按存量入基线——§2.19 D3/D4）")
   // 存量报告面（不阻断——需求 §1.15「存量不达基线降为报告」）：失效基线条目只统计、不报错
-  const detected = new Set([...v1.map(v1Key), ...v2.map(v2Key)])
+  const detected = new Set([...v1.map(v1Key), ...v2.map(v2Key), ...v3.map(v3Key)])
   const stale = [...baseline].filter((k) => !detected.has(k))
   if (stale.length) console.log(`[doc-consistency] 基线条目已失效（已被修掉/文档位移）${stale.length} 条——报告不阻断`)
-  assert.ok(Array.isArray(v1) && Array.isArray(v2), "扫描产出两列表（V1/V2）")
+  assert.ok(Array.isArray(v1) && Array.isArray(v2) && Array.isArray(v3), "扫描产出三列表（V1/V2/V3）")
 })
 
 test("T41 ② 反证（夹具域）：V1 失效引用被检出 / 合规引用不误报", () => {
@@ -167,9 +168,28 @@ test("T41 ④ 反证（仓库域）：注入一条计数不符探针 → 判为�
 test("T41 ⑤ 基线文件与扫描域口径（AC28 判据源）", () => {
   const raw = JSON.parse(readFileSync(join(REPO, BASELINE_PATH), "utf8"))
   assert.ok(Array.isArray(raw.entries) && raw.entries.length > 0, "基线 entries 数组非空")
-  assert.ok(raw.entries.every((e) => /^(V1|V2)\|/.test(e)), "条目标记形态 V1|/V2|")
+  assert.ok(raw.entries.every((e) => /^(V1|V2|V3)\|/.test(e)), "条目标记形态 V1|/V2|/V3|")
   assert.deepStrictEqual(SCAN_DIRS, ["docs/design", "docs/requirements", "docs/batches"], "扫描域（排除 _archive/）")
   // 扫描域宽度面：V1/V2 域内 _archive/ 不受约束（collectMarkdown 跳过）
   const widths = checkDocWidths(REPO, { dir: SCAN_DIRS[0] })
   assert.ok(Array.isArray(widths), "宽度检查可跑（扫描域口径同源）")
+})
+
+test("T46 边界：V3 批次档 §3 工具轮次行三态零假阳（AC32——在飞不报/批准必报/有戳不报/骨架行不算）", () => {
+  const dir = join(tmp, "docs", "batches")
+  mkdirSync(dir, { recursive: true })
+  const PLACE = "_（待实施）_"
+  const doc = (name, sec3, sec4, sec6) => writeFileSync(join(dir, name), [
+    "# 批次", "", "## §1 讨论（主 agent）", "", "内容", "",
+    "## §3 设计评审（评审子代理自写）", "", "### 轮次与发现（发现摘要 / 🔴 处置）", "", sec3, "",
+    "## §4 用户批准（主 agent 记）", "", "### 批准（日期 + 批准范围）", "", sec4, "",
+    "## §6 验证与收口（父代理自写）", "", "### 父侧验证（L2 全量结果 + verify）", "", sec6, "",
+  ].join("\n"))
+  doc("inflight.md", PLACE, PLACE, PLACE) // ① 在飞：§4/§6 仅骨架/占位行 → 不报（零假阳）
+  doc("approved.md", PLACE, "**2026-09-10 · 用户批准（原话：「批准」）**", PLACE) // ② 已批准、§3 无工具轮次行 → 必报
+  doc("stamped.md", "### 轮次 1（评审子代理）\n\n| a | b |\n|---|---|\n| 1 | 2 |", PLACE, "**已核销**") // ③ 含工具写入轮次行 → 不报
+  doc("skeleton.md", "", "**2026-09-10 · 用户批准**", PLACE) // ④ §3 只有骨架行 `### 轮次与发现（…）` → 报（骨架行不算）
+  const got = checkBatchSegments(tmp).map((r) => r.file.replace(/\\/g, "/"))
+  assert.deepStrictEqual(got, ["docs/batches/approved.md", "docs/batches/skeleton.md"],
+    "四态：只报 ②④——在飞不报（判据不引用 §1 状态词）、骨架行既不算内容也不算来源戳")
 })

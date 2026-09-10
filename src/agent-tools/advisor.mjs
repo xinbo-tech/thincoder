@@ -7,6 +7,7 @@
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
 import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage } from "../advisor/run.mjs"
+import { resolveBatchDocPath } from "./batch-segment.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 import {
   generateDesignToken,
@@ -75,6 +76,10 @@ export const advisorTool = {
         items: { type: "string" },
         description: "Explicit list of doc paths to review (design docs, requirements docs, referenced docs). The advisor reviews ONLY these — it does NOT scan git diff. Use for both design review and code review to pass the task's Docs involved list.",
       },
+      batchDoc: {
+        type: "string",
+        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the batch_segment write channel to record its findings table + VERDICT + counts into §3 (ENGINEERING-MODE.md §2.20). Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
+      },
     },
   },
   readonly: true,
@@ -134,6 +139,13 @@ export const advisorTool = {
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
+    // §2.20.2 评审侧批次档门禁 + 实例键绑定（batch_segment 的唯一路径来源）：
+    // 口径 = **「若传则须可读」**（空/不可读 → throw；不强制必传——无批次档的在途设计评审
+    // 零回归，N5）；绑定落在 resolved.run（评审实例键，与 reviewType/round/designId 同族）——
+    // 并发设计评审各绑各档，不用单值会话态（§2.20.8 #6）。
+    if (args.batchDoc !== undefined && args.batchDoc !== null) {
+      resolved.run.batchDoc = resolveBatchDocPath(agent.cwd, args.batchDoc)
+    }
     // Design token minted for EVERY design round — the reviewer echoes it only on
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance
@@ -188,6 +200,8 @@ export const advisorTool = {
     const result = await runAdvisorReview(agent, reviewType, {
       onOutput: ctx.onOutput,
       signal: ctx.signal,
+      // 同步路径的实例绑定传递（异步路径由池条目 run.batchDoc 取——run.mjs 自行解析）。
+      batchDoc: resolved.run.batchDoc ?? null,
     }, designToken, documents, paths, reviewObject, designId)
 
     if (reviewType === "design") {

@@ -28,7 +28,7 @@
   - git 2：git / question
   - 其余：checklist / lint / lsp / execute / tree / ops 4（file_ops / process / get_current_time / wait_for）
   - （read_pdf 已移除——R21；sleep 已删——见 wait_for）
-- **元工具**（agent-tools.mjs）：task / plan / goal / verify / subagent / skill / recent_changes / advisor / eng / timer / read_history / consult_start / consult_stop——readonly 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）。read_history 语义权威 = SESSION.md §9/§13。
+- **元工具**（agent-tools.mjs）：task / plan / goal / verify / batch_segment / subagent / skill / recent_changes / advisor / eng / timer / read_history / consult_start / consult_stop——readonly 自管纪律工具；子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）。read_history 语义权威 = SESSION.md §9/§13。
 - **schema 生成**：`toOpenAISchema(tool)`——name/description/parameters 转 OpenAI function 格式。description 来源：CLI 用 `tools/*.md`（`DESC()` 机制，md 文件即描述源）；VS Code 用 `.mjs` 内嵌描述。md/内嵌描述给模型完整使用手册（含参数说明、路由、反模式），非一行字符串。
 
 ## 3. 上下文与生命周期
@@ -99,6 +99,7 @@
 - **read_image**：视觉模型读图；非视觉模型拒绝/占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
 - **websearch/fetch**：网络边界见 §4；fetch 失败错误含 proxy 提示。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
+- **batch_segment**：批次档段写入（**无路径参数**——目标档 = spawn 绑定 `child._batchDoc` / 设计评审实例键 `resolved.run.batchDoc`；身份定可写段：eng-designer→§2 · 设计评审→§3 · eng-coder→§5）；append-only；写前剥凭证（自有正则）；工具盖 `### 轮次 N（评审子代理）` 戳（**仅 §3**，调用方同名标题被丢弃）；fail-closed 逐条 throw。权威 = `ENGINEERING-MODE.md` §2.20（挂载面 §2.20.3）。
 
 ## 8. MCP
 

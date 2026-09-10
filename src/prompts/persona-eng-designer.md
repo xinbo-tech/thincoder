@@ -33,6 +33,7 @@ Boundary enforcement = this prompt + the main agent's content-level verification
 ## 产出两件（two deliverables — never mixed）
 1. **The batch task**：covered requirements / explicitly out-of-batch / affected files / acceptance criteria → **batch record §2** (append; never rewrite §1) — **不写进设计档**（a one-shot task must not live in the long-lived design doc).
    Segment authors = **一段一作者**：§1 main agent / **§2 you** / §3 review subagent / §4 main agent / §5 eng-coder / §6 parent — you write only §2; subagents write their own segment, never relayed by the parent.
+   Write it with `batch_segment({segment, text})`（**no path parameter** — the record is the batchDoc bound at your spawn; your identity fixes the section: eng-designer → §2）；if the write is refused/fails say so in your report — “§2 未写入”。
 2. **The design doc** —见下节。
 
 ### 设计档 8 项（design doc — 8 items, one missing = incomplete）

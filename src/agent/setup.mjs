@@ -169,7 +169,7 @@ export async function prepareRun(agent, input, callbacks, {
 
   // task/plan tools are injected with the main loop; subagent/skill/goal/verify only at top level
   // eng-coder subagents get advisor for mandatory design review before coding
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, batchSegmentTool } = await import("../agent-tools.mjs")
   const { consultStartTool, consultStopTool } = await import("../agent-tools/consult.mjs")
   // withPool: decorate the consult_start description with the CURRENT candidate pool
   // so the model knows which models it can pick (CLI parity with the plugin). The
@@ -283,8 +283,10 @@ export async function prepareRun(agent, input, callbacks, {
     // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).
     // eng-designer (§2.15 D): the survey-only subagent channel alone — no advisor
     // (it does not fire reviews) and no verify (its deliverable is documents, not code).
-    : engChildRole === "eng-coder" ? [advisorTool, verifyTool, ...(engChildSubagent ? [engChildSubagent] : [])]
-    : engChildRole === "eng-designer" ? [...(engChildSubagent ? [engChildSubagent] : [])]
+    // §2.20.3（第 4 批）：两分支各追加 batch_segment——目标档 = spawn 时绑定的
+    // `agent._batchDoc`（§2.20.2）；主 agent 不挂载（§1/§4/§6 走普通文档写）。
+    : engChildRole === "eng-coder" ? [advisorTool, verifyTool, batchSegmentTool(agent._batchDoc ?? null), ...(engChildSubagent ? [engChildSubagent] : [])]
+    : engChildRole === "eng-designer" ? [batchSegmentTool(agent._batchDoc ?? null), ...(engChildSubagent ? [engChildSubagent] : [])]
     : agent._role === "coder" ? [verifyTool, advisorTool]
     : agent._role === "consult" ? [recentChangesTool]
     : []
