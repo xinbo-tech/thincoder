@@ -1,6 +1,6 @@
 # 结构债评估与清理路线图（STRUCTURE-DEBT）
 
-> 板块：结构债（横切——跨多板块的架构/文档/状态债评估与清理）。权威源指向：`docs/design/README.md` 地图登记 + 本文档（路线图）。
+> 板块：结构债（横切——跨多板块的架构/文档/状态债评估与清理）。权威源指向：`docs/README.md` 地图登记 + 本文档（路线图）。
 > 状态：**评估 2026-09-07 fresh scan 完成**；清理按分批推进（每批独立走设计→评审→eng-coder）。
 > 范围：thincoder（CLI）+ thincoder-vscode（VSC）双树。不属单一功能板块，独立成档。
 
@@ -61,7 +61,7 @@
 
 **现象**：设计文档 markdown 结构性损坏——整节/表/规则压成单行，标题被吞进正文。
 - `AGENT-LOOP.md` 537.8KB（全树最大，比多数源码大 10×）——数百超长单行挤节
-- `docs/design/README.md` L1/2/39/43（CLI）+ L1 整文件（VSC）——地图自身违反自己定的格式纪律
+- ~~地图档（`docs/design/` 的 README）L1/2/39/43（CLI）+ L1 整文件（VSC）——地图自身违反自己定的格式纪律~~ **已消解（2026-09-10 文档重组批）**：CLI 侧地图已无 >300 字符行（DOC-REWRITE 批已重排），且地图职能上移 `docs/README.md`——债对象不存在
 - `docs/TODO.md` 单行巨型条目
 - VSC `ARCHITECTURE/RELEASE/ESCALATE/PHILOSOPHY/COMPETITIVE_ANALYSIS/CONSULTATION/SETTINGS/REQUIREMENTS/TURN-CAP-CONTINUE/TODO` 多文档 L1 整文件压一行
 - CLI `ADVISOR-CONVERGENCE/ACP-CLIENT` 等标题被吞进 prose/表格

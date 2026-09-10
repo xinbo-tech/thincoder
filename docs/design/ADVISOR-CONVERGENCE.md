@@ -18,7 +18,7 @@
 > - **async 评审路径 = AGENT-LOOP §11.2**（async advisor——R13——`_advisorRuns` per-review 实例解析/后台池/settle 记账）——async 面上本文档的轮次/cap 语义以 §11.2 的实例机制落地（R13 = 2026-09-06 用户需求"主代理跑 advisor 不阻塞前端"，已实现）。
 > - **判定铁律 R1-R7 = AGENT-LOOP §12.2**（注入全部 4 份提示词尾部的 "Judgment Rules" 块）——与本文件**正交**：本文件管轮次衰减/收敛上限（轮次行为），铁律管严重级怎么定（判定内容）——铁律不改变轮换行为（Round 2/3 的新问题权限不变）。冲突时以本文件轮次表为准。
 > - **工程模式 = ENGINEERING-MODE.md**（token/门禁/guard 开关/信任模型）——本文件只保留收敛相关与指针。
-> - 设计文档档位纪律（>300/>500 拆分判据）= METHODOLOGY.md「代码结构分层」；行数标注义务 = METHODOLOGY F-R24a；评审核查维度行为 = 本文档 §9（METHODOLOGY F-R24b 只放挂钩指针——单向权威）。
+> - 设计文档档位纪律（>300/>500 拆分判据）= 纪律层 `src/prompts/discipline-normal.md`（代码结构判据节）；行数标注义务 = 纪律层 `src/prompts/discipline-engineering.md`「文档规范」节；评审核查维度行为 = 本文档 §9（原 METHODOLOGY.md 已退役入 `_archive/`——权威链改指纪律层）。
 
 ## 1. 目标
 
@@ -193,7 +193,7 @@ if (!pending // async 评审在飞/排队 → 未决不算未评审 → 不推�
 
 ## 9. 受影响文件行数标注核查（设计评审维度——F-R24b 权威载体）
 
-> 权威链（指环单向化）：设计文档的行数标注**义务**与档位判据 = METHODOLOGY.md（代码结构分层章 / F-R24a 挂钩）；advisor design review 的**核查维度行为语义** = 本节（METHODOLOGY F-R24b 只放挂钩指针）；执行实现 = `advisor-design.md` Review Criteria 第 8 维 "Affected-file size annotations"。
+> 权威链（指环单向化）：行数标注**义务**与档位判据 = 纪律层（`discipline-engineering.md`「文档规范」节 +<br>`discipline-normal.md` 代码结构判据节；原 METHODOLOGY.md 已退役）；核查维度行为语义 = 本节；<br>执行实现 = `advisor-design.md` 第 8 维。
 
 advisor design review 标准维度补一条（2026-09-07 · R24——与 §8 需求契合度同构的维度补条）：
 

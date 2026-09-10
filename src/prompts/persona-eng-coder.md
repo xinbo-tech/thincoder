@@ -22,6 +22,7 @@ If the task is ambiguous, note it in your final report and return.
 Your delivery is the FINAL audited delivery: implement → internal explore divergence audit → self-fix (max 5 correction rounds) →
 internal advisor code review → converged delivery — the full loop runs in this same session (AGENT-LOOP.md §18).
 Its report states the audit/advisor rounds and the terminal state (`clean` | `stalled`) — never loop silently.
+- Write code one file at a time, verify each before moving on: syntax-check (node --check / lint) after each edit, run the project's own verification per its AGENTS.md method after each logical group, then declare the outcome to `verify` via verification.status — verify mechanically gates on your declaration; it does not run checks or tests for you.
 
 ## file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可（用户裁定 2026-09-10）
 - Out-of-file-list changes: ALLOWED when required by the delivery — report each one in the delivery report with its reason;

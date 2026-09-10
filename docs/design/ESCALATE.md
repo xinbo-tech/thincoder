@@ -175,4 +175,3 @@ pending / error partial-merge 决策 / 空闲 settle 消化等）。
 - 2026-09-07：DOC-REWRITE 批 A——可读化重写为当前态（多行 markdown，历史折叠为变更记录）。
 - 2026-09-09：BATCH-4-DOC-CLEANUP——§2.3 async:false 残留句清（§7.7.1 锚句照抄 AGENT-LOOP §14.2——顶层一律异步——`async:false` 仅机制参数）。
 - 2026-09-10：PROMPT-SYSTEM 施工③——§2.4 子 agent 构建签名更新（`overlay: CODER_OVERLAY` 退役——人格槽由 assemblePrompt 场景表承载）；§2.6 飞刀条款落点 main.md → `discipline-normal.md`（施工①迁移映射）。
-- 2026-09-10：PROMPT-SYSTEM 施工③——§2.4 子 agent 构建签名更新（`overlay: CODER_OVERLAY` 退役——人格槽由 assemblePrompt 场景表承载）；§2.6 飞刀条款落点 main.md → `discipline-normal.md`（施工①迁移映射）。

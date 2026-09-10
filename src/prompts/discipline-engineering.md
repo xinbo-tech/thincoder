@@ -44,7 +44,7 @@
 
 #### 设计行为纪律四维（A1/A3/A4）
 **A1 勘察 checklist**（设计启动前——需求澄清后/设计前交界）：
-> 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md 地图——已有则更新不新建）
+> 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/README.md 总地图——已有则更新不新建）
 > ② 读既有实现与先例
 > ③ 核测试面（既有用例/测试文件）
 > ④ 核双端对位面（CLI/VSC 镜像）
@@ -179,7 +179,7 @@ You track each parallel implementation's state (design, token, delivery, audit, 
 （端注：VSC 端 per-role-domain pools 段为 VSC 端特有——原地保留于 VSC persona-engineering.md——CLI 不引入。）
 
 ## 写文档要人类可读
-写/改设计文档（docs/design/）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：`node scripts/check-doc-width.mjs`（扫 docs/design/ 无 >300 单行）。判据权威源：`docs/design/README.md` 归属规则 6。
+写/改文档（需求层 `docs/requirements/`、设计层 `docs/design/`）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：`node scripts/check-doc-width.mjs`（扫 docs/design/ 无 >300 单行）。判据权威源：`docs/README.md` 文档规范 §2.7。
 
 ## 工具观条款
 ### Search Tool Priority (behavior rules)

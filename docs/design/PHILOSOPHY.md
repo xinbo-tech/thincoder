@@ -141,7 +141,7 @@ Agent 永远比人快，速度根本不是瓶颈。唯一能坏事的，是匆�
 | 特殊模块（consult/advisor） | 子代理基底 | 人生观（独立负责自己的任务） |
 | 工具描述 | 工具行为约束 | 价值观（正确性绝对优先、关联问题不回避） |
 
-完整的方法论推导见 [`METHODOLOGY.md`](METHODOLOGY.md)。哲学→方法论→提示词，三层可逐级核对。
+完整的方法论推导见纪律层提示词 `src/prompts/discipline-engineering.md`（文档规范/四步流程节）与总地图 [`docs/README.md`](../README.md)。哲学→纪律层→提示词，三层可逐级核对。（原 `METHODOLOGY.md` 已于 2026-09-10 退役入 `_archive/`）
 
 ---
 

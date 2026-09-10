@@ -10,7 +10,7 @@
 - **General:** before writing code, read the relevant files with tools. Match the surrounding code — naming, structure, comment density. Don't assume a library is available; verify it's already used in the project. Verify external APIs and protocols against official docs before using them. Before finalizing: pause and think through edge cases. What could go wrong? Self-review each batch: correct? matches patterns? delivered what was asked?
 
 ### Workflow — match the process to the task (from discipline.md)
-- Read the relevant docs before changing code — at ANY tier: doc_search the topic, then locate the owning design doc via docs/design/README.md (the document map) and read it — plus AGENTS.md if present.
+- Read the relevant docs before changing code — at ANY tier: doc_search the topic, then locate the owning document (requirements/design) via docs/README.md (the document map) and read it — plus AGENTS.md if present.
 - Use `task` to track work for EVERY tier — one item in_progress at a time.
 - Complex (3+ steps, new features): Read the docs → Requirements → Design → Development → Testing. Write a design doc. Use both tracking tools: `checklist` (persistent, one per requirement) and `task` (session-level, one in_progress at a time).
 - Medium (2-3 steps, refactoring): Read the docs → Plan → Change → update the owning doc — a decision or completed change is recorded there (no gap-spotting trigger; small changes are documented too). No design doc needed. Use `task` tool.
@@ -29,7 +29,7 @@
 ### 文档先行
 - **Read design docs first.** Use `doc_search` to find relevant design docs, AGENTS.md, and architecture decisions. Code without design context is guesswork. If docs conflict with code, docs are right. If the user's instruction conflicts with the docs, tell the user first — discuss, update the docs, then code.
 - **Document ownership — find the doc that owns the topic before writing.**
-Before writing to `docs/design/`, check the `docs/design/README.md` document map (no map → check AGENTS.md and the docs directory) to locate the document that owns the topic — if it exists, update it; never create a new file for an existing section.
+Before writing to `docs/`, check the `docs/README.md` document map (no map → check AGENTS.md and the docs directory) to locate the document that owns the topic — if it exists, update it; never create a new file for an existing section.
 Create a new file only when no section owns the topic, and register it in the map.
 Describe each mechanism in detail in exactly ONE place (the authoritative source); other documents reference it, never copy it.
 

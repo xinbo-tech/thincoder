@@ -1,7 +1,7 @@
 # 工具输出长度限制调整 — 需求（CLI）
 
 > 板块：工具输出的超长**落盘阈值与显示层**（已实现专题，**当前生效**——本对文档是该机制的现行权威源；`TOOLS.md` 未复制此内容）。
-> 关联：`TOOL-OUTPUT-LIMITS-TUNING.md`（设计）、`README.md`（文档地图）。
+> 关联：`TOOL-OUTPUT-LIMITS-TUNING.md`（设计）、`docs/README.md`（总地图）。
 > 状态：**已实现**（2026-08-24 首版 + 2026-09-04 预览保头保尾修订；npm 0.12.43 / VS Code 0.1.49）。
 > 跨端：VS Code 扩展有同语义独立文档且**有独立 offload 实现**（`run-helpers.mjs`，已同改）；阈值/preview/advisor 截断两端各仓库实现——**须两端同步（lockstep）**（评审 #1）。
 > 关联 TODO：read 读回 offload 文件防炸（C 方案）**2026-09-09 已实现**（DUAL-END-TRUNCATION——FR6——待父侧勾销 `docs/TODO.md` 条目）。

@@ -1,7 +1,7 @@
 # Agent 运行参数调整 — 需求（CLI）
 
 > 状态：**已实现**（2026-08-24 评审修订后实施；npm 0.12.43 / vscode 0.1.49 发布）。
-> 关联：`AGENT-PARAMS-TUNING.md`（设计）、`AGENT-LOOP.md`、`TURN-CAP-CONTINUE.md`、`docs/design/README.md`（文档地图）。
+> 关联：`AGENT-PARAMS-TUNING.md`（设计）、`AGENT-LOOP.md`、`TURN-CAP-CONTINUE.md`、`docs/README.md`（总地图）。
 > 范围：本仓库（thincoder CLI）；VS Code 扩展（thincoder-vscode）有同需求独立文档，两端语义一致。
 > 现码核对（2026-09-07）：`src/advisor/run.mjs` `REVIEW_TIMEOUT_MS = 600_000` + 配置覆盖读取在位；`src/config.mjs` DEFAULTS `maxTurns: 200`、`src/agent/helpers.mjs` `DEFAULT_MAX_TURNS = 200`——本文档描述与实现一致。
 

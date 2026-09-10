@@ -90,7 +90,7 @@
 | src/agent-tools/subagent-scheduler.mjs | VSC | 459（>300 审视——键表评估） | ≤+1 | 键表 + §24 注释 |
 | src/prompts/engineering.md | VSC | 88（.md 豁免——列结构变更） | ≤+2 | 去数字化活引用 |
 | docs/design/AGENT-LOOP.md + ENGINEERING-MODE.md + ARCHITECTURE.md | 双端 | doc 豁免 | doc | 同步 |
-| docs/design/README.md | CLI | doc 豁免 | doc | 登记（核销时） |
+| docs/README.md | CLI | doc 豁免 | doc | 登记（核销时） |
 | docs/TODO.md L91 | CLI | doc 豁免 | doc | 需求勾销（核销时）|
 | test/（评审 #3 点名：CLI test/config-pool.test.mjs（耦合锁/读取器/容量拒/scope 守卫/子菜单读写——
   若 TUI 基建无则子菜单走人工清单）+ test/advisor-description.test.mjs（活引用）；VSC

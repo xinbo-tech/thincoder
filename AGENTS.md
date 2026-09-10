@@ -7,11 +7,11 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 
 ## Requirements & Design Docs (the doc map)
 
-**需求基线**：`docs/design/REQUIREMENTS.md`（讨论中，随对话更新，定型后拆分为正式需求/设计文档）+ 具体设计文档 + 用户对话。**本项目没有独立于设计文档的需求文件**——评审/开发时以 REQUIREMENTS.md + 相关设计文档 + 对话背景三者为参照。
+**需求基线**：需求层 `docs/requirements/`（主 agent·产品经理产物）+ 设计层 `docs/design/`（eng-designer 产物）+ 用户对话。需求与设计**分目录**（2026-09-10 文档重组批——规范见 `docs/README.md`）——存量需求内容仍在各设计档内，拆分按**新老划断**（碰到哪迁哪）；评审/开发时以两层文档 + 对话背景为参照。
 
-设计文档在 `docs/design/`。主流程：[`PHILOSOPHY.md`](docs/design/PHILOSOPHY.md)（三观）→ prompts（`src/prompts/` 人格/公共/纪律三层提示词——项目方法论骨干已入纪律层槽位文件，无独立 METHODOLOGY 注入体）。其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
+文档分两层：需求 `docs/requirements/`、设计+测试 `docs/design/`（规范与地图见 `docs/README.md`）。主流程：[`PHILOSOPHY.md`](docs/design/PHILOSOPHY.md)（三观）→ prompts（`src/prompts/` 人格/公共/纪律三层提示词——项目方法论骨干已入纪律层槽位文件，无独立 METHODOLOGY 注入体）。其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
 
-**逐档权威地图 = [`docs/design/README.md`](docs/design/README.md)**（板块 → 文档映射 + 归档标注 + 归属规则）——AGENTS.md 不逐档裸列（2026-09-08 结构债批 5：曾 28 档裸名清单与 README 地图重复 = 双源漂移——8 档归档后悬空随删消解）——写/改设计文档前先查地图。
+**逐档权威地图 = [`docs/README.md`](docs/README.md)**（板块 → 文档映射 + 归档标注 + 归属规则）——AGENTS.md 不逐档裸列（2026-09-08 结构债批 5：曾 28 档裸名清单与 README 地图重复 = 双源漂移——8 档归档后悬空随删消解）——写/改文档前先查地图。
 
 ## Hard Constraints
 

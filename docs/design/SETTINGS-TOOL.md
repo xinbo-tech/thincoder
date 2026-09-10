@@ -3,7 +3,7 @@
 > 板块：工具系统（TOOLS.md 同板块独立保留——MCP.md 先例）。
 > 状态：**已实现**（2026-09-05——CLI settings.test 11/11 + VS Code 镜像 6/6 全绿——CLI dispatch 回归绿——热应用/遮罩/门禁/类型校验 T-S1.1-11 全勾销）。
 > 权威源：CLI `src/agent-tools/settings.mjs`、`src/config.mjs`（DEFAULTS / writeConfigAtomic / configPath）。
-> 关联：`docs/design/README.md`（地图）、`docs/design/TOOLS.md`（工具系统权威——§1 注册表/§3 门禁）、`docs/design/AGENT-PARAMS-*.md`（Agent 运行参数专题——本工具是其 agent 化调整面）。
+> 关联：`docs/README.md`（总地图）、`docs/design/TOOLS.md`（工具系统权威——§1 注册表/§3 门禁）、`docs/design/AGENT-PARAMS-*.md`（Agent 运行参数专题——本工具是其 agent 化调整面）。
 
 ## 变更记录
 
@@ -129,6 +129,6 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 | CLI | dispatch 只读动作分类 | MODIFY（list/get 放行——memory 同款处） |
 | CLI | `test/settings.test.mjs` | NEW |
 | CLI | `docs/design/TOOLS.md` | MODIFY |
-| CLI | `docs/design/README.md` | MODIFY（地图登记——TOOLS.md 板块独立保留） |
+| CLI | `docs/README.md` | MODIFY（地图登记——TOOLS.md 板块独立保留） |
 | CLI | `CHANGELOG.md` | MODIFY（[Unreleased]） |
 | VS Code | agent-tools 镜像 + 注册 + 门禁 + 测试 + 文档 | 同批 |
