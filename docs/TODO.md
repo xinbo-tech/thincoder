@@ -73,6 +73,9 @@
 
 ## 需求池 / 在途实现（状态随批推进更新）
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
+
+- [ ] **工程模式角色重定义**（2026-09-10 用户裁定——需求已收口，**待设计**）——主agent=产品经理（需求文档+全流程编排/确认/核验）/ eng-designer=设计（从需求到设计，唯一写稿人，自己做勘察，无 designToken）/ eng-coder=实现；核心定位「设计 = 对需求的检验」（需求不过 advisor 评审）。归属档：`docs/design/PROMPT-SYSTEM.md` §8（9 条裁定）。
+
 > 2026-09-08 批实况（17:07 终态）：**批 1/批 2/批 3** 全交付核销（L2 双端 112/105 全绿——批 3 文档
 > 指针同步：CHECKPOINT/STRUCTURE-DEBT system.mjs 改指 bash.mjs/search.mjs——父侧收尾）；**env-state
 > 扩展**（SESSION §11.2）已交付核销（bba68df/0bf02b0 + VSC 7e7d90a/ec1e4c4——slot+resumed 按会话
@@ -183,6 +186,36 @@
 - [x] ~~**activity.js 579 行拆分（2026-09-09 B1 修正交付后——超 500 惯例——advisor 🔵）**~~——**2026-09-09 勾销（评估核实：活动区机制已拆——activity.js 287 + activity-freeze.js 94 + activity-view.js 242 同族并存——单体 579 已拆散——登记过时）**
 
 - [x] ~~**VSC 会话恢复呈现对齐**~~——**2026-09-09 核销**（SESSION-RESTORE-PARITY——0231627——L2 179/179——consume 592ea112——见需求池勾销行）
+- [ ] **models[] 候选白名单越权否决模型可用性（2026-09-10 用户裁定——MODEL_SPECS 职能被扩散）**：
+  实证起点：`/model` 切 `qwen3.8-max-0902` 被拒（报"不在 qwen 的候选 models[] 中——加入候选需显式落
+  config"）。但同一模型名 `specForModel('qwen3.8-max-0902')` 实测**已前缀命中 `qwen3.8-max` 精确
+  spec**（1M ctx / 131K out / thinking / partialMode / multimodal / effort[xhigh,medium,low] 全套
+  拿到，非 DEFAULT 兜底）——适配成功，拒绝与适配无关。
+  用户定调（职能边界原则）：MODEL_SPECS 的职能 = **模型精确适配**——适配过的用满模型特性，
+  **没适配的用默认参数（DEFAULT_SPEC 兜底 + warn 一次），而不是拒绝使用**；前缀匹配规则下
+  `qwen3.8-max` 本应覆盖 `qwen3.8-max-0902`（现状码已如此）。能力层已把所有情况处理完。
+  缺陷定性：拒绝来自 `providers[].models[]` 的 `includes()` 纯字符串比对——它对"这个模型能不能被
+  使用"握有**否决权**，而这不是它的职能（职能被任意扩散）。
+  **明确排除的方向（用户原话"不是放宽 F-1"）**：F-1"候选外拒"这一提法本身就把越权否决当合法约束在
+  讨论——正确修法是**取消 models[] 对可用性的否决权**；既不是给白名单开后门，也不是往 models[]
+  补登记一行（补登记 = 迁就该拆的错结构）。
+  否决权现存落点（三处闸门 + 一份固化契约测试）：
+  ① `model-picker.mjs:238` selectModel 切换路径硬 throw
+  ② `model-picker.mjs:120` fetch 建议行点击即报错（API 已证明渠道有该模型，仍拒）
+  ③ `model-ref.mjs:40` parseModelRef——**最重**：config.defaultModel 写了不在 models[] 的模型 →
+    整个 provider 被标 invalid（`config-merge.test.mjs:131` 即在断言该 reason 串）——一个未登记
+    字符串废掉一个渠道
+  ④ `test/model-ref.test.mjs:128`「F-1 候选外拒」把上述契约固化为测试（改动须同步此契约）
+  附带隐患（同族知悉，非本需求主体）：前缀匹配为无条件继承——有差异的快照（0902 若与主线参数有差）
+  静默蹭到错 spec 且仍显示 1M 无提示；另 `qwen3.8-flash` 无精确条目，命中泛前缀 `qwen`
+  （thinking:false / effort:null）——若其实际支持思考，`/think` 与压缩阈值均在按错表走。
+  owning board = Provider（`PROVIDER.md` §9 规格表 / §11 模型支持与预设）+ 模型选择面
+  （`MODEL-MERGE-SESSION.md` F-1/F-7 裁定须随本需求改写）。
+  待澄清（设计启动前需用户裁）：① 取消否决后 models[] 保留何种职能（仅作 `/model` 便捷列表 +
+  models[0] 作显示种子与恢复兜底 firstCandidate？还是字段整体废弃）② 显式 `provider:model` 任意串
+  是否直接放行 ③ 切到未精确适配的模型时，是否在 `/model` 明确回显"按 DEFAULT_SPEC 128K 跑"
+  （现 warn 仅 stdout 打一次，TUI 下基本不可见——放开后错 spec 更难发现）。
+  ——status=登记待设计——设计权在用户，评审发起权在用户
 
 ## 其他在途/待核销（勾销即移出本节）
 - [x] ~~**VS 端面板两缺陷**~~（webview 冻结门丢失 + 扩展端 id 计数器跨 resume）——**2026-09-08 核查已修**：§27.1 F3（冻结块迟到 chunk 三层防护 streaming.js:241 + ui.js:42 + activity.js）+ F4（nextSubagentId 计数器载体改 parent.history ?? parent，跨 resume 续号单调）——2026-09-07 修复批——原待办作废
