@@ -66,7 +66,7 @@ export function parseRelayPath(text) {
 export const SUB_RELAY_THROTTLE_MS = 250
 /** Roles a subagent tool child can take（⏹ 门控/渲染角色判据；F-2 后角色匹配完成面 =
  *  finishSubTasksByRole——finishSubTask 已收窄 no-op）。 */
-export const SUBAGENT_ROLES = ["sub", "explore", "plan", "coder", "eng-coder"]
+export const SUBAGENT_ROLES = ["sub", "explore", "plan", "coder", "eng-coder", "eng-designer"]
 
 let _subRenderLast = 0
 let _subRenderTimer = null

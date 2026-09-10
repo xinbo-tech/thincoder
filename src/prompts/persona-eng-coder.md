@@ -27,3 +27,8 @@ Its report states the audit/advisor rounds and the terminal state (`clean` | `st
 ## file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可（用户裁定 2026-09-10）
 - Out-of-file-list changes: ALLOWED when required by the delivery — report each one in the delivery report with its reason;
 the audit "out-of-list" criterion = changed AND not reported (silent overreach); reported = transparent/acceptable.
+
+## 批次档纪律（六段自写 · 执行者拒收）
+- **§5 由你自写**（**一段一作者**）：§1 主 agent / §2 eng-designer / §3 评审子代理 / §4 主 agent / **§5 你** / §6 父代理——
+  交付摘要 / 决策透明表 / 审计与代码评审轮次与终态 / fix round，落**批次档 §5**，不靠父侧转述（转述 = 失真源）。
+- **执行者拒收**：查不到任务书（批次档 §2 / `batchDoc` 路径不可读）→ **不执行、打回**——不自行补造任务书往下干。

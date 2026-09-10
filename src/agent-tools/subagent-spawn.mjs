@@ -240,18 +240,20 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // Provider/model override: tool `model` arg > subagentModels[role] > subagentModel > parent provider
   const childProvider = resolveChildProvider(parent, effectiveSubagentModel(parent, role, args.model))
 
-  // ── batchDoc gate（ENGINEERING-MODE.md §2.12——FR20 #9 机械面）──────────────
-  // 工程模式下 spawn role='eng-coder' 必传批次档路径（需求 §1.11 铁律 #5 随件传递的
-  // 机械面）。落点 = 本装配点（token 门之前）：sync 与 async 两条 spawn 路径都经过
-  // buildSpawnChild——一处校验双路生效，错误出口与 token 门一致（§2.13.1 选型 A）。
+  // ── batchDoc gate（ENGINEERING-MODE.md §2.12 + §2.15 D1——FR20 #9 机械面）────────
+  // 工程模式下 spawn 工程角色（**eng-coder / eng-designer**——第 2 批扩为角色集合）必传
+  // 批次档路径（需求 §1.11 铁律 #5 随件传递的机械面）。落点 = 本装配点（token 门之前）：
+  // sync 与 async 两条 spawn 路径都经过 buildSpawnChild——一处校验双路生效，错误出口与
+  // token 门一致（§2.13.1 选型 A）。
   // 判据只到"参数在 + 路径可读"——**不校验内容/措辞**（不做"已收口"正则、不匹配模板、
-  // 不生成；内容够不够由执行者拒收兜底——需求 §1.14 #9 行为面，第 2 批）。路径语义照
-  // `files` 先例：cwd 相对或绝对均可，`\` 归一为 `/`。
+  // 不生成；内容够不够由执行者拒收兜底——需求 §1.14 #9 行为面）。路径语义照
+  // `files` 先例：cwd 相对或绝对均可，`\` 归一为 `/`。错误文案带**实际角色名**（§2.15
+  // 越界文案参数化——designer 撞门时不误导）。
   let batchDocAbs = null
-  if (role === "eng-coder") {
+  if (role === "eng-coder" || role === "eng-designer") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     const refusal = (suffix = "") => new Error(
-      "batchDoc is required for role='eng-coder' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it." + suffix)
+      `batchDoc is required for role='${role}' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it.` + suffix)
     if (!given) throw refusal()
     batchDocAbs = resolve(parent.cwd ?? process.cwd(), given.replace(/\\/g, "/"))
     let readable = false
@@ -319,9 +321,11 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     }
   }
 
-  // G6（施工②）：eng-coder 场景即工程纪律——engineering=true 使 setup 场景映射落到
-  // assemblePrompt("eng-coder")（persona-eng-coder + common + discipline-engineering）。
-  const childConfig = role === "eng-coder"
+  // G6（施工②）+ §2.15 B4（第 2 批）：工程角色场景即工程纪律——engineering=true 使 setup
+  // 场景映射落到 assemblePrompt("eng-coder"/"eng-designer")（persona-{role} + common +
+  // discipline-engineering）；designer 也必须 engineering=true 才能装配工程纪律槽。
+  const engineeringRole = role === "eng-coder" || role === "eng-designer"
+  const childConfig = engineeringRole
     ? { ...parent.config, agent: { ...parent.config.agent, engineering: true } }
     : parent.config
 
@@ -360,10 +364,11 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // setup.mjs depth===0——D-AG7 范围边界）。
   let input = args.context ? `Context:\n${args.context}\n\nTask:\n${args.task}` : args.task
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**随任务输入
-  // 下发给 eng-coder——追加一行，任务文本本身不动（批次档 §2 才是任务书本体；本行让
-  // 子代理"拿到本档路径"）。行文不含 summarizeEngTaskBook 的三组段 marker（Docs
-  // involved / Files list / Acceptance criteria）——段匹配不受影响。仅 eng-coder 注入。
-  if (role === "eng-coder") input += `\n\nBatch record (batchDoc): ${batchDocAbs}`
+  // 下发给工程角色（eng-coder 实现 / eng-designer 写稿）——追加一行，任务文本本身不动
+  // （批次档 §2 才是任务书本体；本行让子代理"拿到本档路径"）。行文不含
+  // summarizeEngTaskBook 的三组段 marker（Docs involved / Files list / Acceptance
+  // criteria）——段匹配不受影响。仅工程角色注入。
+  if (engineeringRole) input += `\n\nBatch record (batchDoc): ${batchDocAbs}`
   // §18 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
   // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
   // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /

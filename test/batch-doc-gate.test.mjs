@@ -27,8 +27,9 @@ import { prepareRun } from "../src/agent/setup.mjs"
 
 const DESIGN_ID = "did-batch-doc"
 const liveTok = () => `${randomUUID()}:${Date.now() + 3600e3}`
-/** 门禁拒绝消息逐字（设计 §2.12 定稿文案）。 */
-const BASE_MSG = "batchDoc is required for role='eng-coder' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it."
+/** 门禁拒绝消息逐字（设计 §2.12 + §2.15 D1——文案参数化带实际角色名）。 */
+const baseMsg = (role) => `batchDoc is required for role='${role}' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it.`
+const BASE_MSG = baseMsg("eng-coder")
 
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "batch-doc-")) })
@@ -155,5 +156,31 @@ test("T29 边界：eng-coder 审计受限变体 properties 不含 batchDoc（AC1
   assert.ok(!("designToken" in audit.parameters.properties), "既有 delete 清单仍在（designToken）")
   // 对照断言（防空转）：完整 subagent 工具面仍带 batchDoc
   assert.ok("batchDoc" in subagentTool.parameters.properties, "基工具面含 batchDoc")
-  assert.ok(subagentTool.parameters.properties.batchDoc.description.includes("REQUIRED for role='eng-coder'"), "schema 描述含 REQUIRED 声明")
+  assert.ok(subagentTool.parameters.properties.batchDoc.description.includes("REQUIRED for role='eng-coder'"), "schema 描述含 REQUIRED 声明（eng-coder）")
+  assert.ok(subagentTool.parameters.properties.batchDoc.description.includes("role='eng-designer'"), "schema 描述扩为角色集合（eng-designer）")
+})
+
+// ── 第 2 批（§2.15 D1）：门扩角色集合——eng-designer 同门（不带 → throw；带可读路径 → 通过）──
+test("T33b 错误/正常：eng-designer 同受 batchDoc 门禁（文案含实际角色名——不带角色名不误导）", () => {
+  const parent = {
+    cwd: tmp,
+    provider: { name: "p", model: "m" },
+    config: { agent: { engineering: true } },
+    tools: [{ name: "read", readonly: true }],
+  }
+  const buildDesigner = (args, wantAsync = true) =>
+    buildSpawnChild(parent, { agent: parent, callbacks: {} }, args, "eng-designer", wantAsync, [], [], null)
+  // 不带 → throw（消息点名 eng-designer——非 eng-coder）
+  const e = catchErr(() => buildDesigner({ task: "写设计" }))
+  assert.equal(e?.message, baseMsg("eng-designer"), "designer 门禁文案带实际角色名")
+  assert.notEqual(e?.message, BASE_MSG, "不得复述 eng-coder 文案（不误导）")
+  // 带不存在路径 → 同款不可读后缀
+  const missing = catchErr(() => buildDesigner({ task: "写设计", batchDoc: "docs/batches/none.md" }))
+  assert.equal(missing?.message, baseMsg("eng-designer") + " (given path is not a readable file)")
+  // 带可读路径 → 通过 + 任务输入含 Batch record 行 + sync 路径同款（双路覆盖）
+  const { rel, abs } = makeBatchDoc("docs/batches/2026-09-10-designer.md")
+  const built = buildDesigner({ task: "写设计", batchDoc: rel }, false)
+  assert.ok(built.input.includes(`Batch record (batchDoc): ${abs}`), "child 任务输入含批次档绝对路径")
+  assert.ok(!built.child._engDesignReviewed, "designer 不走 token 面（无 token 需求——§1.5 #4）")
+  assert.equal(built.child._engTaskAuthorized, undefined, "designer 无任务域授权（写操作仍走人工 ask——§2.15 E）")
 })

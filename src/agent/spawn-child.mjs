@@ -33,22 +33,29 @@ export const TURN_CAP_MARK = "stopped: turn cap reached"
 export const STOPPED_MARK = "stopped by user"
 
 /**
- * §18 D-E3 eng-coder 内部 spawn 机械门（AGENT-LOOP.md §18 D-E2 round5 #2 后备）：
- * eng-coder 子代理（depth>0 且 parent._role==="eng-coder"）的内部 spawn 通道只做
- * 偏差审计——role 仅 explore、async 强制同步；审计 spawn 预算 = 首审 1 + 修正轮
- * ≤5 的再审（第 7 次审计 spawn 机械拒绝——5 轮纪律失效时不静默，错误即 stalled
- * 信号）。返回 null = 非 eng-coder 上下文（不加限制）；返回审计尝试序号 = 通过。
+ * §18 D-E3 工程子代理内部 spawn 机械门（AGENT-LOOP.md §18 D-E2 round5 #2 后备 +
+ * ENGINEERING-MODE.md §2.15 D）：eng-coder（偏差审计）与 **eng-designer（自己勘察）**
+ * 同为受限通道——depth>0 且父角色 ∈ 集合时，内部 spawn 只允许 role='explore'、
+ * async 强制同步。
+ * **审计预算（6）只计 eng-coder**（designer 勘察非审计——designer 父路径校验通过后
+ * 返回 null：不计数、且调用方以 `engAuditAttempt !== null` 为审计任务书注入开关——
+ * 非 null 会把审计范围误注进勘察任务书）。
+ * 返回 null = 非工程子代理上下文（不加限制）或 designer 勘察路径（无须计数）；
+ * 返回审计尝试序号 = eng-coder 审计通过。
  * schema 层过滤（setup.mjs 受限变体）只是给模型的参数提示——本函数是机械强制。
  */
 export const ENG_AUDIT_SPAWN_LIMIT = 6 // 允许 6 次审计 spawn；第 7 次拒绝
 export function gateEngCoderSpawn(parent, depth, role, async) {
-  if ((depth ?? 0) <= 0 || parent?._role !== "eng-coder") return null
+  const parentRole = parent?._role
+  if ((depth ?? 0) <= 0 || (parentRole !== "eng-coder" && parentRole !== "eng-designer")) return null
   if (role !== "explore") {
-    throw new Error("eng-coder subagents may only spawn role='explore' — internal spawns exist solely for the read-only divergence audit (AGENT-LOOP.md §18 D-E3)")
+    throw new Error(`${parentRole} subagents may only spawn role='explore' — internal spawns exist solely for read-only work (the eng-coder divergence audit / the designer's own survey) (AGENT-LOOP.md §18 D-E3, ENGINEERING-MODE.md §2.15 D)`)
   }
   if (async === true) {
-    throw new Error("eng-coder internal spawns are sync-only — the audit report must return before the next protocol step; async spawn is only available at the top level (AGENT-LOOP.md §18 D-E3)")
+    throw new Error(`${parentRole} internal spawns are sync-only — the child's report must return before the next protocol step; async spawn is only available at the top level (AGENT-LOOP.md §18 D-E3)`)
   }
+  // designer 勘察路径：校验通过即返回 null（非审计——不计数、不触发审计任务书注入）
+  if (parentRole === "eng-designer") return null
   const attempt = (parent._engAuditSpawns ?? 0) + 1
   if (attempt > ENG_AUDIT_SPAWN_LIMIT) {
     throw new Error("correction-round limit exceeded — deliver a stalled report (AGENT-LOOP.md §18: max 5 fix rounds; the 7th audit spawn is refused mechanically)")

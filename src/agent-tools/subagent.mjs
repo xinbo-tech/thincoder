@@ -101,7 +101,8 @@ export function buildSyncStoppedReport(role, capturedOutput, designId) {
  * - action:"spawn" roles: "explore" — read-only tools, search/read/analyze
  *   (suitable for codebase exploration); "coder" — full tool set, self-contained
  *   implementation tasks; "plan" — read-only planning; "eng-coder" —
- *   engineering-mode implementation (design-token gated).
+ *   engineering-mode implementation (design-token gated); "eng-designer" —
+ *   engineering-mode design writing (requirements + design docs, batchDoc gated).
  * - no role specified — invalid by design since the 2026-08-25 fail-closed gate
  *   (role is mandatory; "no role → same tool set as parent" was removed with the
  *   coder-leak fix and the header text above predates it)
@@ -126,7 +127,8 @@ export const subagentTool = {
     "- plan — read-only implementation planning. Same read/search toolset; NEVER edits files. Returns a step-by-step plan for the parent to execute.\n" +
     "- coder — full implementation. The parent's complete read/write/execute toolset plus verify and advisor for self-review. Its final report must include a delivery transparency table with one row per task requirement (Done / Simplified / Not done — no deferred column).\n" +
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round. ALSO REQUIRES a batchDoc arg — the batch record path (docs/batches/<batch>-<topic>.md), the batch §2 task book this spawn implements: a spawn without it, or with a path that does not resolve to a readable file, is mechanically refused.\n" +
-    "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-coder. The schema enum reflects the active mode.\n\n" +
+    "- eng-designer — engineering-mode design writer (available only in engineering mode): the SOLE author of the requirements + design documents and of the batch record §2 (the batch task book) — revisions included. Writes no implementation code, does not edit prompt files, does not fire reviews, and needs NO designToken (its authorization is the confirmed requirements). It surveys on its own, but may only spawn read-only 'explore' children (sync, ≤6 per batch). ALSO REQUIRES a batchDoc arg — the batch record path (docs/batches/<batch>-<topic>.md); the same mechanical gate as eng-coder: a spawn without it, or with a path that does not resolve to a readable file, is mechanically refused.\n" +
+    "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-designer/eng-coder. The schema enum reflects the active mode.\n\n" +
     "Async spawn (AGENT-LOOP.md §15/§18/§24): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. The child's report is delivered to you automatically — there is no fetch action; use action:'status' only to see progress, never to wait for the result. Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule). Eng-coder's delivery protocol runs fully inside the child (implementation → audit → self-fix → advisor re-review → converged delivery). Async spawns are pooled per role domain (AGENT-LOOP.md §24): at most 4 concurrent eng-coders and 4 concurrent other-role spawns by default (agent.poolLimits overrides both) — a full domain queues further spawns with a position while the other domain keeps starting (domains never block each other), and top-level only. After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result.\n\n" +
     "Task scheduling (AGENT-LOOP.md §20): declare the scheduling metadata to let the SCHEDULER order your spawns — files: the file paths this task will modify, dependsOn: ids from prior async spawn returns whose outcome this task needs. Overlapping-file tasks are serialized and dependent tasks are started in order automatically: a spawn that would conflict, or whose dependencies have not settled, queues instead of running ({id, status:\"queued\", position, reason} — the waiting task auto-starts when the conflict clears / its dependency settles; cancel a queued task to drop it). A spawn whose dependency was cancelled or failed stays queued and marked \"dependency cancelled\" until you decide (cancel it) — in an AUTO session it starts by itself. Referencing an unknown id errors; an id already consumed (auto-delivered by the auto channel) counts as satisfied. Omit both parameters for the plain immediate spawn (no scheduler involvement).\n\n" +
     "Writing the prompt:\n" +
@@ -142,11 +144,11 @@ export const subagentTool = {
       freeze: { type: "string", description: "action:'panel' only: block key of a digested-stuck awaitingDigest block (e.g. \"eng-coder#9\") to reclaim into the conversation via the gated done-freeze event. Refused when the block is running/done/unknown or its report is still pending digestion (would break the digestion order). Requires the CLI TUI panel mirror — headless/VS Code report the freeze unavailable." },
       task: { type: "string", description: "Required for action:'spawn' (the self-contained task brief) and action:'escalate' (goal, constraints, entry files, acceptance criteria). Not used by status." },
       context: { type: "string", description: "Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only." },
-      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder"], description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
+      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder", "eng-designer"], description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
       model: { type: "string", description: "action:'spawn': provider/model override for this sub-agent ('provider:model', a provider name, or a model name on the parent's provider — defaults to config.agent.subagentModels[role], then config.agent.subagentModel, then the parent's provider). pass \"default\" to explicitly inherit the default model — equivalent to omitting the parameter. action:'escalate': pick a consult candidate as 'provider:model' (default = the first consult model)." },
       designToken: { type: "string", description: "Required when role='eng-coder': the token returned by advisor(type='design') after the design review passed. Without a valid token, eng-coder cannot modify files." },
       designId: { type: "string", description: "Optional when role='eng-coder': the designId echoed with the approved token by advisor(type='design'). Required to pick between designs when several approved reviews are active in the session — each eng-coder carries its own designId+token pair so parallel implementations never overwrite each other. Optional for a single design. action:'consume-design': the design whose slot to close out — optional for a single-design session; required to pick when several approved designs are active (the consume gate refuses to guess)." },
-      batchDoc: { type: "string", description: "REQUIRED for role='eng-coder': the batch record path (docs/batches/<batch>-<topic>.md) — the batch §2 task book this spawn implements. The spawn is mechanically refused without it, and also when the path does not resolve (cwd-relative or absolute) to a readable file; the CONTENT is never validated (the batch record owns that). explore/plan/coder spawns ignore it." },
+      batchDoc: { type: "string", description: "REQUIRED for role='eng-coder' and role='eng-designer': the batch record path (docs/batches/<batch>-<topic>.md) — the batch §2 task book this spawn implements (or writes). The spawn is mechanically refused without it, and also when the path does not resolve (cwd-relative or absolute) to a readable file; the CONTENT is never validated (the batch record owns that). explore/plan/coder spawns ignore it." },
       async: { type: "boolean", description: "action:'spawn': true = spawn without waiting — returns {id, status:\"running\"} immediately; the report is delivered to you automatically (there is no fetch action). Default: depth-0 → true (async — every role, AGENT-LOOP.md §18 D-E1a); depth>0 → sync (forced). action:'escalate': same semantics (AGENT-LOOP.md §25 D-R17b) — default async at depth 0; async:false keeps the legacy synchronous flight (mechanism parameter — see the Async spawn section for top-level guidance)." },
       files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares (cwd-relative or absolute paths). files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error. Tasks with overlapping files are serialized automatically — a conflicting spawn queues ({id, status:\"queued\", position, reason}) instead of running concurrently and starts when the conflict clears. Omit to skip conflict detection (plain immediate spawn)." },
       dependsOn: { type: "array", items: { type: "string" }, description: "action:'spawn' only: ids from prior async spawn returns whose outcome this task needs — the task queues ({id, status:\"queued\", position, reason}) until every dependency settles, then starts automatically. Ids already consumed (auto-delivered to the model) count as satisfied; a dependency cancelled or failed leaves the task queued marked 'dependency cancelled' until you decide (cancel it — AUTO sessions auto-start). Unknown ids error." },
@@ -166,12 +168,12 @@ export const subagentTool = {
       ? String(args.action)
       : "spawn"
     if (action !== "spawn") {
-      // §19 restricted-variant action gate (round2 #3): the eng-coder audit
-      // channel (depth>0, role eng-coder) is spawn-only — escalate spawns a
-      // coder+WRITE child (violates explore-only intent) and status/panel/
-      // observe/send have no async pool / panel mirror to query in a child context.
-      if ((ctx.depth ?? 0) > 0 && ctx.agent?._role === "eng-coder") {
-        throw new Error(`only action:'spawn' (sync explore audits) is available inside an eng-coder — escalate/status/cancel/panel/consume-design/observe/send are not (AGENT-LOOP.md §19 D-M3)`)
+      // §19 restricted-variant action gate (round2 #3): the engineering-child channel
+      // (depth>0, role eng-coder or eng-designer) is spawn-only — escalate spawns a
+      // coder+WRITE child (violates explore-only intent) and status/panel/observe/send
+      // have no async pool / panel mirror to query in a child context.
+      if ((ctx.depth ?? 0) > 0 && (ctx.agent?._role === "eng-coder" || ctx.agent?._role === "eng-designer")) {
+        throw new Error(`only action:'spawn' (sync explore children) is available inside an ${ctx.agent._role} — escalate/status/cancel/panel/consume-design/observe/send are not (AGENT-LOOP.md §19 D-M3)`)
       }
       // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn —
       // async OR blocking — the digest must stay organize-only. The escalate
@@ -221,9 +223,9 @@ export const subagentTool = {
     // variant roles ("Coder", " coder") bypass BOTH mode gates and fall through to
     // full tools / no overlay — a full-write coder without design review. Schema enums are
     // advisory; providers don't enforce them. Fail closed on unknown roles.
-    const ROLES = new Set(["explore", "plan", "coder", "eng-coder"])
+    const ROLES = new Set(["explore", "plan", "coder", "eng-coder", "eng-designer"])
     if (!ROLES.has(role)) {
-      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder (exact spelling).`)
+      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder, eng-designer (exact spelling).`)
     }
     // §18 D-E3 internal-spawn gate: an eng-coder sub-agent may only spawn sync
     // explore (audit) children — non-explore roles and async are refused here
@@ -232,12 +234,18 @@ export const subagentTool = {
     // augmentation below. Runs BEFORE the mode gates so the eng-coder-specific
     // error (not the generic engineering-mode one) surfaces.
     const engAuditAttempt = gateEngCoderSpawn(ctx.agent, ctx.depth, role, args.async)
-    // Role is mutually exclusive per mode: normal mode → "coder", engineering mode → "eng-coder"
+    // Role is mutually exclusive per mode: normal mode → "coder", engineering mode → "eng-coder"/"eng-designer"
     if (parent.config?.agent?.engineering && role === "coder") {
-      throw new Error("Engineering mode: use role='eng-coder' for implementation tasks.")
+      throw new Error("Engineering mode: role='coder' is disabled — use role='eng-coder' for implementation tasks (or role='eng-designer' for design writing).")
     }
     if (!parent.config?.agent?.engineering && role === "eng-coder") {
       throw new Error("Engineering mode is not active — use role='coder' for implementation tasks.")
+    }
+    // Third mode gate (ENGINEERING-MODE.md §2.15 A—— symmetric completion):
+    // eng-designer is engineering-mode-only, same family as eng-coder (both carry
+    // the engineering discipline overlay + the batchDoc gate).
+    if (!parent.config?.agent?.engineering && role === "eng-designer") {
+      throw new Error("Engineering mode is not active — role='eng-designer' is engineering-mode only (it writes the requirements/design documents inside the engineering workflow); use role='explore' or role='plan' for read-only work.")
     }
 
     // §17 N3/D-S6 spawn gate (manual tier): auto-turn digests may not spawn — async

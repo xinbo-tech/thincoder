@@ -1,0 +1,26 @@
+{
+  "note": "V1/V2 存量基线（ENGINEERING-MODE.md §2.19 机械校验最小集）。首跑固化：基线内 = 存量违规（报告，不阻断）；基线外 = 新增违规（阻断）。键按 (kind|file|ref/声明) 生成，不含行号——文档编辑位移不改键值。基线条目失效（被修掉）不报错。",
+  "generatedAt": "2026-09-10",
+  "source": "node -e \"import('./scripts/check-doc-width.mjs').then(m=>console.log(JSON.stringify([...m.checkDocConsistency(process.cwd()).v1.map(m.v1Key),...m.checkDocConsistency(process.cwd()).v2.map(m.v2Key)],null,2)))\"",
+  "entries": [
+    "V1|docs/design/APPLY-PATCH.md|TOOLS.md §6.4",
+    "V1|docs/design/CONSULTATION.md|AGENT-LOOP.md §25.3",
+    "V1|docs/design/CONSULTATION.md|AGENT-LOOP.md §25.3",
+    "V1|docs/design/CONTEXT-COMPACTION.md|AGENT-LOOP.md §7.2.1",
+    "V1|docs/design/EDIT.md|EDIT.md §8",
+    "V1|docs/design/EDIT.md|TOOLS.md §6.1",
+    "V1|docs/design/ESCALATE.md|AGENT-LOOP.md §25.3",
+    "V1|docs/design/ESCALATE.md|AGENT-LOOP.md §25.3",
+    "V1|docs/design/HASHLINE-EDIT.md|TOOLS.md §6.3",
+    "V1|docs/design/INSERT-AFTER.md|TOOLS.md §6.2",
+    "V1|docs/design/prompts/discipline-normal.md|AGENT-LOOP.md §18",
+    "V1|docs/design/prompts/discipline-normal.md|AGENT-LOOP.md §25",
+    "V1|docs/design/prompts/persona-eng-coder.md|AGENT-LOOP.md §18",
+    "V1|docs/design/prompts/persona-engineering.md|AGENT-LOOP.md §18",
+    "V1|docs/design/SESSION.md|AGENT-LOOP.md §18",
+    "V1|docs/design/TUI.md|DOC-REWRITE-LARGE.md §4",
+    "V1|docs/design/WRITE.md|TOOLS.md §6.5",
+    "V1|docs/requirements/TOOL-OUTPUT-LIMITS.md|TUNING.md §2.6",
+    "V2|docs/design/PROVIDER.md|5 处|5|4|paren"
+  ]
+}

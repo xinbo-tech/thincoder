@@ -53,7 +53,7 @@ src/acp.mjs + src/acp/   ACP 协议桥（bridge/session/transport——ACP-CLIEN
 src/cli/             CLI 顶层命令实现（setup-wizard/memory-command/distill-command/make-agent/permission——bin/thincoder.mjs 分发 import）
 src/git/             git 子系统（checkpoint.mjs 快照存储 + gitmem.mjs team 层 git 同步）
 src/traces/          trace-store.mjs 完整轨迹存档（AGENT-LOOP.md §18.6——~/.thincoder/traces/）
-src/prompts/         system prompts (槽位化：persona-engineering / persona-normal / persona-{eng-coder,explore,coder,plan} + common + discipline-engineering / discipline-normal + 特殊模块 consult-base / advisor-design / advisor-round{1,2,3}——装配链 [1]人格 → [2]公共 → [3]纪律 → [4]项目 AGENTS+skills；旧 system/engineering/engineering-sub/main/discipline/methodology-template 已退役——PROMPT-SYSTEM.md)
+src/prompts/         system prompts (槽位化：persona-engineering / persona-normal / persona-{eng-coder,eng-designer,explore,coder,plan} + common + discipline-engineering / discipline-normal + 特殊模块 consult-base / advisor-design / advisor-round{1,2,3}——装配链 [1]人格 → [2]公共 → [3]纪律 → [4]项目 AGENTS+skills；旧 system/engineering/engineering-sub/main/discipline/methodology-template 已退役——PROMPT-SYSTEM.md)
 src/provider/        LLM calls (native fetch + SSE)
 src/tools/           built-in tools (file/git/bash/search/web/checklist)
 src/tui/             bare-ANSI terminal UI

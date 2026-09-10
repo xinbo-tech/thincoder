@@ -138,12 +138,37 @@ AC23 主 agent 人格改述 · AC24 撤销“主会话即 designer” · AC25 FR
 
 ## §5 实施记录（写手：目标态 eng-coder 自写；本批 = 交付报告 + 父侧代写落档）
 
-> **待交付**——eng-coder 运行中（设计评审轮次 4 pass + 用户批准后 spawn，designId/designToken 走参数）。
-> 槽位：交付摘要（改了什么 / 碰过的文件 / 如何验证）· 交付透明表（Done / Simplified / Not done）· 审计与代码评审（轮次 / 终态 clean|stalled）· fix round（如有）。
+### 交付摘要（eng-coder 报告，2026-09-10）
+
+- **终态：clean**（内部审计 1 轮——PARTIAL/DOC-DRIFT/OUT-OF-LIST 未发现 · advisor 代码评审 **pass**（0🔴；2🟡+6🔵）· 修正轮 1/5 · LLM 验证 2/3——修正轮未重跑评审，未触及未覆盖文件）。
+- **改动**（21 改 + 5 新增 = 26，全部清单内）：角色注册五处 + 第三道模式门（非工程禁 designer）· 装配四处（内层选择器同步，designer 实选场景）·
+  新槽双源 persona-eng-designer · batchDoc 门扩角色集 + 文案参数化 · 勘察变体参数化复用（designer 路径返回 null，不触发审计注入；审计预算仍只计 eng-coder）·
+  designer 不置 _engDesignReviewed/_engTaskAuthorized（写走人工 ask）· 双源纪律/persona 改写（删“主会话即 designer” + 四步三句 + D1-D7 + 调用链段）·
+  TUI 四处 · 文档登记七处 · **V1/V2 机械校验**（check-doc-width.mjs 51→281 行 + doc-consistency.test.mjs 171 行 + 基线 19 条）。
+- **未动**：`src/agent/dispatch.mjs`（AC19——写域=提示词级，零机械门）· `docs/README.md`（父侧预落，只核未改）· **未 git 提交**（留工作区）。
+- **自证**：lint 252 OK · 目标面测试 72/72 · 快层 310/299 pass（11 slow-skip）· 一致性新增违规 0 / 存量 19（基线内）。
+- **透明表**：Done 全项；Simplified 无；Not done 无。
+
+### 父侧抽查（交付后逐项核磁盘）
+
+角色 enum/第三门/batchDoc 文案角色集/setup 工程枚举/SLOT+场景注册/designer 返回 null/`dispatch.mjs` 未含 eng-designer/新槽双源存在/双源无“主会话即 designer”——**10/10 与声明一致**。
 
 
 ## §6 验证与收口（父代理自写）
 
-> **宿主注记（2026-09-10 用户指出）**：本批实施期的会话宿主是 **VS Code**（VSC 端实现），而本批只改 **CLI 端**（`thincoder` 仓）——
-> 故 **spawn 时传了 `batchDoc` ≠ 门禁生效**：VSC 端无此门禁，未知参数被默默忽略，**证明不了**第 1 批的 CLI 门禁正常。
-> **自用首验必须在 CLI 会话里做**（遗留项，待登记）——VSC 镜像本批按用户指令延后。
+### 父侧验证（L2 恰一次）
+
+- `npm run test:full` → **pass 310 / fail 0**（含新用例 eng-designer-role 32 + doc-consistency 等；快层 310/299 + 11 slow 与自证一致）。
+
+### 遗留项（交付报告 #1-#7，父侧跟进）
+
+| # | 项 | 处置 |
+|---|---|---|
+| 1 | **V2 窗口口径**（实现用“紧邻枚举”，设计/需求文本写“同节”——实测按字面 3 条含 2 假阳） | **需改设计/需求那两句**为“声明所在段落或其紧邻块”（待用户裁；实现不改） |
+| 2 | 中文权威档缺“设计行为纪律四维”正文 | 父侧补正文或加指针（提示词内容权在主 agent） |
+| 3 | 既存漂移：设计档 §2.2 step5 spawn 签名无 batchDoc；subagent 描述沿用 check 动作名 | 文档批处理 |
+| 4 | 预估偏差：check-doc-width 51→281（预算 ±60）；eng-designer-role.test 313 行（>300 测试档 🟡） | 已披露；档位规则下次批处理 |
+| 5 | designer 异步子代改动不进父侧 _touchedFiles（与 coder 同构） | 观察项 |
+| 6 | T39 假工具名 probe_write（避 slow 门） | 测试构造说明 |
+| 7 | 审计机械 union 只见 7 文件（实际 26） | 父侧核验不依赖该 union |
+| 8 | **CLI 侧自用首验**（batchDoc 门 + 新角色）——本会话宿主为 VSC，无法自验 | 已登记 TODO；待 CLI 会话 |

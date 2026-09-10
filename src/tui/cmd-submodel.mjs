@@ -1,7 +1,7 @@
 import { ansi, C } from "./ansi.mjs"
 
 /** Subagent role slots — each has an independent model override slot */
-export const SUBMODEL_SLOTS = ["explore", "plan", "coder", "eng-coder"]
+export const SUBMODEL_SLOTS = ["explore", "plan", "coder", "eng-coder", "eng-designer"]
 
 /** Human-readable effective display with inheritance source. role=null → global slot.
  *  source semantics: "type" = role-specific override (subagentModels[role]),
@@ -21,7 +21,7 @@ function slotDisplay(agent, role) {
 
 /** /submodel command: subagent model config — picker menu (default) or direct args.
  *  ctx: { agent, pushLine, showPicker, askQuestion, persistRaw, pickModelForSlot }
- *  /submodel                        → picker: global + 4 role slots
+ *  /submodel                        → picker: global + 5 role slots
  *  /submodel <value>                → set global default
  *  /submodel <type> <value>         → set a role slot
  *  /submodel <type>                 → show a slot
@@ -87,7 +87,7 @@ export async function handleSubmodelCommand(ctx, args = []) {
     return
   }
 
-  // ── Picker menu: global + 4 role slots ──
+  // ── Picker menu: global + 5 role slots ──
   // for(;;) loop relies on showPicker's async/Promise suspension — every iteration
   // awaits a user choice; Esc (null) exits. Mirrors openModelPicker's menu-loop pattern.
   for (;;) {

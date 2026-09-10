@@ -41,7 +41,7 @@ export function describeToolArgs(name, args) {
       return a.filter ? `${p}  (filter: ${String(a.filter)})` : p
     }
     case "websearch": return String(a.query ?? "")
-    case "subagent": case "coder": case "explore": case "plan": case "eng-coder": {
+    case "subagent": case "coder": case "explore": case "plan": case "eng-coder": case "eng-designer": {
       const task = String(a.task ?? "").replace(/\s+/g, " ").trim()
       if (task) return task.slice(0, 60) + (task.length > 60 ? "…" : "")
       // action-only 调用（status/observe/send/cancel/escalate/consume-design…）无 task——action 兜底（2.4 批）

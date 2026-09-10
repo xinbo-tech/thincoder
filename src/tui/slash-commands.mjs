@@ -42,7 +42,7 @@ export const SLASH_COMMANDS = [
   { name: "/eng", group: "Agent", desc: "toggle engineering mode — strict methodology enforcement" },
   { name: "/advisor", group: "Agent", desc: "advisor settings (model, thinking, review gate)" },
   { name: "/model", group: "Agent", desc: "select model & manage providers" },
-  { name: "/submodel", group: "Agent", desc: "subagent model per type (explore/plan/coder/eng-coder)" },
+  { name: "/submodel", group: "Agent", desc: "subagent model per type (explore/plan/coder/eng-coder/eng-designer)" },
   { name: "/shell", group: "System", desc: "bash tool shell (git-bash/pwsh path; win11 cmd encoding fix)" },
   { name: "/goal", group: "Agent", desc: "set/view/cancel long-term goal" },
   { name: "/think", group: "Agent", desc: "thinking mode & reasoning effort" },
@@ -144,7 +144,7 @@ export function createSlashCommands(ctx) {
     const match = (cands) => cands.filter((c) => c.startsWith(last)).map((c) => `${head} ${c}`)
     if (cmd === "/model" && argIndex === 0) return match(agent.providers.map((p) => p.name))
     if (cmd === "/submodel") {
-      if (argIndex === 0) return match(["explore", "plan", "coder", "eng-coder", "reset"])
+      if (argIndex === 0) return match(["explore", "plan", "coder", "eng-coder", "eng-designer", "reset"])
       if (parts[1] && !["reset"].includes(parts[1]) && argIndex === 1) return match(agent.providers.map((p) => p.name))
     }
     if (cmd === "/think") {

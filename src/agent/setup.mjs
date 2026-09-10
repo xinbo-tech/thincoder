@@ -181,12 +181,12 @@ export async function prepareRun(agent, input, callbacks, {
     if (!list) return tool
     return { ...tool, description: tool.description + `\nCurrently configured consultants (this tool's pool): ${list}` }
   }
-  // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"
+  // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"/"eng-designer"
   const subagentRoles = (depth === 0 && agent.config?.agent?.engineering)
     ? {
-        enum: ["explore", "plan", "eng-coder"],
+        enum: ["explore", "plan", "eng-designer", "eng-coder"],
         description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled).",
+        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents.",
       }
     : {
         enum: ["explore", "plan", "coder"],
@@ -215,42 +215,49 @@ export async function prepareRun(agent, input, callbacks, {
     },
   } : subagentTool
 
-  // §18 D-E3: eng-coder children (depth>0) get an audit-only subagent channel —
-  // role enum limited to explore, NO async parameter (sync only) and action pinned
-  // to spawn (§19 D-M3 restricted-variant action gate — escalate/check/status are
-  // refused here at the schema level too; the mechanical re-check lives in
-  // subagent.mjs execute → the §19 action gate + gateEngCoderSpawn (spawn-child.mjs)
-  // — schema enums are advisory, providers don't enforce them).
-  const engAuditSubagent = depth > 0 && agent._role === "eng-coder"
+  // §18 D-E3 + ENGINEERING-MODE.md §2.15 D（第 2 批——参数化复用，不并列第二个 IIFE）：
+  // 工程子代理（depth>0；eng-coder = 偏差审计 / eng-designer = 自己勘察）get a restricted
+  // spawn channel — role enum limited to explore, NO async parameter (sync only) and action
+  // pinned to spawn（§19 D-M3 restricted-variant action gate——escalate/check/status are
+  // refused here at the schema level too；the mechanical re-check lives in subagent.mjs
+  // execute → the §19 action gate + gateEngCoderSpawn (spawn-child.mjs) — schema enums are
+  // advisory, providers don't enforce them）。描述文案按父角色分流（审计 vs 勘察）。
+  const engChildRole = depth > 0 && (agent._role === "eng-coder" || agent._role === "eng-designer") ? agent._role : null
+  const engChildSubagent = engChildRole
     ? (() => {
         const props = { ...subagentTool.parameters.properties }
-        // §19 review hygiene: the audit channel is spawn-only sync explore — drop
+        // §19 review hygiene: the child channel is spawn-only sync explore — drop
         // async, the check/status params (id/n), the eng-coder token params
-        // (designToken/designId are meaningless for a read-only audit spawn; the
-        // parent spawn already carried the token) and batchDoc (the audit child
-        // derives no batch parameter — its task book rides the mechanical summary
-        // of the parent's _engTaskInput instead). Schema noise would invite the
+        // (designToken/designId are meaningless for a read-only spawn; the parent
+        // spawn already carried the token) and batchDoc (an audit child derives no
+        // batch parameter — its task book rides the mechanical summary of the
+        // parent's _engTaskInput instead). Schema noise would invite the
         // model to pass irrelevant args.
-        delete props.async // sync only — the eng-coder blocks on the audit report
+        delete props.async // sync only — the parent blocks on the child's report
         delete props.id
         delete props.n
         delete props.designToken
         delete props.designId
         delete props.batchDoc
+        const designer = engChildRole === "eng-designer"
         props.role = {
           type: "string",
           enum: ["explore"],
-          description: "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
+          description: designer
+            ? "explore only — the eng-designer's internal spawn channel is reserved for read-only surveys of the current state (ENGINEERING-MODE.md §2.15 D; ≤6 spawns per batch)."
+            : "explore only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §18 D-E3).",
         }
         props.action = {
           type: "string",
           enum: ["spawn"],
-          description: "spawn only — the eng-coder's internal spawn channel is reserved for read-only divergence audits (AGENT-LOOP.md §19 D-M3); escalate/check/status are refused (escalate spawns a coder+WRITE child — against explore-only intent; check/status have no async pool in a child context).",
+          description: `spawn only — the ${engChildRole}'s internal spawn channel is read-only (escalate/check/status are refused; escalate spawns a coder+WRITE child and check/status have no async pool in a child context).`,
         }
         return {
           ...subagentTool,
           name: "subagent",
-          description: "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/check/status are not available (AGENT-LOOP.md §19). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+          description: designer
+            ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY (no async) and action:'spawn' ONLY — the survey channel is read-only; escalate/check/status are not available (AGENT-LOOP.md §19). Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
+            : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/check/status are not available (AGENT-LOOP.md §19). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
           parameters: { ...subagentTool.parameters, properties: props },
         }
       })()
@@ -274,7 +281,10 @@ export async function prepareRun(agent, input, callbacks, {
     // escalate hit "unknown tool" and fell back to bash node --check / npm test to
     // self-verify (2026-08-16 deepseek escalate diagnosis; plugin parity).
     // eng-coder: advisor + verify + the §18 audit-only subagent channel (D-E3).
-    : agent._role === "eng-coder" ? [advisorTool, verifyTool, ...(engAuditSubagent ? [engAuditSubagent] : [])]
+    // eng-designer (§2.15 D): the survey-only subagent channel alone — no advisor
+    // (it does not fire reviews) and no verify (its deliverable is documents, not code).
+    : engChildRole === "eng-coder" ? [advisorTool, verifyTool, ...(engChildSubagent ? [engChildSubagent] : [])]
+    : engChildRole === "eng-designer" ? [...(engChildSubagent ? [engChildSubagent] : [])]
     : agent._role === "coder" ? [verifyTool, advisorTool]
     : agent._role === "consult" ? [recentChangesTool]
     : []
@@ -295,8 +305,8 @@ export async function prepareRun(agent, input, callbacks, {
   const { prompt: base, warnings: slotWarnings } = assemblePrompt(
     agent._role === "consult"
       ? "consult"
-      : (depth === 0 || agent._role === "eng-coder") && agent.config?.agent?.engineering
-        ? (agent._role === "eng-coder" ? "eng-coder" : "engineering")
+      : (depth === 0 || engChildRole) && agent.config?.agent?.engineering
+        ? (engChildRole ?? "engineering")
         : (depth === 0 ? "normal" : agent._role ?? "normal"),
   )
   // D2 警告通道 = 既有 setup 警告通道（history 注入）——不新增机制。深度 0 才注入

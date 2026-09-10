@@ -168,7 +168,7 @@ Phase 1 收集同批（同一 toolCalls 数组）所有**通过前置门禁、�
 
 ## 7. 子代理（subagent 工具）
 
-**综述**：子代理 = `depth > 0` 的独立 agent 对象 + 丢弃式局部双线；role（explore/plan/coder/eng-coder）决定工具集（只读过滤）与 overlay prompt。**文档组织**：显示/交互面 → TUI.md；工程交付协议（eng-coder 内部自审计闭环）→ ENGINEERING-MODE.md + §8 交付协议；工具面/async/调度器/分域池 → §7.1-§7.4 + §10/§11。
+**综述**：子代理 = `depth > 0` 的独立 agent 对象 + 丢弃式局部双线；role（explore/plan/coder/eng-coder/eng-designer）决定工具集（只读过滤）与 overlay prompt。**文档组织**：显示/交互面 → TUI.md；工程交付协议（eng-coder 内部自审计闭环）→ ENGINEERING-MODE.md + §8 交付协议；工具面/async/调度器/分域池 → §7.1-§7.4 + §10/§11。
 
 ### 7.1 角色与委派
 
@@ -180,8 +180,9 @@ Phase 1 收集同批（同一 toolCalls 数组）所有**通过前置门禁、�
 | plan | 纯只读规划 | 普通 + 工程 |
 | coder | 父全量读写执行 + verify/advisor 自评 + 强制交付表 | 普通 |
 | eng-coder | 工程模式替换 coder + 设计驱动 overlay + 必带 designToken + explore 受限审计 | 工程 |
+| eng-designer | 工程模式写稿面唯一作者（需求档/设计档/批次档 §2，含修订）+ **无 designToken**（授权 = 需求已确认）+ 必带 batchDoc + explore 受限勘察（≤6/批，不占审计预算） | 工程 |
 
-**Mode filtering**：普通模式 explore/plan/coder，工程模式 explore/plan/eng-coder——schema enum 反映现行模式。
+**Mode filtering**：普通模式 explore/plan/coder，工程模式 explore/plan/eng-designer/eng-coder——schema enum 反映现行模式（角色互斥：工程禁 coder / 普通禁 eng-coder 与 eng-designer，schema 枚举 + 运行期硬门禁双保险）。
 
 **Why delegate?**：隔离上下文（子 agent 全部读写调用不进父窗口）+ 单任务专注 + 并行省时 + coder/eng-coder 自带 verify/advisor 自评（交付前已验）。thoroughness 三档：quick（单点定向）/ medium（默认，适度并行）/ thorough（多位置全面分析，报告列搜索过什么/没找到什么）——提示词约定形态，不加工具参数。
 
