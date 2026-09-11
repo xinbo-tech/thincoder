@@ -147,7 +147,9 @@ _（待写——评审子代理）_
 
 **评审范围**：批次档 §2（条目 A–D 含续块）· 需求档 §1.15 收尾批块 · 设计档 §2.27（含 §2.27.8）+ §3.1 AC57–AC60/AC67 + §3.2（T75/T76 零改行 / T83）· `docs/design/TUI.md` §1 地图回写面。
 
-**核验方式**（静态读盘——评审环境无 shell，机检脚本未实跑）：B 按「指针行号 → 目标行内容」直读三断言全中（`scripts/check-doc-width.mjs:32` = `SCAN_DIRS` 声明行 · `:34` = `BASELINE_PATH` 声明行 · `:297` = `process.exit(widthHits.length ? 1 : 0)`）；A 实读两被锁档（async 42 例 ✓ / dual-source 21 例 ✗）；C 重测抽样 32/42 行；D 三档非表格 >300 行扫描 = 0 残留 + 折行标注 5 处在位。
+**核验方式**（静态读盘——评审环境无 shell，机检脚本未实跑）：B 按「指针行号 → 目标行内容」直读三断言全中（`scripts/check-doc-width.mjs:32` = `SCAN_DIRS` 声明行 · `:34` = `BASELINE_PATH` 声明行 · `:297` = `process.exit(widthHits.length ? 1 : 0)`）；A 实读两被锁档（async 42 例 ✓ / dual-source 21 例 ✗）；C 重测抽样 32/42 行；D 三档非表格 >300 行扫描 = 0 残留 + 折行标注在位（`AGENT-LOOP.md:534`/`:599`/`:604` · `SESSION.md:542` · `SUBAGENT-ID-COUNTER-AGENT.md:57`）。
+
+> 〔父侧机械改述 2026-09-12 05:06——去掉行尾裸计数「5 处」（紧邻发现表致 doc-consistency V2 假阳性：声明 5 ≠ 表行 7）；**语义零改**，枚举未动。〕
 
 | # | Category | Severity | Issue | Suggestion |
 |---|---|---|---|---|
