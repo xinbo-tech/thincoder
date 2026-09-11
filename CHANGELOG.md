@@ -1,3 +1,26 @@
+## [0.12.61] — 2026-09-11
+
+> 0.12.60 → 0.12.61（§4.3 连续号——发布时定号）
+
+### Added
+
+- **集成集 + 发布门三环（TEST-LIFECYCLE 批）**：`test/integration/`（7 场景 22 用例：普通模式工具流 / 工程模式全链 / 子代理生命周期 / 会话恢复 / TUI 基本盘 / commit 验证关口 / 配置与 provider 选路）+ `test/run-integration.mjs`；`npm run release:check` = lint → test:full → test:integration（prepublishOnly 接线）——发布唯一门禁。
+- **需求池机检 `scripts/check-ledger.mjs`**（FR18 收拢）：指针解析 / D3 组计数 / 六态 / 触发字段 / 老化报告 / 基线降报告；两仓台账收拢（活 30+9 · 归档档 40+11）。
+- **provider.headers 全通路铺开**（Gitee #IKDWH7）· **`~` 家目录展开**（HOME-EXPANSION）· **websearch provider key**（工具面）。
+- **DeepSeek V4.1-Flash 接入** + 模型清单 provider 化（去候选否决权）。
+- **工程模式链路**：角色重定义（FR9 三分 + 内容权）/ 公共层扩容（common.md 10 节·双端 18 档）/ 批次档段写入工具 / 可移植性 FR10–FR15（项目约定去硬编码：`conventions.mjs` + `project-context.mjs`）。
+- **逃生与可观测面**：子代理 abort 来源标注 · 评审池丢弃（报告不达提醒 + 不签发 token）· consult/escalate 完全异步化 · `read_history` 跨会话检索（R19）。
+
+### Changed
+
+- **测试生命周期 v3**：三层来源（单元=开发期脚手架 / 集成-业务 / 集成-生产）+ 退役常态 + 削段合档（11 档退役 ~880 行 · 3 并 · 防回潮静态锚 T75/T76 收归）。
+- **台账体系**：TODO 归档机制（活文件只留未决 + `TODO-archive.md`）+ 归属修订「记录 + 状态推进 + 物理落笔 = 主 agent」+ 六态机检。
+- **TUI**：选择面统一（picker/wizard/question）· 输入修复集 · 方向键（连续上溯/多行竖移）· Stop 钩子 · 跨段 turn 累计 · attention 状态。
+
+### Fixed
+
+- settings 工具 null 默认键类型校验 · ACP 通道修整（headless 裁剪 + relay 前缀剥离）· 评审注入路径硬编码（可移植性 A 家族）· advisor 上下文预算（CJK 加权）· 文档一致性检查扩面 + 宽度基线。
+
 ## [0.12.60] — 2026-09-08
 
 > 0.12.59 → 0.12.60（§4.5 连续号——发布时定号）
