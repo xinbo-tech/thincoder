@@ -5,7 +5,7 @@
 
 ---
 
-## 需求池（归档 15 条——含勾销 1）
+## 需求池（归档 19 条——含勾销 1）
 
 - [x] **`settings` 工具对「内置默认值为 null 的已知键」类型校验失效**（用户"修这个bug"——快车道单点全链）→ 需求 `docs/requirements/SETTINGS-TOOL.md` §2 · 任务书 `batches/2026-09-11-SETTINGS-NULL-DEFAULT.md` §2 · （含 null 叶子键清单 4+1）· status=已核销
 - [x] **批次档 = 任务书**（2026-09-10 用户裁定）→ 需求 `docs/requirements/ENGINEERING-MODE.md` §1.12 · 任务书 `batches/2026-09-10-ENGINEERING-MODE.md` §2 · status=已核销
@@ -26,7 +26,12 @@
 
 - [x] **评审注入路径硬编码项目约定**（2026-09-10 用户裁定）→ 需求 `docs/requirements/ADVISOR-CONVERGENCE.md` §5.1 · 任务书 `batches/2026-09-11-PORTABILITY.md` §2（批次一 CLI + **批次二 VSC 镜像**）· （批次一：`messages.mjs` 注入面去硬编码；批次二：VP-1–11 + VP-12——`conventions.mjs`/`project-context.mjs` 新档 + 六档提示词 + T-V01–19；VSC 快层 511/502/0）· status=已核销
 
-## 技术待办（归档 29 条——含勾销 1）
+- [x] **台账提醒/可见面（两池·分池显示）**（2026-09-12 用户发现「从未见过任何提醒」——裁定：启动提示 + 收口检查点 + 状态行单标记，两池分显·按项目分行·状态行极简·VSC tooltip 增量）→ 需求 `docs/requirements/ENGINEERING-MODE.md` §1.13 · 任务书 `batches/2026-09-12-LEDGER-SURFACE.md` §2 · （§6 收口——AC 全过 + 令牌消费）· status=已核销
+- [x] **机制纪律落地提示词系统**（2026-09-11 用户裁定——测试体系 v3 三层/发布门/退役 + 旧句改写 + 待办台账维护机制）→ 需求 `docs/requirements/PROMPT-SYSTEM.md` §10 · 任务书 `batches/2026-09-11-TEST-DISCIPLINE-PROMPTS.md` §2 · （§6 收口——CLI 21/21 + VSC 12/12 · 机检 34/34 + 令牌消费）· status=已核销
+- [x] **CLI TUI 长会话堆 OOM（静默崩溃）——次生：崩溃后鼠标序列飞出**（2026-09-11 用户同事实测）→ 需求 `docs/requirements/CRASH-REPORTS.md` §1（F3/N1-N4 取证波）· `docs/requirements/SESSION.md` §14.1（根因波）· 任务书 `batches/2026-09-11-TUI-OOM-FORENSICS.md` §2 + `batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §2 · （两波 §6 均收口 + 令牌消费）· status=已核销
+- [x] **文档自审四处混乱**（2026-09-10 主 agent 自审——适用范围：文档维护也走流程）→ 需求 `docs/requirements/ENGINEERING-MODE.md` §1.6 · 任务书（未派工）· status=已废弃（2026-09-12 用户裁定——诉求与本轮「各仓自持 + 提示词层承载」两批高度重叠，不再单独立批）
+
+## 技术待办（归档 62 条——含勾销 1）
 
 - [x] **`parseValue` 两端不一致 + CHANGELOG 历史失真（D-S2.8 / 父侧项）**：① CLI `settings` 保留引号 vs VSC 返回解析值（同 key 两端写入语义不同）② `CHANGELOG.md:42` 记「测试 T-S1.1-11」但测试档从未落地 → 证据 `src/agent-tools/settings.mjs:196`（去引号落地）· status=已核销（第 13 批条目 E——档 `batches/2026-09-11-MECH-DEBT-SWEEP.md`）
 - [x] ~~**`docs/design/TUI.md` §1 地图行存量漂移**~~（第 7 批回写时观察）→ 证据 `docs/design/TUI.md:19`（§1 地图表）· status=已核销（第 14 批 id=13 全表实测回写——15 行改 + 表头口径注；`:25` 另有 pickers 行文字注）
@@ -57,3 +62,100 @@
 - [x] **子代理 id 复用**（**已实落（nextSubagentId scheduler:370-391）**；原注：用户观察——平台 bug——§27.1 F4 修复洞）：真因 = `_subIdCounter` 挂 history expando、压缩随旧数组被抹 → 池空时 spawn 回 #1；已落地（2026-09-10——载体改 agent 本体 ±4 行/端；VSC clean；CLI 端在途）；遗留 = `src/agent-tools/subagent.mjs:293-294` 注释述旧前提 → 证据 `src/agent-tools/subagent-scheduler.mjs:380`（nextSubagentId）· status=已核销
 - [x] **advisor 进行中评审不可取消**（**已实落（subagent.mjs:121 cancel + cancelAsyncAdvisor AGENT-LOOP:754）**；原注：用户反馈——平台 bug）：对象漂移需杀旧重发——无 cancel 通道（同 scope 重发被拒）→ 证据 `src/agent-tools/advisor-async.mjs:254`（"settle 后逐个发起"拒绝文案）· status=已核销
 - [x] **AGENTS.md 文档地图陈旧**（**已销账——实测 VERIFY-DOCONLY/ENGINEERING-WORKLOOP 零命中；:14 明载不逐档裸列**）；原注：:17 仍列 VERIFY-DOCONLY.md（归档后悬空）+ 整体含早已归档档（ENGINEERING-WORKLOOP 等）——父侧立项整体清扫 → 证据 `AGENTS.md:17` · status=已核销
+
+- [x] **VSC 两处未纳登记**（第 12 批 designer 披露）→ 证据 `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md`（§13.10 登记项 + 收口 §14）· 任务书 `batches/2026-09-11-VSC-GUARD-COMPLETION.md` §2 · status=已核销（第 18 批 §6 收口——三面交付 · AC-VG9–12 全过 · 令牌消费）
+- [x] **`src/agent-tools/subagent.mjs` 受限变体 schema 补 cancel 词**（描述层同步）→ 证据 `src/agent-tools/subagent.mjs:142`（action enum）· status=已核销（第 20 批 TUI-SELECTION §5 A2 Done + §6 收口 · 令牌消费）
+- [x] **普通模式偏差审计 + 会话上下文轮**（F-N1.1..6 逐条处置；D2 会话上下文轮退役）→ 任务书 `batches/2026-09-11-NORMAL-MODE-AUDIT.md` §2 · status=已核销（第 23 批 §6 收口——AC-NA1–NA8 8/8 + 令牌消费；原 status 取值「设计已落（待评审/批准）」非六态——随本次核销归一）
+- [x] **`src/tools/read_image.md:8` 描述漂移**（第 6 批达成 vision 后描述与实现矛盾）→ 证据 `src/tools/read_image.md:8` · status=已核销（第 22 批 DOC-HYGIENE §5 C1 Done——替句已在位）
+- [x] **快层慢门 flake：`test/eng-designer-role.test.mjs` 未标 `slow`**（818.5ms 撞 D-T6）→ 证据 `test/eng-designer-role.test.mjs` · status=已核销（第 20 批 TUI-SELECTION §5 A3 Done——`slow(` 已注册 · 令牌消费）
+- [x] **需求档同步（第 4 批 C 遗留 ②——① 第 5 批已销账 · ③ 已作废）**（② 需求档 4 项同步——eng-designer 写域）→ 证据 `docs/design/ENGINEERING-MODE.md:454` · status=已核销（第 22 批 DOC-HYGIENE §5 C5 五点位已落 + §6 链终）
+- [x] **子代理 abort 无来源标注——死亡不可诊断**（用户反馈——平台可观测性缺陷）→ 证据 `src/provider/core.mjs:70` · 任务书 `batches/2026-09-11-ABORT-PROVENANCE.md` §2 · status=已核销（第 24 批 §6 收口——AC-AP1–AP8 全绿 + 令牌消费）
+- [x] **TUI 开放项**（① picker item.note 渲染 bug ② question/wizard/picker 三套选择 UI 统一）→ 证据 `src/tui/model-picker.mjs:109` · status=已核销（第 20 批 TUI-SELECTION §5 A1/A4 Done + §6 收口 · 令牌消费）
+- [x] **digest 注入预算扩面**（consult 族 + VSC 各族注入器绕过）→ 证据 `thincoder-vscode/src/agent-tools/async-settle.mjs:54` · 任务书 `batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §2 · status=已核销（群 B 批 §5 B5 双端 21 档含 consult 族 + §6 收口）
+- [x] **`.thincoder/index/` DB 化前死产物**（勘察外另立）→ status=已核销（第 22 批 DOC-HYGIENE §6 C6「三证齐后已删（GONE）」+ 父侧实测目录不存在）
+- [x] **`src/tui/wrapped-spawn.mjs:1` 注释断链**（勘察外另立——指向已归档档）→ 证据 `src/tui/wrapped-spawn.mjs:1` · status=已核销（第 22 批 DOC-HYGIENE §5 C4 Done——归档路径串已去）
+
+> 2026-09-12 用户裁定：**技术待办条目全部清空**（活档不再保留）——以下 22 条标已废弃入档（原状态随行注）。
+
+- [x] **`src/tui/index.mjs` `startTUI` 单函数 400 行（L72–471）**——越函数档线（≥300 行）；单点增量不触拆分 → 拆分债 → 证据 `src/tui/index.mjs:72` · status=已废弃（原状态=待讨论）
+- [x] **需求档 FR13 行「现况」子句陈旧**（句称 `src/prompts/discipline-engineering.md:182` 教跑 `scripts/check-doc-width.mjs`——实测 `src/prompts/**` 对 `scripts/`/`check-doc-width` 零命中）→ 证据 `docs/requirements/ENGINEERING-MODE.md:723` · status=已废弃（原状态=待讨论）
+- [x] **`/undo` 快照栈字节无界**（条数封顶 50、无尺寸守卫）→ 证据 `src/tui/cmd-undo.mjs:12`（`MAX_UNDO`）· `src/agent/dispatch.mjs:357-358`（快照读整档）· status=已废弃（原状态=待讨论）
+- [x] **`_advisorRuns` 实例无逐实例删除**（仅模式切换整体重置）→ 证据 `src/agent-tools/advisor-async.mjs:104-137` · status=已废弃（原状态=待讨论）
+- [x] **小容器族无上界**（`_asyncTombstones`/`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`；capturedConsole 拼接可突破 64K）→ 证据 `src/agent/async-settle.mjs:138-139` · `src/agent/dispatch.mjs:428-432` · status=已废弃（原状态=待讨论）
+- [x] **`verify-redesign` T-V4 偶触 slow 门**（820–1031ms vs 800ms；干净 HEAD 复现/隔离跑 ~120ms）→ 证据 `test/verify-redesign.test.mjs:87` · status=已废弃（原状态=待讨论）
+- [x] **跨会话同批档案并发写风险**（两会话父侧同写批次档；无会话级写权分片）→ 证据 `src/agent-tools/batch-segment.mjs:130` · status=已废弃（原状态=待讨论——用户 2026-09-11 曾裁定暂不开批）
+- [x] **第 13 批收口遗留**（① T75/T76 无测试宿主 ② `test/settings.test.mjs` 480/500 ③ AC54 注行号 +1 ④ 存量非表格超宽 5 行）→ 证据 `docs/design/ENGINEERING-MODE.md:1406` · status=已废弃（原状态=在途（第 14 批））
+- [x] **第 9 批后续登记面（设计 §13.9）**（① 设计档新时序规则登记面 ② 双源不对称是否补镜像）→ 证据 `src/prompts/discipline-engineering.md:135` · status=已废弃（原状态=在途（第 13 批条目 F））
+- [x] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度（低优先）→ 证据 `docs/design/AGENT-LOOP.md:655` · status=已废弃（原状态=无 status）
+- [x] **CLI 侧自用首验（batchDoc 门 + 新角色）**：需 CLI 会话内真 spawn 一次验证 → 证据 `src/agent-tools/subagent.mjs:151` · status=已废弃（原状态=待讨论）
+- [x] **档位 B：subagent 工具 description 动态矩阵**（工具集变化时自动跟随）→ 证据 `src/agent-tools/subagent.mjs:114` · status=已废弃（原状态=无 status）
+- [x] **既有文档超宽行清理**（设计档侧余 5 行：`docs/design/AGENT-LOOP.md` :510/:572/:574 · `SESSION.md` :524 · `SUBAGENT-ID-COUNTER-AGENT.md` :53）→ 证据 `batches/2026-09-11-SWEEP-FOLLOWUP.md` §2 · status=已废弃（原状态=在途（第 14 批））
+- [x] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌 → 证据 `src/session.mjs:2`（slot-based 模型）· status=已废弃（原状态=无 status）
+- [x] **deepseek-v4-pro 视觉能力复检 + 发布注记**（触发 = 2026-09-14 12:00 路由生效后 / V4.1 Pro 到货——复核 `multimodal` 翻转）→ 证据 `test/read-image-guide.test.mjs:20` · status=已废弃（原状态=触发=条件）
+- [x] **VSC live 块显示不可靠**（用户反馈——根因 ① 出生靠窗口 ② 快照兜底不全 ③ 终态对 never-born no-op）→ 证据 `thincoder-vscode/src/extension/panel-callbacks.mjs:81` · status=已废弃（原状态=待设计——修复方向待用户裁）
+- [x] **advisor 池状态不可查询 + 不可取消**（用户反馈——平台机制缺陷，已实证三次）→ 证据 `src/tools/ops.mjs:195` · status=已废弃（原状态=待讨论（owner=平台））
+- [x] **§24→§11 旧锚全仓清理**（CLI src 面 28 行已落（DOC-HYGIENE C2）；VSC 面另议）→ 证据 `src/tui/suspension-drive.mjs:30` · status=已废弃（原状态=待核销）
+- [x] **IMAGE-DOWNGRADE 跟进项 ②③**（② runVisionReader maxTurns 固定 10 ③ Stop 在降级 await 窗口内 no-op）→ 证据 `thincoder-vscode/src/extension/image-handler.mjs:65` · status=已废弃（原状态=设计权在用户）
+- [x] **VSC git 工具 commit 镜像缺口**（granular add + 整索引 commit 双层混扫）→ 证据 `thincoder-vscode/src/tools/git.mjs:200` · status=已废弃（原状态=待讨论（设计权在用户））
+- [x] **RESIZE 交付建议**（恢复序列字面量三源 → `CLEANUP_REST` 常量收拢）→ 证据 `src/tui/tui-lifecycle.mjs:19`（writeCleanupSequence）· status=已废弃（原状态=待讨论）
+- [x] **INPUT-LOCK-BEHAVIOR 交付注**（① VSC §7 机制正文补同步 ② key-handler busy 门禁注释措辞 + :271 tab 死条件）→ 证据 `thincoder-vscode/docs/design/AGENT-LOOP.md:290` · status=已废弃（原状态=待讨论（① 已落；② 仍待））
+
+---
+
+### 产品可移植性缺陷登记（2026-09-10 全面勘察）——已废弃
+
+> 2026-09-12 用户裁定：**技术待办及其块一并清空**（活档不再保留）。本块 = `src/` 全量“硬编码项目约定”扫描的存量债基线（按任意用户项目视角判定）——**逐条明细原样入档**。
+> 需求依据 = `requirements/ENGINEERING-MODE.md` §2（FR10-FR15）+ `requirements/PROJECT.md`。分级：🔴 = 静默失效 · 🟡 = 降级可见/噪声 · 🔵 = 无害/仅信息。
+
+#### 🔴 静默失效（10 项）
+
+| # | file:line | 硬编码 | 不符约定时的静默后果 |
+|---|---|---|---|
+| P1 | `src/advisor/messages.mjs:253` | 文档地图 = `docs/README.md` / `docs/design/README.md` | 探不到 → 静默跳过——“文档归属”评审维度失去对照物 |
+| P2 | `src/advisor/messages.mjs:236,349` | 项目方法论 = 项目根 `METHODOLOGY.md` | 不存在 → 空 catch 静默不注入，评审仍按“方法论合规”打分 |
+| P3 | `src/advisor/messages.mjs:265,267,269` | 指令文本要求“Read METHODOLOGY.md” | 与 P2 独立——即使未注入也要求读不存在文件（白耗轮次/凭空判断） |
+| P4 | `src/prompts/advisor-design.md:9,18,24` | `docs/README.md` + 示例 `docs/design/AGENT-LOOP.md:180` | 任意项目工程模式下被要求读不存在的文件 |
+| P5 | `src/prompts/discipline-engineering.md:32,47,61` | `docs/design/<TOPIC>.md` 树形状 | 代理会在用户项目里创建 ThinCoder 形状的 docs 树 |
+| P6 | `src/prompts/discipline-engineering.md:141,142,147,151,170,171` | `docs/TODO.md` / `CHANGELOG.md` / checklist 边界 | 用户项目没有这些文件也要“先入池” |
+| P7 | `src/prompts/discipline-engineering.md:182` | `docs/requirements/`+`docs/design/`+**`node scripts/check-doc-width.mjs`** | **自指脚本**——该脚本只在本仓存在，用户项目跑必失败 |
+| P8 | `src/memory/code-sync.mjs:112-124` | `git rev-parse --show-toplevel` 失败 → 返回 `[]` | **非 git 项目：代码/文档索引全空**（表现为“无索引源”） |
+| P9 | `src/memory/schema.mjs:18,20,23-32` | 代码/文档扩展名白名单 + SKIP_DIRS + 体积上限 | 白名单外扩展名**完全不可检索**（.fs/.clj/.dart/.lua/.cs 等代码；.org/.wiki 等文档），无提示 |
+| P10 | `src/agent/dispatch.mjs:199` + `src/advisor/repos.mjs:168` | `^src[\\/]` **字符串锚定** | 嵌套布局（`packages/foo/src/x.md`）被当文档 → **静默绕过设计门禁**；非 `src/` 布局则全部文件都当产品代码 |
+
+#### 🟡 降级可见 / 噪声（18 项）
+
+| # | file:line | 内容 | 影响 |
+|---|---|---|---|
+| P11 | `src/prompts/discipline-normal.md:13,32,213` | `docs/README.md` 地图（:32 有降级子句） | 13/213 无降级 |
+| P12 | `src/prompts/persona-engineering.md:12` | “需求+设计文档（docs/）” | 提示层假设 |
+| P13 | `src/agent-tools/advisor.mjs:104-114` | documents 校验限 `docs/` 前缀或文档扩展名 | 用 `.org/.wiki/.html/.tex` 记设计的项目被硬拒 |
+| P14 | `src/tui/cmd-eng.mjs:31,35-46` | 工程模式门禁要求项目根 `METHODOLOGY.md`；“从模板创建”指向**已不存在**的 `methodology-template.md` | **自相矛盾 + 活 bug**——选项必炸；与本仓“METHODOLOGY 已退役”冲突 |
+| P15 | `src/agent/dispatch.mjs:204`、`src/agent-tools/eng.mjs:59` | 提示文本写死 "in docs/" | 模型可见错误提示带本仓布局 |
+| P16 | `src/advisor/messages.mjs:35-57` | 项目根判据 = 存在 `AGENTS.md`（唯一） | monorepo 子项目无 AGENTS.md → P1/P2 查错目录 |
+| P17 | `src/agent/helpers.mjs:321-327` | 项目指令仅读 cwd 的 AGENTS.md / project_rules.md | 缺失时返回空、**无提示**；不向上走；不认 `.cursor/rules`/`CLAUDE.md` |
+| P18 | `src/advisor/repos.mjs:22-41` 等 | 以 `.git` 判仓库根/评审范围/快照 | 非 git 项目范围采集为空 |
+| P19 | `src/tui/clipboard.mjs:142` → `src/tools/file.mjs:192` | 粘贴图片落盘 `<cwd>/.thincoder-paste-<ts>.png` | 未读则该文件**留在用户仓库根**（污染） |
+| P20 | `src/tools/repomap.mjs:138-145` | 只解析 JS/TS + Python 的 import/export | 其他语言静默缺依赖信息 |
+| P21 | `src/tools/linter.mjs:43-46,119-128` | 语言→linter 表 | 表外语言“no linter available”（可见） |
+| P22 | `src/tools/linter.mjs:61,92` | 配置只看**当前 cwd**（tsconfig.json / Cargo.toml） | monorepo 子包（配置在上级）→ 静默视为无 linter |
+| P23 | `src/agent-tools/subagent-scheduler.mjs:52-54` | 父侧维护文件黑名单 = basename `todo.md`/`changelog.md`/`checklist*`（任意层级） | 用户项目恰有同名文件 → eng-coder **无法声明它**（fail-closed 可见） |
+| P24 | `src/agent-tools/verify.mjs:38-58` | 项目根 = 含 package.json/.git 的最近祖先 | 无锚点 → 退化为松散全局匹配 |
+| P25 | `src/advisor/repos.mjs:146` vs `src/agent-tools/advisor-async.mjs:170` | 同一条“src 是不变量”**两种正则**（组件匹配 vs 锚定） | 语义分叉 |
+| P26 | `src/tools/shared.mjs:20` | `IGNORED_DIRS={node_modules,.git,dist,build,.turbo,coverage}` | 源码在 `build/`/`dist/` → 搜不到（文案有声明） |
+| P27 | `src/tools/tree.mjs:13` | SKIP_DIRS 另含 `bin,obj` 等 | 源码在 `bin/`（Go/脚本项目）→ 树中消失 |
+| P28 | `src/memory/code-sync.mjs:61,141,345` | 任意 `.` 开头路径段一律跳过 | 源码在 `.github/scripts/` 等 → **永不入索引** |
+
+#### 🔵 无害 / 仅信息（7 项）
+
+`cmd-init.mjs:12,24-58`（类型探测，双配置项目误判 Node）· `completion.mjs:81`+`verify.mjs:71,175,283`（措辞层）· `.thincoder/` 命名空间（产品自命名空间，非对用户项目的假设）· `~/.thincoder/` · `.mcp.json`（跨工具约定）· `verify.mjs:197-216`（JS node --check，advisory）· `helpers.mjs:264,271,286`（隐藏项有计数行）
+
+#### 一致性债务（“整明白”时要一起裁的）
+
+1. **`src/` 判据有 4 种实现**：`^src/` 锚定 `dispatch.mjs:199`+`repos.mjs:168` vs 组件匹配 `repos.mjs:146`+`advisor-async.mjs:170` vs 根锚定 `verify.mjs:38-58` vs 注释里的 `isProductCode`（**该函数不存在**，仅注释概念——`repos.mjs:151`、`verify.mjs:184`）
+2. **“项目根”有两个互不相干的定义**：AGENTS.md 版（`messages.mjs:35`）vs package.json+.git 版（`verify.mjs:38`）
+3. **文档/临时文件判定**：扩展名白名单（`repos.mjs:100,116`），不参考任何项目自述
+4. **已有“让项目自己说”的先例**（改造样板）：`.thincoder/advisor.md`（有默认回退的覆盖）· advisor `documents=[…]` 参数（显式声明，但按次不持久）· verify 的自然语言验证法（**明确拒绝硬编码测试命令**——证明本产品既有设计取向）
+
+#### 已核实“不受影响”（防重复勘察）
+
+顶层 `README.md` 从不被读取 · **无任何代码执行用户项目的测试命令**（verify 明确不自跑）· 无构建/发布假设（`package.json` 仅读 ThinCoder 自身）· `test/` 目录假设零命中 · `.vscode/` 仅作端标识后缀 · `prepublishOnly` 用户侧零命中。
