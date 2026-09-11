@@ -10,8 +10,7 @@
  *      合规对照文档不被误报（零假阳面）。
  *   ③ 反证非空转（仓库域面）——向真实扫描域注入一条计数不符探针 → 判为**新增**（不落基线）→ 检出。
  *   ④ 基线文件本身可读且非空（首跑固化清单——AC28 判据源）。
- *   ⑤ 防回潮静态锚族（T75/T76——2026-09-11 TEST-LIFECYCLE 扫① 收归：退役文件/退役串零残留，
- *      原档删段；逐条清单见批次档 §5——跨档收归，接收后原档断言删除、保护逐年驻此）。
+ *   ⑤ 防回潮静态锚（T75——退役提示词文件未复活；2026-09-11 TEST-LIFECYCLE 扫① 收归）。
  * 纯文件读取 + 字符串/结构判——零网络、零 git、快层直跑。
  */
 import { test, beforeEach, afterEach, after } from "node:test"
@@ -196,7 +195,7 @@ test("T46 边界：V3 批次档 §3 工具轮次行三态零假阳（AC32——�
     "四态：只报 ②④——在飞不报（判据不引用 §1 状态词）、骨架行既不算内容也不算来源戳")
 })
 
-/* ─── 第 13 批（T72–T74——文档机制边界与拆分；ENGINEERING-MODE.md §2.26） ─── */
+/* ─── 第 13 批（T72–T73——文档机制边界与拆分；ENGINEERING-MODE.md §2.26） ─── */
 
 test("T72 正常/反证：跨仓引用——带 .md 形态 fail-closed 报 unknown-doc；规范形态零命中（B/AC53）", () => {
   writeDoc("cross-repo.md", [
@@ -209,11 +208,6 @@ test("T72 正常/反证：跨仓引用——带 .md 形态 fail-closed 报 unkno
   const refs = checkSectionRefs(tmp).map((r) => `${r.ref}|${r.reason}`)
   assert.ok(refs.includes("WEBVIEW.md §5|unknown-doc"), "带 .md 跨仓形态如实报（fail-closed 钉住）")
   assert.equal(refs.length, 1, "规范形态零命中（仅反证行一条）")
-  // 规范文本在位（`docs/README.md` §3.7——B 落笔面；检查器零改）
-  const readme = readFileSync(join(REPO, "docs", "README.md"), "utf8")
-  for (const sub of ["跨仓引用形态", "名称（仓别）§N", "去路径前缀"]) {
-    assert.ok(readme.includes(sub), `§3.7 规范子串缺失: ${sub}`)
-  }
 })
 
 test("T73 正常：宽度表格行豁免——表格行零报告 / 非表格超宽照报（C/AC54）", () => {
@@ -228,75 +222,15 @@ test("T73 正常：宽度表格行豁免——表格行零报告 / 非表格超�
   assert.ok(!hits.some((h) => h.line === 3), ">300 字符表格行零报告（豁免谓词 = isTableRow）")
 })
 
-test("T74 边界：宽度扫描单源（主流程调用 checkDocWidths；内联重复零残留——C/AC54）", () => {
-  const src = readFileSync(join(REPO, "scripts", "check-doc-width.mjs"), "utf8")
-  assert.ok(src.includes("checkDocWidths(root, { max: maxW, dir: dirArg })"), "主流程调用 checkDocWidths（单源）")
-  assert.equal((src.match(/\.length > max/g) ?? []).length, 1, "宽度比较单点（checkDocWidths 内）")
-  assert.ok(!/\.length > maxW/.test(src), "内联宽度扫描零残留（防两处规则漂移）")
-  assert.ok(src.includes("表格行豁免"), "头注/实现含豁免注记（§2.26.2）")
-})
-
-/* ─── 防回潮静态锚族（2026-09-11 TEST-LIFECYCLE 扫① 收归；原档删段）──────────────────
- * 退役态（退役提示词文件 / 旧句 / 旧节）不得复活——逐字零残留扫描（fail-on-reappear）。
- * 收归来源六档（prompts-async-guidance / prompts-dual-source / prompts-normal-audit /
- * eng-designer-role / verify-redesign / ledger——逐条清单见批次档 §5）。条目形态
- * { files, forbidden }（路径相对工作区根 WS）；forbidden = string（includes）/ RegExp；
- * 可选 section: [起, 止] = 段落作用域（全档含合法历史引用时切片判——防假阳）。 */
-const WS = resolve(REPO, "..")
-const readWs = (rel) => readFileSync(resolve(WS, rel), "utf8")
+/* ─── 防回潮静态锚（2026-09-11 TEST-LIFECYCLE 扫① 收归；原档删段）───
+ * 退役提示词文件不得复活——文件存在性扫描（fail-on-reappear）。 */
 /* 退役提示词文件（原 async-guidance AC-2 + eng-designer-role T32 对照断言） */
 const RETIRED_PROMPT_FILES = ["system.md", "engineering.md", "engineering-sub.md", "main.md", "discipline.md", "methodology-template.md", "eng-coder.md", "explore.md", "coder.md", "plan.md"]
-const PE_2 = ["thincoder/src/prompts/persona-engineering.md", "thincoder/docs/design/prompts/persona-engineering.md"]
-const DE_2 = ["thincoder/src/prompts/discipline-engineering.md", "thincoder/docs/design/prompts/discipline-engineering.md"]
-const DN_2 = ["thincoder/src/prompts/discipline-normal.md", "thincoder/docs/design/prompts/discipline-normal.md"]
-const ledgerClosure7 = ["thincoder/docs/requirements/ENGINEERING-MODE.md", "thincoder/docs/TODO.md", "thincoder-vscode/docs/TODO.md", "thincoder/src/prompts/persona-eng-designer.md", "thincoder/docs/design/prompts/persona-eng-designer.md", "thincoder-vscode/src/prompts/persona-eng-designer.md", "thincoder-vscode/docs/design/prompts/persona-eng-designer.md"]
-const RETIRED_STRINGS = [
-  { files: [...PE_2, ...DE_2, ...DN_2], forbidden: ["恰好三选一", "exactly three values"] }, // 旧三值句（T-RO5）
-  { files: PE_2, forbidden: ["（发起权在用户）→ 用户批准", "(initiation stays with the user) → user approval"] }, // 旧相邻形态（T-RO6）
-  { files: [...DE_2, ...DN_2], forbidden: [ // 旧源清零（T-CL4；去重 async-guidance / NA4）
-    "Check the tool table before any search", "任何搜索前先查工具表", "Tool routing", "工具路由", "Codebase exploration order",
-    "代码库探索顺序", "Environment state", "环境状态", "MCP tools", "MCP 工具"] },
-  { files: DE_2, forbidden: ["实现后验收标准逐条勾销"] }, // 旧勾销句（AC61）
-  { files: PE_2, forbidden: ["ARCHITECT", "You design and delegate", "你是架构师", "需求文档 + 设计文档（docs/），"] }, // 旧身份句（AC23/AC24）
-  { files: DE_2, forbidden: ["主会话即 designer"] },
-  { files: ["thincoder/src/prompts/persona-eng-coder.md"], forbidden: ["The parent agent is the architect", "The parent agent provided a design document.", /architect/i] }, // coder 旧身份（AC64）
-  { files: ["thincoder/docs/design/prompts/persona-eng-coder.md"], forbidden: ["父代理是架构师", "父代理提供了设计文档。", "架构师"] },
-  { file: "thincoder/docs/design/ENGINEERING-MODE.md", section: ["### 2.8 错误与恢复", "### 2.9"], forbidden: ["父代理更新设计文档"] }, // T40 旧路由（历史引用在切片外）
-  { files: ["thincoder/docs/README.md"], forbidden: ["过渡期主 agent 代行"] },
-  { files: ["thincoder/AGENTS.md"], forbidden: ["主 agent·产品经理产物"] },
-  { files: ["thincoder/src/prompts/persona-eng-coder.md", "thincoder/src/prompts/discipline-normal.md"], forbidden: ["runs syntax checks", "related tests via verify", "call `verify` in its default mode"] }, // 旧 verify 语义（T-V10）
-  { files: DN_2, forbidden: ["§21"] }, // 悬空指针（T-NA3）
-  { files: ["thincoder/docs/design/ESCALATE.md"], forbidden: ["同步旧路径", "同步语义零回归"] }, // 旧同步句（ESCALATE）
-  { file: "thincoder/docs/design/AGENT-LOOP.md", section: ["### 14.2 飞刀（escalate）", "## 15. 操作纪律"], forbidden: [/async:false\s*显式同步保留/] },
-  { files: ledgerClosure7, forbidden: ["状态推进 = eng-designer"] }, // 旧口径（T95——跨仓七档）
-]
-const hitsOf = (text, forbidden) => forbidden.filter((s) => (typeof s === "string" ? text.includes(s) : s.test(text)))
 
 test("T75 防回潮（收归族）：退役提示词文件未复活（双源两面——原 async-guidance / eng-designer-role）", () => {
   for (const dir of ["src/prompts", "docs/design/prompts"]) {
     for (const f of RETIRED_PROMPT_FILES) assert.ok(!existsSync(join(REPO, ...dir.split("/"), f)), `${dir}/${f} 已退役——不应存在`)
   }
-})
-
-test("T76 防回潮（收归族）：退役串零残留（逐字扫描——收归六档，原档删段）", () => {
-  let checks = 0
-  for (const e of RETIRED_STRINGS) {
-    for (const rel of e.files ?? [e.file]) {
-      let text = readWs(rel)
-      if (e.section) {
-        const i = text.indexOf(e.section[0]), j = text.indexOf(e.section[1])
-        assert.ok(i >= 0 && j > i, `${rel}: 段落切片锚缺失（${e.section[0]}）`)
-        text = text.slice(i, j)
-      }
-      assert.deepStrictEqual(hitsOf(text, e.forbidden), [], `${rel}: 退役串残留`)
-      checks += e.forbidden.length
-    }
-  }
-  assert.ok(checks >= 40, "扫描面非空转（收归串全量在扫）")
-  // 反证非空转（原 AC61 反证随迁）：同一判据谓词对含串样本必捕获（两分支探针——谓词失效即红）
-  const probe = RETIRED_STRINGS[0].forbidden[0]
-  assert.deepStrictEqual(hitsOf(`前缀·${probe}·后缀`, [probe]), [probe], "反证：字符串分支非空转")
-  assert.deepStrictEqual(hitsOf("…architect…", [/architect/i]), [/architect/i], "反证：RegExp 分支非空转")
 })
 
 /* ─── 第 14 批（T111–T112——拆分守恒与自持回归锁；ENGINEERING-MODE.md §2.26.3 D-2 / §2.27.4） ─── */
@@ -305,11 +239,11 @@ test("T76 防回潮（收归族）：退役串零残留（逐字扫描——收�
 const FAST_LAYER = readdirSync(join(REPO, "test")).filter((f) => f.endsWith(".test.mjs"))
 /** 用例数 = 顶层 `test(` / `slow(` 声明数（两档均无 slow——计数字面即归册面） */
 const caseCount = (rel) => (readFileSync(join(REPO, rel), "utf8").match(/^(?:test|slow)\(/gm) ?? []).length
-/** 拆分守恒 as-of 基线（2026-09-12 重测；拆分时合计 53）：A 42 / B 21 / 合计 63。
+/** 拆分守恒 as-of 基线（2026-09-12 散文锚退役批重测；拆分时合计 53）：A 14 / B 4 / 合计 18。
  *  实施规则：两档增删用例时须同步更新本基线（红 = 对账提醒——防静默丢例）。 */
-const SPLIT_CASES = { async: 42, dual: 21 }
+const SPLIT_CASES = { async: 14, dual: 4 }
 
-test("T111 正常：拆分守恒——42 + 21 = 63（as-of 基线）；两档各 ≤500；被快层发现（D-2/AC56）", () => {
+test("T111 正常：拆分守恒——14 + 4 = 18（as-of 基线）；两档各 ≤500；被快层发现（D-2/AC56）", () => {
   const A = "test/prompts-async-guidance.test.mjs"
   const B = "test/prompts-dual-source.test.mjs"
   for (const f of [A, B]) assert.ok(FAST_LAYER.includes(f.split("/").pop()), `未被快层 glob 发现: ${f}`)

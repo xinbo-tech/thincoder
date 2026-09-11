@@ -1,14 +1,11 @@
 /**
- * tui-selection-surfaces.test.mjs — 选择面收口（第 20 批 A1/A4——设计档 TUI.md §12）用例 1–10 1:1。
+ * tui-selection-surfaces.test.mjs — 选择面收口（第 20 批 A1/A4——设计档 TUI.md §12）用例 1–9 1:1。
  * 直驱 createPickers / handleQuestionMode / renderWizard + renderPicker 纯函数面
  * （构造手法照 model-ref.test.mjs 脚本化 picker + 最小 state/computeLayout 桩）。
  * 纯单元：零网络、零子进程、零真实终端。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 
 import { createPickers } from "../src/tui/pickers.mjs"
 import { createWizard } from "../src/tui/wizard.mjs"
@@ -19,7 +16,6 @@ import { renderPicker } from "../src/tui/render-frame.mjs"
 import { stringWidth } from "../src/tui/render.mjs"
 import { QUESTION_CUSTOM } from "../src/tui/interaction.mjs"
 
-const HERE = dirname(fileURLToPath(import.meta.url))
 const strip = (s) => s.replace(/\x1b\[[0-9;]*m/g, "")
 // 真 ANSI 色序列（stringWidth 计入零宽——行宽断言不能被色码污染）
 const C = { text: "\x1b[97m", dim: "\x1b[2m", tool: "\x1b[36m", error: "\x1b[31m", warn: "\x1b[33m" }
@@ -224,13 +220,4 @@ test("用例 9 错误（F10/AC-A4-4）：零回归对照——picker 键位 / wi
   handleQuestionMode("", { name: "escape" }, qctx(state4))
   assert.deepEqual(state4.question.options, ["a", "b"], "有 _backOptions：Esc 回选项态")
   assert.equal(state4.question.selected, 1)
-})
-
-test("用例 10 正常·文档面（F10/AC-A4-1）：设计档 §12.4 契约表落档（表头 + 三面列名 + 关键行名）", () => {
-  const doc = readFileSync(join(HERE, "..", "docs", "design", "TUI.md"), "utf8")
-  const section = doc.slice(doc.indexOf("### 12.4 选择面契约"), doc.indexOf("### 12.5"))
-  assert.ok(section.length > 200, "§12.4 节切出非空")
-  for (const needle of ["### 12.4 选择面契约", "picker", "wizard provider 步", "question options", "↑↓ 语义", "选中项可见性", "面特有豁免"]) {
-    assert.ok(section.includes(needle), `§12.4 含 ${needle}`)
-  }
 })

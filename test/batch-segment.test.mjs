@@ -3,7 +3,7 @@
  * 用例表 T43–T53 1:1 落地（含 T43b/T49b/T52b；T46 的 V3 三态在 test/doc-consistency.test.mjs）：
  *   T43 正常 append（既有行字节不变）· T43b 段标题缺失拒 · T44 越段/未知段拒 ·
  *   T45 凭证剥除零命中 · T47 路径门 + 只读面零变更（含挂载面 T47b）·
- *   T48 来源戳不可伪造（含骨架行不计/连写 N=1,2）· T49/T49b 提示词双源（含限定子串）·
+ *   T48 来源戳不可伪造（含骨架行不计/连写 N=1,2）· T49b 提示词双源（含限定子串）·
  *   T50 骨架保护 · T51 并发隔离（实例键）· T52/T52b 超量拒 + 分段追加 N 顺延 ·
  *   T53 身份判据同源（绑定即身份——不读他批状态）。
  * 纯单元：零网络、零子代理启动、零真实评审（advisor 只在门禁抛出点驱动）。
@@ -12,9 +12,8 @@ import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { join } from "node:path"
 import { randomUUID } from "node:crypto"
-import { fileURLToPath } from "node:url"
 
 import { batchSegmentTool, batchDocForReview, resolveBatchDocPath, MAX_TEXT_CHARS } from "../src/agent-tools/batch-segment.mjs"
 import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
@@ -23,7 +22,6 @@ import { buildAdvisorSystemPrompt } from "../src/advisor.mjs"
 import { advisorTool } from "../src/agent-tools/advisor.mjs"
 import { prepareRun } from "../src/agent/setup.mjs"
 
-const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "batch-segment-")) })
 /** Windows 实测（eng-designer-role.test.mjs 同款手法）：setup 深度 0 链路的句柄释放滞后 →
@@ -209,34 +207,11 @@ test("T48 边界：来源戳不可伪造（工具生成 / 自带标题被忽略 
   assert.equal(doc.match(/### 轮次与发现（/g).length, 1, "骨架行原样保留（未被改写）")
 })
 
-// ── T49 / T49b 提示词面（双源） ─────────────────────────────────────────────
+// ── T49b 提示词面（双源） ────────────────────────────────────────────────────
 const WRITE_RE = /把本轮\*\*发现表 \+ VERDICT \+ 计数逐字\*\*写进批次档 §3/
 const QUAL_RE = /仅当本评审为设计评审、且工具面里已挂载 `batch_segment` 时/
-const FAIL_RE = /「§3 未写入」/
-const MARK_RE = /父侧代写必须打标/
-const promptNow = (dir, name) => readFileSync(join(REPO, dir, name), "utf8")
-
-test("T49 正常：三条评审提示词双源——写 §3 指令（逐字）+ 适用面限定 + 失败明示（AC33/AC35）", () => {
-  for (const dir of ["src/prompts", "docs/design/prompts"]) {
-    for (const name of ["advisor-design.md", "advisor-round2.md", "advisor-round3.md"]) {
-      const t = promptNow(dir, name)
-      assert.match(t, WRITE_RE, `${dir}/${name} 缺「发现表+VERDICT+计数逐字写 §3」句`)
-      assert.match(t, QUAL_RE, `${dir}/${name} 缺适用面限定子串（代码评审不误报）`)
-      assert.match(t, FAIL_RE, `${dir}/${name} 缺失败明示句「§3 未写入」`)
-      assert.match(t, MARK_RE, `${dir}/${name} 缺「父侧代写必须打标」句`)
-      assert.match(t, /batch_segment/, `${dir}/${name} 未点明工具名`)
-    }
-    // 失败明示句双源（纪律层——父侧代写打标 + 子代理明示未写入）
-    const disc = promptNow(dir, "discipline-engineering.md")
-    assert.match(disc, /§× 未写入/, `${dir}/discipline-engineering.md 缺「§× 未写入」失败明示句`)
-    assert.match(disc, MARK_RE, `${dir}/discipline-engineering.md 缺「父侧代写必须打标」句`)
-    assert.match(disc, /batch_segment/, `${dir}/discipline-engineering.md 未点明工具名`)
-  }
-})
 
 test("T49b 错误：代码评审不带写指令（round 1 无此句；round 2+ 该句必带限定）", () => {
-  // round 1：代码评审走 advisor-round1.md——不含 §3 写指令（钉死单形态）
-  assert.doesNotMatch(promptNow("src/prompts", "advisor-round1.md"), /批次档 §3/, "代码 round 1 提示词无 §3 写指令")
   const codeR1 = buildAdvisorSystemPrompt({}, null, "code")
   assert.doesNotMatch(codeR1, WRITE_RE, "代码评审 round 1 注入文本不含写指令")
   // round 2+：设计 + 代码共用 ROUND2/ROUND3——指令在，但必带适用面限定（否则代码评审误报「§3 未写入」）

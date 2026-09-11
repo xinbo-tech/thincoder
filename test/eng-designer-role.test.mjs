@@ -2,26 +2,23 @@
  * eng-designer-role.test.mjs — eng-designer 角色 + 行为纪律 + 文档更新纪律（ENGINEERING-MODE.md
  * 第 2 批 · CLI 端）。用例表 1:1 落地（§3.2 T30–T36 / T39 / T40）+ AC16–AC27：
  *   T30 正常（slow——第 20 批 A3 归册：真实 prepareRun 装配实测 818.5ms 撞快层慢门）：
- *       角色注册五处（schema enum / ROLES 白名单 + 错误文案 / 描述角色矩阵 + Mode filtering
- *       / setup 工程 enum / tool-args 显示 case）
+ *       角色注册（schema enum / 描述角色矩阵 + Mode filtering / setup 工程 enum）
  *   T31 错误：非工程模式 spawn eng-designer → throw（第三道模式门——与 eng-coder 门同族）
- *   T32 边界：装配不静默回退（assemblePrompt("eng-designer") 非空 ≠ CONSULT_BASE + 槽序 + 零警告）
- *        + 接线断言（designer 子代理实选场景 = "eng-designer"——setup 内层选择器）；T32b 含第 20 批 A2：
- *        受限变体描述动作清单（7 动作/无 check）+ 机械门文案同清单——零新增装配调用，规避慢门
+ *   T32 边界：装配不静默回退（assemblePrompt("eng-designer") 非空 + 零警告）
+ *   T32b（第 20 批 A2）：受限变体描述动作清单（7 动作/无 check）+ 机械门文案同清单——零新增装配调用，规避慢门
  *   T33 错误/正常：designer 无 batchDoc → throw（文案含实际角色名）；带可读路径 → 通过 + 注入行
- *   T34 边界：写域 = 提示词级（双源 persona 明写写域；dispatch.mjs 无新增写域判定）
  *   T35 边界：勘察受限（受限 schema explore-only + 机械门拒 coder / 允 explore 且返回 null；
  *        勘察任务输入不含 Audit scope 块）
  *   T36 边界：designer 无 designToken 需求（spawn 不带 token → 通过——与 eng-coder 对照）
  *   T39 边界：designer 写操作走父侧人工 ask（无任务域授权；autoApprove 才免问）
- *   T40 边界：写权路由单一口径（六面均指向 eng-designer——正向锚；旧路由/身份句类负向锚已收归接收档）
+ *   T40 边界：写权路由单一口径（§2.8 切片结构面——路由句类正向锚已随 2026-09-12 散文锚退役批删除）
  * 构造手法照先例：直驱 buildSpawnChild（batch-doc-gate.test.mjs）+ 最小 agent 走真实 setup
  * 装配（batch-doc-gate T29 / setup-reminders 形态）+ executeToolCalls 直驱（design-token-settlement）。
  * 纯单元：零网络、零子代理启动。
  *
  * 扫① 削段注（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3 点名档）：T32 退役件对照 + T40 旧
- * 路由/身份句类负向锚（六条）→ 收归 test/doc-consistency.test.mjs T75/T76（防回潮族）；T40 勾销类
- * 负向正则 → 删（重复：正向锚已锁「勾销落批次档 §6 / 不进设计档」）。正向锚全保留。
+ * 路由/身份句类负向锚（六条）→ 收归防回潮族；T40 勾销类负向正则 → 删（重复）。
+ * 2026-09-12 散文锚退役批：注册 / 写权两面段删、写域面整删，防回潮族接收档同步退役。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -37,7 +34,7 @@ import { buildSpawnChild } from "../src/agent-tools/subagent-spawn.mjs"
 import { gateEngCoderSpawn } from "../src/agent/spawn-child.mjs"
 import { prepareRun } from "../src/agent/setup.mjs"
 import { executeToolCalls } from "../src/agent/dispatch.mjs"
-import { assemblePrompt, SCENARIO_SLOT_FILES, CONSULT_BASE } from "../src/prompt-overlays.mjs"
+import { assemblePrompt, SCENARIO_SLOT_FILES } from "../src/prompt-overlays.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
 const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
@@ -90,18 +87,12 @@ const setupAgent = (role, over = {}) => ({
 slow("T30 正常：角色注册五处（schema enum / ROLES 白名单 + 错误文案 / 描述角色矩阵 + Mode filtering / setup 工程 enum / tool-args）", async () => {
   // ① 基工具 schema enum
   assert.ok(subagentTool.parameters.properties.role.enum.includes("eng-designer"), "schema enum 含 eng-designer")
-  // ② ROLES 白名单 + 错误文案（execute 内闭包——源码面断言）
-  const src = read("src/agent-tools/subagent.mjs")
-  assert.match(src, /const ROLES = new Set\(\["explore", "plan", "coder", "eng-coder", "eng-designer"\]\)/, "ROLES 白名单含 eng-designer")
-  assert.match(src, /Valid roles: explore, plan, coder, eng-coder, eng-designer \(exact spelling\)\./, "错误文案含 eng-designer")
   // ③ 描述角色矩阵 + Mode filtering 句
   assert.match(subagentTool.description, /- eng-designer — engineering-mode design writer \(available only in engineering mode\)/, "描述角色矩阵行缺失")
   assert.match(subagentTool.description, /Mode filtering: normal mode exposes explore\/plan\/coder; engineering mode exposes explore\/plan\/eng-designer\/eng-coder\./, "Mode filtering 句缺失")
   // ④ setup 工程模式 enum（真实装配——depth 0）
   const { toolByName } = await prepareRun(setupAgent(undefined), "task", {}, { depth: 0 })
   assert.deepEqual(toolByName.get("subagent").parameters.properties.role.enum, ["explore", "plan", "eng-designer", "eng-coder"], "工程模式 enum 五处之一")
-  // ⑤ tool-args 显示 case
-  assert.match(read("src/tui/tool-args.mjs"), /case "eng-designer": \{/, "tool-args 显示 case 缺失")
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -128,25 +119,14 @@ test("T32 边界：assemblePrompt('eng-designer') 非空 ≠ CONSULT_BASE + 槽�
   assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md"], "场景槽表行（顺序 = persona→common→discipline）")
   const a = assemblePrompt("eng-designer")
   assert.ok(a.prompt.length > 500, "装配非空")
-  assert.notEqual(a.prompt, CONSULT_BASE, "不是 CONSULT_BASE 静默回退")
   assert.deepEqual(a.warnings, [], "全槽在位零警告（漏登记 SLOT_CONTENTS 即警告）")
-  assert.ok(a.prompt.indexOf("写稿面唯一作者") < a.prompt.indexOf("Programming is collaborative labor"), "槽序：人格先于公共")
-  assert.ok(a.prompt.indexOf("Programming is collaborative labor") < a.prompt.indexOf("铁律"), "槽序：公共先于纪律")
   // 扫①：退役提示词文件对照锚 → 收归 test/doc-consistency.test.mjs T75（防回潮族）
 })
 
 test("T32b 接线：designer 子代理实选场景 = 'eng-designer'（setup 内层选择器——非 engineering/normal）", async () => {
-  // 真实装配面：systemPrompt 即场景槽拼接结果（内层选择器误映射 → 拿到主会话人格 = 静默错配）
+  // 真实装配面（A2 面复用其 toolByName——装配句子断言已随 2026-09-12 散文锚退役批删除）
   const designerRun = await prepareRun(setupAgent("eng-designer"), "task", {}, { depth: 1 })
-  assert.ok(designerRun.systemPrompt.includes("写稿面唯一作者"), "designer 场景人格进 system prompt")
-  assert.ok(!designerRun.systemPrompt.includes("产品经理 + 流程编排者"), "不是 engineering 场景（主会话人格）")
-  assert.ok(!designerRun.systemPrompt.includes("ThinCoder, a coding agent"), "不是 normal 场景")
-  assert.ok(designerRun.systemPrompt.includes("铁律"), "工程纪律槽在位（engineering=true 装配）")
-  assert.ok(!designerRun.systemPrompt.includes("prompt slot file"), "无缺槽警告（防静默回退）")
-  // 对照（反证非空转）：eng-coder 子代理走自己的场景（同一装配点）
   const coderRun = await prepareRun(setupAgent("eng-coder"), "task", {}, { depth: 1 })
-  assert.ok(coderRun.systemPrompt.includes("被授权的实现者"), "eng-coder 场景人格（对照）")
-  assert.ok(!coderRun.systemPrompt.includes("写稿面唯一作者"), "两场景不串")
 
   // A2（第 20 批 §2.15 D5——AC-A2-1）：受限变体描述动作清单 = 机械门 7 动作（同清单真值）；
   // 已退役动作 check 不得残留。零新增装配调用——复用上方两处 prepareRun 的 toolByName。
@@ -185,24 +165,6 @@ test("T33 错误/正常：designer 无 batchDoc → throw（含实际角色名�
   // 对照：explore 不带 batchDoc 不受影响（门只管工程角色）
   const explore = buildSpawnChild(engParent(), { agent: engParent(), callbacks: {} }, { task: "audit" }, "explore", true, [], [], null)
   assert.ok(!explore.input.includes("Batch record (batchDoc)"), "explore 不注入、不校验")
-})
-
-// ═════════════════════════════════════════════════════════════════════════════
-// T34 边界：写域 = 提示词级（AC19）
-// ═════════════════════════════════════════════════════════════════════════════
-test("T34 边界：persona 双源明写写域（docs/ 扣除 docs/design/prompts/）+ dispatch.mjs 无新增写域判定", () => {
-  for (const f of ["src/prompts/persona-eng-designer.md", "docs/design/prompts/persona-eng-designer.md"]) {
-    const t = read(f)
-    assert.ok(t.includes("docs/design/prompts/"), `${f}: 写域扣除面在位`)
-    assert.ok(t.includes("docs/"), `${f}: 写域基底在位`)
-    assert.match(t, /写域|write domain/i, `${f}: 写域声明缺失`)
-    assert.match(t, /src\/\*\*/, `${f}: 写域边界（src 不碰）缺失`)
-  }
-  // 机械层零变更（用户裁定：不需要机械门禁）——dispatch 无 designer 判定
-  const dispatch = read("src/agent/dispatch.mjs")
-  assert.ok(!dispatch.includes("eng-designer"), "dispatch.mjs 无新增写域判定（机械层零变更）")
-  assert.match(dispatch, /if \(agent\._role === "eng-coder" && agent\.config\?\.agent\?\.engineering/, "既有 eng-coder 门保持原样（零回归对照）")
-  assert.match(dispatch, /if \(agent\.config\?\.agent\?\.engineering && depth === 0/, "父侧设计门保持原样（零回归对照）")
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -300,42 +262,7 @@ test("T39 边界：designer 子代理写 docs/ → 走父侧授权 ask（非静�
 // ═════════════════════════════════════════════════════════════════════════════
 test("T40 边界：写权路由六面（§2.2 step1/step10 · §2.5 · §2.6 F2 · §2.8 · §2.15 A2）+ 双源 persona-engineering 调用链", () => {
   const em = read("docs/design/ENGINEERING-MODE.md")
-  // §2.2 step 1（设计档写权路由）
-  assert.match(em, /写设计档 `docs\/design\/`（三层：需求\/设计\/测试；按业务板块组织）——\*\*本批起路由 eng-designer\*\*/, "step1 路由句缺失")
-  // §2.2 step 10（勾销 → 批次档 §6，不进设计档）
-  assert.match(em, /验收勾销落批次档 §6/, "step10 勾销归属句缺失")
-  assert.match(em, /勾销不进设计档/, "step10「不进设计档」句缺失")
-  // §2.5（设计评审修订 → designer）
-  assert.match(em, /修订落档经 eng-designer/, "§2.5 路由句缺失")
-  // §2.6 F2（修正轮 docs FIRST 落档 → designer）
-  assert.match(em, /落档动作经 eng-designer/, "§2.6 F2 路由句缺失")
-  // §2.8（实现中设计变更 → designer）
-  assert.match(em, /转 eng-designer 更新设计档（写稿权唯一/, "§2.8 路由句缺失")
-  // §2.15 A2（写权矩阵本体）
-  assert.match(em, /### 2\.15 eng-designer 角色/, "§2.15 本体缺失")
-  assert.match(em, /\*\*A2\. 调用链与写权路由/, "A2 写权表缺失")
-  // §2.8 活路线正句（旧路由/勾销两负向锚已收归接收档 T76；正则式勾销负向锚删除：重复——本行上方
-  // step10 正向锚已锁「勾销落批次档 §6 / 不进设计档」；扫① 2026-09-11）
+  // §2.8 切片结构面（六面路由句类正向锚 + README / AGENTS 口径断言已随 2026-09-12 散文锚退役批删除）
   const sec28 = em.slice(em.indexOf("### 2.8 错误与恢复"), em.indexOf("### 2.9"))
   assert.ok(sec28.length > 100, "§2.8 slice 非空")
-  assert.match(sec28, /转 eng-designer 更新设计档/, "§2.8 目标态路由句缺失")
-  // persona-engineering 双源：调用链段（批次档 → spawn eng-designer（带 files）→ 核验 → 提醒评审 →
-  // 评审 pass 后逐条裁决 →（如需修正）修正轮落地并经核验 → 批准——第 9 批 PROMPT-REVIEW-ORDER 节点）
-  for (const f of ["src/prompts/persona-engineering.md", "docs/design/prompts/persona-engineering.md"]) {
-    const t = read(f)
-    assert.match(t, /调用链/, `${f}: 调用链段标题缺失`)
-    assert.match(t, /spawn eng-designer/, `${f}: spawn eng-designer 指令缺失`)
-    assert.match(t, /batchDoc=/, `${f}: batchDoc 参数示例缺失`)
-    assert.match(t, /files=\[\.\.\.\]/, `${f}: files 声明示例缺失`)
-    assert.ok(t.includes("评审 pass 后逐条裁决"), `${f}: 链行「评审 pass 后逐条裁决」节点缺失`)
-    assert.ok(t.includes("修正轮落地并经核验"), `${f}: 链行「修正轮落地并经核验」节点缺失`)
-    // 身份句类负向锚（三条）→ 收归接收档 T76（扫① 2026-09-11）
-  }
-  // docs/README.md 作者口径一致（RF-3a/3b——第 16 批落笔：过期限定行断言反转为零命中）
-  const rd = read("docs/README.md")
-  assert.match(rd, /eng-designer 产物/, "README §1 目录行作者口径缺失")
-  assert.match(rd, /\| 需求层 \|[^\n|]*\|[^\n|]*\| eng-designer \|/, "README §3.1 作者表 designer 行（去过渡限定）缺失")
-  // AGENTS.md 需求基线口径（RF-3c——同批落笔；旧归属句负向锚 → 收归接收档 T76，扫① 2026-09-11）
-  const ag = read("AGENTS.md")
-  assert.ok(ag.includes("均 **eng-designer 产物**"), "AGENTS.md 需求基线口径句缺失")
 })

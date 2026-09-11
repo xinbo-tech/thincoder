@@ -1232,14 +1232,14 @@ D-2 契约「禁新档增例」），交付时仅一次性人工核验——**�
 |---|---|---|---|---|
 | 1 | `test/doc-consistency.test.mjs` 续 T72–T74 | 同档同族（第 13 批 B/C 机判即落此档）；零新档；快层 glob 自动发现 | 档名语义偏「文档一致性」——本组为「测试档拆分完整性」，主题相邻 | **选定** |
 | 2 | 新档 `test/prompts-split-guard.test.mjs` | 主题最贴切 | 违本批「不得自行新建档」边界；新增档位注册/维护面 | 否决——零新档纪律 |
-| 3 | 并入两档提示词测试之一 | 就近可写 | **破坏其自身守恒计数**（拆分时 53 = 42 + 11；现锁 42 + 21 = 63——并入即失稳，自证矛盾） | 否决 |
+| 3 | 并入两档提示词测试之一 | 就近可写 | **破坏其自身守恒计数**（拆分时 53 = 42 + 11；现锁 14 + 4 = 18——并入即失稳，自证矛盾） | 否决 |
 
 **契约（T111/T112 = 静态不变量——逐字实现形态见 §2.27.4 代码块）**：
 
 - **T111（正常：拆分守恒）**——三面断言：①**发现面** = 两档在快层发现集内
   （`readdirSync(test)` ∩ `*.test.mjs` ≡ `test/*.test.mjs` 单层 glob——`test/run-fast.mjs:19` 默认目标）；
-  ②**守恒** = 用例计数（`^(?:test|slow)\(`）**42 / 21 / 合计 63**（**as-of 2026-09-12 重测基线**——拆分时合计 53；
-  其后第 15/16/23 批锚 + TD 锚组等增例；**增删用例须同步锁定值**——实施规则见 §2.27.4 `SPLIT_CASES`）；
+  ②**守恒** = 用例计数（`^(?:test|slow)\(`）**14 / 4 / 合计 18**（**as-of 2026-09-12 散文锚退役批重测基线**——拆分时合计 53；
+  其后第 15/16/23 批锚 + TD 锚组等增例、散文锚退役批整删驻留断言后回落；**增删用例须同步锁定值**——实施规则见 §2.27.4 `SPLIT_CASES`）；
   ③**硬限** = 两档行数 ≤500（口径 `split("\n").length` 含末行）。
 - **T112（边界：新档自持）**——两面断言：①新档源码零 `prompts-async-guidance` 子串（含注释面——零跨档引用）；
   ②新档 import 说明符全部 `node:` 前缀（头部自持契约的机械面）。
@@ -1350,11 +1350,11 @@ D-2 契约「禁新档增例」），交付时仅一次性人工核验——**�
 const FAST_LAYER = readdirSync(join(REPO, "test")).filter((f) => f.endsWith(".test.mjs"))
 /** 用例数 = 顶层 `test(` / `slow(` 声明数（两档均无 slow——计数字面即归册面） */
 const caseCount = (rel) => (readFileSync(join(REPO, rel), "utf8").match(/^(?:test|slow)\(/gm) ?? []).length
-/** 拆分守恒 as-of 基线（2026-09-12 重测；拆分时合计 53）：A 42 / B 21 / 合计 63。
+/** 拆分守恒 as-of 基线（2026-09-12 散文锚退役批重测；拆分时合计 53）：A 14 / B 4 / 合计 18。
  *  实施规则：两档增删用例时须同步更新本基线（红 = 对账提醒——防静默丢例）。 */
-const SPLIT_CASES = { async: 42, dual: 21 }
+const SPLIT_CASES = { async: 14, dual: 4 }
 
-test("T111 正常：拆分守恒——42 + 21 = 63（as-of 基线）；两档各 ≤500；被快层发现（D-2/AC56）", () => {
+test("T111 正常：拆分守恒——14 + 4 = 18（as-of 基线）；两档各 ≤500；被快层发现（D-2/AC56）", () => {
   const A = "test/prompts-async-guidance.test.mjs"
   const B = "test/prompts-dual-source.test.mjs"
   for (const f of [A, B]) assert.ok(FAST_LAYER.includes(f.split("/").pop()), `未被快层 glob 发现: ${f}`)
@@ -2139,10 +2139,10 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   豁免后检查器仍报存量非表格命中且 exit 非零（`scripts/check-doc-width.mjs:297`——存量 as-of：37 = 24+13，修正轮实测 38 = 24+14）——**不得读作 exit 0**。
 - AC55（§2.26.3 D-1）: `src/advisor/messages.mjs` 本批零改动（改动集判据）；实测 ≤500；拆分计划在档（子串 `project-context.mjs` 在位）。
 - AC56（§2.26.3 D-2）: 两档各 ≤500（实测对表）；用例数守恒（53 = 42 + 11——**as-of 批 13 交付值**；两档其后增例至
-  42 / 21 / 合计 63——活体守恒锁 = AC57 / T111–T112 的 as-of 基线）；两档独立可跑且全绿、被 glob 自动发现；
+   42 / 21 / 合计 63、2026-09-12 散文锚退役批整删后 = **14 / 4 / 合计 18**（活体守恒锁 = AC57 / T111–T112 的 as-of 基线））；两档独立可跑且全绿、被 glob 自动发现；
   新档零跨档 import（grep：无 `prompts-async-guidance` 引用）。
 - AC57（§2.27.1——T111/T112 宿主与断言）: `test/doc-consistency.test.mjs` 新增 T111/T112 两例（**收归族段之后落档**，落档形态逐字见 §2.27.4）——
-  T111 = 发现面（快层集）+ 用例计数（`^(?:test|slow)\(`——**as-of 基线 42 / 21 / 合计 63**，增删须同步）+ 两档 ≤500（`split("\n").length` 口径）；
+  T111 = 发现面（快层集）+ 用例计数（`^(?:test|slow)\(`——**as-of 基线 14 / 4 / 合计 18**，增删须同步）+ 两档 ≤500（`split("\n").length` 口径）；
   T112 = 新档零 `prompts-async-guidance` 子串 + import 全 `node:`；
   既有用例（**T41①–⑤ / T46 / T72–T74 / T75·T76 防回潮收归族**）零改。机器判据：`node --test test/doc-consistency.test.mjs` 全绿（含新两例）+ 该档 ≤500。
 - AC58（§2.27.2——行号指针修正）: 修正表 3 处逐行核验（`:297` = exit 行 / `:32` = `SCAN_DIRS` 声明行 / `:34` = `BASELINE_PATH` 声明行）；
@@ -2337,7 +2337,7 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T72 | 正常/反证：跨仓引用（B） | 夹具两行：`WEBVIEW.md` §5 形态 / `WEBVIEW（VSC 仓）§5` 规范形态 | 前者报 `unknown-doc`（fail-closed 钉住——防未来静默放开）；后者零命中；`docs/README.md` §3.7 规范子串在位 | AC53 |
 | T73 | 正常：宽度表格行豁免 | 夹具：>300 字符表格行 + >300 字符非表格行 | 表格行零报告；非表格行照报（含行号） | AC54 |
 | T74 | 边界：宽度扫描单源 | `scripts/check-doc-width.mjs` 源码 | 主流程调用 `checkDocWidths(`；内联宽度扫描零残留（grep 断言——防两处规则漂移） | AC54 |
-| T111 | 正常：拆分守恒（原设计号 T75①） | 拆分后两档 + `node test/run-fast.mjs` | 用例数 = as-of 基线（A 42 · B 21 · 合计 63——增删须同步）；两档各 ≤500；全绿且被 glob 发现 | AC56 |
+| T111 | 正常：拆分守恒（原设计号 T75①） | 拆分后两档 + `node test/run-fast.mjs` | 用例数 = as-of 基线（A 14 · B 4 · 合计 18——增删须同步）；两档各 ≤500；全绿且被 glob 发现 | AC56 |
 | T112 | 边界：新档自持（原设计号 T76①） | 新档源码 | 零跨档 import（无 `prompts-async-guidance` 引用） | AC56 |
 
 > ① 编号避让（修正轮）：`test/doc-consistency.test.mjs` 档内已存 `T75/T76 防回潮（收归族）` 标题（2026-09-11 TEST-LIFECYCLE 并档）——

@@ -6,13 +6,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
-import { join } from "node:path"
 import { scanVectors, createTopK, SCAN_CHUNK_ROWS } from "../src/memory/scan.mjs"
-
-const ROOT = fileURLToPath(new URL("../src/memory/", import.meta.url))
-const src = (p) => readFileSync(join(ROOT, p), "utf8")
 
 /** 假 DB：按 `rowid > ? ORDER BY rowid LIMIT ?`（末两参）分块返回——记录块大小。 */
 function fakeDb(rows, sizes) {
@@ -85,14 +79,5 @@ test("T-MS3 候选上限：limit=3 / limit=50 → 候选数 = max(limit×4, 20)�
 })
 
 test("T-MS4 三通道接线：三处调用点均经 scan 模块（无全表 .all() 物化）", () => {
-  for (const f of ["core.mjs", "docs.mjs", "code-sync.mjs"]) {
-    const s = src(f)
-    assert.match(s, /scanVectors\(/, `${f}：经 scan 模块分块扫描`)
-    assert.match(s, /createTopK\(Math\.max\(limit \* 4, 20\)\)/, `${f}：候选口径 = max(limit×4, 20)`)
-  }
-  // 负断言：原全表物化形态已清除（UNION ALL 全量 + 裸 .all(...originParams)）
-  assert.equal(/UNION ALL\s*\n\s*SELECT layer/.test(src("core.mjs")), false, "core：无全表 UNION ALL 物化")
-  assert.equal(/SELECT rowid, embedding FROM doc_chunks[^\n]*\.all\(/.test(src("docs.mjs")), false, "docs：无裸 .all()")
-  assert.equal(/SELECT rowid, embedding FROM code_chunks[^\n]*\.all\(/.test(src("code-sync.mjs")), false, "code：无裸 .all()")
   assert.equal(SCAN_CHUNK_ROWS, 2_000, "块常量单源（值锁）")
 })

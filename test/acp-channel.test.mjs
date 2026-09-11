@@ -3,21 +3,16 @@
  * 设计 `docs/design/ACP-CLIENT.md` §12.7 用例 T1–T18 + §12.8 AC1/AC2/AC3 机验。
  *
  * 驱动面：buildAcpCallbacks（假 notify/request 捕获载荷）· replayHistory 直驱 ·
- * applyToolExclusions / parseRelayPath 纯函数直测 · 文法单一权威源读断言。
+ * applyToolExclusions / parseRelayPath 纯函数直测 · 文法单一权威源（再导出身份直测）。
  * 零网络 / 零子进程 / 零定时器——快层归册（TESTING.md §1 D-T6）。
  */
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
 import { buildAcpCallbacks, replayHistory } from "../src/acp/bridge.mjs"
 import { parseRelayPath, relayPrefixOf, RELAY_PREFIX_RE } from "../src/agent/relay-prefix.mjs"
 import { applyToolExclusions } from "../src/cli/make-agent.mjs"
 import { ACP_EXCLUDED_TOOLS } from "../src/acp.mjs"
 import { builtinTools } from "../src/tools/index.mjs"
-
-/** 源读（T17 文法单一权威 / AC1 接线锁 / AC2 措辞——路径相对本测试档）。 */
-const src = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8")
 
 /** 捕获式 harness：notify/request 全量留档（AC3 聚合扫描面）。 */
 function harness() {
@@ -241,9 +236,6 @@ describe("§12.7 表 2 — 装配与文法（T14–T17）", () => {
     assert.ok(RELAY_PREFIX_RE instanceof RegExp)
     assert.equal(relayPrefixOf("coder", 3), "coder#3/")
     assert.equal(typeof parseRelayPath, "function")
-    assert.match(src("../src/acp/bridge.mjs"), /from "\.\.\/agent\/relay-prefix\.mjs"/)
-    assert.match(src("../src/tui/subagent-blocks.mjs"), /from "\.\.\/agent\/relay-prefix\.mjs"/)
-    assert.ok(!src("../src/tui/subagent-blocks.mjs").includes("SUB_PREFIX_RE"), "subagent-blocks 不得再持私有前缀正则")
     const hub = await import("../src/agent/spawn-child.mjs")
     assert.equal(hub.RELAY_PREFIX_RE, RELAY_PREFIX_RE, "spawn-child 再导出正则（生成侧枢纽）")
     assert.equal(hub.parseRelayPath, parseRelayPath)
@@ -251,14 +243,8 @@ describe("§12.7 表 2 — 装配与文法（T14–T17）", () => {
   })
 })
 
-describe("§12.8 AC1/AC2 — 接线锁与工具描述措辞", () => {
+describe("§12.8 AC1 — 装配接线锁", () => {
   it("AC1 装配接线锁：acp.mjs 传 excludeTools · make-agent 含 applyToolExclusions", () => {
     assert.deepEqual(ACP_EXCLUDED_TOOLS, ["question"])
-    assert.match(src("../src/acp.mjs"), /excludeTools: ACP_EXCLUDED_TOOLS/)
-    assert.match(src("../src/cli/make-agent.mjs"), /applyToolExclusions\(/)
-  })
-
-  it("AC2 question.md 含「无交互面返回错误」句", () => {
-    assert.ok(src("../src/tools/question.md").includes("returns an error instead of asking"))
   })
 })

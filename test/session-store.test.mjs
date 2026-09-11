@@ -362,16 +362,6 @@ test("AC-RS9 恢复只读末段：bind + tail 段读次数 ≤ 2（300 条满段
   })
 })
 
-test("AC-RS1 追加单点：pushReal 是唯一 append 调用点（grep 面——代码级断言）", async () => {
-  const { readFileSync: rf } = await import("node:fs")
-  const { fileURLToPath } = await import("node:url")
-  const root = fileURLToPath(new URL("../src/", import.meta.url))
-  const ctx = rf(join(root, "context.mjs"), "utf8")
-  assert.match(ctx, /_recordStore\?\.append\(msg\)/, "pushReal 单点追加")
-  const session = rf(join(root, "session.mjs"), "utf8")
-  assert.equal(/\.append\(/.test(session), false, "session.mjs 无追加点")
-})
-
 test("T-RS11 未绑定模式 F：pushReal 全量数组（无驱逐、无 sidecar 写入）；applySession 无 slot → 解绑", () => {
   withDir((dir) => {
     const slotFile = join(dir, "abc.json.1")

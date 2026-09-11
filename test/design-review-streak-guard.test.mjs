@@ -6,7 +6,7 @@
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
@@ -57,10 +57,6 @@ test("T-SK1 分类矩阵：pass/changes-required 复位；五 kind 逐一计数�
   assert.deepEqual(classify({ hasResult: false, incomplete: "timeout", persistFailed: true }), { reset: false, count: "no_report" }, "#3 无报告压过尾 / 落盘")
   assert.deepEqual(classify({ incomplete: "timeout", persistFailed: true }), { reset: false, count: "timeout" }, "#4 尾压过落盘失败")
   assert.deepEqual(classify({ incomplete: "interrupted", persistFailed: true }), { reset: false, count: null }, "#5 中断压过落盘失败")
-  // 纯函数面：零 I/O、零 src/ import（AC-SK1 静态锚）
-  const src = readFileSync(new URL("../src/agent-tools/review-streak.mjs", import.meta.url), "utf8")
-  assert.ok(!/from\s+"\.\.\//.test(src), "review-streak 不 import 任何 src/ 模块（中立模块——无环）")
-  assert.ok(src.includes('from "node:path"'), "唯一 import = node:path")
 })
 
 // ─── T-SK2 – T-SK5：计数 · 停止 · 复位 ───────────────────────────────────────
@@ -247,27 +243,6 @@ test("T-SK8 settleAdvisorRun 直驱：design 五 kind 逐一 / stale / persist �
     assert.equal(failAgent._engDesignTokens.size, 0, "槽回滚（无半结算态）")
   } finally {
     _resetSessionsDirForTest()
-  }
-})
-
-// ─── T-SK9：静态锚（消费点 / 前缀定义 / 模式切换零清位）──────────────────────
-
-test("T-SK9 静态锚：工具层消费 + 同步面计数 + 内防线；run.mjs 前缀定义；eng / cmd-eng 零「_designReviewStreaks」（模式切换不清）", () => {
-  const advisorSrc = readFileSync(new URL("../src/agent-tools/advisor.mjs", import.meta.url), "utf8")
-  const runSrc = readFileSync(new URL("../src/advisor/run.mjs", import.meta.url), "utf8")
-  assert.ok(advisorSrc.includes("designReviewStreakStopped("), "工具层预检消费在位")
-  assert.ok(advisorSrc.includes("noteDesignReviewOutcome("), "同步面计数调用在位")
-  assert.ok(runSrc.includes("designReviewStreakStopped("), "内防线消费在位")
-  assert.ok(runSrc.includes("ADVISOR_DESIGN_STREAK_STOP_PREFIX ="), "稳定前缀定义在位（run.mjs）")
-  assert.ok(runSrc.includes("buildDesignReviewGuardMessage"), "结论串构建器在位（run.mjs）")
-  for (const f of ["../src/agent-tools/eng.mjs", "../src/tui/cmd-eng.mjs"]) {
-    const src = readFileSync(new URL(f, import.meta.url), "utf8")
-    assert.ok(!src.includes("_designReviewStreaks"), `${f} 零清位调用（eng 模式切换不清护栏——§17.9 #5 定案）`)
-  }
-  // AC-SK2：会话落盘面 grep 零命中（载体 = 会话级内存——不落盘、不进 session 文件）
-  for (const f of ["../src/session.mjs", "../src/session-slots.mjs", "../src/token-ttl.mjs"]) {
-    const src = readFileSync(new URL(f, import.meta.url), "utf8")
-    assert.ok(!src.includes("_designReviewStreaks"), `${f} 零命中（会话级载体）`)
   }
 })
 

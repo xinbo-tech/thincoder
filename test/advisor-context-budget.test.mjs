@@ -1,6 +1,6 @@
 /**
  * advisor-context-budget.test.mjs — 第 25 批（评审上下文预算跟随模型窗口——120K 硬编码退场）
- * 用例表 1:1 落地：T-CB1–T-CB6（设计档 `docs/design/ADVISOR-CONVERGENCE.md` §16.9；
+ * 用例表 1:1 落地：T-CB1–T-CB5（设计档 `docs/design/ADVISOR-CONVERGENCE.md` §16.9；
  * AC-CB1–AC-CB5；需求 §10 F27）；群 B 批 B4 追补 T-EST1/T-EST2（`§18.3`——评审估算器
  * CJK 加权，F32）。
  *
@@ -9,9 +9,6 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync, readdirSync } from "node:fs"
-import { join } from "node:path"
-import { fileURLToPath } from "node:url"
 
 import { _runAdvisorToolLoop, advisorIncompleteMarker } from "../src/advisor/run.mjs"
 import { advisorContextBudget, estimateTokens, MAX_RESULT_CHARS } from "../src/advisor/compaction.mjs"
@@ -84,20 +81,6 @@ test("T-CB5 压缩触发线在位：1M + ~737K → 真裁剪后正常收尾（�
   assert.ok(out.includes("final review text"), "终稿文本在位")
   assert.ok(estimateTokens(messages) < advisorContextBudget(provider).limit, "压缩后估算 < 派生判死线")
   assert.equal(messages.length, 22, "压缩真裁剪（system + 压缩注记 + 最近 20 条）")
-})
-
-test("T-CB6 静态锚：旧 OOM 注释 / 旧常量零残留 + 循环消费派生函数", () => {
-  const compactionSrc = readFileSync(new URL("../src/advisor/compaction.mjs", import.meta.url), "utf8")
-  assert.ok(!compactionSrc.includes("Reserve headroom to avoid OOM"), "① 旧 OOM 注释零残留（逐字）")
-  const srcDir = fileURLToPath(new URL("../src", import.meta.url))
-  const hits = readdirSync(srcDir, { recursive: true, withFileTypes: true })
-    .filter((d) => d.isFile())
-    .filter((d) => readFileSync(join(d.parentPath, d.name), "utf8").includes("MAX_CONTEXT_TOKENS"))
-    .map((d) => join(d.parentPath, d.name).slice(srcDir.length + 1))
-  assert.deepEqual(hits, [], "② MAX_CONTEXT_TOKENS 在 src/ 零残留（递归扫描）")
-  const loopSrc = readFileSync(new URL("../src/advisor/loop.mjs", import.meta.url), "utf8")
-  const missing = ["advisorContextBudget(provider)", "budget.compactAt", "budget.limit"].filter((s) => !loopSrc.includes(s))
-  assert.deepEqual(missing, [], "③ 循环消费派生函数 + 两档（compactAt / limit）")
 })
 
 // ─── T-EST1/T-EST2：B4 评审估算器 CJK 加权（群 B 批 §18.3——F32）───────────────

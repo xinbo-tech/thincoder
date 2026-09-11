@@ -1,19 +1,19 @@
 /**
  * ledger-surface.test.mjs — 台账可见面用例（LEDGER-SURFACE 批——设计档 §3.2 T97–T110 / §3.1 AC80–AC90）。
  * 面：数字单源等价（T97）· 行文本逐字（T98/T99）· 启动行门（T100）· 阈值三例（T101）· 老化界值（T102 慢层）·
- * 去重 + 送达门 + 条目键稳定（T103）· 收口行命令（T104）· 提示词槽位（T105）· 状态行接线（T106）·
+ * 去重 + 送达门 + 条目键稳定（T103）· 收口行命令（T104）· 状态行接线（T106）·
  * 项目发现（T109）· 降级不崩（T110）。
  * 手法：夹具台账（tmp）+ 注入 `ageOf`（确定性——真 git 走 slow 层）+ 直驱 `runLedgerScan` / `renderStatus`。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync, execFileSync } from "node:child_process"
 import { slow } from "./slow.mjs"
-import { blameAges, discoverFamily, entryTitle, findProject, formatAgingLine, formatDetailLine, formatMarker, formatThresholdLine, loadNotifyState, normalizeEntry, notifyKey, planChangeLines, saveNotifyState, summarizeLedger } from "../src/ledger.mjs"
+import { blameAges, discoverFamily, entryTitle, findProject, formatAgingLine, formatDetailLine, formatMarker, formatThresholdLine, loadNotifyState, normalizeEntry, notifyKey, saveNotifyState, summarizeLedger } from "../src/ledger.mjs"
 import { runLedgerScan } from "../src/tui/ledger-surface.mjs"
 import { renderStatus } from "../src/tui/render-frame.mjs"
 import { C } from "../src/tui/ansi.mjs"
@@ -21,8 +21,6 @@ import { main as ledgerMain, runCheck } from "../scripts/check-ledger.mjs"
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const CLI = join(REPO, "scripts", "check-ledger.mjs")
-const pr = (p) => join(REPO, p)
-const ws = (p) => resolve(REPO, "..", p)
 const stripAnsi = (s) => String(s).replace(/\x1b\[[0-9;]*m/g, "")
 const lineOf = (text, needle) => text.split("\n").findIndex((l) => l.includes(needle)) + 1
 let tmp
@@ -226,28 +224,6 @@ slow("T104b 正常：真命令冒烟（子进程）+ 空族提示", () => {
   } finally { rmSync(iso, { recursive: true, force: true }) }
 })
 
-// ── T105 收口行槽位文本面（AC86） ───────────────────────────────────────────
-test("T105 正常：四提示词两锚在位（`台账可见面（收口行）` + `--summary`）+ 脚本名零命中", () => {
-  const prompts = [
-    pr("src/prompts/discipline-engineering.md"), pr("docs/design/prompts/discipline-engineering.md"),
-    ws("thincoder-vscode/src/prompts/discipline-engineering.md"), ws("thincoder-vscode/docs/design/prompts/discipline-engineering.md"),
-  ]
-  for (const f of prompts) {
-    const t = readFileSync(f, "utf8")
-    assert.ok(t.includes("台账可见面（收口行）"), f + "：槽位锚缺失")
-    assert.ok(t.includes("--summary"), f + "：`--summary` 锚缺失")
-    assert.ok(!t.includes("check-ledger"), f + "：脚本名不得进提示词（FR13）")
-  }
-  for (const f of [pr("docs/requirements/ENGINEERING-MODE.md"), pr("docs/design/ENGINEERING-MODE.md")]) {
-    assert.ok(readFileSync(f, "utf8").includes("台账可见面（收口行）"), f + "：枚举同步锚缺失")
-  }
-  for (const dir of [pr("src/prompts"), ws("thincoder-vscode/src/prompts")]) {
-    for (const f of readdirSync(dir)) {
-      assert.ok(!readFileSync(join(dir, f), "utf8").includes("check-ledger"), `${dir}/${f}：脚本名零命中（AC48/AC80 口径不动）`)
-    }
-  }
-})
-
 // ── T106 状态行接线（AC87/F2） ──────────────────────────────────────────────
 test("T106 正常：空标记零注入（字节等价）；非空在位（scrollHint 后、键位组前）；warn 色段", () => {
   const base = baseState()
@@ -261,9 +237,6 @@ test("T106 正常：空标记零注入（字节等价）；非空在位（scroll
   assert.ok(text.indexOf(" │ 台账 4·32") < text.indexOf("Enter"), "位于键位组前")
   const warn = renderStatus({ ...base, ledger: { marker: "台账 4·32", warn: true } }, agentStub(), 80, [])
   assert.ok(warn.includes(`${C.warn}台账 4·32`), "警示色段包裹")
-  const ix = readFileSync(new URL("../src/tui/index.mjs", import.meta.url), "utf8")
-  assert.ok(ix.includes("startLedgerSurface({ state, agent, pushLine, render })"), "TUI 挂载接线在位")
-  assert.ok(ix.includes("ledger: { marker: null, warn: false, scannedAt: 0 }"), "state 位在位")
 })
 
 // ── T109 项目发现（AC88/F4） ────────────────────────────────────────────────
@@ -307,8 +280,6 @@ test("T110 错误：降级不崩——不可读项目跳过 / 坏 JSON 空态 / 
   assert.equal(calls, 0, "无候选 → 零 git 子进程")
   summarizeLedger({ root: tmp, ledger: mk("c2/docs/TODO.md", ledgerText([], [techEntry("Y")])) }, { ageOf: counted })
   assert.equal(calls, 1, "有候选 → 恰一次全档 blame")
-  // ④ headless 零接线（文件域判据）：bin 入口内零台账面
-  assert.ok(!readFileSync(pr("bin/thincoder.mjs"), "utf8").includes("ledger"), "bin/thincoder.mjs 内 `ledger` 零命中（零接线）")
 })
 
 // ── T102 老化界值（慢层——真 git 夹具；commit 日期钉常量） ──────────────────

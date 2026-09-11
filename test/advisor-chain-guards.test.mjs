@@ -157,12 +157,6 @@ test("T-CG5 code 守卫：时间线 + context 尾（尾不在首行）→ 不置
   const settled = settleAdvisorRun(agent, entry)
   assert.equal(settled.stale, false)
   assert.equal(agent._calledAdvisorThisRun, false, "截断评审不得计为已覆盖（A3/F16）")
-  // AC-CG1：旧 `^` 锚正则零残留（定义与消费均在 advisor-settle / advisor-async 之外）
-  const settleSrc = readFileSync(new URL("../src/agent-tools/advisor-settle.mjs", import.meta.url), "utf8")
-  const asyncSrc = readFileSync(new URL("../src/agent-tools/advisor-async.mjs", import.meta.url), "utf8")
-  assert.ok(!settleSrc.includes("ADVISOR_FAILURE_TEXT"), "advisor-settle 定义/消费零残留")
-  assert.ok(!asyncSrc.includes("ADVISOR_FAILURE_TEXT"), "advisor-async 零残留")
-  assert.ok(settleSrc.includes("advisorIncompleteMarker"), "同谓词消费在位")
 })
 
 test("T-CG19 code 守卫：review_failed 字符串 resolve 形态 → 不置 _calledAdvisorThisRun（旧锚语义零丢）", () => {
@@ -273,9 +267,6 @@ test("T-CG8 压缩定锚：（>20 条消息）重挂 pinned 三锚；（≤20 �
     assert.equal(attached.length, 1, "pinned 作为一条 user 消息重挂")
     assert.ok(pinned.includes(declared) && pinned.includes("## Documents to Review") && pinned.includes("## Approval Signal"), "三锚同条")
     assert.ok(out.includes("final review text"), "压缩后循环继续（评审正常收尾）")
-    // AC-CG5：定锚源 = 评审参数（grep：run.mjs 由 documents / object / designToken 构建）
-    const runSrc = readFileSync(new URL("../src/advisor/run.mjs", import.meta.url), "utf8")
-    assert.ok(runSrc.includes("buildPinnedBrief(reviewType, documents, object, designToken, designId)"), "pin 由评审参数构建")
   })
 })
 

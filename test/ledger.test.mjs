@@ -1,11 +1,11 @@
 /**
- * ledger.test.mjs — 台账机检用例（T67–T71 · T92–T96 · AC49——设计档 ENGINEERING-MODE.md §2.24.6 / §2.24.9 契约 · AC45–AC52 / AC75–AC79）。
- * 仓库面：两仓活台账全绿（新增 0 / 存量降报告）+ 归档档键控条目 + 双端锚 + 归属修订文本面。
+ * ledger.test.mjs — 台账机检用例（T67–T71 · T92–T96——设计档 ENGINEERING-MODE.md §2.24.6 / §2.24.9 契约 · AC45–AC52 / AC75–AC79）。
+ * 仓库面：两仓活台账全绿（新增 0 / 存量降报告）。
  * 反证面：坏指针 / 计数不符 / 形态五例 / 活文件 `- [x]` / 非法触发 —— 必报红（防「永远绿的空转脚本」）。
  * 审计面：T94 待处置清单 + 老化（git 回填行龄）走 slow() 门控（fs / git 子进程）。
  *
- * 扫① 削段注（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3）：T95 旧口径句负向锚（七档）
- * → 收归 test/doc-consistency.test.mjs T76（防回潮族）；本档保留正向文本锚（新句/子串）。
+ * 扫① 削段注（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3）：旧口径句负向锚（七档）→ 收归防回潮族
+ * （接收档已随 2026-09-12 散文锚退役批退役）；本档归属修订 / 双端字符串锚 / 归档键控三面同批退役（保号于批次档）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -20,8 +20,6 @@ import { SCAN_DIRS } from "../scripts/check-doc-width.mjs"
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const CLI = join(REPO, "scripts", "check-ledger.mjs")
-const pr = (p) => join(REPO, p)
-const ws = (p) => resolve(REPO, "..", p)
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "ledger-")) })
 afterEach(() => { rmSync(tmp, { recursive: true, force: true }) })
@@ -121,34 +119,7 @@ test("T93 错误：非法触发取值必报红；合法对照条绿；无 `触�
   assert.equal(code(["--root", tmp]), 1)
 })
 
-test("T95 边界：归属修订文本面（需求档 §1.13 + 两仓台账头部 + 4 人格档）", () => {
-  const files = [pr("docs/requirements/ENGINEERING-MODE.md"), pr("docs/TODO.md"), ws("thincoder-vscode/docs/TODO.md"),
-    pr("src/prompts/persona-eng-designer.md"), pr("docs/design/prompts/persona-eng-designer.md"),
-    ws("thincoder-vscode/src/prompts/persona-eng-designer.md"), ws("thincoder-vscode/docs/design/prompts/persona-eng-designer.md")]
-  for (const f of files) {
-    const t = readFileSync(f, "utf8")
-    assert.ok(t.includes("记录 + 状态推进 + 物理落笔"), f + "：新句在位")
-    // 旧口径句负向锚 → 收归接收档 T76（防回潮族——七档同扫；扫① 2026-09-11）
-  }
-  for (const f of files.slice(3)) assert.ok(readFileSync(f, "utf8").includes("todo 状态推进"), f + "：AC25 子串保留")
-})
-
-test("AC49 正常：双端锚 L-A / L-B 固定子串在位（4 文件逐字）", () => {
-  const files = [pr("src/prompts/discipline-engineering.md"), pr("docs/design/prompts/discipline-engineering.md"),
-    ws("thincoder-vscode/src/prompts/discipline-engineering.md"), ws("thincoder-vscode/docs/design/prompts/discipline-engineering.md")]
-  for (const f of files) {
-    const t = readFileSync(f, "utf8")
-    for (const s of ["同一铁律（指针化、不展开任务细节）", "锚的形态不同", "最小证据行（file:line + 症状）", "组标题声明的条数必须等于组内实条目数"]) {
-      assert.ok(t.includes(s), f + "：锚子串缺失 " + s)
-    }
-  }
-})
-
 test("T96 正常：收拢执行面（归档档键控条目 + 活文件组计数 = 未决数）", () => {
-  const cliArc = readFileSync(pr("docs/TODO-archive.md"), "utf8")
-  const vscArc = readFileSync(ws("thincoder-vscode/docs/TODO-archive.md"), "utf8")
-  for (const s of ["已全部完成", "两端不一致", "跨批依赖"]) assert.ok(cliArc.includes(s), "CLI 归档档键控条目：" + s)
-  for (const s of ["eng(enter)", "Gitee open 巡检"]) assert.ok(vscArc.includes(s), "VSC 归档档键控条目：" + s)
   assert.deepStrictEqual(runCheck({ root: REPO }).fresh.map((v) => v.msg), [], "活文件 `- [x]` = 0 · 组计数 = 未决数（L2 绿）")
 })
 

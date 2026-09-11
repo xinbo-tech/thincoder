@@ -1,24 +1,20 @@
 /**
  * cmd-eng.test.mjs — PORTABILITY 批（FR10–FR15 · CLI 面）面① `/eng` + 文案契约
- * 用例表 T-18 / T-19（PO-11）· T-21（PO-12 · FR14）。
+ * 用例表 T-18 / T-19（PO-11）。
  *
- * 断言对象 = src/tui/cmd-eng.mjs（/eng 无前提切换）+ docs/requirements/PORTABILITY.md
- * 的推进档位契约文本。构造手法：ctx 直驱（slash-commands 的调用形态）+ sessions 目录
- * 隔离缝；showPicker 传"会炸的探针"——旧门禁若复活（要求 METHODOLOGY.md）即红。
+ * 断言对象 = src/tui/cmd-eng.mjs（/eng 无前提切换）。构造手法：ctx 直驱
+ * （slash-commands 的调用形态）+ sessions 目录隔离缝；showPicker 传"会炸的探针"——
+ * 旧门禁若复活（要求 METHODOLOGY.md）即红。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { join } from "node:path"
 
 import { handleEngCommand } from "../src/tui/cmd-eng.mjs"
 import { ENG_OFF_REMINDER } from "../src/agent.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest } from "../src/session-slots.mjs"
-
-const __here = dirname(fileURLToPath(import.meta.url))
-const read = (rel) => readFileSync(join(__here, "..", rel), "utf8")
 
 let tmp, sessionsDir
 beforeEach(() => {
@@ -72,14 +68,4 @@ test("T-19 边界：OFF 切换 → 提醒推入 + 令牌语义保持（快照断
   assert.deepEqual([...agent._engDesignTokens], [["did-live", live]], "OFF 不清 token（R16）")
   assert.equal(agent._advisorRuns.size, 0, "per-review 实例随模式清空（D-24b）")
   assert.ok(lines.some((l) => l.includes("Engineering mode: OFF")), "OFF 提示行在场")
-})
-
-test("T-21 正常（FR14）：推进档位契约要点落需求档（PO-12）", () => {
-  const req = read("docs/requirements/PORTABILITY.md")
-  for (const s of [
-    "## 3. FR14 落实文本", "**两档**", "**auto**（默认", "**manual**（每步完成即呈现",
-    "**意图不是词表**", "**跨步动作停住**", "**步与步之间的闸**",
-  ]) {
-    assert.ok(req.includes(s), `FR14 契约要点缺失: ${s}`)
-  }
 })

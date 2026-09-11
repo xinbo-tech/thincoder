@@ -1,12 +1,11 @@
 /**
  * attention-state.test.mjs — 第 33 批（用户介入提醒——attention 态）用例表 1:1 落地：
- * T-AT1–T-AT8（设计档 §14.7）。断言判据全文 = `docs/design/TUI.md` §14
+ * T-AT1–T-AT7（设计档 §14.7）。断言判据全文 = `docs/design/TUI.md` §14
  * （§14.3 逐字契约 / §14.5 D-AT1–D-AT8 / §14.8 AC-AT1–AC-AT6）。
  * 手法：纯函数 + `renderStatus` 直调 + `createKeyHandler` 桩 ctx 直驱（无真实 TTY）；微秒级。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { attentionKind, renderStatus } from "../src/tui/render-frame.mjs"
 import { userNeededAtTurnEnd } from "../src/tui/agent-turn.mjs"
 import { createKeyHandler, clearAttention } from "../src/tui/key-handler.mjs"
@@ -143,12 +142,6 @@ test("T-AT5 鼠标路径清位：滚轮 / 点击到达 → 清位 + render（单
   clearAttention(click, () => renders++)
   assert.equal(click.attentionAwaiting, false, "点击到达 → 清位（同一点覆盖）")
   assert.equal(renders, 2, "重绘一次")
-  // 接线锚（单点位置——滚轮分支与 onMouseClick 调用前）
-  const src = readFileSync(new URL("../src/tui/index.mjs", import.meta.url), "utf8")
-  const callAt = src.indexOf("clearAttention(state, render)")
-  assert.ok(callAt > 0, "index.mjs 数据处理器内含清位调用")
-  assert.ok(callAt < src.indexOf("const consumed = handleWheel("), "位于滚轮分支之前")
-  assert.ok(callAt < src.indexOf("onMouseClick(click.col, click.row)"), "位于点击调用之前")
 })
 
 // ─── T-AT6：置位谓词矩阵 ───────────────────────────────────────────────────
@@ -184,27 +177,4 @@ test("T-AT7 非触发态渲染：picker / wizard / search / interruptPrompt / pr
     assert.ok(!row.includes(ATT_SEQ), `${name}：渲染零注意力序列`)
     assert.ok(!stripAnsi(row).includes("⚠ 等待"), `${name}：无 chip`)
   }
-})
-
-// ─── T-AT8：静态锚（零新定时器 / 导出在位 / 置位接线）────────────────────────
-
-test("T-AT8 静态锚：render-frame 零 setInterval、agent-turn 仅既有 ticker；两导出在位；置位接线锚（D-AT6 顶层链尾）", () => {
-  const rf = readFileSync(new URL("../src/tui/render-frame.mjs", import.meta.url), "utf8")
-  const at = readFileSync(new URL("../src/tui/agent-turn.mjs", import.meta.url), "utf8")
-  const kh = readFileSync(new URL("../src/tui/key-handler.mjs", import.meta.url), "utf8")
-  const ix = readFileSync(new URL("../src/tui/index.mjs", import.meta.url), "utf8")
-  assert.equal((rf.match(/setInterval/g) ?? []).length, 0, "render-frame 零定时器（N9②）")
-  assert.equal((at.match(/setInterval\(/g) ?? []).length, 1, "agent-turn 仅既有 1s ticker（零新增定时器）")
-  assert.ok(rf.includes("export function attentionKind("), "attentionKind 导出在位")
-  assert.ok(at.includes("export function userNeededAtTurnEnd("), "userNeededAtTurnEnd 导出在位")
-  assert.ok(at.includes("userNeededAtTurnEnd(state, agent, skipSession)"), "置位调用在位（链尾谓词消费）")
-  assert.ok(at.includes("state.attentionAwaiting = true"), "置位语句在位")
-  assert.ok(
-    at.indexOf("state.attentionAwaiting = true") > at.indexOf("await suspensionSession(ctx)"),
-    "置位点在挂起会话退出之后（D-AT6 顶层链尾——非回合末 finally）",
-  )
-  assert.ok(kh.includes("clearAttention(state, render)"), "键盘入口清位接线在位")
-  assert.ok(ix.includes("clearAttention(state, render)"), "鼠标路径清位接线在位（index.mjs 数据处理器）")
-  assert.ok(ix.includes("attentionAwaiting: false"), "state 字段默认关在位（§14.3(f)）")
-  assert.ok(!ix.includes("setInterval"), "index.mjs 零新增定时器")
 })

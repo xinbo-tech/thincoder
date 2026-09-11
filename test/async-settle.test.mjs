@@ -230,18 +230,6 @@ test("错误 settle 落盘失败（AC1/N3）：advisor onAccounting hook 保留�
   assert.equal(accounting, 1)
 })
 
-test("一致性（N1/AC1）：四族 settle 同守卫/同分流/同信号兜底——记账单点（公共尾部字面仅存于 async-settle.mjs）", () => {
-  // 四族在相同守卫下走同一条分流（挂起 → 同容器；中止 → 同抑制）——已由上文各族用例
-  // 覆盖；此处锁记账单点结构：settleSeq/_settle/唤醒 waiter 的逐字尾部不得再散落四族。
-  const tail = "entry._settleSeq = (parent._asyncSettleSeq"
-  for (const f of ["subagent-run.mjs", "advisor-async.mjs", "escalate-async.mjs", "consult.mjs"]) {
-    const src = readFileSync(join(__dirname, "..", "src", "agent-tools", f), "utf8")
-    assert.equal(src.includes(tail), false, `${f} 不得再含 settle 公共尾部逐字段（记账单点 = async-settle.mjs）`)
-  }
-  const helper = readFileSync(join(__dirname, "..", "src", "agent-tools", "async-settle.mjs"), "utf8")
-  assert.equal(helper.includes(tail), true)
-})
-
 test("池 accessor（D1）：getAsyncPool 吸收双池——advisor → _asyncAdvisors，其余 → _asyncSubagents；未初始化 null", () => {
   const parent = mkParent()
   assert.equal(getAsyncPool(parent, "advisor"), parent._asyncAdvisors)

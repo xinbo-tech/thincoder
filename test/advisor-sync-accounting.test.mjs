@@ -13,7 +13,6 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { recordToolResults } from "../src/agent/record-results.mjs"
 
 /** 宿主尾族六 kind 的块首行前缀（§14.3——`src/advisor/compaction.mjs` 同族逐字）。 */
@@ -54,9 +53,6 @@ test("T-SG1 正常：sync code run + 干净评审结果——置「已覆盖」+
   assert.equal(agent._advisorRound, 1, "镜像 round 同步")
   assert.equal(run.priorOutput, CLEAN, "prior 规则照旧（review-looking 输出入 prior）")
   assert.equal(agent._advisorSyncCalls.size, 0, "sync 标记消费（删除）照旧")
-  // AC-SG1 机械面：实现侧消费同谓词（grep——防回退）
-  const src = readFileSync(new URL("../src/agent/record-results.mjs", import.meta.url), "utf8")
-  assert.ok(src.includes("advisorIncompleteMarker"), "实现消费单谓词（§15.2 对照实现）")
 })
 
 test("T-SG2 错误：sync code run + 时间线 + timeout 尾（尾不在首行）——不置标记；round 照常进位", async () => {

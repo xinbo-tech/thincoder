@@ -1,9 +1,6 @@
 /**
  * abort-provenance.test.mjs — 第 24 批（子代理 abort 来源标注——可诊断性）测试用例表：
- * T-AP1–T-AP10（AGENT-LOOP.md §20.7 表 + T-AP10 = AC-AP2 的 hop grep 断言面）。
- *
- * 确定性单元（无 io / 无 LLM / 无真实子代理）：T-AP9 / T-AP10 读源码做机械扫描
- * （fail-when-unchanged——改动被回退即红）。
+ * T-AP1–T-AP8（AGENT-LOOP.md §20.7 表）。
  *
  * T-AP8（既有 abort / 结算 / 取消五族全绿 = N-D1.1 零回归）判定 = 命令级：
  *   node --test test/sync-cancel.test.mjs test/async-settle.test.mjs test/queued-stop.test.mjs \
@@ -12,29 +9,10 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
-import { dirname, join } from "node:path"
 import {
   TRIGGERS, triggerOf, abortError, timeoutError, annotateAbort, deathLine,
 } from "../src/abort-provenance.mjs"
 import { classifySyncAbort, armSyncChildAbort } from "../src/agent-tools/subagent.mjs"
-
-const SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "src")
-/** 读源码（T-AP9/T-AP10 机械扫描面）。 */
-const read = (p) => readFileSync(join(SRC, p), "utf8")
-/** 注释剥离（扫描只看代码行——注释里的 `.abort()` 是文档不是站点）。 */
-const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[ \t])\/\/[^\n]*/gm, "$1")
-
-/** 五处 hop（§20.3 第 4 条 #10）+ 五处合成点（§20.3 第 3 条）。 */
-const HOP_FILES = [
-  "agent-tools/subagent-run.mjs",
-  "agent-tools/subagent.mjs",
-  "agent-tools/escalate-async.mjs",
-  "agent-tools/advisor-async.mjs",
-  "agent-tools/consult.mjs",
-]
-const COMPOSER_FILES = [...HOP_FILES]
 
 test("T-AP1 词汇表：triggerOf 四形态 + TRIGGERS 计数 5（F-D1.1）", () => {
   assert.equal(TRIGGERS.length, 5)
@@ -162,28 +140,4 @@ test("T-AP8 零回归判定面：新错误对象仍命中既有谓词（N-D1.1�
   // 形态③不含 interrupt 键（§20.3 第 1 条末——既有 {interrupt} 判据点零触碰）
   assert.equal(ctrl.signal.reason.interrupt, undefined)
   assert.equal(timeoutError("x", "provider", "t").name, "Error")
-})
-
-test("T-AP9 合成点残留扫描：五处全经 deathLine（AC-AP3）", () => {
-  let hits = 0
-  for (const f of COMPOSER_FILES) {
-    const code = stripComments(read(f))
-    hits += [...code.matchAll(/deathLine\(/g)].length
-    assert.equal(/(?:err|e)\?\.message \?\? String\((?:err|e)\)/.test(code), false, `${f}: 残留 message 压缩形态`)
-  }
-  assert.ok(hits >= 5, `deathLine( 命中 ${hits} < 5`)
-})
-
-test("T-AP10 hop 扫描：五处逐跳保 reason + 零裸 abort + 站点 reason 载荷（AC-AP2）", () => {
-  for (const f of HOP_FILES) {
-    const code = stripComments(read(f))
-    assert.ok(code.includes("ctrl.abort(baseSignal.reason)"), `${f}: hop 未携带 reason`)
-    assert.equal(/\.abort\??\.?\(\s*\)/.test(code), false, `${f}: 裸 abort() 残留`)
-  }
-  // 站点总表 #11 / #12（cancel / stop / timeout reason 载荷在位）
-  assert.match(read("agent-tools/subagent-async.mjs"), /abortTrigger: "cancel"/)
-  assert.match(read("agent-tools/advisor-async.mjs"), /abortTrigger: "cancel"/)
-  assert.match(read("agent-tools/consult.mjs"), /abortTrigger: "timeout"/)
-  assert.match(read("agent-tools/consult.mjs"), /abortTrigger: "stop"/)
-  assert.match(read("tui/key-handler.mjs"), /abortTrigger: "stop"/)
 })

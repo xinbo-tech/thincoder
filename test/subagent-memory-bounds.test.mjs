@@ -6,18 +6,12 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
-import { join } from "node:path"
 import { runWithContinue, CAPTURE_CAP_OPTS } from "../src/agent/spawn-child.mjs"
 import { releaseSettledEntry } from "../src/agent-tools/async-settle.mjs"
 import { executeObserveAction } from "../src/agent-tools/subagent-actions.mjs"
 import { RECORD_WINDOW_MESSAGES } from "../src/session-store.mjs"
 import { pushReal } from "../src/context.mjs"
 import { createAgent } from "../src/agent.mjs"
-
-const ROOT = fileURLToPath(new URL("../src/", import.meta.url))
-const src = (p) => readFileSync(join(ROOT, p), "utf8")
 
 const noContinue = { askContinue: async () => false, onDeclined: () => "partial" }
 
@@ -83,14 +77,6 @@ test("T-SM3 子代理窗口：pushReal 300 条 → _fullHistory 恰 200（最新
   assert.equal(out.recentTurns[0], "a99", "newest-first")
 })
 
-test("T-SM4b 窗口覆盖（代码评审 #2 回归）：四处子代理创建点均置 _historyWindow", () => {
-  for (const f of ["agent-tools/subagent-spawn.mjs", "agent-tools/escalate-async.mjs", "agent-tools/consult.mjs", "agent-tools/subagent-actions.mjs"]) {
-    const s = src(f)
-    assert.match(s, /_historyWindow = RECORD_WINDOW_MESSAGES/, `${f}：置位子代理窗口`)
-    assert.match(s, /from "\.\.\/session-store.mjs"|from "\.\/\.\.\/session-store.mjs"/, `${f}：常量单源（session-store）`)
-  }
-})
-
 test("T-SM4 释放点：注入完成后 childAgent/report 置空（幂等）；三消费点调用在位", () => {
   // 直接语义：置空两字段、其余不动、幂等
   const entry = { id: 1, status: "done", done: true, childAgent: { fake: true }, report: "report-body", role: "coder" }
@@ -101,12 +87,4 @@ test("T-SM4 释放点：注入完成后 childAgent/report 置空（幂等）；�
   assert.equal(entry.role, "coder")
   assert.doesNotThrow(() => releaseSettledEntry(entry))
   assert.doesNotThrow(() => releaseSettledEntry(null))
-
-  // 三消费点（AC-O3 grep——释放调用在位）
-  assert.match(src("agent/run-stages.mjs"), /releaseSettledEntry\(e\)/, "①回合尾收集")
-  assert.match(src("agent.mjs"), /releaseSettledEntry\(e\)/, "②run 起始 pending 注入")
-  assert.match(src("tui/suspension-drive.mjs"), /releaseSettledEntry\(e\)/, "③挂起残差注入")
-  // settle 时刻不释放（表 2 候选 2 否决——池内未消化窗口语义零变：async-settle 只定义不调用）
-  const settleSrc = src("agent-tools/async-settle.mjs")
-  assert.equal(settleSrc.split("releaseSettledEntry").length - 1, 1, "async-settle 仅定义（不在 settle 路径调用）")
 })
