@@ -6,7 +6,7 @@
  * background pool by DEFAULT (async:true / omitted; async:false forces the
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
-import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage } from "../advisor/run.mjs"
+import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch-segment.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 import {
@@ -183,10 +183,15 @@ export const advisorTool = {
       if (ctx._toolCallId !== undefined) {
         (agent._advisorAsyncAcks ??= new Set()).add(ctx._toolCallId)
       }
+      // E（F17/§14.14 E-3c）：设计评审点火回执追加冻结句（代码评审 ack 零改）——窗口下界以
+      // 可观察信号表达：报告送达 / 取消前，被审文档（含批次档）零写入。
+      const freezeNote = reviewType === "design"
+        ? "；D5 冻结窗口：被审文档（含批次档）在报告送达前零写入——在途写入会被拒绝，写入将使本轮结算为陈旧 (pass 不发 token)"
+        : ""
       return JSON.stringify({
         id: ack.id, kind: "advisor", status: "running",
         reviewId: resolved.reviewId,
-        note: "评审已后台启动——完成自动回来 (review started in the background — the report arrives in a digest turn automatically; pass this id to cancel if needed)",
+        note: "评审已后台启动——完成自动回来 (review started in the background — the report arrives in a digest turn automatically; pass this id to cancel if needed)" + freezeNote,
       })
     }
 
@@ -204,6 +209,12 @@ export const advisorTool = {
       batchDoc: resolved.run.batchDoc ?? null,
     }, designToken, documents, paths, reviewObject, designId)
 
+    // B 启动拒绝（§14.4 #2——稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），
+    // 可见报错照常返回（record-results 的 REFUSED 契约）。
+    if (String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX) && ctx._toolCallId !== undefined) {
+      (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+    }
+
     if (reviewType === "design") {
       // Design pass/fail settlement — token echo IS the verdict (prompt-enforced);
       // no findings-table heuristics: a design with issues never carries the token.
@@ -213,11 +224,14 @@ export const advisorTool = {
       // retired — no mirror write here; the dispatch/spawn gates read the authoritative
       // multi-slot Map (+ slot-file re-read). Slotting moved into settleDesignReview
       // (shared with the async settle — fix #2).
-      const settled = settleDesignReview(agent, resolved.run, designToken, result)
+      const settled = settleDesignReview(agent, resolved.run, designToken, result, { incomplete: advisorIncompleteMarker(result) })
       // F2e (§29.1): the sync prior mirror must not carry the raw echo the runner
       // stored — overwrite with the clean settled form (exact-suffix truncation).
       if (settled.passed) {
         agent._lastAdvisorOutput = stripApprovedSuffix(settled.output, resolved.run.approvedSuffix)
+      } else if (advisorIncompleteMarker(result)) {
+        // 未完成 ⇒ 同步 prior 镜像覆写为清洗后输出（防未注册 token 进 prior——§14.3）。
+        agent._lastAdvisorOutput = settled.output
       }
       return settled.output
     }

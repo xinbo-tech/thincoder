@@ -10,13 +10,13 @@ import { isDocFile } from "../advisor/repos.mjs"
 // 检测——软提示不阻止）+ recordPeerWrites（成功后累积本回合写足迹——回合末 flush）。
 import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites } from "../peer-domains.mjs"
 import { writeFileSync, mkdirSync, existsSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { join, resolve, relative } from "node:path"
 import { homedir } from "node:os"
 // §29 fix A（AGENT-LOOP.md §29——2026-09-07）：FILE_MUTATORS 的 mutation-seq 记账从
 // 批后提交（record-results noteMutations）移到执行成功即刻——唯一记账点（取代批后段
 // + agent.mjs 中断分支记账——不双计）——同消息 [写 + async advisor launch] 时 launch 前
 // 完成的写在 launchSeq 之前落地 → settle 不再误判 stale（§29 症状根因）。
-import { noteMutations } from "../agent-tools/advisor-async.mjs"
+import { noteMutations, inflightDesignReviewConflict } from "../agent-tools/advisor-async.mjs"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
 
 const ERRORS_DIR = join(homedir(), ".thincoder", "tool-errors")
@@ -207,6 +207,30 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       }
     }
 
+    // E（第 11 批·F17/§14.14 E-3d）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间，
+    // 父侧对被审文件集（声明文档集 + 批次档）的写入会被拒绝：在途写使本轮结算 stale——pass 轮
+    // = token 直接丢失（实证：第 10 批 id=20 整轮作废）。工具面 = FILE_MUTATORS（与变更记账
+    // 同集——不记入日志的写面既不判 stale 也不拦）；判据与 reviewIsStale 同源
+    // （inflightDesignReviewConflict——同 docAbs / 同 normAbs；仅扫 running 未取消的设计条目）。
+    // 位置：只读 / autoApprove 短路之前——审批不得绕过冻结；拒绝 = 可见 denied + 逃生门
+    // （先 cancel → 改 → 重发）。
+    if (FILE_MUTATORS.has(toolCall.name)) {
+      let touched = []
+      try { touched = tool.touchedPaths ? tool.touchedPaths(args) : [args.path] } catch { touched = [] }
+      const absPaths = (touched ?? [])
+        .filter((p) => typeof p === "string" && p)
+        .map((p) => resolve(agent.cwd, p))
+      const conflict = inflightDesignReviewConflict(agent, absPaths)
+      if (conflict) {
+        prepared.push({
+          toolCall, tool, denied: true,
+          reason: "d5 freeze window",
+          hint: `write refused — design review #${conflict.id} is in flight over ${relative(agent.cwd, conflict.path)} (D5 freeze window). A write now would settle it stale — no token for a pass (the round is lost). Wait for the report, or cancel the review first (subagent action:'cancel' id:'${conflict.id}') and re-launch after the change.`,
+        })
+        continue
+      }
+    }
+
     // Readonly tools (and autoApprove — the short-circuit, unchanged for the
     // whole batch too) skip the permission stage entirely.
     // §18 D-E3 task-domain authorization (spawn-time): an eng-coder child's
@@ -293,6 +317,8 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         ? "Error: plan mode is active — only read-only tools are allowed. Exit plan mode first."
         : item.reason === "engineering design gate"
           ? `Error: design review required before any file modification. ${item.hint}`
+          : item.reason === "d5 freeze window"
+          ? `Error: ${item.hint}`
           : item.reason === "denied by user"
           ? "Error: permission denied by user"
           : item.reason === "blocked by PreToolUse hook"

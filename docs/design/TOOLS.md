@@ -93,6 +93,7 @@
 - **execute**：`code`（inline ESM）与 `scriptFile` 二选一必填；nodeArgs 禁 `--eval`/`--inspect` 类；scriptFile 可指向 workspace 外；超时默认 30s / 上限 600s，超时错误含重试引导。
 - **glob**：`{a,b}` brace 展开为 `(?:a|b)`；`!` 排除前缀（多模式 include !exclude）；不支持语法（`?(x)`/`@(a|b)`/`+(x)`/空/未闭合 brace）显式英文报错（不静默漏匹配）。
 - **wait_for**：条件等待（非 sleep）——`{condition, interval_ms?, timeout_ms?}`；条件语义化（advisor settled / subagent id:N done / consult done / file exists / port open）；未知条件显式报错。readonly；timeout 默认 30s（config agent.waitForTimeoutMs 覆盖，cap 600s）；interval 默认 1s 下限 100ms；唯一非即时返回工具。等待用 wait_for，同步工具后不需要等待。
+  - **`advisor settled` 判据（2026-09-11 第 10 批修正）**：= **后台评审池真实态**——`_asyncAdvisors`（∪ history 载体）无 running/queued 条目；修前判据读子代理池的 role==="advisor" 条目（该池永无此类条目）→ **恒真 0ms 秒过**（用户实证）。机制与工具面细则见 AGENT-LOOP.md §18；需求 `../requirements/AGENT-LOOP.md` §4（F-B2）。
 - **timer**：默认 180s，seconds 可选。
 - **task**：状态别名归一（completed/finished/…）+ warning；跨会话/项目级用 checklist（描述含路由）。
 - **verify**：通用验证门禁——语言/框架/项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）。参数已删 `full`/`testNamePattern`/`filter`（保留 `workdir`）。语义见独立设计文档（Verify 重构）。

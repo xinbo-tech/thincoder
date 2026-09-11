@@ -294,13 +294,16 @@ test("T40 边界：写权路由六面（§2.2 step1/step10 · §2.5 · §2.6 F2 
   assert.ok(!sec28.includes("父代理更新设计文档"), "§2.8 旧路由「父代理更新设计文档」残留")
   assert.match(sec28, /转 eng-designer 更新设计档/, "§2.8 目标态路由句缺失")
   assert.ok(!/验收标准.*勾销.*设计档/.test(em.replace(/勾销不进设计档[\s\S]{0,40}/g, "")), "勾销未见「进设计档」字样")
-  // persona-engineering 双源：调用链段（批次档 → spawn eng-designer（带 files）→ 核验 → 提醒评审）
+  // persona-engineering 双源：调用链段（批次档 → spawn eng-designer（带 files）→ 核验 → 提醒评审 →
+  // 评审 pass 后逐条裁决 →（如需修正）修正轮落地并经核验 → 批准——第 9 批 PROMPT-REVIEW-ORDER 节点）
   for (const f of ["src/prompts/persona-engineering.md", "docs/design/prompts/persona-engineering.md"]) {
     const t = read(f)
     assert.match(t, /调用链/, `${f}: 调用链段标题缺失`)
     assert.match(t, /spawn eng-designer/, `${f}: spawn eng-designer 指令缺失`)
     assert.match(t, /batchDoc=/, `${f}: batchDoc 参数示例缺失`)
     assert.match(t, /files=\[\.\.\.\]/, `${f}: files 声明示例缺失`)
+    assert.ok(t.includes("评审 pass 后逐条裁决"), `${f}: 链行「评审 pass 后逐条裁决」节点缺失`)
+    assert.ok(t.includes("修正轮落地并经核验"), `${f}: 链行「修正轮落地并经核验」节点缺失`)
     assert.ok(!t.includes("ARCHITECT"), `${f}: ARCHITECT 自称残留`)
     assert.ok(!t.includes("You design and delegate"), `${f}: 「You design and delegate」残留`)
     assert.ok(!t.includes("你是架构师"), `${f}: 「你是架构师」残留`)

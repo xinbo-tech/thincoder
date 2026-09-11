@@ -193,3 +193,43 @@ test("T46 边界：V3 批次档 §3 工具轮次行三态零假阳（AC32——�
   assert.deepStrictEqual(got, ["docs/batches/approved.md", "docs/batches/skeleton.md"],
     "四态：只报 ②④——在飞不报（判据不引用 §1 状态词）、骨架行既不算内容也不算来源戳")
 })
+
+/* ─── 第 13 批（T72–T74——文档机制边界与拆分；ENGINEERING-MODE.md §2.26） ─── */
+
+test("T72 正常/反证：跨仓引用——带 .md 形态 fail-closed 报 unknown-doc；规范形态零命中（B/AC53）", () => {
+  writeDoc("cross-repo.md", [
+    "# 跨仓引用夹具",
+    "",
+    "带 .md 的跨仓形态：见 WEBVIEW.md §5 展开说明。", // 反证：必报 unknown-doc（防未来静默放开）
+    "",
+    "规范形态：见 WEBVIEW（VSC 仓）§5 展开说明。", // 规范：V1 域外——零命中
+  ].join("\n"))
+  const refs = checkSectionRefs(tmp).map((r) => `${r.ref}|${r.reason}`)
+  assert.ok(refs.includes("WEBVIEW.md §5|unknown-doc"), "带 .md 跨仓形态如实报（fail-closed 钉住）")
+  assert.equal(refs.length, 1, "规范形态零命中（仅反证行一条）")
+  // 规范文本在位（`docs/README.md` §3.7——B 落笔面；检查器零改）
+  const readme = readFileSync(join(REPO, "docs", "README.md"), "utf8")
+  for (const sub of ["跨仓引用形态", "名称（仓别）§N", "去路径前缀"]) {
+    assert.ok(readme.includes(sub), `§3.7 规范子串缺失: ${sub}`)
+  }
+})
+
+test("T73 正常：宽度表格行豁免——表格行零报告 / 非表格超宽照报（C/AC54）", () => {
+  const long = "x".repeat(320)
+  const tableLine = `| a | ${long} |`
+  const plainLine = `p${long}`
+  writeDoc("width.md", ["# 宽度夹具", "", tableLine, "", plainLine].join("\n"))
+  const hits = checkDocWidths(tmp)
+  assert.equal(hits.length, 1, "恰一条命中（表格行被豁免）")
+  assert.equal(hits[0].line, 5, "非表格超宽行照报（含行号）")
+  assert.equal(hits[0].len, plainLine.length, "行长度如实（非表格面零改）")
+  assert.ok(!hits.some((h) => h.line === 3), ">300 字符表格行零报告（豁免谓词 = isTableRow）")
+})
+
+test("T74 边界：宽度扫描单源（主流程调用 checkDocWidths；内联重复零残留——C/AC54）", () => {
+  const src = readFileSync(join(REPO, "scripts", "check-doc-width.mjs"), "utf8")
+  assert.ok(src.includes("checkDocWidths(root, { max: maxW, dir: dirArg })"), "主流程调用 checkDocWidths（单源）")
+  assert.equal((src.match(/\.length > max/g) ?? []).length, 1, "宽度比较单点（checkDocWidths 内）")
+  assert.ok(!/\.length > maxW/.test(src), "内联宽度扫描零残留（防两处规则漂移）")
+  assert.ok(src.includes("表格行豁免"), "头注/实现含豁免注记（§2.26.2）")
+})

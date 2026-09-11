@@ -73,11 +73,24 @@ export function makeDesignTokenRegex(token, flags = "") {
  * later review of the same doc-set starts a fresh full review). On non-echo:
  * strip every dead token occurrence and return the findings text — slots stay
  * untouched (方案 ②: a failed re-review revokes nothing).
+ * @param {Object} [opts] — 第 11 批（A/F11）：`opts.incomplete` = 宿主尾族判定 kind
+ *   （单谓词 `advisorIncompleteMarker`——结算方透传）。非空 ⇒ **一律不签发**（无论评审文本
+ *   是否回显 token）：剥除全部 token 回显 + 追加未签发提示（原因 + 恢复指引），不写槽、
+ *   不关实例（可重评）。
  * @returns {{passed: boolean, output: string}}
  */
-export function settleDesignReview(agent, run, designToken, rawResult) {
+export function settleDesignReview(agent, run, designToken, rawResult, opts = {}) {
   if (!designToken || typeof rawResult !== "string") {
     return { passed: false, output: rawResult ?? "" }
+  }
+  // A（F11/§14.3 消费点 1）：未完成即不签发——判据与 code 完成守卫同源（单谓词）。
+  const incomplete = opts?.incomplete ?? null
+  if (incomplete) {
+    const stripped = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
+    return {
+      passed: false,
+      output: `${stripped}\n\n评审未完成——token 未签发 (review incomplete — no design token issued; reason: ${incomplete})\n以更小范围重跑设计评审（逐档 / 逐节拆分，或拆到两次评审），或调大 agent.advisor.timeoutMs 后重试；补充检查未完成的部分不得按已核处理。`.trim(),
+    }
   }
   const tokenPattern = makeDesignTokenRegex(designToken)
   if (!tokenPattern.test(rawResult)) {

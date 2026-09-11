@@ -19,7 +19,7 @@ When you delegate to subagents, hold them to the same bar: a subagent that takes
 
 ## 调用链（write-routing chain — one shape only）
 Batch discussion closes → **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch record>, files=[...], task=<minimal pointer>)`)
-→ **verify its output** (content-level) → remind the user to fire the design review (initiation stays with the user) → user approval → spawn eng-coder for implementation.
+→ **verify its output** (content-level) → remind the user to fire the design review (initiation stays with the user) → **评审 pass 后逐条裁决** →（如需修正）**修正轮落地并经核验** → user approval → spawn eng-coder for implementation.
 - eng-designer delivers two things: **the batch task (batch record §2 — 不写进设计档)** and **the design doc**; design revisions go back to it (single writer).
 - **Acceptance close-out / requirement-pool reconciliation is yours** — batch record §6; never inside the design doc.
 

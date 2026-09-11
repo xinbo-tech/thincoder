@@ -11,11 +11,17 @@
 
 - **checklist 多批跟踪强化**（工程模式每批准设计批 = checklist 一条——用户"放一放，等我想好了再说"——挂起；恢复条件 = 用户给方向：唯一制/分界/保持）——见 docs/TODO.md。
 - **普通模式偏差审计范围**（§8.1——已实现 F-N1.1..6；执行/检查分离（扩展 F-N1.5——默认走 coder）的实施细节待批）。
-- **R23 VS Code 镜像批评估**（嵌套子代理子块形态 vs VS 子标——端差异已声明——镜像批待评）。
+- **R23 VS Code 镜像批评估**（2026-09-11 前提更新：CLI 子块小节已随 SUBAGENT-TAIL 批退役——现行差异 =
+  CLI 内层行无归属标 vs VS chunk.sub 行首子标——`thincoder-vscode/src/agent-tools/subagent-run.mjs`
+  `runChild`·`forward`（子标挂载，as-of :26-37）、`webview/ui.js` `appendAdvisorChunk`（`.advisor-sub`
+  行首 dim 子标，as-of :41-94）；评估项 = 是否给 CLI 内层行加归属标 / 如何随镜像批对齐——待独立批次）。
 - **B3 观察点**（advisor 20 轮预算——B1/B2 生效后看实测轮数再议）。
 - **观测设施清理**：LOGGING 可观测项（调试完成后删除）——记 docs/TODO.md。
 - **子代理行数债**：subagent-async / subagent-blocks / subagent.mjs 等超 500 行硬限——拆分轮见 docs/TODO.md「拆分治理组」。
 - **混合边停滞残留意向**（P-SL2——纯文件边环已修；依赖边 × 文件域边跨类型环靠停滞检测兜底——docs/TODO.md）。
+- **后台池可观测/可控补面（第 10 批——设计已落档待评审）**：CLI 端 `wait_for "advisor settled"` 判据读错池
+  （`src/tools/ops.mjs` as-of :223-227 只查 `_asyncSubagents`）；VSC 端 `subagent status/cancel` 未接评审池（工具面）
+  + 同款 wait_for 缺陷。设计见 §18；需求见 `../requirements/AGENT-LOOP.md` §4。
 
 ## 变更记录（历史折叠——详见 git log）
 
@@ -718,3 +724,139 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 | 记忆 | MEMORY.md | §3 记忆检索 |
 | MCP 机制 | MCP.md | 工具面扩展 |
 | 多实例协作感知 | MULTI-INSTANCE-COLLAB.md | 并行副本感知 |
+
+## 18. 后台评审池可观测/可控（第 10 批——2026-09-11 设计）
+
+> 需求：`../requirements/AGENT-LOOP.md` §4（F-B1~F-B4 + NFR-B1/B2）。
+> 批次：`../batches/2026-09-11-VSC-ASYNC-VISIBILITY.md`（§1 条目 B——平台机制缺陷已实证三次）。
+> 机制地基：§11.2 async advisor（独立池 `_asyncAdvisors`）+ §7.2 单工具动作面（status/cancel/observe/send）；
+> 本节只写**接入面补全**，不改池本体语义（容量/scope 守卫/cancel 的 token 语义均从 §11.2）。
+> VSC 镜像：`thincoder-vscode/docs/design/AGENT-LOOP.md` §9（同一机制本端实现面）。
+
+### 18.1 问题陈述（现场复核——三条缺陷的**双端分布**）
+
+用户实证（2026-09-09；2026-09-11 并入第 10 批）。现场复核结论（as-of 2026-09-11，逐条给证据）：
+
+| # | 缺陷 | CLI 端 | VSC 端 |
+|---|---|---|---|
+| ① | `subagent status` 查不到后台评审 | **已具备**（2026-09-08） | **缺失** |
+| ② | `wait_for \"advisor settled\"` 误报（0ms 即过但池仍拒重发） | **缺陷在** | **缺陷在** |
+| ③ | 评审无 cancel 通道 | **已具备** | **部分缺失**（面板 ⏹ 有 / 工具动作缺） |
+| ④ | 动作面指引（observe/send 遇 advisor id） | 已有 | **缺失** |
+
+**逐条现场证据**：
+
+- **①** CLI `src/agent-tools/subagent-actions.mjs:98` `:109` `:145`（双池合并——单查 fall-through + 概览并表）；
+  VSC `src/agent-tools/subagent-actions.mjs:89-120`（只 `getAsyncPool(ctx.agent, \"subagent\")`）。
+- **②** 两端同形：判据读**子代理池**里的 role===\"advisor\" 条目——CLI `src/tools/ops.mjs:223-227`、
+  VSC `src/tools/wait_for.mjs:125-129`（均经 `hasRunningAsync` → `asyncPool` = `_asyncSubagents`）；
+  而评审条目在 `_asyncAdvisors`（§11.2）——该池里永无 role=\"advisor\" 条目 → `!hasRunning` 恒 true → **0ms 秒过**。
+- **③** CLI：`src/agent-tools/advisor-async.mjs:247` `cancelAsyncAdvisor` + `src/agent-tools/subagent-async.mjs:249-250`
+  （id 不在子代理池 → 落 advisor 池）+ TUI `src/tui/mouse.mjs:207`；VSC：`src/extension/panel-messages.mjs:238-241`
+  （面板 ⏹ 路由已有）+ `src/agent-tools/advisor-async.mjs:414` `cancelAdvisorReview`，但 `subagent cancel`
+  工具动作无 advisor 落点（`src/agent-tools/subagent-actions.mjs:211-216` 只查子代理池）→ **模型无法取消**。
+- **④** CLI `src/agent-tools/subagent-actions.mjs:235-236`（observe 遇 advisor id → 明确指引）；VSC 无此分支 → 回含糊 \"unknown async subagent id\"。
+
+**同源判定（对照批次 §1 的"可能同源"）**：与**条目 A 不同源**——B 的缺陷面在 **agent-tools/tools 层的池访问器只读子代理池**（一个池忘了接入第二个池的消费点），
+A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面遗漏"这一**系统模式**（非同一根因）：证据 = B 的修复点全是
+`getAsyncPool(...,"advisor")` 类接入点，与 A 的 `ensureBlock`/`postMessage` 无交集。
+
+### 18.2 方案选型对比（子条目①的接入形态——判据来自需求 §4.2）
+
+| # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | **并入 `subagent status`**（双池并表；advisor 条目带 role="advisor" + reviewType/round/elapsed） | 满足 F-B1 ✓；零新工具（工具面不膨胀）✓；与 CLI 已交付形态一致（**双端同源** = NFR-B1）✓；模型可见性靠工具描述一句 ✓；与 §7.2 七动作面零冲突 ✓ | 代价：`subagent` 语义扩到评审（文档/描述必须写清）；返回字段须区分评审专属字段 | **选定** |
+| 2 | 新开 `advisor status` 工具/动作 | 语义最清楚；但**新增动作面**（§7.2 七动作 → 八）+ 模型需学新入口 + 与 CLI 已落地形态分叉（双端两说）——否决 | — | 否决（工具面膨胀 + 双端分叉） |
+| 3 | 只做面板展示（live 块），不给模型查询面 | 最省；但**模型侧的"死等"问题不解**（用户原话：不可知 → digest 是唯一信号）——否决 | — | 否决（解不了实证问题） |
+
+子条目②（`wait_for` 口径）：判据改造**单方案**（既有条件字面不变，只把判据源从子代理池换到评审池）——显式声名单方案无对比；
+否决备选 = 新增条件字面（`advisor id:N done` 等：需求 §4.2 边界明列不做）。
+子条目③（cancel）：VSC 端**单方案**——按 CLI 已交付行为对齐（advisor id 落点 + 同语义取消），无对比空间。
+
+### 18.3 契约（状态通道 / 等待口径 / 取消路由 / 指引）
+
+1. **状态通道**（双端同语义）：`subagent status` 读**两池并集**——子代理池 `getAsyncPool(agent,"subagent")` + 评审池
+   `getAsyncPool(agent,"advisor")`（两端 accessor 均已带 history 载体吸收——§11.2/async-settle D1）。
+   单查（带 id）：先子代理池，未命中落评审池（两池共用 `nextSubagentId` 命名空间——id 全局唯一）；
+   概览：`running` 行含 `role` / `model` / `elapsedSec` / `turn`/`maxTurns`（子代理）或 `reviewType`(design|code) /
+   `round` / `elapsedSec`（评审）；`done` 行带"已 settle 未消化"注记（走自动送达通道）。
+   未命中两池 → 既有错误文案不变（`:unknown async subagent id:`——既有测试锁定，不改）。
+2. **等待口径**（双端）：`advisor settled` 判据 = **评审池无 running/queued 条目**（双载体：`agent._asyncAdvisors` ∪
+   `history._asyncAdvisors`）——与 §11.2 的"未决评审判定"**同源**（CLI `advisorReviewPending` / VSC
+   `advisorReviewInFlight`——若某端 helper 只查单载体，则本批改为双载体并补用例）。条件字面/超时/间隔语义零变。
+3. **取消路由**（双端）：`subagent cancel <id>` 在子代理池未命中时**落评审池**：命中 running 评审 →
+   `entry.cancelled = true` + `controller.abort()`（VSC 已有 `cancelAdvisorReview`——直接复用；CLI 复用
+   `cancelAsyncAdvisor`）+ 机读线提醒（"评审已取消——token 未签发"）+ 幂等（重复取消返回同一确认）；
+   未命中两池/已完成 → 既有错误文案。**取消语义从 §11.2**（不入 pending、不入 token 槽）。
+4. **动作面指引**：`observe`/`send` 遇 advisor id → 明确指引（对齐 CLI 已有文案语义：指向 `action:'status'`
+   或提醒结果自动送达）；两行动作**不为 advisor 开新能力**（需求 §4.2 边界）。
+5. **工具描述**：`subagent` 工具描述 status/cancel 句补"后台评审（advisor）同面可查/可取消"——两端各自原文自持（语义同源）。
+
+### 18.4 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-B1 | ① 并入 `subagent status`（不新开工具） | 双端同源优先于"入口更清"；否决新工具/新动作（见 18.2） |
+| D-B2 | ② 只改判据源，不动条件字面 | 条件字面已被提示词层引用（`docs/design/prompts/discipline-*.md` 工具表）——加字面会连带提示词面；否决新增字面 |
+| D-B3 | ③ VSC 端复用本端 `cancelAdvisorReview`（不引入 CLI 的 `cancelAsyncAdvisor` 名） | 各端独立实现、语义同源（原文自持）——两命名差异登记于此，不做跨仓统一改名 |
+| D-B4 | ④ 指引文案两端各自原文（语义同源） | 文案字节一致非目标（多实现面纪律）；行为机判一致为目标 |
+| D-B5 | ① 的 done 行注记保留（不把已 settle 未消化当 running） | 防"假活"——输出必须与自动送达通道自洽 |
+
+### 18.5 受影响文件全清单（双端分列——行数口径 = `wc -l`；as-of 2026-09-11）
+
+**CLI 端**
+
+| 文件 | 现行行数 | 预计增量 | 改动 |
+|---|---|---|---|
+| `src/tools/ops.mjs` | 286 | +14 | ② `advisor` 分支改读评审池（双载体判据）+ 条件说明行同步（工具描述） |
+| `src/agent-tools/subagent.mjs` | 402 | +4 | ⑤ 工具描述 status/cancel 句补评审面 |
+| `src/agent-tools/subagent-actions.mjs` | 470 | ±3 | ①③ 已具备（as-of 核实；若实现中发现口径缺口 ≤+10） |
+| `test/subagent-observe-send.test.mjs` | 200 | +45 | ①③④ CLI 端 advisor 池用例（单查/概览/取消/指引） |
+| `test/wait-for-advisor-pool.test.mjs`（新） | 0 | +60 | ② 口径用例（红→绿：起池 running → 条件为假；池空 → 真） |
+| `docs/design/TOOLS.md` | 124 | +3 | §7 wait_for 条款口径同步（`advisor settled` = 评审池真实态） |
+| `docs/design/AGENT-LOOP.md` | 724（批次前）→ 862（本批落档后） | +~138（见行数差） | 本节（§18） |
+
+**VSC 端**
+
+| 文件 | 现行行数 | 预计增量 | 改动 |
+|---|---|---|---|
+| `src/agent-tools/subagent-actions.mjs` | 337 | +55 | ① 双池合并（单查 fall-through + 概览并表 + 评审专属字段）；③ cancel advisor 落点；④ observe/send 指引 |
+| `src/agent-tools/subagent.mjs` | 380 | +4 | ⑤ 工具描述同步 |
+| `src/tools/wait_for.mjs` | 195 | +10 | ② 判据改读评审池（复用 `advisorReviewInFlight`——双载体已具备） |
+| `test/subagent-observe-send.test.mjs` | 167 | +45 | ①③④ 用例（VSC 现状盲区） |
+| `test/wait-for-advisor-pool.test.mjs`（新） | 0 | +60 | ② 用例（双端同构） |
+| `test/files.mjs` | 49 | +1 | 新测试文件登记（接线硬项） |
+| `docs/design/AGENT-LOOP.md`（VSC） | 506 | +14 | §9 mirror 注（本批三面 + 命名差异登记 D-B3） |
+| 合计（双端） | — | ~+440（代码面 ~+90） | 14 项 = 12 改 + 2 增（CLI 7 + VSC 7） |
+
+### 18.6 用例表（正常 / 边界 / 错误）
+
+| # | 用例 | 输入 | 预期输出（可机判） | 需求回指 |
+|---|---|---|---|---|
+| T-B1 | 概览双池并表 | 子代理池 1 running + 评委池 1 running | `overview.running` 含 2 条，评审条目带 `role:"advisor"` + `reviewType`/`round` | F-B1 |
+| T-B2 | 单查（advisor id） | `status {id: <advisor 条目 id>}` | 返回该评审条目（含 elapsedSec/round）；不报 unknown | F-B1 |
+| T-B3 | done 行注记 | 池内 `done:true` 评审（未消化） | `status:"done"` + note（自动送达）；不计入 running | F-B1/D-B5 |
+| T-B4 | 等待口径（红→绿） | 池内 1 running 评审 → 池空（settle） | `evaluateWaitForCondition("advisor settled")` 先 false 后 true（修前恒 true） | F-B2 |
+| T-B5 | 等待口径边界 | 池内 `done:true` 未消化评审 | 判为 settled（true）——不阻塞 | F-B2 |
+| T-B6 | 定向取消 | `cancel {id:<running 评审>}` | `{id,status:"cancelled"}` + controller.abort 已调 + 机读线提醒；重复调用幂等 | F-B3 |
+| T-B7 | 取消错误行 | ① 已完成评审 ② 两池皆无 id ③ 无 id | ① `already finished` ② 既有 unknown 文案 ③ 既有 requires-id 文案 | F-B3 边界 |
+| T-B8 | 动作面指引 | `observe {id:<advisor id>}` / `send {id:<advisor id>}` | 明确指引文案（含 `action:'status'` 指向）；**不**报 unknown | F-B4 |
+
+### 18.7 验收标准（逐条回指需求——每条可机器验证）
+
+- **AC-B1**（F-B1）= T-B1/T-B2/T-B3：双端 `subagent status` 概览含评审条目、单查命中评审池、done 注记在位（两端用例各一组）。
+- **AC-B2**（F-B2）= T-B4/T-B5：`evaluateWaitForCondition("advisor settled", ctx)` 在"池有 running"时 false、池空/仅 done 时 true（两端各一组）。
+- **AC-B3**（F-B3）= T-B6/T-B7：cancel 落评审池并中止 controller；错误行文案与既有语义一致。
+- **AC-B4**（F-B4）= T-B8：observe/send 遇 advisor id 返回指引（grep 断言关键字 + 用例断言 `status:"error"` 不带 "unknown"）。
+- **AC-B5**（NFR-B1）= 双端同输入同判定（用例表 T-B1..T-B8 两端各跑一组；差异仅文案/命名，登记于 D-B3）。
+- **AC-B6**（NFR-B2）= CLI `npm test` 全量绿 + VSC `test/run-fast.mjs` 全绿（含既有 subagent/async-settle/ops 族）。
+- **AC-B7**（文档面）= 本节 + TOOLS.md 口径行 + VSC §9 mirror 注在位；`node scripts/check-doc-width.mjs` 新增超宽 0。
+
+### 18.8 边界与冲突点核对
+
+- **本批不做**：池容量/scope 守卫/评审排队语义（§11.2 原样）；评审收敛机制（`ADVISOR-CONVERGENCE.md` 第 9 批链在飞——
+  **D5 冻结/零碰**）；面板 live 块的出生链（属条目 A——VSC 仓 `docs/design/WEBVIEW.md` §5.1）；admitted 新条件字面。
+- **冲突点核对**：① 与 §7.2 七动作面——零新增动作（并入 status/cancel）✓；② 与 §11.2——只补接入面，不动池语义 ✓；
+  ③ 与 `REMOVE-POOL-SNAPSHOT`——零关系（评审池从不参与池快照，撤除面是 queued 行）✓；
+  ④ 与第 9 批 `ADVISOR-CONVERGENCE.md`——只在"取消"上共用机制（本批不碰该档，实施时如发现需改该档 → **停下报告**）。
+- **父侧登记项**（非本设计写域）：CLI `docs/README.md` 地图无需改（§18 属既有档内新节）；批后核销按 D7 清单走。

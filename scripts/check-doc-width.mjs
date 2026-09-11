@@ -3,7 +3,9 @@
  * check-doc-width.mjs — 文档宽度检查 + 文档一致性机械校验 V1/V2
  * （ENGINEERING-MODE.md §2.19 文档更新纪律 · D3/D4 的可机判最小集）。
  *
- * ① 宽度检查（既有）：扫描域内 .md 的 >max 字符单行（文档人类可读判据——README 归属规则 6）。
+ * ① 宽度检查（既有）：扫描域内 .md 的 >max 字符单行（文档人类可读判据——README 归属规则 6）；
+ *    **表格行豁免**（第 13 批 §2.26.2——谓词 = 既有 `isTableRow`，markdown 表格行结构性不可折行）；
+ *    残余：裸单行谓词——围栏内 / 其他 `|…|` 形态的 >max 行会一并被豁免（fail-open 方向——规范侧以「建议就近折行」兜底）。
  *    扫描域 = docs/design + docs/requirements + docs/batches（排除 _archive/——历史快照豁免，
  *    同 collectMarkdown 口径）。
  * ② V1 段引用可解析：`文档.md §N`（含 [X.md](path) §N 链接形态）→ 目标文档节号必须存在；
@@ -52,13 +54,14 @@ export function scanDomain(root) {
   return files;
 }
 
-/** ① 宽度检查：返回 [{file, line, len}]（file 为绝对路径）。 */
+/** ① 宽度检查：返回 [{file, line, len}]（file 为绝对路径）。
+ *  表格行豁免（§2.26.2——谓词 = 既有 `isTableRow`，与 V2 同源；非表格超宽行照报）。 */
 export function checkDocWidths(root, { max = 300, dir = null } = {}) {
   const files = dir ? collectMarkdown(resolve(root, dir)) : scanDomain(root);
   const hits = [];
   for (const f of files) {
     readFileSync(f, "utf8").split("\n").forEach((l, i) => {
-      if (l.length > max) hits.push({ file: f, line: i + 1, len: l.length });
+      if (l.length > max && !isTableRow(l)) hits.push({ file: f, line: i + 1, len: l.length });
     });
   }
   return hits;
@@ -258,12 +261,10 @@ if (isMain) {
   const root = process.cwd();
   const dirArg = argOf("--dir");
 
-  // ① 宽度——扫描域已扩为 docs/design + docs/requirements + docs/batches
+  // ① 宽度——扫描域 = docs/design + docs/requirements + docs/batches；扫描单源 =
+  //    checkDocWidths（表格行豁免同在其中——主流程零内联重复扫描，防两处规则漂移；T74）
   const widthFiles = dirArg ? collectMarkdown(resolve(root, dirArg)) : scanDomain(root);
-  const widthHits = [];
-  for (const f of widthFiles) {
-    readFileSync(f, "utf8").split("\n").forEach((l, i) => { if (l.length > maxW) widthHits.push({ file: f, line: i + 1, len: l.length }); });
-  }
+  const widthHits = checkDocWidths(root, { max: maxW, dir: dirArg });
   const byFile = new Map();
   for (const h of widthHits) byFile.set(h.file, [...(byFile.get(h.file) ?? []), h]);
   for (const [f, hs] of byFile) {

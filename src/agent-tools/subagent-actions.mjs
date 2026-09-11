@@ -77,6 +77,15 @@ function shortTouchedPath(f, cwd) {
 }
 
 function statusFields(entry, cwd) {
+  // §18.3 #1（第 10 批——双池并表）：评审池条目专属字段面——role 区分两池；子代理条目
+  // 字段面零变化（NFR-B2）。reviewType(design|code) / round / elapsedSec——与子代理
+  // 的 turn/maxTurns 而非（评审无子回合预算语义）。
+  if (entry.role === "advisor") {
+    const base = { id: String(entry.id), role: entry.role, reviewType: entry.reviewType ?? null, round: entry.round ?? entry.run?.round ?? null }
+    if (entry.model != null) base.model = entry.model
+    if (entry.startedAt) base.elapsedSec = Math.max(0, Math.round((Date.now() - entry.startedAt) / 1000))
+    return base
+  }
   const base = { id: String(entry.id), role: entry.role }
   if (entry.status === "running") {
     base.model = entry.model ?? null
@@ -289,7 +298,7 @@ export function executeSendAction(args, ctx) {
   const entry = getAsyncPool(agent, "subagent")?.get(key)
   if (!entry) {
     if (getAsyncPool(agent, "advisor")?.has(key)) {
-      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review (AGENT-LOOP.md §7.2)` })
+      return JSON.stringify({ status: "error", error: `id ${key} is an async ADVISOR review — send is for async subagents; you cannot inject direction into a running review (AGENT-LOOP.md §7.2) — track it with action:'status' (role:"advisor") or wait for its report to arrive automatically` })
     }
     return JSON.stringify({ status: "error", error: `unknown async subagent id: ${key}` })
   }

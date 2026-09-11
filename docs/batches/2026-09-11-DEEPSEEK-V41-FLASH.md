@@ -313,4 +313,51 @@ _（上方占位行随 append-only 保留——以本段为准。）_
 
 ## §6 验证与收口（父代理自写）
 
-_（待写——父代理）_
+**收口 2026-09-11**（用户 03:10"批6验收"）——本批**已核销**，本档冻结。
+
+### 交付与提交
+
+| 提交 | 仓 | 内容 |
+|---|---|---|
+| `c22b3ea` | thincoder | 7 文件 / +742 −19：`src/model-specs.mjs`（新行 + 两退役行 + pro 注释）· `src/config.mjs`（预设改值）· `test/deepseek-v41-specs.test.mjs`（新 86 行）· `test/config-merge.test.mjs` · 设计档 §18–§20 · 本批次档 · `docs/TODO.md` |
+| `3e771ee` | thincoder-vscode | 5 文件 / +66 −7：`src/config.mjs` · `src/config-presets.mjs` · `test/config-merge.test.mjs` · `test/image-downgrade.test.mjs` · 设计档镜像同步 |
+
+### 验证实跑（父侧——非采信自述）
+
+- `node --test test/deepseek-v41-specs.test.mjs`（CLI）→ **5/5**（T30–T34/T38）；`test/config-merge.test.mjs` CLI **7/7**；VSC `config-merge` + `image-downgrade` → **18/18**。
+- 全量：VSC `npm test` → **361 / 360 pass / 0 fail / 1 skipped**；CLI `npm test` → **347 / 335 pass / 1 fail / 11 skipped**——
+  **唯一 fail = `T41① 仓库扫描`（V1/V2/V3）**，父侧核实归属 = **他批在飞档 `docs/batches/2026-09-11-POOL-LEDGER.md` 的 2 条新增 V1 违规**（本批对 `docs/**` 零写入）——**非本批面**。
+- AC-13 / AC-14 双端 grep 逐条跑通（`vision-exp` 注释含退役/路由语义 · `2026-09-14` 非空）；锚回归 `read-image-guide.test.mjs` 2/2（**非视觉锚未被改**）。
+- 字段面逐行实读（非 diff 摘要）：新行 10 字段 = §19.2(a) 契约（含 `multimodal`）· 两退役行对齐 · **pro 零字段改**（无 `multimodal` + 注释）· VSC 多 `reasoningEffortDefault: "high"`。
+
+### 实施后对账（声明 vs 实测——**归 §6**，设计档快照不追改）
+
+| 面 | 设计声明 | 实测 | 判定 |
+|---|---|---|---|
+| `src/model-specs.mjs` | 171 / +10~14 | **179（+8）** | 微差（无阈值影响） |
+| `src/config.mjs`（CLI） | 486 / ±0 | 486（±0） | ✓ |
+| `src/config.mjs`（VSC） | 183 / +4~6 | **190（+7）** | 微差（块注释改写） |
+| `src/config-presets.mjs` | 40 / ±0 | 40（±0） | ✓ |
+| `test/image-downgrade.test.mjs` | 126 / +8~10 | **157（+31）** | 扩面——修正轮 T38 采纳后投影未回写（T38 本身为评审采纳项） |
+| `test/config-merge.test.mjs`（CLI） | 173 / ±0 | **176（+3）** | 内部 advisor 轮 1 #2 采纳（T35 只读锚）——**已披露** |
+
+### 遗留清单（逐条 + 归属）
+
+1. **`src/tools/read_image.md:8` 描述漂移**——仍写「Pure text models (DeepSeek V4, GLM-5) will receive an error」，与本批放行的 read_image 行为矛盾（且该描述是发给模型看的面）→ **已登记 `docs/TODO.md:142`**（设计 §19.7 裁「无新文案」，本批未改）。
+2. **`deepseek-v4-pro` 复检 + 发布注记**（9/14 路由生效后 / V4.1 Pro 到货；CHANGELOG 一行）→ **已登记 `docs/TODO.md:141`**。
+3. **CLI `npm test` 的红 = 他批面**（`POOL-LEDGER.md` V1 违规）——他链处置；本批零写入。
+4. **日志产物**：`_t-deepseek-cli.log` / `_t-deepseek-vsc.log`（工作树内、未提交）——证据保留。
+5. **设计档状态行**：`PROVIDER.md` §16 首注仍为第 3 批两态旧文（「范围追加…待批准」——实已实施并核销）——**继承第 3 批 §6 遗留 #5，本次复检仍在** → 随下次 PROVIDER.md 设计轮刷新（设计档写权在 designer，父侧不代笔）。
+
+### 核销同步清单（D7）
+
+- **状态行**：本档 §1 状态 ✅（原文保留 + 追加修正块）；设计档状态行 → 遗留 #5。
+- **计数**：本批 **R11–R17 / N5–N7 / T30–T38 / AC-11..AC-17**（评审修正轮未新增编号）。
+- **指针**：`TODO.md` 需求池条目 → **已核销**（同期处置）· 批次档 §2 = 任务书本体（含修正追加块）✅。
+- **变更记录**：CLI 设计档 + VSC 镜像档 ✅ 各一行（含评审修正轮）。
+- **待办勾销**：需求池 `DeepSeek V4.1-Flash 接入` → `- [x] ~~…~~`（同期处置）。
+- **凭证**：全链零落档 ✅（评审通过只记 "pass"；designId / token 值零出现）。
+
+### 状态
+
+**已核销 2026-09-11**——六段齐备（§2 含修正追加块，同段内 append），append-only 完结。

@@ -167,6 +167,17 @@ export function buildDesignApprovalBlock(designToken, designId) {
  * @returns {string} the user message
  */
 export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null, designId = null) {
+  const body = buildAdvisorUserMessageInner(agent, prior, reviewType, designToken, documents, paths, object, designId)
+  // B 构建自愈（F12/§14.4 #1）：design + token 且输出不含逐字信号 ⇒ 尾包补齐 Approval Signal。
+  // 覆盖所有出口（含 code 形态分支降级态与 legacy 收敛分支）——既有分支语义零改：已在分支内
+  // 注入过的路径因 `[DESIGN-TOKEN:{token}` 逐字在场而不重复追加（幂等）。
+  if (reviewType !== "design" || !designToken) return body
+  if (body.includes(`[DESIGN-TOKEN:${designToken}`)) return body
+  return `${body}\n\n${buildDesignApprovalBlock(designToken, designId)}`
+}
+
+/** 内层构建（无自愈尾包）——出口、分支与消息形态与拆分前逐字一致。 */
+function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null, designId = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.

@@ -117,12 +117,17 @@
   无批次档的在途设计评审**不受阻**（不传即不挂载——不得因缺此参数拒绝评审；缺写通道时 §3 只能父侧代写并**打标**）。
 - 裁决表：After each advisor review you run, reply with a response table — exact header `| # | Action | Detail |`,
   one row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
-  `Action` is one of exactly three values: `Fixed` (you edited the code), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
+  `Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
   `Detail` = what changed and where (file:line), or your evidence/reason.
   No "pre-existing" cop-out: "it was already broken" is never a reason to drop a finding — you own the whole design/code, and when a defect appeared does not decide whether it should be fixed.
   If a finding is outside the approved design's scope, surface it or propose a design update — do not silently ignore it.
   A 🔴 you neither fix nor surface blocks convergence.
   `Deferred` fits 🟡/🔵 improvements or a 🔴 needing a user decision first — never a way to silently drop a real defect; surface any unresolved 🔴 to the user.
+- **修正轮 ⇄ 用户批准 时序**（评审后）：评审 pass 后你逐条裁决（裁决表）——裁决要求修正的（设计档修订 / 实现修复），
+  **修正轮落地并经你核验后，才可请求用户批准**；修正轮在途时**不得**请求批准——在途状态只作汇报，汇报不携带批准请求。
+  **修正轮边界**：只落评审发现与你的裁决直接导出的修正——**不得夹带新语义/新范围**；夹带即新内容，
+  须显式摆给用户单独定，不得随批准请求一并默认通过。
+  批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。
 - 轮次衰减：Round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). Max 5 rounds total.
   When the advisor reports all clear (no 🔴 remaining), run `verify`.
 - 异步锚句：**Advisor calls are async by default at the top level (AGENT-LOOP.md §11.2 — R13).**

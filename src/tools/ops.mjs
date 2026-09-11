@@ -176,12 +176,25 @@ function asyncEntryDone(agent, id) {
   return entry.done === true || entry.status === "done"
 }
 
-/** Any async entry matching pred that is still running/queued (not done). */
-function hasRunningAsync(agent, pred) {
-  for (const e of asyncPool(agent).values()) {
+/** 评审池双载体（第 10 批 §18.3 #2）：agent ∪ history——未初始化的载体不进集合。 */
+function advisorPools(agent) {
+  return [agent?._asyncAdvisors, agent?.history?._asyncAdvisors].filter((m) => m instanceof Map)
+}
+
+/** Any entry matching pred that is still running/queued (not done) — in the given pool. */
+function hasRunningIn(pool, pred) {
+  for (const e of pool?.values() ?? []) {
     if (pred(e) && !(e.done === true || e.status === "done")) return true
   }
   return false
+}
+
+/** "advisor settled" 真判据（第 10 批 §18.3 #2 修正）：**评审池真实态**——双载体
+ *  （agent._asyncAdvisors ∪ history._asyncAdvisors）无 running/queued 条目（与 §11.2 的
+ *  未决评审判定 advisorReviewPending 同源语义）。修前读**子代理池**的 role==="advisor"
+ *  条目——评审条目只在 _asyncAdvisors → 恒无命中 → 恒真 0ms 秒过（用户实证）。 */
+function advisorSettled(agent) {
+  return !advisorPools(agent).some((pool) => hasRunningIn(pool, (e) => e.status === "running" || e.status === "queued"))
 }
 
 /** "consult done" — every consult session has drained (pending 0) or was
@@ -221,10 +234,10 @@ export async function evaluateWaitForCondition(condition, ctx) {
   const agent = ctx?.agent
   switch (parsed.kind) {
     case "advisor":
-      // Advisor reviews run as blocking tool calls (runAdvisorReview) or as
-      // advisor-role async children — "settled" = no advisor-role entry still
-      // running/queued in the async pool.
-      return !hasRunningAsync(agent, (e) => e.role === "advisor")
+      // 第 10 批修正（§18.3 #2——修前恒真 0ms 秒过）：判据 = 评审池真实态（双载体）——
+      // 不再读子代理池的 role==="advisor" 条目（该池永无此类条目）；语义与 §11.2 未决
+      // 评审判定同源（advisorReviewPending）。
+      return advisorSettled(agent)
     case "subagent":
       return asyncEntryDone(agent, parsed.arg)
     case "consult":

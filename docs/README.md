@@ -89,12 +89,13 @@ docs/
 
 写/改本文件 §3 映射内的任一 `docs/` 文档须人类可读：
 
-- **无 >300 字符单行**（整节/表/规则不得压成一行）
+- **无 >300 字符单行**（整节/表/规则不得压成一行）——**表格行豁免**：markdown 表格行结构性不可折行，超宽表格行不计入宽度检查（建议就近折行或表下补充——非阻断）
 - **markdown 结构正确**（标题/表格/代码块不被吞进正文，空行隔离节）
 - **变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）
+- **跨仓引用形态**：引用他仓文档不得写 `X.md` §N 形态（V1 按本仓 basename 解析——**basename 不在本仓扫描域时**恒判 `unknown-doc`；同名 basename 按本仓档解析、可能 `no-section` 误报甚至以错档通过）——写「名称（仓别）§N」（如 `WEBVIEW（VSC 仓）§5`）：去 `.md` 后缀、去路径前缀（跨仓引用 = V1 域外）
 
 违反即文档格式债——与源码 500 行硬限同理。批量检查：`node scripts/check-doc-width.mjs`
-（当前扫描域 = `docs/design/` 含 `_archive/`；`requirements/`、`docs/README.md`、`docs/TODO.md`、`docs/PHILOSOPHY.md` 覆盖为待办，见 `TODO.md`）。
+（扫描域 = `docs/design/` + `docs/requirements/` + `docs/batches`——排除 `_archive/`（历史快照豁免）；`docs/README.md`、`docs/TODO.md`、`docs/PHILOSOPHY.md` 覆盖为待办，见 `TODO.md`）。
 
 ### 3.8 批次记录档（`batches/`——本仓路径）
 

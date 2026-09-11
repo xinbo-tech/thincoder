@@ -39,7 +39,7 @@
 
 ### Added
 
-- **settings 工具（SETTINGS-TOOL.md——2026-09-05 用户三项裁定）**：agent 配置调整通道——list/get/set（全量 config.json 任意键点分路径）；set = 写盘 + 热应用（运行中即生效）；敏感键（apiKey/token/secret/password 段）回显永遮罩；已知键类型校验（DEFAULTS 自动派生）；list/get 只读动作（planMode 放行）；set 审批门。测试 T-S1.1-11（CLI 11 + VS Code 6）。
+- **settings 工具（SETTINGS-TOOL.md——2026-09-05 用户三项裁定）**：agent 配置调整通道——list/get/set（全量 config.json 任意键点分路径）；set = 写盘 + 热应用（运行中即生效）；敏感键（apiKey/token/secret/password 段）回显永遮罩；已知键类型校验（DEFAULTS 自动派生）；list/get 只读动作（planMode 放行）；set 审批门。测试 T-S1.1-11（CLI 11 + VS Code 6）——**记账更正（2026-09-11）：原声称的测试未随批落地（欠账）；已于 2026-09-11 补齐：CLI 25 例 / VS Code 6 例（第 8 批）。**
 - **subagent-async 模块拆分（§20.9 Module Split Policy——2026-09-05 F-N1.5 两段式首批）**：CLI subagent-async.mjs 1020 → 405 行（subagent-scheduler.mjs 231——§20 调度组 + 文件域组 / subagent-actions.mjs 416——status/panel/escalate 动作执行器组）——纯迁移零行为变化（测试零改动 + 断言计数前后对拍一致）。
 - **P-SL2 停滞机械检测（AGENT-LOOP §21.1 扩展注 P-SL2——2026-09-05）**：混合边环形等待停滞 → check/status 守卫明确报错列阻塞链（cancel 破环引导）——防御性（自然流不可达——人工注入可构造）。测试 T-SL2 ①-⑤（scheduler 22 → 27 用例）。
 

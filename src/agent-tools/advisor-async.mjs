@@ -27,23 +27,28 @@
  *     _calledAdvisorThisRun and issues no token (the guard pushes back); a
  *     non-stale code review marks _calledAdvisorThisRun; a passing design review
  *     issues its token under the designId slot at settle time.
+ *     2026-09-11 第 11 批拆分：settle 记账 + 变更日志 + 陈旧/冻结判定迁 `advisor-settle.mjs`
+ *     （本文件 500 行 = 硬帽在册）；既有 import 面经本文件 re-export 保持不变。
  *
  * The sync path (depth>0 eng-coder self-review / explicit async:false) reuses
  * the same instance resolution (rounds/prior/cap) — its accounting still lands
  * in recordToolResults (agent.mjs run loop), marker-keyed by toolCall id.
  */
 import { randomUUID } from "node:crypto"
-import { join } from "node:path"
-import { persistEngTokens } from "../token-ttl.mjs"
-import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from "./design-token.mjs"
 // design-token 工具组（2026-09-08 自本文件迁至 design-token.mjs——再越 500 行硬限）——
 // 既有 import 面（advisor.mjs / 测试）不变：原导出全部经此 re-export 保留。
 export {
   buildApprovedSuffix, stripApprovedSuffix, effectiveTokenTtlMs, generateDesignToken,
   validateDesignToken, makeDesignTokenRegex, settleDesignReview,
 } from "./design-token.mjs"
-import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER, looksLikeReviewOutput } from "../advisor/run.mjs"
-import { isDocFile, isTempFile } from "../advisor/repos.mjs"
+// 第 11 批拆分（2026-09-11）：settle 记账 + 变更日志（noteMutations）+ 陈旧判定
+// （reviewIsStale）+ 冻结冲突（inflightDesignReviewConflict）迁 advisor-settle.mjs——
+// 既有 import 面（dispatch / subagent-async / escalate-async / 测试）经此 re-export 不变。
+import { normAbs, mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
+export {
+  mutationSeqOf, noteMutations, reviewIsStale, settleAdvisorRun, inflightDesignReviewConflict,
+} from "./advisor-settle.mjs"
+import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 import { stripEventToken } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
@@ -145,53 +150,6 @@ export function effectiveAdvisorRound(agent) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mutation log (stale-review determination — fix #2: FILE_MUTATORS after the
-// review launch make the settle stale: no called-mark, no token, guard re-pushes)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function mutationSeqOf(agent) {
-  return agent._mutationSeq ?? 0
-}
-
-/** Record a file-mutation commit — bounded ring feeding the stale scan. paths = ABSOLUTE.
- *  唯一记账点（§29 fix A）：dispatch runOne 写执行成功即刻调用（取代批后段 + 中断分支——
- *  不双计）；mergeChildMutations（子代理合入）是独立事件面。 */
-export function noteMutations(agent, paths) {
-  const list = (paths ?? []).filter((p) => typeof p === "string" && p.length > 0)
-  if (list.length === 0) return
-  agent._mutationSeq = (agent._mutationSeq ?? 0) + 1
-  const log = agent._mutLog ??= []
-  log.push({ seq: agent._mutationSeq, paths: [...new Set(list)] })
-  if (log.length > 200) log.splice(0, log.length - 200)
-}
-
-/** A path counts as a CODE mutation (src/ unconditional; temp/doc excluded outside src/). */
-function isCodePath(p) {
-  return /(?:^|[\\/])src[\\/]/.test(p) || (!isTempFile(p) && !isDocFile(p))
-}
-
-function normAbs(p, cwd) {
-  const s = String(p)
-  return /^[a-zA-Z]:[\\/]/.test(s) || s.startsWith("/") || s.startsWith("\\\\") ? s : join(cwd, s)
-}
-
-/** Stale = a mutation committed after the launch touched the review's face:
- *  code reviews judge the CODE face; design reviews judge their OWN documents. */
-export function reviewIsStale(agent, entry) {
-  const log = agent?._mutLog
-  if (!Array.isArray(log) || log.length === 0) return false
-  const since = log.filter((m) => m.seq > (entry.launchSeq ?? -1))
-  if (since.length === 0) return false
-  if (entry.reviewType === "design") {
-    const scope = (entry.docAbs ?? []).map((p) => normAbs(p, agent?.cwd))
-    if (scope.length === 0) return false // no explicit doc scope — nothing to judge stale
-    const set = new Set(scope)
-    return since.some((m) => (m.paths ?? []).some((p) => set.has(normAbs(p, agent?.cwd))))
-  }
-  return since.some((m) => (m.paths ?? []).some((p) => isCodePath(normAbs(p, agent?.cwd))))
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Async pool (agent._asyncAdvisors — pool 上限 F-1/F-2:常量 = 运行时回退权威(2 → 4),
 // config.mjs DEFAULTS.agent.poolLimits.advisor = config 层镜像——耦合锁 config-pool
 // .test.mjs 逐键断言——勿单侧改默认)
@@ -231,10 +189,6 @@ export function runningAdvisorCount(agent) {
   return [...(agent?._asyncAdvisors?.values() ?? [])].filter((e) => e.status === "running").length
 }
 
-/** Mechanical-failure prefixes (run.mjs resolves with these — never throws): a
- *  settle carrying one produced no review verdict and must not satisfy the guard. */
-const ADVISOR_FAILURE_TEXT = /^Advisor: (?:review failed|review timeout|stopped after|interrupted|context window limit|empty response)/
-
 /** Any in-flight (non-done) async advisor review? — the completion guard skips
  *  its push-back while a review is pending (T-24b4: 未决不算未评审). */
 export function advisorReviewPending(agent) {
@@ -258,110 +212,6 @@ export function cancelAsyncAdvisor(agent, id) {
   entry.cancelled = true
   entry.controller?.abort?.()
   return { id: key, status: "cancelled" }
-}
-
-/**
- * Settle accounting (fix #2/#4 — runs when a non-cancelled review settles,
- * BEFORE the pending transfer / digest injection):
- *  1. round++ (attempts count — parity with the legacy _advisorRound++ budget);
- *  2. stale determination — mutated targets since launch → no called-mark, no token;
- *  3. non-stale: code review → _calledAdvisorThisRun = true; design review →
- *     token echo check (settleDesignReview: slot + instance close; single-value
- *     mirror retired per DESIGN-TOKEN-SETTLEMENT D3) + D1 settle-time slot persist
- *     (persistEngTokens — write failure = settle failure: no registration, no
- *     Approved echo, re-review — 评审 #1);
- *  4. §29 fix B — branch-shaped report output (the caller writes it back to
- *     entry.report; digest injects the CLEANED form): pass → stripped +
- *     Approved/designId suffix (sync 参照形态); persist-failed → stripped +
- *     "D1: …token could NOT be durably written…" re-review notice (no Approved
- *     suffix — never an unregistered token); stale → echo stripped +
- *     "评审目标已变更——token 未签发" prefix — never an unregistered token.
- * Cancelled / parent-aborted reviews consume nothing (the user dropped the
- * attempt — the retry must not lose budget).
- * @returns {{cancelled: boolean, stale: boolean, passed: boolean, report: string|null}}
- */
-export function settleAdvisorRun(agent, entry) {
-  if (entry.cancelled) return { cancelled: true, stale: false, passed: false, report: null }
-  const run = entry.run
-  if (!run) return { cancelled: false, stale: false, passed: false, report: entry.report ?? null }
-  const result = entry.report ?? null
-  run.round++
-  agent._advisorRound = run.round
-  const stale = reviewIsStale(agent, entry)
-  run.stale = stale
-  let report = result
-  let passed = false
-  if (!stale) {
-    if (run.reviewType === "design" && entry.designToken && result) {
-      // settle 前 Map 快照——落盘失败时回滚用（settle 失败 = 结算未发生，不留半结算态：
-      // 重评覆盖旧槽的边角（F2h 复用 designId）也原样恢复旧 token——内存与盘一致）。
-      const preMap = agent._engDesignTokens instanceof Map
-        ? new Map(agent._engDesignTokens)
-        : null
-      const settled = settleDesignReview(agent, run, entry.designToken, result)
-      if (settled.passed) {
-        // DESIGN-TOKEN-SETTLEMENT D1（2026-09-08）：settle 是唯一结算点——settle 当场
-        // 同步落盘 token 字段到槽文件（persistEngTokens = engTokenSlotFields 序列化 +
-        // session 安全写/轮转——勿裸写文件），不等下个回合尾 saveSession（消除"settle→
-        // 下个 saveSession"间的重启丢 token 窗口）。
-        // 写失败即 settle 失败（评审 #1）：token 不注册（Map 回滚到 settle 前快照）、无
-        // Approved 回显、可重评——不静默吞错、不产生"内存有盘上无"态（宁可结算失败
-        // 可重评，不留半结算态）。
-        let durable = false
-        try {
-          durable = persistEngTokens(agent)
-        } catch (e) {
-          logEvent("advisor:error", { id: `advisor#${entry.id}`, err: `engDesignTokens slot persist threw: ${e?.message ?? String(e)}` })
-        }
-        if (durable) {
-          passed = true
-          report = settled.output
-        } else {
-          if (preMap) agent._engDesignTokens = preMap
-          else delete agent._engDesignTokens
-          run.approvedSuffix = null
-          logEvent("advisor:error", { id: `advisor#${entry.id}`, err: "engDesignTokens slot persist failed — settle failed (re-review)" })
-          const stripped = String(result)
-            .replace(makeDesignTokenRegex(entry.designToken, "g"), "")
-            .trim()
-          report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评).`.trim()
-        }
-      } else {
-        report = settled.output
-      }
-    }
-    // A completed review covers the code face ONLY when it actually produced a
-    // verdict: a mechanical-failure settle ("Advisor: review failed/timeout/…" —
-    // run.mjs resolves with the failure text, it never throws) must not satisfy
-    // the guard silently — the digest shows the failure and the guard pushes
-    // back for a retry (fix #2 anti-silent-skip intent; attempts still consume
-    // the per-review round budget, so repeated failures stay bounded by the
-    // cap). An error settle (rejection path — report null with an error) has no
-    // verdict either — same exclusion (advisor 复评补边). Design reviews keep
-    // the mark on any completed verdict (parity with the sync recordToolResults
-    // mark — they have no code face to cover).
-    const failureVerdict = run.reviewType !== "design" && (
-      ADVISOR_FAILURE_TEXT.test(String(report ?? "")) ||
-      (result == null && entry.error != null)
-    )
-    if (!failureVerdict) {
-      agent._calledAdvisorThisRun = true
-    }
-  } else if (run.reviewType === "design" && entry.designToken && result != null) {
-    // §29 fix B（stale 分支）：陈旧评审不签发——digest 不得展示未注册 token——先剥
-    // 方括号回显 + 前置 "评审目标已变更——token 未签发"（不变式——两分支都清洗）。
-    const stripped = String(result)
-      .replace(makeDesignTokenRegex(entry.designToken, "g"), "")
-      .trim()
-    report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
-  }
-  // Prior of round 2+ = the last REVIEW-LOOKING output (mirror of run.mjs's guard).
-  // F2e (§29.1): strip the engine-approved suffix FIRST — the prior must never
-  // carry the raw token / designId (exact truncation — zero collateral).
-  if (report && looksLikeReviewOutput(report)) {
-    run.priorOutput = stripApprovedSuffix(report, run.approvedSuffix)
-  }
-  return { cancelled: false, stale, passed, report }
 }
 
 /** Relay an advisor onOutput chunk into the subagent block channel (`advisor#N/`

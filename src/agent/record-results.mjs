@@ -16,7 +16,11 @@
  *    invalidate verify only (user decision 2026-08-08: reviews trigger on
  *    code mutations, not environment changes).
  *  - advisor calls always advance _advisorRound (convergence budget counts
- *    attempts, not successes).
+ *    attempts, not successes). §15 F16 (2026-09-11 第 13 批): the SYNC
+ *    called-mark is gated by the single incomplete-tail predicate
+ *    (advisorIncompleteMarker) — a truncated-then-settled CODE review must not
+ *    count as covered (the guard re-pushes); design reviews keep the mark
+ *    (no code face — settle-side `failureVerdict` parity).
  *  - Mutations feed _touchedFiles and fire-and-forget memory reindex.
  */
 import { pushReal } from "../context.mjs"
@@ -24,7 +28,7 @@ import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS } from "./helpers.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
-import { looksLikeReviewOutput } from "../advisor/run.mjs"
+import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.mjs"
 
 let _reindexFile = null
 
@@ -111,10 +115,14 @@ export async function recordToolResults(agent, toolByName, results) {
         } else if (asyncAck) {
           agent._advisorAsyncAcks.delete(toolCall.id)
         } else {
-          agent._calledAdvisorThisRun = true
           const reviewId = agent._advisorSyncCalls?.get(toolCall.id)
+          const run = reviewId !== undefined ? advisorRuns(agent).get(reviewId) : undefined
+          // F16 同步面（第 13 批 §15.2——ADVISOR-CONVERGENCE.md §15）：未完成尾 + 非设计面
+          // （含类型不可判——run 缺失的 legacy 直调）⇒ 不置「已覆盖」（与 settle 面
+          // 逐条 parity；设计评审保持计入——无代码面）。
+          const incomplete = advisorIncompleteMarker(String(result))
+          if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun = true
           if (reviewId !== undefined) {
-            const run = advisorRuns(agent).get(reviewId)
             if (run) {
               run.round++
               agent._advisorRound = run.round

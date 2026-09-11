@@ -51,13 +51,15 @@ src/prompts 落地文本（生成质量由断言守）。
 
 | 文件 | 内容大纲 |
 |---|---|
-| persona-engineering.md | ① 身份宣言（产品经理 + 流程编排者 + 批次档作者——非设计文档交付者）② 权限面（批次档 §1/§4/§6、核验设计稿、发起评审、委派）③ 调用链段（批次讨论收口 → spawn eng-designer → 核验 → 提醒评审 → 批准 → spawn eng-coder）④ 发起权边界（评审/实施由用户发起）+ 推进档位声明（auto/manual）⑤ 与 eng-designer / eng-coder 的分工界面 |
+| persona-engineering.md | ① 身份宣言（产品经理 + 流程编排者 + 批次档作者——非设计文档交付者）② 权限面（批次档 §1/§4/§6、核验设计稿、发起评审、委派）③ 调用链段（批次讨论收口 → spawn eng-designer → 核验 → 提醒评审 → **评审后逐条裁决** →（如需修正）**修正轮落地并核验** → 批准 → spawn eng-coder）④ 发起权边界（评审/实施由用户发起）+ 推进档位声明（auto/manual）⑤ 与 eng-designer / eng-coder 的分工界面 |
 | persona-normal.md | ① 身份宣言（coding agent——全项目代码所有者）② 能力边界（直接写码/全工具）③ 协作立场（人定方向拍板，我干活） |
 | persona-eng-coder.md | ① 身份：被授权的实现者（designToken = 授权凭证）② 边界：设计是权威规格；与设计/现状冲突停下上报不静默适应 ③ 自含交付协议概览（审计/自修/评审/收敛——正文在 AGENT-LOOP）④ **file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可（用户裁定 2026-09-10）** |
 | persona-eng-designer.md | ① 身份：写稿面唯一作者（需求档/设计档/批次档 §2，含修订；不写实现/不改提示词/不发起评审）② 授权：需求已确认——**无 designToken**；需求档不经 advisor ③ 写域（`docs/` 扣除 `docs/design/prompts/`）+ 收到什么/缺料打回 + 执行者拒收 ④ 五步工作流（勘察预算 ≤6/批 / 并入需求 + 体系对账 + todo 状态推进 / 判定句 / 写设计 / 自检交回停）⑤ 产出两件（批次任务落批次档 §2 不写进设计档 + 设计档 8 项）⑥ 三方条目一致 |
 | persona-explore.md | ① 身份：只读侦察 ② 权限边界（只读/不碰用户）③ 报告义务（必列找了什么/没找到什么） |
 | persona-coder.md | ① 身份：受控写码实现者 ② 权限边界（写门控）③ 报告义务 |
 | persona-plan.md | ① 身份：只读规划 ② 权限边界（只读/不问用户）③ 报告义务（歧义带回主会话裁决） |
+
+> ③ 调用链段的**时序与修正轮边界**详述 = `../design/ADVISOR-CONVERGENCE.md` §13（需求侧 `ADVISOR-CONVERGENCE.md` §6——2026-09-11 批）。
 
 ### 公共层
 
@@ -294,3 +296,5 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
   ④"L5"改槽位[4] ⑤文件清单总数口径（主链11含特殊14，不含AGENTS）⑥"METHODOLOGY §7"改节名引
   ⑦R24/AC-2 缩写补锚 ⑧命名法总纲补豁免从句（槽[4]动态/特殊自含）⑨§5 静态差值+进度镜像 TODO
   ⑩§6 补受影响文件清单义务（行数标注+拆分计划）——修订版待用户复核后批准。
+- 2026-09-11：§2.5 persona-engineering 行③调用链段补节点（**评审后逐条裁决 →（如需修正）修正轮落地并核验 → 批准**）——
+  与提示词四面文本一致（需求 `ADVISOR-CONVERGENCE.md` §6 F7 / 设计 `../design/ADVISOR-CONVERGENCE.md` §13）。
