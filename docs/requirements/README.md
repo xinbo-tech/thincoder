@@ -8,7 +8,7 @@
 
 本仓此前**没有** `docs/requirements/`——本仓需求写在 CLI 仓需求档里。这是历史遗留的越仓承载，不是设计意图。
 
-- **本仓 `docs/design/` 早已自持**（**55 档**——顶层 `.md` 含 `README.md`；as-of 2026-09-12 实测）——反证本仓有能力自持文档层。
+- **本仓 `docs/design/` 早已自持**（**49 档**——顶层 `.md` 含 `README.md`；归位后实测——归位前 55 档）——反证本仓有能力自持文档层。
 - 塌的只有**需求层与批档层**；本目录即需求层的补齐。
 
 ## 规则
@@ -30,8 +30,70 @@
 
 | 板块 | 文档文件 | 备注 |
 |---|---|---|
-| 工程模式 | `ENGINEERING-MODE.md` | 本批首建档——台账 / 批次档 / 需求档的自持规则、机检闸、提示词承载 |
-| 测试基建 | `TESTING.md` | 散文锚退役批（PROSE-ANCHOR-RETIRE）建立——测试判据（C1-a–d）/ 逐条删除清单口径 / 保留面（行为面 + 结构机检）；与对端同标识条目语义同源、本端原文自持 |
+| （本档） | `README.md` | 需求层地图：登记规则 + 36 档对位表 |
+| 工程模式 | `ENGINEERING-MODE.md` | 台账 / 批次档 / 需求档的自持规则、机检闸、提示词承载 |
+| 测试基建 | `TESTING.md` | 测试判据与保留面（散文锚退役批建立）；与对端同标识条目语义同源、本端原文自持 |
+| Agent 运行参数 | `AGENT-PARAMS.md` | 评审超时 / 轮次上限（归位——自 `docs/design/AGENT-PARAMS-REQUIREMENTS.md`） |
+| Design Token 硬化 | `ENG-TOKEN-BINDING.md` | 流程凭证语义 / TTL（归位） |
+| 轮末蒸馏异步化 | `SEND-STALL-DISTILL.md` | 结束信号先行、蒸馏异步（归位） |
+| 工具输出限制 | `TOOL-OUTPUT-LIMITS.md` | 落盘阈值与预览构成（归位） |
+| 产品定位与决策 | `PROJECT.md` | 定位 / 决策记录 / 与 CLI 的关系（归位异名——原 `docs/design/REQUIREMENTS.md`） |
+| 三观（提示词根基） | `PHILOSOPHY.md` | 世界观 / 人生观 / 价值观（归位） |
+| v1 功能范围 | `FEATURES.md` | 已实现功能清单（自 `PROJECT.md` 拆出） |
+| 诊断事件日志 | `LOGGING.md` | 常驻骨架日志（本批新建——机制在位无档补齐） |
+| 多实例协作感知 | `MULTI-INSTANCE-COLLAB.md` | 同 cwd 多副本感知 / 文件域避让（本批新建） |
+| normal 模式 | `NORMAL-MODE.md` | 提示词槽位装配层（本批新建） |
+| `settings` 工具 | `SETTINGS-TOOL.md` | 配置读写通道与形状护栏（本批新建） |
+| 结构债 | `STRUCTURE-DEBT.md` | 文件 / 函数 / 文档粒度硬指标（本批新建） |
+| verify 门禁 | `VERIFY-REDESIGN.md` | 声明式完成前门（本批新建） |
+
+**树终态 = 16 档**（含本档）：在位 3（`README` / `ENGINEERING-MODE` / `TESTING`）+ 归位 6 + 拆出 1（`FEATURES`）+ 本批新建 6。
+
+## 36 档对位表（CLI 仓需求档 → 本仓判 → 本仓对位档）
+
+> 判值三态：① = 本批建本仓需求档 · ② = 已有对位（允许异名 / 异层——注明档名）· ③ = 本端无此面（写理由）。
+> 语义同源参照 = `LEDGER-SELF-CONTAINED（CLI 仓）§8.6`；本表为本端原文自持的逐档登记。
+
+| # | CLI 仓需求档 | 判 | 本仓对位档 | 归位 / 理由 |
+|---|---|---|---|---|
+| 1 | `ACP-CLIENT` | ③ | — | 本端不以 ACP 接入——本端即 IDE 内嵌扩展 |
+| 2 | `ADVISOR-CONVERGENCE` | ② | `docs/design/ADVISOR-CONVERGENCE.md` | 同名对位 |
+| 3 | `AGENT-LOOP` | ② | `docs/design/AGENT-LOOP.md` | 同名对位 |
+| 4 | `AGENT-PARAMS` | ② | `docs/requirements/AGENT-PARAMS.md` | 归位（自 `docs/design/AGENT-PARAMS-REQUIREMENTS.md`） |
+| 5 | `ASYNC-RESULT-CONTAINER` | ② | `docs/design/ASYNC-RESULT-CONTAINER.md` | 同名对位 |
+| 6 | `CHECKPOINT` | ② | `docs/design/CHECKPOINT.md` | 同名对位 |
+| 7 | `CONSULTATION` | ② | `docs/design/CONSULTATION.md` | 同名对位 |
+| 8 | `CONTEXT-COMPACTION` | ② | `docs/design/CONTEXT-COMPACTION.md` | 同名对位 |
+| 9 | `CRASH-REPORTS` | ③ | — | 本端无崩溃取证面（`crash*.mjs` 零命中） |
+| 10 | `DESIGN-TOKEN-SETTLEMENT` | ② | `docs/design/DESIGN-TOKEN-SETTLEMENT.md` | 同名对位 |
+| 11 | `ENG-TOKEN-BINDING` | ② | `docs/requirements/ENG-TOKEN-BINDING.md` | 归位 |
+| 12 | `ENGINEERING-MODE` | ② | `docs/requirements/ENGINEERING-MODE.md` | 已在位 |
+| 13 | `ESCALATE` | ② | `docs/design/ESCALATE.md` | 同名对位 |
+| 14 | `FEATURES` | ② | `docs/requirements/FEATURES.md` | 拆出（自 `PROJECT.md` v1 功能范围节） |
+| 15 | `LOGGING` | ① | `docs/requirements/LOGGING.md` | 本批新建（机制在位无档） |
+| 16 | `MCP` | ② | `docs/design/MCP.md` | 同名对位 |
+| 17 | `MEMORY` | ② | `docs/design/MEMORY.md` | 同名对位 |
+| 18 | `MULTI-INSTANCE-COLLAB` | ① | `docs/requirements/MULTI-INSTANCE-COLLAB.md` | 本批新建（机制在位无档） |
+| 19 | `NORMAL-MODE` | ① | `docs/requirements/NORMAL-MODE.md` | 本批新建（提示词装配层在位无档） |
+| 20 | `PHILOSOPHY` | ② | `docs/requirements/PHILOSOPHY.md` | 归位（价值层需求） |
+| 21 | `PORTABILITY` | ② | `docs/design/PORTABILITY.md` | 对位档在位 |
+| 22 | `PROJECT` | ② | `docs/requirements/PROJECT.md` | 归位异名（原 `docs/design/REQUIREMENTS.md`） |
+| 23 | `PROMPT-SYSTEM` | ② | `docs/design/VSC-PROMPTS.md` + `docs/design/prompts/` | 异名对位（提示词双源权威） |
+| 24 | `RELEASE` | ② | `docs/design/RELEASE.md` | 同名对位 |
+| 25 | `SEND-STALL-DISTILL` | ② | `docs/requirements/SEND-STALL-DISTILL.md` | 归位 |
+| 26 | `SESSION` | ② | `docs/design/SESSION.md` | 同名对位 |
+| 27 | `SETTINGS-TOOL` | ① | `docs/requirements/SETTINGS-TOOL.md` | 本批新建（机制在位无档） |
+| 28 | `STRUCTURE-DEBT` | ① | `docs/requirements/STRUCTURE-DEBT.md` | 本批新建（本端登记面缺失） |
+| 29 | `SUBAGENT-OBSERVE-SEND` | ② | `docs/design/SUBAGENT-OBSERVE-SEND.md` | 同名对位 |
+| 30 | `TESTING` | ② | `docs/requirements/TESTING.md` | 已在位（设计档 `docs/design/TESTING.md` 在位） |
+| 31 | `TOOL-OUTPUT-LIMITS` | ② | `docs/requirements/TOOL-OUTPUT-LIMITS.md` | 归位 |
+| 32 | `TOOLS` | ② | `docs/design/TOOLS.md` + 编辑族 6 档（`EDIT.md` / `EDIT-HELPERS.md` / `HASHLINE-EDIT.md` / `INSERT-AFTER.md` / `APPLY-PATCH.md` / `WRITE.md`） | 同名对位 |
+| 33 | `TUI` | ② | `docs/design/WEBVIEW.md` | 异名对位（本端 UI 面 = webview；端差已登记） |
+| 34 | `TUI-TOOL-OUTPUT` | ② | `docs/design/WEBVIEW.md` | 异名对位（呈现面 = webview 工具卡） |
+| 35 | `TURN-CAP-CONTINUE` | ② | `docs/design/TURN-CAP-CONTINUE.md` | 同名对位 |
+| 36 | `VERIFY-REDESIGN` | ① | `docs/requirements/VERIFY-REDESIGN.md` | 本批新建（机制在位无档） |
+
+**三值计数**：① 6 · ② 28 · ③ 2 → **36** ✅
 
 ## 需求档写法（三层）
 
@@ -48,3 +110,5 @@
 - 2026-09-12：建档（台账自持批 LEDGER-SELF-CONTAINED——本仓 `docs/requirements/` 首建；首档 = `ENGINEERING-MODE.md`）。
 - 2026-09-12：登记 `TESTING.md`（散文锚退役批 PROSE-ANCHOR-RETIRE 建立——规则 3「新板块才新建 + 立即本表登记」；父侧落笔）。
 - 2026-09-12（修正轮——设计评审轮次 1 #7）：计数口径统一（`docs/design/` 顶层 **55 档**，含 `README.md`；as-of 实测）。
+- 2026-09-12（LEDGER-SELF-CONTAINED 批实施）：归位 6（`AGENT-PARAMS` / `ENG-TOKEN-BINDING` / `SEND-STALL-DISTILL` / `TOOL-OUTPUT-LIMITS` / `PROJECT` / `PHILOSOPHY`）· 拆出 1（`FEATURES`）·
+  新建 6（① 行）——本表登记全集 16 档 + 36 档对位表三值齐备。

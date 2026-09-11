@@ -1,5 +1,6 @@
 # Design Token 硬化 — 需求（VS Code 扩展）
 
+> 归位注记：本档自 `docs/design/ENG-TOKEN-BINDING-REQUIREMENTS.md` 归位入 `docs/requirements/`（文档体系各仓自持批 LEDGER-SELF-CONTAINED——纯需求档去 `-REQUIREMENTS` 后缀；对应 `-TUNING.md` 留 `docs/design/` 作设计档）。
 > 状态：**已实现**（v2 收窄 + R16 TTL 生命周期修订——2026-08-25 / 2026-09-06 分阶段落地）。
 > 关联：`docs/design/ENG-TOKEN-BINDING-TUNING.md`（设计）、`docs/design/README.md`（文档地图）。
 > 设计语义（2026-09-06 用户裁定，权威见 TUNING.md）：designToken 是**流程凭证**（防 agent

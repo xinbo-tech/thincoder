@@ -1,8 +1,8 @@
 # 探索蒸馏异步化 — 设计（VS Code 扩展）
 
 > 板块：轮末探索蒸馏的**时序**（已实现专题，当前生效——现行机制描述）。
-> 需求：`SEND-STALL-DISTILL-REQUIREMENTS.md`
-> 关联：`README.md`（文档地图）；机制本体（蒸馏替换/静默语义）归 CLI 端 `thincoder/docs/design/CONTEXT-COMPACTION.md`（本仓库无此文件，评审 #4）。
+> 需求：`docs/requirements/SEND-STALL-DISTILL.md`
+> 关联：`README.md`（文档地图）；机制本体（蒸馏替换/静默语义）归 CLI 端 `CONTEXT-COMPACTION（CLI 仓）`（本仓库无此文件，评审 #4）。
 > 状态：**已实现**（2026-08-25 实施 + 2026-09-05 模块化；marketplace / Open VSX 0.1.49）。
 > 说明：与 CLI 端 `SEND-STALL-DISTILL-TUNING.md` 同源（两端语义一致；各自文件清单独立——文档地图惯例）。
 

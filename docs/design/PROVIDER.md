@@ -179,7 +179,7 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 
 ### 4.3 请求链超时语义镜像（群 A 批——绝对墙钟废除 + 读侧 idle 补齐）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A1（指针 = CLI 批
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A1（指针 = CLI 批
 > `2026-09-11-ABORT-PROVENANCE.md` §20.10「VSC 镜像 600s 绝对墙钟残留——用户实证文案的唯一在网生产点」）。
 > 语义源：CLI `provider/core.mjs:408-415`（相位拆分——绝对墙钟废除后的现行语义）；双端纪律：语义同源、本端原文自持。
 

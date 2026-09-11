@@ -119,7 +119,7 @@ embedding key + 构建按钮 + 状态；向量维度/模型切换的校验与可
 
 ### 2.7 config 路径字段 `~` 展开（`shell`——群 A 批）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A2
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A2
 > （指针 = CLI 批 `2026-09-11-HOME-EXPANSION.md` §十「VSC 镜像面——仅 `shell` 字段同病」）。
 > 语义源：CLI 设计 `MEMORY.md` §9.3（单一规范化点 / 只读归一）；双端纪律：语义同源、本端独立实现。
 

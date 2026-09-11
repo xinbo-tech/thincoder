@@ -1,5 +1,5 @@
 /**
- * log.mjs — 诊断事件日志（docs/design/LOGGING.md 权威规格）。
+ * log.mjs — 诊断事件日志（docs/requirements/LOGGING.md 权威规格）。
  * 双端同构：thincoder/src/log.mjs 与 thincoder-vscode/src/log.mjs 同一实现语义
  * （共享 ~/.thincoder/logs/、同格式、同事件面——F-L6）。
  *

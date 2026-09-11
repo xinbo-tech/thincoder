@@ -1,5 +1,6 @@
 # ThinCoder VS Code — 需求与决策记录
 
+> 归位注记：本档自 `docs/design/REQUIREMENTS.md` 归位入 `docs/requirements/`（文档体系各仓自持批 LEDGER-SELF-CONTAINED——异名归位；原 §v1 功能范围节拆出至 `FEATURES.md`）。
 > 本文档记录 VS Code 扩展的需求决策、已确定事项和待讨论项。
 > 独立产品，不依赖 thincoder CLI。零外部依赖（npm + 文件系统）。
 
@@ -41,18 +42,6 @@
 4. **custom 支持三种协议**：对齐 CLI `addProviderFlow` 的 custom 分支——手动输入 name / baseURL / model，并选 **API format: `openai`（默认）/ `anthropic` / `google`**，写入 `provider.format`。三种协议都有 transport（见下）。
 
 **协议 transport**：`openai`（默认，SSE chat completions）、`anthropic`（Messages API）、`google`（streamGenerateContent）——**三种均已实现**（`src/provider/transports/`，08-13 注：早期版本仅有 openai transport，anthropic/google 后补齐）。
-
-## v1 功能范围（已实现）
-
-- Agent 主循环：多轮工具调用，上下文压缩，子 agent 派生
-- 工具系统：20+ 工具（文件/搜索/Git/系统/网络/交互/补丁）
-- Agent 自律工具链：`task` / `plan` / `goal` / `verify` / `recent_changes` / `subagent` / `skill`
-- 多 Provider：20 个 preset（含 Claude/Gemini）+ 自定义 endpoint（openai/anthropic/google 三协议），与 CLI 共享 `~/.thincoder/config.json`
-- 多会话 + 模型选择器 + 设置面板 + 快捷键
-- `autoApprove` 会话级开关（槽位字段，与 CLI 共享），默认 `false`；AUTO 按钮 / approve-all 翻转，mid-turn 立即生效
-- repo_outline + context compaction
-
-**v1 范围已全部覆盖（08-14）：** 文件式记忆（`.thincoder/memory/` markdown + frontmatter，CLI 格式兼容）、MCP 客户端（stdio/http/ws）、read_image（工具 + 粘贴图片）、编辑器上下文感知（editor-context 注入）、LSP 集成（`tools/lsp.mjs`，直接用 VS Code 语言服务 API）均已实现。v2 待定项暂无。
 
 ## 待决策
 

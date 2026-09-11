@@ -408,7 +408,7 @@ webview 输入面见下方 UI 段）；settle
   （eng-coder 内自审不翻转）。UI：panel-messages cancelSubagent 路由 role=advisor +
   webview subBlockTarget 加 advisor（⏹/冻结复用）。
 
-**§11.2 接入面补全（2026-09-11 第 10 批——本端镜像；CLI 端权威 = `thincoder/docs/design/AGENT-LOOP.md` §18）**：
+**§11.2 接入面补全（2026-09-11 第 10 批——本端镜像；CLI 端权威 = `AGENT-LOOP（CLI 仓）` §18）**：
 
 - ① `subagent status` 双池合并（本端 `src/agent-tools/subagent-actions.mjs` as-of :89-120 现只查子代理池——本批补）；
 - ② `wait_for "advisor settled"` 判据改读评审池（本端 `src/tools/wait_for.mjs` as-of :125-129 同缺陷——修前恒 0ms 秒过；
@@ -751,7 +751,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 ## 13. 旧锚清理：`§24` → 本端节映射（群 A 批）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A3
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A3
 > （指针 = `docs/TODO.md:165` + CLI 批 `2026-09-11-DOC-HYGIENE.md` §2.29.3——CLI 端已清（`§24`→`§11.x`））。
 > 语义源：CLI §2.29.3 口径（**节粒度重锚 + `D-24x` 标签保留**）；双端纪律：本端节号自持——**不抄 CLI 的 `§11.x`**（本端 `§11` = 生命周期对齐段，非 async 池）。
 
@@ -836,7 +836,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 ## 14. 受限通道描述面清单同步（群 A 批 A11）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A11（指针 =
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A11（指针 =
 > `2026-09-11-TUI-SELECTION.md:96`——CLI 批 20 A2 的 VSC 镜像候选；处置 =「取同源语义」）。
 > 语义源：CLI 批 20 的受限变体动作清单（7 动作含 panel）；VSC 端独立落——**本端无 panel 动作**
 > （`subagent.mjs:2-3`——§19.6 AC-P4），清单 = 本端全部动作减 spawn。
@@ -876,7 +876,7 @@ Partial changes from discarded children stay unmerged/unaudited; re-spawn if the
 
 ## 15. advisor 池中止收口：同构丢弃（群 B 批 B1——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §1 条目 B1（复议指令 = 用户 16:45「都一起做了」）；
+> 来源：批次档 `2026-09-11-VSC-REVIEW-ASYNC-SWEEP（本仓）` §1 条目 B1（复议指令 = 用户 16:45「都一起做了」）；
 > 原登记 = 本档 §12.8 #1（第 35 批「登记不修——advisor 池面属他批」）。
 > 需求 = `AGENT-LOOP（CLI 仓）§11` F-I1 / N-I1~N-I3（指针不重述）。冻结面：§12 已交付契约（C-1~C-9）语义零改——
 > 本批只新增 advisor 池同构面（C-10）；CLI 仓零写入。（编号避撞注：落档时与群 A A11 §14 并发——本批两节顺延 §15/§16。）
@@ -973,7 +973,7 @@ No design token was issued for a discarded design review; launch the review agai
 
 ## 16. digest 注入预算统一（群 B 批 B5——VSC 镜像——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §1 条目 B5
+> 来源：批次档 `2026-09-11-VSC-REVIEW-ASYNC-SWEEP（本仓）` §1 条目 B5
 > （BATCH-3 交付偏差承接口——CLI 仓 `docs/TODO.md` 需求池行）。
 > 语义源（CLI 侧）：`AGENT-LOOP（CLI 仓）§22`（单源模块 / 四族接线 / 用例与 AC——指针不重述）；
 > 需求 = `AGENT-LOOP（CLI 仓）§11` F-I2 / N-I1~N-I3。
@@ -1059,7 +1059,7 @@ No design token was issued for a discarded design review; launch the review agai
 
 ## 17. 会话上下文注入面对齐（VSC-CONTEXT-PARITY 批——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1（用户 22:54「VSC 端会话体验与 CLI
+> 来源：批次档 `2026-09-11-VSC-CONTEXT-PARITY（本仓）` §1（用户 22:54「VSC 端会话体验与 CLI
 > 差距巨大——提示词系统和注入信息面出现巨大差异，挖差异并修正使行为与 CLI 一致」+ 23:02 三条裁定：
 > **权威源 = CLI 蓝图** / `[Current file:]` 收窄保留 / **提示词与注入顺序全对齐**；父侧 23:06 追加约束 =
 > 注入落位与前缀缓存契约）。
@@ -1075,7 +1075,7 @@ CLI 主会话每 run 有 10 类上下文注入块，VSC 端缺失 10 项中的 8
 
 | # | 项 | CLI 对位（基准） | VSC 现状（as-of） |
 |---|---|---|---|
-| 1 | 项目指令注入（AGENTS） | `thincoder/src/agent/setup.mjs:341-344` + `helpers.mjs:324-348` | 无（`loadProjectInstructions` 零命中） |
+| 1 | 项目指令注入（AGENTS） | `src/agent/setup.mjs:341-344`（CLI 仓） + `helpers.mjs:324-348` | 无（`loadProjectInstructions` 零命中） |
 | 2 | 记忆召回（≤3 条） | `setup.mjs:114-124` | 无（`memory.mjs:249 search` 存在但无注入调用） |
 | 3 | 文档召回（≤5 条 chunk/300 字符预览） | `setup.mjs:100-113` | 无（索引为文件式向量索引——`indexer.mjs searchIndex` 存在但无注入调用） |
 | 4 | checklist 推送 | `setup.mjs:126-139` | `tools/checklist.mjs:318 pendingItems` 已实现**零调用** |
@@ -1273,7 +1273,7 @@ VSC 现序违反了它（`:448` time → `:450` pushInjections）。**取「time
 | T-CI-8 | 正常 | skill load（含 `name/SKILL.md` 形态）；重复 load | `<skill-loaded>` 消息 + 转义 + 不截断；二次 → 已加载句 | F-Q7（D-CI8） |
 | T-CI-9 | 边界 | 连续两 run 快照（同会话） | 前一请求体 ⊆ 后一请求体且逐字节相等（前缀缓存契约） | N-Q1 |
 | T-CI-10 | 错误 | 召回/大纲/快照内部 I/O 失败（mock 抛错）；seam 计数（修正轮 #10） | 该块静默跳过；其余块与 user 输入零影响；召回/大纲/快照各恰 1 次调用/run（失败不重试——seam 计数） | N-Q2 |
-| T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 `../thincoder/src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面（git 块 / `OS: … Working directory:` / `OUTLINE_INJECT_PREFIX` / `[Relevant documentation` / `[Relevant memories from previous sessions` / `task checklist (pending/in-progress)` / time 文案 / `ensureAutoReminder`）均在源且**文件内出现序**与 §17.4 单调一致——不一致 = 测试失败（提示序表重对齐） | F-Q13 |
+| T-CI-11 | 正常（双端对照） | 跨仓只读兄弟仓 （CLI 仓）`src/agent/setup.mjs`（`THINCODER_CLI_ROOT` 可覆盖；缺仓/异位 = fail-closed——显式失败不 skip；修正轮 #1） | 序表各 CLI 锚字面（git 块 / `OS: … Working directory:` / `OUTLINE_INJECT_PREFIX` / `[Relevant documentation` / `[Relevant memories from previous sessions` / `task checklist (pending/in-progress)` / time 文案 / `ensureAutoReminder`）均在源且**文件内出现序**与 §17.4 单调一致——不一致 = 测试失败（提示序表重对齐） | F-Q13 |
 
 **跨仓只读语义（修正轮 #1——父侧裁定：保留 fail-closed 并写明；N-Q3/N-P1 登记豁免随附）**：T-CI-11 读
 **兄弟仓**（相对本仓根 `../thincoder`；环境 = 两仓并排 checkout（teamcode 工作区）；`THINCODER_CLI_ROOT` 可

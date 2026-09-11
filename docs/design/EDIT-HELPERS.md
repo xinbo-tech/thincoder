@@ -59,7 +59,7 @@ edit 在编辑器路径（doc 已打开）的 range 编辑，其定位偏移必�
 
 **不设豁免**：无 `.bat` / `.cmd` / `.ps1` / `.sh` 例外（本仓无此类脚本）。
 
-**双端**：与 CLI 仓 `thincoder/.gitattributes` 逐字节同源（语义同源·各端自持——多实现面纪律）。
+**双端**：与 CLI 仓 `.gitattributes` 逐字节同源（语义同源·各端自持——多实现面纪律）。
 
 **配套**：逐字引用类 EOL 脆弱断言（`prompts-async-guidance.test.mjs` / `doc-consistency.test.mjs` / `prompts-mirror-anchors.test.mjs`）根因已在检出层根治；断言侧加固属独立的纵深防御批次，未并入本次。
 

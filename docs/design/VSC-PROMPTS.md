@@ -1,7 +1,7 @@
 # VSC 提示词（VSC-PROMPTS）
 
 > 板块：VSC 端提示词（src/prompts/ 新 15 文件——本端独立实现面）。权威关系：机制语义与施工设计源自
-> CLI 仓 `thincoder/docs/design/PROMPT-SYSTEM.md`（分层模型/命名法/装配矩阵/编写纪律权威蓝图）及三施工
+> CLI 仓 `PROMPT-SYSTEM（CLI 仓）`（分层模型/命名法/装配矩阵/编写纪律权威蓝图）及三施工
 > 档（PROMPT-IMPL-1-TEXT/2-CODE/3-TEST-MIGRATE）——**本端文本以本端原文为准**（多实现面纪律——
 > byte-identical 已废——端特有段各端保留）。状态：**槽位化现行态已落地**（2026-09-10 施工①②③双端
 > 同批——旧 10 文件退役）。注入路径：`src/agent/setup.mjs` assemblePrompt 场景装配。
@@ -53,7 +53,7 @@
 
 ## 指针卫生（群 A 批——`§21` 前缀清理 + R24 归属登记）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A4/A5
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A4/A5
 > （指针 = CLI 批 `2026-09-11-NORMAL-MODE-AUDIT.md:246`（VSC 镜像登记）/ `2026-09-11-ROLE-REDEFINITION.md:72`）。
 
 ### A4：`§21` 前缀残留清理（6 行——逐字删前缀）
@@ -114,7 +114,7 @@
 
 ## 语料修复（VSC-CONTEXT-PARITY 批——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1 条目 E3（用户 22:54 原话 +
+> 来源：批次档 `2026-09-11-VSC-CONTEXT-PARITY（本仓）` §1 条目 E3（用户 22:54 原话 +
 > 裁定 1：权威源 = CLI 蓝图）；需求 = `PROMPT-SYSTEM（CLI 仓）§9`（F-P1~F-P5）。
 > 本批 = 事故性漂移的修复（缺节补回 / 压平修复 / 并行节去重 / 子句补齐 / [4] 层权威句更新）——
 > 不改变提示词体系（四槽位/场景表/降级链零动）。
@@ -135,7 +135,7 @@
 
 **整节补入来源（逐字——实现读源档拷贝，不照本档转写）**：
 
-- **来源①（文档先行）**：正文 = `thincoder/src/prompts/discipline-normal.md:30-34` 逐字（3 bullet）；
+- **来源①（文档先行）**：正文 = `src/prompts/discipline-normal.md:30-34`（CLI 仓） 逐字（3 bullet）；
   唯一替换：其中的 `docs/README.md` → `docs/design/README.md`（地图路径——镜像 `:32` 同）。
 - **来源②（查重与意图）**：正文 = CLI 同文件 `:43-47` 逐字（零替换）。
 
@@ -223,7 +223,7 @@ Implementation size is a consequence of "right", never the criterion.
 
 ## 机制纪律提示词落地（TEST-DISCIPLINE-PROMPTS 批——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS.md` §1（T1–T7）；需求 = `PROMPT-SYSTEM（CLI 仓）§10`
+> 来源：批次档 `2026-09-11-TEST-DISCIPLINE-PROMPTS（本仓）` §1（T1–T7）；需求 = `PROMPT-SYSTEM（CLI 仓）§10`
 > （F-TD1–F-TD7 / N-TD1–N-TD3）；设计+测试 = `PROMPT-SYSTEM（CLI 仓）§8`（逐字文本权威 = 其 §8.3；本端三档 × 双源各版同文（修正轮 #5）——下文同文副本供本端自查）。
 > **实施序（跨批硬约束）**：本端落笔在 `VSC-CONTEXT-PARITY` 批（语料修复）**之后**——落笔前读现态、在修复后的基线上叠加；
 > 行号键控为准（语料修复漂移本端 dn/pe 行号）；两批逐字文本禁止并行落地。
@@ -275,7 +275,7 @@ Implementation size is a consequence of "right", never the criterion.
 **技术待办专属**：每条带**一种触发**——`触发=归批（<批名>）` / `触发=条件（<条件句>）` / `触发=认账不排期`；无触发的条目进「待处置」清单，行龄超 30 天标「老化」——报告只读，处置要人判（主 agent 与用户）。
 ```
 
-**实现后同步（2026-09-12）**：原第 3 行「**维护归属**：…」**移除**——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（修正轮 #2：归属规则单宿主 = pe（本端 Text E）；**不设 de 侧指针**——子代理装配无 pe 面、指针为死指针；理由与依据见该档落修注）。实现侧已达两行版（批次档 `thincoder/docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS.md` §5 偏差 #1）；本注 = 文档面对齐交付态。
+**实现后同步（2026-09-12）**：原第 3 行「**维护归属**：…」**移除**——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（修正轮 #2：归属规则单宿主 = pe（本端 Text E）；**不设 de 侧指针**——子代理装配无 pe 面、指针为死指针；理由与依据见该档落修注）。实现侧已达两行版（批次档 `2026-09-11-TEST-DISCIPLINE-PROMPTS（本仓）` §5 偏差 #1）；本注 = 文档面对齐交付态。
 
 **Text E — pe 归属句（EN / CN）**：
 
@@ -292,7 +292,7 @@ Implementation size is a consequence of "right", never the criterion.
 - 端特有注：本端 de 行号背景含端特有段（R14 池规则 / Multi-Task 注）——本批编辑点均避开端特有段；pe 并行节去重（语料修复批 E-3）会漂移行号——本批锚点为 Yours 条目（键控）。
 
 ## 变更记录
-- 2026-09-12（TEST-DISCIPLINE-PROMPTS 批·实现后对位——Text D 归属行移除）：机制纪律节 Text D 第 3 行移除——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（单宿主 = pe、不设指针）；实现侧已达两行版（批次档 `thincoder/docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS.md` §5 偏差 #1 闭合）。纯对位、零语义。
+- 2026-09-12（TEST-DISCIPLINE-PROMPTS 批·实现后对位——Text D 归属行移除）：机制纪律节 Text D 第 3 行移除——对齐 CLI 权威版 `PROMPT-SYSTEM（CLI 仓）§8.3.4` 最终版（单宿主 = pe、不设指针）；实现侧已达两行版（批次档 `2026-09-11-TEST-DISCIPLINE-PROMPTS（本仓）` §5 偏差 #1 闭合）。纯对位、零语义。
 - 2026-09-12（VSC-CONTEXT-PARITY 批·实现后同步——交付实测态对齐）：语料修复节受影响文件表行 4 实测回填（`test/prompts-async-guidance.test.mjs` 453 → 实测 535——超 500 硬帽；测试档登记口径 = 不拆分，同仓先例 `chat-panel.test.mjs` 621）。纯登记、零语义。
 - 2026-09-12（修正轮 #5——TEST-DISCIPLINE-PROMPTS 设计评审轮次 1 落修）：机制纪律节计数口径统一「三档 × 双源 = 6 文件 / 8 编辑点」（原「四档 × 双源」/「四档双源」/「6 档提示词」/「四档同文」四处 + 同型残留——CLI 档 §8.5/§8.7 两处一并）。纯口径、零语义。
 - 2026-09-11：机制纪律提示词落地节新增——TEST-DISCIPLINE-PROMPTS 批（本端 3 档提示词 × 双源 = 6 文件 / 8 编辑点 + ⑨ 锚组；逐字文本同 CLI `PROMPT-SYSTEM（CLI 仓）§8.3`；实施序 = 语料修复批后落）。
@@ -305,4 +305,4 @@ Implementation size is a consequence of "right", never the criterion.
   15 文件现行形态 + 端特有差异 + 与 CLI 权威档的关系——批 1/批 2 已交付/批 3-5 待做如实记录）。
 - 2026-09-10：PROMPT-SYSTEM 施工①②③双端同批——本档重写为 14 文件槽位化现行态（旧三件套/子代理
   拼装表/METHODOLOGY 降级链描述随退役作废；装配机制节换四槽位表驱动；端特有差异表按新宿主更新）。
-- 2026-09-11：「提交即走」（spawn 排队）纪律句落档——本端落点 = `src/prompts/discipline-engineering.md` 调度段 + `src/prompts/persona-engineering.md` 对位段（各 +1 条）；语义同源（CLI 侧落点与逐字全文见 `thincoder/docs/design/PROMPT-SYSTEM.md` 变更记录）。
+- 2026-09-11：「提交即走」（spawn 排队）纪律句落档——本端落点 = `src/prompts/discipline-engineering.md` 调度段 + `src/prompts/persona-engineering.md` 对位段（各 +1 条）；语义同源（CLI 侧落点与逐字全文见 `PROMPT-SYSTEM（CLI 仓）` 变更记录）。

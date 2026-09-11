@@ -2,7 +2,7 @@
 
 > 本文件是 `docs/design/` 的板块登记表与归属规则——写/改设计文档前**先查这里**。
 > 文档地图重写批 V1（2026-09-08）：归档 11 文件移 `_archive/` 并更新登记；整文件单行 demux 为多行 markdown。
-> 核心纪律：**一个板块一个文档**；功能点并入所属板块文档（不新建）；新板块才新建并在此登记；同一机制只在一处详述（权威源），其余文档引用、不复制。与 CLI 端 `thincoder/docs/design/README.md` 同构。
+> 核心纪律：**一个板块一个文档**；功能点并入所属板块文档（不新建）；新板块才新建并在此登记；同一机制只在一处详述（权威源），其余文档引用、不复制。与 CLI 端 `README（CLI 仓）` 同构。
 
 ## 板块 → 文档映射
 
@@ -14,7 +14,7 @@
 | Agent 循环 | `AGENT-LOOP.md` | 权威源（批 1——ARCHITECTURE §6+§8 迁出写全）。`TURN-CAP-CONTINUE.md`（插件侧实现记录——2026-08-25 两端收口各为实现记录）同板块独立保留；`INPUT-LOCK-ASYNC`（CLI docs/design——主会话输入禁排队 C'——2026-09-09 双端——机制正文本端落 AGENT-LOOP §7——登记于此防悬空——CLI 地图 TUI 行同登记）；`ASYNC-RESIDUE-FIX`（CLI docs/design——异步残留修复批） |
 | 子代理观测/注入 | `SUBAGENT-OBSERVE-SEND.md` | 父侧 observe(查进度)+send(注入引导) 运行中子代理；CLI 同名对应——同机制各自独立 |
 | async 结果容器统一 | `ASYNC-RESULT-CONTAINER.md` | settle 共享 helper/pending 单容器+role/池 accessor/buildChildSignal；CLI 同名对应——同机制各自独立 |
-| 轨迹存档 | `TRACE-STORE-VSC.md`（CLI docs/design——2026-09-09 L31） | VSC chat() 出口完整轨迹 JSONL 落盘同构 CLI（D-TR1-TR10）——trace-store.mjs/src/traces——设计档在 CLI 侧（thincoder/docs/design/TRACE-STORE-VSC.md）——登记于此防悬空 |
+| 轨迹存档 | `_archive/TRACE-STORE-VSC.md`（本仓——原 CLI docs/design，LEDGER-SELF-CONTAINED 批迁入） | VSC chat() 出口完整轨迹 JSONL 落盘同构 CLI（D-TR1-TR10）——trace-store.mjs/src/traces——设计档 = 本仓 `_archive/TRACE-STORE-VSC.md`（迁入后登记改指本仓——零失效指针） |
 | 编辑工具（板块） | `EDIT.md`、`HASHLINE-EDIT.md`、`INSERT-AFTER.md`、`APPLY-PATCH.md`、`WRITE.md` + `EDIT-HELPERS.md`（共享 helper + lfOffsetToRaw） | 每工具一档（2026-09-08 重组——TOOLS.md §9 退地图）。原 EDIT-TOOL-IMPROVEMENT.md 并档归档。CLI 同名对应——同机制各自独立 |
 | memory 工具完善 | `MEMORY.md` §3（delete 工具语义修正/layer 统一段——2026-09-08 并入所属板块文档，原 MEMORY-TOOL-SCOPE-FIX.md 作废删除） | scope 参数改名 layer + delete layer 可选 + 工具描述重写；CLI 同名对应——同机制各自独立 |
 | 工程模式 | `ENGINEERING-MODE.md` | 与 CLI 同名对应（批 4——ARCHITECTURE §9 迁出写全）；会话级开关/eng token/门禁/guard |
@@ -25,21 +25,23 @@
 | 记忆 | `MEMORY.md` | 权威源（批 6——ARCHITECTURE §13 Memory 行展开写全）；文件式 markdown + 可选向量，无 FTS5 |
 | Provider | `PROVIDER.md` | 权威源（批 2——ARCHITECTURE §5 + RESPONSES-TRANSPORT 并入）；transport/预设表/模型适配 |
 | Webview 前端/消息协议 | `WEBVIEW.md` | VSC 独有（无 CLI 对应——批 7）；webview 布局/文件结构/活动面板 R22/组件 + 消息协议（ARCHITECTURE §11+§12 迁出） |
-| 需求与决策 | `REQUIREMENTS.md` | 需求与决策记录 |
-| 三观（提示词根基） | `PHILOSOPHY.md` | |
+| 需求与决策 | `docs/requirements/PROJECT.md` | 需求与决策记录（归位 `docs/requirements/`——台账自持批 LEDGER-SELF-CONTAINED；v1 功能范围节拆出至 `FEATURES.md`） |
+| 三观（提示词根基） | `docs/requirements/PHILOSOPHY.md` | 归位 `docs/requirements/`（价值层需求——LEDGER-SELF-CONTAINED 批） |
 | 提示词系统（双源：中文权威 + 英文落地） | `VSC-PROMPTS.md` + `docs/design/prompts/`（15 档中文权威） | 本端 15 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = **本端双源**（中文权威 ↔ `src/prompts/` 英文落地，差异逐项见「镜像差异表」节）；CLI 仓 `PROMPT-SYSTEM.md` 蓝图 + 施工档三件为参照（语义同源·原文自持）——2026-09-10 双端同批 · 2026-09-11 双源化（第 5 批 VSC-MIRROR） |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
 | 发布流程 | `RELEASE.md` |
 | 测试基建 | `TESTING.md` | 测试生命周期与集成集（新建 2026-09-11——与 CLI 仓同名档对应；语义同源·本端原文自持）。快/全两层 + slow 门 + 显式清单实现面见 `TESTING.md` §1 |
+| 台账自持（文档体系各仓自持） | `LEDGER-SELF-CONTAINED.md` | 本批——台账射程（只收本仓条目）/ 需求树建设 / 批档接收 / 机检 L4（`scripts/check-ledger.mjs`）/ 提示词自持条文 / 存量宽口径处置 |
+| 可移植性 | `PORTABILITY.md` | VSC 镜像面（批次二）——对照 = CLI 仓 `PORTABILITY.md`（§9 = 对位清单权威）；分类唯一权威 / 声明面 / 门禁拒绝 / 索引扩表判据 |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
-| Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
+| Design Token 硬化 | `ENG-TOKEN-BINDING-TUNING.md`（需求 = `docs/requirements/ENG-TOKEN-BINDING.md`） | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
 | 覆盖率缺口修复 | `_archive/COVERAGE-GAPS-REQUIREMENTS.md`、`_archive/COVERAGE-GAPS-TUNING.md` | 遗留测试覆盖收口（2026-08-25，与 CLI 同源）——已移 `_archive/` |
-| 轮末蒸馏异步化 | `SEND-STALL-DISTILL-REQUIREMENTS.md`、`SEND-STALL-DISTILL-TUNING.md` | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25，与 CLI 同源） |
+| 轮末蒸馏异步化 | `SEND-STALL-DISTILL-TUNING.md`（需求 = `docs/requirements/SEND-STALL-DISTILL.md`） | send 按钮卡顿修复：结束信号先行、蒸馏异步（2026-08-25，与 CLI 同源） |
 | 工具移除 | `_archive/SLEEP-REMOVAL-REQUIREMENTS.md`、`_archive/SLEEP-REMOVAL-TUNING.md` | sleep 工具删除（2026-08-25，与 CLI 同源）——已移 `_archive/` |
-| 工具输出限制 | `TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`、`TOOL-OUTPUT-LIMITS-TUNING.md` | 落盘阈值/显示层 16K→64K（2026-08-24，与 CLI 同源） |
-| Agent 运行参数 | `AGENT-PARAMS-REQUIREMENTS.md`、`AGENT-PARAMS-TUNING.md` | 评审超时/轮次上限调整（2026-08-24，与 CLI 同源） |
+| 工具输出限制 | `TOOL-OUTPUT-LIMITS-TUNING.md`（需求 = `docs/requirements/TOOL-OUTPUT-LIMITS.md`） | 落盘阈值/显示层 16K→64K（2026-08-24，与 CLI 同源） |
+| Agent 运行参数 | `AGENT-PARAMS-TUNING.md`（需求 = `docs/requirements/AGENT-PARAMS.md`） | 评审超时/轮次上限调整（2026-08-24，与 CLI 同源） |
 | Webview 性能 | `_archive/webview-input-lag.md` | 输入卡顿修复方案（纯历史修复记录，已实施）——已移 `_archive/` |
 
 ## 规则
@@ -72,6 +74,8 @@
 | 9 | `discipline-engineering.md` · 端内锚注/施工迁注文本（`:8` Mandatory Flow 零裁量锚（ENGINEERING-MODE §2.9 锚#1）/ `:38-41` 第 5 批修订注 / `:58` 设计行为纪律四维锚节） | 镜像不并入（镜像以 CLI 中文档结构与机制文本为准；本项为端内锚注/迁注文本——差异已如实登记） | 端内文本差异——已登记（非静默） |
 
 ## 变更记录
+
+- 2026-09-12：台账自持批（LEDGER-SELF-CONTAINED）——本表补登 `LEDGER-SELF-CONTAINED` / `PORTABILITY` 两行；需求档归位行同步（`docs/requirements/` 四归位 + `PROJECT` 异名归位 + `PHILOSOPHY` 归位——零失效路径）。
 
 - 2026-09-12：子代理审批面对齐批（VSC-CHILD-PERMISSION）——`AGENT-LOOP.md` **§18** 新增（child permission gate：ask 弹卡带归属 / 模式继承 / 块头 ⏸ / 取消释放 / R2 文档修正）；`TOOLS.md` §8 子代理审批条；协议增补 `WEBVIEW.md` §7.2（4 行）；`ESCALATE.md` / `ENGINEERING-MODE.md` 矛盾措辞随批修正。
 - 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——规则 6 补**表格行豁免**句 + 检查器契约附则（宽度扫描单源 `checkDocWidths`；`scripts/check-doc-width.mjs` 断言面同步）。

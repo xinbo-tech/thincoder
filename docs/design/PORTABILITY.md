@@ -1,8 +1,8 @@
 # 可移植性 — VSC 镜像面（批次二）· 设计
 
-> 板块：可移植性（VSC 镜像面——批次二）· 对照 = CLI 仓 `thincoder/docs/design/PORTABILITY.md`（§9 = 对位清单权威）
-> + CLI 仓 `thincoder/docs/requirements/PORTABILITY.md`（需求组 FR10–FR15——正文在 CLI `ENGINEERING-MODE.md` §2）·
-> 批次档 = `thincoder/docs/batches/2026-09-11-PORTABILITY-VSC-MIRROR.md`。
+> 板块：可移植性（VSC 镜像面——批次二）· 对照 = CLI 仓 `PORTABILITY（CLI 仓）`（§9 = 对位清单权威）
+> + CLI 仓 `PORTABILITY（CLI 仓）`（需求组 FR10–FR15——正文在 CLI `ENGINEERING-MODE.md` §2）·
+> 批次档 = `2026-09-11-PORTABILITY-VSC-MIRROR（本仓）`。
 > 状态：设计稿（待评审）。来源 = 批次档 §1（用户 2026-09-11「一起做了吧」——VSC 端 A 家族对位）。
 > 镜像纪律：**各端独立实现、语义同源**（不做 byte-identical、禁以任一端产物回改另一端）——本档文本为 VSC 端定稿；
 > CLI 侧文本以 CLI 档为准。消息文案（降级句 / 提示 / 拒绝）与端无关，本档选定与 CLI 已交付文本同文（§2 D6）。
@@ -26,7 +26,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 ### 1.2 对位勘察结论（三态表——P1–P10 + P14 逐条）
 
-| CLI 条 | CLI 批修法（语义源——`thincoder/docs/design/PORTABILITY.md`） | VSC 对位点（勘察实测） | 三态结论 |
+| CLI 条 | CLI 批修法（语义源——`PORTABILITY（CLI 仓）`） | VSC 对位点（勘察实测） | 三态结论 |
 |---|---|---|---|
 | P1 | 文档地图声明键 + 显式降级句（project-context.mjs） | `advisor/messages.mjs:152-164`（固定路径 + 缺失 skip） | **需修** |
 | P2 | 标准文档声明制 + 降级句（METHODOLOGY 注入移除） | `advisor/messages.mjs:141-150` · `:236-246`（注入 ×2、空 catch） | **需修** |
@@ -234,7 +234,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 - `1. Read the design document fully. Read METHODOLOGY.md to understand the project's standards.` → `1. Read the design document fully.`
 - `methodology compliance (does it follow the project's METHODOLOGY.md?)` → `methodology compliance (does it follow the project's standards as provided?)`
 - 追加句（design）：`3. If the ## Project Guide (AGENTS.md) section above is present, also check requirement fit: does the design match what the requirements documents it points to actually ask for?`
-- **落笔边界（design 分支编号）**：追加句插为第 `3.` 项——原 `3. Do NOT run git diff …`（`src/advisor/messages.mjs:173`）顺延为 `4.`、原 `4.` 顺延为 `5.`（CLI 已交付口径——`thincoder/src/advisor/messages.mjs:175`）。
+- **落笔边界（design 分支编号）**：追加句插为第 `3.` 项——原 `3. Do NOT run git diff …`（`src/advisor/messages.mjs:173`）顺延为 `4.`、原 `4.` 顺延为 `5.`（CLI 已交付口径——`src/advisor/messages.mjs:175`（CLI 仓））。
 
 **评审指令（`messages.mjs` code 路径）**：
 
@@ -245,7 +245,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 
 **门禁 hint（`execute-tools.mjs:110`）**：`Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.`
 未声明约定且默认命中时追加：` — this path was classified as product code by the default conventions (code paths: src); declare project conventions in .thincoder/conventions.json to adjust.`
-**落笔边界（门禁前缀）**：VSC 为单串形态（无外层 Error 包装）——保留前缀 `Error: engineering design gate — `，其后段替换为上述新句；整串 = 前缀 + 新句（删前缀即失去 error 形态——CLI 对位 = `hint` 字段 + 外层包装 `Error: design review required before any file modification. `，`thincoder/src/agent/dispatch.mjs:213` · `:328`）。
+**落笔边界（门禁前缀）**：VSC 为单串形态（无外层 Error 包装）——保留前缀 `Error: engineering design gate — `，其后段替换为上述新句；整串 = 前缀 + 新句（删前缀即失去 error 形态——CLI 对位 = `hint` 字段 + 外层包装 `Error: design review required before any file modification. `，`src/agent/dispatch.mjs:213`（CLI 仓） · `:328`）。
 
 **eng 工具消息（`eng.mjs:79`）**——逐字（尾段 `Cleared N expired design tokens…` / 冲突提示保持零改）：
 
@@ -439,7 +439,7 @@ A 家族（P1–P10 + P14）在 VSC 端的对位点仍带与 CLI 修复前同族
 ## 9. 边界（本批不做）
 
 - **P11–P13 / P16–P28 的 VSC 对位**（`discipline-normal.md:13/:124` 的 docs 地图引用、`persona-engineering.md` 同类、等）——批次三；
-- CLI 侧 B/C 剩余（批次三——`thincoder/docs/design/PORTABILITY.md` §9）；
+- CLI 侧 B/C 剩余（批次三——`PORTABILITY（CLI 仓）` §9）；
 - VSC 端其它待办（另批勘察归批——批次档 §1 三）；
 - **不触碰**：跨仓逐字锚（§3.6）· 端特有段（R14 池规则等）· 他链在途档（VSC `ENGINEERING-MODE.md` §… 本体 / `ADVISOR-CONVERGENCE.md` §13.10/§14）· CLI 批次一已收口产物（只读引用）；
 - VSC `docs/design/README.md` 登记与镜像差异表更新 = 父侧（§5 文档面）。

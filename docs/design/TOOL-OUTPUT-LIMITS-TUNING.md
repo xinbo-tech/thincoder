@@ -1,7 +1,7 @@
 # 工具输出长度限制调整 — 设计（VS Code 扩展）
 
 > 板块：工具输出的超长**落盘阈值与显示层**（已实现专题，当前生效）。
-> 需求：`TOOL-OUTPUT-LIMITS-REQUIREMENTS.md`
+> 需求：`docs/requirements/TOOL-OUTPUT-LIMITS.md`
 > 关联：`README.md`（文档地图）。
 > 状态：**已实现**（2026-08-24 首版 + 2026-09-04 预览保头保尾修订——已并入本文为现行正文；marketplace / Open VSX 0.1.49）。
 > 说明：与 CLI 端 `TOOL-OUTPUT-LIMITS-TUNING.md` 同源（两端语义一致；各自文件清单独立——文档地图惯例）。

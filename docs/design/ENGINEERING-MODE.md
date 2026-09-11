@@ -4,7 +4,7 @@
 > 纪律层槽位提示词驱动、双门禁（设计评审 + 代码评审）。
 > 提示词载体注（2026-09-10——PROMPT-SYSTEM 施工①③）：旧 engineering.md/engineering-sub.md 已退役——
 > 工程纪律现驻 `src/prompts/discipline-engineering.md` + `persona-engineering.md`（装配链 = assemblePrompt
-> 四槽位——蓝图 §3.2）；机制语义权威 = CLI 仓 `thincoder/docs/design/ENGINEERING-MODE.md`（§2.9 锚清单）。
+> 四槽位——蓝图 §3.2）；机制语义权威 = CLI 仓 `ENGINEERING-MODE（CLI 仓）`（§2.9 锚清单）。
 > 与 CLI `docs/design/ENGINEERING-MODE.md` 同名文档对应同一机制板块——各端独立实现，
 > 内容以本端代码为准（本端 = `thincoder-vscode`；DOC-REORG-VSC）。
 > 本文档为**架构级机制文档**：功能性需求以机制目标与约束表述；评审收敛/轮次衰减的

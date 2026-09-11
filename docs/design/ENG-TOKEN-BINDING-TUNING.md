@@ -1,7 +1,7 @@
 # Design Token 硬化 — 设计（VS Code 扩展）
 
 > 状态：**已实现**（v2 + R16——2026-08-25 / 2026-09-06）。
-> 需求：`ENG-TOKEN-BINDING-REQUIREMENTS.md`。
+> 需求：`docs/requirements/ENG-TOKEN-BINDING.md`。
 > 说明：与 CLI 端 `ENG-TOKEN-BINDING-TUNING.md` 同源——**语义两端 lockstep**（流程凭证 /
 > 无签名 / 跨模式存活 / 仅 TTL 过期清 / slot 权威持久源）；VSC 端模块落点与持久化面独立
 > （slot 经 `session-io`/`setSlotEngDesignTokens` 多槽写，非 CLI 单源 persistState 布局）。

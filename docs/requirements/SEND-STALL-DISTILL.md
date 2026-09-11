@@ -1,10 +1,11 @@
 # 探索蒸馏异步化 — 需求（VS Code 扩展）
 
+> 归位注记：本档自 `docs/design/SEND-STALL-DISTILL-REQUIREMENTS.md` 归位入 `docs/requirements/`（文档体系各仓自持批 LEDGER-SELF-CONTAINED——纯需求档去 `-REQUIREMENTS` 后缀；对应 `-TUNING.md` 留 `docs/design/` 作设计档）。
 > 板块：轮末探索蒸馏的**时序**——"何时等待 / 是否等待"（已实现专题，当前生效）。
 > 蒸馏机制本体（`summarizeRunExplorations` 的替换规则与静默语义）归 CLI 端 `thincoder/docs/design/CONTEXT-COMPACTION.md`（本仓库无该文件，评审 #4）——本对文档只定蒸馏的触发与等待时序。
 > 关联：`SEND-STALL-DISTILL-TUNING.md`（设计）、`README.md`（文档地图）。
 > 状态：**已实现**（2026-08-25 评审修订后实施 + 2026-09-05 模块化；marketplace / Open VSX 0.1.49 发布）。
-> 跨端：CLI（thincoder）有同语义独立需求文档（`SEND-STALL-DISTILL-REQUIREMENTS.md`），两端语义一致——蒸馏逻辑两仓库各有实现，**改动须两端同步（lockstep）**，单边改动会造成行为漂移。
+> 跨端：CLI（thincoder）有同语义独立需求文档（`SEND-STALL-DISTILL（CLI 仓）`），两端语义一致——蒸馏逻辑两仓库各有实现，**改动须两端同步（lockstep）**，单边改动会造成行为漂移。
 
 ## 总体目标
 

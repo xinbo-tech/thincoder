@@ -1,7 +1,7 @@
 # 测试基建（TESTING）
 
 > 板块：测试基建——本端测试生命周期与集成集落地面（新建 2026-09-11——测试生命周期与集成集批；与 CLI 仓同名档对应，语义同源·各端原文自持）。
-> 机制语义（三层来源 ①②③ / 处置判据 / 演进评估 / 收编 / 发布门）以 CLI 侧测试基建设计档为准（跨仓指针（CLI 侧）——本端不重述；文件 = `thincoder/docs/design/TESTING.md`）。
+> 机制语义（三层来源 ①②③ / 处置判据 / 演进评估 / 收编 / 发布门）以 CLI 侧测试基建设计档为准（跨仓指针（CLI 侧）——本端不重述；文件 = `TESTING（CLI 仓）`）。
 > 本端档承载：本端执行面（目录/清单/runner/门禁）、首批场景本端实例、验收、受影响文件与纪律核对。
 > 既有基建（快/全两层 + slow 门 + 显式清单）为与 CLI 同源移植（`run-fast.mjs` / `run-full.mjs` / `slow.mjs` 头注"TESTING.md §1 D-T1/D-T6——2026-09-06 移植 CLI 同名机制"）；架构登记见本端 `ARCHITECTURE.md`（测试域与验证层行）。
 > 状态：**已实施**（测试生命周期与集成集——集成集 + 发布门三环已接线；执行结果见 §6 表）。
@@ -250,7 +250,7 @@
 
 ### 8.6 本批两侧记录与跨批协调（登记）
 
-- CLI 侧记录 = `thincoder/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`；VSC 侧记录 = `docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`（本仓）。
+- CLI 侧记录 = `2026-09-12-PROSE-ANCHOR-RETIRE（CLI 仓）`；VSC 侧记录 = `docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`（本仓）。
 - 两侧记录**各持自身范围**（本档 = 本端设计落地）——本档只登记，不预设互引语句。
 
 **依赖就地消解（2026-09-12 修正轮二——用户 05:11 裁定；不挂对齐轮）**
@@ -275,7 +275,7 @@
   - §8.1 追加 10 条（`portability-vsc-advisor-context` T-V07–T-V10 整删 · `eng-designer-role` T57 边界 / `prompts-async-guidance` §3.2·§3.4 段删 6 条），并**撤出** `settings-tool` T-S2.35（PA-A3 回退——工具契约面）；小计与差额重算（**61 整删 + 40 段删 = 101 条**）。
   - §8.2 **端差登记更正**（本端 `scripts/` 无 `check-ledger.mjs`——实测载明；结构机检面 = `check-doc-width.mjs`（含 V1–V3）+ `check-syntax.mjs` + doc-consistency 用例 + slow 门）+ 对账基准重算（592）。
   - §8.3 AC-VT8 / AC-VT10 同步；§8.6 新增**已登记依赖——未消解**（跨仓引用 / 台账机检执行面 vs 并行批 R1/R7）；§8 头注登记需求面依赖。
-- 2026-09-12（散文锚退役批——PROSE-ANCHOR-RETIRE）：新增 **§8**（本端执行面：**§8.1 本端逐条删除清单（27 档 · 整删 61 · 段删 40——修正轮后实测）** + 粗筛对账 + 端特有面 + AC-VT8–AC-VT11 + 边界 + 与并行批重叠面登记 + 两侧记录登记）；登记清单零改（本端无整档删除）；判据/口径=CLI 侧设计档 §11；需求落 CLI 侧 `thincoder/docs/requirements/TESTING.md` §5。
+- 2026-09-12（散文锚退役批——PROSE-ANCHOR-RETIRE）：新增 **§8**（本端执行面：**§8.1 本端逐条删除清单（27 档 · 整删 61 · 段删 40——修正轮后实测）** + 粗筛对账 + 端特有面 + AC-VT8–AC-VT11 + 边界 + 与并行批重叠面登记 + 两侧记录登记）；登记清单零改（本端无整档删除）；判据/口径=CLI 侧设计档 §11；需求落 CLI 侧 `TESTING（CLI 仓）` §5。
 
 - 2026-09-11：新建——测试生命周期与集成集（测试生命周期与集成集批——与 CLI 仓同名档对应；集成清单制 / runner / 发布门三环接线为待实施项）。
 - 2026-09-11（TEST-LIFECYCLE 实施轮）：集成集落地（`test/run-integration.mjs` + `test/integration/` 7 场景 + 种子 S1/S2 + 共享夹具——28 用例，退出码 0）；发布门三环接线（`vscode:prepublish`）；§6 受影响文件表对齐执行结果（README 行数注落定 125 as-of 本批 / 合档与削段已执行）。

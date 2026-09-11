@@ -160,7 +160,7 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 
 > 需求：CLI 仓 `docs/requirements/AGENT-LOOP.md` §3（F-A1~F-A5 + NFR-A1~A3）（CLI 侧文档树）。
 > 本机一条目（条目 A）——纯 VSC 面；条目 B（后台评审池接入面）在 CLI 仓 `docs/design/AGENT-LOOP.md` §18（CLI 侧）。
-> 批次：`thincoder/docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY.md`（CLI 侧；§1 条目 A——用户 2026-09-09 反馈 + 22:32 精复现）。
+> 批次：`2026-09-11-VSC-ASYNC-VISIBILITY（本仓）`（CLI 侧；§1 条目 A——用户 2026-09-09 反馈 + 22:32 精复现）。
 
 #### 5.1.1 问题陈述
 
@@ -448,7 +448,7 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 
 **问题**：消化轮（digest）起跑到首个 token 之间可静默数十秒~分钟——现状只落
 `logEvent("digest:start")`（`src/extension/suspension.mjs:265`——文件日志，用户不可见）；
-CLI 在进消化轮前零延迟打一行 `[auto-turn: digesting …]`（`thincoder/src/tui/suspension-drive.mjs:161`）。
+CLI 在进消化轮前零延迟打一行 `[auto-turn: digesting …]`（`src/tui/suspension-drive.mjs:161`（CLI 仓））。
 
 **方案选型**（判据 = 静默 → 可见）：
 
@@ -830,7 +830,7 @@ function inline(s) {
 | `test/md-render-escape.test.mjs` | 0（新增） | +140 ±40 | 用例表 T-H1~T-H15（纯函数直驱 + 登记自断言） |
 | `test/files.mjs` | 59 | +1 | 新档登记（显式清单——不登记不跑） |
 | `docs/design/WEBVIEW.md` | 719（本批前）→ 891（修正轮后实测） | +172 | 本节（设计者写域——coder 零碰） |
-| `thincoder/docs/requirements/AGENT-LOOP.md`（CLI 仓） | 297（本批前）→ 344（落档后实测） | +47 | §10（设计者写域——coder 零碰） |
+| `AGENT-LOOP（CLI 仓）` | 297（本批前）→ 344（落档后实测） | +47 | §10（设计者写域——coder 零碰） |
 | 合计 | — | 代码面 +6 ±4 / 测试面 +141 ±40 / 文档面 +219 | 2 改 + 1 增（coder 面） |
 
 ### 10.6 用例表（正常 / 边界 / 错误——新增档 `test/md-render-escape.test.mjs`；纯函数直驱）
@@ -879,7 +879,7 @@ function inline(s) {
 
 ## 11. 群 A 批增补——输入历史与说明面（A10 / A13——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A10（用户 2026-09-11
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A10（用户 2026-09-11
 > 17:04 裁定——语义五条）与 A13（用户 17:08 裁定——竞品分析 §7.1「Plan/Subagent/Goal 说明」项）。
 > 双端纪律：A10 的 CLI 对位 = `TUI-INPUT-BOX.md` 第 31 批（↑↓ 三规则）——语义同源、本端原文自持、
 > CLI 零改（用户明示「不追对称」）。

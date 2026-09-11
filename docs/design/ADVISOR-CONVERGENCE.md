@@ -552,8 +552,8 @@ zh 面「恰好四选一」/ en 面 `exactly four values`（计数词与枚举�
 
 | 文件 | 行数注记 | 变更 |
 |---|---|---|
-| `thincoder/docs/requirements/ADVISOR-CONVERGENCE.md` | 152 → **197（实落）** | §8（F18–F23 / N12–N15）——**已落** |
-| `thincoder/docs/requirements/SETTINGS-TOOL.md` | 51 → **52（实落）** | F-S1.7 VSC 对位行——**已落** |
+| `ADVISOR-CONVERGENCE（CLI 仓）` | 152 → **197（实落）** | §8（F18–F23 / N12–N15）——**已落** |
+| `SETTINGS-TOOL（CLI 仓）` | 51 → **52（实落）** | F-S1.7 VSC 对位行——**已落** |
 | `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md` | 330 → **660（实落——交付同步后终值）** | 本节 §13 + §2 载体表 + 变更记录行——**已落**（行数 = 交付同步复写） |
 | `thincoder-vscode/docs/design/TOOLS.md` | 223 → **226（实落——修正轮后终值）** | §5 第 4 条 + 计数 + 变更记录行——**已落** |
 
@@ -826,8 +826,8 @@ async 点火路径；同步评审阻塞回合、父侧无并发写时刻）。
 | 文件 | 行数注记 | 变更 |
 |---|---|---|
 | `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md` | 660 → **931（交付后修正轮实测）** | §14 全节 + §13.10 三面原位收口 + §2 载体表 + 变更记录行 |
-| `thincoder/docs/requirements/ADVISOR-CONVERGENCE.md` | 197 → **239（本批落档后实测）** | §9（F24–F26 / N16–N18）+ §8 收口注记 |
-| `thincoder/docs/TODO.md` | — | 状态推进（第 12 批两处登记条目 → 在途——池动作） |
+| `ADVISOR-CONVERGENCE（CLI 仓）` | 197 → **239（本批落档后实测）** | §9（F24–F26 / N16–N18）+ §8 收口注记 |
+| `TODO（CLI 仓）` | — | 状态推进（第 12 批两处登记条目 → 在途——池动作） |
 
 ### 14.7 关键决策记录（含否决备选）
 
@@ -1158,7 +1158,7 @@ export function advisorContextBudget(provider) {
 
 ## 16. 同源镜像收口（群 A——同步记账拒绝登记 + D5 下界定义句同步）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1（A6 / A7——来源指针 = 本档 §14.11 #2 / #1）。
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1（A6 / A7——来源指针 = 本档 §14.11 #2 / #1）。
 > 语义源：CLI 侧第 13 批（同步记账拒绝登记——CLI `record-results` 消费同谓词）与 CLI §14.14（窗口定义——本端对位 = 本档 §14.4（a））。
 > 双端纪律：语义同源、本端原文自持、零跨仓依赖（不做 byte-identical、不建同步依赖）。
 > 冻结面：本档 §7 / §12 / §13 / §14 已交付契约文本零碰（§14.11 #1/#2 为原位收口注——§16.3）；CLI 仓零写入。
@@ -1264,7 +1264,7 @@ CLI 用 `_toolCallId` + `agent._advisorRefusals` Set；本端无 `_toolCallId` �
 
 ## 17. 评审链残留收口（群 B——B2 / B3 / B4-VSC）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §1（B2 = 本档 §14.11 #5 登记复议；B3 = §14.11 #4 登记复议；
+> 来源：批次档 `2026-09-11-VSC-REVIEW-ASYNC-SWEEP（本仓）` §1（B2 = 本档 §14.11 #5 登记复议；B3 = §14.11 #4 登记复议；
 > B4 = `ADVISOR-CONVERGENCE（CLI 仓）§16.8 #2` 登记承接）。需求 = `docs/requirements/ADVISOR-CONVERGENCE（CLI 仓）§13`（F30 / F31 / F32 + N22~N24——指针不重述）。
 > 分工：B2 / B3 = VSC 单端修（CLI 对位登记——§17.7）；B4 = 双端（语义源 = `ADVISOR-CONVERGENCE（CLI 仓）§18`，本节只写 VSC 面）。
 > 冻结面：§7 / §8 / §9 / §13 / §14 已交付契约文本零碰（本批只新增本节 + §14.11 收口注 + §2 载体表同步）；CLI 仓零写入。

@@ -1,5 +1,6 @@
 # ThinCoder 三观 — 提示词的根基
 
+> 归位注记：本档自 `docs/design/PHILOSOPHY.md` 归位入 `docs/requirements/`（文档体系各仓自持批 LEDGER-SELF-CONTAINED——价值层需求）。
 > 本文档定义 ThinCoder 的世界观、人生观、价值观。所有提示词具体规则均应从此处推导——任何与三观不一致的规则都应被删除或修正。
 > 文档格式债清理批 V2（2026-09-08）——内容完整保留，格式正常化为多行 markdown。
 

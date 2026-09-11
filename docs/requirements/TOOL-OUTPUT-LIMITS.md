@@ -1,5 +1,6 @@
 # 工具输出长度限制调整 — 需求（VS Code 扩展）
 
+> 归位注记：本档自 `docs/design/TOOL-OUTPUT-LIMITS-REQUIREMENTS.md` 归位入 `docs/requirements/`（文档体系各仓自持批 LEDGER-SELF-CONTAINED——纯需求档去 `-REQUIREMENTS` 后缀；对应 `-TUNING.md` 留 `docs/design/` 作设计档）。
 > 板块：工具输出的超长**落盘阈值与显示层**（已实现专题，当前生效——本对文档是该机制的现行权威源）。
 > 关联：`TOOL-OUTPUT-LIMITS-TUNING.md`（设计）、`README.md`（文档地图）。
 > 状态：**已实现**（2026-08-24 首版 + 2026-09-04 预览保头保尾修订；marketplace / Open VSX 0.1.49 发布）。
@@ -42,4 +43,4 @@
 - 2026-09-08：文档重写为人类可读当前态（批 V3b）——合并双端修订为现行正文，折叠实现流水并更新模块落点。
 - 2026-09-09：双端语义增补（DUAL-END-TRUNCATION）——FR3 advisor 截断头尾双保（评审尾
   结论不被切——60/40 + 省略注 + offset 提示）+ FR8 read 双端 C 方案（头 N + 注 + 尾 M——
-  判别锚/形态/边沿见 TUNING.md §2.9——CLI 同构锁步）。
+  判别锚/形态/边沿见 `docs/design/TOOL-OUTPUT-LIMITS-TUNING.md` §2.9——CLI 同构锁步）。

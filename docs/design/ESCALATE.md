@@ -5,7 +5,7 @@
 > 权威源（现行语义/用例/验收）：VSC `AGENT-LOOP.md` §9（会诊/飞刀/advisor 完全异步化——ARCHITECTURE
 > §8.5 迁出，R17 VS Code 镜像）+ CLI `AGENT-LOOP.md` §7.2（escalate = `subagent` 工具 `action:"escalate"`）与
 > §14.2（飞刀——缺省 async + settle 三分类）；F/D/T/AC 见 CLI `ESCALATE.md`（本文件不复制正文）。
-> 与 CLI 端同源（`thincoder/docs/design/ESCALATE.md`）；与会诊（consult）互补，见 `CONSULTATION.md`。
+> 与 CLI 端同源（`ESCALATE（CLI 仓）`）；与会诊（consult）互补，见 `CONSULTATION.md`。
 > 本文件已由 as-of 快照流水重写为当前态记录（历史 surgeon 时代/整改/简化流水见文末「变更记录」）。
 
 ## 0. 术语表

@@ -120,7 +120,7 @@ workspace" 已改为 **"no directory restriction"**（权威源 = CLI TOOLS.md�
 **`settings` 工具的形状护栏（2026-09-11 第 8 批——与 CLI 同源；范围项 W2（第 8 批待裁定项「VSC 镜像是否纳入」——裁定 = 纳入）已裁定纳入本批——2026-09-11 用户裁定，依据 = 本端同一缺陷完整存在 + 两端共享 `~/.thincoder/config.json`）**：
 
 - **现状（缺陷面）**：类型表自动派生自 `AGENT_DEFAULTS`/`TRACES_DEFAULTS`（`src/config-io.mjs:296-324`），且 `buildTypeMap` 跳过 `null` 叶子（`src/agent-tools/settings.mjs:29`）——被跳过的键**零约束**：字符串/对象/数组一律被接受并落盘（含跨端三键 `defaultModel`/`shell`/`memory.team` 与同族键 `agent.subagentModels`，第 12 批补）→ 应用侧（CLI 读侧）静默折叠 = 「写了等于没写」。
-- **契约（同源——详本见 CLI 档 `thincoder/docs/design/SETTINGS-TOOL.md` §8.3）**：null 叶子（`_NULL_LEAF_SHAPES`）+ 跨端键（`_SIBLING_SHAPES`）走**显式形状表**，不可消费形态**拒绝**（不落盘、不热应用）。
+- **契约（同源——详本见 CLI 档 `SETTINGS-TOOL（CLI 仓）` §8.3）**：null 叶子（`_NULL_LEAF_SHAPES`）+ 跨端键（`_SIBLING_SHAPES`）走**显式形状表**，不可消费形态**拒绝**（不落盘、不热应用）。
 - **本端键集**（`_NULL_LEAF_SHAPES`——完备性锁的相等面，2 键）：`agent.subagentModel` 非空串 ∪ null · `agent.compactThreshold` number ∪ null（null = auto）。
 - **跨端 / 同族键**（`_SIBLING_SHAPES`——存在性断言面，4 键；共享 config.json）：`defaultModel` `"provider:model"` 串 ∪ null · `shell` 非空串 ∪ null · `memory.team` 含非空 `repo` 的对象 ∪ null · **`agent.subagentModels` 角色→非空串对象 ∪ null**（第 12 批第 4 条——本端读侧 `subagent.mjs` `effectiveSubagentModel`；`{}` = 清除）。
 - **完备性机械锁**：null 叶子键集 == `_NULL_LEAF_SHAPES` 键集（测试断言 + 运行期一次性警告列出未声明键名）；跨端 / 同族四键在 `_SIBLING_SHAPES` 内**存在性断言**（不参与集合相等）——与 CLI 同款（N-S1.5；第 12 批四键口径）。
@@ -218,7 +218,7 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 ## 11. git commit 路径面：`--only` 镜像（群 A 批）（2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A9
+> 来源：批次档 `2026-09-11-VSC-MIRROR-SWEEP（本仓）` §1 条目 A9
 > （指针 = `docs/TODO.md:167`「QUICKFIX-2 交付注——后批镜像 F-3」）。语义源：CLI
 > `src/tools/git.mjs:150-181`（F-3——`commit --only`）；双端纪律：语义同源、本端独立实现。
 
@@ -258,14 +258,14 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 
 ## 12. 工具描述外部装载：25 档 `.md` 迁移（VSC-CONTEXT-PARITY 批——2026-09-11）
 
-> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1 条目 E4 / R4（用户 22:54
+> 来源：批次档 `2026-09-11-VSC-CONTEXT-PARITY（本仓）` §1 条目 E4 / R4（用户 22:54
 > 「会话体验差距」+ 裁定 1：权威源 = CLI 蓝图）。
 > 需求 = `TOOLS（CLI 仓）` F7 / N9（逐条回指）；注入面与顺序 = VSC `AGENT-LOOP.md §17`。
 
 ### 12.1 问题（现状复核 as-of 2026-09-11）
 
 - CLI：25 档 `src/tools/*.md`（合计 39,106 字符 ≈ 39.1KB——**计数更正 D3**：批次 §1 E4 「26 档」= 笔误，
-  实测 25 档/25 工具）经 `thincoder/src/tools/shared.mjs:12` `DESC()` 运行时装载，含 Routing / Notes 段
+  实测 25 档/25 工具）经 `src/tools/shared.mjs:12`（CLI 仓） `DESC()` 运行时装载，含 Routing / Notes 段
   （如 `read.md` 21 行含「不要用 bash cat」路由与 `repo_outline`/`code_search`/`lsp` 指向）。
 - VSC：`src/tools/` 全 `.mjs`、零 `.md`；31 个 builtinTools 描述全为内联字符串，无 Routing/Notes 结构段；
   `tools/file.mjs:22-29` read 描述 7 行（CLI 21 行）；装载机制不存在（`DESC(` 零命中；`checklist.mjs:3`

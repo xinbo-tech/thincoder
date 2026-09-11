@@ -4,7 +4,7 @@
 > 记录会诊机制（含 `main_history` 只读拉取面）在 VS Code 端的现行实现与接线。
 > 权威源（现行语义/用例/验收）：VSC `AGENT-LOOP.md` §9（会诊/飞刀/advisor 完全异步化——ARCHITECTURE
 > §8.5 迁出，R17 VS Code 镜像）+ CLI `AGENT-LOOP.md` §14.1（会诊 R17 异步化）与 CLI `CONSULTATION.md`（F/D/T/AC——本文件不复制正文）。
-> 与 CLI 端同源（`thincoder/docs/design/CONSULTATION.md`）；会诊（consult）与飞刀（escalate）
+> 与 CLI 端同源（`CONSULTATION（CLI 仓）`）；会诊（consult）与飞刀（escalate）
 > 互补，飞刀见 `ESCALATE.md`。
 > 本文件已由 as-of 快照流水重写为当前态记录（历史实现/整改流水见文末「变更记录」）。
 
