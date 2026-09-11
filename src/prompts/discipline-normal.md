@@ -31,7 +31,12 @@
 - **Document ownership — find the doc that owns the topic before writing.**
 Before writing to `docs/`, check the `docs/README.md` document map (no map → check AGENTS.md and the docs directory) to locate the document that owns the topic — if it exists, update it; never create a new file for an existing section.
 Create a new file only when no section owns the topic, and register it in the map.
-Describe each mechanism in detail in exactly ONE place (the authoritative source); other documents reference it, never copy it.
+  Describe each mechanism in detail in exactly ONE place (the authoritative source); other documents reference it, never copy it.
+
+### 文档体系各仓自持（各仓记各仓的）
+工作区含多个仓（多仓 workspace / monorepo 多仓 / 多项目并存）时：
+1. **文档体系各仓自持**：需求档 / 设计档 / 批次档 / 台账一律各仓自持、只写本仓；本仓需求必须住在本仓——不得把他仓需求写进本仓文档。
+2. **缺的层必须补齐**：本仓缺失的文档层就地补建——不得以「另一仓已有」「避免重复」为由省略本仓文档。
 
 ### UI & interface design (from discipline.md)
 - A value with a FIXED set of choices (enum, level, mode, flag) must be OPTIONS — picker / menu / choices / buttons. Never free-text input.
