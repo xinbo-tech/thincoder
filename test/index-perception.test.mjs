@@ -8,6 +8,7 @@
  * `npm run test:full` 跑）。
  * 2026-09-11 TEST-LIFECYCLE 扫①：B2 ignored 触发面 git 慢档组（T-I6/T-I6b/T-I7/T-I10）拆出
  * 至 `test/index-ignored-slow.test.mjs`（本档体积回归 300 咨询线内）；另裁 T-I9 旧串负向锚段。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：裁 T-I9 词表锁静态面（源码切片 + 词表字面量集比对——读 src 文本）。
  * 环境隔离：全部 fixture 在 tmp；config 路径经 _setConfigPathForTest 沙箱化（面板面）。
  */
 import { test, before, after } from "node:test"
@@ -16,7 +17,6 @@ import { execSync } from "node:child_process"
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
 import * as vscode from "vscode"
 import files from "./files.mjs"
 import { slow } from "./slow.mjs"
@@ -30,10 +30,7 @@ import { _setConfigPathForTest } from "../src/config-io.mjs"
 import { setVSCodeEmbedder, resetEmbedder } from "../src/embed-config.mjs"
 import { setProjectFolder, clearProjectOverride } from "../src/extension/panel-messages.mjs"
 
-// 词表（§4.2 契约八——收集域 = needsRebuild 返回值；indexCompat.reason 属独立命名空间）
-const REASON_WORDS = new Set(["no-index", "new-commits", "file-added", "file-removed", "file-missing", "file-changed", "up-to-date"])
-// 旧串负向锚（FORBIDDEN）随扫① 削段退役——行为由 T-I6/T-I6b/T-I7/T-I10 锁定。
-const SRC_DIR = fileURLToPath(new URL("../src/", import.meta.url))
+// 2026-09-12 PROSE-ANCHOR-RETIRE：词表锁静态面（词表常量与源码切片辅助）随 T-I9 段删退役。
 const _dirs = []
 let _savedWs
 
@@ -91,18 +88,6 @@ async function withFetch(dim, fn) {
   const real = globalThis.fetch
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: [{ index: 0, embedding: new Array(dim).fill(0.5) }] }) })
   try { return await fn() } finally { globalThis.fetch = real }
-}
-
-/** needsRebuild 函数体源码（花括号配平）——各分支 reason 字面量的收集域。 */
-function needsRebuildBody(src) {
-  const start = src.indexOf("export function needsRebuild(")
-  assert.ok(start >= 0, "needsRebuild 导出在位")
-  let depth = 0
-  for (let j = src.indexOf("{", start); j < src.length; j++) {
-    if (src[j] === "{") depth++
-    else if (src[j] === "}" && --depth === 0) return src.slice(start, j + 1)
-  }
-  throw new Error("needsRebuild 函数体配平失败")
 }
 
 test("T-I4b 状态行渲染（F6/AC-I1）：不匹配 → settings.indexMismatch 两语文案逐字 + 重建按钮可用", () => {
@@ -242,15 +227,8 @@ slow("T-I8b 嵌套 memory 零无效重算（F8/AC-I3）：git 快路径连调两
 // ─── B4：词表锁（AC-I4） ──────────────────────────────────────────────
 
 test("T-I9 词表锁（F9/AC-I4）：needsRebuild 各分支 reason 全量收集 ∈ 七词表 + 运行抽检 no-index", () => {
-  // ① 收集域 = needsRebuild 返回值：静态全量（静态收集保证七词全覆盖——含运行 fixture 不可达的
-  //    new-commits/file-missing；运行态四词由 T-I5/T-I6/T-I7/T-I8/T-I10 覆盖）+ 运行抽检 no-index。
-  // 2026-09-11 TEST-LIFECYCLE 扫① 削段：原②块（旧串负向全路径 grep + 两条源码形态锚）删——
-  //    负向防回潮锚已退役；ignored 语义行为由 T-I6/T-I6b/T-I7/T-I10 锁定。
-  const src = readFileSync(join(SRC_DIR, "indexer.mjs"), "utf8")
-  const reasons = [...needsRebuildBody(src).matchAll(/reason:\s*"([a-z-]+)"/g)].map((m) => m[1])
-  const uniq = new Set(reasons)
-  for (const r of uniq) assert.ok(REASON_WORDS.has(r), `reason "${r}" ∈ 七词表`)
-  assert.deepEqual([...uniq].sort(), [...REASON_WORDS].sort(), "七词全量 == 各分支字面量集（词表锁）")
+  // 2026-09-12 PROSE-ANCHOR-RETIRE：原①块（源码切片 + 词表字面量集比对）删——
+  // 读 src 文本 = 散文锚（判据见 CLI 侧设计档 TESTING.md §11）；运行抽检面保留。
   assert.equal(needsRebuild(join(tmpDir("tc-ip-t9-"), "missing")).reason, "no-index", "运行抽检：no-index")
   assert.ok(files.includes("test/index-perception.test.mjs"), "本档已登记 test/files.mjs")
 })

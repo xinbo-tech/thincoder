@@ -1,15 +1,16 @@
 /**
  * portability-vsc-classification.test.mjs — 批次二（可移植性 VSC 镜像面）用例表 1:1：
- * T-V01–T-V06（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V01–AC-V03 机判面（§7）。
+ * T-V01–T-V06（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V02–AC-V03 机判面（§7）。
  * 零网络 / 零真实 LLM（门禁面 = `executeToolBatches` 假工具夹具——与 T-VG19 同型）。
  * 判据权威 = §3.1（分类权威）/ §3.2（接线表）/ §4.1（声明 schema）/ §4.3（文案逐字）。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：AC-V01 静态面（src/ 全仓判据副本扫描）整删——读 src 文本 = 散文锚
+ *（判据见 CLI 侧设计档 TESTING.md §11）。
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, readdirSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
 
 import { classifyPath, clearConventionsCache, isCodePath, isDocPath, isTempPath, loadConventions } from "../src/conventions.mjs"
 import { isDocOnlyChange } from "../src/advisor/repos.mjs"
@@ -41,9 +42,6 @@ function silenceWarn(fn) {
   console.warn = (...a) => seen.push(a.join(" "))
   try { return { value: fn(), warnings: seen } } finally { console.warn = orig }
 }
-/** 源码读取（EOL 归一——静态锚不因 CRLF/LF 写法漂移）。 */
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
-
 // ─── T-V01–T-V04：分类裁判（VP-10 / AC-V02） ─────────────────────────────────
 
 test("T-V01 正常：无声明 —— src/x.mjs=code / docs/a.md=doc / tmp-x.mjs=temp（AC-V02）", () => {
@@ -178,27 +176,3 @@ test("T-V06 边界（门禁）：嵌套 packages/foo/src/x.md 与非字符串路
   assert.deepEqual(executed, [], "零执行（保守面）")
 })
 
-// ─── AC-V01：判据单一权威（静态面） ─────────────────────────────────────────
-
-test("AC-V01 静态面：src/ 全仓无 `docs/` 前缀判据副本、无锚定式 ^src 正则副本、无 DOC_FILE 本地副本（唯一实现 = src/conventions.mjs）", () => {
-  const root = fileURLToPath(new URL("../src/", import.meta.url))
-  const hits = []
-  const walk = (dir) => {
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      const p = join(dir, e.name)
-      if (e.isDirectory()) { walk(p); continue }
-      if (!/\.(?:mjs|cjs|js)$/.test(e.name)) continue
-      const rel = p.slice(root.length).replace(/\\/g, "/")
-      const text = readFileSync(p, "utf8")
-      if (/startsWith\(\s*["'`]docs[\\/]/.test(text)) hits.push(`${rel}: docs/ 前缀判据`)
-      if (/\/\^src\[|\[\\\/\]src\[|\(\?:\^\|\[\\\\\/\]\)src/.test(text)) hits.push(`${rel}: 锚定式 src 正则`)
-      if (/const DOC_FILE\s*=/.test(text) && rel !== "conventions.mjs") hits.push(`${rel}: DOC_FILE 本地副本`)
-    }
-  }
-  walk(root)
-  assert.deepEqual(hits, [], "判据副本零残留（AC-V01）")
-  const conv = readSrc("../src/conventions.mjs")
-  for (const fn of ["isTempPath", "isDocPath", "isCodePath", "classifyPath", "loadConventions"]) {
-    assert.ok(conv.includes(`export function ${fn}`), `conventions.mjs 导出 ${fn}`)
-  }
-})

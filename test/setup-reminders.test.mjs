@@ -20,7 +20,7 @@
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, readFileSync } from "node:fs"
+import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -276,13 +276,6 @@ test("hydrateRun: permission 句退役（D-CI6）+ AUTO 不由 hydrate 推送（
   // hydrate 不再承担（推送位 = hydrate 全部注入之后——cli setup.mjs:351 尾位同构）
   const r2 = await hydrateRun(buildTopLevelAgent(), optsFor({}, { getAuto: () => true }))
   assert.ok(!r2.history.some((m) => m.content === AUTO_REMINDER), "hydrate 不推 AUTO（唯一 = 循环头）")
-  assert.match(AUTO_REMINDER, /^\[System reminder: AUTO mode is active — all tool calls are automatically approved without asking\.\]$/)
-  const agentSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "src", "agent.mjs"), "utf8")
-  assert.ok(agentSrc.includes("getAuto() && !history.some((m) => m.content === AUTO_REMINDER)"), "AUTO 循环头去重检查在位（D-CI6 唯一推送点）")
-  // 双份字面量漂移锁：run-helpers 压缩重注内联副本必须与 AUTO_REMINDER 常量逐字节相等
-  // （去重判据 m.content === AUTO_REMINDER 依赖恒等；单改一处会静默重复注入）。
-  const runHelpersSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "src", "agent", "run-helpers.mjs"), "utf8")
-  assert.ok(runHelpersSrc.includes(AUTO_REMINDER), "run-helpers.mjs 压缩重注 AUTO 句与常量不逐字（漂移）")
 })
 
 test("pushInjections: 同文去重（D-CI5——幂等注入；异文照投、transient 保持）", () => {

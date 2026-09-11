@@ -11,7 +11,6 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let cleanupEnv
@@ -99,13 +98,6 @@ test("T-R1 区出生（AC-CL1）：pool started → 块 append 活动区区尾 +
   const hdr = block.querySelector(".sub-hdr").textContent
   assert.ok(hdr.includes("▶") && hdr.includes("explore#7") && !hdr.includes("sub:"), "头词 [▶ explore#7…] 无 sub: 前缀")
   assert.equal(S._subBlocks.size, 1)
-  // 结构断言（AC-CL1）：index.html 中区位于 #messages 与 #panels 之间（role=region）
-  const html = readFileSync(new URL("../webview/index.html", import.meta.url), "utf8")
-  const iMsg = html.indexOf('id="messages"')
-  const iAct = html.indexOf('id="subagent-activity"')
-  const iPan = html.indexOf('id="panels"')
-  assert.ok(iMsg > 0 && iMsg < iAct && iAct < iPan, "index.html 结构：messages → 活动区 → panels")
-  assert.match(html.slice(html.lastIndexOf("<div", iAct), html.indexOf(">", iAct)), /role="region"/, "区 = role=region")
 })
 
 test("T-R2 内容入块：chunk appendAdvisorChunk 进块（tool/text 行——区内）", async () => {
@@ -185,8 +177,6 @@ test("T-R7 区显隐（边界——AC-CL1）：空区 children 0 且 `:empty` �
   fresh({ S, ctx })
   assert.equal(ctx.activityEl.children.length, 0, "空区零子元素（零显隐 JS——CSS 判据）")
   assert.ok(ctx.activityEl.matches(":empty"), "空区命中 :empty（隐藏规则选择器有效）")
-  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
-  assert.match(css, /#subagent-activity:empty\s*\{\s*display:\s*none;\s*\}/, "`:empty` display:none 规则在位（零 JS 显隐）")
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 3, pool: true })
   assert.equal(ctx.activityEl.children.length, 1, "块入区即现（子元素 1）")
   assert.ok(!ctx.activityEl.matches(":empty"), "非空区不再命中 :empty")
@@ -212,13 +202,6 @@ test("T-R9 150 消息裁 + 归档块入窗（§14 T-CL9）：live 不计窗；�
   for (let i = 0; i < 151; i++) addMessage(ctx, "n" + i)
   trimOldMessages(ctx)
   assert.equal(archived.isConnected, false, "归档块随窗出窗（不是永久 DOM）")
-  // 懒历史锚选择器含 .sub-block（history.js 两处）
-  const histSrc = readFileSync(new URL("../webview/history.js", import.meta.url), "utf8")
-  const sel = histSrc.match(/querySelector\("\.message, \.tool-call, \.advisor-block, \.sub-block"\)/g) ?? []
-  assert.equal(sel.length, 2, "history.js 两处锚选择器含 .sub-block")
-  // trimOldMessages 计数选择器含 .sub-block（ui.js）
-  const uiSrc = readFileSync(new URL("../webview/ui.js", import.meta.url), "utf8")
-  assert.match(uiSrc, /el\.classList\.contains\("advisor-block"\) \|\| el\.classList\.contains\("sub-block"\)/, "trim 计数选择器含 .sub-block")
 })
 
 test("T-R10 区自滚（边界——AC-CL1）：pin 钉底 / 上滚解 pin 不强拉 / 回底重 pin", async () => {
@@ -243,12 +226,6 @@ test("T-R10 区自滚（边界——AC-CL1）：pin 钉底 / 上滚解 pin 不�
   assert.equal(ctx._pinActivity, true, "回底重 pin")
   maybeScrollActivity(ctx)
   assert.equal(el.scrollTop, Number.MAX_SAFE_INTEGER, "重 pin 后钉底")
-  // 静态样式断言（AC-CL1）：32vh 封顶 + 区内自滚 + overscroll
-  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
-  const rules = css.slice(css.indexOf("#subagent-activity {"))
-  assert.match(rules, /max-height:\s*32vh/, "32vh 封顶")
-  assert.match(rules, /overflow-y:\s*auto/, "区内自滚")
-  assert.match(rules, /overscroll-behavior:\s*contain/, "overscroll 隔离（不与消息区互拉）")
 })
 
 test("T-R11 清屏恢复（AC-CL1）：clearMessages 路径 → 区零残留；重建块落区尾（pool/⏹/startedAt）", async () => {

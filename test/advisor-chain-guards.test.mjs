@@ -9,7 +9,7 @@
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import http from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -46,8 +46,6 @@ const write = (root, rel, content) => {
   return p
 }
 const liveTok = () => `${randomUUID()}:${Date.now() + 3600e3}`
-/** 源码读取（EOL 归一——源码 grep 判据不因 CRLF/LF 写法漂移）。 */
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
 const STUB_PROVIDER = { name: "stub", baseURL: "http://stub.invalid", apiKey: "k", model: "stub-model" }
 /** 脚本时钟（T-VG12/T-VG14）：第 n 次调用取 seq[n]（末值兜底）——零真实等待。 */
 const clockFrom = (seq) => { let i = 0; return () => seq[Math.min(i++, seq.length - 1)] }
@@ -221,10 +219,6 @@ test("T-VG6 code 守卫：时间线 + 尾（两形态）→ 不置 _calledAdviso
   const clean = asyncFixture("Round 1 review text — no issues.", { reviewType: "code", designToken: null, reviewId: "rid-clean", designId: null })
   settleAdvisorReview(clean.parent, clean.entry, clean.entry.report, null, null)
   assert.equal(clean.parent._calledAdvisorThisRun, true, "干净 code 评审照常置位")
-  // AC-VG5：旧正则定义 / 消费 grep 零命中；同谓词消费在位
-  const asyncSrc = readSrc("../src/agent-tools/advisor-async.mjs")
-  assert.ok(!asyncSrc.includes("ADVISOR_FAILURE_TEXT"), "旧 `^` 锚正则定义 / 消费零残留")
-  assert.ok(asyncSrc.includes("advisorIncompleteMarker"), "同谓词消费在位（六 kind 全覆盖）")
 })
 
 // ─── B：凭证链（构建面自愈 / 压缩定锚）────────────────────────────────────────
@@ -273,17 +267,6 @@ test("T-VG8 压缩定锚：（>20 条）重挂 pinned 三锚 + 幂等重挂；�
   assert.ok(!messages.some((m) => m.content === "original brief (with token)"), "首条 user 已被压缩（pin 的意义）")
   compactMessages(messages, pinned)
   assert.equal(messages.filter((m) => m.content === pinned).length, 1, "再次压缩：旧 pin 随旧段丢弃、新 pin 重挂——净额仍恰一条（本动作内重挂，不做存在性判定）")
-  // AC-VG3 判据三式（③ 调用点第二实参 pinned 在位——loop.mjs）
-  const runSrc = readSrc("../src/advisor/run.mjs")
-  const start = runSrc.indexOf("function buildPinnedBrief(")
-  assert.ok(start >= 0, "① `function buildPinnedBrief(` 命中")
-  const end = runSrc.indexOf("\n}\n", start)
-  assert.ok(end > start, "① 定义体边界可定位（防切片退化为整文件——断言静默变弱）")
-  const body = runSrc.slice(start, end)
-  for (const id of ["documents", "object", "designToken"]) assert.ok(body.includes(id), `② 定义体内 ${id} 引用`)
-  assert.ok(runSrc.includes("[review brief — re-attached after context compaction; the original review request is no longer in the context]"), "pin 首行逐字")
-  const loopSrc = readSrc("../src/advisor/loop.mjs")
-  assert.ok(loopSrc.includes("compactMessages(messages, pinned)"), "③ 调用点第二实参 pinned 在位")
 })
 
 // ─── C：引文解析候选链 ────────────────────────────────────────────────────────
@@ -335,9 +318,6 @@ test("T-VG11 失败原因三分：file unreadable / content mismatch @ path / pa
     "content mismatch @ docs/a.md",
     "path traversal",
   ], "三分支各一断言（围栏不变）")
-  // AC-VG1：无全盘扫描（零 readdir / 零 glob 调用）
-  const src = readSrc("../src/advisor/citations.mjs")
-  assert.ok(!/readdir|globSync|glob\(/.test(src), "候选链 = 纯路径派生（零扫描）")
 })
 
 // ─── D：预算硬墙 / 提示 / 结构化尾 ─────────────────────────────────────────────

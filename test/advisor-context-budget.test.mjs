@@ -1,16 +1,16 @@
 /**
  * advisor-context-budget.test.mjs — 第 26 批（评审上下文预算 VSC 镜像——120K 硬编码退场）
- * 用例表 1:1 落地：T-CB1–T-CB6（设计档 `docs/design/ADVISOR-CONVERGENCE.md` §15.11）+
- * AC-CB1–AC-CB5 的机判面（§15.12）；群 B 批 B4 追补 T-EST1/T-EST2（§17.3/§17.5——评审
- * 估算器 CJK 加权，F32）。断言判据全文 = §15.4 / §15.5 / §17.3 契约。
+ * 用例表落地：T-CB1–T-CB5 + T-EST1/T-EST2（T-CB6 已退役——见尾注）；设计档
+ * `docs/design/ADVISOR-CONVERGENCE.md` §15.11 + AC-CB1–AC-CB5 的机判面（§15.12）；
+ * 群 B 批 B4 追补 T-EST1/T-EST2（§17.3/§17.5——评审估算器 CJK 加权，F32）。
+ * 断言判据全文 = §15.4 / §15.5 / §17.3 契约。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：T-CB6（旧 OOM 注释 / 常量 src 残留扫描）整删 +
+ * T-CB1 段删（readSrc 导入表比对）——读非测试档文本 = 散文锚。
  * 单测零网络（循环 `seams.chat` 覆写——`??` 默认回退，生产路径不可达）、零真实 LLM、
  * 零长等待（字符串夹具——微秒级，slow-gate 零命中）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync, readdirSync } from "node:fs"
-import { join, relative } from "node:path"
-import { fileURLToPath } from "node:url"
 
 import { _runAdvisorToolLoop } from "../src/advisor/run.mjs"
 import {
@@ -19,8 +19,6 @@ import {
 
 // ─── 夹具 ─────────────────────────────────────────────────────────────────────
 
-/** 源码读取（EOL 归一——静态锚不因 CRLF/LF 写法漂移）。 */
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
 const mkLoopAgent = (timeoutMs) => ({ cwd: "C:/proj/vscb", config: { advisor: { timeoutMs } } })
 const P1M = { name: "stub", baseURL: "http://stub.invalid", apiKey: "k", model: "deepseek-flash" }
 const P128K = { ...P1M, model: "glm-4" }
@@ -55,23 +53,6 @@ const run = (provider, messages, chat, timeoutMs = 600_000) => _runAdvisorToolLo
   provider, messages, null, undefined, mkLoopAgent(timeoutMs), "C:/proj/vscb", "code", null, null, { chat },
 )
 
-/** src/ 递归文本扫描（只读——返回含 needle 的文件相对路径清单）。 */
-function scanSrc(needle) {
-  const root = fileURLToPath(new URL("../src/", import.meta.url))
-  const hits = []
-  const walk = (dir) => {
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      const p = join(dir, e.name)
-      if (e.isDirectory()) walk(p)
-      else if (/\.(?:mjs|cjs|js)$/.test(e.name) && readFileSync(p, "utf8").includes(needle)) hits.push(relative(root, p).replace(/\\/g, "/"))
-    }
-  }
-  walk(root)
-  return hits.sort()
-}
-
-// ─── T-CB1：纯函数（五组输入 × 两档） ─────────────────────────────────────────
-
 test("T-CB1 纯函数 advisorContextBudget：1M / 128K / 未知 / context:64 / null 五组", () => {
   assert.deepEqual(advisorContextBudget({ model: "deepseek-flash" }), { limit: 800_000, compactAt: 640_000 })
   assert.deepEqual(advisorContextBudget({ model: "glm-4" }), { limit: 102_400, compactAt: 81_920 })
@@ -85,13 +66,6 @@ test("T-CB1 纯函数 advisorContextBudget：1M / 128K / 未知 / context:64 / n
     advisorContextBudget({ model: "deepseek-flash", context: 64 }),
     "确定性（无隐藏状态）",
   )
-  const src = readSrc("../src/advisor/compaction.mjs")
-  const imports = src.split("\n").filter((l) => l.startsWith("import "))
-  assert.deepEqual(imports, [
-    'import { providerSpec } from "../specs.mjs"',
-    'import { estimateText } from "../provider/rate.mjs"',
-  ], "导入面 = 两枚叶子（specs + provider/rate——B4 加权单源；无 fs / 无 I/O）")
-  assert.ok(!/\b(?:fs|process|globalThis)\s*\.|\bnode:/.test(src), "无 I/O / 无全局状态写入面")
 })
 
 // ─── T-CB2：核心缺陷闭合（1M 窗口不再被 120K 帽判死） ─────────────────────────
@@ -144,17 +118,6 @@ test("T-CB5 1M 模型 ~73.7 万 tokens：压缩真裁剪（>20 条）后正常�
   assert.ok(!out.includes("Advisor: context window limit"), "压缩后不判死")
   assert.ok(out.includes("FINAL REVIEW TEXT"), "评审正常收尾")
   assert.equal(advisorIncompleteMarker(out), null)
-})
-
-// ─── T-CB6：静态锚（旧帽退场 + 循环消费派生值） ──────────────────────────────
-
-test("T-CB6 静态锚：旧 OOM 注释与 MAX_CONTEXT_TOKENS 在 src/ 零残留；循环消费派生函数", () => {
-  const compaction = readSrc("../src/advisor/compaction.mjs")
-  const loop = readSrc("../src/advisor/loop.mjs")
-  assert.ok(!compaction.includes("Reserve headroom to avoid OOM") && !loop.includes("Reserve headroom to avoid OOM"), "旧 OOM 注释零残留")
-  assert.deepEqual(scanSrc("MAX_CONTEXT_TOKENS"), [], "MAX_CONTEXT_TOKENS 在 src/ 零残留")
-  assert.ok(loop.includes("const budget = advisorContextBudget(provider)"), "循环体外一次性派生")
-  assert.ok(loop.includes("budget.compactAt") && loop.includes("budget.limit"), "两处消费换值")
 })
 
 // ─── T-EST1/T-EST2：B4 评审估算器 CJK 加权（群 B 批 §17.3 / §17.5——F32）─────────

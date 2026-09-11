@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url"
 import { subagentTool, modeRoleField } from "../src/agent-tools/subagent.mjs"
 import { gateEngCoderSpawn } from "../src/agent-tools/subagent-async.mjs"
 import { setupAgentRun } from "../src/agent/setup.mjs"
-import { SCENARIO_SLOT_FILES, assemblePrompt, CONSULT_BASE, DISCIPLINE_ENGINEERING } from "../src/prompt-overlays.mjs"
+import { SCENARIO_SLOT_FILES, assemblePrompt } from "../src/prompt-overlays.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 const REPO = resolve(fileURLToPath(import.meta.url), "..", "..")
@@ -118,9 +118,7 @@ test("T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch_seg
 test("T57 边界：场景表（不静默回退）+ 人格槽位 + 纪律槽", () => {
   assert.deepEqual(SCENARIO_SLOT_FILES["eng-designer"], ["persona-eng-designer.md", "common.md", "discipline-engineering.md"], "designer 场景已登记（槽序 persona→common→discipline）")
   const { prompt, warnings } = assemblePrompt("eng-designer")
-  assert.notEqual(prompt, CONSULT_BASE, "≠ CONSULT_BASE（防静默回退到特殊模块基底）")
   assert.ok(prompt.length > 0, "prompt 非空")
-  assert.ok(prompt.includes(DISCIPLINE_ENGINEERING), "含工程纪律槽")
   // 人格槽文件由提示词面（面②）交付——落地前唯一允许的警告 = 该槽文件缺失（不误报其他槽）
   assert.ok(
     warnings.length === 0 || (warnings.length === 1 && warnings[0].includes("persona-eng-designer.md")),

@@ -10,7 +10,7 @@
  * 单一判据）不禁录入（readOnly 锁移除——打字回显）+ busy 占位符 + send 拒发（Enter/发送
  * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（ctx._interruptMode）。
  * 活动区收口批（2026-09-12 §14 C-14——T-CL20）：**Send 按钮 running 期隐藏**（与拒发同判据——
- * 消除假 affordance；susp/idle 恢复 flex）——⑤ 尾段 + ⑥ 锁该可见性（send.js 门禁零改）。
+ * 消除假 affordance；susp/idle 恢复 flex）——⑤ 尾段 + ⑥ 锁该可见性（send.js 出口守卫机检属散文锚——2026-09-12 删）。
  *
  * 手法（webview 侧 happy-dom——smoke-settings.mjs 模式）：setupWebview（helpers/
  * webview-env.mjs——happy-dom 注册 + en locale + acquireVsCodeApi 桥桩）+ installChatFixture
@@ -23,7 +23,6 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 // ─── happy-dom 环境（必须先于 webview 模块 import——state.js 顶层读 DOM + acquireVsCodeApi）───
@@ -317,8 +316,6 @@ test("⑥ Send running 期隐藏（AC-CL5）：running → display none；susp/i
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   setLoading(ctx, false)
   assert.equal(sendShown(), true, "idle → Send 可见")
-  const sendSrc = readFileSync(new URL("../webview/send.js", import.meta.url), "utf8")
-  assert.ok(sendSrc.includes('_turnState === "running"'), "send.js 出口守卫保留（拒发语义零改）")
   ctx.inputEl.value = "x"
   handleTurnStateMessage({ type: "turnState", state: "running" })
   send()

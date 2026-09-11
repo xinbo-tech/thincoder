@@ -3,23 +3,20 @@
  * FR23 F1；用例 T54/T55/T55b/T56）。锁三件：
  *   ① **两路各一个调用点**——阻塞路（subagent.mjs execute）与异步路
  *      （subagent-async.mjs spawnAsyncSubagent 入池前）都过门；
- *   ② **校验逻辑单份**——两路皆调 `resolveBatchDoc`（subagent-spawn-gate.mjs），文件内无第二份
- *      可读性判定（源码面断言）；
- *   ③ **角色域**——门只对 {eng-coder, eng-designer} 生效；explore/plan/coder 零变更。
+ *   ② **角色域**——门只对 {eng-coder, eng-designer} 生效；explore/plan/coder 零变更。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：原「校验逻辑单份」静态面（读 src 文本）整删——散文锚（判据见 CLI 侧设计档 TESTING.md §11）；
+ * 两路调用行为由 T54/T55/T56 放行与拒绝面对拍覆盖。
  * 放行面以测试缝 `ctx.runAgent`（escalate-async 同形先例）驱动真实 execute：断言 run 边界上的
  * 注入——任务文本含 `Batch record (batchDoc): <abs>` 行 + `opts.batchDoc`（setup 据此落
  * `agent._batchDoc`，装配面在 eng-designer-role.test.mjs 断言）。零网络、零真实 LLM。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { randomUUID } from "node:crypto"
 import { subagentTool } from "../src/agent-tools/subagent.mjs"
-
-const REPO = resolve(import.meta.dirname, "..")
-const read = (rel) => readFileSync(join(REPO, rel), "utf8")
 
 let cwd
 beforeEach(() => { cwd = mkdtempSync(join(tmpdir(), "batchdoc-gate-")); stop.length = 0 })
@@ -102,18 +99,6 @@ test("T54 正常：eng-coder 同样过门（角色域含两角色）", async () 
   assert.equal(stop[0].batchDoc, abs, "eng-coder 绑定同形")
 })
 
-test("T54 边界：校验逻辑单份——两路皆调共享 resolveBatchDoc，无第二份可读性判定", () => {
-  const gate = read("src/agent-tools/subagent-spawn-gate.mjs")
-  const sync = read("src/agent-tools/subagent.mjs")
-  const asy = read("src/agent-tools/subagent-async.mjs")
-  assert.match(sync, /import \{[^}]*resolveBatchDoc[^}]*NEEDS_BATCH_DOC[^}]*\} from "\.\/subagent-spawn-gate\.mjs"/, "阻塞路 import 共享校验")
-  assert.match(asy, /import \{[^}]*resolveBatchDoc[^}]*NEEDS_BATCH_DOC[^}]*\} from "\.\/subagent-spawn-gate\.mjs"/, "异步路 import 共享校验")
-  assert.ok(gate.includes("is not a readable file"), "可读性文案在共享校验内")
-  assert.ok(!sync.includes("is not a readable file") && !asy.includes("is not a readable file"), "两路无重复实现（各自只调用）")
-  assert.equal((sync.match(/resolveBatchDoc\(/g) ?? []).length, 1, "阻塞路恰一个调用点")
-  assert.equal((asy.match(/resolveBatchDoc\(/g) ?? []).length, 1, "异步路恰一个调用点")
-})
-
 test("T55 错误：缺参——两路均拒（不得只拒一路）", async () => {
   const parent = parentAgent()
   await assert.rejects(
@@ -172,6 +157,4 @@ test("T56 边界：指向目录（非文件）同判不可读", async () => {
 
 test("T54 边界：schema 含 batchDoc 属性 / 受限变体 delete 清单含之", () => {
   assert.ok(subagentTool.parameters.properties.batchDoc, "spawn schema 暴露 batchDoc（否则参数无处传入）")
-  const setup = read("src/agent/setup.mjs")
-  assert.match(setup, /delete props\.batchDoc/, "受限变体（审计/勘察子代理）delete 清单同步加 batchDoc")
 })

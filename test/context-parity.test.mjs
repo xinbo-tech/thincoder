@@ -10,11 +10,12 @@
  * 会话形态：`bag()` = 面板 runOpts 同构对象（history/fullHistory 挂其上——跨 run 共享）。
  * 隔离：USERPROFILE/HOME 指向临时 home（用户级 AGENTS.md / ~/.thincoder/skills 不泄漏进断言）。
  * T-CI-11 = 跨仓只读兄弟仓 `../thincoder`（THINCODER_CLI_ROOT 可覆盖；缺仓/异位 fail-closed
- * ——显式失败不 skip；先例 = test/prompts-mirror-anchors.test.mjs:21,30-34）。
+ * ——显式失败不 skip；先例 = test/prompts-mirror-anchors.test.mjs:21,30-34）；2026-09-12 PROSE-ANCHOR-RETIRE：
+ * 序锚字面断言（读 CLI 源文本）删，仅保留 fail-closed 存在性面。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs"
 import { tmpdir, platform as osPlatform } from "node:os"
 import { join, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -364,22 +365,4 @@ test("T-CI-11 正常（双端对照）：CLI 序锚字面在源且文件内出�
   assert.notStrictEqual(CLI_ROOT, VSC_ROOT, "CLI 根不得等于本仓根（THINCODER_CLI_ROOT 空值/自指防护）")
   const cliSetup = join(CLI_ROOT, "src", "agent", "setup.mjs")
   assert.ok(existsSync(cliSetup), `fail-closed：兄弟仓 CLI 源缺失 ${cliSetup}（THINCODER_CLI_ROOT 可覆盖；缺仓/异位 = 显式失败不 skip）`)
-  const src = readFileSync(cliSetup, "utf8")
-  const ANCHORS = [
-    ["git 块", "[System reminder: git context:"],
-    ["OS/cwd", "Working directory: ${agent.cwd}"],
-    ["依赖大纲", "startsWith(OUTLINE_INJECT_PREFIX)"],
-    ["文档召回", "[Relevant documentation"],
-    ["记忆召回", "[Relevant memories from previous sessions"],
-    ["checklist", "task checklist (pending/in-progress)"],
-    ["time 文案", "[System reminder: current time is"],
-    ["AUTO", "ensureAutoReminder(agent)"],
-  ]
-  let prev = -1
-  for (const [name, lit] of ANCHORS) {
-    const i = src.indexOf(lit)
-    assert.ok(i >= 0, `CLI 序锚缺失（${name}）——CLI 侧序已变，请重对齐 §17.4 序表`)
-    assert.ok(i > prev, `CLI 序锚顺序漂移（${name}）——与 §17.4 单调序不一致`)
-    prev = i
-  }
 })

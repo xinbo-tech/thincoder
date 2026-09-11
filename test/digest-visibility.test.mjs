@@ -83,9 +83,6 @@ test("T-D6 digest cap 发射（§14 C-10/AC-CL2）：postDigestCap 载荷逐字�
     { type: "digest", status: "cap", mode: "auto", turns: 12 },
     { type: "digest", status: "cap", mode: "stop", turns: 34 },
   ], "载荷逐字（mode = auto/stop + turns）")
-  const src = readFileSync(new URL("../src/extension/panel-chat.mjs", import.meta.url), "utf8")
-  assert.equal((src.match(/postDigestCap\(panel, "auto", e\.turns\)/g) ?? []).length, 1, "auto 调用点在位")
-  assert.equal((src.match(/postDigestCap\(panel, "stop", e\.turns\)/g) ?? []).length, 1, "stop 调用点在位")
 })
 
 // ② webview 侧：真 chat.js 渲染（AC-D2 + AC-CL2）
@@ -191,8 +188,4 @@ test("T-D7 cap 行 + 边界清空（§14 C-10/C-4/AC-CL2）：auto dim / stop wa
 
 test("T-D8 接线机检（AC-CL2）：本档在册 + `.digest-turn`/`.digest-cap` 样式族在位", () => {
   assert.ok(files.includes("test/digest-visibility.test.mjs"), "本档已登记 test/files.mjs")
-  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
-  assert.match(css, /\.digest-turn\s*\{/, "`.digest-turn` 样式族在位")
-  assert.match(css, /\.digest-cap\s*\{/, "`.digest-cap` 样式族在位")
-  assert.match(css, /\.digest-cap\.digest-cap-stop\s*\{/, "stop 档（warn）样式在位")
 })

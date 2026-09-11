@@ -394,16 +394,8 @@ test("T-V5 补桩边界（AC-A3 不补行）：role 未知/id 缺失/非法频�
   assert.equal(S._subTraceLog.filter((e) => e.kind === "late-terminal-stub").length, 1, "重复终态不重复补桩")
 })
 
-// ═══ ③ 机检：零回归 grep + 新档在册（AC-A6/A7 的仓库面） ═══════════
+// ═══ ③ 机检：本档在册（AC-A6/A7 的仓库面） ═══════════════════════════
 
 test("AC-A6/A7 机检：postPoolSnapshot/SNAPSHOT_ROLES 零命中（REMOVE 面不复活）+ 本档登记 + ev:subdeliver 调用点在位", () => {
-  const srcFiles = ["../src/extension/panel-callbacks.mjs", "../src/extension/suspension.mjs", "../src/extension/panel-messages.mjs", "../src/extension/panel-session.mjs", "../src/extension/chat-panel.mjs", "../webview/activity.js"]
-  const src = srcFiles.map((f) => readFileSync(new URL(f, import.meta.url), "utf8")).join("\n")
-  for (const f of ["panel-callbacks.mjs", "panel-session.mjs", "panel-messages.mjs", "chat-panel.mjs"]) {
-    const body = readFileSync(new URL(`../src/extension/${f}`, import.meta.url), "utf8")
-    assert.ok(!body.includes("postPoolSnapshot") && !body.includes("SNAPSHOT_ROLES"), `${f} 零 REMOVE 面残留`)
-  }
-  assert.ok(src.includes("ev:subdeliver"), "ev:subdeliver 留痕调用点在位（NFR-A2）")
-  assert.ok(src.includes('traceSub("takeover"') && src.includes('traceSub("late-terminal-stub"') && src.includes('traceSub("drop-unknown-role"'), "三类痕迹调用点在位")
   assert.ok(files.includes("test/async-visibility.test.mjs"), "本档已登记 test/files.mjs（接线硬项）")
 })

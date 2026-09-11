@@ -44,8 +44,6 @@ const write = (root, rel, content) => {
   return p
 }
 const liveTok = () => `${randomUUID()}:${Date.now() + 3600e3}`
-/** 源码读取（EOL 归一——源码 grep 判据不因 CRLF/LF 写法漂移）。 */
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
 /** win32 分隔符归一（`relative()` 在 Windows 返回反斜杠——断言不逐平台分叉）。 */
 const norm = (s) => String(s).replace(/\\/g, "/")
 const STUB_PROVIDER = { name: "stub", baseURL: "http://stub.invalid", apiKey: "k", model: "stub-model" }
@@ -67,11 +65,6 @@ test("T-VG16 启动断言：design 无 token 直调 → 拒绝报告（逐字）
   )
   assert.equal(agent._engDesignTokens.size, 0, "槽零写（无凭证产出）")
   assert.equal(agent._lastAdvisorOutput, undefined, "prior 零写（拒绝不耗轮次 / 不落 prior）")
-  // AC-VG9 机判面：前缀定义 / 消费 grep 命中
-  const runSrc = readSrc("../src/advisor/run.mjs")
-  assert.ok(runSrc.includes('export const ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"'), "前缀定义在位")
-  assert.ok(runSrc.includes("the request does not carry the approval signal"), "第二拒绝原因在实现面（构建面补不上的防御分支）")
-  assert.ok(readSrc("../src/agent-tools/advisor-async.mjs").includes("startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)"), "异步结算消费点 grep 命中")
 })
 
 test("T-VG17 异步结算消费：启动拒绝报告不计评审覆盖（false 保持）；对照 design 报告照常置位", () => {
@@ -172,12 +165,6 @@ test("T-VG19 冻结拦截（executeToolBatches 集成）：射程内写在途被
   assert.ok(!allowed.includes("write refused"), "射程外写不拦")
   assert.equal(readFileSync(resolve(ws, otherRel), "utf8"), "ok\n", "对照写落地")
   assert.deepEqual(executed, [otherRel], "对照工具执行恰一次")
-  // AC-VG10 机判面：实现锚 grep（单一预闸点内冻结分支）——§18 C-11（2026-09-12）：
-  // preGateBlocked 已 verbatim 迁至 src/agent/tool-gates.mjs（execute-tools 500 硬限归位），
-  // 源读路径随迁改指新档。
-  const execSrc = readSrc("../src/agent/tool-gates.mjs")
-  assert.ok(execSrc.includes("inflightDesignReviewConflict(agent, absPaths)"), "预闸调用点 grep 命中（两调用点共用同一 preGateBlocked）")
-  assert.ok(execSrc.includes("write refused — design review") && execSrc.includes("D5 freeze window"), "拒绝文案锚实现面在位")
 })
 
 test("T-VG20 点火回执冻结句：design ack 含（逐字）；code ack 不含（不对称锁定）", async () => {
@@ -191,11 +178,6 @@ test("T-VG20 点火回执冻结句：design ack 含（逐字）；code ack 不�
   const codeAck = await advisorTool.execute({ type: "code", paths: ["src/a.mjs"] }, ctx)
   assert.ok(!codeAck.includes("D5 冻结窗口"), "code ack 零冻结句（不对称）")
   assert.ok(codeAck.includes("review started in the background"), "code 回执零回归")
-  // AC-VG11 实现锚：窗口起 / 止读 / 结算三锚 grep 对齐（§14.4(a) 定义句 ↔ 实现）
-  const asyncSrc = readSrc("../src/agent-tools/advisor-async.mjs")
-  for (const anchor of ["eventsAtLaunch", "advisorStale", "settleAdvisorReview"]) {
-    assert.ok(asyncSrc.includes(anchor), `实现锚在位：${anchor}`)
-  }
 })
 
 // ─── C：面③ 收敛路径信号（F26 / AC-VG12——现状锁定，零代码改动）──────────────

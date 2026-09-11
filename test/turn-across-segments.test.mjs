@@ -4,7 +4,7 @@
  * T1-T3 编号帧向量（段 1 首轮 · 续跑段首轮 · 第 3 段中段）· T4 不变式扫描（限可达域）·
  * T5/T6 消费助手 applyTurnFrame（fixture entry / 空 entry）· T7 webview 冻结头（显示面零改动）·
  * T9 真 runAgent 直驱段间生产断言（载体缺口核心）· T10 真 runChild 消费侧接线（段前累计 →
- * 续跑段种子）· T11 种子锚（仅 escalate 支——无行为覆盖的唯一驻留锁）。
+ * 续跑段种子）· T11 种子锚（2026-09-12 散文锚退役：断言面删、用例保号——读 src 子串属散文锚）。
  * 2026-09-11 TEST-LIFECYCLE 扫① 削段：原 T8 源码字面锚全删（行为由 T1-T4/T9/T10 覆盖）；
  * T11 裁为 escalate-async 种子最小锚（agent.mjs/runChild 两份已被 T9/T10 行为覆盖，删）。
  * AC 映射：AC1′←T1-T4/T9 · AC2′←T5/T6/T10 · AC3′←T11 · AC4′←T7 · AC5′←T9
@@ -18,17 +18,13 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync, mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { turnFrame, applyTurnFrame } from "../src/agent/run-helpers.mjs"
 import { runAgent, ContinueError } from "../src/agent.mjs"
 import { runChild } from "../src/agent-tools/subagent-run.mjs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
-
-/** 源码读取（EOL 归一——源码锚判据不因 CRLF/LF 写法漂移）。 */
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
-const escalateAsyncSrc = readSrc("../src/agent-tools/subagent-escalate-async.mjs")
 
 /** 池条目最小形状（fixture——mkEntry 风格，test/subagent-observe-send.test.mjs 先例）。 */
 function mkEntry(over = {}) {
@@ -190,7 +186,6 @@ test("T10 消费侧接线（边界）：段前累计 → 续跑段 opts 种子�
 
 test("T11 种子锚（错误）：escalate-async 续跑支种子传参驻留（该路径无行为覆盖——最小锁）", () => {
   // 裁段注（扫①）：agent.mjs 种子落点与 runChild 种子支已被 T9/T10 行为覆盖（真 runAgent 段间帧
-  // + 真 runChild opts 断言）——重复项删；escalate-async 续跑支全仓无行为覆盖，驻留最小锚。
-  assert.equal((escalateAsyncSrc.match(/_turnSeqBase: turnBase/g) ?? []).length, 1, "escalate-async 续跑支种子传参 1 命中（fail-when-unchanged）")
-  assert.ok(escalateAsyncSrc.includes("let turnBase = 0"), "段前累计循环外声明（escalate-async）")
+  // + 真 runChild opts 断言）——重复项删。
+  // 2026-09-12 PROSE-ANCHOR-RETIRE：种子锚（读 src 子串）删——散文锚（判据见 CLI 侧设计档 TESTING.md §11）。
 })

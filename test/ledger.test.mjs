@@ -9,7 +9,6 @@ import assert from "node:assert/strict"
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import { execFileSync } from "node:child_process"
 import * as vscode from "vscode"
 import { setupWebview, installFullIndexFixture } from "./helpers/webview-env.mjs"
@@ -21,9 +20,6 @@ import {
 } from "../src/ledger.mjs"
 import { _setLedgerSurfaceForTest, dispose as disposeLedgerSurface, initLedgerSurface, pushLedgerStartup, refreshLedger } from "../src/extension/ledger-surface.mjs"
 
-const REPO = dirname(fileURLToPath(import.meta.url))
-const pr = (p) => join(REPO, "..", p)
-const read = (p) => readFileSync(pr(p), "utf8")
 const lineOf = (text, needle) => text.split("\n").findIndex((l) => l.includes(needle)) + 1
 let tmp
 beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), "ledger-vsc-")) })
@@ -181,23 +177,6 @@ test("T108 正常：`ledgerNotice` 逐行 `.ledger-line` 入 #messages；warn �
 // ── 接线机检（AC87/AC90） ───────────────────────────────────────────────────
 test("接线机检：四处挂载 + 样式族 + 本档入册（未入册 = 不跑）", () => {
   assert.ok(files.includes("test/ledger.test.mjs"), "本档已登记 test/files.mjs（VSC 显式清单）")
-  assert.ok(read("src/extension/chat-panel.mjs").includes("initLedgerSurface(this)"), "chat-panel：item 并立")
-  assert.ok(read("src/extension/chat-panel.mjs").includes("disposeLedgerSurface()"), "chat-panel：dispose 接线")
-  assert.ok(read("src/extension/panel-messages.mjs").includes("pushLedgerStartup(panel)"), "panel-messages：webviewReady 启动行")
-  assert.ok(read("src/extension/panel-project.mjs").includes("refreshLedger(panel, { emit: false })"), "panel-project：换项目即时刷新")
-  assert.ok(read("webview/chat.js").includes('case "ledgerNotice"'), "chat.js：ledgerNotice 分派")
-  assert.match(read("webview/chat.css"), /\.ledger-line\s*\{/, "`.ledger-line` 样式族在位")
-  assert.match(read("webview/chat.css"), /\.ledger-line\.warn\s*\{/, "warn 档样式在位")
-  assert.ok(!read("extension.mjs").includes("createStatusBarItem(vscode.StatusBarAlignment.Right, 99)"), "扩展入口零改动（item 归 chat-panel 装配）")
-})
-
-test("T105 正常：VSC 提示词双源两锚在位 + 脚本名零命中（src/prompts）", () => {
-  for (const f of ["src/prompts/discipline-engineering.md", "docs/design/prompts/discipline-engineering.md"]) {
-    const t = read(f)
-    assert.ok(t.includes("台账可见面（收口行）"), f + "：槽位锚缺失")
-    assert.ok(t.includes("--summary"), f + "：`--summary` 锚缺失")
-    assert.ok(!t.includes("check-ledger"), f + "：脚本名不得进提示词（FR13）")
-  }
 })
 
 test("AC89 边界：无候选条目不跑 git 子进程（计数断言）——有候选恰一次", () => {

@@ -1,12 +1,14 @@
 /**
  * portability-vsc-index.test.mjs — 批次二（可移植性 VSC 镜像面）用例表 1:1：
- * T-V14–T-V19（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V06/AC-V07/AC-V08 机判面（§7）。
+ * T-V14–T-V16/T-V19（设计档 `thincoder-vscode/docs/design/PORTABILITY.md` §6）+ AC-V06/AC-V08 机判面（§7）。
  * 零网络（fetch 桩覆盖 buildIndex 的 embed 段）/ 零真实 LLM / 零长等待（临时树 + 内存夹具）。
- * 判据权威 = §3.4（索引扩表/声明并集/可见化）/ §4.3（面板提示行逐字）/ §4.4（六档逐字）/ §4.5（扩表清单）。
+ * 判据权威 = §3.4（索引扩表/声明并集/可见化）/ §4.3（面板提示行逐字）/ §4.5（扩表清单）。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：T-V17/T-V18（六档提示词逐字 / R24 对齐）整删——读提示词档文本 = 散文锚
+ *（判据见 CLI 侧设计档 TESTING.md §11）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -62,9 +64,6 @@ function stubPanel() {
   const posted = []
   return { posted, _panel: { webview: { postMessage: (m) => { posted.push(m); return Promise.resolve(true) } } } }
 }
-/** 源码读取（EOL 归一——静态锚不因 CRLF/LF 写法漂移）。 */
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
-
 // ─── T-V14–T-V16：索引扩表 / 声明并集 / 可见化（VP-9 / AC-V06） ────────────────
 
 test("T-V14 正常（扩展名）：.dart/.lua/.cs/.org 默认可索引（扩表对齐 §4.5）", () => {
@@ -154,71 +153,4 @@ slow("T-V19 正常（索引回归）：非 git 回退路径行为零回归（up-
   assert.equal(needsRebuild(cwd).reason, "file-changed", "改动触发重建")
 })
 
-// ─── T-V17–T-V18：提示词六档（VP-3–VP-7 / AC-V07 · AC-V08） ─────────────────
 
-const SRC_DE = "src/prompts/discipline-engineering.md"
-const CN_DE = "docs/design/prompts/discipline-engineering.md"
-const SRC_AD = "src/prompts/advisor-design.md"
-const CN_AD = "docs/design/prompts/advisor-design.md"
-const SRC_PD = "src/prompts/persona-eng-designer.md"
-const CN_PD = "docs/design/prompts/persona-eng-designer.md"
-const SIX = [SRC_DE, CN_DE, SRC_AD, CN_AD, SRC_PD, CN_PD]
-
-test("T-V17 正常（提示词）：六档新通用化句在场（§4.4 逐条）；旧本仓句零命中；红线锚零损（AC-V07/AC-V08）", () => {
-  const t = Object.fromEntries(SIX.map((f) => [f, readSrc("../" + f)]))
-  // §4.4(a)(b)：树形状 → 落点按项目文档约定
-  for (const f of [SRC_DE, CN_DE]) {
-    assert.ok(t[f].includes("板块设计文档（一板块一档、功能点不独立成文——落点按项目文档约定；本产品自研仓 = docs/design/<TOPIC>.md）按**三节 + 变更记录**组织；"), `${f}: 树形状句改写`)
-    assert.ok(t[f].includes("the project's requirement-pool record（池文件按项目约定；本产品自研仓 = docs/TODO.md）"), `${f}: Pool routing 句改写`)
-    assert.ok(t[f].includes("技术待办仍走项目技术待办区（本产品自研仓 = docs/TODO.md 技术组）"), `${f}: 池边界句改写`)
-    assert.ok(!t[f].includes("— parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family)"), `${f}: 旧父侧维护句零残留`)
-    assert.ok(!t[f].includes("技术待办仍走 `docs/TODO.md` 技术组"), `${f}: 旧池边界句零残留`)
-  }
-  assert.ok(t[SRC_DE].includes("the project's own process files (requirement pool / changelog / checklist family — 本产品自研仓"), "EN files 域声明句改写")
-  assert.ok(t[CN_DE].includes("——项目自身的流程文件（需求池 / 变更记录 / checklist 族——本产品自研仓"), "CN files 域声明句改写")
-  // §4.4(a)：A1 勘察 / A4 实践沉淀落点句（EN 侧）+ §4.4(c)(d)：advisor-design 双源
-  assert.ok(t[SRC_DE].includes("（查项目文档地图——本产品自研仓 = docs/design/README.md；已有则更新不新建）"), "EN A1 勘察句")
-  assert.ok(t[SRC_DE].includes("（落点按项目文档约定；本产品自研仓 = 对应板块的 docs/design/<TOPIC>.md）"), "EN A4 沉淀句")
-  assert.ok(t[SRC_AD].includes("Does it follow the project's document norms and the 4-step workflow?"), "EN 方法论合规句（去 METHODOLOGY）")
-  assert.ok(t[SRC_AD].includes("(per the project's document map, when the review context provides one)"), "EN 文档归属句")
-  assert.ok(t[SRC_AD].includes("Tier authority: the code-structure criteria stated in this bullet."), "EN 档位权威句")
-  assert.ok(t[SRC_AD].includes("(e.g. `path/to/file.md:42`)"), "EN 引用格式例（去本仓路径）")
-  assert.ok(t[SRC_AD].includes("Judge against the Project Guide (when present in the review context)"), "EN 要点句")
-  assert.ok(t[CN_AD].includes("（按项目文档地图——当评审上下文提供时；本产品自研仓 = docs/design/README.md）"), "CN 文档归属句")
-  assert.ok(t[CN_AD].includes("档位权威 = 本条目陈述的代码结构判据。"), "CN 档位权威句")
-  assert.ok(t[CN_AD].includes("（如 `path/to/file.md:42`）"), "CN 引用格式例")
-  assert.ok(t[CN_AD].includes("按评审上下文中提供的 Project Guide（存在时）与本提示词的评审标准判断"), "CN 要点句")
-  assert.ok(!t[SRC_AD].includes("docs/design/AGENT-LOOP.md:180") && !t[CN_AD].includes("docs/design/AGENT-LOOP.md:180"), "旧本仓引用例零残留")
-  // §4.4(e)(f)：persona-eng-designer 双源
-  assert.ok(t[SRC_PD].includes("Your write domain = the project's requirements/design documents（落点按项目文档约定；本产品自研仓 = docs/，扣除 docs/design/prompts/——提示词文件（含中文模板）是产品代码，不归你）。"), "EN 写域句")
-  assert.ok(t[CN_PD].includes("写域 = 项目的需求档 / 设计档（落点按项目文档约定；本产品自研仓 = docs/，扣除 docs/design/prompts/——提示词文件（含中文模板）是产品代码，不归你）。"), "CN 写域句")
-  assert.ok(!t[SRC_PD].includes("advance `docs/TODO.md` status when merging requirements") && !t[SRC_PD].includes("不触碰本仓 `docs/TODO.md`"), "EN todo 推进本仓引用零残留")
-  assert.ok(!t[CN_PD].includes("并入需求时同步推进 `docs/TODO.md`") && !t[CN_PD].includes("不触碰本仓 `docs/TODO.md`"), "CN todo 推进本仓引用零残留")
-  assert.ok(t[SRC_PD].includes("不触碰项目台账档") && t[CN_PD].includes("不触碰台账档"), "todo 推进 = 通用形态（与 CLI 已交付同源口径）")
-  // 红线锚零损（§3.6——跨仓逐字锚抽查：A1/A2/⑥ 组）
-  for (const f of [SRC_DE, CN_DE]) {
-    assert.ok(t[f].includes("**六段自写 · 一段一作者**：批次档 §1 主 agent / §2 eng-designer / §3 评审子代理 / §4 主 agent / §5 eng-coder / §6 父代理——"), `${f}: A1 锚在位`)
-    assert.ok(t[f].includes("写入手段 = `batch_segment({segment, text})`（**无路径参数**"), `${f}: A2 锚在位`)
-    assert.ok(t[f].includes("`Action` 恰好四选一") || t[f].includes("`Action` is one of exactly four values:"), `${f}: Action 四值句锚在位`)
-    assert.ok(t[f].includes("修正轮 ⇄ 用户批准 时序"), `${f}: 修正轮 bullet 锚在位`)
-  }
-  // AC-V07 机判面：编辑面内指令性引用 = 0（「本产品自研仓 =」标注形态除外）；check-doc-width 零指涉（全形态）
-  for (const f of SIX) {
-    t[f].split("\n").forEach((line, i) => {
-      for (const pat of ["docs/design/README.md", "docs/design/<TOPIC>.md"]) {
-        if (line.includes(pat)) assert.ok(line.includes("本产品自研仓"), `${f}:${i + 1} 指令性引用 ${pat} 无「本产品自研仓 =」标注形态`)
-      }
-      assert.ok(!line.includes("check-doc-width"), `${f}:${i + 1} check-doc-width 零指涉被破坏`)
-    })
-  }
-})
-
-test("T-V18 边界（R24 对齐）：EN/CN discipline-engineering R24 行两档同文；退役文件引用形态与 CN 现形态一致（AC-V07）", () => {
-  const R24 = "动机与完整机制见纪律层 `src/prompts/discipline-normal.md` 代码结构判据节（原 `docs/design/METHODOLOGY.md`（CLI 侧）已于 2026-09-10 退役入 `_archive/`）。"
-  const en = readSrc("../" + SRC_DE)
-  const cn = readSrc("../" + CN_DE)
-  assert.ok(en.includes(R24), "EN R24 行 = 目标文本逐字")
-  assert.ok(cn.includes(R24), "CN R24 行同文（两档逐字一致——§2 D4）")
-  assert.ok(!en.includes("动机与完整机制见 `docs/design/METHODOLOGY.md` R24 节"), "旧 R24 句零残留（EN）")
-  assert.ok(!/Read METHODOLOGY\.md/.test(en) && !/Read METHODOLOGY\.md/.test(cn), "`Read METHODOLOGY.md` 全形态零命中（AC-V04 提示词面）")
-})

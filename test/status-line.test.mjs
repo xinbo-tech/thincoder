@@ -5,7 +5,7 @@
  * §2（§14.7 注：本档直驱导出映射面 + 发射调用点 grep 机检）。
  *
  * 两组手法：
- * ① 主侧（T-CL21a）：`statusTextPayload` 纯函数直驱（onWait 相位 → kind）+ 发射点机检；
+ * ① 主侧（T-CL21a）：`statusTextPayload` 纯函数直驱（onWait 相位 → kind）+ 载荷面机判；
  * ② webview 侧（T-CL21b/T-CL22/T-CL23/T-CL24）：happy-dom 全量 id fixture + 真 chat.js 驱动
  *    （window message 直驱 statusText/turnFrame/usage/token）→ `#status-line` 文本断言。
  */
@@ -57,7 +57,7 @@ function resetLine(S) {
   send({ type: "clearMessages" })
 }
 
-// ─── ① 主侧：onWait → statusText 映射（T-CL21a）＋ 发射点机检 ──────────
+// ─── ① 主侧：onWait → statusText 映射（T-CL21a）＋ 载荷面机判 ──────────
 
 test("T-CL21a statusText 映射（AC-CL6/AC-CL7）：五相位逐 kind 载荷 + warn/未知 → 不发射", () => {
   assert.deepEqual(statusTextPayload({ phase: "rate", seconds: 5 }), { type: "statusText", kind: "rateWait", seconds: 5 }, "TPM 限流等待")
@@ -69,23 +69,6 @@ test("T-CL21a statusText 映射（AC-CL6/AC-CL7）：五相位逐 kind 载荷 + 
   assert.equal(statusTextPayload({ phase: "unknown" }), null, "未知相位 → 不发射")
 })
 
-test("T-CL21a-2 发射点机检（AC-CL7）：onWait/onAgentTurn/reasoning 累计/索引进度/✦ 映射逐项在位", () => {
-  const cb = readFileSync(new URL("../src/extension/panel-callbacks.mjs", import.meta.url), "utf8")
-  assert.ok(cb.includes("onWait: (info) =>"), "panel-callbacks onWait 接线在位")
-  assert.ok(cb.includes("onAgentTurn: (turn, maxTurns) =>"), "顶层 onAgentTurn → turnFrame 接线在位")
-  assert.ok(cb.includes("totalUsage.reasoning_tokens +="), "reasoning_tokens 累计在位")
-  const idx = readFileSync(new URL("../src/extension/panel-index.mjs", import.meta.url), "utf8")
-  assert.equal((idx.match(/^\s+postIndexProgress\(panel, p\)/gm) ?? []).length, 3, "索引进度三相位发射（scan/embed/done——调用点计数）")
-  const providers = ["../src/provider.mjs", "../src/provider/transports/openai.mjs",
-    "../src/provider/transports/responses.mjs", "../src/provider/transports/google.mjs"]
-  const src = providers.map((f) => readFileSync(new URL(f, import.meta.url), "utf8")).join("\n")
-  assert.ok(src.includes("status: 429"), "429 onWait 携 status（C-12#1）")
-  assert.ok(src.includes('phase: "overloaded"'), "5xx 重试等待上报（overloaded 相位）")
-  assert.ok(src.includes("u.reasoning_tokens = u.completion_tokens_details?.reasoning_tokens ?? 0"), "openai 映射（completion_tokens_details）")
-  assert.ok(src.includes("reasoning_tokens: usage.output_tokens_details?.reasoning_tokens ?? 0"), "responses 映射（output_tokens_details）")
-  assert.ok(src.includes("reasoning_tokens: json.usageMetadata.thoughtsTokenCount || 0"), "google 映射（thoughtsTokenCount）")
-})
-
 test("T-CL21a-3 C-12#3/#4 host 面机判（AC-CL7）：toolPanel 白名单 tool/cmd 逐字 + subagent-run status:'turn' 发射点", () => {
   const obj = toolPanelPayload("sub:eng-coder#1", { kind: "tool", text: "read {}", round: 2, model: "glm-5.3", tool: "read", cmd: "src/x.mjs" })
   assert.equal(obj.type, "toolPanel", "消息名不变（只增不改）")
@@ -94,8 +77,6 @@ test("T-CL21a-3 C-12#3/#4 host 面机判（AC-CL7）：toolPanel 白名单 tool/
   const strChunk = toolPanelPayload("sub:eng-coder#1", "legacy text")
   assert.equal(strChunk.tool, undefined, "string 分支 tool undefined（安全降级——§7.3）")
   assert.equal(strChunk.cmd, undefined, "string 分支 cmd undefined（安全降级——§7.3）")
-  const run = readFileSync(new URL("../src/agent-tools/subagent-run.mjs", import.meta.url), "utf8")
-  assert.ok(/onSubagent\?\.\(\{[^}]*status: "turn"/s.test(run), "subagent-run 逐轮帧发射点（C-12#4——onSubagent 载荷携 status:'turn'）")
 })
 
 // ─── ② webview 侧：状态行渲染（T-CL21b/T-CL22/T-CL23/T-CL24） ─────────
@@ -172,10 +153,5 @@ test("T-CL24 端差登记（AC-CL6）：scrolled 不做（悬浮回底钮在位�
   send({ type: "usage", usage: { prompt_tokens: 1000, completion_tokens: 20 }, ctxPct: 55 })
   assert.ok(line().includes("context 55%"), "ctx 段保持 pct 形态（绝对数端差不做）")
   assert.ok(!/\bscrolled\b/.test(line()), "状态行无 scrolled 段（M5 端差保持）")
-  const html = readFileSync(new URL("../webview/index.html", import.meta.url), "utf8")
-  const sb = readFileSync(new URL("../webview/scroll.js", import.meta.url), "utf8")
-  assert.ok(sb.includes('scrollBottomBtn.id = "scroll-bottom-btn"'), "悬浮回底钮在位（端差载体——scroll.js 动态建）")
-  assert.ok(sb.includes('appendChild(scrollBottomBtn)'), "回底钮接线在位（chat-container 挂载）")
-  assert.ok(html.includes('id="chat-container"'), "挂载点 #chat-container 在位")
   assert.ok(files.includes("test/status-line.test.mjs"), "本档已登记 test/files.mjs")
 })

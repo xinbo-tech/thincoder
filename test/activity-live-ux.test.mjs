@@ -2,13 +2,14 @@
  * activity-live-ux.test.mjs — VSC live 块 UX（流式跟滚 + 内容区高度 60px）机器验收。
  * 设计权威：`docs/design/WEBVIEW.md` §13（契约 C-LU1..C-LU5 / 用例 T-LU1..T-LU6 §13.6 /
  * AC-LU1..AC-LU7 §13.7）；批次档 `thincoder/docs/batches/2026-09-11-VSC-LIVE-UX.md` §2。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：T-LU5（CSS 文本静态断言）整删——读非测试档文本断言 = 散文锚
+ *（判据见 CLI 侧设计档 TESTING.md §11）；其余用例行为面不变。
  * 手法同 activity-flow / async-visibility webview 侧：installChatFixture + 动态 import 真
  * 模块；跟滚应用在 streaming rAF 尾（happy-dom rAF = setImmediate——`until` 轮询等帧；
  * 节流 ≥50ms——重排条件含脏集，尾 chunk 不丢跟随）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let cleanupEnv
@@ -129,17 +130,6 @@ test("T-LU4 折叠零副作用（AC-LU4·边界）：open=false 追加照落、�
   assert.ok(await until(() => ctx.activityEl.scrollTop === MAX), "帧已处理（节流重排链路——尾 chunk 不丢）")
   assert.equal(content.scrollTop, 100, "折叠态零滚动副作用（open 守卫——滚动被抑）")
   assert.ok(content.textContent.includes("folded append"), "追加照落（内容更新不因折叠被抑）")
-})
-
-test("T-LU5 CSS 高度（AC-LU5·契约静态）：子块 60px + 基础 100px + 注释逐字改述", async () => {
-  const css = readFileSync(new URL("../webview/chat.css", import.meta.url), "utf8")
-  assert.match(css, /\.advisor-block\.sub-block \.advisor-content\s*\{\s*max-height:\s*60px;\s*\}/,
-    "子块覆盖行 = 60px（选择器不变——live+冻结同卡面）")
-  assert.match(css, /\.advisor-content\s*\{[^}]*max-height:\s*100px/,
-    "基础 .advisor-content 规则维持 100px（advisor 流内评审块）")
-  const flat = css.replace(/\s+/g, " ")
-  assert.ok(flat.includes("60px content height (2026-09-11 live 块 UX： 用户设定 100→60——单块占高更小；advisor 流内评审块维持基础 100px), dimmer title — collapsible, reopenable, height 0 when closed."),
-    "C-LU3 注释 = §13.3 引文逐字（旧「均 100px」句已改述）")
 })
 
 test("T-LU6 防御 no-op（AC-LU4·错误面）：已移除 / 已冻结块零抛错零写", async () => {

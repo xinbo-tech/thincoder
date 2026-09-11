@@ -3,13 +3,14 @@
  * 设计权威：`docs/design/ADVISOR-CONVERGENCE.md` §16.1（契约 1–5 / 用例 T-MA6-1–9 / AC-MA6-1–3）。
  *
  * 覆盖：① 工具层六类拒绝全部置位 `ctx._advisorRefused`（拒文原样）；② 记账块读同一 per-call
- * 载体 ⇒ 拒绝 = 未跑（不置 `_calledAdvisorThisRun` / 不推 `_advisorRound`）；③ builder 单源
- * （工具层预检与 runner 内部拒逐字相等）；④ 对照零回归（正常完成照常记账；async 路径零波及）。
+ * 载体 ⇒ 拒绝 = 未跑（不置 `_calledAdvisorThisRun` / 不推 `_advisorRound`）；③ 对照零回归（正常完成照常记账；async 路径零波及）。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：原静态面（builder 源码文本 grep）整删——散文锚（判据见 CLI 侧设计档 TESTING.md §11）；
+ * builder 单源真实行为由 T-MA6-4 / T-MA6-7 锁定。
  * 零网络：sync 收尾面走本地 SSE fake server（127.0.0.1）；run 面经 `ctx.runAdvisorReview` 缝注入。
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs"
 import http from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -27,8 +28,6 @@ function write(root, rel, content) {
   writeFileSync(p, content, "utf8")
   return p
 }
-const readSrc = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replace(/\r\n/g, "\n")
-
 /** 桩 agent（advisor 面最小字段集）。provider 指向本地 wire（T-MA6-6）。 */
 function makeAgent(ws, over = {}) {
   return {
@@ -223,16 +222,4 @@ test("A6 载体接线：工具在 toolCtx 上置位 → 记账块读同一对象
   await driveBatches(a2, "advisor", { type: "code", paths: ["x.mjs"], async: false }, makeStub(false))
   assert.equal(a2._calledAdvisorThisRun, true, "未置位 → 照常记账（零回归）")
   assert.equal(a2._advisorRound, 1)
-})
-
-// ─── AC-MA6-3 静态面：单源消费在位（旧内联拼装零残留）────────────────────────────
-
-test("AC-MA6-3 静态：run.mjs 导出 builder + 内部改用同一 builder（旧内联拼装零残留）", () => {
-  const runSrc = readSrc("../src/advisor/run.mjs")
-  assert.ok(runSrc.includes("export function buildCapMessage(agent)"), "builder 导出在位")
-  assert.equal((runSrc.match(/convergence cap reached after/g) || []).length, 1, "文案单源（恰 1 处）")
-  const toolSrc = readSrc("../src/agent-tools/advisor.mjs")
-  assert.ok(toolSrc.includes("return buildCapMessage(agent)"), "工具层预检消费同一 builder")
-  const exSrc = readSrc("../src/agent/execute-tools.mjs")
-  assert.ok(exSrc.includes("toolCtx?._advisorRefused !== true"), "记账块读 per-call 载体")
 })

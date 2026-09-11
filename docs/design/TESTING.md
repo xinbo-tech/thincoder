@@ -93,15 +93,15 @@
 
 ## 8. 散文锚退役——本端执行面（PROSE-ANCHOR-RETIRE——2026-09-12）
 
-> 机制语义（判据三条 / 口径裁定 C1–C5 / **判据补充 C1-a–c** / 归类三值 / 保留面 / 决策记录）以 CLI 侧测试基建设计档为准（跨仓指针（CLI 侧）——本端不重述；文件 = `thincoder/docs/design/TESTING.md` §11）。
-> 需求依据 = `thincoder/docs/requirements/TESTING.md` §5（F15–F22 / N10–N12）——本端 TESTING 需求尚无本仓落点（本仓 `docs/requirements/` 树已由并行批 `LEDGER-SELF-CONTAINED` 在飞新建：`ENGINEERING-MODE.md` / `README.md`，**未见 TESTING 面**），需求现指 CLI 侧档（**已登记依赖——未消解**，见 §8.6）。
+> 机制语义（判据三条 / 口径裁定 C1–C5 / **判据补充 C1-a–d** / 归类三值 / 保留面 / 决策记录）以测试基建设计（CLI 仓）§11 为准（跨仓指针（CLI 侧）——本端不重述）。
+> 需求依据 = **本仓 `docs/requirements/TESTING.md`**（F15–F22 / N10–N12——本端自持；与 CLI 侧同标识条目语义同源、各端原文自持）。
 > 双端纪律：语义同源、各端独立执行、不做 byte-identical、不加跨端同步依赖（F20）。
 
 ### 8.1 本端逐条删除清单（VSC 仓）
 
 > 键控 = `档 + 用例起始行`（行号 as-of 2026-09-12；执行轮以「档 + 用例名」定位，行号漂移不阻断——D4）。
 > `整删` = 删该用例全部（用例总数 −1）；`段删` = 只删列出的断言行（用例总数不变，行为断言保留）。
-> 清单外断言零触碰（N12）；档内未被点名的用例一律保留。判据 / 口径裁定 C1–C5 + **判据补充 C1-a–c** = CLI 侧设计档 §11.1。
+> 清单外断言零触碰（N12）；档内未被点名的用例一律保留。判据 / 口径裁定 C1–C5 + **判据补充 C1-a–d** = CLI 侧设计档 §11.1。
 
 | 档 | 用例行 | 用例名（截断） | 归类 | 删除行号 | 依据 |
 |---|---|---|---|---|---|
@@ -216,10 +216,10 @@
 
 | 项 | 本端契约 |
 |---|---|
-| 登记清单 | `test/files.mjs` **零改**——本端无整档删除（每档均有保留用例），62 条登记项与实档数不变 |
+| 登记清单 | `test/files.mjs` **零改**——本端无整档删除（每档均有保留用例），63 条登记项（62 档 `.test.mjs` + 1 档 `smoke-settings.mjs`）与实档数不变 |
 | 对账基准 | 本端快层用例总数 653 → **592**（−61 = 本端清单整删条数 61——含修正轮净变动 +3） |
 | 计数口径 | 同 CLI 侧（`test(` / `slow(` / `it(` 起始行计数） |
-| 结构机检面（**端差登记——2026-09-12 修正轮更正**） | 本端实际构成 = `scripts/check-doc-width.mjs`（**行宽 + 一致性 V1/V2/V3 单源**）+ `scripts/check-syntax.mjs`（`npm run lint`）+ `test/doc-consistency.test.mjs` + slow 门——判据面**零改**（保留面）。**端差**：本端 `scripts/` **无 `check-ledger.mjs`**（实测 = `check-doc-width.mjs` / `check-syntax.mjs` / `publish-all.mjs`）——台账机检脚本住 CLI 仓（默认台账清单含两端），**本端无法就地跑台账机检**；该面判据零改，形态归宿 = **已登记依赖——未消解**（见 §8.6）；**不得静默**（N-CL4） |
+| 结构机检面（**端差登记——2026-09-12 修正轮更正**） | 本端实际构成 = `scripts/check-doc-width.mjs`（**行宽 + 一致性 V1/V2/V3 单源**）+ `scripts/check-syntax.mjs`（`npm run lint`）+ `test/doc-consistency.test.mjs` + slow 门——判据面**零改**（保留面）。**端差**：本端 `scripts/` **无 `check-ledger.mjs`**（实测 = `check-doc-width.mjs` / `check-syntax.mjs` / `publish-all.mjs`）——台账机检脚本住 CLI 仓（默认台账清单含两端），**本端无法就地跑台账机检**；该面判据零改、本批零改零新造脚本，**端差登记**（见 §8.6；**不得静默**——N-CL4） |
 | 发布门 | `vscode:prepublish` 三环（lint → test:full → test:integration）全绿不降 |
 
 ### 8.3 本端验收（回指）
@@ -230,6 +230,7 @@
 | AC-VT9 | 本端清单逐条落地（点名的用例名 / 断言行零命中）；本端 `test/files.mjs` 零改 | F16 / F18 |
 | AC-VT10 | 本端 `scripts/check-doc-width.mjs`（宽 + V1/V2/V3）判据面零改 + 台账机检判据零改（执行面端差登记见 §8.2）；`vscode:prepublish` 三环全绿 | F17 / N11 |
 | AC-VT11 | 零新增跨仓同步依赖 / 零 byte-identical 断言（各端原文自持） | F20 |
+| AC-VT12 | 需求档自持：本仓 `docs/requirements/TESTING.md` 在位（含 F15–F22 / N10–N12 标识与判据口径）；本档 §8 需求依据与 AC 回指均指本仓档（零「需求落 CLI 侧档」表述） | 批级（分仓裁定） |
 
 ### 8.4 边界
 
@@ -247,20 +248,29 @@
 - 登记范围仅此：**两侧实施分派方式**（与 CLI 侧同链 / 各端独立）与**两侧记录的互引形态规范**不属本批设计裁定范围（属并行批 `2026-09-12-LEDGER-SELF-CONTAINED.md` 的设计范围）。
 - 本批设计侧落笔面 = 本档；提示词档落笔 = 主 agent 内容权 + eng-coder 落笔（非本批设计侧）。
 
-### 8.6 本批两侧记录（登记）
+### 8.6 本批两侧记录与跨批协调（登记）
 
 - CLI 侧记录 = `thincoder/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`；VSC 侧记录 = `docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`（本仓）。
-- 两侧记录**各持自身范围**（本档 = 本端设计落地；两侧互引形态规范不属本批裁定范围）——本档只登记，不预设互引语句。
+- 两侧记录**各持自身范围**（本档 = 本端设计落地）——本档只登记，不预设互引语句。
 
-**已登记依赖——未消解（2026-09-12 修正轮）**
+**依赖就地消解（2026-09-12 修正轮二——用户 05:11 裁定；不挂对齐轮）**
 
-| # | 依赖 | 事实 | 归宿 |
-|---|---|---|---|
-| 1 | 跨仓引用 | 本档 §8 头注的需求依据指向 CLI 侧需求档；CLI 侧设计档 §11.4 指向本档 | 与并行批 `LEDGER-SELF-CONTAINED` 的 R1（台账射程：本仓自持、跨仓指针禁止）/ R7（文档体系各仓自持）**冲突**；该批**在飞未落地**（修正轮落笔期间实测：本仓 `docs/requirements/` 树已由该批新建——含 `ENGINEERING-MODE.md` / `README.md`，**未见 TESTING 面** → 替代落点仍未存在）→ **不得自行发明替代落点**（本批不改指向）——**待该批落地后由对齐轮改指本仓**；设计评审前不得视为已消解 |
-| 2 | 台账机检执行面 | 本端无 `check-ledger.mjs`（见 §8.2 端差登记） | 同上（该批 R4 含 `check-ledger` 机检补强 → 本端执行面归宿随该批一并定） |
+| # | 项 | 处置（已落） |
+|---|---|---|
+| 1 | 需求落点（原「跨仓引用」） | **已消解**：本端需求自持于本仓 `docs/requirements/TESTING.md`（2026-09-12 新建；语义同源、各端原文自持）——本档 §8 需求依据与 AC 回指均指本仓档；CLI 侧需求指针指其本仓档 |
+| 2 | 台账机检执行面（端差） | **已定案**：本端无 `check-ledger.mjs` = 既有端差（§8.2 登记）；本批零改、不新造脚本；L1–L3 判据保留面不动 |
+
+**跨批协调项（2026-09-12——SWEEP-FOLLOWUP 守恒锁）**：CLI 侧回归锁 `SPLIT_CASES`（`ENGINEERING-MODE（CLI 仓）§2.27.4`；as-of 42 / 21 / 合计 63）
+锁定 `prompts-async-guidance` / `prompts-dual-source` 两档用例数；本批实施删除对应散文锚用例 → **实施轮同批重测并同步该锁值**
+（守则 = `ENGINEERING-MODE（CLI 仓）§2.27.1`「守恒锁守则」；同值面 = 设计档 §2.27.1 / §2.27.4 / AC57 / §3.2 T111 + `ENGINEERING-MODE 需求（CLI 仓）§1.15`）。
+本端对应受影响两档 = `test/prompts-async-guidance.test.mjs` / `test/prompts-mirror-anchors.test.mjs`——**本端无同类例数守恒锁（grep 实测零命中）→ 无锁值同步面**。
 
 ## 变更记录
 
+- 2026-09-12（**修正轮二——设计评审轮次 1 落修 #7/#9/#10**；只落直接导出的修正、零新语义）：
+  §8 头注 / §8.1 判据补充改 **C1-a–d** + 需求依据改指**本仓** `docs/requirements/TESTING.md`（分仓就地消解）·
+  §8.2 登记项计数 63 + 端差登记措辞 · §8.3 增 **AC-VT12**（需求档自持）· §8.6 **依赖就地消解** +
+  **跨批协调项（SWEEP-FOLLOWUP 守恒锁——本端无同类锁值同步面）**。
 - 2026-09-12（**修正轮**——批次档 §1「待裁项裁定与缺陷处置（04:41）」逐条落地）：
   - §8.1 追加 10 条（`portability-vsc-advisor-context` T-V07–T-V10 整删 · `eng-designer-role` T57 边界 / `prompts-async-guidance` §3.2·§3.4 段删 6 条），并**撤出** `settings-tool` T-S2.35（PA-A3 回退——工具契约面）；小计与差额重算（**61 整删 + 40 段删 = 101 条**）。
   - §8.2 **端差登记更正**（本端 `scripts/` 无 `check-ledger.mjs`——实测载明；结构机检面 = `check-doc-width.mjs`（含 V1–V3）+ `check-syntax.mjs` + doc-consistency 用例 + slow 门）+ 对账基准重算（592）。

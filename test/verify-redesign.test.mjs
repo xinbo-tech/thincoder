@@ -3,6 +3,7 @@
  *
  * 2026-09-11 TEST-LIFECYCLE 扫① 削段：原 T-V9（guard 文案负向锚）删 + T-V10 裁为正向参数名
  * 驻留锚（旧词组不复现类锚退役——现行守卫行为由集成场景 ① 与 T-V1~V6 覆盖）。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：T-V10 整删（读 src/prompts 常量子串 = 散文锚；判据见 CLI 侧设计档 TESTING.md §11）。
  *
  * Covers T-V1..V6 of the design test table (VS Code side; T-V7 dual-end
  * consistency is a cross-repo behavior asserted by the parent's full run):
@@ -22,13 +23,10 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import { verifyTool } from "../src/agent-tools/verify.mjs"
-
-const __here = dirname(fileURLToPath(import.meta.url))
 
 /** Build a throwaway agent + ctx with one changed source file already written. */
 function makeCtx(changedRel) {
@@ -145,19 +143,6 @@ test("T-V11b G11: rejection report surfaces the node --check syntax hint on chan
   assert.match(out, /Syntax check \(advisory/)
 })
 
-
-test("T-V10 prompts 验声明参数名驻留（G5-G9）——旧 verify 语义负向锚已裁（扫①）", () => {
-  // 2026-09-11 TEST-LIFECYCLE 扫① 削段：原三条「旧词组不复现」负向锚删（旧语义已随 PROMPT-SYSTEM
-  // 施工③退役多年——行为面由集成 ①（重试提醒）与 T-V1~V6 锁定）；保留正向契约：提示词必须
-  // 点名声明参数名（模型据此调用）。
-  // 旧名单 [eng-coder, engineering-sub, system, discipline, main] 的新宿主映射（施工①迁移映射表）：
-  // eng-coder/engineering-sub → persona-eng-coder；system/discipline/main 的写码执行收尾 → discipline-normal。
-  const files = ["persona-eng-coder.md", "discipline-normal.md"]
-  for (const f of files) {
-    const src = readFileSync(join(__here, "..", "src", "prompts", f), "utf8")
-    assert.match(src, /verification\.status/, `${f}: declarative phrasing present`)
-  }
-})
 
 test("T-V11 goal 门禁：mutated 未 verify → 拦截（G13）", async () => {
   const { goalTool } = await import("../src/agent-tools/goal.mjs")

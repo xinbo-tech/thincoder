@@ -8,7 +8,6 @@
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let cleanupEnv
@@ -151,8 +150,6 @@ test("T-CL6 全归档后区空（AC-CL1）：区 children 0 且 :empty 规则在
   applySubagentStatus(subMsg("done", "explore", 3))
   assert.equal(ctx.activityEl.children.length, 0, "末块归档 → 区 children 0")
   assert.ok(ctx.activityEl.matches(":empty"), "空区命中 :empty（隐藏规则选择器有效）")
-  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
-  assert.match(css, /#subagent-activity:empty\s*\{\s*display:\s*none;\s*\}/, ":empty display:none 规则在位")
 })
 
 test("T-CL7/T-CL8 边界失效与无边界（AC-CL1）：回合元素先被移除 / 无在轮 digest → reclaim 一律尾追（不抛错）", async () => {
@@ -295,7 +292,4 @@ test("T-CL19 turn/计时刷新（AC-CL4）：turn 帧实时；elapsed 经 refres
   const archived = hdrOf(block)
   refreshLiveHeaders()
   assert.equal(hdrOf(block), archived, "归档块头零变化")
-  const panelsSrc = readFileSync(new URL("../webview/panels.js", import.meta.url), "utf8")
-  assert.match(panelsSrc, /refreshLiveHeaders\(\)/, "panels 定时器调用点在位")
-  assert.ok(!/if \(S\._turnState === "running"\) refreshLiveHeaders/.test(panelsSrc), "刷新不设运行态门")
 })

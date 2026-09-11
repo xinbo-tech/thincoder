@@ -6,9 +6,11 @@
  *
  * 手法（§18.7）：host 直驱（permission-gate / panel-messages + panel 假体——chat-panel.test
  * 模式）+ webview 面（installChatFixture + 真 activity/activity-view/permission——
- * activity-closure 模式）+ fs 直读（i18n / R2 文档锚）+ 引擎接线（escalate sync 假 runner /
+ * activity-closure 模式）+ fs 直读（i18n）+ 引擎接线（escalate sync 假 runner /
  * async 真 launchEscalateAsync + 假 runner + 真池条目）。
  * 测试档登记口径 = 不拆分（§17.6 先例——设计 §18.6 注④）。
+ * 2026-09-12 PROSE-ANCHOR-RETIRE：T-CP17（R2 措辞锚——读 docs/design/*.md 文本）整删 +
+ * T-CP18 段删（函数名 src grep；对拍行随 advisor-guard-completion T-VG19 段删同步退场——批次档 §5）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -489,32 +491,6 @@ test("T-CP16 态词清除 + i18n（AC-CP5）：tool:null 清态回落；两 loca
   assert.equal(t("sub.awaitingApproval", { tool: "write" }), "Awaiting approval: write", "插值生效（运行时 en）")
 })
 
-// ─── T-CP17：R2 措辞锚（AC-CP7）────────────────────────────────────────
-
-test("T-CP17 R2 措辞锚（AC-CP7）：四处（ESCALATE 4 + EM 1 + TOOLS 1 + §8 1）逐字在位；旧漏述零残留", () => {
-  const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8")
-  const escalate = read("../docs/design/ESCALATE.md")
-  for (const anchor of [
-    "**可写**（走正常权限门——ask 弹卡带归属 / AUTO 直通）",
-    "走正常权限门（ask 弹卡带归属；AUTO 直通）",
-    "卡归属 `escalate <label> #N`；AUTO 直通",
-    "写权限/权限门（ask 弹卡带归属）/追踪全部现成",
-  ]) assert.ok(escalate.includes(anchor), `ESCALATE 锚在位：${anchor}`)
-  for (const [file, label] of [["../docs/design/ENGINEERING-MODE.md", "EM"], ["../docs/design/TOOLS.md", "TOOLS"]]) {
-    const src = read(file)
-    assert.ok(src.includes("免逐写询问：权限询问阶段整体跳过"), `${label} 锚在位（C-13 同族句）`)
-    assert.ok(!src.includes("豁免仅限") && !src.includes("豁免粒度仅"), `${label} 旧漏述零残留`)
-  }
-  const loop = read("../docs/design/AGENT-LOOP.md")
-  const sec8 = loop.slice(loop.indexOf("## 8. eng-coder 交付协议"), loop.indexOf("## 9. "))
-  assert.ok(sec8.includes("免逐写询问：权限询问阶段"), "本档 §8 同族句改后同位（C-13）")
-  assert.ok(!sec8.includes("豁免粒度仅"), "§8 旧漏述零残留")
-  assert.ok(!escalate.includes("豁免仅限"), "ESCALATE 旧漏述零残留")
-  // 协议登记（WEBVIEW.md §7.2 四行——C-4/C-5/C-6/C-8）
-  const webview = read("../docs/design/WEBVIEW.md")
-  for (const name of ["permissionWithdrawn", "subagentApproval"]) assert.ok(webview.includes(name), `协议登记 ${name} 在位`)
-})
-
 // ─── T-CP18：结构（AC-CP8 / N-CP2）────────────────────────────────────
 
 test("T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates 五函数在位且 ≤300、测档源读改指新档", () => {
@@ -524,9 +500,4 @@ test("T-CP18 结构（AC-CP8）：execute-tools ≤500、tool-gates 五函数在
   const gates = read("../src/agent/tool-gates.mjs")
   assert.ok(lines(exec) <= 500, `execute-tools ≤500（实到 ${lines(exec)}）`)
   assert.ok(lines(gates) <= 300, `tool-gates ≤300（实到 ${lines(gates)}）`)
-  for (const fn of ["agentHasLiveEngSlot", "l3TouchedPaths", "preGateBlocked", "isSubagentConsumeDesignAction", "collectBatchPermission"]) {
-    assert.ok(gates.includes(fn), `tool-gates 载 ${fn}`)
-  }
-  assert.ok(!exec.includes("function preGateBlocked"), "五函数已迁出（原档零重复定义）")
-  assert.ok(read("../test/advisor-guard-completion.test.mjs").includes('readSrc("../src/agent/tool-gates.mjs")'), "guard-completion 源读改指新档")
 })
