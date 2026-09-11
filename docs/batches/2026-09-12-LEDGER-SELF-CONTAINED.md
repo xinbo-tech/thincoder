@@ -75,7 +75,10 @@
 | `docs/batches/` | **53 档 / 16202 行** | **不存在** |
 | `docs/TODO.md` | 有 | 有 ✓（但条目指针仍指 CLI 仓——见 R1） |
 
-**跨仓写痕**（`git grep` 抽验 CLI 的 requirements + design）：共 **54 档**含 VSC 指涉——最重：`design/ENGINEERING-MODE.md` **65 次** · `design/ADVISOR-CONVERGENCE.md` 33 次 · `requirements/AGENT-LOOP.md` 25 次 · `design/PROVIDER.md` 24 次 · `design/AGENT-LOOP.md` 22 次。
+**跨仓写痕**——口径：`git grep -l -E 'thincoder-vscode|VSC 仓|VS Code 端'` 扫 `docs/requirements` + `docs/design`；**as-of 2026-09-12 04:23**（该数随新增档增长，后续批以实测为准）：
+
+- **54 档**含 VSC 指涉。
+- 最重：`design/ENGINEERING-MODE.md` **65 次** · `design/ADVISOR-CONVERGENCE.md` 33 次 · `requirements/AGENT-LOOP.md` 25 次 · `design/PROVIDER.md` 24 次 · `design/AGENT-LOOP.md` 22 次。
 
 **性质**：设计层（VSC `docs/design/` 54 档 / 12270 行 ≈ CLI 同层的 71%）**已经是自持的**——塌的只有**需求层与批档层**。→ R7 不是新建一套体系，而是**把已有体系塌掉的两层补齐**。规模预期须写进设计（见首问）。
 
@@ -124,7 +127,13 @@
 
 ### 设计必须回答的问题（不许含糊过去）
 
-1. **VSC 自持文档面的范围与形态（R7 改写）**：不再问「补不补」，而是——① **迁移策略与分期**：哪些先补、哪些按需随批补齐？历史上写在 CLI 仓的 VSC 需求（requirements + design 共 54 档含指涉）逐档逐节怎么处置（迁 / 各端重写 / 注明域外）？**若判为按需或分期，必须给出分期表与每期触发条件**——不得以「量大」为由停在「待议」；② **边界判据必须可机判**——什么算「跨仓写需求」（产品机制描述算不算？双端对位声明算不算？）；③ 批档目录怎么建、历史批档如何处置（迁 / 就地保留 + 新批本仓）。——**「没有的就补」是用户明确指示，不得再以「重复」为由回避。**
+1. **VSC 自持文档面的范围与形态（R7 改写）**：不再问「补不补」，而是——
+
+   ① **迁移策略与分期**：哪些先补、哪些按需随批补齐？历史上写在 CLI 仓的 VSC 需求逐档逐节怎么处置（迁 / 各端重写 / 注明域外）？**若判为按需或分期，必须给出分期表与每期触发条件**——不得以「量大」为由停在「待议」。
+   ② **边界判据必须可机判**——什么算「跨仓写需求」（产品机制描述算不算？双端对位声明算不算？）。
+   ③ **批档目录怎么建**、历史批档如何处置（迁 / 就地保留 + 新批本仓）。
+
+   ——**「没有的就补」是用户明确指示，不得再以「重复」为由回避。**
 2. **存量跨仓指针逐条处置**：VSC 活档 2 条 + VSC 归档 1 条 + CLI 归档 9 条——逐条出清单（改指本仓 / 迁档 / 就地注记）。
 3. **机检补强**：`check-ledger.mjs` 新增「证据/指针路径本仓内可解析」规则（R4）；与既有 L1–L3 的关系；`doc-consistency` V1 扫描域（`docs/{design,requirements,batches}`）在 VSC 仓补齐后的影响。
 4. **提示词落点**：双端同源；与既有「跨仓引用 = 显式域外」条文的关系（是收口、取代还是并列）——**须逐条对齐，不得留两套口径**。
@@ -216,6 +225,111 @@ _（待写——eng-designer）_
 - AC-B8/B9 · 双端多实现面纪律节含核验职责条文、零维护者注、零本产品术语绑死
 
 _（以下小节随设计推进追加：受影响文件全清单 + 行数标注 / 用例面 / 精确判定句。）_
+
+### 本批任务（细化·续——eng-designer）
+
+#### 五、受影响文件全清单（当前行数 + 预计增量；行数口径 = `split("\n").length`，as-of 2026-09-12）
+
+**CLI 仓**
+
+| # | 文件 | 当前 | 增量 | 动作 |
+|---|---|---|---|---|
+| 1 | `docs/requirements/ENGINEERING-MODE.md` | 869 | +120±30 | 新增 §1.19（FR25——**已落**） |
+| 2 | `docs/design/LEDGER-SELF-CONTAINED.md` | **新建（已落 372 行）** | — | 本批设计档 |
+| 3 | `src/prompts/discipline-engineering.md` | 229 | +30±10 | 多实现面纪律节改写 / A1 ④ / 自持新节 |
+| 4 | `docs/design/prompts/discipline-engineering.md` | 158 | +18±6 | 同上（本档无 A1 节） |
+| 5 | `src/prompts/discipline-normal.md` | 139 | +12±4 | 自持条文条 3 / 条 4（normal 覆盖） |
+| 6 | `scripts/check-ledger.mjs` | 248 | +80±20 | 新增 L4 本仓可解析；`DEFAULT_LEDGERS` 去对端项 |
+| 7 | `test/ledger.test.mjs` | 176 | +60±20 | L4 正常 / 边界 / 反证用例 |
+| 8 | `test/fixtures/ledger-baseline.json` | 13 | +1..+3 | L4 存量条目 |
+| 9 | `test/prompts-async-guidance.test.mjs` | 420 | ±2 | A1 ④ 断言串改 |
+| 10 | `docs/TODO.md` | 25 | ±0 | 主 agent 落笔（记录 + 状态推进） |
+| 11 | `docs/TODO-archive.md` | 162 | ±0 | 冻结（零改） |
+| 12 | `docs/README.md` | 243 | +6±3 | §3.7 / §3.8 补自持与互引规范句 |
+| 13 | `docs/design/ENGINEERING-MODE.md` | 2627 | +45±15 | §2.31 新增 + §2.9 锚#8 A1 ④ 引文同步 |
+
+档位结论：`check-ledger.mjs` 248→~328 ≤500，**不拆**；`docs/design/ENGINEERING-MODE.md` 2627 单档大盘，本批 +45 不触新档位。
+
+**VSC 仓**
+
+| # | 文件 | 当前 | 增量 | 动作 |
+|---|---|---|---|---|
+| 14 | `docs/requirements/README.md` | **新建（已落 48 行）** | — | 本端需求档地图与登记规则 |
+| 15 | `docs/requirements/ENGINEERING-MODE.md` | **新建（已落 64 行）** | — | 本端工程模式自持需求（FR-V1 / F1–F8 / N1–N5） |
+| 16 | `docs/design/LEDGER-SELF-CONTAINED.md` | **新建（已落 389 行）** | — | 本端设计档 |
+| 17 | `src/prompts/discipline-engineering.md` | 241 | +30±10 | 多实现面纪律节 / A1 ④ / 自持新节 |
+| 18 | `docs/design/prompts/discipline-engineering.md` | 164 | +18±6 | 同上（本档无 A1 节） |
+| 19 | `src/prompts/discipline-normal.md` | — | +12±4 | 自持条文条 3 / 条 4 |
+| 20 | `scripts/check-ledger.mjs` | **新建** | 0→~230 | 本端自持检查器（L1–L4 语义同源、独立实现） |
+| 21 | `test/ledger-check.test.mjs` | **新建** | 0→~120 | 本端检查器用例 |
+| 22 | `test/fixtures/ledger-baseline.json` | **新建** | 0→~10 | 本端基线（首跑固化；实测此前不存在） |
+| 23 | `test/files.mjs` | 79 | ±1 | 新测试档登记（清单制） |
+| 24 | `test/prompts-async-guidance.test.mjs` | 535 | ±2 | A1 ④ 断言串改 |
+| 25 | `docs/TODO.md` | 19 | ±0 | 主 agent 落笔（头部改指本仓） |
+| 26 | `docs/TODO-archive.md` | 48 | ±0 | 头部改指本仓；归档条目冻结 |
+| 27 | `docs/design/README.md` | 132 | +8±4 | 板块登记 + 变更记录一行 |
+
+档位结论：`test/prompts-async-guidance.test.mjs` 535 已超 500 软线（**存量**）——本批仅改断言串，**不增内容**；拆分计划触发 = 该档再增内容。
+
+#### 六、提示词面（逐字形态与落点）
+
+范围 4 节内容 × 6 文件（CLI/VSC 各 3 面）+ 2 测试档。逐字稿见两侧设计档 §6：
+
+- **「多实现面纪律」节**（R9 通用化 + R8 核验职责**同节一次落定**）：标题 `（多端镜像）`；示例改「多个端 / 多种语言 / 多个平台 / 同源镜像文档」；正文「双端」→「各实现面 / 面间」；新增第 5 条核验职责（核验四维 + 主 agent 义务 + 时点 = 评审前预检）。**维护者注全删**（`已废` / `乒乓振荡——已实证` / `2026-09-09 修订`）。
+- **A1 勘察 checklist ④**：`核双端对位面（CLI/VSC 镜像）` → `核多实现面镜像面（多端 / 多种语言 / 多个平台同源镜像）`。落 `src/prompts/*` 两档 + 两档测试断言（**中文镜像档不含 A1 节**——实测；差异已登记）。
+- **新节「文档与台账自持」（各仓记各仓的）**：五条（台账只收本仓 / 批次档同规 / 各仓自持含「不得以另一仓已有为由省略」/ 缺的层必须补齐 / 台账头部自持）。工程侧落 `discipline-engineering.md`；条 3 / 条 4 另落 `discipline-normal.md`（normal 覆盖结论见设计档 §6.5）。
+- **面特有段**：VSC `discipline-engineering.md` 尾部「VSC 端特有段：R14 池规则」段**本体零改**（只改多实现面节内的示例引用）。
+
+措辞纪律（R3）：可执行、零维护者注（无日期 / 批号 / 评审号 / 档内引用）、零本产品术语绑死、行宽 ≤300。
+
+#### 七、机检面（R4）要点
+
+- **新增 L4「本仓可解析」**：L4① 指针 `X.md §N` 以**本仓根 + 台账目录**为基根；L4② 证据 `path:line` 路径段须在**本仓根**内为文件。违规 fail-closed（退出码 1）；存量入基线降报告。
+- **L1–L3 判据语义零改**；L4 不复用 `refBases()`（不动 L1）。
+- **漏判机制**（为何 L3② 拦不住事故形态）：L3② 只测 `path:line` **正则形状**（`check-ledger.mjs:33`）——零存在性、零仓属；而 L1 的 `refBases()` 显式并入工作区根与兄弟仓（`:53-57`）→ 跨仓指针可被解析成「存在」。两者叠加 ⇒ 跨仓登记零命中通过。
+- **对端侧**：自持 `thincoder-vscode/scripts/check-ledger.mjs`（独立实现、不跨仓 import）；本端基线档首跑固化新建。CLI 检查器 `DEFAULT_LEDGERS`（`:29`）去对端项。
+- **`doc-consistency` V1 扫描域评估**：两仓 V1 域均为本仓 `docs/{design,requirements,batches}`（对端 `scripts/check-doc-width.mjs:23` 同形）——**判据零改**；对端 `docs/requirements/` 建立后自动入本端扫描面（`scanDomain` 逐目录采集），新档须遵守规范形态。
+
+#### 八、存量处置清单（逐条清单见两侧设计档 §8）
+
+- **跨仓指针**：VSC 活档 2 条 + VSC 活档头部 1 处 + VSC 归档 1 条 + CLI 归档 **10 条**（实测；§1 记 9 条——差异登记）。
+- **批档跨仓**：CLI 仓 53 档实测分类 = **1 迁**（实施面全在对端）· **1 临界待裁** · **31 就地保留 + 注记** · **20 无关（零处置）**。（§1 记「≈25 份」——实测 33 档触及对端，口径差已登记。）
+- **requirements + design 跨仓写痕**：CLI 实测 **49 档**（不含 `_archive`）/ 66 档（含）；对端反向 **35 档**（不含 `_archive`）。分类 = A 对位声明（零改）· B 跨仓指针（就地保留 + 新批零新增）· C 托管内容（迁，触发见分期）· D 归档批（零改）。
+- **分期表**：期 1 本批（自持面 + 提示词 + 机检 + 头部）；期 2 活条目标针（触发 = 该批设计启动）；期 3 迁移收口（触发 = 用户发起存量收口专项批）；期 4 活指针收敛（触发 = 该档被后续批触碰）。
+
+#### 九、用例面与验收面（指针）
+
+- 用例：CLI `T-LS1–T-LS14`；VSC `T-VS1–T-VS13`。
+- 验收标准：CLI `AC-LS1–AC-LS14`；VSC `AC-VS1–AC-VS14`。
+- **三方条目一致**：本段 B1–B9 = 设计档 AC 回指条目（R1–R9）= 需求档 §1.19 F1–F8 / N1–N4。
+- **否决在案（R5）**：本设计零「以对端无自持档为由放行跨仓指针」表述；AC-LS14 / AC-VS14 为维持判据。
+
+#### 十、文件域冲突登记（D8）
+
+- 本批与并行批 `PROSE-ANCHOR-RETIRE` 同触：`src/prompts/discipline-engineering.md`（双端）· `test/prompts-async-guidance.test.mjs`（双端）。
+- **顺序**：本批**不依赖**并行批先落——断言串按本端新文本同批更新；若并行批先落（该断言已退役），本批该档零改。
+- 交本批并行的另一处：`docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` 与 `…-PROSE-ANCHOR-RETIRE.md` 为不同档，无写冲突。
+
+#### 十一、交付物就绪状态（设计侧）
+
+| # | 交付物 | 状态 |
+|---|---|---|
+| ① | CLI 需求档 §1.19（FR25） | **已落** |
+| ② | VSC 需求档树（README + ENGINEERING-MODE） | **已落** |
+| ③ | CLI 设计档 | **已落** |
+| ④ | VSC 设计档 | **已落** |
+| ⑤ | 存量处置清单（逐条） | **已落**（两侧设计档 §8） |
+| ⑥ | 机检补强方案（R4） | **已落**（两侧设计档 §7） |
+| ⑦ | 提示词面（R3/R8/R9 同节逐字） | **已落**（两侧设计档 §6） |
+| ⑧ | VSC 侧批档 §2 | **未落**——父侧另派绑定（机制限制，设计者不跨档写） |
+
+**设计侧自检**：两仓 `node scripts/check-doc-width.mjs` 实跑——本批新增档零 >300 非表格行；新增 V1/V2/V3 违规中属本批者为 **0**（批前/批后差口径；他链在飞项归其链）。
+
+#### 十二、§2 更正（D6 回读核对产物——append-only，不改既有行）
+
+**更正**：上文§五 受影响文件表第 2 行记 `docs/design/LEDGER-SELF-CONTAINED.md`（CLI）为「已落 372 行」——**实测 470 行**（回读核对修正）。同表其余行数不变。同步：VSC 设计档实测 389 行、VSC `requirements/README.md` 48 行、VSC `requirements/ENGINEERING-MODE.md` 64 行、CLI `requirements/ENGINEERING-MODE.md` 869→**909**（§1.19 落位后）。
+
+**回读核对结论**：八件交付物中 ①–⑦ 已落并回读确认在位（§1.19 / 两侧需求档树 / 两侧设计档 / 存量清单 / 机检方案 / 提示词逐字）；⑧ VSC 侧批档 §2 归父侧另派绑定——**本档 §2 为 CLI 侧唯一写入**。
 
 ## §3 设计评审（评审子代理写）
 

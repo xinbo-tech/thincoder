@@ -263,6 +263,8 @@
 | AC-TL11 | VSC 对位档在场且登记（其 README 行）；镜像策略子串在位（语义同源/原文自持/不做 byte 一致） | F14 |
 | AC-TL12 | 种子 S1/S2 场景件在场且断言绿（机验判据实现） | F11 |
 
+> **作废注（2026-09-12 PROSE-ANCHOR-RETIRE）**：AC-TL8 第二半（「点名档零残留（原锚串 grep）」）随 `test/doc-consistency.test.mjs` T76 删除而作废——第一半（doc-consistency 扫描器族在岗）不变。见 §11.5。
+
 ## 7. 首执行清单（扫①——一次性处置）
 
 > 来源 = 批次档 `../batches/2026-09-11-TEST-LIFECYCLE.md` §1 普查（4 路 explore · 110 档全读）；域外载体补录（普查域外 1 档）见 §7.4。
@@ -408,3 +410,336 @@
   - 三阶段收口实现：Phase 1 双端分层+防漏（D-T6 slow 门拦截）/ Phase 2 L0+ 流程修订（D-T3：首次实现 L1→L0+）/ Phase 3 存量清理+红线收窄（D-T5：断言数不减收窄为拆分轮专用）+ 镜像转 slow。
   - 双端 L2 终验 CLI 1486/1486 + VS Code 1204/1204；链测试墙钟较基准降 ~70%（≥50% 参照线过）。用户批准 2026-09-06。
 - 2026-09-07：**存量测试库存清零**——94 个测试文件按"按需加"政策删除（含锁测试断言的覆盖/回归断言产物）；分层机制与脚本不动，测试转按需补。本文件随格式债清理批 A 重写为当前态。
+
+## 11. 散文锚退役（PROSE-ANCHOR-RETIRE——2026-09-12）
+
+> 需求依据：`../requirements/TESTING.md` §5（F15–F22 / N10–N12）。批次档 = `../batches/2026-09-12-PROSE-ANCHOR-RETIRE.md` §1（用户裁定 R1–R5）。
+> 本批产出 = **逐条删除清单**（§11.3 CLI / §11.4 VSC）——清单外断言零触碰；T95 / AC75 处置见 §11.5。
+> 双端纪律：语义同源、各端独立执行、不做 byte-identical、不加跨端同步依赖（F20）。VSC 端执行面登记见 `TESTING（VSC 仓）` §8。
+
+### 11.1 判据（执行版）与口径裁定
+
+判据三条（F15——同时成立即散文锚）：①断言对象是**非测试档文本**或其派生切片；②断言其**文本内容**在场 / 缺席 / 出现次数 / 相对顺序；③断言对象**不是**结构机检保留面所判属性。
+
+**口径裁定（C1–C5——本批分类的唯一执行口径；与 §11.10 D-PA3/D-PA4 对应）**：
+
+| # | 裁定 | 说明 |
+|---|---|---|
+| C1 | 载体判据 | 按**被断言文本的载体**判，不按 needle 原产地判。断言对象 = **执行产物**（函数 / 工具返回值、子进程输出、渲染帧、测试自建临时域文件）或**结构 / 数值常量** → 不命中 ①（保留）；直接读非测试档所得文本，或经 `import` 取到的 src 静态文案字面量 → 命中 ① |
+| C2 | 非测试档边界 | `等` 展开 = 一切非 `test/**` 的仓内文件：`src/**` · `docs/**` · `scripts/**` · `bin/**` · `webview/**` · `locales/**` · `package.json` · 仓根 `*.md` / `*.json` / `*.mjs` · `AGENTS.md` · `README*`；VSC 侧另含兄弟仓 `../thincoder/**` |
+| C3 | 保留面 = 封闭枚举 | R3 的四项机检器所判属性（V1/V2/V3 · L1–L3 · 行宽 · 归册）。对非测试档文本的**出现次数 / 相对顺序 / 位置**断言**不属**该枚举 → 按散文锚处置 |
+| C4 | 存在性断言保留 | `existsSync` 类文件存在性断言不属「文本在场 / 缺席」→ 判据 ② 不成立 → 保留（如 T75 退役提示词文件未复活） |
+| C5 | 测试档自身保留 | 断言读的是 `test/**`（含 `test/files.mjs` 登记清单、`test/helpers/**`、fixtures、测试内常量）→ 判据 ① 不成立 → 保留 |
+
+**归类三值**：`整删`（该用例全部断言均为散文锚——删后无内容残留）/ `段删`（夹锚断言——只删锚断言行，行为断言保留）/ `保留`（无锚断言；**不进清单**）。
+
+**判据补充（2026-09-12 修正轮——PA-A1 / PA-A3 裁定落地；C1 的实质判法）**：
+
+| # | 补充 | 说明 |
+|---|---|---|
+| C1-a | **提示词句子不豁免（PA-A1）** | 载体判据按**实质**判——**不问文本从哪来**（读盘 / 装配器或渲染出口的返回值 / 写入 `systemPrompt` 的装配结果），只问**断言的是否是提示词句子**：断言提示词句子（含装配器传出的话语、注入块、降级句、槽文本，以及装配产物**与字面常量的全文相等 / 不等**）→ 命中 ①——**「不读文件」不是豁免理由**（判据 ② 的在场 / 缺席 / 出现次数 / 相对顺序 / 全文等同各形态均算） |
+| C1-b | **工具契约面与工具返回文案保留（PA-A3）** | **模型实际收到的工具契约对象**（`tool.description` / `parameters` 说明）与**工具返回 / 拒绝文案** → 契约守卫 / 行为输出，非文档散文锁 → 保留。注：读 `src/**` **源码档文本**（含源码里的描述串）仍命中判据 ①——与「工具契约对象」断言是两回事 |
+| C1-c | **非句子对象保留（C1 原义）** | 结构 / 数值 / 判定信号——槽文件表与集合成员、长度、警告清单与警告文案、旗位、退出码 → 保留 |
+
+### 11.2 方案选型对比
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | 按档删（锚档整档删除） | 零误删：✗（粗筛锚档含混装档——会连带删行为用例）；对账：粗筛口径机判易；成本：最低 | 违 F18「混装档只删锚断言、不得整档删」——制造行为覆盖缺口 | 否决 |
+| 2 | 逐条删除清单制（逐条列 `档 + 用例名 + 行号`，父侧核销） | 零误删：✓；对账：✓（用例总数下降 == 整删条数，机判）；沿既有先例：✓（§2「存量清理轮走删除清单制」——2026-09-07）；键控：✓（档 + 用例名，行号 only as-of） | 清单体量大（本批 201 条处置行——100 CLI + 101 VSC）；逐条判定工作量在勘察轮 | **选定** |
+| 3 | 目录 / 标签门控（读档断言族打标签，跳层不跑） | 零误删：✓；对账：✗（标签计数与「用例总数」口径脱钩）；退役性：✗（断言仍驻留 = 未退役）；成本：新增标签约定 + runner 改造 | 与 R2「全删」相悖；且与 slow 门形成两套 skip 叠加（§4.1 否决理由同族） | 否决 |
+
+**粗筛 → 逐条判定的差额（诚实对账）**：批次档 §1 规模表的粗筛口径为「读档 + `includes`/`match` ≥3 的档 → 该档**全部**用例计入」，
+得 CLI 29 档 / 344 用例、VSC 28 档 / 330 用例。粗筛把**断言对象是运行产物**的用例一并计入（混装档的 `includes` 多数落在运行时值上）。
+逐条判定后（**含 2026-09-12 修正轮**——PA-A1 追加 / PA-A3 回退后实测）：CLI **71 整删 + 29 段删**（100 条处置行）· VSC **61 整删 + 40 段删**（101 条处置行）。差额 = 粗筛的已知高估（批次档 §1「规模」节自注「粗筛含混装档 → 禁止按档删」）+ 修正轮的净变动（PA-A1 追加 ×20 · PA-A3 回退 ×2）。
+
+### 11.3 逐条删除清单——CLI 仓
+
+> 键控 = `档 + 用例起始行`（行号 as-of 2026-09-12；执行轮以「档 + 用例名」定位，行号漂移不阻断——D4）。
+> `整删` = 删该用例全部（用例总数 −1）；`段删` = 只删列出的断言行（用例总数不变，行为断言保留）。
+> 清单外断言零触碰（N12）；档内未被点名的用例一律保留。
+
+| 档 | 用例行 | 用例名（截断） | 归类 | 删除行号 | 依据 |
+|---|---|---|---|---|---|
+| abort-provenance | 167 | T-AP9 合成点残留扫描：五处全经 deathLine | 整删 | 167-175 | 读 src 源码文本 + 计数 |
+| abort-provenance | 177 | T-AP10 hop 扫描：五处逐跳保 reason + 零裸 abort | 整删 | 177-189 | 读 src 源码 match / includes |
+| acp-channel | 261 | AC2 question.md 含「无交互面返回错误」句 | 整删 | 261-263 | 读 `src/tools/question.md` 子串 |
+| acp-channel | 240 | T17 文法单一权威（三符号 + 消费方直连） | 段删 | 244-246 | 三行 src 文本 match / includes |
+| acp-channel | 255 | AC1 装配接线锁（acp.mjs / make-agent） | 段删 | 257-258 | 两行 src 文本 match |
+| advisor-chain-guards | 150 | T-CG5 code 守卫……旧锚零残留 | 段删 | 161-165 | 读两 src 文本 includes |
+| advisor-chain-guards | 245 | T-CG8 压缩定锚（pinned 重挂） | 段删 | 276-278 | 读 `run.mjs` 文本 includes |
+| advisor-context-budget | 89 | T-CB6 静态锚：旧 OOM 注释 / 旧常量零残留 | 整删 | 89-101 | 读 src 文本 + readdir 扫描 |
+| advisor-sync-accounting | 49 | T-SG1 sync code run + 干净评审结果 | 段删 | 58-59 | 读 `record-results.mjs` 文本 |
+| async-settle | 233 | 一致性（N1/AC1）：四族 settle 同守卫……记账单点 | 整删 | 233-243 | 读四 src + helper includes |
+| attention-state | 191 | T-AT8 静态锚：render-frame 零 setInterval… | 整删 | 191-210 | 读四 src 文本 includes / 计数 |
+| attention-state | 136 | T-AT5 鼠标路径清位（index.mjs 接线位） | 段删 | 147-151 | 读 `index.mjs` 文本 indexOf |
+| batch-segment | 219 | T49 三条评审提示词双源——写 §3 指令 | 整删 | 219-235 | 读 `src/prompts` + `docs/design/prompts` |
+| batch-segment | 237 | T49b 代码评审不带写指令 | 段删 | 239 | 读 `advisor-round1.md` 文本 |
+| cmd-eng | 77 | T-21 推进档位契约要点落需求档（PO-12） | 整删 | 77-85 | 读 `docs/requirements/PORTABILITY.md` |
+| design-review-streak-guard | 255 | T-SK9 静态锚：工具层消费 + 同步面计数 + 内防线 | 整删 | 255-272 | 读五 src 文本 includes |
+| design-review-streak-guard | 43 | T-SK1 分类矩阵 | 段删 | 60-63 | 读 `review-streak.mjs` 文本 |
+| doc-consistency | 231 | T74 宽度扫描单源（主流程调用 checkDocWidths） | 整删 | 231-237 | 读 `check-doc-width.mjs` 文本 |
+| doc-consistency | 281 | T76 防回潮：退役串零残留（逐字扫描） | 整删 | 281-299 | RETIRED_STRINGS 逐条判定 = 散文锚（D-PA5） |
+| doc-consistency | 201 | T72 跨仓引用（带 .md 形态 fail-closed） | 段删 | 213-216 | 读 `docs/README.md` 子串 |
+| eng-designer-role | 193 | T34 persona 双源明写写域 + dispatch 判定 | 整删 | 193-206 | 读 4 档断言固定子串 |
+| eng-designer-role | 90 | T30 角色注册面（schema / ROLES / tool-args） | 段删 | 95-96 · 104 | 读 `subagent.mjs` / `tool-args.mjs` |
+| eng-designer-role | 127 | T32 边界：装配不静默回退 + 槽序 | 段删 | 131 · 133-134 | 装配产物 `assemblePrompt(...).prompt` 的句子位序与常量全文比对——PA-A1（C1-a）；槽表 / 长度 / warnings 结构断言保留（128 / 130 / 132） |
+| eng-designer-role | 138 | T32b 接线：designer 实选场景 | 段删 | 141-145 · 148-149 | `prepareRun(...).systemPrompt` 提示词句子断言（PA-A1；147 装配点保留——150-168 消费）；工具契约对象与门文案断言按 C1-b 保留 |
+| eng-designer-role | 301 | T40 写权路由六面 + 双源调用链 | 段删 | 304-316 · 321 · 326-331 · 336-337 · 340 | 读 ENGINEERING-MODE / README / AGENTS |
+| home-expansion | 206 | T-H16 静态：展开逻辑全仓恰一处（src + bin） | 整删 | 206-224 | 读 src / bin 文本计数 + 命中文件 |
+| home-expansion | 189 | T-H15 静态：README L1–L4 逐字命中 | 段删 | 195-196 | 读 `README.md` 子串 |
+| hooks-stop | 248 | T-HS11 静态：事件集收口 + matcher 守卫形态 | 段删 | 250-252 | 读 `src/hooks.mjs` 三处子串 |
+| ledger-surface | 230 | T105 四提示词两锚在位 + 脚本名零命中 | 整删 | 230-249 | 读 4 提示词 + 需求档子串 |
+| ledger-surface | 252 | T106 空标记零注入；非空在位；warn 色段 | 段删 | 265-266 | 读 `src/tui/index.mjs` 子串 |
+| ledger-surface | 290 | T110 错误：降级不崩……headless 零接线 | 段删 | 311 | 读 `bin/thincoder.mjs` 零命中 |
+| ledger | 124 | T95 归属修订文本面（需求档 §1.13 + 两仓台账头部 + 4 人格档） | 整删 | 124-133 | 七档只断言固定子串在场（F22 点名） |
+| ledger | 136 | AC49 双端锚 L-A / L-B 固定子串在位（4 文件逐字） | 整删 | 136-144 | 读 4 档断言 4 条字面子串 |
+| ledger | 147 | T96 收拢执行面（归档档键控条目 + 组计数） | 段删 | 150-151 | 读两仓归档档子串（152 为机检返回） |
+| memory-scan-bounds | 87 | T-MS4 三通道接线 | 段删 | 90-96 | 读三 src 文本调用形态 |
+| portability-advisor-context | 52 | T-10 正常（注入）：有 AGENTS.md + docs/README.md | 整删 | 52-59 | 装配器出口（`buildAdvisorUserMessage` 返回值）提示词句子断言——PA-A1 裁定为锚（C1-a：不读文件不豁免） |
+| portability-advisor-context | 61 | T-11 边界（缺料）：无地图 / 无标准文档 | 整删 | 61-68 | 同上（注入正文 + 降级句在场 / 旧指令句缺席——均为提示词句子） |
+| portability-advisor-context | 70 | T-12 正常（声明）：advisor.docMap 指向自定义路径 | 整删 | 70-91 | 同上（声明注入正文 + 标准文档节句） |
+| portability-advisor-context | 105 | T-20 提示词通用化句在场；自指=0 | 整删 | 105-133 | 读 6 档提示词子串 |
+| prompts-async-guidance | 67 | A1 勘察 checklist 子条子串驻留 | 整删 | 67-73 | 读 `discipline-engineering.md` 6 子串 |
+| prompts-async-guidance | 75 | A2 方案对比逐字驻留 | 整删 | 75-79 | 三处 includes 字面句 |
+| prompts-async-guidance | 81 | A3 评审前预检子条子串驻留 | 整删 | 81-87 | 读同档断言 6 子串 |
+| prompts-async-guidance | 89 | A4 实践沉淀逐字驻留 | 整删 | 89-92 | 两处 includes |
+| prompts-async-guidance | 97 | 锚#1 零裁量句驻留 | 整删 | 97-101 | 三处 includes |
+| prompts-async-guidance | 103 | 锚#2 需求池三句驻留 | 整删 | 103-107 | 三处 includes |
+| prompts-async-guidance | 109 | 锚#3 修正轮 docs FIRST + 锚#5 链终消费 | 整删 | 109-114 | 四处 includes |
+| prompts-async-guidance | 116 | 锚#4 拍板 ≠ 设计批准 + 指针句驻留 | 整删 | 116-121 | 四处 includes |
+| prompts-async-guidance | 123 | 锚#6 凭证不落文档驻留 | 整删 | 123-126 | 两处 includes |
+| prompts-async-guidance | 128 | 锚#7 调度器句驻留 | 整删 | 128-132 | 两处 includes（含 SQ_LITERAL） |
+| prompts-async-guidance | 138 | C1 推进档位顶层规则驻留（persona-engineering） | 整删 | 138-143 | includes ×3 + indexOf 位序 |
+| prompts-async-guidance | 145 | C2 step4 尾句驻留 | 整删 | 145-148 | 两处 includes |
+| prompts-async-guidance | 150 | C3 分派表 User stop 条驻留 | 整删 | 150-153 | 两处 includes |
+| prompts-async-guidance | 155 | C4 normal 档位语义段 | 整删 | 155-160 | 三处 includes |
+| prompts-async-guidance | 165 | ASYNC-RESIDUE R1 escalation 段无 async:false | 整删 | 165-168 | doesNotMatch + includes |
+| prompts-async-guidance | 170 | ASYNC-RESIDUE R2 重复句合一 | 整删 | 170-173 | includes + doesNotMatch |
+| prompts-async-guidance | 175 | ASYNC-RESIDUE R4 advisor.mjs 机制限定句 | 整删 | 175-178 | 读 `advisor.mjs` 断言子串 |
+| prompts-async-guidance | 180 | ASYNC-RESIDUE F-2/F-3 工程侧 async 段同基 | 整删 | 180-184 | includes ×2 + doesNotMatch |
+| prompts-async-guidance | 186 | ASYNC-RESIDUE R6 路由面随迁 common | 整删 | 186-189 | 两处 includes |
+| prompts-async-guidance | 191 | BATCH-4-DOC-CLEANUP F-1 ESCALATE.md 锚句驻留 | 整删 | 191-194 | 读 `ESCALATE.md` 断言子串 |
+| prompts-async-guidance | 207 | §7.5 subagent 描述 Async spawn 锚句双句驻留 | 整删 | 207-214 | 读 `subagent.mjs` match / doesNotMatch |
+| prompts-async-guidance | 216 | §7.5 subagent 描述 escalate 段 + async 参数 | 整删 | 216-220 | 两处 doesNotMatch |
+| prompts-async-guidance | 222 | §7.7.1 advisor 描述无顶层同步引导 | 整删 | 222-225 | doesNotMatch |
+| prompts-async-guidance | 236 | advisor AC1 各档含单值 VERDICT 裁决行指令 | 整删 | 236-241 | 循环 4 档 includes |
+| prompts-async-guidance | 243 | advisor AC2 裁决后禁续 | 整删 | 243-251 | 循环 includes + 三处 includes |
+| prompts-async-guidance | 253 | advisor AC7 双轨消除——旧 pass 定义不复发 | 整删 | 253-259 | 五处 doesNotMatch |
+| prompts-async-guidance | 264 | 搜索条款宿主迁移：3 字面驻留 common | 整删 | 264-275 | 循环 includes / 反向 |
+| prompts-async-guidance | 294 | §3.2 装配矩阵：输出=槽序拼接 + 层序内部锚 | 段删 | 297-301 | 装配产物 prompt 的句子位序断言——PA-A1（C1-a）；warnings 结构断言保留（303） |
+| prompts-async-guidance | 307 | §3.2 装配矩阵：角色场景人格差异 + 常量导出面 | 段删 | 310-311 | 装配产物含人格档句子 / 自指句缺席（PA-A1；309 孤立常量随清理）；常量非空断言保留（313-315） |
+| prompts-async-guidance | 318 | §3.2 consult 场景：返回 CONSULT_BASE 自含基底 | 段删 | 320 | 装配产物全文与字面常量相等——PA-A1（C1-a）；warnings 断言保留（321） |
+| prompts-async-guidance | 327 | §3.4 降级链①：槽文件缺失→空缺+警告 | 段删 | 339-341 | 装配产物 prompt 的槽句在场 / 缺席（PA-A1）；warnings 诊断串断言保留（336-338） |
+| prompts-async-guidance | 348 | §3.4 降级链②：common.md 缺失→同款警告 | 段删 | 357-358 | 同上（PA-A1）；warnings 诊断串断言保留（355-356） |
+| prompts-async-guidance | 373 | §3.4 降级链④：基底缺失→不可用报错 | 整删 | 373-377 | 读 `src/agent/setup.mjs` 两处正则 |
+| prompts-async-guidance | 403 | §2.7 #5 前 20% 巡检词 | 段删 | 410 | 读 pe 断言关键词正则（411 非空守卫留） |
+| prompts-async-guidance | 196 | ASYNC 全族：AGENT-LOOP.md §14.2 陈述 | 段删 | 200-201 | 读 doc 后 slice 断言正则 |
+| prompts-dual-source | 62 | AC22① 四条行为纪律句双源驻留 | 整删 | 62-81 | 循环 includes（64-71 / 74-80） |
+| prompts-dual-source | 83 | AC22② 四步流程三句双源驻留 | 整删 | 83-89 | 循环三处 includes |
+| prompts-dual-source | 91 | AC22③ 文档更新纪律三句 + D1–D7 全表 | 整删 | 91-100 | 循环 includes（93-97） |
+| prompts-dual-source | 102 | AC23 主 agent 人格已改述 | 整删 | 102-109 | 循环四处 includes |
+| prompts-dual-source | 111 | AC24 四维归属改述为设计者角色 | 整删 | 111-116 | 循环两处 includes |
+| prompts-dual-source | 118 | AC25 persona-eng-designer 双源 FR19 子串 | 整删 | 118-130 | 循环 13 串 includes + 正则 |
+| prompts-dual-source | 150 | T-RO1 链行节点双源在位 | 整删 | 150-153 | includes + indexOf 位序 |
+| prompts-dual-source | 155 | T-RO2/T-RO3 Action 四值 + 计数词同改 | 整删 | 155-162 | includes + indexOf 词序 |
+| prompts-dual-source | 164 | T-RO4 时序 bullet 双源逐字全文 + 位序 | 整删 | 164-171 | includes + indexOf 位序 |
+| prompts-dual-source | 251 | T-CL2 六节关键句双源逐字 | 整删 | 251-258 | 循环 includes（253 / 256） |
+| prompts-dual-source | 265 | T-CL3/T-CL4 C8 人格段双源在位 | 整删 | 265-284 | includes / 反向四源反证 |
+| prompts-dual-source | 302 | AC61 勾销口径双源 | 整删 | 302-307 | 循环两处 includes |
+| prompts-dual-source | 309 | AC64 persona-eng-coder 身份/边界句 + 头注 | 整删 | 309-317 | includes（311-312 / 315-316） |
+| prompts-dual-source | 341 | T-NA1 英文落地条款锚 6 串全命中 | 整删 | 341-343 | 读 dn 循环 includes |
+| prompts-dual-source | 345 | T-NA2 中文权威镜像锚 6 串全命中 | 整删 | 345-347 | 读 dnZh 循环 includes |
+| prompts-dual-source | 381 | T-TD1 de 双源测试纪律新节驻留 | 整删 | 381-386 | 循环 11 串 includes |
+| prompts-dual-source | 388 | T-TD2/T-TD6 dn 双源新句 + 旧句零残留 | 整删 | 388-396 | includes / 反向 |
+| prompts-dual-source | 244 | T-CL1 common 十节标题双源驻留 | 段删 | 246 | 断言字面标题（247 为计数——保留面） |
+| prompts-dual-source | 398 | T-TD3/T-TD4 pe 双源归属句驻留 | 段删 | 399-400 | 两处全文锚 includes |
+| session-store | 365 | AC-RS1 追加单点：pushReal 唯一 append | 整删 | 365-373 | 读 `context.mjs` / `session.mjs` 文本 |
+| subagent-memory-bounds | 86 | T-SM4b 窗口覆盖（代码评审 #2 回归） | 整删 | 86-92 | 读 src 源码文本 match |
+| subagent-memory-bounds | 94 | T-SM4 释放点（三消费点调用在位） | 段删 | 105-111 | 读 src 文本（前半行为断言保留） |
+| tui-selection-surfaces | 229 | 用例 10 文档面：设计档 §12.4 契约表落档 | 整删 | 229-236 | 读 `docs/design/TUI.md` 切片 + 子串 |
+| turn-across-segments | 113 | T8 源码锚：段内帽零改动 + 编号帧唯一权威 | 整删 | 113-133 | 全 7 断言读 src 文本（含计数/序） |
+| verify-redesign | 132 | T-V9 guard 文案声明式 | 整删 | 132-140 | 读 `src/agent/completion.mjs` 文案 |
+| verify-redesign | 142 | T-V10 prompts 声明式 verify 语义在位 | 整删 | 142-152 | 读 `src/prompts/*.md` 常量子串 |
+
+- **CLI 合计：25 档 · 整删 71 条 · 段删 29 条**（= 100 条处置行——含 2026-09-12 修正轮：PA-A1 追加 10 条 / PA-A3 回退 `settings` T-S2.24 1 条）。
+- 常量面连带清理（同上清单执行轮一并落——非新增条目）：`test/doc-consistency.test.mjs` 的 `WS` / `readWs`（:245-246）· `PE_2` / `DE_2` / `DN_2`（:249-251）· `ledgerClosure7`（:252）· `RETIRED_STRINGS`（:253-272）· `hitsOf`（:273）随 T76 删除（`RETIRED_PROMPT_FILES`：248 **保留**——T75 消费）；
+  其余各档被删用例留下的孤立 helper / import / 常量，执行轮按「删除后零 unused」一并清理（不得留死代码）。
+
+### 11.4 逐条删除清单——VSC 仓
+
+> **落点裁定**（VSC 侧记录 §1「设计必须回答的问题 #1」+「两侧各持自身范围」）：VSC 侧逐条清单**本端自持**——住 `TESTING（VSC 仓）` §8.1（`thincoder-vscode/docs/design/TESTING.md`）。
+> 本档不再重述（D2 单一权威源）；两侧语义同源、各端原文自持（不做 byte-identical）。判据 / 口径裁定 / 归类三值 = 本档 §11.1（两侧共用）。
+
+- **VSC 小计：27 档 · 整删 61 条 · 段删 40 条**（= 101 条处置行）——逐条见 `TESTING（VSC 仓）` §8.1。
+- 本端**无整档删除**（每档均有保留用例）→ `test/files.mjs` 登记清单**零改**（62 条登记项与实档数不变）。
+- **粗筛 → 逐条判定的差额**：VSC 侧记录 §1「事实基线」的粗筛口径 = 「读档 + `includes`/`match` ≥3 的档 → 该档**全部**用例」= 28 档 / ≈330 用例 ≈ 本仓 suite 50%。
+  逐条判定后（含 2026-09-12 修正轮）= **61 整删 + 40 段删**（101 条处置行）——差额原因同 CLI 侧（粗筛把断言对象为运行产物的用例一并计入）。
+  口径注：粗筛的「用例数」与本档对账口径（`test(` / `slow(` / `it(` 起始行计数）不同——**对账以本档口径为准**（命令见 §11.7 AC-PA1）。
+
+### 11.5 T95 / AC75 同批处置（R5 / F22）
+
+| 对象 | 位置 | 处置 | 形态理由 |
+|---|---|---|---|
+| 测试用例 T95 | `test/ledger.test.mjs` :124-133 | **整删**（已入 §11.3 清单） | 七档只断言固定子串在场——判据三条全中 |
+| 验收标准 AC75 | `ENGINEERING-MODE.md`（设计档）§3.1 :2139-2141 | **就地退役注记**（保号） | 删行会让别处引用悬空（D4）；保号 + 明示退役态 |
+| 用例行 T95 | `ENGINEERING-MODE.md`（设计档）§3.2 :2333 | **就地退役注记**（保号） | 同上 |
+| 需求本体（归属修订） | 需求档 `ENGINEERING-MODE.md` §1.13 固定子串「记录 + 状态推进 + 物理落笔」 | **零改**——需求仍生效 | 要求本体由正文文字承载；退役的只是「由测试断言守」这一形式 |
+
+- 退役注记逐字形态：「**已退役（2026-09-12 PROSE-ANCHOR-RETIRE）**——判据面作废（散文锚；见 `TESTING.md` §11.5）；需求本体不变。」
+- **同步作废注**：本文档 §6 AC-TL8 第二半（「点名档零残留（原锚串 grep）」）随 `test/doc-consistency.test.mjs` T76 删除而作废——第一半（doc-consistency 扫描器族在岗）不变。已就地加注。
+
+### 11.6 受影响文件（as-of 2026-09-12）
+
+**文档面**（本批设计侧落笔）
+
+| 文件 | 现状（行数） | 增量 | 说明 |
+|---|---|---|---|
+| `docs/requirements/TESTING.md` | 74 | +52（已落——实测 126，含修正轮 §5.1 判据补充 + F17） | §5 散文锚退役与禁令（F15–F22 / N10–N12） |
+| `docs/requirements/PROMPT-SYSTEM.md` | 412 | ±5（已落——实测落定 413） | §10.2 F-TD6 / §10.3 N-TD2·N-TD3 / §9.3 N-P1 四处去锚断言 + 变更记录 |
+| `docs/design/TESTING.md` | 411 | +335（本批已落——实测 746，含修正轮） | §11 全节 |
+| `docs/design/ENGINEERING-MODE.md` | 2624 | ±6（本批已落） | AC75 / T95 退役注记 + 变更记录 |
+| `TESTING（VSC 仓）`（`thincoder-vscode/docs/design/TESTING.md`） | 98 | +174（本批已落——实测 272，含修正轮） | §8 本端执行面 |
+
+**提示词面**（主 agent 内容权 + eng-coder 落笔——非本批设计侧落笔）
+
+| 文件 | 现状（行数） | 增量 | 说明 |
+|---|---|---|---|
+| `src/prompts/discipline-engineering.md` | 229 | +2 | 测试纪律节（:29）加禁写句 |
+| `docs/design/prompts/discipline-engineering.md` | 158 | +2 | 同上（双源） |
+| `thincoder-vscode/src/prompts/discipline-engineering.md` | 241 | +2 | 同上（VSC 端自持原文） |
+| `thincoder-vscode/docs/design/prompts/discipline-engineering.md` | 164 | +2 | 同上 |
+
+**测试面**（逐条删除；行数为**现状**，增量为**估算净减**——含连带常量 / import 清理；执行轮实测回填）
+
+| 档（CLI） | 现状 | 预计净减 | 档（VSC） | 现状 | 预计净减 |
+|---|---|---|---|---|---|
+| `abort-provenance` | 190 | −22 | `activity-closure` | 302 | −5 |
+| `acp-channel` | 265 | −8 | `activity-flow` | 461 | −19 |
+| `advisor-chain-guards` | 498 | −8 | `activity-live-ux` | 173 | −10 |
+| `advisor-context-budget` | 121 | −13 | `advisor-chain-guards` | 427 | −15 |
+| `advisor-sync-accounting` | 116 | −2 | `advisor-context-budget` | 179 | −15 |
+| `async-settle` | 424 | −11 | `advisor-guard-completion` | 341 | −11 |
+| `attention-state` | 211 | −25 | `advisor-refusal-accounting` | 239 | −9 |
+| `batch-segment` | 321 | −18 | `async-visibility` | 410 | −8 |
+| `cmd-eng` | 86 | −9 | `batch-doc-gate` | 178 | −13 |
+| `design-review-streak-guard` | 292 | −22 | `child-permission` | 533 | −27 |
+| `doc-consistency` | 301 | −37 | `context-parity` | 386 | −18 |
+| `eng-designer-role` | 342 | −50 | `digest-visibility` | 199 | −7 |
+| `home-expansion` | 225 | −21 | `doc-consistency` | 196 | −3 |
+| | | | `eng-designer-role` | 189 | −1 |
+| `hooks-stop` | 256 | −3 | `index-perception` | 260 | −5 |
+| `ledger-surface` | 362 | −23 | `ledger` | 255 | −16 |
+| `ledger` | 176 | −21 | `portability-vsc-advisor-context` | 193 | −67 |
+| `memory-scan-bounds` | 99 | −7 | `portability-vsc-classification` | 205 | −22 |
+| `portability-advisor-context` | 134 | −67 | `portability-vsc-index` | 225 | −57 |
+| `prompts-async-guidance` | 420 | −≈181 | `prompts-async-guidance` | 535 | −≈288 |
+| `prompts-dual-source` | 404 | −≈151 | `prompts-mirror-anchors` | 383 | −≈132 |
+| `session-store` | 400 | −9 | `setup-reminders` | 298 | −3 |
+| `subagent-memory-bounds` | 113 | −14 | `status-line` | 182 | −21 |
+| `tui-selection-surfaces` | 237 | −8 | `tool-descriptions` | 86 | −33 |
+| `turn-across-segments` | 134 | −40 | `turn-across-segments` | 197 | −2 |
+| `verify-redesign` | 153 | −20 | `verify-redesign` | 181 | −12 |
+| | | | `webview-turnstate` | 329 | −2 |
+
+- 档位注（R24）：本批**只减不增**，无新越档风险；两档存量越 500 硬限（VSC `prompts-async-guidance` 535 · `child-permission` 533）——本批净减后均回落至 500 内；不下沉至 300 咨询线内仍**不拆**（拆档会破坏锚断言集中度评价，与既有削段先例一致）。
+- 两仓均**无整档删除**——`test/files.mjs`（VSC 登记清单）零改；CLI 为 glob 自动发现，零登记动作。
+- **与并行批的文件域重叠面（登记——不裁定分派）**：本批与 `2026-09-12-LEDGER-SELF-CONTAINED`（并行批）**都触提示词档**——CLI 侧 `src/prompts/discipline-engineering.md` + `docs/design/prompts/discipline-engineering.md`；VSC 侧同款两档（见 `TESTING（VSC 仓）` §8.5）。
+  重叠面 = 同两档、不同节位（本批 = 测试纪律节禁写句；该批 = 台账维护条款面）。**两侧实施分派方式与两侧记录的互引形态规范不属本批设计裁定范围**（属并行批设计范围）。
+- **本批两侧记录（登记）**：CLI 侧 = `../batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`；VSC 侧 = `thincoder-vscode/docs/batches/2026-09-12-PROSE-ANCHOR-RETIRE.md`——各持自身范围；互引形态规范不属本批裁定。
+
+**端差登记（N-CL4「端差逐条登记不静默」——2026-09-12 修正轮补）**
+
+| # | 端差 | 事实（实测） | 处置 |
+|---|---|---|---|
+| 1 | 台账机检脚本的本仓归属 | CLI 仓 `scripts/check-ledger.mjs`（L1–L3；默认台账清单 = 本仓 + 对端仓台账，缺则跳过不报）；**VSC 仓 `scripts/` 无该脚本**（实测 = `check-doc-width.mjs` / `check-syntax.mjs` / `publish-all.mjs`） | 本批零改（L1–L3 判据面不动）；跨仓形态的归宿 = **已登记依赖——未消解**（下条） |
+| 2 | 结构机检面的端内构成 | CLI = `scripts/check-doc-width.mjs` + `scripts/check-ledger.mjs` + `test/doc-consistency.test.mjs` + slow 门；VSC = `scripts/check-doc-width.mjs`（**行宽 + 一致性 V1/V2/V3 单源**）+ `scripts/check-syntax.mjs`（`npm run lint`）+ `test/doc-consistency.test.mjs` + slow 门 | 本端执行面登记于 `TESTING（VSC 仓）` §8.2；判据面两仓零改 |
+
+**已登记依赖——未消解（2026-09-12 修正轮）**：本批两侧设计档含**跨仓引用**（本档 §11.4 → VSC 侧设计档；VSC 侧设计档 §8 头注 → 本档 §11），
+与并行批 `LEDGER-SELF-CONTAINED` 的 R1（台账射程：本仓自持、跨仓指针禁止）/ R7（文档体系各仓自持）**冲突**。
+该批**在飞未落地**（本修正轮落笔期间实测：VSC 仓 `docs/requirements/` 树已由该批新建——含 `ENGINEERING-MODE.md` / `README.md`，**未见 TESTING 面**）→ **替代落点仍未存在**。
+**不得自行发明替代落点**：本批**不改指向**，依赖如实登记于此，**待该批落地后由对齐轮改指本仓**；本批设计评审前不得视为已消解。
+
+### 11.7 验收标准（AC-PA——逐条回指需求）
+
+| AC | 标准（可机验） | 回指 |
+|---|---|---|
+| AC-PA1 | 对账：CLI 快层用例总数 645 → **574**（−71）· VSC 653 → **592**（−61）；两仓下降数 == 清单整删条数（口径详见下） | F16 / F21 / N10 |
+| AC-PA2 | 清单逐条落地：点名的用例名（整删）/ 断言行（段删）实测零命中；被删用例名不出现在留存测试文本中 | F16 / F21 |
+| AC-PA3 | 零误删：`test/**` 改动集 ⊆ 清单点名档；清单点名档内**保留用例名集不变**（段删档整档跑仍绿） | F18 / N12 |
+| AC-PA4 | 保留面在岗：CLI `scripts/check-doc-width.mjs` / `scripts/check-ledger.mjs` 判据面 diff 空；VSC `scripts/check-doc-width.mjs`（宽 + V1/V2/V3）判据面 diff 空 + 本端台账机检判据零改（执行面端差见 §11.6）；V1/V2/V3 · L1–L3 · 行宽 · slow 门实测绿 | F17 / N11 |
+| AC-PA5 | 发布门不降：CLI `lint → test:full → test:integration` 三门全绿；VSC 三环（`vscode:prepublish`）全绿 | N11 |
+| AC-PA6 | 禁令落档：需求档 §5 子串在位（F15–F22 / N10–N12）；提示词双端 4 档测试纪律节含禁写句（grep） | F19 |
+| AC-PA7 | T95 / AC75 退役注记在位（设计档 `ENGINEERING-MODE.md` §3.1 / §3.2 两处）；`test/ledger.test.mjs` T95 / AC49 原断言行零命中 | F22 |
+| AC-PA8 | 双端同批：两仓清单同批落地；零新增跨仓同步依赖 / 零 byte-identical 断言（F20） | F20 |
+| AC-PA9 | 零死代码：改动档 `node --check` 全通过；被删用例留存的孤立 helper / import / 常量零残留 | §11.3 常量面清理条 |
+| AC-PA10 | 批级机检：两仓 `check-doc-width.mjs` 新增超宽 0 + 新增一致性违规 0（口径 = 批前 / 批后命中集合差——本批改动文件）；两仓快层全绿 | 批级 |
+
+**AC-PA1 计数口径与命令**（两仓同口径）：快层执行面内 `test(` / `slow(` / `it(` **起始行**计数。
+
+```bash
+node -e "const fs=require('fs'),p=process.argv[1];let n=0;for(const f of fs.readdirSync(p).filter(x=>x.endsWith('.test.mjs')))n+=(fs.readFileSync(p+'/'+f,'utf8').match(/^\s*(?:test|slow|it)\(/gm)||[]).length;console.log(n)" test
+```
+
+- 批前基准（as-of 2026-09-12 实跑）：CLI **645** · VSC **653**（= §11.3 / §11.4 清单的对账基准）。
+
+### 11.8 用例表（T-PA——执行轮自验）
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T-PA1 | 正常：对账 | 清单落地后跑 AC-PA1 命令（两仓） | CLI 574 / VSC 592（下降数 == 71 / 61） | AC-PA1 |
+| T-PA2 | 正常：保留面 | 两仓 `check-doc-width` + V1–V3 用例 + 台账机检 L1–L3（执行面端差见 §11.6） | 绿；判据面 diff 空 | AC-PA4 |
+| T-PA3 | 正常：发布门 | 两仓三门 | 全绿 | AC-PA5 |
+| T-PA4 | 边界：段删残留 | 被段删的档整档跑 | 用例名集不变、行为断言仍绿 | AC-PA3 |
+| T-PA5 | 边界：禁令落档 | grep 需求档 §5 + 提示词 4 档 | 子串在位 | AC-PA6 |
+| T-PA6 | 错误：对账反证 | 人为多删一个保留用例 | 下降数 ≠ 清单条数 → 红（非空转反证） | AC-PA1 / AC-PA3 |
+| T-PA7 | 边界：T95 / AC75 退役注记 | grep 设计档两处 + 原断言行 | 注记在位 + 原断言行零命中 | AC-PA7 |
+| T-PA8 | 错误：零死代码 | `node --check` 各改动档 | 全通过 | AC-PA9 |
+| T-PA9 | 边界：双端纪律 | 两仓清单差异核对 | 各端独立落地；零跨仓同步依赖 / 零 byte-identical 断言 | AC-PA8 |
+
+### 11.9 边界与待裁项
+
+**边界（不做）**
+
+- 保留面（V1/V2/V3 · L1–L3 · 行宽 · slow 门）的**语义与判据零改**；
+- 台账本体内容治理 · slow 门阈值与归册纪律 · 行为测试的增删改；
+- **既有 AC 中的锚式判据**不随本批清理（射程 = 已落地测试断言 + F22 两项）；新批 AC 判据按 F19 只写行为面 / 结构机检面；
+- 不新增测试档、不改快 / 全两层入口与 VSC 登记清单。
+- **本批零 UI / 交互决策**（测试面退役，无界面变更）——无 `open` 项；设计档 8 项中「UI/交互决策落档」项本批**不适用**（显式声明，非缺项）。
+
+**待裁项裁定结果（2026-09-12 04:41 用户「可以」——三项全裁定，不留「待议」；修正轮落地）**
+
+| # | 对象 | 裁定 | 落地 |
+|---|---|---|---|
+| 1 | **装配器 / 渲染出口传出的提示词句子断言**（CLI `portability-advisor-context` T-10/T-11/T-12 · `eng-designer-role` T32/T32b · `prompts-async-guidance` §3.2/§3.4 保留项；VSC `portability-vsc-advisor-context` T-V07–T-V10 · `eng-designer-role` T57 边界 · `prompts-async-guidance` §3.2/§3.4 保留项） | **已裁定：裁为锚 → 追加删除**——判据复归**实质**：断言对象是提示词句子即属散文锚，**不因「不读文件」而得豁免**（判据补充见 §11.1 C1-a） | 已落 §11.3 / §11.4 清单（两仓合计 **20 条**：10 整删 + 10 段删） |
+| 2 | `locales/*.json` 文本值**逐字**断言 | **已裁定：保留**（未获裁定为锚，维持现判——载体类 C1） | 不进清单（零改） |
+| 3 | 工具 `description` 静态文案（CLI `settings` T-S2.24 / VSC `settings-tool` T-S2.35） | **已裁定：回退——保留**（工具 `description` = 发给模型的**产品契约面** → 契约守卫，非文档散文锁；判据见 §11.1 C1-b） | 已从 §11.3 / §11.4 清单**撤出**；对应档行（`settings` / `settings-tool`）随之下清单 |
+| 4 | 跨仓引用（本档 §11.4 + VSC 侧设计档 §8 头注） | **已登记依赖——未消解**（与并行批 `LEDGER-SELF-CONTAINED` R1/R7 冲突；该批未落地 → 无替代落点可指，不得自行发明） | 登记见 §11.6「已登记依赖——未消解」 |
+
+### 11.10 关键决策记录
+
+| # | 决策 | 否决备选 | 理由 |
+|---|---|---|---|
+| D-PA1 | 逐条删除清单制 | 按档删 / 标签门控 | §11.2 |
+| D-PA2 | 保留面 = **封闭枚举**（四项机检器所判属性） | 「凡计数 / 序 / 形态断言皆结构」宽解 | 宽解会把对非测试档文本的出现计数一并留下——与判据 ② 直接冲突；且约束 5 要求防回潮负向锚逐条判定（默认可删） |
+| D-PA3 | **载体判据**（C1）——按被断言文本的载体判 | needle 原产地判据 | 原产地判据会把**全部含消息文案的行为断言**卷进删除集（消息字面量均源于 src）——与 F18「混装档只删锚断言、行为用例一律保留」直接冲突 |
+| D-PA4 | `import` 取到的 src **静态文案字面量**计入判据 ① | 视为「运行产物」豁免 | 静态字面量不是执行产物；豁免会留下「改一字即红」的同一病灶 |
+| D-PA5 | `doc-consistency` `RETIRED_STRINGS`（18 条）/ `ledgerClosure7` **逐条判定 = 散文锚 → 删** | 默留（作为防回潮面） | 每条 = 读非测试档 + 断言其文本缺席（判据①②③全中）；约束 5 明令逐条判定、不得默留 |
+| D-PA6 | T75（退役提示词文件未复活——`existsSync`）**保留** | 一并删 | 判据 ② 不成立（非文本在场/缺席）；它断言的是文件存在性即系统状态，非句子——亦本批唯一存活的防回潮面 |
+| D-PA7 | T95 / AC75 = **就地退役注记（保号）** | 删行 / 保留断言 | 删行会让别处引用悬空（D4）；保留断言违 R5 |
+| D-PA8 | 两仓**无整档删除** → VSC `test/files.mjs` 零改 | — | 事实结论：每档均有保留用例（见 §11.3 / §11.4 档计数） |
+| D-PA9 | **提示词句子不豁免**（C1-a——PA-A1 修正轮）：断言对象是**提示词句子**（含装配器 / 渲染出口传出、不读文件者）即属散文锚 | 「执行产物 = 不命中 ①」宽豁免 | 豁免会留下「改一字即红」的同一病灶（装配产物句子改了同样导致错位维护）——与 R1「散文锚一律不做」相悖；用户 2026-09-12 04:41 裁定 |
+| D-PA10 | **工具契约面与工具返回文案保留**（C1-b——PA-A3 修正轮） | 按 C1「import 静态文案字面量」分支整删 | 工具 `description` / 参数说明 = 发给模型的**产品契约面**（工具契约对象）——锁它属**契约守卫**，非文档散文锁；读 `src/**` 源码档文本仍命中 ① |
+
+### 变更记录（本批）
+
+- 2026-09-12（**修正轮**——批次档 §1「待裁项裁定与缺陷处置（04:41）」逐条落地）：
+  - §11.1 增**判据补充 C1-a / C1-b / C1-c**（提示词句子不豁免 · 工具契约面保留 · 非句子对象保留）。
+  - §11.3 追加 10 条（`portability-advisor-context` T-10/T-11/T-12 整删 · `eng-designer-role` T32/T32b 段删 · `prompts-async-guidance` §3.2/§3.4 段删 5 条），并**撤出** `settings` T-S2.24（PA-A3 回退）；段删计数更正（实计 22，声明曾为 21——含本轮追加共 29）。
+  - §11.4 同步 VSC 侧计数与差额（61 整删 + 40 段删 = 101 条）。
+  - §11.6 新增**端差登记**（台账机检脚本本仓归属 / 结构机检面端内构成）与**已登记依赖——未消解**（跨仓引用 vs 并行批 R1/R7）。
+  - §11.7 AC-PA1 对账数重算（CLI 574 / VSC 592）· AC-PA4 端差细化；§11.8 T-PA1/T-PA2 同步。
+  - §11.9 待裁项改**裁定结果**（三项全裁定）；§11.10 增 D-PA9 / D-PA10。
+  - 需求侧同步 = `../requirements/TESTING.md` §5.1 判据补充 + F17 工具契约面（同一裁定同源）。
+- 2026-09-12（散文锚退役批——PROSE-ANCHOR-RETIRE）：新增 **§11**（判据执行版 + 口径裁定 C1–C5 / 方案选型对比 + 粗筛→逐条差额对账 / **逐条删除清单 CLI 71 整删 + 29 段删 · VSC 61 整删 + 40 段删**（修正轮后实测）/ T95 + AC75 处置 / 受影响文件 / AC-PA1–AC-PA10 / T-PA1–T-PA9 / 边界与待裁项 / 决策 D-PA1–D-PA8）；§6 AC-TL8 第二半作废注；
+  需求侧同步 = `../requirements/TESTING.md` §5（F15–F22 / N10–N12）+ `../requirements/PROMPT-SYSTEM.md` 四处判据面去锚（F-TD6 / N-TD2 / N-TD3 / N-P1）。清单外断言零触碰（F18 / N12）。
