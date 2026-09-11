@@ -4,16 +4,19 @@
  * L1 指针可解析（①归一 `§X` ↔ 标题编号 X ②basename 唯一 ③档存在且节号在标题里）· L2 组计数 == 未决实条目数（D3）·
  * L3 形态：①需求池条目单行 ②技术条目含 `file:line` 形态 ③锚形态与组标题结构一致 ④`status=` ∈ 六态
  * ⑤活文件 `- [x]` 零命中（归档口径）⑥`触发=` ∈ 三枚举。**只判形态**——症状 / 归属语义留评审。
+ * L4 本仓可解析（FR25/R4——跨仓登记闸）：①指针 `X.md §N` 以**本仓根 + 台账目录**为基根解析（档 + 节号；**不含**工作区根 / 兄弟仓——不复用 `refBases`）
+ * ②证据 `path.ext:line` 的路径段须在**本仓根**内为现存文件。不可解析 ⇒ `[L4]` + fail-closed（L1–L3 判据语义零改）。
+ * L4 不入判据（零假阳）：无路径散文 /「名称（仓别）§N」规范形态（无 `.md`）/ 组标题行。
  * 豁免（零假阳）：非必填态（待讨论 / 待设计）不判 ③；无 `status=` / `触发=` 场分别免 ④ / ⑥（后者进审计面）；无标记组不判 ③。
  * 基线：`test/fixtures/ledger-baseline.json` 内为存量违规（降报告、不阻断）；新增违规阻断（退出码 1）。
  * 输出：红 = `<档>:<行号> [L1|L2|L3] <症状> — 期望 … · 实得 …` + `<n> 处违规`；绿 = 每档一行 `OK: <档>`。
  * 审计（`--audit`）：技术组无触发条目的「待处置清单」（行龄 > N 天标「老化」）——只读、退出码 0。
  * 汇总（`--summary`）：L2 明细行序列（每项目一行——`src/ledger.mjs` 口径 + 同 formatter）——只读、退出码 0（收口行）。
  * 用法：`node scripts/check-ledger.mjs [--root <仓根>] [--ledger <档>]... [--audit] [--summary] [--days N]`；
- * 扫描域 = 显式台账清单（默认本仓 + 对端仓 `docs/TODO.md`）——与 `check-doc-width.mjs` 互不侵入；不进产品提示词。
+ * 扫描域 = 显式台账清单（默认**只含本仓** `docs/TODO.md`——跨仓扫描面与「跨仓登记」同病）——与 `check-doc-width.mjs` 互不侵入；不进产品提示词。
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 // 数字单源（F7/AC80）：解析 / 计数 / 老化阈值 / 显示面 formatter 消费 `src/ledger.mjs`（L1–L3 语义零改）
@@ -26,11 +29,12 @@ export const TRIGGERS = ["归批", "条件", "认账不排期"];
 export { AGING_DAYS };
 /** 基线档（存量违规报告清单；键稳定、不含行号） */
 export const BASELINE_PATH = "test/fixtures/ledger-baseline.json";
-export const DEFAULT_LEDGERS = ["docs/TODO.md", join("..", "thincoder-vscode", "docs", "TODO.md")]; // 默认台账清单：本仓 + 对端仓（缺则跳过不报）
+export const DEFAULT_LEDGERS = ["docs/TODO.md"]; // 默认台账清单：只扫本仓（L4/R1——检查器不扫对端仓；缺则跳过不报）
 const ENTRY_RE = /^- \[[ x]\]\s+/, OPEN_ENTRY_RE = /^- \[ \]\s+/; // 任意锚（条目键 / 全档扫）/ 未决条目（组计数——§2.24.4 未决口径）
 const DECL_RE = /（(\d+)\s*条）/;
 const H2_RE = /^##\s+(.*)$/;
 const EVIDENCE_RE = /[A-Za-z0-9_./-]+\.[A-Za-z0-9]+`?\s*:\s*\d+/;
+const EVIDENCE_RE_G = new RegExp(EVIDENCE_RE.source, "g"); // L4② 逐条 matchAll 用（既有 EVIDENCE_RE 非全局——L3② `.test` 语义零改）
 const REF_RE = /([A-Za-z0-9_./-]+(?:\.md|\/[A-Za-z0-9_.-]+))`?\s*§\s*(\d+(?:\.\d+)*)/g;
 const TRIGGER_RE = /触发\s*=\s*([^·\n]*)/;
 const STATUS_RE = /status=([^·\n（(]*)/;
@@ -64,6 +68,27 @@ function resolveDoc(p, bases) {
     }
   }
   return null;
+}
+/** L4 包含判据：`abs` 在本仓根内（`..` 逃逸 / 跨盘 → false）。 */
+function withinRoot(root, abs) {
+  const rel = relative(root, abs);
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+}
+/** L4①：本仓基根档解析（root + 台账目录——**不含**工作区根 / 兄弟仓；与 L1 `resolveDoc` 的 `refBases` 分离）。 */
+function l4ResolveDoc(root, bases, p) {
+  for (const b of bases) {
+    for (const c of [resolve(b, p), p.endsWith(".md") ? null : resolve(b, p + ".md")]) {
+      if (!c || !withinRoot(root, c)) continue;
+      try { if (statSync(c).isFile()) return c; } catch { /* 下一候选 */ }
+    }
+  }
+  return null;
+}
+/** L4②：证据路径段须在本仓根内为现存文件（`..` 逃逸即不可解析）。 */
+function inRepoFile(root, p) {
+  const abs = resolve(root, p);
+  if (!withinRoot(root, abs)) return false;
+  try { return statSync(abs).isFile(); } catch { return false; }
 }
 /** 仓内 `.md` basename 计数（L1②：只写 basename 时同名 ≥2 即多义）。 */
 function mdBasenames(root, out = new Map()) {
@@ -124,7 +149,18 @@ export function checkLedger(abs, root, extraRoots = []) {
           if (n > 1) add("L1", e.line, `basename:${r.raw}`, `basename 多义（${r.raw}）`, "带目录前缀（仓内同名 ≥2）", `同名 ${n} 份`);
         }
       }
-      // L3① 需求池组条目单行（续行即违规）
+      // L4 本仓可解析（FR25/R4——跨仓登记闸；判据 = 设计档 `docs/design/LEDGER-SELF-CONTAINED.md` §7）
+      // 基根 = 本仓根 + 台账目录（**不含**工作区根 / 兄弟仓——显式不复用 L1 的 `refBases`，两者语义独立）
+      for (const r of refs) {
+        const target = l4ResolveDoc(root, [root, dirname(abs)], r.raw);
+        if (!target) add("L4", e.line, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓根 / 台账目录为基根可解析到档", "本仓不可解析");
+        else if (!hasSection(sectionNums(target), r.sec)) add("L4", e.line, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓档内节号在标题中", "本仓无该节");
+      }
+      for (const m of e.text.matchAll(EVIDENCE_RE_G)) {
+        const label = m[0].replace(/`/g, "");
+        const p = m[0].replace(/`?\s*:\s*\d+$/, "");
+        if (!inRepoFile(root, p)) add("L4", e.line, label, `证据路径本仓不可解析（${p}）`, "本仓根内为现存文件", "本仓不可解析");
+      }
       if (isPool && (lines[e.line] ?? "").trim() && !/^(#{1,6}\s|-\s\[|\||>|```|---)/.test(lines[e.line])) {
         add("L3①", e.line + 1, key, "需求池条目含续行（单行硬约束）", "一行一条", `第 ${e.line + 1} 行为续行`);
       }

@@ -1,7 +1,7 @@
 /**
  * ledger.test.mjs — 台账机检用例（T67–T71 · T92–T96——设计档 ENGINEERING-MODE.md §2.24.6 / §2.24.9 契约 · AC45–AC52 / AC75–AC79）。
  * 仓库面：两仓活台账全绿（新增 0 / 存量降报告）。
- * 反证面：坏指针 / 计数不符 / 形态五例 / 活文件 `- [x]` / 非法触发 —— 必报红（防「永远绿的空转脚本」）。
+ * 反证面：坏指针 / 计数不符 / 形态五例 / 活文件 `- [x]` / 非法触发 / **跨仓证据与跨仓指针（L4——本仓可解析闸）** —— 必报红（防「永远绿的空转脚本」）。
  * 审计面：T94 待处置清单 + 老化（git 回填行龄）走 slow() 门控（fs / git 子进程）。
  *
  * 扫① 削段注（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3）：旧口径句负向锚（七档）→ 收归防回潮族
@@ -29,15 +29,15 @@ const runTmp = (opts = {}) => runCheck({ root: tmp, ledgers: ["docs/TODO.md"], b
 const runCli = (args, cwd = REPO) => spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: "utf8" })
 const code = (args) => main(args, { log: () => {} }) // 进程内退出码语义（真 spawn 由 T67/T68 覆盖）
 
-test("T67 正常：两仓台账机检全绿（每档一行 OK / 退出码 0；缺仓跳过不报）", () => {
+test("T67 正常：本仓台账机检全绿（每档一行 OK / 退出码 0；缺仓跳过不报）", () => {
   assert.deepStrictEqual(runCheck({ root: REPO }).fresh.map((v) => v.msg), [], "新增违规 0（存量入基线降报告）")
   const r = runCli([])
   assert.equal(r.status, 0, r.stdout + r.stderr)
-  assert.equal((r.stdout.match(/^OK: /gm) ?? []).length, 2, "每档一行 `OK: <档>`")
+  assert.equal((r.stdout.match(/^OK: /gm) ?? []).length, 1, "单档一行 `OK: <档>`（L4/R1——扫描域只含本仓）")
   mk("docs/TODO.md", "# t\n\n## 需求池（0 条）\n\n## 技术待办（0 条）\n")
-  const skip = runCheck({ root: tmp }) // 对端仓缺失 → 该档跳过不报（降级不阻断）
+  const skip = runCheck({ root: tmp, ledgers: ["docs/TODO.md", "docs/NOPE.md", "../thincoder-vscode/docs/TODO.md"] }) // 缺档 / 跨仓默认项不存在 → 跳过不报（降级不阻断）
   assert.equal(skip.checked, 1)
-  assert.equal(skip.skipped.length, 1, "缺仓跳过不报（对称 T61 ④ 跨仓先例）")
+  assert.equal(skip.skipped.length, 2, "缺档跳过不报（降级不阻断）")
   assert.deepStrictEqual(skip.fresh, [])
 })
 
@@ -98,6 +98,7 @@ test("T71 边界：存量降报告不阻断 + 扫描域互不侵入", () => {
 test("T92 错误：活文件 `- [x]` 必报红（归档口径反证）；移出后绿（AC76/L3⑤）", () => {
   const live = (stale) => ["# t", "", "## 技术待办（1 条）", "", "- [ ] **在途条** → 证据 `src/a.mjs:1` · status=在途", ""]
     .concat(stale ? ["- [x] **已核销条**（未移出活文件）→ 证据 `src/b.mjs:2` · status=已核销", ""] : []).join("\n")
+  mk("src/a.mjs", "// 证据夹具\n"); mk("src/b.mjs", "// 证据夹具\n") // L4②：证据路径须本仓可解析（新增闸）
   mk("docs/TODO.md", live(true))
   const { fresh } = runTmp()
   assert.equal(fresh.filter((v) => v.kind === "L3⑤").length, 1, JSON.stringify(fresh.map((v) => v.msg)))
@@ -121,6 +122,61 @@ test("T93 错误：非法触发取值必报红；合法对照条绿；无 `触�
 
 test("T96 正常：收拢执行面（归档档键控条目 + 活文件组计数 = 未决数）", () => {
   assert.deepStrictEqual(runCheck({ root: REPO }).fresh.map((v) => v.msg), [], "活文件 `- [x]` = 0 · 组计数 = 未决数（L2 绿）")
+})
+
+// T94 慢层（fs / git 子进程）：夹具 git 回填行龄——超龄条 commit 日期钉常量 2000-01-01（零壁钟依赖）。
+
+// ── L4 本仓可解析（LEDGER-SELF-CONTAINED 批——T-LS1–T-LS5 / AC-LS1–AC-LS4）──────────────────
+test("T-LS1 正常：本仓指针全解析 → 零 [L4]、退出码 0", () => {
+  mkTargets()
+  mk("docs/TODO.md", ["# t", "", "## 需求池（1 条）", "",
+    "- [ ] **甲** → 需求 `docs/requirements/FOO.md` §1.13 · 任务书 `docs/batches/B.md` §2 · status=待设计", ""].join("\n"))
+  const { fresh } = runTmp()
+  assert.equal(fresh.filter((v) => v.kind === "L4").length, 0, JSON.stringify(fresh.map((v) => v.msg)))
+  assert.equal(code(["--root", tmp]), 0, "退出码 0")
+})
+
+test("T-LS2 错误：跨仓证据路径必报 [L4] + 退出码 1（事故形态反证）", () => {
+  mk("docs/TODO.md", ["# t", "", "## 技术待办（1 条）", "",
+    "- [ ] **乙** → 证据 `../thincoder-vscode/src/x.mjs:10` · status=在途", ""].join("\n"))
+  const { fresh } = runTmp()
+  const l4 = fresh.filter((v) => v.kind === "L4")
+  assert.equal(l4.length, 1, JSON.stringify(fresh.map((v) => v.msg)))
+  assert.match(l4[0].msg, /\[L4\] 证据路径本仓不可解析/)
+  assert.equal(code(["--root", tmp]), 1, "退出码 1（fail-closed）")
+})
+
+test("T-LS3 错误：跨仓指针不以对端可解析放行（本仓基根解析失败必报 [L4]）", () => {
+  mk("thincoder/docs/requirements/AGENT-LOOP.md", "# A\n\n## 1 x\n") // 本仓同名档在，但无 §9
+  mk("thincoder/docs/batches/B.md", "# B\n\n## §2 任务\n")
+  mk("thincoder-vscode/docs/requirements/AGENT-LOOP.md", "# A\n\n## 9 x\n") // 对端仓有且存在——不得据此放行
+  mk("thincoder/docs/TODO.md", ["# t", "", "## 需求池（1 条）", "",
+    "- [ ] **丙** → 需求 `docs/requirements/AGENT-LOOP.md` §9 · 任务书 `docs/batches/B.md` §2 · status=待设计", ""].join("\n"))
+  const repo = join(tmp, "thincoder")
+  const { fresh } = runCheck({ root: repo, ledgers: ["docs/TODO.md"], baseline: new Set() })
+  const l4 = fresh.filter((v) => v.kind === "L4")
+  assert.equal(l4.length, 1, JSON.stringify(fresh.map((v) => v.msg)))
+  assert.match(l4[0].msg, /本仓无该节/)
+  assert.equal(main(["--root", repo], { log: () => {} }), 1, "退出码 1")
+})
+
+test("T-LS4 边界：零假阳（散文提及 + 「名称（仓别）§N」规范形态不入判据）", () => {
+  mkTargets()
+  mk("docs/TODO.md", ["# t", "", "## 需求池（2 条）", "",
+    "- [ ] **甲** → 需求 `docs/requirements/FOO.md` §1.13 · 任务书 `docs/batches/B.md` §2 · status=待设计",
+    "- [ ] **乙**（与对端同名档对应——多实现面纪律；对端 `WEBVIEW（VSC 仓）§5` 为规范形态）· status=待讨论", ""].join("\n"))
+  const { fresh } = runTmp()
+  assert.equal(fresh.filter((v) => v.kind === "L4").length, 0, JSON.stringify(fresh.map((v) => v.msg)))
+})
+
+test("T-LS5 边界：L4 存量分流（基线内降报告不阻断；删键 ⇒ 阻断）", () => {
+  mk("docs/TODO.md", "# t\n\n## 技术待办（1 条）\n\n- [ ] **丙** → 证据 `src/nope.mjs:3` · status=在途\n")
+  const first = runTmp()
+  const key = first.fresh.find((v) => v.kind === "L4")?.key
+  assert.ok(key, "L4 违规为新增（反证非空转）：" + JSON.stringify(first.fresh.map((v) => v.msg)))
+  const second = runTmp({ baseline: new Set([key]) })
+  assert.deepStrictEqual(second.fresh, [], "存量（基线内）不阻断")
+  assert.ok(second.known.some((v) => v.kind === "L4"), "存量降报告")
 })
 
 // T94 慢层（fs / git 子进程）：夹具 git 回填行龄——超龄条 commit 日期钉常量 2000-01-01（零壁钟依赖）。
