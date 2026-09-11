@@ -5,9 +5,22 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
-## [Unreleased]
+## [0.9.1]
 
-> 开发批记录段（2026-09-05 起惯例——版本号发布时才定——见 RELEASE.md：9 月首发 = 0.9.1 时本段改头）
+> 9 月内容组（2026-09-05 起）——2026-09-11 定号 0.9.1。
+
+### Changed（2026-09-11 批）
+
+- **固定活动区回归（live 固定可见 + 一个面板）**：子代理/advisor 活动块迁回 messages 与输入框之间的固定活动区（`#subagent-activity`）——区内出生 / 原地折叠 / 区内保留（上限 20 折叠块）/ `:empty` 显隐 / 32vh 封顶 + 区内自滚 + 钉底跟随 / 区内 ⏹ 定向取消；两态机与投递可靠性机制（出生队列 / 就绪握手 / 终态防御）语义零改；旧「加戏链」（DOM move / 锚插 / 逐行簿记）零复活。
+- **可移植性 VSC 镜像（VP-1–VP-12）**：`src/conventions.mjs` + `src/advisor/project-context.mjs` 新模块；advisor 注入面 / 文档地图 / 项目方法论探测去硬编码；`~` 展开 · 读侧 idle 超时 · 门禁文案 · 索引面与提示词六档（en/cn）同步。
+- **VSC 镜像清扫（A1–A13）**：provider 读空闲超时 · `§24` 旧锚重锚（39 处）· cap 预检（sync-only）· git commit `--only` · 子代理描述两行 · 降级窗 Stop 定向 abort · 首块说明行 · **输入历史 / 多行编辑**（IME 守卫 + 单行任意位置 ↑/↓）。
+- **评审链 / 异步保真（B1–B5）**：advisor 池中止丢弃（含 discarded 提醒）/ launchRefused 记账守卫 / file_ops 冻结拦 + 合入记账 / CJK 估算加权 / digest 注入预算单源（subagent/advisor/escalate/consult 四族全接线）。
+- **集成集 + 发布门三环**：`test/integration/`（7 场景 28 用例）+ `test:integration`；`vscode:prepublish` = lint → test:full → test:integration。
+- **测试生命周期**：三层来源 + 削段/合档（settings-panel → config-pool）/ 拆档（index-perception git 慢档组）。
+
+### Fixed
+
+- **webview 行内代码转义（GitHub #7）** · 设置 null 默认键校验 · git 快路径 gitignore 盲区 · `loadIndex`/`searchIndex` 维度校验 · 语义索引 reason 串统一 · digest 起止指示 · 面板 live 块显示可靠性（投递队列 + 就绪握手 + 终态防御）。
 
 ### Changed
 
