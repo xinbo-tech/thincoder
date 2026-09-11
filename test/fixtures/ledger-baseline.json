@@ -1,12 +1,31 @@
 {
-  "note": "台账机检存量基线（ENGINEERING-MODE.md §2.24.6 / AC48——存量降报告、新增阻断；同 doc-consistency-baseline.json 先例）。键 = (kind|仓/档|条目键)，不含行号（台账被并行会话持续改写，行号漂移不改键值）；键由 checkLedger() 生成、条目修好即从本档删除（删键 = 重新纳入阻断）。本批台账收拢执行后未归一的 5 条残留：技术条证据行缺 `file:line` ×3（CLI 2 / VSC 1——VSC 条为他批 2026-09-11 17:16 新写）· `status=` 机外取值 ×1（设计已落）· `触发=` 未按三枚举归一 ×1（触发 = 2026-09-14 …）。建议父侧随台账收拢一并归一后删除对应键。",
-  "generatedAt": "2026-09-11",
+  "note": "台账机检存量基线（ENGINEERING-MODE.md §2.24.6 / AC48——存量降报告、新增阻断；同 doc-consistency-baseline.json 先例）。键 = (kind|仓/档|条目键)，不含行号（台账被并行会话持续改写，行号漂移不改键值）；键由 checkLedger() 生成、条目修好即从本档删除（删键 = 重新纳入阻断）。存量两族：① 活档 5 条（技术条证据行缺 `file:line` ×3〔CLI 2 / VSC 1——VSC 条为他批 2026-09-11 17:16 新写，L4 两档化后不再入本键扫面〕· `status=` 机外取值 ×1（设计已落）· `触发=` 未按三枚举归一 ×1）；② 归档档 20 条（L4 扫「活档 + 归档档」两档后首跑固化——迁移档指针 ×2 条（3 处）· 对端证据路径 ×11 · 陈旧 / 裸形态证据 ×6）——§8.2 台账落笔（9 迁 + 4 拆）与历史形态归一后逐步消解；收口时随落笔一并删除对应死键。",
+  "generatedAt": "2026-09-12",
   "source": "node scripts/check-ledger.mjs（首跑固化；键 = checkLedger() 产出的 key 字段）",
   "entries": [
     "L3②|thincoder/docs/TODO.md|VSC 两处未纳登记",
     "L3②|thincoder/docs/TODO.md|普通模式偏差审计 + 会话上下文轮",
     "L3④|thincoder/docs/TODO.md|普通模式偏差审计 + 会话上下文轮",
     "L3⑥|thincoder/docs/TODO.md|deepseek-v4-pro 视觉能力复检 + 发布注记",
-    "L3②|thincoder-vscode/docs/TODO.md|发布排期"
+    "L3②|thincoder-vscode/docs/TODO.md|发布排期",
+    "L4|thincoder/docs/TODO-archive.md|batches/2026-09-10-VSC-MIRROR.md §2",
+    "L4|thincoder/docs/TODO-archive.md|batches/2026-09-11-VSC-GUARD-COMPLETION.md §2",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/agent-tools/settings.mjs:35",
+    "L4|thincoder/docs/TODO-archive.md|messages.mjs:62",
+    "L4|thincoder/docs/TODO-archive.md|run.mjs:58",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/advisor/run.mjs:58",
+    "L4|thincoder/docs/TODO-archive.md|setup.mjs:156",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/agent-tools/subagent-async.mjs:375",
+    "L4|thincoder/docs/TODO-archive.md|key-handler.mjs:107",
+    "L4|thincoder/docs/TODO-archive.md|ops.mjs:180",
+    "L4|thincoder/docs/TODO-archive.md|subagent.mjs:121",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/agent-tools/async-settle.mjs:54",
+    "L4|thincoder/docs/TODO-archive.md|src/agent/async-settle.mjs:138",
+    "L4|thincoder/docs/TODO-archive.md|SESSION.md :524",
+    "L4|thincoder/docs/TODO-archive.md|SUBAGENT-ID-COUNTER-AGENT.md :53",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/extension/panel-callbacks.mjs:81",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/extension/image-handler.mjs:65",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/src/tools/git.mjs:200",
+    "L4|thincoder/docs/TODO-archive.md|thincoder-vscode/docs/design/AGENT-LOOP.md:290"
   ]
 }

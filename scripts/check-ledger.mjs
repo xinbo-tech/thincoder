@@ -9,11 +9,11 @@
  * L4 不入判据（零假阳）：无路径散文 /「名称（仓别）§N」规范形态（无 `.md`）/ 组标题行。
  * 豁免（零假阳）：非必填态（待讨论 / 待设计）不判 ③；无 `status=` / `触发=` 场分别免 ④ / ⑥（后者进审计面）；无标记组不判 ③。
  * 基线：`test/fixtures/ledger-baseline.json` 内为存量违规（降报告、不阻断）；新增违规阻断（退出码 1）。
- * 输出：红 = `<档>:<行号> [L1|L2|L3] <症状> — 期望 … · 实得 …` + `<n> 处违规`；绿 = 每档一行 `OK: <档>`。
+ * 输出：红 = `<档>:<行号> [L1|L2|L3|L4] <症状> — 期望 … · 实得 …` + `<n> 处违规`；绿 = 每档一行 `OK: <档>`。
  * 审计（`--audit`）：技术组无触发条目的「待处置清单」（行龄 > N 天标「老化」）——只读、退出码 0。
  * 汇总（`--summary`）：L2 明细行序列（每项目一行——`src/ledger.mjs` 口径 + 同 formatter）——只读、退出码 0（收口行）。
  * 用法：`node scripts/check-ledger.mjs [--root <仓根>] [--ledger <档>]... [--audit] [--summary] [--days N]`；
- * 扫描域 = 显式台账清单（默认**只含本仓** `docs/TODO.md`——跨仓扫描面与「跨仓登记」同病）——与 `check-doc-width.mjs` 互不侵入；不进产品提示词。
+ * 扫描域 = 显式台账清单（默认 = 本仓**活档 + 归档档**两档：活档判 L3⑤、归档档不判（`live:false`——归档口径本就含已完成项）；跨仓扫描面与「跨仓登记」同病——不扫对端仓）——与 `check-doc-width.mjs` 互不侵入；不进产品提示词。
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -29,7 +29,11 @@ export const TRIGGERS = ["归批", "条件", "认账不排期"];
 export { AGING_DAYS };
 /** 基线档（存量违规报告清单；键稳定、不含行号） */
 export const BASELINE_PATH = "test/fixtures/ledger-baseline.json";
-export const DEFAULT_LEDGERS = ["docs/TODO.md"]; // 默认台账清单：只扫本仓（L4/R1——检查器不扫对端仓；缺则跳过不报）
+/** 默认台账清单：本仓两档（活档判 L3⑤；归档档 `live:false` 不判）；不扫对端仓（L4/R1）。缺档跳过不报。 */
+export const DEFAULT_LEDGERS = [
+  { path: "docs/TODO.md", live: true },
+  { path: "docs/TODO-archive.md", live: false },
+];
 const ENTRY_RE = /^- \[[ x]\]\s+/, OPEN_ENTRY_RE = /^- \[ \]\s+/; // 任意锚（条目键 / 全档扫）/ 未决条目（组计数——§2.24.4 未决口径）
 const DECL_RE = /（(\d+)\s*条）/;
 const H2_RE = /^##\s+(.*)$/;
@@ -107,8 +111,8 @@ export function entryKey(text) {
 /** 档显示名（仓目录名 + 仓内相对路径——不随 cwd 漂移）。 */
 export const displayName = (abs, root) => basename(root) + "/" + relative(root, abs).replace(/\\/g, "/");
 
-/** 单档机检：返回违规 [{kind, line, key, msg}]。`abs` = 台账绝对路径；`root` = 所属仓根。 */
-export function checkLedger(abs, root, extraRoots = []) {
+/** 单档机检：返回违规 [{kind, line, key, msg}]。`abs` = 台账绝对路径；`root` = 所属仓根；`live` = 活档（判 L3⑤）。 */
+export function checkLedger(abs, root, extraRoots = [], { live = true } = {}) {
   const display = displayName(abs, root);
   const lines = readFileSync(abs, "utf8").split("\n");
   const bases = refBases(root, dirname(abs), extraRoots);
@@ -118,8 +122,8 @@ export function checkLedger(abs, root, extraRoots = []) {
   const add = (kind, line, keyTail, symptom, expect, got) =>
     hits.push({ kind, line, key: `${kind}|${display}|${keyTail}`, msg: `${display}:${line} [${kind.slice(0, 2)}] ${symptom} — 期望 ${expect} · 实得 ${got}` });
 
-  // L3⑤ 活文件 `- [x]` 零命中（归档口径）
-  lines.forEach((l, i) => {
+  // L3⑤ 活文件 `- [x]` 零命中（归档口径；归档档 `live:false` 免判——其条目本就含已完成闭环）
+  if (live) lines.forEach((l, i) => {
     if (/^- \[x\]/.test(l)) add("L3⑤", i + 1, entryKey(l), "活文件含 `- [x]`（归档口径）", "0 命中（已核销 / 已废弃移入同仓 TODO-archive.md）", "1 条");
   });
 
@@ -183,6 +187,20 @@ export function checkLedger(abs, root, extraRoots = []) {
       }
     }
   }
+  // L4 归档闭环条目面（`- [x]`——已核销 / 已废弃条目仍属本仓射程（R1——跨仓面照判）；L1/L3 面 = 未决条目）
+  lines.forEach((l, i) => {
+    if (!ENTRY_RE.test(l) || OPEN_ENTRY_RE.test(l)) return;
+    for (const r of [...l.matchAll(REF_RE)].map((m) => ({ raw: m[1], sec: m[2] }))) {
+      const target = l4ResolveDoc(root, [root, dirname(abs)], r.raw);
+      if (!target) add("L4", i + 1, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓根 / 台账目录为基根可解析到档", "本仓不可解析");
+      else if (!hasSection(sectionNums(target), r.sec)) add("L4", i + 1, `${r.raw} §${r.sec}`, `指针本仓不可解析（${r.raw} §${r.sec}）`, "本仓档内节号在标题中", "本仓无该节");
+    }
+    for (const m of l.matchAll(EVIDENCE_RE_G)) {
+      const label = m[0].replace(/`/g, "");
+      const p = m[0].replace(/`?\s*:\s*\d+$/, "");
+      if (!inRepoFile(root, p)) add("L4", i + 1, label, `证据路径本仓不可解析（${p}）`, "本仓根内为现存文件", "本仓不可解析");
+    }
+  });
   return hits;
 }
 
@@ -196,22 +214,23 @@ export function loadBaseline(root) {
 
 /** 多档机检 + 基线分流：{perFile, fresh（阻断）, known（存量降报告）, checked, skipped}。 */
 export function runCheck({ root = process.cwd(), ledgers = null, baseline = null } = {}) {
-  const targetPaths = (ledgers ?? DEFAULT_LEDGERS).map((p) => resolve(root, p));
+  const entries = (ledgers ?? DEFAULT_LEDGERS).map((p) => (typeof p === "string" ? { path: p, live: true } : p));
   const base = baseline ?? loadBaseline(root);
   const perFile = [], skipped = [], fresh = [], known = [], roots = new Set();
-  for (const abs of targetPaths) { try { if (statSync(abs).isFile()) roots.add(resolve(dirname(abs), "..")); } catch { /* 缺目录 */ } }
-  for (const abs of targetPaths) {
+  for (const e of entries) { const abs = resolve(root, e.path); try { if (statSync(abs).isFile()) roots.add(resolve(dirname(abs), "..")); } catch { /* 缺目录 */ } }
+  for (const e of entries) {
+    const abs = resolve(root, e.path);
     let ok = false;
     try { ok = statSync(abs).isFile(); } catch { /* 缺目录 / 不可读 */ }
-    if (!ok) { skipped.push(abs); continue; } // 对端仓缺失 / 本仓缺目录 → 跳过不报（降级不阻断）
+    if (!ok) { skipped.push(abs); continue; } // 缺档 → 跳过不报（降级不阻断）
     const repoRoot = resolve(dirname(abs), "..");
-    const hits = checkLedger(abs, repoRoot, [...roots].filter((r) => r !== repoRoot));
+    const hits = checkLedger(abs, repoRoot, [...roots].filter((r) => r !== repoRoot), { live: e.live !== false });
     const f = hits.filter((v) => !base.has(v.key));
     const k = hits.filter((v) => base.has(v.key));
     perFile.push({ file: displayName(abs, repoRoot), hits, fresh: f, known: k });
     fresh.push(...f), known.push(...k);
   }
-  return { perFile, fresh, known, checked: perFile.length, skipped, targetPaths };
+  return { perFile, fresh, known, checked: perFile.length, skipped, targetPaths: entries.map((e) => resolve(root, e.path)) };
 }
 
 /** 行龄（天）：git blame 行级最近变更时间；非 git / 不可判定 → null（标「年龄未知」，零假阳降级）。 */
@@ -244,7 +263,7 @@ export function main(args = process.argv.slice(2), { cwd = process.cwd(), log = 
   const argOf = (f) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : null; };
   const root = resolve(argOf("--root") ?? cwd);
   const ledgers = args.flatMap((a, i) => (a === "--ledger" && args[i + 1] ? [args[i + 1]] : []));
-  const ledgerNames = ledgers.length ? ledgers : DEFAULT_LEDGERS;
+  const ledgerEntries = ledgers.length ? ledgers.map((p) => ({ path: p, live: true })) : DEFAULT_LEDGERS;
   if (args.includes("--summary")) { // 汇总面（收口行 F6——只读）：L2 明细行序列（每项目一行）
     const family = discoverFamily(root);
     const rows = [];
@@ -258,8 +277,8 @@ export function main(args = process.argv.slice(2), { cwd = process.cwd(), log = 
   if (args.includes("--audit")) { // 审计模式：只读，退出码 0
     const days = argOf("--days") ? Number(argOf("--days")) : AGING_DAYS;
     const pending = [];
-    for (const p of ledgerNames) {
-      const abs = resolve(root, p);
+    for (const e of ledgerEntries) {
+      const abs = resolve(root, e.path);
       try { if (statSync(abs).isFile()) pending.push(...collectPending(abs, { days })); } catch { /* 跳过 */ }
     }
     log("待处置清单（技术组无触发条目——报告只读，处置要人判）：");
@@ -270,10 +289,10 @@ export function main(args = process.argv.slice(2), { cwd = process.cwd(), log = 
     log(`合计 ${pending.length} 条（老化 ${pending.filter((r) => r.aged).length} 条）。`);
     return 0;
   }
-  const { perFile, fresh, known, skipped } = runCheck({ root, ledgers: ledgerNames });
+  const { perFile, fresh, known, skipped } = runCheck({ root, ledgers: ledgerEntries });
   for (const abs of skipped) log(`SKIP: ${relative(root, abs)}（不可读——跳过不报）`);
   for (const f of perFile) {
-    for (const v of f.fresh) log(v.msg); // 红：<档>:<行号> [L1|L2|L3] <症状> — 期望 … · 实得 …
+    for (const v of f.fresh) log(v.msg); // 红：<档>:<行号> [L1|L2|L3|L4] <症状> — 期望 … · 实得 …
     if (!f.fresh.length) log(`OK: ${f.file}`);
   }
   for (const v of known) log(`· 存量（基线内——降报告，不阻断）：${v.msg}`);
