@@ -167,7 +167,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 - **AC-S2.5**（→ F-S1.1–F-S1.5、N-S1.2）：**回归网绿**——list 展平/类型标注、get 成功（T-S2.17b）与缺失键提示、set 正常路径（磁盘 + 热应用 + 回显）、未知键原样、类型不符拒绝、敏感键 set 回显遮罩、**敏感键错误文案零明文**（T-S2.16–T-S2.23 + T-S2.17b 绿）。
 - **AC-S2.6**（→ N-S1.3）：`node --test test/settings.test.mjs` 全绿（未标 slow 用例均 <500ms 快层线）；`cd thincoder && node scripts/check-doc-width.mjs` 新增超宽 0 / 新增违规 0。
 - **AC-S2.7**（→ F-S1.7/F-S1.8 的 VSC 面——范围项 W2，**已裁定纳入本批**——2026-09-11 用户裁定）：VSC 镜像档同源形状表落地（其 null 叶子 = `agent.subagentModel`/`agent.compactThreshold`——本端 `_NULL_LEAF_SHAPES` 2 键；跨端三键 `defaultModel`/`shell`/`memory.team` 单列 `_SIBLING_SHAPES` 3 键）
-  + T-S2.30–T-S2.35 绿 + `thincoder-vscode/test/files.mjs` 登记 + `thincoder-vscode/docs/design/TOOLS.md` 同步。**确定项，无纳入前置条件**。
+  + T-S2.30–T-S2.35 绿 + `test/files.mjs`（VSC 仓）登记 + `TOOLS（VSC 仓）` 同步。**确定项，无纳入前置条件**。
 
 ## 7. 关键决策
 
@@ -332,7 +332,7 @@ thincoder-vscode 端 agent-tools 同构移植。VS Code config-io 与 CLI 同读
 | VSC（W2） | `thincoder-vscode/src/agent-tools/settings.mjs` | 147（批次前）→ **249**（交付态·实测） | +102（实测——设计估 +~35；同源形状表——本端 null 叶子 2 + 跨端 3 + 键空间归一） | MODIFY |
 | VSC（W2） | `thincoder-vscode/test/settings-tool.test.mjs` | ——（批次前无此档）→ **148**（交付态·实测） | 148（实测——设计估 ~110；T-S2.30–T-S2.35——6 例） | NEW |
 | VSC（W2） | `thincoder-vscode/test/files.mjs` | 49（批次前）→ 50（交付态·实测） | +1（登记——VSC 清单为显式列表，不登记不跑） | MODIFY |
-| VSC（W2） | `thincoder-vscode/docs/design/TOOLS.md` | 213（批次前）→ 222（交付态·实测） | +10（实测——设计估 +~20；settings 工具形状护栏节） | MODIFY（本设计——eng-designer 已落） |
+| VSC（W2） | `TOOLS（VSC 仓）` | 213（批次前）→ 222（交付态·实测） | +10（实测——设计估 +~20；settings 工具形状护栏节） | MODIFY（本设计——eng-designer 已落） |
 | 父侧 | `docs/TODO.md` / `CHANGELOG.md` | 259 / —— | —— | 核销/记账（主 agent——不入 coder files 域） |
 
 **拆分计划**：无需拆分——最大改动面 `src/agent-tools/settings.mjs` 预计 ~200 行（<300 建议线）；`src/config.mjs`（487，接近 500 硬限）本批**零改动**。

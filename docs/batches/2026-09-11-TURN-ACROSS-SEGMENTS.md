@@ -1,5 +1,8 @@
 # turn 跨段累计（双端 live 头回合编号）· 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-TURN-ACROSS-SEGMENTS（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 VSC 行（as-of `:86`）——条目计数（对端份 / 本仓份）= 6 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent（工程模式）· 2026-09-11 12:59 · 来源 = 用户 12:48「你都自动推进，授权到下午两点」窗口内立项（残余侦察 id=22 确认的真缺口）。

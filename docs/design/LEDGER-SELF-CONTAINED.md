@@ -174,9 +174,9 @@
 | D9 | **跨仓迁移机制 = 两仓两步法**：本仓删（`git rm`，历史在本仓 `log --follow` 可追）+ 对端增（同源文本 + 提交信息携源档路径与源 SHA） | **实测：两仓为独立 git 仓**（`d:/teamcode` 非仓；`thincoder/.git` 与 `thincoder-vscode/.git` 各自独立）→ **跨仓无 `git mv`**；P1 所据「`git mv` 保留历史与 blame」在同仓内成立、**跨仓不成立**——如实登记（处置结论不变，机制按两步法） | 历史重写（`git filter-repo` / `subtree`——改写两仓公开历史，事故刚因历史重写付过代价）**否决** |
 | D10 | **拆分粒度 = 按条/按块切分，文字逐字搬运**（不重写、不摘要） | 过程记录的价值在原文；重写 = 伪造记录（批档 §1.12 一段一作者的存量延伸） | 允许重写（伪造过程记录）**否决** |
 | D11 | **存量搬迁的 append-only 边界**：append-only 约束**在飞过程**；存量搬迁 = **带清单的搬迁**（逐档清单落本案 + 两仓档首搬迁注记） | 「不改既有行」无法与「对端份不得留本仓」并存；清单 + 注记使搬迁**可审计、非静默** | 「append-only 不可违 → 只许新增档」（对端内容永久留驻本仓 = 病根不除）**否决** |
-| D12 | **VSC 需求档树终态 = 15 档**（README + 在位 1 + 归位 6 + 拆出 1 + ① 新建 6） | ② 28 行中对位档住 `docs/design/` 的 20 行**不迁层**（该档是本仓该机制的权威设计档；迁层 = 制造单机制双源） | 「36 物理档全建」= 复制 CLI 正文（违非复制）**否决** |
+| D12 | **VSC 需求档树终态 = 16 档**（README + 在位 2 + 归位 6 + 拆出 1 + ① 新建 6——`TESTING` 由并行批落位，as-built 核对） | ② 28 行中对位档住 `docs/design/` 的 19 行**不迁层**（该档是本仓该机制的权威设计档；迁层 = 制造单机制双源） | 「36 物理档全建」= 复制 CLI 正文（违非复制）**否决** |
 | D13 | **实施分派 = 两侧各一个 eng-coder、独立实施、共享同一 designId + token** | 各端独立实现（在案多实现面纪律）；单设计链双仓实施面 | 单端实施（对端面缺失）· 两端手工串行（窗口倍增）**否决** |
-| D14 | **VSC 测试档（535）拆分 = 尾段迁出**（`:409`–EOF → `test/prompts-carryover-anchors.test.mjs`；方案见 §9） | 超 500 硬限无豁免（AGENTS.md）；尾切零交叉 + 余档余量最大 | 迁「装配 + 降级链」组（基建共用多、余量小——§9）· 不拆（违硬限）**否决** |
+| D14 | **VSC 测试档（535）拆分 = 尾段迁出**（`:409`–EOF → `test/prompts-carryover-anchors.test.mjs`；方案见 §9）——**【as-built 核对：不执行】**并行批先落，该档已回落 500 内（实测 177）→ 本批零改、拆分不适用 | 超 500 硬限无豁免（AGENTS.md）；尾切零交叉 + 余档余量最大 | 迁「装配 + 降级链」组（基建共用多、余量小——§9）· 不拆（违硬限）**否决** |
 
 ## 6. 提示词面（B3 / B8 / B9——同节一次落定）
 
@@ -234,12 +234,12 @@
 |---|---|---|---|
 | 1 | `src/prompts/discipline-engineering.md` | CLI EN | 多实现面纪律节改写（§6.1）· A1 ④（§6.3）· 新节（§6.2） |
 | 2 | `docs/design/prompts/discipline-engineering.md` | CLI CN | 同上（本节无 A1——该镜像档不含「设计行为纪律四维」节，见 §9 注） |
-| 3 | `thincoder-vscode/src/prompts/discipline-engineering.md` | VSC EN | 同上（本端原文自持） |
-| 4 | `thincoder-vscode/docs/design/prompts/discipline-engineering.md` | VSC CN | 同上（同理无 A1） |
+| 3 | `src/prompts/discipline-engineering.md`（VSC 仓） | VSC EN | 同上（本端原文自持） |
+| 4 | `docs/design/prompts/discipline-engineering.md`（VSC 仓） | VSC CN | 同上（同理无 A1） |
 | 5 | `src/prompts/discipline-normal.md` | CLI normal | 新节（§6.2）——normal 覆盖（D7） |
-| 6 | `thincoder-vscode/src/prompts/discipline-normal.md` | VSC normal | 同上（本端原文自持） |
+| 6 | `src/prompts/discipline-normal.md`（VSC 仓） | VSC normal | 同上（本端原文自持） |
 | 7 | `docs/design/prompts/discipline-normal.md` | CLI normal（CN 镜像） | §6.2 条 3 / 条 4——**修正轮纳入**（镜像面与 `src/` 同规：实测存在，184 行） |
-| 8 | `thincoder-vscode/docs/design/prompts/discipline-normal.md` | VSC normal（CN 镜像） | 同上（本端原文自持；实测存在，184 行） |
+| 8 | `docs/design/prompts/discipline-normal.md`（VSC 仓） | VSC normal（CN 镜像） | 同上（本端原文自持；实测存在，184 行） |
 
 **措辞纪律**（R3）：条文可执行、**零维护者注**（不写日期 / 批号 / 评审号 / 档内引用）；零本产品术语绑死；行宽 ≤300 字符。
 
@@ -421,7 +421,7 @@
 | 类 | 判据 | 处置 | 档数 | 逐档 |
 |---|---|---|---|---|
 | **A 对位声明** | 命中行全为本仓自有机制叙述里提及对端（正文引用——轴二管辖） | **零改** | 33 | requirements 16：`ADVISOR-CONVERGENCE` · `PROMPT-SYSTEM` · `PORTABILITY` · `CRASH-REPORTS` · `MEMORY` · `MULTI-INSTANCE-COLLAB` · `SESSION` · `TESTING` · `TOOLS` · `ACP-CLIENT` · `AGENT-PARAMS` · `ASYNC-RESULT-CONTAINER` · `SETTINGS-TOOL` · `STRUCTURE-DEBT` · `SUBAGENT-OBSERVE-SEND` · `TURN-CAP-CONTINUE` ｜ design 17：`SESSION` · `INSERT-AFTER` · `TURN-CAP-CONTINUE` · `ASYNC-RESULT-CONTAINER` · `CONTEXT-COMPACTION` · `CRASH-REPORTS` · `DESIGN-TOKEN-SETTLEMENT` · `EDIT-HELPERS` · `EDIT` · `RELEASE` · `APPLY-PATCH` · `HASHLINE-EDIT` · `MULTI-INSTANCE-COLLAB` · `SUBAGENT-OBSERVE-SEND` · `TOOL-OUTPUT-LIMITS` · `TUI-INPUT-BOX` · `WRITE` |
-| **B 跨仓指针** | 命中行含对端路径（受影响文件表 / 证据 / 验收命令 / 档内指针） | **逐条改指本仓 / 规范形态化**（`thincoder-vscode/x.md §N` → `名称（VSC 仓）§N`，目标 = 该机制的本端对位档） | 18 | requirements 2：`ENGINEERING-MODE`（2 线）· `TUI`（1 线）｜ design 16：`LEDGER-SELF-CONTAINED`（27）· `ADVISOR-CONVERGENCE`（20）· `SETTINGS-TOOL`（16）· `TESTING`（14）· `AGENT-LOOP`（9）· `PROVIDER`（8）· `TOOLS`（4）· `TUI`（2）· `PROMPT-SYSTEM`（2）· `PORTABILITY`（1）· `ACP-CLIENT`（1）· `MEMORY`（1）· `STRUCTURE-DEBT`（1）· `CONSULTATION`（1）· `ESCALATE`（1）· `QUICKFIX-BATCH-3`（1） |
+| **B 跨仓指针** | 命中行含对端路径（受影响文件表 / 证据 / 验收命令 / 档内指针） | **逐条改指本仓 / 规范形态化**（`他仓/x.md §N` → `名称（VSC 仓）§N`，目标 = 该机制的本端对位档） | 18 | requirements 2：`ENGINEERING-MODE`（2 线）· `TUI`（1 线）｜ design 16：`LEDGER-SELF-CONTAINED`（27）· `ADVISOR-CONVERGENCE`（20）· `SETTINGS-TOOL`（16）· `TESTING`（14）· `AGENT-LOOP`（9）· `PROVIDER`（8）· `TOOLS`（4）· `TUI`（2）· `PROMPT-SYSTEM`（2）· `PORTABILITY`（1）· `ACP-CLIENT`（1）· `MEMORY`（1）· `STRUCTURE-DEBT`（1）· `CONSULTATION`（1）· `ESCALATE`（1）· `QUICKFIX-BATCH-3`（1） |
 | **C 托管内容** | 命中行为「对端需求落本档」类**托管声明** | **迁移**（对端需求迁本端，落对端 `docs/requirements/` 对位档；本档留本仓面） | 2 | `requirements/AGENT-LOOP`（7 线——「VSC 仓无 requirements 树 → 需求落本档」相关节 `:250` / `:300` / `:348`）· `design/ENGINEERING-MODE`（1 线） |
 
 **归档面（`docs/design/_archive/` 21 档——复测；上轮记 17）**：
@@ -455,7 +455,7 @@
 | 1 | 仓根（非 `docs/`） | AGENTS · README · CHANGELOG · LICENSE | 同 4 档 | 保持 |
 | 2 | `docs/README.md`（文档地图） | 有（243 行） | **缺** | **建**（逐层登记 + 登记规则指针） |
 | 3 | `docs/TODO.md` / `TODO-archive.md` | 有 | 有 | 保持（头部改指本仓） |
-| 4 | `docs/requirements/` | 36 档 | 2 档 | **对位表 36 行三值齐备**；树终态 **15 档**（§8.6 末） |
+| 4 | `docs/requirements/` | 36 档 | 3 档（含并行批已落 `TESTING.md`） | **对位表 36 行三值齐备**；树终态 **16 档**（§8.6 末） |
 | 5 | `docs/design/` | 46 档 | 55 档 | 已自持（异名对位正常） |
 | 6 | `docs/design/prompts/`（中文权威）+ `src/prompts/`（英文落地） | 各 15 档 | 各 15 档 | 双源对位保持 |
 | 7 | `docs/batches/` | 53 档 | 2 档 | 新批本仓 + 存量宽口径处置（§8.3） |
@@ -496,7 +496,7 @@
 | 27 | `SETTINGS-TOOL` | **①** | — | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5——须建独立需求档 |
 | 28 | `STRUCTURE-DEBT` | **①** | — | 本端结构债登记面缺失（`scripts/` 无行数检查器实跑面）——须建 |
 | 29 | `SUBAGENT-OBSERVE-SEND` | ② | `docs/design/SUBAGENT-OBSERVE-SEND.md` | 同名对位 |
-| 30 | `TESTING` | ② | `docs/design/TESTING.md` | 同名对位 |
+| 30 | `TESTING` | ② | `docs/requirements/TESTING.md`（设计档 `docs/design/TESTING.md` 在位） | 已在位（并行批已落位——as-built） |
 | 31 | `TOOL-OUTPUT-LIMITS` | ② | `docs/design/TOOL-OUTPUT-LIMITS-REQUIREMENTS.md` | **归位** → `docs/requirements/TOOL-OUTPUT-LIMITS.md` |
 | 32 | `TOOLS` | ② | `docs/design/TOOLS.md` + 编辑族单档 6 | 同名对位 |
 | 33 | `TUI` | ② | `docs/design/WEBVIEW.md` | **异名对位**（本端 UI 面 = webview；端差已登记） |
@@ -506,12 +506,14 @@
 
 **三值计数**：① **6**（#15 · #18 · #19 · #27 · #28 · #36）· ② **28** · ③ **2**（#1 · #9）→ 6+28+2 = **36** ✅
 
-**对端 `docs/requirements/` 树终态 = 15 档**：
+**对端 `docs/requirements/` 树终态 = 16 档**：
 
-- 在位 2：`README` · `ENGINEERING-MODE`。
+- 在位 3：`README` · `ENGINEERING-MODE` · `TESTING`（`TESTING` 由并行批落位——as-built）。
 - 归位 6：`AGENT-PARAMS` · `ENG-TOKEN-BINDING` · `SEND-STALL-DISTILL` · `TOOL-OUTPUT-LIMITS` · `PROJECT` · `PHILOSOPHY`。
 - 拆出 1：`FEATURES`。
-- ① 新建 6：`LOGGING` · `MULTI-INSTANCE-COLLAB` · `NORMAL-MODE` · `SETTINGS-TOOL` · `STRUCTURE-DEBT` · `VERIFY-REDESIGN`（2+6+1+6 = **15** ✅）
+- ① 新建 6：`LOGGING` · `MULTI-INSTANCE-COLLAB` · `NORMAL-MODE` · `SETTINGS-TOOL` · `STRUCTURE-DEBT` · `VERIFY-REDESIGN`（3+6+1+6 = **16** ✅）
+
+**② 分桶（28 = 归位 6 + 拆出 1 + 已在位 2 + 异名 / 异层对位 19——与对端侧同口径）**：已在位 2 = `ENGINEERING-MODE` · `TESTING`；异名 / 异层对位 19 = 上表 ② 行中住 `docs/design/` 的对位档（`TESTING` 升入已在位——as-built 对齐）。
 
 **归位规则**（对端 `docs/requirements/` 目标形态）：
 
@@ -554,46 +556,46 @@
 |---|---|---|---|---|
 | 1 | `docs/requirements/ENGINEERING-MODE.md` | 912 | — | §1.19（修订轮新增 F9/F10 + F4 加强 + 判定句区间改指） |
 | 2 | `docs/design/LEDGER-SELF-CONTAINED.md` | **731**（修正轮终值） | — | 本档（初版 470 → 修订轮 +207 → 修正轮 +54） |
-| 3 | `src/prompts/discipline-engineering.md` | 229 | +30±10 | §6.1 改写 / §6.3 / §6.2 新节 |
-| 4 | `docs/design/prompts/discipline-engineering.md` | 158 | +18±6 | §6.1 / §6.2（无 A1 节——见注） |
+| 3 | `src/prompts/discipline-engineering.md` | 230（as-built——并行批 +1） | +30±10 | §6.1 改写 / §6.3 / §6.2 新节 |
+| 4 | `docs/design/prompts/discipline-engineering.md` | 159（as-built——并行批 +1） | +18±6 | §6.1 / §6.2（无 A1 节——见注） |
 | 5 | `src/prompts/discipline-normal.md` | 181 | +12±4 | §6.2 条 3 / 条 4 |
 | 6 | `scripts/check-ledger.mjs` | 248 | +80±20 | 新增 L4 + 本仓基根解析；`DEFAULT_LEDGERS` 去对端项 |
 | 7 | `test/ledger.test.mjs` | 176 | +60±20 | L4 正常 / 边界 / 反证用例 |
 | 8 | `test/fixtures/ledger-baseline.json` | 13 | +1..+3 | L4 存量条目 |
-| 9 | `test/prompts-async-guidance.test.mjs`（CLI） | 420 | ±2 | A1 ④ 断言串改（§6.3）——**CLI 同侧不受拆分影响**（420 = 已拆分后态） |
+| 9 | `test/prompts-async-guidance.test.mjs`（CLI） | **169**（as-built 核对——并行批先落） | **±0** | 本批零改（A1 ④ 断言已随散文锚退役删除——与对端同形态；拆分不受影响） |
 | 10 | `docs/TODO.md` | 25 | ±0 | 主 agent 落笔（记录 + 状态推进） |
 | 11 | `docs/TODO-archive.md` | 162 | −13 行 + 注记 | **9 线迁对端 + 4 线拆分**（§8.2；落笔归主 agent——不再整体冻结） |
 | 12 | `docs/README.md` | 243 | +6±3 | §3.7 / §3.8 补自持与互引规范句 |
 | 13 | `docs/design/ENGINEERING-MODE.md` | 2627 | +45±15 | §2.31 新增（本批设计面登记）+ §2.9 锚#8 A1 ④ 引文同步 |
-| 14 | `thincoder-vscode/docs/requirements/README.md` | **已落 51** | +60±20 | 本端需求档地图与登记规则 + 36 档对位表登记（修正轮终值） |
-| 15 | `thincoder-vscode/docs/requirements/ENGINEERING-MODE.md` | **已落 67** | +40±20 | 本端工程模式自持需求（F1–F10 / N1–N5；修正轮终值） |
-| 16 | `thincoder-vscode/docs/design/LEDGER-SELF-CONTAINED.md` | **已落 557**（修正轮终值） | — | 对端设计档 |
-| 17 | `thincoder-vscode/src/prompts/discipline-engineering.md` | 241 | +30±10 | §6.1 / §6.2 / §6.3 |
-| 18 | `thincoder-vscode/docs/design/prompts/discipline-engineering.md` | 164 | +18±6 | §6.1 / §6.2 |
-| 19 | `thincoder-vscode/src/prompts/discipline-normal.md` | 194 | +12±4 | §6.2 条 3 / 条 4 |
+| 14 | `docs/requirements/README.md`（VSC 仓） | **已落 51** | +60±20 | 本端需求档地图与登记规则 + 36 档对位表登记（修正轮终值） |
+| 15 | `docs/requirements/ENGINEERING-MODE.md`（VSC 仓） | **已落 67** | +40±20 | 本端工程模式自持需求（F1–F10 / N1–N5；修正轮终值） |
+| 16 | `docs/design/LEDGER-SELF-CONTAINED.md`（VSC 仓） | **已落 564**（as-built 实测） | — | 对端设计档 |
+| 17 | `src/prompts/discipline-engineering.md`（VSC 仓） | 242（as-built——并行批 +1） | +30±10 | §6.1 / §6.2 / §6.3 |
+| 18 | `docs/design/prompts/discipline-engineering.md`（VSC 仓） | 165（as-built——并行批 +1） | +18±6 | §6.1 / §6.2 |
+| 19 | `src/prompts/discipline-normal.md`（VSC 仓） | 194 | +12±4 | §6.2 条 3 / 条 4 |
 | 20 | `thincoder-vscode/scripts/check-ledger.mjs` | **新建** | 0→~230 | 本端台账检查器（L1–L4 语义同源、独立实现） |
 | 21 | `thincoder-vscode/test/ledger-check.test.mjs` | **新建** | 0→~120 | 本端检查器用例 |
 | 22 | `thincoder-vscode/test/fixtures/ledger-baseline.json` | **新建** | 0→~10 | 本端基线（首跑固化） |
-| 23 | `thincoder-vscode/test/files.mjs` | 79 | +2 | 新测试档登记 ×2（`ledger-check` + 拆分新档——清单制） |
-| 24 | `thincoder-vscode/test/prompts-async-guidance.test.mjs` | 535 | **拆**（迁出 `:409`–EOF；余档 ≈408）+ ±2 | A1 ④ 断言串改 + 拆分（评审 #1） |
-| 25 | `thincoder-vscode/docs/TODO.md` | 19 | ±0 | 主 agent 落笔（头部改指本仓） |
-| 26 | `thincoder-vscode/docs/TODO-archive.md` | 48 | ±0 | 冻结（零改） |
-| 27 | `thincoder-vscode/docs/design/README.md` | 132 | +8±4 | 板块登记（LEDGER-SELF-CONTAINED）+ 变更记录一行 |
-| 28 | `thincoder-vscode/docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md` | — | — | **父侧另派绑定**（设计者不跨档写 §2） |
-| 29 | `thincoder-vscode/docs/README.md` | **新建** | 0→~130 | 文档地图（§8.6 层清单十行逐行登记） |
-| 30 | `thincoder-vscode/docs/requirements/AGENT-PARAMS.md` | **归位**（原 `docs/design/AGENT-PARAMS-REQUIREMENTS.md` 41 行） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 114 行留 `docs/design/`） |
-| 31 | `thincoder-vscode/docs/requirements/ENG-TOKEN-BINDING.md` | **归位**（原 47 行档） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 115 行留原位） |
-| 32 | `thincoder-vscode/docs/requirements/SEND-STALL-DISTILL.md` | **归位**（原 39 行档） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 137 行留原位） |
-| 33 | `thincoder-vscode/docs/requirements/TOOL-OUTPUT-LIMITS.md` | **归位**（原 46 行档） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 139 行留原位） |
-| 34 | `thincoder-vscode/docs/requirements/PROJECT.md` | **归位**（原 `docs/design/REQUIREMENTS.md` 129 行） | ±0（去 v1 功能范围节） | 二值 ②·归位异名 |
-| 35 | `thincoder-vscode/docs/requirements/FEATURES.md` | **新建（拆出）** | 0→~45 | 自 `REQUIREMENTS.md` §v1 功能范围 拆出 |
-| 36 | `thincoder-vscode/docs/requirements/PHILOSOPHY.md` | **归位**（原 `docs/design/PHILOSOPHY.md` 135 行） | ±0 | 二值 ②·归位（价值层需求） |
-| 37 | `thincoder-vscode/docs/requirements/LOGGING.md` | **新建（①）** | 0→~60 | 机制在位（`src/log.mjs`）无档——兼清 `src/log.mjs:2` 悬空指针 |
-| 38 | `thincoder-vscode/docs/requirements/MULTI-INSTANCE-COLLAB.md` | **新建（①）** | 0→~60 | 机制在位（`src/extension/peer-instances.mjs`）无档 |
-| 39 | `thincoder-vscode/docs/requirements/NORMAL-MODE.md` | **新建（①）** | 0→~70 | 机制在位（提示词装配层）无档 |
-| 40 | `thincoder-vscode/docs/requirements/SETTINGS-TOOL.md` | **新建（①）** | 0→~70 | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |
-| 41 | `thincoder-vscode/docs/requirements/STRUCTURE-DEBT.md` | **新建（①）** | 0→~60 | 本端结构债登记面缺失 |
-| 42 | `thincoder-vscode/docs/requirements/VERIFY-REDESIGN.md` | **新建（①）** | 0→~60 | 机制在位（`src/agent-tools/verify.mjs`）无档 |
+| 23 | `thincoder-vscode/test/files.mjs` | 79 | +1 | 新测试档登记 ×1（`ledger-check`——清单制；拆分新档经 as-built 核对不建） |
+| 24 | `thincoder-vscode/test/prompts-async-guidance.test.mjs` | **177**（as-built 核对——并行批先落） | **±0** | 本批零改（A1 ④ 断言已随散文锚退役删除；拆分不适用——≤500 内） |
+| 25 | `docs/TODO.md`（VSC 仓） | 19 | ±0 | 主 agent 落笔（头部改指本仓） |
+| 26 | `docs/TODO-archive.md`（VSC 仓） | 48 | −5 行 + 注记 | 头部改指本仓（§8.2 #7）；归档 3 条逐条改指（#8）+ 1 行改写（#9）——不再整体冻结 |
+| 27 | `docs/design/README.md`（VSC 仓） | 132 | +8±4 | 板块登记（LEDGER-SELF-CONTAINED）+ 变更记录一行 |
+| 28 | `docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md`（VSC 仓） | — | — | **父侧另派绑定**（设计者不跨档写 §2） |
+| 29 | `docs/README.md`（VSC 仓） | **新建** | 0→~130 | 文档地图（§8.6 层清单十行逐行登记） |
+| 30 | `docs/requirements/AGENT-PARAMS.md`（VSC 仓） | **归位**（原 `docs/design/AGENT-PARAMS-REQUIREMENTS.md` 41 行） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 114 行留 `docs/design/`） |
+| 31 | `docs/requirements/ENG-TOKEN-BINDING.md`（VSC 仓） | **归位**（原 47 行档） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 115 行留原位） |
+| 32 | `docs/requirements/SEND-STALL-DISTILL.md`（VSC 仓） | **归位**（原 39 行档） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 137 行留原位） |
+| 33 | `docs/requirements/TOOL-OUTPUT-LIMITS.md`（VSC 仓） | **归位**（原 46 行档） | ±0 + 头注 | 二值 ②·归位（`-TUNING` 139 行留原位） |
+| 34 | `docs/requirements/PROJECT.md`（VSC 仓） | **归位**（原 `docs/design/REQUIREMENTS.md` 129 行） | ±0（去 v1 功能范围节） | 二值 ②·归位异名 |
+| 35 | `docs/requirements/FEATURES.md`（VSC 仓） | **新建（拆出）** | 0→~45 | 自 `REQUIREMENTS.md` §v1 功能范围 拆出 |
+| 36 | `docs/requirements/PHILOSOPHY.md`（VSC 仓） | **归位**（原 `docs/design/PHILOSOPHY.md` 135 行） | ±0 | 二值 ②·归位（价值层需求） |
+| 37 | `docs/requirements/LOGGING.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/log.mjs`）无档——兼清 `src/log.mjs:2` 悬空指针 |
+| 38 | `docs/requirements/MULTI-INSTANCE-COLLAB.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/extension/peer-instances.mjs`）无档 |
+| 39 | `docs/requirements/NORMAL-MODE.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（提示词装配层）无档 |
+| 40 | `docs/requirements/SETTINGS-TOOL.md`（VSC 仓） | **新建（①）** | 0→~70 | 机制在位（`src/agent-tools/settings.mjs`）；部分承载 = `docs/design/TOOLS.md` §5 |
+| 41 | `docs/requirements/STRUCTURE-DEBT.md`（VSC 仓） | **新建（①）** | 0→~60 | 本端结构债登记面缺失 |
+| 42 | `docs/requirements/VERIFY-REDESIGN.md`（VSC 仓） | **新建（①）** | 0→~60 | 机制在位（`src/agent-tools/verify.mjs`）无档 |
 | 43 | `thincoder-vscode/docs/batches/`（迁移 **14** 档） | 迁入 4234 行（含 10 行折行） | ±0 | §8.3 迁移表逐档 |
 | 44 | `thincoder-vscode/docs/batches/`（拆分 **17** 档新档·本批） | 新建 | 0→≈168 条目 | §8.3 拆分表对端份 |
 | 45 | `thincoder-vscode/docs/design/_archive/`（迁移 3 档） | 迁入 223 行 | ±0 | `DOC-REORG-VSC` 90 · `DOC-REWRITE-VSC` 74 · `TRACE-STORE-VSC` 59 |
@@ -601,8 +603,8 @@
 | 47 | `thincoder/docs/design/_archive/`（拆分 2 / 改指 16） | 53 档层内 | ±0~±20 | §8.4 归档面 |
 | 48 | B 类改指面（本仓 18 档 + 对端反向 35 档） | 行数 ±0 | ±0 | 逐条规范形态化（D4） |
 | 49 | `docs/design/prompts/discipline-normal.md` | 184 | +10±4 | §6.2 条 3 / 条 4（CN 镜像面——修正轮纳入） |
-| 50 | `thincoder-vscode/docs/design/prompts/discipline-normal.md` | 184 | +10±4 | 同上（本端原文自持） |
-| 51 | `thincoder-vscode/test/prompts-carryover-anchors.test.mjs` | **新建** | 0→≈150 | 拆分新档（迁入 7 例——§9 拆分方案） |
+| 50 | `docs/design/prompts/discipline-normal.md`（VSC 仓） | 184 | +10±4 | 同上（本端原文自持） |
+| 51 | `thincoder-vscode/test/prompts-carryover-anchors.test.mjs` | — | **不建** | as-built 核对：拆分面经并行批先落消解（余档 177 ≤500——拆分不适用） |
 
 **拆分 / 档位结论**：
 
@@ -610,11 +612,14 @@
 |---|---|
 | `scripts/check-ledger.mjs` 248 → ~328 | ≤500 硬限内；**不拆**（单档单职责——台账机检）。触发再拆 = 超过 400 行 |
 | `thincoder-vscode/scripts/check-ledger.mjs` 新建 ~230 | 同形；≤500 |
-| `test/prompts-async-guidance.test.mjs`（CLI 420——已拆分后态） | 仅改断言串（±2 行），**不增内容**；CLI 同侧零拆零改 |
-| `thincoder-vscode/test/prompts-async-guidance.test.mjs` 535 | 超 500 **硬限**（修正轮更正：「软线」系误标——500 = AGENTS.md blocking 线，**无豁免通道**）→ **本批拆分**：余档 ≈408 + 新档 ≈150（方案见下）；用例守恒 **49 = 42 + 7** |
+| `test/prompts-async-guidance.test.mjs`（CLI——as-built **169**） | as-built 核对：A1 ④ 断言已随散文锚退役删除（与对端同形态）——本批该档零改；拆分不适用 |
+| `thincoder-vscode/test/prompts-async-guidance.test.mjs`（as-built **177**） | 设计期 535 越 500 **硬限**（修正轮更正：「软线」系误标——500 = AGENTS.md blocking 线，**无豁免通道**）——**as-built 核对：并行批先落（散文锚退役后 177 ≤500）；本批零改、拆分不适用** |
+| （原拟 `test/prompts-carryover-anchors.test.mjs`） | **不建**——as-built：拆分对象已不存在（余档 177）；`test/files.mjs` 登记 **+1** = `ledger-check` |
 | `docs/design/ENGINEERING-MODE.md` 2627 | 单档大盘（既有形态）——本批 +45 不触新档位；**拆分计划**：若再增厚触发「按 §2 批次段切分」专项 |
 
-**测试档拆分方案（`thincoder-vscode/test/prompts-async-guidance.test.mjs` 535 行——超 500 硬限；评审轮次 1 #1；先例 = 第 13 批 D-2）**：
+**测试档拆分方案（评审轮次 1 #1；先例 = 第 13 批 D-2）——【as-built 核对：不执行】**：
+
+> 并行批先落——该档实测 177 行（≤500）；下方方案与用例守恒式（49 = 42 + 7）为设计期基线，留档备查；本批该档零改、不建新档。**作废理由** = 并行批 `PROSE-ANCHOR-RETIRE` 先行实施落树，该档已回落 500 内（实测 177）——拆分对象已不存在。**前置条件失效条款**（照抄对端侧同条款）：若该批实施被回退致该档回越 500 行 → **停手上报**（父侧重裁拆分面）——不自行拆分。
 
 | # | 拆法 | 移动量 | 结论 |
 |---|---|---|---|
@@ -623,9 +628,9 @@
 
 契约：新档 `test/prompts-carryover-anchors.test.mjs` 头部自持（imports + `read` 助手 + 所需语料读取 + 常量）——**零跨档 import**；7 例逐字搬移（断言零改 / 零增 / 零删）；原档头注不改、新档自带头注；登记入对端 `test/files.mjs`（显式清单制）。
 用例数守恒：**49 = 42（余档）+ 7（新档）**——as-of 2026-09-12 实测；增删须同步。
-CLI 同侧：`test/prompts-async-guidance.test.mjs` **420 行不受影响**（已为拆分后态；本批仅 ±2 断言串）。
+CLI 同侧：`test/prompts-async-guidance.test.mjs` **169 行零改**（as-built 核对——A1 ④ 断言已随散文锚退役删除，与对端同形态；无测试断言面）。
 
-**注（A1 不在中文镜像档）**：`docs/design/prompts/discipline-engineering.md` 两仓两档（CLI `:57→:66→:75` · VSC 同形）**不含「设计行为纪律四维」节**（即无 A1 checklist）——故 §6.3 只落 `src/prompts/*` 两档 + 两档测试断言。差异如实登记，不静默。
+**注（A1 不在中文镜像档）**：`docs/design/prompts/discipline-engineering.md` 两仓两档（CLI `:57→:66→:75` · VSC 同形）**不含「设计行为纪律四维」节**（即无 A1 checklist）——故 §6.3 只落 `src/prompts/*` 两档（两档测试断言已随散文锚退役删除——as-built 核对；与对端同形态）。差异如实登记，不静默。
 
 ## 10. 用例表（正常 / 边界 / 错误）
 
@@ -653,7 +658,7 @@ CLI 同侧：`test/prompts-async-guidance.test.mjs` **420 行不受影响**（�
 | T-LS18 | 正常：拆分落地 | 19 档：对端承载档在位 + 本仓档首搬迁注记 | 注记子串全中；条目计数与 §8.3 一致 | B10 / AC-LS17 |
 | T-LS19 | 边界：迁移档宽度合规 | 对端 `node scripts/check-doc-width.mjs` | 新增超宽 0（10 行已折行）；退出码 0 | B10 / AC-LS18 |
 | T-LS20 | 正常：需求对位表三值齐备 | 设计档 §8.6 对位表 | 36 行；① 6 / ② 28 / ③ 2；② 行档名逐行存在 | B11 / AC-LS19 |
-| T-LS21 | 正常：对端需求树终态 | 对端 `docs/requirements/` 目录判据 | 15 档在位（README + 在位 1 + 归位 6 + 拆出 1 + ① 6） | B11 / AC-LS19 |
+| T-LS21 | 正常：对端需求树终态 | 对端 `docs/requirements/` 目录判据 | **16 档在位**（README + 在位 2 + 归位 6 + 拆出 1 + ① 6——`TESTING` 并行批已落位） | B11 / AC-LS19 |
 | T-LS22 | 正常：归位落地 | 6 档目标路径存在 + 原路径不存在；`-TUNING` 4 档留 `docs/design/` | 双向断言全中 | B11 / AC-LS21 |
 | T-LS23 | 正常：文档地图建成 | 对端 `docs/README.md` 存在 | 层清单十行逐行登记（含 guides「不建 + 理由」） | B11 / AC-LS20 |
 | T-LS24 | 边界：guides 不建登记 | 对端 `docs/guides/` | 目录不存在 + 地图内「不建」行在位 | B11 / AC-LS20 |
@@ -661,7 +666,7 @@ CLI 同侧：`test/prompts-async-guidance.test.mjs` **420 行不受影响**（�
 | T-LS26 | **错误：豁免残留**（反证） | grep 设计档 §8 + 批次档 §2 处置值 | 零「就地保留 / 待议 / 豁免」表述 | B10 / AC-LS23 |
 | T-LS27 | 正常：B 类改指 / C 类托管落地 | 本仓 B 类 18 档 + 归档改指 16 档 grep 对端 `.md` 路径形态；C 类 2 处（`requirements/AGENT-LOOP` 7 线 · `design/ENGINEERING-MODE` 1 线） | 残留零命中；改指 `名称（VSC 仓）§N` 目标可解析；本档零「对端需求落本档」托管句 | B12 / AC-LS24 |
 | T-LS28 | 正常：归档面落地 | `docs/design/_archive/`：迁移 3 档对端在位 / 本仓不存在；拆分 2 档；改指 16 档 | 双向断言全中；残留零命中 | B10 / AC-LS25 |
-| T-LS29 | 正常：VSC 侧测试档拆分 | 两档行数 + 用例数 + import 面 + 对端 `test/files.mjs` 登记 | 各 ≤500；49 = 42 + 7；新档零跨档 import；对端快层全绿 | B9 / AC-LS26 |
+| T-LS29 | 正常：测试档面 as-built（跨端面） | 对端 `test/prompts-async-guidance.test.mjs` 实测行数 + `test/files.mjs` 登记 + 对端 `node test/run-fast.mjs` | **177 ≤500**（并行批先落——拆分不适用；存量测试档零改）；登记 **+1**（`ledger-check`）；快层全绿 | B9 / AC-LS26 |
 
 ## 11. 验收标准（逐条回指 R1–R9 + P1′ + P2′）
 
@@ -687,14 +692,14 @@ CLI 同侧：`test/prompts-async-guidance.test.mjs` **420 行不受影响**（�
 | AC-LS16 | 迁移面落地：14 档在对端仓存在 / 在本仓不存在；本仓零 `batches/<迁移档名>.md` 形态引用（14 条已改指规范形态） | B10 · B12 |
 | AC-LS17 | 拆分面落地：19 档逐档对端承载档在位 + 本仓档首搬迁注记在位（含移出条目清单） | B10 |
 | AC-LS18 | 迁移档在对端仓宽度合规：对端 `check-doc-width.mjs` 新增超宽 0、新增一致性违规 0（10 行已折行） | B10 |
-| AC-LS19 | 需求对位覆盖率：36 行三值齐备（① 6 / ② 28 / ③ 2）；② 行对位档名逐行可解析；③ 行理由在位；对端 `docs/requirements/` 终态 15 档 | B11 |
-| AC-LS20 | 对端文档地图建成：`thincoder-vscode/docs/README.md` 存在且层清单十行逐行登记（含 guides「不建 + 理由」、**对端**独有档保留） | B11 |
+| AC-LS19 | 需求对位覆盖率：36 行三值齐备（① 6 / ② 28 / ③ 2——② 分桶 = 归位 6 + 拆出 1 + 已在位 2 + 异名 / 异层对位 19）；② 行对位档名逐行可解析；③ 行理由在位；对端 `docs/requirements/` 终态 **16 档**（15 档蓝图 + `TESTING`——并行批已落位） | B11 |
+| AC-LS20 | 对端文档地图建成：`docs/README.md`（VSC 仓） 存在且层清单十行逐行登记（含 guides「不建 + 理由」、**对端**独有档保留） | B11 |
 | AC-LS21 | 归位落地：6 档在 `docs/requirements/` 在位 + 原路径不存在；4 个 `-TUNING.md` 留 `docs/design/` 零改 | B11 |
 | AC-LS22 | 指针与互引存量：台账逐条处置（CLI 归档 9 迁移 / 4 拆分 / 1 零改；VSC 改指 5 处 + 改写 1 行）；指向迁移档的 14 条批档互引已改指 | B12 |
 | AC-LS23 | **无豁免判据**：设计档 §8 与批次档 §2 处置值域 = {迁移, 拆分, 零处置}——零「就地保留 / 待议 / 豁免」表述 | B10 · B12 |
 | AC-LS24 | B 类改指 / C 类托管落地：本仓 18 档 + 归档改指 16 档内对端 `.md` 路径形态零残留、改指目标可解析；C 类 2 处（`requirements/AGENT-LOOP` 7 线 · `design/ENGINEERING-MODE` 1 线）迁移落地 + 本档零托管句 | B12 |
 | AC-LS25 | 归档面落地：迁移 3 档在对端 `docs/design/_archive/` 在位 + 本仓不存在；拆分 2 档落地；改指 16 档形态化零残留 | B10 |
-| AC-LS26 | VSC 侧测试档拆分（跨端面）：两档各 ≤500；用例数守恒（as-of 基线 49 = 42 + 7）；新档零跨档 import + 对端 `test/files.mjs` 登记 + 对端快层全绿；CLI 侧 420 零改 | B9 |
+| AC-LS26 | 测试档面 as-built（跨端面）：`prompts-async-guidance` 对端 **177** / CLI **169** 均 ≤500（并行批先落——拆分不适用；存量测试档零改）；`test/ledger-check.test.mjs` 零跨仓 import + 登记入对端 `test/files.mjs`（**+1**）+ 对端快层全绿 | B9 |
 
 > **AC-LS12 归属注（修正轮——评审轮次 1 #8）**：两仓「新增一致性违规」口径 = 批前 / 批后命中集合差。VSC 仓复跑现 2 条（as-of 2026-09-12）= 两档 VSC 侧批次记录的 V3「§3 缺工具写入的轮次行」——成因 = §4 骨架含 `---` 分隔行被 V3 判为实文 + §3 未写入（在飞瞬态）；**归属 = 评审写入时序 + 骨架占位标点**，非本批设计内容引入。
 > **消解路径（可机判）**：对应记录 §3 获工具写入的轮次行（`### 轮次 N（评审子代理）`）时自消——复跑归零；或骨架占位收紧（去 `---` 分隔行）同消。复核时点 = 两侧记录 §3 写入后。
@@ -727,4 +732,10 @@ CLI 同侧：`test/prompts-async-guidance.test.mjs` **420 行不受影响**（�
   ① 🔴 VSC 测试档 535 超 500 硬限 → 本批拆分（§9 方案 + D14 · AC-LS26 / T-LS29）；② VSC §9 表去重 / 连续编号 / 口径统一；③ P3 显式映射（§8.8）；④ 实施分派裁定（D13——两侧各一 eng-coder、独立实施、共享同一 designId + token）；
   ⑤ §2 题注 / 表同步 B1–B12；⑥ D3 归档口径更新（不再整体冻结）；⑦ 计数口径逐处统一 + as-of（74→75 · 「已落」值刷新）；⑧ AC-LS12 归属注（2 条 V3 瞬态——基线 / 消解路径）；
   ⑨ `docs/design/prompts/discipline-normal.md`（两仓）纳入落点与 grep 面（§6.4 / §9 / AC-LS8）；⑩ 改指 / 托管 / 归档面补 AC（AC-LS24 · AC-LS25 / T-LS27 · T-LS28）；⑪ 需求档判定句区间改指；⑫ 跨端引用形态收敛（§4.3 扩围声明 + 头行）。
-  回读核对（修正轮终值——D6）：本档 **731** 行；两侧设计档（CLI 731 / VSC 557）· 两侧需求档（CLI 912 / VSC 67）· VSC 需求 README 51 行——实测回填；两仓复跑：本批文件新增超宽 0（VSC 宽度面 75 文件全绿）；新增一致性违规 CLI 8（6 V1 + 2 V2——均他链 / 时序面，见 §8.8 与 §11 归属注）· VSC 2（V3 瞬态——§11 归属注）。
+  回读核对（修正轮终值——D6）：本档 **731** 行；两侧设计档（CLI 731 / VSC 564）· 两侧需求档（CLI 912 / VSC 67）· VSC 需求 README 51 行——实测回填；两仓复跑：本批文件新增超宽 0（VSC 宽度面 75 文件全绿）；新增一致性违规 CLI 8（6 V1 + 2 V2——均他链 / 时序面，见 §8.8 与 §11 归属注）· VSC 2（V3 瞬态——§11 归属注）。
+- 2026-09-12（**as-built 对齐（CLI 侧同步）**——并行批 `PROSE-ANCHOR-RETIRE` 实施落树后，把本档拉到与对端同一 as-built 口径；零新语义 / 零新范围，只修事实、计数与已消解拆分面）：
+  ① 测试档拆分面**不适用**——`prompts-async-guidance` 对端实测 **177** ≤500、CLI 同侧实测 **169** ≤500（并行批先落——语义面断言整族退役）；`prompts-carryover-anchors` **不建**；`test/files.mjs` 登记 **+1**（仅 `ledger-check`）；原拆分方案留档备查 + 作废注（D14 · §9 行 9/23/24/51 · 档位结论 · §10 T-LS29 · §11 AC-LS26 同步）；
+  ② 对端 `docs/requirements/TESTING.md`（并行批已落位）计入 ② 已在位——§8.6 树终态 15 → **16**、异名 / 异层对位 20 → **19**；D12 · §10 T-LS21 · §11 AC-LS19 同步；
+  ③ §9 行 26 改逐条处置口径（不再整体冻结——对齐 §8.2 #7–#9）；
+  ④ 计数回填：对端设计档 **564**（as-built 实测）· 对端两提示词档 **242 / 165** · 本仓两提示词档 **230 / 159**（均 as-built——并行批 +1；§9 行 3/4/16–18）。
+  回读核对（as-built 对齐后——D6）：本档实测 **742** 行；`node scripts/check-doc-width.mjs` 实跑：本批文件新增超宽 0；一致性新增违规与对齐前同集合（7 条 = P3 承接面 V1×6 + V2×1，非本批引入；存量 20 条）。

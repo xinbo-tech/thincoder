@@ -1,5 +1,7 @@
 > **变更史——正文冻结**（2026-09-10 文档重组批）：本档为一次实施批的过程记录或已被取代的旧权威档，
 > 内容 as-of 交付时点，**不作为现状依据**。现状见 `docs/README.md` 地图指向的板块权威档。
+>
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/design/_archive/PROMPT-IMPL-1-TEXT（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.4 归档面）。
 
 # 施工设计①——提示词文本迁移（PROMPT-SYSTEM-IMPL-TEXT）
 

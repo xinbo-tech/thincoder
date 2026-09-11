@@ -3,7 +3,7 @@
 > 板块：飞刀。状态：**已实施 + 已异步化**（R17——2026-09-06，默认 async）。
 > 权威规格（现行）：`AGENT-LOOP.md` §19（escalate 并入 `subagent` 工具 `action:"escalate"`——
 > 工具面收敛，语义/约束/relay 前缀 `escalate#N` 全保留）+ §25 D-R17b（**缺省 async** + 后台池化 + settle 三分类）。
-> 与 VS Code 插件同源设计（`thincoder-vscode/docs/design/ESCALATE.md`）——本文记录 CLI 端的实现与接线。
+> 与 VS Code 插件同源设计（`ESCALATE（VSC 仓）`）——本文记录 CLI 端的实现与接线。
 > 与会诊（consult）互补，见 `CONSULTATION.md`。
 
 ## 0. 术语表

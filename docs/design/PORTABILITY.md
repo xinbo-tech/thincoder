@@ -475,8 +475,8 @@ D1–D7 全表 / 锚#1–#7 / C1–C4 / T-RO 组 / A11 的 `batchDoc` 必传句�
 
 ## 11. 批次二·VSC 镜像面（2026-09-11 补节——回指）
 
-> 本批（批次二 = VSC 镜像面）的对位设计 = VSC 仓 `thincoder-vscode/docs/design/PORTABILITY.md`（新建——父侧预授权；
-> **权威正文在该档，本节只登记与回指**、不复制）。批次档 = `batches/2026-09-11-PORTABILITY-VSC-MIRROR.md`；
+> 本批（批次二 = VSC 镜像面）的对位设计 = `PORTABILITY（VSC 仓）`（新建——父侧预授权；
+> **权威正文在该档，本节只登记与回指**、不复制）。批次档 = `2026-09-11-PORTABILITY-VSC-MIRROR（VSC 仓）`；
 > 需求面 = `../requirements/PORTABILITY.md` §5。
 
 - **对位结论（三态）**：P1–P10 + P14 在 VSC 端逐条勘察——**需修 10 项**（P1/P2/P3/P4/P5/P6/P7/P9/P10 + P15 文案）·

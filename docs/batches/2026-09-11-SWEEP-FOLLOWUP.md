@@ -98,7 +98,7 @@ TUI.md §1 地图漂移观察。本批 = **小收尾**（回归锁补齐 + 文�
 ### 续块（候选 2 翻转）：设计档侧非表格超宽折行（eng-designer 补写，2026-09-11 13:20）
 
 **段序/优先级声明**：用户 12:38「能开的都开起来」→ 候选 2 **翻转纳入本批**（本块 = §2 追加段，接上段条目 A/B/C）；**不升格另立批**（纯格式修订、零机制/零新语义——§1 待设计裁定⑤ 的升格条件不成立）。批内实施面不变：条目 A 仍为唯一 eng-coder 实施项（token 门）；条目 D 设计侧已落（= 评审对象）。
-**候选 1/3 注**：候选 1（VSC 两处登记）= 已另立批 `2026-09-11-VSC-GUARD-COMPLETION`（在飞）；候选 3（POOL-LEDGER）= 已接手（在飞）——均**已另行处置，本批不含**。
+**候选 1/3 注**：候选 1（VSC 两处登记）= 已另立批 `2026-09-11-VSC-GUARD-COMPLETION（VSC 仓）`（在飞）；候选 3（POOL-LEDGER）= 已接手（在飞）——均**已另行处置，本批不含**。
 
 **条目 D（设计侧已落——评审对象）**：设计档侧非表格超宽 5 处折行——纯折行（文字零增删、语义不变），逐处带 eng-designer 折行标注（行号为折行前 as-of）：
 `AGENT-LOOP.md` `:510`（444→3 行）/`:572`（338→2）/`:574`（391→2）· `SESSION.md` `:524`（392→2）· `SUBAGENT-ID-COUNTER-AGENT.md` `:53`（479→3）。
@@ -156,7 +156,7 @@ TUI.md §1 地图漂移观察。本批 = **小收尾**（回归锁补齐 + 文�
 **机检（本轮前/后实跑 `node scripts/check-doc-width.mjs`——CLI 仓，2026-09-12）**：
 - 宽度：22 文件 / 39 行 >300——全部在 `docs/batches/**`（含本批 §3 评审段 :150 / :173 / :174——评审输出）；
   本轮落笔新增超宽 0、前/后命中集合差 = 空。
-- 一致性 V1/V2/V3：新增 8 条——全部他链在飞档（`2026-09-12-VSC-ACTIVITY-CLOSURE` · `2026-09-12-VSC-CHILD-PERMISSION` · `2026-09-12-LEDGER-SELF-CONTAINED`）；
+- 一致性 V1/V2/V3：新增 8 条——全部他链在飞档（`2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` · `2026-09-12-VSC-CHILD-PERMISSION（VSC 仓）` · `2026-09-12-LEDGER-SELF-CONTAINED`）；
   存量（基线内）20 条——本轮改动面新增 = 0、前/后逐条相同；退出码 1 = 存量 + 他链在飞所致（轮前/轮后同）。
 - 留痕：本块（设计档 §7 未另增行）。
 
@@ -252,7 +252,7 @@ _（待写——eng-coder）_
 | 命令 | 结果 |
 |---|---|
 | `node --check test/doc-consistency.test.mjs` | 通过 |
-| `node --test test/doc-consistency.test.mjs` | 13 例：**12 绿（含 T111/T112）**；1 红 = T41①——他链在飞批次档 8 条 V1/V2/V3（`2026-09-12-VSC-ACTIVITY-CLOSURE` ×6 · `VSC-CHILD-PERMISSION` ×1 · `LEDGER-SELF-CONTAINED` ×1）——与 §2 修正轮块 :159 登记同值，归各链 |
+| `node --test test/doc-consistency.test.mjs` | 13 例：**12 绿（含 T111/T112）**；1 红 = T41①——他链在飞批次档 8 条 V1/V2/V3（`2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` ×6 · `VSC-CHILD-PERMISSION（VSC 仓）` ×1 · `LEDGER-SELF-CONTAINED` ×1）——与 §2 修正轮块 :159 登记同值，归各链 |
 | `node test/run-fast.mjs`（两跑） | 647 tests / 628 pass / 1 fail（同 T41①）/ 18 skip；**T111 ✔（2.3ms）· T112 ✔（0.9ms）**；slow 门 18→19 条他档计时抖动（hooks-stop / portability-* / setup-reminders / verify-redesign——offender 逐跑不同 = 负载抖动态；本会话多批已登记存量现象）；**本交付新增 fail = 0 · 新增 slow 门命中 = 0** |
 | `git diff --stat -- test/prompts-async-guidance.test.mjs test/prompts-dual-source.test.mjs` | **空**（被锁两档零改动确认） |
 

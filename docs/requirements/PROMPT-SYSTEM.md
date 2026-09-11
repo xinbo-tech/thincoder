@@ -274,7 +274,7 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 | 设计纪律锚注入（2026-09-09） | MAIN-DESIGN-ENHANCE.md | 已实现 |
 | 注意力重排（2026-09-09 起） | PROMPT-ATTENTION-RESTRUCTURE.md + SPLIT-PLAN | 批 1/2 已交付；批 3-5 待做——**待本蓝图批准后按新命名重排范围** |
 | 基础拆分（2026-09-10） | PROMPT-DECOUPLING §2.5 | 并入本蓝图（§1-§5） |
-| VSC 端差异面 | （VSC 仓）VSC-PROMPTS.md | 已按本蓝图落地（施工①②③ + 语料修复/[4] 层——批次 `../batches/2026-09-11-VSC-CONTEXT-PARITY.md`） |
+| VSC 端差异面 | （VSC 仓）VSC-PROMPTS.md | 已按本蓝图落地（施工①②③ + 语料修复/[4] 层——批次 `2026-09-11-VSC-CONTEXT-PARITY（VSC 仓）`） |
 
 ## 8. 工程模式角色重定义——提示词实现面（需求——2026-09-10 用户裁定；**已设计 + 已实现**——第 2 批 CLI / 第 5 批 VSC）
 
@@ -301,7 +301,7 @@ consult-base.md / advisor-design.md / advisor-round{1,2,3}.md——身份+输出
 
 ## 9. VSC 语料对齐与 [4] 层落地（VSC-CONTEXT-PARITY 批——2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1（用户 2026-09-11 22:54「VSC 端会话体验与
+> 来源：批次 `2026-09-11-VSC-CONTEXT-PARITY（VSC 仓）§1`（用户 2026-09-11 22:54「VSC 端会话体验与
 > CLI 差距巨大——提示词系统和注入信息面出现巨大差异，挖差异并修正使行为与 CLI 一致」+ 23:02 三条裁定；
 > 裁定 1 = 权威源即 CLI 蓝图——VSC 设计档「[4] 层由调用面承担」宣告作废）。
 > 本条目 = 提示词实现面需求；注入面与顺序见 `AGENT-LOOP.md` §13，工具描述面见 `TOOLS.md` F7。

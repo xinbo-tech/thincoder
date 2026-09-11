@@ -35,7 +35,7 @@
 
 ## 4. VSC 向量索引有效性（第 21 批——2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §1 条目 B1–B4（TODO 全量审计「该落地」清单批 B）。
+> 来源：批次 `2026-09-11-VSC-INDEX-PERCEPTION（VSC 仓）§1 条目 B1–B4`（TODO 全量审计「该落地」清单批 B）。
 > 设计+测试见 `MEMORY（VSC 仓）§4`。
 
 ### 4.1 总体需求

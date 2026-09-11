@@ -2,7 +2,7 @@
 
 > 板块：会诊。状态：**已实施 + 已异步化**（R17——2026-09-06）。
 > 权威规格（现行）：`AGENT-LOOP.md` §25 D-R17a（会诊 digest 自动注入 / 跨回合后台 / `consult_check` 退役）。
-> 与 VS Code 插件同源设计（`thincoder-vscode/docs/design/CONSULTATION.md`）——本文记录 CLI 端的实现与接线。
+> 与 VS Code 插件同源设计（`CONSULTATION（VSC 仓）`）——本文记录 CLI 端的实现与接线。
 > 会诊（consult）与飞刀（escalate）是互补机制，见 `ESCALATE.md`。
 
 > 需求层已迁出（2026-09-10 需求层拆分批）：本板块需求见 `../requirements/CONSULTATION.md`——本档保留设计+测试层。

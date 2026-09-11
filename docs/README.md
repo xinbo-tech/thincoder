@@ -93,6 +93,7 @@ docs/
 - **markdown 结构正确**（标题/表格/代码块不被吞进正文，空行隔离节）
 - **变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）
 - **跨仓引用形态**：引用他仓文档不得写 `X.md` §N 形态（V1 按本仓 basename 解析——**basename 不在本仓扫描域时**恒判 `unknown-doc`；同名 basename 按本仓档解析、可能 `no-section` 误报甚至以错档通过）——写「名称（仓别）§N」（如 `WEBVIEW（VSC 仓）§5`）：去 `.md` 后缀、去路径前缀（跨仓引用 = V1 域外）
+- **自持边界（条目与归属）**：台账 / 批次档 / 需求只收本仓事项——禁跨仓指针（含本产品多端互引）；正文引用他仓用上条规范形态。一句话：**正文可以指他仓（规范形态），条目与归属不行**（两轴并列——权威 = `requirements/ENGINEERING-MODE.md` §1.19）
 
 违反即文档格式债——与源码 500 行硬限同理。批量检查：`node scripts/check-doc-width.mjs`
 （扫描域 = `docs/design/` + `docs/requirements/` + `docs/batches`——排除 `_archive/`（历史快照豁免）；`docs/README.md`、`docs/TODO.md`、`docs/PHILOSOPHY.md` 覆盖为待办，见 `TODO.md`）。
@@ -106,6 +107,8 @@ docs/
 `requirements/ENGINEERING-MODE.md` §1.12**：本节不复制（单一权威源）；写/改批次档前先读那一节。
 
 **本仓特有**：跨批检索由 `TODO.md` 需求池台账做索引（每条需求 → 哪批谈的 + 当前状态），而非翻遍批次档。
+
+**各仓自持（各仓记各仓的）**：批次档与台账同规——本仓批次档只登记本仓范围；缺失的文档层就地补建，不得以「另一仓已有」「避免重复」为由省略本仓文档（权威 = `requirements/ENGINEERING-MODE.md` §1.19）。
 
 ### 3.9 需求池（本仓路径）
 
@@ -224,6 +227,7 @@ docs/
 
 ## 变更记录
 
+- 2026-09-12：§3.7 / §3.8 补自持与互引规范句（LEDGER-SELF-CONTAINED 批——各仓自持：条目与归属不带跨仓指针 + 批次档同规）。
 - 2026-09-11：新增「崩溃捕获与取证」板块——`requirements/CRASH-REPORTS.md` + `design/CRASH-REPORTS.md`（TUI-OOM-FORENSICS 批建档；R25 / TUI-STDERR-CAPTURE 归宿落定）——登记 §4 / §4.1。
 - 2026-09-10：**文档目录结构重组**（DOC-REORG 批）——35 档批次/变更史档入 `design/_archive/`（正文冻结）；
   建 `requirements/`（含说明档）；地图自 `design/README.md` 迁入本文件（§1 目录/§2 档位分类/§3 规范/§4 登记表/§5 四问）。

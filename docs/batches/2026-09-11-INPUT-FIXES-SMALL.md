@@ -1,5 +1,8 @@
 # 输入面小修（/advisor 缺 await + VSC Enter 离线面）· 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-INPUT-FIXES-SMALL（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 「仓」列 VSC 行（B2 纯 VSC，as-of `:205`）——条目计数（对端份 / 本仓份）= 6 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 15:10 · 来源 = 用户 13:36「都可以」（Gitee #IKEZ1C + #IKALHO 离线面——评估 id=47/48）。
 
 ---

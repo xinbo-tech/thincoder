@@ -220,7 +220,7 @@ R-1 逐字（插入 persona-explore / persona-coder 身份节尾——CN/EN 双�
   落地现状行；变更记录一行（eng-designer——本设计轮已落）。
 - 本档（`design/PROMPT-SYSTEM.md`）：新建（本设计轮）。
 - 父侧排程件（本档只登记，见 §4）：`docs/README.md` §4 行登记本档；`docs/TODO.md` 行状态推进；
-  `thincoder-vscode/docs/design/VSC-PROMPTS.md`（VSC 端落地纪要 + CLI 档引用改跨仓规范形态）；CHANGELOG。
+  `VSC-PROMPTS（VSC 仓）`（VSC 端落地纪要 + CLI 档引用改跨仓规范形态）；CHANGELOG。
 
 ### 2.5 方案选型对比
 
@@ -660,7 +660,7 @@ const TD_CNT = "（计数口径 = 未决数——归档条目不计数）"      
 | VSC `test/prompts-mirror-anchors.test.mjs` | 319 | +~40 | ⑨ 组（§8.5——+3 例） |
 | `docs/requirements/PROMPT-SYSTEM.md` | 357 → **405**（本批已落 §10） | +48（实测） | eng-designer 本批写 |
 | `docs/design/PROMPT-SYSTEM.md`（本档） | 398 → **697**（本批已落 §8） | +299（实测） | 同上 |
-| `thincoder-vscode/docs/design/VSC-PROMPTS.md` | 220 → **290**（本批已落对位节） | +70（实测） | VSC 对位节 |
+| `VSC-PROMPTS（VSC 仓）` | 220 → **290**（本批已落对位节） | +70（实测） | VSC 对位节 |
 
 **实现后同步（2026-09-12——VSC 六行实测回填）**：现读重测——VSC `src` de/dn/pe = **239 / 193 / 55** · CN = **162 / 183 / 54**；差额（实测 − as-of − 本批增量）= 跨批序漂移（前置 = `VSC-CONTEXT-PARITY` 语料修复批；批次档 `batches/2026-09-11-TEST-DISCIPLINE-PROMPTS.md` §5 已披露）：src de +4 · src dn +24 · src pe −33（原 as-of 87 = 去重前值）；CN 三行 0。纯登记、零语义。
 

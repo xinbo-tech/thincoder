@@ -768,7 +768,7 @@ reasoning 全文」表述按此限缩（**字段集不变**——F-O4）；写�
 > 批次：`../batches/2026-09-11-VSC-ASYNC-VISIBILITY.md`（§1 条目 B——平台机制缺陷已实证三次）。
 > 机制地基：§11.2 async advisor（独立池 `_asyncAdvisors`）+ §7.2 单工具动作面（status/cancel/observe/send）；
 > 本节只写**接入面补全**，不改池本体语义（容量/scope 守卫/cancel 的 token 语义均从 §11.2）。
-> VSC 镜像：`thincoder-vscode/docs/design/AGENT-LOOP.md` §9（同一机制本端实现面）。
+> VSC 镜像：`AGENT-LOOP（VSC 仓）§9`（同一机制本端实现面）。
 
 ### 18.1 问题陈述（现场复核——三条缺陷的**双端分布**）
 
@@ -1304,7 +1304,7 @@ provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#
   （不在子代理死亡链上——同类机制、另行批）；④ 死亡行后缀预算（超长 message 时后缀可被截尾吞——「先削 message 再拼后缀」）：后续改进（非本批——评审 🟡-2 登记）。
 - **VSC 残留面——父侧排程**（所需档 + 用途 + 最小改动面）：`thincoder-vscode/src/provider.mjs`（`:324` 去绝对墙钟 /
   `:327` 头阶段语义对齐 CLI——**用户实证文案的唯一在网生产点**）+ VSC 镜像标注与合成面（`agent-tools/subagent-run.mjs` 等 `entry.error` 合成）；
-  VSC 档 = `thincoder-vscode/docs/design/AGENT-LOOP.md` 与 `PROVIDER.md`（VSC 仓独立写域——本批零碰）；
+  VSC 档 = `AGENT-LOOP（VSC 仓）` 与 `PROVIDER（VSC 仓）`（VSC 仓独立写域——本批零碰）；
 - **零改确认（勘察）**：`provider/responses.mjs` 无自有产生点（错误经共享 `proxyFetch` / `chat` 面）· `provider/retry.mjs` 只透传（`:36`）。
 - **UI/交互决策（本批）**：用户可见面 = digest 中的死亡行（沿用既有注入通道——无新控件、无交互变更）；
   TUI 块状态面零改（登记①——见下 open ②）；`detail` 短串展示为自由文本（不渲染为独立 UI 元素）。

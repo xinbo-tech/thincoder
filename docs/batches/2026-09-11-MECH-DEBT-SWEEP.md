@@ -75,7 +75,7 @@
 
 **落档位置**：需求 = `docs/requirements/ENGINEERING-MODE.md` §1.15 边界块 + `docs/requirements/SETTINGS-TOOL.md` §2 F-S1.3 补充块（A 需求 = `docs/requirements/ADVISOR-CONVERGENCE.md` §7 F16——**文字零改**，该行面已覆盖同步记账）；
 设计+测试 = `docs/design/ADVISOR-CONVERGENCE.md` §15（A）· `docs/design/ENGINEERING-MODE.md` §2.26 + §3.1 AC53–AC56 + §3.2 T72–T76（B/C/D）· `docs/design/SETTINGS-TOOL.md` §9（E）。
-**他链核对（写入静止）**：本批设计面与在飞批 8（`2026-09-11-POOL-LEDGER.md`）的 `ENGINEERING-MODE.md` 双档改动面（§1.13 / §2.24 / §2.25 / §3.1）**零重叠**（本批只新增 §2.26 与 §1.15 追加块）；批 12（`2026-09-11-VSC-GUARD-MIRROR.md`）与 E 的 VSC 文件域交叉见下注。
+**他链核对（写入静止）**：本批设计面与在飞批 8（`2026-09-11-POOL-LEDGER.md`）的 `ENGINEERING-MODE.md` 双档改动面（§1.13 / §2.24 / §2.25 / §3.1）**零重叠**（本批只新增 §2.26 与 §1.15 追加块）；批 12（`2026-09-11-VSC-GUARD-MIRROR（VSC 仓）`）与 E 的 VSC 文件域交叉见下注。
 
 ### 本批覆盖条目（= 设计档 AC 回指条目 = 需求档条目——三方一致）
 
@@ -181,7 +181,7 @@ E-① 契约与两端实现一致（CLI `settings.mjs:194` return s → 改 v；
 | 1 | Evidence / 记录准确性 | 🟡 | 批次档 §1:37 的 D-1 路径不实：`thincoder/src/agent-tools/messages.mjs` **不存在**（实测 ENOENT）；413 行档 = `src/advisor/messages.mjs`（§2:87/:117、设计 §2.26.3、需求 §1.15:650 均为正确路径） | 更正 §1 该行为 `src/advisor/messages.mjs`（父侧文档层） |
 | 2 | Scope coordination / 记录自洽 | 🟡 | §2:78「他链核对」称与批 8 改动面（§1.13/§2.24/§2.25/§3.1）零重叠、「本批只新增 §2.26 与 §1.15 追加块」——与同节 :77 及实况矛盾：AC53–56 即写入 §3.1（批 8 所列改动面）、T72–76 写入 §3.2（批 8 同区） | 改述为「不修改批 8 已落定文本——仅节尾追加；批 8 写入已静止」 |
 | 3 | Clarity / 记录准确性（E） | 🟡 | 批 12 交叉注（:115–:116）重叠集写反：①裁定 = 只改 CLI（设计 §9.3「VSC 零改」、§2 行 8 亦为 CLI 档）；碰 VSC 两档（settings.mjs/settings-tool.test.mjs）的是 ②/③——注中却称「①/③ 与批 12 同域；②（推荐）无重叠」，「②（推荐）」亦与设计 §9.2（①为设计推荐）、§2:130 不符 | 按裁定改写：① = CLI 单端、与批 12 零重叠；重叠集 = {②,③}；删「②（推荐）」残留 |
-| 4 | Scope coordination（A/VSC 对位） | 🟡 | 设计 §15.6（:1027–1028）VSC sync 记账镜像登记写「另批或随批 12 收口」——批 12 §2 已明示不做「sync 完成记账面改动」（`2026-09-11-VSC-GUARD-MIRROR.md:87`），第二选项不可执行 | 改为单指后续批登记（沿 §14.10 #1 先例）或注明批 12 已排除该面 |
+| 4 | Scope coordination（A/VSC 对位） | 🟡 | 设计 §15.6（:1027–1028）VSC sync 记账镜像登记写「另批或随批 12 收口」——批 12 §2 已明示不做「sync 完成记账面改动」（`2026-09-11-VSC-GUARD-MIRROR（VSC 仓）:87`），第二选项不可执行 | 改为单指后续批登记（沿 §14.10 #1 先例）或注明批 12 已排除该面 |
 | 5 | Doc-state（E 裁定落点） | 🟡 | 裁定①已落批次档 §1:63–68，但设计 §9 标题/§9.2 与需求 F-S1.3 块仍标「待用户裁定」（`design/SETTINGS-TOOL.md:4/:340/:361`；`requirements/SETTINGS-TOOL.md:4/:18–20`） | 随 §4/收口改记为「用户裁定①（2026-09-11）」——防 coder 落①而文本仍称待裁 |
 | 6 | Affected-file size annotations | 🟡 | `scripts/check-doc-width.mjs` 298 行、增量「±~6」——净增 ≥3 即越过 300 建议线；设计/任务书未给档位结论或拆分退路（该档前批曾专设增量上限，batch 8 AC51 亦涉其 298 现状） | 补档位结论（承诺 ≤300 或给 >300 拆分退路；净额以实测对表） |
 | 7 | Doc hygiene（D7） | 🔵 | `design/ENGINEERING-MODE.md`（§7 变更记录最新条 = 第 8 批「上午」:1402）与 `requirements/ENGINEERING-MODE.md` 未见第 13 批变更留痕；姐妹档均已落（`ADVISOR-CONVERGENCE.md:1044` · `SETTINGS-TOOL.md:17`） | 补一行变更记录，或明示「随批 8 收口并入」处置（§14.9 D7 先例——不静默） |

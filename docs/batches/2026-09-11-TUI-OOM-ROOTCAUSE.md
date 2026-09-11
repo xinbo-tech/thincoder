@@ -297,7 +297,7 @@ escalate-async/trace-store；组 3 = tool-events/tool-display/tool-args/subagent
 | 组 2/3/4/5 定向 | `node --test test/{subagent-memory-bounds,trace-bounds,tui-memory-budget,heap-watch,memory-scan-bounds}.test.mjs` | 全绿 |
 | 记录存储单元 | `node --test test/session-store.test.mjs` | 17/17（T-RS1–T-RS9/T-RS11–T-RS14 + AC-RS9） |
 | 终端恢复扩展 | `node --test test/tui-stderr-capture.test.mjs` | 含 T-RT1–T-RT4b 全绿 |
-| 文档宽度 | `node scripts/check-doc-width.mjs` | 本批新增违规 0（新增项属并行批 `2026-09-12-VSC-ACTIVITY-CLOSURE`） |
+| 文档宽度 | `node scripts/check-doc-width.mjs` | 本批新增违规 0（新增项属并行批 `2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）`） |
 | 根因 grep | `store.append` 单点 / `full.length − loaded` 零命中 / 向量通道无裸 `.all()` / `_historyWindow` 四处 | 见各档 AC 行 |
 
 **未落项**：无（§2 五组条目全覆盖；C 档与物证回填钩属父侧/设计者面）。
@@ -312,7 +312,7 @@ escalate-async/trace-store；组 3 = tool-events/tool-display/tool-args/subagent
   memory/core 300 · tool-events 447 · subagent-children 235 · heap-watch 89 · memory/scan 96 · tui-lifecycle 95 ·
   wrapped-spawn 55 · consult 474 · subagent-actions 482（全部 ≤500）。
 - **修正轮后复跑**：`node test/run-fast.mjs` = 630 tests · 614 pass · 1 fail——唯一红 = `doc-consistency`（V3）指向
-  并行批 `2026-09-12-VSC-ACTIVITY-CLOSURE.md` / `2026-09-12-VSC-CHILD-PERMISSION.md` §3（非本批档；本批档零违规）。
+  并行批 `2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` / `2026-09-12-VSC-CHILD-PERMISSION（VSC 仓）` §3（非本批档；本批档零违规）。
   定向面全绿：session-store 17/17 · session-guard/slots/gc/read-history 25/25 · integration/session-resume 4/4 ·
   组 2/3/4/5 新档 + 族定向 46/46 · `check-doc-width` 本批新增 0。
 
@@ -335,7 +335,7 @@ escalate-async/trace-store；组 3 = tool-events/tool-display/tool-args/subagent
 
 **2026-09-12 01:30 收口（父侧核验）**
 
-- **真跑**：CLI 快层 `node test/run-fast.mjs` → **630 例 / 614 过 / 1 fail / 15 skip**——唯一红 = `doc-consistency` V3 指向**本批外的两个新批档**（`2026-09-12-VSC-ACTIVITY-CLOSURE.md` / `VSC-CHILD-PERMISSION.md` §3——尚未评审，评审写 §3 后自消；非本批因果）；定向（coder 报告）：`session-store` 17/17 · 组 2/3/4/5 族 46/46 · `integration/session-resume` 4/4 · `tui-stderr-capture` 全绿；
+- **真跑**：CLI 快层 `node test/run-fast.mjs` → **630 例 / 614 过 / 1 fail / 15 skip**——唯一红 = `doc-consistency` V3 指向**本批外的两个新批档**（`2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）` / `VSC-CHILD-PERMISSION（VSC 仓）` §3——尚未评审，评审写 §3 后自消；非本批因果）；定向（coder 报告）：`session-store` 17/17 · 组 2/3/4/5 族 46/46 · `integration/session-resume` 4/4 · `tui-stderr-capture` 全绿；
 - **交付表 10 项全 Done**（组 1–5 全落地：记录存储/子代理上界/显示层额度/堆遥测+终端恢复/检索收敛）；内部审计 clean + 代码评审 2 轮收敛（**1🔴 已修**：投影半行防护 + `_dropPartialTail`；3🟡 全修含硬限拆分 `session-segments.mjs`；残余 1🔵 已登记）；
 - **透明表 8 项采纳**（声明外触碰 5 处均有设计依据或评审导出——非静默）；触碰档均 ≤500 硬限（最大 session-store 442）；
 - **遗留（doc 层——#31 同步）**：设计 §14.3.6 描述符句（≤200 → ≤201/±1 口径）· 设计 §15.5 表补两行（`subagent-freeze.mjs`/`cmd-clear.mjs`）· `session-store.mjs` 越 300 线登记；③ `read-history` 工具描述串（含 "never compacted"）待提示词批处理（已在披露 #8）；

@@ -1,5 +1,8 @@
 # 需求池 / 技术待办指针台账收拢 · 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-POOL-LEDGER（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 对端带仓前缀行（as-of `:189` 起）+ §5 对端 11 档 + 1 披露档——条目计数（对端份 / 本仓份）= 5 / ≥12（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 不是规格：需求在 `requirements/` 成文；整批做完整档冻结。机制与模板见 `docs/requirements/ENGINEERING-MODE.md` §1.12。
@@ -563,7 +566,7 @@ T69 计数反证 / T70 形态三例 / T71 存量降报告 + 域不侵入。
 **② PORTABILITY 写权裁定登记（§2→§6 交接）**
 
 **PORTABILITY 写权冲突已裁定（persona 该行零动——见其批 §4）**：`persona-eng-designer.md` 的 **todo 归属句**（4 档）由本批先行落笔；
-`2026-09-11-PORTABILITY-VSC-MIRROR.md` §4（父侧 2026-09-11 18:20）裁定：批次二设计 / 测试若涉该档该句 → **该行零动**（防覆盖），
+`2026-09-11-PORTABILITY-VSC-MIRROR（VSC 仓）§4`（父侧 2026-09-11 18:20）裁定：批次二设计 / 测试若涉该档该句 → **该行零动**（防覆盖），
 其余目标行按**现读字符串键控**落笔。T95 / T-20 面：本批已同步其过期断言（§5 披露 #12——`test/portability-advisor-context.test.mjs:111-112`）。
 **§6 同旨条目 = 遗留 ③**（父侧落笔）——本行补全交叉指针。
 

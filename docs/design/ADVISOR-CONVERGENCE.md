@@ -342,16 +342,16 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 |---|---|---|---|---|---|
 | `thincoder/src/prompts/persona-engineering.md` | CLI | **落地（运行时加载）** | 46 | ±0（行内插入 ~40 字符） | 链行节点（§13.4a） |
 | `thincoder/docs/design/prompts/persona-engineering.md` | CLI | **中文权威** | 46 | ±0（同上） | 同上 |
-| `thincoder-vscode/src/prompts/persona-engineering.md` | VSC | 落地（运行时加载） | 78 | ±0（同上） | 同上 |
-| `thincoder-vscode/docs/design/prompts/persona-engineering.md` | VSC | 中文镜像 | 53 | ±0（同上） | 同上 |
+| `src/prompts/persona-engineering.md`（VSC 仓） | VSC | 落地（运行时加载） | 78 | ±0（同上） | 同上 |
+| `docs/design/prompts/persona-engineering.md`（VSC 仓） | VSC | 中文镜像 | 53 | ±0（同上） | 同上 |
 | `thincoder/src/prompts/discipline-engineering.md` | CLI | 落地 | 221 | +≤5（新 bullet） | Action 四值 + 时序 bullet |
 | `thincoder/docs/design/prompts/discipline-engineering.md` | CLI | 中文权威 | 149 | +≤5 | 同上 |
-| `thincoder-vscode/src/prompts/discipline-engineering.md` | VSC | 落地 | 228 | +≤5 | 同上 |
-| `thincoder-vscode/docs/design/prompts/discipline-engineering.md` | VSC | 中文镜像 | 155 | +≤5 | 同上 |
+| `src/prompts/discipline-engineering.md`（VSC 仓） | VSC | 落地 | 228 | +≤5 | 同上 |
+| `docs/design/prompts/discipline-engineering.md`（VSC 仓） | VSC | 中文镜像 | 155 | +≤5 | 同上 |
 | `thincoder/src/prompts/discipline-normal.md` | CLI | 落地 | 244 | ±0（就地改词） | Action 四值 |
 | `thincoder/docs/design/prompts/discipline-normal.md` | CLI | 中文权威 | 247 | ±0 | 同上 |
-| `thincoder-vscode/src/prompts/discipline-normal.md` | VSC | 落地 | 229 | ±0（**合并行** L93——子句级改） | 同上 |
-| `thincoder-vscode/docs/design/prompts/discipline-normal.md` | VSC | 中文镜像 | 247 | ±0 | 同上 |
+| `src/prompts/discipline-normal.md`（VSC 仓） | VSC | 落地 | 229 | ±0（**合并行** L93——子句级改） | 同上 |
+| `docs/design/prompts/discipline-normal.md`（VSC 仓） | VSC | 中文镜像 | 247 | ±0 | 同上 |
 | `thincoder/test/prompts-async-guidance.test.mjs` | CLI | 测试 | 512 | +≤30（新批节：链行/四值/时序双源断言 + 负断言） | T-RO1–T-RO6 |
 | `thincoder/test/eng-designer-role.test.mjs` | CLI | 测试 | 312 | +≤6（T40 双源循环字面表 +2） | A12 字面扩展 |
 | `thincoder-vscode/test/prompts-async-guidance.test.mjs` | VSC | 测试 | 396 | +≤25（同款断言——本端 src + 中文镜像两侧） | T-RO1–T-RO6 |
@@ -364,7 +364,7 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 | `thincoder/docs/requirements/ADVISOR-CONVERGENCE.md` | 需求层 | eng-designer | 65 → 105 | +§6（F7–F10 / N4–N6 / 范围边界）——**本批已落** |
 | `thincoder/docs/design/ADVISOR-CONVERGENCE.md` | 设计+测试层 | eng-designer | 234 → 462 | §7 标题与第 2 条改四值 + 新增第 5 条 + §13 全节（含修正轮 8 条落档）+ 变更记录行——**本批已落** |
 | `thincoder/docs/requirements/PROMPT-SYSTEM.md` | 需求层（提示词面） | eng-designer | 296 → 301 | §2.5 persona-engineering 行③调用链段（补节点）+ 变更记录行——**本批已落** |
-| `thincoder-vscode/docs/design/ADVISOR-CONVERGENCE.md` | VSC 设计档（端内独立——对位 CLI §7 四值 / §13 收口节） | eng-designer | 287 → 330 | §7 第 2 条四值 + §12 收口节（对位 CLI §13）+ 变更记录行——**本修正轮已落** |
+| `ADVISOR-CONVERGENCE（VSC 仓）` | VSC 设计档（端内独立——对位 CLI §7 四值 / §13 收口节） | eng-designer | 287 → 330 | §7 第 2 条四值 + §12 收口节（对位 CLI §13）+ 变更记录行——**本修正轮已落** |
 
 > 行数口径注：「现态」= 本修正轮落地后实测——读取计行 `N lines total`（内容行数 +1，如实施域 VSC `persona-engineering.md` 表 78 / 读取 79 即此差）；「改前」= 原标注值（历史口径）。
 > 行数豁免注：提示词与文档均为纯 `.md`（R24a 豁免）；测试档已标改前行数 + 增量上限——**无新增跨档**；存量 >500 面（`thincoder/test/prompts-async-guidance.test.mjs`，实测 512–513 行）不在本批范围。
@@ -394,13 +394,13 @@ VSC `src/prompts/discipline-engineering.md`（现 228 行）· VSC `docs/design/
 | **§2.7 #15 提示词不含维护者注** | 新增文本零日期 / 批次号 / 评审号（本批留痕只在文档面——§13 与需求档 §6） |
 | **评审收敛纪律（本档 §7）** | 四值与「响应表不驱动控制流」不冲突——运行时零解析已实证（§13.5）；`Deferred` 语义与适用范围不变 |
 | **锚#3（修正轮 docs FIRST）** | **不冲突**：锚#3 管「修正轮 spawn 前先落档」，新增时序管「批准请求前修正轮落地并核验」——同一修正轮可同时满足（序：落档 → spawn → 落地 → 核验 → 请批准） |
-| **多实现面纪律（双端）** | 不做 byte-identical 硬一致；一致由同源设计 + 各端断言守（本批不新增端特有段 → VSC 镜像差异表 `thincoder-vscode/docs/design/README.md` 零变更） |
+| **多实现面纪律（双端）** | 不做 byte-identical 硬一致；一致由同源设计 + 各端断言守（本批不新增端特有段 → VSC 镜像差异表 `README（VSC 仓）` 零变更） |
 | **R24a 行数标注** | 提示词/文档 = 纯 .md（豁免）；测试档已标当前行数 + 增量上限（§13.6） |
 
 ### 13.9 后续登记项（本批不碰——明示，不静默）
 
 1. **`docs/design/ENGINEERING-MODE.md` 的链/锚登记面**：§2.2 step 6（交付链）、§2.5、§2.6 F2、§2.9（锚清单——新时序规则的登记位）；
-   VSC `thincoder-vscode/docs/design/ENGINEERING-MODE.md` 同名面。**owner = 该链收口之后**（父侧或后续 designer 轮）——本批不碰（他链在途）。
+   VSC `ENGINEERING-MODE（VSC 仓）` 同名面。**owner = 该链收口之后**（父侧或后续 designer 轮）——本批不碰（他链在途）。
 2. **`docs/design/ENGINEERING-MODE.md` §2.22.2（镜像锚表）**：A12 字面表扩展的登记（可选——A12 内容描述「调用链」已覆盖其扩展面；本批跨仓断言由 §13.6 测试档与新面⑥承载）。
 3. **`docs/TODO.md`「工程模式 / 评审收敛」组条目**（2026-09-11 登记行）：status 推进 = **父侧核销面**（本批设计档不改 TODO）。
 4. **`PROMPT-SYSTEM.md` §2.7 #13 ↔ `ENGINEERING-MODE.md` §1.5 #8/#10 的口径抵牾**（「文本迁移/内容修订 = 架构师直接做」vs
@@ -739,7 +739,7 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 | T-CG6 | 边界 | `prepareAdvisorMessages`：design + `_advisorRound=1` + `_lastAdvisorOutput=null` + `_mutatedThisRun=true` | user 消息含 `## Approval Signal` + 精确 token 字面（改前缺失——回归锁） | F12 |
 | T-CG7 | 错误 | `runAdvisorReview(agent,"design",{}, null, …)`（无 token 直调） | 返回 `Advisor: design review launch refused` 前缀；不 throw；未发起请求（零 chat 调用） | F12 / N8 |
 | T-CG8 | 边界 | `_compactMessages(>20 条消息, pinned)` / `_compactMessages(≤20 条, pinned)` | 前者结果含 pinned 三锚（对象声明 / 文档清单 / Approval Signal）；后者原样返回（无 pin） | F13 |
-| T-CG9 | 正常 | 夹具工作区双仓：`thincoder/docs/design/X.md` + `thincoder-vscode/docs/design/X.md`；scope 声明 vsc 档；引文 `X.md:<行>: <vsc 行内容>` | 命中 1/1（经声明文件目录解析）；报告注明解析路径 | F14 |
+| T-CG9 | 正常 | 夹具工作区双仓：CLI `docs/design/X.md` + VSC 仓 `docs/design/X.md`；scope 声明 vsc 档；引文 `X.md:<行>: <vsc 行内容>` | 命中 1/1（经声明文件目录解析）；报告注明解析路径 | F14 |
 | T-CG10 | 边界 | 引文 = 仓根相对路径（`docs/design/Y.md:…`）；scope 在 `thincoder/**`；另一仓存在同名文件 | 经声明仓根命中；`X.md` 同名另一仓不被误命中（内容判据） | F14 |
 | T-CG11 | 错误 | 引文三形态：不存在文件 / 行内容不符 / `../` 越围栏 | `file unreadable` / `content mismatch @ {path}` / `path traversal`（三分支各一断言） | F14 / N7 |
 | T-CG12 | 边界 | `_runAdvisorToolLoop` + chat 覆写：`advisor.timeoutMs=1`，首次返回工具调用 | 返回超时尾：族前缀 + `rounds:` / `tool calls:` / `budget:` 三要素 | F15 / N8 |
@@ -1025,7 +1025,7 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
 
 - 不改 `settleAdvisorRun` / `advisor.mjs` 结算与透传（零改）；不改 guard 开关语义（opt-in / 工程模式关闭——§2.3）
 - 不改提示词语义；不做 VSC 端对位——VSC 同构面（sync 记账）已由 `../requirements/ADVISOR-CONVERGENCE.md` §8 F23 注「VSC 随之」，
-  本批 CLI 单端交付（镜像登记——**后续批建议**，沿 §14.10 #1 先例；批 12 已排除该面——`2026-09-11-VSC-GUARD-MIRROR.md` §四「明确出批」含「sync 完成记账面改动」；不静默）
+  本批 CLI 单端交付（镜像登记——**后续批建议**，沿 §14.10 #1 先例；批 12 已排除该面——`2026-09-11-VSC-GUARD-MIRROR（VSC 仓）` §四「明确出批」含「sync 完成记账面改动」；不静默）
 - 不做自动重推策略变更（推回 = 既有 guard 机制；本批只修「已覆盖」判定）
 
 ## 16. 评审上下文预算跟随模型窗口（120K 硬编码退场——2026-09-11 第 25 批）

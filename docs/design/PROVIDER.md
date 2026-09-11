@@ -700,7 +700,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 | `test/model-picker-fallback.test.mjs` | **新增** | T29（未命中零 `selectModel` / `selectReasoning` post + 显示与状态回落会话槽复合 + 命中分支同值回写正控——happy-dom 直驱 `handleModelsMessage`） |
 | `test/smoke-provider.mjs` | 65 | 改（`preset.models?.[0]`→`preset.model`） |
 
-**VSC 文档**：`thincoder-vscode/docs/design/PROVIDER.md`（O4 同步已交付——2026-09-11）；范围追加的 §3.2 差异行随本轮落档
+**VSC 文档**：`PROVIDER（VSC 仓）`（O4 同步已交付——2026-09-11）；范围追加的 §3.2 差异行随本轮落档
 ——**不入 eng-coder 任务面**（用户 2026-09-10 裁定 O4）。
 
 ### 16.6 关键决策记录
@@ -1000,7 +1000,7 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 | 文件 | 当前行数 | 预计增量 | 改动要点 |
 |---|---|---|---|
 | `docs/design/PROVIDER.md`（CLI） | 848 | **已落 +271**（现 1119） | §9 决策行 + §11 条目 + §16.2 M3 播种例 + §18–§20（本档）+ 变更记录一行 |
-| `../thincoder-vscode/docs/design/PROVIDER.md`（VSC 镜像） | 386 | **已落 +14**（现 400） | §2 预设 + §6.1 规格表 + §8 图片输入 + 变更记录一行（语义同源） |
+| `PROVIDER（VSC 仓）`（VSC 镜像） | 386 | **已落 +14**（现 400） | §2 预设 + §6.1 规格表 + §8 图片输入 + 变更记录一行（语义同源） |
 
 ### 19.5 关键决策记录
 

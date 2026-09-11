@@ -1,5 +1,8 @@
 # DeepSeek V4.1-Flash 接入（两端 MODEL_SPECS + 预设） · 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-DEEPSEEK-V41-FLASH（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 行级 VSC 行（as-of `:137`–`:140`）——条目计数（对端份 / 本仓份）= 4 / 4（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，**一段一作者**：§1 讨论（主 agent）· §2 批次任务（eng-designer）·
 > §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
 > 不是规格：需求内容按**新老划断**同档承载（Provider 板块无 `requirements/` 镜像，需求层落

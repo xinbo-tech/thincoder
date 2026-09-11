@@ -766,7 +766,7 @@ eng-designer 勘察）的工具描述**动作拒绝清单**与机械门（`src/a
 
 ### 1.17 VSC 端镜像（FR23——2026-09-10 用户裁定；需求澄清已收口）
 
-> **落地注（2026-09-11）**：本节为立项勘察快照——**第 5 批已交付**（VSC 端镜像落地：batchDoc 门 / eng-designer 角色 / `batch_segment` / 提示词双源 15+15；批次档 `../batches/2026-09-10-VSC-MIRROR.md`）。下文「全不存在 / 零命中 / 现为…」均为 2026-09-10 勘察时点表述——现状以 `ENGINEERING-MODE`（VSC 仓）为准。
+> **落地注（2026-09-11）**：本节为立项勘察快照——**第 5 批已交付**（VSC 端镜像落地：batchDoc 门 / eng-designer 角色 / `batch_segment` / 提示词双源 15+15；批次档 `2026-09-10-VSC-MIRROR（VSC 仓）`）。下文「全不存在 / 零命中 / 现为…」均为 2026-09-10 勘察时点表述——现状以 `ENGINEERING-MODE`（VSC 仓）为准。
 
 #### 总体目标
 
@@ -801,14 +801,14 @@ eng-designer 勘察）的工具描述**动作拒绝清单**与机械门（`src/a
 
 #### 归属与待设计项（设计阶段定）
 
-- 归属：本档 §1.17/FR23 · 批次档 `batches/2026-09-10-VSC-MIRROR.md`（第 5 批）· 设计落 `docs/design/ENGINEERING-MODE.md` §2.22（含**镜像锚**逐字段）。
+- 归属：本档 §1.17/FR23 · 批次档 `2026-09-10-VSC-MIRROR（VSC 仓）`（第 5 批）· 设计落 `docs/design/ENGINEERING-MODE.md` §2.22（含**镜像锚**逐字段）。
 - **待设计（选型对比）**：① batchDoc 门——**两处各落** vs **先造共享等价点**；② V1/V2/V3 在 VSC 的扫描域（VSC 无 `docs/requirements/``docs/batches/` 树——空目录跳 vs 镜像时建树）；③ 实现面拆分（拟拆 2 个并行 eng-coder：代码面 / 提示词双源面——文件域不相交）；
   ④ 双源 29 文件（VSC 14 + 新建 15）的初始内容：**逐字自 CLI 拷贝** vs 按 VSC 现状重写（差异面如何处理）。
 
 #### 台账归档对位（2026-09-11 追加登记——第 8 批 · 范围扩展）
 
-- **VSC 归档文件命名与位置**：`thincoder-vscode/docs/TODO-archive.md`（与 CLI `docs/TODO-archive.md` **同 basename**）——
-  已核销 / 已废弃条目勾销后自 `thincoder-vscode/docs/TODO.md` 迁入；活文件只留未决（机制 = §1.13）。
+- **VSC 归档文件命名与位置**：`docs/TODO-archive.md`（VSC 仓；与 CLI `docs/TODO-archive.md` **同 basename**）——
+  已核销 / 已废弃条目勾销后自 `docs/TODO.md`（VSC 仓）迁入；活文件只留未决（机制 = §1.13）。
 - **登记点**：①机制句 = §1.13（两仓通用措辞——「同仓 `docs/TODO-archive.md`」）②镜像登记 = 本节
   ③机检契约 = 设计档 `../design/ENGINEERING-MODE.md` §2.24.9 / §2.25（VSC 行）④运行面 = 两仓台账头部行（主 agent 落笔）。
 - **落笔归属**：两仓台账 / 归档档的物理落笔 = **主 agent**（§1.13 职责分工——2026-09-11 修订）；

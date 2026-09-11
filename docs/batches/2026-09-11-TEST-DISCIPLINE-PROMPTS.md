@@ -1,5 +1,8 @@
 # 测试体系纪律 · 提示词系统落地（TEST-DISCIPLINE-PROMPTS）· 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 波 2（VSC）面（as-of `:90`）——条目计数（对端份 / 本仓份）= 7 / 7（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 23:18 · 来源 = 用户 23:13「今天我们讨论的关于测试体系的那一系列逻辑，你似乎没有落地到提示词里？」+ 23:15「对的，要落地到提示词系统里。」
 
 ---
@@ -19,7 +22,7 @@
 
 3. **待办台账维护机制同步落地（T7）**（用户 23:20「按你建议」= 折入本批）：六态状态机 / 归档规则 / 触发字段 / 老化报告 / 维护归属（主 agent）——现状提示词仅有「指针化 + 一行一条 + 组计数 + 攒批」四件（见已核事实 #6）。
 
-> **跨批协调（2026-09-11 23:24——父侧补记）**：本批实施域与并行批 `2026-09-11-VSC-CONTEXT-PARITY`（#3——R3 语料修复 / R4 工具描述）**在 VSC 提示词面重叠**（`discipline-engineering` / `discipline-normal` / `persona-engineering` + CN 镜像）。**实施序 = 该批先、本批后**——本批 coder 落笔前读现态、在语料修正后的基线上叠加新条款（禁止把两批的逐字文本并行落地）；两链 spawn 共享 files 声明由调度器串行。
+> **跨批协调（2026-09-11 23:24——父侧补记）**：本批实施域与并行批 `2026-09-11-VSC-CONTEXT-PARITY（VSC 仓）`（#3——R3 语料修复 / R4 工具描述）**在 VSC 提示词面重叠**（`discipline-engineering` / `discipline-normal` / `persona-engineering` + CN 镜像）。**实施序 = 该批先、本批后**——本批 coder 落笔前读现态、在语料修正后的基线上叠加新条款（禁止把两批的逐字文本并行落地）；两链 spawn 共享 files 声明由调度器串行。
 
 ### 已核事实（父侧 grep 实证——供 designer 免重复勘察；as-of 2026-09-11 现读）
 

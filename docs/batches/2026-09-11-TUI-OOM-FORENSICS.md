@@ -177,7 +177,7 @@ _（待写——eng-coder）_
 
 ### 五、外批红（非本批面，如实登记）
 
-`npm run test:full` 3 红：`doc-consistency` T41（V1 `docs/batches/2026-09-11-VSC-LIVE-UX.md` 失效引用 + V3 `docs/batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §3 缺轮次行）· `ledger` T67/T96（`docs/TODO.md:15/:17` 锚形态）。两校验器扫描域 = docs（`test/doc-consistency.test.mjs:26` SCAN_DIRS；ledger 扫 `docs/TODO.md`），本批零文档写入 → 与本批无因果；属他批在飞档，父侧收口面。
+`npm run test:full` 3 红：`doc-consistency` T41（V1 `2026-09-11-VSC-LIVE-UX（VSC 仓）` 失效引用 + V3 `docs/batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §3 缺轮次行）· `ledger` T67/T96（`docs/TODO.md:15/:17` 锚形态）。两校验器扫描域 = docs（`test/doc-consistency.test.mjs:26` SCAN_DIRS；ledger 扫 `docs/TODO.md`），本批零文档写入 → 与本批无因果；属他批在飞档，父侧收口面。
 
 ### 六、披露（超声明 / 未落项 / 规模）
 

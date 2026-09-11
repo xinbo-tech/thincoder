@@ -1,5 +1,8 @@
 # spawn 排队纪律（提交即走）· 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-SPAWN-QUEUE-DISCIPLINE（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 落点 VSC 2 档 + 2 测试档分端（as-of `:41`–`:42`）——条目计数（对端份 / 本仓份）= 4 / 2（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder 自写）· §6 验证与收口（父代理）。
 > 编制：主 agent · 2026-09-11 · 来源 = 用户 16:47「**你应该用调度器去排队而不是自己管排队，最好能在提示词里也说明一下**」。
 

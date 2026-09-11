@@ -1,5 +1,8 @@
 # websearch.provider 死键处置（Gitee #IKEI3M 副面）· 批次记录（2026-09-11）
 
+> **搬迁注记（LEDGER-SELF-CONTAINED 批——拆分）**：本档对端（VSC）份已由 VSC 仓 `docs/batches/2026-09-11-WEBSEARCH-PROVIDER-KEY（VSC 仓）` 逐字承载（D10——零改写）；本档保留本仓份。
+> 移出条目（对端份）清单：§2 实施域 VSC 3 档 + 审计轮对端面（as-of `:146`）——条目计数（对端份 / 本仓份）= 5 / 3（判据 = `docs/design/LEDGER-SELF-CONTAINED.md` §8.3 拆分表）。
+
 > 六段 append-only，一段一作者。编制：主 agent · 2026-09-11 17:35 · 来源 = 评估 id=48 勘出 + 用户 13:52「开批，issue都别留着，及时处理」。
 
 ---

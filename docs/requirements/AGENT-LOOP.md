@@ -3,6 +3,8 @@
 > 板块：Agent 循环（主循环/子代理生命周期/异步化）。
 > 状态：现行（随实现演进）。
 > 来源：2026-09-10 自 `../design/AGENT-LOOP.md` 抽取（需求层拆分批）——本档为需求权威；设计+测试见来源档。
+> **迁移注记（LEDGER-SELF-CONTAINED 批）**：本档 VSC 端需求节（历史「需求落本档」托管族）依各仓自持裁定
+> 待迁 VSC 仓需求树（接收面 = VSC 需求专项批）；「需求落本档」托管句已清除，段落本体保留待迁。
 
 ## 1. question 工具抑制
 
@@ -97,7 +99,7 @@ live 块（谁在跑、跑了多久、能取消）并在任务结束时折叠为
 
 ## 5. digest 起跑可见指示（VSC——第 21 批，2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §1 条目 B6 + VSC 仓 `docs/TODO.md`
+> 来源：批次 `2026-09-11-VSC-INDEX-PERCEPTION（VSC 仓）§1 条目 B6` + VSC 仓 `docs/TODO.md`
 > 「会话流 / UI 反馈」组（2026-09-08 用户实测）。设计+测试见 `WEBVIEW（VSC 仓）§7.4`；
 > 机制面（挂起会话 digest）见 `AGENT-LOOP（VSC 仓）§7`。
 
@@ -244,10 +246,10 @@ VSC 面板输入框的 Enter 键语义必须**可预测**：输入法（IME）�
 
 ## 9. VSC async 子代理保真：丢弃可见 / 无孤儿 / 终态可辨（VSC——GitHub #6——第 35 批，2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-ASYNC-PARITY.md` §1（GitHub #6 · GCZ-jpg 2026-09-06：
+> 来源：批次 `2026-09-11-VSC-ASYNC-PARITY（VSC 仓）§1`（GitHub #6 · GCZ-jpg 2026-09-06：
 > 「新消息把还在跑的子代理杀了——修复只落在了 CLI，扩展端没同步到」+ 2026-09-06 真实事故：
 > eng-coder 写一半被杀无报告 / explore 零产出 / 主会话误读「已消费」）。
-> 设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§12`（VSC 仓无 requirements 树——需求落本档，先例 §3/§4）。
+> 设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§12`。
 
 **现场复核前置（2026-09-11 设计勘验——issue 断言不得直接当任务派）**：issue 四根因中两条的**机制面在现行树已不成立**——
 ① 「async spawn 返回 raw object」：spawn ack 早已是 JSON 字符串（VSC `agent-tools/subagent-async.mjs:326/342`，
@@ -295,9 +297,9 @@ VSC 面板输入框的 Enter 键语义必须**可预测**：输入法（IME）�
 
 ## 10. VSC webview Markdown 行内代码：字面量契约与转义回归（VSC——GitHub #7——第 34 批，2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-WEBVIEW-ESCAPE.md` §1（GitHub #7 · zacharyyyang 2026-09-08：
+> 来源：批次 `2026-09-11-VSC-WEBVIEW-ESCAPE（VSC 仓）§1`（GitHub #7 · zacharyyyang 2026-09-08：
 > 「行内代码中的 HTML 标签未转义，导致后续回复隐藏，看起来像任务中途停止」——复现 = 合成 markdown，不依赖模型 / 网关）。
-> 设计 + 测试见 VSC 仓 `WEBVIEW（VSC 仓）§10`（VSC 仓无 requirements 树——需求落本档，先例 §3/§4/§8/§9）。
+> 设计 + 测试见 VSC 仓 `WEBVIEW（VSC 仓）§10`。
 
 **现场复核前置（2026-09-11 设计勘验——issue 的 file:line 与根因不得直接当任务派）**：issue 定位的
 「`md()` / `mdInline()` 未转义插入」对发布版 0.8.10 成立、对现行树**不成立**——`webview/md.js` 已于
@@ -345,7 +347,7 @@ VSC 面板回复里的**行内代码**必须按字面量呈现，且渲染管线
 > 来源：批次 `../batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §1（用户 2026-09-11 16:45「都一起做了」
 > + VSC 未做项普查——条目 B1 = VSC `AGENT-LOOP.md` §12.8 #1 登记复议；B5 = `docs/TODO.md` 需求池
 > 「digest 注入预算扩面」）。设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§15`（B1）与 `§16` + 设计档 `AGENT-LOOP.md` §22
-> （B5——双端语义源）（VSC 仓无 requirements 树——需求落本档，先例 §3/§4/§9/§10）。同批 B2/B3/B4 条目
+> （B5——双端语义源）。同批 B2/B3/B4 条目
 > （VSC 评审链面）需求落 `ADVISOR-CONVERGENCE.md §13`（同批分面——两份载体）。
 
 **现场复核前置（设计勘验——登记行不得直接当任务派）**：B1 原判「登记不改」为第 35 批的**排程理由**
@@ -388,7 +390,7 @@ VSC 面板会话中，后台 advisor 评审池与子代理池享有**同一条�
 
 ## 12. VSC 固定活动区回归：live 固定可见 · 区内原地保留（webview——活动区回归批，2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-ACTIVITY-REGION-RESTORE.md` §1（用户 2026-09-11 17:20 质询
+> 来源：批次 `2026-09-11-VSC-ACTIVITY-REGION-RESTORE（VSC 仓）§1`（用户 2026-09-11 17:20 质询
 > 「块为什么在会话流里」+ 17:23 裁定「加回固定活动区」）——目标 = 09-09 前段裁定 D-1 原话
 > （**live 固定可见 + 一个面板**），并保留 09-11 批 10 全部可靠性机制（投递队列 / 就绪握手 /
 > 终态防御）与 queued 可见性（F-2）——「干净地基上的活动区」，非补丁形态。本条目 = 批次 R1–R8
@@ -400,8 +402,7 @@ VSC 面板会话中，后台 advisor 评审池与子代理池享有**同一条�
 > Q1/D-A1/D-A2、§12.3#4（区上限 20）、§12.4 落流行、§12.7 T-R8、§12.8 AC-R3、§12.10 以 §16 为准
 > （用户 2026-09-12 01:09「1走A」；设计 = VSC 仓 `WEBVIEW.md` §14）。
 > 设计+测试见 VSC 仓 `WEBVIEW（VSC 仓）§12`（§12.1–§12.10）+ §2/§3/§5/§5.1 修订；机制面
-> （挂起 UI 与中止语义）见 VSC 仓 `AGENT-LOOP（VSC 仓）§7/§10`（VSC 仓无 requirements 树——
-> 需求落本档，先例 §3/§4/§5/§8/§9/§10/§11）。
+> （挂起 UI 与中止语义）见 VSC 仓 `AGENT-LOOP（VSC 仓）§7/§10`。
 
 ### 12.1 总体需求
 
@@ -443,7 +444,7 @@ VSC 面板会话中，后台 advisor 评审池与子代理池享有**同一条�
 
 ## 13. VSC 会话上下文注入面对齐（注入面补齐 + 顺序 + 缓存契约——VSC-CONTEXT-PARITY 批，2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1（用户 22:54 原话 + 23:02 三条裁定：
+> 来源：批次 `2026-09-11-VSC-CONTEXT-PARITY（VSC 仓）§1`（用户 22:54 原话 + 23:02 三条裁定：
 > 权威源 = CLI 蓝图 / `[Current file:]` 收窄保留 / **提示词与注入顺序全对齐**；父侧 23:06 追加约束：
 > 注入落位与前缀缓存契约）。
 > 设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§17`；语料面归 `PROMPT-SYSTEM.md §9`、工具描述面归 `TOOLS.md` F7——
@@ -496,12 +497,11 @@ VSC 面板会话与 CLI 主会话的**每 run 上下文注入面同族同序**�
 
 ## 14. VSC live 块 UX：流式跟滚 + 内容区高度（webview——VSC-LIVE-UX 批，2026-09-11）
 
-> 来源：批次 `../batches/2026-09-11-VSC-LIVE-UX.md` §1（用户 2026-09-11 23:29 实测两条：live 块
+> 来源：批次 `2026-09-11-VSC-LIVE-UX（VSC 仓）§1`（用户 2026-09-11 23:29 实测两条：live 块
 > 默认显示内容头部、不跟流式输出滚动、得手动滚；live 块高度 100 → 60）。
 > 设计+测试见 VSC 仓 `WEBVIEW（VSC 仓）§13`（§13.1–§13.9——现场核实/选型/契约/决策/用例/AC/边界）+
 > §12.3 第 6 条高度句改指；机制面零动（本批只动 VSC webview 呈现——CLI 仓零改）。
-> 本条目 = 用户实测两条逐条对位（判定句回指设计 AC-LU1..AC-LU7；VSC 仓无 requirements 树——
-> 需求落本档，先例 §3~§13）。
+> 本条目 = 用户实测两条逐条对位（判定句回指设计 AC-LU1..AC-LU7）。
 
 ### 14.1 总体需求
 
@@ -570,13 +570,12 @@ VSC 面板使用者在子代理 live 块流式输出期间**持续看到最新�
 
 ## 16. VSC 活动区收口：终态清退落流 · digest 可读性 · 块头/状态行字段对齐（webview——活动区收口批，2026-09-12）
 
-> 来源：批次 `../batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md` §1（用户 2026-09-12 走查：
+> 来源：批次 `2026-09-12-VSC-ACTIVITY-CLOSURE（VSC 仓）§1`（用户 2026-09-12 走查：
 > 01:03「live 块执行完没有从子agent面板清除，digest 过程远不如 CLI 清晰」· 01:09「1走A」
 > （A 方案 = 终态块出活动区、内容进会话流 = CLI 语义——对 §12 F-J3 的反转）· 01:10「live 块的
 > 标题信息我也希望对齐」· 01:13 Send 可见性与拒发矛盾 · 01:17「状态行那条，我也希望对齐 CLI」）。
 > 设计+测试见 VSC 仓 `WEBVIEW（VSC 仓）§14`（§14.1–§14.10）+ §2/§3/§5/§5.1/§6/§7.4/§12 修订；
-> 机制面（挂起 UI 与中止语义）见 VSC 仓 `AGENT-LOOP（VSC 仓）§7/§10` 修订。VSC 仓无 requirements
-> 树——需求落本档，先例 §3~§15。本条目 = 批次 R1–R6 逐条对位（判定句回指 AC-CL1..AC-CL6）。
+> 机制面（挂起 UI 与中止语义）见 VSC 仓 `AGENT-LOOP（VSC 仓）§7/§10` 修订。本条目 = 批次 R1–R6 逐条对位（判定句回指 AC-CL1..AC-CL6）。
 
 ### 16.1 总体需求
 
@@ -615,12 +614,11 @@ VSC 面板使用者的子代理活动块**终态即清退**：live 阶段固定�
 
 ## 17. VSC 子代理审批面对齐：child permission gate（VSC——2026-09-12）
 
-> 来源：批次 `../batches/2026-09-12-VSC-CHILD-PERMISSION.md` §1（用户 2026-09-12 01:16/01:17 裁定 A =
+> 来源：批次 `2026-09-12-VSC-CHILD-PERMISSION（VSC 仓）§1`（用户 2026-09-12 01:16/01:17 裁定 A =
 > child（depth>0）写操作走审批门——现状为「偶然的洞」：VSC 权限门要求 `depth === 0`、child callbacks 无
 > permission 通道、child `runAgent` 的 autoApprove 恒 `true`）。设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§18`；
 > 协议登记 `WEBVIEW（VSC 仓）§7.2`；门禁增量 `TOOLS（VSC 仓）§8`；R2 文档修正 = VSC 仓 `ESCALATE.md` /
-> `ENGINEERING-MODE.md`（随设计落档，措辞锚见设计 §18.4 C-13）。VSC 仓无 requirements 树——需求落本档，
-> 先例 §3~§16。本条目 = 批次 R1–R2 逐条对位（判定句回指 AC-CP1..AC-CP9——设计 §18.8）。
+> `ENGINEERING-MODE.md`（随设计落档，措辞锚见设计 §18.4 C-13）。本条目 = 批次 R1–R2 逐条对位（判定句回指 AC-CP1..AC-CP9——设计 §18.8）。
 > **交界注**：§16 F-R4/N-CL4 的「审批态 = 无数据源」理由句随本批落地失实（本批即该数据源）——
 > 两批核销时由父侧同步（本批不改他批档节——登记不静默）。
 
