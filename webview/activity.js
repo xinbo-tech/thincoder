@@ -13,13 +13,19 @@
  * 沿既有 cancelSubagent 路径——协议零改）；started → 翻 running。不做跨 reload 恢复
  * （reload 进程死块死——消息流是历史——SESSION-RESTORE-PARITY）。
  *
+ * 2026-09-11 第 10 批（WEBVIEW.md §5.1——出生投递与块身份可靠性）：① started + pool:true
+ * 命中同名**已冻结**条目 → **新代接管**（建新块改绑键——旧块留流内作历史）；② 终态补块
+ * （never-born 终态防御——桩集精确成员表 = §5.1.4 第 6 条：answered / queued-cancel 为表内
+ * 显式不补行）；③ `S._subTraceLog` 出生事件痕迹（本文件单一写点——环形末 50 条）。
+ * 投递队列 / 就绪·清屏后再断言在主侧（panel-callbacks / suspension / panel-session）。
+ *
  * 呈现委 activity-view.js（refreshBlock/updateStopButton/noteChunk——单一权威在其头
  * ——依赖纯 DAG 无环：activity→view，view 不依赖 core）。freeze 原地折叠 ~15 行并入本
  * 文件（旧冻结叶已删——freeze 并入本文件）。消费面：panels.js（applySubagentStatus/freezeLive
  * Blocks）、chat.js（resetActivity）、streaming.js（ensureBlock/noteChunk/resetActivity
  * ——noteChunk 经本文件 re-export——import 面不变）。
  */
-import { ctx, S } from "./state.js"
+import { ctx, S, SUB_TRACE_MAX } from "./state.js"
 import { buildAdvisorBlock, maybeScrollDown } from "./ui.js"
 import { FAMILY_ROLES, refreshBlock } from "./activity-view.js"
 
@@ -54,7 +60,40 @@ function blockNamesFor(role, id, model, sessionId) {
   return out
 }
 
-// ─── Block lifecycle ─────────────────────────────
+// ─── Block lifecycle ────────────────────────
+
+/** 出生事件痕迹（§5.1.4 第 7 条——本文件单一写点）：环形末 SUB_TRACE_MAX 条——
+ *  kind ∈ takeover / late-terminal-stub / drop-unknown-role（范围 = 出生事件面——§5.1.9；
+ *  queued 遇已冻结键的陈旧窗口丢弃不在此列）。目录 {kind, channel, at}——channel 供复发
+ *  时定位（NFR-A2“不再不可诊断”）。 */
+function traceSub(kind, channel) {
+  const log = (S._subTraceLog ??= [])
+  log.push({ kind, channel, at: Date.now() })
+  if (log.length > SUB_TRACE_MAX) log.splice(0, log.length - SUB_TRACE_MAX)
+}
+
+/** 建块（出生 / 新代接管 / 终态补桩三路径共用——§5.1.4）：append #messages 流尾 + 挂 meta
+ *  基座 + toggle 监听。不入 map——入册由调用方定（三路径同规：_set 后返回）。 */
+function buildBlock(name) {
+  const ch = parseChannel(name)
+  const block = buildAdvisorBlock(ch.label)
+  block.classList.add("sub-block", "sub-live")
+  block.dataset.subname = ch.channel
+  block.dataset.subrole = ch.role ?? ""
+  if (ch.id != null) block.dataset.subid = String(ch.id)
+  block.open = true
+  block._subMeta = {
+    channel: ch.channel, label: ch.label, role: ch.role, id: ch.id, model: ch.model,
+    startedAt: Date.now(), pool: null,
+    turn: null, maxTurns: 0, status: "running", stateWord: null,
+    doneAt: null, frozen: false, error: null, queued: false,
+  }
+  block.addEventListener("toggle", () => { if (block._subMeta && !block._subMeta.frozen) refreshBlock(block) })
+  ctx.messagesEl.appendChild(block)
+  maybeScrollDown(ctx) // 出生即钉底（B1 参照——pinBottom=false 上读中不强拉）
+  refreshBlock(block)
+  return block
+}
 
 /** Get (create on first sight) the activity block for a channel name。块出生即 append
  *  到 #messages 流尾（与 .message 同层——label = channel 去 sub: 前缀——150 窗出生即
@@ -73,24 +112,18 @@ export function ensureBlock(name) {
     if (existing._subMeta?.frozen || !existing.isConnected) return null
     return existing
   }
-  const ch = parseChannel(name)
-  const block = buildAdvisorBlock(ch.label)
-  block.classList.add("sub-block", "sub-live")
-  block.dataset.subname = ch.channel
-  block.dataset.subrole = ch.role ?? ""
-  if (ch.id != null) block.dataset.subid = String(ch.id)
-  block.open = true
-  block._subMeta = {
-    channel: ch.channel, label: ch.label, role: ch.role, id: ch.id, model: ch.model,
-    startedAt: Date.now(), pool: null,
-    turn: null, maxTurns: 0, status: "running", stateWord: null,
-    doneAt: null, frozen: false, error: null, queued: false,
-  }
-  block.addEventListener("toggle", () => { if (block._subMeta && !block._subMeta.frozen) refreshBlock(block) })
-  ctx.messagesEl.appendChild(block)
-  maybeScrollDown(ctx) // 出生即钉底（B1 参照——pinBottom=false 上读中不强拉）
+  const block = buildBlock(name)
   S._subBlocks.set(name, block)
-  refreshBlock(block)
+  return block
+}
+
+/** 新代接管（§5.1.4 第 5 条——started + pool:true 命中 map 中同名已冻结条目）：建新块并
+ *  改绑键（旧冻结块以 DOM 留在流内作历史）+ 记 `takeover` 痕迹。显式取舍：接管后该频道的
+ *  迟到 chunk 会落进新块（仅“id 重复 + 两实例消息交错”可见——§5.1.4 第 5 条代价登记）。 */
+export function takeoverBlock(name) {
+  const block = buildBlock(name)
+  S._subBlocks.set(name, block)
+  traceSub("takeover", name)
   return block
 }
 
@@ -110,14 +143,54 @@ function freezeBlock(block, kind) {
   refreshBlock(block)
 }
 
+/** 终态补桩判定（§5.1.4 第 6 条——桩集**精确成员表**）：无 map 条目时按表判定——返回折叠
+ *  kind（done/stopped/error）或 null（不补）。表内显式不补行：`answered`（有块折叠、无块
+ *  no-op——回复走 digest 呈现）· `cancelled(was:"queued")`（从未启动不冻结）· 表外 status。 */
+function terminalStubKind(m) {
+  switch (m.status) {
+    case "done":
+    case "settled": return "done"
+    case "error": return "error"
+    case "cancelled": return m.was === "queued" ? null : "stopped" // 运行中取消（含 was 缺省）→ 补桩
+    case "terminated": return "stopped"
+    case "failed": return "error"
+    default: return null
+  }
+}
+
+/** 终态补桩前置（§5.1.4 第 6 条）：role ∈ FAMILY_ROLES + id ≠ null + 频道名合法（构造后
+ *  回读解析一致。不满足 → no-op，记 `drop-unknown-role`——未知/非 family 角色如
+ *  consult·escalate / id 缺失 / 非法频道——D-4 非法与未知丢弃）。 */
+function stubAllowed(m) {
+  if (m.role == null || m.id == null || !FAMILY_ROLES.includes(m.role)) return false
+  const ch = parseChannel(`sub:${m.role}#${m.id}`)
+  return ch.role === m.role && ch.id != null
+}
+
+/** 终态补块（never-born 终态防御——§5.1.4 第 6 条）：补出**已折叠**桩块（立即折叠 + 记
+ *  `late-terminal-stub`）。入册同出生路径——后续同名/终态消息走既有幂等守卫。 */
+function stubTerminalBlock(name, m, kind) {
+  const block = buildBlock(name)
+  const meta = block._subMeta
+  if (kind === "error" && m.error) meta.error = m.error
+  if (m.maxTurns != null) meta.maxTurns = m.maxTurns
+  if (m.turn != null) meta.turn = m.turn
+  S._subBlocks.set(name, block)
+  freezeBlock(block, kind)
+  traceSub("late-terminal-stub", name)
+}
+
 /** Status-message effects on blocks（三态机——事件字段自足——簿记 map 已删）:
  *  - queued → 建 ⏳ 等待头（含取消 ⏹——F-2——头只显 ⏳——无位置/等待原因词）
  *  - started → 翻 running（queued 头转 running；FAMILY+pool 出生即建块——同步 spawn
  *    首 chunk 建块）
  *  - cancelled（was:"queued"）→ 等待头移除（从未启动——不冻结）
- *  - 其余 status 一律终态折叠（终态集合闭合）——lookup-only 绝不建块——settled 视同
- *    done 即时折叠（无 awaiting 驻留）——answered 有块折叠无块 no-op（回复走 digest
- *    呈现——权威面）——无块一律 no-op（reload 后陈旧消息不复活） */
+ *  - 其余 status 一律终态折叠（终态集合闭合）——settled 视同 done 即时折叠（无 awaiting
+ *    驻留）——answered 有块折叠、无块 no-op（回复走 digest 呈现——权威面）。
+ *  - **终态补块（2026-09-11 第 10 批——§5.1.4 第 6 条成员表）**：无 map 条目时按表判定——
+ *    桩集（done/settled/error/运行中 cancelled/terminated/failed）且前置满足（family + 合法
+ *    id）→ 补出已折叠桩；表内不补行（answered / queued-cancel）与前置不满足（未知/非 family
+ *    role、id 缺失、非法频道——记 `drop-unknown-role`）一律 no-op。 */
 export function applySubagentStatus(m) {
   if (m.status === "queued") {
     if (m.id == null || m.role == null) return
@@ -132,7 +205,13 @@ export function applySubagentStatus(m) {
   if (m.status === "started") {
     // Pool children of the cancelable family get their block at START (visible
     // before the first relay chunk; sync spawns create on first chunk).
-    if (FAMILY_ROLES.includes(m.role) && m.pool && m.id != null) ensureBlock(`sub:${m.role}#${m.id}`)
+    if (FAMILY_ROLES.includes(m.role) && m.pool && m.id != null) {
+      const name = `sub:${m.role}#${m.id}`
+      // 新代接管（§5.1.4 第 5 条）：同名**已冻结**条目把持键 → 建新块改绑（旧块留流内）；
+      // 其余交 ensureBlock（live 复用 / tombstone 丢弃——守卫语义不变）。
+      if (S._subBlocks.get(name)?._subMeta?.frozen) takeoverBlock(name)
+      else ensureBlock(name)
+    }
     for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
       const block = S._subBlocks.get(name)
       // 冻结块不收 started——不半复活（与终态分支同形）
@@ -172,14 +251,28 @@ export function applySubagentStatus(m) {
     : m.status === "failed" ? "error"
     : null
   if (kind === null) return
+  let hasEntry = false
   for (const name of blockNamesFor(m.role, m.id, m.model, m.sessionId)) {
     const block = S._subBlocks.get(name)
-    if (!block?._subMeta || block._subMeta.frozen) continue
+    if (!block?._subMeta) continue
+    hasEntry = true // 有 map 条目者不受补桩表影响（既有折叠/守卫语义——§5.1.4 第 6 条）
+    if (block._subMeta.frozen) continue
     const meta = block._subMeta
     if (kind === "error" && m.error) meta.error = m.error
     if (m.maxTurns != null) meta.maxTurns = m.maxTurns
     if (m.turn != null) meta.turn = m.turn
     freezeBlock(block, kind)
+  }
+  // 终态补块（never-born 终态防御——§5.1.4 第 6 条成员表）：无 map 条目 → 按表补桩；前置
+  // 不满足 → no-op + `drop-unknown-role`（answered / queued-cancel 为表内不补行——不补痕）。
+  if (!hasEntry) {
+    const stubKind = terminalStubKind(m)
+    if (stubKind === null) return
+    if (!stubAllowed(m)) {
+      traceSub("drop-unknown-role", m.role == null || m.id == null ? "(unidentified)" : `sub:${m.role}#${m.id}`)
+      return
+    }
+    stubTerminalBlock(`sub:${m.role}#${m.id}`, m, stubKind)
   }
 }
 

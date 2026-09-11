@@ -10,6 +10,8 @@ export default [
   // edit-eol/edit-semantics 在 3b974ae「测试清空」中删除且从未恢复——条目随删除勾销
   // （git 核验——残条目让清单虚报套件组成）。chat-panel.test.mjs 为 C1 重建（本行保留）。
   "test/activity-flow.test.mjs", // SESSION-FLOW-B B1（2026-09-09）：子代理块流内出生/原地冻结/resetActivity/150 计入/⏹ 规则/parseChannel——F-B1a~f + N3 无 DOM move（happy-dom——helpers/webview-env.mjs）
+  "test/async-visibility.test.mjs", // 第 10 批条目 A（2026-09-11）：VSC live 块出生可靠性——投递队列/flush/溢出留痕·新代接管·终态补桩成员表·清屏恢复（pool+⏹+位置）——T-V1~V8 + AC-A1~A8（WEBVIEW.md §5.1）
+  "test/wait-for-advisor-pool.test.mjs", // 第 10 批条目 B（2026-09-11）：`advisor settled` 判据 = 评审池真实态（红→绿——双载体）——T-B4/T-B5（CLI AGENT-LOOP.md §18.6）
   "test/chat-panel.test.mjs", // SESSION-FLOW-C C1+C2 host 组（2026-09-09）：turn 句柄保底/abort 启动闩/控制直通/响应器 id 匹配/atComplete seq/保序入队——F-C1a~e + ⑦ C2 忙态状态机（F-C2a）
   "test/webview-turnstate.test.mjs", // SESSION-FLOW-C C2 webview reducer 组（2026-09-09）：_turnState 枚举转换/renderStatusBar 单 writer/Stop susp 常显/_suspCounts 不陈旧——F-C2a~e（happy-dom——helpers/webview-env.mjs）
   "test/edit-tool-improvement.test.mjs",
@@ -37,6 +39,7 @@ export default [
   "test/config-pool.test.mjs", // POOL-CONFIG-UNIFIED（2026-09-09）：耦合锁三键 4/4/4 + advisor 读取器 + 容量拒/scope 守卫 + 白名单 + 落盘——纯单元（拒发路径——config 测试缝隔离）
   "test/config-softfail.test.mjs", // ISSUE-FIX-BATCH F-4（2026-09-09，IKCDMR）：consultModels 软失败（读面过滤 + 一次性警告——CLI 同规则双端锁步）+ 面板写路径对齐 + removeProvider 级联清理（consultModels/subagentModels/advisor.provider）
   "test/settings-panel.test.mjs", // POOL-CONFIG-UNIFIED F-4（2026-09-09）：面板三框回退显 4（agentCardHtml webview 面 + agentSettings extension 面——happy-dom）+ poolAdvisor 双语文案
+  "test/settings-tool.test.mjs", // SETTINGS-TOOL 第 8 批 + 第 12 批（2026-09-11）：settings 工具形状护栏 VSC 面——本端 null 叶子 2 键 + 跨端 3 + 同族 1 = 4 键 + 防漂移锁 + 描述句逐字（T-S2.30–T-S2.37）；登记即跑（清单为显式列表）
   "test/provider-model-guard.test.mjs", // MODEL-400-FIX/QUICKFIX-BATCH-2（2026-09-09）+ MODEL-SELECTION（2026-09-10）：双端 guard 镜像——F-1 model 缺失可读 throw + F-2b advisor 跨渠道渠道默认单值（无则父兜底——T28）+ F-1 byName 单值/父兜底
   "test/image-downgrade.test.mjs", // IMAGE-DOWNGRADE-VISION（2026-09-09）：非视觉贴图自动降级视觉子代理——F-1 描述注入/images 清空 + F-2 fallback 三态 + AC-2 视觉零回归 + runner seam 缺省回落生产（mock 跑者/keyless 短路——零网络）
   // VSC 端镜像（2026-09-11 第 5 批 · ENGINEERING-MODE.md §2.22/§2.23——新档一律入册，否则接线没活）
@@ -46,4 +49,5 @@ export default [
   "test/doc-consistency.test.mjs", // 文档一致性 V1/V2/V3 + 基线 + 接线（§2.22.6）：零新增、V1「（CLI 侧）」豁免、V3 三态零假阳（T61/T63/T64）
   // 「5 新档全入册」之第五档（面② 的锚句断言档——文件域属面②，入册归本表）
   "test/prompts-mirror-anchors.test.mjs", // 提示词双源镜像锚（§2.22.2/§2.22.7）：A1-A8/A11/A12 逐字 + 双源 15 档集合 + 端特有段（T62/T65）
+  "test/advisor-chain-guards.test.mjs", // 第 12 批（2026-09-11）：VSC 评审链边缘守卫镜像——谓词族六 kind + 双结算面不签发 + 信号自愈 + 压缩定锚 + 引文候选链 + 硬墙/提示/结构化尾（T-VG1–T-VG15；ADVISOR-CONVERGENCE.md §13）
 ]

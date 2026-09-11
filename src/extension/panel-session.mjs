@@ -10,6 +10,8 @@ import { migrateLegacySettings } from "./migrate-settings.mjs"
 import { stripEditorInjection } from "./editor-context.mjs"
 import { generateTitle as generateSessionTitle } from "./generate-title.mjs"
 import { _cwd } from "./panel-messages.mjs"
+// 2026-09-11 第 10 批（§5.1.4 第 4 条——清屏后再断言）：存活投影（读 lines.history 双池）
+import { reassertLiveChildren } from "./suspension.mjs"
 import * as vscode from "vscode"
 
   /**
@@ -157,6 +159,10 @@ export function loadSession(panel) {
     // loadOlder (webview scroll-back). idx values are global history indexes.
     const { messages, hasOlder } = historyWindow(history, null)
     sendHistoryPage(panel, messages, hasOlder, false)
+    // 2026-09-11 第 10 批（§5.1.4 第 4 条）：clearMessages（:155）与 historyPage
+    // （sendHistoryPage 内部投递）**之后同 tick** 再断言存活任务——期望位置 = 流尾
+    // （与 §5「出生即流尾」同规——显式定序，不依赖 history 锚插的隐含行为）。
+    reassertLiveChildren(panel)
     pushSessions(panel)
     // MODEL-MERGE-SESSION：切/开会话 → 下拉同步本会话复合（F-4 恢复 UI 面——复用既有
     // "models" 消息——prefs 载具带槽复合；webview 按 prefs 选行 + selectModel 回写同值——

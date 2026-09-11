@@ -117,6 +117,10 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
   御建块已删）；**终态/trim 路径 lookup-only 绝不建块**（reload 后陈旧消息无块频道一律
   no-op——不做跨 reload 恢复——SESSION-RESTORE-PARITY：live 块不入 history——消息流是历
   史——块无需跨 reload 生命）。
+  **2026-09-11 第 10 批修订（见 §5.1.4 第 6 条成员表）**：终态（桩集内——done/settled/error/运行中 cancelled/
+  terminated/failed；**answered 与 queued-cancel 为表内显式例外**）遇"无块频道"且 role ∈ FAMILY_ROLES + id 合法 →
+  **补块并立即折叠**（never-born 终态防御）。原"绝不建块"的依据（"reload 后陈旧消息不复活"）经受控复现证不成立
+  ——`subagent` 族消息只会是本次会话的活事件（历史回放走 `userMessage`/`assistantMessage`/`toolHistory`，不含该族）。
 - **幂等守卫（单 map 单守卫）**：S._subBlocks 键 = 频道名——map 有键且已终态 →
   ensureBlock 返 null（迟来消息丢弃——不复活不重建）；map 有键且 live → 返回既有元素
   （重复 started/queued 覆盖式刷新头词不重挂）；map 无键 → 建块 append 流尾。
@@ -137,6 +141,192 @@ toolPanel/subagent/compress/suspension 消息族（§7）。
 （历史——2026-09-09）；ACTIVITY-REWRITE-SIMPLE 再撤活动区容器（2026-09-09）——
 queued 等待头入流（⏳ + 取消 ⏹）；👥 计数由状态行 `_suspCounts` 承担（susp.running/
 susp.digesting 键）；冻结块落流即会话流历史（随 150 窗裁——无删除窗）。
+
+### 5.1 出生投递与块身份——可靠性设计（2026-09-11 第 10 批）
+
+> 需求：CLI 仓 `docs/requirements/AGENT-LOOP.md` §3（F-A1~F-A5 + NFR-A1~A3）（CLI 侧文档树）。
+> 本机一条目（条目 A）——纯 VSC 面；条目 B（后台评审池接入面）在 CLI 仓 `docs/design/AGENT-LOOP.md` §18（CLI 侧）。
+> 批次：`thincoder/docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY.md`（CLI 侧；§1 条目 A——用户 2026-09-09 反馈 + 22:32 精复现）。
+
+#### 5.1.1 问题陈述
+
+用户实证（2026-09-09）："实际启动了但不能可靠显示 live 块"——**普遍时有时无**（非 advisor-only：
+第一次 advisor 没出现、explore 也没出现、后来 advisor 又出现）。**2026-09-09 22:32 精确复现**：同一响应
+双 spawn 两个 eng-coder → 扩展侧池计数 **2 running**（计数正确）→ webview **只渲染 1 个 live 块**；
+正常会话内可复现（与 reload 无关）。
+
+#### 5.1.2 根因收口（受控复现驱动——happy-dom 驱真 webview 模块）
+
+**复现手法**（可重跑）：`test/helpers/webview-env.mjs` `setupWebview()` + `installChatFixture()` →
+动态 import 真 `webview/activity.js`、`webview/streaming.js` → 直接投喂 `subagent` 消息 → 数
+`#messages > .sub-block`。
+
+| # | 机制（一句话） | 判定 |
+|---|---|---|
+| R-1 | 出生投递纯增量、无队列（webview 未就绪窗口内消息静默丢弃） | 真实（独立缺陷） |
+| R-2 | 块身份键重名 × 冻结守卫（重名的新一代任务永不建块，其后 chunk 全吞） | 真实——**22:32 精复现的机制** |
+| R-3 | 终态对 never-born 块 no-op（块缺失一旦发生即永久） | 真实（独立缺陷·放大器） |
+| R-4 | 清屏抹块 + 重建降级（重建块丢 `pool:true` → 无 ⏹） | 真实（独立缺陷） |
+| R-5 | "webview 渲染端并发消息处理竞态"（22:32 当日记录的真因方向） | **证伪** |
+
+**逐条证据与复现**：
+
+- **R-1**：`src/extension/panel-callbacks.mjs:80` `:112`（直投 `panel._panel?.webview.postMessage(...)`——可选链无缓冲）。
+  同类竞态已被实证并修过三次：i18n / providerStatus / turnState 均改 `webviewReady` 握手重推
+  （`webview/chat.js:313-318`、`src/extension/panel-messages.mjs:396-417`）——任务可见性事件是**唯一没接这条纪律**的族。
+  触发窗：webview 重载/渲染崩溃且 view 未 dispose（`retainContextWhenHidden:true`——`src/extension/chat-panel.mjs:118`）时池存活。
+- **R-2**：`ensureBlock` 对"map 有键且已冻结"直接返 null（`webview/activity.js:67-74`）；chunk 侧空安全守卫（`webview/streaming.js:235-244`）。
+  复现：上一代 `sub:eng-coder#4` 已冻结 → 新一代 #4 `started`（pool:true）→ **零新块**；再补 #5 →
+  **live 块 1 个（host 计 2）**，且 #4 后续 chunk 全丢（两块 content 均空）。
+  触发源 = id 复用（当时每轮 runAgent 首 spawn 回 #1）——已由 `SUBAGENT-ID-COUNTER-AGENT`（2026-09-10）修于源头；
+  **显示层仍无防御**（任何未来 id 重复即永久失明）。
+- **R-3**：`webview/activity.js:166-183` 终态遍历 `blockNamesFor`——查键不建键（lookup-only）。
+- **R-4**：`clearMessages`（boot/loadSession/项目切换必经——`src/extension/panel-session.mjs:155`）→ `resetActivity` 清块清 map；
+  复现：清屏后经 chunk 重建 → 头 `[▶ eng-coder#6 · 0s]`（无 async 词）、`_subMeta.pool === null` → ⏹ 消失
+  （`webview/activity-view.js:114-139` 判据 `pool === true`）；startedAt 亦重置。
+- **R-5**：复现：背靠背两条**不同 id** 的 `started`（pool:true）→ **2 块正常出生**（`applySubagentStatus` 全同步、无 await——无互踩面）。
+
+**同源判定**：
+
+- **R-1 与 R-4 同源**——投递链**只做增量、从不做状态对账**：webview 被清空或错过窗口后，主侧从不重述"谁还活着"。
+- **R-2 与 R-3 同源**——块身份（频道名）与终态守卫的组合**缺"新代/补块"路径**：键一旦被冻结条目把持，新任务既无出生也无补块。
+- 两组彼此独立；R-5 证伪 → **22:32 结论更正**：非渲染竞态，是身份重名 + 静态守卫。
+
+#### 5.1.3 方案选型对比（判据来自需求 §3.2/§3.3）
+
+| # | 候选方案 | 结论 |
+|---|---|---|
+| 1 | **案 A：webview 侧防御修补**——冻结守卫加"新代接管"+ 清屏前 live meta 本地再断言 + 诊断留痕 | 备选（覆盖面不足） |
+| 2 | **案 B：投递链根治**——队列 + 就绪/清屏后状态再断言 + 新代接管 + 终态补块 + 诊断留痕 | **推荐**（用户批准环节裁） |
+
+**判据逐项评估与代价**（判据来自需求 §3.2/§3.3）：
+
+- **案 A**：覆盖 22:32 ✓（接管）；覆盖 R-1 ✗（暗窗口丢的消息 webview 看不见）；覆盖 R-3 ✗（无块即无从知道该建谁）；
+  覆盖 R-4 ◐（本地 meta 可重建，但属"第二份状态"）；回归风险低；实现面小（1 文件 ~40 行）。
+  代价 = **R-1/R-3 两类永久缺块仍在**，且本地再断言与主侧投影可能漂移。
+- **案 B**：覆盖 22:32 ✓；覆盖 R-1 ✓（队列 + 就绪再断言）；覆盖 R-3 ✓（终态补块）；覆盖 R-4 ✓
+  （清屏后再断言 → pool/⏹ 完整）；回归风险中（再断言 × 幂等守卫/150 窗的交互需用例锁）；
+  实现面 8 文件（代码面 ~+130 行 = §5.1.6 src 8 文件求和）。代价 = 主侧多两个小结构（投递队列 + 存活投影，~40 行）+
+  一处新交互面需测试锁；**唯一同时覆盖 R-1/R-3 的方案**。
+
+**与 `REMOVE-POOL-SNAPSHOT`（已交付）的边界核对**（不得静默复活已撤机制）：
+
+- 已撤对象 = `postPoolSnapshot`——**池行快照**（queued 行 + 位置；服务的行面板已由 SESSION-ACTIVITY-REVISED F-3 撤除），撤除理由 = "整窗 reload 池清 → 无补发对象"（`docs/design/REMOVE-POOL-SNAPSHOT.md:31-34`）。
+- 案 B 补发对象 = **任务存活事件**（复用既有 `subagent` 载荷形状；消费者 = 现存 live 块，未撤）；触发点 = webview 就绪 + **清屏之后**（清屏是真实路径）。
+- 判据不同：前者"重建行面板"，后者"出生事件必达"（R-1/R-4 的根因面）；本设计的复现 D/E 落在真实代码路径上（非假想场景）。
+- 红线：不复活 `postPoolSnapshot`/`SNAPSHOT_ROLES`（grep 零命中保持）；不重推行面板；不重放已消化历史。
+
+#### 5.1.4 契约（投递链 / 队列语义 / 再断言 / 新代接管 / 终态防御）
+
+1. **投递队列（主侧）**：`panel._wvOutbox`（数组，上界 200——溢出丢最旧 + 留痕）。任务可见性族消息经
+   `postSubagentEvent(panel, payload)` 投递：`panel._wvReady === true` → 直投；否则入队。首接 = `onSubagent`。
+   **族边界（评审 #10 收口）**：`suspension.mjs:95`（`reclaimDigestedBlocks`）的 `{type:"subagent", status:"done"}`
+   补发为**直投、不入队**——它是"已消化块折叠回收"通知（服务**既有**块的收尾，非出生事件；投递场景 = 活会话消化流，
+   webview 就绪）；若入队跨暗窗口补投，会为**已消化**任务补出折叠桩，与 §5.1.9「已消化不回填」边界冲突。
+2. **就绪握手（既有机制，新增两拍）**：webview 脚本起手投 `{type:"webviewReady"}`（`chat.js:318`）→
+   host `webviewReady` case（`panel-messages.mjs:396`）**新增**：`_wvReady = true`；两拍 **flush（保持入队序）→
+   `reassertLiveChildren(panel)`** 排在 case 内既有推送与 `openSessionContent(panel)`（内部序含 clearMessages →
+   historyPage——§8.5）**之后**（后置理由：clearMessages 抹块 + resetActivity 清簿记——先投的出生事件必被清屏抹掉；
+   两拍后块恒落流尾。序固定：flush 终态先落，再补活着——投影本不含已终态者，故不重复）。
+3. **存活投影（单一事实源 = 与 ⏹ 路由同源）**：`reassertLiveChildren(panel)` 读 `panel._liveLines ?? panel._susp?.lines`
+   的 `history._asyncSubagents` / `history._asyncAdvisors`（与 `panel-messages.mjs:229-231` 的 ⏹ 定位**同一来源**）：
+   `running` → 发 `subagent` `{status:"started", role, id, pool:true, model, startedAt}`；`queued` → 发
+   `{status:"queued", id, role, position}`（两侧 role/id 必带——建块/接管守卫依赖；其余字段复用既有载荷全形状）。
+   **只发 live（running/queued）**——settled/已消化不在投影内（呈现面 = 终态消息 / digest）。
+4. **清屏后再断言（主侧）**：`loadSession`（`panel-session.mjs`）在 `clearMessages`（:155）与 `historyPage`
+   （`sendHistoryPage` :159→:197）**之后同 tick** 调 `reassertLiveChildren(panel)`——**期望位置 = 流尾**
+   （与 §5「出生即流尾」同规；显式定序，不依赖 history 锚插的隐含行为）。
+5. **新代接管（webview）**：`applySubagentStatus` 的 `started` + `pool:true` 分支——命中 map 中同名**已冻结**条目 →
+   **建新块并接管键**（旧冻结块以 DOM 留在流内作历史；记 `takeover` 痕迹）。`queued` 分支维持现状（后续 `started` 接管）。
+   **显式取舍**：接管后该频道的**迟到 chunk 会落进新块**——仅当"id 重复 + 两实例消息交错"才可见（id 单调由
+   `SUBAGENT-ID-COUNTER-AGENT` 保证；接管是最后一道防御）。**代价登记在案，不静默**。
+6. **终态补块（webview）——桩集 = 精确成员表**（有 map 条目者不受本表影响——既有折叠/守卫语义见 §5）：
+   无 map 条目时按表判定；前置 = `role ∈ FAMILY_ROLES` + `id != null` + 频道名合法（不满足 → no-op，记 `drop-unknown-role`）：
+
+   | status | 上下文 | 无块时 | 折叠 kind | 依据 |
+   |---|---|---|---|---|
+   | done / settled | — | **补桩**（立即折叠 + 记 `late-terminal-stub`） | done | F-A2（settled 视同 done——§5） |
+   | error | — | **补桩** | error（错误注记随头） | F-A2 |
+   | cancelled | `was ≠ "queued"`（运行中取消，含 `was` 缺省） | **补桩** | stopped | F-A2 |
+   | cancelled | `was === "queued"`（从未启动） | **不补**（no-op） | — | §5 既有裁决（头移除——从未启动不冻结） |
+   | terminated | — | **补桩** | stopped | F-A2 |
+   | failed | — | **补桩** | error | F-A2 |
+   | answered | — | **不补**（no-op） | — | §5 既有裁决（有块折叠、无块 no-op——回复走 digest 逐字呈现） |
+   | 前置不满足（role 不明 / 非 family 角色如 consult·escalate / id 缺失 / 非法频道） | — | **不补**（no-op） | — | D-4（非法/未知丢弃）；consult 键嵌 model——既有用例锁定 |
+
+   补桩头词 = `[✓/⏹ key · done/stopped …]`（error → 错误注记随头）。非终态不属本表：`started` + pool:true + family →
+   出生/接管（第 5 条）；同步 spawn（`pool` 缺省）无块 → 随首 chunk 建块（§5 既有）；`queued` 出生 → 建 ⏳ 头（既有）。
+   **§5 原句"终态/trim 路径 lookup-only 绝不建块"由此修订**（依据复核见 §5.1.2 的 R-1/R-3 行：
+   `subagent` 族消息只会是本次会话的活事件；answered / queued-cancel 为表内显式不补桩行——§5 裁决保真）。
+7. **诊断留痕**：webview 侧 `S._subTraceLog`（环形末 50 条——`activity.js` 单一写点）记 `takeover` /
+   `late-terminal-stub` / `drop-unknown-role` 三类（范围 = 出生事件面——声明见 §5.1.9）；主侧
+   `logEvent("ev:subdeliver", {...})` 记入队/出队/丢弃计数。
+8. **协议零新增**：不新增消息类型（复用 `subagent` 既有载荷形状）；`toolPanel` chunk 语义零变化（§7.2 表不动）。
+
+#### 5.1.5 关键决策记录（含否决备选）
+
+| # | 决策 | 否决备选 / 理由 |
+|---|---|---|
+| D-1 | 采纳"出生事件队列化 + 状态再断言" | 否决"逐处补门控"（案 A）——门控只防已知路径，R-1/R-3 的缺失面在 webview 视野之外 |
+| D-2 | 再断言**只带 live 条目** | 否决"扩 settled 驻留重建"——与 REMOVE-POOL-SNAPSHOT 的"过度工程"判定冲突；settled 呈现面 = digest |
+| D-3 | 频道名 `sub:<role>#<id>` 与 chunk 路由契约**不变** | 否决"频道加代际后缀"——会连带改频道命名/子标挂载/CLI 面板路由，超出本批可见性范围 |
+| D-4 | 终态补块限"family 角色 + 合法 id" | 否决"无条件建块"——非法/未知 role 的消息仍应丢弃（否则流内出现无法解读的块） |
+| D-5 | 队列上界 200 + 溢出丢最旧 + 留痕 | 否决无界队列（暗窗口长期不结束时内存无界） |
+| D-6 | 清屏后再断言与 `resetActivity` **同 tick、随 `historyPage` 之后投递**（期望位置 = 流尾） | 否决"紧跟 clearMessages"（块先建、历史后插——位置靠 history 锚插的隐含行为保证，非显式序）；否决"延迟一拍"（与历史渲染交错 → 错序块） |
+
+#### 5.1.6 受影响文件全清单（VSC 端——行数口径 = `wc -l`；as-of 2026-09-11）
+
+| 文件 | 现行行数 | 预计增量 | 改动 |
+|---|---|---|---|
+| `webview/activity.js` | 204 | +45 | 新代接管 / 终态补块 / `S._subTraceLog` 单一写点 / 头部机制注释更新 |
+| `webview/state.js` | 113 | +3 | `_subTraceLog: []` + 环形上界常量 |
+| `webview/streaming.js` | 244 | ±5 | 接管后 chunk 落块语义注（确认项；若需守卫 ≤+8） |
+| `src/extension/panel-callbacks.mjs` | 148 | +30 | `postSubagentEvent`（直投/入队）+ 上界与 `ev:subdeliver` 留痕 + `onSubagent` 接线 |
+| `src/extension/panel-messages.mjs` | 455 | +14 | `webviewReady` case：`_wvReady=true` + flush + 再断言（排于 `openSessionContent` 之后——§5.1.4 第 2 条） |
+| `src/extension/panel-session.mjs` | 332 | +8 | `historyPage` 后同 tick 再断言（§5.1.4 第 4 条——期望位置 = 流尾） |
+| `src/extension/chat-panel.mjs` | 414 | +3 | view dispose → `_wvReady=false` + 清队（跨 view 不串味） |
+| `src/extension/suspension.mjs` | 313 | +22 | `reassertLiveChildren(panel)` + 存活投影（双池 → `subagent` 载荷）——与 `backgroundStatus` 同板块 |
+| `test/async-visibility.test.mjs`（新） | 0 | +170 | 队列/再断言（桩面板）+ 接管/补块/清屏恢复（happy-dom 真模块） |
+| `test/files.mjs` | 49 | +1 | 新测试文件登记（接线硬项——沿用第 5 批先例） |
+| `test/activity-flow.test.mjs` | 300 | +40 | 既有语义回归（幂等/冻结/窗裁/tombstone）；**「reload 无恢复」用例按新口径改写**（终态补桩——原 no-op 断言更替）。**拆分评审**：300→~340 越 ≤300 警示线（≤500 硬限内）——测试族存量 6 档同带（最高 `chat-panel.test.mjs` 620）——结论 = 本批不拆分（改写就地；测试族重组归独立项） |
+| `docs/design/WEBVIEW.md` | 339（批次前）→ 536（本批落档后） | +~197（见行数差——含修正轮） | 本节 + §5 终态规则修订指注 |
+| 合计 | — | ~+538（代码面 ~+130 = src 8 文件求和；测试面 ~+211；文档面 ~+197——见行数差） | 11 改 + 1 增 |
+
+#### 5.1.7 用例表（正常 / 边界 / 错误）
+
+| # | 用例 | 输入 | 预期输出（可机判） | 需求回指 |
+|---|---|---|---|---|
+| T-V1 | 双 spawn 背靠背出生（22:32 基例） | 两条 `started`（不同 id，pool:true） | 2 个 live 块（`data-subname` 唯一）+ 各挂 ⏹ | F-A1/F-A3 |
+| T-V2 | 重名新代接管 | 冻结 `sub:eng-coder#4` 在场 → 新 `started` #4 | 新 live 块出生（map 键重绑）+ 痕迹 `takeover` + 旧块仍在流内冻结 | F-A3 |
+| T-V3 | 清屏后再断言（含位置） | `clearMessages` → `historyPage`（末页 N 条）→ 再断言；存活池（1 running + 1 queued） | 重建块 `pool:true`（⏹ 在）+ async 词 + `startedAt` 保留；queued 得 ⏳ 头；**位置断言：重建块位于末页 history 消息之后（流尾）** | F-A4/F-A5 |
+| T-V4 | 终态补块（never-born） | 无块的 `sub:explore#7` 收 `done`（family + 合法 id） | 补出**已折叠**块 + 痕迹 `late-terminal-stub` | F-A2 |
+| T-V5 | 补块边界（不补桩行） | ① role 未知 ② id 缺失 ③ 非法频道名 ④ `answered` 无块 ⑤ `cancelled(was:"queued")` 无块 | 五者一律 no-op（零新块）；① 留 `drop-unknown-role`；④⑤ 保 §5 既有裁决（§5.1.4 第 6 条成员表不补桩行） | F-A2 边界 |
+| T-V6 | 暗窗口队列（主侧） | `_wvReady=false` 期投 2 出生 + 1 终态 → `webviewReady` | 按序 flush 3 条 + 其后再断言仅存活者；`ev:subdeliver` 计数对 | F-A1 |
+| T-V7 | 溢出与清队（边界） | 未就绪期投 >200 条 → view dispose | 丢最旧 + 留痕；dispose 后队列空（跨 view 不串味） | F-A1/NFR-A2 |
+| T-V8 | 零回归（红线） | 既有 activity-flow 全族（幂等/冻结/150 窗/tombstone） | 除「reload 无恢复」用例按新口径改写外原断言全绿；改写行 = 终态补桩新语义（consult 非 family 仍 no-op）；「answered 无块」用例原断言保真 | NFR-A1 |
+
+#### 5.1.8 验收标准（逐条回指需求——每条可机器验证）
+
+- **AC-A1**（F-A1/F-A3）= T-V1：两条不同 id `started` → `#messages > .sub-block.sub-live` 计数 == 2。
+- **AC-A2**（F-A3）= T-V2：重名 `started` → `S._subBlocks.get("sub:eng-coder#4")` 指向**新**元素且 `_subMeta.frozen === false`；`S._subTraceLog` 含 `takeover`。
+- **AC-A3**（F-A2）= T-V4/T-V5：never-born **补桩行**（done/error/运行中 cancelled/terminated/failed）→ 新块且 `_subMeta.frozen === true`、头词含 done/stopped/error；**不补桩行**（§5.1.4 第 6 条成员表：role 未知/非 family/id 缺失/非法频道/answered 无块/queued-cancel 无块）→ `#messages > .sub-block` 计数不变。
+- **AC-A4**（F-A4/F-A5）= T-V3：清屏后再断言 → 重建块 `_subMeta.pool === true` 且 `block.querySelector(".sub-stop-btn")` 非空；重建块位于末页 history 消息**之后**（位置断言——流尾）。
+- **AC-A5**（F-A1/NFR-A2）= T-V6/T-V7：未就绪期投递全入队；就绪后按序 flush + 再断言；溢出丢最旧且 `ev:subdeliver` 记丢弃计数。
+- **AC-A6**（NFR-A1）= 机检：`src/**` 内 `postPoolSnapshot` / `SNAPSHOT_ROLES` grep 零命中（保持现状）。
+- **AC-A7**（NFR-A3）= VSC `test/run-fast.mjs` 全绿 + `test/files.mjs` 新档在册；CLI 仓本条目零代码改动（`git status` 断言）。
+- **AC-A8**（NFR-A2/文档面）= 本节 + §5 指注 + 变更记录一行在位；`node scripts/check-doc-width.mjs` 新增超宽 0。
+
+#### 5.1.9 边界（本批不做）
+
+- 不做 CLI TUI 块机制改动（CLI 无 webview；`⟦ev⟧` 通道语义独立）。
+- 不做已消化/settled 任务的回填重建（呈现面 = digest）。
+- 不改频道命名法 / chunk 路由 / 子标挂载。
+- 不重做池快照（`REMOVE-POOL-SNAPSHOT` 语义保持——见 §5.1.3 边界核对）。
+- 不改 150 窗裁剪与冻结幂等语义。
+- **NFR-A2 痕迹范围声明（评审 #4 收口）**：痕迹集（§5.1.4 第 7 条）覆盖**出生事件面**——同名接管 / 无块终态补桩 /
+  未知·非法 role 丢弃三类；`queued` 事件遇**已冻结键**（或 live-tombstone）的丢弃 = **陈旧/重名窗口**事件
+  （新代可见性由后续 `started` 接管保证——§5.1.4 第 5 条；queued 分支维持现状）——不补痕
+  （tombstone 丢弃语义不变亦见 NFR-A1；需求档 NFR-A2 已同步范围句）。
 
 ## 6. 交互组件要点与标题
 
@@ -304,6 +494,13 @@ susp.digesting 键）；冻结块落流即会话流历史（随 150 窗裁——
   resolve + webviewReady 流总数恰一次）。真机 Reload 走查 = 实现期验证项（N4）。
 
 ## 9. 变更记录（历史折叠——详见 git log）
+- 2026-09-11：VSC-ASYNC-VISIBILITY 条目 A 设计落档——新增 §5.1（出生投递与块身份可靠性：
+  根因收口 R-1~R-5 / 两案选型 / 契约 8 条 / 12 文件受影响表 / T-V1~V8 / AC-A1~A8）+ §5 终态
+  规则修订指注（never-born 终态补块防御）。实施待设计评审 + 用户批准。
+- 2026-09-11：同批修正轮（设计评审轮次 1 后——10 项采纳落档）——§5.1.4 第 6 条改**桩集精确成员表**
+  （answered / queued-cancel 显式不补桩）+ 第 2/4 条再断言位置定序（期望位置 = 流尾）+ 第 1 条族边界
+  （reclaim 直投不迁移）+ 第 3 条载荷补 role/id + 第 7 条痕迹范围指针 + D-6 改口 + §5.1.6 计数勾稽
+  （代码面 ~+130 / 8 文件 / 行数口径）+ §5.1.9 痕迹范围声明 + T-V3 位置断言 / T-V5 不补桩行扩例。
 - 2026-09-09：ACTIVITY-REWRITE-SIMPLE 锚段（活动块去加戏重写）——§2 布局改四行垂直序
   （活动区容器删——grid 五行→四行）+ §3 activity 模块行同步（freeze 并入 activity.js——
   activity-freeze.js 删——簿记删）+ §5 全节重写（块出生即 #messages 流尾 · 原地折叠——

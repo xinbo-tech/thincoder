@@ -12,6 +12,42 @@ import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { notifyCompletionIfUnfocused } from "./notify.mjs"
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
 import { backgroundStatus } from "./suspension.mjs"
+import { logEvent } from "../log.mjs"
+
+// ─── 任务可见性族投递队列（2026-09-11 第 10 批——WEBVIEW.md §5.1.4 第 1 条）———
+/** 队列上界（§5.1.4 第 1 条——溢出丢最旧 + 留痕）。 */
+export const WV_OUTBOX_MAX = 200
+
+/** 任务可见性族消息投递（subagent 族**唯一**入口——§5.1.4 第 1 条）：webview 就绪
+ *  （panel._wvReady === true）→ 直投；否则入队（暗窗口零丢失——webviewReady 握手
+ *  flush 补发）。上界 WV_OUTBOX_MAX——溢出丢最旧 + `ev:subdeliver` 留痕（入队/丢计数——
+ *  NFR-A2）。返回是否直投。族边界（§5.1.4 第 1 条末段）：suspension.mjs
+ *  reclaimDigestedBlocks 的 done 补发为**直投、不入队**（已消化块收尾，非出生事件）。 */
+export function postSubagentEvent(panel, payload) {
+  if (panel._wvReady === true) {
+    panel._panel?.webview.postMessage(payload)
+    return true
+  }
+  const q = (panel._wvOutbox ??= [])
+  q.push(payload)
+  let dropped = 0
+  while (q.length > WV_OUTBOX_MAX) { q.shift(); dropped++ }
+  if (dropped > 0) panel._wvOutboxDropped = (panel._wvOutboxDropped ?? 0) + dropped
+  logEvent("ev:subdeliver", { action: "enqueue", status: payload?.status ?? null, queued: q.length, dropped: panel._wvOutboxDropped ?? 0 })
+  return false
+}
+
+/** 就绪补发（§5.1.4 第 2 条——webviewReady case 两拍之一）：按入队序 flush + `ev:subdeliver`
+ *  出队计数。清队后丢弃计数归零（下一窗口重新计）。返回补发条数。 */
+export function flushSubagentOutbox(panel) {
+  const q = panel._wvOutbox
+  if (!Array.isArray(q) || q.length === 0) return 0
+  const n = q.length
+  for (const payload of q.splice(0)) panel._panel?.webview.postMessage(payload)
+  logEvent("ev:subdeliver", { action: "flush", n, dropped: panel._wvOutboxDropped ?? 0 })
+  panel._wvOutboxDropped = 0
+  return n
+}
 
 /**
  * Ask a question in the panel (persistent in-chat card, never auto-dismisses) — shared
@@ -77,7 +113,7 @@ export function buildPanelCallbacks(panel, deps) {
       panel._panel?.webview.postMessage({ type: "taskProgress", done, inProgress, pending, total: tasks.length, items: tasks })
     },
     onPlanMode: (active) => { panel._panel?.webview.postMessage({ type: "planMode", active }); panel._setPlanMode(active).catch(() => {}) },
-    onSubagent: (info) => panel._panel?.webview.postMessage({ type: "subagent", ...info }),
+    onSubagent: (info) => postSubagentEvent(panel, { type: "subagent", ...info }),
     // Compression lifecycle visibility (CONTEXT-COMPACTION §7 D-C1/D-C3): the webview
     // status line shows "Compressing context…" → "Compressed: N tokens freed (Xs)" /
     // "failed: <error>" / 3-failure degradation note. Only the lifecycle is surfaced —

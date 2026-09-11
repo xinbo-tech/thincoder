@@ -76,14 +76,6 @@ function asyncEntryDone(agent, id) {
   return entry.done === true || entry.status === "done"
 }
 
-/** Any async entry matching pred that is still running/queued (not done). */
-function hasRunningAsync(agent, pred) {
-  for (const e of asyncPool(agent).values()) {
-    if (pred(e) && !(e.done === true || e.status === "done")) return true
-  }
-  return false
-}
-
 /** "consult done" — every consult session has drained (pending 0, parked into the
  *  digest stream) or was explicitly stopped (its children were aborted). No sessions
  *  → true (vacuously). §25 R17: sessions ride history._consultSessions (cross-run
@@ -122,11 +114,21 @@ export async function evaluateWaitForCondition(condition, ctx) {
   const parsed = parseWaitForCondition(condition)
   const agent = ctx?.agent
   switch (parsed.kind) {
-    case "advisor":
-      // Advisor reviews run as blocking tool calls (runAdvisorReview) or as
-      // advisor-role async children — "settled" = no advisor-role entry still
-      // running/queued in the async pool.
-      return !hasRunningAsync(agent, (e) => e.role === "advisor")
+    case "advisor": {
+      // 第 10 批修正（§18.3 #2——修前恒真 0ms 秒过）：判据 = **评审池真实态**——复用本端
+      // 未决评审判定 advisorReviewInFlight（双载体：agent._asyncAdvisors ∪
+      // history._asyncAdvisors——running/queued 才算在飞）。修前查子代理池的 role==="advisor"
+      // 条目——评审条目只在评审池 → 恒无命中 → 0ms 秒过（用户实证）。条件字面/超时/间隔零变。
+      // 惰性动态 import（非顶层静态）：advisor-async → advisor/run → advisor/tools →
+      // tools/index（builtinTools 顶层引 waitForTool）——静态 import 成环并在经 wait_for
+      // 入口加载时 TDZ（实测 Cannot access 'waitForTool' before initialization）；动态
+      // import 延迟到求值期（模块缓存——零重复加载）。panel-messages 的 cancelAdvisorReview
+      // 同款先例。
+      const { advisorReviewInFlight } = await import("../agent-tools/advisor-async.mjs")
+      // agent 缺席（退化 ctx——直调/headless）→ 无评审池 → 空判据真（与其余条件分支同语义；
+      // advisorReviewInFlight 本体不设 null 守卫——本仓写域外，本处兜）。
+      return !agent || !advisorReviewInFlight(agent)
+    }
     case "subagent":
       return asyncEntryDone(agent, parsed.arg)
     case "consult":

@@ -16,7 +16,9 @@ import { openDiffPreview } from "./diff-preview.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { savePastedImages, runVisionReader } from "./image-handler.mjs"
 import { specForModel } from "../specs.mjs"
-import { backgroundStatus } from "./suspension.mjs"
+import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
+// 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍）
+import { flushSubagentOutbox } from "./panel-callbacks.mjs"
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
@@ -403,6 +405,9 @@ export async function handlePanelMessage(panel, msg) {
       // webviewReady 是唯一可靠握手点——i18n 同机制）。
       // C2（F-C2b）：忙态随握手重推（Reload Window 后 webview 冷启为 idle——正在执行的
       // 回合/挂起会话的派生态（Stop/thinking）需以此恢复——单一广播的幂等直发）。
+      // 2026-09-11 第 10 批（§5.1.4 第 1 条）：_wvReady 开闩——任务可见性族消息自此直投
+      // （此前投递入队——暗窗口零丢失）。
+      panel._wvReady = true
       panel._panel?.webview.postMessage({ type: "turnState", state: panel._turnState ?? "idle", ...(panel._susp ? { counts: backgroundStatus(panel._susp.lines.history) } : {}) })
       panel._panel?.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
@@ -414,6 +419,13 @@ export async function handlePanelMessage(panel, msg) {
       // tick 恰一次（N2——loadSession 尾单发——F-B2c——异步第三发在 status() 慢段 fullStatus
       // cb——不同 tick 保留）。槽绑定随之顺延至此——webviewReady 前无 slot 读者（安全）。
       openSessionContent(panel)
+      // 2026-09-11 第 10 批（§5.1.4 第 2 条——两拍，排在 openSessionContent 之后）：
+      // ① flush 暗窗口队列（保持入队序）→ ② 再断言存活（存活投影——只发 running/queued）。
+      // 后置理由：openSessionContent 内部含 clearMessages（抹块 + resetActivity 清簿记）——
+      // 先投的出生事件必被清屏抹掉；两拍后块恒落流尾。序固定：flush 终态先落，再补活着——
+      // 投影本不含已终态者，故不重复。
+      flushSubagentOutbox(panel)
+      reassertLiveChildren(panel)
       break
     }
     case "setAdvisorGuard": {

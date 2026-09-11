@@ -120,6 +120,11 @@ export class ChatPanel {
 
     webviewView.onDidDispose(() => {
       this._panel = null
+      // 2026-09-11 第 10 批（§5.1.4 第 1 条——跨 view 不串味）：view 销毁 → 投递闸门
+      // 关闩 + 清空队列（旧 view 的待投事件不得灌进下一个 view——新 view 经 webviewReady
+      // 握手重新开闩）。
+      this._wvReady = false
+      this._wvOutbox = []
       // §11 销毁点：view 销毁 → 会话级 agent 随之销毁（面板重开经 ensurePanelAgent 重建）
       this._agent = null
       this._abortController?.abort()

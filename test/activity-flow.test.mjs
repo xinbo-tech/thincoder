@@ -203,15 +203,26 @@ test("会话清：resetActivity 移除 .sub-live + 清 map——frozen 不动", 
   assert.equal(frozen.isConnected, true, "frozen 块保留（会话流历史）")
 })
 
-test("reload 无恢复：终态消息对无块频道 no-op——不建块（lookup-only——消息流为历史）", async () => {
+test("never-born 终态补桩（第 10 批新口径——原「reload 无恢复」用例改写）：family+合法 id → 补已折叠桩 + `late-terminal-stub`；非 family（consult）→ no-op + `drop-unknown-role`", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
+  S._subTraceLog = []
   addMessage(ctx, "history")
-  // reload 后陈旧终态（进程死块死——无跨 reload 恢复）
+  // never-born 终态（出生事件丢失/投递失败后的终态到达——旧口径 no-op，现补桩）
   applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 7 })
-  applySubagentStatus({ type: "subagent", status: "settled", role: "consult", id: 4, model: "glm-x", sessionId: 4 })
-  assert.equal(S._subBlocks.size, 0, "无块频道终态一律 no-op（绝不 lookup 外建块）")
-  assert.equal(subBlocks(ctx).length, 0, "#messages 无新增块（历史消息原样）")
+  const stub = S._subBlocks.get("sub:explore#7")
+  assert.ok(stub, "family + 合法 id → 补桩")
+  assert.ok(stub.classList.contains("sub-frozen"), "补桩即折叠（live→frozen）")
+  assert.equal(stub._subMeta.frozen, true, "_subMeta.frozen === true")
+  assert.ok(stub.querySelector(".sub-hdr").textContent.includes("done"), "桩头词含 done")
+  assert.equal(stub.parentNode, ctx.messagesEl, "桩仍落 #messages 流内（出生位）")
+  assert.equal(S._subTraceLog.filter((e) => e.kind === "late-terminal-stub").length, 1, "`late-terminal-stub` 痕迹恰一条")
+  // 非 family（consult——键嵌 model）→ 不补桩 + drop-unknown-role 痕迹
+  const before = subBlocks(ctx).length
+  applySubagentStatus({ type: "subagent", status: "terminated", role: "consult", id: 4, model: "glm-x", sessionId: 4 })
+  assert.equal(subBlocks(ctx).length, before, "consult（非 family）不补桩（no-op）")
+  assert.equal(S._subBlocks.size, 1, "map 无新增条目")
+  assert.ok(S._subTraceLog.some((e) => e.kind === "drop-unknown-role"), "`drop-unknown-role` 痕迹在位")
 })
 
 test("150 裁（冻结）：冻结块随窗裁——map 终态守卫仍丢迟来消息", async () => {

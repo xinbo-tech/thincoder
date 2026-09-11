@@ -28,6 +28,7 @@
 import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
+import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction.mjs"
 import { isCodePath } from "../advisor/repos.mjs"
 import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
@@ -54,11 +55,6 @@ export function resolveAdvisorPoolLimit(raw) {
 export function advisorPoolLimitFor(parent) {
   return resolveAdvisorPoolLimit(parent?.config?.agent?.poolLimits)
 }
-
-/** 机械失败前缀（run.mjs resolve 这些文本——永不 throw）：携带它们的 settle 未产出评审
- *  判定——不得满足 guard（CLI ADVISOR_FAILURE_TEXT 同源——评审发现 #2：失败评审不得静默
- *  满足 code guard；design 保持任意完成判定置位——sync 镜像）。 */
-const ADVISOR_FAILURE_TEXT = /^Advisor: (?:review failed|review timeout|stopped after|interrupted|context window limit|empty response)/
 
 /** 实例轮次上限（run.mjs MAX_ADVISOR_ROUNDS 同值 5——每评审 ≤5 轮——修正 #4：code
  *  第 6 次启动拒；design 豁免 cap（2026-09-07 §8——轮次继续递增、不拒）。 */
@@ -326,8 +322,11 @@ function advisorSettleAccounting(parent, entry, record) {
     const stale = advisorStale(parent, entry)
     let passed = false
     let issued = false // 持久化成功才算"签发"（D1：写失败即 settle 失败）
+    // F18/F23（第 12 批 §13.4 契约四——消费点 2/3 同谓词）：宿主截断尾判定——块首行扫描
+    // 单谓词（六 kind）；error settle（result=null）→ null（无文本可判）。
+    const incomplete = advisorIncompleteMarker(result)
     if (!stale) {
-      passed = entry.reviewType === "design" && designReviewPassed(entry, result)
+      passed = entry.reviewType === "design" && !incomplete && designReviewPassed(entry, result)
       if (passed) {
         // D1（DESIGN-TOKEN-SETTLEMENT.md，2026-09-08）：settle 当场同步写槽文件权威台账——
         // designId 键控持久，token 随会话 slot 跨进程/重启存活。_engPersist = 顶层面板会话
@@ -361,12 +360,12 @@ function advisorSettleAccounting(parent, entry, record) {
           entry.approvedSuffix = buildApprovedSuffix(entry.designToken, entry.designId, parent._engDesignTokens.size)
         }
       }
-      // 机械失败 settle（run.mjs resolve 失败文本——评审未产出判定）不置 called——CLI
-      // ADVISOR_FAILURE_TEXT 同源（guard 不得被失败评审静默满足——T-24b13 语义）；error
-      // settle（rejection 路径——result=null 带 error）同样无判定——不置 called（advisor 复评
-      // 补边）；design 评审保持任意完成判定置位（sync recordToolResults 镜像——无 code 面）。
+      // 机械失败 settle（run.mjs resolve 失败文本——评审未产出判定）不置 called。
+      // F23（第 12 批）：失败判定改用**同一谓词**——旧 `^` 锚正则退役（定义与消费零残留）；
+      // 六 kind 全覆盖 ⊇ 旧六形态（含 review_failed 字符串 resolve；`empty` 本端括号字面
+      // 旧正则本就不命中——改进非丢失）；error settle（result=null + error）判定保留。
       const failureVerdict = entry.reviewType !== "design" && (
-        ADVISOR_FAILURE_TEXT.test(String(result ?? "")) ||
+        incomplete !== null ||
         (result == null && entry.error != null)
       )
       if (!failureVerdict) parent._calledAdvisorThisRun = true
@@ -380,6 +379,10 @@ function advisorSettleAccounting(parent, entry, record) {
       if (stale) {
         const stripped = strip(result)
         entry.report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
+      } else if (incomplete) {
+        // F18（第 12 批——消费点 2）：未完成即不签发——剥后文本 + 未签发提示（stale 分支
+        // 在外层优先保留）；D1 台账零写（issued 未置位）。
+        entry.report = `${strip(result)}\n\n${incompleteNotice(incomplete)}`.trim()
       } else if (issued) {
         entry.report = `${strip(result)}\n\n${entry.approvedSuffix}`
       } else if (passed) {

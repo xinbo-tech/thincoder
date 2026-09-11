@@ -11,6 +11,7 @@
  * 承载批次（各批锚在本文件各节——fail-when-unchanged）：
  *   - AGENT-LOOP §7.7/§7.7.1 异步纪律 / ADVISOR-VERDICT-TEMPLATE L50 / MAIN-DESIGN-ENHANCE A1-A4
  *   - ENGINEERING-MODE §2.9 锚#1-#7 / PROMPT-ATTENTION 开关段 C1-C4
+ *   - PROMPT-REVIEW-ORDER 第 9 批（Action 四值 + 修正轮 ⇄ 用户批准 时序——ADVISOR-CONVERGENCE §13）
  *   - PROMPT-SYSTEM §2.7 编写纪律巡检 / §3.2 装配矩阵 / §3.4 降级链
  */
 import { test } from "node:test"
@@ -393,4 +394,56 @@ test("主链槽位装配非空（六场景全槽在位——终验）", () => {
   for (const s of ["normal", "engineering", "eng-coder", "explore", "coder", "plan"]) {
     assert.ok(engMode[s].prompt.length > 500, `${s}: 装配非空`)
   }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 第 9 批锚（PROMPT-REVIEW-ORDER——ADVISOR-CONVERGENCE 对位节 = 本仓设计档 §12）：
+// Action 四值 + 修正轮 ⇄ 用户批准 时序。口径 = T-RO1–T-RO6：**本端 src + 中文镜像两侧**
+// （跨仓逐字由 prompts-mirror-anchors 面⑥ 承载——多实现面纪律，各端独立断言自身文本）。
+// ─────────────────────────────────────────────────────────────────────────────
+const peZh = read("docs/design/prompts/persona-engineering.md")
+const deZh = read("docs/design/prompts/discipline-engineering.md")
+const dnZh = read("docs/design/prompts/discipline-normal.md")
+const ROPE_CHAIN = ["评审 pass 后逐条裁决", "修正轮落地并经核验"]
+const ROPE_LABEL = "**修正轮 ⇄ 用户批准 时序**"
+const ROPE_BULLET = [
+  "- **修正轮 ⇄ 用户批准 时序**（评审后）：评审 pass 后你逐条裁决（裁决表）——裁决要求修正的（设计档修订 / 实现修复），",
+  "  **修正轮落地并经你核验后，才可请求用户批准**；修正轮在途时**不得**请求批准——在途状态只作汇报，汇报不携带批准请求。",
+  "  **修正轮边界**：只落评审发现与你的裁决直接导出的修正——**不得夹带新语义/新范围**；夹带即新内容，",
+  "  须显式摆给用户单独定，不得随批准请求一并默认通过。",
+  "  批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。",
+].join("\n")
+const PE_PAIR = [["src（英文落地）", pe], ["docs/design/prompts（中文镜像）", peZh]]
+const DE_PAIR = [["src（英文落地）", de], ["docs/design/prompts（中文镜像）", deZh]]
+const DN_PAIR = [["src（英文落地）", dn], ["docs/design/prompts（中文镜像）", dnZh]]
+
+test("T-RO1 正常：链行节点双源均在位（评审后裁决 / 修正轮落地核验——节点序先于用户批准）", () => {
+  for (const [name, doc] of PE_PAIR) for (const lit of ROPE_CHAIN) assert.ok(doc.includes(lit), `${name}: 链行节点缺失: ${lit}`)
+  assert.ok(pe.indexOf(ROPE_CHAIN[0]) < pe.indexOf("user approval") && peZh.indexOf(ROPE_CHAIN[0]) < peZh.indexOf("→ 用户批准"), "节点序漂移（应插在提醒评审与用户批准之间）")
+})
+
+test("T-RO2/T-RO3 正常/边界：Action 四值 + 计数词同改（de×2 + dn×2 双源——词序 Fixed→Dispatched→Not an issue→Deferred）", () => {
+  for (const [name, doc] of [...DE_PAIR, ...DN_PAIR]) {
+    const want = name.startsWith("src") ? "exactly four values" : "恰好四选一"
+    assert.ok(doc.includes("Dispatched") && doc.includes(want), `${name}: 四值/${want} 缺失——计数词未同改`)
+    const o = ["`Fixed`", "`Dispatched`", "`Not an issue`", "`Deferred`"].map((v) => doc.indexOf(v))
+    assert.ok(o[0] < o[1] && o[1] < o[2] && o[2] < o[3], `${name}: 词序漂移`)
+  }
+})
+
+test("T-RO4 正常：时序 bullet 双源逐字全文 + 要素 + 位序（裁决表块末行后、轮次衰减前）", () => {
+  for (const [name, doc] of DE_PAIR) {
+    assert.ok(doc.includes(ROPE_BULLET), `${name}: 时序 bullet 逐字全文缺失`)
+    for (const el of ["**不得**请求批准", "**不得夹带新语义/新范围**", "`Dispatched` 行须已逐条收敛为 `Fixed`"]) assert.ok(doc.includes(el), `${name}: bullet 要素缺失: ${el}`)
+    assert.ok(doc.indexOf(ROPE_LABEL) < doc.indexOf("轮次衰减"), `${name}: 位序漂移（应早于轮次衰减）`)
+  }
+  assert.ok(de.indexOf("surface any unresolved 🔴 to the user.") < de.indexOf(ROPE_LABEL) && deZh.indexOf("未解决的 🔴 必须向用户呈现。") < deZh.indexOf(ROPE_LABEL), "bullet 应紧随裁决表块末行")
+})
+
+test("T-RO5/T-RO6 反例+边界：旧三值句/旧相邻形态零残留（本端 6 档）+ 新增文本零维护者注（§2.7 #15）", () => {
+  for (const [name, doc] of [...PE_PAIR, ...DE_PAIR, ...DN_PAIR]) assert.ok(!doc.includes("恰好三选一") && !doc.includes("exactly three values"), `${name}: 旧三值句残留`)
+  for (const [name, doc] of PE_PAIR) {
+    assert.ok(!doc.includes("（发起权在用户）→ 用户批准") && !doc.includes("(initiation stays with the user) → user approval"), `${name}: 旧相邻形态残留（防“追加两版”）`)
+  }
+  for (const lit of [...ROPE_CHAIN, ROPE_LABEL, ...ROPE_BULLET.split("\n")]) assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(lit), `新增文本含维护者注: ${lit.slice(0, 26)}…`)
 })

@@ -18,6 +18,10 @@
 import { injectPendingAsync, parkAsyncPending } from "../agent-tools/async-settle.mjs" // D2/D3 共享：pending 单容器注入分发 + 停靠统一表示
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs" // §25 R17：会诊会话中止清理（挂起活度见 poolLive 内联读）
 import { logEvent } from "../log.mjs"
+// 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
+// B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
+// 调用期读——环安全（两模块无顶层跨环读取）。
+import { postSubagentEvent } from "./panel-callbacks.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，设计 thincoder/docs/design/INPUT-LOCK-ASYNC.md——双端）：
 // R15 排队用户指令合并整批废弃（攒批取数/合并文案/上限常量全删）——busy（_turnState
@@ -115,6 +119,34 @@ export function backgroundStatus(history) {
     pending: history?._pendingAsyncResults?.length ?? 0, // D2 pending 单容器
     done: entries.filter((e) => e.done).length, // §17.5 留池未消费（sweep 前窗口）
   }
+}
+
+/** 存活投影 / 状态再断言（第 10 批 §5.1.4 第 3/4 条——WEBVIEW.md）——触发点 = webviewReady
+ *  握手（就绪两拍之一）与 loadSession 清屏（historyPage）之后：读 panel._liveLines ??
+ *  panel._susp?.lines 的 _asyncSubagents / _asyncAdvisors（与 panel-messages ⏹ 路由**同一
+ *  来源**）——**只发 live**（running → started + pool:true；queued → queued）；两侧 role/id
+ *  必带（webview 建块/接管守卫依赖——§5.1.4 第 3 条）。settled/已消化不在投影内（呈现面 =
+ *  终态消息 / digest）；投影不含已终态者，故与 flush 不重复。投递经 postSubagentEvent
+ *  （就绪直投 / 未就绪入队——同一族通道）。返回重发条数。 */
+export function reassertLiveChildren(panel) {
+  const lines = panel._liveLines ?? panel._susp?.lines
+  const history = lines?.history
+  if (!history) return 0
+  let n = 0
+  for (const key of ["_asyncSubagents", "_asyncAdvisors"]) {
+    const map = history[key]
+    if (!(map instanceof Map)) continue
+    for (const e of map.values()) {
+      if (e.status === "running") {
+        postSubagentEvent(panel, { type: "subagent", status: "started", role: e.role, id: e.id, pool: true, model: e.model ?? null, startedAt: e.startedAt })
+        n++
+      } else if (e.status === "queued") {
+        postSubagentEvent(panel, { type: "subagent", status: "queued", id: e.id, role: e.role, position: e.position ?? null })
+        n++
+      }
+    }
+  }
+  return n
 }
 
 /** 等待下一次 settle（running 子代理完成）或用户唤醒（Enter 入队 / 会话 abort）。

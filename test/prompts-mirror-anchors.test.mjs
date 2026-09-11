@@ -4,13 +4,15 @@
  * 权威：ENGINEERING-MODE.md §2.22.2（镜像锚 A1–A12）/ §2.22.7（双源结构 + 端特有段 + 跨仓节引用）；
  * 验收：AC39（文本类锚逐字 + A12 宿主）/ AC43（双源结构 + 端特有段）；用例 T62 / T65。
  *
- * 断言五面：
+ * 断言六面：
  *   ① 双源同名集合两侧各 15（src/prompts 与 docs/design/prompts，均与 CLI 同仓同名集合相等）；
  *   ② 文本类锚 A1–A8/A11/A12 在 VSC 宿主档（双源两侧）与 CLI 侧逐字相同（A8 = 跨仓同文件 grep）；
  *      A9/A10 为行为锚（宿主是工具/脚本代码），属面① T59/T61，本档不 grep；
  *   ③ 端特有段在镜像中且被断言（非仅锚句——VSC R14 池规则段等，§2.22.7）；
  *   ④ 镜像跨仓节引用不悬空（VSC 侧可解析，或以「（CLI 侧）」注记豁免——§2.22.7 V1 判据）；
- *   ⑤ A12/T65：主 agent 人格含产品经理身份 + spawn eng-designer 调用链，不含 ARCHITECT/交付物旧句。
+ *   ⑤ A12/T65：主 agent 人格含产品经理身份 + spawn eng-designer 调用链，不含 ARCHITECT/交付物旧句；
+ *   ⑥ 本批同文组跨仓逐字（CLI ↔ VSC）：组 1 = Action 四值句（zh↔zh / en↔en 各 4 文件面）；
+ *      组 2 = 修正轮 ⇄ 用户批准 时序 bullet 全文（4 文件面）——权威定义 = ADVISOR-CONVERGENCE §13.10 面⑥。
  *
  * 跨仓读取 = 兄弟仓路径 `../thincoder/...`（可用 THINCODER_CLI_ROOT 覆盖）；兄弟仓不可用 → fail-closed（显式失败，不静默通过）。
  */
@@ -83,7 +85,7 @@ const A11_ZH = [
   '`subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<批次档路径>, task=...)`',
   "**`batchDoc` 必传**（批次档路径，如 `docs/batches/<批>-<主题>.md`",
 ]
-const A12 = ["产品经理", "流程编排者", "调用链", "spawn eng-designer"]
+const A12 = ["产品经理", "流程编排者", "调用链", "spawn eng-designer", "评审 pass 后逐条裁决", "修正轮落地并经核验"]
 
 const ANCHORS = [
   { id: "A1/A2/A6/A7", files: DE_PAIR, literals: [...A1, ...A2, ...A6, ...A7] },
@@ -189,6 +191,32 @@ test("⑤ 镜像跨仓节引用不悬空（VSC 可解析，或「（CLI 侧）�
     })
   }
   assert.deepStrictEqual(dangling, [], "镜像含悬空节引用（须本端可解析，或按 §2.22.7 标注「（CLI 侧）」）")
+})
+
+// ── ⑥ 本批同文组字面表（PROMPT-REVIEW-ORDER——跨仓逐字；组 1 四值句 / 组 2 时序 bullet）───────
+const ROPE_ZH_ACTION = "`Action` 恰好四选一：`Fixed`（你改了代码——**已落地**）、`Dispatched`（**修正轮在途——尚未落地**）、`Not an issue`（有证据的技术反驳）、`Deferred`（承认但现在不修——附理由）。"
+const ROPE_EN_ACTION = "`Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason)."
+const ROPE_BULLET = [
+  "- **修正轮 ⇄ 用户批准 时序**（评审后）：评审 pass 后你逐条裁决（裁决表）——裁决要求修正的（设计档修订 / 实现修复），",
+  "  **修正轮落地并经你核验后，才可请求用户批准**；修正轮在途时**不得**请求批准——在途状态只作汇报，汇报不携带批准请求。",
+  "  **修正轮边界**：只落评审发现与你的裁决直接导出的修正——**不得夹带新语义/新范围**；夹带即新内容，",
+  "  须显式摆给用户单独定，不得随批准请求一并默认通过。",
+  "  批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。",
+].join("\n")
+
+test("⑥ 本批同文组跨仓逐字（组 1：Action 四值句 zh↔zh / en↔en；组 2：修正轮 ⇄ 用户批准 时序 bullet）", () => {
+  const GROUPS = [
+    { id: "组1-zh 四值句", files: [ZH + "discipline-engineering.md", ZH + "discipline-normal.md"], literals: [ROPE_ZH_ACTION] },
+    { id: "组1-en 四值句", files: [SRC + "discipline-engineering.md", SRC + "discipline-normal.md"], literals: [ROPE_EN_ACTION] },
+    { id: "组2 时序 bullet 全文", files: DE_PAIR, literals: [ROPE_BULLET] },
+  ]
+  for (const g of GROUPS) for (const f of g.files) {
+    const vsc = readRepo(VSC, f), cli = readRepo(CLI, f)
+    for (const lit of g.literals) {
+      assert.ok(cli.includes(lit), `${g.id}: CLI 侧 ${f} 缺字面串（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+      assert.ok(vsc.includes(lit), `${g.id}: VSC 侧 ${f} 与 CLI 不逐字（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+    }
+  }
 })
 
 test("A12/T65 主 agent 人格改述：产品经理身份 + spawn eng-designer 调用链；不含 ARCHITECT/交付物旧句", () => {

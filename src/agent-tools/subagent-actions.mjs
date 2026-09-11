@@ -15,6 +15,8 @@
 import { escapeXml } from "../agent/run-helpers.mjs"
 import { relative, isAbsolute } from "node:path"
 import { describeBlockers, detectStall, dependentLabels, getAsyncPool, queuePosition, refillPool, refreshQueuedRows, stallErrorText, writeTombstone } from "./subagent-scheduler.mjs"
+// 第 10 批 ③（§18.3 #3——D-B3 本端原名）：评审取消路由（advisor id → cancelAdvisorReview）
+import { cancelAdvisorReview } from "./advisor-async.mjs"
 
 /**
  * §19 action:'status' handler — NON-BLOCKING pool query（AGENT-LOOP.md §19 D-M2：
@@ -86,14 +88,36 @@ function shortTouchedPath(f, cwd) {
   const p = r && !r.startsWith("..") && !isAbsolute(r) ? r : "../" + f
   return p.length > 80 ? `${p.slice(0, 79)}…` : p
 }
+
+/** §18.3 #1（第 10 批——双池并表）：评审池条目专属字段面——role 区分两池（子代理：
+ *  turn/maxTurns/touched；评审：reviewType(design|code) / round / elapsedSec）。done 带
+ *  "未取"注记（D-B5——不把已 settle 未消化当 running）。 */
+function advisorStatusFields(entry) {
+  const out = {
+    id: entry.id, role: entry.role, reviewType: entry.reviewType ?? null,
+    round: entry.round ?? entry.run?.round ?? null,
+    model: entry.model ?? null,
+    elapsedSec: entry.startedAt ? Math.max(0, Math.round((Date.now() - entry.startedAt) / 1000)) : null,
+  }
+  if (entry.done) return { ...out, status: "done", note: "settled this turn — unconsumed; the report reaches you automatically (next turn start / suspension digest)" }
+  // cancel→settle 窗口（§18.3 #3）内**不另报 cancelled**——与 CLI 已交付形态一致（NFR-B1 同输入
+  // 同判定；取消事实已由 cancel 动作返回值承载，settle 随后出池）；如需更丰状态，两端同改
+  // 并在设计 §18.4 登记差异。
+  return { ...out, status: entry.status ?? "running" }
+}
 export function subagentStatus({ id }, ctx) {
   const map = getAsyncPool(ctx.agent, "subagent") // D1 accessor——history 载体优先双查询吸收
+  const advisors = getAsyncPool(ctx.agent, "advisor") // §18.3 #1：评审池同面（双池合并）
   const idNum = typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id // 容错归一（纯数字字符串 id——advisor fix #3）
   if (idNum != null) {
-    if (!map || !map.has(idNum)) {
+    // §18.3 #1：单查先子代理池，未命中落评审池（两池共用 nextSubagentId 命名空间——id 全局唯一）
+    const entry = map?.get?.(idNum) ?? advisors?.get?.(idNum) ?? null
+    if (!entry) {
       return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
     }
-    return JSON.stringify(statusEntryFields(map.get(idNum), map, ctx.agent, ctx.cwd))
+    return JSON.stringify(entry.role === "advisor"
+      ? advisorStatusFields(entry)
+      : statusEntryFields(entry, map, ctx.agent, ctx.cwd))
   }
   const overview = { running: [], queued: [], done: [] }
   for (const entry of map?.values() ?? []) {
@@ -110,6 +134,13 @@ export function subagentStatus({ id }, ctx) {
       overview.queued.push(row)
     }
     else overview.running.push(statusEntryFields(entry, map, ctx.agent, ctx.cwd))
+  }
+  // §18.3 #1：概览并表——评审池条目同列（role:"advisor" + reviewType/round/elapsedSec——
+  // role 区分两池；done 行保 {id, role} 形态——T-B3 注记走单查 done 分支）。
+  for (const entry of advisors?.values() ?? []) {
+    if (entry.done) overview.done.push({ id: entry.id, role: entry.role })
+    else if (entry.status === "queued") overview.queued.push({ id: entry.id, role: entry.role, position: queuePosition(advisors, entry) })
+    else overview.running.push(advisorStatusFields(entry))
   }
   // §21.1 P-SL2 停滞可见性（2026-09-05）：概览挂 stall 字段（链 + 单点事实文案——cancel 破环
   // 引导）——模型查进度即见机械停滞结论；非停滞零影响（无字段——返回形状不变）。
@@ -162,6 +193,10 @@ export function cancelSubagent(parent, id) {
     return JSON.stringify({ status: "error", error: "cancel requires an id — pass the target subagent's id (no id = no-op; Ctrl+C / the Stop button stop everything)" })
   }
   if (!map || !map.has(idNum)) {
+    // §18.3 #3（第 10 批——D-B3）：id 不落子代理池 → 落**评审池**（对象漂移时定向干掉旧评审；
+    // 与面板 ⏹ 同源取消——cancelled settle 不入 pending、不签发 token；幂等；已完成/未知
+    // 两池 → 各自既有错误文案）。
+    if (getAsyncPool(parent, "advisor")?.has?.(idNum)) return cancelAdvisorReview(parent, idNum)
     return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
   }
   const entry = map.get(idNum)
@@ -270,6 +305,11 @@ export function subagentObserve({ id }, ctx) {
     return JSON.stringify({ status: "error", error: "observe requires an id — pass the target subagent's id (from an async spawn return) to see its recent activity" })
   }
   if (!map || !map.has(idNum)) {
+    // §18.3 #4（第 10 批）：advisor id 给**明确指引**（评审无逐回合观察面——不可 observe/send），
+    // 不回含糊的 unknown（不报 unknown——AC-B4 机判）。
+    if (getAsyncPool(parent, "advisor")?.has?.(idNum)) {
+      return JSON.stringify({ id, status: "error", error: `id ${id} is a background ADVISOR review, not a subagent — observe has no per-turn view of a review; track it with action:'status' (role:"advisor" — reviewType/round/elapsedSec) or wait for its report to arrive automatically` })
+    }
     return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
   }
   const entry = map.get(idNum)
@@ -314,6 +354,11 @@ export function subagentSend({ id, message }, ctx) {
     return JSON.stringify({ status: "error", error: "send requires a non-empty message — the guidance you want the running subagent to act on as an ordinary user instruction" })
   }
   if (!map || !map.has(idNum)) {
+    // §18.3 #4（第 10 批）：advisor id 明确指引（评审不可注入方向——send 只面向 running
+    // 异步子代理）；不报「unknown」（AC-B4）。
+    if (getAsyncPool(parent, "advisor")?.has?.(idNum)) {
+      return JSON.stringify({ id, status: "error", error: `id ${id} is a background ADVISOR review, not a subagent — you cannot inject direction into a running review; use action:'status' to track it (role:"advisor") or wait for its report to arrive automatically` })
+    }
     return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id} — send targets a running async child from an async spawn return (a synchronous spawn returns no pool id)` })
   }
   const entry = map.get(idNum)

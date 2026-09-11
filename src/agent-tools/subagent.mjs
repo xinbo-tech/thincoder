@@ -146,7 +146,11 @@ export const subagentTool = {
   isControlAction(args) {
     return args?.action === "cancel" || args?.action === "send"
   },
-  description: subagentSpec.description, // description/schema 载荷 verbatim 在 subagent-spec.mjs（2026-09-05 module-split round 2——546 > 500 拆出）
+  // ⑤ 第 10 批（§18.3 #5——CLI 同源句）：status/cancel 面补评审池（同 id 命名空间——advisor id
+  // 同面可查/可取消）。本仓描述载荷在 subagent-spec.mjs（subagentSpec.description 本体不动）——
+  // 本文件是**工具对象组装点**，句尾追加可达意。
+  description: subagentSpec.description
+    + " Background advisor reviews share this status/cancel surface (same id space): pass a review id to status it (role:'advisor' + reviewType/round/elapsedSec) or to cancel it — a cancelled review issues no token.",
   // §2.22.3 参数面：batchDoc（spawn schema 属性——否则参数无处传入；受限变体的 delete 清单
   // 需有该键可删）。本仓 schema 载荷在 subagent-spec.mjs——此处单键扩展，不动 spec 载荷。
   parameters: {

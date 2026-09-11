@@ -6,6 +6,7 @@
 import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
 import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
+import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction.mjs"
 import { isDocFile } from "../advisor/repos.mjs"
 import { resolveBatchDocPath } from "./batch-segment.mjs"
 
@@ -272,6 +273,16 @@ export const advisorTool = {
       // F2h record（§29.1）：无论通过与否都登记 scope→designId（async 同构——launch 时即
       // 有记录）——下个同 scope 评审复用同 id。
       recordSyncDesignScope(agent, documents, designId, agent.cwd)
+      // F18（第 12 批 §13.4 契约四——消费点 1）：宿主截断尾 ⇒ **一律不签发**（无论评审文本
+      // 是否回显 token）——剥 token 回显 + 未签发提示；槽零写（F2h 映射已登记、不占槽）；
+      // prior（_lastAdvisorOutput）覆写为清洗后输出（防未注册 token 进 prior——N14）。
+      const incomplete = advisorIncompleteMarker(result)
+      if (incomplete) {
+        const stripped = String(result).replace(makeDesignTokenRegex(designToken, "g"), "").trim()
+        const output = `${stripped}\n\n${incompleteNotice(incomplete)}`.trim()
+        agent._lastAdvisorOutput = output
+        return output
+      }
       const tokenPattern = makeDesignTokenRegex(designToken)
       if (designToken && result && tokenPattern.test(result)) {
         // Advisor echoed the token → review passed. Issue it to the parent for eng-coder.

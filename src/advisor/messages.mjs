@@ -66,6 +66,8 @@ export function buildDesignApprovalBlock(designToken, designId) {
 }
 
 /**
+ * 内层构建（分支面——design round1 / code 形态 / legacy 收敛；既有分支语义零改）。
+ * 外层 = `buildAdvisorUserMessage`（信号自愈尾包——契约二/F19）——本档导出面。
  * Build the user message for an advisor review session.
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior issue table
@@ -81,7 +83,7 @@ export function buildDesignApprovalBlock(designToken, designId) {
  *   degradation (legacy direct callers).
  * @returns {string} the user message
  */
-export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, rv = null, designId = null) {
+function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = null, documents = null, paths = null, rv = null, designId = null) {
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.
@@ -262,6 +264,17 @@ export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = 
   return parts.join("\n")
 }
 
+/** 契约二（F19）：构建面**自愈尾包**——design + token 时输出必须携带逐字
+ *  `[DESIGN-TOKEN:{token}` 字面；不含 ⇒ 尾包 buildDesignApprovalBlock 补齐（幂等：已含
+ *  原样返回，不缺不补不重复）。覆盖全部出口（design round1 分支 / code 形态降级路径 /
+ *  legacy 收敛分支）——外层单一机械点，内层分支零改。 */
+export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, rv = null, designId = null) {
+  const built = buildAdvisorUserMessageInner(agent, prior, reviewType, designToken, documents, paths, rv, designId)
+  if (reviewType !== "design" || !designToken) return built
+  if (built.includes(`[DESIGN-TOKEN:${designToken}`)) return built
+  return `${built}\n\n${buildDesignApprovalBlock(designToken, designId)}`
+}
+
 /**
  * Resolve the review surface for the convergence fallback: explicit `paths`
  * win; otherwise the runtime mutation record (_touchedFiles, ABSOLUTE) is
@@ -280,5 +293,3 @@ export function resolveScopeFiles(agent, paths) {
   }
   return null
 }
-
-

@@ -231,7 +231,9 @@ export function advisorChunk(m) {
  *  #messages 流尾（activity.js ensureBlock——channel "sub:explore#1"/"sub:consult
  *  glm:glm-5.2 #4"…——append 不插锚——label 去 sub: 前缀）；终态原地折叠（live→frozen
  *  ——头词 ✓ done Ns）；queued spawns 得 ⏳ 等待头（含取消 ⏹——F-2）。ensureBlock 可返
- *  null（map 有键且已终态 = 幂等守卫 / live 被 150 裁 tombstone）——空安全守卫丢弃。 */
+ *  null（map 有键且已终态 = 幂等守卫 / live 被 150 裁 tombstone）——空安全守卫丢弃。
+ *  2026-09-11 第 10 批（§5.1.4 第 5 条）：新代接管后本频道键指向**新块**——旧实例的迟到
+ *  chunk 因而落进新块（显式取舍：仅“id 重复 + 两实例消息交错”可见——不做代际过滤守卫）。 */
 export function subagentChunk(m) {
   const name = String(m.name ?? "")
   const block = ensureBlock(name)

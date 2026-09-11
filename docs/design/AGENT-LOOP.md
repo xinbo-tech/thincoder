@@ -369,14 +369,28 @@ session — so end the turn; do not poll or wait for the result."（本体在 sp
   reviewType+scopeKey 有 running 记录 → 拒（settle 后逐个发起——settled 续跑 round+1
   语义不变——与池容量守卫两关独立）+ launchAsyncAdvisor（design reviewId=designId / 续跑轮现铸 token / rv 实例
   上下文）；settle 记账（陈旧判定跨 run、token 入槽 + engPersist slot 直写、round/prior
-  ≤5、cancel 不入 pending 不入槽）→ digest 注入 + guard 未决不推回 + cancelAdvisorReview。
-  ≤5、cancel 不入 pending 不入槽）→ 挂起期 settle 移交 pending 单容器（role=advisor）
-  digest 注入 + guard 未决不推回 + cancelAdvisorReview。
+  ≤5、cancel 不入 pending 不入槽）——挂起期 settle 移交 pending 单容器（role=advisor）→
+  digest 注入 + guard 未决不推回 + cancelAdvisorReview（取消路由——②-6b）。
   工具 async 参数：depth-0 缺省后台（非阻塞默认——顶层评审不卡回合）；depth>0 拒/恒同步
   （eng-coder 内自审不翻转）。UI：panel-messages cancelSubagent 路由 role=advisor +
   webview subBlockTarget 加 advisor（⏹/冻结复用）。
 
+**§11.2 接入面补全（2026-09-11 第 10 批——本端镜像；CLI 端权威 = `thincoder/docs/design/AGENT-LOOP.md` §18）**：
+
+- ① `subagent status` 双池合并（本端 `src/agent-tools/subagent-actions.mjs` as-of :89-120 现只查子代理池——本批补）；
+- ② `wait_for "advisor settled"` 判据改读评审池（本端 `src/tools/wait_for.mjs` as-of :125-129 同缺陷——修前恒 0ms 秒过；
+  复用本端已导出 `advisorReviewInFlight`（`src/agent-tools/advisor-async.mjs:92`——双载体判据））；
+- ③ `subagent cancel <advisor id>` 落评审池（面板 ⏹ 路由已有——`src/extension/panel-messages.mjs:238-241`；
+  工具动作缺落点——本批补）+ ④ observe/send 遇 advisor id 明确指引；
+- 命名差异登记：本端 `cancelAdvisorReview` ↔ CLI `cancelAsyncAdvisor`（语义同源；**各端原名不改**——D-B3）。
+- 需求：CLI 档 `docs/requirements/AGENT-LOOP.md` §4（F-B1~F-B4）（CLI 侧）。
+- 并入登记：条目 A（面板 live 块出生可靠性）本端权威 = `WEBVIEW.md` §5.1——本档不重复（单一权威源）。
+
 ## 10. 子代理活动显示（本地 webview 机制）
+
+> **机制已换代（2026-09-09 ACTIVITY-REWRITE-SIMPLE——本节下述“活动区/固定区/落流锚/驻留区”描述已废）**：
+> 子代理/consult/advisor 块现行形态 = **流尾出生·原地冻结**（活动区容器已撤）——权威见 `WEBVIEW.md` §5
+> 与 §5.1（2026-09-11 第 10 批可靠性设计——出生投递/块身份）。本节保留为历史接线记录。
 
 子 agent/consult/escalate/advisor-async 活动块**固定于活动区**（`#subagent-activity`——
 messages 与输入之间——live 固定可见——不随会话流滚动丢失），终态**冻结移入对话流**
