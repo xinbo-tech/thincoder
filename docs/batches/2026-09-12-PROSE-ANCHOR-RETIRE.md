@@ -95,6 +95,128 @@ _（待写——eng-designer）_
 
 ---
 
+### 本批任务——散文锚退役（PROSE-ANCHOR-RETIRE · VSC 仓侧执行面）
+
+> 目标（为什么）：让本端测试只在**系统行为 / 结构自洽**上红——消灭「读档断言某句在场/缺席」这类改一字即红、失败零信息量、锚红后动作永远是「把字改回去」的断言（判据三条与边界对照见本档 §1）。
+> 依据：该类锚收益无实证；成本实测 = 本端顶层测试 62 档中粗筛 28 档 / ≈330 用例（≈ 本端 suite 50%）；逐条判定后收敛为 101 条处置行（差额成因见 `docs/design/TESTING.md` §8.1 对账条）。
+> 保留面对照：结构机检有实证战果（本批讨论当刻 `docs/design/TESTING.md` 一致性检查报出真问题）——保留面判据零改。
+> 设计全文 = 本仓 `docs/design/TESTING.md` §8（§8.1 逐条删除清单 · §8.2 本端执行面要点 · §8.3 验收 AC-VT8–AC-VT11 · §8.4 边界 · §8.5 文件域重叠面 · §8.6 两侧记录与依赖登记）——**已定稿（含 2026-09-12 修正轮）**，执行轮以该节为准。
+> 判据与口径裁定（共享语义源）：其指针已在 `docs/design/TESTING.md` §8 头注登记（D2 单一权威源——本档不重述）。
+> 需求侧：本端 TESTING 需求标识（F15–F22 / N10–N12）在本仓**无落点**——**已登记依赖——未消解**（`docs/design/TESTING.md` §8.6）；处置归并行批落地后的**对齐轮**，本批不改指向、不代建落点、不自行发明替代。
+
+#### 1. 覆盖条目（本批 5 条）
+
+| # | 条目 | 落点 | 状态 |
+|---|---|---|---|
+| 1 | 本端散文锚逐条删除——27 档 · 整删 61 · 段删 40（= 101 条处置行） | `docs/design/TESTING.md` §8.1 | 清单已定稿，待实施 |
+| 2 | 保留面不弱化——`scripts/check-doc-width.mjs`（行宽 + 一致性 V1/V2/V3 单源）· `test/doc-consistency.test.mjs` · slow 门，判据零改 | `docs/design/TESTING.md` §8.2 / §8.3 AC-VT10 | 设计已定，实施零改 |
+| 3 | 禁写散文锚纪律落提示词层——本仓提示词双源「测试纪律」节加禁写句 | `docs/design/TESTING.md` §8.5；本档 §3 受影响文件 | 待 eng-coder 落笔（内容权归主 agent） |
+| 4 | 对账可机判——本端用例总数 653 → 592（下降数 == 清单整删条数 61） | `docs/design/TESTING.md` §8.3 AC-VT8 | 待实施 |
+| 5 | 双端纪律——零新增跨仓同步依赖 / 零 byte-identical 断言（各端原文自持） | `docs/design/TESTING.md` §8.3 AC-VT11 / §8.4 | 实施遵守 |
+
+#### 2. 明确不在本批（外）
+
+- 他仓（CLI 仓）执行面——其清单与本端各自自持，本端不代述、不代判；
+- 保留面（`scripts/check-doc-width.mjs` 的 V1/V2/V3 · `test/doc-consistency.test.mjs` · slow 门）的**语义与判据改动**；
+- 台账机检（L1–L3）判据改动与台账本体内容治理（本端无该执行面——端差登记见 `docs/design/TESTING.md` §8.2）；
+- 行为测试的增删改；新增测试档；本端登记制与两清单边界（`test/files.mjs` / `test/integration/files.mjs`）的任何改动；
+- 既有验收 AC-VT1–AC-VT7 的语义；
+- 需求落点新建与跨仓引用改指（依赖未消解，归对齐轮）。
+
+#### 3. 受影响文件（本仓实测——行数与用例数 as-of 2026-09-12）
+
+**测试面**（27 档点名档；「预计净减」含连带常量 / import 清理，执行轮实测回填）：
+
+| 档（`test/` 顶层） | 现状行数 | 用例数 | 整删 | 段删 | 预计净减 |
+|---|---|---|---|---|---|
+| activity-closure | 302 | 14 | 0 | 2 | −5 |
+| activity-flow | 461 | 17 | 0 | 4 | −19 |
+| activity-live-ux | 173 | 6 | 1 | 0 | −10 |
+| advisor-chain-guards | 427 | 15 | 0 | 3 | −15 |
+| advisor-context-budget | 179 | 8 | 1 | 1 | −15 |
+| advisor-guard-completion | 341 | 11 | 0 | 3 | −11 |
+| advisor-refusal-accounting | 239 | 11 | 1 | 0 | −9 |
+| async-visibility | 410 | 10 | 0 | 1 | −8 |
+| batch-doc-gate | 178 | 9 | 1 | 1 | −13 |
+| child-permission | 533 | 19 | 1 | 1 | −27 |
+| context-parity | 386 | 14 | 0 | 1 | −18 |
+| digest-visibility | 199 | 9 | 0 | 2 | −7 |
+| doc-consistency | 196 | 8 | 0 | 1 | −3 |
+| eng-designer-role | 189 | 11 | 0 | 1 | −1 |
+| index-perception | 260 | 9 | 0 | 1 | −5 |
+| ledger | 255 | 11 | 1 | 1 | −16 |
+| portability-vsc-advisor-context | 193 | 8 | 4 | 1 | −67 |
+| portability-vsc-classification | 205 | 7 | 1 | 0 | −22 |
+| portability-vsc-index | 225 | 6 | 2 | 0 | −57 |
+| prompts-async-guidance | 535 | 49 | 35 | 8 | −288 |
+| prompts-mirror-anchors | 383 | 12 | 9 | 1 | −132 |
+| setup-reminders | 298 | 15 | 0 | 1 | −3 |
+| status-line | 182 | 7 | 1 | 2 | −21 |
+| tool-descriptions | 86 | 4 | 2 | 2 | −33 |
+| turn-across-segments | 197 | 10 | 0 | 1 | −2 |
+| verify-redesign | 181 | 13 | 1 | 0 | −12 |
+| webview-turnstate | 329 | 6 | 0 | 1 | −2 |
+| **合计（27 档）** | **7542** | **319** | **61** | **40** | **−821** |
+
+- 合计行口径：行数 / 用例数列 = 上述 27 档之和（非全 suite）；用例数 = `test(` / `slow(` / `it(` 起始行计数。
+- 档位（R24）：本批**只减不增**；两档存量越 500 硬限（`prompts-async-guidance` 535 · `child-permission` 533）净减后均回落至 500 内；**不拆档**（拆档破坏清单集中度，与既有削段先例一致）。
+- `test/files.mjs`（登记清单）：**零改**——现行 63 条登记项（62 档 `.test.mjs` + 1 档 `test/smoke-settings.mjs`），本批无整档删除（27 档每档均有保留用例），登记项与实档数不变（`docs/design/TESTING.md` §8.2）。
+
+**提示词面**（写权 = 主 agent 内容权 + eng-coder 落笔；与并行批同两档、不同节位）：
+
+| 文件 | 现状行数 | 增量 | 说明 |
+|---|---|---|---|
+| `src/prompts/discipline-engineering.md` | 241 | +2 | 「测试纪律」节（:30–35）加禁写散文锚句 |
+| `docs/design/prompts/discipline-engineering.md` | 164 | +2 | 同节（:22–27）加同义句——各端原文自持，不做 byte-identical |
+
+**文档面**（本批设计侧已落笔，执行轮零改）：本仓 `docs/design/TESTING.md` §8（现档 272 行）。
+
+#### 4. 文件域重叠面（登记——不裁定分派）
+
+| 面 | 本批（PROSE-ANCHOR-RETIRE） | 并行批（本仓记录 = `docs/batches/2026-09-12-LEDGER-SELF-CONTAINED.md`） | 重叠 |
+|---|---|---|---|
+| 本仓提示词双源 | 「测试纪律」节加禁写散文锚句 | 该批提示词层要求（台账维护条款面） | 是（同两档、不同节位） |
+| 本仓测试面 | `test/**`（`docs/design/TESTING.md` §8.1 清单） | 台账面测试（如涉） | 待该批设计定，本批不预设 |
+
+- 两侧实施分派方式（同链 / 各端独立）与两侧记录的互引形态规范**不属本批设计裁定范围**（属并行批设计范围）——本批只如实登记现状与依赖。
+- 同两档的并发写入排程（冻结窗口 / 串行化）归父侧；eng-coder 不自行改排程、不自行择时。
+
+#### 5. 验收判据回指（设计档 §8.3——每条可机验）
+
+| AC | 本端机验（命令 / 判据） | 回指 |
+|---|---|---|
+| AC-VT8 | 口径 = 顶层 `test/*.test.mjs` 内 `test(` / `slow(` / `it(` **起始行**计数；实测 653（637 `test(` + 16 `slow(` + 0 `it(`）→ 目标 592（下降 61 == 清单整删条数） | `docs/design/TESTING.md` §8.3 |
+| AC-VT9 | 清单逐条落地——`docs/design/TESTING.md` §8.1 点名用例名 / 断言行实测零命中；`test/files.mjs` 零改（diff 空） | `docs/design/TESTING.md` §8.3 |
+| AC-VT10 | `node scripts/check-doc-width.mjs` 新增超宽 0 + 新增一致性违规 0（口径 = 批前 / 批后命中集合差）；`scripts/check-doc-width.mjs` 判据面 diff 空；`npm run lint → npm run test:full → npm run test:integration` 三环全绿 | `docs/design/TESTING.md` §8.3 |
+| AC-VT11 | 零新增跨仓同步依赖 / 零 byte-identical 断言（grep 本批改动档） | `docs/design/TESTING.md` §8.3 |
+
+计数命令（本端；两仓同口径）：
+
+```bash
+node -e "const fs=require('fs'),p='test';let n=0;for(const f of fs.readdirSync(p).filter(x=>x.endsWith('.test.mjs')))n+=(fs.readFileSync(p+'/'+f,'utf8').match(/^\s*(?:test|slow|it)\(/gm)||[]).length;console.log(n)"
+```
+
+执行轮自验（正常 / 边界 / 错误）：
+
+| # | 场景 | 输入 | 预期 |
+|---|---|---|---|
+| 1 | 正常：对账 | 上列计数命令（落地后跑） | 输出 592 |
+| 2 | 正常：保留面与门 | `node scripts/check-doc-width.mjs` + `npm test` | 新增违规 0；快层全绿 |
+| 3 | 边界：段删残留 | 被段删的档整档跑 | 用例名集不变，行为断言仍绿 |
+| 4 | 错误：对账反证 | 人为多删一个保留用例 | 下降数 ≠ 61 → 红（非空转） |
+
+#### 6. 须注意项（执行者须知——不裁定）
+
+1. **清单即射程**：`docs/design/TESTING.md` §8.1 的 101 条处置行逐条落地；**清单外零触碰**（未点名的用例与档一律保留）；判据灰区已由修正轮裁定完毕（装配器 / 渲染出口的提示词句子 = 锚、已追加删除；`locales` 文本值保留；工具 `description` 保留）——执行轮**零再判**；清单与实测不符 → **停手上报**，不自行增减条目。
+2. **两类删除语义**：`整删` = 删整个用例（用例总数 −1）；`段删` = 只删点名的断言行（用例总数不变，行为断言保留）。档内定位以「档 + 用例名」为准，行号漂移不阻断（D4）。
+3. **连带清理边界**：仅限点名档**档内**的孤立 helper / import / 常量（删除后零 unused，不得留死代码）；跨档零引用面（如 `test/helpers/**`）出现时 → 上报，不自行删。
+4. **计数对账**：落地后实测须为 592；与 61 之差不符 → 停手上报（D3：声明数与实条目数同步改）。
+5. **提示词双源两档**：落笔 = 加禁写句（内容权归主 agent）；同两档并行批在写 → 写入前与父侧确认排程。
+6. **端差不得静默**：本端 `scripts/` 实测无 `check-ledger.mjs`（结构机检面 = `check-doc-width.mjs` + `check-syntax.mjs` + doc-consistency 用例 + slow 门）——执行轮**不得为本端补造脚本**；形态归宿见 `docs/design/TESTING.md` §8.2 / §8.6。
+7. **依赖未消解**：需求落点 / 跨仓引用 / 台账机检执行面三项依赖，本批不自行消解（对齐轮处置）。
+
+**就绪**：本档 §2 已落（本端执行面任务书）——设计就绪待评审（发起权在用户）。
+
 ## §3 设计评审（评审子代理写）
 
 _（待写——评审子代理）_
