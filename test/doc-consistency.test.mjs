@@ -16,7 +16,7 @@
  */
 import { test, beforeEach, afterEach, after } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -297,4 +297,34 @@ test("T76 防回潮（收归族）：退役串零残留（逐字扫描——收�
   const probe = RETIRED_STRINGS[0].forbidden[0]
   assert.deepStrictEqual(hitsOf(`前缀·${probe}·后缀`, [probe]), [probe], "反证：字符串分支非空转")
   assert.deepStrictEqual(hitsOf("…architect…", [/architect/i]), [/architect/i], "反证：RegExp 分支非空转")
+})
+
+/* ─── 第 14 批（T111–T112——拆分守恒与自持回归锁；ENGINEERING-MODE.md §2.26.3 D-2 / §2.27.4） ─── */
+
+/** 快层发现集 = `test/*.test.mjs`（单层通配 ↔ readdirSync 同集——run-fast 默认目标） */
+const FAST_LAYER = readdirSync(join(REPO, "test")).filter((f) => f.endsWith(".test.mjs"))
+/** 用例数 = 顶层 `test(` / `slow(` 声明数（两档均无 slow——计数字面即归册面） */
+const caseCount = (rel) => (readFileSync(join(REPO, rel), "utf8").match(/^(?:test|slow)\(/gm) ?? []).length
+/** 拆分守恒 as-of 基线（2026-09-12 重测；拆分时合计 53）：A 42 / B 21 / 合计 63。
+ *  实施规则：两档增删用例时须同步更新本基线（红 = 对账提醒——防静默丢例）。 */
+const SPLIT_CASES = { async: 42, dual: 21 }
+
+test("T111 正常：拆分守恒——42 + 21 = 63（as-of 基线）；两档各 ≤500；被快层发现（D-2/AC56）", () => {
+  const A = "test/prompts-async-guidance.test.mjs"
+  const B = "test/prompts-dual-source.test.mjs"
+  for (const f of [A, B]) assert.ok(FAST_LAYER.includes(f.split("/").pop()), `未被快层 glob 发现: ${f}`)
+  assert.equal(caseCount(A), SPLIT_CASES.async, "async-guidance 用例数（as-of 基线）")
+  assert.equal(caseCount(B), SPLIT_CASES.dual, "dual-source 用例数（as-of 基线）")
+  assert.equal(caseCount(A) + caseCount(B), SPLIT_CASES.async + SPLIT_CASES.dual, "拆分守恒（合计 = 两档和）")
+  for (const f of [A, B]) {
+    const n = readFileSync(join(REPO, f), "utf8").split("\n").length
+    assert.ok(n <= 500, `${f} ${n} 行 >500 硬限`)
+  }
+})
+
+test("T112 边界：新档自持——零跨档引用；import 全 node:（D-2/AC56）", () => {
+  const src = readFileSync(join(REPO, "test/prompts-dual-source.test.mjs"), "utf8")
+  assert.equal((src.match(/prompts-async-guidance/g) ?? []).length, 0, "零跨档引用（含注释）")
+  const specs = [...src.matchAll(/from\s+["']([^"']+)["']/g)].map((m) => m[1])
+  assert.ok(specs.length > 0 && specs.every((s) => s.startsWith("node:")), "import 全 node: 内建（头部自持）")
 })
