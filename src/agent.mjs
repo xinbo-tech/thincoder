@@ -106,9 +106,13 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   if (pendingAsync?.length) {
     const { injectAsyncResult } = await import("./agent-tools/subagent.mjs")
     const { injectConsultResult } = await import("./agent-tools/consult.mjs")
+    // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1 消费点②——run 起始 pending 注入）：
+    // 注入完成后释放条目对子代理对象的持有（childAgent/report 置空——幂等 helper）。
+    const { releaseSettledEntry } = await import("./agent-tools/async-settle.mjs")
     for (const e of pendingAsync.splice(0)) {
       if (e.role === "consult") await injectConsultResult(agent, e)
       else await injectAsyncResult(agent, e)
+      releaseSettledEntry(e)
     }
   }
   agent._inAutoTurn = autoTurn // spawn gate for manual-tier digests (§17 D-S6/N3)

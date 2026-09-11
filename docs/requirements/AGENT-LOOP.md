@@ -393,6 +393,12 @@ VSC 面板会话中，后台 advisor 评审池与子代理池享有**同一条�
 > （**live 固定可见 + 一个面板**），并保留 09-11 批 10 全部可靠性机制（投递队列 / 就绪握手 /
 > 终态防御）与 queued 可见性（F-2）——「干净地基上的活动区」，非补丁形态。本条目 = 批次 R1–R8
 > 逐条对位（判定句回指 AC-R1..AC-R10）。
+>
+> **2026-09-12 修订（活动区收口批——A 方案反转）**：冻结块去向由「区内原地保留」反转为
+> **终态清退 + 消化后落流**（awaitingDigest 驻留带提示 → 回收归档 `#messages`）；settled 由
+> 「视同 done 即时折叠」改为 **awaitingDigest 驻留**。本 §12 的 F-J1 / F-J3 / F-J6 已随修订；
+> Q1/D-A1/D-A2、§12.3#4（区上限 20）、§12.4 落流行、§12.7 T-R8、§12.8 AC-R3、§12.10 以 §16 为准
+> （用户 2026-09-12 01:09「1走A」；设计 = VSC 仓 `WEBVIEW.md` §14）。
 > 设计+测试见 VSC 仓 `WEBVIEW（VSC 仓）§12`（§12.1–§12.10）+ §2/§3/§5/§5.1 修订；机制面
 > （挂起 UI 与中止语义）见 VSC 仓 `AGENT-LOOP（VSC 仓）§7/§10`（VSC 仓无 requirements 树——
 > 需求落本档，先例 §3/§4/§5/§8/§9/§10/§11）。
@@ -402,19 +408,20 @@ VSC 面板会话中，后台 advisor 评审池与子代理池享有**同一条�
 用户（VSC 面板使用者）的后台活动（子代理 / consult / escalate / advisor-async 活动块）必须
 **live 固定可见**：块出生在会话流与输入之间的固定活动区（`#subagent-activity`），**全程不随会话流
 滚动丢失**、**一个面板**（单活动区——非行面板复活）；块生命周期维持 live → frozen 两态、终态
-**原地折叠**（容器与 DOM 序号不变）；同时 09-11 批 10 的全部可靠性机制（出生必达 / 终态必现 /
+**原地折叠**（容器与 DOM 序号不变；**2026-09-12 修订**：终态折叠后**消化回收即归档落流**——
+见 §16 F-R1）；同时 09-11 批 10 的全部可靠性机制（出生必达 / 终态必现 /
 块身份唯一 / 控制面不降级 / 清屏可恢复）与 queued 可见性（⏳ 头 + 取消 ⏹）语义零回归。
 
 ### 12.2 功能性需求（判定句逐条——设计 AC 逐条回指；对位批次 R1–R8）
 
 | # | 需求（批次对位） | 判定句（验收语义） | 范围边界（不做） |
 |---|---|---|---|
-| F-J1 | 活动区回归——live 固定可见 + 单面板（R1） | 一切出生块 parentNode === `#subagent-activity`（区尾出生）+ 全程不移动（无 DOM move / 无落流）；`#messages` 内 `.sub-block` 计数 == 0；区位于 messages 与面板/输入之间（index.html 结构断言）——AC-R1 | 不做行面板复活；不做 CLI 端；不改扩展端协议 |
+| F-J1 | 活动区回归——live 固定可见 + 单面板（R1） | 一切出生块 parentNode === `#subagent-activity`（区尾出生）；区驻留期（live + awaitingDigest）不移动；**终态（含消化回收）归档落流**（§16 F-R1——2026-09-12 反转；原「全程不移动 / `#messages` 零 `.sub-block`」限缩为区驻留期）；区位于 messages 与面板/输入之间（index.html 结构断言）——AC-CL1 | 不做行面板复活；不做 CLI 端（原「不改扩展端协议」＝活动区回归批边界；本批消息面增补登记见 §16 N-CL1） |
 | F-J2 | 可靠性零回归（R2） | 折叠原地（容器与 DOM 序号不变）；终态闭合 / 幂等守卫 / queued / 补桩 / 接管断言全绿；批 10 实现面零改（投递队列/握手/终态防御）——AC-R2 · AC-R7 | 不改批 10 实现（extension 端零改）；不重做池快照（REMOVE-POOL-SNAPSHOT） |
-| F-J3 | 冻结块去向 = 区内原地保留（R3） | 折叠块留区不落流；折叠块上限 20 丢最旧（DOM 先出）；簿记条目保留作幂等守卫（迟来消息丢弃）——AC-R3 | 不做落流（DOM move + 锚链 = 被删加戏链）；不做折后即移除（补桩不可见） |
+| F-J3 | 冻结块去向 = 消化后落流（R3——**2026-09-12 反转**） | settled → awaitingDigest 驻留（带提示——§16 F-R3）；消化回收（reclaim done）→ 出区 + 归档进 `#messages`（内容可读可展开；落点 = 消化轮边界元素之前，兄弟序保序）；无待消化终态 → 即时归档尾追；全完成后区 `:empty` 零高——AC-CL1 · AC-CL3 | 旧 DOM-move 锚链仍禁（新机制见 §16 F-R1 与 VSC `WEBVIEW.md` §14.4）；不做折后即移除（归档取代移除） |
 | F-J4 | 区显隐 = 有内容才现（R4） | 空区 children == 0 且 `:empty` 规则在位（零显隐 JS）；块入区即现——AC-R4 | 不做常驻空面板；不做「有 live 才现」 |
 | F-J5 | 区高度/自滚（R5） | 32vh 封顶 + 区内自滚 + pin 跟随（静态样式断言 + 近底 24px 解/重 pin）——AC-R5 | 不改 `#messages` 滚动语义；不固定高 / 不封顶 / 不 pin |
-| F-J6 | 与 digest / 挂起态交互（R6） | 块驻留区 + settled 即时折叠（digest 与块零位移）；挂起期 live 固定可见；suspension 退出兜底折叠原地——AC-R6 | 不复活 settle 驻留双态；不改 digest 注入语义 |
+| F-J6 | 与 digest / 挂起态交互（R6——**2026-09-12 修订**） | settled → awaitingDigest 驻留（带提示）；消化回收 → 归档落流（落点随消化轮边界）；挂起期 live 固定可见；suspension 退出兜底 = 区全体（live + awaitingDigest）折叠归档落流——AC-CL1 · AC-CL3 | 不复活旧锚插链（新机制见 §16）；不改 digest 注入语义 |
 | F-J7 | ⏹ 委托与 reset 语义（R7） | ⏹ 委托目标迁区后 postMessage 载荷与 preventDefault/stopPropagation 逐字不变；resetActivity 全区清（含折叠）+ 清 map——AC-R8/AC-R9 | 不改 ⏹ 可见性判据；不跨清屏保留折叠块 |
 | F-J8 | 测试族更新 + 文档面（R8） | activity-flow 族改写为区语义（含 T-R13 ⏹ 委托真 chat.js 图驱动）；async-visibility 位置断言改区；webview-env fixture 区 id 回归；设计修订在位 + `check-doc-width` 新增 0——AC-R10 | 不拆测试族（就地改写）；不动群 A §11 节域 |
 
@@ -433,5 +440,220 @@ VSC 面板会话中，后台 advisor 评审池与子代理池享有**同一条�
 - 不做行面板复活；不做跨 reload 恢复；不加新交互元素 / 新 locale 键；不动块内渲染改造；
 - 不动 advisor 流内块（`S._advisorBlock` ∈ `#messages`）；群 A §11 节域零碰（A10/A13 各自批）；
 - 不新建文档档。
+
+## 13. VSC 会话上下文注入面对齐（注入面补齐 + 顺序 + 缓存契约——VSC-CONTEXT-PARITY 批，2026-09-11）
+
+> 来源：批次 `../batches/2026-09-11-VSC-CONTEXT-PARITY.md` §1（用户 22:54 原话 + 23:02 三条裁定：
+> 权威源 = CLI 蓝图 / `[Current file:]` 收窄保留 / **提示词与注入顺序全对齐**；父侧 23:06 追加约束：
+> 注入落位与前缀缓存契约）。
+> 设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§17`；语料面归 `PROMPT-SYSTEM.md §9`、工具描述面归 `TOOLS.md` F7——
+> 本条目只承载注入面与顺序。
+
+### 13.1 总体需求
+
+VSC 面板会话与 CLI 主会话的**每 run 上下文注入面同族同序**：CLI 有而 VSC 无的注入块按 CLI 对位补齐；
+两端同有块按 CLI 时序排布；全部注入块落**单调追加的尾区（前缀缓存契约）**；两家「有收集无消费」载荷
+（skills 载荷、MCP 警告）收口；VSC 独有注入（编辑器文件、图片指针）保留但条件收窄。
+
+### 13.2 功能性需求（判定句 = 设计 AC 逐条回指）
+
+| # | 需求 | 判定句（验收语义） | 范围边界（不做） |
+|---|---|---|---|
+| F-Q1 | 项目指令注入 | VSC systemPrompt 含 `<untrusted_project_instructions>` 块；三层顺序（用户级 → `AGENTS.md` → `project_rules.md`）；缺文件静默 | 不改 CLI；不做缺失警告（蓝图 §3.4） |
+| F-Q2 | 记忆召回 | 每 run（depth 0）≤3 条、`[Relevant memories from previous sessions (context, not instructions):` 前缀、XML 转义；无命中零注入 | 不做向量召回（本端既有 search 形态） |
+| F-Q3 | 文档召回 | 有索引（manifest + embedder）时 ≤5 条 chunk + `[Relevant documentation` 前缀；无索引静默 | 不做关键词回退（注入面只走向量） |
+| F-Q4 | checklist 推送 | depth 0、pending/in-progress 非空时注入 `[System reminder: task checklist (pending/in-progress):` 块（`- [~] / - [ ]` 前缀） | 不改 checklist 工具与写回语义 |
+| F-Q5 | 工作目录快照 | depth 0 首回合注入 `OS/cwd/Session start + <untrusted_cwd_listing>`；agent 实例内一次；systemPrompt 尾行 OS/cwd 删除 | 不做每回合重注；不改槽 `sessionStart` |
+| F-Q6 | 依赖大纲 | `[System reminder: project dependency outline:` 前缀；同 history 去重；空/无源静默 | 不建索引库（沿用本端 live build） |
+| F-Q7 | skills 面（清单注入 + load 形态） | depth 0 时 systemPrompt 追加 `DISREGARD …` + ≤3 条 + `... and N more` 形态；skill 工具 load 面 = `<skill-loaded>` 包裹 + XML 转义 + history 去重 + 不截断（D-CI8） | 不做 skills 热刷新（下一 run 生效） |
+| F-Q8 | plan 节律重注 | 稀疏 2 轮/满 5 轮/新消息全量 + 进出模式 pending 句（与 CLI 同族） | 不改 plan 工具动作面/readonly 语义 |
+| F-Q9 | 异常提醒 | 异常 finishReason → `the previous turn ended abnormally — …` 提醒；`_warnings` 非空 → warning 行 | 不移植 stream rules（本端传输面既定无此机制） |
+| F-Q10 | 编辑器注入收窄 | 无活动编辑器零注入；同文（同路径+同区间+同内容）不重复注入；3000 字符上限不变 | 不做选区/整文形态变更 |
+| F-Q11 | MCP 警告收口 | 采集点可见面（console）对齐 CLI；字段不再「有收集无消费」（注释与消费面一致） | 不做 history 注入（CLI 无此行为） |
+| F-Q12 | 死载荷消费 | `opts.skills` 载荷被真实消费（= F-Q7）；不再出现解构后无引用的死参数 | 不改面板协议 |
+| F-Q13 | 顺序对齐 | 每 run 注入块顺序 = 设计 §17.4 序表（CLI 现序为基准）；系统提示尾块 = [4] 层 | 不改子代理（depth>0）的 per-run history 注入面（仅时间提醒）；[4] 尾块（项目指令 + skills）不分 depth = F-P5 既定项（systemPrompt 面——非 history 注入面；修正轮 #7） |
+
+### 13.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N-Q1 | 前缀缓存契约 | 注入只追加、不改写早期消息；同会话相邻两 run 的前一 run 请求前缀 ⊆ 后一 run 请求体且逐字节相等 | 机判用例：连续两 run 快照前缀断言 |
+| N-Q2 | 每 run 成本可控 | 新注入块 I/O 有界：目录快照 readdir 一次/实例；大纲一次/session；文档/记忆召回各一次/run；全部失败静默 | 用例断言调用次数（seam 计数） |
+| N-Q3 | 双端语义同源 | 各端独立实现；VSC 自身断言驻留绿；零跨仓依赖 | VSC 快层全绿 + CLI 仓零改动 |
+| N-Q4 | 可机判 | 每功能需求 ≥1 用例（正常/边界/错误三态）机判 | VSC 用例表全绿 |
+
+> **N-Q3 登记豁免（修正轮 #1——设计评审轮次 1 落修）**：跨仓判据 = **产品/运行面**（代码 import / 同步脚本 /
+> 共享模块）零跨仓；VSC 侧 T-CI-11 跨仓只读检验（读兄弟仓 `../thincoder` 源文件做序锚对照）= **交付期对照面**、
+> 登记豁免——**fail-closed**（兄弟仓缺失/异位 = 显式失败不 skip——跳过 = 序锚漂移检测静默失效）；先例 = VSC
+> `test/prompts-mirror-anchors.test.mjs`（同款兄弟仓读 + `THINCODER_CLI_ROOT` 覆盖 + fail-closed）。
+
+### 13.4 明确不做
+
+- 不改 CLI 仓（代码与提示词）/ 不做跨仓共享注入模块；
+- 不改子代理（depth>0）的 per-run history 注入面（[4] 尾块不分 depth——F-P5 既定项、systemPrompt 面；修正轮 #7）；除新增块与 F-Q9/F-Q11 文本外不改既有注入块文案；
+- 不做注入预算/压缩（后须另批）；不动 webview。
+- `[Current file:]` 与粘贴图指针保留（面板能力——仅收窄条件，见 F-Q10）；stream rules 不移植（PROVIDER 传输面既定决策）。
+
+## 14. VSC live 块 UX：流式跟滚 + 内容区高度（webview——VSC-LIVE-UX 批，2026-09-11）
+
+> 来源：批次 `../batches/2026-09-11-VSC-LIVE-UX.md` §1（用户 2026-09-11 23:29 实测两条：live 块
+> 默认显示内容头部、不跟流式输出滚动、得手动滚；live 块高度 100 → 60）。
+> 设计+测试见 VSC 仓 `WEBVIEW（VSC 仓）§13`（§13.1–§13.9——现场核实/选型/契约/决策/用例/AC/边界）+
+> §12.3 第 6 条高度句改指；机制面零动（本批只动 VSC webview 呈现——CLI 仓零改）。
+> 本条目 = 用户实测两条逐条对位（判定句回指设计 AC-LU1..AC-LU7；VSC 仓无 requirements 树——
+> 需求落本档，先例 §3~§13）。
+
+### 14.1 总体需求
+
+VSC 面板使用者在子代理 live 块流式输出期间**持续看到最新输出**：块内容区默认钉底跟随；用户手动
+上滚即让位（不被拽回）；滚回近底后自动复钉。块内容区高度由 100px 调降为 **60px**（单块占高更小、
+多块不挤会话）。跟滚语义与既有钉底族（`#messages` / 活动区 pin）同源，不新造第三种滚动模式。
+
+### 14.2 功能性需求（判定句逐条——设计 AC 逐条回指）
+
+| # | 需求（批次对位） | 判定句（验收语义） | 范围边界（不做） |
+|---|---|---|---|
+| F-LU1 | live 块流式跟滚（U1） | 内容区追加后默认钉底（追加帧后 scrollTop = 超值——AC-LU1）；手动上滚（wheel/touchmove——近底判据 24px）后追加不回弹（AC-LU2）；滚回近底复钉（AC-LU3）；折叠（details 关闭）/已移除态零滚动副作用（AC-LU4） | 不动流内 advisor 块的既有裸钉底；不改区级 pin（`maybeScrollActivity`）；无新交互元素 / 新 locale 键 |
+| F-LU2 | live 块内容区高度 100→60（U2） | `.advisor-block.sub-block .advisor-content` max-height == 60px（静态断言——AC-LU5）；基础 `.advisor-content`（advisor 流内评审块）维持 100px；chat.css 注释同步改述 | 不改 advisor 评审块高度；不改区高度（32vh）；冻结块同 60px（同族卡面统一——live/frozen 不二分） |
+
+### 14.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N-LU1 | 零回归 | VSC 快层全绿；流内 advisor 块 `_advisorScrollDirty` 路径零改；CLI 仓代码零改动 | 既有测试族运行 + `git status` 机检（AC-LU6） |
+| N-LU2 | 可机判 | 每条功能需求 ≥1 用例机判（happy-dom 直驱真 webview 模块——追加钉底/让位不回弹/复钉/折叠零副作用/CSS 断言） | 新档 `test/activity-live-ux.test.mjs`（入 `test/files.mjs` 登记）全绿（AC-LU1..AC-LU5） |
+| N-LU3 | 文档与行数 | 触碰档 `check-doc-width` 新增违规 0；源档守 500 硬限（activity.js ~354——越 300 软线登记）；测试面独立新档（activity-flow 486 近满不追加） | 两仓宽度脚本 + 行数实测表（设计 §13.5） |
+
+### 14.4 明确不做
+
+- 不做 CLI 端（CLI 无 live 块 UI——代码零改动）；不动扩展端协议与实现；
+- 不动流内 advisor 块（`S._advisorBlock`）的跟滚与高度（用户原话指 live 块；如要同口径，用户一句话）；
+- 不改区级 pin / 块头 / tail-3 摘要 / ⏹ 语义；不加新交互元素 / 新 locale 键；不新建文档档。
+
+---
+
+## 15. 长会话内存上界：子代理族与轨迹存档（TUI-OOM-ROOTCAUSE 批——2026-09-11）
+
+> 来源：CLI TUI 会话 ~19.4 分钟后 V8 堆 OOM（批次档 `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md`
+> §1——勘察 C2/C4）。机器线（`history`）由压缩治理已有界；本节约束**压缩管不到的驻留面**：
+> 子代理族的人读线与捕获输出、消化窗口的持有、轨迹存档的在途拷贝。
+
+### 15.1 总体需求
+
+子代理（含 escalate/consult/advisor 族）与轨迹存档在长会话中**不得结构性无界**：子代理族内存
+驻留与「消化窗口持有」有明确上界与释放点；轨迹存档单次记录的拷贝与在途份数有界——
+且**语义可观测面不缩水**（报告完整到达、observe/status 窗口内行为不变、轨迹分析字段保留）。
+
+### 15.2 功能性需求（判定句逐条——设计 AC 逐条回指）
+
+| # | 需求 | 判定句（验收语义） | 范围边界（不做） |
+|---|---|---|---|
+| F-O1 | 子代理人读线窗口化（C2） | 子代理（depth>0）人读线 `_fullHistory` 只保最近 200 条（常量单源同主 agent 窗口）；模拟子代理长跑 10,000 条 → 驻留 ≤ 200 且为最新 200；observe 的「最近 N 回合摘要」（默认 5，≤20）读取面不变 | 不改子代理机器线（`history`）压缩语义（已有）；不做子代理会话落盘（子代理本无槽） |
+| F-O2 | `_capturedOutput` 有界（C2） | 捕获累积超限即截断（头 + 尾 + 省略标记——额度/形态见设计档常量）；模拟子代理流式输出 10MB → 捕获 ≤ 设计上界；既有消费面（停止报告/中止回退——读时已各自 `slice(0, 2000/4000)`）行为不变 | 不落盘全量捕获（被停子代理的部分输出诊断价值在头尾——设计档选型论证）；不改正常完成路径（报告 = entry.report，非捕获面） |
+| F-O3 | 消化窗口持有释放（C2） | 消化注入完成后释放条目对子代理对象的引用（`childAgent`/`report` 置空）——三处消费点（回合尾收集 / 挂起残差 / run 起始 pending 注入）一致；池内未消化窗口（done-in-pool / 挂起驻留）行为不变（报告仍到达、status/observe 可读） | 不改 settle/挂起状态机、不改 digest 注入格式与预算（第 22 节机制零动）；不提前释放未消化条目 |
+| F-O4 | 轨迹存档单次拷贝收敛（C4） | 单条轨迹写入不再产生整对象图深拷贝（序列化一遍完成脱敏 + 编码）；超长消息内容按额度截断（头尾保真）；单记录总量超上限 → 正文降级为摘要 stub（元数据保留，标记可见） | 不改轨迹字段集/落盘目录/保留期（`cleanupTraces` 不变）；不改开关默认（默认 OFF 保持）；不做轨迹压缩/加密 |
+| F-O5 | 轨迹在途份数有界（C4） | 并发在途写盘份数 ≤ 设计上界定值——超限丢弃并计数（不阻塞模型调用路径）；序号分配不再逐次同步扫目录 | 不做轨迹重放/重试补偿（尽力面——丢弃可观测）；不改 fire-and-forget 不阻塞语义 |
+
+### 15.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N-O1 | 有界可测 | 上述四条上界均可注入缝直测（模拟增长/超限矩阵——零网络、零真实写盘） | 新用例档全绿（设计档用例表） |
+| N-O2 | 零回归 | 既有族测试全绿（`test/async-settle.test.mjs` / `test/subagent-observe-send.test.mjs` / `test/subagent-scheduler.test.mjs` / `test/subagent-tail-merge.test.mjs` / 集成 `test/integration/subagent-lifecycle.test.mjs`）；digest 注入内容与预算零变化 | 既有套件 + 定向跑证据 |
+| N-O3 | 诊断可见 | 丢弃/截断均有可观测标记（轨迹丢弃计数；捕获截断标记）——不静默 | 用例断言标记串 |
+| N-O4 | 行数纪律 | 触碰源档守 500 硬限；越 300 软线如实登记 | 交付报告实测行数表 |
+
+### 15.4 明确不做
+
+- 不做子代理内存的全局池级上限（并发 4 已约束）；不做 entry/report 的落盘化（报告本身放行）；
+- 不做轨迹内容质量改写（仅截断/降级 + 标记）；不改 VSC 端（其轨迹面约定不实现——既有登记）。
+
+## 16. VSC 活动区收口：终态清退落流 · digest 可读性 · 块头/状态行字段对齐（webview——活动区收口批，2026-09-12）
+
+> 来源：批次 `../batches/2026-09-12-VSC-ACTIVITY-CLOSURE.md` §1（用户 2026-09-12 走查：
+> 01:03「live 块执行完没有从子agent面板清除，digest 过程远不如 CLI 清晰」· 01:09「1走A」
+> （A 方案 = 终态块出活动区、内容进会话流 = CLI 语义——对 §12 F-J3 的反转）· 01:10「live 块的
+> 标题信息我也希望对齐」· 01:13 Send 可见性与拒发矛盾 · 01:17「状态行那条，我也希望对齐 CLI」）。
+> 设计+测试见 VSC 仓 `WEBVIEW（VSC 仓）§14`（§14.1–§14.10）+ §2/§3/§5/§5.1/§6/§7.4/§12 修订；
+> 机制面（挂起 UI 与中止语义）见 VSC 仓 `AGENT-LOOP（VSC 仓）§7/§10` 修订。VSC 仓无 requirements
+> 树——需求落本档，先例 §3~§15。本条目 = 批次 R1–R6 逐条对位（判定句回指 AC-CL1..AC-CL6）。
+
+### 16.1 总体需求
+
+VSC 面板使用者的子代理活动块**终态即清退**：live 阶段固定驻留活动区（既有语义保留）；awaitingDigest
+阶段驻留并带明确提示；消化回收后**归档进会话流**（内容可读、可展开，落点与消化轮同序）；全部完成后
+活动区不再常驻（`:empty` 零高）。消化轮（digest）在会话流中**可见可辨**（专属回合标签 + 每轮独立
+状态元素 + turn-cap 可见行）；块头与状态行**字段级对齐 CLI**；主会话活动期 Send 按钮不再出现
+「可点但必被拒」的假 affordance。
+
+### 16.2 功能性需求（判定句逐条——设计 AC 逐条回指；对位批次 R1–R6）
+
+| # | 需求（批次对位） | 判定句（验收语义） | 范围边界（不做） |
+|---|---|---|---|
+| F-R1 | 终态块清退 + 落流（A 方案——R1） | settled → awaitingDigest 驻留（带提示——F-R3）；消化回收（reclaim done）→ 出活动区 + 归档进 `#messages`（内容可读可展开；落点 = 消化轮边界元素之前、保序）；无待消化终态 → 即时归档（尾追）；全完成后区 children == 0（`:empty` 零高）；会话退出兜底 = 区全体归档；reset 仅清区——AC-CL1 | 不复活 §12.4 点名的旧 DOM-move 锚链（替代机制见设计 §14.4）；不做折后即移除；不跨 reload 恢复 |
+| F-R2 | digest 可读性（R2） | 每轮消化轮 = ① 专属回合标签行（i18n 落档）② 每轮独立状态元素（轮内原地更新、跨轮随流新增——跨轮漂移消除）③ 本轮 assistant 输出带回合标签（`assistantLabeled` 复位）；turn-cap 停止/自动续跑补可见行（CLI `agent-turn.mjs:188/:192` 对位——i18n 落档）——AC-CL2 | 不改 digest 注入语义与预算；不新增消息类型（cap 用既有 `digest` 族新 status 值） |
+| F-R3 | awaitingDigest 块级提示（R3） | settled 未回收期间块头含对位态词（en = `done · awaiting digestion`；两 locale 落档）——AC-CL3 | 不改 ⏹/折叠语义之外的生命周期；单标志位（不建第二状态机） |
+| F-R4 | live 块标题信息字段级对齐（R4） | 逐字段对位表（设计 §14.3 表 C-13）逐项落位：queued 位置/等待原因 · 当前工具 + 参数摘要 · turn 进展（`turn N/M`）· elapsed 定时刷新 · 模式词/模型（既有等价）；审批态 = 无数据源端差登记（VSC 子代理不经权限门——`execute-tools.mjs:258` depth===0）——AC-CL4 | 不新造 CLI 无的字段；不改 ⏹ 门控；不逐轮重建块（增量刷新） |
+| F-R5 | 活动期 Send 可见性（R5） | `_turnState === "running"` ⇒ Send 不渲染（`display:none`——与 Stop 同派生点）；非 running ⇒ 恢复可见；Enter 出口守卫保留（拒发提示不变）——AC-CL5 | 不开「禁用态」第二形态；不改键位/toast/readOnly 语义 |
+| F-R6 | 状态行字段级对齐（R6） | 逐字段对位表（设计 §14.3 表 C-15）逐项落位：状态文本段（TPM 限流等待 / 限流 429 / 服务过载重试 / 配额耗尽 / 索引进度——结构化 `statusText` 消息 + i18n + 注入缝）· ✦reasoning 段（usage 增 `reasoning_tokens`）· `turn N/M` 段（turnFrame 消息）；`scrolled N` = 端差保持（VSC 悬浮回底钮替代——设计 §14.2 M5）——AC-CL6 | VSC 独有段（goal 徽标/悬浮钮/键位提示缺失）保持；既等价段不重造（审批 attention 段等端差登记） |
+
+### 16.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N-CL1 | 零回归 + 协议登记 | VSC 快层全绿；extension 端消息面增补逐条登记（`statusText`/`turnFrame` 新消息 · `toolPanel` 增 tool 字段 · `subagent` 增 `status:"turn"` · `digest` 增 `status:"cap"`——只增不改）；CLI 仓代码零改 | 既有族运行 + `git status` 断言 + 登记表（设计 §14.3） |
+| N-CL2 | 可机判 | 每功能需求 ≥1 happy-dom 机判用例（归档落点/序 · 每轮元素 · cap 行 · 块头字段 · Send 可见性 · 状态文本映射）——限流等外部态用消息注入缝 | 用例表 T-CL1..T-CL24 全绿（VSC 测试族） |
+| N-CL3 | 文档与行数 | 触碰档 `check-doc-width` 新增违规 0；源档守 500 硬限（`panel-chat.mjs` 499 零余量——增行须先抽 helper，见设计 §14.6） | 两仓宽度脚本 + 行数实测表（设计 §14.6） |
+| N-CL4 | 端差登记 | 各端独立实现、语义同源；端差（审批态无源 · `scrolled N` 钮替代 · ctx 绝对数 · 无人值守续跑文案 · attention 段）逐条登记不静默 | 设计 §14.3/§14.9 差异表 |
+
+### 16.4 明确不做
+
+- 不做 CLI 端（CLI 单面板照旧）；不做行面板复活；不做跨 reload 恢复；不改 digest 注入/预算；
+- 不复活 §12.4 点名的旧加戏链（DOM move 锚链 / settle 驻留双态旧形态 / 逐行簿记 / preview·ticker）；
+- 不重开 §12 其余条目（区位置/区高度/pin/⏹ 语义/批 10 机制——除 §16 明列的反转项）；
+- 不新建文档档；不在本批做流内归档块的独立分页锚（页锚仍由 `.message` 承担——登记设计 §14.9）。
+
+## 17. VSC 子代理审批面对齐：child permission gate（VSC——2026-09-12）
+
+> 来源：批次 `../batches/2026-09-12-VSC-CHILD-PERMISSION.md` §1（用户 2026-09-12 01:16/01:17 裁定 A =
+> child（depth>0）写操作走审批门——现状为「偶然的洞」：VSC 权限门要求 `depth === 0`、child callbacks 无
+> permission 通道、child `runAgent` 的 autoApprove 恒 `true`）。设计+测试见 VSC 仓 `AGENT-LOOP（VSC 仓）§18`；
+> 协议登记 `WEBVIEW（VSC 仓）§7.2`；门禁增量 `TOOLS（VSC 仓）§8`；R2 文档修正 = VSC 仓 `ESCALATE.md` /
+> `ENGINEERING-MODE.md`（随设计落档，措辞锚见设计 §18.4 C-13）。VSC 仓无 requirements 树——需求落本档，
+> 先例 §3~§16。本条目 = 批次 R1–R2 逐条对位（判定句回指 AC-CP1..AC-CP9——设计 §18.8）。
+> **交界注**：§16 F-R4/N-CL4 的「审批态 = 无数据源」理由句随本批落地失实（本批即该数据源）——
+> 两批核销时由父侧同步（本批不改他批档节——登记不静默）。
+
+### 17.1 总体需求
+
+VSC 面板使用者在 ask（手动）模式下，**子代理（depth>0）的写操作与主 agent 一样经过审批门**：权限卡带归属
+（`<child key> · <tool>`）并复用既有权限卡/队列/响应机制；AUTO（autoApprove / approve-all，含轮中翻转）整树
+**静默直通**（模式继承——不新造模式）；等待期间子代理活动块显示 `⏸` + `等待审批: <tool>`（CLI 面板行对位）；
+覆盖 spawn 子代理与 escalate（`ESCALATE.md` 声称的权限门转发成真）；取消（⏹ / 模型 cancel / 会话中止 / Stop）释放
+pending ask（deny + 卡移除）——child 不悬挂（Stop 不停后台池：child 存活、收 deny 后继续——修正轮 #2）。explore/plan（只读工具集）、
+eng-coder（spawn 设计令牌预授权）、consult（只读）**审批面**零行为（手动档 child AUTO 提醒句停注 = KD-7 连带——已登记接受——修正轮 #5）。
+
+### 17.2 功能性需求（判定句逐条——设计 AC 逐条回指；对位批次 R1–R2）
+
+| # | 需求（批次对位） | 判定句（验收语义） | 范围边界（不做） |
+|---|---|---|---|
+| F-CP1 | child 审批门对齐 CLI（R1） | ask 模式：coder/eng-designer 子代理写工具 ⇒ 弹卡（卡含归属 `<child key> · <tool>`）→ approve ⇒ 工具执行、child 继续；deny ⇒ child 工具结果 = 拒绝语义（对位 CLI）；auto / approve-all（含轮中翻转）⇒ 该 child 零卡直通；等待期间块头 `⏸` + `等待审批: <tool>`，resolve 后清除；escalate（sync/async）同覆盖（归属 `escalate <tag> #<id>`）；取消（⏹/模型 cancel/会话中止/Stop）⇒ pending ask 释放（deny + 卡移除）、child 不悬挂（Stop 下 child 存活——不停后台池——修正轮 #2）——AC-CP1..AC-CP6 | 不改权限模式集合；不动 depth-0 顶层审批语义；children 不启用批合并（CLI 对位：`wrapChildCallbacks` 不携批通道——候选扩展登记）；consult/explore/plan/eng-coder 审批面零行为（KD-7 连带除外——见 §17.1——修正轮 #5）；question 面 child 卡释放不做（登记） |
+| F-CP2 | 文档矛盾修正（R2） | `ESCALATE（VSC 仓）:33/:79/:125/:143` · `ENGINEERING-MODE（VSC 仓）:128-130` · `TOOLS（VSC 仓）:178-180` · `AGENT-LOOP（VSC 仓）§8`（同族句）改写后与实现语义一致（机检逐字锚——设计 §18.4 C-13 清单；四处——修正轮 #1）——AC-CP7 | 不改 escalate 机制本体；不改 eng-coder token 门 |
+
+### 17.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N-CP1 | 零回归 + 协议登记 | VSC 快层全绿；协议增量（`permissionRequest` 增 owner/promptId · `permissionResponse` 增 promptId · 新 `permissionWithdrawn`/`subagentApproval`）只增不改、逐条登记；CLI 仓代码零改 | 既有族运行 + `git status`（CLI 仓）+ `WEBVIEW（VSC 仓）§7.2` 登记表 |
+| N-CP2 | 结构 | `execute-tools.mjs` 拆 gate 层后 ≤500（as-of 506 已越硬限）；源新档 ≤300（测试档按测试档登记口径 = 不拆分——设计 §18.6 注④）（修正轮 #4）；两仓 `check-doc-width` 新增违规 0 | 行数实测表（设计 §18.6） |
+| N-CP3 | 可机判 | 每功能需求 ≥1 机判用例（卡归属 / 模式继承 / 块头态 / 取消释放 / 角色域 / 文档锚）——host 直驱 + happy-dom 双面 | 用例表 T-CP1..T-CP19 全绿（含 T-CP19 Stop 释放——修正轮 #2） |
+| N-CP4 | i18n | 新文案键两 locale 同步（`sub.awaitingApproval`） | 键在位 + 插值断言 |
+
+### 17.4 明确不做
+
+- 不做 CLI 端（CLI = 目标语义参照）；不新造权限模式 / 新对话框类型；children 批合并不做（候选扩展登记）；
+- 不动 VSC 顶层（depth 0）审批现有语义（批卡协议 / approve-all / 中止释放面仅按设计 C-5/C-6 增量）；
+- 不做 question 面 child 卡释放（既有缺口——登记）；不改 prompts/提示词文件；不改其他在途批的档节。
+
 
 

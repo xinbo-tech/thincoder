@@ -58,6 +58,7 @@ src/
 | tui | `startTUI` | 裸 ANSI 终端 | `TUI.md` |
 | mcp | 工具动态展开 | MCP 服务器工具并入 builtinTools | `MCP.md` |
 | acp | ACP 桥 | IDE 缓冲/工具调用桥接 | `ACP-CLIENT.md` |
+| crash-reports | `prepareCrashReporting` / `writeCrashRecord` / `recentCrashHint` | 崩溃捕获与取证（fatal 报告 / 记录 / stderr 捕获 / 近堆快照） | `CRASH-REPORTS.md` |
 | bin/thincoder.mjs | CLI 命令表 | 命令分发入口 | — |
 
 ### provider 关键决策（reasoning 语义）
@@ -75,9 +76,10 @@ src/
 
 ## 6. 未决设计批
 
-- **R25 异常终止捕获与留痕**（2026-09-07）：钩子升级留痕 / `process.report` / 启动提示——待实现设计批，归宿待定（可能新板块或并入既有）。
+- （暂无）
 
 ## 变更记录
 
+- 2026-09-11：R25 归宿落定——崩溃捕获与取证板块建档（`requirements/CRASH-REPORTS.md` + `design/CRASH-REPORTS.md`，TUI-OOM-FORENSICS 批）；§4 登记 crash-reports 模块行；§6 未决项清空。
 - 2026-08：v1 架构定稿。
 - 2026-09-07：R25 立项（异常终止捕获）；文档格式债清理（模块地图核对当前态，超详副本降指针）。

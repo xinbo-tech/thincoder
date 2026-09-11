@@ -25,6 +25,14 @@ import {
 import { guardForeignSlotFile } from "./session-guard.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { engTokenSlotFields, restoreEngTokens } from "./token-ttl.mjs"
+// TUI-OOM-ROOTCAUSE 批（SESSION.md §14）：人读线记录存储（磁盘为准 + 内存窗口）。
+// slimForDisplay/isLegacyTransient 迁入 store 模块（§14.5 文件表）——本文件 re-export 保持
+// 既有 import 面（session-slots.mjs 引 isLegacyTransient）。依赖方向单向：store 零项目内依赖。
+import {
+  bindRecordStore, unbindRecordStore, saveProjectedSlot, isLegacyTransient, slimForDisplay,
+  RECORD_WINDOW_MESSAGES,
+} from "./session-store.mjs"
+export { isLegacyTransient, slimForDisplay, bindRecordStore, unbindRecordStore }
 
 // re-export slot 管理（保持既有 import session.mjs 的调用点不变；resumeSlot 下方本地包装导出）
 export {
@@ -43,60 +51,44 @@ export function resumeSlot(cwd) {
   return slotsResumeSlot(cwd)
 }
 
-// ========== legacy transient prefix cleanup ==========
+// ========== core read/write ==========
+// （legacy transient 判定 + slimForDisplay 自本区迁至 session-store.mjs——§14.5 文件表；
+//  上方 re-export 保持既有 import 面。）
 
-const LEGACY_TRANSIENT_PREFIXES = [
-  "[System reminder: working directory snapshot:",
-  "[Relevant memories from previous sessions",
-]
-
-function isLegacyTransient(m) {
-  return (
-    m.role === "user" &&
-    typeof m.content === "string" &&
-    LEGACY_TRANSIENT_PREFIXES.some((p) => m.content.startsWith(p))
-  )
+/** 未绑定路径的人读线全量物化（模式 F——既有语义逐字保留）。 */
+function legacyHistory(agent) {
+  return (agent._fullHistory ?? agent.history)
+    .filter((m) => !m.transient && !isLegacyTransient(m))
+    .map(slimForDisplay)
 }
 
-export { isLegacyTransient }
+/** 恢复描述符（§14.3.6——两调用点统一形态）：`{ history, total, base }`。
+ *  绑定态：history = 尾窗 + ±1 页沿头一条（跨页回合标签判定用——不渲染）、total = 绝对
+ *  总条数（「N messages」标签口径）、base = history[0] 的绝对序号；未绑定（模式 F）：
+ *  回退全量数组（total = 数组长）。 */
+export function sessionDescriptor(agent, data) {
+  const store = agent?._recordStore
+  if (store) {
+    const total = store.total()
+    const win = store.page(Math.max(0, total - RECORD_WINDOW_MESSAGES), total, { margin: 1 })
+    return { history: win.messages, total, base: win.base }
+  }
+  const full = Array.isArray(data?.history) ? data.history : []
+  return { history: full, total: full.length, base: 0 }
+}
 
-// ========== core read/write ==========
-
-/** Slim the HUMAN line (history) for storage — the machine line (contextHistory)
- *  keeps everything byte-identical for the provider. Deepseek-consult design
- *  (2026-08-30): the human line is never compacted and carries the bulk of
- *  session-file size (tool args JSON / full tool results / base64 images), while
- *  nothing consumes its verbatim fidelity. Rules (copy-on-write ONLY — the two
- *  lines share object references via pushReal; mutating in place would corrupt
- *  the machine line and provider prefix cache):
- *   - assistant.tool_calls[].function.arguments → trimmed to 300 chars (head + …)
- *   - tool messages content → 500 chars (head + …)
- *   - multimodal user content array → keep text parts, DROP image_url base64 parts
- *   - plain string messages → untouched (not the size driver)
- */
-function slimForDisplay(m) {
-  if (m && Array.isArray(m.content)) {
-    // Multimodal user message: keep text parts, drop image parts.
-    const textParts = m.content.filter((p) => p?.type !== "image_url")
-    if (textParts.length === m.content.length) return m
-    return { ...m, content: textParts }
+/** 槽摘要（记录存储绑定路径——history 不物化）：与 slotDigest(extractSlotMeta) 同形。 */
+function digestFromStore(fields, counters) {
+  const meta = {
+    messageCount: counters.total,
+    turnCount: counters.userReal,
+    firstMessage: counters.firstMessage,
+    activeProvider: fields.activeProvider ?? "",
+    updatedAt: fields.updatedAt ?? Date.now(),
+    title: fields.title ?? "",
   }
-  if (m && m.role === "assistant" && Array.isArray(m.tool_calls)) {
-    let changed = false
-    const tool_calls = m.tool_calls.map((tc) => {
-      const args = tc.function?.arguments
-      if (typeof args === "string" && args.length > 300) {
-        changed = true
-        return { ...tc, function: { ...tc.function, arguments: args.slice(0, 300) + "…" } }
-      }
-      return tc
-    })
-    return changed ? { ...m, tool_calls } : m
-  }
-  if (m && m.role === "tool" && typeof m.content === "string" && m.content.length > 500) {
-    return { ...m, content: m.content.slice(0, 500) + "\n… (truncated for storage)" }
-  }
-  return m
+  if (fields.activeModel) meta.activeModel = fields.activeModel
+  return { ts: Date.now(), ...meta }
 }
 
 /** Save agent state to the active slot file (atomic write). `display` (the old
@@ -111,16 +103,17 @@ export function saveSession(agent) {
   // history        = FULL, never-compacted (human-readable; VS Code panel & CLI resume read this)
   // contextHistory = machine context (possibly compacted) so CLI resume keeps the token savings
   // Human line: transient machine injections never enter the readable record.
-  const history = (agent._fullHistory ?? agent.history)
-    .filter((m) => !m.transient && !isLegacyTransient(m))
-    .map(slimForDisplay)
+  // TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.5）：绑定记录存储后 `history` 字段由
+  // saveProjectedSlot 流式拼接段原文生成（磁盘为准——不物化全量数组）；未绑定
+  // （模式 F：thincoder chat/测试/未覆盖路径）→ 既有全量物化路径逐字保留（D-R6）。
   // Machine line (contextHistory): KEEP transient messages — resume must rebuild the
   // machine line byte-identical to what the provider cache saw. Dropping them made every
   // process restart diverge at the first injection position (git/OS/time reminders are
   // re-injected with FRESH content) → whole-prefix cache miss on the CLI's very first
   // request of each session (2026-08-16 cache-hit report; Kimi review).
   const contextHistory = agent.history.filter((m) => !isLegacyTransient(m))
-  const data = {
+  // fields = 槽 JSON 数据面（history 由投影插入——键序与既有 data 形态同序，history/contextHistory 居后）
+  const fields = {
     version: 2,
     cwd: agent.cwd,
     title: agent.title ?? "",
@@ -129,8 +122,6 @@ export function saveSession(agent) {
     activeProvider: agent.activeProvider ?? agent.provider?.name ?? "",
     activeModel: agent.activeModel ?? agent.provider?.model ?? null,
     updatedAt: Date.now(),
-    history,
-    contextHistory,
     tasks: agent.tasks ?? [],
     planMode: agent.planMode ?? false,
     autoApprove: agent.autoApprove ?? false,
@@ -141,13 +132,18 @@ export function saveSession(agent) {
     pendingReminders: agent._pendingReminders ?? [],
     sessionStart: agent._sessionStart ?? null,
   }
-  // 2026-09-05 §10 D-4：首认领（_slot 为 null——如 /session 切换后首保存、"查看对方活槽 →
-  // 保存 fork 新槽"的落盘槽跟随）写本端记录——marker = 端内最后认领者；粘性 _slot 期间
+  // 2026-09-05 §10 D-4：首认领（_slot 为 null——如 /session 切换后首保存、“查看对方活槽 →
+  // 保存 fork 新槽”的落盘槽跟随）写本端记录——marker = 端内最后认领者；粘性 _slot 期间
   // 的日常保存不写（F1：保存永不参与竞争）
   const claimedNow = agent._slot == null
   const slot = agent._slot ??= activeSlot(agent.cwd)
   if (claimedNow) writeEndMarker(agent.cwd, slot)
   const p = slotPath(agent.cwd, slot)
+  // 首保存补绑（§14.3.4 表末行——兜底所有未覆盖路径）：未绑定且有槽 → 绑定记录存储
+  // （baseHistory = 当前 _fullHistory 全量；identity = 当前 _sessionStart）
+  if (!agent._recordStore) {
+    bindRecordStore(agent, { slotFile: p, identity: agent._sessionStart ?? null, baseHistory: agent._fullHistory ?? [] })
+  }
   // 2026-08-31 会诊 F2 🔴：写前校验磁盘文件的 sessionStart——与本进程会话不符（另一
   // 进程/会话的现场）→ 先轮转 .bak 保留再写（11311 条历史被新进程覆盖的实锤场景）。
   // 守卫自 2026-09-08 提取为 guardForeignSlotFile（session-guard.mjs——DESIGN-TOKEN-
@@ -155,13 +151,17 @@ export function saveSession(agent) {
   // saveSession 与 token-ttl persistEngTokens（settle 当场落盘）共用同一份（检查按
   // mtime 缓存 _slotMtime：自写未变跳过全量解析）。
   const rotated = guardForeignSlotFile(agent, p, slot)
-  writeSessionFile(p, data)
+  // 绑定态 → 流式投影（段原文拼接——VSC 兼容面逐字同形）；未绑定 → 既有全量物化写
+  if (agent._recordStore) saveProjectedSlot(agent, p, fields, contextHistory)
+  else writeSessionFile(p, { ...fields, history: legacyHistory(agent), contextHistory })
   // 记录我们刚写的 mtime——下次保存跳过重复解析
   try { agent._slotMtime = statSync(p).mtimeMs } catch {}
   // Update slot metadata in manifest
   try {
     const m = loadManifest(agent.cwd)
-    m.slots[slot] = slotDigest(data)
+    m.slots[slot] = agent._recordStore
+      ? digestFromStore(fields, agent._recordStore.counters())
+      : slotDigest({ ...fields, history: legacyHistory(agent) })
     saveManifest(agent.cwd, m)
   } catch (e) {
     // Manifest update failure is non-fatal — data is safe, metadata will lazy-recover on next listSlots
@@ -268,7 +268,7 @@ function stripTruncatedToolArgs(m) {
  *     复验 validateProvider 弹重选）。
  *  删旧支："activeModel==null 清 stale override 回渠道默认"——前提 = 渠道默认字段——已随
  *  三旧层删除消失——双字段恒非空故不可能触发（评审 #7）。 */
-export function applySession(agent, data) {
+export function applySession(agent, data, opts = {}) {
   // 机读线语义（历史注释保留）：data.history = FULL 未压缩记录（人读线）；data.contextHistory =
   // 压缩后机器线——恢复各从其源（保留压缩收益——从完整 history 重建会塞回中间过程——实测
   // prompt 膨胀 283%）。v1 老文件（无 contextHistory）回退播种，剥离被 slimForDisplay 截断的
@@ -289,7 +289,8 @@ export function applySession(agent, data) {
   agent._envResumed = full.length > 0
   const ch = data.contextHistory
   const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
-  agent._fullHistory = [...full]
+  // 绑定态（opts.slot 在场）：人读线 = 记录存储尾窗（下方绑定块填充）——不复制全量 JSON 数组
+  agent._fullHistory = opts.slot != null ? [] : [...full]
   agent.history = [...machine]
   agent.title = data.title ?? ""
   agent.tasks = data.tasks ?? []
@@ -316,6 +317,20 @@ export function applySession(agent, data) {
   agent._verifyPassed = false
   agent._slot = null // 粘性缓存清空——切换后重新认领（F1b）
   agent._slotMtime = null
+  // ── 记录存储绑定（TUI-OOM-ROOTCAUSE——§14.3.4/§14.3.5）──
+  // opts.slot 在场（启动恢复 / 非占用的 /session 切换 / ACP 钉槽）→ 绑定（身份核验 + 对账 +
+  // 窗口）——人读线 = store.tail(200)；未传（模式 F：被他人活进程占用的槽 / 测试 / ACP fork）
+  // → 解绑——人读线维持全量数组（D-R6 零回归）。
+  if (opts.slot != null) {
+    const store = bindRecordStore(agent, {
+      slotFile: slotPath(agent.cwd, opts.slot),
+      identity: data.sessionStart ?? null,
+      baseHistory: full,
+    })
+    agent._fullHistory = store.tail(RECORD_WINDOW_MESSAGES)
+  } else {
+    unbindRecordStore(agent)
+  }
   // ── MODEL-MERGE-SESSION 恢复（F-4——两支）──
   const slotProvider = data.activeProvider ? agent.providers?.find((pr) => pr.name === data.activeProvider) : null
   if (slotProvider) {
@@ -436,6 +451,8 @@ export function resetSessionState(agent) {
   agent._envResumed = false
   agent._processRestartPending = false
   agent._lastEngState = false
+  // /new 或切换：记录存储解绑（新槽由 cmd-new / 首保存补绑重新挂载——§14.3.4）
+  unbindRecordStore(agent)
 }
 
 /** Switch the manifest active pointer to a slot. Returns the slot's session data

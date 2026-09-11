@@ -39,6 +39,12 @@
 - 2026-09-06：回合外事件后台化统一模型（advisor async + 角色分池 + 排队合并）+ 会诊/飞刀完全异步化（digest 自动注入） + long 输出落盘纪律 + question 工具抑制。
 - 2026-09-07：嵌套子代理显示统一（R23）/ files 父侧文件拦截（R26）/ async advisor stale 误判修复 + 凭证机制（§11.2）。
 - 2026-09-11：普通模式偏差审计评估 + 会话上下文轮退役（第 23 批——§19 新增；F-N1 条目迁入需求档；相关文本与状态行同步）。
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批）：新增 §23（子代理族与轨迹存档内存上界：捕获截断 / 释放点 /
+  单遍序列化 / 在途上界；需求 = `../requirements/AGENT-LOOP.md` §15）；批次档
+  `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md`。
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批·设计评审轮次 1 修正轮——本档 #2/#9/#10/#12）：§13 追加内容
+  额度修订行（#2）· §23.7 AC-O4 锚点改指 §13 字段清单（#9）· §23.3.2 seqCache 多进程语义登记
+  （#10）· §23.5 头注释同步登记 + §18.5 `subagent-actions` 行数实测刷新（#12）。
 
 ---
 
@@ -688,6 +694,13 @@ byte-identical 相关机械比对断言/同步脚本全部清理；**内容断�
 
 **变更记录**：2026-09-04 用户裁定全量轨迹存档（§13）；2026-09-05 默认 OFF + 启动清理（D-TR6/D-TR10）；2026-09-06 并入 R2（auto-think logCtx 全字段——开关闭环）。
 
+**修订（TUI-OOM-ROOTCAUSE 批——2026-09-11——内容面；修正轮 #2）**：轨迹内容新增**额度截断**
+（消息内容/推理/工具参数串 > `TRACE_MESSAGE_MAX_CHARS` 64K → 头 16K + 中段标记 + 尾 48K；单记录
+> `TRACE_RECORD_MAX_CHARS` 4M → `messages` 降 stub——元数据保留、标记可断言）——上方「完整轨迹 /
+reasoning 全文」表述按此限缩（**字段集不变**——F-O4）；写入代价形态（单遍序列化/在途上界/序号
+缓存）与常量单源见 §23.3.2；`src/traces/trace-store.mjs` 头注释同批同步（「大小不限/不截断」表述
+作废——§23.5 登记）。
+
 ## 14. 会诊 / 飞刀完全异步化（R17）
 
 > 权威：CONSULTATION.md（会诊机制）、ESCALATE.md（飞刀机制）。**核心**：consult/escalate 从"结果消费绑死在回合内"旧模型改为**digest 自动注入**——发完即可继续交互，完成自动到达、模型消化轮逐条处置。
@@ -834,7 +847,7 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
 |---|---|---|---|
 | `src/tools/ops.mjs` | 286 | +14 | ② `advisor` 分支改读评审池（双载体判据）+ 条件说明行同步（工具描述） |
 | `src/agent-tools/subagent.mjs` | 402 | +4 | ⑤ 工具描述 status/cancel 句补评审面 |
-| `src/agent-tools/subagent-actions.mjs` | 470 | ±3 | ①③ 已具备（as-of 核实；若实现中发现口径缺口 ≤+10） |
+| `src/agent-tools/subagent-actions.mjs` | 479 | ±3 | ①③ 已具备（行数 2026-09-11 实测刷新——修正轮 #12；若实现中发现口径缺口 ≤+10） |
 | `test/subagent-observe-send.test.mjs` | 200 | +45 | ①③④ CLI 端 advisor 池用例（单查/概览/取消/指引） |
 | `test/wait-for-advisor-pool.test.mjs`（新） | 0 | +60 | ② 口径用例（红→绿：起池 running → 条件为假；池空 → 真） |
 | `docs/design/TOOLS.md` | 124 | +3 | §7 wait_for 条款口径同步（`advisor settled` = 评审池真实态） |
@@ -1611,3 +1624,158 @@ BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/des
 
 **变更记录**：2026-09-11 群 B 批——新增本节（digest 注入预算统一：单源模块 + 四族全接线；VSC 镜像 = `AGENT-LOOP（VSC 仓）§16`）。
 
+
+
+---
+
+## 23. 长会话内存上界：子代理族与轨迹存档（TUI-OOM-ROOTCAUSE 批——2026-09-11）
+
+> 需求：`../requirements/AGENT-LOOP.md` §15（F-O1–F-O5 / N-O1–N-O4）。来源：批次档
+> `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §1（勘察 C2/C4）。子代理人读线窗口机制与主 agent
+> 同源（`SESSION.md` §14.3）——本节只落**子代理特有面**（捕获上限 / 释放点）与**轨迹存档面**。
+
+### 23.1 问题陈述（证据 as-of 2026-09-11——实读）
+
+| # | 事实 | 证据（file:line） |
+|---|---|---|
+| 1 | `_capturedOutput` = 子代理流式文本的**第二份全量拷贝**：逐 token `output += …; child._capturedOutput = output`——无上限；跨 Continue 续跑继续累积 | `src/agent/spawn-child.mjs:210-212` · `:218-228` |
+| 2 | 消费面读时截断（2000/4000）——头部诊断价值有限、尾部（停在何处）优先 | `subagent-actions.mjs:445/456` · `escalate-async.mjs:242/258`；例外：`subagent.mjs:354` 停止报告内联全量（再经通用 offload ≥64K 落盘） |
+| 3 | 子代理人读线 `_fullHistory` 同主 agent：永不压缩、全量常驻（每个 child 一份） | `context.mjs:163-180` · 子代理创建 `subagent-spawn.mjs:332-340` |
+| 4 | 条目对 `entry.childAgent` 的引用**从不显式释放**（grep 阴性）——释放仅靠条目对象被回收 | `subagent-run.mjs:133` · `escalate-async.mjs:198`（绑定）；`subagent-run.mjs:184`（池）· `async-settle.mjs:47-50`（pending） |
+| 5 | 消化窗口：done-in-pool 驻留至回合尾收集/run 起始注入/挂起残差三消费点；挂起期（suspDriven）settled 留池等待消化 | `run-stages.mjs:233-239` · `agent.mjs:105-113` · `suspension-drive.mjs:283-289` · `run-stages.mjs:215-218/231` |
+| 6 | 轨迹存档：单次调用**整对象图深拷贝**（redactValue 递归复制容器）+ 独立 `JSON.stringify`（第二份全尺寸字符串），在途无上限（fire-and-forget 不 await、无队列/计数）；本机实测单记录 1.0–1.9MB、分钟级连发 | `trace-store.mjs:117-126` · `:157-177` · `:171` · `:188-196`；实测（本机 traces 目录） |
+| 7 | 序号分配每次同步扫目录（`existsSync` + `readdirSync`） | `trace-store.mjs:85-106` |
+
+### 23.2 方案选型对比
+
+**表 1：`_capturedOutput` 上界形态**（判据：有界 / 消费面保真 / 成本 / 复杂度）
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **滞后水位截断**（超 hard=128K → 裁至头 16K + 标记 + 尾 48K；摊还 O(1)） | 消费面读 2K/4K——头尾保真覆盖；停止报告内联场景有截断标记；无 IO、无新增生命周期 | **选定** |
+| 2 | 超限落盘全文 + 指针 | 「截断≠丢失」最强；但为被停子代理的部分输出引入热路径落盘 + 文件生命周期（收益低——完整文本已随 relay 进父侧显示/日志面） | 否决 |
+| 3 | 环形窗口（保尾丢头） | 丢失「从哪开始」——停止报告头段即断 | 否决（头尾双保更优） |
+
+**表 2：释放点形态**（`childAgent`/`report`）
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **消化注入完成后置空**（三消费点同点；幂等守卫） | 池内窗口（未消化）语义零变；释放点收敛在「文本已进父历史」之后 | **选定** |
+| 2 | settle 时刻置空 | 破坏未消化期的 `status`/`observe`（done 条目读 child 摘要）——窗口内行为回归 | 否决 |
+| 3 | 不置空（现状） | 条目被回收前长挂 child（挂起期 = 分钟级驻留） | 否决 |
+
+**表 3：轨迹单记录写入形态**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **单遍序列化（脱敏内联）+ 内容额度** | 免对象图拷贝与二次全量字符串；峰值 ≈ 单份受限字符串；字段集不变 | **选定** |
+| 2 | 保留深拷贝、仅加内容额 | 拷贝仍在（容器图 + 字符串对象）——峰值降幅有限 | 否决 |
+| 3 | 降级为「仅存元数据」 | 分析价值丢失（轨迹目的 = 逐轮分析） | 否决 |
+
+**表 4：在途上界与序号**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **待写计数上限 8 + 超限丢弃计数 + 序号进程内缓存** | 峰值 ≤ 8 × 记录上限；丢弃可观测；消除逐调用目录扫 | **选定** |
+| 2 | 串行队列（无丢） | 写盘慢时队列无限增长（掩盖问题）；与本模块「尽力面」不符 | 否决 |
+| 3 | 保持无限待写 | 爆炸半径 = 突发条数 × 单记录——本批要治的面 | 否决 |
+
+### 23.3 契约（实现对象）
+
+**23.3.1 子代理面**
+
+- **人读线窗口**：子代理创建时置 `child._historyWindow = RECORD_WINDOW_MESSAGES`（200——常量单源
+  `session-store.mjs`；机制 = `context.mjs` pushReal 驱逐——与主 agent 同路径）。
+- **捕获截断**：`spawn-child.mjs` 捕获闭包改为 `output = appendCappedText(output, t, CAPTURE_CAP_OPTS)`
+  后赋值 `child._capturedOutput`——`CAPTURE_CAP_OPTS = { hard: 131_072, head: 16_384, tail: 49_152,
+  marker: "… [captured output truncated: N chars omitted] …" }`（输出 ≤64K+标记；续跑同闭包累积，
+  语义一致）。
+- **释放**：新 helper `releaseSettledEntry(entry)`（`async-settle.mjs`）——`entry.childAgent = null;
+  entry.report = null`（幂等）；三消费点注入完成后调用：`run-stages.mjs:233-239` ·
+  `agent.mjs:105-113` · `suspension-drive.mjs:283-289`。池内/挂起未消化窗口零变化。
+- **纯函数单源**：`capText` / `appendCappedText` 本体 = `src/text-budget.mjs`（零依赖纯函数；
+  TUI 面 `display-budget.mjs` 与 agent 面共用——D2）。
+
+**23.3.2 轨迹面（`trace-store.mjs`）**
+
+- **单遍序列化**：`record = serializeRecord(fields)`——字符串字段经 `redactSecret(fieldKey, s)`
+  后直接写入输出缓冲（数组/对象逐层手写 JSON 结构）；**不再构造复制图**；输出与既有
+  `JSON.stringify` 形态同构（字段名/次序保持）。
+- **内容额度**：消息内容/推理/工具参数串 > `TRACE_MESSAGE_MAX_CHARS = 65_536` → 头 16K + 中段
+  标记 + 尾 48K（与工具预览同族）；序列化后总长 > `TRACE_RECORD_MAX_CHARS = 4_000_000` →
+  `messages` 字段整体降级为 stub 串（`"[trace record truncated for size: N chars / M messages]"`），
+  其余字段保留；两处均新增标记字段可断言。
+- **在途上界**：模块级 `pending` 计数（写盘 IIFE 进入 +1、settle −1）；达
+  `TRACE_PENDING_MAX = 8` → 本记录丢弃，`_dropped` 计数 +1，首次饱和打一行 stderr
+  `[trace] pending write queue full — N record(s) dropped`（每饱和段一次）。
+- **序号缓存**：`seqCache: Map<dayDir, maxSeq>`——首次 `readdirSync` 后进程内递增预留；
+  目录被清理（retention）后取下界重扫一次（防御）。**多进程语义（修正轮 #10——登记）**：同 cwd
+  多实例各自进程内缓存——seq 可撞、同 sessionKey 记录并入同名文件（append 不覆写）；**可容忍**
+  （本机 traces = 诊断面、默认 OFF、撞号不损坏数据）；不做跨进程协调/落盘校验。
+- 开关/字段/落点/保留期/清理零改。**D2 指针**：§13 为轨迹机制权威——本批已在 §13 追加内容
+  额度修订行（截断 = 内容面——修正轮 #2）；本节承载实现细节（单遍序列化 + 内容额度 + 在途
+  上界 + seqCache）。
+
+### 23.4 关键决策记录（含否决备选）
+
+- **D-SM1 捕获 = 滞后水位截断**（表 1）：hard 128K → 头 16K / 尾 48K——读时消费者（2K/4K）
+  语义等价；停止报告内联场景出现截断标记（可断言）。
+- **D-SM2 释放 = 注入完成后置空**（表 2）：池内窗口零变；三消费点 + 幂等 helper。
+- **D-SM3 子代理窗口复用主 agent 机制**（`_historyWindow`）——不另造第二套。
+- **D-TR1 单遍序列化**（表 3）：脱敏内联、零复制图；字段集与形态逐字保持。
+- **D-TR2 额度双层**（单消息 64K / 单记录 4M）+ **不降到无内容**（stub 保计数）；实测合法
+  记录 ≤1.9MB 不受影响（4M 上限留头寸）。
+- **D-TR3 上界 = 丢弃计数（尽力面）**（表 4）；`seqCache` 同批修（消除逐调用同步扫）。
+- **D-TR4 不新增配置项**：额度为编译期常量（轨迹为诊断面——默认 OFF 时零成本）。
+
+### 23.5 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/text-budget.mjs` | 新 | +80 ± 20 | capText / appendCappedText（零依赖纯函数） |
+| `src/agent/spawn-child.mjs` | 229 | +14 | 捕获闭包截断（常量 + 标记） |
+| `src/agent-tools/subagent-spawn.mjs` | 454 | +3 | 子代理 `_historyWindow` 置位 |
+| `src/agent-tools/async-settle.mjs` | 192 | +10 | `releaseSettledEntry` helper |
+| `src/agent/run-stages.mjs` | 243 | +4 | 消费点调用释放 |
+| `src/agent.mjs` | 414 | +6 | run 起始注入点调用释放 |
+| `src/tui/suspension-drive.mjs` | 298 | +4 | 挂起残差消费点调用释放 |
+| `src/agent-tools/escalate-async.mjs` | 290 | +2 | 注释锚（childAgent 语义面）+ 若有族特有消费点则补调 |
+| `src/traces/trace-store.mjs` | 225 | +55 → ~280 | 单遍序列化 + 双层额度 + 在途计数 + seqCache + **头注释同步**（「不截断」表述作废——§13 修订行；修正轮 #2） |
+| `test/subagent-memory-bounds.test.mjs` | 新 | +130 ± 30 | T-SM1–T-SM4 |
+| `test/trace-bounds.test.mjs` | 新 | +130 ± 30 | T-TR1–T-TR5 |
+
+> 拆分结论：全部 ≤500；`subagent-spawn.mjs`（457）与 `agent.mjs`（420）越 300 咨询线——登记、
+> 不拆（先例）；`escalate-async.mjs`（292）临界登记。
+
+### 23.6 用例表（正常 / 边界 / 错误）
+
+| # | 层 | 场景 | 输入 | 预期输出 | 回指 |
+|---|---|---|---|---|---|
+| T-SM1 | 快层 unit | 捕获截断 | 模拟 token 流累计 10MB | `_capturedOutput.length ≤ 131_072`；头 16K 原样、尾 48K 原样（首尾子串断言）；标记含省略数 | F-O2 |
+| T-SM2 | 快层 unit | 捕获额下零改 | 累计 8KB | 逐字等于输入拼接（无标记——负断言） | F-O2/N-O2 |
+| T-SM3 | 快层 unit | 子代理窗口 | 子代理 pushReal 300 条 | `_fullHistory.length == 200` 且为最新；observe `recentTurnLines` 取 5 回合正常 | F-O1 |
+| T-SM4 | 快层 unit | 释放点 | fake 条目 settle→注入完成 | 注入后 `childAgent === null && report === null`；注入前非 null（窗口内）；幂等重入不抛 | F-O3 |
+| T-TR1 | 快层 unit | 单遍序列化等价 | 固定字段集（含敏感串/嵌套） | 输出 JSON parse 后与 §13 元数据字段清单逐字段相等（参照物 = §13 清单——本仓无既有轨迹用例：新档自身为参照实现，修正轮 #9）；敏感串被脱敏 | F-O4 |
+| T-TR2 | 快层 unit | 单消息额度 | 一条 1MB content | 该串 ≤64K+标记；首尾保真 | F-O4 |
+| T-TR3 | 快层 unit | 单记录额度 | 构造 >4MB | `messages` 为 stub、元数据字段保留、标记含计数 | F-O4 |
+| T-TR4 | 快层 unit | 在途上界 | 注入慢写替身 + 连发 20 条 | 在途 ≤8；丢弃计数 = 12；stderr 饱和行一次 | F-O5/N-O3 |
+| T-TR5 | 快层 unit | 序号缓存 | 连续 3 次调用注入 fake fs | `readdirSync` 恰 1 次；seq 递增且不撞号 | F-O5 |
+
+### 23.7 验收标准（逐条回指需求——可机判）
+
+| AC | 回指 | 判据（机验） |
+|---|---|---|
+| AC-O1 | F-O1 | T-SM3 绿；`RECORD_WINDOW_MESSAGES` 单源（grep = 200） |
+| AC-O2 | F-O2 | T-SM1/T-SM2 绿；捕获常量经 `text-budget.mjs` 单源 |
+| AC-O3 | F-O3 | T-SM4 绿 + 三消费点 grep（释放调用在位） |
+| AC-O4 | F-O4 | T-TR1/T-TR2/T-TR3 绿；字段集对照 = `AGENT-LOOP.md` §13 字段清单（修正轮 #9——本仓无既有轨迹用例，锚点改指 §13；新档自身为参照实现） |
+| AC-O5 | F-O5 | T-TR4/T-TR5 绿；`TRACE_PENDING_MAX` 单源 |
+| AC-O6 | N-O2 | 既有族全绿：`test/async-settle.test.mjs` · `test/subagent-observe-send.test.mjs` · `test/subagent-scheduler.test.mjs` · `test/integration/subagent-lifecycle.test.mjs`；digest 注入预算用例零伤（§22） |
+| AC-O7 | N-O3 | 丢弃/截断标记断言（T-SM1/T-TR3/T-TR4） |
+| AC-O8 | N-O4 | 触碰档 ≤500；`check-doc-width` 新增违规 0 |
+
+### 23.8 边界（本批不做）
+
+- 不做报告（`entry.report`）内容截断（报告为交付物——完整放行；靠释放点与 digest 预算治理）；
+- 不改 settle/挂起状态机与 digest 注入（§22 机制零动）；不做轨迹重放/自动清理外的生命周期；
+- 不做 VSC 端（其轨迹面约定不实现——既有登记；子代理面 VSC 各自实现）。

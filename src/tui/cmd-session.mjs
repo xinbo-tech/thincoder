@@ -1,4 +1,4 @@
-import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker } from "../session.mjs"
+import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor } from "../session.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
 import { stringWidth, sliceByWidth } from "./render.mjs"
@@ -89,14 +89,18 @@ export async function handleSessionCommand(ctx) {
   if (occ.occupied) {
     pushLine(`⚠ Slot ${e.slot} is being used by another live process (${occ.owner}) — continuing here will create a new copy on the next save`, C.warn)
   }
-  applySession(agent, data)
+  applySession(agent, data, occ.occupied ? {} : { slot: e.slot })
   // Rebuild from history (lazy) — the display snapshot is deprecated.
+  // §14.3.6：描述符 { history（尾窗+±1）, total, base }——标签口径 = total（非窗口长度）；
+  // 未绑定（占用分支——模式 F）回退全量数组。
+  const desc = sessionDescriptor(agent, data)
   state.lines = []
-  restoreLines(state, data.history)
+  state._linesChars = 0 // TUI-OOM-ROOTCAUSE（§15.3.2）：切槽重建行集 → 字符账归零，restoreLines 重新入账
+  restoreLines(state, desc)
   state.tasks = agent.tasks ?? []
   if (state.tasks.length > 0 && state.tasks.every((t) => t.status === "done")) {
     state.tasks = []
   }
-  pushLabel(`── Switched to slot ${e.slot} (${data.history.length} messages) ──`, C.warn)
+  pushLabel(`── Switched to slot ${e.slot} (${desc.total} messages) ──`, C.warn)
   render()
 }

@@ -459,8 +459,94 @@ merged.shell = expandHome(merged.shell)
 **§1.13（需求池）核对**：本批**未在 `docs/TODO.md` 需求池登记**（记录归属 = 主 agent——§1.13「记录 / 维护」分工）；
 本席未写入（写域外）——拟录条目见批次档 §2「需父侧排程项」。
 
+
+---
+
+## 10. 检索向量加载上界（TUI-OOM-ROOTCAUSE 批——2026-09-11）
+
+> 需求：`../requirements/MEMORY.md` §6（F-M1–F-M3 / N-M1–N-M3）。来源：批次档
+> `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §1（勘察 C4 检索面）。
+
+### 10.1 问题陈述（证据 as-of 2026-09-11——实读）
+
+| # | 事实 | 证据（file:line） |
+|---|---|---|
+| 1 | 三张表的向量通道全表 `.all()` 物化后逐行 cosine + 全量排序——无 SQL LIMIT、无分块 | `src/memory/core.mjs:60-68`（entries ∪ files）· `docs.mjs:112-116` · `code-sync.mjs:294-298` |
+| 2 | 触发面 = 每轮 run 装配（prompt 注入）+ 工具调用（doc_search/code_search）；本机 memory.db ~736MB（embedding BLOB 为体量主源） | `src/agent/setup.mjs:100-124` · `docs.mjs:185` · `code-sync.mjs:350` |
+| 3 | 结果侧本身有界（候选 = `max(limit×4, 20)`）——病灶是**扫描期**全量物化 | `core.mjs:68` · `docs.mjs:116` |
+| 4 | FTS 通道已有 `LIMIT`（对照面） | `core.mjs:88-104` · `docs.mjs:94-99` |
+
+### 10.2 方案选型对比
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **流式/分块扫描 + 有界 top-K 选择** | 峰值 = 块 + K；召回语义不变（仍全表评分）；实现面小（三处同型） | **选定** |
+| 2 | 结果缓存/LRU 复用 | 缓存的是「查询→结果」——不解决首次扫描峰值；内存更差 | 否决 |
+| 3 | 近似/剪枝（先 FTS 预筛再向量） | 召回语义变化（设计外） | 否决 |
+| 4 | 向量索引（ANN） | 依赖/架构级——超本批 | 否决（登记为后续项） |
+
+**分块实现面候选**：① 绑定层迭代器（`iterate()`——以现有 sqlite 绑定支持为准）；② rowid 游标分页
+（`WHERE rowid > ? ORDER BY rowid LIMIT ?`）。设计取「①可用则用，否则②」——实现时以实测定稿
+（两者语义等价：全表逐行、无重复无遗漏）。
+
+### 10.3 契约（实现对象）
+
+- **分块常量**：`SCAN_CHUNK_ROWS = 2_000`（单块行数——单源；三处共用）。
+- **扫描形态**：每块物化 `{uid, embedding}` → 逐行 `fromBlob`/cosine → top-K 有界插入
+  （候选集 ≤ `max(limit×4, 20)`——既有口径）；块内存随迭代释放。
+- **top-K 选择**：维护升序小顶堆（K 上限）；并列分数按既有排序稳定性规则（先到先留——
+  与「全量 sort 稳定序」等价）。
+- **对外结构不变**：返回 `[{id, score}]` 候选（既有消费面 RRF 融合不变）；FTS 通道与
+  开关（projectOrigin 过滤）零改。
+- **可测缝**：扫描器接受注入的 `runChunkedQuery`（默认真实 DB 实现）——测试以假数据源直测
+  块大小/top-K/等价性（不建真实大表）。
+
+### 10.4 关键决策记录
+
+- **D-M1 流式分块 + top-K**（表 1 候选 1）；**D-M2** 块行数 2_000（单块 ≈ 2k×（4B×维度+行开销）
+  ——量级 KB~MB 级，随维度有界）；**D-M3** 实现面以绑定能力定稿（迭代器优先、rowid 分页兜底）；
+  **D-M4** 不改 FTS/融合/开关语义（N-M2）。
+
+### 10.5 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/memory/scan.mjs` | 新 | +90 ± 20 | `scanVectors(db, sql, params, { chunk, onRow })` + top-K helper（三处复用） |
+| `src/memory/core.mjs` | 301 | +10 → ~311（越 300 软线——登记） | search 向量通道改分块 + top-K |
+| `src/memory/docs.mjs` | 418 | +8 | docSearch 向量通道同改 |
+| `src/memory/code-sync.mjs` | 414 | +8 | codeSearch 向量通道同改 |
+| `test/memory-scan-bounds.test.mjs` | 新 | +120 ± 30 | T-MS1–T-MS4 |
+
+> 拆分结论：全部 ≤500；`core.mjs` 311 越 300 咨询线（单点替换、不拆）。
+
+### 10.6 用例表（正常 / 边界 / 错误）
+
+| # | 层 | 场景 | 输入 | 预期输出 | 回指 |
+|---|---|---|---|---|---|
+| T-MS1 | 快层 unit | 分块扫描 | 假源 10_000 行 | 单块物化 ≤ `SCAN_CHUNK_ROWS`（计数注入）；逐行回调恰 10_000 次 | F-M1/N-M1 |
+| T-MS2 | 快层 unit | top-K 等价 | 假源 1_000 行 × 已知分数 | 结果与「全量排序取前 K」逐条相等（含并列稳定性） | F-M2/N-M2 |
+| T-MS3 | 快层 unit | 候选上限 | limit=3 / limit=50 | 候选数 = max(limit×4, 20)（既有口径） | F-M2 |
+| T-MS4 | 快层 unit | 三通道接线 | 三处调用点 | 均经 scan 模块（grep/注入计数：无 `.all()` 全表物化） | F-M1 |
+
+### 10.7 验收标准（逐条回指）
+
+| AC | 回指 | 判据（机验） |
+|---|---|---|
+| AC-M1 | F-M1 | T-MS1 绿；三处无全表 `.all()`（grep：向量 SQL 无裸 `.all()`） |
+| AC-M2 | F-M2/F-M3 | T-MS2/T-MS3 绿；FTS 用例零伤 |
+| AC-M3 | N-M1 | T-MS1 计数断言（峰值 ≤ 块 + K） |
+| AC-M4 | 零回归 | `test/memory-tool.test.mjs` + 既有检索用例全绿 |
+
+### 10.8 边界（本批不做）
+
+- 不做向量索引/近似检索（登记后续项）；不改 embedding 生成/失效面；不改检索触发点、
+  limit 语义、FTS 通道与 RRF 融合；不做 DB 体量治理（736MB 属数据面——另案）。
+
 ## 变更记录
 
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批）：新增 §10（检索向量加载上界——分块扫描 + top-K：选型 /
+  契约 / 决策 D-M1–D-M4 / 用例 T-MS1–T-MS4 / AC-M1–AC-M4）；需求 = `../requirements/MEMORY.md` §6；
+  批次档 `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md`。
 - 2026-09-11：§9 配置路径字段家目录展开（第 29 批）——`loadConfig` 单点规范化 + 四字段（dbPath / projectDir / team.dir / shell）+ projectDir 七点位基准解析。
 - 2026-09-11：同批修正轮（设计评审轮次 1 pass 后，6 条逐条处置——N7 口径收窄 · README 字面定稿 L1–L4 · §9.2 / D-H2 理由改述 · `~user` 残余静默面登记 · 数字刷新；第 6 条备查；零实现面）。
 - 2026-09-07：文档格式债批 A 重写——历史变更流水账折叠入正文当前态（2026-09-01 补删能力、2026-09-03 单工具五动作重构、2026-09-05 磁盘为真相修复）。

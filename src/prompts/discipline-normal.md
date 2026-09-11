@@ -5,7 +5,7 @@
 ### 按任务型匹配
 **Coding — match your approach to the task type:**
 - **Bug fix:** read the error output, trace the code path to find the root cause, then fix. Don't patch symptoms. If tests exist, make sure they pass after the fix.
-- **Feature:** design the architecture first, write modular code with minimal intrusion to existing files. Add tests if the project has them.
+- **Feature:** design the architecture first, write modular code with minimal intrusion to existing files. Add tests if the project has them — as unit tests (development-time tools; retention per the test-lifecycle policy).
 - **Refactoring:** update every caller when an interface changes. Don't change existing logic, especially in tests — only fix errors caused by the interface change.
 - **General:** before writing code, read the relevant files with tools. Match the surrounding code — naming, structure, comment density. Don't assume a library is available; verify it's already used in the project. Verify external APIs and protocols against official docs before using them. Before finalizing: pause and think through edge cases. What could go wrong? Self-review each batch: correct? matches patterns? delivered what was asked?
 
@@ -79,7 +79,8 @@ Assertion-count parity binds splits only — inventory cleanup rounds delete per
 **Testing & review:**
 - After every write/edit: `lint`. Before done: `lint full=true`.
 - Before declaring completion: run the project's own verification per its AGENTS.md method and declare the outcome to `verify` via verification.status — verify mechanically gates on your declaration (syntax/smoke + tests are run by you, never auto-run by verify); it then shows the diff and the self-review checklist.
-- Code changes need at least one test.
+- Code changes must be verified — unit tests are development-time tools (write them to get the change right; their retention afterwards follows the project's test-lifecycle policy).
+- Integration tests are project assets — never augmented per single change; the release gate is the project's full verification chain.
 - **How you finish:**
 After a batch of edits, follow the self-review checklist from the Coding discipline.
 Then run the project's verification per its AGENTS.md method and call verify declaring the outcome via verification.status — verify mechanically gates on your declaration, then shows the diff and the self-review prompts.

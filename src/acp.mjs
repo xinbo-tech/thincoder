@@ -19,7 +19,7 @@ import { assembleAgent } from "./cli/make-agent.mjs"
 import { createAcpServer, ACP_ERRORS } from "./acp/transport.mjs"
 import { createAcpSession } from "./acp/session.mjs"
 import { replayHistory } from "./acp/bridge.mjs"
-import { listSlots, applySession, deleteSlot, normalizeCwd, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession } from "./session.mjs"
+import { listSlots, applySession, deleteSlot, normalizeCwd, loadSlotFile, slotOccupancy, loadManifest, saveManifest, getSessionId, newSession, slotPath, bindRecordStore } from "./session.mjs"
 import { createCheckpoint, listCheckpoints, rewind, isGitRepo } from "./git/checkpoint.mjs"
 import { createMemory, list as memList, remove as memRemove } from "./memory.mjs"
 
@@ -157,6 +157,9 @@ export function buildAcpHandlers({
           // mySessionId 同进程恒真）→ 第二个会话拿到与第一个相同的槽号 → 双写同槽
           // F2 互旋。getSessionId() 是进程级，_slot 是 agent 级——粒度错配必须在此切断。
           session.agent._slot = newSession(getCwd())
+          // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：新建槽绑定记录存储（baseHistory 空——
+          // identity 待固化）——与 /new 同语义
+          bindRecordStore(session.agent, { slotFile: slotPath(getCwd(), session.agent._slot), identity: session.agent._sessionStart ?? null, baseHistory: [] })
           sessions.set(id, session)
           return { id, configOptions: [{ configId: "model" }, { configId: "thinking" }, { configId: "mode" }] }
         } catch (e) {
@@ -231,7 +234,6 @@ export function buildAcpHandlers({
         try {
           const id = String(nextId++)
           const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
-          applySession(session.agent, data)
           // 2026-08-31 advisor round2 🟡：钉 _slot 前查活主——目标槽被另一活进程（CLI/另一
           // IDE）占用时不得钉回（双方 sessionStart 一致 → F2 永不轮转 → 同槽 last-write-wins
           // 静默互覆盖）。空闲则认领后钉回；占用则不钉 → 下次保存经 activeSlot 自然 fork
@@ -241,7 +243,11 @@ export function buildAcpHandlers({
           // 同进程防护完全由 sameProcessPinned 承担：本进程另一 session 已钉该槽即视为占用
           // （进程级属主无法区分 agent，双方 sessionStart 相同 → F2 永不触发 → 静默互覆盖）。
           const sameProcessPinned = [...sessions.values()].some((s) => s.agent?._slot === slot)
-          if (!occ.occupied && !sameProcessPinned) {
+          const pinned = !occ.occupied && !sameProcessPinned
+          // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：钉槽（非占用）才绑定记录存储——
+          // 占用/fork 分支模式 F（首保存 fork 新槽后补绑）
+          applySession(session.agent, data, pinned ? { slot } : {})
+          if (pinned) {
             const m = loadManifest(getCwd())
             m.slotSessions ??= {}
             m.slotSessions[slot] = getSessionId()
@@ -278,13 +284,15 @@ export function buildAcpHandlers({
         try {
           const id = String(nextId++)
           const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
-          applySession(session.agent, data)
           // 2026-08-31 advisor round2 🟡：同 session/load——活主占用的槽不钉回（防同槽双写，
           // 下次保存 fork 新槽）；空闲则认领后钉回。
           const occ = slotOccupancy(getCwd(), slot)
           // 2026-09-01 会诊 kimi/glm 🔴：同 session/load——同进程其他 session 已钉同槽视为占用 → fork
           const sameProcessPinned = [...sessions.values()].some((s) => s.agent?._slot === slot)
-          if (!occ.occupied && !sameProcessPinned) {
+          const pinned = !occ.occupied && !sameProcessPinned
+          // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：同 load——钉槽才绑定（占用/fork 模式 F）
+          applySession(session.agent, data, pinned ? { slot } : {})
+          if (pinned) {
             const m = loadManifest(getCwd())
             m.slotSessions ??= {}
             m.slotSessions[slot] = getSessionId()

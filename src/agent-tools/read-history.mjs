@@ -5,8 +5,9 @@
  * (SESSION.md §13 R19): an explicit session file path deep-queries that file's
  * history line; "cwd:<dir>" discovers the sessions stored for that directory.
  *
- * Default (no path) — THIS session's full human-readable record (agent._fullHistory
- * — NEVER compacted, audit-complete). Use to recall what was said or done earlier:
+ * Default (no path) — THIS session's full human-readable record (record store when bound
+ * — disk-backed, SESSION.md §14.3.7; agent._fullHistory memory fallback otherwise:
+ * NEVER compacted, audit-complete). Use to recall what was said or done earlier:
  * design decisions, tool-call timing, past rulings.
  *
  * Filters AND together: role / keyword (message text) / tool (tool messages by
@@ -273,7 +274,8 @@ export const readHistoryTool = {
     }
     const keyword = typeof a.keyword === "string" && a.keyword.length > 0 ? a.keyword : null
     // Case-insensitive substring WITHOUT copying the full message text: the human line is
-    // never compacted — single tool results can be hundreds of KB to MBs. Lowercase the
+    // never compacted (绑定态存储行 = slimForDisplay 产物——匹配基准 delta 见 SESSION.md
+    // §14.3.7 / T-RS8b) — single tool results can be hundreds of KB to MBs. Lowercase the
     // needle once and run a regex-i test over the haystack (escaping regex metachars so the
     // keyword stays a literal substring).
     const kwRe = keyword ? new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null
@@ -287,6 +289,19 @@ export const readHistoryTool = {
         : querySessionFile(pathArg, { role, kwRe, tool, since, until, direction, limit }, baseCwd)
     }
 
+    // 本会话（无 path）：绑定记录存储 → 方向流式迭代（磁盘为准——全量可见、内存窗口外
+    // 可命中；§14.3.7）；未绑定（测试 / 模式 F）→ 内存 _fullHistory 既有过滤路径（回退保留）。
+    // 方向语义不变：newest 自尾向前取满 limit → 反转回时间序（输出恒时间序）。
+    const store = ctx.agent?._recordStore
+    if (store?.iterate) {
+      const taken = []
+      for (const m of store.iterate(direction)) {
+        if (!matches(m, { role, kwRe, tool, since, until })) continue
+        taken.push(m)
+        if (taken.length >= limit) break
+      }
+      return formatMatches(direction === "newest" ? taken.reverse() : taken, "oldest", limit)
+    }
     const history = Array.isArray(ctx.agent?._fullHistory) ? ctx.agent._fullHistory : []
     const matched = history.filter((m) => matches(m, { role, kwRe, tool, since, until }))
     return formatMatches(matched, direction, limit)

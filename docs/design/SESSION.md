@@ -20,6 +20,21 @@
 - 2026-09-07：本文档重写为当前态——格式正常化（无 >300 字符行、markdown 结构修正）、历史变更流水账折叠为本记录；活机制正文与逐字契约未改。
 - 2026-09-10（MODEL-SELECTION 批——连带改写）：§8 D-S1「无效」判据收窄（不含"候选外"）/ D-S2 候选改运行期拉取 / D-S3 兜底改渠道默认单值——机制权威见 `PROVIDER.md` §16。
 - 2026-09-11（MODEL-SELECTION 批——修正轮）：§8 D-S1 叙述措辞改用「候选成员校验」表达（R8 目标态自检配套——语义不变、被扫字面量清零）。
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批）：新增 §14（长会话记录内存有界——磁盘为准 + 内存窗口：段存储 /
+  选型四表 / 契约 / 决策 D-R1–D-R8 / 受影响文件 / 用例 T-RS1–T-RS11 / AC-RS1–AC-RS10 / VSC parity
+  评估 / 物证回填钩）；需求 = `../requirements/SESSION.md` §14.1；批次档
+  `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md`。**§3.2/§4.1/§4.3 的「人读线全量」按 §14 修订为
+  「记录/落盘全量 + 内存窗口」**（正文对应段落以 §14 为准，语义面见 §14.3.5 数据流）。
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批·设计评审轮次 1 修正轮——12 条全落；本节 #1/#4/#5/#6/#7/#8 +
+  #12）：§14 sidecar 会话身份锚（`meta.identity` / bind 先验身份 / 轮转联动 / 孤儿拒采纳——#1）·
+  `store.page` ±1 页沿 + 恢复描述符 `{history,total}` 与标签口径（#4）· read_history 匹配面 delta
+  登记（#5）· 追加失败降级语义（失败即停/追赶/标记/重建——#6）· 受影响表补 session-slots /
+  session-guard + 行数实测刷新（#7/#12）；需求档 F-S2 范围注 / F-S4 delta 同步（§14.1）。
+- 2026-09-12（TUI-OOM-ROOTCAUSE 批·实现后同步）：§14.3.6 恢复描述符句按实载校准——实载 `{ history
+  （≤201 = 尾窗 200 + ±1 页沿头一条）, total, base }`、单源 `sessionDescriptor()`（`src/session.mjs:69-78`）、
+  `base` = `history[0]` 绝对序号（渲染起点；缺省 `total − len` 推导）、翻页锚复用 `state._historyTotal`
+  （`_historyAnchor` 未落地——不新增状态位）；§14.5 表补 `session-segments.mjs`（交付 101——按职责拆分
+  产物）行 + `session-store.mjs` 交付 442 行越 300 咨询线登记（不拆——新增档先例）。纯实现态对齐、零语义变更。
 
 ---
 
@@ -538,3 +553,312 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 
 - **AC-1** = 跨会话检索用例全绿（缺省回归 / path 单槽 / cwd: 发现——摘要含槽号+完整文件路径 / 错误路径三型 / 超限护栏断言定稿文案 / depth 门）；**AC-2** = 零回归（read_history 既有调用全绿——缺省不变）；**AC-3** = 描述锚测试绿（消歧段双端一致，锚断言）。
 - 实现批提示：实现面主文件 = 双端 `agent-tools/read-history.mjs`（path 参数 + 描述尾段族表 + 护栏）；逐个点名验证检索族描述实际位置（tools/*.md 或 .mjs 内联——含 read.md 类路由句若存），清单外新增以交付报告为准；**checkpoint "versions" 核验**：总纲句含 "checkpoint cat/versions"——实现前先核验 git 工具动作面是否含 versions——不含则总纲句改 "checkpoint（cat/list——按实际动作面）" 再定稿。
+
+
+---
+
+## 14. 长会话记录内存有界：磁盘为准 + 内存窗口（TUI-OOM-ROOTCAUSE 批——2026-09-11）
+
+> 需求：`../requirements/SESSION.md` §14.1（F-S1–F-S6 / N-S1–N-S6）。
+> 来源：批次档 `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §1（事故 + 勘察 C1 + 用户 23:49 裁定
+> 方向「磁盘为准 + 内存窗口（懒加载下沉到内存层）」）。方向已定——本节做实现级选型与契约。
+
+### 14.1 问题陈述（证据 as-of 2026-09-11）
+
+| # | 事实 | 证据（file:line） |
+|---|---|---|
+| 1 | 人读线 `_fullHistory` 永不压缩、全量常驻：pushReal 双线写入后压缩只重建 `history` | `src/context.mjs:163-180`（pushReal）· `:183-200`（applyCompression——只 `agent.history`） |
+| 2 | 落盘投影（`.json.N` 的 `history`）即全量人读线（slim 后）；恢复把它整体读回内存 | `src/session.mjs:109-171`（saveSession `history = (_fullHistory ?? history)…`）· `:292`（applySession `_fullHistory = [...full]`） |
+| 3 | TUI 懒加载只懒「渲染」，分页源 `full` = 内存全量数组；翻页把行 unshift 进 `state.lines` 且无淘汰 | `src/tui/startup.mjs:142-170`（`createLoadOlder`——`full.length − loaded − PAGE`）· `:119-136`（restoreLines） |
+| 4 | 活消息增长使翻页锚点漂移（`full.length` 增长而 `_historyLoaded` 只记恢复/翻页量）——错位隐患 | `src/tui/startup.mjs:147`（`start = full.length − loaded − HISTORY_PAGE_MESSAGES`） |
+| 5 | 人读线内存消费者全清单：本会话检索 / 观察摘要 / 标题生成 / 保存 / 恢复 / 翻页（无第七方） | `src/agent-tools/read-history.mjs:290` · `src/agent-tools/subagent-actions.mjs:194` · `src/generate-title.mjs:72` · `src/session.mjs:114` · `:292` · `:415` · `src/tui/startup.mjs:145` |
+| 6 | 槽 JSON 的跨端读面（VSC/ACP/列表）依赖 `history` 为**全量数组** | VSC：`thincoder-vscode` `session-io.mjs:104`/`panel-session.mjs:87`（本仓不引用——评估面）· ACP `src/acp.mjs:260` · 列表 `src/session-slots.mjs:141`/`:359` |
+
+事故形态：19 分钟会话 ≈ 8GB 堆（爬升型）；C1 为结构性无界之一（其余见架构批设计）。
+
+### 14.2 方案选型对比（方向既定——实现级四表）
+
+**表 1：记录存储形态**（判据：内存有界 / 翻页可读 / 崩溃完整 / VSC 兼容 / 复杂度）
+
+| # | 候选 | 评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 槽 JSON 内窗口化 + 无 sidecar | 翻页无法按页读 JSON（须全量 parse）；`history` 变窗口 → VSC/ACP/列表破坏 | 不可行 | 否决 |
+| 2 | 单 JSONL 文件 + 内存 offset 索引 | 可按页读；但索引重建须全文件扫描 / 驻留 offset 表；追加序列化点单一 | 索引形态复杂化 | 否决（见候选 3） |
+| 3 | **定长分段 JSONL sidecar + 算术索引**（段 = 100 条，段内行序 = 消息序） | 绝对序号 → （段号, 行号）纯算术；无索引文件；已写段只读；追加 = 单文件 append | 段边界处续写须处理空末段/半行（契约见 §14.3） | **选定** |
+| 4 | 段按字节触发 + 清单文件记账 | 段大小均匀；但清单与段双写需同步（损坏面 ×2）、实现更重 | 收益低 | 否决 |
+| 5 | 全量落盘档 + 内存保尾（不分段） | 翻页须按 offset 扫全档（或全量 parse）——未解决「按页读」 | 不满足 F-S3 | 否决 |
+
+**表 2：内存窗口口径**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **条数窗口 = 200**（与 `INITIAL_HISTORY_MESSAGES` 同值——首屏即窗口，单一概念） | 上界 = 200 条；最坏 200×64K 预览 ≈ 13MB、典型 ≪1MB；observe（≤20 回合）/标题回退覆盖充分 | **选定** |
+| 2 | 条数窗口 = 500 / 1000 | 更宽裕但上界 ×2.5/×5；消费者均已改走存储，无需求 | 否决 |
+| 3 | 字节窗口（如 8MB） | 更严格；驱逐边界计算复杂（须逐条测长）、与首屏口径脱节 | 否决 |
+| 4 | 不设窗口（仅存储） | 消费者（observe/标题/后续未知面）全部依赖存储读——耦合面大、退化风险高 | 否决（保留窗口 = 安全带 + 快路径） |
+
+**表 3：落盘投影（槽 JSON `history`）生成**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **流式拼接段文件**（`[` + 各段原文（已逐字节同形） + `]`——无需重序列化） | O(1) 内存（单段读入即写出）；与既有形态逐字节同构；实现 ~30 行 | **选定** |
+| 2 | 物化数组再 `JSON.stringify` | 峰值 ≈ 记录全量（数百 MB 级记录再现——违背本批目的） | 否决 |
+| 3 | 投影降级为「窗口 + 计数」 | VSC/ACP/列表/跨端接续破坏（version 2 契约） | 否决（红线） |
+
+**表 4：追加时点**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **pushReal 同步追加**（单点；失败独立 try/catch） | 崩溃保留最大化；读路径恒新鲜（read_history/翻页无「未刷窗口」合并逻辑）；成本 = 每消息一次 append（典型 ≤KB 级） | **选定** |
+| 2 | 保存点批量追加 | 崩溃丢自上次保存；读路径须合并「未刷盘尾部」（复杂） | 否决 |
+| 3 | 周期定时刷盘 | 崩溃丢窗口 + 定时器新增（无必要） | 否决 |
+
+### 14.3 契约（实现对象——逐条）
+
+**14.3.1 存储形态与目录**
+
+- sidecar 目录：`{slot 文件路径}.d/`（如 `{hash}.json.3.d/`——与槽文件同目录同前缀）。VSC 侧不可见
+  （其 GC 后缀表 / 发现正则 / 迁移重命名均不匹配 `.d`——VSC 勘察 Q6；本批零改动）。
+- `meta.json`：`{ "v": 1, "segSize": 100, "identity": <sessionStart|null> }`——段粒度保险 + **会话身份锚**
+  （防跨会话采纳——§14.3.4 身份核验）+ 降级标记（`degraded: true`——§14.4 D-R4）；创建时写入一次，
+  身份补写/降级置位时重写（小文件；.tmp+rename 原子——修正轮 #1/#6）。
+- 段文件：`seg-000001.jsonl`、`seg-000002.jsonl`…（六位零填充，序从 1 递增；只追加、不回改）。
+- 行 = 一条消息：`JSON.stringify(slimForDisplay(m))`——与槽 JSON `history` 元素**逐字节同形**
+  （投影零转换）。（`slimForDisplay` 自 `session.mjs` 迁入本模块——§14.5 文件表。）
+- 追加过滤（与 saveSession 同源）：跳过 `m.transient` 与 legacy-transient 前缀。
+
+**14.3.2 索引与常量（单源 = `src/session-store.mjs`）**
+
+| 常量 | 值 | 语义 |
+|---|---|---|
+| `RECORD_SEG_MESSAGES` | 100 | 每段消息数（除末段）；绝对序号 i → 段 `seg-{floor(i/100)+1}`、行 `i%100` |
+| `RECORD_WINDOW_MESSAGES` | 200 | 内存窗口（条数——与首屏同值） |
+| `RECORD_DIR_SUFFIX` | `.d` | sidecar 目录后缀 |
+
+- 总条数 `total`：`(段文件数−1)×segSize + 末段行数`；**末段空文件按 0 行计**（轮转后崩溃的现场）。
+- 半行容忍：末段最后一行 JSON 解析失败 → 视为未写完、忽略（读路径逐行容错；不自动修复）。
+- 段不可变不变式：仅末段可追加；轮转 = 末段满 segSize 后下一次追加新建下一段（崩溃在「满未轮转」
+  与「轮转未写」之间都安全——读侧按上述计数规则还原）。
+
+**14.3.3 store 接口（agent 挂载点 = `agent._recordStore`）**
+
+```
+bindRecordStore(agent, { slotFile, identity, baseHistory })  // 绑定 + 身份核验/对账（§14.3.4）——绑定后置 _historyWindow = 200
+store.append(msg)          // pushReal 调用（同步；独立 try/catch——尽力面；失败置 _degraded + 停写）
+store.total()              // 条数（已落盘）
+store.tail(n)              // 尾部 n 条（恢复窗口：只读末段）
+store.page(start, end, { margin = 1 })  // 区间取页 + ±1 页沿（§14.3.6）——返回 { messages, base }
+store.iterate(dir)         // 方向流式迭代（'newest'|'oldest'——read_history 用）
+store.firstUserMessage()   // 标题回退（首条真实 user——段 1 首扫一次并缓存）
+store.counters()           // {total, userReal, firstMessage}
+saveProjectedSlot(agent, p, fields, contextHistory)  // 流式投影 + 原子写（.tmp+rename；语义同 §2.2）；降级态先追赶（D-R4）
+unlinkRecordStore(slotFile)  // 删槽联动（deleteSlot 调用——§14.3.8）
+```
+
+- **依赖方向（修正轮 #7）**：store 零项目内依赖（仅 `node:` 内置）——路径以 `slotFile` 参传入，
+  `session.mjs` / `session-slots.mjs` 单向引 store（`deleteSlot → unlinkRecordStore` 不构成依赖环）。
+
+**14.3.4 绑定与时点（各调用点）**
+
+| 调用点 | 传入 | 说明 |
+|---|---|---|
+| 启动恢复（TUI） | `applySession(agent, data, { slot })`（内部 bind：`slotFile = slotPath(cwd, slot)`、`identity = data.sessionStart`） | bin 已钉槽（`bin/thincoder.mjs:297-310`——`resumeSlot` 恒返槽） |
+| `/session` 切换 | `applySession(agent, data, { slot: e.slot })`——**仅未被他人活进程占用时**；占用 → 不传（模式 F，首保存 fork 后补绑） | `src/tui/cmd-session.mjs:84-100`（含描述符/标签——§14.3.6） |
+| `/new` | `bindRecordStore(agent, { slotFile: slotPath(cwd, slot), identity: agent._sessionStart, baseHistory: [] })`（`newSession` 返回槽后——identity 此时为 null = 待固化） | `src/tui/cmd-new.mjs:9-22` |
+| ACP load/new | 同启动恢复/新建（钉槽路径） | `src/acp.mjs:234/281` · `src/acp/session.mjs:18`（save 走同一 saveSession） |
+| 首保存补绑 | `saveSession` 内 `agent._slot ??= activeSlot(...)` 之后——若未绑定且有槽 → 绑定（baseHistory = 当前 `_fullHistory` 全量；identity = 当前 `agent._sessionStart`） | 兜底所有未覆盖路径 |
+
+**对账规则**（bind 时——**先验身份、后比计数**；修正轮 #1/#6）：
+
+1. **身份核验（先）**：`meta.identity`（会话身份 = `sessionStart`）vs **现场身份**（= `agent._sessionStart`
+   ——恢复/切换后与槽 JSON `sessionStart` 同值；`/new` 后为 null）。两侧**均非空且相等** → 同源进 2；
+   **一侧非空一侧为空、或两侧非空不等** → 陈旧/孤儿 sidecar——**不得采纳**：原目录改名
+   `{slot 文件路径}.d.stale-<epochms>`（现场保留——与 `.bak`/`.corrupted` 同族），按现场重建
+   （物化 `baseHistory`）；两侧**均空**（未固化态）→ 采纳并继续（残余边缘见 §14.8）。
+2. **计数对账（后）**：`meta.degraded` 在场 → **以 JSON 为准重建**（清标记——§14.4 D-R4）；否则段总
+   条数 < `baseHistory.length` → 以 JSON 为准重建整个 sidecar（rm 目录 → 重新物化；覆盖「VSC 端追加
+   过」与「sidecar 缺失」两类）；段总条数 ≥ JSON 条数 → 以段为准（崩溃后未保存消息可见）；两者皆空
+   → 新目录（懒创建）。
+3. **身份固化**：sidecar 创建时写 `meta.identity` = 现场身份（可为 null）；每次 `saveProjectedSlot`
+   时若 `meta.identity` 为空且 `agent._sessionStart` 非空 → 补写。
+
+**14.3.5 数据流（改动后的读写路径）**
+
+```
+写：pushReal(msg) → _fullHistory.push + 窗口驱逐(>200) + agent._recordStore?.append(msg)（磁盘）
+                 → agent.history.push（机器线——不变）
+存：saveSession → 绑定？ → saveProjectedSlot（history = 段流式拼接；contextHistory = 内存）
+                 ；未绑定（模式 F）→ 既有全量物化路径（零回归）
+恢复：loadSlotFile(JSON) → applySession(agent, data, {slot}) → 绑定（身份核验+对账） → _fullHistory = store.tail(200)
+读：read_history（本会话）→ store.iterate（流式，方向/limit 语义不变）
+   TUI 恢复 → store.tail(200) + store.total()（描述符）；翻页 → store.page(绝对区间)
+```
+
+**14.3.6 TUI 分页契约（TUI 侧同源修正——`TUI.md` §7 + §15；修正轮 #4）**
+
+- 恢复描述符（两调用点统一形态——实现后同步 2026-09-12）：`{ history: <尾窗 ≤200 + ±1 页沿头一条
+  （≤201）>, total, base }`——单源 `sessionDescriptor()`（`src/session.mjs:69-78`；两调用点同源）；
+  ①启动路径 `bin/thincoder.mjs:338`（`restored`）→ `startup.mjs:226-230`；②`/session` 切换
+  `cmd-session.mjs:96-104`。`restoreLines(state, desc)` 读 `desc.history` 建窗（头一条 = ±1 页沿——
+  供跨页回合标签判定、不渲染；渲染起点经 `base` 定位 = `history[0]` 绝对序号，缺省按 `total − len`
+  推导）、`desc.total` 记 `_historyTotal`；**「N messages」标签口径 = `total`**（非窗口长度；落点
+  `startup.mjs:228-230` / `cmd-session.mjs:104`）；未绑定回退传全量数组 + `base: 0`（模式 F）。
+- 翻页：锚 = `state._historyTotal`（恢复时点 total；实现复用既有字段——`_historyAnchor` 未落地，
+  不新增状态位；coder 披露 #2）；页区间 = `[anchor − loaded − 20, anchor − loaded)`。
+  **页沿上下文（±1 边界消息）**：`store.page(start, end, { margin = 1 })` 返回 `{ messages, base }`——
+  `messages` = 绝对区间 `[max(0, start−1), min(total, end+1))` 的连续切片、`base` = 切片首条绝对序号；
+  渲染层以局部索引 `historyToLines(messages, start−base, end−base)` 复用既有签名——页前一消息供跨页
+  回合标签判定（`startup.mjs:26-29`）、页后一消息供 tool_result 配对（`:67-69`）；缺 ±1 = 回归
+  「❯ ThinCoder: 标签重复」与页沿工具结果失配。`margin:0` = 精确区间。
+- **顺带修复**：活消息增长不再使 `full.length − loaded` 漂移（§14.1 事实 4）。
+- 页大小 / 滚轮与 PgUp 双入口 / 滚动补偿 / 三层缓存逐条不变（`HISTORY_PAGE_MESSAGES` 20、
+  `INITIAL_HISTORY_MESSAGES` 200）。
+
+**14.3.7 read_history 契约**
+
+- 本会话（无 `path`）：`store.iterate` 流式匹配（`matches` 谓词逐条复用）；`direction=newest` 自尾
+  向前、取满 limit 即止（不物化全量）；输出构造/字段/limit 默认值/上限 200 逐字不变（省略数 N 的
+  语义面见下方 delta 登记）。
+- 跨会话（`path=` / `cwd:`）：**逐字保持**读槽 JSON（投影全量）+ 既有护栏（`READ_HISTORY_SCAN_MAX`
+  200k 行 / `READ_HISTORY_MAX_MESSAGES` 50k）——零改动。
+- **语义 delta 登记**（修正轮 #5——原「逐字不变」的隐藏面）：匹配基准 = **存储文本（slim 后）**——
+  ① 工具结果 >500 字符、工具参数 >300 字符的尾段被 slim 丢弃（`session.mjs:88-98`）——落于丢弃段
+  的 keyword 不再命中（旧实现匹配未瘦身 `_fullHistory`——`read-history.mjs:290`）；② 输出截断省略数
+  N 按存储文本长度计（`read-history.mjs:78-84` 的 `t.length − end`）——对已带 `truncated for storage`
+  标记者 N ≈ 存储标记长，不反映原始丢弃量。修输出层（剥离存储标记/携带原长）需另存原长或回读槽
+  JSON——收益低，**登记不修**；真实丢弃量以存储全文为准。
+- 未绑定（测试/模式 F）：回退内存 `_fullHistory` 过滤（既有实现保留）。
+
+**14.3.8 生命周期与移植**
+
+- 删除：`deleteSlot` → `unlinkRecordStore`（`rmSync(dir, {recursive, force})`——`src/session-slots.mjs:400-415`）。
+- **轮转/改名路径的 sidecar 处理（修正轮 #1）**：① `.bak` 轮转（`guardForeignSlotFile`——
+  `session-guard.mjs:29-35`）对**非本会话活动绑定面**联动改名 sidecar（`{p}.d → {bak}.d`，若存在；
+  「本会话活动绑定面」判据 = `agent._recordStore?.dir === {p}.d`——该情形跳过，防拔掉活动存储）；
+  ② `.corrupted`/`.unreadable` 改名（`session.mjs:186-230`）**不联动**——现场原地保留，该槽 sidecar
+  由身份核验在槽号回收/复用时拒采纳（§14.3.4）；③ **孤儿 sidecar**（对端删除留下的——VSC 不可见/
+  零改动）在 bind 身份核验处被拒并改名 `.stale-*`；stale 在冷目录随 GC。
+- 冷项目 GC：`deleteColdCwd` 对目录项用 `rmSync`（现 `unlinkSync` 对目录静默跳过——`src/session-gc.mjs:151-159`）；
+  `listColdCwds` 的 `files` 仍只计文件（数据文件判定不变）。
+- `/rename`：只改标题（`session-rename.mjs:16-38`）——sidecar 零动作。
+- 目录/阈值无机器特定常量（N-S5）；`_setSessionsDirForTest` 缝可注入测试目录。
+
+### 14.4 关键决策记录（含否决备选）
+
+- **D-R1 存储 = 定长分段 JSONL sidecar**（表 1 候选 3）：`{hash}.json.{N}.d/` + `seg-*.jsonl` +
+  `meta.json`；已写段只读、末段追加。否决：JSON 内窗口化 / 单文件 offset 索引 / 字节触发清单 /
+  全档 offset（表 1）。
+- **D-R2 窗口 = 200 条**（表 2）：与首屏同值；驱逐 = 入窗即 shift。否决 500/1000、字节窗、无窗。
+- **D-R3 投影 = 流式拼接**（表 3）：段行逐字节同形 → 免重序列化；原子写语义与 `writeSessionFile`
+  同族（本模块自带实现 + 指针注释——不引 session-slots 依赖环）。
+- **D-R4 追加 = pushReal 同步；失败 = 降级（失败即停 + 标记 + 追赶）**（表 4；修正轮 #6——原
+  「下次保存对账自愈」表述不成立：投影源 = store，两侧同缺无修复路径）。① append 失败 → `_degraded`
+  置位 + **追加停写**（store 恒为连续前缀——杜绝中段缺口破坏段/行算术与 total 口径）；② store 维护
+  `_memTotal`（pushReal 计数——含未落盘条）：保存时若 `_memTotal > store.total()` 且缺口 ⊆ 窗口容量
+  → 先从窗口**追赶重试**追加（成功即完全恢复）；窗口已滑过缺口 → 不补写（宁停写不写洞）；③ 追赶
+  失败 → 降级保存：投影照 store 前缀 + `meta.degraded` 标记 + stderr 一行诊断；④ 恢复面对账见标记
+  → 以 JSON 为准重建（清标记）。内存窗口外未落盘条不可恢复（尽力面——N-S6；如实登记 §14.8）。
+- **D-R5 投影保持全量（VSC 红线）**：`version` 2 / `history` 全量数组 / `contextHistory` 逐字节
+  保持——VSC 零改动（§14.9）。
+- **D-R6 模式 F（未绑定）零回归**：`_fullHistory` 全量数组 + `saveSession` 旧路径逐字保留——
+  `thincoder chat` / 测试 / 未覆盖路径行为不变。窗口仅在「绑定」或「depth>0 子代理」
+  （子代理面见 `AGENT-LOOP.md` §23）时启用。需求侧范围注同此（`../requirements/SESSION.md` §14.1
+  F-S2 判定句——修正轮 #8）。
+- **D-R7 对账 = 计数比较**（段 vs JSON）：不做逐条校验（成本高、收益低）；同长异容的退化面
+  如实登记（§14.8 边界）。
+- **D-R8 本会话检索走存储、跨会话保持 JSON**：`path=` 换轨收益低（JSON 仍有护栏），并避免
+  「外部 slot 的 sidecar 解释权」扩展面。否决「统一走存储」。
+
+### 14.5 受影响文件全清单（行数口径 = `split("\n").length` 含末行；as-of 2026-09-11；交付实测行注 = 2026-09-12）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/session-store.mjs` | 新 → 442（交付实测） | +280 ± 40 | 全新模块：段 IO / 索引 / 窗口 / 绑定对账 / 投影写 / 流式迭代 / 生命周期。实现后同步（2026-09-12）：越 300 咨询线——登记、不拆（新增档先例——见拆分结论） |
+| `src/session-segments.mjs` | 新 → 101（交付实测） | —（拆分产物） | 段 IO 原语 + 人读线条目形态（`slimForDisplay`/`isLegacyTransient`/`shouldAppend`/`isRealUserMsg`）+ `_storeStats`；store 越 500 硬限后按职责拆出——公开名 re-export、调用面零改（实现后同步 2026-09-12） |
+| `src/session.mjs` | 476 | +8 / −26 → ~458 | `slimForDisplay`/`isLegacyTransient` 迁出（re-export）；saveSession 分支；applySession `{slot}`（bind：`slotFile` + identity——修正轮 #1）；reset 解绑；首保存补绑 |
+| `src/session-slots.mjs` | 490 | +~3 | `deleteSlot` → `unlinkRecordStore`（删除联动——修正轮 #7） |
+| `src/session-guard.mjs` | 48 | +~5 | `.bak` 轮转时 sidecar 联动改名（非活动绑定面——§14.3.8；修正轮 #1） |
+| `src/context.mjs` | 382 | +12 | pushReal：窗口驱逐 + `store.append`（独立 try/catch） |
+| `src/session-gc.mjs` | 215 | +8 | `deleteColdCwd` 目录 `rmSync`（递归删除 sidecar） |
+| `src/agent-tools/read-history.mjs` | 295 | +35 → ~330（越 300 软线——登记；不拆） | 本会话走 `store.iterate`；未绑定回退保留 |
+| `src/generate-title.mjs` | 83 | +4 | 首条 user 回退 `store.firstUserMessage()` |
+| `bin/thincoder.mjs` | 406 | +8 | `applySession(…, {slot})`；`restored` 描述符（尾窗+total） |
+| `src/tui/startup.mjs` | 266 | +25 → ~291（近 300——登记） | `restoreLines(state, desc)`（`desc = {history, total, base}`——§14.3.6）；`createLoadOlder` 存储读 + 绝对锚 + ±1 页沿（修正轮 #4） |
+| `src/tui/index.mjs` | 455 | +4 | 接线（描述符/初始值） |
+| `src/tui/cmd-session.mjs` | 103 | +6 | 切换绑定（占用分支不绑）+ 描述符 `{history, total, base}` 与标签 total（§14.3.6；修正轮 #4） |
+| `src/tui/cmd-new.mjs` | 34 | +3 | `/new` 绑定空 base |
+| `src/acp.mjs` | 448 | +6 | load/new 绑定（钉槽路径） |
+| `test/session-store.test.mjs` | 新 | +280 ± 40 | 用例表 1:1（快层——temp 目录注入） |
+| `test/integration/session-resume.test.mjs` | 156 | +30 | 端到端：恢复→翻页→检索→保存 往返 |
+
+> 拆分结论：全部触碰档 ≤500 硬限；`read-history.mjs`（~330）与 `startup.mjs`（~291）越 300 咨询线
+> ——单点追加、不拆（先例 §12.3）。`session-store.mjs`（交付 442——实现后同步 2026-09-12）越 300
+> 咨询线——登记、不拆（新增档先例：本批新档单点开档、职责单一；越 500 硬限时已按职责拆出
+> `session-segments.mjs`（交付 101），余部为 store 核心）。`session-slots.mjs`（490）**+~3**——仅
+> `deleteSlot` 一行 `unlinkRecordStore` 调用（删除联动——修正轮 #7）；**原子写实现仍放 store 模块内**
+> （store 零项目内依赖——路径经 `slotFile` 传入，避免依赖环；语义指针注明同族）。
+
+### 14.6 用例表（正常 / 边界 / 错误——映射需求号）
+
+| # | 层 | 场景 | 输入 | 预期输出 | 回指 |
+|---|---|---|---|---|---|
+| T-RS1 | 快层 unit | 追加与计数 | 空 store 追加 250 条（3 段） | `total()==250`；`seg-000001` 100 行、`seg-000003` 50 行；`tail(200)` = 第 51–250 条且逐条相等 | F-S1/F-S2 |
+| T-RS2 | 快层 unit | 窗口驱逐 | 模拟 pushReal 300 条 | `_fullHistory.length == 200` 且为最新 200；`store.total()==300` | F-S2/N-S1 |
+| T-RS3 | 快层 unit | 取页（含 ±1 页沿） | total=250：`page(30,50)`（默认）/ `margin:0` 变体 | 默认：含 ±1 页沿的连续切片（第 29–50 条、`base=29`）；`margin:0`：第 30–49 条（跨段边界正确） | F-S3 |
+| T-RS4 | 快层 unit | 重建对账（JSON 更长） | sidecar 50 条 + baseHistory 120 条 | 目录重建；total==120；旧段文件不再存在 | F-S5 |
+| T-RS5 | 快层 unit | 对账（段更长） | sidecar 130 条 + baseHistory 120 条 | 不重建；total==130；恢复窗口 = 段尾部 | F-S5 |
+| T-RS6 | 快层 unit | 半行容忍 | 末段尾行截断的 JSON | 读取忽略尾行；total 少 1；不抛 | F-S5（错误） |
+| T-RS7 | 快层 unit | 投影逐字节 | 与旧实现同输入的对照 | `history` 数组内容与旧实现（slim 全量）逐条相等；`version==2` | N-S3 |
+| T-RS8 | 快层 unit | 流式检索 | total=500，keyword 命中 3 条（含窗口外） | newest：恰 3 条、序正确；oldest：同集反序；limit 语义不变 | F-S4 |
+| T-RS8b | 快层 unit | 长内容检索（delta 登记） | 工具结果 2,000 字符：keyword 仅在 900 字符处（>500）／仅在 100 字符处 | 900 处：不命中（存储文本截断——delta 登记）；100 处：命中（省略数 N 按存储文本计） | F-S4（delta） |
+| T-RS9 | 快层 unit | 删除联动 | `deleteSlot` | sidecar 目录不存在；`session gc --confirm` 清冷前缀后不存在 | F-S6 |
+| T-RS10 | 集成 | 恢复→翻页→检索→保存 | 真实槽文件 + 200+ 条 | 恢复尾窗 200 + 标签 = total（非窗口长）；翻页至最早（跨页回合标签不重复、页末 tool_result 配对不破）；read_history 命中窗口外；保存后 JSON `history` 全量、sidecar total 不缩 | F-S3/F-S4/S5 |
+| T-RS11 | 快层 unit | 未绑定模式 F | 无 store 的 agent | pushReal 全量数组 + 旧保存路径逐字（负断言：无 sidecar 写入） | D-R6/N-S2 |
+| T-RS12 | 快层 unit | 身份核验（陈旧/孤儿拒绝） | sidecar `meta.identity=S1`（含段）+ 现场身份 S2（或 null） | 不采纳：total = JSON 条数；原目录改名 `{slot}.d.stale-<ts>`；旧内容零进入（修正轮 #1） | F-S5 |
+| T-RS13 | 快层 unit | 身份固化 | 全新 sidecar + 首次保存（`agent._sessionStart=S1`） | `meta.identity` 补写 = S1；再 bind（现场 S1）→ 采纳对账（段≥JSON 语义不变——修正轮 #1） | F-S5 |
+| T-RS14 | 快层 unit | 降级（失败即停/追赶/标记/重建） | 只读目录注入 append 失败 → 恢复可写；另组持续失败 | 失败不抛 + `_degraded` + 段内容冻结（无新行——负断言）；保存→追赶成功（`_degraded` 清）；持续失败→ `meta.degraded`；bind 见标记 → 以 JSON 为准重建（清标记——修正轮 #6） | N-S6 |
+
+### 14.7 验收标准（逐条回指需求——每条可机器验证）
+
+| AC | 回指 | 判据（机验） |
+|---|---|---|
+| AC-RS1 | F-S1 | T-RS1 绿（段/行结构 + append-only 不变式）；pushReal 为唯一追加点（grep：`append(` 单调用点） |
+| AC-RS2 | F-S2/N-S1 | T-RS2 绿；`RECORD_WINDOW_MESSAGES` 单源且 = 200 |
+| AC-RS3 | F-S3 | T-RS3/T-RS10 绿（含 ±1 页沿与滚动补偿）；翻页只经 `store.page`（grep startup.mjs 无 `full.length`） |
+| AC-RS4 | F-S4 | T-RS8/T-RS8b/T-RS10 绿；跨会话 path= 分支零 diff（对照既有 read-history 用例） |
+| AC-RS5 | F-S5 | T-RS4/T-RS5/T-RS6/T-RS12/T-RS13 绿（身份核验先于计数对账） |
+| AC-RS6 | F-S6 | T-RS9 绿 |
+| AC-RS7 | N-S2 | 既有族全绿：`test/integration/session-resume.test.mjs` + `test/read-history-guard.test.mjs` + `test/acp-channel.test.mjs` + 快层全量 |
+| AC-RS8 | N-S3 | T-RS7 绿 + `version`/`contextHistory` 字段断言（VSC 兼容面） |
+| AC-RS9 | N-S4 | T-RS10 中恢复只读末段（注入计数：bind 后段读次数 ≤ 2） |
+| AC-RS10 | N-S5/N-S6 | 常量 grep 单源；T-RS14 绿（失败即停/追赶/标记/重建四断言——修复路径 = 追赶重试或 bind 重建，非「下次保存对账自愈」；修正轮 #6） |
+
+### 14.8 边界（本批不做）与登记项
+
+- 不做：机器线跨保存点的崩溃恢复（机器线仍受保存时点约束——如实边界）；sidecar 的压缩/清理
+  策略（与槽文件同生命周期；`session gc` 兜底）；同长异容对账（D-R7）；跨端 sidecar 协议；
+  `thincoder chat` 的会话化。
+- 登记（修正轮 #1/#6）：身份均空（未固化）× 人为删槽文件的残余边缘——孤儿 sidecar 无法与「本会话
+  未保存现场」区分（按采纳处理）；stale/孤儿目录在活跃目录保留现场（冷目录随 GC——`deleteColdCwd`）；
+  降级后内存窗口外未落盘条不可恢复（尽力面——D-R4④）。
+- 登记项（转 `docs/TODO.md` 技术待办——主 agent 落档）：C5 `/undo` 快照字节上限；C6 `_advisorRuns`
+  逐实例回收；C7 小容器族（`_asyncTombstones`/`turnControllers`/`frozenSubKeys`/capturedConsole）。
+
+### 14.9 VSC parity 影响评估（本批 CLI 单端——评估非改动）
+
+- **读面**：VSC `loadSlot` 读 `history`/`contextHistory` 全量——本批 CLI 投影保持全量数组与
+  version 2 → **零可见变化**；sidecar 不进入 VSC 枚举面（GC 后缀表 / 发现正则 / 迁移重命名均
+  不匹配——VSC 勘察 Q6）。
+- **写面**：VSC 继续全量覆写槽 JSON（F2 轮转守卫 `disk.history.length > data.history.length`）——
+  CLI 侧对账规则（§14.3.4）保证下次 CLI 绑定时：身份匹配 → 以更长者为基准（采纳或重建）；
+  身份不匹配（对端新会话占用同槽）→ 拒采纳重建（sidecar 随现场改名——修正轮 #1）。
+- **登记（另案）**：VSC 若日后要共享同一「磁盘为准 + 窗口」机制，其读面须改 sidecar 协议；
+  本批不做（`MULTI-END` 级变更）。
+
+### 14.10 物证回填钩（同事报告到达后归因回填——写明落点）
+
+- 物证 = 同事回传的 Node 诊断报告 JSON（`report.*.json`）+ `tui-stderr-*.log`（取证批已固化）。
+- **回填落点**：① 本节 §14.1 表追加「物证归因」行——判定主导项（爬升型 = C1/C2 类结构性无界；
+  尖峰型 = C4 类在途拷贝；两型并存则排序）；② 若主导项超出本批 A/B 档设计面 → 以该行证据打回
+  主 agent 立项（C 档扩容或新批）；③ 批次档 §6 收口行同步（父侧）。
+- 回填时机：物证到达当日（Docs Capture the Conversation）。

@@ -12,6 +12,8 @@
 
 import { C } from "./ansi.mjs"
 import { closeOpenSubChildren } from "./subagent-children.mjs"
+// TUI-OOM-ROOTCAUSE（TUI.md §15.3.3 落点表末行）：state.lines 总量账——splice 插入路径过账。
+import { accountLine } from "./display-budget.mjs"
 
 // ─── §19.6 D-P1 面板视图（subagent panel 检查工具）───
 // CLI-ACTIVITY-DEBLOAT F-3：面板区块列表由消费面**读时现算**（action:"panel" 经
@@ -84,9 +86,13 @@ export function freezeSubTaskLines(state, sub) {
   sub.done = true
   sub.doneAt = sub.doneAt ?? Date.now()
   const anchor = sub._freezeAt ?? state.lines.length
-  state.lines.splice(Math.min(anchor, state.lines.length), 0, {
+  const line = {
     text: `subagent activity: ${sub.key}`, color: C.dim, _frozenSubTask: sub,
-  })
+  }
+  state.lines.splice(Math.min(anchor, state.lines.length), 0, line)
+  // TUI-OOM-ROOTCAUSE（TUI.md §15.3.3 落点表末行「冻结子代理 splice 插入——经
+  // syncLineBudget 同款对账」）：冻结行进 state.lines 总量账（splice 插入路径）。
+  accountLine(state, line)
 }
 
 /** 头裁锚点校正（index.mjs pushLine 调用）：裁 removedCount 补 1 标记行 = 净位移

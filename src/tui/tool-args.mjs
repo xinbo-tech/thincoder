@@ -12,6 +12,7 @@
  * 全量必须落行）。
  */
 import { sliceByWidth } from "./render.mjs"
+import { capLines, ARGS_JSON_MAX_CHARS } from "./display-budget.mjs"
 
 /** 单行参数摘要：按工具挑关键字段（vscode 卡片头对齐），未知工具回退 JSON。 */
 export function describeToolArgs(name, args) {
@@ -74,8 +75,10 @@ export function describeToolArgs(name, args) {
 }
 
 /** 恢复路径用：全量参数 pretty JSON 的 dim 行（非空才输出）。
- *  与工具结果的恢复惯例一致——完整落行，超长由连续 dim 折叠收纳。 */
+ *  与工具结果的恢复惯例一致——完整落行；**总量额度**（TUI-OOM-ROOTCAUSE §15.3.1
+ *  ARGS_JSON_MAX_CHARS——`write`/`apply_patch` 整文件内容进显示层的堵口）：超出尾截断
+ *  + 标记，首行保真。 */
 export function toolArgsLines(args) {
   if (!args || typeof args !== "object" || Object.keys(args).length === 0) return []
-  return JSON.stringify(args, null, 2).split("\n")
+  return capLines(JSON.stringify(args, null, 2).split("\n"), ARGS_JSON_MAX_CHARS)
 }

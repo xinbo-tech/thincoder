@@ -393,5 +393,11 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   // INPUT-LOCK-ASYNC（C'——F-3）：busy（processing 含 digest）状态栏提示——取代旧
   // 排队提示（F-7 已删）——“主会话处理中——Enter 提交禁用”
   const enterHint = state.processing ? `主会话处理中 — Enter 提交禁用（字符可输入，回合结束请重按 Enter）` : "Enter: send"
-  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+  // LEDGER-SURFACE（§2.30.3.3/§2.30.3.4）：L1 常驻标记——状态段簇尾（scrollHint 后、键位组前）；
+  // 空标记零注入（半态逐字节等价——同 :233-238 纪律）；warn = 当前项目老化 > 0（警示色段包裹）
+  const lg = state.ledger
+  const ledgerHint = lg?.marker
+    ? ` │ ${lg.warn ? `${ansi.reset}${C.warn}${lg.marker}${ansi.reset}${ansi.dim}` : lg.marker}`
+    : ""
+  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }

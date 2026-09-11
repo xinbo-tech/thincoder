@@ -1,4 +1,4 @@
-import { newSession, resetSessionState } from "../session.mjs"
+import { newSession, resetSessionState, bindRecordStore, slotPath } from "../session.mjs"
 import { C } from "./ansi.mjs"
 
 /** /new command: start a new session in a fresh slot.
@@ -14,8 +14,12 @@ export async function handleNewCommand(ctx) {
     // slot（实锤 .19/.3 双副本）。_slot 更新为粘性新槽位。
     resetSessionState(agent)
     agent._slot = slot
+    // §14.3.4：/new 绑定新槽记录存储（baseHistory 空——identity 此时为 null = 待固化；
+    // 首次保存/首条追加时补写现场身份）
+    bindRecordStore(agent, { slotFile: slotPath(agent.cwd, slot), identity: agent._sessionStart ?? null, baseHistory: [] })
     state.tasks = []
     state.lines = []
+    state._linesChars = 0 // TUI-OOM-ROOTCAUSE（§15.3.2）：行集清空 → 字符账同步归零
     state.streaming = ""
     render()
     pushLine(`New session started (slot ${slot}; /session to switch back)`, C.dim)

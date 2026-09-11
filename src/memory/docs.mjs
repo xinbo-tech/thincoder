@@ -5,6 +5,7 @@
 import { readFile, stat } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
+import { scanVectors, createTopK } from "./scan.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
 import { MAX_DOC_FILE_BYTES } from "./schema.mjs"
 import { buildFtsQuery, put, search, putMarkdown, clearPersonal, EMBED_TEXT_MAX_LEN } from "./core.mjs"
@@ -109,11 +110,12 @@ export async function docSearch(memory, query, { limit = 5 } = {}) {
     console.error(`[docs] query embedding failed, falling back to FTS-only: ${e.message}`)
     return ftsList.slice(0, limit)
   }
-  const rows = memory.db.prepare(`SELECT rowid, embedding FROM doc_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`).all(...originParams)
-  const vecList = rows
-    .map((r) => ({ rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, Math.max(limit * 4, 20))
+  // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all()——峰值 = 块 + K）
+  const top = createTopK(Math.max(limit * 4, 20))
+  scanVectors(memory.db, `SELECT rowid, embedding FROM doc_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
+    onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
+  })
+  const vecList = top.list().map((c) => ({ rowid: c.id, score: c.score }))
 
   const K = 60
   const scores = new Map()

@@ -15,6 +15,8 @@ import {
   readonlyToolNames, escapeXml,
 } from "../agent.mjs"
 import { makeRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
+// TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口常量单源（store 零依赖）。
+import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
@@ -338,6 +340,10 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     overlay,
     role,
   })
+  // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §23.3.1）：子代理人读线窗口置位（常量单源
+  // session-store.mjs）——机制复用主 agent 同路径（context.mjs pushReal 驱逐）；
+  // 每个 child 原先各自一份永不压缩的 _fullHistory（勘察 C2 乘数面）。
+  child._historyWindow = RECORD_WINDOW_MESSAGES
 
   // §2.20.2 批次档段写入通道绑定（第 4 批）：工程角色（eng-coder/eng-designer）把批次档
   // 绝对路径记在 child 上——setup 挂载 batch_segment 时读它。无路径参数的工具靠这条

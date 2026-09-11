@@ -146,6 +146,9 @@ keepTail = min(max(10, floor(context/100_000 × 30)), floor(len × 0.4))
 - CLI：`pushReal` 源头双写；压缩只动机读线。
 - VS Code：调用方经 `opts.history`/`opts.fullHistory` 传入；`compactHistory` 只处理机读线。
 - 会话持久化：CLI `saveSession` 写 `history`+`contextHistory`、`applySession` 机读线从 `contextHistory` 恢复；VS Code `saveMessages(msgDir, name, messages, contextHistory)` 双字段。保持不变。
+- **人读线内存表示修订（2026-09-11，TUI-OOM-ROOTCAUSE 批）**：「人读线全量」指**记录/落盘语义**
+  （完整记录在盘、压缩不触）；运行期内存 = 有界窗口（磁盘为准 + 内存窗口）——机制权威见
+  `SESSION.md` §14。本节其余语义（压缩只动机读线）逐字不变。
 
 ### 6.3 压缩前 checkpoint（D8）——已移除
 
@@ -294,6 +297,8 @@ prompt 措辞（建议）：When over budget, trim in this order: completed reca
 
 ## 变更记录
 
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批）：§6.2 增补「人读线内存表示修订」行（全量 = 记录/落盘语义；
+  内存窗口机制指 `SESSION.md` §14）；零机制语义变化。
 - 2026-08-03：立项与两端首轮统一落地（决策 D1–D12、行为契约、CLI C1–C6 + VS Code V1–V9 清单）——原 §3 两端落地清单已核销，机制收敛为本文档主题正文。
 - 2026-08-23：新增探索结果语义摘要 + 压缩保真（H1/H2，两端 `summarizeRunExplorations` 落地）；parity 说明（reverse 保护 / SUMMARIZE_PROMPT 措辞）评审定稿。
 - 2026-09-02：用户拍板三项——压缩面板（Q2/Q3 进度感知 + 失败可见性）、摘要 ≤1K 目标（D13）、tail 按 token 预算 ≤15%（D-T1/D-T2，含 D4 公式改判"候选条数"语义并移挂预算约束、D12 COMPLETED vs IN-PROGRESS 句在 VS Code 端补齐）。两端实现 + 测试全绿；VS Code 端以 CLI 为准移植。

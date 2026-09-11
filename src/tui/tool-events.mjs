@@ -24,6 +24,7 @@ import {
   SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
   routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
+  shiftFreezeAnchors,
 } from "./subagent-blocks.mjs"
 // 第 27 批 §12.3②：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
 import { RELAY_PREFIX_RE } from "../agent/relay-prefix.mjs"
@@ -34,14 +35,42 @@ import {
   TOOL_OUTPUT_LINE_CAP, REMINDER_CAP, REMINDER_PERSIST_TURNS,
   _toolTicks, _subActions, _subActionQ,
   tickStart, tickTake, settleToolBlock, isAsyncSpawnResult, isSpawnErrorResult,
-  findToolBlock, slimToolResultForDisplay, sweepToolBlocks,
+  findToolBlock, findToolLine, slimToolResultForDisplay, sweepToolBlocks,
 } from "./tool-display.mjs"
 export { sweepToolBlocks, slimToolResultForDisplay } from "./tool-display.mjs"
+// TUI-OOM-ROOTCAUSE（TUI.md §15.3.1/§15.3.3）：显示层额度（行/载体/输出环/评审/流式）。
+import {
+  capText, capLine, capLines, appendCapped, capAdvisorText, accountLine, syncLineBudget,
+  LINE_TRUNC_MARKER, MIDDLE_TRUNC_MARKER, ADVISOR_CAP_OPTS, STREAM_CAP_OPTS,
+  TOOL_OUTPUT_ENTRY_MAX_CHARS, TOOL_OUTPUT_TOTAL_MAX_CHARS, ADVISOR_TEXT_MAX_CHARS,
+} from "./display-budget.mjs"
+
+/** 输出环字符维总量（§15.3.1 TOOL_OUTPUT_TOTAL_MAX_CHARS——与 200 条目环同款丢最旧）。 */
+function trimOutputChars(block) {
+  let total = 0
+  for (const s of block.output) total += s.length
+  while (total > TOOL_OUTPUT_TOTAL_MAX_CHARS && block.output.length > 0) {
+    total -= block.output.shift().length
+  }
+}
 
 /** Build the agent callbacks + the shared flushStream for one turn.
  *          askPermission, askQuestion, saveSessionImpl } */
 export function buildToolCallbacks(deps) {
   const { agent, state, pushLine, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, saveSessionImpl } = deps
+  // 行集总量对账便捷式（§15.3.3——冻结锚点平移交 subagent 族函数）
+  const budgetSync = () => syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
+  /** Advisor 有序块累积 + 额度（§15.3.1 ADVISOR_TEXT_MAX_CHARS——头 32K/尾 96K/中段标记）。 */
+  const pushAdvisorChunk = (raw, kind) => {
+    const blocks = state._advisorBlocks ??= []
+    const last = blocks.at(-1)
+    if (last && last.kind === kind) last.text = appendCapped(last.text, raw, ADVISOR_CAP_OPTS)
+    else blocks.push({ kind, text: appendCapped("", raw, ADVISOR_CAP_OPTS) })
+    // 多块总量：丢最旧块直至 ≤ 额度（裁决尾部优先）
+    let total = 0
+    for (const b of blocks) total += b.text.length
+    while (total > ADVISOR_TEXT_MAX_CHARS && blocks.length > 1) total -= blocks.shift().text.length
+  }
   // NOTE: advisor buffers (_advisorThink/advisorStreaming) are cleared here too.
   // Timing safety: onToolResult flushes _advisorThink into history and empties
   // the buffers BEFORE onTurnEnd can call flushStream (tool result is
@@ -69,7 +98,7 @@ export function buildToolCallbacks(deps) {
       // block content, never the main stream (D1). Routing details in subagent-blocks.
       if (routeSubToken(state, t, scheduleRender)) return
       ensureAssistantLabel()
-      state.streaming += t
+      state.streaming = appendCapped(state.streaming, t, STREAM_CAP_OPTS) // §15.3.1 STREAM_MAX_CHARS
       scheduleRender()
     },
     onReasoning: (t) => {
@@ -77,7 +106,7 @@ export function buildToolCallbacks(deps) {
       // buffer as kind=think (F2: same treatment as the main reasoning stream).
       if (routeSubReasoning(state, t, scheduleRender)) return
       ensureAssistantLabel()
-      state.reasoning += t
+      state.reasoning = appendCapped(state.reasoning, t, STREAM_CAP_OPTS) // §15.3.1 STREAM_MAX_CHARS
       scheduleRender()
     },
     onToolCall: (name, args, toolId) => {
@@ -139,6 +168,8 @@ export function buildToolCallbacks(deps) {
           done: false,
         },
       })
+      accountLine(state, state.lines[state.lines.length - 1]) // 载体入总量账（§15.3.4）
+      budgetSync()
       tickStart(name, toolId)
     },
     // §7.2.3（方案 e）：dispatch runOne 把工具 ctx 上的 _subagentKey（sync spawn/
@@ -236,11 +267,13 @@ export function buildToolCallbacks(deps) {
           // screen of garbage (user report 2026-08-30). The model gets the image
           // via the multimodal channel (agent.mjs), the human needs only the
           // text part: strip image parts from the displayed result.
-          block.result = slimToolResultForDisplay(result)
+          block.result = slimToolResultForDisplay(result) // §15.3.1 RESULT 额度（行 400 + 字符 64K 双维）
           block.summary = formatToolSummary(name, result)
           block.done = true
           const started = tickTake(name, toolId)
           block.elapsed = started !== null ? Math.round(performance.now() - started) : null
+          accountLine(state, findToolLine(state, name, toolId)) // 载体原地变更 → 重新入账
+          budgetSync()
         }
       }
       if (name === "advisor") {
@@ -255,17 +288,22 @@ export function buildToolCallbacks(deps) {
         // _advisorBlocks keep rendering the running view until cleared at turn end.
         const blocks = state._advisorBlocks ?? []
         if (blocks.length > 0) {
-          const text = blocks
+          // 冻结文本额度（§15.3.1：头 32K + 尾 96K 保裁决尾部 + 中段标记——非静默截断，
+          // 代码评审 #3：capLines(...)[0] 会丢标记且截尾）
+          const text = capAdvisorText(blocks
             .map((b) => b.text.replaceAll(ADVISOR_THINKING_PLACEHOLDER, ""))
             .join("")
             .replace(/\n{3,}/g, "\n\n")
-            .trim()
+            .trim())
           if (text) {
-            state.lines.push({
+            const line = {
               text: "advisor review",
               color: C.dim,
               _frozenAdvisor: text,
-            })
+            }
+            state.lines.push(line)
+            accountLine(state, line)
+            budgetSync()
           }
         }
       }
@@ -298,25 +336,26 @@ export function buildToolCallbacks(deps) {
         const isString = typeof chunk === "string"
         const raw = isString ? chunk : String(chunk?.text ?? "")
         const kind = isString ? "text" : (chunk?.kind ?? "text")
-        const blocks = state._advisorBlocks ??= []
-        const last = blocks.at(-1)
-        if (last && last.kind === kind) last.text += raw
-        else blocks.push({ kind, text: raw })
+        pushAdvisorChunk(raw, kind) // §15.3.1 累积额度（多块丢最旧）
         scheduleRender()
         return
       }
       // Append into the CURRENT tool block's output buffer (the block is the
       // display; no _live scroll lines anymore). N2-style cap keeps memory
-      // bounded: keep the LAST 200 output lines per call.
+      // bounded: keep the LAST 200 output lines per call; 字符维双维
+      // （§15.3.1：单条目 ≤ TOOL_OUTPUT_ENTRY_MAX_CHARS、总量 ≤ TOOL_OUTPUT_TOTAL_MAX_CHARS 丢最旧）。
       const block = findToolBlock(state, name, toolId)
       if (block) {
         for (const line of part.text.split("\n")) {
           const trimmed = line.trimEnd()
-          if (trimmed) block.output.push(trimmed)
+          if (trimmed) block.output.push(capText(trimmed, { max: TOOL_OUTPUT_ENTRY_MAX_CHARS, keepHead: 6_000, keepTail: 2_000, marker: MIDDLE_TRUNC_MARKER }))
         }
         if (block.output.length > TOOL_OUTPUT_LINE_CAP) {
           block.output.splice(0, block.output.length - TOOL_OUTPUT_LINE_CAP)
         }
+        trimOutputChars(block)
+        accountLine(state, findToolLine(state, name, toolId))
+        budgetSync()
       }
       scheduleRender()
     },

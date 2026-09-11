@@ -17,6 +17,7 @@
 import { specForModel } from "../config.mjs"
 import { ContinueError } from "../agent.mjs"
 import { relayPrefixOf } from "./relay-prefix.mjs"
+import { appendCappedText } from "../text-budget.mjs"
 // 第 27 批 §12.3①：relay 前缀文法单一权威模块（`src/agent/relay-prefix.mjs`）——
 // 生成侧枢纽再导出（TUI/ACP 消费方可经此导入；消费方按 §12.3① 直连模块亦可）。
 export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.mjs"
@@ -162,6 +163,18 @@ export function emitNestedChildEvent(ctx, relayPrefix, kind) {
   return true
 }
 
+/** 捕获额度（TUI-OOM-ROOTCAUSE——AGENT-LOOP.md §23.3.1 表 1 候选 1：滞后水位截断）：
+ *  `_capturedOutput` 是子代理流式文本的第二份全量拷贝（原无上限——勘察 C2）；超 hard 即
+ *  裁至头 16K + 标记 + 尾 48K（摊还 O(1)）——消费面读时已各自 slice(0, 2000/4000)，头尾
+ *  保真覆盖；停止报告内联场景出现截断标记（可断言——D-SM1）。纯函数本体住
+ *  src/text-budget.mjs（与 TUI 面共用——D2 单源）。 */
+export const CAPTURE_CAP_OPTS = {
+  hard: 131_072,
+  head: 16_384,
+  tail: 49_152,
+  marker: "… [captured output truncated: N chars omitted] …",
+}
+
 /**
  * 子 agent provider API key 检查：trim 后非空才保留；缺失返回 null（调用方
  * 按各自业务语汇报错——subagent 抛出 / escalate·consult 返回 Error 文本）。
@@ -207,9 +220,11 @@ export async function runWithContinue(runner, child, input, callbacks, runOpts, 
   // Review #4 fix: strip sentinel/control chars from the capture — `output` feeds
   // onDeclined's partial-output return, which lands in the PARENT LLM history where
   // the display-layer sanitizeDisplay backstop does not apply.
+  // TUI-OOM-ROOTCAUSE（§23.3.1）：捕获滞后水位截断——超 CAPTURE_CAP_OPTS.hard 裁至
+  // 头 + 标记 + 尾（_capturedOutput 有界；续跑同闭包累积，语义一致）。
   const capture = callbacks?.onToken
-    ? (t) => { output += stripEventTokensForCapture(String(t)); child._capturedOutput = output; callbacks.onToken(t) }
-    : (t) => { output += stripEventTokensForCapture(String(t)); child._capturedOutput = output }
+    ? (t) => { output = appendCappedText(output, stripEventTokensForCapture(String(t)), CAPTURE_CAP_OPTS); child._capturedOutput = output; callbacks.onToken(t) }
+    : (t) => { output = appendCappedText(output, stripEventTokensForCapture(String(t)), CAPTURE_CAP_OPTS); child._capturedOutput = output }
   // §27 R23 D-R23c1（评审 🔴 修复——2026-09-07）：capture 是子代理 runAgent/dispatch ctx
   // 实际收到的 onToken——嵌套 wrapper 标记（wrapChildCallbacks `_relayPrefix`）必须随
   // capture 透传，否则 eng-coder 内 explore 同步收尾的 emitNestedChildEvent 判定恒 false

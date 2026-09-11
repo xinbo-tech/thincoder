@@ -19,7 +19,7 @@
  * import，启动钩子（session.mjs resumeSlot 包装）只一行调用。
  */
 
-import { readdirSync, readFileSync, statSync, unlinkSync, existsSync } from "node:fs"
+import { readdirSync, readFileSync, statSync, unlinkSync, existsSync, rmSync } from "node:fs"
 import { join, dirname, basename } from "node:path"
 import { configDir } from "./config.mjs"
 import { sessionPath, isProcessAlive } from "./session-slots.mjs"
@@ -153,7 +153,14 @@ export function deleteColdCwd(hash, { dir = sessionsDir(), now = Date.now(), ali
   if (!target) return { ok: false, reason: "not-cold", deleted: [] }
   const deleted = []
   for (const name of target.files) {
-    try { unlinkSync(join(dir, name)); deleted.push(name) } catch { /* 占用/竞态——跳过 */ }
+    const p = join(dir, name)
+    try {
+      // §14.3.8（TUI-OOM-ROOTCAUSE）：目录项（记录存储 sidecar `{prefix}.N.d`）递归删——
+      // 现 unlinkSync 对目录静默跳过（旧实现漏删 sidecar）；数据文件维持 unlink。
+      if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true })
+      else unlinkSync(p)
+      deleted.push(name)
+    } catch { /* 占用/竞态——跳过 */ }
   }
   return { ok: true, deleted }
 }

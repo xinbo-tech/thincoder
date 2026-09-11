@@ -16,8 +16,9 @@ import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { createAgent } from "../../src/agent.mjs"
 import { pushReal } from "../../src/context.mjs"
-import { saveSession, resumeSlot, applySession, newSession } from "../../src/session.mjs"
+import { saveSession, resumeSlot, applySession, newSession, sessionDescriptor } from "../../src/session.mjs"
 import { repairHistory } from "../../src/agent/helpers.mjs"
+import { restoreLines, createLoadOlder } from "../../src/tui/startup.mjs"
 import { _setSessionsDirForTest, _resetSessionsDirForTest, slotPath } from "../../src/session-slots.mjs"
 
 const __here = dirname(fileURLToPath(import.meta.url))
@@ -152,4 +153,107 @@ test("④ 错误：损坏会话档 → 真子进程恢复 —— 干净回退 + 
   relay(fresh, { role: "user", content: "after recovery" })
   saveSession(fresh)
   assert.ok(readdirSync(sessionsDir).length > 0, "回退后的会话照常落盘")
+})
+
+// ── T-RS10（TUI-OOM-ROOTCAUSE 组 1——SESSION.md §14.6）：恢复→翻页→检索→保存 往返 ──
+test("④ 正常（T-RS10）：磁盘为准 + 内存窗口——尾窗/total、翻页页沿、窗口外检索、保存不缩", async (t) => {
+  const cwd = mkdtempSync(join(tmpdir(), "tc-int-sess-win-"))
+  t.after(() => { try { rmSync(cwd, { recursive: true, force: true }) } catch { /* ignore */ } })
+  const agent = mkAgent(cwd)
+  // 100 回合 × 3 消息（user / assistant+tool_call / tool）——页沿会落在回合中段
+  const TURNS = 100
+  for (let k = 0; k < TURNS; k++) {
+    relay(agent, { role: "user", content: `turn-${k}` })
+    relay(agent, { role: "assistant", content: null, tool_calls: [{ id: `call_${k}`, type: "function", function: { name: "read", arguments: JSON.stringify({ path: `f${k}` }) } }] })
+    relay(agent, { role: "tool", tool_call_id: `call_${k}`, content: `result-${k}` })
+  }
+  const TOTAL = TURNS * 3
+  assert.equal(agent._fullHistory.length, TOTAL)
+  saveSession(agent)
+  assert.equal(JSON.parse(readFileSync(slotPath(cwd, agent._slot), "utf8")).history.length, TOTAL, "保存：JSON history 全量")
+  assert.equal(agent._recordStore.total(), TOTAL, "保存：sidecar total 不缩")
+
+  // 恢复（真槽文件 → applySession 钉槽 → 绑定）
+  const { slot, data } = resumeSlot(cwd)
+  const first = mkAgent(cwd)
+  applySession(first, data, { slot })
+  assert.equal(first._fullHistory.length, 200, "恢复：人读线 = 尾窗 200")
+  assert.equal(first._recordStore.total(), TOTAL)
+  const desc = sessionDescriptor(first, data)
+  assert.equal(desc.total, TOTAL, "描述符 total = 绝对总条数（标签口径）")
+
+  // TUI 恢复（最小 state——真 restoreLines/loadOlder）
+  const state = {
+    lines: [], expandedBlocks: new Set(), _foldScroll: new Map(), foldEnabled: true,
+    streaming: "", reasoning: "", search: null, tokens: {}, scroll: 0,
+    dims: { get: () => ({ cols: 80, rows: 24 }) },
+  }
+  restoreLines(state, desc)
+  assert.equal(state._historyTotal, TOTAL)
+  assert.equal(state._historyLoaded, 200)
+  assert.equal(state._hasOlder, true)
+  assert.equal(state.lines.filter((l) => l.text === "❯ ThinCoder:").length >= 1, true)
+
+  const loadOlder = createLoadOlder({ agent: first, state, render: () => {} })
+  let guard = 0
+  const addedFor = (fn = loadOlder) => {
+    const before = new Set(state.lines)
+    fn()
+    return state.lines.filter((l) => !before.has(l))
+  }
+  const summarize = (added) => ({
+    labels: added.filter((l) => l.text === "❯ ThinCoder:").length,
+    userLabels: added.filter((l) => l.text === "❯ You:").length,
+    tools: added.filter((l) => l._toolBlock).map((l) => l._toolBlock.result !== null),
+  })
+
+  // 对照组：模式 F（未绑定——全量数组）同页序列 = 零回归基准（页沿行为逐页一致）
+  const fb = mkAgent(cwd)
+  applySession(fb, data) // 无 slot → 模式 F
+  assert.equal(fb._recordStore, null)
+  const stateF = {
+    lines: [], expandedBlocks: new Set(), _foldScroll: new Map(), foldEnabled: true,
+    streaming: "", reasoning: "", search: null, tokens: {}, scroll: 0,
+    dims: { get: () => ({ cols: 80, rows: 24 }) },
+  }
+  restoreLines(stateF, { history: data.history, total: data.history.length, base: 0 })
+  const loadOlderF = createLoadOlder({ agent: fb, state: stateF, render: () => {} })
+  const addedForF = () => {
+    const before = new Set(stateF.lines)
+    loadOlderF()
+    return stateF.lines.filter((l) => !before.has(l))
+  }
+
+  const pages = 10
+  for (let p = 0; p < pages; p++) {
+    const a = addedFor()
+    const b = addedForF()
+    assert.deepEqual(summarize(a), summarize(b), `页 ${p + 1}：绑定态与模式 F（全量基准）页沿行为逐项一致`)
+    if (p === 1) {
+      // 页 2 [60,80)：页末 = assistant+tool_call（其 tool 结果在页外）——±1 页沿保配对
+      assert.equal(a.some((l) => l._toolBlock && l._toolBlock.result !== null), true, "页末工具结果配对不破（+1 页沿）")
+    }
+  }
+  while (state._hasOlder && guard < 30) { loadOlder(); guard++ }
+  while (stateF._hasOlder && guard < 30) { loadOlderF(); guard++ }
+  assert.equal(state._historyLoaded, TOTAL, "翻页到底 = 全量可见")
+  assert.equal(state._hasOlder, false)
+  assert.equal(stateF._historyLoaded, TOTAL, "对照态同步到底（同锚点区间）")
+  assert.equal(Number.isFinite(state.scroll), true) // 锚定滚动补偿不破（值域合理）
+  assert.equal(state.scroll > 0, true, "跨页滚动补偿已生效（页插入后锚定平移）")
+
+  // 本会话检索：内存窗口外命中（存储流式）
+  const { readHistoryTool } = await import("../../src/agent-tools/read-history.mjs")
+  const hits = JSON.parse(readHistoryTool.execute({ keyword: "result-77" }, { agent: first }))
+  assert.equal(hits.length, 1, "窗口外（早期工具结果）keyword 可命中")
+  assert.equal(hits[0].content, "result-77")
+  const far = JSON.parse(readHistoryTool.execute({ keyword: "turn-39", role: "user" }, { agent: first }))
+  assert.equal(far.length, 1, "窗口外早期 user 消息可命中")
+
+  // 再保存：JSON 全量保持、sidecar 不缩（窗口 ≠ 记录）
+  pushReal(first, { role: "user", content: "post-restore" })
+  saveSession(first)
+  const disk2 = JSON.parse(readFileSync(slotPath(cwd, first._slot), "utf8"))
+  assert.equal(disk2.history.length, TOTAL + 1, "保存后 JSON history 仍为全量")
+  assert.equal(first._recordStore.total(), TOTAL + 1)
 })

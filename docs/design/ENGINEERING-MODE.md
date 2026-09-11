@@ -542,7 +542,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 | D4 | **指针纪律** | 指针形态 = `文档:节`（行号仅作 as-of 参考，标 as-of）；**禁止**“见上/见该节”式相对指针 | 提示词 + **机械校验 V1** |
 | D5 | **冻结窗口** | 评审在途**不改被审文档**（改了 = 评审对象已变 → stale，token 不签发）；改动集齐后统一入场 | 提示词（纪律层） |
 | D6 | **回读核对** | 任何写入后**回读核实**再报完成（本会话三次事故：写入静默失败仍报完成、编辑吞标题×2）——已是踩坑记录，本批**升为纪律** | 提示词 |
-| D7 | **变更留痕 + 核销同步** | 每批核销时跑**核销同步清单**（需求档 §1.12 批次档 §6 模板新槽位）——逐项检查：角色表 / 头部状态行 / 计数 / 指针 / 变更记录 / 待办勾销 | 模板槽位（父侧） |
+| D7 | **变更留痕 + 核销同步** | 每批核销时跑**核销同步清单**（需求档 §1.12 批次档 §6 模板新槽位）——逐项检查：角色表 / 头部状态行 / 计数 / 指针 / 变更记录 / 待办勾销 / 台账可见面（收口行） | 模板槽位（父侧） |
 
 **机械校验最小集（评审指出两轮反复栽的两类——可机判的才上机械）**：
 
@@ -1721,6 +1721,263 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   同描述旧编号锚全描述重锚（§2.29.3 观察①）；`read_image.md:7` 的 API 列表（Kimi/Anthropic/OpenAI/Gemini）不在 C1 实证面；
   第 6 批遗留「deepseek-v4-pro 视觉复检」（TODO:145——触发 = 2026-09-14 后）不在本批。
 
+### 2.30 台账提醒与可见面（LEDGER-SURFACE 批——2026-09-12；需求 §1.18 / FR24）
+
+> 状态：设计 + 测试层已落档（2026-09-12，待设计评审）；实现未启动（design token 门）。
+> 需求层 = `../requirements/ENGINEERING-MODE.md` §1.18（F1–F8 / N1–N2）；批次档 = `../batches/2026-09-12-LEDGER-SURFACE.md`。
+> **行文本逐字契约 = §2.30.3.3**（实现面照抄，不得自行解释——多实现面规则 §1.12）。
+
+#### 2.30.1 问题陈述与范围
+
+**现状（一手实测）**：台账（需求档 §1.13）只有两个读面——`check-ledger`（L1–L3 形态机检，面向维护者）与
+`--audit`（待处置清单——慢层、手动跑）；**没有任何主动可见面**。用户 2026-09-12 实测「从未见过任何提醒」：
+两仓 40 条技术待办、触发字段 0/40、老化只活在 `--audit` 输出里。结果：未决项静默积压。
+
+**本批目标**：给台账装三层可见面——**状态行标记**（常驻两数）· **明细行三面**（启动 / 收口 / 变化，落会话流）·
+**VSC 状态栏增量**（item + tooltip）；**有可动作项才出声**（零噪音）；数字与形态**单源**（一处实现、三面同文）。
+
+**范围**：CLI（TUI 状态行 + 流内行）+ VSC（状态栏 item + tooltip + chat 流）+ 收口行清单槽位 + 单源模块 + 测试。
+**非目标**：台账内容治理（归档移档——收口划扫）· `check-ledger` L1–L3 语义（零改）· 新命令 / 工具面（否决在案）。
+
+**用户裁定 R1–R6（批次档 §1）→ 需求条目映射**：R1→F1 · R2→F2 · R3→F4+F3 · R4→F3/F5/F6 · R5→F8 · R6→§2.30.6 边界（否决不得复活）。
+
+#### 2.30.2 选型对比（七个决策点——被否决候选记否决理由）
+
+**D1 数字单源落点**（需求设计约束 1）
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 扩 `scripts/check-ledger.mjs` 为唯一实现 | 运行时可达性：npm `files=[bin/,src/,…]`（`package.json:22-28`）——**`scripts/` 不入包** | 装出来的 CLI 拿不到该模块；TUI 显示面无法消费 | **否决** |
+| 2 | 新模块 `src/ledger.mjs`（check-ledger 消费之） | 运行时可达 + 双端各自实现（N1 语义同源不共码） | check-ledger 的组扫描改 import 共享解析（L1–L3 语义零改——消费同一 `scanGroups`） | **选定** |
+| 3 | 各面各写一份解析 | 单源约束 | 三处口径漂移（正是 FR18 收拢前的教训） | **否决** |
+
+**D2 刷新模型**
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 每帧现算 | 渲染路径零阻塞 | 每帧 git 子进程（老化需 blame）——不可行 | **否决** |
+| 2 | 仅启动算一次 | 成本最低 | 长会话陈旧——本机制的意义即「变化可见」 | **否决** |
+| 3 | 启动 + 周期（`REFRESH_MS=120s`）+ 事件（VSC 项目切换） | 成本有界（N2）+ 变化可捕获 | 常量固定；周期内变化延迟 ≤120s（台账写入低频，可接受） | **选定** |
+
+**D3 变化行去重载体**（需求设计约束 3）
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 会话内内存 | 零持久化 | 「首次越线」跨会话重报（每次启动重报 = 不是一次性） | **否决** |
+| 2 | `~/.thincoder/ledger-notify.json`（configDir 先例——crash-reports 同区） | 跨会话、跨端（同一台机器一份）；坏档降空 | 两进程并发写有丢更新窗口（后果 = 至多一次重报，非缺陷级） | **选定** |
+| 3 | 写进仓库（如 `docs/.ledger-notify.json`） | 随仓可共享 | 污染用户仓库 + 需 gitignore + 对跨仓族不适用 | **否决** |
+
+**D4 收口行载体**（需求设计约束 4）
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 运行时自动检测「批次收口」 | 零人工 | 运行时无从知道收口时刻（收口 = 主 agent 的文档动作，无可观测信号） | **否决** |
+| 2 | 新工具 / 新命令承载 | 形态整齐 | 否决面在案（`/todo` 已否决；本批自我约束「不新增工具/命令面」） | **否决** |
+| 3 | 既有脚本 `--summary` 面 + 核销同步清单新槽位 | 复用既有命令面；输出即收口行 | 依赖主 agent 跑清单项（纪律面——§2.30.3.6 给逐字句） | **选定** |
+
+**D5 VSC「当前项目」判据**（需求设计约束 5）
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | `_cwd()`（扩展的当前项目目录）向上 | 与扩展唯一「当前项目」概念一致（面板项目按钮同源） | 容器工作区（如 D:\teamcode）下无当前项目 → 标记不显（K6 观测） | **选定** |
+| 2 | 活动编辑器文件目录向上 | 更贴「我在哪个仓」 | 同一产品出现第二个「当前项目」概念（与面板分叉）；多一个 `onDidChangeActiveTextEditor` 监听面 | **否决** |
+
+**D6 VSC chat 行载体**
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 新消息类型 `ledgerNotice` + 专用行元素 | 语义准；入 messages 容器（**可回看**——R4 要求） | 需 webview 新 case + 新小档 + CSS（~40 行） | **选定** |
+| 2 | 复用 `error` 气泡 | 零新代码 | 语义错（非错误）；红色错误样式误导 | **否决** |
+| 3 | 复用 `statusText`（状态行区） | 已有通道 | 非会话流——不可回看（违 R4「各落各自会话流」） | **否决** |
+
+**D7 行文本语言**
+
+| # | 候选 | 判据 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 定点中文（两 locale 同文） | 同款同源（三面同字节）；台账词汇 = 需求档定义的中文术语（需求池 / 技术待办 / 老化） | 英 locale 下这几行为中文（产品其余 UI 走 i18n） | **选定** |
+| 2 | i18n 键 + 双语 | 与产品 i18n 体系一致 | 翻译 = 第二词汇表 = 漂移源；且跨端「同款同源」字节面破损 | **否决** |
+
+#### 2.30.3 接口契约
+
+##### 2.30.3.1 单源模块与导出面
+
+**CLI**：`src/ledger.mjs`（新档——纯逻辑 + 文件 I/O，无 TUI 依赖）+ `src/tui/ledger-surface.mjs`（TUI 胶水）。
+**VSC**：`src/ledger.mjs`（**独立实现、语义同源**——不跨仓 import，照 N1 双端纪律）+ `src/extension/ledger-surface.mjs`（扩展胶水）。
+
+导出契约（两端同名同义；实现细节各端自持）：
+
+| 导出 | 语义 |
+|---|---|
+| `AGING_DAYS=30` · `THRESHOLD_BOARD=2` · `THRESHOLD_POOL=3` · `REFRESH_MS=120000` · `NOTIFY_FILE` | 常量（口径 = 需求 §1.18；`REFRESH_MS` = N2 实现常量） |
+| `findProject(anchor)` | 向上（含自身）最近含 `docs/TODO.md` 的目录 → `{root, ledger}` / `null` |
+| `discoverFamily(anchor)` | `{current, projects}`——current = `findProject`；projects = current + 其同级含台账目录（current 缺 → 上下文目录向上最近「含台账子目录」者取其子目录） |
+| `scanGroups(lines)` | `##` 组扫描 → `[{name,line,declared,entries:[{line,text}]}]`（**与 check-ledger L2/L3 同源**——解析唯一实现） |
+| `summarizeLedger(project,{days,ageOf})` | 单项目 → `{name,root,ledger,pool,tech,aged,agedKeys,agedTitles,thresholdReached,boards,actionable}` |
+| `formatMarker(scan)` / `formatDetailLine(scan)` | §2.30.3.3 逐字 |
+| `planChangeLines(prev, summary)` | 纯函数——返回 `{lines, next}`（去重口径 §2.30.3.2） |
+| `loadNotifyState(file)` / `saveNotifyState(file, state)` | 去重档 I/O（坏档 → 空态；写失败静默；temp + rename） |
+| `blameAges(abs)` | 全档一次 `git blame --porcelain` → `Map<line,days>` / `null`（升级自 §2.24.9 的逐行 `blameDays`——供显示面批量用） |
+
+##### 2.30.3.2 口径契约
+
+- **计数 / 老化 / 阈值 / 可动作**：见需求 §1.18 口径节（D2——本节不重述）。
+- **明细行集** = `{current} ∪ {可动作项目}`（发现序：current 在前，其余按目录名升序）；同项去重。
+- **条目键派生**（状态档 `aged` 集元素；修正轮 #3）：键 = 条目行**归一化文本**——去行首 `- [ ] ` 前缀 + 去首尾空白 + 连续空白折叠为单空格。
+  **位置无关**（跨行位移 / 同档他条编辑稳定）；**自身文本变更**（含 `status` 推进）= 键变 → 按新条目计（最坏一次重报——与坏档降级同级，非缺陷级）；两端同规则（去重档跨端共享——CLI 写的键 VSC 须逐字认得）。
+  例：`- [ ] X → 证据 a.mjs:3 · status=待讨论` 位移后仍同键；`status` 改 `待设计` → 键变（下一扫计一次新增）。
+- **变化检测（去重）**——状态档每台账一项 `{aged:[条目键…], threshold:bool}`：
+  - 老化事件：`agedNow − aged(档)` 非空 → 一行（标题取新增者）；**送达后** `aged := agedNow`（自清：已处置条目自然移出）。
+  - 阈值事件：`thresholdNow && !threshold(档)` → 一行；**送达后** `threshold := thresholdNow`（跌回 false 即重置——再达阈 = 新事件）。
+  - **送达门（F5）**：仅当行真正 push（CLI）/ post（VSC，webview 已就绪）成功后才写档；未送达不记。
+- **去重档 schema**：`{"version":1,"ledgers":{"<台账绝对路径·正斜杠>":{"aged":[…],"threshold":false,"updatedAt":<ms>}}}`；
+  缺失 / 坏 JSON → `{version:1, ledgers:{}}`；UTF-8；`writeFileSync(tmp)` + `renameSync`（防撕裂）。
+- **行龄未知**（非 git / 未跟踪）→ 不计老化（零假阳——既有 `blameDays` 同族降级）。
+- **性能**：技术组无「无触发候选条目」的项目**不跑 git**；有候选 → 每台账恰一次全档 blame（非逐行——40 条逐行 blame 会开 40 个子进程）。
+
+##### 2.30.3.3 行文本逐字契约（三面同文——CLI / VSC / `--summary` 同一 formatter）
+
+| # | 形态 | 逐字模板 | 色 / 态 |
+|---|---|---|---|
+| L1 状态标记 | 单行 | `台账 <pool>·<tech>`（例 `台账 4·32`） | `aged>0` → 警示色（CLI `C.warn` / VSC `statusBarItem.warningBackground`）；否则默认 |
+| L2 明细行 | 每项目一行 | `台账 <名>：需求池 <pool> · 技术待办 <tech>（老化 <aged>）` +（阈值时）` — 可开批` | 该项目 `actionable` → 警示色；否则 dim |
+| L3 变化行·老化 | 每事件一行 | `台账变化：<名> 老化首次越线 <n> 条（超 30 天未处置）：<t1>；<t2>；<t3>`（标题 = 条目首段 `**…**`；**无粗体段 → 回退 = 归一化文本前 20 字**〔超出加 `…`；修正轮 #3〕；>3 条时第三项后接 `；…`） | 警示色 |
+| L4 变化行·阈值 | 每事件一行 | `台账变化：<名> 需求池达阈值（<pool> 条）— 可开批` | 警示色 |
+
+- `<名>` = 项目根目录 basename；数字 = 十进制整数；`<aged>` **恒显**（含 0——自证已检查）。
+- `--summary` 输出 = L2 行序列（**行集 = 族行**——`discoverFamily` 的 `projects` 全体逐项目一行，含不可动作同级；**非**「明细行集」（那是运行时启动行的行集——§2.30.3.4）；发现序 = current 在前、其余按目录名升序）；族空时输出 `台账：未发现台账（docs/TODO.md）。`（**仅命令面**——运行时面静默，N1）。
+  （实现后同步（2026-09-12）：收口行 = 核销检查点，给全族台账状态——「不可动作不显」门只约束运行时启动行（§2.30.3.4），不约束本命令面。）
+- **状态行位置**：`buildStatusLine` 状态段簇**尾**（`scrollHint` 后、` │ Enter: send` 键位组前）——状态类信息同簇；
+  受 `sliceByWidth` 右截的优先级与既有状态段一致。备选「行尾」被否决：120 列下 `Ctrl+C: exit` 段已先被截——标记会落在可视区外（K7）。
+
+##### 2.30.3.4 CLI 挂载（TUI）
+
+| 点 | 接线 | 行为 |
+|---|---|---|
+| `src/tui/index.mjs` | state 加 `ledger: {marker:null, warn:false, scannedAt:0}`；`showStartup` 后调 `startLedgerSurface({state,agent,pushLine,render})`；`cleanup()` 调 `dispose()`（`process.on("exit", cleanup)` 先例 = `:278`） | 启动扫描 + 周期 |
+| `src/tui/ledger-surface.mjs`（新档） | 首扫（`setImmediate` 后——不抢首帧）→ push 变化行 / 启动行 → 写 `state.ledger`；`setInterval(REFRESH_MS)`（`unref()`）；`state.processing` 期间跳过本轮（git 子进程不打断回合帧） | 三面发射 + 状态位 |
+| `src/tui/render-frame.mjs` | `buildStatusLine` 状态簇尾插 L1；空标记零注入（半态逐字节等价先例——render-frame `:233-238` 同款纪律） | 常驻标记 |
+
+- **启动行**（修正轮 #2——可动作门）：首扫**任一项目可动作**（`aged>0` 或阈值）→ push 明细行集 L2 行（每项目一行）；**不可动作 → 会话流零行**（常驻标记不受此门约束——F2 按标记态照显，T98）；同扫若出变化行 → **先变化行、后明细行**。
+- **周期扫描**：仅检测到**新**变化时 push（L3 / L4）；`state.ledger` 每次刷新重写（marker / warn）。
+- headless（`thincoder chat` / ACP）**零改动**——入口 `bin/thincoder.mjs`（`.cjs` 仅 shim）不落任何台账面（N1；文件域判据 = AC89 / T110④）。
+
+##### 2.30.3.5 VSC 挂载（状态栏 + chat 流 + tooltip）
+
+| 点 | 接线 | 行为 |
+|---|---|---|
+| `src/extension/ledger-surface.mjs`（新档） | `initLedgerSurface(panel)` / `refreshLedger(panel,{emit})` / `pushLedgerStartup(panel)` / `dispose()` | 扫描 + item 更新 + post |
+| `src/extension/chat-panel.mjs` | `_initStatusBar()` 内调 `initLedgerSurface(this)`（item 并立——`StatusBarAlignment.Right`、priority 99；先例 `:156`） | item 建立 + 周期注册 |
+| `src/extension/panel-messages.mjs` | `webviewReady` 分支（既有三推口处，`:428-430`）加 `pushLedgerStartup(panel)`——每次 webview 创建一次（`retainContextWhenHidden` 下 ≈ 每宿主会话一次） | 启动行 post |
+| `src/extension/panel-project.mjs` | `onProjectChanged` 尾加 `refreshLedger(panel,{emit:false})` | 换项目即时刷新 |
+| `webview/chat.js` | 新 case `ledgerNotice` → `addLedgerNotice(ctx, m.lines)` | 流内行 |
+| `webview/ledger-line.js`（新档 ~25 行） | 逐行 `<div class="ledger-line [warn]">` append 到 `ctx.messagesEl`（`ui.js` 492 行 +25 越 500 硬限 → 独立新档） | 渲染 |
+| `webview/chat.css` | `.ledger-line` 样式（弱化小字；`.warn` 警示色） | 视觉 |
+
+- item 形态：`text = L1`；`tooltip = MarkdownString(明细行集 L2 行)`；**无 `command`**（点击面板否决在案）；无台账 → `hide()`。
+- 消息载荷：`{type:"ledgerNotice", lines:[{text, warn:bool}]}`（端内自有投递通道——与 CLI 的 pushLine 各自实现，语义同源）。
+- **启动行 post 门 = 同 §2.30.3.4**（任一项目可动作才 post；不可动作零 post——零噪音 N1；修正轮 #2）。
+- **自验前置**（N4 先例）：源码改动**需重载扩展才生效**——终局自验 = 重载后在含台账工作区看到 item / 启动行。
+
+##### 2.30.3.6 收口行（命令面 + 清单槽位 + 提示词逐字）
+
+- **命令面**：`node scripts/check-ledger.mjs --summary [--root <dir>]`——输出 = L2 行序列；**只读**（不写档、不改台账）；退出码 0。
+  （本仓直接跑；自工作区根 / VSC 仓用该脚本实际路径。）**命令字面（含脚本名）只落本档 / 批次档 §6 模板——不入提示词**（FR13；修正轮 #1）。
+- **清单槽位**（枚举同步——D3；需求 §1.12 §6 模板 + §1.15 D7 + 本档 §2.19 D7 已落）：核销同步清单加「**台账可见面（收口行）**」。
+- **提示词逐字**（双端 `discipline-engineering.md` ×4——主 agent 内容权 + eng-coder 落笔）：
+
+  > 7. **D7 变更留痕 + 核销同步** — 每批核销跑**核销同步清单**（批次档 §6）：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销 / **台账可见面（收口行）**。
+  >    收口行 = 台账 `--summary` 汇总面的输出（有汇总面的仓直接跑；无则按同口径汇总输出）——保留在会话流。
+
+  （各端原文自持——CLI / VSC 各自文本落地；锚断言 = 固定子串 `台账可见面（收口行）` 与 `--summary`——**两锚即全部断言面**、**不含脚本名**〔修正轮 #1〕；命令字面只落本档 / 批次档 §6 模板。）
+
+#### 2.30.4 受影响文件全清单（as-of 2026-09-12 实测；行数口径 = read 工具）
+
+**本仓（CLI）**
+
+| 文件 | 动作 | 批前 | 预计增量 | 分工与档位 |
+|---|---|---|---|---|
+| `src/ledger.mjs` | **新增** | — | ~180 | eng-coder（新档 ≤300 ✓） |
+| `src/tui/ledger-surface.mjs` | **新增** | — | ~80 | eng-coder ✓ |
+| `src/tui/index.mjs` | 修改 | 478 | +8 | eng-coder（≤486 / 500）——>300 档：**不拆**（state 槽 + 起动调用 + cleanup 挂接——三处单点接线，零结构增长）；函数档：**`startTUI` 400 行（既有，as-of）**——本批零新增函数；拆 = 专项债（§2.30.6） |
+| `src/tui/render-frame.mjs` | 修改 | 398 | +10 | eng-coder（≤408 / 500）——>300 档：**不拆**（`buildStatusLine` 单点注入，零结构增长）；函数档：无 ≥300 行单函数（as-of；最大 `renderInputBox` 85 行） |
+| `scripts/check-ledger.mjs` | 修改 | 240 | +40 / −15 | eng-coder（消费 `scanGroups` + `--summary`；L1–L3 语义零改） |
+| `src/prompts/discipline-engineering.md` | 修改 | 228 | +2 / −1 | 主 agent 内容权 + eng-coder 落笔 |
+| `docs/design/prompts/discipline-engineering.md` | 修改 | 157 | +2 / −1 | 同上（中文权威镜像） |
+| `test/ledger-surface.test.mjs` | **新增** | — | ~240 | eng-coder（glob 自动发现——无需登记） |
+| `docs/requirements/ENGINEERING-MODE.md` | 修改 | 817 | +60 | eng-designer（**已落**——§1.18 + FR24 + 三处枚举） |
+| `docs/design/ENGINEERING-MODE.md` | 修改 | 2307 | +~340 | eng-designer（**已落**——§2.30 + AC80–AC90 + T97–T110） |
+
+**对端仓（VSC）**
+
+| 文件 | 动作 | 批前 | 预计增量 | 分工与档位 |
+|---|---|---|---|---|
+| `src/ledger.mjs` | **新增** | — | ~180 | eng-coder（独立实现、语义同源） |
+| `src/extension/ledger-surface.mjs` | **新增** | — | ~120 | eng-coder ✓ |
+| `src/extension/chat-panel.mjs` | 修改 | 420 | +6 | eng-coder（≤426 / 500）——>300 档：**不拆**（`_initStatusBar` 单点初始化，零结构增长）；函数档：无 ≥300 行单函数（as-of；最大 `constructor` 74 行） |
+| `src/extension/panel-messages.mjs` | 修改 | 485 | +3 | eng-coder（**紧**——488 / 500，不得超）——>300 档：**不拆**（`webviewReady` 分支单点调用）；函数档：**`handlePanelMessage` 378 行（既有 switch 巨型函数，as-of）**——本批仅加 1 个 case 分支；拆 = 专项债（§2.30.6） |
+| `src/extension/panel-project.mjs` | 修改 | 92 | +2 | eng-coder ✓ |
+| `webview/chat.js` | 修改 | 398 | +3 | eng-coder（≤401 / 500）——>300 档：**不拆**（新 case `ledgerNotice` 单点；渲染外置 `ledger-line.js`）；函数档：无 ≥300 行单函数（as-of；最大 message 监听 156 行） |
+| `webview/ledger-line.js` | **新增** | — | ~25 | eng-coder（独立新档——`ui.js` 492+25 越硬限，故不寄居） |
+| `webview/chat.css` | 修改 | 477 | +12 | eng-coder（≤489 / 500）——>300 档：**不拆**（追加 `.ledger-line` 样式段，零结构增长）；样式表——**无函数档（不适用）** |
+| `src/prompts/discipline-engineering.md` | 修改 | 240 | +2 / −1 | 同 CLI |
+| `docs/design/prompts/discipline-engineering.md` | 修改 | 163 | +2 / −1 | 同上 |
+| `test/ledger.test.mjs` | **新增** | — | ~240 | eng-coder + `test/files.mjs` 登记（VSC 显式清单） |
+| `test/files.mjs` | 修改 | 77 | +1 | eng-coder |
+| `docs/design/ENGINEERING-MODE.md`（VSC 仓） | 修改 | 218 | +3 | eng-designer（登记行——**已落**） |
+
+> **档位结论**（修正轮 #4——六档逐档注）：全表**无**触发拆分的档（新增档均 ≤300；既有档增量均守 ≤500；两处临界已在表中标注）。
+> **>300 六档**（CLI `tui/index.mjs` / `tui/render-frame.mjs`；VSC `extension/chat-panel.mjs` / `extension/panel-messages.mjs` / `webview/chat.js` / `webview/chat.css`）**均不拆**——各自为单点接线 / 追加样式，零结构增长；
+> **函数档结论（as-of 实测）**：`index.mjs` `startTUI` 400 行 · `panel-messages.mjs` `handlePanelMessage` 378 行——**两处均为既有巨型函数**（本批零新增函数；拆 = 专项债，§2.30.6）；余四档无 ≥300 行单函数（最大 85 / 74 / 156 行；chat.css 不适用）。
+> **实现面拆分（建议——实施阶段终定）**：2 个并行 eng-coder——① CLI 面（代码 + 测试 + CLI 提示词双源）② VSC 面（代码 + 测试 + VSC 提示词双源）；文件域不相交。
+
+#### 2.30.5 关键决策记录（UI / 判据级——含否决备选）
+
+| # | 决策 | 理由 | 否决备选 |
+|---|---|---|---|
+| K1 | 明细行集 = **current ∪ 可动作**（非全族铺开） | 零噪音优先；实测 `D:\teamcode` 下另有 `ai-gateway` / `thinworker` 含 `docs/TODO.md`——全族 = 4 行噪音 | 「全族每项目一行」（真实异构环境噪音大） |
+| K2 | 启动行**每次会话**出现（不设去重） | 启动行本义 = 会话开场状态提醒；受一次性约束的是**变化行**（F5） | 「一次性/每窗口仅一次」（丢信息——新会话看不到状态） |
+| K3 | VSC 启动行时机 = **webviewReady** | webview 未就绪时 post 会丢（SESSION-FLOW-B 已实证——「此刻发内容即丢」） | 「扩展激活时一枪」（面板未开 = 丢） |
+| K4 | **不新增**工具 / 命令 / 快捷键面 | 否决在案（`/todo`）+ 本机制无新增交互点诉求 | 「新命令 / 新工具」（否决面） |
+| K5 | **不监听文件系统**（无 fs.watch / FileSystemWatcher） | 周期 + 事件已足（台账写入 = 主 agent 低频动作）；少一个常驻监听面 | 「监听台账 mtime」（跨端监听器复杂度 / 资源） |
+| K6 | 容器目录无当前项目 → **标记不显**（明细行照常） | R3「无台账的根不显」直接推导；当前项目判据单一（D5） | 「容器下猜一个子项目」（无判据依据） |
+| K7 | 状态标记置**状态段簇尾** | 状态类信息同簇；右截优先级与既有状态段一致 | 「绝对行尾」（120 列下在可视区外——失效） |
+
+> **K6 观测（据实记录）**：`D:\teamcode`（实测：无 `.git`、无 `docs/`）此类**容器工作区**下，状态标记不出现（无「当前项目」）；
+> 明细行与变化行照常（候选集从上下文目录推导）。若用户要容器场景也显标记，属**新裁定**——本批不预改。
+
+#### 2.30.6 边界（本批不做）
+
+- 不做：`/todo` 命令 · 触发字段回填 + 机检强制 · 点击展开面板 · 状态行合计 / 多行 / 多根铺开（否决在案）。
+- 不做：台账内容治理（归档 / 移档 / 勾销——收口划扫职责，§1.18 范围外）。
+- 不改：`check-ledger` L1–L3 语义（仅消费共享 `scanGroups` + 新增只读 `--summary`）；`bin/thincoder.mjs` headless 面；`test/ledger.test.mjs` 既有用例。
+- **提示词面可移植性**（FR13；修正轮 #1）：四提示词文件只写「台账 `--summary` 汇总面」口径——**不含脚本名**（`src/prompts/**` `check-ledger` 零命中保持，AC48/AC80）；具体命令字面只落**批次档 §6 模板 / 本档**。用户项目无该脚本 → 收口行由主 agent 按同口径汇总输出——不阻断工作流。
+- **同级枚举上限（N2 成本有界——确定性退化；实现后同步（2026-09-12））**：同级枚举限 `MAX_SIBLING_SCAN=100`（`src/ledger.mjs:76`）——父目录的目录项数超限 → 该层候选判**空集**（不取部分结果），退化 **current-only**（`projects = [current]`）；current 缺（容器目录）→ 继续向上求候选。
+  **裁定句**：F4「项目集 = current + 同级含台账者」不设语义上限，**N2 成本有界（≤500ms）优先**——上限只约束枚举规模，不改「含台账者」判据本身；触发面 = 缓存 / 临时等非仓族形态的超大父目录（真实工作区远小于 100）。
+- **登记（不在本批）**：两处既有 ≥300 行单函数——`src/tui/index.mjs` `startTUI`（400 行）· `src/extension/panel-messages.mjs` `handlePanelMessage`（378 行）（as-of 2026-09-12 实测；本批零新增函数、零结构增长）——拆分专项另议（父侧登记台账）。
+- 不做：跨进程缓存 / 全工作区深扫 / 文件监听 / 任何网络面 / 台账档写入（唯一写面 = 去重档）。
+
+#### 2.30.7 UI / 交互决策落档
+
+| # | 决策 | 落点 | 状态 |
+|---|---|---|---|
+| U1 | 状态行标记位置 = 状态段簇尾（键位组前） | §2.30.3.3 / §2.30.3.4 | 定案（K7） |
+| U2 | 标记/行色语义 = 老化>0 / actionable → 警示色 | §2.30.3.3 | 定案 |
+| U3 | VSC item 无点击命令；tooltip = 明细行集 | §2.30.3.5 | 定案（K4） |
+| U4 | 空态：无台账 → 标记不显 + 零行；不可动作 → **会话流零行**（标记照常——默认色；修正轮 #2） | §2.30.3.2 / §2.30.3.4 | 定案（K1/K6） |
+| U5 | VSC 启动行时机 = webviewReady（每次创建） | §2.30.3.5 | 定案（K3） |
+| U6 | 行文本语言 = 定点中文（不翻译） | §2.30.2 D7 | 定案 |
+
+> **open 项：无**（上表全部定案；实现中如遇未决点——停下报告，不静默发明）。
+
+#### 2.30.8 不变量（评审判据）
+
+1. **无台账 → 零输出零标记**（空态零噪音——N1）。
+2. **台账档只读**——本机制唯一写面 = `~/.thincoder/ledger-notify.json`（且仅在送达后写）。
+3. **数字单源**——显示数字全部出自 `src/ledger.mjs`（VSC 等价物）；L2 行在 CLI / VSC / `--summary` 三面同 formatter。
+4. **L1–L3 机检语义零改**——`check-ledger` 既有用例（T67–T96）零改全绿为证。
+5. **不新增工具 / 命令 / 快捷键面**；headless 零新增输出。
+6. **变化行送达门**——未送达不记账（F5——否则用户永远看不到）。
+
 ## 3. 测试（Testing）
 
 ### 3.1 验收标准（Acceptance Criteria）
@@ -1893,6 +2150,29 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
   键控 = 指针字符串）；执行后键控抽验：CLI 归档档含「已全部完成」·「parseValue 两端不一致」·「跨批依赖」，
   VSC 归档档含「eng(enter)」·「Gitee open 巡检」；活文件组计数 = 未决数（L2 绿——T96）。
 
+- AC80（§2.30.3.1——数字单源 / F7）: `scripts/check-ledger.mjs` 消费 `src/ledger.mjs`（grep `src/ledger.mjs` 在场）；
+  同一夹具下 `summarizeLedger` 的 `pool`/`tech` 计数 == `checkLedger` L2 判据的「组内未决条目数」（T97 反证：改一条 → 两侧同步变）；
+  `check-ledger` 既有用例（T67–T96）**零改全绿**（L1–L3 语义零改）；`grep -r "check-ledger" src/prompts/` 零命中（FR13——既有不变）。
+- AC81（§2.30.3.3——行文本逐字 / F1+F2）: L1–L4 四形态与 §2.30.3.3 逐字全等（formatter 直驱断言——含 `台账 4·32`、`（老化 0）` 恒显、`— 可开批` 后缀、`；…` 截断、**无粗体段回退标题**〔修正轮 #3〕）；
+  `--summary` 输出 = L2 序列（T98/T99/T104）。
+- AC82（§2.30.3.2 + §2.30.3.4——可动作门 / F3①；修正轮 #2）: **任一项目**可动作（`aged>0` 或阈值）→ 启动行（明细行集）出现；不可动作 → **会话流零行**——**常驻标记不受此门约束**（F2：标记照显、`aged=0` 默认色——T98）（T100 两侧）。
+- AC83（§2.30.3.2——阈值口径 / F3③）: 池 ≥3 或任一板块 ≥2 达阈；反例（池 2 条跨两档各 1）不达阈（T101）。
+- AC84（§2.30.3.2——老化口径 / F7）: 仅技术组无 `触发=` 且行龄 >30 天者计老化（夹具 git 回填界值 29/31 天——T102）；行龄未知 → 不计且不抛。
+- AC85（§2.30.3.2——去重 / F5；修正轮 #3）: 同一事件只报一次；跨会话（状态档在场）零重报；送达后才记账（未送达不记）；**条目键 = 条目归一化文本**（行位移 / 他条编辑零重报；同条文本变更 = 一次新增——T103）（T103）。
+- AC86（§2.30.3.6——收口行 / F6；修正轮 #1）: `node scripts/check-ledger.mjs --summary` 输出 = L2 序列逐字 + 退出码 0 + **运行前后台账字节不变**；
+  四提示词文件与需求档 §1.12/§1.15、设计档 §2.19 含固定子串 `台账可见面（收口行）`；**四提示词文件另含 `--summary` 子串、不含脚本名**（两锚即全部断言面——T105；`check-ledger` 零命中归 AC48/AC80）。
+- AC87（§2.30.3.4/§2.30.3.5——渲染接线 / F2+F8）: CLI：`buildStatusLine` 在 `scrollHint` 后注入 L1，空标记零注入（字节等价）；
+  VSC：item `text`=L1 / `tooltip` 含全部 L2 行 / `aged>0` → warningBackground / 无台账 → hide；webview `ledgerNotice` → `.ledger-line` 行入 messages（T106–T108）。
+- AC88（§2.30.3.2——项目发现 / F4）: `current` = 向上最近含台账目录（T109①②）；容器目录（无台账且子目录含台账）→ current=null、projects=子目录族；
+  全无台账 → current=null、projects=[]、零输出（T109③）。
+- AC89（§2.30.3.2 + §2.30.8——降级与成本 / N1+N2；修正轮 #5）: 台账不可读 / 去重档坏 JSON / 非 git → 零抛出（T110）；
+  无候选条目项目零 git 子进程（计数断言——不调 `blameAges`）；两仓夹具单次刷新 ≤500ms（慢层实测）；
+  **headless 面零接线**（文件域判据：`bin/thincoder.mjs` 本批 `git diff` 空 + 其内 `ledger` 零命中——T110④ 承载 N1「headless 零新增输出」）。
+- AC90（批级——机检零新增 + 快层）: 两仓 `node scripts/check-doc-width.mjs` **新增超宽 0 + 新增一致性违规 0**（存量照报；口径 = 批前/批后命中集合差）；
+  CLI `node test/run-fast.mjs`（或 `npm test`）全绿；VSC 快层按其清单全绿（含 `test/ledger.test.mjs` 入册）。
+  **归属注（设计期实跑——as-of 2026-09-12）**：唯一新增 V3 命中 = **本批批次档 §4 占位段内的 `---` 分隔行**（骨架标点被 V3 判为实文——
+  在飞态瞬态：§3 获评审轮次行后自消）；归父侧收紧（去掉该行）或随评审自消——**非本批代码面**（批次档 = 父侧写域）。
+
 ### 3.2 用例表
 
 | # | 场景 | 输入 | 预期输出 | 映射 |
@@ -2053,6 +2333,27 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 | T95 | 边界：归属修订文本面 | grep：需求档 §1.13 / 两仓台账头部行 | 新句在位（「记录 + 状态推进 + 物理落笔」）；旧句「状态推进 = eng-designer」零命中 | AC75 |
 | T96 | 正常：收拢执行面（键控抽验） | 两仓台账 + 归档档（收拢执行后） | 归档档含键控条目（CLI/VSC 各 ≥2）；活文件 `- [x]` = 0；组计数 = 未决数（L2 绿） | AC79/AC46 |
 
+**台账可见面批用例（T97–T110——LEDGER-SURFACE；含慢层 git 夹具）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T97 | 正常：单源等价（反证） | 合成夹具台账（两池各若干条）+ 人为改一条后重跑 | `summarizeLedger` 计数 == `checkLedger` L2 实际数；改动后两者同步变（非空转） | AC80/F7 |
+| T98 | 正常：状态标记形态 | 扫描结果 `{pool:4,tech:32,aged:0}` / `{aged:3}` | L1 逐字 `台账 4·32`；aged=0 默认色、aged>0 warn 态（直驱色语义） | AC81/F2 |
+| T99 | 正常：明细行 / 变化行逐字 | 阈值达成 / 未达成 / 老化 +2；>3 条标题截断；**无 `**…**` 条目（标题回退）** | 与 §2.30.3.3 模板逐字全等（含 `— 可开批`、`；…`、回退标题 = 归一化文本前 20 字） | AC81/修正轮 #3 |
+| T100 | 边界：启动行门 | ①可动作（aged>0）②可动作（阈值）③不可动作（池 1 条同板块且老化 0） | ①②出 L2 行（首达阈时带 L4）；③**会话流零行**（标记照常显——默认色；修正轮 #2） | AC82 |
+| T101 | 边界：阈值三例 | ①池 2 条同一需求档 ②池 3 条跨三档 ③池 2 条跨两档（各 1） | ①②达阈；③不达阈 | AC83 |
+| T102 | 边界：老化界值（慢层 `slow()`——git 夹具，commit 日期钉常量） | 夹具 git 回填：29 天 / 31 天 / 31 天但带 `触发=认账不排期` | 仅「31 天且无触发」计老化；余不计 | AC84 |
+| T103 | 正常：去重 + 送达门 + **条目键稳定性**（修正轮 #3） | 首扫（新增老化 + 首达阈）→ 再扫同状态 → 再改一条后再扫；另：**行位移 / 他条编辑后重扫**、**同条文本编辑后重扫**；post 失败（面板未就绪）不记账 | 首扫 2 行 + 记账；再扫 0 行；改动后仅新事件 1 行；位移 / 他条编辑 **0 行**（键稳定）；同条文本编辑 **1 行**（键变 = 一次新增）；未送达后补送达重报 | AC85/F5 |
+| T104 | 正常：收口行命令 | `node scripts/check-ledger.mjs --summary`（夹具族）；空族目录对照 | 输出 = L2 序列逐字；退出码 0；运行前后台账字节不变；空族输出「未发现台账」行 | AC86/F6 |
+| T105 | 正常：收口行槽位（文本面；修正轮 #1） | 四提示词 + 需求档 §1.12/§1.15 + 设计档 §2.19 grep | 子串 `台账可见面（收口行）` 全中；`--summary` 子串在 4 提示词文件；**两锚即全部断言面**（不含脚本名——`check-ledger` 在 `src/prompts/**` 零命中归 AC48/AC80） | AC86 |
+| T106 | 正常：CLI 状态行接线 | `buildStatusLine` 直驱：marker=null / marker 平态 / marker+warn | null → 零注入（字节等价）；非 null → ` │ 台账 4·32` 在位；warn → 警示色段包裹 | AC87/F2 |
+| T107 | 正常：VSC item 形态 | `refreshLedger` 直驱（vscode-mock） | `text` = L1；`tooltip` 含全部 L2 行；aged>0 → warningBackground；无台账 → `hide()` | AC87/F8 |
+| T108 | 正常：VSC webview 渲染（happy-dom——真 chat.js） | `{type:"ledgerNotice", lines:[…]}` 直驱 | `.ledger-line` 逐行入 `#messages`；warn 类仅警示行；连续两次消息不吞行 | AC87/F8 |
+| T109 | 边界：项目发现 / 无台账 | ①cwd 深路径（含台账仓内）②容器目录（子目录含台账）③无任何台账 | ①current = 该仓 ②current=null、projects=子目录族 ③current=null、projects=[]、零输出 | AC88/F4 |
+| T110 | 错误：降级不崩（修正轮 #5：+headless 文件域） | ①台账档不可读 ②去重档坏 JSON ③非 git（`ageOf`→null）④headless 文件域 | ①该项目跳过（余者照常）②按空态重新记账（最坏一次重报）③老化 0 且不抛 ④`bin/thincoder.mjs` diff 空 + 其内 `ledger` 零命中（零接线） | AC89/N1 |
+
+> 快层归属：T102 / AC89 计时断言走 `slow()`（fs / git 子进程——`test/slow.mjs` 归册制）；余例直驱纯函数或 mock（快层）。
+
 ## 5. 配置与会话恢复
 
 **engineering 与 advisor.guard 都是会话级**（2026-08-29 重构）——事实源是当前会话槽位文件
@@ -2079,6 +2380,22 @@ C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 �
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-12（台账可见面批——**实现后同步（交付后 doc 面收口）**；只改文档、零代码）：① §2.30.6 补「同级枚举上限」条（`MAX_SIBLING_SCAN=100` → 同级判空集、退化 current-only；F4 vs N2 裁定句）· ② §2.30.3.3 钉死 `--summary` 行集 = 族行（含不可动作同级；非明细行集）· ③ 需求档 §1.15 D7 行锚逐字化（原「（收口行——跑 …」变体 → 含逐字子串 `台账可见面（收口行）`）；批次档 §2 同步（实现后同步块）。
+
+- 2026-09-12（台账可见面批——**设计评审轮次 1 后修正轮**：发现 1🔴+3🟡+1🔵 全裁「修」；只落直接导出的修正、零新语义）：
+  **#1 🔴 提示词面去脚本名**——§2.30.3.6 逐字文本删脚本名、保留两锚 `台账可见面（收口行）`/`--summary`；命令字面落点 = 本档 / 批次档 §6 模板（§2.30.6 补可移植性口径；AC86/T105 锚面写清，AC48/AC80 口径零改）·
+  **#2 🟡 启动行门改可动作**（§2.30.3.4 / §2.30.3.5；AC82/T100/U4「零输出」限定 = 会话流零行、标记不受门）·
+  **#3 🟡 条目键派生 + 标题回退**（§2.30.3.2 / §2.30.3.3；AC81/AC85/T99/T103 补例）·
+  **#4 🟡 六档逐档档位注**（§2.30.4；含两处既有 ≥300 行单函数登记）·
+  **#5 🔵 headless 文件域判据**（AC89/T110④）。
+  批次档 §2 同步（修正轮留痕见 `../batches/2026-09-12-LEDGER-SURFACE.md` §2）。
+
+- 2026-09-12（台账可见面批——LEDGER-SURFACE：用户逐条裁定 R1–R6 落地）：**新增 §2.30**（问题陈述 / 七个选型决策点 /
+  单源导出契约 + 口径 + 行文本逐字契约 + 双端挂载 + 收口行 / 受影响文件 23 项 / 决策与边界 / 不变量六条）
+  + **§3.1 AC80–AC90** + **§3.2 T97–T110**；§2.19 D7 行与需求 §1.12/§1.15 枚举同步加「台账可见面（收口行）」；
+  需求档 §1.18（FR24）+ §1.13 指针行已落；**否决在案**：`/todo` 命令 · 触发字段回填+机检强制 · 点击面板 · 状态行合计/多行。
+  实现待 coder（token 门）；VSC 仓登记行已落（`thincoder-vscode/docs/design/ENGINEERING-MODE.md`）。
 
 - 2026-09-11（第 8 批·范围扩展轮后**微修**——§5 审计遗留 Deferred 闭合；只改文档、零代码）：§2.25 提示词面表改
   「**8 文件 = persona ×4 + discipline ×4**」——补列 `persona-eng-designer.md` ×4（todo 归属句替换实落——逐字源 = 本批 §4 批准面 / §5 对表 4–7）；

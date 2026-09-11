@@ -19,7 +19,7 @@ import { sweepToolBlocks } from "./tool-events.mjs"
 import { logEvent } from "../log.mjs"
 import { C } from "./ansi.mjs"
 // ASYNC-RESULT-CONTAINER.md D1/D2：池 accessor（双池 absorb）+ pending 单容器停靠
-import { getAsyncPool, parkAsyncPending } from "../agent-tools/async-settle.mjs"
+import { getAsyncPool, parkAsyncPending, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
 // 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
@@ -285,6 +285,8 @@ export async function suspensionSession(ctx) {
         for (const e of residual.splice(0)) {
           if (e.role === "consult") await injectConsultResult(agent, e)
           else await injectAsyncResult(agent, e)
+          // TUI-OOM-ROOTCAUSE（§23.3.1 消费点③——挂起残差注入）：注入完成 → 释放条目持有
+          releaseSettledEntry(e)
         }
       }
     }

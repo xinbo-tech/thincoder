@@ -8,19 +8,22 @@
  * 基线：`test/fixtures/ledger-baseline.json` 内为存量违规（降报告、不阻断）；新增违规阻断（退出码 1）。
  * 输出：红 = `<档>:<行号> [L1|L2|L3] <症状> — 期望 … · 实得 …` + `<n> 处违规`；绿 = 每档一行 `OK: <档>`。
  * 审计（`--audit`）：技术组无触发条目的「待处置清单」（行龄 > N 天标「老化」）——只读、退出码 0。
- * 用法：`node scripts/check-ledger.mjs [--root <仓根>] [--ledger <档>]... [--audit] [--days N]`；
+ * 汇总（`--summary`）：L2 明细行序列（每项目一行——`src/ledger.mjs` 口径 + 同 formatter）——只读、退出码 0（收口行）。
+ * 用法：`node scripts/check-ledger.mjs [--root <仓根>] [--ledger <档>]... [--audit] [--summary] [--days N]`；
  * 扫描域 = 显式台账清单（默认本仓 + 对端仓 `docs/TODO.md`）——与 `check-doc-width.mjs` 互不侵入；不进产品提示词。
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+// 数字单源（F7/AC80）：解析 / 计数 / 老化阈值 / 显示面 formatter 消费 `src/ledger.mjs`（L1–L3 语义零改）
+import { AGING_DAYS, blameAges, discoverFamily, EMPTY_FAMILY_LINE, formatDetailLine, scanGroups, summarizeLedger } from "../src/ledger.mjs";
 /** 状态机六态（需求档 §1.13） */
 export const SIX_STATES = ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"];
 /** 触发字段三枚举（§2.24.9②） */
 export const TRIGGERS = ["归批", "条件", "认账不排期"];
-/** 老化阈值（天——实现常量，`--days` 可覆盖） */
-export const AGING_DAYS = 30;
+/** 老化阈值（天）——单源 = `src/ledger.mjs`（`--days` 可覆盖） */
+export { AGING_DAYS };
 /** 基线档（存量违规报告清单；键稳定、不含行号） */
 export const BASELINE_PATH = "test/fixtures/ledger-baseline.json";
 export const DEFAULT_LEDGERS = ["docs/TODO.md", join("..", "thincoder-vscode", "docs", "TODO.md")]; // 默认台账清单：本仓 + 对端仓（缺则跳过不报）
@@ -95,13 +98,8 @@ export function checkLedger(abs, root, extraRoots = []) {
     if (/^- \[x\]/.test(l)) add("L3⑤", i + 1, entryKey(l), "活文件含 `- [x]`（归档口径）", "0 命中（已核销 / 已废弃移入同仓 TODO-archive.md）", "1 条");
   });
 
-  // 组扫描（L2 计数 + L3①③ 分组识别）
-  const groups = [];
-  lines.forEach((l, i) => {
-    const h = H2_RE.exec(l);
-    if (h) groups.push({ name: h[1].trim(), line: i + 1, declared: Number((DECL_RE.exec(h[1]) ?? [])[1] ?? NaN), entries: [] });
-    else if (groups.length && OPEN_ENTRY_RE.test(l)) groups[groups.length - 1].entries.push({ line: i + 1, text: l });
-  });
+  // 组扫描（L2 计数 + L3①③ 分组识别）——解析唯一实现 = `src/ledger.mjs` `scanGroups`（数字单源 F7/AC80）
+  const groups = scanGroups(lines);
 
   let baseNames = null;
   for (const g of groups) {
@@ -211,6 +209,16 @@ export function main(args = process.argv.slice(2), { cwd = process.cwd(), log = 
   const root = resolve(argOf("--root") ?? cwd);
   const ledgers = args.flatMap((a, i) => (a === "--ledger" && args[i + 1] ? [args[i + 1]] : []));
   const ledgerNames = ledgers.length ? ledgers : DEFAULT_LEDGERS;
+  if (args.includes("--summary")) { // 汇总面（收口行 F6——只读）：L2 明细行序列（每项目一行）
+    const family = discoverFamily(root);
+    const rows = [];
+    for (const p of family.projects) {
+      try { rows.push(formatDetailLine(summarizeLedger(p, { ageOf: blameAges }))); } catch { /* 不可读 → 跳过（N1） */ }
+    }
+    for (const r of rows) log(r);
+    if (!rows.length) log(EMPTY_FAMILY_LINE);
+    return 0;
+  }
   if (args.includes("--audit")) { // 审计模式：只读，退出码 0
     const days = argOf("--days") ? Number(argOf("--days")) : AGING_DAYS;
     const pending = [];

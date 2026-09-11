@@ -18,6 +18,8 @@ import { migrateHashLength } from "./session-migrate.mjs"
 // legacy 过滤）属 session.mjs（500 行内不迁移）——静态环仅此一处：函数声明实例化期已初始化、
 // 只函数体内运行时使用（环安全）；VS Code 端 session-slots ↔ session-io 同构镜像。
 import { loadSlotFile, isLegacyTransient } from "./session.mjs"
+// TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.8）：删槽联动记录存储（store 零项目内依赖——无环）。
+import { unlinkRecordStore } from "./session-store.mjs"
 
 let currentSessionId = null
 
@@ -405,6 +407,7 @@ export function deleteSlot(cwd, slot) {
   delete m.slots[n]
   delete m.slotSessions?.[n] // orphan session-id entries bloat the manifest forever
   try { unlinkSync(slotPath(cwd, n)) } catch { /* missing file is fine */ }
+  unlinkRecordStore(slotPath(cwd, n)) // §14.3.8：删槽连带删除记录存储（sidecar）
   if (m.active === n) delete m.active
   // setActive: true —— 显式表达"删到 active 时 active 置空"的意图（saveManifest 默认
   // 保留 fresh.active，2026-09-01 会诊三家 🟡）

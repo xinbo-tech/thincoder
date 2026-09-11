@@ -6,13 +6,29 @@
 
 ---
 
-## 需求池（1 条）
+## 需求池（4 条）
+
+- [ ] **台账提醒/可见面（两池·分池显示）**（2026-09-12 用户发现「从未见过任何提醒」；裁定：① 启动提示 + a 收口检查点 + b 状态行单标记，**两池分显·按项目分行·状态行极简·明细三行同源（启动/收口/变化）· VSC tooltip 增量**；否决：/todo 命令 · 触发回填+强制）→ 需求 `docs/requirements/ENGINEERING-MODE.md` §1.13 · 任务书 `docs/batches/2026-09-12-LEDGER-SURFACE.md` §2 · status=待设计
 
 > 快车道：用户说"急"走单点不入池。生命周期：实现后核销勾销。
 
 - [ ] **文档自审四处混乱**（2026-09-10 主 agent 自审——适用范围：文档维护也走流程）→ 需求 `docs/requirements/ENGINEERING-MODE.md` §1.6 · 任务书（未派工）· status=待讨论
 
-## 技术待办（25 条）
+- [ ] **机制纪律落地提示词系统**（2026-09-11 用户裁定——测试体系 v3 三层/发布门/退役 + 旧句改写 + 待办台账维护机制）→ 需求 `docs/requirements/PROMPT-SYSTEM.md` §10 · 任务书 `docs/batches/2026-09-11-TEST-DISCIPLINE-PROMPTS.md` §2 · status=在途（coder 已发车——让位 VSC-CONTEXT-PARITY 同域串行）
+
+- [ ] **CLI TUI 长会话堆 OOM（静默崩溃）——次生：崩溃后鼠标序列飞出**（2026-09-11 用户同事实测；勘察完成：三处结构性无界 + 一处分乘数，全进程无堆遥测）→ 需求 `docs/requirements/CRASH-REPORTS.md` §1（F3/N1-N4——取证固化波）· `docs/requirements/SESSION.md` §14.1（根因修复波）· 任务书 `docs/batches/2026-09-11-TUI-OOM-FORENSICS.md` §2 · `docs/batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §2 · status=在途
+
+## 技术待办（31 条）
+
+- [ ] **`src/tui/index.mjs` `startTUI` 单函数 400 行（L72–471）**——越函数档线（≥300 行）；本批（LEDGER-SURFACE）前既有、单点增量不触拆分 → 拆分债 → 证据 `src/tui/index.mjs:72` · status=待讨论
+- [ ] **需求档 FR13 行「现况」子句陈旧**（句称 `src/prompts/discipline-engineering.md:182` 教跑 `scripts/check-doc-width.mjs`——实测 `src/prompts/**` 对 `scripts/`/`check-doc-width` 零命中）→ 证据 `docs/requirements/ENGINEERING-MODE.md:723` · status=待讨论
+
+### 长会话内存面登记（TUI-OOM-ROOTCAUSE 批——2026-09-12 父侧登记）
+
+- [ ] `/undo` 快照栈字节无界（条数封顶 50、无尺寸守卫——库先例：read 有 10MB 守卫）→ 证据 `src/tui/cmd-undo.mjs:12`（`MAX_UNDO`）· `src/agent/dispatch.mjs:357-358`（快照读整档）· status=待讨论
+- [ ] `_advisorRuns` 实例无逐实例删除（仅模式切换整体重置）→ 证据 `src/agent-tools/advisor-async.mjs:104-137` · status=待讨论
+- [ ] 小容器族无上界（`_asyncTombstones`/`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`；capturedConsole 拼接可突破 64K）→ 证据 `src/agent/async-settle.mjs:138-139` · `src/agent/dispatch.mjs:428-432` · status=待讨论
+- [ ] `verify-redesign` T-V4 偶触 slow 门（820–1031ms vs 800ms 阈值；干净 HEAD 复现/隔离跑 ~120ms）→ 登记 `slow()` 或复核阈值 → 证据 `test/verify-redesign.test.mjs:87` · status=待讨论
 
 ### 产品可移植性缺陷登记（2026-09-10 全面勘察——**只登记，待整明白后统一处理**）
 

@@ -27,6 +27,8 @@
 import { relative, isAbsolute } from "node:path"
 import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
+// TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口常量（单源——store 零依赖）。
+import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { logEvent } from "../log.mjs"
 import { deathLine } from "../abort-provenance.mjs"
 import {
@@ -102,6 +104,9 @@ function touchedFilesNote(child, cwd) {
  */
 export function classifyEscalateSettle(parent, entry) {
   if (entry.cancelled) return { cancelled: true }
+  // §23.3.1（TUI-OOM-ROOTCAUSE）——childAgent 语义面：settle 分类（touched 摘要/partial
+  // merge）与 status/observe 摘要的读取源；**消化注入完成后由 `releaseSettledEntry`
+  // （async-settle.mjs）置 null**（池内未消化窗口不释放——表 2 候选 2 否决）。
   const child = entry.childAgent
   const touched = child?._touchedFiles ?? []
   const overlap = overlapPaths(parent, entry.launchSeq, touched)
@@ -196,6 +201,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
       role: "coder",
     })
     entry.childAgent = child // settle 分类/status touched 摘要绑定（start 时刻）
+    child._historyWindow = RECORD_WINDOW_MESSAGES // TUI-OOM-ROOTCAUSE §23.3.1：子代理人读线窗口（四处创建点同置）
     child._logId = relayPrefix.slice(0, -1)
     logEvent("child:spawn", { role: "escalate", id: child._logId, kind: "async", status: "running", ms: 0 })
     const childCallbacks = wrapChildCallbacks(relayPrefix, ctx.callbacks ?? {})

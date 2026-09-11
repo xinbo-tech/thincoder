@@ -12,7 +12,7 @@ import { ensureAutoReminder, injectEngineeringReminder, ContinueError } from "./
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
-import { getAsyncPool } from "../agent-tools/async-settle.mjs"
+import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
@@ -235,6 +235,8 @@ async function collectSettledAsync(agent, { suspDriven = false } = {}) {
       if (!e.done) continue // still running — stays in the pool (D-S1)
       await injectAsyncResult(agent, e)
       if (e.role === "advisor") injectedAdvisor = true
+      // TUI-OOM-ROOTCAUSE（§23.3.1 消费点①——回合尾收集）：注入完成 → 释放条目持有
+      releaseSettledEntry(e)
       map.delete(String(e.id))
     }
   }

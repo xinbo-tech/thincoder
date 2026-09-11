@@ -87,6 +87,7 @@ export function ensureSubTaskKey(state, key, role) {
       key, role, model: undefined, started: Date.now(), done: false, doneAt: null,
       blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0, approval: null,
       lastError: null, dropped: 0,
+      _lineCount: 0, _charCount: 0, // 双维记账（TUI.md §15.3.4——行数维 + 字符维，subagent-children.mjs）
       stopped: false, // §19.5: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
       children: [], // SUBAGENT-TAIL: 嵌套子代理守护载体（内容并入本块——subagent-children.mjs）
     }

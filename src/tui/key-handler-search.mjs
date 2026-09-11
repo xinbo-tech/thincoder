@@ -1,20 +1,28 @@
-/** Perform search on state.lines, update state.search.matches and clamp index */
+/** Perform search on state.lines, update state.search.matches and clamp index
+ *  TUI-OOM-ROOTCAUSE（TUI.md §15.3.1 SEARCH_MATCH_CAP）：匹配计数上限——超限截断 +
+ *  `state.search.capped` 提示标志（渲染面提示行；次要无界面）。
+ */
+import { SEARCH_MATCH_CAP } from "./display-budget.mjs"
+
 export function performSearch(state) {
   if (!state.search) return
   const query = state.search.query.toLowerCase()
   state.search.matches = []
+  state.search.capped = false
   // Clear old highlights
   state.lines.forEach(l => delete l._searchMatches)
 
   if (!query) { state.search.index = 0; return }
 
   state.lines.forEach((line, lineIndex) => {
+    if (state.search.matches.length >= SEARCH_MATCH_CAP) { state.search.capped = true; return }
     const text = (line.text || "").toLowerCase()
     let charIndex = text.indexOf(query)
     if (charIndex !== -1) {
       line._searchMatches = []
     }
     while (charIndex !== -1) {
+      if (state.search.matches.length >= SEARCH_MATCH_CAP) { state.search.capped = true; break }
       state.search.matches.push({ lineIndex, charIndex })
       line._searchMatches.push(charIndex)
       charIndex = text.indexOf(query, charIndex + 1)

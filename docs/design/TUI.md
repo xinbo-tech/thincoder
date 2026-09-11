@@ -660,7 +660,9 @@ reminder:` 前缀的机读消息**（人读线本来就不含，过滤是纵深�
 条；向上滚动到会话顶部（`scroll >= convMaxScroll` 且 `_hasOlder`）→ **自动加载更早一页**
 （`createLoadOlder`，`HISTORY_PAGE_MESSAGES=20`——vscode HISTORY_PAGE_SIZE parity；滚轮/PgUp 双
 入口同一判别式，convMaxScroll 从 key-handler 导出复用；加载后 scroll 补偿保持锚定；头部分页标记
-行 `… N more earlier messages …` 维护）。**性能根治——三层缓存**：convCacheKey 全量 / 行级
+行 `… N more earlier messages …` 维护）。**2026-09-11 修订（TUI-OOM-ROOTCAUSE 批）：分页数据源 =
+会话记录存储（磁盘）——绝对序号锚定；内存层不再驻留全量（机制契约 = `SESSION.md` §14.3.6，本节
+交互语义不变——见 §15）。****性能根治——三层缓存**：convCacheKey 全量 / 行级
 `wrapRowsCached`（行对象 + cols + 加工后 text + 颜色为键） / 段级 `_lineSegCache` 行体缓存
 （行对象 WeakMap→conv 行数组，签名 = textRef 引用比较 + 短字段拼接——普通行在 render-conversation、
 tool/frozen 三段在 render-segments 各自独立 WeakMap）——`buildConvLines` 全量重建 O(总行数) 是卡
@@ -1303,8 +1305,188 @@ export function userNeededAtTurnEnd(state, agent, skipSession) {
 
 **计数（D3）**：用例 **8**（T-AT1–T-AT8）· AC **6**（AC-AT1–AC-AT6）· 实施域 **6 项**（5 改 + 1 新）· 文档域 **2 档**；需求 = F13 + N9。
 
+---
+
+## 15. 长会话内存有界：分页源下沉 + 显示层额度（TUI-OOM-ROOTCAUSE 批——2026-09-11）
+
+> 需求：`../requirements/TUI.md` F6（修订）+ N10。来源：批次档
+> `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md` §1（勘察 C3：行数上限 ≠ 内容上限、多路径绕过裁剪）。
+> 本批两块：**15.A 分页源下沉**（机制契约在 `SESSION.md` §14.3.6——本节只落 TUI 面落点）；
+> **15.B 显示层额度**（本节主体）。
+
+### 15.1 问题陈述（证据 as-of 2026-09-11——实读）
+
+| # | 事实 | 证据（file:line） |
+|---|---|---|
+| 1 | `state.lines` 十条写入路径中**只有 pushLine 有环**（5000 行 → splice 1000）——工具块 / 冻结子代理块 / 冻结评审行 / 恢复与翻页行全部绕过 | `src/tui/index.mjs:278-289`（唯一裁剪）· `:292-296`（pushLabel 裸推）· `tool-events.mjs:128-141` · `:264-268` · `subagent-freeze.mjs:86-89` · `startup.mjs:129/134/155-163` |
+| 2 | 工具块：`output` 环按**条目数**（200）计——无 `\n` 的巨 chunk = 1 条任意大；`result` 只按行数（400）——单行任意大；`argsJson` **完全无上限**（`write`/`apply_patch` 整文件内容进显示层） | `tool-display.mjs:21/77-87` · `tool-events.mjs:313-319` · `tool-args.mjs:78-81`（`JSON.stringify(args, null, 2).split("\n")`） |
+| 3 | 子代理块：500 行环按 `\n` 计数——无换行 chunk 净增 0 行 → 500 环永不触发、文本无界；`_lineCount` 合并追加只记行数 | `subagent-children.mjs:19/22-25/68-80` · `subagent-blocks.mjs:338-356`（raw 直灌） |
+| 4 | 评审载体：`_advisorBlocks` 流式累积与 `_frozenAdvisor` 冻结文本均无任何上限 | `tool-events.mjs:301-305` · `:256-269` |
+| 5 | 主流缓冲 `state.streaming`/`state.reasoning` 逐 token 无界累积、flush 成**单行**——5000 行环对此无效 | `tool-events.mjs:72/80` · `:52-60` |
+| 6 | 恢复/翻页行 unshift 进 `state.lines` 且**无淘汰**——翻页到底 ⇒ 全会话常驻 | `startup.mjs:119-136/142-170` |
+| 7 | 同内容同时驻留 3–4 份：历史对象 1 份 + 块 result 行数组 + output 流式环 + 渲染 `_convCache` 整屏行 | `render-conversation.mjs:26/394`（`_convCache`）· 三载体见上 |
+| 8 | 次要无界：搜索匹配按出现次数累积（`state.search.matches`） | `key-handler-search.mjs:11-22` |
+
+### 15.2 方案选型对比
+
+**表 1：额度计量口径**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **UTF-16 码元（`text.length`）** | 与 JS 字符串内存近似（2B/码元）；确定性、零平台差异、O(1) 计长；显示宽度另由 stringWidth 管 | **选定** |
+| 2 | UTF-8 字节（`Buffer.byteLength`） | 更贴 I/O 口径；每次计长 O(n)（大文本反复计数成本） | 否决（无 I/O 需求面） |
+| 3 | 显示列宽（stringWidth） | 与终端表现贴；CJK 计数贵、折叠/截断语义耦合渲染 | 否决 |
+
+**表 2：执行点（在哪里裁）**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **单点包装 + 载体自记账**：文本入载体前过 `capText`；块/环载体按双维（行数 + 字符）记账；`state.lines` 加总量字符账 | 覆盖全部十条路径；裁剪点靠近来源；与既有行数环同构（扩展非替代） | **选定** |
+| 2 | 渲染期裁剪（buildConvLines 前统一裁） | 存储已无界（迟到）——内存峰值仍在 | 否决 |
+| 3 | 只堵最大的（argsJson/子代理块） | 漏评审载体与流式缓冲；不满足 N10 全覆盖 | 否决 |
+
+**表 3：超限处置形态**
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **截断 + 标记行**（头保 + 尾标记；块级 = 裁最旧 + 既有「已省略 N 行」标记） | 与既有省略标记族（N5/N6）同语义；用户可感知；全文在会话记录 | **选定** |
+| 2 | 静默截断 | 违背「省略计数真值」精神（用户看不见被裁） | 否决 |
+| 3 | 落盘 + 指针行 | 显示层无按需回读交互面（另案）；降级复杂 | 否决（登记） |
+
+### 15.3 契约（实现对象）
+
+**15.3.1 常量（单源 = `src/tui/display-budget.mjs`——新模块）**
+
+| 常量 | 值（UTF-16 码元） | 作用面 |
+|---|---|---|
+| `LINE_MAX_CHARS` | 64_000 | pushLine / pushLabel / 恢复行 / 流式 flush 行——超限截断加尾标记 |
+| `ARGS_JSON_MAX_CHARS` | 24_000 | `_toolBlock.argsJson` 总量（超出：尾截断 + 标记；首行保真） |
+| `TOOL_RESULT_MAX_CHARS` | 64_000 | `_toolBlock.result` 行数组总量（与既有 400 行双维；尾行加标记） |
+| `TOOL_OUTPUT_ENTRY_MAX_CHARS` | 8_000 | 输出环单条目（超出：尾截断 + 标记） |
+| `TOOL_OUTPUT_TOTAL_MAX_CHARS` | 128_000 | 输出环总量（超出：与既有 200 条目环同款丢最旧） |
+| `SUB_BLOCK_CHAR_LIMIT` | 128_000 | 子代理块单环（与 500 显示行双维；裁最旧——省略标记 N6 语义不变，行数照记） |
+| `ADVISOR_TEXT_MAX_CHARS` | 128_000 | `_advisorBlocks` 累积 + `_frozenAdvisor`（头 32K + 尾 96K 保裁决尾部 + 中段标记） |
+| `STREAM_MAX_CHARS` | 256_000 | `state.streaming` / `state.reasoning` 累积（头尾保真；flush 行再受 `LINE_MAX_CHARS`） |
+| `LINES_CHAR_BUDGET` | 2_000_000 | `state.lines` 全部行与载体文本总量（超出：与 5000 行环同款裁头 1000 行 + `shiftFreezeAnchors` + 收据行） |
+| `SEARCH_MATCH_CAP` | 10_000 | 搜索匹配计数（超出截断 + 提示行） |
+
+**15.3.2 辅助 API（`display-budget.mjs`）**
+
+```
+capText(text, { max, keepHead, keepTail, marker })   // 头尾保真 + 中段标记；≤max 时零拷贝返回
+appendCapped(prev, add, opts)                        // 流式累积（滞后水位：超 hard 裁至 keep——摊还 O(1)）
+lineChars(l)                                         // 一行 + 其 _toolBlock/_frozenSubTask/_frozenAdvisor 字段计长
+syncLineBudget(state, { pushLineLike })              // state.lines 总量对账（超限裁头——复用 5000 环机制）
+```
+
+> 纯函数本体（`capText` / `appendCappedText`）住 `src/text-budget.mjs`（零依赖）——与 agent 侧
+> 捕获共用（`AGENT-LOOP.md` §23.3.1，单一来源）；本模块只承载 TUI 面常量与 `lineChars`/
+> `syncLineBudget` 对账。
+
+- 标记形态（逐字——进测试断言）：行截断 `… [line truncated: N chars omitted]`；子块沿用
+  `…（已省略 N 行）`（N6 口径不变）；评审/流式 `… [middle truncated: N chars omitted]`。
+- 状态对象零新增语义字段于 agent；`state._linesChars`（TUI state 内部账）为唯一新增状态位。
+
+**15.3.3 落点（十条路径逐一）**
+
+| 路径 | 落点改动 |
+|---|---|
+| pushLine / pushLabel | 入口 `capText(LINE_MAX_CHARS)` + `syncLineBudget` |
+| 工具块载体 | `tool-events.mjs` 建块/落结果处按 ARGS/RESULT/OUTPUT 常量裁；`tool-display.mjs` 辅助 |
+| 子代理块 | `subagent-children.mjs` `pushBlock`/`dropCarrierLines` 加字符维（`carrier._charCount`） |
+| 评审块 | `tool-events.mjs` 累积与冻结两处 `appendCapped`/`capText` |
+| 流式缓冲 | `tool-events.mjs` onToken/onReasoning `appendCapped` |
+| 恢复/翻页 | `startup.mjs` 行构造后过 `capText`；总量的裁头由 `syncLineBudget` 兜（翻页页内不裁头——保锚定） |
+| 搜索匹配 | `key-handler-search.mjs` 计数上限 |
+| 冻结子代理 splce 插入 | 经 `syncLineBudget`（splice 路径同款对账） |
+
+**15.3.4 双维记账不变式**
+
+- 每个环/块：行数维与字符维**同时**满足（先到先裁）；被裁内容计入既有省略 N（行）——
+  字符维裁剪时按被裁文本行数折算 N（无幽灵计数——N6）。
+- `state.lines` 总量 = Σ `lineChars(l)`——在 push/splice/unshift 后对账（增量维护：
+  push 加分、裁头减分；测试直算对照）。
+
+### 15.4 关键决策记录（含否决备选）
+
+- **D-TB1 口径 = UTF-16 码元**（表 1）；需求所称「字节维度」的实现口径即此（内存近似）。
+- **D-TB2 执行点 = 单点包装 + 载体自记账**（表 2）；不引入渲染期裁剪（迟到）。
+- **D-TB3 处置 = 截断 + 标记**（表 3）；落盘指针行登记为后续项（显示层无回读交互）。
+- **D-TB4 常量集中 `display-budget.mjs`**（D2 单源）：数值改动一处生效；测试导入常量断言。
+- **D-TB5 不碰行数口径**：5000 行环 / 500 行块环 / 200 条目环原样保留，字符维为第二维——
+  既有 N5/N6 语义与既有测试锁逐字不动。
+- **D-TB6 分页源下沉不在本节重述**（机制契约 = `SESSION.md` §14.3.6）；本节只保证
+  「翻页行过额度包装 + 总量对账」。
+
+### 15.5 受影响文件（as-of 2026-09-11 实测；口径 `split("\n").length` 含末行；「实现后同步」两行 = 2026-09-12 实测）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/tui/display-budget.mjs` | 新 | +120 ± 30 | 常量 + capText/appendCapped + 对账 |
+| `src/tui/index.mjs` | 455 | +10 | pushLine/pushLabel 过额度；state 账初始化 |
+| `src/tui/tool-events.mjs` | 408 | +18 | 载体额度（args/result/output）+ 评审/流式 |
+| `src/tui/tool-display.mjs` | 144 | +6 | result 总量裁剪接入 |
+| `src/tui/tool-args.mjs` | 81 | +8 | `toolArgsLines` 总量额度 |
+| `src/tui/subagent-children.mjs` | 163 | +26 | `_charCount` 双维记账 + 裁行折算 |
+| `src/tui/subagent-blocks.mjs` | 436 | +6 | 冻结/压缩面板路径过账 |
+| `src/tui/startup.mjs` | 266 | +10（含 15.A） | 恢复/翻页行过 `capText`；总量对账接入 |
+| `src/tui/key-handler-search.mjs` | 114 | +6 | 匹配计数上限（行数修正轮 #12 刷新） |
+| `src/tui/subagent-freeze.mjs` | 170 → 176（实测） | +6 | 冻结子代理 splice 行经 `accountLine` 入 `state.lines` 总量账（§15.3.3 落点表末行）——**实现后同步（2026-09-12）**；声明外触碰补行（coder 披露） |
+| `src/tui/cmd-clear.mjs` | 21 → 23（实测） | +2 | 清屏行集清空时 `_linesChars` 同步归零（§15.3.2 唯一新增状态位）——**实现后同步（2026-09-12）**；声明外触碰补行（coder 披露） |
+| `test/tui-memory-budget.test.mjs` | 新 | +190 ± 40 | 用例表 1:1（快层——直驱、零定时器） |
+
+> 拆分结论（含实现后同步 2026-09-12 补行）：全部 ≤500；`subagent-blocks.mjs`（436+6）与
+> `tool-events.mjs`（408+18）不越限；`tool-args.mjs`（81）单点扩展、不拆。表内两条「实现后同步」
+> 行为**声明外触碰**补行（coder 披露——`subagent-freeze` 系 §15.3.3 落点表末行已要求、`cmd-clear`
+> 系字符账归零联动），均单点接入、不拆。
+
+### 15.6 用例表（正常 / 边界 / 错误）
+
+| # | 层 | 场景 | 输入 | 预期输出 | 回指 |
+|---|---|---|---|---|---|
+| T-TB1 | 快层 unit | 单行巨内容（pushLine） | 10MB 无换行文本 | 行文本长 ≤ `LINE_MAX_CHARS`+标记；标记串逐字 | N10① |
+| T-TB2 | 快层 unit | 工具参数额度 | `write` 大 content 的 argsJson | 总量 ≤ `ARGS_JSON_MAX_CHARS`+标记；首行完整 | N10② |
+| T-TB3 | 快层 unit | 工具结果单行巨量 | 400 行内单行 5MB | 结果总量 ≤ `TOOL_RESULT_MAX_CHARS`+标记 | N10② |
+| T-TB4 | 快层 unit | 输出环双维 | 300 条 × 大 chunk（含无 `\n` 巨块） | 条目 ≤200、单项 ≤8K、总量 ≤128K；丢最旧 | N10② |
+| T-TB5 | 快层 unit | 子代理块无换行巨 chunk | 1MB 无 `\n` chunk × 多次 | `_charCount` ≤ `SUB_BLOCK_CHAR_LIMIT`；省略标记 N 单调、无幽灵 | N10②/N6 |
+| T-TB6 | 快层 unit | 评审块 | 流式 1MB think + 冻结 | 累积 ≤128K（头 32K/尾 96K）；冻结文本 ≤128K；尾（Verdict）保留 | N10② |
+| T-TB7 | 快层 unit | 流式缓冲 | onToken 累积 5MB | `state.streaming` ≤256K；flush 行再 ≤ `LINE_MAX_CHARS` | N10② |
+| T-TB8 | 快层 unit | `state.lines` 总量 | 各路径混合塞入至超 2M | 裁头生效（含冻结锚点平移）；总量 ≤ 预算+在途单行 | N10③ |
+| T-TB9 | 快层 unit | 翻页不无界 | 翻页 50 页（模拟 1000 条） | 总量 ≤ 预算；锚定滚动补偿不破 | N10④/F6 |
+| T-TB10 | 快层 unit | 搜索匹配上限 | 单字符查询 × 超长行 | 匹配数 ≤ `SEARCH_MATCH_CAP`；提示行出现 | N10（次要面） |
+
+### 15.7 验收标准（逐条回指需求——每条可机器验证）
+
+| AC | 回指 | 判据（机验） |
+|---|---|---|
+| AC-TB1 | N10① | T-TB1 绿；grep：pushLine/pushLabel 入口经 `capText`（单点） |
+| AC-TB2 | N10② | T-TB2/3/4/5/6/7 绿；常量单源（值从 `display-budget.mjs` 导入断言） |
+| AC-TB3 | N10③ | T-TB8 绿（对账直算 = 增量账，双算法对照） |
+| AC-TB4 | N10④/F6 | T-TB9 绿；`startup.mjs` 翻页路径无 `full.length − loaded` 旧式（grep 零命中） |
+| AC-TB5 | N5/N6 零回归 | 既有族全绿：`test/tui-selection-surfaces.test.mjs`、`test/arrow-editing.test.mjs`、`test/attention-state.test.mjs`、`test/input-lock.test.mjs`、`test/tui-exit-cleanup.test.mjs`；行数环既有断言逐字不动 |
+| AC-TB6 | 行数纪律 | 触碰档 ≤500；`node scripts/check-doc-width.mjs` 本批新增违规 0 |
+
+### 15.8 边界（本批不做）
+
+- 不做显示层按需回读交互（截断全文在会话记录——回读面另案）；
+- 不做渲染期裁剪 / 虚拟滚动（改动面另案）；不改折叠/展开/锚定既有语义；
+- 不改 `_convCache` 结构（其特征为「随 state.lines 有界化自然有界」——本节可证：缓存键含行数/文本引用，
+  裁剪后旧行随 WeakMap/键失效释放）；
+- VSC webview 面零改动（其历史窗口显示面独立）。
+
 ## 变更记录
 
+- 2026-09-12（TUI-OOM-ROOTCAUSE 批·实现后同步）：§15.5 补两行——`subagent-freeze.mjs` 170 → 176
+  （冻结 splice 行经 `accountLine` 入 `state.lines` 总量账〔§15.3.3 落点表末行〕）· `cmd-clear.mjs`
+  21 → 23（清屏行集清空时 `_linesChars` 归零〔§15.3.2〕）；均为**声明外触碰**的实现后补行（coder 披露）。
+  纯实现态对齐、零语义变更。
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批）：新增 §15（分页源下沉 TUI 落点 + 显示层额度：常量表 /
+  辅助 API / 十条路径落点 / 决策 D-TB1–D-TB6 / 用例 T-TB1–T-TB10 / AC-TB1–AC-TB6）；需求 =
+  `../requirements/TUI.md` F6 修订 + N10；机制契约（分页）指 `SESSION.md` §14.3.6；批次档
+  `../batches/2026-09-11-TUI-OOM-ROOTCAUSE.md`。
+- 2026-09-11（TUI-OOM-ROOTCAUSE 批·设计评审轮次 1 修正轮）：§15.5 行数实测刷新
+  （`key-handler-search.mjs` 114——修正轮 #12）；页沿 ±1 / 恢复描述符 `total` 口径的契约修正在
+  `SESSION.md` §14.3.6（修正轮 #4——本档 15.A 不重述，D-TB6）。
 - 2026-09-11（交付后设计刷新——第 20/28/31 批面触行）：§1 模块地图行数回写（key-handler 461 · key-modes 294 · render 285 · layout 237 · clipboard 181 · pickers 118 · wizard 242）；§2 `interruptPrompt` 形态注；§4 状态优先级行序修正（interruptPrompt 先于 picker 栈/wizard）+ 「正常输入编辑」括注补竖移/历史（第 31 批）。纯登记/措辞、零语义。
 - 2026-09-11（第 33 批·修正轮——设计评审轮次 1 后）：§14.3 负向锁补机判口径（零序列 + strip-ANSI 无 chip）· T-AT1 补「permission+processing 同真 → blocked」矩阵行 · T-AT2 / AC-AT2 负向锁同口径 · T-AT7 输入行收紧 · T-AT8 补置位接线锚（D-AT6 机判）· §14.4 行数复核（key-handler 440 → 441）。消歧与静态锚、零新语义。
 - 2026-09-11（第 28 批·修正轮——设计评审轮次 1 后）：§13.3 契约面 await 提示措辞对齐（「Promise 输入附 `await` 提示」——与 §13.2 / AC-B1-2 同款；需求档 F12 同改）。纯措辞、零语义。

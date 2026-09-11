@@ -20,6 +20,7 @@
 | F4 | 触发即证据 | 工具执行期间的 console 输出回显到结果（调试价值） |
 | F5 | 交互轻量 | 工具不该与用户对话；需用户输入的场合（如 `question`）由专门机制承担 |
 | F6 | `websearch` 后端选择面单一 | 后端由 `websearch.apiKey` 触发：有 key → Tavily 结构化搜索；无 key → Bing 兜底（零配置可用）。不设独立后端选择键——`provider` 死键已移除（2026-09-11 第 36 批）。**判定句**：申报面（`config.mjs` DEFAULTS / README 配置模板）无 `provider` 键 ∧ `src/` 零 `websearch.provider` 读取（扫描 0 命中）∧ 无 key 调用行为与现状一致 |
+| F7 | 描述装载面双端同构（VSC——VSC-CONTEXT-PARITY 批） | VSC 端工具描述 = 25 档外部 `.md`（`DESC()` 同语义装载）+ Routing/Notes 段在位；CLI 侧内联面（`repo_outline` / `code_search` / `doc_search` / `memory` 等）不强制外置。**判定句**：VSC `src/tools/*.md` 25 档在位 ∧ 该 25 工具描述取自 `DESC("<name>")` ∧ 该 25 面内联 description 字符串零残留 |
 
 ## 3. 非功能性需求
 
@@ -33,6 +34,7 @@
 | N6 | 执行边界 | `execute` = 纯净 node ESM 子进程，与 bash 同边界（无伪沙箱、无 import 阻断、无预置全局）；**文件能力唯一入口 = 专用工具**；超时 SIGKILL（默认 30s，上限 600s） |
 | N7 | lint 零依赖 | `node --check` 快路径 + 语言级联（tsc/ruff/cargo/go vet）；eslint 级联已删（2026-09-02，零依赖政策） |
 | N8 | 配置面诚实 | 工具配置的申报面（DEFAULTS / 配置文档模板 / 两端写入面）与消费面一一对应：申报键必有代码读取点；无读取点的键不申报（发现即删——声明 + 文档 + 写入面收口）。**判定句**：`websearch.provider` → 零申报 ∧ 零读取；遗留磁盘值 → `loadConfig` 不抛、行为与未设置一致（兼容判定） |
+| N9 | 描述打包面（VSC——VSC-CONTEXT-PARITY 批） | 外部 `.md` 描述随扩展打包（`.vscodeignore` 不排除 `src/**/*.md`）——发布产物内 25 档在位 | 打包清单 / 忽略表核对（发布前） |
 
 ## 4. 范围边界（不做）
 
@@ -44,3 +46,4 @@
 ## 变更记录
 
 - 2026-09-11：新增 F6（`websearch` 后端选择面单一）+ N8（配置面诚实）+ §4 边界一条——`websearch.provider` 死键移除（第 36 批，设计 `../design/TOOLS.md` §11）
+- 2026-09-11：新增 F7（描述装载面双端同构——VSC 25 档 `.md` 外部装载）+ N9（描述打包面）——VSC-CONTEXT-PARITY 批 R4；设计 `TOOLS（VSC 仓）§12`。

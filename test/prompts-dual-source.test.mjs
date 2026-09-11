@@ -8,6 +8,7 @@
  *   - 第 15 批锚（PROMPT-SYSTEM 公共层扩容——common 4→10 节 + C1–C8 迁移收尾）——T-CL1/T-CL2 + T-CL3/T-CL4
  *   - 第 16 批锚（角色重定义——ROLE-REDEFINITION §2.28）——AC61（勾销口径）+ AC64（子代理角色句 + 头注）
  *   - 第 23 批锚（普通模式偏差审计收口——AGENT-LOOP §19）——T-NA1/T-NA2（并档自原 prompts-normal-audit）
+ *   - TD 锚组（机制纪律提示词落地——测试纪律 / 台账维护；设计 = PROMPT-SYSTEM §8.5）——T-TD1–T-TD6
  * 头部自持（零跨档 import——D-2 契约）：imports + read/exists 助手 + 语料读取 + NEW_PROMPTS 常量；
  * 断言逐字搬移（零改/零增/零删）。纯文件读取 + 字符串匹配——快层 glob 自动发现直跑。
  *
@@ -343,4 +344,60 @@ test("T-NA1 正常：英文落地条款锚 6 串全命中（fail-when-unchanged�
 
 test("T-NA2 正常：中文权威镜像锚 6 串全命中（fail-when-unchanged）", () => {
   for (const a of ANCHORS_ZH) assert.ok(dnZh.includes(a), `镜像锚缺失: ${a}`)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TD 锚组（机制纪律提示词落地——测试纪律 / 台账维护；设计 = PROMPT-SYSTEM §8.5）：
+// T-TD1–T-TD6 —— de 新节 + 台账块 ×2 源、dn 改写（新句在位 + 旧句零残留）×2 源、pe 归属句 ×2 源；
+// 双源在位 + fail-when-unchanged；旧句反证与维护者注反证（T-RO6 同型）并入例内。
+// ─────────────────────────────────────────────────────────────────────────────
+const TD_DE = [
+  "## 测试纪律（工程侧——寿命 / 门禁 / 归册）",
+  "**单元测试 = 开发期工具**",
+  "**不因单次改动而增补**",
+  "**默认退役（删除）**",
+  "三者全满足才转 ②③",
+  "**退役是常态、保留须举证**",
+  "**发布门 = 项目的完整验证链**",
+  "**未归册而超阈 = 硬红**",
+  "活文件只留**未决四态**",
+  "`触发=认账不排期`",
+  "行龄超 30 天标「老化」",
+]
+const TD_DN_EN = [
+  "Code changes must be verified — unit tests are development-time tools",
+  "Integration tests are project assets — never augmented per single change; the release gate is the project's full verification chain.",
+]
+const TD_DN_ZH = [
+  "代码改动必须验证——单元测试是开发期工具",
+  "集成测试是项目资产——不因单次改动而增补；发布门 = 项目的完整验证链。",
+]
+const TD_PE_EN = "- **The ledger is yours**: the requirement-pool / tech-backlog ledger (record + status advance + physical writes; subagents never declare ledger files in `files`)."
+const TD_PE_ZH = "- **台账归你**：需求池 / 技术待办台账（记录 + 状态推进 + 物理落笔；子代理一律不在 `files` 声明台账档）。"
+const TD_C_EN = "Add tests if the project has them — as unit tests"
+const TD_C_ZH = "项目有测试就加测试——写单元测试"
+const TD_CNT = "（计数口径 = 未决数——归档条目不计数）"
+
+test("T-TD1 正常：de 双源——测试纪律新节 + 台账块 + 组计数尾注驻留（fail-when-unchanged）", () => {
+  for (const [name, doc] of DE_PAIR) {
+    for (const s of TD_DE) assert.ok(doc.includes(s), `${name}: de 新文本缺失: ${s}`)
+    assert.ok(doc.includes(TD_CNT), `${name}: 组计数尾注缺失（计数口径 = 未决数）`)
+  }
+})
+
+test("T-TD2/T-TD6 正常+错误：dn 双源——新句在位 + 旧句零残留（回潮即红）+ `:8` 尾改", () => {
+  for (const [name, doc, keys, old] of [
+    ["dn-src", dn, [...TD_DN_EN, TD_C_EN], "Code changes need at least one test"],
+    ["dn-zh", dnZh, [...TD_DN_ZH, TD_C_ZH], "至少要有一个测试"],
+  ]) {
+    for (const s of keys) assert.ok(doc.includes(s), `${name}: 新句缺失: ${s}`)
+    assert.ok(!doc.includes(old), `${name}: 旧句残留——回潮即红`)
+  }
+})
+
+test("T-TD3/T-TD4 正常+边界：pe 双源归属句驻留 + 新增锚串零维护者注（全文锚；T-TD5 行宽机检 = check-doc-width 常驻）", () => {
+  assert.ok(pe.includes(TD_PE_EN), "pe-src: 归属句缺失（全文锚）")
+  assert.ok(peZh.includes(TD_PE_ZH), "pe-zh: 归属句缺失（全文锚）")
+  const ALL = [...TD_DE, ...TD_DN_EN, ...TD_DN_ZH, TD_PE_EN, TD_PE_ZH, TD_C_EN, TD_C_ZH, TD_CNT]
+  for (const s of ALL) assert.ok(!/\d{4}-\d{2}-\d{2}|第\s*\d+\s*批|评审\s*#/.test(s), `新增文本含维护者注: ${s.slice(0, 26)}…`)
 })

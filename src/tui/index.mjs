@@ -37,8 +37,10 @@ import { runAgentTurn } from "./agent-turn.mjs"
 import { createKeyHandler, convMaxScroll, clearAttention } from "./key-handler.mjs"
 import { showStartup, backgroundIndex, createLoadOlder } from "./startup.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
+import { capLine, accountLine, accountAll, syncLineBudget } from "./display-budget.mjs"
 import { createConfigHelpers } from "./config-helpers.mjs"
 import { createUpdateNotice, pendingNoticeReady } from "./update-notice.mjs"
+import { startLedgerSurface } from "./ledger-surface.mjs"
 
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
@@ -115,6 +117,7 @@ export async function startTUI(agent, opts = {}) {
     currentTool: null, // currently executing tool name (shown in status bar)
     processingStarted: 0, // current turn start time (status bar timer)
     status: "Ready",
+    ledger: { marker: null, warn: false, scannedAt: 0 }, // LEDGER-SURFACE（§2.30.3.4）：L1 标记位——ledger-surface 写 / render-frame 读
     queue: [], // 交接残项单容器 [{ text }]（INPUT-LOCK：submit 不再排队——仅释放窗口兜底/挂起中止残余——回合尾队列循环续发，至多一条）
     interruptPrompt: null, // Ctrl+I inject box（第 31 批——TUI-INPUT-BOX.md §8）: { chars: string[], cursor: number } or null
     attentionAwaiting: false, // 第 33 批（TUI §14.3(f)）：回合结束等待输入——链尾置位 / 用户输入清位；不落盘、不进会话
@@ -127,6 +130,7 @@ export async function startTUI(agent, opts = {}) {
     _historyLoaded: 0, // messages loaded from the TAIL of _fullHistory
     _historyTotal: 0, // total messages in the restored session
     _hasOlder: false, // more earlier messages remain unloaded
+    _linesChars: 0, // TUI-OOM-ROOTCAUSE（§15.3.2）：state.lines 全部行与载体文本总量（字符账——唯一新增状态位）
     _agent: null, // TUI state → agent 回指挂载点：startTUI 装配时置 agent 引用——
     // ① SYNC-CANCEL ⏹ 门控读 state._agent._syncChildAborts（subagent-panel.mjs，2026-09-09）；
     // ② CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：agent._tuiState = state 反向挂载——
@@ -276,7 +280,11 @@ export async function startTUI(agent, opts = {}) {
   process.on("exit", cleanup)
 
   const pushLine = (text, color, kind) => {
-    state.lines.push({ text, color, _kind: kind })
+    // TUI-OOM-ROOTCAUSE（TUI.md §15.3.1/§15.3.3）：行额度单点——行文本过 capLine
+    // （LINE_MAX_CHARS——单行巨内容/无换行巨 chunk 的堵口）+ 总量账 + 预算对账。
+    const line = { text: capLine(text), color, _kind: kind }
+    state.lines.push(line)
+    accountLine(state, line)
     if (state.lines.length > 5000) {
       state.lines.splice(0, 1000)
       state.lines.unshift({ text: `... [earlier messages trimmed — ${state.lines.length} lines remaining]`, color: C.dim })
@@ -284,14 +292,24 @@ export async function startTUI(agent, opts = {}) {
       // 流位置）——不校正则池空补发冻结（freezeSubTaskLines splice）落点漂移；校正量
       // = 净位移（裁 1000 补 1 标记行 → −999，code review round1 #3）。
       shiftFreezeAnchors(state, 1000)
+      accountAll(state) // 行对象集合已变（splice/unshift 直写）——直算重对账
     }
+    syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
     render()
   }
 
   /** Message block label: blank line + label line. Breathing space between user/assistant messages */
   const pushLabel = (text, color) => {
-    if (state.lines.length > 0) state.lines.push({ text: "", color: C.dim })
-    state.lines.push({ text, color })
+    // 行额度同 pushLine（§15.3.1——恢复行/标签行同口径）
+    if (state.lines.length > 0) {
+      const blank = { text: "", color: C.dim }
+      state.lines.push(blank)
+      accountLine(state, blank)
+    }
+    const line = { text: capLine(text), color }
+    state.lines.push(line)
+    accountLine(state, line)
+    syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
     render()
   }
 
@@ -315,6 +333,13 @@ export async function startTUI(agent, opts = {}) {
   // 懒加载更早历史（startup.mjs createLoadOlder——D-S1b）：滚轮/PgUp 到顶自动加载；
   // 声明在此（render 已可用）——data 回调（滚轮分支）与 createKeyHandler ctx（PgUp）共用。
   const loadOlder = createLoadOlder({ agent, state, render })
+
+  // TUI-OOM-ROOTCAUSE（CRASH-REPORTS.md §8.3 订阅接线）：堆预警行入对话流（pushLine 已 render）——
+  // 不新增 TUI 定时器（采样定时器住 heap-watch 模块，bin 入口武装）；订阅失败不影响启动。
+  try {
+    const { onHeapWarn } = await import("../heap-watch.mjs")
+    onHeapWarn((line) => pushLine(line, C.warn))
+  } catch { /* 尽力面 */ }
 
   // Resize events are genuine dimension changes on every terminal (2026-08-31
   // simplification: the earlier settle-timer/double-confirm machinery was built
@@ -438,6 +463,9 @@ export async function startTUI(agent, opts = {}) {
   await promptProviderIfInvalid(agent, () => openModelPicker(), pushLine)
 
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })
+  // LEDGER-SURFACE（§2.30.3.4）：台账可见面——首扫（setImmediate）+ 周期；dispose 挂进程退出（:278 cleanup 先例）
+  const ledgerSurface = startLedgerSurface({ state, agent, pushLine, render })
+  process.on("exit", () => ledgerSurface.dispose())
   backgroundIndex({ agent, state, render })
 
   // Check for updates (non-blocking, after startup screen)——实现 update-notice.mjs

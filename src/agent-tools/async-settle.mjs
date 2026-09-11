@@ -70,6 +70,19 @@ export function buildChildSignal(parent, ctx) {
 // ─── D3 settle 共享 helper ───────────────────────────────────────────────────
 
 /**
+ * §23.3.1 消化窗口持有释放（TUI-OOM-ROOTCAUSE——D-SM2 表 2 候选 1）：注入完成后置空条目
+ * 对子代理对象的引用（`childAgent`/`report`——条目前此从不显式释放，挂起期 = 分钟级驻留）。
+ * 幂等（重入不抛）；池内/挂起未消化窗口语义零变（settle 时刻不释放——表 2 候选 2 否决：
+ * status/observe 在窗口内仍读 child 摘要）。三消费点（回合尾收集 / run 起始 pending 注入 /
+ * 挂起残差注入）在注入完成后调本 helper。
+ */
+export function releaseSettledEntry(entry) {
+  if (!entry || typeof entry !== "object") return
+  entry.childAgent = null
+  entry.report = null
+}
+
+/**
  * D3 settle 共享 helper——四族 settle 回调公共收尾单点（ASYNC-RESULT-CONTAINER.md
  * AC1：settle 记账单点，无逐字重复）。流程：
  *   ① 落 done/status="done"（settle 即翻——不再占槽/持文件域；report/error 由各族

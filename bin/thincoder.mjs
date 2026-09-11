@@ -41,6 +41,13 @@ const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.u
 // 期窗口）——V8 OOM/原生 fatal 自动写 report.*.json（实现批实测：目录缺失时 Node 静默不写
 // ——预建为必要动作）。失败不阻断启动（尽力面）。
 prepareCrashReporting()
+// TUI-OOM-ROOTCAUSE（CRASH-REPORTS.md §8.3 武装点——全命令同源单点）：堆遥测/看门狗——
+// 60s 采样 + 双档（70/85%）比例边缘预警（stderr + TUI 行 + 事件日志）；定时器 unref
+// （一次性命令自然退出零阻塞）；默认开 / THINCODER_HEAP_WATCH 关值集可不启。失败面全吞。
+try {
+  const { startHeapWatch } = await import("../src/heap-watch.mjs")
+  startHeapWatch()
+} catch { /* 看门狗启动失败不阻断启动（尽力面） */ }
 
 // R25（F-R25a）异常钩子升级：原"只 console.error 一行（TUI 全屏下不可见）"→ ① 落盘
 // crash-{ts}-{pid}.json ② TUI 活动态终端恢复 ③ console.error（恢复后打印才可见）
@@ -293,11 +300,13 @@ switch (command) {
     // 恢复上次的会话（同一项目目录）；provider 按保存的名字切回（用户上次可能换过模型）
     // 2026-09-05 §10（R4）：恢复决策按本端记录 resumeSlot（D-2 ①②③）——manifest active
     // 只作"无记录端"的一次性继承源，不再作本端恢复第一依据（D-6）。
-    const { resumeSlot, applySession } = await import("../src/session.mjs")
+    const { resumeSlot, applySession, sessionDescriptor } = await import("../src/session.mjs")
     const { slot, data } = resumeSlot(process.cwd())
     if (data) {
       // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支
-      applySession(agent, data)
+      // TUI-OOM-ROOTCAUSE（SESSION.md §14.3.4）：传 slot → 绑定记录存储（身份核验 + 对账）
+      // ——人读线 = 尾窗（磁盘为准）；未传 = 模式 F（全量数组）
+      applySession(agent, data, { slot })
       // SESSION.md §11.2（2026-09-08——N6 评审 🔴 修复）：process restarted 句 = 进程级
       // 信号——仅本启动 resume 路径设一次（真进程重启恢复盘上会话）；/session 切换与 ACP
       // 加载走同一 applySession 收敛但不设（不误报进程重启）。prepareRun 发句即清——进程
@@ -326,7 +335,7 @@ switch (command) {
         projectDir: config.memory.projectDir ? (isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(process.cwd(), config.memory.projectDir)) : null,
         team: teamConfig(config),
         author: gitAuthor(),
-        restored: data,
+        restored: data ? sessionDescriptor(agent, data) : data,
         // R25（F-R25c）：TUI 启动显示一行"上次运行异常终止"提示（showStartup 渲染——无匹配不传）
         crashNotice: recentCrashHint() ?? undefined,
       })

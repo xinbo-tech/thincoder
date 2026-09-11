@@ -7,6 +7,9 @@
  * 不禁内容变更（.set/.delete/.push），调用方行为与同模块时代一致。
  */
 
+// TUI-OOM-ROOTCAUSE（TUI.md §15.3.1）：显示层额度常量/工具行定位（display-budget 叶子）。
+import { capLines, TOOL_RESULT_MAX_CHARS } from "./display-budget.mjs"
+
 // Tool execution start timestamps (performance.now ms). Keyed by tool_call id
 // when available (parallel same-name tools each get their own tick — the
 // P0-3 fix, 2026-08-30), falling back to a per-name FIFO queue for callers
@@ -73,7 +76,9 @@ export function sweepToolBlocks(state) {
  *  1) Multimodal results (read_image) embed FULL base64 images in the JSON —
  *     the human needs only the text part (model gets images via the multimodal
  *     channel); 2) results beyond maxRows are truncated in the block (full
- *     text always lives in history for the model). Returns row array. */
+ *     text always lives in history for the model). Returns row array.
+ *  TUI-OOM-ROOTCAUSE（§15.3.1 TOOL_RESULT_MAX_CHARS）：总量额度与 400 行双维
+ *  （单行任意大——无 `\n` 巨 chunk/JSON 尾行），尾截断 + 标记。 */
 export function slimToolResultForDisplay(result, maxRows = 400) {
   let displayResult = result
   try {
@@ -81,9 +86,18 @@ export function slimToolResultForDisplay(result, maxRows = 400) {
     if (parsed?.images?.length) displayResult = parsed.text ?? result
   } catch { /* not JSON — show as-is */ }
   const rows = String(displayResult).split("\n").filter((l) => l.trim())
-  return rows.length > maxRows
+  const capped = rows.length > maxRows
     ? [...rows.slice(0, maxRows), `… (result truncated at ${maxRows} rows — full text in history)`]
     : rows
+  return capLines(capped, TOOL_RESULT_MAX_CHARS)
+}
+
+/** 按块定位其载体行（字符账 re-account 用——块对象唯一）。 */
+export function findToolLine(state, name, toolId) {
+  const block = findToolBlock(state, name, toolId)
+  if (!block) return null
+  for (const l of state.lines ?? []) if (l._toolBlock === block) return l
+  return null
 }
 /** Mark the dispatch-level tool carrier done when its result is consumed by a
  *  dedicated branch (subagent/escalate/advisor blocks) — without this the turn

@@ -163,7 +163,7 @@ function tightenTailByBudget(history, start, floorStart, budgetTokens) {
  * pushReal — the single entry point for REAL conversation messages.
  * A real message (user input, assistant reply, tool result, multimodal image) is appended to BOTH:
  *   agent.history      — the machine context (compaction shrinks this)
- *   agent._fullHistory — the NEVER-COMPACTED human-readable record (persistence source)
+ *   agent._fullHistory — the human-readable record (persistence source)
  * Machine-only messages ([System reminder:...], compaction notes, task/plan/checkpoint re-injections)
  * are pushed directly to agent.history WITHOUT going through here, so they never enter _fullHistory.
  * The two lines are written independently at the source — no after-the-fact delta sync.
@@ -171,11 +171,22 @@ function tightenTailByBudget(history, start, floorStart, budgetTokens) {
  * point covers every real message. Pre-existing ts (e.g. from another end writing the shared slot)
  * is preserved; restored old messages keep no ts rather than getting a misleading backdate (D-S3).
  * ts is a LOCAL-ONLY field — the send layer strips it before any provider request (T-S3).
+ *
+ * TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.5）——人读线内存有界 + 磁盘为准：
+ *   ① `agent._recordStore?.append(msg)`：记录同步追加（磁盘为准——append-only sidecar）；
+ *   ② 窗口驱逐：绑定态（agent._historyWindow = 200）下 _fullHistory 只保最近窗口条——
+ *      更早内容仅存磁盘（翻页/检索/保存从盘按需读）。未绑定（模式 F）不驱逐（零回归）。
+ * 追加失败不阻断回合（独立 try/catch——尽力面 N-S6；store 内部另置 degraded 并停写）。
  */
 export function pushReal(agent, msg) {
   if (!Array.isArray(agent._fullHistory)) agent._fullHistory = []
   if (msg && msg.ts === undefined) msg.ts = Date.now()
   agent._fullHistory.push(msg)
+  try { agent._recordStore?.append(msg) } catch { /* 尽力面：落盘失败不阻断回合（N-S6） */ }
+  const win = agent._historyWindow
+  if (win > 0 && agent._fullHistory.length > win) {
+    agent._fullHistory.splice(0, agent._fullHistory.length - win)
+  }
   agent.history.push(msg)
 }
 

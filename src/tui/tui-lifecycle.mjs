@@ -15,9 +15,16 @@ export function writeStartupSequence(write = (s) => process.stdout.write(s)) {
   write(ansi.altBuffer + ansi.hideCursor + ansi.mouseOn + ansi.bracketedPasteOn + ansi.keyboardPush + ansi.modifyOtherKeysOn + ansi.wrapOff)
 }
 
-/** TUI 清理序列：清屏 + 关闭鼠标/粘贴/键盘增强 + 退出 alt buffer + 显示光标 + 恢复环绕。 */
+/** TUI 清理序列 = 异常退出恢复序列（单一来源——§9.2 表 2 候选 1）：清屏 + 关闭鼠标/
+ *  粘贴/键盘增强 + 退出 alt buffer + 显示光标 + 恢复环绕。
+ *  TUI-OOM-ROOTCAUSE（CRASH-REPORTS.md §9.3）：提取为导出常量 `RECOVERY_SEQUENCE`——
+ *  包装父在子异常退出（V8 fatal——不走 JS 钩子）时补发同一序列（单一来源，禁第三份
+ *  副本）；writeCleanupSequence 引用同常量（行为逐字不变——既有字节锁测试保持，AC-RT3）。 */
+export const RECOVERY_SEQUENCE =
+  ansi.clearScreen + ansi.mouseOff + ansi.bracketedPasteOff + ansi.keyboardPop + ansi.modifyOtherKeysOff + ansi.mainBuffer + ansi.showCursor + ansi.reset + ansi.wrapOn
+
 export function writeCleanupSequence(write = (s) => process.stdout.write(s)) {
-  write(ansi.clearScreen + ansi.mouseOff + ansi.bracketedPasteOff + ansi.keyboardPop + ansi.modifyOtherKeysOff + ansi.mainBuffer + ansi.showCursor + ansi.reset + ansi.wrapOn)
+  write(RECOVERY_SEQUENCE)
 }
 
 // R25（ARCHITECTURE.md §R25 F-R25a——复审 #1）：TUI 活动态标志——index.mjs 在终端接管

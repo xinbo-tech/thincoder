@@ -1,12 +1,14 @@
 /**
- * crash-reports.mjs — R25（docs/design/ARCHITECTURE.md §R25——F-R25a/b/c）CLI 异常终止
- * 捕获与留痕机制。
+ * crash-reports.mjs — 崩溃捕获与取证（docs/design/CRASH-REPORTS.md——F1/F2 为 R25 与
+ * TUI-STDERR-CAPTURE 存量迁移；F3 近堆上限堆快照 = TUI-OOM-FORENSICS 批新增）。
  *
- * 三类能力（与设计逐项对应）：
- * - prepareCrashReporting()（F-R25b）：入口最前调用——mkdir 预建 ~/.thincoder/crash-reports/
+ * 能力（与设计逐项对应）：
+ * - prepareCrashReporting()（F-R25b + F3①）：入口最前调用——mkdir 预建 ~/.thincoder/crash-reports/
  *   + process.report 代码内启用（reportOnFatalError + directory）——V8 OOM/原生 fatal
  *   自动写 report.*.json。实现批实测（2026-09-07）：目录缺失时 Node 对 fatal 静默不写
  *   报告——预建是必要动作而非"零成本保险"。
+ *   F3①：同点武装近堆上限堆快照（v8.setHeapSnapshotNearHeapLimit——对象级证据，回答
+ *   "谁在持内存"；全路径单源，默认开、THINCODER_HEAP_SNAPSHOT 可关——F3②）。
  * - writeCrashRecord()（F-R25a）：JS 异常钩子同步落盘 crash-{ts}-{pid}.json（ts = epoch ms
  *   UTC + pid——跨进程同 ms 防覆盖——复审 #3）——权限 0600（config.json 先例）。
  * - recentCrashHint()（F-R25c）：启动扫描 24h 窗内记录（两类文件模式定死——评审 #8：
@@ -23,7 +25,12 @@
  */
 import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+// F3① 命名空间 import：API 缺失（旧 Node）降级为调用期异常并被武装 try 吞掉——不做 import 期硬失败
+import * as v8 from "node:v8"
 import { configDir } from "./config.mjs"
+
+/** F3② 关值集合（trim + 大小写不敏感）；其余取值（未设 / 空串 / 未知串）默认开——fail-open 向取证。 */
+const HEAP_SNAPSHOT_OFF_VALUES = new Set(["0", "false", "off", "no"])
 
 /** crash-reports 运行时目录（~/.thincoder/crash-reports——非仓内——写时自清理）。 */
 export function crashReportsDir() {
@@ -32,13 +39,15 @@ export function crashReportsDir() {
 
 /** 记录文件模式（评审 #8 定死）：crash-*.json = 自写（F-R25a）；report.*.json = Node
  *  fatal（默认命名 report.YYYYMMDD.HHMMSS.<pid>.<seq>.json——2026-09-07 实现批实测）。
- *  purge 另含 tui-stderr-*.log（TUI-STDERR-CAPTURE F-2——30 天同族淘汰）——但 recentCrashHint
- *  不计该类：tui-stderr 每次 TUI 启动都生成（正常退出也留档）——计入即正常会话误报"异常终止"。 */
+ *  purge 另含 tui-stderr-*.log（TUI-STDERR-CAPTURE F-2——30 天同族淘汰）与
+ *  Heap.*.heapsnapshot（CRASH-REPORTS F3③——快照 GB 级、TUI 落点须自动兜底）——但
+ *  recentCrashHint 两类均不计（N3）：tui-stderr 每次 TUI 启动都生成（正常退出也留档）、
+ *  快照非「异常终止」证据类——计入即正常会话误报。 */
 function isCrashRecordName(name) {
   return /^crash-.+\.json$/.test(name) || /^report\..+\.json$/.test(name)
 }
 function isPurgeRecordName(name) {
-  return isCrashRecordName(name) || /^tui-stderr-.+\.log$/.test(name)
+  return isCrashRecordName(name) || /^tui-stderr-.+\.log$/.test(name) || /^Heap\..+\.heapsnapshot$/.test(name)
 }
 
 /** >30 天淘汰（评审 #6）——写时自清理；搭车点 = 写 / 入口 mkdir / 启动扫描（复审 #4）。 */
@@ -54,18 +63,31 @@ function purgeOldCrashReports(dir) {
   }
 }
 
+/** F3② 武装判定（单点——包装器不判 env，防两处判定漂移）：关值集合命中 → 不武装；其余 → 武装。 */
+function heapSnapshotEnabled(env) {
+  return !HEAP_SNAPSHOT_OFF_VALUES.has(String(env?.THINCODER_HEAP_SNAPSHOT ?? "").trim().toLowerCase())
+}
+
 /**
  * F-R25b：入口最前调用（一切重活前——缩编程期窗口）——预建目录 + process.report 启用。
  * 任何失败不阻断启动（尽力面——record 路径自带降级）。返回目录路径。
+ * F3①：同点武装近堆上限堆快照（默认开——全路径单源；环境开关见 heapSnapshotEnabled）。
+ * @param {object} [opts] 注入缝（默认参数保 bin 入口调用点零改）
+ * @param {string} [opts.dir] 目录注入（测试用——同时服务 mkdir / report / purge / 返回）
+ * @param {object} [opts.env] env 注入（测试用）——仅服务 F3② 判定
+ * @param {(n: number) => void} [opts.armHeapSnapshot] 武装实现注入（测试用）——默认真实 node:v8 API
  */
-export function prepareCrashReporting() {
-  const dir = crashReportsDir()
+export function prepareCrashReporting({ dir = crashReportsDir(), env = process.env, armHeapSnapshot = v8.setHeapSnapshotNearHeapLimit } = {}) {
   try {
     mkdirSync(dir, { recursive: true })
     // 代码内启用：shebang 入口无法携带启动参数（env 单参数限制 + execArgv 仅子进程——评审 #1）
     process.report.directory = dir
     process.report.reportOnFatalError = true
   } catch { /* mkdir/启用失败不阻断启动——尽力面 */ }
+  // F3① 武装（独立 try——失败不阻断启动、不影响上方 F1 既有步骤；尽力面静默）
+  if (heapSnapshotEnabled(env)) {
+    try { armHeapSnapshot(1) } catch { /* 武装失败不阻断——N1 */ }
+  }
   purgeOldCrashReports(dir) // F-R25b 入口 mkdir 搭车清理（复审 #4——纯 fatal 序列也触发）
   return dir
 }

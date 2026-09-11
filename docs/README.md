@@ -150,6 +150,7 @@ docs/
 | 工具系统 | `design/TOOLS.md` | 权威源。`design/MCP.md`、`design/SETTINGS-TOOL.md` 同板块独立保留；`design/VERIFY-REDESIGN.md`（verify 重构——doc-only 快路径由 TOOLS.md D-V5 接管） |
 | Checkpoint 事故恢复 | `design/CHECKPOINT.md` | 快照/回滚机制 + 两端存储统一 |
 | 诊断事件日志 | `design/LOGGING.md` | 常驻事件骨架日志 |
+| 崩溃捕获与取证 | `requirements/CRASH-REPORTS.md`（需求）+ `design/CRASH-REPORTS.md`（设计+测试） | 2026-09-11 建档（TUI-OOM-FORENSICS 批）——R25 异常终止捕获 + TUI stderr 捕获 + 近堆上限堆快照 |
 | TUI | `design/TUI.md` | 权威源。`design/TUI-INPUT-BOX.md`、`design/TUI-TOOL-OUTPUT.md` 同板块独立保留 |
 | TUI · 批记录 | `_archive/SYNC-CANCEL.md`、`_archive/INPUT-LOCK-ASYNC.md`、`_archive/INPUT-LOCK-BEHAVIOR-REVISED.md` | 2026-09-10 入档——机制正文落 AGENT-LOOP §7.2 / §9 + §11.3 与 TUI.md §4/§8 |
 | 记忆 | `design/MEMORY.md` | 三层记忆（用户/项目/团队） |
@@ -189,6 +190,7 @@ docs/
 | `requirements/CHECKPOINT.md` | Checkpoint 事故恢复（快照/回滚保险） |
 | `requirements/CONSULTATION.md` | 会诊（多模型并行分析同一问题） |
 | `requirements/CONTEXT-COMPACTION.md` | 上下文压缩 |
+| `requirements/CRASH-REPORTS.md` | 崩溃捕获与取证（崩溃留痕 / Node 报告 / TUI stderr 捕获 / 近堆上限堆快照） |
 | `requirements/DESIGN-TOKEN-SETTLEMENT.md` | 设计评审凭证结算（settle 当场落盘 / 门禁读权威 / 废旧镜像） |
 | `requirements/ENG-TOKEN-BINDING.md` | — |
 | `requirements/ENGINEERING-MODE.md` | 工程模式——thincoder 的严格方法论工作流：design-before-code、纪律层槽位提示词驱动、双门禁（ |
@@ -222,6 +224,7 @@ docs/
 
 ## 变更记录
 
+- 2026-09-11：新增「崩溃捕获与取证」板块——`requirements/CRASH-REPORTS.md` + `design/CRASH-REPORTS.md`（TUI-OOM-FORENSICS 批建档；R25 / TUI-STDERR-CAPTURE 归宿落定）——登记 §4 / §4.1。
 - 2026-09-10：**文档目录结构重组**（DOC-REORG 批）——35 档批次/变更史档入 `design/_archive/`（正文冻结）；
   建 `requirements/`（含说明档）；地图自 `design/README.md` 迁入本文件（§1 目录/§2 档位分类/§3 规范/§4 登记表/§5 四问）。
 - 2026-09-10：建档——`docs/` 唯一地图与文档规范载体（需求/设计分目录重组需求落档）。

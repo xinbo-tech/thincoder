@@ -69,9 +69,14 @@ export async function generateTitle(userContent, provider) {
 export async function ensureSessionTitle(agent) {
   if (agent.title) return agent.title
   try {
-    const firstUser = (agent._fullHistory ?? agent.history).find(
-      (m) => m.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:"),
-    )
+    // TUI-OOM-ROOTCAUSE 批（SESSION.md §14.3.3）：绑定态首条 user 消息在记录存储（段 1）——
+    // 内存窗口可能已滑过它（store.firstUserMessage 首扫一次并缓存）；未绑定回退内存查找。
+    let firstUser = agent._recordStore?.firstUserMessage?.() ?? null
+    if (!firstUser) {
+      firstUser = (agent._fullHistory ?? agent.history).find(
+        (m) => m.role === "user" && typeof m.content === "string" && !m.content.startsWith("[System reminder:"),
+      )
+    }
     if (firstUser) {
       const title = await generateTitle(firstUser.content, agent.provider)
       if (title) agent.title = title

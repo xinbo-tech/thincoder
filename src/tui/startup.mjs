@@ -3,6 +3,9 @@ import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"
 import { countConvLines } from "./render-conversation.mjs"
+// TUI-OOM-ROOTCAUSE（TUI.md §15.3.3）：恢复/翻页行过额度 + state.lines 总量对账。
+import { capLine, accountLine, accountAll, syncLineBudget } from "./display-budget.mjs"
+import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads
  *  the latest INITIAL_HISTORY_MESSAGES, then PgUp-at-top loads HISTORY_PAGE_MESSAGES
@@ -115,24 +118,34 @@ export function historyToLines(history, startIdx, endIdx) {
  * INITIAL_HISTORY_MESSAGES, set the _history* counters the loadOlder closure
  * reads, and prepend the "… N more earlier messages" placeholder. Shared by
  * startup restore and /session switching (the display snapshot is deprecated).
+ * TUI-OOM-ROOTCAUSE（SESSION.md §14.3.6）：desc = `{ history, total, base? }`——
+ * history = 尾窗（≤200，含 ±1 页沿头一条——跨页回标判定用；不渲染）、total = 绝对总条数
+ * （「N messages」标签口径）、base = history[0] 的绝对序号（缺省由 total − len 推导）。
  */
-export function restoreLines(state, history) {
-  const total = Array.isArray(history) ? history.length : 0
-  if (total === 0) return
-  const start = Math.max(0, total - INITIAL_HISTORY_MESSAGES)
+export function restoreLines(state, desc) {
+  const window = Array.isArray(desc?.history) ? desc.history : (Array.isArray(desc) ? desc : [])
+  const total = Number.isFinite(desc?.total) ? desc.total : window.length
+  if (window.length === 0 || total === 0) return
+  const base = Number.isFinite(desc?.base) ? desc.base : Math.max(0, total - window.length)
+  // 已载入量 = 渲染窗口大小（±1 页沿头一条不计数），绝对起点 = total − loaded
+  const loaded = Math.min(INITIAL_HISTORY_MESSAGES, total)
+  const start = total - loaded
   state._lineIdCounter = state._lineIdCounter ?? 0
-  const fresh = historyToLines(history, start, total)
+  const fresh = historyToLines(window, Math.max(0, start - base), window.length)
+  for (const l of fresh) l.text = capLine(l.text) // 行额度（§15.3.3 恢复行过 capText）
   // Stable per-line ids (P1, 2026-08-30): fold keys for tool blocks derive from
   // _lineId so loadOlder's head-unshift cannot re-bind an expanded block to a
   // different tool (positional tool-{i} keys drift under unshift).
   for (const l of fresh) l._lineId = ++state._lineIdCounter
   state.lines.push(...fresh)
-  state._historyLoaded = total - start
+  state._historyLoaded = loaded
   state._historyTotal = total
   state._hasOlder = start > 0
   if (state._hasOlder) {
     state.lines.unshift({ text: `… ${start} more earlier messages (PgUp at top to load)`, color: C.dim })
   }
+  accountAll(state) // 行集重建 → 总量直算重对账（§15.3.4）
+  syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
 }
 /** 懒加载更早历史（2026-08-31 用户约定："滚动到头自动加载"——滚轮/PgUp 到顶皆触发；
  *  2026-08-31 前只挂 PgUp 键 = 违约，滚轮到头无反应）。加载后滚动补偿保持锚定。
@@ -142,10 +155,12 @@ export function restoreLines(state, history) {
 export function createLoadOlder({ agent, state, render }) {
   return () => {
     if (!state._hasOlder) return
-    const full = agent._fullHistory ?? []
+    // 翻页锚 = 恢复时点 total（state._historyTotal）——活消息增长不再使页码漂移
+    // （§14.1 事实 4 / §14.3.6 顺带修复）。
+    const total = state._historyTotal ?? 0
     const loaded = state._historyLoaded
-    const start = Math.max(0, full.length - loaded - HISTORY_PAGE_MESSAGES)
-    const end = full.length - loaded
+    const start = Math.max(0, total - loaded - HISTORY_PAGE_MESSAGES)
+    const end = total - loaded
     if (start >= end) return
 
     const d = state.dims ? state.dims.get() : {}
@@ -154,14 +169,29 @@ export function createLoadOlder({ agent, state, render }) {
 
     if (state.lines[0]?.text?.startsWith("… ")) state.lines.shift()
     state._lineIdCounter = state._lineIdCounter ?? 0
-    const older = historyToLines(full, start, end)
+    // 页源（§14.3.6）：绑定态 → store.page 绝对区间 + ±1 页沿（页前一消息供跨页回合
+    // 标签判定、页后一消息供 tool_result 配对）；未绑定（模式 F）→ 内存全量数组回退。
+    const store = agent._recordStore
+    let older
+    if (store?.page) {
+      const { messages, base } = store.page(start, end, { margin: 1 })
+      older = historyToLines(messages, Math.max(0, start - base), Math.min(messages.length, end - base))
+    } else {
+      older = historyToLines(agent._fullHistory ?? [], start, end)
+    }
+    for (const l of older) l.text = capLine(l.text) // 行额度（§15.3.3 翻页行过 capText）
     for (const l of older) l._lineId = ++state._lineIdCounter
     state.lines.unshift(...older)
+    for (const l of older) accountLine(state, l)
     state._historyLoaded += end - start
     state._hasOlder = start > 0
     if (state._hasOlder) {
-      state.lines.unshift({ text: `… ${start} more earlier messages (scroll to top to load)`, color: C.dim })
+      const ph = { text: `… ${start} more earlier messages (scroll to top to load)`, color: C.dim }
+      state.lines.unshift(ph)
+      accountLine(state, ph)
     }
+    // 页内不裁头（保锚定）——§15.3.3：总量的裁头由 syncLineBudget 兜（此处只对账字符预算）
+    syncLineBudget(state, { onTrim: (st, n) => shiftFreezeAnchors(st, n) })
 
     const after = countConvLines(state, cols, (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24))
     state.scroll += Math.max(0, after - before)
@@ -194,8 +224,10 @@ export function showStartup(ctx) {
   // Recover previous session: rebuild from history (lazy — display snapshot is
   // deprecated; it drifted out of sync with history on VS Code writes).
   if (opts.restored?.history?.length) {
-    restoreLines(state, opts.restored.history)
-    pushLabel(`── Restored previous session (${opts.restored.history.length} messages); /new for a fresh session ──`, C.warn)
+    restoreLines(state, opts.restored)
+    // 「N messages」标签口径 = total（§14.3.6——非窗口长度）
+    const total = Number.isFinite(opts.restored.total) ? opts.restored.total : opts.restored.history.length
+    pushLabel(`── Restored previous session (${total} messages); /new for a fresh session ──`, C.warn)
   }
 
   // Hint when multiple sessions exist

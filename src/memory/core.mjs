@@ -7,6 +7,7 @@
 
 import { parseEntry, serializeEntry, entryFilename } from "../markdown.mjs"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
+import { scanVectors, createTopK } from "./scan.mjs"
 import { readFile, stat, readdir, writeFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 import { segmentCJK, VALID_TYPES, SCHEMA_VERSION } from "./schema.mjs"
@@ -57,15 +58,13 @@ export async function search(memory, query, { limit = 5 } = {}) {
   }
   const vecFilter = memory.projectOrigin ? `AND (layer = 'team' OR origin = ?)` : ""
   const vecParams = memory.projectOrigin ? [memory.projectOrigin] : []
-  const rows = memory.db.prepare(`
-    SELECT 'personal:' || id AS uid, embedding FROM entries WHERE embedding IS NOT NULL
-    UNION ALL
-    SELECT layer || ':' || COALESCE(origin, '') || ':' || path AS uid, embedding FROM files WHERE embedding IS NOT NULL ${vecFilter}
-  `).all(...vecParams)
-  const vecList = rows
-    .map((r) => ({ id: r.uid, score: cosine(qvec, fromBlob(r.embedding)) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, Math.max(limit * 4, 20))
+  // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all() 物化 +
+  // 全量排序——峰值 = 块 + K；召回语义不变）。两表各自游标扫描、共享同一 top-K。
+  const top = createTopK(Math.max(limit * 4, 20))
+  const onRow = (r) => top.push({ id: r.uid, score: cosine(qvec, fromBlob(r.embedding)) })
+  scanVectors(memory.db, `SELECT rowid, 'personal:' || id AS uid, embedding FROM entries WHERE embedding IS NOT NULL`, [], { onRow })
+  scanVectors(memory.db, `SELECT rowid, layer || ':' || COALESCE(origin, '') || ':' || path AS uid, embedding FROM files WHERE embedding IS NOT NULL ${vecFilter}`, vecParams, { onRow })
+  const vecList = top.list()
 
   // ---- RRF merge ----
   const K = 60
