@@ -7,7 +7,9 @@
  * ① 主侧（真 extension 模块 + 桩面板/真 ChatPanel 原型——session-boot 同骨架）：
  *    投递队列（入队/直投/flush/溢出/清队）+ 存活投影再断言 + webviewReady/清屏定序；
  * ② webview 侧（happy-dom 驱真 activity/streaming 模块——activity-flow 同骨架）：
- *    双 spawn 双块 / 新代接管 / 清屏恢复（pool:true + ⏹ + 位置=流尾）/ 终态补桩精确成员表。
+ *    双 spawn 双块 / 新代接管 / 清屏恢复（pool:true + ⏹ + 位置=活动区尾）/ 终态补桩精确成员表。
+ *    2026-09-11 活动区回归：块出生地 = `#subagent-activity`（WEBVIEW.md §12）——helper/fresh
+ *    与位置断言随批改区（T-V2 = T-R6 / T-V4·T-V5 = T-R5 同断言族）。
  *
  * 环境隔离：config/会话目录/log 目录全部指向 tmp（loadSession 真读盘）。
  */
@@ -210,8 +212,8 @@ test("T-V7 溢出与清队：超上界丢最旧 + ev:subdeliver 记丢弃计数�
   }
 })
 
-// T-V3（主侧半——AC-A4）：清屏后再断言排在 clearMessages 与 historyPage 之后（位置 = 流尾）。
-test("T-V3 清屏后再断言（主侧定序）：clearMessages → historyPage → 再断言——排在两者之后（期望位置=流尾）", () => {
+// T-V3（主侧半——AC-A4）：清屏后再断言排在 clearMessages 与 historyPage 之后（期望位置 = 区尾——§12 修订）。
+test("T-V3 清屏后再断言（主侧定序）：clearMessages → historyPage → 再断言——排在两者之后（期望位置=活动区尾）", () => {
   const p = stubPanel({ _slot: 1, _wvReady: true, _liveLines: liveLines() })
   loadSession(p)
   const types = typesOf(p)
@@ -220,7 +222,7 @@ test("T-V3 清屏后再断言（主侧定序）：clearMessages → historyPage 
   const iSub = types.indexOf("subagent")
   assert.ok(iClear >= 0, "loadSession 发 clearMessages")
   assert.ok(iPage > iClear, "historyPage 在 clearMessages 之后（单向 boot 内部序）")
-  assert.ok(iSub > iPage, "再断言在 historyPage 之后——期望位置 = 流尾（显式定序）")
+  assert.ok(iSub > iPage, "再断言在 historyPage 之后——期望位置 = 活动区尾（显式定序）")
   assert.ok(iSub > types.indexOf("planMode"), "再断言在既有推送之后（排于 case 既有面之后）")
   assert.equal(subagentMsgs(p).length, 3, "重建 3 条 live（双池 running ×2 + queued ×1）")
   const started = subagentMsgs(p).find((m) => m.id === 1)
@@ -239,9 +241,11 @@ async function loadWebview() {
 
 function fresh({ S, ctx }) {
   ctx.messagesEl.replaceChildren()
+  ctx.activityEl.replaceChildren()
   S._subBlocks.clear()
   S._subTraceLog = []
   ctx._pinBottom = undefined
+  ctx._pinActivity = undefined
 }
 
 function addMessage(ctx, tag) {
@@ -252,16 +256,18 @@ function addMessage(ctx, tag) {
   return el
 }
 
-const subBlocks = (ctx) => [...ctx.messagesEl.children].filter((el) => el.classList.contains("sub-block"))
+const subBlocks = (ctx) => [...ctx.activityEl.children].filter((el) => el.classList.contains("sub-block"))
 
-// T-V1（AC-A1）：22:32 基例——背靠背双 spawn 各得一块 + ⏹。
-test("T-V1 双 spawn 背靠背出生（22:32 基例——AC-A1）：两条不同 id started → 2 live 块 + 各挂 ⏹", async () => {
+// T-V1（AC-A1——采样点改区，2026-09-11 §12 修订）：22:32 基例——背靠背双 spawn 各得一块 + ⏹。
+test("T-V1 双 spawn 背靠背出生（22:32 基例——AC-A1）：两条不同 id started → 区内 2 live 块 + 各挂 ⏹", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 4, pool: true, model: "glm-5.3" })
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 5, pool: true, model: "glm-5.3" })
   const blocks = subBlocks(ctx)
   assert.equal(blocks.length, 2, "host 计 2 → webview 2 活块（原缺陷：只渲染 1）")
+  assert.equal([...ctx.activityEl.querySelectorAll(":scope > .sub-block.sub-live")].length, 2, "区内 .sub-live 计数 == 2（AC-A1 采样点）")
+  assert.equal([...ctx.messagesEl.children].filter((el) => el.classList.contains("sub-block")).length, 0, "#messages 零 .sub-block（块不落流）")
   assert.deepEqual([...new Set(blocks.map((b) => b.dataset.subname))].length, 2, "data-subname 唯一")
   for (const b of blocks) {
     assert.ok(b.classList.contains("sub-live") && !b.classList.contains("sub-frozen"), "live 态")
@@ -270,8 +276,8 @@ test("T-V1 双 spawn 背靠背出生（22:32 基例——AC-A1）：两条不同
   assert.equal(S._subBlocks.size, 2, "簿记 map 双条目")
 })
 
-// T-V2（AC-A2）：冻结条目把持键 → 新代接管（新块 + 键重绑 + takeover 痕迹 + 旧块留流内）。
-test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 建新块接管键 + takeover 痕迹 + 旧块留流内冻结", async () => {
+// T-V2（AC-A2；= T-R6 新代接管）：冻结条目把持键 → 新代接管（新块 + 键重绑 + takeover 痕迹 + 旧块留区内）。
+test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 建新块接管键 + takeover 痕迹 + 旧块留区内冻结", async () => {
   const { S, ctx, applySubagentStatus, subagentChunk } = await loadWebview()
   fresh({ S, ctx })
   applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 4, pool: true, model: "glm-5.3" })
@@ -285,9 +291,10 @@ test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 �
   assert.ok(next.classList.contains("sub-live"), "新块 sub-live")
   assert.ok(next.querySelector(".sub-stop-btn"), "新块挂 ⏹")
   assert.equal(next._subMeta.startedAt, 777, "新块水合新代 startedAt")
-  assert.equal(old.isConnected, true, "旧冻结块以 DOM 留在流内（历史）")
+  assert.equal(old.isConnected, true, "旧冻结块以 DOM 留在区内（历史）")
   assert.ok(old.classList.contains("sub-frozen"), "旧块仍冻结（不被半复活）")
-  assert.equal(subBlocks(ctx).length, 2, "流内两块（旧冻结 + 新 live）")
+  assert.equal(subBlocks(ctx).length, 2, "区内两块（旧冻结 + 新 live）")
+  assert.equal(old.parentNode, ctx.activityEl, "旧块在活动区（原地）")
   assert.ok(S._subTraceLog.some((e) => e.kind === "takeover"), "takeover 痕迹在位")
   // 接管后迟到 chunk 落新块（§5.1.4 第 5 条显式取舍）
   subagentChunk({ name: "sub:eng-coder#4", kind: "text", text: "late-generation chunk" })
@@ -295,8 +302,8 @@ test("T-V2 重名新代接管（AC-A2）：冻结 #4 在场 → 新 started #4 �
   assert.ok(!old.querySelector(".advisor-content").textContent.includes("late-generation chunk"), "旧冻结块内容不变")
 })
 
-// T-V3（webview 半——AC-A4）：清屏 → historyPage → 再断言 → 重建块 pool:true/⏹ + 位置流尾。
-test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 → 重建块 pool:true + ⏹ 在 + 位置=流尾", async () => {
+// T-V3（webview 半——AC-A4）：清屏 → historyPage → 再断言 → 重建块 pool:true/⏹ + 位置=活动区尾。
+test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 → 重建块 pool:true + ⏹ 在 + 位置=活动区尾", async () => {
   const { S, ctx, applySubagentStatus, resetActivity } = await loadWebview()
   fresh({ S, ctx })
   // 清屏前：两块 live（被 clearMessages 抹掉——host 清屏路径）
@@ -306,8 +313,10 @@ test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 �
   S._advisorBlock = null
   resetActivity()
   assert.equal(subBlocks(ctx).length, 0, "清屏抹块 + 清簿记")
+  assert.equal(ctx.activityEl.children.length, 0, "区零残留（live + 折叠全清）")
   // historyPage：末页消息重灌（模拟 webview 渲染历史）
   const lastHistory = addMessage(ctx, "h1")
+  assert.equal(lastHistory.parentNode, ctx.messagesEl, "历史消息落 #messages（与区无关）")
   // 再断言（host reassertLiveChildren 载荷——running + queued）
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true, model: "glm-5.3", startedAt: 111 })
   applySubagentStatus({ type: "subagent", status: "queued", role: "eng-coder", id: 2, position: 2 })
@@ -319,12 +328,16 @@ test("T-V3 清屏恢复（AC-A4）：clearMessages+historyPage 之后再断言 �
   assert.ok(rebuilt.querySelector(".sub-hdr").textContent.includes("async"), "async 词在（family + pool）")
   const queued = S._subBlocks.get("sub:eng-coder#2")
   assert.ok(queued.querySelector(".sub-hdr").textContent.includes("⏳"), "queued 得 ⏳ 头")
-  // 位置断言：重建块位于末页 history 消息之后（流尾）
-  assert.ok(lastHistory.compareDocumentPosition(rebuilt) & Node.DOCUMENT_POSITION_FOLLOWING, "重建块在 history 消息之后")
-  assert.equal([...ctx.messagesEl.children].indexOf(rebuilt), ctx.messagesEl.children.length - 2, "重建块位于流尾（history 后追加）")
+  // 位置断言（AC-A4——2026-09-11 §12 修订：块出生地 = 活动区）：重建块位于活动区（区尾——#messages 保持零块）
+  assert.equal(rebuilt.parentNode, ctx.activityEl, "重建块位于活动区（不落流）")
+  assert.equal(queued.parentNode, ctx.activityEl, "queued 头同区")
+  assert.equal(ctx.activityEl.lastElementChild, queued, "区尾追加序保持（started → queued 逐条区尾）")
+  assert.equal(rebuilt.compareDocumentPosition(queued) & Node.DOCUMENT_POSITION_FOLLOWING, Node.DOCUMENT_POSITION_FOLLOWING,
+    "区内序：重建块在 queued 头之前")
+  assert.equal([...ctx.messagesEl.children].filter((el) => el.classList.contains("sub-block")).length, 0, "#messages 零块（位置面与消息流无交）")
 })
 
-// T-V4/T-V5（AC-A3）：终态补桩精确成员表——补桩行 + 不补行。
+// T-V4/T-V5（AC-A3；= T-R5 终态补桩）：终态补桩精确成员表——补桩行 + 不补行。
 test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/terminated/failed → 补已折叠桩 + 头词 + 痕迹", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
@@ -342,7 +355,8 @@ test("T-V4 终态补桩（AC-A3）：never-born done/error/运行中 cancelled/t
     const block = S._subBlocks.get(`sub:${m.role}#${m.id}`)
     assert.ok(block, `${m.status}（never-born）补出块`)
     assert.equal(block._subMeta.frozen, true, "补桩即折叠（_subMeta.frozen === true）")
-    assert.equal(subBlocks(ctx).length, before + 1, "#messages 计数 +1")
+    assert.equal(subBlocks(ctx).length, before + 1, "区内计数 +1")
+    assert.equal(block.parentNode, ctx.activityEl, "补桩块落活动区（区内出生）")
     const hdr = block.querySelector(".sub-hdr").textContent
     assert.ok(hdr.includes(word), `${m.status} 头词含 ${word}（断言用：${hdr}）`)
   }

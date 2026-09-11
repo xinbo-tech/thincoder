@@ -25,20 +25,24 @@ import { highlight, normalizeLang } from "./highlight.js"
  *  consumed and the entity (which renders as the literal char) is restored. */
 const ESCAPABLE = /\\([*_`~#\\.\-+\\|>[\]()!]|&(?:lt|gt|amp|quot);)/g
 
-/**
- * Inline pass: run markdown inline syntax over already-escaped text `s`, OR over a
- * raw string when `raw=true` (escaping it first). Returns HTML. The input must never
- * contain raw `<`, `>`, `&` — callers either pre-escape or pass `raw` so we escape.
- */
+/** Inline pass over already-escaped text `s` (callers escape first; `mdInline()` does it
+ *  itself) — returns HTML. Two channels, in order: (1) literal protection — backslash
+ *  escapes, then inline code spans — captured into placeholders and restored verbatim
+ *  at the end (step 6); (2) Markdown replacement — images/links, bold/italic,
+ *  strikethrough — never sees protected content. The input must never contain raw
+ *  `<`, `>`, `&`. */
 function inline(s) {
+  const escp = []
+  const code = []
   // 1. Protect backslash-escaped chars (\* → *, \| → |, …) with placeholders so the
   //    following regex steps don't reinterpret them. The placeholder survives to the
   //    end and is restored as the literal char.
-  const escp = []
   let t = s.replace(ESCAPABLE, (m) => { const i = escp.length; escp.push(m.slice(1)); return `\x00E${i}\x00` })
 
-  // 2. Inline code FIRST (so its content isn't reprocessed by bold/italic/link).
-  t = t.replace(/`([^`]+)`/g, (_, m) => `<code>${m}</code>`)
+  // 2. Inline code spans → placeholders. The content must NOT be reinterpreted by the
+  //    replacement passes below (bold/italic/link/image/strike); it is already esc()'d
+  //    by the callers, so the span text is inserted verbatim at restore time.
+  t = t.replace(/`([^`]+)`/g, (_, m) => { const i = code.length; code.push(m); return `\x00C${i}\x00` })
 
   // 3. Images + links (URL scheme-checked).
   t = t.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => `<img src="${safeUrl(src)}" alt="${alt}">`)
@@ -52,7 +56,9 @@ function inline(s) {
   // 5. Strikethrough.
   t = t.replace(/~~([^~]+)~~/g, (_, m) => `<s>${m}</s>`)
 
-  // 6. Restore backslash-escaped literals.
+  // 6. Restore code spans FIRST, then backslash-escaped literals — the escape pass must
+  //    reach inside the code content (e.g. `\*` → `<code>*</code>`, current semantics kept).
+  t = t.replace(/\x00C(\d+)\x00/g, (_, i) => `<code>${code[+i]}</code>`)
   t = t.replace(/\x00E(\d+)\x00/g, (_, i) => escp[+i])
   return t
 }

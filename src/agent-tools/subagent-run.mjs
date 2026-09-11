@@ -12,6 +12,7 @@
  * import 本模块——runChild 由调用方以参数传入池条目）。
  */
 import { shouldAutoResume, mergeChildMutations } from "./subagent-async.mjs"
+import { applyTurnFrame } from "../agent/run-helpers.mjs"
 
 export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId, maxTurns, childInput, provider, designId, task, asyncFlag, childSignal, batchDoc = null }) {
       let output = ""
@@ -73,6 +74,11 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
       // (no onQuestion) → partial-work return. ASYNC children never pop a continue panel
       // (§15 D-A3): auto-decline, except engineering && AUTO, which auto-resumes — see the
       // ContinueError branch below (§18 D-E2 cap fallback for the default-async eng-coder).
+      // 段间累计（TURN-CAP-CONTINUE §19.3 消费侧义务）：循环局部「段前累计」——循环外
+      // 声明、跨续跑迭代存活；onAgentTurn 每轮更新为最新帧第一参（entry 路径与 entry.turn
+      // 同点同值；sync 路径 entry 空、由同一局部量覆盖）——续跑段以此回传段间种子（本端子
+      // 代理面每段 = 新 agent 对象，累计经 opts 而非对象字段）。
+      let turnBase = 0
       for (let resume = false; ; resume = true) {
         try {
           // §19.5 D-M6: async 条目持条目级 controller signal（cancel 定向 abort——只停该
@@ -110,15 +116,14 @@ export async function runChild(entry, { parent, ctx, cwd, runAgent, role, subId,
             // re-reads childAgent._touchedFiles real-time; a resume re-runs setup and the
             // sink.agent re-assignment re-binds the CURRENT run's object here (per-run
             // arrays reset — the object reference never goes stale).
-            onAgentTurn: (t) => {
-              if (entry) {
-                entry.turn = t
-                entry.childAgent = sink.agent ?? entry.childAgent
-              }
+            onAgentTurn: (t, mt) => {
+              turnBase = t // 段前累计 → 下一续跑段的种子
+              applyTurnFrame(entry, t, mt) // 帧 → 池条目（entry 空 = sync 路径 → no-op）
+              if (entry) entry.childAgent = sink.agent ?? entry.childAgent
             },
             onComplete: () => {},
             onQuestion: ctx.callbacks?.onQuestion ?? null,
-          }, childSig, true, { ...baseOpts, resume, ...(resume ? { history: sink.history } : {}) })
+          }, childSig, true, { ...baseOpts, resume, ...(resume ? { history: sink.history, _turnSeqBase: turnBase } : {}) })
 
           // §19.5 D-M6 (advisor round 2 #4): cancel 与完成竞态的统一终态——runAgent 返回后
           // 若条目已被 cancel（完成瞬间点击/模型 cancel 竞态），走 cancelled 分支：不 merge

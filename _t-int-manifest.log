@@ -1,0 +1,2 @@
+"== ·´Ö¤£ºÂ©µÇ¼Çµµ²»±»Ö´ÐÐ£¨Æô¶¯×Ô¼ìÊ§°Ü£©=="  
+âœ– integration manifest check failed: unregistered integration file (register it in test/integration/files.mjs â€” an unregistered file is never executed): test/integration/zz-unregistered.test.mjs

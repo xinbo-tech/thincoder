@@ -42,7 +42,7 @@ const cfgBag = (over = {}) => ({
   engineering: false,
   advisor: { guard: false },
   agentFields: { subagentModel: null, subagentModels: {}, subagentTurns: 100, maxTurns: 200, verifyGuard: false, compactThreshold: null, consultModels: [], consultTurns: 40, consultTimeoutMs: 600000, waitForTimeoutMs: undefined, poolLimits: null },
-  proxy: undefined, shell: null, providersList: [], websearch: { provider: "tavily", apiKey: "" },
+  proxy: undefined, shell: null, providersList: [], websearch: { apiKey: "" },
   ...over,
 })
 

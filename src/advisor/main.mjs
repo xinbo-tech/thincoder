@@ -1,9 +1,11 @@
 /**
  * advisor/main.mjs — advisor system-prompt selection, follow-up building, session assembly.
  * VS Code port of thincoder CLI src/advisor.mjs (kept in sync with the CLI).
- * User-message building lives in advisor/messages.mjs; execution (tool loop, provider
- * resolution, review entry) in advisor/run.mjs; history extraction in advisor/history.mjs.
- * repos.mjs still hosts the doc-file classifier (isDocFile) used by mutation tracking.
+ * User-message building lives in advisor/messages.mjs; project-context discovery in
+ * advisor/project-context.mjs; execution (tool loop, provider resolution, review entry)
+ * in advisor/run.mjs; history extraction in advisor/history.mjs.
+ * Path classification (code/doc/temp) lives in src/conventions.mjs — the single
+ * authority the gates and guards consume (PORTABILITY VSC mirror · VP-10).
  *
  * The advisor runs as a read-only exploration sub-agent with tools
  * (read, glob, grep, ls, lsp, code_search) — ZERO git, every round. The change
@@ -91,7 +93,7 @@ const ADVISOR_DESIGN = loadPrompt("advisor-design.md", "advisor-design.md")
  * @param {Object} agent — the parent agent
  * @param {Object|null} [prior] — prior review output (full text; decision 2026-08-08)
  * @param {string} [reviewType] — "design" for design review, undefined/"code" for code review
- * @param {Object|null} [rv] — §24 D-24b per-review instance context { round, priorOutput }
+ * @param {Object|null} [rv] — §9 D-24b per-review instance context { round, priorOutput }
  *   （async advisor——2026-09-06）：优先于全局 _advisorRound/_lastAdvisorOutput（多评审并行隔离）
  * @returns {string} the system prompt
  */
@@ -102,13 +104,13 @@ function withTime(prompt) {
   return prompt + `\n\nCurrent time: ${now.toLocaleString("sv-SE")} (${timeZone}).`
 }
 
-/** §24 D-24b：本次评审调用的轮次（conv round——同步路径 = 全局已完成数 + 1；
+/** §9 D-24b：本次评审调用的轮次（conv round——同步路径 = 全局已完成数 + 1；
  *  async 实例 = rv.round 即实例已完轮数 + 1——launch 时解析）。 */
 function convRound(agent, rv) {
   return rv?.round ?? ((agent._advisorRound || 0) + 1)
 }
 
-/** §24 D-24b：评审实例 prior 读数（rv.priorOutput 显式优先——次回落到存储输出）。 */
+/** §9 D-24b：评审实例 prior 读数（rv.priorOutput 显式优先——次回落到存储输出）。 */
 function rvPrior(agent, rv) {
   if (rv?.priorOutput !== undefined && rv?.priorOutput !== null) return rv.priorOutput
   return ((agent._advisorRound || 0) > 0 ? agent._lastAdvisorOutput : null)
@@ -120,7 +122,7 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType, rv = null) {
   // No prior-table parsing, no all-clear phrase matching — the round counter
   // and the stored output are the only inputs. A restarted process has
   // _advisorRound 0 → conservative full re-review.
-  // §24 D-24b：async 实例经 rv 显式携带（并发隔离——不读全局）；rv.round =
+  // §9 D-24b：async 实例经 rv 显式携带（并发隔离——不读全局）；rv.round =
   // 本次调用轮次（实例已完轮数 + 1——launch 解析）；rv.priorOutput 仅 2+ 轮携带。
   const round = convRound(agent, rv)
   const effectivePrior = prior ?? rvPrior(agent, rv)
@@ -160,7 +162,7 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType, rv = null) {
  *   otherwise scan history from index 0 and could match an unrelated stale table)
  */
 export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, rv = null) {
-  // §24 D-24b：async 实例经 rv 显式携带（并发隔离——不读全局）；轮次 = 本次调用轮次。
+  // §9 D-24b：async 实例经 rv 显式携带（并发隔离——不读全局）；轮次 = 本次调用轮次。
   const round = convRound(agent, rv)
   const p = prior ?? rvPrior(agent, rv)
   if (!p) {
@@ -210,7 +212,7 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, rv = null)
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review (passed through to buildAdvisorUserMessage)
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review
  * @param {string|null} [priorParam] — sync 路径的 prior 显式覆盖（direct callers）
- * @param {Object|null} [rv] — §24 D-24b 实例上下文 { round, priorOutput }（async advisor——
+ * @param {Object|null} [rv] — §9 D-24b 实例上下文 { round, priorOutput }（async advisor——
  *   2026-09-06——并发隔离：round = 本次调用轮次 = 实例已完轮数 + 1；rv 给定 → 轮次/prior
  *   全从 rv 解析（不读全局 _advisorRound/_lastAdvisorOutput、不跑 _mutatedThisRun 重置）
  * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
@@ -257,7 +259,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // model output (phrases/table headers drift; three rounds of false reports
   // proved it). Either way the message is a fresh full review (no issue list
   // exists without a prior table) — only the round counter differs.
-  // §24 D-24b：async（rv 给定）不经此重置段——实例轮次由 _advisorRuns 记录管理。
+  // §9 D-24b：async（rv 给定）不经此重置段——实例轮次由 _advisorRuns 记录管理。
   if (!prior || isRound1) {
     if (!rv && !(agent._mutatedThisRun ?? false)) {
       // New review cycle (first review, all-clear, or no code changes): reset

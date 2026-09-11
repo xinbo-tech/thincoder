@@ -13,7 +13,7 @@
  *
  * §25 R17 (AGENT-LOOP.md §25 D-R17b——飞刀 async——2026-09-06): escalate 缺省 async
  * （async:false 显式同步保留——向后兼容）——async 分支经 subagent-async.mjs
- * spawnAsyncSubagent 入 other 池（§24 D-24a 分域——与 explore/plan 共享槽位）——引擎
+ * spawnAsyncSubagent 入 other 池（§5 D-24a 分域——与 explore/plan 共享槽位）——引擎
  * 与 settle 三分类（done merge-all + 重叠警告 / error partial merge 决策 / cancelled
  * D-M6）实现在 subagent-escalate-async.mjs（动态 import——防模块环）。同步路径 verbatim
  * 保留（测试/脚本零行为变化）。

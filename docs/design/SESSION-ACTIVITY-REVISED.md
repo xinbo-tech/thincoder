@@ -2,6 +2,7 @@
 
 > 板块：会话流（VSC——B1 修正——对齐 CLI 单面板形态）。权威源：CLI subagent-panel.mjs（单固定块面板蓝本）+ subagent-freeze.mjs（落流锚）。
 > 状态：**已交付核销**——2026-09-09（5be6c67——活动区回归 + freeze 落流锚 + 行面板撤除 + Stop running 派生——VSC L2 179/179 绿——audit clean + advisor pass——consume f125c0d5——真机走查实现期——activity.js 579 行拆分已交付核销（ACTIVITY-SPLIT——三文件终局——hub re-export 外部零改动——详见变更记录）。
+> 〔2026-09-11 活动区回归批（VSC-ACTIVITY-REGION-RESTORE）〕本档**布局目标（F-1/F-2：固定活动区 + 封顶自滚）已恢复现行**（新批实现——`WEBVIEW.md` §12）；本档 **F-4 落流锚链 / F-5 落流段 / DOM move 链 = 已废机制**（ACTIVITY-REWRITE-SIMPLE 删除 + 新批明令不复活——旧补丁链设计债）；**F-3 行面板撤除 / F-6 Stop 语义保持**；余为沿革记录。
 
 ---
 
@@ -119,3 +120,5 @@
 - 2026-09-09：**F-6 旧裁定段被 QUEUED-VISIBILITY F-2 覆盖**（上方针出线）——用户新裁：queued/
   waiting 等待块头挂取消 ⏹（可撤销排队决策）——本档机制正文其余不动（§6 全停入口定论其余
   保留——逐块 ⏹ 语义扩 queued——详见 docs/design/QUEUED-VISIBILITY.md）。
+- 2026-09-11：**位置形态与落流锚链已被活动区回归批取代**（区内出生 · 原地折叠 · 区内保留
+  ——`WEBVIEW.md` §12）——见头部指针。

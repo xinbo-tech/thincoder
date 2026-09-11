@@ -5,19 +5,19 @@
  * and tracks mutations / advisor-verify bookkeeping / stall detection.
  */
 import { readFileSync, existsSync } from "node:fs"
-import { resolve } from "node:path"
+import { resolve, relative } from "node:path"
 import {
   FILE_MUTATORS, STALL_WINDOW, STALL_THRESHOLD, MAX_PARALLEL_SUBAGENTS,
   offloadToolResult, pushReal, runWithLimit,
 } from "./run-helpers.mjs"
-import { isDocFile } from "../advisor/repos.mjs"
+import { isCodePath, loadConventions } from "../conventions.mjs"
 import { validateDesignToken } from "../agent-tools/advisor.mjs"
 import { logEvent, errText, headText } from "../log.mjs"
 import { manifestPath } from "../extension/session-slots.mjs"
 import { readSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
 import { peerDomains, registerDomains } from "../extension/peer-domains.mjs"
-// §24 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
-import { recordFileMutation } from "../agent-tools/advisor-async.mjs"
+// §9 D-24b：文件变更事件记账（async 评审陈旧判定数据源——跨 run 载体）
+import { recordFileMutation, inflightDesignReviewConflict } from "../agent-tools/advisor-async.mjs"
 
 // R10 L3（MULTI-INSTANCE-COLLAB.md D-L3a/b——VS Code 接线面）：结构化写工具集 =
 // FILE_MUTATORS ∪ file_ops（bash 大通道不可拦——诚实边界：L3 覆盖结构化写工具足迹）。
@@ -99,15 +99,36 @@ function preGateBlocked(agent, { tool, toolName, args, depth }) {
     return { blocked: true, content: "Error: engineering design gate — call advisor with type='design' to review the design document before any file modification. If the review found issues, report them to the parent agent." }
   }
   // Engineering mode PARENT gate: no code-file writes before the design review passed.
-  // Docs/** and root-level docs are exempt (writing them IS the design step); everything
-  // under src/ (incl. src/prompts/*.md) is product code and needs a live design slot.
+  // Document/temp paths are exempt (writing the design document IS the design step);
+  // every path inside a declared code segment (default: src — incl. src/prompts/*.md,
+  // at ANY depth) is product code and needs a live design slot. The classifier is the
+  // single authority (src/conventions.mjs) — the old anchored ^src/ regex here was the
+  // copy that let a nested layout (packages/foo/src/x.md) slip through the gate.
   // AC4: 判定资格 = "任一活槽存在"（内存 Map / 权威槽回读）——单值镜像已退役（D5）。
   if (agent.config?.agent?.engineering && depth === 0 && FILE_MUTATORS.has(toolName)) {
     const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
-    // Unknown/missing paths are treated as code — block conservatively.
-    const touchesCode = paths.some((p) => typeof p !== "string" || /^src[\\/]/.test(p) || !isDocFile(p))
+    const conv = loadConventions(agent.cwd)
+    // Unknown/missing paths (non-string) are treated as code — block conservatively.
+    const touchesCode = paths.some((p) => typeof p !== "string" || isCodePath(p, conv))
     if (touchesCode && !agentHasLiveEngSlot(agent)) {
-      return { blocked: true, content: "Error: engineering design gate — write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents." }
+      // Undeclared project → point at the declaration file (降级可见契约).
+      const convNote = conv.declared
+        ? ""
+        : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in .thincoder/conventions.json to adjust.`
+      return { blocked: true, content: `Error: engineering design gate — Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote}` }
+    }
+  }
+  // E（F25/§14.4(c)）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间父侧对被审文件
+  // 集的写入被拒（在途写使本轮结算 stale——pass 轮 token 白丢）；判据与 advisorStale 设计面
+  // 同源（含 legacy 面）；位置 = 工程门后、权限阶段前（审批不得绕过冻结）。
+  // B3 契约 1（群 B 批 §17.2 E-扩 1——F31(a)）：键扩 file_ops；路径提取统一走 l3TouchedPaths
+  // （move/rename 源+目标；copy 仅目标——非 file_ops 支与现等价：touchedPaths 优先 / [path] 兜底）。
+  if (FILE_MUTATORS.has(toolName) || toolName === "file_ops") {
+    let absPaths = []
+    try { absPaths = l3TouchedPaths(toolName, tool, args ?? {}, agent.cwd) } catch { absPaths = [] }
+    const conflict = inflightDesignReviewConflict(agent, absPaths)
+    if (conflict) {
+      return { blocked: true, content: `Error: write refused — design review #${conflict.id} is in flight over ${relative(agent.cwd, conflict.path)} (D5 freeze window). A write now would settle it stale — no token for a pass (the round is lost). Wait for the report, or cancel the review first (subagent action:'cancel' id:'${conflict.id}') and re-launch after the change.` }
     }
   }
   return { blocked: false }
@@ -246,7 +267,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           let diffInfo = null
           if (toolName !== "bash" && args.path) {
             try {
-              // R-bug join→resolve 同族（AGENT-LOOP.md §24 尾修复注——2026-09-06）：预览读
+              // R-bug join→resolve 同族（2026-09-06）：预览读
               // 用绝对 args.path 时 join(cwd, ·) 同样双前缀 → 读错位路径、展示错误 diff——
               // resolve 相对/绝对均正（与记账点/ l3TouchedPaths 同语义）。
               const abs = resolve(cwd, args.path)
@@ -301,6 +322,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
 
       let result
       let toolErrored = false // LOGGING：catch 记 tool:error 后不再落 tool:done（CLI dispatch parity——单事件）
+      let toolCtx = null // A6（群 A 批）：per-call 调用上下文（try 内建——返 meta 供记账块读）
       if (!tool) {
         result = `Error: unknown tool "${toolName}"`
       } else {
@@ -309,7 +331,9 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         const toolT0 = Date.now()
         logEvent("tool:call", { tool: toolName })
         try {
-          const raw = await tool.execute(args, {
+          // A6（群 A 批）：调用上下文提升为具名对象（ctx 字面量 → `const toolCtx`）——工具可
+          // 在其上置拒绝标记（`_advisorRefused`），记账块同对象读取（per-call 载体；拒绝 = 未跑）。
+          toolCtx = {
             cwd, agent, callbacks, signal, depth,
             // §17 D-S7/D-S9 tool-context passthrough: the subagent tool's manual-tier
             // spawn gate reads the LIVE autoApprove (ctx.getAuto), and children spawned
@@ -319,8 +343,12 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             // Live output streaming (bash etc.) — mirrors CLI dispatch's onOutput;
             // the id lets the webview route chunks to the right tool card.
             onOutput: (chunk) => callbacks.onToolOutput?.(toolName, chunk, tc.id),
-          })
-          result = String(raw)
+          }
+          const raw = await tool.execute(args, toolCtx)
+          // C-7（AGENT-LOOP（VSC 仓）§12.3）工具结果类型守卫：非字符串 → throw（catch 转
+          // "Error: …" 可见结果）；禁静默 String(raw) 成 "[object Object]"（issue ① 病征类）。
+          if (typeof raw !== "string") throw new Error(`${toolName} must return a string value — got ${raw === null ? "null" : typeof raw}`)
+          result = raw
 
           // R10 L3（D-L3a 累积 + 决策⑥ 软提示——D-L3b 工具结果附注，不阻止）：
           // 写成功（无 Error 返回）→ 记入本回合域集合（回合末 flushDomains 整写——
@@ -329,12 +357,17 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             registerDomains(l3Paths)
             if (l3Hits.length > 0) result += "\n\n" + peerConflictNote(l3Hits)
           }
-          // §29 fix A（AGENT-LOOP.md §29——2026-09-07——唯一记账点）：FILE_MUTATORS
-          // 执行成功即刻记文件变更事件——取代批后提交循环的 recordFileMutation（不双计）——
-          // 同批 launch 前的写在 eventsAtLaunch 之前落地 → async 评审 settle 不误判陈旧；
-          // 中断批（commit 循环被跳过）不再丢事件（中断分支不另行记账——seq 单计）。
-          if (FILE_MUTATORS.has(toolName) && !result.startsWith("Error:") && l3Paths.length > 0) {
-            for (const abs of l3Paths) recordFileMutation(agent, abs)
+          // §29 fix A（AGENT-LOOP.md §29——2026-09-07——唯一记账点）：FILE_MUTATORS 执行成功
+          // 即刻记文件变更事件——取代批后提交循环的 recordFileMutation（不双计）——同批 launch
+          // 前的写在 eventsAtLaunch 之前落地 → async 评审 settle 不误判陈旧；中断批（commit
+          // 循环被跳过）不再丢事件（中断分支不另行记账——seq 单计）。
+          // B3 契约 2（群 B 批 §17.2 E-扩 2——F31(b)）：键同扩 file_ops + 同点把 l3Paths 逐项
+          // 记入 _touchedFiles（includes 去重守卫——子代理合入载体；评审实例面未挂数组 → 零记账）。
+          if ((FILE_MUTATORS.has(toolName) || toolName === "file_ops") && !result.startsWith("Error:") && l3Paths.length > 0) {
+            for (const abs of l3Paths) {
+              recordFileMutation(agent, abs)
+              if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
+            }
           }
 
           // Multimodal tools
@@ -366,7 +399,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
 
       return {
         tool_call_id: tc.id, toolName, content: result,
-        meta: { args, tool, tc },
+        meta: { args, tool, tc, toolCtx },
       }
     }
 
@@ -392,7 +425,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
 
       // Track mutations + advisor/verify bookkeeping (CLI parity)
       if (meta) {
-        const { args, tool } = meta
+        const { args, tool, toolCtx } = meta
         if (FILE_MUTATORS.has(toolName)) {
           // Direct file edit — code was changed. The prior advisor review and
           // verify are stale: a review that ran before the edit no longer
@@ -407,7 +440,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args?.path]
           for (const p of paths) {
             if (typeof p !== "string") continue
-            // R-bug join→resolve 双前缀（AGENT-LOOP.md §24 尾修复注——2026-09-06——CLI 同修）：
+            // R-bug join→resolve 双前缀（2026-09-06——CLI 同修）：
             // p 为绝对路径时 join(cwd, p) 双前缀（node path.join 遇绝对段不重置——resolve
             // 才重置）→ _touchedFiles 记错路径（verify 关联面）。
             const abs = resolve(cwd, p)
@@ -425,19 +458,24 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           }
         }
         if (toolName === "verify") agent._verifiedThisRun = true
-        // §24 D-24b（R13——2026-09-06）：async advisor 工具返回 = ack（评审后台跑）——
+        // §9 D-24b（R13——2026-09-06）：async advisor 工具返回 = ack（评审后台跑）——
         // 不在工具结果时点记账（settle 时点统一执行——token/guard 标记/实例轮次）；
         // sync（async:false / depth>0 缺省）走既有记账。
         const advisorAsync = toolName === "advisor" && (args.async ?? depth === 0)
         if (toolName === "advisor" && !advisorAsync) {
-          agent._calledAdvisorThisRun = true
-          // Design reviews are a separate gate with no convergence protocol —
-          // they must not consume code-review rounds. A failed/interrupted review
-          // still counts as an attempt (next retry uses the next round's prompt).
-          try {
-            if (args.type !== "design") agent._advisorRound++
-          } catch {
-            agent._advisorRound++
+          // A6（群 A 批）：拒绝登记——工具置 `toolCtx._advisorRefused` ⇒ 未跑 ⇒ 不置 called /
+          // 不推轮次（拒绝 = 无评审产出；否则 guard 不再推回、轮次被无谓消耗）。零回归：未置位
+          // 走既有记账。async ack 路径不在此（既有 advisorAsync 谓词继续跳过）。
+          if (toolCtx?._advisorRefused !== true) {
+            agent._calledAdvisorThisRun = true
+            // Design reviews are a separate gate with no convergence protocol —
+            // they must not consume code-review rounds. A failed/interrupted review
+            // still counts as an attempt (next retry uses the next round's prompt).
+            try {
+              if (args.type !== "design") agent._advisorRound++
+            } catch {
+              agent._advisorRound++
+            }
           }
         }
       }

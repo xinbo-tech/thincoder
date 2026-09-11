@@ -93,7 +93,7 @@ export async function maybeGuardPushbacks(agent, st) {
   // Cap sync (CLI b74e413): beyond MAX_ADVISOR_ROUNDS the advisor tool
   // refuses reviews (run.mjs convergence cap) — pushing back further
   // would loop forever (fix → pushback → cap-refused call → fix …).
-  // §24 D-24b（R13——④）：async 评审未决（在池 running/queued）不算未评审——不推回
+  // §9 D-24b（R13——④）：async 评审未决（在池 running/queued）不算未评审——不推回
   // （等 settle——settle 后无有效评审/陈旧才推回——陈旧 settle 不置 _calledAdvisorThisRun
   // ——天然落到下一条推回）。
   const advisorCfg = agent.config?.advisor
@@ -107,7 +107,7 @@ export async function maybeGuardPushbacks(agent, st) {
     pushReal(history, fullHistory, { role: "assistant", content: response.content })
     history.push({
       role: "user",
-      // §24 D-24b（R13）：depth-0 缺省 async——提醒补注后台语义（评审 settle → digest 自动
+      // §9 D-24b（R13）：depth-0 缺省 async——提醒补注后台语义（评审 settle → digest 自动
       // 回来——模型无需阻塞等待；未决评审期间本提醒不再推回——等 settle 判定）
       content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${agent._advisorRound + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. At the top level the advisor launches the review in the BACKGROUND by default — the call returns an ack, the report arrives automatically when it settles (digest), and the review never blocks your turn; top-level reviews are always async — never pass async:false; if you need the report before continuing, end the turn and let the digest deliver it. After the review, produce a response table for every issue found (see discipline rules for format).]`,
     })
@@ -256,19 +256,27 @@ export async function finalizeAgentTurn(agent, ctx) {
   if (asyncMap && asyncMap.size > 0) {
     if (signal?.aborted && !signal?.reason?.interrupt) {
       logEvent("ev:stopped", { poolN: asyncMap.size, where: "turn-end-abort" })
-      asyncMap.clear()
+      // §12.3 C-1~C-4（AGENT-LOOP（VSC 仓）§12——第 35 批）：只清已死（丢弃判定 + discarded
+      // 墓碑 + 提醒 + ev:discarded 全在 async-discard.mjs）——原 clear() 全清会把持**会话
+      // signal** 的存活子代清成孤儿（§12.1 ③）。
+      const { discardAbortedPool } = await import("../agent-tools/async-discard.mjs")
+      discardAbortedPool(agent)
     } else if (!(thrownError instanceof ContinueError)) {
       const { collectSettledAsync } = await import("../agent-tools/subagent.mjs")
       await collectSettledAsync(agent, { history, fullHistory, cwd, suspDriven: suspDriven === true })
     }
   }
-  // §24 D-24b（R13——2026-09-06）：async advisor 池同款回合尾处理（独立池——
+  // §9 D-24b（R13——2026-09-06）：async advisor 池同款回合尾处理（独立池——
   // 停/ContinueError 不注入陈旧结果；settled 留池由挂起会话 sweep → digest 消化）。
   const advMap = agent._asyncAdvisors
   if (advMap && advMap.size > 0) {
     if (signal?.aborted && !signal?.reason?.interrupt) {
       logEvent("ev:stopped", { poolN: advMap.size, where: "turn-end-abort-advisor" })
-      advMap.clear()
+      // §15 C-10d（AGENT-LOOP（VSC 仓）§15——群 B 批 B1）：advisor 池同构收尾——只清已死
+      // （丢弃判定 + discarded 墓碑 + C-10c 提醒 + ev:discarded 全在 async-discard.mjs）
+      // ——原 clear() 全清会把持会话 signal 的存活评审清成孤儿（报告不可达，§15.1）。
+      const { discardAbortedAdvisors } = await import("../agent-tools/async-discard.mjs")
+      discardAbortedAdvisors(agent)
     } else if (!(thrownError instanceof ContinueError)) {
       const { collectSettledAdvisors } = await import("../agent-tools/advisor-async.mjs")
       await collectSettledAdvisors(agent, { history, fullHistory, cwd, suspDriven: suspDriven === true })

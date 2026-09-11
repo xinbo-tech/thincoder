@@ -1,6 +1,9 @@
 /**
  * verify-redesign.test.mjs — verifyTool gate semantics (VERIFY-REDESIGN.md).
  *
+ * 2026-09-11 TEST-LIFECYCLE 扫① 削段：原 T-V9（guard 文案负向锚）删 + T-V10 裁为正向参数名
+ * 驻留锚（旧词组不复现类锚退役——现行守卫行为由集成场景 ① 与 T-V1~V6 覆盖）。
+ *
  * Covers T-V1..V6 of the design test table (VS Code side; T-V7 dual-end
  * consistency is a cross-repo behavior asserted by the parent's full run):
  *   T-V1 passed            → 放行
@@ -143,25 +146,15 @@ test("T-V11b G11: rejection report surfaces the node --check syntax hint on chan
 })
 
 
-test("T-V9 guard 文案声明式（G1-G4）", () => {
-  const guard = readFileSync(join(__here, "..", "src", "agent", "run-stages.mjs"), "utf8")
-  assert.match(guard, /declaring the outcome/)
-  assert.doesNotMatch(guard, /run syntax checks and tests/)
-  assert.doesNotMatch(guard, /test failures/)
-  assert.match(guard, /verify was not passed/)
-  assert.doesNotMatch(guard, /verify reported failures/)
-  assert.doesNotMatch(guard, /tests are still failing/)
-})
-
-test("T-V10 prompts 无旧 verify 语义（G5-G9——PROMPT-SYSTEM 施工③宿主更新：退役文件 → 新槽位宿主）", () => {
+test("T-V10 prompts 验声明参数名驻留（G5-G9）——旧 verify 语义负向锚已裁（扫①）", () => {
+  // 2026-09-11 TEST-LIFECYCLE 扫① 削段：原三条「旧词组不复现」负向锚删（旧语义已随 PROMPT-SYSTEM
+  // 施工③退役多年——行为面由集成 ①（重试提醒）与 T-V1~V6 锁定）；保留正向契约：提示词必须
+  // 点名声明参数名（模型据此调用）。
   // 旧名单 [eng-coder, engineering-sub, system, discipline, main] 的新宿主映射（施工①迁移映射表）：
   // eng-coder/engineering-sub → persona-eng-coder；system/discipline/main 的写码执行收尾 → discipline-normal。
   const files = ["persona-eng-coder.md", "discipline-normal.md"]
   for (const f of files) {
     const src = readFileSync(join(__here, "..", "src", "prompts", f), "utf8")
-    assert.doesNotMatch(src, /runs syntax checks/, `${f}: residual verify-runs-syntax`)
-    assert.doesNotMatch(src, /related tests via verify/, `${f}: residual verify-runs-tests`)
-    assert.doesNotMatch(src, /call `verify` in its default mode/, `${f}: residual default-mode`)
     assert.match(src, /verification\.status/, `${f}: declarative phrasing present`)
   }
 })

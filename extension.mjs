@@ -7,6 +7,7 @@ import { ChatPanel } from "./src/extension/chat-panel.mjs"
 import { closeAllMcp } from "./src/mcp.mjs"
 import { initLocale } from "./src/i18n.mjs"
 import { registerDiffPreviewProvider } from "./src/extension/diff-preview.mjs"
+import { startConfigWatch } from "./src/extension/config-watch.mjs"
 
 /** @type {ChatPanel} */
 let _panel
@@ -34,6 +35,14 @@ export async function activate(context) {
 
   // Virtual documents for the native diff preview (permission prompts)
   registerDiffPreviewProvider(context)
+
+  // External config.json writes (CLI `/advisor`, `settings set`, manual edits) — file-system
+  // event → debounce → stat-tuple diff → light settings push (B5 batch 21; SETTINGS.md §2.6).
+  // Self-write suppression is wired inside the module (config-io `onConfigSelfWrite`), so a
+  // panel save never re-renders the panel under the user's cursor.
+  context.subscriptions.push(
+    startConfigWatch({ onChange: () => _panel?._pushSettingsLight?.() }),
+  )
 
   // Auto-show sidebar on first activation
   vscode.commands.executeCommand("workbench.view.extension.thincoder").catch(logFireAndForget)

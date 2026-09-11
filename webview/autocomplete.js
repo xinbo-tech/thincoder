@@ -4,6 +4,7 @@
  */
 import { escHtml } from "./ui.js"
 import { t } from "./i18n.js"
+import { showToast } from "./toast.js"
 
 /**
  * @param {object} ui
@@ -94,6 +95,8 @@ export function initAutocomplete({ inputEl, atDropdown, vscode, pastedImages }) 
       return
     }
     if (e.key === "Enter" || e.key === "Tab") {
+      // C-B2-1：组合期 Enter 归输入法（不接受建议、不 preventDefault——键归输入法）
+      if (e.key === "Enter" && e.isComposing) return
       const active = atDropdown.querySelector(".dropdown-item.active")
       if (active) {
         e.preventDefault()
@@ -156,21 +159,6 @@ export function initAutocomplete({ inputEl, atDropdown, vscode, pastedImages }) 
       renderPasteBar()
     }
     reader.readAsDataURL(file)
-  }
-
-  /** Transient hint for rejected images (auto-fades; zero layout dependency). */
-  function showToast(text) {
-    let el = document.getElementById("paste-toast")
-    if (!el) {
-      el = document.createElement("div")
-      el.id = "paste-toast"
-      el.className = "paste-toast"
-      document.body.appendChild(el)
-    }
-    el.textContent = text
-    el.classList.add("visible")
-    clearTimeout(showToast._t)
-    showToast._t = setTimeout(() => el.classList.remove("visible"), 2600)
   }
 
   function renderPasteBar() {

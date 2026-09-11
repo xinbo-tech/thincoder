@@ -1,7 +1,7 @@
 /**
  * subagent-escalate-async.mjs — §25 R17 飞刀 async（AGENT-LOOP.md §25 D-R17b——VS Code
  * 镜像——2026-09-06）。sync 路径（async:false）在 subagent-escalate.mjs verbatim 保留；
- * 本模块 = async 面：入 **other 池**（§24 D-24a——与 explore/plan 共享槽位——自然容量；
+ * 本模块 = async 面：入 **other 池**（§5 D-24a——与 explore/plan 共享槽位——自然容量；
  * 池满经 spawnAsyncSubagent 排队——escalate 与 explore 同池公平排队）+ 回合自然收尾 +
  * settle 三分类（onAccounting hook——ASYNC-RESULT-CONTAINER.md D3 共享 helper）+ pending
  * 单容器流（history._pendingAsyncResults +role——D2）+ 飞刀专属 digest 注入文案。
@@ -26,7 +26,8 @@
  * + async-settle.mjs（settleAsyncEntry/buildChildSignal——D3/D6 共享 helper）；
  * subagent-escalate.mjs 动态 import 本模块（防环）。
  */
-import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
+import { applyTurnFrame, escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
+import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
 import { spawnAsyncSubagent, mergeChildMutations } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
@@ -70,6 +71,10 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
   let output = ""
   const sink = {}
   const panel = (chunk) => ctx.callbacks?.onToolPanel?.(`sub:escalate ${tag} #${entry.id}`, chunk)
+  // 段间累计（§19.3 消费侧义务——与 runChild 同构）：段前累计循环外声明、跨迭代存活；
+  // 续跑支以 opts 种子回传。本端续跑支当前休眠（ContinueError 全走 error-class return，
+  // 全档无 continue）——种子写入 = 同构契约驻留（未来开放续跑即在位），零行为变化。
+  let turnBase = 0
   const runOpts = (resume) => ({
     depth: 1, role: "coder", // full write path: permission gate, recent-changes tracking
     streamOutput: true, // exempt from the agent.mjs onToken depth gate (consult role parity)
@@ -80,7 +85,7 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
     // 父 send 无差别 targeting 池条目）：飞刀条目同样提供 turnInput 消费回调（读 entry._injected）
     // ——否则 send 落飞刀静默入队永不到达（settle 才注"未投递"）。语义与 spawn runChild 一致。
     turnInput: entry ? () => ((entry._injected?.length ?? 0) > 0 ? entry._injected.splice(0) : []) : null,
-    ...(resume ? { history: sink.history } : {}),
+    ...(resume ? { history: sink.history, _turnSeqBase: turnBase } : {}),
   })
   const outcome = (kind, text) => ({ kind, text, sink, tag, launchEvents })
   // No wall-clock watchdog — turn cap only (CLI parity, 2026-08-16): a fixed wall-clock
@@ -101,7 +106,7 @@ async function runEscalateAsyncEngine({ parent, ctx, entry, task, pick, provider
         onToolResult: (name, text) => panel({ kind: "tool", text: "→ " + String(text ?? "").slice(0, 80).replace(/\n/g, " ") }),
         onComplete: () => {},
         // §19.5 D-M5 同型：turn 钩子同步条目决策字段（status 可见性——与 spawn 子代理一致）
-        onAgentTurn: (t) => { entry.turn = t; entry.childAgent = sink.agent ?? entry.childAgent },
+        onAgentTurn: (t, mt) => { turnBase = t; applyTurnFrame(entry, t, mt); entry.childAgent = sink.agent ?? entry.childAgent },
         onQuestion: null, // async：永不弹继续面板——cap → error-class partial（D-R17b）
       }, entry.controller?.signal ?? null, true, runOpts(resumes > 0))
       // 完成瞬间被 cancel 的竞态（同 subagent runChild——先于任何事件/merge 判定）
@@ -202,13 +207,17 @@ function escalateSettleAccounting(parent, entry, res) {
 
 /** 飞刀 digest 注入（独立流文案——与 subagent/advisor 族区分——D-R17c）：done = 已
  *  merge 的完成报告（处置 = 消费回合档位内正常继续——手动档 auto-turn 禁写由 D-S6 域
- *  模板机械强制——T-R17p）；error = 错误报告 + partial merge 决策注记。注入即消费。 */
+ *  模板机械强制——T-R17p）；error = 错误报告 + partial merge 决策注记。注入即消费。
+ *  §16 D-DG2（群 B 批 B5）：raw（报告正文——标签行不计）计入轮预算（四族共享单源）——
+ *  超限改清单行（全文落盘）；首条豁免保留。 */
 export async function injectEscalateResult(entry, { history, fullHistory, cwd }) {
   const tag = entry.tag ?? "escalate"
   const head = entry.outcome === "error"
     ? `[System reminder: async escalate #${entry.id} (${tag}) FAILED — error report below; partial changes were ${entry.mergeSkipped?.length ? `NOT merged (overlap: ${entry.mergeSkipped.join(", ")})` : "merged (no overlap with your own edits)"}]:`
     : `[System reminder: async escalate #${entry.id} (${tag}) finished — its changes were merged into your session${entry.overlapWarning?.length ? " (⚠ overlap — see report)" : ""}; post-op report:`
-  const body = `${head}\n\n${entry.injectBody ?? ""}]`
+  const raw = String(entry.injectBody ?? "")
+  const saved = digestBudgetOver(history, raw.length) ? persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `escalate#${entry.id}` }) : null
+  const body = `${head}\n\n${saved ?? raw}]`
   pushReal(history, fullHistory, {
     role: "user",
     content: escapeXml(offloadToolResult(cwd ?? process.cwd(), body)),

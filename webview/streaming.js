@@ -1,21 +1,22 @@
 /**
  * streaming.js — token/reasoning stream rendering (rAF-throttled), turn finish,
  * code-block copy buttons, and the in-conversation advisor review block.
- * (ACTIVITY-REWRITE-SIMPLE: subagent activity blocks live in the #messages flow —
- * activity.js. ensureBlock 可返 null——subagentChunk 空安全守卫。)
+ * (2026-09-11 活动区回归：subagent activity blocks live in the `#subagent-activity`
+ * region — activity.js. ensureBlock 可返 null——subagentChunk 空安全守卫；rAF 尾区 pin
+ * = maybeScrollActivity。)
  */
 import { ctx, S } from "./state.js"
 import { md } from "./md.js"
 import { t } from "./i18n.js"
 import {
-  newBlock, maybeScrollDown, escHtml,
+  newBlock, maybeScrollDown, maybeScrollActivity, escHtml,
   buildAdvisorBlock, appendAdvisorChunk,
 } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { renderStatusBar } from "./status-bar.js"
-// ACTIVITY-REWRITE-SIMPLE: subagent activity blocks are born in the #messages flow
-// (activity.js) — lifecycle (create/flip/fold/⏹) lives there; panels.js never
-// imports streaming.js and activity.js imports neither (no cycles).
+// 2026-09-11 活动区回归: subagent activity blocks are born in the region
+// (#subagent-activity — activity.js) — lifecycle (create/flip/fold/⏹) lives there;
+// panels.js never imports streaming.js and activity.js imports neither (no cycles).
 import { ensureBlock, noteChunk, resetActivity } from "./activity.js"
 
 // Stream render scheduler: reasoning/token chunks arrive at thousands/sec; rendering
@@ -60,6 +61,7 @@ function scheduleStreamRender() {
       _advisorScrollDirty = false
     }
     maybeScrollDown(ctx)
+    maybeScrollActivity(ctx) // 活动区独立 pin（§12.3 第 7 条——不与消息区互拉）
   })
 }
 
@@ -171,14 +173,14 @@ export function finish(aborted) {
   ctx._toolRefs = {}
   S._currentTool = null
   S._turnStart = null
-  // ACTIVITY-REWRITE-SIMPLE（2026-09-09）: 活动块生命周期 = 块终态（终态消息即时折
-  // 叠——settled 视同 done）/会话退出兜底（suspension freeze）——不再随普通回合尾重置。
-  // 块随消息流（#messages 内 live/冻结同层）——正常 complete 尾池 live → 挂起会话接管
-  // （块留流内等终态通知）；池空 → 无 live 块——reset 恒 no-op。abort 且无挂起
+  // 2026-09-11 活动区回归: 活动块生命周期 = 块终态（终态消息即时**原地折叠**——settled
+  // 视同 done）/会话退出兜底（suspension freeze）——不随普通回合尾重置。块驻留活动区
+  // （#subagent-activity——live/折叠同区，全程不移动）——正常 complete 尾池 live → 挂起
+  // 会话接管（块留区内等终态通知）；池空 → 无 live 块——reset 恒 no-op。abort 且无挂起
   // 会话 → 池 children 持回合 controller signal 随中止而死（无终态通知）——resetActivity
-  // 清孤儿 live 块；digest/会话内回合中止（_suspended true）不动块（池仍 live——children
-  // 持会话 signal）。
-  if (aborted && !S._suspended) resetActivity() // abort 无会话：池随回合死——孤儿 live 块清场（冻结块不动）
+  // 清区（live + 折叠——D-A8）；digest/会话内回合中止（_suspended true）不动块（池仍
+  // live——children 持会话 signal）。
+  if (aborted && !S._suspended) resetActivity() // abort 无会话：池随回合死——活动区整体复位（含折叠块）
   if (!S._suspended) S._advisorBlock = null // in-flow sync-advisor block pointer — the element itself stays in the conversation
   setLoading(ctx, false)
   renderStatusBar()
@@ -227,11 +229,11 @@ export function advisorChunk(m) {
 }
 
 
-/** Subagent/consultant/escalate activity stream — ACTIVITY-REWRITE-SIMPLE: 块出生即
- *  #messages 流尾（activity.js ensureBlock——channel "sub:explore#1"/"sub:consult
- *  glm:glm-5.2 #4"…——append 不插锚——label 去 sub: 前缀）；终态原地折叠（live→frozen
+/** Subagent/consultant/escalate activity stream — 2026-09-11 活动区回归: 块出生即
+ *  活动区 `#subagent-activity` 区尾（activity.js ensureBlock——channel "sub:explore#1"/
+ *  "sub:consult glm:glm-5.2 #4"…——label 去 sub: 前缀）；终态原地折叠（live→frozen
  *  ——头词 ✓ done Ns）；queued spawns 得 ⏳ 等待头（含取消 ⏹——F-2）。ensureBlock 可返
- *  null（map 有键且已终态 = 幂等守卫 / live 被 150 裁 tombstone）——空安全守卫丢弃。
+ *  null（map 有键且已终态 = 幂等守卫 / live 元素被移除 tombstone）——空安全守卫丢弃。
  *  2026-09-11 第 10 批（§5.1.4 第 5 条）：新代接管后本频道键指向**新块**——旧实例的迟到
  *  chunk 因而落进新块（显式取舍：仅“id 重复 + 两实例消息交错”可见——不做代际过滤守卫）。 */
 export function subagentChunk(m) {

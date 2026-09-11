@@ -178,6 +178,10 @@ export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
       const src = readFileSync(abs, "utf8")
       const { written, roundN } = insertIntoSection(src, seg, body)
       writeFileSync(abs, written)
+      // B3 契约 3（群 B 批 §17.2 E-扩 3——F31(c)）：写入成功即把绑定档记入调用者写域——
+      // 子代理完成点经 mergeChildMutations 合入父侧变更事件（在途设计评审的 stale 判定
+      // 覆盖批次档面）；Array.isArray 守卫（评审实例面 agent 可能未挂 _touchedFiles）。
+      if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
       return `batch_segment: appended ${body.length} characters to §${seg} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.`
     },
   }

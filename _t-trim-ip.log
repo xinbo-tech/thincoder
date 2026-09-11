@@ -1,0 +1,21 @@
+✔ T-I4b 状态行渲染（F6/AC-I1）：不匹配 → settings.indexMismatch 两语文案逐字 + 重建按钮可用 (23.6966ms)
+✔ T-I1 模型不匹配（F6/AC-I1）：indexCompat = model-changed；searchIndex 返空且不进打分段（零网络） (17.0239ms)
+✔ T-I2 头维不一致（F6/AC-I1）：manifest.vector_dim ≠ vectors.bin 头 → loadIndex = null (3.3186ms)
+✔ T-I3 query 维度兜底（F6/AC-I1）：同名模型 + 实际维度不同 → searchIndex = []（不进打分） (3.3212ms)
+✔ T-I4 状态面（F6/AC-I1）：pushIndexStatus 载荷 built:true 且带 mismatch:{indexModel,currentModel} (3.5954ms)
+﹣ T-I5 提示面（F6/AC-I1）：文案含两模型名（含 needed ∧ 不匹配 合取分支）+ 既有两键；选 Build 触发重建 (0.1474ms) # slow test — run `npm run test:full`（THINCODER_TEST_FULL=1）
+✔ T-I8 嵌套 memory 自检一致（F8/AC-I3）：listMemoryFiles ⊇ 嵌套文件且 == discoverFiles 的 memory 子集 (4.749ms)
+﹣ T-I8b 嵌套 memory 零无效重算（F8/AC-I3）：git 快路径连调两次 needed:false (0.6277ms) # slow test — run `npm run test:full`（THINCODER_TEST_FULL=1）
+✔ T-I9 词表锁（F9/AC-I4）：needsRebuild 各分支 reason 全量收集 ∈ 七词表 + 运行抽检 no-index (1.7807ms)
+﹣ T-I6 ignored 文件三态（F7/AC-I2）：改 → file-changed；增 → file-added；删 → file-removed (0.1247ms) # slow test — run `npm run test:full`（THINCODER_TEST_FULL=1）
+﹣ T-I6b ignored 目录条目（F7/AC-I2——契约五目录分支）：目录内改 → file-changed；整棵子树删除 → file-removed (0.0945ms) # slow test — run `npm run test:full`（THINCODER_TEST_FULL=1）
+﹣ T-I7 豁免零误报（F7/AC-I2）：ignored 的 node_modules/.hidden/.thincoder-tmp → needed:false (0.0771ms) # slow test — run `npm run test:full`（THINCODER_TEST_FULL=1）
+﹣ T-I10 零回归正控（N5/AC-I5·N6）：非 git 兜底与 git 快路径删场景同向 + dirty 既有引号语义不变 (0.0784ms) # slow test — run `npm run test:full`（THINCODER_TEST_FULL=1）
+ℹ tests 13
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 6
+ℹ todo 0
+ℹ duration_ms 1151.6645

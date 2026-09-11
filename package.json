@@ -111,13 +111,14 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run lint && npm run test:full",
+    "vscode:prepublish": "npm run lint && npm run test:full && npm run test:integration",
     "package": "vsce package",
     "publish": "vsce publish",
     "publish:ovsx": "ovsx publish",
     "publish:all": "node scripts/publish-all.mjs",
     "test": "node test/run-fast.mjs",
     "test:full": "node test/run-full.mjs",
+    "test:integration": "node test/run-integration.mjs",
     "lint": "node scripts/check-syntax.mjs"
   },
   "devDependencies": {

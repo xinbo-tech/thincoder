@@ -18,7 +18,7 @@ export const SS = {
   providerStatus: {},
   /** Model list getter (chat panel's ctx._models) — supplies the advisor model dropdown. */
   getModels: null,
-  /** @type {{ provider?: string, hasKey?: boolean }} */
+  /** @type {{ hasKey?: boolean }} */
   websearchSettings: {},
   /** @type {{ built?:boolean, files?:number, chunks?:number, hasEmbedder?:boolean } | null} */
   indexStatus: null,

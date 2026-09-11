@@ -59,13 +59,33 @@ export function installSettingsFixture() {
  */
 export function installChatFixture() {
   const ids = [
-    "messages", "input", "send-btn", "abort-btn", "model-btn", "reasoning-btn",
+    "messages", "subagent-activity", "input", "send-btn", "abort-btn", "model-btn", "reasoning-btn",
     "model-dropdown", "reasoning-dropdown", "session-selector", "session-title",
     "session-dropdown", "welcome-panel", "welcome-heading", "welcome-text",
     "welcome-provider-label", "welcome-provider", "welcome-key-label", "welcome-key",
     "welcome-save-btn", "welcome-skip-btn", "welcome-settings-btn", "project-btn",
     "status-line", "task-panel", "goal-panel",
   ]
-  // ACTIVITY-REWRITE-SIMPLE: #subagent-activity 容器删（子代理块出生即 #messages 流内）。
+  // 2026-09-11 活动区回归（WEBVIEW.md §12）：#subagent-activity 回归——子代理活动块出生
+  // 即驻留区尾（区语义断言的宿主；位置序同 index.html：messages → 活动区 → panels）。
   document.body.innerHTML = ids.map((id) => `<div id="${id}"></div>`).join("")
+}
+
+/**
+ * Full index.html id fixture — for driving the REAL `webview/chat.js` module graph
+ * (its top-level init reads every element id; `installChatFixture` above is the
+ * deliberately smaller reducer group). Also applies the index.html default inline
+ * styles the input layer depends on (@-dropdown / paste-bar closed).
+ */
+export function installFullIndexFixture() {
+  const ids = ("chat-container session-bar project-btn session-selector session-title session-arrow " +
+    "session-dropdown new-session-btn messages panels goal-panel task-panel toolbar status-line at-dropdown " +
+    "input-row file-input input attach-btn send-btn abort-btn paste-bar paste-badge controls-row model-btn " +
+    "reasoning-btn auto-btn advisor-btn eng-btn plan-btn settings-btn model-dropdown reasoning-dropdown " +
+    "settings-panel settings-close settings-body welcome-panel welcome-heading welcome-text " +
+    "welcome-provider-label welcome-provider welcome-key-label welcome-key welcome-save-btn welcome-skip-btn " +
+    "welcome-settings-btn").split(" ")
+  document.body.innerHTML = ids.map((id) => `<div id="${id}"></div>`).join("")
+  document.getElementById("at-dropdown").style.display = "none"
+  document.getElementById("paste-bar").style.display = "none"
 }

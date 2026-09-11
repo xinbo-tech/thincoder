@@ -2,12 +2,15 @@
  * advisor/messages.mjs — advisor user-message building (buildAdvisorUserMessage).
  * Split out of advisor.mjs to keep it under the 300-line advisory threshold
  * (.thincoder/advisor.md). System prompts live in advisor.mjs / prompts/.
+ * Project-context discovery/injection (Project Guide / document map / standards /
+ * no-git notice) lives in project-context.mjs (PORTABILITY VSC mirror ·
+ * VP-1/VP-2/VP-8/VP-12) — every discovery step is satisfied or degrades VISIBLY.
  */
-import { readFileSync, existsSync } from "node:fs"
-import { resolve, join, relative } from "node:path"
+import { join, relative } from "node:path"
 import { findReviewRepos, collectRepoSnapshots, collectChangedFiles } from "./repos.mjs"
 import { buildConvergenceBody, buildConvergenceInstructions } from "./convergence.mjs"
 import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "./history.mjs"
+import { injectProjectGuide, injectDocumentMap, injectProjectStandards, NO_GIT_NOTICE } from "./project-context.mjs"
 
 /**
  * Build the review-object declaration block (AGENT-LOOP.md §18.8 D-OA2 — ANCHOR-4).
@@ -47,7 +50,7 @@ export function injectObjectDeclaration(content, object) {
 }
 
 /**
- * Approval-signal block for design reviews (round 1 and round 2+ — §24 D-24b: an
+ * Approval-signal block for design reviews (round 1 and round 2+ — §9 D-24b: an
  * async fix-round continuation must be able to re-approve, so the token is injected
  * into EVERY design round; the reviewer echoes it only on a clean pass). §29.1 F2a
  * (2026-09-07): BOTH values are injected — the token AND the designId (anchor
@@ -77,7 +80,7 @@ export function buildDesignApprovalBlock(designToken, designId) {
  *   When set, the review input is built from this list ONLY — no git-diff change-set collection.
  *   When absent, the legacy git-diff-based scope is kept (backward compatible).
  * @param {string[]|null} [paths] — code review only: explicit list of file/dir paths to review (deduped; shown under Review Scope)
- * @param {Object|null} [rv] — §24 D-24b 实例上下文（async——round = 本次调用轮次）
+ * @param {Object|null} [rv] — §9 D-24b 实例上下文（async——round = 本次调用轮次）
  * @param {string|null} [designId] — §29.1 F2a: injected next to the token in the
  *   Approval Signal (both values — Copy BOTH values verbatim); null → token-only
  *   degradation (legacy direct callers).
@@ -87,7 +90,7 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   // prior = the full prior review output (string) when a convergence round is
   // being built (decision 2026-08-08 — verbatim injection, model understands it).
   // Deterministic: only _advisorRound > 0 with stored output counts.
-  // §24 D-24b：async 实例经 rv 解析（round = 本次调用轮次——1 = 首轮无 prior）。
+  // §9 D-24b：async 实例经 rv 解析（round = 本次调用轮次——1 = 首轮无 prior）。
   const p = prior ?? (rv
     ? (rv.round >= 2 ? rv.priorOutput : null)
     : (agent._advisorRound || 0) > 0 ? agent._lastAdvisorOutput : null)
@@ -98,10 +101,20 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
   const pathList = Array.isArray(paths) ? [...new Set(paths.filter((p) => typeof p === "string" && p.trim()))] : []
 
+  // Project guide FIRST in EVERY review path (code AND design round 0 — the design
+  // branch early-returns below): requirement-fit is judged against the docs it points
+  // to. Root discovered from the review scope (code paths AND design-doc paths).
+  const guideRoot = injectProjectGuide(agent, parts, [...pathList, ...docList])
+
   // Design review: simplified message — focus on the design doc, not code
   if (reviewType === "design" && isRound1) {
     const repos = findReviewRepos(agent)
     parts.push("## Design Review")
+    // FR15/P8: no git → change-set context is unavailable. Say it (never silent).
+    if (repos.length === 0) {
+      parts.push(NO_GIT_NOTICE)
+      parts.push("")
+    }
     if (docList.length > 0) {
       // Explicit review scope (engineering mode, FR2): the caller hands over the
       // doc list — the advisor reviews ONLY these. No git-diff change-set
@@ -137,41 +150,25 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
       }
     }
 
-    // Engineering mode: inject project methodology
+    // Engineering mode: DECLARED standards document only (advisor.standardsDoc).
     if (agent.config?.agent?.engineering) {
-      try {
-        const mpath = resolve(agent.cwd, "METHODOLOGY.md")
-        const methodology = readFileSync(mpath, "utf8")
-        parts.push("## Project Methodology")
-        parts.push("Evaluate the design against this methodology:")
-        parts.push(methodology)
-        parts.push("")
-      } catch { /* file doesn't exist — skip */ }
+      injectProjectStandards(agent, parts, guideRoot)
     }
 
-    // Document map (docs/design/README.md) — inject when the project has one:
-    // the reviewer checks document ownership against it (a change for an
-    // existing section must amend that section's document, not spawn a new
-    // file for it). Absent map → skip (nothing to check against).
-    try {
-      const mapPath = resolve(agent.cwd, "docs", "design", "README.md")
-      if (existsSync(mapPath)) {
-        parts.push("## Document Map")
-        parts.push("The document map below registers which document files exist per section. Use it for the Document ownership criterion: a change for an existing section must amend that section's document, not create a new file.")
-        parts.push(readFileSync(mapPath, "utf8"))
-        parts.push("")
-      }
-    } catch { /* file doesn't exist or is unreadable — skip */ }
+    // Document map: declared path wins, built-in probe as fallback; neither →
+    // explicit degradation sentence (never the old silent skip).
+    injectDocumentMap(agent, parts, guideRoot ?? agent.cwd)
 
     parts.push("## Instructions")
     if (docList.length > 0) {
-      parts.push("1. Read every document in the Documents to Review list in full — review ONLY those files. Read METHODOLOGY.md to understand the project's standards.")
+      parts.push("1. Read every document in the Documents to Review list in full — review ONLY those files.")
     } else {
-      parts.push("1. Read the design document fully. Read METHODOLOGY.md to understand the project's standards.")
+      parts.push("1. Read the design document fully.")
     }
-    parts.push("2. Review against: completeness (all requirements covered?), feasibility (can this be built?), methodology compliance (does it follow the project's METHODOLOGY.md?), clarity (specific enough?), acceptance criteria (verifiable?), scope (appropriate?).")
-    parts.push("3. Do NOT run git diff or look for code changes — there are none at this stage.")
-    parts.push("4. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
+    parts.push("2. Review against: completeness (all requirements covered?), feasibility (can this be built?), methodology compliance (does it follow the project's standards as provided?), clarity (specific enough?), acceptance criteria (verifiable?), scope (appropriate?).")
+    parts.push("3. If the ## Project Guide (AGENTS.md) section above is present, also check requirement fit: does the design match what the requirements documents it points to actually ask for?")
+    parts.push("4. Do NOT run git diff or look for code changes — there are none at this stage.")
+    parts.push("5. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
     if (designToken) {
       parts.push("")
       parts.push(buildDesignApprovalBlock(designToken, designId))
@@ -231,18 +228,16 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   const criteria = loadAdvisorMd(agent.cwd)
   parts.push("## Review Criteria")
   parts.push(criteria)
+  if (guideRoot) {
+    // Requirement-fit is a first-class dimension when the guide was found.
+    parts.push("")
+    parts.push("Additional criterion: **requirement fit** — does the implementation match what the requirements documents (referenced by the Project Guide above) actually ask for?")
+  }
   parts.push("")
 
-  // Engineering mode: inject project methodology so advisor knows the rules
+  // Engineering mode: project standards (declaration-only; same helper as design).
   if (agent.config?.agent?.engineering) {
-    try {
-      const mpath = resolve(agent.cwd, "METHODOLOGY.md")
-      const methodology = readFileSync(mpath, "utf8")
-      parts.push("## Project Methodology (Engineering Mode)")
-      parts.push("The project follows this methodology. Evaluate the changes against it:")
-      parts.push(methodology)
-      parts.push("")
-    } catch { /* file doesn't exist — skip */ }
+    injectProjectStandards(agent, parts, guideRoot)
   }
 
   // Instructions — round-aware: re-reviews skip convention discovery entirely
@@ -252,7 +247,9 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   if (isReReview) {
     parts.push(...buildConvergenceInstructions(round, pathList))
   } else {
-    parts.push("2. Read `AGENTS.md` / design docs only if they exist (check once; do not re-probe with multiple patterns).")
+    parts.push("2. " + (guideRoot
+      ? "The `## Project Guide (AGENTS.md)` section above maps the project — read the requirements/design documents it points to (they are the primary reference for requirement-fit). Use `read` to load those documents."
+      : "No AGENTS.md was found at the project root — rely on the conversation background for the user's requirements. If the requirements are unclear, state so explicitly."))
     parts.push("3. `read` the files in the Review Scope in full — they define exactly what to inspect. Batch independent reads/greps in a single reply instead of one call per round-trip.")
     parts.push("4. Use `grep` or `lsp` to trace callers, imports, and dependencies — only where the diff leaves genuine doubt.")
     parts.push("5. Produce your review table based on the review criteria above. Do not re-read content you already have.")

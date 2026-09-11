@@ -24,6 +24,7 @@ import { loadSlot } from "../extension/session-io.mjs"
 import { specForModel } from "../specs.mjs"
 import { modeRoleField } from "../agent-tools/subagent.mjs"
 import { loadRaw, loadConsultPool, normalizeProxy, resolveProviders, TRACES_DEFAULTS } from "../config-io.mjs"
+import { expandHome } from "../expand-home.mjs"
 import { pushReal } from "./run-helpers.mjs"
 import { assemblePrompt } from "../prompt-overlays.mjs"
 import { pushModeReminders, pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder, pushGitContext, detectRestoredSession } from "./setup-reminders.mjs"
@@ -82,8 +83,8 @@ function engChildSubagentTool(childRole) {
     ...subagentTool,
     name: "subagent",
     description: designer
-      ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY — spawn-only (no action:'status'/'escalate', no async). Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
-      : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only (no action:'status'/'escalate', no async): the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+      ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY — spawn-only: the restricted channel has no action parameter (escalate/status/cancel/consume-design/observe/send are not available) and no async. Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
+      : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY — spawn-only: the restricted channel has no action parameter (escalate/status/cancel/consume-design/observe/send are not available) and no async — the audit report decides your next protocol step. The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
     parameters: { ...subagentTool.parameters, properties: props },
   }
 }
@@ -116,7 +117,7 @@ export function buildTopLevelAgent() {
     config: {
       advisor: { guard: false },
       agent: { engineering: false },
-      proxy: undefined, shell: null, providersList: [], websearch: { provider: "tavily", apiKey: "" },
+      proxy: undefined, shell: null, providersList: [], websearch: { apiKey: "" },
     },
   }
 }
@@ -215,10 +216,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   let cfgConsultModels = []
   let cfgConsultTurns = 40
   let cfgConsultTimeoutMs = 600_000
-  let cfgPoolLimits = null // §24 D-24a（R14）：async 池角色域容量——每次入池判定时读（effectivePoolLimits 校验）
+  let cfgPoolLimits = null // §5 D-24a（R14）：async 池角色域容量——每次入池判定时读（effectivePoolLimits 校验）
   let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §16 — CLI parity); undefined → tool default 30s
   let cfgProviders = []
-  let cfgWebsearch = { provider: "tavily", apiKey: "" } // structured search; empty key → Bing fallback
+  let cfgWebsearch = { apiKey: "" } // structured search; empty key → Bing fallback
   // TRACE-STORE-VSC（D-TR6 镜像——CLI config.mjs DEFAULTS.traces 合并同语义）：traces 段
   // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
   let cfgTraces = { ...TRACES_DEFAULTS }
@@ -229,7 +230,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgVerifyGuard = raw.agent?.verifyGuard === true // opt-in, CLI parity
     cfgCompactThreshold = raw.agent?.compactThreshold ?? null // null = auto from model context
     cfgProxy = normalizeProxy(raw.proxy) // web tools consult agent.config.proxy (resolveWebProxy)
-    cfgShell = typeof raw.shell === "string" && raw.shell ? raw.shell : null // bash tool shell override (CLI parity)
+    cfgShell = typeof raw.shell === "string" && raw.shell ? expandHome(raw.shell) : null // bash tool shell override (CLI parity)——群 A 批 A2：`~` 单点归一（只读——不写回）
     cfgSubagentModel = raw.agent?.subagentModel ?? null // default subagent model override (CLI parity)
     cfgSubagentModels = raw.agent?.subagentModels ?? {} // per-type subagent model overrides (CLI parity)
     cfgSubagentTurns = raw.agent?.subagentTurns ?? 100 // subagent turn cap (CLI parity)
@@ -237,10 +238,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgConsultModels = loadConsultPool() // consultation model list (CONSULTATION.md——F-4 清洗后合法池)
     cfgConsultTurns = raw.agent?.consultTurns ?? 40 // consultation turn budget (panel-exposed)
     cfgConsultTimeoutMs = raw.agent?.consultTimeoutMs ?? 600_000 // consultation wall-clock watchdog (panel-exposed)
-    cfgPoolLimits = raw.agent?.poolLimits ?? null // §24 D-24a: async pool per-domain limits（校验在 scheduler 读点）
+    cfgPoolLimits = raw.agent?.poolLimits ?? null // §5 D-24a: async pool per-domain limits（校验在 scheduler 读点）
     cfgWaitForTimeoutMs = raw.agent?.waitForTimeoutMs ?? undefined // wait_for timeout override — tool applies its own default/cap when absent
     cfgProviders = resolveProviders().providers // for subagent model overrides
-    cfgWebsearch = raw.websearch ?? { provider: "tavily", apiKey: "" }
+    cfgWebsearch = raw.websearch ?? { apiKey: "" }
     cfgTraces = { ...TRACES_DEFAULTS, ...(raw.traces ?? {}) }
   } catch { /* config unreadable — defaults */ }
 

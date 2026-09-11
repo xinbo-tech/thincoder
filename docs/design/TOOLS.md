@@ -208,14 +208,56 @@ approve / deny / approve-all + diff 预览（`diff-preview.mjs` 虚拟文档原�
 - **VS Code 原生能力优先**：编辑经 WorkspaceEdit（undo + 保存 + 编辑器打开）、语言智能走
   编辑器语言服务、审批用 webview 弹窗 + 原生 diff——thin adapter 而非复制 CLI 的 TUI/进程
   面。
-- **bash 命令零文本拦截** = "安全剧场"论证：文本匹配拦不住恶意模型，只误伤正常操作；真实
+- **bash 命令零文本拦截** = “安全剧场”论证：文本匹配拦不住恶意模型，只误伤正常操作；真实
   防线 = 审批层 + 快照；`detectDanger` 只给人看红标。
 - **超限落盘而非截断**：模型可再 read 全量，预览够决策。
 - **工具全部字符串返回**：schema 简单、dispatch 统一、流式展示统一。
 - **live autoApprove**：VS agent 是 per-run 对象、无 CLI 的 `parent.autoApprove` 字段——
   会话槽位 + live getter 承载（§8）。
 
+## 11. git commit 路径面：`--only` 镜像（群 A 批）（2026-09-11）
+
+> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A9
+> （指针 = `docs/TODO.md:167`「QUICKFIX-2 交付注——后批镜像 F-3」）。语义源：CLI
+> `src/tools/git.mjs:150-181`（F-3——`commit --only`）；双端纪律：语义同源、本端独立实现。
+
+**问题（现状——as-of 2026-09-11）**：`src/tools/git.mjs:200-219` commit 走**双层混扫**——
+`path` 给定时先 `git add -- <paths>`（granular）再 `git commit -m`（整索引提交）——索引中他批已暂存的文件会被卷入本次提交（与 granular 意图相悖）。
+
+**契约（逐条——镜像 CLI F-3——实现对象）**：
+
+1. `path` 给定（非 `undefined`/`null`）→ **不走 add**，直接 `git commit --only -m <message> -- <paths>`
+   （从工作树取列文件提交——索引他批不混入；空格分隔多路径形态保持）；
+2. `path` 为空串/纯空白 → **明确错误**：
+   `Error: commit path is empty/whitespace — give at least one file path (space-separated)`（**不回落 `add -A`**）；
+3. `path` 缺省（`undefined`/`null`）→ 既有 `add -A` + `commit -m` 全量语义**原样保留**（单代理语义）；
+4. 既有 checkpoint 清理段（`:210-218`）与错误文案形态零改；工具描述行（`:38`）同步：
+   `commit` 行改为「stage + commit（message，path for granular）」→「commit；**path → `git commit --only <paths>`**（工作树取列文件——索引他批不混入——原子）；无 path → add -A 全量」；
+5. `add` / 其余 action 零改；不加 truncate（本端现状保持）。
+
+**用例表（T-MA9——镜像 CLI `test/git-commit-pathspec.test.mjs`——新档本端自持）**：
+
+| # | 类 | 输入 | 预期输出（断言） | 映射 |
+|---|---|---|---|---|
+| T-MA9-1 | 正常 | 临时仓：`a.txt` 改动 + `b.txt` 改动且已 `git add b`（他批 pre-staged）→ `commit{path:"a.txt"}` | 提交只含 `a.txt`（`diff HEAD^ HEAD --name-only`）；`b.txt` 仍 staged（不混入不丢失） | AC-MA9-1 |
+| T-MA9-2 | 正常 | 多文件空格分隔 `path:"a.txt c.txt"` | 一次 `--only` 两路径；他批 staged 仍不混入 | AC-MA9-1 |
+| T-MA9-3 | 边界 | `path:""` 与 `path:"   "` | 逐字错误串（上述）；**无提交产生**；改动仍 unstaged（未 `add -A`） | AC-MA9-2 |
+| T-MA9-4 | 错误 | untracked 新文件 + `path` | `git commit failed:`（pathspec 不识未跟踪）；add 后可提（零偶发副作用） | AC-MA9-1 |
+| T-MA9-5 | 边界（回归） | 无 `path` → `commit{message}` | 全量（含 untracked 与他批残留 staged）——既有语义零回归 | AC-MA9-3 |
+
+**AC（机判）**：
+
+- AC-MA9-1：T-MA9-1 / T-MA9-2 / T-MA9-4 绿（真 git 子进程——slow 归册）；
+- AC-MA9-2：T-MA9-3 绿（空/空白 path 明确错误 + 零副作用）；
+- AC-MA9-3：T-MA9-5 绿（零回归）+ 新档登记 `test/files.mjs`（不登记不跑）+ VSC 快层全绿 + 宽度零新增。
+
+**边界**：不改 `add` / `rm` 等其他 action；不改 checkpoint / 快照子系统；不引入 `truncate`（本端输出形态保持）；**零 UI 面**。
+
+**计数（D3）**：用例 5（T-MA9-1–5）· AC 3（AC-MA9-1–3）· 实施域 3 档（`git.mjs` + 新测档 + `test/files.mjs` 登记）。
+
 ## 变更记录（历史折叠——详见 git log）
+
+- 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——新增 §11（git commit `--only` 镜像——双层混扫缺口闭源）。
 
 - 2026-09-08：从 ARCHITECTURE §7 迁出成立本档——写全 VSC 独立实现（builtinTools 清单核对
   src/tools/index.mjs；VS 适配/装配/审批照抄 §7 + setup.mjs/execute-tools.mjs/permission-gate

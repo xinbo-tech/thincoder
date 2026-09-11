@@ -5,9 +5,9 @@
  */
 import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
-import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
+import { runAdvisorReview, resolveAdvisorProvider, buildCapMessage, MAX_ADVISOR_ROUNDS, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction.mjs"
-import { isDocFile } from "../advisor/repos.mjs"
+import { isDocPath, loadConventions } from "../conventions.mjs"
 import { resolveBatchDocPath } from "./batch-segment.mjs"
 
 const TOKEN_TTL_DEFAULT_MS = 7 * 24 * 3600 * 1000 // 7-day ceiling (v2 2026-08-25): multi-batch delivery must not re-review an unchanged design within a week; agent.engTokenTtlMs overrides. 2026-09-06 设计 B: HMAC 防伪层删除——token = 无签名流程凭证 uuid:expiresAt（public-default-secret 警告一并移除——安全剧场——见 ENGINEERING-MODE.md 2026-09-06 段）
@@ -22,7 +22,7 @@ function effectiveTokenTtlMs(agent) {
 /** Generate an unsigned design token with expiration (2026-09-06 设计 B — the HMAC
  *  signature layer is gone: token = uuid:expiresAt process credential — format + TTL
  *  fail-closed; slot matching _engDesignTokens.get(designId) === token unchanged).
- *  Export——advisor-async（§24 D-24b）续跑轮现铸同用。 */
+ *  Export——advisor-async（§9 D-24b）续跑轮现铸同用。 */
 export function generateDesignToken(agent) {
   const uuid = randomUUID()
   const expiresAt = Date.now() + effectiveTokenTtlMs(agent)
@@ -90,7 +90,7 @@ export function extractTokenUUID(token) {
  *  Escape the ENTIRE token (uuid:expiresAt — 2026-09-06 设计 B: the HMAC segment is gone;
  *  the advisor echoes the full token, so matching only the UUID segment can never match and
  *  the approval never registers (eng-coder gate then rejects a valid token).
- *  Export——advisor-async（§24 D-24b）通过判定同用。 */
+ *  Export——advisor-async（§9 D-24b）通过判定同用。 */
 export const makeDesignTokenRegex = (token, flags = "") => {
   const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return new RegExp(
@@ -180,7 +180,7 @@ export const advisorTool = {
       },
       async: {
         type: "boolean",
-        description: "Launch the review in the BACKGROUND (AGENT-LOOP.md §24 D-24b): the tool returns an ack immediately, the turn ends naturally, and the report arrives automatically (settle → digest) — the review never blocks the turn. Default: true at the top level (depth-0 — §24 R12 depth-0 async default precedent), always sync inside subagents (passing async:true there is refused). async:false forces the blocking review (mechanism parameter — top-level launches are async by default).",
+        description: "Launch the review in the BACKGROUND (AGENT-LOOP.md §9 D-24b): the tool returns an ack immediately, the turn ends naturally, and the report arrives automatically (settle → digest) — the review never blocks the turn. Default: true at the top level (depth-0 — §5 R12 depth-0 async default precedent), always sync inside subagents (passing async:true there is refused). async:false forces the blocking review (mechanism parameter — top-level launches are async by default).",
       },
     },
   },
@@ -190,11 +190,13 @@ export const advisorTool = {
     const agent = ctx.agent
     const reviewType = args.type || "code"
     const documents = args.documents || null
-    // §24 D-24b（R13——2026-09-06）：async 缺省 = depth-0（R12 先例——②-3 A + 修正 #3：
+    // §9 D-24b（R13——2026-09-06）：async 缺省 = depth-0（R12 先例——②-3 A + 修正 #3：
     // depth>0 显式 async 拒 / 缺省恒同步——eng-coder 内部自审不翻转）。
     const asyncFlag = args.async ?? ((ctx.depth ?? 0) === 0)
     if (asyncFlag && (ctx.depth ?? 0) > 0) {
-      return "Advisor: async reviews are only available at the top level (depth 0 — AGENT-LOOP.md §24 D-24b ②-3) — inside a subagent the advisor runs synchronously; drop the async flag or pass async:false"
+      // 群 A 批 A6：拒绝登记（载体 = per-call ctx 标记——语义同源、实现独立）
+      ctx._advisorRefused = true
+      return "Advisor: async reviews are only available at the top level (depth 0 — AGENT-LOOP.md §9 D-24b ②-3) — inside a subagent the advisor runs synchronously; drop the async flag or pass async:false"
     }
     // Review-object declaration (AGENT-LOOP.md §18.8 N-OA1): the parameter is a
     // JSON object; a string form (LLM serialization) is normalized defensively.
@@ -210,17 +212,20 @@ export const advisorTool = {
 
     // Code review must have a scope — no implicit fallback.
     if (reviewType !== "design" && !paths && !documents) {
+      ctx._advisorRefused = true // A6 拒绝登记（class #2——sync 路径被误记的核心类）
       return "Advisor: no review scope specified. Provide paths (files/directories to review) or documents (acceptance criteria for code review)."
     }
 
-    // Design review: validate that documents are in docs/ or are recognized doc files
+    // Design review: the review scope must be documentation files. Classification
+    // comes from the single authority (src/conventions.mjs) — the old `docs/`
+    // prefix test is retired with it (FR12: no directory-name hardcoding in the
+    // gate; a project whose docs live elsewhere just declares its code paths).
     if (reviewType === "design" && documents) {
-      const invalidDocs = documents.filter((doc) => {
-        if (doc.startsWith("docs/") || doc.startsWith("docs\\")) return false
-        return !isDocFile(doc)
-      })
+      const conv = loadConventions(agent.cwd)
+      const invalidDocs = documents.filter((doc) => !isDocPath(doc, conv))
       if (invalidDocs.length > 0) {
-        return `Advisor: design review documents must be in docs/ directory or be recognized doc files. Invalid: ${invalidDocs.join(", ")}`
+        ctx._advisorRefused = true // A6 拒绝登记（class #3）
+        return `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidDocs.join(", ")}`
       }
     }
 
@@ -231,15 +236,30 @@ export const advisorTool = {
       ? resolveBatchDocPath(agent.cwd, args.batchDoc)
       : null
 
-    // §24 D-24b async 分支：后台启动（ack 即回——回合自然收尾）——容量/实例 cap 在
+    // §9 D-24b async 分支：后台启动（ack 即回——回合自然收尾）——容量/实例 cap 在
     // runner（launchAsyncAdvisor——{ error } 转返回文案——不排队）。settle 记账/消化
     // 全部走 advisor-async 机制（token 槽/guard 标记/cap/陈旧判定——见该模块头注）。
     if (asyncFlag) {
       const { launchAsyncAdvisor } = await import("./advisor-async.mjs")
       const r = launchAsyncAdvisor({ parent: agent, ctx, reviewType, documents, paths, object, batchDoc: boundBatchDoc })
-      if (r.error) return r.error
+      if (r.error) {
+        ctx._advisorRefused = true // A6 拒绝登记（class #4——async 启动拒：池满/同 scope 等）
+        return r.error
+      }
       const e = r.entry
-      return `Advisor ${reviewType} review started in the background (review #${e.id}, round ${e.round}) — the report arrives automatically when it finishes (settle → digest). Continue your turn; the review does not block.`
+      // E（F25/§14.4(d)）：设计评审点火回执追加冻结句（代码评审 ack 零改——不对称）。
+      const freezeNote = reviewType === "design"
+        ? "；D5 冻结窗口：被审文档（含批次档）在报告送达前零写入——在途写入会被拒绝，写入将使本轮结算为陈旧 (pass 不发 token)"
+        : ""
+      return `Advisor ${reviewType} review started in the background (review #${e.id}, round ${e.round}) — the report arrives automatically when it finishes (settle → digest). Continue your turn; the review does not block.${freezeNote}`
+    }
+
+    // A6 契约 #6（群 A 批）：工具层 cap 预检——位置 = **async 分支之后、sync 启动之前**
+    // （sync-only：async 分支已先返回、不经此预检——fresh async 不被全局轮次误拒）。
+    // 与 CLI 同位同谓词；runner 内同谓词兜底仍在（双关）。返回单源 builder。
+    if (reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
+      ctx._advisorRefused = true
+      return buildCapMessage(agent)
     }
 
     // Design review: NO round reset — design rounds 2+ continue the convergence
@@ -262,12 +282,17 @@ export const advisorTool = {
     // Show the advisor's effective model in the block title (it may differ from the main agent's).
     const advModel = (() => { try { return resolveAdvisorProvider(agent).model } catch { return null } })()
     ctx.callbacks?.onToolPanel?.("advisor", { kind: "start", text: "", round, model: advModel })
-    const result = await runAdvisorReview(agent, reviewType, {
+    // 测试缝（advisor-async `ctx?.runAdvisorReview ??` 同形先例——群 A 批 A6）：缺省 = 生产
+    // runAdvisorReview；仅测试注入（sync 启动拒路径正常链不可达——防御纵深）。
+    const reviewRunner = ctx?.runAdvisorReview ?? runAdvisorReview
+    const result = await reviewRunner(agent, reviewType, {
       onOutput: (chunk) => ctx.callbacks?.onToolPanel?.("advisor", chunk),
       signal: ctx.signal,
       // 同步路的实例绑定传递（异步路走 rv.batchDoc——run.mjs 自行解析）：per-call 通道，非会话态。
       batchDoc: boundBatchDoc,
     }, designToken, documents, paths, object, null, designId)
+
+    if (typeof result === "string" && result.startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)) ctx._advisorRefused = true // A6 拒绝登记（class #5——sync 启动拒前缀契约）
 
     if (reviewType === "design") {
       // F2h record（§29.1）：无论通过与否都登记 scope→designId（async 同构——launch 时即

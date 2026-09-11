@@ -28,7 +28,7 @@ import { postSubagentEvent } from "./panel-callbacks.mjs"
 // running 含 digest）输入禁用（routeUserTurn 拒收 + loading.js 锁）——挂起空闲消息走
 // pendingInput 单槽（至多一条待交接——单消息逐发不攒批）。废弃记录见 AGENT-LOOP.md §7。
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN，CLI agent-turn parity；
- *  §24 D-24b：两池合计——advisor 独立池同口径；D2 pending 单容器——四族停靠同一
+ *  §9 D-24b：两池合计——advisor 独立池同口径；D2 pending 单容器——四族停靠同一
  *  _pendingAsyncResults——pendingN = 单容器长度） */
 function poolCounts(history) {
   const maps = [history?._asyncSubagents, history?._asyncAdvisors].filter((m) => m instanceof Map)
@@ -59,7 +59,7 @@ export function poolLive(history) {
  *  回合刚结束、_suspended 尚未置位的窗口，或 ContinueError 停止的回合）补入 pending。
  *  幂等：回调已移交的条目已从 map 删除并带 _inPending 标记（settle/sweep 同一表示——
  *  D2 done-in-pool 统一），不会重复入列。
- *  §24 D-24b：advisor 池同扫（同机制角色无关）；D2：两池统一扫入 pending 单容器
+ *  §9 D-24b：advisor 池同扫（同机制角色无关）；D2：两池统一扫入 pending 单容器
  *  （_pendingAsyncResults +role）。 */
 export function sweepSettledToPending(history) {
   for (const key of ["_asyncSubagents", "_asyncAdvisors"]) {
@@ -103,7 +103,7 @@ function reclaimDigestedBlocks(panel, history, before) {
 /** 后台模式状态行数据（D-S8；17.5.4 #6 顺手对齐）：{ running, queued, pending, done }
  *  —— webview 端按 locale 组合文案。"done" = §17.5 回合尾留池的 settled 未消费项
  *  （挂起会话首轮 sweep 前的可见窗口——纯 settled 池进挂起时首帧不误报 0）。
- *  §24 D-24b：advisor 池条目同列（role=advisor 行——计数含两池）。
+ *  §9 D-24b：advisor 池条目同列（role=advisor 行——计数含两池）。
  *  §25 R17：pending 单容器计入 pending（D2）；running 会诊会话计入 running
  *  （会话级计数——per-model 行已由 consult 活动流承载）。 */
 export function backgroundStatus(history) {
@@ -263,7 +263,24 @@ export async function suspensionSession(panel, entry) {
         const before = pendingRowSnapshot(history)
         const d0 = Date.now()
         logEvent("digest:start", { pendingN })
-        await entry.runTurn({ autoTurn: true, text: "" })
+        // B6（WEBVIEW（VSC 仓）§7.4）：消化轮起跑的可见指示——起跑到首 token 可静默数十秒~分钟，
+        // CLI 有 `[auto-turn: digesting …]` 零延迟行，本端此前只有文件日志。post 早于 runTurn
+        // （可见时刻不晚于回合开跑）；起止两态 + ok 旗标（异常不留"仍在消化"假象，try/finally
+        // 保 end 必发）；直投（同 compress 先例——不经任务可见性 outbox）。
+        panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN })
+        let ok = true
+        try {
+          await entry.runTurn({ autoTurn: true, text: "" })
+        } catch (e) {
+          ok = false
+          // C-8（AGENT-LOOP（VSC 仓）§12.3）：digest 轮被 Stop（回合级 abort——F-6）不是会话
+          // 停止——不搁置：记 digest:stopped 重入循环（池空+无 pending 由步骤 3 自然退出）；
+          // 非 AbortError 照旧上抛（digest-visibility T-D3 契约零变）。
+          if (e?.name === "AbortError") { logEvent("digest:stopped", { pendingN }); continue }
+          throw e
+        } finally {
+          panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms: Date.now() - d0 })
+        }
         const left = history._pendingAsyncResults?.length ?? 0 // D2 单容器
         logEvent("digest:end", { pendingN: left, ms: Date.now() - d0 })
         // §17.5.5 实测修订（2026-09-03）：digest 消化完成（pending 条目已注入）→ 对该轮
@@ -286,7 +303,7 @@ export async function suspensionSession(panel, entry) {
     if (aborted) {
       // §15 abort 语义：清池不注入（用户显式停——不注入陈旧错误）。
       // 排队中的用户消息不是池产物——由下方兜底以普通回合消费（不静默丢，
-      // 2026-09-02 code review round2 #2-VS Code 偏差修复）。§24 D-24b：评审池同清。
+      // 2026-09-02 code review round2 #2-VS Code 偏差修复）。§9 D-24b：评审池同清。
       // §25 R17：会诊会话同清（abort 子代理——停 = 弃——T-R17c 取消语义）；会诊/飞刀
       // pending 单容器同清（中止清池不注入陈旧结果——四族同池语义——D2）。
       history._asyncSubagents?.clear()

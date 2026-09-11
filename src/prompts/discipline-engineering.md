@@ -1,4 +1,4 @@
-<!-- slot:[3] consumers:[main session·engineering mode; eng-coder subagent — both engineering-mode assemblies] -->
+<!-- slot:[3] consumers:[main session·engineering mode; eng-coder + eng-designer subagents — all engineering-mode assemblies] -->
 
 ## 🔴 铁律（置顶——最高频硬约束，违反必返工）
 1. **任何开发任务走四步，不跳**：需求 → 设计 → 开发 → 测试。三步要写文档（需求/设计/测试）——跳到写代码十次有九次错。
@@ -42,7 +42,7 @@
 > 三层模板细化、方案选型对比表、多实现面纪律。
 
 #### 三层模板细化
-板块设计文档（docs/design/<TOPIC>.md——一板块一档、功能点不独立成文）按**三节 + 变更记录**组织；
+板块设计文档（一板块一档、功能点不独立成文——落点按项目文档约定；本产品自研仓 = docs/design/<TOPIC>.md）按**三节 + 变更记录**组织；
 架构级机制文档可以机制目标与约束替代逐条用户故事（架构级豁免——既有惯例）：
 - **需求层**：总体需求（一段话定位——为谁解决什么问题）；功能性需求逐条可交付（用户故事或既有板块
   F1/F2 规格句风格——文档内一致），每条带范围边界（明确不做什么）；非功能性需求 = 性能/安全/兼容/
@@ -53,11 +53,11 @@
 - **测试层**：用例表（正常/边界/错误——输入/预期输出，每条功能性需求 ≥1 用例，映射列标需求号）；
   验收标准逐条回指需求、每条可机器验证（评审与链验收依据）。实现前必须完整。
 - **变更记录**：一行注记（日期 + 变更点），不堆逐批流水账；决策当天落档（Docs Capture the
-  Conversation）；实现后验收标准逐条勾销。
+  Conversation）；实现后验收勾销落批次档 §6（设计档内不写勾销状态）。
 
 #### 设计行为纪律四维（MAIN-DESIGN-ENHANCE A1/A3/A4 逐字锚——施工③随迁落位；A2 已并入上方方案选型对比节）
 **A1 勘察 checklist**（设计启动前——需求澄清后/设计前交界）：
-> 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查 docs/design/README.md 地图——已有则更新不新建）
+> 设计启动前先跑**勘察 checklist**：① `doc_search` 定位所属设计文档（查项目文档地图——本产品自研仓 = docs/design/README.md；已有则更新不新建）
 > ② 读既有实现与先例
 > ③ 核测试面（既有用例/测试文件）
 > ④ 核双端对位面（CLI/VSC 镜像）
@@ -71,7 +71,7 @@
 > ⑤ 方案对比已做？——预检不过先修，不自发起评审（发起权仍在用户）。
 
 **A4 实践沉淀**（Docs Capture the Conversation 收尾——METHODOLOGY 退役改写版）：
-> 本会话验证过的好实践 → 落入板块设计文档/反例档案（对应板块 docs/design/<TOPIC>.md）——不散落会话。决策当天落档（Docs Capture the Conversation）。
+> 本会话验证过的好实践 → 落入板块设计文档/反例档案（落点按项目文档约定；本产品自研仓 = 对应板块的 docs/design/<TOPIC>.md）——不散落会话。决策当天落档（Docs Capture the Conversation）。
 
 #### 方案选型对比（≥2 候选时 MUST——模板表）
 候选 ≥2：设计层 MUST 含「方案选型对比」子节，用下列模板（判据来自需求层——含非功能硬指标；
@@ -107,7 +107,7 @@
 2. **D2 单一权威源** — 一条机制**只在一处详述**，其余处**只引用不重述**（模板同理：批次档模板只在需求档 §1.12）。
 3. **D3 计数·枚举纪律** — 声明“N 项/N 处/N 条”时**计数与列表必须同时改**（可机判）。
 4. **D4 指针纪律** — 指针形态 = `文档:节`（行号只作 as-of 参考）；**禁**“见上/见该节”式相对指针。
-5. **D5 冻结窗口** — **评审在途不改被审文档**（改了 = 评审对象已变 → stale，token 不签发）；改动集齐后统一入场。
+5. **D5 冻结窗口** — **评审在途不改被审文档**（改了 = 评审对象已变 → stale，token 不签发）；改动集齐后统一入场。**在途下界 = 报告送达（digest 注入 / 回合尾 collect）或取消·中止**——「子进程退出」不是窗口边界；窗口内对被审文件集（设计评审含批次档）零写入——射程内写入会被预闸拒绝（先 cancel → 改动 → 重发）。
 6. **D6 回读核对** — 任何写入后**回读核实**再报完成（写入静默失败、编辑吞标题均已实证）。
 7. **D7 变更留痕 + 核销同步** — 每批核销跑**核销同步清单**（批次档 §6）：角色表 / 状态行 / 计数 / 指针 / 变更记录 / 待办勾销。
 
@@ -158,7 +158,7 @@
   No values, no placeholders.
 
 ## 实施委托结构化（任务书结构 + file 域语义）
-- Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent BY DEFAULT — spawn async with the design as the task book (§21 F-N1.5 2026-09-05 ruling); small / exploratory / interactive changes stay inline.
+- Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent BY DEFAULT — spawn async with the design as the task book (F-N1.5 2026-09-05 ruling); small / exploratory / interactive changes stay inline.
 Do not implement sized batches yourself just because you can — the isolated context is what breaks the self-review blind spot.
 - Every delegation carries a task book with:
 goal & why
@@ -166,20 +166,23 @@ known facts (paths the parent already explored — no re-exploration)
 design points & forbidden scope
 acceptance criteria (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
 delivery-report format.
-Sized delegation without these fields is a defect — the coder would re-explore what the parent already knows (§21 F-N1.6 2026-09-05 ruling; async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
+Sized delegation without these fields is a defect — the coder would re-explore what the parent already knows (F-N1.6 2026-09-05 ruling; async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
 - **file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可（用户裁定 2026-09-10）**：
 **files declarations list only the implementer's write domain** (source, test, and design-doc files)
-— parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family) must not be listed;
+— the project's own process files (requirement pool / changelog / checklist family — 本产品自研仓 = docs/TODO.md / CHANGELOG.md / checklist) must not be listed;
 reconciliation notes and CHANGELOG entries are the parent's duty, landed after the eng-coder delivers.
 files must be file-level paths (one per file you will modify). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
 
 ## 需求池攒批工作流（2026-09-03 · 用户裁定——低触发，用到时才读）
 单点流水线固定成本 ~40 分钟——被一个需求点独扛；批量把固定成本摊到多个点。攒批只改变"触发时机"，不改变"每点怎么做"。
-1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
+1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project's requirement-pool record（池文件按项目约定；本产品自研仓 = docs/TODO.md）「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
 2. **Threshold reminder** — "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
 3. **Fast lane** — "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."
 4. **批设计**：一次落多个需求点 → 同批评审 → 用户批准 → 批实现。
-5. **边界**：池只收**用户需求点**——技术待办仍走 `docs/TODO.md` 技术组——不混池；紧急 bug 由快车道覆盖。
+5. **边界**：池只收**用户需求点**——技术待办仍走项目技术待办区（本产品自研仓 = docs/TODO.md 技术组）——不混池；紧急 bug 由快车道覆盖。
+
+需求池与技术待办同一铁律（指针化、不展开任务细节），但锚的形态不同：需求池挂需求档节 + 任务书 §2；技术待办挂归属档节 + 最小证据行（file:line + 症状）。
+台账条目一行一条，续行即违规；组标题声明的条数必须等于组内实条目数。
 
 ## Multi-Task Parallelism (multiple designs in flight)（旧 engineering.md 节——施工③随迁：多设计并行=流程纪律，入工程纪律层；端注：§11.1 R14 per-role-domain pools 段为 VSC 端特有——原地保留于本文件尾部）
 Engineering-mode stages (design / review / implementation / audit / delivery review) can run in parallel —
@@ -199,10 +202,11 @@ and `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc
 async spawns overlapping running/queued files wait queued (clear when the blocker settles); sync spawns conflicting on files error out (not queued); dependency chains auto-order.
 Mirror tasks across independent trees spawn as parallel eng-coders, each declaring its own file domain — overlapping domains are queued by the scheduler, never hand-serialized.
 **files declarations list only the implementer's write domain** (source, test, and design-doc files)
-— parent-side maintained files (docs/TODO.md, CHANGELOG.md, checklist family) must not be listed;
+— the project's own process files (requirement pool / changelog / checklist family — 本产品自研仓 = docs/TODO.md / CHANGELOG.md / checklist) must not be listed;
 reconciliation notes and CHANGELOG entries are the parent's duty, landed after the eng-coder delivers.
 (§28 R26 — rejected mechanically by the subagent tool's files validation, fail-closed before scheduling) files must be file-level paths (one per file you will modify).
 Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
+- **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后**直接提交**——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；**不手工记队列、不逐档放行、不因冲突/池满而推迟提交**。父侧只读状态（status/observe），不模拟调度器。
 **Keep the concurrency cap: at most 4 concurrent eng-coders (review #2 — phrase preserved, T9/T-E16 assertions stay green).**
 - **Cap: at most 4 concurrent eng-coders.**
 You track each parallel implementation's state (design, token, delivery, audit, review) yourself; past 4 the bookkeeping cost and cross-talk risk outweigh the speedup.
@@ -210,22 +214,10 @@ You track each parallel implementation's state (design, token, delivery, audit, 
 - Initiation rights are unchanged: the DESIGN review is still only fired when the user asks (parallel work never self-initiates a review).
 
 ## R24 挂钩（设计侧结构规则执行挂钩——ENGINEERING-MODE 载体）
-设计文档「受影响文件」表对每个将修改的源/测试文件标注 `当前行数 + 预计增量`；设计评审维度含受影响文件行数标注核查（超档即标注拆分规划）。动机与完整机制见 `docs/design/METHODOLOGY.md` R24 节。
+设计文档「受影响文件」表对每个将修改的源/测试文件标注 `当前行数 + 预计增量`；设计评审维度含受影响文件行数标注核查（超档即标注拆分规划）。动机与完整机制见纪律层 `src/prompts/discipline-normal.md` 代码结构判据节（原 `docs/design/METHODOLOGY.md`（CLI 侧）已于 2026-09-10 退役入 `_archive/`）。
 
 ## 写文档要人类可读
-写/改设计文档（docs/design/）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：`node scripts/check-doc-width.mjs`（扫 docs/design/ 无 >300 单行）。判据权威源：`docs/design/README.md` 归属规则 6。
-
-## 工具观条款
-### Search Tool Priority (behavior rules — 2026-09-02, the Bing junk-loop lesson)
-- **Check the tool table before any search**: MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search
-— `websearch` (Bing) is ONLY the fallback (unavailable: not configured, or its call failed).
-- **`websearch` returns junk/unrelated results twice in a row → switch immediately** to an MCP search tool or another path — do not fight it.
-Do not repeat the same query.
-- **Blocked/unreachable site (docs.claude.com / ai.google.dev etc.) → take a mirror path** (e.g. gh-proxy.com to fetch GitHub SDK source / type definitions) — never guess official-doc URLs blindly.
-- **Before fetching a page by hand, scan the tool table** ("do I already have a tool for this?") — `fetch` / MCP search before `curl`-style scraping.
-
-### Codebase exploration order
-- Codebase exploration order: repo_outline → doc_search → code_search. Structure → intent → details.
+写/改设计文档（docs/design/）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：按项目自身的文档规范核验（通用判据：无 >300 字符单行、正常换行与分隔；项目另有声明时以项目为准）。
 
 ### VSC 端特有段：R14 池规则（per-role-domain pools——VSC engineering.md 独有——原地保留）
 §11.1 R14 (per-role-domain pools): the async pool capacity is per domain — eng-coder pool 4, explore/plan/coder (other roles) pool 4 —

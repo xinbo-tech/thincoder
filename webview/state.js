@@ -13,6 +13,10 @@ window._vscode = vscode
 export const ctx = {
   vscode,
   messagesEl: document.getElementById("messages"),
+  // 活动区（2026-09-11 活动区回归——WEBVIEW.md §12）：子代理/consult/advisor-async 块
+  // 出生即驻留此处（区尾）——live 固定可见（不随会话流滚动丢失）；空区 CSS `:empty`
+  // 隐藏零高（零显隐 JS）、32vh 封顶 + 区内自滚。
+  activityEl: document.getElementById("subagent-activity"),
   inputEl: document.getElementById("input"),
   sendBtn: document.getElementById("send-btn"),
   abortBtn: document.getElementById("abort-btn"),
@@ -35,6 +39,7 @@ export const ctx = {
   _inputHistory: [], // sent inputs (memory, per panel session — CLI parity)
   _historyIdx: -1,   // -1 = showing the live draft
   _inputDraft: "",   // stashed in-progress text while navigating history
+  _subDescShown: false, // A13：首块活动说明行已示（panel 会话生命周期内一次——不随 resetActivity 复位）
   // Turn-level assistant label guard (CLI ensureAssistantLabel parity): one
   // "❯ ThinCoder:" per TURN, not per LLM-response segment. onToken/onReasoning
   // start a fresh block after each tool batch; without this every segment

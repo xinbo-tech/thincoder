@@ -171,3 +171,25 @@ test("T64 正常：接线——5 个新 test 档入册 test/files.mjs + 校验�
   assert.ok(Array.isArray(raw.entries) && raw.entries.length > 0, "基线 entries 数组非空")
   assert.ok(raw.entries.every((e) => /^(V1|V2|V3)\|/.test(e)), "条目标记形态 V1|/V2|/V3|")
 })
+
+// ── ⑦ 宽度表格行豁免（群 A 批 A8——README 规则 6 豁免句 + 检查器契约附则） ──────
+test("T-MA8-1 正常/边界：>300 表格行零报 / >300 非表格行照报（谓词单源）", () => {
+  const row = "| 表格列 | " + "x".repeat(300) + " |" // 311 字符——表格行结构性不可折行 → 豁免
+  const plain = "y".repeat(320) // 320 字符——正文非表格行 → 照报
+  writeDoc("width-probe.md", ["# 宽度探针", "", row, "", plain, ""].join("\n"))
+  const hits = checkDocWidths(tmp, { dir: SCAN_DIRS[0] })
+  assert.deepStrictEqual(hits.map((h) => ({ line: h.line, len: h.len })), [{ line: 5, len: 320 }],
+    "恰报非表格行 :5（320）——表格行 :3（311）零报")
+})
+
+test("T-MA8-2 边界（静态）：主流程零内联 width 扫描（判据单源 checkDocWidths）+ 规则 6 子串在位", () => {
+  const src = readFileSync(join(REPO, "scripts", "check-doc-width.mjs"), "utf8")
+  assert.ok(src.includes("const widthHits = checkDocWidths(root, { max: maxW, dir: dirArg })"),
+    "主流程经单源入口（零内联重复扫描）")
+  assert.ok(!/length\s*>\s*maxW/.test(src.slice(src.indexOf("const isMain"))),
+    "主流程零内联 `length > maxW` 扫描")
+  assert.ok(/if \(l\.length > max && !isTableRow\(l\)\)/.test(src), "豁免谓词落在判据行（单源定义）")
+  const readme = readFileSync(join(REPO, "docs", "design", "README.md"), "utf8")
+  assert.ok(readme.includes("表格行豁免"), "规则 6 豁免句在位")
+  assert.ok(readme.includes("checkDocWidths"), "检查器契约附则（宽度扫描单源）在位")
+})

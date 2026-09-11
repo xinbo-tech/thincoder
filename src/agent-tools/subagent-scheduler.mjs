@@ -87,6 +87,12 @@ export function writeTombstone(parent, id, status, role) {
   writeTombstoneTo(parent.history ?? parent, id, status, role)
 }
 
+/** 终态墓碑读取器（C-3——status 动作消费：两池未命中后回显；父形态——history 载体优先，
+ *  无记录 null）。 */
+export function tombstoneOf(parent, id) {
+  return tombMap(parent).get(idNum(id)) ?? null
+}
+
 /** 文件域归一化（round1 #5——相对 cwd 解析绝对 + 去重——冲突比较键 win32 小写）。
  *  §20.8 D-F1.1（2026-09-04）：目录声明检测——fail-closed——尾斜杠形态 / 指向既有目录
  *  → throw（含路径——错误字符串英文定稿）——目录声明静默绕过冲突检测的通道闭合；
@@ -158,9 +164,10 @@ const idNum = (id) => (typeof id === "string" && /^\d+$/.test(id) ? Number(id) :
 
 /**
  * §20 依赖终态查询（单点事实——池条目 / pending（挂起期 settle 移交——注入前）/
- * 终态墓碑（自动送达消费——consumed；取消/失败——D-SD5 分支））：
+ * 终态墓碑（自动送达消费——consumed；取消/失败/丢弃——D-SD5 分支））：
  * ok（settle 成功/consumed——T-SD14 视为满足）/ pending（等启动/完成）/
- * failed|cancelled（依赖取消失败——depc 分支）/ unknown（从未存在——spawn 明确错误）。
+ * failed|cancelled|discarded（依赖取消/丢弃——depc 分支；discarded → cancelled——§12.3 C-6）/
+ * unknown（从未存在——spawn 明确错误）。
  */
 export function depInfo(parent, id) {
   const key = idNum(id)
@@ -173,7 +180,7 @@ export function depInfo(parent, id) {
   const pend = (parent.history?._pendingAsyncResults ?? parent._pendingAsyncResults ?? []).find((x) => String(x.id) === String(key))
   if (pend) return pend.error != null ? { state: "failed", role: pend.role } : { state: "ok", role: pend.role }
   const t = tombMap(parent).get(key)
-  if (t) return { state: t.status === "cancelled" || t.status === "failed" ? t.status : "ok", role: t.role }
+  if (t) return { state: t.status === "failed" ? "failed" : (t.status === "cancelled" || t.status === "discarded") ? "cancelled" : "ok", role: t.role }
   return { state: "unknown", role: null }
 }
 

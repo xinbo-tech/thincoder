@@ -7,6 +7,7 @@ import { t } from "./i18n.js"
 import { addUser } from "./ui.js"
 import { setLoading } from "./loading.js"
 import { clearPanels } from "./panels.js"
+import { showToast } from "./toast.js"
 
 export function send() {
   const text = ctx.inputEl.value.trim()
@@ -17,6 +18,9 @@ export function send() {
   if (!text) return
   if (S._turnState === "running") {
     ctx.inputEl.placeholder = t("input.busyPlaceholder")
+    // C-B2-4（§9.2——AC-B2-3）：拒发可见提示——复用既有 toast 机制（文案 = 既有 busy 串，
+    // 零新增 locale 键）；占位符设置保留（既有测试锁零伤）。
+    showToast(t("input.busyPlaceholder"))
     return
   }
   const h = ctx._inputHistory

@@ -14,7 +14,7 @@
  */
 import { escapeXml } from "../agent/run-helpers.mjs"
 import { relative, isAbsolute } from "node:path"
-import { describeBlockers, detectStall, dependentLabels, getAsyncPool, queuePosition, refillPool, refreshQueuedRows, stallErrorText, writeTombstone } from "./subagent-scheduler.mjs"
+import { describeBlockers, detectStall, dependentLabels, getAsyncPool, queuePosition, refillPool, refreshQueuedRows, stallErrorText, tombstoneOf, writeTombstone } from "./subagent-scheduler.mjs"
 // 第 10 批 ③（§18.3 #3——D-B3 本端原名）：评审取消路由（advisor id → cancelAdvisorReview）
 import { cancelAdvisorReview } from "./advisor-async.mjs"
 
@@ -35,6 +35,7 @@ import { cancelAdvisorReview } from "./advisor-async.mjs"
  * - 不带 id → { overview: { running: [{id, role, model, elapsedSec, turn, maxTurns, touchedFiles?/touched?}],
  *   queued: [{id, role, position, touched}], done: [{id, role}] } }
  * - 带 id   → { id, role, status: "running"|"queued"|"done", position?/note?, model?/elapsedSec?/turn?/maxTurns?, touchedFiles?/touchedMore?/touched? }
+ * - 终态回显（§12.3 C-5——两池未命中查墓碑）→ { id, role, status: "discarded"|"cancelled"|"done"|"failed", note }
  * - 未知 id → { id, status: "error", error: "unknown async subagent id: <id>" }（T12 同语义）
  * §19.5.6 D-SF2 (T-SF——CLI 同语义参考): running 条目带 touched files 摘要——有改动 =
  * touchedFiles（前 5 相对路径）+ touchedMore（仅 >5 时——超出计数）；0 改动 =
@@ -105,6 +106,16 @@ function advisorStatusFields(entry) {
   // 并在设计 §18.4 登记差异。
   return { ...out, status: entry.status ?? "running" }
 }
+
+/** C-5 终态回显表（墓碑 status → 返回 status + note；未列值不入表——不虚构语义）。
+ *  文案要点逐条对应 §12.3 C-5 表（discarded/cancelled/consumed→done/failed）。 */
+const TERMINAL_ECHO = {
+  discarded: { status: "discarded", note: "discarded by the user's Stop — its report will NOT arrive (partial changes stay unmerged/unaudited; re-spawn if the work is still needed)" },
+  cancelled: { status: "cancelled", note: "cancelled — its report will NOT arrive (its work was stopped; partial changes stay unmerged/unaudited)" },
+  consumed: { status: "done", note: "delivered — the report was injected into the session" },
+  failed: { status: "failed", note: "settled with an error — the error report was injected; nothing is pending" },
+}
+
 export function subagentStatus({ id }, ctx) {
   const map = getAsyncPool(ctx.agent, "subagent") // D1 accessor——history 载体优先双查询吸收
   const advisors = getAsyncPool(ctx.agent, "advisor") // §18.3 #1：评审池同面（双池合并）
@@ -113,6 +124,11 @@ export function subagentStatus({ id }, ctx) {
     // §18.3 #1：单查先子代理池，未命中落评审池（两池共用 nextSubagentId 命名空间——id 全局唯一）
     const entry = map?.get?.(idNum) ?? advisors?.get?.(idNum) ?? null
     if (!entry) {
+      // C-5（AGENT-LOOP（VSC 仓）§12.3——终态回显）：两池未命中 → 查终态墓碑——已丢弃/已
+      // 取消/已消费/已失败不再读成「从未存在」；无记录（含未列墓碑值）照旧 unknown。
+      const t = tombstoneOf(ctx.agent, idNum)
+      const echo = t ? TERMINAL_ECHO[t.status] : null
+      if (echo) return JSON.stringify({ id, role: t.role, status: echo.status, note: echo.note })
       return JSON.stringify({ id, status: "error", error: `unknown async subagent id: ${id}` })
     }
     return JSON.stringify(entry.role === "advisor"

@@ -10,7 +10,7 @@ You do NOT write implementation code (that is eng-coder), do NOT edit prompt fil
 - **需求档不经 advisor**（the requirements doc does not go through advisor review）——用户确认即定稿（the design process itself is the first strict check of the requirements）.
 
 ## 写域（prompt-level discipline — no mechanical gate）
-Your write domain = `docs/` **minus `docs/design/prompts/`**（提示词中文模板也是提示词文件）.
+Your write domain = the project's requirements/design documents（落点按项目文档约定；本产品自研仓 = docs/，扣除 docs/design/prompts/——提示词文件（含中文模板）是产品代码，不归你）。
 So: requirements / design docs / batch record §2 are yours; `src/**` and every prompt file are not yours to touch.
 Boundary enforcement = this prompt + the main agent's content-level verification (user ruling 2026-09-10: no mechanical write-domain gate).
 
@@ -24,8 +24,7 @@ Boundary enforcement = this prompt + the main agent's content-level verification
 1. **Survey on your own** — read code / docs / existing designs; evidence must carry `file:line`. **勘察预算 ≤6 explore spawns per batch**（与 eng-coder 审计预算语义独立、各自计数）；the main agent's survey result is reference only — only the designer's own survey finds requirement gaps.
 2. **Merge this batch's requirements into `requirements/`** (new entries in place, no new files) + **whole-system reconciliation**
    (cross-board duplication / contradiction / dead pointers → consistency issues you fix, semantic issues you bounce back);
-   do the **todo 状态推进** in the same pass — advance `docs/TODO.md` status when merging requirements
-   (a prompt-mandated action, never declared in `files`).
+   **todo 状态推进**（记录 + 状态推进 + 物理落笔）归 **主 agent**（2026-09-11 归属修订）——本角色只做需求档条文修订，不触碰项目台账档。
 3. **Give every requirement a verdict sentence**（判定句——acceptance wording）: execution face in this prompt, criteria face in the requirements doc (no verdict sentence = not complete).
 4. **Write the design** `design/<board>.md`.
 5. **Self-check + return** — verify requirement coverage and requirements↔design consistency → report + **STOP** (do not fire a review).

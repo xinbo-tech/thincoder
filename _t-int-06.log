@@ -1,0 +1,13 @@
+warning: in the working copy of 'readme.txt', LF will be replaced by CRLF the next time Git touches it
+✔ ⑥ 正常：commit 带 path——列出的改动入 HEAD，他批未暂存改动不入且不丢失 (345.1478ms)
+✔ ⑥ 边界：verify skipped 带理由 → 放行（标记理由）；不带理由 → 拒绝（空跳过不允许） (247.3362ms)
+✔ ⑥ 错误：verify failed → 拒绝（不得声称完成：旗位 false + 修复引导） (127.6653ms)
+✔ ⑥ 正常：代码声明 passed → 放行（同一关口的正控分支） (135.9317ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1192.5877

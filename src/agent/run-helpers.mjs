@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { join, resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { loadAgentSettings } from "../config-io.mjs"
-import { isCodePath } from "../advisor/repos.mjs"
+import { isCodePath, loadConventions } from "../conventions.mjs"
 
 /** File-modifying tools — the engineering design gate blocks these before review passes (CLI parity). */
 export const FILE_MUTATORS = new Set(["write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit"])
@@ -20,6 +20,26 @@ export function configuredMaxTurns() {
     return loadAgentSettings().maxTurns
   } catch { return DEFAULT_MAX_TURNS }
 }
+
+/**
+ * 跨段累计编号帧（TURN-CAP-CONTINUE §19.3——第 19 批）：seq = 链内累计序数（agent._turnSeq），
+ * turn = 段内轮次（0 起），maxTurns = 本段预算。差额项 seq − turn − 1 = 本段开始前的链内累计
+ * → maxTurns = 段前累计 + 段预算（跨段预算同步累计）。段内帽判定不读本函数（帽 = turn < maxTurns）。
+ */
+export function turnFrame(seq, turn, maxTurns) {
+  return { turn: seq, maxTurns: seq - turn - 1 + maxTurns }
+}
+
+/**
+ * 消费点统一入口（§19.3——runChild / escalate-async 两续跑循环）：把帧写进池条目。
+ * entry 空（sync 路径）→ no-op 不抛；maxTurns ≤ 0（帧缺第二参的兼容形态）→ 不覆盖既有值。
+ */
+export function applyTurnFrame(entry, turn, maxTurns) {
+  if (!entry) return
+  entry.turn = turn
+  if (maxTurns > 0) entry.maxTurns = maxTurns
+}
+
 export const STALL_WINDOW = 5
 export const STALL_THRESHOLD = 3
 export const MAX_VERIFY_PUSHBACKS = 2
@@ -40,15 +60,19 @@ export function escapeXml(s) {
 
 /**
  * True when this run mutated at least one CODE file (CLI hasCodeMutations parity).
- * Code = src/ unconditional (incl. src/prompts/*.md) OR anything that is neither
- * a doc file (docs/, *.md, LICENSE…) nor a temp file (tmp-*, .tmp/.temp — L58
- * 附带差：scratch 脚本不触发 guard——CLI isTempFile 同规则). _touchedFiles stores
- * absolute paths; the src/ check matches a path component.
+ * Code = inside a declared code segment (default: `src` — incl. src/prompts/*.md,
+ * at ANY depth) OR anything that is neither a doc file nor a temp file (tmp-*,
+ * .tmp/.temp — L58 附带差：scratch 脚本不触发 guard——CLI isTempFile 同规则).
+ * _touchedFiles stores absolute paths; classification comes from the single
+ * authority (src/conventions.mjs) and honors the project declaration
+ * (.thincoder/conventions.json) — the same judge as the design gate, never a
+ * second copy of the default list.
  */
 export function hasCodeMutations(agent) {
   const files = agent._touchedFiles ?? []
   if (files.length === 0) return agent._mutatedThisRun
-  return files.some((p) => isCodePath(p))
+  const conv = loadConventions(agent.cwd)
+  return files.some((p) => isCodePath(p, conv))
 }
 export const MAX_TOOL_RESULT = 64 * 1024 // chars — large results saved to disk instead of truncated (aligns with CLI)
 export const TOOL_RESULT_PREVIEW_HEAD = 16 * 1024 // §5 D-4.1 head slice preserved (preview 保头保尾)

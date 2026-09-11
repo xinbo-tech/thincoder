@@ -7,6 +7,15 @@ import { specForModel } from "../../specs.mjs"
 import { resolveEnableThinking } from "../../config.mjs"
 
 /**
+ * Read-side idle watchdog (2026-09-11 群 A batch): after the absolute 600s wall clock was
+ * removed, a silent body would hang the stream forever on the direct path (the proxy path
+ * keeps its `_bodyIdleMs` twin). Body liveness = data flowing: no chunk for READ_IDLE_MS
+ * → the stream is killed with a TimeoutError. Tests inject `idleMs`; production callers
+ * pass nothing (default applies — zero call-site change).
+ */
+const READ_IDLE_MS = 120_000
+
+/**
  * Provider-level pre-flight error (MODEL-400-FIX F-1 — 请求体组装前断言): carries the
  * provider identity so a fail-fast throw is readable ("which provider + what to fix")
  * instead of a wire-time serde 400. CLI parity: CLI side lives in provider/errors.mjs.
@@ -147,7 +156,7 @@ function finalizeToolCalls(result) {
  * read loop races an abort promise so a Stop interrupts even a SILENT stream
  * (server accepted, no data — the for-await would otherwise hang).
  */
-export async function parseStream(response, { onToken, onReasoning, signal }) {
+export async function parseStream(response, { onToken, onReasoning, signal, idleMs: idleOpt }) {
   const result = { content: "", reasoning: "", toolCalls: [], droppedToolCalls: 0, usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
@@ -242,8 +251,32 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
 
   if (!response.body) throw new Error("No stream response body")
 
+  // 读侧 idle 看门狗（群 A 批）：每 chunk 重置；连续 idleMs 无数据 → TimeoutError。
+  // 释放面兼容两种 body：Node 流（代理路径 PassThrough——destroy）与 Web 流（直连
+  // undici ReadableStream——无 destroy，退 cancel）；race 保证两种形态都以
+  // TimeoutError 终止读循环（判死语义与消息逐字同源）。idleMs ≤ 0 = 关闭（测试缝）。
+  const idleMs = idleOpt ?? READ_IDLE_MS
+  const idleError = () => new DOMException(`SSE idle timeout: no data for ${idleMs / 1000}s`, "TimeoutError")
+  let idleTimer = null
+  let rejectIdle = null
+  const idlePromise = new Promise((_, reject) => { rejectIdle = reject })
+  const releaseBody = (err) => {
+    try {
+      if (typeof response.body?.destroy === "function") response.body.destroy(err)
+      else response.body?.cancel?.(err).catch(() => {})
+    } catch { /* already gone */ }
+  }
+  const armIdle = () => {
+    if (!(idleMs > 0)) return
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => { const err = idleError(); releaseBody(err); rejectIdle(err) }, idleMs)
+    idleTimer.unref?.()
+  }
+  armIdle()
+
   const readLoop = async () => {
     for await (const chunk of response.body) {
+      armIdle()
       if (signal?.aborted) throw abortError()
       buffer += decoder.decode(chunk, { stream: true })
       // BOM 剥除（2026-08-31 会诊 #7）：首 chunk 可带 \uFEFF，否则首 data 事件被静默丢弃
@@ -260,7 +293,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       signal.addEventListener("abort", onAbort, { once: true })
     })
     try {
-      await Promise.race([readLoop(), abortPromise])
+      await Promise.race([readLoop(), abortPromise, idlePromise])
     } catch (e) {
       // Interrupt (Ctrl+I, CLI sse.mjs parity): the abort carries reason.interrupt
       // — return the partial result so the agent loop can commit the partial
@@ -272,11 +305,16 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       }
       throw e
     } finally {
+      if (idleTimer) clearTimeout(idleTimer)
       // Abort won the race — release the hanging stream; normal completion is a no-op.
       try { await response.body.cancel() } catch { /* */ }
     }
   } else {
-    await readLoop()
+    try {
+      await Promise.race([readLoop(), idlePromise])
+    } finally {
+      if (idleTimer) clearTimeout(idleTimer)
+    }
   }
 
   buffer += decoder.decode()

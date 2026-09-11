@@ -1,9 +1,9 @@
 /**
- * activity-view.js — 活动块呈现叶（ACTIVITY-REWRITE-SIMPLE——B1 流尾简单形态回归）。
+ * activity-view.js — 活动块呈现叶（2026-09-11 活动区回归——WEBVIEW.md §12 现行机制）。
  * 单一权威：块头/状态词/折叠 tail/⏹ 停止与取消控件（refreshBlock/updateStopButton/
- * noteChunk——语义随各函数 doc）。区显隐/pin/ticker/settle 驻留/awaiting·position·
- * waiting 词随容器与状态机加戏全删——块生命周期只有 live → frozen——头词事件驱动
- * （无 1s ticker——无 idle 时钟）。
+ * noteChunk——语义随各函数 doc）。块生命周期只有 live → frozen——头词事件驱动
+ * （无 1s ticker——无 idle 时钟）；区显隐 = CSS `:empty`、区 pin = ui.js 滚动族
+ * （maybeScrollActivity/initScrollFollow）——本叶零参与显隐/pin（无 refresh 侧机制）。
  * 依赖：state.js + i18n.js——leaf——不依赖编排层 activity.js。
  */
 import { t } from "./i18n.js"

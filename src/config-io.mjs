@@ -42,6 +42,19 @@ export function _configPath() { return _pathOverride ?? configPath }
 // （副本——磁盘保留他端内容；调用方提示重试——决策① A 不自动合并）。
 const readMtimes = new Map() // path → { mtimeMs, size } | null（缺失）
 
+// ─── Self-write notifications（第 21 批 B5——SETTINGS（VSC 仓）§2.6 基线回填订阅面）───
+// saveRaw = 本进程写盘唯一通道（persistRaw/面板写面/工具面/迁移写回全经此）；写成功后的
+// 同步回调让外部写感知面（config-watch）把 watcher 基线刷到当前元组——扩展自写 ⇒ 事件到达时
+// 元组已等于基线 ⇒ 零推送（不抖动面板）；冲突放弃路径（无写）不回调。
+const selfWriteFns = new Set()
+
+/** 订阅 saveRaw 写成功后的同步回调；返回退订函数（config-watch 的 dispose 随退）。 */
+export function onConfigSelfWrite(fn) {
+  if (typeof fn !== "function") return () => {}
+  selfWriteFns.add(fn)
+  return () => { selfWriteFns.delete(fn) }
+}
+
 /** F5b 冲突提示文案（D-F5b 同型——调用方展示/抛出） */
 export const CONFIG_CONFLICT_HINT = "config changed on disk concurrently — retry"
 
@@ -96,6 +109,9 @@ export function saveRaw(raw) {
   writeFileSync(path, JSON.stringify(raw, null, 2) + "\n", { encoding: "utf8", mode: 0o600 })
   try { chmodSync(path, 0o600) } catch { /* best-effort on Windows */ }
   readMtimes.set(path, statTupleOf(path)) // 自写后刷新基线（防自写误判）
+  for (const fn of [...selfWriteFns]) {
+    try { fn() } catch (e) { console.warn(`[config] self-write subscriber failed: ${e.message}`) }
+  }
 }
 
 /** Read → mutate → write（CLI tui persistRaw 镜像）。saveRaw 结果透传（冲突 → 提示）。 */

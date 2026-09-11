@@ -1,0 +1,14 @@
+✔ T-S2.30 本端 null 叶子：set agent.subagentModel 非空串接受；对象/空串拒绝 (11.1397ms)
+✔ T-S2.31 本端 null 叶子（边界）：agent.compactThreshold number ∪ null 接受；字符串/对象拒绝 (2.9944ms)
+✔ T-S2.32 跨端三键：不可消费形态拒绝（未落地前零条目 = 全收）；合法形态接受 (4.0404ms)
+✔ T-S2.33 防漂移（N-S1.5）：本端 null 叶子锁（2 键）+ 跨端三键存在性 + 未声明键捕获 (46.527ms)
+✔ T-S2.34 防漂移：派生表非 null 叶子逐键对拍旧实现（agent.maxTurns→number 等） (13.7974ms)
+✔ T-S2.35 文案：工具 description 逐字断言（§8.6 VSC 新句——整句出现） (0.2507ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 287.2913

@@ -1,19 +1,24 @@
 /**
- * activity-flow.test.mjs — ACTIVITY-REWRITE-SIMPLE 全族重写（B1 流尾形态——设计档用例表
- * 逐行：出生/内容/终态折叠/settled/queued 三分支含取消 ⏹/迟来/多并行/会话清/reload/
- * 150 裁（冻结+live tombstone）/error/answered/重复 started）。手法：installChatFixture
- * 后动态 import 真模块，直接驱动 activity 导出 + ui.appendAdvisorChunk。无真实定时器。
+ * activity-flow.test.mjs — 活动区语义全族（2026-09-11 活动区回归——`WEBVIEW.md` §12 用例表逐行：
+ * T-R1 区出生/T-R2 内容/T-R3 原地折叠（含 settled）/T-R4 queued 三分支/T-R7 区显隐/T-R8 区上限/
+ * T-R9 150 消息裁/T-R10 区自滚/T-R11 清屏恢复/T-R12 回合中止/T-R13 ⏹ 委托/T-R14 迟来丢弃/
+ * T-R15 error·answered/T-R16 兜底折叠）。手法：installChatFixture（含 `#subagent-activity`）+ 动态
+ * import 真模块（T-R13 追加补 id 引导真 chat.js 图——§12.7 注）；T-R5 补桩/T-R6 接管由
+ * `async-visibility.test.mjs` T-V4/T-V2 承载（不重复——TEST-LIFECYCLE 扫① 纪律）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 let cleanupEnv
+let capturedPosts // T-R13 断言面（setupWebview 返回）
 let appendChunk // ui.appendAdvisorChunk（loadWebview 赋值——feedText 用）
 
 before(() => {
   const env = setupWebview()
   cleanupEnv = env.cleanup
+  capturedPosts = env.capturedPosts
   installChatFixture()
 })
 
@@ -27,17 +32,22 @@ async function loadWebview() {
   const ui = await import("../webview/ui.js")
   const activity = await import("../webview/activity.js")
   appendChunk = ui.appendAdvisorChunk
-  return { S: state.S, ctx: state.ctx, trimOldMessages: ui.trimOldMessages, ...activity }
+  return {
+    S: state.S, ctx: state.ctx, trimOldMessages: ui.trimOldMessages,
+    maybeScrollActivity: ui.maybeScrollActivity, initScrollFollow: ui.initScrollFollow, ...activity,
+  }
 }
 
 /** 逐测冷启复位（node --test 同文件串行——模块缓存共享同一 S/ctx——每测独立起点）。 */
 function fresh({ S, ctx }) {
   ctx.messagesEl.replaceChildren()
+  ctx.activityEl.replaceChildren()
   S._subBlocks.clear()
   ctx._pinBottom = undefined
+  ctx._pinActivity = undefined
 }
 
-/** 造一条会话消息（.message——窗口裁剪/兄弟序用）。 */
+/** 造一条会话消息（.message——消息窗裁剪/兄弟序用）。 */
 function addMessage(ctx, tag) {
   const el = document.createElement("div")
   el.className = "message"
@@ -51,8 +61,12 @@ function feedText(block, text) {
   appendChunk(block, "text", text)
 }
 
-/** #messages 内 .sub-block 直接子元素（多块/重复断言用）。 */
+/** 活动区内 .sub-block 直接子元素（多块/重复断言用）。 */
 function subBlocks(ctx) {
+  return [...ctx.activityEl.children].filter((el) => el.classList.contains("sub-block"))
+}
+/** #messages 内 .sub-block（AC-R1 反断言：恒 0——块不落流）。 */
+function streamBlocks(ctx) {
   return [...ctx.messagesEl.children].filter((el) => el.classList.contains("sub-block"))
 }
 /** 直接子元素序号（无 DOM move 断言用——位置不变）。 */
@@ -60,77 +74,83 @@ function idxOf(el) {
   return [...el.parentNode.children].indexOf(el)
 }
 
-// ─── 用例表逐行 ──────────────────────────────────
+// ─── 用例表逐行（§12.7）────────────────────────────
 
-test("出生：pool started 消息建块 append #messages 流尾——label 去 sub: 前缀（AC-2）", async () => {
+test("T-R1 区出生（AC-R1）：pool started → 块 append 活动区区尾 + #messages 零块", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   addMessage(ctx, "m1")
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true, model: "glm-5.3" })
   const block = S._subBlocks.get("sub:explore#7")
   assert.ok(block, "started 建块")
-  assert.equal(block.parentNode, ctx.messagesEl, "块 append #messages（出生即流尾——AC-2）")
-  assert.equal(block, ctx.messagesEl.lastElementChild, "出生位 = #messages 流尾")
-  assert.equal(idxOf(block), 1, "排在 m1 后（流尾 append——非嵌入）")
+  assert.equal(block.parentNode, ctx.activityEl, "块 append 活动区（区内出生——AC-R1）")
+  assert.equal(block, ctx.activityEl.lastElementChild, "出生位 = 活动区区尾")
+  assert.equal(idxOf(block), 0, "区内首块（区尾 append——非嵌入）")
+  assert.equal(streamBlocks(ctx).length, 0, "#messages 内零 .sub-block（块不落流）")
+  assert.equal(subBlocks(ctx).length, 1, "区内单块")
   assert.ok(block.classList.contains("sub-live") && !block.classList.contains("sub-frozen"), "live 态")
   assert.equal(block._subMeta.label, "explore#7", "label = 频道去 sub: 前缀")
   const hdr = block.querySelector(".sub-hdr").textContent
   assert.ok(hdr.includes("▶") && hdr.includes("explore#7") && !hdr.includes("sub:"), "头词 [▶ explore#7…] 无 sub: 前缀")
   assert.equal(S._subBlocks.size, 1)
+  // 结构断言（AC-R1）：index.html 中区位于 #messages 与 #panels 之间（role=region）
+  const html = readFileSync(new URL("../webview/index.html", import.meta.url), "utf8")
+  const iMsg = html.indexOf('id="messages"')
+  const iAct = html.indexOf('id="subagent-activity"')
+  const iPan = html.indexOf('id="panels"')
+  assert.ok(iMsg > 0 && iMsg < iAct && iAct < iPan, "index.html 结构：messages → 活动区 → panels")
+  assert.match(html.slice(html.lastIndexOf("<div", iAct), html.indexOf(">", iAct)), /role="region"/, "区 = role=region")
 })
 
-test("内容：chunk appendAdvisorChunk 进块（tool/text 行）", async () => {
+test("T-R2 内容入块：chunk appendAdvisorChunk 进块（tool/text 行——区内）", async () => {
   const { S, ctx, ensureBlock } = await loadWebview()
   fresh({ S, ctx })
   const block = ensureBlock("sub:eng-coder#1")
   appendChunk(block, "tool", "read x.mjs")
   feedText(block, "report line one\nreport line two")
+  assert.equal(block.parentNode, ctx.activityEl, "块在活动区")
   const content = block.querySelector(".advisor-content")
   assert.ok(content.textContent.includes("read x.mjs"), "tool 行在内容区")
   assert.ok(content.textContent.includes("report line two"), "text 行在内容区（尾部完整）")
 })
 
-test("终态折叠：done 原地折叠——无 DOM move——class 换 + open=false + ⏹ 移除（AC-3）", async () => {
-  const { S, ctx, applySubagentStatus } = await loadWebview()
+test("T-R3 原地折叠（AC-R2）：done/settled 均原地折叠——容器与 DOM 序号不变（无 DOM move）", async () => {
+  const { S, ctx, applySubagentStatus, ensureBlock } = await loadWebview()
   fresh({ S, ctx })
-  addMessage(ctx, "m1")
+  ensureBlock("sub:plan#2") // 区内前块（序号基线——折叠不移动）
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true, model: "glm-5.3" })
   const block = S._subBlocks.get("sub:explore#7")
   const bornIdx = idxOf(block)
   assert.ok(block.querySelector(".sub-stop-btn"), "running+pool → ⏹ 在位")
   applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 7, turn: 4 })
-  assert.equal(block.parentNode, ctx.messagesEl, "仍挂 #messages（无 DOM move——AC-3）")
-  assert.equal(idxOf(block), bornIdx, "位置 == 出生位（原地折叠——无落流移动）")
+  assert.equal(block.parentNode, ctx.activityEl, "仍挂活动区（无 DOM move——AC-R2）")
+  assert.equal(idxOf(block), bornIdx, "位置 == 出生位（原地折叠——不落流）")
+  assert.equal(streamBlocks(ctx).length, 0, "#messages 零块（折叠块不落流——Q1）")
   assert.ok(block.classList.contains("sub-frozen") && !block.classList.contains("sub-live"), "class 换 live→frozen")
   assert.equal(block.open, false, "折叠")
   assert.ok(!block.querySelector(".sub-stop-btn"), "⏹ 移除")
   const hdr = block.querySelector(".sub-hdr").textContent
   assert.ok(hdr.includes("✓") && hdr.includes("done"), "冻结头 ✓ done")
   assert.equal(S._subBlocks.get("sub:explore#7"), block, "map 键仍在（幂等守卫基座）")
+  // settled 视同 done（同族断言）：即时原地折叠——无 awaiting 驻留
+  applySubagentStatus({ type: "subagent", status: "started", role: "plan", id: 8, pool: true })
+  const b2 = S._subBlocks.get("sub:plan#8")
+  feedText(b2, "report tail")
+  applySubagentStatus({ type: "subagent", status: "settled", role: "plan", id: 8 })
+  assert.ok(b2.classList.contains("sub-frozen") && b2.open === false, "settled 即冻结折叠（无驻留态）")
+  assert.equal(b2.parentNode, ctx.activityEl, "原地（区内——不移动）")
+  const hdr2 = b2.querySelector(".sub-hdr").textContent
+  assert.ok(hdr2.includes("✓") && hdr2.includes("done") && !hdr2.includes("awaiting"), "settled 头 = ✓ done（视同 done——无 awaiting 词）")
 })
 
-test("settled 视同 done：即时折叠（无 awaiting 驻留）", async () => {
-  const { S, ctx, applySubagentStatus } = await loadWebview()
-  fresh({ S, ctx })
-  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true })
-  const block = S._subBlocks.get("sub:explore#7")
-  feedText(block, "report tail")
-  applySubagentStatus({ type: "subagent", status: "settled", role: "explore", id: 7 })
-  assert.ok(block.classList.contains("sub-frozen"), "settled 即冻结（无驻留态）")
-  assert.equal(block.open, false, "settled 折叠")
-  const hdr = block.querySelector(".sub-hdr").textContent
-  assert.ok(hdr.includes("✓") && hdr.includes("done"), "settled 头 = ✓ done（视同 done——无 awaiting 词）")
-  assert.ok(!hdr.includes("awaiting"), "无 awaiting digestion 词")
-})
-
-test("queued 三分支（AC-4）：建 ⏳ 头 + 取消 ⏹ → started 翻转 running → 取消移除", async () => {
+test("T-R4 queued 三分支（AC-R2）：区内建 ⏳ 头 + 取消 ⏹ → started 翻转 running → 取消移除", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   // 分支 1：queued → ⏳ 等待头 + 取消 ⏹
   applySubagentStatus({ type: "subagent", status: "queued", role: "eng-coder", id: 9 })
   const b9 = S._subBlocks.get("sub:eng-coder#9")
   assert.ok(b9, "queued 即建等待头")
-  assert.equal(b9.parentNode, ctx.messagesEl, "头在 #messages 流内")
+  assert.equal(b9.parentNode, ctx.activityEl, "头在活动区内")
   assert.ok(b9.querySelector(".sub-hdr").textContent.includes("⏳"), "⏳ 头标")
   assert.ok(!b9.querySelector(".sub-hdr").textContent.includes("position"), "无位置词（position/waiting 词删）")
   const cancelBtn = b9.querySelector(".sub-stop-btn")
@@ -156,7 +176,172 @@ test("queued 三分支（AC-4）：建 ⏳ 头 + 取消 ⏹ → started 翻转 r
   assert.equal(b9.isConnected, true, "running 块不受影响")
 })
 
-test("迟来丢弃：终态后 chunk/ensureBlock 返 null——不复活不重建", async () => {
+test("T-R7 区显隐（边界——Q2/AC-R4）：空区 children 0 且 `:empty` 规则在位；块入区即现", async () => {
+  const { S, ctx, applySubagentStatus } = await loadWebview()
+  fresh({ S, ctx })
+  assert.equal(ctx.activityEl.children.length, 0, "空区零子元素（零显隐 JS——CSS 判据）")
+  assert.ok(ctx.activityEl.matches(":empty"), "空区命中 :empty（隐藏规则选择器有效）")
+  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
+  assert.match(css, /#subagent-activity:empty\s*\{\s*display:\s*none;\s*\}/, "`:empty` display:none 规则在位（零 JS 显隐）")
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 3, pool: true })
+  assert.equal(ctx.activityEl.children.length, 1, "块入区即现（子元素 1）")
+  assert.ok(!ctx.activityEl.matches(":empty"), "非空区不再命中 :empty")
+  assert.equal(subBlocks(ctx).length, 1, "区内单块")
+})
+
+test("T-R8 区上限（边界——Q1/AC-R3）：21 折叠块 → 最旧折叠块 DOM 先出；live 不裁；被移除频道迟来丢弃", async () => {
+  const { S, ctx, applySubagentStatus, ensureBlock, MAX_REGION_FOLDED } = await loadWebview()
+  fresh({ S, ctx })
+  assert.equal(MAX_REGION_FOLDED, 20, "上限常量单点 = 20")
+  const first = ensureBlock("sub:explore#1") // 先出生 → 最旧折叠（先出对象）
+  applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 1 })
+  assert.equal(first.parentNode, ctx.activityEl, "首块先折（区内）")
+  for (let i = 2; i <= MAX_REGION_FOLDED + 1; i++) { // 累计 21 折叠块
+    applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: i })
+  }
+  const folded = [...ctx.activityEl.children].filter((el) => el.classList.contains("sub-frozen"))
+  assert.equal(folded.length, MAX_REGION_FOLDED, "折叠块数封顶 = 上限（DOM 有界）")
+  assert.equal(first.isConnected, false, "最旧折叠块 DOM 先出")
+  assert.equal(subBlocks(ctx).length, MAX_REGION_FOLDED, "区内块数 = 20（无 live）")
+  assert.equal(S._subBlocks.size, MAX_REGION_FOLDED + 1, "簿记条目保留（幂等守卫——超限不移除条目）")
+  // 被上限移除的频道：迟来 chunk 一律丢弃（冻结守卫——不复活不重建）
+  const capRemoved = S._subBlocks.get("sub:explore#1")
+  const before = ctx.activityEl.children.length
+  appendChunk(capRemoved, "text", "late after cap")
+  applySubagentStatus({ type: "subagent", status: "error", role: "explore", id: 1, error: "late" })
+  assert.equal(ensureBlock("sub:explore#1"), null, "被移除频道 ensureBlock → null（冻结守卫）")
+  assert.equal(ctx.activityEl.children.length, before, "无新块（不重建）")
+  assert.ok(!capRemoved.querySelector(".advisor-content").textContent.includes("late after cap"), "迟来 chunk 丢弃（内容不变）")
+  // live 不裁（上限只管折叠块）
+  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 99, pool: true })
+  const live = S._subBlocks.get("sub:eng-coder#99")
+  applySubagentStatus({ type: "subagent", status: "done", role: "plan", id: 50 })
+  assert.equal(live.isConnected, true, "live 块不裁（上限只丢最旧折叠块）")
+  assert.ok(live.classList.contains("sub-live"), "live 态保持")
+})
+
+test("T-R9 150 消息裁（边界——live 不裁）：区块不计消息窗——live 仍在区；#messages 窗只数消息", async () => {
+  const { S, ctx, applySubagentStatus, ensureBlock, trimOldMessages } = await loadWebview()
+  fresh({ S, ctx })
+  const live = ensureBlock("sub:eng-coder#3")
+  for (let i = 0; i < 151; i++) addMessage(ctx, "m" + i) // 152 顶层元素 → 裁 2
+  trimOldMessages(ctx)
+  assert.equal([...ctx.messagesEl.children].filter((el) => el.classList.contains("message")).length, 150, "消息窗 = 150（只数会话内容）")
+  assert.equal(live.isConnected, true, "live 块不受 150 裁（居住区——D-A7）")
+  assert.equal(live.parentNode, ctx.activityEl, "仍在活动区")
+  assert.equal(ensureBlock("sub:eng-coder#3"), live, "通道仍可投喂（live——非 tombstone）")
+  assert.equal(streamBlocks(ctx).length, 0, "#messages 零块")
+  // 折叠块同不受消息窗裁（上限只由 MAX_REGION_FOLDED 管）——见 T-R8
+  applySubagentStatus({ type: "subagent", status: "done", role: "eng-coder", id: 3 })
+  for (let i = 0; i < 151; i++) addMessage(ctx, "n" + i)
+  trimOldMessages(ctx)
+  assert.equal(live.isConnected, true, "折叠块亦留区（消息窗裁不触区）")
+})
+
+test("T-R10 区自滚（边界——Q3/AC-R5）：pin 钉底 / 上滚解 pin 不强拉 / 回底重 pin", async () => {
+  const { S, ctx, maybeScrollActivity, initScrollFollow } = await loadWebview()
+  fresh({ S, ctx })
+  initScrollFollow(ctx) // 区监听绑定（scroll.js 生产路径同函数——含消息区监听）
+  const el = ctx.activityEl
+  Object.defineProperty(el, "scrollHeight", { value: 500, configurable: true })
+  Object.defineProperty(el, "clientHeight", { value: 200, configurable: true })
+  maybeScrollActivity(ctx)
+  assert.equal(el.scrollTop, Number.MAX_SAFE_INTEGER, "pin 默认钉底（区自滚——块出生/流式帧驱动）")
+  el.scrollTop = 290 // gap = 10 < 24 → 近底
+  el.dispatchEvent(new window.WheelEvent("wheel"))
+  assert.equal(ctx._pinActivity, true, "近底轮滚保持 pin")
+  el.scrollTop = 100 // gap = 200 → 上滚
+  el.dispatchEvent(new window.WheelEvent("wheel"))
+  assert.equal(ctx._pinActivity, false, "上滚解 pin")
+  maybeScrollActivity(ctx)
+  assert.equal(el.scrollTop, 100, "解 pin 不强拉（上读中——同 #messages 口径）")
+  el.scrollTop = 480 // 回底
+  el.dispatchEvent(new window.WheelEvent("wheel"))
+  assert.equal(ctx._pinActivity, true, "回底重 pin")
+  maybeScrollActivity(ctx)
+  assert.equal(el.scrollTop, Number.MAX_SAFE_INTEGER, "重 pin 后钉底")
+  // 静态样式断言（AC-R5）：32vh 封顶 + 区内自滚 + overscroll
+  const css = readFileSync(new URL("../webview/base.css", import.meta.url), "utf8")
+  const rules = css.slice(css.indexOf("#subagent-activity {"))
+  assert.match(rules, /max-height:\s*32vh/, "32vh 封顶")
+  assert.match(rules, /overflow-y:\s*auto/, "区内自滚")
+  assert.match(rules, /overscroll-behavior:\s*contain/, "overscroll 隔离（不与消息区互拉）")
+})
+
+test("T-R11 清屏恢复（AC-R8）：clearMessages 路径 → 区零残留；重建块落区尾（pool/⏹/startedAt）", async () => {
+  const { S, ctx, applySubagentStatus, resetActivity } = await loadWebview()
+  fresh({ S, ctx })
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true, model: "glm-5.3" })
+  applySubagentStatus({ type: "subagent", status: "done", role: "eng-coder", id: 2 }) // 无块终态 → 补桩（折叠）
+  assert.equal(ctx.activityEl.children.length, 2, "清屏前：live + 折叠各一")
+  ctx.messagesEl.replaceChildren() // clearMessages（chat.js case：replaceChildren + resetActivity）
+  resetActivity()
+  assert.equal(ctx.activityEl.children.length, 0, "区零残留（live + 折叠全清）")
+  assert.equal(S._subBlocks.size, 0, "簿记清空")
+  addMessage(ctx, "h1")
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true, model: "glm-5.3", startedAt: 111 })
+  const rebuilt = S._subBlocks.get("sub:explore#1")
+  assert.equal(rebuilt.parentNode, ctx.activityEl, "重建块落区（清屏后可恢复）")
+  assert.equal(rebuilt, ctx.activityEl.lastElementChild, "落区尾")
+  assert.equal(rebuilt._subMeta.pool, true, "pool 保真（不降级）")
+  assert.ok(rebuilt.querySelector(".sub-stop-btn"), "⏹ 在（控制面不降级）")
+  assert.equal(rebuilt._subMeta.startedAt, 111, "startedAt 保留（elapsed 不丢）")
+})
+
+test("T-R12 回合中止（AC-R8）：resetActivity 清区全部条目（含折叠）+ 清 map", async () => {
+  const { S, ctx, applySubagentStatus, resetActivity } = await loadWebview()
+  fresh({ S, ctx })
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true })
+  const live = S._subBlocks.get("sub:explore#1")
+  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 2, pool: true })
+  const frozen = S._subBlocks.get("sub:eng-coder#2")
+  feedText(frozen, "done report")
+  applySubagentStatus({ type: "subagent", status: "done", role: "eng-coder", id: 2 })
+  assert.equal(ctx.activityEl.children.length, 2, "中止前：live + 折叠")
+  resetActivity()
+  assert.equal(live.isConnected, false, "live 块移除")
+  assert.equal(frozen.isConnected, false, "折叠块亦移除（D-A8——不跨清屏保留）")
+  assert.equal(S._subBlocks.size, 0, "map 清空")
+  assert.equal(ctx.activityEl.children.length, 0, "区整体复位")
+})
+
+test("T-R13 ⏹ 委托（错误面——AC-R9）：区内点击 .sub-stop-btn → cancelSubagent 逐字 + 不翻折叠", async () => {
+  const { S, ctx, applySubagentStatus } = await loadWebview()
+  fresh({ S, ctx })
+  // §12.7 手法注：追加式补齐 chat.js 顶层 init 所需 id（对照 installFullIndexFixture 清单
+  // 补缺项——append 进既有 DOM、不换夹具——既有 ctx 引用零失效），随后引导真 chat.js 模块图。
+  const GRAPH_IDS = ("chat-container session-bar session-arrow new-session-btn panels toolbar at-dropdown " +
+    "input-row file-input attach-btn paste-bar paste-badge controls-row auto-btn advisor-btn eng-btn " +
+    "plan-btn settings-btn settings-panel settings-close settings-body").split(" ")
+  for (const id of GRAPH_IDS) {
+    if (document.getElementById(id)) continue
+    const el = document.createElement("div")
+    el.id = id
+    document.body.appendChild(el)
+  }
+  await import("../webview/chat.js") // 真模块图（顶层挂 ⏹ 委托于活动区——scroll.js 同图）
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true, model: "glm-5.3" })
+  const block = S._subBlocks.get("sub:explore#7")
+  const btn = block.querySelector(".sub-stop-btn")
+  assert.ok(btn, "⏹ 在位（running + pool）")
+  const mark = capturedPosts.length
+  let witnessed = 0
+  const witness = () => { witnessed++ }
+  document.addEventListener("click", witness) // document 见证：stopPropagation 真触判据
+  const ev = new window.MouseEvent("click", { bubbles: true, cancelable: true })
+  btn.dispatchEvent(ev)
+  document.removeEventListener("click", witness)
+  const posts = capturedPosts.slice(mark).filter((m) => m.type === "cancelSubagent")
+  assert.equal(posts.length, 1, "恰一条 cancelSubagent postMessage")
+  assert.deepEqual(posts[0], { type: "cancelSubagent", id: 7, role: "explore" }, "载荷逐字（id 数值化）")
+  assert.equal(ev.defaultPrevented, true, "preventDefault 真触")
+  assert.equal(witnessed, 0, "stopPropagation 真触（document 见证零命中）")
+  assert.ok(block.classList.contains("sub-live") && !block.classList.contains("sub-frozen"), "块状态不翻（仍 live）")
+  assert.equal(block.open, true, "折叠不翻（open 不变）")
+  assert.equal(block.parentNode, ctx.activityEl, "块仍在活动区")
+})
+
+test("T-R14 迟来丢弃（错误面——AC-R3）：折叠后 / 被移除后 chunk 一律丢弃（返 null / 冻结守卫）", async () => {
   const { S, ctx, applySubagentStatus, ensureBlock } = await loadWebview()
   fresh({ S, ctx })
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true })
@@ -168,9 +353,55 @@ test("迟来丢弃：终态后 chunk/ensureBlock 返 null——不复活不重�
   appendChunk(block, "text", "late chunk") // appendAdvisorChunk 冻结守卫（不落内容）
   assert.equal(block.querySelector(".advisor-content").textContent, before, "迟来 chunk 丢弃（内容不变）")
   assert.equal(S._subBlocks.size, 1, "不重建（无第二块）")
+  // 边缘残留：live 元素被移除（!isConnected）→ tombstone 守卫（条目保留——不重建）
+  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 8, pool: true })
+  const orphan = S._subBlocks.get("sub:eng-coder#8")
+  orphan.remove()
+  assert.equal(ensureBlock("sub:eng-coder#8"), null, "被移除元素 → tombstone null（连续消息同丢弃）")
+  assert.equal(ensureBlock("sub:eng-coder#8"), null, "条目保留作守卫（非一次性删除）")
+  assert.ok(S._subBlocks.has("sub:eng-coder#8"), "簿记条目保留至 resetActivity")
 })
 
-test("多并行：两 spawn 两独立块——互不干扰各自终态", async () => {
+test("T-R15 error/answered：error 头词 + answered（有块折叠 / 无块 no-op）——区内保真", async () => {
+  const { S, ctx, applySubagentStatus, ensureBlock } = await loadWebview()
+  fresh({ S, ctx })
+  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 1, pool: true })
+  const block = S._subBlocks.get("sub:eng-coder#1")
+  feedText(block, "partial")
+  applySubagentStatus({ type: "subagent", status: "error", role: "eng-coder", id: 1, error: "boom" })
+  assert.ok(block.classList.contains("sub-frozen"), "error 冻结")
+  assert.equal(block.parentNode, ctx.activityEl, "折叠原地（区内）")
+  const hdr = block.querySelector(".sub-hdr").textContent
+  assert.ok(hdr.includes("error"), "error 头词")
+  assert.ok(hdr.includes("boom"), "错误注记随头")
+  assert.equal(block.open, false)
+  // answered：有块折叠（consult 终态驱动保留）/ 无块 no-op（回复走 digest 呈现）
+  const b = ensureBlock("sub:consult glm-x #7")
+  feedText(b, "streamed")
+  applySubagentStatus({ type: "subagent", status: "answered", role: "consult", id: 7, model: "glm-x", sessionId: 7 })
+  assert.ok(b.classList.contains("sub-frozen"), "answered（有块）折叠")
+  assert.ok(b.querySelector(".sub-hdr").textContent.includes("✓"), "折叠头 ✓ done")
+  applySubagentStatus({ type: "subagent", status: "answered", role: "consult", id: 9, model: "glm-y", sessionId: 9 })
+  assert.equal(S._subBlocks.size, 2, "无块 answered 不建块（no-op）")
+  assert.equal(subBlocks(ctx).length, 2, "区无第二块")
+})
+
+test("T-R16 兜底折叠（AC-R2）：freezeLiveBlocks（suspension 退出）→ 残余 live 原地折叠（不移动）", async () => {
+  const { S, ctx, applySubagentStatus, freezeLiveBlocks } = await loadWebview()
+  fresh({ S, ctx })
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true })
+  const live = S._subBlocks.get("sub:explore#1")
+  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 2, pool: true })
+  const live2 = S._subBlocks.get("sub:eng-coder#2")
+  feedText(live, "residual")
+  freezeLiveBlocks()
+  assert.ok(live.classList.contains("sub-frozen"), "残余 live 块随会话退出折叠")
+  assert.ok(live2.classList.contains("sub-frozen"), "全部 live 折叠（不留悬空）")
+  assert.equal(live.parentNode, ctx.activityEl, "原地折叠（区内——不移动）")
+  assert.equal(streamBlocks(ctx).length, 0, "#messages 零块")
+})
+
+test("多并行：两 spawn 两独立块（区内）——互不干扰各自终态", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   applySubagentStatus({ type: "subagent", status: "queued", role: "explore", id: 1 })
@@ -187,102 +418,7 @@ test("多并行：两 spawn 两独立块——互不干扰各自终态", async (
   assert.ok(b2.classList.contains("sub-frozen"), "块 2 独立冻结")
 })
 
-test("会话清：resetActivity 移除 .sub-live + 清 map——frozen 不动", async () => {
-  const { S, ctx, applySubagentStatus, resetActivity } = await loadWebview()
-  fresh({ S, ctx })
-  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true })
-  const live = S._subBlocks.get("sub:explore#1")
-  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 2, pool: true })
-  const frozen = S._subBlocks.get("sub:eng-coder#2")
-  feedText(frozen, "done report")
-  applySubagentStatus({ type: "subagent", status: "done", role: "eng-coder", id: 2 })
-  resetActivity()
-  assert.equal(live.isConnected, false, "live 块移除（流内）")
-  assert.equal(S._subBlocks.size, 0, "map 清空")
-  assert.equal(subBlocks(ctx).length, 1, "仅剩 frozen 块")
-  assert.equal(frozen.isConnected, true, "frozen 块保留（会话流历史）")
-})
-
-test("never-born 终态补桩（第 10 批新口径——原「reload 无恢复」用例改写）：family+合法 id → 补已折叠桩 + `late-terminal-stub`；非 family（consult）→ no-op + `drop-unknown-role`", async () => {
-  const { S, ctx, applySubagentStatus } = await loadWebview()
-  fresh({ S, ctx })
-  S._subTraceLog = []
-  addMessage(ctx, "history")
-  // never-born 终态（出生事件丢失/投递失败后的终态到达——旧口径 no-op，现补桩）
-  applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 7 })
-  const stub = S._subBlocks.get("sub:explore#7")
-  assert.ok(stub, "family + 合法 id → 补桩")
-  assert.ok(stub.classList.contains("sub-frozen"), "补桩即折叠（live→frozen）")
-  assert.equal(stub._subMeta.frozen, true, "_subMeta.frozen === true")
-  assert.ok(stub.querySelector(".sub-hdr").textContent.includes("done"), "桩头词含 done")
-  assert.equal(stub.parentNode, ctx.messagesEl, "桩仍落 #messages 流内（出生位）")
-  assert.equal(S._subTraceLog.filter((e) => e.kind === "late-terminal-stub").length, 1, "`late-terminal-stub` 痕迹恰一条")
-  // 非 family（consult——键嵌 model）→ 不补桩 + drop-unknown-role 痕迹
-  const before = subBlocks(ctx).length
-  applySubagentStatus({ type: "subagent", status: "terminated", role: "consult", id: 4, model: "glm-x", sessionId: 4 })
-  assert.equal(subBlocks(ctx).length, before, "consult（非 family）不补桩（no-op）")
-  assert.equal(S._subBlocks.size, 1, "map 无新增条目")
-  assert.ok(S._subTraceLog.some((e) => e.kind === "drop-unknown-role"), "`drop-unknown-role` 痕迹在位")
-})
-
-test("150 裁（冻结）：冻结块随窗裁——map 终态守卫仍丢迟来消息", async () => {
-  const { S, ctx, applySubagentStatus, ensureBlock, trimOldMessages } = await loadWebview()
-  fresh({ S, ctx })
-  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true })
-  const frozen = S._subBlocks.get("sub:explore#7")
-  feedText(frozen, "old report")
-  applySubagentStatus({ type: "subagent", status: "done", role: "explore", id: 7 })
-  for (let i = 0; i < 151; i++) addMessage(ctx, "m" + i) // +151 → 152 元素 → 裁 2
-  trimOldMessages(ctx)
-  assert.equal(frozen.isConnected, false, "最旧冻结块被 150 窗裁")
-  assert.equal([...ctx.messagesEl.children].filter((el) => el.classList.contains("message")).length, 150, "窗内 150 消息")
-  assert.equal(ensureBlock("sub:explore#7"), null, "迟来消息守卫丢（frozen 条目保留 → null）")
-})
-
-test("150 裁（live 运行中）：live 块出生即计窗——被裁 → tombstone 守卫——后续消息一律丢弃", async () => {
-  const { S, ctx, ensureBlock, trimOldMessages, resetActivity } = await loadWebview()
-  fresh({ S, ctx })
-  const live = ensureBlock("sub:eng-coder#3") // 出生即 #messages——150 无豁免
-  for (let i = 0; i < 151; i++) addMessage(ctx, "m" + i)
-  trimOldMessages(ctx)
-  assert.equal(live.isConnected, false, "live 块成最旧被裁（无豁免——出生即计窗）")
-  assert.equal(ensureBlock("sub:eng-coder#3"), null, "被裁后消息丢弃（tombstone 守卫——不重建）")
-  assert.equal(ensureBlock("sub:eng-coder#3"), null, "连续消息同样丢弃（条目保留作守卫——非一次性删除）")
-  assert.ok(S._subBlocks.has("sub:eng-coder#3"), "簿记条目保留（守卫直至 resetActivity——与冻结条目同生命周期）")
-  resetActivity()
-  assert.ok(!S._subBlocks.has("sub:eng-coder#3"), "resetActivity 清簿记——条目释放")
-})
-
-test("error：error 消息终态折叠 + error 头词", async () => {
-  const { S, ctx, applySubagentStatus } = await loadWebview()
-  fresh({ S, ctx })
-  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 1, pool: true })
-  const block = S._subBlocks.get("sub:eng-coder#1")
-  feedText(block, "partial")
-  applySubagentStatus({ type: "subagent", status: "error", role: "eng-coder", id: 1, error: "boom" })
-  assert.ok(block.classList.contains("sub-frozen"), "error 冻结")
-  const hdr = block.querySelector(".sub-hdr").textContent
-  assert.ok(hdr.includes("error"), "error 头词")
-  assert.ok(hdr.includes("boom"), "错误注记随头")
-  assert.equal(block.open, false)
-})
-
-test("answered（有块）折叠 / （无块）no-op", async () => {
-  const { S, ctx, ensureBlock, applySubagentStatus } = await loadWebview()
-  fresh({ S, ctx })
-  // 有块：consult 频道块 + answered → 折叠（consult 终态驱动保留）
-  const b = ensureBlock("sub:consult glm-x #7")
-  feedText(b, "streamed")
-  applySubagentStatus({ type: "subagent", status: "answered", role: "consult", id: 7, model: "glm-x", sessionId: 7 })
-  assert.ok(b.classList.contains("sub-frozen"), "answered（有块）折叠")
-  assert.ok(b.querySelector(".sub-hdr").textContent.includes("✓"), "折叠头 ✓ done")
-  // 无块：answered 无活动块 → no-op（回复走 digest 呈现——不建防御块）
-  applySubagentStatus({ type: "subagent", status: "answered", role: "consult", id: 9, model: "glm-y", sessionId: 9 })
-  assert.equal(S._subBlocks.size, 1, "无块 answered 不建块（no-op）")
-  assert.equal(subBlocks(ctx).length, 1, "无第二块")
-})
-
-test("重复 started：同频道二次 started 覆盖式刷新头词——不重挂", async () => {
+test("重复 started：同频道二次 started 覆盖式刷新头词——不重挂（区内）", async () => {
   const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
   applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 7, pool: true, model: "glm-5.3", turn: 1, maxTurns: 100 })
@@ -296,16 +432,54 @@ test("重复 started：同频道二次 started 覆盖式刷新头词——不重
   assert.ok(second.includes("turn 2/100"), "二次 started 覆盖式刷新头词（turn 续延）")
   assert.ok(!block.classList.contains("sub-frozen"), "重复 started 不翻终态")
 })
-test("suspension 退出兜底：freezeLiveBlocks 折叠残余 live 块（settled 已即时折叠后仅剩 live）", async () => {
-  const { S, ctx, applySubagentStatus, freezeLiveBlocks } = await loadWebview()
+
+// ─── A13（群 A 批）：首块说明行（设计权威：WEBVIEW.md §11.2——C-MA13-1..4 / T-MA13-1..3）───
+
+test("T-MA13-1 首块说明行：首块含 .sub-desc 且文案 = t('sub.desc')；第二块零 .sub-desc（一次性）", async () => {
+  const { S, ctx, applySubagentStatus } = await loadWebview()
   fresh({ S, ctx })
-  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 1, pool: true })
-  const live = S._subBlocks.get("sub:explore#1")
-  applySubagentStatus({ type: "subagent", status: "started", role: "eng-coder", id: 2, pool: true })
-  const live2 = S._subBlocks.get("sub:eng-coder#2")
-  feedText(live, "residual")
-  freezeLiveBlocks()
-  assert.ok(live.classList.contains("sub-frozen"), "残余 live 块随会话退出折叠")
-  assert.ok(live2.classList.contains("sub-frozen"), "全部 live 折叠（不留悬空）")
-  assert.equal(live.parentNode, ctx.messagesEl, "原地折叠（不移动）")
+  const { t } = await import("../webview/i18n.js")
+  S._subDescShown = false // 会话起点（本档其他用例已置位——显式复位）
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 21, pool: true })
+  const first = S._subBlocks.get("sub:explore#21")
+  const desc = first.querySelector(".sub-desc")
+  assert.ok(desc, "首块含说明行")
+  assert.equal(desc.textContent, t("sub.desc"), "文案 = locale 键 sub.desc")
+  assert.equal(desc.parentNode, first, "details 直接子")
+  assert.equal(desc.previousElementSibling.tagName, "SUMMARY", "位于 summary 之后")
+  assert.equal(desc.nextElementSibling.className, "advisor-content", "位于 .advisor-content 之前")
+  assert.equal(S._subDescShown, true, "一次性标志置位")
+  applySubagentStatus({ type: "subagent", status: "started", role: "explore", id: 22, pool: true })
+  const second = S._subBlocks.get("sub:explore#22")
+  assert.equal(second.querySelector(".sub-desc"), null, "第二块零说明行（一次性）")
+})
+
+test("T-MA13-2 边界：resetActivity() 后新块出生 → 零 .sub-desc（会话内已示——不重复）", async () => {
+  const { S, ctx, applySubagentStatus, resetActivity } = await loadWebview()
+  fresh({ S, ctx })
+  S._subDescShown = false
+  applySubagentStatus({ type: "subagent", status: "started", role: "plan", id: 23, pool: true })
+  assert.ok(S._subBlocks.get("sub:plan#23").querySelector(".sub-desc"), "首块已示")
+  resetActivity()
+  assert.equal(S._subDescShown, true, "标志不随 resetActivity 复位（panel 会话生命周期内一次）")
+  applySubagentStatus({ type: "subagent", status: "started", role: "plan", id: 24, pool: true })
+  assert.equal(S._subBlocks.get("sub:plan#24").querySelector(".sub-desc"), null, "清屏后新块零 .sub-desc")
+})
+
+test("T-MA13-3 回归（双面）：Task/Goal 面板说明句在场 + locale 双键（sub.desc en/zh）", async () => {
+  const { S, ctx } = await loadWebview()
+  const { renderTaskPanel, renderGoalPanel } = await import("../webview/panels.js")
+  S._taskProgress = { items: [{ title: "步骤一", status: "pending" }] }
+  S._goalInfo = { objective: "目标", criteria: "标准", status: "active" }
+  renderTaskPanel()
+  renderGoalPanel()
+  assert.ok(document.getElementById("task-panel").innerHTML.includes("panel-desc"), "Task 面板说明句在场（防误删）")
+  assert.ok(document.getElementById("goal-panel").innerHTML.includes("panel-desc"), "Goal 面板说明句在场（防误删）")
+  void ctx
+  const { readFileSync: readFile } = await import("node:fs")
+  for (const f of ["../locales/en.json", "../locales/zh.json"]) {
+    const j = JSON.parse(readFile(new URL(f, import.meta.url), "utf8"))
+    assert.equal(typeof j["sub.desc"], "string", `${f} 含 sub.desc`)
+    assert.ok(j["sub.desc"].length > 0, `${f} sub.desc 非空`)
+  }
 })

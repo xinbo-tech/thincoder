@@ -62,7 +62,10 @@ export function savePastedImages(dataUrls, cwd) {
 // 返回 null = 不降级（无视觉渠道 / 渠道无 key / spawn 失败 / 超时 / 空返回）——调用方回落
 // 现路径（图片保留下发——主回合 setup appendImagePointer 报现错——可读不静默丢）。
 export const VISION_READ_TIMEOUT_MS = 60_000
-export async function runVisionReader({ paths, providerName, cwd }) {
+export async function runVisionReader({ paths, providerName, cwd, signal }) {
+  // A12（群 A 批）：宿主取消缝——窗内 Stop（⏹）经外部 signal 传入；已停 → 快速失败
+  // （不复用 60s 超时路径）；否则桥接内部 controller（下面 ac）。缺省（不传）= 现状。
+  if (signal?.aborted) return null
   let providers = []
   try { providers = resolveProviders().providers } catch { return null }
   const vc = findVisionChannel(providers, providerName)
@@ -72,6 +75,9 @@ export async function runVisionReader({ paths, providerName, cwd }) {
   if (!p) return null // 渠道无 key——spawn 前置即失败
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(), VISION_READ_TIMEOUT_MS)
+  // A12（群 A 批）取消桥接：外部 signal abort → 内部 controller abort（既有 catch → null
+  // 返回形态复用——零新形态）；缺省 = 现状（向后兼容）。
+  if (signal) signal.addEventListener("abort", () => ac.abort(), { once: true })
   try {
     const task = paths.map((f) => `用 read_image 读 ${f} 返回图像内容描述`).join("\n")
     const desc = await runAgent({ ...p, model: vc.model }, cwd, task, {}, ac.signal, true, { depth: 1, role: "explore", maxTurns: 10 })

@@ -25,6 +25,9 @@ import { newSlotData, saveSessionToSlot, setSlotEngDesignTokens } from "../src/e
 import { readSlotEngDesignTokens, clearSlotEngDesignToken, engTokensMergeForSave } from "../src/extension/session-slot-write.mjs"
 import { resolveDesignSlot, authorizeEngCoderDesignToken, executeConsumeDesignAction } from "../src/agent-tools/subagent-spawn-gate.mjs"
 import { injectAsyncResult, DIGEST_INJECT_BUDGET } from "../src/agent-tools/subagent-async.mjs"
+import { injectAdvisorResult } from "../src/agent-tools/advisor-async.mjs"
+import { injectEscalateResult } from "../src/agent-tools/subagent-escalate-async.mjs"
+import { injectConsultResult } from "../src/agent-tools/consult.mjs"
 
 let sessionsDir
 const cwd = "/proj/eng-settlement" // session filename is keyed by hash(cwd) under the isolated sessions dir
@@ -287,3 +290,76 @@ test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞�
     rmSync(cwd, { recursive: true, force: true })
   }
 })
+
+// ─── 群 B 批 B5（§16 D-DG2——AGENT-LOOP.md §16）：四族接线（T-DG1~T-DG3）───
+// 预算单源 = digest-budget.mjs（常量/判超/记账/落盘四处合一）——四族注入器共用同一轮累计
+// （跨族合计生效）；raw = 报告正文（不含 `[System reminder: …]` 标签行）；首条豁免保留；
+// 落盘 tag = 写入族 + 条目 id（文件名后缀）。
+
+test("T-DG1 正常：同轮两条 advisor（各 40K——合计 80K > 64K）→ 首条 inline、次条清单行 + 全文落盘", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    const history = mkHistory()
+    const ctx = { history, fullHistory: [], cwd }
+    const mk = (id, n) => ({ id, role: "advisor", reviewType: "design", report: "A".repeat(n), error: null })
+    await injectAdvisorResult(mk(1, 40000), ctx)
+    await injectAdvisorResult(mk(2, 40000), ctx)
+    assert.equal(history.length, 2, "两注均入史")
+    assert.ok(history[0].content.includes("A".repeat(200)), "首条 40K inline 预览（首条豁免）")
+    const second = history[1].content
+    assert.ok(!second.includes("A".repeat(200)), "次条不 inline 全文")
+    const m = second.match(/saved to disk[^:]*: (.+)/)
+    assert.ok(m, "清单行含落盘 path（报告已落盘 <path> 形态）")
+    const file = m[1].trim().split(/\n/)[0]
+    assert.ok(file.startsWith(join(cwd, ".thincoder", "tmp")), "path 来源 = cwd/.thincoder/tmp（offload 同目录）")
+    assert.ok(file.includes("advisor#2"), "tag 入文件名（写入族 + 条目 id）")
+    assert.equal(readFileSync(file, "utf8"), "A".repeat(40000), "清单行指向的文件 = 次条全文")
+    assert.ok(second.includes("async advisor design review #2 finished"), "族标签行保留（文案零变）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-DG2 正常：escalate / consult 两族接线生效（超限 → 同规清单行 + 全文落盘）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    const history = mkHistory()
+    const ctx = { history, fullHistory: [], cwd }
+    // escalate：先 30K（占轮预算）后 40K → 次条超限（30K + 40K = 70K > 64K）
+    await injectEscalateResult({ id: 11, outcome: "done", tag: "escalate", injectBody: "B".repeat(30000) }, ctx)
+    await injectEscalateResult({ id: 12, outcome: "done", tag: "escalate", injectBody: "C".repeat(40000) }, ctx)
+    assert.ok(history[0].content.includes("B".repeat(200)), "escalate 首条 inline")
+    assert.ok(!history[1].content.includes("C".repeat(200)), "escalate 次条不 inline 全文（族接线生效）")
+    const eFile = history[1].content.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
+    assert.ok(eFile.includes("escalate#12"), "escalate tag 入名")
+    assert.equal(readFileSync(eFile, "utf8"), "C".repeat(40000), "escalate 全文落盘")
+    // consult：同轮继续（预算共享）——40K 必超
+    await injectConsultResult({ id: "c1", replies: [{ model: "m1", reply: "D".repeat(40000) }], failed: 0, total: 1 }, ctx)
+    const c = history[2].content
+    assert.ok(!c.includes("D".repeat(200)), "consult 次条不 inline 全文（族接线生效）")
+    const cFile = c.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
+    assert.ok(cFile.includes("consult#c1"), "consult tag 入名")
+    assert.ok(readFileSync(cFile, "utf8").includes("D".repeat(200)), "consult 全文落盘（replies 正文）")
+    assert.ok(c.includes("consultation #c1 finished"), "会诊标签行保留（文案零变）")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("T-DG3 边界：跨族同轮共享预算（subagent 40K + advisor 40K）→ 次条判超（单源记账）", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "eng-digest-"))
+  try {
+    const history = mkHistory()
+    const ctx = { history, fullHistory: [], cwd }
+    await injectAsyncResult({ id: 21, role: "explore", report: "E".repeat(40000), error: null }, ctx)
+    await injectAdvisorResult({ id: 22, role: "advisor", reviewType: "code", report: "F".repeat(40000), error: null }, ctx)
+    assert.ok(history[0].content.includes("E".repeat(200)), "首条（subagent）inline")
+    assert.ok(!history[1].content.includes("F".repeat(200)), "次条（advisor）判超——跨族合计（共享预算单源）")
+    const file = history[1].content.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
+    assert.ok(file.includes("advisor#22"))
+    assert.equal(readFileSync(file, "utf8"), "F".repeat(40000), "次条全文落盘")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+

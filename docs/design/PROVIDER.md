@@ -169,10 +169,69 @@ chars/token、CJK ≈1），超预算 `sleep`（onWait 通知）；未配则关�
 - **不重试**（`isNonRetryableError`）：401/403 认证、400 级非 429。
 - **401 Kimi 双平台提示**：`sk-kimi-` key 或 `api.kimi.com` 端点遇 401 → 追加说明（Moonshot
   与 Kimi For Coding 的 key 不互通）。
-- **超时**：`FETCH_TIMEOUT_MS = 600_000`（响应头阶段；`AbortSignal.timeout`）；body 读侧
-  空闲 120s（`_bodyIdleMs`，代理路径同）。`AbortError` 透传（用户中断不吞）。
+- **超时（相位语义——2026-09-11 群 A 批改写）**：**绝对墙钟已废除**（原每请求
+  `AbortSignal.timeout(600_000)` 会腰斩长思考请求——"aborted due to timeout" 误报的直接来源）；
+  响应头阶段 = 600s（代理路径 `_headerTimeoutMs`；直连用 undici 默认）；body 阶段 = 读侧
+  空闲 120s（`READ_IDLE_MS`——四 transport 自持；代理路径 `_bodyIdleMs` 同值双保险）。
+  `AbortError` 透传（用户中断不吞）。详见 §4.3。
 - **responses 链失效回退**（D6）：transport === responsesTransport 且 400/404 → 清残留链 +
   真·全量重发一次（不清链则增量分支裸工具结果二次 400）。
+
+### 4.3 请求链超时语义镜像（群 A 批——绝对墙钟废除 + 读侧 idle 补齐）（2026-09-11）
+
+> 来源：批次档 `thincoder/docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md` §1 条目 A1（指针 = CLI 批
+> `2026-09-11-ABORT-PROVENANCE.md` §20.10「VSC 镜像 600s 绝对墙钟残留——用户实证文案的唯一在网生产点」）。
+> 语义源：CLI `provider/core.mjs:408-415`（相位拆分——绝对墙钟废除后的现行语义）；双端纪律：语义同源、本端原文自持。
+
+**（a）问题陈述（现场复核——as-of 2026-09-11）**：
+
+| # | 现状 | 现场锚 |
+|---|---|---|
+| 1 | 每请求合成绝对墙钟：`signal ? _anySignal([signal, AbortSignal.timeout(600_000)]) : AbortSignal.timeout(600_000)`——**头+body 全程 600s 绝对上限** | `src/provider.mjs:324`（`:28` 常量声明；`:23-27` 注释自称 "CLI parity" = 陈旧——CLI 废掉的正是此物） |
+| 2 | 直连路径 body 无读侧守卫（仅代理路径 `_bodyIdleMs`）——墙钟拆除后静默流无显式兜底 | `src/provider.mjs:328`；四 transport 读循环无 idle（`openai.mjs:245-255` / `anthropic.mjs:147+` / `google.mjs:190+` / `responses.mjs:252-257`） |
+| 3 | 文档句与相位语义不符（"响应头阶段" 实为全程绝对上限） | 本档 §4.2（改前句） |
+
+**（b）方案选型对比**（判据 = 用户实证文案闭源 / 长请求不腰斩 / 无新挂起窗口 / 可测 / 与代理路径一致）：
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **去绝对墙钟 + 头相位保留（`_headerTimeoutMs`）+ 四 transport 读侧 idle 120s 补齐** | 误报闭源（无 600s 绝对钟）；长思考请求不再被腰斩；body 停摆 120s 内判死（无新挂起窗口）；idle 可经 seam 注入短值测试；代理 / 直连同语义（120s） | 四 transport 各 +~10 行（timer 臂/清/销毁）+ seam 参数；`_anySignal` polyfill 退场 | **选定** |
+| 2 | 仅去 `:324`（最小——不补直连 idle） | 改动最小；但直连静默流无显式守卫（仅 undici 隐式默认——未承诺 / 不可测 / 与代理路径 120s 不一致）——原 600s 兜底拆除后无替身 | — | 否决 |
+| 3 | 保留绝对墙钟（改值 / 改语义） | CLI 已废（长上下文子代理被腰斩的根因）；用户实证文案同源——复现即回归 | — | 否决 |
+
+**（c）契约（逐条——实现对象）**：
+
+1. `src/provider.mjs:324`：`signal: signal ?? undefined`（**去合成**——不再叠加 `AbortSignal.timeout`）；
+   `:31` `_anySignal` polyfill 随唯一使用点退场（删除）；`:23-28` 注释改写（语义 = 「响应头阶段默认上限（代理路径消费）」）；
+2. `:327` `_headerTimeoutMs: FETCH_TIMEOUT_MS` 保留（代理路径头阶段 600s——与 CLI 同值；本端无 `fetchTimeoutMs` 配置键——不加新配置面）；`:328` `_bodyIdleMs: 120_000` 保留；
+3. **读侧 idle（本端补齐——CLI 对位 = `sse.mjs:169-182` / `google.mjs:197-207`）**：四 transport 的读循环各加
+   `READ_IDLE_MS = 120_000` 空闲看门狗——每 chunk 重置；连续无数据 120s → `response.body.destroy(new DOMException("SSE idle timeout: no data for 120s", "TimeoutError"))`；
+   读毕清理 timer。测试缝 = `parseStream(response, { …, idleMs })`（生产缺省 `READ_IDLE_MS`——调用方零改）；
+4. 错误分类不变：idle 消息含 "timeout" → `classifyErr` 归 `timeout`（`src/log.mjs:178`）——llm:error 可判来源；
+5. 文档：本档 §4.2 改写（已落）+ 本 §4.3 + 变更记录一行。
+
+**（d）用例表（T-MA1——正常 / 边界 / 错误；零网络——fetch / proxyFetch 桩 + 假流）**：
+
+| # | 类 | 输入 | 预期输出（断言） | 映射 |
+|---|---|---|---|---|
+| T-MA1-1 | 正常 | 桩 proxyFetch 捕获请求 options；调用链带用户 signal | `options.signal === 用户 signal`（**非复合**）；`options._headerTimeoutMs === 600_000`；`_bodyIdleMs === 120_000` | AC-MA1-1 |
+| T-MA1-2 | 边界 | 无用户 signal（`undefined`） | `options.signal === undefined`（不再合成 `AbortSignal.timeout`）；请求照发 | AC-MA1-1 |
+| T-MA1-3 | 错误 | 假流：两 chunk 后静默挂起 + `parseStream(..., { idleMs: 40 })` | 读循环以 `TimeoutError` 终止（name 判定）；错误消息含 `SSE idle timeout` | AC-MA1-2 |
+| T-MA1-4 | 边界（对照） | 假流：每 20ms 持续有 chunk 至完成（idleMs=40） | **零误杀**——正常完成；timer 已清理（无悬挂 handle） | AC-MA1-2 |
+| T-MA1-5 | 边界（静态） | `src/provider.mjs` 源文本 grep | `AbortSignal.timeout(FETCH_TIMEOUT_MS)` 零命中；`_anySignal` 零残留（或定义即可见零调用——取删除） | AC-MA1-3 |
+
+**（e）AC（机判）**：
+
+- AC-MA1-1：T-MA1-1 / T-MA1-2 绿（请求信号 = 用户信号；头/body 相位参数在位）；
+- AC-MA1-2：T-MA1-3 / T-MA1-4 绿（idle 判死 + 零误杀成对）；
+- AC-MA1-3：T-MA1-5 绿（源文本零残留）+ 既有 provider 测试族零回归 + VSC 快层全绿 + 两仓 `check-doc-width` 新增违规 0。
+
+**（f）差异登记（如实——不追赶）**：① CLI `anthropic.mjs` / `responses.mjs` 读循环无 idle（仅 sse / google 有）——本端四 transport 全配（本端自持选择，差异登记）；
+② CLI 有 `agent.fetchTimeoutMs` 配置键（`effectiveFetchTimeoutMs`）——本端无（不加配置面，差异登记）；③ undici 直连隐式 bodyTimeout（≈300s）非本端承诺语义——**不依赖**（只作背景注）。
+
+**（g）边界**：不改 `MAX_RETRIES` / 退避 / 429 语义；不改 `proxy.mjs`（`_headerTimeoutMs` / `_bodyIdleMs` 消费面零改）；不改 abort 溯源标注面（VSC 镜像标注/合成族不在本批）；**零 UI 面**。
+
+**计数（D3）**：用例 5（T-MA1-1–5）· AC 3（AC-MA1-1–3）· 实施域 6 档（`provider.mjs` + 四 transport + 新测档）· 文档域 1 档（本档 §4.2/§4.3）。
 
 ## 5. Responses API transport（并入自 RESPONSES-TRANSPORT.md）
 
@@ -379,6 +438,7 @@ offload 写时自清理回收（paste-* 同目录，无名字过滤）。
 
 ## 9. 变更记录（历史折叠——详见 git log 与并入源）
 
+- 2026-09-11（群 A 批——VSC-MIRROR-SWEEP）：新增 §4.3（绝对墙钟废除——用户实证 "aborted due to timeout" 误报闭源；头相位 600s 保留 + 四 transport 读侧 idle 120s 补齐）；§4.2 超时行同步改写。
 - 2026-09-11（第 6 批评审修正轮）：§6.1 决策口径同步——`deepseek-v4-pro` 视觉能力未核实（保守按
   无视觉）；重评触发含 2026-09-14 路由生效后复检（权威见 CLI 侧设计档 `PROVIDER.md` §19.5 #3；语义与 CLI 同源）。
 - 2026-09-11（第 6 批 DeepSeek V4.1-Flash）：`deepseek` 预设默认模型 → `deepseek-flash`；规格行新增/

@@ -38,6 +38,13 @@ export const MAX_ADVISOR_ROUNDS = 5
 const MAX_UNFIXED_DISPLAY = 10 // unfixed issues shown in the cap message
 
 /**
+ * 启动拒绝报告前缀（F24/§14.3——稳定契约）：异步结算面（advisor-async 消费点）据此不置
+ * `_calledAdvisorThisRun`——未发起 = 无评审产出。工具路径恒签发 token ⇒ 本拒绝 =
+ * 直接调用方兜底（防御纵深；CLI §14.4 #2 同款口径——同文字面）。
+ */
+export const ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"
+
+/**
  * Extract unfixed issues from prior review text (for the cap message).
  * Input: an advisor review markdown table (`| # | … |` rows). A row counts as
  * unfixed unless its line carries a resolved-status word (fixed/resolved/done/
@@ -79,6 +86,27 @@ function buildPinnedBrief(reviewType, documents, object, designToken, designId) 
 }
 
 /**
+ * 收敛 cap 拒绝文案（单源——群 A 批 A6：runner 内部拒与本文件工具层预检同用一份 builder，
+ * 输出逐字零变；双源消解）。
+ */
+export function buildCapMessage(agent) {
+  // Summarize unresolved items from the last review output for guidance
+  // (line-level status-word scan — no table-header parsing, decision 2026-08-08).
+  const prior = agent._lastAdvisorOutput
+  const unfixed = prior ? extractUnfixedIssues(prior) : []
+
+  let message = `Advisor: convergence cap reached after ${MAX_ADVISOR_ROUNDS} rounds.\n`
+  if (unfixed.length > 0) {
+    message += `\nUnresolved issues from prior rounds:\n${unfixed.map((i) => `- ${i}`).join("\n")}\n`
+  } else {
+    message += "\nAll prior issues appear resolved.\n"
+  }
+  message += "\nOptions:\n1. Accept current state and proceed\n2. Manually review specific concerns with read/grep\n3. Start a new session (/new) to reset the advisor"
+
+  return message
+}
+
+/**
  * Run an advisor review. reviewType: "code" (default) or "design". Returns review text or null when skipped.
  * @param {string|null} [designToken] — injected into the design-review prompt; the advisor echoes it only on approval.
  * @param {string[]|null} [documents] — design review only: explicit list of doc paths to review; passed through to the message builder.
@@ -86,7 +114,7 @@ function buildPinnedBrief(reviewType, documents, object, designToken, designId) 
  * @param {Object|null} [object] — review-object declaration {type, target, status, reason, exclude}
  *   (AGENT-LOOP.md §18.8 D-OA3): injected at the head of the review user message, every round.
  *   Legacy callers omit it — no declaration injected, behavior unchanged (AC-OA2).
- * @param {Object|null} [rv] — §24 D-24b per-review instance context { round, priorOutput }
+ * @param {Object|null} [rv] — §9 D-24b per-review instance context { round, priorOutput }
  *   （async advisor——2026-09-06）：给定 → 轮次/prior 从实例解析、cap 判定在 runner
  *   （launch 时按实例 ≤5 轮拒）、完成不写全局 _lastAdvisorOutput（并发隔离）。
  * @param {string|null} [designId] — §29.1 F2a: injected next to the design token in
@@ -108,23 +136,10 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // the agent after each sync code review), so >= MAX_ADVISOR_ROUNDS blocks the
   // next call. 5 rounds max; after that the review is never pushed back
   // (the caller decides: accept, manual re-check, or /new to reset).
-  // §24 D-24b：async 实例（rv 给定）的 cap 在 runner launch 时按实例判定（每评审 ≤5 轮——
+  // §9 D-24b：async 实例（rv 给定）的 cap 在 runner launch 时按实例判定（每评审 ≤5 轮——
   // 修正 #4——code-only——design 豁免）——此处只拦 sync 全局轮次。
   if (!rv && reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
-    // Summarize unresolved items from the last review output for guidance
-    // (line-level status-word scan — no table-header parsing, decision 2026-08-08).
-    const prior = agent._lastAdvisorOutput
-    const unfixed = prior ? extractUnfixedIssues(prior) : []
-
-    let message = `Advisor: convergence cap reached after ${MAX_ADVISOR_ROUNDS} rounds.\n`
-    if (unfixed.length > 0) {
-      message += `\nUnresolved issues from prior rounds:\n${unfixed.map((i) => `- ${i}`).join("\n")}\n`
-    } else {
-      message += "\nAll prior issues appear resolved.\n"
-    }
-    message += "\nOptions:\n1. Accept current state and proceed\n2. Manually review specific concerns with read/grep\n3. Start a new session (/new) to reset the advisor"
-
-    return message
+    return buildCapMessage(agent)
   }
 
   const provider = resolveAdvisorProvider(agent)
@@ -132,6 +147,20 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   const advisorCwd = agent.cwd
 
   const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, rv, designId)
+
+  // F24/§14.3 启动断言（fail-closed——CLI §14.4 #2 语义同源）：设计评审请求内**必须**携带与
+  // 本次签发 token 精确对应的 Approval Signal——构建面补不上就拒绝启动（不发"请回显一个
+  // 不存在的 token"的请求）。工具路径恒签发 token ⇒ 直接调用方兜底（正常链不可达＝防御纵深，如实注）。
+  if (reviewType === "design") {
+    const missing = !designToken
+      ? "no design token was minted"
+      : (messages.some((m) => m.role === "user" && String(m.content ?? "").includes(`[DESIGN-TOKEN:${designToken}`))
+        ? null
+        : "the request does not carry the approval signal")
+    if (missing) {
+      return `${ADVISOR_LAUNCH_REFUSAL_PREFIX} — ${missing}. Nothing was sent: a request that asks the reviewer to echo a token it cannot see would break the credential chain. Re-run advisor(type='design') to mint a fresh token.`
+    }
+  }
 
   // Review-object declaration (AGENT-LOOP.md §18.8 D-OA1): injected AFTER the
   // message build so ONE mechanical point covers all rounds — design r1
@@ -178,7 +207,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
       // of round 2+.
       const trimmed = final.trim()
       const looksLikeReview = /\|.*\|.*\|/.test(trimmed) || trimmed.length >= 200
-      // §24 D-24b：async 实例完成不写全局 _lastAdvisorOutput（并发隔离——实例 prior
+      // §9 D-24b：async 实例完成不写全局 _lastAdvisorOutput（并发隔离——实例 prior
       // 由 runner 记入 _advisorRuns 记录——多评审并行互不污染）。
       if (looksLikeReview && !rv) {
         agent._lastAdvisorOutput = final

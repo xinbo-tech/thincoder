@@ -1,20 +1,23 @@
 /**
- * activity.js — 子代理活动块生命周期编排（ACTIVITY-REWRITE-SIMPLE——B1 流尾简单形态
- * 回归——手工重写去加戏：活动区容器/DOM move/落流锚插/settle 驻留/簿记 map/跨 reload
- * 恢复全删——SESSION-FLOW-B B1（52e03f3）流尾形态 = 参照）。
+ * activity.js — 子代理活动块生命周期编排（2026-09-11 活动区回归——WEBVIEW.md §12 现行
+ * 机制：区内出生 · 原地折叠 · 区内保留）。位置两度更替（活动区 → 流尾 → 活动区）——
+ * **两态机与块身份语义始终不变**。
  *
- * 块出生即 #messages 流尾（与 .message 同层——append 不插锚——150 窗出生即计无豁免）。
- * 生命周期只有 live → frozen 两态——终态（任何非 queued/started 的 status——done/
- * settled/error/cancelled/answered/terminated/failed…——settled 视同 done）原地折叠
- * （class sub-live→sub-frozen + open=false + ⏹ 移除 + 头词 ✓ done Ns——无 DOM move/
- * 无锚插/无 report preview）。幂等守卫 = map 有键且已终态 → ensureBlock 返 null（迟来
- * 消息丢弃——绝不复活重建）；live 块被 150 窗裁（!isConnected）→ tombstone 守卫（条目
- * 保留——终态/被裁同守卫——后续消息一律丢弃——resetActivity 才清）。queued → ⏳ 等待头（含取消 ⏹——F-2——QUEUED-VISIBILITY 保留——取消
- * 沿既有 cancelSubagent 路径——协议零改）；started → 翻 running。不做跨 reload 恢复
- * （reload 进程死块死——消息流是历史——SESSION-RESTORE-PARITY）。
+ * 块出生即 append 到固定活动区 `#subagent-activity` 区尾（messages 与输入之间——live
+ * 固定可见，不随会话流滚动丢失）。生命周期只有 live → frozen 两态——终态（任何非
+ * queued/started 的 status——done/settled/error/cancelled/answered/terminated/failed…
+ * ——settled 视同 done）**原地折叠**（容器与 DOM 序号不变：class sub-live→sub-frozen +
+ * open=false + ⏹ 移除 + 头词 ✓ done Ns——全程零 DOM move / 无落流锚插 / 无 report
+ * preview）。幂等守卫 = map 有键且已终态 → ensureBlock 返 null（迟来消息丢弃——绝不复活
+ * 重建）；条目元素被移除（!isConnected——边缘残留）→ tombstone 守卫（条目保留——终态/
+ * 被移除同守卫——后续消息一律丢弃——resetActivity 才清）。**区内保留上限** =
+ * MAX_REGION_FOLDED（折叠块超限丢最旧 DOM——簿记条目保留作守卫）。queued → ⏳ 等待头
+ * （含取消 ⏹——F-2——QUEUED-VISIBILITY 保留——取消沿既有 cancelSubagent 路径——协议
+ * 零改）；started → 翻 running。不做跨 reload 恢复（reload 进程死块死——消息流是历史
+ * ——SESSION-RESTORE-PARITY）。
  *
  * 2026-09-11 第 10 批（WEBVIEW.md §5.1——出生投递与块身份可靠性）：① started + pool:true
- * 命中同名**已冻结**条目 → **新代接管**（建新块改绑键——旧块留流内作历史）；② 终态补块
+ * 命中同名**已冻结**条目 → **新代接管**（建新块改绑键——旧块留区内作历史）；② 终态补块
  * （never-born 终态防御——桩集精确成员表 = §5.1.4 第 6 条：answered / queued-cancel 为表内
  * 显式不补行）；③ `S._subTraceLog` 出生事件痕迹（本文件单一写点——环形末 50 条）。
  * 投递队列 / 就绪·清屏后再断言在主侧（panel-callbacks / suspension / panel-session）。
@@ -26,8 +29,9 @@
  * ——noteChunk 经本文件 re-export——import 面不变）。
  */
 import { ctx, S, SUB_TRACE_MAX } from "./state.js"
-import { buildAdvisorBlock, maybeScrollDown } from "./ui.js"
+import { buildAdvisorBlock, maybeScrollActivity } from "./ui.js"
 import { FAMILY_ROLES, refreshBlock } from "./activity-view.js"
+import { t } from "./i18n.js"
 
 // streaming.js import 面不变（noteChunk 定义在 activity-view.js 叶——hub re-export）
 export { noteChunk } from "./activity-view.js"
@@ -72,8 +76,9 @@ function traceSub(kind, channel) {
   if (log.length > SUB_TRACE_MAX) log.splice(0, log.length - SUB_TRACE_MAX)
 }
 
-/** 建块（出生 / 新代接管 / 终态补桩三路径共用——§5.1.4）：append #messages 流尾 + 挂 meta
- *  基座 + toggle 监听。不入 map——入册由调用方定（三路径同规：_set 后返回）。 */
+/** 建块（出生 / 新代接管 / 终态补桩三路径共用——§5.1.4）：append 活动区
+ *  （`#subagent-activity`）区尾 + 挂 meta 基座 + toggle 监听。不入 map——入册由调用方定
+ *  （三路径同规：_set 后返回）。 */
 function buildBlock(name) {
   const ch = parseChannel(name)
   const block = buildAdvisorBlock(ch.label)
@@ -89,26 +94,36 @@ function buildBlock(name) {
     doneAt: null, frozen: false, error: null, queued: false,
   }
   block.addEventListener("toggle", () => { if (block._subMeta && !block._subMeta.frozen) refreshBlock(block) })
-  ctx.messagesEl.appendChild(block)
-  maybeScrollDown(ctx) // 出生即钉底（B1 参照——pinBottom=false 上读中不强拉）
+  // A13（群 A 批）：会话首个活动块的说明行（新用户可理解——一次性）。位置 = summary 之后、
+  // .advisor-content 之前（details 直接子——refreshBlock 只重建 summary，本行不被擦；
+  // tailLines 射程 = .advisor-content 子元素——本行不在内，tail-3 不受扰）。
+  if (!S._subDescShown) {
+    S._subDescShown = true
+    const desc = document.createElement("div")
+    desc.className = "sub-desc"
+    desc.textContent = t("sub.desc")
+    block.insertBefore(desc, block.querySelector(".advisor-content"))
+  }
+  ctx.activityEl.appendChild(block) // 出生位 = 活动区区尾（全程不移动——折叠不落流）
+  maybeScrollActivity(ctx) // 出生即区钉底（_pinActivity=false 上读中不强拉——不牵动 #messages）
   refreshBlock(block)
   return block
 }
 
 /** Get (create on first sight) the activity block for a channel name。块出生即 append
- *  到 #messages 流尾（与 .message 同层——label = channel 去 sub: 前缀——150 窗出生即
- *  计无豁免）。返回契约：
- *  - map 无键 → 新建块（meta = { status:"running", … }）+ append 流尾 + 钉底
+ *  到活动区 `#subagent-activity` 区尾（label = channel 去 sub: 前缀——区内出生即驻留）。
+ *  返回契约：
+ *  - map 无键 → 新建块（meta = { status:"running", … }）+ append 区尾 + 区钉底
  *  - map 有键且已终态（frozen）→ null（幂等守卫——迟来消息丢弃）
- *  - map 有键且 live 但元素被 150 窗裁（!isConnected）→ tombstone 守卫 → null（条目保
- *    留——后续消息一律丢弃——resetActivity 才清）
+ *  - map 有键且 live 但元素被移除（!isConnected——边缘残留）→ tombstone 守卫 → null
+ *    （条目保留——后续消息一律丢弃——resetActivity 才清）
  *  - map 有键且 live → 返回既有元素（重复 started/queued 覆盖式刷新头词——不重挂） */
 export function ensureBlock(name) {
   const existing = S._subBlocks.get(name)
   if (existing) {
-    // 单 map 单守卫：终态（frozen）或被 150 窗裁（!isConnected——live tombstone）的条目
+    // 单 map 单守卫：终态（frozen）或被移除（!isConnected——live tombstone）的条目
     // 一律返 null——后续消息全部丢弃（绝不复活重建）。簿记条目保留至 resetActivity 才清
-    // （与冻结条目同生命周期——frozen 元素随窗裁后守卫仍在）。
+    // （与冻结条目同生命周期——frozen 元素被区上限移除后守卫仍在）。
     if (existing._subMeta?.frozen || !existing.isConnected) return null
     return existing
   }
@@ -118,7 +133,7 @@ export function ensureBlock(name) {
 }
 
 /** 新代接管（§5.1.4 第 5 条——started + pool:true 命中 map 中同名已冻结条目）：建新块并
- *  改绑键（旧冻结块以 DOM 留在流内作历史）+ 记 `takeover` 痕迹。显式取舍：接管后该频道的
+ *  改绑键（旧冻结块以 DOM 留在区内作历史）+ 记 `takeover` 痕迹。显式取舍：接管后该频道的
  *  迟到 chunk 会落进新块（仅“id 重复 + 两实例消息交错”可见——§5.1.4 第 5 条代价登记）。 */
 export function takeoverBlock(name) {
   const block = buildBlock(name)
@@ -127,9 +142,15 @@ export function takeoverBlock(name) {
   return block
 }
 
- /** 终态原地折叠（ACTIVITY-REWRITE-SIMPLE——freeze 由旧冻结叶并入本文件）:
+/** 区内折叠块保留上限（§12.3 第 4 条——D-A2）：live 不裁（预算 = 并发子代理数 + 队列
+ *  ——池有界）；折叠块超限丢 DOM 中最旧者（先序 = 出生序）——簿记条目保留作幂等守卫
+ *  （与 150 裁同生命周期——resetActivity 才清）。 */
+export const MAX_REGION_FOLDED = 20
+
+/** 终态原地折叠（freeze 由旧冻结叶并入本文件——2026-09-11 活动区回归：区内原地）:
  *  终态翻 + class sub-live→sub-frozen + 折叠 open=false + ⏹ 移除 + 头词刷新——原地
- *  （元素已在 #messages 出生位——无 DOM move/无锚插/无 report preview）。 */
+ *  （元素已在活动区出生位——无 DOM move/无锚插/无 report preview）；折后执行区内保留
+ *  上限（enforceRegionCap）。 */
 function freezeBlock(block, kind) {
   const meta = block._subMeta
   if (!meta || meta.frozen) return
@@ -141,6 +162,16 @@ function freezeBlock(block, kind) {
   block.open = false
   block.querySelector(".sub-stop-btn")?.remove()
   refreshBlock(block)
+  enforceRegionCap()
+}
+
+/** 区内保留上限执行（§12.3 第 4 条——freezeBlock 折后调用）：折叠块数超 MAX_REGION_FOLDED
+ *  → 移除 DOM 中最旧折叠块（先序 = 出生序）；簿记条目保留——被移除频道迟来消息走既有
+ *  冻结守卫丢弃（不复活不重建）。空区/无区 id 零操作。 */
+function enforceRegionCap() {
+  const folded = [...(ctx.activityEl?.children ?? [])].filter((el) => el.classList.contains("sub-frozen"))
+  const overflow = folded.length - MAX_REGION_FOLDED
+  for (let i = 0; i < overflow; i++) folded[i].remove()
 }
 
 /** 终态补桩判定（§5.1.4 第 6 条——桩集**精确成员表**）：无 map 条目时按表判定——返回折叠
@@ -277,21 +308,20 @@ export function applySubagentStatus(m) {
 }
 
 /** Session-exit freeze 兜底（suspension active:false + freeze:true——§17.5.5——panels
- *  直接消费）: 残余 live 块折叠进流（settled 已随消息即时折叠——此兜底只覆盖极窄竞态
- *  ——CLI freezeAllSubTasks 中断语义：不留悬空 live 块）。 */
+ *  直接消费）: 残余 live 块**原地折叠**（settled 已随消息即时折叠——此兜底只覆盖极窄
+ *  竞态——CLI freezeAllSubTasks 中断语义：不留悬空 live 块）。 */
 export function freezeLiveBlocks() {
   for (const block of [...S._subBlocks.values()]) {
     if (block?._subMeta && !block._subMeta.frozen) freezeBlock(block, "done")
   }
 }
 
-/** Full reset — 回合中止（abort 无挂起会话）/会话清: 移除 live 块（.sub-live——流内
- *  孤儿一并防御清）+ 清 map。Frozen 块不动（会话流历史——随 150 窗裁）。 */
+/** Full reset — 回合中止（abort 无挂起会话）/会话清: **清区全部条目（live + 折叠）**
+ *  （D-A8——折叠块不跨清屏保留：块无跨 reload 角色）+ 清 map + 防御孤儿清（边缘路径
+ *  残留——选择器全类 .sub-block）。 */
 export function resetActivity() {
-  for (const block of S._subBlocks.values()) {
-    if (block?._subMeta && !block._subMeta.frozen) block.remove()
-  }
+  for (const block of S._subBlocks.values()) block?.remove()
   S._subBlocks.clear()
-  // 防御清：map 外孤儿 live 块（边缘路径残留）——frozen 不动（无 sub-live）
-  for (const el of document.querySelectorAll(".sub-block.sub-live")) el.remove()
+  // 防御清：map 外孤儿块（边缘路径残留——含折叠）
+  for (const el of document.querySelectorAll(".sub-block")) el.remove()
 }

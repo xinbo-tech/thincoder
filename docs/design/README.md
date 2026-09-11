@@ -30,7 +30,8 @@
 | 提示词系统（双源：中文权威 + 英文落地） | `VSC-PROMPTS.md` + `docs/design/prompts/`（15 档中文权威） | 本端 15 文件槽位化现行态 + 端特有差异（R14 池规则段等）——机制权威 = **本端双源**（中文权威 ↔ `src/prompts/` 英文落地，差异逐项见「镜像差异表」节）；CLI 仓 `PROMPT-SYSTEM.md` 蓝图 + 施工档三件为参照（语义同源·原文自持）——2026-09-10 双端同批 · 2026-09-11 双源化（第 5 批 VSC-MIRROR） |
 | 配置面板（Settings） | `SETTINGS.md` | 现行权威源（2026-08-25 合并 6 份历史批次文档：SETTINGS-PANEL(-2)/PROXY-ROW/REORG/SUBMODEL-SHELL/MODEL-PICKER-UNIFY，已入 `_archive/`，细节查原文件） |
 | 项目切换 | `PROJECT-SWITCHER.md` | |
-| 发布流程 | `RELEASE.md` | |
+| 发布流程 | `RELEASE.md` |
+| 测试基建 | `TESTING.md` | 测试生命周期与集成集（新建 2026-09-11——与 CLI 仓同名档对应；语义同源·本端原文自持）。快/全两层 + slow 门 + 显式清单实现面见 `TESTING.md` §1 |
 | 会诊 | `CONSULTATION.md` | |
 | 飞刀 | `ESCALATE.md` | |
 | Design Token 硬化 | `ENG-TOKEN-BINDING-REQUIREMENTS.md`、`ENG-TOKEN-BINDING-TUNING.md` | v2 收窄：安全修复（双后门/复活陷阱）+ TTL 7 天可配（2026-08-25，v1 内容绑定被实况否决见文档考古） |
@@ -49,6 +50,9 @@
 4. **单一权威源**：同一机制只在一处详述；其余文档引用（指路），不复制内容——多处复制必然漂移矛盾。
 5. **存量碎片处理（2026-08-25 收口）**：Settings 6 文档已合并为 `SETTINGS.md`（现行权威源，历史批次文档已归档 `_archive/`）；TURN-CAP 两端同源已收口为各自实现记录。新增同主题内容须先查本表归属。
 6. **文档人类可读（2026-09-08 防复发）**：写/改本文档映射内任一 `docs/design/` 文档须人类可读——**无 >300 字符单行**（整节/表/规则不得压成一行）、**markdown 结构正确**（标题/表格/代码块不被吞进正文，空行隔离节）、**变更记录折叠**（新变更落一行注记，不堆逐批需求/评审/测试流水账）。违反即文档格式债，与源码长行硬限同理。批量检查：`node scripts/check-doc-width.mjs`（扫 `docs/design/` 无 >300 单行，`_archive/` 豁免）。
+   **表格行豁免（群 A 批——2026-09-11）**：markdown 表格行结构性不可折行——超宽不报（谓词与 V2 枚举同源）；正文非表格行超宽照报。
+   附则（检查器契约——群 A 批）：宽度扫描**单源** = `checkDocWidths(root,{max,dir})`（主流程零内联重复扫描，两处规则不得漂移）；本批改动面零行（现状实跑：69 文件零超宽——豁免为未来性对齐）。检查器本体归属 = 本档规则 6 的执行器。
+   **AC-MA8-1..2 / T-MA8-1–2**（群 A 批·A8）：机判 = 夹具输入（>300 表格行 / >300 非表格行）→ 前者零报、后者照报；`checkDocWidths` 内用 `isTableRow` 谓词；主流程零内联 `length > maxW` 扫描（grep）；宿主 = `test/doc-consistency.test.mjs`（新两例）+ `scripts/check-doc-width.mjs`。
 
 ## 镜像差异表（提示词双源——`docs/design/prompts/` ↔ `src/prompts/` ↔ CLI 仓同名档）
 
@@ -69,6 +73,9 @@
 
 ## 变更记录
 
+- 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——规则 6 补**表格行豁免**句 + 检查器契约附则（宽度扫描单源 `checkDocWidths`；`scripts/check-doc-width.mjs` 断言面同步）。
+
+- 2026-09-11：新增板块「测试基建」（`TESTING.md`）——测试生命周期与集成集对位档（与 CLI 仓同名档对应；语义同源·本端原文自持）。集成清单制 / runner / 发布门三环接线为待实施项。
 - 2026-09-11：提示词双源化（第 5 批 VSC-MIRROR）——新建 `docs/design/prompts/` 15 档中文权威镜像（逐字自 CLI 仓拷贝 + 端特有段并入 + 跨仓节引用改写，逐项见「镜像差异表」节）；`src/prompts/` 14→15（新增 `persona-eng-designer.md`）+ 锚句宿主档定点改写（A1–A8/A11/A12）；「机制权威」句改写为**本端双源**
 - 2026-09-09：ASYNC-RESIDUE-FIX 登记（CLI docs/design——双端 prompts 异步残留措辞清理——本端 main.md/engineering.md 同步修正——评审采纳版）——Agent 循环 行注登记。
 - 2026-09-09：INPUT-LOCK-ASYNC 登记（主会话输入禁排队 C'——busy（running 含 digest）锁输入/拒收——R15 排队合并废弃 + 单槽交接——CLI+VSC 双端实现——本端机制正文 AGENT-LOOP §7 更新）

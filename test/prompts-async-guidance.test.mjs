@@ -37,6 +37,8 @@ const pe = read("src/prompts/persona-engineering.md")
 const pn = read("src/prompts/persona-normal.md")
 const de = read("src/prompts/discipline-engineering.md")
 const dn = read("src/prompts/discipline-normal.md")
+const common = read("src/prompts/common.md")
+const SQ_LITERAL = "- **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后**直接提交**——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；**不手工记队列、不逐档放行、不因冲突/池满而推迟提交**。父侧只读状态（status/observe），不模拟调度器。"
 // 六场景装配快照（装配矩阵/降级链断言面）
 const engMode = Object.fromEntries(["normal", "engineering", "eng-coder", "explore", "coder", "plan"].map((s) => [s, assemblePrompt(s)]))
 
@@ -111,6 +113,7 @@ test("锚#6 凭证不落文档驻留 discipline-engineering（逐字）", () => 
 test("锚#7 调度器句驻留（Multi-Task 块——CLI=de / VSC=persona-engineering——各端断言自身宿主）", () => {
   // 本端 Multi-Task 块含 VSC 端特有 R14 池规则段（persona-engineering.md 原地保留）——锚#7 断言本端宿主。
   assert.ok(pe.includes("overlapping domains are queued by the scheduler, never hand-serialized"), "锚#7 调度器句缺失（VSC 宿主 persona-engineering R14 段）")
+  assert.ok(pe.includes(SQ_LITERAL), "锚#7 提交即走句缺失（VSC 宿主 persona-engineering）")
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,9 +166,10 @@ test("ASYNC-RESIDUE F-2/F-3 工程侧 async 段同基驻留（de）", () => {
   assert.doesNotMatch(de, /it returns a design token in plain text in its response/, "旧 token 句残留")
 })
 
-test("ASYNC-RESIDUE R6 discipline-normal 路由 subagent 补 cancel + escalate 异步注（dn）", () => {
-  assert.ok(dn.includes("(action: spawn / status / cancel / escalate)"), "路由: subagent 行动作列缺 cancel")
-  assert.ok(dn.includes("escalate = fly in a stronger model for hard implementation (background by default — its report arrives automatically; never wait for it synchronously at top level)"), "路由: escalate 异步注缺失")
+test("ASYNC-RESIDUE R6 路由面随迁 common（subagent 族行）+ dn 旧路由块零残留（公共层扩容重定向）", () => {
+  assert.ok(common.includes("| `subagent` / `advisor` / `consult_*` | delegation / independent review / consultation |"), "路由: common 缺 subagent/advisor/consult 族行（宿主迁移后）")
+  assert.ok(dn.includes("it runs in the BACKGROUND by default (like an async spawn)"), "escalate 异步语义缺失（飞刀段——路由细注删源后由该节与工具描述承载）")
+  assert.ok(!dn.includes("Tool routing"), "dn: 旧路由块残留（双源重复）")
 })
 
 test("BATCH-4-DOC-CLEANUP F-1 ESCALATE.md async:false 残留句零 + 锚句驻留", () => {
@@ -236,13 +240,18 @@ test("advisor AC7 双轨消除——旧 pass 定义不复发", () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 搜索条款双文件一致（discipline-normal × discipline-engineering——语义关键词逐文件驻留）。
+// 搜索条款宿主迁移（公共层扩容——条款随迁 common，de/dn 删源；T-CL5）。
 // ─────────────────────────────────────────────────────────────────────────────
-test("搜索条款双文件一致（语义关键词逐文件驻留——各端条款行自持）", () => {
-  for (const [name, f] of [["discipline-engineering", de], ["discipline-normal", dn]]) {
-    assert.ok(f.includes("**`websearch` returns junk/unrelated results twice in a row → switch immediately**"), `${name}: websearch junk 条款缺失`)
-    assert.ok(f.includes("MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search"), `${name}: MCP primary 条款缺失`)
-    assert.ok(f.includes("`websearch` (Bing) is ONLY the fallback"), `${name}: fallback 限定缺失`)
+test("搜索条款宿主迁移：3 字面驻留 common + de/dn 零命中（重定向 + 反证非空转）", () => {
+  // 各端条款行文案自持（多实现面纪律——不做 byte 硬一致）——语义关键词逐宿主驻留断言。
+  const CLAUSES = [
+    "**`websearch` returns junk/unrelated results twice in a row → switch immediately**",
+    "MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search",
+    "`websearch` (Bing) is ONLY the fallback",
+  ]
+  for (const c of CLAUSES) {
+    assert.ok(common.includes(c), `common: 条款缺失: ${c.slice(0, 40)}`)
+    for (const [name, f] of [["discipline-engineering", de], ["discipline-normal", dn]]) assert.ok(!f.includes(c), `${name}: 旧宿主残留: ${c.slice(0, 40)}`)
   }
 })
 
@@ -365,18 +374,13 @@ test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -
   }
 })
 
-test("§2.7 #9 表行 >200 零命中（discipline-normal 4 处待治——本批机械扫登记）", () => {
+test("§2.7 #9 表行 >200 零命中（dn 4 处随表删源清零——公共层扩容）", () => {
   const hits = []
   for (const f of NEW_PROMPTS) {
     const lines = read(`src/prompts/${f}`).split("\n")
     lines.forEach((l, i) => { if (l.startsWith("|") && l.length > 200) hits.push(`${f}:L${i + 1}(${l.length})`) })
   }
-  assert.deepStrictEqual(hits, [
-    "discipline-normal.md:L68(234)",
-    "discipline-normal.md:L71(239)",
-    "discipline-normal.md:L74(250)",
-    "discipline-normal.md:L81(403)",
-  ], "表行>200 现状登记（PROMPT-IMPL-3 §1.2 巡检断言——治理项随下个提示词批）")
+  assert.deepStrictEqual(hits, [], "表行 >200 零命中（common 路由表逐行 ≤200）")
 })
 
 test("§2.7 #5 前 20% 巡检词（WAIT/Do NOT/auto/manual/initiated by the user——文件前 20% 区）", () => {

@@ -19,14 +19,16 @@
  * （跨 runAgent 池内最大 id 续号——subagent-escalate.mjs 单向 import 面不变）、
  * mergeChildMutations（eng-coder spawn merge 与 escalate 引擎共享——重开会话清理）。
  */
-import { mkdirSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
 import { describeBlockers, effectivePoolLimits, entryDomain, nextSubagentId, refreshQueuedRows, runningByDomain, writeTombstoneTo } from "./subagent-scheduler.mjs"
 import { resolveBatchDoc, NEEDS_BATCH_DOC } from "./subagent-spawn-gate.mjs"
 import { settleAsyncEntry } from "./async-settle.mjs"
 import { recordFileMutation } from "./advisor-async.mjs"
+// 群 B 批 B5（§16）：digest 注入预算单源迁出（digest-budget.mjs）——保留 re-export
+// （`DIGEST_INJECT_BUDGET` 测试导入面零改；单条 offload 预览路径零改）。
+import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs"
+export { DIGEST_INJECT_BUDGET } from "./digest-budget.mjs"
 // 测试 import 面（test/subagent-scheduler.test.mjs——测试文件零改动约束）：§20 调度符号经
 // 本模块 re-export 保持可导入——src 侧消费者（subagent.mjs）已改指 subagent-scheduler.mjs 直连。
 export { describeBlockers, queueRunnable, nextSubagentId } from "./subagent-scheduler.mjs"
@@ -311,7 +313,7 @@ export function spawnAsyncSubagent({ parent, ctx, subId, role, provider, childSi
     )
   }
   parent._asyncSubagents.set(id, entry)
-  // §24 D-24a（R14——角色分池）：条目带池域字段（_poolDomain——域判定单一事实源在
+  // §5 D-24a（R14——角色分池）：条目带池域字段（_poolDomain——域判定单一事实源在
   // scheduler.entryDomain——缺省/未知角色归 other）；上限判定按域 running 数 vs
   // 该域配置容量（effectivePoolLimits——每次入池判定时读——变更即生效下个 spawn）。
   entry._poolDomain = entryDomain(entry)
@@ -370,41 +372,8 @@ function settleSubagentEntry(parent, entry, report, error, notifySettle) {
 // ─── Async subagent machinery（AGENT-LOOP.md §15 + §17，CLI D-A1/D-A2/D-A4/D-S3 同规格）───
 
 // ─── BATCH-3-STRUCTURE F-2：digest 注入批量预算（2026-09-09——CLI 同构镜像）───
-// 单 digest 轮（一次连续注入——合并轮多条 pending 条目）inline 合计 ≤ 64K——防多条 pending
-// 合并轮累计超限（1.3MB 请求体复发——MODEL-400 修根因后的 UX/性能防线）。VSC 派发按 role
-// 分流（injectPendingAsync）——本预算达 subagent 族入口（advisor/escalate/consult 各族注入
-// 器不经本路径——受影响清单限本文件——覆盖范围以派发事实为准）。
-export const DIGEST_INJECT_BUDGET = 64 * 1024 // 64K——与 offload 单条预览同量级
-// 轮记账：history 载体 → { len, used }。轮界 = 相邻注入间 history 无其他落史（每次注入
-// pushReal 恰 +1——他人落史 = 新请求窗口 → 预算复位）。键 history 对象（会话级载体）。
-const digestRounds = new Map()
-function digestRoundFor(history) {
-  const r = digestRounds.get(history)
-  if (!r || history.length !== r.len + 1) {
-    const fresh = { len: history.length, used: 0 }
-    digestRounds.set(history, fresh)
-    return fresh
-  }
-  r.len = history.length
-  return r
-}
-
-// 超限条目全量落盘（offloadToolResult 同目录约定 <cwd>/.thincoder/tmp——落盘机制零动——只改
-// inline 决策 + 补超限条目持久化面；旧文件由下次 offload 写时自清——同目录）。返回清单行文本
-// （inline = 仅此——不 inline 全文；文案与 CLI 逐字一致）。落盘失败 → null（调用方回退常规
-// inline 路径——offload 同款“失败不吞报告”语义——结果零丢失）。
-function persistDigestReport(body, cwd) {
-  try {
-    const dir = join(cwd, ".thincoder", "tmp")
-    mkdirSync(dir, { recursive: true })
-    const file = join(dir, `tool-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.txt`)
-    writeFileSync(file, body, "utf8")
-    return `Report saved to disk (digest inject budget exceeded — full text not inlined): ${file}\nRead it with the read tool (offset/limit).`
-  } catch (e) {
-    console.warn(`[digest] report persist failed — falling back to inline (report not lost): ${e.message}`)
-    return null
-  }
-}
+// §16 D-DG1（群 B 批 B5）：常量 / 判超 / 记账 / 落盘四处合一入 digest-budget.mjs 叶子模块
+// （四族共享单源——D2）；本文件保留 re-export（顶部）与 subagent 族注入器接线。
 
 /**
  * §17 D-S3 shared injector: inject one settled async entry into the session as a
@@ -413,19 +382,18 @@ function persistDigestReport(body, cwd) {
  * the turn-end collection (collectSettledAsync below), the run-start
  * history._pendingAsyncResults injection — plus the suspension-exit residual flush.
  * Consumed = the caller removes the entry from its container; no double inject.
- * F-2 (BATCH-3-STRUCTURE)：注入前查轮累计——超限条目不 inline 全文，改清单行（全文经
- * persistDigestReport 落盘——path 随行）。首条豁免（used===0 不判超）：单条大报告 >64K
- * offload 预览照旧——轮预算只约束累计（多条合并轮），不回归单条路径。
+ * F-2（BATCH-3-STRUCTURE）+ §16 D-DG2（群 B 批 B5）：注入前查轮累计（单源）——超限条目
+ * 不 inline 全文，改清单行（全文经 persistOverflowReport 落盘——path 随行；tag = 族 + id）。
+ * 首条豁免（used===0 不判超）：单条大报告 >64K offload 预览照旧——轮预算只约束累计
+ * （多条合并轮），不回归单条路径。
  */
 export async function injectAsyncResult(entry, { history, fullHistory, cwd }) {
   const raw = String(entry.error ?? entry.report ?? "")
-  const round = digestRoundFor(history)
-  const over = round.used > 0 && round.used + raw.length > DIGEST_INJECT_BUDGET
-  round.used += raw.length
+  const over = digestBudgetOver(history, raw.length)
   const inlineBody = () => entry.error != null
     ? `error: ${escapeXml(entry.error)}`
     : escapeXml(offloadToolResult(cwd, entry.report ?? ""))
-  const body = over ? (persistDigestReport(raw, cwd) ?? inlineBody()) : inlineBody()
+  const body = (over && persistOverflowReport(raw, { cwd, tag: `subagent#${entry.id}` })) || inlineBody()
   pushReal(history, fullHistory, {
     role: "user",
     content: `[System reminder: async subagent #${entry.id} (${entry.role}) finished]\n\n${body}`,
@@ -477,7 +445,7 @@ export async function collectSettledAsync(agent, { history, fullHistory, cwd, su
  * §19.5 (AGENT-LOOP.md D-M6 round2 #3): the CANCEL path never reaches this
  * function — runChild checks entry.cancelled BEFORE merging (partial changes are
  * NOT merged into the parent guards; the cancel reminder says so).
- * §24 D-24b（2026-09-06）：子代理磁盘写入同时记入文件变更事件（跨 run 载体——
+ * §9 D-24b（2026-09-06）：子代理磁盘写入同时记入文件变更事件（跨 run 载体——
  * history._fileMutEvents）——async 评审飞行中子代理落盘 → settle 陈旧判定命中。
  */
 export function mergeChildMutations(parent, sink) {

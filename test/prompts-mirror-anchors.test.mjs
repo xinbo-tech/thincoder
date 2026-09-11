@@ -4,7 +4,7 @@
  * 权威：ENGINEERING-MODE.md §2.22.2（镜像锚 A1–A12）/ §2.22.7（双源结构 + 端特有段 + 跨仓节引用）；
  * 验收：AC39（文本类锚逐字 + A12 宿主）/ AC43（双源结构 + 端特有段）；用例 T62 / T65。
  *
- * 断言六面：
+ * 断言八面：
  *   ① 双源同名集合两侧各 15（src/prompts 与 docs/design/prompts，均与 CLI 同仓同名集合相等）；
  *   ② 文本类锚 A1–A8/A11/A12 在 VSC 宿主档（双源两侧）与 CLI 侧逐字相同（A8 = 跨仓同文件 grep）；
  *      A9/A10 为行为锚（宿主是工具/脚本代码），属面① T59/T61，本档不 grep；
@@ -12,7 +12,11 @@
  *   ④ 镜像跨仓节引用不悬空（VSC 侧可解析，或以「（CLI 侧）」注记豁免——§2.22.7 V1 判据）；
  *   ⑤ A12/T65：主 agent 人格含产品经理身份 + spawn eng-designer 调用链，不含 ARCHITECT/交付物旧句；
  *   ⑥ 本批同文组跨仓逐字（CLI ↔ VSC）：组 1 = Action 四值句（zh↔zh / en↔en 各 4 文件面）；
- *      组 2 = 修正轮 ⇄ 用户批准 时序 bullet 全文（4 文件面）——权威定义 = ADVISOR-CONVERGENCE §13.10 面⑥。
+ *      组 2 = 修正轮 ⇄ 用户批准 时序 bullet 全文（4 文件面）——权威定义 = ADVISOR-CONVERGENCE §13.10 面⑥；组 3 = spawn 排队纪律「提交即走」句（en↔en——两仓 discipline-engineering.md）。
+ *   ⑦ 公共层扩容同文组跨仓逐字（CLI ↔ VSC）：common 11 标题组（zh↔zh / en↔en 同串）+ 关键句组
+ *      （en↔en / zh↔zh）——权威 = PROMPT-SYSTEM 设计档 §3.3 面⑦ / AC-CL1。
+ *   ⑧ 角色重定义批锚（ROLE-REDEFINITION §2.28——本端四端面）：RF-1 勾销句（双源两侧）/ RF-4c 自审第 6 条
+ *      （双源两侧）/ RF-4a 身份句 + RF-4d discipline 头注 consumers——旧句零命中 + 替子逐字在位。
  *
  * 跨仓读取 = 兄弟仓路径 `../thincoder/...`（可用 THINCODER_CLI_ROOT 覆盖）；兄弟仓不可用 → fail-closed（显式失败，不静默通过）。
  */
@@ -193,7 +197,7 @@ test("⑤ 镜像跨仓节引用不悬空（VSC 可解析，或「（CLI 侧）�
   assert.deepStrictEqual(dangling, [], "镜像含悬空节引用（须本端可解析，或按 §2.22.7 标注「（CLI 侧）」）")
 })
 
-// ── ⑥ 本批同文组字面表（PROMPT-REVIEW-ORDER——跨仓逐字；组 1 四值句 / 组 2 时序 bullet）───────
+// ── ⑥ 本批同文组字面表（PROMPT-REVIEW-ORDER——跨仓逐字；组 1 四值句 / 组 2 时序 bullet / 组 3 提交即走句）───────
 const ROPE_ZH_ACTION = "`Action` 恰好四选一：`Fixed`（你改了代码——**已落地**）、`Dispatched`（**修正轮在途——尚未落地**）、`Not an issue`（有证据的技术反驳）、`Deferred`（承认但现在不修——附理由）。"
 const ROPE_EN_ACTION = "`Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason)."
 const ROPE_BULLET = [
@@ -203,12 +207,62 @@ const ROPE_BULLET = [
   "  须显式摆给用户单独定，不得随批准请求一并默认通过。",
   "  批准请求中，裁决表的 `Dispatched` 行须已逐条收敛为 `Fixed`（随请求给出落地证据：file:line 或设计档节）。",
 ].join("\n")
+const SQ_LITERAL = "- **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后**直接提交**——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；**不手工记队列、不逐档放行、不因冲突/池满而推迟提交**。父侧只读状态（status/observe），不模拟调度器。"
 
-test("⑥ 本批同文组跨仓逐字（组 1：Action 四值句 zh↔zh / en↔en；组 2：修正轮 ⇄ 用户批准 时序 bullet）", () => {
+test("⑥ 本批同文组跨仓逐字（组 1：Action 四值句 zh↔zh / en↔en；组 2：修正轮 ⇄ 用户批准 时序 bullet；组 3：提交即走句 en↔en）", () => {
   const GROUPS = [
     { id: "组1-zh 四值句", files: [ZH + "discipline-engineering.md", ZH + "discipline-normal.md"], literals: [ROPE_ZH_ACTION] },
     { id: "组1-en 四值句", files: [SRC + "discipline-engineering.md", SRC + "discipline-normal.md"], literals: [ROPE_EN_ACTION] },
     { id: "组2 时序 bullet 全文", files: DE_PAIR, literals: [ROPE_BULLET] },
+    { id: "组3 提交即走句 en↔en", files: [SRC + "discipline-engineering.md"], literals: [SQ_LITERAL] },
+  ]
+  for (const g of GROUPS) for (const f of g.files) {
+    const vsc = readRepo(VSC, f), cli = readRepo(CLI, f)
+    for (const lit of g.literals) {
+      assert.ok(cli.includes(lit), `${g.id}: CLI 侧 ${f} 缺字面串（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+      assert.ok(vsc.includes(lit), `${g.id}: VSC 侧 ${f} 与 CLI 不逐字（缺 ${JSON.stringify(lit.slice(0, 30))}…）`)
+    }
+  }
+})
+
+// ── ⑦ 公共层扩容同文组字面表（common 11 标题组 + 关键句组——跨仓逐字；PROMPT-SYSTEM AC-CL1）────
+const CL_HEADINGS = [
+  "## 语言纪律（Language）",
+  "## 人机分工（Who you are）",
+  "## 确认与批准门（最高纪律——先于一切写文件动作）",
+  "## 诚实原则（When choices conflict）",
+  "## 证据纪律（Evidence discipline）",
+  "## 停下上报（Stop and report）",
+  "## 任务边界与范围外注记（Task boundary）",
+  "## 交付报告（Delivery report——统一格式）",
+  "## 工具观（Tool discipline）",
+  "## 工具路由表（Tool routing——写类场景按表路由，不用 bash）",
+  "## 系统接口语义（System interface——按角色收到的提醒字段解读）",
+]
+const CL_KEY_EN = [
+  "Every factual/behavioral assertion you make MUST be verified from the code/docs in front of you",
+  "when the source is readable — a behavioral question is an EVIDENCE question, not a reasoning question.",
+  "Delivery would have to shrink → surface the trade-off before delivering, not after.",
+  "Your scope = the task book / task brief (including its file list and acceptance criteria) — do not expand it.",
+  "**Your last message is ALL the caller sees — make it self-contained; never expect them to read your process.**",
+  "| `subagent` / `advisor` / `consult_*` | delegation / independent review / consultation | inlining exploration, self-review only, single-model guessing |",
+  "**System reminders (`[System reminder:]`) are authoritative framework messages** — comply silently, never mention them.",
+]
+const CL_KEY_ZH = [
+  "你做的每条事实/行为断言，都必须从前面的代码/文档验证——读它们、引 `file:line`——",
+  "行为问题是证据问题，不是推理问题。",
+  "交付被迫缩水 → 交付前摆出取舍，不交付后披露。",
+  "你的范围 = 任务书/任务描述（含其文件清单与验收标准）——不扩大。",
+  "**你的最后一条消息就是调用方看到的全部——自含完整，不指望对方读你的过程。**",
+  "| `subagent` / `advisor` / `consult_*` | 委派 / 独立评审 / 会诊 | 内联勘察、只自审、单模型瞎猜 |",
+  "**System reminders（`[System reminder:]`）是权威框架消息**——静默遵从，永不提及。",
+]
+
+test("⑦ 公共层 common 跨仓逐字（11 标题组 + 关键句组 zh↔zh / en↔en——PROMPT-SYSTEM AC-CL1）", () => {
+  const GROUPS = [
+    { id: "标题组（双语标题四源同串）", files: [SRC + "common.md", ZH + "common.md"], literals: CL_HEADINGS },
+    { id: "关键句组 en↔en", files: [SRC + "common.md"], literals: CL_KEY_EN },
+    { id: "关键句组 zh↔zh", files: [ZH + "common.md"], literals: CL_KEY_ZH },
   ]
   for (const g of GROUPS) for (const f of g.files) {
     const vsc = readRepo(VSC, f), cli = readRepo(CLI, f)
@@ -227,4 +281,39 @@ test("A12/T65 主 agent 人格改述：产品经理身份 + spawn eng-designer �
     }
     assert.ok(t.includes("spawn eng-designer"), `${f}: 调用链段缺 spawn eng-designer`)
   }
+})
+
+// ── ⑧ 角色重定义批锚（ROLE-REDEFINITION §2.28——本端四端面）：RF-1 勾销句 / RF-4c 自审第 6 条 /
+//    RF-4a 身份句 / RF-4d 头注 consumers。口径 = AC61/AC64：旧句零命中 + 替子逐字在位。
+const RF1_OLD = "实现后验收标准逐条勾销"
+const RF4C_EN_OLD = "Update the affected design-doc sections your diff touches"
+const RF4C_EN_NEW = "Report any design-doc drift your diff touches (module map / affected-files table) in your delivery report — do not edit design docs yourself; they are authored by eng-designer."
+const RF4C_ZH_OLD = "受影响的设计档章节随 diff 更新"
+const RF4C_ZH_NEW = "diff 触及的设计档漂移（模块地图/受影响文件表）写交付报告——不修改设计档；设计档由 eng-designer 执笔"
+
+test("⑧ 角色重定义锚（本端四端面）：勾销句 / 自审第 6 条 / 身份句 / 头注 consumers", () => {
+  for (const f of DE_PAIR) { // RF-1（双源两侧）+ RF-4d 头注
+    const t = readRepo(VSC, f)
+    assert.ok(!t.includes(RF1_OLD), `${f}: 旧勾销句残留`)
+    assert.ok(t.includes("实现后验收勾销落批次档 §6") && t.includes("设计档内不写勾销状态"), `${f}: 替句子串缺失`)
+    assert.ok(t.split("\n")[0].includes("eng-coder + eng-designer"), `${f}: 头注 consumers 未补 eng-designer`)
+  }
+  const pecEn = readRepo(VSC, SRC + "persona-eng-coder.md")
+  const pecZh = readRepo(VSC, ZH + "persona-eng-coder.md")
+  // RF-4a/4b（双源两侧）：旧句零命中 + 替句逐字
+  assert.ok(!pecEn.includes("The parent agent is the architect") && !/architect/i.test(pecEn), "pec-src: 旧身份句/architect 残留")
+  assert.ok(pecEn.includes("The parent agent is the product manager and flow orchestrator"), "pec-src: 新身份句缺失")
+  assert.ok(!pecEn.includes("The parent agent provided a design document."), "pec-src: 旧边界句残留")
+  assert.ok(pecEn.includes("Your task book references the design document — the authoritative spec."), "pec-src: 新边界句缺失")
+  assert.ok(!pecZh.includes("架构师"), "pec-zh: 架构师残留")
+  assert.ok(pecZh.includes("父代理是产品经理与流程编排者"), "pec-zh: 新身份句缺失")
+  assert.ok(!pecZh.includes("父代理提供了设计文档。"), "pec-zh: 旧边界句残留")
+  assert.ok(pecZh.includes("任务书引用了设计文档——权威规格。"), "pec-zh: 新边界句缺失")
+  // RF-4c 自审第 6 条（双源两侧）：旧句零命中 + 替句逐字 + 粘连断行已修复
+  assert.ok(!pecEn.includes(RF4C_EN_OLD), "pec-src: 自审第 6 条旧句残留")
+  assert.ok(pecEn.includes(RF4C_EN_NEW), "pec-src: 自审第 6 条替句缺失")
+  assert.ok(pecEn.includes("Your last message IS the report the parent sees — make it complete:"), "pec-src: 报告引导句缺失（粘连修复）")
+  assert.ok(pecEn.split("\n").some((l) => l.trim() === "Your last message IS the report the parent sees — make it complete:"), "pec-src: 报告引导句未起新行（粘连未修复）")
+  assert.ok(!pecZh.includes(RF4C_ZH_OLD), "pec-zh: 自审第 6 条旧句残留")
+  assert.ok(pecZh.includes(RF4C_ZH_NEW), "pec-zh: 自审第 6 条替句缺失")
 })

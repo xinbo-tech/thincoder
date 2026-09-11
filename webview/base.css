@@ -81,10 +81,11 @@ body {
 
 #chat-container {
   display: grid;
-  /* ACTIVITY-REWRITE-SIMPLE（2026-09-09）垂直序：header(session-bar) / #messages(1fr)
-     / #panels(goal/task——auto) / 输入区(#toolbar)。后两层为 auto，隐藏项不占高 →
-     消息区高 = 容器 − 面板 − 输入（grid 1fr 自动吸收）。 */
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  /* 2026-09-11 活动区回归（WEBVIEW.md §2/§12）垂直序：header(session-bar) /
+     #messages(1fr) / 活动区 #subagent-activity(auto) / #panels(goal/task——auto) /
+     输入区(#toolbar)。后三层均 auto，隐藏项不占高 → 消息区高 = 容器 − 活动区 −
+     面板 − 输入（grid 1fr 自动吸收）。 */
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   height: 100%;
   position: relative;
 }
@@ -94,6 +95,18 @@ body {
   overscroll-behavior: contain;
   padding: 0 12px 12px;
 }
+
+/* 活动区（2026-09-11 回归——WEBVIEW.md §12.3 第 5/6 条）：live 块全程驻留；空区
+   隐藏零高（`:empty`——零显隐 JS——同 #panels 先例）；内容自适应、32vh 封顶 +
+   区内自滚（不与消息区互拉——overscroll-behavior: contain）。 */
+#subagent-activity {
+  max-height: 32vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px;
+}
+
+#subagent-activity:empty { display: none; }
 
 /* ─── Scroll-to-bottom button ─────────────────── */
 
@@ -177,9 +190,10 @@ body {
 }
 
 
-/* ─── Compression status line (CONTEXT-COMPACTION §7 D-C3) ──── */
+/* ─── Compression / digest status lines（CONTEXT-COMPACTION §7 D-C3 · WEBVIEW.md §7.4）── */
 
-.compress-status {
+.compress-status,
+.digest-status {
   margin: 6px 0;
   padding: 6px 12px;
   border-radius: 6px;
@@ -190,12 +204,14 @@ body {
   color: var(--vscode-foreground, inherit);
 }
 
-.compress-status.compress-done {
+.compress-status.compress-done,
+.digest-status.digest-done {
   background: var(--vscode-inputValidation-infoBackground, rgba(0,122,204,0.08));
   border-color: var(--vscode-inputValidation-infoBorder, rgba(0,122,204,0.35));
 }
 
-.compress-status.compress-failed {
+.compress-status.compress-failed,
+.digest-status.digest-failed {
   background: var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.08));
   border-color: var(--vscode-inputValidation-errorBorder, rgba(255,0,0,0.35));
   color: var(--vscode-errorForeground, #f14c4c);

@@ -19,7 +19,7 @@ import { truncateAdvisorResult } from "./truncate.mjs"
 import { _resolvedAdvisorToolsFor } from "./tools.mjs"
 import {
   estimateTokens, compactMessages, shouldBudgetNudge, budgetNudgeText, timeoutTail, renderTimeline,
-  MAX_ADVISOR_TURNS, MAX_CONTEXT_TOKENS, TOOL_TIMEOUT_MS, REVIEW_TIMEOUT_MS, MAX_RESULT_CHARS,
+  advisorContextBudget, MAX_ADVISOR_TURNS, TOOL_TIMEOUT_MS, REVIEW_TIMEOUT_MS, MAX_RESULT_CHARS,
   ADVISOR_THINKING_PLACEHOLDER,
 } from "./compaction.mjs"
 
@@ -83,6 +83,8 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   let reviewTextProduced = false
   let budgetNudged = false
   const startTime = now()
+  // 评审上下文预算（第 26 批——§15.5 契约二）：循环体外一次性派生，provider 全场不变。
+  const budget = advisorContextBudget(provider)
 
   while (true) {
     // Interrupted (Ctrl+I) — stop immediately instead of spinning a fresh uncancellable signal
@@ -113,12 +115,12 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
 
     // Check context window and compact if needed
     const currentTokens = estimateTokens(messages)
-    if (currentTokens > MAX_CONTEXT_TOKENS * 0.8) {
+    if (currentTokens > budget.compactAt) {
       onText(`\n[Context compacted: ${currentTokens} tokens → reducing to fit window]\n`)
       // F20：pinned（评审参数构建）在压缩动作内重挂——对象声明 / 文档清单 / Approval
       // Signal 三锚压缩后仍在（§13.4 契约三）。
       compactMessages(messages, pinned)
-      if (estimateTokens(messages) > MAX_CONTEXT_TOKENS) {
+      if (estimateTokens(messages) > budget.limit) {
         // Report the POST-compaction count — the pre-compaction currentTokens
         // is stale by the time compaction has run.
         return renderTimeline(timeline, `Advisor: context window limit reached (${estimateTokens(messages)} tokens). Review incomplete — too many tool calls. Try a narrower scope.`)

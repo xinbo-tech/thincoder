@@ -1,7 +1,7 @@
 # 工程模式（Engineering Mode）——VS Code 独立实现
 
 > 板块：工程模式——ThinCoder VS Code 的严格方法论工作流：design-before-code、
-> METHODOLOGY 驱动、双门禁（设计评审 + 代码评审）。
+> 纪律层槽位提示词驱动、双门禁（设计评审 + 代码评审）。
 > 提示词载体注（2026-09-10——PROMPT-SYSTEM 施工①③）：旧 engineering.md/engineering-sub.md 已退役——
 > 工程纪律现驻 `src/prompts/discipline-engineering.md` + `persona-engineering.md`（装配链 = assemblePrompt
 > 四槽位——蓝图 §3.2）；机制语义权威 = CLI 仓 `thincoder/docs/design/ENGINEERING-MODE.md`（§2.9 锚清单）。
@@ -24,7 +24,7 @@
 
 工程模式把"设计先行、评审把关、验证收尾"提升为半机械流程：可硬拦的环节一律硬拦
 （写文件门禁、token 校验、guard 推回、角色互斥），无法硬拦的靠
-`discipline-engineering.md` / `persona-engineering.md` / `persona-eng-coder.md` 纪律层与人格层槽位提示词约束（旧 `engineering.md` / `engineering-sub.md` 已随 PROMPT-SYSTEM 施工①退役）。核心承诺：**代码必须先有被评审过
+`discipline-engineering.md` / `persona-engineering.md` / `persona-eng-coder.md` / `persona-eng-designer.md` 纪律层与人格层槽位提示词约束（旧 `engineering.md` / `engineering-sub.md` 已随 PROMPT-SYSTEM 施工①退役）。核心承诺：**代码必须先有被评审过
 的设计；评审对象由任务定义而非遍历猜测；评审循环在 eng-coder 内部闭环。**
 
 本端实现面与 CLI 的差异只在于**平台接线**（webview 面板/会话槽位文件/extension 层）；
@@ -130,9 +130,10 @@
   onPermissionRequest 阶段）。**错误信息即发现途径**——持久化恢复后父代理无 digest 可
   查 designId。
 - **角色互斥**：非工程 enum `["explore","plan","coder"]`、工程 enum
-  `["explore","plan","eng-coder"]`（`modeRoleField`——schema 首道防线 + execute 运行
-  期硬门禁双保险）。运行期文案逐字：
-  `Engineering mode: use role='eng-coder' for implementation tasks.`
+  `["explore","plan","eng-coder","eng-designer"]`（`modeRoleField`——schema 首道防线 + execute 运行
+  期硬门禁双保险；非工程模式禁 `eng-coder` 与 `eng-designer`）。运行期文案逐字：
+  `Engineering mode: use role='eng-coder' for implementation tasks.` ·
+  `Engineering mode is not active — role='eng-designer' is engineering-mode only (it writes the requirements/design documents inside the engineering workflow); use role='explore' or role='plan' for read-only work.`
 - **链终消费（2026-09-07）**：`subagent action:'consume-design'`（`executeConsumeDesign
   Action`，`subagent-spawn-gate.mjs`）——父侧验收核销时显式调用，消费该 designId 槽 +
   镜像同步（mirror ∈ live slots 不变量已随 D5 退役——单值镜像删除，槽为唯一权威）；消费后再 spawn 同 designId = 机械拒；幂等
@@ -152,11 +153,16 @@
   `Error: engineering design gate — write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.`
 - **豁免边界**：`docs/**` 与根级文档（写文档即设计步骤）放行；`src/` 下一切（含
   `src/prompts/*.md`）为产品代码，需 token。判定 `isDocFile` 在 `advisor/repos.mjs`。
+- **D5 冻结窗口预闸（第 15 批 §14.4——本端）**：设计评审在途期间，父侧对被审文件集（含批次档）的写入被拒
+  （`preGateBlocked` × `inflightDesignReviewConflict`——拒绝串见 `ADVISOR-CONVERGENCE.md` §14.4（c））。
+  **在途下界 = 报告送达（digest 注入 / 回合尾 collect）或取消·中止**——「子进程退出」不是窗口边界
+  （窗口 = 点火 → 结算）；逃生门 = 先 cancel → 改动 → 重发。（群 A 批§16.2——下界定义句同步。）
 
 ## 7. engineering 会话行为与 UI
 
-- **system prompt**：工程模式（`engineering && (depth === 0 || role === "eng-coder")`）
+- **system prompt**：工程模式（`engineering && (depth === 0 || role === "eng-coder" || role === "eng-designer")`）
   经 `assemblePrompt` 四槽位装配：eng-coder → `persona-eng-coder.md`+common+`discipline-engineering.md`、
+  eng-designer → `persona-eng-designer.md`+common+`discipline-engineering.md`、
   engineering 主会话 → `persona-engineering.md`+common+`discipline-engineering.md`（PROMPT-SYSTEM 施工②
   ——旧 `loadEngineeringPrompt` + METHODOLOGY 降级警告已退役；蓝图 §3.4 降级链 = 槽缺失跳过+警告）。
 - **模式 UI**：ENG 按钮/设置面板 toggle（消息 `setEngineeringEnabled`）；非工程模式
@@ -177,7 +183,7 @@
 | 工具 | `src/agent-tools/eng.mjs`（enter/exit + sweep + 双写）、`advisor.mjs`（签发/校验/Approved）、`subagent.mjs`（role 门/互斥）、`subagent-spawn-gate.mjs`（resolveDesignSlot/authorize/consume） |
 | agent 装配 | `src/agent/setup.mjs`（engState 读/restore filter/modeRoleField）、`run-helpers.mjs`（agentState/hasCodeMutations/上限）、`execute-tools.mjs`（dispatch 门禁）、`run-stages.mjs`（guard 推回） |
 | 会话/面板 | `src/extension/session-slot-write.mjs`（setSlot*）、`session-io.mjs`、`panel-chat.mjs`（engState 读）、`panel-messages.mjs`（ENG/GUARD 消息） |
-| 提示词 | `src/prompts/persona-engineering.md`、`persona-eng-coder.md`、`discipline-engineering.md`、`common.md`（工程锚落点——旧 engineering.md/engineering-sub.md 已退役——PROMPT-SYSTEM 施工①③） |
+| 提示词 | `src/prompts/persona-engineering.md`、`persona-eng-coder.md`、`persona-eng-designer.md`、`discipline-engineering.md`、`common.md`（工程锚落点——旧 engineering.md/engineering-sub.md 已退役——PROMPT-SYSTEM 施工①③） |
 | 评审 | `src/advisor/*.mjs` + `src/prompts/advisor-*.md`（见 ADVISOR-CONVERGENCE.md） |
 
 ## 9. 测试与验证
@@ -198,8 +204,13 @@
 
 ## 变更记录（历史折叠——详见 git log）
 
+- 2026-09-11：群 A 批（VSC-MIRROR-SWEEP）——§6 补「D5 冻结窗口预闸」bullet（下界定义句入行——同步面 3/3；见 `ADVISOR-CONVERGENCE.md` §16.2）。
+
 - 2026-08-24 ~ 09-07：机制逐批演进（发起权归用户 → 会话级 slot 开关 → designId 多槽
   → eng-coder 内部协议/default async → 无签名 token → 链终消费 → R16 清理三时机）——
   活机制已入正文各节；逐批需求/评审/实现流水账以 git 历史与 docs/TODO.md 为准。
 - 2026-09-08：DOC-REORG-VSC 第 4 批建档——从 ARCHITECTURE §9 工程模式部分迁出正文，
   写全本端独立实现（§9 留 ARCHITECTURE 待后续批瘦身）。
+- 2026-09-11：角色重定义批 RF-5c——跨仓登记面同步（零实现改动）：头注改「纪律层槽位提示词驱动」
+  （与 CLI 端同口径）；§1 槽位清单 + §8 受影响文件表补 `persona-eng-designer.md`；
+  §5 工程 enum 补 `eng-designer`（含第三门运行期文案）；§7 装配句补 eng-designer 分支。

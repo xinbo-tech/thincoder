@@ -12,6 +12,10 @@
 
 import { specForModel } from "../../specs.mjs"
 
+/** 读侧 idle 看门狗（群 A 批——绝对墙钟废除后的 body 停摆守卫）：连续 READ_IDLE_MS
+ *  无 chunk → TimeoutError 判死；测试缝 = parseStream 的 idleMs 参数（生产缺省）。 */
+const READ_IDLE_MS = 120_000
+
 /** 白名单：已实证 previous_response_id 的官方端（2026-08-31 真机验证：
  *  百炼 store:true 全链路 ✅；GLM（open.bigmodel.cn/api/v1）store:true 全链路 ✅）。 */
 function isStatefulHost(baseURL) {
@@ -232,7 +236,7 @@ function normalizeUsage(usage) {
  * parseStream（TRANSPORTS 约定：{ content, reasoning, toolCalls, usage, finishReason }）。
  * 额外返回 responseId（completed 事件）——chat() 据此推进链。
  */
-export async function parseStream(response, { onToken, onReasoning, signal } = {}) {
+export async function parseStream(response, { onToken, onReasoning, signal, idleMs: idleOpt } = {}) {
   const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   result.builtinToolResults = [] // 内置工具（web_search_call）结果 —— agent 层本地化为 tool 消息
   const slots = new Map() // call_id → { id, name, arguments }
@@ -250,10 +254,34 @@ export async function parseStream(response, { onToken, onReasoning, signal } = {
   let buffer = ""
   let sealed = false
   const reader = response.body.getReader()
+
+  // 读侧 idle 看门狗（群 A 批）：每读重置；连续 idleMs 无数据 → TimeoutError（与四 transport
+  // 同源消息）。releaseBody 兼容两种 body：Node 流（代理路径 PassThrough——destroy）与
+  // Web 流（直连 undici ReadableStream——无 destroy，退 cancel）；race 保证两种形态都以
+  // TimeoutError 终止读循环。idleMs ≤ 0 = 关闭（测试缝）。
+  const idleMs = idleOpt ?? READ_IDLE_MS
+  const idleError = () => new DOMException(`SSE idle timeout: no data for ${idleMs / 1000}s`, "TimeoutError")
+  let idleTimer = null
+  let rejectIdle = null
+  const idlePromise = new Promise((_, reject) => { rejectIdle = reject })
+  const releaseBody = (err) => {
+    try {
+      if (typeof response.body?.destroy === "function") response.body.destroy(err)
+      else reader.cancel(err).catch(() => {}) // 本 transport 持显式 reader——locked Web 流释放可达（reader.cancel）
+    } catch { /* already gone */ }
+  }
+  const armIdle = () => {
+    if (!(idleMs > 0)) return
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => { const err = idleError(); releaseBody(err); rejectIdle(err) }, idleMs)
+    idleTimer.unref?.()
+  }
+  armIdle()
   try {
     while (true) {
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
-      const { done, value } = await reader.read()
+      armIdle()
+      const { done, value } = await Promise.race([reader.read(), idlePromise])
       if (done) break
     buffer += decoder.decode(value, { stream: true })
     let idx
@@ -351,6 +379,8 @@ export async function parseStream(response, { onToken, onReasoning, signal } = {
       return { ...result, interrupted: true, interruptMessage: signal.reason.message }
     }
     throw e
+  } finally {
+    if (idleTimer) clearTimeout(idleTimer)
   }
   // 尾部分帧（无 \n\n 定界）：与 CLI 同义——error/failed 帧的错误必须传播，静默吞 = 空内容当回复（评审 #6）
   buffer += decoder.decode()

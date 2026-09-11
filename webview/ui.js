@@ -455,8 +455,16 @@ export function maybeScrollDown(ctx) {
   if (ctx._pinBottom !== false) ctx.messagesEl.scrollTop = Number.MAX_SAFE_INTEGER
 }
 
+/** 活动区 pin（§12.3 第 7 条——同 `#messages` 口径）：默认钉底；buildBlock 与流式帧
+ *  （streaming.js rAF 尾）驱动——上滚解 pin、回底重 pin（initScrollFollow 区监听）。 */
+export function maybeScrollActivity(ctx) {
+  if (ctx._pinActivity === false || !ctx.activityEl) return
+  ctx.activityEl.scrollTop = Number.MAX_SAFE_INTEGER
+}
+
 /** 窗口化裁剪：顶层内容块超过上限时删最旧的，防 DOM 无界增长（webview 输入卡顿治本）。
- *  被裁掉的块带 data-idx（history 来自宿主、live 由本地 _nextIdx 续接），向上滚动时 loadOlder 拉回。 */
+ *  被裁掉的块带 data-idx（history 来自宿主、live 由本地 _nextIdx 续接），向上滚动时 loadOlder 拉回。
+ *  子代理活动块居住活动区（D-A7）——不在本容器——本函数零改。 */
 const MAX_MESSAGE_BLOCKS = 150
 export function trimOldMessages(ctx) {
   const blocks = [...ctx.messagesEl.children].filter((el) =>
@@ -467,16 +475,17 @@ export function trimOldMessages(ctx) {
   ctx._hasOlder = true
 }
 
-/** Wire the pin/unpin listeners once. Threshold ~24px counts "near the bottom" as bottom. */
+/** Wire the pin/unpin listeners once. Threshold ~24px counts "near the bottom" as bottom.
+ *  活动区（§12.3 第 7 条）同口径独立 pin——同一 watch 闭包双目标；`?.` 空安全：
+ *  夹具缺区 id 零抛错。 */
 export function initScrollFollow(ctx) {
   ctx._pinBottom = true
-  ctx.messagesEl.addEventListener("wheel", () => {
-    const el = ctx.messagesEl
-    ctx._pinBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24
-  }, { passive: true })
-  // touch drag on mobile/webview
-  ctx.messagesEl.addEventListener("touchmove", () => {
-    const el = ctx.messagesEl
-    ctx._pinBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24
-  }, { passive: true })
+  ctx._pinActivity = true
+  const watch = (el, key) => {
+    const onScroll = () => { ctx[key] = el.scrollHeight - el.scrollTop - el.clientHeight < 24 }
+    el?.addEventListener("wheel", onScroll, { passive: true })
+    el?.addEventListener("touchmove", onScroll, { passive: true })
+  }
+  watch(ctx.messagesEl, "_pinBottom")
+  watch(ctx.activityEl, "_pinActivity")
 }

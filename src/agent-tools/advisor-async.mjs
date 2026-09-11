@@ -27,15 +27,16 @@
  */
 import { randomUUID } from "node:crypto"
 import { resolve } from "node:path"
-import { runAdvisorReview, resolveAdvisorProvider } from "../advisor/run.mjs"
+import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { advisorIncompleteMarker, incompleteNotice } from "../advisor/compaction.mjs"
-import { isCodePath } from "../advisor/repos.mjs"
+import { isCodePath, loadConventions } from "../conventions.mjs"
 import { generateDesignToken, makeDesignTokenRegex, buildApprovedSuffix, stripApprovedSuffix } from "./advisor.mjs"
 import { escapeXml, offloadToolResult, pushReal } from "../agent/run-helpers.mjs"
 import { logEvent } from "../log.mjs"
 import { nextSubagentId, getAsyncPool } from "./subagent-scheduler.mjs"
 import { settleAsyncEntry, buildChildSignal } from "./async-settle.mjs"
 import { setSlotEngDesignTokens } from "../extension/session-slot-write.mjs"
+import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §16 D-DG2）：digest 注入预算单源
 
 /** §11.2（②-6a）：并行评审上限默认 4（2 → 4——POOL-CONFIG-UNIFIED F-1——三池统一
  *  默认——运行时回退权威——config-io AGENT_DEFAULTS.poolLimits.advisor 为 config 层
@@ -120,8 +121,10 @@ export function advisorStale(parent, entry) {
   if (after.length === 0) return false
   if (entry.reviewType !== "design") {
     // code 面：仅 code-path 变更判陈旧（doc/temp 编辑不触发）。events 为绝对路径——
-    // isCodePath 直接适用（src/ 组件 + temp/doc 文件形态双判定）。
-    return after.some((p) => isCodePath(p))
+    // isCodePath（src/conventions.mjs 单一权威）按实例 cwd 取声明（与设计门禁同源判据——
+    // 声明 codePaths 后 lib/*.md 的变更同样入陈旧判定）。
+    const conv = loadConventions(entry.cwd ?? process.cwd())
+    return after.some((p) => isCodePath(p, conv))
   }
   // design 面：变更命中评审文档（相对 cwd 或绝对形态——win32 分隔符归一）→ 陈旧
   const docs = Array.isArray(entry.documents) ? entry.documents.filter(Boolean) : []
@@ -140,6 +143,33 @@ export function advisorStale(parent, entry) {
     return false
   }
   return after.some(hitDoc)
+}
+
+/**
+ * E 族（F25/§14.4(c)）——D5 冻结窗口写前拦截的冲突检测：设计评审在途（点火 → 结算）期间
+ * 父侧对**被审文件集**的写入会被预闸拒绝（在途写使本轮结算 stale——pass 轮 token 白丢）；
+ * 判据与 `advisorStale` 设计面**同源**（含 legacy 面）；仅扫 design × running × 未取消 ×
+ * 未结算（结算后写不再致 stale）→ {id, path} | null（命中评审 id + 冲突路径 ABS）。
+ */
+export function inflightDesignReviewConflict(parent, absPaths) {
+  const pool = advisorPoolMap(parent) // D1 accessor——history 载体优先双查询吸收
+  const wanted = (absPaths ?? []).filter((p) => typeof p === "string" && p.length > 0)
+  if (!(pool instanceof Map) || pool.size === 0 || wanted.length === 0) return null
+  const norm = (p) => String(p).replace(/\\/g, "/")
+  for (const entry of pool.values()) {
+    if (!entry || entry.reviewType !== "design" || entry.status !== "running" || entry.cancelled || entry.done) continue
+    const docs = Array.isArray(entry.documents) ? entry.documents.filter(Boolean) : []
+    const cwd = norm(entry.cwd ?? process.cwd())
+    for (const p of wanted) {
+      const e = norm(p)
+      const rel = e.startsWith(cwd) ? e.slice(cwd.length).replace(/^\//, "") : e
+      const hit = docs.length > 0
+        ? docs.some((d) => e === norm(d) || rel === norm(d))
+        : (/\.mdx?$|\.markdown$/i.test(e) || /(^|\/)docs(\/|$)/i.test(e))
+      if (hit) return { id: String(entry.id), path: p }
+    }
+  }
+  return null
 }
 
 /**
@@ -325,6 +355,8 @@ function advisorSettleAccounting(parent, entry, record) {
     // F18/F23（第 12 批 §13.4 契约四——消费点 2/3 同谓词）：宿主截断尾判定——块首行扫描
     // 单谓词（六 kind）；error settle（result=null）→ null（无文本可判）。
     const incomplete = advisorIncompleteMarker(result)
+    // B2 契约 1／2（§17.1——F30）：launchRefused 判定上移 `if (!stale)` 块外（无条件求值——语义零变）——记录段守卫与 failureVerdict 共用同一判定。
+    const launchRefused = result != null && String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
     if (!stale) {
       passed = entry.reviewType === "design" && !incomplete && designReviewPassed(entry, result)
       if (passed) {
@@ -364,10 +396,12 @@ function advisorSettleAccounting(parent, entry, record) {
       // F23（第 12 批）：失败判定改用**同一谓词**——旧 `^` 锚正则退役（定义与消费零残留）；
       // 六 kind 全覆盖 ⊇ 旧六形态（含 review_failed 字符串 resolve；`empty` 本端括号字面
       // 旧正则本就不命中——改进非丢失）；error settle（result=null + error）判定保留。
-      const failureVerdict = entry.reviewType !== "design" && (
+      // A（F24/§14.3——异步结算消费面）：启动拒绝报告 = 未发起请求（无评审产出）——不得
+      // 计为评审覆盖（与同步工具面同源前缀；正常链不可达＝防御纵深）。
+      const failureVerdict = (entry.reviewType !== "design" && (
         incomplete !== null ||
         (result == null && entry.error != null)
-      )
+      )) || launchRefused
       if (!failureVerdict) parent._calledAdvisorThisRun = true
       if (record) record.stale = false
     } else if (record) {
@@ -393,7 +427,7 @@ function advisorSettleAccounting(parent, entry, record) {
         entry.report = strip(result) || "Advisor: design review did not pass."
       }
     }
-    if (record) {
+    if (record && !launchRefused) {
       record.round = Math.max(record.round ?? 0, entry.round ?? 1)
       // prior = 清洗后报告（§29 fix B——prior 永不带可回显的方括号 token）；F2e（§29.1）：
       // 再剥引擎 Approved 后缀（精确截断——prior 不带原生 token/designId）。
@@ -402,8 +436,9 @@ function advisorSettleAccounting(parent, entry, record) {
       if (looksLikeReview && entry.report != null) {
         record.priorOutput = stripApprovedSuffix(entry.report, entry.approvedSuffix ?? null)
       }
-      record.state = "settled"
     }
+    // B2 契约 2（§17.1——F30）：拒绝结算 = 未发起 = 无 attempt——round/prior 整段跳过；state 照归 settled（同 scope 续跑通道保住）。
+    if (record) record.state = "settled"
     // 挂起分流/pending 移交/出池/_onTerminal/_resolve/notifySettle——helper 公共段
     // （pending 单容器 history._pendingAsyncResults +role——D2；正常回合留池 done:true——
     // done-in-pool 统一表示——回合尾 collectSettledAdvisors / 挂起会话 sweep）
@@ -436,12 +471,11 @@ export function cancelAdvisorReview(parent, id) {
 /** §11.2 digest 注入（同 injectAsyncResult 形态——报告 XML 转义 + >64K offload）。
  *  注入即消费（调用方从容器移除）。§29 fix B：报告本体由 settle 按分支清洗（通过 =
  *  Approved/designId 后缀——sync 参照形态同构；stale = 剥回显 + 未签发提示）——此处
- *  原样注入、不再附 designId 注记（未通过/未签发的 digest 附 spawn 指引会误导模型——
- *  指引已由通过分支的 Approved 后缀自含）。 */
+ *  原样注入、不再附 designId 注记（未通过/未签发的 digest 附 spawn 指引会误导模型——指引已由通过分支的 Approved 后缀自含）；§16 D-DG2（群 B 批 B5）：raw 计入轮预算（四族共享单源）——超限改清单行（全文落盘）+ 首条豁免。 */
 export async function injectAdvisorResult(entry, { history, fullHistory, cwd }) {
-  const body = entry.error != null
-    ? `error: ${escapeXml(entry.error)}`
-    : escapeXml(offloadToolResult(cwd, entry.report ?? ""))
+  const raw = String(entry.error ?? entry.report ?? "")
+  const saved = digestBudgetOver(history, raw.length) ? persistOverflowReport(raw, { cwd: cwd ?? process.cwd(), tag: `advisor#${entry.id}` }) : null
+  const body = saved != null ? escapeXml(saved) : (entry.error != null ? `error: ${escapeXml(entry.error)}` : escapeXml(offloadToolResult(cwd, entry.report ?? "")))
   const kind = entry.reviewType === "design" ? "design" : "code"
   pushReal(history, fullHistory, {
     role: "user",

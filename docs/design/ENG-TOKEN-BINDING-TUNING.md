@@ -77,7 +77,7 @@
 | 模块 | 内容 |
 |---|---|
 | `src/agent-tools/advisor.mjs` | TTL 常量 + `effectiveTokenTtlMs`（可配校验）/ `generateDesignToken` / `tokenExpiry` / `isExpiredDesignToken` / `validateDesignToken` / `makeDesignTokenRegex` / `buildApprovedSuffix`+`stripApprovedSuffix` / sync 签发判定（echo 匹配 → 入槽 + 后缀） |
-| `src/agent-tools/advisor-async.mjs` | async 评审（§24 D-24b）settle 面——launch 时登记 scope→designId、续跑现铸同 id token；通过判定 echo 匹配 → 入槽 + `buildApprovedSuffix`；非 echo 剥离返回；错误回包/取消不清槽 |
+| `src/agent-tools/advisor-async.mjs` | async 评审（§9 D-24b）settle 面——launch 时登记 scope→designId、续跑现铸同 id token；通过判定 echo 匹配 → 入槽 + `buildApprovedSuffix`；非 echo 剥离返回；错误回包/取消不清槽 |
 | `src/agent-tools/eng.mjs` | enter 幂等（already-on 纯 no-op，不清 token）；真 off→on 转换路径 `sweepExpiredDesignTokens`（仅删过期，文案含清理个数）；exit 不清 token；slot + config.json 双持久化（config 为 mirror） |
 | `src/agent-tools/subagent-spawn-gate.mjs` | 门禁族：`resolveDesignSlot`（designId 精确槽 / 单槽 / 多槽拒 / torn-state 拒）/ `dropExpiredTokenSlot`（仅过期拒删）/ `authorizeEngCoderDesignToken` / `executeConsumeDesignAction`（chain 终消费） |
 | `src/agent/setup.mjs` | 恢复过滤（`isExpiredDesignToken` 逐槽校验，过期丢弃）+ 镜像同步不变量（过期镜像不落 null 而重指存活槽——防 torn-state） |

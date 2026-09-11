@@ -45,13 +45,17 @@ export function scanDomain(root) {
   return files;
 }
 
-/** ① 宽度检查：返回 [{file, line, len}]（file 为绝对路径）。 */
+/** 表格行谓词（**单源**——宽度豁免与 V2 枚举同款；表格行结构性不可折行：超宽不判违规）。 */
+const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(l);
+
+/** ① 宽度检查：返回 [{file, line, len}]（file 为绝对路径）。
+ *  表格行豁免（群 A 批 A8）：>max 的表格行不报、正文非表格行超宽照报；谓词与 V2 同源。 */
 export function checkDocWidths(root, { max = 300, dir = null } = {}) {
   const files = dir ? collectMarkdown(resolve(root, dir)) : scanDomain(root);
   const hits = [];
   for (const f of files) {
     readFileSync(f, "utf8").split("\n").forEach((l, i) => {
-      if (l.length > max) hits.push({ file: f, line: i + 1, len: l.length });
+      if (l.length > max && !isTableRow(l)) hits.push({ file: f, line: i + 1, len: l.length });
     });
   }
   return hits;
@@ -129,7 +133,7 @@ const toNum = (s) => (/^\d+$/.test(s) ? Number(s) : [...s].reduce((a, c) => a + 
 const DECL_RE = /(?<![\dA-Za-z])(\d+|[一二三四五六七八九十两])\s*(项|处|条)(?!目)/g;
 /** 枚举形态：md 列表行 / 表格行（表头 + 分隔行） */
 const LIST_ITEM_RE = /^\s*(?:[-*+]|\d+[.)])\s+/;
-const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(l);
+// isTableRow — 单源在文件头（宽度豁免与 V2 枚举同款谓词）
 const isTableSep = (l) => /^\s*\|[\s:|-]+\|\s*$/.test(l);
 const isBlank = (l) => /^\s*$/.test(l);
 /** 声明前后可忽略的标点/强调符 */
@@ -258,11 +262,9 @@ if (isMain) {
   const dirArg = argOf("--dir");
 
   // ① 宽度——扫描域 = docs/design + docs/requirements + docs/batches（缺失即跳过）
+  // 单源扫描（README 规则 6 附则——群 A 批 A8）：主流程零内联 width 扫描（widthFiles 仅供计数展示）。
   const widthFiles = dirArg ? collectMarkdown(resolve(root, dirArg)) : scanDomain(root);
-  const widthHits = [];
-  for (const f of widthFiles) {
-    readFileSync(f, "utf8").split("\n").forEach((l, i) => { if (l.length > maxW) widthHits.push({ file: f, line: i + 1, len: l.length }); });
-  }
+  const widthHits = checkDocWidths(root, { max: maxW, dir: dirArg });
   const byFile = new Map();
   for (const h of widthHits) byFile.set(h.file, [...(byFile.get(h.file) ?? []), h]);
   for (const [f, hs] of byFile) {

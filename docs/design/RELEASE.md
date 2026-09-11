@@ -66,7 +66,7 @@ npx @vscode/vsce login xinbo-tech
 - [ ] 扩展改动已实际跑过（项目纪律：没有「写了没跑」的代码）
 - [ ] **双源发布已计划**（2026-08-29 漏发事故）：`vsce publish` 只进微软 Marketplace，**Cursor/VSCodium/Windsurf 用户连的是 Open VSX**——每次发版必须两个 registry 都发（见 §3 与 §5b），缺一即未完成
 
-> **测试门禁（2026-09-06 R7 单轮制——发布 = 唯一门禁；勘误落档见 §3）**：无独立预跑步——`vscode:prepublish` = `npm run lint && npm run test:full` 全量（~72s），在 `vsce package` / 无参 `vsce publish` 时自动执行，失败详情直通终端。失败 → 修复 → **局部重跑**确认 → 终跑发布一次收口；双源发同一 .vsix → 全量只测一次。
+> **测试门禁（2026-09-11 三环——发布 = 唯一门禁；勘误落档见 §3）**：无独立预跑步——`vscode:prepublish` = `npm run lint && npm run test:full && npm run test:integration`（全量 ~72s + 集成集 ~2s），在 `vsce package` / 无参 `vsce publish` 时自动执行，失败详情直通终端。失败 → 修复 → **局部重跑**确认 → 终跑发布一次收口；双源发同一 .vsix → 全量只测一次。
 
 ## 3. 发布
 
@@ -80,7 +80,7 @@ npm run publish
 npx @vscode/vsce publish --pat <你的PAT>
 ```
 
-`vsce publish`（无参）自动执行：`vscode:prepublish` = **lint + test:full 全量（~72s——2026-09-06 R7 起；此前 lint + npm test）** → 打包 → 上传；`vsce publish -i <vsix>` 发已打包文件，**不再触发测试**。
+`vsce publish`（无参）自动执行：`vscode:prepublish` = **lint + test:full 全量 + test:integration 集成集（~72s + ~2s——2026-09-06 R7 单轮制；2026-09-11 TEST-LIFECYCLE 批加第三环；此前 lint + npm test）** → 打包 → 上传；`vsce publish -i <vsix>` 发已打包文件，**不再触发测试**。
 
 首次发布会经过市场验证扫描（通常几分钟），通过后即可搜索 "ThinCoder"，安装 ID 为 `xinbo-tech.thincoder-vscode`。
 
@@ -96,13 +96,13 @@ npx @vscode/vsce publish --pat <你的PAT>
 >
 > - **F-R7e 裁定句（2026-08-31 裁定 + 2026-09-06 重申"只要发布没报错就行了"——勿再问）**：发布完成判定 = **publish 命令 exit 0 即可——不轮询、不检查上线版本**——双市场审核/病毒扫描队列上线滞后是市场的业务。
 > - **边界句（勿把 "exit 0 = 完成" 误推广到发布前校验）**："零检查"只针对市场审核/病毒扫描的**激活滞后**——发布前的**调用级前置仍有效**：显式 `--pat` / 设 `VSCE_PAT`+`OVSX_PAT`（§1.2b verify-pat）、ovsx 无 TTY 静默 exit 0 陷阱（§5.1——其失败模式 = exit 0 但什么都没发）——发布前 PAT 校验照做，拿不准就显式传。
-> - **门禁单轮**：`vscode:prepublish` = lint + test:full 全量（~72s，失败详情直通终端）——`vsce package` / 无参 `vsce publish` 时跑；双源发同一 .vsix → 全量只测一次。发布 = 唯一门禁——无独立预跑步、无二次测试。
+> - **门禁单轮（三环）**：`vscode:prepublish` = lint + test:full 全量 + test:integration 集成集（~72s + ~2s，失败详情直通终端）——`vsce package` / 无参 `vsce publish` 时跑；双源发同一 .vsix → 全量只测一次。发布 = 唯一门禁——无独立预跑步、无二次测试。
 
 ## 4. 本地验证（不发布）
 
 ```bash
 npm run package
-# 产物 thincoder-vscode-<version>.vsix（2026-09-06 R7 起 = 全量门禁跑——vscode:prepublish lint + test:full ~72s——本地打包即门禁）
+# 产物 thincoder-vscode-<version>.vsix（2026-09-06 R7 起 = 全量门禁跑——vscode:prepublish lint + test:full ~72s + test:integration ~2s（2026-09-11 三环）——本地打包即门禁）
 code --install-extension thincoder-vscode-0.1.0.vsix
 # 本地安装验证
 ```
@@ -119,7 +119,7 @@ code --install-extension thincoder-vscode-0.1.0.vsix
 - **Marketplace 延迟（已知，每次发布都会遇到）**：`vsce publish` 报 `already exists` 但 `vsce show` 仍显示旧版本 —— **通常是发布其实已成功、市场查询索引有缓存延迟**，不是失败。先 `vsce show xinbo-tech.thincoder-vscode --json` 确认新版本是否在 `versions` 列表里（往往过几分钟就刷出）；真失败会报 `Invalid access token` 或明确错误，而不是 `already exists`。
 - **PAT 在环境变量里（会忘）**：发布用的 PAT 常存于环境变量（`VSCE_PAT` / `OVSX_PAT`），但无 TTY 环境（如 agent 子进程）下环境变量可能没继承或 CLI 静默 exit 0 假装成功。**发布前先验证**：`npx @vscode/vsce ls-publishers`（marketplace）、`npx ovsx verify-pat xinbo-tech --pat $env:OVSX_PAT`（open-vsx）；拿不准就显式 `--pat` 传。
 - **版本 bump 别用 PowerShell `Set-Content -Encoding UTF8`**：Windows PowerShell 5.1 的 `-Encoding UTF8` 会给文件写入 BOM（`EF BB BF`），导致 JSON 解析失败、`prepublish` 测试崩。改 `package.json` 用 JSON.parse → 改字段 → JSON.stringify（无 BOM），或用 `-Encoding utf8NoBOM`。
-- **两端门禁要对称**：`vscode:prepublish` 是最后一道门，必须同时跑 `lint && test`（历史上一端只 lint、一端只 test，导致对方缺的那道门漏拦）。已统一为 `npm run lint && npm run test:full`（2026-09-06 R7 起——全量门禁）。
+- **两端门禁要对称**：`vscode:prepublish` 是最后一道门，必须同时跑 `lint && test`（历史上一端只 lint、一端只 test，导致对方缺的那道门漏拦）。已统一为 `npm run lint && npm run test:full && npm run test:integration`（2026-09-11 三环——全量门禁 + 集成集）。
 
 ### 5.2 版本号规范（CalVer，2026-08-27 用户拍板）
 
@@ -198,3 +198,4 @@ git -c http.proxy=http://10.2.2.112:3128 push github v0.8.6
 - 2026-09-05：版本号连续性规则（号在发布时定 / 月切换硬规则 / 缺口越月号不补）。
 - 2026-09-06：R7 发布单轮制——`vscode:prepublish` = lint + test:full 全量（~72s）；发布 = 唯一门禁；F-R7e 裁定固化。
 - 2026-09-08：随 VSC 文档批 V1b 重写为当前态——整文件单行 demux 为多行 markdown，历史批流水折叠为变更记录。
+- 2026-09-11：TEST-LIFECYCLE 批——发布门加第三环 `test:integration`（`vscode:prepublish` = lint → test:full → test:integration；集成集 = ②③ 验收面，见 `TESTING.md`）。

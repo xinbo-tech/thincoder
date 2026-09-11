@@ -21,13 +21,22 @@ import { subagentTool, modeRoleField } from "../src/agent-tools/subagent.mjs"
 import { gateEngCoderSpawn } from "../src/agent-tools/subagent-async.mjs"
 import { setupAgentRun } from "../src/agent/setup.mjs"
 import { SCENARIO_SLOT_FILES, assemblePrompt, CONSULT_BASE, DISCIPLINE_ENGINEERING } from "../src/prompt-overlays.mjs"
+import { setupWebview, installChatFixture } from "./helpers/webview-env.mjs"
 
 const REPO = resolve(fileURLToPath(import.meta.url), "..", "..")
 const read = (rel) => readFileSync(join(REPO, rel), "utf8")
 
 let cwd
-beforeEach(() => { cwd = mkdtempSync(join(tmpdir(), "eng-designer-")); stop.length = 0 })
-afterEach(() => { rmSync(cwd, { recursive: true, force: true }) })
+let wv
+beforeEach(() => {
+  cwd = mkdtempSync(join(tmpdir(), "eng-designer-")); stop.length = 0
+  wv = setupWebview()
+  installChatFixture()
+})
+afterEach(() => {
+  wv?.cleanup?.()
+  rmSync(cwd, { recursive: true, force: true })
+})
 
 const stop = []
 const provider = { name: "probe", model: "gpt-4o", apiKey: "k" }
@@ -159,11 +168,21 @@ test("T57c 错误：designer 内 spawn eng-coder/plan 拒（受限变体只暴�
   assert.equal(gateEngCoderSpawn(parent, 0, "plan", false), null, "非子代理上下文不加限制（主 agent 面零变更）")
 })
 
-// ── T58 webview 四处枚举 ───────────────────────────────────────────────────
-test("T58 边界：webview 四处枚举/regex 含 eng-designer（按形态断言，非裸子串）", () => {
-  assert.match(read("webview/activity-view.js"), /FAMILY_ROLES = \[[^\]]*"eng-designer"/, "FAMILY_ROLES 枚举含 eng-designer")
-  assert.match(read("webview/activity.js"), /\/\^sub:\([^)]*eng-designer[^)]*\)#/, "频道 regex 含 eng-designer")
-  assert.match(read("webview/settings-agent.js"), /\[[^\]]*"eng-designer"[^\]]*\]\.map\(\(role\)/, "settings-agent 角色枚举含 eng-designer")
-  assert.match(read("webview/settings-agent.js"), /for \(const role of \[[^\]]*"eng-designer"[^\]]*\]\)/, "settings-agent 第二处角色枚举含 eng-designer")
-  assert.match(read("webview/settings-models.js"), /for \(const id of \[[^\]]*"eng-designer"[^\]]*\]\)/, "settings-models 模型 id 枚举含 eng-designer")
+// ── T58 webview 四处枚举（2026-09-11 扫① 改挂行为面）───────────────────────
+// 原 5 条源码 regex 锚删——settings 面改断言渲染产物（角色卡槽位 id，settings-models.mountModelMenus
+// 挂载的同 id 槽位）+ 活动面改断言频道建块（role 入族行为）——契约留在行为面，不锁源码形态。
+test("T58 行为面：eng-designer 在面板/活动面真实可达（角色卡槽位 + 频道建块）", async () => {
+  // ① settings 面：角色卡渲染 eng-designer 子模型槽
+  const { agentCardHtml } = await import("../webview/settings-agent.js")
+  const { SS } = await import("../webview/settings-state.js")
+  SS.agentSettings = {}
+  const html = agentCardHtml()
+  assert.match(html, /id="submodel-slot-eng-designer"/, "角色卡渲染 eng-designer 槽位（UI 面真实可达）")
+  // ② 活动面：eng-designer 频道消息建块（webview 频道 regex 行为）
+  const state = await import("../webview/state.js")
+  const activity = await import("../webview/activity.js")
+  state.ctx.messagesEl.replaceChildren()
+  state.S._subBlocks.clear()
+  activity.applySubagentStatus({ type: "subagent", status: "started", role: "eng-designer", id: 5, pool: true, model: "m" })
+  assert.ok(state.S._subBlocks.get("sub:eng-designer#5"), "eng-designer 频道建块（role 入族——频道 regex 行为）")
 })

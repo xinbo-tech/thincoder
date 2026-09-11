@@ -15,6 +15,23 @@ export const workspace = {
     stat: async () => ({ type: 1 }),
   },
   onDidChangeWorkspaceFolders: () => ({ dispose: () => {} }),
+  // File-system watcher (config-watch.mjs — B5 batch 21): registrations land in
+  // workspace.fileSystemWatchers; tests drive them with watcher._fire(kind, uri).
+  fileSystemWatchers: [],
+  createFileSystemWatcher: (pattern) => {
+    const w = {
+      pattern,
+      disposed: false,
+      _listeners: { change: [], create: [], delete: [] },
+      onDidChange: (fn) => { w._listeners.change.push(fn); return { dispose: () => {} } },
+      onDidCreate: (fn) => { w._listeners.create.push(fn); return { dispose: () => {} } },
+      onDidDelete: (fn) => { w._listeners.delete.push(fn); return { dispose: () => {} } },
+      _fire: (kind, uri) => { if (w.disposed) return; for (const fn of w._listeners[kind] ?? []) fn(uri) },
+      dispose: () => { w.disposed = true },
+    }
+    workspace.fileSystemWatchers.push(w)
+    return w
+  },
   // Editor-edit dual channel (tools/shared.mjs): tests stub textDocuments and
   // capture applyEdit calls. applyEdit must actually APPLY the recorded edits
   // so the doc's text reflects them (the real host applies them synchronously).
@@ -61,7 +78,7 @@ export const window = {
   showInformationMessage: async () => undefined,
   showWarningMessage: async () => undefined,
   showErrorMessage: async () => undefined,
-  withProgress: async (_opts, task) => task({ report: () => {} }, { isCancellationRequested: false }),
+  withProgress: async (_opts, task) => task({ report: () => {} }, { isCancellationRequested: false, onCancellationRequested: () => ({ dispose: () => {} }) }),
   createOutputChannel: () => ({ appendLine: () => {}, show: () => {}, dispose: () => {} }),
   activeTextEditor: undefined,
   onDidChangeActiveTextEditor: () => ({ dispose: () => {} }),
@@ -104,6 +121,15 @@ export class Uri {
   static parse(s) { const u = new URL(s); return new Uri(u.protocol.slice(0, -1), u.pathname) }
   toString() { return `${this.scheme}://${this.path}` }
   with() { return this }
+}
+
+/** RelativePattern (config-watch.mjs — B5 batch 21): transparent carrier of
+ *  (base, pattern) so tests can assert what a watcher was registered on. */
+export class RelativePattern {
+  constructor(base, pattern) {
+    this.base = base
+    this.pattern = pattern
+  }
 }
 
 export class CancellationTokenSource {

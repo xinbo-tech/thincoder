@@ -325,6 +325,13 @@
   line-height: 1.5;
 }
 
+/* A13（群 A 批）：首块活动说明行（仿 .panel-desc 族——controls.css 现值）；零改既有规则。 */
+.sub-desc {
+  font-size: 10px;
+  opacity: 0.5;
+  padding: 2px 0;
+}
+
 .advisor-think { opacity: 0.55; }
 .advisor-tool-line { color: var(--accent); opacity: 0.8; margin-top: 2px; }
 
@@ -364,8 +371,8 @@
   font-family: var(--mono, monospace);
   white-space: pre-line;
 }
-/* 冻结入流块（#messages 尾）：与运行态同卡面——折叠默认、可展开；头行含
-   done/stopped 时长。 */
+/* 冻结块（活动区——原地折叠，2026-09-11 回归）：与运行态同卡面——折叠默认、
+   可展开；头行含 done/stopped 时长。 */
 .advisor-block.sub-block.sub-frozen { opacity: 1; }
 
 .error-text { flex: 1; }

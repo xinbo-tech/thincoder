@@ -77,10 +77,16 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
   let saved = Array.isArray(images) && images.length > 0
     ? savePastedImages(images, _cwd())
     : undefined
+  // A12（群 A 批）：降级窗（下段 await）的外部取消载体——窗生命周期临时字段
+  // （panel._visionAbort——唯一新字段；零新布尔状态）；finally 幂等清理。
+  let visionAbort = null
   if (saved?.length && modelOverride && panel._turnState !== "susp" && !specForModel(modelOverride).multimodal) {
     panel._publishTurnState?.("running")
+    visionAbort = new AbortController()
+    panel._visionAbort = visionAbort
     let out = null
-    try { out = await (visionReader ?? runVisionReader)({ paths: saved, providerName, cwd: _cwd() }) } catch { out = null }
+    try { out = await (visionReader ?? runVisionReader)({ paths: saved, providerName, cwd: _cwd(), signal: visionAbort.signal }) } catch { out = null }
+    finally { if (panel._visionAbort === visionAbort) panel._visionAbort = null }
     if (out?.ok && typeof out.description === "string" && out.description.trim()) {
       const marker = `[图片 ${saved.join("、")} 描述: ${out.description.trim()}]`
       text = text?.trim() ? `${text}\n\n${marker}` : marker
@@ -88,6 +94,10 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
     }
   }
   panel._chat(text, modelOverride, reasoning, providerName, saved)
+  // C-MA12-4（停止语义 = 启动即中止）：窗内被 Stop → 用户消息照常入 history（at-most-half-
+  // a-turn）但回合建立即 abort——置位序必须在 _chat 调用**之后**（其入口清陈旧闩，置前
+  // 会被清掉）；newTurnController 消费。
+  if (visionAbort?.signal.aborted) panel._abortRequested = true
 }
 
 /**
@@ -216,6 +226,13 @@ export async function handlePanelMessage(panel, msg) {
       // （cancelSubagent 定向 abort——running+pool 块挂停 ⏹——queued/waiting 等待头挂取消 ⏹
       // （F-2——QUEUED-VISIBILITY——2026-09-09——覆盖 F-6 旧“queued/waiting 不挂”定论）。
       if (panel._turnState === "running") {
+        // A12（群 A 批）：降级窗（视觉读图 await 段）优先——窗 controller 活且未 aborted →
+        // 定向 abort + break（交付有效）。否则旧两路皆静默无效：命中上回合僵尸 controller /
+        // 入口清闩丢失。
+        if (panel._visionAbort && !panel._visionAbort.signal.aborted) {
+          panel._visionAbort.abort()
+          break
+        }
         if (!panel._abortController || panel._abortController.signal.aborted) panel._abortRequested = true
         panel._abortController?.abort()
       }
@@ -225,7 +242,7 @@ export async function handlePanelMessage(panel, msg) {
     // 条目级 abort（cancelSubagent——与工具 action:'cancel' 同实现路径——D-M6）。
     // live lines 锚点 = panel._liveLines（runPanelChat 每回合登记——挂起期与
     // susp.lines 同一数组）。未知 id（陈旧按钮/池已清）→ no-op（无虚构状态）。
-    // §24 D-24b（R13）：role="advisor" 伪角色条目在独立评审池（_asyncAdvisors）——
+    // §9 D-24b（R13）：role="advisor" 伪角色条目在独立评审池（_asyncAdvisors）——
     // ⏹ 路由到 cancelAdvisorReview（②-6b——controller abort——取消不入 pending/不签发 token）。
     case "cancelSubagent": {
       const lines = panel._liveLines ?? panel._susp?.lines

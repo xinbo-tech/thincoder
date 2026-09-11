@@ -28,7 +28,7 @@
 import { resolvePath, runInterruptible } from "../tools/shared.mjs"
 import * as vscode from "vscode"
 import { existsSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { isDocPath, loadConventions } from "../conventions.mjs"
 
 /**
  * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
@@ -83,42 +83,18 @@ async function resolveChangedFiles(ctx, testCwd) {
 }
 
 // ─── Doc-only detection (VERIFY-REDESIGN D-V5: 保留 doc-only 快路径) ─────────
-// Mirrors the advisor/verify doc semantics (CLI advisor/repos.mjs): extension /
-// name-based doc match, PLUS a src/ exclusion — src/** (incl. prompts/*.md) is
-// product code, never doc-only, consistent with isProductCode.
+// Classification comes from the single authority (src/conventions.mjs): a doc
+// extension that does NOT live inside a declared code segment (default: `src` —
+// incl. prompts/*.md, at ANY depth). The former local DOC_FILE copy plus the
+// anchored findProjectRoot/isUnderSrc walk are deleted with it (VP-10 — the local
+// copy also missed nested layouts, and a project whose layout differs can now
+// declare its code paths in .thincoder/conventions.json).
 
-const DOC_FILE = /(?:^|[\\/])(?:LICENSE|NOTICE|CHANGELOG|AUTHORS)(?:\.\w+)?$|\.(?:md|markdown|mdx|txt|rst|adoc)$/i
-
-/** Doc/name/extension match (does NOT exclude src/ — callers add that). */
-function isDocFile(p) {
-  return DOC_FILE.test(p ?? "")
-}
-
-/** Nearest ancestor of an absolute path holding package.json or .git — the
- *  project root (§18.12 F-VR1: the agent cwd may be a workspace root that is
- *  NOT the repo root). Walk stops at the filesystem root; null when no anchor. */
-function findProjectRoot(absPath) {
-  let dir = dirname(resolve(absPath))
-  for (;;) {
-    if (existsSync(join(dir, "package.json")) || existsSync(join(dir, ".git"))) return dir
-    const parent = dirname(dir)
-    if (parent === dir) return null
-    dir = parent
-  }
-}
-
-/** True when the path is under <projectRoot>/src/ (anchored via findProjectRoot).
- *  Falls back to the loose /src/ pattern when no anchor exists. */
-function isUnderSrc(absPath) {
-  const root = findProjectRoot(absPath)
-  if (!root) return /(?:^|[\\/])src[\\/]/.test(absPath)
-  const norm = normalizeChangedPath(absPath, root)
-  return norm.startsWith(normalizeChangedPath("src", root) + "/")
-}
-
-/** Doc-only change = non-empty list where EVERY file is a doc AND not src/. */
-function isDocOnlyChange(files) {
-  return files.length > 0 && files.every((f) => !isUnderSrc(f) && isDocFile(f))
+/** Doc-only change = non-empty list where EVERY file is a doc AND outside any
+ *  declared code segment (src/** incl. prompts/*.md is product code). */
+function isDocOnlyChange(files, cwd) {
+  const conv = loadConventions(cwd)
+  return files.length > 0 && files.every((f) => isDocPath(f, conv))
 }
 
 // ─── Verification gate (VERIFY-REDESIGN D-V1 / D-V2) ────────────────────────
@@ -245,7 +221,7 @@ export const verifyTool = {
     // Doc-only fast path (D-V5): nothing to run for doc edits. Only an explicit
     // "failed" declaration is respected — otherwise pass without requiring a
     // declaration (there is genuinely nothing to verify on a doc change).
-    if (isDocOnlyChange(files)) {
+    if (isDocOnlyChange(files, ctx.cwd)) {
       if (dec.reason === "failed") {
         ctx.agent._verifiedThisRun = true
         ctx.agent._verifyPassed = false

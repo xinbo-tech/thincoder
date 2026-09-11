@@ -7,6 +7,9 @@
  * 尾族单源：尾的**生成**（结构化超时尾 / 预算提示）与尾的**判定**（谓词族）与压缩
  * 装配同档——字面漂移面收在一处（生成 ⟷ 判定 ⟷ 装配）。
  */
+import { providerSpec } from "../specs.mjs"
+// B4（群 B 批 §17.3——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环——仅依赖 specs.mjs）
+import { estimateText } from "../provider/rate.mjs"
 
 // ─── 限额 ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +18,17 @@ export const MAX_ADVISOR_TURNS = 100
 // ~30 tool turns — a prompt-level efficiency target, DISTINCT from the
 // 100-turn mechanical hard cap (MAX_ADVISOR_TURNS above; pure runaway-loop
 // guard). They serve different purposes; do NOT synchronize them.
-export const MAX_CONTEXT_TOKENS = 120_000 // Reserve headroom to avoid OOM
+// 上下文预算（第 26 批——120K 硬编码退场）：预算跟随评审模型窗口（providerSpec：
+// 模型规格表 × provider 级 context 覆盖）。头寸用途 = chars/4 估算误差 + 响应/协议开销
+// （内存不构成约束——本档 §15.6）；判死线仍是宿主机自限线，服务端窗口约束不变。
+export const CONTEXT_LIMIT_RATIO = 0.8  // 判死线 = 窗口 × 0.8
+const COMPACT_TRIGGER_RATIO = 0.8       // 压缩触发 = 判死线 × 0.8（既有关系零改）
+
+/** 评审上下文预算（纯函数——两档阈值可机测；provider 为 null 时退化默认规格）。 */
+export function advisorContextBudget(provider) {
+  const limit = Math.floor(providerSpec(provider).context * CONTEXT_LIMIT_RATIO)
+  return { limit, compactAt: Math.floor(limit * COMPACT_TRIGGER_RATIO) }
+}
 export const TOOL_TIMEOUT_MS = 30_000 // single tool timeout
 export const REVIEW_TIMEOUT_MS = 600_000 // whole review timeout (10 minutes; agent.advisor.timeoutMs overrides)
 export const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, aligned with main offload limit)
@@ -23,12 +36,14 @@ const MAX_KEY_FILES_IN_COMPACTION = 5 // files named in the compaction summary
 
 // ─── 压缩（+ 定锚重挂）────────────────────────────────────────────────────────
 
-/** Estimate token count from messages (rough: 1 token ≈ 4 chars) */
+/** Estimate token count from messages（B4——群 B 批 §17.3：扁平 chars/4 改 `estimateText`
+ *  加权式——ASCII/4 + 非 ASCII/1；纯 ASCII 与旧式逐值相等；CJK 低估 ~3-4× 修正；
+ *  walker（content / tool_calls 两源）与计数口径零改）。 */
 export function estimateTokens(messages) {
   return messages.reduce((sum, msg) => {
     const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content || "")
     const toolCalls = msg.tool_calls ? JSON.stringify(msg.tool_calls) : ""
-    return sum + Math.ceil((content.length + toolCalls.length) / 4)
+    return sum + estimateText(content + toolCalls)
   }, 0)
 }
 

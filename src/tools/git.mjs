@@ -35,7 +35,7 @@ export const gitTool = {
   description:
     "Run a git command. Only works inside a git repository.\n" +
     "- action='diff': unified diff (staged=true for staged-only, ref=<ref>, path=<dir> to scope). - 'status': staged/unstaged/untracked/conflicts. - 'log': recent commits (count, oneline, path). - 'show': a commit's details (ref).\n" +
-    "- 'add': stage files (path, or -A all). - 'commit': stage + commit (message, path for granular). - 'rm': untrack a file (path, kept on disk).\n" +
+    "- 'add': stage files (path, or -A all). - 'commit': commit; path → `git commit --only <paths>` (commits the listed files from the working tree — other staged work is not swept in — atomic); no path → add -A then commit (full sweep). - 'rm': untrack a file (path, kept on disk).\n" +
     "- 'push'/'fetch'/'pull': sync with remote (remote, ref=branch/tag, tags=true for --tags).\n" +
     "- 'tag'/'branch'/'stash': manage them (tagAction/branchAction/stashAction: list/create/delete/switch, push/pop/list).\n" +
     "- 'checkout'/'restore': switch to ref, or restore a file (path). - 'reset': soft/mixed/hard (hard snapshots first). - 'revert'/'merge'/'cherry-pick': ref.\n" +
@@ -199,12 +199,22 @@ export const gitTool = {
       }
       case "commit": {
         if (!args.message) return "Error: commit requires message"
-        // Granular staging when path given (only stage these); otherwise stage all (add -A).
-        // 多路径：空格分隔（ref 先例——2026-09-05 CLI parity）
-        const staged = args.path ? args.path.split(/\s+/).filter(Boolean) : null
-        const add = runGitStrict(ctx.cwd, staged?.length ? ["add", "--", ...staged] : ["add", "-A"])
-        if (!add.ok) return `git add failed: ${add.err || add.out || "(no output)"}`
-        const commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
+        // A9（群 A 批——CLI F-3 镜像）：path 给定 → `git commit --only -m <message> -- <paths>`
+        // （从工作树取列文件提交——索引里他批已暂存的内容不混入——原子）；无 path → 既有
+        // add -A + commit 全量（单代理语义原样保留）。空/纯空白 path → 明确错误，不回落全量
+        // （静默全量提交正是双层混扫的病根）。多路径：空格分隔（ref 先例——2026-09-05 CLI parity）。
+        const staged = args.path !== undefined && args.path !== null ? args.path.split(/\s+/).filter(Boolean) : null
+        if (staged !== null && staged.length === 0) {
+          return "Error: commit path is empty/whitespace — give at least one file path (space-separated)"
+        }
+        let commit
+        if (staged) {
+          commit = runGitStrict(ctx.cwd, ["commit", "--only", "-m", args.message, "--", ...staged])
+        } else {
+          const add = runGitStrict(ctx.cwd, ["add", "-A"])
+          if (!add.ok) return `git add failed: ${add.err || add.out || "(no output)"}`
+          commit = runGitStrict(ctx.cwd, ["commit", "-m", args.message])
+        }
         if (!commit.ok) return `git commit failed: ${commit.err || "(no output)"}`
         let out = commit.out || "(commit done)"
         // F6: commit = new safety baseline — clear this project's checkpoints

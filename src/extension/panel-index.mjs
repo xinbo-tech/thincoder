@@ -7,7 +7,7 @@ import * as vscode from "vscode"
 import { relative } from "node:path"
 import { getEmbedder as getSharedEmbedder, setVSCodeEmbedder, resetEmbedder } from "../embed-config.mjs"
 import { loadEmbeddingConfig, saveEmbeddingConfig as saveEmbeddingConfigToFile } from "../config-io.mjs"
-import { buildIndex as runBuildIndex, needsRebuild, loadIndexManifest } from "../indexer.mjs"
+import { buildIndex as runBuildIndex, needsRebuild, loadIndexManifest, indexCompat } from "../indexer.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
 export function pushIndexStatus(panel) {
@@ -22,6 +22,11 @@ export function pushIndexStatus(panel) {
           const files = Object.keys(manifest.files).length
           const chunks = Object.values(manifest.files).reduce((sum, f) => sum + f.chunks.length, 0)
           status = { built: true, files, chunks }
+          // B1 (MEMORY.md §4.2 契约四): the built index was embedded with another model than the
+          // one currently configured — surface both names so the settings row can say why
+          // vector search is silent (the score would be meaningless, not merely empty).
+          const compat = indexCompat(cwd, embedder)
+          if (!compat.compatible) status.mismatch = { indexModel: compat.indexModel, currentModel: compat.currentModel }
         } else {
           status = { built: false }
         }
@@ -98,13 +103,22 @@ export async function maybePromptIndex(panel) {
     const embedder = getEmbedder()
     if (!embedder) return
 
+    // B1 (MEMORY.md §4.2 契约四): prompt when the index needs a rebuild OR when it was built
+    // with another model — the latter is the silent-wrong-results case (score=0 hits are
+    // ranked and returned), so it must be visible exactly like a missing index. 不匹配时文案
+    // 恒明示两个模型名（needed ∧ 不匹配 的合取分支同样——"not built" 句对已建索引是假陈述）。
+    let mismatch = null
     try {
       const { needed } = needsRebuild(cwd)
-      if (!needed) return
+      const compat = indexCompat(cwd, embedder)
+      if (!needed && compat.compatible) return
+      if (!compat.compatible) mismatch = compat
     } catch { return }
 
     const answer = await vscode.window.showInformationMessage(
-      "Vector search index not built. Build now? (~30s for small projects, longer for large ones)",
+      mismatch
+        ? `Index was built with ${mismatch.indexModel} but the current embedding model is ${mismatch.currentModel}. Rebuild now?`
+        : "Vector search index not built. Build now? (~30s for small projects, longer for large ones)",
       "Build", "Later"
     )
     if (answer === "Build") buildIndex(panel)
@@ -144,8 +158,13 @@ export async function buildIndex(panel) {
           },
           signal: ctrl.signal,
         })
+        // VP-9 可见化：未列入扩展名（有则提示行——声明指路；零则原文案不变）。
+        const unlisted = result.unlistedExts
+        const hint = unlisted?.count > 0
+          ? ` ${unlisted.count} file(s) skipped — extensions not indexed: ${unlisted.exts.map((e) => e.ext).join(", ")}; declare index.codeExtensions in .thincoder/conventions.json to include them.`
+          : ""
         vscode.window.showInformationMessage(
-          `Index built: ${result.files} files, ${result.chunks} chunks. Semantic search is now active.`
+          `Index built: ${result.files} files, ${result.chunks} chunks. Semantic search is now active.${hint}`
         )
       } catch (e) {
         if (e.name === "AbortError" || token.isCancellationRequested) {

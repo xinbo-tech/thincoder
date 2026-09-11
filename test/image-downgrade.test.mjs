@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as vscode from "vscode"
-import { routeUserTurn, setProjectFolder, clearProjectOverride } from "../src/extension/panel-messages.mjs"
+import { routeUserTurn, setProjectFolder, clearProjectOverride, handlePanelMessage } from "../src/extension/panel-messages.mjs"
 import { runVisionReader, VISION_READ_TIMEOUT_MS } from "../src/extension/image-handler.mjs"
 import { _setConfigPathForTest } from "../src/config-io.mjs"
 
@@ -154,4 +154,52 @@ test("F-2 spawn 失败/超时/空返 → fallback（images 原样——文本零
     assert.equal(text, "看图", "fallback：文本零改动")
     assert.ok(Array.isArray(imgs) && imgs.length === 1, "fallback：images 保留下发")
   }
+})
+
+// ─── A12（群 A 批）：降级窗内 Stop（⏹）定向 abort ─────────────────────────────
+// 设计权威：`docs/design/IMAGE-DOWNGRADE-VISION.md`「跟进修复」节（C-MA12-1..6 / T-MA12-1..3）。
+
+test("T-MA12-1 正常：窗内 abort → 定向命中 _visionAbort + await 提前返回 + _chat 照常 + 闩落位", async () => {
+  const panel = stubPanel()
+  const runner = (arg) => new Promise((_, reject) => {
+    arg.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true })
+  })
+  const p = routeUserTurn(panel, { text: "看图", modelOverride: "deepseek-v4-pro", providerName: "ds", images: [DATAURL], visionReader: runner })
+  await new Promise((r) => setTimeout(r, 20)) // 窗打开（runner 已进入挂起态）
+  const vad = panel._visionAbort
+  assert.ok(vad && !vad.signal.aborted, "窗前挂位：_visionAbort 活")
+  await handlePanelMessage(panel, { type: "abort" })
+  assert.equal(vad.signal.aborted, true, "窗内 Stop 定向命中降级窗 controller")
+  await p
+  assert.equal(panel._chatCalls.length, 1, "await 提前返回后回合照常建立（消息在——不丢）")
+  const [text, , , , imgs] = panel._chatCalls[0]
+  assert.equal(text, "看图", "停后文本零改动（fallback 语义复用）")
+  assert.ok(Array.isArray(imgs) && imgs.length === 1, "images 保留下发")
+  assert.equal(panel._abortRequested, true, "启动即中止闩落位（newTurnController 消费）")
+  assert.equal(panel._visionAbort, null, "窗控制器幂等清理")
+})
+
+test("T-MA12-2 边界（零回归）：无降级窗 abort → 既有分支零变（活 controller 交付 / 僵尸置闩）", async () => {
+  const live = stubPanel()
+  live._turnState = "running"
+  live._abortController = new AbortController()
+  await handlePanelMessage(live, { type: "abort" })
+  assert.equal(live._abortController.signal.aborted, true, "活 controller 照常交付（既有路径）")
+  assert.equal(live._abortRequested, undefined, "活 controller 不置闩（既有语义零变）")
+
+  const zombie = stubPanel()
+  zombie._turnState = "running"
+  zombie._abortController = new AbortController()
+  zombie._abortController.abort() // 上回合遗留僵尸
+  await handlePanelMessage(zombie, { type: "abort" })
+  assert.equal(zombie._abortRequested, true, "僵尸 controller 照常置闩（既有语义零变）")
+})
+
+test("T-MA12-3 边界（缝兼容）：runVisionReader ① 预 aborted signal → 快速 null ② 不传 signal → 现状", async () => {
+  const ac = new AbortController()
+  ac.abort()
+  const t0 = Date.now()
+  assert.equal(await runVisionReader({ paths: ["x.png"], providerName: "ds", cwd: _tmp, signal: ac.signal }), null, "预 aborted → null")
+  assert.ok(Date.now() - t0 < 5000, "快速失败——不复用 60s 超时窗")
+  assert.equal(await runVisionReader({ paths: ["x.png"], providerName: "ds", cwd: _tmp }), null, "不传 signal → 现状（无视觉渠道 null）")
 })

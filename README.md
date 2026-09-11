@@ -63,7 +63,6 @@ The `websearch` tool defaults to **Bing HTML extraction** (zero-config, no key).
 ```jsonc
 {
   "websearch": {
-    "provider": "tavily",
     "apiKey": "tvly-..."   // https://tavily.com — free monthly tier available
   }
 }

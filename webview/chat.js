@@ -76,9 +76,9 @@ ctx.messagesEl.addEventListener("keydown", (e) => {
 // §19.5 D-M7 UI 停止（VS Code）：子代理块 ⏹ 点击 → postMessage cancelSubagent →
 // extension 层定向 abort——不经模型回合（失控子代理时模型可能不可靠——直连路径）。
 // preventDefault + stopPropagation：⏹ 命中区不触发 details 折叠翻转（T-M22 断言——
-// 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。ACTIVITY-REWRITE-SIMPLE（2026-09-09）：
-// 块出生即在 #messages 流内（running + queued 头挂 ⏹——冻结块 ⏹ 已随 freeze 移除——
-// 无区容器）——委托绑 messagesEl。
+// 与 CLI handleMouseClick 的 ⏹ 列级区分同规则）。2026-09-11 活动区回归（WEBVIEW.md
+// §12.3 第 8 条）：块驻留活动区（running + queued 头挂 ⏹——冻结块 ⏹ 已随 freeze 移除）
+// ——**单委托点迁区**（空安全绑定：fixture 缺区 id 零抛错——生产行为不变）。
 const onStopClick = (e) => {
   const btn = e.target.closest(".sub-stop-btn")
   if (!btn) return
@@ -86,7 +86,7 @@ const onStopClick = (e) => {
   e.stopPropagation()
   vscode.postMessage({ type: "cancelSubagent", id: Number(btn.dataset.subId), role: btn.dataset.subRole })
 }
-ctx.messagesEl.addEventListener("click", onStopClick)
+ctx.activityEl?.addEventListener("click", onStopClick)
 
 // Close all dropdowns on Escape
 document.addEventListener("keydown", (e) => {
@@ -242,6 +242,9 @@ window.addEventListener("message", (e) => {
     case "compress":
       showCompressStatus(m)
       break
+    case "digest":
+      showDigestStatus(m)
+      break
     case "permissionRequest":
       showPermissionRequest(m)
       break
@@ -306,6 +309,39 @@ function showCompressStatus(m) {
     el.classList.add("compress-failed")
   }
   el.innerHTML = text
+  maybeScrollDown(ctx)
+}
+
+
+// ─── Digest status line (B6 — WEBVIEW.md §7.4) ─────────────────
+// Lifecycle-only visibility for the digestion turn: "Digesting N background report(s)…" →
+// "Digested … (Xs)" / "Digestion interrupted (Xs)". One element in the messages stream,
+// updated in place (compress-status 同族先例；清屏随清). The end message carries {ok, ms}
+// only — n is remembered from the matching start on the same element.
+function showDigestStatus(m) {
+  let el = document.getElementById("digest-status")
+  if (!el) {
+    el = document.createElement("div")
+    el.id = "digest-status"
+    el.className = "digest-status"
+    document.getElementById("messages").appendChild(el)
+  }
+  el.classList.remove("digest-done", "digest-failed")
+  let text
+  if (m.status === "start") {
+    el.dataset.n = String(m.n ?? "?")
+    text = t("digest.start", { n: el.dataset.n })
+  } else {
+    const seconds = ((m.ms ?? 0) / 1000).toFixed(1)
+    if (m.ok !== false) {
+      text = t("digest.done", { n: el.dataset.n ?? "?", seconds })
+      el.classList.add("digest-done")
+    } else {
+      text = t("digest.aborted", { seconds })
+      el.classList.add("digest-failed")
+    }
+  }
+  el.textContent = text
   maybeScrollDown(ctx)
 }
 

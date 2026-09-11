@@ -4,6 +4,10 @@
  * Docs: https://ai.google.dev/gemini-api/docs
  */
 
+/** 读侧 idle 看门狗（群 A 批——绝对墙钟废除后的 body 停摆守卫）：连续 READ_IDLE_MS
+ *  无 chunk → TimeoutError 判死；测试缝 = parseStream 的 idleMs 参数（生产缺省）。 */
+const READ_IDLE_MS = 120_000
+
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
   if (choice === "auto") return { mode: "AUTO" }
@@ -110,7 +114,7 @@ export function buildRequest(provider, messages, tools, { toolChoice } = {}) {
  * Gemini SSE format: data: {...}\n\n (each line is a complete JSON object)
  * Response shape: { candidates: [{ content: { parts: [{ text }] }, finishReason }], usageMetadata }
  */
-export async function parseStream(response, { onToken, onReasoning, signal }) {
+export async function parseStream(response, { onToken, onReasoning, signal, idleMs: idleOpt }) {
   const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
@@ -166,6 +170,29 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
 
   if (!response.body) throw new Error("No stream response body")
 
+  // 读侧 idle 看门狗（群 A 批）：每 chunk 重置；连续 idleMs 无数据 → TimeoutError。
+  // releaseBody 兼容两种 body：Node 流（代理路径 PassThrough——destroy）与 Web 流（直连
+  // undici ReadableStream——无 destroy，退 cancel）；race 保证两种形态都以 TimeoutError
+  // 终止读循环。idleMs ≤ 0 = 关闭（测试缝）。
+  const idleMs = idleOpt ?? READ_IDLE_MS
+  const idleError = () => new DOMException(`SSE idle timeout: no data for ${idleMs / 1000}s`, "TimeoutError")
+  let idleTimer = null
+  let rejectIdle = null
+  const idlePromise = new Promise((_, reject) => { rejectIdle = reject })
+  const releaseBody = (err) => {
+    try {
+      if (typeof response.body?.destroy === "function") response.body.destroy(err)
+      else response.body?.cancel?.(err).catch(() => {})
+    } catch { /* already gone */ }
+  }
+  const armIdle = () => {
+    if (!(idleMs > 0)) return
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => { const err = idleError(); releaseBody(err); rejectIdle(err) }, idleMs)
+    idleTimer.unref?.()
+  }
+  armIdle()
+
   const abortErr = () => {
     const e = new DOMException("The operation was aborted", "AbortError")
     e.reason = signal?.reason
@@ -189,6 +216,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
 
   const readLoop = async () => {
     for await (const chunk of response.body) {
+      armIdle()
       if (signal?.aborted) throw abortErr()
       buffer += decoder.decode(chunk, { stream: true })
       // BOM 剥除（2026-08-31 会诊 #7）：首 chunk 可带 \uFEFF，否则首个 data 事件被静默丢弃
@@ -206,7 +234,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       signal.addEventListener("abort", onAbort, { once: true })
     })
     try {
-      await Promise.race([readLoop(), abortPromise])
+      await Promise.race([readLoop(), abortPromise, idlePromise])
     } catch (e) {
       // Interrupt (Ctrl+I): return the partial result so the agent loop commits it
       // and injects the user's message, instead of erroring the turn (CLI parity).
@@ -217,10 +245,15 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       }
       throw e
     } finally {
+      if (idleTimer) clearTimeout(idleTimer)
       try { await response.body.cancel() } catch { /* normal completion — no-op */ }
     }
   } else {
-    await readLoop()
+    try {
+      await Promise.race([readLoop(), idlePromise])
+    } finally {
+      if (idleTimer) clearTimeout(idleTimer)
+    }
   }
 
   buffer += decoder.decode()

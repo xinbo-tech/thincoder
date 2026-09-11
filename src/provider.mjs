@@ -20,22 +20,13 @@ import * as anthropicTransport from "./provider/transports/anthropic.mjs"
 import * as googleTransport from "./provider/transports/google.mjs"
 import * as responsesTransport from "./provider/transports/responses.mjs"
 
-// Hard per-request ceiling (CLI parity: core.mjs / anthropic.mjs / google.mjs all use
-// 600_000). Reasoning models on long contexts legitimately think for minutes before
-// the first token — 120s aborted real requests with "The operation was aborted due
-// to timeout". 10 minutes is the CLI-proven bound; the user's abort button is the
-// real escape hatch for anything faster.
+// Default header-phase ceiling — consumed by the proxy path as `_headerTimeoutMs`
+// (the direct path uses undici's own default). 2026-09-11 群 A batch: the old
+// per-request absolute 600s wall clock was removed — it aborted long reasoning
+// requests with "The operation was aborted due to timeout". Body-phase liveness is
+// now guarded by the read-side idle watchdog (READ_IDLE_MS in each transport); the
+// user's abort signal is the real escape hatch.
 export const FETCH_TIMEOUT_MS = 600_000
-
-// AbortSignal.any polyfill for Node 18 / VS Code's Electron (Node 20.3+ has native)
-const _anySignal = AbortSignal.any || ((signals) => {
-  const ctrl = new AbortController()
-  for (const s of signals) {
-    if (s.aborted) { ctrl.abort(s.reason); return ctrl.signal }
-    s.addEventListener("abort", () => ctrl.abort(s.reason), { once: true })
-  }
-  return ctrl.signal
-})
 
 /**
  * Sanitize image parts that would 400 the request (CLI core.mjs parity):
@@ -321,7 +312,7 @@ async function requestWithRetry(provider, url, headers, body, signal, onWait) {
         method: "POST",
         headers,
         body,
-        signal: signal ? _anySignal([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]) : AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: signal ?? undefined,
         // 2026-08-31 会诊 #2（与 CLI 465b9c3 #4 对齐）：代理路径响应头超时对齐直连语义——
         // 原 15s 与直连 600s 割裂，推理模型走代理 TTFB>15s 即误报 "Response timeout"。
         _headerTimeoutMs: FETCH_TIMEOUT_MS,

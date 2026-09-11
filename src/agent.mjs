@@ -8,7 +8,7 @@ import { traceStop } from "./extension/stop-trace.mjs"
 import {
   MAX_ADVISOR_PUSHBACKS, MAX_VERIFY_PUSHBACKS, MAX_VERIFY_RETRIES, MAX_EMPTY_RETRIES,
   configuredMaxTurns, hasCodeMutations,
-  pushReal, agentState,
+  pushReal, agentState, turnFrame,
 } from "./agent/run-helpers.mjs"
 import { MAX_ADVISOR_ROUNDS } from "./advisor/run.mjs"
 import { executeToolBatches } from "./agent/execute-tools.mjs"
@@ -21,7 +21,7 @@ import { checkAndCompact, fireEndOfRunDistill, finalizeAgentTurn, maybeGuardPush
  *  Injected per manual auto-turn run — writes/execute/spawns/questions are also
  *  mechanically denied (deny-stub permission/question handlers + the spawn gate in
  *  subagent.mjs); this reminder steers the model before it hits those denials.
- *  §24 D-24b（R13——2026-09-06）：async advisor review 报告同此消化通道——呈递发现与
+ *  §9 D-24b（R13——2026-09-06）：async advisor review 报告同此消化通道——呈递发现与
  *  修复建议（不擅自动手——修正轮由用户裁决后发起）。 */
 const AUTO_TURN_DIGEST_DOMAIN =
   "[System reminder: auto-turn — background async subagents / consultations / escalate reports / advisor reviews finished while there was no user message, and this turn runs automatically to digest their reports (the finished-report reminders above). No one is waiting for this reply, so organize only: 1) summarize each finished report's key points into this conversation for the user to read later (async advisor review reports: present the findings and suggested fixes verbatim — do not apply them; consultation reports: present each reply verbatim with your per-reply adoption judgment as text — do not apply anything; escalate reports: summarize the merged post-op work — further changes need a user message); 2) update the task list with the task tool (allowed) to mark finished work done; 3) write decision points with a suggested next step as text — do not execute it. FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verify, spawning subagents, asking questions — those need a real user message. End the turn once the summaries are written.]"
@@ -107,7 +107,7 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // §15 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的 map 沿共享 history
   // 数组跨 runAgent 调用存活。
   agent._asyncSubagents = (depth === 0 && history._asyncSubagents instanceof Map) ? history._asyncSubagents : new Map()
-  // §24 D-24b（R13）：async advisor 池同款载体（独立池——角色无关消费机制）。
+  // §9 D-24b（R13）：async advisor 池同款载体（独立池——角色无关消费机制）。
   agent._asyncAdvisors = (depth === 0 && history._asyncAdvisors instanceof Map) ? history._asyncAdvisors : new Map()
 
   // End-of-run exploration distillation boundary (CONTEXT-COMPACTION §5): setupAgentRun has already
@@ -116,6 +116,15 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
 
   // ─── Main loop ─────────────────────────────
   const maxTurns = overrideTurns || configuredMaxTurns()
+  // 跨段累计编号（TURN-CAP-CONTINUE §19.3——第 19 批）：_turnSeq = 链内累计序数。
+  // 复位点唯一（仅 !resume——无条件复位会使续跑段累计失效）；续跑段的种子经 opts 从消费侧
+  // 传入（本端子代理面每段续跑 = 新 agent 对象——载体缺口修正轮修法 A：仅 `_turnSeq == null`
+  // 时落种子、非空不覆盖；CLI 面同一 child 对象跨段存活 → 种子零作用）。每轮 ++ 见循环头。
+  if (!opts.resume) {
+    agent._turnSeq = 0
+  } else if (agent._turnSeq == null) {
+    agent._turnSeq = opts._turnSeqBase ?? 0
+  }
   const recentSigs = []
   let guardPushbacks = 0
   let advisorPushbacks = 0
@@ -126,7 +135,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
     if (signal?.aborted) { traceStop(`agent loop turn ${turn}: aborted at loop head`) ; throw new DOMException("Aborted", "AbortError") }
     // §19.5 D-M5 per-child turn hook (CLI ⟦ev⟧turn 解析的 VS Code 等价): 每轮迭代通报
     // turn 号——subagent runChild 同步进 async 池条目的 entry.turn（status 决策字段）。
-    callbacks.onAgentTurn?.(turn + 1)
+    // §19.3 跨段累计：`++_turnSeq` 每轮无条件递增（与回调存在与否无关）；帧经 turnFrame
+    // 唯一计算点得出（累计编号 / 累计预算），回调双参发出（签名扩展——向后兼容）。
+    const frame = turnFrame(++agent._turnSeq, turn, maxTurns)
+    callbacks.onAgentTurn?.(frame.turn, frame.maxTurns)
 
     // SUBAGENT-OBSERVE-SEND.md D2（2026-09-08）：父 send 注入队列消费点——子 runAgent 每
     // 回合头清空 turnInput 回调（runChild/escalate 引擎提供——读池条目 entry._injected）取回

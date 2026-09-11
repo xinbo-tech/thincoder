@@ -1,0 +1,19 @@
+✔ T57 正常：工程模式 spawn eng-designer 放行（白名单 + 模式门 + 子代门） (26.2804ms)
+✔ T57 错误：未知角色文案点名新角色（漏改则报错信息说谎） (8.8151ms)
+✔ T57 边界：角色 enum（工程模式含 designer / 普通模式不含） (6.9292ms)
+✔ T57 正常：装配分支——batch_segment 在、advisor 不在、绑定落到工具（§2.22.4 ④/⑨） (41.3505ms)
+✔ T57 零回归：eng-coder 装配面不变（advisor/verify 在，batch_segment 仍挂） (11.3589ms)
+✔ T57 边界：场景表（不静默回退）+ 人格槽位 + 纪律槽 (3.659ms)
+✔ T57b 错误：①非工程模式 spawn designer 拒（文案含角色名，不与既有模式门文案撞车） (3.4897ms)
+✔ T57b 错误：②designer 子代 spawn 非 explore 拒（受限通道 explore-only） (8.5023ms)
+✔ T57c 正常：designer 内 spawn explore 允（勘察报告拿到）且不含 Audit scope 块 (4.9469ms)
+✔ T57c 错误：designer 内 spawn eng-coder/plan 拒（受限变体只暴露 explore） (11.8606ms)
+✔ T58 行为面：eng-designer 在面板/活动面真实可达（角色卡槽位 + 频道建块） (35.1061ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1218.4237

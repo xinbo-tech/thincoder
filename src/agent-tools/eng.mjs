@@ -76,7 +76,7 @@ export const engTool = {
       ctx.agent._pendingReminders = ctx.agent._pendingReminders ?? []
       ctx.agent._pendingReminders.push(ENG_ON_REMINDER)
       const conflicted = persistEngineering(ctx.agent, true)
-      return `Engineering mode activated. Design-before-code enforced: write a design document in docs/, run advisor with type='design', get user approval, then implement via eng-coder subagents.${cleared > 0 ? ` Cleared ${cleared} expired design token${cleared === 1 ? "" : "s"} (TTL cleanup — valid tokens stay valid across mode switches).` : ""}${conflicted ? ` ${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : ""}`
+      return `Engineering mode activated. Design-before-code enforced: write a design document first (location per your project's document conventions), run advisor with type='design', get user approval, then implement via eng-coder subagents.${cleared > 0 ? ` Cleared ${cleared} expired design token${cleared === 1 ? "" : "s"} (TTL cleanup — valid tokens stay valid across mode switches).` : ""}${conflicted ? ` ${CONFIG_CONFLICT_HINT} — config.json mirror not written (slot state still holds for this session).` : ""}`
     }
     return "Invalid action: expected 'enter' or 'exit'"
   },

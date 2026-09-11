@@ -1,9 +1,15 @@
 /**
  * advisor/repos.mjs — git repository discovery and change collection for advisor reviews.
  * Shared by message building (advisor.mjs) and the review runner (advisor/run.mjs).
+ *
+ * Path classification (code/doc/temp) lives in src/conventions.mjs — the single
+ * authority (PORTABILITY VSC mirror · VP-10). This module keeps only the git-side
+ * surface; `isDocOnlyChange` consults the shared classifier instead of a local
+ * `^src/` regex (nested layouts used to slip through).
  */
 import { execFileSync } from "node:child_process"
 import { dirname, basename, resolve } from "node:path"
+import { isCodePath, isDocPath, loadConventions } from "../conventions.mjs"
 
 export const GIT_TIMEOUT = 5_000
 export const MAX_EMBEDDED_DIFF = 50_000
@@ -97,44 +103,14 @@ export function collectChangedFiles(repos, cwd) {
   return files
 }
 
-const DOC_FILE = /(?:^|[/\\])(?:LICENSE|NOTICE|CHANGELOG|AUTHORS)(?:\.\w+)?$|\.(?:md|markdown|mdx|txt|rst|adoc)$/i
-
-/** True when a path matches the doc/license pattern by extension or name.
- *  NOTE: this is extension-based only — it does NOT exclude src/ paths.
- *  Callers must separately check the src/ prefix for product-code semantics
- *  (e.g. src/prompts/*.md IS product code despite matching DOC_FILE).
- *  See isDocOnlyChange for the combined check. */
-export function isDocFile(p) {
-  return DOC_FILE.test(p ?? "")
-}
-
-/** Temporary/scratch files that must NOT count as code mutations: tmp-* named
- *  scratch scripts (tmp-c1.mjs, tmp-check.mjs…) and .tmp/.temp extensions.
- *  The advisor/verify guards skip these — a throwaway diagnostic script is not
- *  a code change, and writing one must not push the agent into a review loop
- *  (CLI repos.mjs TEMP_FILE parity). Basename match at ANY depth — _touchedFiles
- *  stores absolute paths, so the pattern must work for "D:/proj/tmp-check.mjs". */
-const TEMP_FILE = /(?:^|[/\\])tmp-[^/\\]+$|\.(?:tmp|temp)$/i
-
-/** True when a path is a throwaway temp file (tmp-* name or .tmp/.temp ext).
- *  Excluded from code-mutation detection so scratch scripts don't trigger
- *  advisor/verify guards. */
-export function isTempFile(p) {
-  return TEMP_FILE.test(p ?? "")
-}
-
-/** True when a path counts as a CODE mutation: src/ is unconditional (incl.
- *  src/prompts/*.md — product code); temp/doc exclusions apply only outside
- *  src/ (CLI hasCodeMutations isCodePath parity — L58). */
-export function isCodePath(p) {
-  return /(?:^|[\\/])src[\\/]/.test(p ?? "") || (!isTempFile(p) && !isDocFile(p))
-}
-
-/** True when all changed files across repos are documentation (md/txt/LICENSE etc.).
- *  Anything under src/ (incl. src/prompts/*.md) counts as product code —
- *  isProductCode semantics, consistent with the design gate. */
+/** True when all changed files across repos are documentation. Classification
+ *  comes from the single authority (src/conventions.mjs): a documentation
+ *  extension OUTSIDE any declared code segment (default: `src`, at any depth —
+ *  src/prompts/*.md and packages/foo/src/x.md are product code); temp files are
+ *  neither code nor doc, so they end the doc-only run exactly as before. */
 export function isDocOnlyChange(repos, cwd) {
   const targets = repos.length > 0 ? repos : [cwd]
+  const conv = loadConventions(cwd)
   let sawChanges = false
   for (const repo of targets) {
     let status
@@ -148,7 +124,7 @@ export function isDocOnlyChange(repos, cwd) {
     for (const line of status.split("\n")) {
       // porcelain: "XY path" or "XY old -> new" (rename)
       const filePath = line.slice(3).split(" -> ").pop().replace(/^"|"$/g, "")
-      if (/^src[\\/]/.test(filePath) || !DOC_FILE.test(filePath)) return false
+      if (isCodePath(filePath, conv) || !isDocPath(filePath, conv)) return false
     }
   }
   return sawChanges

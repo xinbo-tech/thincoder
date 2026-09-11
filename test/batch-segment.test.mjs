@@ -218,3 +218,26 @@ test("T66 边界：两设计评审并发——batchDoc 沿 rv 实例键传递，
   assert.ok(read(docA).includes("A 轮发现") && !read(docA).includes("B 轮发现"), "A 档只含 A 的发现")
   assert.ok(read(docB).includes("B 轮发现") && !read(docB).includes("A 轮发现"), "B 档只含 B 的发现")
 })
+
+// ── T-FZ3（群 B 批 B3 §17.2 E-扩 3）：成功写入记写域 / 失败零记账 ─────────────
+test("T-FZ3 正常/错误：成功写入记绑定档绝对路径入 _touchedFiles；拒绝路径与未挂载体零记账零抛错", async () => {
+  const abs = makeDoc()
+  const agent = { cwd: tmp, _role: "eng-designer", _touchedFiles: [] }
+  const ctx = { agent, cwd: tmp }
+  const out = await batchSegmentTool(abs).execute({ segment: "§2", text: "F31(c) 记账面" }, ctx)
+  assert.match(out, /appended .* to §2/, "写入成功（正控）")
+  assert.deepEqual(agent._touchedFiles, [abs], "成功：绑定档绝对路径入调用者写域（mergeChildMutations 合入载体）")
+  // 去重守卫：同档二次写入不重复入列
+  await batchSegmentTool(abs).execute({ segment: "§2", text: "第二段" }, ctx)
+  assert.deepEqual(agent._touchedFiles, [abs], "includes 去重守卫（同路径不重复）")
+  // 错误路径对照：越段拒绝 → 零记账（fail-closed 不写不记）
+  const before = [...agent._touchedFiles]
+  await catchErr(() => batchSegmentTool(abs).execute({ segment: "§9", text: "越段" }, ctx))
+  assert.deepEqual(agent._touchedFiles, before, "拒绝路径零记账")
+  // 评审实例面（未挂 _touchedFiles）：Array.isArray 守卫——写入成功但不抛错不记账
+  const bare = { cwd: tmp, _role: "eng-designer" }
+  const out2 = await batchSegmentTool(abs).execute({ segment: "§2", text: "无载体写入" }, { agent: bare, cwd: tmp })
+  assert.match(out2, /appended .* to §2/, "未挂载体写入照常成功")
+  assert.equal(bare._touchedFiles, undefined, "未挂载体零记账零抛错（Array.isArray 守卫）")
+})
+

@@ -79,6 +79,7 @@ hashline_edit，或任何写文件的 bash）之前，用平实的文字复述�
 ### 搜索工具优先级
 任何搜索前先查工具表：MCP 搜索工具是**首选**；`websearch`（Bing）只是后备（未配置或调用失败时）。
 `websearch` 连续两次垃圾结果 → 立即切换到 MCP 搜索工具——不要死磕，不要重复同一查询。
+- **站点被墙/不可达（docs.claude.com / ai.google.dev 等）→ 走镜像路径**（如 gh-proxy.com 拉 GitHub SDK 源码/类型定义）——绝不瞎猜官方文档 URL。
 手动抓网页前先扫工具表（"我是不是已经有工具了？"）——`fetch` / MCP 搜索优先于 `curl` 式抓取。
 
 ### 代码库探索顺序
