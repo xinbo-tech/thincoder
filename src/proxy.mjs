@@ -6,6 +6,7 @@ import { connect } from "node:net";
 import { connect as tlsConnect } from "node:tls";
 import { PassThrough } from "node:stream";
 import { URL } from "node:url";
+import { abortError, timeoutError } from "./abort-provenance.mjs";
 
 const FETCH_TIMEOUT = 15_000
 
@@ -52,12 +53,6 @@ export function injectProxy(providers, config) {
   }
 }
 
-function abortError(signal) {
-  const e = new DOMException("The operation was aborted", "AbortError")
-  e.reason = signal?.reason
-  return e
-}
-
 /**
  * 在已建立的 socket 上发 HTTP 请求，响应头到齐即 resolve（流式）。
  * 返回 Response-like: { ok, status, headers: Headers, body: PassThrough(异步迭代), text(): Promise<string> }
@@ -76,15 +71,15 @@ export function streamHttpResponse(sock, urlStr, opts = {}, timeout = FETCH_TIME
     const headers = opts.headers ?? {}
     const signal = opts.signal
 
-    if (signal?.aborted) { sock.destroy(); return reject(abortError(signal)) }
+    if (signal?.aborted) { sock.destroy(); return reject(abortError(signal, "provider", "proxy")) }
 
     const body = new PassThrough()
     let settled = false
     let headerBuf = ""
     let idleTimer = null
 
-    const timer = setTimeout(() => fail(new Error("Response timeout")), timeout)
-    const onAbort = () => { sock.destroy(); fail(abortError(signal)) }
+    const timer = setTimeout(() => fail(timeoutError("Response timeout", "provider", "proxy-header")), timeout)
+    const onAbort = () => { sock.destroy(); fail(abortError(signal, "provider", "proxy")) }
     signal?.addEventListener("abort", onAbort, { once: true })
 
     function cleanup() {
@@ -101,7 +96,7 @@ export function streamHttpResponse(sock, urlStr, opts = {}, timeout = FETCH_TIME
     /** body 阶段空闲看门狗：每次数据到达重置；无数据超时 → 断流（流式消费方抛错） */
     function armIdle() {
       clearTimeout(idleTimer)
-      if (bodyIdleMs > 0) idleTimer = setTimeout(() => body.destroy(new Error("Response body timeout (idle)")), bodyIdleMs)
+      if (bodyIdleMs > 0) idleTimer = setTimeout(() => body.destroy(timeoutError("Response body timeout (idle)", "provider", "proxy-body-idle")), bodyIdleMs)
     }
 
     sock.on("data", (d) => {
@@ -190,11 +185,11 @@ export function tunnelHttps(urlStr, opts, proxyUri, timeout = FETCH_TIMEOUT) {
     const headerTimeoutMs = Number.isFinite(opts?._headerTimeoutMs) ? opts._headerTimeoutMs : 60_000
     const bodyIdleMs = opts?._bodyIdleMs ?? 120_000
 
-    if (signal?.aborted) return reject(abortError(signal))
+    if (signal?.aborted) return reject(abortError(signal, "provider", "proxy"))
 
     const sock = connect({ host: proxy.hostname, port: Number(proxy.port) || 3128 })
     const timer = setTimeout(() => { sock.destroy(); reject(new Error("Proxy CONNECT timeout")) }, timeout)
-    const onAbort = () => { sock.destroy(); reject(abortError(signal)) }
+    const onAbort = () => { sock.destroy(); reject(abortError(signal, "provider", "proxy")) }
     signal?.addEventListener("abort", onAbort, { once: true })
     sock.on("connect", () => sock.write(`CONNECT ${target.hostname}:${target.port || 443} HTTP/1.1\r\nHost: ${target.hostname}\r\n\r\n`))
 
@@ -229,14 +224,14 @@ function tcpConnectProxy(proxyUri, signal, timeout) {
   return new Promise((resolve, reject) => {
     const proxy = new URL(proxyUri)
     const sock = connect({ host: proxy.hostname, port: Number(proxy.port) || 3128 })
-    if (signal?.aborted) { sock.destroy(); return reject(abortError(signal)) }
+    if (signal?.aborted) { sock.destroy(); return reject(abortError(signal, "provider", "proxy")) }
     const onAbort = () => sock.destroy()
     signal?.addEventListener("abort", onAbort, { once: true })
     const timer = setTimeout(() => { sock.destroy(); reject(new Error("Proxy CONNECT timeout")) }, timeout)
     const onError = (e) => { clearTimeout(timer); reject(new Error(`Proxy CONNECT failed (${e.code ?? e.message})`)) }
     const onClose = () => {
       clearTimeout(timer)
-      reject(signal?.aborted ? abortError(signal) : new Error("Proxy connection closed before tunnel established"))
+      reject(signal?.aborted ? abortError(signal, "provider", "proxy") : new Error("Proxy connection closed before tunnel established"))
     }
     sock.once("connect", () => {
       clearTimeout(timer)

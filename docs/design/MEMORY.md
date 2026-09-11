@@ -232,7 +232,236 @@ AC6 值域语义不变（提示仍 personal/project）。
 - **doc-sweep**：`docs/` 若干现状描述文件仍含旧 memory 三工具名 / 向量目录旧说（本文件已更新；其他文件的活文 doc-sweep 列为独立后续任务）。
 - **CLI 人类命令面**（`thincoder memory <list|search|put|remove>`）：`list`/`search`/`put` 为 personal-only 核心面（search limit 10、list 支持 --type）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移。命令面无 list 的共享层/过滤形态、无 clear/批量删（那些是 agent memory 工具面能力）。
 
+## 9. 配置路径字段家目录展开（`~`——单一规范化点）· 第 29 批（2026-09-11）
+
+> 需求层 = `../requirements/MEMORY.md` §5（F10–F14 / N7–N9）；来源批次 = `../batches/2026-09-11-HOME-EXPANSION.md` §1 条目 C1（Gitee #IKETT1）。
+> 状态：设计+测试层（待设计评审）。实施者 = eng-coder（设计 token 门）——契约逐字 / 点位表 / 用例 / AC 判据全文在本节。
+
+### 9.1 问题陈述与证据（as-of 2026-09-11 实测）
+
+**病灶**：全仓无 `~` 展开逻辑（`startsWith("~")` 零命中；`~` 仅作注释/字符串出现）；
+`loadConfig()` 合并用户配置（`src/config.mjs:274-285`）后不做路径归一。
+
+**链路（README 示例即触发）**：`README.md:138` 示例 `"dbPath": "~/.thincoder/memory.db"` → 照抄进 config.json →
+`loadConfig()` 原样返回 → `createMemory()`（`src/memory/schema.mjs:66-68`）先 `mkdirSync(dirname(dbPath), {recursive:true})`
+——以 cwd 为基准建**字面量 `~/.thincoder/` 目录树**；再 `new DatabaseSync(dbPath)` 在 cwd 开/建库。
+**静默性**：无警告；用户真实 home 库中的存量记忆"消失"（实为换了库），且 cwd 被污染出 `~` 目录树。
+
+**同病四字段与消费端（逐一证据）**：
+
+| 字段 | 形态 | 读点（证据） | 现象 |
+|---|---|---|---|
+| `memory.dbPath` | 绝对/相对皆可 | `src/memory/schema.mjs:66-68`；调用点 `src/cli/make-agent.mjs:25` · `bin/thincoder.mjs:221/243/266` · `src/cli/distill-command.mjs:49` | cwd 下建字面 `~` 树 + 在 cwd 开新库 |
+| `memory.projectDir` | 相对项目根 | 七点位 `join(cwd, …)`（§9.3c） | cwd 下生成 `<cwd>/~/…` 并被 syncDir 索引 |
+| `memory.team.dir` | 缺省 = `<configDir>/teams/<name>` | `teamConfig()`（`src/cli/make-agent.mjs:148-152`）→ `ensureClone` / `syncDir` / `commitAndPush` | git 落到 cwd 下字面 `~` 路径 |
+| `shell` | 可执行路径或命令名 | `src/tools/bash.mjs:261` → `spawn(…, { shell })`（`src/tools/bash.mjs:131`） | spawn 不存在的 `~/…` 路径（响亮失败，但属同病） |
+
+**登记（本批不做——非静默）**：
+
+1. 运行时写入面的**当次**展开：TUI `/shell` 热应用（`src/tui/cmd-shell.mjs:58`）· settings 工具 set（`src/agent-tools/settings.mjs`）·
+   VS Code 面板写面——落盘原文（下次启动 `loadConfig()` 即展开），但当次会话不生效（`shell` 是唯一会话内实时消费键）；
+2. `src/acp.mjs:424` 的 ACP 记忆库硬编码 `join(configDir, "memory.db")`——不读 `memory.dbPath`（既有分叉，与 `~` 无因果）；
+3. 历史受害数据：cwd 下已生成的字面 `~` 目录不自动搬移（用户手工迁移；是否随发布说明提示由父侧裁）。
+
+### 9.2 方案选型对比
+
+**（一）展开点**（判据 = 单一权威 / 零漏点 / 可回归 / 代价）：
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **`loadConfig()` 合并后统一展开** | 权威单点：四字段一次归一；漏点面 = 0（消费点零改——projectDir 基准解析除外，新增消费点自动受保护）；可回归：字段级夹具直接断言 | 代价 = `config.mjs` ≤+10 行 + 新模块 1 个 + projectDir 七点位基准解析 | **选定** |
+| 2 | 各消费点各自展开（mkdir/spawn/clone 前各判一次） | 漏点面 = 现有消费点 ≥8 个 + 未来新增点必漏（不可枚举）；回归面分散 | — | 否决 |
+| 3 | 读取代理层（`agent.config` getter / Proxy 包装） | 读面可覆盖但复杂度高；破坏 config 普通对象契约（settings 工具展平 / JSON 序列化 / 会话快照面） | — | 否决 |
+| 4 | 写盘侧归一后回写 config.json（`~` 换绝对路径持久化） | 毁配置原文与可移植性（换机 / 换用户名即失效）；存量手写配置永不展开 | — | 否决 |
+
+**（二）展开器归属**：
+
+| # | 候选 | 评估 | 结论 |
+|---|---|---|---|
+| 1 | **新模块 `src/expand-home.mjs`** | `config.mjs` 已 487/500 行（近硬限；同因拆分先例 `config-migrate.mjs` / `model-specs.mjs`）；纯函数单测面干净；VSC 镜像可同构（各自独立实现，不做同步依赖） | **选定** |
+| 2 | `config.mjs` 内联导出 | 行数两案同末态（内联 +8–12 → ~497——同贴 500 硬限，非区分点）；真代价 = 纯函数失独立单测面（须经 `loadConfig()` 全链）+ 与同因拆分先例（`config-migrate.mjs` / `model-specs.mjs`）不一致 | 否决（区分点 = 可测面 / 模块边界 / 先例，非行数） |
+
+### 9.3 接口契约
+
+**（a）展开器**——`src/expand-home.mjs`（纯函数、零依赖；逐字契约）：
+
+```js
+import { homedir } from "node:os"
+import { join } from "node:path"
+
+/** 展开配置路径字段的前缀 `~`（`~` / `~/` / `~\`）为主目录绝对路径；不识别形态原样返回。
+ *  home 第二参 = 测试注入缝（生产缺省 homedir()）。 */
+export function expandHome(p, home = homedir()) {
+  if (typeof p !== "string" || !p.startsWith("~")) return p   // 非字符串 / 非 ~ 前缀 → 原样
+  if (p === "~") return home                                  // 裸 ~ = 主目录
+  if (p[1] !== "/" && p[1] !== "\\") return p                 // ~user 等非分隔符 → 原样（不猜用户）
+  return join(home, p.slice(2).replaceAll("\\", "/"))         // 余段分隔符归一（跨端统一）
+}
+```
+
+语义（逐形态；`home` 第二参 = 测试注入缝，生产缺省 `homedir()`）：
+
+| 输入形态 | 输出 | 依据 |
+|---|---|---|
+| `"~"` | `home` | 裸 `~` = 主目录 |
+| `"~/x/y"` | `join(home, "x/y")` | 正斜杠前缀 |
+| `"~\\x\\y"` | `join(home, "x/y")`（余段 `\\` 先归一为 `/` 再 join） | Windows 分隔符——跨端统一（配置常跨平台复制） |
+| `"~/"` · `"~\\"` | `home` | 尾分隔符（`join(home, "")` 归一） |
+| `"~user/x"` · `"~abc"` | 原样 | `~` 后非分隔符——不猜用户（`~user` 需 passwd / Windows 用户解析，两平台语义不一） |
+| `"a/~/b"` · `"x~"` | 原样 | 仅前缀形态 |
+| 非字符串（`null` / `undefined` / 数字 / 对象） | 原样 | 类型护栏——`team.dir` 未设即 `undefined` 透传 |
+
+**（b）`loadConfig()` 落点**（`src/config.mjs`）：合并块（`:274-285`）之后、providers 归一之前：
+
+```js
+// 家目录展开（第 29 批）：config 路径字段单一规范化点——只读归一（磁盘原文保留）
+merged.memory.dbPath = expandHome(merged.memory.dbPath)
+merged.memory.projectDir = expandHome(merged.memory.projectDir)
+const team = merged.memory.team
+if (team && typeof team === "object" && !Array.isArray(team) && team.dir !== undefined) {
+  merged.memory.team = { ...team, dir: expandHome(team.dir) }   // 无 dir 键不注入（零键面变化）
+}
+merged.shell = expandHome(merged.shell)
+```
+
+契约细节：
+
+- **只读归一**：不写回磁盘（N9）——`config.json` 保用户原文；换机 / 换用户名后配置仍成立；
+- **零值透传**：`shell: null` / `memory.team: null` / `team.dir` 缺省 → 归一后仍为 `null` / 缺省（消费端 `??` / truthy 判据零变化）；
+- **落点序**：在迁移写回（`config-migrate`）之后——迁移逻辑与磁盘语义不感知展开值。
+
+**（c）projectDir 消费侧基准解析**（七点位：`join(cwd, p)` → `isAbsolute(p) ? p : join(cwd, p)`）：
+
+理由：`~` 展开产出**绝对路径**；`path.join(cwd, "/home/u/x")` 会拼成 `<cwd>/home/u/x`（join 不做绝对绕过）——必须绝对原样。
+**相对形态走原 `join` 分支** → 与修前逐字相同（N7 零伤硬证据）。该式为本仓既有惯用式（先例 `src/tui/cmd-undo.mjs:24`、`src/agent-tools/read-history.mjs:172`）。
+
+| # | 点位（as-of 2026-09-11） | 用途 |
+|---|---|---|
+| 1 | `src/cli/make-agent.mjs:44` | `memory.projectOrigin`（检索 origin 过滤基准）+ 启动 syncDir |
+| 2 | `src/cli/memory-command.mjs:70` | CLI `memory remove` 的 project 层目录 |
+| 3 | `src/memory/docs.mjs:240` | memory 工具（put / delete 的 project 层目录） |
+| 4 | `src/cli/distill-command.mjs:67` | CLI distill 的 project 层 |
+| 5 | `bin/thincoder.mjs:227` | `thincoder memory` 的 projectOrigin |
+| 6 | `bin/thincoder.mjs:272` | `thincoder reindex` 的 project 同步 |
+| 7 | `bin/thincoder.mjs:326` | TUI `/distill` 的 projectDir 入参 |
+
+**（d）冻结面（零改）**：`DEFAULTS` 四字段默认值（`src/config.mjs:91-95`）· `teamConfig()` 缺省 `join(configDir, "teams", name)`
+（`src/cli/make-agent.mjs:152`）· `dbPath` / `team.dir` / `shell` 的消费端（收到的值已绝对）。
+
+### 9.4 受影响文件全清单（行数 = 批前基准 as-of 2026-09-11 实测）
+
+| # | 文件 | 现行行数 | 预计增量 | 改动 | 执行 |
+|---|---|---|---|---|---|
+| 1 | `src/expand-home.mjs` | 新 | ~+30 | 展开器（§9.3a） | eng-coder |
+| 2 | `src/config.mjs` | 487 | ≤+10 | import + 四字段归一（§9.3b） | eng-coder |
+| 3 | `src/cli/make-agent.mjs` | 163 | ≤+2 | :44 基准解析 + import 增补 | eng-coder |
+| 4 | `src/cli/memory-command.mjs` | 86 | ≤+2 | :70 同式 | eng-coder |
+| 5 | `src/memory/docs.mjs` | 418 | ≤+2 | :240 同式 | eng-coder |
+| 6 | `src/cli/distill-command.mjs` | 92 | ≤+2 | :67 同式 | eng-coder |
+| 7 | `bin/thincoder.mjs` | 406 | ≤+3 | :227 / :272 / :326 同式 | eng-coder |
+| 8 | `test/home-expansion.test.mjs` | 新 | ~+110 | T-H1–T-H16（快层 + 1 条 slow） | eng-coder |
+| 9 | `README.md` | 472 | ≤+4 | 展开说明句 + 三字段注释（字面定稿 L1–L4） | eng-coder |
+| 10 | `docs/requirements/MEMORY.md` | 73（批前） | ≤+55 | §5（F10–F14 / N7–N9） | eng-designer（**已落**） |
+| 11 | `docs/design/MEMORY.md` | 239（批前） | 实测 +228（as-of 2026-09-11 修正轮落笔；超预计 ≤+210——纯 .md 档豁免尺寸判据） | 本节 §9 | eng-designer（**已落**） |
+
+**行 9 README 字面定稿（L1–L4——T-H15 逐字 oracle；C1e 落笔字面）**：
+
+| 锚 | README 位置（批前行号 as-of） | 逐字文本（coder 照写） |
+|---|---|---|
+| L1 说明句 | `"memory"` 块内首行（`:138` 前，+1 行） | `// Path fields (dbPath / projectDir / team.dir / shell) expand a leading ~ (~, ~/, ~\) to the home directory at load time` |
+| L2 dbPath 注释 | `:138` 行尾（替换原注释） | `// sqlite index path (~ expands to the home directory)` |
+| L3 projectDir 注释 | `:139` 行尾（替换原注释） | `// Project layer directory (relative to project root; ~ expands to an absolute path used as-is)` |
+| L4 shell 注释尾 | `:124` 行尾追加（原注释保留） | `; a leading ~ in the path expands to the home directory` |
+
+示例值 oracle（F14 第三分句机验）：`"dbPath": "~/.thincoder/memory.db"` 示例值经 `expandHome(v, HOME)` 后 == `join(HOME, ".thincoder/memory.db")`（绝对、无 `~` 前缀；T-H15 内断言）。
+
+### 9.5 关键决策记录
+
+| # | 决策 | 否决备选与理由 |
+|---|---|---|
+| D-H1 | 展开点 = `loadConfig()` 单点（选型 1） | 消费点分散（漏点不可枚举）· 代理层（破坏 config 契约）· 写盘归一（毁原文 / 可移植性） |
+| D-H2 | 展开器住新模块 `src/expand-home.mjs` | config.mjs 内联（行数同贴硬限——非区分点；纯函数失独立单测面 + 违同因拆分先例） |
+| D-H3 | 形态面 = `~` / `~/` / `~\`，**不含** `~user` | `~user` 需 passwd / Windows 用户名解析——收益低、双平台语义不一、猜错即静默错域；不做 = 原样透传——**shell 面**响亮失败（spawn 不存在路径）；**dbPath / projectDir / team.dir 面为残余静默面**（透传建字面 `~user` 目录——同病灶，登记 §9.8） |
+| D-H4 | projectDir 消费侧 `isAbsolute ? p : join(cwd, p)`（非 `resolve(cwd, p)`） | `resolve` 对相对输入也有归一二进样（尾斜杠 / `..` 折叠）→ origin 串非零 delta；`isAbsolute` 分支下相对路径逐字同修前（N7 零伤硬证据） |
+| D-H5 | 磁盘原文不动（读时归一） | 写回绝对路径：毁可移植性 + 存量手写配置不生效 |
+| D-H6 | `shell` 同批同机制纳入 | 分批做 = 同 helper 分叉 / 漏点；shell 是 spawn 路径——同病同修 |
+| D-H7 | 运行时写面**当次**展开不做（登记 §9.1） | 覆盖它要动 settings 工具 + TUI `/shell` + VSC 面板三面（跨端跨档）——本批边界外；落盘原文 + 下次启动展开已使语义自愈 |
+
+### 9.6 用例表（正常 / 边界 / 错误——映射需求号）
+
+新档 `test/home-expansion.test.mjs`；T-H14 归册 slow（`test/slow.mjs`——真实 fs 写 + 子进程，快层 skip / test:full 照跑）；其余快层。
+
+| # | 类 | 输入 | 预期输出 / 断言 | 需求 |
+|---|---|---|---|---|
+| T-H1 | 正常 | `expandHome("~", HOME)` | `HOME` | F10/F11 |
+| T-H2 | 正常 | `expandHome("~/a/b", HOME)` | `join(HOME, "a/b")` | F11 |
+| T-H3 | 边界 | `expandHome("~\\a\\b", HOME)` | `join(HOME, "a/b")`——`\\` 归一，跨平台同式 | F11 |
+| T-H4 | 边界 | `"~/"` · `"~\\"` | `HOME` | F11 |
+| T-H5 | 边界 | `"~user/x"` · `"~abc"` · `"a/~/b"` · `"~~"` | 全部原样（零展开） | F11 |
+| T-H6 | 错误（类型） | `null` · `undefined` · `42` · `{}` · `""` | 原样且不抛 | F11/N8 |
+| T-H7 | 正常 | `loadConfig()` + 夹具四字段全 `~`（`_setConfigPathForTest`） | 四字段 == 展开值 ∧ 各自 `startsWith("~") === false` | F10 |
+| T-H8 | 正常（零变） | `loadConfig()` + 空夹具 `{}` | `dbPath === join(configDir, "memory.db")` ∧ `projectDir === ".thincoder/memory"` ∧ `shell === null` ∧ `team === null` | N7 |
+| T-H9 | 边界 | 夹具 `team:{repo:"r:1"}`（无 dir）· `team:"abc"`（非对象） | 不抛；无 dir 时 `"dir" in team === false`（零键注入）/ `team` 原样；其余字段照展 | F10 |
+| T-H10 | 正常 | 读含 `~` 夹具前后 `readFileSync` 字节 | 相等（零写回） | N9 |
+| T-H11 | 正常 | `memoryTools(mem, {cwd, projectDir:<绝对 tmp>})` → `put{layer:"project"}` | 文件落 `<绝对 tmp>` 下；`join(cwd, <绝对 tmp>)` 形态路径不存在 | F12 |
+| T-H12 | 正常（零变） | `memoryTools(mem, {cwd, projectDir:"projA"})`（相对） | 目录 === `join(cwd, "projA")`（与 `test/memory-tool.test.mjs` 同式） | N7 |
+| T-H13 | 边界 | 夹具 `team:{repo:"r:1", dir:"~/t"}` → `teamConfig(loadConfig())` | `.dir === join(HOME, "t")`（绝对原样，无 cwd 前缀） | F10/F12 |
+| T-H14 | 端到端（slow） | 子进程（伪 `HOME`/`USERPROFILE` + 另置 cwd）：`dbPath:"~/data/memory.db"` · `projectDir:"~/pdata"` → `loadConfig()` + `createMemory()` | `HOME/data/memory.db` 存在 ∧ `<cwd>/~` 不存在 ∧ stdout 两字段无 `~` 前缀 | F13 |
+| T-H15 | 静态 | `README.md` 文本 + `expandHome` | L1–L4 逐字命中（§9.4 字面定稿）∧ 示例值展开 == `join(HOME, ".thincoder/memory.db")`（绝对、无 `~`） | F14 |
+| T-H16 | 静态 | `grep -rn 'startsWith("~")' src bin` | 恰 1 行命中（`src/expand-home.mjs`） | F10 |
+
+### 9.7 验收标准（逐条回指——每条可机器验证）
+
+- **AC-H1（→ F10）**：`loadConfig()` 对含 `~` 的四字段夹具返回全部展开值（T-H7：四字段逐条断言）；全仓展开逻辑恰一处
+  （T-H16：`grep -rn 'startsWith("~")' src bin` == 1 命中，文件 = `src/expand-home.mjs`）。
+- **AC-H2（→ F11）**：形态表驱动（T-H1–T-H6 绿）——正常 2 组 / 边界 4 组逐条断言（`~` / `~/x` / `~\\x` / 尾分隔符；不展开四形态；非字符串零抛）。
+- **AC-H3（→ F12）**：绝对 projectDir 消费面断言（T-H11）∧ 相对形态与 `join(cwd, p)` 逐字等值（T-H12）。
+- **AC-H4（→ F13）**：伪 HOME 端到端（T-H14，slow）——`HOME/data/memory.db` 存在 ∧ `<cwd>/~` 不存在。
+- **AC-H5（→ F14）**：README 断言（T-H15）——说明句 + 三字段注释 L1–L4 逐字命中（字面 = §9.4 字面定稿）∧ 示例值展开后可用（绝对、无 `~` 前缀）。
+- **AC-H6（→ N7）**：`node test/run-fast.mjs` 绿 ∧ `npm run test:full` 绿（既有用例零伤——§9.10 锁清单）；T-H8 / T-H12 绿。
+- **AC-H7（→ N8）**：单测零网络、零真实 home 写入（`test/home-expansion.test.mjs` 全部注入 home / tmp 目录）。
+- **AC-H8（→ N9）**：T-H10 绿（读配置前后磁盘字节相等）。
+- **AC-H9（批级）**：`node scripts/check-doc-width.mjs` 本批文件新增 0 违规；`node --check` 全部改动 `.mjs` 语法过。
+
+### 9.8 边界（本批不做）
+
+- 运行时写面当次展开 / ACP 硬编码分叉 / 历史受害数据搬移（§9.1 登记三条）；
+- 其它字段的路径处理（providers / proxy / mcp command 等——`~` 语义未登记，零碰）；
+- `~user` 形态**残余静默面**：dbPath / projectDir / team.dir 透传后仍建字面 `~user` 目录（同病灶；shell 面为响亮失败——D-H3）；环境变量 / 通配 / 转义；路径存在性校验（形状层止步——同 SETTINGS-TOOL D-S2.5）；
+- VSC 仓镜像（勘察结论 = 仅 `shell` 字段同病 → 报告父侧排程，本批单端）；
+- 不建新档；不碰他链在途档；不改 `DEFAULTS` 默认值；不动 `_archive/` 旧档。
+
+### 9.9 UI/交互决策（全落档）
+
+- 本批零 UI 面：无 picker / 菜单 / TUI 文案改动；无新增用户可见错误文本（展开对不识别形态原样透传——"失败面"不存在）；
+- README（用户可见文档面）随批更新（§9.4 行 9）；
+- `open`：无。（§9.1 三条登记为已裁定出批项，非 open。）
+
+### 9.10 对账（§1 待裁五问逐条 + 既有锁零伤）
+
+| §1 待裁 | 结论 | 落点 |
+|---|---|---|
+| 1 展开点 + helper 归属 | `loadConfig()` 单点（D-H1）+ 新模块 `src/expand-home.mjs`（D-H2） | §9.2 / §9.5 |
+| 2 支持形态 + Windows 分隔符 | `~` / `~/` / `~\`（`\\` 归一生效）；`~user` 不做（D-H3：两平台语义不一、收益低） | §9.3a |
+| 3 四字段落法 + README + 用例/AC | 三字段 loadConfig 展开即毕 / projectDir + 七点位基准解析（§9.3c）；README 见 §9.4 行 9；用例 T-H1–T-H16 + AC-H1–AC-H9（含「cwd 无字面 `~`」机验 = T-H14） | §9.3 / §9.4 / §9.6 / §9.7 |
+| 4 VSC 镜像勘察 | VSC **无** memory 字段消费（文件制记忆、`memoryDir` 硬编码 `cwd/.thincoder/memory`）；**`shell` 同病**（`thincoder-vscode/src/agent/setup.mjs:232` → `src/tools/shell.mjs:233/242` `exec({shell})`）——镜像面 = 1 字段，报告父侧排程 | §9.8 |
+| 5 既有锁零伤 + §1.13 核对 | 见下 | — |
+
+**既有锁零伤清单（as-of 实测）**：
+
+- `test/settings.test.mjs`：T-S2.13 表行集不含 `~` 值 → `c.shell === v` / `teamConfig(c)` 判据零伤。**语义登记**：含 `~` 的 `shell` 写入后，
+  经 `loadConfig()` 读回为展开值（等式 `c.shell === v` 对 `~` 值不成立）——未来若加该夹具行，须按展开语义断言；
+- `test/memory-tool.test.mjs`：相对 projectDir 夹具 → `isAbsolute` 分支与 `join` 逐字同（T-H12）零伤；
+- `test/config-merge.test.mjs` / `test/config.test.mjs` / `test/portability-*.test.mjs`：夹具不含 `~`、`DEFAULTS` 零改 → 零伤；
+- `test/config-pool.test.mjs`：只锁 `poolLimits` → 零伤；
+- 默认值面：`DEFAULTS.memory.dbPath` 已绝对 → `expandHome` 恒等（零值变化）。
+
+**§1.13（需求池）核对**：本批**未在 `docs/TODO.md` 需求池登记**（记录归属 = 主 agent——§1.13「记录 / 维护」分工）；
+本席未写入（写域外）——拟录条目见批次档 §2「需父侧排程项」。
+
 ## 变更记录
 
+- 2026-09-11：§9 配置路径字段家目录展开（第 29 批）——`loadConfig` 单点规范化 + 四字段（dbPath / projectDir / team.dir / shell）+ projectDir 七点位基准解析。
+- 2026-09-11：同批修正轮（设计评审轮次 1 pass 后，6 条逐条处置——N7 口径收窄 · README 字面定稿 L1–L4 · §9.2 / D-H2 理由改述 · `~user` 残余静默面登记 · 数字刷新；第 6 条备查；零实现面）。
 - 2026-09-07：文档格式债批 A 重写——历史变更流水账折叠入正文当前态（2026-09-01 补删能力、2026-09-03 单工具五动作重构、2026-09-05 磁盘为真相修复）。
 - **漂移更新**：①存储改为单一 `~/.thincoder/memory.db`（旧"`{cwd}/.thincoder/index/` manifest+vectors.bin"为 DB 化前旧设计——代码/doc 索引现为 DB 内 code_chunks/doc_chunks 表）；②分块判据由"≤30 行/3 行重叠"更新为实际 `BIG_FILE_LINES=2000` 单 chunk + 符号边界切分；③旧 memory_put/search/delete 三工具名不再写为活工具（已合并为单工具五动作）。

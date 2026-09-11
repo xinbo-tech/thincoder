@@ -1,14 +1,14 @@
 /** /eng command: toggle engineering mode.
- *  Requires METHODOLOGY.md in project root. Offers to create one if missing.
- *  ctx: { agent, pushLine, pushLabel, showPicker } */
-import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs"
-import { join, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
+ *  No prerequisites (FR11): the mode works on any project — no methodology file,
+ *  no docs tree, no git. The retired gate demanded a methodology file and offered
+ *  to create it from a template that no longer ships — that option crashed
+ *  (PORTABILITY P14). ctx: { agent, pushLine, pushLabel } */
+import { readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs"
+import { dirname } from "node:path"
 import { ansi, C } from "./ansi.mjs"
 import { activeSlot, slotPath } from "../session.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 
-const templateDir = join(fileURLToPath(import.meta.url), "..", "..", "prompts")
 import { ENG_OFF_REMINDER } from "../agent.mjs"
 
 /** Atomic slot write (same shape as session.mjs writeSessionFile — kept local to avoid a
@@ -26,29 +26,13 @@ export function writeSessionFile(p, data) {
 }
 
 export async function handleEngCommand(ctx) {
-  const { agent, pushLine, pushLabel, showPicker } = ctx
+  const { agent, pushLine, pushLabel } = ctx
   agent.config.agent ??= {}
-  const methodologyPath = join(agent.cwd, "METHODOLOGY.md")
 
-  // Toggle on: check METHODOLOGY.md exists
-  if (!agent.config.agent.engineering) {
-    if (!existsSync(methodologyPath)) {
-      pushLabel("❯ Eng", ansi.bold + C.tool)
-      pushLine("METHODOLOGY.md not found in project root.", C.warn)
-      const choice = await showPicker("Create METHODOLOGY.md?", [
-        { type: "header", text: "Engineering mode requires a methodology file" },
-        { type: "item", text: "Yes, create from template", action: "create" },
-        { type: "item", text: "No, cancel", action: "cancel" },
-      ])
-      if (!choice || choice.action !== "create") return
-      const src = join(templateDir, "methodology-template.md")
-      copyFileSync(src, methodologyPath)
-      pushLine(`Created METHODOLOGY.md (from template) → edit it to fit your project`, C.tool)
-    }
-  }
-
+  // Toggle on/off — no prerequisite check (FR11: engineering mode depends on no
+  // project file at all; a missing docs tree or git repo must not block it).
   agent.config.agent.engineering = !agent.config.agent.engineering
-  // §24 D-24b: per-review instances die with the mode (fresh convergence cycles
+  // §11.2 D-24b: per-review instances die with the mode (fresh convergence cycles
   // on the next toggle).
   agent._advisorRuns = new Map()
   if (!agent.config.agent.engineering) {
@@ -67,7 +51,7 @@ export async function handleEngCommand(ctx) {
   pushLabel("❯ Eng", ansi.bold + C.tool)
   pushLine(`Engineering mode: ${agent.config.agent.engineering ? "ON" : "OFF"} (session)`, C.tool)
   if (agent.config.agent.engineering) {
-    pushLine(`  → strictly following ${methodologyPath}`, C.dim)
+    pushLine(`  → design-before-code enforced (design review + user approval before code)`, C.dim)
     if (clearedExpired > 0) {
       pushLine(`  → cleared ${clearedExpired} expired design token${clearedExpired === 1 ? "" : "s"}; valid tokens from prior reviews stay usable`, C.dim)
     }

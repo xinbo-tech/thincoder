@@ -6,9 +6,9 @@
  * background pool by DEFAULT (async:true / omitted; async:false forces the
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
-import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
+import { runAdvisorReview, MAX_ADVISOR_ROUNDS, buildCapMessage, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX, buildDesignReviewGuardMessage } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch-segment.mjs"
-import { isDocFile } from "../advisor/repos.mjs"
+import { isDocPath, loadConventions } from "../conventions.mjs"
 import {
   generateDesignToken,
   settleDesignReview,
@@ -16,6 +16,10 @@ import {
   launchAsyncAdvisor,
   stripApprovedSuffix,
 } from "./advisor-async.mjs"
+// 第 33 批（§17.5）：护栏消费面——工具层预检（检查点 1）+ 同步面计数（计数点 2）。
+import {
+  designReviewOutcome, designReviewStreakRecord, designReviewStreakStopped, noteDesignReviewOutcome,
+} from "./review-streak.mjs"
 
 // Design-token utilities moved to advisor-async.mjs (the async settle shares
 // them — no wrapper↔runner module cycle); validateDesignToken stays exported
@@ -106,16 +110,16 @@ export const advisorTool = {
       return "Advisor: no review scope specified. Provide paths (files/directories to review) or documents (acceptance criteria context)."
     }
 
-    // Design review: validate that documents are in docs/ or are recognized doc files
+    // Design review: the review scope must be documentation files. Classification
+    // comes from the single authority (src/conventions.mjs) — the old `docs/`
+    // prefix test is retired with it (FR12: no directory-name hardcoding in the
+    // gate; a project whose docs live elsewhere just declares its code paths).
     if (reviewType === "design" && documents) {
-      const invalidDocs = documents.filter((doc) => {
-        // Allow docs/ directory and recognized doc files (METHODOLOGY.md, README.md, etc.)
-        if (doc.startsWith("docs/") || doc.startsWith("docs\\")) return false
-        return !isDocFile(doc)
-      })
+      const conv = loadConventions(agent.cwd)
+      const invalidDocs = documents.filter((doc) => !isDocPath(doc, conv))
       if (invalidDocs.length > 0) {
         if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-        return `Advisor: design review documents must be in docs/ directory or be recognized doc files. Invalid: ${invalidDocs.join(", ")}`
+        return `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidDocs.join(", ")}`
       }
     }
 
@@ -167,6 +171,14 @@ export const advisorTool = {
       return buildCapMessage(agent)
     }
 
+    // 第 33 批（§17.5 检查点 1——工具层预检；cap 预检邻位 / sync / async 分叉前）：同一 doc-set
+    // 连续 `MAX_DESIGN_REVIEW_STREAK` 次未产出可用结算 ⇒ 拒发（登记 `_advisorRefusals` 同 cap /
+    // 池满款——不置 called / 不耗轮次 / **零 LLM**），返回结论串。
+    if (reviewType === "design" && designReviewStreakStopped(agent, resolved.run.docSetKey)) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+      return buildDesignReviewGuardMessage(designReviewStreakRecord(agent, resolved.run.docSetKey), documents ?? [])
+    }
+
     if (isAsync) {
       const ack = launchAsyncAdvisor(agent, ctx, {
         reviewType, documents, paths, object: reviewObject,
@@ -210,8 +222,10 @@ export const advisorTool = {
     }, designToken, documents, paths, reviewObject, designId)
 
     // B 启动拒绝（§14.4 #2——稳定前缀）：拒发登记（同池满 / cap 款——不置 called、不耗轮次），
-    // 可见报错照常返回（record-results 的 REFUSED 契约）。
-    if (String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX) && ctx._toolCallId !== undefined) {
+    // 可见报错照常返回（record-results 的 REFUSED 契约）。第 33 批：判定单点——同时供设计
+    // 失败分类复用（launchRefused ⇒ neutral——无尝试发生，§17.3 #1）。
+    const launchRefused = String(result).startsWith(ADVISOR_LAUNCH_REFUSAL_PREFIX)
+    if (launchRefused && ctx._toolCallId !== undefined) {
       (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
     }
 
@@ -224,12 +238,18 @@ export const advisorTool = {
       // retired — no mirror write here; the dispatch/spawn gates read the authoritative
       // multi-slot Map (+ slot-file re-read). Slotting moved into settleDesignReview
       // (shared with the async settle — fix #2).
-      const settled = settleDesignReview(agent, resolved.run, designToken, result, { incomplete: advisorIncompleteMarker(result) })
+      const incomplete = advisorIncompleteMarker(result)
+      const settled = settleDesignReview(agent, resolved.run, designToken, result, { incomplete })
+      // 第 33 批（§17.5 计数点 2——同步面）：同分类单源落账（同步面无 stale / 无落盘步骤
+      // ⇒ persistFailed 恒 false）。
+      noteDesignReviewOutcome(agent, resolved.run.docSetKey, designReviewOutcome({
+        launchRefused, stale: false, hasResult: result != null, incomplete, persistFailed: false,
+      }))
       // F2e (§29.1): the sync prior mirror must not carry the raw echo the runner
       // stored — overwrite with the clean settled form (exact-suffix truncation).
       if (settled.passed) {
         agent._lastAdvisorOutput = stripApprovedSuffix(settled.output, resolved.run.approvedSuffix)
-      } else if (advisorIncompleteMarker(result)) {
+      } else if (incomplete) {
         // 未完成 ⇒ 同步 prior 镜像覆写为清洗后输出（防未注册 token 进 prior——§14.3）。
         agent._lastAdvisorOutput = settled.output
       }

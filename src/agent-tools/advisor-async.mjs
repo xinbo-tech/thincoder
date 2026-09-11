@@ -48,9 +48,13 @@ import { normAbs, mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
 export {
   mutationSeqOf, noteMutations, reviewIsStale, settleAdvisorRun, inflightDesignReviewConflict,
 } from "./advisor-settle.mjs"
+// 第 33 批（§17.5）：doc-set 键迁 `review-streak.mjs`（护栏与实例续跑同锚单源；原为私有
+// ——零 import 面）。本文件继续在实例解析 / 池 entries 上消费它。
+import { docSetKey } from "./review-streak.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
 import { stripEventToken } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
+import { deathLine } from "../abort-provenance.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
@@ -62,16 +66,6 @@ import { nextSubagentId } from "./subagent-scheduler.mjs"
 export function advisorRuns(agent) {
   if (!(agent._advisorRuns instanceof Map)) agent._advisorRuns = new Map()
   return agent._advisorRuns
-}
-
-/** Canonical scope key for design reviews — the document multi-set
- *  (order-insensitive, ABS-path normalized — launch 与 continuation 的写法差异
- *  ("./docs/x.md" vs "docs/x.md"、反斜杠) 不误建新实例). */
-function docSetKey(documents, cwd) {
-  const list = [...new Set((documents ?? [])
-    .filter((d) => typeof d === "string" && d.trim())
-    .map((d) => normAbs(d, cwd)))]
-  return JSON.stringify(list.sort())
 }
 
 /** The newest OPEN code instance (the thread a fix-round launch continues), or null. */
@@ -210,7 +204,8 @@ export function cancelAsyncAdvisor(agent, id) {
   }
   if (entry.cancelled) return { id: key, status: "cancelled" } // abort already in flight — idempotent
   entry.cancelled = true
-  entry.controller?.abort?.()
+  // §20.3 站点 #11（第 24 批）：定向中止 = cancel（reason 载荷）
+  entry.controller?.abort?.({ abortTrigger: "cancel", abortDetail: "advisor-cancel" })
   return { id: key, status: "cancelled" }
 }
 
@@ -282,8 +277,9 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
   entry.controller = ctrl
   const baseSignal = buildChildSignal(parent, ctx)
   if (baseSignal) {
-    if (baseSignal.aborted) ctrl.abort()
-    else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
+    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
+    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
   entry.promise = new Promise((res) => { entry._settle = res })
   entry.start = () => {
@@ -296,7 +292,8 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
       signal: entry.controller.signal,
     }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
-      .catch((err) => { entry.error = err?.message ?? String(err) })
+      // §20.3 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
+      .catch((err) => { entry.error = deathLine(err, entry.controller?.signal) })
       .finally(() => {
         // settle 公共收尾单点（ASYNC-RESULT-CONTAINER.md D3——settleAsyncEntry）：日志三连
         // /cancelled 分支（出池+墓碑+⟦ev⟧stopped+"评审已取消——token 未签发"提醒）/挂起分流

@@ -86,7 +86,7 @@ export async function handleAdvisorCommand(ctx) {
   async function thinkingPicker() {
     let thinkIdx = 0
     for (;;) {
-      const entries = buildThinkingEntries(agent, cfg)
+      const entries = await buildThinkingEntries(agent, cfg)
       const c = await showPicker("Advisor Thinking", entries, { defaultIndex: thinkIdx })
       if (!c) return
       thinkIdx = Math.max(0, entries.filter((e) => e.type === "item").indexOf(c))

@@ -1028,6 +1028,527 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
   本批 CLI 单端交付（镜像登记——**后续批建议**，沿 §14.10 #1 先例；批 12 已排除该面——`2026-09-11-VSC-GUARD-MIRROR.md` §四「明确出批」含「sync 完成记账面改动」；不静默）
 - 不做自动重推策略变更（推回 = 既有 guard 机制；本批只修「已覆盖」判定）
 
+## 16. 评审上下文预算跟随模型窗口（120K 硬编码退场——2026-09-11 第 25 批）
+
+> 需求 = `../requirements/ADVISOR-CONVERGENCE.md` §10（F27 / N19）；批次档 = `../batches/2026-09-11-ADVISOR-CONTEXT-BUDGET.md` §1（条目 E1）。
+> **冻结窗口（D5）**：本节为**新增节**——§1–§15 零碰（含 §14 判定族 / §15 sync 记账面）；本档变更记录追加一行（§16.7 注记）。
+> 上下游不变式：判定族六 kind 与六条尾文案（§14.3）**逐字零改**；凭证机制 / 评审语义判据 / 超时预算（`agent.advisor.timeoutMs`）零改。
+
+### 16.1 问题陈述（现场复核——file:line 为 as-of 2026-09-11）
+
+- **缺陷**：评审循环的上下文上限是固定常量 `MAX_CONTEXT_TOKENS = 120_000`（`src/advisor/compaction.mjs:19`，
+  注释 `Reserve headroom to avoid OOM`）。守卫链（`src/advisor/loop.mjs:117-126`）：估算 → `currentTokens > MAX_CONTEXT_TOKENS * 0.8`
+  → 本地压缩 → 压缩后仍 `> MAX_CONTEXT_TOKENS` ⇒ 以 `Advisor: context window limit reached (N tokens).` 收尾
+  （判定族 kind `context_limit`，前缀表 `compaction.mjs:76`）。
+- **实证**：第 15 批轮次 2 评审实例死于 `(120225 tokens)`——与常量逐字吻合；1M 窗口模型被硬帽限死在 ~12% 窗口处。
+- **来源**：该常量自 2026-08-02 引入（`git log -S "MAX_CONTEXT_TOKENS"` → `79fc3df`，注释原文「预留 headroom，避免 OOM」）——
+  当时模型档位为 128K 时代（`120_000 / 128_000 ≈ 94%`）；对现行主力 1M 档位（`deepseek-flash { context: 1_000_000 }`，
+  `src/model-specs.mjs:33`）是**遗留限制**，与用户 2026-09-11 13:18 判定一致。
+- **窗口真值源（既有）**：`providerSpec(provider)`（`src/model-specs.mjs:174-179`）——模型表前缀命中 + provider 级
+  `context`（K 单位）覆盖；未知模型回退 `DEFAULT_SPEC`（128K，`:97`）。**同族先例**（本仓「阈值跟随窗口」惯例）：
+  主循环压缩阈值 `resolveCompactThreshold`（`src/config.mjs:120-135`，`0.6 × 窗口`）、主循环尾预算（`src/context.mjs:44-58`）、
+  评审项目指南预算（`src/advisor/messages.mjs:18-19,93-96`，`5% × 窗口`——advisor 模块内先例）、传输层窗口判定
+  （`src/provider/core.mjs:126-128`）。
+- **接线可达性**：评审循环所持 `provider` 即评审真实 provider（`src/advisor/run.mjs:151` `resolveAdvisorProvider(agent)`
+  → `:181` 传入循环），且循环已在该 provider 上消费 `providerSpec`（`loop.mjs:204`，`reasoningEcho` 判定）——派生值就地可得。
+- **消费面（grep 实测）**：`MAX_CONTEXT_TOKENS` 在全仓（CLI + VSC + 测试 + 脚本）定义 1 处（`compaction.mjs:19`）+
+  导入与使用 2 处（`loop.mjs:18/118/121`）——`run.mjs:16` 的 re-export 面**不含**该常量，替换零外溢。
+
+### 16.2 方案选型对比
+
+**表 1——判死线派生式**（判据来自需求层：跟随窗口 / 头寸充分 / 单参简洁 / 与既有先例同族）
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **比例式**：`limit = floor(窗口 × 0.8)` | 跟随窗口（1M → 800K，= 现状 6.7×——缺陷闭合）；头寸按比例（128K 留 25.6K / 1M 留 200K）；单参数零分支；与既有触发系数（×0.8）同源；与 `COMPACT_RATIO`（0.6）先例同族 | 128K 档线位自 120K 降至 102.4K（−15%——换估计误差头寸，论证见 §16.4）；大窗单请求延迟/额度随上下文上升（模型选择的已知后果） | **选定** |
+| 2 | 绝对预留式：`limit = 窗口 − 100_000` | 大窗几乎不设限（1M → 900K）；但 128K 档 → 28K（远低于现状——128K 模型评审几近不可用）；预留绝对值与「误差随内容量增长」脱节 | — | 否决 |
+| 3 | 混合式：`limit = min(窗口 − 32_000, 窗口 × 0.95)` | 小窗更贴现状（96K）；但两常数三段行为，且 1M 档仅留 5%（对 `chars/4` 估算误差无头寸） | — | 否决（复杂度无对应收益） |
+
+**表 2——接线面**（派生值从哪取）
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **`providerSpec(provider)`（loop.mjs 函数体内、while 轮次外一次性派生——与「循环入口注入」对举）** | 与四条既有先例同族（同一真值源）；自动跟随 provider 级 `context` 覆盖（同一模型不同端点的窗口差异）；循环已持 provider 且已有同源消费点（`loop.mjs:204`）；零新参数、零新配置面 | 派生结果无回显面（不可从运行输出反查）——以纯函数单测 + provider 覆盖双向用例锁（T-CB1 / T-CB4） | **选定** |
+| 2 | agent 配置项（新增 `agent.advisor.maxContextTokens`） | 可显式覆盖；但与 `providers[].context`（窗口真值源）**双源**——配置高于真实窗口时产出「合规但必被服务端拒」的请求（footgun）；E1 不含新配置需求 | — | 否决（覆盖能力已由 `providers[].context` 提供） |
+| 3 | 循环入口注入（`runAdvisorReview` 算好传入） | 显式可测；但派生逻辑两处（生产 + 测试）需同步，且要动 11 参签名；循环所持 provider 即评审真实 provider ⇒ 注入 = 重复派生 | — | 否决 |
+
+### 16.3 契约一：预算派生（两档 + 回退——逐字函数语义）
+
+`compaction.mjs` 常量族内：`MAX_CONTEXT_TOKENS` **退场**，新增常量与纯函数（`providerSpec` 自 `../config.mjs` 导入——
+与 `loop.mjs:11` 同源）：
+
+```js
+// 上下文预算（第 25 批——120K 硬编码退场）：预算跟随评审模型窗口（providerSpec：
+// 模型规格表 × provider 级 context 覆盖）。头寸用途 = chars/4 估算误差 + 响应/协议开销
+// （内存不构成约束——设计 §16.4）；判死线仍是宿主机自限线，服务端窗口约束不变。
+export const CONTEXT_LIMIT_RATIO = 0.8  // 判死线 = 窗口 × 0.8
+const COMPACT_TRIGGER_RATIO = 0.8       // 压缩触发 = 判死线 × 0.8（既有关系零改）
+
+/** 评审上下文预算（纯函数——两档阈值可机测；provider 为 null 时退化默认规格）。 */
+export function advisorContextBudget(provider) {
+  const limit = Math.floor(providerSpec(provider).context * CONTEXT_LIMIT_RATIO)
+  return { limit, compactAt: Math.floor(limit * COMPACT_TRIGGER_RATIO) }
+}
+```
+
+| 输入（provider） | 窗口 | 判死线 `limit` | 压缩触发 `compactAt` |
+|---|---|---|---|
+| `{ model: "deepseek-flash" }`（1M） | 1_000_000 | **800_000** | **640_000** |
+| `{ model: "glm-4" }`（128K） | 128_000 | **102_400** | **81_920** |
+| 未知模型名（回退 `DEFAULT_SPEC` 128K） | 128_000 | **102_400** | **81_920** |
+| `{ model: "deepseek-flash", context: 64 }`（K 覆盖） | 65_536 | **52_428** | **41_942** |
+| `null` / 缺 model（总函数） | 128_000 | **102_400** | **81_920** |
+
+- **回退链**：未知模型 → `specForModel` 的一次性告警 + `DEFAULT_SPEC`（既有语义零改）；`provider` 为 `null` 时
+  `providerSpec` 退化默认（`model-specs.mjs:175` 总函数）——派生不抛错。
+- **量纲**：窗口为 tokens；`providers[].context` 的 K 单位 ×1024 转换只发生在 `providerSpec` 内（零重复转换）。
+- **两档语义**：`compactAt` = 触发本地裁剪（`compactMessages`，规则零改）；`limit` = 压缩后仍超即判死（`context_limit`）。
+  两者关系（×0.8）与现状**逐字同源**——本批只换「上限从哪来」，不换「如何比较」；守卫分支结构（if / 二次估算 / 尾形态）零改。
+
+**循环侧消费（`loop.mjs`——2 处）**：循环体外一次性 `const budget = advisorContextBudget(provider)`（provider 全场不变）；
+`:118` → `currentTokens > budget.compactAt`；`:121` → `estimateTokens(messages) > budget.limit`。其余逐字不动。
+
+### 16.4 OOM 论证（正面回应原注释 `Reserve headroom to avoid OOM`）
+
+1. **内存量级不构成约束**：预算 1M tokens ↔ `estimateTokens` 口径 ~4M 字符 ↔ JS 字符串 ~8MB（UTF-16 双字节）；
+   单次请求 JSON 序列化为同量级瞬时副本 ⇒ 峰值 ≲ 20-30MB，与 Node 默认堆量级相差两个数量级。
+2. **真正的内存边界已由他处承担**：单结果截断 `MAX_RESULT_CHARS = 64K` 字符（`compaction.mjs:22`，`loop.mjs:282` 消费）；
+   压缩后消息集 = system + 压缩注记 + 定锚简报 + 最近 20 条（`compactMessages`）——**与窗口无关的有界集**。
+3. **大窗的真实代价是延迟与 token 额度**（单请求 prefill / 计费），不是 OOM：由 `agent.advisor.timeoutMs` 硬墙（§14.6）
+   与用户的模型选择承担——故 20% 头寸**不**为内存而留；旧注释的动机在本仓代码中找不到支撑（`git log -S` 溯源仅得
+   2026-08-02 的原始中文注释，无对应事故记录），按实测结论改写。
+4. **头寸的真实用途**（新注释所载，三项）：① `estimateTokens` 是 `chars/4` 扁平估算——CJK 内容低估约 3-4×
+   （主循环 `estimateText` 为 ASCII/4 + 非 ASCII/1，`src/provider/rate.mjs:29-35`）；② 响应 / 推理与协议
+   （system/tools）在服务端计入窗口；③ 20% 是「宿主机自限线 < 服务端真窗」的安全间距。
+5. **服务端仍是最终兜底**：超窗由服务端拒绝 → `context_too_long` 分类可见（`run.mjs:222`），评审结算 fail-closed
+   （§14.3 消费点）——本批不改变该兜底。
+6. **残余如实注**：20% 头寸**不能**完全覆盖 4× 级 CJK 低估——极端中文重评审仍可能撞服务端窗（可见失败，不静默）；
+   根治 = 估算器修正（§16.8 #2 登记，另批）。
+
+### 16.5 受影响文件全清单（as-of 2026-09-11 实测 · 行数口径 = `N lines total`）
+
+**实施域（eng-coder 写域——3 项：2 改 + 1 新）**
+
+| # | 文件 | 当前行数 | 动作 | 预计增量 | 档位结论 |
+|---|---|---|---|---|---|
+| 1 | `src/advisor/compaction.mjs` | 158 | 改（常量退场 + 预算纯函数 + `providerSpec` 导入） | +~15 | 交付 ~173 ≤300 ✓ |
+| 2 | `src/advisor/loop.mjs` | 291 | 改（导入换名 + 预算一次性派生 + 两处消费） | +1~3 | 交付 ~294 ≤300（**贴线注记**——若实施越 300：按 §14.7 先例把守卫族整体迁出本档并登记拆分计划，不硬压行） |
+| 3 | `test/advisor-context-budget.test.mjs` | 新 | **新增**（T-CB1–T-CB6） | ~130 | 新档 ≤500 ✓ |
+
+**文档域（eng-designer 写域——本设计者已落）**
+
+| 文件 | 行数注记（批次前 → 落档后） | 变更 |
+|---|---|---|
+| `docs/requirements/ADVISOR-CONVERGENCE.md` | 239 → **279**（§10 落档；§11 属第 23 批） | §10（F27 / N19 / 边界与登记面）——**已落** |
+| `docs/design/ADVISOR-CONVERGENCE.md` | 1045 → **1242**（含本修正轮） | 本节 §16 + 变更记录（含本修正轮 3 条 🔵）——**已落** |
+
+测试基建：CLI 无注册清单档——`test/*.test.mjs` glob 自动发现（`test/run-fast.mjs:17`）；新用例零网络、零真实 LLM
+（循环 `seams.chat` 覆写）、零长等待（字符串夹具——微秒级，`slow-gate` 零命中）。
+
+### 16.6 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-CB1 | 判死线 = **比例式**（窗口 × 0.8） | 表 1——跟随窗口 + 单参数 + 与既有系数/先例同族。否决：绝对预留（小窗崩）· 混合式（两常数无对应收益） |
+| D-CB2 | 接线面 = **`providerSpec`（loop.mjs 函数体内、while 轮次外一次性派生）** | 表 2——真值源单一（provider 级覆盖随之生效）+ 循环已持 provider + 四条同类先例。否决：新配置项（双源 footgun）· 入口注入（重复派生 + 签名扰动） |
+| D-CB3 | **不新增 advisor 专用配置项** | 覆盖能力已由 `providers[].context` 提供（同一模型不同端点窗口不同的既定机制）；advisor 专属旋钮 = 第二真值源 |
+| D-CB4 | 两档**分开命名**（`limit` / `compactAt`），关系保持 ×0.8 | 需求要求两档分别可调可测（一次返回两值）；触发与判死的既有依赖关系不动（改动面最小） |
+| D-CB5 | **原地替换常量**（`MAX_CONTEXT_TOKENS` 退场，不留别名） | 全仓消费面仅 `loop.mjs`（grep 实测）；留别名 = 双源漂移（D2）。否决：保留常量 + 并列新函数（旧帽仍在，随时被误用） |
+| D-CB6 | 128K 档线位下调（120K → 102.4K）**采纳** | 现状 93.75% 的窗占比对 `chars/4` 估算误差与响应空间**无头寸**（CJK 低估实证）——比例式下小窗一并获得正确头寸；1M 档不降反升 6.7×（缺陷本体） |
+| D-CB7 | 六条尾文案 / 判定族 / 压缩规则**零改** | §14.3 判定族与既有用例已锁；缺陷本体是「上限来源」，不是守卫结构。否决：顺带把预算值写进截断尾（文案漂移面 + 无必要） |
+| D-CB8 | **CLI 单端本批**；VSC 镜像随批（登记 §16.8 #1） | 各端独立实现纪律（语义同源、各自原文自持、零跨仓依赖）；VSC 档不在本批写域（差异如实上报——VSC 侧同款缺陷**实测确认存在**，非推测） |
+| D-CB9 | 估算器（`estimateTokens`）**本批不改** | 改估算式会平移全部模型的压缩时点（面大于 E1）；本批头寸已把误差计入（§16.4 #4），修正另批登记 |
+
+### 16.7 与既有纪律的冲突点核对
+
+| 纪律 / 既有节 | 核对结论 |
+|---|---|
+| **D2 单一权威源** | 窗口真值语义**只引用不重述**（`PROVIDER.md` §15 = `providers[].context`；模型规格表 = `src/model-specs.mjs`）；本节只写「预算 = 窗口 × 系数」这一新契约 |
+| **D3 计数·枚举** | 用例 6（T-CB1–T-CB6）· AC 5（AC-CB1–AC-CB5）· 实施域 3 项（2 改 + 1 新）· 文档域 2 档——计数与列表同改（本行与各表一致） |
+| **D5 冻结窗口** | 本档只**新增节**（§16）+ 变更记录 1 行——§1–§15 零碰；改动集齐后统一入场 |
+| **D6 回读核对** | 需求 §10 与本节落笔后回读核实（写入静默失败防护）；实施面验收含回读断言（T-CB6 静态锚） |
+| **D7 变更留痕** | 本档变更记录追加一行（本批）；需求档按既有形态（无变更记录节）由 §10 自带日期与批次注记 |
+| **判定族 / §14.3 契约** | 六 kind 前缀与六条尾文案**逐字零改**（T-CG1 既有用例继续锁）；`context_limit` 生成点行号（§14.3 表引 `loop.mjs:124`）如因本批落笔位移，按 D4「行号 = as-of 参考」由父侧收口并入 |
+| **§14.6 超时语义** | `agent.advisor.timeoutMs`（整场墙钟，默认 600s）零改；预算（token）与墙钟（时间）两维正交 |
+| **主循环阈值（`COMPACT_RATIO = 0.6`）** | 两个不同对象的阈值：主循环 = 会话历史压缩触发（含每轮注入上下文 ⇒ 留 40% 头寸）；评审 = 本地裁剪 + 判死。**不合并、不同步**（同 `MAX_ADVISOR_TURNS` 与提示词 ~30 轮的既有口径：职责不同不同步） |
+| **`AGENT-PARAMS.md` 超时档** | 零改（语义无变，无需改） |
+| **多实现面纪律（双端）** | 不做 byte-identical 硬一致、不建跨仓依赖；VSC 同款缺陷**如实上报**（§16.8 #1——file:line 实证） |
+| **凭证不落档** | 本节全文零 token / designId 值 |
+| **文档人类可读** | 无 >300 字符非表格单行；`node scripts/check-doc-width.mjs` 新增违规 0（AC-CB5） |
+
+### 16.8 后续登记项（本批不做——明示，不静默）
+
+1. **VSC 端镜像（后续批建议——父侧排程）**：**同款缺陷确认存在**（非推测）——`thincoder-vscode` 仓
+   `src/advisor/compaction.mjs:18`（同款常量 `MAX_CONTEXT_TOKENS = 120_000`）、`src/advisor/loop.mjs:22/116/121`
+   （导入 + 两处守卫）；VSC 侧 `providerSpec` 现成（`src/config.mjs:142-149`，经 `src/specs.mjs` re-export）——
+   最小改动面同本端（+~15 行 / +1~3 行）。测试面：新增 VSC 用例档 + **登记 `thincoder-vscode/test/files.mjs`**
+   （VSC 为显式清单，与 CLI glob 不同）。文档面：`ADVISOR-CONVERGENCE（VSC 仓）` 新增 §15 + 变更记录 1 行——
+   VSC 档不在本批写域（本设计者未写）。
+2. **`estimateTokens` 估算器修正（CJK 低估）**：`chars/4` 扁平式 vs 主循环 `estimateText`（ASCII/4 + 非 ASCII/1，
+   `src/provider/rate.mjs:29-35`）——修正会平移全部模型的压缩时点，另批评估（本批头寸已计入误差）。**（收口 2026-09-11：群 B 批承接——本档 §18。）**
+3. **§14.3 生成点行号指针**：`context_limit` 生成点（表引 `src/advisor/loop.mjs:124`）如因本批落笔位移（+1~3 行），
+   节内容零改、行号由父侧收口并入（D4 as-of 口径）。
+4. **父侧核销面**：`docs/TODO.md` 需求池行（本批来源 = 用户 bug 报告）——父侧写域，本设计者不动。
+5. **tpm / rpm 交互**：`rateGate`（`src/provider/rate.mjs:52-57`）对单请求估算超 tpm 只告警放行——大窗评审的额度
+   后果由用户模型选择承担（登记；不新增闸）。
+
+### 16.9 测试层：用例表（正常 / 边界 / 错误）
+
+| 用例 | 类别 | 输入 | 预期输出（断言） | 映射 |
+|---|---|---|---|---|
+| T-CB1 | 正常 | 纯函数 `advisorContextBudget(x)`：1M 模型 / 128K 模型 / 未知模型名 / provider 级 `context:64` / `null` | `{limit:800_000, compactAt:640_000}`；`{102_400, 81_920}`；未知 → 回退同值；`{52_428, 41_942}`；`null` → 默认回退不抛（五组逐一断言） | F27 |
+| T-CB2 | 错误（回归锁） | `_runAdvisorToolLoop` + 1M 模型 provider + ~197K tokens 上下文（12 × 64K 字符工具结果——64K = `MAX_RESULT_CHARS`（64 × 1024）；`chars/4` 口径；消息数 ≤20）+ `seams.chat` 返回终稿 | 输出**不含** `Advisor: context window limit`；含终稿文本；`advisorIncompleteMarker(out) === null`（改前该形态必判死——120K 帽） | F27 |
+| T-CB3 | 对照 | 同上下文 + 128K 模型 provider；同上下文 + 未知模型名 provider | 两者均以截断尾收尾（族前缀 `Advisor: context window limit reached (` 逐字）；`advisorIncompleteMarker → "context_limit"`（机械线不失效 + 未知模型回退判据） | F27 |
+| T-CB4 | 边界 | 同上下文 + `{model:"deepseek-flash", context:64}`（收紧）；同上下文 + `{model:"glm-4", context:1024}`（放宽） | 前者判死、后者不判死（**同量上下文两结果**——provider 级覆盖双向生效，证 `providerSpec` 接线面而非 `specForModel` 单源） | F27 |
+| T-CB5 | 边界 | 1M 模型 provider + ~737K tokens（45 × 64K 字符工具结果——同 64K 口径；消息数 > 20，触发压缩真裁剪） | 输出含 `[Context compacted:`（派生触发线在位）且不含截断尾；压缩后估算 < 判死线；评审正常收尾 | F27 |
+| T-CB6 | 正常（静态锚） | `src/advisor/compaction.mjs` / `src/advisor/loop.mjs` 源文本 | `Reserve headroom to avoid OOM` 零残留；`MAX_CONTEXT_TOKENS` 在 `src/` 零残留；`loop.mjs` 消费 `advisorContextBudget(provider)`（三断言） | F27 / N19 |
+
+### 16.10 验收标准（逐条回指需求——每条可机器验证）
+
+| AC | 验收内容（机判） | 回指 |
+|---|---|---|
+| AC-CB1 | 派生与两档：T-CB1 绿（五组输入 × `{limit, compactAt}` 数对逐断言）；`advisorContextBudget` 为纯函数（`compaction.mjs` 内无 I/O、无状态写入） | F27 |
+| AC-CB2 | 核心缺陷闭合：T-CB2 绿（1M 模型 ~197K tokens **不以** `context_limit` 收尾）+ T-CB3 绿（128K / 未知模型同量上下文仍以截断尾收尾——机械线与回退判据双锁） | F27 |
+| AC-CB3 | 接线面 = `providerSpec`：T-CB4 绿（provider 级 `context` 覆盖**双向**翻转判定结果） | F27 |
+| AC-CB4 | 零回归：T-CB5 绿（派生触发线在位）；既有 `advisor-chain-guards.test.mjs`（21 例）+ `advisor-sync-accounting.test.mjs`（6 例）全绿；`node test/run-fast.mjs` 全绿；`src/prompts/**` 与 VSC 仓零改动（`git status` 判据） | N19 |
+| AC-CB5 | 文档-实现一致 + 旧帽退场：T-CB6 绿（旧 OOM 注释与 `MAX_CONTEXT_TOKENS` 在 `src/` 零残留；循环消费派生函数）；`node scripts/check-doc-width.mjs` 新增违规 0 | N19 |
+
+### 16.11 边界（本批不做）
+
+- 不改判定族六 kind 与六条尾文案、不改压缩算法本体（最近 20 条 + 定锚重挂）、不改结算 / 凭证 / 超时语义
+- 不改 `estimateTokens` 估算式（登记 §16.8 #2）；不新增 advisor 专用配置项（D-CB3）
+- 不做 VSC 端实现（登记 §16.8 #1——各端独立实现纪律）；不碰 `AGENT-PARAMS.md` / `CONTEXT-COMPACTION.md` / `PROVIDER.md`
+- 不改 `docs/TODO.md` / README / CHANGELOG（父侧写域）；不碰他链在途档
+- **UI / 交互**：本批零 UI 面（无 TUI / VSC 显示改动；无 `open` 项）
+
+**计数（D3）**：用例 **6**（T-CB1–T-CB6）· AC **5**（AC-CB1–AC-CB5）· 实施域 **3 项**（2 改 + 1 新）· 文档域 **2 档**；需求 §10 = F27 / N19。
+
+## 17. 评审失败护栏：同一 doc-set 连续未完成即停（第 33 批——2026-09-11）
+
+> 需求 = `../requirements/ADVISOR-CONVERGENCE.md` §12（F28 / F29 / N20 / N21）；批次档 = `../batches/2026-09-11-REVIEW-ATTENTION.md` §1 条目 G1（用户 2026-09-11 13:36 裁定）。
+> **冻结窗口（D5）**：本节为**新增节**——§1–§16 零碰；本档变更记录追加一行。
+> 上下游不变式：凭证签发 / 作废 / 清洗语义、cap（含 design 豁免）、判定族六 kind 与六条尾文案、
+> 陈旧判定 / 记账 / 结算本体**逐字零改**。
+
+### 17.1 问题陈述（现场复核——file:line 为 as-of 2026-09-11）
+
+- **缺陷**：design 评审 cap 豁免（`src/advisor/run.mjs:21-25`；工具层 cap 预检只走 code 分支 `src/agent-tools/advisor.mjs:165-168`）
+  ⇒ **失败路径无上界**：判死（宿主截断尾——结算不签发，`src/agent-tools/design-token.mjs:86-94`）
+  与 stale（陈旧结算——不签发，`src/agent-tools/advisor-settle.mjs:196-203`）都不产出凭证，
+  而设计评审必须拿到凭证才能继续交付链 ⇒ **必然重评**，每次都是整场预算（默认 600s + 全量上下文）。
+- **既有出口盘点**：code = 5 轮 cap（cap 消息 = 收敛失败出口）；design = **无**——两条失败提示都只有
+  「重跑 / 缩范围」指引，没有次数上界（病根即 issue #IKDCVV 的评估结论）。
+- **计数锚可行性（结算点三输入齐备）**：
+  1. `settleAdvisorRun`（`src/agent-tools/advisor-settle.mjs:121-211`）结算时同时持有 `stale`（:128）、
+     `incomplete`（单谓词，:133）、`settled.passed` 与落盘结果（:142-168）——分类输入一处可得；
+  2. 同步面（`src/agent-tools/advisor.mjs:218-237`）在同点持有 `settled.passed` 与 `incomplete`；
+  3. 「同一 doc-set」键现成：`docSetKey`（`src/agent-tools/advisor-async.mjs:67-75`——次序无关 + ABS 归一；
+     与实例续跑同源）。
+- **既有语义可复用**：拒发语义（不置 called / 不耗轮次——`advisor.mjs:165-168` cap 款）、
+  未完成判定单谓词（§14.3）、每评审实例注册表（`agent._advisorRuns`）。
+
+### 17.2 方案选型对比
+
+**表 1——N 值**（判据来自需求层：防无限重评 / 误停概率 / 代价上界 / 恢复成本 / 先例一致性）
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | N=2 | 浪费上界最小（最多 1 次同集重跑余量）；但两次暂态噪声（如 `empty`×2）即触发误停——停止不可自解除，误停恢复 = 换范围 / 新会话 | 误停面最大：把偶发当系统故障 | 否决 |
+| 2 | **N=3** | 连续 3 次同集无可用结算 ≈ 强证据（暂态连中三次概率低）；容忍一次暂态重试；浪费上界 2 次整场预算；与 round2/3 收敛提示的既有节奏同量级；「三振」惯例 | 对比 N=2 多付至多 1 次失败重跑 | **选定** |
+| 3 | N=5 | 与 code cap 同数字但异轴（易被读成同语义）；浪费上界 4 次（600s 预算下 ≈ 40min+ 额度） | 过宽——护栏形同无感 | 否决 |
+
+**表 2——计数载体**
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | run 实例对象（`run.incompleteStreak`） | 零新结构；但「pass 但落盘失败」路径已由 `settleDesignReview` 关闭实例（`design-token.mjs:108`）——重建实例丢计数；且「同一 doc-set」语义锚在键、不在实例 | 语义锚错位 + 已知漏面 | 否决 |
+| 2 | **会话级 Map<docSetKey, {count, log}>**（`agent._designReviewStreaks`） | 与「同一 doc-set」同锚（键 = 现成 `docSetKey` 单源）；跨实例重建存活（含落盘失败路径）；生命周期 = 会话级内存（重启 / `/new` 归零；重置点与 `_advisorRuns` **刻意不同步**——§17.9 #5 定案）；有界（不同 doc-set 数量级极小） | 新会话级小 Map（+1 字段） | **选定** |
+| 3 | 落盘（session 文件字段） | 跨重启存活；但与轮次 / cap 既有语义相悖（重启归零、保守重评——§2.2），且引入字段迁移 / 校验恢复面 | 面大且与既有先例矛盾 | 否决 |
+
+**表 3——与 design 豁免 5 轮的关系**
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **叠加**（豁免保留 + 新失败轴护栏） | 语义正交（轮次轴 vs 失败轴）；保留 2026-09-07 用户裁定；失败无上界的病根由本轴直接闭合 | 两个上界概念并存——须写明轴差异（本节与需求 §12 已明示） | **选定** |
+| 2 | 替代（design 重施 5 轮 cap） | 单一上界；但推翻用户裁定，且轮次预算内的失败循环仍不受控（目标未闭合）；误伤「多轮修正、每次都产出判决」的正常收敛 | — | 否决 |
+| 3 | 只提示不拦（每次失败附计数提示） | 零新拒绝面；但「靠父侧临场兜」正是本批要治的病 | — | 否决 |
+
+### 17.3 契约一：结算分类（纯函数单源）
+
+`designReviewOutcome(input)`（新模块 `src/agent-tools/review-streak.mjs`——纯函数，无 I/O / 无状态）：
+输入 = 一次 design 结算的宿主可见事实；输出 = `{ reset, count }`（`reset=true` = 计数复位；
+`count` = 需加一的类名；两者皆空 = **neutral**——不动计数）。
+
+**优先级（自上而下，首个命中）**：
+
+| # | 输入（结实事实现场） | 输出 | 语义依据 |
+|---|---|---|---|
+| 1 | `launchRefused`（报告以 `ADVISOR_LAUNCH_REFUSAL_PREFIX` 开头——未发起请求） | neutral | 无尝试发生（§14.4 既有语义） |
+| 2 | `stale`（设计评审陈旧结算） | `count: "stale"` | F28 计数类（判死 / stale 两源之一） |
+| 3 | `!hasResult`（design 结算无报告——防御性，正常链不可达） | `count: "no_report"` | fail-closed：无报告不得计为可用 |
+| 4 | `incomplete !== null` 且 `!== "interrupted"` | `count: "{kind}"`（五 kind） | 宿主截断尾（单谓词——§14.3 同源） |
+| 5 | `incomplete === "interrupted"` | neutral | 用户 / 系统中断类——被丢弃的尝试（与 cancelled 同族） |
+| 6 | `persistFailed`（pass 但槽落盘失败） | `count: "no_credential"` | 未产出可用凭证（F28 计数类） |
+| 7 | 其余（`passed` 且落盘成功 / changes-required） | `reset` | 可用判决——连续链断点 |
+
+- **确定性**：全部输入为宿主状态（尾族谓词 / stale 标志 / 结算结果 / 落盘结果）——**零 LLM 输出解析**（N20）。
+- **neutral 与 reset 的分工**：neutral = 无信息事件（取消 / 中断 / 拒发）——**不打断连续计数**
+  （防「取消夹在两次失败之间即洗白」）；如实注：失败-取消-失败-失败 的序列在语义上略宽于「字面相邻」——
+  取舍与收紧方向登记见 §17.9 #2。
+
+### 17.4 契约二：计数、停止与结论（逐字）
+
+**计数（`noteDesignReviewOutcome(agent, key, outcome)`）**：
+
+- `reset` ⇒ 删除该键记录；`count` ⇒ 记录 `{count: prev+1, log: [...log, kind].slice(-MAX_DESIGN_REVIEW_STREAK)}`；neutral ⇒ 不动。
+- 键 = `docSetKey(documents, cwd)`（**自 `advisor-async.mjs` 逐字迁入**——单源）；**空清单键不适用**：不计数也不停止（登记 §17.9 #3）。
+- 载体 = `agent._designReviewStreaks`（Map——懒初始化；**eng 模式切换不清护栏**——与 `_advisorRuns` 刻意不同步，定案见 §17.9 #5）。
+
+**常量**：`MAX_DESIGN_REVIEW_STREAK = 3`（`review-streak.mjs` 导出；`MAX_ADVISOR_ROUNDS` 零改动）。
+
+**停止判定（`designReviewStreakStopped(agent, key)`）**：`(record?.count ?? 0) >= MAX_DESIGN_REVIEW_STREAK`；空清单键恒 false。
+**不可自解除**：被拒后记录保留（复位仅经「可用判决」——被拒后无法发生）；会话结束（重启）随载体清零。
+
+**结论串（`buildDesignReviewGuardMessage(record, documents)`——`run.mjs`，逐字；表行 = 记录逐条）**：
+
+```
+Advisor: design review stopped — 3 consecutive attempts on this document set produced no design token (repeated failed settlements; no further reviews will start for this set in this session).
+Document set (1 design instance — no token issued):
+- docs/design/X.md
+- docs/requirements/X.md
+Attempts (most recent last):
+| # | outcome | meaning |
+|---|---|---|
+| 1 | timeout | review exceeded the wall-clock budget (agent.advisor.timeoutMs) |
+| 2 | stale | the reviewed documents changed while the review was in flight |
+| 3 | empty | the provider returned an empty response |
+Options:
+1. Accept the current state and proceed — implementation for this document set stays gated (no design token).
+2. Narrow or change the scope: a different document set starts a fresh budget — fix the cause first (agent.advisor.timeoutMs / advisor model / provider).
+3. Start a new session (/new) to reset the guard.
+```
+
+**kind → meaning 映射（逐字——上表第三列）**：
+
+| kind | meaning |
+|---|---|
+| timeout | review exceeded the wall-clock budget (agent.advisor.timeoutMs) |
+| context_limit | review exceeded the model context budget |
+| turn_cap | review exceeded the tool-round limit |
+| empty | the provider returned an empty response |
+| review_failed | provider / transport error |
+| stale | the reviewed documents changed while the review was in flight |
+| no_credential | the token could not be written to the session ledger |
+| no_report | the review settled without a report |
+
+**稳定前缀**：`ADVISOR_DESIGN_STREAK_STOP_PREFIX = "Advisor: design review stopped"`（`run.mjs` 导出——与
+`ADVISOR_LAUNCH_REFUSAL_PREFIX` 同族；实现 grep / 用例断言锚）。凭证卫生：串内零 token / designId 值。
+
+### 17.5 契约三：检查点与计数点（接线）
+
+**检查点（cap 两点式同形）**：
+
+1. **工具层预检**（`src/agent-tools/advisor.mjs`——cap 预检邻位，`resolveAdvisorLaunch` 之后、`if (isAsync)` 之前）：
+   `reviewType === "design" && designReviewStreakStopped(agent, resolved.run.docSetKey)` ⇒ 登记
+   `_advisorRefusals`（`ctx._toolCallId` 存在时）+ 返回结论串。**sync / async 两路同治**（检查点在分叉前）。
+2. **`runAdvisorReview` 内防线**（`src/advisor/run.mjs`——cap 内检查邻位）：`reviewType === "design"` 且有 `documents`
+   ⇒ 算 `docSetKey` → 命中则返回结论串——**不建消息、不发起**（防直接调用方绕；零 LLM）。
+
+**计数点（分类单源 `designReviewOutcome`）**：
+
+1. **异步结算**（`settleAdvisorRun`——非陈旧 design 分支 / 陈旧 design 分支 / design 无报告分支三出口）
+   ⇒ `noteDesignReviewOutcome(agent, run.docSetKey, designReviewOutcome({...}))`；
+   `launchRefused` 判定上移为该结算段单点（消费点 = design 分类 + code 守卫——既有语义零变）。
+2. **同步面**（`src/agent-tools/advisor.mjs`——design 结算 `settleDesignReview` 返回后）⇒ 同函数。
+   同步面无 stale / 无落盘步骤（`persistFailed` 恒 false）。
+
+**模块图（新中立模块——打断潜在环）**：`review-streak.mjs` 不 import 任何 `src/` 模块；
+`normAbs` 自 `advisor-settle.mjs` 迁入 + 原处 re-export（既有 import 面零变）、
+`docSetKey` 自 `advisor-async.mjs` 迁入（原为私有——零 import 面）。
+`run.mjs` → `review-streak.mjs` 单向（不构成环：`review-streak` 无回指）。
+
+### 17.6 受影响文件全清单（as-of 2026-09-11 实测——含修正轮复核；行数口径 = `N lines total`）
+
+**实施域（eng-coder 写域——4 改 + 2 新）**
+
+| # | 文件 | 当前行数 | 动作 | 预计增量 | 档位结论 |
+|---|---|---|---|---|---|
+| 1 | `src/agent-tools/review-streak.mjs` | 新 | 新增（常量 + `normAbs` / `docSetKey` 迁入 + 记录 API + 纯分类函数） | ~95 | 新档 ≤300 ✓ |
+| 2 | `src/advisor/run.mjs` | 239 | 改（结论串构建 + 前缀常量 + `runAdvisorReview` 内防线 + 导入） | +~42 | 交付 ~281 ≤300 ✓ |
+| 3 | `src/agent-tools/advisor.mjs` | 241 | 改（工具层预检 + 拒发登记 + 同步面计数） | +~20 | 交付 ~261 ≤300 ✓ |
+| 4 | `src/agent-tools/advisor-settle.mjs` | 212 | 改（`normAbs` 迁出 + 结算段计数接线） | 净 +~10 | 交付 ~222 ≤300 ✓ |
+| 5 | `src/agent-tools/advisor-async.mjs` | 354 | 改（`docSetKey` 迁出 + 导入） | 净 −~6 | >300 advisory（存量 354 → 交付 ~348；净减——迁出 `docSetKey`；拆分评估见 §17.9 #1） |
+| 6 | `test/design-review-streak-guard.test.mjs` | 新 | 新增（T-SK1–T-SK10） | ~230 | 新档 ≤500 ✓ |
+
+**文档域（eng-designer 写域——本设计者已落）**
+
+| 文件 | 行数注记（批次前 → 落档后） | 变更 |
+|---|---|---|
+| `docs/requirements/ADVISOR-CONVERGENCE.md` | 293 → 334 | §12（F28 / F29 / N20 / N21 + 边界）——**已落** |
+| `docs/design/ADVISOR-CONVERGENCE.md` | 1242 → 1501 | §17 + 变更记录（含修正轮行）——**已落** |
+
+测试基建：CLI 无注册清单档——`test/*.test.mjs` glob 自动发现；新用例零网络 / 零真实 LLM（桩 agent + 纯函数直驱）/ 零长等待。
+`test/advisor-chain-guards.test.mjs`（498 行近帽）**不复用**——新建档（同族先例）。
+
+### 17.7 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-SK1 | **N = 3** | 表 1——三振 + 暂态容忍 + 上界可控。否决：2（误停面最大）· 5（形同无感） |
+| D-SK2 | **载体 = 会话级 Map<docSetKey>**（不落盘） | 表 2——同锚 + 跨实例存活 + 会话级寿命（跨 eng 模式切换——§17.9 #5 定案）。否决：run 实例字段（已知漏面）· session 落盘（面大且违先例） |
+| D-SK3 | **「同 doc-set」判据 = `docSetKey`**（迁入复用） | 与实例续跑同源（零新归一逻辑）；空清单不适用（登记） |
+| D-SK4 | **计数类 = 未产出可用结算**（五 kind + stale + no_credential + no_report）；reset = 可用判决；neutral = 取消 / 中断 / 拒发 | §17.3 表——覆盖「判死 / stale / 无凭证」三源；`interrupted` 归 neutral（用户中断类不惩罚——与 cancelled 同族） |
+| D-SK5 | **与 design 豁免 5 轮 = 叠加** | 表 3——语义正交 + 保留用户裁定。否决：替代（推翻裁定且目标未闭合）· 只提示（不治本） |
+| D-SK6 | **停止 = 硬停（会话内不可自解除）** | 恢复 = 换 / 缩范围（天然新键）· `/new` · 接受现状；**不随 eng 模式切换清空**（与 `_advisorRuns` 刻意不同步——§17.9 #5 定案）。否决：自动解除（护栏失效） |
+| D-SK7 | **拒发不耗轮次 / 不耗预算 / 不置已覆盖** | 与 cap 拒发既有语义逐条同款（`_advisorRefusals` 登记——record-results 不置 called / 不进 round） |
+| D-SK8 | **分类单源纯函数（两计数点共用）** | §14.3「单谓词三消费点」教训的直接沿用（防两处各写分类漂移） |
+| D-SK9 | **改动用例新建档**（不复用 498 行档） | 近帽档不得再增厚（档位纪律）；新档 glob 自动发现 |
+| D-SK10 | **CLI 单端本批**；VSC 镜像登记（§17.9 #1） | 各端独立实现纪律；证据与最小改动面已列（file:line as-of） |
+
+### 17.8 与既有纪律的冲突点核对
+
+| 纪律 / 既有节 | 核对结论 |
+|---|---|
+| **D2 单一权威源** | 分类 / 计数 / 停止语义只在本节详述；需求 §12 引用不重述判定表；六 kind 谓词 / 陈旧判定 / 凭证机制**只引用不重述**（§14.3 / §14.14 / `ENGINEERING-MODE.md`） |
+| **D3 计数·枚举** | 用例 10（T-SK1–T-SK10）· AC 6（AC-SK1–AC-SK6）· 实施域 6 项（4 改 + 2 新）· 文档域 2 档——声明与列表逐条一致（本节计数行同表） |
+| **D4 指针纪律** | 指针 = `文档:节`；代码锚 file:line 标 as-of |
+| **D5 冻结窗口** | 本节只**新增节** + 变更记录一行——§1–§16 零碰 |
+| **D6 回读核对** | 需求 §12 与本节落笔后回读核实；实施面验收含静态锚（AC-SK4 / AC-SK6） |
+| **D7 变更留痕** | 本档变更记录追加一行（本批）；需求档按既有形态（§12 自带日期与批次注记） |
+| **凭证不落档** | 本节全文零 token / designId 值（结论文案用通用计数与 doc-set 路径占位） |
+| **cap 语义（§3.2 design 豁免）** | 零改——本护栏是叠加失败轴；`MAX_ADVISOR_ROUNDS` 与 cap 预检分支不动 |
+| **判定族 / 六条尾文案（§14.3）** | 零改（谓词原样复用；`interrupted` 仅在本分类中作 neutral 分支，不改谓词本身） |
+| **完成守卫（§6.2 / §15）** | 公式本体与 sync 记账零改；护栏拒发沿 `_advisorRefusals` 既有契约（不置 called） |
+| **eng 模式重置点** | 定案 = **不同步**——模式切换不清护栏（`eng.mjs` / `cmd-eng.mjs` 零改；§17.9 #5 定案 + T-SK9 静态锚） |
+| **多实现面纪律（双端）** | CLI 单端本批；VSC 同构面如实登记（§17.9 #1——不静默、不跨端追赶） |
+| **档位（≤300 / ≤500）** | 逐文件行数注记 + 交付预估（§17.6）；无越帽项 |
+
+### 17.9 后续登记项（本批不碰——明示，不静默）
+
+1. **VSC 端镜像（后续批建议——父侧排程）**：VSC 侧同款失败无上界存在——`thincoder-vscode/src/agent-tools/advisor-async.mjs`
+   （**492 行**——近 500 帽：`_advisorRuns` :66-70、`docSetKey` 同款 :102 注释、settle 段 :308 起）+
+   `advisor.mjs`（324 行——:115/:129 实例读取）；镜像批须**先评估该档拆分**（新增必越帽）。CLI 侧本批交付 ~348——远 500 帽，无需拆分评估（§17.6 行 5）。
+   文档面：`ADVISOR-CONVERGENCE（VSC 仓）` 新增节（承接 §15 编号）+ 变更记录；测试档须入
+   `thincoder-vscode/test/files.mjs` 注册（VSC 显式清单）。
+2. **neutral 不打断连续的取舍**：失败-取消-失败-失败 亦会累积（现语义）。若实测误报（取消本意为放弃本 doc-set）
+   → 收紧为「严格相邻」或让取消复位（语义级——需用户裁定）。
+3. **空 documents 清单的 design 评审**：护栏不适用（其连评已由实例键控归并——既有 quirk，本节不改；如实注）。
+4. **「会话内再武装」不引入**：硬停的解除 = 换 / 缩范围 · `/new` · 接受现状；若实测「配置修复后想重试同集」成为
+   痛点 → 另批评估（候选：键加配置指纹 / 显式再武装通道——均需走设计评审）。
+5. **`_designReviewStreaks` 生命周期（修正轮定案——原「二选一」收口）**：**会话级**——随会话结束（重启 / `/new`）归零；
+   **eng 模式切换不清**（`eng.mjs` / `cmd-eng.mjs` 的 `_advisorRuns` 置空点**刻意不同步**——护栏病理（同 doc-set 机械性失败）不随评审实例周期改变；
+   F28⑤「停止在该会话内不可自解除」+ 结论串选项③ `/new` 为唯一会话级复位）；实现动作 = **零**（零清位调用——`eng.mjs` / `cmd-eng.mjs` 零改；机判 = T-SK9 静态锚 + AC-SK2）。
+6. **父侧核销面**：`docs/TODO.md` 需求池行 / #IKDCVV 台账 / CHANGELOG——父侧写域，本设计者不动。
+
+### 17.10 测试层：用例表（正常 / 边界 / 错误）
+
+| 用例 | 类别 | 输入 | 预期输出（断言） | 映射 |
+|---|---|---|---|---|
+| T-SK1 | 正常 | `designReviewOutcome` 输入矩阵：pass+落盘成功 / changes-required（无尾、无回显）/ 五 kind 逐一 / `interrupted` / stale / persistFailed / launchRefused / hasResult=false | 逐项：reset / reset / `count:{kind}`×5 / neutral / `count:"stale"` / `count:"no_credential"` / neutral / `count:"no_report"`（优先级逐条锁定） | F28 / N20 |
+| T-SK2 | 正常 | `noteDesignReviewOutcome`：连续三次 `count`（同类） | `count===3`；`log` 顺序 = 录入顺序；`designReviewStreakStopped` → true | F28 |
+| T-SK3 | 边界 | 混合 kind：`timeout` → `stale` → `empty` | `count===3` 且停止；`log` 三 kind 有序（结论表数据源） | F28 / F29 |
+| T-SK4 | 边界 | 计数 2 后一次 `reset`（changes-required）再 2 次 `count` | 第二次序列停在 2（<3）不停；记录删除后重建（log 从空起） | F28 判定句③ |
+| T-SK5 | 边界 | 序列含 neutral：count → neutral（`interrupted`）→ count → count | `count===3` 停止；neutral 不增计数（值断言） | F28 / D-SK4 |
+| T-SK6 | 边界 | 键隔离与归一：集合 A 停止后集合 B 发起；同集写法变体（`./docs/x.md` vs `docs/x.md`；反斜杠；次序颠倒）指向同一键 | B 不受影响；变体同键（A 的计数在变体发起上生效——`stopped===true`） | F28 判定句④ |
+| T-SK7 | 错误 | 工具层预检：置位 3 次计数后 `advisorTool.execute({type:"design", documents:[A]}, ctx)` | 返回串以 `Advisor: design review stopped` 开头；含尝试表与三选项；零 chat 调用；`_advisorRefusals` 命中该 toolCallId | F28 / F29 |
+| T-SK8 | 正常 | `settleAdvisorRun` 直驱（桩 agent + 桩 entry）：design + 六 kind 报告逐一（含 stale 分支与 persist 失败分支） | 每次按分类增计数 / 记录 kind；launchRefused 报告 → 不动计数 | F28 / N20 |
+| T-SK9 | 边界 | 静态锚：`src/agent-tools/advisor.mjs` / `src/advisor/run.mjs` 源文本 | 工具层含 `designReviewStreakStopped` 消费 + 同步面含 `noteDesignReviewOutcome` 调用；`run.mjs` 含 `ADVISOR_DESIGN_STREAK_STOP_PREFIX` 定义；`eng.mjs` / `cmd-eng.mjs` 零 `_designReviewStreaks`（模式切换不清护栏——§17.9 #5 定案） | F28 · §17.9 #5 |
+| T-SK10 | 错误 | 空清单：`documents=[]` 与 `documents=null` 下的计数 / 停止调用 | 均 no-op / false（护栏不适用——fail-open 于此面；无计数写入） | F28（登记 §17.9 #3） |
+
+> 测试基建：桩 agent（`{_designReviewStreaks: new Map(), cwd}`）+ 直驱纯函数 / `settleAdvisorRun` / `advisorTool.execute`
+> （零网络、零真实 LLM、零长等待——微秒级）；新档由 glob 自动发现。
+
+### 17.11 验收标准（逐条回指需求——每条可机器验证）
+
+| AC | 验收内容（机判） | 回指 |
+|---|---|---|
+| AC-SK1 | 分类单源：T-SK1 绿（矩阵逐项）；`designReviewOutcome` 为纯函数（`review-streak.mjs` 无 I/O、无 import `src/`） | F28 / N20 |
+| AC-SK2 | 计数 · 停止 · 复位：T-SK2 – T-SK5 绿；`_designReviewStreaks` 在 session 落盘面 grep 零命中（会话级载体）；`eng.mjs` / `cmd-eng.mjs` 零命中（模式切换不清护栏——T-SK9，§17.9 #5 定案） | F28 / N20 |
+| AC-SK3 | 停止产物：T-SK7 绿（前缀逐字 + 尝试表 + 三选项 + 零凭证值 + 拒发登记）；T-SK3 的 log 与表行一致 | F29 |
+| AC-SK4 | 两级检查点：T-SK9 绿（工具层 + 内防线静态锚）；T-SK7 零 chat 调用 | F28 |
+| AC-SK5 | 键归一与隔离：T-SK6 绿；T-SK10 绿（空清单 no-op） | F28 判定句④ / §17.9 #3 |
+| AC-SK6 | 零回归 + 档位 + 文档一致：`cd thincoder && node test/run-fast.mjs` 全绿（含既有 advisor 三档）；新档被 glob 发现（测试数 +1 档）；§17.4 逐字文案在实现中 grep 命中；受影响文件 ≤ 档位帽（实测对表）；`node scripts/check-doc-width.mjs` 新增违规 0；`src/prompts/**` 与 VSC 仓零改动 | N20 / N21 |
+
+### 17.12 边界（本批不做）
+
+- 不改凭证机制本体与签发 / 作废 / 清洗语义；不改 cap 与 design 豁免（叠加轴）
+- 不改评审侧提示词、判定族谓词与六条尾文案、陈旧判定 / 记账 / 结算本体
+- 不对代码评审生效；不做自动重跑 / 自动缩范围 / 自动再武装
+- 不做 VSC 端实现（登记 §17.9 #1）；不碰 `AGENT-LOOP.md` / `AGENT-PARAMS.md` / `ENGINEERING-MODE.md` 链
+- 不改 `docs/TODO.md` / README / CHANGELOG（父侧写域）
+- **UI / 交互**：本批零 UI 面（结论串落工具返回值；无 TUI / VSC 显示改动；无 `open` 项）
+
+**计数（D3）**：用例 **10**（T-SK1–T-SK10）· AC **6**（AC-SK1–AC-SK6）· 实施域 **6 项**（4 改 + 2 新）· 文档域 **2 档**；需求 §12 = F28 / F29 + N20 / N21。
+
+## 18. 群 B 批 CLI 侧落点：评审估算器 CJK 加权 + 对位登记面（2026-09-11）
+
+> 来源：批次档 `../batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §1 条目 B4（登记承接 = 本档 §16.8 #2）。
+> 需求 = `../requirements/ADVISOR-CONVERGENCE.md` §13（F32 / N22~N24——指针不重述）。
+> 双端纪律：B4 双端（语义同源、各端独立实现、零跨仓依赖）；VSC 面落 `ADVISOR-CONVERGENCE（VSC 仓）§17.3`——本节 = 语义源 + CLI 面。
+> CLI 仓其余面（B1 / B2 / B3）零改——对位登记见 §18.4。
+
+### 18.1 问题（复核 as-of 2026-09-11）
+
+`src/advisor/compaction.mjs:38-45`——`estimateTokens(messages)` = `Math.ceil((content.length + toolCalls.length) / 4)` 扁平式；
+CJK 低估 ~3-4×（主循环 `estimateText`——`src/provider/rate.mjs:30-36`，ASCII/4 + 非 ASCII/1）。
+消费点：`src/advisor/loop.mjs:120 / 124 / 127`（compactAt / 判死线 / 判死尾计数）+ `src/advisor/run.mjs:264`（显示统计——装饰面）。
+行号实证：§16.4 #4 已如实注「20% 头寸不能完全覆盖 4× 级 CJK 低估」（§16.6 D-CB9 本批不改——另批登记）；本批即承接。
+
+### 18.2 方案选型（候选 ≥2）
+
+| # | 候选 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | **复用 `src/provider/rate.mjs#estimateText`**（叶子模块——仅依赖 `abort-provenance.mjs`） | 单源加权公式（与主循环同口径）；纯 ASCII 逐值相等；零新配置面 | import +~1 行；公式替换 1 行 | **选定** |
+| 2 | 本文件内联加权式（复制公式） | 零跨模块依赖；但公式双源（D2——与 rate.mjs 漂移风险） | — | 否决 |
+| 3 | 全对齐 `context.mjs` 的 estimateTokens walker（reasoning_content / 逐参 tool_calls） | 口径最全；但面大于需求（评审 messages 无 reasoning_content 持久；判死语义不变） | — | 否决 |
+
+### 18.3 契约与受影响文件
+
+**契约（逐条）**：
+
+1. `estimateTokens(messages)` 内容项改 `estimateText(content + toolCalls)`——walker（content / tool_calls 两源）零改、计数口径（含 tool_calls JSON 全串）零改；
+2. 纯 ASCII 输入与旧式逐值相等（`ceil((len−0)/4)` 同式）；CJK「中」×N → N（旧式 N/4）；
+3. 消费点（两守卫 + 判死尾 + 显示统计）零改——只随新估值自然生效；比例系数（`CONTEXT_LIMIT_RATIO` / `COMPACT_TRIGGER_RATIO`）零改；
+4. 判定族 / 六条尾文案 / `looksLikeReviewOutput` 阈值谓词零碰。
+
+**受影响文件（行数 as-of 2026-09-11 实测）**：
+
+| # | 文件 | 现 | 预计 | 动作 |
+|---|---|---|---|---|
+| 1 | `src/advisor/compaction.mjs` | 171 | ~174 | +import +加权式 |
+| 2 | `test/advisor-context-budget.test.mjs` | 101 | ~140 | T-EST1 / T-EST2（ASCII 夹具断言逐值不变——零回归对照） |
+
+**用例表（T-EST1 / T-EST2——同 VSC §17.3 语义；CLI 面夹具同型）**：
+
+| # | 类型 | 输入 | 预期输出（断言） | 映射 |
+|---|---|---|---|---|
+| T-EST1 | 正常 | `estimateTokens`：纯 ASCII 400 字符 | 100（与旧式逐值相等——零回归） | F32 |
+| T-EST2 | 正常 | CJK「中」×400；混合 200 ASCII + 200 CJK | 400（旧式 100）；混合 = 50 + 200 = 250 | F32 |
+
+**AC（机判）**：
+
+| AC | 判据 | 回指 |
+|---|---|---|
+| AC-B4-CLI-1 | T-EST1 / T-EST2 绿；既有夹具断言（12 × TOKENS_PER_BLOB 等）逐值不变——CLI 快层全绿 | F32 / N22 |
+| AC-B4-CLI-2 | 行数实测对表 + `check-doc-width` 新增违规 0 | N24 |
+
+### 18.4 对位登记面（CLI 零改——明示，不静默）
+
+| # | 面 | CLI 现状（复核 as-of） | 处置 |
+|---|---|---|---|
+| 1 | B2 async 结算面拒发记账（VSC 已修） | `src/agent-tools/advisor-settle.mjs:133` `run.round++` 无条件 + `:227-229` prior 写入（launchRefused 可命中 `looksLikeReviewOutput`）——与 VSC 修复前同款 | **登记**（本批零改；语义同源指向 `ADVISOR-CONVERGENCE（VSC 仓）§17.1`；随批评估——触发 = VSC 面交付验证或用户裁定） |
+| 2 | B3 冻结窗口 file_ops 面（VSC 已修） | E-6 #3 维持：bash / file_ops 不拦不记（§14.14）；子代理合入面 = E-6 #5 登记 | **登记维持**（不跨端追赶；复核条件随 `ADVISOR-CONVERGENCE（VSC 仓）§17.2` 表） |
+| 3 | B1 advisor 池中止（VSC 已修） | CLI Stop = 全停 → 清池即诚实（无孤儿） | 不需修（本端语义自洽——对位口径 `AGENT-LOOP（VSC 仓）§12.8 #2`） |
+
+### 18.5 边界（本批不做）
+
+- 不改 `loop.mjs` / `run.mjs` / 判定族 / 尾文案 / cap / 凭证机制；不新增配置项；
+- B1 / B2 / B3 CLI 面零改（§18.4 登记）；不做 VSC 仓写入；
+- **零 UI 面**（TUI 显示统计随估值自然变化——无渲染面改动）。
+
+**计数（D3）**：条目 1（B4-CLI）+ 登记 3 项（§18.4）· 用例 2（T-EST1~T-EST2）· AC 2（AC-B4-CLI-1~2）·
+实施域 2 档（compaction 改 + 测试档扩例）· 文档域已落（本节 + §16.8 #2 收口注 + 变更记录行）。
+
 ## 变更记录（历史折叠——详见 git log）
 
 - 2026-08-01~08-08 反转链一句演变：cap 引入（防发散拉锯）→ round2+ fresh session + design 并入共享预算 → prior 表重注入 round2+（响应表退为聚焦参考）→ 硬解析/短语匹配删除、prior 改全文原文注入、轮次判定确定性化——现行语义见正文各节。
@@ -1042,3 +1563,8 @@ if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun =
 - 2026-09-11（修正轮——设计评审轮次 1 后 8 条全部采纳落档）：§13.5 零运行时引用 + 测试层实测行位 · §13.7 D-RO8 补引 `ENGINEERING-MODE.md` §1.5 #8/#10 · §13.9 口径差登记 · §13.10 面⑥定义 ·
   §13.6 行数口径与 tier 措辞 · §13.1 锚#3 仓限定 · §13.11 AC-RO9 判据收缩；VSC 设计档 §7 四值 + §12 收口节（本修正轮落档）。
 - 2026-09-11（第 13 批——机制债收束）：§15 新增（F16 同步面扩展——sync 记账消费单谓词；需求 §7 F16 文字零改）；修正轮：§15.6 镜像登记改述（单指后续批——批 12 已排除该面；评审 #4）。
+- 2026-09-11（第 25 批）：§16 新增——评审上下文预算跟随模型窗口（`MAX_CONTEXT_TOKENS = 120_000` 硬编码退场：判死线 / 压缩触发改由 `providerSpec` 派生；判定族与六条尾文案零改；VSC 镜像登记 §16.8 #1）。
+- 2026-09-11（第 25 批·修正轮——设计评审轮次 1 后 3 条 🔵 落档）：§16.5 文档域行数改「批次前 → 落档后」双值 · §16.9/§16.10 T-CB2 数字按夹具算术落定（~197K——64K = 64 × 1024 口径；T-CB5 同步 ~737K——与 VSC 镜像档跨端一致）· §16.2 表 2 #1 + D-CB2 措辞消歧（loop.mjs 函数体内、while 轮次外一次性派生）。
+- 2026-09-11（第 33 批）：§17 新增——评审失败护栏（同一 doc-set 连续未完成即停：N=3 · 会话级键控计数 · 结论表产物；cap 豁免保留，叠加失败轴；需求 §12 = F28/F29 + N20/N21）。
+- 2026-09-11（第 33 批·修正轮——设计评审轮次 1 后）：§17.6 行 5 档位标注统一（>300 advisory；行数复核 350 → 354）· §17.9 #5 生命周期定案（模式切换不清护栏——与 `_advisorRuns` 刻意不同步；§17.2 / §17.4 / D-SK2 / D-SK6 / §17.8 / T-SK9 / AC-SK2 同步）· §17.9 #1 补 CLI 侧远帽注。消歧与登记、零新语义。
+- 2026-09-11（群 B 批——VSC-REVIEW-ASYNC-SWEEP）：**新增 §18**（B4 评审估算器 CJK 加权——`estimateText` 复用；ASCII 逐值零回归；对位登记面 3 项——B1 / B2 / B3 CLI 零改）；§16.8 #2 原位收口注。

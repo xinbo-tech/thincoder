@@ -8,6 +8,7 @@ import { providerSpec, resolveEnableThinking } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
 import { logEvent, errText, classifyErr, headText } from "../log.mjs"
+import { abortError, annotateAbort, deathLine } from "../abort-provenance.mjs"
 import { recordChatTrace } from "../traces/trace-store.mjs"
 import { readSSE } from "./sse.mjs"
 export { readSSE } from "./sse.mjs"
@@ -23,19 +24,12 @@ export { parseRetryAfter, compileStreamRules } from "./errors.mjs"
 
 // 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟语义废除）——fetchTimeoutMs 现为每调用从 provider 读（config 归一化），见 effectiveFetchTimeoutMs。
 
-/** 可中断 sleep（会诊 #5）：退避/Retry-After/overload 等待期 Ctrl+C 立即生效；内部走 _rateHooks.sleep（测试替换点） */
-function abortDOM(signal) {
-  const e = new DOMException("The operation was aborted", "AbortError")
-  e.reason = signal.reason
-  return e
-}
-
 /** 可中断 sleep（会诊 #5）——retry.mjs 同用（2026-09-08 ENG-SESSION-PROVIDER-CLEANUP D2.3 去重——单实现，retry.mjs 导入）。 */
 export async function sleepInterruptible(ms, signal) {
   if (!signal) return _rateHooks.sleep(ms)
-  if (signal.aborted) throw abortDOM(signal)
+  if (signal.aborted) throw abortError(signal, "provider", "sleep")
   return new Promise((resolve, reject) => {
-    const onAbort = () => { signal.removeEventListener("abort", onAbort); reject(abortDOM(signal)) }
+    const onAbort = () => { signal.removeEventListener("abort", onAbort); reject(abortError(signal, "provider", "sleep")) }
     signal.addEventListener("abort", onAbort, { once: true })
     _rateHooks.sleep(ms).then(
       () => { signal.removeEventListener("abort", onAbort); resolve() },
@@ -110,7 +104,7 @@ export async function chat(provider, opts = {}) {
       provider: pname, model: provider?.model ?? "",
       ms: Date.now() - t0,
       stage: logCtx.stage, turn: logCtx.turn, auto: logCtx.auto === true, child: logCtx.child,
-      err: errText(e, 200),
+      err: errText(deathLine(e, opts.signal), 200),
       kind: classifyErr(e, opts.signal),
     })
     // §18.6 D-TR5：失败路径也落盘——error（errText 截断 + 类别）+ finishReason:null
@@ -424,7 +418,8 @@ async function requestWithRetry(provider, body, signal, onWait) {
         ? await proxyFetch(url, opts, provider.proxyUri)
         : await fetch(url, opts)
     } catch (error) {
-      if (error.name === "AbortError") throw error
+      // §20.3 站点 #2（第 24 批）：fetch 拒否面补标来源（undici 拒否的 AbortError 现场无 reason）
+      if (error.name === "AbortError") throw annotateAbort(error, signal, "provider", "request")
       lastError = error
       continue
     }

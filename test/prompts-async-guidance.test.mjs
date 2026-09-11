@@ -3,7 +3,7 @@
  * 断言对象 = 双端 src/prompts/ 新 15 文件（persona-*×7 / common / discipline-*×2 / 特殊×5）+
  * 装配代码（src/prompt-overlays.mjs）。旧 10 文件（system/engineering/engineering-sub/main/
  * discipline/methodology-template 等）已退役——其锚句随迁新文件（PROMPT-IMPL-1-TEXT §2.3），
- * 本文件按新宿主重写断言；旧文件退役态与全仓零引用也在此对账（红线：变更史档叙述豁免）。
+ * 本文件按新宿主重写断言；退役旧件不存在检查已收归接收档 test/doc-consistency.test.mjs T75（扫① 2026-09-11）。
  *
  * 断言形态（权威分类 = PROMPT-ATTENTION-RESTRUCTURE 阶段 D）：
  *   命令型 → 保逐字整句（A2/A4、核心纪律句族）；列举型 → 子条级关键子串（A1/A3、需求池三句）。
@@ -17,6 +17,10 @@
  *   - PROMPT-ATTENTION 开关段 C1-C4（推进档位 auto/manual）
  *   - PROMPT-REVIEW-ORDER 第 9 批（Action 四值 + 修正轮 ⇄ 用户批准 时序——ADVISOR-CONVERGENCE §13）
  *   - PROMPT-SYSTEM §2.7 编写纪律巡检 / §3.2 装配矩阵 / §3.4 降级链
+ *
+ * 扫① 削段注（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3）：退役旧件不存在检查 + ESCALATE.md/
+ * AGENT-LOOP.md 旧句负向锚 → 收归 test/doc-consistency.test.mjs T75/T76（防回潮族）；本文件保留
+ * 新集合存在检查与全部正向锚（sync 引导负向族 = 现行引导契约背面，判定保留）。
  */
 import { test } from "node:test"
 import assert from "node:assert"
@@ -37,8 +41,8 @@ const NEW_PROMPTS = [
   "common.md", "discipline-engineering.md", "discipline-normal.md",
   "consult-base.md", "advisor-design.md", "advisor-round1.md", "advisor-round2.md", "advisor-round3.md",
 ]
-// 退役旧件（AC-2 退役七件 + 旧纪律/人格——advisor 四件套不在此列）
-const RETIRED_PROMPTS = ["system.md", "engineering.md", "engineering-sub.md", "main.md", "discipline.md", "methodology-template.md", "eng-coder.md", "explore.md", "coder.md", "plan.md"]
+// 退役旧件清单（AC-2）已随扫① 收归 test/doc-consistency.test.mjs T75（防回潮族——2026-09-11）——
+// 本文件不再维护退役名单副本。
 
 const pe = read("src/prompts/persona-engineering.md")
 const pn = read("src/prompts/persona-normal.md")
@@ -46,13 +50,13 @@ const psub = ["persona-eng-coder.md", "persona-explore.md", "persona-coder.md", 
 const common = read("src/prompts/common.md")
 const de = read("src/prompts/discipline-engineering.md")
 const dn = read("src/prompts/discipline-normal.md")
+const SQ_LITERAL = "- **提交即走——排队是机制的职责**：spawn 一律带 `files`/`dependsOn` 后**直接提交**——域冲突由调度器排队（返回 `queued` + position）、并发池满由池排队；**不手工记队列、不逐档放行、不因冲突/池满而推迟提交**。父侧只读状态（status/observe），不模拟调度器。"
 import { loadProjectInstructions } from "../src/agent/helpers.mjs"
 
 // 七场景装配快照（装配矩阵/降级链断言面——第 2 批新增 eng-designer）
 const engMode = Object.fromEntries(["normal", "engineering", "eng-coder", "eng-designer", "explore", "coder", "plan"].map((s) => [s, assemblePrompt(s)]))
 
-test("退役旧件不存在于 prompts 树（AC-2——退役七件+main/discipline/explore/coder/plan 旧件）", () => {
-  for (const f of RETIRED_PROMPTS) assert.ok(!exists(`src/prompts/${f}`), `${f} 已退役——不应存在`)
+test("新 15 件在位于 prompts 树（AC-2——退役旧件不存在检查收归接收档 T75）", () => {
   for (const f of NEW_PROMPTS) assert.ok(exists(`src/prompts/${f}`), `${f} 新集合在位`)
 })
 
@@ -124,6 +128,7 @@ test("锚#6 凭证不落文档驻留 discipline-engineering（逐字）", () => 
 test("锚#7 调度器句驻留（Multi-Task 块——CLI=de / VSC=persona-engineering——各端断言自身宿主）", () => {
   // Multi-Task 块随施工①落入 discipline-engineering（CLI 端）——分层归属：多设计并行=流程纪律。
   assert.ok(de.includes("overlapping domains are queued by the scheduler, never hand-serialized"), "锚#7 调度器句缺失（CLI 宿主 de）")
+  assert.ok(de.includes(SQ_LITERAL), "锚#7 提交即走句缺失（CLI 宿主 de）")
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -178,23 +183,20 @@ test("ASYNC-RESIDUE R2/F-2/F-3 工程侧 async 段同基驻留（de）", () => {
   assert.doesNotMatch(de, /it returns a design token in plain text in its response/, "旧 token 句残留")
 })
 
-test("ASYNC-RESIDUE R6 discipline-normal 路由 subagent 补 cancel + escalate 异步注（dn）", () => {
-  assert.ok(dn.includes("(action: spawn / status / cancel / escalate)"), "路由: subagent 行动作列缺 cancel")
-  assert.ok(dn.includes("escalate = fly in a stronger model for hard implementation (background by default — its report arrives automatically; never wait for it synchronously at top level)"), "路由: escalate 异步注缺失")
+test("ASYNC-RESIDUE R6 路由面随迁 common（subagent 族行——dn 旧路由块负向锚收归接收档 T76）", () => {
+  assert.ok(common.includes("| `subagent` / `advisor` / `consult_*` | delegation / independent review / consultation |"), "路由: common 缺 subagent/advisor/consult 族行（宿主迁移后）")
+  assert.ok(dn.includes("Escalate is DEFAULT-ASYNC at the top level"), "escalate 异步语义缺失（飞刀段——路由细注删源后由该节与工具描述承载）")
 })
 
-test("BATCH-4-DOC-CLEANUP F-1 ESCALATE.md async:false 残留句零 + 锚句驻留", () => {
+test("BATCH-4-DOC-CLEANUP F-1 ESCALATE.md 锚句驻留（旧句负向锚收归接收档 T76）", () => {
   const escalate = read("docs/design/ESCALATE.md")
-  assert.doesNotMatch(escalate, /同步旧路径/, "ESCALATE.md: 同步旧路径残留")
-  assert.doesNotMatch(escalate, /同步语义零回归/, "ESCALATE.md: 同步语义零回归残留")
   assert.ok(escalate.includes("**顶层一律异步**（同 §7.7——§7.7.1：同步保留例外全移除——报告自动到：ack → 回合自然收尾 → 挂起 settle → digest）"), "ESCALATE.md: §7.7.1 锚句缺失")
 })
 
-test("ASYNC 全族：docs/design/AGENT-LOOP.md §14.2 同步保留句已移除 + 顶层一律异步陈述", () => {
+test("ASYNC 全族：docs/design/AGENT-LOOP.md §14.2 顶层一律异步陈述（旧句负向锚收归接收档 T76）", () => {
   const loopDoc = read("docs/design/AGENT-LOOP.md")
   const sec142 = loopDoc.slice(loopDoc.indexOf("### 14.2 飞刀（escalate）"), loopDoc.indexOf("## 15. 操作纪律"))
   assert.ok(sec142.length > 100, "§14.2 slice non-empty")
-  assert.doesNotMatch(sec142, /async:false\s*显式同步保留/, "§14.2: 同步保留句残留")
   assert.match(sec142, /顶层一律异步/, "§14.2: escalate 顶层一律异步陈述存在")
   assert.match(sec142, /报告自动到/, "§14.2: 报告自动到引导存在")
 })
@@ -257,14 +259,18 @@ test("advisor AC7 双轨消除——旧 pass 定义不复发", () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 搜索条款双文件一致（discipline-normal × discipline-engineering——D-P1 先例逐字一致断言）。
+// 搜索条款宿主迁移（第 15 批公共层扩容——条款随迁 common，de/dn 删源；T-CL5）。
 // ─────────────────────────────────────────────────────────────────────────────
-test("搜索条款双文件逐字一致（D-P1 形态——同条款双侧提取逐字比对）", () => {
-  // 各端条款行文案自持（多实现面纪律——不做 byte 硬一致）——语义关键词逐文件驻留断言。
-  for (const [name, f] of [["discipline-engineering", de], ["discipline-normal", dn]]) {
-    assert.ok(f.includes("**`websearch` returns junk/unrelated results twice in a row → switch immediately**"), `${name}: websearch junk 条款缺失`)
-    assert.ok(f.includes("MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search"), `${name}: MCP primary 条款缺失`)
-    assert.ok(f.includes("`websearch` (Bing) is ONLY the fallback"), `${name}: fallback 限定缺失`)
+test("搜索条款宿主迁移：3 字面驻留 common + de/dn 零命中（重定向 + 反证非空转）", () => {
+  // 各端条款行文案自持（多实现面纪律——不做 byte 硬一致）——语义关键词逐宿主驻留断言。
+  const CLAUSES = [
+    "**`websearch` returns junk/unrelated results twice in a row → switch immediately**",
+    "MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search",
+    "`websearch` (Bing) is ONLY the fallback",
+  ]
+  for (const c of CLAUSES) {
+    assert.ok(common.includes(c), `common: 条款缺失: ${c.slice(0, 40)}`)
+    for (const [name, f] of [["discipline-engineering", de], ["discipline-normal", dn]]) assert.ok(!f.includes(c), `${name}: 旧宿主残留: ${c.slice(0, 40)}`)
   }
 })
 
@@ -385,18 +391,13 @@ test("§2.7 #13 槽位注释：每文件头部 <!-- slot:[...] consumers:[...] -
   }
 })
 
-test("§2.7 #9 表行 >200 零命中（discipline-normal 4 处待治——本批机械扫登记）", () => {
+test("§2.7 #9 表行 >200 零命中（dn 4 处随表删源清零——第 15 批公共层扩容）", () => {
   let hits = []
   for (const f of NEW_PROMPTS) {
     const lines = read(`src/prompts/${f}`).split("\n")
     lines.forEach((l, i) => { if (l.startsWith("|") && l.length > 200) hits.push(`${f}:L${i + 1}(${l.length})`) })
   }
-  assert.deepStrictEqual(hits, [
-    "discipline-normal.md:L158(234)",
-    "discipline-normal.md:L161(239)",
-    "discipline-normal.md:L164(250)",
-    "discipline-normal.md:L171(403)",
-  ], "表行>200 现状登记（PROMPT-IMPL-3 §1.2 巡检断言——治理项随下个提示词批）")
+  assert.deepStrictEqual(hits, [], "表行 >200 零命中（common 路由表逐行 ≤200）")
 })
 
 test("§2.7 #5 前 20% 巡检词（WAIT/Do NOT/auto/manual/initiated by the user——文件前 20% 区）", () => {

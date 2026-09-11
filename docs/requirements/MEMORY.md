@@ -3,6 +3,7 @@
 > 板块：记忆系统（三层记忆 + 代码/文档索引）。需求层文档（`docs/requirements/`）。
 > 来源：2026-09-10 自 `../design/MEMORY.md` 抽取需求陈述（§1 总览与目标）。
 > 状态：**现行**。设计+测试见 `../design/MEMORY.md`；长期目标（团队记忆）见 `PROJECT.md` §2.2。
+> 第 29 批（2026-09-11）在途：配置路径字段家目录展开（§5——F10–F14 / N7–N9）；设计+测试见 `../design/MEMORY.md` §9。
 
 ## 1. 总体需求
 
@@ -30,3 +31,83 @@
 | N2 | 可重建 | DB 为易失索引，真相在文件/git——损坏可重建，不丢知识 |
 | N3 | 降级可用 | 向量检索失败静默降级 FTS——记忆功能不因可选能力缺失而不可用 |
 | N4 | 跨端 | VS Code 端同语义独立实现（镜像待补的后续项见设计档） |
+
+
+## 4. VSC 向量索引有效性（第 21 批——2026-09-11）
+
+> 来源：批次 `../batches/2026-09-11-VSC-INDEX-PERCEPTION.md` §1 条目 B1–B4（TODO 全量审计「该落地」清单批 B）。
+> 设计+测试见 `MEMORY（VSC 仓）§4`。
+
+### 4.1 总体需求
+
+VSC 面板使用者依赖语义索引（code/doc/memory 三 kind）得到**可信**的检索结果。索引必须满足
+「**要么可信、要么可见地不可信**」：换 embedding 模型（维度不同）后不得把无效结果当有效结果返回；
+gitignored 可索引文件的增删改不得让索引静默过期；索引自检（`needsRebuild`）与全量发现
+（`discoverFiles`）两组规则对同一文件不得给出**相反判定**。
+
+> 与 F3「失败静默降级」的关系（本批语义澄清）：**失败**（无 key / 网络错误）→ 静默降级关键词（既有语义不变）；
+> **不匹配**（索引与当前模型/维度不一致——配置态而非瞬时故障）→ 结果是错的，必须不产出 + 可见（F6）——两者不冲突。
+
+### 4.2 功能性需求
+
+| # | 需求 | 说明 | 范围边界（不做） |
+|---|---|---|---|
+| F6 | 索引有效性校验（换模型不静默） | 索引与当前 embedding 模型/维度不一致时：① 检索不产出无效结果（不返回全 0 分条目）② 该状态可见（索引状态面 + 重建提示入口） | 不自动静默重建（重建要网络 + 耗时——用户确认后重建）；不改检索命中语义本体 |
+| F7 | 重建触发覆盖（gitignored 可索引文件） | gitignored 的**非 memory** 可索引文件增删改**触发重建判定**（现状 dirty 集只含 git status 报告项——索引静默过期） | 不引入常驻轮询；不改「哪些文件可索引」规则；代价受 SKIP_DIRS/点目录豁免约束（不扫 node_modules 等） |
+| F8 | 自检/发现规则一致（嵌套 memory） | `listMemoryFiles`（自检面）与 `discoverFiles`（发现面）对 `.thincoder/memory/` 的**递归口径一致**——嵌套文件不得被反复判 file-removed（无效重算） | 不改记忆读模型（按层目录一层读取）；不改 memory 文件格式 / 工具契约 |
+| F9 | 诊断原因串统一 | `needsRebuild` 的 reason 词表单一化（`file-changed` 一处拼写残留 `file-changes`） | 不改 reason 的消费语义（仅诊断用）；不新增 reason 种类 |
+
+### 4.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N5 | 降级可用 + 零回归 | 校验判「不匹配」时按「增强不可用」降级（关键词路径照常出结果）；既有 git 快路径 / dirty 集 / 无 git 兜底语义零变化 | 既有用例全绿 + 新增正控（同仓快路径与兜底同向判定） |
+| N6 | 可机器验证 | 每条需求由临时目录 fixture（纯 node，不依赖网络）或桩面板驱动**真模块**机判；需 git 子进程的用例归册 slow（`test/slow.mjs`——快层 skip，test:full 照跑） | 新增用例全绿 + 修前红可复现 |
+
+### 4.4 判定句（各条验收语义——设计 AC 逐条回指）
+
+- **F6**：换模型后 —— `searchIndex` 返回空（不返回 score=0 行）；索引状态面显示「模型不匹配 + 重建入口」。
+- **F7**：gitignored 可索引文件增/删/改 —— `needsRebuild` 报 `needed:true`（对应 reason）；SKIP_DIRS / 点目录内文件零误报。
+- **F8**：嵌套 memory 文件 —— `needsRebuild` 连续两次 `needed:false`；`listMemoryFiles` 集合 == `discoverFiles` 的 memory 子集。
+- **F9**：全路径 —— `"file-changes"` 零出现；各分支 reason ∈ 词表
+  {`no-index` · `new-commits` · `file-added` · `file-removed` · `file-missing` · `file-changed` · `up-to-date`}。
+
+## 5. 配置路径字段家目录展开（`~`）——第 29 批（2026-09-11）
+
+> 来源：批次 `../batches/2026-09-11-HOME-EXPANSION.md` §1 条目 C1（Gitee #IKETT1）。设计+测试见 `../design/MEMORY.md` §9。
+> 归属说明：同病字段 4 个中 3 个是记忆面（`memory.dbPath` / `memory.projectDir` / `memory.team.dir`），触发点 = README 的
+> `dbPath` 示例；第 4 个字段 `shell` 同批同机制（单一权威源——机制一处详述）。VSC 镜像勘察结论见 `../design/MEMORY.md` §9.10。
+
+### 5.1 总体需求
+
+用户以 `~/…` 形态书写配置路径字段（README 配置示例即此形态）时，应用必须解析为**用户主目录下的真实路径**——
+不得在 cwd 静默创建字面量 `~` 目录/文件，不得把 `~` 原样透传给 sqlite / spawn / git。
+
+### 5.2 功能性需求
+
+| # | 需求 | 说明 | 范围边界（不做） |
+|---|---|---|---|
+| F10 | 单一规范化点 | `loadConfig()` 读出合并后统一展开路径字段——`memory.dbPath` / `memory.projectDir` / `memory.team.dir` / `shell` 四字段全覆盖；消费点零散展开禁止 | 不做环境变量（`$HOME` 等）展开；不做其它字段（providers/mcp 等）路径处理；不改写盘原文 |
+| F11 | 支持形态 | 仅前缀形态：`~`（裸）/ `~/…` / `~\…`；`~user`、串中 `~`、非字符串值原样透传 | 不做 `~user`（两平台语义不一、收益低）；不做通配/转义 |
+| F12 | projectDir 消费语义 | `~` 展开产出的**绝对路径**在 projectDir 消费点原样使用（不再拼 cwd 前缀）；**相对值维持既有语义逐字不变** | 不改 `memory.projectDir` 默认值；不改相对形态的「项目根基准」解释 |
+| F13 | 无字面量 `~` 目录 | 配置含 `~` 路径时，任何启动/命令路径都不得创建名为 `~` 的目录或文件（机验） | 不迁移历史受害数据（cwd 下已生成的 `~` 目录不自动搬移） |
+| F14 | README 与示例对齐 | README 配置块反映 `~` 展开语义（示例本身合法可用，注释说明展开规则） | 不改 README 其它章节；不动 `_archive/` 旧档 |
+
+### 5.3 非功能性需求
+
+| # | 维度 | 标准 | 度量方式 |
+|---|---|---|---|
+| N7 | 零回归 | 不含 `~` 的既有形态（默认值 / 相对）行为逐字不变；既有测试零伤 | `test:full` 全绿 ∧ 相对 projectDir 夹具断言与修前逐字相同 |
+| N8 | 零依赖 · 可测 | 展开器纯函数、零依赖（仅 `node:os` / `node:path`）；home 可注入——单测不触碰真实 home | 单测全绿（注入伪 home）；改动档 `node --check` 过 |
+| N9 | 磁盘原文 | config.json 字节不被重写（只读归一；写回仅既有 provider 迁移）；配置跨机可移植 | 读含 `~` 配置前后磁盘字节相等（机验） |
+
+### 5.4 判定句（各条验收语义——设计 AC 逐条回指）
+
+- **F10**：对含 `~` 的四字段夹具 —— `loadConfig()` 返回值全部为展开后绝对路径（`startsWith("~")` 零命中）；全仓展开逻辑恰一处（`src/expand-home.mjs`）。
+- **F11**：`~` → 主目录；`~/x` / `~\x` → 主目录/x；`~user/x`、`a~b`、非字符串 → 原样。
+- **F12**：绝对 projectDir —— `memory.projectOrigin` / memory 工具目录 / CLI 目录均为该绝对路径；相对 projectDir —— 与 `join(cwd, p)` 逐字等值。
+- **F13**：伪 HOME 子进程端到端 —— DB 落伪 HOME 下 ∧ `<cwd>/~` 不存在。
+- **F14**：README 含展开说明句 ∧ 三字段注释（dbPath / projectDir / shell）更新 ∧ 示例值展开后可用。
+- **N7**：既有测试零 fail；相对形态断言逐字同修前；非 `~` 绝对 projectDir 为有意 delta（消费侧 `join(cwd, p)` → `p` 归一——设计 `docs/design/MEMORY.md` §9.3(c)）；其余字段非 `~` 绝对形态仍逐字。
+- **N8**：展开器单测零网络、零真实 home 写入（home 注入）。
+- **N9**：`loadConfig()` 前后 config.json 字节相等。

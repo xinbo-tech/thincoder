@@ -7,6 +7,7 @@
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs } from "./core.mjs"
+import { abortError, timeoutError } from "../abort-provenance.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -104,7 +105,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // Gemini uses API key as query parameter
   const url = `${provider.baseURL}/models/${provider.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(provider.apiKey)}`
 
-  if (signal?.aborted) throw Object.assign(new DOMException("Aborted", "AbortError"), { reason: signal.reason })
+  if (signal?.aborted) throw abortError(signal, "provider", "transport-google")
 
   // 会诊 #6：TPM/RPM 闸门 + 记账
   const { rateGate, recordRate, estimateRequestTokens } = await import("./rate.mjs")
@@ -116,7 +117,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const response = await requestWithRetry(
     () => proxyFetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { ...(provider.headers ?? {}), "Content-Type": "application/json" }, // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出
       body: JSON.stringify(body),
       // 2026-09-01：同 core.mjs——绝对墙钟废除；响应头阶段 fetchTimeoutMs（600s 默认），body 阶段读侧 idle 管
       signal,
@@ -199,7 +200,7 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      try { response.body?.destroy(new Error(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`)) } catch { /* already gone */ }
+      try { response.body?.destroy(timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")) } catch { /* already gone */ }
     }, READ_IDLE_MS)
     idleTimer.unref?.()
   }
@@ -208,9 +209,7 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
     for await (const chunk of response.body) {
       armIdle()
       if (signal?.aborted) {
-        const e = new DOMException("Aborted", "AbortError")
-        e.reason = signal.reason
-        throw e
+        throw abortError(signal, "provider", "transport-google")
       }
       buffer += decoder.decode(chunk, { stream: true })
       // BOM 剥除（会诊 #12）：首个 chunk 可能带 \uFEFF，否则首个 data 事件静默丢失

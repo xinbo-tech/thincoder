@@ -9,7 +9,8 @@
  *   T27  正常：batchDoc 存在 → 通过 + child 任务输入含 "Batch record (batchDoc): <abs>"
  *   T28  边界：非 eng-coder（explore）不带 batchDoc → 现行行为零变更
  *   T29  边界：eng-coder 审计受限变体（setup 装配）properties 不含 batchDoc（AC13）
- * 构造手法照两份先例：直驱 buildSpawnChild（test/subagent-id-counter.test.mjs:12,27）+
+ * 构造手法照两份先例：直驱 buildSpawnChild（test/subagent-scheduler.test.mjs「链路形态」节——
+ * 原 subagent-id-counter.test.mjs 并档；扫① 2026-09-11）+
  * 最小 parent + 活 token 槽（test/design-token-settlement.test.mjs 的 liveTok 形态）；
  * T29 走真实 setup 装配（prepareRun——test/setup-reminders.test.mjs 的 mock agent 形态）。
  * 纯单元：零网络、零子代理启动（buildSpawnChild 只装配，不跑 child）。

@@ -31,6 +31,7 @@ export const ansi = {
   dim: `${ESC}[2m`,
   bold: `${ESC}[1m`,
   fg: (n) => `${ESC}[${30 + n}m`,
+  bg: (n) => `${ESC}[${40 + n}m`,
   gray: `${ESC}[90m`,
 }
 
@@ -44,5 +45,6 @@ export const C = {
   dim: ansi.gray,
   warn: ansi.fg(3),
   advisor: `${ESC}[92m`,  // bright green — visible on dark backgrounds
+  attention: ansi.bg(3) + ansi.fg(0), // 第 33 批（TUI §14.3/D-AT3）：attention 态整行色对——黄底黑字（\x1b[43m\x1b[30m，与 VSC warningBackground 同色系；浅深终端均可见——不依赖主题配色）
   fold: ansi.bold + ansi.fg(6),   // bold cyan — fold markers must stay visible on light AND dark themes (dim white vanished on light backgrounds)
 }

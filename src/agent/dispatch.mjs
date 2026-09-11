@@ -5,7 +5,7 @@ import { logEvent, errText, headText } from "../log.mjs"
 import { offloadToolResult, FILE_MUTATORS } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
 import { snapshotForUndo } from "../tui/cmd-undo.mjs"
-import { isDocFile } from "../advisor/repos.mjs"
+import { isCodePath, loadConventions } from "../conventions.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3b)：写工具钩子——peerCollabNote（执行前冲突
 // 检测——软提示不阻止）+ recordPeerWrites（成功后累积本回合写足迹——回合末 flush）。
 import { PEER_WRITE_TOOLS, peerCollabNote, recordPeerWrites } from "../peer-domains.mjs"
@@ -182,11 +182,13 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // Engineering mode PARENT gate: the parent agent must not touch code files
     // before the design review passed. Signaled by a live design slot (design-review
     // approval — persists in the session slot, survives across turns; _engDesignReviewed
-    // is eng-coder-only and reset per run). Exemptions cover ONLY design artifacts
-    // (docs/** and root-level docs like METHODOLOGY.md/README.md/AGENTS.md/
-    // LICENSE) — writing them IS the design/methodology step. Everything under
-    // src/ (incl. src/prompts/*.md) is product code, not documentation, and
-    // needs a design token. Mechanically blocks "talk then code".
+    // is eng-coder-only and reset per run). Exemptions = the non-code classes of
+    // src/conventions.mjs (documentation and temp scratch files) — writing a design
+    // document IS the design step. Anything inside a declared code segment (default:
+    // src — incl. src/prompts/*.md) is product code, not documentation, and needs a
+    // design token. The project can declare its own code paths (.thincoder/
+    // conventions.json) so a non-src layout is not silently exempted. Mechanically
+    // blocks "talk then code".
     // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：资格判据 = 权威槽"任一活槽存在"
     // （anyLiveDesignSlot——查内存 Map，miss 回读槽文件——单值镜像 `_engDesignToken`
     // 已退役，门禁不再读镜像——AC4）。
@@ -194,14 +196,21 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         && !anyLiveDesignSlot(agent)
         && FILE_MUTATORS.has(toolCall.name)) {
       const paths = tool.touchedPaths ? tool.touchedPaths(args) : [args.path]
+      const conv = loadConventions(agent.cwd)
       // Unknown/missing paths (non-string, e.g. no path argument) are treated
-      // as code — cannot tell what they touch, so block conservatively.
-      const touchesCode = paths.some((p) => typeof p !== "string" || /^src[\\/]/.test(p) || !isDocFile(p))
+      // as code — cannot tell what they touch, so block conservatively. Known
+      // paths go through the single shared classifier: a declared code segment
+      // (default: "src") at ANY depth, else anything that is not documentation.
+      const touchesCode = paths.some((p) => typeof p !== "string" || isCodePath(p, conv))
       if (touchesCode) {
+        // Undeclared project → point at the declaration file (§4.3 降级可见契约).
+        const convNote = conv.declared
+          ? ""
+          : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in .thincoder/conventions.json to adjust.`
         prepared.push({
           toolCall, tool, denied: true,
           reason: "engineering design gate",
-          hint: "Engineering mode: write the design document in docs/ first, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.",
+          hint: `Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote}`,
         })
         continue
       }
@@ -378,7 +387,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         depth,
         signal,
         callbacks,
-        // §24 D-24b: per-call id — the advisor tool marker-keys its launch so
+        // §11.2 D-24b: per-call id — the advisor tool marker-keys its launch so
         // recordToolResults can split async-ack accounting from sync settles.
         _toolCallId: item.toolCall.id,
         onOutput: (chunk) => callbacks.onToolOutput?.(item.toolCall.name, chunk, item.toolCall.id),

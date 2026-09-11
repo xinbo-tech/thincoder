@@ -15,6 +15,9 @@
  */
 
 import { C } from "./ansi.mjs"
+// 第 27 批 §12.3①/②：relay 前缀文法单一权威 = src/agent/relay-prefix.mjs——本文件
+// 不再自持前缀正则/解析副本（防第二套平行正则再漂移）。
+import { parseRelayPath } from "../agent/relay-prefix.mjs"
 import { describeToolArgs } from "./tool-args.mjs"
 import {
   appendSubBlock, descendSubChild,
@@ -28,8 +31,7 @@ export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
 import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors } from "./subagent-freeze.mjs"
 export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
 
-/** `role#id/` prefix router — hyphen included since the eng-coder fix (2026-08-21). */
-export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
+// 前缀文法/解析已迁 src/agent/relay-prefix.mjs（第 27 批 §12.3②）——本文件不自持副本。
 /** ⟦ev⟧ token parser：`⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`。phase done
  *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
  *  完成（§17.5.5 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
@@ -43,28 +45,8 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
-/** 嵌套 relay 前缀通用解析（循环解析任意深度——SUBAGENT-TAIL 保持为路由源——显示契约
- *  docs/design/TUI.md §6）：
- *  `eng-coder#2/explore#1/read` → { head（块路由）, inner[], label（inner 链——R23：
- *  子块折叠键/外层 currentTool 全路径用）, rest }。
- *  单层 = inner[]/label ""——与既有单段匹配语义零改；无前缀 → null。 */
-export function parseRelayPath(text) {
-  const segments = []
-  let rest = String(text)
-  for (;;) {
-    const m = rest.match(SUB_PREFIX_RE)
-    if (!m) break
-    segments.push(`${m[1]}#${m[2]}`)
-    rest = rest.slice(m[0].length)
-  }
-  if (segments.length === 0) return null
-  return {
-    head: segments[0],
-    inner: segments.slice(1),
-    label: segments.slice(1).join("/"),
-    rest,
-  }
-}
+// parseRelayPath 自 src/agent/relay-prefix.mjs import（第 27 批 §12.3①——文法单一权威，
+// 语义与迁移前逐字一致；“嵌套解析任意深度/无前缀 → null”见该模块）。
 
 /** N1: render-layer throttle for child tool-output appends (generation relays verbatim). */
 export const SUB_RELAY_THROTTLE_MS = 250

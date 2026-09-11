@@ -27,9 +27,11 @@ import { resolveChildProvider } from "./subagent.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult, escapeXml } from "../agent/helpers.mjs"
 import { logEvent, errText } from "../log.mjs"
+import { deathLine } from "../abort-provenance.mjs"
 import { makeRelay, wrapChildCallbacks, runWithContinue, ensureChildApiKey, clampEffort } from "../agent/spawn-child.mjs"
 // ASYNC-RESULT-CONTAINER.md D2/D3/D6：pending 单容器停靠 + settle 公共收尾 + child signal 单点
 import { buildChildSignal, settleAsyncEntry } from "./async-settle.mjs"
+import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 §22 D-DG2）：digest 注入预算单源
 
 // Named consult defaults (consult P2, 2026-08-30).
 const CONSULT_TIMEOUT_MS = 600_000 // default consult lifecycle timeout
@@ -178,8 +180,15 @@ export function composeConsultDigest(session) {
  * (_pendingAsyncResults——ASYNC-RESULT-CONTAINER.md D2——role 分发注入）。
  */
 export async function injectConsultResult(agent, entry) {
-  const body = entry?.report ?? "(no consultation result)"
-  const preview = await offloadToolResult(String(body), `consult-${entry.id ?? "session"}`)
+  const full = String(entry?.report ?? "(no consultation result)")
+  // §22 D-DG3（群 B 批 B5）：计入预算的 raw = 报告正文（标签行不计）——首行标签拆出；超限
+  // 路径保留族标签行（与 VSC 镜像同形）；落盘内容 = raw（与其余三族同口径）。
+  const at = full.indexOf("\n")
+  const label = at === -1 ? "" : full.slice(0, at + 1)
+  const raw = at === -1 ? full : full.slice(at + 1)
+  const over = digestBudgetOver(agent, raw.length)
+  const saved = over ? await persistOverflowReport(raw, { tag: `consult-${entry?.id ?? "session"}` }) : null
+  const preview = saved ? `${label}${saved}` : await offloadToolResult(full, `consult-${entry?.id ?? "session"}`)
   pushReal(agent, {
     role: "user",
     content: escapeXml(preview),
@@ -208,7 +217,8 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
   const armWatchdog = () => {
     const t = setTimeout(() => {
       timedOut = true
-      try { ctrl.abort() } catch { /* already settled */ }
+      // §20.3 站点 #12 信号面（第 24 批）：watchdog 中止带 timeout reason
+      try { ctrl.abort({ abortTrigger: "timeout", abortDetail: "consult-watchdog" }) } catch { /* already settled */ }
     }, timeoutMs)
     t.unref?.()
     return t
@@ -329,7 +339,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     } catch (e) {
       // Runner errors (incl. the watchdog's abort) settle as a failed reply — the
       // continue/declined paths are already handled inside runWithContinue.
-      const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : e?.message ?? String(e)
+      const note = timedOut ? `consultation timed out after ${Math.round(timeoutMs / 60000)}min (agent.consultTimeoutMs)` : deathLine(e, ctrl?.signal)
       settle(false, note)
       logSettle("error", note)
     }
@@ -338,8 +348,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     // continue-prompt settle as failed replies — the runner's own errors are already
     // handled inside the loop above. relayPrefix is null on these paths — no TUI
     // block was ever opened, so no freeze event is emitted.
-    settle(false, e?.message ?? String(e))
-    logSettle("error", e?.message ?? String(e))
+    const line = deathLine(e, ctrl?.signal)
+    settle(false, line)
+    logSettle("error", line)
   } finally {
     clearTimeout(watchdog)
   }
@@ -354,7 +365,7 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
 export function cleanupConsultSessions(agent) {
   for (const s of agent._consultSessions?.values() ?? []) {
     s.stopped = true
-    for (const c of s.controllers ?? []) { try { c.abort() } catch { /* already settled */ } }
+    for (const c of s.controllers ?? []) { try { c.abort({ abortTrigger: "stop", abortDetail: "consult-cleanup" }) } catch { /* already settled */ } }
   }
   agent._consultSessions?.clear()
 }
@@ -415,8 +426,9 @@ export const consultStartTool = {
       // 兜底：挂起会话内的 consult children 持会话 signal，digest 自身 Ctrl+C 不误伤）。
       const baseSignal = buildChildSignal(agent, ctx)
       if (baseSignal) {
-        if (baseSignal.aborted) ctrl.abort()
-        else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+        // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
+        if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
+        else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
       }
       // Fire and forget — each child settles itself into the session; the session
       // routes to the pending single container when every child has settled (R17).
@@ -449,7 +461,8 @@ export const consultStopTool = {
     if (!s) return JSON.stringify({ error: "unknown consult id" })
     const abandoned = s.pending
     s.stopped = true
-    for (const c of s.controllers) { try { c.abort() } catch { /* already settled */ } }
+    // §20.3 站点 #11（第 24 批）：会话级停 = stop
+    for (const c of s.controllers) { try { c.abort({ abortTrigger: "stop", abortDetail: "consult-stop" }) } catch { /* already settled */ } }
     return JSON.stringify({ abandoned, cancelled: true })
   },
 }

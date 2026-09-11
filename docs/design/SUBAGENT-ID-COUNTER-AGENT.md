@@ -50,5 +50,9 @@
   无冲突——撤槽持久化方案——极简修载体：history expando → agent 本体——±4 行/端）。
 - 2026-09-09：撤前版 SUBAGENT-ID-COUNTER-PERSIST（槽持久化方案——过度设计——本档取代）。
 - 2026-09-09：评审 PASS + 6 项 advisory 修正（测试文件入表/agent 触达明写/优先级公式/AC-1 加强/用例映射）——执行版定稿——token f6deb375。
-- 2026-09-10：**CLI 端交付校正注（eng-coder 实现前核实——原档以 VSC 形态误写为双端共态）**：CLI 树从未有 history expando 缺陷——计数器一直挂 agent 本体 `_subAgentCounter`（真缺口 = 4 取号点裸 counter+1 无 poolMax 兜底）——CLI 实现 = 机制意图落地（新增 nextSubagentId：max(_subAgentCounter, poolMax)+1 跨池共号）+ 三接线（subagent-spawn/escalate-async/advisor-async）+ 双测试文件（scheduler 内 ID-COUNTER 组 6 例 + subagent-id-counter.test 真链路锁——CLI 测试走 glob 自动发现无需登记 files.mjs）——交付 clean 签收（2026-09-10）——两端各自落地、机制等价（载体名随端：VSC `_subIdCounter`/CLI `_subAgentCounter`）。
+- 2026-09-10：**CLI 端交付校正注（eng-coder 实现前核实——原档以 VSC 形态误写为双端共态）**：CLI 树从未有 history expando 缺陷——计数器一直挂 agent 本体 `_subAgentCounter`（真缺口 = 4 取号点裸 counter+1 无 poolMax 兜底）——
+  CLI 实现 = 机制意图落地（新增 nextSubagentId：max(_subAgentCounter, poolMax)+1 跨池共号）+ 三接线（subagent-spawn/escalate-async/advisor-async）+ 双测试文件（scheduler 内 ID-COUNTER 组 6 例 + subagent-id-counter.test 真链路锁——CLI 测试走 glob 自动发现无需登记 files.mjs）——
+  交付 clean 签收（2026-09-10）——两端各自落地、机制等价（载体名随端：VSC `_subIdCounter`/CLI `_subAgentCounter`）。
+
+> 〔eng-designer 折行 2026-09-11 13:10：单行 479 字符 → 纯折行（批 14 候选 2；文字零增删、语义不变）〕
 

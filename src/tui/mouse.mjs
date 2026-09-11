@@ -199,7 +199,7 @@ export function createMouseDispatch({ agent, state, pushLine, render, popPicker 
     try {
       const id = key.slice(key.lastIndexOf("#") + 1)
       const isAdvisorBlock = key.startsWith("advisor#")
-      // §24 D-24b (②-6b): ⏹ on an advisor block cancels the background review
+      // §11.2 D-24b (②-6b): ⏹ on an advisor block cancels the background review
       // (directed abort → cancelled settle: no pending entry / no token).
       // SYNC-CANCEL F3: async 池/advisor miss 后查 sync registry（⏹ 门控已放开 sync——
       // cancelSyncChild 与 async cancel 同模块同形态——subagent-async.mjs）。

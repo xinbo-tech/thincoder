@@ -3,7 +3,7 @@
 > 归属：`thincoder` CLI 发布到 npm 的完整流程（规则基线参考 thincoder-vscode `docs/design/RELEASE.md`）。
 > 包名：`thincoder`（package.json `name` 字段）。npm 发布者：`xinbo-tech`（已登录，`npm whoami` 验证）。
 > 仓库：Gitee `https://gitee.com/shanghai-xinbo/thincoder`（main 分支）+ GitHub 镜像远端 `github`。
-> 状态：发布 = 唯一门禁（R7 单轮制已落地）——`npm publish` 的 `prepublishOnly` 自动跑 lint + test:full 全量单轮。
+> 状态：发布 = 唯一门禁（R7 单轮制已落地）——`npm publish` 的 `prepublishOnly` 自动跑 lint + test:full + test:integration 单轮。
 
 
 > 需求层（2026-09-10 拆分批）：本板块需求见 `../requirements/RELEASE.md`——本档保留设计与测试细节。
@@ -15,15 +15,16 @@
 - [ ] `CHANGELOG.md` 已更新新版本条目（Keep a Changelog 格式，中文，Added/Changed/Fixed/Removed 分节）；
 - [ ] `package.json` version 已 bump（**发布时才 bump——开发期不预占——见 §4.2**）。
 
-> 不再有手动 `release:check` 步——全量门禁由 `npm publish` 自动执行（见 §2），此处不列。
+> 不再有手动 `release:check` 步——全量 + 集成集门禁由 `npm publish` 自动执行（见 §2），此处不列。
 
 ## 2. 发布 = 唯一门禁（单轮全量制）
 
-`package.json` 的 `prepublishOnly` = `"npm run release:check"`——`scripts/release-check.mjs` 自动跑 **lint（check-syntax）→ 全量测试（test/run-full.mjs，slow 全放行）合并一键**（~90s），摘要输出 + 失败详情自动提取（每个失败块 ≤24 行，最多 12 块）。门禁不过发布中止——这是有意设计，不要绕过。
+`package.json` 的 `prepublishOnly` = `"npm run release:check"`——`scripts/release-check.mjs` 自动跑 **lint（check-syntax）→ 全量测试（test/run-full.mjs，slow 全放行）→ 集成集（test/run-integration.mjs，业务验收场景）合并一键**（实测 2026-09-11：全量 ~16s + 集成集 ~4s）。
+摘要输出 + 失败详情自动提取（每个失败块 ≤24 行，最多 12 块；输出无 `failing tests:` 汇总段时回退输出尾 40 行）。门禁不过发布中止——这是有意设计，不要绕过。集成集的语义与场景表见 `TESTING.md` §3–§5。
 
-**发布 = 唯一门禁**：全量只在 `npm publish` 自动跑一次（prepublishOnly 单轮），不再有独立 check 步、发布前不再手动分轮跑。流程 = 直接 `npm publish`（发布点 = 唯一门禁，无单独 check 步）。
+**发布 = 唯一门禁**：全量 + 集成集只在 `npm publish` 自动跑一次（prepublishOnly 单轮），不再有独立 check 步、发布前不再手动分轮跑。流程 = 直接 `npm publish`（发布点 = 唯一门禁，无单独 check 步）。
 
-**修复迭代纪律**：`npm publish` 失败 → 修复 → **局部重跑**（`node --test --test-name-pattern "<失败名>" <失败文件>`——秒级）确认修复 → **`npm publish` 终跑一次**收口。禁止每次失败都全量重跑（release-check 一轮 ~90s）。
+**修复迭代纪律**：`npm publish` 失败 → 修复 → **局部重跑**（`node --test --test-name-pattern "<失败名>" <失败文件>`——秒级；集成档同法 `node --test test/integration/<档>`）确认修复 → **`npm publish` 终跑一次**收口。禁止每次失败都全链重跑（release-check 一轮 ~20s）。
 
 ### 发布命令
 
@@ -41,7 +42,7 @@ git push origin vX.Y.Z
 git -c http.proxy=http://10.2.2.112:3128 push github main
 git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
 
-npm publish    # prepublishOnly 自动跑 release-check 全量单轮
+npm publish    # prepublishOnly 自动跑 release-check（lint + test:full + test:integration 单轮）
 ```
 
 **发布完成判定（F-R7e 裁定固化）**：publish 命令 **exit 0 = 发布完成**——不轮询、不查上线版本。CLI npm 无审核队列，publish 即见；`npm view` 核验保留（即时可见非轮询，见 §3）。此判定只针对 npm 发布本身——ovsx/vsce 的无 TTY 静默 exit 0 陷阱见 §5.3（其失败模式 = exit 0 但什么都没发——PAT 校验不能省，勿把 "exit 0 = 完成" 推广到 ovsx/vsce）。
@@ -126,3 +127,4 @@ git -c http.proxy=http://10.2.2.112:3128 push github vX.Y.Z
 - 2026-09-05：版本号连续性规则（§4）立项（0.12.59 发版 3 轮全量教训）；release-check 合并脚本建（lint + test:full 一键 + 失败详情自动提取）。
 - 2026-09-06：**发布单轮制（R7）落地**——prepublishOnly 改调 release-check（lint + test:full 全量单轮）；发布 = 唯一门禁，废"check 再 publish"双保险；失败迭代纪律保留（局部重跑 → publish 终跑一次）；发布完成判定固化（exit 0 = 完成，不轮询不查上线）；VS Code 端对照（vscode:prepublish 全量 + 双源一测）随设计批处理。
 - 2026-09-07：本文档随格式债清理批 A 重写为当前态。
+- 2026-09-11（TEST-LIFECYCLE 批——CLI 面）：发布门加集成步骤——`release-check.mjs` 顺序 = lint → test:full → **test:integration**（业务验收场景）；§1/§2/发布命令/修复迭代纪律同步（TESTING.md §4.3）。

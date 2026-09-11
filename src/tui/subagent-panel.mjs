@@ -56,7 +56,7 @@ export function renderSubagentPanel(state, cols, maxRows) {
     // §19.5 D-M7b ②: sync/async 显式头标（B 形态——不靠"没标推断"）——async 由
     // ⟦ev⟧async 标记置位；sync 区块（无标记）显式标 sync。真实 subagent 角色
     // （escalate/consult/compress 等复用面板槽的条目无语义——非 spawn 角色豁免）；
-    // §24 D-24b：role "advisor" 伪角色同面板（块/⏹/冻结复用——ruling ②-4 A）。
+    // §11.2 D-24b：role "advisor" 伪角色同面板（块/⏹/冻结复用——ruling ②-4 A）。
     // 冻结后保留（与 model 标识同生命周期——render-conversation frozenSubTaskLines
     // 同款 modePart）。**颜色后置注入**（code review 🔵#4）：bracket 宽度预算用纯文
     // 本（dim ANSI 内嵌会被 sliceByWidth 截断在 restore 之前 → 行尾残留 dim）——

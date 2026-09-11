@@ -1,0 +1,37 @@
+diff --git a/docs/TODO.md b/docs/TODO.md
+index ad03e2b..9871928 100644
+--- a/docs/TODO.md
++++ b/docs/TODO.md
+@@ -71,6 +71,8 @@
+ ## 代码正确性 / 边界小修（低优先加固）
+ - [ ] **agent 生命周期小项（剩 A2）**：A2 摘要触发条件（仅 ## 节标题）——注释段已修（批 1 2.5 seven actions）+ auto-think depth 归状态债 #3
+ ## 工程模式 / 评审收敛（prompts + 机制）
++
++- [ ] **「评审后修正轮 ⇄ 用户批准」时序未定义 + `Fixed` 语义漂移**（2026-09-11 用户实况发现——第 6 批：修正轮在途时就请了批准）：**① 链路缺节点**——`docs/design/prompts/persona-engineering.md:18-19` 的链是「核验产出 → 提醒用户发起评审 → **用户批准** → spawn coder」，**无「评审后修正轮」**；锚#3（`discipline-engineering.md:135-138`）只规定修正轮 docs FIRST（早于 coder），**未定它与批准的先后**，也未定「修正轮可改什么而不需重新批准」→ 父侧只能临场判断。**② `Fixed` 语义漂移**——评审节定义 = `Fixed`（*you edited the code*：**已改完**），实况被当「已派工/在途」填写（第 3 批 13 条 + 第 6 批 8 条均如此）。**建议规则**：链上补「修正轮**落地并核验** → 才请批准」（或允许并行但批准请求**必须显式声明**「修正轮挂起中 + 逐条内容 + 不含新语义/新范围」）；`Fixed` 要么钉死「已落地」语义、要么补 `Dispatched` 态。归属 = `docs/design/prompts/` 双源 + `discipline-engineering.md` → status=**登记待批**（不单开一轮，随工程模式提示词批处理）
+ - [ ] **§18.8/§18.10 复核（AC-OA4）**：after 样本 = T（2026-09-04 05:06）后首次干净外部评审——信号密度 ≤0.70×1.86=1.30 达成——未达呈报（观察，等样本）
+ - [ ] **修正轮纠结密度观察**：修正轮密度 2.20/1K > 基线 1.86——AC-OA4 可能低估受益面——等样本
+ - [ ] **AC-OA4 统计脚本（可选仓库工具）**：统计轨迹 JSON 评审信号密度——低优先
+@@ -125,14 +127,19 @@
+ > **§7.7 顶层异步**已交付核销（c08e1b2/8763ac2——L2 绿——consume a2b10815）；agent 生命周期 + 11.7 + D6
+ > union 早前核销。批 4 剩 env-state/R19（未排）——designer 2026-09-09 用户裁取消（eng 主会话即 designer）。
+ - [ ] **session-state 诊断工具候选**：只读诊断命令 dump 当前 cwd 会话槽全貌——技术待办非需求点
+-- [ ] **模型清单 provider 化 + 去候选否决权**（2026-09-10 用户裁定；原登记 = "models[] 候选白名单越权否决模型
+-  可用性 / MODEL_SPECS 职能纠偏"——**范围升格**：清单权威交还 provider 运行期拉取，`providers[].models[]` 整字段删除）
+-  → 设计 `design/PROVIDER.md`（需求层同档承载——Provider 板块无 `requirements/` 镜像）·
+-  任务书 `batches/2026-09-10-MODEL-SELECTION.md` §2 · status=在途（2026-09-11 §4 用户批准后——CLI/VSC 双端实施中）
++- [x] ~~**模型清单 provider 化 + 去候选否决权**~~（2026-09-10 用户裁定；原登记 = "models[] 候选白名单越权否决模型可用性 /
++  MODEL_SPECS 职能纠偏"——范围升格为"清单权威交还 provider 运行期拉取 + `providers[].models[]` 整字段删除"）——
++  **2026-09-11 核销**（用户 02:24"第三批验收通过"）：设计评审 2 轮 pass（0🔴）+ 用户批准 2 次（主体 + 范围追加）；
++  双端实现全部提交（`4e59a76` / `9299661` / `cd1de8f`；主实现被第 5 批提交卷走——已记账）；L2 实跑 CLI 331 pass · VSC 358 pass · 0 fail；
++  见 `batches/2026-09-10-MODEL-SELECTION.md` §6
+ - [ ] **子块「已省略 N 行」计数虚高**（2026-09-10 用户报告原话："cli subagent 调 explore 时行数计数不对——应该不是行数，而是 chunk 数"）——**已实证**（主 agent 两轮实验）：`src/tui/subagent-children.mjs:28-50` `dropCarrierLines` 把省略标记（meta 块）当普通块走 FIFO 丢弃 → 丢完再 `unshift` 重建标记（`:48`，`_lineCount += 1`）→ ① 每轮 trim 有 1 单位预算耗在标记自身上（树恒超限 1 → 后续每次追加都触发 trim）；② 每轮给 `dropped` 记 1 行**无对应隐藏内容**的幽灵行 —— 稳态下显示值 ≈ 真实隐藏行 ×2（实测：稳态追加 50 行 → 显示 +100 / 真实 +50；混合场景 显示 139 vs 真实 79）。另 `countBlockLines`（`:17`）按 `split("\n")` 计数，行尾 `\n` 令每块多算 1 元素。→ 板块 TUI · status=待讨论
++- [ ] **DeepSeek V4.1-Flash 接入（两端 MODEL_SPECS + 预设）**（2026-09-11 用户指示"查新 deepseek-flash 参数，更新两端 model_spec"）——**事实已核**（官方一手 `api-docs.deepseek.com`：Your First API Call / Models & Pricing / Vision / Thinking Mode / Context Caching；**+ 本机渠道 `GET /models` 实测 = `["deepseek-flash","deepseek-v4-pro"]`**）：新名 `deepseek-flash` = **V4.1-Flash**（1M ctx · 384K out · thinking 默认开 · effort `[low,high,max]` 默认 `high` · 前缀补全 Beta ✓ · 磁盘缓存默认开 · **vision ✓**）；`deepseek-v4-flash` 与 `deepseek-v4-flash-vision-exp` **已退役**（旧名仍收 → 路由到 V4.1 Flash）；`deepseek-v4-pro` 自 **2026-09-14 12:00（北京）** 起全部路由到 V4.1 Flash（V4 Pro 有序退役）
++  → 设计落 `design/PROVIDER.md` §9/§11（spec 表 + 预设）+ 双端实现面（`src/model-specs.mjs` / `thincoder-vscode/src/config.mjs`）· status=登记待设计
+ 
+ ## 其他在途/待核销（勾销即移出本节）
+ 
++- [ ] **deepseek-v4-pro 视觉能力复检 + 发布注记**（第 6 批评审 #1/#7 的父侧协调项）：**复检触发** = ① **2026-09-14 12:00 路由生效后**（该名由 V4.1-Flash 服务——视觉可用，「预支视觉 = 硬失败」的防 400 理由届时消失）② V4.1 Pro 到货；**动作** = 复核该行 `multimodal` 是否翻转（含双端非视觉锚测试换锚：`read-image-guide.test.mjs:20` / `image-downgrade.test.mjs:24/59/109`）。**发布注记** = 发布流程时 CHANGELOG 记一行「退役名 `deepseek-v4-flash` 起允许图像输入」（用户可见行为变化）
++
+ - [ ] **快层慢门 flake：`test/eng-designer-role.test.mjs:83` 未标 `slow`**（2026-09-10 实测 818.5ms 撞 D-T6 拦截——负载相关偶发，此前多次全绿）——修复口径框架已给出（`test(` → `slow(`，归册不是删除）；随第 5 批实现 eng-coder 顺手带（或单独快修）
+ - [ ] **第 4 批（C 工具）遗留三项**（2026-09-10 eng-coder 交付报告建议）：
+   ① VSC 端镜像（本批工具 + 第 2 批六段机制同搬）②需求档 4 项同步（§1.12 段表「写入手段」列 / §1.11 B9 / §1.16 F1 口径 / §1.16 N2 措辞——**eng-designer 写域**，本会话不可 spawn）③`test/batch-segment.test.mjs` 321 行是否拆分（咨询项）。另：设计 §2.16 过渡期注清理（`ENGINEERING-MODE.md:458`）。

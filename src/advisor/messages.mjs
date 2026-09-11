@@ -2,108 +2,17 @@
  * advisor/messages.mjs — advisor user-message building (buildAdvisorUserMessage).
  * Split out of advisor.mjs to keep it under the 300-line advisory threshold
  * (.thincoder/advisor.md). System prompts live in advisor.mjs / prompts/.
+ * Project-context discovery/injection lives in project-context.mjs (the D-1 registration,
+ * ENGINEERING-MODE.md §2.26.3); the pre-split surface is re-exported below.
  */
-import { readFileSync, existsSync } from "node:fs"
-import { resolve, join, relative, dirname, sep } from "node:path"
-import { providerSpec } from "../config.mjs"
+import { join, relative, sep } from "node:path"
 import { findReviewRepos, collectRepoSnapshots, collectChangedFiles } from "./repos.mjs"
 import { buildConvergenceBody, buildConvergenceInstructions } from "./convergence.mjs"
 import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable } from "./history.mjs"
+import { injectProjectGuide, injectDocumentMap, injectProjectStandards, NO_GIT_NOTICE } from "./project-context.mjs"
 
-/** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
- *  NO fixed truncation; long-context models (1M+) get up to 5% of their context
- *  window for the doc map, small windows still get a floor so the map is always
- *  visible. The map is what tells the reviewer WHERE the requirements docs live
- *  (requirement-fit is judged against those docs, not the conversation only). */
-const PROJECT_GUIDE_MIN = 8192 // chars — floor for small-window models
-const PROJECT_GUIDE_FRACTION = 0.05 // 5% of the reviewer model's context window
-
-/**
- * Discover the project root for the review — user decision 2026-08-08:
- * the project root is a SUBDIRECTORY of the working directory, never an
- * ancestor above it. Priority:
- *   1. Walk UP from each review-scope file's directory, bounded by cwd —
- *      the NEAREST AGENTS.md inside the workspace wins. In a monorepo this is
- *      the subproject's own doc map even when cwd itself has an AGENTS.md
- *      (a workspace-level meta map must not shadow the subproject guide).
- *   2. No scope files / nothing found → cwd (single project; the walk's
- *      last step naturally lands on cwd's own AGENTS.md when it exists).
- * @param {string} cwd — the agent's working directory (workspace root)
- * @param {string[]} scopeFiles — cwd-relative review-scope paths (may be empty)
- * @returns {string|null} absolute project root with an AGENTS.md, or null
- */
-function findProjectRoot(cwd, scopeFiles) {
-  // Normalize separators before comparing: input paths may use either
-  // convention (join() → "\\" on Windows; tool args / tests → "/"). Mixed
-  // styles made isInside(cwd + sep) miss legitimately nested paths.
-  const norm = (p) => p.replaceAll("\\", "/")
-  const isInside = (dir) => {
-    const d = norm(dir)
-    const c = norm(cwd)
-    return d === c || d.startsWith(c + "/")
-  }
-  for (const f of scopeFiles) {
-    let dir = dirname(resolve(cwd, f))
-    while (isInside(dir) && dir !== dirname(dir)) {
-      if (existsSync(join(dir, "AGENTS.md"))) return dir
-      dir = dirname(dir)
-    }
-  }
-  // No scope files, or none found in the walk — cwd itself (its AGENTS.md is
-  // checked as the walk's final step for scope files; for empty scopes, check
-  // it explicitly so a bare cwd project still gets its guide).
-  if (existsSync(join(cwd, "AGENTS.md"))) return cwd
-  return null
-}
-
-/**
- * Inject the project guide (AGENTS.md) into the review message. AGENTS.md is the
- * project's doc map — it defines the structure and where requirements/design
- * documents live. The reviewer must see it FIRST: requirement-fit is judged
- * against the documents it points to, with the conversation background as a
- * supplement. Absent AGENTS.md degrades honestly (no pretending there is a map).
- * @param {Object} agent — the parent agent
- * @param {string[]} parts — message parts (mutated)
- * @param {string[]} [scopeFiles] — cwd-relative review-scope paths for project-root discovery
- * @returns {string|null} the discovered project root (abs), or null when no guide
- */
-function injectProjectGuide(agent, parts, scopeFiles = []) {
-  parts.push("## Project Guide (AGENTS.md)")
-  const root = findProjectRoot(agent.cwd, scopeFiles)
-  const path = root ? join(root, "AGENTS.md") : null
-  let text
-  if (!path) {
-    parts.push("(No AGENTS.md found — neither at the working directory root nor in any review-scope subdirectory. Judge the user's requirements from the conversation background, and say so explicitly if the requirements are unclear.)")
-    parts.push("")
-    return null // no guide — requirement-fit falls back to the conversation
-  }
-  try {
-    text = readFileSync(path, "utf8")
-  } catch (e) {
-    if (e.code !== "ENOENT") {
-      // File exists but is unreadable (EACCES etc.) — log, don't masquerade as "not found".
-      console.warn(`[advisor] AGENTS.md unreadable at ${path}: ${e.message}`)
-    }
-    parts.push("(No AGENTS.md found — neither at the working directory root nor in any review-scope subdirectory. Judge the user's requirements from the conversation background, and say so explicitly if the requirements are unclear.)")
-    parts.push("")
-    return null // no guide — requirement-fit falls back to the conversation
-  }
-  // readFileSync succeeded — compute the budget OUTSIDE the try so a spec
-  // lookup failure can never masquerade as "no AGENTS.md".
-  // providerSpec: the project-guide budget follows the provider-level context
-  // override (PROVIDER.md §15 — advisor messages budget is context-based).
-  const ctx = providerSpec(agent.provider).context
-  const cap = Math.max(PROJECT_GUIDE_MIN, Math.floor(ctx * PROJECT_GUIDE_FRACTION))
-  const shown = text.length <= cap
-    ? text
-    : [...text].slice(0, cap).join("") + `\n\n…(truncated at ${cap} chars — read the full file if you need more)` // codepoint-safe slice: no broken surrogate pairs at the boundary
-  parts.push(`<!-- Project root: ${relative(agent.cwd, path).split(sep).join("/")} (inferred from the review scope under ${agent.cwd}) -->`)
-  parts.push("This file defines the project's structure and where its requirements/design documents live. Read the documents it points to — the user's requirements live THERE, not only in the conversation background.")
-  parts.push("")
-  parts.push(shown)
-  parts.push("")
-  return root // guide injected — requirement-fit criteria apply (truthy root)
-}
+// Structural split (not an authority migration): the moved helpers stay reachable here.
+export { findProjectRoot, injectProjectGuide } from "./project-context.mjs"
 
 /**
  * Build the mechanical review-object declaration block (AGENT-LOOP.md §18.8
@@ -130,7 +39,7 @@ export function buildObjectDeclarationBlock(object = null) {
 }
 
 /**
- * Approval-signal block for design reviews (round 1 and round 2+ — §24 D-24b:
+ * Approval-signal block for design reviews (round 1 and round 2+ — §11.2 D-24b:
  * an async fix-round continuation must be able to re-approve, so the token is
  * injected into EVERY design round; the reviewer echoes it only on a clean pass).
  * §29.1 F2a (2026-09-07): BOTH values are injected — the token AND the designId
@@ -205,6 +114,11 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   if (reviewType === "design" && (agent._advisorRound || 0) === 0) {
     const repos = findReviewRepos(agent)
     parts.push("## Design Review")
+    // FR15/P8: no git → change-set context is unavailable. Say it (never silent).
+    if (repos.length === 0) {
+      parts.push(NO_GIT_NOTICE)
+      parts.push("")
+    }
     if (docList.length > 0) {
       // Explicit review scope (engineering mode, FR2): the caller hands over the
       // doc list — the advisor reviews ONLY these. No git-diff change-set
@@ -240,44 +154,24 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
       }
     }
 
-    // Engineering mode: inject project methodology (resolved from the
-    // DISCOVERED project root — in a monorepo that is the subproject, not cwd)
+    // Engineering mode: the project's DECLARED standards document
+    // (advisor.standardsDoc) — undeclared degrades visibly (PO-2).
     if (agent.config?.agent?.engineering) {
-      try {
-        const mpath = resolve(guideRoot ?? agent.cwd, "METHODOLOGY.md")
-        const methodology = readFileSync(mpath, "utf8")
-        parts.push("## Project Methodology")
-        parts.push("Evaluate the design against this methodology:")
-        parts.push(methodology)
-        parts.push("")
-      } catch { /* file doesn't exist — skip */ }
+      injectProjectStandards(agent, parts, guideRoot)
     }
 
-    // Document map (docs/README.md — the single map since the 2026-09-10 docs
-    // reorg) — inject when the discovered project root has one: the reviewer
-    // checks document ownership against it (a change for an existing section
-    // must amend that section's document, not spawn a new file for it). Falls
-    // back to the legacy pre-reorg map path for downstream projects that have
-    // not run the docs reorg yet. Absent map → skip (nothing to check against).
-    try {
-      const mapRoot = guideRoot ?? agent.cwd
-      const mapCandidates = [resolve(mapRoot, "docs", "README.md"), resolve(mapRoot, "docs", "design", "README.md")]
-      const mapPath = mapCandidates.find((p) => existsSync(p))
-      if (mapPath) {
-        parts.push("## Document Map")
-        parts.push("The document map below registers which document files exist per section. Use it for the Document ownership criterion: a change for an existing section must amend that section's document, not create a new file.")
-        parts.push(readFileSync(mapPath, "utf8"))
-        parts.push("")
-      }
-    } catch { /* file doesn't exist or is unreadable — skip */ }
+    // Document map: declared path wins, the built-in fallback probe (docs/README.md
+    // → docs/design/README.md) stays; neither → explicit degradation sentence
+    // (never the old silent skip).
+    injectDocumentMap(agent, parts, guideRoot ?? agent.cwd)
 
     parts.push("## Instructions")
     if (docList.length > 0) {
-      parts.push("1. Read every document in the Documents to Review list in full — review ONLY those files. Read METHODOLOGY.md to understand the project's standards.")
+      parts.push("1. Read every document in the Documents to Review list in full — review ONLY those files.")
     } else {
-      parts.push("1. Read the design document fully. Read METHODOLOGY.md to understand the project's standards.")
+      parts.push("1. Read the design document fully.")
     }
-    parts.push("2. Review against: completeness (all requirements covered?), feasibility (can this be built?), methodology compliance (does it follow the project's METHODOLOGY.md?), clarity (specific enough?), acceptance criteria (verifiable?), scope (appropriate?).")
+    parts.push("2. Review against: completeness (all requirements covered?), feasibility (can this be built?), methodology compliance (does it follow the project's standards as provided?), clarity (specific enough?), acceptance criteria (verifiable?), scope (appropriate?).")
     parts.push("3. If the ## Project Guide (AGENTS.md) section above is present, also check requirement fit: does the design match what the requirements documents it points to actually ask for?")
     parts.push("4. Do NOT run git diff or look for code changes — there are none at this stage.")
     parts.push("5. If you find issues, produce your review table with the format: | # | Category | Severity | Issue | Suggestion |. If the design passes, no table is needed.")
@@ -353,17 +247,10 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   }
   parts.push("")
 
-  // Engineering mode: inject project methodology so advisor knows the rules
-  // (resolved from the DISCOVERED project root — subproject in a monorepo)
+  // Engineering mode: project standards (declaration-only, same helper as the
+  // design path) — undeclared degrades visibly (PO-2).
   if (agent.config?.agent?.engineering) {
-    try {
-      const mpath = resolve(guideRoot ?? agent.cwd, "METHODOLOGY.md")
-      const methodology = readFileSync(mpath, "utf8")
-      parts.push("## Project Methodology (Engineering Mode)")
-      parts.push("The project follows this methodology. Evaluate the changes against it:")
-      parts.push(methodology)
-      parts.push("")
-    } catch { /* file doesn't exist — skip */ }
+    injectProjectStandards(agent, parts, guideRoot)
   }
 
   // Instructions — round-aware: re-reviews skip convention discovery entirely.

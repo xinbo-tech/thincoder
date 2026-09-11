@@ -71,12 +71,17 @@ export function defaultIsConfigured() {
   }
 }
 
+/** 第 27 批 §12.3⑤（R-A1.1）：ACP 会话装配期剔除的工具。ACP 是 headless 通道——
+ *  question 工具需要交互 UI（`src/tools/question.mjs` 无 `ctx.onQuestion` 即 throw），
+ *  模型可见即会调用、调用必错 → 装配期剔除（schema 直接少一条）。 */
+export const ACP_EXCLUDED_TOOLS = ["question"]
+
 /** M1/M2 session factory: one agent per session, built from the process cwd (single-cwd model).
  *  `id` is the ACP session id — it is baked into the callbacks at construction time
  *  (buildAcpCallbacks closure), so it must be known BEFORE createAcpSession runs.
  *  `request` is the transport's reverse-RPC channel (permissions + fs routing). */
 export async function defaultCreateSession({ id, notify, request, log }) {
-  const agent = await assembleAgent()
+  const agent = await assembleAgent({ excludeTools: ACP_EXCLUDED_TOOLS })
   return createAcpSession({ id, agent, notify, request, log })
 }
 

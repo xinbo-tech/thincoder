@@ -9,7 +9,7 @@
 docs/
   README.md              ← 本文件：总地图 + 文档规范（唯一地图）
   batches/<批>-<主题>.md   ← 批次记录（**一批一份，六段 append-only、一段一作者**：讨论/批次任务/设计评审/批准/实施/验证收口）
-  requirements/<板块>.md ← 需求层（**eng-designer 产物**；过渡期由主 agent 代行——三层归属与迁移规则见 §3）
+  requirements/<板块>.md ← 需求层（**eng-designer 产物**——三层归属与迁移规则见 §3）
   design/<板块>.md       ← 设计层 + 测试层（eng-designer 产物；测试与设计同档共评审）
   design/_archive/       ← 变更史档（批次档/已取代档——正文冻结，不再作为现状依据）
   design/prompts/        ← 提示词中文模板（权威源——双源流程见 requirements/PROMPT-SYSTEM.md §2）
@@ -41,7 +41,7 @@ docs/
 
 | 层 | 内容 | 住哪 | 作者 |
 |---|---|---|---|
-| 需求层 | 总体需求 / 功能性需求（用户故事或规格句）/ 非功能性需求 | `requirements/<板块>.md` | eng-designer（过渡期主 agent 代行） |
+| 需求层 | 总体需求 / 功能性需求（用户故事或规格句）/ 非功能性需求 | `requirements/<板块>.md` | eng-designer |
 | 设计层 | 方案选型与理由 / 架构·接口契约 / 受影响文件清单 / 关键决策记录 | `design/<板块>.md` | eng-designer |
 | 测试层 | 用例表（正常/边界/错误）+ 输入·预期输出 + 与需求条对应关系 | `design/<板块>.md`（与设计同档） | eng-designer |
 
@@ -158,7 +158,7 @@ docs/
 | ACP 协议 | `design/ACP-CLIENT.md` | |
 | 会诊 | `design/CONSULTATION.md` | 机制外指 AGENT-LOOP §14 |
 | 飞刀 | `design/ESCALATE.md` | 机制外指 AGENT-LOOP §14.2 + §7.2 |
-| 测试基建 | `design/TESTING.md` | 测试分层纪律/库存治理（L0/L1/L2） |
+| 测试基建 | `design/TESTING.md` | 测试分层纪律/库存治理（L0/L1/L2）+ 测试生命周期与集成集（§3 起） |
 | 多实例协作感知 | `design/MULTI-INSTANCE-COLLAB.md` | 多副本 agent 协作感知 |
 | 结构债 | `design/STRUCTURE-DEBT.md` | 评估与清理路线图（横切）+ §7 分批路线 |
 | 结构债批执行 | `design/STRUCTURE-DEBT.md` §7 + 批专属档 `_archive/STRUCTURE-DEBT-BATCH-5-6.md`、`_archive/STRUCTURE-DEBT-BATCH-7.md` | 每批独立成档；不逐档裸列（清单指 §7——免重复漂移） |

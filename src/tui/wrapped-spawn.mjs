@@ -1,4 +1,4 @@
-/** wrapped-spawn.mjs — TUI-STDERR-CAPTURE F-1/F-3（docs/design/TUI-STDERR-CAPTURE.md）：包装父
+/** wrapped-spawn.mjs — TUI-STDERR-CAPTURE F-1/F-3：包装父
  * spawn 子（自身 bin）tee stderr → 终端 + crash-reports/tui-stderr-<ts>-<pid>.log（外部终止/
  * native abort——fd 2 进程内不可改——诊断唯一默认捕获路）。子死 → 日志收尾 → 同码退（null 映射
  * code??(signal?1:0)——评审 #1）；spawn error → 注日志 + exit 1（评审 #5——不挂死）。 */

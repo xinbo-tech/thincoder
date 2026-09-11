@@ -3,14 +3,15 @@
  */
 
 import { readFile, stat } from "node:fs/promises"
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
-import { DOC_EXTS, SKIP_DIRS, MAX_DOC_FILE_BYTES } from "./schema.mjs"
+import { MAX_DOC_FILE_BYTES } from "./schema.mjs"
 import { buildFtsQuery, put, search, putMarkdown, clearPersonal, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { deleteByUid, matchMemoryRows, deleteWhere } from "./delete.mjs"
 import { _upsertDocFile, yieldTick } from "./code-index.mjs"
-import { markIndexedCommit, listProjectFiles } from "./code-sync.mjs"
+import { markIndexedCommit, listProjectFiles, indexExtensions } from "./code-sync.mjs"
+import { logEvent } from "../log.mjs"
 
 const DOC_EMBED_BATCH = 64
 
@@ -19,7 +20,7 @@ const DOC_EMBED_BATCH = 64
  * Incremental by mtime.
  */
 export async function docSync(memory, dir, { onProgress } = {}) {
-  const entries = await listProjectFiles(dir, DOC_EXTS)
+  const { entries, unlisted } = await listProjectFiles(dir, indexExtensions(dir).doc)
   const files = [] // { abs, rel, mtimeMs }
   let overSizeSkipped = 0
   for (const { abs, rel } of entries) {
@@ -72,7 +73,10 @@ export async function docSync(memory, dir, { onProgress } = {}) {
 
   onProgress?.({ phase: "done", total: files.length, updated, removed, skipped, failed, overSizeSkipped })
   markIndexedCommit(memory, dir)
-  return { updated, removed, skipped, failed, errors, total: files.length, overSizeSkipped }
+  if (unlisted.count > 0) {
+    logEvent("index:unlisted", { dir, kind: "doc", count: unlisted.count, exts: unlisted.exts.map((e) => e.ext) })
+  }
+  return { updated, removed, skipped, failed, errors, total: files.length, overSizeSkipped, unlistedExts: unlisted }
 }
 
 /**
@@ -233,7 +237,7 @@ const listRowLine = (r) => `[${r.layer}] ${r.id} [${r.type}] ${r.title}（${fmtD
  * opts: { cwd, projectDir, author, team: { dir, name } | null }
  */
 export function memoryTools(memory, opts = {}) {
-  const projectDir = opts.projectDir ? join(opts.cwd ?? process.cwd(), opts.projectDir) : null
+  const projectDir = opts.projectDir ? (isAbsolute(opts.projectDir) ? opts.projectDir : join(opts.cwd ?? process.cwd(), opts.projectDir)) : null
   const dirs = { project: projectDir, team: opts.team?.dir ?? null }
   return [
     {

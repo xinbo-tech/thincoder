@@ -4,6 +4,7 @@
  */
 import { execFileSync } from "node:child_process"
 import { dirname, basename, resolve } from "node:path"
+import { loadConventions, isCodePath } from "../conventions.mjs"
 
 const GIT_TIMEOUT = 5_000
 const MAX_EMBEDDED_DIFF = 50_000
@@ -97,32 +98,10 @@ export function collectChangedFiles(repos, cwd) {
   return files
 }
 
-const DOC_FILE = /(?:^|[/\\])(?:LICENSE|NOTICE|CHANGELOG|AUTHORS)(?:\.\w+)?$|\.(?:md|markdown|mdx|txt|rst|adoc)$/i
-
-/** Temporary/scratch files that must NOT count as code mutations: tmp-* named
- *  scratch scripts (tmp-c1.mjs, tmp-check.mjs…) and .tmp/.temp extensions.
- *  The advisor/verify guards skip these — a throwaway diagnostic script is not
- *  a code change, and writing one must not push the agent into a review loop.
- *  NOTE: matches the tmp-* basename at ANY directory depth, not just root —
- *  intentional: _touchedFiles stores absolute paths, so the pattern must work
- *  for "D:/proj/tmp-check.mjs" as well as a bare "tmp-check.mjs". */
-const TEMP_FILE = /(?:^|[/\\])tmp-[^/\\]+$|\.(?:tmp|temp)$/i
-
-/** True when a path matches the doc/license pattern by extension or name.
- *  NOTE: this is extension-based only — it does NOT exclude src/ paths.
- *  Callers must separately check the src/ prefix for product-code semantics
- *  (e.g. src/prompts/*.md IS product code despite matching DOC_FILE).
- *  See isDocOnlyChange for the combined check. */
-export function isDocFile(p) {
-  return DOC_FILE.test(p ?? "")
-}
-
-/** True when a path is a throwaway temp file (tmp-* name or .tmp/.temp ext).
- *  Excluded from code-mutation detection so scratch scripts don't trigger
- *  advisor/verify guards. */
-export function isTempFile(p) {
-  return TEMP_FILE.test(p ?? "")
-}
+// Path classification (code / doc / temp) lives in ../conventions.mjs — the single
+// authority shared by every gate and guard (PORTABILITY FR12 / PO-10). This module
+// consumes it: `isDocFile` / `isTempFile` were retired here (no re-export — a second
+// import path would recreate the drift the authority exists to remove).
 
 /**
  * True when this run mutated at least one CODE file. Shared single source of
@@ -132,24 +111,22 @@ export function isTempFile(p) {
  * files (tmp-*, .tmp, .temp) are excluded too — a throwaway diagnostic script
  * is not a code change. Mutations without a known path (tools outside
  * FILE_MUTATORS) are treated as code — cannot tell, so guard conservatively.
- * Product-code semantics: anything under src/ (incl. src/prompts/*.md) is code;
- * anything else that isn't a doc or temp file is code.
- * NOTE: _touchedFiles stores ABSOLUTE paths (join(cwd, p)), so the src/ check
- * matches a path component (works for "src/..." and "D:\...\src\..." alike),
- * not a bare ^src prefix — the literal ^src[\\/] form would be dead code here.
+ * Classification semantics (incl. "a declared code segment wins over temp/doc")
+ * live in conventions.mjs; _touchedFiles stores ABSOLUTE paths, which the
+ * segment matcher handles at any depth.
  */
-export function hasCodeMutations({ _touchedFiles, _mutatedThisRun }) {
+export function hasCodeMutations({ _touchedFiles, _mutatedThisRun, cwd }) {
   const files = _touchedFiles ?? []
   if (files.length === 0) return _mutatedThisRun
-  // src/ is unconditional — anything under src/ is code regardless of its name
-  // (incl. src/tmp-*.mjs). Temp/doc exclusions apply only outside src/.
-  return files.some((p) => /(?:^|[\\/])src[\\/]/.test(p) || (!isTempFile(p) && !isDocFile(p)))
+  const conv = loadConventions(cwd)
+  return files.some((p) => isCodePath(p, conv))
 }
 
 /** True when all changed files across repos are documentation (md/txt/LICENSE etc.).
- *  Anything under src/ (incl. src/prompts/*.md) counts as product code —
- *  isProductCode semantics, consistent with the design gate. */
+ *  Anything inside a code segment (incl. src/prompts/*.md) counts as product code —
+ *  the same authority the design gate uses. Paths here are repo-relative. */
 export function isDocOnlyChange(repos, cwd) {
+  const conv = loadConventions(cwd)
   const targets = repos.length > 0 ? repos : [cwd]
   let sawChanges = false
   for (const repo of targets) {
@@ -164,9 +141,9 @@ export function isDocOnlyChange(repos, cwd) {
     for (const line of status.split("\n")) {
       // porcelain: "XY path" or "XY old -> new" (rename)
       const filePath = line.slice(3).split(" -> ").pop().replace(/^"|"$/g, "")
-      // src/ is unconditional product code (even src/tmp-*.mjs) — check before the temp skip
-      if (/^src[\\/]/.test(filePath) || !DOC_FILE.test(filePath)) return false
-      if (isTempFile(filePath)) continue
+      // Code (a declared code segment is unconditional, even for tmp-*.mjs) →
+      // not a doc-only change; docs and temp scratch files fall through.
+      if (isCodePath(filePath, conv)) return false
     }
   }
   return sawChanges

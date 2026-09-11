@@ -46,7 +46,7 @@ export async function generateTitle(userContent, provider) {
     const url = `${provider.baseURL.replace(/\/+$/, "")}${chatPath}`
     const opts = {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+      headers: { ...(provider.headers ?? {}), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }, // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出
       body,
       signal: AbortSignal.timeout(10000),
     }

@@ -4,13 +4,16 @@
  * 覆盖：形态 A（p.model + active*）/ 形态 B（models[] + defaultModel）→ 单值 `providers[].model`
  * （磁盘无 `models` 键）；垃圾清理；幂等；写回失败不阻断；预设 20 条单值；defaultModel 校验
  * （provider ∈ providers——模型不再有成员校验，M4）。
+ *
+ * 并档注（2026-09-11 TEST-LIFECYCLE 扫①——设计档 TESTING.md §7.2 #1）：原 config.test.mjs 全量并入
+ * （reloadMcpFromDisk / mcp.servers 形态两用例——CODE-HARDENING-BATCH §2.3；源档随并删除）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { loadConfig, PROVIDER_PRESETS, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
+import { loadConfig, PROVIDER_PRESETS, reloadMcpFromDisk, _setConfigPathForTest, _resetConfigPathForTest } from "../src/config.mjs"
 import { migrateLegacyModelFields } from "../src/config-migrate.mjs"
 
 function tmpCfg(content) {
@@ -172,5 +175,42 @@ test("AC-1 schema：defaultModel 校验（provider ∈ providers；模型无成�
   } finally {
     _resetConfigPathForTest()
     rmSync(t.dir, { recursive: true, force: true })
+  }
+})
+
+// ─── config 磁盘读层（并档：原 config.test.mjs——CODE-HARDENING-BATCH §2.3，2026-09-08）───
+// reloadMcpFromDisk（内含 readMcpSection）mcp.servers 非数组 → ok:false 走畸形回退；
+// 正常数组 → ok:true。纯单元：tmp config.json 注入（readMcpSection 文档化的测试缝）。
+
+function tmpConfig(content) {
+  const dir = mkdtempSync(join(tmpdir(), "thincoder-cfg-"))
+  const path = join(dir, "config.json")
+  writeFileSync(path, content, "utf8")
+  return { path, cleanup: () => rmSync(dir, { recursive: true, force: true }) }
+}
+
+test("2.3 mcp.servers 非数组 → ok:false（畸形磁盘配置回退——不再静默空表）", () => {
+  const agent = {}
+  const t = tmpConfig(JSON.stringify({ mcp: { servers: "not-an-array" } }))
+  try {
+    const r = reloadMcpFromDisk(agent, t.path)
+    assert.equal(r.ok, false)
+    assert.ok(r.error, "error carries the malformed-config reason")
+  } finally {
+    t.cleanup()
+  }
+})
+
+test("2.3 mcp.servers 正常数组 → ok:true 且 servers 原样返回", () => {
+  const agent = {}
+  const servers = [{ name: "s1", command: "npx", args: ["-y", "mcp-server"] }]
+  const t = tmpConfig(JSON.stringify({ mcp: { servers } }))
+  try {
+    const r = reloadMcpFromDisk(agent, t.path)
+    assert.equal(r.ok, true)
+    assert.equal(r.servers.length, 1)
+    assert.equal(r.servers[0].name, "s1")
+  } finally {
+    t.cleanup()
   }
 })

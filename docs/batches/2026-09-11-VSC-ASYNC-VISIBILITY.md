@@ -321,7 +321,10 @@ CLI `npm test` → **398 / 386 / 1 失败**——唯一失败 = `test/doc-consis
 **2026-09-11 10:53 用户验收**（原话「都验收」——含本批；§4 为**父侧代签**——用户 04:20 授权窗口内，三条件齐备）。
 
 - **交付面**：22 文件（条目 A 11 = 8 源 + 3 测试 · 条目 B 11 = CLI 5 + VSC 6，含两新测试档与 `test/files.mjs` ×2）——投递队列/就绪握手/终态防御三条 + R-1..R-5 收口（**案 B**）+ advisor 池四面（双端）。
-- **父侧实跑**：VSC 全量 **391/390/0** · CLI 全量 **419/408/0**（与第 11 批合跑态）· 实现读码全对——桩集成员表逐行（`activity.js:149-181`：`answered`/`queued-cancel`/前置不满足三行 = **不补** ✓）· 两拍排在 `openSessionContent` 之后（`panel-messages.mjs:427-428`）· `loadSession` 清屏→historyPage→同 tick 再断言（`panel-session.mjs:165`）· dispose 关闸清队（`chat-panel.mjs:126-127`）· VSC 双池单查 fall-through + `wait_for` 惰性 import（TDZ 披露）· CLI `advisorPools`/`advisorSettled` ✓。
+- **父侧实跑**：VSC 全量 **391/390/0** · CLI 全量 **419/408/0**（与第 11 批合跑态）· 实现读码全对——桩集成员表逐行（`activity.js:149-181`：`answered`/`queued-cancel`/前置不满足三行 = **不补** ✓）·
+  两拍排在 `openSessionContent` 之后（`panel-messages.mjs:427-428`）· `loadSession` 清屏→historyPage→同 tick 再断言（`panel-session.mjs:165`）· dispose 关闸清队（`chat-panel.mjs:126-127`）· VSC 双池单查 fall-through + `wait_for` 惰性 import（TDZ 披露）· CLI `advisorPools`/`advisorSettled` ✓。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 412 字符 → 纯折行〕
 - **文档面**：§3 两处跨仓/计数形态违规 → 父侧 05:05 **代笔**（带标注）+ T41 复跑 **6/6 绿** ✓。
 - **偏差裁定**：惰性动态 import = 接受（TDZ 实测）· VSC 描述落点 = 接受 · 387 行测试档 = 接受（同带先例）· boot 三段幂等 = 接受 · cancel↔settle 两端对齐（代码评审 🟡 已修）✓。
 - **实机面**：VS Code 真 webview 目视 = 用户验收面（coder 无 IDE 环境——按设计口径声明；用户 10:53 验收通过）。

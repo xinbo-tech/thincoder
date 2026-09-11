@@ -8,6 +8,8 @@
 import { C } from "./ansi.mjs"
 import { readClipboardText, insertPastedText } from "./clipboard.mjs"
 import { QUESTION_CUSTOM } from "./interaction.mjs"
+import { inputContentWidth } from "./layout.mjs"
+import { moveCursorVertical } from "./render.mjs"
 
 /** SYNC-CANCEL v2 模态 deny 解绕（用户裁——2026-09-09）：⏹ 定向中止 sync child 时
  *  顺带 deny 其 pending 权限/continue 模态——ask 不观 signal（R1——targeted abort 后
@@ -91,10 +93,11 @@ export function handleQuestionMode(str, key, ctx) {
       state.status = "Processing..."
       render()
     } else if (key.name === "up") {
-      q.selected = Math.max(0, (q.selected ?? 0) - 1)
+      // A4（第 20 批 §12.4 契约——同义键同形）：↑↓ 环绕（原钳位——对齐 picker/wizard 既有语义）
+      q.selected = ((q.selected ?? 0) - 1 + q.options.length) % q.options.length
       render()
     } else if (key.name === "down") {
-      q.selected = Math.min(q.options.length - 1, (q.selected ?? 0) + 1)
+      q.selected = ((q.selected ?? 0) + 1) % q.options.length
       render()
     } else if (key.name === "return") {
       const answer = q.options[q.selected ?? 0]
@@ -205,16 +208,21 @@ export function handleQuestionMode(str, key, ctx) {
 }
 
 /** interruptPrompt 模态（Ctrl+I 后输入注入消息）：Enter 提交 → controller.abort
- *  { interrupt: true, message }；Esc 取消；字符进 prompt；其余键静默吞（模态独占）。
+ *  { interrupt: true, message }；Esc 取消；编辑键 = §7.2 最小集 + 四方向键（第 31 批：
+ *  `{ chars, cursor }` codepoint 模型——TUI-INPUT-BOX.md §8.1）；其余键静默吞（模态独占）。
  *  返回 false 当模态未激活（key-handler 先检 state.interruptPrompt 入口再调）。 */
 export function handleInterruptMode(str, key, ctx) {
   const { state, pushLine, render } = ctx
   if (!state.interruptPrompt) return false
+  const p = state.interruptPrompt
+  if (!Array.isArray(p.chars)) p.chars = p.chars ? [...p.chars] : [] // 形态防御（同 question 自由文本态）
+  p.cursor = Math.max(0, Math.min(p.cursor ?? p.chars.length, p.chars.length))
+  const len = p.chars.length
   if (key.name === "escape") {
     state.interruptPrompt = null
     render()
   } else if (key.name === "return") {
-    const msg = (state.interruptPrompt.text ?? "").trim()
+    const msg = p.chars.join("").trim()
     state.interruptPrompt = null
     if (msg) {
       // Guard: if the turn already finished while the user was typing, the controller
@@ -227,12 +235,59 @@ export function handleInterruptMode(str, key, ctx) {
       }
       render()
     }
+  } else if (key.name === "enter") {
+    // Ctrl+J（\n → name "enter"）= no-op 吞——单行不变式：不插换行（§8.1）
+  } else if (key.name === "left") {
+    p.cursor = Math.max(0, p.cursor - 1)
+    render()
+  } else if (key.name === "right") {
+    p.cursor = Math.min(len, p.cursor + 1)
+    render()
+  } else if (key.name === "up" || key.name === "down") {
+    // 折行竖移（§8.1）：显示列保持 + 短行端钳制；无邻行 = 吞（零副作用——无历史回落）
+    const cols = (state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80)
+    const next = moveCursorVertical(p.chars, p.cursor, inputContentWidth(cols), key.name)
+    if (next !== null) {
+      p.cursor = next
+      render()
+    }
+  } else if (key.name === "home") {
+    p.cursor = 0
+    render()
+  } else if (key.name === "end") {
+    p.cursor = len
+    render()
+  } else if (key.ctrl && !key.alt && key.name === "u") {
+    p.chars = []
+    p.cursor = 0
+    render()
   } else if (key.name === "backspace") {
-    state.interruptPrompt.text = state.interruptPrompt.text.slice(0, -1)
-    render()
-  } else if (str && !key.ctrl && !key.meta) {
-    state.interruptPrompt.text += str.replace(/[\r\n]+/g, "")
-    render()
+    if (p.cursor > 0) {
+      p.chars.splice(p.cursor - 1, 1) // codepoint 元素删除——emoji 不劈半
+      p.cursor--
+      render()
+    }
+  } else if (key.ctrl && !key.alt && !key.meta && key.name === "v") {
+    // Ctrl+V 粘贴：落 cursor 位置（\n/\r 去除、\t → 2 空格——insertPastedText 注入框分支）。
+    // 异步读剪贴板期间框可能已 Esc/Enter 关闭 → 回调守卫比对同一引用，防落主输入框
+    // （同 question 态 stale-paste 守卫语义；不加守卫会静默落 state.input）。
+    const target = p
+    readClipboardText().then((text) => {
+      if (text && state.interruptPrompt === target) {
+        insertPastedText(state, text)
+        render()
+      }
+    }).catch((e) => console.error(`[tui] clipboard paste failed: ${e.message}`))
+  } else if (str && !key.ctrl && !key.meta && key.name !== "tab" && key.name !== "enter") {
+    // 可打印字符插入光标位置（codepoint 拆字）；\r\n 剥离 + \t→2 空格（单行不变式）
+    const chars = [...str.replace(/[\r\n]+/g, "").replace(/\t/g, "  ")]
+    if (chars.length) {
+      p.chars.splice(p.cursor, 0, ...chars)
+      p.cursor += chars.length
+      render()
+    }
   }
+  // 未列键（Delete/PgUp/PgDn/F1/…）一律 consume return——无 fall-through（模态独占；§8.1：
+  // Delete 不引入——与 §7.2 最小集对齐）
   return true
 }

@@ -97,8 +97,14 @@ export function insertPastedText(state, rawText, activeQuestion = null) {
   }
   // IKBU3J (2026-08-28)：Ctrl+I 注入框激活时，粘贴进注入文本（与按键路径同语义：去换行保单行），
   // 不得落入主输入框——此前缺失该分支导致粘贴进 state.input、Esc 后残留主输入框。
+  // 第 31 批：注入框 = { chars, cursor } codepoint 模型——粘贴落 cursor 位置（§8.1 键表）。
   if (state.interruptPrompt) {
-    state.interruptPrompt.text += rawText.replace(/[\r\n]+/g, "")
+    const p = state.interruptPrompt
+    if (!Array.isArray(p.chars)) p.chars = p.chars ? [...p.chars] : [] // 形态防御（同 question 面——保文本不丢）
+    const cur = Math.max(0, Math.min(p.cursor ?? p.chars.length, p.chars.length))
+    const chars = [...rawText.replace(/[\r\n]+/g, "").replace(/\t/g, "  ")]
+    p.chars.splice(cur, 0, ...chars)
+    p.cursor = cur + chars.length
     return
   }
   const text = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\t/g, "  ")

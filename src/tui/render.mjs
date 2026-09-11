@@ -161,14 +161,19 @@ export function layoutInput(chars, cursor, width) {
   const PROMPT = "\u25b8 "  // first-line prefix (display width 2)
   const CONT = "  "         // continuation prefix (width 2) — keeps left edge aligned
   const lines = []
+  const starts = []         // lineStarts so far（第 31 批 additive）：每个可视行的行首下标
+  let lineStart = 0         // 当前行的行首下标（chars 索引空间）
   let cursorLine = 0
   let cursorCol = 0
   let cur = ""
   let col = 0
   let firstLine = true
   const avail = () => width - 2 // every line reserves 2 cols for its prefix
-  const flush = () => {
+  // next = 下一行的行首下标（折行 = 当前字符 i；行尾 \n 之后 = i + 1）
+  const flush = (next) => {
     lines.push((firstLine ? PROMPT : CONT) + cur)
+    starts.push(lineStart)
+    lineStart = next
     firstLine = false
     cur = ""
     col = 0
@@ -177,7 +182,7 @@ export function layoutInput(chars, cursor, width) {
     const ch = chars[i]
     if (ch !== undefined && ch !== "\n") {
       const w = charWidth(ch.codePointAt(0))
-      if (col + w > avail()) flush()
+      if (col + w > avail()) flush(i)
       if (i === cursor) {
         cursorLine = lines.length
         cursorCol = 2 + col
@@ -189,12 +194,39 @@ export function layoutInput(chars, cursor, width) {
         cursorLine = lines.length
         cursorCol = 2 + col
       }
-      if (ch === "\n") flush()
+      if (ch === "\n") flush(i + 1)
     }
   }
   const endsWithNewline = chars.length > 0 && chars[chars.length - 1] === "\n"
-  if (cur || lines.length === 0 || endsWithNewline) flush()
-  return { lines, cursorLine, cursorCol }
+  if (cur || lines.length === 0 || endsWithNewline) flush(chars.length)
+  // lineStarts[k] = 第 k 行行首；行 k 区间 = [lineStarts[k], lineStarts[k+1])（含行尾 \n）；
+  // 末项哨兵 = chars.length（上界、不指向行）——竖移定位用（TUI-INPUT-BOX.md §1 不变量 5）。
+  return { lines, cursorLine, cursorCol, lineStarts: [...starts, chars.length] }
+}
+
+/** 竖直移动定位（第 31 批——TUI-INPUT-BOX.md §3 规则 2 / §9.3 #2）：纯函数，
+ *  `(chars, cursor, width, dir) → number | null`（null = 该方向无邻行）。
+ *  目标行显示列 = 当前光标显示列（列保持——`layoutInput` 同源行列；行前缀 2 列等宽故整体
+ *  相减）；目标行更短则钳制到行尾（行尾含 \n → 落在 \n 前）。逐键现算——不记忆列（D-31.2）。
+ *  不读不写任何 state。 */
+export function moveCursorVertical(chars, cursor, width, dir) {
+  const { cursorLine, cursorCol, lineStarts } = layoutInput(chars, cursor, width)
+  const lineCount = lineStarts.length - 1
+  const targetLine = dir === "up" ? cursorLine - 1 : cursorLine + 1
+  if (targetLine < 0 || targetLine >= lineCount) return null
+  const targetCol = Math.max(0, cursorCol - 2) // 2 列行前缀（`▸ ` / 续行空格）——各行等宽
+  const start = lineStarts[targetLine]
+  let end = lineStarts[targetLine + 1]
+  if (end > start && chars[end - 1] === "\n") end -= 1 // 行尾 \n 不占显示列
+  let col = 0
+  let idx = start
+  while (idx < end) {
+    const w = charWidth(chars[idx].codePointAt(0))
+    if (col + w > targetCol) break // 宽字符列中不落点——落在该字符起点
+    col += w
+    idx += 1
+  }
+  return idx
 }
 
 /**

@@ -2,6 +2,7 @@
  * provider/rate.mjs — TPM/RPM proactive throttling gate
  * Sliding-window accounting; pre-check budget before sending requests; sleep until window frees space when over budget.
  */
+import { abortError } from "../abort-provenance.mjs"
 
 export const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504])
 export const MAX_RETRIES = 3
@@ -86,7 +87,7 @@ export async function rateGate(provider, estimated, onWait, signal) {
     waitMs = Math.max(waitMs, 50)
     onWait?.({ phase: "gate", seconds: Math.ceil(waitMs / 1000) })
     await _rateHooks.sleep(waitMs)
-    if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
+    if (signal?.aborted) throw abortError(signal, "provider", "rate-gate")
   }
 }
 

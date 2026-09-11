@@ -34,7 +34,7 @@ import { createInteraction } from "./interaction.mjs"
 import { pasteClipboardImage as pasteClipboardImageImpl, insertPastedText, translateShiftEnter, stripKeyboardProtocol } from "./clipboard.mjs"
 import { parseMouseClicks, handleWheel, createMouseDispatch, mouseOob } from "./mouse.mjs"
 import { runAgentTurn } from "./agent-turn.mjs"
-import { createKeyHandler, convMaxScroll } from "./key-handler.mjs"
+import { createKeyHandler, convMaxScroll, clearAttention } from "./key-handler.mjs"
 import { showStartup, backgroundIndex, createLoadOlder } from "./startup.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
 import { createConfigHelpers } from "./config-helpers.mjs"
@@ -116,7 +116,8 @@ export async function startTUI(agent, opts = {}) {
     processingStarted: 0, // current turn start time (status bar timer)
     status: "Ready",
     queue: [], // 交接残项单容器 [{ text }]（INPUT-LOCK：submit 不再排队——仅释放窗口兜底/挂起中止残余——回合尾队列循环续发，至多一条）
-    interruptPrompt: null, // Ctrl+I interrupt message input: { text: "" } or null
+    interruptPrompt: null, // Ctrl+I inject box（第 31 批——TUI-INPUT-BOX.md §8）: { chars: string[], cursor: number } or null
+    attentionAwaiting: false, // 第 33 批（TUI §14.3(f)）：回合结束等待输入——链尾置位 / 用户输入清位；不落盘、不进会话
     search: null, // Ctrl+F search mode: { query: "", matches: [{lineIndex, charIndex}], index: 0 } or null
     expandedBlocks: new Set(), // block hashes that are expanded (Enter toggles)
     foldEnabled: true, // global fold toggle — /fold on|off
@@ -166,6 +167,10 @@ export async function startTUI(agent, opts = {}) {
 
       let text = mousePending + utf8Decoder.decode(chunk, { stream: true })
       mousePending = ""
+
+    // 第 33 批（TUI §14.3(e) 鼠标点）：stdin 数据到达即用户在场 ⇒ 清 attention 位
+    // （单点覆盖下方滚轮分支与 onMouseClick；键盘入口在 key-handler）。
+    clearAttention(state, render)
 
     // Bracketed paste: terminal wraps pasted text in \x1b[200~ ... \x1b[201~
     // Route pasted content to the active text target (question answer / input box) in one shot,

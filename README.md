@@ -121,7 +121,7 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
     },
   ],
   "activeProvider": "deepseek", // currently active provider name
-  "shell": null, // bash tool shell (win11: e.g. "C:\\Program Files\\Git\\bin\\bash.exe" or "pwsh"); null = system default — cmd on Windows (UTF-8 forced per command), /bin/sh elsewhere. TUI: /shell
+  "shell": null, // bash tool shell (win11: e.g. "C:\\Program Files\\Git\\bin\\bash.exe" or "pwsh"); null = system default — cmd on Windows (UTF-8 forced per command), /bin/sh elsewhere. TUI: /shell; a leading ~ in the path expands to the home directory
   "embedding": {
     // optional: without it, retrieval is pure FTS
     "baseURL": "https://api.siliconflow.cn/v1",
@@ -135,8 +135,9 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
     "compactThreshold": 100000, // context compaction threshold (approx. tokens)
   },
   "memory": {
-    "dbPath": "~/.thincoder/memory.db", // sqlite index path
-    "projectDir": ".thincoder/memory", // Project layer directory (relative to project root)
+    // Path fields (dbPath / projectDir / team.dir / shell) expand a leading ~ (~, ~/, ~\) to the home directory at load time
+    "dbPath": "~/.thincoder/memory.db", // sqlite index path (~ expands to the home directory)
+    "projectDir": ".thincoder/memory", // Project layer directory (relative to project root; ~ expands to an absolute path used as-is)
     "team": {
       // optional: Team layer disabled without it
       "name": "myteam",
@@ -156,7 +157,6 @@ Configuration comes exclusively from `~/.thincoder/config.json` — no environme
   "websearch": {
     // optional: Tavily structured search (stable JSON API, no HTML scraping).
     // Empty apiKey → silently falls back to Bing HTML extraction (zero-config).
-    "provider": "tavily",
     "apiKey": "tvly-...", // https://tavily.com — has a free monthly tier
   },
 }

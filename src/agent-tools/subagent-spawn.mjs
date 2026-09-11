@@ -14,7 +14,7 @@ import {
   createAgent,
   readonlyToolNames, escapeXml,
 } from "../agent.mjs"
-import { makeRelay, wrapChildCallbacks } from "../agent/spawn-child.mjs"
+import { makeRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-child.mjs"
 import { validateDesignToken } from "./advisor.mjs"
 import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
@@ -437,7 +437,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     // （池活续号兜底——counter 载体= agent 本体 _subAgentCounter——跨 run/跨压缩
     // 存活——per-run reset 清单不含它）。sync 分支 makeRelay 不进池——照旧。
     const id = nextSubagentId(parent)
-    relayPrefix = `${role}#${id}/`
+    relayPrefix = relayPrefixOf(role, id)
   } else {
     relayPrefix = makeRelay(parent, role ?? "sub", ctx.callbacks?.onToken, childProvider.model ?? "")
   }

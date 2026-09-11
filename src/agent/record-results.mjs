@@ -100,7 +100,7 @@ export async function recordToolResults(agent, toolByName, results) {
       }
       if (toolCall.name === "verify") agent._verifiedThisRun = true
       if (toolCall.name === "advisor") {
-        // §24 D-24b (settle accounting split — fix #2): an ASYNC launch returns an
+        // §11.2 D-24b (settle accounting split — fix #2): an ASYNC launch returns an
         // ack and settles later — the settle callback owns its called/round/token
         // accounting. Only the SYNC path (depth>0 / explicit async:false) accounts
         // here — per-review instance round++ (marker-keyed by tool call id) + the

@@ -250,7 +250,10 @@ _（待写——eng-coder）_
 
 **2026-09-11 10:53 用户验收**（原话「都验收」——含本批）。
 
-- **交付面**：5 文件——CLI `src/agent-tools/settings.mjs` 153→263 · 新档 `test/settings.test.mjs` 433 行/25 例 · VSC `src/agent-tools/settings.mjs` 147→249 · 新档 `test/settings-tool.test.mjs` 148 行/6 例 · VSC `test/files.mjs` 登记。双表结构（`_NULL_LEAF_SHAPES` 相等面 4/2 + `_SIBLING_SHAPES` 存在性面 1/3）+ 完备性自检 + 形状校验 + 描述句逐字。
+- **交付面**：5 文件——CLI `src/agent-tools/settings.mjs` 153→263 · 新档 `test/settings.test.mjs` 433 行/25 例 · VSC `src/agent-tools/settings.mjs` 147→249 · 新档 `test/settings-tool.test.mjs` 148 行/6 例 · VSC `test/files.mjs` 登记。
+  双表结构（`_NULL_LEAF_SHAPES` 相等面 4/2 + `_SIBLING_SHAPES` 存在性面 1/3）+ 完备性自检 + 形状校验 + 描述句逐字。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 301 字符 → 纯折行〕
 - **父侧实跑（验收时态）**：CLI 25/25 · VSC 6/6 · CLI 全量 388/377/0 · VSC 全量 372/371/0；锁断言逐字复核 ✓（CLI `test/settings.test.mjs:278-279` · VSC `test/settings-tool.test.mjs:106-107`）。
 - **验收后同步轮**（id=24）：设计档 ↔ 交付实测 4 项（测试缝导出 5→6 · VSC 锁断言实测形态 · `_DEFAULTS_ROOT` 键空间入档 + 行为增量如实记录 · 行数注记改「批次前 → 交付态·实测」）——父侧逐项核验 ✓。
 - **偏差裁定**：第 6 个 `_` 导出/键空间归一/锁断言实测形态/`_` 更正披露——**均接受**（理由见批次 §2 修正轮同步块）。

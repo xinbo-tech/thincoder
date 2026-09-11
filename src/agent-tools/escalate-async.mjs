@@ -28,6 +28,7 @@ import { relative, isAbsolute } from "node:path"
 import { runAgent, createAgent, DEFAULT_SUBAGENT_TURNS } from "../agent.mjs"
 import { runWithContinue, TURN_CAP_MARK, wrapChildCallbacks } from "../agent/spawn-child.mjs"
 import { logEvent } from "../log.mjs"
+import { deathLine } from "../abort-provenance.mjs"
 import {
   mergeChildMutations, runningPoolCount, poolDomainOf, poolLimitsFor, ASYNC_POOL_LIMITS, enqueueAsk,
 } from "./subagent-async.mjs"
@@ -152,7 +153,7 @@ export function launchEscalateAsync(parent, ctx, launch) {
   const relayPrefix = `escalate#${id}/`
   const entry = {
     id, role: "escalate", relayPrefix,
-    _pool: poolDomainOf("escalate"), // other — shares the domain with explore/plan/coder (§24 D-24a)
+    _pool: poolDomainOf("escalate"), // other — shares the domain with explore/plan/coder (§11.1 D-24a)
     status: "queued",
     position: undefined,
     report: null, error: null, done: false, cancelled: false,
@@ -174,8 +175,9 @@ export function launchEscalateAsync(parent, ctx, launch) {
   // D6 buildChildSignal 单点（ASYNC-RESULT-CONTAINER.md——D5 同款：_sessionSignal 兜底）。
   const baseSignal = buildChildSignal(parent, ctx)
   if (baseSignal) {
-    if (baseSignal.aborted) ctrl.abort()
-    else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
+    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
+    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
   // Turn mirror (⟦ev⟧turn from the child runAgent → entry.turn/maxTurns — status parity).
   const flight = async () => {
@@ -252,7 +254,8 @@ export function launchEscalateAsync(parent, ctx, launch) {
         // 运行失败/中止：错误文本落 entry.error（子代理同款——cancel 分支忽略它；
         // Ctrl+I 中止的残条目由收尾消化带错误文本——不落空 "(no report)" digest）。
         const child = entry.childAgent
-        entry.error = `escalate (${tag}) error: ${e?.message ?? String(e)}\nPartial output: ${(child?._capturedOutput ?? "").slice(0, 2000)}`
+        // §20.3 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
+        entry.error = `escalate (${tag}) error: ${deathLine(e, entry.controller?.signal)}\nPartial output: ${(child?._capturedOutput ?? "").slice(0, 2000)}`
       })
       .finally(() => {
         // settle 公共收尾单点（ASYNC-RESULT-CONTAINER.md D3——settleAsyncEntry）：日志三连

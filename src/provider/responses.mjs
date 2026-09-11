@@ -420,6 +420,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // rateGate/recordRate 对齐 core（responses body 无 messages 键——按本地全量 messages 估算）
   const estimated = estimateRequestTokens({ messages })
   await rateGate(provider, estimated, onWait, signal)
+  // 定制头展开（PROVIDER.md §21）：provider.headers 在前、内置头在后——同名内置头胜出（三处 fetch 共用）
+  const headers = { ...(provider.headers ?? {}), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }
 
   // round2 复验 #1（2026-08-31）：retry 层对 4xx 非可重试是 throw 而非返回——
   // requestWithRetry 从不返回 400/404 响应 → 下方 isChainInvalidError 分支原来不可达（D6 死代码）。
@@ -429,7 +431,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     response = await requestWithRetry(
       () => proxyFetch(`${provider.baseURL}/responses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+        headers,
         body: JSON.stringify(body),
         signal,
           _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
@@ -448,7 +450,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     response = await requestWithRetry(
       () => proxyFetch(`${provider.baseURL}/responses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+        headers,
         body: JSON.stringify(fullBody),
         signal,
           _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
@@ -466,7 +468,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     response = await requestWithRetry(
       () => proxyFetch(`${provider.baseURL}/responses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` },
+        headers,
         body: JSON.stringify(fresh2.body),
         signal,
           _headerTimeoutMs: effectiveFetchTimeoutMs(provider),

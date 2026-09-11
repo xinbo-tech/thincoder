@@ -3,6 +3,7 @@
  * LLM ↔ tool-call loop, until the task is done.
  */
 import { chat } from "./provider/index.mjs"
+import { abortError, annotateAbort } from "./abort-provenance.mjs"
 import { pushReal, summarizeRunExplorations } from "./context.mjs"
 import { specForModel } from "./config.mjs"
 import { resolve } from "node:path"
@@ -21,6 +22,7 @@ import {
   escapeXml, repairHistory, listWorkDir,
   readonlyToolNames, collectGitContext, loadProjectInstructions,
   ContinueError,
+  turnFrame, // 第 19 批（TURN-ACROSS-SEGMENTS）：跨段累计编号帧（设计 §19.3）
   DEFAULT_MAX_TURNS, DEFAULT_SUBAGENT_TURNS,
   MIN_REPORT_CHARS, REPORT_CONTINUATION,
   AUTO_TURN_DIGEST_DOMAIN,
@@ -68,8 +70,8 @@ export function createAgent({
     // (AC3 零写) — no field initializer; the multi-slot Map `_engDesignTokens` is the
     // authoritative ledger (hydrated by restoreEngTokens / written by settle).
     _touchedFiles: [], _verifyRetries: 0, _advisorRound: 0, _advisorSession: null,
-    _advisorRuns: new Map(), // §24 D-24b: per-review convergence instances (rounds/prior/designId)
-    _mutationSeq: 0, _mutLog: [], // §24 D-24b: mutation log (in-flight review staleness scan)
+    _advisorRuns: new Map(), // §11.2 D-24b: per-review convergence instances (rounds/prior/designId)
+    _mutationSeq: 0, _mutLog: [], // §11.2 D-24b: mutation log (in-flight review staleness scan)
     _lastAdvisorOutput: null, // full review output from the most recent advisor call (convergence rounds inject it verbatim)
     _lastEngState: false,
     _pendingReminders: [],
@@ -124,6 +126,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // Per-run bookkeeping reset — PRESERVED on `resume` (ContinueError continuation):
   // mutation/guard continuity and the convergence budget must survive a continuation.
   if (!resume) {
+    // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §19.3）：链内累计编号
+    // 只在链起点复位——续跑（resume:true）不重置、不回退（编号帧公式见 helpers.mjs
+    // turnFrame）。与下方 mutation/guard 复位同条件同点（全档唯一复位点）。
+    agent._turnSeq = 0
     // §17 D-S6: an auto-turn's guard marks are inherited by the next USER run (not
     // reset) so auto-turn changes never escape the guard silently.
     const g = agent._inheritedGuard
@@ -176,14 +182,20 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   let thrownError = null
   try {
     for (let turn = 0; turn < maxTurns; turn++) {
-    // Update turn counter for status bar display
-    agent._currentTurn = turn + 1
-    agent._maxTurns = maxTurns
+    // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §19.3）：编号帧——
+    // `_turnSeq` 每轮 +1（跨段累计，仅 `!resume` 链起点复位）；面向消费面的两字段
+    // （状态行 + ⟦ev⟧turn / ⟦ev⟧approval 事件共用）在此同点赋值（编号唯一权威；帧
+    // 公式 = helpers.mjs turnFrame）。段内帽判定不读帧（下行循环条件只读段内
+    // turn / maxTurns——N6）。
+    const frame = turnFrame(++agent._turnSeq, turn, maxTurns)
+    agent._currentTurn = frame.turn
+    agent._maxTurns = frame.maxTurns
     // D2 (AGENT-LOOP.md §7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
     // single emit point covering all three spawn tools; phase=llm (tool/done progress rides
-    // the onToolCall/onToolResult relay — no token for those).
+    // the onToolCall/onToolResult relay — no token for those). 第 19 批：载荷取上方帧值
+    // （agent._currentTurn / _maxTurns——字段形态 / 字段数 / phase 零变化，N5）。
     if (depth > 0 && callbacks.onToken) {
-      callbacks.onToken(`⟦ev⟧turn\x1e${turn + 1}\x1e${maxTurns}\x1ellm\x1e`)
+      callbacks.onToken(`⟦ev⟧turn\x1e${agent._currentTurn}\x1e${agent._maxTurns}\x1ellm\x1e`)
     }
 
     // SUBAGENT-OBSERVE-SEND D2: 子代理回合边界消费点——每轮开头把父侧经 subagent
@@ -290,7 +302,8 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
         role: "user",
         content: `[User interrupt: ${response.interruptMessage}]`,
       })
-      throw Object.assign(new Error("User interrupted"), { name: "AbortError" })
+      // §20.3 站点 #8（第 24 批）：错误对象已自带 name/message——只补来源标注（缺 abortInfo 才补）
+      throw annotateAbort(Object.assign(new Error("User interrupted"), { name: "AbortError" }), signal, "agent", "interrupted-response")
     }
 
     if (response.usage) {
@@ -322,7 +335,7 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     }
 
     // abort after chat completes, before committing history: don't commit a half-finished turn
-    if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
+    if (signal?.aborted) throw abortError(signal, "agent", "post-chat")
 
     pushReal(agent, {
       role: "assistant",
@@ -395,6 +408,6 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // 2026-09-05 实践轮：回合收尾（consult 清理/async 池分流/guard 继承——原 425-462
     // 段 + collectSettledAsync 466-494 整体迁 agent/run-stages.mjs finalizeAgentTurn——
     // CLI 对位 VS run-stages——finally 只剩一行调用 + 骨架注释）。
-    await finalizeAgentTurn(agent, { signal, autoTurn, suspDriven, thrownError })
+    await finalizeAgentTurn(agent, { signal, autoTurn, suspDriven, thrownError, depth })
   }
 }

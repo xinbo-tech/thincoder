@@ -1,6 +1,6 @@
 # Provider 层设计（thincoder/src/provider/）
 
-> 本文档描述 LLM 调用层的**当前设计**：OpenAI 兼容协议为主 + Anthropic / Gemini / Responses 原生 transport；SSE 流式解析、重试/退避、TPM/RPM 闸门、截断续写、流规则、发送前载荷净化。状态：**当前态**（2026-08/09 各轮实现已合入，历史变更流水账折叠于文末「变更记录」）；§0 / §16 / §17 = 模型选择面重构增补（2026-09-10 落档）——**两态**：**主体（R1–R9 / M1–M9）已实施并过父侧代码评审**；**范围追加（R10 / M10）增量已评审待批准**（批准前不实施）。
+> 本文档描述 LLM 调用层的**当前设计**：OpenAI 兼容协议为主 + Anthropic / Gemini / Responses 原生 transport；SSE 流式解析、重试/退避、TPM/RPM 闸门、截断续写、流规则、发送前载荷净化。状态：**当前态**（2026-08/09 各轮实现已合入，历史变更流水账折叠于文末「变更记录」）；§0 / §16 / §17 = 模型选择面重构增补（2026-09-10——**R1–R10 / M1–M10 均已实施并核销**）；§21–§24 = `provider.headers` 全通路铺开（第 32 批）。
 >
 > 相关权威：`src/model-specs.mjs`（规格表中枢，`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`）；
 > `src/config.mjs`（`resolveEnableThinking` / `isBailianHost` / `PROVIDER_PRESETS` / `resolveCompactThreshold`）；
@@ -123,6 +123,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`，
 - **响应头阶段**用 `fetchTimeoutMs`——默认 600s，`agent.fetchTimeoutMs` 可配，config.mjs 归一化到 `runtimeProvider.fetchTimeoutMs`，`effectiveFetchTimeoutMs(provider)` 统一消费（core / anthropic / google / responses 四 transport 共用）。
 - **body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（sse.mjs / google.mjs）——body 只要有数据流动就永不超时，连续无新 chunk 才判死；proxy 路径 `_bodyIdleMs` 与之等价（双保险）。
 - `AbortError` 透传（用户 Ctrl+I 取消，不吞）。
+- **abort / 超时来源标注（2026-09-11 第 24 批）**：本节超时 / 中止产生点的错误对象自带结构化来源（`abortInfo`——trigger / layer / detail）；词汇表与判定见 `AGENT-LOOP.md` §20.3（单一权威源——此处只指针）。
 
 ## 4. SSE 流式（sse.mjs readSSE）
 
@@ -445,7 +446,7 @@ escapeMessageContent 覆盖 tool_calls[].arguments / reasoning_content）；
 
 > 来源：批次 `../batches/2026-09-10-MODEL-SELECTION.md` §1（需求见 §0）。本篇 = 本批机制主体；
 > 相关节：§9（specMatch）、§11（预设单值）、§15（providerSpec 不变）。
-> 状态（2026-09-11 拆两态）：**主体（R1–R9 / M1–M9）已实施并过父侧代码评审**（批次档 §5）；**范围追加（R10 / M10）增量已评审待批准**（批准前不实施）。验收勾销 / 逐条验收结论见批次档 §6。
+> 状态（2026-09-11 刷新）：**主体（R1–R9 / M1–M9）与范围追加（R10 / M10）均已实施并核销**（交付面见批次档 §5/§6——范围追加 = VSC `cd1de8f`）。验收勾销 / 逐条验收结论见批次档 §6。
 
 ### 16.1 问题与背景
 
@@ -1095,6 +1096,242 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
 
 > 本批验收勾销 / 逐条验收结论落**批次档 §6**（不写进本档——用户 2026-09-10 裁定）。
 
+## 21. 请求头装配（`provider.headers`——全通路）
+
+> 来源：批次 `../batches/2026-09-11-PROVIDER-HEADERS.md` §1（第 32 批）。本节 = 定制头（`providers[].headers`）
+> 与各通路内置头的装配契约**唯一权威源**（此前仅代码注释承载——本批随铺开落档；其余处只引用不重述——D2）。
+> 相关节：§2（chat 主流程）· §8（原生 transport）· §13（responses transport）。
+
+### 21.1 机制与装配契约
+
+Provider 请求的头分两类来源。**内置头** = transport 协议要求（`Content-Type` / `Authorization` / `x-api-key` /
+`anthropic-version`）——各 transport 就地声明；**定制头** = 渠道级 `providers[].headers` 静态键值
+（desktop proposal ④——如网关要求的 `X-Device-Id`），config 装载面净化后进入运行期 provider。
+
+**装配契约**：`{ ...(provider.headers ?? {}), ...内置头 }`——定制头在前、内置头在后：同名键**内置头胜出**
+（定制头不得覆盖 `Content-Type` 与认证头；与 `src/provider/core.mjs:408-412` 既有语义一致）。`Authorization`
+另有装载面防线：`config.mjs` 净化器（`src/config.mjs:237-249`）在 loadConfig 时剥离该键（大小写不敏感）
+与非字符串值——运行期 provider 的定制头里不含 `authorization`。
+
+### 21.2 通路一览（消费点全表）
+
+全表 6 行 = 本批 5 通路（4 遗漏补展开 + 1 现状参照）+ 1 对照面。
+
+| # | 通路 | 装配点（as-of 2026-09-11） | 内置头 | 定制头展开 |
+|---|---|---|---|---|
+| 1 | 主聊天（OpenAI 兼容） | `src/provider/core.mjs:408-412` | `Content-Type` / `Authorization` | ✓ 既有（参照面） |
+| 2 | 主聊天（responses） | `src/provider/responses.mjs` `chat()` 内三处 `proxyFetch(` 调用点（as-of :430/:449/:467） | `Content-Type` / `Authorization` | ✓ 本批补 |
+| 3 | 主聊天（anthropic） | `src/provider/anthropic.mjs:73-77` | `Content-Type` / `x-api-key` / `anthropic-version` | ✓ 本批补 |
+| 4 | 主聊天（google） | `src/provider/google.mjs:119` | `Content-Type` | ✓ 本批补 |
+| 5 | 会话标题生成 | `src/generate-title.mjs:47-55` | `Content-Type` / `Authorization` | ✓ 本批补 |
+| 6 | 模型清单拉取（对照面） | `src/provider/list-models.mjs:52/57/73` | 按 `format` 分派 | ✓ 既有（零改） |
+
+**域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立——批次 §1 范围口径）；embedding 独立渠道
+（`src/embedding.mjs` 用 `embedder` 独立配置，无定制头字段）、MCP / 网络工具 / 升级检查等自有头面不属本机制；
+VS Code 端无 `providers[].headers` 概念（配置面与展开面均无）——本节为 CLI 面机制，对位引入属新需求。
+
+## 22. 需求层（`provider.headers` 全通路铺开——2026-09-11 第 32 批）
+
+> 归属注：Provider 板块无 `requirements/` 镜像（`docs/README.md` §4.1）——本批需求层同档承载（承 §0 / §18 惯例）。
+> 批次依据：`../batches/2026-09-11-PROVIDER-HEADERS.md` §1（已收口——用户「都可以」，Gitee #IKDWH7）。
+> 设计见 §23；测试层见 §24。
+
+### 22.1 总体需求
+
+用户为渠道声明的静态定制头（`providers[].headers`——如网关要求的 `X-Device-Id`）在主聊天通路已生效，而
+responses / anthropic / google 三 transport 与会话标题生成**不携带该头**——同一渠道下「聊天能通、辅助请求
+被网关拒」的缺口（标题生成失败还会被静默吞成 null，只剩「没有标题」的表象）。本批把静态定制头铺到全部
+5 通路：只铺开、不改语义、不引入新机制。
+
+### 22.2 功能性需求（R18——带判定句；R19 / R20 为随件）
+
+| # | 需求 | 判定句（验收口径） |
+|---|---|---|
+| R18 | **四遗漏通路补展开**（responses / anthropic / google / generate-title）——装配顺序对齐 core.mjs（定制头前、内置头后） | 逐通路机验：`providers[].headers` 声明的键出现在该通路请求头里（5 通路行为用例全绿）；同名冲突时内置头值胜出；无定制头配置时头集合与改动前逐字一致 |
+| R19 | **测试面随件**：新增逐通路行为锁（`test/provider-headers.test.mjs`） | `node --test test/provider-headers.test.mjs` 全绿；`npm test` 全绿（既有锁零伤） |
+| R20 | **文档面随件**：本档三层落档 + 变更记录一行 + 遗留状态行刷新（§23.6（d）） | 本档落档；`node scripts/check-doc-width.mjs` 本批文件新增超宽 0 行、V1/V2/V3 新增违规 0 条 |
+
+### 22.3 非功能性需求
+
+| # | 维度 | 标准 |
+|---|---|---|
+| N8 | 零行为回归 | 未配置 `providers[].headers` 时，5 通路请求头集合与改动前**逐字一致**（T45 锁）；既有头断言（模型清单 T1–T3 / config 面）保持绿 |
+| N9 | 覆盖语义对齐 | 同名时内置头胜出（= core.mjs 现状——T44 锁）；`Authorization` 装载面剥离语义不变（config.mjs 净化器——引用不重述） |
+
+### 22.4 范围边界（本批不做）
+
+- **不**实现会话动态头（`x-opencode-session` 类——证据未立，待报告者给网关证据后另议）；
+- **不**改头语义（净化器 / 装配顺序 / 各 transport 内置头集合——只铺开）；
+- **不**动已展开面（`src/provider/core.mjs` 参照 / `src/provider/list-models.mjs` 对照——零改）；
+- **不**动 embedding 独立渠道（`src/embedding.mjs`——`embedder` 独立配置，无定制头字段）；
+- **不**碰 VS Code 端（无该配置概念——对位引入属新需求）；
+- **不**新建档（本档承载）。
+
+## 23. 设计层（`provider.headers` 全通路铺开——2026-09-11 第 32 批）
+
+### 23.1 问题陈述与背景
+
+`providers[].headers` 是渠道级静态定制头（desktop proposal ④）。现状：主聊天（core.mjs）与模型清单
+（list-models.mjs）已展开；**4 条辅助通路未展开**——responses 三处 fetch（连 `provider.headers` 都未引用）、
+anthropic 字面头、google 仅 `Content-Type`、会话标题生成自建头。后果：同一渠道下用户自定义头在辅助请求面
+无效（网关鉴权 / 会话头要求的端点：聊天可用、标题生成或原生协议请求被拒——标题生成失败还被静默吞成 null）。
+
+### 23.2 接口与数据契约（逐通路落法）
+
+数据流：config.json → loadConfig 净化（`config.mjs` 净化器——剥离 `authorization` 与非字符串值）→ 运行期
+provider → transport 装配（定制头前、内置头后）→ fetch / proxyFetch → 网络。本批只动**装配**一环。
+
+统一形态 = `{ ...(provider.headers ?? {}), ...内置头 }`（§21.1）。逐通路落点：
+
+| # | 通路 | 落法 | 装配后头集合（无配置时） |
+|---|---|---|---|
+| 1 | `src/provider/responses.mjs`（三处 fetch） | `chat()` 内**提升单个 `const headers`**（位置 = `rateGate` 之后、首个 `requestWithRetry` 之前）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用同一对象 | `{Content-Type, Authorization}` |
+| 2 | `src/provider/anthropic.mjs:73-77` | 既有 `const headers` 对象首行加 `...(provider.headers ?? {})` | `{Content-Type, x-api-key, anthropic-version}` |
+| 3 | `src/provider/google.mjs:119` | 内联展开（单调用点） | `{Content-Type}` |
+| 4 | `src/generate-title.mjs:47-55` | `opts.headers` 内联展开（:49——直连与 proxy 分支共用同一 `opts`） | `{Content-Type, Authorization}` |
+
+- responses 三处 fetch 共享同一 `headers` 对象（重试闭包重复调用——对象只读复用，零副作用）；
+- 每点配一行注释（定制头展开 + 顺序语义 + 指针 `PROVIDER.md §21`——与 core.mjs 既有注释同风格）。
+
+**已知边界**（如实登记，不在本批处理）：① 大小写变体同名定制头（如 `X-Api-Key` vs 内置 `x-api-key`）——JS
+对象键区分大小写、HTTP 头不区分：两键并存交给 fetch 归并（既有行为，core.mjs 同状），不做大小写归一
+（改语义 = 超范围）；② 未经装载面净化而直达 `chat()` 的定制 `Authorization`（程序性调用，非用户配置形态）：
+core / responses / generate-title 被内置头覆盖，anthropic 通路无 `Authorization` 内置头 → 该键原样透传
+（用户配置形态下由装载面剥离——§21.1；不在本批加第二道防线）。
+
+### 23.3 方案选型对比
+
+**（a）展开形态（§1 待裁 #1——逐点落法的通用选型）**：
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
+|---|---|---|---|---|
+| a1 | **各点内联展开**（`...(provider.headers ?? {})` 就地写——与 core.mjs / list-models.mjs 既有先例同形） | 零新机制、零新档；与既有先例一致；5 处一行式改动可 grep 逐一核对；防再漂移由**逐通路行为用例**（T39–T43）承担 | 同一行式表达式在 5 点重复——与 list-models 三处先例同量级 | **选定** |
+| a2 | 抽共享装配函数（新 `src/provider/headers.mjs` 或既有档导出），各点改调用 | 一处定义顺序语义；但**防漂移无效**（新通路仍须记得调用）；须连 core / list-models 同步改造才自洽（= 触碰已展开面，违背「只铺开」）；+1 新档 | 机制成本 > 收益；既有先例反证（list-models 三处亦内联） | 否决 |
+| a3 | 反向顺序（内置头前、定制头后——允许定制头覆盖） | 与 core.mjs 既有语义**相反**（既有 = 内置头胜出）；用户可经 headers 覆盖 `Content-Type` / 认证头 = 语义变更（超范围） | 语义回退 + 安全面风险 | 否决 |
+
+**（b）`generate-title.mjs` 改造形态（§1 待裁 #2）**：**局部补**选定（= a1 形态应用于该通路——保持
+「自建头」结构，仅加一行展开）；**改用统一装配**（= a2 复用版）否决——理由同 a2（须连 core / list-models
+一起改才自洽；本批定性 = 只铺开）。
+
+**（c）responses.mjs 三处 fetch 的落法**：提升单 `const headers` **选定**（同函数内三处同一表达式——DRY +
+单点可审，与 anthropic.mjs「先建 const 再引用」既有形态同构）；三处各自内联否决（漂移面 ×3）。
+
+### 23.4 受影响文件全清单（行数为 2026-09-11 实测）
+
+> over-tier 说明：`src/provider/responses.mjs` 494 行逼近 500 硬限——本批净增 ≤2 行（仍 <500），不拆；
+> 后续批次触碰该档时先执行拆分。其余文件远低于阈值。文档面（本档 + 批次档）由设计者落档——实施者面 = 源 + 测试。
+
+**CLI 源（thincoder/src）**：
+
+| 文件 | 当前行数 | 预计增量 | 改动要点 |
+|---|---|---|---|
+| `src/provider/responses.mjs` | 494 | +1~2 | `chat()` 内提升单 `const headers`（含展开）——三处 `proxyFetch(` 调用点（as-of :430/:449/:467）改引用 |
+| `src/provider/anthropic.mjs` | 226 | +1 | `headers` 对象首行加展开（:73-77） |
+| `src/provider/google.mjs` | 259 | ±1 | `headers` 内联展开（:119） |
+| `src/generate-title.mjs` | 83 | ±1 | `opts.headers` 内联展开（:49） |
+
+**CLI 测试（thincoder/test）**：
+
+| 文件 | 当前行数 | 预计增量 | 改动要点 |
+|---|---|---|---|
+| `test/provider-headers.test.mjs` | **新增** | ~150 | T39–T47（5 通路头到达 / 覆盖语义 / 零配置回归 / config 全链 / 错误路径） |
+
+**文档（本批同步面——设计者已落）**：
+
+| 文件 | 当前行数 | 预计增量 | 改动要点 |
+|---|---|---|---|
+| `docs/design/PROVIDER.md`（CLI） | 1125 → 1369（实测） | 本批 +~244 | §21 机制节 + §22–§24 三层 + 状态行刷新（§23.6（d））+ 变更记录两行 |
+
+### 23.5 关键决策记录
+
+| # | 决策 | 理由 | 否决备选 |
+|---|---|---|---|
+| 1 | 展开形态 = 各点内联（与既有先例同形） | §23.3（a）——一致性 + 最小改动面 | 共享装配（a2——防漂移无效 + 须动已展开面）；反向顺序（a3——语义回退） |
+| 2 | responses 三处 fetch 提升单 `const headers` | §23.3（c）——DRY + 单点可审 | 三处各自内联（漂移面 ×3） |
+| 3 | 覆盖语义 = 内置头胜出（定制头在前） | 对齐 core.mjs 既有语义 + 安全（认证 / 内容类型不可被 headers 劫持） | 反向顺序（= 语义变更） |
+| 4 | generate-title 局部补（不改「自建头」结构） | §23.3（b）——保持「只铺开」定性 | 统一装配（须连 core 一起改） |
+| 5 | 测试 = 独立新档 `test/provider-headers.test.mjs`（含 core 参照面锁） | 逐通路行为锁是本批唯一强判据（grep 级判据脆）；core 参照面此前零头断言——顺带补上 | 扩既有档（职责不符）；仅 grep 验收（脆） |
+| 6 | 头来源一览归属 = 本档 §21（不拆 SESSION.md、不新建档） | Provider 板块映射权威（`docs/README.md` §4）；4/5 通路在 `src/provider/`；单一权威源（D2——SESSION.md 无头装配内容，无需改动） | 拆 SESSION.md（双源）；新档（批次 §1 边界禁） |
+
+### 23.6 对账与既有纪律核对
+
+**（a）批次档 §1 对账表逐行处置**：
+
+| # | §1 表述（as-of） | 处置 |
+|---|---|---|
+| 1 | `core.mjs:405-425` 展开 ✓ | 参照面——零改；T39 锁其语义（含覆盖序） |
+| 2 | `responses.mjs:432/451/469` 三处遗漏 | 本批补（§23.2 #1）——锚注：§1 行号 = `headers:` 字面行；本档 §21–§24 统一锚 `proxyFetch(` 调用起始行（同一三处——as-of :430/:449/:467） |
+| 3 | `anthropic.mjs:73-77` 字面头无展开 | 本批补（§23.2 #2） |
+| 4 | `google.mjs:119` 仅 Content-Type | 本批补（§23.2 #3） |
+| 5 | `src/agent/generate-title.mjs:47-55` 自建头 | **路径勘误**：实际 = `src/generate-title.mjs:47-55`（`headers` 行 :49；`src/agent/` 下无该档）——本批补（§23.2 #4） |
+| 6 | `list-models.mjs:52/57/73` 已展开（对照） | 对照面——零改；既有断言（T1/T2）保持绿 |
+
+**（b）既有纪律核对**：
+
+- D2 单一权威：装配契约 + 通路一览唯一权威 = §21；§22–§24 只引用（判定句不重述键位细节）。
+- D3 计数·枚举：本批新增编号 = R18–R20 / N8–N9 / T39–T47 / AC-18–AC-20；通路表 6 行（5 通路 + 1 对照面）——各处点数与列表同源。
+- D4 指针：本档引用 = `文档.md §N` 形态（V1 可解析）；域外文档用反引号包裹名（不触 V1 解析）。
+- D5 冻结窗口：评审在途不改被审文档——本批改动集齐后统一入场。
+- 多实现面纪律：VS Code 端无 `providers[].headers` 概念（配置面 / 展开面均无——实查）→ 无镜像面；差异如实登记
+  （§21 域外与端面行）；未来对位引入 = 新需求（另批）。
+- 并发面：`src/provider/{anthropic,google}.mjs` 同时为**第 24 批（ABORT-PROVENANCE）**的实施域文件
+  （as-of 本设计轮：该批评审轮次 1 = changes-required——未实施）——实施排程由父侧按 files 域串行（批次档 §2 并发面）。
+
+**（c）勘察补充发现（超出 §1 已核清单的面）**：
+
+1. 路径勘误（见（a）#5）。
+2. 全仓 fetch 调用点穷举（补 §1 未列）：provider 面消费点 = §21.2 全表；非 provider 面（MCP 传输 / 网络工具 /
+   升级检查 / 连通探活）自有头机制、`embedding.mjs` 用 `embedder` 独立配置无定制头字段——均域外。
+3. `generate-title.mjs` 的 `_deps` 测试缝注释称存在「proxy-branch regression test」——实查全仓无该测试引用
+   （`_deps` 仅定义处出现）：本批 T43 顺带补 proxy 分支断言（注释所称覆盖首次落实）。
+4. VS Code 端无该配置概念（`src/provider/transports/*` 均为字面头）——域外登记。
+
+**（d）既有遗留项处置（他批遗留——收口于本设计轮）**：
+
+`PROVIDER.md` 头注（`:3`）与 §16 首注（`:448`）原载「R10 / M10 增量待批准」为陈旧两态（`../batches/2026-09-10-MODEL-SELECTION.md` §6
+遗留 #5 / `../batches/2026-09-11-DEEPSEEK-V41-FLASH.md` §5 复检项——两批均注明「随下次 PROVIDER.md 设计轮刷新」）：
+本次一并刷新为已实施并核销（证据：VSC 提交 `cd1de8f` + `test/model-picker-fallback.test.mjs` 在册；批次档 §6 已核销）。
+
+### 23.7 UI/交互决策（含 open）
+
+本批无新增 UI/交互面——纯请求头装配面（配置态 `providers[].headers` 的编辑入口不在本批；既有 TUI `/model`
+provider 管理流零改）。**open 项：无。**
+
+## 24. 测试层（`provider.headers` 全通路铺开——用例表与验收标准）
+
+### 24.1 用例表（正常 / 边界 / 错误——映射需求号）
+
+| # | 类 | 用例 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|---|
+| T39 | 正常 | 主聊天（OpenAI 兼容）定制头到达——参照面 | `chat(provider{headers:{'X-Device-Id':'dev-1'}})`；mock fetch 记录 `opts` | 捕获头 = `X-Device-Id: dev-1` + `Content-Type: application/json` + `Authorization: Bearer k-test` | R18/N8 |
+| T40 | 正常 | responses 定制头到达 | `chat({format:'responses'})` | 头集合同 T39 | R18 |
+| T41 | 正常 | anthropic 定制头到达（内置头在位） | `chat({format:'anthropic'})` | 头集合 = `X-Device-Id` + `Content-Type` + `x-api-key` + `anthropic-version`（无 `Authorization`——该通路无此内置头） | R18 |
+| T42 | 正常 | google 定制头到达 | `chat({format:'google'})` | 头集合 = `X-Device-Id` + `Content-Type` | R18 |
+| T43 | 正常 | 会话标题定制头到达（直连 + proxy 两分支） | `generateTitle(text, provider{headers})`；proxy 分支经 `_deps.proxyFetchImpl` 注入 | 两分支捕获头均含 `X-Device-Id` + 内置头 | R18 |
+| T44 | 边界 | 同名冲突 → 内置头胜出（5 通路） | 各通路传入与该通路内置头同名的定制冲突值 | 内置头值胜出（定制头非同名键仍到达） | R18/N9 |
+| T45 | 边界 | 零配置回归——头集合逐字不变（5 通路） | `provider.headers` 缺省 | 头集合 = 改动前基线（逐通路 deepEqual） | R18/N8 |
+| T46 | 边界 | config → 请求全链（净化 + 展开） | 临时 config.json（headers 含 `Authorization` / 非字符串值 / 正常键）→ `loadConfig` → `chat` | 非法键被装载面剥离；正常定制键到达；`Authorization` = `Bearer <apiKey>` | R18/N9 |
+| T47 | 错误 | 非 2xx 路径定制头携行 + 错误语义不变（anthropic 通路——单通路代表） | `chat({format:'anthropic'})`；mock 返回 401 文本体 | 捕获头含定制键 + `x-api-key`；抛出错误文案以 `Anthropic API error 401` 开头（既有语义族——零改、无重试等待） | R18/N8 |
+
+> 用例落点 = `test/provider-headers.test.mjs`（新增——`npm test` 自动 glob 收集，无需注册）。mock 形态
+> （POC 已验证）：`globalThis.fetch` 注入记录 `(url, opts)`；native 三格式返回最小 SSE 帧（responses =
+> `response.output_text.delta` + `response.completed`；anthropic = `message_start` + `content_block_delta` +
+> `message_stop`；google = 单 `candidates` 帧）；OpenAI 面走非 SSE 单 chunk JSON 兜底；`generate-title` 面返回
+> `{ok:true, json:…}`。全套无定时器等待（快层直跑——超 D-T6 阈值才标 `slow`）。
+> config 面注入缝（T46）= `_setConfigPathForTest`（`src/config.mjs:28-29`）+ tmp config.json——夹具形态复用既有 `test/config-merge.test.mjs`（`tmpCfg()` :16-21；现有缝，零新夹具机制）。
+
+### 24.2 验收标准（逐条回指——每条可机器验证）
+
+- **AC-18（R18）**：`cd thincoder && node --test test/provider-headers.test.mjs` 全绿——T39–T43 逐通路
+  「定制头出现在请求」；T44 覆盖语义；T45 零配置回归；T46 config 全链；T47 错误路径头携行。
+- **AC-19（R19）**：`cd thincoder && npm test` 全绿（既有锁零伤——含模型清单 T1/T2 头断言、config 面、guard 面）。
+- **AC-20（R20）**：`cd thincoder && node scripts/check-doc-width.mjs`——**本批文件**（`docs/design/PROVIDER.md`
+  + 本批次档）新增超宽 0 行、V1/V2/V3 本批面新增违规 0 条；`cd thincoder-vscode && node scripts/check-doc-width.mjs`
+  复跑（本批零改动——确认无新增）。仓内存量与他批在途面不计（观察：CLI 仓当前宽度 8 文件 10 行超宽、一致性
+  新增 4 条——均属他批在途档，非本批面）。
+
+> 本批验收勾销 / 逐条验收结论落**批次档 §6**（不写进本档——用户 2026-09-10 裁定）。
+
 ## 变更记录
 
 - 2026-08 回补：规格表迁出 config → model-specs.mjs（re-export specForModel）；核心机制（chat 流程 / 重试 / SSE / 续写 / 闸门 / 净化 / 原生 transport）定稿。
@@ -1122,3 +1359,10 @@ Beta / 磁盘缓存默认开 / **多模态视觉**）；旧名 `deepseek-v4-flas
   a1/a2 前提措辞降级（pro 视觉能力未核实——保守，不以「无视觉」硬断言承载）；§19.2（c）字符位改准（第 10 字符）；
   §19.2（a）tempRange 出处补记（沿用既有行现值）；§19.4 VSC 行补块注释改写句；T36 扩 vision-exp 行断言 +
   T38 增 pro 只读字段锚；AC-13 补 VSC 判据（批次档 §2 同步追加）。
+- 2026-09-11（第 32 批 PROVIDER-HEADERS）：`provider.headers` 全通路铺开——responses / anthropic / google /
+  generate-title 四遗漏通路补展开（顺序 = 定制头前、内置头后——内置头胜出，与 core.mjs 对齐）；新增 §21 请求头装配
+  （6 行消费点全表 = 5 通路 + 1 对照面）+ §22–§24 三层落档（需求 R18–R20 / 设计 §23 / 测试 §24）。
+- 2026-09-11 状态行刷新：头注与 §16 首注的「R10 / M10 增量待批准」陈旧两态 → 已实施并核销
+  （`../batches/2026-09-10-MODEL-SELECTION.md` §6 遗留 #5 / `../batches/2026-09-11-DEEPSEEK-V41-FLASH.md` §5 复检项一并收口）。
+- 2026-09-11（第 24 批 ABORT-PROVENANCE——指针注）：§3 超时语义节补一行来源标注指针（词汇表见 `AGENT-LOOP.md` §20.3）；本文档零语义改动。
+- 2026-09-11 评审修正轮（第 32 批——7 条采纳项落档）：D3 枚举同步（T39–T47）；responses 三处调用点锚法统一（`proxyFetch(` 起始行——as-of :430/:449/:467；§23.6（a）#2 锚注）；T41 预期补全集合；§23.4 文档行数注刷新（+~244）；T46 注入缝点名（§24.1 注）。

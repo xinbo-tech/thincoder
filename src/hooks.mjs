@@ -8,7 +8,7 @@
  *   PreToolUse          — before each tool call (can block execution)
  *   PostToolUse         — after successful tool execution
  *   PostToolUseFailure  — after failed tool execution
- *   Notification        — generic notification (triggered by agent)
+ *   Stop                — main-session run end (no tool name; block is meaningless)
  *
  * Each hook: { matcher?, command, args?, timeout?, action? }
  *   matcher: regex against tool name (default: match all)
@@ -29,9 +29,11 @@ export async function runHooks(event, ctx) {
   if (!hooks?.length) return true
 
   for (const hook of hooks) {
-    if (hook.matcher) {
+    // Matcher = tool-name regex: tool events always carry a toolName; no-tool-name
+    // events (Stop) ignore it — a configured matcher must not silently never fire.
+    if (hook.matcher && ctx.toolName != null) {
       try {
-        if (!new RegExp(hook.matcher).test(ctx.toolName ?? "")) continue
+        if (!new RegExp(hook.matcher).test(ctx.toolName)) continue
       } catch { /* invalid regex → skip */ }
     }
 
@@ -48,6 +50,8 @@ async function runOneHook(event, hook, ctx) {
     toolArgs: ctx.toolArgs ?? null,
     result: ctx.result ?? null,
     error: ctx.error?.message ?? null,
+    // Event-specific fields (Stop: turn / reason) — existing callers pass no extra ⇒ payload unchanged.
+    ...(ctx.extra ?? {}),
     timestamp: new Date().toISOString(),
   })
 

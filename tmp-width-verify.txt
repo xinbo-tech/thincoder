@@ -1,0 +1,46 @@
+✗ d:\teamcode\thincoder\docs\design\AGENT-LOOP.md: 3 行 >300 字符
+    :510 (444 chars)
+    :572 (338 chars)
+    :574 (391 chars)
+✗ d:\teamcode\thincoder\docs\design\SESSION.md: 1 行 >300 字符
+    :524 (392 chars)
+✗ d:\teamcode\thincoder\docs\design\SUBAGENT-ID-COUNTER-AGENT.md: 1 行 >300 字符
+    :53 (479 chars)
+✗ d:\teamcode\thincoder\docs\design\TUI.md: 2 行 >300 字符
+    :29 (358 chars)
+    :812 (301 chars)
+✗ d:\teamcode\thincoder\docs\batches\2026-09-11-POOL-LEDGER.md: 6 行 >300 字符
+    :337 (439 chars)
+    :338 (586 chars)
+    :339 (458 chars)
+    … 共 6 行
+✗ d:\teamcode\thincoder\docs\batches\2026-09-11-PROMPT-REVIEW-ORDER.md: 3 行 >300 字符
+    :179 (593 chars)
+    :180 (417 chars)
+    :181 (430 chars)
+✗ d:\teamcode\thincoder\docs\batches\2026-09-11-REVIEW-CHAIN-GUARDS.md: 4 行 >300 字符
+    :195 (797 chars)
+    :196 (652 chars)
+    :197 (356 chars)
+    … 共 4 行
+✗ d:\teamcode\thincoder\docs\batches\2026-09-11-SETTINGS-NULL-DEFAULT.md: 7 行 >300 字符
+    :161 (622 chars)
+    :162 (690 chars)
+    :163 (353 chars)
+    … 共 7 行
+✗ d:\teamcode\thincoder\docs\batches\2026-09-11-SUBAGENT-TAIL.md: 8 行 >300 字符
+    :218 (458 chars)
+    :219 (344 chars)
+    :220 (444 chars)
+    … 共 8 行
+✗ d:\teamcode\thincoder\docs\batches\2026-09-11-VSC-ASYNC-VISIBILITY.md: 3 行 >300 字符
+    :194 (335 chars)
+    :195 (308 chars)
+    :228 (362 chars)
+
+FAIL(宽度): 10 文件 / 38 行超 300 字符——违反 README 归属规则 6（文档人类可读）。
+✗ V1 docs/batches/2026-09-11-VSC-ASYNC-VISIBILITY.md “WEBVIEW.md §5”（unknown-doc）
+✗ V2 docs/batches/2026-09-11-REVIEW-CHAIN-GUARDS.md:202 “6 条” 声明 6 ≠ 枚举 3（paren）
+一致性 V1/V2/V3：新增违规 2 条 · 存量（基线内）20 条。
+
+FAIL(一致性): 2 条新增违规（V1 段引用 / V2 计数 / V3 批次档 §3）——修掉或（存量）入基线 test/fixtures/doc-consistency-baseline.json。

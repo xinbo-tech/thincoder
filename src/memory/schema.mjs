@@ -14,10 +14,22 @@ export const VALID_TYPES = new Set(["rule", "knowledge", "decision", "pattern"])
 export const SCHEMA_VERSION = 9
 export const SQLITE_BUSY_TIMEOUT = 3000
 
-// Code index: source file extensions
-export const CODE_EXTS = new Set([".mjs", ".js", ".ts", ".tsx", ".jsx", ".py", ".rs", ".go", ".java", ".c", ".h", ".cpp", ".hpp", ".rb", ".swift", ".kt", ".sh", ".bash", ".sql", ".yaml", ".yml", ".toml", ".json", ".css", ".html", ".vue", ".svelte"])
+// Code index: source file extensions. Curated DEFAULTS — a project can declare
+// more (union) through .thincoder/conventions.json → index.codeExtensions
+// (PORTABILITY PO-9: an unlisted extension used to be invisible AND undeclarable).
+export const CODE_EXTS = new Set([
+  ".mjs", ".js", ".cjs", ".mts", ".cts", ".ts", ".tsx", ".jsx",
+  ".py", ".rs", ".go", ".java", ".c", ".h", ".cpp", ".hpp",
+  ".rb", ".swift", ".kt", ".dart", ".lua", ".cs", ".fs", ".fsx",
+  ".clj", ".cljs", ".ex", ".exs", ".erl", ".hrl", ".scala", ".groovy",
+  ".pl", ".pm", ".r", ".jl", ".zig", ".ps1",
+  ".sh", ".bash", ".sql", ".yaml", ".yml", ".toml", ".json",
+  ".proto", ".graphql", ".tf", ".hcl",
+  ".css", ".html", ".vue", ".svelte",
+])
 // Doc index: markdown / plain text (separate index makes it easier for LLM to distinguish "design specs" from "existing code")
-export const DOC_EXTS = new Set([".md", ".mdc", ".txt", ".rst", ".adoc"])
+// Same declaration rule as CODE_EXTS (index.docExtensions).
+export const DOC_EXTS = new Set([".md", ".mdc", ".mdx", ".txt", ".rst", ".adoc", ".org", ".wiki", ".tex"])
 // Directory names always skipped during code/doc indexing
 // NOTE: these are case-sensitive basename matches; add common platform-specific dirs
 export const SKIP_DIRS = new Set([

@@ -19,36 +19,37 @@
 ## 1. 模块地图（结构性快照）
 
 纪律（2026-08-30）：本表是**结构性快照**，随实现同步回写——交付新增/改名/删除文件时同批
-更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-09 实测（INPUT-LOCK-ASYNC 批回写 +
-INPUT-LOCK-BEHAVIOR-REVISED 批回写）；SUBAGENT-TAIL 批（2026-09-11）按交付实测回写其所触六文件行
-（blocks / freeze / children / render-segments / panel / index），其余行仍为 2026-09-09 值。仅供量级参考（会漂）。
+更新本节（eng-coder 交付自查第 6 项）。**行数列 = 2026-09-11 全表实测回写**（第 14 批收尾批；口径沿用既往：
+`split("\n").length` 含末行——仅作量级参考，会漂）；同日**交付后刷新轮**按实测回写触行（第 20/28/31 批面——见变更记录）。**同批如实注（超出范围项——只注不补）**：
+① `model-picker.mjs`（496）/ `model-catalog.mjs`（90）/ `wrapped-spawn.mjs`（39）三档未收本表（补登随后续 TUI 文档维护批）；
+② `pickers.mjs` 行文字未随 MODEL-MERGE-SESSION 拆分重写（模型两级面 + `/provider` 管理已迁 `model-picker.mjs`）——行内已注。
 
 ### 核心管线（stdin → 状态 → 渲染 → 回合）
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
 | `index.mjs` | 450 | startTUI 入口：raw mode、keyStream + readline、分块解码（utf8Decoder stream:true + mousePending）、粘贴协议、Shift+Enter 翻译、resize、state 对象、pushLine/pushLabel、提交（busy 吞防御——busy 全拒——白名单已删——INPUT-LOCK-BEHAVIOR-REVISED）、行缓冲裁剪；装配归位（D-S1）：createMouseDispatch / createLoadOlder / update-notice（re-export）；`state._agent` + `agent._tuiState` 双向挂载（DEBLOAT F-3） |
-| `tui-lifecycle.mjs` | 75 | TUI 生命周期终端序列（2026-08-31 自 index 拆出）：writeStartupSequence（alt buffer + 光标 + 鼠标/粘贴/键盘增强 + **DECRST 7 禁环绕**）、writeCleanupSequence（恢复 DECSET 7 等）、createExitCleanup（退出闭包）、setTuiActive |
+| `tui-lifecycle.mjs` | 88 | TUI 生命周期终端序列（2026-08-31 自 index 拆出）：writeStartupSequence（alt buffer + 光标 + 鼠标/粘贴/键盘增强 + **DECRST 7 禁环绕**）、writeCleanupSequence（恢复 DECSET 7 等）、createExitCleanup（退出闭包）、setTuiActive |
 | `update-notice.mjs` | 77 | 后台升级提示（2026-09-03 D-S1c 自 index 拆出）：upgradeFailureText / pendingNoticeReady 纯函数（index re-export）+ createUpdateNotice（提示 picker + 启动检查装配） |
-| `key-handler.mjs` | 440 | 按键分发：模态入口（permission/question/search/picker/wizard/interruptPrompt）+ 输入编辑；**busy 门禁**（INPUT-LOCK——提交吞——斜杠同禁发——空 Enter 静默）；挂起空闲 Enter → pendingInput 单槽+唤醒（槽满吞）；Ctrl+C 分支（picker 取消/武装/挂起两级/首按停回合/空闲双确认）；convMaxScroll 导出 |
+| `key-handler.mjs` | 461 | 按键分发：模态入口（permission/question/search/picker/wizard/interruptPrompt）+ 输入编辑；**busy 门禁**（INPUT-LOCK——提交吞——斜杠同禁发——空 Enter 静默）；挂起空闲 Enter → pendingInput 单槽+唤醒（槽满吞）；Ctrl+C 分支（picker 取消/武装/挂起两级/首按停回合/空闲双确认）；convMaxScroll 导出 |
 | `key-handler-search.mjs` | 114 | 搜索模式按键子处理（Ctrl+F 分支，2026-08-30 拆出） |
-| `key-modes.mjs` | 216 | 按键模态层（2026-09-03 D-S4 自 key-handler 拆出）：permission / question / interruptPrompt 独占模态 handler——模态激活即消费全部按键（返回 true，未激活 false）；ctx 注入 state/agent/pushLine/render |
-| `agent-turn.mjs` | 323 | runAgentTurn（`{ autoTurn, skipSession }`）回合驱动器：状态复位 / runAgent 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（冻结决策、sweep、标题、落盘）/ 交接消息单条续发（state.queue 残项单容器——INPUT-LOCK）；LOGGING turn 包装；挂起会话段迁 suspension-drive.mjs（函数级静态环互相 import——回合尾进入驱动器、驱动器内回合递归本文件） |
-| `suspension-drive.mjs` | 297 | 挂起会话驱动器（2026-09-05 split：agent-turn 535>500——driver 族 verbatim 迁入；2026-09-09 INPUT-LOCK：R15 攒批删+单槽消费+残余单消息化——净减）——状态机行表见 AGENT-LOOP.md §9.2 |
-| `tool-events.mjs` | 404 | 工具事件 → TUI 状态：buildToolCallbacks + flushStream、`_toolBlock` 载体生命周期（onToolCall 开 / onToolResult 定态 / onToolOutput 追加 + advisor 有序块）、onCompress*/onTaskUpdate/onTurnEnd 落盘；权限/批权限/问答按 ctx 条件接线（auto-turn null → denied）；finishSubTaskKey；slimToolResultForDisplay |
+| `key-modes.mjs` | 294 | 按键模态层（2026-09-03 D-S4 自 key-handler 拆出）：permission / question / interruptPrompt 独占模态 handler——模态激活即消费全部按键（返回 true，未激活 false）；ctx 注入 state/agent/pushLine/render |
+| `agent-turn.mjs` | 324 | runAgentTurn（`{ autoTurn, skipSession }`）回合驱动器：状态复位 / runAgent 循环（flushStream、AbortError 中断区分、ContinueError）/ finally 收尾（冻结决策、sweep、标题、落盘）/ 交接消息单条续发（state.queue 残项单容器——INPUT-LOCK）；LOGGING turn 包装；挂起会话段迁 suspension-drive.mjs（函数级静态环互相 import——回合尾进入驱动器、驱动器内回合递归本文件） |
+| `suspension-drive.mjs` | 298 | 挂起会话驱动器（2026-09-05 split：agent-turn 535>500——driver 族 verbatim 迁入；2026-09-09 INPUT-LOCK：R15 攒批删+单槽消费+残余单消息化——净减）——状态机行表见 AGENT-LOOP.md §9.2 |
+| `tool-events.mjs` | 406 | 工具事件 → TUI 状态：buildToolCallbacks + flushStream、`_toolBlock` 载体生命周期（onToolCall 开 / onToolResult 定态 / onToolOutput 追加 + advisor 有序块）、onCompress*/onTaskUpdate/onTurnEnd 落盘；权限/批权限/问答按 ctx 条件接线（auto-turn null → denied）；finishSubTaskKey；slimToolResultForDisplay |
 | `tool-display.mjs` | 144 | 工具块显示/计时/清扫 helper 族（2026-09-05 module-split：tool-events 537 > 500——_toolTicks/_subActions 计时表、sweepToolBlocks、settle/slim/async 探测/find 等 verbatim 迁入；模块级可变对象导出 + re-export sweepToolBlocks 保 agent-turn 消费面；DEBLOAT F-1：报告 preview 常量已删） |
 | `subagent-blocks.mjs` | 454 | 子 agent 区块数据层：SUB_EVENT_RE 路由（settled/stopped/queued/cancelled + ⟦ev⟧async 置位与 _pendingAsyncKeys 兜底）、finishSubTask/Key、SUB_RELAY_THROTTLE_MS=250、SUBAGENT_ROLES、parseRelayPath（SUBAGENT-TAIL 嵌套路由源——内层内容行并入外层 `blocks`）；N2 单环 500 显示行（appendSubBlock 口径——见 subagent-children 行）；冻结族迁 subagent-freeze.mjs |
 | `subagent-freeze.mjs` | 170 | 子 agent 完成/冻结族（2026-09-05 split：subagent-blocks 625 > 500）：freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks + computePanelBlocks（§19.6 面板**读时现算**——DEBLOAT F-3 手工镜像退役）——re-export |
 | `subagent-children.mjs` | 163 | 嵌套子代理数据层（SUBAGENT-TAIL）：守护载体 ensureSubChild/descendSubChild（任意 inner 深度——只存守护元数据，无内容行）、closeSubChild、closeOpenSubChildren（外层冻结定格 stopped——类目 A 写路径）；SUB_BLOCK_LINE_LIMIT/appendSubBlock（re-export 保 import 面）；单环 500 显示行 trim（trimSubCarrier——单载体最旧先行）+ 省略计数真值（dropCarrierLines——N6：标记不占额度/不计 N/无幽灵行） |
-| `render-frame.mjs` | 376 | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板（行由 layout 预计算直接 put）；renderHeader（logo+版本+模型+think 徽章+cwd）；状态栏 busy 文案（INPUT-LOCK——主会话处理中——queue 提示已撤）；question 自由文本态光标例外（TUI-INPUT-BOX.md §7.2） |
+| `render-frame.mjs` | 377 | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板（行由 layout 预计算直接 put）；renderHeader（logo+版本+模型+think 徽章+cwd）；状态栏 busy 文案（INPUT-LOCK——主会话处理中——queue 提示已撤）；question 自由文本态光标例外（TUI-INPUT-BOX.md §7.2） |
 | `render-conversation.mjs` | 425 | 对话面板行构建（纯函数）：三层缓存（convCacheKey 全量 / 行级 wrapRowsCached / 段级 _lineSegCache——2026-09-03 D-S2 后只管普通源行段，tool/frozenSub/frozenAdvisor 三段随实现迁 render-segments.mjs 各带独立 WeakMap）；搜索高亮、折叠装配（六处折叠点）、主输出前后空行、连续 dim 折叠；convViewport 视口数学单源导出 |
 | `render-segments.mjs` | 169 | 对话行三类特殊段渲染（2026-09-03 D-S2 自 render-conversation 拆出）：tool 块 / frozenSubTask / frozenAdvisor——段渲染 + sig 分支 + 独立 WeakMap 段缓存三段合一（toolSeg/frozenSubSeg/frozenAdvSeg）；buildConvLines 主循环只留 ~3 行分支调用；SUBAGENT-TAIL：冻结载体段单流渲染（子块段调用与子块树签名已删） |
 | `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30）：foldCapRows（60%）、isExpanded/toggleFoldBlock、renderFoldedHead、renderExpandedBlock（窗口 + 底部收起）、renderBlockTimeline、foldTailLines、scrollFoldBlock、renderMathAndMarkdown——消费方：长消息/连续 dim/子 agent/advisor/工具块 |
 | `subagent-panel.mjs` | 150 | 运行中子 agent 固定底部面板渲染（中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数（顶部分隔线 + 驻留区块折叠头 + tail 3 / 展开窗口）；SUBAGENT-TAIL：单流渲染只读 `sub.blocks`（子块段三函数与子块折叠键已删） |
-| `tool-args.mjs` | 80 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
-| `render.mjs` | 253 | 纯函数：字符宽度（CJK/emoji/组合字符）、wrap、slice、markdown 表格对齐、sanitize |
-| `render-loop.mjs` | 129 | 渲染调度：整帧 recompute + 行 diff（只重绘变化行）+ 光标定位，防闪烁；MIN_RENDER_INTERVAL_MS 16ms 节流；每帧 write 包 wrapOff/wrapOn（Ambiguous 防线②）——1s ticker 在 agent-turn.mjs（含 subRunning() 驱动面板 elapsed 走秒） |
-| `layout.mjs` | 226 | 面板布局计算（行/列分配；运行中区块 → panels.subagent 槽 + subagentLines 预计算）；小终端压缩链（subagent 面板最先让位 → conversation → picker → permission → todo 分隔线）；question 自由文本态 boxLines = layoutAnswer（layoutInput 同实现 + MAX_INPUT_LINES cap + offset 滚动）；queue 面板槽已撤（INPUT-LOCK F-7） |
+| `tool-args.mjs` | 82 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
+| `render.mjs` | 285 | 纯函数：字符宽度（CJK/emoji/组合字符）、wrap、slice、markdown 表格对齐、sanitize |
+| `render-loop.mjs` | 131 | 渲染调度：整帧 recompute + 行 diff（只重绘变化行）+ 光标定位，防闪烁；MIN_RENDER_INTERVAL_MS 16ms 节流；每帧 write 包 wrapOff/wrapOn（Ambiguous 防线②）——1s ticker 在 agent-turn.mjs（含 subRunning() 驱动面板 elapsed 走秒） |
+| `layout.mjs` | 237 | 面板布局计算（行/列分配；运行中区块 → panels.subagent 槽 + subagentLines 预计算）；小终端压缩链（subagent 面板最先让位 → conversation → picker → permission → todo 分隔线）；question 自由文本态 boxLines = layoutAnswer（layoutInput 同实现 + MAX_INPUT_LINES cap + offset 滚动）；queue 面板槽已撤（INPUT-LOCK F-7） |
 | `dims.mjs` | 47 | 终端尺寸单源：get() 读缓存；refresh() 只在事件钩子（启动 seed/resize），sane-gate（cols≥40/rows≥10）挡 falsy（headless/无 TTY），任何 sane 采样（含缩小）立即提交；2026-08-31 简化——ConPTY stale 假说防御（双确认/trusted settle/看门狗）整体移除：误诊根因是 fold-block 组件漏传 cols=80，且双确认反而卡死真实拖拽缩小 |
 
 ### 渲染内容层
@@ -63,11 +64,11 @@ INPUT-LOCK-BEHAVIOR-REVISED 批回写）；SUBAGENT-TAIL 批（2026-09-11）按�
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `mouse.mjs` | 213 | SGR 鼠标序列解析（滚轮/左键点击）；handleWheel（展开块内容行块内滚动 ±3 + 穿出语义）；点击命中（picker 选项/折叠块 toggle/展开窗 ▲▼ 翻窗/⏹ 列级 cancel）；convGlobalIndex 与渲染同式；**createMouseDispatch 装配簇（2026-09-03 D-S1a 自 index 迁入：cancelSubagent/onMouseClick/mouseCtx——依赖 cancelAsyncSubagent/cancelAsyncAdvisor，tui→core 无环）** |
-| `clipboard.mjs` | 175 | 剪贴板文本/图像读写（Win powershell 强制 UTF-8 / macOS pbpaste / Linux xclip）+ translateShiftEnter（CSI-u → meta+return）+ stripKeyboardProtocol；insertPastedText 目标路由（question 自由文本落 cursor + \r\n→空格单行守卫、options 忽略、注入框去换行、主输入光标 splice——TUI-INPUT-BOX.md §7.2） |
+| `mouse.mjs` | 250 | SGR 鼠标序列解析（滚轮/左键点击）；handleWheel（展开块内容行块内滚动 ±3 + 穿出语义）；点击命中（picker 选项/折叠块 toggle/展开窗 ▲▼ 翻窗/⏹ 列级 cancel）；convGlobalIndex 与渲染同式；**createMouseDispatch 装配簇（2026-09-03 D-S1a 自 index 迁入：cancelSubagent/onMouseClick/mouseCtx——依赖 cancelAsyncSubagent/cancelAsyncAdvisor，tui→core 无环）** |
+| `clipboard.mjs` | 181 | 剪贴板文本/图像读写（Win powershell 强制 UTF-8 / macOS pbpaste / Linux xclip）+ translateShiftEnter（CSI-u → meta+return）+ stripKeyboardProtocol；insertPastedText 目标路由（question 自由文本落 cursor + \r\n→空格单行守卫、options 忽略、注入框去换行、主输入光标 splice——TUI-INPUT-BOX.md §7.2） |
 | `interaction.mjs` | 134 | 权限确认（y/n/a；batch a/o/n；continue y/n）、自由提问（question 工具：选项 ↑↓ / Esc 转自由文本——QUESTION_CUSTOM sentinel）；askQuestion 装配 q.answer codepoint 数组 + q.cursor；permission 内容预览（bash 危险命令 ⚠️ 标注、write/edit 内容预览） |
-| `pickers.mjs` | 500 | 通用列表选择器（标题/条目/filter/栈式嵌套）+ 模型两级选择器（provider → model，可 fetch /models、失败回退预设）+ /provider Add/Remove/key 流程（Custom API format 走 picker 枚举——openai/anthropic/google 默认 0——D-C1）+ pickModelForSlot（子模型槽位） |
-| `wizard.mjs` | 208 | 首启配置向导：provider 菜单（existing/preset/custom）——preset 声明字段（format/thinking/reasoningEffort/maxTokens/chatPath）随 item 直达落盘（无 format 提问步但字段不丢——与 picker preset 路径同构）；Custom 文本步 name→baseURL→model→**format（D-C2，默认 openai）**→key→embedkey → 落盘 → 模型选择；Esc 全步可跳无半配置 |
+| `pickers.mjs` | 118 | 通用列表选择器（标题/条目/filter/栈式嵌套）+ 模型两级选择器（provider → model，可 fetch /models、失败回退预设）+ /provider Add/Remove/key 流程（Custom API format 走 picker 枚举——openai/anthropic/google 默认 0——D-C1）+ pickModelForSlot（子模型槽位）——**注：模型两级面 + `/provider` 管理已迁 `model-picker.mjs`**（MODEL-MERGE-SESSION 拆分；本行文字未随拆重写） |
+| `wizard.mjs` | 242 | 首启配置向导：provider 菜单（existing/preset/custom）——preset 声明字段（format/thinking/reasoningEffort/maxTokens/chatPath）随 item 直达落盘（无 format 提问步但字段不丢——与 picker preset 路径同构）；Custom 文本步 name→baseURL→model→**format（D-C2，默认 openai）**→key→embedkey → 落盘 → 模型选择；Esc 全步可跳无半配置 |
 | `startup.mjs` | 266 | 启动屏 + 会话恢复（historyToLines 从 history 重建——**display 快照已废弃，恢复唯一路径**；行形态复刻 live：工具参数摘要 + 全量 JSON dim 行 + 思考单条 C.reason）+ 懒加载历史窗口（restoreLines / createLoadOlder——2026-09-03 D-S1b 归属修复，index 只留调用）+ 后台索引 backgroundIndex + 崩溃提示（R25 crashNotice） |
 
 ### 基础设施
@@ -83,15 +84,15 @@ INPUT-LOCK-BEHAVIOR-REVISED 批回写）；SUBAGENT-TAIL 批（2026-09-11）按�
 
 | 文件 | 行数 | 职责 |
 |---|---|---|
-| `cmd-config.mjs` | 393 | /config（embedding 三件套落盘——引用 DEFAULTS.embedding 不硬编码；代理/轮次/阈值等菜单循环） |
+| `cmd-config.mjs` | 464 | /config（embedding 三件套落盘——引用 DEFAULTS.embedding 不硬编码；代理/轮次/阈值等菜单循环） |
 | `cmd-mcp.mjs` | 395 | /mcp（MCP.md §5/§8 权威：edit/test 子命令、token 一等字段、探活确认环）——字段表单在 `cmd-mcp-form.mjs` |
 | `cmd-mcp-form.mjs` | 198 | MCP edit/add 统一字段 picker 表单机制（MCP.md §8.3：fieldPicker 循环——字段行 + `✓ Save & test` 末行；`k=` 删除语义合并入 mergeKeyValuePairs；maskToken 迁移落点） |
-| `cmd-advisor.mjs` | 255 | /advisor（评审模型/思考配置 + guard 开关，交互菜单循环） |
-| `cmd-submodel.mjs` | 152 | /submodel（子 agent 模型槽位，§9） |
+| `cmd-advisor.mjs` | 256 | /advisor（评审模型/思考配置 + guard 开关，交互菜单循环） |
+| `cmd-submodel.mjs` | 155 | /submodel（子 agent 模型槽位，§9） |
 | `cmd-think.mjs` | 139 | /think（思考模式/effort 枚举——specForModel 动态枚举，不硬编码） |
 | `cmd-shell.mjs` | 105 | /shell（shell 配置，§9） |
 | `cmd-session.mjs` | 103 | /session 列表/切换 + /rename |
-| 其余单命令小件 | 各 10–101 | /auto /clear /copy /eng(101) /exit /extract /fold /goal /help /init /model /new /plan /reindex /restore /skills /undo /upgrade；`distill-cmd.mjs`（47 行）蒸馏交互引擎（/extract 入口调用 runDistill） |
+| 其余单命令小件 | 各 8–95 | /auto /clear /copy /eng(95) /exit /extract /fold /goal /help /init /model /new /plan /reindex /restore /skills /undo /upgrade；`distill-cmd.mjs`（47 行）蒸馏交互引擎（/extract 入口调用 runDistill） |
 
 ## 2. stdin 输入层（index.mjs）
 
@@ -120,7 +121,7 @@ INPUT-LOCK-BEHAVIOR-REVISED 批回写）；SUBAGENT-TAIL 批（2026-09-11）按�
   （codepoint 数组）/ cursor / history / scroll / _foldScroll / _followTail / processing /
   controller / permission / question / picker + pickerStack / wizard / tasks / dims / tokens /
   ctxCache / search / expandedBlocks / foldEnabled / exitArmed / suspAbortArmed / _lineIdCounter /
-  subTasks / queue / interruptPrompt / pendingNotice / pendingInput / _history* 等。
+  subTasks / queue / interruptPrompt（第 31 批：`{ chars, cursor }` 单行态——契约见 TUI-INPUT-BOX.md §1 不变量 9/§8）/ pendingNotice / pendingInput / _history* 等。
 - **cleanup**（退出路径统一）：saveSession 同步写盘 → closeAllMcp → 终端复位（alt buffer 退出、
   mouse/paste/keyboard/modifyOtherKeys off、wrapOn、主缓冲区、显示光标）。`process.on("exit",
   cleanup)` 注册一次；`/exit` 与 Ctrl+C 双确认最终都走 `process.exit`（exitTimer 延迟可注入防真
@@ -164,9 +165,9 @@ flushStream（live 生产者）：思考/流式正文在工具调用前或回合
 permission（y/n/a/esc；batch a/o/n；continue y/n）
 → question（选项 ↑↓/enter/esc，自由文本——key-modes）
 → search 模式（Ctrl+F 进入：Ctrl+N/P/G/R 导航、esc 退出、字符输入过滤）
+→ interruptPrompt（Ctrl+I 后输入注入消息——创建/模态分支先于 picker，见 TUI-INPUT-BOX.md §1 不变量 4）
 → picker 栈 / wizard（↑↓ 选择、enter 确认、esc 取消）
-→ interruptPrompt（Ctrl+I 后输入注入消息）
-→ 正常输入编辑（字符/退格/Ctrl+U/Ctrl+V/↑↓历史/多行）
+→ 正常输入编辑（字符/退格/Ctrl+U/Ctrl+V/↑↓（竖移/历史——第 31 批三规则，TUI-INPUT-BOX.md §3）/多行）
 ```
 
 模态分支（key-modes.mjs）：permission/question/interruptPrompt 激活时**消费全部按键**（含未匹
@@ -762,7 +763,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
   打开时新 picker 入栈，关闭返回上层）；模型选择器两级（provider → model，可 fetch /models 拉取
   真实列表，失败回退预设）；/provider Add/Remove/设 key 问答流程；**Add Provider → Custom 的 API
   format 为 picker 枚举**（openai/anthropic/google——默认 index=0 openai；Esc/取消 = 中止整个流
-  程——与手输非法 abort 同语义：无半配置落盘——D-C1）。
+  程——与手输非法 abort 同语义：无半配置落盘——D-C1）；**条目附注（note）渲染与三选择面契约见 §12**。
 - **/config 命令**（cmd-config.mjs）：embedding 三件套落盘（setEmbedKey 补写 baseURL/model——已有
   值保留、缺省取 config.mjs `DEFAULTS.embedding`——**引用，不硬编码字面量**；存量仅 apiKey 的配置
   再次保存自动补齐——F3 存量兼容）；/config 数值项手输（consultTurns/阈值等）非枚举属合理自由文
@@ -820,13 +821,507 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 | 2026-09-09 | busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——专题 INPUT-LOCK-BEHAVIOR-REVISED.md）：VSC readOnly 锁移除（busy 不禁录入——打字回显——send 禁由 send.js 出口守卫兜——占位符文案更新）+ CLI 斜杠白名单删（busy 斜杠同禁发——/exit 也发不出——退出靠 Ctrl+C 终端层通道）——门禁判据（processing/_turnState running）零动 | 已实现（§4 门禁去白名单 + §1 行数回写；双端 INPUT-LOCK 测试更新） |
 | 2026-09-11 | 子代理内嵌活动并入外层流（SUBAGENT-TAIL）——四处 `routeSub*` 嵌套分支 append 上移外层 `sub.blocks`（数据流合并 D-ST1）；子块载体退居守护元数据；渲染面净删（子块段/子块头/每层折叠键）；单环 500 显示行 trim（D-ST4）；省略计数真值修复（N6） | 已实现（§6 并档节；test/subagent-tail-merge.test.mjs——12 用例；真机 smoke 过 2026-09-11） |
 
-> **未决/待办承接（来自 2026-09-03 picker 化评审旁支——开放项不折叠）**：① picker item.note 渲染丢弃
-> （pickers.mjs 只消费 header.note——buildProviderEntries 的 baseURL/无 key 提示与 cmd-advisor
-> 主菜单 Provider 注记写在 item.note 实际不显示——信息缺失疑似 bug——另案（未登记，待父侧
-> 立项））；② question options / wizard provider 与 picker 并行实现（第二/三套选择 UI——统一属
-> 架构决策——待登记 docs/TODO.md）；（③ /config 数值项档位预设——已裁定不做）。
+> **未决/待办承接（来自 2026-09-03 picker 化评审旁支）**：① picker item.note 渲染丢弃——**已收口**
+> （第 20 批 §12：条目附注渲染 + 渠道警示面收口——text 内恒显）；② question options / wizard provider
+> 与 picker 并行实现——**已裁定**（第 20 批 §12：分工保留 + 契约对齐——不合并三面）；（③ /config
+> 数值项档位预设——已裁定不做）。
+
+## 12. 选择面收口（第 20 批——2026-09-11）
+
+> 本批 = 跨板块收口：**A1/A4 = TUI 面**（本节全量承载）· **A2 = 描述面**（机制落点
+> `ENGINEERING-MODE.md` §2.15 D5）· **A3 = 测试面**（机制落点 `TESTING.md` §1.2）——批级 AC 表见本节末。
+> 需求回指：`../requirements/TUI.md` F9（picker 附注渲染）· F10（选择面分工与契约）· N7（选择面行宽预算）。
+> 批次档：`../batches/2026-09-11-TUI-SELECTION.md`。
+
+### 12.1 问题陈述
+
+- **A1（item.note 渲染丢弃）**：`pickers.mjs` 的 `rebuildLines` 只在 header 分支消费 `e.note`
+  （as-of :66），item 分支仅渲染 `text` + `marker`（as-of :72）——`model-picker.mjs`
+  `buildProviderEntries`（as-of :109-127）写在 `item.note` 的 baseURL / `(no key)` / `(不可用)`、
+  `cmd-advisor.mjs` 主菜单（as-of :134）的 Provider 注记（`Provider: …`——**不含渠道警示**）
+  **实际不显示**。**面归属（修正轮 #5）**：cmd-advisor 渠道警示载体 = `buildModelEntries` 渠道列表
+  的 **header** note（as-of :203-207——`(no key)` / `(fetch failed: …)`）——header 分支既有消费
+  （`pickers.mjs:66`）已渲染，非本批 A1 收口面（A1 只收口 `item.note` 消费；「不再最先牺牲」口径针对 item 行）。
+  item 行宽 = 选择器布局约束（renderPicker 8 格余量 + 右截断）——附注渲染必须一并处理宽度预算
+  （否则警示尾部被截 = 修了但看不见）。
+- **A4（三套选择 UI 并存）**：picker（`pickers.mjs` / `model-picker.mjs`）· wizard provider 步
+  （`wizard.mjs`——经同一 renderPicker 渲染、键位自持）· question options（`interaction.mjs` +
+  `key-modes.mjs` + `layout.mjs` 输入框内嵌窗）——渲染与交互各自实现，行为差异未落档。
+
+### 12.2 三面现状（as-of 2026-09-11 实测）
+
+| 面 | 载体 | 渲染 | 键位 | 面特有 |
+|---|---|---|---|---|
+| picker | `state.picker` + `pickerStack` | renderPicker 覆盖面板（标题 + 过滤提示 + `n/m` 位置指示 + `↑ more`/`↓ more`） | ↑↓ **环绕** · PgUp/PgDn/Home/End · 输入过滤 · Enter 选 · Esc pop · Ctrl+C 取消栈顶 · 鼠标点击 | 过滤 / 鼠标 / 栈式嵌套 |
+| wizard provider 步 | `state.wizard`（step="provider"） | 同一 renderPicker（`layout.mjs` overlay = picker ?? wizard；无过滤提示 / 无 `n/m`） | ↑↓ **环绕** · Enter 选 · Esc 取消整向导；**选中项无自动滚动**（`w.scroll` 恒 0） | 无过滤 / 无鼠标 / 无 PgUp 族 |
+| question options | `state.question`（options 态） | 输入框内嵌窗（QWIN=5，`▸ ` 前缀；Custom 哨兵 → `✍ Custom answer…`） | ↑↓ **钳位** · Enter 确认 · Esc 取消/回选项态 | 无过滤 / 无鼠标 / 无独立面板 |
+
+键位证据（as-of）：picker 环绕 = `key-handler.mjs:187-192`（取模）；wizard 环绕 = `key-handler.mjs:226-231`；
+question 钳位 = `key-modes.mjs:93-97`（`Math.max/min` 夹取）；wizard 无滚动 = `wizard.mjs:77`（`scroll: 0` 初始化后无写点）。
+
+### 12.3 A4 方案选型对比（本批设计主体）
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **全面统一**——三面归一到 picker 组件 | question 选项面并入覆盖面板（改变提问工具交互形态 + 输入框足迹 + 自由文本逃生口路径）；wizard 流程重构（文本步 / 全跳语义重接）——触及 question 协议面、向导流程与全部相关测试 | 单一实现（长期维护收益）；代价 = 三面交互语义大改，与「不改既有交互语义」边界冲突面最大 | 否决 |
+| 2 | **分工保留 + 契约对齐**（选定） | 三面职责本就不同（全功能菜单 / 首启向导 / 提问工具）；真实不一致仅 2 处（↑↓ 环绕 vs 钳位；wizard 选中项越窗不可见）；其余差异可归面特有豁免 | 成本小（2 文件小改 + 契约表落档）；用户可见不一致清零；豁免显式化（不再隐含） | **选定** |
+| 3 | 仅落档（登记现状，零代码） | 差异仍在——用户已裁「两项都做」（TODO 第 20 批来源条目），登记不构成收口 | 最低成本、零行为收益 | 否决 |
+
+### 12.4 选择面契约（本批后现行——三面同表）
+
+| 项 | picker | wizard provider 步 | question options | 判定 |
+|---|---|---|---|---|
+| 职责（分工） | 全功能菜单面（配置/模型/会话等命令入口） | 首启向导面（流程 > 列表） | 提问工具面（选项 + 自由文本逃生口） | 分工保留——不合并 |
+| ↑↓ 语义 | 环绕（既有） | 环绕（既有） | **环绕（本批对齐——原钳位）** | 同义键同形 |
+| 选中项可见性 | 自动滚动（既有） | **自动滚动（本批补）** | 窗随选中（既有） | 选中项恒在可视窗内 |
+| Enter / Esc | 选 / pop 当前层 | 选 / 取消整向导 | 确认 / 取消或回选项态 | 按面语义（共同点 = Esc 恒有效） |
+| 过滤 / 鼠标 / 层级栈 | 有 | 豁免（短列表 + 键盘驱动首启） | 豁免（短列表 + 协议绑定） | 面特有豁免 |
+| 位置指示（`n/m`） | 有 | 豁免（无过滤面——指示归 picker） | 豁免（输入框足迹） | 面特有豁免 |
+
+**面特有键豁免理由（落档——防后续误判为缺陷）**：过滤/鼠标/栈为 picker 行数规模（模型清单/会话清单可长）与
+操作频度（命令入口）所需；wizard 候选 ≤ 十余项且为首启一次性流程；question 选项 = 模型给的少量候选项 + 输入框足迹。
+**Esc 按面语义**：picker「取消当前层」（多层面有上一步）、wizard「取消整个向导」（无上一步——全跳是既有语义）、
+question「取消提问 / 回选项态」——三条语义由各自流程上下文决定，不可互换；契约只锁「Esc 恒有效」。
+
+**未定项**：无（三面交互决策全落档；豁免项已列理由——§12.6 D-SS4/D-SS5）。
+
+### 12.5 A1 设计（附注渲染 + 宽度预算）
+
+**逐字渲染形态（item 行——本批后）**：`{prefix}{text}{marker}{note}`——
+
+- prefix = `" ▸ "`（选中）/ `"   "`（未选中）——既有；
+- marker = `"  " + marker`（有 marker 时）——既有（`●` = 当前会话渠道）；
+- note = `"  " + note`（有 note 时）——**本批新增消费**；无 note 零追加（不产生尾随空格）。
+
+例（cols=100，未选中、无 key 渠道）：
+
+```
+   deepseek     deepseek-chat (ctx 128K) (no key)  https://api.deepseek.com
+```
+
+**宽度预算（N7）**：行渲染宽 ≤ `cols − 8 − width(指示位)`（8 格余量 + 首/末行 `↑ more`/`↓ more`——
+8 格余量口径见 §5 Ambiguous 防线；右截断 = renderPicker 既有 `sliceByWidth(text, maxW−1) + "…"`，
+as-of `render-frame.mjs:106-110`）。**判定式为准（修正轮 #6）**：任意渲染行 ≤ `cols − 8`（含指示行——
+指示位宽在 8 格外另扣、以 pad 补齐，行总宽仍落 8 格界内；用例 4 锚此界）。**保序 = prefix → text →
+marker → note；截断从行尾开始——note（附注段）最先牺牲**；text 内警示与 `(ctx …)` / `← session`
+同权（text 截断 = 既有语义）。
+
+**产出面收口（`model-picker.mjs` `buildProviderEntries`）**：`(no key)` / `(不可用)` 自 note **上移进
+`text`**——与既有状态标同簇（`(ctx …)` / `← session`；先例 = 同文件 `setKeyFlow`（as-of :398）与
+wizard 的 `(added, no key)`——渠道警示本就属 text 面，model-picker 是唯一把警示放 note 的面）；
+`note` 收窄为 baseURL（补充信息——预算内显示、超宽右截断可接受）。**警示不再位于最先牺牲段**（修正轮 #4——
+与 text 内既有状态标同权；极端长条目 + 极窄列下随 text 尾部既有右截断语义，80 列真实条目由 AC-A1-2 锚定）。
+
+逐字草案（`buildProviderEntries` 条目构造）——
+
+```js
+text: `${p.name.padEnd(12)} ${shown}${ctxTag}${keyStatus}${unavailable}${sessionNote}`,
+marker,
+note: p.baseURL,
+```
+
+（`sessionNote` = 既有 `" ← session"`；字段顺序 = 名 → 模型 → ctx → 警示 → 会话标。）
+
+### 12.6 关键决策记录（含否决备选）
+
+- **D-SS1 分工保留（否决全面统一）**——见 §12.3 候选 ①；合并只买来「单一实现」，却改变 question 协议面与向导流程，改动面/风险与收益不匹配。
+- **D-SS2 警示上移 text（否决「新增 `flag` 字段 + 渲染层保位」）**——保位方案为 picker 通用面新增专用概念（仅 1 个消费点）、与既有状态标形成两套机制；上移方案复用既有 text 状态标惯例、零新概念，且为结构保位（不依赖宽度余量）。
+- **D-SS3 question ↑↓ 对齐为环绕（否决「picker/wizard 改钳位」）**——环绕是三面中 2 面的既有行为 + 菜单循环（键按到底回起点）比死头体验自然；改动面 = 1 面 2 行。
+- **D-SS4 面特有键豁免落档（否决「补齐 wizard/question 的 PgUp 族与鼠标」）**——两面的列表规模与足迹不需要；补齐属加戏（见 §12.4 豁免理由）。
+- **D-SS5 Esc 语义按面保留（否决「统一 Esc 语义」）**——三个「取消」由各自流程上下文决定（见 §12.4）；契约只锁「Esc 恒有效」。
+- **D-SS6 wizard 滚动改进落点 = `renderWizard`（否决「在 key-handler 里逐键调整」）**——`renderWizard` 是索引变化的单一路径（按键与初始渲染都经它）；滚动调整与选中行产出于同处可保证「产出即一致」。winH 走 `computeLayout`（同 `pickers.mjs` 口径）+ try/catch 兜底 8（无 dims/测试环境不崩）。
+- **D-SS7 A1 渲染落点 = `rebuildLines`（否决「renderPicker 预算感知拼装」）**——header 分支的 note 消费就在 `rebuildLines`（既有单源）；item 分支同处补齐 = 两分支同形态、渲染层零改（截断/余量既有）；note 作为补充信息随行右截断的语义与 text 一致。
+
+### 12.7 受影响文件（当前行数 as-of 2026-09-11 实测——口径 `split("\n").length` 含末行）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/tui/pickers.mjs` | 107 | +3 ± 2 | `rebuildLines` item 分支渲染 note（`  ` 分隔） |
+| `src/tui/model-picker.mjs` | 496 | ±4 | `buildProviderEntries`：警示上移 text、note 收窄为 baseURL |
+| `src/tui/key-modes.mjs` | 239 | ±4 | question options ↑↓ 环绕（上/下两分支） |
+| `src/tui/wizard.mjs` | 228 | +8 ± 4 | `renderWizard`：选中行自动滚入可视窗（winH 走 `computeLayout` + try/catch 兜底） |
+| `src/tui/layout.mjs` | 227 | 0 | 零改（overlay 合流既有——核对项） |
+| `src/tui/render-frame.mjs` | 377 | 0 | 零改（8 格余量 + 右截断既有——核对项） |
+| `src/agent/setup.mjs` | 355 | ±3 | A2：受限变体 3 个文案面同步（见 `ENGINEERING-MODE.md` §2.15 D5） |
+| `test/eng-designer-role.test.mjs` | 316 | ±6 | A3：T30 自 `test(` 改 `slow(` + import；A2：T32b 扩两处 description 断言 |
+| `test/tui-selection-surfaces.test.mjs` | 0（新增） | +145 ± 40 | A1/A4 用例表 1:1（新档；用例 10 = 文档面断言——修正轮 #2） |
+
+> 文档写域（设计者）：`../requirements/TUI.md` · 本文件 · `../requirements/ENGINEERING-MODE.md` ·
+> `ENGINEERING-MODE.md` §2.15 D5 · `../requirements/TESTING.md` · `TESTING.md` §1.2 · `docs/TODO.md`（状态推进）。
+> **拆分评审**：`model-picker.mjs`（496——>300 advisory、≤500 硬限）本批**不拆**（±4 单点改动；再增厚即触发拆分评估）；
+> `setup.mjs`（355）±3 单点文案——不拆；`test/eng-designer-role.test.mjs`（316±6——修正轮 #7）单点断言扩写（T30 归册 + T32b 扩断言）——不拆；其余档 ≤300 或无增。
+> **交付自查项（修正轮 #1——时序归位）**：coder 交付时**报告** §1 模块地图所触 4 个源文件（pickers / model-picker / key-modes / wizard）**实测行数**（口径同表头注；入交付报告——**不回写文档**）；§1 地图 4 行由**设计者在收口阶段回写**（写权 = 上方「文档写域（设计者）」句、**无例外**；`ENGINEERING-MODE.md` §2.15 A2 口径不改）；新测试档入 `test/` 不入地图（地图只含 `src/tui`）。
+
+### 12.8 测试层——用例表
+
+> 新档 `test/tui-selection-surfaces.test.mjs`（直驱 `createPickers` / `handleQuestionMode` / `renderWizard` +
+> `renderPicker` 纯函数面；构造手法照 `model-ref.test.mjs`（脚本化 showPicker）与 `mouse-sane-gate.test.mjs`（最小 state + computeLayout）；
+> 用例 10 = 文档面断言——读本文件 §12.4，修正轮 #2）。
+> A2 断言 = 扩既有 T32b（designer / eng-coder 双端 `prepareRun` 装配既有——零新增装配调用，规避慢门）；A3 = 该档 T30 归册自身。
+
+| # | 类型 | 输入 | 预期输出 | 回指 |
+|---|---|---|---|---|
+| 1 | 正常 | `showPicker("t", [{type:"item",text:"a",note:"N1"},{type:"item",text:"b"}])` 直驱 | `state.picker.lines[0].text === " ▸ a  N1"`；`lines[1].text === "   b"`（无 note 零尾随） | F9 |
+| 2 | 正常 | header 行带 note（既有消费面） | header 行文本 = ` H  h1`（零回归） | F9 |
+| 3 | 正常 | 真实 `buildProviderEntries`（createModelPicker + 脚本化 showPicker 捕获）：无 key 渠道 / `_unavailable` 渠道 | 条目 `text` 含 `(no key)` / `(不可用)`；条目 `note` === baseURL | F9 |
+| 4 | 边界 | `renderPicker(state, 80, panel, overlay)` 渲染超长 note 行 + 指示行 | 每行 `stringWidth ≤ 72`（cols−8）；超宽行尾 `…`；prefix + text 段保全 | F9 / N7 |
+| 5 | 边界 | question options 末项按 ↓ / 首项按 ↑（`handleQuestionMode` 直驱） | selected 环绕（末→0；首→末） | F10 |
+| 6 | 边界 | wizard provider 列表超窗 + index 越窗（`renderWizard` + dims 注入） | `w.scroll` 调整——选中行落 `[scroll, scroll+winH)` 内 | F10 |
+| 7 | 边界 | question 自由文本态（无 options）与 Custom 哨兵项 | 自由文本态零回归；哨兵项渲染 `✍ Custom answer…` 并参与环绕 | F10 |
+| 8 | 错误 | dims 缺失 / `computeLayout` 抛错（wizard 滚动计算） | winH 兜底 8——渲染不崩（同 `pickers.mjs` 兜底口径） | F10 |
+| 9 | 错误 | 零回归对照：picker ↑↓ 环绕 / PgUp 钳位 / Esc pop；wizard Esc = 整向导取消；question Esc = 取消或回选项态 | 行为逐条不变 | F10 |
+| 10 | 正常（文档面） | 读 `docs/design/TUI.md` §12.4 节文本（修正轮 #2） | 含表头「### 12.4 选择面契约」+ 三面列名（`picker` / `wizard provider 步` / `question options`）+ 关键行名（`↑↓ 语义` / `选中项可见性` / `面特有豁免`） | F10 |
+
+### 12.9 验收标准（逐条回指需求；每条可机器验证）
+
+| AC | 判据 | 断言手段 | 回指 |
+|---|---|---|---|
+| AC-A1-1 | item note 渲染：含 note 条目行尾 = `  ` + note；无 note 条目行形态不变 | `rebuildLines` 输出行文本断言（用例 1/2） | F9 |
+| AC-A1-2 | 警示恒显：80 列渲染 provider 条目行含 `(no key)`（无 key）/ `(不可用)`（探不通） | 用例 3 + `renderPicker` 输出断言 | F9 |
+| AC-A1-3 | 行宽预算：任意渲染行 ≤ `cols − 8`；超宽右截断带 `…` | 用例 4 的 `stringWidth` 断言 | N7 |
+| AC-A4-1 | 契约表落档（三面 × 职责/键位/豁免——§12.4 本表） | 用例 10（读本文件 §12.4——表头 + 三面列名 + 关键行名子串断言） | F10 |
+| AC-A4-2 | question ↑↓ 环绕（末项 down → 0；首项 up → 末项） | 用例 5 直驱断言 | F10 |
+| AC-A4-3 | wizard provider 选中项恒在可视窗（越窗后 scroll 调整） | 用例 6 断言 | F10 |
+| AC-A4-4 | 三面零回归（picker 键位 / wizard 文本步 / question Esc·Enter 语义） | 用例 7/9 + 既有 TUI 测试面 | F10 |
+| AC-A2-1 | 受限变体描述同步（门清单全部拒绝动作名、无 `check`） | T32b 扩断言（双端 description）——见 `ENGINEERING-MODE.md` §2.15 D5 | A2 |
+| AC-A3-1 | T30 归册（`slow(` 注册——快层 skip / 全量跑）+ 快层零超阈拦截 | 源码断言 + 快层/全量运行——见 `TESTING.md` §1.2 | A3 |
+
+### 12.10 边界（本批不做）
+
+- 不合并三面实现（D-SS1）；不给 wizard/question 补过滤、鼠标、层级栈（D-SS4）；不统一 Esc 语义（D-SS5）。
+- 不改 picker 的过滤/鼠标/栈/键盘既有语义（本批只加 note 消费）；不改 question 自由文本态
+  （TUI-INPUT-BOX（本仓）§7 权威面零改）；不改 wizard 文本步与 Esc 全跳语义。
+- 不动 VSC 端（webview 无 picker/wizard 面；描述面对位见 A2 注——镜像评估归父侧）。
+- 不预判其它用例的 slow 归册（A3 判据 = 快层慢门实测点名——不预判）。
+
+## 13. 输入面小修·B1——/advisor Thinking 子菜单与 picker entries 契约（第 28 批——2026-09-11）
+
+> 需求回指：`../requirements/TUI.md` F12（/advisor 子菜单可开 + picker entries 契约）。
+> 批次档 `../batches/2026-09-11-INPUT-FIXES-SMALL.md` §1 条目 B1（Gitee #IKEZ1C）。
+> 同批 B2（VSC webview Enter 语义）为 VSC 面——设计见 `WEBVIEW（VSC 仓）§9`；本板块只承载 CLI 面。
+
+### 13.1 问题陈述（as-of 2026-09-11 逐条现场核实）
+
+- 根因：`src/tui/cmd-advisor.mjs:89` 调 `buildThinkingEntries(agent, cfg)`——该函数 `async`（定义 :225，
+  内部 `await import("../config.mjs")`）——**漏 `await`** → Promise 传入 `showPicker` → `src/tui/pickers.mjs:46`
+  的 `entries.filter` 抛 `TypeError: entries.filter is not a function` → 被 `src/tui/slash-commands.mjs:120-123`
+  既有拦截器落为 `[error]` 行（TUI 主循环存活——但 Thinking 子菜单**必炸**、用户不可用）。
+- 对照面：Model 子面正常（`buildModelEntries` 同步——`cmd-advisor.mjs:196`）；全仓 `showPicker(` 调用点
+  39 处（`src/tui` 全量 grep——2026-09-11；含 `key-handler.mjs:143` fire-and-forget 面）仅此一处漏 `await`。
+- 同族陷阱：`showPicker` 入口对 `entries` 无契约校验——任何漏 `await`/错误类型都表现为下游裸抛，
+  错误信息不指向调用点（诊断面缺失）。
+
+### 13.2 B1 守卫形态裁定（2 候选——含否决理由）
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **显式 TypeError**（入口首行；Promise 输入附 `await` 提示） | 把同族陷阱变显式错误（批次 §1 建议方向）；错误信息指向调用点标题；`handleSlash` 既有 try/catch 兜底为 `[error]` 行——TUI 存活面零改；39 处既有调用点全部传数组——零触达 | 代价 = 新测试锁错误形态；收益 = 同族错误一次可判（不再从 `entries.filter` 反推） | **选定** |
+| 2 | 空集返回（`resolve(null)`——静默不打开） | 与 0-item 保护同形、不抛 | **静默吞掉编程错误**——菜单「打不开」无诊断（正是本 issue 的体验）；掩盖漏 `await` 类缺陷 | 否决 |
+
+### 13.3 设计（逐字契约）
+
+- **C-B1-1 调用点修复**（`cmd-advisor.mjs:89`）：`const entries = await buildThinkingEntries(agent, cfg)`
+  （只加 `await`——`buildThinkingEntries` 语义零改）。
+- **C-B1-2 入口守卫**（`pickers.mjs` `showPicker` 首行——**在 `closePicker()` 之前**：
+  参数校验先行，非法输入不改变 picker 栈状态）：
+
+```js
+function showPicker(title, entries, { defaultIndex = 0 } = {}) {
+  if (!Array.isArray(entries)) {
+    const got = entries && typeof entries.then === "function"
+      ? "a Promise (missing `await`?)"
+      : `a ${entries === null ? "null" : typeof entries}`
+    throw new TypeError(`showPicker("${title}"): entries must be an array — got ${got}`)
+  }
+  closePicker()
+  ...（以下零改）
+```
+
+- **契约面**：`entries: Array` 为调用方义务（异步来源 = 调用方 `await` 后再传）；非法输入 = 同步
+  `TypeError`（不静默、不裸抛；Promise 输入附 `await` 提示）；`handleSlash` 既有错误拦截语义零改。
+- **零改核对**：39 处调用点全部传数组字面量/数组变量（含 `model-picker.mjs` 9 处、`cmd-config.mjs` 8 处）
+  ——守卫零触达；0-item 保护（`pickers.mjs:48`）与 picker 渲染/导航语义零改。
+
+### 13.4 关键决策记录（含否决备选）
+
+- **D-B1-1 守卫形态 = 显式 TypeError（否决空集返回）**——见 §13.2。
+- **D-B1-2 守卫落点 = `showPicker` 入口首行（否决「各调用点自检」/「`rebuildLines` 内事后防御」）**——
+  入口是全部 picker 调用的单一收口；事后防御的错误信息不指向调用点，诊断价值归零。
+- **D-B1-3 不做静态源码断言锁（否决「grep `await buildThinkingEntries`」形态）**——行为锁已足
+  （T-B1-1 修前红/修后绿）；内部实现锁属过度测试（测试清零政策口径）。
+
+### 13.5 受影响文件（as-of 2026-09-11 实测；口径 `split("\n").length` 含末行）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/tui/cmd-advisor.mjs` | 256 | +0 ±1 | :89 补 `await`（C-B1-1） |
+| `src/tui/pickers.mjs` | 107 | +5 ±2 | `showPicker` 入口 Array.isArray 守卫（C-B1-2） |
+| `test/advisor-thinking-picker.test.mjs` | 0（新增） | +90 ± 30 | 用例表 1:1（T-B1-1~T-B1-3） |
+
+> **§1 模块地图回写**：`cmd-advisor.mjs` / `pickers.mjs` 两行行数由**设计者在收口阶段回写**
+> （同 §12.7 先例：coder 交付时报告实测行数、不回写文档；写权 = 设计者、无例外）。
+
+### 13.6 测试层——用例表（新档 `test/advisor-thinking-picker.test.mjs`；直驱、零网络、零定时器）
+
+> 手法：脚本化 `showPicker` 驱真 `handleAdvisorCommand`（同 `provider-admission.test.mjs` 模式）+
+> 真 `createPickers` 最小 ctx（同 `model-ref.test.mjs` 的最小 state 模式）；快层直跑（<800ms）。
+
+| # | 类型 | 输入 | 预期输出 | 回指 |
+|---|---|---|---|---|
+| T-B1-1 | 正常（回归锁——修前红） | 脚本化 showPicker 记录调用：第一次（"Advisor"）返回 `{action:"thinking"}` 条目；第二次（"Advisor Thinking"）返回 null（Esc）；第三次返回 null | 第二次调用的 `entries` 为真数组（`Array.isArray`）、含 `action:"inherit"` 与 `effort_*` 条目；全程无异常；pushLine 收集无 `[error]` 开头行 | F12 |
+| T-B1-2 | 错误 | 真 `createPickers`（最小 ctx）+ `showPicker("t", Promise.resolve([]))` | 同步抛 `TypeError`——message 含子串 `entries must be an array` 与 `await` | F12 |
+| T-B1-3 | 边界（正控） | 真 `createPickers`：① `showPicker("t", [item])` → 打开；② `showPicker("t", [header-only])` → 0 item | ① `state.picker.title === "t"`（入栈）——`closePicker()` 收尾；② 立即 `resolve(null)`、不入栈（0-item 保护零回归） | F12 |
+
+### 13.7 验收标准（逐条回指需求；每条可机器验证）
+
+| AC | 判据 | 断言手段 | 回指 |
+|---|---|---|---|
+| AC-B1-1 | Thinking 子菜单可开：entries 为真数组、含条目、全程无 `[error]` | T-B1-1 | F12 |
+| AC-B1-2 | 非数组 entries → 显式 TypeError（子串 `entries must be an array`；Promise 分支含 `await` 提示） | T-B1-2 | F12 |
+| AC-B1-3 | 正控与 0-item 保护零回归（真数组照常打开；zero-item 不打开） | T-B1-3 | F12 |
+| AC-B1-4 | 零回归：CLI 快层不新增红（基线 as-of 2026-09-11：471/458/1/12——1 红 = doc-consistency 他批档面，非本批）；39 处调用点零触达 | 快层运行 + grep 核对 | F12 |
+
+### 13.8 边界（本批不做）
+
+- 不改 picker 渲染/过滤/导航/栈/键位语义（TUI-INPUT-BOX（本仓）§7 权威面零改）；
+- 不做异步 entries 支持（契约 = 调用方 `await`；不为 Promise 输入自动消化）；
+- 不改 `handleSlash` 错误拦截语义；不重构 cmd-advisor 其余子面（Model/Guard/View 零改）；
+- 不动 VSC 端（同批 B2 属 VSC 面——各端独立实现）；不新增文档档。
+
+## 14. 用户介入提醒（attention 态——第 33 批 2026-09-11）
+
+> 需求 = `../requirements/TUI.md` §2 F13 + §3 N9；批次档 = `../batches/2026-09-11-REVIEW-ATTENTION.md` §1 条目 G2
+> （用户原话（#IKDCVV）：「对于出现需要用户介入的情况进行一个底部任务栏的变色提醒，这样就不用反复切回来」；
+> 2026-09-11 13:36 批准立项 = CLI 状态栏变色 + VSC 面板/状态栏 attention 态）。
+> **冻结窗口（D5）**：本节为**新增节**——§1–§13 零碰；变更记录追加一行。
+> 范围：**CLI 单端设计**（VSC 对位 = 语义同源、各端独立实现——登记与所需档见 §14.9）。
+
+### 14.1 问题陈述（现场复核——as-of 2026-09-11）
+
+- **现状**：状态栏 = `renderStatus`（`src/tui/render-frame.mjs:208-218`）+ `buildStatusLine`（:320-376）——
+  模式 / 耗时 / token / 上下文利用率 / busy（INPUT-LOCK）/ 快捷键；**无「需要用户介入」可视态**
+  （全 docs 检索 `任务栏` / `attention` 零命中——本批首建）。
+- **用户场景**：Agent 跑长任务或弹审批 / 提问时，用户切去别处 → 需要反复切回来查看（issue 原话）。
+
+**既有信号面清点（全清单 + 裁决——「哪些算需要用户介入」）**：
+
+| 信号面 | 载体（file:line as-of） | 裁决 | 理由 |
+|---|---|---|---|
+| 审批卡挂起 | `state.permission`（`interaction.mjs:58-99`） | **计**（blocked） | agent 阻塞——不回应则零进展 |
+| 提问卡挂起 | `state.question`（`interaction.mjs:101-130`） | **计**（blocked） | 同上 |
+| 回合结束等待输入 | `runAgentTurn` 顶层链尾（`agent-turn.mjs:212-323`） | **计**（awaiting） | agent 已停、无自动续跑——「不用反复切回来」的主用例 |
+| picker / wizard / search / interruptPrompt | `state.picker` / `wizard` / `search` / `interruptPrompt` | 不计 | 用户自己发起——在场已由发起动作证明（提醒无意义） |
+| pendingInput（挂起期输入单槽） | `suspension-drive.mjs:177-216` | 不计 | 是**用户自己的**待交接输入，非 agent 需要用户 |
+| 挂起会话（池 live） | `state.suspended` / `state._suspPending` | 不计 | 自动续跑中（settle → digest 驱动）——不需要用户动作 |
+| design token 门 / 工具拒绝 | 工具返回值（对话内可见） | 不计 | 无独立 UI 态；其「需要用户」部分由上述三类承接（父代理回合结束 → awaiting） |
+
+### 14.2 方案选型对比
+
+**表 1——触发集合**（判据来自需求层：可见提醒的语义正确性 / 噪声 / 可机械判定）
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | 仅阻塞两态（审批 / 提问） | 语义最纯（agent 真阻塞）；但漏掉「长任务跑完等你」主用例——恰是「不用反复切回来」指向的场景 | 覆盖不足 | 否决 |
+| 2 | **阻塞两态 + 回合结束等待输入** | 覆盖「agent 阻塞 or 已停、无自动续跑」的完整集合（= 需要用户介入的本质）；两者均可机械判定 | awaiting 在空闲期常态可见——如实义（「agent 在等你」）；文案区分三态 | **选定** |
+| 3 | 再扩到 picker / wizard / search | 用户自发面也提醒；但用户刚按了键——提醒 = 噪声，且语义非「agent 需要你」 | 语义错位 | 否决 |
+
+**表 2——CLI 形态**（判据：贴合「任务栏变色」/ 实现面 / 主题兼容 / 静帧可判）
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **整行注意力底色 + 提示语前缀（稳态）** | 「变色」直译——整行可扫视；单一渲染点（`renderStatus`）；稳态可静帧断言；与 VSC `statusBarItem.warningBackground` 同色系（跨端观感一致） | 需处理内部样式复位（底色重施加——实现要点见 §14.3） | **选定** |
+| 2 | 仅加文案前缀（不上色） | 实现最简；但不是「变色」——不满足用户原话 | — | 否决 |
+| 3 | 闪烁 / 频闪 | 更抓眼；但需**空闲重绘定时器**（现仅 processing / 子代理期有 1s ticker）——新定时器 + 耗电 + 闪屏；违「零新定时器」取向（N9②） | — | 否决 |
+| 4 | 输入框边框变色 | 有 permission 先例（`inputBoxStyle` warn 边框）；但输入框在屏上可见度低于整行状态栏，且 question 态边框现为 tool 色（改动波及面大） | 提醒强度不足 + 波及 question 观感 | 否决 |
+
+**表 3——消除条件**（判据：「查看后复位」的可判定近似 / 复位及时性 / 无新交互契约）
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **任意用户输入（键盘 / 鼠标）即复位** | CLI 无焦点事件——「查看」的唯一可判定近似（人一按键即在场）；blocked 两态实时派生（提示消解即消失，零残留） | 阅读不回键时 awaiting 保持（如实义——color 在 = agent 在等） | **选定** |
+| 2 | 仅下一回合开始复位 | 零新入口；但「读了不回」时长亮——复位语义弱（无法表达已读） | — | 否决 |
+| 3 | 显式确认键（如 Esc / Ctrl+G） | 可精确表达已读；但引入新交互契约（用户习惯外）+ 需提示教学 | — | 否决 |
+
+### 14.3 设计（逐字契约）
+
+**（a）派生（纯函数——`render-frame.mjs` 导出，供测试直驱）**：
+
+```js
+// attentionKind(state): "blocked" | "awaiting" | null —— 渲染层派生（无副作用）
+export function attentionKind(state) {
+  if (state.permission || state.question) return "blocked"
+  if (state.attentionAwaiting && !state.processing && !state.suspended && !state._suspPending) return "awaiting"
+  return null
+}
+```
+
+**（b）提示语（chip——逐字；kind 内优先级：blocked > awaiting；blocked 内 permission > question——与按键分发优先级同序）**：
+
+| kind | 条件细分 | chip（逐字） |
+|---|---|---|
+| blocked | `state.permission` 非空 | `⚠ 等待你的审批` |
+| blocked | `state.question` 非空 | `⚠ 等待你的回答` |
+| awaiting | — | `⚠ 等待你的输入` |
+
+**（c）渲染契约（`renderStatus`）**：
+
+- attention 非 null ⇒ 整行以注意力色对包裹：**背景 = ANSI 43（黄底）+ 前景 = ANSI 30（黑字）**；
+  行首 = chip，其后 ` │ ` 分隔，再接既有内容（banner 前缀 + `buildStatusLine`）——**内容零省略**。
+- **底色存活**：既有内容含内部 `ansi.reset`（banner / ctx 警示段）——实现须在每次内部复位后**重施加底色**
+  （建议实现：`(chip + " │ " + banners + statusLine).replaceAll(ansi.reset, ansi.reset + ATT)` 后整体 `ATT … reset` 包裹）。
+  否决替代 = 剥离内部样式（会丢 ≥80% 上下文警示色与 banner 色相）。
+- **宽度预算**：`statusMax = cols − 1 − width(bannerPrefix) − width(chip + " │ ")`——整行仍 ≤ `cols − 1`（既有口径；N9④）。
+- **稳态（不闪烁）**：attention 色随帧派生——无空闲重绘定时器（N9②）。
+- **负向（零侵入锁）**：attention 为 null ⇒ 输出与改动前**逐字节等价**（实现约束 = 平态不经注意力包裹路径、字节面零注入；机判口径 = 零注意力序列（`\x1b[43m` 零出现）+ strip-ANSI 文本无 chip——与 N9 / T-AT2 同口径）。
+
+**（d）置位（1 点——回合链尾）**：`agent-turn.mjs` 顶层链尾（队列续发循环与挂起会话退出**之后**、函数自然结束前），
+谓词 = 导出纯函数（可直测）：
+
+```js
+export function userNeededAtTurnEnd(state, agent, skipSession) {
+  return !skipSession && !state.suspended && !state._suspPending && !poolLive(agent)
+      && state.queue.length === 0 && !state.processing
+}
+// 命中 ⇒ state.attentionAwaiting = true; render()
+```
+
+- 排除项语义：`skipSession`（digest / 会话内回合——由外层链尾统一置位）· 挂起两态 / 池 live / 队列非空
+  （自动续跑中——不由用户接手）。
+- 中断结束（Ctrl+C 停回合）与错误结束同样置位（agent 已停、等用户——语义一致）。
+
+**（e）清位（2 点——输入即在场）**：
+
+- 键盘：`key-handler.mjs` `onKeypress` 入口（模态分派**之前**）——清位 + 仅当原值为真时 `render()`。
+- 鼠标：`index.mjs` stdin `data` 处理器内——滚轮分支与 `onMouseClick` 调用前（单点覆盖滚轮 / 点击）。
+- blocked 两态无需清位（实时派生——提示消解即消失；零残留）。
+
+**（f）state 字段**：`attentionAwaiting: false`（`index.mjs` state 字面量——默认关；不落盘、不进会话）。
+
+### 14.4 受影响文件全清单（as-of 2026-09-11 实测——含修正轮复核；行数口径 = `N lines total`）
+
+**实施域（eng-coder 写域——5 改 + 1 新）**
+
+| # | 文件 | 当前行数 | 动作 | 预计增量 | 档位结论 |
+|---|---|---|---|---|---|
+| 1 | `src/tui/render-frame.mjs` | 377 | 改（`attentionKind` 派生 + chip + 底色包裹 + 宽度预算） | +~32 | >300 advisory（存量 377 → 交付 ~409；拆分评估见 §14.9 #4） |
+| 2 | `src/tui/ansi.mjs` | 49 | 改（`bg` 序列 + 注意力色对常量） | +~5 | ✓（≤300） |
+| 3 | `src/tui/agent-turn.mjs` | 324 | 改（`userNeededAtTurnEnd` 谓词 + 链尾置位） | +~12 | >300 advisory（交付 ~336；净增小，沿存量先例） |
+| 4 | `src/tui/key-handler.mjs` | 441 | 改（`onKeypress` 入口清位） | +~5 | >300 advisory（交付 ~446 < 500 ✓） |
+| 5 | `src/tui/index.mjs` | 450 | 改（state 字段 + 鼠标输入路径清位） | +~8 | >300 advisory（交付 ~458 < 500 ✓） |
+| 6 | `test/attention-state.test.mjs` | 新 | 新增（T-AT1–T-AT8） | ~200 | 新档 ≤500 ✓ |
+
+**文档域（eng-designer 写域——本设计者已落）**
+
+| 文件 | 行数注记（批次前 → 落档后） | 变更 |
+|---|---|---|
+| `docs/requirements/TUI.md` | 68 → 76 | §2 F13 + §3 N9 + §4 边界行 + header 批次注 + 变更记录（含修正轮行）——**已落** |
+| `docs/design/TUI.md` | 1125 → 1344 | §14 + 变更记录（含修正轮行；计数含末行 EOL 归一 +1）——**已落** |
+
+测试基建：CLI 无注册清单档——`test/*.test.mjs` glob 自动发现；`input-lock.test.mjs` 的桩手法可复用
+（`createKeyHandler` 桩 ctx 直驱按键 / `renderStatus` 直调）——零 TTY、零定时器悬挂、微秒级。
+
+### 14.5 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-AT1 | **触发集合 = 阻塞两态 + 回合结束等待输入** | 表 1——「agent 阻塞或已停、无自动续跑」完整集合。否决：仅阻塞两态（漏主用例）· 扩到用户自发面（语义错位） |
+| D-AT2 | **CLI 形态 = 整行注意力底色 + chip（稳态）** | 表 2——「变色」直译 + 单一渲染点 + 静帧可判。否决：仅文案（非变色）· 闪烁（需新定时器）· 边框（强度不足） |
+| D-AT3 | **色对 = 黄底黑字（ANSI 43 / 30）** | 与 VSC warningBackground 同色系（双端观感一致——语义同源）；黄底黑字不依赖终端主题配色（浅深色终端均可见）；沿用既有 C.warn 语族 |
+| D-AT4 | **消除 = 任意用户输入（键 / 鼠）+ blocked 实时派生** | 表 3——「查看」的可判定近似；零新交互契约 |
+| D-AT5 | **稳态不闪烁 / 零新定时器** | 频闪需空闲重绘（现无此定时器）；稳态色已满足「扫一眼即知」（N9②） |
+| D-AT6 | **置位点 = 顶层链尾（非回合末 finally）** | finally 后还有队列续发 / 挂起会话（digest 自动消费）——在那之后才真正「无人接手」；避免 digest 间歇误报 |
+| D-AT7 | **chip 中文（与 busy 提示同语族）** | TUI 现状混排（busy 提示中文 / 键位提示英文）；用户面向提示用中文与「主会话处理中」同族 |
+| D-AT8 | **CLI 单端本批**；VSC 对位登记（§14.9 #1/#2） | 各端独立实现纪律；VSC 同构面（status bar waiting 态已存 / 面板 attention 待建）如实登记 |
+
+### 14.6 与既有纪律的冲突点核对
+
+| 纪律 / 既有节 | 核对结论 |
+|---|---|
+| **§4 按键分发** | 清位点在模态分派**之前**——只复位渲染态字段，**不改变任何按键语义**（模态判定 / busy 门禁 / 编辑路径零改）；blocked 态下首个按键照常被模态消费 |
+| **§8 回合驱动** | 置位点 = 顶层链尾（队列续发 / 挂起退出之后）——挂起状态机（`suspensionSession`）语义零改；digest 回合（skipSession）不置位 |
+| **§5 渲染管线 / 宽度纪律** | 状态行仍 ≤ `cols − 1`（chip 宽度计入预算）；不新增面板 / 不新增行 |
+| **INPUT-LOCK（busy 提示）** | 零改——processing 期 attention 派生为 null（blocked 除外——审批 / 提问可发生于回合中，属正确提醒） |
+| **TUI-INPUT-BOX §7.2（question 自由文本态）** | 零改（不改 question 键集 / 光标 / 布局） |
+| **D2 单一权威源** | 触发 / 形态 / 消除只在本节详述；需求 F13 引用不重述逐字文案 |
+| **D3 计数·枚举** | 用例 8（T-AT1–T-AT8）· AC 6（AC-AT1–AC-AT6）· 实施域 6 项（5 改 + 1 新）· 文档域 2 档——声明与列表逐条一致（本节计数行同表） |
+| **D4 指针纪律** | 指针 = `文档:节`；代码锚 file:line 标 as-of |
+| **D5 冻结窗口** | 本节只**新增节** + 变更记录一行——§1–§13 零碰 |
+| **D6 回读核对** | 需求 F13 与本节落笔后回读核实；实施面验收含静态锚（AC-AT6） |
+| **D7 变更留痕** | 本档变更记录追加一行；需求档加 header 批次注 + 变更记录行 |
+| **零新依赖 / 零新定时器** | 色对 = 裸 ANSI 序列（`ansi.bg`——零依赖）；无常驻定时器新增（N9②） |
+| **多实现面纪律（双端）** | CLI 单端本批；VSC 登记（§14.9 #1/#2——不静默、不跨端追赶） |
+
+### 14.7 测试层：用例表（正常 / 边界 / 错误）
+
+| 用例 | 类别 | 输入 | 预期输出（断言） | 映射 |
+|---|---|---|---|---|
+| T-AT1 | 正常 | `attentionKind(state)` 矩阵：permission / question / awaiting（条件齐备）/ permission+processing 同真 / 平态 | `"blocked"` / `"blocked"` / `"awaiting"` / `"blocked"`（processing 豁免仅及 awaiting——F13④ 消歧锁）/ `null`（纯函数直测） | F13 |
+| T-AT2 | 正常 | `renderStatus` 两态（80 列）：awaiting vs 平态 | awaiting 输出含 `\x1b[43m` 与 `⚠ 等待你的输入`；strip-ANSI 后以 chip 开头且含常态字段；平态输出 **不含** `\x1b[43m` 且 strip-ANSI 文本无 chip（负向锁——与 N9 判定句同口径） | F13 / N9 |
+| T-AT3 | 正常 | blocked 优先级：permission 单真 / question 单真 / permission+awaiting 同真 | `⚠ 等待你的审批` / `⚠ 等待你的回答`；blocked 胜 awaiting（优先级锁） | F13 |
+| T-AT4 | 边界 | `createKeyHandler` 桩直驱：置位 awaiting → 字符键 / 方向键 / Esc | `attentionAwaiting === false` 且 render 被调（清位一次） | F13 判定句② |
+| T-AT5 | 边界 | 鼠标路径直驱（滚轮 / 点击桩）：置位 awaiting → 事件 | 清位 + render | F13 判定句② |
+| T-AT6 | 边界 | `userNeededAtTurnEnd(state, agent, skipSession)` 矩阵：正常空闲 / skipSession / suspended / _suspPending / 池 live / queue 非空 / processing | `true` / `false`×6（逐条件） | F13（置位条件） |
+| T-AT7 | 错误 | 非触发态渲染：picker / wizard / search / interruptPrompt / processing（无审批/提问） / suspended（awaiting=false） | `attentionKind → null`；渲染零注意力序列 | F13 判定句④ |
+| T-AT8 | 边界 | 静态锚：`src/tui/render-frame.mjs` / `agent-turn.mjs` 源文本 | 零新增 `setInterval`（N9②）；`attentionKind` / `userNeededAtTurnEnd` 导出在位；**置位接线锚**：`agent-turn.mjs` 含 `userNeededAtTurnEnd` 调用 + `attentionAwaiting = true` 置位（D-AT6 顶层链尾接线——机判） | N9 · D-AT6 |
+
+> 测试基建：`createKeyHandler` 桩 ctx（同 `input-lock.test.mjs` 手法）+ `renderStatus` / 纯函数直调——零 TTY、
+> 零定时器悬挂、微秒级；新档由 glob 自动发现。
+
+### 14.8 验收标准（逐条回指需求——每条可机器验证）
+
+| AC | 验收内容（机判） | 回指 |
+|---|---|---|
+| AC-AT1 | 派生确定：T-AT1 / T-AT7 绿；`attentionKind` 纯函数（无 I/O、无状态） | F13 / N9 |
+| AC-AT2 | 变色 + 文案：T-AT2 绿（色序列 + chip 逐字 + 平态负向锁：零序列 / 无 chip） | F13 / N9 |
+| AC-AT3 | 三态优先级：T-AT3 绿（blocked > awaiting；permission > question） | F13 |
+| AC-AT4 | 消除：T-AT4 / T-AT5 绿（键 / 鼠标清位 + 重绘） | F13 判定句② |
+| AC-AT5 | 置位条件：T-AT6 绿（七条件矩阵——skipSession / 挂起两态 / 池 live / 队列 / processing 全排除） | F13（置位） |
+| AC-AT6 | 零侵入 + 零回归 + 档位：T-AT8 绿（零新定时器 / 导出在位 / 置位接线锚）；`cd thincoder && node test/run-fast.mjs` 全绿（含 `input-lock.test.mjs` 既有锁档）；受影响文件 ≤ 档位帽（实测对表）；`node scripts/check-doc-width.mjs` 新增违规 0；VSC 仓零改动 | N9 |
+
+### 14.9 边界（本批不做）+ 登记（VSC 对位）
+
+**本批不做**：
+
+- 不改状态栏既有信息面与既有按键 / 模态 / 挂起语义；不做闪烁 / 系统级通知 / 终端标题改写 / 响铃
+- 不引入空闲重绘定时器；不落盘（attention 为呈现态）；不做「已读回执」持久化
+- 不做 VSC 端实现与 VSC 文档（登记见下——各端独立实现纪律）；不碰提示词 / 评审链 / 其它板块
+
+**登记（VSC 对位——后续批建议，父侧排程）**：
+
+1. **VSC 端 attention 态**：现状盘点（as-of）——`thincoder-vscode/src/extension/chat-panel.mjs:152-177`（`_setStatus` 三态：
+   idle / running / waiting）+ `:202-206`（`_refreshStatus`——权限 / question 队列非空 = waiting 优先）；
+   `permission-gate.mjs:28/58` 与 `panel-callbacks.mjs:67` 的 waiting 设置点；webview 侧状态行 = `webview/status-bar.js`
+   （`#status-line` 单 writer）。**已覆盖面**：审批 / 提问挂起已有 waiting 态（`statusBarItem.warningBackground`）——
+   与 CLI blocked 类同义。**待建面**：回合结束等待输入（idle 态细分）+ 面板内 attention 态（webview 可见形态）。
+2. **VSC 所需档 + 最小改动面（父侧排程输入）**：设计档 = `WEBVIEW（VSC 仓）`（§8.4 忙态收敛 / 状态栏——现状权威）
+   新增 attention 语义节 + 变更记录；需求面登记 = `REQUIREMENTS（VSC 仓）`；实现面（改动预估）= `chat-panel.mjs`
+   （`_setStatus` / `_refreshStatus` 增态——回合结束注意力判据）、`webview/status-bar.js` + `webview/*.css`
+   （面板 attention 渲染）、`locales/{en,zh}.json`（词键——VSC 端 i18n 硬项）、新测试档须注册 `test/files.mjs`（VSC 显式清单）。
+3. **跨端语义同源锚**：三触发态语义 / 消除语义（用户输入或提示消解）与本端一致——各端原文自持，不做 byte-identical。
+4. **`render-frame.mjs` 拆分的后续评估**：本节交付 ~409 行（>300 advisory 存量先例）；若状态栏渲染继续增厚
+   → 按 §12.7 先例评估拆出独立 `status.mjs`（本批不拆——净增 ~32 行、职责未变）。
+
+**计数（D3）**：用例 **8**（T-AT1–T-AT8）· AC **6**（AC-AT1–AC-AT6）· 实施域 **6 项**（5 改 + 1 新）· 文档域 **2 档**；需求 = F13 + N9。
 
 ## 变更记录
+
+- 2026-09-11（交付后设计刷新——第 20/28/31 批面触行）：§1 模块地图行数回写（key-handler 461 · key-modes 294 · render 285 · layout 237 · clipboard 181 · pickers 118 · wizard 242）；§2 `interruptPrompt` 形态注；§4 状态优先级行序修正（interruptPrompt 先于 picker 栈/wizard）+ 「正常输入编辑」括注补竖移/历史（第 31 批）。纯登记/措辞、零语义。
+- 2026-09-11（第 33 批·修正轮——设计评审轮次 1 后）：§14.3 负向锁补机判口径（零序列 + strip-ANSI 无 chip）· T-AT1 补「permission+processing 同真 → blocked」矩阵行 · T-AT2 / AC-AT2 负向锁同口径 · T-AT7 输入行收紧 · T-AT8 补置位接线锚（D-AT6 机判）· §14.4 行数复核（key-handler 440 → 441）。消歧与静态锚、零新语义。
+- 2026-09-11（第 28 批·修正轮——设计评审轮次 1 后）：§13.3 契约面 await 提示措辞对齐（「Promise 输入附 `await` 提示」——与 §13.2 / AC-B1-2 同款；需求档 F12 同改）。纯措辞、零语义。
+- 2026-09-11（第 33 批）：§14 新增——用户介入提醒（attention 态：触发集合清点与裁决 / CLI 整行变色 + chip 逐字 / 置位·清位契约 / 用例 T-AT1–T-AT8 / AC-AT1–AC-AT6；VSC 对位登记 §14.9）；需求 = `../requirements/TUI.md` F13 + N9；批次档 `../batches/2026-09-11-REVIEW-ATTENTION.md`。
+
+- 2026-09-11（第 28 批·输入面小修 B1——设计落档）：新增 §13（/advisor Thinking 子菜单 + `showPicker` entries 契约：根因/守卫选型/逐字契约/受影响文件/用例 T-B1-1~3/AC-B1-1~4）；需求 = `../requirements/TUI.md` F12；批次档 `../batches/2026-09-11-INPUT-FIXES-SMALL.md`。
+
+- 2026-09-11（第 20 批·修正轮——设计评审轮次 1 后）：#1–#7 逐条落档（#8 = 非缺陷，随交付链）——#1 交付自查时序归位（coder 报实测行数 / 设计者收口回写 §1 地图——§12.7 改写）·
+  #2 AC-A4-1 落显式用例 10（文档面断言——§12.8 / §12.9）· #4 警示口径收窄（不再最先牺牲——§12.5）· #5 `cmd-advisor.mjs` 面归属澄清（§12.1）·
+  #6 宽度预算判定式为准（§12.5——需求档 N7 同改）· #7 拆分评审补 `test/eng-designer-role.test.mjs` 半行（§12.7）；#3 = 父侧确认（零动作）。
+
+- 2026-09-11（第 20 批·TUI 面收口）：**设计落档**——§12 新增（picker 附注渲染 + 三选择面分工契约；
+  设计与测试并档）+ §9 指针 + §11 未决承接更新（①② 收口/裁定）；批次档 `../batches/2026-09-11-TUI-SELECTION.md`。
+
+- 2026-09-11（第 14 批·设计落档）：收尾批——§1 模块地图**全表行数回写**（2026-09-11 实测；口径与既往一致）
+  + 表头口径注 + 未入表三档如实注 + `pickers.mjs` 行迁移注；配套（T75/T76 宿主 + 行号指针修正）见
+  `ENGINEERING-MODE.md` §2.27。
 
 - 2026-09-11：SUBAGENT-TAIL 批（子代理内嵌活动并入外层流——数据流合并 / 取代 R23 子块小节 /
   单环 trim / 省略计数真值修复）——**已交付并验收**（6 源 + 新测试档 12 用例全绿、全量 fail 0、

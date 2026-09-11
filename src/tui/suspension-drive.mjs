@@ -22,12 +22,12 @@ import { C } from "./ansi.mjs"
 import { getAsyncPool, parkAsyncPending } from "../agent-tools/async-settle.mjs"
 
 // INPUT-LOCK-ASYNC（C'——2026-09-09，本档 INPUT-LOCK-ASYNC.md）：R15 排队
-// 用户指令合并（§24 D-24c——攒批计划/合并文案/上限常量）整批废弃
+// 用户指令合并（§11.3 D-24c——攒批计划/合并文案/上限常量）整批废弃
 // ——busy 提交吞 + pendingInput 单槽化（至多一条待交接——单消息逐发不攒批）。
 // 废弃记录见 AGENT-LOOP.md §11.3。
 
 /** 后台池计数（LOGGING susp/digest 事件字段——pendingN/poolN）。
- *  poolN = _asyncSubagents + _asyncAdvisors（§24 D-24b advisor 池同面板计数——queued
+ *  poolN = _asyncSubagents + _asyncAdvisors（§11.2 D-24b advisor 池同面板计数——queued
  *  条目同样在 map 内——2026-09-03 code review #2：不再 +queue.length 双计）。
  *  R17（§25 D-R17a/b）：pendingN = pending 单容器 `_pendingAsyncResults` 条数（
  *  ASYNC-RESULT-CONTAINER.md D2——四族统一停靠——digest 驱动判据同单容器）。 */
@@ -74,7 +74,7 @@ export function allPendingEntries(agent) {
 /** 后台池存活判据（D-S2/F5 口径）：running/queued 子代理或后台评审，或已 settle 未注入结果
  *  （pending 单容器非空 = D-S3 "未注入"），或 running consult 会话（会诊跨回合——
  *  §25 D-R17a 挂起活度钩子——consult 启动回合尾即入挂起态）。回合尾与每次轮末都用它
- *  评估退出。§24 D-24b：_asyncAdvisors（后台评审池）与子代理池同判——评审飞行中挂起
+ *  评估退出。§11.2 D-24b：_asyncAdvisors（后台评审池）与子代理池同判——评审飞行中挂起
  *  会话必须存活。 */
 export function poolLive(agent) {
   const map = agent._asyncSubagents
@@ -130,7 +130,7 @@ function waitForSettleOrWake(agent, state) {
 }
 
 /** 后台模式状态行文本（D-S8；17.5.4 #6 顺手对齐）："后台 N 子代理运行中 · M 完成待消化"
- *  ——"运行中" = running + queued（含后台评审——§24 D-24b 同面板计数）+ running consult
+ *  ——"运行中" = running + queued（含后台评审——§11.2 D-24b 同面板计数）+ running consult
  *  children（R17——会诊跨回合）；"完成待消化" = pending 任一族移交项 + §17.5 回合尾留池
  *  的 settled 未消费项（挂起会话 sweep 前的可见窗口）。 */
 function backgroundStatusText(agent) {

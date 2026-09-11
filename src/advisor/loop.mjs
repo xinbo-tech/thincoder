@@ -15,7 +15,7 @@ import { truncateAdvisorResult } from "./truncate.mjs"
 import { batchSegmentTool } from "../agent-tools/batch-segment.mjs"
 import {
   estimateTokens, compactMessages, shouldBudgetNudge, budgetNudgeText, timeoutTail, renderTimeline,
-  MAX_ADVISOR_TURNS, MAX_CONTEXT_TOKENS, TOOL_TIMEOUT_MS, REVIEW_TIMEOUT_MS, MAX_RESULT_CHARS,
+  MAX_ADVISOR_TURNS, advisorContextBudget, TOOL_TIMEOUT_MS, REVIEW_TIMEOUT_MS, MAX_RESULT_CHARS,
   ADVISOR_THINKING_PLACEHOLDER,
 } from "./compaction.mjs"
 
@@ -86,6 +86,9 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   let reviewTextProduced = false
   let budgetNudged = false
   const startTime = now()
+  // 第 25 批（§16.3）：上下文预算跟随评审模型窗口——`providerSpec`（模型规格表 × provider 级
+  // context 覆盖）派生；函数体内、while 轮次外一次性（provider 全场不变），两档消费见下守卫。
+  const budget = advisorContextBudget(provider)
 
   while (true) {
     // Interrupted (Ctrl+I) — stop immediately instead of spinning a fresh uncancellable signal
@@ -115,10 +118,10 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     
     // Check context window and compact if needed
     const currentTokens = estimateTokens(messages)
-    if (currentTokens > MAX_CONTEXT_TOKENS * 0.8) {
+    if (currentTokens > budget.compactAt) {
       onText(`\n[Context compacted: ${currentTokens} tokens → reducing to fit window]\n`)
       compactMessages(messages, pinned)
-      if (estimateTokens(messages) > MAX_CONTEXT_TOKENS) {
+      if (estimateTokens(messages) > budget.limit) {
         // Report the POST-compaction count — the pre-compaction currentTokens
         // is stale by the time compaction has run.
         return renderTimeline(timeline, `Advisor: context window limit reached (${estimateTokens(messages)} tokens). Review incomplete — too many tool calls. Try a narrower scope.`)

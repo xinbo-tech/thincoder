@@ -8,14 +8,20 @@ import { segmentCJK, CODE_EXTS, DOC_EXTS, SKIP_DIRS, BIG_FILE_LINES } from "./sc
 export function detectLanguage(filename) {
   const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase()
   const map = {
-    ".mjs": "javascript", ".js": "javascript", ".jsx": "jsx", ".ts": "typescript", ".tsx": "tsx",
+    ".mjs": "javascript", ".js": "javascript", ".cjs": "javascript", ".jsx": "jsx",
+    ".ts": "typescript", ".tsx": "tsx", ".mts": "typescript", ".cts": "typescript",
     ".py": "python", ".rs": "rust", ".go": "go", ".java": "java",
     ".c": "c", ".h": "c", ".cpp": "cpp", ".hpp": "cpp",
-    ".rb": "ruby", ".swift": "swift", ".kt": "kotlin",
+    ".rb": "ruby", ".swift": "swift", ".kt": "kotlin", ".dart": "dart", ".lua": "lua",
+    ".cs": "csharp", ".fs": "fsharp", ".fsx": "fsharp",
+    ".clj": "clojure", ".cljs": "clojure", ".ex": "elixir", ".exs": "elixir",
+    ".erl": "erlang", ".hrl": "erlang", ".scala": "scala", ".groovy": "groovy",
+    ".pl": "perl", ".pm": "perl", ".r": "r", ".jl": "julia", ".zig": "zig",
+    ".ps1": "powershell", ".proto": "protobuf", ".graphql": "graphql", ".tf": "terraform", ".hcl": "hcl",
     ".sh": "bash", ".bash": "bash", ".sql": "sql",
     ".yaml": "yaml", ".yml": "yaml", ".toml": "toml", ".json": "json",
     ".css": "css", ".html": "html", ".vue": "vue", ".svelte": "svelte",
-    ".md": "markdown", ".mdc": "markdown",
+    ".md": "markdown", ".mdc": "markdown", ".mdx": "markdown", ".org": "org", ".wiki": "wiki", ".tex": "tex",
   }
   return map[ext] ?? ext.slice(1)
 }

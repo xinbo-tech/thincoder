@@ -250,14 +250,14 @@ export async function prepareRun(agent, input, callbacks, {
         props.action = {
           type: "string",
           enum: ["spawn"],
-          description: `spawn only — the ${engChildRole}'s internal spawn channel is read-only (escalate/check/status are refused; escalate spawns a coder+WRITE child and check/status have no async pool in a child context).`,
+          description: `spawn only — the ${engChildRole}'s internal spawn channel is read-only (escalate/status/cancel/panel/consume-design/observe/send are refused: escalate spawns a coder+WRITE child, and the pool/panel actions have no async pool or panel mirror in a child context).`,
         }
         return {
           ...subagentTool,
           name: "subagent",
           description: designer
-            ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY (no async) and action:'spawn' ONLY — the survey channel is read-only; escalate/check/status are not available (AGENT-LOOP.md §19). Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
-            : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/check/status are not available (AGENT-LOOP.md §19). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
+            ? "Spawn a read-only `explore` sub-agent to SURVEY the current state for the design (ENGINEERING-MODE.md §2.15 D): it reads code / docs / existing designs and reports evidence with file:line. BLOCKING ONLY (no async) and action:'spawn' ONLY — the survey channel is read-only; escalate/status/cancel/panel/consume-design/observe/send are not available (AGENT-LOOP.md §19). Survey budget: ≤6 explore spawns per batch — the main agent's survey result is reference only; do your own."
+            : "Spawn a read-only `explore` sub-agent to AUDIT your delivery against the design (AGENT-LOOP.md §18 D-E2 ③): it compares the delivered code with the design for divergence — partially implemented acceptance criteria, silent simplifications, doc drift, changes outside the approved file list. BLOCKING ONLY (no async — the audit report decides your next protocol step). action:'spawn' ONLY — the audit channel is a read-only spawn; escalate/status/cancel/panel/consume-design/observe/send are not available (AGENT-LOOP.md §19). The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched; never hand the audit a self-written file list (a self-report could omit exactly the out-of-scope file it must catch).",
           parameters: { ...subagentTool.parameters, properties: props },
         }
       })()

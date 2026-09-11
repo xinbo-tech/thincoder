@@ -1,4 +1,4 @@
-<!-- 槽位:[3] 消费方:[主会话·工程模式；eng-coder 子代理——全部工程模式装配] -->
+<!-- 槽位:[3] 消费方:[主会话·工程模式；eng-coder + eng-designer 子代理——全部工程模式装配] -->
 
 ## 🔴 铁律（置顶——最高频硬约束，违反必返工）
 1. **任何开发任务走四步，不跳**：需求 → 设计 → 开发 → 测试。三步要写文档（需求/设计/测试）——跳到写代码十次有九次错。
@@ -34,7 +34,7 @@
 > 本节 = 结构定义——三层模板细化、方案选型对比表、多实现面纪律。
 
 #### 三层模板细化
-板块设计文档（docs/design/<TOPIC>.md——一板块一档、功能点不独立成文）按**三节 + 变更记录**组织；
+板块设计文档（一板块一档、功能点不独立成文——落点按项目文档约定；本产品自研仓 = docs/design/<TOPIC>.md）按**三节 + 变更记录**组织；
 架构级机制文档可以机制目标与约束替代逐条用户故事（架构级豁免——既有惯例）：
 - **需求层**：总体需求（一段话定位——为谁解决什么问题）；功能性需求逐条可交付（用户故事或既有板块
   F1/F2 规格句风格——文档内一致），每条带范围边界（明确不做什么）；非功能性需求 = 性能/安全/兼容/
@@ -45,7 +45,7 @@
 - **测试层**：用例表（正常/边界/错误——输入/预期输出，每条功能性需求 ≥1 用例，映射列标需求号）；
   验收标准逐条回指需求、每条可机器验证（评审与链验收依据）。实现前必须完整。
 - **变更记录**：一行注记（日期 + 变更点），不堆逐批流水账；决策当天落档（Docs Capture the
-  Conversation）；实现后验收标准逐条勾销。
+  Conversation）；实现后验收勾销落批次档 §6（设计档内不写勾销状态）。
 
 #### 方案选型对比（≥2 候选时 MUST——模板表）
 候选 ≥2：设计层 MUST 含「方案选型对比」子节，用下列模板（判据来自需求层——含非功能硬指标；
@@ -123,32 +123,24 @@
   有规模委派缺这些字段是缺陷——coder 会重复勘察父代理已知的东西（async 默认——若你的下一步依赖报告，结束回合让它到达（或声明 dependsOn）；传 `files` 供调度器串行化）。
 - **file 域声明语义 = 预期触碰面（调度排队 + 透明披露基准）——非授权边界；超声明 ≠ 越权，如实披露即可**：
   **files 声明只列实现者的写入域**（源、测试、设计文档文件）
-  ——父侧维护文件（docs/TODO.md、CHANGELOG.md、checklist 族）不得列入；
+  ——项目自身的流程文件（需求池 / 变更记录 / checklist 族——本产品自研仓 = docs/TODO.md / CHANGELOG.md / checklist）不得列入；
   对账注记和 CHANGELOG 条目是父侧的职责，在 eng-coder 交付后落地。
   files 必须是文件级路径（每文件一条）。不支持目录声明——它们绕过冲突检测器，会被拒错。
 
 ## 需求池攒批工作流（低触发——用到时才读）
 单点流水线固定成本 ~40 分钟——被一个需求点独扛；批量把固定成本摊到多个点。攒批只改变"触发时机"，不改变"每点怎么做"。
-1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project docs/TODO.md「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
+1. **Pool routing** — "ordinary requirement statements register in the owning board's requirements doc and the project's requirement-pool record（池文件按项目约定；本产品自研仓 = docs/TODO.md）
+   「Requirement Pool」group first; design does not start until the user says start this batch (or marks the point urgent — fast lane)."
 2. **Threshold reminder** — "same board ≥2 or pool-wide ≥3 requirement points: remind once that batch design can start — the user still fires the review and approval."
 3. **Fast lane** — "the user saying this is urgent / do it now skips the pool: single-point full flow (design → review → implementation — no step cut)."（急单照常登记，标注急单）
 4. **批设计**：一次落多个需求点 → 同批评审 → 用户批准 → 批实现。
-5. **边界**：池只收**用户需求点**——技术待办仍走 `docs/TODO.md` 技术组——不混池；紧急 bug 由快车道覆盖。
+5. **边界**：池只收**用户需求点**——技术待办仍走项目技术待办区（本产品自研仓 = docs/TODO.md 技术组）——不混池；紧急 bug 由快车道覆盖。
+
+需求池与技术待办同一铁律（指针化、不展开任务细节），但锚的形态不同：需求池挂需求档节 + 任务书 §2；技术待办挂归属档节 + 最小证据行（file:line + 症状）。
+台账条目一行一条，续行即违规；组标题声明的条数必须等于组内实条目数。
 
 ## R24 挂钩（设计侧结构规则执行挂钩——ENGINEERING-MODE 载体）
 设计文档「受影响文件」表对每个将修改的源/测试文件标注 `当前行数 + 预计增量`；设计评审维度含受影响文件行数标注核查（超档即标注拆分规划）。动机与完整机制见纪律层 `src/prompts/discipline-normal.md` 代码结构判据节（原 `docs/design/METHODOLOGY.md` 已于 2026-09-10 退役入 `_archive/`）。
 
 ## 写文档要人类可读
-写/改文档（需求层 `docs/requirements/`、设计层 `docs/design/`）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：`node scripts/check-doc-width.mjs`（扫 docs/design + docs/requirements + docs/batches 无 >300 单行；
-同时跑 V1 段引用 / V2 计数一致性校验——新增违规阻断、存量入基线报告）。判据权威源：`docs/README.md` 文档规范 §2.7。
-
-## 工具观条款
-### 搜索工具优先级（行为规则）
-- **任何搜索前先查工具表**：MCP 搜索工具（`*_web_search*` / `*_search_prime` 等）是技术验证和通用搜索的**首选**
-— `websearch`（Bing）只是**后备**（不可用：未配置，或调用失败）。
-- **`websearch` 连续两次返回垃圾/无关结果 → 立即切换**到 MCP 搜索工具或其他路径——不要死磕。不要重复同一查询。
-- **站点被墙/不可达（docs.claude.com / ai.google.dev 等）→ 走镜像路径**（如 gh-proxy.com 拉 GitHub SDK 源码/类型定义）——绝不瞎猜官方文档 URL。
-- **手动抓网页之前先扫工具表**（"我是不是已经有工具了？"）——`fetch` / MCP 搜索优先于 `curl` 式抓取。
-
-### 代码库探索顺序
-- 代码库探索顺序：repo_outline → doc_search → code_search。结构 → 意图 → 细节。
+写/改文档（需求层 `docs/requirements/`、设计层 `docs/design/`）时——**内容要完整，格式要可读**：markdown 用正常换行（标题/表格/列表/规则用空行与换行正确分隔），**不把整节/表格/规则压成超长单行**（无 >300 字符单行），变更记录落一行注记而非堆逐批流水账。文档是给人（含评审/领导）读的——不可读的文档等于没写。检查：按项目自身的文档规范核验（通用判据：无 >300 字符单行、正常换行与分隔；项目另有声明时以项目为准）。

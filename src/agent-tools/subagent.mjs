@@ -21,6 +21,7 @@
 
 import { gateEngCoderSpawn, TURN_CAP_MARK, STOPPED_MARK, emitNestedChildEvent } from "../agent/spawn-child.mjs"
 import { logEvent, errText } from "../log.mjs"
+import { abortError, deathLine } from "../abort-provenance.mjs"
 import {
   runChildPipeline, executeCancelAction, enqueueAsk, mergeChildMutations,
 } from "./subagent-async.mjs"
@@ -65,8 +66,9 @@ export function classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err) {
 export function armSyncChildAbort(parent, key, baseSignal) {
   const ctrl = new AbortController()
   if (baseSignal) {
-    if (baseSignal.aborted) ctrl.abort()
-    else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason（下游可判定「谁杀的」）
+    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
+    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
   const registry = (parent._syncChildAborts ??= new Map())
   registry.set(key, { ctrl, stopped: false })
@@ -129,7 +131,7 @@ export const subagentTool = {
     "- eng-coder — engineering-mode coder (available only in engineering mode, replacing coder). Same full toolset as coder plus the design-driven methodology overlay; REQUIRES a valid designToken arg obtained from a passed advisor(type='design') review. The advisor's Approved reply also echoes a designId — pass it as the designId arg: required to pick between designs when several approved reviews are active, optional for a single design. The delivery report echoes the designId back for the audit fix round. ALSO REQUIRES a batchDoc arg — the batch record path (docs/batches/<batch>-<topic>.md), the batch §2 task book this spawn implements: a spawn without it, or with a path that does not resolve to a readable file, is mechanically refused.\n" +
     "- eng-designer — engineering-mode design writer (available only in engineering mode): the SOLE author of the requirements + design documents and of the batch record §2 (the batch task book) — revisions included. Writes no implementation code, does not edit prompt files, does not fire reviews, and needs NO designToken (its authorization is the confirmed requirements). It surveys on its own, but may only spawn read-only 'explore' children (sync, ≤6 per batch). ALSO REQUIRES a batchDoc arg — the batch record path (docs/batches/<batch>-<topic>.md); the same mechanical gate as eng-coder: a spawn without it, or with a path that does not resolve to a readable file, is mechanically refused.\n" +
     "Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-designer/eng-coder. The schema enum reflects the active mode.\n\n" +
-    "Async spawn (AGENT-LOOP.md §15/§18/§24): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. The child's report is delivered to you automatically — there is no fetch action; use action:'status' only to see progress, never to wait for the result. Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule). Eng-coder's delivery protocol runs fully inside the child (implementation → audit → self-fix → advisor re-review → converged delivery). Async spawns are pooled per role domain (AGENT-LOOP.md §24): at most 4 concurrent eng-coders and 4 concurrent other-role spawns by default (agent.poolLimits overrides both) — a full domain queues further spawns with a position while the other domain keeps starting (domains never block each other), and top-level only. After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result.\n\n" +
+    "Async spawn (AGENT-LOOP.md §15/§18/§11.1): pass async:true to spawn WITHOUT waiting — returns {id, role, status:\"running\"} immediately so you can keep working in your own turn (read/check files, run other tools) while the child runs in the background. The child's report is delivered to you automatically — there is no fetch action; use action:'status' only to see progress, never to wait for the result. Top-level spawns are ALWAYS async — never pass `async:false` at depth-0 (the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it). Inside subagents (depth>0) spawns are always synchronous (platform rule). Eng-coder's delivery protocol runs fully inside the child (implementation → audit → self-fix → advisor re-review → converged delivery). Async spawns are pooled per role domain (AGENT-LOOP.md §11.1): at most 4 concurrent eng-coders and 4 concurrent other-role spawns by default (agent.poolLimits overrides both) — a full domain queues further spawns with a position while the other domain keeps starting (domains never block each other), and top-level only. After an async spawn the turn winds down normally — nothing expects you to wait for it: the child runs in the background and its report is delivered to you automatically — before your next turn, or digested in the suspension session — so end the turn; do not poll or wait for the result.\n\n" +
     "Task scheduling (AGENT-LOOP.md §20): declare the scheduling metadata to let the SCHEDULER order your spawns — files: the file paths this task will modify, dependsOn: ids from prior async spawn returns whose outcome this task needs. Overlapping-file tasks are serialized and dependent tasks are started in order automatically: a spawn that would conflict, or whose dependencies have not settled, queues instead of running ({id, status:\"queued\", position, reason} — the waiting task auto-starts when the conflict clears / its dependency settles; cancel a queued task to drop it). A spawn whose dependency was cancelled or failed stays queued and marked \"dependency cancelled\" until you decide (cancel it) — in an AUTO session it starts by itself. Referencing an unknown id errors; an id already consumed (auto-delivered by the auto channel) counts as satisfied. Omit both parameters for the plain immediate spawn (no scheduler involvement).\n\n" +
     "Writing the prompt:\n" +
     "- The sub-agent starts with zero context — it has not seen this conversation. Brief it like a colleague who just walked into the room: state the goal, list what you already know, hand over the specifics.\n" +
@@ -287,12 +289,12 @@ export const subagentTool = {
         // ContinueError——原样上抛 → 阻塞 catch 三分支②折叠（"child 随即在 abort 检出点
         // 解绕折叠"——AGENT-LOOP §7.2 机制文）。abort 恒已在途（stopped 只由
         // cancelSyncChild 与 ctrl.abort 同时置位）——信号语义真实。
-        if (parent._syncChildAborts?.get(key)?.stopped) throw new DOMException("Aborted", "AbortError")
+        if (parent._syncChildAborts?.get(key)?.stopped) throw abortError(ctrl.signal, "settle", "sync-stopped")
         const go = await ctx.onPermissionRequest("continue", { turns: e.turn, agent: key })
         // ⏹ deny（denyModalForOwner resolve(false)）与用户按 n 同形——旗标区分：
         // stopped → 同上抛（折叠——abort 先于 deny 已在途）；普通 n → false 走 decline
         // （现状——cap partial 报告）。
-        if (parent._syncChildAborts?.get(key)?.stopped) throw new DOMException("Aborted", "AbortError")
+        if (parent._syncChildAborts?.get(key)?.stopped) throw abortError(ctrl.signal, "settle", "sync-stopped")
         return go
       }
       return enqueueAsk(parent, "_permQueue", ask)
@@ -341,7 +343,7 @@ export const subagentTool = {
         // §27 R23 error-run 映射（实现批补一行）：run 错误（非 abort）→ 同样发 stopped
         // ——内层子块定格不悬空（T-R23a.3——工具错/运行错误路径）。
         emitNestedChildEvent(ctx, relayPrefix, "stopped")
-        logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(e, 200) })
+        logEvent("child:error", { role, id: child._logId, ms: Date.now() - blockT0, err: errText(deathLine(e, ctrl?.signal), 200) })
         throw e
       }
       // ② targeted 折叠（err AbortError && 自属 ctrl aborted && 非整回合停）：merge +
@@ -387,7 +389,7 @@ export const subagentTool = {
 // （maybeRefillAsync——execute 不再直接使用池常量）。
 // 2026-09-05 拆分轮: maybeRefillAsync 随 §20 调度器独立（./subagent-scheduler.mjs）——
 // 再导出源改写，消费面（agent.mjs 动态 import 等）不变。
-// 2026-09-06 §24 拆分轮: ASYNC_SUBAGENT_LIMIT 导出 → ASYNC_POOL_LIMITS（分域常量——
+// 2026-09-06 §11.1 拆分轮: ASYNC_SUBAGENT_LIMIT 导出 → ASYNC_POOL_LIMITS（分域常量——
 // 定义在 subagent-async.mjs——re-export 面同步）。
 export {
   ASYNC_POOL_LIMITS,

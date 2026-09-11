@@ -5,7 +5,7 @@
  * childConfig 拷贝父 config 带全量，child 无 agent.providers）→ [agent.provider] 遗留。
  * .length 空数组守卫：providers=[] 不得静默跳过列表查找（?? 遇 [] 不落链）。错配场景
  * （advisor.provider ≠ child 实际 provider）从 providersList 正确解析——无 throw 无 warn。
- * 纯函数直驱——import 无真实 config 读（同 advisor-description 先例）。
+ * 纯函数直驱——import 无真实 config 读。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

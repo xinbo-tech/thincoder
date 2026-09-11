@@ -4,12 +4,29 @@
 import { readFile, stat } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
-import { CODE_EXTS, DOC_EXTS, SKIP_DIRS, MAX_CODE_FILE_BYTES, MAX_DOC_FILE_BYTES } from "./schema.mjs"
+import { CODE_EXTS, DOC_EXTS, MAX_CODE_FILE_BYTES, MAX_DOC_FILE_BYTES } from "./schema.mjs"
 import { buildFtsQuery, ensureEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { detectLanguage, _upsertCodeFile, _upsertDocFile, yieldTick } from "./code-index.mjs"
+import { walkProjectFiles, isSkippedRelPath, extensionOf, createUnlistedTally, MAX_WALK_FILES } from "./file-walk.mjs"
+import { loadConventions } from "../conventions.mjs"
+import { logEvent } from "../log.mjs"
 
 const DIFF_FULL_SYNC_THRESHOLD = 200
 const CODE_EMBED_BATCH = 64
+
+/**
+ * Index extension sets = built-in tables ∪ project declaration
+ * (`.thincoder/conventions.json` → index.codeExtensions / index.docExtensions;
+ * PORTABILITY PO-9/§3.7 — a project may declare extensions this product does not
+ * ship a default for). Declaration only ADDS (union), never removes.
+ */
+export function indexExtensions(dir) {
+  const conv = loadConventions(dir)
+  return {
+    code: new Set([...CODE_EXTS, ...conv.index.codeExtensions]),
+    doc: new Set([...DOC_EXTS, ...conv.index.docExtensions]),
+  }
+}
 
 /**
  * git-driven incremental indexing: use git diff to find files changed since
@@ -19,6 +36,7 @@ const CODE_EMBED_BATCH = 64
  */
 export async function gitSync(memory, dir, { onProgress } = {}) {
   const { execFile: _execFile } = await import("node:child_process")
+  const { code: codeExts, doc: docExts } = indexExtensions(dir)
   const gitRun = (args) => new Promise((resolve, reject) => {
     _execFile("git", args, { cwd: dir, encoding: "utf8", timeout: 10000, windowsHide: true }, (err, stdout) => {
       if (err) reject(err); else resolve(stdout)
@@ -55,17 +73,16 @@ export async function gitSync(memory, dir, { onProgress } = {}) {
   for (let i = 0; i < diffOut.length; i++) {
     const rel = diffOut[i].replaceAll("\\", "/")
     const abs = join(dir, rel)
-    const ext = rel.slice(rel.lastIndexOf(".")).toLowerCase()
+    const ext = extensionOf(rel)
 
-    const pathDirs = rel.split("/")
-    if (pathDirs.some((d) => SKIP_DIRS.has(d) || d.startsWith("."))) continue
+    if (isSkippedRelPath(rel)) continue
 
-    if (!CODE_EXTS.has(ext) && !DOC_EXTS.has(ext)) { skipped++; continue }
+    if (!codeExts.has(ext) && !docExts.has(ext)) { skipped++; continue }
 
     try {
       const text = await readFile(abs, "utf8")
       const lines = text.split("\n")
-      if (CODE_EXTS.has(ext)) {
+      if (codeExts.has(ext)) {
         const lang = detectLanguage(abs)
         let mtimeMs = 0
         try { mtimeMs = Math.floor((await stat(abs)).mtimeMs) } catch { /* new file */ }
@@ -79,7 +96,7 @@ export async function gitSync(memory, dir, { onProgress } = {}) {
     } catch (e) {
       const isDeleted = e.code === "ENOENT"
       if (isDeleted) {
-        if (CODE_EXTS.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(dir, rel)
+        if (codeExts.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(dir, rel)
         else memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(dir, rel)
         removed++
       } else {
@@ -104,16 +121,27 @@ export async function gitSync(memory, dir, { onProgress } = {}) {
 
 /**
  * List project files matching the given extensions.
- * Only indexes git repos — if dir isn't inside a git worktree, returns [].
- * Uses `git ls-files --cached --others --exclude-standard` to get the file list
- * (tracked + untracked-not-ignored, respecting .gitignore).
- * Returns an array of { abs, rel } pairs (abs = full path, rel = path relative to dir).
+ * Preferred source = git (`git ls-files --cached --others --exclude-standard`:
+ * tracked + untracked-not-ignored, .gitignore respected). Projects WITHOUT git
+ * fall back to a filesystem walk (PORTABILITY FR15/P8) — before, the index was
+ * silently empty there. The walk cannot honour .gitignore (no git → no such
+ * concept) and skips the shared SKIP_DIRS/dot-directory set instead.
+ * Returns { entries, unlisted }: `entries` = { abs, rel } pairs (rel relative to
+ * dir); `unlisted` = files whose extension is in NO index list (count + sample),
+ * the visible signal behind "my .xyz files are not searchable" (PORTABILITY PO-9).
+ * `truncated` = the non-git walk hit its file cap (capped trees are logged, never
+ * silently indexed-partial). opts.maxFiles = the walk cap (test seam).
  */
-export async function listProjectFiles(dir, exts) {
+export async function listProjectFiles(dir, exts, { maxFiles } = {}) {
   const { execFile: _execFile } = await import("node:child_process")
   const { join: joinPath } = await import("node:path")
+  const { code, doc } = indexExtensions(dir)
+  const tally = createUnlistedTally(new Set([...code, ...doc]))
 
-  // Only index git repos — if this isn't one, return empty
+  const files = []
+  const finish = (truncated = false) => ({ entries: files, unlisted: tally.result(), truncated })
+
+  // Git listing when available; a non-git project falls through to the walk.
   let gitTop
   try {
     gitTop = (await new Promise((resolve, reject) => {
@@ -121,10 +149,17 @@ export async function listProjectFiles(dir, exts) {
         (err, stdout) => { if (err) reject(err); else resolve(stdout.trim()) })
     })).replace(/\\/g, "/")
   } catch {
-    return [] // not a git repo → nothing to index
+    // Not a git repo → filesystem walk (FR15: the index must still be usable).
+    const walked = await walkProjectFiles(dir, exts, { knownExts: new Set([...code, ...doc]), ...(maxFiles !== undefined ? { maxFiles } : {}) })
+    files.push(...walked.files)
+    // The walk's cap must stay visible end-to-end (file-walk.mjs: "never silently
+    // dropped") — a capped listing says so in the log, not only in a discarded flag.
+    if (walked.truncated) {
+      logEvent("index:truncated", { dir, files: walked.files.length, maxFiles: maxFiles ?? MAX_WALK_FILES })
+    }
+    return { entries: files, unlisted: walked.unlisted, truncated: walked.truncated }
   }
 
-  const files = []
   try {
     const raw = await new Promise((resolve, reject) => {
       _execFile("git", ["ls-files", "--cached", "--others", "--exclude-standard"],
@@ -134,16 +169,15 @@ export async function listProjectFiles(dir, exts) {
     for (const line of raw.trim().split("\n")) {
       const p = line.trim()
       if (!p) continue
-      const ext = p.slice(p.lastIndexOf(".")).toLowerCase()
-      if (!exts.has(ext)) continue
-      const abs = joinPath(dir, p)
       const rel = p.replace(/\\/g, "/")
-      if (rel.split("/").some((seg) => SKIP_DIRS.has(seg) || seg.startsWith("."))) continue
-      files.push({ abs, rel })
+      if (isSkippedRelPath(rel)) continue
+      const ext = extensionOf(rel)
+      if (!ext || !exts.has(ext)) { tally.note(rel); continue }
+      files.push({ abs: joinPath(dir, rel), rel })
     }
   } catch { /* ls-files failed */ }
 
-  return files
+  return finish()
 }
 
 
@@ -152,7 +186,8 @@ export async function listProjectFiles(dir, exts) {
  * Incremental by mtime — only rebuilds chunks for files that have changed.
  */
 export async function codeSync(memory, dir, { onProgress } = {}) {
-  const entries = await listProjectFiles(dir, CODE_EXTS)
+  const { code: exts } = indexExtensions(dir)
+  const { entries, unlisted } = await listProjectFiles(dir, exts)
   const files = [] // { abs, rel, mtimeMs }
   let overSizeSkipped = 0
   for (const { abs, rel } of entries) {
@@ -206,7 +241,10 @@ export async function codeSync(memory, dir, { onProgress } = {}) {
 
   onProgress?.({ phase: "done", total: files.length, updated, removed, skipped, failed, overSizeSkipped })
   markIndexedCommit(memory, dir)
-  return { updated, removed, skipped, failed, errors, total: files.length, overSizeSkipped }
+  if (unlisted.count > 0) {
+    logEvent("index:unlisted", { dir, kind: "code", count: unlisted.count, exts: unlisted.exts.map((e) => e.ext) })
+  }
+  return { updated, removed, skipped, failed, errors, total: files.length, overSizeSkipped, unlistedExts: unlisted }
 }
 
 /** Record current HEAD as the index anchor (gitSync incremental diff baseline); silently skip non-git repos */
@@ -338,32 +376,33 @@ export function codeSearchTool(memory) {
  * Single-file incremental reindex: called after write/edit/delete, only rebuilds this one path.
  */
 export async function reindexFile(memory, cwd, absPath) {
-  const ext = absPath.slice(absPath.lastIndexOf(".")).toLowerCase()
+  const ext = extensionOf(absPath)
   const rel = relative(cwd, absPath).replaceAll("\\", "/")
   if (rel === ".." || rel.startsWith("../")) return
-  const dirs = rel.split("/").slice(0, -1)
-  if (dirs.some((d) => SKIP_DIRS.has(d) || d.startsWith("."))) return
+  if (isSkippedRelPath(rel)) return
+  // Declared extensions count for the single-file path too (union with built-ins).
+  const { code: codeExts, doc: docExts } = indexExtensions(cwd)
 
   // skip oversized files (minified bundles, test fixtures, generated code)
-  const maxBytes = CODE_EXTS.has(ext) ? MAX_CODE_FILE_BYTES : DOC_EXTS.has(ext) ? MAX_DOC_FILE_BYTES : 0
+  const maxBytes = codeExts.has(ext) ? MAX_CODE_FILE_BYTES : docExts.has(ext) ? MAX_DOC_FILE_BYTES : 0
   if (maxBytes > 0) {
     try { const st = await stat(absPath); if (st.size > maxBytes) return } catch { /* can't stat, proceed */ }
   }
 
   let text
   try { text = await readFile(absPath, "utf8") } catch {
-    if (CODE_EXTS.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(cwd, rel)
-    else if (DOC_EXTS.has(ext)) memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(cwd, rel)
+    if (codeExts.has(ext)) memory.db.prepare(`DELETE FROM code_chunks WHERE origin = ? AND path = ?`).run(cwd, rel)
+    else if (docExts.has(ext)) memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(cwd, rel)
     return
   }
   const lines = text.split("\n")
 
-  if (CODE_EXTS.has(ext)) {
+  if (codeExts.has(ext)) {
     const lang = detectLanguage(absPath)
     let mtimeMs = 0
     try { mtimeMs = Math.floor((await stat(absPath)).mtimeMs) } catch { /* new file */ }
     _upsertCodeFile(memory, cwd, rel, lines, lang, mtimeMs)
-  } else if (DOC_EXTS.has(ext)) {
+  } else if (docExts.has(ext)) {
     let mtimeMs = 0
     try { mtimeMs = Math.floor((await stat(absPath)).mtimeMs) } catch { /* new file */ }
     _upsertDocFile(memory, cwd, rel, lines, mtimeMs)

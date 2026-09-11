@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process"
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { createAgent } from "../agent.mjs"
 import { loadConfig, configDir } from "../config.mjs"
 import { createMemory, memoryTools, syncDir, codeSearchTool, docSearchTool } from "../memory.mjs"
@@ -10,8 +10,18 @@ import { discoverRules } from "../rules.mjs"
 // R10 L2（MULTI-INSTANCE-COLLAB §2a.4 D-L2b）：peer_instances 只读工具——挂感知模块导出
 import { peerInstancesTool } from "../peer-instances.mjs"
 
+/** 第 27 批 §12.3⑤（R-A1.1）：装配期工具剔除——按 `name` 过滤的纯函数（机验锚）。
+ *  恒等语义：空列表 / 零命中 → 原数组原样返回（零意外剔除——T15）。
+ *  ACP 通道经 `assembleAgent({ excludeTools })` 传入（acp.mjs `ACP_EXCLUDED_TOOLS`）。 */
+export function applyToolExclusions(tools, excludeTools = []) {
+  const excluded = new Set(excludeTools ?? [])
+  if (excluded.size === 0) return tools
+  const kept = tools.filter((t) => !excluded.has(t?.name))
+  return kept.length === tools.length ? tools : kept
+}
+
 /** Assemble an agent with memory, MCP tools, and code/doc indices attached (sync all layers, then return) */
-export async function assembleAgent() {
+export async function assembleAgent({ excludeTools = [] } = {}) {
   const config = loadConfig()
   const provider = config.provider
   const providers = config.providersList
@@ -41,7 +51,7 @@ export async function assembleAgent() {
   memory.codeOrigin = cwd
   // Project layer: sync .thincoder/memory/ dir to index on startup (sync if present, skip otherwise)
   if (config.memory.projectDir) {
-    memory.projectOrigin = join(cwd, config.memory.projectDir)
+    memory.projectOrigin = isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(cwd, config.memory.projectDir)
     await syncDir(memory, { layer: "project", dir: memory.projectOrigin })
   }
   // Team layer (optional): auto-clone on first use; startup only indexes local dir, remote pull via explicit thincoder sync
@@ -101,7 +111,7 @@ export async function assembleAgent() {
 
   const agent = createAgent({
     provider,
-    tools: [...baseTools, ...mcpTools],
+    tools: applyToolExclusions([...baseTools, ...mcpTools], excludeTools),
     config,
     cwd,
     memory,

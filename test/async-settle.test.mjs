@@ -16,6 +16,7 @@ import {
   settleAsyncEntry, getAsyncPool, parkAsyncPending, parentAborted, buildChildSignal,
 } from "../src/agent-tools/async-settle.mjs"
 import { injectAsyncResult, DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "../src/agent-tools/subagent-async.mjs"
+import { injectConsultResult } from "../src/agent-tools/consult.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -346,3 +347,77 @@ test("F-2 落盘失败兜底：persist 失败 → 回退常规 inline（不吞�
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+// ─── 群 B 批 B5（§22 D-DG2）：四族全接线（T-DG1~T-DG3）───
+// 预算单源 = digest-budget.mjs（常量/判超/记账/落盘四处合一）——四族注入器共用同一轮累计
+// （跨族合计生效）；raw = 报告正文（不含 `[System reminder: …]` 标签行）；首条豁免保留；
+// 落盘 tag = 写入族 + 条目 id（文件名后缀——subagent/advisor/escalate 经本入口沿用既有
+// `async-subagent-<id>` callId）。
+
+test("B5 T-DG1 正常：同轮两条 consult（各 40K——合计 80K > 64K）→ 首条 inline、次条清单行 + 全文落盘", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  _setDigestOffloadDirForTest(dir)
+  try {
+    const parent = mkParent()
+    // 真 shape：report = 组合 digest（首行标签 + 正文）——D-DG3 口径：标签行不计入预算
+    const digest = (id, n) => `[System reminder: consultation #${id} finished — 1 of 1 models replied (0 failed)]\n${"A".repeat(n)}`
+    await injectConsultResult(parent, { id: 1, report: digest(1, 40000) })
+    await injectConsultResult(parent, { id: 2, report: digest(2, 40000) })
+    assert.equal(parent.history.length, 2, "两注均入史")
+    assertInline(parent.history[0], "A") // 首条豁免：40K inline 预览
+    assert.ok(parent.history[0].content.includes("consultation #1 finished"), "首条标签行在（inline 路零改——单条 offload 路径零改）")
+    const second = parent.history[1].content
+    assert.ok(!second.includes("A".repeat(200)), "次条不 inline 全文（族接线生效）")
+    assert.ok(second.includes("consultation #2 finished"), "次条保留族标签行（超限消息 = 标签行 + 清单行——与 VSC 镜像同形）")
+    const m = second.match(/saved to disk[^:]*: (.+)/)
+    assert.ok(m, "清单行含落盘 path")
+    const file = m[1].trim().split(/\n/)[0]
+    assert.ok(file.startsWith(dir), "path 来源 = digest 落盘目录")
+    assert.ok(file.includes("-consult-2.log"), "consult tag 入名")
+    assert.equal(readFileSync(file, "utf8"), "A".repeat(40000), "落盘 = 正文（标签行不入盘——D-DG3 口径）")
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("B5 T-DG2 正常：三族既有路径超限形态——迁移后清单行行为恒等（零回归对照）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  _setDigestOffloadDirForTest(dir)
+  try {
+    const parent = mkParent()
+    await injectAsyncResult(parent, mkBig(1, "A", 30000)) // subagent 族
+    await injectAsyncResult(parent, mkEntry(2, "advisor", { report: "B".repeat(30000) })) // advisor 族——累计 60K ≤ 64K
+    await injectAsyncResult(parent, mkEntry(3, "escalate", { report: "C".repeat(40000) })) // escalate 族——累计 100K → 超限
+    assert.equal(parent.history.length, 3)
+    assertInline(parent.history[0], "A")
+    assertInline(parent.history[1], "B")
+    assert.ok(!parent.history[2].content.includes("C".repeat(200)), "第三条不 inline 全文")
+    const file = parent.history[2].content.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
+    assert.ok(file.includes("-async-subagent-3.log"), "既有 callId 命名零变（迁移恒等）")
+    assert.equal(readFileSync(file, "utf8"), "C".repeat(40000), "全文落盘")
+    assert.ok(parent.history[2].content.includes("async escalate #3"), "族标签行保留（文案零变）")
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("B5 T-DG3 边界：跨族同轮共享预算（subagent 40K + consult 40K）→ 次条判超（单源记账）", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tc-digest-"))
+  _setDigestOffloadDirForTest(dir)
+  try {
+    const parent = mkParent()
+    await injectAsyncResult(parent, mkBig(1, "E", 40000))
+    await injectConsultResult(parent, { id: 2, report: "F".repeat(40000) })
+    assertInline(parent.history[0], "E")
+    assert.ok(!parent.history[1].content.includes("F".repeat(200)), "次条（consult）判超——跨族合计（共享预算）")
+    const file = parent.history[1].content.match(/saved to disk[^:]*: (.+)/)[1].trim().split(/\n/)[0]
+    assert.ok(file.includes("-consult-2.log"))
+    assert.equal(readFileSync(file, "utf8"), "F".repeat(40000), "次条全文落盘")
+  } finally {
+    _setDigestOffloadDirForTest(null)
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+

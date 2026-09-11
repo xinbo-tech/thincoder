@@ -521,7 +521,10 @@ CLI `renameSlot`（src/session-rename.mjs）+ VS Code `setSlotTitle`（session-i
 - 新参数 `path`（可选——默认本会话）：目标会话文件路径（显式）或 `cwd:` 前缀指定目录（自动发现该 cwd 的会话槽——manifest/slotSessions 结构既有）；跨会话查询 = path 指定 → 读目标文件 history 线 → 同 filter 面（role/keyword/tool/since/until/limit/direction——§9 语义）应用。
 - 本会话缺省 = 零行为变化（向后兼容——既有调用全不传 path）。
 - 发现面（path = `cwd:xxx`）：**列全部槽 + 时间序——不做死槽过滤**（v1 决策）。每槽摘要行 = **槽号 + 完整文件路径 + title/消息数/updatedAt**——摘要必须含寻址字段：模型无法自行算 sha1(cwd) 拼文件名，第二步深查 = `path = <摘要行的完整文件路径>` 重调（两步交互与 memory search 同型）。
-- 检索护栏（**双保险**——L24 2026-09-09 消息数预算补充，评审 #2 钉阈值）：单槽检索设**行扫第一道** **READ_HISTORY_SCAN_MAX = 200,000 行**（流式计数——超限不再读全文）+ **消息数第二道** parse 后 `history.length` 超 **READ_HISTORY_MAX_MESSAGES = 50,000** 即拒（JSON 单行槽行扫不设防）——两道超限均返回同一逐字定稿文案 `{error: "session too large — refine keyword or since/until"}`（双端同常量同文案——描述口径 "over 50,000 messages or 200,000 lines is refused"）；返回条数沿用 §9 limit 语义（>200 → 200）。
+- 检索护栏（**双保险**——L24 2026-09-09 消息数预算补充，评审 #2 钉阈值）：单槽检索设**行扫第一道** **READ_HISTORY_SCAN_MAX = 200,000 行**（流式计数——超限不再读全文）+ **消息数第二道** parse 后 `history.length` 超 **READ_HISTORY_MAX_MESSAGES = 50,000** 即拒（JSON 单行槽行扫不设防）
+  ——两道超限均返回同一逐字定稿文案 `{error: "session too large — refine keyword or since/until"}`（双端同常量同文案——描述口径 "over 50,000 messages or 200,000 lines is refused"）；返回条数沿用 §9 limit 语义（>200 → 200）。
+
+> 〔eng-designer 折行 2026-09-11 13:10：单行 392 字符 → 纯折行（批 14 候选 2；文字零增删、语义不变）〕
 - 错误路径：未知 cwd → 明确错误返回（无该 cwd 会话目录）；cwd 无槽 → 空列表 + 提示；目标文件缺失/损坏 → 错误返回不崩（§9 错误处理同型）。
 
 **D-R19b（消歧总纲——read_history 描述尾段逐字定稿，实现时并入各工具描述）**：

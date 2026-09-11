@@ -113,7 +113,7 @@ export function executeStatusAction(args, ctx) {
   const { id } = args ?? {}
   if (id !== undefined && id !== null && String(id) !== "") {
     const key = String(id)
-    // §24 D-24b: by-id queries fall through to the advisor pool (shared counter —
+    // §11.2 D-24b: by-id queries fall through to the advisor pool (shared counter —
     // ids are unique across both pools; role identifies the kind).
     const entry = map.get(key) ?? advisors.get(key)
     if (!entry) {

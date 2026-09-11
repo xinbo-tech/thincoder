@@ -132,8 +132,8 @@ export function renderInputBox(state, W, boxLines, cols, inputLayout, inputOffse
         ? " ↑↓ select │ Enter confirm │ Esc: cancel "
         : " Enter submit │ Esc: cancel │ Ctrl+U clear │ Ctrl+V paste ")
     }
-    if (title === " Inject Message ") parts.push(" Enter send, Esc cancel ")
-    if (title !== " Question ") {
+    if (title === " Inject Message ") parts.push(" Enter send, Esc cancel │ ←→↑↓ Home/End move │ Ctrl+V paste ")
+    if (title === " Input " || title === " Processing... ") {
       parts.push(" Shift+Enter / Ctrl+J newline ")
       parts.push(" Ctrl+V paste ")
       parts.push(" Ctrl+I inject ")
@@ -153,8 +153,8 @@ export function renderInputBox(state, W, boxLines, cols, inputLayout, inputOffse
   const curLine = (!hasOverlay && inputLayout) ? inputLayout.cursorLine - (inputOffset ?? 0) : -1
   const curCol = (!hasOverlay && inputLayout) ? inputLayout.cursorCol : -1
 
-  // Interrupt prompt 空文本占位符：灰色提示用户该做什么
-  const isInterruptEmpty = state.interruptPrompt && !state.interruptPrompt.text
+  // Interrupt prompt 空文本占位符：灰色提示用户该做什么（第 31 批：chars 数组判空——§8）
+  const isInterruptEmpty = state.interruptPrompt && state.interruptPrompt.chars.length === 0
   const interruptPlaceholder = "Type message to inject (Enter send, Esc cancel)"
 
   for (let li = 0; li < boxLines.length; li++) {
@@ -205,6 +205,15 @@ export function renderInputBox(state, W, boxLines, cols, inputLayout, inputOffse
   return out
 }
 
+/** 第 33 批（TUI §14.3(a)——纯函数派生，无副作用）：blocked = 审批/提问卡挂起（实时派生，
+ *  提示消解即消失）；awaiting = 回合结束等待输入（链尾置位——processing / 挂起两态期间不派生）。
+ *  @returns {"blocked"|"awaiting"|null} */
+export function attentionKind(state) {
+  if (state.permission || state.question) return "blocked"
+  if (state.attentionAwaiting && !state.processing && !state.suspended && !state._suspPending) return "awaiting"
+  return null
+}
+
 /** Status bar (always 1 line). */
 export function renderStatus(state, agent, cols, slashCommands) {
   const statusLine = buildStatusLine(state, agent, { cols, slashCommands })
@@ -213,8 +222,20 @@ export function renderStatus(state, agent, cols, slashCommands) {
   const advisorBanner = agent.config?.advisor?.guard === true ? `${C.advisor} ADVISOR${ansi.reset}${ansi.dim}│` : ""
   const engBanner = agent.config?.agent?.engineering ? `${C.advisor} ENG${ansi.reset}${ansi.dim}│` : ""
   const bannerPrefix = (agent.planMode ? " PLAN│ " : "") + (agent.autoApprove ? " AUTO│ " : "") + (agent.config?.advisor?.guard === true ? " ADVISOR│ " : "") + (agent.config?.agent?.engineering ? " ENG│ " : "")
-  const statusMax = cols - 1 - (bannerPrefix ? stringWidth(bannerPrefix) : 0)
-  return `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}${ansi.reset}`
+  // 第 33 批（TUI §14.3(b)/(c)）：attention 态 = chip 行首 + 整行注意力色对包裹（blocked >
+  // awaiting；blocked 内 permission > question——与按键分发优先级同序）；平态零注入。
+  const kind = attentionKind(state)
+  const chip = kind === "blocked" ? (state.permission ? "⚠ 等待你的审批" : "⚠ 等待你的回答")
+    : kind === "awaiting" ? "⚠ 等待你的输入" : ""
+  const attentionPad = chip ? `${chip} │ ` : ""
+  // 宽度预算（N9④）：chip 占位计入——整行仍 ≤ cols − 1（既有口径）。
+  const statusMax = cols - 1 - (bannerPrefix ? stringWidth(bannerPrefix) : 0) - (attentionPad ? stringWidth(attentionPad) : 0)
+  const inner = `${ansi.dim}${planBanner}${autoBanner}${advisorBanner}${engBanner}${sliceByWidth(statusLine, Math.max(10, statusMax))}`
+  // 负向锁（§14.3）：attention 为 null ⇒ 半态路径逐字节等价（不经包裹 / 零字节注入）。
+  if (!chip) return `${inner}${ansi.reset}`
+  // 底色存活（§14.3）：既有内容含内部 ansi.reset（banner / ctx 警示段）——每次内部复位后
+  // 重施加注意力色对，再整体包裹（内容零省略）。
+  return `${C.attention}${(chip + " │ " + inner).replaceAll(ansi.reset, ansi.reset + C.attention)}${ansi.reset}`
 }
 
 // ====================================================================

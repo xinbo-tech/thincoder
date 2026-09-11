@@ -210,6 +210,18 @@ export class ContinueError extends Error {
   }
 }
 
+/** 跨段累计编号帧（TURN-CAP-CONTINUE.md §19.3——第 19 批 TURN-ACROSS-SEGMENTS）：
+ *  唯一计算点（纯函数）——把链内累计序数换算成面向消费面的编号载荷。
+ *  - seq      = 该轮链内累计序数（1 起——`agent._turnSeq` 每轮 +1，续跑不重置）
+ *  - turn     = 段内轮号（0 起——段内帽判定的循环变量）
+ *  - maxTurns = 本段预算（段内帽判定值——原样传入）
+ *  返回 { turn, maxTurns }：turn = seq（累计已跑轮数）；maxTurns = 段前累计 + 本段预算
+ *  = seq - turn - 1 + maxTurns（差额项 = 本段开始前的链内累计）。
+ *  段内帽判定不读本帧（只读段内 turn / maxTurns——N6 零机制改动）。 */
+export function turnFrame(seq, turn, maxTurns) {
+  return { turn: seq, maxTurns: seq - turn - 1 + maxTurns }
+}
+
 /** Repair malformed conversation history: remove orphan tool messages and fill missing tool results */
 export function repairHistory(history) {
   const out = []

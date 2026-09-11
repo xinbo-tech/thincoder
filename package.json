@@ -35,7 +35,8 @@
     "prepublishOnly": "npm run release:check",
     "lint": "node scripts/check-syntax.mjs",
     "release:check": "node scripts/release-check.mjs",
-    "test:full": "node test/run-full.mjs"
+    "test:full": "node test/run-full.mjs",
+    "test:integration": "node test/run-integration.mjs"
   },
   "author": "liwei <liwei@51marine.com> (上海新舶)",
   "license": "MIT"

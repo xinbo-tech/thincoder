@@ -11,10 +11,10 @@
  * path (doc-only changes return early) — the task list and self-review checklist.
  */
 
-import { isDocFile } from "../advisor/repos.mjs"
+import { isCodePath, isDocPath, loadConventions } from "../conventions.mjs"
 import { execSync, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { resolve } from "node:path"
 
 /**
  * §18.12 D-VR1 path normalization — mirrors the §20.5 file-domain handling:
@@ -29,32 +29,6 @@ function normalizeChangedPath(p, base) {
 /** Win32 comparison key: case-insensitive drives/folders (same file). */
 function changedFileKey(p) {
   return process.platform === "win32" ? p.toLowerCase() : p
-}
-
-/**
- * Nearest ancestor of an absolute path holding package.json or .git — the
- * project/repo root. Walk stops at the filesystem root; returns null when no anchor exists.
- */
-function findProjectRoot(absPath) {
-  let dir = dirname(resolve(absPath))
-  for (;;) {
-    if (existsSync(join(dir, "package.json")) || existsSync(join(dir, ".git"))) return dir
-    const parent = dirname(dir)
-    if (parent === dir) return null
-    dir = parent
-  }
-}
-
-/**
- * True when the path is under <projectRoot>/src/ (anchored via findProjectRoot —
- * a parent-path /src/ segment outside the project must not classify a file as
- * product code). Falls back to the loose /src/ pattern when no anchor exists.
- */
-function isUnderSrc(absPath) {
-  const root = findProjectRoot(absPath)
-  if (!root) return /(?:^|[\\/])src[\\/]/.test(absPath)
-  const norm = normalizeChangedPath(absPath, root)
-  return norm.startsWith(normalizeChangedPath("src", root) + "/")
 }
 
 /**
@@ -180,19 +154,24 @@ export const verifyTool = {
     // 1b. Doc-only fast path: every changed file is documentation (docs/, *.md,
     // LICENSE…) — syntax checks and a verification declaration are meaningless
     // for doc changes, and the task list/self-review checklist add nothing either.
-    // src/** (incl. prompts/*.md) is product code — excluded from the fast path,
-    // consistent with isProductCode. Empty list (no changes / git unavailable)
+    // Paths inside a declared code segment (default: src — incl. prompts/*.md) are
+    // product code — excluded from the fast path, consistent with the design gate.
+    // The project's own layout is declarable (.thincoder/conventions.json).
+    // Empty list (no changes / git unavailable)
     // intentionally falls through to the normal path below.
-    if (changedFiles.length > 0 && changedFiles.every((f) => !isUnderSrc(f) && isDocFile(f))) {
+    const conv = loadConventions(cwd)
+    if (changedFiles.length > 0 && changedFiles.every((f) => isDocPath(f, conv))) {
       lines.push("")
       lines.push("Documentation-only changes — skipping syntax checks and tests.")
       ctx.agent._verifyPassed = true
       return lines.join("\n")
     }
 
-    // Code files needing verification: anything under src/ (incl. src/prompts/*.md)
-    // or any non-doc file (D-V1 — these require a verification declaration).
-    const codeFiles = changedFiles.filter((f) => isUnderSrc(f) || !isDocFile(f))
+    // Code files needing verification: anything the shared classifier calls product
+    // code (D-V1 — these require a verification declaration). Temp scratch files are
+    // neither code nor docs and fall out of this list (a throwaway diagnostic script
+    // is not a code change — no declaration is demanded for it).
+    const codeFiles = changedFiles.filter((f) => isCodePath(f, conv))
 
     // 2. Advisory syntax hint (D-V5) — node --check on changed .js/.mjs when node
     // exists. SOFT hint only — it does NOT gate done (no language-specific

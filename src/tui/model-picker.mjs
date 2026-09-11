@@ -112,17 +112,20 @@ export function createModelPicker(ctx) {
       const active = p.name === agent.activeProvider
       const shown = active ? (agent.activeModel ?? defaultModelLabel(p)) : defaultModelLabel(p)
       const marker = active ? "●" : ""
-      const note = active ? " ← session" : ""
+      // A1（第 20 批 §12.5）：渠道警示（(no key) / (不可用)）上移 text——与既有状态标
+      // （(ctx …) / ← session）同簇（先例 = 本文件 setKeyFlow / wizard 的 (added, no key)）：
+      // 警示不再位于最先牺牲段。note 收窄为 baseURL（补充信息——超宽随行右截断可接受）。
+      const sessionNote = active ? " ← session" : ""
       const keyStatus = p.apiKey ? "" : " (no key)"
       const unavailable = p._unavailable ? " (不可用)" : ""
       const ctxTag = ` (ctx ${fmtContextK(providerSpec(p).context)})`
       entries.push({
         type: "item",
-        text: `${p.name.padEnd(12)} ${shown}${ctxTag}${note}`,
+        text: `${p.name.padEnd(12)} ${shown}${ctxTag}${keyStatus}${unavailable}${sessionNote}`,
         action: "open-models",
         provider: p.name,
         marker,
-        note: `${p.baseURL}${keyStatus}${unavailable}`,
+        note: p.baseURL,
       })
     }
     entries.push({ type: "header", text: "Management" })

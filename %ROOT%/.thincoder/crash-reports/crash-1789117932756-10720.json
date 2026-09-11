@@ -1,0 +1,20 @@
+{
+  "time": "2026-09-11T09:12:12.754Z",
+  "type": "unhandledRejection",
+  "message": "R25 test crash (THINCODER_TEST_CRASH)",
+  "stack": "Error: R25 test crash (THINCODER_TEST_CRASH)\n    at file:///D:/teamcode/thincoder/bin/thincoder.mjs:82:9",
+  "uptime": 0.2381804,
+  "argv": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "D:\\teamcode\\thincoder\\bin\\thincoder.cjs"
+  ],
+  "cwd": "D:\\teamcode\\thincoder",
+  "memoryUsage": {
+    "rss": 73482240,
+    "heapTotal": 18604032,
+    "heapUsed": 11250160,
+    "external": 3543533,
+    "arrayBuffers": 209187
+  },
+  "node": "v24.19.0"
+}

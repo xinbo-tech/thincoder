@@ -9,6 +9,10 @@
  * feed (§14.3 谓词 ↔ §14.6 结构化尾——同族单源)。拆分线 = 行数硬帽实测（见批次档 §5）。
  */
 
+import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:11 同源导入）
+// B4（群 B 批，CLI §18.3——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
+import { estimateText } from "../provider/rate.mjs"
+
 export const MAX_ADVISOR_TURNS = 100
 // NOTE: prompts/advisor-round{1,2,3}.md encourage the model to finish within
 // ~30 tool turns — a prompt-level efficiency target, DISTINCT from the
@@ -16,18 +20,31 @@ export const MAX_ADVISOR_TURNS = 100
 // guard). They serve different purposes; do NOT synchronize them.
 
 // Context window limits
-export const MAX_CONTEXT_TOKENS = 120_000 // Reserve headroom to avoid OOM
+// 上下文预算（第 25 批——120K 硬编码退场）：预算跟随评审模型窗口（providerSpec：
+// 模型规格表 × provider 级 context 覆盖）。头寸用途 = chars/4 估算误差 + 响应/协议开销
+// （内存不构成约束——设计 §16.4）；判死线仍是宿主机自限线，服务端窗口约束不变。
+export const CONTEXT_LIMIT_RATIO = 0.8  // 判死线 = 窗口 × 0.8
+const COMPACT_TRIGGER_RATIO = 0.8       // 压缩触发 = 判死线 × 0.8（既有关系零改）
+
+/** 评审上下文预算（纯函数——两档阈值可机测；provider 为 null 时退化默认规格）。 */
+export function advisorContextBudget(provider) {
+  const limit = Math.floor(providerSpec(provider).context * CONTEXT_LIMIT_RATIO)
+  return { limit, compactAt: Math.floor(limit * COMPACT_TRIGGER_RATIO) }
+}
+
 export const TOOL_TIMEOUT_MS = 30_000 // single tool timeout
 export const REVIEW_TIMEOUT_MS = 600_000 // whole review timeout (10 minutes)
 export const MAX_RESULT_CHARS = 64 * 1024 // tool result truncation (line-aware; 64K, aligned with main offload limit)
 const MAX_KEY_FILES_IN_COMPACTION = 5 // files named in the compaction summary
 
-/** Estimate token count from messages (rough: 1 token ≈ 4 chars) */
+/** Estimate token count from messages（B4——群 B 批 CLI §18.3：扁平 chars/4 改 `estimateText`
+ *  加权式——ASCII/4 + 非 ASCII/1；纯 ASCII 与旧式逐值相等；CJK 低估 ~3-4× 修正；
+ *  walker（content / tool_calls 两源）与计数口径零改）。 */
 export function estimateTokens(messages) {
   return messages.reduce((sum, msg) => {
     const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content || "")
     const toolCalls = msg.tool_calls ? JSON.stringify(msg.tool_calls) : ""
-    return sum + Math.ceil((content.length + toolCalls.length) / 4)
+    return sum + estimateText(content + toolCalls)
   }, 0)
 }
 

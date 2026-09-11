@@ -14,7 +14,7 @@
  */
 
 import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { runAgent } from "../src/agent.mjs"
 import { loadConfig, configPath } from "../src/config.mjs"
 import { cleanupTraces } from "../src/traces/trace-store.mjs"
@@ -224,7 +224,7 @@ switch (command) {
       memory.embedder = createEmbedder(config.embedding)
     }
     if (config.memory.projectDir) {
-      memory.projectOrigin = join(process.cwd(), config.memory.projectDir)
+      memory.projectOrigin = isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(process.cwd(), config.memory.projectDir)
     }
     const code = await memoryCommand(memory, args)
     if (code) exitSoon(code)
@@ -269,7 +269,7 @@ switch (command) {
     const cwd = process.cwd()
     let total = { added: 0, removed: 0 }
     if (config.memory.projectDir) {
-      const s = await syncDir(memory, { layer: "project", dir: join(cwd, config.memory.projectDir) })
+      const s = await syncDir(memory, { layer: "project", dir: isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(cwd, config.memory.projectDir) })
       total.added += s.added
     }
     const team = teamConfig(config)
@@ -323,7 +323,7 @@ switch (command) {
     const { startTUI } = await import("../src/tui.mjs")
     try {
       await startTUI(agent, {
-        projectDir: config.memory.projectDir ? join(process.cwd(), config.memory.projectDir) : null,
+        projectDir: config.memory.projectDir ? (isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(process.cwd(), config.memory.projectDir)) : null,
         team: teamConfig(config),
         author: gitAuthor(),
         restored: data,

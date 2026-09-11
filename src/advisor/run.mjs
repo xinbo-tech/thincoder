@@ -11,6 +11,10 @@ import { appendCitationReport } from "./citations.mjs"
 import { runAdvisorToolLoop } from "./loop.mjs"
 import { advisorIncompleteMarker, estimateTokens } from "./compaction.mjs"
 import { batchDocForReview } from "../agent-tools/batch-segment.mjs"
+// 第 33 批（§17.5 模块图）：护栏常量 / doc-set 键 / 记录读取——单向导入（review-streak 无回指）。
+import {
+  MAX_DESIGN_REVIEW_STREAK, docSetKey, designReviewStreakRecord, designReviewStreakStopped,
+} from "../agent-tools/review-streak.mjs"
 
 // 拆分后 import 面（既有导出名逐一保面——re-export；谓词为本批新增）。
 export { ADVISOR_THINKING_PLACEHOLDER, MAX_RESULT_CHARS, renderTimeline as _renderTimeline } from "./compaction.mjs"
@@ -19,7 +23,7 @@ export { runAdvisorToolLoop as _runAdvisorToolLoop } from "./loop.mjs"
 export { advisorIncompleteMarker } from "./compaction.mjs"
 
 // Mechanical convergence cap: up to 5 rounds suffice; a 6th call means the model
-// is looping — refuse it instead of burning tokens. §24 D-24b (2026-09-06): PER
+// is looping — refuse it instead of burning tokens. §11.2 D-24b (2026-09-06): PER
 // REVIEW INSTANCE (agent._advisorRuns); CODE REVIEWS ONLY (2026-09-07 §8 ruling)
 // — design reviews are EXEMPT: their rounds keep advancing, the cap never refuses.
 export const MAX_ADVISOR_ROUNDS = 5
@@ -27,6 +31,48 @@ export const MAX_ADVISOR_ROUNDS = 5
 /** B 启动拒绝前缀（§14.4 #2）——稳定契约单源（三消费点同串）：run.mjs 生成；同步工具面
  *  据此登记 `_advisorRefusals`；异步结算面据此不置 `_calledAdvisorThisRun`。 */
 export const ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"
+
+/** 评审失败护栏稳定前缀（第 33 批 §17.4——与 `ADVISOR_LAUNCH_REFUSAL_PREFIX` 同族；
+ *  实现 grep / 用例断言锚）。凭证卫生：串内零 token / designId 值。 */
+export const ADVISOR_DESIGN_STREAK_STOP_PREFIX = "Advisor: design review stopped"
+
+/** kind → 人读说明（第 33 批 §17.4 逐字——结论表第三列；八类 = 五 kind + stale +
+ *  no_credential + no_report，与 review-streak.mjs 分类输出同集）。 */
+const DESIGN_REVIEW_OUTCOME_MEANINGS = {
+  timeout: "review exceeded the wall-clock budget (agent.advisor.timeoutMs)",
+  context_limit: "review exceeded the model context budget",
+  turn_cap: "review exceeded the tool-round limit",
+  empty: "the provider returned an empty response",
+  review_failed: "provider / transport error",
+  stale: "the reviewed documents changed while the review was in flight",
+  no_credential: "the token could not be written to the session ledger",
+  no_report: "the review settled without a report",
+}
+
+/**
+ * 停止结论串（第 33 批 §17.4 逐字；F29）：稳定前缀 + 停止的 doc-set 清单 + 失败尝试表
+ * （记录逐条——kind + 人读说明）+ 三选项（接受现状 / 改变或缩小范围后重跑 / /new 重置）。
+ * 全文零凭证值；不自动执行任何恢复动作（发起权在父代理 / 用户）。
+ * @param {{count: number, log: string[]}|null} record — 护栏记录（`designReviewStreakRecord`）
+ * @param {string[]|null} documents — 被停的文档集（结论清单数据源）
+ */
+export function buildDesignReviewGuardMessage(record, documents) {
+  const log = Array.isArray(record?.log) ? record.log : []
+  const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
+  return [
+    `${ADVISOR_DESIGN_STREAK_STOP_PREFIX} — ${MAX_DESIGN_REVIEW_STREAK} consecutive attempts on this document set produced no design token (repeated failed settlements; no further reviews will start for this set in this session).`,
+    "Document set (1 design instance — no token issued):",
+    ...docList.map((d) => `- ${d}`),
+    "Attempts (most recent last):",
+    "| # | outcome | meaning |",
+    "|---|---|---|",
+    ...log.map((kind, i) => `| ${i + 1} | ${kind} | ${DESIGN_REVIEW_OUTCOME_MEANINGS[kind] ?? kind} |`),
+    "Options:",
+    "1. Accept the current state and proceed — implementation for this document set stays gated (no design token).",
+    "2. Narrow or change the scope: a different document set starts a fresh budget — fix the cause first (agent.advisor.timeoutMs / advisor model / provider).",
+    "3. Start a new session (/new) to reset the guard.",
+  ].join("\n")
+}
 
 const MAX_UNFIXED_DISPLAY = 10 // unfixed issues shown in the cap message
 
@@ -142,10 +188,19 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
 
   // Mechanical convergence cap — CODE REVIEWS ONLY (2026-09-07 §8 ruling: design
   // reviews are exempt). _advisorRound is scoped to the current review instance
-  // (§24 D-24b ③), so >= MAX_ADVISOR_ROUNDS blocks the next call of THIS instance.
+  // (§11.2 D-24b ③), so >= MAX_ADVISOR_ROUNDS blocks the next call of THIS instance.
   // 5 rounds max; after that the review is never pushed back.
   if (reviewType !== "design" && (agent._advisorRound || 0) >= MAX_ADVISOR_ROUNDS) {
     return buildCapMessage(agent)
+  }
+
+  // 第 33 批（§17.5 检查点 2——内防线）：同一 doc-set 连续未产出可用结算达阈值 ⇒ 直接拒绝
+  // （不建消息、不发起、零 LLM）——防直接调用方绕过工具层预检（正常工具链在预检已拒）。
+  if (reviewType === "design" && Array.isArray(documents) && documents.length > 0) {
+    const streakKey = docSetKey(documents, agent.cwd)
+    if (designReviewStreakStopped(agent, streakKey)) {
+      return buildDesignReviewGuardMessage(designReviewStreakRecord(agent, streakKey), documents)
+    }
   }
 
   const provider = resolveAdvisorProvider(agent)

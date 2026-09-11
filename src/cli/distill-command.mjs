@@ -1,4 +1,4 @@
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { loadConfig, configPath } from "../config.mjs"
 import { createMemory } from "../memory.mjs"
 import { teamConfig, gitAuthor } from "./make-agent.mjs"
@@ -64,7 +64,7 @@ export async function distillCommand(args, exitSoon) {
   }
 
   const opts = {
-    projectDir: config.memory.projectDir ? join(process.cwd(), config.memory.projectDir) : null,
+    projectDir: config.memory.projectDir ? (isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(process.cwd(), config.memory.projectDir)) : null,
     team,
     author: gitAuthor(),
   }

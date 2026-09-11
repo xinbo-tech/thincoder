@@ -1,0 +1,12 @@
+{
+  "note": "台账机检存量基线（ENGINEERING-MODE.md §2.24.6 / AC48——存量降报告、新增阻断；同 doc-consistency-baseline.json 先例）。键 = (kind|仓/档|条目键)，不含行号（台账被并行会话持续改写，行号漂移不改键值）；键由 checkLedger() 生成、条目修好即从本档删除（删键 = 重新纳入阻断）。本批台账收拢执行后未归一的 5 条残留：技术条证据行缺 `file:line` ×3（CLI 2 / VSC 1——VSC 条为他批 2026-09-11 17:16 新写）· `status=` 机外取值 ×1（设计已落）· `触发=` 未按三枚举归一 ×1（触发 = 2026-09-14 …）。建议父侧随台账收拢一并归一后删除对应键。",
+  "generatedAt": "2026-09-11",
+  "source": "node scripts/check-ledger.mjs（首跑固化；键 = checkLedger() 产出的 key 字段）",
+  "entries": [
+    "L3②|thincoder/docs/TODO.md|VSC 两处未纳登记",
+    "L3②|thincoder/docs/TODO.md|普通模式偏差审计 + 会话上下文轮",
+    "L3④|thincoder/docs/TODO.md|普通模式偏差审计 + 会话上下文轮",
+    "L3⑥|thincoder/docs/TODO.md|deepseek-v4-pro 视觉能力复检 + 发布注记",
+    "L3②|thincoder-vscode/docs/TODO.md|发布排期"
+  ]
+}

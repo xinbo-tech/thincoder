@@ -16,6 +16,10 @@
  */
 import { specForModel } from "../config.mjs"
 import { ContinueError } from "../agent.mjs"
+import { relayPrefixOf } from "./relay-prefix.mjs"
+// 第 27 批 §12.3①：relay 前缀文法单一权威模块（`src/agent/relay-prefix.mjs`）——
+// 生成侧枢纽再导出（TUI/ACP 消费方可经此导入；消费方按 §12.3① 直连模块亦可）。
+export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.mjs"
 
 /** 事件 token 哨兵串（D1）——LLM 正常内容混淆概率极低；字段分隔用 RS (\x1e)。 */
 export const EVENT_SENTINEL = "⟦ev⟧"
@@ -71,7 +75,7 @@ export function gateEngCoderSpawn(parent, depth, role, async) {
  */
 export function makeRelay(parent, label, emit, model) {
   parent._subAgentCounter = (parent._subAgentCounter ?? 0) + 1
-  const relayPrefix = `${label}#${parent._subAgentCounter}/`
+  const relayPrefix = relayPrefixOf(label, parent._subAgentCounter)
   emit?.(relayPrefix + "[model]" + (model ?? ""))
   return relayPrefix
 }

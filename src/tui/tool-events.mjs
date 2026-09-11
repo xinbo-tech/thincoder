@@ -21,10 +21,12 @@ import { formatToolSummary } from "./tool-summaries.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "../advisor/run.mjs"
 import {
-  SUB_PREFIX_RE, SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
+  SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
   routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
 } from "./subagent-blocks.mjs"
+// 第 27 批 §12.3②：前缀正则换名 + import 源改文法模块（纯换名——语义零改）。
+import { RELAY_PREFIX_RE } from "../agent/relay-prefix.mjs"
 import { TURN_CAP_MARK, STOPPED_MARK } from "../agent/spawn-child.mjs"
 // 2026-09-05 module-split：ticks/maps/sweep/slim/settle/探测/find 族迁 tool-display.mjs——
 // buildToolCallbacks 内部引用用本地 import；sweepToolBlocks re-export（agent-turn 消费面）
@@ -276,7 +278,7 @@ export function buildToolCallbacks(deps) {
       // child-stdout/SSE fragments at arbitrary byte boundaries; trimEnd eats
       // real trailing newlines and routeSubToolOutput's verbatim concat would
       // glue lines (2026-09-03 修复轮; main path keeps the trimmed form below).
-      const isSubRelay = SUB_PREFIX_RE.test(name)
+      const isSubRelay = RELAY_PREFIX_RE.test(name)
       const rawText = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")
       const part = {
         kind: typeof chunk === "string" ? "text" : (chunk?.kind ?? "text"),

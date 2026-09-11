@@ -10,7 +10,7 @@
 ## 未决 / 待办状态行（承接开放项——勿当历史折叠）
 
 - **checklist 多批跟踪强化**（工程模式每批准设计批 = checklist 一条——用户"放一放，等我想好了再说"——挂起；恢复条件 = 用户给方向：唯一制/分界/保持）——见 docs/TODO.md。
-- **普通模式偏差审计范围**（§8.1——已实现 F-N1.1..6；执行/检查分离（扩展 F-N1.5——默认走 coder）的实施细节待批）。
+- **普通模式偏差审计**（第 23 批评估收口 2026-09-11——F-N1.1..6 条目迁入 `../requirements/NORMAL-MODE.md` §6；审计结论与收口落点见 §19——待批次批准实施；**原「执行/检查分离（扩展 F-N1.5）实施细节待批」不成立**：该细节已由 F-N1.5/F-N1.6 条款实落）。
 - **R23 VS Code 镜像批评估**（2026-09-11 前提更新：CLI 子块小节已随 SUBAGENT-TAIL 批退役——现行差异 =
   CLI 内层行无归属标 vs VS chunk.sub 行首子标——`thincoder-vscode/src/agent-tools/subagent-run.mjs`
   `runChild`·`forward`（子标挂载，as-of :26-37）、`webview/ui.js` `appendAdvisorChunk`（`.advisor-sub`
@@ -22,6 +22,12 @@
 - **后台池可观测/可控补面（第 10 批——设计已落档待评审）**：CLI 端 `wait_for "advisor settled"` 判据读错池
   （`src/tools/ops.mjs` as-of :223-227 只查 `_asyncSubagents`）；VSC 端 `subagent status/cancel` 未接评审池（工具面）
   + 同款 wait_for 缺陷。设计见 §18；需求见 `../requirements/AGENT-LOOP.md` §4。
+- **VSC 端 600s 绝对墙钟残留（第 24 批 abort 来源标注勘察发现——2026-09-11）**：`thincoder-vscode/src/provider.mjs`
+  as-of :324 每请求 `AbortSignal.timeout(600_000)`——用户实证死亡文案（"aborted due to timeout"）的唯一在网生产点；
+  VSC 仓独立写域，**父侧排程**（所需档与最小改动面见 §20.10）。
+- **TOOLS.md §3 hooks 事件表收口（第 30 批 Stop 钩子——2026-09-11）**：`docs/design/TOOLS.md:38` 行需更新
+  （+Stop / `~/.thincoder/hooks/` 路径纠错）——本批未落（不在声明面），父侧排程（目标文本见 §21.9）。
+
 
 ## 变更记录（历史折叠——详见 git log）
 
@@ -32,6 +38,7 @@
 - 2026-09-05：Module Split Policy / checklist 多批跟踪 / 委托操作标准 / 环形死锁修正 / 停滞机械检测。
 - 2026-09-06：回合外事件后台化统一模型（advisor async + 角色分池 + 排队合并）+ 会诊/飞刀完全异步化（digest 自动注入） + long 输出落盘纪律 + question 工具抑制。
 - 2026-09-07：嵌套子代理显示统一（R23）/ files 父侧文件拦截（R26）/ async advisor stale 误判修复 + 凭证机制（§11.2）。
+- 2026-09-11：普通模式偏差审计评估 + 会话上下文轮退役（第 23 批——§19 新增；F-N1 条目迁入需求档；相关文本与状态行同步）。
 
 ---
 
@@ -87,8 +94,9 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, s
 - **工具执行期间中断**：`signal.reason.interrupt` → 先为已提交的 tool_calls 合成占位 tool 结果（`[Tool execution interrupted — results discarded]`——tool 消息必须紧跟 assistant tool_calls，否则 strict provider 重试轮 400）再注入中断消息后 continue。
 - **中断清扫（runAgentTurn finally）**：`freezeAllSubTasks` + `sweepToolBlocks`（未 done 工具载体标 done+interrupted、清 `_toolTicks`）——无 running 残留、无陈旧计时泄漏；`state.dims.refresh()`。
 - **垃圾回滚**：无 message interrupt 落 `[User interrupt: undefined]` 垃圾——agent-turn 无 message 分支回滚尾部垃圾（chat catch / response.interrupted 两路径注入恒为 history 最后一条；工具执行中断常规路径经下一 chat dedup 后垃圾仍居尾——接受窄边）。
+- **reason 词汇表扩展（2026-09-11 第 24 批）**：程序性取消 / 停止（含二按全停）/ 定时器中止站点新增 `abortTrigger` 载荷形态（上列 `{interrupt}` 判据点语义零改）——枚举 / 判定 / 求值链见 §20.3。
 
-**变更记录**：2026-08 回补中断语义；2026-09-02 挂起驱动下 finally 语义放宽（§9）；2026-09-03 Ctrl+C processing 武装化 + 回合 abort 与池解耦（§9.5）；2026-09-03 autoTurn 选项 + AUTO 档续跑。
+**变更记录**：2026-08 回补中断语义；2026-09-02 挂起驱动下 finally 语义放宽（§9）；2026-09-03 Ctrl+C processing 武装化 + 回合 abort 与池解耦（§9.5）；2026-09-03 autoTurn 选项 + AUTO 档续跑；2026-09-11 第 24 批 reason 词汇表扩展指针（§20.3——`abortTrigger` 形态）。
 
 ## 3. prepareRun 上下文注入（setup.mjs）
 
@@ -430,9 +438,12 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 > 3. **Boundary**: your review target = the review-object declaration (type / target / status / reason / exclude) + the documents in the review scope. Do NOT expand it … Findings that touch something outside this scope go in a trailing "out-of-scope note" — NO severity assigned to them.
 > 4. **Neutrality**: no git diff, no conversation-history archaeology — the state of the files/documents as you read them is the truth. Do not guess author intent.
 
-**Round 1 例外（设计评审会话上下文轮）**：新第一轮 = 会话上下文轮（`advisor-context.md`——注入需求聚焦会话上下文 ≤3KB 含来源标注——评"真需求覆盖"）；原 7 维全量轮移第二轮；round2+ 无会话考古（Neutrality 保持）。cap 5→6。
+**会话上下文轮（旧 §18.8.1——2026-09-04 设计）——已退役（第 23 批评估 2026-09-11）**：该设计（新第一轮 + `advisor-context.md` + cap 6）
+从未实现；其问题域（评审可评估「真需求覆盖」）现由四个机制承接：① 会话背景注入（`src/advisor/messages.mjs`——最近 3 组交流，机械提取）；
+② 需求文档主参照（Project Guide 指向——评审工作流第 2 步必读）；③ 设计评审批次档绑定（`batchDoc`——`ENGINEERING-MODE.md` §2.20.3）；
+④ 评审对象声明（§12.1）。round2+ 无会话考古、四模板 Neutrality 锚不变。评估与证据见 §19。
 
-**变更记录**：2026-09-04 advisor 人格锚（§7.6）+ coder/consult 人格锚（§7.6）+ 会话上下文轮（§7.6）。
+**变更记录**：2026-09-04 advisor 人格锚（§7.6）+ coder/consult 人格锚（§7.6）+ 会话上下文轮设计（§7.6）；2026-09-11 会话上下文轮退役（从未落地——第 23 批评估，见 §19）。
 
 ## 8. 工程交付协议：eng-coder 内部自审计闭环（概览）
 
@@ -447,9 +458,12 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 ### 8.1 偏差审计四类 + 普通模式轻量审计
 
-**四类偏差**（对照设计逐条查）：**部分实现 / 静默简化 / 文档漂移 / 超清单改动**。"超清单"判据 = 改了且未报告 = 偏差（静默越权）；已报告 = 透明可接受（A 裁定——清单外改动允许但必须逐项报告）。**普通模式轻量审计**（main.md/coder.md/discipline.md）：主代理验证 coder 交付时对照①本轮用户指令②板块设计文档（文档地图定位）查三向一致 + 指令落文档——零额外 LLM（读是既有动作）；F-N1.4 升级：实现偏差由主 agent 修正至符合设计后才宣布完成（真实文档漂移/超范围 → 报告用户不擅改）。
+**四类偏差**（对照设计逐条查）：**部分实现 / 静默简化 / 文档漂移 / 超清单改动**。"超清单"判据 = 改了且未报告 = 偏差（静默越权）；
+已报告 = 透明可接受（A 裁定——清单外改动允许但必须逐项报告）。**普通模式轻量审计**（现行提示词 `persona-normal` / `common` / `discipline-normal`——
+条目见 `../requirements/NORMAL-MODE.md` §6）：主代理验证 coder 交付时对照①本轮用户指令②板块设计文档（文档地图定位）查三向一致 + 指令落文档——
+零额外 LLM（读是既有动作）；F-N1.4 升级：实现偏差由主 agent 修正至符合设计后才宣布完成（真实文档漂移/超范围 → 报告用户不擅改）。
 
-**变更记录**：2026-09-02 工程交付协议（用户重构裁定链下沉 eng-coder）；2026-09-04 测试分层收口 + 审计范围引导 + 文档漂移永不编辑；2026-09-05 普通模式偏差审计修正闭环。
+**变更记录**：2026-09-02 工程交付协议（用户重构裁定链下沉 eng-coder）；2026-09-04 测试分层收口 + 审计范围引导 + 文档漂移永不编辑；2026-09-05 普通模式偏差审计修正闭环；2026-09-11 第 23 批——F-N1 条目迁入 `../requirements/NORMAL-MODE.md` §6（评估与收口见 §19）。
 
 ## 9. 挂起回合：会话级后台双通道 + digest
 
@@ -507,7 +521,11 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 - **二按统一全停块**：武装检查提升到状态路由之前（两次按下之间状态会迁移）；二按 = 当前回合平 abort（清池）+ abort 集合全部 controller；仅挂起态置 `_suspAborted` + 唤醒（非挂起语境置位会粘滞阻塞未来会话重入）。
 - **清理**：中止后复位 `state._suspAborted`（可重新进入挂起态）；残余 pendingInput 单槽消息转回 `state.queue`（单条——不静默丢）；回合启动解除 `exitArmed` 残留（空闲退出双确认不跨回合）。
 
-**变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；2026-09-06 pendingInput 排队用户指令合并（§11.3）；2026-09-09 INPUT-LOCK-ASYNC（C'——busy 含 digest 输入禁用——提交吞 + 白名单直执行——R15 攒批/queue 排队废弃——pendingInput 单槽——§11.3 全文废弃记录——专题 INPUT-LOCK-ASYNC.md）；2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——忙时同吞——退出靠 Ctrl+C——双端实现——专题档见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md）。
+**变更记录**：2026-09-02 挂起回合 V2（用户裁定 AUTO 推进型）+ 偏差修复轮；2026-09-03 硬化轮（settle 完成队列 + 消化逐条回收）+ Ctrl+C 武装化 + sync spawn 精确冻结；
+2026-09-06 pendingInput 排队用户指令合并（§11.3）；2026-09-09 INPUT-LOCK-ASYNC（C'——busy 含 digest 输入禁用——提交吞 + 白名单直执行——R15 攒批/queue 排队废弃——pendingInput 单槽——§11.3 全文废弃记录——专题 INPUT-LOCK-ASYNC.md）；
+2026-09-09 busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——输入不禁只禁提交——斜杠白名单删——忙时同吞——退出靠 Ctrl+C——双端实现——专题档见 docs/design/INPUT-LOCK-BEHAVIOR-REVISED.md）。
+
+> 〔eng-designer 折行 2026-09-11 13:10：单行 444 字符 → 纯折行（批 14 候选 2；文字零增删、语义不变）〕
 
 ## 10. 子代理任务调度器（files/dependsOn）
 
@@ -569,9 +587,15 @@ You are an IMPLEMENTER with independent judgment — not a typewriter.
 
 ### 11.2 async advisor（R13——独立后台评审池）
 
-- **池形态**：独立 `_asyncAdvisors`（复用 pending/digest/注入/冻结机制；新 runner 包装 runAdvisorReview——不碰 subagent 管线）。容量默认 `ADVISOR_POOL_LIMIT = 4`（三池统一默认 4——POOL-CONFIG-UNIFIED F-1）——**可配 `agent.poolLimits.advisor`**（advisor-async 读取器每 launch 读 agent.config——合法 ≥1 整数生效、非法/缺省回退 4——拒文案报当前生效上限）——超限 → 返回错误文案（"另有一评审在跑——逐个发起"——评审间有依赖语义，排队无意义——②-6a 无排队语义不变）。
+- **池形态**：独立 `_asyncAdvisors`（复用 pending/digest/注入/冻结机制；新 runner 包装 runAdvisorReview——不碰 subagent 管线）。容量默认 `ADVISOR_POOL_LIMIT = 4`（三池统一默认 4——POOL-CONFIG-UNIFIED F-1）——
+  **可配 `agent.poolLimits.advisor`**（advisor-async 读取器每 launch 读 agent.config——合法 ≥1 整数生效、非法/缺省回退 4——拒文案报当前生效上限）——超限 → 返回错误文案（"另有一评审在跑——逐个发起"——评审间有依赖语义，排队无意义——②-6a 无排队语义不变）。
+
+> 〔eng-designer 折行 2026-09-11 13:10：单行 338 字符 → 纯折行（批 14 候选 2；文字零增删、语义不变）〕
 - **工具语义**：advisor 加 `async: true`；**缺省 async**（R12 depth-0 缺省先例）——仅 depth-0（depth>0 显式 async 拒 / 缺省恒同步）。发起返回 ack → 回合自然收尾 → 挂起态 → settle → digest。
-- **同 scope 并发守卫（POOL-CONFIG-UNIFIED F-5——用户裁① 2026-09-09）**：launch 判定 = 两关独立——① 池容量（全局 running ≤ 生效上限）；② 同 scope（同 reviewType+scope 有 running 评审 → 拒——design scope = 文档集键 docSetKey——code = 单 code 线程 openCodeRun 语义——任一 running code 评审阻断新 code launch）。**settled 续跑语义不变**（round+1/prior 注入——resolve 只查 settled 的分歧由此消除——running 并行多实例歧义放大被拒）；拒文案含 scope 语义与指引（"此 scope 已有评审在跑——settle 后逐个发起"——去数字化）。
+- **同 scope 并发守卫（POOL-CONFIG-UNIFIED F-5——用户裁① 2026-09-09）**：launch 判定 = 两关独立——① 池容量（全局 running ≤ 生效上限）；② 同 scope（同 reviewType+scope 有 running 评审 → 拒——design scope = 文档集键 docSetKey——code = 单 code 线程 openCodeRun 语义——任一 running code 评审阻断新 code launch）。
+  **settled 续跑语义不变**（round+1/prior 注入——resolve 只查 settled 的分歧由此消除——running 并行多实例歧义放大被拒）；拒文案含 scope 语义与指引（"此 scope 已有评审在跑——settle 后逐个发起"——去数字化）。
+
+> 〔eng-designer 折行 2026-09-11 13:10：单行 391 字符 → 纯折行（批 14 候选 2；文字零增删、语义不变）〕
 - **UI 通道**：subagent 面板 + role="advisor" 伪角色（块/⏹/冻结全复用；cancel = 定向 abort → cancelled settle：不入 pending、不入 token 槽、digest 提示"评审已取消——token 未签发"）。
 - **settle 记账（token/guard/cap 改绑）**：评审 settle 时（消化链首行注入前）执行：
   - ①**陈旧判定**——评审 launch 后发生 FILE_MUTATORS → 评审基于旧状态 → 不置 `_calledAdvisorThisRun`、代码评审不签发 token（guard 仍推回发起新评审）；
@@ -860,3 +884,730 @@ A 的缺陷面在 **webview 块身份/投递链**。共性是"第二池接入面
   ③ 与 `REMOVE-POOL-SNAPSHOT`——零关系（评审池从不参与池快照，撤除面是 queued 行）✓；
   ④ 与第 9 批 `ADVISOR-CONVERGENCE.md`——只在"取消"上共用机制（本批不碰该档，实施时如发现需改该档 → **停下报告**）。
 - **父侧登记项**（非本设计写域）：CLI `docs/README.md` 地图无需改（§18 属既有档内新节）；批后核销按 D7 清单走。
+
+## 19. 普通模式偏差审计 + 会话上下文轮——评估与收口（第 23 批——2026-09-11）
+
+> 需求：`../requirements/NORMAL-MODE.md` §6（F-N1.1–F-N1.6——本批自旧 §21 条目迁入）·
+> `../requirements/ADVISOR-CONVERGENCE.md` §11（会话上下文轮退役）。
+> 批次：`../batches/2026-09-11-NORMAL-MODE-AUDIT.md` §1（D1/D2——2026-09-08 用户裁「恢复」的评估项；2026-09-11 用户裁「开」）。
+> 缓行条件（「等 §11.3 / 批 5 / 批 6」）已闭合：§11.3 已交付（现为废弃记录——§11.3）；批 5/6 收口入档（`_archive/STRUCTURE-DEBT-BATCH-5-6.md`）。
+> 与两个旧设计面（旧 §21 / 旧 §18.8.1）的关系 = **执行 + 补指针 / 修订（退役）**——见 §19.4。
+
+### 19.1 评估结论（做 / 不做 / 何时做）
+
+**D1（普通模式偏差审计）**——三段结论：
+
+- **原义审计 = 已做**：F-N1.1..6 已实落为提示词条款（`src/prompts/discipline-normal.md` :13 / :15-17 / :92 / :125-133 / :147-150）；
+  设计判据「零额外 LLM」保持（审计 = 既有交付核对的一部分，不新增步骤）。此项无需再做。
+- **常态化独立审计机制 = 不做**（机械论证）：① 与 N-N1（零额外 LLM）冲突——独立审计 = 新步骤 / 新 spawn；
+  ② 数据源无着——「实况审计」需轨迹 / 会话数据，而轨迹默认关（`src/config.mjs:108`——2026-09-05 用户裁定发布隐私）；
+  ③ 与 F-N1.1..6 语义重复。三项并列机械论证，任一成立即否决。
+- **一次性收口 = 做（本批）**：审计发现五条偏差 + 一条登记（§19.3）——按最小面收口（文档面本批落；断言面与指针面随本批实施）。
+
+**D2（会话上下文轮）**——两段结论：
+
+- **原设计 = 退役（不做）**（机械论证）：① 从未实现——git 全历史无 `advisor-context.md`（新增过滤检索零命中）、
+  轮序 / cap 5→6 无实现提交；② 问题域（评审可评估「真需求覆盖」）已由四个现行机制承接（§19.5 第 5 条）；
+  ③ 设计要素与后裁定冲突——cap 5→6 已被 design 评审 cap 豁免（2026-09-07）取代、新轮序与现行三轮语义
+  （`ADVISOR-CONVERGENCE.md` §2.1）冲突、会话考古例外与四模板 Neutrality 锚冲突；④ 实施成本（新提示词 + 轮序机改 + 双端 + 断言）对比零增量收益。
+- **文档修正 = 做（本批）**：§7.6 行 433 的「现行态」表述与实现及 `ADVISOR-CONVERGENCE.md` §2.1/§3 矛盾（文档漂移）→ 退役记录（§19.5 第 5 条）。
+
+### 19.2 方案选型对比（D1/D2 各三候选——判据 = 批次 §1 五问 + 纪律层约束）
+
+**D1：**
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | 常态化独立审计机制（新步骤 / 审计器 spawn） | 覆盖最全 ✓；与 N-N1 冲突 ✗；轨迹默认关 → 无数据源 ✗；与 F-N1.1..6 语义重复 ✗ | — | 否决（三项判据不过） |
+| 2 | **一次性收口（条目迁址 + 断言恢复 + 指针修复 + 状态行收口）** | 覆盖全部实发现偏差（§19.3）✓；零行为面改动 ✓；零额外 LLM ✓；成本 = 1 新测试档 + 提示词指针 4 处 + 文档面 | 代价：不获得「持续发现新偏差」能力（断言只锁已知条款）——接受（实况考古不做，§19.10） | **选定** |
+| 3 | 全不做（搁置） | 零成本 ✓；五条偏差原样留存（条目失所 / 断言失锁 / 指针悬空）✗ = 文档漂移不处置 | — | 否决（违反偏差处置纪律） |
+
+**D2：**
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | 按原设计实现（新第一轮 + `advisor-context.md` + cap 6） | 问题域真 ✓；与现行轮序语义 / cap 豁免 / Neutrality 锚冲突 ✗；双端实施成本 ✗；增量收益 ≈ 0（四机制已承接）✗ | — | 否决 |
+| 2 | **退役原型 + 文档修正（行 433 → 退役记录）** | 文档与实现恢复一致 ✓；零代码改动 ✓；承接机制有据（file:line）✓ | 代价：放弃「专用上下文轮」形态——接受（轻量机制已足） | **选定** |
+| 3 | 增强现行机制（如扩会话背景轮数） | 改提示词语义——超本批边界（§19.10）✗；收益未证明 ✗ | — | 否决（超边界） |
+
+### 19.3 审计面与判据（D1——本批执行的偏差面清单）
+
+| 面 | 审什么 | 判据 | 结果 |
+|---|---|---|---|
+| ① 需求条目面 | F-N1.1..6 定义是否有现行承载 | 指针纪律（ID 可寻址） | **F-1**：条目定义随旧 §21 重写失所（现档仅存 ID 引用）→ 迁入需求档 §6 |
+| ② 实现条款面 | 提示词条款 vs 需求条目 | 三向一致 | 在位（§19.1 D1 证据）——clean |
+| ③ 机械锁面 | F-N1 条款是否有断言锁 | 测试纪律（fail-when-unchanged） | **F-2**：零断言（`test/` 无 F-N1 锚；原 T-N1.x 随 2026-09-07 测试清空删除、未恢复）→ 新增锁 |
+| ④ 指针 / 未决面 | 活引用可解析 + 未决行诚实 | 指针纪律 + 状态行纪律 | **F-3**：提示词「§21」悬空 ×4；**F-4**：未决行「实施细节待批」悬挂（内容已由 F-N1.5/1.6 实落） |
+| ⑤ 文本一致面 | 条款叙述的文件名单 vs 现行提示词层 | 实现即事实 | **F-5**：§8.1 条款文件名单过期（`main.md/coder.md/discipline.md` → 现行 `persona-normal/common/discipline-normal`） |
+
+**登记项（F-6——本批不修）**：F-N1.2 的 coder 侧自查行（旧 `coder.md`）现无独立条款——其透明度效力由交付表
+（`common.md` 交付报告节）+ 主代理侧核验条款承接（COMMON-LAYER 迁移在案）；是否恢复 coder 侧行 = 提示词语义面，另行批次评估。
+
+**计数（D3）**：发现 = 收口 5（F-1–F-5）+ 登记 1（F-6）。
+
+### 19.4 与旧 §21 / 旧 §18.8.1 既有文本的关系
+
+- **旧 §21（设计档旧编号——重写后落 §8.1）= 执行 + 补指针**：机制本体（F-N1.1..6）已实落于提示词条款，本批不改语义；
+  补指针 = 条目迁入 `../requirements/NORMAL-MODE.md` §6（可寻址）+ §8.1 文本同步（F-5）。
+- **旧 §18.8.1（= §7.6 行 433 文本）= 修订（退役）**：历史事实保留（2026-09-04 设计过、评审未发起、未实现），
+  「现行态」表述替换为退役记录 + 承接机制指针（§19.5 第 5 条）。
+
+### 19.5 契约（收口落点——逐字 / 指针）
+
+1. **需求条目**：`../requirements/NORMAL-MODE.md` §6 = F-N1.1 / N-N1 / F-N1.2 / F-N1.3 / F-N1.4 / F-N1.5 / F-N1.6（判定句逐条）。
+2. **提示词指针修复（CLI 两档——删除「§21 」前缀；内容权 = 主 agent）**：
+   `src/prompts/discipline-normal.md:125`（`（§21 F-N1.5 2026-09-05 ruling）` → `（F-N1.5 2026-09-05 ruling）`）、
+   同档 `:133`（F-N1.6 同款）；`docs/design/prompts/discipline-normal.md:128` / `:136`（中文「裁定」同款）。
+3. **断言锁**：`test/prompts-normal-audit.test.mjs`（新增——用例表 §19.8）。
+4. **状态行收口**：「未决 / 待办状态行」条目「普通模式偏差审计范围」改述为收口条目（指向需求档 §6 + 本节）。
+5. **D2 退役记录（§7.6 行 433 替换——逐字；落文允许追加指针句）**：
+
+   > **会话上下文轮（旧 §18.8.1——2026-09-04 设计）——已退役（第 23 批评估 2026-09-11）**：该设计（新第一轮 + `advisor-context.md` + cap 6）
+   > 从未实现；其问题域（评审可评估「真需求覆盖」）现由四个机制承接：① 会话背景注入（`src/advisor/messages.mjs`——最近 3 组交流，机械提取）；
+   > ② 需求文档主参照（Project Guide 指向——评审工作流第 2 步必读）；③ 设计评审批次档绑定（`batchDoc`——`ENGINEERING-MODE.md` §2.20.3）；
+   > ④ 评审对象声明（§12.1）。round2+ 无会话考古、四模板 Neutrality 锚不变。评估与证据见 §19。
+
+对拍口径（修正轮注）：契约块正文逐字；落文**允许追加指针句**——现行落文与契约一致（含收尾句「评估与证据见 §19。」）；对拍遇仅指针句差异不判偏离。
+
+### 19.6 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-23-1 | D1 = 一次性收口（不建常态化机制） | §19.1/§19.2——零额外 LLM 判据 + 数据源无着；否决候选 1/3 |
+| D-23-2 | F-N1.1..6 条目**原 ID 迁入**需求档（不重编号） | 既有引用（提示词 / 设计档）按 ID 即可解析——迁址即指针修复；重编号（F11+）会再制造一轮引用漂移——否决 |
+| D-23-3 | D2 = 退役原型设计（不实施） | §19.1/§19.2——未实现 + 四机制承接 + 与后裁定冲突；否决「按原设计实现」与「增强现行机制」 |
+| D-23-4 | 指针修复取「删前缀」而非「改指新节」 | §8.1 不承载 F-N1.5/1.6 全文（条目本体在需求档 §6）——改指会再造半个悬空；ID 自身可解析即达标 |
+| D-23-5 | 断言锁 = 新档（不改在途测试档） | COMMON-LAYER 批在改 `prompts-async-guidance` / `prompts-dual-source`（在途）——新档零冲突（§19.7） |
+
+### 19.7 受影响文件全清单（行数口径 = 行计数；as-of 2026-09-11）
+
+> 口径（修正轮注）：列 2「变更前 / 变更后」——文档域 = 本批变更前 / 落笔后实测（as-of 2026-09-11；他批后续增量不计入本表）；实施域 = 现行 / 预计。列 4 增量标注实测 / 预计。
+
+**文档域（eng-designer 写域——本批已落）**
+
+| 文件 | 变更前 / 变更后 | 变更 | 增量（实测 / 预计） |
+|---|---|---|---|
+| `docs/requirements/NORMAL-MODE.md` | 62 → 86 | §6 新增（F-N1 条目 + 判定句）+ 抬头设计指针更新 | +24（实测） |
+| `docs/requirements/ADVISOR-CONVERGENCE.md` | 280 → 294 | §11 新增（会话上下文轮退役登记） | +14（实测） |
+| `docs/design/AGENT-LOOP.md` | 873 → 1024 | §19 新增 + 状态行条目收口 + §7.6 行 433 退役 + §8.1 文本修正 + 变更记录 | +151（实测） |
+| `docs/TODO.md` | 173 → 173 | 行 135 状态推进（台账） | ±0（行替换） |
+
+**实施域（eng-coder 写域——本批批准后）**
+
+| 文件 | 变更前 / 变更后 | 变更 | 增量（实测 / 预计） |
+|---|---|---|---|
+| `test/prompts-normal-audit.test.mjs` | — → ~100 | **新增**（T-NA1–T-NA4） | ~100（预计） |
+| `src/prompts/discipline-normal.md` | 180 → 180 | 指针修复 2 处（§19.5 第 2 条——内容权主 agent） | 0（行内微调） |
+| `docs/design/prompts/discipline-normal.md` | 183 → 183 | 指针修复 2 处 | 0（行内微调） |
+
+**父侧面（非本批写域——登记）**：`CHANGELOG.md`；`docs/README.md` 地图零改（无新档）；VSC 端零面
+（会话上下文轮 VSC 侧无落档；VSC 提示词无 F-N1 引用——登记）。
+
+### 19.8 用例表（T-NA——正常 / 边界 / 错误）
+
+| # | 类别 | 输入 | 预期输出（可机判） | 回指 |
+|---|---|---|---|---|
+| T-NA1 | 正常 | 读 `src/prompts/discipline-normal.md` | 条款锚 6 串全命中：`update the owning doc`、`reconcile the delivery against the owning design doc`、`implementation deviations are fixed`、`implemented by a coder subagent BY DEFAULT`、`Sized delegation without these fields is a defect`、`board design doc` | D1 / F-1·F-2 |
+| T-NA2 | 正常 | 读 `docs/design/prompts/discipline-normal.md` | 中文镜像锚 6 串全命中：`更新所属文档`、`把交付对照所属设计文档`、`实现偏差`、`默认由 coder 子代理实现`、`有规模委派缺这些字段是缺陷`、`本轮用户指示是否落进了板块文档` | D1 / F-1·F-2 |
+| T-NA3 | 边界（反例） | 两档全文件扫描 | 悬空指针零残留：不含 `§21`（修复后 fail-when-unchanged——修复前应红） | D1 / F-3 |
+| T-NA4 | 错误（回归） | 既有 prompts 测试族 | 全绿（零破坏——本批不动其它锚句） | D1·D2 边界 |
+
+### 19.9 验收标准（AC-NA——逐条回指 D1/D2）
+
+- **AC-NA1**（D1 / F-1）= `../requirements/NORMAL-MODE.md` §6 在位：F-N1.1–F-N1.6 六个 ID + N-N1 全命中（grep 断言）；抬头指针指向本节（§19）。
+- **AC-NA2**（D1 / F-2）= T-NA1 / T-NA2 绿（`node --test test/prompts-normal-audit.test.mjs`——条款锚 fail-when-unchanged：改动任一锚串即红）。
+- **AC-NA3**（D1 / F-3）= T-NA3 绿（两档含 `§21` 命中数 = 0）。
+- **AC-NA4**（D1 / F-4）= 状态行条目改述在位（grep：该条含「第 23 批」与需求档 §6 指向；「实施细节待批」**不作未决主张**出现——机判口径 = 「未决 / 待办状态行」节内凡命中该串的行须同行含「不成立」（引用性历史否定留痕，as-of `:13`；未否定形态零命中））。
+- **AC-NA5**（D2）= §19 在位 + §7.6 行 433 退役记录在位（grep：含「已退役（第 23 批评估」+「四个机制承接」；`advisor-context.md` 不再被述为现行机制）。
+- **AC-NA6**（纪律面）= 本批触碰文件零新增违规（`node scripts/check-doc-width.mjs`——宽度 + V1/V2/V3；仓库内他批在途文件的存量违规不在本批判据内）；T-NA4 绿（既有 prompts 测试零干扰）。
+- **AC-NA7**（D2）= `../requirements/ADVISOR-CONVERGENCE.md` §11 在位（退役登记 + 判定句 + 边界）。
+- **AC-NA8**（D1 / F-5）= §8.1 条款文件名单同步在位（grep：§8.1 节内含逐字句「现行提示词 `persona-normal` / `common` / `discipline-normal`」；旧名单串 `main.md` / `coder.md` / `discipline.md` 在该节零命中）。
+
+### 19.10 边界（本批不做）与登记项
+
+- 不做常态化审计机制 / 实况考古审计（§19.1 D1）；不实现会话上下文轮（退役）；
+- 不改提示词语义（除 §19.5 第 2 条指针前缀删除——非语义）；不改任何运行时代码（本批零 `src/**.mjs` 改动）；
+- 不碰他链在途档（`ADVISOR-CONVERGENCE.md` 设计档 §16 第 25 批在途 / COMMON-LAYER 批在途 / 第 14 批折行在途——零碰）；
+- VSC 端零面（登记）；F-6（coder 侧自查行）另行批评估（登记）；
+- 同族指针债登记：提示词镜像 `docs/design/prompts/discipline-normal.md` 另存悬空的 AGENT-LOOP §25 引用（V1 基线在案）——随提示词批清理；
+- `test/fixtures/doc-consistency-baseline.json` 零改（本批不新增 V1/V2 违规、不修基线项）。
+
+**变更记录**：2026-09-11 第 23 批——普通模式偏差审计评估 + 会话上下文轮退役（新增本节；状态行条目收口；§8.1 / §7.6 文本同步）；同日评审后修正轮（6 条）——AC-NA4 机判口径改「引用性否定 vs 未决主张」、AC-NA5 收窄 D2、新增 AC-NA8（F-5 独立机判）、🔵#3–#5 修正 3 处、#6 复核保持。
+
+## 20. 子代理 abort 来源标注（可诊断性）（第 24 批——2026-09-11）
+
+> 需求：`../requirements/AGENT-LOOP.md` §6（F-D1.1–F-D1.4——判定句）。
+> 批次：`../batches/2026-09-11-ABORT-PROVENANCE.md` §1（用户反馈已实证两次——用户 2026-09-11 裁「本仓接管」）。
+> 相关设计面：§2.1（中断语义——reason 词汇表就地扩展，见 §20.3）· `ASYNC-RESULT-CONTAINER.md`（settle 共享 helper——报告合成点所在）·
+> `PROVIDER.md` §3（重试、超时与错误分类——产生点所在）· `LOGGING.md`（`llm:error` 事件面——§20.3 第 3 条触面）。
+
+### 20.1 问题陈述（现场复核——file:line as-of 2026-09-11）
+
+**F-AP1（产生点无来源）**：abort 错误在产生点只有通用文案——「哪一层、何触发」零标注。产生点全景：
+`src/provider/core.mjs:27-31`（`abortDOM`——退避 / 限流等待）· `src/provider/sse.mjs:185-189`（读循环）·
+`src/provider/anthropic.mjs:80` 与 `:187-190` · `src/provider/google.mjs:107` 与 `:210-213` ·
+`src/provider/rate.mjs:89`（`"Aborted"`——连 `signal.reason` 都未拷贝）· `src/proxy.mjs:55-59`（`abortError` 单点）·
+`src/agent.mjs:293`（`"User interrupted"`）与 `:325` · `src/agent-tools/subagent.mjs:290` 与 `:295`。
+
+**F-AP2（链式传播丢 reason——关键丢失点）**：子代理 / 评审 / 会诊 controller 链到基信号的**5 处 hop 全部以裸 `abort()` 转发**——
+reason 在该点丢失：`src/agent-tools/subagent-run.mjs:101-103` · `src/agent-tools/subagent.mjs:67-69`（sync 装配 `armSyncChildAbort`）·
+`escalate-async.mjs:177-178` · `advisor-async.mjs:285-286` · `consult.mjs:418-419`。
+实测（Node 24.19.0 / undici 7.29.0）：裸 abort 下 fetch 拒绝 = `DOMException[AbortError] "This operation was aborted"`、
+**无 `reason` 字段**——「谁杀的」在死亡现场已不可恢复。
+
+**F-AP3（报告面压成 message 单行）**：结算面把错误对象压成 message 字符串——name / cause / reason / 标注全丢：
+`src/agent-tools/subagent-run.mjs:159`（`entry.error = err?.message ?? String(err)`）· `advisor-async.mjs:299` ·
+`escalate-async.mjs:255` · `consult.mjs:341` · `subagent.mjs:344`（`errText(e, 200)`）。
+digest 原样注入 `entry.error`（`subagent-async.mjs:372-400`）——**用户实证所见的一行即此**。
+
+**F-AP4（TUI 状态面粗粒度）**：`src/tui/subagent-freeze.mjs:143` 冻结兜底写死 `"interrupted"`；`tool-events.mjs:182` 的
+`lastError` 只认 TURN_CAP_MARK / STOPPED_MARK 两标记——异步死亡在块面零文案（digest 是其唯一载体）。
+
+**F-AP5（残留 600s 面——Q3 勘察结论）**：
+
+- **CLI 请求链零绝对墙钟残留**：2026-09-01 已废除（`src/provider/core.mjs:70-71` 注——signal 只载用户 / 取消链）。
+  实测（undici 7.29.0）：裸 abort 产生的文案 = `"This operation was aborted"`（**非** "aborted due to timeout"）——
+  **CLI 请求链已不能产生用户实证的文案**。
+- **现存活墙钟边界 = 有意设计面**（裁定与标注见 §20.3 第 4 条）：proxy 响应头 600s（`core.mjs:420` → `proxy.mjs:86`
+  "Response timeout"）· SSE 读侧 idle 120s（`sse.mjs:176-179`）· proxy body idle 120s（`proxy.mjs:104`）·
+  consult watchdog 600s（`consult.mjs:35` 与 `:206-212`）· advisor 评审预算（`advisor/loop.mjs:141-143`——已自带
+  「Advisor: review timeout」文案）。
+- **VSC 镜像残留（用户实证文案的唯一在网生产点）**：`thincoder-vscode/src/provider.mjs:28`（`FETCH_TIMEOUT_MS = 600_000`）→
+  `:324` `AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])` → `:327`——**每个请求**带绝对 600s 墙钟；
+  `:24-27` 注释自称 "CLI parity" = **陈旧**（CLI 废掉的正是此物）。实测：timeout 信号触发时拒绝 =
+  `TimeoutError "The operation was aborted due to timeout"`——与用户实证文案**逐字一致**。
+  VSC 档不在本批写域——登记 + 父侧排程（§20.10）。
+
+**F-AP6（相邻缺陷——cause 丢失）**：`entry.error = err?.message` 同时丢 `cause`——「fetch failed」类网络死亡
+（真因在 undici 的 cause 链）同样不可判；本批由 §20.3 第 3 条合成器一并覆盖（P1——**可由评审剥离**，见 §20.5 D-24-5）。
+
+### 20.2 方案选型对比（Q1 分层 / Q2 载体 / Q3 切除——判据 = 批次 §1 五问）
+
+**Q1 来源面分层：**
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | 仅 trigger 单轴（user / timeout / cancel / stop / unknown） | 答「何触发」✓；答「哪一层发起」✗（D1 与 F-D1.1 明列两问） | — | 否决 |
+| 2 | **trigger × layer 双轴（选定）** | 两问直落 ✓；layer 取 D1 原文三分（provider / agent / settle）——枚举小、稳定 ✓；站点精度由 detail 承载 ✓ | 代价：detail 为自由短串（非枚举）——接受（机判靠 trigger / layer 两轴） | **选定** |
+| 3 | 自由文本单串（无枚举） | 人读 ✓；机判 ✗（AC 不可断言——D3 计数无从守） | — | 否决 |
+
+**Q2 标注载体：**
+
+| # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | message 内嵌（来源拼进错误 message） | 零消费面改动 ✓；污染一切 message 消费面（errText 截断 / 日志 / 模型可见文案）✗；不可机判 ✗ | — | 否决 |
+| 2 | **结构化字段 `err.abortInfo`（主载体）+ 报告面合成器（选定）** | 可机判 ✓；message 零改（零回归）✓；一模块一词汇表（单一权威）✓ | 代价：报告面 5 处换合成器调用——接受 | **选定** |
+| 3 | 上报面独立新通道（digest 新增字段 / 行） | 契约面大（注入格式 / 预算 / 双端）✗；与报告正文分离——模型决策要多读一处 ✗ | — | 否决 |
+
+**Q3 残留 600s 路径：**
+
+| # | 候选方案 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 切除 CLI 请求链 600s 面 | CLI 请求链已无绝对墙钟（F-AP5 实证）——**无可切除对象** | — | 不适用 |
+| 2 | **保留有意边界 + 标注使可判（选定）** | 边界均为有意设计（proxy 头 / 读侧 idle / watchdog）✓；标注后各自带 `timeout` + 边界名 ✓ | 代价：边界死亡依赖合成器在位（§20.3 第 3 条） | **选定** |
+| 3 | VSC 600s 绝对墙钟本批一并切 | 双端纪律 = 各端独立实现、互不追赶；VSC 档不在本批写域 ✗ | — | 否决（登记 + 父侧排程） |
+
+### 20.3 契约（词汇表 / 模块接口 / 死亡行 / 站点 / 数据流）
+
+**第 1 条 词汇表（单一权威源 = 新模块 `src/abort-provenance.mjs`）**
+
+**trigger（枚举 5 值）**：
+
+| trigger | 判据（`signal.reason`） | 发起面（站点） |
+|---|---|---|
+| `user` | `reason.interrupt === true` | Ctrl+C 停回合（`tui/key-handler.mjs:94` 与 `:114`）· Ctrl+I（`tui/key-modes.mjs:224`）· ACP cancel（`acp/session.mjs:49`） |
+| `timeout` | `reason.name === "TimeoutError"`；或 `reason.abortTrigger === "timeout"`（定时器面） | 读侧 idle / proxy 定时器 / consult watchdog（第 4 条） |
+| `cancel` | `reason.abortTrigger === "cancel"` | 池 cancel（`subagent-async.mjs:202`）· sync ⏹（`:226`）· 评审 cancel（`advisor-async.mjs:213`） |
+| `stop` | `reason.abortTrigger === "stop"` | 全停 / 清池（`tui/key-handler.mjs:62` 与 `:67`）· consult 会话停（`consult.mjs:357` 与 `:452`） |
+| `unknown` | reason 缺失且错误无 `abortInfo` | **诊断告警态**（残留 / 未标注路径——必须显式呈现，不得静默） |
+
+**layer（枚举 3 值——D1 原文三分）**：`provider` / `agent` / `settle`；未标注错误回落 `unrecorded`
+（合成器兜底 token——计入 unknown 告警形态）。
+
+**求值链（trigger 判定——一处写死；`deathLine` / `annotateAbort` 共用）**：
+`err.abortInfo?.trigger`（已标注——产生点 / 补标点已判，直取）→ 否则 `triggerOf(signal)`（信号域——上表判据逐条读 `signal.reason`；得非 `unknown` 值直取）→
+否则 `err.name` 兜底（`TimeoutError` → `timeout`；`AbortError` → `unknown`（告警）；后缀渲染条件仍按第 3 条）。
+归属：标注域归产生点（`abortError` / `timeoutError`）与 `annotateAbort`；信号域归 `triggerOf`；兜底归合成器 `deathLine`。
+
+**reason 形态（4 形态——就地扩展，向后兼容）**：
+① `{interrupt: true(, message)}`（既有——user 面）② `TimeoutError`（Node 原生——timeout 面）
+③ `{abortTrigger: "cancel"|"stop"|"timeout"(, abortDetail)}`（新增——程序性取消 / 停止 / 定时器）④ 缺失（→ unknown）。
+
+既有 `reason.interrupt` 判据点（`agent.mjs:242` · `run-stages.mjs:147` · `agent-turn.mjs:149-164` · `agent.mjs:343`）
+**零触碰**——新增形态不含 `interrupt` 键，各判据行为与今日「undefined reason」逐字同构。
+
+**form ① 既存实测（修正轮 #4——只读抽查）**：四站点均自带 reason（零改动）——`key-handler.mjs:94` 与 `:114` = `{interrupt: true}` · `key-modes.mjs:224` = `{interrupt: true, message}` · `acp/session.mjs:49` = `{interrupt: true, message: "cancelled by client"}`。
+
+**第 2 条 模块接口（`src/abort-provenance.mjs`——新增；纯函数、零 import——任意层可引、无环）**
+
+| 导出 | 签名 | 语义 |
+|---|---|---|
+| `TRIGGERS` | `["user","timeout","cancel","stop","unknown"]`（计数 5） | 枚举权威（测试锁） |
+| `triggerOf` | `(signal) => trigger` | 按第 1 条判据序判定 |
+| `abortError` | `(signal, layer, detail) => DOMException` | 产生点：`AbortError` + `reason` 透传 + `abortInfo` 标注 |
+| `timeoutError` | `(message, layer, detail) => Error` | 定时器面：自有 message + `abortInfo{trigger:"timeout"}` |
+| `annotateAbort` | `(err, signal, layer, detail) => err`（第 4 参 `detail` 可选——3 参调用兼容） | 外部错误（undici 拒否等）补标——缺 `abortInfo` 才补；不改 name / message；`detail` 载站点名短串（站点 #2 传 `"request"`）；缺省回落 `unrecorded` |
+| `deathLine` | `(err, signal) => string` | 报告面合成器（第 3 条形态） |
+
+**第 3 条 死亡行形态（合成器输出——fail-when-unchanged 断言锚）**
+
+`<原 message>[ ← cause: <cause.message>][ · abort(<trigger>@<layer>:<detail>)]`
+
+- **原 message 前缀逐字保留**（零回归——既有前缀 / 包含断言不受影响）；
+- 后缀出现条件 = `err.abortInfo` 存在 ∨ `signal?.aborted` ∨ `err.name ∈ {AbortError, TimeoutError}`；
+- unknown 形态（告警）：`· abort(unknown@<layer>:no reason on signal)`；未标注回落 `unknown@unrecorded`；
+- 总长 ≤300 字符（超长优先截 detail——文档宽度判据同量级）。
+
+**合成点（settle 族报告面——5 档；行号 as-of 交付后实测）**：`subagent-run.mjs:162` · `advisor-async.mjs:303` ·
+`escalate-async.mjs:258` · `consult.mjs:334` 与 `:343` · `subagent.mjs:346`（sync 错误日志）。`logEvent("child:error", …)` 经 `entry.error`
+自动携带（零改动）；`llm:error` 事件面（`core.mjs:107`）的 `err` 字段同合成器（P1）。
+
+**第 4 条 站点总表（12 行——产生 9 / 传播 1 / 取消停止 1 / 定时器 1）**
+
+| # | 面 | 站点（as-of） | 动作 |
+|---|---|---|---|
+| 1 | 产生 | `provider/core.mjs:27-31`（abortDOM——退避 / 限流等待） | `abortError(provider, "sleep")` |
+| 2 | 产生 | `provider/core.mjs:426-427`（fetch 拒否 catch） | `annotateAbort(provider, "request")` |
+| 3 | 产生 | `provider/sse.mjs:185-189`（读循环） | `abortError(provider, "stream-read")` |
+| 4 | 产生 | `provider/anthropic.mjs:80` 与 `:187-190` | `abortError(provider, "transport-anthropic")` |
+| 5 | 产生 | `provider/google.mjs:107` 与 `:210-213` | `abortError(provider, "transport-google")` |
+| 6 | 产生 | `provider/rate.mjs:89`（TPM/RPM 闸门——补 reason 透传） | `abortError(provider, "rate-gate")` |
+| 7 | 产生 | `proxy.mjs:55-59`（socket abort 单点——`:79` / `:193` / `:232` / `:239` 全走它） | `abortError(provider, "proxy")` |
+| 8 | 产生 | `agent.mjs:306`（interrupted response）与 `:338`（post-chat） | `annotateAbort` / `abortError(agent, …)` |
+| 9 | 产生 | `subagent.mjs:290` 与 `:295`（sync stopped 抛错） | `abortError(settle, "sync-stopped")` |
+| 10 | 传播 | F-AP2 五处 hop | `ctrl.abort(baseSignal.reason)`（reason 保留） |
+| 11 | 取消停止 | cancel 3 处 + stop 4 处（第 1 条表内站点） | `abort({abortTrigger:…, abortDetail:…})` |
+| 12 | 定时器 | 错误面（destroy / reject 抛错）：`sse.mjs:178` · `proxy.mjs:81` · `proxy.mjs:99` · `google.mjs:203`（google-sse-idle）；信号面（watchdog 中止 ctrl）：`consult.mjs:213` | 错误面 `timeoutError(…)`；信号面 `abort({abortTrigger:"timeout", abortDetail:"consult-watchdog"})` |
+
+规则（覆盖勘察外的漏网站点）：**对单个任务目标的定向中止 = cancel；整批 / 会话 / 回合级停止 = stop；用户按键 = user；
+定时器 = timeout；无标注 = unknown**（unknown 即告警——不得静默）。
+
+**第 5 条 数据流（单链——谁写、谁读）**
+
+调用面（TUI / ACP / cancel 动作）写 `reason`（形态 ①③）→ 链 hop 逐跳保 reason（第 4 条 #10）→
+provider / agent / settle 产生或补标错误（`abortInfo`，第 4 条 #1–#9、#12）→ 结算面合成 `deathLine`（第 3 条 5 处）→
+`entry.error` / consult note / `child:error` 日志 → digest 注入（`subagent-async.mjs:372-400` 零改）→ 用户与模型**一次可判**。
+
+### 20.4 残留 600s 面裁定（Q3——勘察结论与证据）
+
+1. **CLI 请求链无可切除对象**：绝对墙钟已于 2026-09-01 废除（`core.mjs:70-71`）；实测文案亦不符（F-AP5 第 1 条）；
+2. **有意边界保留**（proxy 头 600s / 读侧 idle 120s / proxy body idle 120s / consult watchdog 600s / advisor 评审墙）——
+   本批使其死亡自带 `timeout` 标注（§20.3 第 4 条 #12），不再"静默"；
+3. **VSC 镜像 600s 绝对墙钟**（用户实证文案的唯一在网生产点）——双端纪律下**登记 + 父侧排程**（§20.10），本批零碰。
+
+### 20.5 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决备选 |
+|---|---|---|
+| D-24-1 | layer 取 D1 原文三分（provider / agent / settle）+ detail 载站点名 | 与需求措辞同构、枚举稳定；否决「每站点一个 layer 值」（枚举膨胀、与需求不对齐） |
+| D-24-2 | 载体 = 结构化 `err.abortInfo`（非 message 内嵌） | 零回归 + 可机判；否决 Q2-1（message 污染）/ Q2-3（新通道） |
+| D-24-3 | reason 词汇表**就地扩展**（新 `abortTrigger` 形态）——不改 `{interrupt}` 既有形态 | 既有判据点零触碰（§20.3 第 1 条末）；否决「把 user 也迁入新形态」（触发大批既有断点） |
+| D-24-4 | 死亡行 = 原 message 前缀 + 后缀（不重写 message） | 既有文案 / 前缀断言零回归；否决「重写 message 为来源优先形态」 |
+| D-24-5 | cause 链渲染（P1）随本批落地、**可由评审剥离** | F-AP6 同点同修（零额外成本）；剥离后 P0 完整（合成器保留原样即可） |
+| D-24-6 | VSC 残留不当场修 | 双端纪律（各端独立实现）+ 写域边界；登记 §20.10 |
+
+### 20.6 受影响文件全清单（行数口径 = 行计数；as-of 2026-09-11）
+
+**文档域（eng-designer 写域——本批已落）**
+
+| 文件 | 批前基线（as-of 批前） | 变更 | 落档后（评审轮次 1 实测） |
+|---|---|---|---|
+| `docs/requirements/AGENT-LOOP.md` | 134 | §6 新增（F-D1.1–F-D1.4 + 判定句 + 边界；修正轮零改） | 168 |
+| `docs/design/AGENT-LOOP.md` | 1024 | §20 新增 + §2.1 一行指针（修正轮 #5）+ 状态行条目 + 本节变更记录 | 1282（其后并入他批增量不计入——如第 30 批 §21） |
+| `docs/design/PROVIDER.md` | 1365 | §3 一行指针（修正轮 #5——来源标注指向 §20.3） | +1 |
+| `docs/TODO.md` | 173 | 行 151 状态推进（台账——行替换） | ±0 |
+
+行数口径：批前基线 = 各节落档前；落档后 = §6 / §20 落档后、评审轮次 1 时点读数。文档面核对（修正轮 #5）：`LOGGING.md` 核得零改（`llm:error` err = `errText(e, 200)` 截断字符串——字段与截断形态不变，P1 仅换内容来源）。
+
+**实施域（eng-coder 写域——本批已交付；行数 as-of 2026-09-11 交付后实测）**
+
+| 文件 | 批前基线 | 交付后实测 | 净变 | 变更 |
+|---|---|---|---|---|
+| `src/abort-provenance.mjs` | —（新增） | 117 | 新增（设计估 ~90） | 词汇表 + 6 导出 |
+| `src/provider/core.mjs` | 482 | 477 | -5 | 产生点 `sleep` + `request`（+ P1 llm:error 面） |
+| `src/provider/sse.mjs` | 266 | 265 | -1 | 产生点 `stream-read` + 定时器 `sse-idle` |
+| `src/provider/anthropic.mjs` | 226 | 225 | -1 | 产生点 transport 两处 |
+| `src/provider/google.mjs` | 259 | 258 | -1 | 产生点 transport 两处 + 定时器 `google-sse-idle` |
+| `src/provider/rate.mjs` | 108 | 109 | +1 | 产生点 `rate-gate`（含 reason 透传） |
+| `src/proxy.mjs` | 267 | 262 | -5 | 产生点 `proxy` 单点 + 定时器两处 |
+| `src/agent.mjs` | 401 | 414 | +13 | 产生点 `agent` 两处 |
+| `src/agent-tools/subagent.mjs` | 403 | 405 | +2 | 产生点 2 + hop 1 + 合成 1 |
+| `src/agent-tools/subagent-run.mjs` | 203 | 206 | +3 | hop 1 + 合成 1 |
+| `src/agent-tools/subagent-async.mjs` | 473 | 474 | +1 | cancel 两处 |
+| `src/agent-tools/escalate-async.mjs` | 287 | 290 | +3 | hop 1 + 合成 1 |
+| `src/agent-tools/advisor-async.mjs` | 350 | 354 | +4 | hop 1 + 合成 1 + cancel 1 |
+| `src/agent-tools/consult.mjs` | 456 | 461 | +5 | hop 1 + 定时器 1 + stop 2 + 合成 2 |
+| `src/tui/key-handler.mjs` | 440 | 441 | +1 | stop reason 两处 |
+| `test/abort-provenance.test.mjs` | —（新增） | 190 | 新增（设计估 ~170） | T-AP1–T-AP10 |
+
+口径注：行数 = 读回行数（与批前基线同一计数法）；交付后读数含评审修正轮增量与他批在途并发编辑
+（共享档净变非本批独占——如 `agent.mjs` +13 以他批为主）。
+
+行数警戒（交付后实测）：`subagent-async.mjs`（474）· `consult.mjs`（461）· `key-handler.mjs`（441）· `subagent.mjs`（405）均在
+500 行硬限内（本批增量小——最逼近者 `consult.mjs` 461）；未触发拆分治理。
+
+**父侧面（非本批写域——登记）**：`CHANGELOG.md`（父侧核销注）；VSC 仓（§20.10）。
+
+### 20.7 用例表（T-AP——正常 / 边界 / 错误）
+
+| # | 类别 | 输入 | 预期输出（可机判） | 回指 |
+|---|---|---|---|---|
+| T-AP1 | 正常（词汇表） | `triggerOf` 四形态输入：`{interrupt:true}` / `TimeoutError` / `{abortTrigger:"cancel"}` / `undefined` | `user` / `timeout` / `cancel` / `unknown` 逐一命中；`TRIGGERS` 计数 = 5 | F-D1.1 |
+| T-AP2 | 正常（链传递） | 五处 hop 各一：`base.abort({interrupt:true,message})` → 子 ctrl | 子 `signal.reason` 深等 base.reason（fail-when-unchanged） | F-D1.2 |
+| T-AP3 | 正常（报告合成） | `deathLine(abortError(sig,"provider","stream-read"), sig)` | 前缀 = 原 message 逐字；含后缀 `abort(user@provider:stream-read` | F-D1.3 |
+| T-AP4 | 边界（unknown 告警） | 裸 `abort()`（无 reason）→ `deathLine` | 显式含 `unknown`（不得静默——空后缀即红） | F-D1.4 |
+| T-AP5 | 边界（定时器面——两形态） | ① `timeoutError("SSE idle timeout…","provider","sse-idle")` → `deathLine`；② `triggerOf({abortTrigger:"timeout"})` | ① 含 `timeout@provider:sse-idle`；② = `timeout` | F-D1.1 · F-D1.3 |
+| T-AP6 | 边界（cause 链——P1） | `Object.assign(new Error("fetch failed"),{cause:new Error("HeadersTimeoutError")})` | `deathLine` 含 `← cause:` 与 cause 文本 | F-D1.3（一次可判） |
+| T-AP7 | 错误（取消 / 停止） | cancel / stop 站点 reason（`{abortTrigger:"cancel"}` / `"stop"`）→ `deathLine` | 分别含 `cancel@…` / `stop@…` | F-D1.1 |
+| T-AP8 | 错误（零回归） | 既有测试族（`sync-cancel` / `async-settle` / `queued-stop` / `subagent-observe-send` / `advisor-chain-guards`） | 全绿（既有 abort 锁零伤） | N-D1.1 |
+| T-AP9 | 错误（合成点残留） | 源码扫描五处合成点 | `entry.error = err?.message` 形态命中 = 0（全经 `deathLine`） | F-D1.3 |
+
+### 20.8 验收标准（AC-AP——逐条回指 D1 / F-D1.x）
+
+- **AC-AP1**（F-D1.1）= T-AP1 绿 + `TRIGGERS` 计数 5 与 `../requirements/AGENT-LOOP.md` §6 表述一致（`node --test test/abort-provenance.test.mjs`）。
+- **AC-AP2**（F-D1.2）= T-AP2 绿 + grep 断言：五处 hop 均以 `abort(` 实参携带 reason（裸 `ctrl.abort()` 形态在五档命中 = 0）。
+- **AC-AP3**（F-D1.3）= T-AP3 / T-AP9 绿 + 合成器在五处合成点在位（grep `deathLine(` 命中 ≥5；`err?.message ?? String(err)` 命中 = 0）。
+- **AC-AP4**（F-D1.4）= T-AP4 绿（unknown 显式——用户实证形态可判；空后缀即红）。
+- **AC-AP5**（F-D1.1/F-D1.3 边界）= T-AP5 + T-AP7 绿（timeout / cancel / stop 三面标注落地；timeout 两形态 = 错误面 `timeoutError` + 信号面 `{abortTrigger:"timeout"}`——含 `triggerOf({abortTrigger:"timeout"}) → timeout` 断言）。
+- **AC-AP6**（N-D1.1）= T-AP8 绿——既有 abort / 结算 / 取消测试族全绿（零回归）。
+- **AC-AP7**（纪律面）= `node scripts/check-doc-width.mjs` 本批触碰档零新增违规（宽度 + V1/V2/V3）；仓库内他批在途文件的存量违规不在本批判据内。
+- **AC-AP8**（P1 面，可剥离）= T-AP6 绿（cause 链）——**若评审裁定剥离 P1**，本 AC 随同摘除，AC-AP1–AC-AP7 不受影响。
+
+### 20.9 纪律核对（D1 · 既有测试锁 · 双端纪律）
+
+- **D1 覆盖**：F-D1.1–F-D1.4 四条判定句 → AC-AP1–AC-AP5 逐条回指（§20.8）；
+- **既有 abort 测试锁零伤**：`test/sync-cancel.test.mjs`（hop / ⏹ 分类）· `test/async-settle.test.mjs`（settle 语义）·
+  `test/queued-stop.test.mjs`（cancel 路由）· `test/subagent-observe-send.test.mjs`（cancel 链路）· `test/advisor-chain-guards.test.mjs`
+  （timeout 六 kind）——本批只加标注与合成器，不改判定谓词（`classifySyncAbort` / `parentAborted` / `classifyErr` 零改），全族必须绿（T-AP8）；
+- **双端纪律**：各端独立实现、语义同源——CLI 面本批落地；VSC 面差异（600s 绝对墙钟 + 镜像标注面）**如实登记**（§20.10），
+  不以任一端产物为准回改另一端；不做 byte-identical 镜像同步。
+
+### 20.10 边界（本批不做）与登记项
+
+- **不改 abort 机制本体**（何时 abort / 谁有权 abort 零改）——只加标注与渲染（范围边界，批次 §1 明列）；
+- 不改 digest 注入格式 / 预算（`subagent-async.mjs:372-400` 契约零改）；不改提示词语义；不碰他链在途档；
+- **登记（本批不做）**：① TUI 块面错误文案（F-AP4——digest 已是首次可判载体，块面文案另行批）；
+  ② tool-result 面（`agent/dispatch.mjs:464` `Error: <message>`）与 sync 重抛面；③ MCP 家族（`mcp.mjs:23-24` / `transport-*`）同形标注
+  （不在子代理死亡链上——同类机制、另行批）；④ 死亡行后缀预算（超长 message 时后缀可被截尾吞——「先削 message 再拼后缀」）：后续改进（非本批——评审 🟡-2 登记）。
+- **VSC 残留面——父侧排程**（所需档 + 用途 + 最小改动面）：`thincoder-vscode/src/provider.mjs`（`:324` 去绝对墙钟 /
+  `:327` 头阶段语义对齐 CLI——**用户实证文案的唯一在网生产点**）+ VSC 镜像标注与合成面（`agent-tools/subagent-run.mjs` 等 `entry.error` 合成）；
+  VSC 档 = `thincoder-vscode/docs/design/AGENT-LOOP.md` 与 `PROVIDER.md`（VSC 仓独立写域——本批零碰）；
+- **零改确认（勘察）**：`provider/responses.mjs` 无自有产生点（错误经共享 `proxyFetch` / `chat` 面）· `provider/retry.mjs` 只透传（`:36`）。
+- **UI/交互决策（本批）**：用户可见面 = digest 中的死亡行（沿用既有注入通道——无新控件、无交互变更）；
+  TUI 块状态面零改（登记①——见下 open ②）；`detail` 短串展示为自由文本（不渲染为独立 UI 元素）。
+
+**未确认面（open）**：① 用户实证两次的**原始死亡文本**未入档——§20.4 给出「唯一在网生产点 = VSC 600s 绝对墙钟」的
+机械论证（文案逐字一致 + CLI 已废实证），若用户可补截图 / 原文即可二审（不阻塞本批）；
+② `detail` 短串是否收紧为枚举——待实现后按实测站点收敛（本批只锁 trigger / layer 两轴）。
+
+**变更记录**：2026-09-11 第 24 批——子代理 abort 来源标注（可诊断性）（新增本节；需求档 §6 同批落地；VSC 残留 600s 面登记父侧）；
+同日评审轮次 1 后修正轮（🔴1 + 🔵4 全落）——timeout 三处对齐（判据行 `reason.abortTrigger === "timeout"` · 形态③纳 `"timeout"` · 站点 #12 分错误面/信号面）·
+求值链段（err 优先 + 三步归属）· §20.6 行数口径改「批前基线 → 落档后实测」· form ① 四站点既存证据行 · §2.1 与 `PROVIDER.md` §3 指针（LOGGING.md 核得零改）。
+同日交付后设计刷新——`annotateAbort` 签名 4 参可选形态 · 站点表 #8 行号校正（`:306`/`:338`）· 补两处同类站点（`google.mjs:203` 定时器面 / `consult.mjs:334`+`:343` 合成器面——并随行校正 #12 与合成点链行号）· §20.6 实施域行数交付后实测刷新 · §20.10 登记 ④（后缀预算——后续改进）。
+
+## 21. Stop 钩子（主会话 run 结束事件）（第 30 批——2026-09-11）
+
+> 来源：批次 `../batches/2026-09-11-STOP-HOOK.md` §1；需求 `../requirements/AGENT-LOOP.md` §7。
+> 用户裁定（2026-09-11 13:36）：事件名 `Stop`；范围 = 每回合、仅主会话（子代理不触发）。
+
+### 21.1 问题陈述（现场复核——as-of 2026-09-11）
+
+- **需求**：Gitee #IKD5XY——「回答结束触发自定义通知」（弹窗 / 声音）。通知设施交给用户脚本（hook）——产品不做 OS 级通知。
+- **引擎现成**：`src/hooks.mjs:27-42`（`runHooks`：配置读取 / matcher 过滤 / 逐条 runOneHook / block 返回 false）、
+  `src/hooks.mjs:44-93`（`runOneHook`：基础载荷 JSON → stdin、timeout 默认 10s、spawn 失败/超时 → 放行）。
+  调用点仅三类：`src/agent/dispatch.mjs:254` / `:310`（PreToolUse——可阻断）、`:439`（PostToolUse——fire-and-forget）、
+  `:453`（PostToolUseFailure——fire-and-forget）。
+- **缺面 = run 终止触发点**：`callbacks.onTurnEnd?.(agent, turn)` 是**回合循环内的逐轮簿记**（TUI：流刷新 + 增量落盘，
+  `src/tui/tool-events.mjs:380-401`）——调用点 `src/agent/completion.mjs:42/65/83/96/111/139`（六处 continue 路径）、
+  `src/agent/post-turn.mjs:69`（每个工具轮）、`src/agent.mjs:387`（工具期中断）——**不含** run 正常完成路径。
+  run 终止的唯一收口点 = `finally` → `await finalizeAgentTurn(...)`（`src/agent.mjs:409` → `src/agent/run-stages.mjs:121`）。
+- **死事件**：`Notification` 声明于 `src/hooks.mjs:11`，**零调用点**。存活面清点（全仓 findstr）：代码注释 1 处 ·
+  `docs/design/_archive/ROADMAP-0.9.0.md`（归档）· `README.md:306`（0.9.0 历史变更史）；存活文档 `docs/design/TOOLS.md:38`
+  未列该事件；配置无校验（hooks 按事件名动态读取——`src/hooks.mjs:28`）。
+- **文档面**：hooks 事件列表的存活处 = `docs/design/TOOLS.md:38`（三事件 + `~/.thincoder/hooks/` 路径误述——
+  实际 = config.json `hooks` 键，权威 `src/hooks.mjs:5`）；`docs/design/AGENT-LOOP.md:125` 只述 PreToolUse 阻断点。
+- **双端**：VSC 仓**无 hooks 引擎**——`thincoder-vscode/src/hooks.mjs` 不存在、`runHooks` / hooks 引擎引用于 `thincoder-vscode/src` 零命中；
+  VSC 有自有 `thincoder-vscode/src/agent/run-stages.mjs` 镜像（日后 VSC 若上 hooks，Stop 触发点挂同位置——登记，不做）。
+
+### 21.2 方案选型对比
+
+**Q1 触发点（判据 = 「回答结束」语义 / 通知价值 / 覆盖完整性 / 实现成本）：**
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价 / 权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | 逐内层轮（onTurnEnd 消费点） | 长任务 N 轮 → N 次通知（风暴）；「回答未结束就报结束」语义错位 | —— | **否决** |
+| 2 | run 正常完成返回点（`agent.mjs:332`） | 只覆盖 done；撞帽暂停 / 异常终止无通知——而这两态恰是用户离开时最需要被叫回的场景 | —— | **否决**（覆盖不足） |
+| 3 | 收尾点 `finalizeAgentTurn` + 显式条件 | 单点覆盖全部退出路径（done / maxTurns / error / abort 分支同点分流）；条件可读（depth / abort / AbortError） | 需给收尾函数补 `depth` 入参（调用点 1 行） | **选定** |
+| 4 | TUI 层（`agent-turn.mjs` break 点） | 只覆盖交互面——headless（`-p` / runAgent 直调）丢失；引擎语义散到 TUI | —— | **否决** |
+
+**Q2 载荷载体（判据 = 与既有三事件同构 / 改动面 / 扩展性）：**
+
+| # | 候选 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 基础骨架 + `ctx.extra` 可选合并 | 既有三调用点不传 extra → 载荷逐字零变；Stop 专属字段（turn / reason）单点注入 | 引擎 +1 行 | **选定** |
+| 2 | 为 Stop 单建载荷构造器 | 复制骨架 → 两处漂移源 | —— | **否决** |
+| 3 | 复用既有字段承载（如 reason 塞 `result`） | 字段语义重载（`result` = 工具结果、`error` = 失败消息）——下游脚本无法稳定判读 | —— | **否决** |
+
+**Q3 `Notification` 处置（判据 = 运行时影响 / 用户陷阱 / 用途重叠）：**
+
+| # | 候选 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | 删除声明（引擎头 + 文档面） | 零调用点（自重引入即死）；存活文档不列；配置无校验 → 删除 = **零运行时影响**（既有 Notification 配置本就惰性）；「能配却永不触发」是陷阱；「通知」用途已被 Stop 覆盖 | 需核文档面（已核——§21.1） | **选定** |
+| 2 | 接线（映射到 Stop / 新工具触发） | 语义与 Stop 重复；新工具 = 新范围（批次边界外） | —— | **否决** |
+
+### 21.3 契约（触发判定 / 时序 / 载荷 / 引擎改动 / 事件表）
+
+**触发判定（逐字）**——`src/agent/run-stages.mjs` `finalizeAgentTurn` 首部（`flushPeerDomains(agent)` 之后）：
+
+```js
+// 第 30 批 D1（Stop 钩子）：主会话 run 终止 → fire-and-forget（非阻塞；失败静默——与 PostToolUse 同语义）。
+// 排除用户中止（Ctrl+C / Ctrl+I——中止后 TUI 重建 controller 续跑或已显式停回合）与 AbortError 展开。
+if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
+  runHooks("Stop", {
+    agent,
+    error: thrownError && !(thrownError instanceof ContinueError) ? thrownError : undefined,
+    extra: {
+      turn: agent._currentTurn ?? 0,
+      reason: thrownError instanceof ContinueError ? "maxTurns" : thrownError ? "error" : "done",
+    },
+  }).catch(() => {})
+}
+```
+
+- 判定语义：`depth === 0`（仅主会话——用户裁定）；`signal?.aborted` 排除 Ctrl+C（停回合）与 Ctrl+I（注入续跑）；
+  `AbortError` 名称兜底（`agent.mjs:304` 的 interrupt 合成 AbortError 不带 signal 判据——防续跑期假通知）；
+- `reason` 三态：`done`（正常完成）· `maxTurns`（`ContinueError`——撞帽暂停）· `error`（其余异常——`error` 字段带 message）；
+- 每 runAgent 调用至多一次（触发块在收尾函数内、收尾函数在 `finally` 单点调用）。
+
+**时序（与 post-turn / onTurnEnd 的关系）**：
+
+```
+回合循环每轮：chat → dispatch（Pre / Post / Failure hooks）→ post-turn 注入（onTurnEnd = TUI 簿记）
+→ 循环退出（正常 return / ContinueError / 异常 / 中止）
+→ finally → finalizeAgentTurn：① flushPeerDomains ② ★Stop 触发（本批新增）③ 池收尾（collectSettledAsync）④ guard 继承
+```
+
+- `onTurnEnd`（逐轮簿记）与 `Stop`（run 终止）**层级不同**：前者既有语义零改，后者不逐轮触发；
+- Stop 置于收尾链**首部**：后续收尾步骤的任何异常不得吞掉通知（与 `flushPeerDomains` 首行同理由）；
+- auto-turn（digest）回合 = depth 0 → 同样触发（决策 §21.4-④）；撞帽后用户续跑 = 新 runAgent 调用 → 再次触发
+  （每段一次；最终回答的 Stop = 链上最后一次）；
+- fire-and-forget：不 await（`runHooks(...).catch(() => {})`）、不计入回合时延；子进程存活性随宿主进程
+  （与 PostToolUse 同语义——不 unref、不新增退出面）。
+
+**载荷（stdin JSON——字段与顺序）**：
+
+```json
+{"event":"Stop","toolName":null,"toolArgs":null,"result":null,"error":null,"turn":7,"reason":"done","timestamp":"2026-09-11T07:00:00.000Z"}
+```
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `event` | `"Stop"` | 事件名（用户裁定） |
+| `toolName` / `toolArgs` / `result` | `null` | 无工具面——骨架字段保留（镜像既有事件形态） |
+| `error` | `null` \| string | **仅 `reason="error"` 时** = 异常 message；其余态 null |
+| `turn` | number | 链内累计轮号（`agent._currentTurn`——`helpers.turnFrame` 帧值，跨段累计，与状态行同源） |
+| `reason` | `"done"` \| `"maxTurns"` \| `"error"` | 终止原因三态 |
+| `timestamp` | ISO 8601 | 既有骨架同款 |
+
+- 不携带回答正文 / agent 对象 / 会话标识（脚本按需自取环境；后续增字段 = 向后兼容）；
+- `matcher` 对 Stop 无效（引擎改动 2）；`action: "block"` 无意义（返回值无人消费——fire-and-forget）。
+
+**引擎改动（`src/hooks.mjs`——三处小改，既有三调用点零改）**：
+
+1. `runOneHook` 载荷构造：基础键与 `timestamp` 之间插入 `...(ctx.extra ?? {})`（既有调用点不传 → 逐字零变）；
+2. `runHooks` matcher 守卫：`if (hook.matcher && ctx.toolName != null)`——工具事件 `toolName` 恒非空（零变化），
+   无工具名事件（Stop）忽略 matcher（**否决「仅文档说明」**：配了 matcher 会静默失火——陷阱，守卫 1 行可除）；
+3. 头部事件表：删 `Notification` 行、增 `Stop` 行（含「无工具名 / block 无意义」注记）。
+
+**事件表（本批收口后全四类）**：
+
+| 事件 | 触发点 | matcher | block 语义 |
+|---|---|---|---|
+| PreToolUse | 工具执行前（dispatch 预审段——可阻断） | 工具名 | 有（非零退出阻断——`dispatch.mjs:334` 错误文案） |
+| PostToolUse | 工具成功后（fire-and-forget） | 工具名 | 无（返回值无人消费） |
+| PostToolUseFailure | 工具失败后（fire-and-forget） | 工具名 | 无 |
+| **Stop**（新） | 主会话 run 终止（fire-and-forget） | 忽略（无工具名） | 无 |
+
+> 长期权威面 = `docs/design/TOOLS.md` §3（事件表行——登记项 §21.9）与 `src/hooks.mjs` 头（代码内权威）；
+> §3 落地前本节 = 过渡权威（落档后本节只留指针）。
+
+### 21.4 关键决策记录（含否决备选）
+
+1. **触发点 = 收尾点单点 + 显式条件**（否决逐内层轮 / 正常返回点 / TUI 层——§21.2 Q1）；
+2. **中止排除** = `signal?.aborted` + `AbortError` 兜底：Ctrl+I 是「注入后自动续跑」、Ctrl+C 是用户当场停——
+   两者都不需要通知（用户在场 + 工作未终止）；
+3. **撞帽 / 异常也触发**（`reason` 区分）：两态都是「agent 停了、可能需要你」——撞帽在 TUI 会阻塞问「Continue?」，
+   无人值守时恰是通知价值最高点；否决「仅 done」（覆盖不足）；
+4. **auto-turn（digest）触发**：异步工作结算后的 digest 回合 = 用户离开时工作真正收尾的时刻——排除它反丢核心场景；
+   接受的代价 = 罕见的「digest 撞帽 + autoApprove 自动续跑」链会多一次通知（**登记接受**——脚本可按 `reason` 过滤）；
+5. **载荷最小面**：不带回答正文 / agent 对象（通知场景非必需；正文会引入截断策略 + 状态暂存；后续加字段向后兼容）；
+   `turn` 用链内累计帧值（与状态行同源）；
+6. **失败静默**：与既有三事件同语义（引擎层已静默——spawn 失败 / 超时放行）；否决「Stop 单独可见化」（不一致 + 新日志面）；
+   全族可诊断面（如 `ev:hook` 事件）**登记**为独立批（§21.9）；
+7. **`Notification` 删除**（否决接线——§21.2 Q3）；
+8. **matcher 守卫进引擎**（否决「仅文档说明」——§21.3 引擎改动 2）；
+9. **extra 合并而非新构造器**（单一载荷构造点——D2）；
+10. **不改 TUI / dispatch / completion / post-turn**：本批只在收尾点挂载 + 引擎载荷扩展（零回归面最小化）。
+
+### 21.5 受影响文件全清单（行数口径 = 行计数；as-of 2026-09-11）
+
+| 文件 | 当前行数 | 预计增量 | 改动面 |
+|---|---|---|---|
+| `src/hooks.mjs` | 94 | +4~6（→ ~98-100） | 头部事件表（−1 行 / +1 行）· matcher 守卫 +1 · extra 合并 +1（含注释） |
+| `src/agent/run-stages.mjs` | 228 | +9~12（→ ~237-240） | `import { runHooks }` + 触发块（§21.3 逐字）+ JSDoc（ctx.depth） |
+| `src/agent.mjs` | 412 | 0（同改 1 行） | `:409` 调用点补 `depth` 入参 |
+| `test/hooks-stop.test.mjs` | 新增 | ~150-190 | 假 hook 脚本（mkdtemp 运行期生成；`process.execPath` + 脚本路径为 command / args）+ 11 用例（§21.6） |
+| `docs/requirements/AGENT-LOOP.md` | 169 | +41（→ 210，已落档） | 新 §7（需求层） |
+| `docs/design/AGENT-LOOP.md` | 1282 | +232（→ 1514，已落档——含状态行 1 条） | 新 §21（本节）+ 状态行 1 条 |
+| 登记（**不在本批声明面——父侧排程**）`docs/design/TOOLS.md` | 126 | 1 行替换 | §3 hooks 行：+Stop / 路径纠错（目标文本见 §21.9） |
+
+**零改确认**：`src/agent/dispatch.mjs`（490——三调用点逐字零改）· `src/agent/completion.mjs`（147）·
+`src/agent/post-turn.mjs`（71）· `src/tui/**`（TUI 面零改——`tool-events.mjs`（406）onTurnEnd 语义不动）·
+`thincoder-vscode/**`（VSC 仓零碰）。
+
+### 21.6 用例表（T-HS——正常 / 边界 / 错误）
+
+| # | 类 | 场景 | 输入 / 动作 | 预期输出 | 映射 |
+|---|---|---|---|---|---|
+| T-HS1 | 正常 | 主会话正常完成 | 桩 agent（`agent.config.hooks.Stop` = 假脚本——注入面见注）+ `finalizeAgentTurn(agent,{depth:0})` | 脚本产物出现：`event="Stop"` / 骨架 null / `reason="done"` / `turn` 数字 / timestamp ISO | F-E1 / F-E2 / F-E3 |
+| T-HS2 | 边界（**归册按慢门实测**） | 非阻塞 | 脚本先落 started 标记 → 等 go 信号文件（≤10s 超时自杀；此间不落载荷）→ 落载荷 | `await finalizeAgentTurn`（测试级 15s 超时兜底）返回后：轮询 started（≤5s）→ 断言载荷**不存在**（宿主返回先于脚本产物——await 化回归 = 死锁 → 测试超时红）；写 go → 轮询载荷出现（确已执行） | F-E3 |
+| T-HS3 | 边界 | 撞帽 | `thrownError = new ContinueError(50)` | `reason="maxTurns"`、`error=null` | F-E2 |
+| T-HS4 | 边界 | 子代理 | `depth:1` | 零产物（不触发） | F-E1 |
+| T-HS5 | 边界 | 用户中止 | ① `signal` 已 abort ② `thrownError = AbortError` | 两态各自零产物 | F-E1 |
+| T-HS6 | 边界 | auto-turn 回合 | `autoTurn:true` + `depth:0` | 触发（`reason="done"`）——决策 ④ 留痕 | F-E1 |
+| T-HS7 | 边界 | Stop hook 带 matcher | `matcher:"^bash$"`（无工具名） | 仍触发（matcher 忽略——决策 ⑧） | F-E4 |
+| T-HS8 | 错误 | hook 命令不存在 | `command` = 不存在路径 | `finalizeAgentTurn` 零异常、零产物 | F-E3 |
+| T-HS9 | 错误 | 非预期异常 | `thrownError = new Error("boom")` | `reason="error"`、`error="boom"` | F-E2 |
+| T-HS10 | 回归 | 工具事件 matcher 语义 | 经注入配置两跑：`runHooks("PreToolUse", {toolName, agent})`——`agent.config.hooks.PreToolUse` = 假脚本（matcher `^bash$`——注入面见注）；`toolName` = `"read"` / `"bash"` | read 不触发 / bash 触发（过滤语义保持） | F-E4 / N-E1 |
+| T-HS11 | 静态 | 事件集收口 | 扫描 `src/hooks.mjs` 源码 | 含 `Stop`；不含 `Notification` | F-E5 |
+
+> 桩 agent 可行性（勘察）：`finalizeAgentTurn` 的依赖对最小桩零崩溃——`flushPeerDomains`（`_peerWritten` 缺席即返回）·
+> `getAsyncPool`（`?? null`）· `collectSettledAsync`（池空 → 早退）· `closeOpenCodeAdvisorRuns`（`_advisorRuns` 非 Map 免疫）。
+> 假脚本落 `fs.mkdtempSync(os.tmpdir())`（运行期生成——零固件维护）；`command = process.execPath`（免 PATH / Windows 差异）。
+> **配置注入面（修正轮 🟡1——既有缝）**：引擎配置读取 = `ctx.agent?.config?.hooks?.[event]`（`src/hooks.mjs:28`——逐调用动态读取、无模块级状态）——
+> 测试以**参数注入**覆盖（构造桩 `agent.config.hooks[event]`；env 覆盖 / 模块级 setter / 临时配置目录均不需要）：**零新增缝**——`hooks.mjs` 影响表（+4~6）与「零改」口径不变。
+> **轮询与归册（修正轮 🔵3）**：全部「轮询」统一 ≤5s 上限 + 失败信息（目标路径 + 脚本 stderr 摘要）；T-HS2 以**信号同步**（go 文件）与收尾时延解耦——归册按慢门实测点名（TESTING.md §1.2）；其余用例保持快层 <500ms。
+
+### 21.7 验收标准（AC-HS——逐条回指 D1 / F-E.x / N-E.x）
+
+- **AC-HS1**（F-E1）= T-HS1 / T-HS3 / T-HS4 / T-HS5 / T-HS6 绿（`node --test test/hooks-stop.test.mjs`——触发面五态）。
+- **AC-HS2**（F-E2）= T-HS1 / T-HS3 / T-HS9 绿 + 载荷字段断言（reason 三态 / error 仅 error 态非空 / turn 数字 / timestamp ISO / 骨架 null）。
+- **AC-HS3**（F-E3）= T-HS2（归册按慢门实测——归册时走 `npm run test:full`）+ T-HS8 绿（「宿主返回先于脚本产物」+ 零异常）。
+- **AC-HS4**（F-E4）= T-HS7 / T-HS10 绿 + grep 断言 `ctx.toolName != null` 守卫在位（`src/hooks.mjs`）。
+- **AC-HS5**（F-E5）= T-HS11 绿（源码含 Stop、不含 Notification）+ 交付核验：`src/hooks.mjs` 头部事件表四类齐；
+  `TOOLS.md` §3 分句随父侧排程落档（登记项 §21.9——不阻塞代码面）。
+- **AC-HS6**（N-E1）= `npm test` 全绿 + `npm run test:full` 全绿（既有族零回归；hooks 无既有测试——首个 hooks 测试档为本批新增）。
+- **AC-HS7**（纪律面 / N-E3）= 两仓 `node scripts/check-doc-width.mjs` 本批触碰档零新增违规 + 本批交付 diff 不含
+  `thincoder-vscode/**`（VSC 仓零碰——diff 面核对）。
+- **AC-HS8**（N-E2）= 断言锁定 + 反例可复现（fail-when-unchanged 抽查）：① 摘除触发块 → T-HS1 转红；
+  ② 摘除 matcher 守卫 → T-HS7 转红；③ 恢复 `Notification` 声明行 → T-HS11 转红——coder 交付报告附抽查证据（三条反例各一次）。
+
+### 21.8 纪律核对（D1 · D2 事件表归属 · 既有测试锁 · 双端纪律）
+
+- **D1 写权**：需求 / 设计档 = eng-designer（本批 §7 / §21 本节）；批次档 §2 = eng-designer（`batch_segment`）；
+  `src/**` = eng-coder（设计 token 门）；`docs/design/TOOLS.md` §3 = 设计档（设计者权属）——**不在本批声明面**，登记父侧排程；
+- **D2 单一权威源**：事件表长期权威 = `docs/design/TOOLS.md` §3 + `src/hooks.mjs` 头；本节 = 本批落地依据（过渡权威——§21.3 注记），
+  不复制到别处；`docs/design/AGENT-LOOP.md:736` 指针行（hooks → TOOLS.md）保持有效；
+- **既有测试锁**：hooks 引擎**无既有测试**（`thincoder/test/**` 对 `runHooks` / `hooks.mjs` 零命中——`_catalogHooks` / `_rateHooks`
+  为测试注入钩子、同名不同物）→ 无锁伤面；零回归由全量 `npm test` 覆盖（AC-HS6）；
+- **双端纪律**：各端独立实现、语义同源——本批 **CLI 单端**（VSC 仓无 hooks 引擎——§21.1 勘察），VSC 零碰、不做 byte-identical；
+  VSC 差异登记 + 父侧排程（§21.9）；
+- **文档宽度 / 计数（D3）**：本批触碰四档零新增违规（AC-HS7）；事件计数陈述（四类）与列表同改。
+
+### 21.9 边界（本批不做）与登记项
+
+- **不做**：OS 级通知设施（弹窗 / 声音——用户脚本面）· 工具化通知 · 逐内层轮触发 · 子代理 Stop ·
+  hooks 引擎既有语义改动 · TUI 面改动 · 新建档；
+- **登记（父侧排程——所需档 + 用途 + 最小改动面）**：
+  1. `docs/design/TOOLS.md` §3 hooks 行（`TOOLS.md:38`）——**1 行替换**，目标文本：
+     「- **hooks**：PreToolUse / PostToolUse / PostToolUseFailure / Stop 用户脚本（配置在 `~/.thincoder/config.json` 的
+     `hooks` 键；PreToolUse 可阻断；Stop = 主会话 run 终止事件）。事件表与载荷契约 = AGENT-LOOP §21.3 / `src/hooks.mjs` 头。」
+     （同时纠正 `~/.thincoder/hooks/` 路径误述）；
+  2. hooks 引擎失败可诊断面（`ev:hook` 事件 / 全族可见化）——独立批评估（§21.4-⑥）；
+  3. VSC 差异：VSC 无 hooks 引擎 → 无 Stop 面（如需对位 = 独立批；挂载点 = `thincoder-vscode/src/agent/run-stages.mjs`）；
+- **存量面不回改**：`README.md:306`（0.9.0 历史变更史）与 `_archive/ROADMAP-0.9.0.md` 为历史记录——不重写
+  （功能面露出随发布批，父侧定）；
+- **UI / 交互决策（本批）**：零 UI 变更（无新控件 / 无渲染改动——用户可见面 = 其自有脚本产物）；无 open 交互项。
+
+**未确认面（open）**：① 口径确认——「每回合」在本设计读作**每次主会话 run 终止**（用户可见「一次回答」）；
+若用户本意含「每个内层工具轮」则另需裁定（本批按前者设计——通知风暴与「回答结束」语义相悖，§21.4-①）；
+② 未来 CLI 若引入非用户源 `AbortError`（如请求超时 abort），Stop 对该类终止静默——彼时按 `reason` 扩展（独立批）。
+
+**变更记录**：2026-09-11 第 30 批——Stop 钩子（主会话 run 结束事件）+ Notification 死声明除名（新增本节；需求档 §7 同批落地；TOOLS.md §3 更新登记父侧）。
+同日评审轮次 1 后修正轮（🟡1 + 🔵3 全落）——配置注入面复核（既有缝 = `ctx.agent.config` 参数注入；零新增缝）· 状态行 / 影响表括注改「+Stop / 路径纠错」·
+T-HS2 改信号同步（墙钟余量消除）+ 归册按实测 · T-HS1 删「宿主返回不等待」半句 · §21.6 注记统一轮询上限 / 失败信息。
+
+## 22. digest 注入预算统一（群 B 批 B5——双端语义源）（2026-09-11）
+
+> 来源：批次档 `../batches/2026-09-11-VSC-REVIEW-ASYNC-SWEEP.md` §1 条目 B5（`docs/TODO.md` 需求池行；BATCH-3 交付偏差承接口）。
+> 需求 = `../requirements/AGENT-LOOP.md` §11（F-I2 / N-I1~N-I3——指针不重述）。
+> 双端纪律：语义同源、各端独立实现、零跨仓依赖；VSC 面落 `AGENT-LOOP（VSC 仓）§16`（镜像）。
+> 冻结面：§9 / §11 / §14 已交付契约零碰（只扩预算覆盖，不改轮界定 / 标签 / 墓碑语义）；VSC 仓零写入。
+
+### 22.1 问题（现状复核 as-of 2026-09-11）
+
+预算现覆盖（CLI 面）= subagent / advisor / escalate 三族（共用 `injectAsyncResult`——`src/agent-tools/subagent-async.mjs:325-363 / 373-405`）；
+consult 族绕过：`injectConsultResult`（`src/agent-tools/consult.mjs:181-188`）——offload 预览只有单条保护、无轮累计。
+注入路径：run-start 注入（`src/agent.mjs:103-110`）+ 挂起退出残余（`src/tui/suspension-drive.mjs:280-286`）——role 分支两处内联，consult 两路皆绕过。
+BATCH-3 F-2 原始事故面（1.3MB 请求体）+ 交付偏差记录（`docs/design/_archive/BATCH-3-STRUCTURE.md` 变更记录：「四族共用单点」与实际派发不符——扩面需新任务重评审）。
+多族合并轮（subagent + consult 同轮）累计超限可复现。
+
+### 22.2 方案选型（候选 ≥2——与 VSC §16.2 同三候选）
+
+| # | 候选 | 判据逐项评估 | 取舍 | 结论 |
+|---|---|---|---|---|
+| 1 | **共享叶子模块 `digest-budget.mjs`（单源）+ 四族全接线** | 常量 / 判超 / 记账 / 落盘四处合一（D2）；派发与直采路径全覆盖；`subagent-async.mjs` 释放 ~25 行 | 新档 ~70 + consult 接线 +2~4 行 | **选定** |
+| 2 | 只在 role 分支调用点统一（`agent.mjs` / `suspension-drive.mjs`） | 单点集中；但直采路径（回合尾 collect——`subagent-async.mjs` 内）不经调用点——覆盖不完备 | — | 否决 |
+| 3 | 各注入器各自实现判超（不建模块） | 零新档；但记账双份/判超多份 = 多源漂移（D2）+ 跨族合计失效 | — | 否决 |
+
+### 22.3 契约（逐条——实现对象；VSC 面同语义）
+
+**D-DG1 单源模块（CLI 面）**：新档 `src/agent-tools/digest-budget.mjs`——导出三件：`DIGEST_INJECT_BUDGET`（64×1024）；
+`digestBudgetOver(agent, size)`（判超 + 记账——`used > 0 && used + size > BUDGET` 首条豁免保留；轮界定
+`agent.history.length !== r.len + 1` 语义逐字自 `subagent-async.mjs:330-343` 迁入，键 = agent）；
+`persistOverflowReport(raw, { tag })`（`configDir/tool-results` 落盘 + `cleanupOldToolResults` 轮转 + 清单行；失败 null——调用方回退 inline）。
+测试缝 `_setDigestOffloadDirForTest` 随迁（原处 re-export）。
+
+**D-DG2 接线点**：`injectAsyncResult`（subagent / advisor / escalate 三族——判超 / 落盘改调共享模块，标签与墓碑语义零变）；
+`injectConsultResult`（consult 新接线——统一形态：raw 计入预算 → 超限 → 落盘清单行（失败回退 inline 预览））。
+
+**D-DG3 计数口径**：计入预算的 `raw` = 报告 / 错误正文（不含 `[System reminder: …]` 标签行——与既有口径一致）；错误条目同计同落盘。
+
+**D-DG4 兼容面**：`subagent-async.mjs` 保留 `DIGEST_INJECT_BUDGET` + `_setDigestOffloadDirForTest` re-export
+（测试导入面零改——`test/async-settle.test.mjs:18`）；单条 offload 预览路径零改。
+
+### 22.4 受影响文件（行数 as-of 2026-09-11 实测）
+
+| # | 文件 | 现 | 预计 | 动作 |
+|---|---|---|---|---|
+| 1 | `src/agent-tools/digest-budget.mjs` | 新 | ~70 | 单源模块（D-DG1） |
+| 2 | `src/agent-tools/subagent-async.mjs` | 474 | ~450（净减） | 迁出 + re-export |
+| 3 | `src/agent-tools/consult.mjs` | 461 | ~465 | +接线 |
+| 4 | `test/async-settle.test.mjs` | 349 | ~390 | T-DG1~T-DG3 |
+
+### 22.5 用例表（T-DG1~T-DG3——CLI 面）
+
+| # | 类型 | 输入 | 预期输出（断言） | 需求 |
+|---|---|---|---|---|
+| T-DG1 | 正常 | 同轮两条 consult（各 40K 正文——合计 80K > 64K）直驱 `injectConsultResult` | 首条 inline 预览；次条 = 清单行（全文落盘——读档断言）+ 不 inline 全文 | F-I2 |
+| T-DG2 | 正常 | 三族既有路径超限形态（subagent / advisor / escalate 经 `injectAsyncResult`） | 清单行同规（迁移后行为恒等——零回归对照） | F-I2 |
+| T-DG3 | 边界 | 跨族同轮：subagent 40K + consult 40K | 次条判超（**共享预算**——单源记账） | F-I2 |
+
+### 22.6 验收标准（逐条回指需求——可机判）
+
+| AC | 判据 | 回指 |
+|---|---|---|
+| AC-B5-CLI-1 | T-DG1 / T-DG2 / T-DG3 绿 | F-I2 |
+| AC-B5-CLI-2 | 既有预算用例零回归（`DIGEST_INJECT_BUDGET` / 测试缝 re-export 恒等） | N-I1 |
+| AC-B5-CLI-3 | 行数实测对表（subagent-async 净减）+ CLI 快层全绿 + `check-doc-width` 新增违规 0 | N-I3 |
+
+### 22.7 边界（本批不做）
+
+- 不改轮界定（相邻注入 = 同轮）/ 各族标签与墓碑 / offload 单条路径；不做跨轮累计 / 全局配额；
+- 不改 VSC 仓（镜像各自实现——`AGENT-LOOP（VSC 仓）§16`）；**零 UI 面**。
+
+**计数（D3）**：用例 3（T-DG1~T-DG3）· AC 3（AC-B5-CLI-1~3）· 实施域 3 档改 + 1 档新（subagent-async / consult / 测试档 + digest-budget 新档）
+· 文档域已落（本节 + 变更记录行）。
+
+**变更记录**：2026-09-11 群 B 批——新增本节（digest 注入预算统一：单源模块 + 四族全接线；VSC 镜像 = `AGENT-LOOP（VSC 仓）§16`）。
+

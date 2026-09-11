@@ -338,12 +338,12 @@ export function refreshQueuedTokens(parent, onToken) {
 }
 
 /**
- * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4 + §24 D-24a/R14 分域):
+ * Slot-queue refill (AGENT-LOOP.md §15 D-A1/D-A6 + §20 D-SD4 + §11.1 D-24a/R14 分域):
  * start queue heads while a running slot is free — called from every settle
  * (completion frees a slot) and from the turn-end collection's refill loop. §20：
  * 队列现可混合 waiting-deps 与 slot-queued——扫描选"依赖全满足 + 域无冲突"的最早
  * 条目启动（waiting 越行不阻塞槽位；多任务同时解除按 queued 序逐个启动）。
- * §24 D-24a（R14）：槽位判定按域——条目 _pool 域内 running 数 < 该域上限才启动
+ * §11.1 D-24a（R14）：槽位判定按域——条目 _pool 域内 running 数 < 该域上限才启动
  * （同域仍 4——纯单域队列行为与旧 shift 完全一致；跨域总量 8——各域独立腾槽，
  * 互不阻塞）。配置每次补位时读（poolLimitsFor——变更即生效下个补位）。
  */

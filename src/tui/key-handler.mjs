@@ -1,9 +1,21 @@
 import { ansi, C } from "./ansi.mjs"
 import { readClipboardText, insertPastedText } from "./clipboard.mjs"
-import { computeLayout } from "./layout.mjs"
+import { computeLayout, inputContentWidth } from "./layout.mjs"
+import { moveCursorVertical } from "./render.mjs"
 import { handleSearchKey } from "./key-handler-search.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 import { handlePermissionMode, handleQuestionMode, handleInterruptMode } from "./key-modes.mjs"
+
+/** 第 33 批（TUI §14.3(e)——attention 清位）：输入即在场——仅当原值为真时置假 + `render()`
+ *  （已假则零副作用、零重绘）。键盘入口与本文件（`onKeypress`）与鼠标输入路径（index.mjs
+ *  stdin data 处理器）两点共用；blocked 两态无需清位（实时派生）。
+ *  @returns {boolean} 本次是否发生清位 */
+export function clearAttention(state, render) {
+  if (!state.attentionAwaiting) return false
+  state.attentionAwaiting = false
+  render()
+  return true
+}
 
 /** Current conversation max scroll offset (display lines beyond the visible panel). */
 export function convMaxScroll(state) {
@@ -24,6 +36,9 @@ export function createKeyHandler(ctx) {
   const { agent, state, render, popPicker, renderPickerLines, handleSlash, handleTab, submit, pasteClipboardImage, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems, renderWizard, pushLine, cleanup, showPicker, loadOlder } = ctx
 
   return function onKeypress(str, key = {}) {
+    // 第 33 批（TUI §14.3(e) 键盘点）：模态分派**之前**——任意按键 = 用户在场 ⇒ 清 attention
+    // 位（仅复位呈现态字段，按键语义 / 模态判定 / busy 门禁零改）。
+    clearAttention(state, render)
     // permission confirm: y/n/a (a = approve + AUTO ON); batch (§16 D-B1): a/o/n (Esc = deny)
     // ——模态实现 key-modes.mjs handlePermissionMode（2026-09-03 D-S4）
     if (handlePermissionMode(str, key, { state, agent, pushLine, render })) return
@@ -59,12 +74,13 @@ export function createKeyHandler(ctx) {
           state.suspended
         if (hasStopTarget) {
           // 当前回合平 abort（无 interrupt——命中 agent.mjs 回合收尾清池分支——全停）
-          if (state.processing && state.controller) state.controller.abort()
+          // §20.3 站点 #11（第 24 批）：整批 / 会话级停 = stop（reason 载荷）
+          if (state.processing && state.controller) state.controller.abort({ abortTrigger: "stop", abortDetail: "session-stop" })
           // 会话 abort 集合 = 链条内全部 controller（含 Ctrl+I/ContinueError 重建的旧
           // controller——children 不逃逸，round1 偏差 #3）。挂起态才标记 _suspAborted +
           // 唤醒 driver（driver 收尾清池）——非挂起语境置位会粘滞阻塞未来挂起会话重入
           // （round2 偏差 #1 语义）。
-          for (const c of agent._sessionAbortAll ?? (agent._sessionAbort ? [agent._sessionAbort] : [])) c?.abort()
+          for (const c of agent._sessionAbortAll ?? (agent._sessionAbort ? [agent._sessionAbort] : [])) c?.abort({ abortTrigger: "stop", abortDetail: "session-stop" })
           if (state.suspended) {
             state._suspAborted = true
             state._suspWake?.()
@@ -159,7 +175,8 @@ export function createKeyHandler(ctx) {
     // Ctrl+I (or Tab during processing): interrupt and inject a message
     if ((key.ctrl && !key.alt && key.name === "i") || (key.name === "tab" && state.processing && !state.interruptPrompt)) {
       if (state.processing && state.controller && !state.interruptPrompt) {
-        state.interruptPrompt = { text: "" }
+        // 注入框状态模型（第 31 批——TUI-INPUT-BOX.md §1 不变量 9）：{ chars, cursor }，空态 = { chars: [], cursor: 0 }
+        state.interruptPrompt = { chars: [], cursor: 0 }
         render()
       }
       return
@@ -266,9 +283,10 @@ export function createKeyHandler(ctx) {
       // busy 门禁（INPUT-LOCK C'——2026-09-09 + INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：
       // processing（含 digest——单一判据）输入不禁——吞提交不吞字符（打字照常回显）；Enter
       // 提交吞 + busy 提示——斜杠同禁发（白名单已删——/exit 也发不出——退出靠 Ctrl+C 终端
-      // 层通道——门禁前不误伤）；空 Enter 静默（text 非空才吞）；Tab/↑↓ 仍禁；多行换行
-      // （meta/enter——编辑）照常放行。
-      if (key.name === "tab" || key.name === "up" || key.name === "down") return
+      // 层通道——门禁前不误伤）；空 Enter 静默（text 非空才吞）；多行换行
+      // （meta/enter——编辑）照常放行。**第 31 批**：↑↓ 不再在此全屏蔽——分流下沉到下方
+      // 三规则块（竖移放行 / 历史导航禁；TUI-INPUT-BOX.md §3）；Tab 仍吞（死条件在案——原样保留）。
+      if (key.name === "tab") return
       const isSend = (key.name === "return" && !key.meta) || (str === "\r" && !key.meta)
       if (isSend && state.input.join("").trim()) {
         pushLine(`[主会话处理中 —— 消息未发送（回合结束后请重按 Enter）]`, C.warn)
@@ -292,7 +310,24 @@ export function createKeyHandler(ctx) {
       return
     }
 
-    // input history
+    // ↑/↓ 三规则（TUI-INPUT-BOX.md §3——第 31 批）：① 翻历史中恒历史（多行条目不竖移）
+    // ② 竖移优先（可视行口径——折行与 \n 同权；显示列保持 + 短行端钳制）③ 边界回落历史（↑）
+    // ／无动作（↓）。processing 期：竖移放行（纯编辑——与字符/退格/←→ 同权）、历史导航禁
+    // （规则 ①/③ 的历史分支吞——不进入、不切换）。
+    if (key.name === "up" || key.name === "down") {
+      if (state.historyIndex === -1) { // 规则 ① 优先——翻历史中不竖移
+        const cols = (state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80)
+        const next = moveCursorVertical(state.input, state.cursor, inputContentWidth(cols), key.name)
+        if (next !== null) {
+          state.cursor = next // 规则 ②：竖移（草稿/历史指针零涉——D-31.6）
+          render()
+          return
+        }
+      }
+      if (state.processing) return // 规则 ①/③ 的历史分支吞——processing 期历史导航禁
+    }
+
+    // input history（规则 ① 恒历史 + 规则 ③ 边界回落——历史语义零改）
     if (key.name === "up") {
       if (state.history.length) {
         // Save current input as draft when entering history mode (historyIndex === -1).

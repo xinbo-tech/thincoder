@@ -2,7 +2,8 @@
  * advisor.mjs — advisor system-prompt selection, follow-up building, session assembly.
  * User-message building lives in advisor/messages.mjs; execution (tool loop, provider
  * resolution, review entry) in advisor/run.mjs; history extraction in advisor/history.mjs.
- * repos.mjs still hosts the doc-file classifier (isDocFile) used by mutation tracking.
+ * Path classification (code / doc / temp) and the project declaration surface live in
+ * ../conventions.mjs — the single authority every gate consumes (repos.mjs included).
  *
  * The advisor runs as a read-only exploration sub-agent with tools
  * (read, glob, grep, ls, lsp, code_search) — ZERO git, every round. The change
@@ -266,7 +267,7 @@ export function prepareAdvisorMessages(agent, reviewType, designToken = null, do
   // review surface.
   const scopeFiles = resolveScopeFiles(agent, paths)
   const followUp = buildAdvisorFollowUp(agent, prior, scopeFiles, object)
-  // §24 D-24b (design round 2+ — async fix-round continuations must be able to
+  // §11.2 D-24b (design round 2+ — async fix-round continuations must be able to
   // re-approve): re-anchor the review scope (the convergence follow-up carries no
   // document list) and inject the round's design token with the approval signal.
   if (reviewType === "design") {

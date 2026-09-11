@@ -264,7 +264,11 @@ VERDICT: pass
 | 2 | 引用核验（修正 #5 新面） | 🔵 | TUI.md:508 现引 `src/agent-tools/subagent.mjs:215-220`；轮 1 §3 记录同事实引 `agent-tools/subagent.mjs:176`（batch:191）——两值必有一陈旧；本次评议范围不含源码，无法复核。另：本批新增文案的行号锚（TUI.md:508/:516-517/:553、AGENT-LOOP.md:15-16）与 AGENTS.md「设计档代码引用锚符号、不用行号」约定不一致（行号随编辑腐烂） | 实现时按 fail-when-mismatch 核对 `:215-220`（或改符号锚）；收口回写时顺带清理；不阻塞 |
 | 3 | Coordination（父侧待办——R5） | 🟡 | 父侧待办未闭环（均已在批次档记录、非设计缺陷）：TODO.md 两条改记（batch:175——主 agent 指示未执行）· CHANGELOG · 交付后回写核验（TUI.md §1 地图行 / §11 完成史 / 变更记录终稿——batch:107；两处「不得回退」核验——batch:108）· 真机 smoke 执行（主 agent/用户——batch:171） | 收口时逐项闭环；不阻塞凭证签发 |
 
-**核验要点（正面结论）**：七项修正逐条文本落地（非纸面）——①契约②注 + 守护最小形状（TUI.md:512-517）；②折叠键句（:628-629）+ §10 行内 supersede 注（:781）+ 批次档核验行（batch:108）；③VSC 表述改准（:552-555）+ AGENT-LOOP.md:14-16（+batch:105）；④真机 smoke（:602-608 + batch:171）；⑤并发内层子块失效前提（:506-508）；⑥用例 2 负断言（:576）；⑦用例 6 混入内层前缀行（:580）。冻结面不变：12 用例（TUI.md:575-586）· AC1..AC9（:592-600）· F8/N5/N6（requirements/TUI.md:26/36/37）；实现边界 / files 域照原表零动（batch:173）。修正未引入机制级矛盾：内层行并入 / 守护元数据 / 单环 500 / 计数真值 / VSC「无子块小节形态 · 另有子标形态」五组表述在受审四档内一致——无 Document ownership 🔴；受影响文件表与 AC 可验证性沿用轮 1 源码核验（照原表零动），无新增跨尺寸线项。修正新面（smoke 步骤 / AGENT-LOOP 未决行预写 / 失效前提注 / 两条断言加强）逐条量小且均已在批次档披露（batch:164-171）——未见未披露扩面。
+**核验要点（正面结论）**：七项修正逐条文本落地（非纸面）——①契约②注 + 守护最小形状（TUI.md:512-517）；②折叠键句（:628-629）+ §10 行内 supersede 注（:781）+ 批次档核验行（batch:108）；③VSC 表述改准（:552-555）+ AGENT-LOOP.md:14-16（+batch:105）；
+④真机 smoke（:602-608 + batch:171）；⑤并发内层子块失效前提（:506-508）；⑥用例 2 负断言（:576）；⑦用例 6 混入内层前缀行（:580）。冻结面不变：12 用例（TUI.md:575-586）· AC1..AC9（:592-600）· F8/N5/N6（requirements/TUI.md:26/36/37）；实现边界 / files 域照原表零动（batch:173）。
+修正未引入机制级矛盾：内层行并入 / 守护元数据 / 单环 500 / 计数真值 / VSC「无子块小节形态 · 另有子标形态」五组表述在受审四档内一致——无 Document ownership 🔴；受影响文件表与 AC 可验证性沿用轮 1 源码核验（照原表零动），无新增跨尺寸线项。修正新面（smoke 步骤 / AGENT-LOOP 未决行预写 / 失效前提注 / 两条断言加强）逐条量小且均已在批次档披露（batch:164-171）——未见未披露扩面。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 618 字符 → 纯折行〕
 
 **计数**：🔴 0 · 🟡 1 · 🔵 2。无阻塞项。
 
@@ -294,7 +298,10 @@ _（待写——eng-coder）_
 
 ### SUBAGENT-TAIL 实施记录（eng-coder 自写——2026-09-11）
 
-**交付摘要**：F8/N5/N6 落地——4 个 `routeSub*`（token / reasoning / toolCall / toolOutput）嵌套分支的 append 目标上移外层 `sub.blocks`（D-ST1 数据流合并）；子块载体降为守护元数据（done 守卫 / currentTool fresh 判别 / children 收尾遍历）；渲染面净删（`subChildHeadRow` / `subChildFoldKey` / `renderSubChildSections` / 递归 walk / 子块树签名 / 两处调用点）；trim 收窄为单载体最旧先行（D-ST4）；省略计数三缺陷修复（标记自重 / 幽灵行 / 块尾空行口径——N6）。写域 = **6 源 + 1 新测试档**；`mouse.mjs` 零改（核对通过——只读通用 `_foldToggle` / `_stopCol` / `_foldScroll`）；`docs/**` 零改。
+**交付摘要**：F8/N5/N6 落地——4 个 `routeSub*`（token / reasoning / toolCall / toolOutput）嵌套分支的 append 目标上移外层 `sub.blocks`（D-ST1 数据流合并）；子块载体降为守护元数据（done 守卫 / currentTool fresh 判别 / children 收尾遍历）；
+渲染面净删（`subChildHeadRow` / `subChildFoldKey` / `renderSubChildSections` / 递归 walk / 子块树签名 / 两处调用点）；trim 收窄为单载体最旧先行（D-ST4）；省略计数三缺陷修复（标记自重 / 幽灵行 / 块尾空行口径——N6）。写域 = **6 源 + 1 新测试档**；`mouse.mjs` 零改（核对通过——只读通用 `_foldToggle` / `_stopCol` / `_foldScroll`）；`docs/**` 零改。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 447 字符 → 纯折行〕
 
 **改动清单（file:line，as-of 交付）**
 

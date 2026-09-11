@@ -1,0 +1,48 @@
+✖ T41 ① 仓库扫描：V1/V2/V3 违规全部在基线内（新增违规阻断） (263.4008ms)
+✔ T41 ② 反证（夹具域）：V1 失效引用被检出 / 合规引用不误报 (5.144ms)
+✔ T41 ③ 反证（夹具域）：V2 计数不符被检出 / 相符与伪形不误报（三形态） (2.9073ms)
+✔ T41 ④ 反证（仓库域）：注入一条计数不符探针 → 判为新增（不落基线） (424.6027ms)
+✔ T41 ⑤ 基线文件与扫描域口径（AC28 判据源） (24.0226ms)
+✔ T46 边界：V3 批次档 §3 工具轮次行三态零假阳（AC32——在飞不报/批准必报/有戳不报/骨架行不算） (6.0848ms)
+✔ T72 正常/反证：跨仓引用——带 .md 形态 fail-closed 报 unknown-doc；规范形态零命中（B/AC53） (4.0682ms)
+✔ T73 正常：宽度表格行豁免——表格行零报告 / 非表格超宽照报（C/AC54） (3.4319ms)
+✔ T74 边界：宽度扫描单源（主流程调用 checkDocWidths；内联重复零残留——C/AC54） (1.2501ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 8
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 872.4947
+
+✖ failing tests:
+
+test at test\doc-consistency.test.mjs:46:1
+✖ T41 ① 仓库扫描：V1/V2/V3 违规全部在基线内（新增违规阻断） (263.4008ms)
+  AssertionError [ERR_ASSERTION]: 新增违规（修掉或按存量入基线——§2.19 D3/D4）
+  + actual - expected
+  
+  + [
+  +   'V1 docs/batches/2026-09-11-ACP-CHANNEL-FIXES.md “本档 §13.2”（no-section）',
+  +   'V1 docs/batches/2026-09-11-ACP-CHANNEL-FIXES.md “本档 §13.2”（no-section）',
+  +   'V1 docs/batches/2026-09-11-PORTABILITY.md “本档 §9”（no-section）',
+  +   'V1 docs/batches/2026-09-11-PORTABILITY.md “本档 §9”（no-section）',
+  +   'V1 docs/batches/2026-09-11-TUI-SELECTION.md “本文件 §12.4”（no-section）',
+  +   'V1 docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md “PROVIDER.md §4.3”（no-section）',
+  +   'V1 docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md “SETTINGS.md §2.7”（unknown-doc）',
+  +   'V2 docs/batches/2026-09-11-TUI-SELECTION.md:162 “三条” 声明 3 ≠ 枚举 2（list）'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///D:/teamcode/thincoder/test/doc-consistency.test.mjs:55:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'V1 docs/batches/2026-09-11-ACP-CHANNEL-FIXES.md “本档 §13.2”（no-section）', 'V1 docs/batches/2026-09-11-ACP-CHANNEL-FIXES.md “本档 §13.2”（no-section）', 'V1 docs/batches/2026-09-11-PORTABILITY.md “本档 §9”（no-section）', 'V1 docs/batches/2026-09-11-PORTABILITY.md “本档 §9”（no-section）', 'V1 docs/batches/2026-09-11-TUI-SELECTION.md “本文件 §12.4”（no-section）', 'V1 docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md “PROVIDER.md §4.3”（no-section）', 'V1 docs/batches/2026-09-11-VSC-MIRROR-SWEEP.md “SETTINGS.md §2.7”（unknown-doc）', 'V2 docs/batches/2026-09-11-TUI-SELECTION.md:162 “三条” 声明 3 ≠ 枚举 2（list）' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

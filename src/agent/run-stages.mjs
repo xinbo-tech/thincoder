@@ -16,6 +16,8 @@ import { getAsyncPool } from "../agent-tools/async-settle.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
+// 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §21）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
+import { runHooks } from "../hooks.mjs"
 
 /**
  * 响应后置提醒注入（2026-09-05 实践轮——自 runAgent 响应处理链提取，verbatim）：
@@ -113,16 +115,29 @@ export async function injectTurnReminders(agent, ctx) {
 }
 
 /**
- * 回合收尾（2026-09-05 实践轮——自 runAgent finally 提取，verbatim + 签名化）：
- * consult 清理（无孤儿烧 token 的 consult children）→ async 池回合尾分流（Ctrl+C
- * 清池不注入 / ContinueError 留池续跑 / 其余 collectSettledAsync）→ auto-turn guard
- * 标记继承（对象字段清单——正常结束才继承；中止丢弃；ContinueError 由续跑快照）。
+ * 回合收尾（2026-09-05 实践轮——自 runAgent finally 提取，verbatim + 签名化）：写足迹
+ * flush → Stop 钩子（第 30 批 D1——ctx.depth === 0 的主会话 run 终止事件，
+ * fire-and-forget）→ consult 清理（无孤儿烧 token 的 consult children）→ async 池回合尾
+ * 分流（Ctrl+C 清池不注入 / ContinueError 留池续跑 / 其余 collectSettledAsync）→ auto-turn
+ * guard 标记继承（对象字段清单——正常结束才继承；中止丢弃；ContinueError 由续跑快照）。
  */
 export async function finalizeAgentTurn(agent, ctx) {
-  const { signal, autoTurn, suspDriven, thrownError } = ctx
+  const { signal, autoTurn, suspDriven, thrownError, depth } = ctx
   // R10 L3（MULTI-INSTANCE-COLLAB §2a.5 D-L3a）：回合末登记 flush——本回合写足迹整写
   // 一次（首行执行：收尾链后续任何异常都不吞登记）；无写入 → 跳过（hot 窗口自然衰减）。
   flushPeerDomains(agent)
+  // 第 30 批 D1（Stop 钩子）：主会话 run 终止 → fire-and-forget（非阻塞；失败静默——与 PostToolUse 同语义）。
+  // 排除用户中止（Ctrl+C / Ctrl+I——中止后 TUI 重建 controller 续跑或已显式停回合）与 AbortError 展开。
+  if (depth === 0 && !signal?.aborted && thrownError?.name !== "AbortError") {
+    runHooks("Stop", {
+      agent,
+      error: thrownError && !(thrownError instanceof ContinueError) ? thrownError : undefined,
+      extra: {
+        turn: agent._currentTurn ?? 0,
+        reason: thrownError instanceof ContinueError ? "maxTurns" : thrownError ? "error" : "done",
+      },
+    }).catch(() => {})
+  }
   // R17（AGENT-LOOP.md §25 D-R17a）: consultation sessions are cross-turn
   // background work now — NO unconditional turn-end cleanup (the old rule aborted
   // leftover consult children at every turn end because check-loop consumption was
@@ -163,7 +178,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     // keep _asyncSubagents/_asyncAdvisors/_consultSessions — the resumed run continues them
   } else {
     const injectedAdvisor = await collectSettledAsync(agent, { suspDriven })
-    // §24 D-24b: a normally-ended USER run with no review/child activity closes
+    // §11.2 D-24b: a normally-ended USER run with no review/child activity closes
     // the OPEN code instances — the converged/abandoned thread must not burn the
     // 5-round cap of a later task (the next code review starts a fresh round 1).
     // Digest auto-turns are exempt (their disposition precedes the fix round).

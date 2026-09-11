@@ -17,6 +17,7 @@ import { dirname, join } from "node:path"
 import { parseModelRef, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
 // 老形态迁移核（M7 v2——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
 import { migrateLegacyModelFields } from "./config-migrate.mjs"
+import { expandHome } from "./expand-home.mjs"
 
 export { parseModelRef, resolveRuntimeProvider, defaultModelReason, migrateLegacyModelFields }
 
@@ -73,7 +74,7 @@ export const DEFAULTS = {
     streamRules: [],      // time-traveling stream rules: [{ pattern: "regex", message: "reminder", action: "abort"|"warn", repeat: "always"|"once" }]
     advisor: { guard: false },  // code review is always available; guard: true pushes completion back until reviewed (opt-in). Also accepts provider/model/thinking/reasoningEffort/timeoutMs overrides. Deprecated: enabled (2026-08-21)
     autoThink: false,     // auto-classify task difficulty and set reasoning effort per-turn
-    engineering: false,   // strict methodology enforcement — read METHODOLOGY.md, design-before-code
+    engineering: false,   // strict methodology enforcement — design-before-code (design review + user approval before code)
     // Async pool limits (AGENT-LOOP.md §11.1 D-24a/R14 + §11.2 R13 — POOL-CONFIG-
     // UNIFIED 2026-09-09): { engCoder, other, advisor } — eng-coder pool / other-role
     // pool / advisor-review pool, defaults 4/4/4 (user ruling "eng-coder 四路，其他
@@ -101,7 +102,7 @@ export const DEFAULTS = {
     servers: [],
   },
   websearch: {
-    provider: "tavily",  // structured search API; empty apiKey → fall back to Bing HTML scraping
+    // Structured search via Tavily when a key is set — empty apiKey → Bing RSS/HTML fallback (zero-config).
     apiKey: "",          // Tavily key (tvly-...) — optional
   },
   traces: {
@@ -283,6 +284,15 @@ export function loadConfig() {
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
     traces: { ...DEFAULTS.traces, ...config.traces },
   }
+
+  // 家目录展开（第 29 批）：config 路径字段单一规范化点——只读归一（磁盘原文保留）
+  merged.memory.dbPath = expandHome(merged.memory.dbPath)
+  merged.memory.projectDir = expandHome(merged.memory.projectDir)
+  const team = merged.memory.team
+  if (team && typeof team === "object" && !Array.isArray(team) && team.dir !== undefined) {
+    merged.memory.team = { ...team, dir: expandHome(team.dir) }   // 无 dir 键不注入（零键面变化）
+  }
+  merged.shell = expandHome(merged.shell)
 
   // providers[].model 内存归一（v2 M3：非空字符串保留；非字符串/空串归一删除）——渠道默认模型
   // 单值；无默认模型合法（模型选择经 /models 拉取候选——准入判据见 M8/M9）。

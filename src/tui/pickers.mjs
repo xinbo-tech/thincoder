@@ -41,6 +41,12 @@ export function createPickers(ctx) {
    *  互斥保护：入栈前把现有挂起 picker 全部 resolve(null)，消除 Promise 悬挂。
    *  （正常嵌套是先 await 上一层返回再开新的，栈深通常为 1。） */
   function showPicker(title, entries, { defaultIndex = 0 } = {}) {
+    if (!Array.isArray(entries)) {
+      const got = entries && typeof entries.then === "function"
+        ? "a Promise (missing `await`?)"
+        : `a ${entries === null ? "null" : typeof entries}`
+      throw new TypeError(`showPicker("${title}"): entries must be an array — got ${got}`)
+    }
     closePicker()
     return new Promise((resolve) => {
       const itemCount = entries.filter((e) => e.type === "item").length
@@ -69,7 +75,12 @@ export function createPickers(ctx) {
         const sel = row === p.index
         if (sel) selLine = lines.length
         const marker = e.marker ? `  ${e.marker}` : ""
-        lines.push({ text: `${sel ? " ▸ " : "   "}${e.text}${marker}`, color: sel ? ansi.bold + C.text : C.dim, _row: row })
+        // A1（第 20 批 §12.5——D-SS7）：item 附注消费——渲染形态 {prefix}{text}{marker}{note}；
+        // header 分支既有消费同形态，无 note 零追加（不产生尾随空格）。宽度预算 =
+        // renderPicker 既有 8 格余量 + 右截断——保序 prefix→text→marker→note，截断从行尾
+        // 开始 = note 段最先牺牲。
+        const note = e.note ? `  ${e.note}` : ""
+        lines.push({ text: `${sel ? " ▸ " : "   "}${e.text}${marker}${note}`, color: sel ? ansi.bold + C.text : C.dim, _row: row })
         row++
       }
     }

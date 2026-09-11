@@ -1,4 +1,4 @@
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { loadConfig } from "../config.mjs"
 import { teamConfig } from "./make-agent.mjs"
 import { put, search, list } from "../memory/core.mjs"
@@ -67,7 +67,7 @@ export async function memoryCommand(memory, args, opts = {}) {
 function cliDirs() {
   const config = loadConfig()
   const dirs = { project: null, team: null }
-  if (config.memory?.projectDir) dirs.project = join(process.cwd(), config.memory.projectDir)
+  if (config.memory?.projectDir) dirs.project = isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(process.cwd(), config.memory.projectDir)
   const team = teamConfig(config)
   if (team) dirs.team = team.dir
   return dirs

@@ -21,6 +21,8 @@
  */
 import { detectDanger, normalizeEOL, joinWithEol } from "../tools/shared.mjs"
 import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, hasLineParams } from "../tools/edit-diff.mjs"
+// 第 27 批 §12.3①/③：relay 前缀文法单一权威（模块直连——不自持正则副本）。
+import { parseRelayPath } from "../agent/relay-prefix.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {
@@ -167,26 +169,38 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
 
   const callbacks = {
     onToken: (text) => {
-      // Strip the subagent `[model]` metadata token (role#id/[model]<name>) — it's a
+      // 第 27 批 §12.3③ 行 1（R-A2.1）：relay 前缀（role#id/——任意嵌套深度）零进显示面——
+      // 先剥前缀取 payload，信号判定与正文发送都作用在 payload 上。
+      const path = parseRelayPath(text)
+      const payload = path ? path.rest : text
+      // Strip the subagent `[model]` metadata token ([model]<name>) — it's a
       // TUI/webview display signal, not conversation content, and must not reach ACP clients.
-      // §19.5 D-M8 (round2 #6): nested prefixes recurse — eng-coder#2/explore#1/[model]…
-      if (/^(?:[\w-]+#\d+\/)*\[model\]/.test(text)) return
-      // D7 (AGENT-LOOP.md §7.2 + §19.5 round2 #6 + D-M7b): strip ⟦ev⟧ event tokens (bare or
-      // any-depth prefixed variants — turn/approval/done/settled/stopped/async — async
-      // = §19.5 D-M7b zero-field spawn marker) — they
-      // carry RS control characters and are a TUI display signal; structured ACP
+      if (/^\[model\]/.test(payload)) return
+      // D7 (AGENT-LOOP.md §7.2 + §19.5 round2 #6 + D-M7b): strip ⟦ev⟧ event tokens (turn/
+      // approval/done/settled/stopped/async — async = §19.5 D-M7b zero-field spawn marker)
+      // — they carry RS control characters and are a TUI display signal; structured ACP
       // mapping (tool_call_update) is tracked separately in docs/TODO.md.
       // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-      if (/^(?:[\w-]+#\d+\/)*⟦ev⟧(?:turn|approval|done|settled|stopped|async)\x1e/.test(text)) return
-      update("agent_message_chunk", { content: { type: "text", text } })
+      if (/^⟦ev⟧(?:turn|approval|done|settled|stopped|async)\x1e/.test(payload)) return
+      if (!payload) return // D6：剥后空载荷不发通知（防噪声空 chunk）
+      update("agent_message_chunk", { content: { type: "text", text: payload } })
     },
-    onReasoning: (text) => update("agent_thought_chunk", { content: { type: "text", text } }),
+    onReasoning: (text) => {
+      // 第 27 批 §12.3③ 行 2：同 onToken 取 payload；空载荷不发（D6）。
+      const path = parseRelayPath(text)
+      const payload = path ? path.rest : text
+      if (!payload) return
+      update("agent_thought_chunk", { content: { type: "text", text: payload } })
+    },
     onUsage: (usage) => update("usage_update", { usage }),
     onWait: ({ phase, seconds }) => log(`[rate-limit] ${phase} waiting ~${seconds}s`),
     onCompress: () => log("[context] auto-compacted"),
 
     onToolCall: (name, args, toolId) => {
       const id = toolCallId()
+      // 第 27 批 §12.3③ 行 3：显示面剥前缀（title / kind）；配对键 toolQueue 存原样 name（D3）。
+      const path = parseRelayPath(name)
+      const shown = path ? path.rest : name
       // D15.8（advisor 🔴#1 修复）：模型级 id 每轮重置（sse.mjs finalizeToolCalls 内
       // seq=0——call_0 call_1… 跨轮/跨消息可重复——设计自注「跨 turn 不保证唯一」）。
       // 因此 push 前若队列已有同名同 toolId 条目，它必是结果永不回调的陈旧孤儿
@@ -200,8 +214,8 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
       toolQueue.push({ name, id, toolId: toolId ?? null })
       update("tool_call", {
         toolCallId: id,
-        title: name,
-        kind: inferToolKind(name),
+        title: shown,
+        kind: inferToolKind(shown),
         status: "in_progress",
         rawInput: args ?? {},
         content: [contentBlock(JSON.stringify(args ?? {}))],
@@ -222,15 +236,19 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {} }
      * client. Any transport failure → reject (safety-first, kimi parity).
      */
     onPermissionRequest: async (name, args) => {
+      // 第 27 批 §12.3③ 行 4：显示面（请求文本 + toolCall.title）剥前缀；
+      // 危险基名判定与 peekToolId 照旧（配对键 = 原样名——D3）。
+      const path = parseRelayPath(name)
+      const shown = path ? path.rest : name
       // 危险命令标注(只提示不拦截):kimi 同款模式,帮助编辑器端用户审批
-      const base = name.includes("/") ? name.split("/").pop() : name
+      const base = shown.includes("/") ? shown.split("/").pop() : shown
       const danger = base === "bash" ? detectDanger(args?.command ?? "") : undefined
-      const content = [contentBlock(`Requesting approval to run ${name}`)]
+      const content = [contentBlock(`Requesting approval to run ${shown}`)]
       if (danger) content.push(contentBlock(`⚠️ Dangerous: ${danger}`))
       content.push(contentBlock(JSON.stringify(args ?? {})))
       const toolCall = {
-        toolCallId: peekToolId(name) ?? toolCallId(), // D15.8：peek 不消费——result 仍要与自己的条目配对
-        title: name,
+        toolCallId: peekToolId(name) ?? toolCallId(), // D15.8：peek 不消费（原样名键）——result 仍要与自己的条目配对
+        title: shown,
         content,
       }
       try {
@@ -328,7 +346,10 @@ export function replayHistory({ sessionId, notify, history, log = () => {} }) {
         // later tool_call_updates by toolCallId; an orphan update would be ignored.
         pendingToolCalls = calls.map((tc, i) => {
           const id = `t${++toolSeq}`
-          const title = tc?.name ?? "tool"
+          // 第 27 批 §12.3③ 行 5（防御面——T18）：历史工具名带前缀 → 剥；无前缀 → 零变化。
+          const raw = tc?.name ?? "tool"
+          const path = parseRelayPath(raw)
+          const title = path ? path.rest : raw
           update("tool_call", {
             toolCallId: id,
             title,

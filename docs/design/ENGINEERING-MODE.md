@@ -12,13 +12,12 @@
 
 ### 2.1 角色模型
 
-> **目标态注（2026-09-10——FR9 角色重定义，需求已收口；设计已批待实施）**：本表在实施落地前
-> 描述**现行态**；目标态细节（9 条裁定）见 `../requirements/ENGINEERING-MODE.md` **§1.5**（as-of 指针——D4）。
-> **落地时核销项（D7）**：本表与注同步改为三段链目标态；§5 角色互斥句（:664）同步补第三门（非工程禁 eng-designer）。
+> **落地核销完成（2026-09-11——角色重定义批）**：本表 = **三段链目标态**（第 2 批落地 CLI · 第 5 批镜像 VSC；本注即第 2 批 §2.15 的「落地时核销项（D7）」执行——同批核销）。裁定依据 = `../requirements/ENGINEERING-MODE.md` **§1.5**（写权矩阵见 #10；现行对账明细见 §2.28.2）。
 
 | 角色 | 职责 | 机械约束 |
 |---|---|---|
-| **父代理**（顶层，`role` 未定义） | 架构师：需求/设计文档 → 提醒设计就绪 → 用户发起设计评审（传 documents + object）→ 打回呈递 + 用户拍板 → 用户批准 → spawn eng-coder（默认 async）→ 交付验证（父侧 = L2 `test:full` 每链终态 1 次 + 可选的父侧复核）→ 链终核销 consume-design | 拦截型：design token 前写产品代码被拒；提示词约束：不写实现、不发起评审、等批准、验收 |
+| **主 agent**（父代理·顶层，`role` 未定义） | **产品经理 + 流程编排者 + 批次档作者**：需求讨论/登记/收口 · 批次档 §1/§4/§6 · **核验设计稿（内容性）** · 提醒用户发起设计评审 · 委派 eng-designer（设计）/ eng-coder（实现）· 交付验证（L2 `test:full` 每链终态 1 次 + 可选父侧复核）· 链终核销 consume-design。**不写**需求档/设计档（写稿权归 eng-designer——§2.15 A2）、不写实现 | 拦截型：design token 前写产品代码被拒；提示词约束：不写实现、不发起评审、等批准、验收 |
+| **eng-designer**（子代理，`role="eng-designer"`） | **写稿面唯一作者**：需求档 + 设计档（含修订）+ 批次档 §2；自勘察（限 explore，预算 ≤6/批）→ 并入需求 + 体系对账 → 判定句 → 写设计 → 自检交回（§2.15 A–F） | **无 token**（授权 = 需求已确认）；spawn 必传 `batchDoc`；内部 spawn 仅 explore（机械门）；不写实现/不改提示词/不发起评审 |
 | **eng-coder**（子代理，`role="eng-coder"`） | 实现者：按设计实现 → **内部协议闭环**（explore 偏差审计 → 自修 → advisor 复评 → 收敛，≤5 修正轮；完整协议 = 本文件 §2.2 step 6）→ 交付（报告含审计/评审轮次 + 终态 clean/stalled；永不编辑设计文档） | 拦截型：spawn 需 token、写文件需 `_engDesignReviewed`；内部 spawn 仅 explore + 同步（机械门）；审计 ≤6 次（第 7 次机械拒绝 = stalled 信号） |
 
 ### 2.2 主流程（Mandatory Flow——10 步）
@@ -31,7 +30,7 @@
    - 有 🔴 → 呈递发现 + 逐项修复建议 → **用户逐条拍板** → 修改 → 再提醒 → 用户发起复审；持续拒绝（>3 轮）→ 停下向用户报告未决项，不静默循环。
    - 无 🔴 → advisor 回显 `[DESIGN-TOKEN:…]` + designId（同 scope 复审沿用同 id）→ designId+token 入槽（`_engDesignTokens` Map）。
 4. 用户批准设计——显式 sign-off 才解锁实现；用户对设计内容/形态的选择只是需求确认，不是设计批准（锚#4）。
-5. spawn `eng-coder`：`subagent(role="eng-coder", designId, designToken, task)`——designId 可选（单设计省略）；
+5. spawn `eng-coder`：`subagent(role="eng-coder", designId, designToken, batchDoc=<本批批次档>, task)`——designId 可选（单设计省略）；**`batchDoc` 必传**（§2.12 门禁——eng-designer 同门，§2.15 A）；
    designToken 经 PARAMETER 传值，**绝不进任务文本**；task 按 Implementation Handoff 结构化任务书（纪律层
    "实施委托结构化"节）含 Docs
    involved → 文件清单 → 验收标准——**默认 async**（返回 {id, running}，交付协议在子代理内部闭环）。
@@ -104,7 +103,7 @@
 
     > Fix rounds reuse the same designToken — but docs FIRST, and only while the chain is open (same designId, before parent-side close-out); once the chain terminal state is reached, every further spawn — including deviation fixes — goes through a fresh design review and token.
 
-  - 执行判据（父侧架构师）：**链中不疑 token**（多次 spawn/fix round 复用同一 token 是正常态，非 bug，
+  - 执行判据（主 agent）：**链中不疑 token**（多次 spawn/fix round 复用同一 token 是正常态，非 bug，
     勿误判失效而重评审）；**链终必清 slot**（delivery verified + clean + 已签入 = 链闭合 → 立即
     consume——不消费 = slot 堆积，旧 designId 从 session 查不到，表现似"token 丢"实为未清）；
     **未闭合不消费**（stalled / L2 非 clean / fix round 在途 → 同 token 继续）；**重评审只在真新链
@@ -324,16 +323,16 @@ A 胜在：**单一共用装配点 + 与 token 门同出口**（错误生命周�
 
 - **语义修订**（方案/验收标准/接口/受影响文件的改动）→ **只经 eng-designer**（主 agent 不自改；含小改）——§2.2 step1 / §2.8 已改指，另 §2.6 F2/§2.5 的**修正轮 docs FIRST** 落档动作同属此类 → 同走 designer。
 - **勾销/验收/核销**→ **批次档 §6**（主 agent；见上表末行）——**不写进设计档**，故与“写稿权唯一”不冲突；
-  **提示词文件**已在 A2 表末行（主 agent 内容权 + eng-coder 落笔），此处不重列（D4/D2）。
+  **提示词文件**：主 agent 内容权 + eng-coder 落笔（§1.5 #10 / §2.19 D1；起草分工 = §2.28.3），此处不重列（D4/D2）。
 
 **调用形态（链路可执行性——评审 🔴）**：主 agent 在批次讨论收口后
 `subagent(role="eng-designer", batchDoc=<本批批次档路径>, files=[...], task=<极简指针>)`——任务书本体 = 批次档 §2（B11）；
-**`files` 声明照需求 §1.11 B3**（写明将要改的文档，**不声明 `docs/TODO.md`**——TODO 状态推进是提示词规定的动作、不经 files）；
+**`files` 声明照需求 §1.11 B3**（写明将要改的文档，**不声明 `docs/TODO.md`**——台账（记录 + 状态推进 + 物理落笔）归主 agent；子代理一律不声明台账档——2026-09-11 归属修订）；
 designer 产出 = 设计档 + 回写批次档 §2；主 agent 核验（内容性核验 §1.5 #2）→ 提醒用户发起评审。
 **为何必须成文**：只落角色不落调用，落地后没有任何提示词/设计句说明“谁写设计档、谁去派 designer”——
 同档 §2.8 原句（父代理更新设计文档）与新角色直接冲突（同一机制两处不同描述）。
 
-**FR9 九条裁定落地状态表（评审 #2）**——逐条给“本批落 / 沿用现状 / 后续批”，消除“九条”整体宣称与实际子集的口径差：
+**FR9 裁定落地状态表（第 2 批 as-of——评审 #2；覆盖 #1–#9）**——逐条给“本批落 / 沿用现状 / 后续批”。**现行对账（#1–#12 + FR9——含 #10–#12 补充裁定）见 §2.28.2**：
 
 | # | 裁定 | 本批 | 说明 |
 |---|---|---|---|
@@ -403,7 +402,7 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 **内容要素**（逐项对应需求，不自由发挥）：身份=写稿面唯一作者 · 授权=需求已确认（**无 token**）· 边界=不写实现/不改提示词/不发起评审 ·
 **需求档不经 advisor**（FR9 #5——用户确认即定稿）· **勘察预算 ≤6 次 explore/批**（FR9 #7，与审计预算独立）·
 收到什么（批次档 §1 + 本批 todo 项 + 需求体系 + 清单）· **缺料就打回** · 五步（勘察 → 并入需求 + 体系对账 → 每条需求配判定句 → 写设计 → 自检交回停）·
-**todo 状态推进**（需求 §1.8 步 2 / §1.11 B5：并入需求时同步推进 `docs/TODO.md` 状态——提示词规定的动作，机械面归 FR18【单列】）·
+**todo 侧职责（2026-09-11 归属修订）**：状态推进与物理落笔归主 agent；designer 只做需求档条文修订 + 收拢应用清单（提示词面同步 = 主 agent 内容权——登记项）·
 失败路径 · **执行者拒收**（查不到任务书不执行）· 批次的写手边界（§2 自写）。
 
 **FR19 产出要求——必含要素逐项列（评审 #5；需求档 :78 / §1.8）**：
@@ -429,6 +428,22 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
    非 null 会把审计范围误注进勘察任务书。
 4. **变体实现口径（评审 #8）**：designer 变体 = **参数化复用**既有受限变体（父角色集合条件 + 描述文案分流），**不并列第二个 34 行 IIFE**——
    据此 `setup.mjs` 增量守住 ≤±20。
+5. **受限变体描述面动作清单同步（第 20 批——2026-09-11；D3 枚举纪律适用）**：受限变体（eng-coder 审计 /
+   eng-designer 勘察——参数化复用同一 IIFE）的动作拒绝清单**以机械门为唯一真值**（`src/agent-tools/subagent.mjs`
+   execute 内受限变体动作门，as-of :175-177——门文案列 `escalate/status/cancel/panel/consume-design/observe/send`；
+   工具动作面文档 = `AGENT-LOOP.md` §7.2）。3 个文案面同清单同步（`src/agent/setup.mjs` as-of :253 action 描述 ·
+   :259 勘察描述 · :260 审计描述）；**已退役动作 `check` 不得残留**（删除记录见 `AGENT-LOOP.md` §7.5）。
+   - 逐字草案（`setup.mjs:253`，action 描述）：`spawn only — the ${engChildRole}'s internal spawn channel is
+     read-only (escalate/status/cancel/panel/consume-design/observe/send are refused: escalate spawns a
+     coder+WRITE child, and the pool/panel actions have no async pool or panel mirror in a child context).`
+   - 逐字草案（`setup.mjs:259` / `:260`）：串 `escalate/check/status are not available` →
+     `escalate/status/cancel/panel/consume-design/observe/send are not available`（两处同串替换）。
+   - **AC-A2-1**（机验）：`test/eng-designer-role.test.mjs` **T32b 扩断言**（该例双端 `prepareRun` 装配既有
+     ——零新增装配调用，规避慢门）：designer / eng-coder 两处 description 各含上列 7 个动作名、不含
+     `check`；触发机械门（受限内非 spawn 动作）的错误文案同含 7 名（同清单对照）。
+   - 零改面（核对项）：`subagent.mjs` 基工具描述 / action 枚举、`spawn-child.mjs` 门语义、其余 setup 面；
+     VSC 端独立实现（`thincoder-vscode/src/agent/setup.mjs` `delete props.action` + 自有文案）
+     ——镜像评估归父侧（本批 CLI-only）。
 
 **E. 写域边界（**提示词纪律——无机械门**，2026-09-10 用户裁定）**
 
@@ -449,13 +464,13 @@ explore/plan/coder spawns ignore it”、`:128` 角色条目为 eng-coder 专属
 **G. 文档登记面（7 处——含 `docs/README.md`，评审 #2）**：`docs/requirements/PROMPT-SYSTEM.md:39`（命名法角色行）· `:45-46`（文件计数）·
 `:54-59`（人格层大纲加行）· `:195-207`（§3.2 装配矩阵加行）· `docs/design/AGENT-LOOP.md:177-184`（角色矩阵 + Mode filtering）·
 `AGENTS.md:56`（槽位清单）· **`docs/README.md:12`（§1 目录行“requirements ← 主 agent·产品经理产物”）+ `:44`（§3.1 作者表：需求层作者行）**
-——两处均改为 **eng-designer**（含过渡期注：eng-designer 未落地前由主 agent 代行），与 §2.15 A2 写权表口径一致。
+——两处均改为 **eng-designer**（含过渡期注：eng-designer 未落地前由主 agent 代行——**该注已随落地核销**，落地面见 §2.28.4 RF-3），与 §2.15 A2 写权表口径一致。
 
 ### 2.16 行为纪律（第 2 批 B——提示词层，双源同步）
 
 | 纪律 | 内容 | 落点 |
 |---|---|---|
-| **六段自写 · 一段一作者** | §1 主 agent / **§2 designer** / §3 评审子代理 / §4 主 agent / §5 coder / §6 父代理 | persona-eng-designer（§2 自写）+ persona-eng-coder（§5 自写）+ discipline-engineering（§3/§4/§6 归属 + **过渡期注**：§3 自写机制未落地前由父侧代写） |
+| **六段自写 · 一段一作者** | §1 主 agent / **§2 designer** / §3 评审子代理 / §4 主 agent / §5 coder / §6 父代理 | persona-eng-designer（§2 自写）+ persona-eng-coder（§5 自写）+ discipline-engineering（§3/§4/§6 归属；**§3 自写机制已落地**——`batch_segment` 第 4 批 CLI / 第 5 批 VSC，过渡期注已消） |
 | **执行者拒收**（FR20 #9 行为面） | 任务书/依据不存在→**不执行、打回**（coder 找不到 §2 / designer 找不到 §1） | persona-eng-designer + persona-eng-coder + discipline-engineering |
 | **澄清必经主 agent**（#3） | 子代理撞到需用户决定的事→打回主代理（无旁路） | discipline-engineering |
 | **三方条目一致**（#4） | 批次档 §2 条目 = 设计档验收回指 = 需求档条目 | discipline-engineering |
@@ -869,15 +884,17 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
   FR18 行改为「六态」，表保持 6 行；本批**不新增态**。
 - 各态对任务书指针的要求（必填 / 可挂 / 保留）随表住需求档 §1.13；本档 §3.1 AC45 只取其中
   「在途 / 待核销 = 必填」一条做断言，其余态**只判单行形态**——机判面与需求文本对齐，不另立口径。
+- **归档两态（2026-09-11 追加裁定）**：已核销 / 已废弃 = **归档态**——勾销后移出活文件（同仓 `docs/TODO-archive.md`）；
+  活文件不判其入口形态（活文件零 `- [x]`——L3⑤）；表本体与去向以需求档 §1.13 为准（细则 §2.24.9①）。
 
 #### 2.24.4 两池分组与计数
 
 - **两池不混**：需求池收**用户需求点**；技术待办另组分列。**分组是归属判定**——错组 = 后续状态推进认错对象。
-- **组计数口径（钉死——机检 L2 与验收共用同一口径）**：**组** = 行首 `##` 级标题（H1 档标题不计入）；
-  **条目** = 行首顶格 `- [ ]` / `- [x]`（缩进行、续行均不计）。组标题声明的「N 条」必须等于组内实条目数（D3）。
-- **勾销（本批钉死——修正轮裁决 #7）**：`status=已核销` 的条目**就地保留 `- [x]`**（只改勾选框：不移位、不删除），
-  条目连同其冻结指针**留在原组内**；**活组计数含 `- [x]`**（与本节条目口径一致——条目 = 行首顶格 `- [ ]` / `- [x]` 两类）。
-  依据：需求档 §1.13 该态 = 「保留指针（已冻结）」——「移出」与「保留计数」两种读法会给出不同的 L2 / AC46 结果，本批取后者并显式化。
+- **组计数口径（钉死——机检 L2 与验收共用同一口径；2026-09-11 改为未决口径）**：**组** = 行首 `##` 级标题（H1 档标题不计入）；
+  **条目** = 行首顶格 `- [ ]`（未决——`- [x]` 只存于归档档、活文件零命中：L3⑤）。组标题声明的「N 条」必须等于组内**未决**实条目数（D3）。
+- **归档（2026-09-11 追加裁定——替代原「就地 `[x]` 保留、计入组计数」）**：`status=已核销` / `已废弃` 的条目
+  **勾销（锚行 `- [x]`）后整体移入同仓 `docs/TODO-archive.md`**（照 `checklist-done.md` 先例）；条目连同其冻结指针入归档档，
+  **活文件只留未决**；活组计数 = 未决数。细则（命名 / 形态 / 机检 / VSC 对位）= §2.24.9。
 - **数字口径**：本节 / §2.25 / 变更记录里的散文字数一律为 **as-of 实测**，不构成契约；
   **验收以检查器（`check-ledger.mjs`）重算值为准**（散文数字不作判据）。
 
@@ -911,8 +928,8 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 | 号 | 检查 | 判据 |
 |---|---|---|
 | **L1** | **指针可解析** | 条目内引用的 `<档>.md §X` 须过三条子判据（**①归一 ②basename 唯一 ③可解析**——逐条见下表后「L1 子判据」） |
-| **L2** | **计数一致（D3）** | 组标题声明的"（N 条）" == 组内实条目数（组 / 条目口径见 §2.24.4） |
-| **L3** | **形态合规（只判形态）** | ①需求池组条目均为**单行**（无续行细节）②技术**组**条目含 `file:line` 的**正则形态**③条目锚形态与**所在组标题**结构一致（需求池组 = 需求档节 + 任务书；技术组 = 归属档节 + 证据行）④**`status=` 取值落在六态内**（枚举 = 需求档 §1.13 状态机表） |
+| **L2** | **计数一致（D3）** | 组标题声明的"（N 条）" == 组内**未决**实条目数（口径见 §2.24.4——2026-09-11 修订） |
+| **L3** | **形态合规（只判形态）** | ①需求池组条目均为**单行**（无续行细节）②技术**组**条目含 `file:line` 的**正则形态**③条目锚形态与**所在组标题**结构一致（需求池组 = 需求档节 + 任务书；技术组 = 归属档节 + 证据行）④**`status=` 取值落在六态内**（活文件实为未决四态——§2.24.9①）⑤**活文件 `- [x]` 零命中**（归档口径——§2.24.9①）⑥**技术条目 `触发=` 取值合法**（三枚举——§2.24.9②；无触发 = 审计面非红） |
 
 **L1 子判据**（三条，任一不过即 L1 红）：
 
@@ -929,6 +946,8 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 - **status 枚举豁免**：非必填态槽位写 `—`、**无 `status=` 场**的条目豁免 L3④；
   台账内**存量**机外取值（如 `登记` / `登记待裁` / `根因已定位待设计`）入基线降报告（本节基线机制），
   并在**收拢时就近归一**（`登记` / `登记待裁` → 待讨论；`根因已定位待设计` → 待设计）。
+- **归档态与触发字段豁免（2026-09-11）**：已核销 / 已废弃条目不在活文件（归档档——L3⑤ 排除，不另判 L3④）；
+  需求池组无 `触发=` 场（触发 = 技术条目专属）；技术组**无触发** → 审计「待处置」（非 L3⑥）；`触发=` 写而取值非三枚举 → **L3⑥ 红**。
 
 **机判与评审的分界**：症状措辞是否属实、条目归属是否真是技术项、指针指得对不对——**一律不机判**
 （需求档 §1.15 NFR：「不得靠自然语言理解」）。上表三项**只判可判的形态**；语义面留评审。
@@ -940,6 +959,8 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 - **输出（红）**：每违规一行，形态 = `<档>:<行号> [L1|L2|L3] <症状> — 期望 <…> · 实得 <…>`；
   末尾汇总 `<n> 处违规`；退出码 **1**。
 - **退出码**：**0 = 全绿 / 1 = 有红**（fail-closed；异常退出不得伪装成绿）。
+- **审计模式（新增——2026-09-11）**：`node scripts/check-ledger.mjs --audit`——输出「**待处置清单**」（技术组全部无触发条目；
+  行龄超 N 天者标「老化」，N 默认 30）；**退出码 0、运行前后文件字节不变**（报告只读——处置要人判）。
 
 **扫描域**：**仅两仓 `docs/TODO.md`**（显式清单，不做目录递归发现）。
 **明确不含**：`docs/design/**`（宽度扫描域，归 `check-doc-width.mjs`）——
@@ -948,7 +969,7 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 **基线与存量**：机检含**基线机制**（同 `check-doc-width.mjs` V1/V2/V3 的存量口径）——
 本批修正后新出现的违规**阻断**；未在本批范围内的存量违规**入基线并降为报告**（不阻断）。
 **基线存放面（修正轮裁决 #6）**：`test/fixtures/ledger-baseline.json`——键**稳定、不含行号**
-（照 `scripts/check-doc-width.mjs:32` → `test/fixtures/doc-consistency-baseline.json` 先例，按 `(kind|file|引用串)` 键控）；
+（照 `scripts/check-doc-width.mjs:34` → `test/fixtures/doc-consistency-baseline.json` 先例，按 `(kind|file|引用串)` 键控）；
 入 eng-coder `files`；文件格式由实现阶段定（本节只钉**路径与键稳定性**）。
 「存量降报告不阻断」是 **AC48** 的断言项之一（与 T71① 对齐）。
 **反证要求**：用例须含"合成坏台账必报红"（防"永远绿的空转脚本"）。
@@ -976,12 +997,50 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 #### 2.24.8 不变量（评审判据）
 
 1. 台账条目**一行一条**，且**不含方案叙述**（无续行细节）。
-2. 需求池与技术待办**分组互斥**，组计数与实条目数**相等**。
+2. 需求池与技术待办**分组互斥**，组计数与实条目数（**未决数**）**相等**。
 3. 状态机**六态**，且"N 态"声明处处与列表一致（D3）。
 4. 检查器**退出码二值可靠**（0 绿 / 1 红），且**含反证用例**（坏台账必报红）。
 5. 检查器**不进产品提示词**（`src/prompts/**` 零命中）。
 6. 提示词锚 L-A / L-B **双端逐字相同**（锚句不含 byte-identical 之外的依赖；节内其余文本各端自持）。
 7. 本批**不触碰** `check-doc-width.mjs`、**不扩**宽度扫描域。
+8. 活台账**零 `- [x]`**——已核销 / 已废弃整体住同仓 `docs/TODO-archive.md`；组计数 = 未决数（2026-09-11 追加裁定）。
+9. 技术条目 `触发=` 取值 ∈ 三枚举（写即须合法）；无触发条目 → 审计「待处置」（报告不阻断——§2.24.9）。
+10. 老化报告**只读**——运行前后台账文件字节不变；年龄不可判定（无 git / 解析失败）降级「年龄未知」照列。
+
+#### 2.24.9 归档 / 触发 / 老化（2026-09-11 追加裁定——范围扩展）
+
+> 来源 = 批次档 §1「追加裁定」1–6（用户 2026-09-11 16:34–16:37）。机制句权威 = 需求档 §1.13；
+> 本节 = 设计侧口径（机检 / 归属 / VSC 对位）。**归属修订**：记录 + 状态推进 + 物理落笔 = **主 agent**（父侧）；
+> eng-designer 台账侧职责 = 需求档条文修订 + **收拢应用清单**（判定交付——物理落笔不归它）。
+
+**① 归档口径（替代「就地 `[x]` 保留、计入组计数」——§2.24.4 已同步改写）**：
+
+- 已核销 / 已废弃条目**勾销（锚行 `- [x]`）后整体移入同仓 `docs/TODO-archive.md`**
+  （CLI = `docs/TODO-archive.md`；VSC = `thincoder-vscode/docs/TODO-archive.md`——**同 basename**；照 `checklist-done.md` 先例）。
+- 活文件**只留未决**：`- [x]` 零命中（**L3⑤**）；**组计数（N 条）= 未决数**（L2 口径同改）。
+- 归档档最小形态：一行标题 + 来源注（自本仓 `docs/TODO.md` 移出）+ 原样迁入行（保留 `- [x]` 锚、status、冻结指针）；
+  **不入机检扫描域**（扫描域 = 两仓活台账——§2.24.6）。
+- **VSC 归档对位**：命名 / 位置 = `thincoder-vscode/docs/TODO-archive.md`；登记点 = 需求档 §1.17「台账归档对位」追加登记 + 本节。
+
+**② 触发字段（技术待办——(b) 形态补定；文本权威 = 需求档 §1.13）**：
+
+- 形态：`触发=归批（<批名/批号>）` / `触发=条件（<条件句>）` / `触发=认账不排期`（三枚举；`认账不排期` = 合法选项，区别于遗忘）。
+- **无 `触发=` 场** → 审计面「待处置」（默认归集；**不判 L3 红**——处置要人判）；`触发=` 取值非三枚举 → **L3⑥ 红**。
+- 赋值归主 agent（能用则不空——在途条可「归批」、带前置条可「条件」）；未赋者由审计面兜底（不强制迁移时全量赋）。
+
+**③ 老化报告（审计模式——报告只读）**：
+
+- 入口 = `node scripts/check-ledger.mjs --audit`；输出「**待处置清单**」= 技术组全部无触发条目（逐条 `<档>:<行号>` + 摘要），
+  **行龄超 N 天**者标「老化」。
+- **N 默认 30 天**（实现常量）；行龄 = 条目行最近变更时间（实现面建议 `git blame` 行级；
+  非 git / 不可判定 → 标「年龄未知」照列、不判老化——零假阳降级）。
+- **不自动删 / 不改任何文件**；退出码 **0**（报告不阻断——处置要人判）。
+
+**④ 归属与落笔（修订）**：物理落笔（两仓 `TODO.md` / `TODO-archive.md`）= 父侧；台账档**不入任何子代理 `files`**
+（§1.13 职责分工——2026-09-11 修订）；运行面头部行口径 = 父侧落笔（含「归档 = 同仓 `docs/TODO-archive.md`」句）。
+
+**⑤ 机检增量汇总（L1–L3 基础上）**：L3⑤（活文件零 `- [x]`）· L3⑥（触发取值合法）· 审计模式（待处置清单 + 老化标记）。
+基线机制沿用（存量入基线降报告）；**反证**：合成活文件含 `- [x]` / 非法 `触发=` → 必报红（T92 / T93）。
 
 ### 2.25 受影响文件（第 8 批 as-of——2026-09-11 实测，不得当契约引用）
 
@@ -989,12 +1048,13 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 
 | 文件 | 性质 | as-of | 增量上限 | 档位处置 |
 |---|---|---|---|---|
-| docs/requirements/ENGINEERING-MODE.md | 修改 | 738（as-of 交付前实测） | **本批已落 +19（719 → 738，git numstat +22/−3）** | >300：不拆（按节组织，新增量全在既有节内） |
-| docs/design/ENGINEERING-MODE.md | 修改 | 1450（as-of 交付前实测） | **本批已净增 +263（1187 → 1450，git numstat +263/−0）** | >300：**不拆**（拆档破"一板块一档 + D2 单一权威源"）。**拆分计划**：§2.24 实测 148 行（≤300）——本批不改档结构；后续批若越 300，按既有子节 §2.24.1–§2.24.8 切为两节（各 ≤300） |
-| docs/TODO.md | 修改 | 284（as-of 2026-09-11 实测） | 净减（目标 ≤250） | 非源文件，无硬顶；**他批并行在写**（本会话内相继量到 248/255/257/263/281/284）——as-of 值仅供参照 |
-| scripts/check-ledger.mjs | **新增** | — | ≤180 | 新增档，300 硬顶内 |
-| test/ledger.test.mjs | **新增** | — | ≤120 | 新增档 |
+| docs/requirements/ENGINEERING-MODE.md | 修改 | 817（as-of 2026-09-11 本扩展轮实测） | **本扩展轮净增 +19（798 → 817——§1.13 / §1.8 步 2 / §1.11 B5 / FR18 行 / §1.17）**；早前已落 +19（719 → 738，as-of 当时） | >300：不拆（按节组织，新增量全在既有节内） |
+| docs/design/ENGINEERING-MODE.md | 修改 | 2285 → **2307**（as-of 2026-09-11；本扩展轮实测 2285，微修落笔后复测 2307） | **本扩展轮净增 +79（2206 → 2285——§2.24.9 / AC75–AC79 / T92–T96 / §7 / §2.25）**；早前轮次净增 +263（1187 → 1450，as-of 当时） | >300：**不拆**（拆档破"一板块一档 + D2 单一权威源"）。**拆分计划**：§2.24 扩展后实测 **192 行**（≤300）——本档结构未变；后续批若越 300，按既有子节 §2.24.1–§2.24.9 切为两节（各 ≤300） |
+| docs/TODO.md | 修改（收拢执行——父侧） | 174（as-of 2026-09-11 脚本复算） | 净减（收拢后活文件 = 未决 **30**；归档档 +40 条） | 非源文件，无硬顶；**他批并行在写**——as-of 仅供参照；物理落笔 = 父侧（2026-09-11 归属修订） |
+| scripts/check-ledger.mjs | **新增** | — | ≤240（L3⑤⑥ + 审计模式增量） | 新增档，300 硬顶内 |
+| test/ledger.test.mjs | **新增** | — | ≤180（T92–T96 增量） | 新增档 |
 | test/fixtures/ledger-baseline.json | **新增** | — | ≤80 | 台账检查**基线档**（存量违规降报告——§2.24.6）；键稳定不含行号（照 `test/fixtures/doc-consistency-baseline.json` 先例）；**入 eng-coder `files`** |
+| `docs/TODO-archive.md` | **新增**（父侧落笔） | — | ≈+40 行（归档 / 勾销条目迁入 + 头部注） | 台账归档档（§2.24.9①）；**不入任何子代理 `files`**——物理落笔 = 父侧 |
 | 测试注册面（CLI 仓 glob 自动发现） | **无改动** | — | **0** | CLI 仓**无显式清单档**——`test/run-fast.mjs:19` / `test/run-full.mjs:9` 走 `test/*.test.mjs` glob → 新 test 档注册改动 **0**（`test/files.mjs` 是 VSC 仓机制，不入本表） |
 | scripts/check-doc-width.mjs | **不触碰** | 298 | **0** | 已贴 300 硬顶——本批一律不改 |
 
@@ -1002,10 +1062,13 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 
 | 文件 | 性质 | as-of | 增量上限 | 说明 |
 |---|---|---|---|---|
-| thincoder-vscode/docs/TODO.md | 修改 | 40 | +≤70（建需求池组 + 技术组按 (b) 重排） | 单脚本以外部路径输入覆盖此档（§2.24.7 决策 3）；**不入 eng-coder `files`**（见下注） |
+| thincoder-vscode/docs/TODO.md | 修改（收拢执行——父侧） | 63（as-of 2026-09-11 实测） | 净变（活留 **9** / 归档 **11** 条移出——as-of 清单表） | 单脚本以外部路径输入覆盖此档（§2.24.7 决策 3）；**不入任何子代理 `files`**——物理落笔 = 父侧 |
 | thincoder-vscode/docs/design/PROVIDER.md | **不触碰** | — | **0** | 并行会话在写——只读参照，本批不得改 |
+| thincoder-vscode/docs/TODO-archive.md | **新增**（父侧落笔） | — | ≈+13 行（11 条迁入 + 头部注） | VSC 归档档（同 basename 对位——需求档 §1.17 登记；§2.24.9①）；物理落笔 = 父侧 |
 
-**提示词双源面**（4 文件——**落笔归 eng-coder**，设计侧只出锚 L-A/L-B）
+**提示词双源面**（**8 文件 = `persona-eng-designer.md` ×4 + `discipline-engineering.md` ×4**——**落笔归 eng-coder**）
+
+*（a）`discipline-engineering.md` ×4——锚 L-A / L-B（设计侧只出锚；逐字源 = §2.24.5 / AC49）*
 
 | 文件 | 性质 | as-of | 增量上限 |
 |---|---|---|---|
@@ -1014,11 +1077,22 @@ FR18 的诉求：**一眼看出"哪条需求落地了没有"**，无需遍历文
 | thincoder-vscode/src/prompts/discipline-engineering.md | 修改 | 229 | +≤12（端原文自持，语义同源；**入 eng-coder `files`**） |
 | thincoder-vscode/docs/design/prompts/discipline-engineering.md | 修改 | 156 | +≤12（同上；**入 eng-coder `files`**） |
 
-> **声明纪律**：两仓台账（`docs/TODO.md` / `thincoder-vscode/docs/TODO.md`）**均不列入 `files` 参数**
-> （§1.13 末段——file 域 = 预期触碰面，非授权边界；台账收拢是 eng-designer 的提示词规定动作，
-> 与调度器冲突检测无关）。
+*（b）`persona-eng-designer.md` ×4——todo 归属句替换（**2026-09-11 补列**——§5 审计 Deferred 闭合；实落）*
+
+| 文件 | 性质 | as-of | 增量（实落） |
+|---|---|---|---|
+| src/prompts/persona-eng-designer.md | 修改 | 56 | 归属句替换（逐字源 = 本批 §4 批准面 / §5 对表 4–7——「todo 状态推进（记录 + 状态推进 + 物理落笔）= 主 agent」；AC25 子串 `todo 状态推进` 保留）；**入 eng-coder `files`** |
+| docs/design/prompts/persona-eng-designer.md | 修改 | 54 | 同上（中文权威）；**入 eng-coder `files`** |
+| thincoder-vscode/src/prompts/persona-eng-designer.md | 修改 | 56 | 同上（端原文自持——含「不触碰本仓 `docs/TODO.md`」）；**入 eng-coder `files`** |
+| thincoder-vscode/docs/design/prompts/persona-eng-designer.md | 修改 | 54 | 同上；**入 eng-coder `files`** |
+
+> 行数一律 as-of（2026-09-11 实测），不作契约。persona 面设计侧零新增选型——纯登记（逐字源 = 批次档 §4 批准面 + §5 对表 4–7 实落）。
+
+> **声明纪律（2026-09-11 归属修订）**：两仓台账（`docs/TODO.md` / `thincoder-vscode/docs/TODO.md`）与归档档
+> （`docs/TODO-archive.md` / `thincoder-vscode/docs/TODO-archive.md`）**均不列入任何子代理 `files` 参数**；
+> **物理落笔 = 父侧（主 agent）**（§1.13 职责分工——原「eng-designer 落笔」口径作废）。
 > **VSC 三文件归属拆分**：2 个提示词档（`thincoder-vscode/src/prompts/…` + 同仓中文镜像）**入 eng-coder `files`**；
-> `thincoder-vscode/docs/TODO.md` **不入**（同上——由 eng-designer 落笔）。
+> `thincoder-vscode/docs/TODO.md` **不入**（同父侧维护档）。
 > **注册面已核实（原“待实测确认项”结案）**：CLI 仓无显式清单档，`test/*.test.mjs` glob 自动发现
 > （`test/run-fast.mjs:19`、`test/run-full.mjs:9`）→ 新 test 档注册改动 **0**。
 
@@ -1137,10 +1211,515 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 
 #### 2.26.5 边界（本批不做）
 
-- 不做 V1 跨仓解析（①——登记后续）；不扩宽度扫描域（`docs/TODO.md` / `docs/README.md` / `docs/PHILOSOPHY.md` 仍域外——`docs/TODO.md` 在案待裁）
+- 不做 V1 跨仓解析（①——登记后续）；不扩宽度扫描域（`docs/TODO.md` / `docs/README.md` / `docs/PHILOSOPHY.md` 仍域外——T6 域扩提案已由用户 2026-09-11 裁定不采纳〔维持三域〕；轮次 4 #2② 状态同步）
 - 不动 VSC 仓脚本镜像（`thincoder-vscode/scripts/check-doc-width.mjs`——C 豁免语义镜像 = 登记项，本批 CLI 单端；若用户要同批镜像 → 一句话翻转并入）
 - 不重排既有批次档 §3 表（已折行记录冻结）；不做文档内容改写（只做规则 / 括注层面改动）
 - 提示词面零碰（`src/prompts/**` 与本批无关）
+
+### 2.27 收尾批：第 13 批遗留收束 + 文档实测回写（第 14 批——2026-09-11）
+
+**问题陈述**（来源 = 第 13 批 §6 收口遗留 + id=11 观察）：第 13 批交付后留下三个未收尾面——
+① **T75/T76 无测试宿主**——§3.2 两条用例（拆分守恒 / 新档自持）仅有设计行、无落点（当批写域清单缺口；
+D-2 契约「禁新档增例」），交付时仅一次性人工核验——**无回归锁**；
+② **AC54 注行号指针 +1 漂移**——`scripts/check-doc-width.mjs` 行号随条目 C 落地位移（当批 coder 审计发现）；
+③ **TUI.md §1 地图行存量漂移**——非第 7 批触及行仍为 2026-09-09 值（id=11 实测：pickers 500→107 为最大量级差）。
+本批 = **小收尾**（回归锁补齐 + 文档 ↔ 实测对齐）——不新增功能语义、不动既有行为面。
+需求面 = 需求档 §1.15 收尾批块（**无新需求**——A = 既有判定句的回归锁化 / B = D4 维护 / C = 文档对齐）。
+
+#### 2.27.1 条目 A：T75/T76 宿主与断言形态（选型对比）
+
+| # | 候选方案 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论（选定/否决理由） |
+|---|---|---|---|---|
+| 1 | `test/doc-consistency.test.mjs` 续 T72–T74 | 同档同族（第 13 批 B/C 机判即落此档）；零新档；快层 glob 自动发现 | 档名语义偏「文档一致性」——本组为「测试档拆分完整性」，主题相邻 | **选定** |
+| 2 | 新档 `test/prompts-split-guard.test.mjs` | 主题最贴切 | 违本批「不得自行新建档」边界；新增档位注册/维护面 | 否决——零新档纪律 |
+| 3 | 并入两档提示词测试之一 | 就近可写 | **破坏其自身守恒计数**（53 = 42 + 11 立即失稳——自证矛盾） | 否决 |
+
+**契约（T75/T76 = 静态不变量——逐字实现形态见 §2.27.4 代码块）**：
+
+- **T75（正常：拆分守恒）**——三面断言：①**发现面** = 两档在快层发现集内
+  （`readdirSync(test)` ∩ `*.test.mjs` ≡ `test/*.test.mjs` 单层 glob——`test/run-fast.mjs:19` 默认目标）；
+  ②**守恒** = 用例计数（`^(?:test|slow)\(`）42 / 11 / 合计 53（拆分前实测总数）；
+  ③**硬限** = 两档行数 ≤500（口径 `split("\n").length` 含末行——与 §2.26.3 表 563→419 同口径）。
+- **T76（边界：新档自持）**——两面断言：①新档源码零 `prompts-async-guidance` 子串（含注释面——零跨档引用）；
+  ②新档 import 说明符全部 `node:` 前缀（头部自持契约的机械面）。
+- **「全绿」不入用例内（裁决）**：两档与 T75 同处一个快层套件——红则套件红，套件级已承载；
+  用例内嵌 runner（spawn 两个测试档）= 重复执行 + 引入 spawn 面 + 零边际信号 → 否决（D-27b）。
+- **守恒锁守则**：后续批次向两档增/删用例时，本锁数值须同步（D3——锁的存在即提醒点）。
+- §3.2 T75 行「输入」列的 `node test/run-fast.mjs` = 批级验证输入（§6 级），非单测内嵌 runner——
+  该两行零改（落档形态的权威 = 本节，见 D2）。
+
+#### 2.27.2 条目 B：行号指针修正（精确定位 + 同类自查）
+
+**修正集 = 3 处**（与 coder 审计同一溯源链；已落）：
+
+| # | 位置 | 原值 | 修正值 | 目标行核验（2026-09-11 实测） |
+|---|---|---|---|---|
+| 1 | §3.1 AC54 注 | `scripts/check-doc-width.mjs:296` | `:297` | `process.exit(widthHits.length ? 1 : 0);` |
+| 2 | §3.1 AC51 | `scripts/check-doc-width.mjs:30` | `:32` | `export const SCAN_DIRS = [...]` 声明行 |
+| 3 | §2.24.6 | `scripts/check-doc-width.mjs:32` | `:34` | `export const BASELINE_PATH = ...` 声明行 |
+
+判据 = 指向批 13 触及文件、且因条目 C 落地位移（批 13 前后对照核验）。同类自查面 = 全档 `文件:行` 型指针全量枚举
+（77 处 / 70 行）+ 活体面（§3.1 / §3.2 / 当前机制叙述处）逐处精查。
+**登记集 = 5 处**（存量漂移——如实登记本批不修）：
+
+1. `src/agent/dispatch.mjs:220`（AC26）——现 :244 豁免条件行 / :254 入 ask 队列（批 11 位移）；
+2. `src/agent/setup.mjs:299`（AC17）——装配调用现 :307–313、内层条件 :310–312；
+3. `src/prompt-overlays.mjs:70-71`（AC17）——所述「静默回退陷阱」现 :73；
+4. 需求档 `ENGINEERING-MODE.md` §1.15:614（AC28）——非功能段现 :635–636；
+5. `docs/README.md:174`（§2.20.8）——在途设计档行现 :175。
+
+**范围外（D4）**：§2.x 历史批段与 §7 变更记录内的行号 = **as-of 记录**（描述当时状态、非当前导航）——不溯改；
+§2.26.3 的 `:420`–EOF（×2）= **搬迁操作记录**（描述搬迁前时点状态）——留档不改（零「当前值」可换）。
+
+#### 2.27.3 条目 C：TUI.md §1 地图行数回写（口径 + 全表）
+
+**口径裁定 = `split("\n").length`（含末行）**——依据：同表多数行（28 / 42）+ 全部 SUBAGENT-TAIL 回写行
+（git `1fb78fe` 核验）+ id=11 观察值均为同口径。**全表回写**（非只回写 id=11 观察处——一次量测摊平成本、
+消灭混口径/混时点——「非本批触及行是否顺带全部回写」的裁定：**顺带回写**）。
+**回写净值 = 15 行改**（其余 27 行同值——回写后全表单一 as-of：2026-09-11）：
+
+| # | 文件 | 原值 | 新值 | # | 文件 | 原值 | 新值 |
+|---|---|---|---|---|---|---|---|
+| 1 | `tui-lifecycle.mjs` | 75 | 88 | 9 | `layout.mjs` | 226 | 227 |
+| 2 | `key-modes.mjs` | 216 | 239 | 10 | `mouse.mjs` | 213 | 250 |
+| 3 | `agent-turn.mjs` | 323 | 324 | 11 | `pickers.mjs` | 500 | 107 |
+| 4 | `suspension-drive.mjs` | 297 | 298 | 12 | `wizard.mjs` | 208 | 228 |
+| 5 | `tool-events.mjs` | 404 | 406 | 13 | `cmd-config.mjs` | 393 | 464 |
+| 6 | `render-frame.mjs` | 376 | 377 | 14 | `cmd-advisor.mjs` | 255 | 256 |
+| 7 | `tool-args.mjs` | 80 | 82 | 15 | `cmd-submodel.mjs` | 152 | 155 |
+| 8 | `render-loop.mjs` | 129 | 131 |  |  |  |  |
+
+另有小命令范围格 = 实测 **8–95**（原 10–101）；行内 `/eng(101)` → `/eng(95)`；`distill-cmd.mjs`（47 行）与
+`slash-commands.mjs`（187 行）实测同值不变。**表头口径注**（已落）：单一 as-of + 口径句 + 如实注两条。
+**如实注（超出范围项——只注不补）**：① 三档未收本表——`model-picker.mjs`（496）/ `model-catalog.mjs`（90）/
+`wrapped-spawn.mjs`（39）（补登随后续 TUI 文档维护批）；② `pickers.mjs` 行文字未随 MODEL-MERGE-SESSION 拆分重写
+（模型两级面 + `/provider` 管理已迁 `model-picker.mjs`——行内已注）。
+
+#### 2.27.4 受影响文件全清单 + T75/T76 落档形态
+
+| # | 文件 | 当前行数（rawSplit） | 动作 | 内容 | 实施者 | 预计 |
+|---|---|---|---|---|---|---|
+| 1 | `test/doc-consistency.test.mjs` | 236 | 改（+T75/T76） | 两用例继 T72–T74（形态见下） | **eng-coder**（待 token 门） | +~40 |
+| 2 | `docs/design/ENGINEERING-MODE.md` | 1600 | 改（§2.27 + AC57–AC60 + 3 指针） | 本节 + §3.1 + 行号 | eng-designer（**已落**） | +~130 |
+| 3 | `docs/design/TUI.md` | 850 | 改（§1 回写 + 表头注 + 变更记录） | 15 行 + 范围格 + 注 | eng-designer（**已落**） | ±~10 |
+| 4 | `docs/requirements/ENGINEERING-MODE.md` | 752 | 改（§1.15 收尾批块 + 状态行） | 薄块 + 状态行 | eng-designer（**已落**） | +~14 |
+
+**T75/T76 逐字落档形态（coder 落笔文案；§3.2 T75/T76 行零改——形态权威 = 本节）**：
+
+```js
+/* ─── 第 14 批（T75–T76——拆分守恒与自持；ENGINEERING-MODE.md §2.26.3 D-2 / §2.27） ─── */
+
+/** 快层发现集 = `test/*.test.mjs`（run-fast.mjs:19 默认目标；单层通配 ↔ readdirSync 同集） */
+const FAST_LAYER = readdirSync(join(REPO, "test")).filter((f) => f.endsWith(".test.mjs"))
+/** 用例数 = 顶层 `test(` / `slow(` 声明数（当前两档均无 slow——计数字面即归册面） */
+const caseCount = (rel) => (readFileSync(join(REPO, rel), "utf8").match(/^(?:test|slow)\(/gm) ?? []).length
+
+test("T75 正常：拆分守恒——53 = 42 + 11；两档各 ≤500；被快层发现（D-2/AC56）", () => {
+  const A = "test/prompts-async-guidance.test.mjs"
+  const B = "test/prompts-dual-source.test.mjs"
+  for (const f of [A, B]) assert.ok(FAST_LAYER.includes(f.split("/").pop()), `未被快层 glob 发现: ${f}`)
+  assert.equal(caseCount(A), 42, "async-guidance 用例数")
+  assert.equal(caseCount(B), 11, "dual-source 用例数")
+  assert.equal(caseCount(A) + caseCount(B), 53, "拆分守恒 53 = 42 + 11")
+  for (const f of [A, B]) {
+    const n = readFileSync(join(REPO, f), "utf8").split("\n").length
+    assert.ok(n <= 500, `${f} ${n} 行 >500 硬限`)
+  }
+})
+
+test("T76 边界：新档自持——零跨档引用；import 全 node:（D-2/AC56）", () => {
+  const src = readFileSync(join(REPO, "test/prompts-dual-source.test.mjs"), "utf8")
+  assert.equal((src.match(/prompts-async-guidance/g) ?? []).length, 0, "零跨档引用（含注释）")
+  const specs = [...src.matchAll(/from\s+["']([^"']+)["']/g)].map((m) => m[1])
+  assert.ok(specs.length > 0 && specs.every((s) => s.startsWith("node:")), "import 全 node: 内建（头部自持）")
+})
+```
+
+**coder 落笔注意**：`node:fs` import 行追加 `readdirSync`；新段（含节注）插在档尾 T74 之后；零改既有用例；
+`REPO` / `join` / `assert` 已在该档直接复用。
+
+#### 2.27.5 关键决策记录（含否决备选）
+
+| # | 决策 | 否决备选 | 依据 |
+|---|---|---|---|
+| D-27a | T75/T76 宿主 = `doc-consistency.test.mjs`（T72–T74 续） | 新档 / 并入两档 | 零新档 + 同族先例 + 守恒自洽 |
+| D-27b | T75 断言 = 静态不变量（发现 + 守恒 + ≤500）；「全绿」归套件级 | 用例内 spawn runner | 零重复执行、零 spawn 面、无边际信号 |
+| D-27c | C 口径 = rawSplit + **全表**回写 | nlCount 归一化 / 只回写观察处 | 与同表多数 + id=11 + SUBAGENT-TAIL（git 核验）同口径；混口径/混时点一次消灭 |
+| D-27d | B 修正集 = 批 13 所致 3 处；存量 5 处登记不修 | 全档全量重算 / 只修单处 | 溯源一致（第 13 批遗留）；「新增阻断、存量报告」纪律类比 |
+
+#### 2.27.6 边界（本批不做）
+
+- 不新增文件；`src/**` / `scripts/**` / 提示词 / `CHANGELOG.md` / `docs/TODO.md` 零触碰（B 只改文档内指针文本）；
+- B 登记集 5 处与 §2.x / §7 历史行号不修；TUI 三档不补行（只注）；`pickers.mjs` / §9 描述不重写（只注）；
+- 第 9 批 §13.9 登记面（§2.2 / §2.5 / §2.6 / §2.9——批 8 链窗口）不碰；
+- 宽度扫描域不扩；V1/V2/V3 检查器语义零改。
+
+#### 2.27.7 纪律核对
+
+- **D1**：设计/需求档修订 = eng-designer（含 A 的设计面）；coder 写域 = `test/doc-consistency.test.mjs` 单档。
+- **D2**：T75/T76 形态权威 = §2.27.4（§3.2 行零改、回指 AC56）；批次档 §2 只引用不重述。
+- **D3**：计数声明与列表同改（3 处修正 = 表 3 行；5 处登记 = 列 5 项；15 行回写 = 表 15 行；三档未入表 = 列 3 名）。
+- **D4**：修正值 = 当前解析目标（as-of 2026-09-11）；历史/as-of 面不溯改。
+- **D5**：B/C 落档先于评审点火；评审在途零改（冻结）。
+- **D6**：落笔后回读 + 机检（`node scripts/check-doc-width.mjs` 新增 0）。
+- **D7**：变更留痕 = 本档 §7 一行 + `TUI.md` 变更记录一行（已落）。
+
+#### 2.27.8 条目 D（候选 2 翻转）：设计档侧非表格超宽折行（5 处——已落）
+
+**来源**：第 13 批 §6 收口遗留（批次档 §1 候选 2——用户 2026-09-11「能开的都开起来」翻转纳入本批）；批次记录侧 9 行已由父侧代笔折行 + 打标，设计档侧余额 = 5 处（非表格行）。
+**折行口径**：纯折行——文字零增删、语义不变（断点取既有 `；`/`——` 边界；列表续行 2 空格缩进）；逐处带折行标注（`> 〔eng-designer 折行 …〕`——与父侧代笔式标注同型）。
+**与表格行豁免的关系**：豁免（第 13 批条目 C——§2.26.2）只覆盖 markdown 表格行（结构性不可折行）；本 5 处均为**非表格行**——不豁免、照折。
+
+| # | 文件 | 行（as-of 2026-09-11） | 原长 → 折后行数 |
+|---|---|---|---|
+| 1 | `docs/design/AGENT-LOOP.md` | `:510` | 444 → 3 |
+| 2 | `docs/design/AGENT-LOOP.md` | `:572` | 338 → 2 |
+| 3 | `docs/design/AGENT-LOOP.md` | `:574` | 391 → 2 |
+| 4 | `docs/design/SESSION.md` | `:524` | 392 → 2 |
+| 5 | `docs/design/SUBAGENT-ID-COUNTER-AGENT.md` | `:53` | 479 → 3 |
+
+**落笔裁定 = 设计者自落（选型对比）**：
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | eng-designer 自落（本轮） | D1 设计档写权唯一；零语义格式修订；批记录侧域主代笔先例；零 token 链成本 | 无（纯格式面，无实现信号可验） | **选定** |
+| 2 | eng-coder 落（token 门后） | 实施/设计分离 | 设计档写权异位（D1）+ 为格式面新开 token 链 | 否决 |
+| 3 | 不折（留存量） | 零成本 | 违「非表格禁 >300」纪律 + TODO 清理面挂账 | 否决 |
+
+**边界**：零文字语义改动、零行序调整、零表格行触碰；本批 5 处之外不折——他链在飞超宽行如实注、归其链（as-of 2026-09-11 快照 3 处：`PORTABILITY.md` `:164`（335）· `COMMON-LAYER.md` `:125`（344）· `VSC-GUARD-COMPLETION.md` `:157`（802）——随其链变动）；`src/**` / `scripts/**` 零触碰。
+**纪律核对**：D1（写权 = eng-designer）· D3（5 处 ↔ 表 5 行）· D4（行号只作 as-of）· D5（落档先于评审点火）· D6（落笔后回读 + 机检）· D7（本档 §7 一行）。
+**验收**：AC67（§3.1）· 用例 T83（§3.2）。
+
+### 2.28 角色重定义收口（角色重定义批——2026-09-11；FR9 + 需求 §1.5）
+
+> 需求源 = `../requirements/ENGINEERING-MODE.md` §1.2 FR9 + §1.5（裁定清单 + 收口块）；批次档 = `../batches/2026-09-11-ROLE-REDEFINITION.md`。
+> 本批 = **收口批**：对账（已实现面 vs 裁定面）为主 + 差异面修正；**新增机制 = 零**（不发明需求——新增文本仅源自既有裁定与实践口径）。
+> 零碰区（他批在途/已落）：§2.26 · §2.27 · §3.1 AC45–AC60。
+
+#### 2.28.1 问题陈述
+
+2026-09-10 用户逐条裁定的「角色三段链」（主 agent = 产品经理 / eng-designer = 写稿面唯一作者 / eng-coder = 实现；「设计 = 对需求的检验」）已随第 2/4/5 批实际运行——本会话 7–15 批全链即**运行实例**。但裁定面与文档面/提示词面之间仍留三类残留（勾销口径 · 内容权流程 · 归属/计数/过渡性登记面）——「同一机制两处不同描述」（D2 违反）会在下批评审里复现。本批逐条对账（§2.28.2）并收口（§2.28.4），使三段链在四层（需求/设计/提示词/机械）单口径。
+
+#### 2.28.2 现状对账（§1.5 全部裁定 + FR9——逐条判定）
+
+| # | 裁定要点 | 判定 | 现行证据 | 差异处置 |
+|---|---|---|---|---|
+| 1 | 主 agent 保留编排/核验/确认/发起权 | 已实落 | persona-engineering 双源（身份宣言 + 调用链 + 发起权边界） | — |
+| 2 | 主 agent 内容性核验设计稿 | 已实落 | 同上（content-level verification 明写） | — |
+| 3 | 设计修订全部回 eng-designer | 已实落 | §2.2 step1/step10 · §2.5 · §2.6 F2 · §2.8 · §2.15 A2（六面核对集——AC27/T40 在守） | — |
+| 4 | eng-designer 无 designToken | 已实落 | persona-eng-designer 双源 + 机械面（AC20/T36） | — |
+| 5 | 需求档不过 advisor | 已实落 | persona-eng-designer 双源（不经 advisor 句） | — |
+| 6 | 评审发起权/提醒权在主 agent | 已实落 | persona-engineering 发起权边界（双端） | — |
+| 7 | 勘察归 eng-designer 自己做 + 预算 | 已实落 | persona（≤6/批）+ setup 勘察变体（AC20/T35） | — |
+| 8 | 提示词内容权 | **部分** | 内容权/落笔分工在 D1 与 persona；该分工未在本链档面（ENGINEERING-MODE / PROMPT-SYSTEM）落档 + `PROMPT-SYSTEM.md` §2.7 #13 抵牾（修正轮 #8） | **RF-2** |
+| 9 | 设计确认门 A⊃B | 已实落 | A = §2.15 A2 修订路径；B = §2.2 step 3–4 评审节点 | — |
+| 10 | 文档写权分工 | **部分** | D1/A2 表在位；`README.md` / `AGENTS.md` / §2.1 残留过期限定 | **RF-3** |
+| 11 | 文档更新纪律 | 已实落 | D1–D7 双源 + §2.19 + 机械校验（AC28/T41）；计数/状态登记面归 RF-5 | **RF-5**（登记面） |
+| 12 | 勾销归属（批次档 §6） | **部分** | 设计档/persona/README 面已对；纪律层模板块 4 面残留「实现后验收标准逐条勾销」 | **RF-1** |
+| FR9 | 角色三段链定义/分工 | **部分** | 角色/流程/机械面在位；§2.1 表两行 + 「落地时核销项」未执行（对账快照——修复 = RF-3/RF-5，本批已落） | **RF-3/RF-5** |
+
+**判定计数**：已实落 9（#1–#7 · #9 · #11）· 部分 4（#8 · #10 · #12 · FR9）· **未落 0**。
+
+#### 2.28.3 接口契约——提示词面变更流程（本批落档的流程契约）
+
+**唯一形态**：**eng-designer 起草逐字 → 主 agent 确认（内容权） → eng-coder 机械落笔**（落笔走正常链：设计评审 → 用户批准 → eng-coder；照抄不解释、不裁量）。
+
+- 依据：需求 §1.5 #8 注（内容权；落笔仍走正常链；`src/prompts/*.md` 仍是产品代码——FR1 不变）+ #10 + D1。
+- 与 D1 的相容性（本批 Q5 核对）：D1「提示词 = 主 agent 内容权 + eng-coder 落笔」为**权利归属**；起草/确认/落笔为**分工步骤**——归属 ≠ 分工（同 `ADVISOR-CONVERGENCE.md` §13.8 既有裁法——修正轮 #5：§13.9 为后续登记项）。
+- 与双端纪律的相容性：4 面（CLI src/中文权威 + VSC src/中文权威）**各端独立落笔、语义同源**；不做 byte-identical 硬一致；差异如实上报（多实现面纪律——纪律层文档规范节）。
+- 落档形态：本设计 §2.28.4 各条 = 逐字草案（照抄件）；落笔批「文本 + 断言同批」（锚句变更永不静默——`PROMPT-SYSTEM.md` §2.7 #12）。
+
+#### 2.28.4 差异面收口（RF-1–RF-6——逐字草案 + 最小改动面）
+
+**RF-1 勾销口径（需求 #12）——4 面**（CLI/VSC × src/中文权威 `discipline-engineering.md`）
+- 定位：设计文档模板细化 →「变更记录」行尾句。
+- 现句（删除——4 面同文）：`实现后验收标准逐条勾销。`
+- 替句（逐字——4 面同文；修正轮 #1——删归因注：`PROMPT-SYSTEM.md` §2.7 #15 口径）：`实现后验收勾销落批次档 §6（设计档内不写勾销状态）。`
+- 排程：提示词面（父侧排程/协调——与在途链同触 `discipline-engineering.md` 时由调度器按文件域串行）。
+
+**RF-2 内容权与提示词流程（需求 #8/#10）——父侧排程**
+- (a) `docs/requirements/PROMPT-SYSTEM.md` §2.7 #13——修正逐字稿（替换现段；保留「变更走批」首句，其下改写）：
+
+  13. **变更走批**：提示词内容变更 = 设计批评审 + 批准，不走"顺手改"；每文件头部注本槽位与消费方
+      ——**变更流程界定（用户裁定 2026-09-10；口径 = `ENGINEERING-MODE.md` §1.5 #8/#10）**：提示词文件
+      （`src/prompts/*.md`）**仍是产品代码**（FR1 口径不变）——**内容权 = 主 agent**（逐字文本由它定，
+      它就是设计的一部分）；**落笔走正常链**（设计评审 → 用户批准 → eng-coder），起草分工 = eng-designer
+      起草逐字 → 主 agent 确认 → eng-coder 机械落笔（流程详述 = `../design/ENGINEERING-MODE.md` §2.28.3）。
+      "不经设计流程"指不经 eng-designer 的**需求/设计档**流程（提示词是产品方针，非设计方案）——**不**指
+      绕过门禁。装配代码（setup.mjs/prompt-overlays.mjs 等）= 代码，工程模式实现链不变。
+
+- (b) 同档 §8：标题「（需求——2026-09-10 用户裁定；待设计）」→「（需求——2026-09-10 用户裁定；**已设计 + 已实现**——第 2 批 CLI / 第 5 批 VSC）」；§8 状态行同改；机制权威源行「§2.1 目标态注」→「§2.1 三段链表 + §2.15/§2.28」；§8 变更记录 2026-09-10 行（as-of :301）「9 条裁定」→「§1.5 裁定清单」（修正轮 #2——「§8.1 末行」指针与磁盘不符，实际命中行 = 变更记录）；§8.2 过渡例外 → 闭合注（与需求档 §1.5 同口径，引 a 案）。
+- (c) 同档 §5 结构债第 1 条（「工程模式现拼 engineering.md（ARCHITECT）…」）→ 核销注（槽位化已交付，PROMPT-SYSTEM 施工①③）。
+- 排程：父侧排程（不在本批写域——修正稿由主 agent 确认后落笔；TODO 在案条目随落笔核销）。
+
+**RF-3 作者归属（需求 #10/FR9）**
+- (a) `docs/README.md` §1 目录行——「requirements/<板块>.md ← 需求层（**eng-designer 产物**；过渡期由主 agent 代行——三层归属与迁移规则见 §3）」→ 删「过渡期由主 agent 代行」限定。
+- (b) 同档 §3.1 作者表——「| 需求层 | … | eng-designer（过渡期主 agent 代行） |」→「| 需求层 | … | eng-designer |」。
+- (c) `AGENTS.md`（本仓根）——整句替换：现句「**需求基线**：需求层 `docs/requirements/`（主 agent·产品经理产物）+ 设计层 `docs/design/`（eng-designer 产物）+ 用户对话。」→ 替句「**需求基线**：需求层 `docs/requirements/` + 设计层 `docs/design/`（均 **eng-designer 产物**——写稿权唯一；需求讨论/登记在会话面）+ 用户对话。」
+- (d) 设计档 §2.1 + 需求档 §1.6 落地注——**本批已落**。
+- 排程：(a)(b)(c) 落笔（README 与 T40 断言同批；AGENTS.md 按父侧维护面先例）；(d) 已落。
+
+**RF-4 子代理提示词角色句（需求 #1/#3）——提示词面（修正轮 #4——EN + 中文权威均逐字）**
+- (a) `persona-eng-coder.md` 身份句 4 面——EN 现句
+  `The parent agent is the architect: it provides design documents, file lists, and acceptance criteria. Your role is implementation.` → EN 替句（逐字）：
+  `The parent agent is the product manager and flow orchestrator: it hands you the batch record §2 as your task book (design-doc references, file list, acceptance criteria) and the design token; the design document itself is authored by eng-designer. Your role is implementation.`
+  zh 现句（中文权威 CLI/VSC 同文）`父代理是架构师：它提供设计文档、文件清单和验收标准。你的角色是实现。` → zh 替句（逐字）：
+  `父代理是产品经理与流程编排者：它把批次档 §2 作为任务书交给你（设计档引用、文件清单、验收标准），以及设计 token；设计文档本身由 eng-designer 执笔。你的角色是实现。`
+- (b) 同档「边界：设计是权威规格」首句——EN 现句 `The parent agent provided a design document. Read it, follow it. Do not deviate.` → EN 替句（逐字）
+  `Your task book references the design document — the authoritative spec. Read it, follow it. Do not deviate.`；zh 现句 `父代理提供了设计文档。通读它，遵循它。不得偏离。` → zh 替句（逐字）
+  `任务书引用了设计文档——权威规格。通读它，遵循它。不得偏离。`
+- (c) `persona-eng-coder.md`（VSC 仓）收尾自审第 6 条 ×2 面——EN 现句 `6. Update the affected design-doc sections your diff touches — …`（含粘连断行 `…rot otherwise) Your last message…`）→ EN 替句（逐字）：
+  `6. Report any design-doc drift your diff touches (module map / affected-files table) in your delivery report — do not edit design docs yourself; they are authored by eng-designer.`
+  （粘连修复：`Your last message IS the report the parent sees — make it complete:` 断开起新行——只报告、不修改）；zh 现句 `⑥ 受影响的设计档章节随 diff 更新（模块地图/受影响文件表）` → zh 替句（逐字）：
+  `⑥ diff 触及的设计档漂移（模块地图/受影响文件表）写交付报告——不修改设计档；设计档由 eng-designer 执笔`
+- (d) `discipline-engineering.md` 头注 consumers 4 面——补 eng-designer：EN `eng-coder subagent — both engineering-mode assemblies` → `eng-coder + eng-designer subagents — all engineering-mode assemblies`（逐字）；zh `eng-coder 子代理——全部工程模式装配` → `eng-coder + eng-designer 子代理——全部工程模式装配`（逐字）。
+- 排程：提示词面（父侧排程/协调）。
+
+**RF-5 登记面（需求 #11——D3/D7）**
+- (a) 需求档（本批已落）：header 状态行 · §1.5 收口块 · §1.6 落地注 · §1.17 落地注。
+- (b) 设计档（本批已落）：§2.1 三段链目标态 + 核销注 · §2.2 step5 sample 补 `batchDoc` · §2.6 角色名 · §2.15 计数口径/现行对账指针/A2 指针修正 · §2.16 过渡期注核销 · §5 模式门注。
+- (c) `ENGINEERING-MODE.md`（VSC 仓）——头注「METHODOLOGY 驱动」· §1 槽位清单 · §5 角色 enum + 运行期文案 · §7 装配句 · §8 受影响文件表（五处陈旧面）——跨仓，父侧排程。
+- 排程：(a)(b) 已落；(c) 跨仓父侧排程。
+
+**RF-6 回归锁（FR19 + 需求 #11 可机判）**
+- CLI：`test/eng-designer-role.test.mjs`（T40 断言更新——README 口径「过渡期主 agent 代行」零命中）· `test/prompts-dual-source.test.mjs`（**新增断言**——勾销旧句零命中 + 替句子串在位）（修正轮 #7）。
+- VSC：`test/prompts-mirror-anchors.test.mjs`（**新增断言**——勾销句 · VSC 自审第 6 条零命中 · 身份句子串）（修正轮 #7——同前，措辞统一）。
+- 口径：断言随文本同批落（锚句变更永不静默）。
+
+#### 2.28.5 方案选型与关键决策
+
+| # | 决策点 | 候选 | 选定 | 否决理由 |
+|---|---|---|---|---|
+| D1 | 差异修法载体 | A 提示词面逐字修 + 文档面收口 · B 只改文档 · C 大范围重写 | **A** | B：文档对 agent 无执行力（§1.8 教训）；C：超需（差异为残留级） |
+| D2 | 勾销句修法 | A 就地改述（指向批次档 §6）· B 整句删除 · C 整节重写 | **A** | B：模板句位留空（读者追问勾销去哪）；C：超需 |
+| D3 | 内容权抵牾收口（本批 Q4） | A 以 §1.5 #8/#10 为准修 #13 · B 以 #13 为准改 §1.5 · C 两存加互指注 | **A** | B：同日澄清注明言「落笔仍走正常链」（避免与 FR1 冲突）+ 实操全按 #8/#10；C：两说并存违 D2，评审必撞 |
+| D4 | persona-eng-coder 身份句 | A 就地改述（产品经理 + 任务书 + designer 执笔）· B 删句 · C 不改 | **A** | B：身份信息有用；C：与主 agent 新身份互斥（同机制两说） |
+| D5 | VSC 收尾自审第 6 条 | A 改述「只报告、不修改」· B 删除 · C 保留 | **A** | B：drift 上报义务的显式化丢失；C：与「eng-coder 永不编辑设计文档」互斥 |
+| D6 | 收口范围 | A 只收角色重定义直接差异 · B 顺带清 METHODOLOGY 残留等相邻项 | **A** | B：范围蔓延（相邻项各有归属批次/父侧定时点——登记不并批） |
+
+> D3 结论：**并入本批收口**——本批主题即提示词面流程（起草 → 确认 → 落笔），#13 旧表述正是其对立面；不收口 = 本批自带未决矛盾（评审必撞）；修法成本 = 一处文本 + §8 同步（登记面随落笔核销）。
+
+#### 2.28.6 受影响文件（as-of 2026-09-11——行数口径 = 读工具行数）
+
+| 文件（端） | as-of | 增量 | 条目 | 落笔 |
+|---|---|---|---|---|
+| `src/prompts/discipline-engineering.md`（CLI） | 227 | ≤±5 | RF-1 · RF-4d | 提示词面 |
+| `docs/design/prompts/discipline-engineering.md`（CLI） | 155 | ≤±5 | RF-1 · RF-4d | 提示词面 |
+| `src/prompts/discipline-engineering.md`（VSC 仓） | 234 | ≤±5 | RF-1 · RF-4d | 提示词面 |
+| `docs/design/prompts/discipline-engineering.md`（VSC 仓） | 161 | ≤±5 | RF-1 · RF-4d | 提示词面 |
+| `src/prompts/persona-eng-coder.md`（CLI） | 37 | ≤±5 | RF-4a/4b | 提示词面 |
+| `docs/design/prompts/persona-eng-coder.md`（CLI） | 37 | ≤±5 | RF-4a/4b | 提示词面 |
+| `src/prompts/persona-eng-coder.md`（VSC 仓） | 50 | ≤±8 | RF-4a/4b/4c | 提示词面 |
+| `docs/design/prompts/persona-eng-coder.md`（VSC 仓） | 46 | ≤±8 | RF-4a/4b/4c | 提示词面 |
+| `docs/README.md`（CLI） | 240 | ≤±3 | RF-3a/3b | 落笔（随 T40） |
+| `AGENTS.md`（CLI 仓根） | 69 | ≤±2 | RF-3c | 落笔（父侧维护面先例） |
+| `docs/requirements/PROMPT-SYSTEM.md`（CLI） | 308 | ≤±14 | RF-2a/2b/2c | 父侧排程 |
+| `docs/design/ENGINEERING-MODE.md`（VSC 仓） | 206 | ≤±10 | RF-5c | 父侧排程（跨仓） |
+| `docs/requirements/ENGINEERING-MODE.md`（CLI） | 761 | +17（实测 778） | RF-5a + 收口块 | **本批已落** |
+| `docs/design/ENGINEERING-MODE.md`（CLI） | 1762 | +163（实测 1925） | §2.28 + 登记面各节 | **本批已落** |
+| `test/eng-designer-role.test.mjs`（CLI） | 316 | ≤±6 | RF-6（T40 更新） | 随 RF-3 |
+| `test/prompts-dual-source.test.mjs`（CLI） | 175 | +~25 | RF-6（勾销句断言） | 随 RF-1 |
+| `test/prompts-mirror-anchors.test.mjs`（VSC 仓） | 231 | +~25 | RF-6（勾销/自审句断言） | 随 RF-1/RF-4 |
+
+> 档位注：全部为文档/提示词/测试类；无源文件触发档位线（本批零代码改动）。设计档本体（1762 行）为架构级文档——本次实测 +163（≤±200 预算内——同档折叠惯例（§2.10）），不触发拆分。`test/eng-designer-role.test.mjs` 316 行 = >300 建议档——本批单点更新（T40 更新，+≤6）不拆（修正轮 #6）。
+
+#### 2.28.7 边界（不做什么）
+
+- 本批**零代码改动**（无 `src/**` 代码面；提示词文本按排程落笔）。
+- 不碰零碰区（§2.26/§2.27/AC45–AC60）· `docs/TODO.md` 只读（§1 边界）· 他链在途档。
+- 不并批相邻项：第 9 批设计登记面（§2.2/§2.5/§2.6/§2.9 时序规则登记——父侧定时点）· 第 4 批 C 工具遗留文档同步 · METHODOLOGY 退役残留（含 `discipline-engineering.md`（VSC 仓）R24 死指针）· TODO 旧 VSC 镜像登记行核销。
+- 不加机械门/不改 `dispatch`（写域纪律维持提示词级——用户裁定）。
+- 不做跨端 byte-identical 硬一致；不重写 §2.15 历史表（as-of 保留 + 指针）。
+- 不发明需求（本批无用户新裁定项——新增文本仅源自既有裁定与实践口径）。
+
+#### 2.28.8 UI/交互决策与回指
+
+- **UI/交互：N/A**——本批为文档/提示词文本收口，无界面面；无 `open` 项。
+- 验收标准 = §3.1 AC61–AC66（逐条回指 RF-1–RF-6 / 需求 §1.5）；用例 = §3.2 T77–T82。
+
+### 2.29 文档 / 产品文案卫生（第 22 批——2026-09-11）
+
+> 来源：TODO 全量审计（id=28）「该落地」清单批 C（6 条）+ 用户 13:12「批C开工」；批次档 `../batches/2026-09-11-DOC-HYGIENE.md` §1。
+> 范围裁定：原建议 7 条剔除 C#145（设计档超宽折行——已由第 14 批承接，不重复派工）。本批 = **纯文档 / 文案卫生**——
+> 不改行为与语义（C1 仅改描述文本；C2/C4 仅注释与描述串内锚文本；spec 驱动真值面零改）。
+
+#### 2.29.1 问题陈述（6 条现状——审计 id=28 一手实测复核）
+
+| # | 现状缺陷 | 现场锚（as-of 2026-09-11） |
+|---|---|---|
+| C1 | `read_image` 工具描述（**模型可见面**）事实错误：点名「DeepSeek V4, GLM-5」为纯文本模型——实测 `deepseek-flash` / `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 均 `multimodal: true`（仅 `deepseek-v4-pro` 非视觉）；能力门为 spec 驱动 | `src/tools/read_image.md:8` vs `src/model-specs.mjs:33/38/40`；门 `src/tools/file.mjs:168` |
+| C2 | `§24` 旧锚残留（AGENT-LOOP 重排后旧节号不存 = 断链）：CLI `src/**` 实测 **28 行 / 29 处 token / 18 文件**（审计估「25 处」——以逐行枚举为准，D3） | 逐行见 §2.29.3 |
+| C3 | `AGENT-LOOP（VSC 仓）§7` 两句仍述 C' 态（busy「输入禁用」/ readOnly 锁）——与 INPUT-LOCK-BEHAVIOR-REVISED 及本端实现矛盾 | `thincoder-vscode/docs/design/AGENT-LOOP.md:290-291` / `:322-325`；实现 `webview/loading.js:38`（readOnly 锁移除）+ `webview/send.js` 出口守卫 + `locales/{zh,en}.json:13`（占位符定稿串） |
+| C4 | `wrapped-spawn.mjs:1` 注释指向已归档档 `docs/design/TUI-STDERR-CAPTURE.md`（真断链） | `src/tui/wrapped-spawn.mjs:1`；归档实况 `docs/design/_archive/TUI-STDERR-CAPTURE.md` |
+| C5 | 需求档 5 点位未同步（第 4 批 C 遗留 ②；第 5 项 N3 为第 5 批评审 #9 委托项） | `docs/requirements/ENGINEERING-MODE.md` §1.12 段表 / §1.11 B9 / §1.16 F1 / §1.16 N2 / §1.17 N3 |
+| C6 | CLI 仓 `.thincoder/index/`（`manifest.json` 117,135 B + `vectors.bin` 4,395,208 B）为 DB 化前死产物（mtime 2026-07-29；`src/**`+`bin/**` 零读写点；活体索引 = `~/.thincoder/memory.db`） | `thincoder/.thincoder/index/`；`.gitignore:18`（未跟踪） |
+
+**契约面（本节裁定即实现规格）**：C1/C3/C4 的逐字替句 + C2 的逐行映射表 + C5 的点位表——实现与评审的核对以此为准。
+
+#### 2.29.2 C1 描述面同步（`read_image.md:8`——逐字替句）
+
+**修法方向（审计）**：改「能力以 spec 为准」+ 去具体模型名。
+
+| # | 候选 | 判据（防再漂移 / 模型可读 / 改动面） | 结论 |
+|---|---|---|---|
+| 1 | 保留示例（名单更新为「正确」名单） | 名单随模型上下线必再漂（本缺陷即第 6 批 deepseek 放行后漂移的产物——同形态复发） | 否决 |
+| 2 | **去具体模型名 + 能力以 spec 为准** | 唯一不随模型清单变化的表述；错误路径由 `file.mjs` 门文案兜底（含引导句——零改） | **选定** |
+
+**定稿替句（逐字——整行替换 `read_image.md:8`）**：
+
+`- This tool only works with models that support vision/image input (capability is spec-driven — the model spec decides, not a hardcoded list). Models without vision support will receive an error — except svg, which needs no vision support since it is read as text.`
+
+**要点**：① 去两个名单纯（「Kimi K3, Qwen3.8, MiniMax M3, GLM-5.3-Flash」与「DeepSeek V4, GLM-5」= 漂移源）；
+② svg 例外子句保留（语义零改——svg 走文本源码路径）；③ **工具名示例不新增**（「This tool」在工具描述上下文内自明；
+`read_image` 字样已在首行与 `file.mjs` 错误/引导文案在位）——去名单纯、不引入新示例，与第 20 批「描述面同步」同族；
+④ `file.mjs` 门与错误文案（spec 驱动真值面）本批零改。
+
+#### 2.29.3 C2 旧锚清理（`§24`→`§11.x`——逐行映射表）
+
+**口径（映射权威 = POOL-CONFIG-UNIFIED F-7）**：`§24` → **`§11.x` 粒度**（非裸 `§11`）；`D-24x` 标签保留（与已更新行先例同形——
+`src/config.mjs:77`「§11.1 D-24a/R14 + §11.2 R13」）。三域：
+
+- `D-24a` / `R14` / 分域池 → **§11.1**（角色分池 + 可配置）；
+- `D-24b` / `R13` / async advisor 收敛 → **§11.2**（async advisor——独立后台评审池）；
+- `D-24c` / `R15` / 排队合并（已废弃） → **§11.3**（排队用户指令合并——废弃记录）。
+
+**逐行映射表（28 行 / 29 处 token / 18 文件——键控 = 文件 + 旧锚串；行号 as-of 2026-09-11，实现时以 grep 重扫为准）**：
+
+| # | 文件:行（as-of） | 旧锚 → 新锚 | 域 |
+|---|---|---|---|
+| 1 | `src/advisor/messages.mjs:133` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 2 | `src/advisor/run.mjs:22` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 3 | `src/advisor/run.mjs:145` | `§24 D-24b ③` → `§11.2 D-24b ③` | B |
+| 4 | `src/advisor.mjs:270` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 5 | `src/agent/completion.mjs:123` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 6 | `src/agent/dispatch.mjs:390` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 7 | `src/agent/record-results.mjs:103` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 8 | `src/agent/run-stages.mjs:166` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 9 | `src/agent-tools/eng.mjs:37` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 10 | `src/agent-tools/eng.mjs:55` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 11 | `src/agent-tools/escalate-async.mjs:155` | `§24 D-24a` → `§11.1 D-24a` | A |
+| 12 | `src/agent-tools/subagent-actions.mjs:116` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 13 | `src/agent-tools/subagent-run.mjs:39` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
+| 14 | `src/agent-tools/subagent-run.mjs:55` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
+| 15 | `src/agent-tools/subagent-run.mjs:83` | `§24 D-24a` → `§11.1 D-24a` | A |
+| 16 | `src/agent-tools/subagent-scheduler.mjs:341` | `§24 D-24a/R14` → `§11.1 D-24a/R14` | A |
+| 17 | `src/agent-tools/subagent-scheduler.mjs:346` | `§24 D-24a（R14）` → `§11.1 D-24a（R14）` | A |
+| 18 | `src/agent-tools/subagent.mjs:132`（token ①） | `§15/§18/§24` → `§15/§18/§11.1` | A |
+| 19 | `src/agent-tools/subagent.mjs:132`（token ②） | `per role domain (AGENT-LOOP.md` 句内 `§24` → `§11.1` | A |
+| 20 | `src/agent-tools/subagent.mjs:390` | `§24 拆分轮` → `§11.1 拆分轮` | A |
+| 21 | `src/agent.mjs:71` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 22 | `src/agent.mjs:72` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 23 | `src/tui/cmd-eng.mjs:35` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 24 | `src/tui/mouse.mjs:202` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 25 | `src/tui/subagent-panel.mjs:59` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 26 | `src/tui/suspension-drive.mjs:25` | `§24 D-24c` → `§11.3 D-24c` | C |
+| 27 | `src/tui/suspension-drive.mjs:30` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 28 | `src/tui/suspension-drive.mjs:77` | `§24 D-24b` → `§11.2 D-24b` | B |
+| 29 | `src/tui/suspension-drive.mjs:133` | `§24 D-24b` → `§11.2 D-24b` | B |
+
+**执行面**：替换仅改锚文本（`§24`→`§11.x`）——其余逐字不动；`subagent.mjs:132` 为**描述串内锚文本**（模型可见面——
+无语义变化、零行为）。
+**同族观察（出批——登记不并修）**：① 同描述/同文件内另有同代旧编号锚（`§15/§18` 串、`§19.x`、`§20`——实测
+`src/agent-tools/subagent.mjs` 内 `§19` 21 处 / `§20` 5 处）——不属 C2（`§24`）范围，建议另立勘察做一次全描述重锚；
+② `test/advisor-description.test.mjs:18` 的「旧 §24 已更新」为**变更注**（非断链）——保留；`docs/**` 记史面照留；
+③ VSC 仓 `src/**` `§24` 残留（实测 39 处 / 13 文件）——本批 CLI 单端，出批（TODO「双端」余 VSC 面另议）。
+
+#### 2.29.4 C3 机制正文同步（`AGENT-LOOP（VSC 仓）§7`——两句修订，已落）
+
+**事实核对（实现已按 INPUT-LOCK-BEHAVIOR-REVISED 落地）**：`webview/loading.js:38` `readOnly = false`（锁移除——始终可编辑）；
+`webview/send.js` 出口守卫 busy 拒发（文本保留不吞）；占位符定稿串 = `input.busyPlaceholder`「主会话处理中——Enter 提交禁用——可继续输入」
+（`locales/{zh,en}.json:13` 同串）。原文两句为 C' 态残留（busy 输入禁用 + readOnly）。
+
+**修订（逐字两处——已落磁盘；本节行号 as-of 2026-09-11——该档活跃，键控以句内容为准）**：
+
+- 位①（busy 判据段「单一判据）提交拒收」句；as-of `:293-295`）：`单一判据）输入禁用**（INPUT-LOCK-ASYNC C'——…——webview 输入锁见下方 UI 段）` →
+  `单一判据）提交拒收**（INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09——**输入不禁**（可录入回显）——Enter/发送拒发不排队——webview 输入面见下方 UI 段）`；
+- 位②（挂起 UI 段「输入门禁 = busy…派生」句；as-of `:329-332`）：`**输入锁 = busy…派生**（loading.js——readOnly + busy 占位符——…中断模态豁免锁…）` →
+  `**输入门禁 = busy…派生**（loading.js——**readOnly 锁已撤**（可录入）——busy 占位符「主会话处理中——Enter 提交禁用——可继续输入」——…中断模态——注入通道在门禁前…）`；
+- 档头加一行变更注（`2026-09-11：§7 输入门禁两句按 INPUT-LOCK-BEHAVIOR-REVISED 同步——第 22 批 C3`）。
+
+**UI 面**：占位符定稿串照实（与实现同串）——**无 open 项**。
+**范围边界（不并修——登记；修正轮 #3）**：模块地图行 `INPUT-LOCK-ASYNC（C'` 标签两处（chat-panel / suspension 行——as-of `:72`/`:73`）、
+中止语义（F-6）行 C' 标签（as-of `:314-315`）= 机制/裁决**指针**、
+无行为断言——不属 C3 断言面（TODO 范围 = busy 判据段旧句 / 挂起 UI 段旧句两处——as-of `:293` / `:329`）。
+
+#### 2.29.5 C4 注释断链（处置择一——去路径，待 coder）
+
+| # | 候选 | 判据（可解析 / 不开先例 / 同族一致 / 现状依据边界） | 结论 |
+|---|---|---|---|
+| 1 | 改指归档档（`docs/design/_archive/TUI-STDERR-CAPTURE.md`） | 指针可解析、最小改动；但 src 全仓 `_archive/` 零引用（开先例），且产品注释指冻结档（DOC 地图归档面「不作现状依据」） | 否决 |
+| 2 | **去路径（机制名保留）** | 同机制姊妹引用已是名称形态（`src/crash-reports.mjs:35`「TUI-STDERR-CAPTURE F-2」零路径）——两处同形；名称可 grep 回溯 | **选定** |
+
+**定稿改动（逐字）**：`src/tui/wrapped-spawn.mjs:1` 删去 `（docs/design/TUI-STDERR-CAPTURE.md）`——首行变为
+`/** wrapped-spawn.mjs — TUI-STDERR-CAPTURE F-1/F-3：包装父`（其余注释逐字不动）。
+**后续触发（登记）**：`TUI.md` §1 已登记 wrapped-spawn 补登随「后续 TUI 文档维护批」——届时注释可再改指 `TUI.md` 权威节。
+
+#### 2.29.6 C5 需求档同步（5 点位——已落）
+
+第 4 批 C 遗留 ② 收口（§1 记「4 项」= 原措辞；第 5 项 N3 为第 5 批评审 #9 委托——设计档 §2.21 as-of 行含，
+`2026-09-10-VSC-MIRROR.md` §5:93 登记——同位同源并入，计数按 5 点位，D3）：
+
+| # | 点位 | 改法（已落） | 判定子串（AC72） |
+|---|---|---|---|
+| ① | §1.12 段作者表 | 加第 3 列「写入手段」（6 行：§2/§3/§5 = `batch_segment`（条件与身份限定照 §2.20.3）；§1/§4/§6 = 普通文档写） | `写入手段` · `batch_segment` |
+| ② | §1.11 B9 行 | documents 列补「§3 段不在评审对象清单内」；怎么传列补「设计评审带 `batchDoc`——有批次档在飞时必传；工具侧 = 若传则须可读」 | `batchDoc` · `若传则须可读` |
+| ③ | §1.16 F1 | 追加「评审侧口径（实施同步）」句（若传则须可读——非必传；不传不挂载、评审照常跑） | `评审侧口径` · `若传则须可读` |
+| ④ | §1.16 N2 | 「（非被审文档）」→「§3 段不在评审对象清单内（B9 只含批次档 §2）」——**不写「批次档非被审文档」**（§2.20.4 口径） | `§3 段不在评审对象清单内` |
+| ⑤ | §1.17 N3 | 「双源 29 文件」→「双源 15+15=30 档之宿主档」（第 5 批评审 #9 委托） | `15+15=30` · N3 行 `29 文件` 零命中 |
+
+**边界（登记）**：§1.17 勘察快照块内另有一处「双源 29 文件」（落地注覆盖的 as-of 表述）——不改（快照如实）；
+§1.12「实现差量」登记段残句（与新增「写入手段」列直接矛盾——advisor 写权面）——**C5 附注项并落**（转为已落地注；不另计条目）。
+
+#### 2.29.7 C6 死产物清理（删除面 + 先决检查 + 归属）
+
+- **删除面（路径级——1 目录 / 2 文件）**：`thincoder/.thincoder/index/`（`manifest.json` + `vectors.bin`）整目录删除。
+- **先决检查（fail-closed——执行时逐条实跑，任一不成立 → 停下报告，不删）**：① `git ls-files .thincoder/index` 为空（未跟踪——设计期已验）；
+  ② `.gitignore` 命中（`:18` `.thincoder/index/`——已验）；③ `src/`+`bin/` 对该目录/文件名零引用（实测 0 命中——已验）。
+- **归属裁定 = eng-coder**（与 C1/C2/C4 同批一次交付/一次核验；删除为未跟踪态机械动作——不涉设计取舍）；VSC 仓 `.thincoder/index/`（活体索引）**零碰**。
+- **范围不扩**：单目录——不扫其他 `.thincoder/` 面（`advisor.md` / `skills/` 等为跟踪资产，零碰）。
+
+#### 2.29.8 受影响文件全清单（行数批前基准 / 预计增量 / 分工）
+
+行数口径（修正轮 #1）：本列 = **批前基准**（设计期 as-of 2026-09-11 实测）——「已落」行的当前值 = 批前 + 增量列（均在声明上限内）；本表不逐次回写，收口核数按批前/批后差。
+
+| 文件 | 行数（批前基准） | 预计增量 | 改动 | 执行（本批） |
+|---|---|---|---|---|
+| `docs/requirements/ENGINEERING-MODE.md` | 786 | ≤+24 | C5 五点位 + §1.15 批块 | eng-designer（**已落**） |
+| `docs/design/ENGINEERING-MODE.md` | 1986 | ≤+240 | §2.29 + §3.1 AC68–AC74 + §3.2 T84–T91 + 变更记录 | eng-designer（**已落**） |
+| `AGENT-LOOP.md`（VSC 仓 `docs/design/`） | 521 | ≤+8 | C3 两句 + 档头变更注 | eng-designer（**已落**） |
+| `docs/TODO.md` | 173 | ±6 | 6 条 status 推进（C1–C6 六行——键控 = 行内「第 22 批」注记：`:92` C6 · `:93` C4 · `:146` C1 · `:148` C5 · `:164` C2 · `:168` C3；行号 as-of——修正轮 #2） | eng-designer（**已落**） |
+| `src/tools/read_image.md` | 9 | 0（整行替换） | C1 替句 | eng-coder |
+| `src/tui/wrapped-spawn.mjs` | 39 | 0（串删除） | C4 去路径 | eng-coder |
+| `src/**`（C2——18 文件，行数见下） | — | 0（逐处替换） | `§24`→`§11.x`（28 行 / 29 处） | eng-coder |
+| `.thincoder/index/`（目录——2 文件） | — | -2 文件（-4.5 MB） | C6 删除 | eng-coder |
+| `batches/2026-09-11-DOC-HYGIENE.md` | — | +§2 / §5 | 任务书 / 交付记录 | designer / coder |
+
+C2 十八文件行数（as-of）：`advisor/messages` 300 · `advisor/run` 239 · `advisor.mjs` 291 · `agent/completion` 147 ·
+`agent/dispatch` 490 · `agent/record-results` 175 · `agent/run-stages` 228 · `agent-tools/eng` 68 · `agent-tools/escalate-async` 287 ·
+`agent-tools/subagent-actions` 479 · `agent-tools/subagent-run` 203 · `agent-tools/subagent-scheduler` 392 · `agent-tools/subagent` 403 ·
+`agent.mjs` 401 · `tui/cmd-eng` 79 · `tui/mouse` 250 · `tui/subagent-panel` 150 · `tui/suspension-drive` 298。
+**档位注**：>300 五档（dispatch 490 / subagent-actions 479 / subagent-scheduler 392 / subagent 403 / agent.mjs 401）
+均为**注释/描述串文本替换**（零逻辑、零净增）——不触发拆分；贴线档 `messages.mjs`（300）同为零净增。
+
+#### 2.29.9 关键决策记录（含否决备选）
+
+| # | 决策 | 否决备选 | 理由 |
+|---|---|---|---|
+| D-29a | C1 去模型名 + spec 口径 | 更新名单 / 保留原句 | 名单即漂移源（本缺陷形态复发）；spec 驱动为单一真值面 |
+| D-29b | C2 映射 `§11.x` 粒度 + 保留 `D-24x` 标签 | 裸 `§11` / 删 `D-24x` | F-7 权威；与已更新行先例（`config.mjs:77`）同形 |
+| D-29c | C3 局部修订两句 | 整段重写 / 不修 | 最小改动；整段重写越权（该档他链面内容） |
+| D-29d | C4 去路径 | 归档前缀改指 | 同族同形（`crash-reports.mjs:35`）；不开 `_archive` 先例；归档面「不作现状依据」 |
+| D-29e | C5 含 N3（5 点位） | 只做 4 项 | 同位同源未完项（第 5 批评审委托）；计数与列表同改（D3） |
+| D-29f | C6 归 eng-coder | 父侧执行 | 同批一次交付/一次核验；未跟踪态机械可判（先决检查 fail-closed） |
+| D-29g | 判定面 = 一次性静态判据（不新增持久测试） | 新增 fail-when-present 测试 | 判据为「清理/同步」形态（非行为锁）；存量回归锁已覆盖核心面（`advisor-description.test.mjs` 断言 §11.2 锚在位、`prompts-async-guidance` 断言 §7.5 锚句）；CI 面零扩张 |
+
+#### 2.29.10 边界（本批不做）与同族观察
+
+- 不改任何行为/语义（C1 仅描述文本——spec 驱动真值面零改；C2/C4 仅注释与描述串内锚文本；C3 仅本端文档句）；
+- 不碰 `src/prompts/**`（提示词 = 主 agent 内容权）；不建新档；不碰他链在途档（D5）；
+- 出批登记：VSC 仓 `src/**` `§24` 残留（39 处 / 13 文件——另议）；`wrapped-spawn` 同族「约 12 处 `docs/design/` 前缀注释扫尾」；
+  同描述旧编号锚全描述重锚（§2.29.3 观察①）；`read_image.md:7` 的 API 列表（Kimi/Anthropic/OpenAI/Gemini）不在 C1 实证面；
+  第 6 批遗留「deepseek-v4-pro 视觉复检」（TODO:145——触发 = 2026-09-14 后）不在本批。
 
 ## 3. 测试（Testing）
 
@@ -1218,13 +1797,14 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 - AC44（§2.22.9 + 需求 N4——验收不冒充）: 机械面全绿之外，**交付报告必须写明“生效需重载扩展”**；不得以“文件存在/静态断言绿”声称机制已生效（第 2 批教训）。
 - AC45（§2.24.2/§2.24.4——需求池指针化；口径对齐 L3①）: CLI `docs/TODO.md` 需求池组**每条为单行**，
   **无多行任务细节续行**；**指针必填态**（`status=在途` / `待核销`）条目须三要素齐备（需求 `<档>` §X ·
-  任务书 `batches/…` §2 · status）；**非必填三要素断言态（待讨论 / 待设计 / 已核销 / 已废弃）**只断言单行形态，
-  **不判其指针齐备**——形态权威 = 需求档 §1.13（待讨论 写 `—`、待设计 可挂、**已核销 / 已废弃 = 保留指针（已冻结）**；修正轮 #8 / 轮次3 #2）；
+  任务书 `batches/…` §2 · status）；**非必填三要素断言态（待讨论 / 待设计——活文件内）**只断言单行形态，
+  **不判其指针齐备**——形态权威 = 需求档 §1.13（待讨论 写 `—`、待设计 可挂；**已核销 / 已废弃 = 归档态**——勾销后移出活文件、随条目入 `docs/TODO-archive.md`，活文件不判；2026-09-11 追加裁定 / 修正轮 #8 / 轮次3 #2）；
   **收拢面可机判形态 = 需求池组零续行**（机检 L3① 绿）；原文「既有 4–5 行细节条目已收拢」中的
   **数字不作文本契约**——条目数一律以检查器重算值为准（D3）。
 - AC46（§2.24.4——两池分组 + D3 计数）: 需求池组与技术组**互斥不混**（同一板块条目只在一池）；
-  每组标题声明的“（N 条）”与组内**实条目数相等**（机检 L2 绿）；`status=已核销` 条目**就地保留 `- [x]`**
-  （不移位、不删除——冻结指针留原组），且**计入**活组条目数（条目口径 = 顶格 `- [ ]` / `- [x]`）。
+  每组标题声明的“（N 条）”与组内**未决实条目数相等**（机检 L2 绿——条目口径 = 顶格 `- [ ]`）；
+  `status=已核销` / `已废弃` 条目**勾销后移入 `docs/TODO-archive.md`**（活文件零 `- [x]`——机检 L3⑤；**不计入**活组条目数——
+  2026-09-11 追加裁定，替代原「就地保留、计入」口径）。
 - AC47（§2.24.2——技术待办 (b) 形态）: 每条技术待办 = **指针（可指则指）+ 最小证据行（`file:line` + 症状）**；
   无归属档时指针为 `—`；正文方案叙述不入台账。
 - AC48（§2.24.6——机检 + 反证 + 存量降报告 + 不进产品提示词）: `node scripts/check-ledger.mjs` 对双端台账 **退出码 0**；
@@ -1243,12 +1823,12 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
   **②失效指针**：`docs/TODO.md` 中**归属档写作 `docs/design/requirements/PROMPT-SYSTEM.md` 的条目**已改为
   `docs/requirements/PROMPT-SYSTEM.md`；**写「§1.2 FR9」的条目**已改为「§1.3 FR9」——二者机检 L1 绿；
   **③过期状态**：`docs/TODO.md` 中**含 `FR16-FR19` 子串的条目**已重写为只指 FR18（不再以四条整体挂 `待设计`）
-  ——**机检（L3④）**：含 `FR18` 的条目 `status` ∈ 六态；含 `FR16-FR19` 的条目数 **0**——**验收面 grep 断言**
+  ——**机检（L3④）**：含 `FR18` 的条目 `status` ∈ 六态（**活文件实为未决四态**——已核销 / 已废弃 归归档档）；含 `FR16-FR19` 的条目数 **0**——**验收面 grep 断言**
   （`grep -c "FR16-FR19" docs/TODO.md` = 0；父侧 L2 执行——非 L1–L3 契约判据；轮次3 #3）；
-  **④未勾销**：`docs/TODO.md` 中**含「已全部完成」子串的条目**已勾销——**验收面 grep 断言**
-  （含该子串的条目锚行为 `- [x]`；父侧 L2 执行——非 L1–L3 契约判据）。
+  **④未勾销**：`docs/TODO.md` 中**含「已全部完成」子串的条目**已勾销并**移入归档档**——**验收面 grep 断言**（字面命令式——父侧 L2 执行；§4 12:50 裁定随本链本次写入落笔）：
+  `grep -c "已全部完成" docs/TODO.md` **= 0**（已移出活文件）且 `grep -c "已全部完成" docs/TODO-archive.md` **≥ 1**（该条存入、锚行 `- [x]`——2026-09-11 追加裁定后口径）。
 - AC51（§2.24.7——不侵入纪律；**全文权威落点 = 本节**，批次档 §2 只引用）: `scripts/check-doc-width.mjs` **零改动**（as-of 298 行不变）；
-  宽度扫描域**维持** `docs/{design,requirements,batches}`（`scripts/check-doc-width.mjs:30`）**不变**——本批**未扩至** `docs/TODO.md` / `docs/README.md`；
+  宽度扫描域**维持** `docs/{design,requirements,batches}`（`scripts/check-doc-width.mjs:32`）**不变**——本批**未扩至** `docs/TODO.md` / `docs/README.md`；
   `thincoder-vscode/docs/design/PROVIDER.md` 零改动。
 - AC52（§2.24.2/§2.24.3 交付面——需求档文本已在位）: 需求档 `ENGINEERING-MODE.md` §1.13 含本批新增口径的
   **固定子串**（逐字 grep）：`重分组口径` · `需求点一律入需求池组，技术项一律入技术组` · `(b) = 指针（可指则指）` · `最小证据行`；
@@ -1257,10 +1837,61 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
   检查器对带 `.md` 的跨仓形态保持 fail-closed 如实报（T72 反证钉住）；规范形态零命中（T72）；`checkSectionRefs` 零改动。
 - AC54（§2.26.2——表格行宽度豁免）: T73 / T74 绿（豁免谓词 = `isTableRow`；非表格超宽照报；宽度扫描单源——内联重复零残留 grep）；
   `docs/README.md` §3.7 规则 1 含 `表格行豁免` 子串。**判据口径（修正轮 #11）**：「新增超宽 0」= **批前/批后命中集合差**（非 exit 码）；
-  豁免后检查器仍报存量非表格命中且 exit 非零（`scripts/check-doc-width.mjs:296`——存量 as-of：37 = 24+13，修正轮实测 38 = 24+14）——**不得读作 exit 0**。
+  豁免后检查器仍报存量非表格命中且 exit 非零（`scripts/check-doc-width.mjs:297`——存量 as-of：37 = 24+13，修正轮实测 38 = 24+14）——**不得读作 exit 0**。
 - AC55（§2.26.3 D-1）: `src/advisor/messages.mjs` 本批零改动（改动集判据）；实测 ≤500；拆分计划在档（子串 `project-context.mjs` 在位）。
 - AC56（§2.26.3 D-2）: 两档各 ≤500（实测对表）；用例数守恒（53 = 42 + 11）；两档独立可跑且全绿、被 glob 自动发现；
   新档零跨档 import（grep：无 `prompts-async-guidance` 引用）。
+- AC57（§2.27.1——T75/T76 宿主与断言）: `test/doc-consistency.test.mjs` 新增 T75/T76 两例（继 T72–T74 之后，落档形态逐字见 §2.27.4）——
+  T75 = 发现面（快层集）+ 用例计数守恒（42 + 11 = 53）+ 两档 ≤500（`split("\n").length` 口径）；T76 = 新档零 `prompts-async-guidance` 子串 + import 全 `node:`；
+  既有用例（T41 / T46 / T72–T74）零改。机器判据：`node --test test/doc-consistency.test.mjs` 全绿（含新两例）+ 该档 ≤500。
+- AC58（§2.27.2——行号指针修正）: 修正表 3 处逐行核验（`:297` = exit 行 / `:32` = `SCAN_DIRS` 声明行 / `:34` = `BASELINE_PATH` 声明行）；
+  登记集与历史/as-of 行号**未动**（对照 = 仅表列 3 行变化）。机器判据：核验脚本按「指针行号 → 目标行内容」三断言直跑。
+- AC59（§2.27.3——TUI.md §1 回写）: 表内 42 行数值 = 2026-09-11 实测 rawSplit（15 行改 + 27 行同值）；
+  表头含单一 as-of + 口径句 + 未入表三档注；`pickers.mjs` 行含迁移注；小命令格 = 8–95、`/eng(95)`。
+  机器判据：重测脚本逐行 diff = 0 + 表头固定子串 grep。
+- AC60（批级——机检零新增 + 快层）: `node scripts/check-doc-width.mjs` **新增超宽 0 + 一致性新增违规 0**（存量照报）；
+  `node test/run-fast.mjs`（或 `npm test`）全绿。
+
+- AC61（§2.28.4 RF-1——勾销口径 · 4 面）: 四端 `discipline-engineering.md`（CLI/VSC × src/中文权威）旧句「实现后验收标准逐条勾销」**零命中**；替句固定子串「实现后验收勾销落批次档 §6」+「设计档内不写勾销状态」在位（各端自断言）。
+- AC62（§2.28.3/§2.28.4 RF-2——内容权与流程）: `requirements/PROMPT-SYSTEM.md` §2.7 #13 含固定子串「仍是产品代码」·「内容权 = 主 agent」·「落笔走正常链」·「eng-designer 起草」；旧口径「不走 eng-coder 实现链」「架构师直接」在本档内零命中；§8 标题/状态行无「待设计」、§8.2 为已关闭注、「9 条裁定」零命中。
+- AC63（§2.28.4 RF-3——作者归属）: `docs/README.md` 含「eng-designer 产物」且「过渡期主 agent 代行」零命中；`AGENTS.md` 含「eng-designer 产物」口径句（无「主 agent·产品经理产物」）；设计档 §2.1 为三段链三行表（含 eng-designer 行）+ 无「目标态注」残留；需求档 §1.6 无「尚未落地」。机器判据：grep + `node --test test/eng-designer-role.test.mjs`（T40 更新后）绿。
+- AC64（§2.28.4 RF-4——子代理角色句）: 双端 `persona-eng-coder` 无「architect/架构师」「provided a design document」旧句、VSC 侧无「Update the affected design-doc sections」句、VSC 中文权威面无「受影响的设计档章节随 diff 更新」句（修正轮 #4）；含固定子串「product manager and flow orchestrator」/「产品经理与流程编排者」+ 报告口径句；discipline 头注 consumers 含 eng-designer（4 面）。
+- AC65（§2.28.4 RF-5——登记面）: 需求档 header 无「九条」、§1.5 收口块在位、§1.17 落地注在位；设计档 §2.15/§2.16 无「过渡期由主 agent 代行」「九条」类残留（修正轮 #3——核销句不命中该子串，零假红）、§2.1 核销注在位；`ENGINEERING-MODE.md`（VSC 仓）陈旧面已修（角色 enum 含 eng-designer · 槽位清单/受影响文件含 persona-eng-designer · 装配句含 designer 分支 · 无「METHODOLOGY 驱动」）。
+- AC66（批级——机检零新增 + 快层）: `node scripts/check-doc-width.mjs` **新增超宽 0 + 一致性新增违规 0**（存量照报；口径 = **批前/批后命中集合差**——本批改动文件）；`node test/run-fast.mjs`（或 `npm test`）全绿；VSC 仓快层按其清单全绿。
+  **归属注**：as-of 实跑余 1 条非本批新增一致性命中（`batches/2026-09-11-PORTABILITY.md` 发现表行的自指段引用——指向批次档不存在的第 9 节，应为设计档 `PORTABILITY.md` §9；他链在飞，D5）——归其链修，不计入本批。
+
+- AC67（§2.27.8——设计档侧非表格超宽折行）: 5 处折行后逐处命中归零（`AGENT-LOOP.md` `:510`/`:572`/`:574` · `SESSION.md` `:524` · `SUBAGENT-ID-COUNTER-AGENT.md` `:53`——按「文件 + 折后首行内容」键控，行号只作 as-of）；各折行处 `〔eng-designer 折行 …〕` 标注在位；
+  批前/批后宽度命中集合差 = **仅本批 5 处**（他链在飞照报——归其链，不计入本批）；本批改动面新增一致性违规 0。机器判据：`node scripts/check-doc-width.mjs` 前后对照。
+
+- AC68（§2.29.2 C1——描述面同步；修正轮 #4）: `src/tools/read_image.md:8` 与 §2.29.2 定稿替句**逐字全等**（整行替换——逐字全等蕴含一切旧串零命中：两名单全 6 名 +「Pure text models」）；
+  `src/tools/file.mjs` 本批零改动（`git diff` 空——spec 驱动真值面）。
+- AC69（§2.29.3 C2——旧锚清理）: CLI `src/**` 内 `§24` 零命中（grep）；映射表 29 处逐处落位（键控 = 文件 + 新锚串——逐行对照 §2.29.3 表）；
+  `§11.1`/`§11.2`/`§11.3` 在新锚位分别在位（域 A 9 处 / 域 B 19 处 / 域 C 1 处）。
+- AC70（§2.29.4 C3——VSC 机制正文同步）: `AGENT-LOOP.md`（VSC 仓）内旧串「单一判据）输入禁用」「readOnly + busy」零命中；
+  替句子串「提交拒收」「readOnly 锁已撤」「主会话处理中——Enter 提交禁用——可继续输入」在位。
+- AC71（§2.29.5 C4——注释断链）: `src/tui/wrapped-spawn.mjs` 内「docs/design/TUI-STDERR-CAPTURE.md」零命中；
+  「TUI-STDERR-CAPTURE F-1/F-3」在位；该档 diff 仅 1 行（其余注释逐字未动）。
+- AC72（§2.29.6 C5——需求档同步）: 五点位逐点子串在位（① 段表「写入手段」列 + 6 行填值；② B9 行 `若传则须可读` + `§3 段不在评审对象清单内`；
+  ③ F1 段 `评审侧口径`；④ N2 段 `§3 段不在评审对象清单内` 且「非被审文档」零命中；⑤ N3 行 `15+15=30` 且该行 `29 文件` 零命中）。
+- AC73（§2.29.7 C6——死产物删除）: `thincoder/.thincoder/index/` 不存在（目录判据）；`thincoder-vscode/.thincoder/index/` 存在且本批零触碰（对照）。
+- AC74（批级——机检零新增 + 快层）: 两仓 `node scripts/check-doc-width.mjs` **新增超宽 0 + 新增一致性违规 0**（存量照报；口径 = 批前/批后命中集合差）；
+  CLI `node test/run-fast.mjs`（或 `npm test`）全绿；VSC 快层按其清单全绿。
+  **归属注（设计期实跑——as-of 2026-09-11）**：宽度超宽与 V1 新增加计均为**他链在飞项**（PORTABILITY 批次档的自指 §9 ·
+  TUI-SELECTION 批次档的自指 §12.4 等）——**非本批文件**（D5）——归其链修，不计入本批；本批文件两仓命中 0。
+
+- AC75（§2.24.9④——归属修订；文本 + 台账面）: 需求档 `ENGINEERING-MODE.md` §1.13 含固定子串「记录 + 状态推进 + 物理落笔」·
+  「收拢应用清单」（职责分工段）；旧口径「状态推进 = eng-designer」在需求档 §1.13 与两仓台账头部**零命中**
+  （grep 断言——两仓头部行由父侧落笔）。
+- AC76（§2.24.9①——归档口径 / 机检 L3⑤）: 两仓活台账 `- [x]` 条目 **= 0**（`grep -c "^- \[x\]"`）；
+  合成「活文件含 `- [x]`」样本 → `[L3]` 报红 + 退出码 1（反证——T92）；两仓 `docs/TODO-archive.md` 存在且含键控条目
+  （CLI =「已全部完成」·「parseValue」；VSC =「eng(enter)」）；需求档 §1.13 含固定子串「活文件只留未决」·「TODO-archive.md」；需求档 §1.17「台账归档对位」块含固定子串「台账归档对位」·「同 basename」（轮次 4 #7——并入本子串族）。
+- AC77（§2.24.9②——触发字段 / L3⑥）: 需求档 §1.13 含三枚举固定子串（`归批` · `条件` · `认账不排期`）与「待处置」句；
+  机检 L3⑥：`触发=` 取值非三枚举 → 报红；**无触发** → 不进红、进审计报告（T93 / T94）。
+- AC78（§2.24.9③——老化报告 / 审计模式）: `node scripts/check-ledger.mjs --audit` 对合成台账（无触发条目）输出
+  「待处置清单」+ 逐条 `<档>:<行号>`；超 N 天者带「老化」标记；**退出码 0**；**运行前后两仓台账字节不变**（不自动删/改——T94）。
+- AC79（§2.24.9①/②执行面——两仓收拢应用清单）: 批次档 §2 含「两仓台账收拢应用清单」表（逐条判定 ∈ {留池 / 移技术组 / 归档 / 勾销}；
+  键控 = 指针字符串）；执行后键控抽验：CLI 归档档含「已全部完成」·「parseValue 两端不一致」·「跨批依赖」，
+  VSC 归档档含「eng(enter)」·「Gitee open 巡检」；活文件组计数 = 未决数（L2 绿——T96）。
 
 ### 3.2 用例表
 
@@ -1382,6 +2013,46 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 | T75 | 正常：拆分守恒 | 拆分后两档 + `node test/run-fast.mjs` | 用例总数 53；两档各 ≤500；全绿且被 glob 发现 | AC56 |
 | T76 | 边界：新档自持 | 新档源码 | 零跨档 import（无 `prompts-async-guidance` 引用） | AC56 |
 
+**角色重定义批用例（T77–T82）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T77 | 正常/反证：勾销口径 4 面 | 四端 `discipline-engineering.md` grep（旧句 / 替句）；合成含旧句样本 | 旧句零命中 + 替句子串在位；含旧句样本被断言捕获（反证非空转） | AC61 |
+| T78 | 正常：内容权口径 | `requirements/PROMPT-SYSTEM.md` grep（固定子串 + 旧口径 + §8 状态） | 固定子串全中；旧口径与「待设计」零命中 | AC62 |
+| T79 | 边界：作者归属 | `README.md` / `AGENTS.md` / 设计档 §2.1 / 需求档 §1.6 grep + `node --test test/eng-designer-role.test.mjs` | 口径子串在位；过期限定零命中；T40 更新后全绿 | AC63 |
+| T80 | 边界：子代理角色句 | 双端 `persona-eng-coder` grep + VSC 断言（自审第 6 条） | 旧句零命中；新子串在位 | AC64 |
+| T81 | 边界：登记面 | 两档 grep（计数/过渡期表述/§1.17）+ `ENGINEERING-MODE.md`（VSC 仓）人工核（修正轮 #3） | 无「九条/过渡期由主 agent 代行/尚未落地」残留；落地注在位 | AC65 |
+| T82 | 正常：批级门 | `node scripts/check-doc-width.mjs` + CLI 快层 + VSC 快层 | 新增超宽 0 / 新增一致性违规 0；两仓快层绿 | AC66 |
+
+**收尾批续做用例（T83——设计档侧超宽折行）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T83 | 正常：设计档侧超宽清零 | `node scripts/check-doc-width.mjs`（批前/批后） | 本批 5 处命中归零；批前/批后差 = 仅本批 5 处（他链在飞照报） | AC67 |
+
+**文档 / 产品文案卫生批用例（T84–T91——静态判据为主）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T84 | 正常：C1 描述面 | `src/tools/read_image.md:8` 与定稿替句逐字比对 + `src/tools/file.mjs` diff | `:8` 与定稿替句逐字全等（蕴含旧串零命中）；`file.mjs` diff 空 | AC68 |
+| T85 | 正常：C2 清理 | `src/**` grep `§24` + 逐行对照 §2.29.3 映射表 | 0 命中；29 处新锚逐处落位（域 A 9 / B 19 / C 1） | AC69 |
+| T86 | 边界：C2 扫描域 | 同 grep 于 `test/**` / `docs/**` | scope = `src/**`；`test/advisor-description.test.mjs:18` 变更注与 `docs/**` 记史面不判 | AC69 |
+| T87 | 正常：C3 同步 | `AGENT-LOOP.md`（VSC 仓）grep（旧串 / 新串） | 旧串零命中；新子串在位 | AC70 |
+| T88 | 正常：C4 断链 | `src/tui/wrapped-spawn.mjs` grep + diff | 归档路径串零命中；diff = 1 行 | AC71 |
+| T89 | 正常：C5 五点位 | `docs/requirements/ENGINEERING-MODE.md` grep（五点位子串） | 逐点全中；旧措辞（「非被审文档」/ N3 行「29 文件」）零命中 | AC72 |
+| T90 | 正常/边界：C6 删除面 | 目录存在性检查（两仓 `.thincoder/index`） | CLI 侧不存在；VSC 侧存在且零触碰 | AC73 |
+| T91 | 正常：批级门 | 两仓 `check-doc-width` + CLI/VSC 快层 | 新增超宽 0 / 新增一致性违规 0；两仓快层绿 | AC74 |
+
+**第 8 批用例·范围扩展（T92–T96——归档 / 触发 / 老化 / 收拢执行）**
+
+| # | 场景 | 输入 | 预期输出 | 映射 |
+|---|---|---|---|---|
+| T92 | 错误：活文件 `- [x]` 必报红（反证） | 合成台账：活文件含 `- [x]` 条目（未移出） | 报 `[L3]`（归档口径）+ 退出码 1；移出后（归档档侧）→ 绿 | AC76/L3⑤ |
+| T93 | 错误：非法触发取值必报红 | 合成台账：技术条 `触发=随便`；对照 `触发=归批（第 8 批）` | 前者 `[L3⑥]` 红 + 退出码 1；对照条绿；**无 `触发=` 场不报红** | AC77/L3⑥ |
+| T94 | 边界：待处置清单 + 老化（审计模式——**慢层 `slow()` 门控**：含 fs / git 子进程；轮次 4 #6） | `--audit` 对合成台账：1 条无触发新鲜 + 1 条无触发超龄（夹具 git 回填行龄——**commit 日期钉常量**〔超龄条〕，零壁钟依赖） | 「待处置清单」两条均列；超龄者标「老化」；**退出码 0**；运行前后文件字节不变 | AC78 |
+| T95 | 边界：归属修订文本面 | grep：需求档 §1.13 / 两仓台账头部行 | 新句在位（「记录 + 状态推进 + 物理落笔」）；旧句「状态推进 = eng-designer」零命中 | AC75 |
+| T96 | 正常：收拢执行面（键控抽验） | 两仓台账 + 归档档（收拢执行后） | 归档档含键控条目（CLI/VSC 各 ≥2）；活文件 `- [x]` = 0；组计数 = 未决数（L2 绿） | AC79/AC46 |
+
 ## 5. 配置与会话恢复
 
 **engineering 与 advisor.guard 都是会话级**（2026-08-29 重构）——事实源是当前会话槽位文件
@@ -1397,7 +2068,7 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 - **初值链**：CLI `assembleAgent()` 从 config.json 播种 → `applySession` 时 slot 值覆盖（TUI 单 agent 长驻，无 per-submit 重建）；VS Code `setupAgentRun` 每轮从 `engState`（panel-chat 从槽位读）注入。
 - **guard 存槽 ≠ 工程模式机械推回**：guard 状态存槽只是会话级配置事实；工程模式下 guard 推回一律关闭（§2.3 设计原则），存槽不改变这一点。
 - **resume** 保留 run 状态（mutation 追踪/收敛预算）——guard 跨续跑生效、cap 不可重置；design token **随 slot 持久化**（TTL 7 天 fail-closed——重进 TTL 内恢复；过期重新评审）；持久化槽同受链终消费管理（§2.6 F4）。
-- **角色互斥**：工程模式禁用 `coder`，普通模式禁用 `eng-coder` 与 `eng-designer`（schema 枚举 + 运行期硬门禁双保险；第 2 批新增第三门——落地时同步本行，见设计档 §2.15 A 模式门）
+- **角色互斥**：工程模式禁用 `coder`，普通模式禁用 `eng-coder` 与 `eng-designer`（schema 枚举 + 运行期硬门禁双保险；第三门（非工程禁 `eng-designer`）= 第 2 批——见 §2.15 A 模式门）
 
 ## 6. 已知取舍（评审记录）
 
@@ -1408,6 +2079,42 @@ V2 面有分隔行二次确认、宽度面无此确认，fail-open 方向）；�
 5. 架构级文档以机制约束（FR1-FR8）替代用户故事——架构级机制文档的既定形式（评审 2026-09-02 #1 措辞修正，不主张 METHODOLOGY 原文含此豁免）。
 
 ## 7. 变更记录
+
+- 2026-09-11（第 8 批·范围扩展轮后**微修**——§5 审计遗留 Deferred 闭合；只改文档、零代码）：§2.25 提示词面表改
+  「**8 文件 = persona ×4 + discipline ×4**」——补列 `persona-eng-designer.md` ×4（todo 归属句替换实落——逐字源 = 本批 §4 批准面 / §5 对表 4–7）；
+  批次档 §2 同步补 4 行（D3——计数与列表同改）+ 登记 PORTABILITY 写权裁定（`../batches/2026-09-11-PORTABILITY-VSC-MIRROR.md` §4——persona 该行零动）。
+
+- 2026-09-11（第 8 批·范围扩展轮——**设计评审轮次 4 后修正轮**：发现 7 条全裁「修」；只落直接导出的修正、零新语义）：
+  **AC76 子串族并入需求档 §1.17「台账归档对位」块**（子串「台账归档对位」·「同 basename」——#7）· **T94 补层归属与确定性**（慢层 `slow()` 门控 + 夹具 commit 日期钉常量——#6）·
+  **分隔符形态统一为 `+`**（AC75 子串形态——§2.15 A2 与需求档 FR18 行同步——#4）· **§2.26.5 域陈述状态同步**（T6 域扩已裁不采纳——`docs/TODO.md` 不再「在案待裁」——#2② 复核落点）；
+  批次档 §2 配套行级修订（① 指针改指 §2.15 A2 · 应用清单两行复核注 · 预算 / 枚举 / AC 回指注 · 本基准数字口径 · 落笔要点 `+` 形态）——见 `../batches/2026-09-11-POOL-LEDGER.md` §2 修正轮留痕。
+
+- 2026-09-11（第 8 批·**范围扩展**——TODO 机制增量并入：归档 / 触发 / 老化 / 归属修订）：
+  **新增 §2.24.9**（归档口径——勾销后移入同仓 `TODO-archive.md` / 活文件只留未决 / 组计数 = 未决数；触发字段三枚举——`归批` / `条件` / `认账不排期`；
+  老化报告审计模式——`--audit` / N 默认 30 天 / 报告只读；归属修订——物理落笔归父侧）
+  + **§3.1 AC75–AC79** + **§3.2 T92–T96**；§2.24.3 / §2.24.4 / §2.24.6 / §2.24.8 同步改写（L2 未决口径 · L3⑤⑥ · 审计模式）；
+  §2.25 补两仓归档档行 + 声明纪律改写（原「由 eng-designer 落笔」作废）；**枚举统一 = AC45–AC52 · AC75–AC79 / T67–T71 · T92–T96**；
+  需求档 §1.13 同步（状态机两行 / 组计数 / 状态取值面 / 触发与老化 / 职责分工；另 FR18 行 · §1.8 步 2 · §1.11 B5 · §1.17 对位登记）；
+  两仓收拢应用清单落批次档 §2（物理落笔 = 父侧）；**替代口径**：「就地 `[x]` 保留、计入组计数」作废。
+
+- 2026-09-11（文档 / 产品文案卫生批——小结性修正轮，设计评审轮次 1【pass——🔴0 · 🟡0 · 🔵4】后）：4 条 🔵 全落（只改文档、零语义）——
+  #1 §2.29.8 行数列改标「批前基准」+ 口径注（批前/现读混列消解）· #2 §2.29.8 `docs/TODO.md` 行六条键控拉全（C1–C6——计数 6 与括注 5 不齐消解）·
+  #3 §2.29.4 行号指针内容键控（「中止语义（F-6）行」等）+ as-of 更新 · #4 AC68/T84 改「与定稿替句逐字全等」断言（零命中集真子集问题消解）。
+
+- 2026-09-11（文档 / 产品文案卫生——第 22 批：审计 id=28 批 C 六条）：**新增 §2.29**（C1 描述面同步 · C2 `§24`→`§11.x` 逐行映射表 28 行/29 处 · C3 VSC 机制正文两句同步 · C4 注释断链去路径 · C5 需求档 5 点位同步 · C6 死产物删除——逐条裁定 + 边界）
+  + **§3.1 AC68–AC74** + **§3.2 T84–T91**；需求档 §1.15 批块同步（逐条「无新需求」）+ C5 五点位已落；C3 已落（VSC 仓）；C1/C2/C4/C6 待 coder（token 门）。
+
+- 2026-09-11（角色重定义批——ROLE-REDEFINITION：现状对账 + 差异面收口）：**新增 §2.28**（对账表 §2.28.2 · 提示词面变更流程 §2.28.3 · 差异面 RF-1–RF-6 §2.28.4 · 决策 §2.28.5）
+  + **§3.1 AC61–AC66** + **§3.2 T77–T82**；同步核销：§2.1 三段链目标态（第 2 批 D7 核销项执行）· §2.2/§2.6/§2.15/§2.16/§5 登记面；需求档 §1.5 收口块 + 登记同步。
+  落笔排程（提示词面 / PROMPT-SYSTEM / VSC 仓文档）见批次档 `../batches/2026-09-11-ROLE-REDEFINITION.md` §2。
+
+- 2026-09-11（角色重定义批——修正轮，设计评审轮次 1 后）：**8 条修正落档**（RF-1 替句删归因注 · RF-2b 定位校正 as-of :301 · AC65/T81 断言改准——核销句零假红 · RF-4 a–d 中文面逐字补全 + AC64 zh 零命中 · §2.28.3 指针 §13.9→§13.8 · §2.28.6 档位注 · RF-6「新增断言」措辞 · §2.28.2 #8 措辞限定）——**只改文档、零实现**（提示词实体零碰）。
+
+- 2026-09-11（第 14 批——收尾批：第 13 批遗留收束 + 文档实测回写）：**新增 §2.27**（A T75/T76 宿主与断言形态——
+  落 `test/doc-consistency.test.mjs` 续 T72–T74；B 行号指针修正 3 处 + 存量登记 5 处；C `TUI.md` §1 全表行数回写）
+  + **§3.1 AC57–AC60**；需求档 §1.15 收尾批块同步（无新需求）。B/C 设计侧已落；A 待 coder（token 门）。
+
+- 2026-09-11（第 14 批·续做轮——候选 2 翻转）：新增 **§2.27.8**（条目 D——设计档侧非表格超宽折行 5 处：`AGENT-LOOP.md` / `SESSION.md` / `SUBAGENT-ID-COUNTER-AGENT.md`——已落 + 逐处标注）+ **§3.1 AC67** + **§3.2 T83**。
 
 - 2026-09-11（第 13 批——机制债收束）：**新增 §2.26**（B 跨仓引用形态规范——V1 检查器零改 · C 表格行宽度豁免——规范+机制双层 ·
   D 两处拆分债——D-1 不拆 [计划登记] / D-2 测试档拆分）+ **§3.1 AC53–AC56** + **§3.2 T72–T76**；需求档 §1.15 边界块同步。

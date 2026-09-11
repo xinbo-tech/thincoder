@@ -6,6 +6,10 @@
  * 改动文件（绝对路径，非 git repo → 不依赖 git diff），断言 verifyTool.execute 的
  * _verifyPassed 判定与打回引导内容。verify 不再跑任何测试命令——各放行用例顺带
  * 断言输出不含自动测试痕迹（npm test / Related tests / full suite）。
+ *
+ * 扫① 削段注（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3 点名档）：T-V9 删 4 条旧句负向锚
+ * （留 2 正句）；T-V10 删 3 旧语义串 ×2 档（→ 收归 test/doc-consistency.test.mjs T76——留
+ * verification.status 正锚）。覆盖依据：T-V1~V6 行为面 + 集成 ①（工具流 verify 关口）。
  */
 import { test } from "node:test"
 import assert from "node:assert"
@@ -125,29 +129,24 @@ test("T-V8 doc-only 改动 + 显式 failed → 打回（G10，双端同）", asy
   assert.match(out, /VERIFY BLOCKED/)
 })
 
-test("T-V9 guard 文案声明式（G1-G4）", async () => {
+test("T-V9 guard 文案声明式（G1-G4——扫① 裁后：正句留 2 / 旧句负向锚删 4）", async () => {
   const guard = readFileSync(join(__here, "..", "src", "agent", "completion.mjs"), "utf8")
-  // 首个闸：declaring the outcome + 非 run syntax checks and tests
+  // 首个闸：declaring the outcome（模型可见文案契约——正句）
   assert.match(guard, /declaring the outcome/)
-  assert.doesNotMatch(guard, /run syntax checks and tests/)
-  assert.doesNotMatch(guard, /test failures/)
-  // 失败重试：was not passed（非 tests are still failing / verify reported test failures）
+  // 失败重试：was not passed（正句）
   assert.match(guard, /verify was not passed/)
-  assert.doesNotMatch(guard, /verify reported test failures/)
-  assert.doesNotMatch(guard, /tests are still failing/)
+  // 旧句负向锚（4 条）已删——扫① 判定：旧语义早退役，守卫行为由 T-V1~V6 + 集成 ①（工具流
+  // verify 关口）覆盖（2026-09-11 TEST-LIFECYCLE——设计档 TESTING.md §7.3 点名档）。
 })
 
-test("T-V10 prompts 无旧 verify 语义（G5-G9——PROMPT-SYSTEM 施工③宿主更新：退役文件 → 新槽位宿主）", async () => {
+test("T-V10 prompts 声明式 verify 语义在位（G5-G9——扫① 裁后：正锚留 2；旧语义负向锚收归接收档）", async () => {
   // 旧名单 [eng-coder, engineering-sub, system, discipline, main] 的新宿主映射（施工①迁移映射表）：
   // eng-coder/engineering-sub → persona-eng-coder；system/discipline/main 的写码执行收尾 → discipline-normal。
   const files = ["persona-eng-coder.md", "discipline-normal.md"]
   for (const f of files) {
     const src = readFileSync(join(__here, "..", "src", "prompts", f), "utf8")
-    // 旧语义：verify 声称 runs syntax checks / runs tests / related tests
-    assert.doesNotMatch(src, /runs syntax checks/, `${f}: residual verify-runs-syntax`)
-    assert.doesNotMatch(src, /related tests via verify/, `${f}: residual verify-runs-tests`)
-    assert.doesNotMatch(src, /call `verify` in its default mode/, `${f}: residual default-mode`)
-    // 允许的新语义声明式引导仍存在（verification.status 声明参数）
+    // 声明式引导在位（verification.status 声明参数——模型可见契约）
     assert.match(src, /verification\.status/, `${f}: declarative phrasing present`)
   }
+  // 三旧语义串 ×2 档的负向锚 → 收归 test/doc-consistency.test.mjs T76 防回潮族（扫① 2026-09-11）。
 })

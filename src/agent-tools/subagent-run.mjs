@@ -8,6 +8,7 @@
 import { ASYNC_POOL_LIMITS, poolDomainOf, poolLimitsFor, runningPoolCount } from "./subagent-async.mjs"
 import { runChildPipeline } from "./subagent-async.mjs"
 import { logEvent } from "../log.mjs"
+import { deathLine } from "../abort-provenance.mjs"
 import { pushReal } from "../context.mjs"
 import {
   describeBlockers, refreshQueuedTokens,
@@ -36,7 +37,7 @@ export function drainInjectedQueue(entry, agent) {
  * turn-cap / permission / MIN_REPORT_CHARS / mergeChildMutations all unchanged),
  * but the parent does not await it: the promise is parked in _asyncSubagents and
  * consumed by the auto channel (§19.8 — turn-end collection / suspension digest;
- * the check action is gone). Slot queue (§24 D-24a/R14 — 分域): the entry carries a
+ * the check action is gone). Slot queue (§11.1 D-24a/R14 — 分域): the entry carries a
  * pool domain (_pool = poolDomainOf(role)); running count < limit[its domain]
  * (agent.poolLimits — default engCoder 4 / other 4) → start now; ≥ → enqueue
  * (status "queued", position = queue index) — never rejected, never requiring the
@@ -52,7 +53,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   const id = parent._subAgentCounter
   const entry = {
     id, role, relayPrefix,
-    // §24 D-24a/R14：池域字段（域判定单一事实源——poolDomainOf——role 枚举见
+    // §11.1 D-24a/R14：池域字段（域判定单一事实源——poolDomainOf——role 枚举见
     // subagent.mjs ROLES；未知角色归 other）——running 计数/补位按域过滤。
     _pool: poolDomainOf(role),
     status: "queued", // 下面按等待态/槽位重定（避免两处判断漂移）
@@ -80,7 +81,7 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
     _injected: [],
   }
   // §20 D-SD3 准入落点：等待态（依赖未满足/域冲突/depc）→ queued（waiting-deps——
-  // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§24 D-24a：
+  // 不占槽不启动——即使槽空）；纯槽满（kind slot）→ 按域计数判定（§11.1 D-24a：
   // runningIn(domain) < limit(domain)——跨域互不阻塞——每次入池判定时读配置）。
   const blockers = describeBlockers(parent, entry)
   if (blockers.kind === "slot") {
@@ -99,8 +100,9 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
   entry.controller = ctrl
   const baseSignal = buildChildSignal(parent, ctx)
   if (baseSignal) {
-    if (baseSignal.aborted) ctrl.abort()
-    else baseSignal.addEventListener("abort", () => ctrl.abort(), { once: true })
+    // §20.3 站点 #10（第 24 批）：hop 逐跳保 reason
+    if (baseSignal.aborted) ctrl.abort(baseSignal.reason)
+    else baseSignal.addEventListener("abort", () => ctrl.abort(baseSignal.reason), { once: true })
   }
   // §19.5 D-M5：turn 镜像拦截层（callbacks 包装层——选改动最小方案：在既有
   // wrapChildCallbacks 之外再包一层，只解析 ⟦ev⟧turn 更新条目，其余原样转发）。
@@ -156,7 +158,8 @@ export function executeAsyncSpawn(parent, ctx, role, args, child, input, childOp
       askContinue: () => Promise.resolve(Boolean(parent.config?.agent?.engineering && parent.autoApprove)),
     })
       .then((report) => { entry.report = report })
-      .catch((err) => { entry.error = err?.message ?? String(err) })
+      // §20.3 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
+      .catch((err) => { entry.error = deathLine(err, entry.controller?.signal) })
       .finally(() => {
         // SUBAGENT-OBSERVE-SEND D3（send→settle 竞态）：settle 收尾时 _injected 仍残留
         // = 消息入队后子代理在下一回合边界前 settle——未投递——附 settle 报告/错误提示

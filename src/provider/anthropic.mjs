@@ -8,6 +8,7 @@ import { specForModel } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs } from "./core.mjs"
+import { abortError } from "../abort-provenance.mjs"
 
 const ANTHROPIC_VERSION = "2023-06-01"
 
@@ -71,13 +72,14 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟废除）——anthropic/responses 经 core.mjs 的
 // effectiveFetchTimeoutMs 共用；响应头阶段 600s 默认，body 阶段 idle 超时。
   const headers = {
+    ...(provider.headers ?? {}), // 定制头展开（PROVIDER.md §21）：定制头在前、内置头在后——同名内置头胜出
     "Content-Type": "application/json",
     "x-api-key": provider.apiKey,
     "anthropic-version": ANTHROPIC_VERSION,
   }
 
   // Active signal check
-  if (signal?.aborted) throw Object.assign(new DOMException("Aborted", "AbortError"), { reason: signal.reason })
+  if (signal?.aborted) throw abortError(signal, "provider", "transport-anthropic")
 
   // 会诊 #6：TPM/RPM 闸门 + 记账（rate.mjs 与 OpenAI 格式共用同一窗口）
   const { rateGate, recordRate } = await import("./rate.mjs")
@@ -185,9 +187,7 @@ async function parseAnthropicStream(response, { onToken, onReasoning, signal }) 
 
   for await (const chunk of response.body) {
     if (signal?.aborted) {
-      const e = new DOMException("Aborted", "AbortError")
-      e.reason = signal.reason
-      throw e
+      throw abortError(signal, "provider", "transport-anthropic")
     }
     buffer += decoder.decode(chunk, { stream: true })
     // BOM 剥除（会诊 #12）：首个 chunk 可能带 \uFEFF，否则 message_start 事件被静默丢失（含 usage）

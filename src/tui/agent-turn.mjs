@@ -29,6 +29,18 @@ import { suspensionSession, poolLive } from "./suspension-drive.mjs"
 const DISTILL_FLUSH_TIMEOUT_MS = 5000
 
 /**
+ * 第 33 批（TUI §14.3(d)——纯函数，供测试直驱）：回合链尾「需要用户」谓词——agent 已停
+ * 且无自动续跑 ⇒ 置 attention 位。排除项语义（F13）：`skipSession`（digest / 会话内回合
+ *  ——由外层链尾统一置位）· 挂起两态 / 池 live / 队列非空（自动续跑中——不由用户接手）·
+ *  processing（回合在跑）。
+ *  @returns {boolean}
+ */
+export function userNeededAtTurnEnd(state, agent, skipSession) {
+  return !skipSession && !state.suspended && !state._suspPending && !poolLive(agent)
+    && state.queue.length === 0 && !state.processing
+}
+
+/**
  * LOGGING（docs/design/LOGGING.md）包装：回合骨架事件（turn:start/turn:end——kind
  * user/auto；result ok/stopped/error）。内层经 _logOutcome 载具回传终止原因（中止/
  * turn-cap 拒绝/错误 vs 正常完成）——嵌套回合（队列递归/挂起会话内 digest 轮）各自
@@ -319,5 +331,13 @@ async function runAgentTurnInner(ctx, text, opts) {
     // 驻留全消失；释放窗口守卫同步失效（Enter 并发开第二个 runAgentTurn——双驱动器
     // 竞态复现）。
     state._suspAborted = false
+  }
+
+  // 第 33 批（TUI §14.3(d)）：顶层链尾（队列续发循环与挂起会话退出**之后**）——无人自动
+  // 接手 ⇒ 置 attention 位（渲染层实时派生 blocked/awaiting；用户任意输入清位）。D-AT6：
+  // 不放在回合末 finally——那之后还有队列续发 / 挂起会话（digest 自动消费），不是「需要用户」。
+  if (userNeededAtTurnEnd(state, agent, skipSession)) {
+    state.attentionAwaiting = true
+    render()
   }
 }

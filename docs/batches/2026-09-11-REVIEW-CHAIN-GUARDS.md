@@ -253,7 +253,11 @@ _（待写——评审子代理）_
 | 5 | 用例稳健性（R4） | 🔵 | T-CG13「预算 1500ms + 首次调用阻塞 ~1200ms」实际余量仅 300ms——负载过冲即 elapsed > 1500 → 第 2 轮落 `remaining ≤ 0` 走超时尾 → 断言红（wall-clock 依赖） | 时钟注入或判定绑纯函数（`shouldBudgetNudge` 已有）+ 集成断言放宽阈值 / mock 计时器驱动 |
 | 6 | 谓词精度（A） | 🔵 | 行扫描前缀匹配无法区分宿主截断尾与**模型引文**引用同一逐字串（本批评审对象文档即含这些串）——干净评审含一行以此开头即 fail-closed 缓发 token（方向安全、多付一轮重跑）；line-scan 本身必要（sync 路径 `appendCitationReport` 尾接在超时尾之后——`run.mjs:450-451`） | 补负向锁（干净评审 + 引文含尾前缀不应判 incomplete）；或把匹配限定为尾区段形态 |
 
-**计数**：发现表 6 条（1🔴 · 2🟡 · 3🔵）。**锚点抽检（全中）**：`run.mjs` :163/:171/:175/:186/:228/:451/:492/:52-75/:170-172 · `messages.mjs` :194/:273-276（402 行）· `citations.mjs` :46（78 行）· `design-token.mjs` :83（105 行）· `advisor-async.mjs` :236/:415-418/:178-192/:283-291/:350-356（500 行）· `async-settle.mjs` :134-146/:163-177 · `dispatch.mjs` :169-208/:291-301（455 行）· `helpers.mjs:86`（FILE_MUTATORS）· `subagent-async.mjs` :446-459/:245-251 · `provider/core.mjs` :72/:77-78/:235/:426-430 · `sse.mjs` :168-170/:182-189/:220-235 · `log.mjs` :178-179。**行数实测与标注一致**：run.mjs 498 · advisor-async.mjs 500 · messages.mjs 402 · dispatch.mjs 455 · agent-tools/advisor.mjs 227 · design-token.mjs 105 · citations.mjs 78。
+**计数**：发现表 6 条（1🔴 · 2🟡 · 3🔵）。**锚点抽检（全中）**：`run.mjs` :163/:171/:175/:186/:228/:451/:492/:52-75/:170-172 · `messages.mjs` :194/:273-276（402 行）· `citations.mjs` :46（78 行）· `design-token.mjs` :83（105 行）·
+`advisor-async.mjs` :236/:415-418/:178-192/:283-291/:350-356（500 行）· `async-settle.mjs` :134-146/:163-177 · `dispatch.mjs` :169-208/:291-301（455 行）· `helpers.mjs:86`（FILE_MUTATORS）· `subagent-async.mjs` :446-459/:245-251 ·
+`provider/core.mjs` :72/:77-78/:235/:426-430 · `sse.mjs` :168-170/:182-189/:220-235 · `log.mjs` :178-179。**行数实测与标注一致**：run.mjs 498 · advisor-async.mjs 500 · messages.mjs 402 · dispatch.mjs 455 · agent-tools/advisor.mjs 227 · design-token.mjs 105 · citations.mjs 78。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 691 字符 → 纯折行（文字零增删、语义不变）〕
 
 VERDICT: changes-required
 
@@ -300,7 +304,10 @@ VERDICT: pass
 - 修正轮落地（id=27）经父侧实文核验：**6/6**（kind 表第 6 行 :548 · 块首行扫描 :550-554 · 消费点 2 :560-562 · §14.6#1 :631-637 · E-D6 :887 + E-6 #5 :895 · 计数三处 :656/:705/批次档 :202 · T-CG13 :743 · T-CG21 :747）；
 - **轮次 2 评审：Approved**（六条全 Fixed · 无新增 🔴/🟡 · 不变项复核 ✓：AC 14 · 用例 21（A–D 17 / E 4）· 实施域 10 项 · kind 6 · 需求 F11–F17/N7–N11）+ **token 已签发**（值不落档——运行时凭证）。
 
-**批准范围**：**11 文件实施面**（A–D 10 项 + E-1 新行）——`src/advisor/run.mjs`（拆）· `src/advisor/loop.mjs`（新）· `src/advisor/compaction.mjs`（新）· `src/advisor/messages.mjs` · `src/advisor/citations.mjs` · `src/agent-tools/advisor.mjs` · `src/agent-tools/advisor-async.mjs`（拆）· `src/agent-tools/advisor-settle.mjs`（新）· `src/agent-tools/design-token.mjs` · `test/advisor-chain-guards.test.mjs`（新）· `src/agent/dispatch.mjs`（E-1 预闸）。
+**批准范围**：**11 文件实施面**（A–D 10 项 + E-1 新行）——`src/advisor/run.mjs`（拆）· `src/advisor/loop.mjs`（新）· `src/advisor/compaction.mjs`（新）· `src/advisor/messages.mjs` · `src/advisor/citations.mjs` ·
+`src/agent-tools/advisor.mjs` · `src/agent-tools/advisor-async.mjs`（拆）· `src/agent-tools/advisor-settle.mjs`（新）· `src/agent-tools/design-token.mjs` · `test/advisor-chain-guards.test.mjs`（新）· `src/agent/dispatch.mjs`（E-1 预闸）。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 411 字符 → 纯折行〕
 **不含**：文档面（§14 / 需求 §7 / 批次档——已落）· `ENGINEERING-MODE.md` 双档与提示词四镜像（登记面 E-6 #1）· 它批/实现面。
 **验收**：AC-CG1–AC-CG12 + AC-CG13/AC-CG14（**14 条**）· 用例 T-CG1–T-CG14 + T-CG19–T-CG21 + T-CG15–T-CG18（**21 条**）· 两处硬帽拆分（run.mjs 498→拆 / advisor-async.mjs 500=在册硬帽→拆）+ **import 面经 re-export 零改**。
 
@@ -330,7 +337,10 @@ _（eng-coder 自写 · 2026-09-11）_
 | 10 | `src/agent/dispatch.mjs` | 455 → **481** | Phase-1 D5 冻结窗口预闸（`FILE_MUTATORS` × `inflightDesignReviewConflict` → `denied + hint`，位在只读/autoApprove 短路前） |
 | 11 | `test/advisor-chain-guards.test.mjs` | 新 → **498** | T-CG1–T-CG14 + T-CG19–T-CG21 + T-CG15–T-CG18（21 例） |
 
-**导入面零改（机械证明）**：既有消费名逐一在位（`MAX_ADVISOR_ROUNDS` / `ADVISOR_THINKING_PLACEHOLDER` / `MAX_RESULT_CHARS` / `_advisorToolsFor` / `_renderTimeline` / `_runAdvisorToolLoop` / `looksLikeReviewOutput` / `buildCapMessage` / `runAdvisorReview` / `resolveAdvisorProvider` / citations 三导出 / `settleAdvisorRun` / `noteMutations` / `mutationSeqOf` / `reviewIsStale` / 池族全名）；全量套件零回归佐证。
+**导入面零改（机械证明）**：既有消费名逐一在位（`MAX_ADVISOR_ROUNDS` / `ADVISOR_THINKING_PLACEHOLDER` / `MAX_RESULT_CHARS` / `_advisorToolsFor` / `_renderTimeline` / `_runAdvisorToolLoop` /
+`looksLikeReviewOutput` / `buildCapMessage` / `runAdvisorReview` / `resolveAdvisorProvider` / citations 三导出 / `settleAdvisorRun` / `noteMutations` / `mutationSeqOf` / `reviewIsStale` / 池族全名）；全量套件零回归佐证。
+
+> 〔父侧代笔 2026-09-11 12:58：单行 369 字符 → 纯折行〕
 
 ### 逐需求透明表（F11–F17 / N7–N11——Done / Simplified / Not done）
 
@@ -374,7 +384,10 @@ _（eng-coder 自写 · 2026-09-11）_
 
 **终态：clean**（0 未闭 🔴；🔵 = 存量登记项；外域项已逐条登记/打回）。取证：`_t-chain-guards.log`（快层）/ `_t-chain-guards-full.log`（全量）/ `node --test test/advisor-chain-guards.test.mjs`（21/21）。
 
-**行数复核（终稿 —— 修复后最终实测，`N lines total` 口径）**：`run.mjs` **239** · `loop.mjs` **291** · `compaction.mjs` **158** · `messages.mjs` **413** · `citations.mjs` **140** · `agent-tools/advisor.mjs` **241** · `advisor-async.mjs` **350** · `advisor-settle.mjs` **214** · `design-token.mjs` **118** · `dispatch.mjs` **481** · `test/advisor-chain-guards.test.mjs` **498**。（上表个别数字为压缩 / 审计修复前时刻实测——以本行为准；全部在档：run/loop/compaction/advisor-settle ≤300、其余 ≤500、新档 498 ≤500。）
+**行数复核（终稿 —— 修复后最终实测，`N lines total` 口径）**：`run.mjs` **239** · `loop.mjs` **291** · `compaction.mjs` **158** · `messages.mjs` **413** · `citations.mjs` **140** · `agent-tools/advisor.mjs` **241** ·
+`advisor-async.mjs` **350** · `advisor-settle.mjs` **214** · `design-token.mjs` **118** · `dispatch.mjs` **481** · `test/advisor-chain-guards.test.mjs` **498**。（上表个别数字为压缩 / 审计修复前时刻实测——以本行为准；全部在档：run/loop/compaction/advisor-settle ≤300、其余 ≤500、新档 498 ≤500。）
+
+> 〔父侧代笔 2026-09-11 12:58：单行 454 字符 → 纯折行〕
 
 **§5 写入自证**：本段经 `batch_segment({segment:"§5"})` 两笔落档（回读核实：批次档 §5 现含交付摘要 / 逐需求透明表 / 偏差表 / 轮次响应表 / 外域项 / 终态）。
 

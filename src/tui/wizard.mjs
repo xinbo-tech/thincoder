@@ -8,6 +8,7 @@
 
 import { PROVIDER_PRESETS as PRESETS } from "../config.mjs"
 import { ansi, C } from "./ansi.mjs"
+import { computeLayout } from "./layout.mjs"
 import { probeChannelModels } from "./model-catalog.mjs"
 
 /**
@@ -102,6 +103,19 @@ export function createWizard(ctx) {
     }
     if (w.error) lines.push({ text: ` ${w.error}`, color: C.error })
     w.lines = lines
+    // A4（第 20 批 §12.5——D-SS6）：provider 步选中行自动滚入可视窗——renderWizard 是索引变化的单一路径（产出即一致）；
+    // winH 走 computeLayout（同 pickers.mjs 口径）+ try/catch 兜底 8（无 dims/测试环境不崩）。
+    if (w.step === "provider") {
+      let winH
+      try {
+        winH = Math.max(1, (computeLayout(state, { cols: (state.dims?.get() ?? {}).cols ?? (process.stdout.columns || 80), rows: (state.dims?.get() ?? {}).rows ?? (process.stdout.rows || 24) }).panels.picker?.h ?? lines.length + 1) - 1)
+      } catch {
+        winH = 8 // safe fallback for mocks without dims（同 pickers.mjs 兜底口径）
+      }
+      if (w.selectedLine < w.scroll) w.scroll = w.selectedLine
+      if (w.selectedLine >= w.scroll + winH) w.scroll = w.selectedLine - winH + 1
+      w.scroll = Math.max(0, Math.min(w.scroll, Math.max(0, lines.length - winH)))
+    }
     render()
   }
 

@@ -26,6 +26,13 @@ const MAX_INPUT_LINES = 5
 const MAX_TASK_LINES = 5
 const QWIN = 5
 
+/** 输入框内容宽度单源（第 31 批——TUI-INPUT-BOX.md §9.3 #3）：`computeLayout` 的输入框
+ *  layoutInput 宽度与键处理侧竖移（`moveCursorVertical`）共用——布局与竖移零漂移。
+ *  含 2 列行前缀（`▸ ` / 续行 2 空格）；layoutInput 内部再为前缀预留 2 列。 */
+export function inputContentWidth(cols) {
+  return Math.max(20, cols - 1) - 4
+}
+
 /** question 自由文本态渲染布局：与主输入框同实现（TUI-INPUT-BOX.md §7.2 round2 #1/#6）——
  *  折行展开（`▸ ` 首行 + 续行 2 空格缩进）+ 光标行列；answer 单行不变式（无 \n 字符）由
  *  输入侧硬守卫（Ctrl+J no-op / 粘贴 \n→空格），此处只复用 layoutInput 的折行/光标语义，
@@ -40,11 +47,14 @@ export function layoutAnswer(chars, cursor, width) {
  */
 export function computeLayout(state, { cols, rows }) {
   const W = Math.max(20, cols - 1)
+  const inputW = inputContentWidth(cols) // 输入框内容宽（= W - 4）——单源：布局与竖移共用
 
   // --- input box ---
-  const inputBuf = state.search ? [...state.search.query] : (state.interruptPrompt ? [...state.interruptPrompt.text] : state.input)
-  const inputCursor = state.search ? inputBuf.length : (state.interruptPrompt ? inputBuf.length : state.cursor)
-  const inputLayout = layoutInput(inputBuf, inputCursor, W - 4)
+  // Ctrl+I 注入框（第 31 批）：{ chars, cursor } codepoint 数组 + 光标——与主输入框同渲染路径（§8）。
+  const ip = state.interruptPrompt
+  const inputBuf = state.search ? [...state.search.query] : (ip ? ip.chars : state.input)
+  const inputCursor = state.search ? inputBuf.length : (ip ? Math.max(0, Math.min(ip.cursor ?? inputBuf.length, inputBuf.length)) : state.cursor)
+  const inputLayout = layoutInput(inputBuf, inputCursor, inputW)
   let inputOffset = 0
   if (inputLayout.lines.length > MAX_INPUT_LINES) {
     inputOffset = Math.min(inputLayout.cursorLine, inputLayout.lines.length - MAX_INPUT_LINES)
@@ -66,7 +76,7 @@ export function computeLayout(state, { cols, rows }) {
     } else {
       const answerChars = Array.isArray(q.answer) ? q.answer : q.answer ? [...q.answer] : []
       const qCursor = Math.max(0, Math.min(q.cursor ?? answerChars.length, answerChars.length))
-      questionLayout = layoutAnswer(answerChars, qCursor, W - 4)
+      questionLayout = layoutAnswer(answerChars, qCursor, inputW)
       if (questionLayout.lines.length > MAX_INPUT_LINES) {
         questionOffset = Math.min(questionLayout.cursorLine, questionLayout.lines.length - MAX_INPUT_LINES)
       }
