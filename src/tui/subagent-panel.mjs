@@ -12,8 +12,10 @@
  *
  * §19.5 D-M7 ⏹：运行中（非 done）折叠头右缘停止标记（dim，仅折叠头）——点击 =
  * cancel（mouse.mjs 列级命中 _stopCol——不触发折叠翻转）。
- * §27 R23（supersede §19.5 D-M8 子标方案）：嵌套子代理渲染为子块段（renderSubChildSections
- * ——子块头 + 独立折叠键——面板与冻结渲染共用——styleSubLabelRow 已随子标机制退役）。
+ * SUBAGENT-TAIL（supersede §27 R23 子块段方案；显示契约 docs/design/TUI.md §6）：嵌套
+ * 子代理内容行并入本块 blocks（数据层——append 目标上移）——面板与冻结渲染只读
+ * sub.blocks（无子块段/无子块头/无每层折叠键）；折叠键只剩 `sub-${key}`（面板 ↔
+ * 冻结同键——D5 无缝衔接不变）。
  *
  * 中立模块（D1 评审 #6）：layout.mjs 调 renderSubagentPanel 预计算面板高度
  * （subagentLines → subagentH），render-frame.mjs 直接 put 预计算行（不重复
@@ -31,61 +33,6 @@ import { sliceByWidth, stringWidth } from "./render.mjs"
 import { isExpanded, renderBlockTimeline, renderExpandedBlock, foldTailLines } from "./fold-block.mjs"
 import { SUBAGENT_ROLES } from "./subagent-blocks.mjs"
 
-/**
- * §27 R23 子块（嵌套子代理）段渲染——面板与冻结渲染共用（中立纯函数模块）：
- * 每子块 = 工具式头行（`❯ explore#N · model · elapsed`——D-R23b，dim ❯ + role#N 亮 +
- * model/elapsed dim——与 C 工具头同排式；done/stopped 定格动词——D-R23c2）+ 折叠态
- * tail 2 / 展开态全量窗口（60% 封顶 + 块内滚动——fold-block 公共组件）；孙块递归
- * （任意 inner 深度——D-R23d——每层独立折叠键）。折叠键 = `sub-{outerKey}/{innerPath}`
- * （D-R23e——与既有 sub-{key} 同族——_foldToggle 命中映射复用 fold-block 通用通道——
- * mouse.mjs 零改动）。行数配额在数据层（子块计入外层 500 行环——NFR）。
- */
-
-/** 子块折叠键（D-R23e）：sub-{outerKey}/{innerPath}。 */
-export function subChildFoldKey(rootKey, innerPath) {
-  return `sub-${rootKey}/${innerPath}`
-}
-
-/** 子块头行（D-R23b/c2）——返回带 _foldToggle 的行（可点击折叠/展开——fold-block 通道）。 */
-function subChildHeadRow(rootKey, child, innerPath, cols) {
-  const foldKey = subChildFoldKey(rootKey, innerPath)
-  const end = child.done ? (child.doneAt ?? Date.now()) : Date.now()
-  const secs = Math.max(0, Math.floor((end - (child.started ?? end)) / 1000))
-  const verb = child.done ? (child.stopped ? `stopped ${secs}s` : `done ${secs}s`) : `${secs}s`
-  const raw = `❯ ${child.key}${child.model ? ` · ${child.model}` : ""} · ${verb}`
-  let text = sliceByWidth(raw, Math.max(1, cols - 2))
-  // dim 注入（截断后——自闭合：行末由打印端 reset 兜底；灰色段间 restore 恢复行基色）。
-  const restore = ansi.fg(6) // 行基色 C.tool（cyan）
-  if (text.startsWith("❯")) text = `${ansi.gray}❯${restore}${text.slice(1)}`
-  const sep = text.indexOf(" · ")
-  if (sep > 0) text = `${text.slice(0, sep)}${ansi.gray}${text.slice(sep)}`
-  return { text, color: C.tool, _foldToggle: foldKey }
-}
-
-/** 子块段行（head + 折叠 tail2 / 展开窗口）——递归孙块。root = 外层块（key 为折叠前缀源）。 */
-export function renderSubChildSections(state, root, cols, maxRows) {
-  const out = []
-  const walk = (carrier, path) => {
-    for (const child of carrier.children ?? []) {
-      const innerPath = path ? `${path}/${child.key}` : child.key
-      out.push(subChildHeadRow(root.key, child, innerPath, cols))
-      const foldKey = subChildFoldKey(root.key, innerPath)
-      if (isExpanded(state, foldKey)) {
-        // 展开：全量时间线窗口化（per-kind 着色，60% 封顶 + 块内滚动——公共组件）
-        const body = renderBlockTimeline(child.blocks, cols)
-        out.push(...renderExpandedBlock({ body, foldKey, state, maxRows, cols, label: `${child.key} activity` }))
-      } else {
-        // 折叠：tail 2 非空行（最近活动）——dim（与既有外层折叠 tail 同型）
-        for (const line of foldTailLines(child.blocks, 2)) {
-          out.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim, _skipDimFold: true })
-        }
-      }
-      walk(child, innerPath)
-    }
-  }
-  walk(root, "")
-  return out
-}
 /**
  * 面板行构建（纯函数）：顶部分隔线 `─` + 各运行中区块（折叠头 + tail 3 /
  * 展开全量）。maxRows = 终端行数（展开态 60% 封顶窗口化）；省略 = 不封顶
@@ -197,8 +144,6 @@ export function renderSubagentPanel(state, cols, maxRows) {
         out.push({ text: `│ ${sliceByWidth(line, cols - 4)}`, color: C.dim })
       }
     }
-    // §27 R23：子块段（嵌套子代理——头 + tail2/展开窗口）随外层块渲染（面板与冻结共用）。
-    out.push(...renderSubChildSections(state, sub, cols, maxRows))
   }
   return out
 }

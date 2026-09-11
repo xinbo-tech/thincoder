@@ -71,13 +71,14 @@ export function finishSubTaskKey(state, key, lastError = null) {
 /** 冻结完成/中断区块进 state.lines（§7.2 D4——_frozenSubTask 载体行，渲染端
  *  render-conversation 识别；折叠交互 key = sub-${key} 与运行面板同源跨冻结延续）。
  *  §27 R23 D-R23c2 收尾语义（T-R23c.2a）：外层先冻结而内层子块未收尾（外层 abort/
- *  中断）→ 子块随外层冻结定格 stopped（closeOpenSubChildren——不悬空）。
+ *  中断）→ 子块随外层冻结定格 stopped（closeOpenSubChildren——不悬空）。SUBAGENT-TAIL：
+ *  ② 语义照旧（防御性保留——无正读者、不设断言；显示契约 docs/design/TUI.md §6）。
  *  锚点插入（2026-09-03 修复轮）：settled 块带 _freezeAt（settle 时刻流位置）——
  *  splice 落位使挂起期补发冻结块位于其 digest 总览文本之前；无锚点尾推不变；
  *  多锚点批量冻结按降序（绝对位置 splice——先插小锚点会移走大锚点目标）。 */
 export function freezeSubTaskLines(state, sub) {
   if (!sub) return
-  closeOpenSubChildren(sub) // R23 D-R23c2——开子块随外层冻结定格 stopped
+  closeOpenSubChildren(sub) // R23 D-R23c2——开子块随外层冻结定格 stopped（SUBAGENT-TAIL：② 防御性保留）
   state._frozenSubKeys ??= new Set()
   state._frozenSubKeys.add(sub.key)
   sub.done = true

@@ -4,17 +4,20 @@
  * undefined = sync）, started, done, doneAt, blocks:
  * [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError,
  * dropped, blockEpoch, awaitingDigest（§17）, _freezeAt（冻结锚点）, stopped（§19.5）,
- * children: []（R23——嵌套子代理子块载体——见 subagent-children.mjs）}。
- * 职责：前缀路由（parseRelayPath——**R23：嵌套段不再子标渲染——建子块载体归属**）、
- * 事件 token 解析（**R23：内层 ⟦ev⟧done/stopped 生成侧补发射（D-R23c1）路由到子块
- * 定格；§27.1 F2：done 后完全定格——迟到 chunk 丢弃**）、kind 合并、N2 树级环形上限（R23 NFR——子块计入外层配额）、N1 渲染节流、
- * 完成冻结（freezeSubTaskLines 家族——锚点 splice）。
+ * children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容并入本块 blocks——见
+ * subagent-children.mjs）}。
+ * 职责：前缀路由（parseRelayPath——**SUBAGENT-TAIL（D-ST1）：嵌套段内容行并入外层
+ * blocks——append 目标上移，子块载体只余守护元数据**）、
+ * 事件 token 解析（**内层 ⟦ev⟧done/stopped 生成侧补发射（D-R23c1）路由到子块
+ * 定格；F2：done 后完全定格——迟到 chunk 丢弃**）、kind 合并、N2 单环 500 显示行上限
+ * （SUBAGENT-TAIL D-ST4——内层行同环计数、单载体最旧先行）、N1 渲染节流、
+ * 完成冻结（freezeSubTaskLines 家族——锚点 splice）。显示契约 = docs/design/TUI.md §6。
  */
 
 import { C } from "./ansi.mjs"
 import { describeToolArgs } from "./tool-args.mjs"
 import {
-  SUB_BLOCK_LINE_LIMIT, appendSubBlock, appendSubChild, ensureSubChild, descendSubChild,
+  appendSubBlock, descendSubChild,
   closeSubChild,
 } from "./subagent-children.mjs"
 export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
@@ -40,7 +43,8 @@ export const SUB_PREFIX_RE = /^([\w-]+)#(\d+)\//
  *  （块尚未创建）缓冲 `state._pendingAsyncKeys`——ensureSubTaskKey 块创建时应用（兜底）。 */
 export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e([^\x1e]*)\x1e?([\s\S]*)$/
 
-/** §19.5 D-M8 嵌套 relay 前缀通用解析（循环解析任意深度——R23 保持为路由源）：
+/** 嵌套 relay 前缀通用解析（循环解析任意深度——SUBAGENT-TAIL 保持为路由源——显示契约
+ *  docs/design/TUI.md §6）：
  *  `eng-coder#2/explore#1/read` → { head（块路由）, inner[], label（inner 链——R23：
  *  子块折叠键/外层 currentTool 全路径用）, rest }。
  *  单层 = inner[]/label ""——与既有单段匹配语义零改；无前缀 → null。 */
@@ -102,7 +106,7 @@ export function ensureSubTaskKey(state, key, role) {
       blocks: [], currentTool: null, toolArgs: null, turn: 0, maxTurns: 0, approval: null,
       lastError: null, dropped: 0,
       stopped: false, // §19.5: ⟦ev⟧stopped 冻结标记（标题 "stopped"）
-      children: [], // R23: 嵌套子代理子块载体（subagent-children.mjs——D-R23a）
+      children: [], // SUBAGENT-TAIL: 嵌套子代理守护载体（内容并入本块——subagent-children.mjs）
     }
     // §19.5 D-M7b ①（处置 #4 兜底——2026-09-03）：缺失 key 的 ⟦ev⟧async 事件已缓冲
     // pending 标志（routeSubToken——async 先于块创建到达：排队条目补位启动的时序窗口）
@@ -116,9 +120,10 @@ export function ensureSubTask(state, subMatch) {
   return ensureSubTaskKey(state, `${subMatch[1]}#${subMatch[2]}`, subMatch[1])
 }
 
-/** Append（kind 合并追加）+ N2 树级环形上限；fresh=true 强制新块（每工具调用）。
- *  R23（2026-09-07）：appendSubBlock/trimSubBlocks 实现迁 subagent-children.mjs（树级
- *  配额——子块计入外层 500 行环）——本文件 import + re-export 保 import 面（压缩面板等）。 */
+/** Append（kind 合并追加）+ N2 单环 500 显示行上限；fresh=true 强制新块（每工具调用）。
+ *  R23（2026-09-07）：appendSubBlock/trimSubBlocks 实现迁 subagent-children.mjs——
+ *  SUBAGENT-TAIL（D-ST4）后为单载体最旧先行（内层并入行同环计数）；本文件 import +
+ *  re-export 保 import 面（压缩面板等）。 */
 /** 事件 token → 区块头部（turn/approval 更新 turn n/max + 等待态）。事件永不进
  *  blocks/主流——仅头部。@returns {boolean} 良构事件（已消费） */
 export function applySubEvent(sub, payload) {
@@ -138,10 +143,12 @@ export function applySubEvent(sub, payload) {
 
 // ─── Prefix routing（agent-turn callbacks 委派）：true = 带前缀已消费；false = 主路径
 
-/** onToken 分支：子文本 / [model] 元数据 / ⟦ev⟧ 事件。§27 R23（supersede §19.5 D-M8
- *  子标方案）：head 段路由块——inner 段**建子块载体归属内容**（D-R23a——subagent-children.mjs）；
- *  内层 [model] 记子块模型；内层 ⟦ev⟧ 除 done/stopped（生成侧补发射——D-R23c1——路由
- *  子块定格）外剥除不路由（防 explore 进度污染外层块头——round1 #4）。 */
+/** onToken 分支：子文本 / [model] 元数据 / ⟦ev⟧ 事件。SUBAGENT-TAIL（D-ST1——supersede
+ *  R23 子块段方案，显示契约 docs/design/TUI.md §6）：head 段路由块——inner 段**内容行
+ *  并入外层块 blocks**（append 目标上移），子块载体只余守护元数据（done 守卫——F2
+ *  迟到丢弃；currentTool——fresh 判别）；内层 [model] 记子块模型；内层 ⟦ev⟧ 除
+ *  done/stopped（生成侧补发射——D-R23c1——路由子块定格）外剥除不路由（防 explore
+ *  进度污染外层块头——round1 #4）。 */
 export function routeSubToken(state, t, scheduleRender) {
   const path = parseRelayPath(t)
   if (!path) return false
@@ -195,16 +202,17 @@ export function routeSubToken(state, t, scheduleRender) {
   // queued（§20 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
   // 更新 sub.queued——块不可展开（无活动流）；启动后 async 事件清标转 running）。
   if (payload.startsWith("⟦ev⟧")) {
-    // R23（supersede D-M8"内层事件剥除不路由"——评审 #1 🅰）：done/stopped 完成信号 =
-    // 生成侧补发射（D-R23c1——sync 同步收尾段带完整嵌套前缀）→ 路由到子块定格
-    // （D-R23c2——closeSubChild——不冻结外层、不落 preview）；缺失子块（迟到事件/
+    // 内层完成信号（沿革：D-M8 子标 → R23 子块段 → SUBAGENT-TAIL 并入——显示契约
+    // docs/design/TUI.md §6）：done/stopped = 生成侧补发射（D-R23c1——sync 同步收尾段带
+    // 完整嵌套前缀）→ 路由到子块定格（closeSubChild——不冻结外层、不落 preview）；
+    // 缺失子块（迟到事件/
     // 从未开块）→ 不建幻影（no-op）。其余内层事件（turn/approval/queued/settled/
     // async/cancelled）剥除不路由（防 explore 进度污染外层块头——round1 #4）。
     if (nested) {
       const innerEv = payload.match(SUB_EVENT_RE)
       if (innerEv && (innerEv[1] === "done" || innerEv[1] === "stopped")) {
         const leaf = descendSubChild(sub, path.inner, { create: false })
-        // §27.1 F2: done 子块完全定格——迟到 done/stopped 丢弃（重复 done 不重放
+        // F2 保全：done 子块完全定格——迟到 done/stopped 丢弃（重复 done 不重放
         // 定格；stopped 不打回 done 定格块）
         if (leaf && !leaf.done) closeSubChild(sub, leaf, innerEv[1] === "stopped", path.label)
         scheduleRender()
@@ -272,11 +280,12 @@ export function routeSubToken(state, t, scheduleRender) {
   // parent's) — shown in the block header, NOT appended to its content stream.
   // Only treat as metadata when the model isn't set yet (it's always the FIRST token);
   // a child content token that happens to start with "[model]" must not be swallowed.
-  // R23：内层 [model] 记到子块（D-R23a 子块状态字段——不再剥除丢弃）；单层规则不变。
+  // SUBAGENT-TAIL：内层 [model] 记到守护载体（类目 B 字面量——不渲染、无正读者；
+  // docs/design/TUI.md §6）；单层规则不变。
   if (payload.startsWith("[model]") && (nested || sub.model === undefined)) {
     if (nested) {
       const leaf = descendSubChild(sub, path.inner)
-      // §27.1 F2: done 子块完全定格——迟到 [model] 不写定格块头
+      // F2: done 子块完全定格——迟到 [model] 不写定格块头
       if (!leaf.done && leaf.model === undefined) {
         leaf.model = payload.slice(7)
         scheduleRender()
@@ -287,82 +296,76 @@ export function routeSubToken(state, t, scheduleRender) {
     }
     return true
   }
-  // Child LLM text → text block (N2 cap inside appendSubBlock). R23：内层文本归属子块
-  // （D-R23b——子块行——不再混外层 blocks/子标）。§27.1 F2：done 子块完全定格——
-  // 迟到 chunk 丢弃（与 appendSubChild 数据层守卫同义——此处免无谓 render）。
-  if (nested) {
-    const leaf = descendSubChild(sub, path.inner)
-    if (leaf.done) return true
-    appendSubChild(sub, leaf, "text", payload)
-  } else appendSubBlock(sub, "text", payload)
+  // Child LLM text → text block (N2 cap inside appendSubBlock). SUBAGENT-TAIL（D-ST1）：
+  // 内层文本**并入外层 blocks**（append 目标上移——子块不再承载内容行，取代小节）。
+  // F2：done 子块完全定格——迟到 chunk 丢弃（leaf.done 守卫——免无谓 render）。
+  const leaf = nested ? descendSubChild(sub, path.inner) : null
+  if (leaf?.done) return true
+  appendSubBlock(sub, "text", payload)
   scheduleRender()
   return true
 }
 
 /** Child reasoning token → think block (F2: same treatment as main reasoning).
- *  §27 R23 nested think：归属内层子块（supersede D-M8 子标渲染——D-R23a/b）。 */
+ *  SUBAGENT-TAIL：内层 think 并入外层 blocks（append 目标上移——显示契约 TUI.md §6）。 */
 export function routeSubReasoning(state, t, scheduleRender) {
   const path = parseRelayPath(t)
   if (!path) return false
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
   const nested = path.inner.length > 0
-  if (nested) {
-    const leaf = descendSubChild(sub, path.inner)
-    if (leaf.done) return true // §27.1 F2: done 子块完全定格——迟到 think 丢弃
-    appendSubChild(sub, leaf, "think", path.rest)
-  } else appendSubBlock(sub, "think", path.rest)
+  const leaf = nested ? descendSubChild(sub, path.inner) : null
+  if (leaf?.done) return true // F2: done 子块完全定格——迟到 think 丢弃
+  appendSubBlock(sub, "think", path.rest)
   scheduleRender()
   return true
 }
 
-/** Child tool call → fresh tool block + header currentTool。§27 R23 嵌套（supersede
- *  D-M8 子标工具行）：工具行归属内层子块（子块内 `❯ tool`）；currentTool 外层存全路径
- *  （`explore#1/read`——评审 #8：外层块头状态区现状保持不缩改）+ 子块存工具名（子块内
- *  输出归属判别）。 */
+/** Child tool call → fresh tool block + header currentTool。SUBAGENT-TAIL（D-ST1）：内层
+ *  工具行并入外层 blocks（同款 `❯ tool` 行——取代小节）；currentTool 外层存全路径
+ *  （`explore#1/read`——评审 #8：外层块头状态区现状保持不缩改）+ 子块存工具名（守护
+ *  元数据——fresh 判别源，routeSubToolOutput 读）。 */
 export function routeSubToolCall(state, name, args, scheduleRender) {
   const path = parseRelayPath(name)
   if (!path) return false
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
   const nested = path.inner.length > 0
-  // §27.1 F2: done 子块完全定格——迟到 tool call 丢弃（不复活外层 currentTool/子块状态）
+  // F2: done 子块完全定格——迟到 tool call 丢弃（不复活外层 currentTool/子块状态）
   const leaf = nested ? descendSubChild(sub, path.inner) : null
   if (leaf?.done) return true
   sub.currentTool = nested ? `${path.label}/${path.rest}` : path.rest
   sub.toolArgs = args
   sub.approval = null
   const argsDesc = describeToolArgs(path.rest, args)
-  if (nested) {
+  if (leaf) {
     leaf.currentTool = path.rest
     leaf.toolArgs = args
     leaf.approval = null
-    appendSubChild(sub, leaf, "tool", `❯ ${path.rest}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
-  } else {
-    appendSubBlock(sub, "tool", `❯ ${path.rest}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
   }
+  appendSubBlock(sub, "tool", `❯ ${path.rest}${argsDesc ? " " + argsDesc : ""}\n`, { fresh: true })
   scheduleRender()
   return true
 }
 
 /** Child tool output（D1 前缀 name relay）→ 追加当前 tool block。RAW 拼接（2026-09-03
  *  修复轮——relay chunk 是任意字节边界碎片，逐 chunk 补 \n 会把词拦腰断行 + 烧 N2
- *  配额；emit 端自带换行结构无损还原）。§27 R23 嵌套：输出归属内层子块（T-R23a.2——
- *  输出全在子块——外层流无混入）；fresh 判别在子块层（子块 currentTool=工具名）——
- *  内外/同层同名工具互不串块。 */
+ *  配额；emit 端自带换行结构无损还原）。SUBAGENT-TAIL（D-ST1）：内层输出并入外层
+ *  blocks（append 目标上移）；fresh 判别照旧在子块层（守护元数据 leaf.currentTool=
+ *  工具名）——内外/同层同名工具互不串块。 */
 export function routeSubToolOutput(state, name, part, scheduleRender) {
   const path = parseRelayPath(name)
   if (!path) return false
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — drop late token
-  if (path.inner.length > 0) {
-    const leaf = descendSubChild(sub, path.inner)
-    if (leaf.done) return true // §27.1 F2: done 子块完全定格——迟到输出丢弃（不复活 currentTool）
-    const leafTool = path.rest
-    appendSubChild(sub, leaf, "tool", part.text, { fresh: leaf.currentTool !== leafTool })
-    if (leaf.currentTool !== leafTool) leaf.currentTool = leafTool
+  const nested = path.inner.length > 0
+  const leaf = nested ? descendSubChild(sub, path.inner) : null
+  if (leaf?.done) return true // F2: done 子块完全定格——迟到输出丢弃（不复活 currentTool）
+  const toolName = path.rest
+  if (leaf) {
+    appendSubBlock(sub, "tool", part.text, { fresh: leaf.currentTool !== toolName })
+    if (leaf.currentTool !== toolName) leaf.currentTool = toolName
   } else {
-    const toolName = path.rest
     appendSubBlock(sub, "tool", part.text, { fresh: sub.currentTool !== toolName })
     if (sub.currentTool !== toolName) sub.currentTool = toolName
   }

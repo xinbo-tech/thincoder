@@ -1,82 +1,74 @@
 /**
- * subagent-children.mjs — 嵌套子代理子块载体数据层（AGENT-LOOP.md §27 R23 D-R23a/c2/NFR）。
+ * subagent-children.mjs — 嵌套子代理子块载体数据层（显示契约：docs/design/TUI.md §6
+ * 「内层活动并入外层流（SUBAGENT-TAIL）」节——2026-09-11 批）。
  *
  * 子块 = 外层 state.subTasks 块内的嵌套载体（外层 .children[]——每层一子块——D-R23d）：
  *   carrier = { key（父内段标 role#N）, role, model, started, done, doneAt, stopped,
  *               blocks, currentTool, toolArgs, approval, lastError, dropped,
- *               blockEpoch, children: [], _lineCount }——与外层块同形（渲染复用
- *               renderBlockTimeline/renderExpandedBlock 公共组件）。
- * 内容/工具/模型全部归属子块（D-R23b——不再混外层 blocks——T-R23a.2 输出全在子块）。
+ *               blockEpoch, children: [], _lineCount }
+ * SUBAGENT-TAIL（D-ST1）后内层 relay 行**不再存子块**——append 目标上移外层块 blocks
+ * （单存储单账本；子块 blocks 恒空）。子块载体降为**守护元数据**，职责 = ① done 后
+ * 迟到 chunk 丢弃（F2 语义不回退）② 外层冻结时未收尾子块不悬空（closeOpenSubChildren
+ * ——写路径保留，无正读者）③ 内层工具 fresh 判别（leaf.currentTool）。
  *
- * N2 共享配额（R23 NFR——评审 #6）：子块行数计入**外层** 500 行环形上限——树级 trim
- * （子块批量输出先丢、外层叙述保留优先——见 trimSubTree）——子块不独立扩容——面板
- * 不无限增长。
+ * N2 单环配额（D-ST4）：全部内容行（含内层并入行）就地计入外层 500 **显示行**环——
+ * trim = 单载体最旧先行（原树级 trim「子块先丢 / done 豁免」随子块内容层退役）。
+ * 省略计数真值（N6——D-ST5）：`…（已省略 N 行）` 的 N 只随内容移除增长；标记自身
+ * 不占额度、不被丢弃、不计入 N。
  */
 export const SUB_BLOCK_LINE_LIMIT = 500
 
-const countBlockLines = (text) => text.split("\n").length
-
-/** 载体树总行数（根自身 + 全部子孙块）——共享配额记账。 */
-export function carrierTreeLines(carrier) {
-  let n = carrier._lineCount ?? 0
-  for (const c of carrier.children ?? []) n += carrierTreeLines(c)
-  return n
+/** 显示行计数（N6 口径）：块尾 `\n` 的空元素不计（行结束符非空行）。 */
+const countBlockLines = (text) => {
+  const lines = String(text ?? "").split("\n")
+  return lines[lines.length - 1] === "" ? lines.length - 1 : lines.length
 }
 
-/** 载体级丢行（原 trimSubBlocks 逐块丢弃数学——整块 shift、末块按行裁切）；返回实际
- *  丢弃行数。每载体独立 dropped 计数 + meta 省略标记（同既有 trimSubBlocks 语义）。 */
+/** 省略标记块判定（trim 产物——不占额度/不可被丢；N6）。 */
+const isTrimMarker = (b) => b?.kind === "meta" && b._trimMarker === true
+
+/** 载体级丢行（D-ST4 单环最旧先行）：从头部内容块 FIFO 丢行；省略标记跳过（不占额度/
+ *  不被丢弃/不计入 N——N6）。返回实际丢弃行数（= N 增量——无幽灵行）。 */
 function dropCarrierLines(carrier, want) {
-  if (want <= 0 || carrier.blocks.length === 0) return 0
+  if (want <= 0) return 0
   let dropped = 0
-  while (want > dropped && carrier.blocks.length > 0) {
-    const first = carrier.blocks[0]
+  while (want > dropped) {
+    const idx = carrier.blocks.findIndex((b) => !isTrimMarker(b))
+    if (idx === -1) break // 仅余省略标记（内容耗尽）——不再产生幽灵行
+    const first = carrier.blocks[idx]
     const lines = countBlockLines(first.text)
+    if (lines <= 0) { carrier.blocks.splice(idx, 1); continue } // 空块无显示行：移除不计数
     const take = Math.min(lines, want - dropped)
     if (take >= lines) {
-      carrier.blocks.shift()
+      carrier.blocks.splice(idx, 1)
       dropped += lines
     } else {
       first.text = first.text.split("\n").slice(take).join("\n")
       dropped += take
     }
   }
-  carrier._lineCount = (carrier._lineCount ?? 0) - dropped
+  carrier._lineCount = Math.max(0, (carrier._lineCount ?? 0) - dropped)
   carrier.dropped = (carrier.dropped ?? 0) + dropped
-  const marker = `…（已省略 ${carrier.dropped} 行）`
-  const first = carrier.blocks[0]
-  if (first && first.kind === "meta") first.text = marker
-  else { carrier.blocks.unshift({ kind: "meta", text: marker }); carrier._lineCount = (carrier._lineCount ?? 0) + 1 }
+  if (dropped > 0) {
+    const marker = `…（已省略 ${carrier.dropped} 行）`
+    const head = carrier.blocks[0]
+    if (head && isTrimMarker(head)) head.text = marker // 既有标记原位更新（不重复 unshift）
+    else carrier.blocks.unshift({ kind: "meta", text: marker, _trimMarker: true }) // 标记不占额度（N6）
+  }
   return dropped
 }
 
-/** R23 NFR：树级配额 trim——总行（根 + 子块树）超限 → 丢行。丢序 = **子树递归先于
- *  根载体**（后序：叶子/子块先、根最后）——子块承载批量输出（explore 工具流），外层
- *  叙述行（折叠头 tail/状态区的展示源）保留优先；每载体内部仍最旧行先行（dropCarrierLines
- *  逐块 FIFO）。单载体（无子块）情形与既有 trimSubBlocks 行为逐字同效。
- *  §27.1 F1（2026-09-07 三缺陷修复批——缺陷③主修）：丢行遍历**跳过 done 子块**——
- *  done = 定格快照——配额压力不再蚕食已定格子块行，丢行落点移到外层自身行（live
- *  块「已省略 N 行」增长语义正确）。边界（评审 #6）：live 行耗尽（全树皆 done）→
- *  允许超限（定格快照优先于配额——N2 上限对 done 存量 best-effort）。 */
-export function trimSubTree(root) {
-  let over = carrierTreeLines(root) - SUB_BLOCK_LINE_LIMIT
-  if (over <= 0) return
-  const walk = (carrier) => {
-    for (const c of carrier.children ?? []) {
-      if (over <= 0) return
-      if (c.done) continue // §27.1 F1: done 子块 = 定格快照——丢行遍历跳过（豁免）
-      walk(c)
-    }
-    if (over <= 0) return
-    over -= dropCarrierLines(carrier, over)
-  }
-  walk(root)
+/** 单载体 trim（原树级 trimSubTree 收窄——D-ST4）：超 500 显示行 → 最旧先行丢行。 */
+function trimSubCarrier(carrier) {
+  const over = (carrier._lineCount ?? 0) - SUB_BLOCK_LINE_LIMIT
+  if (over > 0) dropCarrierLines(carrier, over)
 }
 
-/** kind 合并追加（载体级）——既有 appendSubBlock 数学（净增行记账——P1）。 */
+/** kind 合并追加（载体级）——净增行记账（显示行口径；省略标记不参与合并——N6）。 */
 function pushBlock(carrier, kind, text, fresh) {
   if (!text) return
   const last = carrier.blocks.at(-1)
-  if (!fresh && last && last.kind === kind) {
+  if (!fresh && last && last.kind === kind && !isTrimMarker(last)) {
     const before = countBlockLines(last.text)
     last.text += text
     carrier._lineCount = (carrier._lineCount ?? 0) + countBlockLines(last.text) - before
@@ -87,27 +79,18 @@ function pushBlock(carrier, kind, text, fresh) {
   carrier.blockEpoch = (carrier.blockEpoch ?? 0) + 1
 }
 
-/** 追加到根载体（外层块/压缩面板——无父载体者自身即配额树根）。树级 trim——
- *  无子块时与既有 trimSubBlocks 同效（N2 既有测试口径不变）。 */
+/** 追加到块载体（外层块/压缩面板——自身即配额环）：单载体 trim——无子块时与既有
+ *  trimSubBlocks 同效（N2 既有测试口径不变）。SUBAGENT-TAIL：内层行经 routeSub* 也
+ *  走本函数（append 目标上移——单一配额环）。 */
 export function appendSubBlock(sub, kind, text, { fresh = false } = {}) {
   if (!text) return
   pushBlock(sub, kind, text, fresh)
-  trimSubTree(sub)
-}
-
-/** R23：追加到子块载体——行数计入根（外层）树配额（NFR——同配额不独立扩容）。
- *  §27.1 F2（2026-09-07）：child.done 守卫——done 后完全定格，迟到 chunk 丢弃
- *  （与 §7.2 D4 完成态冻结语义统一——数据层 tombstone 拒绝）。 */
-export function appendSubChild(root, child, kind, text, { fresh = false } = {}) {
-  if (!text) return
-  if (child.done) return
-  pushBlock(child, kind, text, fresh)
-  root.blockEpoch = (root.blockEpoch ?? 0) + 1
-  trimSubTree(root)
+  trimSubCarrier(sub)
 }
 
 /** R23 D-R23a：子块载体创建/定位——按段（role#N）在父载体 children 查找，缺失即建
- *  （每层一子块——任意 inner 深度同路径——D-R23d）。@returns 子块载体 */
+ *  （每层一子块——任意 inner 深度同路径——D-R23d）。SUBAGENT-TAIL 后子块只承载守护
+ *  元数据（done/currentTool/children——内容行归外层 blocks）。@returns 子块载体 */
 export function ensureSubChild(carrier, seg) {
   carrier.children ??= []
   let c = carrier.children.find((x) => x.key === seg)
@@ -142,6 +125,7 @@ export function descendSubChild(root, inner, { create = true } = {}) {
 
 /** R23 D-R23c2 子块完成定格（内层 ⟦ev⟧done/stopped → 子块尾定格——不落 preview、不冻结
  *  外层）；stopped = interrupted（外层 abort 传播/内层错误收尾——T-R23a.3 不悬空）。
+ *  SUBAGENT-TAIL 后 done 为 F2 正读者（迟到 chunk 丢弃守卫）；currentTool 为 fresh 判别源。
  *  外层块头 currentTool 若指向该子块（innerPath 前缀——评审 #8 全路径现状保持）→ 清空
  *  （子块已定格——工具不再是 current）。 */
 export function closeSubChild(root, child, stopped, innerPath) {
@@ -158,7 +142,9 @@ export function closeSubChild(root, child, stopped, innerPath) {
 }
 
 /** R23 D-R23c2 收尾语义（T-R23c.2a）：外层先冻结而内层未收尾（外层 abort/中断）→
- *  内层子块随外层冻结时定格 stopped——不悬空。freezeSubTaskLines 冻结前调用。 */
+ *  内层子块随外层冻结时定格 stopped——不悬空。SUBAGENT-TAIL：② 语义照旧保留（防御性
+ *  写路径——定格后无正读者、不设断言；见 docs/design/TUI.md §6 守护字段类目 A）。
+ *  freezeSubTaskLines 冻结前调用。 */
 export function closeOpenSubChildren(sub) {
   const walk = (carrier) => {
     for (const c of carrier.children ?? []) {

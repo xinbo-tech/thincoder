@@ -19,8 +19,9 @@
 ## 1. 模块地图（结构性快照）
 
 纪律（2026-08-30）：本表是**结构性快照**，随实现同步回写——交付新增/改名/删除文件时同批
-更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-09 实测（INPUT-LOCK-ASYNC 批回写 + INPUT-LOCK-BEHAVIOR-REVISED 批回写），
-仅供量级参考（会漂）。
+更新本节（eng-coder 交付自查第 6 项）。行数列为 2026-09-09 实测（INPUT-LOCK-ASYNC 批回写 +
+INPUT-LOCK-BEHAVIOR-REVISED 批回写）；SUBAGENT-TAIL 批（2026-09-11）按交付实测回写其所触六文件行
+（blocks / freeze / children / render-segments / panel / index），其余行仍为 2026-09-09 值。仅供量级参考（会漂）。
 
 ### 核心管线（stdin → 状态 → 渲染 → 回合）
 
@@ -36,14 +37,14 @@
 | `suspension-drive.mjs` | 297 | 挂起会话驱动器（2026-09-05 split：agent-turn 535>500——driver 族 verbatim 迁入；2026-09-09 INPUT-LOCK：R15 攒批删+单槽消费+残余单消息化——净减）——状态机行表见 AGENT-LOOP.md §9.2 |
 | `tool-events.mjs` | 404 | 工具事件 → TUI 状态：buildToolCallbacks + flushStream、`_toolBlock` 载体生命周期（onToolCall 开 / onToolResult 定态 / onToolOutput 追加 + advisor 有序块）、onCompress*/onTaskUpdate/onTurnEnd 落盘；权限/批权限/问答按 ctx 条件接线（auto-turn null → denied）；finishSubTaskKey；slimToolResultForDisplay |
 | `tool-display.mjs` | 144 | 工具块显示/计时/清扫 helper 族（2026-09-05 module-split：tool-events 537 > 500——_toolTicks/_subActions 计时表、sweepToolBlocks、settle/slim/async 探测/find 等 verbatim 迁入；模块级可变对象导出 + re-export sweepToolBlocks 保 agent-turn 消费面；DEBLOAT F-1：报告 preview 常量已删） |
-| `subagent-blocks.mjs` | 450 | 子 agent 区块数据层：SUB_EVENT_RE 路由（settled/stopped/queued/cancelled + ⟦ev⟧async 置位与 _pendingAsyncKeys 兜底）、finishSubTask/Key、trimSubTree（N2 树级环）、SUB_RELAY_THROTTLE_MS=250、SUBAGENT_ROLES、parseRelayPath（R23）；冻结族迁 subagent-freeze.mjs |
-| `subagent-freeze.mjs` | 169 | 子 agent 完成/冻结族（2026-09-05 split：subagent-blocks 625 > 500）：freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks + computePanelBlocks（§19.6 面板**读时现算**——DEBLOAT F-3 手工镜像退役）——re-export |
-| `subagent-children.mjs` | 177 | 嵌套子代理子块载体数据层（R23 嵌套子代理子块方案）：ensureSubChild/descendSubChild/appendSubChild（任意 inner 深度）、树级 trim（trimSubTree 后序丢行——子块输出先丢、外层叙述保留）、closeSubChild、closeOpenSubChildren（外层冻结定格 stopped）、SUB_BLOCK_LINE_LIMIT/appendSubBlock 迁移至此（re-export 保 import 面） |
+| `subagent-blocks.mjs` | 454 | 子 agent 区块数据层：SUB_EVENT_RE 路由（settled/stopped/queued/cancelled + ⟦ev⟧async 置位与 _pendingAsyncKeys 兜底）、finishSubTask/Key、SUB_RELAY_THROTTLE_MS=250、SUBAGENT_ROLES、parseRelayPath（SUBAGENT-TAIL 嵌套路由源——内层内容行并入外层 `blocks`）；N2 单环 500 显示行（appendSubBlock 口径——见 subagent-children 行）；冻结族迁 subagent-freeze.mjs |
+| `subagent-freeze.mjs` | 170 | 子 agent 完成/冻结族（2026-09-05 split：subagent-blocks 625 > 500）：freezeSubTaskLines/freezeDoneSubTasks/freezeAllSubTasks/freezeReclaimDigestedBlocks + computePanelBlocks（§19.6 面板**读时现算**——DEBLOAT F-3 手工镜像退役）——re-export |
+| `subagent-children.mjs` | 163 | 嵌套子代理数据层（SUBAGENT-TAIL）：守护载体 ensureSubChild/descendSubChild（任意 inner 深度——只存守护元数据，无内容行）、closeSubChild、closeOpenSubChildren（外层冻结定格 stopped——类目 A 写路径）；SUB_BLOCK_LINE_LIMIT/appendSubBlock（re-export 保 import 面）；单环 500 显示行 trim（trimSubCarrier——单载体最旧先行）+ 省略计数真值（dropCarrierLines——N6：标记不占额度/不计 N/无幽灵行） |
 | `render-frame.mjs` | 376 | 帧布局装配：header / conversation / subagent 面板 / todo / input / status 各面板（行由 layout 预计算直接 put）；renderHeader（logo+版本+模型+think 徽章+cwd）；状态栏 busy 文案（INPUT-LOCK——主会话处理中——queue 提示已撤）；question 自由文本态光标例外（TUI-INPUT-BOX.md §7.2） |
 | `render-conversation.mjs` | 425 | 对话面板行构建（纯函数）：三层缓存（convCacheKey 全量 / 行级 wrapRowsCached / 段级 _lineSegCache——2026-09-03 D-S2 后只管普通源行段，tool/frozenSub/frozenAdvisor 三段随实现迁 render-segments.mjs 各带独立 WeakMap）；搜索高亮、折叠装配（六处折叠点）、主输出前后空行、连续 dim 折叠；convViewport 视口数学单源导出 |
-| `render-segments.mjs` | 183 | 对话行三类特殊段渲染（2026-09-03 D-S2 自 render-conversation 拆出）：tool 块 / frozenSubTask / frozenAdvisor——段渲染 + sig 分支 + 独立 WeakMap 段缓存三段合一（toolSeg/frozenSubSeg/frozenAdvSeg）；buildConvLines 主循环只留 ~3 行分支调用；R23 冻结载体尾部挂 renderSubChildSections |
+| `render-segments.mjs` | 169 | 对话行三类特殊段渲染（2026-09-03 D-S2 自 render-conversation 拆出）：tool 块 / frozenSubTask / frozenAdvisor——段渲染 + sig 分支 + 独立 WeakMap 段缓存三段合一（toolSeg/frozenSubSeg/frozenAdvSeg）；buildConvLines 主循环只留 ~3 行分支调用；SUBAGENT-TAIL：冻结载体段单流渲染（子块段调用与子块树签名已删） |
 | `fold-block.mjs` | 257 | 公共折叠组件（2026-08-30）：foldCapRows（60%）、isExpanded/toggleFoldBlock、renderFoldedHead、renderExpandedBlock（窗口 + 底部收起）、renderBlockTimeline、foldTailLines、scrollFoldBlock、renderMathAndMarkdown——消费方：长消息/连续 dim/子 agent/advisor/工具块 |
-| `subagent-panel.mjs` | 195 | 运行中子 agent 固定底部面板渲染（中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数（顶部分隔线 + 驻留区块折叠头 + tail 3 / 展开窗口）；renderSubChildSections/subChildFoldKey（R23 子块段——面板与冻结渲染共用导出） |
+| `subagent-panel.mjs` | 150 | 运行中子 agent 固定底部面板渲染（中立模块——layout 预计算高度与 render-frame put 共用，避免循环依赖）：renderSubagentPanel 纯函数（顶部分隔线 + 驻留区块折叠头 + tail 3 / 展开窗口）；SUBAGENT-TAIL：单流渲染只读 `sub.blocks`（子块段三函数与子块折叠键已删） |
 | `tool-args.mjs` | 80 | 工具参数可读展示（2026-08-30，对齐 vscode 卡片头）：describeToolArgs 按工具挑关键参数单行摘要——live 标题行（tool-events）与恢复标题行（startup historyToLines）共用；toolArgsLines 全量 JSON dim 行（恢复路径） |
 | `render.mjs` | 253 | 纯函数：字符宽度（CJK/emoji/组合字符）、wrap、slice、markdown 表格对齐、sanitize |
 | `render-loop.mjs` | 129 | 渲染调度：整帧 recompute + 行 diff（只重绘变化行）+ 光标定位，防闪烁；MIN_RENDER_INTERVAL_MS 16ms 节流；每帧 write 包 wrapOff/wrapOn（Ambiguous 防线②）——1s ticker 在 agent-turn.mjs（含 subRunning() 驱动面板 elapsed 走秒） |
@@ -387,7 +388,7 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
 ### 子 agent 活动区块（数据层指针 + 面板/冻结渲染）
 
 区块数据层在 `subagent-blocks.mjs` / `subagent-children.mjs` / `subagent-freeze.mjs`（§1 地图行
-——事件 token 路由、⟦ev⟧async 置位、N2 环、R23 子块载体、冻结族、面板现算 computePanelBlocks）；
+——事件 token 路由、⟦ev⟧async 置位、N2 单环 500 显示行、SUBAGENT-TAIL 守护载体、冻结族、面板现算 computePanelBlocks）；
 编排语义（settle 时序、async 生命周期、排队规则）以 AGENT-LOOP.md（子代理工具族 §7.2、async
 §7.3、挂起 §9、调度与排队 §10、async advisor §11.2；权威源接管点 §17）为权威。显示层契约：
 
@@ -427,14 +428,13 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   stopped；interrupt 清场 → interrupted 标）；挂起期**已结算待消化中间态**（sub.done &&
   awaitingDigest）驻留面板显示 `done · awaiting digestion`（T-S14），池空补发冻结后移除；折叠态头
   行 `▶ [✓ …] … subagent activity — click to expand`。
-- **嵌套子代理（R23 方案——旧子标行方案已废弃）**：内层 relay 前缀（eng-coder 内 explore）显示
-  为**子块载体**——`❯ explore#1 · model · elapsed` 工具式头（dim ❯ + role#N 亮 + model/elapsed
-  dim；done/stopped 定格动词）+ **独立折叠键** `sub-{outerKey}/{innerPath}`（fold-block 通用通道
-  ——鼠标点击零扩展）；折叠 tail 2、展开 60% 封顶窗口；递归孙块（任意 inner 深度，每层独立折叠
-  键）；内层完成/终止 = 生成侧补发射 ⟦ev⟧done/stopped → 子块定格（不落 preview）；外层 abort 冻结
-  时开子块随冻结定格 stopped（closeOpenSubChildren）；行数计入外层树配额（N2 trim 后序丢行）。
-  冻结载体渲染含子块段（frozenSubTaskLines 尾部挂 renderSubChildSections——子块折叠态/滚动/行数
-  进段缓存签名）。
+- **嵌套子代理（SUBAGENT-TAIL——2026-09-11 批；R23 子块小节与更早的子标行方案均已退役）**：内层
+  relay 前缀（eng-coder 内 explore）的活动行（工具行/输出/文本/思考）**并入外层块活动流**
+  （sub.blocks）——与其他工具调用同款：折叠 tail 3 直达、展开全量时间线可达（任意 inner 深度）；
+  内层完成/终止信号（生成侧补发射 ⟦ev⟧done/stopped）照旧——供子块守护定格（不再有显示面）；
+  子块载体退居**守护元数据**（done 后迟到丢弃 / 外层冻结定格 stopped / 内层工具 fresh 判别——
+  不再承载内容行）；**渲染层无任何子块段与子块折叠键**（只读单流）。方案选型/契约/用例见下文
+  「内层活动并入外层流（SUBAGENT-TAIL）」节。
 - **advisor 块**：运行中 = 对话流内可折叠框（key=`advisor-blocks`，单实例；头
   `[advisor · review] N lines` + tail 3；展开 = renderBlockTimeline 有序块时间线——think↔tool 交
   替按发射序、占位标记全视图剥离）；完成 → 冻结 `_frozenAdvisor` 载体（key=`advisor-done-{_lineId
@@ -469,6 +469,159 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
 - 测试：`test/activity-debloat.test.mjs`（用例表 1:1——preview 删/精确 key 命中与无块/
   现算正常与空态/降级路径/门控等价/驻留回收/锚点不回归）。
 
+#### 内层活动并入外层流（SUBAGENT-TAIL——2026-09-11 批，设计与测试并档）
+
+**需求回指**：需求 `../requirements/TUI.md` F8（子代理内嵌套活动的显示同款——用户口径 C）·
+N5（防刷屏与行额度）· N6（省略计数真值）。
+
+**问题陈述**：子代理块内嵌套 spawn（eng-coder 内 explore）此前渲染为「子块小节」——独立头行
+（`❯ explore#1 · model · elapsed`）+ 独立折叠体（tail 2）+ 每层独立折叠键，内容存于子块载体
+`children[].blocks`。折叠态父块 tail 只含外层自身活动——嵌套活动被藏在小节里（只露 2 行且需
+展开），与普通工具调用「最近活动直接进父块 tail」不同款（用户口径 C）。附带缺陷：子块
+「已省略 N 行」计数虚高（≈ 真实 ×2——标记自重 + 幽灵行 + 块尾空行口径；N6）。
+
+**方案选型对比**
+
+① 实现面（内层行落外层 tail）：
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **数据流合并**——内层 relay 行 append 到外层块 `blocks` | 时序天然精确（append 顺序 = relay 发生顺序；嵌套 spawn 恒 sync、父块在子跑期间不产行）；单存储单账本（配额/计数/渲染同一数组）；渲染层净删 | 路由层四处 append 目标上移；子块载体降为守护元数据；「每层独立折叠键」退役 | **选定** |
+| 2 | 渲染期合并——数据不动，渲染时拼内层/外层合并流 | 时序重建需每子块的插入锚——外层环 trim 丢旧行使索引锚漂移 → 需序号簿记 + 双存储对账；收益仅「路由零改」（而路由本就要为「内容去哪」改） | 复杂度更高 + 新增双存储一致性面 | 否决 |
+| 3 | 并存（合并 tail + 保留小节渲染） | 合并 tail 的末几行 = 子块 tail 的内容——同一活动两处显示；面板空间敏感（防刷屏 D1） | 与「与其他工具同款」口径冲突 | 否决 |
+
+② 小节形态：
+
+| # | 候选 | 判据逐项评估 | 取舍（选定代价/权衡） | 结论 |
+|---|---|---|---|---|
+| 1 | **取代小节** | 与普通工具完全同款（对照面无小节）；有嵌套时折叠态每块 7 行 → 4 行；无重复承载；子块级省略标记自然消失 | 子块头（model/耗时/定格词）与每层独立折叠键退役——R23d 承诺按**内容可达性**承接（任意深度内容随外层展开可达——用例 3/9、AC3 钉死） | **选定** |
+| 2 | 并存（小节保留 + tail 合并） | 保留子块身份与独立展开 | 同一内容两处重复；面板行数不减（≥7 行/块）；「已省略」标记与折叠键族保留（点 2 修复面保留） | 否决 |
+
+**数据流与渲染契约（本批后现状）**
+
+- **路由目标上移**：`routeSubToken` / `routeSubReasoning` / `routeSubToolCall` / `routeSubToolOutput`
+  的嵌套分支 append 目标 = 外层块（`appendSubBlock(sub, …)`——与单层分支同函数）。kind 合并 /
+  fresh 语义照旧（工具调用 fresh=true 起新块；输出按 `leaf.currentTool` 判别续接）。内层
+  `[model]` token、内层 `⟦ev⟧done/stopped` 定格、其余内层事件剥除——**照旧**（守护元数据/丢弃，
+  不进内容流）。
+- **已知失效前提（本批不处理——未来复核项）**：同一外层块若出现两个**并发**内层子块交错，内层输出会
+  并入末块的他人工具头块（`pushBlock` 仅按 kind 合并——`subagent-children.mjs:79`）；当前不可达
+  ——depth>0 spawn 恒同步（`src/agent-tools/subagent.mjs` `wantAsync` 缺省门控，as-of :215-220；下游
+  `src/agent-tools/subagent-run.mjs` `executeAsyncSpawn` 对 depth>0 拒 async，as-of :47-48；工程子代
+  通道 `src/agent/spawn-child.mjs` `gateEngCoderSpawn` 限 sync explore，as-of :48-56），未来放开
+  并行嵌套时须复核。
+- **子块载体 = 守护元数据**（key/role/model/done/stopped/currentTool/children——字段全集、类目划分见
+  下条，无内容行）：职责收窄为 ① done 后迟到 chunk 丢弃（F2 语义不回退）② 外层冻结时未收尾子块
+  不悬空（closeOpenSubChildren 定格 stopped——② 的写路径保留、无读者，见下条类目 A）③ 内层工具 fresh 判别。
+- **守护字段最小形状与②注（评审 #1 落档——防反向补实现/补断言）**：正读者只有 `done`（迟到丢弃守卫）/
+  `currentTool`（fresh 判别）/ `children`（收尾遍历）——载体查找键 `key` 为结构基础。其余字段分两类：
+  **A 保留写路径（无读者、不设断言）** = `stopped`——定格族写点保留（`closeOpenSubChildren` 冻结定格
+  = ②；`closeSubChild` 内层 stopped 定格）；**B 可留可删字面量** = `model`/`started`/`doneAt`/`blocks`/
+  `toolArgs`/`approval` 等（原读者 `subChildHeadRow`/子块树签名随批删除——不得为其补渲染或补断言）。
+  **② = 防御性保留**（无可见语义、不必设断言）：冻结后迟到 relay 由 tombstone 独立丢弃
+  （`subagent-blocks.mjs` `ensureSubTaskKey` tombstone 守卫，as-of :96-97；`routeSubReasoning` /
+  `routeSubToolCall` / `routeSubToolOutput` 的 tombstone 分支，as-of :307-308 / :326-327 / :356-357），
+  AC8 不含②。
+- **渲染单流**：`renderSubChildSections` / `subChildHeadRow` / `subChildFoldKey` 删除——面板与冻结
+  渲染只读 `sub.blocks`（折叠 = 头 + `foldTailLines(sub.blocks)` tail 3；展开 = `renderBlockTimeline(sub.blocks)`
+  60% 封顶窗口——既有组件零改）。折叠键只剩 `sub-${key}`（面板 ↔ 冻结同键——D5 无缝衔接不变）。
+- **行数额度单环**：内层内容就地计入外层 500 行环（`SUB_BLOCK_LINE_LIMIT` 口径不变 = 500 显示行）；
+  树级 trim（trimSubTree 后序/子块先丢/done 豁免）随子块内容层退役——trim 收窄为单载体最旧先行。
+- **省略计数真值**：`…（已省略 N 行）` 的 N 只随**内容移除**增长；标记自身不占额度、不计入 N；
+  `countBlockLines` 口径修订为**显示行**（块尾 `\n` 的空元素不计）。
+
+**关键决策记录（含否决备选）**
+
+- **D-ST1 合并点 = 数据流**（否决渲染期合并、并存——见选型表①②）。
+- **D-ST2 小节取代**（否决并存）；R23d「任意深度可展开」按内容可达性承接——承诺面变化显式记录：
+  任意深度内层内容**可达**保留；**每层独立折叠键退役**（其前提 = 每层独立渲染载体，内容并入后不存在）。
+- **D-ST3 tail 预算 = 3 行不变**（否决「3+2 并为 5 行」：用户口径是「同款」非「更多」；扩行增加面板
+  常驻高度、与 D1 防刷屏相悖）。
+- **D-ST4 丢行语义 = 单环最旧先行**（否决「保留子块先丢」优先级——需按行打源标 + 优先级遍历；收益
+  仅「外层较早叙述行更晚被丢」——值不当；且与「同款单流」语义一致）。代价如实列明：内层批量输出与
+  外层叙述同环最旧先行——外层较早叙述行可能先被丢弃。
+- **D-ST5 点 2 裁决**：子块级「已省略」标记随取代消失；**块级省略标记仍在**（流首 meta 行）→ 按用户
+  裁定「仍保留省略标记 → 计数真值必须一并修」分支执行：dropCarrierLines 三缺陷（标记自重 / 幽灵行 /
+  块尾空行口径）随本批修正（N6）。
+- **D-ST6 陈旧指针随批修订**：本批所触文件注释中引用的 AGENT-LOOP 旧节号（§27 / §19.5 / D-R23*——
+  文档重组后已不存在，显示契约实际在本文件 §6）——注释改指本文件对应节；只改所触文件，不做全库清理。
+  **交付实测口径（2026-09-11——防后续误读）**：注释修订按「**改动区域** + 显示契约指针」落地——改动区域
+  （模块头 / 改动函数 / 删除面）已改指本文件 §6 并档节；**未改动区域**的旧节号（§19.5 / §19.6 / §20 / §24 / §27）
+  为**存量全库性文档债，不随批迁移**——读者遇旧节号按本口径对照本文件 §6，勿按旧节号检索。
+
+**与既有纪律的冲突点核对**
+
+- **D1 防刷屏**（`tool-events.mjs` 注释「事件 token 只进头部——不进 blocks/主流」）：事件路由零改，
+  照旧只更新头部；本批合并的是**内容行**（工具/文本/思考——本就属于块内容，非事件）。面板折叠态
+  行数净减（有嵌套时 7 → 4 行/块）。
+- **R23 递归承诺**：见 D-ST2（内容可达性保留 + 每层独立键退役——用例 3/9、AC3 钉死可达性）。
+- **折叠键族**：`sub-${key}` 单键不变（面板/冻结共用）；`sub-${key}/${path}` 子块键从渲染面消失；
+  `mouse.mjs` 零改动（`_foldToggle` / `_stopCol` / `_foldScroll` 通道均不依赖子块键——核对项）。
+- **500 行环**：单环 500 显示行（总预算不变——原「子块计入外层配额」树记账收窄为单载体记账）。
+- **60% 封顶与展开窗口**：零动（既有组件）。
+- **VSC 对位面**：**无子块小节形态**（另有子标形态——VSC 嵌套活动有对位显示：chunk `sub` 行首 dim 子标，
+  `thincoder-vscode/src/agent-tools/subagent-run.mjs` `runChild`·`forward`（子标挂载，as-of :26-37）、
+  `webview/ui.js` `appendAdvisorChunk`（`.advisor-sub` 行首 dim 子标，as-of :41-94））；**本批后两端不再同构**
+  （CLI 内层行无归属标 vs VSC 保留子标）——端差异由 AGENT-LOOP 未决行承接（镜像评估待独立批次）；
+  本批 CLI-only，VSC 不动。
+
+**受影响文件清单**（当前行数 as-of 2026-09-11 实测；文档写域另列）
+
+| 文件 | 当前行数 | 预计增量 | 变更点 |
+|---|---|---|---|
+| `src/tui/subagent-blocks.mjs` | 451 | −5 ± 10 | 四处嵌套分支 append 上移；注释与陈旧指针修订 |
+| `src/tui/subagent-children.mjs` | 177 | −35 ± 15 | 单环 trim 收窄；dropCarrierLines 计数真值修复；appendSubChild / trimSubTree / carrierTreeLines 删除；守护族保留 |
+| `src/tui/subagent-panel.mjs` | 205 | −40 ± 10 | 子块段渲染删除（subChildHeadRow / renderSubChildSections / subChildFoldKey + 调用点） |
+| `src/tui/render-segments.mjs` | 183 | −15 ± 5 | frozenSubSeg 子块树签名与子块段调用删除 |
+| `src/tui/subagent-freeze.mjs` | 169 | ±5 | closeOpenSubChildren 语义保留；注释随批修订 |
+| `src/tui/index.mjs` | 450 | ±2 | state.subTasks 注释修订 |
+| `src/tui/mouse.mjs` | 250 | 0 | 零改（核对项） |
+| `test/subagent-tail-merge.test.mjs` | 0（新增） | +140 ± 40 | 用例表 1:1（新档） |
+| `../requirements/TUI.md`、本文件 | — | — | 文档写域（设计者；实现外收口项见批次档 §2） |
+
+**测试层——用例表**
+
+| # | 类型 | 输入 | 预期输出 | 需求回指 |
+|---|---|---|---|---|
+| 1 | 正常 | routeSubToolCall / Output / Token / Reasoning 直驱：`eng-coder#2/subagent` → `eng-coder#2/explore#1/read` → 输出 → 文本片 | `state.subTasks["eng-coder#2"].blocks` 依 relay 顺序含全部行；子块载体无内容增量 | F8 |
+| 2 | 正常 | 上述块（≥5 行）→ renderSubagentPanel(cols) | 头行 + 3 行 tail（= 合并流末 3 非空行，含内层行文本）；无 `❯ explore#1` 子块头行、无子块折叠键；**负断言：tail 行文本不含 `explore#N` 式归属前缀**（取代决定可见后果——内层行与普通工具行同款无标） | F8 / N5 |
+| 3 | 正常 | expandedBlocks 含 `sub-eng-coder#2` → 展开渲染 | 全量时间线含内层行；窗口封顶（foldCapRows）内、控制行齐备 | F8 |
+| 4 | 正常 | 冻结载体（`_frozenSubTask`）渲染 | 折叠 tail 3 含内层行；`sub-` 键跨运行/冻结同键可 toggle | F8 |
+| 5 | 边界 | 无嵌套块（仅外层自身行）全路径直驱 | 与改前同款（tail 3 / 展开时间线 / 头行字段零变化——零回归） | F8 |
+| 6 | 边界 | 追加超限（>500 显示行——序列混入内层前缀行） | 单环 ≤500 显示行（**内层行与外层行同环计数**）；流首恰 1 条省略标记；继续追加持续守恒 | N5 |
+| 7 | 边界 | 稳态追加 K 行（每行触发 trim） | 省略标记 N 恰 +K（无幽灵增量——计数真值） | N6 |
+| 8 | 边界 | 连续多轮 trim（含标记已存在场景） | 标记恰 1 条且不重复 unshift；N 只随内容移除增长 | N6 |
+| 9 | 边界 | 两层以上嵌套路径（`eng-coder#2/explore#1/…` 更深孙路径形态构造） | 任意深度内层行并入同一流、展开可达（R23d 内容可达性） | F8 |
+| 10 | 错误 | 子块 done 后迟到 chunk（tool/text/think/model） | 丢弃——不产生新行（F2 语义不回退） | F8（纪律保全） |
+| 11 | 错误 | 外层冻结 tombstone 后迟到 token | 丢弃——不复活块 | F8（纪律保全） |
+| 12 | 错误 | 内层非完成事件（⟦ev⟧turn/approval 等） | 剥除不路由——不污染父块头与内容流 | F8（D1 保全） |
+
+**验收标准（逐条回指需求；每条可机器验证）**
+
+| AC | 判据 | 断言手段 | 回指 |
+|---|---|---|---|
+| AC1 | 内层行落外层 blocks 且顺序 = relay 顺序 | 直驱 routeSub* → blocks 文本/kind 序列断言 | F8 |
+| AC2 | 折叠态渲染 = 头 + ≤3 行 tail（含内层最新活动）；无子块头/子块段 | renderSubagentPanel / 冻结段渲染输出断言 | F8 / N5 |
+| AC3 | 展开态 = 合并流全量（任意深度可达）+ 60% 封顶零动 | 展开渲染行数与文本断言 | F8 |
+| AC4 | 渲染输出零子块折叠键（`sub-*/…`）与零子块头行 | 渲染行 `_foldToggle` 集合 + 文本断言 | F8 |
+| AC5 | 折叠态每块 ≤ 4 行（头 1 + tail ≤3） | 面板行数分块断言 | N5 |
+| AC6 | 单环 ≤500 显示行 + 省略标记恰 1 条 | 超限直驱 → 行数/标记断言 | N5 |
+| AC7 | 计数真值：稳态追加 K → N 恰 +K；多轮 trim 无幽灵增量 | dropped 值/标记文本断言 | N6 |
+| AC8 | 守护不回退：done 子块迟到丢弃 / tombstone 丢弃 / 内层非完成事件剥除 | 直驱断言 | F8 |
+| AC9 | 无嵌套零回归 + `sub-${key}` 键族 toggle 不变 | 既有路径断言 | F8 |
+
+**真机 smoke（用户可见面验收步骤——2026-09-11 评审 #4 采纳；非机器判据）**：实现落盘后**新起一个 CLI
+会话**（模块缓存——当次会话不生效），触发一次嵌套 explore（spawn 一个 eng-coder——其内部探索即走嵌套
+路径），目视三查：① 外层块 tail 出现内层活动行；② 无 `❯ explore#N` 小节头行；③ 面板高度较批前下降
+（有嵌套时折叠态 7 → 4 行/块）。执行者 = 主 agent / 用户（coder 无 TTY，不承担该步）；任一项不符 →
+报父侧开修正轮（同链 docs FIRST）。依据：本批为用户可见显示面变更——项目先例「真机手感是唯一判据」
+（§11 2026-08-31 性能行）+ 折叠阈值曾两轮死于真机（§10 折叠决策行）。单测（AC1..AC9）仍为机器
+可验证基线。
+
+**交付核验（2026-09-11——批次档 §5/§6）**：AC1–AC9 机器判据 = 新档 `test/subagent-tail-merge.test.mjs`
+12 用例全绿（全量 363/352/0——同窗并行批次计数波动见批次档 §5）；真机 smoke 三查通过（tail 含内层行 /
+无 `❯ explore#N` 小节头 / 折叠态 ≤4 行）；交付终态 clean（内部偏差审计 clean + 代码评审 pass）。
+
 ### 约束
 
 - 展开块行带 `_skipDimFold` 标记，不再参与连续 dim 折叠（防折叠套折叠——0.12.7 回归修复；
@@ -487,7 +640,8 @@ lines` + tail 3，点击展开 = 60% 封顶的实时视图（token 持续进入�
   自增计数器——live 工具载体/恢复 restoreLines/懒加载 loadOlder 统一分配）派生，位置索引只作
   `??` 回退：`tool-${_lineId}`、`long-${_lineId ?? i}`、`fold-${首行 _lineId ?? i}`、
   `advisor-done-${_lineId ?? i}`——loadOlder 头部 unshift 后展开态与 _foldScroll offset 不串位
-  （2026-08-30 判例）。子块/区块键天然身份化（sub.key / innerPath），与行位置无关。
+  （2026-08-30 判例）。子代理块键 `sub-${key}` 天然身份化（key 为 `role#id`，与行位置无关）；R23 子块键
+  （`sub-${key}/${innerPath}`）已随 SUBAGENT-TAIL 批退役——折叠键只剩 `sub-${key}`（见 §6 并档节）。
 - **组件解耦**：fold-block 不 import 任何业务常量（advisor 占位符经 `strip: []` 参数注入）。
 
 ## 7. 会话恢复与懒加载（startup.mjs）
@@ -639,7 +793,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 | 恢复过滤 [System reminder: | 机读消息不显示（与 VS Code 渲染契约一致） |
 | 运行中子 agent 为固定底部面板（§7.2.1） | 活动不随会话滚动、elapsed 可见；完成后冻结进会话流历史可读（2026-08-30） |
 | 子代理流 `role#id/` 前缀 + ⟦ev⟧ 事件 token | 主/子流共用一套回调，按前缀分流到区块（数据层 subagent-blocks.mjs）；事件 token 只改头部状态——不污染区块内容与主流（D1） |
-| 嵌套子代理 = 子块载体（R23） | 内层 relay 前缀 parseRelayPath 归属子块——工具式头 + 独立折叠键 + 生成侧补发射定格（supersede D-M8 子标行方案，2026-09） |
+| 嵌套子代理 = 子块载体（R23） | 内层 relay 前缀 parseRelayPath 归属子块——工具式头 + 独立折叠键 + 生成侧补发射定格（supersede D-M8 子标行方案，2026-09；**本行已被 SUBAGENT-TAIL 批 supersede**——内层行并入外层流、子块小节与独立折叠键退役——现行态见 §6 并档节） |
 | /submodel 独立命令而非扩展现有 /model | /model 语义是主会话 provider 切换；子 agent 模型是高频操作——picker 导航 + 参数直设双通道 |
 | 子 agent 模型按类型分别配置（subagentModels[role]） | 4 种 role 用途差异大——搜索用便宜模型、规划/实现用好模型；全局 subagentModel 兜底（向后兼容）；优先级：工具参数 > 类型级 > 全局 > 继承父 |
 | /submodel picker 选中写入槽位（不复用 openModelPicker） | openModelPicker 绑定主会话状态（改 activeProvider/activeModel）；子模型选择需"选中即写指定槽位"的参数化变体——仅回调目标不同 |
@@ -664,6 +818,7 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 | 2026-09-03 | 行数债拆分批（index/render-conversation/key-handler→key-modes/tool-events/subagent-blocks/agent-turn/cmd-mcp）——re-export 保导出面，模块地图同批回写 | 已实现（§1 地图呈现现状；2026-09-05 续拆 suspension-drive/subagent-freeze/tool-display/tui-lifecycle/cmd-mcp-form） |
 | 2026-09-09 | 主会话输入禁排队（INPUT-LOCK-ASYNC C'——专题 INPUT-LOCK-ASYNC.md——机制正文落 AGENT-LOOP §9/§11.3）：busy（processing 含 digest）提交吞 + 白名单直执行——queue 面板/提示/Ctrl+D/攒批全撤——pendingInput 单槽 + 交接残项单容器（模块地图行数同批回写——净减 60 行） | 已实现（§4 门禁 + §8 交接续发；测试 test/input-lock.test.mjs） |
 | 2026-09-09 | busy 行为修订（INPUT-LOCK-BEHAVIOR-REVISED——评审通过——专题 INPUT-LOCK-BEHAVIOR-REVISED.md）：VSC readOnly 锁移除（busy 不禁录入——打字回显——send 禁由 send.js 出口守卫兜——占位符文案更新）+ CLI 斜杠白名单删（busy 斜杠同禁发——/exit 也发不出——退出靠 Ctrl+C 终端层通道）——门禁判据（processing/_turnState running）零动 | 已实现（§4 门禁去白名单 + §1 行数回写；双端 INPUT-LOCK 测试更新） |
+| 2026-09-11 | 子代理内嵌活动并入外层流（SUBAGENT-TAIL）——四处 `routeSub*` 嵌套分支 append 上移外层 `sub.blocks`（数据流合并 D-ST1）；子块载体退居守护元数据；渲染面净删（子块段/子块头/每层折叠键）；单环 500 显示行 trim（D-ST4）；省略计数真值修复（N6） | 已实现（§6 并档节；test/subagent-tail-merge.test.mjs——12 用例；真机 smoke 过 2026-09-11） |
 
 > **未决/待办承接（来自 2026-09-03 picker 化评审旁支——开放项不折叠）**：① picker item.note 渲染丢弃
 > （pickers.mjs 只消费 header.note——buildProviderEntries 的 baseURL/无 key 提示与 cmd-advisor
@@ -672,6 +827,10 @@ toggle/翻窗/流式 append 只失效该块段。行级 _lineId 在恢复/加载
 > 架构决策——待登记 docs/TODO.md）；（③ /config 数值项档位预设——已裁定不做）。
 
 ## 变更记录
+
+- 2026-09-11：SUBAGENT-TAIL 批（子代理内嵌活动并入外层流——数据流合并 / 取代 R23 子块小节 /
+  单环 trim / 省略计数真值修复）——**已交付并验收**（6 源 + 新测试档 12 用例全绿、全量 fail 0、
+  真机 smoke 过）；§1 模块地图其所触六文件行回写 + §6 重写嵌套子代理段并新增并档节（设计与测试）+ §11 完成史行。
 
 - 2026-09-10：CLI-ACTIVITY-DEBLOAT 批（活动块去加戏：F-1 报告 preview 删 / F-2 finishSubTask 收窄精确匹配 / F-3 面板镜像改读时现算 computePanelBlocks——agent._tuiState 反向挂载；④ awaitingDigest 驻留零动）——§6.4 补充节 + §1 模块地图行数回写。
 - 2026-09-09：INPUT-LOCK-BEHAVIOR-REVISED 批（busy 行为修订——VSC 不禁录入只禁 send——CLI 白名单删、忙时斜杠同吞）——§4 门禁描述去白名单、§9 slash 命令节同步、§1 模块地图行数回写（见 §11 完成史行）。
